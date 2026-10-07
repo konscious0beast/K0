@@ -1,6 +1,9 @@
-# STUB(M0) — owned by M2. Replace completely, keep the public API.
 class_name StatIds extends RefCounted
-## Achievement counter ids (02_TECH §6.3), persistent in ShowState.stats. == DataValidator.STAT_IDS.
+## Achievement counter ids (02_TECH §6.3), persistent in ShowState.stats. == DataValidator.STAT_IDS
+## (test_m2_achievements asserts the equality).
+##
+## Counters grow by +n (Show.bump_stat), viewers_max / viewers_target_peak only grow to a new maximum
+## (Show.set_stat_max), explore_seconds_since_battle is reset to 0 by Show.begin_battle.
 
 const ALL: PackedStringArray = ["kills_total", "kills_skill", "battles_won", "battles_fled", "preemptives",
 	"ambushes_won", "crits_total", "stunts_success", "stunts_fail", "chests_opened", "sponsor_gifts",

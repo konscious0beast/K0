@@ -77,6 +77,12 @@ func open_visual(animated: bool) -> void:
 		prop.visible = false
 
 
+## Both cells of the door.
+func occupied_cells(_layout: FloorLayout) -> Array[Vector2i]:
+	var c: Vector2i = gate.get("cell", Vector2i.ZERO)
+	return [c, c + RoomCell.dir_offset(int(gate.get("dir", RoomCell.DOOR_N)))]
+
+
 ## Closest point on the gate line (local X in ±2 m).
 func reach_point(from: Vector3) -> Vector3:
 	var local: Vector3 = global_transform.affine_inverse() * from

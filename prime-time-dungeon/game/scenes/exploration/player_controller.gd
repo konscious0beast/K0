@@ -2,7 +2,7 @@ extends CharacterBody3D
 ## Kai in the exploration (02_TECH §7.3, GDD §2.1): capsule r 0.4 / h 1.7 (layer 2 `player`, mask 1 `world`),
 ## run 5.5 m/s, sneak 2.5 m/s (action `sneak` held; touch: stick deflection ≤ 0.6 holds sneak), accel 30 m/s²,
 ## decel 40 m/s², turn 12 rad/s towards the move direction, gravity 20 m/s², no jump. Movement is camera relative
-## (Input.get_vector of the move_* actions: keyboard, gamepad and touch alike).
+## (Input.get_vector of the move_* actions: keyboard, gamepad and touch alike; the deflection only sets the direction).
 ## `action` (one key) → signal action_requested; the ExplorationScene decides between interact (focused interactable)
 ## and the field strike (start_strike: arc 100°, reach 1.8 m, 0.45 s, cooldown 0.6 s).
 ## Standalone (scene root, e.g. capture of player.tscn) it builds a small preview stage around itself.
@@ -20,6 +20,8 @@ const GRAVITY: float = 20.0
 const CAPSULE_RADIUS: float = 0.4
 const CAPSULE_HEIGHT: float = 1.7
 const STEP_INTERVAL_RUN: float = 0.36
+const ARC_FLASH_SEC: float = 0.15        # gold swoosh from the start of the hitting part of the swing
+const ARC_HEIGHT: float = 0.9
 const STEP_INTERVAL_SNEAK: float = 0.62
 const MOVE_ACTIONS: Array[StringName] = [&"move_forward", &"move_back", &"move_left", &"move_right", &"sneak",
 	&"action"]
@@ -35,6 +37,7 @@ var _step_t: float = 0.0
 var _anim_t: float = 0.0
 var _sneaking: bool = false
 var _standalone: bool = false
+var _arc: MeshInstance3D = null           # field-strike swoosh (100°, 1.8 m), visible ARC_FLASH_SEC
 
 
 func _ready() -> void:
@@ -52,6 +55,15 @@ func _ready() -> void:
 		add_child(cs)
 	if rig == null:
 		_build_rig()
+	if _arc == null:
+		_arc = MeshInstance3D.new()
+		_arc.name = "StrikeArc"
+		_arc.mesh = FB.strike_arc_mesh()
+		_arc.material_override = FB.beam(FB.HYPE_GOLD, 0.9)
+		_arc.position = Vector3(0.0, ARC_HEIGHT, 0.0)
+		_arc.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_arc.visible = false
+		add_child(_arc)
 	_standalone = get_parent() == get_tree().root
 	if _standalone:
 		_build_preview_stage()
@@ -88,6 +100,8 @@ func _physics_process(delta: float) -> void:
 		_strike_t += delta
 		if _strike_t > Rules.STRIKE_DURATION:
 			_strike_t = -1.0
+	if _arc != null:
+		_arc.visible = _strike_t >= Rules.STRIKE_HIT_FROM and _strike_t <= Rules.STRIKE_HIT_FROM + ARC_FLASH_SEC
 	if grace_left > 0.0:
 		grace_left = maxf(0.0, grace_left - delta)
 		if rig != null:
@@ -101,7 +115,9 @@ func _physics_process(delta: float) -> void:
 	var strength: float = minf(1.0, input.length())
 	var horizontal: Vector3 = Vector3(velocity.x, 0.0, velocity.z)
 	if strength > 0.01:
-		var want: Vector3 = dir.normalized() * max_speed * strength
+		# Two speeds only (GDD §2.1, TECH §7.3/§10.3): the stick gives the direction, `sneak` the speed (the touch
+		# joystick holds `sneak` itself at a deflection ≤ 0.6). Never scaled by the deflection.
+		var want: Vector3 = dir.normalized() * max_speed
 		horizontal = horizontal.move_toward(want, ACCEL * delta)
 		var target_yaw: float = Rules.yaw_of(dir)
 		var diff: float = wrapf(target_yaw - rotation.y, -PI, PI)
@@ -146,7 +162,22 @@ func start_strike() -> bool:
 	Sfx.play(&"swing")
 	if rig != null and rig.has_method("play"):
 		rig.call("play", &"attack", 1.0)
+	_swing_fallback_body()
 	return true
+
+
+## Fallback figure (stub rig without animations): twist + lean the body 0.15 s out, 0.3 s back.
+func _swing_fallback_body() -> void:
+	if rig == null or not rig.has_meta(FB.META_FALLBACK) or not is_inside_tree():
+		return
+	var body: Node3D = rig.get_node_or_null("FallbackBody") as Node3D
+	if body == null:
+		return
+	var tw: Tween = create_tween().set_parallel(true)
+	tw.tween_property(body, "rotation:y", -0.7, 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.tween_property(body, "rotation:x", -0.25, 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.chain().tween_property(body, "rotation:y", 0.0, 0.3).set_trans(Tween.TRANS_SINE)
+	tw.parallel().tween_property(body, "rotation:x", 0.0, 0.3).set_trans(Tween.TRANS_SINE)
 
 
 ## True during the hitting part of the swing.
@@ -197,6 +228,8 @@ func release_inputs() -> void:
 			Input.action_release(a)
 	velocity = Vector3.ZERO
 	_strike_t = -1.0
+	if _arc != null:
+		_arc.visible = false
 
 
 ## Preview stage for standalone instancing (capture of player.tscn): floor, light, camera.

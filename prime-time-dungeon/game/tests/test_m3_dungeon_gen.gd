@@ -7,7 +7,7 @@ const SEEDS: int = 200
 const MAX_AVG_MS: float = 20.0
 
 
-# --- helpers -----------------------------------------------------------------------------------------------------------
+# --- helpers ----------------------------------------------------------------------------------------------------------
 
 func _encounters() -> Array:
 	return [
@@ -70,7 +70,8 @@ func _layout_def() -> FloorDef:
 		"events": [{"id": "fev_t_drone", "type": "photo_drone", "cell": [2, 0], "offset": [2.0, 0.0],
 			"params": {"pose_hype": 15, "pose_followers": 20, "smash_credits": 30, "smash_hype": -5}}],
 		"spawners": [{"zone": "zone_a", "pool": ["enc_t_near"], "interval_sec": 90}],
-		"safe_rooms": [{"id": "sr_t_kiosk", "cell": [0, 1], "name": "Kiosk", "theme": "kiosk", "shop": ["itm_bandage"]}],
+		"safe_rooms": [{"id": "sr_t_kiosk", "cell": [0, 1], "name": "Kiosk", "theme": "kiosk",
+			"shop": ["itm_bandage"]}],
 		"stairs": {"cell": [1, 0]},
 	}
 	return FloorDef.from_dict({"id": "floor_1", "index": 1, "name": "Fixture", "theme": "metro", "timer_seconds": 600,
@@ -144,9 +145,20 @@ func _check_procedural(l: FloorLayout, def: FloorDef, tag: String) -> void:
 		assert_eq(ch.type, "wood", tag + " chest type")
 		assert_eq(l.cell_at(ch.cell).kind, RoomCell.Kind.NORMAL, tag + " chest in a NORMAL cell")
 		assert_true(ch.offset.length() >= DungeonGenerator.CHEST_MIN_RADIUS - 0.001, tag + " chest off the centre")
+	assert_eq(_group_chest_clashes(l), 0, tag + " no group within CHEST_MIN_SPACING of a chest of its room")
 
 
-# --- tests -------------------------------------------------------------------------------------------------------------
+## Group/chest pairs of one cell closer than CHEST_MIN_SPACING (a group would spawn inside the chest's blocker).
+static func _group_chest_clashes(l: FloorLayout) -> int:
+	var n: int = 0
+	for e: EnemySpawn in l.enemies:
+		for ch: ChestSpawn in l.chests:
+			if ch.cell == e.cell and ch.offset.distance_to(e.offset) < DungeonGenerator.CHEST_MIN_SPACING - 0.001:
+				n += 1
+	return n
+
+
+# --- tests ------------------------------------------------------------------------------------------------------------
 
 func test_room_size_matches_env_kit() -> void:
 	assert_almost(FloorLayout.ROOM_SIZE, EnvKit.ROOM_SIZE)
@@ -429,6 +441,27 @@ func test_procedural_configurations() -> void:
 				assert_eq(l.quarter_boss, Vector2i(-1, -1))
 			if def.floor_boss == "":
 				assert_eq(l.floor_boss, Vector2i(-1, -1))
+
+
+## Few rooms, many groups and chests: second groups (SECOND_GROUP_OFFSET, turned away from chests) really occur.
+func test_second_groups_keep_clear_of_chests() -> void:
+	var def: FloorDef = _proc_def({"rooms": {"min": 12, "max": 14}, "enemy_groups": {"min": 7, "max": 9},
+		"chests": {"min": 5, "max": 8}, "safe_rooms": 1})
+	var second: int = 0
+	for i in 40:
+		var fseed: int = SeedUtil.derive(5000 + i, "floor", 2)
+		var l: FloorLayout = DungeonGenerator.generate(def, fseed)
+		var errs: PackedStringArray = l.validate()
+		if not errs.is_empty():
+			fail("seed %d invalid: %s" % [fseed, "; ".join(errs)])
+			continue
+		_check_procedural(l, def, "seed %d:" % fseed)
+		for e: EnemySpawn in l.enemies:
+			if not e.is_boss and e.offset != Vector2.ZERO:
+				second += 1
+				assert_almost(e.offset.length(), DungeonGenerator.SECOND_GROUP_OFFSET.length(), 0.001,
+					"second group offset is a turned SECOND_GROUP_OFFSET")
+	assert_gt(second, 0, "the configuration produces second groups in a room")
 
 
 func test_procedural_bosses_and_safe_rooms() -> void:

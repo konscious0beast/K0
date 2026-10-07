@@ -32,9 +32,17 @@ const LOG_SIZE: int = 64
 const ZONE_ENV_SEC: float = 1.2
 const NO_CELL: Vector2i = Vector2i(-999, -999)
 const CAPTURE_STEP: float = 4.0         # capture mode: Kai starts 4 m towards the first door of the start room
+const BOSS_EXTRA_ARM: float = 1.5       # boss rooms: longer arm so the large boss figure stays in the frame
+const HITSTOP_SEC: float = 0.07         # field strike hit: 70 ms freeze + flash before the battle transition
+const REVEAL_BEAT_SEC: float = 0.25     # pause after an event prop animation before its result is shown
+const MARKER_LIFT: float = 0.3          # focus marker above the focused object's visual top
 
 ## Tests may switch this off: encounters then only emit Events.encounter_triggered (no Game/Router battle start).
 var auto_start_battle: bool = true
+## Test hook: false → event outcomes (toast, gate, encounter) follow at once instead of after the prop animation.
+var reveal_waits: bool = true
+## Freeze + white flash on the struck group before the battle starts (0 = none).
+var hitstop_sec: float = HITSTOP_SEC
 
 var _params: Dictionary = {}
 var _layout: FloorLayout = null
@@ -55,6 +63,9 @@ var _enemies: Dictionary = {}           # group id → EnemyActor
 var _interactables: Array[Interactable] = []
 var _gates: Dictionary = {}             # gate key → GateInteractable
 var _focused: Interactable = null
+var _marker: MeshInstance3D = null      # bobbing HYPE_GOLD prism above the focused interactable
+var _marker_t: float = 0.0
+var _revealing: bool = false
 var _dialog: ChoiceDialog = null
 var _cur_cell: Vector2i = NO_CELL
 var _cur_zone: String = ""
@@ -66,6 +77,7 @@ var _log: Array[ExploreEvent] = []
 var _last_prompt: String = ""
 var _hud_cell: Vector2i = NO_CELL
 var _hud_yaw: float = INF
+var _visible_cells: Dictionary = {}     # Vector2i → true: rooms drawn right now (current + door-linked)
 
 
 ## Stores params only: {"spawn": &"start" | &"<safe room id>", "capture": bool}
@@ -126,7 +138,8 @@ func on_resume(payload: Dictionary) -> void:
 	_encounter_pending = false
 	if not _built:
 		return
-	_freeze(false)
+	# A dialog that is still open (e.g. a debug encounter started behind it) keeps the floor frozen and the timer off.
+	_freeze(is_modal())
 	if payload.has("battle_result"):
 		_after_battle(payload["battle_result"] as BattleResult)
 	elif payload.has("from_safe_room"):
@@ -139,14 +152,15 @@ func on_resume(payload: Dictionary) -> void:
 	_last_prompt = "<refresh>"
 	Events.overlay_mode_requested.emit(&"explore")
 	Sfx.music(StringName(_def.music) if _def.music != "" else &"explore")
-	Game.timer_running = true
+	Game.timer_running = not is_modal()
 	_update_quest_hud()
 
 
 ## "" → nearest living non-boss group; same path as contact (NORMAL);
 ## no living group left → first non-boss encounter of the floor with group_id "".
 func force_encounter(group_id: String = "") -> void:
-	if not _built:
+	# Never behind a blocking dialog / during an outcome reveal or while suspended (GDD §2.6: dialogs block).
+	if not _built or is_modal() or _suspended:
 		return
 	if group_id != "":
 		var actor: EnemyActor = _actor_at(group_id)
@@ -192,7 +206,7 @@ func get_player_cell() -> Vector2i:
 	return _layout.world_to_cell(get_player_position())
 
 
-# --- additional helpers (debug overlay, tests, autoplay) ---------------------------------------------------------------
+# --- additional helpers (debug overlay, tests, autoplay) --------------------------------------------------------------
 
 func get_player() -> PlayerBody:
 	return _player
@@ -235,8 +249,9 @@ func active_dialog() -> ChoiceDialog:
 	return _dialog if is_instance_valid(_dialog) else null
 
 
+## A choice dialog is open or an event outcome is still being revealed (prop animation before the result).
 func is_modal() -> bool:
-	return active_dialog() != null
+	return active_dialog() != null or _revealing
 
 
 func is_encounter_pending() -> bool:
@@ -280,7 +295,7 @@ func _build_world() -> void:
 	_actors_root.name = "Actors"
 	_world.add_child(_actors_root)
 	_builder.build_rooms(_rooms_root)
-	_builder.build_camera_blockers(_world)
+	_builder.build_door_lintels(_world)
 	var fr: FloorRun = Game.state.floor_run
 	var k: int = 0
 	for g: Dictionary in _layout.gates:
@@ -344,6 +359,10 @@ func _build_actors() -> void:
 	_actors_root.add_child(_companion)
 	_camera = CameraRig.new()
 	_camera.target = _player
+	for it: Interactable in _interactables:
+		var blocker: StaticBody3D = it.get_node_or_null("Blocker") as StaticBody3D
+		if blocker != null and not it is GateInteractable:
+			_camera.exclude.append(blocker.get_rid())
 	add_child(_camera)
 	for e: EnemySpawn in _layout.enemies:
 		if not _is_defeated(e):
@@ -555,16 +574,19 @@ func _on_enemy_state_changed(group_id: String, state: StringName) -> void:
 # Frame update
 # ======================================================================================================================
 
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	if not _built or _suspended:
 		return
+	_marker_t += delta
 	_player.camera_yaw = _camera.yaw
 	if _player.global_position.y < FALL_LIMIT_Y:
 		var c: Vector2i = _cur_cell if _cur_cell != NO_CELL else _layout.start
 		_player.teleport(_layout.cell_to_world(c) + Vector3(0.0, 0.5, 0.0), _player.rotation.y)
 		_companion.snap_behind()
 	_update_room(false)
+	_update_actor_visibility()
 	_update_focus()
+	_place_marker()
 	_check_strike()
 	if _hud != null:
 		var yaw: float = _player.rotation.y
@@ -587,6 +609,43 @@ func _update_room(force: bool) -> void:
 	_log_event(ExploreEvent.Type.ROOM_ENTERED, {"cell": [cell.x, cell.y], "kind": RoomCell.kind_to_string(rc.kind),
 		"first_visit": first})
 	_zone_environment(cell)
+	_apply_room_visibility(cell)
+	if _camera != null:
+		var boss_room: bool = rc.kind == RoomCell.Kind.QUARTER_BOSS or rc.kind == RoomCell.Kind.FLOOR_BOSS
+		_camera.frame_extra_arm = BOSS_EXTRA_ARM if boss_room else 0.0
+
+
+## Only the current room and the rooms linked to it by a door are drawn: rooms have no ceiling, so the high camera
+## would otherwise show wall tops, floors, props and actors of every room around (03_ART §6.1 "darüber
+## Fog/Hintergrund"). Visual only — collisions, physics and AI keep running everywhere.
+func _apply_room_visibility(cell: Vector2i) -> void:
+	_visible_cells.clear()
+	_visible_cells[cell] = true
+	for n: Vector2i in _layout.linked(cell):
+		_visible_cells[n] = true
+	for c: Variant in _builder.rooms.keys():
+		var room: Node3D = _builder.rooms[c] as Node3D
+		if room != null and is_instance_valid(room):
+			room.visible = _visible_cells.has(c)
+	for it: Interactable in _interactables:
+		if not is_instance_valid(it):
+			continue
+		var shown: bool = false
+		for c: Vector2i in it.occupied_cells(_layout):
+			shown = shown or _visible_cells.has(c)
+		it.visible = shown
+	_update_actor_visibility()
+
+
+func is_cell_shown(cell: Vector2i) -> bool:
+	return _visible_cells.has(cell)
+
+
+func _update_actor_visibility() -> void:
+	for gid: Variant in _enemies.keys():
+		var a: EnemyActor = _actor_at(gid)
+		if a != null:
+			a.visible = _visible_cells.has(_layout.world_to_cell(a.global_position))
 
 
 ## Zone palettes override the floor palette (§4.4.7): fog/background and ambient blend to the zone of the room.
@@ -599,17 +658,16 @@ func _zone_environment(cell: Vector2i) -> void:
 	_cur_zone = rc.zone
 	var env: Environment = _env.environment
 	var pal: Dictionary = _layout.zone_palette(cell, _def.palette)
-	var fog: Color = FB.col(pal, "fog", env.background_color)
+	var fog: Color = FB.col(pal, "fog", env.fog_light_color)
 	var amb: Color = FB.col(pal, "ambient", env.ambient_light_color)
-	if _env_fallback:
-		amb = amb.lightened(0.3)
+	var bg: Color = FB.background_of(fog)          # 03_ART §4.2: background = fog × 0.6
 	if first or not is_inside_tree():
-		env.background_color = fog
+		env.background_color = bg
 		env.fog_light_color = fog
 		env.ambient_light_color = amb
 		return
 	var tw: Tween = create_tween().set_parallel(true)
-	tw.tween_property(env, "background_color", fog, ZONE_ENV_SEC)
+	tw.tween_property(env, "background_color", bg, ZONE_ENV_SEC)
 	tw.tween_property(env, "fog_light_color", fog, ZONE_ENV_SEC)
 	tw.tween_property(env, "ambient_light_color", amb, ZONE_ENV_SEC)
 
@@ -631,13 +689,36 @@ func _update_focus() -> void:
 	_set_focus(best)
 
 
+## Focus = HUD prompt + in-world highlight (cyan outline on the prop, bobbing gold marker above it; GDD §14.3
+## "Interaktionsprompt über Objekt" — the HUD prompt itself has no world anchor yet, see ExplorationHud).
 func _set_focus(it: Interactable) -> void:
+	if it != _focused:
+		if _focused != null and is_instance_valid(_focused):
+			_focused.set_highlight(false)
+		if it != null:
+			it.set_highlight(true)
 	_focused = it
+	_place_marker()
 	var prompt: String = it.prompt_text() if it != null else ""
 	if prompt != _last_prompt:
 		_last_prompt = prompt
 		if _hud != null:
 			_hud.set_prompt(prompt)
+
+
+func _place_marker() -> void:
+	if _marker == null:
+		if _world == null:
+			return
+		_marker = FB.focus_marker()
+		_marker.name = "FocusMarker"
+		_world.add_child(_marker)
+	var it: Interactable = _focused if _focused != null and is_instance_valid(_focused) else null
+	_marker.visible = it != null
+	if it != null:
+		var bob: float = sin(_marker_t * TAU * 1.2) * 0.08
+		_marker.global_position = it.marker_position() + Vector3(0.0, MARKER_LIFT + bob, 0.0)
+		_marker.rotation = Vector3(PI, _marker_t * 2.0, 0.0)
 
 
 func _on_player_action() -> void:
@@ -672,7 +753,28 @@ func _check_strike() -> void:
 	if hit != null:
 		var adv: int = Rules.strike_advantage(hit.state, hit.global_position, hit.flat_forward(), pos, hit.is_boss(),
 			Balance.BACK_DOT)
+		_strike_hit(hit, adv)
+
+
+## Hit confirm: everything freezes for hitstop_sec while the struck group flashes white, then the battle starts.
+func _strike_hit(hit: EnemyActor, adv: int) -> void:
+	if hitstop_sec <= 0.0 or not is_inside_tree():
 		_trigger_encounter(hit.group_id(), hit.encounter_id(), adv)
+		return
+	_encounter_pending = true
+	_freeze(true)
+	_set_focus(null)
+	FB.flash_rig(hit.rig, hitstop_sec + 0.05)
+	Sfx.play(&"hit")
+	get_tree().create_timer(hitstop_sec).timeout.connect(_after_hitstop.bind(hit.group_id(), hit.encounter_id(), adv))
+
+
+func _after_hitstop(group_id: String, encounter_id: String, advantage: int) -> void:
+	_encounter_pending = false
+	if not is_inside_tree() or _suspended:
+		_freeze(_suspended or is_modal())
+		return
+	_trigger_encounter(group_id, encounter_id, advantage)
 
 
 ## Contact ≤ 1.1 m (EnemyActor) or a boss trigger radius.
@@ -787,7 +889,8 @@ func open_gate_visual(key: String) -> void:
 func open_event_dialog(ev_it: EventInteractable) -> void:
 	if is_modal() or _encounter_pending or ev_it == null:
 		return
-	_open_dialog(ev_it.title(), ev_it.description(), ev_it.options(), _on_event_choice.bind(ev_it))
+	_open_dialog(ev_it.title(), ev_it.description(), ev_it.options(), _on_event_choice.bind(ev_it),
+		ev_it.default_choice())
 
 
 func _on_event_choice(choice: String, ev_it: EventInteractable) -> void:
@@ -796,10 +899,31 @@ func _on_event_choice(choice: String, ev_it: EventInteractable) -> void:
 	var outcome: Dictionary = Game.apply_floor_event(ev_it.ev.id, choice)
 	_log_event(ExploreEvent.Type.EVENT_CHOICE, {"event_id": ev_it.ev.id, "choice": choice,
 		"completed": bool(outcome.get("completed", false))})
-	var text: String = ev_it.outcome_text(choice, outcome)
-	if text != "":
-		Events.toast_requested.emit(text, &"event")
-	ev_it.play_outcome(choice, outcome)
+	var wait: float = ev_it.play_outcome(choice, outcome)
+	if wait > 0.0 and reveal_waits and is_inside_tree():
+		# Reveal: Kai and the groups stay frozen (timer paused) while the prop plays, then a short beat, then the
+		# result toast / gate / encounter.
+		_revealing = true
+		_set_modal(true)
+		get_tree().create_timer(wait + REVEAL_BEAT_SEC).timeout.connect(
+			_finish_event_choice.bind(choice, outcome, ev_it))
+		return
+	_finish_event_choice(choice, outcome, ev_it)
+
+
+func is_revealing() -> bool:
+	return _revealing
+
+
+func _finish_event_choice(choice: String, outcome: Dictionary, ev_it: EventInteractable) -> void:
+	if _revealing:
+		_revealing = false
+		if not _suspended:
+			_set_modal(false)
+	if is_instance_valid(ev_it):
+		var text: String = ev_it.outcome_text(choice, outcome)
+		if text != "":
+			Events.toast_requested.emit(text, &"event")
 	var gate_key: String = str(outcome.get("open_gate", ""))
 	if gate_key != "":
 		open_gate_visual(gate_key)
@@ -813,8 +937,8 @@ func open_stairs_dialog() -> void:
 		return
 	var opts: Array[Dictionary] = [{"id": "descend", "label": tr("Abstieg"), "enabled": true},
 		{"id": "stay", "label": tr("Noch nicht"), "enabled": true}]
-	_open_dialog(tr("Treppe nach unten"), tr("Etage verlassen? Offene Truhen und der Etagenboss bleiben zurück."), opts,
-		_on_stairs_choice)
+	_open_dialog(tr("Treppe nach unten"), tr("Etage verlassen? Offene Truhen und der Etagenboss bleiben zurück."),
+		opts, _on_stairs_choice, "stay")
 
 
 func _on_stairs_choice(choice: String) -> void:
@@ -835,12 +959,13 @@ func enter_safe_room(safe_room_id: String) -> void:
 	Router.enter_safe_room(safe_room_id)
 
 
-## Modal choice dialog (timer paused, enemies / Kai frozen while it is open).
-func _open_dialog(title: String, text: String, options: Array[Dictionary], callback: Callable) -> void:
+## Modal choice dialog (timer paused, enemies / Kai frozen while it is open); `default_id` = the safe option.
+func _open_dialog(title: String, text: String, options: Array[Dictionary], callback: Callable,
+		default_id: String = "") -> void:
 	var dlg: ChoiceDialog = ChoiceDialog.new()
 	_dialog = dlg
 	add_child(dlg)
-	dlg.open(title, text, options)
+	dlg.open(title, text, options, default_id)
 	dlg.chosen.connect(_on_dialog_chosen.bind(callback))
 	_set_modal(true)
 

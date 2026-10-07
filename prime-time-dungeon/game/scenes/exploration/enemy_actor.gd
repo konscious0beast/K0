@@ -27,7 +27,6 @@ const HOME_EPS: float = 0.35
 const TURN_RATE: float = 6.0
 const GRAVITY: float = 20.0
 const EYE_HEIGHT: float = 1.0
-const CHASE_SIGHT_MULT: float = 1.5    # while chasing, line of sight counts within 1.5 × sight_range (any direction)
 
 var spawn: EnemySpawn = null
 var explore: Dictionary = {}
@@ -50,6 +49,8 @@ var _wp_index: int = 0
 var _circle_angle: float = 0.0
 var _anim_t: float = 0.0
 var _bubble: Label3D = null
+var _zz: Label3D = null
+var _zz_base_y: float = 0.0
 var _preview: bool = false
 
 
@@ -161,7 +162,9 @@ func _physics_process(delta: float) -> void:
 				_set_state(CHASE)
 		CHASE:
 			_chase_t += delta
-			var sees: bool = not hidden and _has_line_of_sight(kai, float(explore["sight_range"]) * CHASE_SIGHT_MULT)
+			# Same sight as when idle (§7.3: cone sight_range / sight_angle_deg + raycast); the group turns towards Kai
+			# while chasing, so the cone keeps covering him as long as he does not break line of sight.
+			var sees: bool = not hidden and _sees(kai)
 			_no_sight_t = 0.0 if sees else _no_sight_t + delta
 			if Rules.should_give_up(_no_sight_t, Rules.flat_dist(global_position, home), _chase_t, explore):
 				_set_state(RETURN)
@@ -214,10 +217,15 @@ func _perceives(kai: Vector3) -> bool:
 	var hear: float = Rules.hearing_radius(explore, moving, sneaking)
 	if hear > 0.0 and dist <= hear:
 		return true
-	if Rules.in_sight_cone(global_position, flat_forward(), kai, float(explore["sight_range"]),
-			float(explore["sight_angle_deg"])):
-		return _has_line_of_sight(kai, float(explore["sight_range"]))
-	return false
+	return _sees(kai)
+
+
+## Sight only: inside the cone (sight_range / sight_angle_deg) and an unblocked ray (layer `world`).
+func _sees(kai: Vector3) -> bool:
+	var rng: float = float(explore["sight_range"])
+	if not Rules.in_sight_cone(global_position, flat_forward(), kai, rng, float(explore["sight_angle_deg"])):
+		return false
+	return _has_line_of_sight(kai, rng)
 
 
 func _has_line_of_sight(kai: Vector3, max_dist: float) -> bool:
@@ -271,6 +279,7 @@ func _set_state(s: StringName) -> void:
 	if _bubble != null:
 		_bubble.visible = s == ALERT or s == CHASE
 		_bubble.text = "!" if s == ALERT else "!!"
+	_update_zz()
 	if s == ALERT:
 		Events.enemy_alerted.emit(group_id())
 	if spawn != null:
@@ -301,11 +310,21 @@ func _angle_on_circle() -> float:
 
 
 func _animate(speed: float) -> void:
+	_update_zz()
 	if rig == null:
 		return
 	if rig.has_method("set_locomotion"):
 		rig.call("set_locomotion", speed)
 	FB.animate_character(rig, _anim_t, speed)
+
+
+## "Z z" only while asleep (hidden from ALERT on); slow bob.
+func _update_zz() -> void:
+	if _zz == null:
+		return
+	_zz.visible = is_asleep()
+	if _zz.visible:
+		_zz.position.y = _zz_base_y + sin(_anim_t * 1.6) * 0.08
 
 
 func _build_visual(def: EnemyDef) -> void:
@@ -328,23 +347,12 @@ func _build_visual(def: EnemyDef) -> void:
 		cs.shape = cap
 		cs.position = Vector3(0.0, cap.height * 0.5, 0.0)
 		add_child(cs)
-	# Group size pips (GDD §2.3: small shadow icons above the head).
-	var pips: Node3D = Node3D.new()
+	# Group size pips (GDD §2.3: small shadow icons above the head): INK discs with a PAPER rim (bosses DANGER) on a
+	# camera-facing INK plate, drawn over everything — readable on every zone palette.
+	var pips: MeshInstance3D = FB.build_pips(group_size, is_boss())
 	pips.name = "GroupPips"
 	pips.position = Vector3(0.0, top + 0.35, 0.0)
 	add_child(pips)
-	var pip_mesh: SphereMesh = SphereMesh.new()
-	pip_mesh.radius = 0.085
-	pip_mesh.height = 0.17
-	pip_mesh.radial_segments = 8
-	pip_mesh.rings = 4
-	for i in group_size:
-		var mi: MeshInstance3D = MeshInstance3D.new()
-		mi.mesh = pip_mesh
-		mi.material_override = FB.glow(Color("#ff4d4d") if is_boss() else Color("#2a1f36"), 1.0)
-		mi.position = Vector3((i - (group_size - 1) * 0.5) * 0.24, 0.0, 0.0)
-		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		pips.add_child(mi)
 	_bubble = Label3D.new()
 	_bubble.name = "AlertBubble"
 	_bubble.text = "!"
@@ -358,6 +366,20 @@ func _build_visual(def: EnemyDef) -> void:
 	_bubble.position = Vector3(0.0, top + 0.8, 0.0)
 	_bubble.visible = false
 	add_child(_bubble)
+	# Sleeping groups (tutorial rats, GDD B1): a slow "Z z" so the player learns to sneak up and strike first.
+	_zz = Label3D.new()
+	_zz.name = "SleepZz"
+	_zz.text = "Z z"
+	_zz.font_size = 64
+	_zz.outline_size = 12
+	_zz.modulate = Color(FB.PAPER, 0.5)
+	_zz.outline_modulate = Color(FB.INK, 0.5)
+	_zz.pixel_size = 0.006
+	_zz.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_zz.position = Vector3(0.15, top + 0.75, 0.0)
+	_zz_base_y = _zz.position.y
+	add_child(_zz)
+	_update_zz()
 
 
 ## Standalone preview (capture of enemy_actor.tscn): first enemy of the data in ALERT pose on a small stage.

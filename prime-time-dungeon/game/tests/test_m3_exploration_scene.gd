@@ -1,23 +1,36 @@
 extends TestCase
 ## ExplorationScene (02_TECH §7.3, §9.2, §11.5): headless instancing, spawn not inside a wall, room changes,
 ## force_encounter → Events.encounter_triggered (signal spy) and — once BattleBridge is real — Router → BattleScene,
-## interactions (chest, event dialog, stairs dialog), suspend/resume protocol, safe-room return, strays, movement,
-## companion and camera. Generic over the floor_1 data (cells are looked up by kind, not hard-coded).
+## interactions (chest, gates, event dialog, stairs dialog), suspend/resume protocol, safe-room return, strays,
+## movement speeds, companion, camera, the enemy state machine and the fallback visuals.
+## Independent of the M7 content: every test runs on fixture_game_data() (the real tables with floor_1 replaced by a
+## small fixture floor that has every placement type); test_real_floor_1_builds checks the real floor_1 once.
 
 const Rules := preload("res://scenes/exploration/encounter_rules.gd")
 const EnemyActor := preload("res://scenes/exploration/enemy_actor.gd")
 const GateInteractable := preload("res://scenes/exploration/gate_interactable.gd")
+const EventInteractable := preload("res://scenes/exploration/event_interactable.gd")
+const PlayerBody := preload("res://scenes/exploration/player_controller.gd")
+const FB := preload("res://scenes/exploration/fallback_art.gd")
 const SCENE: String = "res://scenes/exploration/exploration.tscn"
 const ROUTER_FIXTURE: String = "res://tests/fixtures/router/router_screen.tscn"
 const STUB_HEADER: String = "# STUB(M0)"
 const MAX_FRAMES: int = 240
 
 var _spy: Array[Array] = []
+var _saved_data: GameData = null
+
+static var _fixture: GameData = null
 
 
 func before_each() -> void:
 	Engine.time_scale = 8.0
 	_spy.clear()
+	_saved_data = DB.data
+	if _fixture == null:
+		_fixture = fixture_game_data()
+	if _fixture != null:
+		DB.data = _fixture
 	Game.new_game(0, "Kai", 4242)
 
 
@@ -37,6 +50,116 @@ func after_each() -> void:
 			cur.free()
 	Router.adopt(null)
 	Game.timer_running = false
+	_stop_audio()
+	if _saved_data != null:
+		DB.data = _saved_data
+
+
+## Stops every Sfx / music player, so no playback is still alive when the runner quits (ObjectDB leak at exit).
+func _stop_audio() -> void:
+	Sfx.music(&"", 0.0)
+	var sfx: Node = tree.root.get_node_or_null("Sfx")
+	if sfx == null:
+		return
+	for c: Node in sfx.get_children():
+		if c is AudioStreamPlayer:
+			(c as AudioStreamPlayer).stop()
+			(c as AudioStreamPlayer).stream = null
+
+
+# --- fixture data -----------------------------------------------------------------------------------------------------
+
+## The real tables (res://data) with floor_1 replaced by the fixture floor below; null + fail on a data error.
+##   y=4        [3,4 n]   [4,4 n]          key gate (3,5)↑(3,4): itm_key_master · event gate (4,5)↑(4,4): fev_t_lever
+##                 ╪         ╪
+##   y=5  [2,5 T]-[3,5 n]   [4,5 n]        T stairs, S safe room, n normal, * start
+##                 |         |
+##   y=6  [2,6 S]-[3,6 n]-[4,6 n]
+##                 |
+##   y=7          [3,7 *]
+static func fixture_game_data() -> GameData:
+	var raw: Dictionary = {}
+	for t: String in GameData.TABLES:
+		var f: FileAccess = FileAccess.open("res://data/%s.json" % t, FileAccess.READ)
+		var parsed: Variant = JSON.parse_string(f.get_as_text()) if f != null else null
+		raw[t] = parsed if parsed is Dictionary else {"schema": 1, "entries": []}
+	var floors: Array = (raw["floors"] as Dictionary).get("entries", [])
+	var base: Dictionary = {}
+	for i in floors.size():
+		if str((floors[i] as Dictionary).get("id", "")) == "floor_1":
+			base = floors[i]
+			floors.remove_at(i)
+			break
+	floors.insert(0, fixture_floor(base))
+	var data: GameData = GameData.new()
+	if not data.load_from_tables(raw, "m3_fixture"):
+		printerr("Assertion failed: m3 fixture data invalid: " + "; ".join(data.errors))
+		return null
+	return data
+
+
+static func fixture_floor(base: Dictionary) -> Dictionary:
+	var f: Dictionary = base.duplicate(true)
+	f["id"] = "floor_1"
+	f["index"] = 1
+	f["timer_start_after"] = "enc_t_tutorial"
+	f["grid"] = {"w": 8, "h": 8}
+	f["encounters"] = [
+		{"id": "enc_t_tutorial", "enemies": ["enm_kanalratte", "enm_kanalratte"], "weight": 0, "tutorial": true},
+		{"id": "enc_t_patrol", "enemies": ["enm_kanalratte"], "weight": 0}]
+	var wheel_table: Array = [
+		{"weight": 35, "kind": "item", "id": "itm_bandage", "amount": 2},
+		{"weight": 25, "kind": "credits", "id": "", "amount": 50},
+		{"weight": 15, "kind": "box", "id": "box_bronze", "amount": 1},
+		{"weight": 15, "kind": "nothing", "id": "", "amount": 1},
+		{"weight": 10, "kind": "encounter", "id": "enc_t_patrol", "amount": 1}]
+	f["layout"] = {
+		"zones": [
+			{"id": "zone_a", "name": "Bahnsteig", "palette": {"floor": "#3a3f4b", "wall": "#1f5f66",
+				"accent": "#ff2e88", "light": "#ffd59e", "fog": "#1a1430", "ambient": "#2a2440"}},
+			{"id": "zone_b", "name": "Kanal", "palette": {"floor": "#24302c", "wall": "#3b4a3f", "accent": "#7cc242",
+				"light": "#b8f0c8", "fog": "#12302a", "ambient": "#1e3530"}}],
+		"cells": [
+			{"x": 3, "y": 7, "zone": "zone_a", "kind": "start", "doors": "N"},
+			{"x": 3, "y": 6, "zone": "zone_a", "kind": "normal", "doors": "NESW"},
+			{"x": 2, "y": 6, "zone": "zone_a", "kind": "safe", "doors": "E"},
+			{"x": 3, "y": 5, "zone": "zone_a", "kind": "normal", "doors": "NSW"},
+			{"x": 2, "y": 5, "zone": "zone_a", "kind": "stairs", "doors": "E"},
+			{"x": 3, "y": 4, "zone": "zone_b", "kind": "normal", "doors": "S"},
+			{"x": 4, "y": 6, "zone": "zone_b", "kind": "normal", "doors": "NW"},
+			{"x": 4, "y": 5, "zone": "zone_b", "kind": "normal", "doors": "NS"},
+			{"x": 4, "y": 4, "zone": "zone_b", "kind": "normal", "doors": "S"}],
+		"gates": [{"cell": [3, 5], "dir": "N", "requires": "itm_key_master"},
+			{"cell": [4, 5], "dir": "N", "requires": "event:fev_t_lever"}],
+		"encounters_placed": [
+			{"group_id": "f1_g0", "enc_id": "enc_t_tutorial", "cell": [3, 6], "offset": [0.0, -2.5], "state": "IDLE",
+				"turn": false, "waypoints": []},
+			{"group_id": "f1_g1", "enc_id": "enc_t_patrol", "cell": [3, 5], "offset": [0.0, 0.0], "state": "PATROL",
+				"turn": true, "waypoints": []}],
+		"chests": [
+			{"id": "f1_c0", "cell": [4, 6], "offset": [-3.5, -3.5], "type": "wood", "contents": []},
+			{"id": "f1_c1", "cell": [3, 4], "offset": [3.0, -3.0], "type": "metal",
+				"contents": [{"kind": "credits", "id": "", "amount": 40}]},
+			{"id": "f1_c2", "cell": [4, 4], "offset": [0.0, -3.0], "type": "locked",
+				"contents": [{"kind": "item", "id": "itm_bandage", "amount": 2}]}],
+		"events": [
+			{"id": "fev_t_drone", "type": "photo_drone", "cell": [4, 6], "offset": [0.0, 0.0],
+				"params": {"pose_hype": 15, "pose_followers": 20, "smash_credits": 30, "smash_hype": -5}},
+			{"id": "fev_t_wheel", "type": "wheel", "cell": [4, 6], "offset": [3.5, -3.0],
+				"params": {"cost": 20, "max_spins": 3, "table": wheel_table}},
+			{"id": "fev_t_candidate", "type": "lost_candidate", "cell": [4, 6], "offset": [-3.0, 3.0],
+				"params": {"tag": "heal", "reward_item": "itm_antidote", "followers": 40}},
+			{"id": "fev_t_lever", "type": "lever", "cell": [4, 5], "offset": [3.0, 2.0],
+				"params": {"success": 0.6, "gate": "4,5,N", "flood_pct": 15, "encounter": "enc_t_patrol"}},
+			{"id": "fev_t_vending", "type": "broken_vending", "cell": [3, 4], "offset": [-3.0, -2.0],
+				"params": {"base": 0.5, "per_lck": 0.02, "reward_item": "itm_bandage", "reward_amount": 2,
+					"fail_pct": 10, "fail_hype": 4}}],
+		"spawners": [{"zone": "zone_a", "pool": ["enc_t_patrol"], "interval_sec": 90}],
+		"safe_rooms": [{"id": "sr_t_kiosk", "cell": [2, 6], "name": "Kiosk 24/7", "theme": "kiosk",
+			"shop": ["itm_bandage"]}],
+		"stairs": {"cell": [2, 5]},
+	}
+	return f
 
 
 func _record(a0: Variant = null, a1: Variant = null, a2: Variant = null) -> void:
@@ -57,6 +180,39 @@ static func _cell_center(layout: FloorLayout, c: Vector2i) -> Vector3:
 	return layout.cell_to_world(c)
 
 
+func _first_non_boss_encounter() -> String:
+	for enc: EncounterDef in Game.floor_def().encounters:
+		if not enc.boss:
+			return enc.id
+	return ""
+
+
+static func _horizontal_speed(body: CharacterBody3D) -> float:
+	return Vector2(body.velocity.x, body.velocity.z).length()
+
+
+static func _first_glow_mesh(n: Node) -> MeshInstance3D:
+	if n is MeshInstance3D:
+		var sm: ShaderMaterial = (n as MeshInstance3D).material_override as ShaderMaterial
+		if sm != null and sm.get_shader_parameter("energy") != null and sm.get_shader_parameter("pulse_speed") != null:
+			return n as MeshInstance3D
+	for c: Node in n.get_children():
+		var m: MeshInstance3D = _first_glow_mesh(c)
+		if m != null:
+			return m
+	return null
+
+
+static func _first_mesh(n: Node) -> MeshInstance3D:
+	if n is MeshInstance3D:
+		return n as MeshInstance3D
+	for c: Node in n.get_children():
+		var m: MeshInstance3D = _first_mesh(c)
+		if m != null:
+			return m
+	return null
+
+
 ## First neighbour of the start that is reachable through an open door.
 static func _start_neighbor(layout: FloorLayout) -> Vector2i:
 	var ns: Array[Vector2i] = layout.neighbors(layout.start)
@@ -68,7 +224,7 @@ func _is_stub(path: String) -> bool:
 	return f == null or f.get_line().begins_with(STUB_HEADER)
 
 
-# --- building ----------------------------------------------------------------------------------------------------------
+# --- building ---------------------------------------------------------------------------------------------------------
 
 func test_scene_builds_the_floor() -> void:
 	Events.floor_entered.connect(_record)
@@ -168,7 +324,7 @@ func test_room_change_visits_the_room() -> void:
 	assert_true(seen, "Events.room_entered(cell, kind, true)")
 
 
-# --- encounters --------------------------------------------------------------------------------------------------------
+# --- encounters -------------------------------------------------------------------------------------------------------
 
 func test_force_encounter_signal_spy_nearest_group() -> void:
 	var scene: ExplorationScene = await _make_scene()
@@ -190,7 +346,10 @@ func test_force_encounter_signal_spy_nearest_group() -> void:
 	assert_len(_spy, 1, "exactly one encounter")
 	if _spy.size() == 1:
 		assert_eq(_spy[0][0], nearest, "nearest living non-boss group")
-		assert_eq(_spy[0][1], layout.enemy_by_id(nearest).encounter_id if nearest != "" else _spy[0][1])
+		if nearest != "":
+			assert_eq(_spy[0][1], layout.enemy_by_id(nearest).encounter_id, "the group's encounter")
+		else:
+			assert_eq(_spy[0][1], _first_non_boss_encounter(), "no group: first non-boss encounter of the floor")
 		assert_eq(_spy[0][2], Rules.NORMAL, "forced encounters are NORMAL")
 	var last: ExploreEvent = scene.recent_events().back()
 	assert_eq(last.type, ExploreEvent.Type.ENCOUNTER)
@@ -215,11 +374,7 @@ func test_force_encounter_specific_and_fallback() -> void:
 	_spy.clear()
 	scene.force_encounter("")
 	Events.encounter_triggered.disconnect(_record)
-	var first_enc: String = ""
-	for enc: EncounterDef in Game.floor_def().encounters:
-		if not enc.boss:
-			first_enc = enc.id
-			break
+	var first_enc: String = _first_non_boss_encounter()
 	assert_len(_spy, 1)
 	if _spy.size() == 1:
 		assert_eq(_spy[0][0], "")
@@ -270,7 +425,8 @@ func test_contact_and_strike_advantage_rules() -> void:
 	# Arc / cone helpers.
 	assert_true(Rules.in_arc(e, north, Vector3(0.5, 0, -1.5), Rules.STRIKE_RANGE, Rules.STRIKE_ARC_DEG))
 	assert_false(Rules.in_arc(e, north, Vector3(0, 0, -1.9), Rules.STRIKE_RANGE, Rules.STRIKE_ARC_DEG), "out of reach")
-	assert_false(Rules.in_arc(e, north, Vector3(1.5, 0, -0.2), Rules.STRIKE_RANGE, Rules.STRIKE_ARC_DEG), "outside 100°")
+	assert_false(Rules.in_arc(e, north, Vector3(1.5, 0, -0.2), Rules.STRIKE_RANGE, Rules.STRIKE_ARC_DEG),
+		"outside 100°")
 	assert_almost(Rules.hearing_radius({"hear_run": 4.0, "hear_sneak": 1.5}, true, false), 4.0)
 	assert_almost(Rules.hearing_radius({"hear_run": 4.0, "hear_sneak": 1.5}, true, true), 1.5)
 	assert_true(Rules.should_give_up(4.0, 0.0, 0.0, {"giveup_no_sight": 4.0, "leash": 20.0, "max_chase": 8.0}))
@@ -331,7 +487,7 @@ func test_contact_triggers_encounter() -> void:
 		assert_ne(_spy[0][2], Rules.PREEMPTIVE, "touching the front is not a preemptive strike")
 
 
-# --- stack protocol ----------------------------------------------------------------------------------------------------
+# --- stack protocol ---------------------------------------------------------------------------------------------------
 
 func test_suspend_and_resume_after_battle() -> void:
 	var scene: ExplorationScene = await _make_scene()
@@ -397,7 +553,7 @@ func test_capture_spawn_at_safe_room_does_not_push() -> void:
 	assert_eq(Router.current, scene, "capture mode never enters the safe room")
 
 
-# --- interactions ------------------------------------------------------------------------------------------------------
+# --- interactions -----------------------------------------------------------------------------------------------------
 
 func test_chest_interaction_opens_chest() -> void:
 	var scene: ExplorationScene = await _make_scene()
@@ -471,6 +627,13 @@ func test_event_dialog_choice_and_timer_pause() -> void:
 	assert_has(Game.state.floor_run.completed_events, ev.id)
 	assert_eq(_spy.size(), 1, "Events.event_completed")
 	assert_eq(str(it.call("prompt_text")), "", "completed event has no prompt")
+	assert_true(bool(it.call("is_dimmed")), "completed event is dimmed")
+	var glow_mesh: MeshInstance3D = _first_glow_mesh(it.get_node("Prop"))
+	assert_not_null(glow_mesh, "the drone has glow parts")
+	if glow_mesh != null:
+		var sm: ShaderMaterial = glow_mesh.material_override as ShaderMaterial
+		assert_almost(float(sm.get_shader_parameter("energy")), FB.DIM_GLOW_ENERGY, 0.001, "glow off")
+		assert_almost(float(sm.get_shader_parameter("pulse_speed")), 0.0, 0.001, "no pulse")
 	var last: ExploreEvent = scene.recent_events().back()
 	assert_eq(last.type, ExploreEvent.Type.EVENT_CHOICE)
 
@@ -544,7 +707,8 @@ func test_gate_interactable_rules() -> void:
 	add_to_tree(holder)
 	var gate: GateInteractable = GateInteractable.new()
 	holder.add_child(gate)
-	gate.setup_gate({"cell": Vector2i(1, 3), "dir": RoomCell.DOOR_N, "requires": "itm_key_master", "key": "1,3,N"}, {}, 1)
+	gate.setup_gate({"cell": Vector2i(1, 3), "dir": RoomCell.DOOR_N, "requires": "itm_key_master", "key": "1,3,N"},
+		{}, 1)
 	assert_eq(gate.key, "1,3,N")
 	assert_has(gate.prompt_text(), "Benötigt", "without the key")
 	gate.interact()
@@ -600,37 +764,73 @@ func test_stray_spawn_far_from_kai() -> void:
 				assert_true(int(dist[c]) <= int(dist[cell]), "largest BFS distance to Kai")
 
 
-# --- actors ------------------------------------------------------------------------------------------------------------
+# --- actors -----------------------------------------------------------------------------------------------------------
 
 func test_enemy_patrol_alert_chase_return() -> void:
 	var scene: ExplorationScene = await _make_scene()
 	scene.auto_start_battle = false
-	var actor: EnemyActor = null
-	for gid: String in scene.living_groups():
-		var a: EnemyActor = scene.get_enemy(gid)
-		if not a.is_boss() and a.can_ambush() and not a.is_asleep():
-			actor = a
-			break
+	var actor: EnemyActor = scene.get_enemy("f1_g1")
+	assert_not_null(actor, "fixture patrol group f1_g1")
 	if actor == null:
-		skip("no mobile awake group on this floor")
 		return
-	# Kai steps into the group's sight cone (4 m in front of it) → ALERT (0.6 s telegraph) → CHASE.
+	assert_true(actor.can_ambush() and not actor.is_asleep(), "mobile and awake")
+	assert_eq(actor.state, &"PATROL")
+	var states: Array[StringName] = []
+	var home_dist: Array[float] = []
+	var on_state: Callable = func(_gid: String, st: StringName) -> void:
+		states.append(st)
+		if st == &"PATROL" and states.has(&"RETURN"):
+			home_dist.append(Rules.flat_dist(actor.global_position, actor.home))
+	actor.state_changed.connect(on_state)
 	Events.enemy_alerted.connect(_record)
+	# Kai stands 6 m in front of the group (inside its sight cone, room centre side) → ALERT (0.6 s) → CHASE.
+	actor.frozen = true
+	await wait_frames(1)
+	var center: Vector3 = scene.get_layout().cell_to_world(actor.spawn.cell)
+	var to_c: Vector3 = Rules.flat_dir(actor.global_position, center)
+	if to_c == Vector3.ZERO:
+		to_c = Vector3.FORWARD
+	actor.face(Rules.yaw_of(to_c))
+	scene.get_player().teleport(actor.global_position + to_c * 6.0 + Vector3(0.0, 0.05, 0.0), Rules.yaw_of(-to_c))
+	await wait_frames(1)
+	actor.frozen = false
+	var chased: bool = await wait_until(func() -> bool: return actor.state == &"CHASE", 3000)
+	assert_true(chased, "PATROL → ALERT → CHASE")
+	assert_false(_spy.is_empty(), "Events.enemy_alerted")
+	assert_true(states.find(&"ALERT") >= 0 and states.find(&"ALERT") < states.find(&"CHASE"), "ALERT before CHASE")
+	var d0: float = Rules.flat_dist(actor.global_position, scene.get_player_position())
+	await wait_frames(4)
+	var d1: float = Rules.flat_dist(actor.global_position, scene.get_player_position())
+	assert_lt(d1, d0, "the chasing group closes in on Kai")
+	# Kai hidden (grace) and gone → no sight for giveup_no_sight s → RETURN → back at the leash point → PATROL.
+	scene.get_player().set_grace(120.0)
+	scene.get_player().teleport(scene.get_layout().cell_to_world(scene.get_layout().start), 0.0)
+	var back: bool = await wait_until(func() -> bool: return not home_dist.is_empty(), 8000)
+	assert_true(back, "chase given up and the group walked home")
+	assert_has(states, &"RETURN")
+	if not home_dist.is_empty():
+		assert_lt(home_dist[0], EnemyActor.HOME_EPS + 0.001, "ends at its leash point (home)")
+	actor.state_changed.disconnect(on_state)
+	Events.enemy_alerted.disconnect(_record)
+
+
+func test_chasing_group_needs_the_sight_cone() -> void:
+	var scene: ExplorationScene = await _make_scene()
+	scene.auto_start_battle = false
+	var actor: EnemyActor = scene.get_enemy("f1_g1")
+	if actor == null:
+		fail("fixture patrol group f1_g1 missing")
+		return
 	actor.frozen = true
 	await wait_frames(1)
 	var fwd: Vector3 = actor.flat_forward()
-	var spot: Vector3 = actor.global_position + fwd * 4.0
-	scene.get_player().teleport(spot, Rules.yaw_of(-fwd))
-	actor.frozen = false
-	await wait_until(func() -> bool: return actor.state == &"ALERT" or actor.state == &"CHASE", 120)
-	Events.enemy_alerted.disconnect(_record)
-	assert_false(_spy.is_empty(), "Events.enemy_alerted")
-	# Hide Kai (grace) → the group loses sight and returns home.
-	scene.get_player().set_grace(30.0)
-	scene.get_player().teleport(scene.get_layout().cell_to_world(scene.get_layout().start), 0.0)
-	var ok: bool = await wait_until(func() -> bool: return actor.state == &"RETURN" or actor.state == &"PATROL" \
-		or actor.state == &"IDLE", 400)
-	assert_true(ok, "chase given up")
+	# 3 m straight behind the group: outside the 110° cone, beyond hearing while Kai stands → no sight.
+	scene.get_player().teleport(actor.global_position - fwd * 3.0 + Vector3(0.0, 0.05, 0.0), Rules.yaw_of(fwd))
+	await wait_frames(2)
+	assert_false(bool(actor.call("_sees", scene.get_player_position())), "behind the group: not seen")
+	scene.get_player().teleport(actor.global_position + fwd * 3.0 + Vector3(0.0, 0.05, 0.0), Rules.yaw_of(-fwd))
+	await wait_frames(2)
+	assert_true(bool(actor.call("_sees", scene.get_player_position())), "in front: seen")
 
 
 func test_companion_follows_trail() -> void:
@@ -668,3 +868,275 @@ func test_camera_rig_values_and_input() -> void:
 	assert_almost(rad_to_deg(float(rig.get("pitch"))), -65.0, 0.01, "pitch clamped to −65°")
 	var arm: SpringArm3D = rig.get_node("Pitch/SpringArm") as SpringArm3D
 	assert_eq(arm.collision_mask, 1, "spring arm collides with world only")
+
+
+# --- real data, speeds, dialogs ---------------------------------------------------------------------------------------
+
+func test_real_floor_1_builds() -> void:
+	if _saved_data == null:
+		skip("no real data")
+		return
+	DB.data = _saved_data
+	Game.new_game(0, "Kai", 4242)
+	var scene: ExplorationScene = await _make_scene()
+	var layout: FloorLayout = scene.get_layout()
+	assert_not_null(layout, "real floor_1 layout")
+	if layout == null:
+		return
+	assert_eq(layout.validate(), PackedStringArray())
+	assert_eq(scene.get_node("World/Rooms").get_child_count(), layout.cells.size(), "one room per cell")
+	assert_eq(scene.get_player_cell(), layout.start)
+	assert_eq(scene.living_groups().size(), layout.enemies.size())
+
+
+func test_player_speeds_ignore_stick_deflection() -> void:
+	var scene: ExplorationScene = await _make_scene()
+	scene.auto_start_battle = false
+	var kai: PlayerBody = scene.get_player()
+	# Touch: deflection 0.6 holds sneak → 2.5 m/s (GDD §2.1, TECH §10.3), never 0.6 × something.
+	Input.action_press(&"sneak")
+	Input.action_press(&"move_forward", 0.6)
+	var ok: bool = await wait_until(func() -> bool: return _horizontal_speed(kai) >= PlayerBody.SNEAK_SPEED - 0.05,
+		600)
+	assert_true(ok, "sneak speed reached")
+	await wait_frames(3)
+	assert_almost(_horizontal_speed(kai), PlayerBody.SNEAK_SPEED, 0.05, "sneak at stick 0.6 = 2.5 m/s")
+	Input.action_release(&"sneak")
+	Input.action_release(&"move_forward")
+	await wait_frames(2)
+	Input.action_press(&"move_forward", 0.65)
+	ok = await wait_until(func() -> bool: return _horizontal_speed(kai) >= PlayerBody.RUN_SPEED - 0.05, 600)
+	assert_true(ok, "run speed reached")
+	assert_almost(_horizontal_speed(kai), PlayerBody.RUN_SPEED, 0.05, "stick 0.65 = 5.5 m/s")
+	Input.action_release(&"move_forward")
+
+
+func test_choice_dialog_hit_area_focus_and_guard() -> void:
+	var scene: ExplorationScene = await _make_scene()
+	Events.floor_completed.connect(_record)
+	scene.open_stairs_dialog()
+	var dlg: Node = scene.active_dialog()
+	assert_not_null(dlg)
+	if dlg == null:
+		Events.floor_completed.disconnect(_record)
+		return
+	await wait_frames(3)
+	var buttons: Array[Button] = dlg.call("buttons")
+	for i in buttons.size():
+		assert_true(buttons[i].size.y >= UiTheme.TOUCH_HIT, "hit area >= 88 px (TECH §10.2)")
+		if i > 0:
+			var gap: float = buttons[i].position.y - (buttons[i - 1].position.y + buttons[i - 1].size.y)
+			assert_true(gap >= 12.0, "12 px between hit areas")
+	var focus: Control = dlg.get_viewport().gui_get_focus_owner()
+	assert_not_null(focus, "default focus set at once (call_deferred)")
+	if focus != null:
+		assert_eq(str(focus.get_meta(&"choice_id", "")), "stay", "stairs: the safe option has the focus")
+	# Mashing confirm right after opening does nothing (guard window) …
+	assert_true(bool(dlg.call("is_guarded")))
+	await _press_action(&"ui_accept")
+	await wait_frames(3)
+	assert_false(bool(dlg.call("is_closed")), "confirm inside the guard window is swallowed")
+	# … and after it, confirm picks the focused safe option: the floor is not left.
+	dlg.set("_opened_msec", Time.get_ticks_msec() - 5000)
+	await _press_action(&"ui_accept")
+	await wait_frames(3)
+	Events.floor_completed.disconnect(_record)
+	assert_true(not is_instance_valid(dlg) or bool(dlg.call("is_closed")), "confirm after the guard closes it")
+	assert_eq(_spy.size(), 0, "the default confirm never descends")
+	assert_false(scene.is_modal())
+
+
+func _press_action(action: StringName) -> void:
+	var down: InputEventAction = InputEventAction.new()
+	down.action = action
+	down.pressed = true
+	Input.parse_input_event(down)
+	await wait_frames(1)
+	var up: InputEventAction = InputEventAction.new()
+	up.action = action
+	up.pressed = false
+	Input.parse_input_event(up)
+
+
+func test_disabled_options_are_not_focusable() -> void:
+	var scene: ExplorationScene = await _make_scene()
+	Game.state.inventory.counts = {}           # no heal item → "Heilitem geben" disabled
+	var it: EventInteractable = scene.get_interactable("fev_t_candidate") as EventInteractable
+	assert_not_null(it)
+	if it == null:
+		return
+	scene.open_event_dialog(it)
+	var dlg: Node = scene.active_dialog()
+	await wait_frames(3)
+	var buttons: Array[Button] = dlg.call("buttons")
+	assert_eq(buttons.size(), 2)
+	var give: Button = buttons[0]
+	var leave: Button = buttons[1]
+	assert_true(give.disabled)
+	assert_eq(give.focus_mode, Control.FOCUS_NONE, "disabled options are not focusable")
+	assert_eq(leave.get_node(leave.focus_neighbor_bottom), leave, "focus ring only over enabled options")
+	assert_eq(dlg.get_viewport().gui_get_focus_owner(), leave, "default focus on 'Weitergehen'")
+	dlg.call("cancel")
+
+
+func test_wheel_copy() -> void:
+	var scene: ExplorationScene = await _make_scene()
+	var it: EventInteractable = scene.get_interactable("fev_t_wheel") as EventInteractable
+	assert_not_null(it)
+	if it == null:
+		return
+	assert_has(it.description(), "Noch 3 Drehungen.")
+	Game.state.floor_run.event_uses["fev_t_wheel"] = 2
+	assert_has(it.description(), "Noch 1 Drehung.")
+	Game.state.inventory.credits = 5
+	var spin: Dictionary = it.options()[0]
+	assert_false(bool(spin["enabled"]))
+	assert_has(str(spin["label"]), "zu wenig Credits", "a greyed-out option says what is missing")
+	assert_eq(it.default_choice(), "ignore")
+
+
+func test_event_reveal_waits_for_the_prop() -> void:
+	var scene: ExplorationScene = await _make_scene()
+	scene.auto_start_battle = false
+	var it: EventInteractable = scene.get_interactable("fev_t_wheel") as EventInteractable
+	assert_not_null(it)
+	if it == null:
+		return
+	Events.toast_requested.connect(_record)
+	scene.open_event_dialog(it)
+	var dlg: Node = scene.active_dialog()
+	dlg.call("choose", "spin")
+	assert_true(scene.is_revealing(), "the wheel spins first")
+	assert_true(scene.is_modal())
+	assert_eq(_spy.size(), 0, "no result toast while the wheel spins")
+	assert_false(Game.timer_running, "timer paused during the reveal")
+	assert_false(scene.get_player().input_enabled, "Kai frozen during the reveal")
+	scene.force_encounter("")
+	assert_false(scene.is_encounter_pending(), "no forced encounter behind the reveal")
+	var done: bool = await wait_until(func() -> bool: return not scene.is_revealing(), 6000)
+	Events.toast_requested.disconnect(_record)
+	assert_true(done, "reveal finished")
+	assert_eq(_spy.size(), 1, "result toast after the spin")
+	assert_true(Game.timer_running, "timer runs again")
+
+
+func test_force_encounter_is_ignored_behind_a_dialog() -> void:
+	var scene: ExplorationScene = await _make_scene()
+	scene.auto_start_battle = false
+	scene.open_stairs_dialog()
+	Events.encounter_triggered.connect(_record)
+	scene.force_encounter("")
+	Events.encounter_triggered.disconnect(_record)
+	assert_eq(_spy.size(), 0, "dialogs block (GDD §2.6)")
+	scene.on_suspend()
+	scene.on_resume({})
+	assert_false(Game.timer_running, "resume with an open dialog keeps the timer paused")
+	assert_false(scene.get_player().input_enabled, "… and Kai frozen")
+	scene.active_dialog().call("cancel")
+	await wait_frames(1)
+	assert_true(Game.timer_running)
+	assert_true(scene.get_player().input_enabled)
+
+
+# --- visuals ----------------------------------------------------------------------------------------------------------
+
+func test_room_visibility() -> void:
+	var scene: ExplorationScene = await _make_scene()
+	var rooms: Node = scene.get_node("World/Rooms")
+	assert_true((rooms.get_node("Room_3_7") as Node3D).visible, "current room drawn")
+	assert_true((rooms.get_node("Room_3_6") as Node3D).visible, "door-linked neighbour drawn")
+	assert_false((rooms.get_node("Room_4_6") as Node3D).visible, "rooms beyond walls hidden")
+	assert_false(scene.get_enemy("f1_g1").visible, "groups in hidden rooms hidden")
+	assert_true(scene.get_enemy("f1_g0").visible)
+	scene.get_player().teleport(scene.get_layout().cell_to_world(Vector2i(4, 6)) + Vector3(2.0, 0.05, 2.0), 0.0)
+	await wait_frames(3)
+	assert_true((rooms.get_node("Room_4_6") as Node3D).visible)
+	assert_true((rooms.get_node("Room_4_5") as Node3D).visible)
+	assert_false((rooms.get_node("Room_3_7") as Node3D).visible)
+	assert_true((scene.get_interactable("fev_t_drone") as Node3D).visible)
+	assert_true((scene.get_interactable("4,5,N") as Node3D).visible, "gates seen from both cells")
+	assert_true(scene.get_enemy("f1_g0").visible, "the hub is door-linked to (4,6)")
+	assert_false(scene.get_enemy("f1_g1").visible, "(3,5) is behind a wall")
+
+
+func test_camera_clears_walls_and_looks_ahead() -> void:
+	var scene: ExplorationScene = await _make_scene()
+	var rig: Node3D = scene.get_camera_rig()
+	var start: Vector3 = scene.get_layout().cell_to_world(scene.get_layout().start)
+	# Kai 2 m in front of the solid south wall of the start room, looking north: the wall is behind him.
+	scene.get_player().teleport(start + Vector3(0.0, 0.05, 5.5), 0.0)
+	rig.call("snap", 0.0)
+	await wait_frames(20)
+	assert_gt(float(rig.call("current_arm")), 6.5, "arm not collapsed by the wall behind Kai")
+	assert_lt(float(rig.call("effective_pitch")), deg_to_rad(-45.0), "pitch raised instead")
+	var cam_z: float = scene.get_camera_rig().camera().global_position.z
+	assert_lt(cam_z, start.z + 7.5, "the camera stays inside the room (in front of the wall)")
+	assert_almost(rad_to_deg(float(rig.get("pitch"))), -38.0, 0.01, "the player's pitch is untouched")
+	# Look-ahead: the pivot sits in front of Kai along the camera's forward → Kai in the lower part of the frame.
+	var cam: Camera3D = scene.get_camera_rig().camera()
+	var on_screen: Vector2 = cam.unproject_position(scene.get_player_position() + Vector3(0.0, 1.0, 0.0))
+	var vp: Vector2 = cam.get_viewport().get_visible_rect().size
+	assert_gt(on_screen.y, vp.y * 0.55, "Kai below the screen centre")
+	# Kai fades out when the camera comes very close to his head.
+	var kai: PlayerBody = scene.get_player()
+	cam.global_position = kai.global_position + Vector3(0.0, 1.7, 0.3)
+	rig.call("_update_fade")
+	var mesh: MeshInstance3D = _first_mesh(kai.rig)
+	assert_not_null(mesh)
+	if mesh != null:
+		assert_gt(mesh.transparency, 0.9, "camera inside 0.6 m → Kai's rig is faded out")
+
+
+func test_sleeping_group_and_pips() -> void:
+	var scene: ExplorationScene = await _make_scene()
+	var sleeper: EnemyActor = scene.get_enemy("f1_g0")
+	var patrol: EnemyActor = scene.get_enemy("f1_g1")
+	assert_true(sleeper.is_asleep())
+	assert_true((sleeper.get_node("SleepZz") as Node3D).visible, "\"Z z\" over sleeping groups")
+	assert_false((patrol.get_node("SleepZz") as Node3D).visible)
+	var pips: MeshInstance3D = sleeper.get_node("GroupPips") as MeshInstance3D
+	assert_not_null(pips)
+	if pips != null:
+		assert_eq(int((pips.material_override as ShaderMaterial).get_shader_parameter("count")), 2, "2 rats")
+	sleeper.frozen = true
+	sleeper.call("_set_state", &"ALERT")
+	assert_false((sleeper.get_node("SleepZz") as Node3D).visible, "hidden once alerted")
+
+
+func test_strike_arc_and_hit_flash() -> void:
+	var scene: ExplorationScene = await _make_scene()
+	scene.auto_start_battle = false
+	var kai: PlayerBody = scene.get_player()
+	var arc: Node3D = kai.get_node("StrikeArc") as Node3D
+	assert_not_null(arc)
+	scene.perform_action()
+	var shown: bool = await wait_until(func() -> bool: return arc.visible, 300)
+	assert_true(shown, "the swing flashes a gold arc")
+	var gone: bool = await wait_until(func() -> bool: return not arc.visible, 300)
+	assert_true(gone, "only briefly")
+	var rig: Node3D = scene.get_enemy("f1_g0").rig
+	FB.flash_rig(rig, 10.0)
+	var m: MeshInstance3D = _first_mesh(rig)
+	assert_true(m != null and m.material_overlay != null, "hit flash overlay on the struck group")
+
+
+func test_focus_highlight_and_marker() -> void:
+	var scene: ExplorationScene = await _make_scene()
+	var it: Node3D = scene.get_interactable("f1_c0") as Node3D
+	var spot: Vector3 = it.global_position + Rules.flat_forward(it.global_transform.basis) * 1.1
+	scene.get_player().teleport(spot, Rules.yaw_of(Rules.flat_dir(spot, it.global_position)))
+	await wait_frames(4)
+	assert_eq(scene.focused_interactable(), it)
+	var marker: Node3D = scene.get_node_or_null("World/FocusMarker") as Node3D
+	assert_not_null(marker, "focus marker")
+	if marker != null:
+		assert_true(marker.visible)
+		assert_lt(Rules.flat_dist(marker.global_position, it.global_position), 0.01, "marker above the object")
+		assert_gt(marker.global_position.y, it.global_position.y + 0.6)
+	var mesh: MeshInstance3D = _first_mesh(it.get_node("Prop"))
+	assert_eq(mesh.material_overlay, FB.highlight_material(), "cyan outline on the focused prop")
+	scene.get_player().teleport(scene.get_layout().cell_to_world(scene.get_layout().start), 0.0)
+	await wait_frames(4)
+	assert_null(mesh.material_overlay, "highlight removed on focus loss")
+	if marker != null:
+		assert_false(marker.visible)

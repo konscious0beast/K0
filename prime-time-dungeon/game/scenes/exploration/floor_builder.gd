@@ -1,12 +1,14 @@
 extends RefCounted
 ## FloorBuilder (02_TECH §7.3, M3-private): FloorLayout → room nodes via EnvKit/PropKit. One RoomSpec per cell
 ## (palette = layout.zone_palette(cell, def.palette)), EnvKit.build_room(spec) placed under World/Rooms at
-## layout.cell_to_world(c) as "Room_<x>_<y>". Closed gates get PropKit gate + blocking body + gate_interactable (built by
-## the scene). Anchors come from EnvKit.anchor_for (spec semantics as fallback while the art kit is a stub).
+## layout.cell_to_world(c) as "Room_<x>_<y>". Closed gates get PropKit gate + blocking body + gate_interactable (built
+## by the scene). Anchors come from EnvKit.anchor_for (spec semantics as fallback while the art kit is a stub).
 ## Every M4 builder that returns an empty node is completed by fallback_art.gd (stub phase only).
 
 const FB := preload("res://scenes/exploration/fallback_art.gd")
-const CAMERA_BLOCK_HEIGHT: float = 12.0
+
+const LINTEL_Y: float = 3.0              # door lintel underside (03_ART §6.1 "Sturz auf 3.0 m")
+const LINTEL_TOP: float = 3.5            # wall height
 
 var layout: FloorLayout
 var def: FloorDef
@@ -68,50 +70,29 @@ func build_rooms(parent: Node3D) -> void:
 		rooms[c] = room
 
 
-## Tall invisible wall boxes (layer 1) along every wall and above every door of every room, so the camera's
-## SpringArm3D (mask `world`) shortens at walls instead of looking over them from the neighbouring room (rooms have no
-## ceiling; the 7 m / −38° camera is higher than the 3.5 m walls). Same footprint as the walls → no gameplay change.
-func build_camera_blockers(parent: Node3D) -> StaticBody3D:
+## Collision boxes for the door lintels (layer 1, y 3.0–3.5 m over every door, through both walls): the art kit's
+## walls only collide beside the openings, but the camera treats the wall above a door as wall (camera_rig.gd).
+## Kai (1.7 m) and the groups never reach that height → no gameplay change. One box per door.
+func build_door_lintels(parent: Node3D) -> StaticBody3D:
 	var body: StaticBody3D = StaticBody3D.new()
-	body.name = "CameraBlockers"
+	body.name = "DoorLintels"
 	body.collision_layer = 1
 	body.collision_mask = 0
-	var half: float = FloorLayout.ROOM_SIZE * 0.5
-	var t: float = EnvKit.WALL_THICKNESS
-	var door_w: float = EnvKit.DOOR_WIDTH
-	var lintel_y: float = 3.0
 	for c: Vector2i in layout.sorted_cells():
 		var rc: RoomCell = layout.cell_at(c)
-		var center: Vector3 = layout.cell_to_world(c)
 		for b: int in RoomCell.DIR_BITS:
 			var off: Vector2i = RoomCell.dir_offset(b)
-			var along_x: bool = off.y != 0
-			var line: float = half - t * 0.5
-			var yaw: float = 0.0 if along_x else PI * 0.5
-			var base: Vector3 = center + Vector3(off.x * line, 0.0, off.y * line)
-			if rc.has_door(b):
-				var seg: float = (FloorLayout.ROOM_SIZE - door_w) * 0.5
-				for side: float in [-1.0, 1.0]:
-					var a: float = side * (door_w * 0.5 + seg * 0.5)
-					var p: Vector3 = base + (Vector3(a, 0.0, 0.0) if along_x else Vector3(0.0, 0.0, a))
-					_blocker_box(body, Vector3(seg, CAMERA_BLOCK_HEIGHT, t), p + Vector3(0.0, CAMERA_BLOCK_HEIGHT * 0.5, 0.0),
-						yaw)
-				var lh: float = CAMERA_BLOCK_HEIGHT - lintel_y
-				_blocker_box(body, Vector3(door_w, lh, t), base + Vector3(0.0, lintel_y + lh * 0.5, 0.0), yaw)
-			else:
-				_blocker_box(body, Vector3(FloorLayout.ROOM_SIZE, CAMERA_BLOCK_HEIGHT, t),
-					base + Vector3(0.0, CAMERA_BLOCK_HEIGHT * 0.5, 0.0), yaw)
+			if not rc.has_door(b) or off.x < 0 or off.y < 0:
+				continue                      # each door once (from its west / north cell)
+			var t: Transform3D = door_transform(c, b)
+			var cs: CollisionShape3D = CollisionShape3D.new()
+			var box: BoxShape3D = BoxShape3D.new()
+			box.size = Vector3(EnvKit.DOOR_WIDTH + 1.0, LINTEL_TOP - LINTEL_Y, EnvKit.WALL_THICKNESS * 2.0)
+			cs.shape = box
+			cs.transform = Transform3D(t.basis, t.origin + Vector3(0.0, (LINTEL_Y + LINTEL_TOP) * 0.5, 0.0))
+			body.add_child(cs)
 	parent.add_child(body)
 	return body
-
-
-static func _blocker_box(body: StaticBody3D, size: Vector3, pos: Vector3, yaw: float) -> void:
-	var cs: CollisionShape3D = CollisionShape3D.new()
-	var box: BoxShape3D = BoxShape3D.new()
-	box.size = size
-	cs.shape = box
-	cs.transform = Transform3D(Basis(Vector3.UP, yaw), pos)
-	body.add_child(cs)
 
 
 ## Room-local anchor; the art kit decides (EnvKit.anchor_for). While EnvKit is a stub it returns IDENTITY for every

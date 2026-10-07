@@ -16,7 +16,8 @@ const TYPE_NAMES: PackedStringArray = ["room_entered", "chest_opened", "encounte
 
 var type: ExploreEvent.Type = Type.ROOM_ENTERED
 var tick: int = 0                   # RunSim tick
-var data: Dictionary = {}           # e.g. TIMER_WARNING {"seconds": 300}, STRAY_DUE {"zone", "group_id", "encounter_id"}
+## e.g. TIMER_WARNING {"seconds": 300}, STRAY_DUE {"zone", "group_id", "encounter_id"}
+var data: Dictionary = {}
 
 
 static func make(t: ExploreEvent.Type, p_tick: int, p_data: Dictionary) -> ExploreEvent:

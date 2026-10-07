@@ -1,8 +1,9 @@
 extends CharacterBody3D
 ## Graf Mopsula follows Kai's trail (02_TECH §7.3) without the NavigationServer: a ring buffer of Kai's positions
 ## (one point every 0.25 m, 64 points); Mopsula walks along it 1.8 m of arc length behind Kai via move_and_slide()
-## at Kai's speed (faster when lagging). Distance > 10 m, spawn and on_resume → teleport onto the trail point or 1.8 m
-## behind Kai. Collision layer 0 (never blocks Kai, never triggers anything), mask `world`. No battle trigger.
+## at Kai's speed: his current speed, at least MIN_SPEED to close a gap while he stands, never faster than his run speed
+## (5.5 m/s). Distance > 10 m, spawn and on_resume → teleport onto the trail point or 1.8 m behind Kai.
+## Collision layer 0 (never blocks Kai, never triggers anything), mask `world`. No battle trigger.
 
 const FB := preload("res://scenes/exploration/fallback_art.gd")
 const Rules := preload("res://scenes/exploration/encounter_rules.gd")
@@ -11,7 +12,7 @@ const TRAIL_SIZE: int = 64
 const FOLLOW_DIST: float = 1.8
 const TELEPORT_DIST: float = 10.0
 const MIN_SPEED: float = 2.0
-const MAX_SPEED: float = 8.0
+const MAX_SPEED: float = 5.5          # Kai's run speed (player RUN_SPEED; §7.3 "mit Spielergeschwindigkeit")
 const GRAVITY: float = 20.0
 const TURN_RATE: float = 10.0
 

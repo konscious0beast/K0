@@ -215,19 +215,28 @@ static func _credits(state: GameState) -> int:
 	return state.inventory.credits if state.inventory != null else 0
 
 
-## Item ids in the inventory (count > 0) carrying `tag`, sorted (deterministic choice list).
+## Item ids carrying `tag` via Inventory.ids_with_tag (§6.1, M2), sorted (deterministic choice list).
+## While Inventory is still the M0 stub (its API ignores its own `counts`) the counts are scanned directly instead.
 static func _items_with_tag(state: GameState, data: GameData, tag: String) -> PackedStringArray:
-	var out: PackedStringArray = []
-	if state.inventory == null or data == null:
-		return out
-	for k: Variant in state.inventory.counts.keys():
-		var item_id: String = str(k)
-		if int(state.inventory.counts[k]) <= 0 or not data.has_id("items", item_id):
-			continue
-		if data.item(item_id).tags.has(tag):
-			out.append(item_id)
+	var inv: Inventory = state.inventory
+	if inv == null or data == null:
+		return PackedStringArray()
+	var out: PackedStringArray = inv.ids_with_tag(data, tag)
+	if out.is_empty() and _inventory_api_is_stub(inv):
+		for k: Variant in inv.counts.keys():
+			var item_id: String = str(k)
+			if int(inv.counts[k]) > 0 and data.has_id("items", item_id) and data.item(item_id).tags.has(tag):
+				out.append(item_id)
 	out.sort()
 	return out
+
+
+## True for the M0 stub: an item listed in `counts` that count() does not report.
+static func _inventory_api_is_stub(inv: Inventory) -> bool:
+	for k: Variant in inv.counts.keys():
+		if int(inv.counts[k]) > 0 and inv.count(str(k)) <= 0:
+			return true
+	return false
 
 
 static func _kai(state: GameState) -> PartyMember:

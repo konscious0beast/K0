@@ -7,8 +7,14 @@ extends "res://scenes/exploration/interactable.gd"
 const PROPS: Dictionary = {"photo_drone": &"camera_drone", "lost_candidate": &"phone_booth", "wheel": &"fortune_wheel",
 	"lever": &"lever", "broken_vending": &"broken_vending"}
 
+const LEVER_SEC: float = 0.35
+const WHEEL_SEC: float = 1.2
+const DRONE_SEC: float = 0.4
+const KICK_SEC: float = 0.3
+
 var ev: EventSpawn = null
 var prop: Node3D = null
+var _dimmed: bool = false
 
 
 func setup_event(p_ev: EventSpawn, palette: Dictionary, prop_seed: int) -> void:
@@ -70,10 +76,13 @@ func description() -> String:
 		"lost_candidate":
 			return tr("Ein verletzter Kandidat klammert sich an den Hörer. „Haben Sie vielleicht was zum Verbinden?“")
 		"wheel":
-			var uses: int = int(Game.state.floor_run.event_uses.get(ev.id, 0)) if Game.state != null else 0
-			var left: int = maxi(0, int(p.get("max_spins", 3)) - uses)
-			return tr("Ein Dreh kostet %d Cr. Noch %d Drehung(en). Die Zuschauer lieben Glücksspiel.") \
-				% [int(p.get("cost", 0)), left]
+			var left: int = spins_left()
+			var spins: String = tr("Keine Drehung mehr.")
+			if left == 1:
+				spins = tr("Noch 1 Drehung.")
+			elif left > 1:
+				spins = tr("Noch %d Drehungen.") % left
+			return tr("Ein Dreh kostet %d Cr. %s Die Zuschauer lieben Glücksspiel.") % [int(p.get("cost", 0)), spins]
 		"lever":
 			return tr("Ein rostiger Hebel. Daneben ein Schild: „NICHT ZIEHEN“.")
 		"broken_vending":
@@ -103,7 +112,12 @@ func options() -> Array[Dictionary]:
 				out.append({"id": "give", "label": tr("Heilitem geben (keins dabei)"), "enabled": false})
 			out.append({"id": "leave", "label": tr("Weitergehen"), "enabled": avail.has("leave")})
 		"wheel":
-			out.append({"id": "spin", "label": tr("Drehen (%d Cr)") % int(p.get("cost", 0)), "enabled": avail.has("spin")})
+			var spin_label: String = tr("Drehen (%d Cr)") % int(p.get("cost", 0))
+			if not avail.has("spin"):
+				# Greyed out with the reason (what is missing).
+				spin_label = tr("%s – keine Drehungen mehr") % spin_label if spins_left() <= 0 \
+					else tr("%s – zu wenig Credits") % spin_label
+			out.append({"id": "spin", "label": spin_label, "enabled": avail.has("spin")})
 			out.append({"id": "ignore", "label": tr("Ignorieren"), "enabled": avail.has("ignore")})
 		"lever":
 			out.append({"id": "pull", "label": tr("Ziehen"), "enabled": avail.has("pull")})
@@ -117,6 +131,25 @@ func options() -> Array[Dictionary]:
 ## Choice that only closes the dialog (ui_cancel).
 func cancel_choice() -> String:
 	return ""
+
+
+## Option focused first in the dialog: the safe one (leave / ignore), so a mashed confirm key risks nothing.
+func default_choice() -> String:
+	match ev.type if ev != null else "":
+		"photo_drone":
+			return "pose"
+		"wheel":
+			return "ignore"
+	return "leave"
+
+
+## Wheel spins left on this floor (max_spins − event_uses).
+func spins_left() -> int:
+	if ev == null:
+		return 0
+	var uses: int = int(Game.state.floor_run.event_uses.get(ev.id, 0)) \
+		if Game.state != null and Game.state.floor_run != null else 0
+	return maxi(0, int(ev.params.get("max_spins", 3)) - uses)
 
 
 ## Short result line for a toast ("" = none).
@@ -152,33 +185,57 @@ func outcome_text(choice: String, outcome: Dictionary) -> String:
 	return ""
 
 
-## Visual reaction of the prop after a choice.
-func play_outcome(choice: String, outcome: Dictionary) -> void:
+## Visual reaction of the prop after a choice; returns how long it plays (s). The scene shows the result toast and
+## starts a resulting encounter only after it (no spoiled wheel result, the lever moves before the flood fight).
+func play_outcome(choice: String, outcome: Dictionary) -> float:
+	var dur: float = 0.0
 	if not bool(outcome.get("valid", false)) or not is_inside_tree():
 		refresh()
-		return
+		return dur
 	match ev.type:
 		"lever":
 			var handle: Node3D = prop.get_node_or_null("Handle") as Node3D
 			if handle != null:
+				dur = LEVER_SEC
 				var tw: Tween = create_tween()
-				tw.tween_property(handle, "rotation:x", deg_to_rad(35.0), 0.35).set_trans(Tween.TRANS_BACK)
+				tw.tween_property(handle, "rotation:x", deg_to_rad(35.0), LEVER_SEC).set_trans(Tween.TRANS_BACK)
 		"wheel":
 			var spin: Node3D = prop.get_node_or_null("Wheel/Spin") as Node3D
 			if spin != null:
+				dur = WHEEL_SEC
 				var tw2: Tween = create_tween()
-				tw2.tween_property(spin, "rotation:y", spin.rotation.y + TAU * 3.0 + 1.3, 1.2) \
+				tw2.tween_property(spin, "rotation:y", spin.rotation.y + TAU * 3.0 + 1.3, WHEEL_SEC) \
 					.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
 		"photo_drone":
 			if choice == "smash":
+				dur = DRONE_SEC
 				var tw3: Tween = create_tween()
-				tw3.tween_property(prop, "position:y", -1.4, 0.4).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+				tw3.tween_property(prop, "position:y", -1.4, DRONE_SEC).set_trans(Tween.TRANS_QUAD) \
+					.set_ease(Tween.EASE_IN)
 				tw3.tween_callback(func() -> void: prop.visible = false)
+		"broken_vending":
+			if choice == "kick":
+				dur = KICK_SEC
+				var base: Vector3 = prop.position
+				var tw4: Tween = create_tween()
+				for i in 4:
+					var dx: float = 0.06 * (1.0 if i % 2 == 0 else -1.0)
+					tw4.tween_property(prop, "position", base + Vector3(dx, 0.0, 0.0), KICK_SEC / 5.0)
+				tw4.tween_property(prop, "position", base, KICK_SEC / 5.0)
 	refresh()
+	return dur
 
 
-## Dims completed events (no prompt any more).
+## Completed events (and an exhausted wheel) are dimmed: glow parts off, no pulse, albedo −40 % (no prompt any more).
 func refresh() -> void:
 	if prop == null:
 		return
-	set_meta(&"completed", choices().is_empty())
+	var done: bool = choices().is_empty()
+	set_meta(&"completed", done)
+	if done != _dimmed:
+		_dimmed = done
+		FB.dim_prop(prop, done)
+
+
+func is_dimmed() -> bool:
+	return _dimmed

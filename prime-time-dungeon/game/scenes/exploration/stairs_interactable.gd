@@ -30,3 +30,8 @@ func reach_point(from: Vector3) -> Vector3:
 	var local: Vector3 = global_transform.affine_inverse() * from
 	return global_transform * Vector3(clampf(local.x, -STAIRS_WIDTH * 0.5, STAIRS_WIDTH * 0.5), 0.0,
 		clampf(local.z, -0.2, 0.3))
+
+
+## The flight is part of the room: the marker floats over its top edge (railing height).
+func visual_top() -> float:
+	return 1.1

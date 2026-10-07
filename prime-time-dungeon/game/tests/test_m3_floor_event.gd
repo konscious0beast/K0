@@ -1,9 +1,19 @@
 extends TestCase
 ## FloorEvent (02_TECH §7.4, GDD §2.6): choices / resolve / apply for all 5 types with fixed seeds, plus the
-## Game.apply_floor_event integration (seed k × 16 + uses, completion signal). Uses its own fixture data (independent of
-## the M7 content); inventory side effects are asserted once Inventory (M2) is no longer the M0 stub.
+## Game.apply_floor_event integration (seed k × 16 + uses, completion signal) on the exploration fixture floor. Uses its
+## own fixture data (independent of the M7 content); inventory side effects are asserted once Inventory (M2) is no
+## longer the M0 stub.
 
 const STUB_HEADER: String = "# STUB(M0)"
+const ExplorationTests := preload("res://tests/test_m3_exploration_scene.gd")
+
+var _saved_db: GameData = null
+
+
+func after_each() -> void:
+	if _saved_db != null:
+		DB.data = _saved_db
+		_saved_db = null
 
 
 func _data() -> GameData:
@@ -96,7 +106,7 @@ static func _inventory_ready() -> bool:
 	return inv.add("itm_t_bandage", 1, 9) == 1
 
 
-# --- photo_drone -------------------------------------------------------------------------------------------------------
+# --- photo_drone ------------------------------------------------------------------------------------------------------
 
 func test_photo_drone() -> void:
 	var data: GameData = _data()
@@ -139,7 +149,7 @@ func test_photo_drone_credits_when_inventory_ready() -> void:
 	assert_eq(st.inventory.credits, before + 30)
 
 
-# --- lost_candidate ----------------------------------------------------------------------------------------------------
+# --- lost_candidate ---------------------------------------------------------------------------------------------------
 
 func test_lost_candidate() -> void:
 	var data: GameData = _data()
@@ -185,7 +195,7 @@ func test_lost_candidate_items_when_inventory_ready() -> void:
 	assert_eq(st.inventory.count("itm_t_ticket"), 1)
 
 
-# --- wheel -------------------------------------------------------------------------------------------------------------
+# --- wheel ------------------------------------------------------------------------------------------------------------
 
 func test_wheel_spin_rules() -> void:
 	var data: GameData = _data()
@@ -246,7 +256,7 @@ func test_wheel_kinds_and_weights() -> void:
 		assert_almost(int(counts.get(k, 0)) / float(n), float(expect[k]), 0.03, "weight of %s" % k)
 
 
-# --- lever -------------------------------------------------------------------------------------------------------------
+# --- lever ------------------------------------------------------------------------------------------------------------
 
 func test_lever_success_and_flood() -> void:
 	var data: GameData = _data()
@@ -300,7 +310,7 @@ func test_lever_chance_over_seeds() -> void:
 	assert_false(bool(leave["completed"]))
 
 
-# --- broken_vending ----------------------------------------------------------------------------------------------------
+# --- broken_vending ---------------------------------------------------------------------------------------------------
 
 func test_broken_vending() -> void:
 	var data: GameData = _data()
@@ -349,33 +359,48 @@ func test_unknown_type_and_bad_input() -> void:
 	assert_true(st.floor_run.completed_events.is_empty())
 
 
-# --- Game integration --------------------------------------------------------------------------------------------------
+# --- Game integration -------------------------------------------------------------------------------------------------
 
 func test_game_apply_floor_event_integration() -> void:
+	# Fixture floor (independent of M7 content): the wheel is event k = 1 and draws random numbers, so the seed
+	# contract of §7.4 (derive(floor_run.seed, "event", k × 16 + event_uses)) is really checked.
+	var fixture: GameData = ExplorationTests.fixture_game_data()
+	if fixture == null:
+		fail("m3 exploration fixture data invalid")
+		return
+	_saved_db = DB.data
+	DB.data = fixture
 	Game.new_game(0, "Kai", 4242)
 	var layout: FloorLayout = DungeonGenerator.generate(Game.floor_def(), Game.state.floor_run.seed)
-	var ev: EventSpawn = null
 	var k: int = -1
 	for i in layout.events.size():
-		if layout.events[i].type == "photo_drone":
-			ev = layout.events[i]
+		if layout.events[i].id == "fev_t_wheel":
 			k = i
-			break
-	if ev == null:
-		skip("floor_1 data has no photo_drone event")
-		return
+	assert_gt(k, 0, "wheel is not the first event")
+	var ev: EventSpawn = layout.events[k]
 	var spy: Array[Dictionary] = []
 	var cb: Callable = func(payload: Dictionary) -> void: spy.append(payload)
 	Events.event_completed.connect(cb)
-	# Same rng as Game (k × 16 + uses) → same outcome as resolve() with that seed.
-	var rng: RandomNumberGenerator = SeedUtil.make_rng(SeedUtil.derive(Game.state.floor_run.seed, "event", k * 16))
-	var expected: Dictionary = FloorEvent.resolve(ev, "pose", Game.state, DB.data, rng)
-	var out: Dictionary = Game.apply_floor_event(ev.id, "pose")
+	var fseed: int = Game.state.floor_run.seed
+	for n in 2:
+		assert_eq(int(Game.state.floor_run.event_uses.get(ev.id, 0)), n, "event_uses before spin %d" % n)
+		var rng: RandomNumberGenerator = SeedUtil.make_rng(SeedUtil.derive(fseed, "event", k * 16 + n))
+		var expected: Dictionary = FloorEvent.resolve(ev, "spin", Game.state, DB.data, rng)
+		var out: Dictionary = Game.apply_floor_event(ev.id, "spin")
+		assert_eq(out, expected, "spin %d = resolve() with derive(seed, \"event\", k × 16 + %d)" % [n, n])
+		assert_true(bool(out.get("valid", false)), "spin %d valid" % n)
 	Events.event_completed.disconnect(cb)
-	assert_eq(out, expected)
+	assert_eq(int(Game.state.floor_run.event_uses.get(ev.id, 0)), 2, "event_uses 0 → 1 → 2")
 	assert_has(Game.state.floor_run.completed_events, ev.id)
-	assert_len(spy, 1)
+	assert_len(spy, 1, "only the first spin completes the event")
 	if spy.size() == 1:
-		assert_eq(spy[0], {"event_id": ev.id, "choice": "pose"})
-	var again: Dictionary = Game.apply_floor_event(ev.id, "pose")
-	assert_false(bool(again.get("valid", true)), "second completion refused")
+		assert_eq(spy[0], {"event_id": ev.id, "choice": "spin"})
+	# A different use count would draw differently somewhere over the table (the seed really advances).
+	var differs: bool = false
+	for n in 8:
+		var a: Dictionary = FloorEvent.resolve(ev, "spin", Game.state, DB.data,
+			SeedUtil.make_rng(SeedUtil.derive(fseed, "event", k * 16 + n)))
+		var b: Dictionary = FloorEvent.resolve(ev, "spin", Game.state, DB.data,
+			SeedUtil.make_rng(SeedUtil.derive(fseed, "event", k * 16 + n + 1)))
+		differs = differs or a["wheel"] != b["wheel"]
+	assert_true(differs, "the wheel outcome depends on the use count")

@@ -15,6 +15,7 @@ var interact_id: String = ""
 var extent: float = 0.0            # object half size added to the reach (chests, gates, stairs)
 var scene: Node = null             # owning ExplorationScene (duck-typed callbacks)
 var player_inside: bool = false
+var _top_cache: float = -1.0
 
 
 func _init() -> void:
@@ -75,6 +76,42 @@ func is_available() -> bool:
 ## Called by ExplorationScene on `action` while focused.
 func interact() -> void:
 	pass
+
+
+## Focus highlight: cyan outline pass (material_overlay) on every mesh of the object's visuals.
+func set_highlight(on: bool) -> void:
+	for n: Node in get_children():
+		if n is Node3D and not n is CollisionObject3D:
+			FB.set_highlight(n, on)
+
+
+## World point the focus marker floats above (top of the visuals).
+func marker_position() -> Vector3:
+	return global_position + Vector3(0.0, visual_top(), 0.0)
+
+
+## Local height of the object's visual top (merged mesh AABBs of the children, cached; at least 0.6 m).
+func visual_top() -> float:
+	if _top_cache < 0.0:
+		_top_cache = maxf(0.6, _max_mesh_y(self, Transform3D.IDENTITY))
+	return _top_cache
+
+
+static func _max_mesh_y(n: Node, xf: Transform3D) -> float:
+	var top: float = 0.0
+	for c: Node in n.get_children():
+		if not c is Node3D or c is CollisionObject3D:
+			continue
+		var cx: Transform3D = xf * (c as Node3D).transform
+		if c is MeshInstance3D and (c as MeshInstance3D).mesh != null and (c as Node3D).visible:
+			top = maxf(top, (cx * (c as MeshInstance3D).mesh.get_aabb()).end.y)
+		top = maxf(top, _max_mesh_y(c, cx))
+	return top
+
+
+## Cells the object is seen from (room visibility); gates override (they sit between two cells).
+func occupied_cells(layout: FloorLayout) -> Array[Vector2i]:
+	return [layout.world_to_cell(global_position)]
 
 
 ## Closest point of the object to `from` (XZ distance / cone tests).

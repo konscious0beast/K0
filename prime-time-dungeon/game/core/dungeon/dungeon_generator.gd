@@ -385,6 +385,9 @@ static func _place_chests(l: FloorLayout, def: FloorDef, floor_seed: int, rng: R
 
 
 ## Keeps the room centre (group spawn) free and two chests of one room apart; no extra rng draws.
+## Deviation from §7.2 step 9 (plain randf_range(−4, 4) per axis): an offset shorter than CHEST_MIN_RADIUS is pushed out
+## to 2.5 m (a group stands at the room centre), a clash with another chest of the room (< CHEST_MIN_SPACING) is turned
+## by 90° steps. Same two rng draws per chest as the spec, so the rng stream of later steps is unchanged.
 static func _chest_offset(l: FloorLayout, cell: Vector2i, off: Vector2) -> Vector2:
 	var o: Vector2 = off
 	if o.length() < CHEST_MIN_RADIUS:
@@ -426,9 +429,29 @@ static func _place_groups(l: FloorLayout, def: FloorDef, rng: RandomNumberGenera
 		var enc: EncounterDef = _pick_encounter(def, rel, rng)
 		if enc == null:
 			return "no non-boss encounter on floor_%d" % def.index
-		var off: Vector2 = Vector2.ZERO if k < cand.size() else SECOND_GROUP_OFFSET
+		var off: Vector2 = Vector2.ZERO if k < cand.size() else _second_group_offset(l, cell)
 		l.enemies.append(EnemySpawn.make("f%d_g%d" % [def.index, k], cell, enc, off, &"PATROL"))
 	return ""
+
+
+## SECOND_GROUP_OFFSET turned in 90° steps until no chest of the cell is closer than CHEST_MIN_SPACING (a group must
+## not spawn inside a chest's blocking body); none free → the rotation with the largest clearance. No rng draws.
+static func _second_group_offset(l: FloorLayout, cell: Vector2i) -> Vector2:
+	var best: Vector2 = SECOND_GROUP_OFFSET
+	var best_clear: float = -1.0
+	var o: Vector2 = SECOND_GROUP_OFFSET
+	for _t in 4:
+		var clear: float = INF
+		for ch: ChestSpawn in l.chests:
+			if ch.cell == cell:
+				clear = minf(clear, ch.offset.distance_to(o))
+		if clear >= CHEST_MIN_SPACING:
+			return o
+		if clear > best_clear:
+			best_clear = clear
+			best = o
+		o = Vector2(-o.y, o.x)
+	return best
 
 
 static func _pick_encounter(def: FloorDef, rel: float, rng: RandomNumberGenerator) -> EncounterDef:

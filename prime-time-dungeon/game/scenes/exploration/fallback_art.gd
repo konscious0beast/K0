@@ -20,32 +20,82 @@ const EXIT_GREEN: Color = Color("#2bd66b")
 const WARN_YELLOW: Color = Color("#f2c230")
 const PAPER: Color = Color("#f5f0e6")
 const SODIUM: Color = Color("#ff9a2e")
+const AMBIENT_ENERGY: float = 0.8        # 03_ART §4.2 explore
+const FOG_DENSITY: float = 0.03          # 03_ART §4.2 explore
+const SUN_ENERGY: float = 1.1            # 03_ART §4.3 explore
+const ROOM_LIGHT_ENERGY: float = 1.2     # 03_ART §4.3 / 02_TECH §8.5 room omni
+const ROOM_LIGHT_RANGE: float = 9.0
+const ENV_AMBIENT_DESAT: float = 0.85   # zone ambient on the environment: mostly neutral (pillar 3)
+const WALL_CAP_H: float = 0.06           # INK cap on wall crowns (seen from the high camera)
+const SIGN_HDR: float = 1.6              # HDR factor of sign text (glows through AgX / fog)
+const PIT_DEPTH: float = 2.75            # stair pit below the floor
 
+## Environment (simplified 03_ART §3.4 env_tiles): sRGB vertex colours (linearized like ptd_vertex_albedo: the
+## Compatibility renderer hands COLOR over already linear), world-space tile grout, 3 toon bands with the violet shade
+## tint in the shadow band, omni lights in stepped thirds. The zone lights and the zone ambient reach the walls mostly
+## desaturated (light_desat; own `ambient` term instead of the engine's): warm light × warm wall would otherwise
+## compound to a monochrome orange room (03_ART pillar 3: environment ≤ 45 % saturation; figures keep the full light).
 const ENV_SHADER: String = """
 shader_type spatial;
-render_mode specular_disabled;
-uniform vec4 grout_color : source_color = vec4(0.07, 0.06, 0.09, 1.0);
+render_mode specular_disabled, ambient_light_disabled;
+uniform vec4 grout_color : source_color = vec4(0.10, 0.11, 0.14, 1.0);
 uniform float tile_size = 2.0;
 uniform float grout_width = 0.035;
-uniform float bands = 3.0;
+uniform vec4 shade_color : source_color = vec4(0.35, 0.3, 0.5, 1.0);
+uniform float light_desat = 0.85;
+uniform float albedo_desat = 0.45;
+uniform vec3 ambient = vec3(0.03, 0.03, 0.04);
 varying vec3 v_wpos;
 varying vec3 v_wnrm;
+vec3 vertex_albedo(vec3 c) {
+#if CURRENT_RENDERER == RENDERER_COMPATIBILITY
+	return c;
+#else
+	return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c));
+#endif
+}
 void vertex() {
 	v_wpos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	v_wnrm = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 }
 void fragment() {
-	vec3 base = COLOR.rgb;
+	vec3 base = vertex_albedo(COLOR.rgb);
+	float emit = UV2.x;
+	// Dark warm palettes land in the tonemapper's toe, which pushes saturation up: walls / floors are taken a bit
+	// towards grey (neon / emissive parts keep their full colour).
+	base = mix(mix(base, vec3(dot(base, vec3(0.2126, 0.7152, 0.0722))), albedo_desat), base, step(0.001, emit));
 	vec2 uv = abs(v_wnrm.y) > 0.5 ? v_wpos.xz : (abs(v_wnrm.x) > 0.5 ? v_wpos.zy : v_wpos.xy);
 	vec2 f = fract(uv / tile_size);
 	float g = max(step(f.x, grout_width), step(f.y, grout_width)) * COLOR.a;
 	ALBEDO = mix(base, grout_color.rgb, g * 0.8);
-	EMISSION = base * UV2.x * 2.0;
+	EMISSION = base * emit * 2.0 + ALBEDO * ambient;
 }
 void light() {
-	float ndl = clamp(dot(NORMAL, LIGHT), 0.0, 1.0) * ATTENUATION;
-	float b = clamp(floor(ndl * bands + 0.5) / bands, 0.0, 1.0);
-	DIFFUSE_LIGHT += LIGHT_COLOR / PI * (0.15 + 0.85 * b);
+	float ndl = dot(NORMAL, LIGHT);
+	float x = ndl;
+	float intensity = 1.0;
+	if (LIGHT_IS_DIRECTIONAL) {
+		x = min(ndl, mix(-0.08, 1.0, ATTENUATION));
+	} else {
+		intensity = min(1.0, ceil(ATTENUATION * 3.0) / 3.0) * step(0.02, ATTENUATION);
+	}
+	float b = mix(0.22, 0.6, smoothstep(-0.005, 0.045, x));
+	b = mix(b, 1.0, smoothstep(0.395, 0.445, x));
+	vec3 tint = mix(shade_color.rgb, vec3(1.0), smoothstep(-0.005, 0.445, x));
+	vec3 lc = mix(LIGHT_COLOR, vec3(dot(LIGHT_COLOR, vec3(0.299, 0.587, 0.114))), light_desat);
+	DIFFUSE_LIGHT += lc / PI * b * tint * intensity;
+}
+"""
+
+## Toon (figures, props) and outline: fragments closer than 1.5 m to the camera are dithered out (screen-door, gone
+## at 0.6 m), so a camera squeezed against Kai never fills the frame with his head (GeometryInstance3D.transparency
+## is not applied to these shaders by the Compatibility renderer).
+const NEAR_FADE_GLSL: String = """
+void near_fade(vec3 view_pos, vec2 frag) {
+	float f = clamp((1.5 - length(view_pos)) / 0.9, 0.0, 1.0);
+	if (f > 0.0 && fract(52.9829189 * fract(dot(frag, vec2(0.06711056, 0.00583715)))) < f) {
+		discard;
+	}
 }
 """
 
@@ -54,9 +104,12 @@ shader_type spatial;
 render_mode specular_disabled;
 uniform vec4 albedo : source_color = vec4(1.0, 1.0, 1.0, 1.0);
 uniform vec4 rim_color : source_color = vec4(1.0, 0.95, 0.85, 1.0);
-uniform float rim_amount = 0.25;
+uniform float rim_amount = 0.35;
 uniform float emission_energy = 0.0;
+uniform float light_desat = 0.55;
+%s
 void fragment() {
+	near_fade(VERTEX, FRAGCOORD.xy);
 	ALBEDO = albedo.rgb;
 	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 3.0) * rim_amount;
 	EMISSION = albedo.rgb * emission_energy + rim_color.rgb * rim;
@@ -64,7 +117,9 @@ void fragment() {
 void light() {
 	float ndl = clamp(dot(NORMAL, LIGHT), 0.0, 1.0) * ATTENUATION;
 	float b = ndl > 0.4 ? 1.0 : (ndl > 0.06 ? 0.55 : 0.12);
-	DIFFUSE_LIGHT += LIGHT_COLOR / PI * b;
+	// Half-neutral light: figure / prop colours read as designed under the coloured zone lights.
+	vec3 lc = mix(LIGHT_COLOR, vec3(dot(LIGHT_COLOR, vec3(0.299, 0.587, 0.114))), light_desat);
+	DIFFUSE_LIGHT += lc / PI * b;
 }
 """
 
@@ -76,7 +131,9 @@ uniform float outline_width = 0.02;
 void vertex() {
 	VERTEX += NORMAL * outline_width;
 }
+%s
 void fragment() {
+	near_fade(VERTEX, FRAGCOORD.xy);
 	ALBEDO = outline_color.rgb;
 }
 """
@@ -87,10 +144,49 @@ render_mode unshaded, cull_disabled;
 uniform vec4 color : source_color = vec4(1.0, 1.0, 1.0, 1.0);
 uniform float energy = 1.5;
 uniform float pulse_speed = 0.0;
+uniform float bob = 0.0;
+void vertex() {
+	VERTEX.y += sin(TIME * 6.2832) * bob;
+}
 void fragment() {
 	ALBEDO = color.rgb * energy * (1.0 + 0.2 * sin(TIME * pulse_speed));
 }
 """
+
+## Group-size pips (GDD §2.3): one camera-facing plate (INK, 60 %) with `count` INK discs and a PAPER/DANGER rim,
+## drawn over everything (no depth test, no fog) so the group size reads on any zone palette.
+const PIPS_SHADER: String = """
+shader_type spatial;
+render_mode unshaded, cull_disabled, depth_test_disabled, fog_disabled, shadows_disabled;
+uniform int count = 1;
+uniform vec4 disc_color : source_color = vec4(0.078, 0.051, 0.11, 1.0);
+uniform vec4 rim_color : source_color = vec4(0.96, 0.94, 0.9, 1.0);
+uniform vec4 plate_color : source_color = vec4(0.078, 0.051, 0.11, 0.6);
+const float PAD = 0.35;
+const float STEP = 1.3;
+void vertex() {
+	MODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0], INV_VIEW_MATRIX[1], INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);
+}
+void fragment() {
+	float w = float(count) * STEP - (STEP - 1.0) + 2.0 * PAD;
+	float h = 1.0 + 2.0 * PAD;
+	vec2 p = vec2(UV.x * w, (1.0 - UV.y) * h);
+	vec2 q = abs(p - vec2(w, h) * 0.5) - (vec2(w, h) * 0.5 - vec2(0.5));
+	float plate = 1.0 - step(0.5, length(max(q, 0.0)) + min(max(q.x, q.y), 0.0));
+	vec4 c = vec4(plate_color.rgb, plate_color.a * plate);
+	for (int i = 0; i < count; i++) {
+		float d = length(p - vec2(PAD + 0.5 + float(i) * STEP, h * 0.5));
+		if (d < 0.5) {
+			c = d > 0.36 ? rim_color : disc_color;
+		}
+	}
+	ALBEDO = c.rgb;
+	ALPHA = c.a;
+}
+"""
+
+const HIGHLIGHT_COLOR: Color = Color("#22d3ee")       # UiTheme.C_ACCENT_2 (focus)
+const DIM_GLOW_ENERGY: float = 0.12
 
 const BEAM_SHADER: String = """
 shader_type spatial;
@@ -137,37 +233,217 @@ static func toon(color: Color, outline: bool = true, emission: float = 0.0, outl
 	if _materials.has(key):
 		return _materials[key]
 	var m: ShaderMaterial = ShaderMaterial.new()
-	m.shader = _shader("toon", TOON_SHADER)
+	m.shader = _shader("toon", TOON_SHADER % NEAR_FADE_GLSL)
 	m.set_shader_parameter("albedo", color)
 	m.set_shader_parameter("emission_energy", emission)
 	if outline:
 		var o: ShaderMaterial = ShaderMaterial.new()
-		o.shader = _shader("outline", OUTLINE_SHADER)
+		o.shader = _shader("outline", OUTLINE_SHADER % NEAR_FADE_GLSL)
 		o.set_shader_parameter("outline_width", outline_width)
 		m.next_pass = o
 	_materials[key] = m
 	return m
 
 
-## Environment material: vertex colors (linear, alpha = tile grout on/off), UV2.x = emission mask.
-static func env_material() -> Material:
-	if not _materials.has("env"):
+## Environment material per zone palette: vertex colors (alpha = tile grout on/off), UV2.x = emission mask, the zone's
+## shade (`shade`, default the violet SHADE), grout (`grout`) and ambient (desaturated, × AMBIENT_ENERGY) as uniforms.
+static func env_material(palette: Dictionary = {}) -> Material:
+	var shade: Color = col(palette, "shade", Color("#5a4e8c"))
+	var grout: Color = col(palette, "grout", Color("#1a1e24"))
+	var amb_src: Color = col(palette, "ambient", Color("#2a2440"))
+	var key: String = "env|%s|%s|%s" % [shade.to_html(), grout.to_html(), amb_src.to_html()]
+	if not _materials.has(key):
 		var m: ShaderMaterial = ShaderMaterial.new()
 		m.shader = _shader("env", ENV_SHADER)
-		_materials["env"] = m
-	return _materials["env"]
+		m.set_shader_parameter("shade_color", shade)
+		m.set_shader_parameter("grout_color", grout)
+		var luma: float = amb_src.r * 0.299 + amb_src.g * 0.587 + amb_src.b * 0.114
+		var amb: Color = amb_src.lerp(Color(luma, luma, luma), ENV_AMBIENT_DESAT).srgb_to_linear()
+		m.set_shader_parameter("ambient", Vector3(amb.r, amb.g, amb.b) * AMBIENT_ENERGY)
+		_materials[key] = m
+	return _materials[key]
 
 
-static func glow(color: Color, energy: float = 1.5, pulse: float = 0.0) -> Material:
-	var key: String = "glow|%s|%.2f|%.2f" % [color.to_html(), energy, pulse]
+static func glow(color: Color, energy: float = 1.5, pulse: float = 0.0, bob: float = 0.0) -> Material:
+	var key: String = "glow|%s|%.2f|%.2f|%.3f" % [color.to_html(), energy, pulse, bob]
 	if not _materials.has(key):
 		var m: ShaderMaterial = ShaderMaterial.new()
 		m.shader = _shader("glow", GLOW_SHADER)
 		m.set_shader_parameter("color", color)
 		m.set_shader_parameter("energy", energy)
 		m.set_shader_parameter("pulse_speed", pulse)
+		m.set_shader_parameter("bob", bob)
 		_materials[key] = m
 	return _materials[key]
+
+
+## Pip plate material for a group of `count` (1–4); bosses get a DANGER rim.
+static func pips_material(count: int, boss: bool) -> Material:
+	var key: String = "pips|%d|%s" % [count, str(boss)]
+	if not _materials.has(key):
+		var m: ShaderMaterial = ShaderMaterial.new()
+		m.shader = _shader("pips", PIPS_SHADER)
+		m.set_shader_parameter("count", clampi(count, 1, 4))
+		m.set_shader_parameter("rim_color", DANGER if boss else PAPER)
+		m.render_priority = 2
+		_materials[key] = m
+	return _materials[key]
+
+
+## Billboard plate of `count` pips; quad size in metres (pip diameter 0.17 m).
+static func build_pips(count: int, boss: bool) -> MeshInstance3D:
+	var unit: float = 0.17
+	var n: int = clampi(count, 1, 4)
+	var q: QuadMesh = QuadMesh.new()
+	q.size = Vector2((n * 1.3 - 0.3 + 0.7) * unit, 1.7 * unit)
+	var mi: MeshInstance3D = MeshInstance3D.new()
+	mi.mesh = q
+	mi.material_override = pips_material(n, boss)
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.extra_cull_margin = 1.0
+	return mi
+
+
+## Inverted-hull outline used as material_overlay for the focused interactable.
+static func highlight_material() -> Material:
+	if not _materials.has("highlight"):
+		var m: ShaderMaterial = ShaderMaterial.new()
+		m.shader = _shader("outline", OUTLINE_SHADER % NEAR_FADE_GLSL)
+		m.set_shader_parameter("outline_color", HIGHLIGHT_COLOR)
+		m.set_shader_parameter("outline_width", 0.035)
+		_materials["highlight"] = m
+	return _materials["highlight"]
+
+
+## Focus highlight on/off for every mesh under `n` (per instance, the cached materials stay untouched).
+static func set_highlight(n: Node, on: bool) -> void:
+	if n is MeshInstance3D:
+		(n as MeshInstance3D).material_overlay = highlight_material() if on else null
+	for c: Node in n.get_children():
+		set_highlight(c, on)
+
+
+## Gold prism (tip down) that floats over the focused interactable.
+static func focus_marker() -> MeshInstance3D:
+	var prism: PrismMesh = PrismMesh.new()
+	prism.size = Vector3(0.32, 0.3, 0.12)
+	var mi: MeshInstance3D = MeshInstance3D.new()
+	mi.mesh = prism
+	mi.material_override = glow(HYPE_GOLD, 2.0)
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.visible = false
+	return mi
+
+
+## White hit flash (hitstop) on a character: CharacterRig.flash (M4) plus a white overlay on fallback figures.
+static func flash_rig(rig: Node3D, sec: float) -> void:
+	if rig == null or not is_instance_valid(rig):
+		return
+	if rig.has_method("flash"):
+		rig.call("flash", Color.WHITE, sec)
+	if not rig.has_meta(META_FALLBACK):
+		return
+	if not _materials.has("flash"):
+		var m: StandardMaterial3D = StandardMaterial3D.new()
+		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		m.albedo_color = Color(1.0, 1.0, 1.0, 0.85)
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_materials["flash"] = m
+	_set_overlay(rig, _materials["flash"])
+	if rig.is_inside_tree():
+		rig.get_tree().create_timer(sec).timeout.connect(_clear_flash.bind(rig))
+
+
+## `rig` is untyped on purpose: it may already be freed when the timer fires (group defeated / scene left).
+static func _clear_flash(rig: Variant) -> void:
+	if is_instance_valid(rig):
+		_set_overlay(rig as Node, null)
+
+
+static func _set_overlay(n: Node, m: Material) -> void:
+	if n is MeshInstance3D:
+		(n as MeshInstance3D).material_overlay = m
+	for c: Node in n.get_children():
+		_set_overlay(c, m)
+
+
+## Dims a completed event prop (or restores it): glow parts nearly off and without pulse, toon albedo −40 %, labels
+## darker. Fallback materials are swapped for dimmed cached variants; other materials get a darkening overlay.
+static func dim_prop(root: Node, dim: bool) -> void:
+	for c: Node in root.get_children():
+		dim_prop(c, dim)
+	if root is MeshInstance3D:
+		var mi: MeshInstance3D = root as MeshInstance3D
+		if dim and not mi.has_meta(&"m3_undim"):
+			mi.set_meta(&"m3_undim", mi.material_override)
+			var dm: Material = _dimmed(mi.material_override)
+			if dm != null:
+				mi.material_override = dm
+			else:
+				mi.material_overlay = _dark_overlay()
+		elif not dim and mi.has_meta(&"m3_undim"):
+			mi.material_override = mi.get_meta(&"m3_undim") as Material
+			mi.material_overlay = null
+			mi.remove_meta(&"m3_undim")
+	elif root is Label3D:
+		var l: Label3D = root as Label3D
+		if dim and not l.has_meta(&"m3_undim"):
+			l.set_meta(&"m3_undim", l.modulate)
+			l.modulate = Color(l.modulate.darkened(0.6), 0.6)
+		elif not dim and l.has_meta(&"m3_undim"):
+			l.modulate = l.get_meta(&"m3_undim") as Color
+			l.remove_meta(&"m3_undim")
+
+
+static func _dimmed(m: Material) -> Material:
+	var sm: ShaderMaterial = m as ShaderMaterial
+	if sm == null or sm.shader == null:
+		return null
+	if sm.shader == _shader("glow", GLOW_SHADER):
+		return glow(sm.get_shader_parameter("color") as Color, DIM_GLOW_ENERGY, 0.0)
+	if sm.shader == _shader("toon", TOON_SHADER % NEAR_FADE_GLSL):
+		var width: float = 0.02
+		if sm.next_pass is ShaderMaterial:
+			width = float((sm.next_pass as ShaderMaterial).get_shader_parameter("outline_width"))
+		return toon((sm.get_shader_parameter("albedo") as Color).darkened(0.4), sm.next_pass != null, 0.0, width)
+	if sm.shader == _shader("beam", BEAM_SHADER):
+		return beam(sm.get_shader_parameter("color") as Color, float(sm.get_shader_parameter("alpha")) * 0.3)
+	return null
+
+
+static func _dark_overlay() -> Material:
+	if not _materials.has("dark"):
+		var m: StandardMaterial3D = StandardMaterial3D.new()
+		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		m.albedo_color = Color(0.6, 0.6, 0.6)
+		m.blend_mode = BaseMaterial3D.BLEND_MODE_MUL
+		_materials["dark"] = m
+	return _materials["dark"]
+
+
+## Flat 100° ring sector (front = −Z, r 0.5–1.8 m) for the field-strike swoosh; UV.y 0 at the outer edge.
+static func strike_arc_mesh() -> ArrayMesh:
+	var verts: PackedVector3Array = PackedVector3Array()
+	var uvs: PackedVector2Array = PackedVector2Array()
+	var segs: int = 14
+	var half: float = deg_to_rad(50.0)
+	for i in segs:
+		var a0: float = -half + 2.0 * half * i / segs
+		var a1: float = -half + 2.0 * half * (i + 1) / segs
+		var o0: Vector3 = Vector3(sin(a0), 0.0, -cos(a0))
+		var o1: Vector3 = Vector3(sin(a1), 0.0, -cos(a1))
+		var quad: Array[Vector3] = [o0 * 1.8, o1 * 1.8, o1 * 0.5, o0 * 0.5]
+		var quv: Array[Vector2] = [Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1)]
+		for k: int in [0, 1, 2, 0, 2, 3]:
+			verts.append(quad[k])
+			uvs.append(quv[k])
+	var arrays: Array = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	arrays[Mesh.ARRAY_TEX_UV] = uvs
+	var mesh: ArrayMesh = ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return mesh
 
 
 static func beam(color: Color, alpha: float = 0.2) -> Material:
@@ -200,10 +476,9 @@ class MeshBuilder extends RefCounted:
 	func is_empty() -> bool:
 		return verts.is_empty()
 
-	## Vertex colour of the fallback environment: the sRGB palette value lifted half-way towards linear-as-sRGB, so the
-	## dark zone palettes stay readable under the simple fallback lighting.
+	## Vertex colour of the fallback environment: the sRGB palette value (the shader linearizes it per renderer).
 	func _vc(color: Color) -> Color:
-		return color.srgb_to_linear().lerp(color, 0.6)
+		return color
 
 	## Triangles are given counter-clockwise around the outward normal; Godot's front faces are clockwise, so the
 	## vertices are stored in reverse order.
@@ -330,8 +605,14 @@ static func build_room(spec: RoomSpec, root: Node3D) -> void:
 	body.collision_mask = 0
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = spec.seed
-	# Floor (tiled) + collision.
-	geo.add_box(Vector3(ROOM_SIZE, 0.2, ROOM_SIZE), _xf(Vector3(0.0, -0.1, 0.0)), c_floor, 0.0, true)
+	# Floor (tiled) + collision. STAIRS: the floor leaves the stair pit open (x ±2, z 0..−5 at the stairs anchor).
+	if int(spec.kind) == RoomSpec.Kind.STAIRS:
+		for part: Array in [[Vector3(-5.0, -0.1, 0.0), Vector3(6.0, 0.2, ROOM_SIZE)],
+				[Vector3(5.0, -0.1, 0.0), Vector3(6.0, 0.2, ROOM_SIZE)],
+				[Vector3(0.0, -0.1, 4.0), Vector3(4.0, 0.2, 8.0)], [Vector3(0.0, -0.1, -6.5), Vector3(4.0, 0.2, 3.0)]]:
+			geo.add_box(part[1], _xf(part[0]), c_floor, 0.0, true)
+	else:
+		geo.add_box(Vector3(ROOM_SIZE, 0.2, ROOM_SIZE), _xf(Vector3(0.0, -0.1, 0.0)), c_floor, 0.0, true)
 	_add_collision_box(body, Vector3(ROOM_SIZE, 0.2, ROOM_SIZE), Vector3(0.0, -0.1, 0.0))
 	# Walls with door openings.
 	for b: int in RoomCell.DIR_BITS:
@@ -343,6 +624,7 @@ static func build_room(spec: RoomSpec, root: Node3D) -> void:
 			geo.add_box(Vector3(0.7, WALL_HEIGHT, 0.7), _xf(p), c_wall.darkened(0.2))
 			geo.add_box(Vector3(0.74, 0.3, 0.74), _xf(Vector3(p.x, 1.0, p.z)), WARN_YELLOW)
 			geo.add_box(Vector3(0.9, 0.3, 0.9), _xf(Vector3(p.x, WALL_HEIGHT - 0.15, p.z)), c_wall.darkened(0.1))
+			geo.add_box(Vector3(0.94, 0.08, 0.94), _xf(Vector3(p.x, WALL_HEIGHT + 0.04, p.z)), INK)
 	# Decoration variant (03_ART §6.2) on walls without doors.
 	_variant_deco(props, spec, c_accent)
 	# Corner clutter in the border strip (outside the clear zone and the door corridors).
@@ -357,13 +639,13 @@ static func build_room(spec: RoomSpec, root: Node3D) -> void:
 	var gmi: MeshInstance3D = MeshInstance3D.new()
 	gmi.name = "Geometry"
 	gmi.mesh = geo.commit()
-	gmi.material_override = env_material()
+	gmi.material_override = env_material(pal)
 	gmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	root.add_child(gmi)
 	var pmi: MeshInstance3D = MeshInstance3D.new()
 	pmi.name = "Props"
 	pmi.mesh = props.commit()
-	pmi.material_override = env_material()
+	pmi.material_override = env_material(pal)
 	pmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	root.add_child(pmi)
 	root.add_child(body)
@@ -371,9 +653,8 @@ static func build_room(spec: RoomSpec, root: Node3D) -> void:
 		var light: OmniLight3D = OmniLight3D.new()
 		light.name = "Light"
 		light.position = Vector3(0.0, 3.0, 0.0)
-		light.omni_range = 12.0
-		light.omni_attenuation = 0.6
-		light.light_energy = 2.6
+		light.omni_range = ROOM_LIGHT_RANGE
+		light.light_energy = ROOM_LIGHT_ENERGY
 		light.light_color = c_light
 		light.shadow_enabled = false
 		light.distance_fade_enabled = true
@@ -386,9 +667,8 @@ static func build_room(spec: RoomSpec, root: Node3D) -> void:
 			st.name = "Stairs"
 			st.transform = anchor_for(spec, &"stairs")
 			root.add_child(st)
-			for rail: Array in [[Vector3(-2.15, 0.5, -2.5), Vector3(0.2, 1.0, 5.4)],
-					[Vector3(2.15, 0.5, -2.5), Vector3(0.2, 1.0, 5.4)], [Vector3(0.0, 0.5, -5.2), Vector3(4.5, 1.0, 0.2)]]:
-				_add_collision_box(body, rail[1], rail[0])
+			# One box over the pit + railings: Kai stands at the top edge (z ≥ 0), never walks down the flight.
+			_add_collision_box(body, Vector3(4.5, 1.0, 5.4), Vector3(0.0, 0.5, -2.6))
 		RoomSpec.Kind.SAFE:
 			var door: Node3D = build_prop(&"safe_door", spec.palette)
 			door.name = "SafeDoor"
@@ -425,16 +705,24 @@ static func _wall_side(geo: MeshBuilder, body: StaticBody3D, bit: int, has_door:
 		geo.add_box(Vector3(length, 0.3, 0.12), _xf(Vector3(inner.x, 0.15, inner.z), yaw), c_wall.darkened(0.35))
 		geo.add_box(Vector3(length, 0.12, 0.14), _xf(Vector3(inner.x, WALL_HEIGHT - 0.06, inner.z), yaw),
 			c_wall.lightened(0.15))
-		geo.add_box(Vector3(length, 0.07, 0.05), _xf(Vector3(inner.x, 2.55, inner.z) + inward * 0.03, yaw), c_accent, 0.7)
+		geo.add_box(Vector3(length, 0.07, 0.05), _xf(Vector3(inner.x, 2.55, inner.z) + inward * 0.03, yaw), c_accent,
+			0.7)
+		# INK crown over wall + top trim: clean dark silhouette from the high camera, no coplanar tops.
+		var cap_c: Vector3 = Vector3(pos.x, WALL_HEIGHT + WALL_CAP_H * 0.5, pos.z) + inward * 0.04
+		geo.add_box(Vector3(length, WALL_CAP_H, WALL_T + 0.18), _xf(cap_c, yaw), INK)
 	if has_door:
-		# Door frame: jambs + lintel (03_ART §6.2).
+		# Door frame: jambs + lintel (03_ART §6.2). Jambs 0.54 wide at ±2.23: the inner face sits 0.04 m inside the
+		# opening, the wall segment's end face (±2.0) lies inside the jamb → no coplanar faces (z-fighting).
 		var frame_c: Color = Color("#3a3a44")
+		var frame_yaw: float = 0.0 if along_x else PI * 0.5
 		for side: float in [-1.0, 1.0]:
-			var a: float = side * (DOOR_W * 0.5 + 0.25)
+			var a: float = side * (DOOR_W * 0.5 + 0.23)
 			var jp: Vector3 = Vector3(a, 1.5, off.y * line) if along_x else Vector3(off.x * line, 1.5, a)
-			geo.add_box(Vector3(0.5, 3.0, 0.62), _xf(jp, 0.0 if along_x else PI * 0.5), frame_c)
+			geo.add_box(Vector3(0.54, 3.0, 0.62), _xf(jp, frame_yaw), frame_c)
 		var lp: Vector3 = Vector3(0.0, 3.25, off.y * line) if along_x else Vector3(off.x * line, 3.25, 0.0)
-		geo.add_box(Vector3(DOOR_W + 1.0, 0.5, 0.62), _xf(lp, 0.0 if along_x else PI * 0.5), frame_c)
+		geo.add_box(Vector3(DOOR_W + 1.0, 0.5, 0.62), _xf(lp, frame_yaw), frame_c)
+		geo.add_box(Vector3(DOOR_W + 1.06, WALL_CAP_H, 0.7), _xf(lp + Vector3(0.0, 0.25 + WALL_CAP_H * 0.5, 0.0),
+			frame_yaw), INK)
 		geo.add_box(Vector3(DOOR_W, 0.06, 0.64), _xf(lp + Vector3(0.0, -0.27, 0.0), 0.0 if along_x else PI * 0.5),
 			WARN_YELLOW, 0.4)
 
@@ -514,32 +802,46 @@ static func _ring(props: MeshBuilder, radius: float, color: Color, emission: flo
 			color, emission)
 
 
-## Fallback environment: background/fog from the palette fog colour, ambient from `ambient`, AgX, glow on high.
+## Fallback environment with the 03_ART §4.2 `explore` values: background = fog × 0.6, ambient = palette `ambient`
+## at 0.80, exponential fog 0.030 in the fog colour, AgX at exposure 1.0, glow 0.8 on quality high.
 static func environment(palette: Dictionary, quality: StringName) -> Environment:
 	var env: Environment = Environment.new()
 	env.set_meta(META_FALLBACK, true)
 	var fog: Color = col(palette, "fog", Color("#1a1430"))
 	env.background_mode = Environment.BG_COLOR
-	env.background_color = fog
+	env.background_color = background_of(fog)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = col(palette, "ambient", Color("#2a2440")).lightened(0.3)
-	env.ambient_light_energy = 1.6
+	env.ambient_light_color = col(palette, "ambient", Color("#2a2440"))
+	env.ambient_light_energy = AMBIENT_ENERGY
+	env.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
 	env.tonemap_mode = Environment.TONE_MAPPER_AGX
+	env.tonemap_exposure = 1.0
 	env.fog_enabled = true
+	env.fog_mode = Environment.FOG_MODE_EXPONENTIAL
 	env.fog_light_color = fog
-	env.fog_density = 0.02
+	env.fog_density = FOG_DENSITY
+	env.fog_sky_affect = 0.0
 	env.glow_enabled = quality == &"high"
-	env.glow_intensity = 0.6
+	env.glow_intensity = 0.8
 	env.glow_bloom = 0.05
+	env.glow_hdr_threshold = 1.0
 	return env
 
 
+## 03_ART §4.2: BG_COLOR = palette fog × 0.6.
+static func background_of(fog: Color) -> Color:
+	return Color(fog.r * 0.6, fog.g * 0.6, fog.b * 0.6, 1.0)
+
+
+## 03_ART §4.3 explore sun: palette `key`, energy 1.1, rotation (−55°, 35°, 0), shadows on high (30 m).
 static func sun(palette: Dictionary, quality: StringName) -> DirectionalLight3D:
 	var light: DirectionalLight3D = DirectionalLight3D.new()
-	light.rotation = Vector3(deg_to_rad(-58.0), deg_to_rad(32.0), 0.0)
+	light.rotation = Vector3(deg_to_rad(-55.0), deg_to_rad(35.0), 0.0)
 	light.light_color = col(palette, "key", Color("#ffb866"))
-	light.light_energy = 0.9
+	light.light_energy = SUN_ENERGY
 	light.shadow_enabled = quality == &"high"
+	light.shadow_bias = 0.03
+	light.shadow_normal_bias = 1.0
 	light.directional_shadow_max_distance = 30.0
 	return light
 
@@ -595,17 +897,52 @@ static func _capsule(radius: float, height: float) -> CapsuleMesh:
 	return m
 
 
-static func _label(parent: Node3D, text: String, pos: Vector3, color: Color, size: int = 48) -> Label3D:
+## Sign text: thick INK outline and an HDR modulate (× SIGN_HDR) so it glows through AgX and fog, on an INK backing
+## plate (same billboard / depth mode as the text; drawn first via render priority) for ≥ 4.5:1 contrast on any wall.
+static func _label(parent: Node3D, text: String, pos: Vector3, color: Color, size: int = 48,
+		billboard: BaseMaterial3D.BillboardMode = BaseMaterial3D.BILLBOARD_DISABLED, no_depth: bool = false) -> Label3D:
 	var l: Label3D = Label3D.new()
 	l.text = text
 	l.position = pos
-	l.modulate = color
+	l.modulate = Color(color.r * SIGN_HDR, color.g * SIGN_HDR, color.b * SIGN_HDR, 1.0)
 	l.font_size = size
-	l.outline_size = 10
+	l.outline_size = 18
 	l.outline_modulate = INK
 	l.pixel_size = 0.006
+	l.billboard = billboard
+	l.no_depth_test = no_depth
+	l.render_priority = 2
+	l.outline_render_priority = 1
 	parent.add_child(l)
+	var font: Font = ThemeDB.fallback_font
+	var px: Vector2 = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size) if font != null \
+		else Vector2(size * 0.6 * text.length(), size)
+	var quad: QuadMesh = QuadMesh.new()
+	quad.size = Vector2(px.x * l.pixel_size + 0.3, size * l.pixel_size * 1.35)
+	var plate: MeshInstance3D = MeshInstance3D.new()
+	plate.name = "Plate"
+	plate.mesh = quad
+	plate.position = Vector3(0.0, 0.0, -0.02)
+	plate.material_override = _plate_material(billboard, no_depth)
+	plate.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	l.add_child(plate)
 	return l
+
+
+static func _plate_material(billboard: BaseMaterial3D.BillboardMode, no_depth: bool) -> Material:
+	var key: String = "plate|%d|%s" % [billboard, str(no_depth)]
+	if not _materials.has(key):
+		var m: StandardMaterial3D = StandardMaterial3D.new()
+		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		m.albedo_color = Color(INK, 0.9)
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		m.cull_mode = BaseMaterial3D.CULL_DISABLED
+		m.billboard_mode = billboard
+		m.no_depth_test = no_depth
+		m.disable_fog = true
+		m.render_priority = 0
+		_materials[key] = m
+	return _materials[key]
 
 
 ## Fallback prop by PropKit id (only the ids the exploration uses). `opts.type` for chests (wood/metal/locked).
@@ -628,38 +965,51 @@ static func fill_prop(root: Node3D, id: StringName, palette: Dictionary = {}, op
 			_mesh_part(root, _box(Vector3(4.2, 0.2, 0.25)), Vector3(0.0, 0.25, 0.0), toon(dark))
 			for i in 9:
 				var x: float = -1.8 + i * 0.45
-				_mesh_part(root, _cyl(0.05, 0.05, 2.7, 6), Vector3(x, 1.4, 0.0), toon(Color("#8a8f96"), true, 0.0, 0.012))
+				_mesh_part(root, _cyl(0.05, 0.05, 2.7, 6), Vector3(x, 1.4, 0.0),
+					toon(Color("#8a8f96"), true, 0.0, 0.012))
 			for i in 4:
 				var x2: float = -1.6 + i * 1.07
 				_mesh_part(root, _box(Vector3(0.5, 0.18, 0.32)), Vector3(x2, 1.5, 0.0),
 					toon(WARN_YELLOW if i % 2 == 0 else INK, false))
 			_mesh_part(root, _sphere(0.09), Vector3(0.0, 2.85, -0.18), glow(DANGER, 2.0, 4.0))
 		&"stairs_down":
-			# Pit with descending steps drawn as darkening bands, gold edge, light column, "ETAGE n+1" sign.
+			# 03_ART §6.3: 10 steps 4.0 × 0.25 × 0.5 (each −0.25 y, −0.5 z) into an open pit (the STAIRS room floor
+			# leaves x ±2, z 0..−5 open), gold edge strips, dark pit walls, railings, light column, sign + arrow.
+			var pit_c: Color = Color("#1e1826")
 			for i in 10:
-				var shade: Color = Color("#6e6a72").darkened(0.08 * i)
-				_mesh_part(root, _box(Vector3(4.0, 0.03, 0.5)), Vector3(0.0, 0.016 + 0.0005 * i, -0.25 - 0.5 * i),
+				var top: float = -0.25 * (i + 1)
+				var shade: Color = Color("#6e6a72").lerp(INK, minf(1.0, i / 9.0) * 0.85)
+				var h: float = top + PIT_DEPTH
+				_mesh_part(root, _box(Vector3(4.0, h, 0.5)), Vector3(0.0, top - h * 0.5, -0.25 - 0.5 * i),
 					toon(shade, false))
-				_mesh_part(root, _box(Vector3(4.0, 0.035, 0.06)), Vector3(0.0, 0.02, -0.03 - 0.5 * i),
-					toon(WARN_YELLOW.darkened(0.06 * i), false, 0.3))
+				_mesh_part(root, _box(Vector3(4.0, 0.03, 0.06)), Vector3(0.0, top + 0.015, -0.03 - 0.5 * i),
+					toon(WARN_YELLOW.lerp(INK, i / 12.0), false, 0.3))
+			for side: float in [-1.0, 1.0]:
+				_mesh_part(root, _box(Vector3(0.2, PIT_DEPTH, 5.0)), Vector3(side * 2.1, -PIT_DEPTH * 0.5, -2.5),
+					toon(pit_c, false))
+			_mesh_part(root, _box(Vector3(4.4, PIT_DEPTH, 0.2)), Vector3(0.0, -PIT_DEPTH * 0.5, -5.1),
+				toon(pit_c, false))
+			_mesh_part(root, _box(Vector3(4.4, 0.05, 0.1)), Vector3(0.0, 0.025, 0.02), toon(WARN_YELLOW, false, 0.5))
 			var rail_c: Color = Color("#4a4e58")
 			for side: float in [-1.0, 1.0]:
 				for z: float in [-0.2, -2.6, -5.0]:
-					_mesh_part(root, _cyl(0.04, 0.04, 1.0, 6), Vector3(side * 2.1, 0.5, z), toon(rail_c, true, 0.0, 0.01))
-				_mesh_part(root, _box(Vector3(0.08, 0.08, 5.0)), Vector3(side * 2.1, 1.0, -2.6), toon(rail_c, true, 0.0, 0.01))
+					_mesh_part(root, _cyl(0.04, 0.04, 1.0, 6), Vector3(side * 2.1, 0.5, z),
+						toon(rail_c, true, 0.0, 0.01))
+				_mesh_part(root, _box(Vector3(0.08, 0.08, 5.0)), Vector3(side * 2.1, 1.0, -2.6),
+					toon(rail_c, true, 0.0, 0.01))
 			_mesh_part(root, _box(Vector3(4.3, 0.08, 0.08)), Vector3(0.0, 1.0, -5.05), toon(rail_c, true, 0.0, 0.01))
-			var col_mi: MeshInstance3D = _mesh_part(root, _cyl(1.2, 1.2, 4.0, 16), Vector3(0.0, 2.0, -2.5),
+			var col_mi: MeshInstance3D = _mesh_part(root, _cyl(1.2, 1.2, 4.5, 16), Vector3(0.0, -0.25, -2.5),
 				beam(HYPE_GOLD, 0.07))
 			col_mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			# Beacon inside the −38° frame from 4–12 m: arrow at 1.9 m (bobs 0.1 m @ 1 Hz), sign at 2.4 m.
 			var arrow: PrismMesh = PrismMesh.new()
 			arrow.size = Vector3(0.6, 0.5, 0.1)
-			var ami: MeshInstance3D = _mesh_part(root, arrow, Vector3(0.0, 2.6, -2.5), glow(HYPE_GOLD, 2.0),
+			var ami: MeshInstance3D = _mesh_part(root, arrow, Vector3(0.0, 1.9, -2.5), glow(HYPE_GOLD, 2.0, 0.0, 0.1),
 				Vector3(PI, 0.0, 0.0), "Arrow")
 			ami.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			var next_floor: int = int(opts.get("next_floor", 2))
-			var lbl: Label3D = _label(root, "ETAGE %d" % next_floor, Vector3(0.0, 3.4, -2.5), HYPE_GOLD, 72)
-			lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-			lbl.no_depth_test = true
+			_label(root, "ETAGE %d" % next_floor, Vector3(0.0, 2.45, -2.5), HYPE_GOLD, 64,
+				BaseMaterial3D.BILLBOARD_ENABLED, true)
 		&"safe_door":
 			var frame: Color = Color("#4a5a60")
 			_mesh_part(root, _box(Vector3(3.0, 0.3, 0.4)), Vector3(0.0, 3.0, 0.0), toon(frame))
@@ -667,9 +1017,10 @@ static func fill_prop(root: Node3D, id: StringName, palette: Dictionary = {}, op
 				_mesh_part(root, _box(Vector3(0.3, 3.0, 0.4)), Vector3(side * 1.35, 1.5, 0.0), toon(frame))
 				_mesh_part(root, _box(Vector3(1.15, 2.8, 0.15)), Vector3(side * 0.6, 1.4, -0.05),
 					toon(Color("#6a7a80"), true, 0.0, 0.012))
-				_mesh_part(root, _box(Vector3(0.08, 2.6, 0.18)), Vector3(side * 0.05, 1.4, -0.06), glow(EXIT_GREEN, 1.6))
+				_mesh_part(root, _box(Vector3(0.08, 2.6, 0.18)), Vector3(side * 0.05, 1.4, -0.06),
+					glow(EXIT_GREEN, 1.6))
 			_mesh_part(root, _box(Vector3(2.4, 0.1, 0.12)), Vector3(0.0, 2.95, -0.2), glow(EXIT_GREEN, 2.0))
-			var sl: Label3D = _label(root, "SAFE ROOM", Vector3(0.0, 3.45, -0.05), EXIT_GREEN, 56)
+			var sl: Label3D = _label(root, "SAFE ROOM", Vector3(0.0, 3.45, -0.22), EXIT_GREEN, 56)
 			sl.rotation = Vector3(0.0, PI, 0.0)
 		&"camera_drone":
 			_mesh_part(root, _box(Vector3(0.5, 0.15, 0.5)), Vector3(0.0, 1.6, 0.0), toon(Color("#1a1420")))
@@ -684,8 +1035,7 @@ static func fill_prop(root: Node3D, id: StringName, palette: Dictionary = {}, op
 			_mesh_part(root, _box(Vector3(1.1, 2.4, 1.1)), Vector3(0.0, 1.2, 0.0), toon(Color("#c23b22")))
 			_mesh_part(root, _box(Vector3(0.9, 1.6, 1.12)), Vector3(0.0, 1.3, 0.0), glow(Color("#ffe9b0"), 0.9))
 			_mesh_part(root, _box(Vector3(1.2, 0.25, 1.2)), Vector3(0.0, 2.5, 0.0), toon(INK))
-			var pl: Label3D = _label(root, "TELEFON", Vector3(0.0, 2.85, 0.0), PAPER, 40)
-			pl.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
+			_label(root, "TELEFON", Vector3(0.0, 2.9, 0.0), PAPER, 40, BaseMaterial3D.BILLBOARD_FIXED_Y)
 		&"fortune_wheel":
 			_mesh_part(root, _box(Vector3(0.3, 2.2, 0.3)), Vector3(0.0, 1.1, 0.15), toon(Color("#3a3a44")))
 			# "Wheel" tilts the disc upright (axle along Z), "Wheel/Spin" turns around the axle.
@@ -705,8 +1055,8 @@ static func fill_prop(root: Node3D, id: StringName, palette: Dictionary = {}, op
 					glow(seg_cols[i], 1.1), Vector3(0.0, -a + PI * 0.5, 0.0))
 			_mesh_part(root, _sphere(0.16), Vector3(0.0, 2.0, -0.18), toon(HYPE_GOLD, true, 0.4))
 			_mesh_part(root, _box(Vector3(0.12, 0.3, 0.08)), Vector3(0.0, 3.15, -0.15), toon(DANGER, true, 0.3))
-			var wl: Label3D = _label(root, "DOOMSCROLL+", Vector3(0.0, 3.55, -0.1), Color("#b05cff"), 40)
-			wl.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
+			_label(root, "DOOMSCROLL+", Vector3(0.0, 3.55, -0.1), Color("#c890ff"), 40,
+				BaseMaterial3D.BILLBOARD_FIXED_Y)
 		&"lever":
 			_mesh_part(root, _box(Vector3(0.8, 0.9, 0.5)), Vector3(0.0, 0.45, 0.0), toon(Color("#5a6270")))
 			var pivot: Node3D = Node3D.new()
@@ -722,7 +1072,8 @@ static func fill_prop(root: Node3D, id: StringName, palette: Dictionary = {}, op
 			body.rotation = Vector3(0.0, 0.0, deg_to_rad(6.0))
 			root.add_child(body)
 			_mesh_part(body, _box(Vector3(1.0, 1.9, 0.8)), Vector3(0.0, 0.95, 0.0), toon(Color("#7a1f3a")))
-			_mesh_part(body, _box(Vector3(0.6, 1.0, 0.04)), Vector3(-0.1, 1.15, -0.41), glow(Color("#ffe9b0"), 0.6, 9.0))
+			_mesh_part(body, _box(Vector3(0.6, 1.0, 0.04)), Vector3(-0.1, 1.15, -0.41),
+				glow(Color("#ffe9b0"), 0.6, 9.0))
 			_mesh_part(body, _box(Vector3(1.0, 0.25, 0.12)), Vector3(0.0, 1.78, -0.42), glow(NOVA_MAGENTA, 1.2))
 			_mesh_part(body, _box(Vector3(0.12, 0.3, 0.05)), Vector3(0.33, 1.0, -0.42), glow(NOVA_CYAN, 1.5))
 		_:
@@ -736,7 +1087,7 @@ static func _chest(root: Node3D, type: String) -> void:
 		body_c = Color("#7c8a94")
 		trim_c = Color("#c0c8d2")
 	elif type == "locked":
-		body_c = Color("#4a5560")
+		body_c = Color("#33507e")
 		trim_c = Color("#ffc93c")
 	_mesh_part(root, _box(Vector3(0.9, 0.45, 0.6)), Vector3(0.0, 0.225, 0.0), toon(body_c))
 	var lid: Node3D = Node3D.new()
@@ -749,7 +1100,8 @@ static func _chest(root: Node3D, type: String) -> void:
 		_mesh_part(root, _box(Vector3(0.08, 0.47, 0.62)), Vector3(sx * 0.43, 0.235, 0.0), toon(trim_c, false, 0.15))
 	if type == "locked":
 		_mesh_part(root, _box(Vector3(0.18, 0.2, 0.06)), Vector3(0.0, 0.32, -0.32), toon(DANGER, true, 0.5))
-	var glint: MeshInstance3D = _mesh_part(root, _sphere(0.05), Vector3(0.0, 0.55, -0.1), glow(HYPE_GOLD, 2.5, 5.0),
+	# Sparkle of an unopened chest: above the closed lid (0.45–0.60 m) at the front corner.
+	var glint: MeshInstance3D = _mesh_part(root, _sphere(0.05), Vector3(0.3, 0.7, -0.25), glow(HYPE_GOLD, 2.5, 5.0),
 		Vector3.ZERO, "Glint")
 	glint.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
@@ -791,16 +1143,19 @@ static func build_character(model: Dictionary, rig: Node3D) -> void:
 	var height: float = 1.0
 	match str(model.get("base", "humanoid")):
 		"humanoid":
+			# Chibi (03_ART pillar 1): head Ø 0.58 m ≈ 1/3 of 1.75 m, eyes at ~47 % of the head height.
 			height = 1.75
 			for sx: float in [-1.0, 1.0]:
-				_mesh_part(body, _capsule(0.11, 0.82), Vector3(sx * 0.12, 0.41, 0.0), toon(sec))
-				_mesh_part(body, _capsule(0.08, 0.62), Vector3(sx * 0.34, 1.12, 0.0), toon(prim),
-					Vector3(0.0, 0.0, sx * 0.14))
-				_mesh_part(body, _sphere(0.07), Vector3(sx * 0.38, 0.8, 0.0), toon(skin))
-				_mesh_part(body, _sphere(0.03), Vector3(sx * 0.07, 1.6, -0.18), toon(eye, false))
-			_mesh_part(body, _capsule(0.25, 0.74), Vector3(0.0, 1.1, 0.0), toon(prim))
-			_mesh_part(body, _sphere(0.2), Vector3(0.0, 1.58, 0.0), toon(skin))
-			_mesh_part(body, _sphere(0.215, 0.26), Vector3(0.0, 1.68, 0.03), toon(acc))
+				_mesh_part(body, _capsule(0.11, 0.62), Vector3(sx * 0.12, 0.31, 0.0), toon(sec))
+				_mesh_part(body, _box(Vector3(0.17, 0.09, 0.27)), Vector3(sx * 0.12, 0.045, -0.04), toon(acc))
+				_mesh_part(body, _capsule(0.08, 0.5), Vector3(sx * 0.31, 0.86, 0.0), toon(prim),
+					Vector3(0.0, 0.0, sx * 0.16))
+				_mesh_part(body, _sphere(0.08), Vector3(sx * 0.36, 0.62, 0.0), toon(skin))
+				_mesh_part(body, _sphere(0.05, 0.075), Vector3(sx * 0.1, 1.43, -0.255), toon(eye, false))
+				_mesh_part(body, _sphere(0.016), Vector3(sx * 0.1 - 0.018, 1.455, -0.3), glow(PAPER, 1.2))
+			_mesh_part(body, _capsule(0.23, 0.62), Vector3(0.0, 0.86, 0.0), toon(prim))
+			_mesh_part(body, _sphere(0.29), Vector3(0.0, 1.45, 0.0), toon(skin))
+			_mesh_part(body, _sphere(0.305, 0.36), Vector3(0.0, 1.6, 0.04), toon(acc))
 		"pug":
 			height = 0.6
 			_mesh_part(body, _capsule(0.17, 0.56), Vector3(0.0, 0.3, 0.06), toon(prim), Vector3(PI * 0.5, 0.0, 0.0))
@@ -815,6 +1170,22 @@ static func build_character(model: Dictionary, rig: Node3D) -> void:
 			_mesh_part(body, _sphere(0.06), Vector3(0.0, 0.46, 0.33), toon(prim))
 			_mesh_part(body, _box(Vector3(0.36, 0.3, 0.04)), Vector3(0.0, 0.36, 0.2), toon(acc),
 				Vector3(-0.35, 0.0, 0.0))
+		"rodent" when _rodent_upright(model):
+			# Pose rule (03_ART §5.3, 02_TECH resolve_pose): "auto" → upright from scale 1.0, else quadruped.
+			height = 1.15
+			for sx: float in [-1.0, 1.0]:
+				_mesh_part(body, _capsule(0.08, 0.4), Vector3(sx * 0.12, 0.2, 0.0), toon(prim))
+				_mesh_part(body, _box(Vector3(0.14, 0.05, 0.22)), Vector3(sx * 0.12, 0.025, -0.06), toon(sec))
+				_mesh_part(body, _capsule(0.06, 0.36), Vector3(sx * 0.24, 0.62, -0.06), toon(prim),
+					Vector3(0.5, 0.0, sx * 0.3))
+				_mesh_part(body, _sphere(0.08, 0.04), Vector3(sx * 0.13, 1.14, 0.0), toon(sec),
+					Vector3(PI * 0.5, 0.0, 0.0))
+				_mesh_part(body, _sphere(0.04), Vector3(sx * 0.08, 0.98, -0.2), glow(eye, 1.6))
+			_mesh_part(body, _capsule(0.22, 0.62), Vector3(0.0, 0.6, 0.0), toon(prim))
+			_mesh_part(body, _sphere(0.18), Vector3(0.0, 0.98, -0.04), toon(prim))
+			_mesh_part(body, _sphere(0.07), Vector3(0.0, 0.94, -0.24), toon(sec))
+			_mesh_part(body, _cyl(0.02, 0.05, 0.7, 6), Vector3(0.0, 0.25, 0.35), toon(sec),
+				Vector3(PI * 0.5 + 0.6, 0.0, 0.0))
 		"rodent":
 			height = 0.7
 			_mesh_part(body, _capsule(0.16, 0.56), Vector3(0.0, 0.22, 0.05), toon(prim), Vector3(PI * 0.5, 0.0, 0.0))
@@ -879,6 +1250,15 @@ static func build_character(model: Dictionary, rig: Node3D) -> void:
 	body.scale = Vector3.ONE * s
 	if "height" in rig:
 		rig.set("height", height * s)
+
+
+static func _rodent_upright(model: Dictionary) -> bool:
+	var pose: String = str(model.get("pose", "auto"))
+	if pose == "upright":
+		return true
+	if pose == "quadruped":
+		return false
+	return float(model.get("scale", 1.0)) >= 1.0
 
 
 ## Simple procedural motion of a fallback figure: bob while moving, breathing while idle.

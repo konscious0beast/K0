@@ -24,3 +24,8 @@ func prompt_text() -> String:
 func interact() -> void:
 	if scene != null and scene.has_method("enter_safe_room"):
 		scene.call("enter_safe_room", safe_room_id)
+
+
+## The door prop is part of the room: the marker floats just under the "SAFE ROOM" sign.
+func visual_top() -> float:
+	return 2.7

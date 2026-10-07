@@ -147,11 +147,36 @@ func test_quantities_match_gdd() -> void:
 		assert_true(d.has_id("skills", id), "enemy skill " + id)
 		if d.has_id("skills", id):
 			assert_eq(d.skill(id).user, "enemy", id)
-	assert_len(ENEMY_SKILLS_F1, 25)
 	for id: String in BOSS_SKILLS:
 		assert_true(d.has_id("skills", id), "boss skill " + id)
-	assert_len(BOSS_SKILLS, 11)
-	assert_gt(enemy_skills, 25 + 11, "enemy skills incl. strike + floor-2 stubs")
+	# Counted from the data (TECH §1.7: 25 enemy skills, 11 boss skills), not from the constants above.
+	var f1_ai: Dictionary = {}
+	var f2_ai: Dictionary = {}
+	for e: EnemyDef in d.all_enemies():
+		if e.boss:
+			continue
+		var bucket: Dictionary = f1_ai if e.tags.has("floor_1") else f2_ai
+		for sid: String in _skills_of(e.ai.get("actions", []) as Array):
+			if sid != "skl_e_strike":
+				bucket[sid] = true
+	var f1_list: Array = f1_ai.keys()
+	f1_list.sort()
+	var expected_f1: Array = Array(ENEMY_SKILLS_F1)
+	expected_f1.sort()
+	assert_eq(f1_list, expected_f1, "skills used by floor-1 regular enemy AI (minus strike) = GDD §5.2 list")
+	assert_len(f1_list, 25, "25 floor-1 enemy skills")
+	var boss_list: Array = []
+	for sid: String in d.ids("skills"):
+		if sid.begins_with("skl_b_") or sid.begins_with("skl_q_"):
+			boss_list.append(sid)
+	boss_list.sort()
+	var expected_boss: Array = Array(BOSS_SKILLS)
+	expected_boss.sort()
+	assert_eq(boss_list, expected_boss, "skl_b_*/skl_q_* skills = GDD boss skill list")
+	assert_len(boss_list, 11, "11 boss skills")
+	for sid: String in f2_ai:
+		assert_false(f1_ai.has(sid), sid + " is a floor-2 stub skill, not shared with floor 1")
+	assert_eq(enemy_skills, 25 + 11 + 1 + f2_ai.size(), "enemy skills = 25 + 11 boss + strike + floor-2 stubs")
 	assert_eq(item_skills, 10, "one use_skill per consumable")
 	var regular: int = 0
 	var bosses: int = 0
@@ -790,6 +815,9 @@ func test_floor_2_stub() -> void:
 		assert_gt(enc.weight, 0, enc.id + " rollable")
 		for e: String in enc.enemies:
 			assert_true(d.enemy(e).tags.has("floor_2"), enc.id + " uses floor-2 enemies")
+		var carts: int = enc.enemies.count("enm_einkaufswagen_rudel")
+		assert_true(carts == 0 or carts == 3, "%s: the Einkaufswagen-Rudel always comes in threes (GDD §15), got %d" % [
+			enc.id, carts])
 	for id: String in ["enm_schaufensterpuppe", "enm_einkaufswagen_rudel", "enm_rabattschild"]:
 		assert_true(d.has_id("enemies", id), id)
 	assert_eq(d.enemy("enm_schaufensterpuppe").stats["hp"], 90)

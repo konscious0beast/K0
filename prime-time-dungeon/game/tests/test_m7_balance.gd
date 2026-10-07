@@ -2,7 +2,11 @@ extends TestCase
 ## M7 balance (02_TECH §11.5, 01_GDD §13): every Floor-1 encounter is won by the auto-battling party (AutoPolicy vs
 ## EnemyAI, 50 seeds) in >= 80 % of the fights at the level and with the gear the GDD progression expects at that point:
 ## zone A L2 (tutorial L1), zone B L3 (start party, Lv 1–3), zone C L4, Hausmeister L5, zone D L6, Rattenkönigin L7.
-## Needs the real M1 battle core: skipped while core/battle/*.gd are still M0 stubs (runs at integration, §0.1 phase C).
+## Party turns per won fight are checked against GDD §13 (regular 4–6, median 4.5; Hausmeister 16–22; Königin 20–26).
+## OPEN DEVIATION (doc CR pending, TECH owner): 02_TECH §11.5 says "Startparty (Lv 1–3)" for every encounter; zones C/D
+## use the GDD §5.4/§13 progression (C L4 + mid gear, D L6 + late gear) instead. Not done until §11.5 is amended.
+## Needs the real M1 battle core: skipped while core/battle/*.gd are still M0 stubs (runs at integration, §0.1 phase C);
+## merge of phase C is gated on these tests un-skipping and passing.
 
 const STUB_HEADER: String = "# STUB(M0)"
 const M1_FILES: PackedStringArray = ["res://core/battle/battle_state.gd", "res://core/battle/combatant.gd",
@@ -11,6 +15,13 @@ const M1_FILES: PackedStringArray = ["res://core/battle/battle_state.gd", "res:/
 const SEEDS: int = 50
 const MIN_WIN_RATE: float = 0.80
 const MAX_SUBMITS: int = 800
+## GDD §13 party turns per won fight: regular fights per encounter (tutorial excluded, Sim 3.2) and their median.
+const REGULAR_TURNS: Vector2 = Vector2(3.0, 7.0)
+const REGULAR_TURNS_MEDIAN: Vector2 = Vector2(4.0, 6.0)
+const BOSS_TURNS: Dictionary = {
+	"enc_f1_boss_hausmeister": Vector2(16.0, 22.0),
+	"enc_f1_boss_rattenkoenigin": Vector2(20.0, 26.0),
+}
 
 ## Gear the party can have at each point of floor 1 (GDD §2.5, §6.5): start kit; SR1 purchases + metal chests A/B;
 ## after the Hausmeister: fire axe (locked chest C), key ring (boss drop), signet collar (locked chest D),
@@ -76,10 +87,19 @@ func test_regular_encounters_win_rate() -> void:
 	if reason != "":
 		skip(reason)
 		return
+	var turns: Array = []
 	for id: String in PLAN:
-		if real_data().encounter(id).boss:
+		var enc: EncounterDef = real_data().encounter(id)
+		if enc.boss:
 			continue
-		_assert_win_rate(id)
+		var avg: float = _assert_win_rate(id)
+		if enc.tutorial:
+			continue
+		assert_between(avg, REGULAR_TURNS.x, REGULAR_TURNS.y, "%s: avg party turns (GDD §13)" % id)
+		turns.append(avg)
+	turns.sort()
+	var median: float = (float(turns[(turns.size() - 1) >> 1]) + float(turns[turns.size() >> 1])) / 2.0
+	assert_between(median, REGULAR_TURNS_MEDIAN.x, REGULAR_TURNS_MEDIAN.y, "median party turns of regular fights")
 
 
 func test_hausmeister_at_level_5() -> void:
@@ -87,7 +107,9 @@ func test_hausmeister_at_level_5() -> void:
 	if reason != "":
 		skip(reason)
 		return
-	_assert_win_rate("enc_f1_boss_hausmeister")
+	var avg: float = _assert_win_rate("enc_f1_boss_hausmeister")
+	var band: Vector2 = BOSS_TURNS["enc_f1_boss_hausmeister"]
+	assert_between(avg, band.x, band.y, "enc_f1_boss_hausmeister: avg party turns (GDD §13)")
 
 
 func test_rattenkoenigin_at_level_7() -> void:
@@ -95,7 +117,9 @@ func test_rattenkoenigin_at_level_7() -> void:
 	if reason != "":
 		skip(reason)
 		return
-	_assert_win_rate("enc_f1_boss_rattenkoenigin")
+	var avg: float = _assert_win_rate("enc_f1_boss_rattenkoenigin")
+	var band: Vector2 = BOSS_TURNS["enc_f1_boss_rattenkoenigin"]
+	assert_between(avg, band.x, band.y, "enc_f1_boss_rattenkoenigin: avg party turns (GDD §13)")
 
 
 func test_tutorial_cannot_be_lost() -> void:
@@ -119,13 +143,15 @@ func test_battles_are_deterministic() -> void:
 
 # --- helpers -------------------------------------------------------------------------------------------------------
 
-func _assert_win_rate(enc_id: String) -> void:
+## Asserts the win rate of `enc_id` at its PLAN level/gear and returns the average party turns of the won fights.
+func _assert_win_rate(enc_id: String) -> float:
 	var p: Array = PLAN[enc_id]
 	var stats: Dictionary = _run_series(enc_id, int(p[0]), str(p[1]), str(p[2]), SEEDS)
 	var rate: float = float(stats["wins"]) / float(SEEDS)
 	assert_true(rate >= MIN_WIN_RATE, "%s at L%d (%s gear): win rate %.0f %% < %.0f %% (avg party turns %.1f)" % [
 		enc_id, int(p[0]), str(p[1]), rate * 100.0, MIN_WIN_RATE * 100.0, float(stats["avg_party_turns"])])
 	assert_eq(int(stats["stuck"]), 0, enc_id + ": every battle terminates")
+	return float(stats["avg_party_turns"])
 
 
 func _run_series(enc_id: String, level: int, gear: String, items: String, n: int) -> Dictionary:

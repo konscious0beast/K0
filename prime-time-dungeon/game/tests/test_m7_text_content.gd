@@ -1,6 +1,10 @@
 extends TestCase
-## M7 texts (01_GDD §10.2, §11; 02_TECH §4.1, §4.4.12–13): M.O.D./chat/Mopsula lines per tag with the GDD minimum counts,
-## voices, length/placeholder rules, line ids, Mopsula scenes (conditions, order, flags) and German-only display texts.
+## M7 texts (01_GDD §10.2, §11; 02_TECH §4.1, §4.4.12–13): M.O.D./chat/Mopsula lines per tag with the GDD minimum
+## counts, voices, length/placeholder rules, line ids, Mopsula scenes (conditions, order, flags) and German-only display
+## texts.
+## Scene conditions follow GDD §10.2 (`scn_mop_1` `>= 1`, `scn_mop_4` without `first_visit`: a scene skipped on the
+## first visit stays available). 02_TECH §4.4.13 still lists the older first-visit-only conditions — open doc CR (TECH
+## owner).
 
 ## GDD §11.2/§11.3: tag → minimum number of lines.
 const MIN_LINES: Dictionary = {
@@ -183,3 +187,36 @@ func test_scene_conditions() -> void:
 	assert_true(s3.eval(later_kiosk, {}, {"scene_scn_mop_1": true}))
 	assert_false(s4.eval(later_kiosk, {}, {}), "scene 4 only in the Stellwerk")
 	assert_true(s4.eval(signalbox, {}, {}))
+
+
+# --- open content gaps (blocked by M0 vocabularies) ----------------------------------------------------------------
+
+## GDD §1.4 B1/B2 tutorial hints and the B4 banner need a tag prefix (e.g. `tutorial_`/`story_`), and 05 §6.12 gift
+## lines need `{sender}`/`{amount}`; DataValidator (M0) knows neither yet. Skipped (= visibly open) until the M0 change
+## requests land; then it fails until the lines are added and the 05 §6.12 texts restored verbatim.
+func test_pending_story_and_gift_lines() -> void:
+	var missing: PackedStringArray = []
+	for p: String in ["tutorial_", "story_"]:
+		if not DataValidator.OPTIONAL_MOD_TAG_PREFIXES.has(p):
+			missing.append("tag prefix " + p)
+	for ph: String in ["sender", "amount"]:
+		if not DataValidator.TEXT_PLACEHOLDERS.has(ph):
+			missing.append("placeholder {%s}" % ph)
+	if not missing.is_empty():
+		skip("open M0 CR: DataValidator lacks " + ", ".join(missing))
+		return
+	var d: GameData = real_data()
+	var prefixed: Dictionary = {"tutorial_": 0, "story_": 0}
+	var queen_banner: bool = false
+	for l: ModLineDef in _all_lines():
+		for p: String in prefixed:
+			if l.tag.begins_with(p):
+				prefixed[p] = int(prefixed[p]) + 1
+		queen_banner = queen_banner or l.text == "Die Königin hört von euch."
+	assert_gt(int(prefixed["tutorial_"]), 0, "GDD §1.4 B1/B2 tutorial hints")
+	assert_gt(int(prefixed["story_"]), 0, "GDD §1.4 story beats")
+	assert_true(queen_banner, "GDD §1.4 B4 banner „Die Königin hört von euch.“")
+	for l: ModLineDef in d.mod_lines("gift_received"):
+		assert_true(l.text.contains("{sender}"), "05 §6.12: gift_received names {sender}")
+	for l: ModLineDef in d.mod_lines("gift_received:credits"):
+		assert_true(l.text.contains("{amount}"), "05 §6.12: gift_received:credits names {amount}")

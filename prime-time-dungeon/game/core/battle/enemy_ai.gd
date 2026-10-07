@@ -8,8 +8,14 @@ const FixedMath := preload("res://core/stats/fixed_math.gd")
 
 
 static func choose(state: BattleState, actor: Combatant, rng: RandomNumberGenerator) -> BattleCommand:
+	return choose_action(state, actor, rng).get("command") as BattleCommand
+
+
+## Like choose(), plus the index of the chosen entry in actions_of(actor) (-1 for the attack fallback):
+## {"command": BattleCommand (null without actor), "index": int}. BattleState uses the index for `once` bookkeeping.
+static func choose_action(state: BattleState, actor: Combatant, rng: RandomNumberGenerator) -> Dictionary:
 	if actor == null:
-		return null
+		return {"command": null, "index": -1}
 	var actions: Array = actions_of(actor)
 	var cands: Array[int] = []
 	var weights: Array[int] = []
@@ -32,16 +38,17 @@ static func choose(state: BattleState, actor: Combatant, rng: RandomNumberGenera
 		cands.append(i)
 		weights.append(JsonUtil.to_int(a.get("weight", 1), 1))
 	if not cands.is_empty():
-		var a: Dictionary = actions[cands[FixedMath.weighted_index(rng, weights)]]
+		var index: int = cands[FixedMath.weighted_index(rng, weights)]
+		var a: Dictionary = actions[index]
 		var sk: SkillDef = state.skill_def(str(a.get("skill", "")))
 		var targets: PackedStringArray = pick_target(state, actor, str(a.get("target", "random")), sk, rng)
 		targets = _taunt_override(state, actor, sk, targets, rng)
 		if not _needs_target(sk) or not targets.is_empty():
-			return BattleCommand.skill(actor.id, sk.id, targets)
+			return {"command": BattleCommand.skill(actor.id, sk.id, targets), "index": index}
 	var atk: SkillDef = state.skill_def(actor.attack_skill)
 	var t: PackedStringArray = pick_target(state, actor, "random", atk, rng)
 	t = _taunt_override(state, actor, atk, t, rng)
-	return BattleCommand.attack(actor.id, t[0] if not t.is_empty() else "")
+	return {"command": BattleCommand.attack(actor.id, t[0] if not t.is_empty() else ""), "index": -1}
 
 
 ## All keys must hold (`once` is checked by choose() with the action index): self_hp_below/above f, ally_hp_below f
@@ -138,6 +145,7 @@ static func once_key(actor: Combatant, index: int) -> String:
 
 
 ## Single-target skill on the party with a living taunting member → with TAUNT_CHANCE that member (lowest slot).
+## random_enemy counts as single-target: for enemy actors ActionResolver uses the one target chosen here.
 static func _taunt_override(state: BattleState, actor: Combatant, skill: SkillDef, targets: PackedStringArray,
 		rng: RandomNumberGenerator) -> PackedStringArray:
 	if actor.is_party() or skill == null or targets.size() != 1:

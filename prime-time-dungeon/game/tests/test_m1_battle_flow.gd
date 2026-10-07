@@ -67,6 +67,8 @@ func _check_invariants(events: Array[ActionEvent], s: BattleState, label: String
 				assert_eq(prev.type, ActionEvent.Type.DAMAGE, "%s: KO directly after the lethal DAMAGE (#%d)" % [label, i])
 				assert_eq(prev.target_id, e.target_id)
 				assert_eq(prev.hp_after, 0)
+				assert_eq(e.item_id != "", e.command == BattleCommand.Kind.ITEM,
+						"%s: KO.item_id iff item kill (#%d)" % [label, i])
 				if e.target_id == open and not acted:
 					open = ""                     # died at TURN_START (poison): no TURN_END
 			ActionEvent.Type.DAMAGE:
@@ -280,6 +282,48 @@ func test_combo_second_hit() -> void:
 	assert_len(Fx.of_type(s.submit(BattleCommand.attack("p1", "e0")), ActionEvent.Type.COMBO), 0, "enemy turn between")
 
 
+func test_combo_needs_physical_or_magical_damage() -> void:
+	# Fixed damage (ice spray) has no combo factor (02_TECH §5.9): it neither finishes nor starts a combo.
+	var s: BattleState = Fx.make_state(data, PackedStringArray(["enm_dummy", "enm_rat"]),
+			{"seed": 8, "items": {"itm_ice_spray": 2}})
+	s.start()
+	var kai: Combatant = s.get_combatant("p0")
+	var mop: Combatant = s.get_combatant("p1")
+	_until(s, kai)
+	Fx.force_next(s, mop)
+	s.submit(BattleCommand.attack("p0", "e0"))
+	assert_eq(s.current_actor(), mop)
+	Fx.force_next(s, kai)
+	var ev: Array[ActionEvent] = s.submit(BattleCommand.item("p1", "itm_ice_spray", PackedStringArray(["e0"])))
+	assert_len(Fx.of_type(ev, ActionEvent.Type.COMBO), 0, "no COMBO for a fixed-damage finisher")
+	assert_eq(Fx.of_type(ev, ActionEvent.Type.DAMAGE)[0].amount, 90, "fixed 90, no × 1.1")
+	assert_eq(s.current_actor(), kai)
+	Fx.force_next(s, mop)
+	ev = s.submit(BattleCommand.attack("p0", "e0"))
+	assert_len(Fx.of_type(ev, ActionEvent.Type.COMBO), 0, "a fixed-damage action does not start a combo either")
+	assert_eq(s.current_actor(), mop)
+	ev = s.submit(BattleCommand.attack("p1", "e0"))
+	assert_len(Fx.of_type(ev, ActionEvent.Type.COMBO), 1, "control: attack right after the other member's attack")
+
+
+func test_weapon_element_only_for_party_attacks() -> void:
+	var s: BattleState = Fx.make_state(data, PackedStringArray(["enm_slime"]),
+			{"seed": 3, "kai": {"element_mods": {"fire": 1.5}}})
+	s.start()
+	var kai: Combatant = s.get_combatant("p0")
+	var slime: Combatant = s.get_combatant("e0")
+	kai.attack_element = "fire"
+	slime.attack_element = "fire"     # never used for enemies: their attack skill's own element counts
+	_until(s, kai)
+	var dmg: ActionEvent = Fx.of_type(s.submit(BattleCommand.attack("p0", "e0")), ActionEvent.Type.DAMAGE)[0]
+	assert_eq(dmg.element, "fire", "party attack: weapon element")
+	assert_true(dmg.weak, "slime fire 1.5")
+	_until(s, slime)
+	dmg = Fx.of_type(s.submit(BattleCommand.attack("e0", "p0")), ActionEvent.Type.DAMAGE)[0]
+	assert_eq(dmg.element, "physical", "enemy attack: skill element")
+	assert_false(dmg.weak, "Kai's fire weakness is not hit")
+
+
 func test_items_heal_revive_damage_and_delta() -> void:
 	var s: BattleState = Fx.make_state(data, PackedStringArray(["enm_rat", "enm_rat"]),
 			{"items": {"itm_bandage": 2, "itm_smelling_salts": 1, "itm_molotov": 1, "itm_elixir": 1}})
@@ -312,6 +356,12 @@ func test_items_heal_revive_damage_and_delta() -> void:
 	var dmg: Array[ActionEvent] = Fx.of_type(ev, ActionEvent.Type.DAMAGE)
 	assert_len(dmg, 2, "all enemies")
 	assert_eq(dmg[0].amount, 90, "fixed 60 × fire weakness 1.5")
+	var kos: Array[ActionEvent] = Fx.of_type(ev, ActionEvent.Type.KO)
+	assert_len(kos, 2)
+	for ko: ActionEvent in kos:
+		assert_eq(ko.command, BattleCommand.Kind.ITEM, "KO.command of an item kill")
+		assert_eq(ko.item_id, "itm_molotov", "KO.item_id names the item")
+		assert_eq(ko.skill_id, "skl_item_molotov", "KO.skill_id is the item's use_skill")
 	assert_true(s.is_finished(), "both rats (24 HP) are down")
 	assert_eq(s.result.item_delta, {"itm_bandage": -1, "itm_smelling_salts": -1, "itm_molotov": -1})
 	assert_eq(s.result.items_used, 3)
@@ -565,6 +615,50 @@ func test_apply_gift_rolled_chest_is_deterministic() -> void:
 	assert_true(has_epic, "guarantee epic on the last roll")
 
 
+## Rarity of one rolled chest entry in the fixture pool f1 (common: credits/bandage, rare: salts, epic: axe).
+func _pool_rarity(e: ActionEvent) -> int:
+	if e.type == ActionEvent.Type.CREDITS_GAINED or e.item_id == "itm_bandage":
+		return 0
+	return 1 if e.item_id == "itm_smelling_salts" else 2
+
+
+func test_rolled_chest_guarantee_roll_uses_restricted_weights() -> void:
+	# 05 §7.4: the guarantee roll draws from weights[tier] with every rarity below the guarantee set to 0
+	# (silver [55, 38, 7] → [0, 38, 7]: epic 7/45 ≈ 15.6 %, not 7 %).
+	var t: Dictionary = Fx.tables()
+	(t["lootboxes"] as Array).append({"id": "box_silver", "name": "Silber", "tier": 2, "color": "#c0c0c0", "rolls": 1,
+		"rarity_weights": {"common": 55, "rare": 38, "epic": 7}, "guarantee": "rare"})
+	(t["lootboxes"] as Array).append({"id": "box_plat", "name": "Silber 3", "tier": 4, "color": "#e5e4e2", "rolls": 3,
+		"rarity_weights": {"common": 55, "rare": 38, "epic": 7}, "guarantee": "rare"})
+	var d: GameData = fixture_data(t)
+	var s: BattleState = Fx.make_state(d, PackedStringArray(["enm_rat"]), {"seed": 5})
+	s.start()
+	var counts: Array[int] = [0, 0, 0]
+	var n: int = 2000
+	for _i in n:
+		for e: ActionEvent in s.apply_gift({"kind": "chest", "tier": "silver", "contents": []}):
+			if e.type == ActionEvent.Type.ITEM_GAINED or e.type == ActionEvent.Type.CREDITS_GAINED:
+				counts[_pool_rarity(e)] += 1
+	assert_eq(counts[0], 0, "the guarantee roll never draws below rare")
+	assert_eq(counts[1] + counts[2], n, "one entry per chest")
+	assert_between(counts[2], 250, 375, "epic ≈ 7/45 of the guarantee rolls (%d)" % counts[2])
+	# Three rolls: the last one is restricted only if no earlier roll reached rare.
+	var last_common: int = 0
+	for _i in 600:
+		var r: Array[int] = []
+		for e: ActionEvent in s.apply_gift({"kind": "chest", "tier": "plat", "contents": []}):
+			if e.type == ActionEvent.Type.ITEM_GAINED or e.type == ActionEvent.Type.CREDITS_GAINED:
+				r.append(_pool_rarity(e))
+		assert_len(r, 3)
+		if r.size() != 3:
+			continue
+		assert_true(r.max() >= 1, "every chest has a rare+ entry")
+		if r[2] == 0:
+			last_common += 1
+			assert_true(maxi(r[0], r[1]) >= 1, "last roll common only after an earlier rare+")
+	assert_gt(last_common, 0, "the last roll uses the full weights when the guarantee is already met")
+
+
 func test_ghost_overrides_for_stun_preview() -> void:
 	var s: BattleState = Fx.make_state(data, PackedStringArray(["enm_rat", "enm_boss_janitor"]),
 			{"kai": {"skills": PackedStringArray(["skl_kai_cable_whip"])}})
@@ -587,7 +681,7 @@ func test_ghost_overrides_for_stun_preview() -> void:
 func test_real_data_encounters_integration() -> void:
 	var rd: GameData = real_data()
 	if not rd.is_valid():
-		return
+		return      # real_data() has already failed this test with the loader errors; no battles on broken data
 	var battles: int = 0
 	for f: FloorDef in rd.all_floors():
 		for enc: EncounterDef in f.encounters:

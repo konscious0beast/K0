@@ -1,8 +1,9 @@
 class_name ActionEvent extends RefCounted
 ## Result event for presentation (02_TECH §5.3, exact structure). Serializable (Brief §6b.2).
 ## Side of an id: "p…" party, "e…" enemy, "u…" pseudo unit. hp_after/mp_after are snapshots after the event.
-## Extra (non-default) fields the core also sets: KO.command / KO.item_id (command of the killing action, -1 for
-## status ticks and pseudo units) so ShowRules can tell kills by attack/skill/stunt/item apart.
+## Extra (non-default) fields the core also sets: KO.command (command of the killing action, -1 for status ticks,
+## pseudo units and phase ops) and KO.item_id (the used item for ITEM kills; skill_id is then its use_skill) so
+## ShowRules can tell kills by attack/skill/stunt/item apart.
 
 enum Type {
 	BATTLE_START,    # value = advantage; target_ids = all combatant ids (party first)

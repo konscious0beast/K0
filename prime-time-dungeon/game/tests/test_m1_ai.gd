@@ -162,6 +162,77 @@ func test_choose_ai_command_is_pure_and_once_is_marked_on_resolution() -> void:
 		assert_ne(EnemyAI.choose(s, mimic, make_rng(seed)).skill_id, "skl_e_fine", "once actions are used at most once")
 
 
+func test_once_is_marked_only_for_the_chosen_action() -> void:
+	# The same skill as a `once` action and as a normal action: only choosing the `once` entry uses it up.
+	var t: Dictionary = Fx.tables()
+	(t["enemies"] as Array).append(Fx._enemy("enm_twin", Fx._stats(500, 0, 1, 1, 1, 1, 1, 1), [
+		{"skill": "skl_e_brace", "weight": 1, "target": "self", "cond": {"once": true}},
+		{"skill": "skl_e_brace", "weight": 1, "target": "self"}], {"exp": 1, "credits": 1}))
+	# Two `once` entries with the same skill: the chosen one is marked (not simply the first).
+	(t["enemies"] as Array).append(Fx._enemy("enm_twin_once", Fx._stats(500, 0, 1, 1, 1, 1, 1, 1), [
+		{"skill": "skl_e_brace", "weight": 1, "target": "self", "cond": {"once": true}},
+		{"skill": "skl_e_brace", "weight": 1, "target": "self", "cond": {"once": true}}], {"exp": 1, "credits": 1}))
+	var d: GameData = fixture_data(t)
+	for enemy_id: String in ["enm_twin", "enm_twin_once"]:
+		var seen: Dictionary = {}
+		for seed in range(1, 41):
+			var s: BattleState = Fx.make_state(d, PackedStringArray([enemy_id]), {"seed": seed})
+			s.start()
+			var twin: Combatant = s.get_combatant("e0")
+			_until(s, twin)
+			assert_eq(s.current_actor(), twin)
+			var choice: Dictionary = EnemyAI.choose_action(s, twin,
+					SeedUtil.make_rng(SeedUtil.derive(s.setup.seed, "ai", s.action_n)))
+			var cmd: BattleCommand = s.choose_ai_command()
+			assert_eq(cmd.to_dict(), (choice["command"] as BattleCommand).to_dict(), "choose_action ≡ choose_ai_command")
+			s.submit(cmd)
+			var index: int = int(choice["index"])
+			seen[index] = true
+			var label: String = "%s seed %d index %d" % [enemy_id, seed, index]
+			if index == 0:
+				assert_eq(twin.used_once, PackedStringArray(["0:0"]), label + ": once entry chosen → marked")
+			elif enemy_id == "enm_twin":
+				assert_eq(twin.used_once, PackedStringArray(), label + ": normal entry chosen → once stays unused")
+			else:
+				assert_eq(twin.used_once, PackedStringArray(["0:1"]), label + ": the chosen once entry is marked")
+		assert_eq(seen.size(), 2, enemy_id + ": both entries were chosen at least once")
+
+
+func test_taunt_applies_to_random_enemy_skills() -> void:
+	var t: Dictionary = Fx.tables()
+	(t["skills"] as Array).append(Fx._skill("skl_e_pounce", "enemy", "attack", "random_enemy",
+			{"damage_type": "physical", "element": "physical", "power": 10}))
+	(t["skills"] as Array).append(Fx._skill("skl_kai_wild_swing", "party", "attack", "random_enemy",
+			{"damage_type": "physical", "element": "physical", "power": 10}))
+	(t["enemies"] as Array).append(Fx._enemy("enm_pouncer", Fx._stats(500, 0, 1, 1, 1, 1, 1, 1), [
+		{"skill": "skl_e_pounce", "weight": 1, "target": "random"}], {"exp": 1, "credits": 1}))
+	var d: GameData = fixture_data(t)
+	var hits: int = 0
+	var n: int = 400
+	for seed in range(1, n + 1):
+		var s: BattleState = Fx.make_state(d, PackedStringArray(["enm_pouncer"]), {"seed": seed})
+		s.start()
+		var pouncer: Combatant = s.get_combatant("e0")
+		_until(s, pouncer)
+		s.get_combatant("p0").statuses.append(StatusEffect.new(d.status("sts_taunt"), 3, "p0"))
+		var dmg: Array[ActionEvent] = Fx.of_type(s.submit(s.choose_ai_command()), ActionEvent.Type.DAMAGE)
+		assert_len(dmg, 1, "random_enemy: one target")
+		if not dmg.is_empty() and dmg[0].target_id == "p0":
+			hits += 1
+	# P(p0) = 0.8 + 0.2 × 0.5 = 0.9 (the AI's target is used, not a second draw)
+	assert_between(hits, 330, 390, "taunt also steers random_enemy skills of enemies")
+	# Party random_enemy: a single given target is not honored (random draw with the battle rng).
+	var targets: Dictionary = {}
+	for seed in range(1, 41):
+		var s: BattleState = Fx.make_state(d, PackedStringArray(["enm_dummy", "enm_dummy"]),
+				{"seed": seed, "kai": {"skills": PackedStringArray(["skl_kai_wild_swing"])}})
+		s.start()
+		_until(s, s.get_combatant("p0"))
+		var ev: Array[ActionEvent] = s.submit(BattleCommand.skill("p0", "skl_kai_wild_swing", PackedStringArray(["e0"])))
+		targets[Fx.of_type(ev, ActionEvent.Type.DAMAGE)[0].target_id] = true
+	assert_eq(targets.size(), 2, "party: random over all living enemies")
+
+
 func test_empty_action_list_falls_back_to_attack() -> void:
 	var s: BattleState = _started(["enm_dummy"])
 	var dummy: Combatant = s.get_combatant("e0")

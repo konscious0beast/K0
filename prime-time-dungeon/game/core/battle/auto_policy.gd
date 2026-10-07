@@ -97,7 +97,7 @@ static func _damage_skill_command(state: BattleState, actor: Combatant) -> Battl
 			continue
 		if not ["single_enemy", "all_enemies", "random_enemy"].has(sk.target):
 			continue
-		var element: String = actor.attack_element if sid == actor.attack_skill else sk.element
+		var element: String = actor.attack_element if actor.is_party() and sid == actor.attack_skill else sk.element
 		var score: int = sk.power * Elements.multiplier_pm(target.element_mods, element)
 		if score > best_score:
 			best_score = score

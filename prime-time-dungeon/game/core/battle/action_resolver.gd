@@ -17,6 +17,7 @@ static func resolve(state: BattleState, cmd: BattleCommand) -> Array[ActionEvent
 	if actor == null:
 		return out
 	state.running_command = int(cmd.kind)
+	state.running_item_id = cmd.item_id if cmd.kind == BattleCommand.Kind.ITEM else ""
 	match cmd.kind:
 		BattleCommand.Kind.ATTACK:
 			var atk: SkillDef = state.skill_def(actor.attack_skill)
@@ -43,13 +44,14 @@ static func resolve(state: BattleState, cmd: BattleCommand) -> Array[ActionEvent
 	return out
 
 
-## Applies a skill's effects (no ACTION_START). Element: skill element, the actor's attack_element for its attack skill.
-## Hits on state.combo_target_id use combo_second_hit.
+## Applies a skill's effects (no ACTION_START). Element: skill element; for a party member's attack skill the weapon
+## element (attack_element). Enemies always use the skill element. Hits on state.combo_target_id use combo_second_hit.
 static func apply_skill(state: BattleState, actor: Combatant, skill: SkillDef, target_ids: PackedStringArray,
 		out: Array[ActionEvent]) -> void:
 	if skill == null:
 		return
-	var element: String = actor.attack_element if skill.id == actor.attack_skill else skill.element
+	var element: String = actor.attack_element if actor.is_party() and skill.id == actor.attack_skill \
+			else skill.element
 	var targets: Array[Combatant] = []
 	for id: String in target_ids:
 		var t: Combatant = state.get_combatant(id)
@@ -478,6 +480,9 @@ static func _action_start(actor: Combatant, cmd: BattleCommand, skill_id: String
 
 ## Actual targets of a skill: single → the given one, all → every living one of the side, random_enemy → one random
 ## living enemy (state.rng), self → actor, none → [].
+## random_enemy of an enemy actor with exactly one given valid target → that target: EnemyAI already drew it with
+## ai_rng (target rule + taunt override, GDD §3.11). Party commands always get the random draw (the player does not
+## pick the target of a random skill).
 static func _resolve_targets(state: BattleState, actor: Combatant, sk: SkillDef,
 		given: PackedStringArray) -> PackedStringArray:
 	var valid: PackedStringArray = state.valid_targets(actor, sk.id)
@@ -491,7 +496,9 @@ static func _resolve_targets(state: BattleState, actor: Combatant, sk: SkillDef,
 		"all_enemies", "all_allies":
 			out = valid
 		"random_enemy":
-			if not valid.is_empty():
+			if not actor.is_party() and given.size() == 1 and valid.has(given[0]):
+				out.append(given[0])
+			elif not valid.is_empty():
 				out.append(valid[state.rng.randi_range(0, valid.size() - 1)])
 		"self":
 			out.append(actor.id)
@@ -501,9 +508,12 @@ static func _resolve_targets(state: BattleState, actor: Combatant, sk: SkillDef,
 ## Combo (GDD §7.3): party damage action on exactly one enemy, directly after the other party member's action on the
 ## same target (no enemy/pseudo turn in between) → COMBO event, combo_second_hit for this target.
 ## Also records the action's single enemy target for the next party turn.
+## Only physical/magical damage counts (both actions): the ×COMBO_MULT lives in DamageCalc.compute; fixed damage
+## (items such as ice spray) has no combo factor (02_TECH §5.9), so it neither finishes nor starts a combo.
 static func _combo(state: BattleState, actor: Combatant, sk: SkillDef, targets: PackedStringArray,
 		out: Array[ActionEvent]) -> void:
-	if not actor.is_party() or not sk.is_damaging() or targets.size() != 1:
+	if not actor.is_party() or not (sk.damage_type == "physical" or sk.damage_type == "magical") \
+			or targets.size() != 1:
 		return
 	var t: Combatant = state.get_combatant(targets[0])
 	if t == null or t.is_party():
@@ -554,6 +564,8 @@ static func _ko(state: BattleState, target: Combatant, killer_id: String, skill_
 	ev.max_hp = target.max_hp()
 	ev.beat = beat
 	ev.command = command
+	if command == int(BattleCommand.Kind.ITEM):
+		ev.item_id = state.running_item_id
 	var overkill: bool = amount * FixedMath.PM >= hp_before * FixedMath.PM \
 			+ target.max_hp() * FixedMath.pm(Balance.OVERKILL_MAXHP_FRAC)
 	ev.value = 1 if overkill else 0
@@ -754,8 +766,9 @@ static func _gain_content(state: BattleState, c: Dictionary, out: Array[ActionEv
 		_gain_item(state, str(c.get("item_id", "")), maxi(1, JsonUtil.to_int(c.get("qty", 1), 1)), out)
 
 
-## Offline chest without server contents: LootboxDef box_<tier> rarity weights, rolls × effect_pm (min 1), guarantee
-## on the last roll, entries from loot_pool(floor, rarity).
+## Offline chest without server contents: LootboxDef box_<tier> rarity weights, rolls × effect_pm (min 1), entries
+## from loot_pool(floor, rarity). Guarantee (05 §7.4): if no earlier roll reached it, the last roll draws from the
+## weights with every rarity below the guarantee set to 0 (silver [55, 38, 7] → [0, 38, 7]); one draw per roll.
 static func _roll_box(state: BattleState, box_id: String, effect_pm: int, out: Array[ActionEvent]) -> void:
 	if state.data == null or not state.data.has_id("lootboxes", box_id):
 		push_warning("BattleState.apply_gift: unknown lootbox '%s'" % box_id)
@@ -766,12 +779,21 @@ static func _roll_box(state: BattleState, box_id: String, effect_pm: int, out: A
 	var weights: Array[int] = []
 	for r: String in order:
 		weights.append(maxi(0, JsonUtil.to_int(box.rarity_weights.get(r, 0))))
-	var best: int = 0
+	var need: int = order.find(box.guarantee)
+	var guaranteed: Array[int] = weights.duplicate()
+	var guaranteed_total: int = 0
+	for j in guaranteed.size():
+		if j < need:
+			guaranteed[j] = 0
+		guaranteed_total += guaranteed[j]
+	var best: int = -1
 	for i in rolls:
-		var ri: int = _weighted_nonzero(state.rng, weights)
-		var need: int = order.find(box.guarantee)
-		if i == rolls - 1 and need > 0 and best < need and ri < need:
-			ri = need
+		var ri: int = 0
+		if i == rolls - 1 and need > 0 and best < need:
+			# Degenerate data (no weight at or above the guarantee): the guarantee rarity itself.
+			ri = _weighted_nonzero(state.rng, guaranteed) if guaranteed_total > 0 else need
+		else:
+			ri = _weighted_nonzero(state.rng, weights)
 		best = maxi(best, ri)
 		_roll_pool_entry(state, order[ri], out)
 

@@ -49,6 +49,7 @@ var action_target_id: String = ""           # single enemy target of the running
 var self_delay: int = 0                     # delays that hit the actor in its own turn (stun on self, stunt fail)
 var stunt_used: bool = false                # STUNT used in the running turn (no cooldown tick at its end)
 var running_command: int = -1               # BattleCommand.Kind being resolved (-1 between actions; KO.command)
+var running_item_id: String = ""            # item of the ITEM command being resolved ("" otherwise; KO.item_id)
 var fled: bool = false
 var gift_n: int = 0
 var next_enemy_n: int = 0
@@ -356,8 +357,10 @@ func submit(cmd: BattleCommand) -> Array[ActionEvent]:
 		return out
 	var actor: Combatant = _current
 	var rank: int = command_rank(cmd)
+	var once_key: String = _once_key_for(actor, cmd)
 	out = ActionResolver.resolve(self, cmd)
-	_mark_once(actor, cmd)
+	if once_key != "" and not actor.used_once.has(once_key):
+		actor.used_once.append(once_key)
 	_finish_turn(actor, rank, out)
 	_advance(out)
 	history.append_array(out)
@@ -371,8 +374,7 @@ func choose_ai_command() -> BattleCommand:
 		return null
 	if actor.is_party():
 		return AutoPolicy.choose(self, actor)
-	ai_rng.seed = SeedUtil.derive(setup.seed, "ai", action_n)
-	return EnemyAI.choose(self, actor, ai_rng)
+	return _enemy_choice(actor).get("command") as BattleCommand
 
 
 ## Only in AWAIT_COMMAND; does not consume a turn (05 CR-2). Gift dictionary schema 05 §6.5:
@@ -622,6 +624,7 @@ func _begin_turn(actor: Combatant, out: Array[ActionEvent]) -> void:
 	self_delay = 0
 	stunt_used = false
 	running_command = -1
+	running_item_id = ""
 	combo_target_id = ""
 	action_target_id = ""
 	_current = null
@@ -653,6 +656,7 @@ func _close_turn(actor: Combatant) -> void:
 	self_delay = 0
 	stunt_used = false
 	running_command = -1
+	running_item_id = ""
 	combo_target_id = ""
 	action_target_id = ""
 	_current = null
@@ -787,23 +791,42 @@ func _validate_targets(actor: Combatant, sk: SkillDef, ids: PackedStringArray) -
 	return ""
 
 
-## Marks the first unused `once` AI action of the actor's current action list that uses cmd.skill_id
-## (done at resolution, so replays without AI recomputation stay identical).
-func _mark_once(actor: Combatant, cmd: BattleCommand) -> void:
+## EnemyAI choice for `actor` exactly as choose_ai_command() makes it (ai_rng reseeded with derive(seed, "ai",
+## action_n)): {"command", "index"}.
+func _enemy_choice(actor: Combatant) -> Dictionary:
+	ai_rng.seed = SeedUtil.derive(setup.seed, "ai", action_n)
+	return EnemyAI.choose_action(self, actor, ai_rng)
+
+
+## Used-once key (EnemyAI.once_key) of the `once` AI action that enemy SKILL command `cmd` executes, "" if none.
+## Computed before resolution (from the battle state alone, so replays without AI recomputation stay identical; also
+## before a phase change caused by the action). The AI choice is replayed: if it yields exactly `cmd`, its action
+## index decides, so a skill listed both as `once` and as a normal action only uses up the `once` entry when that entry
+## was chosen. A command the AI would not have made (scripted/tests) counts as the first unused `once` action with the
+## skill, unless a normal action of the list uses the same skill.
+func _once_key_for(actor: Combatant, cmd: BattleCommand) -> String:
 	if actor.is_party() or cmd.kind != BattleCommand.Kind.SKILL:
-		return
+		return ""
 	var actions: Array = EnemyAI.actions_of(actor)
+	var choice: Dictionary = _enemy_choice(actor)
+	var ai_cmd: BattleCommand = choice.get("command") as BattleCommand
+	var index: int = int(choice.get("index", -1))
+	if ai_cmd != null and ai_cmd.to_dict() == cmd.to_dict() and index >= 0 and index < actions.size():
+		var chosen: Dictionary = actions[index]
+		var chosen_cond: Dictionary = chosen.get("cond", {})
+		return EnemyAI.once_key(actor, index) if bool(chosen_cond.get("once", false)) else ""
+	var first: String = ""
 	for i in actions.size():
 		var a: Dictionary = actions[i]
 		if str(a.get("skill", "")) != cmd.skill_id:
 			continue
 		var cond: Dictionary = a.get("cond", {})
 		if not bool(cond.get("once", false)):
-			continue
+			return ""
 		var key: String = EnemyAI.once_key(actor, i)
-		if not actor.used_once.has(key):
-			actor.used_once.append(key)
-			return
+		if first == "" and not actor.used_once.has(key):
+			first = key
+	return first
 
 
 ## MOD_LINE(warn_tag) once per approach when a pseudo unit reaches preview position <= warn_at (1-based).

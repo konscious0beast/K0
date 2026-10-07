@@ -1,4 +1,3 @@
-# STUB(M0) — owned by M4. Replace completely, keep the public API.
 class_name RoomSpec extends RefCounted
 ## Input M3 → M4 for one room (02_TECH §8.5).
 

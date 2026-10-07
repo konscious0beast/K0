@@ -15,7 +15,8 @@ func _init() -> void:
 
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	# Anchors AND offsets: set_anchors_preset() alone keeps the (zero) rect → the backdrop was 0×0 and never drawn.
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 
 func _process(delta: float) -> void:

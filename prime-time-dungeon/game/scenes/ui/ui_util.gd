@@ -4,6 +4,7 @@ extends RefCounted
 ## inventory and safe rooms (they read Game/DB, never write Game.state).
 
 const STUB_HEADER: String = "# STUB(M0)"
+const UiIconU := preload("res://scenes/ui/ui_icon.gd")
 
 # --- Art palette extras (03_ART §2.1 / §2.4) -------------------------------------------------------------------------
 const C_LIVE: Color = Color("#ff3b30")
@@ -28,8 +29,8 @@ const ELEMENT_NAMES: Dictionary = {"physical": "Physisch", "fire": "Feuer", "ice
 const STAT_KEYS: PackedStringArray = ["hp", "mp", "str", "mag", "def", "res", "spd", "lck"]
 const STAT_NAMES: Dictionary = {"hp": "HP", "mp": "MP", "str": "Stärke", "mag": "Magie", "def": "Abwehr",
 	"res": "Resistenz", "spd": "Tempo", "lck": "Glück"}
-const STAT_SHORT: Dictionary = {"hp": "HP", "mp": "MP", "str": "STR", "mag": "MAG", "def": "DEF", "res": "RES",
-	"spd": "SPD", "lck": "LCK"}
+const STAT_SHORT: Dictionary = {"hp": "HP", "mp": "MP", "str": "STÄ", "mag": "MAG", "def": "ABW", "res": "RES",
+	"spd": "TMP", "lck": "GLÜ"}
 const SLOT_NAMES: Dictionary = {"weapon": "Waffe", "armor": "Rüstung", "accessory": "Accessoire"}
 const EQUIP_SLOTS: PackedStringArray = ["weapon", "armor", "accessory"]
 const TYPE_NAMES: Dictionary = {"consumable": "Verbrauch", "weapon": "Waffe", "armor": "Rüstung",
@@ -143,13 +144,18 @@ static func glyph_safe(text: String) -> String:
 
 # --- widgets -----------------------------------------------------------------------------------------------------------
 
+## Stylebox states of a Button that touch_pad() insets (LTR layouts; the *_mirrored states are only drawn for RTL).
+const BUTTON_STATES: PackedStringArray = ["normal", "hover", "pressed", "hover_pressed", "disabled", "focus"]
+const TOUCH_META: StringName = &"touch_visible_h"
+const MIN_FONT: int = 15                    # 03_ART §9.3: no UI text below 15 px
+
 static func label(text: String, variation: StringName = &"", font_size: int = 0, color: Color = Color(0, 0, 0, 0)) -> Label:
 	var l: Label = Label.new()
 	l.text = text
 	if variation != &"":
 		l.theme_type_variation = variation
 	if font_size > 0:
-		l.add_theme_font_size_override("font_size", font_size)
+		l.add_theme_font_size_override("font_size", maxi(font_size, MIN_FONT))
 	if color.a > 0.0:
 		l.add_theme_color_override("font_color", color)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -166,6 +172,91 @@ static func button(text: String, variation: StringName = &"", min_height: int = 
 		b.custom_minimum_size.y = min_height
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT if variation == &"ButtonFlat" else HORIZONTAL_ALIGNMENT_CENTER
 	add_sounds(b)
+	return b
+
+
+## 02_TECH §10.2 rule 5 / 03_ART §9.4 for buttons inside rows and lists: the button rect is the hit area (>= TOUCH_HIT
+## high) and every state stylebox is drawn inset (negative expand margins), so the visible part is `visible_h`
+## (>= MIN_TOUCH) high. Width follows the container. Lists keep >= 12 px separation (gap between hit areas).
+## Idempotent; meta `touch_visible_h` = visible height (tests).
+static func touch_pad(b: BaseButton, visible_h: float = 64.0) -> BaseButton:
+	if b == null or b.has_meta(TOUCH_META):
+		return b
+	var vis: float = maxf(visible_h, float(UiTheme.MIN_TOUCH))
+	var hit: float = maxf(float(UiTheme.TOUCH_HIT), vis)
+	var inset: float = (hit - vis) * 0.5
+	for st: String in BUTTON_STATES:
+		var sb: StyleBox = _state_box(b, st)
+		if sb == null:
+			continue
+		var d: StyleBox = sb.duplicate() as StyleBox
+		if d is StyleBoxFlat:
+			(d as StyleBoxFlat).expand_margin_top -= inset
+			(d as StyleBoxFlat).expand_margin_bottom -= inset
+		elif d is StyleBoxTexture:
+			(d as StyleBoxTexture).expand_margin_top -= inset
+			(d as StyleBoxTexture).expand_margin_bottom -= inset
+		b.add_theme_stylebox_override(st, d)
+	b.custom_minimum_size.y = maxf(b.custom_minimum_size.y, hit)
+	b.set_meta(TOUCH_META, vis)
+	return b
+
+
+## Sets the vertical content margins of every state stylebox (compact fixed-height buttons, e.g. the title menu).
+static func set_vmargin(b: Control, v: float) -> void:
+	for st: String in BUTTON_STATES:
+		var sb: StyleBox = _state_box(b, st)
+		if sb == null:
+			continue
+		var d: StyleBox = sb.duplicate() as StyleBox
+		d.content_margin_top = v
+		d.content_margin_bottom = v
+		b.add_theme_stylebox_override(st, d)
+
+
+## Visible height of a control for the touch rules: touch_pad meta, the HitVisual of UiTheme.ensure_hit_area, else
+## the rect height.
+static func visible_height(c: Control) -> float:
+	if c.has_meta(TOUCH_META):
+		return float(c.get_meta(TOUCH_META))
+	var v: Control = c.get_node_or_null("HitVisual") as Control
+	if v != null:
+		return v.size.y
+	return c.size.y
+
+
+static func _state_box(b: Control, state: String) -> StyleBox:
+	if b.has_theme_stylebox_override(state):
+		return b.get_theme_stylebox(state)
+	var th: Theme = UiTheme.get_theme()
+	var t: StringName = b.theme_type_variation if b.theme_type_variation != &"" else StringName(b.get_class())
+	while t != &"":
+		if th.has_stylebox(state, t):
+			return th.get_stylebox(state, t)
+		t = th.get_type_variation_base(t)
+	return th.get_stylebox(state, "Button") if th.has_stylebox(state, "Button") else null
+
+
+## Visible close button (X icon + caption) for modals: the touch way out (02_TECH §10.3 "reine Button-UI"; on touch the
+## Esc/B glyph hints are hidden). 64 px visible, 88 px hit area.
+static func close_button(caption: String = "Schließen") -> Button:
+	var b: Button = button("", &"")
+	b.name = "Close"
+	b.custom_minimum_size = Vector2(176, 0)
+	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var row: HBoxContainer = hbox(10)
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	full_rect(row)
+	b.add_child(row)
+	var ic: Control = UiIconU.make(&"cross", UiTheme.C_TEXT, 20.0)
+	ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(ic)
+	var l: Label = label(caption, &"", 20)
+	l.name = "Text"
+	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(l)
+	touch_pad(b)
 	return b
 
 

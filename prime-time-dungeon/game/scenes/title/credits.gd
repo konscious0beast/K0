@@ -1,7 +1,8 @@
 extends Control
 ## "Etage 2 folgt" credits (GDD §1.4 B8, §15): teaser camera ride down a dead escalator into the sunken mall
 ## "Passage Ewiger Rabatt" (neon pink / cooler cyan / mould green, blinking "NUR HEUTE!" signs), credits roll on the
-## left, end card "ETAGE 2 FOLGT". Skippable (ui_accept / ui_cancel / button) → title. Params {"from_title": bool}.
+## left on an ink scrim (signs sit right of it), end card "ETAGE 2 FOLGT". Skippable (ui_accept / ui_cancel / button)
+## → title. Params {"from_title": bool}.
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const SceneKit := preload("res://scenes/ui/scene_kit.gd")
@@ -80,7 +81,7 @@ func finish() -> void:
 func _apply_camera() -> void:
 	var k: float = clampf(elapsed / (DURATION - 6.0), 0.0, 1.0)
 	var pos: Vector3 = Vector3(0.0, 6.0, 9.0).lerp(Vector3(0.0, -4.5, -11.0), k)
-	SceneKit.look(_cam, pos + Vector3(sin(elapsed * 0.3) * 0.3, 0, 0), pos + Vector3(0, -2.6, -6.0))
+	SceneKit.look(_cam, pos + Vector3(sin(elapsed * 0.3) * 0.3, 0, 0), pos + Vector3(0.6, -1.7, -6.0))
 
 
 func _build() -> void:
@@ -108,9 +109,9 @@ func _build() -> void:
 	add_child(shade)
 	# Left-to-right ink gradient behind the roll so the names stay readable over the neon signs.
 	var grad: Gradient = Gradient.new()
-	grad.set_color(0, Color(UiUtil.C_INK, 0.88))
+	grad.set_color(0, Color(UiUtil.C_INK, 0.92))
 	grad.set_color(1, Color(UiUtil.C_INK, 0.0))
-	grad.add_point(0.55, Color(UiUtil.C_INK, 0.7))
+	grad.add_point(0.7, Color(UiUtil.C_INK, 0.85))
 	var gtex: GradientTexture2D = GradientTexture2D.new()
 	gtex.gradient = grad
 	gtex.width = 256
@@ -148,7 +149,7 @@ func _build() -> void:
 				s.custom_minimum_size = Vector2(520, 0)
 				_roll.add_child(s)
 			"r":
-				_roll.add_child(UiUtil.label(text.to_upper(), &"", 14, UiTheme.C_ACCENT_2))
+				_roll.add_child(UiUtil.label(text.to_upper(), &"", 16, UiTheme.C_ACCENT_2))
 			"n":
 				var n: Label = UiUtil.label(text, &"", 24)
 				n.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -171,16 +172,23 @@ func _build() -> void:
 	var e2: Label = UiUtil.label("„Passage Ewiger Rabatt“ – Bleiben Sie dran!", &"", 24, Color("#ff4fa0"))
 	e2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_end_card.add_child(e2)
+	var safe: SafeAreaContainer = SafeAreaContainer.new()
+	safe.extra = 0
+	add_child(safe)
+	var frame: Control = Control.new()
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	safe.add_child(frame)
 	_skip = UiUtil.button("Überspringen", &"")
 	_skip.name = "Skip"
 	_skip.add_theme_font_size_override("font_size", 16)
+	UiUtil.touch_pad(_skip)
 	_skip.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	_skip.offset_left = -220
-	_skip.offset_right = -24
-	_skip.offset_top = -62
-	_skip.offset_bottom = -20
+	_skip.offset_left = -196
+	_skip.offset_right = 0
+	_skip.offset_top = -float(UiTheme.TOUCH_HIT)
+	_skip.offset_bottom = 0
 	_skip.pressed.connect(finish)
-	add_child(_skip)
+	frame.add_child(_skip)
 
 
 func _build_escalator(world: Node3D) -> void:
@@ -200,28 +208,44 @@ func _build_escalator(world: Node3D) -> void:
 				Vector3(side, y2 + 0.5, z2), 2.4, Vector3(-34, 0, 0)))
 
 
+## Shop fronts sit right of the credits scrim and deeper in the mall; sign text is INK on the pink sign (readable,
+## no pink-on-pink); lamps hang from cables; a back wall with the mall's neon name fills the upper half.
 func _build_mall(world: Node3D) -> void:
 	world.add_child(SceneKit.box(Vector3(40, 0.2, 40), Color("#9a9080"), Vector3(0, -6.9, -18)))
-	for i in 6:
-		var x: float = -9.0 + i * 3.6
-		var z: float = -14.0 - (i % 2) * 4.0
+	world.add_child(SceneKit.box(Vector3(40, 16, 0.4), Color("#2a1a2a"), Vector3(0, 0.0, -30)))
+	world.add_child(SceneKit.box(Vector3(14, 0.14, 0.2), Color("#ff4fa0"), Vector3(6, 4.2, -29.7), 1.8))
+	world.add_child(SceneKit.box(Vector3(14, 0.14, 0.2), Color("#4fe6ff"), Vector3(6, 1.6, -29.7), 1.8))
+	var mall: Label3D = Label3D.new()
+	mall.text = "PASSAGE EWIGER RABATT"
+	mall.font_size = 96
+	mall.pixel_size = 0.012
+	mall.modulate = Color("#fff0f5")
+	mall.outline_size = 18
+	mall.outline_modulate = Color("#ff4fa0")
+	mall.position = Vector3(6, 2.9, -29.6)
+	world.add_child(mall)
+	for i in 5:
+		var x: float = -0.5 + i * 3.4
+		var z: float = -17.0 - (i % 2) * 4.0
 		world.add_child(SceneKit.box(Vector3(3.0, 3.4, 0.2), Color("#2a3a44"), Vector3(x, -5.1, z)))
-		world.add_child(SceneKit.box(Vector3(2.6, 2.2, 0.05), Color("#fff0f5") if i % 2 == 0 else Color("#4fe6ff"),
-			Vector3(x, -5.4, z + 0.12), 0.7))
-		var sign_node: Node3D = SceneKit.box(Vector3(2.4, 0.5, 0.08), Color("#ff4fa0"), Vector3(x, -3.2, z + 0.16), 2.2)
+		world.add_child(SceneKit.box(Vector3(2.6, 2.2, 0.05), Color("#7a5a6e") if i % 2 == 0 else Color("#2e8a9a"),
+			Vector3(x, -5.4, z + 0.12), 0.35))
+		var sign_node: Node3D = SceneKit.box(Vector3(2.4, 0.5, 0.08), Color("#ff4fa0"), Vector3(x, -3.2, z + 0.16), 0.6)
 		world.add_child(sign_node)
 		var l3: Label3D = Label3D.new()
 		l3.text = "NUR HEUTE!" if i % 2 == 0 else "-90 %"
 		l3.font_size = 64
 		l3.pixel_size = 0.005
-		l3.modulate = Color("#ffffff")
-		l3.outline_size = 8
-		l3.outline_modulate = Color("#ff4fa0")
+		l3.modulate = UiUtil.C_INK
+		l3.outline_size = 0
 		l3.position = Vector3(x, -3.2, z + 0.25)
 		world.add_child(l3)
 		_signs.append(l3)
-	for i in 4:
-		world.add_child(SceneKit.sphere(0.45, Color("#c8e04a"), Vector3(-6 + i * 4, -6.5, -9 - (i % 2) * 3), 1.2))
+	for i in 3:
+		var lamp: Vector3 = Vector3(-1.0 + i * 4.5, -4.2, -10.0 - (i % 2) * 3.0)
+		world.add_child(SceneKit.cylinder(0.02, 0.02, 6.0, Color("#3a3036"), lamp + Vector3(0, 3.3, 0)))
+		world.add_child(SceneKit.cylinder(0.12, 0.42, 0.25, Color("#3a3036"), lamp + Vector3(0, 0.38, 0), 0.0, 16, true))
+		world.add_child(SceneKit.sphere(0.24, Color("#c8e04a"), lamp + Vector3(0, 0.2, 0), 1.2))
 	world.add_child(SceneKit.omni(Color("#ff4fa0"), 2.0, 14.0, Vector3(-4, -3, -10)))
 	world.add_child(SceneKit.omni(Color("#4fe6ff"), 2.0, 14.0, Vector3(4, -3, -14)))
 	world.add_child(SceneKit.omni(Color("#ffd59e"), 1.0, 10.0, Vector3(0, 5, 6)))

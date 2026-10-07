@@ -145,6 +145,76 @@ func test_mopsula_scene_plays_as_blocking_lines_and_is_marked_seen() -> void:
 	Events.mod_said.disconnect(cb)
 
 
+## Two scenes that both qualify on the same visit (like scn_mop_2 + scn_mop_4 on the first sr_signalbox visit after the
+## Hausmeister): both play in that visit — the second becomes pending right after the first is marked seen.
+func test_two_qualifying_scenes_both_play_in_one_visit() -> void:
+	var data: GameData = _data_with_scenes([
+		{"id": "scn_test_a", "name": "Test A", "condition": "e.first_visit == true", "priority": 0,
+			"lines": [{"voice": "mopsula", "text": "Erste Szene."}]},
+		{"id": "scn_test_b", "name": "Test B", "condition": "e.first_visit == true", "priority": 1,
+			"set_flag": "test_pep_talk", "lines": [{"voice": "mopsula", "text": "Zweite Szene."},
+			{"voice": "kai", "text": "Verstanden."}]}])
+	if data == null:
+		return
+	var saved: GameData = DB.data
+	DB.data = data
+	Game.new_game(0, "Kai", 3)
+	Game.run_log = _spy
+	var dialog: Node = (load(SCENE_DIALOG) as PackedScene).instantiate()
+	dialog.call("setup", {})
+	tree.root.add_child(dialog)
+	_nodes.append(dialog)
+	var r: Node = _room()
+	await wait_frames(3)
+	var first: SceneDef = r.get("pending_scene") as SceneDef
+	assert_true(first != null and first.id == "scn_test_a", "first scene pending")
+	r.call("activate", "mopsula")
+	await wait_frames(2)
+	for i in 6:
+		dialog.call("advance")
+	var ok: bool = await wait_until(func() -> bool:
+		var p: SceneDef = r.get("pending_scene") as SceneDef
+		return _spy.of_type("scene").size() == 1 and p != null, WAIT)
+	assert_true(ok, "after the first scene the second one is pending in the same visit")
+	var second: SceneDef = r.get("pending_scene") as SceneDef
+	assert_true(second != null and second.id == "scn_test_b", "second scene = scn_test_b")
+	var marker: Node3D = r.find_child("SceneMarker", true, false) as Node3D
+	assert_true(marker != null and marker.visible, "'!' stays for the next scene")
+	r.call("activate", "mopsula")
+	await wait_frames(2)
+	for i in 8:
+		dialog.call("advance")
+	var ok2: bool = await wait_until(func() -> bool: return _spy.of_type("scene").size() == 2, WAIT)
+	assert_true(ok2, "second scene played in the same visit")
+	assert_eq(_spy.of_type("scene"), [{"t": "scene", "id": "scn_test_a"}, {"t": "scene", "id": "scn_test_b"}] as
+		Array[Dictionary])
+	assert_true(bool(Game.get_flag("test_pep_talk", false)), "set_flag of the second scene applied")
+	assert_null(r.get("pending_scene"), "nothing left")
+	DB.data = saved
+
+
+func _data_with_scenes(scenes: Array) -> GameData:
+	var tables: Dictionary = {}
+	for t: String in GameData.TABLES:
+		var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/%s.json" % t))
+		if typeof(raw) != TYPE_DICTIONARY:
+			fail("cannot read data/%s.json" % t)
+			return null
+		var d: Dictionary = raw
+		tables[t] = d.get("entries", [])
+		match t:
+			"party":
+				tables["party_start"] = d.get("start", {})
+			"enemies":
+				if d.has("pseudo_units"):
+					tables["pseudo_units"] = d["pseudo_units"]
+			"lootboxes":
+				tables["lootbox_pools"] = d.get("pools", {})
+				tables["lootbox_pity"] = d.get("pity", {"rare": 4, "epic": 8})
+	tables["scenes"] = scenes
+	return fixture_data(tables)
+
+
 func test_event_run_cannot_save() -> void:
 	var r: Node = _room()
 	await wait_frames(2)

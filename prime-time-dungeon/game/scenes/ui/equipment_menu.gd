@@ -1,6 +1,7 @@
 extends "res://scenes/ui/menu_base.gd"
 ## Pause tab / safe room "Ausrüstung" (02_TECH §1.6, GDD §10.1): member tabs, three slots, candidate list (inventory
 ## items of the slot type the member may wear + "Ablegen") with stat preview (green/red), Game.equip(member, slot, item).
+## Layout: slots | candidates | stat column (full stat names, same as the party page).
 
 var member_id: String = "kai"
 var slot: String = ""                 # "" = slot level, else candidate level
@@ -25,26 +26,34 @@ func _ready() -> void:
 	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_child(row)
 	var left: VBoxContainer = UiUtil.vbox(10)
-	left.custom_minimum_size = Vector2(380, 0)
+	left.custom_minimum_size = Vector2(360, 0)
 	row.add_child(left)
-	_slots = UiUtil.vbox(6)
+	_slots = UiUtil.vbox(12)                # 12 px between the 88 px hit areas
 	left.add_child(_slots)
-	left.add_child(UiUtil.spacer(6))
-	var ptitle: Label = UiUtil.label("WERTE", &"", 13, UiTheme.C_ACCENT)
-	ptitle.add_theme_font_override("font", UiTheme.font_bold())
-	left.add_child(ptitle)
-	_preview = GridContainer.new()
-	_preview.columns = 4
-	_preview.add_theme_constant_override("h_separation", 12)
-	left.add_child(_preview)
-	var right: VBoxContainer = UiUtil.vbox(8)
-	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(right)
+	var mid: VBoxContainer = UiUtil.vbox(8)
+	mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(mid)
 	_cand_title = UiUtil.label("Slot wählen", &"LabelSmall", 16)
-	right.add_child(_cand_title)
+	mid.add_child(_cand_title)
 	var sl: Dictionary = scroll_list()
-	right.add_child(sl["scroll"] as Control)
+	mid.add_child(sl["scroll"] as Control)
 	_cands = sl["list"]
+	var stats_panel: PanelContainer = PanelContainer.new()
+	stats_panel.custom_minimum_size = Vector2(250, 0)
+	stats_panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	stats_panel.add_theme_stylebox_override("panel", UiUtil.box_style(Color(UiUtil.C_INK, 0.55), Color(UiTheme.C_ACCENT_2,
+		0.35), 1, 0.0, 14, 10))
+	row.add_child(stats_panel)
+	var right: VBoxContainer = UiUtil.vbox(6)
+	stats_panel.add_child(right)
+	var ptitle: Label = UiUtil.label("WERTE", &"", 16, UiTheme.C_ACCENT)
+	ptitle.add_theme_font_override("font", UiTheme.font_bold())
+	right.add_child(ptitle)
+	_preview = GridContainer.new()
+	_preview.columns = 2
+	_preview.add_theme_constant_override("h_separation", 12)
+	_preview.add_theme_constant_override("v_separation", 2)
+	right.add_child(_preview)
 	if Game.state != null and Game.state.member(member_id) == null and not UiUtil.party().is_empty():
 		member_id = UiUtil.party()[0].id
 	refresh()
@@ -174,8 +183,8 @@ func _show_preview(delta: Dictionary) -> void:
 		return
 	var stats: Dictionary = UiUtil.member_stats(m)
 	for k: String in ["str", "mag", "def", "res", "spd", "lck"]:
-		var kl: Label = UiUtil.label(str(UiUtil.STAT_SHORT[k]), &"LabelSmall", 15)
-		kl.custom_minimum_size = Vector2(40, 0)
+		var kl: Label = UiUtil.label(str(UiUtil.STAT_NAMES[k]), &"LabelSmall", 16)
+		kl.custom_minimum_size = Vector2(110, 0)
 		_preview.add_child(kl)
 		var d: int = int(delta.get(k, 0))
 		var txt: String = str(int(stats.get(k, 0)))

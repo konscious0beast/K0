@@ -3,7 +3,9 @@ extends TestCase
 ## setup({"capture": true}); menus own a focused control after _ready, overlays never take focus; PauseMenu and every
 ## page/dialog opened from it run WHEN_PAUSED; touch hit areas >= 88 px; SafeAreaContainer margins >= 24 px; the name
 ## entry is limited to 12 characters; every static Label/Button/RichTextLabel/Label3D text of the UI scenes and every
-## Label3D text built by PropKit/Vfx only uses glyphs of ThemeDB.fallback_font.
+## Label3D text built by PropKit/Vfx only uses glyphs of ThemeDB.fallback_font. Touch rules of every menu control
+## (visible >= MIN_TOUCH, touch_pad hit areas >= TOUCH_HIT), the 15 px font minimum (03_ART §9.3), touch close buttons
+## of every modal (scheme TOUCH), touch buttons never over minimap / hype meter, backdrop size, safe-rect layouts.
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const ROUTER_FIXTURE: String = "res://tests/fixtures/router/router_screen.tscn"
@@ -30,6 +32,10 @@ const SCENE_TOUCH: String = "res://scenes/ui/touch_controls.tscn"
 const SCENE_GLOBAL: String = "res://scenes/ui/global_ui.tscn"
 const DAMAGE_STYLES: Array[StringName] = [&"damage", &"crit", &"heal", &"mp", &"miss", &"weak", &"resist", &"status"]
 const PAUSE_PAGES: Array[String] = ["party", "inventory", "equipment", "skills", "achievements", "bestiary", "settings"]
+const MENU_SCENES: Array[String] = [SCENE_TITLE, SCENE_SLOTS, SCENE_NAME, SCENE_INTRO, SCENE_GAME_OVER, SCENE_CREDITS,
+	SCENE_SAFE_ROOM, SCENE_VENDING, SCENE_LOOTBOX, SCENE_SETTINGS, SCENE_CONFIRM, SCENE_LOBBY, SCENE_RESULT,
+	SCENE_SUMMARY]
+const MIN_FONT: int = 15
 
 
 func before_each() -> void:
@@ -271,6 +277,233 @@ func test_safe_area_margins_at_least_24() -> void:
 		tree.paused = false
 
 
+# --- touch sizes / fonts / close buttons (02_TECH §10.2 rule 5, §10.3; 03_ART §9.3) -------------------------------
+
+func test_every_menu_control_meets_the_touch_sizes() -> void:
+	for path: String in MENU_SCENES:
+		var n: Node = _instance(path)
+		if n == null:
+			continue
+		add_to_tree(n)
+		await wait_frames(4)
+		assert_eq(_small_controls(n), PackedStringArray(), "%s: interactive controls >= %d px" % [path.get_file(),
+			UiTheme.MIN_TOUCH])
+		_dispose(n)
+		tree.paused = false
+	var pm: Node = _instance(SCENE_PAUSE)
+	if pm == null:
+		return
+	add_to_tree(pm)
+	await wait_frames(3)
+	for tab: String in PAUSE_PAGES:
+		pm.call("show_tab", tab)
+		await wait_frames(3)
+		assert_eq(_small_controls(pm), PackedStringArray(), "pause page '%s': interactive controls >= %d px" % [tab,
+			UiTheme.MIN_TOUCH])
+	var inv: Node = pm.call("page", "inventory") as Node
+	pm.call("show_tab", "inventory")
+	if inv != null and inv.has_method("_activate"):
+		inv.call("_activate", "itm_bandage")         # target list (Auf wen anwenden?)
+		await wait_frames(3)
+		assert_eq(_small_controls(pm), PackedStringArray(), "inventory target list >= %d px" % UiTheme.MIN_TOUCH)
+
+
+func test_ui_texts_are_at_least_15_px() -> void:
+	var paths: Array[String] = []
+	paths.assign(MENU_SCENES)
+	paths.append_array([SCENE_PAUSE, SCENE_HUD, SCENE_OVERLAY, SCENE_DIALOG, SCENE_TOUCH, SCENE_GLOBAL])
+	for path: String in paths:
+		var n: Node = _instance(path)
+		if n == null:
+			continue
+		add_to_tree(n)
+		await wait_frames(4)
+		if path == SCENE_PAUSE:
+			for tab: String in PAUSE_PAGES:
+				n.call("show_tab", tab)
+				await wait_frames(2)
+		assert_eq(_small_fonts(n), PackedStringArray(), "%s: every Label >= %d px" % [path.get_file(), MIN_FONT])
+		_dispose(n)
+		tree.paused = false
+
+
+## Scheme TOUCH hides the Esc/B glyph hints: PauseMenu, VendingMenu and the big map must each offer a visible button
+## that closes them (02_TECH §10.3 "reine Button-UI").
+func test_touch_scheme_every_modal_has_a_visible_close_button() -> void:
+	var saved: int = Game.input_scheme
+	Game.input_scheme = Game.InputScheme.TOUCH
+	Events.input_scheme_changed.emit(Game.InputScheme.TOUCH)
+	# Pause menu.
+	var pm: Node = _instance(SCENE_PAUSE, {})
+	if pm != null:
+		add_to_tree(pm)
+		await wait_frames(3)
+		var b: BaseButton = pm.get("close_button") as BaseButton
+		assert_true(b != null and b.is_visible_in_tree() and not b.disabled, "pause menu: visible close button")
+		assert_eq(_visible_glyphs(pm), 0, "pause menu: no key glyphs on touch")
+		if b != null:
+			assert_true(_size_ok(b), "pause close button >= %d px" % UiTheme.MIN_TOUCH)
+			b.pressed.emit()
+			await wait_frames(2)
+			assert_false(is_instance_valid(pm) and pm.is_inside_tree(), "the button closes the pause menu")
+			assert_false(tree.paused, "and unpauses")
+	# Vending machine.
+	var v: Node = _instance(SCENE_VENDING, {})
+	if v != null:
+		var closed: Array[bool] = [false]
+		v.connect("closed", func() -> void: closed[0] = true)
+		add_to_tree(v)
+		await wait_frames(3)
+		var vb: BaseButton = v.get("close_button") as BaseButton
+		assert_true(vb != null and vb.is_visible_in_tree(), "vending: visible close button")
+		if vb != null:
+			vb.pressed.emit()
+			await wait_frames(2)
+			assert_true(closed[0], "the button closes the vending machine")
+	# Big map.
+	var h: Node = _instance(SCENE_HUD, {})
+	if h != null:
+		add_to_tree(h)
+		await wait_frames(2)
+		var bm: Node = h.call("open_big_map")
+		assert_not_null(bm, "big map opens")
+		await wait_frames(2)
+		if bm != null:
+			var mb: BaseButton = bm.get("close_button") as BaseButton
+			assert_true(mb != null and mb.is_visible_in_tree(), "big map: visible close button")
+			if mb != null:
+				assert_true(_size_ok(mb), "big map close button >= %d px" % UiTheme.MIN_TOUCH)
+				mb.pressed.emit()
+				await wait_frames(2)
+				assert_false(tree.paused, "closing the big map unpauses")
+				assert_false(bool(h.call("is_modal_open")), "big map closed")
+	Game.input_scheme = saved as Game.InputScheme
+	Events.input_scheme_changed.emit(saved)
+
+
+func test_vending_quantity_buttons_for_touch_and_mouse() -> void:
+	Game.new_game(0, "Kai", 5)
+	Game.state.inventory.credits = 500
+	var v: Node = _instance(SCENE_VENDING, {})
+	if v == null:
+		return
+	add_to_tree(v)
+	await wait_frames(3)
+	v.set("selected", "itm_bandage")
+	v.call("set_qty", 1)
+	var plus: BaseButton = v.find_child("Plus", true, false) as BaseButton
+	var minus: BaseButton = v.find_child("Minus", true, false) as BaseButton
+	assert_true(plus != null and minus != null, "−/+ buttons next to the quantity")
+	if plus == null or minus == null:
+		return
+	plus.pressed.emit()
+	plus.pressed.emit()
+	assert_eq(int(v.get("qty")), 3, "+ raises the quantity")
+	minus.pressed.emit()
+	assert_eq(int(v.get("qty")), 2, "− lowers it")
+	assert_true(_size_ok(plus) and _size_ok(minus), "−/+ >= %d px" % UiTheme.MIN_TOUCH)
+
+
+func test_backdrop_fills_the_viewport() -> void:
+	for path: String in [SCENE_SLOTS, SCENE_NAME, SCENE_SUMMARY, SCENE_RESULT, SCENE_LOBBY]:
+		var n: Node = _instance(path)
+		if n == null:
+			continue
+		add_to_tree(n)
+		await wait_frames(2)
+		var bg: Control = null
+		for c: Node in n.get_children():
+			var sc: Script = c.get_script() as Script
+			if sc != null and sc.resource_path.ends_with("broadcast_bg.gd"):
+				bg = c as Control
+		assert_not_null(bg, "%s has the broadcast backdrop" % path.get_file())
+		if bg != null:
+			var vp: Vector2 = n.get_viewport().get_visible_rect().size
+			assert_true(bg.size.is_equal_approx(vp), "%s: backdrop %s = viewport %s" % [path.get_file(), str(bg.size),
+				str(vp)])
+		_dispose(n)
+
+
+## Headless runs on a 64 px root (visible rect 1280×1280): the real phone/desktop sizes are set explicitly.
+func test_summary_screens_stay_inside_the_safe_rect() -> void:
+	var saved: Vector2i = tree.root.size
+	for res: Vector2i in [Vector2i(1280, 720), Vector2i(1600, 720)]:
+		tree.root.size = res
+		await wait_frames(1)
+		await _check_safe_rect([SCENE_SUMMARY, SCENE_RESULT], res)
+	tree.root.size = saved
+	await wait_frames(1)
+
+
+func _check_safe_rect(paths: Array[String], res: Vector2i) -> void:
+	for path: String in paths:
+		var n: Node = _instance(path)
+		if n == null:
+			continue
+		add_to_tree(n)
+		await wait_frames(4)
+		var safe: SafeAreaContainer = null
+		for c: Node in n.find_children("*", "MarginContainer", true, false):
+			if c is SafeAreaContainer:
+				safe = c as SafeAreaContainer
+		assert_not_null(safe, "%s: SafeAreaContainer" % path.get_file())
+		if safe == null:
+			continue
+		var m: Dictionary = safe.compute_margins()
+		var r: Rect2 = n.get_viewport().get_visible_rect()     # the screen (an overfull container grows past it)
+		var inner: Rect2 = Rect2(r.position + Vector2(float(m["left"]), float(m["top"])), r.size - Vector2(float(m["left"]) +
+			float(m["right"]), float(m["top"]) + float(m["bottom"])))
+		var out: PackedStringArray = []
+		for c2: Node in safe.find_children("*", "Control", true, false):
+			var ctl: Control = c2 as Control
+			if not ctl.is_visible_in_tree() or ctl.size.x <= 0.0 or ctl.size.y <= 0.0:
+				continue
+			var cr: Rect2 = ctl.get_global_rect()
+			if not inner.grow(0.5).encloses(cr):
+				out.append("%s %s" % [ctl.name, str(cr)])
+		assert_eq(out, PackedStringArray(), "%s @ %s: every child inside the safe rect %s" % [path.get_file(), str(res),
+			str(inner)])
+		_dispose(n)
+
+
+## With the touch layer shown, the pause/map hit areas never cover the minimap or the hype meter.
+func test_touch_buttons_never_cover_minimap_or_hype() -> void:
+	var saved_size: Vector2i = tree.root.size
+	tree.root.size = Vector2i(1280, 720)
+	var saved: StringName = Game.settings.touch_controls
+	Game.settings.touch_controls = &"on"
+	var o: Node = _instance(SCENE_OVERLAY, {})
+	var h: Node = _instance(SCENE_HUD, {})
+	if o == null or h == null:
+		Game.settings.touch_controls = saved
+		tree.root.size = saved_size
+		return
+	tree.root.add_child(o)
+	_nodes.append(o)
+	add_to_tree(h)
+	Events.overlay_mode_requested.emit(&"explore")
+	await wait_frames(4)
+	var touch: Node = h.get("touch") as Node
+	assert_true(touch != null and bool(touch.call("is_shown")), "touch layer shown")
+	var buttons: Dictionary = touch.get("buttons") if touch != null else {}
+	var others: Dictionary = {"minimap": h.call("minimap_rect"), "hype": o.call("hype_rect")}
+	for k: String in others.keys():
+		var other: Rect2 = others[k]
+		assert_true(other.size.x > 0.0, "%s laid out" % k)
+		for a: Variant in buttons.keys():
+			var br: Rect2 = (buttons[a] as Control).get_global_rect()
+			assert_false(br.intersects(other), "touch %s %s overlaps %s %s" % [str(a), str(br), k, str(other)])
+	Game.settings.touch_controls = &"off"
+	Events.settings_changed.emit()
+	await wait_frames(2)
+	assert_almost((h.call("minimap_rect") as Rect2).end.x, (o.call("hype_rect") as Rect2).end.x, 1.0,
+		"without touch both return to the right edge")
+	Game.settings.touch_controls = saved
+	Events.settings_changed.emit()
+	tree.root.size = saved_size
+	await wait_frames(1)
+
+
 # --- glyphs of 3D labels ------------------------------------------------------------------------------------------------
 
 func test_label3d_texts_of_propkit_and_vfx_use_available_glyphs() -> void:
@@ -298,6 +531,49 @@ func test_glyph_helpers() -> void:
 
 
 # --- helpers -------------------------------------------------------------------------------------------------------------
+
+## Visible BaseButtons and Sliders smaller than MIN_TOUCH (visible part) or with a touch_pad hit area below TOUCH_HIT.
+func _small_controls(root: Node) -> PackedStringArray:
+	var out: PackedStringArray = []
+	for c: Node in root.find_children("*", "Control", true, false):
+		var ctl: Control = c as Control
+		if not (ctl is BaseButton or ctl is Slider) or not ctl.is_visible_in_tree():
+			continue
+		if not _size_ok(ctl):
+			out.append("%s (%s) %s visible h %.0f" % [ctl.name, ctl.get_class(), str(ctl.size), UiUtil.visible_height(ctl)])
+	return out
+
+
+func _size_ok(ctl: Control) -> bool:
+	var min_t: float = float(UiTheme.MIN_TOUCH) - 0.5
+	if ctl.size.x < min_t or UiUtil.visible_height(ctl) < min_t or ctl.size.y < min_t:
+		return false
+	if ctl.has_meta(UiUtil.TOUCH_META) and ctl.size.y < float(UiTheme.TOUCH_HIT) - 0.5:
+		return false
+	return true
+
+
+## Labels (visible) whose effective font size is below MIN_FONT.
+func _small_fonts(root: Node) -> PackedStringArray:
+	var out: PackedStringArray = []
+	for c: Node in root.find_children("*", "Label", true, false):
+		var l: Label = c as Label
+		if not l.is_visible_in_tree() or l.text.strip_edges() == "":
+			continue
+		var fs: int = l.get_theme_font_size("font_size")
+		if fs < MIN_FONT:
+			out.append("%s '%s' %d px" % [l.name, l.text.left(30), fs])
+	return out
+
+
+func _visible_glyphs(root: Node) -> int:
+	var n: int = 0
+	for c: Node in root.find_children("*", "HBoxContainer", true, false):
+		var sc: Script = c.get_script() as Script
+		if sc != null and sc.resource_path.ends_with("input_glyph.gd") and (c as Control).is_visible_in_tree():
+			n += 1
+	return n
+
 
 func _instance(path: String, params: Dictionary = {"capture": true}) -> Node:
 	assert_true(ResourceLoader.exists(path), "%s exists" % path)

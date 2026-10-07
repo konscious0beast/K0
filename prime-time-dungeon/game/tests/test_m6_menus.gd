@@ -248,6 +248,30 @@ func test_settings_rows_write_game_settings() -> void:
 	Events.settings_changed.disconnect(cb)
 
 
+## Slider steps apply live but write user://settings.cfg only at drag end / close; camera sensitivity 1.00× exact.
+func test_settings_sliders_debounce_saving_and_camera_hits_one() -> void:
+	var sm: Node = _scene(SCENE_SETTINGS, {"framed": true})
+	add_to_tree(sm)
+	await wait_frames(2)
+	var rows: Dictionary = sm.get("rows")
+	var vol: HSlider = rows["master_volume"] as HSlider
+	vol.value = 40.0
+	vol.value = 45.0
+	assert_almost(Game.settings.master_volume, 0.45, 0.001, "applied live")
+	assert_true(bool(sm.call("is_dirty")), "not written per slider step")
+	vol.drag_ended.emit(true)
+	assert_false(bool(sm.call("is_dirty")), "written once at the end of the drag")
+	var cam: HSlider = rows["camera_sensitivity"] as HSlider
+	cam.value = 120.0
+	cam.value = 100.0
+	assert_eq(Game.settings.camera_sensitivity, 1.0, "1.00× is exactly selectable")
+	assert_almost(cam.min_value, 25.0, 0.001, "0.25×")
+	assert_almost(cam.max_value, 300.0, 0.001, "3.00×")
+	assert_true(bool(sm.call("is_dirty")))
+	sm.call("close")
+	assert_false(bool(sm.call("is_dirty")), "closing writes pending changes")
+
+
 func test_settings_mode_can_only_be_lowered() -> void:
 	assert_eq(Game.state.difficulty, &"prime")
 	var sm: Node = _scene(SCENE_SETTINGS, {"framed": true})
@@ -410,8 +434,36 @@ func test_game_over_buttons_by_mode() -> void:
 	assert_eq(g.get("reason"), &"timer")
 	var buttons: Dictionary = g.get("buttons")
 	assert_true(buttons.has("load") and buttons.has("title"), "campaign: load + title")
+	var ok: bool = await wait_until(func() -> bool: return bool(g.call("buttons_ready")), WAIT)
+	assert_true(ok, "buttons become active")
 	assert_eq((buttons["load"] as Button).disabled, not bool(g.call("can_load")), "load only with a save")
 	assert_has(_all_text(g), "Die Etage ist eingestürzt.", "timer reason text")
+
+
+func test_game_over_buttons_wait_before_accepting_input() -> void:
+	Engine.time_scale = 1.0
+	var g: Node = _scene(SCENE_GAME_OVER, {"reason": &"defeat"})
+	add_to_tree(g)
+	await wait_frames(2)
+	var buttons: Dictionary = g.get("buttons")
+	assert_false(bool(g.call("buttons_ready")), "not ready in the first frames (03_ART: buttons after 1.5 s)")
+	assert_true((buttons["title"] as Button).disabled, "'Zum Titel' disabled during the delay")
+	var owner: Control = tree.root.gui_get_focus_owner()
+	assert_true(owner == null or not g.is_ancestor_of(owner), "no button focused during the delay")
+	var ev: InputEventAction = InputEventAction.new()
+	ev.action = &"ui_accept"
+	ev.pressed = true
+	Input.parse_input_event(ev)
+	await wait_frames(2)
+	assert_false(Router.busy, "a carried-over confirm press does not leave the screen")
+	Engine.time_scale = 8.0
+	var ok: bool = await wait_until(func() -> bool: return bool(g.call("buttons_ready")), WAIT)
+	assert_true(ok, "buttons active after the delay")
+	assert_false((buttons["title"] as Button).disabled)
+	var focused: bool = await wait_until(func() -> bool:
+		var f: Control = tree.root.gui_get_focus_owner()
+		return f != null and g.is_ancestor_of(f), 60)
+	assert_true(focused, "first button focused once active")
 
 
 # --- helpers -------------------------------------------------------------------------------------------------------------

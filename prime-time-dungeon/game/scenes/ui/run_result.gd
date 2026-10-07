@@ -79,12 +79,13 @@ func to_title() -> void:
 	Router.goto(Router.SCENE_TITLE)
 
 
+## Layout fits the 24 px safe rect at 1280×720 (compact rows; nothing leaves the SafeAreaContainer).
 func _build() -> void:
 	add_child(Backdrop.new())
 	var safe: SafeAreaContainer = SafeAreaContainer.new()
-	safe.extra = 24
+	safe.extra = 0
 	add_child(safe)
-	var col: VBoxContainer = UiUtil.vbox(10)
+	var col: VBoxContainer = UiUtil.vbox(6)
 	col.alignment = BoxContainer.ALIGNMENT_CENTER
 	safe.add_child(col)
 	var info: Dictionary = EventInfo.find(event_id())
@@ -92,7 +93,7 @@ func _build() -> void:
 	kicker.add_theme_font_override("font", UiTheme.font_bold())
 	kicker.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(kicker)
-	var title: Label = UiUtil.label(str(info.get("name", "Event-Lauf")).to_upper(), &"LabelTitle", 48)
+	var title: Label = UiUtil.label(str(info.get("name", "Event-Lauf")).to_upper(), &"LabelTitle", 42)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(title)
 	var cause: Array = CAUSES.get(str(summary.get("cause", "")), ["LAUF BEENDET", UiTheme.C_TEXT_DIM])
@@ -114,17 +115,16 @@ func _build() -> void:
 		22))
 	qrow.add_child(UiUtil.label(("Quest erfüllt: " if quest_done else "Quest offen (%d %%): " % roundi(float(
 		summary.get("quest_progress", 0.0)) * 100.0)) + qtext, &"", 20))
-	col.add_child(UiUtil.spacer(6))
 	var center: CenterContainer = CenterContainer.new()
 	col.add_child(center)
-	var table: VBoxContainer = UiUtil.vbox(4)
+	var table: VBoxContainer = UiUtil.vbox(0)
 	table.custom_minimum_size = Vector2(620, 0)
 	center.add_child(table)
 	var breakdown: Dictionary = summary.get("breakdown", {}) if typeof(summary.get("breakdown", {})) == \
 		TYPE_DICTIONARY else {}
 	for b: Array in BREAKDOWN:
 		var row: HBoxContainer = UiUtil.hbox(12)
-		row.custom_minimum_size = Vector2(0, 38)
+		row.custom_minimum_size = Vector2(0, 34)
 		table.add_child(row)
 		row.add_child(UiIcon.make(b[2] as StringName, UiTheme.C_ACCENT_2, 22))
 		var l: Label = UiUtil.label(str(b[1]), &"", 21)
@@ -144,7 +144,7 @@ func _build() -> void:
 	var tl: Label = UiUtil.label("PUNKTE", &"LabelHeader")
 	tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	trow.add_child(tl)
-	_total = UiUtil.label("0", &"", 44, UiTheme.C_GOLD)
+	_total = UiUtil.label("0", &"", 40, UiTheme.C_GOLD)
 	_total.add_theme_font_override("font", UiTheme.font_mono())
 	trow.add_child(_total)
 	var target: int = int(summary.get("score", 0))
@@ -157,21 +157,22 @@ func _build() -> void:
 	var rk: Label = UiUtil.label(rank_text, &"", 20, UiTheme.C_GOLD if rank in [1, 2, 3] else UiTheme.C_TEXT_DIM)
 	rk.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(rk)
-	col.add_child(UiUtil.spacer(6))
 	var brow: HBoxContainer = UiUtil.hbox(18)
 	brow.alignment = BoxContainer.ALIGNMENT_CENTER
 	col.add_child(brow)
 	_again = UiUtil.button("Nochmal", &"ButtonBig")
 	_again.name = "Again"
-	_again.custom_minimum_size = Vector2(260, 72)
+	_again.custom_minimum_size = Vector2(260, 0)
+	UiUtil.touch_pad(_again, 72.0)
 	_again.pressed.connect(again)
 	brow.add_child(_again)
 	_title_btn = UiUtil.button("Zum Titel", &"ButtonBig")
 	_title_btn.name = "Title"
-	_title_btn.custom_minimum_size = Vector2(260, 72)
+	_title_btn.custom_minimum_size = Vector2(260, 0)
+	UiUtil.touch_pad(_title_btn, 72.0)
 	_title_btn.pressed.connect(to_title)
 	brow.add_child(_title_btn)
 	UiUtil.wire_horizontal([_again, _title_btn] as Array[Control])
-	var note: Label = UiUtil.label("Replays ansehen folgt mit den Online-Events.", &"LabelSmall", 14)
+	var note: Label = UiUtil.label("Replays ansehen folgt mit den Online-Events.", &"LabelSmall", 16)
 	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(note)

@@ -70,7 +70,7 @@ func _card(m: PartyMember) -> Button:
 	names.add_child(n)
 	var cls: String = "Klasse: –" if m.class_id == "" else "Klasse: " + (UiUtil.tr_text(DB.class_def(m.class_id).name)
 		if DB.has_id("classes", m.class_id) else m.class_id)
-	names.add_child(UiUtil.label(cls + "  (Wahl ab Etage 3)", &"LabelSmall", 14))
+	names.add_child(UiUtil.label(cls + "  (Wahl ab Etage 3)", &"LabelSmall", 16))
 	var lv: Label = UiUtil.label("Lv %d" % m.level, &"", 28, UiTheme.C_GOLD)
 	lv.add_theme_font_override("font", UiTheme.font_bold())
 	head.add_child(lv)

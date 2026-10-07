@@ -53,7 +53,7 @@ func refresh() -> void:
 		var t: String = def.type if def != null else "consumable"
 		if t != last_type:
 			last_type = t
-			var h: Label = UiUtil.label(str(UiUtil.TYPE_NAMES.get(t, t)).to_upper(), &"", 13, UiTheme.C_ACCENT)
+			var h: Label = UiUtil.label(str(UiUtil.TYPE_NAMES.get(t, t)).to_upper(), &"", 15, UiTheme.C_ACCENT)
 			h.add_theme_font_override("font", UiTheme.font_bold())
 			_list.add_child(h)
 		var b: Button = list_button(UiUtil.item_name(id), item_icon(id), item_color(id), "×%d" % int(counts[id]))

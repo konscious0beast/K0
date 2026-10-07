@@ -1,14 +1,18 @@
 extends CanvasLayer
 ## Pause menu (02_TECH §1.6, §9.4 layer 60, GDD §14.4): tabs Party · Inventar · Ausrüstung · Fähigkeiten · Achievements ·
 ## Bestiarium · Optionen · Zum Titel. Opening pauses the tree (Game timer stops) and emits pause_menu_toggled(true);
-## the menu itself closes on pause / ui_cancel (from the tab list), unpauses and emits pause_menu_toggled(false).
+## the menu itself closes on pause / ui_cancel (from the tab bar) or the visible "Schließen" button (touch has no
+## Esc/Back: the touch pause button sits under the paused HUD), unpauses and emits pause_menu_toggled(false).
 ## process_mode WHEN_PAUSED — also every page and dialog opened from here (§9.4). tab_prev / tab_next switch tabs.
+## Layout: one tab bar (icon over caption, 64 px visible / 88 px hit, 12 px apart) with the close button at its end;
+## ui_left/ui_right move along the bar, ui_down enters the page, ui_cancel in a page returns to the bar.
 ## setup({"tab": "party"|"inventory"|"equipment"|"skills"|"achievements"|"bestiary"|"settings", "context":
 ## "explore"|"safe_room"}).
 
 signal closed()
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
+const InputGlyph := preload("res://scenes/ui/input_glyph.gd")
 const UiIcon := preload("res://scenes/ui/ui_icon.gd")
 const CONFIRM: String = "res://scenes/ui/confirm_dialog.tscn"
 const SETTINGS: String = "res://scenes/ui/settings_menu.tscn"
@@ -33,6 +37,7 @@ var _root: Control
 var _panel: PanelContainer
 var _tab_buttons: Dictionary = {}          # id → Button
 var _tab_list: Array[Control] = []
+var close_button: Button
 var _content: PanelContainer
 var _page_title: Label
 var _status: Label
@@ -106,9 +111,6 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 		close()
 		return
-	if event.is_action_pressed(&"ui_right") and _tab_has_focus():
-		get_viewport().set_input_as_handled()
-		_focus_page()
 
 
 ## Shows the page of `tab` (lazy instancing). "title" opens the confirm dialog instead.
@@ -226,6 +228,8 @@ func _focus_in_page() -> bool:
 
 func _tab_has_focus() -> bool:
 	var f: Control = get_viewport().gui_get_focus_owner()
+	if f != null and f == close_button:
+		return true
 	for b: Control in _tab_list:
 		if b == f:
 			return true
@@ -278,42 +282,28 @@ func _build() -> void:
 	var head: HBoxContainer = UiUtil.hbox(14)
 	outer.add_child(head)
 	var badge: PanelContainer = PanelContainer.new()
+	badge.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	badge.add_theme_stylebox_override("panel", UiUtil.box_style(UiTheme.C_ACCENT, Color(0, 0, 0, 0), 0, 0.21, 16, 2))
 	head.add_child(badge)
 	var bl: Label = UiUtil.label("PAUSE", &"LabelHeader", 26, UiUtil.C_PAPER)
 	badge.add_child(bl)
 	_page_title = UiUtil.label("", &"LabelHeader", 26)
+	_page_title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	head.add_child(_page_title)
 	head.add_child(UiUtil.spacer(0, 0, true))
 	_info = UiUtil.label("", &"LabelSmall", 16)
 	_info.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	head.add_child(_info)
-	var body: HBoxContainer = UiUtil.hbox(18)
-	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	outer.add_child(body)
-	var tabs: VBoxContainer = UiUtil.vbox(4)
-	tabs.custom_minimum_size = Vector2(250, 0)
-	body.add_child(tabs)
+	var tabs: HBoxContainer = UiUtil.hbox(12)       # 12 px between the 88 px hit areas
+	tabs.name = "Tabs"
+	outer.add_child(tabs)
 	for t: Dictionary in TABS:
 		var id: String = str(t["id"])
-		var b: Button = UiUtil.button("", &"ButtonFlat")
+		var b: Button = _tab_button(t["icon"] as StringName, str(t["label"]),
+			UiTheme.C_DANGER if id == "title" else UiTheme.C_ACCENT_2)
 		b.name = "Tab_" + id
-		b.toggle_mode = true
-		b.custom_minimum_size = Vector2(0, 52)
-		var row: HBoxContainer = UiUtil.hbox(12)
-		UiUtil.full_rect(row)
-		row.offset_left = 16
-		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		b.add_child(row)
-		var ic: Control = UiIcon.make(t["icon"] as StringName, UiTheme.C_DANGER if id == "title" else UiTheme.C_ACCENT_2,
-			24)
-		ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		row.add_child(ic)
-		var l: Label = UiUtil.label(str(t["label"]), &"", 22)
-		l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		row.add_child(l)
+		b.toggle_mode = id != "title"
 		if id == "title":
-			tabs.add_child(UiUtil.spacer(10))
 			b.pressed.connect(ask_to_title)
 		else:
 			b.focus_entered.connect(func() -> void: show_tab(id))
@@ -323,20 +313,61 @@ func _build() -> void:
 		tabs.add_child(b)
 		_tab_buttons[id] = b
 		_tab_list.append(b)
-	UiUtil.wire_vertical(_tab_list)
+	close_button = _tab_button(&"cross", "Schließen", UiTheme.C_TEXT)
+	close_button.name = "Close"
+	close_button.pressed.connect(close)
+	tabs.add_child(close_button)
+	var bar: Array[Control] = _tab_list.duplicate()
+	bar.append(close_button)
+	UiUtil.wire_horizontal(bar)
+	for b2: Control in bar:
+		var btn: Control = b2
+		# ui_down enters the page (handled in the button's own gui_input, before the viewport's focus navigation).
+		btn.gui_input.connect(func(ev: InputEvent) -> void:
+			if ev.is_action_pressed(&"ui_down") and btn != close_button:
+				_focus_page()
+				btn.accept_event())
 	_content = PanelContainer.new()
 	_content.name = "Content"
 	_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_content.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_content.add_theme_stylebox_override("panel", UiUtil.box_style(Color(UiUtil.C_INK, 0.35), Color(0, 0, 0, 0), 0, 0.0,
 		12, 10))
-	body.add_child(_content)
+	outer.add_child(_content)
 	var foot: HBoxContainer = UiUtil.hbox(20)
 	outer.add_child(foot)
 	_status = UiUtil.label("", &"", 18, UiTheme.C_OK)
 	_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	foot.add_child(_status)
-	foot.add_child(InputGlyph.make(&"tab_prev", "", 14))
-	foot.add_child(InputGlyph.make(&"tab_next", "Reiter", 14))
-	foot.add_child(InputGlyph.make(&"ui_accept", "Wählen", 14))
-	foot.add_child(InputGlyph.make(&"ui_cancel", "Zurück", 14))
+	foot.add_child(InputGlyph.make(&"tab_prev", "", 15))
+	foot.add_child(InputGlyph.make(&"tab_next", "Reiter", 15))
+	foot.add_child(InputGlyph.make(&"ui_accept", "Wählen", 15))
+	foot.add_child(InputGlyph.make(&"ui_cancel", "Zurück", 15))
+
+
+## Tab bar entry: icon over caption; 64 px visible, 88 px hit area (UiUtil.touch_pad).
+func _tab_button(icon: StringName, caption: String, icon_color: Color) -> Button:
+	var b: Button = UiUtil.button("", &"ButtonFlat")
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.custom_minimum_size = Vector2(UiTheme.MIN_TOUCH, 0)
+	var col: VBoxContainer = UiUtil.vbox(2)
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	UiUtil.full_rect(col)
+	b.add_child(col)
+	var ic: Control = UiIcon.make(icon, icon_color, 24)
+	ic.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	col.add_child(ic)
+	var l: Label = UiUtil.label(caption, &"", 16)
+	l.name = "Text"
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	col.add_child(l)
+	var flat: StyleBoxFlat = UiUtil.box_style(Color(UiTheme.C_PANEL, 0.6), Color(UiTheme.C_ACCENT_2, 0.35), 1, 0.0, 6, 4)
+	b.add_theme_stylebox_override("normal", flat)
+	var on: StyleBoxFlat = UiUtil.box_style(Color(UiTheme.C_ACCENT, 0.3), UiTheme.C_ACCENT, 0, 0.0, 6, 4)
+	on.border_width_bottom = 4
+	b.add_theme_stylebox_override("pressed", on)
+	b.add_theme_stylebox_override("hover_pressed", on)
+	UiUtil.touch_pad(b)
+	return b

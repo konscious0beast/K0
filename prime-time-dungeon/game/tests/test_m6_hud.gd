@@ -6,6 +6,7 @@ extends TestCase
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const MinimapScript := preload("res://scenes/ui/minimap.gd")
 const SCENE_HUD: String = "res://scenes/ui/exploration_hud.tscn"
+const SCENE_TOUCH: String = "res://scenes/ui/touch_controls.tscn"
 
 
 func before_each() -> void:
@@ -194,3 +195,56 @@ func test_pause_action_opens_the_menu() -> void:
 	Input.parse_input_event(rel)
 	await wait_frames(2)
 	assert_true(tree.paused)
+
+
+## TouchControls is PAUSABLE (inherits the HUD): while PauseMenu/BigMap pause the tree it gets no touch_up, so pausing
+## releases the joystick (move_*/sneak) and held button actions.
+func test_pausing_releases_touch_joystick_and_buttons() -> void:
+	var t: Node = (load(SCENE_TOUCH) as PackedScene).instantiate()
+	t.call("setup", {"force_visible": true})
+	add_to_tree(t)
+	await wait_frames(2)
+	var joy: Control = t.get("joystick") as Control
+	var start: Vector2 = Vector2(150, joy.size.y - 150)
+	assert_true(bool(joy.call("touch_down", 0, start)), "joystick takes the touch")
+	joy.call("touch_move", 0, start + Vector2(0, -80))
+	assert_true(Input.is_action_pressed(&"move_forward"), "stick pushes move_forward")
+	var held: Button = (t.get("buttons") as Dictionary)[&"action"] as Button
+	held.button_down.emit()
+	await wait_frames(1)                 # parse_input_event is applied on the next flush
+	assert_true(Input.is_action_pressed(&"action"), "action held")
+	tree.paused = true
+	await wait_frames(2)
+	assert_false(Input.is_action_pressed(&"move_forward"), "move released on pause")
+	assert_false(Input.is_action_pressed(&"sneak"), "sneak released")
+	assert_false(Input.is_action_pressed(&"action"), "held button action released")
+	assert_false(bool(joy.get("active")), "joystick inactive")
+	tree.paused = false
+	await wait_frames(1)
+	assert_false(Input.is_action_pressed(&"move_forward"), "Kai does not keep walking after the pause")
+	UiUtil.release_move_actions()
+
+
+## Detached stack screen (§13.3): party_changed / floor_entered / quest signals while the HUD is out of the tree only
+## mark it dirty; re-attaching refreshes.
+func test_detached_hud_refreshes_on_reattach() -> void:
+	var h: ExplorationHud = _hud()
+	await wait_frames(2)
+	var box: Node = h.find_child("Party", true, false)
+	var before: Array[Node] = box.get_children()
+	var parent: Node = h.get_parent()
+	parent.remove_child(h)
+	var kai: PartyMember = Game.state.member("kai")
+	kai.display_name = "Neuname"
+	Events.party_changed.emit()
+	await wait_frames(1)
+	assert_eq(box.get_children(), before, "no rebuild while detached")
+	parent.add_child(h)
+	var ok: bool = await wait_until(func() -> bool:
+		var lbls: Array[Node] = box.find_children("*", "Label", true, false)
+		for l: Node in lbls:
+			if (l as Label).text == "Neuname":
+				return true
+		return false, 30)
+	assert_true(ok, "party panel refreshed after re-attaching")
+	kai.display_name = ""

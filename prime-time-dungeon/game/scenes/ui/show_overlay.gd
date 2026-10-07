@@ -7,6 +7,8 @@ extends CanvasLayer
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const UiIcon := preload("res://scenes/ui/ui_icon.gd")
 const ModDialogScript := preload("res://scenes/ui/mod_dialog.gd")
+const TouchScript := preload("res://scenes/ui/touch_controls.gd")
+const BADGE_H: float = 30.0                # LIVE pill 80×30, corner radius = half the height (03_ART §9.2)
 const SHADER_LOW: String = "res://art/shaders/ui_tv_overlay.gdshader"
 const SHADER_HIGH: String = "res://art/shaders/ui_tv_overlay_aberration.gdshader"
 const MODES: Array[StringName] = [&"explore", &"battle", &"safe_room", &"menu", &"hidden", &"game_over"]
@@ -201,6 +203,7 @@ var _shown_followers: float = 0.0
 var _target_followers: int = 0
 var _demo_values: Dictionary = {}
 var _lower_lift: float = 0.0
+var _touch_shift: bool = false
 
 
 ## Stores params only (screen contract); {"capture": true} → demo still with sample numbers.
@@ -263,6 +266,10 @@ func _process(delta: float) -> void:
 			_hype.set_value(h, h > _hype.value)
 	_hype_value.text = str(roundi(_hype.shown))
 	_update_lower_lift(delta)
+	var touch_on: bool = TouchScript.active != null and is_instance_valid(TouchScript.active)
+	if touch_on != _touch_shift:
+		_touch_shift = touch_on
+		_layout_hype()
 
 
 # --- public (M6-internal) --------------------------------------------------------------------------------------------
@@ -279,23 +286,45 @@ func set_mode(p_mode: StringName) -> void:
 	_ticker_panel.visible = show_bar
 	if mode == &"safe_room":
 		_badge_label.text = "WERBEPAUSE"
-		_badge.add_theme_stylebox_override("panel", UiUtil.box_style(UiTheme.C_GOLD, Color(0, 0, 0, 0), 0, 0.0, 10, 2))
+		_badge.add_theme_stylebox_override("panel", _pill(UiTheme.C_GOLD))
 		_badge_label.add_theme_color_override("font_color", UiUtil.C_INK)
+		_badge_dot.set("color", UiUtil.C_INK)
 	else:
 		_badge_label.text = "LIVE"
-		_badge.add_theme_stylebox_override("panel", UiUtil.box_style(UiUtil.C_LIVE, Color(0, 0, 0, 0), 0, 0.0, 10, 2))
+		_badge.add_theme_stylebox_override("panel", _pill(UiUtil.C_LIVE))
 		_badge_label.add_theme_color_override("font_color", UiUtil.C_PAPER)
-	# Battle: hype meter top center (top right belongs to the battle HUD speed/auto buttons, GDD §14.5).
+		_badge_dot.set("color", UiUtil.C_PAPER)
+	_layout_hype()
+
+
+## LIVE / WERBEPAUSE badge: a pill (corner radius = half the height), 03_ART §9.2.
+func _pill(col: Color) -> StyleBoxFlat:
+	var sb: StyleBoxFlat = UiUtil.box_style(col, Color(0, 0, 0, 0), 0, 0.0, 14, 2)
+	sb.set_corner_radius_all(int(BADGE_H * 0.5))
+	sb.corner_detail = 8
+	return sb
+
+
+## Battle: hype meter top center (top right belongs to the battle HUD speed/auto buttons, GDD §14.5). Exploration with
+## the touch layer shown: left of the pause button's hit area (TouchControls.RIGHT_CLEARANCE), never under it.
+func _layout_hype() -> void:
+	if _hype_box == null:
+		return
 	if mode == &"battle":
 		_hype_box.set_anchors_preset(Control.PRESET_CENTER_TOP)
 		_hype_box.offset_left = -160
 		_hype_box.offset_right = 160
 	else:
+		var right: float = -TouchScript.RIGHT_CLEARANCE if _touch_shift else 0.0
 		_hype_box.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-		_hype_box.offset_left = -320
-		_hype_box.offset_right = 0
+		_hype_box.offset_left = right - 320.0
+		_hype_box.offset_right = right
 	_hype_box.offset_top = 2
 	_hype_box.offset_bottom = 40
+
+
+func hype_rect() -> Rect2:
+	return _hype_box.get_global_rect() if _hype_box.is_visible_in_tree() else Rect2()
 
 
 ## Sponsor lower third (in 0.25 s, holds 2.5 s, out 0.2 s); queued. Same sponsor within 1 s is shown once.
@@ -431,7 +460,7 @@ func _build_top_left() -> void:
 	_frame.add_child(_top_left)
 	_badge = PanelContainer.new()
 	_badge.name = "LiveBadge"
-	_badge.custom_minimum_size = Vector2(80, 30)
+	_badge.custom_minimum_size = Vector2(80, BADGE_H)
 	_badge.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	_top_left.add_child(_badge)
 	var brow: HBoxContainer = UiUtil.hbox(6)
@@ -454,7 +483,7 @@ func _build_top_left() -> void:
 	_viewers_label.name = "Viewers"
 	_viewers_label.add_theme_font_override("font", UiTheme.font_mono())
 	vrow.add_child(_viewers_label)
-	vrow.add_child(UiUtil.label("Zuschauer", &"LabelSmall", 14))
+	vrow.add_child(UiUtil.label("Zuschauer", &"LabelSmall", 16))
 	var frow: HBoxContainer = UiUtil.hbox(6)
 	col.add_child(frow)
 	var heart: Control = UiIcon.make(&"heart", UiTheme.C_ACCENT, 14)
@@ -509,7 +538,7 @@ func _build_ticker() -> void:
 	var chat_icon: Control = UiIcon.make(&"chat", UiUtil.C_PAPER, 14)
 	chat_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	chat_row.add_child(chat_icon)
-	var tl: Label = UiUtil.label("CHAT", &"", 14, UiUtil.C_PAPER)
+	var tl: Label = UiUtil.label("CHAT", &"", 15, UiUtil.C_PAPER)
 	tl.add_theme_font_override("font", UiTheme.font_bold())
 	tl.add_theme_constant_override("outline_size", 0)
 	chat_row.add_child(tl)
@@ -543,7 +572,7 @@ func _build_lower_third() -> void:
 	col.add_child(_lower_name_panel)
 	var nrow: HBoxContainer = UiUtil.hbox(10)
 	_lower_name_panel.add_child(nrow)
-	var pres: Label = UiUtil.label("PRÄSENTIERT VON", &"", 12, UiUtil.C_INK)
+	var pres: Label = UiUtil.label("PRÄSENTIERT VON", &"", 15, UiUtil.C_INK)
 	pres.add_theme_constant_override("outline_size", 0)
 	pres.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	nrow.add_child(pres)

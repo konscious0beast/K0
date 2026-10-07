@@ -11,6 +11,7 @@ const ToastStackScript := preload("res://scenes/ui/toast_stack.gd")
 const SCENE_OVERLAY: String = "res://scenes/ui/show_overlay.tscn"
 const SCENE_DIALOG: String = "res://scenes/ui/mod_dialog.tscn"
 const SCENE_GLOBAL: String = "res://scenes/ui/global_ui.tscn"
+const SCENE_PAUSE: String = "res://scenes/ui/pause_menu.tscn"
 const WAIT: int = 1500
 
 var _saved_fast_text: bool = false
@@ -33,6 +34,8 @@ func after_each() -> void:
 	Game.settings.text_speed = _saved_text_speed
 	Game.autoplay = false
 	Game.clear_blocking_dialogs()
+	tree.paused = false
+	Events.overlay_mode_requested.emit(&"hidden")
 
 
 # --- number formats -------------------------------------------------------------------------------------------------
@@ -193,6 +196,82 @@ func test_blocking_line_waits_and_emits_dialog_finished_once() -> void:
 	assert_eq(int(Game.get("_blocking_dialogs")), 0, "timer released")
 	assert_false(bool(d.call("is_busy")))
 	Events.dialog_finished.disconnect(cb)
+
+
+## A blocking line that is never shown (empty text / chat voice) was still counted by Game (§3.4): ModDialog balances
+## it, so the floor countdown does not freeze until the next goto.
+func test_dropped_blocking_line_releases_the_timer() -> void:
+	var d: CanvasLayer = _dialog()
+	await wait_frames(1)
+	Game.new_game(0, "Kai", 2)
+	Game.timer_running = true
+	Game.state.floor_run.timer_started = true
+	assert_true(Game.is_timer_ticking(), "timer ticks before")
+	var got: Array[String] = []
+	var cb: Callable = func(tag: String) -> void: got.append(tag)
+	Events.dialog_finished.connect(cb)
+	Events.mod_said.emit("   ", &"mod", "empty_line", true)
+	Events.mod_said.emit("nur fürs Chat-Band", &"chat", "chat_line", true)
+	assert_false(bool(d.call("is_busy")), "nothing shown")
+	var ok: bool = await wait_until(func() -> bool: return Game.is_timer_ticking(), 30)
+	assert_true(ok, "timer ticks again after the dropped blocking lines")
+	assert_eq(got, ["empty_line", "chat_line"] as Array[String], "each dropped blocking line is balanced once")
+	assert_eq(int(Game.get("_blocking_dialogs")), 0)
+	Events.dialog_finished.disconnect(cb)
+	Game.timer_running = false
+
+
+## ui_accept belongs to a menu opened over a waiting blocking line (PauseMenu, layer 60, tree paused): the focused
+## tab is pressed and the line stays where it is.
+func test_menu_over_a_blocking_line_keeps_its_confirm_input() -> void:
+	var d: CanvasLayer = _dialog()
+	await wait_frames(1)
+	Events.mod_said.emit("Eine sehr wichtige Durchsage, bitte bis zum Ende lesen.", &"mod", "important", true)
+	d.call("advance")                    # full text shown; the next accept would end the line
+	var line_before: Dictionary = d.call("current_line")
+	var pm: Node = (load(SCENE_PAUSE) as PackedScene).instantiate()
+	pm.call("setup", {})
+	tree.root.add_child(pm)
+	_nodes.append(pm)
+	var focused: bool = await wait_until(func() -> bool:
+		var f: Control = tree.root.gui_get_focus_owner()
+		return f != null and pm.is_ancestor_of(f), 60)
+	assert_true(focused, "a pause tab has the focus")
+	var tab: BaseButton = tree.root.gui_get_focus_owner() as BaseButton
+	var presses: Array[int] = [0]
+	if tab != null:
+		tab.pressed.connect(func() -> void: presses[0] += 1)
+	var ev: InputEventAction = InputEventAction.new()
+	ev.action = &"ui_accept"
+	ev.pressed = true
+	Input.parse_input_event(ev)
+	var rel: InputEventAction = InputEventAction.new()
+	rel.action = &"ui_accept"
+	rel.pressed = false
+	Input.parse_input_event(rel)
+	await wait_frames(3)
+	assert_eq(presses[0], 1, "the focused tab got the confirm press")
+	assert_true(bool(d.call("is_busy")), "the line is still waiting")
+	assert_eq(d.call("current_line"), line_before, "same line as before")
+	if is_instance_valid(pm):
+		pm.call("close")
+	await wait_frames(2)
+	tree.paused = false
+	d.call("advance")
+	assert_false(bool(d.call("is_busy")), "without the menu the box takes ui_accept/advance again")
+
+
+func test_dialog_moves_right_in_the_safe_room() -> void:
+	var d: CanvasLayer = _dialog()
+	await wait_frames(1)
+	Events.overlay_mode_requested.emit(&"safe_room")
+	d.call("enqueue", "Rechts neben dem Menü.", &"mod", "x", false)
+	await wait_frames(2)
+	var r: Rect2 = d.call("box_rect")
+	assert_true(bool(d.call("is_align_right")), "safe room aligns the box right")
+	assert_gt(r.position.x, 412.0, "box clear of the safe-room menu column (x <= 412)")
+	Events.overlay_mode_requested.emit(&"explore")
+	assert_false(bool(d.call("is_align_right")), "other modes: bottom centre")
 
 
 func test_soft_lines_advance_on_their_own_without_dialog_finished() -> void:

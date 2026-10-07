@@ -1,10 +1,11 @@
-class_name ConfirmDialog extends CanvasLayer
+extends CanvasLayer
 ## Yes/No dialog (02_TECH §1.6, modal layer 60) — used by the stairs (M3, §7.3), "Zum Titel", slot overwrite, mode change.
 ## Usage: `var d := load("res://scenes/ui/confirm_dialog.tscn").instantiate()`; `d.setup({"text": "…", "yes": "Abstieg",
 ## "no": "Noch nicht"})`; add it anywhere (it is its own CanvasLayer); listen to `confirmed` / `cancelled` / `closed(bool)`
 ## or pass callables "on_yes" / "on_no". Default focus: "no" when params.default_no (destructive questions), else "yes".
 ## ui_cancel / pause = no. Frees itself after answering. process_mode ALWAYS (works paused and unpaused); hosts inside
-## the PauseMenu switch it to WHEN_PAUSED (§9.4).
+## the PauseMenu switch it to WHEN_PAUSED (§9.4). No class_name (§13.2 rule 1: not listed as public class in §1);
+## other modules load the scene by path and use it duck-typed (setup / signals above).
 
 signal confirmed()
 signal cancelled()

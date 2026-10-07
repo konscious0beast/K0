@@ -8,6 +8,7 @@ signal slot_chosen(slot: int)
 signal cancelled()
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
+const InputGlyph := preload("res://scenes/ui/input_glyph.gd")
 const UiIcon := preload("res://scenes/ui/ui_icon.gd")
 const Backdrop := preload("res://scenes/ui/broadcast_bg.gd")
 const TitleFlow := preload("res://scenes/title/title_flow.gd")

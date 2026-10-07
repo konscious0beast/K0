@@ -4,6 +4,7 @@ extends Control
 ## Several offline events: list on the left. "Zurück" → title.
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
+const InputGlyph := preload("res://scenes/ui/input_glyph.gd")
 const UiIcon := preload("res://scenes/ui/ui_icon.gd")
 const Backdrop := preload("res://scenes/ui/broadcast_bg.gd")
 const EventInfo := preload("res://scenes/ui/event_info.gd")
@@ -100,14 +101,14 @@ func _build() -> void:
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_child(body)
 	# Left: event list (+ buttons).
-	var left: VBoxContainer = UiUtil.vbox(8)
+	var left: VBoxContainer = UiUtil.vbox(12)      # 12 px between the 88 px hit areas
 	left.custom_minimum_size = Vector2(300, 0)
 	body.add_child(left)
-	left.add_child(UiUtil.label("SENDUNGEN", &"", 14, UiTheme.C_ACCENT))
+	left.add_child(UiUtil.label("SENDUNGEN", &"", 15, UiTheme.C_ACCENT))
 	for i in events.size():
 		var e: Dictionary = events[i]
 		var b: Button = UiUtil.button(str(e.get("name", "Event")), &"ButtonFlat")
-		b.custom_minimum_size = Vector2(0, 52)
+		UiUtil.touch_pad(b)
 		var idx: int = i
 		b.focus_entered.connect(func() -> void: select(idx))
 		b.pressed.connect(func() -> void:
@@ -120,13 +121,13 @@ func _build() -> void:
 	left.add_child(UiUtil.spacer(0, 0, true))
 	_start = UiUtil.button("Sendung starten", &"ButtonBig")
 	_start.name = "Start"
-	_start.custom_minimum_size = Vector2(0, 76)
+	UiUtil.touch_pad(_start, 72.0)
 	_start.pressed.connect(start)
 	_start.disabled = events.is_empty()
 	left.add_child(_start)
 	_back = UiUtil.button("Zurück", &"ButtonBig")
 	_back.name = "Back"
-	_back.custom_minimum_size = Vector2(0, 64)
+	UiUtil.touch_pad(_back)
 	_back.pressed.connect(back)
 	left.add_child(_back)
 	var chain: Array[Control] = []
@@ -148,14 +149,14 @@ func _build() -> void:
 	_name = UiUtil.label("", &"LabelTitle", 44)
 	_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	cc.add_child(_name)
-	var ql: Label = UiUtil.label("QUEST", &"", 14, UiTheme.C_GOLD)
+	var ql: Label = UiUtil.label("QUEST", &"", 15, UiTheme.C_GOLD)
 	ql.add_theme_font_override("font", UiTheme.font_bold())
 	cc.add_child(ql)
 	_quest = UiUtil.label("", &"", 24)
 	_quest.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	cc.add_child(_quest)
 	cc.add_child(UiUtil.spacer(4))
-	var rl: Label = UiUtil.label("REGELN", &"", 14, UiTheme.C_GOLD)
+	var rl: Label = UiUtil.label("REGELN", &"", 15, UiTheme.C_GOLD)
 	rl.add_theme_font_override("font", UiTheme.font_bold())
 	cc.add_child(rl)
 	_rules = UiUtil.vbox(4)

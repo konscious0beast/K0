@@ -1,7 +1,11 @@
-class_name InputGlyph extends HBoxContainer
+extends HBoxContainer
 ## Key / button symbol for an input action in the current input scheme (02_TECH §1.6, §10). Keyboard: key cap
 ## ("F", "Esc"); gamepad: round face button (A/B/X/Y in Xbox colors) or shoulder/menu pill; touch: hidden (touch has
 ## its own buttons) unless `show_on_touch`. Optional trailing caption ("Öffnen"). Updates on input_scheme_changed.
+## Private M6 helper (§0.3/§13.2: no class_name): `const InputGlyph := preload("res://scenes/ui/input_glyph.gd")`.
+## Font sizes below 15 px are raised to 15 (03_ART §9.3 minimum).
+
+const MIN_FONT: int = 15
 
 const PAD_FACE: Dictionary = {0: ["A", Color("#3fbf5f")], 1: ["B", Color("#e04848")], 2: ["X", Color("#3f7fe0")],
 	3: ["Y", Color("#e0b83f")]}
@@ -31,11 +35,11 @@ var _caption_label: Label
 var _scheme_override: int = -1
 
 
-static func make(p_action: StringName, p_caption: String = "", p_font_size: int = 16) -> InputGlyph:
-	var g: InputGlyph = InputGlyph.new()
-	g.font_size = p_font_size
-	g.action = p_action
-	g.caption = p_caption
+static func make(p_action: StringName, p_caption: String = "", p_font_size: int = 16) -> HBoxContainer:
+	var g: HBoxContainer = (load("res://scenes/ui/input_glyph.gd") as GDScript).new() as HBoxContainer
+	g.set("font_size", maxi(p_font_size, MIN_FONT))
+	g.set("action", p_action)
+	g.set("caption", p_caption)
 	return g
 
 

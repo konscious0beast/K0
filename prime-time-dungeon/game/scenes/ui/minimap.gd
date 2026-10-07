@@ -17,11 +17,21 @@ var player_cell: Vector2i = Vector2i(-1, -1)
 var player_yaw: float = 0.0
 var big: bool = false
 var show_unvisited: bool = false        # debug/capture: draw every cell
+var swatch_kind: String = ""            # legend swatch: "player" | "start" | "safe" | "stairs" | "boss" | "gate"
 var _blink: float = 0.0
 
 
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+
+## Legend swatch for the big map: one cell drawn exactly like the map draws `p_kind` (same colours + marker).
+static func swatch(p_kind: String, p_size: float = 30.0) -> Control:
+	var c: Control = (load("res://scenes/ui/minimap.gd") as GDScript).new() as Control
+	c.set("swatch_kind", p_kind)
+	c.custom_minimum_size = Vector2(p_size, p_size)
+	c.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	return c
 
 
 func bind(p_layout: FloorLayout, p_visited: Array[Vector2i]) -> void:
@@ -101,6 +111,9 @@ static func layout_from_def(def: FloorDef) -> FloorLayout:
 
 
 func _draw() -> void:
+	if swatch_kind != "":
+		_draw_swatch()
+		return
 	var r: Rect2 = Rect2(Vector2.ZERO, size)
 	draw_rect(r, Color(UiTheme.C_PANEL, 0.78 if not big else 0.55), true)
 	draw_rect(r, Color(UiTheme.C_ACCENT_2, 0.6 if not big else 0.35), false, 2.0)
@@ -189,6 +202,28 @@ func view_cells() -> Rect2:
 	return Rect2(center - Vector2(w, h) * 0.5, Vector2(w, h))
 
 
+func _draw_swatch() -> void:
+	var cs: float = minf(size.x, size.y)
+	var gap: float = maxf(1.5, cs * 0.1)
+	var cr: Rect2 = Rect2((size - Vector2(cs, cs)) * 0.5 + Vector2(gap, gap), Vector2(cs - gap * 2.0, cs - gap * 2.0))
+	var rc: RoomCell = RoomCell.new()
+	rc.kind = {"safe": RoomCell.Kind.SAFE, "stairs": RoomCell.Kind.STAIRS, "boss": RoomCell.Kind.QUARTER_BOSS,
+		"start": RoomCell.Kind.START}.get(swatch_kind, RoomCell.Kind.NORMAL) as RoomCell.Kind
+	draw_rect(cr, _cell_color(rc), true)
+	draw_rect(cr, Color(1, 1, 1, 0.18), false, 1.0)
+	_draw_marker(cr, rc)
+	var c: Vector2 = cr.get_center()
+	if swatch_kind == "gate":
+		draw_line(c + Vector2(cs * 0.5 - 1.0, -cs * 0.28), c + Vector2(cs * 0.5 - 1.0, cs * 0.28), UiTheme.C_DANGER,
+			maxf(3.0, cs * 0.14))
+	elif swatch_kind == "player":
+		var alen: float = cs * 0.32
+		var pts: PackedVector2Array = [c + Vector2(0, -alen), c + Vector2(alen * 0.7, alen * 0.6),
+			c + Vector2(0, alen * 0.25), c + Vector2(-alen * 0.7, alen * 0.6)]
+		draw_colored_polygon(pts, UiTheme.C_ACCENT_2)
+		draw_polyline(pts + PackedVector2Array([pts[0]]), UiUtil.C_INK, 1.5, true)
+
+
 func _cell_color(rc: RoomCell) -> Color:
 	match rc.kind:
 		RoomCell.Kind.SAFE:
@@ -198,7 +233,7 @@ func _cell_color(rc: RoomCell) -> Color:
 		RoomCell.Kind.QUARTER_BOSS, RoomCell.Kind.FLOOR_BOSS:
 			return Color("#5a1f2a")
 	var base: Color = Color("#3a3f5b")
-	if layout.zones.has(rc.zone):
+	if layout != null and layout.zones.has(rc.zone):
 		var pal: Dictionary = (layout.zones[rc.zone] as Dictionary).get("palette", {})
 		var hexs: String = str(pal.get("floor", ""))
 		if hexs.is_valid_html_color():

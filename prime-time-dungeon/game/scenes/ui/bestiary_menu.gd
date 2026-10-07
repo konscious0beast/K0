@@ -99,7 +99,7 @@ func _show(id: String) -> void:
 	if typeof(weak_v) == TYPE_ARRAY or typeof(weak_v) == TYPE_PACKED_STRING_ARRAY:
 		for w: Variant in weak_v:
 			weak.append(str(w))
-	var wl: Label = UiUtil.label("SCHWÄCHEN", &"", 13, UiTheme.C_ACCENT)
+	var wl: Label = UiUtil.label("SCHWÄCHEN", &"", 15, UiTheme.C_ACCENT)
 	wl.add_theme_font_override("font", UiTheme.font_bold())
 	extra.add_child(wl)
 	if weak.is_empty():

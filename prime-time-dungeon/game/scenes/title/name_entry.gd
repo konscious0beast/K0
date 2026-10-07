@@ -4,12 +4,16 @@ extends Control
 ## starten" → the single new-game path (TitleFlow.start_new_game → intro). Params {"slot": int}.
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
+const InputGlyph := preload("res://scenes/ui/input_glyph.gd")
 const UiIcon := preload("res://scenes/ui/ui_icon.gd")
 const Backdrop := preload("res://scenes/ui/broadcast_bg.gd")
 const TitleFlow := preload("res://scenes/title/title_flow.gd")
 const SLOT_SELECT: String = "res://scenes/title/slot_select.tscn"
 const MAX_LEN: int = 12
-const ROWS: Array[String] = ["QWERTZUIOPÜ", "ASDFGHJKLÖÄ", "YXCVBNMß-."]
+# 10 keys per row: 64 px keys with 12 px gaps fit next to the mode column (02_TECH §10.2 rule 5).
+const ROWS: Array[String] = ["QWERTZUIOP", "ASDFGHJKLÖ", "YXCVBNMÄÜß"]
+const KEY: float = 64.0
+const KEY_GAP: int = 12
 const MODES: Array[Dictionary] = [
 	{"id": &"prime", "title": "Prime Time", "text": "Die echte Sendung. Etagen-Timer 20:00, volle Härte."},
 	{"id": &"vorabend", "title": "Vorabendprogramm", "text": "Timer × 1,5 (30:00), Gegnerschaden × 0,75, EXP × 1,2. " +
@@ -97,6 +101,16 @@ func back() -> void:
 	Router.goto(SLOT_SELECT, {"mode": "new"})
 
 
+func _char_key(c: String) -> Button:
+	var k: Button = UiUtil.button(c, &"")
+	k.custom_minimum_size = Vector2(KEY, KEY)
+	k.set_meta("char", c)
+	k.add_theme_font_size_override("font_size", 22)
+	k.pressed.connect(func() -> void: type_char(c))
+	_keys.append(k)
+	return k
+
+
 func _set_shift(on: bool) -> void:
 	_shift = on
 	for k: Button in _keys:
@@ -141,35 +155,30 @@ func _build() -> void:
 			name_edit.text = clean.replace("?", "")
 			name_edit.caret_column = name_edit.text.length())
 	left.add_child(name_edit)
-	var kb: VBoxContainer = UiUtil.vbox(6)
+	var kb: VBoxContainer = UiUtil.vbox(KEY_GAP)
 	left.add_child(kb)
 	for r: String in ROWS:
-		var row: HBoxContainer = UiUtil.hbox(6)
+		var row: HBoxContainer = UiUtil.hbox(KEY_GAP)
 		kb.add_child(row)
 		for i in r.length():
-			var c: String = r[i]
-			var k: Button = UiUtil.button(c, &"")
-			k.custom_minimum_size = Vector2(64, 64)
-			k.set_meta("char", c)
-			k.add_theme_font_size_override("font_size", 22)
-			k.pressed.connect(func() -> void: type_char(c))
-			row.add_child(k)
-			_keys.append(k)
-	var srow: HBoxContainer = UiUtil.hbox(6)
+			row.add_child(_char_key(r[i]))
+	var srow: HBoxContainer = UiUtil.hbox(KEY_GAP)
 	kb.add_child(srow)
 	var shift_b: Button = UiUtil.button("Aa", &"")
-	shift_b.custom_minimum_size = Vector2(134, 64)
+	shift_b.custom_minimum_size = Vector2(140, KEY)
 	shift_b.pressed.connect(func() -> void: _set_shift(not _shift))
 	srow.add_child(shift_b)
+	srow.add_child(_char_key("-"))
+	srow.add_child(_char_key("."))
 	var space_b: Button = UiUtil.button("Leerzeichen", &"")
-	space_b.custom_minimum_size = Vector2(344, 64)
+	space_b.custom_minimum_size = Vector2(236, KEY)
 	space_b.pressed.connect(func() -> void:
 		if name_edit.text.length() < MAX_LEN and not name_edit.text.ends_with(" ") and name_edit.text != "":
 			name_edit.text += " "
 			name_edit.caret_column = name_edit.text.length())
 	srow.add_child(space_b)
 	var del_b: Button = UiUtil.button("Löschen", &"")
-	del_b.custom_minimum_size = Vector2(206, 64)
+	del_b.custom_minimum_size = Vector2(172, KEY)
 	del_b.pressed.connect(backspace)
 	srow.add_child(del_b)
 	_set_shift(false)
@@ -212,10 +221,10 @@ func _build() -> void:
 	right.add_child(UiUtil.spacer(0, 0, true))
 	_start = UiUtil.button("Sendung starten", &"ButtonBig")
 	_start.name = "Start"
-	_start.custom_minimum_size = Vector2(0, 80)
+	UiUtil.touch_pad(_start, 80.0)
 	_start.pressed.connect(start)
 	right.add_child(_start)
 	mode_list.append(_start)
 	UiUtil.wire_vertical(mode_list)
-	var hint: Label = UiUtil.label("Tastatur: tippen und Enter · Gamepad/Touch: Bildschirmtastatur", &"LabelSmall", 14)
+	var hint: Label = UiUtil.label("Tastatur: tippen und Enter · Gamepad/Touch: Bildschirmtastatur", &"LabelSmall", 16)
 	col.add_child(hint)

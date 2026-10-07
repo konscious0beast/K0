@@ -5,9 +5,11 @@ class_name ExplorationHud extends CanvasLayer
 ## glyph, control hints, touch layer (layer 20). `pause` opens the PauseMenu (tree paused, §9.4).
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
+const InputGlyph := preload("res://scenes/ui/input_glyph.gd")
 const UiIcon := preload("res://scenes/ui/ui_icon.gd")
 const MinimapScript := preload("res://scenes/ui/minimap.gd")
 const EventInfo := preload("res://scenes/ui/event_info.gd")
+const TouchClearance := preload("res://scenes/ui/touch_controls.gd")
 const PAUSE_MENU: String = "res://scenes/ui/pause_menu.tscn"
 const TOUCH_CONTROLS: String = "res://scenes/ui/touch_controls.tscn"
 const WARN_ORANGE_SEC: int = 300
@@ -19,13 +21,19 @@ const SHAKE_STRENGTH: float = 0.15
 const MINIMAP_SIZE: float = 136.0
 
 
-## Full-screen map (layer 60, tree paused): every visited cell, legend, zone names. Closes on map / ui_cancel / pause.
+## Full-screen map (layer 60, tree paused): every visited cell, legend (same swatches as the map), zone names. Closes on
+## map / ui_cancel / pause or the "Schließen" button (touch: the only way out, §10.3). Opaque backdrop: the HUD and the
+## show overlay underneath never shine through.
 class BigMap extends CanvasLayer:
 	const UiUtilB := preload("res://scenes/ui/ui_util.gd")
 	const MinimapB := preload("res://scenes/ui/minimap.gd")
 	const UiIconB := preload("res://scenes/ui/ui_icon.gd")
+	const InputGlyphB := preload("res://scenes/ui/input_glyph.gd")
+	signal closed()
 	var map: Control
+	var close_button: Button
 	var floor_title: String = ""
+	var _closing: bool = false
 
 	func _ready() -> void:
 		layer = 60
@@ -36,10 +44,11 @@ class BigMap extends CanvasLayer:
 		add_child(root)
 		var dim: ColorRect = ColorRect.new()
 		UiUtilB.full_rect(dim)
-		dim.color = Color(0.03, 0.02, 0.06, 0.95)
+		dim.color = UiTheme.C_BG
 		root.add_child(dim)
 		var safe: SafeAreaContainer = SafeAreaContainer.new()
 		safe.extra = 16
+		safe.mouse_filter = Control.MOUSE_FILTER_STOP
 		root.add_child(safe)
 		var row: HBoxContainer = UiUtilB.hbox(24)
 		safe.add_child(row)
@@ -51,20 +60,30 @@ class BigMap extends CanvasLayer:
 		var side: VBoxContainer = UiUtilB.vbox(10)
 		side.custom_minimum_size = Vector2(300, 0)
 		row.add_child(side)
-		side.add_child(UiUtilB.label("KARTE", &"LabelHeader"))
+		var head: HBoxContainer = UiUtilB.hbox(10)
+		side.add_child(head)
+		var title: Label = UiUtilB.label("KARTE", &"LabelHeader")
+		title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		head.add_child(title)
+		close_button = UiUtilB.close_button("Schließen")
+		close_button.pressed.connect(close)
+		head.add_child(close_button)
 		side.add_child(UiUtilB.label(floor_title, &"LabelSmall", 18))
-		side.add_child(UiUtilB.spacer(8))
-		for entry: Array in [[&"arrow_up", UiTheme.C_ACCENT_2, "Kandidat:in"], [&"door", UiUtilB.C_EXIT, "Safe Room"],
-				[&"stairs", UiTheme.C_GOLD, "Treppe"], [&"skull", UiTheme.C_DANGER, "Boss"],
-				[&"cross", UiTheme.C_DANGER, "Verschlossenes Tor"]]:
-			var r: HBoxContainer = UiUtilB.hbox(10)
-			r.add_child(UiIconB.make(entry[0] as StringName, entry[1] as Color, 22))
-			r.add_child(UiUtilB.label(str(entry[2]), &"", 18))
+		side.add_child(UiUtilB.spacer(4))
+		for entry: Array in [["player", "Kandidat:in"], ["start", "Start"], ["safe", "Safe Room"],
+				["stairs", "Treppe"], ["boss", "Boss"], ["gate", "Verschlossenes Tor"]]:
+			var r: HBoxContainer = UiUtilB.hbox(12)
+			r.add_child(MinimapB.swatch(str(entry[0]), 30.0))
+			var l: Label = UiUtilB.label(str(entry[1]), &"", 18)
+			l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			r.add_child(l)
 			side.add_child(r)
 		side.add_child(UiUtilB.spacer(0, 0, true))
 		var hint: HBoxContainer = UiUtilB.hbox(12)
-		hint.add_child(InputGlyph.make(&"map", "Schließen", 16))
+		hint.add_child(InputGlyphB.make(&"map", "Schließen", 16))
 		side.add_child(hint)
+		UiUtilB.focus_later(close_button)
 
 	func _unhandled_input(event: InputEvent) -> void:
 		if event.is_action_pressed(&"map") or event.is_action_pressed(&"ui_cancel") or event.is_action_pressed(&"pause"):
@@ -72,9 +91,13 @@ class BigMap extends CanvasLayer:
 			close()
 
 	func close() -> void:
+		if _closing:
+			return
+		_closing = true
 		Sfx.play_ui(&"ui_cancel")
 		get_tree().paused = false
 		Events.pause_menu_toggled.emit(false)
+		closed.emit()
 		queue_free()
 
 
@@ -94,7 +117,7 @@ var _quest_bar: ProgressBar
 var _party_box: VBoxContainer
 var _prompt_panel: PanelContainer
 var _prompt_label: Label
-var _prompt_glyph: InputGlyph
+var _prompt_glyph: Control
 var _hints: HBoxContainer
 var _seconds: int = -1
 var _timer_started: bool = false
@@ -108,6 +131,8 @@ var _modal: Node = null
 var _prompt_text: String = ""
 var _quest_text: String = ""
 var _demo: bool = false
+var _dirty: Dictionary = {}                 # handler → pending while detached (§13.3); applied on re-attach
+var _quest_progress_pending: float = -1.0
 
 
 ## Optional (captures): {"capture": true} → standalone still with floor map, timer, prompt and quest line.
@@ -125,10 +150,10 @@ func _ready() -> void:
 	Events.floor_timer_started.connect(_on_timer_started)
 	Events.floor_timer_warning.connect(_on_timer_warning)
 	Events.floor_timer_expired.connect(_on_timer_expired)
-	Events.party_changed.connect(_refresh_party)
+	Events.party_changed.connect(_on_party_changed)
 	Events.quest_progress.connect(_on_quest_progress)
 	Events.quest_completed.connect(_on_quest_completed)
-	Events.floor_entered.connect(func(_i: int) -> void: _refresh_floor())
+	Events.floor_entered.connect(_on_floor_entered)
 	_refresh_floor()
 	_refresh_party()
 	if Game.state != null and Game.state.floor_run != null:
@@ -139,6 +164,28 @@ func _ready() -> void:
 	_auto_quest()
 	if bool(_params.get("capture", false)):
 		_start_demo()
+
+
+## Detached stack screen (ExplorationScene during battles / safe room, §9.2): handlers only mark work as dirty; it is
+## applied when the HUD is attached again.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_ENTER_TREE and not _dirty.is_empty():
+		_apply_dirty.call_deferred()
+
+
+func _apply_dirty() -> void:
+	if not is_inside_tree():
+		return
+	var d: Dictionary = _dirty
+	_dirty = {}
+	if d.has("floor"):
+		_refresh_floor()
+	if d.has("party"):
+		_refresh_party()
+	if d.has("quest_progress"):
+		_on_quest_progress(_quest_progress_pending)
+	if d.has("quest_completed"):
+		_on_quest_completed()
 
 
 func _process(delta: float) -> void:
@@ -287,6 +334,24 @@ func _build() -> void:
 		touch = (load(TOUCH_CONTROLS) as PackedScene).instantiate() as CanvasLayer
 		touch.name = "TouchControls"
 		add_child(touch)
+		touch.connect("shown_changed", _layout_for_touch)
+		_layout_for_touch(bool(touch.call("is_shown")))
+
+
+## While the touch layer is shown, the pause/map buttons (88 px hit areas at x = 1227) own the top-right corner:
+## the minimap moves left of them (02_TECH §10.2 rule 5: hit areas never overlap other controls).
+func _layout_for_touch(shown: bool) -> void:
+	var right: float = -TouchClearance.RIGHT_CLEARANCE if shown else 0.0
+	minimap.offset_right = right
+	minimap.offset_left = right - MINIMAP_SIZE
+	var hint: Control = _frame.get_node_or_null("MapHint") as Control
+	if hint != null:
+		hint.offset_right = right
+		hint.offset_left = right - MINIMAP_SIZE
+
+
+func minimap_rect() -> Rect2:
+	return minimap.get_global_rect()
 
 
 func _build_top_center() -> void:
@@ -297,7 +362,7 @@ func _build_top_center() -> void:
 	col.offset_right = 220
 	col.alignment = BoxContainer.ALIGNMENT_BEGIN
 	_frame.add_child(col)
-	_floor_label = UiUtil.label("", &"", 14, UiTheme.C_TEXT_DIM)
+	_floor_label = UiUtil.label("", &"", 16, UiTheme.C_TEXT_DIM)
 	_floor_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_floor_label.add_theme_font_override("font", UiTheme.font_bold())
 	col.add_child(_floor_label)
@@ -325,7 +390,7 @@ func _build_top_center() -> void:
 	_quest_panel.add_child(qcol)
 	var qrow: HBoxContainer = UiUtil.hbox(8)
 	qcol.add_child(qrow)
-	var qtag: Label = UiUtil.label("QUEST", &"", 13, UiTheme.C_GOLD)
+	var qtag: Label = UiUtil.label("QUEST", &"", 15, UiTheme.C_GOLD)
 	qtag.add_theme_font_override("font", UiTheme.font_bold())
 	qrow.add_child(qtag)
 	_quest_label = UiUtil.label("", &"", 16)
@@ -345,7 +410,8 @@ func _build_minimap() -> void:
 	minimap.offset_top = 50
 	minimap.offset_bottom = 50 + MINIMAP_SIZE
 	_frame.add_child(minimap)
-	var hint: InputGlyph = InputGlyph.make(&"map", "Karte", 13)
+	var hint: Control = InputGlyph.make(&"map", "Karte", 15)
+	hint.name = "MapHint"
 	hint.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	hint.offset_left = -MINIMAP_SIZE
 	hint.offset_right = 0
@@ -402,9 +468,9 @@ func _build_hints() -> void:
 	_hints.offset_top = -22 - 14 - 26
 	_hints.alignment = BoxContainer.ALIGNMENT_END
 	_frame.add_child(_hints)
-	_hints.add_child(InputGlyph.make(&"sneak", "Schleichen", 14))
-	_hints.add_child(InputGlyph.make(&"action", "Schlag", 14))
-	_hints.add_child(InputGlyph.make(&"pause", "Menü", 14))
+	_hints.add_child(InputGlyph.make(&"sneak", "Schleichen", 16))
+	_hints.add_child(InputGlyph.make(&"action", "Schlag", 16))
+	_hints.add_child(InputGlyph.make(&"pause", "Menü", 16))
 
 
 # --- timer ------------------------------------------------------------------------------------------------------------
@@ -486,6 +552,20 @@ func _shake_camera(on: bool) -> void:
 
 # --- party / floor / quest ------------------------------------------------------------------------------------------
 
+func _on_floor_entered(_index: int) -> void:
+	if not is_inside_tree():
+		_dirty["floor"] = true
+		return
+	_refresh_floor()
+
+
+func _on_party_changed() -> void:
+	if not is_inside_tree():
+		_dirty["party"] = true      # apply_battle_result / safe-room heal fire while the HUD is detached
+		return
+	_refresh_party()
+
+
 func _refresh_floor() -> void:
 	var def: FloorDef = Game.floor_def()
 	_floor_label.text = UiUtil.tr_text(def.name).to_upper() if def != null else ""
@@ -510,7 +590,7 @@ func _refresh_party() -> void:
 		n.add_theme_font_override("font", UiTheme.font_bold())
 		n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		top.add_child(n)
-		var lv: Label = UiUtil.label("Lv %d" % m.level, &"LabelSmall", 13)
+		var lv: Label = UiUtil.label("Lv %d" % m.level, &"LabelSmall", 15)
 		top.add_child(lv)
 		var hp_row: HBoxContainer = UiUtil.hbox(6)
 		col.add_child(hp_row)
@@ -519,9 +599,9 @@ func _refresh_party() -> void:
 		hp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		hp.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		hp_row.add_child(hp)
-		var hp_l: Label = UiUtil.label("", &"", 13)
+		var hp_l: Label = UiUtil.label("", &"", 15)
 		hp_l.name = "HpText"
-		hp_l.custom_minimum_size = Vector2(70, 0)
+		hp_l.custom_minimum_size = Vector2(80, 0)
 		hp_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		hp_l.add_theme_font_override("font", UiTheme.font_mono())
 		hp_row.add_child(hp_l)
@@ -532,9 +612,9 @@ func _refresh_party() -> void:
 		mp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		mp.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		mp_row.add_child(mp)
-		var mp_l: Label = UiUtil.label("", &"", 12, UiTheme.C_MANA)
+		var mp_l: Label = UiUtil.label("", &"", 15, UiTheme.C_MANA)
 		mp_l.name = "MpText"
-		mp_l.custom_minimum_size = Vector2(70, 0)
+		mp_l.custom_minimum_size = Vector2(80, 0)
 		mp_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		mp_l.add_theme_font_override("font", UiTheme.font_mono())
 		mp_row.add_child(mp_l)
@@ -577,11 +657,18 @@ func _auto_quest() -> void:
 
 
 func _on_quest_progress(progress: float) -> void:
+	if not is_inside_tree():
+		_dirty["quest_progress"] = true
+		_quest_progress_pending = progress
+		return
 	if _quest_panel.visible:
 		_quest_bar.value = clampf(progress, 0.0, 1.0) * 100.0
 
 
 func _on_quest_completed() -> void:
+	if not is_inside_tree():
+		_dirty["quest_completed"] = true
+		return
 	if not _quest_panel.visible:
 		return
 	_quest_bar.value = 100.0

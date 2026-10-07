@@ -45,8 +45,9 @@ func refresh() -> void:
 		var is_on: bool = unlocked.has(a.id) or Show.is_unlocked(a.id)
 		var b: Button = UiUtil.button("", &"ButtonFlat")
 		b.name = "Ach_" + a.id
-		b.custom_minimum_size = Vector2(0, 66)
+		b.custom_minimum_size = Vector2(0, 0)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		UiUtil.touch_pad(b, 66.0)
 		var row: HBoxContainer = UiUtil.hbox(14)
 		UiUtil.full_rect(row)
 		row.offset_left = 14

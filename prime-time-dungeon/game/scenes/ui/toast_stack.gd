@@ -81,7 +81,7 @@ func push_toast(text: String, icon: StringName = &"info", color_override: Color 
 	var col_box: VBoxContainer = UiUtil.vbox(0)
 	col_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(col_box)
-	var title: Label = UiUtil.label(str(style[0]), &"", 13, col)
+	var title: Label = UiUtil.label(str(style[0]), &"", 15, col)
 	title.add_theme_font_override("font", UiTheme.font_bold())
 	col_box.add_child(title)
 	var body: Label = UiUtil.label(UiUtil.glyph_safe(text), &"", 18)

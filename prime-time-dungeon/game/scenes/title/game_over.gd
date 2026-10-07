@@ -3,6 +3,8 @@ extends Control
 ## `timer_expired` line, statistics from FloorRun (time, kills, viewer peak); buttons after 1.5 s: "Letzten
 ## Spielstand laden" (grace time 3:00, only with a saved slot) · "Zum Titel"; event runs: "Auswertung" first.
 ## Params {"reason": &"defeat" | &"timer"}. Save.record_game_over already ran in Game.on_game_over (Router.game_over).
+## The buttons stay disabled (and unfocused) until BUTTONS_AFTER, so a confirm press carried over from the lost battle
+## cannot fire them before the screen was seen; {"capture": true} skips the delay.
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const UiIcon := preload("res://scenes/ui/ui_icon.gd")
@@ -20,6 +22,7 @@ var _card: ColorRect
 var _panel: PanelContainer
 var _button_row: HBoxContainer
 var _busy: bool = false
+var _ready_for_input: bool = false
 
 
 func setup(params: Dictionary) -> void:
@@ -40,12 +43,20 @@ func _ready() -> void:
 				CARD_IN)
 		_panel.modulate.a = 0.0
 		_button_row.modulate.a = 0.0
+		_set_buttons_enabled(false)
 		var tw: Tween = create_tween()
 		tw.tween_interval(0.5)
 		tw.tween_property(_panel, "modulate:a", 1.0, 0.3)
 		tw.tween_interval(maxf(0.0, BUTTONS_AFTER - 0.8))
+		tw.tween_callback(_enable_buttons)
 		tw.tween_property(_button_row, "modulate:a", 1.0, 0.25)
-	UiUtil.focus_later(_first_button())
+	else:
+		_enable_buttons()
+
+
+## True once the buttons accept input (after BUTTONS_AFTER).
+func buttons_ready() -> bool:
+	return _ready_for_input
 
 
 func load_last() -> void:
@@ -78,6 +89,19 @@ func to_result() -> void:
 
 func can_load() -> bool:
 	return Game.state != null and Game.state.slot > 0 and Save.has_save(Game.state.slot)
+
+
+func _set_buttons_enabled(on: bool) -> void:
+	for id: Variant in buttons.keys():
+		(buttons[id] as Button).disabled = not on
+
+
+func _enable_buttons() -> void:
+	_ready_for_input = true
+	_set_buttons_enabled(true)
+	if buttons.has("load"):
+		(buttons["load"] as Button).disabled = not can_load()
+	UiUtil.focus_later(_first_button())
 
 
 func _first_button() -> Button:
@@ -173,7 +197,8 @@ func _build() -> void:
 func _button(id: String, text: String, cb: Callable) -> Button:
 	var b: Button = UiUtil.button(text, &"ButtonBig")
 	b.name = "Btn_" + id
-	b.custom_minimum_size = Vector2(320, 72)
+	b.custom_minimum_size = Vector2(320, 0)
+	UiUtil.touch_pad(b, 72.0)
 	b.pressed.connect(cb)
 	_button_row.add_child(b)
 	buttons[id] = b

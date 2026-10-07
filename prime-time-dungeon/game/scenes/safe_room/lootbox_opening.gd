@@ -2,13 +2,15 @@ extends CanvasLayer
 ## Lootbox opening (02_TECH §1.6, GDD §9.4, 03_ART §7.2), modal layer 60 in the safe room: box shelf with counts, the
 ## published odds of the selected box (per draw, chance of ≥ 1 rare+ / epic for its draw count, guarantee, pity state)
 ## and the opening: box jumps to centre + M.O.D. `lootbox_open_<tier>`; 3 taps (shake, punch, light tier colour →
-## rarity colour of the best draw from tap 2), burst, cards revealed one by one (0.4 s, rarity border, "DUPLIKAT",
+## rarity colour of the best draw from tap 2), the lid flips open (−110° in 0.2 s), burst, cards fly out of the box
+## in an arc and are revealed one by one (0.4 s, rarity border, "DUPLIKAT",
 ## "GARANTIE!" + M.O.D. `lootbox_pity`). Buttons "Alle aufdecken" · "Nächste Box" · "Fertig". The roll is
 ## Game.open_lootbox(box) at the first tap (recorded; no undo afterwards). Footer always: not purchasable.
 
 signal closed()
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
+const InputGlyph := preload("res://scenes/ui/input_glyph.gd")
 const UiIcon := preload("res://scenes/ui/ui_icon.gd")
 const SceneKit := preload("res://scenes/ui/scene_kit.gd")
 const MenuBase := preload("res://scenes/ui/menu_base.gd")
@@ -17,6 +19,9 @@ const TAPS: int = 3
 const REVEAL_SEC: float = 0.4
 const FOOTER: String = "Lootboxen in PRIME TIME DUNGEON können nicht gekauft werden."
 const DEMO_BOXES: PackedStringArray = ["box_silver", "box_bronze", "box_bronze", "box_fan"]
+const LID_OPEN_DEG: float = -110.0
+const LID_SEC: float = 0.2
+const ODDS_FONT: int = 16
 
 var state: StringName = &"select"           # &"select" | &"tease" | &"reveal" | &"done"
 var selected_box: String = ""
@@ -220,22 +225,30 @@ func _explode() -> void:
 		Sfx.play(&"lootbox_rare")
 	_burst.color = UiUtil.rarity_color(best_rarity())
 	_burst.position = _stage_view.position + _stage_view.size * Vector2(0.5, 0.42)
-	_burst.restart()
-	_burst.emitting = true
-	if is_inside_tree():
-		var tw: Tween = create_tween()
-		tw.tween_property(_box_pivot, "scale", Vector3.ONE * 1.25, 0.1)
-		tw.tween_property(_box_pivot, "scale", Vector3.ZERO, 0.18)
-	Vfx.spawn(&"chest_open", _box_pivot, _box_pivot.global_position if _box_pivot.is_inside_tree() else Vector3.ZERO)
+	var lid: Node3D = _box_node.get_node_or_null("Lid") as Node3D if _box_node != null else null
 	_spawn_cards()
 	_update_buttons()
 	UiUtil.focus_later(_all_btn)
-	_dim_stage(true)
 	if not is_inside_tree():
+		if lid != null:
+			lid.rotation.x = deg_to_rad(LID_OPEN_DEG)
+		_dim_stage(true)
 		reveal_all()
 		return
+	# Lid flips open, light bursts out, then the cards fly out in an arc; the box fades only after that.
+	var tw: Tween = create_tween()
+	if lid != null:
+		tw.tween_property(lid, "rotation:x", deg_to_rad(LID_OPEN_DEG), LID_SEC).set_trans(Tween.TRANS_BACK) \
+			.set_ease(Tween.EASE_OUT)
+	tw.tween_callback(func() -> void:
+		_burst.restart()
+		_burst.emitting = true
+		Vfx.spawn(&"chest_open", _box_pivot, _box_pivot.global_position if _box_pivot.is_inside_tree() else Vector3.ZERO))
+	tw.tween_interval(0.35)
+	tw.tween_callback(func() -> void: _dim_stage(true))
+	_fly_cards(LID_SEC)
 	_reveal_tween = create_tween()
-	_reveal_tween.tween_interval(0.3)
+	_reveal_tween.tween_interval(LID_SEC + 0.55)
 	for c: Node in _cards.get_children():
 		var card: Control = c as Control
 		_reveal_tween.tween_callback(func() -> void:
@@ -275,6 +288,29 @@ func _spawn_cards() -> void:
 		_cards.add_child(_make_card(r))
 
 
+## Cards start small at the box (stage centre) and fly to their slot in an arc (staggered), after the lid opened.
+func _fly_cards(delay: float) -> void:
+	var i: int = 0
+	for c: Node in _cards.get_children():
+		var card: Control = c as Control
+		card.modulate.a = 0.0
+		var t: Tween = card.create_tween()
+		t.tween_interval(delay + 0.06 * i)
+		t.tween_callback(func() -> void:
+			card.pivot_offset = card.size * 0.5
+			var target: Vector2 = card.position
+			var from: Vector2 = Vector2(_cards.size.x * 0.5 - card.size.x * 0.5, -_cards.position.y * 0.35)
+			card.position = from
+			card.scale = Vector2(0.3, 0.3)
+			card.modulate.a = 1.0
+			var arc: Tween = card.create_tween().set_parallel(true)
+			arc.tween_method(func(k: float) -> void:
+				card.position = from.lerp(target, k) + Vector2(0, -120.0 * sin(k * PI)), 0.0, 1.0, 0.38) \
+				.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+			arc.tween_property(card, "scale", Vector2.ONE, 0.38).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT))
+		i += 1
+
+
 func _dim_stage(on: bool) -> void:
 	if _stage_view == null:
 		return
@@ -299,7 +335,7 @@ func _make_card(r: LootReward) -> Control:
 	face.name = "Face"
 	face.alignment = BoxContainer.ALIGNMENT_CENTER
 	card.add_child(face)
-	var rl: Label = UiUtil.label(UiUtil.rarity_name(r.rarity).to_upper(), &"", 14, col)
+	var rl: Label = UiUtil.label(UiUtil.rarity_name(r.rarity).to_upper(), &"", 15, col)
 	rl.add_theme_font_override("font", UiTheme.font_bold())
 	rl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	face.add_child(rl)
@@ -320,7 +356,7 @@ func _make_card(r: LootReward) -> Control:
 		al.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		face.add_child(al)
 	if r.converted_from != "":
-		var dl: Label = UiUtil.label("DUPLIKAT: %s" % UiUtil.item_name(r.converted_from), &"", 12, UiTheme.C_GOLD)
+		var dl: Label = UiUtil.label("DUPLIKAT: %s" % UiUtil.item_name(r.converted_from), &"", 15, UiTheme.C_GOLD)
 		dl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		dl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		dl.custom_minimum_size = Vector2(150, 0)
@@ -413,8 +449,8 @@ func _refresh_list() -> void:
 		_list.add_child(MenuBase.empty_note("Keine Lootboxen. Achievements, Bosse und Follower-Meilensteine bringen welche."))
 		if selected_box == "" and DB.has_id("lootboxes", "box_bronze"):
 			_show_odds("box_bronze")
-	elif selected_box == "" or not p.has(selected_box):
-		select_box(str(ids[0]))
+	elif state == &"select" and (selected_box == "" or not p.has(selected_box)):
+		select_box(str(ids[0]))      # never while "done": the opened box and "Nächste Box" stay until the player moves on
 	UiUtil.wire_vertical(_box_buttons)
 	_update_buttons()
 
@@ -444,15 +480,18 @@ func _show_odds(box_id: String) -> void:
 		pe = 5
 	var odds: Dictionary = Odds.box_odds(def, pr, pe, limits)
 	var floor_index: int = Game.state.floor_run.index if Game.state != null and Game.state.floor_run != null else 1
-	var head: Label = UiUtil.label("WAHRSCHEINLICHKEITEN · %s" % UiUtil.tr_text(def.name).to_upper(), &"", 13,
+	var head: Label = UiUtil.label("WAHRSCHEINLICHKEITEN · %s" % UiUtil.tr_text(def.name).to_upper(), &"", ODDS_FONT,
 		UiTheme.C_ACCENT_2)
+	head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	head.add_theme_font_override("font", UiTheme.font_bold())
 	_odds_box.add_child(head)
 	var draws: String = "%d Ziehungen" % int(odds["rolls"])
 	if def.fixed_pool != "":
 		draws += " + 1 festes Fan-Item"
-	_odds_box.add_child(UiUtil.label(draws + " · pro Ziehung:", &"", 15))
-	var row: HBoxContainer = UiUtil.hbox(10)
+	_odds_box.add_child(UiUtil.label(draws + " · pro Ziehung:", &"", ODDS_FONT))
+	var row: HFlowContainer = HFlowContainer.new()
+	row.add_theme_constant_override("h_separation", 8)
+	row.add_theme_constant_override("v_separation", 6)
 	_odds_box.add_child(row)
 	for r: String in UiUtil.RARITY_ORDER:
 		var tag: PanelContainer = PanelContainer.new()
@@ -471,10 +510,11 @@ func _show_odds(box_id: String) -> void:
 	_odds_box.add_child(at_least)
 	for pair: Array in [["Mind. 1× Selten oder besser je Box", UiUtil.fmt_pct(float(odds["p_rare_plus"]), 2)],
 			["Mind. 1× Episch je Box", UiUtil.fmt_pct(float(odds["p_epic"]), 2)]]:
-		var k: Label = UiUtil.label(str(pair[0]), &"", 14, UiTheme.C_TEXT_DIM)
+		var k: Label = UiUtil.label(str(pair[0]), &"", ODDS_FONT, UiTheme.C_TEXT_DIM)
+		k.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		k.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		at_least.add_child(k)
-		var v: Label = UiUtil.label(str(pair[1]), &"", 14, UiTheme.C_TEXT)
+		var v: Label = UiUtil.label(str(pair[1]), &"", ODDS_FONT, UiTheme.C_TEXT)
 		v.add_theme_font_override("font", UiTheme.font_mono())
 		v.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		at_least.add_child(v)
@@ -489,7 +529,9 @@ func _show_odds(box_id: String) -> void:
 	var entries: Array[Dictionary] = Odds.entry_odds(def, DB.data, floor_index)
 	if not entries.is_empty():
 		_odds_box.add_child(UiUtil.spacer(2))
-		var ih: Label = UiUtil.label("INHALT (ETAGE %d) · Chance je Ziehung" % floor_index, &"", 12, UiTheme.C_TEXT_DIM)
+		var ih: Label = UiUtil.label("INHALT (ETAGE %d) · Chance je Ziehung" % floor_index, &"", ODDS_FONT,
+			UiTheme.C_TEXT_DIM)
+		ih.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		ih.add_theme_font_override("font", UiTheme.font_bold())
 		_odds_box.add_child(ih)
 		for e: Dictionary in entries:
@@ -500,25 +542,25 @@ func _show_odds(box_id: String) -> void:
 			var n: String = "%s Credits" % UiUtil.fmt_int(int(e["amount"])) if str(e["kind"]) == "credits" else \
 				("%s × %d" % [UiUtil.item_name(str(e["id"])), int(e["amount"])] if int(e["amount"]) > 1 else
 				UiUtil.item_name(str(e["id"])))
-			var nl: Label = UiUtil.label(n, &"", 13)
+			var nl: Label = UiUtil.label(n, &"", ODDS_FONT)
 			nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			er.add_child(nl)
-			var pl: Label = UiUtil.label(UiUtil.fmt_pct(float(e["p"]), 2), &"", 13, UiTheme.C_TEXT_DIM)
+			var pl: Label = UiUtil.label(UiUtil.fmt_pct(float(e["p"]), 2), &"", ODDS_FONT, UiTheme.C_TEXT_DIM)
 			pl.add_theme_font_override("font", UiTheme.font_mono())
 			er.add_child(pl)
 			_odds_box.add_child(er)
 	for e2: Dictionary in Odds.fixed_odds(def, DB.data, floor_index):
 		var fr: HBoxContainer = UiUtil.hbox(6)
-		fr.add_child(UiUtil.label("Fan-Item: %s" % UiUtil.item_name(str(e2["id"])), &"", 13, Color("#ff5fa2")))
+		fr.add_child(UiUtil.label("Fan-Item: %s" % UiUtil.item_name(str(e2["id"])), &"", ODDS_FONT, Color("#ff5fa2")))
 		fr.add_child(UiUtil.spacer(0, 0, true))
-		fr.add_child(UiUtil.label(UiUtil.fmt_pct(float(e2["p"])), &"", 13, UiTheme.C_TEXT_DIM))
+		fr.add_child(UiUtil.label(UiUtil.fmt_pct(float(e2["p"])), &"", ODDS_FONT, UiTheme.C_TEXT_DIM))
 		_odds_box.add_child(fr)
 
 
 func _small(text: String) -> Label:
-	var l: Label = UiUtil.label(text, &"", 14, UiTheme.C_TEXT_DIM)
+	var l: Label = UiUtil.label(text, &"", ODDS_FONT, UiTheme.C_TEXT_DIM)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.custom_minimum_size = Vector2(380, 0)
+	l.custom_minimum_size = Vector2(360, 0)
 	return l
 
 
@@ -542,7 +584,9 @@ func _start_demo() -> void:
 	rewards = _demo_rewards()
 	taps = TAPS
 	state = &"reveal"
-	_box_pivot.scale = Vector3.ZERO
+	var lid: Node3D = _box_node.get_node_or_null("Lid") as Node3D if _box_node != null else null
+	if lid != null:
+		lid.rotation.x = deg_to_rad(LID_OPEN_DEG)
 	_spawn_cards()
 	_stage_view.modulate.a = 0.3
 	reveal_all()
@@ -582,8 +626,8 @@ func _build() -> void:
 	var left: VBoxContainer = UiUtil.vbox(8)
 	left.custom_minimum_size = Vector2(420, 0)
 	body.add_child(left)
-	left.add_child(UiUtil.label("REGAL", &"", 13, UiTheme.C_ACCENT))
-	_list = UiUtil.vbox(2)
+	left.add_child(UiUtil.label("REGAL", &"", 15, UiTheme.C_ACCENT))
+	_list = UiUtil.vbox(12)                 # 12 px between the 88 px hit areas
 	left.add_child(_list)
 	var odds_panel: PanelContainer = PanelContainer.new()
 	odds_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -591,6 +635,7 @@ func _build() -> void:
 		0.45), 1, 0.0, 12, 10))
 	left.add_child(odds_panel)
 	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.name = "OddsScroll"
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	odds_panel.add_child(scroll)
 	_odds_box = UiUtil.vbox(5)
@@ -665,7 +710,8 @@ func _build() -> void:
 
 func _btn(text: String, cb: Callable, parent: Node) -> Button:
 	var b: Button = UiUtil.button(text, &"ButtonBig")
-	b.custom_minimum_size = Vector2(220, 68)
+	b.custom_minimum_size = Vector2(220, 0)
+	UiUtil.touch_pad(b, 68.0)
 	b.pressed.connect(cb)
 	parent.add_child(b)
 	return b
@@ -681,8 +727,16 @@ func _build_stage() -> void:
 	world.add_child(we)
 	world.add_child(SceneKit.camera(Vector3(0, 1.6, 3.4), Vector3(0, 0.55, 0), 40.0))
 	world.add_child(SceneKit.cylinder(0.9, 1.0, 0.3, Color("#2a1d3d"), Vector3(0, -0.15, 0), 0.0, 32))
-	world.add_child(SceneKit.cylinder(1.02, 1.02, 0.04, Color("#ff2e88"), Vector3(0, -0.02, 0), 1.6, 32))
-	world.add_child(SceneKit.sun(Color("#ffffff"), 0.8, Vector3(-40, 30, 0)))
+	# Emissive rims as thin rings around the top and bottom edge (a full disc would light the whole top up).
+	for ring: Array in [[0.9, 0.0], [1.0, -0.3]]:
+		var tm: TorusMesh = TorusMesh.new()
+		tm.inner_radius = float(ring[0]) - 0.005
+		tm.outer_radius = float(ring[0]) + 0.035
+		tm.rings = 48
+		tm.ring_segments = 6
+		world.add_child(SceneKit.mesh_node(tm, SceneKit.mat(Color("#ff2e88"), 1.6), Vector3(0, float(ring[1]), 0)))
+	world.add_child(SceneKit.sun(Color("#ffffff"), 0.9, Vector3(-40, 30, 0)))
+	world.add_child(SceneKit.omni(Color("#fff0e0"), 0.8, 5.0, Vector3(1.4, 1.8, 2.2)))   # key light → metal highlights
 	_light = SceneKit.omni(Color("#cd7f32"), 1.0, 4.0, Vector3(0, 1.3, 0.9))
 	world.add_child(_light)
 	_box_pivot = Node3D.new()

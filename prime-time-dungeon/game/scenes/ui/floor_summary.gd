@@ -63,12 +63,13 @@ func continue_pressed() -> void:
 		Game.continue_after_summary()
 
 
+## Layout fits the 24 px safe rect at 1280×720 (rows in two columns; everything stays inside the SafeAreaContainer).
 func _build() -> void:
 	add_child(Backdrop.new())
 	var safe: SafeAreaContainer = SafeAreaContainer.new()
-	safe.extra = 24
+	safe.extra = 0
 	add_child(safe)
-	var col: VBoxContainer = UiUtil.vbox(10)
+	var col: VBoxContainer = UiUtil.vbox(8)
 	col.alignment = BoxContainer.ALIGNMENT_CENTER
 	safe.add_child(col)
 	var floor_index: int = int(summary.get("floor", 1))
@@ -77,24 +78,28 @@ func _build() -> void:
 	kicker.add_theme_font_override("font", UiTheme.font_bold())
 	kicker.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(kicker)
-	var title: Label = UiUtil.label("ETAGEN-BILANZ", &"LabelTitle")
+	var title: Label = UiUtil.label("ETAGEN-BILANZ", &"LabelTitle", 48)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(title)
 	if def != null:
-		var sub: Label = UiUtil.label(UiUtil.tr_text(def.name), &"", 22, UiTheme.C_TEXT_DIM)
+		var sub: Label = UiUtil.label(UiUtil.tr_text(def.name), &"", 20, UiTheme.C_TEXT_DIM)
 		sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		col.add_child(sub)
-	col.add_child(UiUtil.spacer(10))
+	col.add_child(UiUtil.spacer(4))
 	var center: CenterContainer = CenterContainer.new()
 	col.add_child(center)
-	var table: VBoxContainer = UiUtil.vbox(6)
-	table.custom_minimum_size = Vector2(640, 0)
+	var table: GridContainer = GridContainer.new()
+	table.name = "Table"
+	table.columns = 2
+	table.add_theme_constant_override("h_separation", 16)
+	table.add_theme_constant_override("v_separation", 8)
 	center.add_child(table)
 	var i: int = 0
 	for r: Dictionary in ROWS:
 		var row: PanelContainer = PanelContainer.new()
+		row.custom_minimum_size = Vector2(440, 0)
 		row.add_theme_stylebox_override("panel", UiUtil.box_style(Color(UiTheme.C_PANEL, 0.9),
-			Color(UiTheme.C_ACCENT_2, 0.35), 1, 0.21, 22, 6))
+			Color(UiTheme.C_ACCENT_2, 0.35), 1, 0.21, 22, 5))
 		table.add_child(row)
 		var h: HBoxContainer = UiUtil.hbox(14)
 		row.add_child(h)
@@ -102,10 +107,10 @@ func _build() -> void:
 			(UiTheme.C_GOLD if r["icon"] == &"trophy" else UiTheme.C_ACCENT_2), 26)
 		ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		h.add_child(ic)
-		var l: Label = UiUtil.label(str(r["label"]), &"", 22)
+		var l: Label = UiUtil.label(str(r["label"]), &"", 21)
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		h.add_child(l)
-		var v: Label = UiUtil.label("", &"", 26, UiTheme.C_GOLD if r["key"] == "followers_gained" else UiTheme.C_TEXT)
+		var v: Label = UiUtil.label("", &"", 25, UiTheme.C_GOLD if r["key"] == "followers_gained" else UiTheme.C_TEXT)
 		v.add_theme_font_override("font", UiTheme.font_mono())
 		v.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		h.add_child(v)
@@ -123,12 +128,14 @@ func _build() -> void:
 				v.text = _fmt(target, fmt)
 				Sfx.play_ui(&"coin"))
 		i += 1
-	col.add_child(UiUtil.spacer(8))
+	col.add_child(UiUtil.spacer(4))
 	var quote: String = UiUtil.mod_line("floor_end", {"floor": floor_index})
 	if quote != "":
 		var q: Label = UiUtil.label("M.O.D.: „%s“" % quote, &"", 19, UiTheme.C_ACCENT_2)
 		q.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		q.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		q.custom_minimum_size = Vector2(880, 0)
+		q.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		col.add_child(q)
 	var note: String = ""
 	if Game.mode == &"event_offline":
@@ -139,13 +146,13 @@ func _build() -> void:
 		var n: Label = UiUtil.label(note, &"LabelSmall", 16)
 		n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		col.add_child(n)
-	col.add_child(UiUtil.spacer(6))
 	var brow: HBoxContainer = UiUtil.hbox(16)
 	brow.alignment = BoxContainer.ALIGNMENT_CENTER
 	col.add_child(brow)
 	_continue = UiUtil.button("Weiter", &"ButtonBig")
 	_continue.name = "Continue"
-	_continue.custom_minimum_size = Vector2(300, 72)
+	_continue.custom_minimum_size = Vector2(300, 0)
+	UiUtil.touch_pad(_continue, 72.0)
 	_continue.pressed.connect(continue_pressed)
 	brow.add_child(_continue)
 

@@ -2,10 +2,13 @@ class_name SafeRoomScene extends Node3D
 ## Safe room (02_TECH §9.5, GDD §10, §14.7): EnvKit.build_safe_room(seed, quality, theme) with fixed camera (FOV 50),
 ## Kai + Graf Mopsula; Game.enter_safe_room(id) (full heal, scene context), Show.say("safe_room_enter"), overlay
 ## &"safe_room". Menu (left list, scene right): Speichern · Lootboxen (n) · Automat · Ausrüstung · Mopsula (!) · Weiter.
-## Mopsula scenes (scenes.json) play through ModDialog as blocking lines, then Game.mark_scene_seen(); without a scene a
-## `mopsula_idle` line. Shop via vending_menu (Game.buy), lootboxes via lootbox_opening (Game.open_lootbox).
+## Mopsula scenes (scenes.json) play through ModDialog as blocking lines, then Game.mark_scene_seen(); the next
+## qualifying scene of the same visit becomes pending right away (several scenes per visit, e.g. scn_mop_2 +
+## scn_mop_4, "NEU" badge + "!" stay); without a scene a `mopsula_idle` line. Shop via vending_menu (Game.buy), lootboxes via lootbox_opening (Game.open_lootbox).
+## ModDialog sits right-aligned here (overlay mode &"safe_room"), so the menu column stays readable while M.O.D. talks.
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
+const InputGlyph := preload("res://scenes/ui/input_glyph.gd")
 const UiIcon := preload("res://scenes/ui/ui_icon.gd")
 const SceneKit := preload("res://scenes/ui/scene_kit.gd")
 const SafeRoomSet := preload("res://scenes/safe_room/safe_room_set.gd")
@@ -23,10 +26,13 @@ var context: Dictionary = {}               # Game.enter_safe_room() result (scen
 var pending_scene: SceneDef = null
 var menu_buttons: Dictionary = {}          # id → Button
 var stand_in: bool = false
+var played_scenes: PackedStringArray = []  # scene ids played during this visit (never twice per visit)
 
 var _params: Dictionary = {}
 var _info: Dictionary = {}
 var _room: Node3D
+var _tv_drone: Node3D = null
+var _hints: HBoxContainer
 var _cam: Camera3D
 var _kai: Node3D
 var _mopsula: Node3D
@@ -70,9 +76,11 @@ func _process(delta: float) -> void:
 	_t += delta
 	if _bang != null and _bang.visible:
 		_bang.position.y = _bang_base_y() + sin(_t * 4.0) * 0.06
-	var tv: Node3D = _room.find_child("TvDrone", true, false) as Node3D if _room != null else null
-	if tv != null:
-		SceneKit.animate_drone(tv, _t, 2.4)
+	if _tv_drone != null:
+		SceneKit.animate_drone(_tv_drone, _t, 2.4)
+	if _hints != null:
+		var md: Node = ModDialogScript.current
+		_hints.visible = not (md != null and is_instance_valid(md) and bool(md.call("is_busy")))
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -177,8 +185,13 @@ func talk_to_mopsula() -> void:
 	if not is_inside_tree():
 		return
 	Game.mark_scene_seen(scene)
+	played_scenes.append(scene.id)
+	# Another scene may qualify on the same visit (first_visit stays true in `context`): offer it right away.
+	var nxt: SceneDef = Game.next_scene(context)
+	pending_scene = nxt if nxt != null and not played_scenes.has(nxt.id) else null
 	_mopsula.call("play", &"idle")
 	_busy = false
+	_update_bang()
 	_refresh_menu_labels()
 	(menu_buttons["mopsula"] as Control).grab_focus()
 
@@ -234,6 +247,7 @@ func _build_world() -> void:
 	stand_in = bool(built["stand_in"])
 	_room.name = "Room"
 	add_child(_room)
+	_tv_drone = _room.find_child("TvDrone", true, false) as Node3D     # cached: animated every frame
 	var we: WorldEnvironment = WorldEnvironment.new()
 	if stand_in:
 		we.environment = SceneKit.environment(Color("#1a1218"), Color("#8a6a7a"), 0.7, true)
@@ -343,7 +357,10 @@ func _refresh_menu_labels() -> void:
 	var n: int = Game.state.pending_lootboxes.size() if Game.state != null else 0
 	_set_button_text("lootbox", "Lootboxen (%d)" % n)
 	(menu_buttons["lootbox"] as Button).disabled = n <= 0
-	_set_button_text("mopsula", "Mopsula  !" if pending_scene != null else "Mopsula")
+	_set_button_text("mopsula", "Mopsula")
+	var badge: Control = (menu_buttons["mopsula"] as Button).find_child("Badge", true, false) as Control
+	if badge != null:
+		badge.visible = pending_scene != null
 	_set_button_text("save", "Speichern" if Game.mode != &"event_offline" else "Speichern (Event: aus)")
 	_header_sub.text = "Credits %s  ·  Countdown angehalten%s" % [UiUtil.fmt_int(UiUtil.credits()),
 		(": " + UiUtil.fmt_time(floori(Game.time_left()))) if Game.state != null and Game.state.floor_run != null and
@@ -352,7 +369,18 @@ func _refresh_menu_labels() -> void:
 	for c: Node in _menu.get_children():
 		if c is Button:
 			list.append(c as Control)
+			_style_enabled(c as Button)
 	UiUtil.wire_vertical(list)
+
+
+## Label + icon are children of the button, so the theme's font_disabled_color never reaches them: dim them here.
+func _style_enabled(b: Button) -> void:
+	var l: Label = b.find_child("Text", true, false) as Label
+	if l != null:
+		l.add_theme_color_override("font_color", UiTheme.C_TEXT_DIM if b.disabled else UiTheme.C_TEXT)
+	var ic: Control = b.find_child("Icon", true, false) as Control
+	if ic != null:
+		ic.modulate = Color(0.55, 0.55, 0.6, 0.5) if b.disabled else Color.WHITE
 
 
 func _set_button_text(id: String, text: String) -> void:
@@ -396,8 +424,8 @@ func _build_ui() -> void:
 	var frame: Control = Control.new()
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	safe.add_child(frame)
-	var col: VBoxContainer = UiUtil.vbox(8)
-	col.position = Vector2(8, 64)
+	var col: VBoxContainer = UiUtil.vbox(4)
+	col.position = Vector2(8, 60)
 	col.custom_minimum_size = Vector2(380, 0)
 	frame.add_child(col)
 	var tag: PanelContainer = PanelContainer.new()
@@ -408,12 +436,12 @@ func _build_ui() -> void:
 	tl.add_theme_font_override("font", UiTheme.font_bold())
 	tl.add_theme_constant_override("outline_size", 0)
 	tag.add_child(tl)
-	var title: Label = UiUtil.label(str(_info.get("name", "Safe Room")).to_upper(), &"LabelTitle", 44)
+	var title: Label = UiUtil.label(str(_info.get("name", "Safe Room")).to_upper(), &"LabelTitle", 38)
 	col.add_child(title)
 	_header_sub = UiUtil.label("", &"LabelSmall", 16)
 	col.add_child(_header_sub)
-	col.add_child(UiUtil.spacer(6))
-	_menu = UiUtil.vbox(6)
+	col.add_child(UiUtil.spacer(4))
+	_menu = UiUtil.vbox(12)                  # 12 px between hit areas (02_TECH §10.2 rule 5)
 	_menu.name = "Menu"
 	col.add_child(_menu)
 	for e: Array in [["save", "Speichern", &"floppy"], ["lootbox", "Lootboxen", &"box"], ["vending", "Automat", &"vending"],
@@ -430,13 +458,18 @@ func _build_ui() -> void:
 		var icon_col: Color = UiUtil.C_EXIT if str(e[0]) == "leave" else (UiTheme.C_GOLD if str(e[0]) == "mopsula"
 			else UiTheme.C_ACCENT_2)
 		var ic: Control = UiIcon.make(e[2] as StringName, icon_col, 28)
+		ic.name = "Icon"
 		ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(ic)
 		var l: Label = UiUtil.label(str(e[1]), &"", 24)
 		l.name = "Text"
 		l.add_theme_font_override("font", UiTheme.font_bold())
 		l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(l)
+		if str(e[0]) == "mopsula":
+			row.add_child(_new_badge())
+		row.add_child(UiUtil.spacer(0, 16))
 		var id: String = str(e[0])
 		b.pressed.connect(func() -> void: activate(id))
 		_menu.add_child(b)
@@ -446,6 +479,7 @@ func _build_ui() -> void:
 	_status.custom_minimum_size = Vector2(380, 0)
 	col.add_child(_status)
 	var hints: HBoxContainer = UiUtil.hbox(14)
+	_hints = hints
 	hints.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	hints.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	hints.offset_left = -420
@@ -453,8 +487,8 @@ func _build_ui() -> void:
 	hints.offset_top = -22 - 14 - 26
 	hints.alignment = BoxContainer.ALIGNMENT_END
 	frame.add_child(hints)
-	hints.add_child(InputGlyph.make(&"ui_accept", "Wählen", 14))
-	hints.add_child(InputGlyph.make(&"pause", "Party-Menü", 14))
+	hints.add_child(InputGlyph.make(&"ui_accept", "Wählen", 16))
+	hints.add_child(InputGlyph.make(&"pause", "Party-Menü", 16))
 	_heal_banner = PanelContainer.new()
 	_heal_banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	_heal_banner.offset_left = -150
@@ -473,3 +507,20 @@ func _build_ui() -> void:
 		tw.tween_interval(2.6)
 		tw.tween_property(_heal_banner, "modulate:a", 0.0, 0.5)
 	_refresh_menu_labels()
+
+
+## Gold "NEU" pill on the Mopsula entry while a scene is pending (HYPE_GOLD with INK text, 03_ART §2.4).
+func _new_badge() -> PanelContainer:
+	var badge: PanelContainer = PanelContainer.new()
+	badge.name = "Badge"
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	badge.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var sb: StyleBoxFlat = UiUtil.box_style(UiTheme.C_GOLD, UiUtil.C_INK, 2, 0.0, 10, 1)
+	sb.set_corner_radius_all(14)
+	badge.add_theme_stylebox_override("panel", sb)
+	var t: Label = UiUtil.label("NEU", &"", 16, UiUtil.C_INK)
+	t.add_theme_font_override("font", UiTheme.font_bold())
+	t.add_theme_constant_override("outline_size", 0)
+	badge.add_child(t)
+	badge.visible = false
+	return badge

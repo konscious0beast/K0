@@ -56,12 +56,13 @@ static func clear(node: Node) -> void:
 		c.queue_free()
 
 
-## Flat list entry: icon + text (+ right aligned text), focusable, mouse + touch friendly (min 48 px high).
+## Flat list entry: icon + text (+ right aligned text), focusable; 64 px visible, 88 px hit area (02_TECH §10.2 rule 5,
+## UiUtil.touch_pad). Lists put them 12 px apart (scroll_list()).
 static func list_button(text: String, icon_kind: StringName = &"", icon_color: Color = Color.WHITE,
 		right_text: String = "", text_color: Color = Color(0, 0, 0, 0)) -> Button:
 	var b: Button = UiUtil.button("", &"ButtonFlat")
-	b.custom_minimum_size = Vector2(0, 48)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	UiUtil.touch_pad(b)
 	var row: HBoxContainer = UiUtil.hbox(10)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	UiUtil.full_rect(row)
@@ -89,12 +90,13 @@ static func list_button(text: String, icon_kind: StringName = &"", icon_color: C
 
 ## Member tabs (Kai | Graf Mopsula); calls `on_select(member_id)` on focus/press. Returns the button row.
 static func member_tabs(selected: String, on_select: Callable) -> HBoxContainer:
-	var row: HBoxContainer = UiUtil.hbox(8)
+	var row: HBoxContainer = UiUtil.hbox(12)
 	var buttons: Array[Control] = []
 	for m: PartyMember in UiUtil.party():
 		var b: Button = UiUtil.button(UiUtil.member_name(m), &"ButtonFlat")
 		b.name = "Tab_" + m.id
-		b.custom_minimum_size = Vector2(200, 48)
+		b.custom_minimum_size = Vector2(200, 0)
+		UiUtil.touch_pad(b)
 		b.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		b.toggle_mode = true
 		b.button_pressed = m.id == selected
@@ -174,7 +176,7 @@ static func scroll_list() -> Dictionary:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var list: VBoxContainer = UiUtil.vbox(2)
+	var list: VBoxContainer = UiUtil.vbox(12)      # 12 px between the 88 px hit areas
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(list)
 	return {"scroll": scroll, "list": list}

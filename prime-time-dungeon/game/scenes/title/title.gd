@@ -4,6 +4,7 @@ class_name TitleScreen extends Control
 ## Beenden (not on mobile). New game: slot select → name entry → intro; every path ends in request_new_game().
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
+const InputGlyph := preload("res://scenes/ui/input_glyph.gd")
 const UiIcon := preload("res://scenes/ui/ui_icon.gd")
 const TitleFlow := preload("res://scenes/title/title_flow.gd")
 const Studio := preload("res://scenes/title/title_studio.gd")
@@ -214,7 +215,7 @@ func _build_logo(frame: Control) -> void:
 
 
 func _build_menu(frame: Control) -> void:
-	_menu = UiUtil.vbox(4)
+	_menu = UiUtil.vbox(12)                 # 12 px between entries (02_TECH §10.2 rule 5)
 	_menu.name = "Menu"
 	_menu.position = Vector2(8, 168)
 	_menu.custom_minimum_size = Vector2(360, 0)
@@ -235,6 +236,7 @@ func _build_menu(frame: Control) -> void:
 		b.name = "Menu_" + str(e[0])
 		b.set_meta("menu_id", str(e[0]))
 		b.custom_minimum_size = Vector2(360, 64)
+		UiUtil.set_vmargin(b, 8.0)          # exactly 64 px high: 7 entries fit the safe rect
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		var id: String = str(e[0])
 		b.pressed.connect(func() -> void: activate(id))
@@ -242,6 +244,8 @@ func _build_menu(frame: Control) -> void:
 		menu_buttons[id] = b
 		list.append(b)
 	UiUtil.wire_vertical(list)
+	if entries.size() >= 7:
+		_menu.position.y = 150.0
 	if menu_buttons.has("continue"):
 		var info: Dictionary = Save.slot_summary(Save.newest_slot())
 		if not info.is_empty() and not bool(info.get("corrupt", false)):
@@ -249,15 +253,24 @@ func _build_menu(frame: Control) -> void:
 				str(info.get("player_name", "Kai")), int(info.get("floor_index", 1))]
 
 
+## Footer on an ink strip (lower third): the "not purchasable" notice must stay legible over the pink stage glow.
 func _build_footer(frame: Control) -> void:
+	var strip: PanelContainer = PanelContainer.new()
+	strip.name = "Footer"
+	strip.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	strip.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	strip.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	strip.offset_right = 0
+	strip.offset_bottom = 0
+	strip.add_theme_stylebox_override("panel", UiUtil.box_style(Color(UiTheme.C_PANEL, 0.85), Color(UiTheme.C_ACCENT_2,
+		0.35), 1, 0.21, 18, 5))
+	frame.add_child(strip)
 	var foot: HBoxContainer = UiUtil.hbox(18)
-	foot.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	foot.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	foot.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	foot.offset_left = -640
-	foot.offset_top = -28
 	foot.alignment = BoxContainer.ALIGNMENT_END
-	frame.add_child(foot)
-	foot.add_child(InputGlyph.make(&"ui_accept", "Wählen", 15))
+	strip.add_child(foot)
+	foot.add_child(InputGlyph.make(&"ui_accept", "Wählen", 16))
 	var version: String = str(ProjectSettings.get_setting("application/config/version", VERSION_FALLBACK))
-	foot.add_child(UiUtil.label("v%s · Vertical Slice · Lootboxen sind nicht käuflich" % version, &"LabelSmall", 14))
+	var v: Label = UiUtil.label("v%s · Vertical Slice · Lootboxen sind nicht käuflich" % version, &"", 16, UiTheme.C_TEXT)
+	v.add_theme_constant_override("outline_size", 2)
+	v.add_theme_color_override("font_outline_color", UiUtil.C_INK)
+	foot.add_child(v)

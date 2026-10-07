@@ -23,18 +23,28 @@ func _ready() -> void:
 
 ## {"left", "top", "right", "bottom"} in canvas pixels (each >= EDGE).
 func compute_margins() -> Dictionary:
-	var m: Dictionary = {"left": EDGE + extra, "top": EDGE + extra, "right": EDGE + extra, "bottom": EDGE + extra}
-	if not OS.has_feature("mobile") or not is_inside_tree():
+	var ins: Dictionary = device_insets(get_viewport() if is_inside_tree() else null)
+	var m: Dictionary = {}
+	for side: String in ["left", "top", "right", "bottom"]:
+		m[side] = int(ins[side]) + EDGE + extra
+	return m
+
+
+## Display cutout / rounded-corner insets in canvas pixels WITHOUT the 24 px edge (0 on desktop). Layers that place
+## controls with absolute offsets (touch buttons, joystick) shift by these (02_TECH §10.4).
+static func device_insets(vp: Viewport) -> Dictionary:
+	var m: Dictionary = {"left": 0, "top": 0, "right": 0, "bottom": 0}
+	if vp == null or not OS.has_feature("mobile"):
 		return m
 	var safe: Rect2i = DisplayServer.get_display_safe_area()
 	var win: Vector2i = DisplayServer.window_get_size()
 	if win.x <= 0 or win.y <= 0 or safe.size.x <= 0:
 		return m
-	var sc: Vector2 = get_viewport().get_visible_rect().size / Vector2(win)
-	m["left"] = maxi(0, roundi(safe.position.x * sc.x)) + EDGE + extra
-	m["top"] = maxi(0, roundi(safe.position.y * sc.y)) + EDGE + extra
-	m["right"] = maxi(0, roundi((win.x - safe.end.x) * sc.x)) + EDGE + extra
-	m["bottom"] = maxi(0, roundi((win.y - safe.end.y) * sc.y)) + EDGE + extra
+	var sc: Vector2 = vp.get_visible_rect().size / Vector2(win)
+	m["left"] = maxi(0, roundi(safe.position.x * sc.x))
+	m["top"] = maxi(0, roundi(safe.position.y * sc.y))
+	m["right"] = maxi(0, roundi((win.x - safe.end.x) * sc.x))
+	m["bottom"] = maxi(0, roundi((win.y - safe.end.y) * sc.y))
 	return m
 
 

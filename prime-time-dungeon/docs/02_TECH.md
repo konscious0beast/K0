@@ -1,7 +1,9 @@
 # PRIME TIME DUNGEON — Technische Architektur (verbindlich)
 
-> Status: **verbindlicher Vertrag** für alle Implementierungs-Module M0–M7.
-> Grundlage: `docs/00_BRIEF.md` (hat Vorrang bei Widersprüchen). Inhalte/Balancing-Zahlen: GDD (`docs/01_GDD.md`).
+> Status: **verbindlicher Vertrag** für alle Implementierungs-Module M0–M8 (M8 = Live-Hooks, `core/live/`, 05_LIVE_MODUS).
+> Vorrang bei Widersprüchen: `00_BRIEF` > **dieses Dokument** (APIs, Schemas, Pfade, IDs, Feldnamen) > `01_GDD` (Zahlen, Inhalte)
+> > `03_ART` > `04`/`05`. Formeln und Spielzahlen dieses Dokuments sind aus dem GDD übernommen (GDD §3, §4, §7, §9 kanonisch);
+> wo das GDD andere Bezeichner nutzt, gilt die Abbildung in §4.2/§4.4.0.
 > Engine: Godot **4.7.2-stable**, GDScript, statisch typisiert. Alle in diesem Dokument genannten Godot-APIs
 > wurden gegen das installierte 4.7.2-Binary geprüft (Doctool-Dump + Headless/Xvfb-Testprojekte).
 >
@@ -18,7 +20,7 @@
 4. [Daten (JSON) und DB](#4-daten-json-und-db)
 5. [Kampf-Kern (M1)](#5-kampf-kern-m1)
 6. [Show, Loot, Progression, Save (M2)](#6-show-loot-progression-save-m2)
-7. [Dungeon-Generierung (M3)](#7-dungeon-generierung-m3)
+7. [Dungeon und Erkundung (M3)](#7-dungeon-und-erkundung-m3)
 8. [Art-Kit-API (M4)](#8-art-kit-api-m4)
 9. [Szenenfluss und Router](#9-szenenfluss-und-router)
 10. [Eingabe und Plattform](#10-eingabe-und-plattform)
@@ -62,11 +64,16 @@ Diese haben **kein** `class_name` (Kollisionsgefahr) und werden modulintern per 
 
 ```
 core/data (M0) ← core/stats ← core/battle (M1) ← core/show, core/loot, core/progression (M2)
-core/dungeon (M3) ← core/data
+core/dungeon (M3) ← core/data, core/loot, core/progression (FloorEvent liest/schreibt GameState)
+core/live (M8) ← core/* (RunSim, RunLog, Gift…; nie umgekehrt)
 art/* (M4) ← nur Godot + core/data (nur Def-Typen, optional)
 autoload/* (M0/M2) ← core/*
 scenes/* (M3/M5/M6) ← autoload/*, core/*, art/*
 ```
+
+Ausnahme in der Stub-Phase: `autoload/game.gd` (M0) hält `RunSim`/`RunLog` (M8-Stubs), `Show` nutzt `Gift`/`GiftPolicy`/
+`GiftApplier` (M8-Stubs). Die Stubs liefern neutrale Werte (`step()` → `[]`, `validate()` → `""`), bis M8 sie ersetzt;
+die Timer-Logik in `RunSim.step` ist Pflicht für Phase B (ohne sie läuft kein Countdown).
 
 - `core/**` greift **nie** auf Autoloads (`Events`, `DB`, `Game`, `Show`, `Save`, `Router`, `Sfx`) oder den SceneTree zu.
   Daten kommen als `GameData`-Instanz, Zufall als `RandomNumberGenerator` per Parameter.
@@ -110,12 +117,16 @@ Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört gen
 | `core/data/data_validator.gd` | M0 | `DataValidator`: Schema-/Referenz-/Wertebereichsprüfung, Vokabular-Konstanten (§4.3) |
 | `core/data/json_util.gd` | M0 | `JsonUtil`: Datei lesen, `to_int`, `to_str_array`, `vec2i_to_arr`, `arr_to_vec2i` |
 | `core/data/seed_util.gd` | M0 | `SeedUtil`: deterministische Seed-Ableitung (§4.6) |
+| `core/data/condition_expr.gd` | M0 | `ConditionExpr`: Parser/Auswerter für Achievement- und Szenen-Bedingungen (§4.4.9, §6.1) |
 | `core/data/defs/status_def.gd` | M0 | `StatusDef` |
 | `core/data/defs/skill_def.gd` | M0 | `SkillDef` |
 | `core/data/defs/item_def.gd` | M0 | `ItemDef` |
 | `core/data/defs/class_def.gd` | M0 | `ClassDef` |
 | `core/data/defs/party_member_def.gd` | M0 | `PartyMemberDef` |
 | `core/data/defs/enemy_def.gd` | M0 | `EnemyDef` |
+| `core/data/defs/pseudo_unit_def.gd` | M0 | `PseudoUnitDef` (`enemies.json → pseudo_units`) |
+| `core/data/defs/milestone_def.gd` | M0 | `MilestoneDef` |
+| `core/data/defs/scene_def.gd` | M0 | `SceneDef` (Mopsula-Szenen) |
 | `core/data/defs/encounter_def.gd` | M0 | `EncounterDef` (eingebettet in `floors.json`) |
 | `core/data/defs/floor_def.gd` | M0 | `FloorDef` |
 | `core/data/defs/lootbox_def.gd` | M0 | `LootboxDef` |
@@ -161,8 +172,32 @@ Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört gen
 | `core/dungeon/room_cell.gd` | M3 (S) | `RoomCell` |
 | `core/dungeon/chest_spawn.gd` | M3 (S) | `ChestSpawn` |
 | `core/dungeon/enemy_spawn.gd` | M3 (S) | `EnemySpawn` |
-| `core/dungeon/floor_layout.gd` | M3 (S) | `FloorLayout`: Ergebnis der Generierung |
+| `core/dungeon/event_spawn.gd` | M3 (S) | `EventSpawn` (Etagen-Event im Layout) |
+| `core/dungeon/floor_layout.gd` | M3 (S) | `FloorLayout`: Ergebnis von Layout/Generierung |
 | `core/dungeon/dungeon_generator.gd` | M3 (S) | `DungeonGenerator` (§7) |
+| `core/dungeon/explore_event.gd` | M3 (S) | `ExploreEvent`: serialisierbare Erkundungs-Ereignisse (Brief §6b.2) |
+| `core/dungeon/floor_event.gd` | M3 (S) | `FloorEvent`: Regeln der Etagen-Events (§7.4) |
+
+`core/live/` (M8 „Live-Hooks“, 05_LIVE_MODUS §11.2; Stubs von M0, alle `RefCounted`, ohne Autoloads/SceneTree/`Time`):
+
+| Datei | Modul | Zweck |
+|---|---|---|
+| `core/live/run_sim.gd` | M8 (S) | `RunSim`: deterministische Erkundungs-Uhr in Ticks (§7.1), Replay von Commands |
+| `core/live/run_log.gd` | M8 (S) | `RunLog`: Seed + Commands + Ticks (Brief §6b.3); `to_dict`/`from_dict`/`digest` |
+| `core/live/command.gd` | M8 (S) | `Command`: Schema-Prüfung der aufgezeichneten Commands (`t`-Typen aus §3.4) |
+| `core/live/canonical_json.gd` | M8 (S) | `CanonicalJson`: kanonische Serialisierung für Hashes |
+| `core/live/state_hash.gd` | M8 (S) | `StateHash`: SHA-256 über `GameState`/`BattleState` (ohne Anzeigefelder) |
+| `core/live/event_def.gd` | M8 (S) | `EventDef`: Live-/Offline-Event inkl. `quest`, `window` (Brief §6b.5) |
+| `core/live/event_catalog.gd` | M8 (S) | `EventCatalog`: lädt/validiert `data/events.json` |
+| `core/live/quest_tracker.gd` | M8 (S) | `QuestTracker`: Quest-Fortschritt aus normalisierten Events |
+| `core/live/score_calc.gd` | M8 (S) | `ScoreCalc`: Punkte eines Event-Laufs |
+| `core/live/leaderboard.gd` | M8 (S) | `Leaderboard`: lokale Top 10 |
+| `core/live/gift.gd` | M8 (S) | `Gift`: Geschenk-Schema, `validate`, `make_system`, `make_dev` |
+| `core/live/gift_policy.gd` | M8 (S) | `GiftPolicy`: Caps, Wirkungsfaktoren (Ganzzahl) |
+| `core/live/gift_applier.gd` | M8 (S) | `GiftApplier`: Geschenk außerhalb des Kampfes anwenden |
+| `core/live/fair_roll.gd` | M8 (S) | `FairRoll`: Commit-Reveal-Würfel (nur Tests im Slice) |
+
+Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (dort normativ; Namen/Typen dieses Dokuments haben Vorrang).
 
 ### 1.4 `data/` (alle M7, Stubs von M0)
 
@@ -172,13 +207,16 @@ Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört gen
 | `data/skills.json` | Fähigkeiten inkl. Basisangriffe, Stunts, Item-Effekte, Gegner-Skills |
 | `data/items.json` | Verbrauchsgüter, Ausrüstung, Schlüsselgegenstände |
 | `data/classes.json` | Klassen (ab Etage 3, Datenmodell jetzt) |
-| `data/party.json` | Kai, Graf Mopsula |
-| `data/enemies.json` | Gegner inkl. Bosse |
-| `data/floors.json` | Etagen inkl. Encounter-Tabellen, Truhen-Tabelle, Shop, Palette |
-| `data/lootboxes.json` | Bronze/Silber/Gold/Fan-Box |
-| `data/achievements.json` | Achievements |
-| `data/sponsors.json` | Sponsoren + Geschenke |
+| `data/party.json` | Kai, Graf Mopsula + Startinventar/-Credits (`start`) |
+| `data/enemies.json` | Gegner inkl. Bosse (KI, Phasen) + Pseudo-Einheiten (`pseudo_units`) |
+| `data/floors.json` | Etagen inkl. Encounter, handgebautem Layout (Zonen, Tore, Truhen, Events, Spawner, Safe Rooms), Palette, `quest`/`window` |
+| `data/lootboxes.json` | Bronze/Silber/Gold/Fan-Box + Seltenheits-Pools (`pools`) + Pity (`pity`) |
+| `data/achievements.json` | Achievements (Trigger + Bedingung) |
+| `data/sponsors.json` | Sponsoren + Geschenke + Gewichtungsregeln |
+| `data/milestones.json` | Follower-Meilensteine |
 | `data/mod_lines.json` | M.O.D.-, Mopsula-, Kai- und Chat-Zeilen |
+| `data/scenes.json` | Mopsula-Szenen (Safe Room) |
+| `data/events.json` | Live-/Offline-Events (M7 Inhalt, M8 Schema); **nicht** in `GameData.TABLES`, geladen von `EventCatalog` (§4.5) |
 
 ### 1.5 `art/` (alle M4)
 
@@ -214,21 +252,24 @@ Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört gen
 |---|---|---|
 | `scenes/boot/boot.tscn` + `boot.gd` | M6 (S) | **Main Scene**: Args lesen, Settings anwenden, GlobalUi + ggf. Autoplay anlegen, → Titel |
 | `scenes/boot/autoplay.gd` | M6 | Autoplay-Treiber (§11.4) |
-| `scenes/title/title.tscn` + `title.gd` | M6 (S) | `TitleScreen`: Neues Spiel / Laden / Einstellungen / Beenden |
+| `scenes/title/title.tscn` + `title.gd` | M6 (S) | `TitleScreen`: Fortsetzen / Neues Spiel / Laden / Event-Lauf / Optionen / Credits / Beenden (§9.5) |
 | `scenes/title/slot_select.tscn` + `.gd` | M6 | Slot-Auswahl (Neu/Laden) |
-| `scenes/title/name_entry.tscn` + `.gd` | M6 | Namenseingabe (Default „Kai“) |
+| `scenes/title/name_entry.tscn` + `.gd` | M6 | Namenseingabe (Default „Kai“, `LineEdit.max_length = 12`) + Modus Prime Time / Vorabendprogramm |
 | `scenes/title/intro.tscn` + `.gd` | M6 | M.O.D.-Intro-Sequenz |
 | `scenes/title/game_over.tscn` + `.gd` | M6 | Game Over (Grund: `defeat`/`timer`) |
 | `scenes/title/credits.tscn` + `.gd` | M6 | „Etage 2 folgt“-Abspann |
 | `scenes/exploration/exploration.tscn` + `exploration.gd` | M3 (S) | `ExplorationScene`: Etage aufbauen, Spieler/Gegner/Interaktion, Encounter |
 | `scenes/exploration/floor_builder.gd` | M3 | `FloorLayout` → Raum-Nodes via `EnvKit`/`PropKit` |
-| `scenes/exploration/player.tscn` + `player_controller.gd` | M3 | CharacterBody3D + `CharacterRig`, Bewegung, Schwung-Angriff |
+| `scenes/exploration/player.tscn` + `player_controller.gd` | M3 | CharacterBody3D + `CharacterRig`, Laufen/Schleichen, Feldschlag/Interagieren (`action`) |
+| `scenes/exploration/companion_follower.gd` | M3 | Mopsula folgt Kais Spur (ohne NavigationServer, §7.3) |
 | `scenes/exploration/camera_rig.gd` | M3 | Orbit-Kamera mit SpringArm3D |
-| `scenes/exploration/enemy_actor.tscn` + `enemy_actor.gd` | M3 | Sichtbare Gegnergruppe: Patrouille/Verfolgung/Kontakt |
+| `scenes/exploration/enemy_actor.tscn` + `enemy_actor.gd` | M3 | Sichtbare Gegnergruppe: IDLE/PATROL/ALERT/CHASE/RETURN, Kontakt |
 | `scenes/exploration/interactable.gd` | M3 | Basis Area3D-Interaktion (Prompt-Text, `interact()`) |
-| `scenes/exploration/chest_interactable.gd` | M3 | Truhe |
+| `scenes/exploration/chest_interactable.gd` | M3 | Truhe (wood/metal/locked) |
+| `scenes/exploration/gate_interactable.gd` | M3 | Tor (benötigt Schlüssel/Event) |
+| `scenes/exploration/event_interactable.gd` | M3 | Etagen-Event mit Wahl-Dialog (§7.4) |
 | `scenes/exploration/stairs_interactable.gd` | M3 | Treppe |
-| `scenes/exploration/safe_door_interactable.gd` | M3 | Safe-Room-Tür |
+| `scenes/exploration/safe_door_interactable.gd` | M3 | Safe-Room-Tür (trägt die Safe-Room-ID) |
 | `scenes/battle/battle.tscn` + `battle_scene.gd` | M5 (S) | `BattleScene`: Root, Setup, Ende → Router |
 | `scenes/battle/battle_controller.gd` | M5 | Kampfschleife (§5.7) |
 | `scenes/battle/battle_player.gd` | M5 | Spielt `ActionEvent`-Listen ab |
@@ -236,12 +277,12 @@ Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört gen
 | `scenes/battle/battle_camera.gd` | M5 | Kamera-Shots |
 | `scenes/battle/ui/battle_hud.tscn` + `.gd` | M5 | Kampf-HUD (CanvasLayer 5): Party-Panels, CTB-Leiste, Menüs |
 | `scenes/battle/ui/party_panel.gd` | M5 | HP/MP/Status je Partymitglied |
-| `scenes/battle/ui/ctb_bar.gd` | M5 | Zugreihenfolge-Leiste rechts (10 Einträge, Vorschau) |
-| `scenes/battle/ui/command_menu.gd` | M5 | Angriff/Fähigkeit/Stunt/Item/Verteidigen/Flucht |
+| `scenes/battle/ui/ctb_bar.gd` | M5 | Zugreihenfolge-Leiste rechts (12 Einträge, bei Schema TOUCH 10; Pseudo-Icons, Geist-Vorschau) |
+| `scenes/battle/ui/command_menu.gd` | M5 | Angriff/Fähigkeit/Stunt (mit Cooldown-Zahl)/Item/Verteidigen/Flucht |
 | `scenes/battle/ui/action_list.gd` | M5 | Untermenü Fähigkeiten/Stunts/Items |
 | `scenes/battle/ui/target_cursor.gd` | M5 | Zielauswahl |
 | `scenes/battle/ui/battle_results.tscn` + `.gd` | M5 | Ergebnis: EXP, Credits, Items, Level-Ups, Follower, Achievements |
-| `scenes/safe_room/safe_room.tscn` + `safe_room.gd` | M6 (S) | `SafeRoomScene`: Innenraum + Menü |
+| `scenes/safe_room/safe_room.tscn` + `safe_room.gd` | M6 (S) | `SafeRoomScene`: Innenraum (Theme je Safe Room) + Menü + Mopsula-Szenen (`scenes.json`) |
 | `scenes/safe_room/vending_menu.tscn` + `.gd` | M6 | Automat (Shop) |
 | `scenes/safe_room/lootbox_opening.tscn` + `.gd` | M6 | Lootbox-Öffnung mit M.O.D.-Kommentar |
 | `scenes/ui/theme/ui_theme.gd` | **M0** | `UiTheme`: Basis-Theme (Code-generiert) |
@@ -253,10 +294,16 @@ Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört gen
 | `scenes/ui/minimap.gd` | M6 | Minimap + große Karte |
 | `scenes/ui/touch_controls.tscn` + `.gd` | M6 | Touch-Layer (virtueller Stick + Buttons + Kamera-Drag) |
 | `scenes/ui/virtual_joystick.gd` | M6 | Floating Joystick |
-| `scenes/ui/pause_menu.tscn` + `.gd` | M6 | Pause: Party, Items, Ausrüstung, Einstellungen, Titel |
+| `scenes/ui/pause_menu.tscn` + `.gd` | M6 | Pause: Party, Inventar, Ausrüstung, Fähigkeiten, Achievements, Bestiarium, Optionen, Zum Titel |
 | `scenes/ui/party_menu.gd` | M6 | Party-Status |
 | `scenes/ui/inventory_menu.gd` | M6 | Inventar (Feld-Nutzung) |
 | `scenes/ui/equipment_menu.gd` | M6 | Ausrüstung |
+| `scenes/ui/skills_menu.gd` | M6 | Fähigkeiten + Freischalt-Level (aus `learnset`) |
+| `scenes/ui/achievements_menu.gd` | M6 | Achievements (erhalten / verborgen „???“) |
+| `scenes/ui/bestiary_menu.gd` | M6 | Bestiarium aus `GameState.bestiary` |
+| `scenes/ui/floor_summary.tscn` + `.gd` | M6 | `FloorSummary`: Etagen-Bilanz (Zeit, Kills, Zuschauer-Peak, Follower, Achievements) → `Game.continue_after_summary()` |
+| `scenes/ui/event_lobby.tscn` + `.gd` | M6 | Event-Lauf-Karte (05 CR-10) |
+| `scenes/ui/run_result.tscn` + `.gd` | M6 | Event-Lauf-Ergebnis (05 CR-10) |
 | `scenes/ui/settings_menu.tscn` + `.gd` | M6 | Einstellungen |
 | `scenes/ui/confirm_dialog.tscn` + `.gd` | M6 | Ja/Nein-Dialog |
 | `scenes/ui/safe_area_container.gd` | M6 | MarginContainer mit Safe-Area-Rändern |
@@ -269,17 +316,19 @@ Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört gen
 |---|---|---|
 | `tests/run_tests.gd` | M0 | Test-Runner (§11.1) |
 | `tests/capture.gd` | M0 | Screenshot-Werkzeug (§11.3) |
-| `tests/test_case.gd` | M0 | `TestCase`: Basis mit Asserts (§11.2) |
-| `tests/fixtures/data_min/*.json` | M0 | Minimaler gültiger Datensatz (alle 11 Tabellen) für M0-Tests |
+| `tests/lib/test_case.gd` | M0 | `TestCase`: Basis mit Asserts (§11.2); liegt in `lib/`, damit der Runner sie nicht als Testdatei lädt |
+| `tests/fixtures/data_min/*.json` | M0 | Minimaler gültiger Datensatz (alle 13 Tabellen aus `GameData.TABLES`) für M0-Tests |
 | `tests/test_m0_harness.gd` | M0 | Selbsttest Asserts/Runner |
 | `tests/test_m0_db.gd` | M0 | Laden/Validieren/Fehlerfälle von `GameData` |
 | `tests/test_m0_compile_all.gd` | M0 | Lädt jede `.gd`/`.tscn` unter `res://` → fängt Parse-Fehler |
 | `tests/test_m0_seed_util.gd` | M0 | Determinismus `SeedUtil` |
+| `tests/test_m0_sfx.gd` | M0 | Musik-Loop läuft weiter (`loop_end`), unbekannte ID ohne Absturz |
+| `tests/test_m0_condition_expr.gd` | M0 | `ConditionExpr`: Grammatik, Typvergleiche, Fehlerfälle |
 | `tests/test_m1_stats.gd` | M1 | StatBlock, Elemente |
 | `tests/test_m1_ctb.gd` | M1 | Tick-System, Vorschau, Haste/Slow, Präventiv/Hinterhalt |
 | `tests/test_m1_damage.gd` | M1 | Formeln, Krit, Elemente, Verteidigen, Treffer |
-| `tests/test_m1_status.gd` | M1 | Statusdauer, DoT/HoT, skip_turn, Immunität |
-| `tests/test_m1_ai.gd` | M1 | EnemyAI-Bedingungen/Phasen, AutoPolicy |
+| `tests/test_m1_status.gd` | M1 | Statusdauer, Gift am Zugbeginn, Stun-Verzögerung, Haste/Slow-Ausschluss, Resistenz, Immunität |
+| `tests/test_m1_ai.gd` | M1 | EnemyAI-Bedingungen/Zielregeln/Taunt, Phasen-Ops, Pseudo-Einheit, AutoPolicy |
 | `tests/test_m1_battle_flow.gd` | M1 | Kompletter Kampf bis Sieg/Niederlage/Flucht, Event-Invarianten |
 | `tests/test_m2_show.gd` | M2 | ShowRules-Hype, Zuschauer, Follower, Sponsor-Trigger |
 | `tests/test_m2_achievements.gd` | M2 | Zähler, Schwellen, Belohnungen |
@@ -287,12 +336,14 @@ Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört gen
 | `tests/test_m2_progression.gd` | M2 | EXP-Kurve, Level-Up, Equip, BattleBridge |
 | `tests/test_m2_save.gd` | M2 | Roundtrip, Migration, kaputte Dateien, Slots |
 | `tests/test_m2_shop.gd` | M2 | Kaufen/Verkaufen |
-| `tests/test_m3_dungeon_gen.gd` | M3 | 200 Seeds: Invarianten, Determinismus, Laufzeit |
-| `tests/test_m3_exploration_scene.gd` | M3 | Szene headless instanziieren, Spawn, Encounter auslösen |
+| `tests/test_m3_dungeon_gen.gd` | M3 | `floor_1`-Layout valide/deterministisch; 200 Seeds prozedural: Invarianten, Determinismus, Laufzeit |
+| `tests/test_m3_floor_event.gd` | M3 | `FloorEvent.choices/resolve/apply` für alle 5 Typen mit festen Seeds |
+| `tests/test_m3_exploration_scene.gd` | M3 | Szene headless instanziieren, Spawn, Encounter auslösen (Signal-Spion) |
 | `tests/test_m4_art_kit.gd` | M4 | Alle Bases/Props/Räume bauen, Tri-Budgets, Anim-Interface |
 | `tests/test_m5_battle_scene.gd` | M5 | Battle-Szene headless mit Auto-Kampf bis Ende |
 | `tests/test_m6_ui_scenes.gd` | M6 | Alle UI-Szenen instanziieren, Default-Fokus vorhanden |
-| `tests/test_m7_data_content.gd` | M7 | Inhalt: Mengen (≥ x Gegner etc.), Balancing-Sanity (Etage 1 schaffbar) |
+| `tests/test_m7_data_content.gd` | M7 | Inhalt: Mengen laut GDD (11 Gegner, 2 Bosse, 16 Party-Skills, 2 Stunts, 25 Gegner-Skills, 11 Boss-Skills, 29 Achievements, 7 Sponsoren, 6 Meilensteine, 6 Status, 4 Szenen), Balancing-Sanity |
+| `tests/test_m8_*.gd` | M8 | Live-Hooks laut 05_LIVE_MODUS §11.4 (RunLog, RunSim, Command, Gift, Replay …) |
 
 ---
 
@@ -380,6 +431,7 @@ renderer/rendering_method="mobile"
 renderer/rendering_method.mobile="mobile"
 renderer/rendering_method.web="gl_compatibility"
 rendering_device/fallback_to_opengl3=true
+rendering_device/fallback_to_d3d12=false
 textures/vram_compression/import_etc2_astc=true
 anti_aliasing/quality/msaa_3d=1
 environment/defaults/default_clear_color=Color(0.055, 0.035, 0.09, 1)
@@ -396,6 +448,8 @@ Begründungen (kurz):
 - `stretch canvas_items + expand`: Referenz 1280×720; auf 19,5:9-Handys wird die sichtbare Fläche breiter (z. B. 1600×720), auf 4:3 höher (1280×960). UI wird **nur über Anker/Container** platziert.
 - `orientation=4` = Sensor Landscape.
 - `positional_shadow/atlas_size=0`: Omni-/Spot-Schatten sind projektweit deaktiviert.
+- `fallback_to_d3d12=false`: In 4.7.2 ist der Default `true` (gemessen). D3D12 testen wir nicht; Windows nutzt Vulkan und fällt
+  ohne Vulkan direkt auf OpenGL 3 (`gl_compatibility`) zurück, das in CI ohnehin geprüft wird.
 - `--rendering-driver opengl3` (Xvfb/CI) schaltet automatisch auf `gl_compatibility` (geprüft).
 
 ### 2.2 Input-Map
@@ -413,15 +467,14 @@ Alle Events mit `"device":-1` (= alle Geräte; geprüft: matcht Gamepad 0/1/3 un
 | `cam_right` | 0.2 | E | Achse 2 (RX) +1.0 | Erkundung |
 | `cam_up` | 0.2 | – | Achse 3 (RY) −1.0 | Erkundung |
 | `cam_down` | 0.2 | – | Achse 3 (RY) +1.0 | Erkundung |
-| `sprint` | 0.5 | Shift | Button 7 (L3), Achse 5 (RT) +1.0 | Erkundung |
-| `interact` | 0.5 | F, Space, Enter, Kp Enter | Button 0 (A) | Erkundung |
-| `attack` | 0.5 | X | Button 2 (X) | Erkundung (Präventivschlag) |
+| `sneak` | 0.5 | Shift | Achse 4 (LT) +1.0, Button 7 (L3) | Erkundung (halten = Schleichen 2.5 m/s) |
+| `action` | 0.5 | F, Space, Enter, Kp Enter | Button 0 (A) | Erkundung: Interagieren (Vorrang, wenn Prompt aktiv), sonst Feldschlag |
 | `pause` | 0.5 | Escape, P | Button 6 (Start) | Erkundung, Safe Room |
 | `map` | 0.5 | M, Tab | Button 4 (Back) | Erkundung |
 | `tab_prev` | 0.5 | Q, PageUp | Button 9 (LB) | Menüs mit Reitern |
 | `tab_next` | 0.5 | E, PageDown | Button 10 (RB) | Menüs mit Reitern |
 | `toggle_auto` | 0.5 | T | Button 3 (Y) | Kampf |
-| `toggle_speed` | 0.5 | R | Button 4 (Back) | Kampf |
+| `toggle_speed` | 0.5 | R | Button 8 (R3) | Kampf (×1 ↔ ×2) |
 | `toggle_fullscreen` | 0.5 | F11 | – | global (nur PC) |
 | `debug_overlay` | 0.5 | F3 | – | global (nur `OS.is_debug_build()`) |
 | `ui_accept` (Override!) | 0.5 | Enter, Kp Enter, Space | Button 0 (A) | Menüs |
@@ -430,8 +483,11 @@ Alle Events mit `"device":-1` (= alle Geräte; geprüft: matcht Gamepad 0/1/3 un
 **Wichtig (geprüft in 4.7.2):** Die eingebauten `ui_accept`/`ui_cancel` enthalten **keine** Gamepad-Buttons → müssen in
 `project.godot` überschrieben werden (Override ersetzt die Defaults vollständig, daher alle Events listen).
 `ui_up/down/left/right` (Pfeile + D-Pad + linker Stick) und `ui_focus_next/prev` bleiben Default.
+Es gibt **eine** Erkundungs-Taste `action` (GDD §2.1: Feldschlag und Interagieren auf derselben Taste); E bleibt `cam_right`.
+Gamepad-Konstanten (gemessen 4.7.2): `JOY_AXIS_TRIGGER_LEFT` = 4, `JOY_BUTTON_LEFT_STICK` = 7, `JOY_BUTTON_RIGHT_STICK` = 8,
+`JOY_BUTTON_BACK` = 4.
 
-Keycodes: W=87, A=65, S=83, D=68, Q=81, E=69, F=70, X=88, P=80, M=77, T=84, R=82, Space=32, Enter=4194309,
+Keycodes: W=87, A=65, S=83, D=68, Q=81, E=69, F=70, P=80, M=77, T=84, R=82, Space=32, Enter=4194309,
 Kp Enter=4194310, Escape=4194305, Tab=4194306, Shift=4194325, Up=4194320, Down=4194322,
 Left=4194319, Right=4194321, PageUp=4194323, PageDown=4194324, F3=4194334, F11=4194342.
 
@@ -444,7 +500,7 @@ move_forward={
 , Object(InputEventJoypadMotion,"resource_local_to_scene":false,"resource_name":"","device":-1,"axis":1,"axis_value":-1.0,"script":null)
 ]
 }
-interact={
+action={
 "deadzone": 0.5,
 "events": [Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"button_index":0,"pressure":0.0,"pressed":false,"script":null)
 ]
@@ -482,6 +538,7 @@ Listenreihenfolge. Daraus die Regel:
 extends Node
 ## Global signal bus. Signals only, no state, no logic.
 ## Arrays in signal args are untyped on purpose (no dependency on core classes); element types are documented.
+## Achievement triggers carry one `payload: Dictionary` (keys: §6.3 "Trigger-Payloads").
 
 # --- Flow ---------------------------------------------------------------
 signal scene_changed(scene_path: String)
@@ -495,14 +552,17 @@ signal pause_menu_toggled(open: bool)
 
 # --- Floor / exploration -----------------------------------------------
 signal floor_entered(floor_index: int)                   # first entry of a floor (not on resume)
+signal floor_timer_started()                             # FloorRun.timer_started false → true (after tutorial battle)
 signal floor_timer_changed(seconds_left: int)            # whenever the integer second changes
 signal floor_timer_warning(seconds_left: int)            # exactly at FloorDef.timer_warnings values
 signal floor_timer_expired()
-signal floor_completed(floor_index: int)                 # stairs taken
+signal floor_completed(floor_index: int)                 # stairs taken (before summary overlay)
 signal room_entered(cell: Vector2i, room_kind: int, first_visit: bool)   # RoomCell.Kind
 signal enemy_alerted(group_id: String)
 signal encounter_triggered(group_id: String, encounter_id: String, advantage: int)  # BattleSetup.Advantage
 signal chest_opened(chest_id: String, rewards: Array)    # Array[LootReward]
+signal gate_opened(cell: Vector2i, dir: int)             # RoomCell.DOOR_*
+signal stray_spawn_requested(zone_id: String, group_id: String, encounter_id: String)   # Game (RunSim STRAY_DUE)
 signal camera_drag(relative: Vector2)                    # touch camera drag in viewport px
 
 # --- Battle ---------------------------------------------------------------
@@ -510,11 +570,25 @@ signal battle_started(encounter_id: String, is_boss: bool)
 signal battle_turn_started(combatant_id: String, is_party: bool)
 signal battle_ended(outcome: int, encounter_id: String)  # BattleResult.Outcome
 
+# --- Achievement triggers (payload keys: §6.3) --------------------------------
+signal enemy_killed(payload: Dictionary)                 # Show (from ActionEvent KO)
+signal battle_won(payload: Dictionary)                   # Show.end_battle
+signal battle_fled(payload: Dictionary)                  # Show.end_battle
+signal stunt_resolved(payload: Dictionary)               # Show (STUNT_RESULT)
+signal combo(payload: Dictionary)                        # Show (COMBO)
+signal party_ko(payload: Dictionary)                     # Show (KO of a party member)
+signal boss_defeated(payload: Dictionary)                # Show.end_battle (VICTORY + is_boss)
+signal item_bought(payload: Dictionary)                  # Game.buy
+signal event_completed(payload: Dictionary)              # ExplorationScene (FloorEvent done)
+signal explore_tick(payload: Dictionary)                 # Game, once per full explore second (RunSim)
+signal level_up(payload: Dictionary)                     # Game.apply_battle_result, once per level gained
+
 # --- Show -----------------------------------------------------------------
-signal viewers_changed(viewers: int)
+signal viewers_changed(viewers: int)                     # noise-free ShowModel value (deterministic)
 signal followers_changed(followers: int, delta: int)
 signal hype_changed(hype: float, delta: float, reason: StringName)
 signal achievement_unlocked(achievement_id: String)
+signal milestone_reached(milestone_id: String)
 signal sponsor_gift_triggered(sponsor_id: String)
 signal mod_said(text: String, voice: StringName, tag: String, blocking: bool)   # voice: &"mod", &"mopsula", &"kai", &"chat"
 signal dialog_finished(tag: String)                      # emitted by ModDialog when a line is done/dismissed
@@ -528,6 +602,14 @@ signal credits_changed(credits: int, delta: int)
 signal lootbox_earned(box_id: String)
 signal lootbox_opened(box_id: String, rewards: Array)    # Array[LootReward]
 
+# --- Live mode (M8 hooks, Brief §6b; 05_LIVE_MODUS CR-1) ------------------------
+signal run_started(event_id: String, league: String)
+signal run_finished(summary: Dictionary)
+signal quest_progress(progress: float)
+signal quest_completed()
+signal gift_received(gift: Dictionary)                   # every accepted gift, incl. source "system"
+signal gift_rejected(gift_id: String, reason: String)
+
 # --- UI -----------------------------------------------------------------
 signal toast_requested(text: String, icon: StringName)
 ```
@@ -537,14 +619,18 @@ Wer emittiert was (verbindlich):
 | Signal | Emitter |
 |---|---|
 | `scene_changed` | Router |
-| `new_game_started`, `floor_timer_*`, `floor_completed`, `party_changed`, `member_leveled`, `inventory_changed`, `credits_changed`, `lootbox_opened`, `input_scheme_changed`, `settings_changed` | Game |
+| `new_game_started`, `floor_timer_*`, `floor_completed`, `stray_spawn_requested`, `party_changed`, `member_leveled`, `level_up`, `inventory_changed`, `credits_changed`, `lootbox_opened`, `input_scheme_changed`, `settings_changed`, `item_bought`, `explore_tick`, `run_started`, `run_finished`, `quest_progress`, `quest_completed` | Game |
 | `game_loaded`, `game_saved` | Save |
-| `floor_entered`, `room_entered`, `enemy_alerted`, `encounter_triggered`, `chest_opened`, `overlay_mode_requested(&"explore")` | ExplorationScene (M3) |
+| `floor_entered`, `room_entered`, `enemy_alerted`, `encounter_triggered`, `chest_opened`, `gate_opened`, `event_completed`, `overlay_mode_requested(&"explore")` | ExplorationScene (M3) |
 | `battle_started`, `battle_turn_started`, `battle_ended`, `overlay_mode_requested(&"battle")` | BattleScene/BattleController (M5) |
-| `viewers_changed`, `followers_changed`, `hype_changed`, `achievement_unlocked`, `sponsor_gift_triggered`, `mod_said`, `chat_posted`, `lootbox_earned` | Show |
+| `viewers_changed`, `followers_changed`, `hype_changed`, `achievement_unlocked`, `milestone_reached`, `sponsor_gift_triggered`, `mod_said`, `chat_posted`, `lootbox_earned`, `enemy_killed`, `battle_won`, `battle_fled`, `stunt_resolved`, `combo`, `party_ko`, `boss_defeated`, `gift_received`, `gift_rejected` | Show |
 | `dialog_finished` | ModDialog (M6) |
 | `camera_drag` | TouchControls (M6) |
 | `pause_menu_toggled`, `toast_requested`, `overlay_mode_requested(&"safe_room"/&"menu"/&"hidden")` | M6-Szenen; `toast_requested` darf jeder |
+
+Achievement-Trigger, deren Name **kein** eigenes Signal ist, bildet `Show` aus bestehenden Signalen (Payload §6.3):
+`battle_started` → `battle_started`, `sponsor_gift_triggered` → `sponsor_gift`, `viewers_changed` → `viewers_changed`,
+`chest_opened` → `chest_opened`, `lootbox_opened` → `lootbox_opened`, `floor_completed` → `floor_completed`.
 
 ### 3.3 `DB` (M0)
 
@@ -554,16 +640,19 @@ var data: GameData            # created + loaded in _init()
 var ok: bool                  # data.is_valid()
 
 func _init() -> void          # data = GameData.new(); ok = data.load_dir("res://data"); push_error each error
-# Facade (forwarders, identical semantics to GameData, see §4.4):
+# Facade (forwarders, identical semantics to GameData, see §4.5):
 func enemy(id: String) -> EnemyDef
+func pseudo_unit(id: String) -> PseudoUnitDef
 func skill(id: String) -> SkillDef
 func item(id: String) -> ItemDef
 func party_member(id: String) -> PartyMemberDef
 func achievement(id: String) -> AchievementDef
 func lootbox(id: String) -> LootboxDef
 func sponsor(id: String) -> SponsorDef
+func milestone(id: String) -> MilestoneDef
 func status(id: String) -> StatusDef
 func class_def(id: String) -> ClassDef
+func scene_def(id: String) -> SceneDef
 func floor_def(index: int) -> FloorDef
 func encounter(id: String) -> EncounterDef
 func mod_lines(tag: String) -> Array[ModLineDef]
@@ -572,59 +661,103 @@ func has_id(table: String, id: String) -> bool
 
 Fehler beim Laden: jeder Eintrag aus `data.errors` per `push_error("DB: <msg> (res://data/<table>.json)")` — der
 `res://`-Teil sorgt dafür, dass `check.sh` (`ERROR: .*res://`) den Smoke-Run scheitern lässt.
+`data/events.json` (Live-Events) lädt **nicht** `DB`, sondern `EventCatalog` (M8, §1.3) bei Bedarf (Titel → „Event-Lauf“).
 
 ### 3.4 `Game` (M0)
 
 ```gdscript
 extends Node
 enum InputScheme { KEYBOARD_MOUSE, GAMEPAD, TOUCH }
+const TICKS_PER_SEC: int = 30        # simulation clock (05 CR-3): 1 tick = 1/30 s explore time
 
 var state: GameState = null          # null until new_game()/Save.load_slot()
-var settings: GameSettings           # created in _init(), loaded from user://settings.cfg
+var settings: GameSettings           # created in _init(); loaded from user://settings.cfg unless ephemeral
 var input_scheme: InputScheme = InputScheme.KEYBOARD_MOUSE
-var timer_running: bool = false      # true only via ExplorationScene; Router resets to false on goto/push
+var timer_running: bool = false      # "explore view active": true only via ExplorationScene; Router resets to false on goto/push
 var autoplay: bool = false           # set by Boot from --autoplay
 var auto_battle: bool = false        # party uses AutoPolicy (toggle_auto / Settings / Autoplay)
 var fast_text: bool = false          # dialogs show instantly (Autoplay, text_speed=2)
+var ephemeral: bool = false          # tests, autoplay, capture: settings defaults, never read/written on disk
+var mode: StringName = &"campaign"   # &"campaign" | &"event_offline" (M8)
+var run_log: RunLog = null           # Brief §6b.3; created by new_game/start_event_run/Save.load_slot
+var quest: QuestTracker = null       # only mode &"event_offline"
+var sim: RunSim = null               # deterministic explore clock (thin variant, 05 CR-6)
 
 func has_state() -> bool
-func new_game(slot: int, player_name: String = "Kai", seed: int = -1) -> void
-	# seed -1 → (Time.get_unix_time_from_system() * 1000) & 0x7FFFFFFF; state = GameState.create_new(DB.data, slot, name, seed)
-	# start_floor(1); emits new_game_started(slot)
-func ensure_state() -> void          # if not has_state(): new_game(0, "Kai", 1)  — standalone scenes, capture, tests
+func new_game(slot: int, player_name: String = "Kai", seed: int = -1, difficulty: StringName = &"prime") -> void
+	# seed -1 → int(Time.get_unix_time_from_system() * 1000.0) & 0x7FFFFFFF
+	# state = GameState.create_new(DB.data, slot, player_name, seed, difficulty); run_log = RunLog.new() (header: seed, slot,
+	# mode, difficulty, game_version); sim = RunSim.new(DB.data, state, {}); start_floor(1); emits new_game_started(slot)
+func start_event_run(event_id: String) -> void   # M8: EventCatalog → EventDef.run_seed(); mode = &"event_offline"; slot 0
+func ensure_state() -> void          # if not has_state(): ephemeral-safe new_game(0, "Kai", 1) — standalone scenes, capture, tests
 func floor_def() -> FloorDef         # DB.floor_def(state.floor_run.index)
-func start_floor(floor_index: int) -> void     # state.floor_run = FloorRun.create(DB.floor_def(i), state.seed); location "start"
+func start_floor(floor_index: int) -> void
+	# state.floor_run = FloorRun.create(DB.floor_def(i), state.seed, state.difficulty); Show.start_floor(i) (hype := 30);
+	# record({"t": "floor", "floor": i})
+func is_timer_ticking() -> bool      # timer_running and state.floor_run.timer_started and _blocking_dialogs == 0
 func complete_floor() -> void
-	# emits floor_completed; Show.bump_stat("floors_cleared"); next := DB.floor_def(index+1)
-	# if next != null and next.playable: start_floor(index+1); Save.autosave(); Router.goto(Router.SCENE_EXPLORATION, {"spawn": &"start"})
-	# else: Router.goto(Router.SCENE_CREDITS)
+	# timer_running = false; record({"t": "descend"}); emits floor_completed(index) (Show: trigger + say("floor_end"));
+	# Router.goto(Router.SCENE_FLOOR_SUMMARY, {"summary": state.floor_run.summary()}, FADE)
+func continue_after_summary() -> void   # called by FloorSummary "Weiter"
+	# next := DB.floor_def(index + 1); if next != null: start_floor(index + 1); Save.autosave()
+	# if next == null or not next.playable: Router.goto(Router.SCENE_CREDITS) else Router.goto(SCENE_EXPLORATION, {"spawn": &"start"})
+func on_game_over(reason: StringName) -> void   # Router.game_over calls it first: stat game_overs +1; Save.record_game_over(state.slot)
 func next_seed(purpose: String) -> int   # state.rng_counter += 1; SeedUtil.derive(state.seed, purpose, state.rng_counter)
 func make_battle_setup(encounter_id: String, advantage: int, group_id: String) -> BattleSetup
+	# record({"t": "encounter", "enc": encounter_id, "adv": advantage, "group": group_id});
 	# BattleBridge.make_setup(state, DB.data, encounter_id, advantage, group_id, next_seed("battle")); setup.auto_battle = auto_battle
 func apply_battle_result(result: BattleResult) -> BattleRewards
-	# BattleBridge.apply_result(state, DB.data, result); emits party_changed, inventory_changed, credits_changed, member_leveled
+	# BattleBridge.apply_result(state, DB.data, result); emits party_changed, inventory_changed, credits_changed,
+	# member_leveled + level_up({"member", "level"}) per level; floor_timer_started if timer_started flipped
 func open_lootbox(box_id: String) -> Array[LootReward]
-	# removes one box_id from state.pending_lootboxes; LootRoller.roll_lootbox(..., rng from next_seed("lootbox"));
-	# add_rewards(); emits lootbox_opened
-func add_rewards(rewards: Array[LootReward]) -> void   # items → inventory, credits, followers (→ Show.add_followers)
-func rest_full_heal() -> void         # Progression.full_heal(state, DB.data); emits party_changed
+	# record({"t": "lootbox", "box": box_id}); removes one box_id from state.pending_lootboxes;
+	# LootRoller.roll_lootbox(box, DB.data, floor_index, state, rng from next_seed("lootbox")); add_rewards(); emits lootbox_opened
+func add_rewards(rewards: Array[LootReward]) -> void   # items → inventory (overflow over max_stack → credits at sell value), credits
+func buy(item_id: String, qty: int, safe_room_id: String) -> bool
+	# record({"t": "buy", ...}); Shop.buy(); emits inventory_changed, credits_changed, item_bought({"item_id", "qty", "cost", "safe_room_id"})
+func sell(item_id: String, qty: int) -> bool          # record; Shop.sell(); emits inventory_changed, credits_changed
+func equip(member_id: String, slot: String, item_id: String) -> bool   # record; Progression.equip(); emits party_changed
+func rest_full_heal() -> void         # record({"t": "rest"}); Progression.full_heal(state, DB.data); emits party_changed
+func apply_floor_event(event_id: String, choice: String) -> Dictionary   # §7.4 (FloorEvent resolve/apply + Show + record)
+func enter_safe_room(safe_room_id: String) -> Dictionary
+	# location = id; safe_room_visits += 1; first_visit := id not in visited_safe_rooms → append; rest_full_heal();
+	# returns scene context {"safe_room_id", "first_visit", "safe_room_visits", "kai_level"} for scenes.json conditions
+func next_scene(ctx: Dictionary) -> SceneDef      # first SceneDef (priority order) whose condition holds and that was not seen; null
+func mark_scene_seen(scene: SceneDef) -> void     # flags scene_<id> = true, set_flag (e.g. mop_pep_talk)
+func set_difficulty(d: StringName) -> bool   # only &"prime" → &"vorabend" (never up); remaining timer ticks × 1.5
+func record(cmd: Dictionary) -> void  # run_log.add_cmd(sim.tick(), cmd); no-op if run_log == null
+func replay_log(log: RunLog) -> Dictionary   # M8: {"final_hash", "result", "mismatch_at"}; drives RunSim/BattleState without scenes
 func set_flag(key: String, value: Variant) -> void
 func get_flag(key: String, default: Variant = null) -> Variant
-func time_left() -> float             # state.floor_run.time_left
+func time_left() -> float             # state.floor_run.time_left_ticks / float(TICKS_PER_SEC) (display only)
 func apply_settings() -> void         # audio volumes (Sfx), fullscreen, quality (scaling_3d_scale etc.), emits settings_changed
 ```
 
 Laufzeitverhalten:
-- `_process(delta)`: wenn `state != null`: `state.play_time_sec += delta`; wenn zusätzlich `timer_running`:
-  `state.floor_run.time_left -= delta`; Ganzzahl-Sekundenwechsel → `floor_timer_changed`; Überschreiten eines Werts aus
-  `floor_def().timer_warnings` → `floor_timer_warning(value)`; `≤ 0` → `timer_running = false`, `floor_timer_expired`,
-  `Router.game_over(&"timer")`.
-- `_input(event)`: erkennt `input_scheme` (Key/MouseButton/MouseMotion>2px → KEYBOARD_MOUSE; JoypadButton/JoypadMotion>0.5 → GAMEPAD;
-  ScreenTouch → TOUCH; emulierte Maus-Events mit `device == InputEvent.DEVICE_ID_EMULATION` ignorieren), emittiert bei Wechsel.
-  Bei GAMEPAD → `Input.mouse_mode = MOUSE_MODE_HIDDEN`, sonst `VISIBLE`.
+- `_init()`: `settings = GameSettings.new()`; **nur wenn nicht ephemer** `settings.load_from_disk()`. Ephemer ist der Lauf, wenn
+  `OS.get_cmdline_user_args()` `--autoplay` oder `--capture` enthält oder das Hauptskript ein `-s`-Skript ist
+  (`OS.get_cmdline_args()` enthält `-s`/`--script`); `run_tests.gd` und `capture.gd` setzen zusätzlich `Game.ephemeral = true`.
+  Ephemer: Defaults, `save_to_disk()` ist ein No-op → Tests und Screenshots sind maschinenunabhängig.
+- `_process(delta)`: wenn `state != null`: `state.play_time_sec += delta` (nur Anzeige, nicht im Hash). Wenn `is_timer_ticking()`:
+  `_acc += delta`; `n := floori(_acc * TICKS_PER_SEC)`; `_acc -= n / float(TICKS_PER_SEC)`; `n > 0` → `_dispatch(sim.step(n))`.
+  **Alle** spielrelevanten Zeitregeln der Erkundung (Etagen-Timer, Warnungen, Hype-Zerfall, Pazifist-Zähler, Streuner) laufen in
+  `RunSim.step` auf ganzen Ticks, nie auf `delta` (Brief §6b.1). `_dispatch` übersetzt die `ExploreEvent`s (§7.1):
+  `TIMER_SECOND` → `floor_timer_changed`; `TIMER_WARNING` → `floor_timer_warning`; `TIMER_EXPIRED` → `timer_running = false`,
+  `floor_timer_expired`, `Router.game_over(&"timer")`; `EXPLORE_TICK` → `explore_tick(payload)`; `HYPE` → `Show.sync_from_state()`;
+  `STRAY_DUE` → `stray_spawn_requested` (ExplorationScene platziert die Gruppe).
+- Dialog-Pause: `_ready()` verbindet `Events.mod_said` (`blocking == true` → `_blocking_dialogs += 1`) und `Events.dialog_finished`
+  (`maxi(0, _blocking_dialogs - 1)`). Cutscenes und Lootbox-Öffnen laufen außerhalb der Erkundung (Timer steht ohnehin).
+- Eingabeschema: Ein Kind-Node `InputSchemeWatcher` (privat, `process_mode = PROCESS_MODE_ALWAYS`) erkennt in `_input(event)` das
+  Schema (Key/MouseButton/MouseMotion > 2 px → KEYBOARD_MOUSE; JoypadButton/JoypadMotion > 0.5 → GAMEPAD; ScreenTouch → TOUCH;
+  emulierte Maus-Events mit `device == InputEvent.DEVICE_ID_EMULATION` ignorieren), setzt `Game.input_scheme` und emittiert bei
+  Wechsel; bei GAMEPAD `Input.mouse_mode = MOUSE_MODE_HIDDEN`, sonst `VISIBLE`. `Game` selbst bleibt `PAUSABLE` (Timer steht
+  in der Pause), der Watcher funktioniert auch im Pausemenü.
 - `toggle_fullscreen` behandelt `Game._unhandled_input` (nur PC); `debug_overlay` behandelt `DebugOverlay` (M6, Teil von `GlobalUi`) selbst.
 - `timer_running` setzt **nur** die `ExplorationScene` auf `true` (`_ready()`, `on_resume()`); `Router` setzt es bei **jedem**
-  `goto`/`push` auf `false` (verhindert, dass der Timer hinter Kampf, Safe Room, Game Over oder Abspann weiterläuft).
+  `goto`/`push` auf `false`. Der Countdown einer Etage beginnt erst mit `FloorRun.timer_started` (Etage 1: nach dem Sieg über
+  `FloorDef.timer_start_after` = `enc_f1_a1_tutorial`, GDD B2).
+- Aufgezeichnete Commands (`record`, Brief §6b.2/3): `floor`, `encounter`, `battle` (M5, jeder `BattleCommand.to_dict()`),
+  `lootbox`, `buy`, `sell`, `equip`, `rest`, `event` (FloorEvent-Wahl), `chest`, `gate`, `descend`, `gift` (nur `source ≠ "system"`).
 
 `GameSettings` (M0, `autoload/game_settings.gd`):
 
@@ -633,7 +766,7 @@ Laufzeitverhalten:
 | `master_volume` | float 0..1 | 0.8 | `audio/master` |
 | `music_volume` | float | 0.6 | `audio/music` |
 | `sfx_volume` | float | 0.8 | `audio/sfx` |
-| `battle_speed` | float ∈ {1.0, 1.5, 2.0} | 1.0 | `game/battle_speed` |
+| `battle_speed` | float ∈ {1.0, 2.0} | 1.0 | `game/battle_speed` |
 | `text_speed` | int 0 langsam / 1 normal / 2 sofort | 1 | `game/text_speed` |
 | `auto_battle_default` | bool | false | `game/auto_battle_default` |
 | `fullscreen` | bool | false | `display/fullscreen` |
@@ -643,7 +776,8 @@ Laufzeitverhalten:
 | `camera_invert_x` / `camera_invert_y` | bool | false | `input/…` |
 | `camera_sensitivity` | float 0.25..3.0 | 1.0 | `input/camera_sensitivity` |
 
-Methoden: `func load_from_disk() -> void`, `func save_to_disk() -> Error`, `func to_dict() -> Dictionary`.
+Methoden: `func load_from_disk() -> void`, `func save_to_disk() -> Error` (ephemer: `OK` ohne Schreiben), `func to_dict() -> Dictionary`.
+Der Spielmodus (Prime Time / Vorabendprogramm) ist **keine** Einstellung, sondern `GameState.difficulty` (pro Spielstand).
 
 Qualitätsstufen (angewendet von `Game.apply_settings()` auf `get_tree().root`; Szenen lesen `Game.settings.quality` beim Bauen):
 
@@ -659,37 +793,65 @@ Qualitätsstufen (angewendet von `Game.apply_settings()` auf `get_tree().root`; 
 
 ```gdscript
 extends Node
-func viewers() -> int
+func viewers() -> int                 # noise-free ShowModel.viewers_for(...) — deterministic, used by stats/achievements
+func display_viewers() -> int         # smoothed + noise, UI only
 func followers() -> int
 func hype() -> float
-func add_hype(amount: float, reason: StringName = &"") -> void      # clamps 0..100, emits hype_changed
-func add_followers(n: int, reason: StringName = &"") -> void        # emits followers_changed
-func bump_stat(stat_id: String, amount: int = 1) -> void            # AchievementTracker.bump → unlock handling
-func set_stat_max(stat_id: String, value: int) -> void              # gauge stats (max)
+func add_hype(amount: float, reason: StringName = &"") -> void      # amount > 0 → × hype_gain_mult (equipment); clamp 0..100; emits hype_changed
+func add_followers(n: int, reason: StringName = &"") -> void        # emits followers_changed; checks milestones (§4.4.11)
+func bump_stat(stat_id: String, amount: int = 1) -> void
+func set_stat(stat_id: String, value: int) -> void
+func set_stat_max(stat_id: String, value: int) -> void
+func trigger(trigger_id: String, payload: Dictionary) -> void       # AchievementTracker.evaluate → unlock handling (below)
 func is_unlocked(achievement_id: String) -> bool
 func say(tag: String, ctx: Dictionary = {}, blocking: bool = false) -> String
-	# ModAnnouncer.pick(tag, floor_index, hype) → format(line, ctx + player/floor) → emits mod_said(text, voice, tag, blocking);
-	# returns text ("" if no line)
-func chat(tag: String, ctx: Dictionary = {}) -> void                # picks voice &"chat" line → emits chat_posted
-func begin_battle(setup: BattleSetup) -> void                       # ShowRules.new(DB.data, setup.is_boss), gifts=0, say("battle_start[_boss]")
-func on_battle_event(e: ActionEvent) -> void                        # ShowRules.feed(e) → apply ShowDelta (hype, stats)
-func take_sponsor_gift() -> String                                  # sponsor_id or ""; marks used, hype -= 20
-func end_battle(result: BattleResult) -> int                        # followers gained; end stats; says win/flee line
+	# ModAnnouncer.pick(tag, floor_index, hype, now_sec) → format(line, ctx + name/floor/level/viewers/followers)
+	# → emits mod_said(text, voice, tag, blocking); returns text ("" if no line or suppressed by priority/cooldown)
+func chat(tag: String, ctx: Dictionary = {}) -> void                # voice &"chat" line → emits chat_posted
+func start_floor(floor_index: int) -> void                          # hype := Balance.HYPE_START (30); say("floor_start")
+func sync_from_state() -> void                                      # re-emit hype/viewers/followers after load or RunSim tick
+func begin_battle(setup: BattleSetup) -> void
+	# _rules = ShowRules.new(DB.data, setup); _rng seeded Game.next_seed("show"); thresholds/gifts reset; stat
+	# explore_seconds_since_battle := 0; preemptives +1 on PREEMPTIVE; trigger("battle_started", payload); say("first_fight") once
+func on_battle_event(e: ActionEvent) -> void
+	# ShowRules.feed(e) → ShowDelta → add_hype, stats, triggers (enemy_killed/stunt_resolved/combo/party_ko signals + trigger());
+	# M.O.D. lines for delta.reasons; viewers_peak_battle = max(viewers()); sponsor threshold check (§6.2)
+func receive_gift(gift: Dictionary) -> Dictionary                   # THE single gift entry (Brief §6b.4) → {"accepted": bool, "reason": String}
+func take_pending_gift(battle: BattleState = null) -> Dictionary   # {} = none; battle gives the party situation for weight_mods
+func end_battle(result: BattleResult) -> int                        # followers gained; stats; battle_won/battle_fled/boss_defeated
 func unlocked_this_battle() -> PackedStringArray
 ```
 
-Zustand: ausschließlich `Game.state.show` (`ShowState`) + flüchtig `_rules: ShowRules`, `_gifts_this_battle: int`,
-`_rng: RandomNumberGenerator` (Seed `Game.next_seed("show")` bei `begin_battle`/`new_game_started`).
-Ticks (`_process`, nur wenn `Game.state != null`): jede 1,0 s Zuschauer neu berechnen (§6.2) + `viewers_changed`;
-wenn `Game.timer_running`: Hype driftet mit 0,25/s Richtung 20; Sekunden seit letztem Kampf hochzählen →
-`set_stat_max("max_seconds_without_battle", s)`; alle 6,0 ± 2,0 s eine Chat-Zeile nach Hype-Band
-(`chat_hype_high` ≥ 70, `chat_hype_mid` 30–70, `chat_hype_low` < 30).
-Hört auf `Events`: `chest_opened`, `lootbox_opened`, `member_leveled`, `floor_completed`, `room_entered(first_visit)`,
-`credits_changed(delta<0)`, `floor_timer_warning`, `floor_entered`, `encounter_triggered` (→ Stats/M.O.D.-Zeilen, §6.3).
+Zustand: ausschließlich `Game.state.show` (`ShowState`) + flüchtig `_rules: ShowRules`, `_queue: Array[Dictionary]` (angenommene,
+noch nicht ausgelieferte Geschenke), `_rng` (Spiellogik: **nur** Sponsor-Auswahl, Seed `Game.next_seed("show")` bei
+`begin_battle`) und `_fx_rng` (Chat, Zuschauer-Rauschen, M.O.D.-Zeilenwahl; nicht spielrelevant).
 
-Achievement-Freischaltung (in `Show`): `Events.achievement_unlocked(id)`; `reward_box` → `state.pending_lootboxes.append()` +
-`Events.lootbox_earned`; `reward_followers` → `add_followers`; `reward_credits` → Inventory; `say("achievement:<id>")` mit
-Fallback `"achievement"` und `ctx {"achievement": def.name}`; `Events.toast_requested(def.name, &"achievement")`.
+Geschenke (Brief §6b.4, 05 §6.5): Gift-Dictionary mindestens `{"schema": 1, "gift_id": String, "source": "system"|"fan"|"paid"|"dev",
+"kind": "sponsor_buff"|"gold"|"chest"|"fan_pack", "sponsor_id": String, "payload": Dictionary}`.
+`receive_gift(g)`: `Gift.validate(g)` → bei `source ≠ "system"`: `GiftPolicy.check(...)` und `Game.record({"t": "gift", "gift": g})`
+→ im Kampf in `_queue`, außerhalb sofort `GiftApplier.apply(Game.state, DB.data, g, rng)` + `Game.add_rewards()` →
+`Events.gift_received(g)`; abgelehnt → `Events.gift_rejected(gift_id, reason)`.
+`take_pending_gift(battle)`: (1) erstes wartendes externes Geschenk; sonst (2) ist eine Hype-Schwelle offen (§6.2):
+`SponsorSystem.pick(DB.data, {"floor_index", "is_boss", "party": battle.party()}, _rng)` → `Gift.make_system(sponsor_id, battle_n, k)` → **ebenfalls** `receive_gift()` → Rückgabe.
+Der Hype-Schwellen-Trigger hat damit keinen eigenen Geschenkweg.
+
+Zeitabhängiges: `Show._process` ist **reine Anzeige**: `display_viewers` glättet Richtung `viewers()` mit
+`1 - exp(-delta / 1.5)`, alle 2.0 s Rauschen ±1.5 % (`_fx_rng`), Chat alle 6.0 ± 2.0 s (mind. 2.5 s Abstand) nach Hype-Band
+(`chat_hype_high` ≥ 70, `chat_hype_mid` 30–70, `chat_hype_low` < 30). Hype-Zerfall und Pazifist-Zählung rechnet `RunSim` (§7.1).
+`viewers_changed` feuert, sobald sich der rauschfreie Wert ändert; dabei `set_stat_max("viewers_max", v)` und `trigger("viewers_changed", {"viewers": v})`.
+
+Hört auf `Events`: `chest_opened` (Hype +3, `chests_opened` +1, Trigger), `lootbox_opened` (`lootboxes_opened` +1, Trigger),
+`level_up` (Trigger, `say("level_up")`), `floor_completed` (Trigger mit `{"floor", "timer_left"}`, `say("floor_end")`),
+`room_entered` (STAIRS erstmals → `say("stairs_found")`), `floor_timer_warning` (600 → `chat("timer_warn_600")`;
+300 → `say("timer_warn_300")` + Hype +10; 60 → `say("timer_warn_60")` + Hype +15), `floor_timer_expired` (`say("timer_expired")`),
+`event_completed` (Hype +5, `events_completed` +1, Trigger), `item_bought` (`credits_spent_vendor` += cost, `say("vendor_buy")`, Trigger),
+`explore_tick` (Trigger), `sponsor_gift_triggered` (`sponsor_gifts` +1, Trigger `sponsor_gift`).
+
+Achievement-Freischaltung (in `Show`): `Events.achievement_unlocked(id)`; `def.box` → `state.pending_lootboxes.append()` +
+`Events.lootbox_earned`; Follower = `def.followers` oder (−1) fest nach Box-Tier: bronze 25 / silver 50 / gold 100 (`add_followers`);
+Hype +8; `say("achievement:<id>")` mit Fallback `"achievement_generic"` und `ctx {"achievement": def.name}`;
+`Events.toast_requested(def.name, &"achievement")`. Meilensteine (`add_followers` überschreitet `MilestoneDef.followers`):
+Box/Credits/Item/Titel gutschreiben, `state.show.milestones.append(id)`, `Events.milestone_reached`, `say("follower_milestone")`.
 
 ### 3.6 `Save` (M2)
 
@@ -703,9 +865,15 @@ func slot_path(slot: int) -> String          # save_dir + "/slot_%d.json" % slot
 func has_save(slot: int) -> bool
 func slot_summary(slot: int) -> Dictionary   # {} empty; {"corrupt": true} unreadable; else SaveCodec summary keys
 func save_slot(slot: int) -> Error           # Game.state → SaveCodec.encode → atomic write; emits game_saved
-func load_slot(slot: int) -> Error           # read → SaveCodec.decode → Game.state; emits game_loaded
+func load_slot(slot: int) -> Error           # read → SaveCodec.decode → Game.state (+ grace time_left ≥ 180 s, §6.4),
+                                             # Game.sim/run_log neu; emits game_loaded
 func delete_slot(slot: int) -> Error
 func autosave() -> Error                     # save_slot(Game.state.slot); slot 0 → OK, no write
+func newest_slot() -> int                    # slot with the latest saved_at_unix, 0 if none (Title "Fortsetzen")
+func record_game_over(slot: int) -> Error    # read-modify-write: state.show.stats.game_overs += 1 in the slot file; slot 0 → OK
+func load_leaderboard(event_id: String) -> Dictionary            # M8 (05 CR-8): user://leaderboards/<event_id>.json
+func save_leaderboard(event_id: String, d: Dictionary) -> Error  # atomic like slots
+func save_replay(log: RunLog) -> Error                           # user://replays/<run_id>.json, max. 20 files
 func last_error() -> String
 ```
 
@@ -725,6 +893,7 @@ const SCENE_CREDITS: String = "res://scenes/title/credits.tscn"
 const SCENE_EXPLORATION: String = "res://scenes/exploration/exploration.tscn"
 const SCENE_BATTLE: String = "res://scenes/battle/battle.tscn"
 const SCENE_SAFE_ROOM: String = "res://scenes/safe_room/safe_room.tscn"
+const SCENE_FLOOR_SUMMARY: String = "res://scenes/ui/floor_summary.tscn"
 
 var current: Node = null          # top of stack (active screen)
 var busy: bool = false            # true during any transition
@@ -732,11 +901,13 @@ var busy: bool = false            # true during any transition
 func goto(path: String, params: Dictionary = {}, transition: Transition = Transition.FADE) -> void
 func push(path: String, params: Dictionary = {}, transition: Transition = Transition.FADE) -> void
 func pop(payload: Dictionary = {}, transition: Transition = Transition.FADE) -> void
+func adopt(node: Node) -> void                      # _stack = [node], current = node (node already under root);
+                                                    # used by capture.gd and TestCase.add_to_tree for screen scenes (§9.2)
 func start_battle(setup: BattleSetup) -> void       # push(SCENE_BATTLE, {"setup": setup}, SWIRL)
 func end_battle(result: BattleResult) -> void       # DEFEAT → game_over(&"defeat"); else pop({"battle_result": result}, FADE)
-func enter_safe_room() -> void                      # push(SCENE_SAFE_ROOM, {}, FADE)
-func exit_safe_room() -> void                       # pop({"from_safe_room": true}, FADE)
-func game_over(reason: StringName) -> void          # goto(SCENE_GAME_OVER, {"reason": reason}, FADE)
+func enter_safe_room(safe_room_id: String) -> void  # push(SCENE_SAFE_ROOM, {"safe_room_id": safe_room_id}, FADE)
+func exit_safe_room() -> void                       # pop({"from_safe_room": <id of the safe room>}, FADE)
+func game_over(reason: StringName) -> void          # Game.on_game_over(reason); goto(SCENE_GAME_OVER, {"reason": reason}, FADE)
 func stack_size() -> int
 ```
 
@@ -763,11 +934,15 @@ func get_volume(bus: StringName) -> float
 Busse werden in `_init()` per `AudioServer.add_bus()` angelegt (kein `.tres`). Streams werden **lazy** beim ersten Abspielen
 von `SfxSynth.make(id)`/`SfxSynth.make_music(id)` erzeugt (22050 Hz, 16 Bit mono, `AudioStreamWAV`), danach gecacht.
 Unbekannte ID → einmal `push_warning`, kein Absturz.
+**Musik-Loops:** `make_music` setzt `loop_mode = AudioStreamWAV.LOOP_FORWARD`, `loop_begin = 0` **und**
+`loop_end = data.size() / 2` (16 Bit mono = Anzahl Frames). Ohne `loop_end` (Default 0) stoppt der Stream sofort (gemessen 4.7.2:
+`playing == false`, Position 0.0). Pflichttest in `test_m0_sfx.gd`: `AudioStreamPlayer` mit `make_music(&"explore")` im Baum, nach
+1.5 × Stream-Länge (`wait_until`, §11.2) gilt `playing == true`.
 
 Feste IDs — SFX: `ui_move, ui_confirm, ui_cancel, ui_error, step, swing, hit, hit_crit, hit_weak, miss, magic, fire, ice,
 shock, toxic, light, dark, heal, buff, debuff, ko, defend, flee, stunt_success, stunt_fail, level_up, chest_open, coin,
 lootbox_shake, lootbox_open, lootbox_rare, sponsor, achievement, timer_warn, stairs, swirl, door, mod_blip, chat_pop, vending`.
-Musik: `title, explore, battle, boss, safe_room, victory, game_over, credits` (Loops 4–8 s, `loop_mode = LOOP_FORWARD`).
+Musik: `title, explore, battle, boss, safe_room, victory, game_over, credits` (Loops 4–8 s, Loop-Regel oben).
 
 ### 3.9 `UiTheme` (M0, `scenes/ui/theme/ui_theme.gd`) — Basis-Theme für M5/M6
 
@@ -777,7 +952,8 @@ const FONT_SIZE: int = 22
 const FONT_SIZE_SMALL: int = 16
 const FONT_SIZE_HEADER: int = 30
 const FONT_SIZE_TITLE: int = 56
-const MIN_TOUCH: int = 64
+const MIN_TOUCH: int = 64                     # minimum VISIBLE size of touch controls (reference 1280×720)
+const TOUCH_HIT: int = 88                     # minimum HIT area (invisible margin around smaller controls, ART A9)
 const C_BG: Color = Color("#140d1c")
 const C_PANEL: Color = Color(0.12, 0.08, 0.19, 0.9)
 const C_TEXT: Color = Color("#f5f0ff")
@@ -789,6 +965,9 @@ const C_DANGER: Color = Color("#ff4d4d")
 const C_OK: Color = Color("#4ade80")
 const C_MANA: Color = Color("#60a5fa")
 static func get_theme() -> Theme              # built once in code, cached; Router assigns it to get_tree().root.theme
+static func font_mono() -> Font               # SystemFont (monospace fallback list, ART §9.3) for counters/timer digits
+static func ensure_hit_area(button: BaseButton) -> void
+	# custom_minimum_size >= TOUCH_HIT; the visible part is a centered child (>= MIN_TOUCH), the button's own styleboxes empty
 ```
 
 Schrift: Godot-Standardschrift (eingebettet, Umlaute vorhanden) + `FontVariation` (`variation_embolden = 0.5`) für Header/Title/
@@ -816,73 +995,156 @@ Fokus-Stil aller Buttons: 3 px `C_ACCENT_2`-Rahmen (StyleBox `focus`).
 ### 4.1 Konventionen
 
 - Jede Datei: **ein Objekt** `{"schema": 1, "entries": [ {...}, ... ]}`. Encounters sind in `floors.json` eingebettet.
-- Texte (`name`, `desc`, `text`, `slogan`, `announce`) sind **deutscher Quelltext**; Anzeige immer über `tr(text)`
-  (gettext-Stil: msgid = deutscher Text; spätere EN-Übersetzung per `.po`, kein Key-System).
+  Zusätzliche Top-Level-Schlüssel sind **nur** diese: `party.json` → `start`; `enemies.json` → `pseudo_units`;
+  `lootboxes.json` → `pools`, `pity`. Jeder andere Top-Level-Schlüssel ist ein Fehler.
+- Texte (`name`, `desc`, `text`, `slogan`) sind **deutscher Quelltext**; Anzeige immer über `tr(text)`
+  (gettext-Stil: msgid = deutscher Text; spätere EN-Übersetzung per `.po`, kein Key-System). Das erfüllt die `tr()`-Pflicht
+  aus Brief §4; die `name_key`/`desc_key`-Spalten des GDD werden direkt als deutscher Text in `name`/`desc` geschrieben (§4.4.0).
 - JSON kennt nur Floats: `JSON.parse_string` liefert `12` als `12.0` (geprüft). `int`-Felder müssen ganzzahlig sein
   (Validator prüft `fmod(v, 1.0) == 0.0`) und werden mit `int()` konvertiert.
-- Farben: Hex-Strings `"#rrggbb"`.
+- Farben: Hex-Strings `"#rrggbb"`. Rasterkoordinaten: `[x, y]`. Raum-lokale Offsets: `[x, z]` in Metern.
 - Unbekannte Keys sind **Fehler** (fängt Tippfehler).
 - Optionale Felder werden beim Laden mit dem Default befüllt (Normalisierung) → Defs haben immer alle Felder.
+- Sprechtexte (`mod_lines.text`, `scenes.lines[].text`) haben **≤ 110 Zeichen** (GDD §11.1, 2 Zeilen im HUD).
 
 ### 4.2 ID-Konventionen
 
 | Tabelle | Präfix | Regex | Beispiel |
 |---|---|---|---|
 | statuses | `sts_` | `^sts_[a-z0-9_]+$` | `sts_poison` |
-| skills | `skl_` | `^skl_[a-z0-9_]+$` | `skl_mop_slam`, `skl_attack_kai`, `skl_stunt_kai_backflip`, `skl_item_bandage` |
-| items | `itm_` | `^itm_[a-z0-9_]+$` | `itm_bandage` |
-| classes | `cls_` | `^cls_[a-z0-9_]+$` | `cls_brawler` |
+| skills | `skl_` | `^skl_[a-z0-9_]+$` | `skl_kai_heavy_swing`, `skl_attack_kai`, `skl_stunt_kai_suplex`, `skl_e_bite`, `skl_item_bandage` |
+| items | `itm_` | `^itm_[a-z0-9_]+$` | `itm_bandage`, `itm_wpn_mop`, `itm_key_master` |
+| classes | `cls_` | `^cls_[a-z0-9_]+$` | `cls_kai_wrecker` |
 | party | – | `^[a-z][a-z0-9_]*$` | `kai`, `mopsula` |
-| enemies | `enm_` | `^enm_[a-z0-9_]+$` | `enm_tunnel_rat` |
+| enemies | `enm_` | `^enm_[a-z0-9_]+$` | `enm_kanalratte`, `enm_boss_hausmeister` |
+| pseudo_units (in enemies.json) | `pu_` | `^pu_[a-z0-9_]+$` | `pu_train_gleis9` |
 | floors | `floor_` | `^floor_[0-9]+$` | `floor_1` |
-| encounters | `enc_` | `^enc_[a-z0-9_]+$` | `enc_f1_rats` |
+| encounters | `enc_` | `^enc_[a-z0-9_]+$` | `enc_f1_a2` |
+| Etagen-Events (in floors.json) | `fev_` | `^fev_[a-z0-9_]+$` | `fev_wheel` |
+| Zonen / Safe Rooms (in floors.json) | `zone_` / `sr_` | `^zone_[a-z0-9_]+$` / `^sr_[a-z0-9_]+$` | `zone_sewer`, `sr_kiosk` |
 | lootboxes | `box_` | `^box_[a-z0-9_]+$` | `box_bronze` |
-| achievements | `ach_` | `^ach_[a-z0-9_]+$` | `ach_first_kill` |
-| sponsors | `spn_` | `^spn_[a-z0-9_]+$` | `spn_krachchips` |
-| mod_lines | `mod_` | `^mod_[a-z0-9_]+$` | `mod_battle_win_03` |
+| achievements | `ach_` | `^ach_[a-z0-9_]+$` | `ach_one_hp` |
+| sponsors | `spn_` | `^spn_[a-z0-9_]+$` | `spn_gluckwasser` |
+| milestones | `ms_` | `^ms_[0-9]+$` | `ms_1000` |
+| mod_lines | `mod_` | `^mod_[a-z0-9_]+$` | `mod_floor_start_01` |
+| scenes | `scn_` | `^scn_[a-z0-9_]+$` | `scn_mop_4` |
+| Passiva (in classes.json) | `pas_` | `^pas_[a-z0-9_]+$` | `pas_thick_skin` |
+| Live-Events (`events.json`, M8) | `evt_` | `^evt_[a-z0-9_]+$` | `evt_offline_gleis9` |
 
-IDs sind **global eindeutig** über alle Tabellen. Laufzeit-IDs (nicht in Daten): Kampfteilnehmer `p0..p3`, `e0..eN`;
-Gegnergruppen `f<etage>_g<i>`, Quartier-Boss `f<etage>_qb`, Etagenboss `f<etage>_fb`; Truhen `f<etage>_c<i>`.
+IDs sind **global eindeutig** über alle Tabellen (inkl. Encounter-, Etagen-Event-, Zonen- und Safe-Room-IDs).
+Laufzeit-IDs (nicht in Daten): Kampfteilnehmer `p0..p3`, `e0..eN`, Pseudo-Einheiten `u0..`; Gegnergruppen `f<etage>_g<i>`,
+Streuner `f<etage>_s<i>`, Quartier-Boss `f<etage>_qb`, Etagenboss `f<etage>_fb`; Truhen `f<etage>_c<i>` (auch im handgebauten
+Layout, §4.4.7). Flags: `defeated_<enemy_id>` (Boss besiegt), `scene_<scene_id>` (Szene gesehen), `mop_pep_talk`, `title_<ms_id>`.
+
+**Verbindliche Abbildung GDD-ID → Daten-ID** (das GDD nennt Kurz-IDs; die Daten in `res://data/` verwenden immer die rechte Spalte):
+
+| GDD-Form | Regel | Beispiele |
+|---|---|---|
+| Gegner `kanalratte`, `boss_hausmeister` | `enm_` + GDD-ID | `enm_kanalratte`, `enm_boss_hausmeister`, `enm_boss_rattenkoenigin` |
+| Pseudo-Einheit `train_gleis9` | `pu_` + GDD-ID | `pu_train_gleis9` |
+| Verbrauchsitem `item_bandage` | `item_` → `itm_` | `itm_bandage`, `itm_smoke`, `itm_elixir` |
+| Ausrüstung/Schlüssel `wpn_mop`, `arm_hoodie`, `acc_gas_mask`, `key_master` | `itm_` + GDD-ID | `itm_wpn_mop`, `itm_arm_hoodie`, `itm_acc_gas_mask`, `itm_key_master` |
+| Skills `kai_heavy_swing`, `mop_noble_flame`, `e_bite`, `b_broom`, `q_scepter`, `stunt_kai_suplex` | `skl_` + GDD-ID | `skl_kai_heavy_swing`, `skl_e_bite`, `skl_b_broom`, `skl_stunt_kai_suplex` |
+| Basisangriff Party (GDD „Angriff“) | `skl_attack_<member>` | `skl_attack_kai`, `skl_attack_mopsula` |
+| Item-Wirkung | `skl_item_<GDD-ID ohne item_>` | `skl_item_bandage` (für `itm_bandage`) |
+| Status `poison` | `sts_` + GDD-ID | `sts_poison`, `sts_stun`, `sts_guard` |
+| Lootbox-Tier `bronze`, `fan` | `box_` + GDD-ID | `box_bronze`, `box_fan` |
+| Sponsor `sp_gluckwasser` | `sp_` → `spn_` | `spn_gluckwasser`, `spn_doomscroll` |
+| Gruppe `grp_a2`, `grp_boss_hausmeister`, `grp_evt_pigeons` | `grp_` → `enc_f<etage>_` | `enc_f1_a2`, `enc_f1_a1_tutorial`, `enc_f1_boss_hausmeister`, `enc_f1_evt_pigeons` |
+| Etagen-Event `evt_wheel` | `evt_` → `fev_` (`evt_` ist für Live-Events reserviert) | `fev_photo_drone`, `fev_lost_candidate`, `fev_wheel`, `fev_lever`, `fev_broken_vending` |
+| Mopsula-Szene `mop_scene_1` | `mop_scene_` → `scn_mop_` | `scn_mop_1` … `scn_mop_4` |
+| Truhentyp `chest_wood` | Feld `type` | `"wood"`, `"metal"`, `"locked"` |
+| `ach_*`, `cls_*`, `pas_*`, `ms_*`, `zone_*`, `sr_*` | unverändert | `ach_one_hp`, `cls_kai_wrecker`, `ms_1000`, `sr_signalbox` |
+| M.O.D.-Keys | Tags laut §4.4.12 | `timer_warning_5` → `timer_warn_300`, `boss_intro_hausmeister` → `boss_intro:enm_boss_hausmeister` |
+
+ID-Werte **innerhalb** von Bedingungen und Parametern (z. B. `e.enemy_id == "enm_fahrscheinfresser"`) verwenden ebenfalls die Daten-ID.
 
 ### 4.3 Vokabulare (Konstanten in `DataValidator`, verbindlich für alle Module)
 
 ```gdscript
 const STATS: PackedStringArray = ["hp", "mp", "str", "mag", "def", "res", "spd", "lck"]
-const ELEMENTS: PackedStringArray = ["none", "fire", "ice", "shock", "toxic", "light", "dark"]
-const DAMAGE_TYPES: PackedStringArray = ["physical", "magical", "heal", "true", "none"]
-const SKILL_CATEGORIES: PackedStringArray = ["attack", "magic", "heal", "buff", "debuff", "stunt", "item", "summon"]
-const TARGETS: PackedStringArray = ["single_enemy", "all_enemies", "random_enemy", "single_ally", "all_allies", "self", "single_ally_ko"]
+const ELEMENTS: PackedStringArray = ["none", "physical", "fire", "ice", "shock", "poison"]
+const DAMAGE_TYPES: PackedStringArray = ["physical", "magical", "fixed", "heal", "none"]
+const HEAL_MODES: PackedStringArray = ["", "mag", "pct", "fixed"]
+const SKILL_CATEGORIES: PackedStringArray = ["attack", "magic", "heal", "buff", "debuff", "stunt", "item", "summon", "special"]
+const TARGETS: PackedStringArray = ["single_enemy", "all_enemies", "random_enemy", "single_ally", "all_allies", "self", "single_ally_ko", "none"]
 const SKILL_USERS: PackedStringArray = ["party", "enemy", "item", "any"]
+const SKILL_SPECIALS: PackedStringArray = ["steal_credits", "escape"]
 const ANIMS: PackedStringArray = ["attack", "cast", "stunt", "item"]
 const SHOW_TAGS: PackedStringArray = ["flashy", "finisher", "cute", "gross", "risky"]
 const ITEM_TYPES: PackedStringArray = ["consumable", "weapon", "armor", "accessory", "key"]
+const ITEM_TAGS: PackedStringArray = ["heal", "cure", "revive", "mp", "damage", "show", "escape"]
 const EQUIP_SLOTS: PackedStringArray = ["weapon", "armor", "accessory"]
-const RARITIES: PackedStringArray = ["common", "uncommon", "rare", "epic", "legendary"]
+const RARITIES: PackedStringArray = ["common", "rare", "epic"]
 const USABLE: PackedStringArray = ["battle", "field", "both", "none"]
 const STATUS_KINDS: PackedStringArray = ["buff", "debuff"]
-const STATUS_FLAGS: PackedStringArray = ["skip_turn", "wake_on_hit", "no_magic", "no_stunt", "taunt"]
-const AI_PROFILES: PackedStringArray = ["basic", "aggressive", "support", "boss"]
-const AI_CONDITIONS: PackedStringArray = ["self_hp_below", "ally_hp_below", "turn_every", "turn_min", "phase", "target_lacks_status", "enemies_alive_below"]
-const MODEL_BASES: PackedStringArray = ["humanoid", "pug", "rodent", "blob", "insect", "robot", "brute", "specter"]
+const STATUS_FLAGS: PackedStringArray = ["delay_on_apply", "guard", "taunt", "no_magic", "no_stunt"]
+const TICK_TIMINGS: PackedStringArray = ["turn_start", "turn_end"]
+const AI_TYPES: PackedStringArray = ["weighted", "phased"]
+const AI_CONDITIONS: PackedStringArray = ["self_hp_below", "self_hp_above", "ally_hp_below", "turn_mod", "allies_alive_below", "once"]
+const AI_TARGETS: PackedStringArray = ["random", "lowest_hp_pct", "highest_hp", "not_status", "self", "all_enemies", "all_allies", "ally_lowest_hp_pct"]
+const PHASE_OPS: PackedStringArray = ["say", "status_self", "summon", "fixed_damage_self", "add_pseudo", "remove_pseudo"]
+const MODEL_BASES: PackedStringArray = ["humanoid", "pug", "rodent", "blob", "insect", "robot", "brute", "specter", "swarm"]
 const MODEL_PROPS: PackedStringArray = ["cape", "crown", "monocle", "top_hat", "cap", "bandana", "apron", "mop", "broom",
-	"knife", "staff", "key_ring", "glasses", "lamp_helmet", "backpack", "mask", "wings", "antennae"]
+	"knife", "staff", "key_ring", "glasses", "lamp_helmet", "backpack", "mask", "wings", "antennae",
+	"newspaper_head", "briefcase", "bottlecap_chain", "cable_tangle", "spray_cap", "escalator_back", "claws", "helmet",
+	"shield", "halberd", "rat_king_tail", "ticket_crown", "wrench", "axe", "crowbar", "cart"]
+const MODEL_POSES: PackedStringArray = ["auto", "quadruped", "upright"]
 const THEMES: PackedStringArray = ["metro", "mall"]
-const LOOT_KINDS: PackedStringArray = ["item", "credits", "followers"]
-const GIFT_KINDS: PackedStringArray = ["heal_party_pct", "mp_party_pct", "buff_party", "item", "revive_party", "damage_enemies_pct"]
+const SAFE_ROOM_THEMES: PackedStringArray = ["kiosk", "pumphouse", "signalbox"]
+const CELL_KINDS: PackedStringArray = ["start", "normal", "safe", "quarter_boss", "floor_boss", "stairs", "gate"]
+const CHEST_TYPES: PackedStringArray = ["wood", "metal", "locked"]
+const FLOOR_EVENT_TYPES: PackedStringArray = ["photo_drone", "lost_candidate", "wheel", "lever", "broken_vending"]
+const ENEMY_START_STATES: PackedStringArray = ["IDLE", "PATROL"]
+const QUEST_TYPES: PackedStringArray = ["reach_stairs", "defeat_boss", "bounty", "hype_peak", "pacifist", "achievement_hunt", "all_of"]
+const LOOT_KINDS: PackedStringArray = ["item", "credits", "box", "nothing", "encounter"]   # box/nothing/encounter only in fev_wheel tables
+const GIFT_KINDS: PackedStringArray = ["heal_party_pct", "heal_party_flat", "mp_party_pct", "status_party", "status_enemies", "item", "revive_or_heal_lowest"]
+const SPONSOR_WEIGHT_CONDS: PackedStringArray = ["ally_hp_below", "ally_mp_below", "ally_ko", "is_boss"]
+const ACH_TRIGGERS: PackedStringArray = ["enemy_killed", "battle_won", "battle_fled", "battle_started", "stunt_resolved", "combo",
+	"party_ko", "boss_defeated", "sponsor_gift", "viewers_changed", "chest_opened", "item_bought", "lootbox_opened",
+	"level_up", "event_completed", "explore_tick", "floor_completed"]
 const VOICES: PackedStringArray = ["mod", "mopsula", "kai", "chat"]
-const TEXT_PLACEHOLDERS: PackedStringArray = ["player", "enemy", "item", "count", "floor", "sponsor", "achievement", "skill", "member", "seconds"]
-const REQUIRED_MOD_TAGS: PackedStringArray = ["intro", "floor_enter", "battle_start", "battle_start_boss", "battle_win",
-	"battle_win_close", "battle_flee", "battle_lose", "crit", "stunt_success", "stunt_fail", "ko_party", "sponsor_gift",
-	"achievement", "lootbox_open", "lootbox_rare", "level_up", "chest_open", "timer_warn_300", "timer_warn_60",
-	"timer_expired", "safe_room_enter", "mopsula_talk", "boss_phase", "floor_complete", "game_over",
-	"chat_hype_high", "chat_hype_mid", "chat_hype_low", "chat_crit", "chat_stunt_fail", "chat_handle"]
+const TEXT_PLACEHOLDERS: PackedStringArray = ["name", "floor", "level", "enemy", "item", "achievement", "viewers", "followers",
+	"sponsor", "count", "member", "seconds"]
+const REQUIRED_MOD_TAGS: PackedStringArray = ["intro", "floor_start", "first_fight", "achievement_generic", "low_hp",
+	"kill_streak", "crit", "weakness", "overkill", "stunt_success", "stunt_fail", "boring_fight", "flee", "flee_fail",
+	"sponsor_gift", "timer_warn_300", "timer_warn_60", "timer_expired", "lootbox_open_bronze", "lootbox_open_silver",
+	"lootbox_open_gold", "lootbox_open_fan", "lootbox_pity", "death", "mopsula_ko", "kai_ko", "revive", "boss_defeated",
+	"level_up", "follower_milestone", "safe_room_enter", "vendor_buy", "stairs_found", "floor_end",
+	"chat_hype_high", "chat_hype_mid", "chat_hype_low", "chat_crit", "chat_boring", "chat_mopsula", "chat_handle"]
+const OPTIONAL_MOD_TAG_PREFIXES: PackedStringArray = ["achievement:", "boss_intro:", "boss_phase:", "event_", "gift_received",
+	"mopsula_idle", "chat_"]   # live tags of 05 CR-9 are optional
 ```
 
-`StatIds.ALL` (§6.3) ist das Vokabular für `achievements.stat`.
+`StatIds.ALL` (§6.3) ist das Vokabular für `s.<stat>` in Bedingungen.
 
 ### 4.4 Schemas
 
 Spalten: **F** = Feld, **T** = Typ, **P** = Pflicht (✓) sonst Default, **Regel**.
+
+#### 4.4.0 Abbildung GDD-Felder → Schema-Felder
+
+Das GDD beschreibt Inhalte mit eigenen Spaltennamen. Verbindlich für `data/` ist dieses Kapitel; M7 überträgt so:
+
+| GDD | Schema (dieses Dokument) |
+|---|---|
+| `name_key`, `desc_key` | `name`, `desc` (deutscher Text, `tr()`-fähig) |
+| Skill `owner` + `unlock_level` | `party.json → learnset[{level, skill}]` des Besitzers; Skill selbst `user: "party"` |
+| `mp` | `mp_cost` |
+| `status` / `status_chance` / `status_turns` | `statuses: [{id, chance, turns}]` |
+| `hype_tags` | `show_tags` |
+| Ziel `enemy` / `ally` / `ko_ally` | `single_enemy` / `single_ally` / `single_ally_ko` (`all_enemies`, `all_allies`, `self` gleich) |
+| Skalierung `str` / `mag` | `damage_type: "physical"` / `"magical"` |
+| Skalierung `pct` / Heilung `mag (heal)` / `revive` / Item „heilt 45 HP (fixed)“ | `damage_type: "heal"` + `heal_mode` `"pct"` / `"mag"` / `"pct"` mit Ziel `single_ally_ko` / `"fixed"` |
+| Fixschaden (Items, Zug) | `damage_type: "fixed"`, `power` = Betrag |
+| Stunt „Erfolg `0.60 + LCK × 0.01`, max 0.85“ | `success_base 0.60`, `success_lck 0.01`, `success_cap 0.85`, `success_boss_mod -0.15` |
+| Gegner `affinities {weak, resist, immune}` | `element_mods {element: 1.5 / 0.5 / 0.0}` |
+| `field_speed` | `explore.field_speed` |
+| `visual {kit, colors}` | `model` (ModelSpec, §4.4.14) |
+| Waffe „ATK +x“ / „MAG +x“ | `stats.str +x` / `stats.mag +x` (in A = STR + atk mathematisch identisch); UI beschriftet Waffen-STR als „ATK“ |
+| Ausrüstung „`poison: resist`“ / „`immune`“ | `element_mods {"poison": 0.5}` / `{"poison": 0.0}` + `status_immune ["sts_poison"]` |
+| Klassen `owner` / `skills` / `name_key` | `for` / `learnset` / `name` |
+| `party.json` Top-Level `start_inventory`, `start_credits` | `start: {inventory, credits}` (§4.4.5); `exp_curve`/`level_cap` sind Konstanten in `Balance` |
 
 #### 4.4.1 `statuses.json` → `StatusDef`
 
@@ -891,17 +1153,32 @@ Spalten: **F** = Feld, **T** = Typ, **P** = Pflicht (✓) sonst Default, **Regel
 | `id` | String | ✓ | `sts_` |
 | `name` | String | ✓ | |
 | `kind` | String | ✓ | `STATUS_KINDS` |
-| `default_turns` | int | 3 | 1..9 |
+| `default_turns` | int | 3 | 1..99 |
 | `stat_mult` | Dict<stat,float> | `{}` | Keys ∈ STATS ohne hp/mp; 0.25..4.0 |
-| `tick_pct` | int | 0 | −50..50; % max HP am `TURN_END` des Trägers (<0 Schaden, >0 Heilung) |
-| `tick_speed_mult` | float | 1.0 | 0.25..4.0 (Hast 0.5, Langsam 2.0) |
-| `accuracy_mult` | float | 1.0 | 0.0..1.0 (Blind 0.5) |
+| `tick_timing` | String | `"turn_end"` | `TICK_TIMINGS`; Zeitpunkt des Ticks |
+| `tick_pct` | int | 0 | −50..50; % max HP (<0 Schaden, >0 Heilung) |
+| `tick_min` | int | 0 | 0..999; Mindestbetrag eines Ticks (Gift: 1) |
+| `tick_speed_mult` | float | 1.0 | 0.25..4.0 (Haste 0.6, Slow 1.5) |
 | `flags` | Array[String] | `[]` | ⊂ `STATUS_FLAGS` |
+| `excludes` | Array[String] | `[]` | Status-IDs, die beim Anlegen entfernt werden (Haste ↔ Slow) |
+| `element` | String | `"none"` | `ELEMENTS`; Status wird blockiert, wenn `element_mods[element] == 0.0` beim Ziel |
 | `color` | String | `"#ffffff"` | Hex |
 | `icon` | String | `""` | Glyph-ID für UI |
 
+Semantik: Dauern zählen **eigene Züge** des Trägers und sinken am `TURN_END` um 1 (0 → `STATUS_REMOVED`). Ausnahme Flag
+`delay_on_apply` (Stun): beim Anlegen sofort `ctb_counter += roundi(base_delay × (Boss ? 0.5 : 1.0))`, solange aktiv nicht erneut
+anwendbar (`STATUS_BLOCKED`), entfernt am nächsten `TURN_START` des Trägers. Erneutes Anlegen eines aktiven Status setzt
+`turns_left = neu` (kein Stapeln). Flag `guard`: D × `GUARD_DEF_MULT` in der Schadensformel. Flag `taunt`: Gegner-KI-Override (§5.8).
+
+Der Slice hat **genau 6** Einträge (GDD §3.9):
+
 ```json
-{"id": "sts_poison", "name": "Vergiftet", "kind": "debuff", "default_turns": 3, "tick_pct": -8, "color": "#7ddc3a", "icon": "poison"}
+{"id": "sts_poison", "name": "Vergiftet", "kind": "debuff", "default_turns": 4, "tick_timing": "turn_start", "tick_pct": -8, "tick_min": 1, "element": "poison", "color": "#7cc242", "icon": "poison"}
+{"id": "sts_stun",   "name": "Betäubt",   "kind": "debuff", "default_turns": 1, "flags": ["delay_on_apply"], "color": "#f5d90a", "icon": "stun"}
+{"id": "sts_slow",   "name": "Verlangsamt", "kind": "debuff", "default_turns": 3, "tick_speed_mult": 1.5, "excludes": ["sts_haste"], "color": "#5b8def", "icon": "slow"}
+{"id": "sts_haste",  "name": "Turbo",     "kind": "buff",   "default_turns": 3, "tick_speed_mult": 0.6, "excludes": ["sts_slow"], "color": "#ff7a1a", "icon": "haste"}
+{"id": "sts_guard",  "name": "Gepanzert", "kind": "buff",   "default_turns": 3, "flags": ["guard"], "color": "#9aa7b8", "icon": "guard"}
+{"id": "sts_taunt",  "name": "Provoziert", "kind": "buff",  "default_turns": 3, "flags": ["taunt"], "color": "#e8455a", "icon": "taunt"}
 ```
 
 #### 4.4.2 `skills.json` → `SkillDef`
@@ -914,36 +1191,52 @@ Spalten: **F** = Feld, **T** = Typ, **P** = Pflicht (✓) sonst Default, **Regel
 | `user` | String | `"any"` | `SKILL_USERS` |
 | `category` | String | ✓ | `SKILL_CATEGORIES` |
 | `target` | String | ✓ | `TARGETS` |
-| `damage_type` | String | `"none"` | `DAMAGE_TYPES` |
-| `element` | String | `"none"` | `ELEMENTS` |
-| `power` | int | 100 | 0..1000 (Prozent) |
-| `base` | int | 0 | 0..9999 (flach) |
+| `damage_type` | String | `"none"` | `DAMAGE_TYPES` (physical: A = STR / D = DEF; magical: A = MAG / D = RES) |
+| `element` | String | `"none"` | `ELEMENTS`; Schadens-Skills ≠ `none` (Basisangriffe `physical`) |
+| `power` | int | 100 | 0..1000; Prozent (`physical`/`magical`/`heal` mit `mag`/`pct`) bzw. Betrag (`fixed`, `heal_mode: fixed`) |
+| `heal_mode` | String | `""` | `HEAL_MODES`; Pflicht ≠ `""` bei `damage_type: heal` |
 | `hits` | int | 1 | 1..8 |
 | `mp_cost` | int | 0 | 0..999 |
-| `rank` | int | 3 (Stunt: 4) | 1..6 (CTB-Verzögerung, §5.5) |
-| `accuracy` | int | 95 (magical/heal/none: −1) | −1 = trifft immer, sonst 1..100 |
-| `crit_bonus` | int | 0 | 0..100 (Prozentpunkte) |
-| `statuses` | Array[{id, chance, turns}] | `[]` | id ∈ statuses; chance 0..1; turns 0..9 (0 = `default_turns`) |
+| `rank` | int | 3 (Stunt 4, Item 2) | 1..6 (CTB-Verzögerung, §5.5) |
+| `accuracy` | int | −1 | −1 = trifft immer (alle Slice-Skills), sonst 1..100 (reserviert) |
+| `crit_bonus` | float | 0.0 | 0.0..1.0 (Prozentpunkte als Bruch, z. B. 0.20) |
+| `statuses` | Array[{id, chance, turns}] | `[]` | id ∈ statuses; chance 0..1; turns 0..99 (0 = `default_turns`) |
 | `cleanse` | Array[String] | `[]` | status ids |
-| `revive_pct` | int | 0 | 0..100; nur mit `target: single_ally_ko` sinnvoll |
-| `mp_restore` | int | 0 | 0..999 |
+| `mp_restore` | int | 0 | 0..999 (flach) |
+| `mp_restore_pct` | int | 0 | 0..100 (% max MP) |
 | `summon` | Array[String] | `[]` | enemy ids; nur `category: summon` |
-| `stunt_chance` | int | 0 | `category: stunt` → 1..100 Pflicht, sonst 0 |
-| `stunt_fail_status` | String | `""` | status id |
+| `flee_guaranteed` | bool | false | Flucht gelingt sicher (nicht bei Bossen/`can_flee: false`) — `itm_smoke` |
+| `special` | {kind, max, refund_on_win} | `{}` | kind ∈ `SKILL_SPECIALS`; `steal_credits`: `max` int, `refund_on_win` bool; `escape`: Akteur verlässt den Kampf |
+| `success_base` | float | 0.0 | Stunts: Pflicht 0.05..1.0 |
+| `success_lck` | float | 0.01 | 0..0.05 pro LCK-Punkt |
+| `success_cap` | float | 0.85 | 0..1 |
+| `success_boss_mod` | float | −0.15 | −1..0, addiert gegen Bosse |
+| `fail_effect` | {self_dmg_pct, delay_pct, status, status_turns} | `{}` | Stunt-Fehlschlag: % MaxHP Selbstschaden (0..100), `ctr += base_delay × delay_pct/100` (0..200), Status auf sich |
+| `cooldown` | int | 0 (Stunt: 3) | 0..9 eigene Züge |
 | `anim` | String | `"attack"` | `ANIMS` |
 | `vfx` | String | `""` | Vfx-Kind (§8.6); `""` → aus Element/Damage-Type abgeleitet |
 | `sfx` | String | `""` | Sfx-ID; `""` → Default |
-| `hype` | int | 0 | −20..50 Hype-Bonus bei Nutzung durch Party |
+| `hype` | int | 0 | −20..50 Hype bei Nutzung durch die Party (`itm_hype_megaphone`: 25) |
+| `kill_hype` | int | 0 | 0..50 Zusatz-Hype, wenn der Skill tötet (`skl_kai_prime_finisher`: 10) |
 | `show_tags` | Array[String] | `[]` | ⊂ `SHOW_TAGS` |
 
+Wirkungsreihenfolge je Ziel: Schaden/Heilung → `statuses` → `cleanse` → `mp_restore(_pct)` → `special`.
+Wiederbelebung = `target: single_ally_ko` + `damage_type: heal` + `heal_mode: pct` (`power` = % MaxHP).
+
 ```json
-{"id": "skl_mop_slam", "name": "Wischmopp-Schmetterer", "desc": "Ein nasser, lauter Hieb.", "user": "party",
- "category": "attack", "target": "single_enemy", "damage_type": "physical", "element": "none", "power": 140,
- "mp_cost": 4, "rank": 3, "statuses": [{"id": "sts_def_down", "chance": 0.3, "turns": 3}],
- "anim": "attack", "vfx": "slash", "hype": 2, "show_tags": ["flashy"]}
+{"id": "skl_kai_heavy_swing", "name": "Wuchtschlag", "desc": "Mit voller Wucht. Und schlechter Haltung.", "user": "party",
+ "category": "attack", "target": "single_enemy", "damage_type": "physical", "element": "physical", "power": 160,
+ "mp_cost": 3, "rank": 4, "anim": "attack", "vfx": "slash", "show_tags": ["flashy"]}
+{"id": "skl_stunt_kai_suplex", "name": "Bahnsteig-Suplex", "user": "party", "category": "stunt", "target": "single_enemy",
+ "damage_type": "physical", "element": "physical", "power": 230, "rank": 4, "cooldown": 3,
+ "success_base": 0.60, "success_lck": 0.01, "success_cap": 0.85, "success_boss_mod": -0.15,
+ "fail_effect": {"self_dmg_pct": 10, "delay_pct": 50}, "anim": "stunt", "show_tags": ["risky", "flashy"]}
+{"id": "skl_item_bandage", "name": "Werbepflaster", "user": "item", "category": "item", "target": "single_ally",
+ "damage_type": "heal", "heal_mode": "fixed", "power": 45, "rank": 2, "anim": "item"}
 ```
 
-Pflicht-Skills: jeder Party-Member und jeder Gegner braucht `attack_skill` (Kategorie `attack`, `power` 100, `rank` 3).
+Pflicht-Skills: jeder Party-Member und jeder Gegner braucht `attack_skill` (Kategorie `attack`, `power` 100, `rank` 3,
+`element: physical`, `damage_type: physical`).
 
 #### 4.4.3 `items.json` → `ItemDef`
 
@@ -954,145 +1247,254 @@ Pflicht-Skills: jeder Party-Member und jeder Gegner braucht `attack_skill` (Kate
 | `desc` | String | `""` | |
 | `type` | String | ✓ | `ITEM_TYPES`; Ausrüstungs-Slot = `type` |
 | `rarity` | String | `"common"` | `RARITIES` |
-| `price` | int | 0 | 0..99999; Verkauf = `price / 2` (Ganzzahl); 0 = nicht handelbar |
+| `price` | int | 0 | 0..99999; Automatenpreis; 0 = nicht im Automaten |
+| `sell` | int | −1 | −1 = `floori(price / 2)`; 0 = unverkäuflich (Pflicht für `key`); Loot-only-Ausrüstung explizit 150 (rare) / 250 (epic), `itm_elixir` 300 |
+| `max_stack` | int | 9 | 1..99 |
+| `tags` | Array[String] | `[]` | ⊂ `ITEM_TAGS` (`fev_lost_candidate` verlangt ein Item mit `heal`) |
 | `use_skill` | String | `""` | consumable: Pflicht, Skill mit `user: "item"` |
 | `usable` | String | `"none"` | `USABLE`; consumable ≠ `none` |
-| `stats` | Dict<stat,int> | `{}` | Ausrüstung: −99..999 |
+| `stats` | Dict<stat,int> | `{}` | Ausrüstung: −99..999 (Waffen-ATK → `str`) |
+| `crit_bonus` | float | 0.0 | Ausrüstung: 0..0.5 (Feuerwehraxt, Brechstange, Schlüsselbund: 0.05) |
 | `element_mods` | Dict<element,float> | `{}` | Ausrüstung: multipliziert auf Träger |
 | `status_immune` | Array[String] | `[]` | Ausrüstung |
+| `show_mods` | {hype_gain_mult, follower_mult} | `{1.0, 1.0}` | 0.5..3.0; `itm_acc_fan_scarf` 1.2 / `itm_acc_clip_mic` follower 1.15 |
 | `equip_by` | Array[String] | `[]` | Party-IDs; `[]` = alle |
-| `attack_element` | String | `"none"` | weapon: Element des Basisangriffs |
+| `attack_element` | String | `"physical"` | weapon: Element des Basisangriffs |
 | `icon` | String | `""` | |
 | `color` | String | `"#ffffff"` | |
 
 ```json
-{"id": "itm_bandage", "name": "Tierheim-Verband", "desc": "Heilt 40 HP.", "type": "consumable", "price": 20,
- "use_skill": "skl_item_bandage", "usable": "both", "icon": "bandage", "color": "#e8e0d0"}
+{"id": "itm_bandage", "name": "Werbepflaster", "desc": "Heilt 45 HP.", "type": "consumable", "price": 25,
+ "tags": ["heal"], "use_skill": "skl_item_bandage", "usable": "both", "icon": "bandage", "color": "#e8e0d0"}
+{"id": "itm_wpn_fire_axe", "name": "Feuerwehraxt", "type": "weapon", "rarity": "rare", "price": 480, "equip_by": ["kai"],
+ "stats": {"str": 12}, "crit_bonus": 0.05}
+{"id": "itm_acc_gas_mask", "name": "Gasmaske", "type": "accessory", "rarity": "rare", "price": 300,
+ "element_mods": {"poison": 0.0}, "status_immune": ["sts_poison"]}
 ```
 
-#### 4.4.4 `classes.json` → `ClassDef` (vorbereitet, Wahl ab Etage 3)
+#### 4.4.4 `classes.json` → `ClassDef` (vorbereitet, Wahl ab Etage 3; 8 Einträge, 4 je Figur)
 
 | F | T | P / Default | Regel |
 |---|---|---|---|
 | `id` | String | ✓ | `cls_` |
 | `name` | String | ✓ | |
 | `desc` | String | `""` | |
-| `for` | Array[String] | `[]` | Party-IDs; `[]` = alle |
+| `for` | Array[String] | `[]` | Party-IDs; `[]` = alle (Def-Feld `for_members`) |
 | `min_floor` | int | 3 | 1..99 |
 | `stat_mult` | Dict<stat,float> | `{}` | 0.5..2.0 |
-| `learnset` | Array[{level, skill}] | `[]` | |
-| `attack_skill` | String | `""` | Override |
+| `growth_add` | Dict<stat,float> | `{}` | 0..20 |
+| `passives` | Array[{id, params}] | `[]` | id `pas_`; `params` freies Dictionary (wird im Slice nicht ausgewertet) |
+| `learnset` | Array[{level, skill}] | `[]` | level 1..99; Skill-Referenz darf fehlen, wenn `min_floor > 1` (Warnung, kein Fehler) |
+| `show_mods` | {hype_gain_mult, stunt_success_add, stunt_cooldown, sponsor_thresholds} | `{1.0, 0.0, 3, [50, 75, 100]}` | |
 
 ```json
-{"id": "cls_brawler", "name": "Raufbold", "for": ["kai"], "min_floor": 3, "stat_mult": {"str": 1.15, "def": 1.1}, "learnset": []}
+{"id": "cls_kai_wrecker", "name": "Abrissbirne", "for": ["kai"], "min_floor": 3,
+ "stat_mult": {"hp": 1.10, "str": 1.15, "def": 1.10, "spd": 0.95}, "growth_add": {"hp": 3.0, "def": 0.5},
+ "passives": [{"id": "pas_thick_skin", "params": {"taunt_turns_add": 1, "dmg_taken_mult_while_taunt": 0.9}}],
+ "learnset": [{"level": 11, "skill": "skl_kai_wrecking_ball"}, {"level": 13, "skill": "skl_kai_concrete_boots"}],
+ "show_mods": {"hype_gain_mult": 1.0, "stunt_success_add": 0.0, "stunt_cooldown": 3, "sponsor_thresholds": [50, 75, 100]}}
 ```
 
-#### 4.4.5 `party.json` → `PartyMemberDef`
+#### 4.4.5 `party.json` → `PartyMemberDef` (+ Top-Level `start`)
 
 | F | T | P / Default | Regel |
 |---|---|---|---|
 | `id` | String | ✓ | genau `kai` und `mopsula` müssen existieren |
-| `name` | String | ✓ | Default-Anzeigename (Kai: vom Spieler überschreibbar) |
+| `name` | String | ✓ | Default-Anzeigename (Kai: vom Spieler überschreibbar, max. 12 Zeichen) |
 | `title` | String | `""` | z. B. „Graf“ |
 | `base_stats` | Dict<stat,int> | ✓ | alle 8 STATS, hp ≥ 1 |
 | `growth` | Dict<stat,float> | ✓ | alle 8 STATS, 0..50 pro Level |
 | `attack_skill` | String | ✓ | |
-| `learnset` | Array[{level:int, skill:String}] | `[]` | level 1..99 |
+| `learnset` | Array[{level:int, skill:String}] | `[]` | level 1..`Balance.LEVEL_CAP` |
 | `stunts` | Array[String] | `[]` | Skills mit `category: stunt` |
 | `equipment` | {weapon, armor, accessory} | alle `""` | Item-IDs passenden Typs |
 | `element_mods` | Dict<element,float> | `{}` | |
 | `status_immune` | Array[String] | `[]` | |
+| `status_resist` | Dict<status,float> | `{}` | 0..1 |
 | `battle_slot` | int | ✓ | 0..3, eindeutig |
-| `model` | ModelSpec | ✓ | §4.4.12 |
+| `model` | ModelSpec | ✓ | §4.4.14 |
 | `portrait_color` | String | `"#ffffff"` | |
 
+Top-Level `start` (Pflicht): `{"inventory": {item_id: int 1..max_stack}, "credits": int ≥ 0}` — liest `GameState.create_new`.
+
 ```json
-{"id": "mopsula", "name": "Mopsula", "title": "Graf", "battle_slot": 1,
- "base_stats": {"hp": 62, "mp": 30, "str": 6, "mag": 14, "def": 6, "res": 11, "spd": 13, "lck": 9},
- "growth": {"hp": 7.5, "mp": 3.0, "str": 0.8, "mag": 2.0, "def": 0.9, "res": 1.6, "spd": 1.1, "lck": 1.0},
- "attack_skill": "skl_attack_mopsula", "learnset": [{"level": 1, "skill": "skl_noble_spark"}],
- "stunts": ["skl_stunt_mopsula_pose"], "equipment": {"weapon": "", "armor": "itm_velvet_collar", "accessory": ""},
- "model": {"base": "pug", "scale": 1.0, "colors": {"primary": "#d8b98a", "secondary": "#2a2024", "accent": "#7b2cbf"}, "props": ["cape", "monocle"]},
- "portrait_color": "#7b2cbf"}
+{"schema": 1,
+ "start": {"inventory": {"itm_bandage": 3, "itm_antidote": 1}, "credits": 50},
+ "entries": [
+  {"id": "mopsula", "name": "Mopsula", "title": "Graf", "battle_slot": 1,
+   "base_stats": {"hp": 42, "mp": 30, "str": 5, "mag": 13, "def": 6, "res": 11, "spd": 14, "lck": 12},
+   "growth": {"hp": 6.0, "mp": 4.0, "str": 0.6, "mag": 2.2, "def": 0.8, "res": 1.6, "spd": 0.6, "lck": 0.7},
+   "attack_skill": "skl_attack_mopsula",
+   "learnset": [{"level": 1, "skill": "skl_mop_noble_flame"}, {"level": 1, "skill": "skl_mop_holy_lick"}, {"level": 2, "skill": "skl_mop_frost_sneeze"}],
+   "stunts": ["skl_stunt_mop_entrance"], "equipment": {"weapon": "itm_wpn_collar_leather", "armor": "itm_arm_pug_sweater", "accessory": ""},
+   "model": {"base": "pug", "scale": 1.0, "colors": {"primary": "#d8b98a", "secondary": "#2a2024", "accent": "#7b2cbf"}, "props": ["cape", "monocle"]},
+   "portrait_color": "#7b2cbf"}
+ ]}
 ```
 
-#### 4.4.6 `enemies.json` → `EnemyDef`
+#### 4.4.6 `enemies.json` → `EnemyDef` (+ Top-Level `pseudo_units` → `PseudoUnitDef`)
 
 | F | T | P / Default | Regel |
 |---|---|---|---|
 | `id` | String | ✓ | `enm_` |
 | `name` | String | ✓ | |
-| `level` | int | 1 | 1..99 |
+| `level` | int | 1 | 1..99 (Richtwert für UI/Bestiarium) |
 | `stats` | Dict<stat,int> | ✓ | alle 8 STATS |
 | `exp` | int | 0 | ≥ 0 |
 | `credits` | int | 0 | ≥ 0 |
-| `ai` | String | `"basic"` | `AI_PROFILES` |
-| `attack_skill` | String | ✓ | |
-| `skills` | Array[{id, weight, when}] | `[]` | weight ≥ 1; `when` = AI-Bedingung (§5.8) |
-| `element_mods` | Dict<element,float> | `{}` | −1.0..3.0 (1.5 schwach, 0.5 resistent, 0 immun, −1 absorbiert) |
+| `attack_skill` | String | ✓ | Fallback, wenn keine Aktion zulässig ist |
+| `ai` | {type, actions} | `{"type": "weighted", "actions": []}` | `type` ∈ `AI_TYPES`; `actions` = Array[AiAction]; `phased` → `actions` leer, `phases` Pflicht |
+| `phases` | Array[Phase] | `[]` | nur `ai.type: phased`; absteigend nach `hp_above`, letzte Phase `hp_above: 0.0` |
+| `element_mods` | Dict<element,float> | `{}` | Slice-Werte 1.5 (weak) / 0.5 (resist) / 0.0 (immun); Bereich 0.0..3.0 |
 | `status_immune` | Array[String] | `[]` | |
+| `status_resist` | Dict<status,float> | `{}` | 0..1 (Bosse: `{"sts_stun": 0.5, "sts_slow": 0.5}`) |
 | `drops` | Array[{item, chance}] | `[]` | chance 0..1 |
+| `boss_drops` | Array[{kind, id, amount}] | `[]` | sichere Drops (100 %), kind ∈ `item`/`box`; z. B. `itm_key_master`, `box_silver` |
 | `tags` | Array[String] | `[]` | frei |
 | `boss` | bool | false | |
-| `phases` | Array[Phase] | `[]` | Phase = `{hp_below: float, skills: [...], announce: String, mod_tag: String, stat_mult: {}}` |
-| `hype_value` | int | 1 | 0..20 (Interesse des Publikums, skaliert Kill-Hype) |
 | `model` | ModelSpec | ✓ | |
-| `explore` | {speed, chase_speed, aggro_radius} | `{2.0, 4.2, 6.0}` | Meter/Sekunde, Meter |
+| `explore` | Explore | `field_speed` ✓ | siehe unten |
+
+`AiAction` = `{skill, weight, target, cond}`: `skill` ✓ (Skill-ID), `weight` int ≥ 1 (✓), `target` ∈ `AI_TARGETS` bzw.
+`"not_status:<sts_id>"` (Default `"random"`), `cond` Dictionary mit Schlüsseln aus `AI_CONDITIONS` (`{}` = immer):
+`self_hp_below: float`, `self_hp_above: float`, `ally_hp_below: float` (irgendein Verbündeter inkl. selbst), `turn_mod: [n, r]`
+(eigene Zugnummer, erster eigener Zug = 0), `allies_alive_below: int` (lebende Gegner < n), `once: true` (max. 1× pro Kampf).
+Zielregel ↔ Skill-Ziel muss passen: `single_enemy` → `random`/`lowest_hp_pct`/`highest_hp`/`not_status:*`;
+`single_ally` → `ally_lowest_hp_pct`/`self`; `all_enemies`/`all_allies`/`self` → gleichnamige Regel.
+
+`Phase` = `{hp_above: float 0..1, on_enter: Array[Op], actions: Array[AiAction]}`; Phase i gilt, solange `hp_ratio > hp_above`.
+`Op` (Schlüssel `op` ∈ `PHASE_OPS`): `{"op": "say", "tag": String}` · `{"op": "status_self", "status": sts, "turns": 1..99}` ·
+`{"op": "summon", "enemy": enm, "count": 1..3}` · `{"op": "fixed_damage_self", "amount": int, "min_hp": 1}` ·
+`{"op": "add_pseudo", "unit": pu, "ctr": int}` · `{"op": "remove_pseudo", "unit": pu}`.
+
+`Explore` = `{field_speed ✓ (0 = steht still), patrol_speed 1.8, sight_range 10.0, sight_angle_deg 110.0, hear_run 4.0,
+hear_sneak 1.5, giveup_no_sight 4.0, leash 20.0, max_chase 8.0}` (m, m/s, s; Taubenschwarm `sight_range 14.0`).
+
+`PseudoUnitDef` (Top-Level `pseudo_units`): `id` ✓ `pu_`, `name` ✓, `icon` ✓, `action` ✓ `{fixed_pct_maxhp: int 1..100,
+element: String, ignores_guard: bool, target: "all_party"}`, `ctr_after` ✓ int 1..999 (absoluter neuer Zähler nach jeder Aktion),
+`warn_tag` String `""`, `warn_at` int 2 (M.O.D.-Warnung, sobald die Einheit auf Vorschau-Position `warn_at` steht, 1-basiert).
 
 ```json
-{"id": "enm_tunnel_rat", "name": "Tunnelratte", "level": 1,
- "stats": {"hp": 34, "mp": 0, "str": 8, "mag": 2, "def": 4, "res": 2, "spd": 12, "lck": 5},
- "exp": 6, "credits": 4, "ai": "basic", "attack_skill": "skl_attack_bite",
- "skills": [{"id": "skl_attack_bite", "weight": 3, "when": {}}, {"id": "skl_gnaw_poison", "weight": 1, "when": {"turn_min": 2}}],
- "element_mods": {"fire": 1.5}, "drops": [{"item": "itm_cheese", "chance": 0.25}], "tags": ["beast"],
- "hype_value": 1, "model": {"base": "rodent", "scale": 0.8, "colors": {"primary": "#7a6a5a", "secondary": "#d9b8a0", "accent": "#e04050"}, "props": ["bandana"]},
- "explore": {"speed": 2.0, "chase_speed": 4.4, "aggro_radius": 6.0}}
+{"schema": 1,
+ "pseudo_units": [
+  {"id": "pu_train_gleis9", "name": "Einfahrender Zug", "icon": "train",
+   "action": {"fixed_pct_maxhp": 35, "element": "physical", "ignores_guard": true, "target": "all_party"},
+   "ctr_after": 160, "warn_tag": "boss_train_warning", "warn_at": 2}
+ ],
+ "entries": [
+  {"id": "enm_kanalratte", "name": "Kanalratte", "level": 1,
+   "stats": {"hp": 24, "mp": 0, "str": 13, "mag": 3, "def": 5, "res": 3, "spd": 13, "lck": 5},
+   "exp": 12, "credits": 6, "attack_skill": "skl_e_bite",
+   "ai": {"type": "weighted", "actions": [
+     {"skill": "skl_e_bite", "weight": 3, "target": "random"},
+     {"skill": "skl_e_gnaw_poison", "weight": 1, "target": "not_status:sts_poison"}]},
+   "element_mods": {"fire": 1.5}, "drops": [{"item": "itm_bandage", "chance": 0.25}, {"item": "itm_antidote", "chance": 0.10}],
+   "model": {"base": "rodent", "scale": 0.8, "colors": {"primary": "#6b5b4e", "secondary": "#e88a9a", "eyes": "#ff3030"}},
+   "explore": {"field_speed": 4.8}},
+  {"id": "enm_boss_hausmeister", "name": "Der Hausmeister", "level": 6, "boss": true,
+   "stats": {"hp": 380, "mp": 60, "str": 23, "mag": 14, "def": 14, "res": 10, "spd": 12, "lck": 6},
+   "exp": 180, "credits": 200, "attack_skill": "skl_b_broom",
+   "element_mods": {"shock": 1.5, "poison": 0.5}, "status_resist": {"sts_stun": 0.5, "sts_slow": 0.5},
+   "boss_drops": [{"kind": "item", "id": "itm_key_master", "amount": 1}, {"kind": "item", "id": "itm_acc_key_ring", "amount": 1},
+                  {"kind": "box", "id": "box_silver", "amount": 1}],
+   "ai": {"type": "phased", "actions": []},
+   "phases": [
+     {"hp_above": 0.60, "on_enter": [{"op": "say", "tag": "boss_intro:enm_boss_hausmeister"}],
+      "actions": [{"skill": "skl_b_rules", "weight": 10, "target": "self", "cond": {"once": true}},
+                  {"skill": "skl_b_broom", "weight": 3, "target": "random"}, {"skill": "skl_b_keys", "weight": 1, "target": "all_enemies"}]},
+     {"hp_above": 0.25, "on_enter": [{"op": "summon", "enemy": "enm_kanalratte", "count": 1}, {"op": "say", "tag": "boss_phase:enm_boss_hausmeister:2"}],
+      "actions": [{"skill": "skl_b_broom", "weight": 2, "target": "random"}, {"skill": "skl_b_cleaner_fog", "weight": 2, "target": "all_enemies"},
+                  {"skill": "skl_b_keys", "weight": 1, "target": "all_enemies"},
+                  {"skill": "skl_b_call_tenant", "weight": 4, "target": "self", "cond": {"allies_alive_below": 2, "turn_mod": [4, 0]}}]},
+     {"hp_above": 0.0, "on_enter": [{"op": "status_self", "status": "sts_haste", "turns": 5}, {"op": "say", "tag": "boss_phase:enm_boss_hausmeister:3"}],
+      "actions": [{"skill": "skl_b_mop_whirl", "weight": 2, "target": "all_enemies"}, {"skill": "skl_b_broom", "weight": 2, "target": "lowest_hp_pct"}]}],
+   "model": {"base": "brute", "scale": 1.36, "colors": {"primary": "#7c8a94", "secondary": "#3e4a55", "accent": "#4a3a30"}, "props": ["cap", "key_ring", "broom"]},
+   "explore": {"field_speed": 0.0}}
+ ]}
 ```
 
-#### 4.4.7 `floors.json` → `FloorDef` (+ `EncounterDef`)
+Rattenkönigin P2/P3 nutzen `{"op": "add_pseudo", "unit": "pu_train_gleis9", "ctr": 120}` bzw. `remove_pseudo` +
+`{"op": "fixed_damage_self", "amount": 72, "min_hp": 1}` + `{"op": "status_self", "status": "sts_haste", "turns": 99}`; ihr
+`model.pose` ist `"quadruped"`.
+
+#### 4.4.7 `floors.json` → `FloorDef` (+ `EncounterDef`, Layout)
 
 | F | T | P / Default | Regel |
 |---|---|---|---|
 | `id` | String | ✓ | `floor_<index>` |
 | `index` | int | ✓ | 1..99, eindeutig |
 | `name` | String | ✓ | |
-| `playable` | bool | true | false → nach vorheriger Etage Abspann |
+| `playable` | bool | true | false → Abspann nach der vorherigen Etage |
 | `theme` | String | ✓ | `THEMES` |
-| `timer_seconds` | int | ✓ | 60..7200 (Etage 1: 1200) |
-| `timer_warnings` | Array[int] | `[300, 60]` | absteigend, < timer_seconds |
+| `timer_seconds` | int | ✓ | 60..7200 (Etage 1: 1200; Vorabendprogramm × 1.5) |
+| `timer_warnings` | Array[int] | `[600, 300, 60]` | absteigend, < timer_seconds |
+| `timer_start_after` | String | `""` | enc id; Countdown startet nach dessen Sieg (`""` = bei Betreten). Etage 1: `enc_f1_a1_tutorial` |
+| `floor_mult` | float | 1.0 | 0.1..100 (Zuschauer-Basis, GDD §7.2: E1 1.0, E2 1.5) |
 | `grid` | {w:int, h:int} | ✓ | 3..12 |
-| `rooms` | {min:int, max:int} | ✓ | 6 ≤ min ≤ max ≤ w·h − 2 |
-| `safe_rooms` | int | 1 | 1..2 |
-| `chests` | {min, max} | ✓ | 0..20 |
-| `enemy_groups` | {min, max} | ✓ | 0..20 |
-| `viewer_base` | int | ✓ | 100..10_000_000 |
+| `layout` | Layout | `{}` | handgebaute Etage (unten); leer → prozedural (§7.2) |
+| `rooms` | {min:int, max:int} | ✓ ohne `layout` | 6 ≤ min ≤ max ≤ w·h − 2 |
+| `safe_rooms` | int | 1 | 0..3 (nur prozedural) |
+| `chests` | {min, max} | ✓ ohne `layout` | 0..20 |
+| `enemy_groups` | {min, max} | ✓ ohne `layout` | 0..20 |
+| `chest_table` | Array[{kind, id, weight, min, max}] | ✓ ohne `layout` | kind ∈ {item, credits} |
+| `shop` | Array[String] | `[]` | Automat der prozeduralen Safe Rooms (item ids mit price > 0) |
 | `quarter_boss` | String | `""` | enc id mit `boss: true` |
 | `floor_boss` | String | `""` | enc id mit `boss: true` |
 | `encounters` | Array[EncounterDef] | ✓ | ≥ 1 nicht-Boss |
-| `chest_table` | Array[{kind, id, weight, min, max}] | ✓ | kind ∈ {item, credits} |
-| `shop` | Array[String] | `[]` | item ids mit price > 0 |
-| `palette` | {floor, wall, accent, light, fog, ambient} | Theme-Default | Hex |
+| `palette` | {floor, wall, accent, light, fog, ambient} | Theme-Default | Hex; Zonen überschreiben (Layout) |
 | `music` | String | `"explore"` | Sfx-Musik-ID |
+| `quest` | Dictionary | `{}` | Brief §6b.5: `{type ∈ QUEST_TYPES, label, params}`; nur Event-Läufe werten aus |
+| `window` | Dictionary | `{}` | Brief §6b.5: `{open_at, close_at (ISO-8601 UTC), duration_sec}` |
 
-`EncounterDef`: `id` (✓ `enc_`), `enemies` (✓ Array 1..4 enemy ids), `weight` (int, 10; Boss: 0), `min_depth`/`max_depth`
-(float 0..1, Default 0.0/1.0, relative Raumtiefe), `boss` (bool false), `can_flee` (bool, Default `!boss`), `music` (`""` → `battle`/`boss`).
+`EncounterDef`: `id` (✓ `enc_`), `enemies` (✓ Array 1..4 enemy ids), `weight` (int, 10; Boss/platziert: 0), `min_depth`/`max_depth`
+(float 0..1, Default 0.0/1.0, nur prozedural), `boss` (bool false), `can_flee` (bool, Default `!boss`), `tutorial` (bool false:
+Gegnerschaden × 0.5, Flucht gesperrt, Niederlage unmöglich — HP der Party fällt nicht unter 1), `music` (`""` → `battle`/`boss`).
+
+**Layout** (handgebaut; Etage 1 nutzt es, GDD §1.3/§2.5–2.8/§10.1):
+
+| F | T | Regel |
+|---|---|---|
+| `cells` | Array[{x, y, zone, kind, doors}] | ✓; `kind` ∈ `CELL_KINDS`; `doors` ⊂ `"NESW"` (String, z. B. `"NS"`), symmetrisch zum Nachbarn; genau 1 `start`, 1 `stairs` |
+| `zones` | Array[{id, name, palette}] | ✓; `palette` wie FloorDef.palette (überschreibt sie für Zellen der Zone) |
+| `gates` | Array[{cell, dir, requires}] | Tür zwischen `cell` und Nachbar in `dir` (`N/E/S/W`) ist zu, bis `requires` erfüllt: Item-ID (`itm_key_master`) oder `"event:<fev_id>"` |
+| `encounters_placed` | Array[{group_id, enc_id, cell, offset, state, turn, waypoints}] | `group_id` `f<i>_g<k>` / `f<i>_qb` / `f<i>_fb`; `state` ∈ `ENEMY_START_STATES` (Default `PATROL`); `turn` bool (true; Tutorial false = dreht sich nie um); `waypoints` Array[[x, z]] raum-lokal |
+| `chests` | Array[{id, cell, offset, type, contents}] | `id` `f<i>_c<k>`; `type` ∈ `CHEST_TYPES`; `contents` Array[{kind, id, amount}] Pflicht bei `metal`/`locked`, leer bei `wood` (wood = 20–40 Cr + 1 Wurf `pools.f<i>.common`) |
+| `events` | Array[{id, type, cell, offset, params}] | `id` `fev_`; `type` ∈ `FLOOR_EVENT_TYPES`; `params` je Typ (§7.4) |
+| `spawners` | Array[{zone, pool, interval_sec}] | `pool` = enc ids; `interval_sec` 10..600 (90) |
+| `safe_rooms` | Array[{id, cell, name, theme, shop}] | 0..3; `id` `sr_`; `theme` ∈ `SAFE_ROOM_THEMES`; `shop` = item ids mit price > 0 |
+| `stairs` | {cell} | ✓; Zelle mit `kind: stairs` |
+
+Offsets sind raum-lokal `[x, z]` mit `|x|, |z| ≤ 4.5` (§7.3). Quartier-/Etagenboss stehen in Zellen `quarter_boss`/`floor_boss`
+(Gruppen `f<i>_qb`/`f<i>_fb`, Encounter aus `quarter_boss`/`floor_boss`).
 
 ```json
-{"id": "floor_1", "index": 1, "name": "Etage 1 – Gleis 9", "theme": "metro", "timer_seconds": 1200,
- "timer_warnings": [300, 60], "grid": {"w": 7, "h": 7}, "rooms": {"min": 14, "max": 18}, "safe_rooms": 1,
- "chests": {"min": 4, "max": 6}, "enemy_groups": {"min": 6, "max": 8}, "viewer_base": 1200,
- "quarter_boss": "enc_f1_janitor", "floor_boss": "enc_f1_rat_queen",
+{"id": "floor_1", "index": 1, "name": "Etage 1 – Die Unterstadt", "theme": "metro", "timer_seconds": 1200,
+ "timer_warnings": [600, 300, 60], "timer_start_after": "enc_f1_a1_tutorial", "floor_mult": 1.0, "grid": {"w": 8, "h": 8},
+ "quarter_boss": "enc_f1_boss_hausmeister", "floor_boss": "enc_f1_boss_rattenkoenigin",
  "encounters": [
-   {"id": "enc_f1_rats", "enemies": ["enm_tunnel_rat", "enm_tunnel_rat"], "weight": 10},
-   {"id": "enc_f1_janitor", "enemies": ["enm_janitor"], "weight": 0, "boss": true}
+   {"id": "enc_f1_a1_tutorial", "enemies": ["enm_kanalratte", "enm_kanalratte"], "weight": 0, "tutorial": true},
+   {"id": "enc_f1_a2", "enemies": ["enm_kanalratte", "enm_taubenschwarm", "enm_kanalratte"], "weight": 0},
+   {"id": "enc_f1_boss_hausmeister", "enemies": ["enm_boss_hausmeister"], "weight": 0, "boss": true}
  ],
- "chest_table": [{"kind": "item", "id": "itm_bandage", "weight": 10, "min": 1, "max": 2},
-                 {"kind": "credits", "id": "", "weight": 6, "min": 20, "max": 60}],
- "shop": ["itm_bandage"], "palette": {"floor": "#3a3f4b", "wall": "#5b6270", "accent": "#ff2e88", "light": "#ffd59e", "fog": "#1a1430", "ambient": "#2a2440"},
+ "layout": {
+   "zones": [{"id": "zone_platform", "name": "Bahnsteig Nord", "palette": {"floor": "#2b4a52", "accent": "#ff2e88"}}],
+   "cells": [{"x": 3, "y": 7, "zone": "zone_platform", "kind": "start", "doors": "N"},
+             {"x": 3, "y": 6, "zone": "zone_platform", "kind": "normal", "doors": "NS"}],
+   "gates": [{"cell": [3, 2], "dir": "N", "requires": "itm_key_master"}],
+   "encounters_placed": [{"group_id": "f1_g0", "enc_id": "enc_f1_a1_tutorial", "cell": [3, 6], "offset": [0.0, -2.5],
+                          "state": "IDLE", "turn": false, "waypoints": []}],
+   "chests": [{"id": "f1_c0", "cell": [3, 6], "offset": [3.5, 2.0], "type": "wood", "contents": []}],
+   "events": [{"id": "fev_photo_drone", "type": "photo_drone", "cell": [4, 6], "offset": [0.0, 0.0],
+               "params": {"pose_hype": 15, "pose_followers": 20, "smash_credits": 30, "smash_hype": -5}}],
+   "spawners": [{"zone": "zone_platform", "pool": ["enc_f1_a2", "enc_f1_a4"], "interval_sec": 90}],
+   "safe_rooms": [{"id": "sr_kiosk", "cell": [2, 6], "name": "Kiosk 24/7", "theme": "kiosk", "shop": ["itm_bandage", "itm_antidote"]}],
+   "stairs": {"cell": [4, 0]}
+ },
+ "palette": {"floor": "#3a3f4b", "wall": "#5b6270", "accent": "#ff2e88", "light": "#ffd59e", "fog": "#1a1430", "ambient": "#2a2440"},
  "music": "explore"}
 ```
 
-#### 4.4.8 `lootboxes.json` → `LootboxDef`
+#### 4.4.8 `lootboxes.json` → `LootboxDef` (+ Top-Level `pools`, `pity`)
 
 | F | T | P / Default | Regel |
 |---|---|---|---|
@@ -1100,16 +1502,28 @@ Pflicht-Skills: jeder Party-Member und jeder Gegner braucht `attack_skill` (Kate
 | `name` | String | ✓ | |
 | `tier` | int | ✓ | 1..4 |
 | `color` | String | ✓ | |
-| `rolls` | int | 1 | 1..10 |
-| `entries` | Array[{kind, id, weight, min, max}] | ✓ | kind ∈ `LOOT_KINDS`; id nur bei item |
-| `guaranteed` | Array[gleiche Struktur ohne weight] | `[]` | |
-| `mod_tag` | String | `"lootbox_open"` | |
+| `rolls` | int | 2 | 1..10 Würfe |
+| `rarity_weights` | {common, rare, epic} | ✓ | int ≥ 0, Summe > 0 |
+| `guarantee` | String | `""` | `""`/`"rare"`/`"epic"`: greift auf den **letzten** Wurf, falls bis dahin nicht erfüllt |
+| `fixed_pool` | String | `""` | `""`/`"fan"`: zusätzlich 1 fester Eintrag aus `pools.<f>.fan` (vor den Würfen) |
+| `mod_tag` | String | `""` | `""` → `lootbox_open_<id ohne box_>` |
+
+Top-Level: `pools: {"f1": {"common": [Entry], "rare": [Entry], "epic": [Entry], "fan": [Entry]}}` mit
+`Entry = {kind ∈ {item, credits}, id (item) | "", amount int ≥ 1, weight int ≥ 1}`; Pool-Schlüssel `f<index>`, fehlt er,
+gilt der höchste vorhandene ≤ Etage. `pity: {"rare": 4, "epic": 8}` (Boxen ohne Treffer, ab denen der **erste** Wurf erzwungen wird).
 
 ```json
-{"id": "box_bronze", "name": "Bronze-Box", "tier": 1, "color": "#cd7f32", "rolls": 2,
- "entries": [{"kind": "item", "id": "itm_bandage", "weight": 10, "min": 1, "max": 2},
-             {"kind": "credits", "id": "", "weight": 8, "min": 15, "max": 40},
-             {"kind": "followers", "id": "", "weight": 2, "min": 20, "max": 50}]}
+{"schema": 1,
+ "entries": [
+   {"id": "box_bronze", "name": "Bronze-Box", "tier": 1, "color": "#cd7f32", "rolls": 2, "rarity_weights": {"common": 80, "rare": 18, "epic": 2}},
+   {"id": "box_silver", "name": "Silber-Box", "tier": 2, "color": "#c0c8d2", "rolls": 3, "rarity_weights": {"common": 55, "rare": 38, "epic": 7}, "guarantee": "rare"},
+   {"id": "box_fan", "name": "Fan-Box", "tier": 4, "color": "#ff5fa2", "rolls": 2, "rarity_weights": {"common": 50, "rare": 40, "epic": 10}, "fixed_pool": "fan"}
+ ],
+ "pools": {"f1": {"common": [{"kind": "credits", "id": "", "amount": 25, "weight": 30}, {"kind": "item", "id": "itm_bandage", "amount": 2, "weight": 25}],
+                  "rare": [{"kind": "item", "id": "itm_smelling_salts", "amount": 1, "weight": 20}],
+                  "epic": [{"kind": "item", "id": "itm_wpn_rail_crowbar", "amount": 1, "weight": 10}],
+                  "fan":  [{"kind": "item", "id": "itm_acc_clip_mic", "amount": 1, "weight": 40}]}},
+ "pity": {"rare": 4, "epic": 8}}
 ```
 
 #### 4.4.9 `achievements.json` → `AchievementDef`
@@ -1119,16 +1533,30 @@ Pflicht-Skills: jeder Party-Member und jeder Gegner braucht `attack_skill` (Kate
 | `id` | String | ✓ | `ach_` |
 | `name` | String | ✓ | |
 | `desc` | String | ✓ | |
-| `stat` | String | ✓ | ∈ `StatIds.ALL` |
-| `gte` | int | ✓ | ≥ 1; freigeschaltet, sobald Zähler ≥ gte |
-| `reward_box` | String | `""` | box id |
-| `reward_followers` | int | 0 | |
-| `reward_credits` | int | 0 | |
+| `trigger` | String | ✓ | ∈ `ACH_TRIGGERS` |
+| `condition` | String | ✓ | Ausdruck (Grammatik unten), beim Laden geparst |
+| `box` | String | `""` | box id |
+| `followers` | int | −1 | −1 = nach Box-Tier (bronze 25 / silver 50 / gold 100, sonst 0) |
 | `hidden` | bool | false | |
-| `mod_tag` | String | `"achievement"` | spezifische Zeilen zusätzlich unter Tag `achievement:<id>` |
+| `mod_tag` | String | `""` | `""` → `achievement:<id>` mit Fallback `achievement_generic` |
+
+Bedingungs-Grammatik (`ConditionExpr`, §6.1; identisch für `scenes.condition`):
+```
+expr    := clause ( "&&" clause )*
+clause  := "true" | operand OP literal
+operand := "e." KEY | "s." STAT_ID | "f." FLAG          # KEY/FLAG: [a-z0-9_]+
+OP      := "==" | "!=" | ">=" | "<=" | ">" | "<"
+literal := number | "\"" text "\"" | "true" | "false"
+```
+`e.` = Trigger-Payload (Schlüssel je Trigger: §6.3, unbekannter Schlüssel = Ladefehler), `s.` = `ShowState.stats` (∈ `StatIds.ALL`,
+fehlend = 0), `f.` = `GameState.flags` (fehlend = `false`/0). Zahlen werden numerisch verglichen (int/float gleich), Strings nur
+mit `==`/`!=`, Typkonflikt = `false`.
 
 ```json
-{"id": "ach_pacifist", "name": "Pazifist", "desc": "5 Minuten ohne Kampf.", "stat": "max_seconds_without_battle", "gte": 300, "reward_box": "box_bronze", "reward_followers": 50}
+{"id": "ach_one_hp", "name": "Haaresbreite", "desc": "Einen Kampf mit genau 1 HP gewonnen.", "trigger": "battle_won",
+ "condition": "e.min_party_hp == 1", "box": "box_silver"}
+{"id": "ach_mimic", "name": "Fahrschein, bitte", "desc": "Den Fahrscheinfresser besiegt.", "trigger": "enemy_killed",
+ "condition": "e.enemy_id == \"enm_fahrscheinfresser\"", "box": "box_silver"}
 ```
 
 #### 4.4.10 `sponsors.json` → `SponsorDef`
@@ -1139,90 +1567,163 @@ Pflicht-Skills: jeder Party-Member und jeder Gegner braucht `attack_skill` (Kate
 | `name` | String | ✓ | fiktive Marke |
 | `slogan` | String | `""` | |
 | `color` | String | ✓ | |
-| `hype_threshold` | int | ✓ | 1..100 |
-| `gift` | {kind, value, status, item} | ✓ | kind ∈ `GIFT_KINDS`; value int; status/item je nach kind Pflicht |
-| `weight` | int | 10 | ≥ 1 |
+| `gift` | Array[GiftEffect] | ✓ | 1..3 Effekte, in Reihenfolge angewendet |
+| `weight` | int | 1 | ≥ 1 (Basis-Gewicht) |
+| `weight_mods` | Array[{cond, value, mult}] | `[]` | `cond` ∈ `SPONSOR_WEIGHT_CONDS`; `value` float (Schwelle, bei `ally_ko`/`is_boss` ignoriert); `mult` float > 0 |
 | `min_floor` / `max_floor` | int | 1 / 0 | 0 = unbegrenzt |
 | `mod_tag` | String | `"sponsor_gift"` | |
 
+`GiftEffect` = `{kind ∈ GIFT_KINDS, value: int, status: String, turns: int, item: String, target: "party"|"enemies", ignore_resist: bool}`:
+`heal_party_pct` (alle lebenden Verbündeten +value % MaxHP), `heal_party_flat` (+value HP), `mp_party_pct` (+value % MaxMP),
+`status_party` / `status_enemies` (`status` für `turns` auf alle Lebenden der Seite; `ignore_resist` umgeht `status_resist`, nicht
+`status_immune`), `item` (`item` × value ins Kampf-Inventar), `revive_or_heal_lowest` (KO-Verbündeten mit value % MaxHP beleben,
+sonst niedrigsten HP-Anteil +value % MaxHP). Gewicht = `weight × Π mult` aller erfüllten `weight_mods`
+(`ally_hp_below`: ein lebender Verbündeter < value HP-Anteil; `ally_mp_below`: < value MP-Anteil; `ally_ko`; `is_boss`).
+
 ```json
-{"id": "spn_krachchips", "name": "KrachChips", "slogan": "Knackt lauter als Knochen!", "color": "#ffcc00",
- "hype_threshold": 60, "gift": {"kind": "heal_party_pct", "value": 30, "status": "", "item": ""}, "weight": 10}
+{"id": "spn_gluckwasser", "name": "Glückwasser", "slogan": "Trink dich glücklich. Wörtlich.", "color": "#4ad9d9",
+ "gift": [{"kind": "heal_party_pct", "value": 35}], "weight": 3, "weight_mods": [{"cond": "ally_hp_below", "value": 0.5, "mult": 3.0}]}
+{"id": "spn_brutzel", "name": "Brutzel-Burger", "slogan": "Mit echtem Fleisch-Aroma.", "color": "#ff8a3d",
+ "gift": [{"kind": "item", "item": "itm_brutzel_burger", "value": 1}, {"kind": "heal_party_flat", "value": 20}], "weight": 2}
+{"id": "spn_doomscroll", "name": "DoomScroll+", "slogan": "Nur noch eine Folge.", "color": "#7a5cff",
+ "gift": [{"kind": "status_enemies", "status": "sts_slow", "turns": 3, "target": "enemies", "ignore_resist": true}],
+ "weight": 2, "weight_mods": [{"cond": "is_boss", "value": 0, "mult": 2.0}]}
 ```
 
-#### 4.4.11 `mod_lines.json` → `ModLineDef`
+#### 4.4.11 `milestones.json` → `MilestoneDef`
+
+| F | T | P / Default | Regel |
+|---|---|---|---|
+| `id` | String | ✓ | `ms_<followers>` |
+| `followers` | int | ✓ | ≥ 1, eindeutig |
+| `reward_box` | String | `""` | box id |
+| `credits` | int | 0 | ≥ 0 |
+| `item` | String | `""` | item id |
+| `title` | String | `""` | Anzeigetitel; setzt Flag `title_<id>` |
+| `min_floor` | int | 1 | Meilenstein zählt erst ab dieser Etage (`ms_5000`: 2) |
+| `mod_tag` | String | `"follower_milestone"` | |
+
+```json
+{"id": "ms_1000", "followers": 1000, "reward_box": "box_fan", "item": "itm_acc_fan_scarf"}
+```
+
+#### 4.4.12 `mod_lines.json` → `ModLineDef`
 
 | F | T | P / Default | Regel |
 |---|---|---|---|
 | `id` | String | ✓ | `mod_` |
-| `tag` | String | ✓ | `REQUIRED_MOD_TAGS`, `achievement:<ach_id>` oder frei (z. B. `boss_intro:enc_f1_janitor`) |
+| `tag` | String | ✓ | `REQUIRED_MOD_TAGS`, `timer_warn_<s>`, parametrisiert (`achievement:<ach_id>`, `boss_intro:<enemy_id>`, `boss_phase:<enemy_id>:<n>`) oder optionale Präfixe (`OPTIONAL_MOD_TAG_PREFIXES`) |
 | `voice` | String | `"mod"` | `VOICES` |
-| `text` | String | ✓ | Platzhalter nur `{name}` aus `TEXT_PLACEHOLDERS` |
+| `text` | String | ✓ | ≤ 110 Zeichen; Platzhalter `{…}` nur aus `TEXT_PLACEHOLDERS` |
 | `user` | String | `""` | nur voice chat: fester Absender; `""` → zufälliger Handle (Tag `chat_handle`) |
 | `weight` | int | 1 | ≥ 1 |
 | `min_floor` / `max_floor` | int | 1 / 0 | |
 | `min_hype` / `max_hype` | int | 0 / 100 | |
 
+GDD-Key → Tag: alle Keys aus GDD §11.2 sind 1:1 Tags, außer `timer_warning_5` → `timer_warn_300`, `timer_warning_1` →
+`timer_warn_60`, `timer_zero` → `timer_expired`, `boss_intro_<boss>` → `boss_intro:<enemy_id>`, `boss_phase_<boss>_<n>` →
+`boss_phase:<enemy_id>:<n>`; die 10:00-Meldung ist `timer_warn_600` mit `voice: chat`. Fallback bei der Auswahl: `a:b:c` → `a:b` → `a`.
+
 ```json
-{"id": "mod_battle_win_01", "tag": "battle_win", "voice": "mod", "text": "Applaus für {player}! Die Quote dankt.", "weight": 2}
+{"id": "mod_floor_start_01", "tag": "floor_start", "voice": "mod", "text": "Etage {floor}! Neuer Countdown, neue Monster, gleiche Gage: keine.", "weight": 1}
 ```
 
-#### 4.4.12 ModelSpec (in `party.json`, `enemies.json`)
+#### 4.4.13 `scenes.json` → `SceneDef` (Mopsula-Szenen, GDD §10.2)
+
+| F | T | P / Default | Regel |
+|---|---|---|---|
+| `id` | String | ✓ | `scn_` |
+| `name` | String | ✓ | |
+| `condition` | String | ✓ | Grammatik §4.4.9; `e.` = Safe-Room-Kontext `{safe_room_id, first_visit, safe_room_visits, kai_level}` |
+| `lines` | Array[{voice, text}] | ✓ | 1..40; voice ∈ `mopsula`/`kai`/`mod`; text ≤ 110 Zeichen |
+| `set_flag` | String | `""` | Flag, das nach der Szene auf `true` gesetzt wird |
+| `once` | bool | true | setzt immer zusätzlich `scene_<id>` |
+| `priority` | int | 0 | kleiner = zuerst, wenn mehrere verfügbar |
 
 ```json
-{"base": "rodent", "scale": 0.8, "colors": {"primary": "#7a6a5a", "secondary": "#d9b8a0", "accent": "#e04050", "skin": "#e8b89a", "eyes": "#111111"},
+{"id": "scn_mop_4", "name": "Vor dem Thron", "condition": "e.safe_room_id == \"sr_signalbox\" && e.first_visit == true",
+ "set_flag": "mop_pep_talk", "priority": 0,
+ "lines": [{"voice": "mopsula", "text": "Sie nennt sich Königin. Eine RATTE. Mit einer Krone aus Fahrscheinen."},
+           {"voice": "kai", "text": "Wir müssen nicht gegen sie kämpfen. Die Treppe ist gleich da."}]}
+```
+Bedingungen der vier Szenen: `scn_mop_1` `e.safe_room_visits == 1`; `scn_mop_2` `f.defeated_enm_boss_hausmeister == true`;
+`scn_mop_3` `e.kai_level >= 4 && f.scene_scn_mop_1 == true`; `scn_mop_4` wie oben.
+
+#### 4.4.14 ModelSpec (in `party.json`, `enemies.json`)
+
+```json
+{"base": "rodent", "scale": 0.8, "pose": "auto", "colors": {"primary": "#6b5b4e", "secondary": "#e88a9a", "accent": "#e04050", "skin": "#e8b89a", "eyes": "#ff3030"},
  "props": ["bandana"], "seed": 0, "gltf": ""}
 ```
 
-`base` ∈ `MODEL_BASES` (✓), `scale` 0.3..4.0 (1.0), `colors.primary` ✓, übrige Farben optional (Archetyp-Defaults),
-`props` ⊂ `MODEL_PROPS`, `seed` int (0), `gltf` = späterer `res://art/models/…glb`-Pfad (`""`).
+`base` ∈ `MODEL_BASES` (✓), `scale` 0.3..4.0 (1.0), `pose` ∈ `MODEL_POSES` (`"auto"` = ART-Regel: `rodent` mit `scale ≥ 1.0`
+aufrecht, sonst Vierbeiner; `"quadruped"`/`"upright"` erzwingen — `enm_boss_rattenkoenigin` setzt `"quadruped"`),
+`colors.primary` ✓, übrige Farben optional (Archetyp-Defaults), `props` ⊂ `MODEL_PROPS`, `seed` int (0),
+`gltf` = späterer `res://art/models/…glb`-Pfad (`""`).
 
 ### 4.5 Validierung (`DataValidator`) und `GameData`-API
 
-Ablauf `GameData.load_dir(dir)`: (1) alle 11 Dateien parsen; (2) je Eintrag Schema prüfen + normalisieren; (3) zweiter Durchlauf:
-Referenzen; (4) Defs bauen. Alle Fehler werden gesammelt (kein Abbruch beim ersten).
+Ablauf `GameData.load_dir(dir)`: (1) alle Dateien aus `TABLES` parsen; (2) je Eintrag Schema prüfen + normalisieren; (3) zweiter
+Durchlauf: Referenzen; (4) Bedingungen parsen (`ConditionExpr.parse`); (5) Defs bauen. Alle Fehler werden gesammelt (kein Abbruch).
 
 Regeln (jede Verletzung = ein Eintrag in `errors`, Format `"<table>[<index>|<id>].<field>: <message>"`):
 
-1. Datei existiert, ist Objekt mit `schema == 1` und Array `entries`.
-2. Pflichtfelder vorhanden; Typen korrekt; `int` ganzzahlig; unbekannte Keys verboten.
-3. ID-Regex je Tabelle; IDs global eindeutig (inkl. Encounter-IDs).
-4. Enums aus §4.3; Wertebereiche aus §4.4.
-5. Referenzen auflösbar: Skills (Party/Gegner/Klassen/Items/Phasen), Status (Skills/Items/Sponsoren), Items (Drops, Lootboxen,
-   Truhen, Shop, Startausrüstung, Sponsor-Item), Gegner (Encounter, Summon), Lootboxen (Achievements), Encounter (Etagen-Bosse).
-6. Typ-Konsistenz: `use_skill` hat `user: "item"`; Stunts haben `category: "stunt"` und `stunt_chance > 0`;
-   Startausrüstung passt zu Slot und `equip_by`; Bosse-Encounter haben `boss: true`.
+1. Datei existiert, ist Objekt mit `schema == 1` und Array `entries`; Top-Level-Zusatzschlüssel nur laut §4.1
+   (`party.start` Pflicht, `lootboxes.pools`/`pity` Pflicht, `enemies.pseudo_units` optional).
+2. Pflichtfelder vorhanden; Typen korrekt; `int` ganzzahlig; unbekannte Keys verboten (auch in verschachtelten Strukturen mit festem Schema).
+3. ID-Regex je Tabelle (§4.2); IDs global eindeutig (inkl. Encounter-, Etagen-Event-, Zonen-, Safe-Room- und Pseudo-IDs).
+4. Enums aus §4.3; Wertebereiche aus §4.4; Texte ≤ 110 Zeichen (mod_lines, scenes).
+5. Referenzen auflösbar: Skills (Party/Gegner-AI/Phasen/Items/`attack_skill`), Status (Skills, Items, Sponsoren, Phasen-Ops,
+   `status_resist`, `excludes`), Items (Drops, `boss_drops`, Pools, Truheninhalte, Shops, Start-Inventar, Startausrüstung,
+   Sponsor-Items, Meilensteine, Gate-`requires`), Gegner (Encounter, Summon, Phasen-Ops), Pseudo-Einheiten (Phasen-Ops),
+   Lootboxen (Achievements, Meilensteine, `boss_drops`, Glücksrad), Encounter (Bosse, `timer_start_after`, Platzierung,
+   Spawner, Event-Folgekämpfe). Klassen-`learnset` mit `min_floor > 1`: fehlender Skill nur Warnung.
+6. Typ-Konsistenz: `use_skill` hat `user: "item"`; Stunts haben `category: "stunt"` und `success_base > 0`; `damage_type: heal`
+   hat `heal_mode`; Startausrüstung passt zu Slot und `equip_by`; Boss-Encounter haben `boss: true`; AI-Zielregel passt zum Skill-Ziel;
+   `ai.type: phased` ⇔ `phases` nicht leer, `hp_above` streng absteigend, letzte = 0.0.
 7. Party enthält `kai` und `mopsula`; `battle_slot` eindeutig.
-8. Etagen: `index` lückenlos ab 1; `floor_1.playable == true`.
+8. Etagen: `index` lückenlos ab 1; `floor_1.playable == true`. Layout: Raster-Grenzen, Türen symmetrisch, alle Zellen von `start`
+   erreichbar (Gates als offen gerechnet), genau 1 `start`/`stairs`, Zelle von `stairs` hat `kind: stairs`, Zonen-IDs existieren,
+   Offsets ≤ 4.5, `group_id`/Truhen-IDs im Laufzeitformat und eindeutig, Safe-Room-Zellen haben `kind: safe`.
 9. `mod_lines`: jeder Tag aus `REQUIRED_MOD_TAGS` hat ≥ 1 Zeile; zusätzlich `timer_warn_<v>` für jeden Wert `v` aus allen
-   `floors.timer_warnings`; Platzhalter nur aus `TEXT_PLACEHOLDERS` (Regex `\{([a-z_]+)\}`).
-10. `achievements.stat` ∈ `StatIds.ALL` (DataValidator hält eine Kopie `STAT_IDS`; `test_m2_achievements` prüft Gleichheit).
+   `floors.timer_warnings`; **jeder in Daten referenzierte Tag** (Phasen-`say`, `warn_tag`, `mod_tag` von Lootboxen/Sponsoren/
+   Meilensteinen) hat ≥ 1 Zeile; Platzhalter nur aus `TEXT_PLACEHOLDERS` (Regex `\{([a-z_]+)\}`).
+10. `achievements.condition` und `scenes.condition` parsen fehlerfrei; `s.`-Operanden ∈ `StatIds.ALL` (DataValidator hält eine Kopie
+    `STAT_IDS`; `test_m2_achievements` prüft Gleichheit); `e.`-Schlüssel ∈ Payload-Schlüssel des Triggers (§6.3).
 
 ```gdscript
 class_name GameData extends RefCounted
 const TABLES: PackedStringArray = ["statuses", "skills", "items", "classes", "party", "enemies", "floors",
-	"lootboxes", "achievements", "sponsors", "mod_lines"]
+	"lootboxes", "achievements", "sponsors", "milestones", "mod_lines", "scenes"]
 var source: String = ""                    # dir or "dicts"
 var errors: PackedStringArray = []
+var warnings: PackedStringArray = []
 
 func load_dir(dir: String = "res://data") -> bool          # true if no errors
-func load_from_dicts(tables: Dictionary) -> bool           # {"skills": [ {...} ], ...}; missing tables = empty; same validation
-                                                           # except rules 7–9 (fixtures may be partial)
+func load_from_dicts(tables: Dictionary) -> bool           # {"skills": [ {...} ], ..., "party_start": {...}, "lootbox_pools": {...},
+                                                           #  "lootbox_pity": {...}, "pseudo_units": [...]}; missing = empty/defaults;
+                                                           # same validation except rules 7–9 (fixtures may be partial)
 func is_valid() -> bool
 # Getters: unknown id → null + push_error("GameData: unknown <table> id '<id>' (res://data/<table>.json)")
 func enemy(id: String) -> EnemyDef
+func pseudo_unit(id: String) -> PseudoUnitDef
 func skill(id: String) -> SkillDef
 func item(id: String) -> ItemDef
 func party_member(id: String) -> PartyMemberDef
 func achievement(id: String) -> AchievementDef
 func lootbox(id: String) -> LootboxDef
 func sponsor(id: String) -> SponsorDef
+func milestone(id: String) -> MilestoneDef
 func status(id: String) -> StatusDef
 func class_def(id: String) -> ClassDef
+func scene_def(id: String) -> SceneDef
 func floor_def(index: int) -> FloorDef      # null (no error) if index has no floor → end of content
 func floor_by_id(id: String) -> FloorDef
 func encounter(id: String) -> EncounterDef
 func mod_lines(tag: String) -> Array[ModLineDef]   # [] if none (no error)
+func party_start() -> Dictionary                   # {"inventory": {id: int}, "credits": int}
+func loot_pool(floor_index: int, rarity: String) -> Array[Dictionary]   # pools.f<i> (fallback highest ≤ i); rarity incl. "fan"
+func pity_limits() -> Dictionary                   # {"rare": 4, "epic": 8}
 func has_id(table: String, id: String) -> bool
 func ids(table: String) -> PackedStringArray       # sorted ascending
 func all_statuses() -> Array[StatusDef]
@@ -1234,14 +1735,21 @@ func all_enemies() -> Array[EnemyDef]
 func all_floors() -> Array[FloorDef]               # sorted by index
 func all_lootboxes() -> Array[LootboxDef]
 func all_achievements() -> Array[AchievementDef]
+func all_achievements_for(trigger_id: String) -> Array[AchievementDef]
 func all_sponsors() -> Array[SponsorDef]
+func all_milestones() -> Array[MilestoneDef]       # sorted by followers
+func all_scenes() -> Array[SceneDef]               # sorted by priority, then id
 ```
 
 Def-Klassen (`core/data/defs/*.gd`): `class_name XxxDef extends RefCounted`, ein typisiertes Feld pro JSON-Feld
 (gleicher Name; `for` → `for_members`), verschachtelte Strukturen als normalisierte `Dictionary`/`Array[Dictionary]`,
 String-Listen als `PackedStringArray`, plus `static func from_dict(d: Dictionary) -> XxxDef` (erwartet normalisiertes Dict).
-Zusatzfelder: `FloorDef.encounters: Array[EncounterDef]`, `ModLineDef.tag_base` (Teil vor `:`).
-Defs sind nach dem Laden **unveränderlich** (Konvention: niemand schreibt in Def-Felder).
+Zusatzfelder: `FloorDef.encounters: Array[EncounterDef]`, `ModLineDef.tag_base` (Teil vor dem ersten `:`),
+`AchievementDef.expr` / `SceneDef.expr` (`ConditionExpr`, geparst). Defs sind nach dem Laden **unveränderlich**.
+
+`data/events.json` (Live-Events, Schema 05 §10.1, Top-Level `{"schema": 1, "events": [...]}`) gehört **nicht** zu `TABLES`:
+Es wird vom Server-Pfad später unverändert geliefert und daher von `EventCatalog` (M8) geladen und mit `EventDef.validate()`
+geprüft (05 CR-9). `test_m8_event_def` lädt die echte Datei → Fehler darin lassen `check.sh` scheitern.
 
 ### 4.6 `SeedUtil` (M0)
 
@@ -1257,7 +1765,8 @@ static func derive(base: int, purpose: String, index: int) -> int:
 static func make_rng(seed: int) -> RandomNumberGenerator   # rng.seed = seed; returns rng
 ```
 
-Verwendete Zwecke: `"floor"` (index = Etage), `"battle"`, `"lootbox"`, `"chest"`, `"show"`, `"shop"`.
+Verwendete Zwecke: `"floor"` (index = Etage), `"battle"`, `"lootbox"`, `"chest"`, `"show"`, `"shop"`, `"event"` (Etagen-Events,
+§7.4), `"stray"` (Streuner), `"retry"` (Generator), im Kampf `"ctb"`, `"action"`, `"ai"`, `"gift"` (§5.1).
 Golden Values (gemessen mit 4.7.2, Pflicht in `test_m0_seed_util.gd`): `mix(1, 2) == 696197768`,
 `derive(4242, "floor", 1) == 1557687279`, `derive(1, "battle", 1) == 582315397`.
 
@@ -1265,8 +1774,9 @@ Golden Values (gemessen mit 4.7.2, Pflicht in `test_m0_seed_util.gd`): `mix(1, 2
 
 ## 5. Kampf-Kern (M1)
 
-Alle Klassen `extends RefCounted`, keine Autoloads, keine Nodes, kein `await`. Jede Zufallsentscheidung nutzt
-`BattleState.rng` (geseedet aus `BattleSetup.seed`) → gleicher Seed + gleiche Befehle = identische Events.
+Alle Klassen `extends RefCounted`, keine Autoloads, keine Nodes, kein `await`. Jede Zufallsentscheidung nutzt RNGs, die aus
+`BattleSetup.seed` abgeleitet sind → gleicher Seed + gleiche Befehle = identische Events (Brief §6b.1). Zahlen und Regeln
+folgen GDD §3 (Formeln kanonisch, Konstanten in `Balance`, §5.9).
 
 ### 5.1 Zustandsautomat
 
@@ -1275,15 +1785,22 @@ Alle Klassen `extends RefCounted`, keine Autoloads, keine Nodes, kein `await`. J
 SETUP ───────────────► AWAIT_COMMAND ◄──────────────┐
                             │ submit(cmd)            │ nächster Akteur kann handeln
                             ▼                        │
-                       (resolve + TURN_END + CTB) ───┘
-                            │ alle Gegner KO / alle Party KO / Flucht erfolgreich
+       (resolve + TURN_END + CTB + interne Züge) ────┘
+                            │ alle Gegner KO/geflohen / alle Party KO / Flucht erfolgreich
                             ▼
                         FINISHED  (result != null, BATTLE_END war letztes Event)
 ```
 
-**Invariante:** Nach `start()`, `submit()` und `apply_sponsor_gift()` gilt immer: entweder `is_finished()` oder
-`current_actor()` ist lebendig und **kann handeln** (Züge mit `skip_turn`-Status werden intern verbraucht und erscheinen
-als `TURN_START → TURN_SKIPPED → … → TURN_END` in der zurückgegebenen Liste).
+**Invariante:** Nach `start()`, `submit()` und `apply_gift()` gilt immer: entweder `is_finished()` oder `current_actor()` ist eine
+lebende, **echte** Einheit (keine Pseudo-Einheit), die handeln kann. Interne Züge erscheinen vollständig in der zurückgegebenen
+Liste: Züge von Pseudo-Einheiten (`TURN_START(u0) → ACTION_START → DAMAGE… → TURN_END`) und Akteure, die am Zugbeginn an Gift
+sterben (`TURN_START → DAMAGE(status_id) → KO`, ohne `TURN_END`).
+
+RNG-Regel (05 CR-2): `var action_n: int`; bei **jedem** `TURN_START` gilt `action_n += 1` und
+`rng.seed = SeedUtil.derive(setup.seed, "action", action_n)` (Auflösung) sowie
+`ai_rng.seed = SeedUtil.derive(setup.seed, "ai", action_n)` (nur `choose_ai_command`). Start-Zähler nutzen
+`SeedUtil.derive(setup.seed, "ctb", 0)`, Sponsor-Geschenke `SeedUtil.derive(setup.seed, "gift", k)`. Damit ergibt das erneute
+Einspielen aufgezeichneter Befehle dieselben Events, egal ob die KI-Wahl im Replay neu gerechnet wird oder nicht.
 
 ### 5.2 `StatBlock`, `Elements`
 
@@ -1302,10 +1819,14 @@ static func from_dict(d: Dictionary) -> StatBlock   # missing keys → 0
 static func key_to_stat(key: String) -> StatBlock.Stat
 
 class_name Elements extends RefCounted
-const NONE: String = "none"   # + FIRE, ICE, SHOCK, TOXIC, LIGHT, DARK
-const ALL: PackedStringArray = ["none", "fire", "ice", "shock", "toxic", "light", "dark"]
-static func multiplier(mods: Dictionary, element: String) -> float   # default 1.0; "none" → 1.0
+const NONE: String = "none"   # + PHYSICAL, FIRE, ICE, SHOCK, POISON
+const ALL: PackedStringArray = ["none", "physical", "fire", "ice", "shock", "poison"]   # == DataValidator.ELEMENTS
+static func multiplier(mods: Dictionary, element: String) -> float   # "none" → 1.0; else mods.get(element, 1.0)
+static func affinity(mult: float) -> StringName                      # 1.5+ &"weak", 1.0 &"normal", 0<x<1 &"resist", 0 &"immune"
 ```
+
+Physische Resistenz (`element_mods {"physical": 0.5}`) wirkt auf jeden Schaden mit Element `physical` (Basisangriffe, physische
+Skills, Zug der Rattenkönigin). Vfx/Sfx heißen weiterhin `toxic`; `Vfx.for_skill` bildet Element `poison` auf `&"toxic"` ab.
 
 ### 5.3 `ActionEvent` (exakte Struktur)
 
@@ -1314,27 +1835,32 @@ class_name ActionEvent extends RefCounted
 enum Type {
 	BATTLE_START,    # value = advantage; target_ids = all combatant ids (party first)
 	TURN_START,      # actor_id
-	TURN_SKIPPED,    # actor_id, status_id (the skip_turn status)
 	ACTION_START,    # actor_id, command, skill_id, item_id, target_ids, text = display name of skill/item/command
-	DAMAGE,          # actor_id ("" for status tick), target_id, amount (>0), hp_after, element, crit, weak, resist,
-	                 # beat, status_id (set if caused by a status tick), skill_id
+	COMBO,           # actor_id (2nd actor), target_id; damage of this action × Balance.COMBO_MULT
+	DAMAGE,          # actor_id ("" for status tick), target_id, amount (>= 0; 0 only if immune), hp_after, element, crit, weak,
+	                 # resist, immune, beat, status_id (set if caused by a status tick), skill_id
 	HEAL,            # actor_id, target_id, amount (>0), hp_after, beat, status_id (tick), skill_id
 	MP_CHANGE,       # target_id, amount (+/-), mp_after, beat
-	MISS,            # actor_id, target_id, beat
 	STATUS_ADDED,    # target_id, status_id, value = turns, beat
-	STATUS_REMOVED,  # target_id, status_id (expired, cleansed, woken)
-	STATUS_BLOCKED,  # target_id, status_id (immune or resisted roll)
+	STATUS_REMOVED,  # target_id, status_id (expired, cleansed, replaced via excludes)
+	STATUS_BLOCKED,  # target_id, status_id (immune, element-immune, resisted roll, stun already active)
 	DEFEND,          # actor_id
-	KO,              # target_id, def_id, max_hp, actor_id (killer, "" for status), skill_id (killing skill), value = overkill amount
+	KO,              # target_id, def_id, max_hp, actor_id (killer, "" for status), skill_id, amount = killing damage,
+	                 # value = 1 if overkill (damage >= hp_before + max_hp * 0.5) else 0
 	REVIVE,          # target_id, hp_after, max_hp
-	SUMMON,          # actor_id, target_id = new combatant id, def_id = enemy def id, value = slot
+	SUMMON,          # actor_id, target_id = new combatant id, def_id = enemy/pseudo def id, value = slot
+	PSEUDO_REMOVED,  # target_id (pseudo unit leaves the CTB order)
+	ESCAPED,         # actor_id (enemy leaves the battle, no rewards for it)
+	CREDITS_STOLEN,  # actor_id, value = amount (refunded on VICTORY if refund_on_win)
+	CREDITS_GAINED,  # value = amount (gift; applied after battle via BattleResult.credits_delta)
 	STUNT_RESULT,    # actor_id, skill_id, success
 	FLEE_RESULT,     # actor_id, success
-	ITEM_GAINED,     # item_id, value = count (sponsor gift)
+	ITEM_GAINED,     # item_id, value = count (gift)
 	SPONSOR_GIFT,    # sponsor_id, text = sponsor name
-	PHASE_CHANGE,    # actor_id (boss), value = new phase index (1-based), text = announce
-	ANNOUNCE,        # text (e.g. "Präventivschlag!", "Hinterhalt!")
-	CTB_ORDER,       # order = next 10 combatant ids (index 0 = next actor)
+	PHASE_CHANGE,    # actor_id (boss), value = new phase index (1-based)
+	MOD_LINE,        # text = M.O.D. tag (boss_intro:…, boss_phase:…, warn_tag); Show.say(text)
+	ANNOUNCE,        # text (display, e.g. "Präventivschlag!", "Hinterhalt!")
+	CTB_ORDER,       # order = next PREVIEW_LENGTH (12) combatant ids (index 0 = next actor)
 	TURN_END,        # actor_id
 	BATTLE_END,      # value = BattleResult.Outcome
 }
@@ -1357,22 +1883,25 @@ var beat: int = 0                # events of one action with the same beat play 
 var crit: bool = false
 var weak: bool = false
 var resist: bool = false
+var immune: bool = false
 var success: bool = false
 var value: int = 0
 var order: PackedStringArray = []
-var text: String = ""            # already German, already formatted
+var text: String = ""            # ANNOUNCE/ACTION_START: German display text; MOD_LINE: tag
 
 static func make(t: ActionEvent.Type) -> ActionEvent
-func to_dict() -> Dictionary     # only non-default fields + "type" as String name; used in tests/logs
+func to_dict() -> Dictionary                         # only non-default fields + "type" as String name
+static func from_dict(d: Dictionary) -> ActionEvent  # inverse of to_dict (unknown type → push_error, null); Brief §6b.2
 ```
 
 Reihenfolge-Garantien (Tests prüfen das):
-- Eine Aktion: `ACTION_START` → (`STUNT_RESULT`) → Effekt-Events (aufsteigender `beat`) → `KO`s direkt nach dem tödlichen
-  `DAMAGE` → `TURN_END` (mit vorangehenden Status-Ticks/`STATUS_REMOVED` des Akteurs) → `CTB_ORDER` → `TURN_START` nächster Akteur
-  **oder** `BATTLE_END` als letztes Event.
-- Seitenzugehörigkeit ist an der ID ablesbar: `p…` = Party, `e…` = Gegner (ShowRules/HUD nutzen `begins_with("p")`).
+- Eine Aktion: `ACTION_START` → (`COMBO`) → (`STUNT_RESULT`) → Effekt-Events (aufsteigender `beat`) → `KO`s direkt nach dem
+  tödlichen `DAMAGE` → (`PHASE_CHANGE` → Phasen-Ops) → `TURN_END` (mit vorangehenden `turn_end`-Ticks/`STATUS_REMOVED` des Akteurs)
+  → `CTB_ORDER` → (`MOD_LINE` Pseudo-Warnung) → `TURN_START` nächster Akteur **oder** `BATTLE_END` als letztes Event.
+- Seitenzugehörigkeit ist an der ID ablesbar: `p…` = Party, `e…` = Gegner, `u…` = Pseudo-Einheit (ShowRules/HUD nutzen `begins_with`).
 - `hp_after`/`mp_after` sind Schnappschüsse **nach** dem Event. Die Darstellung liest während der Wiedergabe **nur** Event-Daten,
   nie den (bereits vorausgelaufenen) `BattleState`. Nach der Wiedergabe darf sie mit `BattleState` synchronisieren.
+- `ActionEvent.from_dict(e.to_dict())` ergibt ein Event mit identischem `to_dict()` (Test in `test_m1_battle_flow`).
 
 ### 5.4 Weitere Klassen (Felder + Signaturen)
 
@@ -1382,12 +1911,17 @@ enum Advantage { NORMAL, PREEMPTIVE, AMBUSH }
 var encounter_id: String = ""
 var group_id: String = ""                    # exploration group ("" for forced/debug)
 var enemy_ids: PackedStringArray = []        # 1..4 EnemyDef ids, slot order
-var party: Array[Combatant] = []             # built by BattleBridge, ids p0.., current hp/mp
+var party: Array[Combatant] = []             # built by BattleBridge, ids p0.., current hp/mp, start statuses applied
 var items: Dictionary = {}                   # item_id -> count (battle-usable consumables)
+var credits_available: int = 0               # party credits (limit for steal_credits)
 var advantage: BattleSetup.Advantage = Advantage.NORMAL
 var seed: int = 1
 var is_boss: bool = false
 var can_flee: bool = true
+var tutorial: bool = false                   # enemy damage × 0.5, flee locked, party HP never below 1
+var enemy_dmg_mult: float = 1.0              # Vorabendprogramm 0.75 × tutorial 0.5
+var exp_mult: float = 1.0                    # Vorabendprogramm 1.2
+var show_mods: Dictionary = {"hype_gain_mult": 1.0, "follower_mult": 1.0}   # product over equipped items
 var theme_id: String = "metro"
 var palette: Dictionary = {}
 var floor_index: int = 1
@@ -1395,10 +1929,11 @@ var auto_battle: bool = false
 
 class_name Combatant extends RefCounted
 enum Side { PARTY, ENEMY }
-var id: String                    # "p0".."p3" / "e0".. (summons continue numbering, never reused)
-var def_id: String                # "kai" / "enm_tunnel_rat"
+var id: String                    # "p0".."p3" / "e0".. / "u0".. (summons continue numbering, never reused)
+var def_id: String                # "kai" / "enm_kanalratte" / "pu_train_gleis9"
 var side: Combatant.Side
-var slot: int                     # stage slot 0..3
+var is_pseudo: bool = false       # not targetable, no HP, acts via PseudoUnitDef.action, shown in CTB preview
+var slot: int                     # stage slot 0..3 (pseudo: -1)
 var display_name: String
 var level: int
 var stats: StatBlock              # incl. equipment/class (computed outside); max_hp = stats HP
@@ -1410,25 +1945,32 @@ var defending: bool = false
 var attack_skill: String
 var skills: PackedStringArray = []
 var stunts: PackedStringArray = []
+var stunt_cooldown: int = 0       # own turns until STUNT is available again
 var element_mods: Dictionary = {}
 var status_immune: PackedStringArray = []
-var attack_element: String = "none"
-var ai: String = "basic"
+var status_resist: Dictionary = {}           # status id → 0..1
+var attack_element: String = "physical"
+var crit_bonus: float = 0.0                  # from equipment
+var ai: Dictionary = {}                      # EnemyDef.ai (normalized)
+var phases: Array[Dictionary] = []           # EnemyDef.phases
+var phase: int = 0                           # current phase index (0-based; -1 = not yet entered)
+var used_once: PackedStringArray = []        # AI actions with cond.once already used ("<phase>:<index>")
+var own_turns: int = 0                       # completed own turns (turn_mod, first own turn = 0)
 var is_boss: bool = false
-var phase: int = 0                # boss phase (0 = base)
+var is_summon: bool = false                  # summoned units give no EXP/credits/drops
 var exp_reward: int = 0
 var credit_reward: int = 0
 var drops: Array[Dictionary] = []
-var hype_value: int = 1
+var boss_drops: Array[Dictionary] = []
 var model: Dictionary = {}        # ModelSpec passthrough for presentation
-var last_action_key: String = ""  # "attack" / skill id / "item" … (show variety)
-var repeat_count: int = 0
+var last_action_key: String = ""  # "attack" / skill id / item id / "stunt" / "defend" (show variety)
 
 static func create_enemy(def: EnemyDef, id: String, slot: int) -> Combatant
+static func create_pseudo(def: PseudoUnitDef, id: String) -> Combatant
 static func create_party(def: PartyMemberDef, id: String, slot: int, display_name: String, level: int,
 	stats: StatBlock, hp: int, mp: int, skills: PackedStringArray, stunts: PackedStringArray, attack_skill: String,
-	element_mods: Dictionary, status_immune: PackedStringArray, attack_element: String) -> Combatant
-func is_alive() -> bool
+	element_mods: Dictionary, status_immune: PackedStringArray, attack_element: String, crit_bonus: float) -> Combatant
+func is_alive() -> bool                            # pseudo: true while in the order
 func is_party() -> bool
 func max_hp() -> int
 func max_mp() -> int
@@ -1436,7 +1978,9 @@ func stat(s: StatBlock.Stat) -> int                # effective: base × product(
 func has_status(status_id: String) -> bool
 func has_flag(flag: String) -> bool                # any active status has flag
 func hp_ratio() -> float
-func tick_speed() -> int                           # CTBQueue.tick_speed(stat(SPD)) × product(tick_speed_mult), min 2
+func speed_mult() -> float                         # product of tick_speed_mult of active statuses (haste 0.6 / slow 1.5)
+func to_dict() -> Dictionary
+static func from_dict(d: Dictionary, data: GameData) -> Combatant
 
 class_name StatusEffect extends RefCounted
 var def: StatusDef
@@ -1447,6 +1991,7 @@ func id() -> String
 
 class_name BattleCommand extends RefCounted
 enum Kind { ATTACK, SKILL, STUNT, ITEM, DEFEND, FLEE }
+const KIND_NAMES: PackedStringArray = ["attack", "skill", "stunt", "item", "defend", "flee"]
 var kind: BattleCommand.Kind
 var actor_id: String
 var skill_id: String = ""
@@ -1458,15 +2003,15 @@ static func stunt(actor_id: String, skill_id: String, target_ids: PackedStringAr
 static func item(actor_id: String, item_id: String, target_ids: PackedStringArray) -> BattleCommand
 static func defend(actor_id: String) -> BattleCommand
 static func flee(actor_id: String) -> BattleCommand
+func to_dict() -> Dictionary     # {"kind": "skill", "actor": "p0", "skill": "skl_…", "item": "", "targets": ["e1"]} — Brief §6b.2
+static func from_dict(d: Dictionary) -> BattleCommand   # unknown kind / missing actor → null
 
 class_name HitResult extends RefCounted
-var hit: bool = true
-var amount: int = 0          # >= 0; absorb → absorbed = true and amount is the heal amount
+var amount: int = 0          # >= 0
 var crit: bool = false
 var weak: bool = false
 var resist: bool = false
 var immune: bool = false
-var absorbed: bool = false
 
 class_name BattleResult extends RefCounted
 enum Outcome { VICTORY, DEFEAT, FLED }
@@ -1474,41 +2019,68 @@ var outcome: BattleResult.Outcome
 var encounter_id: String
 var group_id: String
 var is_boss: bool
-var turns: int                         # number of TURN_START events
-var exp: int                           # sum of exp_reward of all defeated enemies (VICTORY only)
-var credits: int
-var drops: PackedStringArray = []      # rolled with battle rng at victory
+var boss_id: String = ""               # EnemyDef id of the boss ("" otherwise)
+var advantage: int = 0                 # BattleSetup.Advantage
+var turns: int                         # number of TURN_START events (all units)
+var party_turns: int = 0               # TURN_START of party members
+var exp: int                           # sum of exp_reward of defeated non-summoned enemies × exp_mult (VICTORY only)
+var credits: int                       # sum of credit_reward (incl. overkill bonus)
+var overkill_credits: int = 0          # part of `credits` that came from overkill × 1.25
+var credits_stolen: int = 0            # steal_credits total (VICTORY + refund_on_win → refunded)
+var credits_delta: int = 0             # gift credits (05 CR-2)
+var drops: PackedStringArray = []      # item ids rolled with battle rng at victory
+var boss_rewards: Array[Dictionary] = []   # EnemyDef.boss_drops of defeated bosses ({kind, id, amount})
 var party_hp: Dictionary = {}          # member def id -> int (final, KO = 0)
 var party_mp: Dictionary = {}
-var item_delta: Dictionary = {}        # item id -> int (negative used, positive sponsor gifts)
+var item_delta: Dictionary = {}        # item id -> int (negative used, positive gifts)
 var kills: int = 0
+var defeated_ids: PackedStringArray = []   # EnemyDef ids of defeated enemies (bestiary)
+var weak_found: Dictionary = {}        # EnemyDef id -> PackedStringArray of elements that hit "weak"
+var escaped: PackedStringArray = []    # EnemyDef ids that used escape
 var damage_taken: int = 0              # total damage to party
-var min_party_hp_ratio: float = 1.0    # lowest hp ratio any party member reached while alive
-var lowest_end_hp: int = 0             # min hp among living party members at the end
+var min_party_hp: int = 0              # at battle end: lowest hp among living party members
+var min_party_hp_pct: float = 1.0      # at battle end: lowest hp ratio among living party members
+var crits: int = 0                     # party crits
+var weakness_hits: int = 0             # party hits on weak
+var items_used: int = 0
+var party_kos: int = 0
+func to_dict() -> Dictionary
 ```
 
-### 5.5 `CTBQueue` (Tick-System)
+`exp` als Bezeichner ist eine bewusste Ausnahme der Namensregel (§13.1).
+
+### 5.5 `CTBQueue` (Tick-System, GDD §3.2–3.4)
 
 ```gdscript
 class_name CTBQueue extends RefCounted
-const RANK_QUICK: int = 2      # ITEM, DEFEND, failed FLEE
-const RANK_NORMAL: int = 3     # ATTACK, default skill rank, skipped turn
-const PREVIEW_LENGTH: int = 10
-static func tick_speed(spd: int) -> int          # clampi(roundi(400.0 / float(spd + 10)), 4, 30)
+const TICK_K: int = 1000
+const TICK_OFFSET: int = 10
+const RANK_DIVISOR: float = 3.0
+const RANK_QUICK: int = 2      # ITEM, DEFEND, FLEE
+const RANK_NORMAL: int = 3     # ATTACK, default skill rank
+const PREVIEW_LENGTH: int = 12         # desktop/gamepad
+const PREVIEW_LENGTH_TOUCH: int = 10   # touch UI shows the first 10 of the same list
+static func base_delay(spd: int) -> int          # roundi(TICK_K / float(spd + TICK_OFFSET)); spd = effective SPD
+static func delay_for(c: Combatant, rank: int) -> int
+	# maxi(1, roundi(base_delay(c.stat(SPD)) * rank / RANK_DIVISOR * c.speed_mult()))
 func setup(combatants: Array[Combatant], advantage: int, rng: RandomNumberGenerator) -> void
-func next_actor() -> Combatant                   # lowest counter among living; ties: party before enemy, then lower slot;
-                                                 # subtracts that counter from all living; returns actor (counter now 0)
-func on_acted(c: Combatant, rank: int) -> void   # c.ctb_counter = c.tick_speed() * rank
-func preview(count: int, actor: Combatant = null, rank: int = -1) -> PackedStringArray
-	# pure simulation, no mutation; index 0 = current/next actor; if actor+rank given, actor's next delay uses rank
-func add(c: Combatant) -> void                   # summons: counter = tick_speed * RANK_NORMAL
+func next_actor() -> Combatant                   # lowest counter among living (incl. pseudo); ties: party → enemy → pseudo,
+                                                 # then higher effective SPD, then lower slot; subtracts that counter from all living
+func on_acted(c: Combatant, rank: int) -> void   # c.ctb_counter = delay_for(c, rank); pseudo: PseudoUnitDef.ctr_after
+func preview(count: int, actor: Combatant = null, rank: int = -1, overrides: Dictionary = {}) -> PackedStringArray
+	# pure simulation on a copy, no mutation; index 0 = current/next actor; the actor's first follow-up uses `rank`
+	# (pending_rank of the highlighted action), everyone else rank 3, pseudo units ctr_after;
+	# overrides: {combatant_id: ctr} for the ghost preview of stun/slow/haste targets (GDD §3.4)
+func add(c: Combatant, counter: int) -> void     # summons roundi(base_delay × 0.5), revived base_delay, pseudo per op
 func remove(c: Combatant) -> void
-func delay(c: Combatant, ticks: int) -> void
+func add_delay(c: Combatant, ticks: int) -> void # stun on apply, stunt fail
 ```
 
-Startwerte: NORMAL: `roundi(ts * 3 * rng.randf_range(0.7, 1.0))`. PREEMPTIVE: Party `slot`, Gegner `ts * 3 + 30`.
-AMBUSH: Gegner `slot`, Party `ts * 3 + 30`. Beispiel `tick_speed`: SPD 5 → 27, 10 → 20, 20 → 13, 40 → 8, 60 → 6.
-Rang: `ATTACK` 3, `SKILL`/`STUNT` = `SkillDef.rank`, `ITEM` 2, `DEFEND` 2, `FLEE` (fehlgeschlagen) 2, übersprungener Zug 3.
+Startwerte (GDD §2.4): **NORMAL** alle `roundi(base_delay × rng.randf_range(0.5, 1.0))`; **PREEMPTIVE** Party 0, Gegner
+`base_delay`; **AMBUSH** Gegner 0, Party `base_delay`. Bosse starten immer NORMAL.
+`base_delay`: SPD 5 → 67, 10 → 50, 11 → 48, 13 → 43, 14 → 42, 15 → 40, 20 → 33, 30 → 25.
+Rang: `ATTACK` 3, `SKILL`/`STUNT` = `SkillDef.rank`, `ITEM` = Rang des `use_skill` (Default 2), `DEFEND` 2, `FLEE` 2.
+Haste/Slow wirken über `speed_mult()` (0.6 / 1.5, schließen sich per `excludes` aus).
 
 ### 5.6 `BattleState`
 
@@ -1518,48 +2090,81 @@ enum Phase { SETUP, AWAIT_COMMAND, FINISHED }
 var phase: BattleState.Phase = Phase.SETUP
 var setup: BattleSetup
 var data: GameData
-var rng: RandomNumberGenerator          # seeded from setup.seed in _init
-var combatants: Array[Combatant] = []   # party (p0..) then enemies (e0..), summons appended
+var rng: RandomNumberGenerator          # resolution; reseeded per action (§5.1)
+var ai_rng: RandomNumberGenerator       # EnemyAI only; reseeded per action
+var action_n: int = 0
+var combatants: Array[Combatant] = []   # party (p0..) then enemies (e0..), summons and pseudo units appended
 var queue: CTBQueue
 var items: Dictionary                   # copy of setup.items, mutated by ITEM use / gifts
 var turn_count: int = 0
+var failed_flee_attempts: int = 0
+var last_actor_side: int = -1           # Combatant.Side of the previous turn (pseudo counts as ENEMY)
+var last_party_actor_id: String = ""    # combo detection
+var last_party_target_id: String = ""   # "" if the previous party action was not a single-target damage action
+var credits_stolen: int = 0
 var result: BattleResult = null
 var history: Array[ActionEvent] = []    # every event ever returned (debug/tests)
 
 func _init(p_setup: BattleSetup, p_data: GameData) -> void
 func start() -> Array[ActionEvent]
-	# BATTLE_START, ANNOUNCE (preemptive/ambush), CTB_ORDER, TURN_START(first actor) [+ skipped turns]
+	# BATTLE_START, ANNOUNCE (preemptive/ambush), boss phase 1 on_enter ops, CTB_ORDER, TURN_START(first actor) [+ internal turns]
 func current_actor() -> Combatant
 func get_combatant(id: String) -> Combatant
 func party() -> Array[Combatant]
-func enemies() -> Array[Combatant]
-func living(side: Combatant.Side) -> Array[Combatant]
+func enemies() -> Array[Combatant]                           # without pseudo units
+func living(side: Combatant.Side) -> Array[Combatant]        # without pseudo units
 func available_commands(actor: Combatant) -> Array[int]      # BattleCommand.Kind values in menu order
-	# FLEE only if setup.can_flee; STUNT only if actor.stunts non-empty and no no_stunt flag;
+	# FLEE only if setup.can_flee and not setup.tutorial; STUNT only if stunts non-empty, stunt_cooldown == 0 and no no_stunt flag;
 	# ITEM only if any usable item count > 0; SKILL only if skills non-empty
 func usable_skills(actor: Combatant) -> PackedStringArray    # mp sufficient, no no_magic flag for category magic/heal/buff/debuff
 func usable_items() -> PackedStringArray                     # count > 0, usable battle/both
-func valid_targets(actor: Combatant, skill_id: String) -> PackedStringArray   # respects taunt for single_enemy
+func valid_targets(actor: Combatant, skill_id: String) -> PackedStringArray   # never pseudo units
 func default_target(actor: Combatant, skill_id: String) -> String            # enemy: lowest hp; ally heal: lowest ratio
-func preview_order(count: int, hover_rank: int = -1) -> PackedStringArray
+func preview_order(count: int, hover_rank: int = -1, overrides: Dictionary = {}) -> PackedStringArray
 func command_rank(cmd: BattleCommand) -> int
 func validate(cmd: BattleCommand) -> String                  # "" valid, otherwise reason (English, for logs)
 func submit(cmd: BattleCommand) -> Array[ActionEvent]        # push_error + [] if invalid or not current actor
-func choose_ai_command() -> BattleCommand                    # enemy → EnemyAI; party → AutoPolicy
-func apply_sponsor_gift(sponsor_id: String) -> Array[ActionEvent]   # only in AWAIT_COMMAND; does not consume a turn
+func choose_ai_command() -> BattleCommand                    # enemy → EnemyAI (ai_rng); party → AutoPolicy
+func apply_gift(g: Dictionary) -> Array[ActionEvent]         # only in AWAIT_COMMAND; does not consume a turn (05 CR-2)
 func is_finished() -> bool
+func to_dict() -> Dictionary                                 # snapshot incl. CTB counters, statuses, items, action_n
 ```
 
-Regeln: Defend setzt `defending = true` bis zum nächsten `TURN_START` des Akteurs (Schaden × 0.5). Status-Ticks und
-Dauer-Dekrement am `TURN_END` des Trägers; bei 0 → `STATUS_REMOVED`. Erneutes Anwenden: `turns_left = max(alt, neu)`.
-`wake_on_hit`: jeder `DAMAGE` auf den Träger entfernt den Status. Flucht: Chance
-`clampi(50 + (Ø SPD Party − Ø SPD Gegner) × 2, 20, 95)` %. Stunt: Chance `clampi(stunt_chance + roundi(LCK × 0.5), 10, 95)` %;
-Erfolg → Skill-Effekt; Misserfolg → `stunt_fail_status` auf sich selbst (falls gesetzt). Bosse wechseln Phase, sobald
-`hp_ratio < phases[i].hp_below` (Event `PHASE_CHANGE`, Skill-Liste/stat_mult der Phase aktiv). Summons füllen freie
-Gegner-Slots (max. 4 lebende Gegner). Sieg: Drops (`rng.randf() < chance` je Drop je besiegtem Gegner), EXP/Credits summiert.
-Sponsor-Geschenke (`apply_sponsor_gift`): `SPONSOR_GIFT` + Effekt — `heal_party_pct` (HEAL value % max HP an Lebende),
-`mp_party_pct` (MP_CHANGE), `buff_party` (STATUS_ADDED `status`), `item` (ITEM_GAINED, `items[item] += value`),
-`revive_party` (REVIVE mit value % HP), `damage_enemies_pct` (DAMAGE true, value % max HP; Bosse halbiert).
+Regeln (GDD §3):
+- **Zugbeginn** (`TURN_START`): `defending = false`; Status mit `delay_on_apply` (Stun) werden entfernt; Status mit
+  `tick_timing: turn_start` ticken (Gift: `maxi(tick_min, roundi(max_hp × 8 / 100))` Schaden, kann töten → `KO`, kein Zug).
+- **Zugende** (`TURN_END`): Ticks mit `tick_timing: turn_end`, dann alle Dauern −1 (0 → `STATUS_REMOVED`); `own_turns += 1`;
+  `stunt_cooldown -= 1` (min 0), außer im Zug, in dem der Stunt benutzt wurde; `queue.on_acted(actor, rank)`.
+- **Verteidigen**: `defending = true` bis zum nächsten eigenen `TURN_START` (Schaden × 0.5); `MP_CHANGE` +`maxi(2, ceili(max_mp × 0.05))`.
+- **Status anwenden**: Immunität (`status_immune`) oder `element_mods[StatusDef.element] == 0.0` → `STATUS_BLOCKED`; sonst
+  Chance `chance × (1 − status_resist[id])` (Sponsor `ignore_resist` überspringt den Resist-Faktor); `excludes` entfernt den
+  Gegenstatus; aktiver gleicher Status → `turns_left = neu` (kein Stapeln); Stun: `ctb_counter += roundi(base_delay × (Boss ? 0.5 : 1.0))`,
+  bei aktivem Stun `STATUS_BLOCKED`.
+- **Flucht**: `clampf(0.40 + (Ø SPD Party − Ø SPD Gegner) × 0.03 + 0.15 × failed_flee_attempts + (PREEMPTIVE ? 0.25 : 0.0), 0.10, 0.95)`;
+  `flee_guaranteed`-Item (`itm_smoke`) → 1.0; Boss/`can_flee == false`/Tutorial → Befehl ungültig. Fehlschlag: Rang 2, `failed_flee_attempts += 1`.
+- **Stunt**: Chance `clampf(minf(success_base + LCK × success_lck, success_cap) + (lebender Boss-Gegner ? success_boss_mod : 0.0), 0.05, 1.0)`;
+  Erfolg → Skill-Effekt; Fehlschlag → `fail_effect` (Selbstschaden `roundi(max_hp × self_dmg_pct / 100)` als `DAMAGE` ohne Tod
+  (min 1 HP), nach `on_acted` `add_delay(roundi(base_delay × delay_pct / 100))`, `status` auf sich). Danach `stunt_cooldown = cooldown`.
+- **Combo** (GDD §7.3): Party-Aktion mit genau einem gegnerischen Ziel und Schaden, wenn die direkt vorherige Aktion
+  (kein Gegner-/Pseudo-Zug dazwischen) vom **anderen** Party-Mitglied auf **dasselbe** Ziel ging → `COMBO`-Event und
+  `combo_second_hit = true` für alle Treffer dieser Aktion auf dieses Ziel.
+- **Bosse/Phasen**: nach **jedem** `DAMAGE` auf einen Boss: neue Phase = erste Phase mit `hp_ratio > hp_above`; nur vorwärts,
+  max. 1 Wechsel pro Ereignis → `PHASE_CHANGE`, dann `on_enter`-Ops in Reihenfolge: `say` → `MOD_LINE(tag)`; `status_self` →
+  `STATUS_ADDED`; `summon` → `SUMMON` (freie Slots, max. 4 lebende Gegner, Zähler `roundi(base_delay × 0.5)`);
+  `fixed_damage_self` → `DAMAGE` (hp nie unter `min_hp`); `add_pseudo` → `SUMMON` (def_id `pu_…`, id `u<n>`, Zähler `ctr`);
+  `remove_pseudo` → `PSEUDO_REMOVED`. Phase 1 wird nach `BATTLE_START` betreten.
+- **Pseudo-Einheiten**: Wenn eine `u…`-Einheit dran ist, rechnet `BattleState` den Zug selbst: `ACTION_START` (text = Name) →
+  je lebendem Party-Mitglied `DAMAGE` = `roundi(max_hp × fixed_pct_maxhp / 100 × Element-Mult × (defending ? 0.5 : 1.0) × enemy_dmg_mult)`
+  (`guard` wirkt nicht) → `TURN_END` → Zähler `ctr_after`. Steht die Einheit nach einem `CTB_ORDER` auf Position `warn_at`
+  (1-basiert) und wurde seit ihrer letzten Aktion noch nicht gewarnt → `MOD_LINE(warn_tag)`.
+- **Spezial-Skills**: `steal_credits` → `amount = mini(max, setup.credits_available − credits_stolen)` → `CREDITS_STOLEN`;
+  `escape` → `ESCAPED`, Einheit verlässt Kampf und Zugreihenfolge (keine EXP/Credits/Drops; Gruppe gilt danach als erledigt).
+- **Wiederbelebung**: `REVIVE`, Zähler `base_delay`. **Tutorial**: Party-HP fällt durch Schaden nie unter 1.
+- **Sieg**, wenn kein echter Gegner mehr lebt (getötet oder geflohen): Drops je getötetem, nicht beschworenem Gegner
+  `rng.randf() < chance × (1 + Ø LCK der lebenden Party / 100)`; `boss_drops` immer; EXP/Credits summiert (Overkill: Credits
+  dieses Gegners × 1.25, Differenz in `overkill_credits`), `exp × exp_mult`.
+- `apply_gift(g)`: `kind: "sponsor_buff"` → `SPONSOR_GIFT` + Effekte aus `SponsorDef.gift` (§4.4.10, RNG `"gift"`); `gold` →
+  `CREDITS_GAINED`; `chest`/`fan_pack` → `ITEM_GAINED`/`CREDITS_GAINED` je Inhalt. Ändert sich die Reihenfolge (Status), folgt `CTB_ORDER`.
 
 ### 5.7 Darstellungs-Protokoll (M5 treibt den Kern)
 
@@ -1576,10 +2181,12 @@ func run(setup: BattleSetup) -> void:
 		var actor: Combatant = state.current_actor()
 		Events.battle_turn_started.emit(actor.id, actor.is_party())
 		var cmd: BattleCommand
-		if actor.is_party() and not Game.auto_battle:
+		var chosen: bool = actor.is_party() and not Game.auto_battle
+		if chosen:
 			cmd = await hud.request_command(state, actor)     # menus, target cursor, CTB preview via state.preview_order
 		else:
 			cmd = state.choose_ai_command()
+		Game.record({"t": "battle", "cmd": cmd.to_dict(), "auto": not chosen})
 		await _play(state.submit(cmd))
 	var result: BattleResult = state.result
 	Events.battle_ended.emit(result.outcome, result.encounter_id)
@@ -1593,26 +2200,29 @@ func _play(events: Array[ActionEvent]) -> void:
 	await player.play(events)          # BattlePlayer emits event_played(e) per event → Show.on_battle_event(e)
 	if state.is_finished():
 		return
-	var sponsor_id: String = Show.take_sponsor_gift()
-	if sponsor_id != "":
-		await player.play(state.apply_sponsor_gift(sponsor_id))
+	var g: Dictionary = Show.take_pending_gift(state)
+	if not g.is_empty():
+		await player.play(state.apply_gift(g))
 ```
 
-`BattlePlayer` (M5): `signal event_played(e: ActionEvent)`; `var speed: float` (= `Game.settings.battle_speed`, Autoplay 4.0);
-`func play(events: Array[ActionEvent]) -> void` (Coroutine). Events mit gleichem `beat` innerhalb einer Aktion starten gleichzeitig.
-Richtdauern bei `speed = 1.0` (Dauer / speed):
+`BattlePlayer` (M5): `signal event_played(e: ActionEvent)`; `var speed: float` (= `Game.settings.battle_speed` ∈ {1.0, 2.0},
+Autoplay 4.0); `func play(events: Array[ActionEvent]) -> void` (Coroutine). Events mit gleichem `beat` innerhalb einer Aktion
+starten gleichzeitig. Richtdauern bei `speed = 1.0` (Dauer / speed):
 
 | Event | Darstellung | Dauer |
 |---|---|---|
 | `BATTLE_START` | Kamera-Fahrt, Banner „KAMPF!“ / Boss-Intro | 1.2 s (Boss 2.5 s) |
 | `TURN_START` | Akteur-Highlight, CTB-Leiste | 0.15 s |
 | `ACTION_START` | Skill-Banner; Rig dasht (Nahkampf) und spielt `attack`/`cast`/`stunt`/`item`, wartet auf `impact` | Anim bis Impact |
-| `DAMAGE` / `HEAL` / `MISS` / `MP_CHANGE` | `hit`-Anim, `flash`, Vfx, Schadenszahl | 0.35 s pro Beat |
+| `COMBO` | Banner „COMBO!“ | 0.4 s |
+| `DAMAGE` / `HEAL` / `MP_CHANGE` | `hit`-Anim, `flash`, Vfx, Schadenszahl (`immune` → „IMMUN“) | 0.35 s pro Beat |
 | `STATUS_ADDED` / `REMOVED` / `BLOCKED` | Icon-Pop + Text | 0.25 s |
-| `KO` | `die`-Anim, Dissolve (Gegner) | 0.6 s |
-| `SUMMON` | Rig erscheint mit `smoke` | 0.6 s |
+| `KO` | `die`-Anim, Dissolve (Gegner), Overkill-Banner bei `value == 1` | 0.6 s |
+| `SUMMON` / `PSEUDO_REMOVED` / `ESCAPED` | Rig/Icon erscheint mit `smoke` / verschwindet | 0.6 s |
+| `CREDITS_STOLEN` / `CREDITS_GAINED` / `ITEM_GAINED` | Münz-/Item-Popup | 0.6 s |
 | `STUNT_RESULT` | „STUNT GEGLÜCKT!“ / „PATZER!“ | 0.6 s |
 | `PHASE_CHANGE` / `ANNOUNCE` | Banner | 1.0 s |
+| `MOD_LINE` | keine eigene Dauer (Show spricht parallel) | 0 s |
 | `SPONSOR_GIFT` | Billboard-Drop, Konfetti | 1.5 s |
 | `CTB_ORDER` | Leiste animiert (parallel) | 0.2 s |
 | `TURN_END` | Rig zurück zur Position | 0.15 s |
@@ -1622,79 +2232,110 @@ Richtdauern bei `speed = 1.0` (Dauer / speed):
 
 ```gdscript
 class_name DamageCalc extends RefCounted
-static func compute(attacker: Combatant, target: Combatant, skill: SkillDef, element: String, rng: RandomNumberGenerator) -> HitResult
-static func hit_chance(attacker: Combatant, target: Combatant, skill: SkillDef) -> float   # 0..1
+static func compute(attacker: Combatant, target: Combatant, skill: SkillDef, element: String, rng: RandomNumberGenerator,
+	combo_second_hit: bool = false, enemy_dmg_mult: float = 1.0) -> HitResult     # physical/magical (GDD §3.7)
+static func fixed(target: Combatant, value: int, element: String, enemy_dmg_mult: float = 1.0) -> HitResult
+	# roundi(value × affinity × (defending ? 0.5 : 1.0) × enemy_dmg_mult); no A/D, no variance, no crit, guard ignored
+static func heal_amount(caster: Combatant, target: Combatant, skill: SkillDef, rng: RandomNumberGenerator) -> int
+static func hit_chance(attacker: Combatant, target: Combatant, skill: SkillDef) -> float   # slice: always 1.0 (accuracy −1)
 static func crit_chance(attacker: Combatant, skill: SkillDef) -> float
-static func status_chance(target: Combatant, base_chance: float) -> float
-static func mitigation(defense: int) -> float
+static func status_chance(target: Combatant, status_id: String, base_chance: float, ignore_resist: bool = false) -> float
 
 class_name ActionResolver extends RefCounted
 static func resolve(state: BattleState, cmd: BattleCommand) -> Array[ActionEvent]     # validated cmd, no TURN_END
 static func apply_skill(state: BattleState, actor: Combatant, skill: SkillDef, target_ids: PackedStringArray, out: Array[ActionEvent]) -> void
-static func apply_status(state: BattleState, target: Combatant, status_id: String, turns: int, source_id: String, chance: float, beat: int, out: Array[ActionEvent]) -> void
-static func end_of_turn(state: BattleState, actor: Combatant, out: Array[ActionEvent]) -> void   # ticks, durations
+static func apply_status(state: BattleState, target: Combatant, status_id: String, turns: int, source_id: String, chance: float,
+	beat: int, out: Array[ActionEvent], ignore_resist: bool = false) -> void
+static func turn_start(state: BattleState, actor: Combatant, out: Array[ActionEvent]) -> void   # defend reset, stun removal, turn_start ticks
+static func end_of_turn(state: BattleState, actor: Combatant, out: Array[ActionEvent]) -> void  # turn_end ticks, durations, cooldown
+static func check_phase(state: BattleState, boss: Combatant, out: Array[ActionEvent]) -> void
+static func pseudo_turn(state: BattleState, unit: Combatant, out: Array[ActionEvent]) -> void
 
 class_name EnemyAI extends RefCounted
 static func choose(state: BattleState, actor: Combatant, rng: RandomNumberGenerator) -> BattleCommand
-static func condition_met(state: BattleState, actor: Combatant, when: Dictionary) -> bool
+static func condition_met(state: BattleState, actor: Combatant, cond: Dictionary) -> bool
+static func pick_target(state: BattleState, actor: Combatant, rule: String, skill: SkillDef, rng: RandomNumberGenerator) -> PackedStringArray
 
 class_name AutoPolicy extends RefCounted
 static func choose(state: BattleState, actor: Combatant) -> BattleCommand   # deterministic, no rng
 ```
 
-AI-Bedingungen (`when`, alle Schlüssel müssen gelten; `{}` = immer): `self_hp_below: float`, `ally_hp_below: float`
-(irgendein Verbündeter), `turn_every: int` (eigene Zugnummer % n == 0), `turn_min: int`, `phase: int`,
-`target_lacks_status: String` (mindestens ein Party-Ziel ohne Status), `enemies_alive_below: int` (lebende Gegner < n).
-Profile: `basic` = gewichteter Zufall über erfüllte Skills, Ziel zufällig; `aggressive` = Ziel mit niedrigster HP;
-`support` = Heil-/Buff-Skills bevorzugt (Gewicht × 3), wenn Verbündeter < 50 % HP; `boss` = wie `basic`, Skills der aktuellen
-Phase zusätzlich. Taunt erzwingt Ziel. MP-Kosten müssen bezahlbar sein, sonst `attack_skill`.
-AutoPolicy: (1) Verbündeter < 35 % HP und Heil-Skill/Item verfügbar → heilen (niedrigste Ratio); (2) MP ≥ 50 % → stärkster
-bezahlbarer Schadens-Skill (höchste `power`, bei Gleichstand niedrigste ID) auf Gegner mit niedrigster HP;
-(3) sonst `ATTACK` auf Gegner mit niedrigster HP. Nie Stunt, nie Flucht.
+`EnemyAI.choose` (GDD §3.11): Aktionsliste = `ai.actions` bzw. `phases[phase].actions` → **Filter** (alle `cond`-Schlüssel erfüllt,
+MP ≥ `mp_cost`, `once` noch nicht benutzt) → **gewichteter Zufall** mit `rng` → **Ziel** per `pick_target`:
+`random` (lebendes Party-Mitglied), `lowest_hp_pct`, `highest_hp` (absolute HP), `not_status:<id>` (zufällig unter denen ohne
+Status, sonst `random`), `self`, `all_enemies` (= ganze Party), `all_allies`, `ally_lowest_hp_pct` (inkl. selbst) →
+**Taunt-Override**: Einzelziel auf Party und ein lebendes Party-Mitglied mit Flag `taunt` → mit `TAUNT_CHANCE` (0.80) dieses Ziel.
+Leere Liste nach Filter → `attack_skill` auf `random`. Gleichstände bei `lowest_*`/`highest_*`: kleinerer Slot.
+
+`AutoPolicy` (Party, Autoplay/Auto-Kampf): (0) steht eine Pseudo-Einheit in `preview_order(3)` vor dem nächsten Zug des Akteurs →
+`DEFEND`; (1) Verbündeter < 35 % HP (oder KO und Wiederbelebung verfügbar) und Heil-Skill/-Item verfügbar → heilen (niedrigste Ratio);
+(2) MP ≥ 50 % → stärkster bezahlbarer Schadens-Skill (höchste `power` × bekannter Element-Mult, bei Gleichstand niedrigste ID) auf den
+Gegner mit niedrigster HP; (3) sonst `ATTACK` auf Gegner mit niedrigster HP. Nie Stunt, nie Flucht.
 
 ### 5.9 Formeln (`Balance`, Konstanten dürfen per Balancing geändert werden, die Struktur nicht)
 
 ```gdscript
 class_name Balance extends RefCounted
-const STAT_MULT: float = 2.0
-const LEVEL_MULT: float = 2.0
-const MITIGATION_K: float = 50.0
-const DEF_WEIGHT: float = 1.5
-const VARIANCE: float = 0.08            # × randf_range(1 - V, 1 + V)
+const DMG_VARIANCE_MIN: float = 0.9
+const DMG_VARIANCE_MAX: float = 1.1
+const HEAL_VARIANCE_MIN: float = 0.95
+const HEAL_VARIANCE_MAX: float = 1.05
 const CRIT_BASE: float = 0.05
-const CRIT_PER_LCK: float = 0.004
+const CRIT_PER_LCK: float = 0.005
 const CRIT_CAP: float = 0.40
 const CRIT_MULT: float = 1.5
 const DEFEND_MULT: float = 0.5
+const GUARD_DEF_MULT: float = 1.5
+const COMBO_MULT: float = 1.1
 const HEAL_STAT_MULT: float = 1.5
-const HIT_LCK_FACTOR: float = 0.01
-const HIT_MIN: float = 0.30
-const STATUS_RES_PER_LCK: float = 0.005
-const FLEE_BASE: int = 50
-const FLEE_SPD_FACTOR: int = 2
-const FLEE_MIN: int = 20
-const FLEE_MAX: int = 95
-const STUNT_LCK_FACTOR: float = 0.5
-const STUNT_MIN: int = 10
-const STUNT_MAX: int = 95
-const MAX_LEVEL: int = 99
-const KO_REVIVE_HP: int = 1             # after VICTORY/FLED, KO'd members return with 1 HP
+const HEAL_BASE: float = 10.0
+const DEFEND_MP_PCT: float = 0.05
+const DEFEND_MP_MIN: int = 2
+const POST_BATTLE_MP_REGEN: float = 0.15
+const TAUNT_CHANCE: float = 0.80
+const STUN_BOSS_MULT: float = 0.5
+const SUMMON_CTR_FRAC: float = 0.5
+const OVERKILL_MAXHP_FRAC: float = 0.5
+const OVERKILL_CREDIT_MULT: float = 1.25
+const DROP_LCK_DIV: float = 100.0
+const FLEE_BASE: float = 0.40
+const FLEE_PER_SPD: float = 0.03
+const FLEE_PER_FAIL: float = 0.15
+const FLEE_PREEMPT: float = 0.25
+const FLEE_MIN: float = 0.10
+const FLEE_MAX: float = 0.95
+const STUNT_COOLDOWN: int = 3
+const STUNT_CHANCE_MIN: float = 0.05
+const LEVEL_CAP: int = 10
+const EXP_A: float = 15.0
+const EXP_B: float = 1.7
+const EXP_C: float = 15.0
+const KO_REVIVE_HP: int = 1             # after VICTORY, KO'd members return with 1 HP
+const EASY_TIMER_MULT: float = 1.5      # Vorabendprogramm
+const EASY_ENEMY_DMG: float = 0.75
+const EASY_EXP: float = 1.2
+const TUTORIAL_ENEMY_DMG: float = 0.5
+const BACK_DOT: float = -0.34           # exploration: "from behind" (≙ > 110°)
 ```
 
-| Größe | Formel |
+| Größe | Formel (GDD §3.7) |
 |---|---|
-| physisch roh | `power/100 × (STR × 2 + Level × 2) + base` |
-| magisch roh | `power/100 × (MAG × 2 + Level × 2) + base` |
-| Mitigation | `50 / (50 + DEF × 1.5)` bzw. RES |
-| Schaden | `roh × Mitigation × Varianz × Krit(1.5) × Element × Defend(0.5)`, `maxi(1, roundi(…))`; immun → 0 |
-| true | `base` (keine Mitigation/Varianz/Krit) |
-| Heilung | `power/100 × (MAG × 1.5 + Level) + base`, × Varianz |
-| Krit (nur physisch/Stunt) | `min(0.05 + LCK × 0.004 + crit_bonus/100, 0.40)` |
-| Treffer (accuracy ≥ 0) | `clamp(accuracy/100 × (1 + (LCK_a − LCK_t) × 0.01) × accuracy_mult, 0.30, 1.0)` |
-| Status-Chance | `chance × (1 − LCK_t × 0.005)`; immun → `STATUS_BLOCKED` |
-| Element | `element_mods[element]` (Default 1.0): >1 `weak`, 0<x<1 `resist`, 0 immun, <0 Absorb (HEAL statt DAMAGE) |
+| Angriff/Verteidigung | physical: `A = STR`, `D = DEF`; magical: `A = MAG`, `D = RES` (Ausrüstung steckt in den Stats); Ziel mit `guard`: `D × 1.5` |
+| Schaden roh | `A × A / (A + D) × power / 100` |
+| Schaden | `roh × randf_range(0.9, 1.1) × (crit ? 1.5 : 1) × Element × (defending ? 0.5 : 1) × (combo ? 1.1 : 1) × enemy_dmg_mult`; `maxi(1, roundi(…))`; immun (Mult 0) → 0 |
+| Krit (nur `physical`) | `clampf(0.05 + LCK × 0.005 + attacker.crit_bonus + skill.crit_bonus, 0.0, 0.40)` |
+| Fixschaden | `roundi(power × Element × (defending ? 0.5 : 1) × enemy_dmg_mult)`; keine A/D, keine Varianz, kein Krit, `guard` wirkungslos |
+| Heilung `mag` | `roundi((MAG × 1.5 + 10) × power / 100 × randf_range(0.95, 1.05))` |
+| Heilung `pct` / Wiederbelebung | `roundi(MaxHP × power / 100)` |
+| Heilung `fixed` | `power` |
+| Treffer | trifft immer (`hit_chance` = 1.0; `accuracy` reserviert) |
+| Status-Chance | `chance × (1 − status_resist[status])`; Immunität → `STATUS_BLOCKED` |
+| Element | `element_mods[element]` (Default 1.0): 1.5 `weak`, 0.5 `resist`, 0.0 `immune`; Element `none` → 1.0 |
+| Gift-Tick | `maxi(1, roundi(MaxHP × 0.08))` am eigenen Zugbeginn |
+| Flucht / Stunt | §5.6 |
+| Overkill | `damage ≥ hp_before + max_hp × 0.5` |
 
-Element einer Aktion: Skill-Element; beim Basisangriff (`element: none`) das `attack_element` der Waffe.
+Element einer Aktion: Skill-Element; beim Basisangriff das `attack_element` der Waffe (Default `physical`).
 
 ---
 
@@ -1704,69 +2345,111 @@ Element einer Aktion: Skill-Element; beim Basisangriff (`element: none`) das `at
 
 ```gdscript
 class_name ShowState extends RefCounted
-var viewers: int = 0
+var viewers: int = 0                         # last noise-free value (summary/save)
 var followers: int = 0
-var hype: float = 20.0
+var hype: float = 30.0
 var stats: Dictionary = {}                   # StatIds → int
 var achievements: PackedStringArray = []     # unlocked ids
+var milestones: PackedStringArray = []       # reached ms ids
 var sponsor_uses: Dictionary = {}            # sponsor id → total gifts given
 func to_dict() -> Dictionary
 static func from_dict(d: Dictionary) -> ShowState
 
 class_name ShowModel extends RefCounted
-static func viewers_for(viewer_base: int, hype: float, followers: int) -> int
-	# int(viewer_base × (0.6 + hype × 0.016) × (1.0 + followers / 5000.0)); caller adds ±3 % noise
-static func clamp_hype(h: float) -> float                     # 0..100
-static func drift_hype(h: float, target: float, rate: float, dt: float) -> float
-static func followers_for_battle(result: BattleResult, hype: float, stunts_ok: int) -> int
+const VIEWER_BASE: int = 1000
+const VIEWER_PER_FOLLOWER: float = 1.0
+const HYPE_START: float = 30.0
+const HYPE_EXPLORE_FLOOR: float = 15.0
+const HYPE_DECAY_TICKS: int = 150            # −1 hype per 5 s explore time (30 ticks/s)
+const FOLLOWER_CONV_BASE: float = 0.01
+const FOLLOWER_CONV_HYPE: float = 0.02
+const FOLLOWER_BOSS_MULT: float = 2.0
+const FLEE_FOLLOWER_LOSS: float = 0.01
+static func viewers_for(floor_mult: float, hype: float, followers: int) -> int
+	# roundi((VIEWER_BASE × floor_mult + followers × VIEWER_PER_FOLLOWER) × (0.4 + hype / 40.0))
+static func clamp_hype(h: float) -> float                       # 0..100
+static func decay_step(hype: float) -> float                    # hype > 15 → maxf(15.0, hype − 1.0); else unchanged
+static func followers_for_battle(viewers_peak_battle: int, hype_end: float, is_boss: bool, follower_mult: float) -> int
+	# floori(viewers_peak_battle × (0.01 + 0.02 × hype_end / 100.0) × (is_boss ? 2.0 : 1.0) × follower_mult)
+static func followers_lost_on_flee(followers: int) -> int       # floori(followers × 0.01)
 
 class_name ShowDelta extends RefCounted
-var hype: float = 0.0
+var hype: float = 0.0                        # raw (before hype_gain_mult)
 var stats: Dictionary = {}                   # StatIds → increment
-var reasons: Array[StringName] = []          # &"crit", &"stunt_success", … (chat/M.O.D. triggers)
+var reasons: Array[StringName] = []          # &"crit", &"weakness", &"overkill", &"kill_streak", &"low_hp", … → M.O.D./chat tags
+var triggers: Array[Dictionary] = []         # [{"trigger": "enemy_killed", "payload": {...}}, …] (§6.3)
 
 class_name ShowRules extends RefCounted
-func _init(p_data: GameData, is_boss: bool) -> void      # self-contained: needs only ActionEvent fields + EnemyDef.hype_value
+func _init(p_data: GameData, p_setup: BattleSetup) -> void   # self-contained: needs only ActionEvent fields + setup
+func start_delta() -> ShowDelta                              # battle start hype (§6.2)
 func feed(e: ActionEvent) -> ShowDelta
+func end_delta(result: BattleResult) -> ShowDelta            # close win / flawless
 func stunts_succeeded() -> int
 
 class_name AchievementTracker extends RefCounted
-func _init(p_data: GameData, p_show: ShowState) -> void
-func bump(stat_id: String, amount: int = 1) -> PackedStringArray      # newly unlocked ids
-func set_max(stat_id: String, value: int) -> PackedStringArray
-func check_all() -> PackedStringArray
+func _init(p_data: GameData, p_show: ShowState, p_flags: Dictionary) -> void
+func evaluate(trigger_id: String, payload: Dictionary) -> PackedStringArray   # newly unlocked ids (each id at most once ever)
 
 class_name SponsorSystem extends RefCounted
-const MAX_GIFTS_PER_BATTLE: int = 1
-const MAX_GIFTS_PER_BOSS_BATTLE: int = 2
-const HYPE_COST: float = 20.0
-static func pick(data: GameData, show: ShowState, floor_index: int, gifts_this_battle: int, is_boss: bool, rng: RandomNumberGenerator) -> String
-	# eligible: hype >= hype_threshold, floor in range; weighted pick; "" if none or limit reached
+const THRESHOLDS: PackedInt32Array = [50, 75, 100]
+const MAX_GIFTS_PER_BATTLE: int = 2
+const MAX_GIFTS_PER_BOSS_BATTLE: int = 3
+const HYPE_COST: float = 0.0
+const HYPE_AFTER_TOP: float = 80.0                     # crossing 100 sets hype to 80
+static func crossed(prev_hype: float, new_hype: float, fired: PackedInt32Array) -> PackedInt32Array   # upward crossings not yet fired
+static func weight_of(def: SponsorDef, ctx: Dictionary) -> float   # weight × Π mult of fulfilled weight_mods
+static func pick(data: GameData, ctx: Dictionary, rng: RandomNumberGenerator) -> String
+	# ctx {"floor_index", "is_boss", "party": Array[Combatant]}; eligible by floor range; weighted; "" if none
 
 class_name ModAnnouncer extends RefCounted
+const KEY_COOLDOWN_SEC: float = 20.0
 func _init(p_data: GameData, p_rng: RandomNumberGenerator) -> void
-func pick(tag: String, floor_index: int, hype: float) -> ModLineDef    # tag "a:b" falls back to "a"; avoids last 3 ids per tag
-func format(line: ModLineDef, ctx: Dictionary) -> String               # text.format(ctx); missing keys stay visible
-	# Show always adds ctx["player"] = Game.state.player_name and ctx["floor"] = floor index before calling format()
+func pick(tag: String, floor_index: int, hype: float, now_sec: float) -> ModLineDef
+	# fallback "a:b:c" → "a:b" → "a"; filters floor/hype range; never the same line twice in a row per tag;
+	# key cooldown 20 s per base tag except boss_*, death, timer_*, intro (null while cooling down)
+static func priority(tag: String) -> int        # death 5 > boss_* 4 > timer_* 3 > achievement* 2 > lootbox_* 1 > rest 0
+func format(line: ModLineDef, ctx: Dictionary) -> String   # text.format(ctx); missing keys stay visible
+	# Show always adds ctx name (player_name), floor, level (Kai), viewers, followers before format()
+
+class_name ConditionExpr extends RefCounted     # core/data/condition_expr.gd (M0) — grammar §4.4.9
+var error: String = ""
+static func parse(src: String) -> ConditionExpr                 # error != "" on syntax errors
+func eval(e: Dictionary, s: Dictionary, f: Dictionary) -> bool
+func operands() -> Array[Dictionary]                            # [{"scope": "e"|"s"|"f", "key": String}] for validation
 
 class_name LootReward extends RefCounted
-var kind: String          # "item" | "credits" | "followers"
+var kind: String          # "item" | "credits"
 var id: String = ""       # item id
 var amount: int = 1
 var rarity: String = "common"
+var converted_from: String = ""   # item id when a duplicate piece of equipment became credits ("DUPLIKAT → +X Cr")
+var pity: bool = false            # forced by pity ("GARANTIE!")
 func to_dict() -> Dictionary
 
 class_name LootRoller extends RefCounted
-static func roll_lootbox(box: LootboxDef, data: GameData, rng: RandomNumberGenerator) -> Array[LootReward]
-static func roll_chest(def: FloorDef, rng: RandomNumberGenerator) -> Array[LootReward]   # 1 roll from chest_table (+1 at 20 %)
-static func roll_drops(drops: Array[Dictionary], rng: RandomNumberGenerator) -> PackedStringArray
-static func is_rare(rewards: Array[LootReward], data: GameData) -> bool   # any item rarity >= rare → tag lootbox_rare
+static func roll_lootbox(box: LootboxDef, data: GameData, floor_index: int, state: GameState, rng: RandomNumberGenerator) -> Array[LootReward]
+static func roll_chest(chest: Dictionary, data: GameData, floor_index: int, state: GameState, rng: RandomNumberGenerator) -> Array[LootReward]
+	# layout chest: wood → randi_range(20, 40) credits + 1 entry from pools.f<i>.common; metal/locked → contents
+static func roll_chest_table(def: FloorDef, rng: RandomNumberGenerator) -> Array[LootReward]   # procedural floors: 1 roll (+1 at 20 %)
+static func roll_drops(drops: Array[Dictionary], avg_party_lck: float, rng: RandomNumberGenerator) -> PackedStringArray
+static func best_rarity(rewards: Array[LootReward]) -> String
+```
 
+Lootbox-Ablauf `roll_lootbox` (GDD §9, deterministisch bei gleichem RNG + Zustand):
+1. `fixed_pool == "fan"` → 1 gewichteter Eintrag aus `loot_pool(floor, "fan")` (Rarität `epic` für die Anzeige).
+2. Für Wurf `i` in `0 .. rolls−1`: Rarität = bei `i == 0` und `state.pity_epic ≥ pity.epic` → `epic` (`pity = true`); sonst bei
+   `i == 0` und `state.pity_rare ≥ pity.rare` → `rare` (`pity = true`); sonst bei `i == rolls − 1` und unerfüllter `guarantee` →
+   Garantie-Rarität; sonst gewichtet aus `rarity_weights`. Dann gewichteter Eintrag aus `loot_pool(floor, rarity)`.
+3. Ausrüstung (`weapon`/`armor`/`accessory`), die schon besessen wird (Inventar, ausgerüstet oder früher in dieser Box) →
+   `kind = "credits"`, `amount = roundi(Verkaufswert × 1.5)`, `converted_from = item_id`.
+4. Pity: Box enthielt `rare` oder besser → `pity_rare = 0`, sonst `+1`; enthielt `epic` → `pity_epic = 0`, sonst `+1`.
+
+```gdscript
 class_name PartyMember extends RefCounted
 var id: String
 var display_name: String
 var level: int = 1
-var exp: int = 0                       # progress toward next level
+var exp: int = 0                       # progress toward next level (0 at LEVEL_CAP)
 var hp: int
 var mp: int
 var equipment: Dictionary = {"weapon": "", "armor": "", "accessory": ""}
@@ -1778,11 +2461,12 @@ static func from_dict(d: Dictionary) -> PartyMember
 class_name Inventory extends RefCounted
 var counts: Dictionary = {}            # item id → int > 0 (equipped items are NOT counted)
 var credits: int = 0
-func add(item_id: String, n: int = 1) -> void
+func add(item_id: String, n: int = 1, max_stack: int = 9) -> int   # returns how many were actually added (cap max_stack)
 func remove(item_id: String, n: int = 1) -> bool
 func count(item_id: String) -> int
 func has(item_id: String, n: int = 1) -> bool
 func ids_of_type(data: GameData, type: String) -> PackedStringArray
+func ids_with_tag(data: GameData, tag: String) -> PackedStringArray     # e.g. "heal" for fev_lost_candidate
 func battle_items(data: GameData) -> Dictionary
 func add_credits(n: int) -> void
 func spend_credits(n: int) -> bool
@@ -1793,15 +2477,31 @@ class_name FloorRun extends RefCounted
 var floor_id: String
 var index: int
 var seed: int                          # SeedUtil.derive(run_seed, "floor", index)
-var time_left: float
+var time_left_ticks: int               # Game.TICKS_PER_SEC = 30 (05 CR-3)
+var timer_started: bool = false        # FloorDef.timer_start_after == "" → true at creation
+var warned: PackedInt32Array = []      # timer warnings already fired (seconds)
+var decay_ticks: int = 0               # hype decay accumulator (ShowModel.HYPE_DECAY_TICKS)
 var visited: Array[Vector2i] = []
 var opened_chests: PackedStringArray = []
 var defeated_groups: PackedStringArray = []
+var opened_gates: PackedStringArray = []      # "<x>,<y>,<N|E|S|W>"
+var completed_events: PackedStringArray = []  # fev ids
+var event_uses: Dictionary = {}               # fev id → int (wheel spins)
+var strays: Dictionary = {}                   # living strays: group id → {"zone": String, "enc": String}
+var stray_counter: int = 0
+var spawner_ticks: Dictionary = {}            # zone id → ticks since the zone had no living stray
 var quarter_boss_defeated: bool = false
 var floor_boss_defeated: bool = false
 var stairs_found: bool = false
-var location: StringName = &"start"    # &"start" | &"safe_room"
-static func create(def: FloorDef, run_seed: int) -> FloorRun
+var location: StringName = &"start"           # &"start" | safe room id (e.g. &"sr_kiosk")
+var visited_safe_rooms: PackedStringArray = []
+var safe_room_visits: int = 0                 # total entries on this floor (scene conditions)
+var stats: Dictionary = {"time_used_ticks": 0, "kills": 0, "viewers_peak": 0, "followers_gained": 0, "achievements": 0}
+static func create(def: FloorDef, run_seed: int, difficulty: StringName) -> FloorRun
+	# time_left_ticks = roundi(def.timer_seconds × (difficulty == &"vorabend" ? 1.5 : 1.0) × 30)
+func time_left_sec() -> float
+func tick_timer(n: int, warnings: PackedInt32Array) -> Dictionary   # {"second_changed": bool, "warnings": PackedInt32Array, "expired": bool}
+func summary() -> Dictionary   # {"floor", "time_used_sec", "time_left_sec", "kills", "viewers_peak", "followers_gained", "achievements"}
 func to_dict() -> Dictionary
 static func from_dict(d: Dictionary) -> FloorRun
 
@@ -1809,18 +2509,24 @@ class_name GameState extends RefCounted
 var slot: int = 0
 var seed: int
 var player_name: String = "Kai"
+var difficulty: StringName = &"prime"  # &"prime" | &"vorabend" (only lowerable)
 var play_time_sec: float = 0.0
 var party: Array[PartyMember] = []     # ordered by battle_slot
 var inventory: Inventory
 var pending_lootboxes: PackedStringArray = []
+var pity_rare: int = 0
+var pity_epic: int = 0
+var bestiary: Dictionary = {}          # enemy id → {"defeated": int, "weak_known": PackedStringArray}
 var floor_run: FloorRun
 var show: ShowState
 var flags: Dictionary = {}
 var rng_counter: int = 0
-static func create_new(data: GameData, slot: int, player_name: String, seed: int) -> GameState
-	# party from party.json (level 1, full hp/mp, learnset level 1, start equipment), credits 50, show: hype 20,
-	# followers 0, viewers = floor_1.viewer_base × 0.6; floor_run = null (Game.start_floor sets it)
+static func create_new(data: GameData, slot: int, player_name: String, seed: int, difficulty: StringName = &"prime") -> GameState
+	# party from party.json (level 1, full hp/mp, learnset level ≤ 1, start equipment); inventory + credits from
+	# data.party_start() (3× itm_bandage, 1× itm_antidote, 50 Cr); show: hype 30, followers 0; floor_run = null (Game.start_floor)
 func member(id: String) -> PartyMember
+func hype_gain_mult(data: GameData) -> float     # product of equipped show_mods.hype_gain_mult
+func follower_mult(data: GameData) -> float      # product of equipped show_mods.follower_mult
 func to_dict() -> Dictionary
 static func from_dict(d: Dictionary) -> GameState
 
@@ -1832,33 +2538,51 @@ var stat_gains: Dictionary             # stat key → int
 var learned: PackedStringArray
 
 class_name Progression extends RefCounted
-static func exp_to_next(level: int) -> int                       # 10 + roundi(15.0 × pow(level, 1.7))
-static func base_stats_at(def: PartyMemberDef, level: int) -> StatBlock   # base + floori(growth × (level − 1))
+static func exp_to_next(level: int) -> int                       # level >= Balance.LEVEL_CAP → 0; else floori(15.0 × pow(level, 1.7) + 15.0)
+static func base_stats_at(def: PartyMemberDef, level: int, class_def: ClassDef = null) -> StatBlock
+	# floori(base + (growth + growth_add) × (level − 1)) per stat (GDD §4.1)
 static func total_stats(member: PartyMember, data: GameData) -> StatBlock # + equipment stats, × class stat_mult
 static func add_exp(member: PartyMember, amount: int, data: GameData) -> Array[LevelUpInfo]
+	# level up raises hp/mp by the max delta (no full heal); at LEVEL_CAP surplus EXP is discarded
 static func equip(member: PartyMember, inventory: Inventory, data: GameData, slot: String, item_id: String) -> bool   # "" unequips
 static func full_heal(state: GameState, data: GameData) -> void
 static func to_combatant(member: PartyMember, data: GameData, id: String, slot: int) -> Combatant
+	# crit_bonus = Σ equipment crit_bonus; element_mods = Π; status_immune = ∪; status_resist from def; attack_element from weapon
 
 class_name BattleRewards extends RefCounted
 var exp: int = 0
-var credits: int = 0
+var credits: int = 0                   # incl. overkill bonus
+var overkill_credits: int = 0
+var credits_refunded: int = 0          # stolen credits returned on victory
+var credits_lost: int = 0              # stolen credits kept by the enemy (fled/defeat)
 var items: PackedStringArray = []
+var boxes: PackedStringArray = []      # boss boxes → pending_lootboxes
 var level_ups: Array[LevelUpInfo] = []
+var mp_regen: Dictionary = {}          # member id → MP restored by the "Werbepause"
 var followers: int = 0
 var revived: PackedStringArray = []
 var achievements: PackedStringArray = []
 
 class_name BattleBridge extends RefCounted
 static func make_setup(state: GameState, data: GameData, encounter_id: String, advantage: int, group_id: String, seed: int) -> BattleSetup
+	# party combatants via Progression.to_combatant; items = inventory.battle_items; credits_available = inventory.credits;
+	# encounter: is_boss, can_flee, tutorial; bosses force NORMAL; enemy_dmg_mult = (vorabend 0.75) × (tutorial 0.5);
+	# exp_mult (vorabend 1.2); show_mods = state.hype_gain_mult/follower_mult; floor palette/theme;
+	# is_boss and flags["mop_pep_talk"] → both party combatants start with sts_guard 2, flag erased (GDD §10.2)
 static func apply_result(state: GameState, data: GameData, result: BattleResult) -> BattleRewards
-	# hp/mp writeback; KO → 1 HP unless DEFEAT; item_delta → inventory; VICTORY: exp to every member
-	# (living full, KO'd 50 %), credits, drops; defeated_groups += group_id; *_qb/*_fb → boss flags
+	# hp/mp writeback; KO → 1 HP unless DEFEAT; item_delta → inventory; credits_delta; VICTORY: EXP per member (alive full,
+	# KO'd floori(50 %)), credits (+overkill), drops, boss_rewards (items → inventory, boxes → pending_lootboxes),
+	# Werbepause +ceili(max_mp × 0.15) MP for living members, stolen credits refunded; FLED/DEFEAT: stolen credits lost;
+	# VICTORY: defeated_groups += group_id, strays.erase(group_id), flags defeated_<boss_id> + quarter/floor boss flags;
+	# bestiary (defeated += 1 per defeated_ids entry, weak_known ∪= weak_found); floor_run.stats.kills += kills;
+	# VICTORY over FloorDef.timer_start_after → floor_run.timer_started = true
 
 class_name Shop extends RefCounted
-static func stock(def: FloorDef) -> PackedStringArray
-static func buy(state: GameState, data: GameData, item_id: String, qty: int) -> bool
-static func sell(state: GameState, data: GameData, item_id: String, qty: int) -> bool   # price / 2 each; key items not sellable
+static func stock(def: FloorDef, safe_room_id: String) -> PackedStringArray    # layout safe room shop, else def.shop
+static func price_of(data: GameData, item_id: String) -> int
+static func sell_value(data: GameData, item_id: String) -> int                 # ItemDef.sell (−1 → floori(price / 2))
+static func buy(state: GameState, data: GameData, item_id: String, qty: int) -> bool     # qty 1..9, respects max_stack
+static func sell(state: GameState, data: GameData, item_id: String, qty: int) -> bool    # sell_value each; sell 0 → false
 
 class_name SaveCodec extends RefCounted
 const FORMAT: String = "ptd_save"
@@ -1871,60 +2595,91 @@ static func summary(state: GameState) -> Dictionary
 static func last_errors() -> PackedStringArray
 ```
 
-### 6.2 Show-Zahlen (verbindlich, Konstanten in `show_rules.gd` / `show_model.gd`)
+### 6.2 Show-Zahlen (verbindlich, GDD §7; Konstanten in `show_model.gd` / `show_rules.gd` / `sponsor_system.gd`)
 
-Hype-Deltas (`ShowRules.feed`), nur Party-Aktionen außer markiert:
+Hype-Ereignisse im Kampf (`ShowRules`, nur Party-Aktionen außer markiert; positive Werte × `hype_gain_mult` in `Show.add_hype`):
 
-| Ereignis | Δ Hype | Stats |
+| Ereignis (ActionEvent) | Δ Hype | Stats / Trigger |
 |---|---|---|
-| `ACTION_START` Party, Skill mit `hype` | `+skill.hype` | `items_used` +1 bei Item |
-| `ACTION_START` Party, anderer `last_action_key` als zuvor | +2 | |
-| gleicher `last_action_key` zum 3. Mal in Folge | −4 | |
-| `DAMAGE` durch Party | +1 | |
-| … `crit` | +3 | `crits` +1 |
-| … `weak` | +2 | `weakness_hits` +1 |
-| `KO` Gegner | +4 × max(1, hype_value/2) | `kills` +1 |
-| … durch Skill ≠ attack_skill | +3 | `kills_skill` +1 |
-| … Overkill (value ≥ getötete max HP) | +2 | |
-| `KO` Party-Mitglied | +6 | |
-| Party-Mitglied fällt unter 25 % HP (1× pro Mitglied/Kampf) | +4 | |
-| Gegner-Krit auf Party | +2 | |
-| `STUNT_RESULT` Erfolg / Patzer | +12 / +5 | `stunts_success` / `stunts_failed` +1 |
-| `DEFEND` Party | −1 | |
-| `FLEE_RESULT` Erfolg / Fehlschlag | −10 / −3 | |
-| `SPONSOR_GIFT` | +3 | `sponsor_gifts` +1 |
-| `BATTLE_END` Sieg (+ knapp: min_party_hp_ratio < 0.2) | +5 (+10) | |
+| `BATTLE_START`: normal / präventiv / Hinterhalt / Boss | +5 / +5 / +8 / +10 | (Show: `preemptives` +1) |
+| `ACTION_START`: `action_key` nicht unter den letzten 4 Party-Keys („Abwechslung“) | +3 | |
+| `ACTION_START`: gleicher `action_key` zum 3. (und jedem weiteren) Mal in Folge, egal wer | −5 | Grund `boring_fight` |
+| `ACTION_START`: Skill/Item mit `hype` (z. B. `itm_hype_megaphone` +25) | `+skill.hype` | |
+| `ACTION_START`: Verteidigen 2× in Folge durch denselben Charakter | −4 | |
+| `ACTION_START`: jeder Party-Zug nach dem 10. (Boss: 25.) | −3 | |
+| `DAMAGE` durch Party: `crit` / `weak` (max. 1× pro Aktion) | +5 / +4 | `crits_total` +1; Grund `crit`/`weakness` |
+| `KO` Gegner durch Angriff oder Item / Skill / Stunt | +3 / +6 / +10 (+`kill_hype`) | `kills_total` +1; Skill: `kills_skill` +1; Trigger `enemy_killed` |
+| … Overkill (`value == 1`) | +8 | Grund `overkill` |
+| … Kill-Serie (3 Kills in 3 aufeinanderfolgenden Party-Aktionen) | +6 | Grund `kill_streak` |
+| `COMBO` | +5 | Trigger `combo` |
+| `STUNT_RESULT` Erfolg / Fehlschlag | +20 / +8 | `stunts_success` / `stunts_fail` +1; Trigger `stunt_resolved` |
+| `DAMAGE` auf Party: Mitglied fällt erstmals im Kampf unter 25 % HP | +6 | Grund `low_hp` |
+| `KO` Party-Mitglied | +10 | Mopsula: `ko_mopsula` +1; Trigger `party_ko`; Grund `mopsula_ko`/`kai_ko` |
+| `REVIVE` | +8 | Grund `revive` |
+| `FLEE_RESULT` Erfolg / Fehlschlag | −30 / −5 | Grund `flee`/`flee_fail` |
+| `TURN_END` Party ohne positives Ereignis seit `ACTION_START` („Langweilig“) | −2 | |
+| Kampfende (`end_delta`): knapp (`min_party_hp_pct ≤ 0.10`) / ohne Schaden (`damage_taken == 0`) | +15 / +5 | |
 
-Zuschauer: `ShowModel.viewers_for(floor.viewer_base, hype, followers)` ± 3 % Rauschen, jede Sekunde.
-Follower nach Kampf (Sieg): `roundi((10 + kills × 3 + stunts_ok × 5 + (knapp ? 15 : 0) + (Boss ? 100 : 0)) × (0.5 + hype / 100))`;
-Flucht: `−roundi(followers × 0.01)`; Niederlage: 0. Hype-Drift in Erkundung Richtung 20 mit 0,25/s; Sponsor kostet 20 Hype.
+`action_key`: `attack`, Skill-ID, Item-ID, `stunt`, `defend`.
 
-### 6.3 `StatIds` (Achievement-Zähler)
+Erkundung (Show/RunSim): Truhe +3, Etagen-Event +5, Achievement +8, Timer-Warnung 5:00 / 1:00 +10 / +15 (einmalig);
+Zerfall −1 je 150 Ticks (5 s) Erkundungszeit, nie unter 15 (`ShowModel.decay_step`). Start jeder Etage: Hype = 30.
+
+Sponsor-Schwellen (nur im Kampf): Steigt Hype aufwärts über 50, 75 oder 100 (jede Schwelle 1× pro Kampf) und sind weniger als
+2 (Boss 3) Geschenke vergeben, wird ein System-Geschenk fällig (`take_pending_gift`); nach Schwelle 100 wird Hype auf 80 gesetzt.
+Geschenke kosten **keinen** Hype und keine Ticks. Auswahl `SponsorSystem.pick` mit Gewichten aus `sponsors.json`.
+
+Zuschauer: `ShowModel.viewers_for(floor.floor_mult, hype, followers)` (rauschfrei, deterministisch); Anzeige glättet und rauscht (§3.5).
+`viewers_peak_battle` = Maximum des rauschfreien Werts während des Kampfes.
+Follower nach Sieg: `ShowModel.followers_for_battle(viewers_peak_battle, hype_end, is_boss, follower_mult)`;
+Flucht: `−followers_lost_on_flee(followers)`; Niederlage: 0. Achievements: bronze 25 / silver 50 / gold 100; Events laut §7.4.
+Kontrolle (GDD §13): Hype 100, 1 500 Follower → `(1000 + 1500) × 2.9 = 7 250` Zuschauer → `ach_viewers_5000` ist erreichbar.
+
+### 6.3 `StatIds` (Achievement-Zähler) und Trigger-Payloads
+
+`StatIds.ALL` = GDD §8 (persistent in `ShowState.stats`):
 
 | ID | Typ | Wer erhöht | Wann |
 |---|---|---|---|
-| `kills` | Zähler | Show (ShowRules) | Gegner-KO |
-| `kills_skill` | Zähler | Show | Gegner-KO durch Skill ≠ Basisangriff |
-| `crits` | Zähler | Show | Party-Krit |
-| `weakness_hits` | Zähler | Show | Party trifft Schwäche |
-| `stunts_success` / `stunts_failed` | Zähler | Show | Stunt-Ergebnis |
-| `sponsor_gifts` | Zähler | Show | Geschenk |
-| `items_used` | Zähler | Show | Item im Kampf |
+| `kills_total` | Zähler | Show (ShowRules) | Gegner-KO |
+| `kills_skill` | Zähler | Show | Gegner-KO durch Skill |
 | `battles_won` | Zähler | `Show.end_battle` | Sieg |
-| `battles_won_close` | Zähler | `Show.end_battle` | Sieg mit `min_party_hp_ratio < 0.2` |
-| `battles_won_1hp` | Zähler | `Show.end_battle` | Sieg mit `lowest_end_hp == 1` |
-| `flawless_wins` | Zähler | `Show.end_battle` | Sieg mit `damage_taken == 0` |
-| `boss_kills` | Zähler | `Show.end_battle` | Sieg mit `is_boss` |
-| `battles_fled` / `battles_lost` | Zähler | `Show.end_battle` | Flucht / Niederlage |
+| `battles_fled` | Zähler | `Show.end_battle` | Flucht |
+| `preemptives` | Zähler | `Show.begin_battle` | Kampfstart PREEMPTIVE |
+| `ambushes_won` | Zähler | `Show.end_battle` | Sieg nach AMBUSH |
+| `crits_total` | Zähler | Show | Party-Krit |
+| `stunts_success` / `stunts_fail` | Zähler | Show | Stunt-Ergebnis |
 | `chests_opened` | Zähler | Show (`Events.chest_opened`) | |
+| `sponsor_gifts` | Zähler | Show (`sponsor_gift_triggered`) | |
+| `credits_spent_vendor` | Zähler | Show (`Events.item_bought`) | Betrag |
 | `lootboxes_opened` | Zähler | Show (`Events.lootbox_opened`) | |
-| `levels_gained` | Zähler | Show (`Events.member_leveled`) | |
-| `floors_cleared` | Zähler | `Game.complete_floor` | |
-| `rooms_visited` | Zähler | Show (`Events.room_entered`, first_visit) | |
-| `credits_spent` | Zähler | Show (`Events.credits_changed`, delta < 0) | Betrag |
-| `max_seconds_without_battle` | Max | Show `_process` | Pazifist |
-| `hype_peak` | Max | Show (bei jedem Hype-Wechsel, `int(hype)`) | |
-| `followers_peak` | Max | Show | |
+| `events_completed` | Zähler | Show (`Events.event_completed`) | |
+| `game_overs` | Zähler | `Game.on_game_over` (+ `Save.record_game_over`) | |
+| `ko_mopsula` | Zähler | Show | KO Mopsula |
+| `explore_seconds_since_battle` | Zähler (reset) | RunSim (+1 je 30 Ticks), `Show.begin_battle` setzt 0 | Pazifist |
+| `viewers_max` | Max | Show (`viewers_changed`) | rauschfreier Wert |
+
+Trigger-Payloads (`e.`-Schlüssel; der Validator prüft Bedingungen dagegen):
+
+| Trigger | Payload-Schlüssel |
+|---|---|
+| `enemy_killed` | `enemy_id`, `overkill` (bool), `by` (`attack`/`skill`/`stunt`/`item`), `member` |
+| `battle_won` | `party_turns`, `min_party_hp`, `min_party_hp_pct`, `crits`, `weakness_hits`, `items_used`, `party_kos`, `damage_taken`, `is_boss`, `boss_id`, `encounter_type` (`normal`/`preemptive`/`ambush`), `group_id` |
+| `battle_fled` | `encounter_id`, `is_boss` |
+| `battle_started` | `encounter_id`, `encounter_type`, `is_boss` |
+| `stunt_resolved` | `success`, `member`, `skill_id` |
+| `combo` | `member`, `enemy_id` |
+| `party_ko` | `member` |
+| `boss_defeated` | `boss_id`, `party_turns` |
+| `sponsor_gift` | `sponsor_id` |
+| `viewers_changed` | `viewers` |
+| `chest_opened` | `chest_id`, `type` |
+| `item_bought` | `item_id`, `qty`, `cost`, `safe_room_id` |
+| `lootbox_opened` | `box_id`, `best_rarity` |
+| `level_up` | `member`, `level` |
+| `event_completed` | `event_id`, `choice` |
+| `explore_tick` | `seconds_since_battle` |
+| `floor_completed` | `floor`, `timer_left` (Sekunden, int) |
 
 ### 6.4 Save-Format (Version 1)
 
@@ -1936,68 +2691,97 @@ Datei `user://saves/slot_<1..3>.json` (bei `use_custom_user_dir` unter `…/Prim
   "version": 1,
   "game_version": "0.1.0",
   "saved_at_unix": 1760000000,
-  "summary": {"player_name": "Kai", "floor_index": 1, "level": 3, "play_time_sec": 812, "followers": 1520, "location": "safe_room"},
+  "summary": {"player_name": "Kai", "floor_index": 1, "level": 3, "play_time_sec": 812, "followers": 420, "location": "sr_kiosk"},
   "state": {
     "slot": 1,
     "seed": 123456,
     "player_name": "Kai",
+    "difficulty": "prime",
     "play_time_sec": 812.5,
     "rng_counter": 41,
+    "pity_rare": 2,
+    "pity_epic": 5,
     "party": [
-      {"id": "kai", "display_name": "Kai", "level": 3, "exp": 12, "hp": 88, "mp": 10,
-       "equipment": {"weapon": "itm_mop", "armor": "itm_scrubs", "accessory": ""}, "skills": ["skl_mop_slam"], "class_id": ""},
-      {"id": "mopsula", "display_name": "Mopsula", "level": 3, "exp": 30, "hp": 61, "mp": 24,
-       "equipment": {"weapon": "", "armor": "itm_velvet_collar", "accessory": ""}, "skills": ["skl_noble_spark"], "class_id": ""}
+      {"id": "kai", "display_name": "Kai", "level": 3, "exp": 12, "hp": 82, "mp": 16,
+       "equipment": {"weapon": "itm_wpn_mop", "armor": "itm_arm_hoodie", "accessory": ""}, "skills": ["skl_kai_heavy_swing", "skl_kai_taunt", "skl_kai_sweep"], "class_id": ""},
+      {"id": "mopsula", "display_name": "Mopsula", "level": 3, "exp": 30, "hp": 54, "mp": 38,
+       "equipment": {"weapon": "itm_wpn_collar_leather", "armor": "itm_arm_pug_sweater", "accessory": ""}, "skills": ["skl_mop_noble_flame", "skl_mop_holy_lick"], "class_id": ""}
     ],
     "inventory": {"credits": 140, "counts": {"itm_bandage": 3}},
     "pending_lootboxes": ["box_bronze"],
-    "floor_run": {"floor_id": "floor_1", "index": 1, "seed": 99887, "time_left": 734.2,
-                  "visited": [[3, 6], [3, 5]], "opened_chests": ["f1_c0"], "defeated_groups": ["f1_g2"],
-                  "quarter_boss_defeated": false, "floor_boss_defeated": false, "stairs_found": false, "location": "safe_room"},
-    "show": {"viewers": 1800, "followers": 1520, "hype": 35.0, "stats": {"kills": 12},
-             "achievements": ["ach_first_kill"], "sponsor_uses": {"spn_krachchips": 1}},
-    "flags": {"intro_seen": true}
+    "bestiary": {"enm_kanalratte": {"defeated": 4, "weak_known": ["fire"]}},
+    "floor_run": {"floor_id": "floor_1", "index": 1, "seed": 99887, "time_left_ticks": 22026, "timer_started": true,
+                  "warned": [600], "decay_ticks": 40, "visited": [[3, 7], [3, 6]], "opened_chests": ["f1_c0"],
+                  "defeated_groups": ["f1_g0"], "opened_gates": [], "completed_events": ["fev_photo_drone"], "event_uses": {},
+                  "strays": {}, "stray_counter": 0, "spawner_ticks": {"zone_platform": 812},
+                  "quarter_boss_defeated": false, "floor_boss_defeated": false, "stairs_found": false,
+                  "location": "sr_kiosk", "visited_safe_rooms": ["sr_kiosk"], "safe_room_visits": 1,
+                  "stats": {"time_used_ticks": 13974, "kills": 6, "viewers_peak": 2210, "followers_gained": 420, "achievements": 4}},
+    "show": {"viewers": 1800, "followers": 420, "hype": 35.0, "stats": {"kills_total": 6},
+             "achievements": ["ach_first_blood"], "milestones": ["ms_100", "ms_250"], "sponsor_uses": {"spn_gluckwasser": 1}},
+    "flags": {"intro_seen": true, "scene_scn_mop_1": true}
   }
 }
 ```
 
 Regeln: `Vector2i` als `[x, y]`; Zahlen beim Laden mit `int()` konvertieren; unbekannte Item-/Skill-IDs beim Laden verwerfen
 (Warnung, nicht fatal); fehlende Felder → Defaults; `version > VERSION` → Laden verweigern („Spielstand stammt aus neuerer Version“).
-Speichern nur im Safe Room (manuell) + Autosave in `Game.complete_floor()`. Nach dem Laden: `Router.goto(SCENE_EXPLORATION,
-{"spawn": state.floor_run.location})`; bei `&"safe_room"` ruft die Erkundung nach Aufbau `Router.enter_safe_room()` auf.
+Speichern nur im Safe Room (manuell, `location` = Safe-Room-ID) + Autosave in `Game.continue_after_summary()`.
+**Gnadenfrist:** `Save.load_slot` setzt nach dem Dekodieren `time_left_ticks = maxi(time_left_ticks, 180 × 30)` (GDD §2.9).
+Nach dem Laden: Etage nicht spielbar (`playable == false`) → `Router.goto(SCENE_CREDITS)`; sonst
+`Router.goto(SCENE_EXPLORATION, {"spawn": state.floor_run.location})`; bei einer Safe-Room-ID ruft die Erkundung nach Aufbau
+`Router.enter_safe_room(id)` auf.
 
 ---
 
-## 7. Dungeon-Generierung (M3)
+## 7. Dungeon und Erkundung (M3)
+
+Etage 1 ist **handgebaut** (`FloorDef.layout`, GDD §1.3: Raster 8 × 8, 31 Zellen, Zonen A–D, 3 Safe Rooms, Tor zu Gleis 9,
+16 Truhen, 5 Events, 2 Streuner-Spawner). Der prozedurale Generator (§7.2) bleibt für Etagen ohne `layout` (Etage 2+).
+Beide Wege liefern dasselbe `FloorLayout`; alles danach (Aufbau, Szene, Speichern) ist identisch.
 
 ### 7.1 Datenstrukturen
 
 ```gdscript
 class_name RoomCell extends RefCounted
-enum Kind { START, NORMAL, SAFE, QUARTER_BOSS, FLOOR_BOSS, STAIRS }
+enum Kind { START, NORMAL, SAFE, QUARTER_BOSS, FLOOR_BOSS, STAIRS, GATE }
 const DOOR_N: int = 1   # -Z (y - 1)
 const DOOR_E: int = 2   # +X (x + 1)
 const DOOR_S: int = 4   # +Z (y + 1)
 const DOOR_W: int = 8   # -X (x - 1)
 var coord: Vector2i
 var kind: RoomCell.Kind = Kind.NORMAL
+var zone: String = ""       # zone id ("" for procedural floors)
 var doors: int = 0
-var depth: int = 0          # BFS distance from start
+var depth: int = 0          # BFS distance from start (gates counted as open)
 var variant: int = 0        # 0..3 decoration variant
 var on_path: bool = false   # on start→stairs path
+static func dir_bit(dir: String) -> int      # "N"/"E"/"S"/"W" → DOOR_*
 
 class_name ChestSpawn extends RefCounted
 var id: String              # "f1_c0"
 var cell: Vector2i
 var offset: Vector2         # room-local XZ, |x|,|y| <= 4.5
+var type: String = "wood"   # "wood" | "metal" | "locked" (locked needs itm_key_master)
+var contents: Array[Dictionary] = []   # fixed contents (metal/locked)
 
 class_name EnemySpawn extends RefCounted
-var id: String              # "f1_g3" / "f1_qb" / "f1_fb"
+var id: String              # "f1_g3" / "f1_s0" (stray) / "f1_qb" / "f1_fb"
 var cell: Vector2i
 var offset: Vector2
 var encounter_id: String
 var lead_enemy_id: String   # first enemy of the encounter (visual + explore params)
 var is_boss: bool
+var start_state: StringName = &"PATROL"     # &"IDLE" | &"PATROL"
+var can_turn: bool = true                    # false: IDLE group never turns (tutorial)
+var waypoints: Array[Vector2] = []           # room-local XZ; empty PATROL → circle r 4 m around offset
+
+class_name EventSpawn extends RefCounted
+var id: String              # "fev_wheel"
+var type: String            # FLOOR_EVENT_TYPES
+var cell: Vector2i
+var offset: Vector2
+var params: Dictionary
 
 class_name FloorLayout extends RefCounted
 const ROOM_SIZE: float = 16.0        # == EnvKit.ROOM_SIZE (test asserts)
@@ -2011,22 +2795,75 @@ var stairs: Vector2i
 var quarter_boss: Vector2i = Vector2i(-1, -1)   # (-1,-1) if floor has no quarter boss
 var floor_boss: Vector2i = Vector2i(-1, -1)
 var safe_rooms: Array[Vector2i] = []
+var safe_room_ids: Dictionary = {}   # Vector2i → safe room id ("sr_…"; procedural: "sr_f<i>_<k>")
+var safe_room_info: Dictionary = {}  # safe room id → {"cell", "name", "theme", "shop"}
+var zones: Dictionary = {}           # zone id → {"name", "palette"} ({} procedural)
+var gates: Array[Dictionary] = []    # [{"cell": Vector2i, "dir": int (DOOR_*), "requires": String, "key": "x,y,D"}]
 var path: Array[Vector2i] = []       # start … stairs
 var chests: Array[ChestSpawn] = []
 var enemies: Array[EnemySpawn] = []
+var events: Array[EventSpawn] = []
+var spawners: Array[Dictionary] = [] # [{"zone", "pool": PackedStringArray, "interval_sec": int}]
 func cell_at(c: Vector2i) -> RoomCell
 func cell_to_world(c: Vector2i) -> Vector3       # Vector3(c.x * 16.0, 0, c.y * 16.0) = room center
 func world_to_cell(p: Vector3) -> Vector2i       # roundi(p.x / 16.0), roundi(p.z / 16.0)
-func neighbors(c: Vector2i) -> Array[Vector2i]   # connected via doors
+func neighbors(c: Vector2i, opened_gates: PackedStringArray = []) -> Array[Vector2i]   # via doors; closed gates block
+func gate_at(c: Vector2i, dir: int) -> Dictionary  # {} if none
+func zone_palette(c: Vector2i, floor_palette: Dictionary) -> Dictionary   # zone palette merged over floor palette
 func validate() -> PackedStringArray
-func to_debug_string() -> String                 # ASCII map: S start, T stairs, Q quarter boss, B floor boss, H safe, . normal
+func to_debug_string() -> String                 # ASCII map: S start, T stairs, Q quarter boss, B floor boss, H safe, G gate, . normal
 
 class_name DungeonGenerator extends RefCounted
 const MAX_ATTEMPTS: int = 20
-static func generate(def: FloorDef, floor_seed: int) -> FloorLayout
+static func generate(def: FloorDef, floor_seed: int) -> FloorLayout   # def.layout not empty → from_layout(), else procedural
+static func from_layout(def: FloorDef, floor_seed: int) -> FloorLayout
+
+class_name ExploreEvent extends RefCounted     # core/dungeon/explore_event.gd (M3) — Brief §6b.2 "Ereignisse raus"
+enum Type { ROOM_ENTERED, CHEST_OPENED, ENCOUNTER, ENEMY_STATE, EVENT_CHOICE, GATE_OPENED, ACHIEVEMENT, HYPE,
+	TIMER_SECOND, TIMER_WARNING, TIMER_EXPIRED, EXPLORE_TICK, STRAY_DUE, GIFT_DELIVERED, FLOOR_COMPLETED }
+var type: ExploreEvent.Type
+var tick: int = 0                   # RunSim tick
+var data: Dictionary = {}           # e.g. TIMER_WARNING {"seconds": 300}, STRAY_DUE {"zone", "group_id", "encounter_id"}
+static func make(t: ExploreEvent.Type, p_tick: int, p_data: Dictionary) -> ExploreEvent
+func to_dict() -> Dictionary
+static func from_dict(d: Dictionary) -> ExploreEvent
+
+class_name FloorEvent extends RefCounted       # core/dungeon/floor_event.gd (M3), rules §7.4
+static func choices(ev: EventSpawn, state: GameState, data: GameData) -> PackedStringArray
+static func resolve(ev: EventSpawn, choice: String, state: GameState, data: GameData, rng: RandomNumberGenerator) -> Dictionary
+	# pure (no mutation): {"completed": bool, "credits": int, "items_add": Dictionary, "items_remove": Dictionary,
+	#  "boxes": PackedStringArray, "hype": float, "followers": int, "party_damage_pct": Dictionary (member → %),
+	#  "encounter_id": String, "open_gate": String ("x,y,D"), "mod_tag": String}
+static func apply(outcome: Dictionary, ev: EventSpawn, choice: String, state: GameState, data: GameData) -> void
+	# mutates GameState only (credits, items, hp (never below 1), opened_gates, completed_events, event_uses); hype/followers via Show
 ```
 
-### 7.2 Algorithmus (deterministisch: nur `rng` aus `floor_seed`; Versuch k nutzt `SeedUtil.derive(floor_seed, "retry", k)`)
+Erkundungs-Uhr `RunSim` (`core/live/run_sim.gd`, M8, dünne Variante 05 CR-6; M0 legt den Stub an):
+
+```gdscript
+class_name RunSim extends RefCounted
+func _init(p_data: GameData, p_state: GameState, p_rules: Dictionary) -> void
+func step(n: int) -> Array[ExploreEvent]        # n ticks; per tick in this order:
+	# 1 timer: floor_run.time_left_ticks −1, stats.time_used_ticks +1 → TIMER_SECOND on integer-second change,
+	#   TIMER_WARNING when crossing a value of FloorDef.timer_warnings (once, floor_run.warned), TIMER_EXPIRED at 0 (stops)
+	# 2 every 30 ticks: stat explore_seconds_since_battle +1 → EXPLORE_TICK {"seconds_since_battle"}
+	# 3 floor_run.decay_ticks +1; at ShowModel.HYPE_DECAY_TICKS: reset, show.hype = ShowModel.decay_step(hype) → HYPE (if changed)
+	# 4 spawners: zone without living stray → spawner_ticks[zone] +1; at interval_sec × 30 → group "f<i>_s<stray_counter>",
+	#   encounter = pool[SeedUtil.make_rng(SeedUtil.derive(floor_run.seed, "stray", stray_counter)).randi_range(0, size − 1)],
+	#   floor_run.strays[group] = {"zone", "enc"}, stray_counter +1, ticks reset → STRAY_DUE
+func apply(cmd: Dictionary) -> Array[ExploreEvent]   # M8 replay of recorded explore commands
+func tick() -> int                                    # ticks since run start
+```
+
+### 7.2 Algorithmus
+
+**Handgebaut (`from_layout`)**: Zellen, Zonen, Tore, Truhen, Gruppen, Events, Spawner, Safe Rooms und Treppe kommen 1:1 aus
+`def.layout`; `doors` aus dem `"NESW"`-String; BFS ab `start` (Tore offen) → `depth`; `path` = kürzester Weg Start → Treppe
+(BFS-Elternkette, bei Gleichstand Nachbarreihenfolge N, E, S, W); `variant = rng.randi_range(0, 3)` je Zelle in Reihenfolge
+(y, dann x) mit `rng` aus `floor_seed`; Bosse aus `quarter_boss`/`floor_boss`-Zellen mit Gruppen `f<i>_qb`/`f<i>_fb`.
+`validate()` muss leer sein, sonst `push_error` (Datenfehler, kein Retry).
+
+**Prozedural** (deterministisch: nur `rng` aus `floor_seed`; Versuch k nutzt `SeedUtil.derive(floor_seed, "retry", k)`):
 
 1. `target = rng.randi_range(rooms.min, rooms.max)`; `start = Vector2i(w / 2, h − 1)`.
 2. **Baum wachsen** (keine Schleifen): solange `cells.size() < target`: zufällige bestehende Zelle, Richtungen in Zufallsreihenfolge,
@@ -2034,50 +2871,80 @@ static func generate(def: FloorDef, floor_seed: int) -> FloorLayout
 3. BFS ab Start → `depth`. `stairs` = Zelle mit max. Tiefe (Gleichstand: kleinstes y, dann kleinstes x).
    Bedingung `depth(stairs) ≥ ceili(target × 0.35)`, sonst neuer Versuch.
 4. `path` = eindeutiger Baumpfad Start → Treppe; `on_path = true`.
-5. **Quartier-Boss** (falls `def.quarter_boss != ""`): `path[roundi((path.size() − 1) × 0.6)]`, Index ≥ 2 und ≠ Treppe —
-   Engstelle, weil Baum: alles hinter ihm ist nur durch ihn erreichbar.
-6. **Etagenboss** (falls `def.floor_boss != ""`): neue Sackgasse an freiem Nachbar der Treppe (Raster-intern, nicht belegt);
-   sonst tiefstes Blatt ≠ Treppe, nicht auf `path`; sonst neuer Versuch. Optional (nicht auf dem Weg zur Treppe).
-7. **Safe Room(s)**: Kandidaten = Zellen mit `depth < depth(QB)`, nicht Start, nicht auf Pfad bevorzugt (Blätter zuerst);
-   Wahl: Tiefe am nächsten an `0.6 × depth(QB)`. Fallback: Pfadzelle mit Index 1..QB−1. Zweiter Safe Room (falls `safe_rooms == 2`):
-   `depth > depth(QB)`, nicht Treppe/Boss. Ohne QB gilt `depth(stairs)` statt `depth(QB)`.
+5. **Quartier-Boss** (falls `def.quarter_boss != ""`): `path[roundi((path.size() − 1) × 0.6)]`, Index ≥ 2 und ≠ Treppe.
+6. **Etagenboss** (falls `def.floor_boss != ""`): neue Sackgasse an freiem Nachbar der Treppe; sonst tiefstes Blatt ≠ Treppe,
+   nicht auf `path`; sonst neuer Versuch.
+7. **Safe Rooms** (`def.safe_rooms`, 0..3): erster: Kandidaten mit `depth < depth(QB)`, nicht Start, Blätter bevorzugt, Tiefe am
+   nächsten an `0.6 × depth(QB)`; weitere: `depth > depth(QB)`, nicht Treppe/Boss. Ohne QB gilt `depth(stairs)`. IDs `sr_f<i>_<k>`,
+   Theme reihum `kiosk`, `pumphouse`, `signalbox`; Shop = `def.shop`.
 8. Übrige Zellen `NORMAL`; `variant = rng.randi_range(0, 3)` für alle.
-9. **Truhen**: `n = rng.randi_range(chests.min, chests.max)`, geeignet = NORMAL ohne Start; Blätter zuerst (gemischt), dann Rest
-   (gemischt); IDs `f<i>_c<k>`; `offset = Vector2(rng.randf_range(−4.0, 4.0), rng.randf_range(−4.0, 4.0))`.
-10. **Gegnergruppen**: `n = rng.randi_range(enemy_groups.min, enemy_groups.max)`, geeignet = NORMAL mit `depth ≥ 2`;
-    max. 1 Gruppe pro Raum (bei Mangel 2); Encounter gewichtet aus Nicht-Boss-Encountern mit
-    `min_depth ≤ depth / max_depth ≤ max_depth`; IDs `f<i>_g<k>`. Bosse: `f<i>_qb` / `f<i>_fb`, `offset = Vector2.ZERO`.
+9. **Truhen** (`type: wood`, Inhalt per `roll_chest_table`): `n = rng.randi_range(chests.min, chests.max)`, NORMAL ohne Start;
+   Blätter zuerst; IDs `f<i>_c<k>`; `offset = Vector2(rng.randf_range(−4.0, 4.0), rng.randf_range(−4.0, 4.0))`.
+10. **Gegnergruppen**: `n = rng.randi_range(enemy_groups.min, enemy_groups.max)`, NORMAL mit `depth ≥ 2`; max. 1 Gruppe pro Raum
+    (bei Mangel 2); Encounter gewichtet aus Nicht-Boss-Encountern mit passender relativer Tiefe; IDs `f<i>_g<k>`, Zustand PATROL.
 11. `validate()` muss leer sein, sonst neuer Versuch; nach `MAX_ATTEMPTS` → `push_error` und letztes Layout zurückgeben.
 
-`validate()` prüft: alle Zellen verbunden; Türbits symmetrisch; genau 1 START/STAIRS; QB auf Pfad; Safe Room vor QB erreichbar ohne QB;
-keine Truhe/Gruppe in START/SAFE/Boss-Räumen; IDs eindeutig; Anzahlen in den Grenzen der Def.
-Test-Pflicht (M3): 200 Seeds × `floor_1` → `validate()` leer, gleicher Seed → identischer `to_debug_string()`, Ø-Laufzeit < 20 ms.
+`validate()` prüft: alle Zellen verbunden (Tore offen gerechnet); Türbits symmetrisch; genau 1 START/STAIRS; Safe Room(s) vor dem
+Quartier-Boss erreichbar ohne ihn; keine Truhe/Gruppe/Event in START/SAFE/Boss-Räumen; IDs eindeutig; Offsets ≤ 4.5; prozedural
+zusätzlich Anzahlen in den Grenzen der Def. Test-Pflicht (M3): `floor_1` (Layout) → `validate()` leer, gleicher Seed → identischer
+`to_debug_string()`; 200 Seeds × prozedurale Fixture-Etage → `validate()` leer, Determinismus, Ø-Laufzeit < 20 ms.
 
 ### 7.3 Aufbau der Erkundung (M3 ↔ M4)
 
-`FloorBuilder` (M3) erzeugt pro Zelle einen `RoomSpec` und ruft `EnvKit.build_room(spec)`; Raum-Node wird unter `World/Rooms`
-bei `layout.cell_to_world(c)` platziert (Name `Room_<x>_<y>`). Interaktions-Areas (M3) sitzen an `EnvKit.anchor_for(spec, …)`.
+`FloorBuilder` (M3) erzeugt pro Zelle einen `RoomSpec` (Palette = `layout.zone_palette(cell, def.palette)`) und ruft
+`EnvKit.build_room(spec)`; Raum-Node wird unter `World/Rooms` bei `layout.cell_to_world(c)` platziert (Name `Room_<x>_<y>`).
+Tore: geschlossene Tore bekommen `PropKit.build(&"gate")` in der Türöffnung (Kollision Layer 1) + `gate_interactable`.
+Interaktions-Areas (M3) sitzen an `EnvKit.anchor_for(spec, …)` bzw. an den Daten-Offsets.
 Weltkonventionen: Raum 16 × 16 m, Wandhöhe 3.5 m, Türöffnung 4.0 m breit (Mitte der Kante), Wandstärke 0.5 m, Boden y = 0.
 Freihaltezone: Kreis r = 5.0 m um die Raummitte und 3 m tiefe Korridore vor jeder Tür sind kollisionsfrei (Props nur im
-Randstreifen) → M3 darf Spawns/Truhen mit `|offset| ≤ 4.5` setzen.
+Randstreifen) → Spawns/Truhen/Events mit `|offset| ≤ 4.5`.
 
-Kollisionslayer: 1 `world` (Wände/Boden/große Props), 2 `player`, 3 `enemy`, 4 `interact` (Area3D, Maske 2).
+Kollisionslayer: 1 `world` (Wände/Boden/große Props/geschlossene Tore), 2 `player`, 3 `enemy`, 4 `interact` (Area3D, Maske 2).
 
-Erkundungs-Kennzahlen (M3): Spieler-Kapsel r 0.4 / h 1.7, Gehen 5.0 m/s, Sprint 7.5 m/s, Beschleunigung 30 m/s², Drehrate 12 rad/s,
-Gravitation 20 m/s². Kamera: SpringArm3D Länge 7.0 m (Kollisionsmaske `world`), Pitch −38° (Bereich −65°..−15°), FOV 60,
-Stick-Yaw 2.6 rad/s, Maus (RMT halten) 0.005 rad/px × Empfindlichkeit, Touch-Drag 0.006 rad/px.
-Gegner: Patrouille im Raum (Radius 4 m), `explore.speed`/`chase_speed`/`aggro_radius` aus Def, Sichtkegel 120°,
-Aufgabe nach 12 m Distanz oder 6 s ohne Sicht, Kontakt bei ≤ 1.2 m. Bosse stehen an Anchor `&"boss_spot"`, Kampf bei Betreten
-des Radius 5 m. Vorteil: Spieler-Schwung (`attack`, Reichweite 1.8 m, 90°-Bogen, Cooldown 0.6 s) trifft unaufmerksamen Gegner →
-PREEMPTIVE; Spieler berührt Rücken eines unaufmerksamen Gegners (Winkel Gegner-Blickrichtung ↔ Richtung zum Spieler > 120°)
-→ PREEMPTIVE; verfolgender Gegner trifft Spieler von hinten (Winkel > 120° zur Spieler-Blickrichtung) → AMBUSH; sonst NORMAL.
-Nach Flucht: Gruppe 3 s betäubt, Spieler 2 s unverwundbar; nach jedem Kampf 1.5 s Encounter-Sperre.
+Spieler (GDD §2.1): Kapsel r 0.4 / h 1.7, **Laufen 5.5 m/s**, **Schleichen 2.5 m/s** (Action `sneak` halten; Touch: Stick-Auslenkung
+≤ 0.6), Beschleunigung 30 m/s², Abbremsen 40 m/s², Drehrate 12 rad/s, Gravitation 20 m/s², kein Sprung.
+Action `action` (eine Taste): liegt ein Interactable im Radius 1.5 m und im 120°-Kegel vor Kai → `interact()` (Vorrang),
+sonst **Feldschlag** (Bogen 100°, Reichweite 1.8 m, Dauer 0.45 s, Cooldown 0.6 s).
+Kamera (verbindlich hier und in 03_ART; GDD-Werte 6 m/−22°/FOV 65 gelten nicht): SpringArm3D Länge 7.0 m (Kollisionsmaske
+`world`), Pitch −38° (Bereich −65°..−15°), FOV 60, Stick-Yaw 2.6 rad/s, Maus (RMT halten) 0.005 rad/px × Empfindlichkeit,
+Touch-Drag 0.006 rad/px.
+
+Begleiter `companion_follower.gd` (M3, **ohne** NavigationServer): Spur aus Spielerpositionen (alle 0.25 m ein Punkt, Ringpuffer 64);
+Mopsula (`CharacterBody3D`, Layer 0, Maske `world`) folgt der Spur mit 1.8 m Bogenlänge Abstand per `move_and_slide()` mit
+Spielergeschwindigkeit; Abstand > 10 m oder Spawn/`on_resume` → Teleport auf den Spurpunkt bzw. 1.8 m hinter Kai. Kein Kampfauslöser.
+
+Gegner (`enemy_actor.gd`, GDD §2.3, Werte aus `EnemyDef.explore`):
+
+| Zustand | Verhalten |
+|---|---|
+| `IDLE` | steht; dreht sich alle 4 s um ±60° (nicht bei `can_turn == false`) |
+| `PATROL` | Wegpunkte mit `patrol_speed` (1.8 m/s); ohne Wegpunkte Kreis r 4 m um den Spawn |
+| `ALERT` | bleibt stehen, „!“-Blase, 0.6 s Telegraph → `CHASE`; `Events.enemy_alerted` |
+| `CHASE` | verfolgt mit `field_speed` (0 = steht, kann nie verfolgen/Hinterhalt) |
+| `RETURN` | zurück zum Leash-Punkt mit 3.0 m/s; ignoriert Kai 2 s |
+
+Wahrnehmung: Sichtkegel `sight_range`/`sight_angle_deg` (10 m / 110°) mit Raycast (Maske `world`); Hörradius 360° `hear_run` 4.0 m
+beim Laufen, `hear_sneak` 1.5 m beim Schleichen. Aufgabe: `giveup_no_sight` 4 s ohne Sicht **oder** > `leash` 20 m vom Leash-Punkt
+**oder** `max_chase` 8 s Gesamtverfolgung → `RETURN`. Kontakt bei ≤ **1.1 m**. Bosse stehen an Anchor `&"boss_spot"`, Kampf bei
+Betreten des Radius 5 m (immer NORMAL).
+
+Vorteil (Brief §4 hat Vorrang; `fwd_e`/`fwd_k` Blickrichtungen, `d_ek` Richtung Gegner→Kai, `d_ke` Kai→Gegner,
+`Balance.BACK_DOT = -0.34` ≙ 110°), in dieser Reihenfolge:
+
+| Ergebnis | Bedingung |
+|---|---|
+| PREEMPTIVE | Feldschlag trifft die Gruppe **und** (Zustand ∈ {IDLE, PATROL} **oder** `dot(fwd_e, d_ek) < BACK_DOT`) |
+| PREEMPTIVE | Kai berührt eine Gruppe, die **nicht** in `CHASE` ist, von hinten: `dot(fwd_e, d_ek) < BACK_DOT` |
+| AMBUSH | Gruppe in `CHASE` berührt Kai von hinten: `dot(fwd_k, d_ke) < BACK_DOT` |
+| NORMAL | alles andere; Bosse immer |
+
+Nach Kampf oder Flucht: Kai 2.0 s unverwundbar und unsichtbar; Gegner im Radius 6 m gehen in `RETURN`; geflohene Gruppe bleibt.
 
 ```gdscript
 class_name ExplorationScene extends Node3D        # scenes/exploration/exploration.gd (M3)
-func setup(params: Dictionary) -> void            # {"spawn": &"start" | &"safe_room", "capture": bool}; default: state location
+func setup(params: Dictionary) -> void            # stores params only: {"spawn": &"start" | &"<safe room id>", "capture": bool}
 func on_suspend() -> void                         # Game.timer_running = false; release pressed move actions
-func on_resume(payload: Dictionary) -> void       # {"battle_result": BattleResult} | {"from_safe_room": true}
+func on_resume(payload: Dictionary) -> void       # {"battle_result": BattleResult} | {"from_safe_room": "<sr id>"}
 func force_encounter(group_id: String = "") -> void   # "" → nearest living non-boss group; same path as contact (NORMAL);
 	# no living group left → first non-boss encounter of the floor with group_id ""
 func get_layout() -> FloorLayout
@@ -2085,10 +2952,11 @@ func get_player_position() -> Vector3
 func get_player_cell() -> Vector2i
 ```
 
-`_ready()`: `Game.ensure_state()`; Layout `DungeonGenerator.generate(Game.floor_def(), Game.state.floor_run.seed)`; Räume, Truhen
-(bereits geöffnete als offen), Gegner (ohne `defeated_groups`, Bosse ohne Defeated-Flag), Spieler, Kamera,
-`ExplorationHud` instanziieren und `bind_layout()`; beim ersten Betreten der Etage `Events.floor_entered`;
-`Events.overlay_mode_requested(&"explore")`; `Sfx.music(&"explore")`; `Game.timer_running = true`.
+`_ready()`: `Game.ensure_state()`; Layout `DungeonGenerator.generate(Game.floor_def(), Game.state.floor_run.seed)`; Räume, Tore
+(`opened_gates` offen), Truhen (geöffnete als offen), Gegner (ohne `defeated_groups`, Bosse ohne Defeated-Flag, lebende `strays`),
+Events (abgeschlossene ohne Prompt), Spieler, Begleiter, Kamera, `ExplorationHud` instanziieren und `bind_layout()`; beim ersten
+Betreten der Etage `Events.floor_entered`; `Events.overlay_mode_requested(&"explore")`; `Sfx.music(&"explore")`;
+`Game.timer_running = true` (der Countdown tickt erst, wenn `floor_run.timer_started`). Hört auf `Events.stray_spawn_requested`.
 Encounter: `Events.encounter_triggered` → `Router.start_battle(Game.make_battle_setup(encounter_id, advantage, group_id))`.
 
 Weitere Abläufe in der Erkundung (M3, verbindlich):
@@ -2096,11 +2964,33 @@ Weitere Abläufe in der Erkundung (M3, verbindlich):
 | Auslöser | Ablauf |
 |---|---|
 | Raumwechsel (`layout.world_to_cell(player)` ändert sich) | erste Betretung → `floor_run.visited.append(cell)`, `hud.mark_visited(cell)`; immer `Events.room_entered(cell, kind, first_visit)`; STAIRS erstmals → `floor_run.stairs_found = true` |
-| Truhe `interact` | Index k aus ID `f<i>_c<k>`; `rewards := LootRoller.roll_chest(Game.floor_def(), SeedUtil.make_rng(SeedUtil.derive(floor_run.seed, "chest", k)))`; `Game.add_rewards(rewards)`; `floor_run.opened_chests.append(id)`; `ChestProp.open()`; `Events.chest_opened(id, rewards)`; `Sfx.play(&"chest_open")` |
-| Treppe `interact` | ConfirmDialog (M6) „Etage verlassen?“ → Ja: `Game.complete_floor()` |
-| Safe-Room-Tür `interact` | `floor_run.location = &"safe_room"`; `Router.enter_safe_room()`. Rückkehr (`on_resume({"from_safe_room": true})`): Spieler 1,2 m vor Anchor `&"safe_door"`, Blick zur Raummitte; `floor_run.location = &"start"` |
-| Laden mit `location == &"safe_room"` | Spieler wird vor der Safe-Room-Tür platziert, danach `Router.enter_safe_room()` (deferred, nach Aufbau) |
-| Gegnergruppe besiegt (`on_resume` mit `VICTORY`) | Gruppen-Node `queue_free()` (`defeated_groups` hat `BattleBridge` bereits ergänzt) |
+| Truhe `interact` | `locked` ohne `itm_key_master` → Prompt „Verschlossen“; sonst k aus `f<i>_c<k>`; `rewards := LootRoller.roll_chest(chest, DB.data, i, Game.state, SeedUtil.make_rng(SeedUtil.derive(floor_run.seed, "chest", k)))`; `Game.record({"t": "chest", "id"})`; `Game.add_rewards(rewards)`; `floor_run.opened_chests.append(id)`; `ChestProp.open()`; `Events.chest_opened(id, rewards)`; `Sfx.play(&"chest_open")` |
+| Tor `interact` (`gate_interactable.gd`) | `requires` ist Item und im Inventar → `opened_gates.append(key)`, `Game.record({"t": "gate", "key"})`, Tor-Prop entfernen, `Events.gate_opened`; sonst Prompt „Benötigt: Generalschlüssel“ |
+| Etagen-Event `interact` (`event_interactable.gd`) | Wahl-Dialog mit `FloorEvent.choices()`; Wahl → `Game.apply_floor_event(id, choice)` (§7.4) → `completed` → `Events.event_completed({"event_id", "choice"})`; `open_gate` → Tor öffnen; `encounter_id != ""` → Kampf NORMAL mit `group_id ""` |
+| Treppe `interact` | ConfirmDialog (M6) „Etage verlassen? Offene Truhen und der Etagenboss bleiben zurück.“ → Ja: `Game.complete_floor()` |
+| Safe-Room-Tür `interact` | `floor_run.location = &"<sr id>"`; `Router.enter_safe_room(id)`. Rückkehr (`on_resume({"from_safe_room": id})`): Spieler 1,2 m vor Anchor `&"safe_door"` der Zelle, Blick zur Raummitte; `floor_run.location = &"start"` |
+| Laden mit Safe-Room-`location` | Spieler wird vor dieser Safe-Room-Tür platziert, danach `Router.enter_safe_room(id)` (deferred, nach Aufbau) |
+| `stray_spawn_requested(zone, group, enc)` | Spawn in der Zelle der Zone mit größter BFS-Distanz zu Kais Zelle (Gleichstand: kleinstes y, dann x), Zustand PATROL |
+| Gegnergruppe besiegt (`on_resume` mit `VICTORY`) | Gruppen-Node `queue_free()` (`defeated_groups`/`strays` hat `BattleBridge` bereits gepflegt) |
+
+### 7.4 Etagen-Events (`FloorEvent`, GDD §2.6)
+
+`Game.apply_floor_event(event_id: String, choice: String) -> Dictionary`: k = Index des Events in `layout.events`,
+`rng = SeedUtil.make_rng(SeedUtil.derive(floor_run.seed, "event", k × 16 + event_uses[id]))`; `FloorEvent.resolve` → `FloorEvent.apply`
+→ `Show.add_hype(hype)`, `Show.add_followers(followers)`, Boxen → `pending_lootboxes`, `Show.say(mod_tag)` falls gesetzt →
+`Game.record({"t": "event", "id", "choice"})` → Rückgabe. Jede Wahl außer `leave`/`ignore` schließt das Event ab
+(`completed_events`; Show: Hype +5, `events_completed` +1). Je Event max. 1 Abschluss pro Etage.
+
+| `type` | `params` (Daten, Etage 1) | Wahl → Ergebnis |
+|---|---|---|
+| `photo_drone` | `pose_hype 15`, `pose_followers 20`, `smash_credits 30`, `smash_hype -5` | `pose`: Hype +15, Follower +20 · `smash`: +30 Cr, Hype −5, Tag `event_photo_drone_smash` |
+| `lost_candidate` | `tag "heal"`, `reward_item "itm_acc_lucky_ticket"`, `followers 40` | `give:<item_id>` (nur Items mit Tag `heal` im Inventar): Item −1, `reward_item` +1, Follower +40 · `leave`: Tag `event_lost_candidate_leave` |
+| `wheel` | `cost 20`, `max_spins 3`, `table [{weight 35, kind item, id itm_bandage, amount 2}, {25, credits, 50}, {15, box, box_bronze}, {15, nothing}, {10, encounter, enc_f1_evt_pigeons}]` | `spin` (Credits ≥ cost, `event_uses < max_spins`): −20 Cr, gewichteter Eintrag; `event_uses += 1` · `ignore` |
+| `lever` | `success 0.60`, `gate "x,y,D"` (Tor mit `requires: "event:fev_lever"`), `flood_pct 15`, `encounter "enc_f1_evt_slime"` | `pull`: `rng.randf() < success` → `open_gate`; sonst alle lebenden −15 % MaxHP (min 1 HP) + Folgekampf · `leave` |
+| `broken_vending` | `base 0.50`, `per_lck 0.01`, `reward_item "itm_energy_krawumm"`, `reward_amount 2`, `fail_pct 10`, `fail_hype 4` | `kick`: Erfolg `rng.randf() < base + Kai.LCK × per_lck` → 2 × Item; sonst Kai −10 % MaxHP (min 1), Hype +4 · `leave` |
+
+Validator (Regel 4/5): `params`-Schlüssel je Typ exakt wie oben; Item-/Box-/Encounter-IDs auflösbar; `lever.gate` verweist auf ein
+Tor mit `requires == "event:<diese fev id>"`.
 
 ---
 
@@ -2144,7 +3034,9 @@ static func vfx_additive(color: Color) -> ShaderMaterial
 static func outline(width: float = 0.025, color: Color = Palette.INK) -> ShaderMaterial
 static func clear_cache() -> void
 # opts: "outline": bool (true), "outline_width": float (0.025), "rim": float (0.25), "bands": int (2),
-#       "emission": Color (black), "shade": Color (palette-derived), "tile_size": float (2.0, env only)
+#       "emission": Color (black), "shade": Color (palette-derived), "tile_size": float (2.0, env only),
+#       "rim_color": Color (palette rim), "spec": float (0.25 = spec_strength), "wobble": float (0.0, vertex wobble amplitude m),
+#       "stripes": Dictionary ({} | {"color": Color, "width": float, "speed": float} scrolling stripes, e.g. escalator)
 # Same color+opts → same cached instance (fewer material switches).
 
 class_name MeshUtil extends RefCounted
@@ -2152,7 +3044,9 @@ static func sphere(radius: float) -> SphereMesh
 static func capsule(radius: float, height: float) -> CapsuleMesh
 static func box(size: Vector3) -> BoxMesh
 static func cylinder(top_radius: float, bottom_radius: float, height: float) -> CylinderMesh
-static func merge(parts: Array[Dictionary]) -> ArrayMesh   # each {"mesh": Mesh, "xform": Transform3D, "color": Color}
+static func merge(parts: Array[Dictionary]) -> ArrayMesh
+	# each {"mesh": Mesh, "xform": Transform3D, "color": Color (sRGB), "emission": float = 0.0, "metal": float = 0.0}
+	# writes COLOR = sRGB albedo, UV2.x = emission mask, UV2.y = metal mask, CUSTOM0.xyz = smoothed normals (03_ART §3.1/§5.2)
 static func tri_count(mesh: Mesh) -> int
 ```
 
@@ -2161,25 +3055,30 @@ static func tri_count(mesh: Mesh) -> int
 | Shader | Typ | Uniforms (Name: Typ = Default) |
 |---|---|---|
 | `toon.gdshader` | spatial, `render_mode specular_disabled`, eigene `light()` | `albedo: vec4 = (1,1,1,1)`, `use_vertex_color: bool = false`, `shade_color: vec4 = (0.35,0.3,0.5,1)`, `bands: float = 2.0`, `rim_color: vec4 = (1,0.95,0.85,1)`, `rim_amount: float = 0.25`, `emission_color: vec4 = (0,0,0,1)`, `emission_energy: float = 0.0`; **instance**: `flash_amount: float = 0`, `flash_color: vec4 = (1,1,1,1)`, `highlight: float = 0`, `dissolve: float = 0` |
-| `toon_outline.gdshader` | spatial, `unshaded, cull_front` | `outline_color: vec4 = INK`, `outline_width: float = 0.025`; **instance**: `flash_amount`, `dissolve` (gleiche Namen) |
+| `toon_outline.gdshader` | spatial, `unshaded, cull_front` | `outline_color: vec4 = INK`, `outline_width: float = 0.025`; **instance** (Reihenfolge verbindlich, identisch zu `toon`): `flash_amount: float = 0`, `flash_color: vec4 = (1,1,1,1)`, `highlight: float = 0`, `dissolve: float = 0` |
 | `env_tiles.gdshader` | spatial, eigene `light()` | `tile_size: float = 2.0`, `grout_color: vec4`, `grout_width: float = 0.04`, `dirt_amount: float = 0.3`, `shade_color: vec4`, `bands: float = 3.0`, `use_vertex_color: bool = true` |
 | `glow.gdshader` | spatial, `unshaded` | `color: vec4`, `energy: float = 2.0`, `pulse_speed: float = 0.0` |
 | `vfx_additive.gdshader` | spatial, `unshaded, blend_add, cull_disabled, depth_draw_never` | `color: vec4`, `softness: float = 0.5` |
 | `hologram.gdshader` | spatial, `unshaded, blend_add` | `color: vec4 = NOVA_CYAN`, `scan_speed: float = 1.5`, `alpha: float = 0.6` |
-| `ui_swirl.gdshader` | canvas_item | `progress: float = 0` (0..1), `snapshot: sampler2D`, `tint: vec4 = INK` |
+| `ui_swirl.gdshader` | canvas_item | `progress: float = 0` (0..1), `snapshot: sampler2D`, `tint: vec4 = INK`, `aspect: float = 1.7778` (Router setzt `size.x / size.y`) |
 | `ui_tv_overlay.gdshader` | canvas_item | `scanline_alpha: float = 0.08`, `vignette: float = 0.35`, `aberration: float = 0.6` |
 
 Instance-Uniforms setzen nur über `GeometryInstance3D.set_instance_shader_parameter()` (via `CharacterRig`-Methoden), nie Material duplizieren.
+**Reihenfolge-Regel (geprüft 4.7.2):** Shader, die als Material/`next_pass` am selben Mesh hängen, deklarieren gleichnamige
+Instance-Uniforms in **gleicher Reihenfolge**; sonst vergibt Godot verschiedene Indizes („different indices“-Warnung) und Flash/Dissolve
+wirken nur auf ein Material. Das gilt bereits für die M0-Stubs. Zusätzliche Art-Uniforms (03_ART §3) dürfen ergänzt werden, die hier
+genannten Namen/Typen/Defaults sind Pflicht.
 
 ### 8.4 `CharacterBuilder`, `CharacterRig`
 
 ```gdscript
 class_name CharacterBuilder extends RefCounted
 static func build(model: Dictionary, seed: int = 0) -> CharacterRig
-	# model = ModelSpec (§4.4.12). If model.gltf != "" and ResourceLoader.exists(model.gltf) → glTF wrapped in CharacterRig
+	# model = ModelSpec (§4.4.14). If model.gltf != "" and ResourceLoader.exists(model.gltf) → glTF wrapped in CharacterRig
 	# subclass mapping to AnimationPlayer clips of the same names; otherwise procedural archetype.
 static func supported_bases() -> PackedStringArray    # == DataValidator.MODEL_BASES (test asserts)
-static func supported_props() -> PackedStringArray    # == DataValidator.MODEL_PROPS
+static func supported_props() -> PackedStringArray    # == DataValidator.MODEL_PROPS (all built; simplified fallbacks allowed)
+static func resolve_pose(model: Dictionary) -> StringName   # pose "auto": rodent with scale >= 1.0 → &"upright", else &"quadruped" 
 
 class_name CharacterRig extends Node3D
 signal impact                                  # contact moment of attack/cast/stunt/item
@@ -2189,7 +3088,8 @@ const LOOPING: Array[StringName] = [&"idle", &"walk", &"run", &"victory", &"defe
 var model: Dictionary
 var height: float                              # top of head in local Y (for UI/number anchors)
 func play(anim: StringName, speed: float = 1.0) -> void
-func play_and_wait(anim: StringName, speed: float = 1.0) -> void   # coroutine; loops return immediately
+func play_and_wait(anim: StringName, speed: float = 1.0) -> void   # coroutine; loops return immediately;
+	# not is_inside_tree() → set end pose at once, emit impact (attack/cast/stunt/item) + anim_finished, push_warning, return
 func current_anim() -> StringName
 func set_locomotion(speed_mps: float) -> void  # < 0.2 idle, < 5.5 walk (cadence scales), else run
 func flash(color: Color = Color.WHITE, duration: float = 0.12) -> void
@@ -2199,13 +3099,15 @@ func set_dead(dead: bool) -> void              # instant KO pose (no anim), for 
 func anchor(anchor_name: StringName) -> Node3D # &"head", &"center", &"overhead", &"hand_r", &"hand_l", &"feet"
 func face_towards(world_pos: Vector3) -> void
 func reset_pose() -> void
+func emit_impact() -> void                     # emits impact; called by procedural tweens and AnimationPlayer method tracks
 ```
 
 Animationen sind prozedurale Tweens auf den Pivots (Rotation/Position/Scale). Dauern bei `speed = 1.0`:
 `attack` 0.55 s (`impact` bei 0.30), `cast` 0.80 s (0.55), `stunt` 1.20 s (0.80), `item` 0.60 s (0.35), `hit` 0.35 s,
 `die` 0.70 s, `idle` Loop 1.6 s (Atmen/Bob), `walk` Loop 0.8 s, `run` Loop 0.5 s, `victory` Loop 1.0 s, `defend` Loop 1.2 s.
 Jede One-Shot-Anim endet mit `anim_finished`, danach automatisch `idle` (außer `die`).
-Größen bei `scale = 1.0`: humanoid 1.75 m, pug 0.6 m, rodent 0.7 m, blob 0.9 m, insect 0.8 m, robot 1.5 m, brute 2.2 m, specter 1.6 m.
+Größen bei `scale = 1.0`: humanoid 1.75 m, pug 0.6 m, rodent 0.7 m, blob 0.9 m, insect 0.8 m, robot 1.5 m, brute 2.2 m, specter 1.6 m,
+swarm 0.8 m (5 Tauben auf Orbit r 0.6 m, 03_ART §5.5).
 
 glTF-Pfad (später): Blender → glTF 2.0 (`.glb`) nach `res://art/models/characters/<name>.glb`, AnimationPlayer-Clips exakt wie
 `ANIMS` benannt, Methodenspur ruft `emit_impact()` am Trefferframe, Ursprung zwischen den Füßen, Blickrichtung −Z,
@@ -2215,13 +3117,13 @@ Materialien werden beim Import durch `Materials.toon_vc()`/`toon()` ersetzt (Ver
 
 ```gdscript
 class_name RoomSpec extends RefCounted
-enum Kind { START, NORMAL, SAFE, QUARTER_BOSS, FLOOR_BOSS, STAIRS }   # same order as RoomCell.Kind
+enum Kind { START, NORMAL, SAFE, QUARTER_BOSS, FLOOR_BOSS, STAIRS, GATE }   # same order as RoomCell.Kind
 var theme_id: String = "metro"
 var kind: RoomSpec.Kind = Kind.NORMAL
 var doors: int = 0              # RoomCell.DOOR_* bitmask
 var variant: int = 0            # 0..3
 var seed: int = 0
-var palette: Dictionary = {}    # FloorDef.palette (hex strings)
+var palette: Dictionary = {}    # zone palette merged over FloorDef.palette (hex strings), FloorLayout.zone_palette()
 var with_light: bool = true
 var quality: StringName = &"high"
 
@@ -2241,25 +3143,29 @@ static func anchor_for(spec: RoomSpec, anchor: StringName) -> Transform3D
 	# WITHOUT door in order N,E,S,W, 0.6 m in front of it, facing room center; room with 4 doors → center, facing +Z)
 static func build_battle_arena(theme_id: String, palette: Dictionary, is_boss: bool, seed: int, quality: StringName = &"high") -> Node3D
 	# round stage r = 9 m at origin, backdrop, 2 camera drones, sponsor billboard; no sun (see make_sun)
-static func build_safe_room(seed: int, quality: StringName = &"high") -> Node3D
-	# interior 12 × 10 m at origin, incl. vending_machine, save_terminal, couch, door, warm OmniLight
+static func build_safe_room(seed: int, quality: StringName = &"high", theme: StringName = &"kiosk") -> Node3D
+	# interior 12 × 10 m at origin, incl. vending_machine, save_terminal, couch, door, warm OmniLight;
+	# theme &"kiosk" | &"pumphouse" | &"signalbox" swaps set dressing (03_ART §6.3), anchors identical for all themes
 static func safe_room_anchor(anchor: StringName) -> Transform3D
 	# local transforms inside build_safe_room(): &"vending", &"terminal", &"couch", &"mopsula_spot", &"player_spot", &"door", &"camera"
 static func make_environment(theme_id: String, palette: Dictionary, mode: StringName, quality: StringName = &"high") -> Environment
-	# mode &"explore" | &"battle" | &"safe"; BG_COLOR, ambient color, exponential fog (density 0.02), filmic tonemap, glow (high only)
+	# mode &"explore" | &"battle" | &"safe"; BG_COLOR, ambient color, exponential fog (density 0.02),
+	# tonemap Environment.TONE_MAPPER_AGX (= 4, checked 4.7.2; ART A1), glow (high only)
 static func make_sun(theme_id: String, mode: StringName, quality: StringName = &"high") -> DirectionalLight3D
 	# shadows only on high; directional_shadow_mode ORTHOGONAL on mobile (OS.has_feature("mobile")) else PSSM 2 splits;
 	# directional_shadow_max_distance 30 (explore) / 20 (battle)
 
 class_name PropKit extends RefCounted
 const IDS: PackedStringArray = ["chest", "stairs_down", "safe_door", "vending_machine", "save_terminal", "couch", "crate",
-	"barrel", "bench", "pillar", "lamp", "trash_bin", "turnstile", "poster", "camera_drone", "billboard", "rail", "wreck", "pipe"]
+	"barrel", "bench", "pillar", "lamp", "trash_bin", "turnstile", "poster", "camera_drone", "billboard", "rail", "wreck", "pipe",
+	"gate", "phone_booth", "fortune_wheel", "lever", "broken_vending"]   # gate: closed door bar; last four: floor events (§7.4)
 static func build(prop_id: StringName, seed: int = 0, palette: Dictionary = {}) -> Node3D   # "chest" returns ChestProp
 
 class_name ChestProp extends Node3D
 signal opened
 var is_open: bool
-func open(animated: bool = true) -> void        # lid tween 0.5 s + glow; emits opened
+func open(animated: bool = true) -> void        # lid tween 0.5 s + glow; emits opened;
+	# not is_inside_tree() → set_open_instant() + emit opened + push_warning (tweens never run outside the tree)
 func set_open_instant() -> void
 ```
 
@@ -2271,9 +3177,11 @@ const KINDS: Array[StringName] = [&"hit", &"crit", &"slash", &"bite", &"magic", 
 	&"light", &"dark", &"heal", &"buff", &"debuff", &"ko", &"levelup", &"sponsor", &"confetti", &"smoke", &"sparkle",
 	&"stairs_glow", &"chest_open"]
 static func spawn(kind: StringName, parent: Node, at: Vector3, color: Color = Color(0, 0, 0, 0), scale: float = 1.0) -> Node3D
-	# adds itself to parent at global position `at`, frees itself after duration(kind); color.a == 0 → kind default
+	# pooled: 4 instances per kind per parent (03_ART §7); reuses the oldest via restart(); reparents to `parent` at global `at`;
+	# returns the node; callers NEVER free it (the pool owns it and hides it after duration(kind)); color.a == 0 → kind default
 static func duration(kind: StringName) -> float  # 0.3 .. 1.5 s
-static func for_skill(skill: SkillDef) -> StringName   # skill.vfx or element/damage_type default
+static func for_skill(skill: SkillDef) -> StringName   # skill.vfx or element default: physical → &"slash", fire/ice/shock → same,
+	# poison → &"toxic", heal → &"heal", buff/debuff category → &"buff"/&"debuff"; &"light"/&"dark" are presentation-only kinds
 static func damage_number(parent: Node, at: Vector3, text: String, style: StringName) -> void
 	# Label3D billboard, no_depth_test, rises 0.8 m in 0.8 s; style &"damage", &"crit", &"heal", &"mp", &"miss", &"weak", &"resist", &"status"
 ```
@@ -2292,8 +3200,9 @@ flowchart LR
   Exploration -->|push SWIRL| Battle -->|pop FADE| Exploration
   Battle -->|DEFEAT goto| GameOver
   Exploration -->|push FADE| SafeRoom -->|pop FADE| Exploration
-  Exploration -->|Treppe: complete_floor| Exploration
-  Exploration -->|letzte spielbare Etage| Credits --> Title
+  Exploration -->|Treppe: complete_floor goto| FloorSummary
+  FloorSummary -->|nächste Etage spielbar| Exploration
+  FloorSummary -->|sonst| Credits --> Title
   Exploration -->|Timer 0| GameOver --> Title
 ```
 
@@ -2309,12 +3218,20 @@ Abläufe:
 
 | Aufruf | Schritte |
 |---|---|
-| `goto(path, params, t)` | `busy = true` → `Game.timer_running = false` → Übergang-aus → eingehängten Top-Screen `queue_free()`, ausgehängte Stack-Screens `free()`, beim ersten Aufruf zusätzlich die Boot-Szene (`get_tree().current_scene`) `queue_free()` → `load(path).instantiate()` → `setup(params)` falls vorhanden → `root.add_child()` → `get_tree().current_scene = node` → Übergang-ein → `busy = false` → `scene_changed` |
-| `push(path, params, t)` | `busy` → `Game.timer_running = false` → oberer Screen `on_suspend()` falls vorhanden → Übergang-aus → `root.remove_child(top)` → neuen Screen instanziieren/`setup`/einhängen → Übergang-ein → `scene_changed` |
-| `pop(payload, t)` | `busy` → Übergang-aus → oberen Screen `queue_free()` → vorherigen wieder einhängen, `current_scene` setzen → `on_resume(payload)` falls vorhanden → Übergang-ein → `scene_changed` |
+| `goto(path, params, t)` | `busy = true` → `Game.timer_running = false` → Übergang-aus → eingehängten Top-Screen `queue_free()` (falls vorhanden), ausgehängte Stack-Screens `free()`, beim ersten Aufruf zusätzlich die Boot-Szene (`get_tree().current_scene`, falls nicht `null`) `queue_free()` → `load(path).instantiate()` → `setup(params)` falls vorhanden → `root.add_child()` → `get_tree().current_scene = node` → Übergang-ein → `busy = false` → `scene_changed` |
+| `push(path, params, t)` | `busy` → `Game.timer_running = false` → oberer Screen `on_suspend()` falls vorhanden → Übergang-aus → `root.remove_child(top)` **nur wenn `top != null` und `top.get_parent() == root`** → neuen Screen instanziieren/`setup`/einhängen → Übergang-ein → `scene_changed` |
+| `pop(payload, t)` | `busy` → Übergang-aus → oberen Screen `queue_free()` → vorherigen wieder einhängen, `current_scene` setzen → `on_resume(payload)` falls vorhanden → Übergang-ein → `scene_changed`; leerer Stack (Stapel ≤ 1) → `push_warning` + `goto(SCENE_TITLE)` |
+| `adopt(node)` | kein Übergang: `_stack = [node]`, `current = node`; `node` hängt bereits unter `root` |
 
-Screen-Vertrag (Duck-Typing, alle optional): `setup(params: Dictionary) -> void` (vor `add_child`), `on_suspend() -> void`,
-`on_resume(payload: Dictionary) -> void`. Kein Code verlässt sich auf `get_tree().current_scene` außer Router selbst.
+Null-Guards (Pflicht): `-s`-Läufe (Tests, Capture) haben **keine** Boot-Szene; `get_tree().current_scene` ist `null` und `_stack`
+ist leer, Test-/Capture-Szenen hängen direkt an `root`. `goto`/`push`/`pop` behandeln `null`/leeren Stack ohne Fehler; `capture.gd`
+und `TestCase.add_to_tree()` rufen für Screen-Szenen (`ExplorationScene`, `BattleScene`, `SafeRoomScene`, `TitleScreen`)
+`Router.adopt(node)` auf, damit `start_battle`/`enter_safe_room` aus diesen Szenen sauber pushen.
+
+Screen-Vertrag (Duck-Typing, alle optional): `setup(params: Dictionary) -> void` wird **vor** `add_child` aufgerufen und **speichert
+nur** `_params = params` (dort sind `@onready`-Variablen und `get_tree()` noch `null`); die Arbeit passiert in `_ready()` bzw.
+`on_resume()`. `on_suspend() -> void`, `on_resume(payload: Dictionary) -> void`. Kein Code verlässt sich auf
+`get_tree().current_scene` außer Router selbst.
 
 ### 9.3 Übergänge
 
@@ -2325,7 +3242,7 @@ Tweens auf Router (`PROCESS_MODE_ALWAYS`, Tween `set_pause_mode(Tween.TWEEN_PAUS
 |---|---|---|
 | `NONE` | 0 s | 0 s |
 | `FADE` | 0.25 s nach `Palette.INK` | 0.25 s |
-| `SWIRL` | Snapshot `get_viewport().get_texture().get_image()` → `ui_swirl.gdshader` `progress` 0→1 in 0.7 s + `Sfx.play(&"swirl")` | 0.3 s Fade |
+| `SWIRL` | Snapshot `get_viewport().get_texture().get_image()` → `ui_swirl.gdshader` (`snapshot` = Textur, `aspect = size.x / size.y` des TextureRect) `progress` 0→1 in 0.7 s (`TRANS_CUBIC`, `EASE_IN`) + `Sfx.play(&"swirl")` | 0.3 s Fade |
 
 Headless (`DisplayServer.get_name() == "headless"`) → **kein Snapshot** (liefert dort `null` + Engine-Fehler, geprüft), SWIRL wird zu FADE.
 
@@ -2343,27 +3260,45 @@ Headless (`DisplayServer.get_name() == "headless"`) → **kein Snapshot** (liefe
 
 `GlobalUi` (`scenes/ui/global_ui.tscn`) wird von Boot **einmal** per `get_tree().root.add_child.call_deferred(ui)` direkt unter
 `root` gehängt (nicht im Router-Stack, `PROCESS_MODE_ALWAYS`) und schaltet seine Anzeige über `Events.overlay_mode_requested`. `capture.gd` hängt es ebenfalls an (§11.3).
-Pause: `ExplorationHud` öffnet `PauseMenu` auf `pause` und setzt `get_tree().paused = true` (`Events.pause_menu_toggled`).
+Pause: `ExplorationHud` (`PROCESS_MODE_PAUSABLE`) öffnet `PauseMenu` auf `pause` und setzt `get_tree().paused = true`
+(`Events.pause_menu_toggled(true)`). **Prozessmodi (gemessen 4.7.2: ein PAUSABLE-Node erhält während der Pause 0
+`_unhandled_input`-Events, ein WHEN_PAUSED-Node 1):** `PauseMenu` und alle aus ihm geöffneten Menüs (`party_menu`, `inventory_menu`,
+`equipment_menu`, `skills_menu`, `achievements_menu`, `bestiary_menu`, `settings_menu`, `confirm_dialog`) haben
+`process_mode = PROCESS_MODE_WHEN_PAUSED`. Das Schließen (`pause`/`ui_cancel`) und Entpausieren (`get_tree().paused = false`,
+`pause_menu_toggled(false)`) übernimmt das `PauseMenu` selbst. `Game` bleibt PAUSABLE (Timer steht), die Schema-Erkennung läuft im
+Kind-Node `InputSchemeWatcher` (`PROCESS_MODE_ALWAYS`, §3.4). `GlobalUi`, `Router`, `Sfx` sind `ALWAYS`.
 
 ### 9.5 Weitere Screen-APIs (modulübergreifend genutzt)
 
 ```gdscript
 class_name TitleScreen extends Control            # M6
-func request_new_game(slot: int, player_name: String, skip_intro: bool, seed: int = -1) -> void
+func request_new_game(slot: int, player_name: String, skip_intro: bool, seed: int = -1, difficulty: StringName = &"prime") -> void
 	# same code path as the menu: Game.new_game(...) → goto(SCENE_INTRO) or, if skip_intro, goto(SCENE_EXPLORATION, {"spawn": &"start"})
+	# Menu (GDD §14.1): Fortsetzen (Save.newest_slot() > 0 only) · Neues Spiel · Laden · Event-Lauf (05 CR-10) · Optionen · Credits ·
+	# Beenden (not OS.has_feature("mobile")). name_entry: LineEdit.max_length = 12, default "Kai"; mode Prime Time / Vorabendprogramm
 
 class_name BattleScene extends Node3D             # M5
 func setup(params: Dictionary) -> void            # {"setup": BattleSetup}; missing → Game.ensure_state() + debug setup
 	# with first non-boss encounter of the current floor (seed 1), {"capture": true} → stop at first command menu
 
 class_name SafeRoomScene extends Node3D           # M6
-func setup(params: Dictionary) -> void            # full heal on enter, Show.say("safe_room_enter"), overlay &"safe_room"
+func setup(params: Dictionary) -> void            # stores params only: {"safe_room_id": String}; missing → first safe room of the floor
+	# _ready(): EnvKit.build_safe_room(seed, quality, theme of the safe room); ctx := Game.enter_safe_room(id) (full heal);
+	# Show.say("safe_room_enter"); overlay &"safe_room"; Mopsula "!" if Game.next_scene(ctx) != null; playing a scene uses
+	# ModDialog (blocking lines in order) and then Game.mark_scene_seen(); no scene → random line tag "mopsula_idle" (optional)
+	# Shop: Shop.stock(Game.floor_def(), id) via vending_menu; buying via Game.buy(item, qty, id)
 
 class_name ExplorationHud extends CanvasLayer     # M6, instanced by ExplorationScene
 func bind_layout(layout: FloorLayout, visited: Array[Vector2i]) -> void
 func set_player(cell: Vector2i, yaw_rad: float) -> void
 func mark_visited(cell: Vector2i) -> void
-func set_prompt(text: String) -> void             # "" hides; touch interact button visible only with prompt
+func set_prompt(text: String) -> void             # "" hides; the touch "action" button shows the interact icon while a prompt is set
+func set_quest(text: String, progress: float) -> void   # event runs only (Game.mode == &"event_offline"); "" hides
+	# Timer (on Events.floor_timer_changed): hidden until floor_timer_started; < 300 s orange, < 60 s red pulsing (+ screenshake 0.15
+	# for 0.3 s every 10 s), <= 10 s Sfx.play_ui(&"timer_warn") once per full second (GDD §2.9)
+
+class_name FloorSummary extends Control           # M6, scenes/ui/floor_summary.tscn
+func setup(params: Dictionary) -> void            # stores {"summary": FloorRun.summary()}; "Weiter" → Game.continue_after_summary()
 ```
 
 ---
@@ -2377,6 +3312,8 @@ func set_prompt(text: String) -> void             # "" hides; touch interact but
 - Gameplay-Eingaben in `_unhandled_input` bzw. `_physics_process`; UI konsumiert über `_gui_input`/Fokus → Menüs blockieren Gameplay.
 - Menü-Logik für `ui_cancel`/`pause`/`tab_*` ebenfalls in `_unhandled_input` (nie `_input`), damit fokussierte `LineEdit`s Tasten zuerst bekommen.
 - Kontextabhängige Doppelbelegungen (Q/E, Tab, Esc, Back) sind gewollt; jeder Kontext wertet nur seine Actions aus.
+- Erkundung: `action` = Interagieren, wenn `ExplorationHud` einen Prompt zeigt (Interactable im Radius 1.5 m / 120°), sonst Feldschlag;
+  `sneak` gehalten = Schleichen. Kampf: `toggle_speed` schaltet `battle_speed` 1.0 ↔ 2.0 (auch Speed-Button „»“ im HUD), `toggle_auto`.
 - Esc ist `pause` **und** `ui_cancel`: Ein offenes Menü schließt bei `ui_cancel` oder `pause` und ruft
   `get_viewport().set_input_as_handled()`; die Erkundung reagiert auf `pause` nur, wenn kein Menü offen ist.
 
@@ -2387,21 +3324,24 @@ func set_prompt(text: String) -> void             # "" hides; touch interact but
    über `focus_neighbor_*` explizit gesetzt.
 3. `ui_cancel` schließt das oberste Menü / geht eine Ebene zurück; im Kampfmenü zurück zur Befehlsliste.
 4. Fokus-Stil (aus `UiTheme`): 3 px `NOVA_CYAN`-Rahmen + leichte Skalierung; bei Schema TOUCH ausgeblendet (`UiTheme`-Variante).
-5. Mindestgröße interaktiver Elemente 64 × 64 px (Referenz 1280 × 720), Abstand ≥ 8 px.
+5. Referenzauflösung ist **1280 × 720** (`project.godot`; GDD-Werte für 1920 × 1080 gelten × 2/3). Interaktive Elemente sichtbar
+   ≥ `UiTheme.MIN_TOUCH` (64 px), Trefferfläche ≥ `UiTheme.TOUCH_HIT` (88 px, `ensure_hit_area`), Abstand der Trefferflächen ≥ 12 px.
 6. Kein Menü ohne Tastatur-/Gamepad-Weg; `test_m6_ui_scenes.gd` prüft, dass jede UI-Szene nach `_ready` ein fokussiertes Control hat.
 
 ### 10.3 Touch
 
 - Sichtbar, wenn `settings.touch_controls == &"on"` oder (`&"auto"` und `DisplayServer.is_touchscreen_available()` und
   `Game.input_scheme == TOUCH`); bei Wechsel auf Tastatur/Gamepad ausgeblendet.
-- Linke 40 % Bildbreite: Floating-Joystick (erscheint am Berührpunkt), Radius 90 px, Knopf 40 px, Deadzone 0.15; setzt
-  `Input.action_press(&"move_*", strength)` / `action_release`.
-- Rechte Seite: Buttons `interact` (96 px, nur mit Prompt), `attack` (80 px), `map` (64 px), `pause` (64 px, oben rechts);
-  Buttons lösen `Input.parse_input_event()` mit `InputEventAction` (pressed true/false) aus.
+- Linke 40 % Bildbreite: Floating-Joystick (erscheint am Berührpunkt, Ruhe-Anzeige bei (147, 573)), Radius 90 px, Knopf 40 px,
+  Deadzone 0.15; setzt `Input.action_press(&"move_*", strength)` / `action_release`; Auslenkung ≤ 0.6 hält zusätzlich `sneak`.
+- Rechte Seite: **ein** Button `action` (96 px rund bei (1147, 587); Icon „Hand“ mit Prompt, sonst „Schlag“), `map` (64 px),
+  `pause` (64 px, oben rechts bei (1227, 40)); alle mit Trefferfläche ≥ 88 px. Buttons lösen `Input.parse_input_event()` mit
+  `InputEventAction` (pressed true/false) aus. (Positionen = GDD §14.8 × 2/3, bezogen auf 1280 × 720.)
 - Drag auf freier rechter Fläche → `Events.camera_drag(relative)`.
 - `emulate_mouse_from_touch = true` (Buttons reagieren auf Touch); keine Maus-Taste ist an Gameplay-Actions gebunden,
   daher keine Fehlauslösung durch emulierte Klicks.
-- Kampf & Menüs: reine Button-UI, keine Touch-Sonderlogik.
+- Kampf & Menüs: reine Button-UI (Kampfbefehle 2 Spalten × 3 Zeilen, je 200 × 64 px sichtbar / 88 px Treffer); Gegner direkt antippen
+  wählt das Ziel (Trefferfläche ≥ 107 px um den Gegner), erneut antippen oder „OK“ führt aus. CTB-Leiste zeigt bei TOUCH 10 Einträge.
 
 ### 10.4 Safe Area und Seitenverhältnis
 
@@ -2445,7 +3385,9 @@ extends SceneTree   — enthält KEINE class_name-Referenzen und KEINE Autoload-
 _initialize():
   args = OS.get_cmdline_user_args(): optional --filter=<substring>, --verbose
   await process_frame                     # Autoloads bereit (DB geladen)
-  files = rekursiv res://tests/**/test_*.gd (DirAccess), alphabetisch; Filter auf Dateinamen
+  root.get_node("Game").set("ephemeral", true)   # per node path, no autoload identifier (settings defaults, §3.4)
+  files = rekursiv res://tests/**/test_*.gd (DirAccess), alphabetisch, OHNE res://tests/lib/ und res://tests/fixtures/;
+          Filter auf Dateinamen
   für jede Datei:
     script := load(path) as GDScript
     script == null oder not script.can_instantiate() → "[ERROR] <file>: failed to compile", errors += 1, weiter
@@ -2454,8 +3396,11 @@ _initialize():
     inst := script.new()
     inst ist kein TestCase (inst.has_method("_tc_marker") == false) → "[ERROR] <file>: does not extend TestCase", failed += 1
     inst.set("tree", self)
-    methods := script.get_script_method_list() mit Namen "test_*", in Deklarationsreihenfolge
+    methods := script.get_script_method_list(), gefiltert auf Namen "test_*" mit 0 Pflichtargumenten
+               (len(args) - len(default_args) == 0), DEDUPLIZIERT nach Name (erste Fundstelle gewinnt — die Liste enthält
+               zuerst die eigenen, dann geerbte Methoden, überschriebene doppelt; gemessen 4.7.2) → Deklarationsreihenfolge
     für jede Methode:
+      print("[RUN] <file> :: <name>")      # vor dem Start, damit ein Hänger dem Test zuordenbar ist
       inst.call("_tc_begin", name); await inst.call("before_each"); await inst.call(name); await inst.call("after_each")
       ergebnis := inst.call("_tc_end")   # Dictionary {"failures": PackedStringArray, "skipped": String}
       Ausgabe-Zeile (s. u.)
@@ -2473,7 +3418,7 @@ RESULT: 143 passed, 1 failed, 1 skipped, 0 errors in 1.92 s
 Bei Fehlschlägen zusätzlich `printerr("Assertion failed: <file>::<test> — <msg>")` (trifft `ERR_RE` in `check.sh`).
 Ein `SCRIPT ERROR` innerhalb eines Tests kann GDScript nicht abfangen; `check.sh` erkennt ihn über `ERR_RE`.
 
-### 11.2 `tests/test_case.gd` (M0)
+### 11.2 `tests/lib/test_case.gd` (M0)
 
 ```gdscript
 class_name TestCase extends RefCounted
@@ -2482,7 +3427,7 @@ func before_each() -> void                # override
 func after_each() -> void                 # override; free nodes added via add_to_tree() automatically
 func assert_true(cond: bool, msg: String = "") -> void
 func assert_false(cond: bool, msg: String = "") -> void
-func assert_eq(actual: Variant, expected: Variant, msg: String = "") -> void   # deep equality for Array/Dictionary
+func assert_eq(actual: Variant, expected: Variant, msg: String = "") -> void   # _deep_eq (below), never `==` on mixed types
 func assert_ne(actual: Variant, unexpected: Variant, msg: String = "") -> void
 func assert_almost(actual: float, expected: float, eps: float = 0.0001, msg: String = "") -> void
 func assert_gt(a: Variant, b: Variant, msg: String = "") -> void
@@ -2497,10 +3442,26 @@ func skip(reason: String) -> void          # marks test skipped; further asserts
 func make_rng(seed: int = 1) -> RandomNumberGenerator
 func real_data() -> GameData               # cached GameData.load_dir("res://data")
 func fixture_data(tables: Dictionary) -> GameData   # GameData.load_from_dicts(tables); fails test if invalid
-func add_to_tree(node: Node) -> Node       # tree.root.add_child(node); auto-freed in after_each
+func add_to_tree(node: Node) -> Node       # tree.root.add_child(node); screen scenes (has setup/on_resume) → Router.adopt(node)
+                                           # via root.get_node("Router"); auto-freed in after_each
 func wait_frames(n: int) -> void           # coroutine: await tree.process_frame n times
+func await_signal(sig: Signal, max_frames: int = 300) -> bool   # coroutine: true if emitted within max_frames, else false + fail()
+func wait_until(cond: Callable, max_frames: int) -> bool        # coroutine: polls cond each frame; false + fail() on timeout
+func _deep_eq(a: Variant, b: Variant) -> bool
+	# int/float compared numerically (1 == 1.0); String == StringName; Packed*Array vs Array element-wise; Dictionary by keys
+	# (key lookup with the same String/StringName and int/float tolerance); type mismatch → false with a reason, never `==`
 func _tc_marker() -> void                  # identifies TestCase for the runner
 ```
+Gemessen 4.7.2: `Variant(PackedStringArray) == Variant(Array)` wirft `SCRIPT ERROR: Invalid operands` und bricht den Test ab;
+`[1] == [1.0]`, `{"a": 1} == {"a": 1.0}` (JSON liefert immer float) und `[&"x"] == ["x"]` ergeben `false`. Deshalb `_deep_eq`;
+`test_m0_harness.gd` prüft genau diese drei Fälle (PackedStringArray vs Array, int vs float in Array/Dictionary, StringName vs String).
+
+**Warte-Regel:** Tests warten **nie** direkt mit `await some_signal` (ein Signal eines freigegebenen Nodes kehrt nie zurück → Hänger
+bis zum `check.sh`-Timeout, gemessen Exit 124), sondern immer über `await_signal`/`wait_until` mit Frame-Limit. Tweens laufen nur
+im Baum (gemessen: außerhalb bleibt `x == 0.0`, `is_running() == true` nach 30 Frames) → Nodes mit Animationen immer über
+`add_to_tree()` testen; `CharacterRig.play_and_wait` und `ChestProp.open` beenden sich außerhalb des Baums sofort (§8.4/§8.5).
+**Szenentests** (M3/M5/M6) setzen in `before_each` `Engine.time_scale = 8.0` (und für Kämpfe `BattlePlayer.speed = 4.0`) und stellen
+in `after_each` `Engine.time_scale = 1.0` wieder her (`time_scale` skaliert Tweens, Timer und `_process`-Delta, geprüft §11.4).
 Asserts brechen den Test **nicht** ab (keine Exceptions in GDScript); alle Fehlschläge eines Tests werden gesammelt.
 Unit-Tests von M1/M2 nutzen `fixture_data()` mit eigenen Mini-Daten (unabhängig von M7-Inhalten); nur `test_m7_*` und
 Integrationstests nutzen `real_data()`.
@@ -2516,10 +3477,11 @@ _initialize():
   fehlend → printerr("Assertion failed: capture: missing --scene/--out"); quit(1)
   await process_frame
   Engine.max_fps = 60
+  root.get_node("Game").set("ephemeral", true)
   nicht ResourceLoader.exists(scene) → printerr("Assertion failed: capture: scene not found <scene>"); quit(1)
   node := (load(scene) as PackedScene).instantiate()
   node.has_method("setup") → node.call("setup", {"capture": true})
-  root.add_child(node)
+  root.add_child(node); Screen-Szene → root.get_node("Router").call("adopt", node)
   ohne --no-global-ui und ResourceLoader.exists("res://scenes/ui/global_ui.tscn") → instanziieren, an root hängen
   frames × await process_frame; await RenderingServer.frame_post_draw
   img := root.get_texture().get_image(); null/leer → printerr("Assertion failed: capture: empty image"); quit(2)
@@ -2530,23 +3492,26 @@ Jede Szene unter `scenes/**` und `art/gallery/**` muss **standalone** instanziie
 
 ### 11.4 `--autoplay` (Boot + `scenes/boot/autoplay.gd`, M6)
 
-`check.sh` startet `godot --headless --path <tmp> --quit-after 600 -- --autoplay`. Gemessen: headless ohne FPS-Limit ≈ 144 Frames/s;
+`check.sh` startet `godot --headless --path <tmp> --quit-after 900 -- --autoplay` (900 Frames = reines Sicherheitsnetz; normal beendet
+Autoplay selbst mit `quit(0)`/`quit(1)`). `run_smoke` in `check.sh` **muss** den Exit-Code prüfen (`code=${PIPESTATUS[0]}`, ≠ 0 → Fehler)
+und verlangt die Zeile `AUTOPLAY: OK` (Phase A: `AUTOPLAY: SKIPPED (stub)`), Regex `AUTOPLAY: (OK|SKIPPED \(stub\))`; fehlt sie → Fehler.
+Gemessen: headless ohne FPS-Limit ≈ 144 Frames/s;
 mit `Engine.max_fps = 60` exakt 16,7 ms/Frame; `Engine.time_scale` skaliert `_process`-/Physik-Delta, Tweens und Timer (geprüft).
 
 Boot bei `--autoplay`: `Game.autoplay = true`, `Engine.max_fps = 60`, `Engine.time_scale = 5.0` (1 Frame = 0,083 s Spielzeit;
-600 Frames = 10 s real = 50 s Spielzeit), `Save.read_only = true`, `Game.fast_text = true`, Autoplay-Node per `get_tree().root.add_child.call_deferred()` unter `root`
+600 Frames = 10 s real = 50 s Spielzeit), `Save.read_only = true`, `Game.fast_text = true`, `Game.ephemeral = true`, Autoplay-Node per `get_tree().root.add_child.call_deferred()` unter `root`
 (`PROCESS_MODE_ALWAYS`), dann normaler Start → Titel. `BattlePlayer.speed = 4.0`, Ergebnis-Screen fährt nach 1,0 s automatisch fort.
 
-Schritte (Frame-Budgets ab Start des Schritts; Watchdog gesamt 590 Frames):
+Schritte (Frame-Budgets ab Start des Schritts; Summe 600; Watchdog gesamt 640 Frames, deutlich vor `--quit-after 900`):
 
 | # | Schritt | Aktion | Erfolgsbedingung | Budget |
 |---|---|---|---|---|
 | 1 | `boot_to_title` | – | `Router.current is TitleScreen` und `not Router.busy` | 60 |
 | 2 | `new_game` | `title.request_new_game(0, "Kai", true, 4242)` | `Router.current is ExplorationScene`, nicht busy, `Events.floor_entered` empfangen | 90 |
 | 3 | `explore` | `Input.action_press(&"move_forward")` 24 Frames, dann `action_release` | Spieler ≥ 1,0 m bewegt (`get_player_position()`) | 30 |
-| 4 | `force_battle` | `Game.auto_battle = true`; `exploration.force_encounter("")` | `Router.current is BattleScene`, nicht busy | 60 |
+| 4 | `force_battle` | `Game.auto_battle = true`; `exploration.force_encounter("")` (nächste Gruppe = Tutorial `f1_g0`) | `Router.current is BattleScene`, nicht busy | 60 |
 | 5 | `battle` | – (AutoPolicy) | `Events.battle_ended` mit `VICTORY` **und** wieder `ExplorationScene`, nicht busy | 300 |
-| 6 | `safe_room` | `Router.enter_safe_room()`, nach Ankunft `Router.exit_safe_room()` | erst `SafeRoomScene`, dann `ExplorationScene` | 60 |
+| 6 | `safe_room` | `Router.enter_safe_room(<kleinste Safe-Room-ID des Layouts>)`, nach Ankunft `Router.exit_safe_room()` | erst `SafeRoomScene`, dann `ExplorationScene`; `Game.state.floor_run.timer_started == true` | 60 |
 | 7 | `done` | `print("AUTOPLAY: OK frames=%d" % n)`; `get_tree().quit(0)` | | |
 
 Fehler (Budget überschritten, falscher Ausgang, Watchdog): `printerr("Assertion failed: AUTOPLAY step '<name>' failed: <grund>")`
@@ -2559,42 +3524,60 @@ Weitere Boot-Argumente (Entwicklung): `--seed=<int>` (Seed für Neues Spiel), `-
 
 | Modul | Pflicht-Tests |
 |---|---|
-| M0 | Harness-Selbsttest; `GameData` lädt `tests/fixtures/data_min` fehlerfrei; ≥ 1 Negativtest je Validierungsregel 1–10; compile-all; SeedUtil-Golden-Values |
-| M1 | CTB-Reihenfolge/Preview/Haste/Slow/Preemptive/Ambush; jede Formel aus §5.9 mit festen Zahlen; Status-Ticks/Dauer/skip_turn; AI-Bedingungen; 100 Seeds Auto-vs-Auto-Kampf terminiert < 200 Züge; Event-Reihenfolge-Invarianten (§5.3) |
-| M2 | Hype-Tabelle §6.2 Zeile für Zeile; Sponsor-Limits; Achievement-Schwellen + Belohnung; Loot deterministisch bei Seed; EXP-Kurve; Equip/Unequip; Save-Roundtrip (encode→decode→encode identisch), v0-Migration-Stub, kaputte Datei → `.bak` |
-| M3 | §7.2-Invarianten für 200 Seeds; Determinismus; Szene: Spawn ≠ in Wand, `force_encounter` ruft Router |
-| M4 | Jede Base × Prop baut; Tri-Budgets §12.1; `play_and_wait` jeder One-Shot-Anim endet, `impact` feuert genau 1× bei attack/cast/stunt/item; `build_room` für alle 16 Türmasken |
-| M5 | Battle-Szene headless mit `auto_battle` bis `BATTLE_END`; HUD-Werte = letzte `hp_after` |
-| M6 | Jede UI-Szene instanziierbar + Default-Fokus; SafeAreaContainer-Ränder ≥ 24 |
-| M7 | `real_data()` valide; Mindestmengen laut GDD; jede Etage-1-Encounter mit Startparty (Lv 1–3) per Auto-Kampf (50 Seeds) ≥ 80 % Siegquote, Bosse mit Lv 4–6 |
+| M0 | Harness-Selbsttest (inkl. `_deep_eq`-Fälle, `await_signal`-Timeout, Methoden-Deduplizierung); `GameData` lädt `tests/fixtures/data_min` fehlerfrei; ≥ 1 Negativtest je Validierungsregel 1–10; compile-all; SeedUtil-Golden-Values; Musik-Loop (§3.8); `ConditionExpr`; Router mit leerem Stack/`adopt` |
+| M1 | `base_delay`-Tabelle §5.5; Startwerte NORMAL/PREEMPTIVE/AMBUSH; Preview 12 inkl. `pending_rank`, Overrides, Pseudo-Einheit; Haste 0.6/Slow 1.5; jede Formel aus §5.9 mit festen Zahlen (inkl. Combo, Fixschaden, Heilmodi, Krit-Cap); Status (Gift am Zugbeginn, Stun-Verzögerung + Boss × 0.5, Resist, Reapply setzt Dauer); Flucht-/Stunt-Chancen; Cooldown 3; AI-Bedingungen/Zielregeln/Taunt 80 %; Phasen-Ops; `steal_credits`/`escape`; `BattleCommand`/`ActionEvent` `to_dict`↔`from_dict`; gleicher Seed + gleiche Befehle → identische `to_dict()`-Liste; 100 Seeds Auto-vs-Auto terminiert < 200 Züge; Event-Reihenfolge (§5.3) |
+| M2 | Hype-Tabelle §6.2 Zeile für Zeile; Sponsor-Schwellen 50/75/100, Limits 2/3, Hype → 80, `weight_mods`; Achievement-Bedingungen mit allen Triggern (Payloads §6.3) + Tier-Belohnung; Meilensteine; Lootbox: Rarität→Pool, Garantie letzter Wurf, Pity 4/8 persistent, Duplikat → Credits × 1.5; EXP-Tabelle GDD §4.3 (30/63/112/173/246/330/424/529/643, Cap 10); Equip/Unequip; BattleBridge (MP-Regen 15 %, KO → 1 HP, Pep-Talk, Timer-Start nach Tutorial); Save-Roundtrip (encode→decode→encode identisch), Gnadenfrist 180 s, v0-Migration-Stub, kaputte Datei → `.bak` |
+| M3 | `floor_1`-Layout valide + deterministisch; prozedural 200 Seeds §7.2; `FloorEvent` alle Typen; Szene: Spawn ≠ in Wand, `force_encounter` → `Events.encounter_triggered` per Signal-Spion (startet keinen echten Kampf) **oder** mit `Router.adopt(scene)` → danach `Router.current is BattleScene` (per `wait_until`) |
+| M4 | Jede Base × Prop baut; Tri-Budgets §12.1; Rigs nur über `add_to_tree()`; `play_and_wait` jeder One-Shot-Anim endet, `impact` feuert genau 1× bei attack/cast/stunt/item; außerhalb des Baums sofortiges Ende; `build_room` für alle 16 Türmasken; `build_safe_room` alle 3 Themes; Log ohne „different indices“ |
+| M5 | Battle-Szene headless mit `auto_battle` bis `BATTLE_END` (time_scale 8, speed 4); HUD-Werte = letzte `hp_after`; CTB-Leiste 12/10 Einträge |
+| M6 | Jede UI-Szene instanziierbar + Default-Fokus; `PauseMenu.process_mode == PROCESS_MODE_WHEN_PAUSED` (und alle Untermenüs); Touch-Trefferflächen ≥ 88; SafeAreaContainer-Ränder ≥ 24; `name_entry` `max_length == 12` |
+| M7 | `real_data()` valide; Mindestmengen laut GDD; jede Etage-1-Encounter mit Startparty (Lv 1–3) per Auto-Kampf (50 Seeds) ≥ 80 % Siegquote, Hausmeister mit Lv 5, Königin mit Lv 7 |
+| M8 | 05_LIVE_MODUS §11.4; zusätzlich `RunSim.step(1) × n ≡ step(n)` und Timer/Hype-Zerfall in Ticks |
 
 ---
 
 ## 12. Performance, Export, CI
 
-### 12.1 Budgets (Zielgeräte: Mittelklasse-Android 2021 (Adreno 610/Mali-G57), iPhone 11; PC: integrierte GPU)
+### 12.1 Budgets (einzige Budget-Tabelle des Projekts; 03_ART §11 verweist hierher)
+
+Referenzgeräte: Mittelklasse-Android (Adreno 610 / Mali-G57), iPhone 11; PC: integrierte GPU. Quality `low` (Mobil-Default) 60 FPS,
+`high` ≥ 45 FPS mobil / 60 FPS PC, Compatibility-Fallback 30 FPS.
 
 | Größe | Erkundung | Kampf | Safe Room |
 |---|---|---|---|
 | Ziel-FPS | PC 60, Mobil 60 (Minimum 30) | gleich | gleich |
-| Draw Calls (Monitor `RENDER_TOTAL_DRAW_CALLS_IN_FRAME`) | ≤ 250 | ≤ 200 | ≤ 150 |
-| Sichtbare Dreiecke (`RENDER_TOTAL_PRIMITIVES_IN_FRAME`) | ≤ 120 000 | ≤ 80 000 | ≤ 60 000 |
+| Draw Calls (Monitor `RENDER_TOTAL_DRAW_CALLS_IN_FRAME`) | ≤ 150 | ≤ 150 | ≤ 120 |
+| Sichtbare Dreiecke (`RENDER_TOTAL_PRIMITIVES_IN_FRAME`, inkl. Hulls und Schattenpass) | ≤ 120 000 | ≤ 120 000 | ≤ 60 000 |
 | DirectionalLight3D | 1 (Schatten nur „high“) | 1 | 1 |
 | OmniLight3D aktiv im Umkreis 24 m | ≤ 4 (low: 2), keine Schatten | ≤ 2 | ≤ 3 |
-| Lichter pro Mesh | ≤ 3 (Compat rendert je Licht einen Pass) | ≤ 3 | ≤ 3 |
+| Lichter pro Mesh | ≤ 3 | ≤ 3 | ≤ 3 |
 | Schattenkarte | 2048 PC / 1024 mobil, max. Distanz 30 m | 20 m | 15 m |
-| Materialien (eindeutig) | ≤ 24 | ≤ 24 | ≤ 16 |
+| Materialien (eindeutig, aus `Materials`-Cache) | ≤ 24 | ≤ 24 | ≤ 16 |
+| Partikel | ≤ 400 gleichzeitig, ≤ 6 Emitter | gleich | gleich |
+| `Label3D` gleichzeitig | ≤ 12 (gepoolt) | gleich | gleich |
 | Physik | ≤ 40 Bodies, keine RigidBodies | keine | keine |
 | RAM | ≤ 400 MB | | |
-| Aufbauzeit | Etage generieren + bauen ≤ 500 ms PC / 1,5 s mobil | Arena ≤ 300 ms | ≤ 300 ms |
+| Aufbauzeit | Etage (Layout/Generierung + Bauen) ≤ 500 ms PC / 1,5 s mobil | Arena ≤ 300 ms | ≤ 300 ms |
 
-Pro Asset: Party-Figur ≤ 3 000 Tris, Gegner ≤ 2 500, Boss ≤ 6 000, Raum (Geometrie + Props) ≤ 4 000, Arena ≤ 8 000.
-Figur ≤ 10 MeshInstances (je 2 Draw Calls inkl. Outline). Verboten: SSAO, SSIL, SSR, SDFGI, VoxelGI, Volumetric Fog, GPUParticles,
+Pro Asset (Tris über `MeshUtil.tri_count`, ohne Hull; `test_m4_art_kit` prüft genau diese Werte):
+
+| Asset | Tris | MeshInstances |
+|---|---|---|
+| Held (Kai, Mopsula) | ≤ 2 500 | ≤ 8 |
+| Gegner (Schwarm gesamt) | ≤ 1 500 | ≤ 6 |
+| Boss | ≤ 4 000 (+ `wreck` ≤ 600) | ≤ 10 |
+| Raum | Geometrie ≤ 1 500 + Props ≤ 2 500 | 2 (Geometry, Props) + Interaktives |
+| Arena | ≤ 8 000 | – |
+
+Jede Figuren-MeshInstance kostet 2 Draw Calls (inkl. Outline-`next_pass`). „Lichter pro Mesh ≤ 3“ begründet sich mit den
+Fragment-Kosten (Licht-Schleife pro Pixel auf Mobile-GPUs), nicht mit Extra-Passes: gemessen bleiben die Draw Calls in Compatibility
+mit 0/1/3/6 OmniLights auf 10 Meshes konstant bei 10. Verboten: SSAO, SSIL, SSR, SDFGI, VoxelGI, Volumetric Fog, GPUParticles,
 Echtzeit-Reflexionen, Texturen > 512 px (es gibt keine). `DebugOverlay` (F3) zeigt FPS, Draw Calls, Primitives.
 
 ### 12.2 Plattform-Renderer
 
-PC/Android/iOS: `mobile` (Vulkan/Metal; D3D12-Fallback ist nicht konfiguriert, Windows nutzt Vulkan, bei Fehlen → OpenGL 3).
+PC/Android/iOS: `mobile` (Vulkan/Metal). Der D3D12-Fallback ist in 4.7.2 standardmäßig an und wird hier ausdrücklich abgeschaltet
+(`rendering_device/fallback_to_d3d12=false`, §2.1): Windows nutzt Vulkan, ohne Vulkan → OpenGL 3.
 Fallback auf `gl_compatibility` automatisch (`fallback_to_opengl3=true`). CI-Screenshots laufen immer in `gl_compatibility`
 (`--rendering-driver opengl3` unter Xvfb/llvmpipe, geprüft) → jede Darstellung muss in beiden Renderern korrekt aussehen.
 
@@ -2704,6 +3687,9 @@ Android/iOS werden lokal exportiert (Android: JDK 17 + SDK + Debug-Keystore in E
   `:=` nur, wenn der Typ aus der rechten Seite eindeutig ist (Konstruktor, Literal, typisierte Funktion).
 - JSON-Werte immer explizit konvertieren: `int(d["hp"])`, `float(...)`, `str(...)`; typisierte Arrays per
   `var a: Array[String] = []; a.assign(raw_array)`.
+- **Schleifenvariablen** über Array/Dictionary brauchen einen Typ (sonst unter `untyped_declaration=2` Fehler, gemessen:
+  `"for" iterator variable "x" has no static type. (Warning treated as error.)`): `for e: Variant in raw_array:`,
+  `for key: String in dict:`, `for d: Dictionary in list:`. Iteratoren über `int`/`range()` (`for i in n:`) dürfen untypisiert bleiben.
 - Einrückung Tabs; Zeilen ≤ 120 Zeichen; `##`-Doc-Kommentare für öffentliche APIs; Kommentare Englisch.
 - Namen: Dateien `snake_case.gd`; `class_name` = PascalCase des Dateinamens; Konstanten `UPPER_SNAKE`; Methoden/Variablen
   `snake_case`; privat `_prefix`; Bools `is_/has_/can_`; Signale im Partizip (`chest_opened`), Anfragen `*_requested`.
@@ -2714,11 +3700,13 @@ Android/iOS werden lokal exportiert (Android: JDK 17 + SDK + Debug-Keystore in E
   mit `Could not resolve external class member`. Enum-**Werte** dürfen innerhalb der Klasse unqualifiziert bleiben (`Side.PARTY`).
   Autoload-Skripte (ohne `class_name`) sind nicht betroffen (`Router.Transition` funktioniert).
 - Keine Methoden/Variablen mit Namen eingebauter Funktionen (`floor`, `str`, `min`, `max`, `range`, `print`, `load` …) —
-  daher `floor_def()`, `floor_run`, `Stat.STR` statt `str`. Einzige Ausnahme: `seed` als Feld-/Parametername (wie
-  `RandomNumberGenerator.seed`; geprüft: kompiliert), weil die globale Funktion `seed()` nirgends benutzt werden darf.
+  daher `floor_def()`, `floor_run`, `Stat.STR` statt `str`. Zwei Ausnahmen (geprüft: kompilieren, nur Shadow-Warnung, die aus ist):
+  `seed` als Feld-/Parametername (wie `RandomNumberGenerator.seed`; die globale Funktion `seed()` darf nirgends benutzt werden) und
+  `exp` als Feldname (`BattleResult.exp`, `PartyMember.exp`, `BattleRewards.exp`, `EnemyDef.exp` = JSON-Key; die globale Funktion
+  `exp()` wird in diesen Klassen nicht benutzt).
 - Keine globalen `randi()/randf()` in `core/` und `art/kit/`; reine Darstellungs-Jitter (Kamera-Shake, Partikel) dürfen sie nutzen.
 - Ganzzahlen für HP/MP/Schaden/Credits; `float` nur für Verhältnisse, Zeiten, Hype.
-- Spielertexte: `tr("Deutscher Text")`; Datentexte: `tr(def.name)`; Formatierung mit `"…{player}…".format(ctx)`.
+- Spielertexte: `tr("Deutscher Text")`; Datentexte: `tr(def.name)`; Formatierung mit `"…{name}…".format(ctx)` (Platzhalter §4.3).
 
 ### 13.2 `class_name`-Regeln
 
@@ -2761,11 +3749,14 @@ Android/iOS werden lokal exportiert (Android: JDK 17 + SDK + Debug-Keystore in E
 
 ## 14. Anhang: Integrations-Checkliste
 
-1. `tools/check.sh` grün (Import, alle Tests, Autoplay `AUTOPLAY: OK`).
+1. `tools/check.sh` grün (Import, alle Tests, Autoplay `AUTOPLAY: OK`, Exit-Code 0 geprüft).
 2. `tools/check.sh --shot` für alle sieben Szenen aus §12.4 ohne Fehlerzeilen; Bilder zeigen Toon-Look mit Outlines.
 3. `DebugOverlay`-Werte in Erkundung/Kampf innerhalb §12.1 (Release-Build auf PC + einem Android-Gerät).
-4. Etage 1 manuell durchspielbar: Titel → Intro → Erkundung → ≥ 3 Kämpfe → Achievement + Lootbox → Safe Room (Speichern, Laden,
-   Lootbox öffnen, Automat) → Quartier-Boss → Treppe (optional Etagenboss) → Abspann.
+4. Etage 1 manuell durchspielbar: Titel → Intro → Tutorial-Kampf (danach startet der Countdown) → Erkundung → ≥ 3 Kämpfe →
+   Achievement + Lootbox → Safe Room (Speichern, Laden, Lootbox öffnen, Automat, Mopsula-Szene) → Etagen-Events → Quartier-Boss →
+   Generalschlüssel öffnet Tor zu Gleis 9 → Treppe (optional Etagenboss mit Zug-Pseudo-Einheit) → Etagen-Bilanz → Autosave → Abspann.
 5. Tastatur, Gamepad und Touch bedienen alle Menüs und die Erkundung. Touch auf Android-Gerät; am PC ersatzweise
    `touch_controls = &"on"` plus lokal (nicht committen) `input_devices/pointing/emulate_touch_from_mouse=true`.
-6. Spielstand aus Slot laden stellt Etage (gleiches Layout per Seed), geöffnete Truhen, besiegte Gruppen, Timer und Show-Werte wieder her.
+6. Spielstand aus Slot laden stellt Etage (gleiches Layout), geöffnete Truhen/Tore, abgeschlossene Events, besiegte Gruppen, Streuner,
+   Safe-Room-Position, Timer (mind. 3:00 Gnadenfrist), Pity-Zähler, Bestiarium und Show-Werte wieder her.
+7. Gleicher Seed + aufgezeichneter `RunLog` → `Game.replay_log()` liefert denselben `StateHash` (Brief §6b.1–3).

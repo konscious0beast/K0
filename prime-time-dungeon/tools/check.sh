@@ -48,7 +48,7 @@ run_tests() {
   local extra=()
   [ -n "${TEST_FILTER:-}" ] && extra=(-- "--filter=$TEST_FILTER")
   out="$(timeout 600 "$GODOT" --headless --path "$WORK" -s res://tests/run_tests.gd "${extra[@]}" 2>&1 | filter_noise)"
-  code=${PIPESTATUS[0]}
+  code=$?
   echo "$out"
   if [ "$code" -ne 0 ] || echo "$out" | grep -qE "$ERR_RE"; then
     echo "check.sh: TESTS FAILED (exit $code)"; return 1
@@ -56,12 +56,16 @@ run_tests() {
 }
 
 run_smoke() {
-  echo "== smoke (main scene, headless, 600 frames, autoplay) =="
-  local out
-  out="$(timeout 300 "$GODOT" --headless --path "$WORK" --quit-after 600 -- --autoplay 2>&1 | filter_noise)"
+  echo "== smoke (main scene, headless, autoplay, safety net 900 frames) =="
+  local out code
+  out="$(timeout 300 "$GODOT" --headless --path "$WORK" --quit-after 900 -- --autoplay 2>&1 | filter_noise)"
+  code=$?
   echo "$out" | tail -n 60
-  if echo "$out" | grep -qE "$ERR_RE"; then
-    echo "check.sh: SMOKE FAILED (errors above)"; return 1
+  if [ "$code" -ne 0 ] || echo "$out" | grep -qE "$ERR_RE"; then
+    echo "check.sh: SMOKE FAILED (exit $code)"; return 1
+  fi
+  if ! echo "$out" | grep -qE 'AUTOPLAY: (OK|SKIPPED \(stub\))'; then
+    echo "check.sh: SMOKE FAILED (no 'AUTOPLAY: OK' line)"; return 1
   fi
 }
 

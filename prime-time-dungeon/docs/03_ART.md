@@ -6,19 +6,27 @@
 > Alles wird **prozedural aus `PrimitiveMesh`es + Shadern** gebaut. Keine Texturen, keine externen Assets.
 > Blender-glTF ersetzt später die Platzhalter **1:1** (Kap. 10).
 
-**Verifikation (2026-10-07, Godot 4.7.2-stable):** Alle Shader und `MeshUtil` aus diesem Dokument wurden in einem
-Wegwerf-Projekt (mit `untyped_declaration = 2`) gebaut und unter `xvfb-run` gerendert — **Compatibility**
-(`--rendering-method gl_compatibility --rendering-driver opengl3`, Mesa llvmpipe) und **Mobile**
-(`--rendering-method mobile --rendering-driver vulkan`, Mesa lavapipe). Ergebnis: 0 Shader-/Script-Fehler, 0 Warnungen,
-Bilder in beiden Renderern deckungsgleich (Graustufen-Probe `#808080` vs. `#848484`, ≤ 3 %). Dabei gefundene und hier eingearbeitete Engine-Fakten:
+**Verifikation (2026-10-07, Godot 4.7.2-stable, nach Review-Korrektur):** Alle Shader (inkl. `ptd_color.gdshaderinc` per `#include`)
+und `MeshUtil` aus diesem Dokument wurden in einem Wegwerf-Projekt (mit `untyped_declaration = 2`) gebaut und unter `xvfb-run`
+gerendert — **Compatibility** (`--rendering-method gl_compatibility --rendering-driver opengl3`, Mesa llvmpipe) und **Mobile**
+(`--rendering-method mobile --rendering-driver vulkan`, Mesa lavapipe). Ergebnis: 0 Shader-/Script-Fehler, 0 Warnungen.
+Messwerte (960 × 540, Kugel r 0.6 aus `MeshUtil.merge`, Kamera 6 m): **Outline sichtbar** — Silhouette mit `outline_width 0.1`
+**82 px**, ohne Outline **71 px**, in beiden Renderern gleich (die erste Fassung von §3.3 schrumpfte den Hull, F6).
+Partikel-/MultiMesh-Farbe 0.5 (AgX, `vfx_additive`): Compatibility `#808080`, Mobile `#7F7F7F` (vorher `#ACACAD` auf Mobile, F1).
+TV-Overlay low/high: identische Pixel in beiden Renderern. Dabei gefundene und hier eingearbeitete Engine-Fakten:
 
 | # | Befund (getestet) | Konsequenz |
 |---|---|---|
-| F1 | **Vertex-Farben:** Dieselben Mesh-Daten (Farbe linear gespeichert, 0.216) ergaben Compatibility `#363636`, Mobile `#848484` — Compatibility linearisiert `COLOR` selbst, Mobile nicht. Gilt auch für MultiMesh-Instanzfarben. | Mesh-Farben werden **sRGB** gespeichert; Shader konvertieren nur außerhalb Compatibility (`#if CURRENT_RENDERER == RENDERER_COMPATIBILITY`, Preprocessor-Define existiert in 4.7). |
+| F1 | **Vertex-Farben:** Dieselben Mesh-Daten (Farbe linear gespeichert, 0.216) ergaben Compatibility `#363636`, Mobile `#848484` — Compatibility linearisiert `COLOR` selbst, Mobile nicht. Gilt genauso für Partikel- und MultiMesh-Instanzfarben. | Mesh-, Partikel- und Instanzfarben werden **sRGB** gespeichert; **jeder** Shader, der `COLOR` liest (`toon`, `env_tiles`, `vfx_additive`), wandelt über `ptd_vertex_albedo()` aus `art/shaders/ptd_color.gdshaderinc` (`#include`; `#if CURRENT_RENDERER == RENDERER_COMPATIBILITY` funktioniert auch in Include-Dateien, geprüft). |
 | F2 | **Instance-Uniforms über `next_pass`:** gleiche Namen reichen nicht — die **Deklarationsreihenfolge** muss in beiden Shadern identisch sein, sonst Warnung „different indices … only the first one will display correctly“. | `toon` und `toon_outline` deklarieren `flash_amount, flash_color, highlight, dissolve` in genau dieser Reihenfolge. |
 | F3 | glTF-Export/-Import von Godot schreibt/liest `COLOR_0` **ohne** Farbraumwandlung; Blender exportiert `COLOR_0` linear (glTF-Spezifikation). | Post-Import wandelt Vertex-Farben `linear_to_srgb()` (Kap. 10). |
 | F4 | Statische Funktion namens `tr()` kollidiert mit `Object.tr()` (Parse-Fehler). | Hilfsfunktion heißt `MeshUtil.xform()`. |
 | F5 | Große Boden-Boxen, die selbst Schatten werfen, versinken in Compatibility im Eigenschatten. | Raumgeometrie `cast_shadow = OFF` (wie 02_TECH §8.5). |
+| F6 | Godot baut die Y-Spiegelung in `PROJECTION_MATRIX` ein: `PROJECTION_MATRIX[1][1] < 0`. Ein Clip-Space-Offset, der damit skaliert wird, zeigt nach **innen** (Hull schrumpft, Outline unsichtbar). | `toon_outline` nimmt `abs(PROJECTION_MATRIX[1][1])` (§3.3); Regressionsprobe `art/gallery/render_probe.tscn` (§11, A11). |
+| F7 | Ob ein `canvas_item`-Shader den Bildschirm liest, steht beim Kompilieren fest: Ein deklarierter `hint_screen_texture`-Sampler erzwingt jeden Frame eine Vollbild-Backbuffer-Kopie, egal welcher Laufzeit-Zweig ihn nutzt. | Zwei Overlay-Dateien: `ui_tv_overlay.gdshader` (ohne Bildschirm-Lesen, `low`) und `ui_tv_overlay_aberration.gdshader` (`high`), §3.9. |
+| F8 | `ThemeDB.fallback_font` (Standardschrift) hat **keine** Glyphen für `● ♥ ★ ↓ ↑ → ▼ ▲ ☰` (`has_char() == false`); vorhanden sind Umlaute, `ß „ “ – … · € × % !`. | Symbole sind `Polygon2D`-Icons bzw. Meshes, nie Textzeichen (§9.2); `test_m6` prüft alle statischen UI-Strings. |
+| F9 | `Viewport.get_texture().get_image()` liefert headless `null` + „Parameter "t" is null“ (SubViewport und Root). Eine `ViewportTexture` direkt an einem `TextureRect` erzeugt headless **keinen** Fehler. | Porträts und M.O.D.-Icon sind `ViewportTexture`s lebender SubViewports, kein Image-Cache (§5.6, §9.2). |
+| F10 | `Basis.scaled(s)` skaliert in **Eltern**-Achsen: `from_euler(0,0,90°).scaled(2,1,1)` streckt die Y-Achse. `scaled_local(s)` streckt die lokale X-Achse (geprüft). | `MeshUtil.xform()` nutzt `scaled_local()` (§5.2), sonst gehen Rotationen skalierter Kugeln verloren. |
 
 ---
 
@@ -141,14 +149,32 @@ Basis sind die Konstanten von `UiTheme` (02_TECH §3.9); Art ergänzt nur LIVE/P
 | `art/shaders/vfx_additive.gdshader` | spatial | Additive Billboard-Partikel ohne Textur (Punkt/Stern/Ring/Funke) |
 | `art/shaders/hologram.gdshader` | spatial | M.O.D., Bildschirme, Sponsor-Logos, Schilde |
 | `art/shaders/ui_swirl.gdshader` | canvas_item | Kampf-Swirl (Router) |
-| `art/shaders/ui_tv_overlay.gdshader` | canvas_item | Scanlines, Vignette, Chromatische Aberration + Testbild „Sendeschluss“ |
+| `art/shaders/ui_tv_overlay.gdshader` | canvas_item | Quality `low`: Scanlines + Vignette als Abdunkelung, Testbild „Sendeschluss“; **liest den Bildschirm nicht** (F7) |
+| `art/shaders/ui_tv_overlay_aberration.gdshader` | canvas_item | Quality `high`: wie oben + chromatische Aberration (liest den Bildschirm); gleiche Uniforms + `screen_tex` (Antrag A10 an 02_TECH §1.5) |
+| `art/shaders/ptd_color.gdshaderinc` | Include | `ptd_vertex_albedo()` — sRGB-Weiche für `COLOR` (F1); per `#include` in `toon`, `env_tiles`, `vfx_additive` (Antrag A10 an 02_TECH §1.5) |
 
 **Vertex-Daten-Konvention** (geschrieben von `MeshUtil.merge()`, gelesen von `toon`/`env_tiles`/`toon_outline`):
 `COLOR` = **sRGB**-Albedo (F1), `UV2.x` = Emissionsmaske (× `vertex_emission_energy` 3.0), `UV2.y` = Metallmaske
 (+0.9 Glanz, doppelte Glanzpunktgröße), `CUSTOM0.xyz` = geglättete Normalen für den Hull.
-Damit reicht **ein** Material pro Figur für Haut, Stoff, Metall und Leuchtteile.
+Damit reicht **ein** Material pro Figur für Haut, Stoff, Metall und Leuchtteile. Dieselbe sRGB-Regel gilt für Partikelfarben
+(`CPUParticles3D.color`/`color_ramp`) und MultiMesh-Instanzfarben.
 
-**`Materials`-Optionen** (02_TECH §8.2) — Art-Belegung:
+`art/shaders/ptd_color.gdshaderinc` (einzige Stelle der Farbraum-Weiche; Include-Dateien haben kein `shader_type`):
+
+```glsl
+// PRIME TIME DUNGEON - shared color helpers (#include in toon, env_tiles, vfx_additive).
+// Vertex/particle/MultiMesh colors are stored sRGB. Compatibility hands COLOR to the shader already
+// linearized, Mobile/Forward+ hand it over raw (tested 4.7.2) -> convert only there.
+vec3 ptd_vertex_albedo(vec3 c) {
+#if CURRENT_RENDERER == RENDERER_COMPATIBILITY
+	return c;
+#else
+	return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c));
+#endif
+}
+```
+
+**`Materials`-Optionen** (02_TECH §8.2, dort vollständig) — Art-Belegung:
 
 | Aufruf | Ergebnis |
 |---|---|
@@ -157,7 +183,10 @@ Damit reicht **ein** Material pro Figur für Haut, Stoff, Metall und Leuchtteile
 | `Materials.env({"tile_size": 2.0})` + Zonen-`shade`/`grout` | Raumgeometrie und Props (kein Outline) |
 | `Materials.glow(color, 2.0)` | Neon, Augen-Leuchtteile mit eigenem Mesh |
 | `Materials.vfx_additive(color)` | Partikel |
-| Art-Zusatzschlüssel (Antrag, Kap. 12): `"wobble": float`, `"stripes": Dictionary`, `"rim_color": Color` | Schleim/Kabel/Schwänze, Rolltreppe, Boss-Rim |
+| `"wobble": float` → `wobble_amount` (m; `wobble_speed` 1.5 Hz fest) | Schleim 0.03, Kabel 0.05, Schwänze 0.02 |
+| `"stripes": {"color", "width", "speed"}` → `stripe_color`, `stripe_duty` (= width, Anteil 0..1), `stripe_scroll` (Streifen/s); `stripe_mix` = 1.0 sobald gesetzt, `stripe_frequency` 6.0 fest | Rolltreppe `{"color": #F2C230, "width": 0.5, "speed": 0.8}` |
+| `"rim_color": Color` → `rim_color` (Default = Zonen-Palette `rim`) | Boss-Rim Rattenkönigin `#9A6BFF` |
+| `"spec": float` → `spec_strength` (0.25) | Metall-Lootboxen 0.6, Schleim 0.5 |
 
 Zonenwechsel: `EnvKit` baut jeden Raum mit der Palette seiner Zone; Figuren-Rim folgt der Zone über
 `Materials`-Cache-Eintrag pro Zone (`rim_color` aus Palette-Schlüssel `rim`).
@@ -176,6 +205,8 @@ nicht auf nach unten zeigenden Flächen. Glanzpunkt wird wegen `specular_disable
 // COLOR = sRGB albedo, UV2.x = emission mask, UV2.y = metal mask, CUSTOM0.xyz = outline normals.
 shader_type spatial;
 render_mode blend_mix, depth_draw_opaque, cull_back, specular_disabled;
+
+#include "res://art/shaders/ptd_color.gdshaderinc"
 
 // --- contract ---
 uniform vec4 albedo : source_color = vec4(1.0);
@@ -220,16 +251,6 @@ uniform float wobble_speed = 1.5;                              // Hz
 group_uniforms;
 
 varying vec3 v_obj_pos;
-
-// Vertex colors are stored sRGB. Compatibility already hands them to the shader linearized,
-// Mobile/Forward+ hand them over raw (tested 4.7.2) -> convert only there.
-vec3 ptd_vertex_albedo(vec3 c) {
-#if CURRENT_RENDERER == RENDERER_COMPATIBILITY
-	return c;
-#else
-	return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c));
-#endif
-}
 
 float ptd_hash(vec3 p) {
 	p = fract(p * 0.3183099 + vec3(0.71, 0.113, 0.419));
@@ -327,6 +348,9 @@ void light() {
 Hull wächst im **Clip-Space** entlang der (geglätteten) Normalen. `outline_width` = Linienbreite in Metern **bei 6 m Kameradistanz**
 (0.025 m ≈ 3.5 px bei 1080p/FOV 60); näher bleibt die Bildschirmbreite konstant (keine fetten Linien in Close-ups),
 weiter weg wird sie bis 35 % dünner. Kamera-Zoom (FOV) skaliert die Linie mit. Ohne `CUSTOM0` (rohe `PrimitiveMesh`) Rückfall auf `NORMAL`.
+**Vorzeichen (F6):** `PROJECTION_MATRIX[1][1]` ist in Godot negativ (Y-Spiegelung eingebaut) — die Höhe geht deshalb als
+`abs(...)` ein; die Richtung `dir_px` stimmt bereits. Gemessen mit `outline_width 0.1`: Silhouette 82 px statt 71 px ohne Hull
+(beide Renderer); `highlight` und `flash` am Hull wirken über `next_pass`.
 
 ```glsl
 // PRIME TIME DUNGEON - Inverted-hull outline (next_pass of toon). Mobile + Compatibility.
@@ -362,7 +386,7 @@ void vertex() {
 	float len = length(dir_px);
 	dir_px = len > 0.0001 ? dir_px / len : vec2(0.0);
 	float w = outline_width * (1.0 + 0.6 * highlight);
-	float ndc_h = w * PROJECTION_MATRIX[1][1] / ref_distance;                  // NDC height at ref distance
+	float ndc_h = w * abs(PROJECTION_MATRIX[1][1]) / ref_distance;             // NDC height at ref distance; [1][1] < 0 in Godot (Y flip)
 	float dist_factor = clamp(ref_distance / max(clip.w, 0.001), min_width_factor, 1.0);
 	clip.xy += dir_px * vec2(VIEWPORT_SIZE.y / VIEWPORT_SIZE.x, 1.0) * ndc_h * dist_factor * clip.w;
 	POSITION = clip;
@@ -388,6 +412,8 @@ Schmutzflecken (Value-Noise) + Schmutzkante 0.6 m an Wänden, diagonale Bildschi
 shader_type spatial;
 render_mode blend_mix, depth_draw_opaque, cull_back, specular_disabled;
 
+#include "res://art/shaders/ptd_color.gdshaderinc"
+
 // --- contract ---
 uniform float tile_size = 2.0;                                  // m
 uniform vec4 grout_color : source_color = vec4(0.10, 0.11, 0.14, 1.0);
@@ -408,15 +434,6 @@ uniform float band_mid : hint_range(0.0, 1.0) = 0.6;
 
 varying vec3 v_world;
 varying vec3 v_wnormal;
-
-// Same rule as toon.gdshader: vertex colors are sRGB, Compatibility delivers them linearized.
-vec3 ptd_vertex_albedo(vec3 c) {
-#if CURRENT_RENDERER == RENDERER_COMPATIBILITY
-	return c;
-#else
-	return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c));
-#endif
-}
 
 float ptd_hash2(vec2 p) {
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -510,13 +527,17 @@ void fragment() {
 
 ### 3.6 `vfx_additive.gdshader`
 
-Als `material` eines `QuadMesh` (Größe 1×1, Skalierung über Partikel), Mesh eines `CPUParticles3D`. Farbe = `color × COLOR` (Partikelfarbe/-verlauf).
+Als `material` eines `QuadMesh` (Größe 1×1, Skalierung über Partikel), Mesh eines `CPUParticles3D`. Farbe = `color × COLOR`
+(Partikelfarbe/-verlauf, **sRGB** wie Vertex-Farben, F1 → `ptd_vertex_albedo()`; ohne die Weiche war Mobile bei Farbe 0.5 `#ACACAD`
+statt `#808080`).
 
 ```glsl
 // PRIME TIME DUNGEON - Additive billboard particle sprite, texture-free. Mobile + Compatibility.
-// Use as material of the QuadMesh of a CPUParticles3D. Final color = color * particle COLOR.
+// Use as material of the QuadMesh of a CPUParticles3D. Final color = color * particle COLOR (sRGB, F1).
 shader_type spatial;
 render_mode unshaded, blend_add, cull_disabled, depth_draw_never, fog_disabled, shadows_disabled;
+
+#include "res://art/shaders/ptd_color.gdshaderinc"
 
 uniform vec4 color : source_color = vec4(1.0);
 uniform float softness : hint_range(0.0, 1.0) = 0.5;
@@ -545,7 +566,7 @@ void fragment() {
 	} else {
 		a = 1.0 - smoothstep(1.0 - s, 1.0, r);
 	}
-	ALBEDO = color.rgb * COLOR.rgb * energy * a * color.a * COLOR.a;
+	ALBEDO = color.rgb * ptd_vertex_albedo(COLOR.rgb) * energy * a * color.a * COLOR.a;
 }
 ```
 
@@ -623,23 +644,29 @@ void fragment() {
 }
 ```
 
-### 3.9 `ui_tv_overlay.gdshader`
+### 3.9 `ui_tv_overlay.gdshader` + `ui_tv_overlay_aberration.gdshader`
 
-Vollbild-`ColorRect` (`mouse_filter IGNORE`) im ShowOverlay (Layer 40). Quality `high`: `aberration 0.6`; `low`: `aberration 0.0`
-(dann **kein** Bildschirm-Lesen im Shader-Pfad, nur Abdunkeln über Alpha). Game Over: `test_card` 0→1 in 0.2 s.
+Vollbild-`ColorRect` (`mouse_filter IGNORE`) im ShowOverlay (Layer 40). **Zwei Dateien** (F7): Ein deklarierter
+`hint_screen_texture`-Sampler kostet jeden Frame eine Vollbild-Kopie, unabhängig von `if`-Zweigen — Quality `low` darf ihn deshalb
+gar nicht enthalten. `ShowOverlay` wählt das Material in `_ready()` und bei `Events.settings_changed` (gesendet von
+`Game.apply_settings()`, 02_TECH §3.4) nach `settings.quality`: `low` → `ui_tv_overlay.gdshader` (Scanlines + Vignette als schwarze Abdunkelung über Alpha),
+`high` → `ui_tv_overlay_aberration.gdshader` (`aberration 0.6`, liest den Bildschirm). Beide haben dieselben Uniforms
+(Vertrag 02_TECH §8.3 inkl. `aberration`, in `low` ohne Wirkung) und ergeben ohne Aberration pixelgleiche Bilder (geprüft, beide Renderer).
+Game Over: `test_card` 0→1 in 0.2 s (in beiden Varianten). Beim Tausch werden `scanline_alpha`, `vignette`, `test_card` übernommen.
+
+`ui_tv_overlay.gdshader` (Quality `low`, Vertrags-Datei):
 
 ```glsl
-// PRIME TIME DUNGEON - TV overlay (scanlines, vignette, chromatic aberration) + "Sendeschluss" test card.
-// Fullscreen ColorRect in GlobalUi ShowOverlay (CanvasLayer 40). Mobile + Compatibility.
+// PRIME TIME DUNGEON - TV overlay, quality LOW: scanlines + vignette as alpha darkening, "Sendeschluss" test card.
+// No screen read (no hint_screen_texture -> no full-screen backbuffer copy). Fullscreen ColorRect in ShowOverlay (layer 40).
 shader_type canvas_item;
 
-// --- contract ---
+// --- contract (02_TECH 8.3) ---
 uniform float scanline_alpha : hint_range(0.0, 1.0) = 0.08;
 uniform float vignette : hint_range(0.0, 1.0) = 0.35;
-uniform float aberration : hint_range(0.0, 4.0) = 0.6;               // px at 720p, 0 = no screen read
+uniform float aberration : hint_range(0.0, 4.0) = 0.0;               // contract only; ignored here (see _aberration variant)
 
 // --- art extras ---
-uniform sampler2D screen_tex : hint_screen_texture, filter_linear;
 uniform float test_card : hint_range(0.0, 1.0) = 0.0;                // 1 = Game Over test card
 uniform float noise_amount : hint_range(0.0, 1.0) = 0.25;
 
@@ -661,20 +688,55 @@ vec3 ptd_card(vec2 uv) {
 
 void fragment() {
 	vec2 uv = SCREEN_UV;
-	vec3 col = vec3(0.0);
-	float a = 0.0;
-	if (aberration > 0.0) {
-		vec2 off = (uv - 0.5) * aberration * SCREEN_PIXEL_SIZE * 2.0;
-		col = vec3(texture(screen_tex, uv + off).r, texture(screen_tex, uv).g, texture(screen_tex, uv - off).b);
-		a = 1.0;
-	}
 	float line = step(0.5, fract(FRAGCOORD.y * 0.5));
 	float vig = smoothstep(0.35, 0.95, length((uv - 0.5) * vec2(1.3, 1.0))) * vignette;
-	col = mix(col, vec3(0.0), line * scanline_alpha * a);
+	float dark = 1.0 - (1.0 - line * scanline_alpha) * (1.0 - vig);  // black with this alpha (= high variant)
+	COLOR = vec4(ptd_card(UV) * test_card, max(dark, test_card));
+}
+```
+
+`ui_tv_overlay_aberration.gdshader` (Quality `high`):
+
+```glsl
+// PRIME TIME DUNGEON - TV overlay, quality HIGH: reads the screen for chromatic aberration, plus scanlines,
+// vignette and "Sendeschluss" test card. Same uniforms as ui_tv_overlay.gdshader (+ screen_tex). Mobile + Compatibility.
+shader_type canvas_item;
+
+// --- contract (02_TECH 8.3) ---
+uniform float scanline_alpha : hint_range(0.0, 1.0) = 0.08;
+uniform float vignette : hint_range(0.0, 1.0) = 0.35;
+uniform float aberration : hint_range(0.0, 4.0) = 0.6;               // px at 720p
+
+// --- art extras ---
+uniform sampler2D screen_tex : hint_screen_texture, filter_linear;
+uniform float test_card : hint_range(0.0, 1.0) = 0.0;
+uniform float noise_amount : hint_range(0.0, 1.0) = 0.25;
+
+float ptd_rand(vec2 p) {
+	return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+vec3 ptd_card(vec2 uv) {
+	int bar = int(floor(uv.x * 7.0));
+	vec3 bars[7] = vec3[7](vec3(0.75, 0.75, 0.75), vec3(0.75, 0.75, 0.0), vec3(0.0, 0.75, 0.75),
+		vec3(0.0, 0.75, 0.0), vec3(0.75, 0.0, 0.75), vec3(0.75, 0.0, 0.0), vec3(0.0, 0.0, 0.75));
+	vec3 c = bars[clamp(bar, 0, 6)];
+	if (uv.y > 0.67) {
+		c = vec3(step(0.5, fract(uv.x * 4.0)) * 0.9 + 0.05);
+	}
+	float n = ptd_rand(floor(uv * vec2(320.0, 180.0)) + fract(TIME) * 91.0);
+	return mix(c, vec3(n), noise_amount);
+}
+
+void fragment() {
+	vec2 uv = SCREEN_UV;
+	vec2 off = (uv - 0.5) * aberration * SCREEN_PIXEL_SIZE * 2.0;
+	vec3 col = vec3(texture(screen_tex, uv + off).r, texture(screen_tex, uv).g, texture(screen_tex, uv - off).b);
+	float line = step(0.5, fract(FRAGCOORD.y * 0.5));
+	float vig = smoothstep(0.35, 0.95, length((uv - 0.5) * vec2(1.3, 1.0))) * vignette;
+	col *= (1.0 - line * scanline_alpha) * (1.0 - vig);
 	col = mix(col, ptd_card(UV), test_card);
-	a = max(a, test_card);
-	// without aberration: draw only scanline + vignette darkening as alpha
-	COLOR = vec4(col * (1.0 - vig), max(a, max(line * scanline_alpha, vig)));
+	COLOR = vec4(col, 1.0);
 }
 ```
 
@@ -682,10 +744,11 @@ void fragment() {
 
 | Regel | Grund |
 |---|---|
-| Vertex-/Instanzfarben sRGB speichern, Konvertierung nur per `CURRENT_RENDERER`-Weiche (F1) | sonst ist Compatibility doppelt linearisiert (dunkler, übersättigt) |
+| Vertex-, Partikel- und Instanzfarben sRGB speichern; jeder Shader, der `COLOR` liest, ruft `ptd_vertex_albedo()` aus `ptd_color.gdshaderinc` (F1) — nie eine eigene Kopie der Weiche | sonst ist ein Renderer falsch linearisiert (Mobile zu hell, Compatibility zu dunkel) |
 | Instance-Uniforms in `toon`/`toon_outline` in identischer Reihenfolge (F2) | geteilte Indizes |
+| Clip-Space-Offsets mit `abs(PROJECTION_MATRIX[1][1])` skalieren (F6) | Godot-Projektion enthält die Y-Spiegelung |
 | `light()` nutzt nur `NORMAL, LIGHT, VIEW, LIGHT_COLOR, ATTENUATION, LIGHT_IS_DIRECTIONAL, ALBEDO, FRAGCOORD, UV2` | in beiden Renderern vorhanden (getestet) |
-| Kein `hint_screen_texture`/`DEPTH_TEXTURE` in Spatial-Shadern; in Canvas-Shadern erlaubt (Overlay) | 02_TECH §8.1 + Kosten |
+| Kein `hint_screen_texture`/`DEPTH_TEXTURE` in Spatial-Shadern. In Canvas-Shadern **nur** in `ui_tv_overlay_aberration` (Quality `high`) | 02_TECH §8.1; jeder deklarierte Screen-Sampler = Vollbild-Kopie pro Frame (F7) |
 | Kein `discard` in `env_tiles` | Early-Z/HSR auf Tile-GPUs; `toon` enthält `discard` nur für Dissolve (wenige Figuren) |
 | Keine Textur-Sampler in 3D-Shadern | keine Assets, kein Speicher |
 | ≤ 4 Instance-Uniforms pro Shader (Limit 16) | Puffergröße |
@@ -700,7 +763,7 @@ void fragment() {
 
 | Feature | Mobile | Compatibility | Entscheidung |
 |---|---|---|---|
-| Tonemap Linear/Reinhard/Filmic/ACES/**AgX** | ja | ja (AgX gerendert) | **AgX** (Neon clippt ohne Farbstich) — Abweichung zu 02_TECH „filmic“, s. Kap. 12 |
+| Tonemap Linear/Reinhard/Filmic/ACES/**AgX** | ja | ja (AgX gerendert) | **AgX** (Neon clippt ohne Farbstich); 02_TECH §8.5 `TONE_MAPPER_AGX` |
 | Glow | ja | ja (gerendert) | nur Quality `high` (02_TECH §3.4) |
 | Fog Exponential/Depth, Height-Fog | ja | ja (gerendert) | Exponential, Height-Fog nur Kanalisation |
 | Volumetric Fog, SSAO, SSIL, SSR, SDFGI | **nein** (Forward+ only) | **nein** | nie; Ersatz: Fog + additive Lichtkegel (`hologram` auf Kegel-Mesh) + Kontakt-Blob |
@@ -751,11 +814,12 @@ y 0.01, `Materials.toon(Palette.INK, {"outline": false, "rim": 0.0})`, `cast_sha
 |---|---|
 | Achsen | Meter, +Y oben, **Vorderseite −Z** (02_TECH). Rechte Hand = **+X**. Ursprung = Mitte zwischen den Füßen am Boden. |
 | Aufbau | `CharacterRig` → benannte **Pivot-Node3D** → je Pivot ein `MeshInstance3D` (per `MeshUtil.merge()`), Material `Materials.toon_vc({"bands": 3, "rim": 0.45})`. Leuchtteile mit Puls (Display, Glühbirne, Boss-Augen) als **eigenes** Mesh im selben Pivot (eigene Instance-Uniforms). |
-| Pivot-Namen | `Hips, Torso, Head, ArmL, ArmR, LegL, LegR, Tail, Body, WingL, WingR, JawLower, Leg0…Leg7, Keys, Crown` |
+| Pivot-Namen | `Hips, Torso, Head, ArmL, ArmR, LegL, LegR, Tail, Body, WingL, WingR, JawLower, LegsA, LegsB, Keys, Crown, ClawL, ClawR, Bird0…Bird4` (`Crown` trägt `ticket_crown`/`crown`) |
 | Anker (`CharacterRig.anchor()`) | `head` (Kopfmitte), `center` (Rumpfmitte), `overhead` (0.25 m über Kopf), `hand_r`, `hand_l`, `feet` (Ursprung) — als leere Node3D unter dem jeweiligen Pivot |
 | Notation | Pivot-Position in Rig-Koordinaten (scale 1), Teile relativ zum Pivot. `Sphere r`, `Capsule r/h` (h = Gesamthöhe), `Box x×y×z`, `Cyl rt/rb/h`, `Cone r/h`, `Torus ri/ro`, `Hemi r`, `Prism x×y×z`. Rotation in Grad (X, Y, Z). **E** = Emissionsmaske 1.0, **M** = Metallmaske 1.0. Farbslots aus `ModelSpec.colors`: `primary`, `secondary`, `accent`, `skin`, `eyes`. |
 | Segmente (gemessen) | Sphere 10×6 = 140 Tris, Capsule 10×2 = 180, Cyl 8 = 48, Torus 10×5 = 100, Hemi = 80, Box = 12, Prism = 8. **Kleinteile r < 0.06 m:** Sphere 6×3 = 48, Capsule 6×1 = 72, Cyl 6 = 36. |
-| Skalierung | `ModelSpec.scale` skaliert den **Rig-Root**; Rezepte sind für scale 1.0 angegeben. Höhen bei scale 1 (02_TECH): humanoid 1.75, pug 0.6, rodent 0.7, blob 0.9, insect 0.8, robot 1.5, brute 2.2, specter 1.6 m. |
+| Skalierung | `ModelSpec.scale` skaliert den **Rig-Root**; Rezepte sind für scale 1.0 angegeben. Höhen bei scale 1 (02_TECH): humanoid 1.75, pug 0.6, rodent 0.7, blob 0.9, insect 0.8, robot 1.5, brute 2.2, specter 1.6, swarm 0.8 m. |
+| Pose | `ModelSpec.pose` (02_TECH §4.4.14) über `CharacterBuilder.resolve_pose()`: `"auto"` = Regel des Archetyps (nur `rodent`: `scale ≥ 1.0` → `&"upright"`, sonst `&"quadruped"`), `"quadruped"`/`"upright"` erzwingen. Andere Bases ignorieren `pose`. |
 | Cache | gleicher `ModelSpec` (base + scale + colors + props) → gleiche `ArrayMesh`-Instanzen aus `CharacterBuilder`-Cache. |
 
 ### 5.2 `MeshUtil` — verifiziert
@@ -841,8 +905,9 @@ static func prism(size: Vector3, left_to_right: float = 0.5) -> PrismMesh:
 	return m
 
 
+## Scale along the part's OWN (rotated) axes: scaled_local, not scaled (F10).
 static func xform(pos: Vector3, rot_deg: Vector3 = Vector3.ZERO, scl: Vector3 = Vector3.ONE) -> Transform3D:
-	return Transform3D(Basis.from_euler(rot_deg * (PI / 180.0)).scaled(scl), pos)
+	return Transform3D(Basis.from_euler(rot_deg * (PI / 180.0)).scaled_local(scl), pos)
 
 
 ## parts: [{"mesh": Mesh, "xform": Transform3D, "color": Color (sRGB), "emission": float = 0, "metal": float = 0}]
@@ -952,11 +1017,12 @@ var head_mesh: ArrayMesh = MeshUtil.merge(head_parts)
 ### 5.3 Archetypen (`art/kit/archetypes.gd`, je `ModelSpec.base`)
 
 #### `humanoid` — 1.75 m (Kai, Pendler)
-Slots: primary = Oberteil, secondary = Hose, accent = Haare, skin, eyes. Gemessen: **2 040 Tris** inkl. Mopp, 7 Meshes.
+Slots: primary = Oberteil, secondary = Hose, accent = Haare, skin, eyes. Gemessen: **2 040 Tris** inkl. Mopp; **6 Meshes** (der `Hips`-Pivot
+hat kein eigenes Mesh, die Hüft-Box gehört zum `Torso`-Mesh — so bleibt auch der Gegner `pendler` bei ≤ 6 Meshes).
 
 | Pivot (Parent) | Pos | Teile |
 |---|---|---|
-| `Hips` | (0, 0.60, 0) | Box 0.50×0.12×0.36 · secondary |
+| `Hips` | (0, 0.60, 0) | (kein Mesh) — Hüft-Box 0.50×0.12×0.36 · secondary wird in das `Torso`-Mesh gemerged (Position relativ zu `Torso` (0,0,0)) |
 | `Torso` (Hips) | (0, 0.60, 0) | Capsule 0.24/0.62 · (0,0.26,0) · primary; Kragen Torus 0.10/0.20 · (0,0.50,0.10) · (−70,0,0) · primary×0.8; Bauchtasche Box 0.30×0.12×0.03 · (0,0.10,−0.235) · primary×0.8; Namensschild Box 0.12×0.07×0.02 · (−0.12,0.38,−0.235) · `#F2F2EA`; Logo Sphere 0.035 · (0.11,0.38,−0.24) · `HYPE_GOLD` |
 | `Head` (Torso) | (0, 1.12, 0) | Sphere 0.28 · (0,0.26,0) · skin; Haar Sphere 0.30 · (0,0.36,0.04) · Skal. (1,0.72,1) · accent; Pony Box 0.44×0.10×0.12 · (0,0.44,−0.20) · (−20,0,0) · accent; Augen 2× Capsule 0.035/0.11 · (±0.10,0.27,−0.255) · eyes; Mund Box 0.08×0.015×0.01 · (0,0.15,−0.275) · `#8A3B3B`; Ohren 2× Sphere 0.05 · (±0.28,0.25,0) · skin |
 | `ArmL` / `ArmR` (Torso) | (∓0.32, 1.04, 0) | Capsule 0.085/0.48 · (0,−0.20,0) · primary; Hand Sphere 0.095 · (0,−0.46,0) · skin; Anker `hand_l`/`hand_r` (0,−0.46,0) |
@@ -964,16 +1030,21 @@ Slots: primary = Oberteil, secondary = Hose, accent = Haare, skin, eyes. Gemesse
 | Anker | — | `head` (0,1.38,0), `center` (0,0.90,0), `overhead` (0,1.95,0) |
 
 #### `pug` — 0.6 m (Graf Mopsula)
-Slots: primary = Fell, secondary = Maske/Ohren, accent = Kleidung, eyes. Gemessen: **1 448 Tris** inkl. `cape` + `monocle`, 2 Meshes.
+Slots: primary = Fell, secondary = Maske/Ohren, accent = Kleidung, eyes. Gemessen: **1 448 Tris** inkl. `cape` + `monocle`, 2 Meshes;
+mit Siegel-Plakette (+ Box 12 + Torus 100) **≈ 1 560 Tris**. **Kein Kronen-Motiv an Mopsula** (04_STRATEGIE §2.3): weder `crown`-Prop
+noch kronenförmige Teile; sein Adelsanspruch ist die Siegel-Plakette.
 
 | Pivot | Pos | Teile |
 |---|---|---|
-| `Body` | (0, 0, 0) | Rumpf Capsule 0.17/0.52 · (0,0.27,0.02) · (90,0,0) · primary; Ringelschwanz Torus 0.025/0.06 · (0,0.42,0.25) · (0,0,90) · primary; 4 Beine Cyl 0.045/0.05/0.18 · (±0.10,0.09,−0.14) und (±0.10,0.09,0.18) · primary; Halsband Torus 0.13/0.165 · (0,0.40,−0.16) · (70,0,0) · `#6B3F22` |
+| `Body` | (0, 0, 0) | Rumpf Capsule 0.17/0.52 · (0,0.27,0.02) · (90,0,0) · primary; Ringelschwanz Torus 0.025/0.06 · (0,0.42,0.25) · (0,0,90) · primary; 4 Beine Cyl 0.045/0.05/0.18 · (±0.10,0.09,−0.14) und (±0.10,0.09,0.18) · primary; Halsband Torus 0.13/0.165 · (0,0.40,−0.16) · (70,0,0) · `#6B3F22`; **Siegel-Plakette** (Signatur, `itm_wpn_collar_signet`-Optik, immer sichtbar): Plakette Box 0.08×0.08×0.015 **M** · (0,0.30,−0.26) · (−15,0,0) · `HYPE_GOLD` + Öse Torus 0.02/0.03 **M** · (0,0.35,−0.25) · (90,0,0) · `HYPE_GOLD` |
 | `Head` (Body) | (0, 0.44, −0.22) | Schädel Sphere 0.19 · Skal. (1.05,0.95,0.95) · primary; Maske Sphere 0.10 · (0,−0.04,−0.15) · Skal. (1.25,0.8,0.6) · secondary; Nase Sphere 0.03 · (0,0,−0.21) · `#111111`; Augen 2× Sphere 0.05 · (±0.08,0.05,−0.15) · eyes; Glanz 2× Sphere 0.015 **E** · (−0.065,0.07,−0.195), (0.095,0.07,−0.195) · `#FFFFFF`; Schlappohren 2× Sphere 0.07 · (±0.16,0.08,−0.02) · (0,0,±35) · Skal. (1,0.35,0.8) · secondary; Stirnfalten 2× Capsule 0.012/0.12 · (0,0.13,−0.13), (0,0.10,−0.15) · (0,0,90) · primary×0.85 |
 | Anker | — | `head` (0,0.44,−0.22), `center` (0,0.27,0), `overhead` (0,0.85,−0.1), `hand_r` = Maul (0,0.38,−0.42) |
 
 #### `rodent` — 0.7 m (Kanalratte, Rattenschamane, Rattengardist, Rattenkönigin)
-Slots: primary = Fell, secondary = Ohren/Schwanz/Pfoten (rosa), accent = Kleidung, eyes (**E**). **Pose-Regel:** `scale < 1.0` → Vierbeiner, `scale ≥ 1.0` → aufrecht.
+Slots: primary = Fell, secondary = Ohren/Schwanz/Pfoten (rosa), accent = Kleidung, eyes (**E**). **Pose-Regel** (`pose: "auto"`):
+`scale < 1.0` → Vierbeiner, `scale ≥ 1.0` → aufrecht. `pose: "quadruped"`/`"upright"` überschreibt sie (5.1) — die Rattenkönigin
+(scale 4.0) setzt `"quadruped"` und liegt. Damit die GDD-Maße (§5.3: liegende Kapsel 3.5 m, Kopf-Kugel Ø 1.2 m) stimmen, bekommt
+ihr Rumpf-Capsule Skal. (1, 1.17, 1) — lokale Kapselachse Y, dank `scaled_local` (F10) = Körperachse (3.0 → 3.5 m) — und der `Head`-Pivot Skal. 0.86 (Ø 1.4 → 1.2 m).
 
 *Vierbeiner* (Tabelle für scale 0.8 ≙ 0.60 m Körperlänge; Werte im Rig durch 0.8 geteilt gespeichert):
 
@@ -990,7 +1061,7 @@ Slots: primary = Fell, secondary = Ohren/Schwanz/Pfoten (rosa), accent = Kleidun
 | `Torso` | (0, 0.23, 0) | Capsule 0.14/0.47 · (0,0.16,0) · primary; Bauch Sphere 0.11 · (0,0.12,−0.06) · Skal. (1,1.3,0.7) · primary×1.25 |
 | `Head` (Torso) | (0, 0.61, −0.03) | Sphere 0.12 · primary; Schnauze Cone 0.055/0.13 · (0,−0.02,−0.12) · (−90,0,0); Nase Sphere 0.02 · (0,−0.02,−0.19) · secondary; Ohren 2× Sphere 0.05 · (±0.07,0.09,0.02) · Skal. (1,1,0.35) · secondary; Augen 2× Sphere 0.02 **E** · (±0.05,0.03,−0.09) · eyes |
 | `ArmL`/`ArmR` (Torso) | (∓0.15, 0.42, 0) | Capsule 0.035/0.25 · (0,−0.10,0) · primary; Pfote Sphere 0.04 · (0,−0.22,0) · secondary |
-| `LegL`/`LegR` | (∓0.08, 0.12, 0) | Capsule 0.05/0.16 · (0,−0.05,0) · primary; Fuß Box 0.07×0.03×0.12 · (0,−0.11,−0.03) · secondary |
+| Beine (im `Torso`-Mesh) | — | 2× Capsule 0.05/0.16 · (∓0.08,−0.16,0) · primary; Füße 2× Box 0.07×0.03×0.12 · (∓0.08,−0.22,−0.03) · secondary. Gang = Watscheln: `Torso` Roll ±8° + Bob (keine Bein-Pivots → 5 Meshes: Torso, Head, ArmL, ArmR, Tail) |
 | `Tail` | (0, 0.10, 0.12) | 3 Cyl r 0.025 → 0.012, je h 0.16, nach +Z, je +25° (X) · secondary |
 
 #### `blob` — 0.9 m (Kanalschleim)
@@ -1000,17 +1071,18 @@ Slots: primary = Körper, secondary = Müll, eyes. Opak (kein Alpha-Shader im Ve
 |---|---|
 | `Body` (0,0,0) | Sphere 0.45 · (0,0.36,0) · Skal. (1,0.8,1) · primary; Augen 2× Sphere 0.05 · (±0.10,0.50,−0.33) · `PAPER` + Pupillen 2× Sphere 0.025 · (±0.10,0.50,−0.37) · eyes; Dose Cyl 0.06/0.06/0.18 **M** · (0.22,0.60,0) · (0,0,60) · `#C0C0C0` (ragt oben heraus); Kiste Box 0.12×0.08×0.10 · (−0.25,0.55,0.12) · secondary |
 
-Gemessen (Testmodell): 3 Teile, Wobble 0.03 m @ 1.5 Hz sichtbar, Squash & Stretch zusätzlich per Tween (5.6).
+Gemessen (Testmodell): 3 Teile, Wobble 0.03 m @ 1.5 Hz sichtbar, Squash & Stretch zusätzlich per Tween (5.8).
 
 #### `insect` — 0.8 m (Kellerspinne; mit Prop `wings` fliegend)
 Slots: primary = Körper, secondary = Muster, accent = Kieferklauen, eyes (**E**).
 
 | Pivot | Pos | Teile |
 |---|---|---|
-| `Body` | (0, 0.45, 0) | Hinterleib Sphere 0.40 · (0,0.10,0.35) · primary; Muster 3× Sphere 0.08 · (0,0.48,0.35), (0,0.40,0.50), (0,0.30,0.62) · Skal. (1,0.3,1) · secondary; Kopf Sphere 0.22 · (0,0,−0.15) · primary; 6 Augen Sphere 0.035 **E** · (±0.06,0.08,−0.34), (±0.12,0.05,−0.30), (±0.04,0.13,−0.32) · eyes; Klauen 2× Cone 0.03/0.10 · (±0.05,−0.10,−0.33) · (−150,0,0) · accent |
-| `Leg0…Leg7` | (±0.18, 0.45, −0.15 + 0.12·i), i = 0…3 | je ein Mesh: Oberteil Cyl 0.03/0.03/0.45 schräg 40° nach außen-oben, Unterteil Cyl 0.03/0.02/0.55 nach außen-unten · primary |
+| `Body` | (0, 0.45, 0) | Hinterleib Sphere 0.40 · (0,0.10,0.35) · primary; Muster 3× Scheibe Cyl 0.08/0.08/0.02 · (0,0.48,0.35), (0,0.40,0.50), (0,0.30,0.62) · (−30,0,0) · secondary; Kopf Sphere 0.22 · (0,0,−0.15) · primary; 6 Augen Sphere 0.035 **E** · (±0.06,0.08,−0.34), (±0.12,0.05,−0.30), (±0.04,0.13,−0.32) · eyes; Klauen 2× Cone 0.03/0.10 · (±0.05,−0.10,−0.33) · (−150,0,0) · accent |
+| `LegsA` / `LegsB` (Body) | (0, 0, 0) | je **ein** Mesh aus 4 Beinen — A = {L0, R1, L2, R3}, B = {R0, L1, R2, L3}; Beinwurzel i (0…3) bei (±0.18, 0, −0.15 + 0.12·i); je Bein Oberteil Cyl 0.03/0.03/0.45 schräg 40° nach außen-oben, Unterteil Cyl 0.03/0.02/0.55 nach außen-unten · primary |
 
-Mit `wings`: nur Leg0–Leg5, Körper schwebt +0.4 m.
+Gerechnet: Kellerspinne ≈ 1 360 Tris, 3 Meshes (Body, LegsA, LegsB). Mit `claws` oder `wings`: nur 3 Beine je Gruppe (Beinwurzeln i = 0…2);
+mit `wings` schwebt der Körper +0.4 m.
 
 #### `robot` — 1.5 m (Fahrscheinfresser; Automaten-Körper)
 
@@ -1041,6 +1113,19 @@ Slots: primary = Körper, secondary = Kappe/Kopf, accent = Schweif, eyes (**E**)
 | `ArmL`/`ArmR` | (∓0.32, 1.25, 0) | Capsule 0.06/0.40 · (0,−0.15,0) · (0,0,±20) · primary |
 | Schweif | — | `CPUParticles3D` 6 Partikel, `vfx_additive` Punkt, Größe 0.35 m, Verlauf accent → secondary → transparent, Lebenszeit 0.8 s, Emission lokal (0,0.4,0.1) |
 
+#### `swarm` — 0.8 m (Taubenschwarm; Base in 02_TECH §4.3)
+Slots: primary = Gefieder, secondary = Hals (**M**), accent = Schnabel, eyes (**E**). 5 Vögel à 1 Mesh (Flügel im Vogel-Mesh) → 5 Meshes,
+gerechnet 140 + 48 + 36 + 5 × 12 = 284 Tris je Vogel → **≈ 1 420 Tris** gesamt (Budget Gegner 1 500, 02_TECH §12.1).
+
+| Pivot | Pos | Teile |
+|---|---|---|
+| `Body` | (0, 0.8, 0), dreht 1.2 rad/s (Y) = Orbit | — (leer, trägt die Vögel) |
+| `Bird0…Bird4` (Body) | auf Kreis r 0.6 m, Winkel 72°·i, Höhe ±0.12 m (Sinus, Phase i·1.3), Blick tangential | Körper Sphere 0.12 · Skal. (1,0.9,1.3) · primary; Hals/Kopf Sphere 0.055 **M** · (0,0.10,−0.12) · secondary; Schnabel Cone 0.02/0.06 · (0,0.09,−0.19) · (−90,0,0) · accent; Augen 2× Box 0.02×0.02×0.01 **E** · (±0.03,0.12,−0.165) · eyes; Flügel 2× Box 0.22×0.02×0.12 · (±0.13,0.04,0) · (0,0,±10) · primary×0.85; Schwanz Box 0.08×0.02×0.10 · (0,0.02,0.17) · primary×0.85 |
+
+Flügel-Flap 8 Hz als Bird-Pivot-Roll ±15° + Skal. Y 1.0↔0.8 (keine eigenen Flügel-Pivots, Meshes ≤ 6). `attack`: ein Vogel (Index =
+Zugzähler mod 5) stößt 1.0 m auf das Ziel und zurück; `die`: Vögel fliegen radial 3 m auseinander + Dissolve. Anker: `center` (0,0.8,0),
+`head` (0,0.9,0), `overhead` (0,1.3,0), `hand_r`/`hand_l` = `Bird0`/`Bird1`.
+
 ### 5.4 Props (`ModelSpec.props`, Vokabular 02_TECH §4.3)
 
 | Prop | Anker | Aufbau (Referenz humanoid; für andere Bases × Rumpfbreite skaliert) |
@@ -1063,37 +1148,66 @@ Slots: primary = Körper, secondary = Kappe/Kopf, accent = Schweif, eyes (**E**)
 | `mask` | head | Gasmaske: Cyl 0.08/0.10/0.10 · vorn · (−90,0,0) · `#3A3A44` + 2 Filter Cyl 0.04/0.04/0.06 · `#6B7B3A` |
 | `wings` | Torso/Body | Pivots `WingL/WingR`: Box 0.50×0.02×0.25 · secondary, Flap ±50° (Z) @ 8 Hz |
 | `antennae` | head | 2× Cyl 0.01/0.01/0.25 + Sphere 0.03 **E** · accent, Wobble |
+| `newspaper_head` | head (Bürokostüm: ersetzt alle Kopf-Teile **und** die Torso-Details Kragen, Bauchtasche, Namensschild, Logo) | Ref. humanoid: Zeitung Box 0.42×0.50×0.12 · (0,0.26,0) · `#E8E4D8`; 4 Zeilen Box 0.30×0.025×0.01 · (0,0.38−0.06·k,−0.065) · `#2A2A2A`; Uhr-Scheibe Cyl 0.07/0.07/0.01 **E** · (0.12,0.10,−0.065) · (90,0,0) · `#FFFFFF`; dazu Krawatte am Torso Cyl 0.035/0.06/0.32 · (0,0.30,−0.235) · accent |
+| `briefcase` | hand_l | Ref. humanoid: Box 0.40×0.30×0.10 · (0,−0.17,0) · `#5A3A22`; Griff Box 0.10×0.03×0.03 · (0,−0.01,0) · `#2A1A10`; 2 Schlösser Box 0.03×0.03×0.01 **M** · (±0.10,−0.06,−0.055) · `#C9A227` |
+| `bottlecap_chain` | Torso | Ref. rodent aufrecht: 6 Kronkorken Box 0.05×0.05×0.012 **M** · 45° (Z) gedreht, auf Bogen r 0.15 um (0,0.40,−0.13) (−60°…+60°) vor der Brust · `#C0C0C0`/`#D93B3B`/`#F2C230` zyklisch |
+| `cable_tangle` | Body (eigenes Mesh, Material `{"wobble": 0.05}`) | Ref. blob: Steckdosen-Front Box 0.20×0.20×0.04 · (0,0.36,−0.36) · `#E8E8E8` + 2 Löcher Cyl 0.015/0.015/0.02 · (±0.04,0.36,−0.385) · (90,0,0) · `#1A1420`; 8 Ketten à 3 Cyl 0.035/0.035/0.18, Startpunkte als Fibonacci-Kugel auf r 0.42 um (0,0.36,0), je Glied 35° Knick (Richtung aus `seed`), Farben `#1E1E1E`/`#D93B3B`/`#3B6FD9` zyklisch; Stecker Box 0.06×0.04×0.08 **M** `#C0C0C0` am Kettenende. Ersetzt Dose + Kiste des `blob` |
+| `spray_cap` | head | Ref. specter: Düsenschaft Cyl 0.05/0.05/0.10 · (0,0.97,0) · `#1A1420`; Sprühkopf Box 0.06×0.05×0.08 · (0,1.04,−0.03) · `#FFFFFF`; Düsenloch Box 0.02×0.02×0.01 · (0,1.04,−0.075) · `#1A1420` |
+| `escalator_back` | Body (eigenes Mesh, Material `{"stripes": {"color": #F2C230, "width": 0.15, "speed": 0.8}}`) | Ref. insect: 5 Stufen Box 1.1×0.10×0.28 gestaffelt ab (0,0.30,−0.50), je +0.10 y / +0.26 z, Rot (−10,0,0) · primary. Ersetzt die 3 Muster-Scheiben |
+| `claws` | Pivots `ClawL`/`ClawR` an Body (±0.30, 0.0, −0.45) | Ref. insect: Oberschere Cone 0.07/0.30 · (0,0.04,−0.15) · (−90,0,0) · accent; Unterschere Cone 0.06/0.25 · (0,−0.04,−0.13) · (−90,0,0) · accent (Unterschere klappt 0→25° X alle 1.2 s). Insect mit `claws` baut nur 6 Beine |
+| `helmet` | head (ersetzt die Ohren) | Ref. rodent aufrecht: Hemi 0.135 **M** · (0,0.03,0) · `#A8B0B8` + Spitze Cone 0.03/0.10 **M** · (0,0.17,0) · `#A8B0B8` |
+| `shield` | hand_l | Ref. rodent aufrecht: Box 0.25×0.33×0.03 **M** · (0,0,−0.06) · `#A8B0B8`; Wappen Box 0.12×0.12×0.01 · (0,0.02,−0.08) · accent + Zacken-Leiste Prism 0.12×0.05×0.01 · (0,0.105,−0.08) · accent |
+| `halberd` | hand_r | Ref. rodent aufrecht: Stiel Cyl 0.015/0.015/0.90 · (0,0.25,0) · `#6B4A2E`; Klinge Box 0.02×0.12×0.14 **M** · (0,0.62,−0.06) · `#D8DDE2`; Spitze Cone 0.02/0.08 **M** · (0,0.74,0) · `#D8DDE2` |
+| `rat_king_tail` | Tail (ersetzt den Schwanz; eigenes Mesh, Material `{"wobble": 0.02}`) | Ref. rodent Vierbeiner: 6 Ketten à 3 Cyl r 0.03 → 0.015, h 0.20, fächerförmig −50°…+50° (Y), Knoten Sphere 0.05 an (0,0,0); an jedem Ende Mini-Ratte: Körper Sphere 0.05 + Kopf Sphere 0.03 · primary, Ohren keine |
+| `ticket_crown` | eigener Pivot `Crown` auf Kopfoberkante (P3-Glühen per `flash`) | Ref. rodent: Reif Torus 0.095/0.11 **M** · `#C9A227`; 10 Fahrscheine Box 0.035×0.07×0.006 auf Kreis r 0.10, je 8° nach außen gekippt · `#F2E8C9`; Lochung je Box 0.012×0.012×0.008 · `#1A1420` |
+| `wrench` | hand_r | Ref. humanoid: Griff Box 0.05×0.32×0.035 · (0,0.10,0) · (−70,0,0) · `#C23B22`; Kopf Box 0.10×0.08×0.05 **M** · (0,0.18,−0.24) · `#A8B0B8`; Backe Box 0.08×0.03×0.05 **M** · (0,0.23,−0.26) · `#A8B0B8` |
+| `axe` | hand_r | Ref. humanoid: Stiel Cyl 0.025/0.025/0.80 · (0,0.10,0) · (−70,0,0) · `#C23B22`; Klinge Prism 0.22×0.18×0.03 **M** · (0.10,0.20,−0.36) · `#D8DDE2`; Dorn Cone 0.025/0.10 **M** · (−0.08,0.20,−0.36) · (0,0,90) · `#D8DDE2` |
+| `crowbar` | hand_r | Ref. humanoid: Stange Cyl 0.02/0.02/0.85 **M** · (0,0.10,0) · (−70,0,0) · `#3A3A44`; Klaue Cyl 0.02/0.012/0.15 **M** · (0,0.25,−0.42) · (−35,0,0) · `#3A3A44`; Griffband Cyl 0.024/0.024/0.15 · (0,0.0,0.05) · (−70,0,0) · `#F2C230` |
+| `cart` | Body (ersetzt bei `robot` alle Gehäuse-Teile außer `JawLower` = Korbklappe) | Ref. robot: Gitterkorb 12 Cyl 0.01/0.01/0.6 **M** `#C0C6CC` (4 Kanten senkrecht, 8 Streben waagrecht) um Box-Volumen 0.6×0.5×0.8 auf y 0.55; Griff Cyl 0.02/0.02/0.6 · (0,1.0,0.42) · (0,0,90) · `#E8455A`; 4 Räder Cyl 0.06/0.06/0.04 · (±0.25,0.06,±0.35) · (0,0,90) · `#1E1E1E`; Scheinwerfer-Augen 2× Sphere 0.05 **E** · (±0.15,0.60,−0.42) · `#FFF2C8` |
+
+Alle Props aus `DataValidator.MODEL_PROPS` werden gebaut (`CharacterBuilder.supported_props() == MODEL_PROPS`, 02_TECH §8.4); Maße sind
+Rig-Koordinaten bei scale 1.0 der genannten Referenz-Base, an anderen Bases skaliert `archetypes.gd` mit der Rumpfbreite (vereinfachter
+Rückfall erlaubt, nie ein Fehler). `cape` an rodent aufrecht ersetzt die Bauch-Kugel (Umhang deckt sie). Zusatz `cape` an rodent Vierbeiner: Box 0.36×0.03×0.55 · Body (0,0.15,0.02) · (4,0,0) · accent + Saum Box
+0.38×0.04×0.04 **M** `HYPE_GOLD` hinten. `wrench`/`axe`/`crowbar` sind die Waffen-Optik von Kai (`itm_wpn_pipe_wrench`/`itm_wpn_fire_axe`/
+`itm_wpn_rail_crowbar`); sichtbar werden sie erst mit A8 (Ausrüstungs-Optik), bis dahin trägt Kai immer `mop`.
 
 ### 5.5 Besetzung (Party & Gegner → `ModelSpec`)
 
-„Signatur“ = Teile, die das GDD-Aussehen (01_GDD Kap. 5) vervollständigen und **neue Props** brauchen (Antrag an 02_TECH §4.3, Kap. 12).
-Bis zur Aufnahme baut `archetypes.gd` den Fallback (Spalte „props“) — das Spiel ist damit vollständig, nur weniger spezifisch.
+Quelle der `model`-Daten in `party.json`/`enemies.json` (01_GDD §5.1 verweist hierher). Alle Bases/Props sind im Vokabular
+(02_TECH §4.3); Spalte „Tris“ = gerechnet aus der Segment-Tabelle 5.1 (ohne Hull), Budget je Asset 02_TECH §12.1.
 
-| ID | base | scale | colors (primary / secondary / accent / skin / eyes) | props | Signatur (neue Props) |
-|---|---|---|---|---|---|
-| `kai` | humanoid | 1.0 | `#3AA9A0` / `#2E3A57` / `#3B2A22` / `#E8B48F` / `#1A1420` | `mop` | — (Waffen-Optik: `wrench`, `axe`, `crowbar`) |
-| `mopsula` | pug | 1.0 | `#D8B98A` / `#2A2024` / `#7B2CBF` / — / `#1A1420` | `cape`, `monocle` | Kronen-Halsband → `crown` am Hals |
-| `kanalratte` | rodent | 0.8 | `#6B5B4E` / `#E88A9A` / — / — / `#FF3030` | — | — |
-| `taubenschwarm` | insect | 0.4 | `#8C93A6` / `#5FA38E` / `#E0A040` / — / `#FF9A2E` | `wings` | neue **base** `swarm`: 5 Tauben (Sphere 0.12 Körper, Kopf 0.07 **M**, Schnabel Cone, Flügel) auf Orbit r 0.6 m, 1.2 rad/s |
-| `pendler` | humanoid | 1.09 | `#4A4F5A` / `#4A4F5A` / `#B33A3A` / `#C9C2B8` / `#1A1420` | `glasses` | `newspaper_head` (Box 0.42×0.50×0.12 `#E8E4D8` + 4 Zeilen + Uhr-Scheibe **E**), `briefcase` (Box 0.40×0.30×0.10 `#5A3A22`) |
-| `kanalschleim` | blob | 1.0 | `#6FBF4A` / `#D93B3B` / — / — / `#1A1420` | — | — |
-| `rattenschamane` | rodent | 1.3 | `#5A4A40` / `#E88A9A` / `#3E2F5B` / — / `#FFE66B` | `staff`, `cape` | Kronkorken-Kette (6 Torus) → `bottlecap_chain` |
-| `kabelsalat` | robot | 0.55 | `#CFCFCF` / `#1E1E1E` / `#9FE8FF` / — / `#9FE8FF` | `antennae` | `cable_tangle`: 8 Kabelketten à 4 Cyl 0.035, Farben `#1E1E1E`/`#D93B3B`/`#3B6FD9`, Wobble 0.05 (ein Mesh) |
-| `kellerspinne` | insect | 1.0 | `#2B2B33` / `#C2453A` / `#C2453A` / — / `#FFB000` | — | — |
-| `spruehgeist` | specter | 0.65 | `#E23E9B` / `#FFFFFF` / `#4AD9D9` / — / `#1A1420` | — | `spray_cap` (Hemi + Düse) |
-| `rolltreppenkrabbe` | insect | 1.5 | `#8A8F96` / `#F2C230` / `#B84A2E` / — / `PAPER` | — | `escalator_back` (schräge Box 1.1×0.1×1.4, `stripes` scrollend `#F2C230`), `claws` (Pivots ClawL/R, Cone-Paar, Unterteil klappt 0→25°) |
-| `rattengardist` | rodent | 2.0 | `#4D3F36` / `#E88A9A` / `#7A1F9E` / — / `#FF3030` | `knife`, `cap` | `helmet` (Hemi **M** + Spitze), `shield` (Box 0.5×0.65×0.06 **M** + Kronen-Wappen), `halberd` (Cyl 1.8 + Klinge **M**) |
-| `fahrscheinfresser` | robot | 1.2 | `#2F6FB3` / `#24578C` / `#9AF2FF` / — / `PAPER` | — | — (robot ist bereits der Automat) |
-| `boss_hausmeister` | brute | 1.36 | `#7C8A94` / `#3E4A55` / `#4A3A30` / `#D9A88A` / `#1A1420` | `cap`, `key_ring`, `broom` | — |
-| `boss_rattenkoenigin` | rodent | 4.0 | `#3F3530` / `#E88A9A` / `#F2EEE6` / — / `#FF3030` | `crown`, `cape`, `staff` | `rat_king_tail` (6 Kettenschwänze mit Mini-Ratten, ein Wobble-Mesh), `ticket_crown` (10 Box-Fahrscheine `#F2E8C9`) |
+| ID | base | scale | pose | colors (primary / secondary / accent / skin / eyes) | props | Tris / Meshes |
+|---|---|---|---|---|---|---|
+| `kai` | humanoid | 1.0 | auto | `#3AA9A0` / `#2E3A57` / `#3B2A22` / `#E8B48F` / `#1A1420` | `mop` | 2 040 (gemessen) / 6 |
+| `mopsula` | pug | 1.0 | auto | `#D8B98A` / `#2A2024` / `#7B2CBF` / — / `#1A1420` | `cape`, `monocle` (Siegel-Plakette ist Archetyp-Teil, 5.3) | ≈ 1 560 / 2 |
+| `kanalratte` | rodent | 0.8 | auto (→ Vierbeiner) | `#6B5B4E` / `#E88A9A` / — / — / `#FF3030` | — | ≈ 1 340 / 3 |
+| `taubenschwarm` | swarm | 1.0 | — | `#8C93A6` / `#5FA38E` / `#E0A040` / — / `#FF9A2E` | — | ≈ 1 420 / 5 |
+| `pendler` | humanoid | 1.09 | — | `#4A4F5A` / `#4A4F5A` / `#B33A3A` / `#C9C2B8` / `#1A1420` | `newspaper_head`, `briefcase` | ≈ 1 430 / 6 |
+| `kanalschleim` | blob | 1.0 | — | `#6FBF4A` / `#D93B3B` / — / — / `#1A1420` | — | ≈ 390 / 1 |
+| `rattenschamane` | rodent | 1.3 | auto (→ aufrecht) | `#5A4A40` / `#E88A9A` / `#3E2F5B` / — / `#FFE66B` | `staff`, `cape`, `bottlecap_chain` | ≈ 1 340 / 6 (5 + Glühbirne) |
+| `kabelsalat` | blob | 0.6 | — | `#CFCFCF` / `#1E1E1E` / `#9FE8FF` / — / `#9FE8FF` | `cable_tangle` | ≈ 1 380 / 2 |
+| `kellerspinne` | insect | 1.0 | — | `#2B2B33` / `#C2453A` / `#C2453A` / — / `#FFB000` | — | ≈ 1 360 / 3 |
+| `spruehgeist` | specter | 0.65 | — | `#E23E9B` / `#FFFFFF` / `#4AD9D9` / — / `#1A1420` | `spray_cap` | ≈ 790 / 3 |
+| `rolltreppenkrabbe` | insect | 1.5 | — | `#8A8F96` / `#F2C230` / `#B84A2E` / — / `PAPER` | `escalator_back`, `claws` | ≈ 1 320 / 6 |
+| `rattengardist` | rodent | 2.0 | auto (→ aufrecht) | `#4D3F36` / `#E88A9A` / `#7A1F9E` / — / `#FF3030` | `helmet`, `shield`, `halberd` | ≈ 1 390 / 5 |
+| `fahrscheinfresser` | robot | 1.2 | — | `#2F6FB3` / `#24578C` / `#9AF2FF` / — / `PAPER` | — | ≈ 590 / 3 |
+| `boss_hausmeister` | brute | 1.36 | — | `#7C8A94` / `#3E4A55` / `#4A3A30` / `#D9A88A` / `#1A1420` | `cap`, `key_ring`, `broom` | ≈ 3 300 / 8 |
+| `boss_rattenkoenigin` | rodent | 4.0 | **quadruped** | `#3F3530` / `#E88A9A` / `#F2EEE6` / — / `#FF3030` | `ticket_crown`, `cape`, `staff`, `rat_king_tail` | ≈ 3 050 / 5 |
 
-Boss-Sonderwerte: Rattenkönigin-Material mit `rim_color #9A6BFF`, `rim 0.8`; Thron = `PropKit.build("wreck")` (Kap. 6.3), Königin sitzt
-auf dem Wagendach (Rig-Root y +3.0). P3: `crown`-Mesh `flash_color #FF5A5A`, `flash_amount 0.8`; Zepter-Lampe (`staff`) wechselt jede
-1.0 s `#FF3B30`/`#2BD66B`. Hausmeister P3: Augen-Mesh `flash_color #FF3B30`, `flash_amount 1.0`; Dampf `Vfx.spawn(&"smoke")` an beiden Ohren alle 0.8 s.
+`kabelsalat` steht auf `blob` (GDD: Knäuel um einen Kugel-Kern), dazu im Archetyp-Idle 4 Funken `#9FE8FF` (`CPUParticles3D`, Loop).
+Das Vokabular-Prop `crown` bleibt baubar, wird im Slice aber von **keiner** Figur getragen (Mopsula nie, 04_STRATEGIE §2.3); die
+Königin trägt `ticket_crown`. `itm_acc_queen_crown` ist nur für Kai ausrüstbar (`equip_by ["kai"]`, 01_GDD §6.4).
+Die Tris-Werte außer Kai sind gerechnet; `test_m4_art_kit` misst alle Einträge gegen 02_TECH §12.1 und ist maßgeblich.
+
+Boss-Sonderwerte: Rattenkönigin-Material `Materials.toon_vc({"bands": 3, "rim": 0.8, "rim_color": Color("#9A6BFF")})`; Thron =
+`PropKit.build("wreck")` (Kap. 6.3), Königin liegt auf dem Wagendach (Rig-Root y +3.0). P3: `Crown`-Mesh (`ticket_crown`)
+`flash_color #FF5A5A`, `flash_amount 0.8`; Zepter-Lampe (`staff`) wechselt jede 1.0 s `#FF3B30`/`#2BD66B`. Hausmeister P3: Augen-Mesh
+`flash_color #FF3B30`, `flash_amount 1.0`; Dampf `Vfx.spawn(&"smoke")` an beiden Ohren alle 0.8 s.
 
 ### 5.6 M.O.D. (Hologramm-Drohne, kein `CharacterRig`)
 
-Gebaut in `scenes/ui/mod_dialog.gd` (SubViewport-Icon) und im Titel-Studio direkt aus `MeshUtil` + `hologram` (keine eigene Kit-Klasse):
+Gebaut in `scenes/ui/mod_dialog.gd` (Icon: eigene `SubViewport` 64×64, `own_world_3d`, `transparent_bg`, `UPDATE_WHEN_VISIBLE`, angezeigt
+als deren `ViewportTexture` in einem `TextureRect` — nie `get_image()`, F9) und im Titel-Studio direkt aus `MeshUtil` + `hologram` (keine eigene Kit-Klasse):
 Kern `MeshUtil.icosahedron(0.32)` (20 Tris, verifiziert) mit `hologram` (`color NOVA_CYAN`, `energy 1.6`); Linse Sphere 0.07 `hologram` `NOVA_MAGENTA` `energy 3`;
 Ring Torus 0.42/0.46, Rot (70,0,0), `hologram` `NOVA_MAGENTA`, dreht 0.8 rad/s; Sprech-Kegel Cone 0.35/0.9 nach unten, `hologram` `alpha 0.15`.
 Idle: Kern dreht 0.6 rad/s (Y) + 0.25 rad/s (X), Bob ±0.06 m @ 0.5 Hz. Erscheinen: Skal. 0→1 in 0.25 s (`TRANS_BACK`) + `holo_glitch` 1→0 in 0.15 s.
@@ -1105,7 +1219,7 @@ Position Erkundung: Kai + (0.9, 2.3, 0.6) (kamera-seitig über der Schulter), Ka
 | ID | base | Kurz |
 |---|---|---|
 | `schaufensterpuppe` | humanoid 1.0 | primary `#E8DCCB`, secondary `#E8DCCB`, kein Gesicht (eyes = skin), Gelenke Sphere 0.06; Pose eingefroren, ruckt 15° in 0.05 s, wenn außerhalb des Kamera-Frustums |
-| `einkaufswagen_rudel` | robot 0.6 ×3 | Signatur `cart`: Gitterkorb aus 12 Cyl 0.01 **M** `#C0C6CC`, Griff `#E8455A`, Scheinwerfer-Augen Sphere 0.05 **E** `#FFF2C8` |
+| `einkaufswagen_rudel` | robot 0.6 ×3 | props `cart` (5.4): Gitterkorb aus 12 Cyl 0.01 **M** `#C0C6CC`, Griff `#E8455A`, Scheinwerfer-Augen Sphere 0.05 **E** `#FFF2C8` |
 | `rabattschild` | brute 0.8 | primary `#FFFFFF`, accent `#E8455A`; Prozentzahl als `Label3D` 96 px `#E8455A`, Outline 12 `#FFFFFF` |
 
 ### 5.8 Prozedurale Animation (`CharacterRig`, Namen/Dauern aus 02_TECH §8.4)
@@ -1117,7 +1231,7 @@ Geschwindigkeit koppelt. `impact` wird zum angegebenen Zeitpunkt emittiert; der 
 | Anim | Dauer (impact) | Bewegung (humanoid; andere Bases sinngemäß) |
 |---|---|---|
 | `idle` | Loop 1.6 s | Torso Skal. y 1.00↔1.03; Head Rot Z ±3°; Arme ±4° X gegenphasig. Kampf: Hips −0.05 m, Torso 8° vor, Arme −25° X |
-| `walk` | Loop 0.8 s (Kadenz ∝ Tempo bis 5.5 m/s) | Beine ±25° X, Arme ∓20°, Hips-Bob 0.03 m bei doppelter Frequenz (|sin|), Lean 6° |
+| `walk` | Loop 0.8 s (Kadenz ∝ Tempo bis 5.5 m/s) | Beine ±25° X, Arme ∓20°, Hips-Bob 0.03 m bei doppelter Frequenz (Betrag des Sinus), Lean 6° |
 | `run` | Loop 0.5 s | Beine ±35°, Arme ∓30°, Bob 0.05 m, Lean 12° |
 | `attack` | 0.55 s (0.30) | Ausholen ArmR −140° X in 0.18 s → Schlag auf +40° X in 0.12 s → **impact** → Hitstop 0.06 s → zurück 0.19 s |
 | `cast` | 0.80 s (0.55) | Arme −160° X in 0.25 s; `flash_color` = Elementfarbe, `flash_amount` 0→0.35 pulsierend 6 Hz; `Vfx.spawn(&"magic")` am Boden; Stoß nach vorn |
@@ -1129,8 +1243,8 @@ Geschwindigkeit koppelt. `impact` wird zum angegebenen Zeitpunkt emittiert; der 
 | `victory` | Loop 1.0 s | Kai: ArmR −170° X + Hüpfer 0.2 m; Mopsula: 360° Y in 0.5 s, dann Sitz (Body 20° X) |
 
 `set_highlight(true)`: Instance `highlight` 1.0 auf allen Meshes → Outline `HYPE_GOLD` ×1.6 breit, goldener Fresnel-Puls 8 Hz.
-Gegner-Eigenbewegungen (Ratte Hoppel-Bob 4 Hz, Schwarm-Orbit, Spinnen-Gang mit gegenphasigen Bein-Gruppen {L0,R1,L2,R3}/{R0,L1,R2,L3}
-Yaw ±18° @ 3 Hz, Krabben-Scheren alle 1.2 s, Automaten-Kiefer 0→35° in 0.12 s, Schleim Squash 1.5 Hz ±8 %, Specter-Schweben)
+Gegner-Eigenbewegungen (Ratte Hoppel-Bob 4 Hz, Schwarm-Orbit, Spinnen-Gang: Pivots `LegsA`/`LegsB` gegenphasig
+Yaw ±10° um die Körperachse + Hub 0.03 m @ 3 Hz, Krabben-Scheren alle 1.2 s, Automaten-Kiefer 0→35° in 0.12 s, Schleim Squash 1.5 Hz ±8 %, Specter-Schweben)
 laufen als `idle`/`walk`-Varianten im Archetyp.
 
 ---
@@ -1141,7 +1255,7 @@ laufen als `idle`/`walk`-Varianten im Archetyp.
 
 | Maß | Wert |
 |---|---|
-| Raum (`EnvKit.ROOM_SIZE`) | **16 × 16 m** (das GDD nennt 12-m-Zellen; der Code-Vertrag gilt, Kap. 12) |
+| Raum (`EnvKit.ROOM_SIZE`) | **16 × 16 m** (= 01_GDD §1.3, 02_TECH §8.5) |
 | Kit-Raster | **2 m** (8 × 8 Kacheln pro Raum = `env_tiles.tile_size`) |
 | Wandhöhe / -stärke | 3.5 m / 0.5 m |
 | Tür | 4.0 m breit, mittig, Sturz auf 3.0 m |
@@ -1159,7 +1273,7 @@ laufen als `idle`/`walk`-Varianten im Archetyp.
 | Wandsegment 2 m | Box 2.0×3.5×0.5; Sockel Box 2.0×0.3×0.6 (Palette `wall` × 0.7); Abschlussleiste Box 2.0×0.12×0.55 | `wall` |
 | Pfeiler (Ecken) | Box 0.7×3.5×0.7 + Kapitell Box 0.9×0.3×0.9; Zone A: Cyl 0.35 + Warnband Cyl 0.36 h 0.3 auf 1.0 m `#F2C230` | `wall` × 0.8 |
 | Türrahmen | 2× Box 0.5×3.0×0.6 + Sturz Box 5.0×0.5×0.6 | `#3A3A44` |
-| Varianten (`variant`) | 0 = schlicht; 1 = Poster (Box 1.2×1.6×0.03 **E** 0.6 in `accent`, 2 je Raum); 2 = Rohre (2 Cyl 0.12 waagrecht auf 0.8/3.0 m, `#8A4B2A`); 3 = Graffiti (3 schräge Box-Streifen 0.05 **E** 0.4 `#E23E9B`) + Risse (Wandsegment ±4° verkippt) |
+| Varianten (`variant`) | 0 = schlicht; 1 = Poster (Box 1.2×1.6×0.03 **E** 0.6 in `accent`, 2 je Raum); 2 = Rohre (2 Cyl 0.12 waagrecht auf 0.8/3.0 m, `#8A4B2A`); 3 = Graffiti (3 schräge Box-Streifen 0.05 **E** 0.4 `#E23E9B`) + Risse (Wandsegment ±4° verkippt) | je Variante (s. Aufbau) |
 | Zone A Gleisrand | Bahnsteigkante Box 16×0.05×0.6 `#F2C230` an der Seite ohne Tür; dahinter Gleisbett −1.0 m mit Schienen Box 0.08×0.15×16 **M** (Spur 1.435 m) + Schwellen Box 2.4×0.12×0.25 alle 0.67 m |
 | Zone B | Wasserrinne Box 2×0.05×16 · y −0.15 · `#1E4A40` mit `glow` 0.3 (Schimmer) |
 
@@ -1168,7 +1282,7 @@ laufen als `idle`/`walk`-Varianten im Archetyp.
 | ID | Aufbau | Farbe | Outline |
 |---|---|---|---|
 | `chest` (`ChestProp`) | Box 0.9×0.45×0.6 + Deckel-Pivot (Hinterkante) Box 0.92×0.15×0.62 + 4 Eckbeschläge Box 0.08 **M** `#CD7F32`; `open()`: Deckel 0→−110° X in 0.5 s (`TRANS_BACK`), `Vfx.spawn(&"chest_open")` | `#8A5A32` | ja |
-| `stairs_down` | 10 Stufen Box 4.0×0.25×0.5 (je −0.25 y, −0.5 z), Kanten-Streifen Box 4.0×0.03×0.06 `#F2C230`; Geländer Cyl 0.04 **M**; Lichtsäule Cyl 1.6/1.6/6.0 ohne Kappen `hologram` `HYPE_GOLD` `alpha 0.15`; `Label3D` „↓ ETAGE 2“ | `#6E6A72` | ja |
+| `stairs_down` | 10 Stufen Box 4.0×0.25×0.5 (je −0.25 y, −0.5 z), Kanten-Streifen Box 4.0×0.03×0.06 `#F2C230`; Geländer Cyl 0.04 **M**; Lichtsäule Cyl 1.6/1.6/6.0 ohne Kappen `hologram` `HYPE_GOLD` `alpha 0.15`; `Label3D` „ETAGE 2“ (Zahl = aktuelle Etage + 1) + Pfeil darüber als Mesh: Prism 0.5×0.4×0.08 · (180,0,0) (Spitze nach unten) `glow` `HYPE_GOLD` energy 2, wippt 0.1 m @ 1 Hz — kein „↓“-Zeichen (F8) | `#6E6A72` | ja |
 | `safe_door` | Rahmen + 2 Schiebeflügel Box 2.0×2.8×0.15 (je 1.9 m seitwärts in 0.5 s), Leuchtstreifen Box 0.1 **E** `EXIT_GREEN`, `Label3D` „SAFE ROOM“ | `#4A5A60` | ja |
 | `vending_machine` | Box 1.0×1.9×0.8 `#C2185B`; Fenster Box 0.6×1.1×0.02 **E** 0.8 `#FFE9B0`; 4×3 Produkte Box 0.1 bunt; Münzschlitz **E** `NOVA_CYAN`; Kopfschild Box 1.0×0.25×0.1 **E** `NOVA_MAGENTA` + `Label3D` „AUTOMAT“ (bewusst anders als der blaue Fahrscheinfresser) | | ja |
 | `save_terminal` | Konsole Box 0.6×1.1×0.5 `#3A3A44` + Pult Box 0.6×0.05×0.4 (−30° X) mit Display **E** `NOVA_CYAN` + Mini-Ikosaeder 0.1 `hologram` | | ja |
@@ -1201,7 +1315,13 @@ hängende Deko ohne Kollision; Kamera-`SpringArm3D` nur gegen Layer 1.
 
 ## 7. VFX (`Vfx.KINDS`, nur `CPUParticles3D`)
 
-Partikel = `QuadMesh` + `vfx_additive`. `Vfx.spawn()` hält pro Kind einen Pool von 4 Instanzen (`restart()` statt Neubau).
+Partikel = `QuadMesh` + `vfx_additive`. **Pool pro Parent** (02_TECH §8.6): `Vfx.spawn()` hält **keinen** statischen Zustand; der Pool
+liegt als Meta am Parent (`parent.get_meta(&"vfx_pool", {})`, Dictionary `kind → Array[Node3D]`, max. **4** je Kind). Vor jeder
+Wiederverwendung wird geprüft `is_instance_valid(n) and n.is_inside_tree() and n.get_parent() == parent`; ungültige Einträge fliegen
+raus. Wiederverwendung = ältester Eintrag, `global_position = at`, `visible = true`, `restart()` (kein Neubau); nach `duration(kind)` setzt ein Timer
+`emitting = false`, `visible = false`. Der Pool stirbt mit dem Parent (Battle-/Exploration-Szene) — keine „previously freed“-Referenzen,
+Tests bleiben ohne `clear_pool()` isoliert. Aufrufer geben zurückgegebene Nodes nie frei. Gleiches Prinzip für `damage_number`
+(Meta `&"dmg_pool"`, max. 12 `Label3D`).
 Darstellungs-Zufall (Jitter) darf `randf()` nutzen (02_TECH §0), nie den Kern-RNG.
 
 | Kind | Aufbau | Partikel | Dauer |
@@ -1227,7 +1347,7 @@ Darstellungs-Zufall (Jitter) darf `randf()` nutzen (02_TECH §0), nie den Kern-R
 | `stairs_glow` | 12 Punkte `HYPE_GOLD` steigen in der Lichtsäule (Loop-Variante, `one_shot false`) | 12 | Loop |
 | `chest_open` | 24 Sterne in Rarität-/Tierfarbe + Ring | 25 | 0.80 s |
 
-Budget: ≤ 400 Partikel gleichzeitig, ≤ 6 aktive Emitter. Status-Loops (am Anker `overhead`, vom BattlePlayer gesetzt):
+Budget (02_TECH §12.1): ≤ 400 Partikel gleichzeitig, ≤ 6 aktive Emitter. Status-Loops (am Anker `overhead`, vom BattlePlayer gesetzt):
 poison 3 Blasen, stun 3 Prism-Sterne `#F5D90A` kreisen r 0.25 @ 2 rad/s, slow Torus 0.35/0.40 `hologram` `#5B8DEF` am Boden,
 haste 2 Prism-Chevrons `#FF7A1A`, guard Hex-Schild `#9AA7B8` α 0.15, taunt Cone 0.08/0.2 `#E8455A` hüpft 0.1 m @ 2 Hz.
 
@@ -1324,9 +1444,9 @@ Ein Theme für alles: `UiTheme.get_theme()` (`scenes/ui/theme/ui_theme.gd`, M0);
 
 | Element | Position (720p) | Look |
 |---|---|---|
-| LIVE-Badge | oben links (16, 16), 80×30 | Pille `LIVE_RED`, Punkt ● pulsiert 1 Hz, „LIVE“ 20 px fett `PAPER` |
+| LIVE-Badge | oben links (16, 16), 80×30 | Pille `LIVE_RED`, Punkt = `Polygon2D`-Kreis (12 Ecken, r 5 px, `PAPER`) pulsiert 1 Hz, „LIVE“ 20 px fett `PAPER` |
 | Zuschauer | rechts daneben | Augen-Icon (`Polygon2D`) + Zahl 22 px Monospace, Tausenderpunkt; Anstieg kurz `HEAL`, Abfall `DANGER` (0.4 s) |
-| Follower | darunter | „♥ 1.234“ 16 px `C_TEXT_DIM` |
+| Follower | darunter | Herz-Icon (`Polygon2D`, 14 px, `NOVA_MAGENTA`) + „1.234“ 16 px `C_TEXT_DIM` |
 | Timer | oben Mitte | 38 px Monospace in Schrägbox; < 5:00 `SODIUM`, < 1:00 `LIVE_RED` + Puls 2 Hz (1.0↔1.08) |
 | Hype-Leiste | oben rechts, 320×14 | Verlauf `NOVA_MAGENTA`→`HYPE_GOLD`, Rauten-Marker 50/75/100, Glanzlicht läuft 0.3 s bei Anstieg |
 | Chat-Ticker | unten, Höhe 22 | `C_PANEL` 70 %, Text 15 px, 80 px/s, Nutzernamen in Akzentfarben |
@@ -1335,9 +1455,21 @@ Ein Theme für alles: `UiTheme.get_theme()` (`scenes/ui/theme/ui_theme.gd`, M0);
 | REC-Ecken (Erkundung) | 4 Ecken | L-Winkel 28 px, 2 px `PAPER` @ 35 % |
 
 Kampf-UI (GDD 14.5, auf 720p umgerechnet × 2/3): Befehlsmenü 240×280 unten links (Zeilen 42 px, aktive Zeile + 4 px Magenta-Balken);
-Zugreihenfolge rechts (Eintrag 1: 64 px, weitere 42 px; Porträts = einmal pro `ModelSpec` gerenderte Köpfe, SubViewport 128², gecacht;
-Rahmen `ui_party`/`ui_enemy`, Zug grau, Geist 50 %); Party-Panels 254×74 (HP-Leiste 8 px mit nachlaufendem `DANGER`-Segment 0.5 s, MP 6 px);
+Zugreihenfolge rechts (Eintrag 1: 64 px, weitere 42 px; Rahmen `ui_party`/`ui_enemy`, Zug grau, Geist 50 %); Party-Panels 254×74 (HP-Leiste 8 px mit nachlaufendem `DANGER`-Segment 0.5 s, MP 6 px);
 Element-Icons als `Polygon2D` (Tropfen, Hex-Stern, Zickzack, Blase, Faust) in Elementfarbe.
+
+**Porträts (F9, verbindlich):** je `ModelSpec`-Cache-Key (5.1) **eine dauerhaft lebende** `SubViewport` 128 × 128 (`own_world_3d = true`,
+`transparent_bg = true`, `render_target_update_mode = UPDATE_ONCE`; Kamera FOV 30 auf Anker `head`, Abstand 2.2 × Kopfhöhe, Licht
+`DirectionalLight3D` (−30, 30, 0) Energie 1.2). Die Porträts zeigen deren **`ViewportTexture`** (`TextureRect`, `STRETCH_KEEP_ASPECT_COVERED`).
+Kein `get_texture().get_image()` und kein Image-Cache: headless liefert das `null` + Engine-Fehler (bricht `test_m5`/`test_m6`/Autoplay),
+die `ViewportTexture` dagegen läuft headless fehlerfrei (geprüft). Den Cache (`Dictionary key → SubViewport`) besitzt der `BattleHud`;
+die Viewports hängen unter ihm und werden mit ihm freigegeben (max. 6 je Kampf: 2 Party + 4 Gegnertypen).
+
+**Glyphen-Regel (F8):** Statische UI-Texte und `Label3D`-Texte verwenden nur Zeichen, für die `ThemeDB.fallback_font.has_char()` gilt.
+Fehlend (geprüft): `● ♥ ★ ↓ ↑ → ▼ ▲ ☰`. Vorhanden: Umlaute, `ß „ “ – … · € × % !`. Symbole sind Icons: LIVE-Punkt und Herz
+(`Polygon2D`), Pause-Menü-Taste = 3 Balken (`Polygon2D`, 3 × 24×4 px), Rang-Uhr-Symbole = `Polygon2D`-Kreis + Zeiger, Treppe = Prism-Pfeil (6.3).
+`test_m6_ui_scenes` prüft jeden statischen `Label`/`Button`/`RichTextLabel`-Text aller UI-Szenen und alle `Label3D`-Texte aus `PropKit`/`Vfx`
+Zeichen für Zeichen gegen `ThemeDB.fallback_font.has_char()` (Antrag A13).
 
 ### 9.3 Schriften
 
@@ -1345,17 +1477,20 @@ Element-Icons als `Polygon2D` (Tropfen, Hex-Stern, Zickzack, Blase, Faust) in El
 |---|---|---|
 | Fließtext, Menüs | Godot-Standardschrift (UiTheme, Umlaute vorhanden) | **Inter** |
 | Überschriften / Bauchbinden | Standardschrift + `FontVariation.variation_embolden 0.5` (UiTheme) | **Anton** oder **Barlow Condensed** |
-| Zahlen / Timer / Zuschauer | `SystemFont` mit `font_names = ["Consolas", "Roboto Mono", "DejaVu Sans Mono", "monospace"]`, Fallback Standardschrift (Antrag A9) | **JetBrains Mono** |
+| Zahlen / Timer / Zuschauer | `UiTheme.font_mono()` (02_TECH §3.9) = `SystemFont` mit `font_names = ["Consolas", "Roboto Mono", "DejaVu Sans Mono", "monospace"]`, Fallback Standardschrift | **JetBrains Mono** |
 | Schadenszahlen / „LEVEL UP!“ | Standardschrift + `variation_embolden 1.0`, Outline 12–16 `INK` | **Lilita One** |
 
 Größen (720p, UiTheme): Text 22, klein 16, Header 30, Titel 56; Ticker 15, Timer 38. Minimum 15 px.
 
 ### 9.4 Touch
 
-Sichtbare Größen aus 02_TECH §10.3 (Stick r 90, `interact` 96, `attack` 80, `map`/`pause` 64 px; `UiTheme.MIN_TOUCH 64`). Art-Regel: **Trefferfläche ≥ 88 px**
-(720p-Referenz ≙ 48 dp auf einem 6,1″-Phone im Querformat: 720 px / 2,56″ = 281 px/″ → 0,3″ = 85 px) — kleinere Buttons bekommen
-unsichtbaren Rand bis 88 px, Abstand zwischen Trefferflächen ≥ 12 px. Stil: Stick-Ring `PAPER` @ 25 %, Knopf @ 60 %; Aktions-Buttons rund
-`NOVA_MAGENTA` @ 80 % mit `PAPER`-Icon; Kampf-Befehle als Buttons ≥ 200×64 sichtbar / 88 hoch Treffer.
+Referenz **1280 × 720** (`project.godot`). Größen und Positionen aus 02_TECH §10.2/§10.3 (= 01_GDD §14.8): Stick Radius **90**, Knopf 40,
+Ruhe-Anzeige (147, 573); **ein** Button `action` **96** rund bei (1147, 587) (Icon Hand bei Prompt, sonst Faust), `map` **64** bei
+(1227, 140), `pause` **64** bei (1227, 40). Sichtbar ≥ `UiTheme.MIN_TOUCH` (**64**), Trefferfläche ≥ `UiTheme.TOUCH_HIT` (**88**) über
+`UiTheme.ensure_hit_area()` (unsichtbarer Rand), Abstand zwischen Trefferflächen ≥ 12 px; Gegner-Antippen ≥ 107 px.
+Begründung 88: 720p-Referenz ≙ 48 dp auf einem 6,1″-Phone im Querformat (720 px / 2,56″ = 281 px/″ → 0,3″ ≈ 85 px).
+Stil: Stick-Ring `PAPER` @ 25 %, Knopf @ 60 %; Aktions-Buttons rund `NOVA_MAGENTA` @ 80 % mit `PAPER`-Icon (`Polygon2D`, F8);
+Kampf-Befehle 2 Spalten × 3 Zeilen, je 200×64 sichtbar / 88 hoch Treffer. `test_m6_ui_scenes` prüft Trefferflächen ≥ 88 (02_TECH §11.5).
 
 ---
 
@@ -1374,7 +1509,7 @@ Ziel: ein `.glb` ersetzt einen Archetyp/Prop **ohne Code-Änderung**: Daten setz
 | Emission/Metall | 2. UV-Map **„EmitMetal“** (U = Emission, V = Metall, 0/1) → `TEXCOORD_1` = `UV2`. |
 | Outline | Post-Import schreibt `CUSTOM0` via `MeshUtil.smoothed_normals()` — keine Blender-Arbeit. |
 | Materialien | Beliebige Namen; Post-Import ersetzt **alle** durch `Materials.toon_vc({"bands": 3, "rim": 0.45})` (Figuren) bzw. `Materials.env()` (Umgebung). Leuchtteile mit Puls als eigenes Objekt mit Suffix `_glow`. |
-| Shading | Auto Smooth 40°; Polycount nach Kap. 11. |
+| Shading | Auto Smooth 40°; Tris und Objektzahl nach 02_TECH §12.1 (Held ≤ 2 500 / 8, Gegner ≤ 1 500 / 6, Boss ≤ 4 000 / 10). |
 | Animationen | Actions exakt `idle, walk, run, attack, cast, hit, die, victory, defend, stunt, item` (02_TECH `CharacterRig.ANIMS`), 30 fps, Längen = Dauern aus 5.8. Loop-Flag setzt der Post-Import nach `CharacterRig.LOOPING`. Walk-Zyklus = 1.6 m Weg, Run-Zyklus = 2.75 m. |
 | Impact-Frame | glTF kann keine Methodenspuren → `res://art/models/characters/<name>.anim.json` `{"attack": 0.30, "cast": 0.55, "stunt": 0.80, "item": 0.35}`; Post-Import fügt die Methodenspur `emit_impact()` ein (02_TECH §8.4). |
 | Umgebung | Je Prop ein `.glb` `res://art/models/props/<prop_id>.glb` mit Maßen aus 6.3, Kollision über Import-Suffix `-colonly` (Boxen). `PropKit` nimmt das Modell, wenn vorhanden. |
@@ -1384,43 +1519,55 @@ Ziel: ein `.glb` ersetzt einen Archetyp/Prop **ohne Code-Änderung**: Daten setz
 
 ## 11. Performance-Budget (Mobile)
 
-Ziel: Mittelklasse 2022 (Adreno 619 / Mali-G57), Quality `low` (Default Mobile, 02_TECH §3.4: Skalierung 0.7, kein MSAA/Schatten/Glow) **60 FPS**;
-Quality `high` (0.85, MSAA 2×, Schatten, Glow) **≥ 45 FPS**. Fallback Compatibility (Web/alt) 30 FPS.
+**Die Budgets stehen ausschließlich in 02_TECH §12.1** (einzige Budget-Tabelle des Projekts; `test_m4_art_kit` und die Roadmap-DoD
+prüfen gegen sie). Kurzfassung der dort festgelegten Werte, an die sich alle Rezepte dieses Dokuments halten:
+Referenzgerät **Adreno 610 / Mali-G57** (wie 04_STRATEGIE §8.2), Quality `low` 60 FPS, `high` ≥ 45 FPS mobil; je Asset (Tris ohne Hull /
+MeshInstances) Held ≤ 2 500 / 8, Gegner ≤ 1 500 / 6 (Schwarm gesamt), Boss ≤ 4 000 (+ `wreck` ≤ 600) / 10, Raum Geometrie ≤ 1 500 +
+Props ≤ 2 500; Draw Calls Erkundung / Kampf / Safe Room ≤ 150 / 150 / 120; sichtbare Tris ≤ 120 000 inkl. Hulls und Schattenpass;
+Aufbauzeit Etage ≤ 500 ms PC / 1,5 s mobil.
 
-| Kategorie | Budget | Stand (gemessen) |
-|---|---|---|
-| Tris Held | ≤ 2 500 (Hull rendert sie ein 2. Mal) | Kai 2 040, Mopsula 1 448 |
-| Tris Gegner | ≤ 1 500 (Schwarm gesamt) | Rezepte aus 5.3 liegen bei 600–1 400 |
-| Tris Boss | ≤ 4 000 (+ `wreck` ≤ 600) | — |
-| Tris pro Raum | Geometrie ≤ 1 500, Props ≤ 2 500 | Wände = Boxen (12 Tris) |
-| Tris sichtbar gesamt | ≤ 120 000 inkl. Hulls und Schattenpass | — |
-| Meshes pro Figur | Held ≤ 8, Gegner ≤ 6, Boss ≤ 10 | Kai 7, Mopsula 2 |
-| Draw Calls Erkundung | ≤ 150 | Raum = 2 Draws (Geometrie + Props) + Interaktives; ~9 Räume sichtbar |
-| Draw Calls Kampf | ≤ 150 | 2 Helden ≈ 18 + 4 Gegner ≈ 40 (je ×2 Outline enthalten) + Arena 10 + VFX/UI 30 |
-| Materialien | ≤ 24 Instanzen aus dem `Materials`-Cache | Vertex-Farben statt Material pro Farbe |
-| Lichter | 1 Sonne (Schatten nur `high`) + ≤ 4 (`high`) / 2 (`low`) Omni in Reichweite | 02_TECH |
-| Partikel | ≤ 400 gleichzeitig, ≤ 6 Emitter, One-Shot ≤ 48 | — |
-| `Label3D` | ≤ 12 gleichzeitig (gepoolt) | — |
-| Overdraw | Additive Flächen ≤ 25 % des Bildes | Lichtsäulen `alpha ≤ 0.15` |
-| Bauzeit | Etage komplett ≤ 150 ms hinter dem Lade-Fade (Mesh-Cache) | — |
+Art-Messstand (Rechnung je Figur in 5.3/5.5): Kai 2 040 Tris / 6 Meshes (gemessen), Mopsula ≈ 1 560 / 2, Gegner 390–1 420 / ≤ 6,
+Hausmeister ≈ 3 300 / 8, Rattenkönigin ≈ 3 050 / 5. Draw-Call-Rechnung Kampf: jede Figuren-MeshInstance = 2 Draws (Toon + Hull) →
+2 Helden 16 + 4 Gegner ≤ 48 + Arena 10 + VFX/UI 30 ≈ 104.
+
+Art-Regeln, die die Budgets sichern (keine eigenen Budgets): Vertex-Farben statt Material pro Farbe; Partikel-One-Shots ≤ 48 je Emitter;
+additive Flächen (Lichtsäulen, Hologramme) ≤ 25 % der Bildfläche, `alpha ≤ 0.15`; Leuchtteile mit eigenem Mesh nur, wenn sie pulsieren.
 
 Messen: DebugOverlay (Layer 90) zeigt `Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME`, `RENDER_TOTAL_PRIMITIVES_IN_FRAME`, FPS.
-`tests/test_m4_art_kit.gd` prüft Tri-Budgets über `MeshUtil.tri_count()`. Screenshot-Prüfung in beiden Renderern:
-Compatibility `--rendering-driver opengl3`; Mobile lokal mit Mesa-lavapipe (`VK_ICD_FILENAMES=<lvp_icd.json>`), Log darf kein `SHADER ERROR` und keine
-„different indices“-Warnung enthalten.
+`tests/test_m4_art_kit.gd` prüft Tris (`MeshUtil.tri_count()`) und MeshInstances jedes `ModelSpec` aus 5.5 gegen 02_TECH §12.1.
+Screenshot-Prüfung in beiden Renderern: Compatibility `--rendering-driver opengl3`; Mobile lokal mit Mesa-lavapipe
+(`VK_ICD_FILENAMES=<lvp_icd.json>`); Log ohne `SHADER ERROR` und ohne „different indices“-Warnung.
+
+**Render-Probe (Regression F1/F6, Antrag A11):** `art/gallery/render_probe.tscn` + `.gd` läuft in `check.sh --shot` mit (headless gibt es
+keine Pixel). Aufbau: Hintergrund schwarz (`BG_CLEAR_COLOR`, AgX), Kamera (0, 1, 6), Sonne (−55, 35, 0); zwei Kugeln
+`MeshUtil.merge([{sphere(0.6), xform((0,1,0)), #E8B48F}])` mit eigenen (nicht gecachten) `ShaderMaterial`s aus `toon.gdshader`
+(`use_vertex_color true`) bei x = −1.6 mit `next_pass` aus `toon_outline.gdshader` (`outline_width 0.1`, `outline_color #FF00FF`) und
+bei x = +1.6 ohne `next_pass`; darüber bei (0, 2.6, 0) ein MultiMesh-Quad mit `vfx_additive`
+(`energy 1`, `softness 0.01`, Instanzfarbe 0.5). Nach 15 Frames (`await RenderingServer.frame_post_draw`) misst das Skript die breiteste
+Zeile nicht-schwarzer Pixel je Bildhälfte und den hellsten Pixel der Mittelspalte oben. Bedingungen: `w_outline ≥ w_plain + 6` px
+(gemessen 82 vs. 71 bei 960 × 540) und VFX-Wert 0x80 ± 4 (gemessen `#808080`/`#7F7F7F`); sonst `push_error("RENDER_PROBE: …")`
+→ die Fehlerzeile lässt `check.sh --shot` scheitern (02_TECH §14 Punkt 2).
 
 ---
 
 ## 12. Abweichungen & Anträge an andere Dokumente
 
+Rangfolge bei Widersprüchen: 00_BRIEF > 02_TECH (APIs, Schemas, Pfade) > 01_GDD (Zahlen, Inhalte) > 03_ART > 04.
+
 | # | Thema | Stand | Entscheidung / Antrag |
 |---|---|---|---|
-| A1 | Tonemapper | 02_TECH §8.5: „filmic tonemap“ | **AgX** (Art-Entscheidung: gesättigtes Neon ohne Farbkippen; in beiden Renderern gerendert). `make_environment()` setzt `TONE_MAPPER_AGX`. |
-| A2 | Vertex-Farbraum | 02_TECH: „Vertex-Colors“ ohne Farbraum | sRGB speichern + Shader-Weiche (F1); Post-Import linear→sRGB (F3). |
-| A3 | Instance-Uniform-Reihenfolge | 02_TECH §8.3 listet `toon_outline` nur `flash_amount`, `dissolve` | `toon_outline` deklariert zusätzlich `flash_color`, `highlight` **zwischen** beiden, damit die Reihenfolge mit `toon` übereinstimmt (F2). |
-| A4 | Raumgröße | GDD 1.3: Zellen 12 m; 02_TECH: `ROOM_SIZE 16` | Art folgt dem Code-Vertrag (16 m); GDD-Text bei Gelegenheit angleichen. |
-| A5 | Erkundungskamera | GDD 2.2 (6 m, −22°, FOV 65) vs. 02_TECH §7.3 (7 m, −38°, FOV 60) | Art folgt 02_TECH. |
-| A6 | Neue Props/Base (02_TECH §4.3 `MODEL_PROPS`/`MODEL_BASES`) | — | Antrag: Base `swarm`; Props `newspaper_head`, `briefcase`, `bottlecap_chain`, `cable_tangle`, `spray_cap`, `escalator_back`, `claws`, `helmet`, `shield`, `halberd`, `rat_king_tail`, `ticket_crown`, `wrench`, `axe`, `crowbar`, `cart`. Bis dahin Fallbacks aus 5.5. |
-| A7 | `Materials`-Optionen | 02_TECH §8.2 | Antrag: Zusatzschlüssel `"wobble"`, `"stripes"`, `"rim_color"`, `"spec"`. |
-| A8 | Ausrüstungs-Optik | — | Antrag: `items.json → visual {"props_add": [...], "colors": {...}}` optional; Darstellung mischt es vor `CharacterBuilder.build()` in den `ModelSpec`. |
-| A9 | Monospace-Zahlen, Touch-Trefferfläche | `UiTheme` hat nur die Standardschrift; `MIN_TOUCH 64` | Antrag: `UiTheme` ergänzt `FONT_MONO` (SystemFont, s. 9.3) und Trefferflächen-Rand bis 88 px (9.4). |
+| A1 | Tonemapper | **übernommen** (02_TECH §8.5) | `make_environment()` setzt `Environment.TONE_MAPPER_AGX`. |
+| A2 | Vertex-Farbraum | **übernommen** (02_TECH §8.2 Merge-Part `{mesh, xform, color (sRGB), emission, metal}`) | sRGB speichern + Shader-Weiche (F1) — gilt auch für Partikel/MultiMesh (`vfx_additive`); Post-Import linear→sRGB (F3). |
+| A3 | Instance-Uniform-Reihenfolge | **übernommen** (02_TECH §8.3, auch für M0-Stubs) | `toon` und `toon_outline`: `flash_amount, flash_color, highlight, dissolve` in genau dieser Reihenfolge (F2). `ui_swirl.aspect` setzt der Router (02_TECH §9.3). |
+| A4 | Raumgröße | **erledigt** (01_GDD §1.3: 16-m-Zellen) | 16 m, `EnvKit.ROOM_SIZE`. |
+| A5 | Erkundungskamera | **erledigt** (01_GDD §2.2 = 02_TECH §7.3) | 7 m, −38°, FOV 60. |
+| A6 | Bases/Props/Pose | **übernommen** (02_TECH §4.3 `MODEL_BASES += swarm`, `MODEL_PROPS +=` 16 Props, `MODEL_POSES`; §4.4.14 `pose`; §8.4 `resolve_pose`) | M4 baut alle (5.3 `swarm`, 5.4); `enm_boss_rattenkoenigin` `pose: "quadruped"`. 01_GDD §16 nutzt `model` statt `visual`. |
+| A7 | `Materials`-Optionen | **übernommen** (02_TECH §8.2) | `wobble`, `stripes`, `rim_color`, `spec` → Uniform-Belegung 3.1. |
+| A8 | Ausrüstungs-Optik | **offen** | Antrag an 02_TECH §4.4.3: `items.json → visual {"props_add": [...], "colors": {...}}` optional; Darstellung mischt es vor `CharacterBuilder.build()` in den `ModelSpec` (Kai: `wrench`/`axe`/`crowbar`). Bis dahin trägt Kai immer `mop`. |
+| A9 | Monospace-Zahlen, Touch-Trefferfläche | **übernommen** (02_TECH §3.9 `font_mono()`, `TOUCH_HIT 88`, `ensure_hit_area()`; §10.2) | — |
+| A10 | Neue Shader-Dateien | **Antrag an 02_TECH §1.5** | `art/shaders/ptd_color.gdshaderinc` (Include, F1) und `art/shaders/ui_tv_overlay_aberration.gdshader` (Quality `high`, F7) in den Dateibaum (M4); ShowOverlay (M6) tauscht das Overlay-Material bei `Events.settings_changed`. |
+| A11 | Render-Regressionsprobe | **Antrag an 02_TECH §1.5/§12.4** | `art/gallery/render_probe.tscn` + `.gd` (Kap. 11) in die Szenenliste von `check.sh --shot`/CI; prüft Outline-Breite (F6) und Partikel-Farbraum (F1) in Compatibility. |
+| A12 | `Vfx`-Pool | **übernommen** (02_TECH §8.6: 4 je Kind je Parent, Aufrufer geben nie frei) | Umsetzung ohne statischen Zustand: Pool als Meta am Parent, Gültigkeitsprüfung vor Wiederverwendung (Kap. 7). Das „reparents to parent“ in §8.6 entfällt damit (Nodes sind immer Kinder ihres Parents). |
+| A13 | Glyphen-Test | **Antrag an 02_TECH §11.5 (M6)** | `test_m6_ui_scenes`: alle statischen UI- und `Label3D`-Texte bestehen `ThemeDB.fallback_font.has_char()` Zeichen für Zeichen (F8). |
+| A14 | Porträts / M.O.D.-Icon | Art-Regel (9.2, 5.6) | `ViewportTexture` lebender SubViewports statt `get_image()`-Cache (F9). |
+| A15 | DCC-Abstand (04_STRATEGIE §2.3) | **umgesetzt** | Mopsula ohne Kronen-Motiv: Signatur = goldene Siegel-Plakette (`itm_wpn_collar_signet` „Siegel-Halsband“), kein `crown` am Mopsula-Rig; `itm_acc_queen_crown` nur Kai. Anzeigenamen wie „Fan-Box“, „NOVA SYNDIKAT“, „Quartier-Boss“ stehen im Brief und bleiben; Art referenziert nur neutrale IDs (`fan`, `NOVA_*`-Farbkonstanten, `boss_hausmeister`), Umbenennungen nach Roadmap E2 sind reine Textänderungen. |

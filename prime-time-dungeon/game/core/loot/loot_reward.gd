@@ -1,6 +1,6 @@
-# STUB(M0) — owned by M2. Replace completely, keep the public API.
 class_name LootReward extends RefCounted
-## One reward line (02_TECH §6.1).
+## One reward line (02_TECH §6.1): an item stack or a credit amount, with display rarity and markers for the
+## lootbox UI ("DUPLIKAT → +X Cr", "GARANTIE!").
 
 var kind: String = "item"         # "item" | "credits"
 var id: String = ""               # item id
@@ -11,4 +11,4 @@ var pity: bool = false            # forced by pity ("GARANTIE!")
 
 
 func to_dict() -> Dictionary:
-	return {}
+	return {"kind": kind, "id": id, "amount": amount, "rarity": rarity, "converted_from": converted_from, "pity": pity}

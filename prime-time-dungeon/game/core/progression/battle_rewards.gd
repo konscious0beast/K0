@@ -1,6 +1,6 @@
-# STUB(M0) — owned by M2. Replace completely, keep the public API.
 class_name BattleRewards extends RefCounted
-## Rewards applied after a battle (02_TECH §6.1).
+## Rewards applied after a battle (02_TECH §6.1): filled by BattleBridge.apply_result (followers and achievements
+## by the battle controller from Show.end_battle / Show.unlocked_this_battle), shown by the results screen.
 
 var exp: int = 0
 var credits: int = 0                   # incl. overkill bonus

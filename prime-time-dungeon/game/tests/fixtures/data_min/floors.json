@@ -1,0 +1,186 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "floor_1",
+			"index": 1,
+			"name": "Etage 1 – Die Unterstadt",
+			"theme": "metro",
+			"timer_seconds": 1200,
+			"timer_warnings": [
+				600,
+				300,
+				60
+			],
+			"timer_start_after": "enc_f1_a1_tutorial",
+			"floor_mult": 1.0,
+			"grid": {
+				"w": 8,
+				"h": 8
+			},
+			"encounters": [
+				{
+					"id": "enc_f1_a1_tutorial",
+					"enemies": [
+						"enm_kanalratte",
+						"enm_kanalratte"
+					],
+					"weight": 0,
+					"tutorial": true
+				},
+				{
+					"id": "enc_f1_a2",
+					"enemies": [
+						"enm_kanalratte"
+					],
+					"weight": 0
+				}
+			],
+			"layout": {
+				"zones": [
+					{
+						"id": "zone_platform",
+						"name": "Bahnsteig Nord",
+						"palette": {
+							"floor": "#3a3f4b",
+							"wall": "#1f5f66",
+							"accent": "#ff2e88",
+							"light": "#ffd59e",
+							"fog": "#1a1430",
+							"ambient": "#2a2440"
+						}
+					}
+				],
+				"cells": [
+					{
+						"x": 3,
+						"y": 7,
+						"zone": "zone_platform",
+						"kind": "start",
+						"doors": "N"
+					},
+					{
+						"x": 3,
+						"y": 6,
+						"zone": "zone_platform",
+						"kind": "normal",
+						"doors": "NESW"
+					},
+					{
+						"x": 2,
+						"y": 6,
+						"zone": "zone_platform",
+						"kind": "safe",
+						"doors": "E"
+					},
+					{
+						"x": 4,
+						"y": 6,
+						"zone": "zone_platform",
+						"kind": "normal",
+						"doors": "W"
+					},
+					{
+						"x": 3,
+						"y": 5,
+						"zone": "zone_platform",
+						"kind": "stairs",
+						"doors": "S"
+					}
+				],
+				"gates": [],
+				"encounters_placed": [
+					{
+						"group_id": "f1_g0",
+						"enc_id": "enc_f1_a1_tutorial",
+						"cell": [
+							3,
+							6
+						],
+						"offset": [
+							0.0,
+							-2.5
+						],
+						"state": "IDLE",
+						"turn": false,
+						"waypoints": []
+					}
+				],
+				"chests": [
+					{
+						"id": "f1_c0",
+						"cell": [
+							4,
+							6
+						],
+						"offset": [
+							3.5,
+							2.0
+						],
+						"type": "wood",
+						"contents": []
+					}
+				],
+				"events": [
+					{
+						"id": "fev_photo_drone",
+						"type": "photo_drone",
+						"cell": [
+							4,
+							6
+						],
+						"offset": [
+							0.0,
+							0.0
+						],
+						"params": {
+							"pose_hype": 15,
+							"pose_followers": 20,
+							"smash_credits": 30,
+							"smash_hype": -5
+						}
+					}
+				],
+				"spawners": [
+					{
+						"zone": "zone_platform",
+						"pool": [
+							"enc_f1_a2"
+						],
+						"interval_sec": 90
+					}
+				],
+				"safe_rooms": [
+					{
+						"id": "sr_kiosk",
+						"cell": [
+							2,
+							6
+						],
+						"name": "Kiosk 24/7",
+						"theme": "kiosk",
+						"shop": [
+							"itm_bandage",
+							"itm_antidote"
+						]
+					}
+				],
+				"stairs": {
+					"cell": [
+						3,
+						5
+					]
+				}
+			},
+			"palette": {
+				"floor": "#3a3f4b",
+				"wall": "#5b6270",
+				"accent": "#ff2e88",
+				"light": "#ffd59e",
+				"fog": "#1a1430",
+				"ambient": "#2a2440"
+			},
+			"music": "explore"
+		}
+	]
+}

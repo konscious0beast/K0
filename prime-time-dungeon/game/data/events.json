@@ -1,0 +1,57 @@
+{
+	"schema": 1,
+	"events": [
+		{
+			"id": "evt_offline_gleis9",
+			"kind": "offline",
+			"name_key": "evt_offline_gleis9_name",
+			"floor": 1,
+			"windows": [],
+			"seed_policy": {
+				"type": "fixed",
+				"run_seed": 424242
+			},
+			"quest": {
+				"type": "reach_stairs",
+				"label_key": "quest_reach_stairs",
+				"params": {
+					"floor": 1
+				}
+			},
+			"rules": {
+				"mode": "solo",
+				"leagues": [
+					"pur"
+				],
+				"timer_mode": "explore_only",
+				"floor_timer_sec": 1200,
+				"max_run_wall_sec": 0,
+				"party_preset": "new_game",
+				"difficulty": "prime_time",
+				"attempts": {
+					"ranked": 0,
+					"practice": true
+				},
+				"gifts": {
+					"enabled": false
+				}
+			},
+			"votes": {
+				"enabled": false
+			},
+			"scoring": {
+				"complete": 10000,
+				"progress_max": 5000,
+				"per_sec_left": 5,
+				"per_follower": 1,
+				"follower_cap": 3000,
+				"per_achievement": 100,
+				"per_ko": -150
+			},
+			"rewards": {
+				"participation": "badge_gleis9",
+				"quest": "cos_mop_top_hat_gleis9"
+			}
+		}
+	]
+}

@@ -1,0 +1,152 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "skl_attack_kai",
+			"name": "Angriff",
+			"user": "party",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 100,
+			"rank": 3,
+			"anim": "attack"
+		},
+		{
+			"id": "skl_attack_mopsula",
+			"name": "Angriff",
+			"user": "party",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 100,
+			"rank": 3,
+			"anim": "attack"
+		},
+		{
+			"id": "skl_kai_heavy_swing",
+			"name": "Wuchtschlag",
+			"desc": "Mit voller Wucht. Und schlechter Haltung.",
+			"user": "party",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 160,
+			"mp_cost": 3,
+			"rank": 4,
+			"anim": "attack",
+			"vfx": "slash",
+			"show_tags": [
+				"flashy"
+			]
+		},
+		{
+			"id": "skl_stunt_kai_suplex",
+			"name": "Bahnsteig-Suplex",
+			"user": "party",
+			"category": "stunt",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 230,
+			"rank": 4,
+			"cooldown": 3,
+			"success_base": 0.6,
+			"success_lck": 0.01,
+			"success_cap": 0.85,
+			"success_boss_mod": -0.15,
+			"fail_effect": {
+				"self_dmg_pct": 10,
+				"delay_pct": 50
+			},
+			"anim": "stunt",
+			"show_tags": [
+				"risky",
+				"flashy"
+			]
+		},
+		{
+			"id": "skl_mop_noble_flame",
+			"name": "Adelsflamme",
+			"desc": "Blaues Blut brennt heißer.",
+			"user": "party",
+			"category": "magic",
+			"target": "single_enemy",
+			"damage_type": "magical",
+			"element": "fire",
+			"power": 110,
+			"mp_cost": 4,
+			"rank": 3,
+			"anim": "cast",
+			"vfx": "fire"
+		},
+		{
+			"id": "skl_mop_holy_lick",
+			"name": "Heiliges Schlabbern",
+			"desc": "Eine Ehre, die keiner wollte.",
+			"user": "party",
+			"category": "heal",
+			"target": "single_ally",
+			"damage_type": "heal",
+			"heal_mode": "mag",
+			"power": 100,
+			"mp_cost": 4,
+			"rank": 2,
+			"anim": "cast",
+			"vfx": "heal"
+		},
+		{
+			"id": "skl_e_strike",
+			"name": "Angriff",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 100,
+			"rank": 3,
+			"anim": "attack"
+		},
+		{
+			"id": "skl_e_bite",
+			"name": "Biss",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 100,
+			"rank": 3,
+			"anim": "attack",
+			"vfx": "bite"
+		},
+		{
+			"id": "skl_item_bandage",
+			"name": "Werbepflaster",
+			"user": "item",
+			"category": "item",
+			"target": "single_ally",
+			"damage_type": "heal",
+			"heal_mode": "fixed",
+			"power": 45,
+			"rank": 2,
+			"anim": "item"
+		},
+		{
+			"id": "skl_item_antidote",
+			"name": "Gegengift",
+			"user": "item",
+			"category": "item",
+			"target": "single_ally",
+			"damage_type": "none",
+			"cleanse": [
+				"sts_poison"
+			],
+			"rank": 2,
+			"anim": "item"
+		}
+	]
+}

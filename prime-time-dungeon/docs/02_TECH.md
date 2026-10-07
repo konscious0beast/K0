@@ -46,6 +46,11 @@
 - M0 legt für **jede** Datei, deren öffentliche API in §3, §5, §6, §7, §8, §9 definiert ist, einen **Stub** an:
   exakte `class_name`, exakte Signaturen, Rümpfe geben Default-Werte zurück (`return null`, `return []`, `pass`).
   Erste Zeile jedes Stubs: `# STUB(M0) — owned by Mx. Replace completely, keep the public API.`
+  **Ausnahme Zustands-Stubs (M2):** `GameState.create_new` (Party aus `party.json` mit Level 1/Basis-HP/-MP/Startausrüstung/
+  Lernset ≤ 1, Startinventar + Credits, leerer `ShowState`), `GameState.member`, `FloorRun.create` (`floor_id`, `index`, `seed`,
+  `time_left_ticks`, `timer_started`), `FloorRun.time_left_sec` und `FloorRun.summary` (alle Schlüssel) liefern **minimal gültige**
+  Werte statt `null`, damit `Game.new_game`/`ensure_state()` schon in Phase B einen Zustand haben und die Szenentests von M3/M5/M6
+  unabhängig von M2 grün werden können.
 - Shader-Stubs (`art/shaders/*.gdshader`) sind gültige Minimal-Shader mit **allen** in §8.3 genannten Uniforms.
 - Szenen-Stubs (`.tscn`) enthalten Root-Node + Skript. `scenes/boot/boot.gd`-Stub geht direkt zu `Router.SCENE_TITLE`
   und gibt bei `--autoplay` nur `AUTOPLAY: SKIPPED (stub)` aus.
@@ -185,7 +190,7 @@ Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört gen
 | `core/live/run_sim.gd` | M8 (S) | `RunSim`: deterministische Erkundungs-Uhr in Ticks (§7.1), Replay von Commands |
 | `core/live/run_log.gd` | M8 (S) | `RunLog`: Seed + Commands + Ticks (Brief §6b.3); `to_dict`/`from_dict`/`digest` |
 | `core/live/command.gd` | M8 (S) | `Command`: Schema-Prüfung der aufgezeichneten Commands (`t`-Typen aus §3.4) |
-| `core/live/canonical_json.gd` | M8 (S) | `CanonicalJson`: kanonische Serialisierung für Hashes |
+| `core/live/canonical_json.gd` | M8 (S) | `CanonicalJson`: kanonische Serialisierung für Hashes; `static var last_error: String` (von den statischen Funktionen gesetzt, gelesen als `CanonicalJson.last_error`) |
 | `core/live/state_hash.gd` | M8 (S) | `StateHash`: SHA-256 über `GameState`/`BattleState` (ohne Anzeigefelder) |
 | `core/live/event_def.gd` | M8 (S) | `EventDef`: Live-/Offline-Event inkl. `quest`, `window` (Brief §6b.5) |
 | `core/live/event_catalog.gd` | M8 (S) | `EventCatalog`: lädt/validiert `data/events.json` |
@@ -288,7 +293,7 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `scenes/ui/theme/ui_theme.gd` | **M0** | `UiTheme`: Basis-Theme (Code-generiert) |
 | `scenes/ui/global_ui.tscn` + `global_ui.gd` | M6 (S) | Persistente UI: ShowOverlay, ModDialog, Toasts, DebugOverlay |
 | `scenes/ui/show_overlay.tscn` + `.gd` | M6 | TV-Overlay: LIVE, Zuschauer, Follower, Hype-Meter, Sponsor-Banner, Chat-Ticker |
-| `scenes/ui/mod_dialog.tscn` + `.gd` | M6 | M.O.D.-/Mopsula-Textbox mit Queue |
+| `scenes/ui/mod_dialog.tscn` + `.gd` | M6 | M.O.D.-/Mopsula-Textbox mit Queue; Dialog-Presenter (`Game.set_dialog_presenter`, §9.4) |
 | `scenes/ui/toast_stack.gd` | M6 | Achievement-/Hinweis-Toasts |
 | `scenes/ui/exploration_hud.tscn` + `.gd` | M6 (S) | `ExplorationHud`: Timer, Etage, Party-Mini-Status, Minimap, Prompt, Touch, Pause |
 | `scenes/ui/minimap.gd` | M6 | Minimap + große Karte |
@@ -318,7 +323,12 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `tests/capture.gd` | M0 | Screenshot-Werkzeug (§11.3) |
 | `tests/lib/test_case.gd` | M0 | `TestCase`: Basis mit Asserts (§11.2); liegt in `lib/`, damit der Runner sie nicht als Testdatei lädt |
 | `tests/fixtures/data_min/*.json` | M0 | Minimaler gültiger Datensatz (alle 13 Tabellen aus `GameData.TABLES`) für M0-Tests |
-| `tests/test_m0_harness.gd` | M0 | Selbsttest Asserts/Runner |
+| `tests/fixtures/router/router_screen.tscn` + `.gd` | M0 | Fixture-Screen (nur Screen-Vertrag §9.2) für `test_m0_router` — unabhängig von den echten Screens |
+| `tests/fixtures/runner_selftest/test_selftest_cases.gd` | M0 | Absichtlich abstürzende Tests; nur im Kindprozess des Runner-Selbsttests (`--root=…`) ausgeführt |
+| `tests/test_m0_harness.gd` | M0 | Selbsttest Asserts/Runner (inkl. Kindprozess: SCRIPT ERROR → FAIL, Exit 1) |
+| `tests/test_m0_autoloads.gd` | M0 | `project.godot`-Vertrag, Autoload-Reihenfolge, Events-Signalliste, Game/Settings-Grundlagen, UiTheme |
+| `tests/test_m0_router.gd` | M0 | Router: Stack, Queue, goto/push/pop, Fehlerpfade; Helfer zu echten Ziel-Screens nur, solange diese M0-Stubs sind |
+| `tests/test_m0_game.gd` | M0 | Game: Command-IDs, Dialog-Pause-Reset, Quest-Metriken, Replay-Kontext; Replay-Integration (übersprungen, solange Abhängigkeiten Stubs sind) |
 | `tests/test_m0_db.gd` | M0 | Laden/Validieren/Fehlerfälle von `GameData` |
 | `tests/test_m0_compile_all.gd` | M0 | Lädt jede `.gd`/`.tscn` unter `res://` → fängt Parse-Fehler |
 | `tests/test_m0_seed_util.gd` | M0 | Determinismus `SeedUtil` |
@@ -560,7 +570,7 @@ signal floor_completed(floor_index: int)                 # stairs taken (before 
 signal room_entered(cell: Vector2i, room_kind: int, first_visit: bool)   # RoomCell.Kind
 signal enemy_alerted(group_id: String)
 signal encounter_triggered(group_id: String, encounter_id: String, advantage: int)  # BattleSetup.Advantage
-signal chest_opened(chest_id: String, rewards: Array)    # Array[LootReward]
+signal chest_opened(chest_id: String, rewards: Array)    # Array[LootReward]; Game.open_chest
 signal gate_opened(cell: Vector2i, dir: int)             # RoomCell.DOOR_*
 signal stray_spawn_requested(zone_id: String, group_id: String, encounter_id: String)   # Game (RunSim STRAY_DUE)
 signal camera_drag(relative: Vector2)                    # touch camera drag in viewport px
@@ -579,7 +589,7 @@ signal combo(payload: Dictionary)                        # Show (COMBO)
 signal party_ko(payload: Dictionary)                     # Show (KO of a party member)
 signal boss_defeated(payload: Dictionary)                # Show.end_battle (VICTORY + is_boss)
 signal item_bought(payload: Dictionary)                  # Game.buy
-signal event_completed(payload: Dictionary)              # ExplorationScene (FloorEvent done)
+signal event_completed(payload: Dictionary)              # Game.apply_floor_event (FloorEvent done)
 signal explore_tick(payload: Dictionary)                 # Game, once per full explore second (RunSim)
 signal level_up(payload: Dictionary)                     # Game.apply_battle_result, once per level gained
 
@@ -619,9 +629,9 @@ Wer emittiert was (verbindlich):
 | Signal | Emitter |
 |---|---|
 | `scene_changed` | Router |
-| `new_game_started`, `floor_timer_*`, `floor_completed`, `stray_spawn_requested`, `party_changed`, `member_leveled`, `level_up`, `inventory_changed`, `credits_changed`, `lootbox_opened`, `input_scheme_changed`, `settings_changed`, `item_bought`, `explore_tick`, `run_started`, `run_finished`, `quest_progress`, `quest_completed` | Game |
+| `new_game_started`, `floor_timer_*`, `floor_completed`, `stray_spawn_requested`, `party_changed`, `member_leveled`, `level_up`, `inventory_changed`, `credits_changed`, `lootbox_opened`, `chest_opened` (`open_chest`), `event_completed` (`apply_floor_event`), `input_scheme_changed`, `settings_changed`, `item_bought`, `explore_tick`, `run_started`, `run_finished`, `quest_progress`, `quest_completed` | Game |
 | `game_loaded`, `game_saved` | Save |
-| `floor_entered`, `room_entered`, `enemy_alerted`, `encounter_triggered`, `chest_opened`, `gate_opened`, `event_completed`, `overlay_mode_requested(&"explore")` | ExplorationScene (M3) |
+| `floor_entered`, `room_entered`, `enemy_alerted`, `encounter_triggered`, `gate_opened`, `overlay_mode_requested(&"explore")` | ExplorationScene (M3) |
 | `battle_started`, `battle_turn_started`, `battle_ended`, `overlay_mode_requested(&"battle")` | BattleScene/BattleController (M5) |
 | `viewers_changed`, `followers_changed`, `hype_changed`, `achievement_unlocked`, `milestone_reached`, `sponsor_gift_triggered`, `mod_said`, `chat_posted`, `lootbox_earned`, `enemy_killed`, `battle_won`, `battle_fled`, `stunt_resolved`, `combo`, `party_ko`, `boss_defeated`, `gift_received`, `gift_rejected` | Show |
 | `dialog_finished` | ModDialog (M6) |
@@ -682,18 +692,23 @@ var mode: StringName = &"campaign"   # &"campaign" | &"event_offline" (M8)
 var run_log: RunLog = null           # Brief §6b.3; created by new_game/start_event_run/Save.load_slot
 var quest: QuestTracker = null       # only mode &"event_offline"
 var sim: RunSim = null               # deterministic explore clock (thin variant, 05 CR-6)
+var in_battle: bool = false          # make_battle_setup → apply_battle_result (also reset by new run/game over); Show routes
+                                     # external gifts by it (§3.5)
+var replaying: bool = false          # true while replay_log runs: record() no-op, no Router/Save calls; UI/Show may skip
+                                     # pure presentation (M.O.D. lines, toasts)
 
 func has_state() -> bool
 func new_game(slot: int, player_name: String = "Kai", seed: int = -1, difficulty: StringName = &"prime") -> void
 	# seed -1 → int(Time.get_unix_time_from_system() * 1000.0) & 0x7FFFFFFF
-	# state = GameState.create_new(DB.data, slot, player_name, seed, difficulty); run_log = RunLog.new() (header: seed, slot,
-	# mode, difficulty, game_version); sim = RunSim.new(DB.data, state, {}); start_floor(1); emits new_game_started(slot)
+	# state = GameState.create_new(DB.data, slot, player_name, seed, difficulty); run_log = RunLog.new() (header: schema, seed,
+	# slot, player_name, mode, difficulty, game_version, sim_hz, event_id, run_id); sim = RunSim.new(DB.data, state, {});
+	# start_floor(1); emits new_game_started(slot)
 func start_event_run(event_id: String) -> void   # M8: EventCatalog → EventDef.run_seed(); mode = &"event_offline"; slot 0
 func ensure_state() -> void          # if not has_state(): ephemeral-safe new_game(0, "Kai", 1) — standalone scenes, capture, tests
 func floor_def() -> FloorDef         # DB.floor_def(state.floor_run.index)
 func start_floor(floor_index: int) -> void
-	# state.floor_run = FloorRun.create(DB.floor_def(i), state.seed, state.difficulty); Show.start_floor(i) (hype := 30);
-	# record({"t": "floor", "floor": i})
+	# state.floor_run = FloorRun.create(DB.floor_def(i), state.seed, state.difficulty); clear_blocking_dialogs();
+	# Show.start_floor(i) (hype := 30); record({"t": "floor", "floor": i})
 func is_timer_ticking() -> bool      # timer_running and state.floor_run.timer_started and _blocking_dialogs == 0
 func complete_floor() -> void
 	# timer_running = false; record({"t": "descend"}); emits floor_completed(index) (Show: trigger + say("floor_end"));
@@ -701,13 +716,17 @@ func complete_floor() -> void
 func continue_after_summary() -> void   # called by FloorSummary "Weiter"
 	# next := DB.floor_def(index + 1); if next != null: start_floor(index + 1); Save.autosave()
 	# if next == null or not next.playable: Router.goto(Router.SCENE_CREDITS) else Router.goto(SCENE_EXPLORATION, {"spawn": &"start"})
-func on_game_over(reason: StringName) -> void   # Router.game_over calls it first: stat game_overs +1; Save.record_game_over(state.slot)
+func on_game_over(reason: StringName) -> void   # Router.game_over calls it first: in_battle = false; stat game_overs +1;
+	# not while replaying: Save.record_game_over(state.slot), event run → finish_run(reason)
 func next_seed(purpose: String) -> int   # state.rng_counter += 1; SeedUtil.derive(state.seed, purpose, state.rng_counter)
+	# purposes of the live game: "battle" (make_battle_setup), "show" (Show.begin_battle), "lootbox" (open_lootbox),
+	# "gift" (Show: GiftApplier outside battles) — replay_log consumes them identically (same code path)
 func make_battle_setup(encounter_id: String, advantage: int, group_id: String) -> BattleSetup
 	# record({"t": "encounter", "enc": encounter_id, "adv": advantage, "group": group_id});
-	# BattleBridge.make_setup(state, DB.data, encounter_id, advantage, group_id, next_seed("battle")); setup.auto_battle = auto_battle
+	# BattleBridge.make_setup(state, DB.data, encounter_id, advantage, group_id, next_seed("battle")); setup.auto_battle = auto_battle;
+	# setup != null → in_battle = true
 func apply_battle_result(result: BattleResult) -> BattleRewards
-	# BattleBridge.apply_result(state, DB.data, result); emits party_changed, inventory_changed, credits_changed,
+	# in_battle = false; BattleBridge.apply_result(state, DB.data, result); emits party_changed, inventory_changed, credits_changed,
 	# member_leveled + level_up({"member", "level"}) per level; floor_timer_started if timer_started flipped
 func open_lootbox(box_id: String) -> Array[LootReward]
 	# record({"t": "lootbox", "box": box_id}); removes one box_id from state.pending_lootboxes;
@@ -717,19 +736,35 @@ func buy(item_id: String, qty: int, safe_room_id: String) -> bool
 	# record({"t": "buy", ...}); Shop.buy(); emits inventory_changed, credits_changed, item_bought({"item_id", "qty", "cost", "safe_room_id"})
 func sell(item_id: String, qty: int) -> bool          # record; Shop.sell(); emits inventory_changed, credits_changed
 func equip(member_id: String, slot: String, item_id: String) -> bool   # record; Progression.equip(); emits party_changed
+func use_item(item_id: String, member_id: String) -> bool   # inventory menu (field use): record({"t": "use_item", "item", "member"});
+	# Progression.use_item(state, DB.data, item_id, member_id); emits party_changed, inventory_changed
 func rest_full_heal() -> void         # record({"t": "rest"}); Progression.full_heal(state, DB.data); emits party_changed
-func apply_floor_event(event_id: String, choice: String) -> Dictionary   # §7.4 (FloorEvent resolve/apply + Show + record)
+func apply_floor_event(event_id: String, choice: String) -> Dictionary   # §7.4 (FloorEvent resolve/apply + Show + record;
+	# outcome.completed → emits event_completed({"event_id", "choice"}))
+func visit_room(cell: Vector2i) -> bool   # ExplorationScene on every room change; first visit: floor_run.visited.append(cell),
+	# STAIRS → stairs_found = true, record({"t": "room", "cell": [x, y]}); returns first_visit
+func open_chest(chest_id: String) -> Array[LootReward]   # §7.3 chest flow without visuals: unknown / already open / locked without
+	# itm_key_master → [] (no change); else record({"t": "chest", "id"}), LootRoller.roll_chest (rng SeedUtil.derive(floor_run.seed,
+	# "chest", k)), add_rewards(), opened_chests.append(id), emits chest_opened(id, rewards)
+func open_gate(key: String) -> void   # requirement checked by the caller (M3); once: record({"t": "gate", "key"}), opened_gates.append
 func enter_safe_room(safe_room_id: String) -> Dictionary
-	# location = id; safe_room_visits += 1; first_visit := id not in visited_safe_rooms → append; rest_full_heal();
-	# returns scene context {"safe_room_id", "first_visit", "safe_room_visits", "kai_level"} for scenes.json conditions
+	# record({"t": "safe_room", "id"}); location = id; safe_room_visits += 1; first_visit := id not in visited_safe_rooms → append;
+	# full heal (Progression.full_heal, not recorded separately); returns scene context {"safe_room_id", "first_visit",
+	# "safe_room_visits", "kai_level"} for scenes.json conditions
+func leave_safe_room() -> void        # ExplorationScene.on_resume({"from_safe_room"}): record({"t": "safe_room_exit"}); location = &"start"
 func next_scene(ctx: Dictionary) -> SceneDef      # first SceneDef (priority order) whose condition holds and that was not seen; null
-func mark_scene_seen(scene: SceneDef) -> void     # flags scene_<id> = true, set_flag (e.g. mop_pep_talk)
-func set_difficulty(d: StringName) -> bool   # only &"prime" → &"vorabend" (never up); remaining timer ticks × 1.5
-func record(cmd: Dictionary) -> void  # run_log.add_cmd(sim.tick(), cmd); no-op if run_log == null
-func replay_log(log: RunLog) -> Dictionary   # M8: {"final_hash", "result", "mismatch_at"}; drives RunSim/BattleState without scenes
-func set_flag(key: String, value: Variant) -> void
+func mark_scene_seen(scene: SceneDef) -> void     # record({"t": "scene", "id"}); flags scene_<id> = true, set_flag (e.g. mop_pep_talk)
+func set_difficulty(d: StringName) -> bool   # only &"prime" → &"vorabend" (never up); record({"t": "difficulty", "to"});
+	# remaining timer ticks × 1.5
+func record(cmd: Dictionary) -> void  # run_log.add_cmd(sim.tick(), cmd, cmd_id); no-op if run_log == null or replaying;
+	# cmd_id: "gift"/"twist" (external inputs) → 0, every other command strictly increasing from 1 per run log (05 §10.6;
+	# a new run log — new_game, start_event_run, Save.load_slot — starts at 1 again)
+func replay_log(p_log: RunLog) -> Dictionary   # M8: {"final_hash", "result", "mismatch_at"} — see "Replay" below
+func set_flag(key: String, value: Variant) -> void   # record({"t": "flag", "key", "value"}) (value bool/int/String); flags[key] = value
 func get_flag(key: String, default: Variant = null) -> Variant
 func time_left() -> float             # state.floor_run.time_left_ticks / float(TICKS_PER_SEC) (display only)
+func clear_blocking_dialogs() -> void # _blocking_dialogs = 0 — Router at every goto (old screens freed), start_floor
+func set_dialog_presenter(active: bool) -> void   # ModDialog (M6) true in _ready, false in _exit_tree (false also clears)
 func apply_settings() -> void         # audio volumes (Sfx), fullscreen, quality (scaling_3d_scale etc.), emits settings_changed
 ```
 
@@ -739,14 +774,22 @@ Laufzeitverhalten:
   (`OS.get_cmdline_args()` enthält `-s`/`--script`); `run_tests.gd` und `capture.gd` setzen zusätzlich `Game.ephemeral = true`.
   Ephemer: Defaults, `save_to_disk()` ist ein No-op → Tests und Screenshots sind maschinenunabhängig.
 - `_process(delta)`: wenn `state != null`: `state.play_time_sec += delta` (nur Anzeige, nicht im Hash). Wenn `is_timer_ticking()`:
-  `_acc += delta`; `n := floori(_acc * TICKS_PER_SEC)`; `_acc -= n / float(TICKS_PER_SEC)`; `n > 0` → `_dispatch(sim.step(n))`.
+  `_acc += delta`; `n := floori(_acc * TICKS_PER_SEC)`; `_acc -= n / float(TICKS_PER_SEC)`; dann **n-mal einzeln**
+  `_dispatch(sim.step(1))` (Abbruch, sobald `is_timer_ticking()` false wird). Einzelticks, damit Reaktionen auf die Events eines Ticks
+  (Show-Hype bei Timer-Warnungen, Achievements bei `explore_tick`) vor dem nächsten Tick greifen — unabhängig von der Framerate;
+  `replay_log` tickt genauso.
   **Alle** spielrelevanten Zeitregeln der Erkundung (Etagen-Timer, Warnungen, Hype-Zerfall, Pazifist-Zähler, Streuner) laufen in
   `RunSim.step` auf ganzen Ticks, nie auf `delta` (Brief §6b.1). `_dispatch` übersetzt die `ExploreEvent`s (§7.1):
   `TIMER_SECOND` → `floor_timer_changed`; `TIMER_WARNING` → `floor_timer_warning`; `TIMER_EXPIRED` → `timer_running = false`,
-  `floor_timer_expired`, `Router.game_over(&"timer")`; `EXPLORE_TICK` → `explore_tick(payload)`; `HYPE` → `Show.sync_from_state()`;
+  `floor_timer_expired`, `Router.game_over(&"timer")` (beim Replay nur `on_game_over(&"timer")`); `EXPLORE_TICK` → `explore_tick(payload)`; `HYPE` → `Show.sync_from_state()`;
   `STRAY_DUE` → `stray_spawn_requested` (ExplorationScene platziert die Gruppe).
-- Dialog-Pause: `_ready()` verbindet `Events.mod_said` (`blocking == true` → `_blocking_dialogs += 1`) und `Events.dialog_finished`
-  (`maxi(0, _blocking_dialogs - 1)`). Cutscenes und Lootbox-Öffnen laufen außerhalb der Erkundung (Timer steht ohnehin).
+- Dialog-Pause: `_ready()` verbindet `Events.mod_said` (`blocking == true` **und** ein Presenter ist angemeldet →
+  `_blocking_dialogs += 1`) und `Events.dialog_finished` (`maxi(0, _blocking_dialogs - 1)`). Presenter = `ModDialog` (M6), meldet sich
+  per `Game.set_dialog_presenter(true)` in `_ready()` und `(false)` in `_exit_tree()` an/ab; ohne Presenter (Tests, Standalone-Szenen,
+  Boot-Stub ohne `GlobalUi`) pausiert keine Zeile den Countdown — sonst bliebe er für den Rest des Laufs stehen. Zurückgesetzt wird
+  der Zähler zusätzlich bei jedem `Router.goto` (`clear_blocking_dialogs()` nach dem Freigeben der alten Screens, vor `add_child` des
+  neuen, damit dessen `_ready()`-Zeilen zählen), in `start_floor`, beim Abmelden des Presenters und bei jedem neuen Lauf.
+  Cutscenes und Lootbox-Öffnen laufen außerhalb der Erkundung (Timer steht ohnehin).
 - Eingabeschema: Ein Kind-Node `InputSchemeWatcher` (privat, `process_mode = PROCESS_MODE_ALWAYS`) erkennt in `_input(event)` das
   Schema (Key/MouseButton/MouseMotion > 2 px → KEYBOARD_MOUSE; JoypadButton/JoypadMotion > 0.5 → GAMEPAD; ScreenTouch → TOUCH;
   emulierte Maus-Events mit `device == InputEvent.DEVICE_ID_EMULATION` ignorieren), setzt `Game.input_scheme` und emittiert bei
@@ -756,8 +799,39 @@ Laufzeitverhalten:
 - `timer_running` setzt **nur** die `ExplorationScene` auf `true` (`_ready()`, `on_resume()`); `Router` setzt es bei **jedem**
   `goto`/`push` auf `false`. Der Countdown einer Etage beginnt erst mit `FloorRun.timer_started` (Etage 1: nach dem Sieg über
   `FloorDef.timer_start_after` = `enc_f1_a1_tutorial`, GDD B2).
-- Aufgezeichnete Commands (`record`, Brief §6b.2/3): `floor`, `encounter`, `battle` (M5, jeder `BattleCommand.to_dict()`),
-  `lootbox`, `buy`, `sell`, `equip`, `rest`, `event` (FloorEvent-Wahl), `chest`, `gate`, `descend`, `gift` (nur `source ≠ "system"`).
+- **Aufzeichnungsregel:** Jede Zustandsänderung, die von außerhalb des Kerns (Szenen, UI) ausgelöst wird, läuft über eine
+  aufzeichnende `Game`-Methode; Szenen/UI schreiben **nie** direkt in `Game.state` (auch nicht `floor_run.visited`, `location`,
+  `opened_chests`, `flags`). Reaktionen (Show auf `Events`-Signale, `BattleBridge`, `RunSim`) sind deterministisch und werden nicht
+  aufgezeichnet. Ausnahme: `Save.load_slot` ersetzt den Zustand und startet einen neuen `RunLog`.
+- Aufgezeichnete Commands (`record`, Brief §6b.2/3) mit Feldern: `floor {floor}`, `encounter {enc, adv, group}`,
+  `battle {cmd, auto}` (M5, jeder `BattleCommand.to_dict()`), `lootbox {box}`, `buy {item, qty, safe_room}`, `sell {item, qty}`,
+  `equip {member, slot, item}`, `use_item {item, member}`, `rest {}`, `event {id, choice}` (FloorEvent-Wahl), `chest {id}`,
+  `gate {key}`, `room {cell: [x, y]}` (nur Erstbesuch), `safe_room {id}`, `safe_room_exit {}`, `scene {id}`, `flag {key, value}`,
+  `difficulty {to}`, `descend {}`, `gift {gift}` (nur `source ≠ "system"`, aufgezeichnet bei der **Anwendung**, §3.5; `cmd_id` 0).
+  `Command.TYPES` (M8) = genau diese Liste.
+- Quest-Adapter (05 CR-4, nur `mode == &"event_offline"`): `enemy_killed` → `{"type": "enemy_killed", "enemy_id"}`,
+  `boss_defeated` → `{"type": "boss_defeated", "boss_id"}`, `battle_started` → `{"type": "battle_started"}`, `floor_completed` →
+  `{"type": "floor_completed", "floor"}`, `achievement_unlocked` → `{"type": "achievement", "id"}`; Metriken (CR-13)
+  `{"type": "metric", "name", "value": int}` mit `value = state.show.stats[name]` (deterministisch, nie die verrauschten
+  Anzeige-Zuschauer): `viewers_changed` → `viewers_target_peak`, `followers_changed` → `followers_gained_run`, `hype_changed` →
+  `hype_100_count`; nur wenn sich der Wert seit der letzten Meldung geändert hat. Show aktualisiert diese Zähler **bevor** es das
+  Signal sendet (§6.3). Damit ist der Quest-Typ `hype_peak` im Slice verdrahtet.
+- **Replay** (`replay_log(p_log)`): sichert den Live-Kontext (`state`, `run_log`, `sim`, `quest`, `mode`, Zähler …), setzt
+  `replaying = true`, baut `state = GameState.create_new(DB.data, header.slot, header.player_name, header.seed, header.difficulty)`,
+  bei `header.event_id != ""` `mode = &"event_offline"`, `EventCatalog` → `EventDef` → `RunSim.new(…, def.rules)` und
+  `quest = QuestTracker.from_def(def.quest)`, sonst Regeln `{}`. Dann je Command (Reihenfolge des Logs): Checkpoints mit `k` kleiner als
+  der Command-Tick prüfen, Uhr **tickweise** wie live bis `k` (`_dispatch(sim.step(1))`), dann **dieselbe** Methode wie live
+  (`start_floor`, `open_lootbox`, `buy`, `sell`, `equip`, `use_item`, `rest_full_heal`, `apply_floor_event`, `open_chest`,
+  `open_gate`, `visit_room`, `enter_safe_room`, `leave_safe_room`, `mark_scene_seen`, `set_flag`, `set_difficulty`,
+  `descend` → `floor_completed` senden, `gift` außerhalb des Kampfes → `Show.receive_gift`). Kämpfe exakt nach §5.7 ohne Szene:
+  `encounter` → `make_battle_setup` (next_seed "battle") → `BattleState.new` → `Show.begin_battle` (next_seed "show") →
+  `battle_started` → `_play(start())`; `battle` → `_play(submit(BattleCommand.from_dict(cmd)))`; `_play` = Events →
+  `Show.on_battle_event`, dann (Kampf läuft) ein direkt folgendes `gift`-Command in `Show.receive_gift` und
+  `Show.take_pending_gift(battle)` → `apply_gift`; Kampfende → `battle_ended`, `apply_battle_result`, `Show.end_battle`,
+  DEFEAT → `on_game_over(&"defeat")`. Checkpoint `k` = Zustand nach allen Commands mit `k' ≤ k`. Danach Live-Kontext zurück,
+  `replaying = false`, `Show.sync_from_state()`. RNG-Verbrauch, Show-Reaktionen, Meilensteine und Safe-Room-Buchhaltung sind damit
+  per Konstruktion identisch. Nicht während eines Kampfes (`in_battle` → Warnung, leeres Ergebnis): Shows Kampfzustand würde
+  überschrieben. Logs mit `header.from_save` (nach `Save.load_slot`) → Warnung, leeres Ergebnis.
 
 `GameSettings` (M0, `autoload/game_settings.gd`):
 
@@ -828,17 +902,30 @@ noch nicht ausgelieferte Geschenke), `_rng` (Spiellogik: **nur** Sponsor-Auswahl
 
 Geschenke (Brief §6b.4, 05 §6.5): Gift-Dictionary mindestens `{"schema": 1, "gift_id": String, "source": "system"|"fan"|"paid"|"dev",
 "kind": "sponsor_buff"|"gold"|"chest"|"fan_pack", "sponsor_id": String, "payload": Dictionary}`.
-`receive_gift(g)`: `Gift.validate(g)` → bei `source ≠ "system"`: `GiftPolicy.check(...)` und `Game.record({"t": "gift", "gift": g})`
-→ im Kampf in `_queue`, außerhalb sofort `GiftApplier.apply(Game.state, DB.data, g, rng)` + `Game.add_rewards()` →
-`Events.gift_received(g)`; abgelehnt → `Events.gift_rejected(gift_id, reason)`.
-`take_pending_gift(battle)`: (1) erstes wartendes externes Geschenk; sonst (2) ist eine Hype-Schwelle offen (§6.2):
+`receive_gift(g)`: `Gift.validate(g)` → bei `source ≠ "system"`: `GiftPolicy.check(...)` → angenommen: **im Kampf**
+(`Game.in_battle`, also schon ab `Game.make_battle_setup`, auch während des Swirl-Übergangs) in `_queue`; **außerhalb** sofort
+anwenden = `Game.record({"t": "gift", "gift": g})` (nur `source ≠ "system"`) → `GiftApplier.apply(Game.state, DB.data, g,
+SeedUtil.make_rng(Game.next_seed("gift")))` + `Game.add_rewards()` → `Events.gift_received(g)`; abgelehnt →
+`Events.gift_rejected(gift_id, reason)`.
+`take_pending_gift(battle)`: (1) erstes wartendes externes Geschenk → **jetzt** `Game.record({"t": "gift", "gift": g})` → Rückgabe
+(der Controller wendet es per `battle.apply_gift` an); sonst (2) ist eine Hype-Schwelle offen (§6.2):
 `SponsorSystem.pick(DB.data, {"floor_index", "is_boss", "party": battle.party()}, _rng)` → `Gift.make_system(sponsor_id, battle_n, k)` → **ebenfalls** `receive_gift()` → Rückgabe.
-Der Hype-Schwellen-Trigger hat damit keinen eigenen Geschenkweg.
+Der Hype-Schwellen-Trigger hat damit keinen eigenen Geschenkweg. Externe Geschenke, die bei `end_battle` noch warten, werden als
+**letzter** Schritt von `end_battle` außerhalb des Kampfes angewendet (wie oben: record → `GiftApplier` → `gift_received`).
+**Aufzeichnung bei Anwendung, nicht bei Empfang:** Nur so ist die Reihenfolge im Log eindeutig (ein `gift`-Command im Kampf steht
+direkt hinter dem `battle`- bzw. `encounter`-Command, an dessen `_play`-Grenze es ausgeliefert wurde) und `Game.replay_log` kann
+es an derselben Stelle wieder einspeisen (§3.4 „Replay“).
 
 Zeitabhängiges: `Show._process` ist **reine Anzeige**: `display_viewers` glättet Richtung `viewers()` mit
 `1 - exp(-delta / 1.5)`, alle 2.0 s Rauschen ±1.5 % (`_fx_rng`), Chat alle 6.0 ± 2.0 s (mind. 2.5 s Abstand) nach Hype-Band
 (`chat_hype_high` ≥ 70, `chat_hype_mid` 30–70, `chat_hype_low` < 30). Hype-Zerfall und Pazifist-Zählung rechnet `RunSim` (§7.1).
-`viewers_changed` feuert, sobald sich der rauschfreie Wert ändert; dabei `set_stat_max("viewers_max", v)` und `trigger("viewers_changed", {"viewers": v})`.
+`viewers_changed` feuert, sobald sich der rauschfreie Wert ändert — **synchron** in der Zustandsänderung (`add_hype`, `add_followers`,
+`start_floor`, `sync_from_state`, Kampf-Events), nie aus `_process` (sonst hinge die Achievement-Reihenfolge an der Framerate);
+dabei `set_stat_max("viewers_max", v)`, `set_stat_max("viewers_target_peak", v)` und `trigger("viewers_changed", {"viewers": v})`.
+CR-13-Zähler (§6.3) werden **vor** dem jeweiligen Signal aktualisiert: `add_followers(n)` mit `n > 0` → `followers_gained_run += n`
+(vor `followers_changed`); `add_hype` erreicht 100 von unten (`prev < 100`, neu = 100) → `hype_100_count += 1` (vor `hype_changed`).
+Replay: Alle Show-Methoden laufen auch während `Game.replay_log` (`Game.replaying == true`); sie dürfen dann reine Präsentation
+(M.O.D.-/Chat-Zeilen, Toasts) weglassen, führen aber jede Zustandsänderung und jeden RNG-Verbrauch exakt wie live aus.
 
 Hört auf `Events`: `chest_opened` (Hype +3, `chests_opened` +1, Trigger), `lootbox_opened` (`lootboxes_opened` +1, Trigger),
 `level_up` (Trigger, `say("level_up")`), `floor_completed` (Trigger mit `{"floor", "timer_left"}`, `say("floor_end")`),
@@ -851,7 +938,8 @@ Achievement-Freischaltung (in `Show`): `Events.achievement_unlocked(id)`; `def.b
 `Events.lootbox_earned`; Follower = `def.followers` oder (−1) fest nach Box-Tier: bronze 25 / silver 50 / gold 100 (`add_followers`);
 Hype +8; `say("achievement:<id>")` mit Fallback `"achievement_generic"` und `ctx {"achievement": def.name}`;
 `Events.toast_requested(def.name, &"achievement")`. Meilensteine (`add_followers` überschreitet `MilestoneDef.followers`):
-Box/Credits/Item/Titel gutschreiben, `state.show.milestones.append(id)`, `Events.milestone_reached`, `say("follower_milestone")`.
+Box/Credits/Item/Titel gutschreiben (Titel-Flag `title_<id>` direkt in `Game.state.flags` — Reaktion, **nicht** über das
+aufzeichnende `Game.set_flag`), `state.show.milestones.append(id)`, `Events.milestone_reached`, `say("follower_milestone")`.
 
 ### 3.6 `Save` (M2)
 
@@ -866,14 +954,15 @@ func has_save(slot: int) -> bool
 func slot_summary(slot: int) -> Dictionary   # {} empty; {"corrupt": true} unreadable; else SaveCodec summary keys
 func save_slot(slot: int) -> Error           # Game.state → SaveCodec.encode → atomic write; emits game_saved
 func load_slot(slot: int) -> Error           # read → SaveCodec.decode → Game.state (+ grace time_left ≥ 180 s, §6.4),
-                                             # Game.sim/run_log neu; emits game_loaded
+                                             # Game.sim/run_log neu (Header wie new_game + "from_save": true; nur für
+                                             # Bug-Reports — replay_log startet immer bei create_new); emits game_loaded
 func delete_slot(slot: int) -> Error
 func autosave() -> Error                     # save_slot(Game.state.slot); slot 0 → OK, no write
 func newest_slot() -> int                    # slot with the latest saved_at_unix, 0 if none (Title "Fortsetzen")
 func record_game_over(slot: int) -> Error    # read-modify-write: state.show.stats.game_overs += 1 in the slot file; slot 0 → OK
 func load_leaderboard(event_id: String) -> Dictionary            # M8 (05 CR-8): user://leaderboards/<event_id>.json
 func save_leaderboard(event_id: String, d: Dictionary) -> Error  # atomic like slots
-func save_replay(log: RunLog) -> Error                           # user://replays/<run_id>.json, max. 20 files
+func save_replay(p_log: RunLog) -> Error                         # user://replays/<run_id>.json, max. 20 files
 func last_error() -> String
 ```
 
@@ -1001,7 +1090,8 @@ Fokus-Stil aller Buttons: 3 px `C_ACCENT_2`-Rahmen (StyleBox `focus`).
   (gettext-Stil: msgid = deutscher Text; spätere EN-Übersetzung per `.po`, kein Key-System). Das erfüllt die `tr()`-Pflicht
   aus Brief §4; die `name_key`/`desc_key`-Spalten des GDD werden direkt als deutscher Text in `name`/`desc` geschrieben (§4.4.0).
 - JSON kennt nur Floats: `JSON.parse_string` liefert `12` als `12.0` (geprüft). `int`-Felder müssen ganzzahlig sein
-  (Validator prüft `fmod(v, 1.0) == 0.0`) und werden mit `int()` konvertiert.
+  (Validator prüft `fmod(v, 1.0) == 0.0` und `|v| < 9·10¹⁵` = `JsonUtil.MAX_INTEGRAL`, sonst liefert `int()` Überlauf-Werte)
+  und werden mit `int()` konvertiert.
 - Farben: Hex-Strings `"#rrggbb"`. Rasterkoordinaten: `[x, y]`. Raum-lokale Offsets: `[x, z]` in Metern.
 - Unbekannte Keys sind **Fehler** (fängt Tippfehler).
 - Optionale Felder werden beim Laden mit dem Default befüllt (Normalisierung) → Defs haben immer alle Felder.
@@ -1456,8 +1546,8 @@ Gegnerschaden × 0.5, Flucht gesperrt, Niederlage unmöglich — HP der Party f�
 |---|---|---|
 | `cells` | Array[{x, y, zone, kind, doors}] | ✓; `kind` ∈ `CELL_KINDS`; `doors` ⊂ `"NESW"` (String, z. B. `"NS"`), symmetrisch zum Nachbarn; genau 1 `start`, 1 `stairs` |
 | `zones` | Array[{id, name, palette}] | ✓; `palette` wie FloorDef.palette (überschreibt sie für Zellen der Zone) |
-| `gates` | Array[{cell, dir, requires}] | Tür zwischen `cell` und Nachbar in `dir` (`N/E/S/W`) ist zu, bis `requires` erfüllt: Item-ID (`itm_key_master`) oder `"event:<fev_id>"` |
-| `encounters_placed` | Array[{group_id, enc_id, cell, offset, state, turn, waypoints}] | `group_id` `f<i>_g<k>` / `f<i>_qb` / `f<i>_fb`; `state` ∈ `ENEMY_START_STATES` (Default `PATROL`); `turn` bool (true; Tutorial false = dreht sich nie um); `waypoints` Array[[x, z]] raum-lokal |
+| `gates` | Array[{cell, dir, requires}] | Tür zwischen `cell` und Nachbar in `dir` (`N/E/S/W`) ist zu, bis `requires` erfüllt: Item-ID (`itm_key_master`) oder `"event:<fev_id>"`; je Tür höchstens **ein** Tor (`[3,6] N` und `[3,5] S` sind dieselbe Tür, `DataValidator.door_key`); Laufzeit-Schlüssel (`opened_gates`, `FloorLayout.gates[].key`) = `"x,y,D"` der Seite, auf der das Tor definiert ist |
+| `encounters_placed` | Array[{group_id, enc_id, cell, offset, state, turn, waypoints}] | `group_id` `f<i>_g<k>` / `f<i>_qb` / `f<i>_fb`; `state` ∈ `ENEMY_START_STATES` (Default `PATROL`); `turn` bool (true; Tutorial false = dreht sich nie um); `waypoints` Array[[x, z]] raum-lokal, `|x|, |z| ≤ 4.5` wie Offsets |
 | `chests` | Array[{id, cell, offset, type, contents}] | `id` `f<i>_c<k>`; `type` ∈ `CHEST_TYPES`; `contents` Array[{kind, id, amount}] Pflicht bei `metal`/`locked`, leer bei `wood` (wood = 20–40 Cr + 1 Wurf `pools.f<i>.common`) |
 | `events` | Array[{id, type, cell, offset, params}] | `id` `fev_`; `type` ∈ `FLOOR_EVENT_TYPES`; `params` je Typ (§7.4) |
 | `spawners` | Array[{zone, pool, interval_sec}] | `pool` = enc ids; `interval_sec` 10..600 (90) |
@@ -1465,7 +1555,10 @@ Gegnerschaden × 0.5, Flucht gesperrt, Niederlage unmöglich — HP der Party f�
 | `stairs` | {cell} | ✓; Zelle mit `kind: stairs` |
 
 Offsets sind raum-lokal `[x, z]` mit `|x|, |z| ≤ 4.5` (§7.3). Quartier-/Etagenboss stehen in Zellen `quarter_boss`/`floor_boss`
-(Gruppen `f<i>_qb`/`f<i>_fb`, Encounter aus `quarter_boss`/`floor_boss`).
+(Gruppen `f<i>_qb`/`f<i>_fb`, Encounter aus `quarter_boss`/`floor_boss`). Verbindlich (Regel 8): Gruppe `f<i>_qb` ⇔ `enc_id ==
+FloorDef.quarter_boss` ⇔ Zelle `kind: quarter_boss` (ebenso `_fb`/`floor_boss`); ist `quarter_boss`/`floor_boss` gesetzt, gibt es
+**genau eine** solche Platzierung, und der Boss-Encounter steht unter keiner anderen Gruppen-ID (BattleBridge setzt die Boss-Flags
+anhand dieser Gruppen).
 
 ```json
 {"id": "floor_1", "index": 1, "name": "Etage 1 – Die Unterstadt", "theme": "metro", "timer_seconds": 1200,
@@ -1678,16 +1771,20 @@ Regeln (jede Verletzung = ein Eintrag in `errors`, Format `"<table>[<index>|<id>
    Sponsor-Items, Meilensteine, Gate-`requires`), Gegner (Encounter, Summon, Phasen-Ops), Pseudo-Einheiten (Phasen-Ops),
    Lootboxen (Achievements, Meilensteine, `boss_drops`, Glücksrad), Encounter (Bosse, `timer_start_after`, Platzierung,
    Spawner, Event-Folgekämpfe). Klassen-`learnset` mit `min_floor > 1`: fehlender Skill nur Warnung.
-6. Typ-Konsistenz: `use_skill` hat `user: "item"`; Stunts haben `category: "stunt"` und `success_base > 0`; `damage_type: heal`
+6. Typ-Konsistenz: `use_skill` hat `user: "item"`; Party-Skills (`learnset`, `stunts`, `attack_skill`, Klassen-`learnset`) haben
+   `user` `party` oder `any`; Stunts haben `category: "stunt"` und `success_base > 0`; `damage_type: heal`
    hat `heal_mode`; Startausrüstung passt zu Slot und `equip_by`; Boss-Encounter haben `boss: true`; AI-Zielregel passt zum Skill-Ziel;
    `ai.type: phased` ⇔ `phases` nicht leer, `hp_above` streng absteigend, letzte = 0.0.
 7. Party enthält `kai` und `mopsula`; `battle_slot` eindeutig.
 8. Etagen: `index` lückenlos ab 1; `floor_1.playable == true`. Layout: Raster-Grenzen, Türen symmetrisch, alle Zellen von `start`
    erreichbar (Gates als offen gerechnet), genau 1 `start`/`stairs`, Zelle von `stairs` hat `kind: stairs`, Zonen-IDs existieren,
-   Offsets ≤ 4.5, `group_id`/Truhen-IDs im Laufzeitformat und eindeutig, Safe-Room-Zellen haben `kind: safe`.
+   Offsets und Wegpunkte ≤ 4.5, `group_id`/Truhen-IDs im Laufzeitformat und eindeutig, Safe-Room-Zellen haben `kind: safe`,
+   höchstens ein Tor je Tür (beide Seiten = eine Tür), Boss-Platzierungen laut §4.4.7 (`f<i>_qb`/`_fb` ⇔ Encounter ⇔ Zellenart,
+   genau eine je gesetztem Boss).
 9. `mod_lines`: jeder Tag aus `REQUIRED_MOD_TAGS` hat ≥ 1 Zeile; zusätzlich `timer_warn_<v>` für jeden Wert `v` aus allen
    `floors.timer_warnings`; **jeder in Daten referenzierte Tag** (Phasen-`say`, `warn_tag`, `mod_tag` von Lootboxen/Sponsoren/
-   Meilensteinen) hat ≥ 1 Zeile; Platzhalter nur aus `TEXT_PLACEHOLDERS` (Regex `\{([a-z_]+)\}`).
+   Meilensteinen) hat ≥ 1 Zeile; Platzhalter nur aus `TEXT_PLACEHOLDERS` (Regex `\{([a-z_]+)\}`); jede andere geschweifte Klammer
+   (`{Name}`, `{name`, `}`, `{ floor }`) ist ein Fehler (`String.format` ließe sie im HUD stehen).
 10. `achievements.condition` und `scenes.condition` parsen fehlerfrei; `s.`-Operanden ∈ `StatIds.ALL` (DataValidator hält eine Kopie
     `STAT_IDS`; `test_m2_achievements` prüft Gleichheit); `e.`-Schlüssel ∈ Payload-Schlüssel des Triggers (§6.3).
 
@@ -1745,7 +1842,11 @@ Def-Klassen (`core/data/defs/*.gd`): `class_name XxxDef extends RefCounted`, ein
 (gleicher Name; `for` → `for_members`), verschachtelte Strukturen als normalisierte `Dictionary`/`Array[Dictionary]`,
 String-Listen als `PackedStringArray`, plus `static func from_dict(d: Dictionary) -> XxxDef` (erwartet normalisiertes Dict).
 Zusatzfelder: `FloorDef.encounters: Array[EncounterDef]`, `ModLineDef.tag_base` (Teil vor dem ersten `:`),
-`AchievementDef.expr` / `SceneDef.expr` (`ConditionExpr`, geparst). Defs sind nach dem Laden **unveränderlich**.
+`AchievementDef.expr` / `SceneDef.expr` (`ConditionExpr`, geparst). Defs sind nach dem Laden **unveränderlich**: `GameData` sperrt
+alle `Dictionary`-/`Array`-Felder aller Defs rekursiv (`make_read_only()`, auch `layout.cells`, `ai.actions`, `phases` …) — ein
+Schreibversuch ist ein `SCRIPT ERROR` statt einer stillen Änderung an `DB.data` bzw. dem geteilten `real_data()`-Cache der Tests.
+Veränderbare Kopie: `duplicate(true)`; die Listen-Getter (`all_*`, `mod_lines`, `loot_pool`) liefern bereits Kopien.
+`Packed*Array`-Felder kann Godot nicht sperren (gemessen 4.7.2: auch sie werden per Referenz geteilt) → nie verändern.
 
 `data/events.json` (Live-Events, Schema 05 §10.1, Top-Level `{"schema": 1, "events": [...]}`) gehört **nicht** zu `TABLES`:
 Es wird vom Server-Pfad später unverändert geliefert und daher von `EventCatalog` (M8) geladen und mit `EventDef.validate()`
@@ -2546,6 +2647,9 @@ static func add_exp(member: PartyMember, amount: int, data: GameData) -> Array[L
 	# level up raises hp/mp by the max delta (no full heal); at LEVEL_CAP surplus EXP is discarded
 static func equip(member: PartyMember, inventory: Inventory, data: GameData, slot: String, item_id: String) -> bool   # "" unequips
 static func full_heal(state: GameState, data: GameData) -> void
+static func use_item(state: GameState, data: GameData, item_id: String, member_id: String) -> bool   # via Game.use_item
+	# field use: usable "field"/"both", count > 0; use_skill on the member outside battle (heal by heal_mode without
+	# variance/crit, cleanse, mp_restore/_pct, revive only for target single_ally_ko), −1 item; false = nothing changed
 static func to_combatant(member: PartyMember, data: GameData, id: String, slot: int) -> Combatant
 	# crit_bonus = Σ equipment crit_bonus; element_mods = Π; status_immune = ∪; status_resist from def; attack_element from weapon
 
@@ -2637,7 +2741,7 @@ Kontrolle (GDD §13): Hype 100, 1 500 Follower → `(1000 + 1500) × 2.9 = 7 250
 
 ### 6.3 `StatIds` (Achievement-Zähler) und Trigger-Payloads
 
-`StatIds.ALL` = GDD §8 (persistent in `ShowState.stats`):
+`StatIds.ALL` = GDD §8 + 05 CR-13 (persistent in `ShowState.stats`; `DataValidator.STAT_IDS` ist eine identische Kopie):
 
 | ID | Typ | Wer erhöht | Wann |
 |---|---|---|---|
@@ -2658,6 +2762,9 @@ Kontrolle (GDD §13): Hype 100, 1 500 Follower → `(1000 + 1500) × 2.9 = 7 250
 | `ko_mopsula` | Zähler | Show | KO Mopsula |
 | `explore_seconds_since_battle` | Zähler (reset) | RunSim (+1 je 30 Ticks), `Show.begin_battle` setzt 0 | Pazifist |
 | `viewers_max` | Max | Show (`viewers_changed`) | rauschfreier Wert |
+| `viewers_target_peak` | Max | Show (`viewers_changed`, wie `viewers_max`) | rauschfreier Wert; Quest-Metrik `hype_peak` (05 CR-13) |
+| `followers_gained_run` | Summe | Show (`add_followers` mit n > 0, **vor** `followers_changed`) | Quest-Metrik (CR-13); im Event-Lauf = Lauf-Summe (frischer `GameState`) |
+| `hype_100_count` | Zähler | Show (`add_hype` erreicht 100 von unten, **vor** `hype_changed`) | Quest-Metrik (CR-13) |
 
 Trigger-Payloads (`e.`-Schlüssel; der Validator prüft Bedingungen dagegen):
 
@@ -2963,12 +3070,12 @@ Weitere Abläufe in der Erkundung (M3, verbindlich):
 
 | Auslöser | Ablauf |
 |---|---|
-| Raumwechsel (`layout.world_to_cell(player)` ändert sich) | erste Betretung → `floor_run.visited.append(cell)`, `hud.mark_visited(cell)`; immer `Events.room_entered(cell, kind, first_visit)`; STAIRS erstmals → `floor_run.stairs_found = true` |
-| Truhe `interact` | `locked` ohne `itm_key_master` → Prompt „Verschlossen“; sonst k aus `f<i>_c<k>`; `rewards := LootRoller.roll_chest(chest, DB.data, i, Game.state, SeedUtil.make_rng(SeedUtil.derive(floor_run.seed, "chest", k)))`; `Game.record({"t": "chest", "id"})`; `Game.add_rewards(rewards)`; `floor_run.opened_chests.append(id)`; `ChestProp.open()`; `Events.chest_opened(id, rewards)`; `Sfx.play(&"chest_open")` |
-| Tor `interact` (`gate_interactable.gd`) | `requires` ist Item und im Inventar → `opened_gates.append(key)`, `Game.record({"t": "gate", "key"})`, Tor-Prop entfernen, `Events.gate_opened`; sonst Prompt „Benötigt: Generalschlüssel“ |
-| Etagen-Event `interact` (`event_interactable.gd`) | Wahl-Dialog mit `FloorEvent.choices()`; Wahl → `Game.apply_floor_event(id, choice)` (§7.4) → `completed` → `Events.event_completed({"event_id", "choice"})`; `open_gate` → Tor öffnen; `encounter_id != ""` → Kampf NORMAL mit `group_id ""` |
+| Raumwechsel (`layout.world_to_cell(player)` ändert sich) | `first_visit := Game.visit_room(cell)` (pflegt `visited`/`stairs_found` und zeichnet auf); `first_visit` → `hud.mark_visited(cell)`; immer `Events.room_entered(cell, kind, first_visit)` |
+| Truhe `interact` | `locked` ohne `itm_key_master` → Prompt „Verschlossen“; sonst `rewards := Game.open_chest(id)` (würfelt mit `SeedUtil.derive(floor_run.seed, "chest", k)`, zeichnet auf, `add_rewards`, `opened_chests`, `Events.chest_opened`); dann `ChestProp.open()`; `Sfx.play(&"chest_open")` |
+| Tor `interact` (`gate_interactable.gd`) | `requires` ist Item und im Inventar → `Game.open_gate(key)`, Tor-Prop entfernen, `Events.gate_opened`; sonst Prompt „Benötigt: Generalschlüssel“ |
+| Etagen-Event `interact` (`event_interactable.gd`) | Wahl-Dialog mit `FloorEvent.choices()`; Wahl → `Game.apply_floor_event(id, choice)` (§7.4; sendet bei `completed` selbst `Events.event_completed`); `open_gate` → Tor-Prop entfernen (Zustand pflegt `FloorEvent.apply`); `encounter_id != ""` → Kampf NORMAL mit `group_id ""` |
 | Treppe `interact` | ConfirmDialog (M6) „Etage verlassen? Offene Truhen und der Etagenboss bleiben zurück.“ → Ja: `Game.complete_floor()` |
-| Safe-Room-Tür `interact` | `floor_run.location = &"<sr id>"`; `Router.enter_safe_room(id)`. Rückkehr (`on_resume({"from_safe_room": id})`): Spieler 1,2 m vor Anchor `&"safe_door"` der Zelle, Blick zur Raummitte; `floor_run.location = &"start"` |
+| Safe-Room-Tür `interact` | `Router.enter_safe_room(id)` (`location` setzt `Game.enter_safe_room` in `SafeRoomScene._ready`). Rückkehr (`on_resume({"from_safe_room": id})`): Spieler 1,2 m vor Anchor `&"safe_door"` der Zelle, Blick zur Raummitte; `Game.leave_safe_room()` |
 | Laden mit Safe-Room-`location` | Spieler wird vor dieser Safe-Room-Tür platziert, danach `Router.enter_safe_room(id)` (deferred, nach Aufbau) |
 | `stray_spawn_requested(zone, group, enc)` | Spawn in der Zelle der Zone mit größter BFS-Distanz zu Kais Zelle (Gleichstand: kleinstes y, dann x), Zustand PATROL |
 | Gegnergruppe besiegt (`on_resume` mit `VICTORY`) | Gruppen-Node `queue_free()` (`defeated_groups`/`strays` hat `BattleBridge` bereits gepflegt) |
@@ -2978,7 +3085,7 @@ Weitere Abläufe in der Erkundung (M3, verbindlich):
 `Game.apply_floor_event(event_id: String, choice: String) -> Dictionary`: k = Index des Events in `layout.events`,
 `rng = SeedUtil.make_rng(SeedUtil.derive(floor_run.seed, "event", k × 16 + event_uses[id]))`; `FloorEvent.resolve` → `FloorEvent.apply`
 → `Show.add_hype(hype)`, `Show.add_followers(followers)`, Boxen → `pending_lootboxes`, `Show.say(mod_tag)` falls gesetzt →
-`Game.record({"t": "event", "id", "choice"})` → Rückgabe. Jede Wahl außer `leave`/`ignore` schließt das Event ab
+`Game.record({"t": "event", "id", "choice"})` → `outcome.completed` → `Events.event_completed({"event_id", "choice"})` → Rückgabe. Jede Wahl außer `leave`/`ignore` schließt das Event ab
 (`completed_events`; Show: Hype +5, `events_completed` +1). Je Event max. 1 Abschluss pro Etage.
 
 | `type` | `params` (Daten, Etage 1) | Wahl → Ergebnis |
@@ -2990,7 +3097,8 @@ Weitere Abläufe in der Erkundung (M3, verbindlich):
 | `broken_vending` | `base 0.50`, `per_lck 0.01`, `reward_item "itm_energy_krawumm"`, `reward_amount 2`, `fail_pct 10`, `fail_hype 4` | `kick`: Erfolg `rng.randf() < base + Kai.LCK × per_lck` → 2 × Item; sonst Kai −10 % MaxHP (min 1), Hype +4 · `leave` |
 
 Validator (Regel 4/5): `params`-Schlüssel je Typ exakt wie oben; Item-/Box-/Encounter-IDs auflösbar; `lever.gate` verweist auf ein
-Tor mit `requires == "event:<diese fev id>"`.
+Tor mit `requires == "event:<diese fev id>"` — jede Seite der Tür ist erlaubt (`"3,6,N"` ≡ `"3,5,S"`); der Loader normalisiert
+`params.gate` auf die Seite, auf der das Tor definiert ist (= Laufzeit-Schlüssel in `opened_gates`).
 
 ---
 
@@ -3218,8 +3326,8 @@ Abläufe:
 
 | Aufruf | Schritte |
 |---|---|
-| `goto(path, params, t)` | `busy = true` → `Game.timer_running = false` → Übergang-aus → eingehängten Top-Screen `queue_free()` (falls vorhanden), ausgehängte Stack-Screens `free()`, beim ersten Aufruf zusätzlich die Boot-Szene (`get_tree().current_scene`, falls nicht `null`) `queue_free()` → `load(path).instantiate()` → `setup(params)` falls vorhanden → `root.add_child()` → `get_tree().current_scene = node` → Übergang-ein → `busy = false` → `scene_changed` |
-| `push(path, params, t)` | `busy` → `Game.timer_running = false` → oberer Screen `on_suspend()` falls vorhanden → Übergang-aus → `root.remove_child(top)` **nur wenn `top != null` und `top.get_parent() == root`** → neuen Screen instanziieren/`setup`/einhängen → Übergang-ein → `scene_changed` |
+| `goto(path, params, t)` | `busy = true` → `Game.timer_running = false` → Übergang-aus → `load(path).instantiate()` → `setup(params)` falls vorhanden (schlägt das fehl: `push_error` und Ersatz `SCENE_TITLE`, außer `path` ist selbst der Titel) → eingehängten Top-Screen `queue_free()` (falls vorhanden), ausgehängte Stack-Screens `free()`, beim ersten Aufruf zusätzlich die Boot-Szene (`get_tree().current_scene`, falls nicht `null`) `queue_free()` → `Game.clear_blocking_dialogs()` → `root.add_child()` → `get_tree().current_scene = node` → Übergang-ein → `busy = false` → `scene_changed` |
+| `push(path, params, t)` | `busy` → `Game.timer_running = false` → oberer Screen `on_suspend()` falls vorhanden → Übergang-aus → neuen Screen instanziieren/`setup` (schlägt das fehl: `push_error`, der alte Screen bleibt eingehängt und bekommt `on_resume({})`, Übergang-ein, Ende) → `root.remove_child(top)` **nur wenn `top != null` und `top.get_parent() == root`** → neuen Screen einhängen → Übergang-ein → `scene_changed` |
 | `pop(payload, t)` | `busy` → Übergang-aus → oberen Screen `queue_free()` → vorherigen wieder einhängen, `current_scene` setzen → `on_resume(payload)` falls vorhanden → Übergang-ein → `scene_changed`; leerer Stack (Stapel ≤ 1) → `push_warning` + `goto(SCENE_TITLE)` |
 | `adopt(node)` | kein Übergang: `_stack = [node]`, `current = node`; `node` hängt bereits unter `root` |
 
@@ -3260,6 +3368,9 @@ Headless (`DisplayServer.get_name() == "headless"`) → **kein Snapshot** (liefe
 
 `GlobalUi` (`scenes/ui/global_ui.tscn`) wird von Boot **einmal** per `get_tree().root.add_child.call_deferred(ui)` direkt unter
 `root` gehängt (nicht im Router-Stack, `PROCESS_MODE_ALWAYS`) und schaltet seine Anzeige über `Events.overlay_mode_requested`. `capture.gd` hängt es ebenfalls an (§11.3).
+`ModDialog` (Teil von `GlobalUi`) meldet sich als Dialog-Presenter an: `Game.set_dialog_presenter(true)` in `_ready()`,
+`Game.set_dialog_presenter(false)` in `_exit_tree()`; jede Zeile endet (fertig oder weggeklickt) mit `Events.dialog_finished(tag)`
+(§3.4 Dialog-Pause).
 Pause: `ExplorationHud` (`PROCESS_MODE_PAUSABLE`) öffnet `PauseMenu` auf `pause` und setzt `get_tree().paused = true`
 (`Events.pause_menu_toggled(true)`). **Prozessmodi (gemessen 4.7.2: ein PAUSABLE-Node erhält während der Pause 0
 `_unhandled_input`-Events, ein WHEN_PAUSED-Node 1):** `PauseMenu` und alle aus ihm geöffneten Menüs (`party_menu`, `inventory_menu`,
@@ -3383,11 +3494,13 @@ Geprüftes Verhalten (4.7.2), aus dem die Regeln folgen:
 ```
 extends SceneTree   — enthält KEINE class_name-Referenzen und KEINE Autoload-Bezeichner.
 _initialize():
-  args = OS.get_cmdline_user_args(): optional --filter=<substring>, --verbose
+  args = OS.get_cmdline_user_args(): optional --filter=<substring>, --verbose, --root=<res://dir> (Default res://tests;
+         nur für den Runner-Selbsttest mit res://tests/fixtures/runner_selftest)
   await process_frame                     # Autoloads bereit (DB geladen)
+  OS.add_logger(<private Logger-Unterklasse>)   # zählt Fehler mit error_type == Logger.ERROR_TYPE_SCRIPT (SCRIPT ERROR)
   root.get_node("Game").set("ephemeral", true)   # per node path, no autoload identifier (settings defaults, §3.4)
-  files = rekursiv res://tests/**/test_*.gd (DirAccess), alphabetisch, OHNE res://tests/lib/ und res://tests/fixtures/;
-          Filter auf Dateinamen
+  files = rekursiv <root>/**/test_*.gd (DirAccess), alphabetisch, OHNE res://tests/lib/ und res://tests/fixtures/
+          (außer einer davon ist selbst die Wurzel); Filter auf Dateinamen
   für jede Datei:
     script := load(path) as GDScript
     script == null oder not script.can_instantiate() → "[ERROR] <file>: failed to compile", errors += 1, weiter
@@ -3401,8 +3514,10 @@ _initialize():
                zuerst die eigenen, dann geerbte Methoden, überschriebene doppelt; gemessen 4.7.2) → Deklarationsreihenfolge
     für jede Methode:
       print("[RUN] <file> :: <name>")      # vor dem Start, damit ein Hänger dem Test zuordenbar ist
+      n0 := Logger-Zähler
       inst.call("_tc_begin", name); await inst.call("before_each"); await inst.call(name); await inst.call("after_each")
       ergebnis := inst.call("_tc_end")   # Dictionary {"failures": PackedStringArray, "skipped": String}
+      Zähler > n0 → Test gilt als FAIL "SCRIPT ERROR (<n>, see log above)" (auch wenn skip() gerufen wurde)
       Ausgabe-Zeile (s. u.)
   Zusammenfassung; quit(1) wenn failed > 0 oder errors > 0 oder Anzahl Tests == 0, sonst quit(0)
   Laufzeitfehler in einem Test (SCRIPT ERROR) brechen nur diese Testmethode ab; der Runner läuft weiter (geprüft).
@@ -3416,7 +3531,11 @@ Ausgabeformat (stdout):
 RESULT: 143 passed, 1 failed, 1 skipped, 0 errors in 1.92 s
 ```
 Bei Fehlschlägen zusätzlich `printerr("Assertion failed: <file>::<test> — <msg>")` (trifft `ERR_RE` in `check.sh`).
-Ein `SCRIPT ERROR` innerhalb eines Tests kann GDScript nicht abfangen; `check.sh` erkennt ihn über `ERR_RE`.
+Ein `SCRIPT ERROR` bricht die Testmethode ab (Asserts danach laufen nie); der Runner zählt ihn über den Logger
+(`OS.add_logger`, 4.7.2 geprüft: `_log_error(…, error_type, …)` mit `ERROR_TYPE_SCRIPT`, auch nach `await`) und wertet den Test
+als `[FAIL] … — SCRIPT ERROR` → Exit-Code 1 auch ohne `check.sh`. `push_error` zählt **nicht** (Negativtests dürfen ihn auslösen,
+`check.sh` prüft ihn weiter über `ERR_RE`). `test_m0_harness` startet den Runner in einem Kindprozess
+(`OS.execute_with_pipe`) auf `tests/fixtures/runner_selftest/` und prüft Ausgabe und Exit-Code.
 
 ### 11.2 `tests/lib/test_case.gd` (M0)
 
@@ -3475,11 +3594,13 @@ extends SceneTree   — keine class_name-/Autoload-Bezeichner.
 _initialize():
   args: --scene (Pflicht), --out (Pflicht, absoluter Pfad), --frames (Default 90), optional --no-global-ui
   fehlend → printerr("Assertion failed: capture: missing --scene/--out"); quit(1)
+  DisplayServer.get_name() == "headless" → printerr("Assertion failed: capture: needs a display (run via check.sh --shot / xvfb)");
+    quit(2)   # der Dummy-Renderer sendet nie frame_post_draw → ohne diese Prüfung hängt der Prozess (gemessen)
   await process_frame
   Engine.max_fps = 60
   root.get_node("Game").set("ephemeral", true)
   nicht ResourceLoader.exists(scene) → printerr("Assertion failed: capture: scene not found <scene>"); quit(1)
-  node := (load(scene) as PackedScene).instantiate()
+  node := (load(scene) as PackedScene).instantiate(); null → printerr("Assertion failed: capture: cannot instantiate <scene>"); quit(1)
   node.has_method("setup") → node.call("setup", {"capture": true})
   root.add_child(node); Screen-Szene → root.get_node("Router").call("adopt", node)
   ohne --no-global-ui und ResourceLoader.exists("res://scenes/ui/global_ui.tscn") → instanziieren, an root hängen
@@ -3524,7 +3645,7 @@ Weitere Boot-Argumente (Entwicklung): `--seed=<int>` (Seed für Neues Spiel), `-
 
 | Modul | Pflicht-Tests |
 |---|---|
-| M0 | Harness-Selbsttest (inkl. `_deep_eq`-Fälle, `await_signal`-Timeout, Methoden-Deduplizierung); `GameData` lädt `tests/fixtures/data_min` fehlerfrei; ≥ 1 Negativtest je Validierungsregel 1–10; compile-all; SeedUtil-Golden-Values; Musik-Loop (§3.8); `ConditionExpr`; Router mit leerem Stack/`adopt` |
+| M0 | Harness-Selbsttest (inkl. `_deep_eq`-Fälle, `await_signal`-Timeout, Methoden-Deduplizierung, Runner wertet SCRIPT ERROR als FAIL); `GameData` lädt `tests/fixtures/data_min` fehlerfrei; ≥ 1 Negativtest je Validierungsregel 1–10; Defs read-only; compile-all; SeedUtil-Golden-Values; Musik-Loop (§3.8); `ConditionExpr`; Router mit leerem Stack/`adopt` über den Fixture-Screen (echte Ziel-Screens von M5/M6 nur, solange deren Skript noch der M0-Stub ist — danach `skip`, Abdeckung durch Autoplay/Integration; Screens müssen beliebige `setup(params)` also nicht für M0-Tests vertragen); Game: Command-IDs, Dialog-Pause, Quest-Metriken, Replay ≡ Live (Integration, ab Phase C) |
 | M1 | `base_delay`-Tabelle §5.5; Startwerte NORMAL/PREEMPTIVE/AMBUSH; Preview 12 inkl. `pending_rank`, Overrides, Pseudo-Einheit; Haste 0.6/Slow 1.5; jede Formel aus §5.9 mit festen Zahlen (inkl. Combo, Fixschaden, Heilmodi, Krit-Cap); Status (Gift am Zugbeginn, Stun-Verzögerung + Boss × 0.5, Resist, Reapply setzt Dauer); Flucht-/Stunt-Chancen; Cooldown 3; AI-Bedingungen/Zielregeln/Taunt 80 %; Phasen-Ops; `steal_credits`/`escape`; `BattleCommand`/`ActionEvent` `to_dict`↔`from_dict`; gleicher Seed + gleiche Befehle → identische `to_dict()`-Liste; 100 Seeds Auto-vs-Auto terminiert < 200 Züge; Event-Reihenfolge (§5.3) |
 | M2 | Hype-Tabelle §6.2 Zeile für Zeile; Sponsor-Schwellen 50/75/100, Limits 2/3, Hype → 80, `weight_mods`; Achievement-Bedingungen mit allen Triggern (Payloads §6.3) + Tier-Belohnung; Meilensteine; Lootbox: Rarität→Pool, Garantie letzter Wurf, Pity 4/8 persistent, Duplikat → Credits × 1.5; EXP-Tabelle GDD §4.3 (30/63/112/173/246/330/424/529/643, Cap 10); Equip/Unequip; BattleBridge (MP-Regen 15 %, KO → 1 HP, Pep-Talk, Timer-Start nach Tutorial); Save-Roundtrip (encode→decode→encode identisch), Gnadenfrist 180 s, v0-Migration-Stub, kaputte Datei → `.bak` |
 | M3 | `floor_1`-Layout valide + deterministisch; prozedural 200 Seeds §7.2; `FloorEvent` alle Typen; Szene: Spawn ≠ in Wand, `force_encounter` → `Events.encounter_triggered` per Signal-Spion (startet keinen echten Kampf) **oder** mit `Router.adopt(scene)` → danach `Router.current is BattleScene` (per `wait_until`) |
@@ -3699,8 +3820,9 @@ Android/iOS werden lokal exportiert (Android: JDK 17 + SDK + Debug-Keystore in E
   `Parse Error: Cannot assign a value of type "Combatant.Side" as "Side"`, und externer Zugriff auf so typisierte Member scheitert
   mit `Could not resolve external class member`. Enum-**Werte** dürfen innerhalb der Klasse unqualifiziert bleiben (`Side.PARTY`).
   Autoload-Skripte (ohne `class_name`) sind nicht betroffen (`Router.Transition` funktioniert).
-- Keine Methoden/Variablen mit Namen eingebauter Funktionen (`floor`, `str`, `min`, `max`, `range`, `print`, `load` …) —
-  daher `floor_def()`, `floor_run`, `Stat.STR` statt `str`. Zwei Ausnahmen (geprüft: kompilieren, nur Shadow-Warnung, die aus ist):
+- Keine Methoden/Variablen mit Namen eingebauter Funktionen (`floor`, `str`, `min`, `max`, `range`, `print`, `load`, `log`,
+  `hash` …) — daher `floor_def()`, `floor_run`, `Stat.STR` statt `str`; Parameter mit solchen Namen bekommen das Präfix `p_`
+  (`replay_log(p_log: RunLog)`, `Save.save_replay(p_log: RunLog)`, `RunLog.add_checkpoint(tick, p_hash: String)`). Zwei Ausnahmen (geprüft: kompilieren, nur Shadow-Warnung, die aus ist):
   `seed` als Feld-/Parametername (wie `RandomNumberGenerator.seed`; die globale Funktion `seed()` darf nirgends benutzt werden) und
   `exp` als Feldname (`BattleResult.exp`, `PartyMember.exp`, `BattleRewards.exp`, `EnemyDef.exp` = JSON-Key; die globale Funktion
   `exp()` wird in diesen Klassen nicht benutzt).
@@ -3759,4 +3881,6 @@ Android/iOS werden lokal exportiert (Android: JDK 17 + SDK + Debug-Keystore in E
    `touch_controls = &"on"` plus lokal (nicht committen) `input_devices/pointing/emulate_touch_from_mouse=true`.
 6. Spielstand aus Slot laden stellt Etage (gleiches Layout), geöffnete Truhen/Tore, abgeschlossene Events, besiegte Gruppen, Streuner,
    Safe-Room-Position, Timer (mind. 3:00 Gnadenfrist), Pity-Zähler, Bestiarium und Show-Werte wieder her.
-7. Gleicher Seed + aufgezeichneter `RunLog` → `Game.replay_log()` liefert denselben `StateHash` (Brief §6b.1–3).
+7. Gleicher Seed + aufgezeichneter `RunLog` → `Game.replay_log()` liefert denselben `StateHash` (Brief §6b.1–3); automatisch geprüft
+   von `test_m0_game.test_replay_matches_live_run_integration` (Kampf → Lootbox → Ruhe, auch nach JSON-Rundlauf), sobald
+   RunLog/StateHash/RunSim/GameState/BattleBridge/BattleState/LootRoller/Show keine Stubs mehr sind.

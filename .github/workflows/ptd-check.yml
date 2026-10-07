@@ -1,0 +1,70 @@
+name: ptd-check
+on:
+  push:
+    paths: ["prime-time-dungeon/**", ".github/workflows/ptd-check.yml"]
+  pull_request:
+    paths: ["prime-time-dungeon/**", ".github/workflows/ptd-check.yml"]
+  workflow_dispatch: {}
+env:
+  GODOT_VERSION: "4.7.2"
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: System deps
+        run: sudo apt-get update && sudo apt-get install -y xvfb libgl1 libglx-mesa0 libgl1-mesa-dri unzip
+      - name: Cache Godot
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}-stable-linux
+      - name: Download Godot
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot && cd ~/godot
+          curl -fsSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip && mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" godot && chmod +x godot
+      - name: Import + tests + autoplay smoke
+        run: GODOT=~/godot/godot prime-time-dungeon/tools/check.sh
+      - name: Screenshots (gl_compatibility)
+        run: |
+          mkdir -p shots
+          for s in res://art/gallery/character_gallery.tscn res://art/gallery/env_gallery.tscn res://art/gallery/vfx_gallery.tscn \
+                   res://scenes/title/title.tscn res://scenes/exploration/exploration.tscn res://scenes/battle/battle.tscn \
+                   res://scenes/safe_room/safe_room.tscn; do
+            GODOT=~/godot/godot prime-time-dungeon/tools/check.sh --shot "$s" "shots/$(basename "$s" .tscn).png" 120 1280x720
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: shots/
+  export:
+    needs: check
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Godot + templates
+        run: |
+          mkdir -p ~/godot && cd ~/godot
+          curl -fsSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip && mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" godot && chmod +x godot
+          curl -fsSL -o tpl.tpz "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          mkdir -p ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          unzip -q tpl.tpz -d tpl && mv tpl/templates/* ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable/
+      - name: Export desktop
+        working-directory: prime-time-dungeon/game
+        run: |
+          ~/godot/godot --headless --path . --import
+          mkdir -p ../build/windows ../build/linux ../build/macos
+          ~/godot/godot --headless --path . --export-release "Linux" ../build/linux/PrimeTimeDungeon.x86_64
+          ~/godot/godot --headless --path . --export-release "Windows" ../build/windows/PrimeTimeDungeon.exe
+          ~/godot/godot --headless --path . --export-release "macOS" ../build/macos/PrimeTimeDungeon.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: builds
+          path: prime-time-dungeon/build/

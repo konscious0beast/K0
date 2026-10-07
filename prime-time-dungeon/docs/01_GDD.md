@@ -622,7 +622,7 @@ Werte sind fest pro Typ (kein Gegner-Level-Scaling im Slice). `Lv` = Richtwert f
 
 | Phase | HP | `on_enter` | Aktionen (Gewicht · Ziel · Bedingung) |
 |---|---|---|---|
-| P1 „Kehrwoche“ | 100–60 % | Spruch `boss_hausmeister_p1` | `b_rules` 10 self `once` (1. Zug) · `b_broom` 3 random · `b_keys` 1 all |
+| P1 „Kehrwoche“ | 100–60 % | Spruch `boss_intro_hausmeister` | `b_rules` 10 self `once` (1. Zug) · `b_broom` 3 random · `b_keys` 1 all |
 | P2 „Hausordnung § 7“ | 60–25 % | beschwört 1 `kanalratte`; Spruch `boss_phase_hausmeister_2` | `b_broom` 2 random · `b_cleaner_fog` 2 all · `b_keys` 1 all · `b_call_tenant` 4 `allies_alive_below 2` `turn_mod [4,0]` |
 | P3 „Feierabend!“ | < 25 % | `haste` 5 auf sich; Spruch `boss_phase_hausmeister_3` | `b_mop_whirl` 2 all · `b_broom` 2 `lowest_hp_pct` |
 
@@ -684,7 +684,7 @@ Signallampe (Kugel, wechselt Rot/Grün). Fell #3F3530, Rim-Light Violett #9A6BFF
 | `grp_d3` | D | rolltreppenkrabbe, rattengardist | 126 | 42 |
 | `grp_boss_rattenkoenigin` | D | boss_rattenkoenigin | 420 | 500 |
 
-Summe EXP regulär (ohne Streuner): 1 094. Bei ~80 % bekämpft: L5 vor Hausmeister, L6 danach, **L7 vor der Königin**.
+Summe EXP regulär (15 Gruppen inkl. Tutorial und Rarität, ohne Streuner): **994**. Bei ~80 % bekämpft: ~500 EXP = **L5 vor dem Hausmeister**, ~680 = L6 danach, ~975 = **L7 vor der Königin**.
 
 ---
 
@@ -858,7 +858,7 @@ Erwartung E1: ~40 pro regulärem Kampf, ~110 Hausmeister, ~250 Königin → **~1
 
 ---
 
-## 8. Achievements (25)
+## 8. Achievements (29)
 
 **Prüfung:** Der Autoload `Show` lauscht auf `Events`-Signale. Bedingung = Ausdruck über `e.` (Event-Payload),
 `s.` (persistente Zähler in `Game.stats`) und `f.` (Flags). Operatoren: `== != >= <= > <`, Verknüpfung nur `&&`.
@@ -868,6 +868,7 @@ Jedes Achievement wird genau 1× vergeben. Belohnung: Lootbox + Follower (Kap. 7
 stunts_success, stunts_fail, chests_opened, sponsor_gifts, credits_spent_vendor, lootboxes_opened, events_completed,
 game_overs, ko_mopsula, explore_seconds_since_battle, viewers_max`.
 
+**Payload `enemy_killed`:** `enemy_id, overkill, by (attack|skill|stunt|item), member`.
 **Payload `battle_won`:** `party_turns, min_party_hp, min_party_hp_pct, crits, weakness_hits, items_used, party_kos,
 damage_taken, is_boss, boss_id, encounter_type, group_id`.
 
@@ -1038,7 +1039,7 @@ Safe Rooms E1: `sr_kiosk` (A), `sr_pumphouse` (B/C), `sr_signalbox` (D). Optik: 
 | Länge: max. **110 Zeichen** pro Spruch (2 Zeilen im HUD) | — |
 | Siezt Kai, nennt Mopsula „der Graf“ oder „unser Publikumsliebling“ | — |
 
-**Platzhalter:** `{name}` (Kai-Name), `{enemy}`, `{item}`, `{achievement}`, `{viewers}`, `{followers}`, `{sponsor}`.
+**Platzhalter:** `{name}` (Kai-Name), `{floor}`, `{level}`, `{enemy}`, `{item}`, `{achievement}`, `{viewers}`, `{followers}`, `{sponsor}`.
 **Auswahl:** zufällig aus dem Key, nie zweimal hintereinander derselbe; Key-Cooldown 20 s (außer `boss_*`, `death`, `timer_*`, `intro`).
 **Priorität:** `death` > `boss_*` > `timer_*` > `achievement_*` > `lootbox_*` > Rest. Niedrigere werden verworfen, wenn eine höhere läuft.
 
@@ -1088,7 +1089,7 @@ Safe Rooms E1: `sr_kiosk` (A), `sr_pumphouse` (B/C), `sr_signalbox` (D). Optik: 
 | `stairs_found` | „Die Treppe! Abstieg oder Ruhm — die Uhr sagt Abstieg, das Publikum sagt Königin.“ · „Da ist sie, die Treppe. Ich würde ja noch ein bisschen bleiben. Rein quotentechnisch.“ |
 | `floor_end` | „Etage 1 geschafft! Nach der Werbung: Etage 2. Bleiben Sie dran!“ · „Sie haben die Unterstadt überlebt. Bitte unterschreiben Sie hier, hier und — hier, für die Fortsetzung.“ |
 
-(Gesamt: **83 Sprüche**.)
+(Gesamt: **90 Sprüche**.)
 
 ---
 
@@ -1147,7 +1148,7 @@ Die Skill-Listen der Klassen (je 4 Skills L11–L17) werden mit Etage 3 spezifiz
 | Erwartete Game Overs Etage 1 (Erstspieler) | **0–1** gesamt; Hausmeister ~20 % Niederlage-Rate beim 1. Versuch, Königin ~35 % | — |
 | Timer-Verbrauch Etage 1 | 11–15 min von 20:00 (Rest 5–9 min) | Laufwege ~31 Zellen + Erkundung |
 | Gesamtspielzeit Etage 1 (Erstdurchlauf) | **22–28 min** (Median 25) inkl. Tutorial; Wiederholer 15–20 min | Brief: 15–25 min |
-| Bekämpfte Gruppen | 10–13 von 16 | — |
+| Bekämpfte Gruppen | 11–13 von 15 regulären | — |
 | Credits bei Königin | ~1 100 erwirtschaftet, ~800 ausgegeben | — |
 | Sponsor-Geschenke pro Etage | 4–7 | Hype-Tabelle |
 | Achievements pro Etage (Erstdurchlauf) | 12–16 von 29 | — |

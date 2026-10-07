@@ -103,6 +103,25 @@ tests/         run_tests.gd + test_*.gd
 
 Szenenfluss: `Boot → Title → (Neues Spiel | Laden) → Exploration(Etage N) ⇄ Battle ⇄ SafeRoom → … → Credits/GameOver`.
 
+## 6b. Live-Modus „SHOWRUN“ (geplant, Architektur muss ihn jetzt schon ermöglichen)
+
+Spielmodus, den man **am Stück** spielt: Eine **Live-Etage** ist nur in einem festen **Zeitfenster X** geöffnet
+(z. B. Sa 20:00–21:30). Alle Teilnehmer spielen denselben Seed mit einem **Quest-Ziel**, solo oder im **Koop (2–4)**.
+**Zuschauer** können Läufe **in Echtzeit verfolgen** (mit Verzögerung) und Spielern **Sponsor-Pakete** (Gold, Kisten) schicken,
+die im Spiel als Sponsor-Drop mit M.O.D.-Ansage ankommen. Details: `docs/05_LIVE_MODUS.md`.
+
+Pflichten für den Code **schon im Vertical Slice** (damit der Modus später ohne Umbau kommt):
+1. **Deterministischer Kern:** Gleicher Seed + gleiche Befehlsfolge ⇒ exakt gleiches Ergebnis. Kein `randf()`/`randi()` global,
+   kein `Time`-abhängiges Verhalten in `core/`.
+2. **Befehle rein, Ereignisse raus:** Spieler-Eingaben werden als serialisierbare **Commands** (Dictionary/JSON) an den Kern gegeben,
+   der Kern liefert serialisierbare **Events** zurück (ActionEvents im Kampf, ExploreEvents in der Erkundung). Die Darstellung spielt
+   nur Events ab. ⇒ Netzwerk, Zuschauer-Stream und Replays nutzen später genau diese Daten.
+3. **Ein Run-Log:** `Game` kann einen Lauf als Liste (Seed, Commands, Zeitstempel) aufzeichnen und wieder abspielen.
+4. **Externe Geschenke als Eingang:** Sponsor-Geschenke laufen über eine einzige Funktion (`Show.receive_gift(gift: Dictionary)`),
+   egal ob sie vom Spiel selbst (Hype-Schwelle) oder später von echten Zuschauern kommen.
+5. **Zeitfenster & Quest als Daten:** `floors.json` / `events.json` können `quest` (Ziel-Typ + Parameter) und `window`
+   (open/close-Zeit, Dauer) enthalten. Offline gibt es diesen Modus als „Event-Lauf“ mit festem Seed + lokaler Bestenliste.
+
 ## 7. Ziel dieses Repos (jetzt)
 
 Ein **spielbarer Vertical Slice** von Etage 1 in Godot 4.7 mit Option-B-Optik:

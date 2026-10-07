@@ -5,6 +5,7 @@
 			"id": "floor_1",
 			"index": 1,
 			"name": "Etage 1 – Die Unterstadt",
+			"playable": true,
 			"theme": "metro",
 			"timer_seconds": 1200,
 			"timer_warnings": [
@@ -18,6 +19,8 @@
 				"w": 8,
 				"h": 8
 			},
+			"quarter_boss": "enc_f1_boss_hausmeister",
+			"floor_boss": "enc_f1_boss_rattenkoenigin",
 			"encounters": [
 				{
 					"id": "enc_f1_a1_tutorial",
@@ -26,12 +29,158 @@
 						"enm_kanalratte"
 					],
 					"weight": 0,
-					"tutorial": true
+					"tutorial": true,
+					"can_flee": false
 				},
 				{
 					"id": "enc_f1_a2",
 					"enemies": [
+						"enm_kanalratte",
+						"enm_taubenschwarm",
 						"enm_kanalratte"
+					],
+					"weight": 0
+				},
+				{
+					"id": "enc_f1_a3",
+					"enemies": [
+						"enm_pendler",
+						"enm_taubenschwarm"
+					],
+					"weight": 0
+				},
+				{
+					"id": "enc_f1_a4",
+					"enemies": [
+						"enm_taubenschwarm",
+						"enm_taubenschwarm",
+						"enm_kanalratte"
+					],
+					"weight": 0
+				},
+				{
+					"id": "enc_f1_a_rare",
+					"enemies": [
+						"enm_fahrscheinfresser"
+					],
+					"weight": 0
+				},
+				{
+					"id": "enc_f1_b1",
+					"enemies": [
+						"enm_kanalschleim",
+						"enm_kanalratte",
+						"enm_kanalratte"
+					],
+					"weight": 0
+				},
+				{
+					"id": "enc_f1_b2",
+					"enemies": [
+						"enm_rattenschamane",
+						"enm_kanalratte",
+						"enm_kanalratte"
+					],
+					"weight": 0
+				},
+				{
+					"id": "enc_f1_b3",
+					"enemies": [
+						"enm_kabelsalat",
+						"enm_kanalschleim"
+					],
+					"weight": 0
+				},
+				{
+					"id": "enc_f1_b4",
+					"enemies": [
+						"enm_kanalschleim",
+						"enm_kanalschleim",
+						"enm_rattenschamane"
+					],
+					"weight": 0
+				},
+				{
+					"id": "enc_f1_c1",
+					"enemies": [
+						"enm_kellerspinne",
+						"enm_kellerspinne"
+					],
+					"weight": 0
+				},
+				{
+					"id": "enc_f1_c2",
+					"enemies": [
+						"enm_spruehgeist",
+						"enm_kabelsalat"
+					],
+					"weight": 0
+				},
+				{
+					"id": "enc_f1_c3",
+					"enemies": [
+						"enm_kellerspinne",
+						"enm_spruehgeist",
+						"enm_kanalratte"
+					],
+					"weight": 0
+				},
+				{
+					"id": "enc_f1_boss_hausmeister",
+					"enemies": [
+						"enm_boss_hausmeister"
+					],
+					"weight": 0,
+					"boss": true,
+					"can_flee": false
+				},
+				{
+					"id": "enc_f1_d1",
+					"enemies": [
+						"enm_rolltreppenkrabbe",
+						"enm_rattenschamane"
+					],
+					"weight": 0
+				},
+				{
+					"id": "enc_f1_d2",
+					"enemies": [
+						"enm_rattengardist",
+						"enm_rattengardist",
+						"enm_rattenschamane"
+					],
+					"weight": 0
+				},
+				{
+					"id": "enc_f1_d3",
+					"enemies": [
+						"enm_rolltreppenkrabbe",
+						"enm_rattengardist"
+					],
+					"weight": 0
+				},
+				{
+					"id": "enc_f1_boss_rattenkoenigin",
+					"enemies": [
+						"enm_boss_rattenkoenigin"
+					],
+					"weight": 0,
+					"boss": true,
+					"can_flee": false
+				},
+				{
+					"id": "enc_f1_evt_pigeons",
+					"enemies": [
+						"enm_taubenschwarm",
+						"enm_taubenschwarm"
+					],
+					"weight": 0
+				},
+				{
+					"id": "enc_f1_evt_slime",
+					"enemies": [
+						"enm_kanalschleim",
+						"enm_kanalschleim"
 					],
 					"weight": 0
 				}
@@ -47,59 +196,724 @@
 							"accent": "#ff2e88",
 							"light": "#ffd59e",
 							"fog": "#1a1430",
-							"ambient": "#2a2440"
+							"ambient": "#2a2440",
+							"shade": "#4a3e78",
+							"rim": "#ffd9a8",
+							"grout": "#1a1e24",
+							"key": "#ffb866",
+							"neon2": "#2bd66b"
+						}
+					},
+					{
+						"id": "zone_sewer",
+						"name": "Kanalisation",
+						"palette": {
+							"floor": "#24302c",
+							"wall": "#3b4a3f",
+							"accent": "#7cc242",
+							"light": "#b8f0c8",
+							"fog": "#12302a",
+							"ambient": "#1e3530",
+							"shade": "#2f4f5c",
+							"rim": "#c8ffd0",
+							"grout": "#18201c",
+							"key": "#9fe0c0",
+							"neon2": "#f5d90a"
+						}
+					},
+					{
+						"id": "zone_cellar",
+						"name": "Kellergewölbe",
+						"palette": {
+							"floor": "#3a2c24",
+							"wall": "#5a4a3e",
+							"accent": "#e23e9b",
+							"light": "#ffd27a",
+							"fog": "#2a1a12",
+							"ambient": "#3a2a22",
+							"shade": "#4a2e3e",
+							"rim": "#ffe2b8",
+							"grout": "#241a14",
+							"key": "#ffc98a",
+							"neon2": "#ff3b30"
+						}
+					},
+					{
+						"id": "zone_track9",
+						"name": "Gleis 9",
+						"palette": {
+							"floor": "#2a2530",
+							"wall": "#2e2a38",
+							"accent": "#ff3b30",
+							"light": "#c9b8ff",
+							"fog": "#1e1530",
+							"ambient": "#261e38",
+							"shade": "#3e2e66",
+							"rim": "#c9b8ff",
+							"grout": "#16121c",
+							"key": "#c9b8ff",
+							"neon2": "#2bd66b"
+						}
+					},
+					{
+						"id": "zone_office",
+						"name": "Hausmeister-Büro",
+						"palette": {
+							"floor": "#3c3a30",
+							"wall": "#5a5e50",
+							"accent": "#e8f0d8",
+							"light": "#e8f0d8",
+							"fog": "#20201a",
+							"ambient": "#34322a",
+							"shade": "#3a3a2a",
+							"rim": "#f0ffe0",
+							"grout": "#22201a",
+							"key": "#e8f0d8",
+							"neon2": "#ff3b30"
+						}
+					},
+					{
+						"id": "zone_throne",
+						"name": "Thronsaal",
+						"palette": {
+							"floor": "#1e1a24",
+							"wall": "#241e30",
+							"accent": "#9a6bff",
+							"light": "#ffd27a",
+							"fog": "#1a1230",
+							"ambient": "#221a38",
+							"shade": "#2a1f50",
+							"rim": "#9a6bff",
+							"grout": "#120e18",
+							"key": "#9a6bff",
+							"neon2": "#fff2c8"
 						}
 					}
 				],
 				"cells": [
 					{
-						"x": 3,
-						"y": 7,
+						"x": 0,
+						"y": 0,
+						"zone": "zone_throne",
+						"kind": "floor_boss",
+						"doors": "E"
+					},
+					{
+						"x": 1,
+						"y": 0,
+						"zone": "zone_track9",
+						"kind": "stairs",
+						"doors": "ESW"
+					},
+					{
+						"x": 2,
+						"y": 0,
+						"zone": "zone_track9",
+						"kind": "normal",
+						"doors": "SW"
+					},
+					{
+						"x": 4,
+						"y": 0,
+						"zone": "zone_cellar",
+						"kind": "normal",
+						"doors": "ES"
+					},
+					{
+						"x": 5,
+						"y": 0,
+						"zone": "zone_office",
+						"kind": "quarter_boss",
+						"doors": "W"
+					},
+					{
+						"x": 6,
+						"y": 0,
+						"zone": "zone_cellar",
+						"kind": "normal",
+						"doors": "S"
+					},
+					{
+						"x": 1,
+						"y": 1,
+						"zone": "zone_track9",
+						"kind": "normal",
+						"doors": "NES"
+					},
+					{
+						"x": 2,
+						"y": 1,
+						"zone": "zone_track9",
+						"kind": "safe",
+						"doors": "NW"
+					},
+					{
+						"x": 4,
+						"y": 1,
+						"zone": "zone_cellar",
+						"kind": "normal",
+						"doors": "NS"
+					},
+					{
+						"x": 6,
+						"y": 1,
+						"zone": "zone_cellar",
+						"kind": "normal",
+						"doors": "NS"
+					},
+					{
+						"x": 1,
+						"y": 2,
+						"zone": "zone_track9",
+						"kind": "normal",
+						"doors": "NS"
+					},
+					{
+						"x": 4,
+						"y": 2,
+						"zone": "zone_cellar",
+						"kind": "normal",
+						"doors": "NES"
+					},
+					{
+						"x": 5,
+						"y": 2,
+						"zone": "zone_cellar",
+						"kind": "normal",
+						"doors": "EW"
+					},
+					{
+						"x": 6,
+						"y": 2,
+						"zone": "zone_cellar",
+						"kind": "normal",
+						"doors": "NSW"
+					},
+					{
+						"x": 1,
+						"y": 3,
 						"zone": "zone_platform",
-						"kind": "start",
-						"doors": "N"
+						"kind": "normal",
+						"doors": "NS"
 					},
 					{
 						"x": 3,
-						"y": 6,
+						"y": 3,
+						"zone": "zone_sewer",
+						"kind": "normal",
+						"doors": "ES"
+					},
+					{
+						"x": 4,
+						"y": 3,
+						"zone": "zone_sewer",
+						"kind": "normal",
+						"doors": "NESW"
+					},
+					{
+						"x": 5,
+						"y": 3,
+						"zone": "zone_sewer",
+						"kind": "normal",
+						"doors": "ESW"
+					},
+					{
+						"x": 6,
+						"y": 3,
+						"zone": "zone_sewer",
+						"kind": "safe",
+						"doors": "NW"
+					},
+					{
+						"x": 1,
+						"y": 4,
+						"zone": "zone_platform",
+						"kind": "normal",
+						"doors": "NES"
+					},
+					{
+						"x": 2,
+						"y": 4,
+						"zone": "zone_platform",
+						"kind": "normal",
+						"doors": "ESW"
+					},
+					{
+						"x": 3,
+						"y": 4,
+						"zone": "zone_sewer",
+						"kind": "normal",
+						"doors": "NESW"
+					},
+					{
+						"x": 4,
+						"y": 4,
+						"zone": "zone_sewer",
+						"kind": "normal",
+						"doors": "NESW"
+					},
+					{
+						"x": 5,
+						"y": 4,
+						"zone": "zone_sewer",
+						"kind": "normal",
+						"doors": "NW"
+					},
+					{
+						"x": 0,
+						"y": 5,
+						"zone": "zone_platform",
+						"kind": "normal",
+						"doors": "E"
+					},
+					{
+						"x": 1,
+						"y": 5,
 						"zone": "zone_platform",
 						"kind": "normal",
 						"doors": "NESW"
 					},
 					{
 						"x": 2,
-						"y": 6,
+						"y": 5,
 						"zone": "zone_platform",
 						"kind": "safe",
-						"doors": "E"
-					},
-					{
-						"x": 4,
-						"y": 6,
-						"zone": "zone_platform",
-						"kind": "normal",
-						"doors": "W"
+						"doors": "NW"
 					},
 					{
 						"x": 3,
 						"y": 5,
+						"zone": "zone_sewer",
+						"kind": "normal",
+						"doors": "NE"
+					},
+					{
+						"x": 4,
+						"y": 5,
+						"zone": "zone_sewer",
+						"kind": "normal",
+						"doors": "NW"
+					},
+					{
+						"x": 1,
+						"y": 6,
 						"zone": "zone_platform",
-						"kind": "stairs",
-						"doors": "S"
+						"kind": "normal",
+						"doors": "NS"
+					},
+					{
+						"x": 1,
+						"y": 7,
+						"zone": "zone_platform",
+						"kind": "start",
+						"doors": "N"
 					}
 				],
-				"gates": [],
+				"gates": [
+					{
+						"cell": [
+							1,
+							3
+						],
+						"dir": "N",
+						"requires": "itm_key_master"
+					},
+					{
+						"cell": [
+							4,
+							3
+						],
+						"dir": "N",
+						"requires": "event:fev_lever"
+					}
+				],
 				"encounters_placed": [
 					{
 						"group_id": "f1_g0",
 						"enc_id": "enc_f1_a1_tutorial",
 						"cell": [
-							3,
+							1,
 							6
 						],
 						"offset": [
 							0.0,
-							-2.5
+							-2.0
+						],
+						"state": "IDLE",
+						"turn": false,
+						"waypoints": []
+					},
+					{
+						"group_id": "f1_g1",
+						"enc_id": "enc_f1_a2",
+						"cell": [
+							1,
+							4
+						],
+						"offset": [
+							0.0,
+							0.0
+						],
+						"state": "PATROL",
+						"turn": true,
+						"waypoints": [
+							[
+								-4.0,
+								-4.0
+							],
+							[
+								4.0,
+								-4.0
+							],
+							[
+								4.0,
+								4.0
+							],
+							[
+								-4.0,
+								4.0
+							]
+						]
+					},
+					{
+						"group_id": "f1_g2",
+						"enc_id": "enc_f1_a3",
+						"cell": [
+							2,
+							4
+						],
+						"offset": [
+							0.0,
+							0.0
+						],
+						"state": "IDLE",
+						"turn": true,
+						"waypoints": []
+					},
+					{
+						"group_id": "f1_g3",
+						"enc_id": "enc_f1_a4",
+						"cell": [
+							1,
+							3
+						],
+						"offset": [
+							0.0,
+							0.0
+						],
+						"state": "PATROL",
+						"turn": true,
+						"waypoints": [
+							[
+								-4.0,
+								-4.0
+							],
+							[
+								4.0,
+								-4.0
+							],
+							[
+								4.0,
+								4.0
+							],
+							[
+								-4.0,
+								4.0
+							]
+						]
+					},
+					{
+						"group_id": "f1_g4",
+						"enc_id": "enc_f1_a_rare",
+						"cell": [
+							0,
+							5
+						],
+						"offset": [
+							0.0,
+							0.0
+						],
+						"state": "IDLE",
+						"turn": true,
+						"waypoints": []
+					},
+					{
+						"group_id": "f1_g5",
+						"enc_id": "enc_f1_b1",
+						"cell": [
+							4,
+							4
+						],
+						"offset": [
+							0.0,
+							0.0
+						],
+						"state": "PATROL",
+						"turn": true,
+						"waypoints": [
+							[
+								-4.0,
+								-4.0
+							],
+							[
+								4.0,
+								-4.0
+							],
+							[
+								4.0,
+								4.0
+							],
+							[
+								-4.0,
+								4.0
+							]
+						]
+					},
+					{
+						"group_id": "f1_g6",
+						"enc_id": "enc_f1_b2",
+						"cell": [
+							3,
+							3
+						],
+						"offset": [
+							0.0,
+							0.0
+						],
+						"state": "PATROL",
+						"turn": true,
+						"waypoints": [
+							[
+								-4.0,
+								-4.0
+							],
+							[
+								4.0,
+								-4.0
+							],
+							[
+								4.0,
+								4.0
+							],
+							[
+								-4.0,
+								4.0
+							]
+						]
+					},
+					{
+						"group_id": "f1_g7",
+						"enc_id": "enc_f1_b3",
+						"cell": [
+							5,
+							3
+						],
+						"offset": [
+							0.0,
+							0.0
+						],
+						"state": "PATROL",
+						"turn": true,
+						"waypoints": [
+							[
+								-4.0,
+								-4.0
+							],
+							[
+								4.0,
+								-4.0
+							],
+							[
+								4.0,
+								4.0
+							],
+							[
+								-4.0,
+								4.0
+							]
+						]
+					},
+					{
+						"group_id": "f1_g8",
+						"enc_id": "enc_f1_b4",
+						"cell": [
+							4,
+							5
+						],
+						"offset": [
+							0.0,
+							0.0
+						],
+						"state": "IDLE",
+						"turn": true,
+						"waypoints": []
+					},
+					{
+						"group_id": "f1_g9",
+						"enc_id": "enc_f1_c1",
+						"cell": [
+							5,
+							2
+						],
+						"offset": [
+							0.0,
+							0.0
+						],
+						"state": "PATROL",
+						"turn": true,
+						"waypoints": [
+							[
+								-4.0,
+								-4.0
+							],
+							[
+								4.0,
+								-4.0
+							],
+							[
+								4.0,
+								4.0
+							],
+							[
+								-4.0,
+								4.0
+							]
+						]
+					},
+					{
+						"group_id": "f1_g10",
+						"enc_id": "enc_f1_c2",
+						"cell": [
+							6,
+							0
+						],
+						"offset": [
+							0.0,
+							0.0
+						],
+						"state": "IDLE",
+						"turn": true,
+						"waypoints": []
+					},
+					{
+						"group_id": "f1_g11",
+						"enc_id": "enc_f1_c3",
+						"cell": [
+							4,
+							1
+						],
+						"offset": [
+							0.0,
+							0.0
+						],
+						"state": "PATROL",
+						"turn": true,
+						"waypoints": [
+							[
+								-4.0,
+								-4.0
+							],
+							[
+								4.0,
+								-4.0
+							],
+							[
+								4.0,
+								4.0
+							],
+							[
+								-4.0,
+								4.0
+							]
+						]
+					},
+					{
+						"group_id": "f1_g12",
+						"enc_id": "enc_f1_d1",
+						"cell": [
+							1,
+							2
+						],
+						"offset": [
+							0.0,
+							0.0
+						],
+						"state": "IDLE",
+						"turn": true,
+						"waypoints": []
+					},
+					{
+						"group_id": "f1_g13",
+						"enc_id": "enc_f1_d2",
+						"cell": [
+							1,
+							1
+						],
+						"offset": [
+							0.0,
+							0.0
+						],
+						"state": "PATROL",
+						"turn": true,
+						"waypoints": [
+							[
+								-4.0,
+								-4.0
+							],
+							[
+								4.0,
+								-4.0
+							],
+							[
+								4.0,
+								4.0
+							],
+							[
+								-4.0,
+								4.0
+							]
+						]
+					},
+					{
+						"group_id": "f1_g14",
+						"enc_id": "enc_f1_d3",
+						"cell": [
+							2,
+							0
+						],
+						"offset": [
+							0.0,
+							0.0
+						],
+						"state": "IDLE",
+						"turn": true,
+						"waypoints": []
+					},
+					{
+						"group_id": "f1_qb",
+						"enc_id": "enc_f1_boss_hausmeister",
+						"cell": [
+							5,
+							0
+						],
+						"offset": [
+							0.0,
+							0.0
+						],
+						"state": "IDLE",
+						"turn": false,
+						"waypoints": []
+					},
+					{
+						"group_id": "f1_fb",
+						"enc_id": "enc_f1_boss_rattenkoenigin",
+						"cell": [
+							0,
+							0
+						],
+						"offset": [
+							0.0,
+							0.0
 						],
 						"state": "IDLE",
 						"turn": false,
@@ -110,12 +924,243 @@
 					{
 						"id": "f1_c0",
 						"cell": [
+							1,
+							5
+						],
+						"offset": [
+							-3.5,
+							-3.5
+						],
+						"type": "wood",
+						"contents": []
+					},
+					{
+						"id": "f1_c1",
+						"cell": [
+							0,
+							5
+						],
+						"offset": [
+							-3.5,
+							-3.5
+						],
+						"type": "metal",
+						"contents": [
+							{
+								"kind": "item",
+								"id": "itm_arm_safety_vest",
+								"amount": 1
+							}
+						]
+					},
+					{
+						"id": "f1_c2",
+						"cell": [
+							1,
+							4
+						],
+						"offset": [
+							-3.5,
+							-3.5
+						],
+						"type": "wood",
+						"contents": []
+					},
+					{
+						"id": "f1_c3",
+						"cell": [
+							1,
+							3
+						],
+						"offset": [
+							-3.5,
+							-3.5
+						],
+						"type": "wood",
+						"contents": []
+					},
+					{
+						"id": "f1_c4",
+						"cell": [
+							3,
+							4
+						],
+						"offset": [
+							-3.5,
+							-3.5
+						],
+						"type": "wood",
+						"contents": []
+					},
+					{
+						"id": "f1_c5",
+						"cell": [
+							5,
+							4
+						],
+						"offset": [
+							-3.5,
+							-3.5
+						],
+						"type": "metal",
+						"contents": [
+							{
+								"kind": "item",
+								"id": "itm_wpn_collar_studded",
+								"amount": 1
+							}
+						]
+					},
+					{
+						"id": "f1_c6",
+						"cell": [
+							3,
+							5
+						],
+						"offset": [
+							-3.5,
+							-3.5
+						],
+						"type": "wood",
+						"contents": []
+					},
+					{
+						"id": "f1_c7",
+						"cell": [
 							4,
-							6
+							5
+						],
+						"offset": [
+							-3.5,
+							-3.5
+						],
+						"type": "metal",
+						"contents": [
+							{
+								"kind": "item",
+								"id": "itm_smelling_salts",
+								"amount": 2
+							}
+						]
+					},
+					{
+						"id": "f1_c8",
+						"cell": [
+							5,
+							3
+						],
+						"offset": [
+							-3.5,
+							-3.5
+						],
+						"type": "wood",
+						"contents": []
+					},
+					{
+						"id": "f1_c9",
+						"cell": [
+							6,
+							2
+						],
+						"offset": [
+							-3.5,
+							-3.5
+						],
+						"type": "wood",
+						"contents": []
+					},
+					{
+						"id": "f1_c10",
+						"cell": [
+							4,
+							2
+						],
+						"offset": [
+							-3.5,
+							-3.5
+						],
+						"type": "wood",
+						"contents": []
+					},
+					{
+						"id": "f1_c11",
+						"cell": [
+							6,
+							0
+						],
+						"offset": [
+							-3.5,
+							-3.5
+						],
+						"type": "metal",
+						"contents": [
+							{
+								"kind": "item",
+								"id": "itm_acc_gas_mask",
+								"amount": 1
+							}
+						]
+					},
+					{
+						"id": "f1_c12",
+						"cell": [
+							4,
+							1
+						],
+						"offset": [
+							-3.5,
+							-3.5
+						],
+						"type": "locked",
+						"contents": [
+							{
+								"kind": "item",
+								"id": "itm_wpn_fire_axe",
+								"amount": 1
+							}
+						]
+					},
+					{
+						"id": "f1_c13",
+						"cell": [
+							1,
+							2
+						],
+						"offset": [
+							-3.5,
+							-3.5
+						],
+						"type": "wood",
+						"contents": []
+					},
+					{
+						"id": "f1_c14",
+						"cell": [
+							2,
+							0
+						],
+						"offset": [
+							-3.5,
+							-3.5
+						],
+						"type": "locked",
+						"contents": [
+							{
+								"kind": "item",
+								"id": "itm_wpn_collar_signet",
+								"amount": 1
+							}
+						]
+					},
+					{
+						"id": "f1_c15",
+						"cell": [
+							2,
+							0
 						],
 						"offset": [
 							3.5,
-							2.0
+							-3.5
 						],
 						"type": "wood",
 						"contents": []
@@ -126,12 +1171,12 @@
 						"id": "fev_photo_drone",
 						"type": "photo_drone",
 						"cell": [
-							4,
-							6
+							1,
+							5
 						],
 						"offset": [
-							0.0,
-							0.0
+							3.0,
+							3.0
 						],
 						"params": {
 							"pose_hype": 15,
@@ -139,13 +1184,125 @@
 							"smash_credits": 30,
 							"smash_hype": -5
 						}
+					},
+					{
+						"id": "fev_lost_candidate",
+						"type": "lost_candidate",
+						"cell": [
+							2,
+							4
+						],
+						"offset": [
+							3.0,
+							-3.0
+						],
+						"params": {
+							"tag": "heal",
+							"reward_item": "itm_acc_lucky_ticket",
+							"followers": 40
+						}
+					},
+					{
+						"id": "fev_wheel",
+						"type": "wheel",
+						"cell": [
+							3,
+							5
+						],
+						"offset": [
+							-3.0,
+							3.0
+						],
+						"params": {
+							"cost": 20,
+							"max_spins": 3,
+							"table": [
+								{
+									"weight": 35,
+									"kind": "item",
+									"id": "itm_bandage",
+									"amount": 2
+								},
+								{
+									"weight": 25,
+									"kind": "credits",
+									"id": "",
+									"amount": 50
+								},
+								{
+									"weight": 15,
+									"kind": "box",
+									"id": "box_bronze",
+									"amount": 1
+								},
+								{
+									"weight": 15,
+									"kind": "nothing",
+									"id": "",
+									"amount": 1
+								},
+								{
+									"weight": 10,
+									"kind": "encounter",
+									"id": "enc_f1_evt_pigeons",
+									"amount": 1
+								}
+							]
+						}
+					},
+					{
+						"id": "fev_lever",
+						"type": "lever",
+						"cell": [
+							4,
+							3
+						],
+						"offset": [
+							3.0,
+							3.0
+						],
+						"params": {
+							"success": 0.6,
+							"gate": "4,3,N",
+							"flood_pct": 15,
+							"encounter": "enc_f1_evt_slime"
+						}
+					},
+					{
+						"id": "fev_broken_vending",
+						"type": "broken_vending",
+						"cell": [
+							6,
+							1
+						],
+						"offset": [
+							3.0,
+							0.0
+						],
+						"params": {
+							"base": 0.5,
+							"per_lck": 0.01,
+							"reward_item": "itm_energy_krawumm",
+							"reward_amount": 2,
+							"fail_pct": 10,
+							"fail_hype": 4
+						}
 					}
 				],
 				"spawners": [
 					{
 						"zone": "zone_platform",
 						"pool": [
-							"enc_f1_a2"
+							"enc_f1_a2",
+							"enc_f1_a4"
+						],
+						"interval_sec": 90
+					},
+					{
+						"zone": "zone_sewer",
+						"pool": [
+							"enc_f1_b1",
+							"enc_f1_b2"
 						],
 						"interval_sec": 90
 					}
@@ -155,30 +1312,258 @@
 						"id": "sr_kiosk",
 						"cell": [
 							2,
-							6
+							5
 						],
 						"name": "Kiosk 24/7",
 						"theme": "kiosk",
 						"shop": [
 							"itm_bandage",
-							"itm_antidote"
+							"itm_antidote",
+							"itm_energy_krawumm",
+							"itm_brutzel_burger",
+							"itm_smelling_salts",
+							"itm_molotov",
+							"itm_ice_spray",
+							"itm_smoke",
+							"itm_hype_megaphone",
+							"itm_wpn_pipe_wrench",
+							"itm_wpn_collar_studded",
+							"itm_arm_safety_vest",
+							"itm_arm_velvet_cape",
+							"itm_acc_lucky_ticket"
+						]
+					},
+					{
+						"id": "sr_pumphouse",
+						"cell": [
+							6,
+							3
+						],
+						"name": "Pumpenhaus",
+						"theme": "pumphouse",
+						"shop": [
+							"itm_bandage",
+							"itm_antidote",
+							"itm_energy_krawumm",
+							"itm_brutzel_burger",
+							"itm_smelling_salts",
+							"itm_molotov",
+							"itm_ice_spray",
+							"itm_smoke",
+							"itm_hype_megaphone",
+							"itm_wpn_pipe_wrench",
+							"itm_wpn_collar_studded",
+							"itm_arm_safety_vest",
+							"itm_arm_velvet_cape",
+							"itm_acc_lucky_ticket",
+							"itm_wpn_fire_axe",
+							"itm_wpn_collar_signet",
+							"itm_arm_sewer_suit",
+							"itm_acc_rubber_boots",
+							"itm_acc_sneakers",
+							"itm_acc_gas_mask"
+						]
+					},
+					{
+						"id": "sr_signalbox",
+						"cell": [
+							2,
+							1
+						],
+						"name": "Stellwerk",
+						"theme": "signalbox",
+						"shop": [
+							"itm_bandage",
+							"itm_antidote",
+							"itm_energy_krawumm",
+							"itm_brutzel_burger",
+							"itm_smelling_salts",
+							"itm_molotov",
+							"itm_ice_spray",
+							"itm_smoke",
+							"itm_hype_megaphone",
+							"itm_wpn_pipe_wrench",
+							"itm_wpn_collar_studded",
+							"itm_arm_safety_vest",
+							"itm_arm_velvet_cape",
+							"itm_acc_lucky_ticket",
+							"itm_wpn_fire_axe",
+							"itm_wpn_collar_signet",
+							"itm_arm_sewer_suit",
+							"itm_acc_rubber_boots",
+							"itm_acc_sneakers",
+							"itm_acc_gas_mask"
 						]
 					}
 				],
 				"stairs": {
 					"cell": [
-						3,
-						5
+						1,
+						0
 					]
 				}
 			},
 			"palette": {
 				"floor": "#3a3f4b",
-				"wall": "#5b6270",
+				"wall": "#1f5f66",
 				"accent": "#ff2e88",
 				"light": "#ffd59e",
 				"fog": "#1a1430",
-				"ambient": "#2a2440"
+				"ambient": "#2a2440",
+				"shade": "#4a3e78",
+				"rim": "#ffd9a8",
+				"grout": "#1a1e24",
+				"key": "#ffb866",
+				"neon2": "#2bd66b"
+			},
+			"music": "explore"
+		},
+		{
+			"id": "floor_2",
+			"index": 2,
+			"name": "Etage 2 – Passage Ewiger Rabatt",
+			"playable": false,
+			"theme": "mall",
+			"timer_seconds": 1500,
+			"timer_warnings": [
+				600,
+				300,
+				60
+			],
+			"timer_start_after": "",
+			"floor_mult": 1.5,
+			"grid": {
+				"w": 9,
+				"h": 9
+			},
+			"rooms": {
+				"min": 16,
+				"max": 22
+			},
+			"safe_rooms": 2,
+			"chests": {
+				"min": 6,
+				"max": 9
+			},
+			"enemy_groups": {
+				"min": 7,
+				"max": 10
+			},
+			"chest_table": [
+				{
+					"kind": "credits",
+					"id": "",
+					"weight": 40,
+					"min": 30,
+					"max": 60
+				},
+				{
+					"kind": "item",
+					"id": "itm_bandage",
+					"weight": 20,
+					"min": 1,
+					"max": 2
+				},
+				{
+					"kind": "item",
+					"id": "itm_brutzel_burger",
+					"weight": 15,
+					"min": 1,
+					"max": 1
+				},
+				{
+					"kind": "item",
+					"id": "itm_energy_krawumm",
+					"weight": 15,
+					"min": 1,
+					"max": 1
+				},
+				{
+					"kind": "item",
+					"id": "itm_antidote",
+					"weight": 10,
+					"min": 1,
+					"max": 2
+				}
+			],
+			"shop": [
+				"itm_bandage",
+				"itm_antidote",
+				"itm_energy_krawumm",
+				"itm_brutzel_burger",
+				"itm_smelling_salts",
+				"itm_molotov",
+				"itm_ice_spray",
+				"itm_smoke",
+				"itm_hype_megaphone",
+				"itm_wpn_pipe_wrench",
+				"itm_wpn_collar_studded",
+				"itm_arm_safety_vest",
+				"itm_arm_velvet_cape",
+				"itm_acc_lucky_ticket",
+				"itm_wpn_fire_axe",
+				"itm_wpn_collar_signet",
+				"itm_arm_sewer_suit",
+				"itm_acc_rubber_boots",
+				"itm_acc_sneakers",
+				"itm_acc_gas_mask"
+			],
+			"encounters": [
+				{
+					"id": "enc_f2_puppen",
+					"enemies": [
+						"enm_schaufensterpuppe",
+						"enm_schaufensterpuppe"
+					],
+					"weight": 10,
+					"min_depth": 0.0,
+					"max_depth": 0.7
+				},
+				{
+					"id": "enc_f2_wagen",
+					"enemies": [
+						"enm_einkaufswagen_rudel",
+						"enm_einkaufswagen_rudel",
+						"enm_einkaufswagen_rudel"
+					],
+					"weight": 10,
+					"min_depth": 0.0,
+					"max_depth": 1.0
+				},
+				{
+					"id": "enc_f2_schild",
+					"enemies": [
+						"enm_rabattschild",
+						"enm_schaufensterpuppe"
+					],
+					"weight": 8,
+					"min_depth": 0.3,
+					"max_depth": 1.0
+				},
+				{
+					"id": "enc_f2_sale",
+					"enemies": [
+						"enm_rabattschild",
+						"enm_einkaufswagen_rudel",
+						"enm_einkaufswagen_rudel"
+					],
+					"weight": 6,
+					"min_depth": 0.5,
+					"max_depth": 1.0
+				}
+			],
+			"palette": {
+				"floor": "#9a9080",
+				"wall": "#2a3a44",
+				"accent": "#ff4fa0",
+				"light": "#fff0f5",
+				"fog": "#2a1a2a",
+				"ambient": "#3a2a3a",
+				"shade": "#5a3a6a",
+				"rim": "#ffe0f0",
+				"grout": "#6e665a",
+				"key": "#fff0f5",
+				"neon2": "#4fe6ff"
 			},
 			"music": "explore"
 		}

@@ -187,13 +187,30 @@ func talk_to_mopsula() -> void:
 	Game.mark_scene_seen(scene)
 	played_scenes.append(scene.id)
 	# Another scene may qualify on the same visit (first_visit stays true in `context`): offer it right away.
-	var nxt: SceneDef = Game.next_scene(context)
-	pending_scene = nxt if nxt != null and not played_scenes.has(nxt.id) else null
+	pending_scene = next_unplayed_scene()
 	_mopsula.call("play", &"idle")
 	_busy = false
 	_update_bang()
 	_refresh_menu_labels()
 	(menu_buttons["mopsula"] as Control).grab_focus()
+
+
+## Game.next_scene(context) without the scenes already played on this visit. A repeatable scene (once = false) that
+## still qualifies would otherwise come back first every time and hide every later qualifying scene (DB order) for the
+## rest of the visit. Game.next_scene has no skip list, so its filter is repeated here for that case only.
+func next_unplayed_scene() -> SceneDef:
+	var first: SceneDef = Game.next_scene(context)
+	if first == null or not played_scenes.has(first.id):
+		return first
+	if Game.state == null or DB.data == null:
+		return null
+	var stats: Dictionary = Game.state.show.stats if Game.state.show != null else {}
+	for sc: SceneDef in DB.data.all_scenes():
+		if played_scenes.has(sc.id) or (sc.once and bool(Game.get_flag("scene_" + sc.id, false))):
+			continue
+		if sc.expr != null and sc.expr.eval(context, stats, Game.state.flags):
+			return sc
+	return null
 
 
 func leave() -> void:

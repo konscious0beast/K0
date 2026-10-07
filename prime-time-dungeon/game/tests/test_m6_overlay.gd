@@ -333,6 +333,45 @@ func test_autoplay_dismisses_blocking_lines() -> void:
 	Events.dialog_finished.disconnect(cb)
 
 
+## One tap = one advance: with pointing/emulate_mouse_from_touch (project.godot) Input creates an emulated mouse click
+## for every touch, which set_input_as_handled() cannot stop. At text_speed 2 (instant) counting both would skip a
+## whole line (t1 → t3); at normal speed one tap would reveal AND end the line. A real mouse click still advances.
+func test_one_tap_advances_exactly_one_blocking_line() -> void:
+	Game.settings.text_speed = 2
+	var d: CanvasLayer = _dialog()
+	await wait_frames(1)
+	for t: String in ["t1", "t2", "t3"]:
+		d.call("enqueue", "Zeile " + t, &"mod", t, true)
+	await wait_frames(2)
+	assert_eq(str((d.call("current_line") as Dictionary).get("tag", "")), "t1", "first line shown")
+	var r: Rect2 = d.call("box_rect")
+	assert_true(r.size.x > 0.0, "box laid out")
+	var pos: Vector2 = tree.root.get_final_transform() * r.get_center()     # canvas → window coordinates
+	var down: InputEventScreenTouch = InputEventScreenTouch.new()
+	down.index = 0
+	down.position = pos
+	down.pressed = true
+	Input.parse_input_event(down)
+	var up: InputEventScreenTouch = down.duplicate() as InputEventScreenTouch
+	up.pressed = false
+	Input.parse_input_event(up)
+	await wait_frames(3)
+	assert_eq(str((d.call("current_line") as Dictionary).get("tag", "")), "t2", "one tap ends exactly one line")
+	var click: InputEventMouseButton = InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.position = pos
+	click.global_position = pos
+	click.pressed = true
+	Input.parse_input_event(click)
+	var rel: InputEventMouseButton = click.duplicate() as InputEventMouseButton
+	rel.pressed = false
+	Input.parse_input_event(rel)
+	await wait_frames(3)
+	assert_eq(str((d.call("current_line") as Dictionary).get("tag", "")), "t3", "a real mouse click still advances")
+	d.call("advance")
+	assert_false(bool(d.call("is_busy")))
+
+
 func test_text_speed_instant_shows_everything_at_once() -> void:
 	Game.settings.text_speed = 2
 	var d: CanvasLayer = _dialog()

@@ -193,6 +193,52 @@ func test_two_qualifying_scenes_both_play_in_one_visit() -> void:
 	DB.data = saved
 
 
+## A repeatable scene (once = false) that still qualifies comes first from Game.next_scene again after it played; it
+## must not hide the next qualifying scene for the rest of the visit, and it never plays twice in one visit.
+func test_repeatable_scene_does_not_hide_later_scenes_of_the_visit() -> void:
+	var data: GameData = _data_with_scenes([
+		{"id": "scn_test_rep", "name": "Wiederholung", "condition": "e.first_visit == true", "priority": 0,
+			"once": false, "lines": [{"voice": "mopsula", "text": "Immer wieder gern."}]},
+		{"id": "scn_test_next", "name": "Danach", "condition": "e.first_visit == true", "priority": 1,
+			"lines": [{"voice": "mopsula", "text": "Und noch etwas."}]}])
+	if data == null:
+		return
+	var saved: GameData = DB.data
+	DB.data = data
+	Game.new_game(0, "Kai", 3)
+	Game.run_log = _spy
+	var dialog: Node = (load(SCENE_DIALOG) as PackedScene).instantiate()
+	dialog.call("setup", {})
+	tree.root.add_child(dialog)
+	_nodes.append(dialog)
+	var r: Node = _room()
+	await wait_frames(3)
+	var first: SceneDef = r.get("pending_scene") as SceneDef
+	assert_true(first != null and first.id == "scn_test_rep", "repeatable scene pending first")
+	r.call("activate", "mopsula")
+	await wait_frames(2)
+	for i in 4:
+		dialog.call("advance")
+	var ok: bool = await wait_until(func() -> bool: return _spy.of_type("scene").size() == 1 and not bool(r.get("_busy")),
+		WAIT)
+	assert_true(ok, "repeatable scene played")
+	var again: SceneDef = Game.next_scene(r.get("context") as Dictionary)
+	assert_true(again != null and again.id == "scn_test_rep", "precondition: Game.next_scene offers it again")
+	var nxt: SceneDef = r.get("pending_scene") as SceneDef
+	assert_true(nxt != null and nxt.id == "scn_test_next", "the later qualifying scene is pending, not hidden")
+	r.call("activate", "mopsula")
+	await wait_frames(2)
+	for i in 4:
+		dialog.call("advance")
+	var ok2: bool = await wait_until(func() -> bool: return _spy.of_type("scene").size() == 2 and not bool(r.get("_busy")),
+		WAIT)
+	assert_true(ok2, "second scene played in the same visit")
+	assert_eq(_spy.of_type("scene"), [{"t": "scene", "id": "scn_test_rep"}, {"t": "scene", "id": "scn_test_next"}] as
+		Array[Dictionary])
+	assert_null(r.get("pending_scene"), "the repeatable scene does not come back in the same visit")
+	DB.data = saved
+
+
 func _data_with_scenes(scenes: Array) -> GameData:
 	var tables: Dictionary = {}
 	for t: String in GameData.TABLES:

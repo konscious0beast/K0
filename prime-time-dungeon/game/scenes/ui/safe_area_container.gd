@@ -4,6 +4,10 @@ class_name SafeAreaContainer extends MarginContainer
 
 const EDGE: int = 24
 
+## Test / capture seam: a simulated display cutout ({"left", "top", "right", "bottom"} in canvas pixels) that
+## device_insets() returns on every platform while set. Empty = the real display safe area (mobile only).
+static var simulated_insets: Dictionary = {}
+
 ## Extra margin added on every side (e.g. menus that want more air); never negative, so every margin stays >= EDGE.
 @export var extra: int = 0:
 	set(v):
@@ -34,6 +38,10 @@ func compute_margins() -> Dictionary:
 ## controls with absolute offsets (touch buttons, joystick) shift by these (02_TECH §10.4).
 static func device_insets(vp: Viewport) -> Dictionary:
 	var m: Dictionary = {"left": 0, "top": 0, "right": 0, "bottom": 0}
+	if not simulated_insets.is_empty():
+		for side: String in m.keys():
+			m[side] = maxi(0, int(simulated_insets.get(side, 0)))
+		return m
 	if vp == null or not OS.has_feature("mobile"):
 		return m
 	var safe: Rect2i = DisplayServer.get_display_safe_area()

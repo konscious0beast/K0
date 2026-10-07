@@ -25,8 +25,11 @@ const BUTTONS: Array[Dictionary] = [
 ## Shown touch layer (M6-internal; null while none is visible).
 static var active: Node = null
 
-## Clearance from the right edge of a SafeAreaContainer frame that HUD elements keep while the touch layer is shown:
-## the pause/map hit areas (88 px around x = 1227) end at x = 1183, minus the 12 px gap, minus the 24 px edge.
+## Horizontal gap between the pause/map HIT areas and a HUD element moved left of them (the visible 64 px discs sit
+## another 12 px further right).
+const HUD_GAP: float = 27.0
+## right_clearance() of the 1280×720 reference layout without display insets: the pause/map hit areas (88 px around
+## x = 1227) start at x = 1183; the frame edge is at 1280 − 24 = 1256 → 1256 − 1183 + HUD_GAP.
 const RIGHT_CLEARANCE: float = 100.0
 
 var force_visible: bool = false             # captures / tests
@@ -200,6 +203,34 @@ func _place_button(b: Button) -> void:
 		b.offset_bottom = y + hit.y * 0.5
 	b.offset_left = -from_right - hit.x * 0.5
 	b.offset_right = -from_right + hit.x * 0.5
+
+
+## Canvas x of the left edge of the top-right (pause/map) hit areas: the same right anchor, display insets and hit
+## size as _place_button, evaluated for the current viewport, so it is exact before a layout pass and independent of
+## the order in which size_changed reaches this layer and the HUDs.
+func top_buttons_left() -> float:
+	var vp: Viewport = get_viewport() if is_inside_tree() else null
+	var w: float = vp.get_visible_rect().size.x if vp != null else REF.x
+	var ins: Dictionary = SafeAreaContainer.device_insets(vp)
+	var left: float = w
+	for b: Variant in buttons.values():
+		var btn: Button = b as Button
+		var c: Vector2 = (btn.get_meta("spec") as Dictionary)["center"]
+		if c.y > REF.y * 0.5:
+			continue
+		var hit: float = maxf(btn.custom_minimum_size.x, btn.get_combined_minimum_size().x)
+		left = minf(left, w - (REF.x - c.x + float(ins["right"])) - hit * 0.5)
+	return left
+
+
+## How far (≥ 0) a HUD element anchored to the right edge of `safe` (its frame) must move left so it ends HUD_GAP
+## before the pause/map hit areas. Measured against the buttons' real position, i.e. including the display insets
+## (notch) and whatever right margin `safe` has; HUDs re-evaluate it on viewport size changes.
+func right_clearance(safe: SafeAreaContainer) -> float:
+	if safe == null or not safe.is_inside_tree() or not is_inside_tree():
+		return RIGHT_CLEARANCE
+	var frame_right: float = safe.get_viewport().get_visible_rect().size.x - float(safe.compute_margins()["right"])
+	return maxf(0.0, frame_right - top_buttons_left() + HUD_GAP)
 
 
 func _apply_insets() -> void:

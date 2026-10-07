@@ -9,7 +9,6 @@ const InputGlyph := preload("res://scenes/ui/input_glyph.gd")
 const UiIcon := preload("res://scenes/ui/ui_icon.gd")
 const MinimapScript := preload("res://scenes/ui/minimap.gd")
 const EventInfo := preload("res://scenes/ui/event_info.gd")
-const TouchClearance := preload("res://scenes/ui/touch_controls.gd")
 const PAUSE_MENU: String = "res://scenes/ui/pause_menu.tscn"
 const TOUCH_CONTROLS: String = "res://scenes/ui/touch_controls.tscn"
 const WARN_ORANGE_SEC: int = 300
@@ -106,6 +105,7 @@ var touch: CanvasLayer
 
 var _params: Dictionary = {}
 var _root: Control
+var _safe: SafeAreaContainer
 var _frame: Control
 var _floor_label: Label
 var _timer_panel: PanelContainer
@@ -318,13 +318,13 @@ func _build() -> void:
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	UiUtil.apply_theme(_root)
 	add_child(_root)
-	var safe: SafeAreaContainer = SafeAreaContainer.new()
-	safe.extra = 0
-	_root.add_child(safe)
+	_safe = SafeAreaContainer.new()
+	_safe.extra = 0
+	_root.add_child(_safe)
 	_frame = Control.new()
 	_frame.name = "Frame"
 	_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	safe.add_child(_frame)
+	_safe.add_child(_frame)
 	_build_top_center()
 	_build_minimap()
 	_build_party()
@@ -336,18 +336,26 @@ func _build() -> void:
 		add_child(touch)
 		touch.connect("shown_changed", _layout_for_touch)
 		_layout_for_touch(bool(touch.call("is_shown")))
+		# Display insets (notch) can change with the window size / rotation: re-measure the pause/map clearance.
+		get_viewport().size_changed.connect(_on_viewport_resized)
 
 
 ## While the touch layer is shown, the pause/map buttons (88 px hit areas at x = 1227) own the top-right corner:
-## the minimap moves left of them (02_TECH §10.2 rule 5: hit areas never overlap other controls).
+## the minimap moves left of them (02_TECH §10.2 rule 5: hit areas never overlap other controls). The clearance is
+## measured against the buttons' real position (display insets included), see TouchControls.right_clearance().
 func _layout_for_touch(shown: bool) -> void:
-	var right: float = -TouchClearance.RIGHT_CLEARANCE if shown else 0.0
+	var right: float = -float(touch.call("right_clearance", _safe)) if shown and touch != null else 0.0
 	minimap.offset_right = right
 	minimap.offset_left = right - MINIMAP_SIZE
 	var hint: Control = _frame.get_node_or_null("MapHint") as Control
 	if hint != null:
 		hint.offset_right = right
 		hint.offset_left = right - MINIMAP_SIZE
+
+
+func _on_viewport_resized() -> void:
+	if touch != null and is_instance_valid(touch):
+		_layout_for_touch(bool(touch.call("is_shown")))
 
 
 func minimap_rect() -> Rect2:

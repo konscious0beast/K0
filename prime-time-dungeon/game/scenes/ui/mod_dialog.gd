@@ -188,6 +188,12 @@ func _input(event: InputEvent) -> void:
 		return
 	if _menu_owns_input():
 		return
+	# One tap = one advance: with pointing/emulate_mouse_from_touch (project.godot) Input itself creates a second,
+	# emulated InputEventMouseButton for every touch (and emulate_touch_from_mouse would do the reverse), so
+	# set_input_as_handled() on the first one cannot stop it. Emulated pointer events are ignored here.
+	if (event is InputEventMouseButton or event is InputEventScreenTouch) \
+			and event.device == InputEvent.DEVICE_ID_EMULATION:
+		return
 	var hit: bool = false
 	if event.is_action_pressed(&"ui_accept") or event.is_action_pressed(&"action"):
 		hit = true

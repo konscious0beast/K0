@@ -8,6 +8,7 @@ extends TestCase
 ## of every modal (scheme TOUCH), touch buttons never over minimap / hype meter, backdrop size, safe-rect layouts.
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
+const TouchControlsScript := preload("res://scenes/ui/touch_controls.gd")
 const ROUTER_FIXTURE: String = "res://tests/fixtures/router/router_screen.tscn"
 const FOCUS_FRAMES: int = 900
 const SCENE_TITLE: String = "res://scenes/title/title.tscn"
@@ -47,6 +48,7 @@ func before_each() -> void:
 func after_each() -> void:
 	Engine.time_scale = 1.0
 	tree.paused = false
+	SafeAreaContainer.simulated_insets = {}
 	await _settle_router()
 
 
@@ -466,7 +468,9 @@ func _check_safe_rect(paths: Array[String], res: Vector2i) -> void:
 		_dispose(n)
 
 
-## With the touch layer shown, the pause/map hit areas never cover the minimap or the hype meter.
+## With the touch layer shown, the pause/map hit areas never cover the minimap or the hype meter and keep exactly
+## TouchControls.HUD_GAP to them: without insets and with a simulated notch on the right (the display insets move the
+## buttons inwards; HUD and overlay re-measure the clearance on size_changed).
 func test_touch_buttons_never_cover_minimap_or_hype() -> void:
 	var saved_size: Vector2i = tree.root.size
 	tree.root.size = Vector2i(1280, 720)
@@ -485,14 +489,25 @@ func test_touch_buttons_never_cover_minimap_or_hype() -> void:
 	await wait_frames(4)
 	var touch: Node = h.get("touch") as Node
 	assert_true(touch != null and bool(touch.call("is_shown")), "touch layer shown")
-	var buttons: Dictionary = touch.get("buttons") if touch != null else {}
-	var others: Dictionary = {"minimap": h.call("minimap_rect"), "hype": o.call("hype_rect")}
-	for k: String in others.keys():
-		var other: Rect2 = others[k]
-		assert_true(other.size.x > 0.0, "%s laid out" % k)
-		for a: Variant in buttons.keys():
-			var br: Rect2 = (buttons[a] as Control).get_global_rect()
-			assert_false(br.intersects(other), "touch %s %s overlaps %s %s" % [str(a), str(br), k, str(other)])
+	_assert_touch_clearance(touch, h, o, "no insets")
+	if touch != null:
+		# Measured against the frame's real right margin: a container with 16 px extra air needs 16 px less.
+		var roomy: SafeAreaContainer = SafeAreaContainer.new()
+		roomy.extra = 16
+		add_to_tree(roomy)
+		assert_almost(float(touch.call("right_clearance", roomy)), TouchControlsScript.RIGHT_CLEARANCE - 16.0, 0.5,
+			"clearance follows the frame margin")
+	SafeAreaContainer.simulated_insets = {"left": 0, "top": 30, "right": 60, "bottom": 20}
+	tree.root.size_changed.emit()
+	await wait_frames(3)
+	var pause_btn: Control = (touch.get("buttons") as Dictionary).get(&"pause") as Control if touch != null else null
+	assert_true(pause_btn != null and pause_btn.get_global_rect().end.x <= 1280.0 - 60.0 + 0.5,
+		"the pause button moved inside the simulated notch")
+	_assert_touch_clearance(touch, h, o, "notch right 60")
+	SafeAreaContainer.simulated_insets = {}
+	tree.root.size_changed.emit()
+	await wait_frames(3)
+	_assert_touch_clearance(touch, h, o, "insets gone again")
 	Game.settings.touch_controls = &"off"
 	Events.settings_changed.emit()
 	await wait_frames(2)
@@ -502,6 +517,25 @@ func test_touch_buttons_never_cover_minimap_or_hype() -> void:
 	Events.settings_changed.emit()
 	tree.root.size = saved_size
 	await wait_frames(1)
+
+
+func _assert_touch_clearance(touch: Node, h: Node, o: Node, what: String) -> void:
+	if touch == null:
+		return
+	var buttons: Dictionary = touch.get("buttons")
+	var gap: float = float(TouchControlsScript.HUD_GAP)
+	var others: Dictionary = {"minimap": h.call("minimap_rect"), "hype": o.call("hype_rect")}
+	for k: String in others.keys():
+		var other: Rect2 = others[k]
+		assert_true(other.size.x > 0.0, "%s: %s laid out" % [what, k])
+		for a: Variant in buttons.keys():
+			var br: Rect2 = (buttons[a] as Control).get_global_rect()
+			assert_false(br.intersects(other), "%s: touch %s %s overlaps %s %s" % [what, str(a), str(br), k,
+				str(other)])
+		for a: StringName in [&"pause", &"map"]:
+			var br: Rect2 = (buttons[a] as Control).get_global_rect()
+			assert_almost(br.position.x - other.end.x, gap, 1.0, "%s: %s keeps HUD_GAP to the %s hit area" % [what, k,
+				str(a)])
 
 
 # --- glyphs of 3D labels ------------------------------------------------------------------------------------------------

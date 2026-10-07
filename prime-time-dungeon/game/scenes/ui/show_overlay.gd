@@ -168,6 +168,7 @@ var _params: Dictionary = {}
 var _demo: bool = false
 var _root: Control
 var _tv: ColorRect
+var _safe: SafeAreaContainer
 var _frame: Control
 var _rec: RecCorners
 var _top_left: HBoxContainer
@@ -226,6 +227,7 @@ func _ready() -> void:
 	Events.mod_said.connect(_on_mod_said)
 	Events.followers_changed.connect(_on_followers_changed)
 	Events.hype_changed.connect(_on_hype_changed)
+	get_viewport().size_changed.connect(_layout_hype)      # display insets move the touch pause/map buttons
 	_apply_quality()
 	_target_viewers = Show.display_viewers()
 	_shown_viewers = float(_target_viewers)
@@ -306,7 +308,8 @@ func _pill(col: Color) -> StyleBoxFlat:
 
 
 ## Battle: hype meter top center (top right belongs to the battle HUD speed/auto buttons, GDD §14.5). Exploration with
-## the touch layer shown: left of the pause button's hit area (TouchControls.RIGHT_CLEARANCE), never under it.
+## the touch layer shown: left of the pause button's hit area (TouchControls.right_clearance(), measured against the
+## buttons' real position incl. display insets), never under it.
 func _layout_hype() -> void:
 	if _hype_box == null:
 		return
@@ -315,7 +318,9 @@ func _layout_hype() -> void:
 		_hype_box.offset_left = -160
 		_hype_box.offset_right = 160
 	else:
-		var right: float = -TouchScript.RIGHT_CLEARANCE if _touch_shift else 0.0
+		var right: float = 0.0
+		if _touch_shift and TouchScript.active != null and is_instance_valid(TouchScript.active):
+			right = -float(TouchScript.active.call("right_clearance", _safe))
 		_hype_box.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 		_hype_box.offset_left = right - 320.0
 		_hype_box.offset_right = right
@@ -439,13 +444,13 @@ func _build() -> void:
 	UiUtil.full_rect(_rec)
 	_rec.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(_rec)
-	var safe: SafeAreaContainer = SafeAreaContainer.new()
-	safe.extra = 0
-	_root.add_child(safe)
+	_safe = SafeAreaContainer.new()
+	_safe.extra = 0
+	_root.add_child(_safe)
 	_frame = Control.new()
 	_frame.name = "Frame"
 	_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	safe.add_child(_frame)
+	_safe.add_child(_frame)
 	_build_top_left()
 	_build_hype()
 	_build_ticker()

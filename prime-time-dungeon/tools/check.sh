@@ -3,7 +3,8 @@
 #
 # Usage:
 #   tools/check.sh                 # import + unit tests + headless smoke run of main scene
-#   tools/check.sh --tests-only    # import + unit tests
+#   tools/check.sh --tests-only [--filter=<substr>]
+#                                  # import + unit tests (optionally only test files whose name contains <substr>)
 #   tools/check.sh --shot <res://scene.tscn> <out.png> [frames] [WxH]
 #                                  # render a scene under Xvfb and save a screenshot
 #
@@ -42,9 +43,11 @@ run_import() {
 }
 
 run_tests() {
-  echo "== tests =="
+  echo "== tests ${TEST_FILTER:+(filter: $TEST_FILTER)} =="
   local out code
-  out="$(timeout 600 "$GODOT" --headless --path "$WORK" -s res://tests/run_tests.gd 2>&1 | filter_noise)"
+  local extra=()
+  [ -n "${TEST_FILTER:-}" ] && extra=(-- "--filter=$TEST_FILTER")
+  out="$(timeout 600 "$GODOT" --headless --path "$WORK" -s res://tests/run_tests.gd "${extra[@]}" 2>&1 | filter_noise)"
   code=${PIPESTATUS[0]}
   echo "$out"
   if [ "$code" -ne 0 ] || echo "$out" | grep -qE "$ERR_RE"; then
@@ -82,6 +85,7 @@ run_shot() {
 status=0
 case "${1:-}" in
   --tests-only)
+    case "${2:-}" in --filter=*) TEST_FILTER="${2#--filter=}" ;; esac
     run_import || status=1
     [ $status -eq 0 ] && { run_tests || status=1; }
     ;;

@@ -8,16 +8,20 @@ class_name CharacterRig extends Node3D
 signal impact                                  # contact moment of attack/cast/stunt/item
 signal anim_finished(anim: StringName)
 
-const ANIMS: Array[StringName] = [&"idle", &"walk", &"run", &"attack", &"cast", &"hit", &"die", &"victory", &"defend", &"stunt", &"item"]
+const ANIMS: Array[StringName] = [&"idle", &"walk", &"run", &"attack", &"cast", &"hit", &"die", &"victory", &"defend",
+	&"stunt", &"item"]
 const LOOPING: Array[StringName] = [&"idle", &"walk", &"run", &"victory", &"defend"]
 
 ## One-shot durations / impact times at speed 1.0 (02_TECH §8.4).
-const DURATIONS: Dictionary = {&"attack": 0.55, &"cast": 0.80, &"stunt": 1.20, &"item": 0.60, &"hit": 0.35, &"die": 0.70}
+const DURATIONS: Dictionary = {&"attack": 0.55, &"cast": 0.80, &"stunt": 1.20, &"item": 0.60, &"hit": 0.35,
+	&"die": 0.70}
 const IMPACT_AT: Dictionary = {&"attack": 0.30, &"cast": 0.55, &"stunt": 0.80, &"item": 0.35}
 const LOOP_PERIOD: Dictionary = {&"idle": 1.6, &"walk": 0.8, &"run": 0.5, &"victory": 1.0, &"defend": 1.2}
 const WALK_STRIDE: float = 1.6     # m per walk cycle (03_ART §10)
 const RUN_STRIDE: float = 2.75     # m per run cycle
 const ANCHOR_NAMES: Array[StringName] = [&"head", &"center", &"overhead", &"hand_r", &"hand_l", &"feet"]
+const DANGER_RIM_AMOUNT: float = 0.6
+const DANGER_RIM_MIX: float = 0.6
 
 # --- keyframe curves [t0, v0, t1, v1, …] (seconds at speed 1, degrees / meters at humanoid size) ---
 const K_ATK_ARM_R: PackedFloat32Array = [0.0, 0.0, 0.18, -140.0, 0.30, 40.0, 0.36, 40.0, 0.55, 0.0]
@@ -128,7 +132,12 @@ var _item_box: MeshInstance3D = null
 var _contact: MeshInstance3D = null
 var _fx_done: Dictionary = {}
 var _token: int = 0
+var _echo_die: bool = false           # play(&"die") on a KO rig: anim_finished(&"die") follows deferred
 var _procedural: bool = true          # false for glTF rigs (AnimationPlayer owns the pose)
+var _danger_rim: bool = false
+var _danger_amount: float = DANGER_RIM_AMOUNT
+var _rim_override: Color = Color.WHITE
+var _has_rim_override: bool = false
 
 
 func _ready() -> void:
@@ -140,14 +149,22 @@ func play(anim: StringName, speed: float = 1.0) -> void:
 	if not ANIMS.has(anim):
 		push_warning("CharacterRig.play: unknown anim '%s' → idle" % anim)
 		anim = &"idle"
-	var prev: StringName = _anim
-	var prev_pending: bool = not LOOPING.has(prev) and not (prev == &"die" and _dead)
-	var prev_impact: bool = prev_pending and not _impact_done
+	# Finish an interrupted one-shot (after the new state is set) so awaiting callers return and impact fires
+	# exactly once per one-shot (02_TECH §8.4).
+	var pending: Dictionary = _take_pending()
+	_token += 1
+	if anim == &"die" and _dead:
+		# already KO: keep the end pose (no stand-up), answer with a deferred anim_finished(&"die")
+		_speed = maxf(speed, 0.01)
+		_t = float(DURATIONS[&"die"])
+		_echo_die = true
+		_flush_die_echo.call_deferred()
+		_complete_pending(pending)
+		return
 	_anim = anim
 	_speed = maxf(speed, 0.01)
 	_t = 0.0
 	_fx_done.clear()
-	_token += 1
 	if anim != &"die":
 		if _dead:
 			_revive()
@@ -172,20 +189,19 @@ func play(anim: StringName, speed: float = 1.0) -> void:
 				if death_style == &"dissolve":
 					flash(Palette.DANGER, 0.1)
 	_set_shield(anim == &"defend")
-	# Finish an interrupted one-shot so awaiting callers return and impact fires exactly once per one-shot.
-	if prev_impact:
-		impact.emit()
-	if prev_pending:
-		anim_finished.emit(prev)
+	_complete_pending(pending)
 
 
 ## Coroutine; loops return immediately; outside the tree: end pose at once, impact + anim_finished, push_warning.
+## `die` on a rig that is already KO returns at once and keeps the KO pose.
 func play_and_wait(anim: StringName, speed: float = 1.0) -> void:
 	if LOOPING.has(anim):
 		play(anim, speed)
 		return
 	if not ANIMS.has(anim):
 		play(anim, speed)
+		return
+	if anim == &"die" and _dead:
 		return
 	if not is_inside_tree():
 		push_warning("CharacterRig.play_and_wait('%s') outside the tree: finished instantly" % anim)
@@ -248,8 +264,11 @@ func set_dissolve(amount: float) -> void:
 		p.emitting = _dissolve < 0.5 and not _dead
 
 
-## Instant KO pose (no anim), for loading/standalone states.
+## Instant KO pose (no anim), for loading/standalone states. A running one-shot is finished first (impact once,
+## anim_finished) so awaiting callers return.
 func set_dead(dead: bool) -> void:
+	var pending: Dictionary = _take_pending()
+	_token += 1
 	if dead:
 		_anim = &"die"
 		_t = float(DURATIONS[&"die"])
@@ -257,6 +276,8 @@ func set_dead(dead: bool) -> void:
 		_dead = true
 		_set_shield(false)
 		_fx_done = {"ko": true}
+		if _item_box != null:
+			_item_box.visible = false
 		if death_style == &"dissolve":
 			set_dissolve(1.0)
 		_apply_pose(_eval())
@@ -264,7 +285,9 @@ func set_dead(dead: bool) -> void:
 		_revive()
 		_anim = &"idle"
 		_t = 0.0
+		_impact_done = true
 		_apply_pose(_eval())
+	_complete_pending(pending)
 
 
 ## &"head", &"center", &"overhead", &"hand_r", &"hand_l", &"feet"
@@ -285,7 +308,10 @@ func face_towards(world_pos: Vector3) -> void:
 		rotation.y = atan2(-d.x, -d.z)
 
 
+## Rest pose + idle; a running one-shot is finished first (impact once, anim_finished).
 func reset_pose() -> void:
+	var pending: Dictionary = _take_pending()
+	_token += 1
 	_revive()
 	_anim = &"idle"
 	_t = 0.0
@@ -295,14 +321,20 @@ func reset_pose() -> void:
 	_flash_left = 0.0
 	_apply_flash(0.0, Color.WHITE)
 	_set_shield(false)
+	if _item_box != null:
+		_item_box.visible = false
 	for pname: String in _pivots:
 		(_pivots[pname] as Node3D).transform = _rest[pname]
 	if _model_root != null:
 		_model_root.transform = Transform3D(Basis.from_scale(Vector3.ONE * _model_scale), Vector3.ZERO)
+	_complete_pending(pending)
 
 
 ## Emits impact; called by procedural tweens and AnimationPlayer method tracks.
+## During a one-shot whose impact already fired, further calls are ignored (impact exactly once, §8.4).
 func emit_impact() -> void:
+	if _impact_done and _oneshot_running():
+		return
 	_impact_done = true
 	impact.emit()
 
@@ -316,9 +348,35 @@ func set_boss_phase(phase: int) -> void:
 
 ## Re-tints the rim light of all toon meshes (zone palette `rim`, 03_ART §3.1).
 func set_rim_color(color: Color) -> void:
+	_rim_override = color
+	_has_rim_override = true
+	_apply_rim()
+
+
+## Art extra (review M4, pillar 2): warm DANGER rim so enemies separate from dirty floors at the gameplay camera.
+## CharacterBuilder switches it on for enemy-only bases; callers may toggle it (e.g. humanoid enemies such as Pendler).
+func set_danger_rim(on: bool, amount: float = DANGER_RIM_AMOUNT) -> void:
+	_danger_rim = on
+	_danger_amount = amount
+	_apply_rim()
+
+
+func has_danger_rim() -> bool:
+	return _danger_rim
+
+
+func _apply_rim() -> void:
 	for mi: MeshInstance3D in _meshes:
 		var opts: Dictionary = (_mesh_opts.get(mi, {}) as Dictionary).duplicate()
-		opts["rim_color"] = color
+		if _has_rim_override:
+			opts["rim_color"] = _rim_override
+		if _danger_rim:
+			var base_rim: Color = Materials.DEFAULT_RIM
+			var given: Variant = opts.get("rim_color", null)
+			if typeof(given) == TYPE_COLOR:
+				base_rim = given
+			opts["rim_color"] = base_rim.lerp(Palette.DANGER, DANGER_RIM_MIX)
+			opts["rim"] = maxf(float(opts.get("rim", 0.25)), _danger_amount)
 		mi.material_override = Materials.toon_vc(opts)
 
 
@@ -383,25 +441,65 @@ func _revive() -> void:
 
 
 func _finish_instantly(anim: StringName) -> void:
+	var pending: Dictionary = _take_pending()
+	_token += 1
 	_anim = anim
 	_t = float(DURATIONS.get(anim, 0.0))
+	_fx_done.clear()
+	if anim != &"die" and _dead:
+		_revive()
 	_apply_pose(_eval())
-	if IMPACT_AT.has(anim):
-		impact.emit()
 	if anim == &"die":
 		_dead = true
 		_impact_done = true
 		if death_style == &"dissolve":
 			set_dissolve(1.0)
 	else:
+		_impact_done = true
 		_anim = _resume
 		_rate = _resume_rate
 		_t = 0.0
 		_apply_pose(_eval())
+	_complete_pending(pending)
+	if IMPACT_AT.has(anim):
+		impact.emit()
 	anim_finished.emit(anim)
 
 
-# --- internals: per frame ----------------------------------------------------------------------------------------------
+## True while a one-shot runs whose impact / anim_finished callers may still await (02_TECH §8.4).
+func _oneshot_running() -> bool:
+	return not LOOPING.has(_anim) and not (_anim == &"die" and _dead)
+
+
+## Snapshot of what the running one-shot still owes (call before changing the anim state).
+func _take_pending() -> Dictionary:
+	var out: Dictionary = {"anim": &"", "impact": false, "echo": _echo_die}
+	_echo_die = false
+	if _oneshot_running():
+		out["anim"] = _anim
+		out["impact"] = not _impact_done and IMPACT_AT.has(_anim)
+	return out
+
+
+## Emits what an interrupted one-shot owed: its missing impact (once), then anim_finished.
+func _complete_pending(p: Dictionary) -> void:
+	if bool(p["impact"]):
+		impact.emit()
+	if StringName(p["anim"]) != &"":
+		anim_finished.emit(StringName(p["anim"]))
+	if bool(p["echo"]):
+		anim_finished.emit(&"die")
+
+
+## Deferred answer to play(&"die") on a rig that is already KO.
+func _flush_die_echo() -> void:
+	if _echo_die:
+		_echo_die = false
+		anim_finished.emit(&"die")
+
+
+# --- internals: per frame
+# ----------------------------------------------------------------------------------------------
 
 func _process(delta: float) -> void:
 	_clock += delta
@@ -431,6 +529,11 @@ func _impact_time(anim: StringName) -> float:
 
 func _finish_oneshot() -> void:
 	var done: StringName = _anim
+	if not _impact_done and IMPACT_AT.has(done):
+		# impact time after the end (glTF clip / .anim.json) or a method track that never fired: still exactly once
+		_impact_done = true
+		impact.emit()
+	_impact_done = true
 	if done == &"die":
 		_t = _duration(done)
 		_dead = true
@@ -836,8 +939,8 @@ func _ch_victory(c: Dictionary, fam: StringName) -> void:
 
 ## Base-specific idle/locomotion extras (03_ART §5.8 "Gegner-Eigenbewegungen").
 func _ch_extras(c: Dictionary, fam: StringName) -> void:
-	if _dead and death_style == &"fall":
-		return
+	if _dead:
+		return   # KO pose is static (fallen or dissolved)
 	var tt: float = _clock
 	match _base:
 		&"rodent":

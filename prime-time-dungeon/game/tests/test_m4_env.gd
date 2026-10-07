@@ -50,6 +50,13 @@ func _door_volume(side: int) -> AABB:
 	return AABB(a, Vector3.ZERO).expand(b)
 
 
+## 4 m wide × 3 m deep × 2.2 m high free corridor in front of a door (edge frame, slightly inset from the jambs).
+func _corridor_volume(side: int) -> AABB:
+	var a: Vector3 = RB.edge_xf(side, -1.95, 0.05, 0.05).origin
+	var b: Vector3 = RB.edge_xf(side, 1.95, 2.2, 3.0).origin
+	return AABB(a, Vector3.ZERO).expand(b)
+
+
 func _count(root: Node, cls: String) -> int:
 	var n: int = 1 if root.is_class(cls) else 0
 	for c: Node in root.get_children():
@@ -90,7 +97,8 @@ func _glyphs_ok(text: String) -> bool:
 	return true
 
 
-# --- rooms -------------------------------------------------------------------------------------------------------------
+# --- rooms
+# -------------------------------------------------------------------------------------------------------------
 
 func test_build_room_all_masks_kinds_and_zones() -> void:
 	var t0: int = Time.get_ticks_usec()
@@ -148,6 +156,22 @@ func test_build_room_all_masks_kinds_and_zones() -> void:
 							"%s: collision %s inside the clear radius" % [ctx, b])
 				var light: OmniLight3D = room.get_node_or_null("Light") as OmniLight3D
 				assert_not_null(light, ctx + ": Light")
+				var omni: int = _count(room, "OmniLight3D")
+				if kind == RoomSpec.Kind.STAIRS or kind == RoomSpec.Kind.SAFE:
+					assert_true(omni <= 2, ctx + ": Light + at most one short-range Neon")
+					var neon: OmniLight3D = room.get_node_or_null("Neon") as OmniLight3D
+					if neon != null:
+						assert_true(neon.distance_fade_begin + neon.distance_fade_length <= 16.0, ctx + ": neon fades by 16 m")
+				else:
+					assert_eq(omni, 1, ctx + ": exactly one OmniLight3D (02_TECH §8.5/§12.1)")
+				# 3 m deep corridor in front of every open door is collision-free (02_TECH §7.3), all kinds
+				for side: int in RB.SIDES:
+					if (mask & side) == 0:
+						continue
+					var corridor: AABB = _corridor_volume(side)
+					for i in range(1, boxes.size()):
+						assert_false(boxes[i].intersects(corridor), "%s: collision %s in the corridor of door %d"
+							% [ctx, boxes[i], side])
 				room.free()
 	var avg_ms: float = float(Time.get_ticks_usec() - t0) / 1000.0 / float(built)
 	assert_lt(avg_ms, 30.0, "average room build time %.1f ms (floor budget 500 ms)" % avg_ms)
@@ -167,7 +191,7 @@ func test_floor_box_and_light_params() -> void:
 	assert_almost(light.distance_fade_begin, 24.0)
 	assert_almost(light.distance_fade_length, 6.0)
 	var lights: int = _count(room, "OmniLight3D")
-	assert_true(lights <= 2, "≤ 2 omni lights per room (budget 4 in 24 m)")
+	assert_eq(lights, 1, "one omni light in a NORMAL room (budget 4 in 24 m)")
 	room.free()
 	var no_light := _spec(5, RoomSpec.Kind.NORMAL, "platform")
 	no_light.with_light = false
@@ -279,6 +303,18 @@ func test_anchor_for() -> void:
 		assert_almost(t.origin.length(), EnvKit.WALL_INNER - 0.6, 0.001, "0.6 m in front of the wall")
 		var facing: Vector3 = -t.basis.z
 		assert_true(facing.is_equal_approx(-t.origin.normalized()), "mask %d: faces the room center" % mask)
+	# stairs: center; the well (local −Z) descends toward the first wall without door (02_TECH §7.3 corridors)
+	for mask in 16:
+		spec.doors = mask
+		var st: Transform3D = EnvKit.anchor_for(spec, &"stairs")
+		assert_true(st.origin.is_equal_approx(Vector3.ZERO), "mask %d: stairs at the center" % mask)
+		var well_dir: Vector3 = -st.basis.z
+		var target: Vector3 = Vector3(0, 0, -1)
+		for side: int in RB.SIDES:
+			if (mask & side) == 0:
+				target = RB.edge_origin(side).normalized()
+				break
+		assert_true(well_dir.is_equal_approx(target), "mask %d: well toward %s, got %s" % [mask, target, well_dir])
 	spec.doors = 15
 	var c: Transform3D = EnvKit.anchor_for(spec, &"safe_door")
 	assert_true(c.origin.is_equal_approx(Vector3.ZERO))
@@ -357,10 +393,27 @@ func test_safe_room_all_themes() -> void:
 	assert_lt(look.z, -0.5, "camera looks into the room")
 	var to_couch: Vector3 = (EnvKit.safe_room_anchor(&"couch").origin - cam.origin).normalized()
 	assert_gt(look.dot(to_couch), 0.8, "couch in view")
+	# the exit door (only interaction target to leave) is in frame at 4:3, 16:9 and 20:9 with FOV 50 (03_ART §8.1)
+	var door_pt: Vector3 = EnvKit.safe_room_anchor(&"door").origin + Vector3(0, 1.4, 0)
+	for size: Vector2i in [Vector2i(1024, 768), Vector2i(1280, 720), Vector2i(1600, 720)]:
+		var vp := SubViewport.new()
+		vp.size = size
+		vp.own_world_3d = true
+		add_to_tree(vp)
+		var c3 := Camera3D.new()
+		c3.fov = 50.0
+		vp.add_child(c3)
+		c3.transform = cam
+		c3.current = true
+		assert_true(c3.is_position_in_frustum(door_pt), "door in frame at %s" % size)
+		for a: StringName in [&"vending", &"terminal", &"couch"]:
+			assert_true(c3.is_position_in_frustum(EnvKit.safe_room_anchor(a).origin + Vector3(0, 1.0, 0)),
+				"%s in frame at %s" % [a, size])
 	assert_eq(EnvKit.safe_room_anchor(&"nowhere"), Transform3D.IDENTITY)
 
 
-# --- environment + sun -------------------------------------------------------------------------------------------------
+# --- environment + sun
+# -------------------------------------------------------------------------------------------------
 
 func test_make_environment() -> void:
 	var ex: Environment = EnvKit.make_environment("metro", {}, &"explore")
@@ -397,7 +450,24 @@ func test_make_sun() -> void:
 	assert_true(ex.shadow_enabled)
 	assert_almost(ex.directional_shadow_max_distance, 30.0)
 	assert_almost(ex.light_energy, 1.1)
-	assert_true(ex.rotation_degrees.is_equal_approx(Vector3(-55, 35, 0)))
+	assert_true(ex.rotation_degrees.is_equal_approx(EnvKit.EXPLORE_SUN_ROTATION))
+	# side/back key: ≥ 50° away from the follow camera's view direction (pitch −38°, yaw 0 → looking −Z)
+	var light_dir: Vector3 = -ex.basis.z.normalized()
+	var view_dir: Vector3 = Basis.from_euler(Vector3(deg_to_rad(-38.0), 0, 0)) * Vector3(0, 0, -1)
+	assert_lt(light_dir.dot(view_dir), cos(deg_to_rad(50.0)), "explore key does not shine along the camera view")
+	var sewer_pal: Dictionary = {}
+	var cellar_pal: Dictionary = {}
+	for k: String in Palette.PALETTE_KEYS:
+		sewer_pal[k] = Palette.ZONE_PRESETS["sewer"][k]
+		cellar_pal[k] = Palette.ZONE_PRESETS["cellar"][k]
+	var sewer_sun: DirectionalLight3D = EnvKit.make_zone_sun("metro", sewer_pal, &"explore")
+	assert_almost(sewer_sun.light_energy, 0.7, 0.001, "sewer key energy (03_ART §4.3)")
+	assert_eq(sewer_sun.light_color.to_html(false), "9fe0c0", "sewer key color")
+	var cellar_sun: DirectionalLight3D = EnvKit.make_zone_sun("metro", cellar_pal, &"explore")
+	assert_almost(cellar_sun.light_energy, 0.9, 0.001, "cellar key energy")
+	assert_eq(cellar_sun.light_color.to_html(false), "ffc98a")
+	sewer_sun.free()
+	cellar_sun.free()
 	var b: DirectionalLight3D = EnvKit.make_sun("metro", &"battle")
 	assert_almost(b.directional_shadow_max_distance, 20.0)
 	assert_almost(b.light_energy, 1.25)
@@ -410,7 +480,8 @@ func test_make_sun() -> void:
 		l.free()
 
 
-# --- props -------------------------------------------------------------------------------------------------------------
+# --- props
+# -------------------------------------------------------------------------------------------------------------
 
 func test_every_prop_builds() -> void:
 	for id: String in PropKit.IDS:
@@ -527,6 +598,29 @@ func test_chest_open_in_tree() -> void:
 	assert_true(chest.is_open, "style change keeps the open state")
 	await wait_frames(1)
 	assert_almost(rad_to_deg((chest.get_node("Lid") as Node3D).rotation.x), ChestProp.LID_OPEN_DEG, 0.5)
+
+
+func test_chest_interrupted_open_still_emits_once() -> void:
+	for how: String in ["set_open_instant", "set_style"]:
+		var host := Node3D.new()
+		add_to_tree(host)
+		var chest: ChestProp = PropKit.build(&"chest", 2) as ChestProp
+		host.add_child(chest)
+		var fired: Array[int] = [0]
+		chest.opened.connect(func() -> void: fired[0] += 1)
+		chest.open(true)
+		await wait_frames(2)
+		assert_eq(fired[0], 0, how + ": tween still running")
+		if how == "set_open_instant":
+			chest.set_open_instant()
+		else:
+			chest.set_style("metal")
+		assert_eq(fired[0], 1, how + " during the lid tween emits the owed opened")
+		await wait_frames(60)
+		assert_eq(fired[0], 1, how + ": exactly once")
+		assert_true(chest.is_open)
+		chest.set_open_instant()
+		assert_eq(fired[0], 1, "set_open_instant on an idle chest emits nothing")
 
 
 func test_chest_open_outside_tree() -> void:

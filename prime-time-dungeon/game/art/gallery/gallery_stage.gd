@@ -9,7 +9,7 @@ static func add_world(host: Node3D, theme_id: String, palette: Dictionary, mode:
 	we.environment = EnvKit.make_environment(theme_id, palette, mode, quality)
 	we.environment.fog_density *= fog_scale
 	host.add_child(we)
-	host.add_child(EnvKit.make_sun(theme_id, mode, quality))
+	host.add_child(EnvKit.make_zone_sun(theme_id, palette, mode, quality))
 
 
 static func add_camera(host: Node3D, pos: Vector3, target: Vector3, fov: float = 40.0) -> Camera3D:
@@ -32,11 +32,13 @@ static func label(host: Node3D, text: String, pos: Vector3, size: int = 28, colo
 	l.text = text
 	l.font_size = size
 	l.outline_size = 8
-	l.modulate = color
+	l.modulate = Palette.sign_color(color)
 	l.outline_modulate = Palette.INK
 	l.pixel_size = 0.005
 	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	l.no_depth_test = true
+	l.render_priority = 20            # after holograms / transparent props (labels stay readable)
+	l.outline_render_priority = 19
 	l.position = pos
 	host.add_child(l)
 	return l

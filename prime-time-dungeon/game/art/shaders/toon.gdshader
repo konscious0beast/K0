@@ -26,7 +26,8 @@ group_uniforms cel;
 uniform float band_shadow : hint_range(0.0, 1.0) = 0.30;
 uniform float band_mid : hint_range(0.0, 1.0) = 0.65;
 uniform float threshold_mid : hint_range(-1.0, 1.0) = 0.02;   // N.L shadow -> mid (bands = 3)
-uniform float threshold_lit : hint_range(-1.0, 1.0) = 0.42;   // N.L mid -> lit (bands = 3), shadow -> lit (bands = 2: 0.15)
+// N.L mid -> lit (bands = 3), shadow -> lit (bands = 2: 0.15)
+uniform float threshold_lit : hint_range(-1.0, 1.0) = 0.42;
 uniform float band_softness : hint_range(0.001, 0.2) = 0.025;
 uniform float rim_width : hint_range(0.0, 1.0) = 0.22;
 group_uniforms specular;

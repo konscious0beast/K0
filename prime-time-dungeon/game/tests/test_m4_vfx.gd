@@ -39,7 +39,8 @@ func _skill(fields: Dictionary) -> SkillDef:
 	return s
 
 
-# --- kinds -------------------------------------------------------------------------------------------------------------
+# --- kinds
+# -------------------------------------------------------------------------------------------------------------
 
 func test_durations_cover_every_kind() -> void:
 	assert_eq(Vfx.KINDS.size(), 22)
@@ -189,6 +190,15 @@ func _labels(host: Node) -> Array[Label3D]:
 	return out
 
 
+## Number entries only (captions are own pool entries since the review fix).
+func _numbers(host: Node) -> Array[Label3D]:
+	var out: Array[Label3D] = []
+	for l: Label3D in _labels(host):
+		if not bool(l.get("is_caption")):
+			out.append(l)
+	return out
+
+
 func _last_shown(host: Node) -> Label3D:
 	var pool: Array = host.get_meta(Vfx.DMG_META, [])
 	return pool.back() as Label3D if not pool.is_empty() else null
@@ -213,22 +223,32 @@ func test_damage_number_styles_and_texts() -> void:
 		assert_true(l.visible)
 		for i in l.text.length():
 			assert_true(ThemeDB.fallback_font.has_char(l.text.unicode_at(i)), "glyph %s" % l.text[i])
-	var weak: Label3D = _labels(host)[5]
-	var caption: Label3D = weak.get_node_or_null("Caption") as Label3D
-	assert_not_null(caption, "weak has a caption")
-	if caption != null:
-		assert_eq(caption.text, "SCHWACHSTELLE!")
-		assert_true(caption.visible)
-	var crit: Label3D = _labels(host)[1]
-	var dmg: Label3D = _labels(host)[0]
+	var weak: Label3D = _numbers(host)[5]
+	var captions: Array[Label3D] = []
+	for l: Label3D in _labels(host):
+		if bool(l.get("is_caption")):
+			captions.append(l)
+	assert_eq(captions.size(), 2, "weak + resist captions are own pool entries (Label3D budget §12.1)")
+	if captions.size() == 2:
+		assert_eq(captions[0].text, "SCHWACHSTELLE!")
+		assert_true(captions[0].visible)
+		assert_eq(captions[0].font_size, 40)
+		assert_almost(captions[0].position.y - weak.position.y, 0.22, 0.001, "caption above the number")
+		assert_eq(captions[1].text, "RESISTENT")
+		assert_eq(captions[1].modulate.to_html(false), Palette.PAPER.to_html(false))
+	assert_eq(weak.get_child_count(), 0, "no child caption Label3D")
+	var crit: Label3D = _numbers(host)[1]
+	var dmg: Label3D = _numbers(host)[0]
 	assert_gt(crit.font_size, dmg.font_size, "crit bigger than damage")
 	assert_ne(crit.modulate, dmg.modulate)
-	var heal: Label3D = _labels(host)[2]
+	var heal: Label3D = _numbers(host)[2]
 	assert_gt(heal.modulate.g, heal.modulate.r, "heal is green")
-	var status: Label3D = _labels(host)[7]
+	var status: Label3D = _numbers(host)[7]
 	assert_eq(status.modulate.to_html(false), Palette.status_color("sts_poison").to_html(false), "status word → color")
+	var before: int = _labels(host).size()
 	Vfx.damage_number(host, Vector3(20, 1, 0), "0", &"resist")
 	assert_eq(_last_shown(host).text, "IMMUN", "resist 0 → IMMUN")
+	assert_eq(_labels(host).size(), before + 1, "IMMUN has no caption entry")
 	Vfx.damage_number(host, Vector3(22, 1, 0), "5", &"wobble")
 	assert_eq(_last_shown(host).text, "5", "unknown style → damage")
 
@@ -238,6 +258,17 @@ func test_damage_number_pool_and_stacking() -> void:
 	for i in 15:
 		Vfx.damage_number(host, Vector3(float(i) * 3.0, 1, 0), str(i), &"damage")
 	assert_eq(_labels(host).size(), Vfx.DMG_POOL_SIZE, "max 12 Label3D per parent (budget §12.1)")
+	for i in 10:
+		Vfx.damage_number(host, Vector3(float(i) * 3.0, 1, 2), str(i), &"weak")
+	assert_eq(_labels(host).size(), Vfx.DMG_POOL_SIZE, "captions count against the pool too")
+	var all_labels: int = 0
+	var stack: Array[Node] = [host]
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		if n is Label3D:
+			all_labels += 1
+		stack.append_array(n.get_children())
+	assert_eq(all_labels, Vfx.DMG_POOL_SIZE, "no hidden child Label3D (≤ 12 Label3D at once)")
 	var other: Node3D = _host()
 	Vfx.damage_number(other, Vector3.ZERO, "1", &"damage")
 	Vfx.damage_number(other, Vector3.ZERO, "2", &"damage")

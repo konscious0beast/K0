@@ -1,14 +1,16 @@
 class_name PropKit extends RefCounted
 ## Props (02_TECH §8.5, 03_ART §6.3). Every prop is a recipe of primitive parts (vertex colors, emission/metal masks)
-## merged into one mesh; moving parts are own pivots, neon/holograms own meshes, texts Label3D (fallback-font glyphs only,
+## merged into one mesh; moving parts are own pivots, neon/holograms own meshes, texts Label3D (fallback-font glyphs
+## only,
 ## 03_ART F8). Interactive props (chest, stairs, safe door, automat, terminal, gate, event props) use the toon material
 ## with a 0.02 outline, set dressing uses the env material without outline. Origin = floor center, front = −Z.
-## Art extras: recipe() (EnvKit merges set dressing into one room mesh), palette key "label" (text of stairs_down,
-## billboard, safe_door), is_interactive().
+## Art extras: recipe() (EnvKit merges set dressing into one room mesh), stairs_recipe() (compact stairs), palette key
+## "label" (text of stairs_down, billboard, safe_door; pending API change request, see STAIRS_LABEL), is_interactive().
 
-const IDS: PackedStringArray = ["chest", "stairs_down", "safe_door", "vending_machine", "save_terminal", "couch", "crate",
-	"barrel", "bench", "pillar", "lamp", "trash_bin", "turnstile", "poster", "camera_drone", "billboard", "rail", "wreck", "pipe",
-	"gate", "phone_booth", "fortune_wheel", "lever", "broken_vending"]   # gate: closed door bar; last four: floor events (§7.4)
+## gate: closed door bar; last four: floor events (§7.4)
+const IDS: PackedStringArray = ["chest", "stairs_down", "safe_door", "vending_machine", "save_terminal", "couch",
+	"crate", "barrel", "bench", "pillar", "lamp", "trash_bin", "turnstile", "poster", "camera_drone", "billboard", "rail",
+	"wreck", "pipe", "gate", "phone_booth", "fortune_wheel", "lever", "broken_vending"]
 const INTERACTIVE: PackedStringArray = ["chest", "stairs_down", "safe_door", "vending_machine", "save_terminal", "gate",
 	"phone_booth", "fortune_wheel", "lever", "broken_vending"]
 const PropAnim := preload("res://art/kit/prop_anim.gd")
@@ -17,6 +19,9 @@ const DARK: Color = Color("#1a1420")
 const STAIR_GREY: Color = Color("#6e6a72")
 const DOOR_GREY: Color = Color("#4a5a60")
 const AUTOMAT_PINK: Color = Color("#c2185b")
+## Dressing crates: greyer, darker wood than the loot chest (Palette.WOOD + brass), review M4.
+const CRATE_WOOD: Color = Color("#6e5a48")
+const CRATE_SLAT: Color = Color("#4e3f33")
 
 
 ## "chest" returns ChestProp.
@@ -174,7 +179,7 @@ static func assemble(id: String, r: Dictionary, palette: Dictionary = {}) -> Nod
 		l.text = str(ld.get("text", ""))
 		l.font_size = int(ld.get("size", 48))
 		l.outline_size = int(ld.get("outline", 10))
-		l.modulate = ld.get("color", Palette.PAPER)
+		l.modulate = Palette.sign_color(ld.get("color", Palette.PAPER))
 		l.outline_modulate = Palette.INK
 		l.pixel_size = float(ld.get("pixel", 0.005))
 		l.position = ld.get("pos", Vector3.ZERO)
@@ -209,7 +214,8 @@ static func assemble(id: String, r: Dictionary, palette: Dictionary = {}) -> Nod
 static func material_for(outline: bool, pal: Dictionary) -> ShaderMaterial:
 	if outline:
 		return Materials.toon_vc({"bands": 3, "rim": 0.45, "outline_width": 0.02})
-	return Materials.env({"shade": pal.get("shade", Materials.DEFAULT_ENV_SHADE), "grout": pal.get("grout", Materials.DEFAULT_GROUT),
+	return Materials.env({"shade": pal.get("shade", Materials.DEFAULT_ENV_SHADE),
+		"grout": pal.get("grout", Materials.DEFAULT_GROUT),
 		"grout_width": 0.0, "dirt": 0.2})
 
 
@@ -263,16 +269,42 @@ static func _collide(r: Dictionary, size: Vector3, pos: Vector3, rot: Vector3 = 
 	(r["collision"] as Array).append({"size": size, "xform": MeshUtil.xform(pos, rot)})
 
 
-static func _label(r: Dictionary, text: String, pos: Vector3, size: int, color: Color, rot: Vector3 = Vector3(0, 180, 0),
+static func _label(r: Dictionary, text: String, pos: Vector3, size: int, color: Color,
+		rot: Vector3 = Vector3(0, 180, 0),
 		billboard: bool = false, parent: String = "") -> void:
 	(r["labels"] as Array).append({"text": text, "pos": pos, "size": size, "color": color, "rot": rot,
 		"billboard": billboard, "parent": parent})
 
 
-# --- recipes -----------------------------------------------------------------------------------------------------------
+# --- recipes
+# -----------------------------------------------------------------------------------------------------------
 
-static func _stairs(r: Dictionary, palette: Dictionary) -> void:
-	for i in 10:
+## Number of 0.5 m steps of stairs_down (03_ART §6.3) and the compact variant for rooms with 4 doors (the well then
+## stays out of the 3 m door corridors, 02_TECH §7.3).
+const STAIRS_STEPS: int = 10
+const STAIRS_STEPS_COMPACT: int = 8
+## Label of stairs_down without a floor number (03_ART §6.3 wants "ETAGE <current + 1>"; RoomSpec carries no floor yet,
+## pending API change request "RoomSpec.floor_number"). palette["label"] overrides it (art extra).
+const STAIRS_LABEL: String = "NÄCHSTE ETAGE"
+
+
+## Depth of the stair well from the anchor (entry edge at z 0, well toward −Z) incl. the rear wall.
+static func stairs_well_depth(steps: int = STAIRS_STEPS) -> float:
+	return 0.5 * float(steps) + 0.35
+
+
+## Art extra (EnvKit set piece): stairs_down recipe with `steps` steps.
+static func stairs_recipe(palette: Dictionary, steps: int = STAIRS_STEPS) -> Dictionary:
+	var r: Dictionary = {"parts": [], "outline": true, "pivots": [], "glows": [], "holos": [], "labels": [],
+		"collision": [], "anim": ""}
+	_stairs(r, palette, steps)
+	return r
+
+
+static func _stairs(r: Dictionary, palette: Dictionary, steps: int = STAIRS_STEPS) -> void:
+	var run: float = 0.5 * float(steps)
+	var mid: float = -run * 0.5
+	for i in steps:
 		var fi: float = float(i)
 		_box(r, Vector3(4.0, 0.25, 0.5), Vector3(0, -0.125 - 0.25 * fi, -0.25 - 0.5 * fi), STAIR_GREY)
 		_box(r, Vector3(4.0, 0.03, 0.06), Vector3(0, -0.25 * fi + 0.015, -0.03 - 0.5 * fi), Palette.WARN_YELLOW,
@@ -280,25 +312,26 @@ static func _stairs(r: Dictionary, palette: Dictionary) -> void:
 	# stair well walls + floor
 	var well: Color = Palette.mul(STAIR_GREY, 0.7)
 	for sx: float in [-1.0, 1.0]:
-		_box(r, Vector3(0.3, 2.8, 5.3), Vector3(2.15 * sx, -1.4, -2.55), well)
-	_box(r, Vector3(4.6, 2.8, 0.3), Vector3(0, -1.4, -5.2), well)
-	_box(r, Vector3(4.6, 0.2, 1.2), Vector3(0, -2.6, -4.5), well)
+		_box(r, Vector3(0.3, 2.8, run + 0.3), Vector3(2.15 * sx, -1.4, -(run + 0.3) * 0.5 + 0.1), well)
+	_box(r, Vector3(4.6, 2.8, 0.3), Vector3(0, -1.4, -(run + 0.2)), well)
+	_box(r, Vector3(4.6, 0.2, 1.2), Vector3(0, -0.25 * float(steps) - 0.1, -(run - 0.5)), well)
 	# railings (metal)
 	for sx: float in [-1.0, 1.0]:
-		_add(r, seg(Vector3(2.05 * sx, 1.0, 0.0), Vector3(2.05 * sx, 1.0, -5.05), 0.04, 0.04, Palette.RAIL, 0.0, 1.0))
+		_add(r,
+			seg(Vector3(2.05 * sx, 1.0, 0.0), Vector3(2.05 * sx, 1.0, -(run + 0.05)), 0.04, 0.04, Palette.RAIL, 0.0, 1.0))
 		for k in 5:
-			var z: float = -1.25 * float(k)
+			var z: float = -(run * 0.25) * float(k)
 			_add(r, seg(Vector3(2.05 * sx, 0.0, z), Vector3(2.05 * sx, 1.0, z), 0.035, 0.035, Palette.RAIL, 0.0, 1.0))
-	_add(r, seg(Vector3(-2.05, 1.0, -5.05), Vector3(2.05, 1.0, -5.05), 0.04, 0.04, Palette.RAIL, 0.0, 1.0))
+	_add(r, seg(Vector3(-2.05, 1.0, -(run + 0.05)), Vector3(2.05, 1.0, -(run + 0.05)), 0.04, 0.04, Palette.RAIL, 0.0, 1.0))
 	for sx: float in [-1.0, 1.0]:
 		_box(r, Vector3(0.22, 0.9, 0.22), Vector3(2.05 * sx, 0.45, 0.25), Palette.WARN_YELLOW)
 		_box(r, Vector3(0.24, 0.12, 0.24), Vector3(2.05 * sx, 0.55, 0.25), DARK)
 	# light column + label + bobbing arrow (glow)
 	(r["holos"] as Array).append({"role": "column", "mesh": MeshUtil.tube(1.6, 6.0, 16),
-		"xform": Transform3D(Basis.IDENTITY, Vector3(0, 1.0, -2.5)), "color": Palette.HYPE_GOLD, "alpha": 0.15})
-	var text: String = str(palette.get("label", "ETAGE 2"))
-	_label(r, text, Vector3(0, 3.7, -2.5), 120, Palette.HYPE_GOLD, Vector3.ZERO, true)
-	(r["pivots"] as Array).append({"role": "arrow", "pos": Vector3(0, 4.6, -2.5), "rot": Vector3.ZERO, "parts": []})
+		"xform": Transform3D(Basis.IDENTITY, Vector3(0, 1.0, mid)), "color": Palette.HYPE_GOLD, "alpha": 0.15})
+	var text: String = str(palette.get("label", STAIRS_LABEL))
+	_label(r, text, Vector3(0, 3.7, mid), 96, Palette.HYPE_GOLD, Vector3.ZERO, true)
+	(r["pivots"] as Array).append({"role": "arrow", "pos": Vector3(0, 4.6, mid), "rot": Vector3.ZERO, "parts": []})
 	(r["glows"] as Array).append({"role": "arrow_glow", "parent": "arrow",
 		"parts": [_p(MeshUtil.prism(Vector3(0.5, 0.4, 0.08)), Vector3.ZERO, Color.WHITE, Vector3(180, 0, 0)),
 			_p(MeshUtil.box(Vector3(0.18, 0.3, 0.08)), Vector3(0, 0.33, 0), Color.WHITE)],
@@ -306,8 +339,8 @@ static func _stairs(r: Dictionary, palette: Dictionary) -> void:
 	r["anim"] = "stairs"
 	# barrier around the well (players interact from the entry side, never fall in)
 	for sx: float in [-1.0, 1.0]:
-		_collide(r, Vector3(0.3, 1.2, 5.4), Vector3(2.15 * sx, 0.6, -2.5))
-	_collide(r, Vector3(4.6, 1.2, 0.3), Vector3(0, 0.6, -5.2))
+		_collide(r, Vector3(0.3, 1.2, run + 0.4), Vector3(2.15 * sx, 0.6, mid))
+	_collide(r, Vector3(4.6, 1.2, 0.3), Vector3(0, 0.6, -(run + 0.2)))
 	_collide(r, Vector3(4.0, 1.2, 0.2), Vector3(0, 0.6, 0.0))
 
 
@@ -378,7 +411,8 @@ static func _vending(r: Dictionary, broken: bool) -> void:
 	local.append(_p(MeshUtil.box(Vector3(0.05, 0.14, 0.02)), Vector3(0.36, 1.15, -0.41), Palette.NOVA_CYAN, Vector3.ZERO,
 		Vector3.ONE, 1.0))
 	for k in 6:
-		local.append(_p(MeshUtil.box(Vector3(0.06, 0.05, 0.02)), Vector3(0.32 + 0.08 * float(k % 2), 0.95 - 0.07 * float(k / 2),
+		local.append(_p(MeshUtil.box(Vector3(0.06, 0.05, 0.02)), Vector3(0.32 + 0.08 * float(k % 2),
+			0.95 - 0.07 * float(k / 2),
 			-0.41), Palette.PAPER))
 	local.append(_p(MeshUtil.box(Vector3(0.6, 0.18, 0.06)), Vector3(-0.12, 0.32, -0.41), DARK))
 	local.append(_p(MeshUtil.box(Vector3(1.0, 0.25, 0.1)), Vector3(0, 1.78, -0.42), Palette.NOVA_MAGENTA, Vector3.ZERO,
@@ -436,11 +470,11 @@ static func _crate(r: Dictionary, rng: RandomNumberGenerator) -> void:
 		var s: float = rng.randf_range(0.6, 1.0) * (1.0 - 0.12 * float(i))
 		var yaw: float = rng.randf_range(-15.0, 15.0)
 		var c: Vector3 = Vector3(rng.randf_range(-0.08, 0.08), y + s * 0.5, rng.randf_range(-0.08, 0.08))
-		_box(r, Vector3(s, s, s), c, Palette.WOOD, Vector3(0, yaw, 0))
+		_box(r, Vector3(s, s, s), c, CRATE_WOOD, Vector3(0, yaw, 0))
 		for k in 2:
-			_box(r, Vector3(s + 0.04, 0.1 * s, s + 0.04), c + Vector3(0, (-0.25 + 0.5 * float(k)) * s, 0), Color("#6b4a2e"),
+			_box(r, Vector3(s + 0.04, 0.1 * s, s + 0.04), c + Vector3(0, (-0.25 + 0.5 * float(k)) * s, 0), CRATE_SLAT,
 				Vector3(0, yaw, 0))
-		_box(r, Vector3(s + 0.03, 0.08 * s, s * 0.12), c + Vector3(0, 0, -s * 0.5), Color("#6b4a2e"), Vector3(0, yaw, 45))
+		_box(r, Vector3(s + 0.03, 0.08 * s, s * 0.12), c + Vector3(0, 0, -s * 0.5), CRATE_SLAT, Vector3(0, yaw, 45))
 		_collide(r, Vector3(s, s, s), c, Vector3(0, yaw, 0))
 		y += s
 
@@ -450,10 +484,11 @@ static func _barrel(r: Dictionary, rng: RandomNumberGenerator) -> void:
 	var c: Color = Palette.WARN_YELLOW if toxic else Color("#3e6b4a")
 	_add(r, _p(MeshUtil.cylinder(0.30, 0.30, 0.90), Vector3(0, 0.45, 0), c))
 	for y: float in [0.18, 0.72]:
-		_add(r, _p(MeshUtil.cylinder(0.32, 0.32, 0.05), Vector3(0, y, 0), Palette.mul(c, 0.7), Vector3.ZERO, Vector3.ONE, 0.0,
-			1.0))
+		_add(r,
+			_p(MeshUtil.cylinder(0.32, 0.32, 0.05), Vector3(0, y, 0), Palette.mul(c, 0.7), Vector3.ZERO, Vector3.ONE, 0.0, 1.0))
 	if toxic:
-		_add(r, _p(MeshUtil.cylinder(0.27, 0.27, 0.03), Vector3(0, 0.91, 0), Color("#7cc242"), Vector3.ZERO, Vector3.ONE, 1.0))
+		_add(r,
+			_p(MeshUtil.cylinder(0.27, 0.27, 0.03), Vector3(0, 0.91, 0), Color("#7cc242"), Vector3.ZERO, Vector3.ONE, 1.0))
 		_box(r, Vector3(0.3, 0.25, 0.01), Vector3(0, 0.45, -0.305), DARK)
 		_add(r, _p(MeshUtil.sphere(0.07), Vector3(0, 0.48, -0.31), Palette.WARN_YELLOW, Vector3.ZERO, Vector3(1, 1, 0.2)))
 	_collide(r, Vector3(0.6, 0.9, 0.6), Vector3(0, 0.45, 0))
@@ -512,7 +547,8 @@ static func _turnstile(r: Dictionary, rng: RandomNumberGenerator) -> void:
 		var a: float = TAU * float(k) / 3.0
 		_add(r, seg(hub, hub + Vector3(-0.08, cos(a) * 0.4, sin(a) * 0.4).normalized() * 0.42, 0.022, 0.022, Palette.STEEL,
 			0.0, 1.0))
-	_box(r, Vector3(0.02, 0.08, 0.12), Vector3(0.16, 0.92, -0.25), Palette.EXIT_GREEN if rng.randf() < 0.6 else Palette.LIVE_RED,
+	_box(r, Vector3(0.02, 0.08, 0.12), Vector3(0.16, 0.92, -0.25),
+		Palette.EXIT_GREEN if rng.randf() < 0.6 else Palette.LIVE_RED,
 		Vector3.ZERO, 1.0)
 	_collide(r, Vector3(0.3, 1.0, 0.8), Vector3(0, 0.5, 0))
 
@@ -542,7 +578,8 @@ static func _drone(r: Dictionary) -> void:
 	var body_parts: Array = [
 		_p(MeshUtil.box(Vector3(0.5, 0.15, 0.5)), Vector3.ZERO, DARK),
 		_p(MeshUtil.cylinder(0.09, 0.09, 0.2), Vector3(0, -0.06, -0.24), Palette.DARK_METAL, Vector3(90, 0, 0)),
-		_p(MeshUtil.box(Vector3(0.12, 0.03, 0.02)), Vector3(0, 0.08, -0.26), Palette.NOVA_MAGENTA, Vector3.ZERO, Vector3.ONE, 1.0),
+		_p(MeshUtil.box(Vector3(0.12, 0.03, 0.02)), Vector3(0, 0.08, -0.26), Palette.NOVA_MAGENTA, Vector3.ZERO,
+			Vector3.ONE, 1.0),
 	]
 	for sx: float in [-1.0, 1.0]:
 		for sz: float in [-1.0, 1.0]:
@@ -554,10 +591,12 @@ static func _drone(r: Dictionary) -> void:
 	var i: int = 0
 	for sx: float in [-1.0, 1.0]:
 		for sz: float in [-1.0, 1.0]:
-			(r["pivots"] as Array).append({"role": "rotor%d" % i, "pos": Vector3(0.32 * sx, 0.10, 0.32 * sz), "rot": Vector3.ZERO,
+			(r["pivots"] as Array).append({"role": "rotor%d" % i, "pos": Vector3(0.32 * sx, 0.10, 0.32 * sz),
+				"rot": Vector3.ZERO,
 				"parts": [_p(MeshUtil.box(Vector3(0.24, 0.01, 0.04)), Vector3.ZERO, Palette.RAIL)]})
 			i += 1
-	(r["glows"] as Array).append({"role": "lens", "parts": [_p(MeshUtil.sphere(0.06), Vector3(0, -0.06, -0.35), Color.WHITE)],
+	(r["glows"] as Array).append({"role": "lens",
+		"parts": [_p(MeshUtil.sphere(0.06), Vector3(0, -0.06, -0.35), Color.WHITE)],
 		"color": Palette.LIVE_RED, "energy": 3.0})
 	r["anim"] = "drone"
 
@@ -571,7 +610,8 @@ static func _billboard(r: Dictionary, pal: Dictionary, palette: Dictionary) -> v
 	_box(r, Vector3(3.0, 0.08, 0.06), Vector3(0, 1.82, -0.05), c, Vector3.ZERO, 1.0)
 	var q := QuadMesh.new()
 	q.size = Vector2(2.9, 1.1)
-	(r["holos"] as Array).append({"role": "screen", "mesh": q, "xform": Transform3D(Basis(Vector3.UP, PI), Vector3(0, 2.4, -0.06)),
+	(r["holos"] as Array).append({"role": "screen", "mesh": q,
+		"xform": Transform3D(Basis(Vector3.UP, PI), Vector3(0, 2.4, -0.06)),
 		"color": c, "alpha": 0.45})
 	_label(r, str(palette.get("label", "NOVA SYNDIKAT")), Vector3(0, 2.4, -0.09), 64, Palette.PAPER)
 
@@ -620,8 +660,8 @@ static func _pipe(r: Dictionary, rng: RandomNumberGenerator) -> void:
 	_add(r, _p(MeshUtil.box(Vector3(rad * 2.2, rad * 2.2, rad * 2.2)), Vector3(1.0, 0.5, 0), Palette.mul(c, 0.9)))
 	_add(r, _p(MeshUtil.cylinder(rad, rad, 1.2), Vector3(1.0, 1.1, 0), c))
 	_add(r, seg(Vector3(0, 0.5 + rad, 0), Vector3(0, 0.75 + rad, 0), 0.03, 0.03, Palette.DARK_METAL, 0.0, 1.0))
-	_add(r, _p(MeshUtil.torus(0.08, 0.12, 8, 3), Vector3(0, 0.76 + rad, 0), Color("#c23b22"), Vector3.ZERO, Vector3.ONE, 0.0,
-		1.0))
+	_add(r, _p(MeshUtil.torus(0.08, 0.12, 8, 3), Vector3(0, 0.76 + rad, 0), Color("#c23b22"), Vector3.ZERO,
+		Vector3.ONE, 0.0, 1.0))
 
 
 ## Closed door bar for a 4 m door opening (gate, 02_TECH §7.3): front −Z, spans X.
@@ -700,7 +740,8 @@ static func _fortune_wheel(r: Dictionary) -> void:
 			Palette.PAPER, Vector3.ZERO, Vector3.ONE, 0.6))
 	wheel_parts.append(_p(MeshUtil.cylinder(0.16, 0.16, 0.12), Vector3(0, 0, -0.04), Palette.STEEL, Vector3(90, 0, 0),
 		Vector3.ONE, 0.0, 1.0))
-	(r["pivots"] as Array).append({"role": "wheel", "pos": Vector3(0, 2.05, -0.05), "rot": Vector3.ZERO, "parts": wheel_parts})
+	(r["pivots"] as Array).append({"role": "wheel", "pos": Vector3(0, 2.05, -0.05), "rot": Vector3.ZERO,
+		"parts": wheel_parts})
 	r["anim"] = "wheel"
 	_collide(r, Vector3(1.6, 3.2, 0.9), Vector3(0, 1.6, 0))
 

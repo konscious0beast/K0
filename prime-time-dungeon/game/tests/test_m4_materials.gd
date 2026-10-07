@@ -6,7 +6,8 @@ func after_each() -> void:
 	Materials.clear_cache()
 
 
-# --- Palette -------------------------------------------------------------------------------------------------------------
+# --- Palette
+# -------------------------------------------------------------------------------------------------------------
 
 func test_palette_contract_constants() -> void:
 	assert_eq(Palette.INK.to_html(false), "140d1c")
@@ -153,7 +154,8 @@ func test_env_glow_vfx_outline_factories() -> void:
 	assert_almost(float(h.get_shader_parameter(&"alpha")), 0.15)
 
 
-# --- shaders -------------------------------------------------------------------------------------------------------------
+# --- shaders
+# -------------------------------------------------------------------------------------------------------------
 
 func _uniform_names(path: String) -> PackedStringArray:
 	var out: PackedStringArray = []
@@ -197,7 +199,117 @@ func test_shader_contract_uniforms_and_extras() -> void:
 	assert_true(outline_src.contains("abs(PROJECTION_MATRIX[1][1])"), "outline uses abs() of the flipped projection (F6)")
 
 
-# --- MeshUtil ------------------------------------------------------------------------------------------------------------
+## 02_TECH §8.3: names, types and defaults of the contract uniforms are binding (also for the TV overlay LOW variant).
+const CONTRACT_DEFAULTS: Dictionary = {
+	"res://art/shaders/toon.gdshader": {"albedo": Color(1, 1, 1, 1), "use_vertex_color": false,
+		"shade_color": Color(0.35, 0.3, 0.5, 1), "bands": 2.0, "rim_color": Color(1, 0.95, 0.85, 1), "rim_amount": 0.25,
+		"emission_color": Color(0, 0, 0, 1), "emission_energy": 0.0},
+	"res://art/shaders/toon_outline.gdshader": {"outline_color": Palette.INK, "outline_width": 0.025},
+	"res://art/shaders/env_tiles.gdshader": {"tile_size": 2.0, "grout_width": 0.04, "dirt_amount": 0.3, "bands": 3.0,
+		"use_vertex_color": true},
+	"res://art/shaders/glow.gdshader": {"energy": 2.0, "pulse_speed": 0.0},
+	"res://art/shaders/vfx_additive.gdshader": {"softness": 0.5},
+	"res://art/shaders/hologram.gdshader": {"color": Palette.NOVA_CYAN, "scan_speed": 1.5, "alpha": 0.6},
+	"res://art/shaders/ui_swirl.gdshader": {"progress": 0.0, "tint": Palette.INK, "aspect": 1.7778},
+	"res://art/shaders/ui_tv_overlay.gdshader": {"scanline_alpha": 0.08, "vignette": 0.35, "aberration": 0.6},
+	"res://art/shaders/ui_tv_overlay_aberration.gdshader": {"scanline_alpha": 0.08, "vignette": 0.35, "aberration": 0.6},
+}
+const INSTANCE_CONTRACT: PackedStringArray = ["flash_amount", "flash_color", "highlight", "dissolve"]
+
+
+func test_shader_contract_defaults() -> void:
+	for path: String in CONTRACT_DEFAULTS:
+		var sh: Shader = load(path) as Shader
+		assert_not_null(sh, path)
+		if sh == null:
+			continue
+		var defaults: Dictionary = CONTRACT_DEFAULTS[path]
+		for uname: String in defaults:
+			var want: Variant = defaults[uname]
+			var got: Variant = _source_default(sh.code, uname)
+			var ctx: String = "%s: %s default" % [path.get_file(), uname]
+			if want is Color:
+				assert_true(got is Color, ctx + " is a color")
+				if got is Color:
+					var g: Color = got
+					var w: Color = want
+					assert_true(absf(g.r - w.r) < 0.003 and absf(g.g - w.g) < 0.003 and absf(g.b - w.b) < 0.003
+						and absf(g.a - w.a) < 0.003, "%s = %s, expected %s" % [ctx, g, w])
+			elif want is bool:
+				assert_eq(bool(got), want, ctx)
+			else:
+				assert_almost(float(got), float(want), 0.0001, ctx)
+
+
+## Default value written in the shader source for `uname` (float, bool or vecN → Color); null when none.
+static func _source_default(code: String, uname: String) -> Variant:
+	var re := RegEx.create_from_string("uniform\\s+\\w+\\s+" + uname + "\\b[^=;]*=\\s*([^;]+);")
+	var m: RegExMatch = re.search(code)
+	if m == null:
+		return null
+	var v: String = m.get_string(1).strip_edges()
+	if v == "true" or v == "false":
+		return v == "true"
+	if v.begins_with("vec"):
+		var args: PackedStringArray = v.substr(v.find("(") + 1, v.rfind(")") - v.find("(") - 1).split(",")
+		var f: Array[float] = []
+		for a: String in args:
+			f.append(a.strip_edges().to_float())
+		if f.size() == 1:
+			return Color(f[0], f[0], f[0], f[0])
+		while f.size() < 4:
+			f.append(1.0)
+		return Color(f[0], f[1], f[2], f[3])
+	return v.to_float()
+
+
+## Declared `instance uniform` names of a shader, in source order.
+static func _instance_uniforms(path: String) -> PackedStringArray:
+	var out: PackedStringArray = []
+	var re := RegEx.create_from_string("(?m)^\\s*instance\\s+uniform\\s+\\w+\\s+(\\w+)")
+	for m: RegExMatch in re.search_all(FileAccess.get_file_as_string(path)):
+		out.append(m.get_string(1))
+	return out
+
+
+## Headless guard for the "different indices" rule (02_TECH §8.3/§11.5): the dummy rasterizer never logs the warning,
+## so every material/next_pass pair the kit builds is checked statically — shared instance uniforms in the same order.
+func test_instance_uniform_order_of_next_pass_pairs() -> void:
+	var toon: PackedStringArray = _instance_uniforms("res://art/shaders/toon.gdshader")
+	var outline: PackedStringArray = _instance_uniforms("res://art/shaders/toon_outline.gdshader")
+	assert_eq(toon.slice(0, INSTANCE_CONTRACT.size()), INSTANCE_CONTRACT,
+		"toon: contract instance uniforms first, in order")
+	assert_eq(outline.slice(0, INSTANCE_CONTRACT.size()), INSTANCE_CONTRACT, "outline: same order as toon")
+	var pairs: Dictionary = {}
+	for m: ShaderMaterial in [Materials.toon(Color.RED), Materials.toon_vc({"bands": 3}), Materials.toon(Color.BLUE,
+			{"outline_width": 0.05}), Materials.toon_vc({"stripes": {"color": Color.YELLOW, "width": 0.5, "speed": 0.8}})]:
+		var mat: Material = m
+		while mat != null and mat.next_pass != null:
+			var a: ShaderMaterial = mat as ShaderMaterial
+			var b: ShaderMaterial = mat.next_pass as ShaderMaterial
+			if a != null and b != null:
+				pairs[[a.shader.resource_path, b.shader.resource_path]] = true
+			mat = mat.next_pass
+	assert_gt(pairs.size(), 0, "the kit builds material + next_pass pairs")
+	for pv: Variant in pairs:
+		var pair: Array = pv
+		var ua: PackedStringArray = _instance_uniforms(str(pair[0]))
+		var ub: PackedStringArray = _instance_uniforms(str(pair[1]))
+		var shared_a: PackedStringArray = []
+		var shared_b: PackedStringArray = []
+		for n: String in ua:
+			if ub.has(n):
+				shared_a.append(n)
+		for n: String in ub:
+			if ua.has(n):
+				shared_b.append(n)
+		assert_eq(shared_b, shared_a, "%s + next_pass %s: shared instance uniforms in the same order" % pair)
+		for i in shared_a.size():
+			assert_eq(ua.find(shared_a[i]), ub.find(shared_a[i]), "%s: same index in both shaders" % shared_a[i])
+
+
+# --- MeshUtil
+# ------------------------------------------------------------------------------------------------------------
 
 func test_meshutil_primitive_segments() -> void:
 	var s: SphereMesh = MeshUtil.sphere(0.3)
@@ -278,9 +390,11 @@ func test_meshutil_xform_scales_local_axes() -> void:
 
 
 func test_meshutil_box_sizes_and_mirroring() -> void:
-	var a: ArrayMesh = MeshUtil.merge([{"mesh": MeshUtil.box(Vector3(1, 2, 3)), "color": Color.WHITE}] as Array[Dictionary])
+	var a: ArrayMesh = MeshUtil.merge([{"mesh": MeshUtil.box(Vector3(1, 2, 3)),
+		"color": Color.WHITE}] as Array[Dictionary])
 	assert_true(a.get_aabb().size.is_equal_approx(Vector3(1, 2, 3)), "unit-box cache keeps sizes")
-	var b: ArrayMesh = MeshUtil.merge([{"mesh": MeshUtil.box(Vector3(0.5, 0.5, 0.5)), "color": Color.WHITE}] as Array[Dictionary])
+	var b: ArrayMesh = MeshUtil.merge([{"mesh": MeshUtil.box(Vector3(0.5, 0.5, 0.5)),
+		"color": Color.WHITE}] as Array[Dictionary])
 	assert_true(b.get_aabb().size.is_equal_approx(Vector3(0.5, 0.5, 0.5)), "second box size from the same cache")
 	var mirrored: ArrayMesh = MeshUtil.merge([{"mesh": MeshUtil.box(Vector3.ONE), "color": Color.WHITE,
 		"xform": Transform3D(Basis.from_scale(Vector3(-1, 1, 1)), Vector3.ZERO)}] as Array[Dictionary])

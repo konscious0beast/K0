@@ -26,9 +26,12 @@ uniform float band_shadow : hint_range(0.0, 1.0) = 0.22;
 uniform float band_mid : hint_range(0.0, 1.0) = 0.6;
 uniform float vertex_emission_energy : hint_range(0.0, 16.0) = 2.5;   // x UV2.x
 uniform float metal_sheen : hint_range(0.0, 2.0) = 0.6;               // x UV2.y
+uniform float center_clean : hint_range(0.0, 1.0) = 0.5;              // less floor dirt within ~5 m of the mesh origin
+uniform float omni_step_soft : hint_range(0.0, 0.3) = 0.12;           // ramp width of the 3 omni light steps
 
 varying vec3 v_world;
 varying vec3 v_wnormal;
+varying vec2 v_local_xz;
 
 float ptd_hash2(vec2 p) {
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -44,6 +47,7 @@ float ptd_vnoise(vec2 p) {
 
 void vertex() {
 	v_world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	v_local_xz = VERTEX.xz;
 	v_wnormal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 }
 
@@ -67,6 +71,10 @@ void fragment() {
 	float n = ptd_vnoise(p * 1.3) * 0.6 + ptd_vnoise(p * 5.0) * 0.4;
 	float grime = an.y > 0.5 ? 0.0 : 1.0 - smoothstep(0.0, dirt_height, v_world.y);
 	float dirt = clamp(smoothstep(0.45, 0.85, n) + grime * 0.7, 0.0, 1.0) * dirt_amount * (1.0 - special);
+	// cleaner floor in the room's clear zone (rooms/arena are built around their origin): enemies read better
+	if (an.y > 0.5) {
+		dirt *= mix(1.0 - center_clean, 1.0, smoothstep(2.5, 6.0, length(v_local_xz)));
+	}
 	col = mix(col, dirt_color.rgb, dirt);
 	ALBEDO = col;
 	METALLIC = 0.0;
@@ -89,7 +97,11 @@ void light() {
 	if (LIGHT_IS_DIRECTIONAL) {
 		x = min(ndl, mix(-0.08, 1.0, ATTENUATION));
 	} else {
-		intensity = min(1.0, ceil(ATTENUATION * 3.0) / 3.0) * step(0.02, ATTENUATION);
+		// 3 toon steps like ceil(ATTENUATION * 3) / 3, but with short ramps and a soft final cutoff, so omni pools read
+		// as light, not as hard-edged decals on walls and corners (03_ART §3.4, review M4)
+		float a3 = ATTENUATION * 3.0;
+		float stepped = (floor(a3) + smoothstep(0.0, max(omni_step_soft, 0.001), fract(a3))) / 3.0;
+		intensity = min(1.0, stepped) * smoothstep(0.0, 0.08, ATTENUATION);
 	}
 	float b = ptd_band(x);
 	float shadow_w = 1.0 - smoothstep(-0.005, 0.045, x);

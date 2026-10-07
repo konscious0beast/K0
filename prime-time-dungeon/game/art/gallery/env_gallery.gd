@@ -6,6 +6,7 @@ extends Node3D
 
 const Stage := preload("res://art/gallery/gallery_stage.gd")
 const Cast := preload("res://art/gallery/cast.gd")
+const SetBuilder := preload("res://art/kit/set_builder.gd")
 
 @export var page: String = "overview"
 @export var room_mask: int = 5
@@ -77,13 +78,13 @@ func _page_overview() -> void:
 	arena.position = Vector3(56, 0, -18)
 	arena.scale = Vector3(0.75, 0.75, 0.75)
 	add_child(arena)
-	Stage.label(self, "Arena", Vector3(56, 9, -18), 110, Palette.HYPE_GOLD).pixel_size = 0.03
+	Stage.label(self, "Arena", Vector3(56, 2, -31), 110, Palette.HYPE_GOLD).pixel_size = 0.03
 	var themes: Array[StringName] = [&"kiosk", &"pumphouse", &"signalbox"]
 	for i in 3:
-		var sr: Node3D = EnvKit.build_safe_room(i, &"high", themes[i])
+		var sr: Node3D = SetBuilder.build_safe(i, &"high", themes[i], true)   # cutaway: interior visible from above
 		sr.position = Vector3(44 + 13.0 * float(i), 0, 14)
 		add_child(sr)
-	Stage.label(self, "Safe Rooms", Vector3(57, 6, 14), 110, Palette.HYPE_GOLD).pixel_size = 0.03
+	Stage.label(self, "Safe Rooms", Vector3(57, 0.5, 22.5), 110, Palette.HYPE_GOLD).pixel_size = 0.03
 	Stage.add_camera(self, Vector3(14, 92, 64), Vector3(14, 0, -4), 46.0)
 
 
@@ -165,7 +166,8 @@ func _page_safe() -> void:
 func _page_kinds() -> void:
 	Stage.add_world(self, "metro", {}, &"explore", &"high", 0.15)
 	var kinds: Array = [[RoomSpec.Kind.START, 1, "platform"], [RoomSpec.Kind.STAIRS, 2, "track9"],
-		[RoomSpec.Kind.SAFE, 1, "platform"], [RoomSpec.Kind.QUARTER_BOSS, 8, "cellar"], [RoomSpec.Kind.FLOOR_BOSS, 2, "track9"],
+		[RoomSpec.Kind.SAFE, 1, "platform"], [RoomSpec.Kind.QUARTER_BOSS, 8, "cellar"], [RoomSpec.Kind.FLOOR_BOSS, 2,
+			"track9"],
 		[RoomSpec.Kind.NORMAL, 10, "sewer"]]
 	for i in kinds.size():
 		var k: Array = kinds[i]
@@ -174,20 +176,26 @@ func _page_kinds() -> void:
 	Stage.add_camera(self, Vector3(0, 46, 40), Vector3(0, 0, 0), 50.0)
 
 
+## Props by height (review M4: tall props in the back so no label or small prop hides behind a billboard or gate).
+const PROP_ROWS: Array = [
+	["safe_door", "billboard", "gate", "vending_machine", "broken_vending", "phone_booth"],
+	["fortune_wheel", "pillar", "lamp", "turnstile", "couch", "save_terminal"],
+	["poster", "camera_drone", "rail", "pipe", "bench", "trash_bin"],
+	["chest", "crate", "barrel", "lever"],
+]
+
+
 func _page_props() -> void:
 	Stage.add_world(self, "metro", {}, &"battle")
 	Stage.add_floor(self, 14.0, {})
-	var ids: PackedStringArray = PropKit.IDS
-	var i: int = 0
-	for id: String in ids:
-		if id == "wreck" or id == "stairs_down":
-			continue
-		var n: Node3D = PropKit.build(StringName(id), 3)
-		var col: int = i % 6
-		var row: int = i / 6
-		n.position = Vector3(-8.0 + 3.2 * float(col), 0.0 if id != "camera_drone" else 1.5, -6.0 + 3.6 * float(row))
-		n.rotation.y = PI
-		add_child(n)
-		Stage.label(self, id, n.position + Vector3(0, -0.1, 1.0) - Vector3(0, n.position.y, 0), 40)
-		i += 1
-	Stage.add_camera(self, Vector3(0, 9.0, 13.0), Vector3(0, 0.5, -1.5), 50.0)
+	for row in PROP_ROWS.size():
+		var ids: Array = PROP_ROWS[row]
+		for col in ids.size():
+			var id: String = str(ids[col])
+			var n: Node3D = PropKit.build(StringName(id), 3)
+			var x: float = (float(col) - float(ids.size() - 1) * 0.5) * 3.3
+			n.position = Vector3(x, 0.0 if id != "camera_drone" else 1.5, -6.6 + 3.7 * float(row))
+			n.rotation.y = PI
+			add_child(n)
+			Stage.label(self, id, Vector3(n.position.x, 0.0, n.position.z + 1.2), 52)
+	Stage.add_camera(self, Vector3(0, 9.5, 13.5), Vector3(0, 0.5, -1.2), 50.0)

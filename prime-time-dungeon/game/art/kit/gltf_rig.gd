@@ -11,7 +11,7 @@ const Forwarder := preload("res://art/kit/gltf_impact_forwarder.gd")
 var _player: AnimationPlayer = null
 var _clips: Dictionary = {}            # StringName → clip name
 var _impacts: Dictionary = {}          # StringName → seconds
-var _track_impacts: bool = false
+var _track_clips: Dictionary = {}      # StringName → true for clips whose method track calls emit_impact()
 
 
 func setup_from_scene(inst: Node3D, p_model: Dictionary) -> void:
@@ -50,7 +50,7 @@ func setup_from_scene(inst: Node3D, p_model: Dictionary) -> void:
 			if _player.has_animation(a):
 				_clips[a] = String(a)
 				if _has_impact_track(_player.get_animation(a)):
-					_track_impacts = true
+					_track_clips[a] = true
 		_player.animation_finished.connect(_on_clip_finished)
 	_load_impacts(str(model.get("gltf", "")))
 	var bounds := AABB()
@@ -70,7 +70,10 @@ func setup_from_scene(inst: Node3D, p_model: Dictionary) -> void:
 
 
 func play(anim: StringName, speed: float = 1.0) -> void:
+	var still_dead: bool = anim == &"die" and _dead
 	super.play(anim, speed)
+	if still_dead:
+		return   # KO rig keeps the end frame of the die clip
 	if _player != null and _clips.has(_anim):
 		_player.speed_scale = 1.0
 		_player.play(str(_clips[_anim]), -1.0, maxf(speed, 0.01))
@@ -112,8 +115,8 @@ func _duration(anim: StringName) -> float:
 
 
 func _impact_time(anim: StringName) -> float:
-	if _track_impacts and _clips.has(anim):
-		return INF   # the method track calls emit_impact()
+	if _track_clips.has(anim):
+		return INF   # this clip's method track calls emit_impact() (missed → emitted at the end, base class)
 	if _impacts.has(anim):
 		return float(_impacts[anim])
 	return super._impact_time(anim)

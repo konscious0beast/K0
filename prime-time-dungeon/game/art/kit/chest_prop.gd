@@ -7,6 +7,11 @@ signal opened
 
 const LID_OPEN_DEG: float = 110.0
 const OPEN_TIME: float = 0.5
+const BRASS_TRIM: Color = Color("#cd7f32")
+const DARK_KEYHOLE: Color = Color("#1a1420")
+## Idle glint on the lock plate while closed: 0.35 s star flash every 2.6 s.
+const GLINT_PERIOD: float = 2.6
+const GLINT_TIME: float = 0.35
 
 var is_open: bool = false
 ## "wood" | "metal" | "locked"
@@ -18,6 +23,9 @@ var _glow: MeshInstance3D = null
 var _seed: int = 0
 var _palette: Dictionary = {}
 var _tween: Tween = null
+var _open_owed: bool = false           # an animated open() whose `opened` has not been emitted yet
+var _glint: MeshInstance3D = null
+var _glint_t: float = 0.0
 
 
 ## Lid tween 0.5 s + glow; emits opened. Outside the tree: set_open_instant() + opened + push_warning.
@@ -36,8 +44,8 @@ func open(animated: bool = true) -> void:
 		return
 	is_open = true
 	_ensure_built()
-	if _tween != null and _tween.is_valid():
-		_tween.kill()
+	_kill_tween()
+	_open_owed = true
 	_tween = create_tween()
 	_tween.tween_property(_lid, "rotation:x", deg_to_rad(LID_OPEN_DEG), OPEN_TIME).set_trans(Tween.TRANS_BACK) \
 		.set_ease(Tween.EASE_OUT)
@@ -49,22 +57,27 @@ func open(animated: bool = true) -> void:
 		_glow_color())
 
 
+## Interrupting a running animated open() still emits its `opened` (every open() emits exactly once).
 func set_open_instant() -> void:
 	_ensure_built()
-	if _tween != null and _tween.is_valid():
-		_tween.kill()
+	var owed: bool = _kill_tween()
 	is_open = true
 	if _lid != null:
 		_lid.rotation.x = deg_to_rad(LID_OPEN_DEG)
 	if _glow != null:
 		_glow.visible = true
+	if owed:
+		opened.emit()
 
 
 ## Art extra: rebuilds the chest as "wood" | "metal" | "locked" (keeps the open state).
 func set_style(type: String) -> void:
 	chest_type = type if type in ["wood", "metal", "locked"] else "wood"
+	var owed: bool = _kill_tween()
 	_clear()
 	_build(_seed, _palette)
+	if owed:
+		opened.emit()
 
 
 func _ready() -> void:
@@ -77,7 +90,18 @@ func _ensure_built() -> void:
 
 
 func _on_open_finished() -> void:
+	_open_owed = false
 	opened.emit()
+
+
+## Stops a running lid tween; returns true if its `opened` was still owed to an awaiting caller.
+func _kill_tween() -> bool:
+	if _tween != null and _tween.is_valid():
+		_tween.kill()
+	_tween = null
+	var owed: bool = _open_owed
+	_open_owed = false
+	return owed
 
 
 func _glow_color() -> Color:
@@ -124,6 +148,18 @@ func _build(seed: int, palette: Dictionary) -> void:
 	add_child(_glow)
 	if is_open:
 		_lid.rotation.x = deg_to_rad(LID_OPEN_DEG)
+	# camera-facing additive star on the lid's front edge (reads from every side and from the gameplay camera)
+	_glint = MeshInstance3D.new()
+	_glint.name = "Glint"
+	var quad := QuadMesh.new()
+	quad.size = Vector2(0.55, 0.55)
+	_glint.mesh = quad
+	_glint.material_override = Materials.vfx_additive_ex(Palette.HYPE_GOLD, 1, 0.5, 3.0, true)
+	_glint.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_glint.position = Vector3(0.18, 0.62, -0.22)
+	_glint.visible = false
+	_glint_t = float(absi(seed) % 13) * 0.2      # chests in one room do not glint in sync
+	add_child(_glint)
 	var body := StaticBody3D.new()
 	body.name = "Collision"
 	body.collision_layer = 1
@@ -144,29 +180,34 @@ func _clear() -> void:
 	_body = null
 	_lid = null
 	_glow = null
+	_glint = null
 
 
-## Chest body parts (03_ART §6.3): Box 0.9×0.45×0.6 + bands + 4 corner fittings (metal) + lock plate.
+## Chest body parts (03_ART §6.3): Box 0.9×0.45×0.6 + bands + 4 corner fittings (metal) + lock plate. Review M4: the
+## loot chest must not read as a dressing crate — big brass corners and bands (#CD7F32, metal) and an emissive
+## HYPE_GOLD lock plate (E 0.6); dressing crates use the greyer CRATE_WOOD.
 static func body_parts(r: Dictionary, type: String) -> void:
 	var body: Color = Palette.WOOD if type == "wood" else Color("#8a8f96")
-	var trim: Color = Color("#cd7f32") if type == "wood" else Color("#5a6068")
+	var trim: Color = BRASS_TRIM if type == "wood" else Color("#5a6068")
 	var parts: Array = r["parts"]
 	parts.append(MeshUtil.part(MeshUtil.box(Vector3(0.9, 0.45, 0.6)), Vector3(0, 0.225, 0), body))
 	if type == "wood":
 		for y: float in [0.12, 0.33]:
-			parts.append(MeshUtil.part(MeshUtil.box(Vector3(0.92, 0.03, 0.62)), Vector3(0, y, 0), Palette.mul(body, 0.75)))
+			parts.append(MeshUtil.part(MeshUtil.box(Vector3(0.92, 0.045, 0.62)), Vector3(0, y, 0), trim, Vector3.ZERO,
+				Vector3.ONE, 0.0, 1.0))
 	else:
 		for x: float in [-0.3, 0.0, 0.3]:
 			parts.append(MeshUtil.part(MeshUtil.box(Vector3(0.04, 0.44, 0.61)), Vector3(x, 0.225, 0), Palette.mul(body, 0.82),
 				Vector3.ZERO, Vector3.ONE, 0.0, 1.0))
 	for sx: float in [-1.0, 1.0]:
 		for sz: float in [-1.0, 1.0]:
-			parts.append(MeshUtil.part(MeshUtil.box(Vector3(0.08, 0.08, 0.08)), Vector3(0.43 * sx, 0.04, 0.28 * sz), trim,
+			parts.append(MeshUtil.part(MeshUtil.box(Vector3(0.12, 0.12, 0.12)), Vector3(0.42 * sx, 0.06, 0.27 * sz), trim,
 				Vector3.ZERO, Vector3.ONE, 0.0, 1.0))
-			parts.append(MeshUtil.part(MeshUtil.box(Vector3(0.08, 0.08, 0.08)), Vector3(0.43 * sx, 0.41, 0.28 * sz), trim,
+			parts.append(MeshUtil.part(MeshUtil.box(Vector3(0.12, 0.12, 0.12)), Vector3(0.42 * sx, 0.39, 0.27 * sz), trim,
 				Vector3.ZERO, Vector3.ONE, 0.0, 1.0))
-	parts.append(MeshUtil.part(MeshUtil.box(Vector3(0.14, 0.16, 0.03)), Vector3(0, 0.36, -0.31),
-		Palette.HYPE_GOLD if type == "wood" else trim, Vector3.ZERO, Vector3.ONE, 0.0, 1.0))
+	parts.append(MeshUtil.part(MeshUtil.box(Vector3(0.20, 0.22, 0.03)), Vector3(0, 0.33, -0.31),
+		Palette.HYPE_GOLD if type == "wood" else trim, Vector3.ZERO, Vector3.ONE, 0.6 if type == "wood" else 0.0, 1.0))
+	parts.append(MeshUtil.part(MeshUtil.box(Vector3(0.05, 0.08, 0.02)), Vector3(0, 0.31, -0.33), DARK_KEYHOLE))
 	if type == "locked":
 		parts.append(MeshUtil.part(MeshUtil.torus(0.035, 0.055), Vector3(0, 0.30, -0.36), Palette.STEEL, Vector3.ZERO,
 			Vector3.ONE, 0.0, 1.0))
@@ -177,11 +218,31 @@ static func body_parts(r: Dictionary, type: String) -> void:
 ## Lid parts relative to the lid pivot at the rear top edge (lid extends toward −Z).
 static func lid_parts(type: String) -> Array:
 	var body: Color = Palette.WOOD if type == "wood" else Color("#8a8f96")
-	var trim: Color = Color("#cd7f32") if type == "wood" else Color("#5a6068")
+	var trim: Color = BRASS_TRIM if type == "wood" else Color("#5a6068")
 	var parts: Array = []
 	parts.append(MeshUtil.part(MeshUtil.box(Vector3(0.92, 0.15, 0.62)), Vector3(0, 0.075, -0.31), Palette.mul(body, 1.08)))
-	parts.append(MeshUtil.part(MeshUtil.box(Vector3(0.94, 0.04, 0.10)), Vector3(0, 0.12, -0.31), Palette.mul(body, 0.75)))
+	parts.append(MeshUtil.part(MeshUtil.box(Vector3(0.94, 0.05, 0.12)), Vector3(0, 0.13, -0.31), trim, Vector3.ZERO,
+		Vector3.ONE, 0.0, 1.0))
 	for sx: float in [-1.0, 1.0]:
-		parts.append(MeshUtil.part(MeshUtil.box(Vector3(0.08, 0.17, 0.64)), Vector3(0.43 * sx, 0.075, -0.31), trim,
+		parts.append(MeshUtil.part(MeshUtil.box(Vector3(0.10, 0.17, 0.64)), Vector3(0.42 * sx, 0.075, -0.31), trim,
 			Vector3.ZERO, Vector3.ONE, 0.0, 1.0))
 	return parts
+
+
+# --- idle glint (closed chests catch the eye, pillar 4/6)
+# -----------------------------------------------------------------
+
+func _process(delta: float) -> void:
+	if _glint == null:
+		return
+	if is_open or not is_visible_in_tree():
+		_glint.visible = false
+		return
+	_glint_t = fmod(_glint_t + delta, GLINT_PERIOD)
+	var u: float = _glint_t / GLINT_TIME
+	if u >= 1.0:
+		_glint.visible = false
+		return
+	var k: float = sin(PI * u)
+	_glint.visible = true
+	_glint.scale = Vector3(k, k, k)

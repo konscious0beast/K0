@@ -6,7 +6,8 @@ shader_type canvas_item;
 // --- contract (02_TECH 8.3) ---
 uniform float scanline_alpha : hint_range(0.0, 1.0) = 0.08;
 uniform float vignette : hint_range(0.0, 1.0) = 0.35;
-uniform float aberration : hint_range(0.0, 4.0) = 0.0;               // contract only; ignored here (see _aberration variant)
+// contract default (02_TECH 8.3); unused in LOW (see _aberration)
+uniform float aberration : hint_range(0.0, 4.0) = 0.6;
 
 // --- art extras ---
 uniform float test_card : hint_range(0.0, 1.0) = 0.0;                // 1 = Game Over test card

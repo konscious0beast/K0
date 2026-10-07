@@ -1,6 +1,7 @@
 extends TestCase
 ## M4 characters (02_TECH §8.4, §11.5, §12.1; 03_ART §5/§10): every base × prop builds, tri/mesh budgets of the cast and
-## the DB models, heights, the CharacterRig animation contract (play_and_wait ends, impact exactly once, outside the tree
+## the DB models, heights, the CharacterRig animation contract (play_and_wait ends, impact exactly once, outside the
+## tree
 ## instantly), locomotion, flash/highlight/dissolve, KO state, facing, glTF wrapper, deterministic caching.
 
 const Cast := preload("res://art/gallery/cast.gd")
@@ -10,31 +11,10 @@ const WITH_IMPACT: Array[StringName] = [&"attack", &"cast", &"stunt", &"item"]
 const GLTF_PATH: String = "user://test_m4_gltf_rig.tscn"
 
 
-## Captures engine log lines containing one of `needles` (e.g. "different indices", 02_TECH §11.5 M4).
-class _LogSpy extends Logger:
-	var needles: PackedStringArray = []
-	var hits: PackedStringArray = []
-	var _mutex: Mutex = Mutex.new()
-
-	func _log_error(_function: String, _file: String, _line: int, code: String, rationale: String,
-			_editor_notify: bool, _error_type: int, _script_backtraces: Array[ScriptBacktrace]) -> void:
-		_check(code + " " + rationale)
-
-	func _log_message(message: String, _error: bool) -> void:
-		_check(message)
-
-	func _check(text: String) -> void:
-		for n: String in needles:
-			if text.contains(n):
-				_mutex.lock()
-				hits.append(text.strip_edges())
-				_mutex.unlock()
-
-	func found() -> PackedStringArray:
-		_mutex.lock()
-		var out: PackedStringArray = hits.duplicate()
-		_mutex.unlock()
-		return out
+## Captures engine log lines containing one of `needles` (e.g. "different indices", 02_TECH §11.5 M4). Headless the
+## dummy rasterizer never logs that warning; test_m4_materials checks the instance-uniform order statically and the
+## render probe (check.sh --shot, real renderer) runs this spy too.
+const LogSpy := preload("res://art/gallery/log_spy.gd")
 
 
 func after_each() -> void:
@@ -102,7 +82,8 @@ func _start_wait(rig: CharacterRig, anim: StringName, speed: float) -> Array[boo
 	return done
 
 
-# --- vocabulary --------------------------------------------------------------------------------------------------------
+# --- vocabulary
+# --------------------------------------------------------------------------------------------------------
 
 func test_vocabulary_matches_validator() -> void:
 	assert_eq(CharacterBuilder.supported_bases(), DataValidator.MODEL_BASES)
@@ -143,8 +124,8 @@ func test_normalize_defaults_and_unknowns() -> void:
 # --- every base × prop -----------------------------------------------------------------------------------------------
 
 func test_every_base_and_every_prop_builds() -> void:
-	var spy := _LogSpy.new()
-	spy.needles = PackedStringArray(["different indices"])
+	var spy: Logger = LogSpy.new()
+	spy.set("needles", PackedStringArray(["different indices"]))
 	OS.add_logger(spy)
 	for base: String in CharacterBuilder.supported_bases():
 		var plain: CharacterRig = _rig({"base": base})
@@ -167,7 +148,7 @@ func test_every_base_and_every_prop_builds() -> void:
 				assert_not_null(mi.material_override, "%s + %s: %s material" % [base, prop, mi.name])
 			_drop(rig)
 	OS.remove_logger(spy)
-	assert_eq(spy.found(), PackedStringArray(), "no 'different indices' in the log")
+	assert_eq(spy.call("found"), PackedStringArray(), "no 'different indices' in the log")
 
 
 func test_all_props_at_once_on_every_base() -> void:
@@ -177,7 +158,8 @@ func test_all_props_at_once_on_every_base() -> void:
 		_drop(rig)
 
 
-# --- budgets (02_TECH §12.1, measured with MeshUtil.tri_count, hull not counted) ---------------------------------------
+# --- budgets (02_TECH §12.1, measured with MeshUtil.tri_count, hull not counted)
+# ---------------------------------------
 
 func _check_budget(id: String, model: Dictionary, role: String) -> void:
 	var limits: Array = Cast.BUDGETS[role]
@@ -217,7 +199,8 @@ func test_heights_follow_nominal_and_scale() -> void:
 	for base: String in CharacterBuilder.supported_bases():
 		var nominal: float = float(Archetypes.NOMINAL_HEIGHT[base])
 		var rig: CharacterRig = _rig({"base": base, "scale": 1.0})
-		assert_between(rig.height, nominal * 0.6, nominal * 1.45, "%s height %.2f vs %.2f" % [base, rig.height, nominal])
+		assert_between(rig.height, nominal * 0.9, nominal * 1.1, "%s height %.2f vs %.2f (±10 %%, 02_TECH §8.4)"
+			% [base, rig.height, nominal])
 		var h1: float = rig.height
 		_drop(rig)
 		var big: CharacterRig = _rig({"base": base, "scale": 2.0, "pose": "upright" if base == "rodent" else "auto"})
@@ -266,6 +249,26 @@ func test_builds_are_cached_and_deterministic() -> void:
 	var r1: CharacterRig = _rig({"base": "brute", "scale": 0.8})
 	var r2: CharacterRig = _rig({"base": "brute", "scale": 1.36})
 	assert_lt(MeshUtil.tri_count_tree(r1), MeshUtil.tri_count_tree(r2), "compact brute is cached separately")
+
+
+## Interim data rule (pending API change request): a humanoid whose eyes color equals its skin color is the faceless
+## mannequin of 03_ART §5.7 (Schaufensterpuppe); any other eye color keeps the face.
+func test_mannequin_rule_is_explicit_and_narrow() -> void:
+	var skin := "#e8dccb"
+	var mannequin: CharacterRig = _rig({"base": "humanoid", "colors": {"primary": skin, "skin": skin, "eyes": skin}})
+	var face: CharacterRig = _rig({"base": "humanoid", "colors": {"primary": skin, "skin": skin, "eyes": "#e8dccc"}})
+	assert_lt(MeshUtil.tri_count_tree(mannequin), MeshUtil.tri_count_tree(face), "eyes == skin → faceless mannequin")
+	var kai_like: CharacterRig = _rig({"base": "humanoid", "colors": {"primary": "#3aa9a0", "eyes": "#1a1420"}})
+	assert_eq(MeshUtil.tri_count_tree(kai_like), MeshUtil.tri_count_tree(_rig(_kai())) - _mop_tris(),
+		"default eyes keep the face")
+
+
+func _mop_tris() -> int:
+	var with_mop: CharacterRig = _rig(_kai())
+	var without: Dictionary = _kai()
+	without["props"] = []
+	var plain: CharacterRig = _rig(without)
+	return MeshUtil.tri_count_tree(with_mop) - MeshUtil.tri_count_tree(plain)
 
 
 func test_death_style_and_vertex_data() -> void:
@@ -377,6 +380,80 @@ func test_interrupted_one_shot_still_completes_contract() -> void:
 	assert_eq(rig.current_anim(), &"hit")
 	await wait_until(func() -> bool: return rig.current_anim() == &"idle", 3000)
 	assert_eq(impacts[0], 1, "no second impact")
+
+
+func test_die_on_ko_rig_returns_and_keeps_pose() -> void:
+	for model: Dictionary in [_kai(), {"base": "blob"}]:
+		var rig: CharacterRig = _rig(model)
+		await wait_frames(1)
+		rig.set_dead(true)
+		var head: Node3D = rig.anchor(&"head")
+		var y0: float = head.global_position.y
+		var done: Array[bool] = _start_wait(rig, &"die", 1.0)
+		var ok: bool = await wait_until(func() -> bool: return done[0], 5)
+		assert_true(ok, "%s: play_and_wait(die) on a KO rig returns" % model.get("base", "kai"))
+		await wait_frames(3)
+		assert_eq(rig.current_anim(), &"die")
+		assert_almost(head.global_position.y, y0, 0.01, "KO pose kept (no stand-up)")
+		# plain play(die) + await anim_finished must not hang either
+		var echoed: Array[int] = [0]
+		rig.anim_finished.connect(func(a: StringName) -> void:
+			if a == &"die":
+				echoed[0] += 1)
+		rig.play(&"die")
+		ok = await wait_until(func() -> bool: return echoed[0] == 1, 5)
+		assert_true(ok, "play(die) on a KO rig answers with anim_finished(die)")
+		await wait_frames(3)
+		assert_almost(head.global_position.y, y0, 0.01, "still KO after play(die)")
+		assert_eq(echoed[0], 1, "exactly one echo")
+		# a finished die followed by a second die (KO twice)
+		rig.play(&"idle")
+		await wait_frames(1)
+		var d1: Array[bool] = _start_wait(rig, &"die", 2.0)
+		ok = await wait_until(func() -> bool: return d1[0], 120)
+		assert_true(ok, "first die returns")
+		var d2: Array[bool] = _start_wait(rig, &"die", 2.0)
+		ok = await wait_until(func() -> bool: return d2[0], 5)
+		assert_true(ok, "second die on the KO rig returns")
+		_drop(rig)
+
+
+func test_set_dead_and_reset_pose_finish_an_awaited_one_shot() -> void:
+	for which: String in ["set_dead", "reset_pose"]:
+		var rig: CharacterRig = _rig(_kai())
+		var impacts: Array[int] = [0]
+		rig.impact.connect(func() -> void: impacts[0] += 1)
+		var done: Array[bool] = _start_wait(rig, &"attack", 0.25)
+		await wait_frames(2)
+		assert_false(done[0], which + ": slow attack still running")
+		if which == "set_dead":
+			rig.set_dead(true)
+		else:
+			rig.reset_pose()
+		var ok: bool = await wait_until(func() -> bool: return done[0], 5)
+		assert_true(ok, which + " during an awaited attack: play_and_wait returns")
+		assert_eq(impacts[0], 1, which + ": the interrupted attack still emits impact once")
+		assert_eq(rig.current_anim(), &"die" if which == "set_dead" else &"idle")
+		await wait_frames(30)
+		assert_eq(impacts[0], 1, which + ": no second impact")
+		_drop(rig)
+	# die interrupted by set_dead(true) / outside the tree with a pending one-shot
+	var r2: CharacterRig = _rig(_kai())
+	var dd: Array[bool] = _start_wait(r2, &"die", 0.25)
+	await wait_frames(2)
+	r2.set_dead(true)
+	assert_true(await wait_until(func() -> bool: return dd[0], 5), "set_dead during an awaited die returns")
+	_drop(r2)
+	var outside: CharacterRig = CharacterBuilder.build(_kai())
+	var fin: Array[StringName] = []
+	var imp: Array[int] = [0]
+	outside.impact.connect(func() -> void: imp[0] += 1)
+	outside.anim_finished.connect(func(a: StringName) -> void: fin.append(a))
+	outside.play(&"cast")
+	await outside.play_and_wait(&"hit")
+	assert_eq(fin, [&"cast", &"hit"] as Array[StringName], "pending one-shot finished before the instant one")
+	assert_eq(imp[0], 1, "pending cast impact once")
+	outside.free()
 
 
 func test_locomotion_states() -> void:
@@ -575,6 +652,20 @@ func _make_gltf_scene() -> PackedScene:
 	attack.track_insert_key(vt, 0.25, Vector3(0, 0, -0.3))
 	attack.track_insert_key(vt, 0.5, Vector3.ZERO)
 	lib.add_animation(&"attack", attack)
+	var cast := Animation.new()      # clip WITHOUT a method track: impact from the default table
+	cast.length = 0.8
+	var ct: int = cast.add_track(Animation.TYPE_VALUE)
+	cast.track_set_path(ct, NodePath("Body:position"))
+	cast.track_insert_key(ct, 0.0, Vector3.ZERO)
+	cast.track_insert_key(ct, 0.8, Vector3.ZERO)
+	lib.add_animation(&"cast", cast)
+	var item := Animation.new()      # clip shorter than the default impact time (0.35 s): impact still once
+	item.length = 0.2
+	var itr: int = item.add_track(Animation.TYPE_VALUE)
+	item.track_set_path(itr, NodePath("Body:position"))
+	item.track_insert_key(itr, 0.0, Vector3.ZERO)
+	item.track_insert_key(itr, 0.2, Vector3.ZERO)
+	lib.add_animation(&"item", item)
 	var idle := Animation.new()
 	idle.length = 1.0
 	idle.loop_mode = Animation.LOOP_LINEAR
@@ -617,12 +708,17 @@ func test_gltf_wrapper_contract() -> void:
 	if player != null:
 		await wait_frames(1)
 		assert_eq(String(player.current_animation), "idle", "idle clip resumes after the one-shot")
-	# clip without a glTF counterpart (cast) still keeps the timing contract via the procedural defaults
-	impacts[0] = 0
-	var done2: Array[bool] = _start_wait(rig, &"cast", 2.0)
-	ok = await wait_until(func() -> bool: return done2[0], 3000)
-	assert_true(ok)
-	assert_eq(impacts[0], 1, "cast impact from the default table")
+	# clips without a method track keep the timing contract via the procedural defaults, per clip
+	for anim: StringName in [&"cast", &"item", &"stunt"]:
+		impacts[0] = 0
+		var done2: Array[bool] = _start_wait(rig, anim, 2.0)
+		ok = await wait_until(func() -> bool: return done2[0], 3000)
+		assert_true(ok, "glTF %s returns" % anim)
+		assert_eq(impacts[0], 1, "glTF %s: impact exactly once (default table / end of a short clip)" % anim)
+	# KO twice on the glTF rig
+	rig.set_dead(true)
+	var dd: Array[bool] = _start_wait(rig, &"die", 1.0)
+	assert_true(await wait_until(func() -> bool: return dd[0], 5), "glTF: die on a KO rig returns")
 	_drop(rig)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(GLTF_PATH))
 	var fallback: CharacterRig = _rig({"base": "pug", "gltf": "res://art/models/does_not_exist.glb"})

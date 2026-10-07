@@ -10,7 +10,8 @@ extends RefCounted
 ##   meshes: Dictionary mesh name → {"pivot", "parts": Array, "mat": Dictionary (Materials opts), "pulse": Dictionary,
 ##     "role": String}, mesh_order: Array[String],
 ##   anchors: Dictionary anchor → {"pivot", "pos"}, sockets: Dictionary socket → {"pivot", "pos", "size", "rot"},
-##   particles: Array[Dictionary] ({"kind", "pivot", "pos"}), mat: Dictionary (default material opts), flags: Dictionary.
+##   particles: Array[Dictionary] ({"kind", "pivot", "pos"}), mat: Dictionary (default material opts),
+##   flags: Dictionary.
 
 const BASES: PackedStringArray = ["humanoid", "pug", "rodent", "blob", "insect", "robot", "brute", "specter", "swarm"]
 const PROPS: PackedStringArray = ["cape", "crown", "monocle", "top_hat", "cap", "bandana", "apron", "mop", "broom",
@@ -21,6 +22,9 @@ const PROPS: PackedStringArray = ["cape", "crown", "monocle", "top_hat", "cap", 
 ## Nominal heights at scale 1.0 (02_TECH §8.4).
 const NOMINAL_HEIGHT: Dictionary = {"humanoid": 1.75, "pug": 0.6, "rodent": 0.7, "blob": 0.9, "insect": 0.8,
 	"robot": 1.5, "brute": 2.2, "specter": 1.6, "swarm": 0.8}
+## Uniform fit of a recipe (03_ART §5.3 part lists) to its nominal height: the listed parts give blob 0.72 m, insect
+## 0.98 m and specter 1.85 m at scale 1.0; the Model node is scaled by ModelSpec.scale × fit (02_TECH §8.4 sizes).
+const BASE_FIT: Dictionary = {"blob": 1.25, "insect": 0.82, "specter": 0.865}
 
 const DEFAULT_COLORS: Dictionary = {
 	"humanoid": {"primary": "#3aa9a0", "secondary": "#2e3a57", "accent": "#3b2a22", "skin": "#e8b48f", "eyes": "#1a1420"},
@@ -41,6 +45,14 @@ const WOOD_HANDLE: Color = Color("#8a5a32")
 const STAFF_WOOD: Color = Color("#6b4a2e")
 const MOUTH: Color = Color("#8a3b3b")
 const RQ: float = 1.25   # rodent quadruped: 03_ART table values are for scale 0.8 → stored / 0.8
+const MOP_HEAD: Color = Color("#8e9cbc")
+const MOP_STRAND: Color = Color("#7684a6")
+const MOP_STRAND_DARK: Color = Color("#65739a")
+const MOP_TIP: Color = Color("#525e80")
+const MOP_STRANDS: int = 20
+const BROOM_BRISTLES: Color = Color("#e0c070")
+const BROOM_BINDING: Color = Color("#8a6a2e")
+const CAPE_HEM: Color = Color("#6a46c0")
 
 
 # --- entry ---------------------------------------------------------------------------------------------------------
@@ -181,8 +193,8 @@ static func _seg(a: Vector3, b: Vector3, r_a: float, r_b: float, color: Color, e
 static func _place(bp: Dictionary, socket: String, ref: float, parts: Array, mesh_name: String = "") -> void:
 	var s: Dictionary = bp["sockets"].get(socket, {})
 	if s.is_empty():
-		s = bp["sockets"].get("body", {"pivot": str((bp["pivots"] as Array)[0]), "pos": Vector3.ZERO, "size": ref,
-			"rot": Vector3.ZERO})
+		s = bp["sockets"].get("body",
+			{"pivot": str((bp["pivots"] as Array)[0]), "pos": Vector3.ZERO, "size": ref, "rot": Vector3.ZERO})
 	var k: float = float(s["size"]) / maxf(ref, 0.0001)
 	var st := Transform3D(Basis.from_euler((s["rot"] as Vector3) * (PI / 180.0)).scaled(Vector3(k, k, k)),
 		s["pos"] as Vector3)
@@ -231,7 +243,10 @@ static func _humanoid(bp: Dictionary) -> void:
 	var skin: Color = _col(bp, "skin")
 	var eyes: Color = _col(bp, "eyes")
 	var news: bool = _has(bp, "newspaper_head")
-	# eyes == skin → faceless mannequin (03_ART §5.7 Schaufensterpuppe): bald, no ears/face/collar, joint spheres
+	# eyes == skin → faceless mannequin (03_ART §5.7 Schaufensterpuppe): bald, no ears/face/collar, joint spheres.
+	# Interim data rule: an explicit switch (MODEL_PROPS "mannequin" or ModelSpec "variant") is a pending API change
+	# request to 02_TECH §4.3/§4.4.14 + DataValidator; until then authors must not give a humanoid eyes == skin by
+	# accident (test_m4_art_kit documents the rule).
 	var faceless: bool = eyes.is_equal_approx(skin)
 	_pivot(bp, "Hips", "", Vector3(0, 0.60, 0))
 	_pivot(bp, "Torso", "Hips", Vector3(0, 0.60, 0))
@@ -244,8 +259,8 @@ static func _humanoid(bp: Dictionary) -> void:
 	_add(bp, "Torso", _p(MeshUtil.box(Vector3(0.50, 0.12, 0.36)), Vector3(0, 0.0, 0), sec))
 	_add(bp, "Torso", _p(MeshUtil.capsule(0.24, 0.62), Vector3(0, 0.26, 0), prim))
 	if news:
-		_add(bp, "Torso", _p(MeshUtil.box(Vector3(0.16, 0.22, 0.02)), Vector3(0, 0.42, -0.226), Color("#d9d9d9"),
-			Vector3(-6, 0, 0)))
+		_add(bp, "Torso",
+			_p(MeshUtil.box(Vector3(0.16, 0.22, 0.02)), Vector3(0, 0.42, -0.226), Color("#d9d9d9"), Vector3(-6, 0, 0)))
 		_add(bp, "Torso", _p(MeshUtil.cylinder(0.035, 0.06, 0.32), Vector3(0, 0.30, -0.24), acc, Vector3(-6, 0, 0)))
 	elif faceless:
 		# shoulder joints (Sphere 0.06 class: small segment count) at the arm pivots, rig-local to Torso
@@ -266,8 +281,8 @@ static func _humanoid(bp: Dictionary) -> void:
 	else:
 		_add(bp, "Head", _p(MeshUtil.sphere(0.28), Vector3(0, 0.26, 0), skin))
 		_add(bp, "Head", _p(MeshUtil.sphere(0.30), Vector3(0, 0.36, 0.04), acc, Vector3.ZERO, Vector3(1, 0.72, 1)))
-		_add(bp, "Head", _p(MeshUtil.capsule(0.055, 0.40), Vector3(0, 0.425, -0.19), acc, Vector3(-20, 0, 90),
-			Vector3(1.35, 1.2, 1.1)))
+		_add(bp, "Head",
+			_p(MeshUtil.capsule(0.055, 0.40), Vector3(0, 0.425, -0.19), acc, Vector3(-20, 0, 90), Vector3(1.35, 1.2, 1.1)))
 		_add(bp, "Head", _p(MeshUtil.cone(0.07, 0.16), Vector3(0.06, 0.60, 0.04), acc, Vector3(-25, 0, -20)))
 		_add(bp, "Head", _p(MeshUtil.cone(0.06, 0.13), Vector3(-0.07, 0.59, 0.08), acc, Vector3(-35, 0, 25)))
 		for sx: float in [-1.0, 1.0]:
@@ -313,10 +328,10 @@ static func _newspaper_head(bp: Dictionary, pivot: String, c: Vector3, k: float)
 			Vector3(0, 0, -4)))
 	_add(bp, pivot, _p(MeshUtil.cylinder(0.07 * k, 0.07 * k, 0.012 * k), c + Vector3(0.12, -0.16, -0.068) * k,
 		Color.WHITE, Vector3(90, 0, 0), Vector3.ONE, 0.6))
-	_add(bp, pivot, _p(MeshUtil.box(Vector3(0.008, 0.05, 0.006) * k), c + Vector3(0.12, -0.14, -0.076) * k, DARK,
-		Vector3(0, 0, 20)))
-	_add(bp, pivot, _p(MeshUtil.box(Vector3(0.008, 0.035, 0.006) * k), c + Vector3(0.125, -0.165, -0.076) * k, DARK,
-		Vector3(0, 0, -70)))
+	_add(bp, pivot,
+		_p(MeshUtil.box(Vector3(0.008, 0.05, 0.006) * k), c + Vector3(0.12, -0.14, -0.076) * k, DARK, Vector3(0, 0, 20)))
+	_add(bp, pivot,
+		_p(MeshUtil.box(Vector3(0.008, 0.035, 0.006) * k), c + Vector3(0.125, -0.165, -0.076) * k, DARK, Vector3(0, 0, -70)))
 
 
 # --- pug (Graf Mopsula) ---------------------------------------------------------------------------------------------
@@ -338,22 +353,25 @@ static func _pug(bp: Dictionary) -> void:
 	# Signet plaque (signature, always visible; no crown motif on Mopsula, 03_ART A15)
 	_add(bp, "Body", _p(MeshUtil.box(Vector3(0.08, 0.08, 0.015)), Vector3(0, 0.30, -0.26), Palette.HYPE_GOLD,
 		Vector3(-15, 0, 0), Vector3.ONE, 0.25, 1.0))
-	_add(bp, "Body", _p(MeshUtil.torus(0.02, 0.03), Vector3(0, 0.35, -0.25), Palette.HYPE_GOLD, Vector3(90, 0, 0),
-		Vector3.ONE, 0.0, 1.0))
+	_add(bp, "Body",
+		_p(MeshUtil.torus(0.02, 0.03), Vector3(0, 0.35, -0.25), Palette.HYPE_GOLD, Vector3(90, 0, 0), Vector3.ONE, 0.0, 1.0))
 	# Head
 	_add(bp, "Head", _p(MeshUtil.sphere(0.19), Vector3.ZERO, prim, Vector3.ZERO, Vector3(1.05, 0.95, 0.95)))
 	_add(bp, "Head", _p(MeshUtil.sphere(0.10), Vector3(0, -0.04, -0.15), sec, Vector3.ZERO, Vector3(1.25, 0.8, 0.6)))
 	_add(bp, "Head", _p(MeshUtil.sphere(0.03), Vector3(0, 0.0, -0.21), Color("#111111")))
-	_add(bp, "Head", _p(MeshUtil.sphere(0.028), Vector3(0, -0.105, -0.185), Color("#e86a7a"), Vector3.ZERO,
-		Vector3(1, 0.45, 1)))
+	_add(bp, "Head",
+		_p(MeshUtil.sphere(0.028), Vector3(0, -0.105, -0.185), Color("#e86a7a"), Vector3.ZERO, Vector3(1, 0.45, 1)))
 	for sx: float in [-1.0, 1.0]:
 		_add(bp, "Head", _p(MeshUtil.sphere(0.05), Vector3(0.08 * sx, 0.05, -0.15), eyes))
-		_add(bp, "Head", _p(MeshUtil.sphere(0.07), Vector3(0.16 * sx, 0.08, -0.02), sec, Vector3(0, 0, 35 * sx),
-			Vector3(1, 0.35, 0.8)))
-	_add(bp, "Head", _p(MeshUtil.sphere(0.015), Vector3(-0.065, 0.07, -0.195), Color.WHITE, Vector3.ZERO, Vector3.ONE, 1.0))
+		_add(bp, "Head",
+			_p(MeshUtil.sphere(0.07), Vector3(0.16 * sx, 0.08, -0.02), sec, Vector3(0, 0, 35 * sx), Vector3(1, 0.35, 0.8)))
+	_add(bp, "Head",
+		_p(MeshUtil.sphere(0.015), Vector3(-0.065, 0.07, -0.195), Color.WHITE, Vector3.ZERO, Vector3.ONE, 1.0))
 	_add(bp, "Head", _p(MeshUtil.sphere(0.015), Vector3(0.095, 0.07, -0.195), Color.WHITE, Vector3.ZERO, Vector3.ONE, 1.0))
-	_add(bp, "Head", _p(MeshUtil.capsule(0.012, 0.12), Vector3(0, 0.13, -0.13), Palette.mul(prim, 0.85), Vector3(0, 0, 90)))
-	_add(bp, "Head", _p(MeshUtil.capsule(0.012, 0.12), Vector3(0, 0.10, -0.15), Palette.mul(prim, 0.85), Vector3(0, 0, 90)))
+	_add(bp, "Head",
+		_p(MeshUtil.capsule(0.012, 0.12), Vector3(0, 0.13, -0.13), Palette.mul(prim, 0.85), Vector3(0, 0, 90)))
+	_add(bp, "Head",
+		_p(MeshUtil.capsule(0.012, 0.12), Vector3(0, 0.10, -0.15), Palette.mul(prim, 0.85), Vector3(0, 0, 90)))
 	_common_anchor_set(bp, "Head", Vector3.ZERO, "Body", Vector3(0, 0.27, 0), Vector3(0, 0.41, 0.12))
 	_anchor(bp, "hand_r", "Head", Vector3(0, -0.06, -0.20))
 	_anchor(bp, "hand_l", "Body", Vector3(-0.17, 0.27, -0.05))
@@ -389,8 +407,8 @@ static func _rodent_quadruped(bp: Dictionary) -> void:
 		Vector3(1, 0.7, 1.6)))
 	for sx: float in [-1.0, 1.0]:
 		for sz: float in [-1.0, 1.0]:
-			_add(bp, "Body", _p(MeshUtil.sphere(0.047), Vector3(0.10 * sx, -0.17, 0.18 * sz) * f, sec, Vector3.ZERO,
-				Vector3(1.2, 0.85, 1.6)))
+			_add(bp, "Body",
+				_p(MeshUtil.sphere(0.047), Vector3(0.10 * sx, -0.17, 0.18 * sz) * f, sec, Vector3.ZERO, Vector3(1.2, 0.85, 1.6)))
 	# Head
 	_add(bp, "Head", _p(MeshUtil.sphere(0.14 * f), Vector3.ZERO, prim))
 	_add(bp, "Head", _p(MeshUtil.cone(0.07 * f, 0.16 * f), Vector3(0, -0.03, -0.15) * f, prim, Vector3(-90, 0, 0)))
@@ -400,8 +418,8 @@ static func _rodent_quadruped(bp: Dictionary) -> void:
 			_add(bp, "Head", _p(MeshUtil.sphere(0.065 * f), Vector3(0.09 * sx, 0.11, 0.02) * f, sec, Vector3(0, 0, 15 * sx),
 				Vector3(1, 1, 0.35)))
 	for sx: float in [-1.0, 1.0]:
-		_add(bp, "Head", _p(MeshUtil.sphere(0.03 * f), Vector3(0.06 * sx, 0.04, -0.11) * f, eyes, Vector3.ZERO,
-			Vector3.ONE, 1.0))
+		_add(bp, "Head",
+			_p(MeshUtil.sphere(0.03 * f), Vector3(0.06 * sx, 0.04, -0.11) * f, eyes, Vector3.ZERO, Vector3.ONE, 1.0))
 	_add(bp, "Head", _p(MeshUtil.box(Vector3(0.04, 0.03, 0.01) * f), Vector3(0, -0.07, -0.20) * f, TOOTH))
 	# Tail
 	if not _has(bp, "rat_king_tail"):
@@ -455,8 +473,8 @@ static func _rodent_upright(bp: Dictionary) -> void:
 	_pivot(bp, "ArmR", "Torso", Vector3(0.15, 0.42, 0))
 	_add(bp, "Torso", _p(MeshUtil.capsule(0.14, 0.47), Vector3(0, 0.16, 0), prim))
 	if not _has(bp, "cape"):
-		_add(bp, "Torso", _p(MeshUtil.sphere(0.11), Vector3(0, 0.12, -0.06), Palette.mul(prim, 1.25), Vector3.ZERO,
-			Vector3(1, 1.3, 0.7)))
+		_add(bp, "Torso",
+			_p(MeshUtil.sphere(0.11), Vector3(0, 0.12, -0.06), Palette.mul(prim, 1.25), Vector3.ZERO, Vector3(1, 1.3, 0.7)))
 	for sx: float in [-1.0, 1.0]:
 		_add(bp, "Torso", _p(MeshUtil.capsule(0.05, 0.16), Vector3(0.08 * sx, -0.16, 0), prim))
 		_add(bp, "Torso", _p(MeshUtil.box(Vector3(0.07, 0.03, 0.12)), Vector3(0.08 * sx, -0.22, -0.03), sec))
@@ -465,8 +483,8 @@ static func _rodent_upright(bp: Dictionary) -> void:
 	_add(bp, "Head", _p(MeshUtil.sphere(0.02), Vector3(0, -0.02, -0.19), sec))
 	if not _has(bp, "helmet"):
 		for sx: float in [-1.0, 1.0]:
-			_add(bp, "Head", _p(MeshUtil.sphere(0.055), Vector3(0.07 * sx, 0.09, 0.02), sec, Vector3(0, 0, 15 * sx),
-				Vector3(1, 1, 0.35)))
+			_add(bp, "Head",
+				_p(MeshUtil.sphere(0.055), Vector3(0.07 * sx, 0.09, 0.02), sec, Vector3(0, 0, 15 * sx), Vector3(1, 1, 0.35)))
 	for sx: float in [-1.0, 1.0]:
 		_add(bp, "Head", _p(MeshUtil.sphere(0.024), Vector3(0.05 * sx, 0.03, -0.095), eyes, Vector3.ZERO, Vector3.ONE, 1.0))
 	_add(bp, "Head", _p(MeshUtil.box(Vector3(0.035, 0.025, 0.01)), Vector3(0, -0.06, -0.165), TOOTH))
@@ -505,14 +523,14 @@ static func _blob(bp: Dictionary) -> void:
 		_add(bp, "Body", _p(MeshUtil.sphere(0.45), Vector3(0, 0.04, 0), Palette.mul(prim, 0.85), Vector3.ZERO,
 			Vector3(1.18, 0.12, 1.18)))
 	for sx: float in [-1.0, 1.0]:
-		_add(bp, "Body", _p(MeshUtil.sphere(0.059), Vector3(0.12 * sx, 0.50, -0.33), Palette.PAPER, Vector3.ZERO,
-			Vector3(1.1, 1.15, 1.0)))
+		_add(bp, "Body",
+			_p(MeshUtil.sphere(0.059), Vector3(0.12 * sx, 0.50, -0.33), Palette.PAPER, Vector3.ZERO, Vector3(1.1, 1.15, 1.0)))
 		_add(bp, "Body", _p(MeshUtil.sphere(0.032), Vector3(0.12 * sx, 0.50, -0.385), eyes))
-		_add(bp, "Body", _p(MeshUtil.sphere(0.012), Vector3(0.12 * sx - 0.012, 0.515, -0.415), Color.WHITE, Vector3.ZERO,
-			Vector3.ONE, 1.0))
+		_add(bp, "Body",
+			_p(MeshUtil.sphere(0.012), Vector3(0.12 * sx - 0.012, 0.515, -0.415), Color.WHITE, Vector3.ZERO, Vector3.ONE, 1.0))
 	if not cables:
-		_add(bp, "Body", _p(MeshUtil.box(Vector3(0.14, 0.03, 0.01)), Vector3(0, 0.36, -0.42), Palette.mul(prim, 0.45),
-			Vector3(-25, 0, 0)))
+		_add(bp, "Body",
+			_p(MeshUtil.box(Vector3(0.14, 0.03, 0.01)), Vector3(0, 0.36, -0.42), Palette.mul(prim, 0.45), Vector3(-25, 0, 0)))
 		_add(bp, "Body", _p(MeshUtil.cylinder(0.06, 0.06, 0.18), Vector3(0.22, 0.60, 0), Color("#c0c0c0"),
 			Vector3(0, 0, 60), Vector3.ONE, 0.0, 1.0))
 		_add(bp, "Body", _p(MeshUtil.cylinder(0.062, 0.062, 0.05), Vector3(0.235, 0.61, 0), sec, Vector3(0, 0, 60)))
@@ -620,8 +638,8 @@ static func _robot(bp: Dictionary) -> void:
 					Vector3(0.19 + 0.07 * float(col), 0.98 - 0.07 * float(row), -0.26), eyes, Vector3.ZERO, Vector3.ONE, 0.3))
 		_add(bp, "Body", _p(MeshUtil.box(Vector3(0.67, 0.06, 0.12)), Vector3(0, 0.71, -0.30), Palette.mul(prim, 0.8)))
 		for k in 6:
-			_add(bp, "Body", _p(MeshUtil.cone(0.035, 0.085), Vector3(-0.25 + 0.1 * float(k), 0.64, -0.33), TOOTH,
-				Vector3(180, 0, 0)))
+			_add(bp, "Body",
+				_p(MeshUtil.cone(0.035, 0.085), Vector3(-0.25 + 0.1 * float(k), 0.64, -0.33), TOOTH, Vector3(180, 0, 0)))
 		# Display: own mesh (flicker via flash_amount, 03_ART §5.3)
 		_add(bp, "Body", _p(MeshUtil.box(Vector3(0.42, 0.25, 0.02)), Vector3(0, 1.125, -0.26), acc, Vector3.ZERO,
 			Vector3.ONE, 1.0), "Display")
@@ -653,12 +671,12 @@ static func _cart_parts(bp: Dictionary) -> void:
 	var hz: float = 0.40
 	for sx: float in [-1.0, 1.0]:
 		for sz: float in [-1.0, 1.0]:
-			_add(bp, "Body", _seg(c + Vector3(hx * sx, -hy, hz * sz), c + Vector3(hx * sx, hy, hz * sz), 0.012, 0.012,
-				wire, 0.0, 1.0))
+			_add(bp, "Body",
+				_seg(c + Vector3(hx * sx, -hy, hz * sz), c + Vector3(hx * sx, hy, hz * sz), 0.012, 0.012, wire, 0.0, 1.0))
 			_add(bp, "Body", _seg(c + Vector3(hx * sx * 0.8, -hy, hz * sz * 0.8), Vector3(0.25 * sx, 0.10, 0.35 * sz),
 				0.012, 0.012, wire, 0.0, 1.0))
-			_add(bp, "Body", _p(MeshUtil.cylinder(0.06, 0.06, 0.04), Vector3(0.25 * sx, 0.06, 0.35 * sz), Color("#1e1e1e"),
-				Vector3(0, 0, 90)))
+			_add(bp, "Body",
+				_p(MeshUtil.cylinder(0.06, 0.06, 0.04), Vector3(0.25 * sx, 0.06, 0.35 * sz), Color("#1e1e1e"), Vector3(0, 0, 90)))
 	for y: float in [-hy, 0.0, hy]:
 		for sz: float in [-1.0, 1.0]:
 			_add(bp, "Body", _seg(c + Vector3(-hx, y, hz * sz), c + Vector3(hx, y, hz * sz), 0.01, 0.01, wire, 0.0, 1.0))
@@ -669,14 +687,20 @@ static func _cart_parts(bp: Dictionary) -> void:
 	_add(bp, "Body", _p(MeshUtil.cylinder(0.025, 0.025, 0.66), Vector3(0, 1.0, 0.46), Color("#e8455a"), Vector3(0, 0, 90)))
 	for sx: float in [-1.0, 1.0]:
 		_add(bp, "Body", _seg(c + Vector3(hx * sx, hy, hz), Vector3(0.30 * sx, 1.0, 0.46), 0.012, 0.012, wire, 0.0, 1.0))
-		_add(bp, "Body", _p(MeshUtil.sphere(0.05), Vector3(0.15 * sx, 0.60, -0.42), Color("#fff2c8"), Vector3.ZERO,
-			Vector3.ONE, 1.0))
+		_add(bp, "Body",
+			_p(MeshUtil.sphere(0.05), Vector3(0.15 * sx, 0.60, -0.42), Color("#fff2c8"), Vector3.ZERO, Vector3.ONE, 1.0))
 	_add(bp, "JawLower", _p(MeshUtil.box(Vector3(0.58, 0.46, 0.015)), Vector3(0, -0.23, 0), Palette.mul(wire, 0.75),
 		Vector3.ZERO, Vector3.ONE, 0.0, 1.0))
 	_add(bp, "JawLower", _p(MeshUtil.box(Vector3(0.20, 0.05, 0.03)), Vector3(0, -0.40, -0.01), Color("#e8455a")))
 
 
 # --- brute (Der Hausmeister) ------------------------------------------------------------------------------------------
+
+## Brows below the cap brim and in front of the cap shell, eyes lower and bigger (review M4: the P3 glow of the Eyes
+## mesh must read from the establishing shot); positions for +X, mirrored.
+const BRUTE_BROW := Vector3(0.115, 0.115, -0.285)
+const BRUTE_EYE := Vector3(0.115, 0.03, -0.262)
+const BRUTE_EYE_R: float = 0.05
 
 static func _brute(bp: Dictionary) -> void:
 	var prim: Color = _col(bp, "primary")
@@ -699,22 +723,22 @@ static func _brute(bp: Dictionary) -> void:
 	for k in 4:
 		_add(bp, "Torso", _p(MeshUtil.sphere(0.03), Vector3(0, -0.13 + 0.16 * float(k), -0.425), Color("#d8dde2"),
 			Vector3.ZERO, Vector3.ONE, 0.0, 1.0))
-	_add(bp, "Torso", _p(MeshUtil.box(Vector3(0.22, 0.18, 0.03)), Vector3(0.17, 0.46, -0.40), Palette.mul(prim, 0.85),
-		Vector3(-10, 0, 0)))
+	_add(bp, "Torso",
+		_p(MeshUtil.box(Vector3(0.22, 0.18, 0.03)), Vector3(0.17, 0.46, -0.40), Palette.mul(prim, 0.85), Vector3(-10, 0, 0)))
 	var pens: Array[Color] = [Color("#2a5db0"), Color("#c23b22"), Color("#1e1e1e")]
 	for i in 3:
-		_add(bp, "Torso", _p(MeshUtil.cylinder(0.015, 0.015, 0.15), Vector3(0.12 + 0.05 * float(i), 0.57, -0.39), pens[i],
-			Vector3(-10, 0, 0)))
+		_add(bp, "Torso",
+			_p(MeshUtil.cylinder(0.015, 0.015, 0.15), Vector3(0.12 + 0.05 * float(i), 0.57, -0.39), pens[i], Vector3(-10, 0, 0)))
 	_add(bp, "Torso", _p(MeshUtil.torus(0.17, 0.27), Vector3(0, 0.76, -0.02), Palette.mul(prim, 0.85), Vector3(-8, 0, 0)))
 	_add(bp, "Head", _p(MeshUtil.cylinder(0.15, 0.17, 0.2), Vector3(0, -0.28, 0.02), Palette.mul(skin, 0.9)))
 	_add(bp, "Head", _p(MeshUtil.sphere(0.30), Vector3.ZERO, skin))
 	_add(bp, "Head", _p(MeshUtil.sphere(0.07), Vector3(0, -0.01, -0.29), Palette.mul(skin, 0.88)))
 	_add(bp, "Head", _p(MeshUtil.capsule(0.045, 0.34), Vector3(0, -0.085, -0.265), acc, Vector3(0, 0, 90)))
 	for sx: float in [-1.0, 1.0]:
-		_add(bp, "Head", _p(MeshUtil.box(Vector3(0.13, 0.045, 0.05)), Vector3(0.105 * sx, 0.14, -0.255), acc,
+		_add(bp, "Head", _p(MeshUtil.box(Vector3(0.13, 0.045, 0.05)), BRUTE_BROW * Vector3(sx, 1, 1), acc,
 			Vector3(0, 0, -14 * sx)))
 		_add(bp, "Head", _p(MeshUtil.sphere(0.07), Vector3(0.30 * sx, 0.0, 0.0), skin, Vector3.ZERO, Vector3(0.6, 1, 1)))
-		_add(bp, "Head", _p(MeshUtil.sphere(0.045), Vector3(0.10 * sx, 0.06, -0.255), eyes, Vector3.ZERO,
+		_add(bp, "Head", _p(MeshUtil.sphere(BRUTE_EYE_R), BRUTE_EYE * Vector3(sx, 1, 1), eyes, Vector3.ZERO,
 			Vector3(1, 1.2, 0.6)), "Eyes")
 		_add(bp, "Head", _p(MeshUtil.capsule(0.05, 0.16), Vector3(0.20 * sx, -0.09, -0.22), acc, Vector3(0, 0, 60 * sx)))
 	_mesh(bp, "Eyes", "Head")["pulse"] = {"mode": "phase", "color": Color("#ff3b30"), "phase": 3}
@@ -757,19 +781,19 @@ static func _brute_compact(bp: Dictionary, prim: Color, sec: Color, acc: Color, 
 	_pivot(bp, "LegR", "", Vector3(0.21, 0.51, 0))
 	_add(bp, "Torso", _p(_capsule_lo(0.42, 1.12, 10, 1), Vector3(0, 0.27, 0), prim))
 	_add(bp, "Torso", _p(MeshUtil.cylinder(0.45, 0.47, 0.20), Vector3(0, -0.22, 0), Palette.mul(prim, 0.85)))
-	_add(bp, "Torso", _p(MeshUtil.box(Vector3(0.22, 0.18, 0.03)), Vector3(0.17, 0.46, -0.40), Palette.mul(prim, 0.85),
-		Vector3(-10, 0, 0)))
+	_add(bp, "Torso",
+		_p(MeshUtil.box(Vector3(0.22, 0.18, 0.03)), Vector3(0.17, 0.46, -0.40), Palette.mul(prim, 0.85), Vector3(-10, 0, 0)))
 	_add(bp, "Torso", _p(MeshUtil.cylinder(0.24, 0.30, 0.10), Vector3(0, 0.80, -0.02), Palette.mul(prim, 0.85)))
 	_add(bp, "Head", _p(MeshUtil.cylinder(0.15, 0.17, 0.2), Vector3(0, -0.28, 0.02), Palette.mul(skin, 0.9)))
 	_add(bp, "Head", _p(MeshUtil.sphere(0.30), Vector3.ZERO, skin))
 	_add(bp, "Head", _p(MeshUtil.sphere(0.055), Vector3(0, -0.01, -0.29), Palette.mul(skin, 0.88)))
 	_add(bp, "Head", _p(MeshUtil.capsule(0.045, 0.34), Vector3(0, -0.085, -0.265), acc, Vector3(0, 0, 90)))
 	for sx: float in [-1.0, 1.0]:
-		_add(bp, "Head", _p(MeshUtil.box(Vector3(0.13, 0.045, 0.05)), Vector3(0.105 * sx, 0.14, -0.255), acc,
+		_add(bp, "Head", _p(MeshUtil.box(Vector3(0.13, 0.045, 0.05)), BRUTE_BROW * Vector3(sx, 1, 1), acc,
 			Vector3(0, 0, -14 * sx)))
 		_add(bp, "Head", _p(_sphere_lo(0.07, 8, 4), Vector3(0.30 * sx, 0.0, 0.0), skin, Vector3.ZERO, Vector3(0.6, 1, 1)))
-		_add(bp, "Head", _p(MeshUtil.sphere(0.045), Vector3(0.10 * sx, 0.06, -0.255), eyes, Vector3.ZERO,
-			Vector3(1, 1.2, 0.6)))
+		_add(bp, "Head",
+			_p(MeshUtil.sphere(BRUTE_EYE_R), BRUTE_EYE * Vector3(sx, 1, 1), eyes, Vector3.ZERO, Vector3(1, 1.2, 0.6)))
 	for arm: String in ["ArmL", "ArmR"]:
 		_add(bp, arm, _p(_capsule_lo(0.12, 0.88, 8, 1), Vector3(0, -0.40, 0), prim))
 		_add(bp, arm, _p(MeshUtil.cylinder(0.135, 0.135, 0.10), Vector3(0, -0.72, 0), Palette.mul(prim, 0.85)))
@@ -808,10 +832,10 @@ static func _specter(bp: Dictionary) -> void:
 		Vector3.ONE, 0.0, 1.0))
 	_add(bp, "Body", _p(MeshUtil.sphere(0.30), Vector3(0, 0.65, 0), sec))
 	for sx: float in [-1.0, 1.0]:
-		_add(bp, "Body", _p(MeshUtil.capsule(0.05, 0.15), Vector3(0.11 * sx, 0.70, -0.27), eyes, Vector3(-15, 0, 0),
-			Vector3.ONE, 0.4))
-		_add(bp, "Body", _p(MeshUtil.sphere(0.014), Vector3(0.11 * sx - 0.015, 0.73, -0.315), Color.WHITE, Vector3.ZERO,
-			Vector3.ONE, 1.0))
+		_add(bp, "Body",
+			_p(MeshUtil.capsule(0.05, 0.15), Vector3(0.11 * sx, 0.70, -0.27), eyes, Vector3(-15, 0, 0), Vector3.ONE, 0.4))
+		_add(bp, "Body",
+			_p(MeshUtil.sphere(0.014), Vector3(0.11 * sx - 0.015, 0.73, -0.315), Color.WHITE, Vector3.ZERO, Vector3.ONE, 1.0))
 		_add(bp, "Body", _p(MeshUtil.box(Vector3(0.10, 0.025, 0.02)), Vector3(0.11 * sx, 0.82, -0.27), DARK,
 			Vector3(-15, 0, 20 * sx)))
 	_add(bp, "Body", _p(MeshUtil.box(Vector3(0.14, 0.04, 0.02)), Vector3(0, 0.55, -0.285), DARK, Vector3(-30, 0, 0)))
@@ -834,10 +858,12 @@ static func _specter(bp: Dictionary) -> void:
 	_socket(bp, "hand_l", "ArmL", Vector3(-0.12, -0.33, 0), 0.6)
 
 
-# --- swarm (Taubenschwarm) ---------------------------------------------------------------------------------------------
+# --- swarm (Taubenschwarm)
+# ---------------------------------------------------------------------------------------------
 
 const SWARM_BIRDS: int = 5
 const SWARM_RADIUS: float = 0.6
+const SWARM_HOVER: float = 0.58
 
 
 static func _swarm(bp: Dictionary) -> void:
@@ -845,7 +871,8 @@ static func _swarm(bp: Dictionary) -> void:
 	var sec: Color = _col(bp, "secondary")
 	var acc: Color = _col(bp, "accent")
 	var eyes: Color = _col(bp, "eyes")
-	_pivot(bp, "Body", "", Vector3(0, 0.8, 0))
+	# hover height 0.58 m (03_ART lists 0.8) so the birds' top stays at the nominal 0.8 m (02_TECH §8.4)
+	_pivot(bp, "Body", "", Vector3(0, SWARM_HOVER, 0))
 	for i in SWARM_BIRDS:
 		var a: float = deg_to_rad(72.0 * float(i))
 		var bname: String = "Bird%d" % i
@@ -957,13 +984,14 @@ static func _prop_cape(bp: Dictionary) -> void:
 	var base: String = str(bp["base"])
 	if base == "pug":
 		# draped velvet mantle with gold trim + white ruff collar of the self-proclaimed count
-		_add(bp, "Body", _p(MeshUtil.capsule(0.19, 0.46), Vector3(0, 0.30, 0.07), acc, Vector3(90, 0, 0), Vector3(1.12, 1.0, 0.8)))
+		_add(bp, "Body",
+			_p(MeshUtil.capsule(0.19, 0.46), Vector3(0, 0.30, 0.07), acc, Vector3(90, 0, 0), Vector3(1.12, 1.0, 0.8)))
 		_add(bp, "Body", _p(MeshUtil.torus(0.17, 0.21), Vector3(0, 0.28, 0.27), Palette.HYPE_GOLD, Vector3(80, 0, 0),
 			Vector3(1.05, 1.0, 0.75), 0.15, 1.0))
-		_add(bp, "Body", _p(MeshUtil.torus(0.12, 0.19), Vector3(0, 0.44, -0.17), Palette.PAPER, Vector3(70, 0, 0),
-			Vector3(1, 1, 0.55)))
-		_add(bp, "Body", _p(MeshUtil.sphere(0.035), Vector3(0, 0.36, -0.26), Palette.HYPE_GOLD, Vector3.ZERO, Vector3.ONE,
-			0.3, 1.0))
+		_add(bp, "Body",
+			_p(MeshUtil.torus(0.12, 0.19), Vector3(0, 0.44, -0.17), Palette.PAPER, Vector3(70, 0, 0), Vector3(1, 1, 0.55)))
+		_add(bp, "Body",
+			_p(MeshUtil.sphere(0.035), Vector3(0, 0.36, -0.26), Palette.HYPE_GOLD, Vector3.ZERO, Vector3.ONE, 0.3, 1.0))
 		return
 	if base == "rodent" and StringName(bp["pose"]) == &"upright":
 		_add(bp, "Torso", _p(MeshUtil.cylinder(0.09, 0.30, 0.55), Vector3(0, 0.13, 0.01), acc))
@@ -976,6 +1004,9 @@ static func _prop_cape(bp: Dictionary) -> void:
 		_add(bp, "Body", _p(MeshUtil.capsule(0.175 * f, 0.56 * f), Vector3(0, 0.035, 0.05) * f, acc, Vector3(90, 0, 0),
 			Vector3(1.1, 1.0, 0.78)))
 		if acc.get_luminance() > 0.6:
+			# darker royal hem under the light ermine so body and cape separate (review M4, throne accent #9A6BFF)
+			_add(bp, "Body", _p(_capsule_lo(0.175 * f, 0.56 * f, 8, 1), Vector3(0, 0.0, 0.05) * f, CAPE_HEM,
+				Vector3(90, 0, 0), Vector3(1.2, 1.05, 0.62)))
 			var spots: Array[Vector3] = [Vector3(-0.07, 0.17, -0.12), Vector3(0.08, 0.17, -0.02), Vector3(-0.05, 0.18, 0.08),
 				Vector3(0.06, 0.165, 0.18), Vector3(-0.10, 0.14, 0.24), Vector3(0.12, 0.13, -0.18), Vector3(0.0, 0.185, 0.0),
 				Vector3(-0.13, 0.12, 0.05)]
@@ -1021,15 +1052,21 @@ static func _prop_top_hat(bp: Dictionary) -> void:
 
 
 static func _prop_cap(bp: Dictionary, color: Color, lamp: bool) -> void:
+	# brute (Hausmeister): cap sits higher with the brim tipped up so brows and the P3 eye glow stay visible from the
+	# establishing and enemy-turn cameras (review M4); other bases keep the 03_ART §5.4 fit
+	var brute: bool = str(bp["base"]) == "brute"
+	var lift: float = 0.10 if brute else 0.0
+	var brim_rot := Vector3(20, 0, 0) if brute else Vector3(-8, 0, 0)
+	var brim := Vector3(0.30, 0.03, 0.17) if brute else Vector3(0.30, 0.03, 0.20)
 	var parts: Array = [
-		_p(MeshUtil.hemisphere(0.31), Vector3(0, 0.07, 0.01), color),
-		_p(MeshUtil.box(Vector3(0.30, 0.03, 0.20)), Vector3(0, 0.08, -0.30), Palette.mul(color, 0.85), Vector3(-8, 0, 0)),
+		_p(MeshUtil.hemisphere(0.31), Vector3(0, 0.07 + lift, 0.01), color),
+		_p(MeshUtil.box(brim), Vector3(0, 0.08 + lift, -0.29 if brute else -0.30), Palette.mul(color, 0.85), brim_rot),
 	]
 	if lamp:
-		parts.append(_p(MeshUtil.cylinder(0.05, 0.05, 0.06), Vector3(0, 0.22, -0.27), Color("#fff2c8"), Vector3(-70, 0, 0),
-			Vector3.ONE, 1.0))
+		parts.append(_p(MeshUtil.cylinder(0.05, 0.05, 0.06), Vector3(0, 0.22 + lift, -0.27), Color("#fff2c8"),
+			Vector3(-70, 0, 0), Vector3.ONE, 1.0))
 	else:
-		parts.append(_p(MeshUtil.sphere(0.03), Vector3(0, 0.38, 0.01), Palette.mul(color, 0.8)))
+		parts.append(_p(MeshUtil.sphere(0.03), Vector3(0, 0.38 + lift, 0.01), Palette.mul(color, 0.8)))
 	_place(bp, "head", 0.28, parts)
 
 
@@ -1052,32 +1089,61 @@ static func _prop_apron(bp: Dictionary) -> void:
 	])
 
 
+## Kai's mop (03_ART §5.4): solid tapered head Cyl 0.12/0.16/0.22 in a cool wet blue-grey (never skin-like under the
+## warm key), a strand skirt draped over its end and a fringe of 20 short thin strands (own mesh with a hairline
+## outline, so the strands stay thin) in two damp greys — reads as a mop, not as a gloved hand (review M4).
 static func _prop_mop(bp: Dictionary) -> void:
 	# held low, pointing forward-down (reads in idle and swings with the arm in attack)
 	var d := Vector3(0.10, -0.34, -0.93).normalized()
-	var fluff := Color("#d9d2b6")
-	var parts: Array = [
+	var end: Vector3 = d * 1.06
+	_place(bp, "hand_r", 1.0, [
 		_seg(d * -0.38, d * 0.84, 0.025, 0.025, WOOD_HANDLE),
 		_seg(d * 0.78, d * 0.86, 0.045, 0.045, Color("#e8455a")),
-		_seg(d * 0.84, d * 1.00, 0.09, 0.15, fluff),
-	]
-	var side: Vector3 = d.cross(Vector3.UP).normalized()
-	var up2: Vector3 = side.cross(d).normalized()
-	for i in 7:
-		var a: float = TAU * float(i) / 7.0 + 0.3
-		var off: Vector3 = (side * cos(a) + up2 * sin(a))
-		var root: Vector3 = d * 0.98 + off * 0.10
-		var tip: Vector3 = d * 1.12 + off * 0.17 + Vector3(0, -0.08, 0)
-		parts.append(_seg(root, tip, 0.035, 0.03, Palette.mul(fluff, 0.9 + 0.05 * float(i % 3))))
-	_place(bp, "hand_r", 1.0, parts)
-
-
-static func _prop_broom(bp: Dictionary) -> void:
-	_place(bp, "hand_r", 1.25, [
-		_p(MeshUtil.cylinder(0.03, 0.03, 1.60), Vector3(0, 0.15, 0), WOOD_HANDLE, Vector3(-70, 0, 0)),
-		_p(MeshUtil.box(Vector3(0.60, 0.12, 0.17)), Vector3(0, 0.42, -0.76), Color("#c9a227"), Vector3(-70, 0, 0)),
-		_p(MeshUtil.box(Vector3(0.57, 0.08, 0.15)), Vector3(0, 0.45, -0.86), Color("#3b2a22"), Vector3(-70, 0, 0)),
+		_seg(d * 0.84, end, 0.12, 0.16, MOP_HEAD),
+		_seg(end + Vector3(0, 0.03, 0), end + Vector3(0, -0.15, 0), 0.165, 0.2, MOP_STRAND),
 	])
+	var fringe: Array = []
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 5150
+	for i in MOP_STRANDS:
+		var a: float = TAU * float(i) / float(MOP_STRANDS) + rng.randf_range(-0.1, 0.1)
+		var off := Vector3(cos(a), 0, sin(a))
+		var root: Vector3 = end + off * rng.randf_range(0.15, 0.19) + Vector3(0, -0.12, 0)
+		var tip: Vector3 = root + off * rng.randf_range(0.01, 0.04) + Vector3(rng.randf_range(-0.02, 0.02),
+			-rng.randf_range(0.06, 0.11), rng.randf_range(-0.02, 0.02))
+		var r: float = rng.randf_range(0.014, 0.019)
+		fringe.append(_strand(root, tip, r, r * 0.8, MOP_STRAND_DARK if i % 2 == 0 else MOP_TIP))
+	_place(bp, "hand_r", 1.0, fringe, "MopFringe")
+	var hand_pivot: String = str((bp["sockets"].get("hand_r", {}) as Dictionary).get("pivot", "ArmR"))
+	_mesh(bp, "MopFringe", hand_pivot)["mat"] = {"bands": 3, "rim": 0.45, "outline_width": 0.006}
+
+
+## Thin 4-sided strand without caps (8 tris), for mop fibres / bristles within the hero budget.
+static func _strand(a: Vector3, b: Vector3, r_a: float, r_b: float, color: Color) -> Dictionary:
+	var p: Dictionary = _seg(a, b, r_a, r_b, color)
+	var m: CylinderMesh = p["mesh"]
+	m.radial_segments = 4
+	m.cap_top = false
+	m.cap_bottom = false
+	return p
+
+
+## Push broom held like a staff, the head beside the figure at floor level (review M4: thick stick, light bristles
+## with a dark binding so the boss prop reads in battle stance). Socket reference 1.25 = brute hand.
+static func _prop_broom(bp: Dictionary) -> void:
+	# brute hand at 0.62 m (rig scale 1): stick rises ~0.95 m above it, the head stands on the floor beside the boot
+	var top := Vector3(-0.03, 0.95, 0.05)
+	var foot := Vector3(0.20, -0.40, -0.18)
+	var axis: Vector3 = (foot - top).normalized()
+	var head_basis := Basis(Quaternion(Vector3.DOWN, axis))
+	var parts: Array = [_seg(top, foot, 0.045, 0.045, WOOD_HANDLE)]
+	var hx := Transform3D(head_basis, foot)
+	for pd: Array in [[Vector3(0.72, 0.09, 0.20), Vector3(0, 0.0, 0), BROOM_BINDING],
+			[Vector3(0.68, 0.16, 0.17), Vector3(0, -0.12, 0), BROOM_BRISTLES],
+			[Vector3(0.70, 0.03, 0.18), Vector3(0, -0.19, 0), Palette.mul(BROOM_BRISTLES, 0.8)]]:
+		parts.append({"mesh": MeshUtil.box(pd[0] as Vector3), "xform": hx * Transform3D(Basis.IDENTITY, pd[1] as Vector3),
+			"color": pd[2], "emission": 0.0, "metal": 0.0})
+	_place(bp, "hand_r", 1.25, parts)
 
 
 static func _prop_knife(bp: Dictionary) -> void:
@@ -1304,19 +1370,30 @@ static func _prop_helmet(bp: Dictionary) -> void:
 	])
 
 
+## Steel shield (review M4: darker steel, raised rim, centre boss; metal sheen only on rim + boss, so it never blows
+## out to a white card).
 static func _prop_shield(bp: Dictionary) -> void:
 	var acc: Color = _col(bp, "accent")
-	_place(bp, "hand_l", 0.55, [
-		_p(MeshUtil.box(Vector3(0.25, 0.33, 0.03)), Vector3(0, 0, -0.06), Palette.RAIL, Vector3.ZERO, Vector3.ONE, 0.0, 1.0),
-		_p(MeshUtil.box(Vector3(0.12, 0.12, 0.01)), Vector3(0, 0.02, -0.08), acc),
-		_p(MeshUtil.prism(Vector3(0.12, 0.05, 0.01)), Vector3(0, 0.105, -0.08), acc),
-	])
+	var steel := Color("#69727c")
+	var rim := Color("#3e454e")
+	var parts: Array = [
+		# flat plate without metal mask: a flat face would catch the full toon highlight and read as white card
+		_p(MeshUtil.box(Vector3(0.25, 0.33, 0.03)), Vector3(0, 0, -0.06), steel),
+		_p(MeshUtil.box(Vector3(0.04, 0.31, 0.012)), Vector3(0, 0, -0.078), Palette.mul(acc, 0.8)),
+		_p(MeshUtil.hemisphere(0.05), Vector3(0, 0.0, -0.075), Color("#a8b0b8"), Vector3(-90, 0, 0), Vector3.ONE, 0.0, 1.0),
+	]
+	for e: Array in [[Vector3(0.25, 0.02, 0.02), Vector3(0, 0.155, -0.08)],
+		[Vector3(0.25, 0.02, 0.02), Vector3(0, -0.155, -0.08)],
+			[Vector3(0.02, 0.33, 0.02), Vector3(0.115, 0, -0.08)], [Vector3(0.02, 0.33, 0.02), Vector3(-0.115, 0, -0.08)]]:
+		parts.append(_p(MeshUtil.box(e[0] as Vector3), e[1] as Vector3, rim, Vector3.ZERO, Vector3.ONE, 0.0, 0.5))
+	_place(bp, "hand_l", 0.55, parts)
 
 
 static func _prop_halberd(bp: Dictionary) -> void:
 	_place(bp, "hand_r", 0.55, [
 		_p(MeshUtil.cylinder(0.015, 0.015, 0.90), Vector3(0, 0.25, 0), STAFF_WOOD),
-		_p(MeshUtil.box(Vector3(0.02, 0.12, 0.14)), Vector3(0, 0.62, -0.06), Palette.STEEL, Vector3.ZERO, Vector3.ONE, 0.0, 1.0),
+		_p(MeshUtil.box(Vector3(0.02, 0.12, 0.14)), Vector3(0, 0.62, -0.06), Palette.STEEL, Vector3.ZERO,
+			Vector3.ONE, 0.0, 1.0),
 		_p(MeshUtil.cone(0.02, 0.08), Vector3(0, 0.74, 0), Palette.STEEL, Vector3.ZERO, Vector3.ONE, 0.0, 1.0),
 	])
 
@@ -1343,13 +1420,18 @@ static func _prop_rat_king_tail(bp: Dictionary) -> void:
 				lerpf(0.03, 0.015, float(j + 1) / 3.0) * f, sec), mn)
 			end = q
 		var dir: Vector3 = yb * Vector3(0, 0, 1)
-		var body_c: Vector3 = end + dir * 0.04 * f + Vector3(0, 0.01, 0) * f
-		_add(bp, tail_pivot, _p(MeshUtil.sphere(0.059), body_c, prim, Vector3(0, yaw, 0), Vector3(0.9, 0.8, 1.4) * (0.05 * f / 0.059)),
-			mn)
-		var head_c: Vector3 = body_c + dir * 0.065 * f + Vector3(0, 0.01, 0) * f
-		_add(bp, tail_pivot, _p(MeshUtil.sphere(0.03 * f), head_c, prim), mn)
-		_add(bp, tail_pivot, _p(MeshUtil.box(Vector3(0.05, 0.022, 0.01) * f), head_c + Vector3(0, 0.028, 0) * f, sec,
-			Vector3(0, yaw, 0)), mn)
+		var lat: Vector3 = yb * Vector3(1, 0, 0)
+		# mini-rat (review M4: bigger body, 2 ears, red emissive eyes → reads as rats, not as paws)
+		var body_c: Vector3 = end + dir * 0.055 * f + Vector3(0, 0.015, 0) * f
+		_add(bp, tail_pivot, _p(MeshUtil.sphere(0.059), body_c, prim, Vector3(0, yaw, 0),
+			Vector3(0.9, 0.8, 1.4) * (0.07 * f / 0.059)), mn)
+		var head_c: Vector3 = body_c + dir * 0.09 * f + Vector3(0, 0.012, 0) * f
+		_add(bp, tail_pivot, _p(MeshUtil.sphere(0.04 * f), head_c, prim), mn)
+		for ex: float in [-1.0, 1.0]:
+			_add(bp, tail_pivot, _p(MeshUtil.box(Vector3(0.035, 0.035, 0.01) * f), head_c + (lat * 0.03 * ex
+				+ Vector3(0, 0.038, 0)) * f, sec, Vector3(0, yaw, 20.0 * ex)), mn)
+			_add(bp, tail_pivot, _p(MeshUtil.box(Vector3(0.014, 0.014, 0.012) * f), head_c + (lat * 0.017 * ex + dir * 0.035
+				+ Vector3(0, 0.01, 0)) * f, Palette.LIVE_RED, Vector3(0, yaw, 0), Vector3.ONE, 1.0), mn)
 	_mesh(bp, mn, tail_pivot)["mat"] = {"bands": 3, "rim": 0.45, "wobble": 0.02}
 
 

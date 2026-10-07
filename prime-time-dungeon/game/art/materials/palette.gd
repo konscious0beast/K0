@@ -37,7 +37,8 @@ const ELEMENT_CORE_COLORS: Dictionary = {"fire": "#ffe08a", "ice": "#e6f8ff", "s
 const STATUS_COLORS: Dictionary = {"sts_poison": "#7cc242", "sts_stun": "#f5d90a", "sts_slow": "#5b8def",
 	"sts_haste": "#ff7a1a", "sts_guard": "#9aa7b8", "sts_taunt": "#e8455a"}
 const RARITY_COLORS: Dictionary = {"common": "#bfc5cc", "rare": "#4aa8ff", "epic": "#b05cff"}
-const BOX_COLORS: Dictionary = {"box_bronze": "#cd7f32", "box_silver": "#c0c8d2", "box_gold": "#ffc83d", "box_fan": "#ff5fa2"}
+const BOX_COLORS: Dictionary = {"box_bronze": "#cd7f32", "box_silver": "#c0c8d2", "box_gold": "#ffc83d",
+	"box_fan": "#ff5fa2"}
 
 ## Zone presets (03_ART §2.2/§2.3), hex. Matching a FloorDef/zone palette against these yields the art keys and the
 ## dressing style used by EnvKit (zone_style()).
@@ -152,6 +153,15 @@ static func rarity_color(rarity: String) -> Color:
 
 static func box_color(box_id: String) -> Color:
 	return hex(str(BOX_COLORS.get(box_id, BOX_COLORS["box_bronze"])))
+
+
+## Art extra: Label3D sign color at full brightness (max channel 1.0, hue kept). Label3D colors are clamped to 1.0 and
+## then pass the AgX tonemapper (white ≈ 205 on screen), so in-world signs use the brightest version of their color.
+static func sign_color(c: Color) -> Color:
+	var m: float = maxf(c.r, maxf(c.g, c.b))
+	if m <= 0.2:
+		return c          # dark text (e.g. INK on a light board) stays as designed
+	return Color(c.r / m, c.g / m, c.b / m, c.a)
 
 
 ## Multiplies RGB (03_ART notation "primary×0.8"), keeps alpha, clamps to 0..1.

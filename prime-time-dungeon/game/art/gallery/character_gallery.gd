@@ -9,6 +9,9 @@ const Stage := preload("res://art/gallery/gallery_stage.gd")
 
 @export var page: String = "cast"
 
+## Name tags under the figures (review M4: 26 px at 0.005 m/px was unreadable in the CI shots).
+const LABEL_SIZE: int = 44
+
 var rigs: Dictionary = {}          # id → CharacterRig
 var _params: Dictionary = {}
 
@@ -34,8 +37,8 @@ func _ready() -> void:
 				Vector3(0, 3.0, 10.5), Vector3(0, 1.5, 0))
 		"enemies":
 			_build_closeup(["enm_pendler", "enm_rattengardist", "enm_rolltreppenkrabbe", "enm_rattenschamane",
-				"enm_spruehgeist", "enm_fahrscheinfresser"], [Vector3(-3.6, 0, 0), Vector3(-2.2, 0, 0), Vector3(-0.4, 0, 0),
-				Vector3(1.4, 0, 0), Vector3(2.6, 0, 0), Vector3(3.9, 0, 0)], Vector3(0, 2.2, 6.5), Vector3(0, 0.8, 0))
+				"enm_spruehgeist", "enm_fahrscheinfresser"], [Vector3(-3.2, 0, 0), Vector3(-1.95, 0, 0), Vector3(-0.55, 0, 0),
+				Vector3(0.85, 0, 0), Vector3(2.0, 0, 0), Vector3(3.2, 0, 0)], Vector3(0, 2.4, 7.6), Vector3(0, 0.85, 0))
 		_:
 			_build_cast()
 
@@ -49,7 +52,7 @@ func _place(id: String, model: Dictionary, pos: Vector3, yaw_deg: float, label: 
 	rig.battle_stance = true
 	rigs[id] = rig
 	if label != "":
-		Stage.label(self, label, pos + Vector3(0, -0.05, 0.55), 26)
+		Stage.label(self, label, pos + Vector3(0, -0.05, 0.55), LABEL_SIZE)
 	return rig
 
 
@@ -124,22 +127,25 @@ func _build_anims() -> void:
 		&"victory", &"die"]
 	var times: Dictionary = {&"idle": 0.4, &"walk": 0.25, &"attack": 0.24, &"cast": 0.4, &"item": 0.35, &"stunt": 0.5,
 		&"hit": 0.08, &"defend": 0.3, &"victory": 0.75, &"die": 0.7}
-	var ids: PackedStringArray = ["kai", "mopsula", "enm_kanalratte", "enm_boss_hausmeister"]
+	# big Hausmeister in the back row so it never hides the small rat (review M4)
+	var ids: PackedStringArray = ["enm_boss_hausmeister", "kai", "mopsula", "enm_kanalratte"]
 	var row: int = 0
 	for id: String in ids:
 		var col: int = 0
 		for a: StringName in anims:
-			var scale_fix: float = 0.55 if id == "enm_boss_hausmeister" else 1.0
+			var scale_fix: float = 0.4 if id == "enm_boss_hausmeister" else 1.0
 			var model: Dictionary = Cast.model(id)
 			model["scale"] = float(model.get("scale", 1.0)) * scale_fix
-			var rig: CharacterRig = _place("%s_%s" % [id, a], model, Vector3(-6.3 + 1.4 * float(col), 0, -2.0 + 2.4 * float(row)),
-				-20.0, String(a) if row == 0 else "")
+			var front: bool = row == ids.size() - 1      # anim names under the front row (never over a figure)
+			var rig: CharacterRig = _place("%s_%s" % [id, a], model, Vector3(-6.3 + 1.4 * float(col), 0,
+				-2.0 + 2.4 * float(row)),
+				-20.0, String(a) if front else "")
 			rig.battle_stance = false
 			rig.spawn_effects = false
 			_freeze(rig, a, float(times[a]))
 			col += 1
 		row += 1
-	Stage.add_camera(self, Vector3(0, 6.5, 12.0), Vector3(0, 0.6, 0.6), 42.0)
+	Stage.add_camera(self, Vector3(0, 8.6, 14.6), Vector3(0, 0.4, 1.4), 44.0)
 
 
 func _build_props() -> void:

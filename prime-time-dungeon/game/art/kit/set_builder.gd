@@ -12,10 +12,15 @@ const SAFE_ANCHORS: Dictionary = {
 	&"couch": [Vector3(2.0, 0, -3.95), 0.0],
 	&"mopsula_spot": [Vector3(2.45, 0.45, -3.9), 0.0],
 	&"player_spot": [Vector3(0.6, 0, -1.6), -15.0],
-	&"door": [Vector3(5.15, 0, 1.2), -90.0],
+	&"door": [Vector3(5.15, 0, -2.0), -90.0],
 }
+## Fixed camera (FOV 50 vertical, 03_ART §8.1). The exit door sits on the right wall toward the back and the camera aims
+## slightly right, so the door is in frame at 4:3, 16:9 and 20:9 (review M4; test_m4_env checks the frustum).
 const SAFE_CAMERA_POS: Vector3 = Vector3(0.0, 2.9, 6.4)
-const SAFE_CAMERA_TARGET: Vector3 = Vector3(0.0, 1.05, -2.0)
+const SAFE_CAMERA_TARGET: Vector3 = Vector3(0.45, 1.05, -2.0)
+const SAFE_CAMERA_FOV: float = 50.0
+## Ceiling beams (z), clear of the door (z −4.3 … 0.3).
+const BEAM_Z: Array[float] = [-4.4, 0.9, 3.4]
 
 
 static func safe_anchor(anchor: StringName) -> Transform3D:
@@ -41,7 +46,8 @@ static func _mesh_node(node_name: String, parts: Array, mat: Material, shadows: 
 	typed.assign(parts)
 	mi.mesh = MeshUtil.merge_no_hull(typed)
 	mi.material_override = mat
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if shadows else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if shadows \
+		else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return mi
 
 
@@ -57,21 +63,26 @@ static func _omni(node_name: String, pos: Vector3, color: Color, energy: float, 
 	return l
 
 
-static func _label(text: String, size: int, color: Color, outline: Color, xf: Transform3D, px: float = 0.006) -> Label3D:
+static func _label(text: String, size: int, color: Color, outline: Color, xf: Transform3D,
+		px: float = 0.006) -> Label3D:
 	var l := Label3D.new()
 	l.name = "Label_" + text.replace(" ", "_").left(16)
 	l.text = text
 	l.font_size = size
 	l.outline_size = 14
 	l.pixel_size = px
-	l.modulate = color
+	l.modulate = Palette.sign_color(color)
 	l.outline_modulate = outline
 	l.transform = xf
 	l.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return l
 
 
-# --- battle arena (03_ART §8.2: stage r 9 m, party at +Z, enemies at −Z) ------------------------------------------------
+# --- battle arena (03_ART §8.2: stage r 9 m, party at +Z, enemies at −Z)
+# ------------------------------------------------
+
+const PARTY_ZONE := Vector3(0, 0, 3.1)
+const ENEMY_ZONE := Vector3(0, 0, -3.0)
 
 static func build_arena(theme_id: String, palette: Dictionary, is_boss: bool, seed: int, quality: StringName) -> Node3D:
 	var pal: Dictionary = Palette.resolve(palette, theme_id)
@@ -120,7 +131,8 @@ static func build_arena(theme_id: String, palette: Dictionary, is_boss: bool, se
 				Vector3(0, yaw, 0), Vector3.ONE, 1.0))
 	# giant show screen
 	geo.append(_part(MeshUtil.box(Vector3(9.4, 4.4, 0.5)), Vector3(0, 5.6, -14.2), Palette.INK))
-	geo.append(_part(MeshUtil.box(Vector3(9.6, 0.15, 0.6)), Vector3(0, 3.4, -14.15), accent, Vector3.ZERO, Vector3.ONE, 1.0))
+	geo.append(_part(MeshUtil.box(Vector3(9.6, 0.15, 0.6)), Vector3(0, 3.4, -14.15), accent, Vector3.ZERO, Vector3.ONE,
+		1.0))
 	# light towers with lamp heads
 	for sx: float in [-1.0, 1.0]:
 		for z: float in [-5.0, 5.5]:
@@ -160,8 +172,8 @@ static func build_arena(theme_id: String, palette: Dictionary, is_boss: bool, se
 	root.add_child(holo)
 	root.add_child(_label("BOSSKAMPF" if is_boss else "DUNGEON PRIME TIME", 150, Palette.PAPER,
 		Palette.DANGER if is_boss else Palette.NOVA_MAGENTA, Transform3D(Basis.IDENTITY, Vector3(0, 6.1, -13.85)), 0.012))
-	root.add_child(_label("LIVE", 110, Palette.PAPER, Palette.LIVE_RED, Transform3D(Basis.IDENTITY, Vector3(-3.4, 4.3,
-		-13.85)), 0.01))
+	root.add_child(_label("LIVE", 110, Palette.PAPER, Palette.LIVE_RED,
+		Transform3D(Basis.IDENTITY, Vector3(-3.4, 4.3, -13.85)), 0.01))
 	# drones + sponsor billboard (PropKit nodes, animated)
 	var d1: Node3D = PropKit.build(&"camera_drone", seed)
 	d1.position = Vector3(-6.0, 4.2, 4.5)
@@ -182,18 +194,21 @@ static func build_arena(theme_id: String, palette: Dictionary, is_boss: bool, se
 	root.add_child(_omni("FillLight", Vector3(0, 6.0, 6.0), pal["light"], 1.0, 20.0))
 	root.add_child(_omni("BackLight", Vector3(0, 4.0, -9.0), accent, 1.6, 14.0))
 	if quality == &"high":
+		# warm/cool split (review M4): magenta (DANGER for bosses) pools on the enemy zone, cyan on the party zone, so
+		# each side stands in its own show light instead of one mixed grey-lavender oval in the middle
 		for sx: float in [-1.0, 1.0]:
 			var spot := SpotLight3D.new()
 			spot.name = "Spot" + ("L" if sx < 0.0 else "R")
-			spot.light_color = Palette.NOVA_MAGENTA if sx < 0.0 else Palette.NOVA_CYAN
+			spot.light_color = (Palette.DANGER if is_boss else Palette.NOVA_MAGENTA) if sx < 0.0 else Palette.NOVA_CYAN
 			spot.light_energy = 3.0
 			spot.spot_range = 14.0
 			spot.spot_angle = 22.0
 			spot.shadow_enabled = false
 			spot.light_specular = 0.0
 			root.add_child(spot)
-			spot.transform = Transform3D.IDENTITY.looking_at(Vector3.ZERO - Vector3(7.0 * sx, 6.0, 2.0), Vector3.UP) \
-				.translated(Vector3(7.0 * sx, 6.0, 2.0))
+			var from := Vector3(7.0 * sx, 6.0, 2.0)
+			var target: Vector3 = ENEMY_ZONE if sx < 0.0 else PARTY_ZONE
+			spot.transform = Transform3D.IDENTITY.looking_at(target - from, Vector3.UP).translated(from)
 	return root
 
 
@@ -206,7 +221,8 @@ static func _face_center(n: Node3D) -> void:
 
 # --- safe room (03_ART §6.3) ------------------------------------------------------------------------------------------
 
-static func build_safe(seed: int, quality: StringName, theme: StringName) -> Node3D:
+## cutaway (galleries/overviews only): no ceiling slab and beams, so the interior reads from above.
+static func build_safe(seed: int, quality: StringName, theme: StringName, cutaway: bool = false) -> Node3D:
 	var pal: Dictionary = Palette.preset("safe")
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash("safe") ^ (seed * 2654435761)
@@ -221,32 +237,41 @@ static func build_safe(seed: int, quality: StringName, theme: StringName) -> Nod
 	geo.append(_part(MeshUtil.box(Vector3(SAFE_W + 1.0, 0.2, SAFE_D + 1.0)), Vector3(0, -0.1, 0), floor_c))
 	geo.append(_part(MeshUtil.box(Vector3(SAFE_W + 1.0, SAFE_H, 0.5)), Vector3(0, SAFE_H * 0.5, -hd - 0.25), wall_c))
 	for sx: float in [-1.0, 1.0]:
-		geo.append(_part(MeshUtil.box(Vector3(0.5, SAFE_H, SAFE_D + 1.0)), Vector3((hw + 0.25) * sx, SAFE_H * 0.5, 0.0), wall_c))
+		geo.append(_part(MeshUtil.box(Vector3(0.5, SAFE_H, SAFE_D + 1.0)), Vector3((hw + 0.25) * sx, SAFE_H * 0.5, 0.0),
+			wall_c))
 	# wainscot, trims, ceiling beams, cut-away front edge
 	geo.append(_part(MeshUtil.box(Vector3(SAFE_W, 1.0, 0.06)), Vector3(0, 0.5, -hd + 0.03), Palette.mul(wall_c, 0.72)))
-	geo.append(_part(MeshUtil.box(Vector3(SAFE_W, 0.08, 0.1)), Vector3(0, 1.02, -hd + 0.05), Palette.HYPE_GOLD, Vector3.ZERO,
+	geo.append(_part(MeshUtil.box(Vector3(SAFE_W, 0.08, 0.1)), Vector3(0, 1.02, -hd + 0.05), Palette.HYPE_GOLD,
+		Vector3.ZERO,
 		Vector3.ONE, 0.2, 1.0))
 	for sx: float in [-1.0, 1.0]:
-		geo.append(_part(MeshUtil.box(Vector3(0.06, 1.0, SAFE_D)), Vector3((hw - 0.03) * sx, 0.5, 0), Palette.mul(wall_c, 0.72)))
+		geo.append(_part(MeshUtil.box(Vector3(0.06, 1.0, SAFE_D)), Vector3((hw - 0.03) * sx, 0.5, 0),
+			Palette.mul(wall_c, 0.72)))
 		geo.append(_part(MeshUtil.box(Vector3(0.1, 0.08, SAFE_D)), Vector3((hw - 0.05) * sx, 1.02, 0), Palette.HYPE_GOLD,
 			Vector3.ZERO, Vector3.ONE, 0.2, 1.0))
-	geo.append(_part(MeshUtil.box(Vector3(SAFE_W + 1.0, 0.2, SAFE_D + 1.0)), Vector3(0, SAFE_H + 0.1, 0), Palette.mul(wall_c, 0.5)))
-	for k in 4:
-		geo.append(_part(MeshUtil.box(Vector3(SAFE_W + 1.0, 0.25, 0.3)), Vector3(0, SAFE_H - 0.12, -hd + 0.6 + 2.6 * float(k)),
-			Color("#5a3a2a")))
+	if not cutaway:
+		geo.append(_part(MeshUtil.box(Vector3(SAFE_W + 1.0, 0.2, SAFE_D + 1.0)), Vector3(0, SAFE_H + 0.1, 0),
+			Palette.mul(wall_c, 0.5)))
+		for bz: float in BEAM_Z:   # no beam over the exit door (its sign would hide behind it)
+			geo.append(_part(MeshUtil.box(Vector3(SAFE_W + 1.0, 0.25, 0.3)), Vector3(0, SAFE_H - 0.12, bz),
+				Color("#5a3a2a")))
 	geo.append(_part(MeshUtil.box(Vector3(SAFE_W + 1.0, 0.25, 0.4)), Vector3(0, 0.0, hd + 0.3), Palette.INK))
 	# rug + stripe pattern
 	geo.append(_part(MeshUtil.box(Vector3(5.0, 0.02, 3.4)), Vector3(0.6, 0.01, -1.6), Color("#7a3b5a")))
 	for k in 3:
-		geo.append(_part(MeshUtil.box(Vector3(4.6, 0.022, 0.12)), Vector3(0.6, 0.012, -2.9 + 1.3 * float(k)), Palette.HYPE_GOLD,
+		geo.append(_part(MeshUtil.box(Vector3(4.6, 0.022, 0.12)), Vector3(0.6, 0.012, -2.9 + 1.3 * float(k)),
+			Palette.HYPE_GOLD,
 			Vector3.ZERO, Vector3.ONE, 0.15))
 	# lootbox shelf with three boxes (bronze / silver / gold)
 	var shelf := Vector3(4.55, 0, -4.55)
 	props.append(_part(MeshUtil.box(Vector3(1.6, 1.2, 0.4)), shelf + Vector3(0, 0.6, 0), Color("#5a4a3e")))
-	props.append(_part(MeshUtil.box(Vector3(1.6, 0.05, 0.42)), shelf + Vector3(0, 0.62, 0), Palette.mul(Color("#5a4a3e"), 0.75)))
-	var box_cols: Array[Color] = [Palette.box_color("box_bronze"), Palette.box_color("box_silver"), Palette.box_color("box_gold")]
+	props.append(_part(MeshUtil.box(Vector3(1.6, 0.05, 0.42)), shelf + Vector3(0, 0.62, 0),
+		Palette.mul(Color("#5a4a3e"), 0.75)))
+	var box_cols: Array[Color] = [Palette.box_color("box_bronze"), Palette.box_color("box_silver"),
+		Palette.box_color("box_gold")]
 	for k in 3:
-		props.append(_part(MeshUtil.box(Vector3(0.36, 0.3, 0.3)), shelf + Vector3(-0.5 + 0.5 * float(k), 1.36, 0.0), box_cols[k],
+		props.append(_part(MeshUtil.box(Vector3(0.36, 0.3, 0.3)), shelf + Vector3(-0.5 + 0.5 * float(k), 1.36, 0.0),
+			box_cols[k],
 			Vector3(0, rng.randf_range(-12.0, 12.0), 0), Vector3.ONE, 0.25, 1.0))
 	# TV wall (screen = own mesh, M6 tints it with flash_color via instance uniform)
 	var tv := Vector3(0.6, 2.25, -hd + 0.08)
@@ -259,7 +284,8 @@ static func build_safe(seed: int, quality: StringName, theme: StringName) -> Nod
 				props.append(_part(MeshUtil.cylinder(0.6, 0.6, 1.6), pp + Vector3(0, 0.8, 0), Color("#3e6b4a")))
 				props.append(_part(MeshUtil.hemisphere(0.6), pp + Vector3(0, 1.6, 0), Palette.mul(Color("#3e6b4a"), 0.8)))
 				props.append(_part(MeshUtil.cylinder(0.14, 0.14, 1.8), pp + Vector3(0, 2.4, 0), Color("#8a4b2a")))
-				props.append(_part(MeshUtil.cylinder(0.16, 0.16, 0.04), pp + Vector3(0, 1.1, -0.6), Palette.PAPER, Vector3(90, 0, 0),
+				props.append(_part(MeshUtil.cylinder(0.16, 0.16, 0.04), pp + Vector3(0, 1.1, -0.6), Palette.PAPER,
+					Vector3(90, 0, 0),
 					Vector3.ONE, 0.6))
 				props.append(_part(MeshUtil.box(Vector3(0.015, 0.12, 0.01)), pp + Vector3(0.02, 1.12, -0.63), Palette.LIVE_RED,
 					Vector3(0, 0, 35 * sx)))
@@ -286,7 +312,8 @@ static func build_safe(seed: int, quality: StringName, theme: StringName) -> Nod
 			var counter := Vector3(-5.2, 0, -1.6)
 			props.append(_part(MeshUtil.box(Vector3(0.6, 1.0, 2.4)), counter + Vector3(0, 0.5, 0), Color("#c23b22")))
 			props.append(_part(MeshUtil.box(Vector3(0.7, 0.06, 2.5)), counter + Vector3(0, 1.03, 0), Palette.PAPER))
-			props.append(_part(MeshUtil.box(Vector3(0.62, 0.12, 2.42)), counter + Vector3(0, 0.75, 0), Palette.HYPE_GOLD, Vector3.ZERO,
+			props.append(_part(MeshUtil.box(Vector3(0.62, 0.12, 2.42)), counter + Vector3(0, 0.75, 0), Palette.HYPE_GOLD,
+				Vector3.ZERO,
 				Vector3.ONE, 0.3))
 			var stand := Vector3(-1.2, 0, -4.4)
 			props.append(_part(MeshUtil.box(Vector3(1.2, 1.4, 0.35)), stand + Vector3(0, 0.7, 0), Palette.DARK_METAL))
@@ -303,7 +330,8 @@ static func build_safe(seed: int, quality: StringName, theme: StringName) -> Nod
 	screen.name = "TVScreen"
 	screen.mesh = MeshUtil.box(Vector3(1.15, 0.7, 0.02))
 	screen.position = tv + Vector3(0, 0, 0.07)
-	screen.material_override = Materials.toon(Color("#2a1a3a"), {"outline": false, "rim": 0.0, "emission": Palette.NOVA_MAGENTA})
+	screen.material_override = Materials.toon(Color("#2a1a3a"), {"outline": false, "rim": 0.0,
+		"emission": Palette.NOVA_MAGENTA})
 	screen.set_instance_shader_parameter(&"flash_color", Palette.NOVA_MAGENTA)
 	screen.set_instance_shader_parameter(&"flash_amount", 0.3)
 	root.add_child(screen)
@@ -324,5 +352,6 @@ static func build_safe(seed: int, quality: StringName, theme: StringName) -> Nod
 	var lamp: Array = [PropKit.seg(Vector3(2.2, SAFE_H, -3.2), Vector3(2.2, 2.6, -3.2), 0.012, 0.012, Palette.INK),
 		_part(MeshUtil.hemisphere(0.3), Vector3(2.2, 2.55, -3.2), Color("#c23b22"), Vector3(180, 0, 0)),
 		_part(MeshUtil.sphere(0.1), Vector3(2.2, 2.45, -3.2), Color("#ffd27a"), Vector3.ZERO, Vector3.ONE, 1.5)]
-	root.add_child(_mesh_node("Lamp", lamp, Materials.env({"shade": pal["shade"], "grout_width": 0.0, "dirt": 0.0, "hatch": 0.0})))
+	root.add_child(_mesh_node("Lamp", lamp,
+		Materials.env({"shade": pal["shade"], "grout_width": 0.0, "dirt": 0.0, "hatch": 0.0})))
 	return root

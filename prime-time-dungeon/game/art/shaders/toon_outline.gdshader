@@ -31,7 +31,8 @@ void vertex() {
 	float len = length(dir_px);
 	dir_px = len > 0.0001 ? dir_px / len : vec2(0.0);
 	float w = outline_width * (1.0 + 0.6 * highlight);
-	float ndc_h = w * abs(PROJECTION_MATRIX[1][1]) / ref_distance;             // NDC height at ref distance; [1][1] < 0 in Godot (Y flip)
+	// NDC height at ref distance; [1][1] < 0 in Godot (Y flip)
+	float ndc_h = w * abs(PROJECTION_MATRIX[1][1]) / ref_distance;
 	float dist_factor = clamp(ref_distance / max(clip.w, 0.001), min_width_factor, 1.0);
 	clip.xy += dir_px * vec2(VIEWPORT_SIZE.y / VIEWPORT_SIZE.x, 1.0) * ndc_h * dist_factor * clip.w;
 	POSITION = clip;

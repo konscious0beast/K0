@@ -1,5 +1,6 @@
 // PRIME TIME DUNGEON - TV overlay, quality HIGH: reads the screen for chromatic aberration, plus scanlines,
-// vignette and "Sendeschluss" test card. Same uniforms as ui_tv_overlay.gdshader (+ screen_tex). Mobile + Compatibility.
+// vignette and "Sendeschluss" test card. Same uniforms as ui_tv_overlay.gdshader (+ screen_tex). Mobile +
+// Compatibility.
 // 03_ART 3.9 / F7 (request A10): the only canvas shader that declares a screen sampler.
 shader_type canvas_item;
 

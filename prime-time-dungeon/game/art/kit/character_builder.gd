@@ -9,6 +9,8 @@ const MESH_CACHE_MAX: int = 96
 const DEFAULT_MAT: Dictionary = {"bands": 3, "rim": 0.45}
 ## Arm splay (degrees) so arms clear the chibi torso.
 const ARM_OUT: Dictionary = {"humanoid": 6.0, "brute": 9.0, "rodent": 10.0, "specter": 0.0}
+## Bases that only appear as enemies: their rigs get the warm danger rim by default (CharacterRig.set_danger_rim).
+const ENEMY_BASES: PackedStringArray = ["rodent", "blob", "insect", "robot", "brute", "specter", "swarm"]
 
 static var _mesh_cache: Dictionary = {}
 
@@ -112,7 +114,8 @@ static func _build_procedural(model: Dictionary, seed: int) -> CharacterRig:
 		rig.death_style = &"dissolve"
 	var root := Node3D.new()
 	root.name = "Model"
-	root.scale = Vector3.ONE * float(m["scale"])
+	var eff_scale: float = float(m["scale"]) * float(Archetypes.BASE_FIT.get(str(m["base"]), 1.0))
+	root.scale = Vector3.ONE * eff_scale
 	rig.add_child(root)
 	var nodes: Dictionary = {}
 	for pv: Variant in (bp["pivots"] as Array):
@@ -187,11 +190,13 @@ static func _build_procedural(model: Dictionary, seed: int) -> CharacterRig:
 	for pname2: String in nodes:
 		piv_typed[pname2] = nodes[pname2]
 	rig.call("_setup", {
-		"base": m["base"], "pose": m["pose"], "model_root": root, "scale": m["scale"], "pivots": piv_typed,
+		"base": m["base"], "pose": m["pose"], "model_root": root, "scale": eff_scale, "pivots": piv_typed,
 		"meshes": meshes, "mesh_opts": mesh_opts, "pulses": pulses, "anchors": anchors, "particles": particles,
 		"height": maxf(bounds.end.y, 0.1), "width": maxf(bounds.size.x, bounds.size.z),
 		"arm_out": float(ARM_OUT.get(str(m["base"]), 0.0)), "phase": float(absi(eff_seed) % 97) * 0.173,
 	})
+	if ENEMY_BASES.has(str(m["base"])):
+		rig.set_danger_rim(true)
 	return rig
 
 

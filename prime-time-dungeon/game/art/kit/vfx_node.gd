@@ -4,6 +4,8 @@ extends Node3D
 ## Particle colors are sRGB (03_ART F1, vfx_additive converts). Presentation jitter may use randf() (02_TECH §13.1).
 
 const CONFETTI_COLORS: Array[Color] = [Color("#ff2e88"), Color("#ffc93c"), Color("#22d3ee"), Color("#2bd66b")]
+const ICE: Color = Color("#7fd8ff")
+const POISON: Color = Color("#7cc242")
 
 var kind: StringName = &""
 var life: float = 0.5
@@ -80,11 +82,12 @@ func setup(p_kind: StringName, p_life: float, p_loop: bool) -> void:
 			f.explosiveness = 0.7
 			f.color_ramp = _ramp([Color("#ffe08a"), Color("#ff6a2b"), Color(0.478, 0.122, 0.122, 0.0)], [0.0, 0.45, 1.0])
 		"ice":
+			# review M4: thin bright frost ring (not a filled grey disc), white core flash, bigger shards
 			var shards := _emitter("Shards", 12, 0.6, 0, 1.0, 1.0, Color.WHITE, false)
 			var pm := PrismMesh.new()
-			pm.size = Vector3(0.08, 0.25, 0.08)
+			pm.size = Vector3(0.12, 0.35, 0.12)
 			shards.mesh = pm
-			shards.material_override = Materials.hologram(Color("#7fd8ff"), 0.9, 2.2)
+			shards.material_override = Materials.hologram(ICE, 0.9, 2.6)
 			shards.spread = 180.0
 			shards.direction = Vector3.UP
 			shards.initial_velocity_min = 2.0
@@ -92,20 +95,15 @@ func setup(p_kind: StringName, p_life: float, p_loop: bool) -> void:
 			shards.gravity = Vector3(0, -3.0, 0)
 			shards.angular_velocity_min = -360.0
 			shards.angular_velocity_max = 360.0
-			var ring := MeshInstance3D.new()
-			ring.name = "FrostRing"
-			var cyl := CylinderMesh.new()
-			cyl.top_radius = 1.0
-			cyl.bottom_radius = 1.0
-			cyl.height = 0.02
-			cyl.radial_segments = 16
-			cyl.rings = 0
-			ring.mesh = cyl
-			ring.material_override = Materials.hologram(Color("#7fd8ff"), 0.22, 1.4)
-			ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			ring.position = Vector3(0, 0.02, 0)
-			add_child(ring)
+			var ring := _quad("FrostRing", Vector2(2.6, 2.6), 2, false, ICE)
+			ring.material_override = Materials.vfx_additive_ex(ICE, 2, 0.35, 3.2, false)
+			ring.rotation = Vector3(-PI * 0.5, 0, 0)
+			ring.position = Vector3(0, 0.03, 0)
 			_fx.append({"node": ring, "type": "grow", "max": 1.0, "grow": 0.25, "tint": false})
+			var core := _quad("Core", Vector2(1.2, 1.2), 0, true, Color.WHITE)
+			core.material_override = Materials.vfx_additive_ex(Color("#e6f8ff"), 0, 0.8, 3.0, true)
+			core.position = Vector3(0, 0.6, 0)
+			_fx.append({"node": core, "type": "flash", "time": 0.15, "tint": false})
 		"shock":
 			for b in 3:
 				var bolt := Node3D.new()
@@ -123,7 +121,9 @@ func setup(p_kind: StringName, p_life: float, p_loop: bool) -> void:
 			var sp := _sparks(10, Color("#9fe8ff"), false)
 			sp.position = Vector3(0, 0.2, 0)
 		"toxic":
-			var bub := _emitter("Bubbles", 16, 1.0, 2, 0.08, 0.16, Color("#7cc242"), true)
+			# review M4: filled poison bubbles (0.10–0.18 m) at higher energy + 3 big "pop" bubbles near the end
+			var bub := _emitter("Bubbles", 16, 1.0, 0, 0.10, 0.18, POISON, true)
+			bub.material_override = Materials.vfx_additive_ex(Color.WHITE, 0, 0.35, 3.0)
 			bub.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
 			bub.emission_sphere_radius = 0.4
 			bub.direction = Vector3.UP
@@ -132,6 +132,16 @@ func setup(p_kind: StringName, p_life: float, p_loop: bool) -> void:
 			bub.initial_velocity_max = 1.0
 			bub.gravity = Vector3.ZERO
 			bub.explosiveness = 0.6
+			var pops := _emitter("Pops", 3, 0.35, 2, 0.26, 0.34, POISON, true, 0.6)
+			pops.material_override = Materials.vfx_additive_ex(Color.WHITE, 2, 0.6, 3.5)
+			pops.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+			pops.emission_sphere_radius = 0.35
+			pops.position = Vector3(0, 0.7, 0)
+			pops.direction = Vector3.UP
+			pops.spread = 30.0
+			pops.initial_velocity_min = 0.2
+			pops.initial_velocity_max = 0.4
+			pops.gravity = Vector3.ZERO
 		"light", "heal":
 			var c: Color = Palette.PAPER if p_kind == &"light" else Color("#6bffb0")
 			var st := _emitter("Stars", 20, 0.8, 1, 0.1, 0.2, c, true)
@@ -211,7 +221,7 @@ func setup(p_kind: StringName, p_life: float, p_loop: bool) -> void:
 			lbl.font_size = 72
 			lbl.outline_size = 14
 			lbl.pixel_size = 0.005
-			lbl.modulate = Palette.HYPE_GOLD
+			lbl.modulate = Palette.sign_color(Palette.HYPE_GOLD)
 			lbl.outline_modulate = Palette.INK
 			lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 			lbl.no_depth_test = true
@@ -352,9 +362,11 @@ func _face_camera() -> void:
 		global_rotation = Vector3(0, atan2(to_cam.x, to_cam.z), 0)
 
 
-# --- builders ----------------------------------------------------------------------------------------------------------
+# --- builders
+# ----------------------------------------------------------------------------------------------------------
 
-func _emitter(node_name: String, amount: int, lifetime: float, shape: int, size_min: float, size_max: float, color: Color,
+func _emitter(node_name: String, amount: int, lifetime: float, shape: int, size_min: float, size_max: float,
+		color: Color,
 		tint: bool, delay: float = 0.0) -> CPUParticles3D:
 	var p := CPUParticles3D.new()
 	p.name = node_name
@@ -436,7 +448,8 @@ func _confetti(amount: int) -> CPUParticles3D:
 	return c
 
 
-## Sponsor drop (03_ART §7.2): drone flies in with a parcel, the parcel floats down on a parachute, confetti + holo flash.
+## Sponsor drop (03_ART §7.2): drone flies in with a parcel, the parcel floats down on a parachute, confetti + holo
+## flash.
 func _build_sponsor() -> void:
 	var drone: Node3D = PropKit.build(&"camera_drone", 1)
 	drone.name = "Drone"
@@ -582,6 +595,11 @@ func _animate(delta: float) -> void:
 				else:
 					n.position = Vector3(0, 0.2, 0)
 				n.visible = u < 0.98
+			"flash":
+				var ft: float = float(fx.get("time", 0.15))
+				var fk: float = clampf(_t / ft, 0.0, 1.0)
+				n.visible = _t < ft
+				n.scale = Vector3.ONE * maxf((0.6 + 0.6 * fk) * (1.0 - fk), 0.01)
 			"holo":
 				var hk: float = clampf((_t - 1.1) / 0.15, 0.0, 1.0)
 				n.visible = _t >= 1.1

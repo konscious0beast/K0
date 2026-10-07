@@ -3,7 +3,8 @@ extends RefCounted
 ## Room 16 × 16 m centered at the origin, walls 3.5 m / 0.5 m (inner face at 7.5 m), doors 4.0 m wide in the middle of
 ## an edge (lintel at 3.0 m), floor top y = 0. Free zone: circle r 5 m + 3 m corridors in front of doors; dressing only
 ## in the border strip. Output: "Geometry" (floor + walls, one mesh), "Props" (dressing, one mesh), "Collision"
-## (StaticBody3D layer 1, box shapes), optional "Light" (+ "Neon" accent on quality high) and kind set pieces.
+## (StaticBody3D layer 1, box shapes), optional "Light" (+ "Neon" accent in STAIRS/SAFE rooms on quality high) and
+## kind set pieces.
 
 const DOOR_N: int = 1
 const DOOR_E: int = 2
@@ -18,6 +19,9 @@ const DOOR_HALF: float = 2.0
 const FRAME: Color = Color("#3a3a44")
 const TRENCH_W: float = 2.4
 const CHANNEL_W: float = 1.6
+## Kinds whose room gets the extra "Neon" OmniLight on quality high; it fades out from 12 m (gone at 16 m).
+const NEON_KINDS: Array[RoomSpec.Kind] = [RoomSpec.Kind.STAIRS, RoomSpec.Kind.SAFE]
+const NEON_FADE_BEGIN: float = 12.0
 
 var spec: RoomSpec
 var pal: Dictionary = {}
@@ -59,6 +63,18 @@ static func edge_basis(side: int) -> Basis:
 			return Basis(Vector3.UP, PI * 0.5)
 		DOOR_W:
 			return Basis(Vector3.UP, -PI * 0.5)
+	return Basis.IDENTITY
+
+
+## Exact basis whose local −Z points at the wall `side` (no rounding noise; IDENTITY for the north wall).
+static func toward_wall_basis(side: int) -> Basis:
+	match side:
+		DOOR_E:
+			return Basis(Vector3(0, 0, 1), Vector3.UP, Vector3(-1, 0, 0))
+		DOOR_S:
+			return Basis(Vector3(-1, 0, 0), Vector3.UP, Vector3(0, 0, -1))
+		DOOR_W:
+			return Basis(Vector3(0, 0, -1), Vector3.UP, Vector3(1, 0, 0))
 	return Basis.IDENTITY
 
 
@@ -138,7 +154,9 @@ func build() -> Node3D:
 		light.distance_fade_begin = 24.0
 		light.distance_fade_length = 6.0
 		root.add_child(light)
-		if spec.quality == &"high":
+		# Neon accent (03_ART §4.3) only where light carries the signal (stairs gold, safe-room exit green), short fade:
+		# every other room relies on emissive geometry + glow (02_TECH §12.1: ≤ 4 omni lights within 24 m)
+		if spec.quality == &"high" and NEON_KINDS.has(spec.kind):
 			for i in mini(extra_lights.size(), 1):
 				var ld: Dictionary = extra_lights[i]
 				var neon := OmniLight3D.new()
@@ -150,7 +168,7 @@ func build() -> Node3D:
 				neon.shadow_enabled = false
 				neon.light_specular = 0.0
 				neon.distance_fade_enabled = true
-				neon.distance_fade_begin = 20.0
+				neon.distance_fade_begin = NEON_FADE_BEGIN
 				neon.distance_fade_length = 4.0
 				root.add_child(neon)
 	for n: Node3D in set_pieces:
@@ -184,7 +202,8 @@ func _env_mat(tiles: bool) -> ShaderMaterial:
 	return Materials.env(opts)
 
 
-# --- floor -------------------------------------------------------------------------------------------------------------
+# --- floor
+# -------------------------------------------------------------------------------------------------------------
 
 func _choose_floor_features() -> void:
 	var doorless: Array[int] = []
@@ -200,7 +219,18 @@ func _choose_floor_features() -> void:
 		elif style == &"sewer":
 			channel_side = pick
 	if spec.kind == RoomSpec.Kind.STAIRS:
-		hole = Rect2(-2.3, -5.35, 4.6, 5.35)
+		var sxf: Transform3D = EnvKit.anchor_for(spec, &"stairs")
+		var depth: float = PropKit.stairs_well_depth(stairs_steps())
+		var a: Vector3 = sxf * Vector3(-2.3, 0, 0)
+		hole = Rect2(Vector2(a.x, a.z), Vector2.ZERO)
+		for c: Vector3 in [Vector3(2.3, 0, 0), Vector3(-2.3, 0, -depth), Vector3(2.3, 0, -depth)]:
+			var w: Vector3 = sxf * c
+			hole = hole.expand(Vector2(w.x, w.z))
+
+
+## Steps of the stairs set piece: compact well when all four walls have doors (02_TECH §7.3 corridors).
+func stairs_steps() -> int:
+	return PropKit.STAIRS_STEPS_COMPACT if (spec.doors & 15) == 15 else PropKit.STAIRS_STEPS
 
 
 ## XZ rect (x = position.x, z = position.y) of a strip along `side` from the outer edge to inward depth w1.
@@ -260,7 +290,8 @@ func _build_floor() -> void:
 			border = subtract(border, hole)
 		for r2: Rect2 in border:
 			geo.append(_rect_box(r2, 0.0, 0.012, Palette.mul(floor_c, 0.8)))
-	shapes.append({"size": Vector3(2.0 * HALF, 0.2, 2.0 * HALF), "xform": Transform3D(Basis.IDENTITY, Vector3(0, -0.1, 0))})
+	shapes.append({"size": Vector3(2.0 * HALF, 0.2, 2.0 * HALF),
+		"xform": Transform3D(Basis.IDENTITY, Vector3(0, -0.1, 0))})
 	if trench_side != 0:
 		_build_trench(trench_side)
 	if channel_side != 0:
@@ -307,7 +338,8 @@ func _edge_box(side: int, u: float, length: float, y: float, height: float, w: f
 	return {"mesh": MeshUtil.box(Vector3.ONE), "xform": xf, "color": color, "emission": emission, "metal": metal}
 
 
-# --- walls -------------------------------------------------------------------------------------------------------------
+# --- walls
+# -------------------------------------------------------------------------------------------------------------
 
 func _build_wall(side: int) -> void:
 	var wall_c: Color = pal["wall"]
@@ -443,12 +475,14 @@ func _build_kind() -> void:
 		RoomSpec.Kind.START:
 			_start_marking()
 		RoomSpec.Kind.STAIRS:
-			var stairs: Node3D = PropKit.build(&"stairs_down", spec.seed, spec.palette)
+			var steps: int = stairs_steps()
+			var stairs: Node3D = PropKit.assemble("stairs_down", PropKit.stairs_recipe(spec.palette, steps), spec.palette)
 			stairs.name = "Stairs"
 			stairs.transform = EnvKit.anchor_for(spec, &"stairs")
 			set_pieces.append(stairs)
 			_steal_collision(stairs)
-			extra_lights.insert(0, {"pos": Vector3(0, 2.5, -2.5), "color": Palette.HYPE_GOLD, "energy": 1.6, "range": 7.0})
+			extra_lights.insert(0, {"pos": stairs.transform * Vector3(0, 2.5, -0.25 * float(steps)),
+				"color": Palette.HYPE_GOLD, "energy": 1.6, "range": 7.0})
 		RoomSpec.Kind.SAFE:
 			var door: Node3D = PropKit.build(&"safe_door", spec.seed, spec.palette)
 			door.name = "SafeDoor"
@@ -479,7 +513,8 @@ func _start_marking() -> void:
 	var ring := MeshUtil.torus(1.5, 1.7)
 	ring.rings = 24
 	geo.append(MeshUtil.part(ring, Vector3(0, 0.01, 0), Palette.NOVA_MAGENTA, Vector3.ZERO, Vector3(1, 0.08, 1), 0.9))
-	geo.append(MeshUtil.part(MeshUtil.cylinder(0.6, 0.6, 0.02), Vector3(0, 0.005, 0), Palette.mul(Palette.NOVA_MAGENTA, 0.5),
+	geo.append(MeshUtil.part(MeshUtil.cylinder(0.6, 0.6, 0.02), Vector3(0, 0.005, 0),
+		Palette.mul(Palette.NOVA_MAGENTA, 0.5),
 		Vector3.ZERO, Vector3.ONE, 0.3))
 	var sides: Array[int] = _wall_sides_for_decor()
 	var side: int = sides[0]
@@ -497,12 +532,12 @@ func _start_marking() -> void:
 	l.font_size = 140
 	l.outline_size = 16
 	l.pixel_size = 0.006
-	l.modulate = Palette.PAPER
+	l.modulate = Palette.sign_color(Palette.PAPER)
 	l.outline_modulate = Palette.LIVE_RED
 	l.transform = edge_xf(side, u, 2.25, 0.2) * Transform3D(Basis(Vector3.UP, PI), Vector3.ZERO)
 	set_pieces.append(l)
-	extra_lights.insert(0, {"pos": edge_xf(side, u, 2.2, 1.5).origin, "color": Palette.NOVA_MAGENTA, "energy": 1.8,
-		"range": 6.0})
+	extra_lights.insert(0,
+		{"pos": edge_xf(side, u, 2.2, 1.5).origin, "color": Palette.NOVA_MAGENTA, "energy": 1.8, "range": 6.0})
 
 
 ## Hausmeister-Büro (03_ART §2.2 boss palette): desk, filing cabinets, notice board, "staff only" sign.
@@ -574,11 +609,12 @@ func _throne() -> void:
 		var d: float = rng.randf_range(1.5, 6.5)
 		props.append(MeshUtil.part(MeshUtil.box(Vector3(0.12, 0.01, 0.06)), Vector3(cos(a) * d, 0.012, sin(a) * d),
 			Color("#f2e8c9"), Vector3(0, rng.randf_range(0.0, 180.0), 0)))
-	extra_lights.insert(0, {"pos": edge_xf(back, 0.0, 3.0, 3.0).origin, "color": pal["accent"], "energy": 2.0,
-		"range": 8.0})
+	extra_lights.insert(0,
+		{"pos": edge_xf(back, 0.0, 3.0, 3.0).origin, "color": pal["accent"], "energy": 2.0, "range": 8.0})
 
 
-# --- dressing ------------------------------------------------------------------------------------------------------------
+# --- dressing
+# ------------------------------------------------------------------------------------------------------------
 
 const STYLE_PROPS: Dictionary = {
 	"platform": ["bench", "bench", "trash_bin", "lamp", "lamp", "pillar", "crate"],

@@ -13,6 +13,8 @@ const WALL_THICKNESS: float = 0.5
 const CLEAR_RADIUS: float = 5.0
 ## Inner wall face distance from the room center (ROOM_SIZE / 2 − WALL_THICKNESS).
 const WALL_INNER: float = 7.5
+## Explore key light (03_ART §4.3 lists (−55, 35, 0); amended after review M4: side/back key, see make_zone_sun).
+const EXPLORE_SUN_ROTATION := Vector3(-50, -110, 0)
 
 
 ## children: "Geometry" (MeshInstance3D, floor+walls merged, cast_shadow OFF), "Props" (MeshInstance3D merged),
@@ -27,10 +29,21 @@ static func build_room(spec: RoomSpec) -> Node3D:
 
 
 ## Room-local: &"player_spawn", &"stairs", &"boss_spot" (center), &"safe_door" (center of the first wall WITHOUT door in
-## order N, E, S, W, 0.6 m in front of it, facing room center; room with 4 doors → center, facing +Z). Facing = local −Z.
+## order N, E, S, W, 0.6 m in front of it, facing room center; room with 4 doors → center, facing +Z). Facing = local
+## −Z.
+## &"stairs" is rotated so its well (local −Z) descends toward the first wall without door (art detail, origin =
+## center).
 static func anchor_for(spec: RoomSpec, anchor: StringName) -> Transform3D:
 	match anchor:
-		&"player_spawn", &"stairs", &"boss_spot":
+		&"player_spawn", &"boss_spot":
+			return Transform3D.IDENTITY
+		&"stairs":
+			# center; the well (local −Z) points at the first wall WITHOUT door (N, E, S, W) so the 3 m door corridors
+			# stay free (02_TECH §7.3); 4 doors → facing −Z with the compact well (PropKit.STAIRS_STEPS_COMPACT)
+			var sdoors: int = spec.doors if spec != null else 0
+			for side: int in RoomBuilder.SIDES:
+				if (sdoors & side) == 0:
+					return Transform3D(RoomBuilder.toward_wall_basis(side), Vector3.ZERO)
 			return Transform3D.IDENTITY
 		&"safe_door":
 			var doors: int = spec.doors if spec != null else 0
@@ -54,7 +67,8 @@ static func build_safe_room(seed: int, quality: StringName = &"high", theme: Str
 	return SetBuilder.build_safe(seed, quality, theme)
 
 
-## Local transforms inside build_safe_room(): &"vending", &"terminal", &"couch", &"mopsula_spot", &"player_spot", &"door",
+## Local transforms inside build_safe_room(): &"vending", &"terminal", &"couch", &"mopsula_spot", &"player_spot",
+## &"door",
 ## &"camera" (camera transform looking into the room, FOV 50, 03_ART §8.1). Facing = local −Z.
 static func safe_room_anchor(anchor: StringName) -> Transform3D:
 	return SetBuilder.safe_anchor(anchor)
@@ -116,13 +130,30 @@ static func make_environment(theme_id: String, palette: Dictionary, mode: String
 	return env
 
 
+## shadows only on high; directional_shadow_mode ORTHOGONAL on mobile else PSSM 2 splits;
+## directional_shadow_max_distance 30 (explore) / 20 (battle). Theme key color (see make_zone_sun for zone moods).
 static func make_sun(theme_id: String, mode: StringName, quality: StringName = &"high") -> DirectionalLight3D:
-	var pal: Dictionary = Palette.theme_palette(theme_id)
+	return make_zone_sun(theme_id, {}, mode, quality)
+
+
+## Art extra (pending API change request: optional `palette` on make_sun): like make_sun, but the key color comes from
+## the zone palette and the explore energy from the zone style (03_ART §4.3: sewer 0.7, cellar 0.9, else 1.1).
+## Explore key = side/back light (review M4): it no longer shines along the follow camera's view (pitch −38°, looking
+## −Z), so the toon bands model the figures and their shadows fall sideways onto the floor in view.
+static func make_zone_sun(theme_id: String, palette: Dictionary, mode: StringName,
+		quality: StringName = &"high") -> DirectionalLight3D:
+	var pal: Dictionary = Palette.resolve(palette, theme_id) if not palette.is_empty() else Palette.theme_palette(theme_id)
 	var sun := DirectionalLight3D.new()
 	sun.name = "Sun"
 	var key: Color = pal["key"]
 	var energy: float = 1.1
-	var rot := Vector3(-55, 35, 0)
+	if not palette.is_empty():
+		match Palette.zone_style(palette, theme_id):
+			&"sewer":
+				energy = 0.7
+			&"cellar":
+				energy = 0.9
+	var rot := EXPLORE_SUN_ROTATION
 	var max_dist: float = 30.0
 	match mode:
 		&"battle":

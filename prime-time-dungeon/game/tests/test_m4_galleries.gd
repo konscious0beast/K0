@@ -51,7 +51,12 @@ func test_vfx_gallery_freezes_effects() -> void:
 			effects += 1
 	assert_eq(effects, Vfx.KINDS.size(), "one effect per kind")
 	var labels: int = 0
+	var captions: int = 0
 	for c: Node in inst.get_children():
 		if c.has_method("show_number"):
-			labels += 1
+			if bool(c.get("is_caption")):
+				captions += 1
+			else:
+				labels += 1
 	assert_eq(labels, Vfx.STYLES.size(), "one damage number per style")
+	assert_eq(captions, 2, "weak + resist captions")

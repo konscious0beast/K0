@@ -4,21 +4,45 @@ extends Node3D
 ## Black background, camera (0, 1, 6), sun (−55, 35, 0); sphere with outline (magenta, 0.1) at x −1.6, plain sphere at
 ## x +1.6, a vfx_additive MultiMesh quad (instance color 0.5) at (0, 2.6, 0). After 15 frames: widest row of non-black
 ## pixels per half (outline must be ≥ 6 px wider) and the brightest pixel of the center column (0x80 ± 4).
-## The probe renders into its own 960 × 540 SubViewport (own world), so overlays of other modules never affect the pixels.
+## The probe renders into its own 960 × 540 SubViewport (own world), so overlays of other modules never affect the
+## pixels.
+## A white `damage` number (Vfx.damage_number at (3, 2.7, 0), frozen after the pop) must reach ≥ 240 luminance in the
+## upper right (03_ART §7.1: pure white; the AgX tonemapper caps Label3D text at ~205, see damage_number.gd).
+## It also listens to the engine log: a "different indices" warning (instance uniforms of toon / toon_outline declared
+## in
+## a different order, 02_TECH §8.3/§11.5) only appears in a real renderer, so it fails here (ERROR line → check.sh).
 
 const FRAMES: int = 15
 const MIN_EXTRA_PX: int = 6
 const VFX_TARGET: int = 128
 const VFX_TOLERANCE: int = 4
+const NUMBER_MIN_LUMA: float = 240.0
+const NUMBER_AT := Vector3(3.0, 2.7, 0.0)
+const LogSpy := preload("res://art/gallery/log_spy.gd")
 
 var result: Dictionary = {}
 var _frame: int = 0
 var _done: bool = false
 var _vp: SubViewport = null
+var _spy: Logger = null
+var _world: Node3D = null
 
 
 func setup(_params: Dictionary) -> void:
 	pass
+
+
+func _enter_tree() -> void:
+	if _spy == null:
+		_spy = LogSpy.new()
+		_spy.set("needles", PackedStringArray(["different indices"]))
+		OS.add_logger(_spy)
+
+
+func _exit_tree() -> void:
+	if _spy != null:
+		OS.remove_logger(_spy)
+		_spy = null
 
 
 func _ready() -> void:
@@ -36,7 +60,9 @@ func _ready() -> void:
 	var world := Node3D.new()
 	world.name = "World"
 	_vp.add_child(world)
+	_world = world
 	_build(world)
+	Vfx.damage_number(world, NUMBER_AT, "88", &"damage")
 
 
 func _build(world: Node3D) -> void:
@@ -80,6 +106,8 @@ func _build(world: Node3D) -> void:
 		mi.material_override = mat
 		mi.position = Vector3(1.6 * float(side), 0, 0)
 		world.add_child(mi)
+		mi.set_instance_shader_parameter(&"flash_amount", 0.0)
+		mi.set_instance_shader_parameter(&"dissolve", 0.0)
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.use_colors = true
@@ -105,6 +133,7 @@ func _build(world: Node3D) -> void:
 func _process(_delta: float) -> void:
 	if _done:
 		return
+	_freeze_numbers()
 	_frame += 1
 	if _frame < FRAMES:
 		return
@@ -137,18 +166,49 @@ func _measure(img: Image) -> void:
 		for dx in range(-2, 3):
 			var c: Color = img.get_pixel(clampi(cx + dx, 0, w - 1), y)
 			vfx = maxi(vfx, roundi(maxf(c.r, maxf(c.g, c.b)) * 255.0))
-	result = {"w_outline": w_outline, "w_plain": w_plain, "vfx": vfx}
+	var luma: float = _number_luma(img)
+	result = {"w_outline": w_outline, "w_plain": w_plain, "vfx": vfx, "number_luma": luma}
 	var ok: bool = true
+	if luma < NUMBER_MIN_LUMA:
+		push_error("RENDER_PROBE: damage number too dull (luma %.0f < %.0f) (res://art/kit/damage_number.gd)"
+			% [luma, NUMBER_MIN_LUMA])
+		ok = false
+	var indices: PackedStringArray = _spy.call("found") if _spy != null else PackedStringArray()
+	if not indices.is_empty():
+		push_error("RENDER_PROBE: FAIL different indices (%s) (res://art/shaders/toon_outline.gdshader)" % indices[0])
+		ok = false
 	if w_outline < w_plain + MIN_EXTRA_PX:
 		push_error("RENDER_PROBE: outline not visible (w_outline %d, w_plain %d) (res://art/shaders/toon_outline.gdshader)"
 			% [w_outline, w_plain])
 		ok = false
 	if absi(vfx - VFX_TARGET) > VFX_TOLERANCE:
-		push_error("RENDER_PROBE: particle color space off (center %d, expected %d ± %d) (res://art/shaders/vfx_additive.gdshader)"
-			% [vfx, VFX_TARGET, VFX_TOLERANCE])
+		push_error(("RENDER_PROBE: particle color space off (center %d, expected %d ± %d) "
+			+ "(res://art/shaders/vfx_additive.gdshader)") % [vfx, VFX_TARGET, VFX_TOLERANCE])
 		ok = false
 	if ok:
-		print("RENDER_PROBE: OK w_outline=%d w_plain=%d vfx=%d" % [w_outline, w_plain, vfx])
+		print("RENDER_PROBE: OK w_outline=%d w_plain=%d vfx=%d number_luma=%.0f" % [w_outline, w_plain, vfx, luma])
+
+
+## Holds the probe's damage number once the pop is over (frame-rate independent still).
+func _freeze_numbers() -> void:
+	if _world == null:
+		return
+	for n: Variant in (_world.get_meta(Vfx.DMG_META, []) as Array):
+		var l: Node = n
+		if is_instance_valid(l) and bool(l.get("active")) and float(l.get("_t")) >= 0.2:
+			l.call("freeze")
+
+
+## Brightest luminance (0..255) in the upper right region where the damage number floats.
+static func _number_luma(img: Image) -> float:
+	var w: int = img.get_width()
+	var h: int = img.get_height()
+	var best: float = 0.0
+	for y in range(0, int(h * 0.35)):
+		for x in range(int(w * 0.55), int(w * 0.85)):
+			var c: Color = img.get_pixel(x, y)
+			best = maxf(best, (0.299 * c.r + 0.587 * c.g + 0.114 * c.b) * 255.0)
+	return best
 
 
 static func _row_width(img: Image, y: int, x0: int, x1: int) -> int:

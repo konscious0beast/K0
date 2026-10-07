@@ -11,7 +11,10 @@
 				"common": 80,
 				"rare": 18,
 				"epic": 2
-			}
+			},
+			"guarantee": "",
+			"fixed_pool": "",
+			"mod_tag": "lootbox_open_bronze"
 		},
 		{
 			"id": "box_silver",
@@ -24,7 +27,9 @@
 				"rare": 38,
 				"epic": 7
 			},
-			"guarantee": "rare"
+			"guarantee": "rare",
+			"fixed_pool": "",
+			"mod_tag": "lootbox_open_silver"
 		},
 		{
 			"id": "box_gold",
@@ -37,7 +42,9 @@
 				"rare": 55,
 				"epic": 20
 			},
-			"guarantee": "epic"
+			"guarantee": "epic",
+			"fixed_pool": "",
+			"mod_tag": "lootbox_open_gold"
 		},
 		{
 			"id": "box_fan",
@@ -50,7 +57,9 @@
 				"rare": 40,
 				"epic": 10
 			},
-			"fixed_pool": "fan"
+			"guarantee": "",
+			"fixed_pool": "fan",
+			"mod_tag": "lootbox_open_fan"
 		}
 	],
 	"pools": {
@@ -67,36 +76,328 @@
 					"id": "itm_bandage",
 					"amount": 2,
 					"weight": 25
+				},
+				{
+					"kind": "item",
+					"id": "itm_antidote",
+					"amount": 2,
+					"weight": 15
+				},
+				{
+					"kind": "item",
+					"id": "itm_energy_krawumm",
+					"amount": 1,
+					"weight": 15
+				},
+				{
+					"kind": "item",
+					"id": "itm_ice_spray",
+					"amount": 1,
+					"weight": 10
+				},
+				{
+					"kind": "item",
+					"id": "itm_molotov",
+					"amount": 1,
+					"weight": 10
 				}
 			],
 			"rare": [
 				{
 					"kind": "item",
-					"id": "itm_antidote",
+					"id": "itm_brutzel_burger",
 					"amount": 2,
+					"weight": 20
+				},
+				{
+					"kind": "item",
+					"id": "itm_smelling_salts",
+					"amount": 1,
 					"weight": 20
 				},
 				{
 					"kind": "credits",
 					"id": "",
 					"amount": 120,
+					"weight": 15
+				},
+				{
+					"kind": "item",
+					"id": "itm_hype_megaphone",
+					"amount": 1,
 					"weight": 10
+				},
+				{
+					"kind": "item",
+					"id": "itm_smoke",
+					"amount": 1,
+					"weight": 10
+				},
+				{
+					"kind": "item",
+					"id": "itm_acc_lucky_ticket",
+					"amount": 1,
+					"weight": 8
+				},
+				{
+					"kind": "item",
+					"id": "itm_acc_rubber_boots",
+					"amount": 1,
+					"weight": 8
+				},
+				{
+					"kind": "item",
+					"id": "itm_arm_safety_vest",
+					"amount": 1,
+					"weight": 5
+				},
+				{
+					"kind": "item",
+					"id": "itm_wpn_collar_studded",
+					"amount": 1,
+					"weight": 5
 				}
 			],
 			"epic": [
 				{
+					"kind": "item",
+					"id": "itm_elixir",
+					"amount": 1,
+					"weight": 25
+				},
+				{
+					"kind": "item",
+					"id": "itm_wpn_fire_axe",
+					"amount": 1,
+					"weight": 15
+				},
+				{
+					"kind": "item",
+					"id": "itm_wpn_collar_signet",
+					"amount": 1,
+					"weight": 15
+				},
+				{
+					"kind": "item",
+					"id": "itm_acc_sneakers",
+					"amount": 1,
+					"weight": 15
+				},
+				{
+					"kind": "item",
+					"id": "itm_arm_ermine",
+					"amount": 1,
+					"weight": 10
+				},
+				{
+					"kind": "item",
+					"id": "itm_wpn_rail_crowbar",
+					"amount": 1,
+					"weight": 10
+				},
+				{
 					"kind": "credits",
 					"id": "",
-					"amount": 300,
+					"amount": 400,
 					"weight": 10
 				}
 			],
 			"fan": [
 				{
 					"kind": "item",
+					"id": "itm_acc_clip_mic",
+					"amount": 1,
+					"weight": 40
+				},
+				{
+					"kind": "item",
+					"id": "itm_elixir",
+					"amount": 1,
+					"weight": 30
+				},
+				{
+					"kind": "item",
+					"id": "itm_hype_megaphone",
+					"amount": 2,
+					"weight": 30
+				}
+			]
+		},
+		"f2": {
+			"common": [
+				{
+					"kind": "credits",
+					"id": "",
+					"amount": 40,
+					"weight": 30
+				},
+				{
+					"kind": "item",
 					"id": "itm_bandage",
 					"amount": 3,
-					"weight": 40
+					"weight": 20
+				},
+				{
+					"kind": "item",
+					"id": "itm_antidote",
+					"amount": 2,
+					"weight": 10
+				},
+				{
+					"kind": "item",
+					"id": "itm_energy_krawumm",
+					"amount": 2,
+					"weight": 15
+				},
+				{
+					"kind": "item",
+					"id": "itm_ice_spray",
+					"amount": 2,
+					"weight": 10
+				},
+				{
+					"kind": "item",
+					"id": "itm_molotov",
+					"amount": 2,
+					"weight": 10
+				},
+				{
+					"kind": "item",
+					"id": "itm_brutzel_burger",
+					"amount": 1,
+					"weight": 5
+				}
+			],
+			"rare": [
+				{
+					"kind": "item",
+					"id": "itm_brutzel_burger",
+					"amount": 3,
+					"weight": 20
+				},
+				{
+					"kind": "item",
+					"id": "itm_smelling_salts",
+					"amount": 2,
+					"weight": 20
+				},
+				{
+					"kind": "credits",
+					"id": "",
+					"amount": 180,
+					"weight": 15
+				},
+				{
+					"kind": "item",
+					"id": "itm_hype_megaphone",
+					"amount": 1,
+					"weight": 10
+				},
+				{
+					"kind": "item",
+					"id": "itm_smoke",
+					"amount": 1,
+					"weight": 10
+				},
+				{
+					"kind": "item",
+					"id": "itm_acc_lucky_ticket",
+					"amount": 1,
+					"weight": 8
+				},
+				{
+					"kind": "item",
+					"id": "itm_acc_rubber_boots",
+					"amount": 1,
+					"weight": 8
+				},
+				{
+					"kind": "item",
+					"id": "itm_arm_sewer_suit",
+					"amount": 1,
+					"weight": 5
+				},
+				{
+					"kind": "item",
+					"id": "itm_arm_velvet_cape",
+					"amount": 1,
+					"weight": 5
+				}
+			],
+			"epic": [
+				{
+					"kind": "item",
+					"id": "itm_elixir",
+					"amount": 1,
+					"weight": 25
+				},
+				{
+					"kind": "item",
+					"id": "itm_wpn_collar_royal",
+					"amount": 1,
+					"weight": 15
+				},
+				{
+					"kind": "item",
+					"id": "itm_wpn_rail_crowbar",
+					"amount": 1,
+					"weight": 15
+				},
+				{
+					"kind": "item",
+					"id": "itm_acc_sneakers",
+					"amount": 1,
+					"weight": 10
+				},
+				{
+					"kind": "item",
+					"id": "itm_arm_ermine",
+					"amount": 1,
+					"weight": 15
+				},
+				{
+					"kind": "item",
+					"id": "itm_wpn_fire_axe",
+					"amount": 1,
+					"weight": 5
+				},
+				{
+					"kind": "item",
+					"id": "itm_wpn_collar_signet",
+					"amount": 1,
+					"weight": 5
+				},
+				{
+					"kind": "credits",
+					"id": "",
+					"amount": 600,
+					"weight": 10
+				}
+			],
+			"fan": [
+				{
+					"kind": "item",
+					"id": "itm_acc_clip_mic",
+					"amount": 1,
+					"weight": 30
+				},
+				{
+					"kind": "item",
+					"id": "itm_acc_fan_scarf",
+					"amount": 1,
+					"weight": 10
+				},
+				{
+					"kind": "item",
+					"id": "itm_elixir",
+					"amount": 1,
+					"weight": 30
+				},
+				{
+					"kind": "item",
+					"id": "itm_hype_megaphone",
+					"amount": 2,
+					"weight": 30
 				}
 			]
 		}

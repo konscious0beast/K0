@@ -3,17 +3,185 @@
 	"entries": [
 		{
 			"id": "scn_mop_1",
-			"name": "Erste Rast",
-			"condition": "e.safe_room_visits == 1",
-			"priority": 0,
+			"name": "Seine Durchlaucht",
+			"condition": "e.safe_room_visits >= 1",
+			"priority": 1,
+			"set_flag": "",
+			"once": true,
 			"lines": [
 				{
 					"voice": "mopsula",
-					"text": "Ein Kiosk. Wir hatten auf ein Schloss gehofft."
+					"text": "Kammerdiener:in. Setz dich. Wir müssen reden."
 				},
 				{
 					"voice": "kai",
-					"text": "Es gibt Kaffee. Das ist fast dasselbe."
+					"text": "Du redest seit einer Stunde."
+				},
+				{
+					"voice": "mopsula",
+					"text": "Mit dir. Nicht AN dich. Ein Unterschied, den das gemeine Volk selten begreift."
+				},
+				{
+					"voice": "kai",
+					"text": "Wieso kannst du überhaupt sprechen?"
+				},
+				{
+					"voice": "mopsula",
+					"text": "Wir konnten immer sprechen. Ihr habt nur nie zugehört."
+				},
+				{
+					"voice": "mopsula",
+					"text": "Neun Jahre „Na, du Dicker?“. Neun Jahre!"
+				},
+				{
+					"voice": "kai",
+					"text": "… Ich hab dir jeden Abend das Ohr gekrault."
+				},
+				{
+					"voice": "mopsula",
+					"text": "(Pause) Das linke. Das linke war akzeptabel. Weitermachen."
+				},
+				{
+					"voice": "mod",
+					"text": "Zuschauer-Umfrage: 94 % wollen mehr vom Hund. Notiert."
+				}
+			]
+		},
+		{
+			"id": "scn_mop_2",
+			"name": "Ahnenreihe",
+			"condition": "f.defeated_enm_boss_hausmeister == true",
+			"priority": 2,
+			"set_flag": "",
+			"once": true,
+			"lines": [
+				{
+					"voice": "mopsula",
+					"text": "Der Hausmeister. Er hatte einen Schlüssel für jede Tür."
+				},
+				{
+					"voice": "mopsula",
+					"text": "Und keine einzige, hinter der jemand auf ihn wartete."
+				},
+				{
+					"voice": "kai",
+					"text": "Das ist ungewohnt nachdenklich für dich."
+				},
+				{
+					"voice": "mopsula",
+					"text": "Wir sind von hohem Geblüt. Nachdenklichkeit ist erblich. Unsere Ahnen waren Grafen, Herzöge —"
+				},
+				{
+					"voice": "kai",
+					"text": "Deine Mutter war aus einem Kofferraum in Polen."
+				},
+				{
+					"voice": "mopsula",
+					"text": "EIN SEHR VORNEHMER KOFFERRAUM."
+				},
+				{
+					"voice": "kai",
+					"text": "(lacht)"
+				},
+				{
+					"voice": "mopsula",
+					"text": "… Wartet jemand auf dich? Da oben?"
+				},
+				{
+					"voice": "kai",
+					"text": "Da oben ist nichts mehr."
+				},
+				{
+					"voice": "mopsula",
+					"text": "Dann warten Wir eben aufeinander. Das ist ein Befehl."
+				}
+			]
+		},
+		{
+			"id": "scn_mop_3",
+			"name": "Das Tierheim",
+			"condition": "e.kai_level >= 4 && f.scene_scn_mop_1 == true",
+			"priority": 3,
+			"set_flag": "",
+			"once": true,
+			"lines": [
+				{
+					"voice": "mopsula",
+					"text": "Weißt du, warum Wir „schwer vermittelbar“ waren?"
+				},
+				{
+					"voice": "kai",
+					"text": "Weil du jeden Besucher angeknurrt hast."
+				},
+				{
+					"voice": "mopsula",
+					"text": "Weil sie die Falschen waren. Familien mit Kinderwagen. Pärchen mit Instagram."
+				},
+				{
+					"voice": "mopsula",
+					"text": "Niemand wollte einen alten Mops mit Atemgeräuschen."
+				},
+				{
+					"voice": "kai",
+					"text": "Ich wollte dich adoptieren. Nächsten Monat. Die Papiere lagen schon in der Schublade."
+				},
+				{
+					"voice": "mopsula",
+					"text": "(lange Pause) … Das sagst du nur wegen der Kameras."
+				},
+				{
+					"voice": "kai",
+					"text": "Die Kameras sind mir egal."
+				},
+				{
+					"voice": "mopsula",
+					"text": "Hmpf. Wir nehmen das zur Kenntnis. Unter Vorbehalt. (dreht sich weg, Schwanz wedelt)"
+				},
+				{
+					"voice": "mod",
+					"text": "Diese Szene wird in 47 Galaxien gerade mit Taschentüchern beworben. Danke."
+				}
+			]
+		},
+		{
+			"id": "scn_mop_4",
+			"name": "Vor dem Thron",
+			"condition": "e.safe_room_id == \"sr_signalbox\"",
+			"priority": 0,
+			"set_flag": "mop_pep_talk",
+			"once": true,
+			"lines": [
+				{
+					"voice": "mopsula",
+					"text": "Sie nennt sich Königin. Eine RATTE. Mit einer Krone aus Fahrscheinen."
+				},
+				{
+					"voice": "kai",
+					"text": "Wir müssen nicht gegen sie kämpfen. Die Treppe ist gleich da."
+				},
+				{
+					"voice": "mopsula",
+					"text": "Es gibt Dinge, die ein Adeliger nicht dulden kann. Hochstapelei ist eines davon."
+				},
+				{
+					"voice": "kai",
+					"text": "Du bist ein Mops aus dem Tierheim."
+				},
+				{
+					"voice": "mopsula",
+					"text": "Und du bist ein:e Tierpfleger:in mit einem Wischmopp. Und doch stehen wir hier."
+				},
+				{
+					"voice": "mopsula",
+					"text": "Lebend. Im Fernsehen."
+				},
+				{
+					"voice": "kai",
+					"text": "… Okay. Zusammen."
+				},
+				{
+					"voice": "mopsula",
+					"text": "Zusammen. Aber Wir gehen voraus. Wegen der Optik."
 				}
 			]
 		}

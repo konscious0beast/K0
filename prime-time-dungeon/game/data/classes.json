@@ -4,6 +4,7 @@
 		{
 			"id": "cls_kai_wrecker",
 			"name": "Abrissbirne",
+			"desc": "Tank und Schläger. Steht im Weg, und zwar gern.",
 			"for": [
 				"kai"
 			],
@@ -27,12 +28,7 @@
 					}
 				}
 			],
-			"learnset": [
-				{
-					"level": 11,
-					"skill": "skl_kai_heavy_swing"
-				}
-			],
+			"learnset": [],
 			"show_mods": {
 				"hype_gain_mult": 1.0,
 				"stunt_success_add": 0.0,
@@ -41,6 +37,268 @@
 					50,
 					75,
 					100
+				]
+			}
+		},
+		{
+			"id": "cls_kai_runner",
+			"name": "Gleisläufer:in",
+			"desc": "Tempo und Krits. Kennt jede Abkürzung, besonders die verbotenen.",
+			"for": [
+				"kai"
+			],
+			"min_floor": 3,
+			"stat_mult": {
+				"spd": 1.2,
+				"lck": 1.2,
+				"def": 0.9
+			},
+			"growth_add": {
+				"spd": 0.5,
+				"lck": 0.5
+			},
+			"passives": [
+				{
+					"id": "pas_first_strike",
+					"params": {
+						"first_action_crit_add": 0.25,
+						"preemptive_angle_deg": 90
+					}
+				}
+			],
+			"learnset": [],
+			"show_mods": {
+				"hype_gain_mult": 1.0,
+				"stunt_success_add": 0.0,
+				"stunt_cooldown": 3,
+				"sponsor_thresholds": [
+					50,
+					75,
+					100
+				]
+			}
+		},
+		{
+			"id": "cls_kai_tinker",
+			"name": "Schrott-Tüftler:in",
+			"desc": "Items und Elemente. Aus Müll wird Munition.",
+			"for": [
+				"kai"
+			],
+			"min_floor": 3,
+			"stat_mult": {
+				"mag": 1.3,
+				"str": 0.95
+			},
+			"growth_add": {
+				"mag": 1.0,
+				"mp": 1.0
+			},
+			"passives": [
+				{
+					"id": "pas_tinkering",
+					"params": {
+						"damage_item_mult": 1.5,
+						"item_rank": 1
+					}
+				}
+			],
+			"learnset": [],
+			"show_mods": {
+				"hype_gain_mult": 1.0,
+				"stunt_success_add": 0.0,
+				"stunt_cooldown": 3,
+				"sponsor_thresholds": [
+					50,
+					75,
+					100
+				]
+			}
+		},
+		{
+			"id": "cls_kai_showrunner",
+			"name": "Showrunner:in",
+			"desc": "Hype und Stunts. Die Kamera liebt dich, die Versicherung nicht.",
+			"for": [
+				"kai"
+			],
+			"min_floor": 3,
+			"stat_mult": {
+				"lck": 1.25
+			},
+			"growth_add": {
+				"lck": 0.5
+			},
+			"passives": [
+				{
+					"id": "pas_crowd_magnet",
+					"params": {
+						"stunt_success_add": 0.15,
+						"stunt_cooldown": 2,
+						"hype_gain_mult": 1.25
+					}
+				}
+			],
+			"learnset": [],
+			"show_mods": {
+				"hype_gain_mult": 1.25,
+				"stunt_success_add": 0.15,
+				"stunt_cooldown": 2,
+				"sponsor_thresholds": [
+					50,
+					75,
+					100
+				]
+			}
+		},
+		{
+			"id": "cls_mop_archmage",
+			"name": "Hofmagier",
+			"desc": "Elementarschaden. Jede Schwachstelle ist eine Einladung.",
+			"for": [
+				"mopsula"
+			],
+			"min_floor": 3,
+			"stat_mult": {
+				"mag": 1.2,
+				"mp": 1.1
+			},
+			"growth_add": {
+				"mag": 0.6,
+				"mp": 1.0
+			},
+			"passives": [
+				{
+					"id": "pas_exploit",
+					"params": {
+						"weak_mult": 1.75
+					}
+				}
+			],
+			"learnset": [],
+			"show_mods": {
+				"hype_gain_mult": 1.0,
+				"stunt_success_add": 0.0,
+				"stunt_cooldown": 3,
+				"sponsor_thresholds": [
+					50,
+					75,
+					100
+				]
+			}
+		},
+		{
+			"id": "cls_mop_physician",
+			"name": "Leibarzt Seiner Hoheit",
+			"desc": "Heilung mit Standesdünkel. Gift duldet er nicht.",
+			"for": [
+				"mopsula"
+			],
+			"min_floor": 3,
+			"stat_mult": {
+				"res": 1.15,
+				"hp": 1.1
+			},
+			"growth_add": {
+				"hp": 2.0,
+				"res": 0.4
+			},
+			"passives": [
+				{
+					"id": "pas_bedside",
+					"params": {
+						"heal_mult": 1.3,
+						"self_cure_poison_turn_start": true
+					}
+				}
+			],
+			"learnset": [],
+			"show_mods": {
+				"hype_gain_mult": 1.0,
+				"stunt_success_add": 0.0,
+				"stunt_cooldown": 3,
+				"sponsor_thresholds": [
+					50,
+					75,
+					100
+				]
+			}
+		},
+		{
+			"id": "cls_mop_hexer",
+			"name": "Fluchgraf",
+			"desc": "Debuffs mit Stammbaum. Flüche halten länger.",
+			"for": [
+				"mopsula"
+			],
+			"min_floor": 3,
+			"stat_mult": {
+				"mag": 1.1,
+				"spd": 1.05
+			},
+			"growth_add": {
+				"mag": 0.4,
+				"spd": 0.2
+			},
+			"passives": [
+				{
+					"id": "pas_curse",
+					"params": {
+						"status_chance_add": 0.25,
+						"status_turns_add": 1
+					}
+				}
+			],
+			"learnset": [],
+			"show_mods": {
+				"hype_gain_mult": 1.0,
+				"stunt_success_add": 0.0,
+				"stunt_cooldown": 3,
+				"sponsor_thresholds": [
+					50,
+					75,
+					100
+				]
+			}
+		},
+		{
+			"id": "cls_mop_diva",
+			"name": "Diva",
+			"desc": "Buffs und Bühne. Sponsoren kommen früher, Applaus sowieso.",
+			"for": [
+				"mopsula"
+			],
+			"min_floor": 3,
+			"stat_mult": {
+				"lck": 1.2,
+				"res": 1.1
+			},
+			"growth_add": {
+				"lck": 0.5,
+				"res": 0.3
+			},
+			"passives": [
+				{
+					"id": "pas_spotlight",
+					"params": {
+						"buff_turns_add": 1,
+						"sponsor_thresholds": [
+							45,
+							70,
+							95
+						]
+					}
+				}
+			],
+			"learnset": [],
+			"show_mods": {
+				"hype_gain_mult": 1.0,
+				"stunt_success_add": 0.0,
+				"stunt_cooldown": 3,
+				"sponsor_thresholds": [
+					45,
+					70,
+					95
 				]
 			}
 		}

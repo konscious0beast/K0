@@ -38,16 +38,47 @@
 				{
 					"level": 1,
 					"skill": "skl_kai_heavy_swing"
+				},
+				{
+					"level": 2,
+					"skill": "skl_kai_taunt"
+				},
+				{
+					"level": 3,
+					"skill": "skl_kai_sweep"
+				},
+				{
+					"level": 4,
+					"skill": "skl_kai_first_aid"
+				},
+				{
+					"level": 5,
+					"skill": "skl_kai_leash_trip"
+				},
+				{
+					"level": 6,
+					"skill": "skl_kai_deo_torch"
+				},
+				{
+					"level": 7,
+					"skill": "skl_kai_cable_whip"
+				},
+				{
+					"level": 9,
+					"skill": "skl_kai_prime_finisher"
 				}
 			],
 			"stunts": [
 				"skl_stunt_kai_suplex"
 			],
 			"equipment": {
-				"weapon": "",
-				"armor": "",
+				"weapon": "itm_wpn_mop",
+				"armor": "itm_arm_hoodie",
 				"accessory": ""
 			},
+			"element_mods": {},
+			"status_immune": [],
+			"status_resist": {},
 			"model": {
 				"base": "humanoid",
 				"scale": 1.0,
@@ -61,7 +92,9 @@
 				},
 				"props": [
 					"mop"
-				]
+				],
+				"seed": 0,
+				"gltf": ""
 			},
 			"portrait_color": "#3aa9a0"
 		},
@@ -99,17 +132,47 @@
 				{
 					"level": 1,
 					"skill": "skl_mop_holy_lick"
+				},
+				{
+					"level": 2,
+					"skill": "skl_mop_frost_sneeze"
+				},
+				{
+					"level": 3,
+					"skill": "skl_mop_thunder_bark"
+				},
+				{
+					"level": 4,
+					"skill": "skl_mop_royal_decree"
+				},
+				{
+					"level": 6,
+					"skill": "skl_mop_mass_lick"
+				},
+				{
+					"level": 7,
+					"skill": "skl_mop_revive"
+				},
+				{
+					"level": 9,
+					"skill": "skl_mop_inferno"
 				}
 			],
-			"stunts": [],
+			"stunts": [
+				"skl_stunt_mop_entrance"
+			],
 			"equipment": {
-				"weapon": "",
-				"armor": "",
+				"weapon": "itm_wpn_collar_leather",
+				"armor": "itm_arm_pug_sweater",
 				"accessory": ""
 			},
+			"element_mods": {},
+			"status_immune": [],
+			"status_resist": {},
 			"model": {
 				"base": "pug",
 				"scale": 1.0,
+				"pose": "auto",
 				"colors": {
 					"primary": "#d8b98a",
 					"secondary": "#2a2024",
@@ -119,7 +182,9 @@
 				"props": [
 					"cape",
 					"monocle"
-				]
+				],
+				"seed": 0,
+				"gltf": ""
 			},
 			"portrait_color": "#7b2cbf"
 		}

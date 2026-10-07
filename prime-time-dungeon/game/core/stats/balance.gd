@@ -1,6 +1,8 @@
-# STUB(M0) — owned by M1. Replace completely, keep the public API.
 class_name Balance extends RefCounted
-## All battle/progression formula constants (02_TECH §5.9). Values may be rebalanced, the structure may not.
+## All battle/progression formula constants (02_TECH §5.9, GDD §3/§16.3). Values may be rebalanced, the structure
+## may not.
+## The battle core converts the float constants once to permille/basis points (core/stats/fixed_math.gd) and computes
+## with integers (05 CR-12); e.g. the damage variance is drawn as rng.randi_range(900, 1100) ‰.
 
 const DMG_VARIANCE_MIN: float = 0.9
 const DMG_VARIANCE_MAX: float = 1.1

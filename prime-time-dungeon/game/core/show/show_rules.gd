@@ -3,11 +3,13 @@ class_name ShowRules extends RefCounted
 ##
 ## Self-contained: needs only ActionEvent fields + the BattleSetup (party combatant ids → member def ids, boss flag,
 ## advantage) and skill/item defs for `hype` / `kill_hype`. Side is read from the id (`p…` party, `e…` enemy,
-## `u…` pseudo unit, §5.3). Deltas are raw (before hype_gain_mult, applied by Show.add_hype).
+## `u…` pseudo unit, §5.3). Deltas are raw (before hype_gain_mult, which Show applies to the positive parts only).
 ##
 ## Interpretations (documented): crit +5 per crit, weakness +4 at most once per action (GDD §7.3 is canonical for
-## numbers); enemies killed without a party actor (status tick) count as kills (`kills_total`, trigger `enemy_killed`
-## with `by: "status"`, `member: ""`) but give no kill hype; "falls under 25 %" needs the previous HP at ≥ 25 %.
+## numbers); enemies killed without a party actor (status tick) count as kills but give no kill hype (not a party
+## action): the kill is credited to the party action that applied the ticking status (STATUS_ADDED during an open
+## party action → its `by` / `member`, `kills_skill` for a skill), otherwise `by: "attack"`, `member: ""` — `by` stays
+## within the documented attack/skill/stunt/item (§6.3); "falls under 25 %" needs the previous HP at ≥ 25 %.
 
 const HYPE_START_NORMAL: float = 5.0
 const HYPE_START_PREEMPTIVE: float = 5.0
@@ -63,6 +65,8 @@ var _kill_window: Array[int] = []            # kills of the last STREAK_ACTIONS 
 var _low_hp_done: Dictionary = {}
 var _stunts_ok: int = 0
 var _started: bool = false
+var _status_src: Dictionary = {}             # "<enemy id>|<status id>" → {"actor", "command"} of the applying party action
+var _tick_status: Dictionary = {}            # enemy id → status id of its last status-tick DAMAGE
 
 
 ## Self-contained: needs only ActionEvent fields + setup.
@@ -112,6 +116,8 @@ func feed(e: ActionEvent) -> ShowDelta:
 				_hp[e.target_id] = e.hp_after
 		ActionEvent.Type.KO:
 			_on_ko(d, e)
+		ActionEvent.Type.STATUS_ADDED:
+			_on_status_added(e)
 		ActionEvent.Type.COMBO:
 			if _is_party(e.actor_id):
 				_add(d, HYPE_COMBO, &"combo")
@@ -194,6 +200,8 @@ func _on_action_start(d: ShowDelta, e: ActionEvent) -> void:
 
 
 func _on_damage(d: ShowDelta, e: ActionEvent) -> void:
+	if e.actor_id == "" and e.status_id != "" and _is_enemy(e.target_id):
+		_tick_status[e.target_id] = e.status_id
 	if _is_party(e.actor_id) and _is_enemy(e.target_id) and e.status_id == "":
 		if e.crit:
 			_add(d, HYPE_CRIT, &"crit")
@@ -210,10 +218,17 @@ func _on_damage(d: ShowDelta, e: ActionEvent) -> void:
 func _on_ko(d: ShowDelta, e: ActionEvent) -> void:
 	if _is_enemy(e.target_id):
 		_stat(d, "kills_total")
-		var by: String = "status"
+		var by: String = "attack"
 		var member: String = ""
 		var overkill: bool = e.value == 1
-		if _is_party(e.actor_id):
+		if not _is_party(e.actor_id):
+			var src: Dictionary = _kill_source(e)
+			if not src.is_empty():
+				by = _by_for(int(src.get("command", BattleCommand.Kind.ATTACK)))
+				member = _member(str(src.get("actor", "")))
+				if by == "skill":
+					_stat(d, "kills_skill")
+		else:
 			member = _member(e.actor_id)
 			by = _by_for(_command if (_in_action and e.actor_id == _actor) else BattleCommand.Kind.ATTACK)
 			match by:
@@ -240,6 +255,28 @@ func _on_ko(d: ShowDelta, e: ActionEvent) -> void:
 			_stat(d, "ko_mopsula")
 		_trigger(d, "party_ko", {"member": who})
 		_hp[e.target_id] = 0
+
+
+## Remembers which party action applied a status to an enemy (a later tick kill is credited to it); applied outside a
+## party action (enemy, boss op, gift) → no party source.
+func _on_status_added(e: ActionEvent) -> void:
+	if not _is_enemy(e.target_id) or e.status_id == "":
+		return
+	var key: String = e.target_id + "|" + e.status_id
+	if _in_action:
+		_status_src[key] = {"actor": _actor, "command": _command}
+	else:
+		_status_src.erase(key)
+
+
+## {"actor", "command"} of the party action behind a kill without party actor (status tick); {} if unknown.
+func _kill_source(e: ActionEvent) -> Dictionary:
+	if e.actor_id != "":
+		return {}
+	var status_id: String = str(_tick_status.get(e.target_id, ""))
+	if status_id == "":
+		return {}
+	return _status_src.get(e.target_id + "|" + status_id, {})
 
 
 func _on_stunt(d: ShowDelta, e: ActionEvent) -> void:
@@ -333,7 +370,10 @@ func _member(combatant_id: String) -> String:
 func _add(d: ShowDelta, amount: float, reason: StringName = &"") -> void:
 	d.hype += amount
 	if amount > 0.0:
+		d.hype_gain += amount
 		_positive = true
+	elif amount < 0.0:
+		d.hype_loss += amount
 	if reason != &"" and not d.reasons.has(reason):
 		d.reasons.append(reason)
 

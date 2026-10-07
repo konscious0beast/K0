@@ -52,6 +52,10 @@ static func decode(d: Dictionary, data: GameData) -> GameState:
 		return null
 	var st: GameState = GameState.from_dict(m["state"])
 	_sanitize(st, data)
+	# 05 CR-11: a missing loot_seed (v0) is derived from the corrected floor index — GameState.from_dict used the raw
+	# index from the file, which _sanitize may just have fixed.
+	if st.floor_run != null and _loot_seed_missing(m["state"]):
+		st.floor_run.loot_seed = SeedUtil.derive(st.seed, "loot", st.floor_run.index)
 	return st
 
 
@@ -145,7 +149,8 @@ static func _version_of(d: Dictionary) -> int:
 	return int(v)
 
 
-## v0 → v1: float-second timer → whole ticks; loot_seed is derived later (GameState.from_dict); summary added.
+## v0 → v1: float-second timer → whole ticks; loot_seed is derived in decode (after the floor index is sanitized);
+## summary added.
 static func _migrate_v0_to_v1(d: Dictionary) -> Dictionary:
 	var out: Dictionary = d.duplicate(true)
 	var raw_state: Variant = out.get("state", {})
@@ -171,6 +176,12 @@ static func _migrate_v0_to_v1(d: Dictionary) -> Dictionary:
 	if not out.has("saved_at_unix"):
 		out["saved_at_unix"] = 0
 	return out
+
+
+## The save's floor_run has no usable loot_seed (missing or negative, as FloorRun.from_dict reads it).
+static func _loot_seed_missing(raw_state: Dictionary) -> bool:
+	var raw_fr: Variant = raw_state.get("floor_run", null)
+	return raw_fr is Dictionary and JsonUtil.to_int((raw_fr as Dictionary).get("loot_seed", -1), -1) < 0
 
 
 ## Drops unknown ids and clamps values against the data; every change is recorded as a warning.

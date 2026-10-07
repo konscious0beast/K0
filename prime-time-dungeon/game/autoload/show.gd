@@ -8,7 +8,8 @@ extends Node
 ## (Game.replay_log) reproduce it exactly; while Game.replaying only pure presentation (lines, chat) is skipped.
 ##
 ## Hype is kept in whole points: positive gains are scaled by hype_gain_mult in integer per-mille and rounded half
-## up (deterministic, integral state hash, 05 §3.3 Nr. 5/9).
+## up (deterministic, integral state hash, 05 §3.3 Nr. 5/9). A battle delta applies its positive parts scaled and its
+## negative parts unscaled as one change (ShowDelta.hype_gain / hype_loss, GDD §7.3).
 
 const CHAT_MIN_INTERVAL: float = 2.5         # GDD §7.5: max. 1 chat line per 2.5 s
 const CHAT_INTERVAL: float = 6.0             # exploration chat every 6 ± 2 s by hype band
@@ -132,16 +133,10 @@ func hype() -> float:
 
 ## amount > 0 → × hype_gain_mult (equipment); clamp 0..100; emits hype_changed.
 func add_hype(amount: float, reason: StringName = &"") -> void:
-	var st: GameState = Game.state
-	if st == null or st.show == null:
-		return
-	var points: int = roundi(amount)
-	if points > 0:
-		var mult_pm: int = roundi(st.hype_gain_mult(DB.data) * 1000.0)
-		points = (points * mult_pm + 500) / 1000
-	if points == 0:
-		return
-	_set_hype(ShowModel.clamp_hype(st.show.hype + points), reason)
+	if amount > 0.0:
+		_add_hype_parts(amount, 0.0, reason)
+	else:
+		_add_hype_parts(0.0, amount, reason)
 
 
 ## Emits followers_changed; checks milestones (§4.4.11).
@@ -336,6 +331,8 @@ func take_pending_gift(battle: BattleState = null) -> Dictionary:
 			_remember_gift(str(ext.get("gift_id", "")))
 			_gifts_given += 1
 			_external_given += 1
+			# the external gift may have taken the slot a reserved threshold was waiting for
+			_drop_unservable_thresholds(_max_gifts() - _gifts_given)
 			_after_delivery(ext)
 			return ext
 	while not _open_thresholds.is_empty():
@@ -356,8 +353,8 @@ func take_pending_gift(battle: BattleState = null) -> Dictionary:
 			else:
 				_take_from_queue(str(g.get("gift_id", "")))
 				_gifts_given += 1
-		if t == SponsorSystem.THRESHOLDS[SponsorSystem.THRESHOLDS.size() - 1] and hype() > SponsorSystem.HYPE_AFTER_TOP:
-			_set_hype(SponsorSystem.HYPE_AFTER_TOP, &"sponsor")
+		if t == _top_threshold():
+			_reset_after_top()
 		if not g.is_empty():
 			_after_delivery(g)
 			return g
@@ -373,10 +370,14 @@ func end_battle(result: BattleResult) -> int:
 		return 0
 	var gained: int = 0
 	var enc_type: String = _encounter_type(result.advantage)
+	if result.outcome == BattleResult.Outcome.VICTORY and _rules != null:
+		_apply_delta(_rules.end_delta(result))
+	# Thresholds still open can no longer be served (no turn boundary left); an open top threshold resets hype to 80
+	# now, before the follower conversion — hype_end and the peak are then the same whether a gift slot was free
+	# when 100 was crossed (reset here) or not (reset at once in _check_thresholds).
+	_drop_unservable_thresholds(0)
 	match result.outcome:
 		BattleResult.Outcome.VICTORY:
-			if _rules != null:
-				_apply_delta(_rules.end_delta(result))
 			bump_stat("battles_won")
 			if result.advantage == BattleSetup.Advantage.AMBUSH:
 				bump_stat("ambushes_won")
@@ -403,11 +404,6 @@ func end_battle(result: BattleResult) -> int:
 			var fled_payload: Dictionary = {"encounter_id": result.encounter_id, "is_boss": result.is_boss}
 			Events.battle_fled.emit(fled_payload)
 			trigger("battle_fled", fled_payload)
-	# Thresholds crossed by the last action can no longer be served (no turn boundary left); crossing 100 still
-	# resets hype to 80.
-	var top: int = SponsorSystem.THRESHOLDS[SponsorSystem.THRESHOLDS.size() - 1]
-	if _open_thresholds.has(top) and hype() > SponsorSystem.HYPE_AFTER_TOP:
-		_set_hype(SponsorSystem.HYPE_AFTER_TOP, &"sponsor")
 	var waiting: Array[Dictionary] = _queue.duplicate()
 	_reset_battle()
 	for g: Dictionary in waiting:
@@ -438,21 +434,59 @@ func _set_hype(value: float, reason: StringName) -> void:
 		st.show.stats["hype_100_count"] = int(st.show.stats.get("hype_100_count", 0)) + 1
 	_hype_seen = now
 	Events.hype_changed.emit(now, now - prev, reason)
+	# Viewers (battle peak, viewers_max, floor peak, trigger) first: the value at this hype is recorded even when the
+	# top threshold resets hype to 80 at once (no gift slot left) — the peak must not depend on the gift slots.
+	_update_viewers(false)
 	if _battle_active and now > prev:
 		_check_thresholds(prev, now)
-	_update_viewers(false)
+
+
+## Whole hype points from raw parts: gain × hype_gain_mult (per mille, half up), loss unscaled; one clamped change.
+func _add_hype_parts(gain: float, loss: float, reason: StringName) -> void:
+	var st: GameState = Game.state
+	if st == null or st.show == null:
+		return
+	var points: int = roundi(loss)
+	var gain_points: int = roundi(gain)
+	if gain_points > 0:
+		var mult_pm: int = roundi(st.hype_gain_mult(DB.data) * 1000.0)
+		points += (gain_points * mult_pm + 500) / 1000
+	if points == 0:
+		return
+	_set_hype(ShowModel.clamp_hype(st.show.hype + points), reason)
 
 
 ## Upward threshold crossings in battle: a system gift is due while fewer than max gifts were (or will be) given;
 ## without gift the top threshold still resets hype to 80.
 func _check_thresholds(prev: float, now: float) -> void:
-	var top: int = SponsorSystem.THRESHOLDS[SponsorSystem.THRESHOLDS.size() - 1]
 	for t: int in SponsorSystem.crossed(prev, now, _fired):
 		_fired.append(t)
 		if _gifts_given + _open_thresholds.size() < _max_gifts():
 			_open_thresholds.append(t)
-		elif t == top and hype() > SponsorSystem.HYPE_AFTER_TOP:
-			_set_hype(SponsorSystem.HYPE_AFTER_TOP, &"sponsor")
+			_open_thresholds.sort()   # ascending even when a nested change (achievement hype) crossed a higher one first
+		elif t == _top_threshold():
+			_reset_after_top()
+
+
+## Reserved thresholds beyond the gift slots still free are dropped (highest first, so the top threshold goes first);
+## a dropped top threshold resets hype to 80 at once — as if no slot had been free when it was crossed.
+func _drop_unservable_thresholds(free_slots: int) -> void:
+	var dropped_top: bool = false
+	while _open_thresholds.size() > maxi(0, free_slots):
+		var last: int = _open_thresholds.size() - 1
+		dropped_top = dropped_top or _open_thresholds[last] == _top_threshold()
+		_open_thresholds.remove_at(last)
+	if dropped_top:
+		_reset_after_top()
+
+
+func _reset_after_top() -> void:
+	if hype() > SponsorSystem.HYPE_AFTER_TOP:
+		_set_hype(SponsorSystem.HYPE_AFTER_TOP, &"sponsor")
+
+
+static func _top_threshold() -> int:
+	return SponsorSystem.THRESHOLDS[SponsorSystem.THRESHOLDS.size() - 1]
 
 
 ## Noise-free viewers: when the value changed → ShowState.viewers, viewers_max / viewers_target_peak (before the
@@ -485,8 +519,12 @@ func _apply_delta(d: ShowDelta) -> void:
 	keys.sort_custom(func(a: Variant, b: Variant) -> bool: return str(a) < str(b))
 	for k: Variant in keys:
 		bump_stat(str(k), int(d.stats[k]))
-	if d.hype != 0.0:
-		add_hype(d.hype, d.reasons[0] if not d.reasons.is_empty() else &"battle")
+	var gain: float = d.hype_gain
+	var loss: float = d.hype_loss
+	if gain == 0.0 and loss == 0.0:            # delta built without parts: the net value is all there is
+		gain = maxf(d.hype, 0.0)
+		loss = minf(d.hype, 0.0)
+	_add_hype_parts(gain, loss, d.reasons[0] if not d.reasons.is_empty() else &"battle")
 	var mopsula_moment: bool = false
 	for t: Dictionary in d.triggers:
 		var id: String = str(t.get("trigger", ""))

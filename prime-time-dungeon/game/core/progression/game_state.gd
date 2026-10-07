@@ -1,6 +1,7 @@
 class_name GameState extends RefCounted
-## Complete runtime save state (02_TECH §6.1). Everything except play_time_sec and show.viewers (display fields)
-## is game-relevant and part of the state hash (05 §3.3 Nr. 8); to_dict() only contains integral numbers there.
+## Complete runtime save state (02_TECH §6.1). Everything except play_time_sec and show.viewers (display fields) and
+## slot (active save slot; Save.save_slot moves it) is game-relevant and part of the state hash (05 §3.3 Nr. 8);
+## to_dict() only contains integral numbers there.
 
 var slot: int = 0
 var seed: int = 0

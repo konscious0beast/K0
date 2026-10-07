@@ -133,6 +133,18 @@ func test_codec_v0_migration_stub() -> void:
 	assert_eq(st.member("kai").level, 2)
 	var v1: Dictionary = SaveCodec.encode(_rich_state(), "x")
 	assert_eq(SaveCodec.migrate(v1), v1, "current version passes unchanged")
+	# 05 CR-11: the loot seed of a v0 save follows the corrected floor index, not the raw one from the file
+	var wrong_index: Dictionary = v0.duplicate(true)
+	wrong_index["state"]["floor_run"]["floor_id"] = "floor_2"
+	var st2: GameState = SaveCodec.decode(wrong_index, Fx.data())
+	assert_not_null(st2, "; ".join(SaveCodec.last_errors()))
+	assert_eq(st2.floor_run.index, 2, "index follows the floor id")
+	assert_eq(st2.floor_run.loot_seed, SeedUtil.derive(99, "loot", 2), "loot_seed derived from the corrected index")
+	var kept: Dictionary = SaveCodec.encode(_rich_state(), "x")
+	kept["state"]["floor_run"]["index"] = 2
+	var st3: GameState = SaveCodec.decode(kept, Fx.data())
+	assert_eq(st3.floor_run.index, 1)
+	assert_eq(st3.floor_run.loot_seed, _rich_state().floor_run.loot_seed, "a saved loot_seed is kept")
 
 
 func test_codec_refuses_newer_and_invalid_saves() -> void:
@@ -299,6 +311,48 @@ func test_read_only_and_autosave() -> void:
 	assert_true(Save.has_save(2), "autosave writes the state's slot")
 	Game.state = null
 	assert_eq(Save.autosave(), OK, "no state → nothing to do")
+
+
+## GDD §10.1 / §2.8: saving into another slot makes it the active slot — autosave and game over follow it.
+func test_save_slot_moves_the_active_slot() -> void:
+	_prev_data = Fx.begin_world(12, 1)
+	assert_eq(Save.save_slot(1), OK, Save.last_error())
+	var credits_1: int = int(_read(DIR + "/slot_1.json")["state"]["inventory"]["credits"])
+	Game.state.inventory.credits = credits_1 + 500
+	assert_eq(Save.save_slot(2), OK, Save.last_error())
+	assert_eq(Game.state.slot, 2, "the target becomes the active slot (like load_slot)")
+	assert_eq(_read(DIR + "/slot_2.json")["state"]["slot"], 2)
+	Game.state.inventory.credits = credits_1 + 600
+	assert_eq(Save.autosave(), OK, Save.last_error())
+	assert_eq(int(_read(DIR + "/slot_2.json")["state"]["inventory"]["credits"]), credits_1 + 600,
+		"autosave writes the active slot")
+	assert_eq(int(_read(DIR + "/slot_1.json")["state"]["inventory"]["credits"]), credits_1, "slot 1 untouched")
+	Game.on_game_over(&"defeat")
+	assert_eq(_read(DIR + "/slot_2.json")["state"]["show"]["stats"].get("game_overs", 0), 1, "game over: active slot")
+	assert_eq(_read(DIR + "/slot_1.json")["state"]["show"]["stats"].get("game_overs", 0), 0)
+	Save.read_only = true
+	assert_eq(Save.save_slot(3), OK)
+	assert_eq(Game.state.slot, 2, "nothing written → the active slot stays")
+
+
+## 05 (Game row): event runs use slot 0 and are never saved into campaign slots.
+func test_event_runs_never_write_campaign_slots() -> void:
+	_prev_data = Fx.begin_world(13, 1)
+	assert_eq(Save.save_slot(1), OK)
+	var saved: Array = []
+	var cb: Callable = func(slot: int, ok: bool) -> void: saved.append([slot, ok])
+	Events.game_saved.connect(cb)
+	Game.mode = &"event_offline"
+	assert_eq(Save.save_slot(2), ERR_UNAVAILABLE)
+	assert_ne(Save.last_error(), "")
+	assert_eq(saved, [[2, false]])
+	assert_false(Save.has_save(2))
+	assert_eq(Game.state.slot, 1)
+	assert_eq(Save.autosave(), OK)
+	assert_eq(Save.record_game_over(1), OK)
+	assert_eq(_read(DIR + "/slot_1.json")["state"]["show"]["stats"].get("game_overs", 0), 0, "event game over: no write")
+	assert_eq(saved.size(), 1, "autosave: no write in an event run")
+	Events.game_saved.disconnect(cb)
 
 
 func test_record_game_over() -> void:

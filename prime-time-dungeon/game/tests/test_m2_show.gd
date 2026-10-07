@@ -247,7 +247,49 @@ func test_rules_kills_overkill_streak() -> void:
 	var k6: ShowDelta = r.feed(_ko("e5", "enm_rat", ""))
 	assert_eq(k6.hype, 0.0, "status-tick kill: no kill hype")
 	assert_eq(k6.stats, {"kills_total": 1})
-	assert_eq(k6.triggers[0]["payload"], {"enemy_id": "enm_rat", "overkill": false, "by": "status", "member": ""})
+	assert_eq(k6.triggers[0]["payload"], {"enemy_id": "enm_rat", "overkill": false, "by": "attack", "member": ""},
+		"no known source: 'by' stays within attack/skill/stunt/item (§6.3)")
+
+
+func test_rules_status_kill_is_credited_to_the_applying_party_action() -> void:
+	var r: ShowRules = _rules()
+	var by_values: Array = []
+	r.feed(_act("p1", K.SKILL, "skl_mop_flame"))
+	r.feed(_ev(ActionEvent.Type.STATUS_ADDED, {"target_id": "e0", "status_id": "sts_burn", "value": 3}))
+	r.feed(_end("p1"))
+	r.feed(_act("e0", K.ATTACK))
+	r.feed(_end("e0"))
+	r.feed(_ev(ActionEvent.Type.DAMAGE, {"target_id": "e0", "status_id": "sts_burn", "amount": 3, "hp_after": 0,
+		"max_hp": 24}))
+	var k1: ShowDelta = r.feed(_ko("e0", "enm_rat", ""))
+	assert_eq(k1.hype, 0.0, "tick kill: no kill hype (not a party action)")
+	assert_eq(k1.stats, {"kills_total": 1, "kills_skill": 1}, "credited to Mopsula's skill")
+	assert_eq(k1.triggers[0]["payload"], {"enemy_id": "enm_rat", "overkill": false, "by": "skill", "member": "mopsula"})
+	by_values.append(k1.triggers[0]["payload"]["by"])
+	r.feed(_act("p0", K.ITEM, "skl_item_molotov", "itm_molotov"))
+	r.feed(_ev(ActionEvent.Type.STATUS_ADDED, {"target_id": "e1", "status_id": "sts_burn", "value": 3}))
+	r.feed(_end("p0"))
+	r.feed(_ev(ActionEvent.Type.DAMAGE, {"target_id": "e1", "status_id": "sts_burn", "amount": 3, "hp_after": 0,
+		"max_hp": 24}))
+	var k2: ShowDelta = r.feed(_ko("e1", "enm_rat", ""))
+	assert_eq(k2.triggers[0]["payload"]["by"], "item")
+	assert_eq(k2.triggers[0]["payload"]["member"], "kai")
+	by_values.append(k2.triggers[0]["payload"]["by"])
+	# applied by a party action, then re-applied outside one (enemy turn): the party no longer owns the status
+	r.feed(_act("p0", K.SKILL, "skl_mop_flame"))
+	r.feed(_ev(ActionEvent.Type.STATUS_ADDED, {"target_id": "e2", "status_id": "sts_poison", "value": 3}))
+	r.feed(_end("p0"))
+	r.feed(_act("e3", K.SKILL, "skl_mop_flame"))
+	r.feed(_ev(ActionEvent.Type.STATUS_ADDED, {"target_id": "e2", "status_id": "sts_poison", "value": 3}))
+	r.feed(_end("e3"))
+	r.feed(_ev(ActionEvent.Type.DAMAGE, {"target_id": "e2", "status_id": "sts_poison", "amount": 3, "hp_after": 0,
+		"max_hp": 24}))
+	var k3: ShowDelta = r.feed(_ko("e2", "enm_rat", ""))
+	assert_eq(k3.stats, {"kills_total": 1})
+	assert_eq(k3.triggers[0]["payload"], {"enemy_id": "enm_rat", "overkill": false, "by": "attack", "member": ""})
+	by_values.append(k3.triggers[0]["payload"]["by"])
+	for by: Variant in by_values:
+		assert_has(["attack", "skill", "stunt", "item"], by, "documented 'by' values only")
 
 
 func test_rules_combo_and_stunts() -> void:
@@ -302,6 +344,22 @@ func test_rules_party_low_hp_ko_revive_flee() -> void:
 	var fl: ShowDelta = r.feed(_ev(ActionEvent.Type.FLEE_RESULT, {"actor_id": "p0", "success": true}))
 	assert_eq(fl.hype, -30.0)
 	assert_has(fl.reasons, &"flee")
+
+
+func test_rules_delta_keeps_positive_and_negative_parts() -> void:
+	var cycle: Array = [[K.ATTACK, "", ""], [K.STUNT, "skl_stunt_kai_suplex", ""], [K.FLEE, "", ""],
+		[K.SKILL, "skl_kai_heavy_swing", ""], [K.ITEM, "skl_item_bandage", "itm_bandage"]]
+	var r: ShowRules = _rules()
+	var d: ShowDelta = null
+	for i in 11:
+		var c: Array = cycle[i % cycle.size()]
+		d = r.feed(_act("p0", c[0], c[1], c[2]))
+		r.feed(_end("p0"))
+	assert_eq([d.hype, d.hype_gain, d.hype_loss], [0.0, 3.0, -3.0], "11th action: variety +3 and drag −3 kept apart")
+	var start: ShowDelta = r.start_delta()
+	assert_eq([start.hype, start.hype_gain, start.hype_loss], [5.0, 5.0, 0.0], "battle start: gain only")
+	var k: ShowDelta = _rules().feed(_ev(ActionEvent.Type.FLEE_RESULT, {"actor_id": "p0", "success": true}))
+	assert_eq([k.hype, k.hype_gain, k.hype_loss], [-30.0, 0.0, -30.0])
 
 
 func test_rules_end_delta() -> void:
@@ -441,6 +499,33 @@ func test_show_add_hype_gain_mult_rounding_and_hype_100_count() -> void:
 	assert_eq(seen[0], [34.0, 4.0, "crit", 0])
 	assert_eq(seen[2], [100.0, 71.0, "", 1], "hype_100_count raised before hype_changed")
 	assert_eq(seen[4][3], 2, "reaching 100 from below again counts again")
+
+
+## GDD §7.3: only positive events are × hype_gain_mult — a mixed-sign action must not net out before scaling.
+func test_show_hype_gain_mult_scales_only_the_positive_parts_of_an_action() -> void:
+	_world()
+	var st: GameState = Game.state
+	st.inventory.add("itm_acc_scarf")
+	assert_true(Progression.equip(st.member("kai"), st.inventory, Fx.data(), "accessory", "itm_acc_scarf"))
+	Show.begin_battle(_setup())
+	var cycle: Array = [[K.ATTACK, "", ""], [K.STUNT, "skl_stunt_kai_suplex", ""], [K.FLEE, "", ""],
+		[K.SKILL, "skl_kai_heavy_swing", ""], [K.ITEM, "skl_item_bandage", "itm_bandage"]]
+	for i in 10:
+		var c: Array = cycle[i % cycle.size()]
+		Show.on_battle_event(_act("p0", c[0], c[1], c[2]))
+		Show.on_battle_event(_end("p0"))
+	st.show.hype = 20.0
+	Show.on_battle_event(_act("p0", K.ATTACK))
+	assert_eq(Show.hype(), 21.0, "11th action: variety +3 × 1.2 = 3.6 → 4, drag −3 unscaled → +1 (not 0)")
+	Show.end_battle(_result(BattleResult.Outcome.FLED))
+	Show.begin_battle(_setup())
+	for i in 2:
+		Show.on_battle_event(_act("p0", K.ITEM, "skl_item_megaphone", "itm_megaphone"))
+		Show.on_battle_event(_end("p0"))
+	st.show.hype = 10.0
+	Show.on_battle_event(_act("p0", K.ITEM, "skl_item_megaphone", "itm_megaphone"))
+	assert_eq(Show.hype(), 35.0, "3rd megaphone in a row: +25 × 1.2 = 30, repetition −5 → +25 (not 24)")
+	Show.end_battle(_result(BattleResult.Outcome.FLED))
 
 
 func test_show_viewers_changed_is_synchronous_with_stats_first() -> void:
@@ -673,9 +758,74 @@ func test_show_end_battle_resets_unserved_top_threshold() -> void:
 	Game.state.show.hype = 90.0
 	var res: BattleResult = _result(BattleResult.Outcome.VICTORY)
 	res.min_party_hp_pct = 0.05
-	Show.end_battle(res)                                  # close win +15 → 100 with no turn left for a gift
-	assert_eq(Show.hype(), 80.0, "crossing 100 still resets hype to 80")
+	var at_won: Array = []
+	var cb: Callable = func(_p: Dictionary) -> void: at_won.append(Show.hype())
+	Events.battle_won.connect(cb)
+	var gained: int = Show.end_battle(res)                # close win +15 → 100 with no turn left for a gift
+	Events.battle_won.disconnect(cb)
+	assert_eq(at_won, [80.0], "crossing 100 still resets hype to 80 — before the follower conversion")
+	assert_eq(gained, ShowModel.followers_for_battle(ShowModel.viewers_for(1.0, 100.0, 0), 80.0, false, 1.0),
+		"peak at hype 100, hype_end 80")
+	assert_eq(Show.hype(), 88.0, "then +8 for ach_first_win")
 	assert_eq(Game.state.show.stats["hype_100_count"], 1)
+
+
+## Crossing 100 records the viewer value at hype 100 and converts the same followers whether gift slots were free
+## (reservation, reset to 80 later) or used up (reset to 80 at once) — mid-battle and through the end-of-battle bonus.
+func test_show_top_threshold_peak_and_followers_do_not_depend_on_gift_slots() -> void:
+	var peak_100: int = ShowModel.viewers_for(1.0, 100.0, 0)
+	assert_eq(peak_100, 2900)
+	var expected: int = ShowModel.followers_for_battle(peak_100, 80.0, false, 1.0)
+	for at_end: bool in [false, true]:
+		for gifts_before: bool in [false, true]:
+			var label: String = "at_end %s, 2 gifts before %s" % [str(at_end), str(gifts_before)]
+			_world()
+			Game.in_battle = true
+			Show.begin_battle(_setup())
+			if gifts_before:
+				Show.add_hype(25.0)                       # 30 → 55: gift at 50 (+8 hype / +25 followers achievement)
+				assert_false(Show.take_pending_gift(null).is_empty(), label)
+				Show.add_hype(20.0)                       # → 83: gift at 75 — both slots used
+				assert_false(Show.take_pending_gift(null).is_empty(), label)
+			Game.state.show.followers = 0
+			Game.state.show.hype = 90.0 if at_end else 95.0
+			var seen: Array = []
+			var cb: Callable = func(v: int) -> void: seen.append(v)
+			Events.viewers_changed.connect(cb)
+			if not at_end:
+				Show.add_hype(5.0)                        # 95 → 100
+			var res: BattleResult = _result(BattleResult.Outcome.VICTORY)
+			if at_end:
+				res.min_party_hp_pct = 0.05               # close win +15 → 100
+			var gained: int = Show.end_battle(res)
+			Events.viewers_changed.disconnect(cb)
+			assert_has(seen, peak_100, label + ": the hype-100 value is emitted")
+			assert_eq(Game.state.show.stats["viewers_max"], peak_100, label)
+			assert_eq(Game.state.floor_run.stats["viewers_peak"], peak_100, label)
+			assert_eq(Game.state.show.stats["hype_100_count"], 1, label)
+			assert_eq(gained, expected, label + ": peak 2900, hype_end 80")
+			Fx.end_world(_prev_data)
+			_prev_data = null
+
+
+## An external gift that takes the slot reserved for threshold 100 drops the reservation at once: hype is reset to
+## 80 right away instead of staying at 100 for another turn.
+func test_show_external_gift_taking_the_reserved_top_slot_resets_hype_at_once() -> void:
+	_world()
+	Game.in_battle = true
+	Show.begin_battle(_setup(true))                       # boss: 3 gifts
+	Show.add_hype(25.0)                                   # 30 → 55: 50 (+8 achievement)
+	assert_false(Show.take_pending_gift(null).is_empty())
+	Show.add_hype(20.0)                                   # 63 → 83: 75
+	assert_false(Show.take_pending_gift(null).is_empty())
+	var ext: Dictionary = _dev_gift(7)
+	assert_eq(Show.receive_gift(ext)["apply"], "queued")
+	Show.add_hype(30.0)                                   # → 100: the third slot is reserved for threshold 100
+	assert_eq(Show.hype(), 100.0, "reserved: hype stays at 100 until the gift")
+	assert_eq(Show.take_pending_gift(null).get("gift_id", ""), ext["gift_id"], "waiting external gift first")
+	assert_eq(Show.hype(), 80.0, "no slot left for threshold 100: reservation dropped, reset to 80 at once")
+	assert_eq(Show.take_pending_gift(null), {}, "max. 3 gifts")
+	Show.end_battle(_result(BattleResult.Outcome.VICTORY))
 
 
 func test_show_battle_events_signals_and_lines() -> void:

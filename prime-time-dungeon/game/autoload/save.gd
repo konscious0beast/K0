@@ -48,14 +48,19 @@ func slot_summary(slot: int) -> Dictionary:
 
 
 ## Game.state → SaveCodec.encode → atomic write; emits game_saved. Slot 0 and read_only → OK without writing.
-## The live state is not modified (its `slot` stays, so the state hash of the run is unaffected); the file records
-## the target slot.
+## After a successful write the target becomes the active slot (Game.state.slot, like load_slot), so autosave and
+## record_game_over follow the player's last save (GDD §10.1, §2.8). `slot` is run meta data, not game logic: M8's
+## StateHash has to leave it out like play_time_sec. Event runs (Game.mode != campaign, 05: slot 0) are never
+## written into campaign slots → ERR_UNAVAILABLE.
 func save_slot(slot: int) -> Error:
 	_last_error = ""
 	if slot == 0:
 		return OK
 	if not _valid_slot(slot):
 		return _fail(ERR_INVALID_PARAMETER, "invalid slot %d" % slot)
+	if not _campaign():
+		Events.game_saved.emit(slot, false)
+		return _fail(ERR_UNAVAILABLE, "event runs are not saved into campaign slots")
 	if read_only:
 		Events.game_saved.emit(slot, true)
 		return OK
@@ -66,6 +71,8 @@ func save_slot(slot: int) -> Error:
 	d["saved_at_unix"] = int(Time.get_unix_time_from_system())
 	(d["state"] as Dictionary)["slot"] = slot
 	var err: Error = _atomic_write(slot_path(slot), d)
+	if err == OK:
+		Game.state.slot = slot
 	Events.game_saved.emit(slot, err == OK)
 	return err
 
@@ -117,9 +124,9 @@ func delete_slot(slot: int) -> Error:
 	return OK
 
 
-## save_slot(Game.state.slot); slot 0 → OK, no write.
+## save_slot(Game.state.slot) — the active slot (last loaded or saved); slot 0 or an event run → OK, no write.
 func autosave() -> Error:
-	if Game.state == null or Game.state.slot == 0:
+	if Game.state == null or Game.state.slot == 0 or not _campaign():
 		return OK
 	return save_slot(Game.state.slot)
 
@@ -139,10 +146,10 @@ func newest_slot() -> int:
 	return best
 
 
-## Read-modify-write: state.show.stats.game_overs += 1 in the slot file; slot 0 → OK.
+## Read-modify-write: state.show.stats.game_overs += 1 in the slot file; slot 0 or an event run → OK, no write.
 func record_game_over(slot: int) -> Error:
 	_last_error = ""
-	if slot == 0 or read_only:
+	if slot == 0 or read_only or not _campaign():
 		return OK
 	if not _valid_slot(slot):
 		return _fail(ERR_INVALID_PARAMETER, "invalid slot %d" % slot)
@@ -213,6 +220,11 @@ func last_error() -> String:
 
 func _valid_slot(slot: int) -> bool:
 	return slot >= 1 and slot <= SLOT_COUNT
+
+
+## Only campaign runs touch the campaign slots (05: event runs use slot 0, never saved).
+func _campaign() -> bool:
+	return Game.mode == &"campaign"
 
 
 func _fail(err: Error, msg: String) -> Error:

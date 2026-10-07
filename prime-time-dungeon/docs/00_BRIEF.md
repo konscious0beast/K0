@@ -74,7 +74,14 @@ Etage betreten → Erkunden (Gegner sichtbar, Truhen, Events, Safe Room)
 - **Deterministisch testbar:** Jede Zufallsquelle nimmt einen `RandomNumberGenerator` mit Seed entgegen.
 - **Tests:** eigener minimaler Test-Runner `res://tests/run_tests.gd` (headless, Exit-Code ≠ 0 bei Fehlern).
   Werkzeug: `tools/check.sh` (kopiert Projekt in Temp-Ordner → import → tests → smoke run).
-- **Kein Pay-to-Win, keine Echtgeld-Lootboxen.** Monetarisierung: Premium-Kauf (PC) / Free-Demo + Vollversion-Unlock (Mobile).
+- **Kein Pay-to-Win.** Spieler kaufen sich selbst **nichts Zufälliges** für Echtgeld. Monetarisierung Basis:
+  Premium-Kauf (PC) / Free-Demo + Vollversion-Unlock (Mobile).
+- **Entscheidung (Nutzer, 2026-10-07): Zuschauer-Geschenke mit Echtgeld (Variante B: Twitch Bits / C: eigener Shop)
+  und mit Zufallsinhalt („wie WoW-Loot“) sind gewollt** — Umsetzung nur mit Leitplanken (Details `05_LIVE_MODUS.md`):
+  veröffentlichte Wahrscheinlichkeiten, Pity-Garantie, **Inhalte sind lauf-gebunden** (verfallen nach dem Lauf, kein
+  dauerhafter Wert, kein Handel, keine Auszahlung), Limits pro Spieler/Lauf, Sponsor-freie Wertung in der Liga,
+  Altersprüfung für Käufer, Geo-Sperre wo verboten (z. B. Belgien), **beweisbar faire Server-Würfel** (Seed-Hash vor dem Event
+  veröffentlicht). Rechtsprüfung vor Launch ist Pflicht.
 
 ## 6. Verbindliche Architektur-Verträge (Kurzform — Details in 02_TECH.md)
 

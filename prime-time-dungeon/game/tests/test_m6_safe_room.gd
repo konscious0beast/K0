@@ -1,0 +1,153 @@
+extends TestCase
+## Safe room (02_TECH §9.5, GDD §14.7): entering records the safe room + full heal, menu order, modals (vending,
+## lootboxes, pause/equipment) with focus return, Mopsula scenes as blocking ModDialog lines tagged "scene:<id>" that
+## end in Game.mark_scene_seen, event runs cannot save.
+
+const UiUtil := preload("res://scenes/ui/ui_util.gd")
+const SCENE_SAFE_ROOM: String = "res://scenes/safe_room/safe_room.tscn"
+const SCENE_DIALOG: String = "res://scenes/ui/mod_dialog.tscn"
+const WAIT: int = 1500
+
+
+class SpyLog extends RunLog:
+	var got: Array[Dictionary] = []
+
+	func add_cmd(_tick: int, cmd: Dictionary, _cmd_id: int = 0) -> void:
+		got.append(cmd.duplicate(true))
+
+	func of_type(t: String) -> Array[Dictionary]:
+		var out: Array[Dictionary] = []
+		for c: Dictionary in got:
+			if str(c.get("t", "")) == t:
+				out.append(c)
+		return out
+
+
+var _spy: SpyLog = null
+var _saved_log: RunLog = null
+
+
+func before_each() -> void:
+	Engine.time_scale = 8.0
+	tree.paused = false
+	Game.new_game(0, "Kai", 3)
+	_saved_log = Game.run_log
+	_spy = SpyLog.new()
+	Game.run_log = _spy
+
+
+func after_each() -> void:
+	Engine.time_scale = 1.0
+	tree.paused = false
+	Game.run_log = _saved_log
+	Game.mode = &"campaign"
+	Game.clear_blocking_dialogs()
+	Router.adopt(null)
+
+
+func _room() -> Node:
+	var r: Node = (load(SCENE_SAFE_ROOM) as PackedScene).instantiate()
+	r.call("setup", {})
+	add_to_tree(r)
+	return r
+
+
+func test_enter_records_and_heals() -> void:
+	var kai: PartyMember = Game.state.member("kai")
+	if kai != null:
+		kai.hp = 1
+	var r: Node = _room()
+	await wait_frames(2)
+	assert_true(r is SafeRoomScene)
+	var sr: String = str(r.get("safe_room_id"))
+	assert_ne(sr, "", "safe room id resolved")
+	assert_eq(_spy.of_type("safe_room"), [{"t": "safe_room", "id": sr}] as Array[Dictionary], "Game.enter_safe_room")
+	# The heal itself is Progression.full_heal (M2); only checked once that module is real.
+	if kai != null and not UiUtil.is_stub("res://core/progression/progression.gd"):
+		assert_gt(kai.hp, 1, "full heal on entering")
+	assert_eq(r.call("menu_ids"), PackedStringArray(["save", "lootbox", "vending", "equipment", "mopsula", "leave"]),
+		"menu order (GDD §14.7)")
+
+
+func test_vending_modal_returns_focus() -> void:
+	var r: Node = _room()
+	await wait_frames(3)
+	r.call("activate", "vending")
+	await wait_frames(3)
+	var vend: Node = null
+	for c: Node in r.get_children():
+		if c.has_method("confirm") and c.has_signal("closed"):
+			vend = c
+	assert_not_null(vend, "vending machine opens as modal")
+	if vend == null:
+		return
+	var owner: Control = tree.root.gui_get_focus_owner()
+	assert_true(owner != null and vend.is_ancestor_of(owner), "focus inside the vending menu")
+	r.call("activate", "lootbox")
+	assert_eq(r.find_children("*", "CanvasLayer", false, false).filter(func(n: Node) -> bool:
+		return n.has_method("tap")).size(), 0, "no second modal while one is open")
+	vend.call("close")
+	await wait_frames(3)
+	var owner2: Control = tree.root.gui_get_focus_owner()
+	var vbtn: Control = (r.get("menu_buttons") as Dictionary)["vending"] as Control
+	assert_eq(owner2, vbtn, "focus returns to 'Automat'")
+
+
+func test_equipment_opens_pause_menu_on_equipment_tab() -> void:
+	var r: Node = _room()
+	await wait_frames(3)
+	r.call("activate", "equipment")
+	await wait_frames(3)
+	var pm: Node = null
+	for c: Node in r.get_children():
+		if c.has_method("show_tab"):
+			pm = c
+	assert_not_null(pm, "pause menu opened")
+	if pm == null:
+		return
+	assert_eq(str(pm.get("current_tab")), "equipment")
+	assert_true(tree.paused)
+	pm.call("close")
+	await wait_frames(3)
+	assert_false(tree.paused)
+
+
+func test_mopsula_scene_plays_as_blocking_lines_and_is_marked_seen() -> void:
+	var dialog: Node = (load(SCENE_DIALOG) as PackedScene).instantiate()
+	dialog.call("setup", {})
+	tree.root.add_child(dialog)
+	_nodes.append(dialog)
+	var r: Node = _room()
+	await wait_frames(3)
+	var scene: SceneDef = r.get("pending_scene") as SceneDef
+	if scene == null:
+		skip("no Mopsula scene pending on the first visit with the current data")
+		return
+	var tags: Array[String] = []
+	var cb: Callable = func(_text: String, _voice: StringName, tag: String, blocking: bool) -> void:
+		if blocking:
+			tags.append(tag)
+	Events.mod_said.connect(cb)
+	r.call("activate", "mopsula")
+	await wait_frames(2)
+	assert_eq(tags.size(), scene.lines.size(), "every scene line is said")
+	for t: String in tags:
+		assert_eq(t, "scene:" + scene.id)
+	assert_true(bool(dialog.call("is_busy")), "lines wait in the dialog box")
+	assert_eq(_spy.of_type("scene").size(), 0, "not seen before the last line is dismissed")
+	for i in scene.lines.size() * 2 + 2:
+		dialog.call("advance")
+	var done: bool = await wait_until(func() -> bool: return _spy.of_type("scene").size() == 1, WAIT)
+	assert_true(done, "Game.mark_scene_seen after the dialog")
+	assert_eq(_spy.of_type("scene"), [{"t": "scene", "id": scene.id}] as Array[Dictionary])
+	assert_true(bool(Game.get_flag("scene_" + scene.id, false)), "flag scene_<id> set")
+	assert_null(r.get("pending_scene"), "no scene pending anymore")
+	Events.mod_said.disconnect(cb)
+
+
+func test_event_run_cannot_save() -> void:
+	var r: Node = _room()
+	await wait_frames(2)
+	Game.mode = &"event_offline"
+	assert_null(r.call("open_save"), "no save dialog in event runs")
+	assert_has(str(r.call("status_text")), "Event-Lauf", "explains why")

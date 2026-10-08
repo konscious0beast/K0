@@ -83,7 +83,6 @@ func _ready() -> void:
 	Events.floor_entered.connect(_on_floor_entered)
 	Events.new_game_started.connect(_on_new_run)
 	Events.game_loaded.connect(_on_new_run)
-	Events.floor_entered.connect(_on_floor_entered)
 	Events.floor_timer_started.connect(_on_floor_timer_started)
 
 
@@ -946,21 +945,18 @@ func _on_explore_tick(payload: Dictionary) -> void:
 			_floor_start_pending = false
 
 
-func _on_floor_entered(_floor_index: int) -> void:
-	var st: GameState = Game.state
-	if not Game.replaying and st != null and st.floor_run != null and st.floor_run.timer_started:
-		_floor_start_pending = true
-
-
 func _on_floor_timer_started() -> void:
 	if not Game.replaying:
 		_floor_start_pending = true
 
 
-## GDD §1.4 B1: tutorial hints on the first entry of a floor whose countdown waits for its tutorial battle.
+## A floor whose countdown already runs (load, descent) queues "floor_start"; one whose countdown waits for its
+## tutorial battle gets the GDD §1.4 B1 tutorial hints instead.
 func _on_floor_entered(floor_index: int) -> void:
-	var def: FloorDef = DB.data.floor_def(floor_index) if DB.data != null else null
 	var st: GameState = Game.state
+	if not Game.replaying and st != null and st.floor_run != null and st.floor_run.timer_started:
+		_floor_start_pending = true
+	var def: FloorDef = DB.data.floor_def(floor_index) if DB.data != null else null
 	if def == null or def.timer_start_after == "" or st == null or st.floor_run == null or st.floor_run.timer_started:
 		return
 	say("tutorial_explore")

@@ -401,6 +401,9 @@ static func _dimmed(m: Material) -> Material:
 		return null
 	if sm.shader == _shader("glow", GLOW_SHADER):
 		return glow(sm.get_shader_parameter("color") as Color, DIM_GLOW_ENERGY, 0.0)
+	if sm.shader == Materials.GLOW_SHADER:
+		# PropKit (M4) glow parts (drone lens, wheel bulbs, …): same shader, nearly off, no pulse / flicker.
+		return Materials.glow_ex(sm.get_shader_parameter("color") as Color, DIM_GLOW_ENERGY, 0.0, 0.0)
 	if sm.shader == _shader("toon", TOON_SHADER % NEAR_FADE_GLSL):
 		var width: float = 0.02
 		if sm.next_pass is ShaderMaterial:

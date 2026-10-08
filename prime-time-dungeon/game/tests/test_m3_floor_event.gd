@@ -200,6 +200,7 @@ func test_lost_candidate_items_when_inventory_ready() -> void:
 func test_wheel_spin_rules() -> void:
 	var data: GameData = _data()
 	var st: GameState = _state(data)
+	st.inventory.credits = 3 * 20               # exactly three spins (the real Inventory pays every spin)
 	var ev: EventSpawn = _wheel()
 	assert_eq(FloorEvent.choices(ev, st, data), PackedStringArray(["spin", "ignore"]))
 	var first: Dictionary = FloorEvent.resolve(ev, "spin", st, data, make_rng(5))
@@ -395,7 +396,9 @@ func test_game_apply_floor_event_integration() -> void:
 	assert_len(spy, 1, "only the first spin completes the event")
 	if spy.size() == 1:
 		assert_eq(spy[0], {"event_id": ev.id, "choice": "spin"})
-	# A different use count would draw differently somewhere over the table (the seed really advances).
+	# A different use count would draw differently somewhere over the table (the seed really advances). The two spins
+	# above were paid from the 50 Cr start budget; top it up so the third spin is affordable.
+	Game.state.inventory.credits = 100
 	var differs: bool = false
 	for n in 8:
 		var a: Dictionary = FloorEvent.resolve(ev, "spin", Game.state, DB.data,

@@ -9,6 +9,8 @@ const PROPS: Dictionary = {"photo_drone": &"camera_drone", "lost_candidate": &"p
 
 const LEVER_SEC: float = 0.35
 const WHEEL_SEC: float = 1.2
+## PropKit wheel (M4 PropAnim.play_action): 14 rad/s decaying ×0.35 per second → ~1.7 rad/s after 2 s (slowed down).
+const KIT_WHEEL_SEC: float = 2.0
 const DRONE_SEC: float = 0.4
 const KICK_SEC: float = 0.3
 
@@ -195,13 +197,21 @@ func play_outcome(choice: String, outcome: Dictionary) -> float:
 	match ev.type:
 		"lever":
 			var handle: Node3D = prop.get_node_or_null("Handle") as Node3D
-			if handle != null:
+			if prop.has_method("play_action"):
+				# PropKit lever (M4 PropAnim): the arm is pulled down in 0.35 s and swings back afterwards.
+				dur = LEVER_SEC
+				prop.call("play_action")
+			elif handle != null:
 				dur = LEVER_SEC
 				var tw: Tween = create_tween()
 				tw.tween_property(handle, "rotation:x", deg_to_rad(35.0), LEVER_SEC).set_trans(Tween.TRANS_BACK)
 		"wheel":
 			var spin: Node3D = prop.get_node_or_null("Wheel/Spin") as Node3D
-			if spin != null:
+			if prop.has_method("play_action"):
+				# PropKit wheel (M4 PropAnim): fast spin that slows down to its idle turn.
+				dur = KIT_WHEEL_SEC
+				prop.call("play_action")
+			elif spin != null:
 				dur = WHEEL_SEC
 				var tw2: Tween = create_tween()
 				tw2.tween_property(spin, "rotation:y", spin.rotation.y + TAU * 3.0 + 1.3, WHEEL_SEC) \

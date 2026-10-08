@@ -104,6 +104,9 @@ static func fixture_floor(base: Dictionary) -> Dictionary:
 	f["index"] = 1
 	f["timer_start_after"] = "enc_t_tutorial"
 	f["grid"] = {"w": 8, "h": 8}
+	# The fixture floor has no bosses: the real floor_1 (M7) names its boss encounters, which are not in this table.
+	f["quarter_boss"] = ""
+	f["floor_boss"] = ""
 	f["encounters"] = [
 		{"id": "enc_t_tutorial", "enemies": ["enm_kanalratte", "enm_kanalratte"], "weight": 0, "tutorial": true},
 		{"id": "enc_t_patrol", "enemies": ["enm_kanalratte"], "weight": 0}]
@@ -1020,6 +1023,20 @@ func test_event_reveal_waits_for_the_prop() -> void:
 	assert_true(Game.timer_running, "timer runs again")
 
 
+func test_lever_reveal_waits_for_the_prop() -> void:
+	var scene: ExplorationScene = await _make_scene()
+	scene.auto_start_battle = false
+	var it: EventInteractable = scene.get_interactable("fev_t_lever") as EventInteractable
+	assert_not_null(it)
+	if it == null:
+		return
+	scene.open_event_dialog(it)
+	scene.active_dialog().call("choose", "pull")
+	assert_true(scene.is_revealing(), "the lever moves first (art-kit or fallback lever)")
+	var done: bool = await wait_until(func() -> bool: return not scene.is_revealing(), 6000)
+	assert_true(done, "reveal finished")
+
+
 func test_force_encounter_is_ignored_behind_a_dialog() -> void:
 	var scene: ExplorationScene = await _make_scene()
 	scene.auto_start_battle = false
@@ -1116,8 +1133,20 @@ func test_strike_arc_and_hit_flash() -> void:
 	assert_true(gone, "only briefly")
 	var rig: Node3D = scene.get_enemy("f1_g0").rig
 	FB.flash_rig(rig, 10.0)
-	var m: MeshInstance3D = _first_mesh(rig)
-	assert_true(m != null and m.material_overlay != null, "hit flash overlay on the struck group")
+	assert_true(_is_flashing(rig), "hit flash on the struck group")
+
+
+## CharacterRig (M4) flashes via the instance uniform flash_amount; fallback figures via a white material_overlay.
+static func _is_flashing(n: Node) -> bool:
+	if n is MeshInstance3D:
+		var mi: MeshInstance3D = n as MeshInstance3D
+		var amount: Variant = mi.get_instance_shader_parameter(&"flash_amount")
+		if mi.material_overlay != null or (amount != null and float(amount) > 0.0):
+			return true
+	for c: Node in n.get_children():
+		if _is_flashing(c):
+			return true
+	return false
 
 
 func test_focus_highlight_and_marker() -> void:

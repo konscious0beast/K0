@@ -23,9 +23,11 @@ const BOSS_POS: Vector3 = Vector3(0, 0, -4.5)
 ## Free slots next to a boss (summons, e.g. the Hausmeister's tenant rat).
 const BOSS_SIDE_SLOTS: Array[Vector3] = [Vector3(-2.8, 0, -2.4), Vector3(2.8, 0, -2.4), Vector3(-1.6, 0, -1.8),
 	Vector3(1.6, 0, -1.8)]
-## Rattenkönigin on her derailed metro car (03_ART §8.2); the party steps back by 1 m.
+## Rattenkönigin on her derailed metro car (03_ART §8.2); the party steps back by 1 m. Her feet stand on the roof
+## (PropKit wreck: roof top ≈ 3.7 m at x 0); at 3.0 m she stood 0.7 m inside the car and only her head showed above
+## it in the command shots (visual pass).
 const QUEEN_ID: String = "enm_boss_rattenkoenigin"
-const QUEEN_POS: Vector3 = Vector3(0, 3.0, -6.0)
+const QUEEN_POS: Vector3 = Vector3(0, 3.7, -6.0)
 const WRECK_POS: Vector3 = Vector3(0, 0, -6.0)
 const QUEEN_PARTY_SHIFT: Vector3 = Vector3(0, 0, 1.0)
 const MARKER_PARTY: Color = Color("#22d3ee")

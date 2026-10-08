@@ -33,6 +33,13 @@ var _panel: PanelContainer = null
 var _rows: VBoxContainer = null
 var _done: bool = false
 var _bars: Array[Dictionary] = []     # {"bar", "from", "to", "levels", "label"}
+var _params: Dictionary = {}
+
+
+## Optional: {"capture": true} → standalone still (02_TECH §11.3) with a sample victory (the scene is otherwise empty
+## until the controller calls present()).
+func setup(params: Dictionary) -> void:
+	_params = params
 
 
 func _init() -> void:
@@ -48,6 +55,32 @@ func _ready() -> void:
 	# Controls under a CanvasLayer do not inherit root.theme (UiUtil.apply_theme note, 4.7.2): assign it explicitly
 	_root.theme = UiTheme.get_theme()
 	add_child(_root)
+	if bool(_params.get("capture", false)) and get_parent() == get_tree().root:
+		_present_demo.call_deferred()
+
+
+## Capture still: a victory over two Kanalratten with a level up-free EXP gain, overkill credits and achievements.
+func _present_demo() -> void:
+	Game.ensure_state()
+	var r: BattleResult = BattleResult.new()
+	r.outcome = BattleResult.Outcome.VICTORY
+	r.exp = 24
+	r.credits = 14
+	r.overkill_credits = 2
+	r.kills = 2
+	var rw: BattleRewards = BattleRewards.new()
+	rw.exp = 24
+	rw.credits = 14
+	rw.overkill_credits = 2
+	rw.followers = 83
+	for id: String in ["ach_first_blood", "ach_first_win", "ach_overkill"]:
+		if DB.has_id("achievements", id):
+			rw.achievements.append(id)
+	for m: PartyMember in (Game.state.party if Game.state != null else []):
+		if m != null:
+			before[m.id] = {"level": m.level, "exp": m.exp}
+			m.exp += rw.exp                # ephemeral capture state: the bars fill like after a real battle
+	present(r, rw)
 
 
 ## Coroutine: shows the results and returns when the player continues (or after auto_continue_sec).

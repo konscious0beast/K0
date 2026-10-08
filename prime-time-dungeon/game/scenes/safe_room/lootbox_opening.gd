@@ -18,6 +18,7 @@ const Odds := preload("res://scenes/safe_room/lootbox_odds.gd")
 const TAPS: int = 3
 const REVEAL_SEC: float = 0.4
 const FOOTER: String = "Lootboxen in PRIME TIME DUNGEON können nicht gekauft werden."
+const BOX_GONE_SCALE: float = 0.01        # opened box during the reveal (shrunk away behind the cards)
 const DEMO_BOXES: PackedStringArray = ["box_silver", "box_bronze", "box_bronze", "box_fan"]
 const LID_OPEN_DEG: float = -110.0
 const LID_SEC: float = 0.2
@@ -311,13 +312,22 @@ func _fly_cards(delay: float) -> void:
 		i += 1
 
 
+## Reveal: the stage dims and the opened box shrinks away into the cards (its upright lid used to stick out above
+## the card row as a flat grey slab, visual pass); back to selection: both return.
 func _dim_stage(on: bool) -> void:
 	if _stage_view == null:
 		return
+	var alpha: float = 0.3 if on else 1.0
+	var box_scale: Vector3 = Vector3.ONE * (BOX_GONE_SCALE if on else 1.0)
 	if not _stage_view.is_inside_tree():
-		_stage_view.modulate.a = 0.3 if on else 1.0
+		_stage_view.modulate.a = alpha
+		if _box_pivot != null:
+			_box_pivot.scale = box_scale
 		return
-	create_tween().tween_property(_stage_view, "modulate:a", 0.3 if on else 1.0, 0.3)
+	var tw: Tween = create_tween().set_parallel(true)
+	tw.tween_property(_stage_view, "modulate:a", alpha, 0.3)
+	if _box_pivot != null:
+		tw.tween_property(_box_pivot, "scale", box_scale, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
 
 
 func _clear_cards() -> void:
@@ -589,6 +599,7 @@ func _start_demo() -> void:
 		lid.rotation.x = deg_to_rad(LID_OPEN_DEG)
 	_spawn_cards()
 	_stage_view.modulate.a = 0.3
+	_box_pivot.scale = Vector3.ONE * BOX_GONE_SCALE
 	reveal_all()
 	_light.light_color = UiUtil.rarity_color("epic")
 	_light.light_energy = 4.0
@@ -605,7 +616,7 @@ func _build() -> void:
 	add_child(_root)
 	var bg: ColorRect = ColorRect.new()
 	UiUtil.full_rect(bg)
-	bg.color = Color(0.04, 0.02, 0.07, 0.94)
+	bg.color = Color(0.04, 0.02, 0.07, 0.965)       # show overlay pills no longer ghost behind the title
 	_root.add_child(bg)
 	var safe: SafeAreaContainer = SafeAreaContainer.new()
 	safe.extra = 0

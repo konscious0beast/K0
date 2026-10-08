@@ -5,8 +5,9 @@
 #   tools/check.sh                 # import + unit tests + headless smoke run of main scene
 #   tools/check.sh --tests-only [--filter=<substr>]
 #                                  # import + unit tests (optionally only test files whose name contains <substr>)
-#   tools/check.sh --shot <res://scene.tscn> <out.png> [frames] [WxH]
-#                                  # render a scene under Xvfb and save a screenshot
+#   tools/check.sh --shot <res://scene.tscn> <out.png> [frames] [WxH] [capture args...]
+#                                  # render a scene under Xvfb and save a screenshot; extra args go to
+#                                  # tests/capture.gd (--touch, --recipe=<name>, --params=<json>, --no-global-ui)
 #
 # Env: GODOT=<path to godot 4.7 binary> (default: "godot" on PATH)
 set -uo pipefail
@@ -71,13 +72,14 @@ run_smoke() {
 
 run_shot() {
   local scene="$1" out_png="$2" frames="${3:-90}" res="${4:-1280x720}"
-  echo "== screenshot $scene -> $out_png =="
+  shift $(( $# < 4 ? $# : 4 ))
+  echo "== screenshot $scene -> $out_png ${*:+($*)} =="
   local abs_out
   abs_out="$(cd "$(dirname "$out_png")" && pwd)/$(basename "$out_png")"
   local out
   out="$(timeout 300 xvfb-run -a -s "-screen 0 ${res}x24" "$GODOT" --path "$WORK" \
         --rendering-driver opengl3 --resolution "$res" -s res://tests/capture.gd -- \
-        --scene="$scene" --out="$abs_out" --frames="$frames" 2>&1 | filter_noise)"
+        --scene="$scene" --out="$abs_out" --frames="$frames" "$@" 2>&1 | filter_noise)"
   echo "$out" | tail -n 40
   if echo "$out" | grep -qE "$ERR_RE"; then
     echo "check.sh: SHOT HAD ERRORS (see above)"; return 1

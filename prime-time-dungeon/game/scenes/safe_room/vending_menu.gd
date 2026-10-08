@@ -295,7 +295,7 @@ func _build() -> void:
 	safe.mouse_filter = Control.MOUSE_FILTER_STOP
 	_root.add_child(safe)
 	_panel = PanelContainer.new()
-	_panel.add_theme_stylebox_override("panel", UiUtil.box_style(Color(UiTheme.C_PANEL, 0.97), Color(UiUtil.C_EXIT, 0.8),
+	_panel.add_theme_stylebox_override("panel", UiUtil.box_style(Color(UiTheme.C_PANEL, 1.0), Color(UiUtil.C_EXIT, 0.8),
 		3, 0.0, 22, 14))
 	safe.add_child(_panel)
 	var col: VBoxContainer = UiUtil.vbox(12)

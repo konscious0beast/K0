@@ -250,6 +250,7 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `art/gallery/character_gallery.tscn` + `.gd` | Alle Archetypen/Party/Gegner aus DB nebeneinander (Screenshot-Ziel) |
 | `art/gallery/env_gallery.tscn` + `.gd` | Raum-Varianten aller Türmasken + Arena + Safe Room |
 | `art/gallery/vfx_gallery.tscn` + `.gd` | Alle Vfx-Arten im Loop |
+| `art/gallery/name_tags.gd` | Bildschirm-Namensschilder der Galerien (2D-Labels an 3D-Punkten, überlappungsfrei; privat) |
 
 ### 1.6 `scenes/`
 
@@ -321,6 +322,7 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 |---|---|---|
 | `tests/run_tests.gd` | M0 | Test-Runner (§11.1) |
 | `tests/capture.gd` | M0 | Screenshot-Werkzeug (§11.3) |
+| `tests/capture_recipes.gd` | M0 | Benannte Capture-Zustände für `--recipe=` (§11.3; per `load()` nach den Autoloads, kein class_name) |
 | `tests/lib/test_case.gd` | M0 | `TestCase`: Basis mit Asserts (§11.2); liegt in `lib/`, damit der Runner sie nicht als Testdatei lädt |
 | `tests/fixtures/data_min/*.json` | M0 | Minimaler gültiger Datensatz (alle 13 Tabellen aus `GameData.TABLES`) für M0-Tests |
 | `tests/fixtures/router/router_screen.tscn` + `.gd` | M0 | Fixture-Screen (nur Screen-Vertrag §9.2) für `test_m0_router` — unabhängig von den echten Screens |
@@ -622,6 +624,9 @@ signal gift_rejected(gift_id: String, reason: String)
 
 # --- UI -----------------------------------------------------------------
 signal toast_requested(text: String, icon: StringName)
+## Bottom corners (canvas px inside the safe frame) a screen keeps for its own panels while overlay `mode` is active;
+## the ModDialog box centres in the free span between them (battle: command menu / party panels). (0, 0) clears.
+signal dialog_reserve_requested(mode: StringName, left: float, right: float)
 ```
 
 Wer emittiert was (verbindlich):
@@ -636,6 +641,7 @@ Wer emittiert was (verbindlich):
 | `viewers_changed`, `followers_changed`, `hype_changed`, `achievement_unlocked`, `milestone_reached`, `sponsor_gift_triggered`, `mod_said`, `chat_posted`, `lootbox_earned`, `enemy_killed`, `battle_won`, `battle_fled`, `stunt_resolved`, `combo`, `party_ko`, `boss_defeated`, `gift_received`, `gift_rejected` | Show |
 | `dialog_finished` | ModDialog (M6) |
 | `camera_drag` | TouchControls (M6) |
+| `dialog_reserve_requested` | Screens mit eigenen Panels unten links/rechts (BattleHud M5: `&"battle"`); Empfänger ModDialog (M6) |
 | `pause_menu_toggled`, `toast_requested`, `overlay_mode_requested(&"safe_room"/&"menu"/&"hidden")` | M6-Szenen; `toast_requested` darf jeder |
 
 Achievement-Trigger, deren Name **kein** eigenes Signal ist, bildet `Show` aus bestehenden Signalen (Payload §6.3):
@@ -3259,10 +3265,12 @@ static func anchor_for(spec: RoomSpec, anchor: StringName) -> Transform3D
 	# room-local: &"player_spawn" (center), &"stairs" (center), &"boss_spot" (center), &"safe_door" (center of the first wall
 	# WITHOUT door in order N,E,S,W, 0.6 m in front of it, facing room center; room with 4 doors → center, facing +Z)
 static func build_battle_arena(theme_id: String, palette: Dictionary, is_boss: bool, seed: int, quality: StringName = &"high") -> Node3D
-	# round stage r = 9 m at origin, backdrop, 2 camera drones, sponsor billboard; no sun (see make_sun)
+	# round stage r = 9 m at origin, backdrop with a low show screen (top ≤ 2.65 m: stays below the command shots' top HUD
+	# band), audience stands behind the party (+Z), 2 camera drones, sponsor billboard; no sun (see make_sun)
 static func build_safe_room(seed: int, quality: StringName = &"high", theme: StringName = &"kiosk") -> Node3D
 	# interior 12 × 10 m at origin, incl. vending_machine, save_terminal, couch, door, warm OmniLight;
-	# theme &"kiosk" | &"pumphouse" | &"signalbox" swaps set dressing (03_ART §6.3), anchors identical for all themes
+	# theme &"kiosk" | &"pumphouse" | &"signalbox" swaps set dressing (03_ART §6.3), anchors identical for all themes;
+	# the room-name sign is the Label3D named EnvKit.SAFE_TITLE_SIGN (screens with their own name header hide it)
 static func safe_room_anchor(anchor: StringName) -> Transform3D
 	# local transforms inside build_safe_room(): &"vending", &"terminal", &"couch", &"mopsula_spot", &"player_spot", &"door", &"camera"
 static func make_environment(theme_id: String, palette: Dictionary, mode: StringName, quality: StringName = &"high") -> Environment
@@ -3379,7 +3387,9 @@ Headless (`DisplayServer.get_name() == "headless"`) → **kein Snapshot** (liefe
 `root` gehängt (nicht im Router-Stack, `PROCESS_MODE_ALWAYS`) und schaltet seine Anzeige über `Events.overlay_mode_requested`. `capture.gd` hängt es ebenfalls an (§11.3).
 `ModDialog` (Teil von `GlobalUi`) meldet sich als Dialog-Presenter an: `Game.set_dialog_presenter(true)` in `_ready()`,
 `Game.set_dialog_presenter(false)` in `_exit_tree()`; jede Zeile endet (fertig oder weggeklickt) mit `Events.dialog_finished(tag)`
-(§3.4 Dialog-Pause).
+(§3.4 Dialog-Pause). Lage der Box: unten mittig über dem Chat-Ticker (Safe Room: rechtsbündig); Screens mit eigenen Panels in den
+unteren Ecken melden diese per `Events.dialog_reserve_requested(mode, left, right)` (gilt nur im genannten Overlay-Modus), die Box
+zentriert sich dann in der freien Spanne (Breite 420–740 px) und wächst bei langen Zeilen nach oben (Sprecher-Reiter folgt).
 Pause: `ExplorationHud` (`PROCESS_MODE_PAUSABLE`) öffnet `PauseMenu` auf `pause` und setzt `get_tree().paused = true`
 (`Events.pause_menu_toggled(true)`). **Prozessmodi (gemessen 4.7.2: ein PAUSABLE-Node erhält während der Pause 0
 `_unhandled_input`-Events, ein WHEN_PAUSED-Node 1):** `PauseMenu` und alle aus ihm geöffneten Menüs (`party_menu`, `inventory_menu`,
@@ -3399,7 +3409,10 @@ func request_new_game(slot: int, player_name: String, skip_intro: bool, seed: in
 
 class_name BattleScene extends Node3D             # M5
 func setup(params: Dictionary) -> void            # {"setup": BattleSetup}; missing → Game.ensure_state() + debug setup
-	# with first non-boss encounter of the current floor (seed 1), {"capture": true} → stop at first command menu
+	# with first non-boss encounter of the current floor (seed 1) or {"encounter": "<enc id>"} (boss stills),
+	# {"capture": true} → stop at first command menu. BattleHud reserves the bottom corners of the M.O.D. box
+	# (Events.dialog_reserve_requested(&"battle", command menu / target panel + 12, party panels + 12)); its sub menus
+	# end above the box incl. speaker tab (keys 178 px, touch 206 px above the safe frame's bottom)
 
 class_name SafeRoomScene extends Node3D           # M6
 func setup(params: Dictionary) -> void            # stores params only: {"safe_room_id": String}; missing → first safe room of the floor
@@ -3407,12 +3420,16 @@ func setup(params: Dictionary) -> void            # stores params only: {"safe_r
 	# Show.say("safe_room_enter"); overlay &"safe_room"; Mopsula "!" if Game.next_scene(ctx) != null; playing a scene uses
 	# ModDialog (blocking lines in order) and then Game.mark_scene_seen(); no scene → random line tag "mopsula_idle" (optional)
 	# Shop: Shop.stock(Game.floor_def(), id) via vending_menu; buying via Game.buy(item, qty, id)
+	# The UI header names the room → the set's SAFE_TITLE_SIGN is hidden; the menu column is hidden while a modal is open
 
 class_name ExplorationHud extends CanvasLayer     # M6, instanced by ExplorationScene
 func bind_layout(layout: FloorLayout, visited: Array[Vector2i]) -> void
 func set_player(cell: Vector2i, yaw_rad: float) -> void
 func mark_visited(cell: Vector2i) -> void
 func set_prompt(text: String) -> void             # "" hides; the touch "action" button shows the interact icon while a prompt is set
+func set_prompt_anchor(canvas_pos: Vector2) -> void   # prompt centred 12 px ABOVE this point (ExplorationScene: projected
+	# focus marker top), clamped to the band below the top HUD (y ≥ 112) and above the M.O.D. box (≥ 190 px from the
+	# bottom); Vector2.INF → default slot bottom centre. Never covers the focused object (GDD §14.3 "über Objekt")
 func set_quest(text: String, progress: float) -> void   # event runs only (Game.mode == &"event_offline"); "" hides
 	# Timer (on Events.floor_timer_changed): hidden until floor_timer_started; < 300 s orange, < 60 s red pulsing (+ screenshake 0.15
 	# for 0.3 s every 10 s), <= 10 s Sfx.play_ui(&"timer_warn") once per full second (GDD §2.9)
@@ -3596,12 +3613,16 @@ Integrationstests nutzen `real_data()`.
 
 ### 11.3 `tests/capture.gd` (M0) — passend zu `check.sh --shot`
 
-`check.sh` ruft: `xvfb-run … godot --path <tmp> --rendering-driver opengl3 --resolution WxH -s res://tests/capture.gd -- --scene=<res://…tscn> --out=<abs.png> --frames=<n>`
+`check.sh` ruft: `xvfb-run … godot --path <tmp> --rendering-driver opengl3 --resolution WxH -s res://tests/capture.gd -- --scene=<res://…tscn> --out=<abs.png> --frames=<n> [weitere Argumente]`
+(`check.sh --shot <scene> <out.png> [frames] [WxH] [Argumente…]` reicht alles nach `WxH` an `capture.gd` durch).
 
 ```
 extends SceneTree   — keine class_name-/Autoload-Bezeichner.
 _initialize():
-  args: --scene (Pflicht), --out (Pflicht, absoluter Pfad), --frames (Default 90), optional --no-global-ui
+  args: --scene (Pflicht), --out (Pflicht, absoluter Pfad), --frames (Default 90), optional --no-global-ui,
+    --params=<JSON-Objekt> (über {"capture": true} gemergt; kein Objekt → "Assertion failed: capture: --params …", quit(1)),
+    --touch (vor dem Szenenaufbau: Game.settings.touch_controls = &"on", Game.set_input_scheme(TOUCH) — Handy-Layout),
+    --recipe=<name> (benannter Zustand aus tests/capture_recipes.gd, s. u.)
   fehlend → printerr("Assertion failed: capture: missing --scene/--out"); quit(1)
   DisplayServer.get_name() == "headless" → printerr("Assertion failed: capture: needs a display (run via check.sh --shot / xvfb)");
     quit(2)   # der Dummy-Renderer sendet nie frame_post_draw → ohne diese Prüfung hängt der Prozess (gemessen)
@@ -3610,15 +3631,30 @@ _initialize():
   root.get_node("Game").set("ephemeral", true)
   nicht ResourceLoader.exists(scene) → printerr("Assertion failed: capture: scene not found <scene>"); quit(1)
   node := (load(scene) as PackedScene).instantiate(); null → printerr("Assertion failed: capture: cannot instantiate <scene>"); quit(1)
-  node.has_method("setup") → node.call("setup", {"capture": true})
+  node.has_method("setup") → node.call("setup", {"capture": true} + --params)
   root.add_child(node); Screen-Szene → root.get_node("Router").call("adopt", node)
   ohne --no-global-ui und ResourceLoader.exists("res://scenes/ui/global_ui.tscn") → instanziieren, an root hängen
+  --recipe → load("res://tests/capture_recipes.gd").new() unter root; await runner.run(recipe, node);
+    false → printerr("Assertion failed: capture: recipe '<name>' failed"); quit(1)
   frames × await process_frame; await RenderingServer.frame_post_draw
   img := root.get_texture().get_image(); null/leer → printerr("Assertion failed: capture: empty image"); quit(2)
   DirAccess.make_dir_recursive_absolute(out.get_base_dir()); img.save_png(out) → print("CAPTURE: saved <out> <w>x<h>"); quit(0)
 ```
 Jede Szene unter `scenes/**` und `art/gallery/**` muss **standalone** instanziierbar sein (`Game.ensure_state()` bzw. Debug-Setup,
 §9.5) und mit `{"capture": true}` einen aussagekräftigen Standbild-Zustand zeigen.
+
+**Capture-Rezepte** (`tests/capture_recipes.gd`, Testwerkzeug, kein class_name, darf Autoloads/class_names und private Member der
+Screens benutzen): `run(recipe, scene) -> bool` (Koroutine; unbekannt → `false`). `<familie>_<arg>`-Namen gehen an `_r_<familie>(scene, arg)`.
+Zustände, die nur durch Spielen erreichbar sind, frieren die Rezepte mit `get_tree().paused = true` ein (GlobalUi läuft weiter).
+
+| Szene | Rezepte |
+|---|---|
+| `exploration.tscn` | `explore_platform` / `explore_sewer` / `explore_cellar` (Gruppe der Zone 6 m vor Kai), `prompt_<zone>` (Kai vor einer Truhe: Prompt + Marker), `bigmap`, `pause_party` / `pause_inventory` / `pause_equipment` / `pause_skills` / `pause_settings` |
+| `battle.tscn` | `battle_menu`, `battle_skills`, `battle_target`, `battle_damage`, `battle_enemy_turn`, `boss_intro` (mit `--params={"encounter": "<boss enc>", "capture": false, "speed": 1.0}`), `boss_phase`, `battle_gift`, `battle_victory` / `battle_results` (mit `--params={"capture_turns": 99}`) |
+| `safe_room.tscn` | `safe_vending`, `safe_equipment`, `safe_lootbox`, `safe_lootbox_open`, `safe_mopsula` |
+
+Beispiel (Handy-Format, Touch an): `tools/check.sh --shot res://scenes/battle/battle.tscn /tmp/b.png 5 2400x1080 --touch --recipe=battle_skills`.
+`test_m6_visual_pass` prüft, dass alle Rezepte existieren.
 
 ### 11.4 `--autoplay` (Boot + `scenes/boot/autoplay.gd`, M6)
 

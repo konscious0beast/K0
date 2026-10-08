@@ -157,7 +157,7 @@ void fragment() {
 ## drawn over everything (no depth test, no fog) so the group size reads on any zone palette.
 const PIPS_SHADER: String = """
 shader_type spatial;
-render_mode unshaded, cull_disabled, depth_test_disabled, fog_disabled, shadows_disabled;
+render_mode unshaded, cull_disabled, fog_disabled, shadows_disabled;
 uniform int count = 1;
 uniform vec4 disc_color : source_color = vec4(0.078, 0.051, 0.11, 1.0);
 uniform vec4 rim_color : source_color = vec4(0.96, 0.94, 0.9, 1.0);
@@ -290,7 +290,8 @@ static func pips_material(count: int, boss: bool) -> Material:
 	return _materials[key]
 
 
-## Billboard plate of `count` pips; quad size in metres (pip diameter 0.17 m).
+## Billboard plate of `count` pips; quad size in metres (pip diameter 0.17 m). Depth-tested: pips of a group in a
+## neighbouring room hide behind its walls instead of floating over the HUD edges (visual pass).
 static func build_pips(count: int, boss: bool) -> MeshInstance3D:
 	var unit: float = 0.17
 	var n: int = clampi(count, 1, 4)

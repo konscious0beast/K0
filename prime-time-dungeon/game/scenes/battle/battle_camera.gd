@@ -23,6 +23,16 @@ const EST_LOOK: Vector3 = Vector3(0, 0.9, -0.5)
 const COMMAND_FOV: float = 37.0
 const TARGET_FOV: float = 35.0
 const COMMAND_LOOK_TO_ACTOR: float = 0.1
+## Rattenkönigin battles (wide): command / target shot pulled back, slightly lifted and widened, so the actor's head
+## (bottom third) and the queen on her wreck (top) both fit between the HUD bands.
+const WIDE_COMMAND_LIFT: Vector3 = Vector3(0, 0.8, 3.0)
+const WIDE_COMMAND_LOOK_Y: float = 0.6
+const WIDE_COMMAND_FOV: float = 50.0
+## Enemy turn: look point from the party towards the acting enemy (keeps the enemy's figure in the frame).
+const ENEMY_TURN_LOOK_TO_ACTOR: float = 0.3
+## Victory orbit end: radius and sideways look shift (party left of the results panel).
+const VICTORY_END_RADIUS: float = 5.2
+const VICTORY_END_SHIFT: float = 1.4
 ## The actor's head stays above this fraction of the frame height (bottom HUD band / chat ticker).
 const HEAD_MAX_Y: float = 0.82
 const FADE_NEAR: float = 6.0           # rigs closer than this to the lens and reaching into the frame fade out
@@ -125,6 +135,12 @@ func shot(p_name: StringName, ctx: Dictionary = {}) -> void:
 			var cpos: Vector3 = home + Vector3(0.9 * s, 1.2 + 0.9 * hk, 2.6 + 0.4 * hk)
 			var look: Vector3 = _enemy_center().lerp(home, COMMAND_LOOK_TO_ACTOR) + Vector3(0, 0.1 + 0.28 * hk, 0)
 			var cfov: float = COMMAND_FOV
+			if wide:
+				# the Rattenkönigin stands on her wreck (roof 3.7 m, z −6): further back and wider, so she is in the
+				# frame instead of behind the top HUD band
+				cpos += WIDE_COMMAND_LIFT
+				look += Vector3(0, WIDE_COMMAND_LOOK_Y, 0)
+				cfov = WIDE_COMMAND_FOV
 			blend = 0.35
 			if p_name == &"target_select" and target != "":
 				# turn towards the target, but keep the actor in the frame (half way from the command look point)
@@ -132,7 +148,7 @@ func shot(p_name: StringName, ctx: Dictionary = {}) -> void:
 				if target.begins_with("p"):
 					tp = _home(target) + Vector3(0, 0.6, 0)
 				look = look.lerp(tp, 0.6)
-				cfov = TARGET_FOV
+				cfov = TARGET_FOV if not wide else WIDE_COMMAND_FOV - 2.0
 				blend = 0.2
 			look = _keep_head_in_frame(cpos, look, cfov, _anchor(actor, &"head"))
 			_program(func(_t1: float) -> Vector3: return cpos, func(_t2: float) -> Vector3: return look,
@@ -201,13 +217,18 @@ func shot(p_name: StringName, ctx: Dictionary = {}) -> void:
 				_program(func(_t1: float) -> Vector3: return rpos, func(_t2: float) -> Vector3: return rlook,
 					func(_t3: float) -> float: return 50.0)
 		&"enemy_turn":
+			# behind and above the acting enemy, its whole figure in the lower part of the frame, the party beyond it
+			# (small enemies: the old offset put the lens right over the rat, only giant paws showed at the bottom
+			# edge); other enemies close to the lens are culled for the shot
 			var eh: Vector3 = _home(actor)
 			var k: float = clampf(_height(actor) / 1.5, 0.8, 2.0)
-			var epos: Vector3 = eh + Vector3(-1.2 * k, 2.0 * k, -2.6 * k)
-			var elook: Vector3 = _party_center() + Vector3(0, 0.9, 0)
+			var epos: Vector3 = eh + Vector3(-1.4 * k, 1.4 + 1.6 * k, -2.0 - 2.2 * k)
+			var elook: Vector3 = (_party_center() + Vector3(0, 0.9, 0)).lerp(eh + Vector3(0, _height(actor) * 0.5, 0),
+				ENEMY_TURN_LOOK_TO_ACTOR)
 			_program(func(_t1: float) -> Vector3: return epos, func(_t2: float) -> Vector3: return elook,
 				func(_t3: float) -> float: return 50.0)
 			blend = 0.3
+			fade_ids = _near_lens(epos, elook, 50.0, [actor])
 		&"stunt":
 			var sc: Vector3 = _home(actor)
 			var sh: float = _height(actor)
@@ -230,11 +251,19 @@ func shot(p_name: StringName, ctx: Dictionary = {}) -> void:
 				func(_t3: float) -> float: return 50.0)
 			blend = 0.3
 		&"victory":
+			# orbit around the cheering party; in its last second the camera pulls back and the party slides into the
+			# left part of the frame, clear of the results panel that opens on the right (visual pass)
 			var vc: Vector3 = _party_center()
-			_program(func(t: float) -> Vector3:
-					var a: float = deg_to_rad(lerpf(210.0, 150.0, _ease(t / 3.0)))
-					return vc + Vector3(sin(a) * 3.8, 1.3, cos(a) * 3.8),
-				func(_t2: float) -> Vector3: return vc + Vector3(0, 0.9, 0),
+			var vpos: Callable = func(t: float) -> Vector3:
+				var a: float = deg_to_rad(lerpf(210.0, 150.0, _ease(t / 3.0)))
+				var r: float = lerpf(3.8, VICTORY_END_RADIUS, _ease(clampf((t - 1.8) / 1.2, 0.0, 1.0)))
+				return vc + Vector3(sin(a) * r, 1.3 + (r - 3.8) * 0.25, cos(a) * r)
+			_program(vpos,
+				func(t2: float) -> Vector3:
+					var eye: Vector3 = vpos.call(t2)
+					var base: Vector3 = vc + Vector3(0, 0.9, 0)
+					var right: Vector3 = (base - eye).cross(Vector3.UP).normalized()
+					return base + right * VICTORY_END_SHIFT * _ease(clampf((t2 - 1.8) / 1.2, 0.0, 1.0)),
 				func(_t3: float) -> float: return 40.0)
 		&"defeat":
 			var fig: Vector3 = _home(actor) if actor != "" else _party_center()

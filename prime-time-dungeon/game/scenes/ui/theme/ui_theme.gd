@@ -198,7 +198,8 @@ static func _build() -> Theme:
 	t.set_type_variation("PanelDialog", "PanelContainer")
 	t.set_stylebox("panel", "PanelDialog", _box(C_PANEL, C_ACCENT_2, 3, 16.0, 12.0))
 	t.set_type_variation("PanelMenu", "PanelContainer")
-	t.set_stylebox("panel", "PanelMenu", _box(C_PANEL, accent_frame, 2, 12.0, 12.0))
+	# modal menus cover the HUD / show overlay: opaque, so no HUD text ghosts through the page (visual pass)
+	t.set_stylebox("panel", "PanelMenu", _box(Color(C_PANEL, 1.0), accent_frame, 2, 12.0, 12.0))
 
 	# Label variations
 	t.set_type_variation("LabelTitle", "Label")

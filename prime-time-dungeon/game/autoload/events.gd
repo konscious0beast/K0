@@ -75,3 +75,6 @@ signal gift_rejected(gift_id: String, reason: String)
 
 # --- UI -----------------------------------------------------------------
 signal toast_requested(text: String, icon: StringName)
+## Bottom corners (canvas px inside the safe frame) a screen keeps for its own panels while overlay `mode` is active;
+## the ModDialog box centres in the free span between them (battle: command menu / party panels). (0, 0) clears.
+signal dialog_reserve_requested(mode: StringName, left: float, right: float)

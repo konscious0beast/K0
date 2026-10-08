@@ -5,7 +5,8 @@ class_name BattleScene extends Node3D
 ## and a debug setup with the first non-boss encounter of the current floor (seed 1); {"capture": true} → stops at the
 ## first command menu (§9.5; enemy turns before it play at speed ≥ 3). Optional (tests/tools): "speed" (BattlePlayer
 ## speed override), "results_auto_sec" (results continue on their own), "stay" (no Router.end_battle at the end),
-## "capture_turns" (party turns AutoPolicy plays before a capture stops, default 0).
+## "capture_turns" (party turns AutoPolicy plays before a capture stops, default 0), "encounter" (encounter id of the
+## debug setup instead of the first non-boss one, e.g. a boss battle still).
 
 const BattleStage := preload("res://scenes/battle/battle_stage.gd")
 const BattleCamera := preload("res://scenes/battle/battle_camera.gd")
@@ -46,7 +47,7 @@ func _ready() -> void:
 	var s: Variant = _params.get("setup", null)
 	battle_setup = s as BattleSetup if s is BattleSetup else null
 	if battle_setup == null:
-		battle_setup = make_debug_setup()
+		battle_setup = make_debug_setup(str(_params.get("encounter", "")))
 		debug_setup_used = true
 	if battle_setup == null:
 		push_error("[BattleScene] no encounter for a debug battle (res://data/floors.json)")
@@ -120,8 +121,9 @@ func _update_speed() -> void:
 		camera.speed = sp
 
 
-## Debug setup (02_TECH §9.5): first non-boss encounter of the current floor, seed 1.
-static func make_debug_setup() -> BattleSetup:
+## Debug setup (02_TECH §9.5): first non-boss encounter of the current floor (or `encounter_id` if the current floor
+## has it), seed 1.
+static func make_debug_setup(encounter_id: String = "") -> BattleSetup:
 	if Game.state == null:
 		return null
 	var fdef: FloorDef = Game.floor_def()
@@ -131,9 +133,18 @@ static func make_debug_setup() -> BattleSetup:
 		return null
 	var enc_id: String = ""
 	for enc: EncounterDef in fdef.encounters:
-		if not enc.boss:
+		if encounter_id != "" and enc.id == encounter_id:
 			enc_id = enc.id
 			break
+		if not enc.boss and enc_id == "" and encounter_id == "":
+			enc_id = enc.id
+	if enc_id == "" and encounter_id != "":
+		push_warning("[BattleScene] encounter '%s' not on floor %d → first non-boss encounter" % [encounter_id,
+			fdef.index])
+		for enc2: EncounterDef in fdef.encounters:
+			if not enc2.boss:
+				enc_id = enc2.id
+				break
 	if enc_id == "":
 		return null
 	var s: BattleSetup = BattleBridge.make_setup(Game.state, DB.data, enc_id, BattleSetup.Advantage.NORMAL, "",

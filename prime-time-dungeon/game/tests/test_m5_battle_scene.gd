@@ -391,7 +391,7 @@ func test_stage_slots_and_the_queen_on_her_wreck() -> void:
 	var qstage: Node3D = (load("res://scenes/battle/battle_stage.gd") as GDScript).new()
 	add_to_tree(qstage)
 	qstage.call("build", q, &"low")
-	assert_eq(qstage.call("home", "e0"), Vector3(0, 3.0, -6.0), "Rattenkönigin on the wreck")
+	assert_eq(qstage.call("home", "e0"), Vector3(0, 3.7, -6.0), "Rattenkönigin on the wreck (feet on its roof)")
 	assert_not_null(qstage.get_node_or_null("Wreck"))
 	assert_eq(qstage.call("home", "p0"), Vector3(-1.3, 0, 4.0), "party one metre back")
 	var renamed: Array[PackedStringArray] = []

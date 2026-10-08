@@ -6,13 +6,17 @@ extends Node3D
 
 const Cast := preload("res://art/gallery/cast.gd")
 const Stage := preload("res://art/gallery/gallery_stage.gd")
+const NameTags := preload("res://art/gallery/name_tags.gd")
 
 @export var page: String = "cast"
 
-## Name tags under the figures (review M4: 26 px at 0.005 m/px was unreadable in the CI shots).
-const LABEL_SIZE: int = 44
+## Name tags under the figures: screen-space labels (name_tags.gd) in the UI font, nudged apart when they overlap
+## (visual pass: the billboard tags overlapped each other and the figures behind them).
+const TAG_SIZE: int = 18
+const TAG_COLORS: Dictionary = {"hero": Color("#22d3ee"), "enemy": Color("#f5f0ff"), "boss": Color("#ffc93c")}
 
 var rigs: Dictionary = {}          # id → CharacterRig
+var tags: CanvasLayer = null       # name_tags.gd
 var _params: Dictionary = {}
 
 
@@ -22,6 +26,9 @@ func setup(params: Dictionary) -> void:
 
 func _ready() -> void:
 	Stage.add_world(self, "metro", {}, &"battle")
+	tags = NameTags.new()
+	tags.name = "NameTags"
+	add_child(tags)
 	match page:
 		"bases":
 			_build_bases()
@@ -41,9 +48,12 @@ func _ready() -> void:
 				Vector3(0.85, 0, 0), Vector3(2.0, 0, 0), Vector3(3.2, 0, 0)], Vector3(0, 2.4, 7.6), Vector3(0, 0.85, 0))
 		_:
 			_build_cast()
+	var cam: Camera3D = get_node_or_null("Camera") as Camera3D
+	tags.set("camera", cam)
 
 
-func _place(id: String, model: Dictionary, pos: Vector3, yaw_deg: float, label: String, seed: int = 0) -> CharacterRig:
+func _place(id: String, model: Dictionary, pos: Vector3, yaw_deg: float, label: String, seed: int = 0,
+		tag_over_head: bool = false) -> CharacterRig:
 	var rig: CharacterRig = CharacterBuilder.build(model, seed)
 	rig.name = "Rig_" + id
 	add_child(rig)
@@ -52,53 +62,60 @@ func _place(id: String, model: Dictionary, pos: Vector3, yaw_deg: float, label: 
 	rig.battle_stance = true
 	rigs[id] = rig
 	if label != "":
-		Stage.label(self, label, pos + Vector3(0, -0.05, 0.55), LABEL_SIZE)
+		var role: String = str((Cast.CAST.get(id, {}) as Dictionary).get("role", "enemy"))
+		var col: Color = TAG_COLORS.get(role, TAG_COLORS["enemy"]) as Color
+		if tag_over_head:
+			tags.call("add_tag", rig, label, Vector3(0, 0.3, 0), col, TAG_SIZE + 2, false, true)
+		else:
+			tags.call("add_tag", rig, label, Vector3(0, 0, 0.5), col, TAG_SIZE, true)
 	return rig
 
 
 func _build_cast() -> void:
 	Stage.add_floor(self, 9.0, {})
+	# three rows: bosses at the back (tags over their heads), seven enemies in the middle (staggered so neighbouring
+	# tags never collide), party + small enemies in front, far enough forward and seen from high enough that no tag
+	# under the middle row sits on a front-row figure (layout checked with a projection script, visual pass)
 	var layout: Dictionary = {
-		"enm_boss_hausmeister": [Vector3(-3.4, 0, -3.8), 12.0],
-		"enm_boss_rattenkoenigin": [Vector3(2.8, 0, -4.4), -55.0],
-		"enm_pendler": [Vector3(-5.0, 0, -0.6), 15.0],
-		"enm_rattengardist": [Vector3(-3.5, 0, -0.4), 10.0],
-		"enm_fahrscheinfresser": [Vector3(-1.9, 0, -0.6), 5.0],
-		"enm_rattenschamane": [Vector3(-0.5, 0, -0.2), 0.0],
-		"enm_rolltreppenkrabbe": [Vector3(1.2, 0, -0.5), -15.0],
-		"enm_spruehgeist": [Vector3(3.1, 0, -0.3), -10.0],
-		"enm_kellerspinne": [Vector3(4.8, 0, -0.2), -25.0],
-		"enm_taubenschwarm": [Vector3(-4.0, 0, 2.6), 10.0],
-		"enm_kanalratte": [Vector3(-2.5, 0, 2.8), 20.0],
-		"kai": [Vector3(-1.0, 0, 2.6), 10.0],
-		"mopsula": [Vector3(0.3, 0, 2.9), -15.0],
-		"enm_kanalschleim": [Vector3(1.7, 0, 2.7), -10.0],
-		"enm_kabelsalat": [Vector3(3.1, 0, 2.8), -20.0],
+		"enm_boss_hausmeister": [Vector3(-4.2, 0, -4.6), 12.0],
+		"enm_boss_rattenkoenigin": [Vector3(2.6, 0, -5.0), -40.0],
+		"enm_pendler": [Vector3(-6.3, 0, -0.6), 15.0],
+		"enm_rattengardist": [Vector3(-4.2, 0, -1.8), 10.0],
+		"enm_fahrscheinfresser": [Vector3(-2.1, 0, -0.6), 5.0],
+		"enm_rattenschamane": [Vector3(0.0, 0, -1.8), 0.0],
+		"enm_rolltreppenkrabbe": [Vector3(2.1, 0, -0.6), -10.0],
+		"enm_spruehgeist": [Vector3(4.2, 0, -1.8), -10.0],
+		"enm_kellerspinne": [Vector3(6.3, 0, -0.6), -25.0],
+		"enm_taubenschwarm": [Vector3(-5.25, 0, 3.8), 10.0],
+		"enm_kanalratte": [Vector3(-3.15, 0, 3.8), 20.0],
+		"kai": [Vector3(-1.05, 0, 3.8), 10.0],
+		"mopsula": [Vector3(1.05, 0, 3.8), -15.0],
+		"enm_kanalschleim": [Vector3(3.15, 0, 3.8), -10.0],
+		"enm_kabelsalat": [Vector3(5.25, 0, 3.8), -20.0],
 	}
-	var known: Dictionary = {}
 	for id: String in layout:
 		var entry: Array = layout[id]
 		var model: Dictionary = Cast.model(id)
 		var db_model: Dictionary = _db_model(id)
 		if not db_model.is_empty():
 			model = db_model
+		var boss: bool = str(Cast.CAST[id]["role"]) == "boss"
 		var rig: CharacterRig = _place(id, model, entry[0] as Vector3, float(entry[1]), str(Cast.CAST[id]["name"]),
-			id.length())
+			id.length(), boss)
 		if id.begins_with("enm_"):
 			rig.death_style = &"dissolve"
-		known[id] = true
-	# DB entries the cast sheet does not list (new content from data) appear in an extra front row
-	var x: float = -5.0
-	for id: String in _db_ids():
-		if known.has(id):
-			continue
-		if x > 5.5:
-			break
-		_place(id, _db_model(id), Vector3(x, 0, 5.2), 0.0, id, id.length())
-		x += 1.6
-	var label := Stage.label(self, "PRIME TIME DUNGEON · CAST ETAGE 1", Vector3(0, 5.6, -6.5), 64, Palette.HYPE_GOLD)
+	# floor-1 enemies / party members of the data the cast sheet does not know (new content) appear centred in an extra
+	# front row; floor-2 content and the sheet's floor-2 stubs belong to the "bases" page
+	var extra: PackedStringArray = []
+	for id: String in _floor1_ids():
+		if not Cast.CAST.has(id) and extra.size() < 5:
+			extra.append(id)
+	for i in extra.size():
+		var ex: float = (float(i) - float(extra.size() - 1) * 0.5) * 2.4
+		_place(extra[i], _db_model(extra[i]), Vector3(ex, 0, 5.6), 0.0, _db_name(extra[i]), extra[i].length())
+	var label := Stage.label(self, "PRIME TIME DUNGEON · CAST ETAGE 1", Vector3(0, 4.9, -7.0), 64, Palette.HYPE_GOLD)
 	label.pixel_size = 0.006
-	Stage.add_camera(self, Vector3(0, 5.2, 12.5), Vector3(0, 1.0, -0.6), 40.0)
+	Stage.add_camera(self, Vector3(0, 7.0, 13.0), Vector3(0, 0.9, -0.6), 40.0)
 
 
 func _build_bases() -> void:
@@ -214,6 +231,32 @@ func _db_ids() -> PackedStringArray:
 	for e: EnemyDef in data.all_enemies():
 		out.append(e.id)
 	return out
+
+
+## Party members + every enemy of the floor-1 encounters (DB order, unique).
+func _floor1_ids() -> PackedStringArray:
+	var out := PackedStringArray()
+	var data: GameData = DB.data
+	if data == null:
+		return out
+	for p: PartyMemberDef in data.all_party():
+		out.append(p.id)
+	var fdef: FloorDef = DB.floor_def(1) if DB.has_id("floors", "floor_1") else null
+	if fdef == null:
+		return out
+	for enc: EncounterDef in fdef.encounters:
+		for eid: String in enc.enemies:
+			if not out.has(eid):
+				out.append(eid)
+	return out
+
+
+func _db_name(id: String) -> String:
+	if id.begins_with("enm_") and DB.has_id("enemies", id):
+		return tr(DB.data.enemy(id).name)
+	if DB.has_id("party", id):
+		return tr(DB.data.party_member(id).name)
+	return id
 
 
 func _db_model(id: String) -> Dictionary:

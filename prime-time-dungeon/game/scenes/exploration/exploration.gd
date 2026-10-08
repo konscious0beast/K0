@@ -36,6 +36,7 @@ const BOSS_EXTRA_ARM: float = 1.5       # boss rooms: longer arm so the large bo
 const HITSTOP_SEC: float = 0.07         # field strike hit: 70 ms freeze + flash before the battle transition
 const REVEAL_BEAT_SEC: float = 0.25     # pause after an event prop animation before its result is shown
 const MARKER_LIFT: float = 0.3          # focus marker above the focused object's visual top
+const PROMPT_LIFT: float = 0.35         # HUD prompt anchor above the marker
 
 ## Tests may switch this off: encounters then only emit Events.encounter_triggered (no Game/Router battle start).
 var auto_start_battle: bool = true
@@ -718,6 +719,15 @@ func _place_marker() -> void:
 	if it != null:
 		var bob: float = sin(_marker_t * TAU * 1.2) * 0.08
 		_marker.global_position = it.marker_position() + Vector3(0.0, MARKER_LIFT + bob, 0.0)
+	# HUD prompt above the object (not over it): projected marker top, fixed (no bob) so the panel does not wobble
+	if _hud != null:
+		var cam: Camera3D = _camera.camera() if _camera != null else null
+		var top: Vector3 = it.marker_position() + Vector3(0.0, MARKER_LIFT + PROMPT_LIFT, 0.0) if it != null \
+			else Vector3.ZERO
+		if it != null and cam != null and cam.is_inside_tree() and not cam.is_position_behind(top):
+			_hud.set_prompt_anchor(cam.unproject_position(top))
+		else:
+			_hud.set_prompt_anchor(Vector2.INF)
 		_marker.rotation = Vector3(PI, _marker_t * 2.0, 0.0)
 
 

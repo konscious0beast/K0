@@ -53,7 +53,9 @@ func _ready() -> void:
 	if capture:
 		toasts.call("push_toast", "Erster Kill", &"achievement")
 	else:
-		show_overlay.call("set_mode", initial_mode())
+		var mode: StringName = initial_mode()
+		show_overlay.call("set_mode", mode)
+		mod_dialog.call("set_overlay_mode", mode)
 
 
 ## Overlay mode for the active screen (Router.current): exploration / battle / safe room, else menu.

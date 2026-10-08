@@ -18,6 +18,11 @@ const SHAKE_EVERY_SEC: int = 10
 const SHAKE_DURATION: float = 0.3
 const SHAKE_STRENGTH: float = 0.15
 const MINIMAP_SIZE: float = 136.0
+## World-anchored prompt (set_prompt_anchor): gap above the anchor point and the band it is kept in (below the timer /
+## hype meter, above the M.O.D. box incl. tab and the chat ticker; safe-frame px).
+const PROMPT_ANCHOR_GAP: float = 12.0
+const PROMPT_TOP_MIN: float = 112.0
+const PROMPT_BOTTOM_CLEAR: float = 190.0
 
 
 ## Full-screen map (layer 60, tree paused): every visited cell, legend (same swatches as the map), zone names. Closes on
@@ -118,6 +123,7 @@ var _party_box: VBoxContainer
 var _prompt_panel: PanelContainer
 var _prompt_label: Label
 var _prompt_glyph: Control
+var _prompt_anchor: Vector2 = Vector2.INF
 var _hints: HBoxContainer
 var _seconds: int = -1
 var _timer_started: bool = false
@@ -247,6 +253,42 @@ func set_prompt(text: String) -> void:
 		_prompt_panel.visible = false
 	if touch != null:
 		touch.call("set_prompt_active", show_it)
+	_place_prompt()
+
+
+## Canvas point the prompt sits centred above (the focused object's marker, projected by the exploration scene) so the
+## prompt never covers the object right in front of Kai (GDD §14.3 "Interaktionsprompt über Objekt"); Vector2.INF →
+## default slot bottom centre. The panel stays inside the band between the top HUD and the M.O.D. box.
+func set_prompt_anchor(canvas_pos: Vector2) -> void:
+	if canvas_pos == _prompt_anchor:
+		return
+	_prompt_anchor = canvas_pos
+	_place_prompt()
+
+
+func prompt_rect() -> Rect2:
+	return _prompt_panel.get_global_rect() if _prompt_panel.visible else Rect2()
+
+
+func _place_prompt() -> void:
+	if _prompt_panel == null:
+		return
+	var anchored: bool = _prompt_anchor.is_finite() and _frame.size.x > 0.0
+	if not anchored:
+		_prompt_panel.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+		_prompt_panel.offset_left = -200
+		_prompt_panel.offset_right = 200
+		_prompt_panel.offset_bottom = -22 - 14 - 108 - 40
+		_prompt_panel.offset_top = -22 - 14 - 108 - 40 - 44
+		return
+	var sz: Vector2 = Vector2(maxf(240.0, _prompt_panel.get_combined_minimum_size().x), 44.0)
+	var local: Vector2 = _prompt_anchor - _frame.get_global_rect().position
+	var pos: Vector2 = Vector2(local.x - sz.x * 0.5, local.y - sz.y - PROMPT_ANCHOR_GAP)
+	pos.x = clampf(pos.x, 8.0, maxf(8.0, _frame.size.x - sz.x - 8.0))
+	pos.y = clampf(pos.y, PROMPT_TOP_MIN, maxf(PROMPT_TOP_MIN, _frame.size.y - PROMPT_BOTTOM_CLEAR - sz.y))
+	_prompt_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_prompt_panel.position = pos.round()
+	_prompt_panel.size = sz
 
 
 ## Event runs only (Game.mode == &"event_offline"); "" hides.

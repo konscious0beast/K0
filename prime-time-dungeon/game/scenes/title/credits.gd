@@ -22,6 +22,8 @@ const ROLL: Array[Array] = [
 	["s", "Lootboxen in PRIME TIME DUNGEON können nicht gekauft werden."],
 	["s", "Kein Mops wurde bei dieser Produktion verletzt. Wir haben gefragt. Er hat abgelehnt zu antworten."],
 ]
+const ROLL_EDGE: float = 56.0       # px of the soft fade at the top / bottom of the credit roll
+
 
 var elapsed: float = 0.0
 var done: bool = false
@@ -137,6 +139,27 @@ func _build() -> void:
 	_roll.custom_minimum_size = Vector2(540, 0)
 	_roll.position = Vector2(0, 600)
 	clip.add_child(_roll)
+	# soft top / bottom edges: lines fade out instead of being cut mid-letter at the clip border (visual pass)
+	for top: bool in [true, false]:
+		var eg: Gradient = Gradient.new()
+		eg.set_color(0, Color(UiUtil.C_INK, 0.95))
+		eg.set_color(1, Color(UiUtil.C_INK, 0.0))
+		var et: GradientTexture2D = GradientTexture2D.new()
+		et.gradient = eg
+		et.width = 4
+		et.height = 64
+		et.fill_from = Vector2(0, 0) if top else Vector2(0, 1)
+		et.fill_to = Vector2(0, 1) if top else Vector2(0, 0)
+		var edge: TextureRect = TextureRect.new()
+		edge.name = "RollEdgeTop" if top else "RollEdgeBottom"
+		edge.texture = et
+		edge.stretch_mode = TextureRect.STRETCH_SCALE
+		edge.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		edge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		edge.set_anchors_preset(Control.PRESET_TOP_WIDE if top else Control.PRESET_BOTTOM_WIDE)
+		edge.offset_top = 0.0 if top else -ROLL_EDGE
+		edge.offset_bottom = ROLL_EDGE if top else 0.0
+		clip.add_child(edge)
 	for e: Array in ROLL:
 		var kind: String = str(e[0])
 		var text: String = UiUtil.format_line(str(e[1])) if str(e[1]).contains("{") else str(e[1])

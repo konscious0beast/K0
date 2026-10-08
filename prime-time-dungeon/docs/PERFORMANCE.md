@@ -142,6 +142,16 @@ Label3D ≤ 8, Partikel ≤ 56 in ≤ 5 Emittern, keine Körper.
 Mobile zählt den Sonnen-Schattenpass getrennt (Compatibility rendert ihn im Hauptpass); die 3D-Draw-Calls liegen dort trotzdem bei
 weniger als der Hälfte des Budgets. Quality low (Mobil-Standard) halbiert die Primitive (keine Schatten, kein Glow, Skalierung 0,7).
 
+### 3.5 Nachmessung nach dem Zusammenführen mit dem Visual-Pass und dem Full-Run-Bot
+
+`tools/perf.sh` (Compatibility high, llvmpipe) auf dem zusammengeführten Stand (Phase C + Visual-Pass `ptd/int-visual` + int-cr /
+int-play): **`PERF: OK`, `LEAK: OK`**. Erkundung DC 3D max 112, UI 83, Omni 4 + 1, Lichter/Mesh 2, Materialien 21, Körper
+4 statisch / 19 kinematisch; Kampf-Eröffnungen DC 3D 55–126, **UI 122–167** (Tutorial-Kampf mit M.O.D.-Box zwischen den
+reservierten Ecken), Primitive max 48 315; komplette Kämpfe DC 3D ≤ 131, UI ≤ 151, Primitive max 66 493 (Rattenkönigin; die
+Publikumstribüne des Visual-Pass liegt in der einen Arena-Geometrie: +≈ 2 500 Tris, kein zusätzlicher Draw Call), Materialien ≤ 21;
+Safe Rooms DC 3D 73–74 / UI 64–84, 0 Körper. Erstes Bild 2,3 s; Etage 1 bauen 281 ms warm; 20 Router-Zyklen ohne Wachstum.
+Der Full-Run-Bot (`--autoplay=full`) wird wie der Smoke-Treiber erst mit dem Argument geladen (§4.6).
+
 ---
 
 ## 4. Optimierungen

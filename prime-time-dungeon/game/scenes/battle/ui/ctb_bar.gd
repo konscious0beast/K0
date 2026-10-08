@@ -2,16 +2,19 @@ extends Control
 ## CTB turn-order bar on the right edge (02_TECH §1.6, GDD §3.4/§14.5, 03_ART §9.2): 12 entries (scheme TOUCH 10)
 ## of CTB_ORDER / preview_order, entry 1 = current/next actor (64 px), entries 2.. 42 px; portrait icons framed blue
 ## (party #4AA8FF), red (enemy #E8455A) or grey (pseudo unit, train icon); ghost preview entries at 50 % alpha.
-## Entries are keyed per occurrence and slide to their new slots (0.2 s). Private M5 helper (no class_name).
+## Entries are keyed per occurrence and slide to their new slots (0.2 s). Duplicate enemy types carry their letter
+## in an ink chip (red edge, 15 px) at the entry's corner. The last full order is kept, so a scheme switch (count 12
+## ↔ 10) re-trims the bar at once (reapply). Private M5 helper (no class_name).
 
 const HudStyle := preload("res://scenes/battle/ui/hud_style.gd")
-## 03_ART §9.2 asks for 64 / 42 px; 56 / 36 px keep all 12 entries above the party panels in the bottom-right corner
+## 03_ART §9.2 asks for 64 / 42 px; 56 / 35 px keep all 12 entries above the party panels in the bottom-right corner
 ## (which sit right of the M.O.D. text box) at 720 px height.
 const FIRST: float = 56.0
-const ENTRY: float = 36.0
+const ENTRY: float = 35.0
 const GAP: float = 2.0
 const WIDTH: float = 56.0
-const HEADER: float = 18.0
+const HEADER: float = 20.0
+const CHIP: Vector2 = Vector2(16, 18)
 const SLIDE_SEC: float = 0.2
 
 
@@ -25,6 +28,7 @@ class Entry extends Control:
 	var portrait: TextureRect = null
 	var icon: Control = null
 	var badge: Label = null
+	var chip: Panel = null
 
 	func _draw() -> void:
 		var r: Rect2 = Rect2(Vector2.ZERO, size)
@@ -48,6 +52,7 @@ class Entry extends Control:
 var count: int = 12
 var order: PackedStringArray = []
 var ghosts: PackedStringArray = []
+var full_order: PackedStringArray = []     # last order handed to set_order (untrimmed)
 ## Provider (BattleHud): ctb_portrait(id) -> Texture2D, ctb_kind(id) -> String, ctb_letter(id) -> String.
 var provider: Object = null
 
@@ -58,16 +63,17 @@ var _header: Label = null
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	custom_minimum_size = Vector2(WIDTH, HEADER + FIRST + (ENTRY + GAP) * 11.0)
-	_header = HudStyle.label("ZUGFOLGE", 12, Color("#b3a7c9"), true, 3)
+	_header = HudStyle.label("ZUGFOLGE", 15, Color("#b3a7c9"), true, 3)
 	_header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_header.position = Vector2(-22, -5)
-	_header.size = Vector2(WIDTH + 44, 16)
+	_header.position = Vector2(-26, -6)
+	_header.size = Vector2(WIDTH + 52, 20)
 	add_child(_header)
 
 
 ## Shows `p_order` (first `count` entries); ids in `ghost_ids` are drawn as ghosts (hypothetical position).
 func set_order(p_order: PackedStringArray, ghost_ids: PackedStringArray = PackedStringArray(),
 		animate: bool = true) -> void:
+	full_order = p_order.duplicate()
 	order = p_order.slice(0, mini(count, p_order.size()))
 	ghosts = ghost_ids.duplicate()
 	var seen: Dictionary = {}
@@ -117,6 +123,23 @@ func set_order(p_order: PackedStringArray, ghost_ids: PackedStringArray = Packed
 			old.queue_free()
 
 
+## Re-applies the last order with the current `count` (input scheme switch), without animation.
+func reapply() -> void:
+	set_order(full_order, ghosts, false)
+
+
+## Re-reads every entry's letter from the provider (a summon lettered duplicate types anew).
+func refresh_letters() -> void:
+	for key: Variant in _entries.keys():
+		var e: Entry = _entries[key]
+		var l: String = str(provider.call("ctb_letter", e.unit_id)) if provider != null else ""
+		if l == e.letter:
+			continue
+		e.letter = l
+		_set_badge(e)
+		_layout_entry(e)
+
+
 ## Rect of entry slot i (0 = current actor).
 func slot_rect(i: int) -> Rect2:
 	if i == 0:
@@ -158,11 +181,33 @@ func _make_entry(id: String) -> Entry:
 			tr2.texture = provider.call("ctb_portrait", id) as Texture2D
 		e.portrait = tr2
 		e.add_child(tr2)
-	if e.letter != "":
-		var b: Label = HudStyle.label(e.letter, 13, HudStyle.C_PAPER, true, 3)
-		e.badge = b
-		e.add_child(b)
+	_set_badge(e)
 	return e
+
+
+## Letter chip (ink box, 1 px enemy-red edge, 15 px letter) or none.
+func _set_badge(e: Entry) -> void:
+	if e.chip != null:
+		e.chip.queue_free()
+		e.chip = null
+		e.badge = null
+	if e.letter == "":
+		return
+	var chip: Panel = Panel.new()
+	chip.name = "LetterChip"
+	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb: StyleBoxFlat = HudStyle.show_box(HudStyle.C_INK, HudStyle.C_ENEMY, 1, 0.0, Vector4(0, 0, 0, 0))
+	sb.shadow_size = 0
+	chip.add_theme_stylebox_override("panel", sb)
+	chip.size = CHIP
+	var b: Label = HudStyle.label(e.letter, 15, HudStyle.C_PAPER, true, 0)
+	b.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	b.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	b.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	chip.add_child(b)
+	e.add_child(chip)
+	e.chip = chip
+	e.badge = b
 
 
 func _layout_entry(e: Entry) -> void:
@@ -173,6 +218,6 @@ func _layout_entry(e: Entry) -> void:
 	if e.icon != null:
 		e.icon.position = Vector2(4, 4)
 		e.icon.size = s - Vector2(8, 8)
-	if e.badge != null:
-		e.badge.position = Vector2(s.x - 13, s.y - 19)
-		e.badge.size = Vector2(12, 18)
+	if e.chip != null:
+		e.chip.position = Vector2(s.x - CHIP.x + 3.0, s.y - CHIP.y)    # inside the slot: the next entry never covers it
+		e.chip.size = CHIP

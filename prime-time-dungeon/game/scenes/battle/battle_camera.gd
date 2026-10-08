@@ -4,6 +4,11 @@ extends Camera3D
 ## release, enemy turn, stunt orbit, sponsor drop, victory orbit, defeat push-in — with cut or blend (Tween-like
 ## sine ease of position, look-at point and FOV). Camera trauma: offset 0.25 m × trauma² (18 Hz noise), roll 3° ×
 ## trauma², decay 1.5/s. Shot time runs with `speed` (battle speed ×2 / autoplay halves every shot).
+## Occlusion: rigs that are not part of the shot but stand close in front of the lens (the off-turn partner in the
+## command shot, enemies between the camera and a melee strike) are culled for this camera for the length of the shot
+## (their meshes move to render layer HIDE_LAYER, which the camera's cull mask excludes; GeometryInstance3D
+## transparency only works in Forward+, not in the Mobile / Compatibility renderers). Visibility flags, dissolve and
+## shadows stay untouched. The melee side shot picks the side with fewer such rigs.
 ## Private M5 helper (no class_name); presentation only. Positions are in the battle scene's space (stage at origin).
 
 const TRAUMA_DECAY: float = 1.5
@@ -13,7 +18,17 @@ const SHAKE_HZ: float = 18.0
 const EST_FROM: Vector3 = Vector3(6.5, 4.2, 9.0)
 const EST_TO: Vector3 = Vector3(4.5, 3.4, 8.0)
 const EST_LOOK: Vector3 = Vector3(0, 0.9, -0.5)
-
+## Over-the-shoulder command / target shots: narrower than 03_ART's 48 so 0.7 m enemies at ~9 m stay ≥ 48 px tall
+## (03_ART §1 pillar 2), the look point close to the enemies.
+const COMMAND_FOV: float = 37.0
+const TARGET_FOV: float = 35.0
+const COMMAND_LOOK_TO_ACTOR: float = 0.1
+## The actor's head stays above this fraction of the frame height (bottom HUD band / chat ticker).
+const HEAD_MAX_Y: float = 0.82
+const FADE_NEAR: float = 6.0           # rigs closer than this to the lens and reaching into the frame fade out
+## Render layer (1-based 20) of rigs culled for the current shot; the battle camera never draws it.
+const HIDE_LAYER_BIT: int = 1 << 19
+const BLOCK_RADIUS: float = 1.2        # rigs this close (ground plane) to the lens → action line block a melee shot
 var speed: float = 1.0
 var trauma: float = 0.0
 var shake_scale: float = 1.0
@@ -35,9 +50,11 @@ var _look_fn: Callable = Callable()
 var _fov_fn: Callable = Callable()
 var _drift: float = 0.0
 var _clock: float = 0.0
+var _faded: Dictionary = {}            # combatant id → {GeometryInstance3D instance id: original layers}
 
 
 func _ready() -> void:
+	cull_mask = cull_mask & ~HIDE_LAYER_BIT
 	near = 0.05
 	far = 220.0
 	fov = 50.0
@@ -70,7 +87,9 @@ func shot(p_name: StringName, ctx: Dictionary = {}) -> void:
 	var actor: String = str(ctx.get("actor", ""))
 	var target: String = str(ctx.get("target", ""))
 	var blend: float = 0.0
+	var fade_ids: PackedStringArray = []
 	_drift = 0.0
+	_set_faded(PackedStringArray())        # the previous shot's culled rigs are back before this shot is measured
 	match p_name:
 		&"establishing":
 			var a: Vector3 = EST_FROM * (1.3 if wide else 1.0)
@@ -96,28 +115,53 @@ func shot(p_name: StringName, ctx: Dictionary = {}) -> void:
 				func(t: float) -> Vector3: return head.lerp(l2, _ease(clampf((t - 0.9) / 1.6, 0.0, 1.0))),
 				func(t: float) -> float: return lerpf(40.0, 50.0, _ease(t / 2.5)))
 		&"command", &"target_select":
-			# behind the actor on its outer side: the actor stands bottom center, the enemies fill the frame and the
-			# other party member stays out of the shot (03_ART §8.3 values for a 1.75 m hero)
+			# behind the actor on its outer side: the actor stands bottom center, the enemies fill the frame; the
+			# other party member is faded if it still reaches into the frame close to the lens
 			var home: Vector3 = _home(actor)
 			var h: float = _height(actor)
 			var s: float = -1.0 if home.x <= 0.0 else 1.0
 			var hk: float = clampf(h, 0.5, 2.2)
-			var cpos: Vector3 = home + Vector3(0.9 * s, 1.5 + 0.35 * hk, 2.6 + 0.4 * hk)
-			# small actors (Mopsula) get a lower look point so they sit above the bottom HUD / chat ticker
-			var look: Vector3 = _enemy_center().lerp(home, 0.25) + Vector3(0, 0.1 + 0.28 * hk, 0)
-			var cfov: float = 48.0
+			# tall actors: the camera rises with them, so the actor sits in the lower third, under the enemies
+			var cpos: Vector3 = home + Vector3(0.9 * s, 1.2 + 0.9 * hk, 2.6 + 0.4 * hk)
+			var look: Vector3 = _enemy_center().lerp(home, COMMAND_LOOK_TO_ACTOR) + Vector3(0, 0.1 + 0.28 * hk, 0)
+			var cfov: float = COMMAND_FOV
 			blend = 0.35
 			if p_name == &"target_select" and target != "":
-				look = _home(target) + Vector3(0, minf(_height(target) * 0.6, 1.0), 0)
+				# turn towards the target, but keep the actor in the frame (half way from the command look point)
+				var tp: Vector3 = _home(target) + Vector3(0, minf(_height(target) * 0.6, 1.0), 0)
 				if target.begins_with("p"):
-					look = _home(target) + Vector3(0, 0.6, 0)
-				cfov = 44.0
+					tp = _home(target) + Vector3(0, 0.6, 0)
+				look = look.lerp(tp, 0.6)
+				cfov = TARGET_FOV
 				blend = 0.2
+			look = _keep_head_in_frame(cpos, look, cfov, _anchor(actor, &"head"))
 			_program(func(_t1: float) -> Vector3: return cpos, func(_t2: float) -> Vector3: return look,
 				func(_t3: float) -> float: return cfov)
 			_drift = 0.03
+			fade_ids = _near_lens(cpos, look, cfov, [actor, target])
 		&"action_side":
+			# the side with fewer uninvolved rigs between the lens and the strike; ties: the actor's side
 			var side: float = -1.0 if _home(actor).x < 0.0 else 1.0
+			# the shot follows the dash: test the corridor at its start and at the strike (actor next to the target)
+			var th0: Vector3 = _live_or_home(target)
+			var ah0: Vector3 = _home(actor)
+			var flat: Vector3 = Vector3(ah0.x - th0.x, 0.0, ah0.z - th0.z)
+			var strike: Vector3 = th0 + (flat.normalized() if flat.length_squared() > 0.001 else Vector3(0, 0, 1)) * 0.9
+			var mids: Array[Vector3] = [(ah0 + th0) * 0.5, (strike + th0) * 0.5]
+			var blocked: Array[PackedStringArray] = []
+			for sd: float in [side, -side]:
+				var ids: PackedStringArray = []
+				for m: Vector3 in mids:
+					var cam0: Vector3 = Vector3(7.0 * sd + m.x * 0.4, 2.2 + m.y * 0.5, m.z)
+					for bid: String in _blockers(cam0, m + Vector3(0, 1.0, 0), [actor, target]):
+						if not ids.has(bid):
+							ids.append(bid)
+				blocked.append(ids)
+			if blocked[1].size() < blocked[0].size():
+				side = -side
+				fade_ids = blocked[1]
+			else:
+				fade_ids = blocked[0]
 			_program(func(_t1: float) -> Vector3:
 					var mid: Vector3 = (_live(actor) + _live_or_home(target)) * 0.5
 					return Vector3(7.0 * side + mid.x * 0.4, 2.2 + mid.y * 0.5, mid.z),
@@ -208,6 +252,13 @@ func shot(p_name: StringName, ctx: Dictionary = {}) -> void:
 			var pz: Vector3 = _party_center()
 			_program(func(_t1: float) -> Vector3: return pz + Vector3(7.5, 3.6, 7.0),
 				func(_t2: float) -> Vector3: return pz + Vector3(-1.0, 1.0, 0), func(_t3: float) -> float: return 55.0)
+		&"party_hit":
+			# push-in on the party from the enemy side (impact of an attack on the whole party, e.g. the train)
+			var pc: Vector3 = _party_center()
+			var hs: Vector3 = pc + Vector3(1.6, 2.0, -4.4)
+			var hdir: Vector3 = (pc + Vector3(0, 0.7, 0) - hs).normalized()
+			_program(func(t: float) -> Vector3: return hs + hdir * 0.6 * _ease(t / 1.2),
+				func(_t2: float) -> Vector3: return pc + Vector3(0, 0.7, 0), func(_t3: float) -> float: return 45.0)
 		_:
 			push_warning("[BattleCamera] unknown shot '%s'" % p_name)
 			return
@@ -217,7 +268,161 @@ func shot(p_name: StringName, ctx: Dictionary = {}) -> void:
 	_from_fov = _fov
 	_t = 0.0
 	_blend = blend
+	_set_faded(fade_ids)
 	_evaluate()
+
+
+## Ids of rigs currently culled for the shot (tests).
+func faded_ids() -> PackedStringArray:
+	var out: PackedStringArray = []
+	for k: Variant in _faded.keys():
+		out.append(str(k))
+	return out
+
+
+func _exit_tree() -> void:
+	_set_faded(PackedStringArray())
+
+
+# --- occlusion -------------------------------------------------------------------------------------------------------
+
+## Screen position (x, y in pixels of the current viewport) and depth of `p` seen from eye → look with vertical FOV
+## `f`; depth <= 0 → behind the lens.
+func _project(eye: Vector3, look: Vector3, f: float, p: Vector3) -> Vector3:
+	var vs: Vector2 = get_viewport().get_visible_rect().size if is_inside_tree() else Vector2(1280, 720)
+	var dir: Vector3 = look - eye
+	if dir.length_squared() < 0.0001:
+		return Vector3(0, 0, -1)
+	var b: Basis = Basis.looking_at(dir, Vector3.UP)
+	var local: Vector3 = b.inverse() * (p - eye)
+	var depth: float = -local.z
+	if depth <= 0.001:
+		return Vector3(0, 0, depth)
+	var k: float = 1.0 / tan(deg_to_rad(f) * 0.5)
+	var ny: float = local.y / depth * k
+	var nx: float = local.x / depth * k * vs.y / maxf(vs.x, 1.0)
+	return Vector3((nx * 0.5 + 0.5) * vs.x, (0.5 - ny * 0.5) * vs.y, depth)
+
+
+## Lowers the look point (camera pitches down) until the actor's head sits above HEAD_MAX_Y of the frame.
+func _keep_head_in_frame(eye: Vector3, look: Vector3, f: float, head: Vector3) -> Vector3:
+	var vs: Vector2 = get_viewport().get_visible_rect().size if is_inside_tree() else Vector2(1280, 720)
+	var l: Vector3 = look
+	for i in 16:
+		var p: Vector3 = _project(eye, l, f, head)
+		if p.z <= 0.0 or p.y <= vs.y * HEAD_MAX_Y:
+			break
+		l.y -= 0.12
+	return l
+
+
+## Rigs (except `skip`) closer than FADE_NEAR to the lens whose body reaches into the frame.
+func _near_lens(eye: Vector3, look: Vector3, f: float, skip: Array) -> PackedStringArray:
+	var out: PackedStringArray = []
+	if stage == null:
+		return out
+	var vs: Vector2 = get_viewport().get_visible_rect().size if is_inside_tree() else Vector2(1280, 720)
+	var frame: Rect2 = Rect2(Vector2.ZERO, vs)
+	for id: String in stage.call("unit_ids"):
+		if skip.has(id):
+			continue
+		var r: CharacterRig = stage.call("rig", id)
+		if not _rig_shown(r):
+			continue
+		var box: AABB = _rig_aabb(r)
+		if box.get_center().distance_to(eye) > FADE_NEAR:
+			continue
+		# any corner of the rig's bounds (props included: a raised broom reaches far beyond the feet) in frame
+		for i in 8:
+			var sp: Vector3 = _project(eye, look, f, box.get_endpoint(i))
+			if sp.z > 0.0 and frame.grow(-4.0).has_point(Vector2(sp.x, sp.y)):
+				out.append(id)
+				break
+	return out
+
+
+## Rig drawn at all (not escaped, not dissolved after a KO).
+static func _rig_shown(r: CharacterRig) -> bool:
+	if r == null or not r.visible:
+		return false
+	var model: Node3D = r.get_node_or_null("Model") as Node3D
+	return model == null or model.visible
+
+
+## World-space bounds of a rig's meshes (home ± height when it has none in the tree).
+static func _rig_aabb(r: CharacterRig) -> AABB:
+	var out: AABB = AABB()
+	var first: bool = true
+	if r.is_inside_tree():
+		for n: Node in r.find_children("*", "MeshInstance3D", true, false):
+			var mi: MeshInstance3D = n as MeshInstance3D
+			if mi.mesh == null or not mi.is_visible_in_tree():
+				continue
+			var b: AABB = mi.global_transform * mi.mesh.get_aabb()
+			out = b if first else out.merge(b)
+			first = false
+	if first:
+		var h: float = maxf(r.height, 0.4)
+		var p: Vector3 = r.global_position if r.is_inside_tree() else r.position
+		return AABB(p - Vector3(h * 0.3, 0, h * 0.3), Vector3(h * 0.6, h, h * 0.6))
+	return out
+
+
+## Rigs (except `skip`) standing in the corridor between the lens and the action point (ground plane distance: a
+## small enemy below the line of sight still fills the bottom of the frame).
+func _blockers(eye: Vector3, at: Vector3, skip: Array) -> PackedStringArray:
+	var out: PackedStringArray = []
+	if stage == null:
+		return out
+	var e2: Vector2 = Vector2(eye.x, eye.z)
+	var seg: Vector2 = Vector2(at.x, at.z) - e2
+	var len2: float = maxf(seg.length_squared(), 0.0001)
+	for id: String in stage.call("unit_ids"):
+		if skip.has(id):
+			continue
+		var r: CharacterRig = stage.call("rig", id)
+		if not _rig_shown(r):
+			continue
+		var h: Vector3 = _home(id)
+		var c: Vector2 = Vector2(h.x, h.z)
+		var t: float = clampf((c - e2).dot(seg) / len2, 0.0, 1.0)
+		if t < 0.04 or t > 0.92:
+			continue
+		if (e2 + seg * t).distance_to(c) < BLOCK_RADIUS + 0.35 * r.size_factor():
+			out.append(id)
+	return out
+
+
+func _set_faded(ids: PackedStringArray) -> void:
+	for k: Variant in _faded.keys():
+		if ids.has(str(k)):
+			continue
+		var saved: Dictionary = _faded[k]
+		for iid: Variant in saved.keys():
+			var gi: GeometryInstance3D = instance_from_id(int(iid)) as GeometryInstance3D
+			if gi != null and is_instance_valid(gi):
+				gi.layers = int(saved[iid])
+		_faded.erase(k)
+	if stage == null or not is_instance_valid(stage):
+		return
+	for id: String in ids:
+		if _faded.has(id):
+			continue
+		var r: CharacterRig = stage.call("rig", id)
+		if r == null:
+			continue
+		var saved2: Dictionary = {}
+		_cull(r, saved2)
+		_faded[id] = saved2
+
+
+static func _cull(n: Node, saved: Dictionary) -> void:
+	if n is GeometryInstance3D:
+		var gi: GeometryInstance3D = n as GeometryInstance3D
+		saved[gi.get_instance_id()] = gi.layers
+		gi.layers = HIDE_LAYER_BIT
+	for c: Node in n.get_children():
+		_cull(c, saved)
 
 
 func _program(pos_fn: Callable, look_fn: Callable, fov_fn: Callable) -> void:

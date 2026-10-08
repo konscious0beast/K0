@@ -1,9 +1,10 @@
 extends CanvasLayer
 ## Battle results (02_TECH §1.6, §5.7; GDD §3.12/§14.5): EXP per member (bars fill, LEVEL UP banner with stat gains
 ## and learned skills), credits (+ overkill bonus, refunded / lost credits), items and boss boxes, followers, unlocked
-## achievements; "Weiter" (default focus) continues. Fled / defeat show a short card. Autoplay continues on its own
-## after 1.0 s (auto_continue_sec). Layer 6: above the battle HUD, below the show overlay / M.O.D. box.
-## Private M5 script (no class_name).
+## achievements; "Weiter" (default focus, ButtonBig with an 88 px hit area) continues — also after a defeat. Fled /
+## defeat show a short card. Autoplay continues on its own after 1.0 s (auto_continue_sec). Layer 6: above the
+## battle HUD, below the show overlay / M.O.D. box; UiTheme is assigned to the root (CanvasLayer children do not
+## inherit root.theme). Private M5 script (no class_name).
 
 signal closed
 signal frame_ticked
@@ -44,6 +45,8 @@ func _ready() -> void:
 	_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.visible = false
+	# Controls under a CanvasLayer do not inherit root.theme (UiUtil.apply_theme note, 4.7.2): assign it explicitly
+	_root.theme = UiTheme.get_theme()
 	add_child(_root)
 
 
@@ -67,8 +70,6 @@ func present(result: BattleResult, rewards: BattleRewards) -> void:
 	if continue_button != null:
 		continue_button.grab_focus.call_deferred()
 	var wait_sec: float = auto_continue_sec
-	if result.outcome == BattleResult.Outcome.DEFEAT and wait_sec < 0.0:
-		wait_sec = 2.0
 	if wait_sec >= 0.0 and is_inside_tree():
 		var t: float = 0.0
 		while t < maxf(0.05, wait_sec) and not _done:
@@ -188,6 +189,7 @@ func _build(result: BattleResult, rw: BattleRewards) -> void:
 	continue_button.focus_mode = Control.FOCUS_ALL
 	continue_button.pressed.connect(_on_continue)
 	foot.add_child(continue_button)
+	UiTheme.ensure_hit_area(continue_button)            # >= 88 px hit area (02_TECH §10.2), visible ButtonBig
 	continue_button.focus_neighbor_left = continue_button.get_path_to(continue_button)
 	continue_button.focus_neighbor_right = continue_button.get_path_to(continue_button)
 	continue_button.focus_neighbor_top = continue_button.get_path_to(continue_button)
@@ -274,7 +276,7 @@ func _member_rows(result: BattleResult, rw: BattleRewards) -> void:
 				else:
 					up.add_child(learned)
 		elif ko and result.outcome == BattleResult.Outcome.VICTORY:
-			row.add_child(HudStyle.label(tr("K.O. – halbe EXP, zurück mit 1 HP"), 14, Color("#ff8080")))
+			row.add_child(HudStyle.label(tr("K.O. – halbe EXP, zurück mit 1 HP"), 15, Color("#ff8080")))
 
 
 ## Credits | Follower | Beute in one row.

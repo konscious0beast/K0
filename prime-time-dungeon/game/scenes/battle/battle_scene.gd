@@ -2,9 +2,10 @@ class_name BattleScene extends Node3D
 ## Battle screen (02_TECH §5.7, §9.5): builds the stage (arena, rigs), the FF10-like camera, the HUD (CanvasLayer 5)
 ## and the results screen, then runs the BattleController. Screen contract: setup(params) only stores the params;
 ## the work happens in _ready(). Params: {"setup": BattleSetup} (Router.start_battle); missing → Game.ensure_state()
-## and a debug setup with the first non-boss encounter of the current floor (seed 1); {"capture": true} → a still a
-## few turns into the battle, stopped at the first command menu. Optional (tests/tools): "speed" (BattlePlayer speed
-## override), "results_auto_sec" (results continue on their own), "stay" (no Router.end_battle at the end).
+## and a debug setup with the first non-boss encounter of the current floor (seed 1); {"capture": true} → stops at the
+## first command menu (§9.5; enemy turns before it play at speed ≥ 3). Optional (tests/tools): "speed" (BattlePlayer
+## speed override), "results_auto_sec" (results continue on their own), "stay" (no Router.end_battle at the end),
+## "capture_turns" (party turns AutoPolicy plays before a capture stops, default 0).
 
 const BattleStage := preload("res://scenes/battle/battle_stage.gd")
 const BattleCamera := preload("res://scenes/battle/battle_camera.gd")
@@ -15,7 +16,7 @@ const BattleResults := preload("res://scenes/battle/ui/battle_results.gd")
 const HUD_SCENE: String = "res://scenes/battle/ui/battle_hud.tscn"
 const RESULTS_SCENE: String = "res://scenes/battle/ui/battle_results.tscn"
 const AUTOPLAY_SPEED: float = 4.0
-const CAPTURE_AUTO_TURNS: int = 2
+const CAPTURE_AUTO_TURNS: int = 0
 const DEBUG_SEED: int = 1
 
 var battle_setup: BattleSetup = null
@@ -80,7 +81,7 @@ func _ready() -> void:
 	controller.exit_on_end = not bool(_params.get("stay", false)) and not capture
 	if capture:
 		controller.force_manual = true
-		controller.auto_turns = CAPTURE_AUTO_TURNS
+		controller.auto_turns = int(_params.get("capture_turns", CAPTURE_AUTO_TURNS))
 	add_child(controller)
 	_update_speed()
 	Events.overlay_mode_requested.emit(&"battle")

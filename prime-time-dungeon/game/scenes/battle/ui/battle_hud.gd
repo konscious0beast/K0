@@ -3,9 +3,12 @@ extends CanvasLayer
 ## 12-entry preview (TOUCH 10) and ghost preview of the highlighted action (right edge), command menu (bottom left),
 ## action sub menus, target cursor, enemy plates, banners, speed (×1/×2) and auto buttons (top right).
 ## request_command(state, actor) is the controller's coroutine for player input (keyboard / gamepad focus, touch).
-## During playback the BattlePlayer feeds every ActionEvent to on_event() (HUD values = event hp_after / mp_after);
-## after each playback the controller calls sync_from_state(). Portraits are ViewportTextures of living SubViewports
-## (03_ART §9.2 F9), cached per ModelSpec, owned by this node (max 6). Private M5 script (no class_name).
+## During playback the BattlePlayer feeds every ActionEvent to on_event() (HUD values = event hp_after / mp_after;
+## summon plates from the event's def_id); after each playback the controller calls sync_from_state(). An input
+## scheme switch re-applies hints, CTB length and the open menu level. Every Control root of this layer carries
+## UiTheme (CanvasLayer children do not inherit root.theme). Portraits are ViewportTextures of living SubViewports
+## (03_ART §9.2 F9) framed from the rig's geometry, cached per ModelSpec, owned by this node (max 6).
+## Private M5 script (no class_name).
 
 signal command_done(cmd: BattleCommand)
 
@@ -18,6 +21,11 @@ const TargetCursor := preload("res://scenes/battle/ui/target_cursor.gd")
 const EnemyPlates := preload("res://scenes/battle/ui/enemy_plates.gd")
 const Banner := preload("res://scenes/battle/ui/battle_banner.gd")
 const PORTRAIT_PX: int = 128
+const PORTRAIT_FOV: float = 30.0
+## Frame = PORTRAIT_FILL × the larger side of the framed AABB (head, or the whole rig for faceless bases).
+const PORTRAIT_FILL: float = 1.2
+const PORTRAIT_FILL_SWARM: float = 0.75   # one bird, wings cropped: the face reads at 36 px
+const PORTRAIT_WHOLE: PackedStringArray = ["robot", "blob"]
 const MAX_PORTRAITS: int = 6
 const PANEL_GAP: float = 6.0
 const CTB_W: float = 56.0
@@ -62,6 +70,7 @@ var _auto_label: Label = null
 var _speed_key: Label = null
 var _auto_key: Label = null
 var _intro: bool = false
+var _target_title: String = ""
 
 
 func _init() -> void:
@@ -72,20 +81,26 @@ func _ready() -> void:
 	safe = SafeAreaContainer.new()
 	safe.name = "Safe"
 	add_child(safe)
+	# Controls under a CanvasLayer do not inherit root.theme (UiUtil.apply_theme note, measured 4.7.2): every
+	# Control root of this layer gets UiTheme explicitly (3 px cyan focus, ButtonFlat / ButtonBig variations)
+	safe.theme = UiTheme.get_theme()
 	frame = Control.new()
 	frame.name = "Frame"
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	safe.add_child(frame)
 	plates = EnemyPlates.new()
 	plates.name = "EnemyPlates"
+	plates.theme = UiTheme.get_theme()
 	add_child(plates)
 	move_child(plates, 0)
 	banner = Banner.new()
 	banner.name = "Banner"
+	banner.theme = UiTheme.get_theme()
 	add_child(banner)
 	target_cursor = TargetCursor.new()
 	target_cursor.name = "TargetCursor"
 	target_cursor.provider = self
+	target_cursor.theme = UiTheme.get_theme()
 	add_child(target_cursor)
 	_build_frame()
 	Events.input_scheme_changed.connect(_on_scheme_changed)
@@ -96,6 +111,8 @@ func setup_hud(p_stage: Node3D, p_camera: Camera3D, p_setup: BattleSetup) -> voi
 	stage = p_stage
 	camera = p_camera
 	setup = p_setup
+	if stage.has_signal(&"letters_changed"):
+		stage.connect(&"letters_changed", _on_letters_changed)
 	plates.stage = stage
 	plates.camera = camera
 	target_cursor.stage = stage
@@ -136,6 +153,7 @@ func _build_frame() -> void:
 	frame.add_child(command_menu)
 	command_menu.chosen.connect(_on_command_chosen)
 	command_menu.highlighted.connect(_on_command_highlighted)
+	command_menu.rejected.connect(_on_command_rejected)
 	action_list = ActionList.new()
 	action_list.name = "ActionList"
 	frame.add_child(action_list)
@@ -169,7 +187,8 @@ func _build_frame() -> void:
 func _top_button(node_name: String, caption: String, key: String) -> Button:
 	var b: Button = Button.new()
 	b.name = node_name
-	b.focus_mode = Control.FOCUS_ALL
+	# never steals the command menu's keyboard / pad focus (hotkeys T/R, pad Y/R3 cover it)
+	b.focus_mode = Control.FOCUS_NONE
 	b.custom_minimum_size = Vector2(64, 64)
 	var cap: Label = HudStyle.label(caption, 20, HudStyle.C_PAPER, true, 3)
 	cap.name = "Caption"
@@ -178,14 +197,14 @@ func _top_button(node_name: String, caption: String, key: String) -> Button:
 	cap.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	cap.offset_bottom = -8
 	b.add_child(cap)
-	var k: Label = HudStyle.label(key, 12, Color("#b3a7c9"), true, 2)
+	var k: Label = HudStyle.label(key, 15, Color("#b3a7c9"), true, 2)
 	k.name = "Key"
 	k.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	k.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	k.offset_left = -20
-	k.offset_right = 20
-	k.offset_top = -38
-	k.offset_bottom = -22
+	k.offset_left = -22
+	k.offset_right = 22
+	k.offset_top = -41
+	k.offset_bottom = -21
 	b.add_child(k)
 	UiTheme.ensure_hit_area(b)
 	return b
@@ -240,12 +259,25 @@ func is_touch() -> bool:
 	return Game.input_scheme == Game.InputScheme.TOUCH
 
 
+## Re-applies the whole HUD to the new input scheme: key hints, CTB length (also during playback) and the open
+## menu level with its scheme sizes (touch rows / 88 px buttons).
 func _on_scheme_changed(_scheme: int) -> void:
 	if not is_inside_tree():
 		return
+	_refresh_toggles()
 	_layout()
-	if awaiting and level == &"menu" and _actor != null:
-		_open_menu(command_menu.call("focused_kind"))
+	ctb.call("reapply")
+	if not awaiting or _actor == null:
+		return
+	match level:
+		&"menu":
+			_open_menu(command_menu.call("focused_kind"))
+		&"list":
+			_open_list(_list_kind, str(action_list.call("focused_id")))
+		&"target":
+			var tid: String = str(target_cursor.call("current_id"))
+			var cands: PackedStringArray = target_cursor.get("candidates")
+			target_cursor.call("begin", cands, str(target_cursor.get("mode")), tid, _target_title)
 
 
 ## Hides party panels / CTB during the battle intro, slides them in afterwards.
@@ -287,13 +319,21 @@ func portrait(id: String) -> Texture2D:
 
 
 func _make_portrait(model: Dictionary) -> SubViewport:
-	var vp: SubViewport = SubViewport.new()
+	var vp: SubViewport = make_portrait_viewport(model)
 	vp.name = "Portrait%d" % _portraits.size()
+	add_child(vp)
+	frame_portrait(vp)
+	return vp
+
+
+## A living 128 px portrait SubViewport (03_ART §9.2 F9) with the rig, light and camera of `model`; call
+## frame_portrait(vp) once it is inside the tree. Shared with the portrait gallery (scenes/battle/portrait_gallery).
+static func make_portrait_viewport(model: Dictionary) -> SubViewport:
+	var vp: SubViewport = SubViewport.new()
 	vp.size = Vector2i(PORTRAIT_PX, PORTRAIT_PX)
 	vp.own_world_3d = true
 	vp.transparent_bg = true
 	vp.render_target_update_mode = SubViewport.UPDATE_ONCE
-	add_child(vp)
 	var env: WorldEnvironment = WorldEnvironment.new()
 	var e: Environment = Environment.new()
 	e.background_mode = Environment.BG_CLEAR_COLOR
@@ -304,6 +344,7 @@ func _make_portrait(model: Dictionary) -> SubViewport:
 	env.environment = e
 	vp.add_child(env)
 	var rig: CharacterRig = CharacterBuilder.build(model, 0)
+	rig.name = "Rig"
 	rig.spawn_effects = false
 	vp.add_child(rig)
 	var light: DirectionalLight3D = DirectionalLight3D.new()
@@ -312,21 +353,62 @@ func _make_portrait(model: Dictionary) -> SubViewport:
 	light.light_specular = 0.0
 	vp.add_child(light)
 	var cam: Camera3D = Camera3D.new()
-	cam.fov = 30.0
+	cam.name = "Camera"
+	cam.fov = PORTRAIT_FOV
 	cam.near = 0.02
 	vp.add_child(cam)
-	var head_node: Node3D = rig.anchor(&"head")
-	var head: Vector3 = head_node.global_position if head_node != rig else Vector3(0, rig.height * 0.82, 0)
-	var hs: float = clampf(rig.height * 0.38, 0.2, 1.3)
-	var d: float = 2.2 * hs
-	if str(model.get("base", "")) == "swarm":
-		# five birds on an orbit: frame the whole flock instead of one head
-		head = Vector3(0, rig.height * 0.5, 0)
-		d = 2.5 * maxf(rig.height, 0.6)
-	var eye: Vector3 = head + Vector3(0.22 * hs, 0.08 * hs, -d)
-	cam.global_transform = Transform3D(Basis.looking_at(head - eye, Vector3.UP), eye)
-	cam.current = true
 	return vp
+
+
+## Frames the portrait from the rig's geometry (not a height heuristic): the merged AABB of the head pivot's meshes
+## for figures with a face (humanoid, pug, rodent, brute, specter, insect), one bird of a swarm, the whole rig for
+## robots (incl. the shopping carts) and blobs; the camera looks at the AABB center from the front with the frame
+## 1.2 × the larger AABB side.
+static func frame_portrait(vp: SubViewport) -> void:
+	var rig: CharacterRig = vp.get_node_or_null("Rig") as CharacterRig
+	var cam: Camera3D = vp.get_node_or_null("Camera") as Camera3D
+	if rig == null or cam == null:
+		return
+	var box: AABB = portrait_aabb(rig)
+	var center: Vector3 = box.get_center()
+	var extent: float = maxf(maxf(box.size.x, box.size.y), 0.12)
+	var swarm: bool = str(CharacterBuilder.normalize(rig.model).get("base", "")) == "swarm" if not rig.model.is_empty() \
+		else false
+	var fill: float = PORTRAIT_FILL_SWARM if swarm else PORTRAIT_FILL
+	var d: float = fill * extent / (2.0 * tan(deg_to_rad(PORTRAIT_FOV * 0.5))) + box.size.z * 0.5
+	var eye: Vector3 = center + Vector3(0.18 * extent, 0.06 * extent, -d)
+	cam.transform = Transform3D(Basis.looking_at(center - eye, Vector3.UP), eye)
+	cam.current = true
+
+
+## Rig-space AABB used for the portrait (see frame_portrait).
+static func portrait_aabb(rig: CharacterRig) -> AABB:
+	var base: String = str(CharacterBuilder.normalize(rig.model).get("base", "")) if not rig.model.is_empty() else ""
+	var root: Node = rig
+	if base == "swarm":
+		# five birds on an orbit read as specks: one pigeon, close
+		var bird: Node = rig.find_child("Bird0", true, false)
+		if bird != null:
+			root = bird
+	elif not PORTRAIT_WHOLE.has(base):
+		var head: Node = rig.find_child("Head", true, false)
+		if head != null:
+			root = head
+	var inv: Transform3D = rig.global_transform.affine_inverse() if rig.is_inside_tree() else Transform3D.IDENTITY
+	var out: AABB = AABB()
+	var first: bool = true
+	for n: Node in [root] + root.find_children("*", "MeshInstance3D", true, false):
+		var mi: MeshInstance3D = n as MeshInstance3D
+		if mi == null or mi.mesh == null or not mi.is_visible_in_tree():
+			continue
+		var xf: Transform3D = inv * mi.global_transform if mi.is_inside_tree() else Transform3D.IDENTITY
+		var b: AABB = xf * mi.mesh.get_aabb()
+		out = b if first else out.merge(b)
+		first = false
+	if first:
+		var h: float = maxf(rig.height, 0.3)
+		return AABB(Vector3(-h * 0.3, h * 0.55, -h * 0.3), Vector3(h * 0.6, h * 0.45, h * 0.6))
+	return out
 
 
 func ctb_portrait(id: String) -> Texture2D:
@@ -385,11 +467,28 @@ func _known_weak(def_id: String) -> PackedStringArray:
 	return out
 
 
-func _add_enemy_plate(id: String) -> void:
-	var info: Dictionary = stage.call("info", id)
-	var def_id: String = str(info.get("def_id", ""))
-	plates.call("add_plate", id, str(stage.call("display_name", id)), int(info.get("max_hp", 1)),
-		int(info.get("max_hp", 1)), _bestiary_known(def_id), _known_weak(def_id))
+## Plate of an enemy at full HP. Name / max HP come from the enemy def (§5.3: SUMMON carries def_id), so a plate is
+## right even if the stage does not know the unit yet; the stage adds the letter of duplicate types.
+func _add_enemy_plate(id: String, def_id: String = "") -> void:
+	var info: Dictionary = stage.call("info", id) if stage != null else {}
+	if def_id == "":
+		def_id = str(info.get("def_id", ""))
+	var max_hp: int = int(info.get("max_hp", 0))
+	var nm: String = str(stage.call("display_name", id)) if stage != null and not info.is_empty() else ""
+	if DB.has_id("enemies", def_id):
+		var def: EnemyDef = DB.enemy(def_id)
+		max_hp = int(def.stats.get("hp", max_hp))
+		if nm == "":
+			nm = tr(def.name)
+	plates.call("add_plate", id, nm if nm != "" else id, maxi(1, max_hp), maxi(1, max_hp), _bestiary_known(def_id),
+		_known_weak(def_id))
+
+
+## The stage lettered duplicate enemy types anew (a summon of the same type): rename plates and CTB badges.
+func _on_letters_changed(ids: PackedStringArray) -> void:
+	for id: String in ids:
+		plates.call("set_display_name", id, str(stage.call("display_name", id)))
+	ctb.call("refresh_letters")
 
 
 # --- event feed (playback) -------------------------------------------------------------------------------------------
@@ -403,6 +502,8 @@ func on_event(e: ActionEvent) -> void:
 		ActionEvent.Type.TURN_START:
 			_set_active(e.actor_id)
 		ActionEvent.Type.DAMAGE, ActionEvent.Type.HEAL, ActionEvent.Type.REVIVE:
+			if e.max_hp > 0 and not panels.has(e.target_id):
+				plates.call("set_max_hp", e.target_id, e.max_hp)
 			_apply_hp(e.target_id, e.hp_after)
 			if e.type == ActionEvent.Type.DAMAGE and e.weak and e.element != "" and e.target_id.begins_with("e"):
 				var def_id: String = str((stage.call("info", e.target_id) as Dictionary).get("def_id", ""))
@@ -428,7 +529,7 @@ func on_event(e: ActionEvent) -> void:
 				plates.call("remove_plate", e.target_id)
 		ActionEvent.Type.SUMMON:
 			if e.target_id.begins_with("e"):
-				_add_enemy_plate(e.target_id)
+				_add_enemy_plate(e.target_id, e.def_id)
 		ActionEvent.Type.ESCAPED:
 			plates.call("remove_plate", e.actor_id)
 		ActionEvent.Type.STUNT_RESULT:
@@ -590,6 +691,7 @@ func _finish(cmd: BattleCommand) -> void:
 		return
 	awaiting = false
 	level = &""
+	plates.set("targeted", PackedStringArray())
 	command_menu.call("close")
 	action_list.call("close")
 	target_cursor.call("end")
@@ -601,6 +703,7 @@ func _finish(cmd: BattleCommand) -> void:
 
 func _open_menu(focus_kind: int) -> void:
 	level = &"menu"
+	plates.set("targeted", PackedStringArray())
 	action_list.call("close")
 	target_cursor.call("end")
 	var available: Array[int] = _state.available_commands(_actor)
@@ -634,6 +737,26 @@ func _on_command_highlighted(kind: int) -> void:
 		_preview(_rank_of_kind(kind))
 
 
+## A greyed command was pressed: short reason in the action strip (ui_error already played).
+func _on_command_rejected(kind: int) -> void:
+	if not awaiting or level != &"menu":
+		return
+	var reason: String = ""
+	match kind:
+		BattleCommand.Kind.SKILL:
+			reason = tr("Keine Fähigkeiten")
+		BattleCommand.Kind.STUNT:
+			reason = tr("Stunt lädt noch") if _actor != null and _actor.stunt_cooldown > 0 \
+				and not _actor.stunts.is_empty() else tr("Kein Stunt möglich")
+		BattleCommand.Kind.ITEM:
+			reason = tr("Keine Items")
+		BattleCommand.Kind.FLEE:
+			reason = tr("Flucht unmöglich")
+		_:
+			reason = tr("Nicht möglich")
+	banner.call("show_skill", reason, false, 0.9)
+
+
 func _on_command_chosen(kind: int) -> void:
 	if not awaiting or level != &"menu":
 		return
@@ -653,6 +776,7 @@ func _on_command_chosen(kind: int) -> void:
 
 func _open_list(kind: int, focus_id: String = "") -> void:
 	level = &"list"
+	plates.set("targeted", PackedStringArray())
 	_list_kind = kind
 	var entries: Array[Dictionary] = []
 	var title: String = ""
@@ -668,8 +792,8 @@ func _open_list(kind: int, focus_id: String = "") -> void:
 			entries = _item_entries()
 	command_menu.call("close")
 	action_list.call("open", title, entries, is_touch(), focus_id)
-	command_menu.visible = true          # stays visible (dimmed) left of the sub menu
-	command_menu.modulate = Color(1, 1, 1, 0.55)
+	command_menu.visible = true          # stays visible left of the sub menu: dimmed, no focus, no clicks
+	command_menu.call("set_dimmed", true)
 	_layout()
 
 
@@ -793,6 +917,7 @@ func _begin_targets(skill_id: String, title: String) -> void:
 	action_list.call("close")
 	command_menu.call("close")
 	var def_id: String = _state.default_target(_actor, skill_id)
+	_target_title = title
 	target_cursor.call("begin", cands, mode, def_id, title)
 	_layout()
 
@@ -800,6 +925,7 @@ func _begin_targets(skill_id: String, title: String) -> void:
 func _on_target_changed(id: String) -> void:
 	if not awaiting or level != &"target":
 		return
+	plates.set("targeted", target_cursor.call("selected_ids") as PackedStringArray)
 	if camera != null and id != "":
 		var mode: String = str(target_cursor.get("mode"))
 		if mode == "single" or mode == "self":
@@ -852,7 +978,7 @@ func _submit(cmd: BattleCommand) -> bool:
 		push_warning("[BattleHud] command rejected: %s" % reason)
 		Sfx.play_ui(&"ui_error")
 		return false
-	command_menu.modulate = Color.WHITE
+	command_menu.call("set_dimmed", false)
 	_finish(cmd)
 	return true
 

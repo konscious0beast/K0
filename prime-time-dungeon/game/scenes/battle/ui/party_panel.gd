@@ -5,8 +5,9 @@ extends PanelContainer
 ## after each playback. Private M5 helper (no class_name).
 
 const HudStyle := preload("res://scenes/battle/ui/hud_style.gd")
-## 03_ART §9.2: 254×74; 244×64 keeps both panels right of the M.O.D. text box (bottom center, x ≤ 1010 px).
-const SIZE: Vector2 = Vector2(244, 64)
+## 03_ART §9.2: 254×74; 244×72 keeps both panels right of the M.O.D. text box (bottom center, x ≤ 1010 px) and
+## below the 12-entry CTB bar, with every text ≥ 15 px (03_ART §9.3; HP / MP numbers 16 px).
+const SIZE: Vector2 = Vector2(244, 72)
 
 var unit_id: String = ""
 var hp: int = 0
@@ -82,7 +83,8 @@ func setup(p_id: String, display_name: String, p_hp: int, p_max_hp: int, p_mp: i
 	_ko_label.visible = false
 	_portrait_frame.add_child(_ko_label)
 	var col: VBoxContainer = VBoxContainer.new()
-	col.add_theme_constant_override("separation", 0)
+	col.add_theme_constant_override("separation", -2)
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(col)
@@ -102,7 +104,7 @@ func setup(p_id: String, display_name: String, p_hp: int, p_max_hp: int, p_mp: i
 	_stunt_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_stunt_icon.visible = has_stunt
 	top.add_child(_stunt_icon)
-	_stunt_label = HudStyle.mono_label("", 14, Color("#b3a7c9"))
+	_stunt_label = HudStyle.mono_label("", 15, Color("#b3a7c9"))
 	_stunt_label.visible = false
 	top.add_child(_stunt_label)
 	var hp_row: HBoxContainer = _bar_row("HP")
@@ -111,8 +113,8 @@ func setup(p_id: String, display_name: String, p_hp: int, p_max_hp: int, p_mp: i
 	_hp_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_hp_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	hp_row.add_child(_hp_bar)
-	_hp_label = HudStyle.mono_label("", 14)
-	_hp_label.custom_minimum_size = Vector2(70, 0)
+	_hp_label = HudStyle.mono_label("", 16)
+	_hp_label.custom_minimum_size = Vector2(72, 0)
 	_hp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	hp_row.add_child(_hp_label)
 	var mp_row: HBoxContainer = _bar_row("MP")
@@ -121,8 +123,8 @@ func setup(p_id: String, display_name: String, p_hp: int, p_max_hp: int, p_mp: i
 	_mp_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_mp_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	mp_row.add_child(_mp_bar)
-	_mp_label = HudStyle.mono_label("", 13, Color("#bcd6ff"))
-	_mp_label.custom_minimum_size = Vector2(70, 0)
+	_mp_label = HudStyle.mono_label("", 16, Color("#bcd6ff"))
+	_mp_label.custom_minimum_size = Vector2(72, 0)
 	_mp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	mp_row.add_child(_mp_label)
 	max_hp = maxi(1, p_max_hp)
@@ -136,8 +138,8 @@ func _bar_row(tag: String) -> HBoxContainer:
 	var r: HBoxContainer = HBoxContainer.new()
 	r.add_theme_constant_override("separation", 5)
 	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var l: Label = HudStyle.label(tag, 12, Color("#b3a7c9"), true, 2)
-	l.custom_minimum_size = Vector2(22, 0)
+	var l: Label = HudStyle.label(tag, 15, Color("#b3a7c9"), true, 2)
+	l.custom_minimum_size = Vector2(26, 0)
 	r.add_child(l)
 	return r
 

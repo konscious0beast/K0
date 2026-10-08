@@ -1,8 +1,9 @@
 extends PanelContainer
 ## Sub menu of the battle commands (02_TECH §1.6, GDD §14.5): skills / stunts / items with name, MP cost (or count),
-## element icon, rank as 1–3 clock symbols and the description of the highlighted entry at the bottom. Entries that
-## cannot be used (MP, KO targets missing) stay focusable but greyed. Focus wraps; scheme TOUCH uses 88 px rows.
-## Private M5 helper (no class_name).
+## element icon, rank as 1–3 clock symbols (16 px; the description line names the turn cost in words) and the
+## description of the highlighted entry at the bottom. Entries that cannot be used (MP, KO targets missing) stay
+## focusable but greyed. Active row: 3 px cyan frame inside the row + 4 px magenta bar (HudStyle.style_row). Focus
+## wraps; scheme TOUCH uses 88 px rows 12 px apart (02_TECH §10.2 rule 5). Private M5 helper (no class_name).
 
 signal chosen(id: String)
 signal highlighted(id: String)
@@ -13,6 +14,8 @@ const ROW_H: float = 40.0
 const ROW_H_TOUCH: float = 88.0
 const MAX_ROWS: int = 6
 const MAX_ROWS_TOUCH: int = 3
+const TOUCH_GAP: int = 12
+const RANK_ICON: float = 16.0
 
 var entries: Array[Dictionary] = []
 var buttons: Array[Button] = []
@@ -67,6 +70,8 @@ func open(title: String, p_entries: Array[Dictionary], p_touch: bool, focus_id: 
 		c.queue_free()
 	buttons.clear()
 	var row_h: float = ROW_H_TOUCH if touch else ROW_H
+	var gap: int = TOUCH_GAP if touch else 0
+	_rows.add_theme_constant_override("separation", gap)
 	for i in entries.size():
 		var e: Dictionary = entries[i]
 		var b: Button = _make_row(e, row_h)
@@ -75,7 +80,7 @@ func open(title: String, p_entries: Array[Dictionary], p_touch: bool, focus_id: 
 		b.pressed.connect(choose.bind(i))
 		b.focus_entered.connect(_on_focus.bind(i))
 	var shown: int = mini(entries.size(), MAX_ROWS_TOUCH if touch else MAX_ROWS)
-	_scroll.custom_minimum_size = Vector2(WIDTH - 20.0, row_h * float(maxi(1, shown)))
+	_scroll.custom_minimum_size = Vector2(WIDTH - 20.0, row_h * float(maxi(1, shown)) + float(gap * maxi(0, shown - 1)))
 	custom_minimum_size = Vector2(WIDTH, 0)
 	_wire_focus()
 	visible = true
@@ -90,8 +95,14 @@ func open(title: String, p_entries: Array[Dictionary], p_touch: bool, focus_id: 
 		if focus_id == "" and bool(entries[i].get("enabled", true)):
 			idx = i
 			break
-	buttons[idx].grab_focus.call_deferred()
+	_grab.call_deferred(buttons[idx])
 	_show_desc(idx)
+
+
+## Deferred focus that skips rows replaced in the meantime (a re-open in the same frame, e.g. a scheme switch).
+func _grab(b: Button) -> void:
+	if is_instance_valid(b) and b.is_inside_tree() and not b.is_queued_for_deletion() and visible:
+		b.grab_focus()
 
 
 func close() -> void:
@@ -133,11 +144,12 @@ func _make_row(e: Dictionary, row_h: float) -> Button:
 	b.focus_mode = Control.FOCUS_ALL
 	b.custom_minimum_size = Vector2(WIDTH - 24.0, row_h)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	HudStyle.style_row(b)
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	row.offset_left = 10
+	row.offset_left = 12
 	row.offset_right = -8
 	var dim: Color = Color("#6a6278")
 	var icon_kind: String = str(e.get("icon", ""))
@@ -157,9 +169,10 @@ func _make_row(e: Dictionary, row_h: float) -> Button:
 	row.add_child(l)
 	var rank: int = int(e.get("rank", 0))
 	if rank > 0:
-		var clocks: int = 1 if rank <= 2 else (2 if rank == 3 else 3)
-		var rc: HudStyle.Icon = HudStyle.Icon.new("rank_%d" % clocks, Color("#b3a7c9") if ok else dim, 11)
-		rc.custom_minimum_size = Vector2(34, 11)
+		var clocks: int = rank_clocks(rank)
+		var rc: HudStyle.Icon = HudStyle.Icon.new("rank_%d" % clocks, Color("#b3a7c9") if ok else dim, RANK_ICON)
+		rc.name = "Rank"
+		rc.custom_minimum_size = Vector2(RANK_ICON * 2.05 * 2.0 + 2.0, RANK_ICON)
 		rc.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(rc)
 	var cost: String = str(e.get("cost", ""))
@@ -195,4 +208,22 @@ func _show_desc(i: int) -> void:
 	if i < 0 or i >= entries.size():
 		_desc.text = ""
 		return
-	_desc.text = str(entries[i].get("desc", ""))
+	var d: String = str(entries[i].get("desc", ""))
+	var rank: int = int(entries[i].get("rank", 0))
+	if rank > 0:
+		d = (d + "\n" if d != "" else "") + tr("Zugkosten: %s") % rank_word(rank)
+	_desc.text = d
+
+
+## Clock symbols of a CTB rank (GDD §3.4): ≤ 2 → 1, 3 → 2, ≥ 4 → 3.
+static func rank_clocks(rank: int) -> int:
+	return 1 if rank <= 2 else (2 if rank == 3 else 3)
+
+
+static func rank_word(rank: int) -> String:
+	match rank_clocks(rank):
+		1:
+			return "leicht"
+		2:
+			return "normal"
+	return "schwer"

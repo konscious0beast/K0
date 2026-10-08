@@ -4,6 +4,9 @@ extends Node3D
 ## (Rattenkönigin, Gleis 9), the active-actor marker and looping status effects at the rigs.
 ## Private M5 helper (no class_name); presentation only — never touches BattleState.
 
+## Display names of these ids changed (a duplicate enemy type appeared: "Mieterratte" → "Mieterratte A").
+signal letters_changed(ids: PackedStringArray)
+
 const StatusFx := preload("res://scenes/battle/status_fx.gd")
 const TrainFx := preload("res://scenes/battle/train_fx.gd")
 
@@ -327,10 +330,13 @@ func _center(party: bool) -> Vector3:
 	return sum / float(n)
 
 
+## Letters of duplicate enemy types in spawn order (ids sorted by their number: e2 before e10). A unit keeps its
+## letter for the whole battle; a lone unit gets the first free letter when a second one of its type appears.
+## Emits letters_changed with every id whose display name changed (HUD renames plates / CTB badges).
 func _assign_letters() -> void:
 	var by_def: Dictionary = {}
 	var ids: Array = _info.keys()
-	ids.sort()
+	ids.sort_custom(func(a: Variant, b: Variant) -> bool: return id_number(str(a)) < id_number(str(b)))
 	for idv: Variant in ids:
 		var id: String = str(idv)
 		var d: Dictionary = _info[id]
@@ -339,13 +345,32 @@ func _assign_letters() -> void:
 		var list: Array = by_def.get(str(d["def_id"]), [])
 		list.append(id)
 		by_def[str(d["def_id"])] = list
-	_letters.clear()
+	var changed: PackedStringArray = []
 	for k: Variant in by_def.keys():
 		var list2: Array = by_def[k]
 		if list2.size() < 2:
 			continue
-		for i in list2.size():
-			_letters[str(list2[i])] = String.chr(65 + i)
+		var used: Dictionary = {}
+		for idv2: Variant in list2:
+			if _letters.has(str(idv2)):
+				used[str(_letters[str(idv2)])] = true
+		var next: int = 0
+		for idv3: Variant in list2:
+			var id3: String = str(idv3)
+			if _letters.has(id3):
+				continue
+			while used.has(String.chr(65 + next)):
+				next += 1
+			_letters[id3] = String.chr(65 + next)
+			used[String.chr(65 + next)] = true
+			changed.append(id3)
+	if not changed.is_empty():
+		letters_changed.emit(changed)
+
+
+## Numeric part of a combatant id ("e12" → 12); sorts ids in spawn order.
+static func id_number(id: String) -> int:
+	return id.substr(1).to_int() if id.length() > 1 else 0
 
 
 # --- markers and status loops -----------------------------------------------------------------------------------------

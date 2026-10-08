@@ -13,6 +13,9 @@ const C_MP: Color = Color("#60a5fa")
 const C_TRAIL: Color = Color("#ff4d4d")
 const C_PANEL: Color = Color(0.0784, 0.051, 0.1098, 0.86)
 const C_PANEL_HI: Color = Color(0.16, 0.08, 0.22, 0.94)
+const C_TEXT_HAND: Color = Color("#d9d0ea")    # clock hands / secondary text
+const C_FOCUS: Color = Color("#22d3ee")        # UiTheme.C_ACCENT_2 (focus frame)
+const C_BAR: Color = Color("#ff2e88")          # UiTheme.C_ACCENT (active row bar)
 const ELEMENT_COLORS: Dictionary = {"physical": "#f2ebdd", "fire": "#ff6a2b", "ice": "#7fd8ff", "shock": "#f5e642",
 	"poison": "#7cc242", "none": "#6bffb0"}
 const STATUS_COLORS: Dictionary = {"sts_poison": "#7cc242", "sts_stun": "#f5d90a", "sts_slow": "#5b8def",
@@ -154,13 +157,16 @@ class Icon extends Control:
 				_poly(ci, [c + Vector2(-s, -s * 0.6), c + Vector2(s, -s * 0.6), c + Vector2(0, s * 0.8)], col, ink)
 			_:
 				if kind.begins_with("rank_"):
+					# rank clocks: `col` rim, ink face, light hands (C_TEXT_HAND), one clock per rank step
 					var n2: int = clampi(kind.trim_prefix("rank_").to_int(), 1, 3)
 					for i in n2:
-						var cc: Vector2 = Vector2(r.position.x + s * 0.9 + float(i) * s * 1.9, c.y)
-						ci.draw_circle(cc, s * 0.85, ink)
-						ci.draw_circle(cc, s * 0.68, col)
-						ci.draw_line(cc, cc + Vector2(0, -s * 0.5), ink, maxf(1.2, s * 0.18))
-						ci.draw_line(cc, cc + Vector2(s * 0.38, 0), ink, maxf(1.2, s * 0.18))
+						var cc: Vector2 = Vector2(r.position.x + s * 0.95 + float(i) * s * 2.05, c.y)
+						ci.draw_circle(cc, s * 0.95, col)
+						ci.draw_circle(cc, s * 0.72, ink)
+						var w2: float = maxf(1.6, s * 0.22)
+						ci.draw_line(cc, cc + Vector2(0, -s * 0.55), C_TEXT_HAND, w2, true)
+						ci.draw_line(cc, cc + Vector2(s * 0.42, s * 0.12), C_TEXT_HAND, w2, true)
+						ci.draw_circle(cc, w2 * 0.6, C_TEXT_HAND)
 				else:
 					ci.draw_circle(c, s * 0.8, ink)
 					ci.draw_circle(c, s * 0.62, col)
@@ -217,6 +223,32 @@ class Bar extends Control:
 			draw_rect(Rect2(Vector2.ZERO, Vector2(size.x * value, maxf(1.0, size.y * 0.35))),
 				Color(1, 1, 1, 0.22), true)
 		draw_rect(r, Color(1, 1, 1, 0.18), false, 1.0)
+
+
+## Active list / menu row (03_ART §9.1/§9.2): 3 px cyan focus frame drawn INSIDE the row (expand margin 0, so a
+## ScrollContainer never clips it) + a 4 px magenta bar on the left while focused. For ButtonFlat rows.
+static func style_row(b: Button) -> void:
+	var focus: StyleBoxFlat = StyleBoxFlat.new()
+	focus.bg_color = Color(C_BAR, 0.16)
+	focus.border_color = C_FOCUS
+	focus.set_border_width_all(3)
+	focus.set_corner_radius_all(0)
+	focus.set_expand_margin_all(0.0)
+	b.add_theme_stylebox_override("focus", focus)
+	var bar: ColorRect = ColorRect.new()
+	bar.name = "FocusBar"
+	bar.color = C_BAR
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bar.anchor_top = 0.0
+	bar.anchor_bottom = 1.0
+	bar.offset_left = 3.0
+	bar.offset_right = 7.0
+	bar.offset_top = 3.0
+	bar.offset_bottom = -3.0
+	bar.visible = false
+	b.add_child(bar)
+	b.focus_entered.connect(func() -> void: bar.visible = true)
+	b.focus_exited.connect(func() -> void: bar.visible = false)
 
 
 ## Skewed show panel (12° = skew 0.21) with an accent edge.

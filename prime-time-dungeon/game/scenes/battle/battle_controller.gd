@@ -65,16 +65,17 @@ func run(setup: BattleSetup) -> void:
 			if cmd == null:
 				chosen = false                    # auto battle switched on while the menu was open
 		if cmd == null:
-			cmd = state.choose_ai_command()
+			cmd = safe_ai_command(state, actor.id)
 			if actor.is_party() and auto_turns > 0:
 				auto_turns -= 1
-		if cmd == null:
-			push_error("[BattleController] no command for %s" % actor.id)
+		var events: Array[ActionEvent] = state.submit(cmd)
+		if events.is_empty():
+			push_error("[BattleController] submit returned no events for %s" % actor.id)
 			break
 		var d: Dictionary = cmd.to_dict()
 		commands.append({"cmd": d, "auto": not chosen})
 		Game.record({"t": "battle", "cmd": d, "auto": not chosen})
-		await _play(state.submit(cmd))
+		await _play(events)
 	running = false
 	result = state.result
 	if result == null:
@@ -91,6 +92,19 @@ func run(setup: BattleSetup) -> void:
 	finished.emit(result)
 	if exit_on_end:
 		Router.end_battle(result)
+
+
+## EnemyAI / AutoPolicy command of the current actor. An invalid one would make submit() return [] without consuming
+## the turn and the battle loop would spin inside one frame forever, so it falls back to Verteidigen (always valid
+## for the current actor) with a push_error (`report` false: tests). `st`: BattleState (or a test double).
+static func safe_ai_command(st: Object, actor_id: String, report: bool = true) -> BattleCommand:
+	var cmd: BattleCommand = st.call("choose_ai_command") as BattleCommand
+	var reason: String = str(st.call("validate", cmd)) if cmd != null else "no command"
+	if reason != "":
+		if report:
+			push_error("[BattleController] invalid AI command for %s (%s) → defend" % [actor_id, reason])
+		cmd = BattleCommand.defend(actor_id)
+	return cmd
 
 
 func _play(events: Array[ActionEvent]) -> void:

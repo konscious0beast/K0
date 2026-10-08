@@ -3,15 +3,28 @@ extends TestCase
 ## HUD values = the last hp_after / mp_after of the events (also at every single event), every event emitted exactly
 ## once and in order, CTB bar 12 entries (scheme TOUCH 10), the command menu by real ui_accept input, sub menus and
 ## cancel, auto toggle while the menu is open, ghost preview without mutating the battle, pending sponsor gifts at the
-## turn boundary, capture setup, flight by item, defeat card and the results screen.
+## turn boundary, capture setup, flight by item, defeat card and the results screen; a full Rattenkönigin battle
+## (summon plates = real name / max HP / last hp_after, train turn), the HUD ghost preview, UiTheme on the HUD, the
+## inert dimmed menu, greyed commands, 12 px touch gaps, scheme switches mid-menu, stable duplicate letters, a rig
+## freed mid-dash and the invalid-AI-command fallback.
 ## Scene tests run with Engine.time_scale 8 and BattlePlayer speed 4 (§11.2).
 
 const SCENE: String = "res://scenes/battle/battle.tscn"
 const ROUTER_FIXTURE: String = "res://tests/fixtures/router/router_screen.tscn"
 const RESULTS_SCENE: String = "res://scenes/battle/ui/battle_results.tscn"
 const BattleHud := preload("res://scenes/battle/ui/battle_hud.gd")
+const BattleController := preload("res://scenes/battle/battle_controller.gd")
 const MAX_FRAMES: int = 20000
 const SPEED: float = 4.0
+
+## EnemyAI / AutoPolicy double that proposes an invalid command.
+class BadAiState extends RefCounted:
+	func choose_ai_command() -> BattleCommand:
+		return BattleCommand.attack("e0", "nobody")
+
+	func validate(_cmd: BattleCommand) -> String:
+		return "target not valid"
+
 
 var _saved_auto: bool = false
 var _saved_scheme: int = 0
@@ -72,6 +85,21 @@ func _wait_done(scene: BattleScene) -> bool:
 
 func _wait_menu(scene: BattleScene) -> bool:
 	return await wait_until(func() -> bool: return scene.hud != null and scene.hud.awaiting, MAX_FRAMES)
+
+
+func _level_party(exp_gain: int) -> void:
+	for m: PartyMember in Game.state.party:
+		Progression.add_exp(m, exp_gain, DB.data)
+		var sb: StatBlock = Progression.total_stats(m, DB.data)
+		m.hp = sb.get_stat(StatBlock.Stat.HP)
+		m.mp = sb.get_stat(StatBlock.Stat.MP)
+
+
+## Smallest distance between two rects (negative = overlap).
+static func _gap(a: Rect2, b: Rect2) -> float:
+	var dx: float = maxf(b.position.x - a.end.x, a.position.x - b.end.x)
+	var dy: float = maxf(b.position.y - a.end.y, a.position.y - b.end.y)
+	return maxf(dx, dy)
 
 
 func _press(action: StringName) -> void:
@@ -151,6 +179,8 @@ func test_hud_values_equal_last_hp_after() -> void:
 			if shown != e.hp_after:
 				mismatches.append("%s %s: hud %d, event %d" % [ActionEvent.type_name(e.type), e.target_id, shown,
 					e.hp_after])
+			if e.target_id.begins_with("e") and bool(hud.plates.call("is_full", e.target_id)):
+				mismatches.append("full plate of %s covers the damage number during playback" % e.target_id)
 		elif e.type == ActionEvent.Type.MP_CHANGE and e.target_id.begins_with("p"):
 			if hud.panel_mp(e.target_id) != e.mp_after:
 				mismatches.append("MP %s: hud %d, event %d" % [e.target_id, hud.panel_mp(e.target_id), e.mp_after]))
@@ -206,8 +236,15 @@ func test_ctb_bar_shows_12_entries_and_10_on_touch() -> void:
 	await wait_frames(3)
 	assert_eq(int(ctb.call("entry_count")), CTBQueue.PREVIEW_LENGTH_TOUCH, "10 entries (touch)")
 	assert_true(scene.hud.command_menu.get("touch"), "touch command grid")
-	for b: Button in scene.hud.command_menu.get("buttons"):
+	var cmd_buttons: Array[Button] = scene.hud.command_menu.get("buttons")
+	for b: Button in cmd_buttons:
 		assert_true(b.custom_minimum_size.y >= UiTheme.TOUCH_HIT, "touch hit area >= 88 (%s)" % b.name)
+	for i in cmd_buttons.size():
+		for j in range(i + 1, cmd_buttons.size()):
+			var g: float = _gap(cmd_buttons[i].get_global_rect(), cmd_buttons[j].get_global_rect())
+			assert_true(g >= 11.99, "hit areas %s / %s are %.1f px apart (>= 12, 02_TECH §10.2)" % [cmd_buttons[i].name,
+				cmd_buttons[j].name, g])
+	assert_eq(str(scene.hud.get("_auto_key").text), "", "no keyboard hint in TOUCH")
 
 
 func test_command_menu_by_input_attacks_the_default_target() -> void:
@@ -221,6 +258,8 @@ func test_command_menu_by_input_attacks_the_default_target() -> void:
 	var actor: Combatant = state.current_actor()
 	assert_eq(hud.level, &"menu")
 	assert_eq(int(hud.command_menu.call("focused_kind")), BattleCommand.Kind.ATTACK, "default focus: Angriff")
+	for en: Combatant in state.living(Combatant.Side.ENEMY):
+		assert_true(bool(hud.plates.call("is_full", en.id)), "full plate of %s while choosing" % en.id)
 	var expected: String = state.default_target(actor, "")
 	await _press(&"ui_accept")
 	assert_eq(hud.level, &"target", "Angriff → target selection")
@@ -332,6 +371,8 @@ func test_capture_setup_stops_at_the_first_command_menu() -> void:
 	assert_false(scene.controller.state.is_finished())
 	assert_true(scene.controller.state.current_actor().is_party())
 	assert_false(scene.controller.exit_on_end, "a capture never leaves the scene")
+	for c: Dictionary in scene.controller.commands:
+		assert_true(str((c["cmd"] as Dictionary)["actor"]).begins_with("e"), "§9.5: the first party turn is the menu")
 
 
 # --- stage / results ------------------------------------------------------------------------------------------------
@@ -353,6 +394,18 @@ func test_stage_slots_and_the_queen_on_her_wreck() -> void:
 	assert_eq(qstage.call("home", "e0"), Vector3(0, 3.0, -6.0), "Rattenkönigin on the wreck")
 	assert_not_null(qstage.get_node_or_null("Wreck"))
 	assert_eq(qstage.call("home", "p0"), Vector3(-1.3, 0, 4.0), "party one metre back")
+	var renamed: Array[PackedStringArray] = []
+	qstage.connect("letters_changed", func(ids: PackedStringArray) -> void: renamed.append(ids))
+	qstage.call("add_enemy", "e1", "enm_kanalratte", 1, false)
+	assert_eq(qstage.call("letter", "e1"), "", "a lone Kanalratte has no letter")
+	qstage.call("add_enemy", "e2", "enm_kanalratte", 2, true)
+	assert_eq([qstage.call("letter", "e1"), qstage.call("letter", "e2")], ["A", "B"], "second rat → A / B")
+	assert_eq(qstage.call("display_name", "e1"), "Kanalratte A")
+	assert_eq(renamed.back() if not renamed.is_empty() else PackedStringArray(), PackedStringArray(["e1", "e2"]),
+		"letters_changed names the renamed lone unit too")
+	qstage.call("add_enemy", "e10", "enm_kanalratte", 3, true)
+	assert_eq([qstage.call("letter", "e1"), qstage.call("letter", "e2"), qstage.call("letter", "e10")],
+		["A", "B", "C"], "spawn order by id number (e10 after e2), existing letters stay")
 	qstage.call("add_pseudo", "u0", "pu_train_gleis9")
 	var train: Node3D = qstage.get("train")
 	assert_not_null(train, "pseudo unit → train staged")
@@ -400,6 +453,213 @@ func test_results_screen_lists_rewards_and_continues() -> void:
 	assert_not_null(b)
 	if b != null:
 		assert_true(b.has_focus(), "Weiter has the default focus")
+		assert_true(b.size.y >= UiTheme.TOUCH_HIT, "Weiter hit area >= 88 px (%.0f)" % b.size.y)
+		assert_eq(b.get_theme_font_size("font_size"), UiTheme.FONT_SIZE_BUTTON_BIG, "ButtonBig resolves (UiTheme)")
 		b.pressed.emit()
 	assert_true(await wait_until(func() -> bool: return done[0], 120), "present() returns after Weiter")
 	assert_false(bool(results.get("shown")))
+
+
+# --- review round: summons, ghosts, theme, menus, letters, robustness ------------------------------------------------
+
+func test_queen_battle_summon_plates_and_train_follow_the_events() -> void:
+	Game.auto_battle = true
+	_level_party(4000)
+	var scene: BattleScene = _scene(_setup("enc_f1_boss_rattenkoenigin"))
+	var hud: BattleHud = scene.hud
+	var seen: Array[ActionEvent] = []
+	var mismatches: PackedStringArray = []
+	var summoned: PackedStringArray = []
+	var train_turns: Array[int] = [0]
+	scene.player.event_played.connect(func(e: ActionEvent) -> void:
+		seen.append(e)
+		if e.type == ActionEvent.Type.SUMMON and e.target_id.begins_with("e"):
+			summoned.append(e.target_id)
+			if str(hud.plates.call("plate_name", e.target_id)) == e.target_id:
+				mismatches.append("plate of %s shows the raw id" % e.target_id)
+			if int(hud.plates.call("plate_max_hp", e.target_id)) != int(DB.enemy(e.def_id).stats.get("hp", 0)):
+				mismatches.append("plate max_hp of %s = %d" % [e.target_id, int(hud.plates.call("plate_max_hp",
+					e.target_id))])
+		elif e.type == ActionEvent.Type.ACTION_START and e.actor_id.begins_with("u"):
+			train_turns[0] += 1
+		elif e.type in [ActionEvent.Type.DAMAGE, ActionEvent.Type.HEAL, ActionEvent.Type.REVIVE] and e.hp_after >= 0:
+			var shown: int = hud.panel_hp(e.target_id) if e.target_id.begins_with("p") else hud.plate_hp(e.target_id)
+			if shown != e.hp_after:
+				mismatches.append("%s %s: hud %d, event %d" % [ActionEvent.type_name(e.type), e.target_id, shown,
+					e.hp_after]))
+	assert_true(await _wait_done(scene))
+	var state: BattleState = scene.controller.state
+	assert_eq(seen.size(), state.history.size(), "one event_played per event")
+	for i in mini(seen.size(), state.history.size()):
+		if seen[i] != state.history[i]:
+			fail("event %d out of order" % i)
+			break
+	assert_eq(mismatches, PackedStringArray(), "HUD = event data at every event (summons included)")
+	assert_gt(summoned.size(), 1, "the queen summoned her rats")
+	assert_gt(train_turns[0], 0, "the Gleis-9 train had its pseudo turn")
+	for id: String in summoned:
+		var c: Combatant = state.get_combatant(id)
+		assert_eq(int(hud.plates.call("plate_max_hp", id)), c.max_hp(), "plate max HP of %s" % id)
+		assert_eq(str(hud.plates.call("plate_name", id)), str(scene.stage.call("display_name", id)),
+			"plate name of %s follows the stage letters" % id)
+	var last_hp: Dictionary = {}
+	for e: ActionEvent in state.history:
+		if e.type in [ActionEvent.Type.DAMAGE, ActionEvent.Type.HEAL, ActionEvent.Type.REVIVE] and e.hp_after >= 0:
+			last_hp[e.target_id] = e.hp_after
+		elif e.type == ActionEvent.Type.KO:
+			last_hp[e.target_id] = 0
+	for id2: Variant in last_hp.keys():
+		var sid: String = str(id2)
+		var shown2: int = hud.panel_hp(sid) if sid.begins_with("p") else hud.plate_hp(sid)
+		assert_eq(shown2, int(last_hp[id2]), "%s = last hp_after" % sid)
+
+
+func test_target_ghost_preview_is_drawn_by_the_hud_ctb_bar() -> void:
+	Game.auto_battle = false
+	var scene: BattleScene = _scene(_setup("enc_f1_a2"))
+	assert_true(await _wait_menu(scene))
+	await wait_frames(3)
+	var hud: BattleHud = scene.hud
+	var state: BattleState = scene.controller.state
+	var actor: Combatant = state.current_actor()
+	var skill: String = "skl_kai_leash_trip"
+	hud.set("_kind", BattleCommand.Kind.SKILL)
+	hud.set("_skill_id", skill)
+	hud.call("_begin_targets", skill, "Test")
+	assert_eq(hud.level, &"target")
+	var rank: int = state.skill_def(skill).rank
+	var count: int = int(hud.ctb.get("count"))
+	var moved_any: bool = false
+	for t: String in state.valid_targets(actor, skill):
+		hud.target_cursor.call("select_id", t)
+		var ghost: PackedStringArray = BattleHud.ghost_order(state, actor, skill, PackedStringArray([t]), rank, count)
+		var base: PackedStringArray = state.preview_order(count, rank)
+		if ghost.find(t) == base.find(t) and ghost.count(t) == base.count(t):
+			assert_false(bool(hud.ctb.call("is_ghost", t)), "%s does not move → no ghost" % t)
+			continue
+		moved_any = true
+		assert_true(bool(hud.ctb.call("is_ghost", t)), "the slowed %s is drawn as a ghost" % t)
+		assert_eq(hud.ctb.call("shown_ids"), ghost, "the bar shows the hypothetical order")
+	assert_true(moved_any, "the slow moves at least one enemy")
+
+
+func test_hud_uses_ui_theme_greyed_commands_and_an_inert_dimmed_menu() -> void:
+	Game.auto_battle = false
+	Game.set_input_scheme(Game.InputScheme.KEYBOARD_MOUSE)
+	var scene: BattleScene = _scene(_setup("enc_f1_a1_tutorial", "f1_g0"))
+	assert_true(await _wait_menu(scene))
+	await wait_frames(3)
+	var hud: BattleHud = scene.hud
+	var menu: PanelContainer = hud.command_menu
+	var buttons: Array[Button] = menu.get("buttons")
+	var focus: StyleBoxFlat = buttons[0].get_theme_stylebox("focus") as StyleBoxFlat
+	assert_not_null(focus)
+	if focus != null:
+		assert_eq(focus.border_color, UiTheme.C_ACCENT_2, "3 px cyan focus frame (03_ART §9.1)")
+		assert_eq(focus.border_width_top, 3)
+		assert_eq(focus.expand_margin_left, 0.0, "drawn inside the row (never clipped)")
+	assert_eq(buttons[0].get_theme_stylebox("normal"), UiTheme.get_theme().get_stylebox("normal", "ButtonFlat"),
+		"the HUD inherits UiTheme (ButtonFlat resolves under the CanvasLayer)")
+	assert_eq(hud.speed_button.focus_mode, Control.FOCUS_NONE, "×1 never steals the menu focus")
+	assert_eq(hud.auto_button.focus_mode, Control.FOCUS_NONE, "AUTO never steals the menu focus")
+	var flee: Button = buttons[BattleCommand.Kind.FLEE]
+	assert_false((menu.get("enabled") as Array)[BattleCommand.Kind.FLEE], "no flight in the tutorial")
+	assert_false(flee.disabled, "greyed, but pressable")
+	flee.pressed.emit()
+	assert_eq(hud.level, &"menu", "rejected: still in the menu")
+	assert_eq(str(hud.banner.call("skill_text")), "Flucht unmöglich", "the reason is shown")
+	menu.call("choose", BattleCommand.Kind.SKILL)
+	assert_eq(hud.level, &"list")
+	assert_true(menu.visible, "the command menu stays visible (dimmed)")
+	for b: Button in buttons:
+		assert_eq(b.focus_mode, Control.FOCUS_NONE, "dimmed %s takes no focus" % b.name)
+		assert_eq(b.mouse_filter, Control.MOUSE_FILTER_IGNORE, "dimmed %s takes no clicks" % b.name)
+	buttons[BattleCommand.Kind.ATTACK].pressed.emit()
+	assert_eq(hud.level, &"list", "a click on a dimmed command does nothing")
+	var rows: Array[Button] = hud.action_list.get("buttons")
+	assert_gt(rows.size(), 0)
+	if not rows.is_empty():
+		var rf: StyleBoxFlat = rows[0].get_theme_stylebox("focus") as StyleBoxFlat
+		assert_true(rf != null and rf.expand_margin_left == 0.0 and rf.border_color == UiTheme.C_ACCENT_2,
+			"list rows: cyan focus frame inside the row (ScrollContainer clipping)")
+	await wait_frames(2)
+	await _press(&"ui_cancel")
+	assert_eq(hud.level, &"menu")
+	for b2: Button in menu.get("buttons"):
+		assert_eq(b2.focus_mode, Control.FOCUS_ALL, "menu active again")
+
+
+func test_scheme_switch_reopens_the_list_with_touch_rows() -> void:
+	Game.auto_battle = false
+	Game.set_input_scheme(Game.InputScheme.KEYBOARD_MOUSE)
+	var scene: BattleScene = _scene(_setup("enc_f1_a2"))
+	assert_true(await _wait_menu(scene))
+	await wait_frames(3)
+	var hud: BattleHud = scene.hud
+	hud.command_menu.call("choose", BattleCommand.Kind.SKILL)
+	assert_eq(hud.level, &"list")
+	assert_eq(str(hud.get("_auto_key").text), "T")
+	Game.set_input_scheme(Game.InputScheme.TOUCH)
+	await wait_frames(3)
+	assert_eq(hud.level, &"list", "still in the sub menu")
+	assert_true(bool(hud.action_list.get("touch")), "list re-opened for TOUCH")
+	assert_eq(str(hud.get("_auto_key").text), "", "key hints follow the scheme")
+	var rows: Array[Button] = hud.action_list.get("buttons")
+	for i in rows.size():
+		assert_true(rows[i].size.y >= UiTheme.TOUCH_HIT, "touch row %d >= 88 px" % i)
+		if i > 0 and rows[i].is_visible_in_tree() and rows[i - 1].is_visible_in_tree():
+			assert_true(_gap(rows[i - 1].get_global_rect(), rows[i].get_global_rect()) >= 11.99,
+				"touch rows %d / %d >= 12 px apart" % [i - 1, i])
+	assert_eq(int(hud.ctb.call("entry_count")), CTBQueue.PREVIEW_LENGTH_TOUCH)
+	Game.set_input_scheme(Game.InputScheme.KEYBOARD_MOUSE)
+	await wait_frames(3)
+	assert_false(bool(hud.action_list.get("touch")))
+	assert_eq(int(hud.ctb.call("entry_count")), CTBQueue.PREVIEW_LENGTH, "back to 12 entries")
+
+
+func test_a_rig_freed_mid_dash_still_plays_every_event() -> void:
+	Game.auto_battle = false
+	var scene: BattleScene = _scene(_setup("enc_f1_a2"))
+	assert_true(await _wait_menu(scene))
+	var state: BattleState = scene.controller.state
+	var actor: Combatant = state.current_actor()
+	var target: Combatant = state.living(Combatant.Side.ENEMY)[0]
+	var start: ActionEvent = ActionEvent.make(ActionEvent.Type.ACTION_START)
+	start.actor_id = actor.id
+	start.command = BattleCommand.Kind.ATTACK
+	start.skill_id = actor.attack_skill
+	start.target_ids = PackedStringArray([target.id])
+	var dmg: ActionEvent = ActionEvent.make(ActionEvent.Type.DAMAGE)
+	dmg.actor_id = actor.id
+	dmg.target_id = target.id
+	dmg.amount = 1
+	dmg.max_hp = target.max_hp()
+	dmg.hp_after = target.hp - 1
+	var end: ActionEvent = ActionEvent.make(ActionEvent.Type.TURN_END)
+	end.actor_id = actor.id
+	var got: Array[ActionEvent] = []
+	scene.player.event_played.connect(func(e: ActionEvent) -> void: got.append(e))
+	var done: Array[bool] = [false]
+	var events: Array[ActionEvent] = [start, dmg, end]
+	var run: Callable = func() -> void:
+		await scene.player.play(events)
+		done[0] = true
+	run.call()
+	assert_false(done[0], "the melee dash is running")
+	scene.stage.call("remove_unit", actor.id)
+	assert_true(await wait_until(func() -> bool: return done[0], 900), "playback finishes without the rig")
+	assert_eq(got, events, "every event emitted once, in order")
+	assert_eq(scene.hud.plate_hp(target.id), target.hp - 1, "the HUD got the hp_after")
+
+
+func test_invalid_ai_command_falls_back_to_defend() -> void:
+	var cmd: BattleCommand = BattleController.safe_ai_command(BadAiState.new(), "e0", false)
+	assert_not_null(cmd)
+	if cmd != null:
+		assert_eq(cmd.to_dict(), BattleCommand.defend("e0").to_dict(), "invalid AI command → Verteidigen")
+	var state: BattleState = BattleState.new(_setup("enc_f1_a2"), DB.data)
+	state.start()
+	var actor: Combatant = state.current_actor()
+	var ok: BattleCommand = BattleController.safe_ai_command(state, actor.id, false)
+	assert_eq(state.validate(ok), "", "a valid AI command passes unchanged")
+	assert_gt(state.submit(ok).size(), 0, "and consumes the turn")

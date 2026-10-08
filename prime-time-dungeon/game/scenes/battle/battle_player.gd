@@ -1,9 +1,10 @@
 extends Node
 ## BattlePlayer (02_TECH §5.7): plays ActionEvent lists back on the stage — camera shots, rig dashes and animations,
 ## Vfx, damage numbers, banners — and emits event_played(e) once per event, in list order, at the moment it is
-## presented (the controller forwards it to Show.on_battle_event; the HUD gets on_event right before). Events of one
-## action with the same beat start together; durations follow the §5.7 table divided by `speed` (Settings
-## battle_speed ∈ {1, 2}, autoplay 4). Reads only event data during playback, never the BattleState.
+## presented (the controller forwards it to Show.on_battle_event; the HUD gets on_event right before; a SUMMON is
+## staged first so the HUD finds the new unit). Events of one action with the same beat start together; durations
+## follow the §5.7 table divided by `speed` (Settings battle_speed ∈ {1, 2}, autoplay 4); a victory waits for the
+## camera's 3 s victory orbit. Reads only event data during playback, never the BattleState.
 ## Private M5 helper (no class_name).
 
 signal event_played(e: ActionEvent)
@@ -12,6 +13,8 @@ signal event_played(e: ActionEvent)
 signal frame_ticked
 
 const BEAT_SEC: float = 0.35
+## Length of the camera's victory orbit (03_ART §8.3); BATTLE_END (victory) waits for it at every speed.
+const VICTORY_ORBIT_SEC: float = 3.0
 const DUR: Dictionary = {
 	"battle_start": 1.2, "battle_start_boss": 2.5, "turn_start": 0.15, "combo": 0.4, "damage": 0.35,
 	"status": 0.25, "ko": 0.6, "summon": 0.6, "credits": 0.6, "stunt_result": 0.6, "banner": 1.0, "sponsor": 1.5,
@@ -132,8 +135,9 @@ func _battle_start(e: ActionEvent) -> void:
 	if boss_id != "":
 		dur = DUR["battle_start_boss"]
 		_shot(&"boss_intro", {"actor": boss_id})
-		_banner_big(str(stage.call("display_name", boss_id)), C_DANGER, dur / maxf(speed, 0.01) * 0.85,
-			tr("BOSSKAMPF"), 54)
+		# subject-bound: TV lower third, never over the boss's head during the crane
+		_lower_third(tr("BOSSKAMPF"), str(stage.call("display_name", boss_id)), C_DANGER,
+			dur / maxf(speed, 0.01) * 0.85)
 	else:
 		_shot(&"establishing")
 		_banner_big(tr("KAMPF!"), C_GOLD, 1.0 / maxf(speed, 0.01))
@@ -156,6 +160,9 @@ func _battle_end(e: ActionEvent) -> void:
 			_shot(&"victory")
 			_banner_big(tr("SIEG!"), C_GOLD, DUR["battle_end"] / maxf(speed, 0.01), "", 76)
 			Sfx.music(&"victory", 0.4)
+			# the cheering party gets the whole victory orbit (3.0 s at speed 1) before the results panel opens
+			await _wait(maxf(DUR["battle_end"], VICTORY_ORBIT_SEC))
+			return
 		BattleResult.Outcome.DEFEAT:
 			var ko_id: String = ""
 			for id2: String in _ids(true):
@@ -266,11 +273,13 @@ func _skill_action(start: ActionEvent, effects: Array[ActionEvent], skill: Skill
 		rig.set_locomotion(7.0)
 		Sfx.play(&"step")
 		await _tween_pos(rig, strike, DUR["dash"])
-		if not is_instance_valid(rig):
-			return
-		rig.set_locomotion(0.0)
-		rig.face_towards(_target_center(targets))
-	if rig != null:
+		# a rig freed mid-dash only skips the animation steps: every event below is still played (and emitted)
+		if is_instance_valid(rig):
+			rig.set_locomotion(0.0)
+			rig.face_towards(_target_center(targets))
+		else:
+			rig = null
+	if rig != null and is_instance_valid(rig):
 		rig.play(anim, speed)
 		Sfx.play(&"swing" if anim == &"attack" else (&"magic" if anim == &"cast" else &"buff"), -4.0)
 		var impact_at: float = float(CharacterRig.IMPACT_AT.get(anim, 0.3))
@@ -280,7 +289,7 @@ func _skill_action(start: ActionEvent, effects: Array[ActionEvent], skill: Skill
 	if party and (anim == &"cast" or anim == &"stunt") and not effects.is_empty():
 		_shot(&"skill_release", {"target": targets[0] if targets.size() == 1 else "", "area": area})
 	await _play_effects(effects, actor, skill)
-	if anim == &"stunt" and rig != null:
+	if anim == &"stunt" and rig != null and is_instance_valid(rig):
 		await _wait(0.25)
 	if melee and is_instance_valid(rig) and not _ko.has(actor):
 		rig.set_locomotion(3.0)
@@ -364,6 +373,8 @@ func _pseudo_action(start: ActionEvent, effects: Array[ActionEvent]) -> void:
 	if is_instance_valid(train) and train.is_connected("hit", cb):
 		train.disconnect("hit", cb)
 	Sfx.play(&"hit_crit")
+	# the payoff: cut from the wide train shot to a push-in on the party for the damage beats (readable numbers)
+	_shot(&"party_hit")
 	if camera != null:
 		camera.call("add_trauma", 0.6)
 	await _play_effects(effects, start.actor_id, null)
@@ -378,7 +389,7 @@ func _play_sponsor(e: ActionEvent) -> void:
 	_shot(&"sponsor_drop")
 	if stage != null:
 		Vfx.spawn(&"sponsor", stage, Vector3(0, 0, 0.5), col, 1.0)
-	_banner_big(tr("SPONSOR-GESCHENK!"), col, DUR["sponsor"] / maxf(speed, 0.01), tr(e.text), 54)
+	_lower_third(tr("SPONSOR-GESCHENK!"), tr(e.text), col, DUR["sponsor"] / maxf(speed, 0.01))
 	await _wait(DUR["sponsor"])
 
 
@@ -404,6 +415,13 @@ func _play_effects(effects: Array[ActionEvent], actor: String, skill: SkillDef) 
 			await _wait(maxf(group_wait, BEAT_SEC))
 			group_wait = 0.0
 		beat = maxi(beat, e.beat)
+		if e.type == ActionEvent.Type.SUMMON:
+			# the stage registers the new unit first, so the HUD builds its plate / CTB entry with its real name,
+			# letter and max HP (the event itself is still emitted exactly once, in list order)
+			var dur: float = _present(e, actor, skill)
+			_emit(e)
+			group_wait = maxf(group_wait, dur)
+			continue
 		_emit(e)
 		group_wait = maxf(group_wait, _present(e, actor, skill))
 	if group_wait > 0.0:
@@ -590,7 +608,7 @@ func _phase_change(e: ActionEvent) -> void:
 		r.set_boss_phase(e.value)
 		r.flash(C_DANGER, 0.4)
 	var who: String = str(stage.call("display_name", e.actor_id)) if stage != null else ""
-	_banner_big(tr("PHASE %d") % e.value, C_DANGER, DUR["banner"] / maxf(speed, 0.01), who, 60)
+	_lower_third(who, tr("PHASE %d") % e.value, C_DANGER, DUR["banner"] / maxf(speed, 0.01))
 	Sfx.play(&"debuff")
 	if camera != null:
 		camera.call("add_trauma", 0.4)
@@ -672,6 +690,13 @@ func _banner_big(text: String, col: Color, duration: float, sub: String = "", fo
 	if hud == null or not is_instance_valid(hud):
 		return
 	hud.get("banner").call("announce", text, col, maxf(0.35, duration), sub, font_size)
+
+
+## Subject-bound announcement (boss intro, phase change, sponsor gift) as a TV lower third.
+func _lower_third(kicker: String, title: String, col: Color, duration: float) -> void:
+	if hud == null or not is_instance_valid(hud):
+		return
+	hud.get("banner").call("lower_third", kicker, title, col, maxf(0.6, duration))
 
 
 func _rig(id: String) -> CharacterRig:

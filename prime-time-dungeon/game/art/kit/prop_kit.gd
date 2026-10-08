@@ -1,9 +1,8 @@
 class_name PropKit extends RefCounted
 ## Props (02_TECH §8.5, 03_ART §6.3). Every prop is a recipe of primitive parts (vertex colors, emission/metal masks)
 ## merged into one mesh; moving parts are own pivots, neon/holograms own meshes, texts Label3D (fallback-font glyphs
-## only,
-## 03_ART F8). Interactive props (chest, stairs, safe door, automat, terminal, gate, event props) use the toon material
-## with a 0.02 outline, set dressing uses the env material without outline. Origin = floor center, front = −Z.
+## only, 03_ART F8). Interactive props (chest, stairs, safe door, automat, terminal, gate, event props) use the toon
+## material with a 0.02 outline, set dressing uses the env material without outline. Origin = floor center, front = −Z.
 ## Art extras: recipe() (EnvKit merges set dressing into one room mesh), stairs_recipe() (compact stairs), palette key
 ## "label" (text of stairs_down, billboard, safe_door; pending API change request, see STAIRS_LABEL), is_interactive().
 
@@ -276,8 +275,7 @@ static func _label(r: Dictionary, text: String, pos: Vector3, size: int, color: 
 		"billboard": billboard, "parent": parent})
 
 
-# --- recipes
-# -----------------------------------------------------------------------------------------------------------
+# --- recipes ----------------------------------------------------------------------------------------------------------
 
 ## Number of 0.5 m steps of stairs_down (03_ART §6.3) and the compact variant for rooms with 4 doors (the well then
 ## stays out of the 3 m door corridors, 02_TECH §7.3).

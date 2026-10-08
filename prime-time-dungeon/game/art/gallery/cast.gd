@@ -53,7 +53,7 @@ const CAST: Dictionary = {
 		"colors": {"primary": "#c0c6cc", "secondary": "#e8455a", "accent": "#fff2c8", "eyes": "#fff2c8"}, "props": ["cart"]}},
 	"enm_rabattschild": {"name": "Rabattschild", "role": "enemy", "model": {"base": "brute", "scale": 0.8,
 		"colors": {"primary": "#ffffff", "secondary": "#e8455a", "accent": "#e8455a", "skin": "#f2e0d0", "eyes": "#1a1420"},
-		"props": []}},
+		"props": ["discount_tag"]}},
 }
 
 ## Tri / MeshInstance budgets per role (02_TECH §12.1, hull not counted).

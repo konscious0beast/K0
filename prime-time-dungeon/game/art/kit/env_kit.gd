@@ -30,8 +30,7 @@ static func build_room(spec: RoomSpec) -> Node3D:
 
 ## Room-local: &"player_spawn", &"stairs", &"boss_spot" (center), &"safe_door" (center of the first wall WITHOUT door in
 ## order N, E, S, W, 0.6 m in front of it, facing room center; room with 4 doors → center, facing +Z). Facing = local
-## −Z.
-## &"stairs" is rotated so its well (local −Z) descends toward the first wall without door (art detail, origin =
+## −Z. &"stairs" is rotated so its well (local −Z) descends toward the first wall without door (art detail, origin =
 ## center).
 static func anchor_for(spec: RoomSpec, anchor: StringName) -> Transform3D:
 	match anchor:
@@ -68,8 +67,7 @@ static func build_safe_room(seed: int, quality: StringName = &"high", theme: Str
 
 
 ## Local transforms inside build_safe_room(): &"vending", &"terminal", &"couch", &"mopsula_spot", &"player_spot",
-## &"door",
-## &"camera" (camera transform looking into the room, FOV 50, 03_ART §8.1). Facing = local −Z.
+## &"door", &"camera" (camera transform looking into the room, FOV 50, 03_ART §8.1). Facing = local −Z.
 static func safe_room_anchor(anchor: StringName) -> Transform3D:
 	return SetBuilder.safe_anchor(anchor)
 

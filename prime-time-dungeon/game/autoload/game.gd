@@ -95,6 +95,7 @@ func _ready() -> void:
 	Events.dialog_finished.connect(_on_dialog_finished)
 	Events.enemy_killed.connect(_on_quest_enemy_killed)
 	Events.boss_defeated.connect(_on_quest_boss_defeated)
+	Events.boss_hp_changed.connect(_on_quest_boss_hp)
 	Events.battle_started.connect(_on_quest_battle_started)
 	Events.floor_completed.connect(_on_quest_floor_completed)
 	Events.achievement_unlocked.connect(_on_quest_achievement)
@@ -178,7 +179,7 @@ func new_game(slot: int, player_name: String = "Kai", seed: int = -1, difficulty
 		push_warning("[Game] GameState.create_new returned null (no game state)")
 		return
 	run_log = _make_run_log(run_seed, slot, player_name, difficulty, "")
-	sim = RunSim.new(DB.data, state, {})
+	sim = _make_sim(state, {})
 	start_floor(1)
 	Events.new_game_started.emit(slot)
 
@@ -200,10 +201,36 @@ func start_event_run(event_id: String) -> void:
 		return
 	quest = QuestTracker.from_def(def.quest)
 	run_log = _make_run_log(run_seed, 0, "Kai", &"prime", event_id)
-	sim = RunSim.new(DB.data, state, def.rules)
+	sim = _make_sim(state, def.rules)
 	start_floor(maxi(1, def.floor_index))
 	var leagues: Array = def.rules.get("leagues", ["pur"])
 	Events.run_started.emit(event_id, str(leagues[0]) if not leagues.is_empty() else "pur")
+
+
+## Save.load_slot: the decoded save becomes the running campaign. The private run context (event def, finished flag,
+## quest state, layout cache, command ids, metric memory, dialog/timer state) is reset as for a new game; run_log =
+## p_log (header "from_save"), a fresh RunSim (rules {}) writes its checkpoints into it. Save emits game_loaded.
+func adopt_loaded_state(st: GameState, p_log: RunLog) -> void:
+	_reset_run()
+	mode = &"campaign"
+	state = st
+	if state == null:
+		return
+	run_log = p_log
+	sim = _make_sim(state, {})
+
+
+## Rules of the running event run (EventDef.rules, 05 §10.1); {} in the campaign. Show passes them to GiftPolicy (§3.5).
+func event_rules() -> Dictionary:
+	if mode != &"event_offline" or _event_def == null:
+		return {}
+	return _event_def.rules
+
+
+## Game is the only emitter of party_changed (§3.2); Show calls this after a gift changed the party outside a battle
+## (GiftApplier sponsor_buff heals / MP).
+func emit_party_changed() -> void:
+	Events.party_changed.emit()
 
 
 ## Standalone scenes, capture, tests: ephemeral-safe new game in slot 0 with seed 1.
@@ -247,6 +274,8 @@ func complete_floor() -> void:
 		return
 	timer_running = false
 	record({"t": "descend"})
+	if sim != null:
+		sim.request_checkpoint()
 	Events.floor_completed.emit(state.floor_run.index)
 	if mode == &"event_offline":
 		finish_run(&"floor_completed")
@@ -314,6 +343,8 @@ func apply_battle_result(result: BattleResult) -> BattleRewards:
 	var rewards: BattleRewards = BattleBridge.apply_result(state, DB.data, result)
 	if rewards == null:
 		rewards = BattleRewards.new()
+	if sim != null:
+		sim.request_checkpoint()   # 05 §3.3 Nr. 8: a checkpoint after every battle (written when the clock moves on)
 	Events.party_changed.emit()
 	Events.inventory_changed.emit()
 	Events.credits_changed.emit(_credits(), _credits() - credits_before)
@@ -476,12 +507,13 @@ func visit_room(cell: Vector2i) -> bool:
 		var rc: RoomCell = layout.cell_at(cell)
 		if rc != null and rc.kind == RoomCell.Kind.STAIRS:
 			fr.stairs_found = true
+	_quest_feed(RunSim.zones_event(fr, layout))   # reach_stairs progress before the stairs (05 §1.3, same as RunSim)
 	return true
 
 
 ## §7.3 chest flow without visuals: locked without itm_key_master / unknown / already open → [] (nothing changes);
-## else record, LootRoller.roll_chest (rng derive(floor_run.seed, "chest", k)), add_rewards, opened_chests,
-## Events.chest_opened(id, rewards).
+## else record, LootRoller.roll_chest (rng derive(floor_run.loot_seed, "chest", k) — 05 CR-11: the layout seed is
+## public, the loot seed is not), add_rewards, opened_chests, Events.chest_opened(id, rewards).
 func open_chest(chest_id: String) -> Array[LootReward]:
 	var rewards: Array[LootReward] = []
 	if state == null or state.floor_run == null:
@@ -503,7 +535,7 @@ func open_chest(chest_id: String) -> Array[LootReward]:
 		return rewards
 	record({"t": "chest", "id": chest_id})
 	var k: int = chest_id.get_slice("_c", 1).to_int()
-	var rng: RandomNumberGenerator = SeedUtil.make_rng(SeedUtil.derive(fr.seed, "chest", k))
+	var rng: RandomNumberGenerator = SeedUtil.make_rng(SeedUtil.derive(fr.loot_seed, "chest", k))
 	var spec: Dictionary = {"id": chest.id, "type": chest.type, "contents": chest.contents}
 	rewards = LootRoller.roll_chest(spec, DB.data, fr.index, state, rng)
 	add_rewards(rewards)
@@ -673,9 +705,14 @@ func finish_run(cause: StringName) -> Dictionary:
 	summary["event_id"] = event_id
 	summary["quest_complete"] = quest.is_complete() if quest != null else false
 	summary["quest_progress"] = quest.progress() if quest != null else 0.0
+	summary["quest_progress_ppm"] = quest.progress_ppm() if quest != null else 0
+	summary["party_kos"] = int(state.floor_run.stats.get("party_kos", 0)) if state.floor_run != null else 0
 	if state.show != null:
 		summary["followers"] = state.show.followers
+		summary["followers_gained_run"] = int(state.show.stats.get("followers_gained_run", 0))
 		summary["achievements_total"] = state.show.achievements.size()
+		# an event run starts from GameState.create_new: every achievement it holds was unlocked in this run
+		summary["achievements_in_run"] = state.show.achievements.size()
 	var scoring: Dictionary = _event_def.scoring if _event_def != null else {}
 	var sc: Dictionary = ScoreCalc.score(summary, scoring)
 	summary["score"] = int(sc.get("score", 0))
@@ -693,6 +730,9 @@ func finish_run(cause: StringName) -> Dictionary:
 	}
 	summary["rank"] = board.add(entry)
 	Save.save_leaderboard(event_id, board.to_dict())
+	if sim != null:
+		# final checkpoint + run_log.result {"cause", "final_hash", "ticks", "score"} (05 §10.6)
+		summary["final_hash"] = sim.close(String(cause), {"score": summary["score"]})
 	if run_log != null:
 		Save.save_replay(run_log)
 	Events.run_finished.emit(summary)
@@ -790,6 +830,15 @@ func _make_run_log(run_seed: int, slot: int, player_name: String, difficulty: St
 	return rl
 
 
+## The live clock: RunSim over `st` that writes its checkpoints into the current run_log (every 300 ticks, after
+## battles / floor ends via request_checkpoint, close() at finish_run; 05 §3.3 Nr. 8). Replays build their own sim
+## without a log.
+func _make_sim(st: GameState, rules: Dictionary) -> RunSim:
+	var s: RunSim = RunSim.new(DB.data, st, rules)
+	s.run_log = run_log
+	return s
+
+
 func _load_event_def(event_id: String) -> EventDef:
 	var catalog: EventCatalog = EventCatalog.new()
 	if not catalog.load_file(EVENTS_PATH):
@@ -873,7 +922,7 @@ func _on_dialog_finished(_tag: String) -> void:
 # --- quest adapter (05 CR-4): signals → normalized quest events ------------------------------------------------------
 
 func _quest_feed(ev: Dictionary) -> void:
-	if mode != &"event_offline" or quest == null:
+	if mode != &"event_offline" or quest == null or ev.is_empty():
 		return
 	if quest.on_event(ev):
 		Events.quest_progress.emit(quest.progress())
@@ -888,6 +937,12 @@ func _on_quest_enemy_killed(payload: Dictionary) -> void:
 
 func _on_quest_boss_defeated(payload: Dictionary) -> void:
 	_quest_feed({"type": "boss_defeated", "boss_id": str(payload.get("boss_id", ""))})
+
+
+## defeat_boss progress before the victory (05 §1.3; same rule as RunSim._quest_feed_battle).
+func _on_quest_boss_hp(payload: Dictionary) -> void:
+	_quest_feed({"type": "boss_hp", "boss_id": str(payload.get("boss_id", "")), "hp": int(payload.get("hp", 0)),
+		"max_hp": int(payload.get("max_hp", 0))})
 
 
 func _on_quest_battle_started(_encounter_id: String, _is_boss: bool) -> void:
@@ -1039,7 +1094,9 @@ func _replay_play(battle: BattleState, events: Array[ActionEvent], cmds: Array[D
 		i += 1
 	var g: Dictionary = Show.take_pending_gift(battle)
 	if not g.is_empty():
-		for e: ActionEvent in battle.apply_gift(g):
+		var gift_events: Array[ActionEvent] = battle.apply_gift(g)
+		Show.note_battle_gift(g, gift_events)
+		for e: ActionEvent in gift_events:
 			if e != null:
 				Show.on_battle_event(e)
 	return i

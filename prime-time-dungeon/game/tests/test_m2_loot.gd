@@ -181,6 +181,25 @@ func test_procedural_chest_table() -> void:
 	assert_eq(LootRoller.roll_chest_table(Fx.data().floor_def(1), make_rng(1)), [], "no table → nothing")
 
 
+## M3 CR 1: a procedural wood chest carries the contents DungeonGenerator rolled from FloorDef.chest_table (§7.2
+## step 9) — roll_chest gives exactly those (no 20–40 Cr pool roll, no rng needed).
+func test_wood_chest_with_contents_gives_them() -> void:
+	var d: GameData = Fx.data()
+	var proc: Dictionary = {"id": "f2_c0", "type": "wood", "contents": [{"kind": "item", "id": "itm_bandage",
+		"amount": 2}, {"kind": "credits", "id": "", "amount": 45}]}
+	assert_eq(_dicts(LootRoller.roll_chest(proc, d, 2, _state(), null)), [
+		{"kind": "item", "id": "itm_bandage", "amount": 2, "rarity": "common", "converted_from": "", "pity": false},
+		{"kind": "credits", "id": "", "amount": 45, "rarity": "common", "converted_from": "", "pity": false}])
+	var layout: FloorLayout = DungeonGenerator.generate(d.floor_def(2), 777)
+	var chest: ChestSpawn = layout.chests[0]
+	assert_false(chest.contents.is_empty(), "procedural chests are filled from the chest table")
+	var spec: Dictionary = {"id": chest.id, "type": chest.type, "contents": chest.contents}
+	var got: Array = _dicts(LootRoller.roll_chest(spec, d, 2, _state(), make_rng(5)))
+	assert_eq(got.size(), chest.contents.size(), "the chest-table roll, not the wood pool")
+	for i in got.size():
+		assert_eq([got[i]["kind"], got[i]["amount"]], [chest.contents[i]["kind"], chest.contents[i]["amount"]])
+
+
 func test_drops_chance_with_luck() -> void:
 	var drops: Array[Dictionary] = [{"item": "itm_bandage", "chance": 0.25}, {"item": "itm_salts", "chance": 0.0},
 		{"item": "itm_antidote", "chance": 1.0}]

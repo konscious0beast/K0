@@ -100,9 +100,11 @@ func _process(_delta: float) -> void:
 
 
 func _exit_tree() -> void:
-	# A battle torn down before its end (tests, debug) must not leave Game in battle mode.
+	# A battle torn down before its end (tests, debug) must not leave Game in battle mode nor Show with a running
+	# battle context (thresholds, gift queue, ShowRules) that the next battle or an exploration gift would see.
 	if controller != null and not controller.done and controller.result == null:
 		Game.in_battle = false
+		Show.abort_battle()
 
 
 func _update_speed() -> void:

@@ -766,7 +766,9 @@ func _strike_hit(hit: EnemyActor, adv: int) -> void:
 	_set_focus(null)
 	FB.flash_rig(hit.rig, hitstop_sec + 0.05)
 	Sfx.play(&"hit")
-	get_tree().create_timer(hitstop_sec).timeout.connect(_after_hitstop.bind(hit.group_id(), hit.encounter_id(), adv))
+	# process_always = false: the hitstop pauses with the tree (PauseMenu, §9.4) instead of starting the battle under it
+	get_tree().create_timer(hitstop_sec, false).timeout.connect(
+		_after_hitstop.bind(hit.group_id(), hit.encounter_id(), adv))
 
 
 func _after_hitstop(group_id: String, encounter_id: String, advantage: int) -> void:
@@ -905,7 +907,9 @@ func _on_event_choice(choice: String, ev_it: EventInteractable) -> void:
 		# result toast / gate / encounter.
 		_revealing = true
 		_set_modal(true)
-		get_tree().create_timer(wait + REVEAL_BEAT_SEC).timeout.connect(
+		# process_always = false: a pause during the reveal also pauses this timer (no toast / gate / encounter under
+		# the open PauseMenu, §9.4)
+		get_tree().create_timer(wait + REVEAL_BEAT_SEC, false).timeout.connect(
 			_finish_event_choice.bind(choice, outcome, ev_it))
 		return
 	_finish_event_choice(choice, outcome, ev_it)

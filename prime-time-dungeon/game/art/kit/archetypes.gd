@@ -11,13 +11,14 @@ extends RefCounted
 ##     "role": String}, mesh_order: Array[String],
 ##   anchors: Dictionary anchor → {"pivot", "pos"}, sockets: Dictionary socket → {"pivot", "pos", "size", "rot"},
 ##   particles: Array[Dictionary] ({"kind", "pivot", "pos"}), mat: Dictionary (default material opts),
-##   flags: Dictionary.
+##   labels: Array[Dictionary] ({"name", "pivot", "pos", "rot", "text", "color", "outline", "font_size",
+##     "outline_size", "pixel_size"} → Label3D, e.g. the Rabattschild percent sign), flags: Dictionary.
 
 const BASES: PackedStringArray = ["humanoid", "pug", "rodent", "blob", "insect", "robot", "brute", "specter", "swarm"]
 const PROPS: PackedStringArray = ["cape", "crown", "monocle", "top_hat", "cap", "bandana", "apron", "mop", "broom",
 	"knife", "staff", "key_ring", "glasses", "lamp_helmet", "backpack", "mask", "wings", "antennae",
 	"newspaper_head", "briefcase", "bottlecap_chain", "cable_tangle", "spray_cap", "escalator_back", "claws", "helmet",
-	"shield", "halberd", "rat_king_tail", "ticket_crown", "wrench", "axe", "crowbar", "cart"]
+	"shield", "halberd", "rat_king_tail", "ticket_crown", "wrench", "axe", "crowbar", "cart", "discount_tag"]
 
 ## Nominal heights at scale 1.0 (02_TECH §8.4).
 const NOMINAL_HEIGHT: Dictionary = {"humanoid": 1.75, "pug": 0.6, "rodent": 0.7, "blob": 0.9, "insect": 0.8,
@@ -66,7 +67,7 @@ static func blueprint(m: Dictionary, seed: int) -> Dictionary:
 		"base": base, "pose": m.get("pose", &"upright"), "colors": m.get("colors", {}),
 		"props": m.get("props", PackedStringArray()), "seed": seed,
 		"pivots": [], "pivot_parent": {}, "pivot_pos": {}, "pivot_rot": {}, "pivot_scale": {},
-		"meshes": {}, "mesh_order": [], "anchors": {}, "sockets": {}, "particles": [],
+		"meshes": {}, "mesh_order": [], "anchors": {}, "sockets": {}, "particles": [], "labels": [],
 		"mat": {"bands": 3, "rim": 0.45}, "flags": {},
 	}
 	# brute below boss size (scale < 1.0) → compact recipe within the enemy budget (02_TECH §12.1)
@@ -858,8 +859,7 @@ static func _specter(bp: Dictionary) -> void:
 	_socket(bp, "hand_l", "ArmL", Vector3(-0.12, -0.33, 0), 0.6)
 
 
-# --- swarm (Taubenschwarm)
-# ---------------------------------------------------------------------------------------------
+# --- swarm (Taubenschwarm) --------------------------------------------------------------------------------------------
 
 const SWARM_BIRDS: int = 5
 const SWARM_RADIUS: float = 0.6
@@ -977,6 +977,27 @@ static func _apply_props(bp: Dictionary) -> void:
 			"cart":
 				if str(bp["base"]) != "robot":
 					_prop_cart_fallback(bp)
+			"discount_tag":
+				_prop_discount_tag(bp)
+
+
+## Rabattschild price tag (03_ART §5.7: percent number as Label3D 96 px in the accent colour, outline 12 white): a
+## white tag plate with an accent rim on the chest socket and one Label3D "-50%" just in front of it (front = −Z).
+static func _prop_discount_tag(bp: Dictionary) -> void:
+	var acc: Color = _col(bp, "accent")
+	_place(bp, "chest", 0.42, [
+		_p(MeshUtil.box(Vector3(0.66, 0.40, 0.02)), Vector3(0, 0, -0.005), acc),
+		_p(MeshUtil.box(Vector3(0.60, 0.34, 0.03)), Vector3(0, 0, -0.025), Palette.PAPER),
+	])
+	var s: Dictionary = bp["sockets"].get("chest", bp["sockets"].get("body", {}))
+	var pivot: String = str(s.get("pivot", ""))      # "" → the model root
+	var k: float = float(s.get("size", 0.42)) / 0.42
+	var rot: Vector3 = s.get("rot", Vector3.ZERO)
+	var basis: Basis = Basis.from_euler(rot * (PI / 180.0))
+	(bp["labels"] as Array).append({"name": "DiscountTag", "pivot": pivot,
+		"pos": (s.get("pos", Vector3.ZERO) as Vector3) + basis * Vector3(0, 0, -0.045 * k),
+		"rot": rot + Vector3(0, 180, 0), "text": "-50%", "color": acc, "outline": Color.WHITE, "font_size": 96,
+		"outline_size": 12, "pixel_size": 0.0018 * k})
 
 
 static func _prop_cape(bp: Dictionary) -> void:

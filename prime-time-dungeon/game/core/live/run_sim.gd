@@ -22,7 +22,8 @@ class_name RunSim extends RefCounted
 ## BattleBridge/BattleState (enemy and party commands come from the log), chests/lootboxes via LootRoller, shop,
 ## equipment, items, floor events (FloorEvent), safe rooms, scenes, flags, difficulty, gifts (GiftApplier outside
 ## battles, BattleState.apply_gift inside). RNG streams are consumed exactly like the live flow (Game.next_seed
-## "battle" + "show" per encounter, "lootbox", "gift"; chest/event/stray seeds from the floor seed). What it does NOT
+## "battle" + "show" per encounter, "lootbox", "gift"; event/stray seeds from the floor seed, chest seeds from the
+## floor's loot_seed, 05 CR-11). What it does NOT
 ## contain are the reactions of the Show facade (hype/followers from battle events, achievements, milestones, sponsor
 ## gifts, M.O.D.); a RunSim-only run is therefore a "core run": RunSim.replay of its log reproduces it bit for bit
 ## (05 §11.4 test_m8_replay), while Game.replay_log reproduces complete live runs.
@@ -32,8 +33,9 @@ class_name RunSim extends RefCounted
 ## floor_completed (descend), plus the detail events zones (first room visits) and boss_hp (boss damage). Achievement
 ## and metric events need the Show facade and are not part of a core run.
 ## With `run_log` set, apply() records every accepted command (k = tick(), cmd id 0 for gifts, else 1, 2, …) and the
-## clock writes checkpoints: one every CHECKPOINT_TICKS and one after each battle / descend, always taken when the clock
-## leaves a tick (state after all commands with k' <= k, 05 §10.6), plus close() at the end.
+## clock writes checkpoints: one every CHECKPOINT_TICKS and one after each battle / descend (request_checkpoint() for a
+## Game-driven sim, which records through Game.record instead of apply()), always taken when the clock leaves a tick
+## (state after all commands with k' <= k, 05 §10.6), plus close() at the end.
 ## Event rules (rules.leagues / rules.gifts) are stored in state.flags["live"] on construction, so the gift policy
 ## of the run (Pur-Liga: no external gifts) holds for every gift path (GiftPolicy.check with the run counters).
 ## External gifts are checked again when they are applied — the core check is authoritative (05 §6.10, L4/L5):
@@ -228,6 +230,25 @@ func gift_refusal(g: Dictionary) -> String:
 		if not GiftPolicy.can_deliver_in_battle(_battle_external, eff):
 			return "cap_reached"
 	return ""
+
+
+## The next tick end writes a checkpoint (like after a battle / descend applied here). Game calls it after its own
+## battles and floor ends, because a Game-driven sim never sees those commands in apply().
+func request_checkpoint() -> void:
+	_checkpoint_due = true
+
+
+## Quest detail event {"type": "zones", "explored", "total"} of a floor: distinct zones of the visited cells of a
+## handbuilt layout; {} for a layout without zones (procedural floors). Shared by RunSim and the Game quest adapter.
+static func zones_event(fr: FloorRun, layout: FloorLayout) -> Dictionary:
+	if fr == null or layout == null or layout.zones.is_empty():
+		return {}
+	var seen: Dictionary = {}
+	for c: Vector2i in fr.visited:
+		var rc: RoomCell = layout.cell_at(c)
+		if rc != null and layout.zones.has(rc.zone):
+			seen[rc.zone] = true
+	return {"type": "zones", "explored": seen.size(), "total": layout.zones.size()}
 
 
 ## Ends a recorded run: final checkpoint + run_log.result {"cause", "final_hash", "ticks"} (+ extra, e.g. "score").
@@ -504,7 +525,7 @@ func _apply_room(cell: Vector2i, out: Array[ExploreEvent]) -> void:
 
 
 ## Like Game.open_chest (02_TECH §3.4): unknown / opened / locked without itm_key_master → nothing; else
-## LootRoller.roll_chest with SeedUtil.derive(floor_run.seed, "chest", k).
+## LootRoller.roll_chest with SeedUtil.derive(floor_run.loot_seed, "chest", k) (05 CR-11: never the public layout seed).
 func _apply_chest(chest_id: String, out: Array[ExploreEvent]) -> void:
 	var fr: FloorRun = state.floor_run
 	var layout: FloorLayout = _current_layout()
@@ -521,7 +542,7 @@ func _apply_chest(chest_id: String, out: Array[ExploreEvent]) -> void:
 	if chest.type == "locked" and (state.inventory == null or not state.inventory.has("itm_key_master")):
 		return
 	var k: int = chest_id.get_slice("_c", 1).to_int()
-	var rng: RandomNumberGenerator = SeedUtil.make_rng(SeedUtil.derive(fr.seed, "chest", k))
+	var rng: RandomNumberGenerator = SeedUtil.make_rng(SeedUtil.derive(fr.loot_seed, "chest", k))
 	var spec: Dictionary = {"id": chest.id, "type": chest.type, "contents": chest.contents}
 	var rewards: Array[LootReward] = LootRoller.roll_chest(spec, data, fr.index, state, rng)
 	_add_rewards(rewards)
@@ -648,17 +669,13 @@ func _quest_feed_battle(events: Array[ActionEvent]) -> void:
 			quest.on_event({"type": "boss_hp", "boss_id": e.def_id, "hp": e.hp_after, "max_hp": e.max_hp})
 
 
-## Explored zones of the floor (distinct zones of the visited cells) → zones {"explored", "total"} (reach_stairs
-## progress before the stairs; handbuilt floors only — procedural floors have no zones).
+## Explored zones of the floor (zones_event) → reach_stairs progress before the stairs (handbuilt floors only).
 func _quest_feed_zones(fr: FloorRun, layout: FloorLayout) -> void:
-	if quest == null or layout == null or layout.zones.is_empty():
+	if quest == null:
 		return
-	var seen: Dictionary = {}
-	for c: Vector2i in fr.visited:
-		var rc: RoomCell = layout.cell_at(c)
-		if rc != null and layout.zones.has(rc.zone):
-			seen[rc.zone] = true
-	quest.on_event({"type": "zones", "explored": seen.size(), "total": layout.zones.size()})
+	var ev: Dictionary = zones_event(fr, layout)
+	if not ev.is_empty():
+		quest.on_event(ev)
 
 
 func _compare_checkpoint(cps: Array[Dictionary], cp: int, out: Dictionary) -> int:

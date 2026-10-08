@@ -449,6 +449,34 @@ func test_global_ui_composition_and_single_instance() -> void:
 	assert_eq(int((RunResultScript.last_summary as Dictionary).get("score", 0)), 1234, "run summary cached for RunResult")
 
 
+## M5 CR 1: GlobalUi.occupied_rects() lists what the persistent UI covers right now (toasts, gift banner, M.O.D.
+## box, hype meter …) so battle UI can avoid it; hidden parts are left out.
+func test_global_ui_occupied_rects() -> void:
+	var g: Node = _global({})
+	await wait_frames(2)
+	Events.overlay_mode_requested.emit(&"battle")
+	await wait_frames(2)
+	var base: Array = g.call("occupied_rects")
+	for r: Rect2 in base:
+		assert_true(r.size.x > 0.0 and r.size.y > 0.0, "only non-empty rects")
+	var d: CanvasLayer = g.get("mod_dialog") as CanvasLayer
+	var t: CanvasLayer = g.get("toasts") as CanvasLayer
+	d.call("enqueue", "Eine Zeile der M.O.D., die sichtbar bleibt.", &"mod", "intro", true)
+	Events.toast_requested.emit("Erster Kill", &"achievement")
+	Events.gift_received.emit({"kind": "gold", "source": "fan", "sender": {"anon": true}})
+	var ok: bool = await wait_until(func() -> bool:
+		return (d.call("box_rect") as Rect2).size.x > 0.0 and (t.call("stack_rect") as Rect2).size.x > 0.0, 120)
+	assert_true(ok, "box and toast visible")
+	var rects: Array = g.call("occupied_rects")
+	assert_has(rects, d.call("box_rect"), "M.O.D. box")
+	assert_has(rects, t.call("stack_rect"), "toasts")
+	var o: CanvasLayer = g.get("show_overlay") as CanvasLayer
+	assert_has(rects, o.call("gift_banner_rect"), "gift banner")
+	assert_true(rects.size() >= base.size() + 3)
+	d.call("advance")
+	d.call("advance")
+
+
 func test_debug_overlay_info() -> void:
 	var g: Node = _global({})
 	await wait_frames(2)

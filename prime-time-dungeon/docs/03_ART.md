@@ -788,11 +788,11 @@ Boss-Phasenwechsel: Ambient 0.25 s auf Palette `neon2`, danach zurück (Tween 0.
 
 ### 4.3 Licht-Rigs
 
-**Sonne (`EnvKit.make_sun`)** — einziges schattenwerfendes Licht, „Studio-Key“:
+**Sonne (`EnvKit.make_sun` / `make_zone_sun` mit Zonen-Palette, 02_TECH §8.5)** — einziges schattenwerfendes Licht, „Studio-Key“:
 
 | mode | Farbe | Energie | Rotation | Schatten |
 |---|---|---|---|---|
-| explore | Palette `key` | 1.1 (Kanal 0.7, Keller 0.9) | `(-55, 35, 0)` | `high`: an, max. 30 m, `shadow_bias 0.03`, `normal_bias 1.0` |
+| explore | Palette `key` | 1.1 (Kanal 0.7, Keller 0.9) | `(-50, -110, 0)` (Seiten-/Gegenlicht; früher `(-55, 35, 0)` — leuchtete entlang der Folgekamera, Review M4) | `high`: an, max. 30 m, `shadow_bias 0.03`, `normal_bias 1.0` |
 | battle | Palette `key` | 1.25 | `(-50, -30, 0)` (von vorne-links auf die Party) | `high`: an, max. 20 m |
 | safe | `#FFE2B8` | 1.2 | `(-60, 20, 0)` | `high`: an |
 
@@ -1220,7 +1220,7 @@ Position Erkundung: Kai + (0.9, 2.3, 0.6) (kamera-seitig über der Schulter), Ka
 |---|---|---|
 | `schaufensterpuppe` | humanoid 1.0 | primary `#E8DCCB`, secondary `#E8DCCB`, kein Gesicht (eyes = skin), Gelenke Sphere 0.06; Pose eingefroren, ruckt 15° in 0.05 s, wenn außerhalb des Kamera-Frustums |
 | `einkaufswagen_rudel` | robot 0.6 ×3 | props `cart` (5.4): Gitterkorb aus 12 Cyl 0.01 **M** `#C0C6CC`, Griff `#E8455A`, Scheinwerfer-Augen Sphere 0.05 **E** `#FFF2C8` |
-| `rabattschild` | brute 0.8 | primary `#FFFFFF`, accent `#E8455A`; Prozentzahl als `Label3D` 96 px `#E8455A`, Outline 12 `#FFFFFF` |
+| `rabattschild` | brute 0.8 | primary `#FFFFFF`, accent `#E8455A`; Prozentzahl als `Label3D` 96 px `#E8455A`, Outline 12 `#FFFFFF` — ModelSpec-Prop `discount_tag` (02_TECH §4.4.14): Preisschild-Platte (weiß, Akzent-Rand) auf dem `chest`-Sockel + Label3D „-50%“ nach vorn (−Z), blendet mit dem Dissolve aus |
 
 ### 5.8 Prozedurale Animation (`CharacterRig`, Namen/Dauern aus 02_TECH §8.4)
 
@@ -1392,10 +1392,15 @@ Game Over = `ui_tv_overlay.test_card` 0→1 in 0.2 s, Buttons nach 1.5 s.
 - Schwung-Kick: FOV 60→57→60 in 0.15 s. Gegner bemerkt Kai: Armlänge 7.0→6.3→7.0 in 0.4 s.
 - Bei Kollision Arm sofort kürzen (keine Clipping-Frames), Rückkehr mit 4 m/s.
 - Safe Room: feste Kamera am Anker `&"camera"` (FOV 50), kein Orbit.
+- Umgesetzt (M3, gleichlautend 02_TECH §7.3): Pivot 2.5 m **vor** Kai (Look-ahead; Kai im unteren Drittel); Wand/Tür hinter Kai →
+  erst Pitch anheben (bis −65°, gemessen in Sturzhöhe 3.2 m), dann Arm kürzen; Türstürze mit Kollision; Boss-Räume +1.5 m Arm;
+  Kamera < 1.5 m an Kais Kopf → Rig blendet aus; Zoom 5–9 m per Mausrad oder Zwei-Finger-Pinch.
 
 ### 8.2 Kampf-Bühne (`battle_stage.gd`)
 
-Arena = `EnvKit.build_battle_arena()` (Bühne r 9 m). Party blickt −Z, Gegner +Z.
+Arena = `EnvKit.build_battle_arena()` (Bühne r 9 m). Party blickt −Z, Gegner +Z. Show-Bildschirm-Titel („DUNGEON PRIME TIME“/„BOSSKAMPF“, y 6.3) und
+„LIVE“-Schild (y 5.1) liegen über 4.6 m: die tiefen Befehls-Shots schneiden die Rückwand dort direkt unter dem HUD-Band ab, so wird
+kein Text halb hinter dem Hype-Meter abgeschnitten (Review M5); Totalen zeigen beide.
 
 | Slot | Position |
 |---|---|
@@ -1444,7 +1449,7 @@ Ein Theme für alles: `UiTheme.get_theme()` (`scenes/ui/theme/ui_theme.gd`, M0);
 
 | Element | Position (720p) | Look |
 |---|---|---|
-| LIVE-Badge | oben links (16, 16), 80×30 | Pille `LIVE_RED`, Punkt = `Polygon2D`-Kreis (12 Ecken, r 5 px, `PAPER`) pulsiert 1 Hz, „LIVE“ 20 px fett `PAPER` |
+| LIVE-Badge | oben links (24, 24) — Safe-Area-Rand 24 px (02_TECH §10.4 hat Vorrang vor den früheren 16 px), 80×30 | Pille `LIVE_RED`, Punkt = `Polygon2D`-Kreis (12 Ecken, r 5 px, `PAPER`) pulsiert 1 Hz, „LIVE“ 20 px fett `PAPER` |
 | Zuschauer | rechts daneben | Augen-Icon (`Polygon2D`) + Zahl 22 px Monospace, Tausenderpunkt; Anstieg kurz `HEAL`, Abfall `DANGER` (0.4 s) |
 | Follower | darunter | Herz-Icon (`Polygon2D`, 14 px, `NOVA_MAGENTA`) + „1.234“ 16 px `C_TEXT_DIM` |
 | Timer | oben Mitte | 38 px Monospace in Schrägbox; < 5:00 `SODIUM`, < 1:00 `LIVE_RED` + Puls 2 Hz (1.0↔1.08) |
@@ -1565,8 +1570,8 @@ Rangfolge bei Widersprüchen: 00_BRIEF > 02_TECH (APIs, Schemas, Pfade) > 01_GDD
 | A7 | `Materials`-Optionen | **übernommen** (02_TECH §8.2) | `wobble`, `stripes`, `rim_color`, `spec` → Uniform-Belegung 3.1. |
 | A8 | Ausrüstungs-Optik | **offen** | Antrag an 02_TECH §4.4.3: `items.json → visual {"props_add": [...], "colors": {...}}` optional; Darstellung mischt es vor `CharacterBuilder.build()` in den `ModelSpec` (Kai: `wrench`/`axe`/`crowbar`). Bis dahin trägt Kai immer `mop`. |
 | A9 | Monospace-Zahlen, Touch-Trefferfläche | **übernommen** (02_TECH §3.9 `font_mono()`, `TOUCH_HIT 88`, `ensure_hit_area()`; §10.2) | — |
-| A10 | Neue Shader-Dateien | **Antrag an 02_TECH §1.5** | `art/shaders/ptd_color.gdshaderinc` (Include, F1) und `art/shaders/ui_tv_overlay_aberration.gdshader` (Quality `high`, F7) in den Dateibaum (M4); ShowOverlay (M6) tauscht das Overlay-Material bei `Events.settings_changed`. |
-| A11 | Render-Regressionsprobe | **Antrag an 02_TECH §1.5/§12.4** | `art/gallery/render_probe.tscn` + `.gd` (Kap. 11) in die Szenenliste von `check.sh --shot`/CI; prüft Outline-Breite (F6) und Partikel-Farbraum (F1) in Compatibility. |
+| A10 | Neue Shader-Dateien | **erledigt** (02_TECH §1.5, Integration) | `art/shaders/ptd_color.gdshaderinc` (Include, F1) und `art/shaders/ui_tv_overlay_aberration.gdshader` (Quality `high`, F7) in den Dateibaum (M4); ShowOverlay (M6) tauscht das Overlay-Material bei `Events.settings_changed`. |
+| A11 | Render-Regressionsprobe | **erledigt** (02_TECH §1.5/§12.4: CI-Schritt prüft `RENDER_PROBE: OK`) | `art/gallery/render_probe.tscn` + `.gd` (Kap. 11) in die Szenenliste von `check.sh --shot`/CI; prüft Outline-Breite (F6) und Partikel-Farbraum (F1) in Compatibility. |
 | A12 | `Vfx`-Pool | **übernommen** (02_TECH §8.6: 4 je Kind je Parent, Aufrufer geben nie frei) | Umsetzung ohne statischen Zustand: Pool als Meta am Parent, Gültigkeitsprüfung vor Wiederverwendung (Kap. 7). Das „reparents to parent“ in §8.6 entfällt damit (Nodes sind immer Kinder ihres Parents). |
 | A13 | Glyphen-Test | **Antrag an 02_TECH §11.5 (M6)** | `test_m6_ui_scenes`: alle statischen UI- und `Label3D`-Texte bestehen `ThemeDB.fallback_font.has_char()` Zeichen für Zeichen (F8). |
 | A14 | Porträts / M.O.D.-Icon | Art-Regel (9.2, 5.6) | `ViewportTexture` lebender SubViewports statt `get_image()`-Cache (F9). |

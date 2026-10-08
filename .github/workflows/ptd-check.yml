@@ -44,6 +44,12 @@ jobs:
                    res://scenes/safe_room/safe_room.tscn; do
             GODOT=~/godot/godot prime-time-dungeon/tools/check.sh --shot "$s" "shots/$(basename "$s" .tscn).png" 120 1280x720
           done
+      - name: Render probe (03_ART A11)
+        run: |
+          mkdir -p shots
+          GODOT=~/godot/godot prime-time-dungeon/tools/check.sh --shot res://art/gallery/render_probe.tscn \
+            shots/render_probe.png 60 1280x720 | tee render_probe.log
+          grep -q "RENDER_PROBE: OK" render_probe.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:

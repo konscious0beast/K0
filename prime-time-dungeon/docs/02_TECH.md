@@ -237,6 +237,8 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `art/shaders/hologram.gdshader` (S) | M.O.D.-Hologramm / Bildschirme |
 | `art/shaders/ui_swirl.gdshader` (S) | canvas_item: Kampf-Swirl-Übergang (Router) |
 | `art/shaders/ui_tv_overlay.gdshader` (S) | canvas_item: Scanlines/Vignette/Chromatic für TV-Overlay |
+| `art/shaders/ui_tv_overlay_aberration.gdshader` | canvas_item: TV-Overlay Qualität `high` (chromatische Aberration über einen Screen-Sampler, sonst gleiche Uniforms wie `ui_tv_overlay`, 03_ART §3.9/F7, A10); `ShowOverlay` wählt ihn bei `high`, sonst `ui_tv_overlay` |
+| `art/shaders/ptd_color.gdshaderinc` | Gemeinsamer Farbraum-Helfer `ptd_vertex_albedo` (sRGB-Vertex-/Partikelfarben → linear nur außerhalb von Compatibility, 03_ART F1/A10) für `toon`/`env_tiles`/`vfx_additive` (`#include`) |
 | `art/materials/palette.gd` (S) | `Palette`: Farbkonstanten, Hex-Parser, Theme-Paletten |
 | `art/materials/materials.gd` (S) | `Materials`: Material-Fabrik mit Cache |
 | `art/kit/mesh_util.gd` (S) | `MeshUtil`: Low-Poly-Primitive, Merge mit Vertex-Colors, Tri-Zählung |
@@ -252,6 +254,9 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `art/gallery/character_gallery.tscn` + `.gd` | Alle Archetypen/Party/Gegner aus DB nebeneinander (Screenshot-Ziel) |
 | `art/gallery/env_gallery.tscn` + `.gd` | Raum-Varianten aller Türmasken + Arena + Safe Room |
 | `art/gallery/vfx_gallery.tscn` + `.gd` | Alle Vfx-Arten im Loop |
+| `art/gallery/render_probe.tscn` + `.gd` | Render-Regressionsprobe (03_ART A11): Outline-Richtung, Partikel-Farbraum, Schadenszahl-Helligkeit, Log ohne „different indices“; druckt `RENDER_PROBE: OK` (Pflicht-Shot in §12.4) |
+| `art/gallery/log_spy.gd` | `Logger`, der Log-Nadeln (z. B. „different indices“) sammelt — von Probe und M4-Tests genutzt (privat) |
+| `art/gallery/*_gallery.tscn` (Varianten) | Seiten-Varianten der Galerien (`page`-Export: archetype/hero/enemy/boss/anim/prop, env room/kinds/props/arena/safe) |
 
 ### 1.6 `scenes/`
 
@@ -560,7 +565,7 @@ signal game_loaded(slot: int)
 signal game_saved(slot: int, ok: bool)
 signal settings_changed()
 signal input_scheme_changed(scheme: int)                 # Game.InputScheme
-signal overlay_mode_requested(mode: StringName)          # &"explore", &"battle", &"safe_room", &"menu", &"hidden"
+signal overlay_mode_requested(mode: StringName)          # &"explore", &"battle", &"safe_room", &"menu", &"hidden", &"game_over"
 signal pause_menu_toggled(open: bool)
 
 # --- Floor / exploration -----------------------------------------------
@@ -577,6 +582,7 @@ signal chest_opened(chest_id: String, rewards: Array)    # Array[LootReward]; Ga
 signal gate_opened(cell: Vector2i, dir: int)             # RoomCell.DOOR_*
 signal stray_spawn_requested(zone_id: String, group_id: String, encounter_id: String)   # Game (RunSim STRAY_DUE)
 signal camera_drag(relative: Vector2)                    # touch camera drag in viewport px
+signal camera_zoom(amount: float)                        # touch pinch: arm length change in m (> 0 = zoom out)
 
 # --- Battle ---------------------------------------------------------------
 signal battle_started(encounter_id: String, is_boss: bool)
@@ -591,6 +597,7 @@ signal stunt_resolved(payload: Dictionary)               # Show (STUNT_RESULT)
 signal combo(payload: Dictionary)                        # Show (COMBO)
 signal party_ko(payload: Dictionary)                     # Show (KO of a party member)
 signal boss_defeated(payload: Dictionary)                # Show.end_battle (VICTORY + is_boss)
+signal boss_hp_changed(payload: Dictionary)              # Show (boss hit, hp_after): {"boss_id", "hp", "max_hp"}
 signal item_bought(payload: Dictionary)                  # Game.buy
 signal event_completed(payload: Dictionary)              # Game.apply_floor_event (FloorEvent done)
 signal explore_tick(payload: Dictionary)                 # Game, once per full explore second (RunSim)
@@ -636,10 +643,10 @@ Wer emittiert was (verbindlich):
 | `game_loaded`, `game_saved` | Save |
 | `floor_entered`, `room_entered`, `enemy_alerted`, `encounter_triggered`, `gate_opened`, `overlay_mode_requested(&"explore")` | ExplorationScene (M3) |
 | `battle_started`, `battle_turn_started`, `battle_ended`, `overlay_mode_requested(&"battle")` | BattleScene/BattleController (M5) |
-| `viewers_changed`, `followers_changed`, `hype_changed`, `achievement_unlocked`, `milestone_reached`, `sponsor_gift_triggered`, `mod_said`, `chat_posted`, `lootbox_earned`, `enemy_killed`, `battle_won`, `battle_fled`, `stunt_resolved`, `combo`, `party_ko`, `boss_defeated`, `gift_received`, `gift_rejected` | Show |
+| `viewers_changed`, `followers_changed`, `hype_changed`, `achievement_unlocked`, `milestone_reached`, `sponsor_gift_triggered`, `mod_said`, `chat_posted`, `lootbox_earned`, `enemy_killed`, `battle_won`, `battle_fled`, `stunt_resolved`, `combo`, `party_ko`, `boss_defeated`, `boss_hp_changed`, `gift_received`, `gift_rejected` | Show |
 | `dialog_finished` | ModDialog (M6) |
-| `camera_drag` | TouchControls (M6) |
-| `pause_menu_toggled`, `toast_requested`, `overlay_mode_requested(&"safe_room"/&"menu"/&"hidden")` | M6-Szenen; `toast_requested` darf jeder |
+| `camera_drag`, `camera_zoom` | TouchControls (M6); `camera_zoom` = Zwei-Finger-Pinch auf der freien Kamerafläche (0.02 m/px Abstandsänderung), `CameraRig` klemmt wie das Mausrad auf 5–9 m |
+| `pause_menu_toggled`, `toast_requested`, `overlay_mode_requested(&"safe_room"/&"menu"/&"hidden"/&"game_over")` | M6-Szenen (`&"game_over"`: GameOver-Screen, nur Scanlines); `toast_requested` darf jeder |
 
 Achievement-Trigger, deren Name **kein** eigenes Signal ist, bildet `Show` aus bestehenden Signalen (Payload §6.3):
 `battle_started` → `battle_started`, `sponsor_gift_triggered` → `sponsor_gift`, `viewers_changed` → `viewers_changed`,
@@ -704,9 +711,16 @@ func has_state() -> bool
 func new_game(slot: int, player_name: String = "Kai", seed: int = -1, difficulty: StringName = &"prime") -> void
 	# seed -1 → int(Time.get_unix_time_from_system() * 1000.0) & 0x7FFFFFFF
 	# state = GameState.create_new(DB.data, slot, player_name, seed, difficulty); run_log = RunLog.new() (header: schema, seed,
-	# slot, player_name, mode, difficulty, game_version, sim_hz, event_id, run_id); sim = RunSim.new(DB.data, state, {});
-	# start_floor(1); emits new_game_started(slot)
+	# slot, player_name, mode, difficulty, game_version, sim_hz, event_id, run_id); sim = RunSim.new(DB.data, state, {})
+	# with sim.run_log = run_log (checkpoints, see below); start_floor(1); emits new_game_started(slot)
 func start_event_run(event_id: String) -> void   # M8: EventCatalog → EventDef.run_seed(); mode = &"event_offline"; slot 0
+	# (sim = RunSim.new(…, def.rules) with sim.run_log = run_log, like new_game)
+func adopt_loaded_state(st: GameState, p_log: RunLog) -> void   # Save.load_slot: resets the PRIVATE run context
+	# (event def, finished flag, quest + metric memory, layout cache, command ids, dialog/timer state — as for a new game),
+	# mode = &"campaign", state = st, run_log = p_log (header "from_save"), sim = RunSim.new(DB.data, st, {}) recording
+	# into p_log. Save emits game_loaded.
+func event_rules() -> Dictionary     # EventDef.rules of the running event run; {} in the campaign (Show → GiftPolicy)
+func emit_party_changed() -> void    # Game is the only party_changed emitter: Show calls it after an outside gift healed
 func ensure_state() -> void          # if not has_state(): ephemeral-safe new_game(0, "Kai", 1) — standalone scenes, capture, tests
 func floor_def() -> FloorDef         # DB.floor_def(state.floor_run.index)
 func start_floor(floor_index: int) -> void
@@ -714,11 +728,13 @@ func start_floor(floor_index: int) -> void
 	# Show.start_floor(i) (hype := 30); record({"t": "floor", "floor": i})
 func is_timer_ticking() -> bool      # timer_running and state.floor_run.timer_started and _blocking_dialogs == 0
 func complete_floor() -> void
-	# timer_running = false; record({"t": "descend"}); emits floor_completed(index) (Show: trigger + say("floor_end"));
+	# timer_running = false; record({"t": "descend"}); sim.request_checkpoint(); emits floor_completed(index) (Show: trigger +
+	# say("floor_end")); event run → finish_run(&"floor_completed");
 	# Router.goto(Router.SCENE_FLOOR_SUMMARY, {"summary": state.floor_run.summary()}, FADE)
 func continue_after_summary() -> void   # called by FloorSummary "Weiter"
 	# next := DB.floor_def(index + 1); if next != null: start_floor(index + 1); Save.autosave()
 	# if next == null or not next.playable: Router.goto(Router.SCENE_CREDITS) else Router.goto(SCENE_EXPLORATION, {"spawn": &"start"})
+	# the party (sponsor_buff)
 func on_game_over(reason: StringName) -> void   # Router.game_over calls it first: in_battle = false; stat game_overs +1;
 	# not while replaying: Save.record_game_over(state.slot), event run → finish_run(reason)
 func next_seed(purpose: String) -> int   # state.rng_counter += 1; SeedUtil.derive(state.seed, purpose, state.rng_counter)
@@ -729,8 +745,9 @@ func make_battle_setup(encounter_id: String, advantage: int, group_id: String) -
 	# BattleBridge.make_setup(state, DB.data, encounter_id, advantage, group_id, next_seed("battle")); setup.auto_battle = auto_battle;
 	# setup != null → in_battle = true
 func apply_battle_result(result: BattleResult) -> BattleRewards
-	# in_battle = false; BattleBridge.apply_result(state, DB.data, result); emits party_changed, inventory_changed, credits_changed,
-	# member_leveled + level_up({"member", "level"}) per level; floor_timer_started if timer_started flipped
+	# in_battle = false; BattleBridge.apply_result(state, DB.data, result); sim.request_checkpoint(); emits party_changed,
+	# inventory_changed, credits_changed, member_leveled + level_up({"member", "level"}) per level; floor_timer_started if
+	# timer_started flipped
 func open_lootbox(box_id: String) -> Array[LootReward]
 	# record({"t": "lootbox", "box": box_id}); removes one box_id from state.pending_lootboxes;
 	# LootRoller.roll_lootbox(box, DB.data, floor_index, state, rng from next_seed("lootbox")); add_rewards(); emits lootbox_opened
@@ -747,8 +764,9 @@ func apply_floor_event(event_id: String, choice: String) -> Dictionary   # §7.4
 func visit_room(cell: Vector2i) -> bool   # ExplorationScene on every room change; first visit: floor_run.visited.append(cell),
 	# STAIRS → stairs_found = true, record({"t": "room", "cell": [x, y]}); returns first_visit
 func open_chest(chest_id: String) -> Array[LootReward]   # §7.3 chest flow without visuals: unknown / already open / locked without
-	# itm_key_master → [] (no change); else record({"t": "chest", "id"}), LootRoller.roll_chest (rng SeedUtil.derive(floor_run.seed,
-	# "chest", k)), add_rewards(), opened_chests.append(id), emits chest_opened(id, rewards)
+	# itm_key_master → [] (no change); else record({"t": "chest", "id"}), LootRoller.roll_chest (rng SeedUtil.derive(
+	# floor_run.loot_seed, "chest", k) — 05 CR-11: never the public layout seed; RunSim identical), add_rewards(),
+	# opened_chests.append(id), emits chest_opened(id, rewards)
 func open_gate(key: String) -> void   # requirement checked by the caller (M3); once: record({"t": "gate", "key"}), opened_gates.append
 func enter_safe_room(safe_room_id: String) -> Dictionary
 	# record({"t": "safe_room", "id"}); location = id; safe_room_visits += 1; first_visit := id not in visited_safe_rooms → append;
@@ -816,11 +834,23 @@ Laufzeitverhalten:
   `Command.TYPES` (M8) = genau diese Liste.
 - Quest-Adapter (05 CR-4, nur `mode == &"event_offline"`): `enemy_killed` → `{"type": "enemy_killed", "enemy_id"}`,
   `boss_defeated` → `{"type": "boss_defeated", "boss_id"}`, `battle_started` → `{"type": "battle_started"}`, `floor_completed` →
-  `{"type": "floor_completed", "floor"}`, `achievement_unlocked` → `{"type": "achievement", "id"}`; Metriken (CR-13)
+  `{"type": "floor_completed", "floor"}`, `achievement_unlocked` → `{"type": "achievement", "id"}`; Detail-Events wie `RunSim`
+  (Fortschritt vor dem Abschluss): `visit_room` (Erstbesuch) → `RunSim.zones_event(floor_run, layout)` = `{"type": "zones",
+  "explored", "total"}` (nur handgebaute Etagen mit Zonen), `boss_hp_changed` (Show) → `{"type": "boss_hp", "boss_id", "hp",
+  "max_hp"}`; Metriken (CR-13)
   `{"type": "metric", "name", "value": int}` mit `value = state.show.stats[name]` (deterministisch, nie die verrauschten
   Anzeige-Zuschauer): `viewers_changed` → `viewers_target_peak`, `followers_changed` → `followers_gained_run`, `hype_changed` →
   `hype_100_count`; nur wenn sich der Wert seit der letzten Meldung geändert hat. Show aktualisiert diese Zähler **bevor** es das
   Signal sendet (§6.3). Damit ist der Quest-Typ `hype_peak` im Slice verdrahtet.
+- **Checkpoints** (05 §3.3 Nr. 8): die Live-Uhr `sim` schreibt in `run_log` (`sim.run_log = run_log` bei `new_game`,
+  `start_event_run`, `adopt_loaded_state`): alle 300 Ticks sowie nach jedem Kampf (`apply_battle_result`) und jedem
+  `descend` (`complete_floor`) per `RunSim.request_checkpoint()` — geschrieben, wenn die Uhr den Tick verlässt (Checkpoint
+  `k` = Zustand nach allen Commands mit `k' ≤ k`). `finish_run` schließt das Log mit `sim.close(cause, {"score"})`
+  (letzter Checkpoint + `run_log.result {"cause", "final_hash", "ticks", "score"}`) vor `Save.save_replay`. `replay_log`
+  vergleicht jeden Checkpoint (`mismatch_at`). Summary von `finish_run` (für `ScoreCalc`): `FloorRun.summary()` +
+  `cause`, `event_id`, `quest_complete`, `quest_progress`, `quest_progress_ppm`, `party_kos` (`floor_run.stats.party_kos`,
+  BattleBridge), `followers`, `followers_gained_run`, `achievements_total`, `achievements_in_run` (Event-Läufe starten bei
+  `create_new` → = Anzahl), `score`, `breakdown`, `rank`, `final_hash`.
 - **Replay** (`replay_log(p_log)`): sichert den Live-Kontext (`state`, `run_log`, `sim`, `quest`, `mode`, Zähler …), setzt
   `replaying = true`, baut `state = GameState.create_new(DB.data, header.slot, header.player_name, header.seed, header.difficulty)`,
   bei `header.event_id != ""` `mode = &"event_offline"`, `EventCatalog` → `EventDef` → `RunSim.new(…, def.rules)` und
@@ -832,7 +862,7 @@ Laufzeitverhalten:
   `encounter` → `make_battle_setup` (next_seed "battle") → `BattleState.new` → `Show.begin_battle` (next_seed "show") →
   `battle_started` → `_play(start())`; `battle` → `_play(submit(BattleCommand.from_dict(cmd)))`; `_play` = Events →
   `Show.on_battle_event`, dann (Kampf läuft) ein direkt folgendes `gift`-Command in `Show.receive_gift` und
-  `Show.take_pending_gift(battle)` → `apply_gift`; Kampfende → `battle_ended`, `apply_battle_result`, `Show.end_battle`,
+  `Show.take_pending_gift(battle)` → `apply_gift` → `Show.note_battle_gift(g, events)`; Kampfende → `battle_ended`, `apply_battle_result`, `Show.end_battle`,
   DEFEAT → `on_game_over(&"defeat")`. Checkpoint `k` = Zustand nach allen Commands mit `k' ≤ k`. Danach Live-Kontext zurück,
   `replaying = false`, `Show.sync_from_state()`. RNG-Verbrauch, Show-Reaktionen, Meilensteine und Safe-Room-Buchhaltung sind damit
   per Konstruktion identisch. Nicht während eines Kampfes (`in_battle` → Warnung, leeres Ergebnis): Shows Kampfzustand würde
@@ -901,7 +931,13 @@ func on_battle_event(e: ActionEvent) -> void
 	# M.O.D. lines for delta.reasons; viewers_peak_battle = max(viewers()); sponsor threshold check (§6.2)
 func receive_gift(gift: Dictionary) -> Dictionary                   # THE single gift entry (Brief §6b.4) → {"accepted": bool, "reason": String}
 func take_pending_gift(battle: BattleState = null) -> Dictionary   # {} = none; battle gives the party situation for weight_mods
+func note_battle_gift(g: Dictionary, events: Array[ActionEvent]) -> void   # after battle.apply_gift(g): run bookkeeping
+	# (GiftApplier.note_battle_gift: gift items + load/caps, idempotent per gift id) exactly as RunSim books it
+func application_refusal(g: Dictionary) -> String                  # "" or why an external gift may not be applied NOW
+	# (duplicate | GiftPolicy.check with the run counters + run tick) — same rule as RunSim.gift_refusal
 func end_battle(result: BattleResult) -> int                        # followers gained; stats; battle_won/battle_fled/boss_defeated
+func abort_battle() -> void          # battle torn down before its end (BattleScene freed): drops _rules/_setup/thresholds/queue
+	# without end_battle (no followers/stats); waiting external gifts → gift_rejected(id, "run_not_active"), never applied
 func unlocked_this_battle() -> PackedStringArray
 ```
 
@@ -916,11 +952,23 @@ Geschenke (Brief §6b.4, 05 §6.5): Gift-Dictionary mindestens `{"schema": 1, "g
 anwenden = `Game.record({"t": "gift", "gift": g})` (nur `source ≠ "system"`) → `GiftApplier.apply(Game.state, DB.data, g,
 SeedUtil.make_rng(Game.next_seed("gift")))` + `Game.add_rewards()` → `Events.gift_received(g)`; abgelehnt →
 `Events.gift_rejected(gift_id, reason)`.
-`take_pending_gift(battle)`: (1) erstes wartendes externes Geschenk → **jetzt** `Game.record({"t": "gift", "gift": g})` → Rückgabe
-(der Controller wendet es per `battle.apply_gift` an); sonst (2) ist eine Hype-Schwelle offen (§6.2):
+`take_pending_gift(battle)`: (1) erstes wartendes externes Geschenk, solange in diesem Kampf weniger als
+`rules.gifts.max_per_battle` (Standard 1, `GiftPolicy.can_deliver_in_battle`) externe ausgeliefert wurden → **erneut geprüft**
+(`application_refusal`: Duplikat, `GiftPolicy.check` mit aktuellen Lauf-Zählern und `tick = Game.sim.tick()` — Frist, Caps,
+Wirkungsfaktor; abgelehnt → aus der Queue, `gift_rejected`, nicht aufgezeichnet) → **jetzt** `Game.record({"t": "gift",
+"gift": g})` + `GiftPolicy.note_applied` → Rückgabe (der Controller wendet es per `battle.apply_gift` an und ruft
+`note_battle_gift(g, events)`); sonst (2) ist eine Hype-Schwelle offen (§6.2):
 `SponsorSystem.pick(DB.data, {"floor_index", "is_boss", "party": battle.party()}, _rng)` → `Gift.make_system(sponsor_id, battle_n, k)` → **ebenfalls** `receive_gift()` → Rückgabe.
 Der Hype-Schwellen-Trigger hat damit keinen eigenen Geschenkweg. Externe Geschenke, die bei `end_battle` noch warten, werden als
-**letzter** Schritt von `end_battle` außerhalb des Kampfes angewendet (wie oben: record → `GiftApplier` → `gift_received`).
+**letzter** Schritt von `end_battle` außerhalb des Kampfes angewendet — ebenfalls nach erneuter Prüfung (`application_refusal`;
+abgelehnt → `gift_rejected`), sonst wie oben: record → `GiftApplier` → `gift_received`. Die Prüfung bei Anwendung ist maßgeblich
+(05 §6.10): Live-Lauf, `Game.replay_log` und `RunSim.replay` verwerfen dasselbe Geschenk und buchen dieselben Zähler
+(`flags["live"]`), sonst wichen Checkpoints/Final-Hash ab. Nach einem `sponsor_buff` außerhalb des Kampfes ruft Show
+`Game.emit_party_changed()`. Ein vorzeitig freigegebener Kampf (`BattleScene._exit_tree` ohne Ergebnis) ruft `abort_battle()`.
+Zeilen: `gift_received` mit `{sender}` (nur bei nicht-anonymem Absender, sonst `gift_received:anon`), `gift_received:credits`
+mit `{amount}` (angewendete Credits), `fan_pack_received` mit `{sender}`, `gift_diminished` mit `{pct}` (Wirkung < 100 %),
+Ablehnungen `cap_reached`/`chest_blocked` → `gift_capped`, `not_accepting` → `gift_declined` (05 §6.12; Pur-Liga,
+Duplikate, Schemafehler stumm).
 **Aufzeichnung bei Anwendung, nicht bei Empfang:** Nur so ist die Reihenfolge im Log eindeutig (ein `gift`-Command im Kampf steht
 direkt hinter dem `battle`- bzw. `encounter`-Command, an dessen `_play`-Grenze es ausgeliefert wurde) und `Game.replay_log` kann
 es an derselben Stelle wieder einspeisen (§3.4 „Replay“).
@@ -935,6 +983,13 @@ CR-13-Zähler (§6.3) werden **vor** dem jeweiligen Signal aktualisiert: `add_fo
 (vor `followers_changed`); `add_hype` erreicht 100 von unten (`prev < 100`, neu = 100) → `hype_100_count += 1` (vor `hype_changed`).
 Replay: Alle Show-Methoden laufen auch während `Game.replay_log` (`Game.replaying == true`); sie dürfen dann reine Präsentation
 (M.O.D.-/Chat-Zeilen, Toasts) weglassen, führen aber jede Zustandsänderung und jeden RNG-Verbrauch exakt wie live aus.
+
+Story-Beats (GDD §1.4, `tutorial_*`/`story_*`-Zeilen): `floor_entered` einer Etage, deren Countdown auf ihr Tutorial wartet
+(`FloorDef.timer_start_after` gesetzt, `timer_started == false`) → `say("tutorial_explore")` + `say("tutorial_sneak")` (B1);
+`begin_battle` mit `setup.tutorial` → `say("tutorial_battle")`, nach dem 2. Party-Zug (`TURN_END`) → `say("tutorial_stunt")`
+(B2); `begin_battle` → `say("story_battle:<encounter_id>")`, falls Zeilen existieren (B4: `enc_f1_b2` „Die Königin hört von
+euch.“). `on_battle_event` emittiert `boss_hp_changed({"boss_id", "hp", "max_hp"})` für Events mit `hp_after` auf einer
+Boss-Einheit (Quest-Fortschritt `defeat_boss`, gleiche Regel wie `RunSim`).
 
 Hört auf `Events`: `chest_opened` (Hype +3, `chests_opened` +1, Trigger), `lootbox_opened` (`lootboxes_opened` +1, Trigger),
 `level_up` (Trigger, `say("level_up")`), `floor_completed` (Trigger mit `{"floor", "timer_left"}`, `say("floor_end")`),
@@ -961,10 +1016,13 @@ var read_only: bool = false                  # Autoplay: true → save calls ret
 func slot_path(slot: int) -> String          # save_dir + "/slot_%d.json" % slot
 func has_save(slot: int) -> bool
 func slot_summary(slot: int) -> Dictionary   # {} empty; {"corrupt": true} unreadable; else SaveCodec summary keys
-func save_slot(slot: int) -> Error           # Game.state → SaveCodec.encode → atomic write; emits game_saved
-func load_slot(slot: int) -> Error           # read → SaveCodec.decode → Game.state (+ grace time_left ≥ 180 s, §6.4),
-                                             # Game.sim/run_log neu (Header wie new_game + "from_save": true; nur für
-                                             # Bug-Reports — replay_log startet immer bei create_new); emits game_loaded
+func save_slot(slot: int) -> Error           # Game.state → SaveCodec.encode → atomic write; emits game_saved; after a
+                                             # successful write `slot` becomes the active slot (Game.state.slot — autosave
+                                             # and record_game_over follow it); `slot` is meta data, not in StateHash
+func load_slot(slot: int) -> Error           # read → SaveCodec.decode (+ grace time_left ≥ 180 s, §6.4) →
+                                             # Game.adopt_loaded_state(state, run_log) (privater Lauf-Kontext zurückgesetzt;
+                                             # Header wie new_game + "from_save": true; nur für Bug-Reports — replay_log
+                                             # startet immer bei create_new); emits game_loaded
 func delete_slot(slot: int) -> Error
 func autosave() -> Error                     # save_slot(Game.state.slot); slot 0 → OK, no write
 func newest_slot() -> int                    # slot with the latest saved_at_unix, 0 if none (Title "Fortsetzen")
@@ -1187,7 +1245,7 @@ const MODEL_BASES: PackedStringArray = ["humanoid", "pug", "rodent", "blob", "in
 const MODEL_PROPS: PackedStringArray = ["cape", "crown", "monocle", "top_hat", "cap", "bandana", "apron", "mop", "broom",
 	"knife", "staff", "key_ring", "glasses", "lamp_helmet", "backpack", "mask", "wings", "antennae",
 	"newspaper_head", "briefcase", "bottlecap_chain", "cable_tangle", "spray_cap", "escalator_back", "claws", "helmet",
-	"shield", "halberd", "rat_king_tail", "ticket_crown", "wrench", "axe", "crowbar", "cart"]
+	"shield", "halberd", "rat_king_tail", "ticket_crown", "wrench", "axe", "crowbar", "cart", "discount_tag"]
 const MODEL_POSES: PackedStringArray = ["auto", "quadruped", "upright"]
 const THEMES: PackedStringArray = ["metro", "mall"]
 const SAFE_ROOM_THEMES: PackedStringArray = ["kiosk", "pumphouse", "signalbox"]
@@ -1197,6 +1255,7 @@ const FLOOR_EVENT_TYPES: PackedStringArray = ["photo_drone", "lost_candidate", "
 const ENEMY_START_STATES: PackedStringArray = ["IDLE", "PATROL"]
 const QUEST_TYPES: PackedStringArray = ["reach_stairs", "defeat_boss", "bounty", "hype_peak", "pacifist", "achievement_hunt", "all_of"]
 const LOOT_KINDS: PackedStringArray = ["item", "credits", "box", "nothing", "encounter"]   # box/nothing/encounter only in fev_wheel tables
+                                                                                           # (wheel amount ≥ 1; "nothing" 0 allowed, GDD §2.6)
 const GIFT_KINDS: PackedStringArray = ["heal_party_pct", "heal_party_flat", "mp_party_pct", "status_party", "status_enemies", "item", "revive_or_heal_lowest"]
 const SPONSOR_WEIGHT_CONDS: PackedStringArray = ["ally_hp_below", "ally_mp_below", "ally_ko", "is_boss"]
 const ACH_TRIGGERS: PackedStringArray = ["enemy_killed", "battle_won", "battle_fled", "battle_started", "stunt_resolved", "combo",
@@ -1204,15 +1263,17 @@ const ACH_TRIGGERS: PackedStringArray = ["enemy_killed", "battle_won", "battle_f
 	"level_up", "event_completed", "explore_tick", "floor_completed"]
 const VOICES: PackedStringArray = ["mod", "mopsula", "kai", "chat"]
 const TEXT_PLACEHOLDERS: PackedStringArray = ["name", "floor", "level", "enemy", "item", "achievement", "viewers", "followers",
-	"sponsor", "count", "member", "seconds"]
+	"sponsor", "count", "member", "seconds", "sender", "amount", "pct", "min"]   # sender/amount/pct/min: 05 §6.12
 const REQUIRED_MOD_TAGS: PackedStringArray = ["intro", "floor_start", "first_fight", "achievement_generic", "low_hp",
 	"kill_streak", "crit", "weakness", "overkill", "stunt_success", "stunt_fail", "boring_fight", "flee", "flee_fail",
 	"sponsor_gift", "timer_warn_300", "timer_warn_60", "timer_expired", "lootbox_open_bronze", "lootbox_open_silver",
 	"lootbox_open_gold", "lootbox_open_fan", "lootbox_pity", "death", "mopsula_ko", "kai_ko", "revive", "boss_defeated",
 	"level_up", "follower_milestone", "safe_room_enter", "vendor_buy", "stairs_found", "floor_end",
 	"chat_hype_high", "chat_hype_mid", "chat_hype_low", "chat_crit", "chat_boring", "chat_mopsula", "chat_handle"]
+## Optional tags: live tags of 05 CR-9 / §6.12 (event_*, gift_*, fan_pack_*, live_*, vote_*, twist_applied_*) and the
+## story beats of GDD §1.4 (tutorial_* hints B1/B2, story_battle:<encounter_id> banners B4).
 const OPTIONAL_MOD_TAG_PREFIXES: PackedStringArray = ["achievement:", "boss_intro:", "boss_phase:", "event_", "gift_received",
-	"mopsula_idle", "chat_"]   # live tags of 05 CR-9 are optional
+	"mopsula_idle", "chat_", "gift_", "fan_pack_", "live_", "vote_", "twist_applied_", "tutorial_", "story_"]
 ```
 
 `StatIds.ALL` (§6.3) ist das Vokabular für `s.<stat>` in Bedingungen.
@@ -1714,7 +1775,7 @@ sonst niedrigsten HP-Anteil +value % MaxHP). Gewicht = `weight × Π mult` aller
 | F | T | P / Default | Regel |
 |---|---|---|---|
 | `id` | String | ✓ | `mod_` |
-| `tag` | String | ✓ | `REQUIRED_MOD_TAGS`, `timer_warn_<s>`, parametrisiert (`achievement:<ach_id>`, `boss_intro:<enemy_id>`, `boss_phase:<enemy_id>:<n>`) oder optionale Präfixe (`OPTIONAL_MOD_TAG_PREFIXES`) |
+| `tag` | String | ✓ | `REQUIRED_MOD_TAGS`, `timer_warn_<s>`, parametrisiert (`achievement:<ach_id>`, `boss_intro:<enemy_id>`, `boss_phase:<enemy_id>:<n>`, `story_battle:<encounter_id>` — nur Format `enc_…` geprüft, Fixtures ersetzen Etagen; `test_m7_text_content` prüft die Referenz der echten Daten) oder optionale Präfixe (`OPTIONAL_MOD_TAG_PREFIXES`) |
 | `voice` | String | `"mod"` | `VOICES` |
 | `text` | String | ✓ | ≤ 110 Zeichen; Platzhalter `{…}` nur aus `TEXT_PLACEHOLDERS` |
 | `user` | String | `""` | nur voice chat: fester Absender; `""` → zufälliger Handle (Tag `chat_handle`) |
@@ -1725,6 +1786,10 @@ sonst niedrigsten HP-Anteil +value % MaxHP). Gewicht = `weight × Π mult` aller
 GDD-Key → Tag: alle Keys aus GDD §11.2 sind 1:1 Tags, außer `timer_warning_5` → `timer_warn_300`, `timer_warning_1` →
 `timer_warn_60`, `timer_zero` → `timer_expired`, `boss_intro_<boss>` → `boss_intro:<enemy_id>`, `boss_phase_<boss>_<n>` →
 `boss_phase:<enemy_id>:<n>`; die 10:00-Meldung ist `timer_warn_600` mit `voice: chat`. Fallback bei der Auswahl: `a:b:c` → `a:b` → `a`.
+Story-Beats (GDD §1.4, Konsument `Show`, §3.5): `tutorial_explore`, `tutorial_sneak` (B1), `tutorial_battle`, `tutorial_stunt` (B2),
+`story_battle:enc_f1_b2` (B4). Live-Zeilen 05 §6.12: `gift_received` (`{sender}`), `gift_received:anon`, `gift_received:credits`
+(`{amount}`), `gift_diminished` (`{pct}`), `gift_capped`, `gift_declined`, `fan_pack_received` (`{sender}`), `live_closing` (`{min}`,
+S2), `vote_open` (S2).
 
 ```json
 {"id": "mod_floor_start_01", "tag": "floor_start", "voice": "mod", "text": "Etage {floor}! Neuer Countdown, neue Monster, gleiche Gage: keine.", "weight": 1}
@@ -1743,13 +1808,15 @@ GDD-Key → Tag: alle Keys aus GDD §11.2 sind 1:1 Tags, außer `timer_warning_5
 | `priority` | int | 0 | kleiner = zuerst, wenn mehrere verfügbar |
 
 ```json
-{"id": "scn_mop_4", "name": "Vor dem Thron", "condition": "e.safe_room_id == \"sr_signalbox\" && e.first_visit == true",
+{"id": "scn_mop_4", "name": "Vor dem Thron", "condition": "e.safe_room_id == \"sr_signalbox\"",
  "set_flag": "mop_pep_talk", "priority": 0,
  "lines": [{"voice": "mopsula", "text": "Sie nennt sich Königin. Eine RATTE. Mit einer Krone aus Fahrscheinen."},
            {"voice": "kai", "text": "Wir müssen nicht gegen sie kämpfen. Die Treppe ist gleich da."}]}
 ```
-Bedingungen der vier Szenen: `scn_mop_1` `e.safe_room_visits == 1`; `scn_mop_2` `f.defeated_enm_boss_hausmeister == true`;
-`scn_mop_3` `e.kai_level >= 4 && f.scene_scn_mop_1 == true`; `scn_mop_4` wie oben.
+Bedingungen der vier Szenen (GDD §10.2: eine beim ersten Besuch verpasste Szene bleibt bei späteren Besuchen gültig —
+abweichend von „nur beim ersten Besuch“): `scn_mop_1` `e.safe_room_visits >= 1`; `scn_mop_2` `f.defeated_enm_boss_hausmeister ==
+true`; `scn_mop_3` `e.kai_level >= 4 && f.scene_scn_mop_1 == true`; `scn_mop_4` wie oben (ohne `first_visit`). `once` (Flag
+`scene_<id>`) verhindert die Wiederholung; mehrere qualifizierte Szenen eines Besuchs spielen nacheinander (M6 SafeRoom).
 
 #### 4.4.14 ModelSpec (in `party.json`, `enemies.json`)
 
@@ -1761,7 +1828,10 @@ Bedingungen der vier Szenen: `scn_mop_1` `e.safe_room_visits == 1`; `scn_mop_2` 
 `base` ∈ `MODEL_BASES` (✓), `scale` 0.3..4.0 (1.0), `pose` ∈ `MODEL_POSES` (`"auto"` = ART-Regel: `rodent` mit `scale ≥ 1.0`
 aufrecht, sonst Vierbeiner; `"quadruped"`/`"upright"` erzwingen — `enm_boss_rattenkoenigin` setzt `"quadruped"`),
 `colors.primary` ✓, übrige Farben optional (Archetyp-Defaults), `props` ⊂ `MODEL_PROPS`, `seed` int (0),
-`gltf` = späterer `res://art/models/…glb`-Pfad (`""`).
+`gltf` = späterer `res://art/models/…glb`-Pfad (`""`). Prop `discount_tag` (Rabattschild, 03_ART §5.7): Preisschild-Platte auf dem
+`chest`-Sockel + `Label3D` „-50%“ (96 px Akzentfarbe, Outline 12 weiß; Blueprint-Schlüssel `labels`, blendet mit dem Dissolve aus).
+Schaufensterpuppe: Übergangsregel `colors.eyes == colors.skin` → gesichtslose Puppe (`humanoid`); ein expliziter Schalter
+(Prop/Variante) folgt mit Etage 2.
 
 ### 4.5 Validierung (`DataValidator`) und `GameData`-API
 
@@ -2186,7 +2256,8 @@ func remove(c: Combatant) -> void
 func add_delay(c: Combatant, ticks: int) -> void # stun on apply, stunt fail
 ```
 
-Startwerte (GDD §2.4): **NORMAL** alle `roundi(base_delay × rng.randf_range(0.5, 1.0))`; **PREEMPTIVE** Party 0, Gegner
+Startwerte (GDD §2.4): **NORMAL** alle `FixedMath.div_round(base_delay × rng.randi_range(500, 1000), 1000)` (Faktor 0.5–1.0 als
+Ganzzahl-Promille, 05 §3.3 Nr. 5 / CR-12); **PREEMPTIVE** Party 0, Gegner
 `base_delay`; **AMBUSH** Gegner 0, Party `base_delay`. Bosse starten immer NORMAL.
 `base_delay`: SPD 5 → 67, 10 → 50, 11 → 48, 13 → 43, 14 → 42, 15 → 40, 20 → 33, 30 → 25.
 Rang: `ATTACK` 3, `SKILL`/`STUNT` = `SkillDef.rank`, `ITEM` = Rang des `use_skill` (Default 2), `DEFEND` 2, `FLEE` 2.
@@ -2238,12 +2309,36 @@ func choose_ai_command() -> BattleCommand                    # enemy → EnemyAI
 func apply_gift(g: Dictionary) -> Array[ActionEvent]         # only in AWAIT_COMMAND; does not consume a turn (05 CR-2)
 func is_finished() -> bool
 func to_dict() -> Dictionary                                 # snapshot incl. CTB counters, statuses, items, action_n
+static func from_dict(d: Dictionary, p_data: GameData) -> BattleState   # CR-14: inverse; continuing gives identical events
+# helpers used by M2/M5/M8:
+func ghost_overrides(actor: Combatant, skill_id: String, target_ids: PackedStringArray) -> Dictionary
+	# {combatant_id: ctr} for preview_order (stun ghost preview; haste/slow only change FUTURE delays → not shown)
+func flee_chance() -> float                                  # formula below (HUD); flee_allowed() -> bool
+func stunt_chance(actor: Combatant, skill: SkillDef) -> float
+func skill_def(id: String) -> SkillDef                       # also item_def(id), status_def(id) (data lookups for HUD)
+func free_enemy_slot() -> int                                # -1 if 4 living enemies
+func pseudo_units() -> Array[Combatant]
+func set_action_seed_source(c: Callable) -> void             # optional CR-2 hook (S4: server action seeds)
+var running_item_id: String                                  # item of the ITEM command being resolved (KO.item_id)
 ```
+
+Snapshots (CR-14, 05 §3.4/§3.6): `BattleState.to_dict/from_dict(d, data)`, `CTBQueue.to_dict/from_dict(d, combatants)`,
+`StatusEffect.to_dict/from_dict(d, data)`, `BattleSetup.to_dict/from_dict(d, data)`, `BattleResult.from_dict(d)`,
+`Combatant.to_dict/from_dict(d, data)`. Snapshots enthalten **keine Floats**: Gleitkommawerte als `*_ppm`-Ganzzahlen, RNG-Seed/
+-State als Dezimal-Strings (> 2^53). `StateHash.of_battle` hasht `to_dict()`; `test_m1_battle_snapshot` prüft Snapshot →
+`from_dict` → gleicher Hash und identisches Weiterspielen. `Combatant` zusätzlich: `left_battle` (geflohener Gegner / entfernte
+Pseudo-Einheit), `pseudo_def`, `warned` (Pseudo-Warnung seit der letzten Aktion gegeben), `is_ko()`, `get_status(id)`,
+`mp_ratio()`, `speed_pm()` (Tempo in Promille), `duplicate_combatant()`; `DamageCalc.pct_max_hp(target, pct, element, mult)`
+(Prozentschaden der Pseudo-Einheiten, ignoriert Verteidigung/Guard — das Feld `ignores_guard` wird nicht gelesen),
+`Elements.multiplier_pm(mods, element)`, `ActionEvent.type_name(t)`.
+Bekannte Spielgrenzen (wie spezifiziert): `accuracy` ist reserviert (nichts verfehlt); `fan_pack`-Hype und `cheer` gehören
+Show — `cheer` hat im Kampf keine Wirkung.
 
 Regeln (GDD §3):
 - **Zugbeginn** (`TURN_START`): `defending = false`; Status mit `delay_on_apply` (Stun) werden entfernt; Status mit
   `tick_timing: turn_start` ticken (Gift: `maxi(tick_min, roundi(max_hp × 8 / 100))` Schaden, kann töten → `KO`, kein Zug).
-- **Zugende** (`TURN_END`): Ticks mit `tick_timing: turn_end`, dann alle Dauern −1 (0 → `STATUS_REMOVED`); `own_turns += 1`;
+- **Zugende** (`TURN_END`): Ticks mit `tick_timing: turn_end`, dann alle Dauern −1 (0 → `STATUS_REMOVED`) — **außer** Status, die
+  in diesem Zug auf den Akteur gelegt wurden (GDD §3.3: „3 eigene Züge“ = die 3 folgenden eigenen Züge); `own_turns += 1`;
   `stunt_cooldown -= 1` (min 0), außer im Zug, in dem der Stunt benutzt wurde; `queue.on_acted(actor, rank)`.
 - **Verteidigen**: `defending = true` bis zum nächsten eigenen `TURN_START` (Schaden × 0.5); `MP_CHANGE` +`maxi(2, ceili(max_mp × 0.05))`.
 - **Status anwenden**: Immunität (`status_immune`) oder `element_mods[StatusDef.element] == 0.0` → `STATUS_BLOCKED`; sonst
@@ -2258,8 +2353,9 @@ Regeln (GDD §3):
 - **Combo** (GDD §7.3): Party-Aktion mit genau einem gegnerischen Ziel und Schaden, wenn die direkt vorherige Aktion
   (kein Gegner-/Pseudo-Zug dazwischen) vom **anderen** Party-Mitglied auf **dasselbe** Ziel ging → `COMBO`-Event und
   `combo_second_hit = true` für alle Treffer dieser Aktion auf dieses Ziel.
-- **Bosse/Phasen**: nach **jedem** `DAMAGE` auf einen Boss: neue Phase = erste Phase mit `hp_ratio > hp_above`; nur vorwärts,
-  max. 1 Wechsel pro Ereignis → `PHASE_CHANGE`, dann `on_enter`-Ops in Reihenfolge: `say` → `MOD_LINE(tag)`; `status_self` →
+- **Bosse/Phasen**: nach **jedem** `DAMAGE` auf einen Boss: neue Phase = erste Phase mit `hp_ratio > hp_above`; nur vorwärts;
+  überspringt ein Treffer mehrere Schwellen, wird **jede** Zwischenphase der Reihe nach betreten (GDD §3.11), je
+  `PHASE_CHANGE`, dann ihre `on_enter`-Ops in Reihenfolge: `say` → `MOD_LINE(tag)`; `status_self` →
   `STATUS_ADDED`; `summon` → `SUMMON` (freie Slots, max. 4 lebende Gegner, Zähler `roundi(base_delay × 0.5)`);
   `fixed_damage_self` → `DAMAGE` (hp nie unter `min_hp`); `add_pseudo` → `SUMMON` (def_id `pu_…`, id `u<n>`, Zähler `ctr`);
   `remove_pseudo` → `PSEUDO_REMOVED`. Phase 1 wird nach `BATTLE_START` betreten.
@@ -2271,7 +2367,8 @@ Regeln (GDD §3):
   `escape` → `ESCAPED`, Einheit verlässt Kampf und Zugreihenfolge (keine EXP/Credits/Drops; Gruppe gilt danach als erledigt).
 - **Wiederbelebung**: `REVIVE`, Zähler `base_delay`. **Tutorial**: Party-HP fällt durch Schaden nie unter 1.
 - **Sieg**, wenn kein echter Gegner mehr lebt (getötet oder geflohen): Drops je getötetem, nicht beschworenem Gegner
-  `rng.randf() < chance × (1 + Ø LCK der lebenden Party / 100)`; `boss_drops` immer; EXP/Credits summiert (Overkill: Credits
+  `rng.randi_range(0, 999999) < roundi(clampf(chance × (1 + Ø LCK der lebenden Party / 100), 0, 1) × 10^6)` (`LootRoller.roll_drops`,
+  Ganzzahl-ppm, 05 CR-12); `boss_drops` immer; EXP/Credits summiert (Overkill: Credits
   dieses Gegners × 1.25, Differenz in `overkill_credits`), `exp × exp_mult`.
 - `apply_gift(g)`: `kind: "sponsor_buff"` → `SPONSOR_GIFT` + Effekte aus `SponsorDef.gift` (§4.4.10, RNG `"gift"`); `gold` →
   `CREDITS_GAINED`; `chest`/`fan_pack` → `ITEM_GAINED`/`CREDITS_GAINED` je Inhalt. Ändert sich die Reihenfolge (Status), folgt `CTB_ORDER`.
@@ -2297,8 +2394,11 @@ func run(setup: BattleSetup) -> void:
 		else:
 			cmd = state.choose_ai_command()
 		Game.record({"t": "battle", "cmd": cmd.to_dict(), "auto": not chosen})
-		await _play(state.submit(cmd))
+		await _play(state.submit(cmd))       # (an invalid AI command falls back to DEFEND; an empty submit() ends the loop)
 	var result: BattleResult = state.result
+	if result == null:                      # BattleState bug: never strand the player on the battle screen
+		abort_unfinished()                  # Game.in_battle = false; Show.abort_battle(); finished(null); Router.end_battle(null)
+		return
 	Events.battle_ended.emit(result.outcome, result.encounter_id)
 	var rewards: BattleRewards = Game.apply_battle_result(result)
 	rewards.followers = Show.end_battle(result)
@@ -2312,8 +2412,14 @@ func _play(events: Array[ActionEvent]) -> void:
 		return
 	var g: Dictionary = Show.take_pending_gift(state)
 	if not g.is_empty():
-		await player.play(state.apply_gift(g))
+		var gift_events: Array[ActionEvent] = state.apply_gift(g)
+		Show.note_battle_gift(g, gift_events)   # run counters / gift items exactly like RunSim (05 §6.9)
+		await player.play(gift_events)
 ```
+
+`BattleScene._exit_tree()` vor dem Kampfende (Szene vorzeitig freigegeben: Tests, Debug, Szenenwechsel) setzt
+`Game.in_battle = false` und ruft `Show.abort_battle()` (keine Show-Reste für den nächsten Kampf, wartende externe Geschenke
+werden abgelehnt).
 
 `BattlePlayer` (M5): `signal event_played(e: ActionEvent)`; `var speed: float` (= `Game.settings.battle_speed` ∈ {1.0, 2.0},
 Autoplay 4.0); `func play(events: Array[ActionEvent]) -> void` (Coroutine). Events mit gleichem `beat` innerhalb einer Aktion
@@ -2441,10 +2547,10 @@ const BACK_DOT: float = -0.34           # exploration: "from behind" (≙ > 110�
 |---|---|
 | Angriff/Verteidigung | physical: `A = STR`, `D = DEF`; magical: `A = MAG`, `D = RES` (Ausrüstung steckt in den Stats); Ziel mit `guard`: `D × 1.5` |
 | Schaden roh | `A × A / (A + D) × power / 100` |
-| Schaden | `roh × randf_range(0.9, 1.1) × (crit ? 1.5 : 1) × Element × (defending ? 0.5 : 1) × (combo ? 1.1 : 1) × enemy_dmg_mult`; `maxi(1, roundi(…))`; immun (Mult 0) → 0 |
+| Schaden | `roh × Varianz × (crit ? 1.5 : 1) × Element × (defending ? 0.5 : 1) × (combo ? 1.1 : 1) × enemy_dmg_mult`; `maxi(1, roundi(…))`; immun (Mult 0) → 0; Varianz 0.9–1.1 als `rng.randi_range(900, 1100)` ‰ (Ganzzahl, 05 CR-12; Konstanten `Balance.DMG_VARIANCE_MIN/MAX`) |
 | Krit (nur `physical`) | `clampf(0.05 + LCK × 0.005 + attacker.crit_bonus + skill.crit_bonus, 0.0, 0.40)` |
 | Fixschaden | `roundi(power × Element × (defending ? 0.5 : 1) × enemy_dmg_mult)`; keine A/D, keine Varianz, kein Krit, `guard` wirkungslos |
-| Heilung `mag` | `roundi((MAG × 1.5 + 10) × power / 100 × randf_range(0.95, 1.05))` |
+| Heilung `mag` | `roundi((MAG × 1.5 + 10) × power / 100 × Varianz)`, Varianz `rng.randi_range(950, 1050)` ‰ |
 | Heilung `pct` / Wiederbelebung | `roundi(MaxHP × power / 100)` |
 | Heilung `fixed` | `power` |
 | Treffer | trifft immer (`hit_chance` = 1.0; `accuracy` reserviert) |
@@ -2548,7 +2654,8 @@ func to_dict() -> Dictionary
 class_name LootRoller extends RefCounted
 static func roll_lootbox(box: LootboxDef, data: GameData, floor_index: int, state: GameState, rng: RandomNumberGenerator) -> Array[LootReward]
 static func roll_chest(chest: Dictionary, data: GameData, floor_index: int, state: GameState, rng: RandomNumberGenerator) -> Array[LootReward]
-	# layout chest: wood → randi_range(20, 40) credits + 1 entry from pools.f<i>.common; metal/locked → contents
+	# non-empty contents → exactly those (metal/locked, and procedural wood chests whose contents DungeonGenerator rolled
+	# from chest_table, §7.2 step 9); wood without contents → randi_range(20, 40) credits + 1 entry from pools.f<i>.common
 static func roll_chest_table(def: FloorDef, rng: RandomNumberGenerator) -> Array[LootReward]   # procedural floors: 1 roll (+1 at 20 %)
 static func roll_drops(drops: Array[Dictionary], avg_party_lck: float, rng: RandomNumberGenerator) -> PackedStringArray
 static func best_rarity(rewards: Array[LootReward]) -> String
@@ -2616,6 +2723,7 @@ var location: StringName = &"start"           # &"start" | safe room id (e.g. &"
 var visited_safe_rooms: PackedStringArray = []
 var safe_room_visits: int = 0                 # total entries on this floor (scene conditions)
 var stats: Dictionary = {"time_used_ticks": 0, "kills": 0, "viewers_peak": 0, "followers_gained": 0, "achievements": 0}
+	# + "party_kos" once a party member was KO'd on this floor (BattleBridge)
 static func create(def: FloorDef, run_seed: int, difficulty: StringName) -> FloorRun
 	# time_left_ticks = roundi(def.timer_seconds × (difficulty == &"vorabend" ? 1.5 : 1.0) × 30)
 func time_left_sec() -> float
@@ -2696,7 +2804,8 @@ static func apply_result(state: GameState, data: GameData, result: BattleResult)
 	# KO'd floori(50 %)), credits (+overkill), drops, boss_rewards (items → inventory, boxes → pending_lootboxes),
 	# Werbepause +ceili(max_mp × 0.15) MP for living members, stolen credits refunded; FLED/DEFEAT: stolen credits lost;
 	# VICTORY: defeated_groups += group_id, strays.erase(group_id), flags defeated_<boss_id> + quarter/floor boss flags;
-	# bestiary (defeated += 1 per defeated_ids entry, weak_known ∪= weak_found); floor_run.stats.kills += kills;
+	# bestiary (defeated += 1 per defeated_ids entry, weak_known ∪= weak_found); floor_run.stats.kills += kills,
+	# floor_run.stats.party_kos += party_kos (key appears with the first KO; event score KO penalty, 05 §1.5);
 	# VICTORY over FloorDef.timer_start_after → floor_run.timer_started = true
 
 class_name Shop extends RefCounted
@@ -2749,6 +2858,12 @@ Zerfall −1 je 150 Ticks (5 s) Erkundungszeit, nie unter 15 (`ShowModel.decay_s
 
 Sponsor-Schwellen (nur im Kampf): Steigt Hype aufwärts über 50, 75 oder 100 (jede Schwelle 1× pro Kampf) und sind weniger als
 2 (Boss 3) Geschenke vergeben, wird ein System-Geschenk fällig (`take_pending_gift`); nach Schwelle 100 wird Hype auf 80 gesetzt.
+Ausgeliefert wird an der nächsten Zuggrenze; eine Schwelle, die erst der letzte Treffer des Kampfes überschreitet, bleibt ohne
+Geschenk (keine Zuggrenze mehr, §5.7 fragt nur bei laufendem Kampf) — `end_battle` verwirft offene Schwellen und setzt eine offene
+100er-Schwelle **vor** der Follower-Umrechnung auf 80 (Peak/Follower unabhängig von freien Geschenk-Slots). Hype wird in ganzen
+Punkten geführt (Gewinne × `hype_gain_mult` in Ganzzahl-Promille, halb aufgerundet; Verluste unskaliert, `ShowDelta.hype_gain`/
+`hype_loss`), Status-Tick-Kills werden der Party-Aktion gutgeschrieben, die den Status gelegt hat (`by`/`member`) — nur solange der
+letzte Schaden am Gegner dieser Tick war.
 Geschenke kosten **keinen** Hype und keine Ticks. Auswahl `SponsorSystem.pick` mit Gewichten aus `sponsors.json`.
 
 Zuschauer: `ShowModel.viewers_for(floor.floor_mult, hype, followers)` (rauschfrei, deterministisch); Anzeige glättet und rauscht (§3.5).
@@ -3004,7 +3119,12 @@ func tick() -> int                                    # ticks since run start
    Theme reihum `kiosk`, `pumphouse`, `signalbox`; Shop = `def.shop`.
 8. Übrige Zellen `NORMAL`; `variant = rng.randi_range(0, 3)` für alle.
 9. **Truhen** (`type: wood`, Inhalt per `roll_chest_table`): `n = rng.randi_range(chests.min, chests.max)`, NORMAL ohne Start;
-   Blätter zuerst; IDs `f<i>_c<k>`; `offset = Vector2(rng.randf_range(−4.0, 4.0), rng.randf_range(−4.0, 4.0))`.
+   Blätter zuerst; IDs `f<i>_c<k>`; `offset = Vector2(rng.randi_range(−400, 400), rng.randi_range(−400, 400)) / 100.0`
+   (Ganzzahl-Zentimeter, 05 CR-12); Abweichung (M3): ein Offset kürzer als 2.0 m wird auf 2.5 m hinausgeschoben (die Gruppe
+   steht in der Raummitte), zwei Truhen eines Raums < 1.5 m auseinander → 90°-Drehung — ohne zusätzliche Würfe. Inhalt:
+   `LootRoller.roll_chest_table(def, SeedUtil.make_rng(SeedUtil.derive(floor_seed, "chest_table", k)))` → `contents`
+   (`LootRoller.roll_chest` gibt nicht-leere `contents` auch bei `wood` unverändert aus). Hinweis 05 CR-11: dieser Inhalt hängt
+   am öffentlichen Layout-Seed — vor Online-Etagen (S1+) beim Öffnen aus `floor_run.loot_seed` würfeln.
 10. **Gegnergruppen**: `n = rng.randi_range(enemy_groups.min, enemy_groups.max)`, NORMAL mit `depth ≥ 2`; max. 1 Gruppe pro Raum
     (bei Mangel 2); Encounter gewichtet aus Nicht-Boss-Encountern mit passender relativer Tiefe; IDs `f<i>_g<k>`, Zustand PATROL.
 11. `validate()` muss leer sein, sonst neuer Versuch; nach `MAX_ATTEMPTS` → `push_error` und letztes Layout zurückgeben.
@@ -3032,7 +3152,12 @@ Action `action` (eine Taste): liegt ein Interactable im Radius 1.5 m und im 120�
 sonst **Feldschlag** (Bogen 100°, Reichweite 1.8 m, Dauer 0.45 s, Cooldown 0.6 s).
 Kamera (verbindlich hier und in 03_ART; GDD-Werte 6 m/−22°/FOV 65 gelten nicht): SpringArm3D Länge 7.0 m (Kollisionsmaske
 `world`), Pitch −38° (Bereich −65°..−15°), FOV 60, Stick-Yaw 2.6 rad/s, Maus (RMT halten) 0.005 rad/px × Empfindlichkeit,
-Touch-Drag 0.006 rad/px.
+Touch-Drag 0.006 rad/px; Zoom 5–9 m per Mausrad (0.5 m) oder Zwei-Finger-Pinch (`Events.camera_zoom`, §10.3).
+Umgesetzte Abweichungen (M3, so verbindlich): Pivot schaut 2.5 m vor Kai entlang der flachen Kamerablickrichtung (vor Wänden
+gekürzt; Kai im unteren Drittel, Interaktions-/Schlagzone frei); steht hinter Kai eine Wand/Tür, wird zuerst der effektive Pitch
+angehoben (bis −65°, gemessen in Sturzhöhe 3.2 m), erst danach der Arm gekürzt; Kai direkt an Wand/Tür → Kamera darf hinter der
+Wand bleiben (flachster Pitch, aus dem Kopf und Füße sichtbar); Türstürze haben Kollisionsboxen (Layer `world`); Boss-Räume
++1.5 m Arm (`frame_extra_arm`); Kamera < 1.5 m an Kais Kopf → sein Rig blendet aus.
 
 Begleiter `companion_follower.gd` (M3, **ohne** NavigationServer): Spur aus Spielerpositionen (alle 0.25 m ein Punkt, Ringpuffer 64);
 Mopsula (`CharacterBody3D`, Layer 0, Maske `world`) folgt der Spur mit 1.8 m Bogenlänge Abstand per `move_and_slide()` mit
@@ -3089,7 +3214,7 @@ Weitere Abläufe in der Erkundung (M3, verbindlich):
 | Auslöser | Ablauf |
 |---|---|
 | Raumwechsel (`layout.world_to_cell(player)` ändert sich) | `first_visit := Game.visit_room(cell)` (pflegt `visited`/`stairs_found` und zeichnet auf); `first_visit` → `hud.mark_visited(cell)`; immer `Events.room_entered(cell, kind, first_visit)` |
-| Truhe `interact` | `locked` ohne `itm_key_master` → Prompt „Verschlossen“; sonst `rewards := Game.open_chest(id)` (würfelt mit `SeedUtil.derive(floor_run.seed, "chest", k)`, zeichnet auf, `add_rewards`, `opened_chests`, `Events.chest_opened`); dann `ChestProp.open()`; `Sfx.play(&"chest_open")` |
+| Truhe `interact` | `locked` ohne `itm_key_master` → Prompt „Verschlossen“; sonst `rewards := Game.open_chest(id)` (würfelt mit `SeedUtil.derive(floor_run.loot_seed, "chest", k)`, zeichnet auf, `add_rewards`, `opened_chests`, `Events.chest_opened`); dann `ChestProp.open()`; `Sfx.play(&"chest_open")` |
 | Tor `interact` (`gate_interactable.gd`) | `requires` ist Item und im Inventar → `Game.open_gate(key)`, Tor-Prop entfernen, `Events.gate_opened`; sonst Prompt „Benötigt: Generalschlüssel“ |
 | Etagen-Event `interact` (`event_interactable.gd`) | Wahl-Dialog mit `FloorEvent.choices()`; Wahl → `Game.apply_floor_event(id, choice)` (§7.4; sendet bei `completed` selbst `Events.event_completed`); `open_gate` → Tor-Prop entfernen (Zustand pflegt `FloorEvent.apply`); `encounter_id != ""` → Kampf NORMAL mit `group_id ""` |
 | Treppe `interact` | ConfirmDialog (M6) „Etage verlassen? Offene Truhen und der Etagenboss bleiben zurück.“ → Ja: `Game.complete_floor()` |
@@ -3111,8 +3236,13 @@ Weitere Abläufe in der Erkundung (M3, verbindlich):
 | `photo_drone` | `pose_hype 15`, `pose_followers 20`, `smash_credits 30`, `smash_hype -5` | `pose`: Hype +15, Follower +20 · `smash`: +30 Cr, Hype −5, Tag `event_photo_drone_smash` |
 | `lost_candidate` | `tag "heal"`, `reward_item "itm_acc_lucky_ticket"`, `followers 40` | `give:<item_id>` (nur Items mit Tag `heal` im Inventar): Item −1, `reward_item` +1, Follower +40 · `leave`: Tag `event_lost_candidate_leave` |
 | `wheel` | `cost 20`, `max_spins 3`, `table [{weight 35, kind item, id itm_bandage, amount 2}, {25, credits, 50}, {15, box, box_bronze}, {15, nothing}, {10, encounter, enc_f1_evt_pigeons}]` | `spin` (Credits ≥ cost, `event_uses < max_spins`): −20 Cr, gewichteter Eintrag; `event_uses += 1` · `ignore` |
-| `lever` | `success 0.60`, `gate "x,y,D"` (Tor mit `requires: "event:fev_lever"`), `flood_pct 15`, `encounter "enc_f1_evt_slime"` | `pull`: `rng.randf() < success` → `open_gate`; sonst alle lebenden −15 % MaxHP (min 1 HP) + Folgekampf · `leave` |
-| `broken_vending` | `base 0.50`, `per_lck 0.01`, `reward_item "itm_energy_krawumm"`, `reward_amount 2`, `fail_pct 10`, `fail_hype 4` | `kick`: Erfolg `rng.randf() < base + Kai.LCK × per_lck` → 2 × Item; sonst Kai −10 % MaxHP (min 1), Hype +4 · `leave` |
+| `lever` | `success 0.60`, `gate "x,y,D"` (Tor mit `requires: "event:fev_lever"`), `flood_pct 15`, `encounter "enc_f1_evt_slime"` | `pull`: `rng.randi_range(0, 9999) < roundi(success × 10000)` → `open_gate`; sonst alle lebenden −15 % MaxHP (min 1 HP) + Folgekampf · `leave` |
+| `broken_vending` | `base 0.50`, `per_lck 0.01`, `reward_item "itm_energy_krawumm"`, `reward_amount 2`, `fail_pct 10`, `fail_hype 4` | `kick`: Erfolg `rng.randi_range(0, 9999) < roundi(base × 10000) + Kai.LCK × roundi(per_lck × 10000)` → 2 × Item; sonst Kai −10 % MaxHP (min 1), Hype +4 · `leave` |
+
+Chancen werden als Ganzzahl in Basispunkten gewürfelt (ein Wurf wie zuvor `randf()`, 05 §3.3 Nr. 5 / CR-12); der Lint
+`test_m8_no_global_rng` hat für `core/` keine Ausnahmen mehr. Glücksrad-Eintrag `nothing` trägt `amount 0` (GDD §2.6).
+Die Ergebnis-Enthüllung (Prop-Animation + Pause) nutzt `SceneTreeTimer` mit `process_always = false`: eine Pause (§9.4)
+hält auch sie an — kein Toast/Tor/Folgekampf unter dem Pausemenü; ebenso der Hitstop des Feldschlags.
 
 Validator (Regel 4/5): `params`-Schlüssel je Typ exakt wie oben; Item-/Box-/Encounter-IDs auflösbar; `lever.gate` verweist auf ein
 Tor mit `requires == "event:<diese fev id>"` — jede Seite der Tür ist erlaubt (`"3,6,N"` ≡ `"3,5,S"`); der Loader normalisiert
@@ -3279,7 +3409,10 @@ static func make_environment(theme_id: String, palette: Dictionary, mode: String
 	# tonemap Environment.TONE_MAPPER_AGX (= 4, checked 4.7.2; ART A1), glow (high only)
 static func make_sun(theme_id: String, mode: StringName, quality: StringName = &"high") -> DirectionalLight3D
 	# shadows only on high; directional_shadow_mode ORTHOGONAL on mobile (OS.has_feature("mobile")) else PSSM 2 splits;
-	# directional_shadow_max_distance 30 (explore) / 20 (battle)
+	# directional_shadow_max_distance 30 (explore) / 20 (battle); = make_zone_sun(theme_id, {}, mode, quality)
+static func make_zone_sun(theme_id: String, palette: Dictionary, mode: StringName, quality: StringName = &"high") -> DirectionalLight3D
+	# like make_sun with the zone palette's key color and zone energy (03_ART §4.3: sewer 0.7, cellar 0.9, else 1.1); explore
+	# key is a side/back light (rotation (−50, −110, 0), amended 03_ART), battle (−50, −30, 0) energy 1.25 (M5 battle stage)
 
 class_name PropKit extends RefCounted
 const IDS: PackedStringArray = ["chest", "stairs_down", "safe_door", "vending_machine", "save_terminal", "couch", "crate",
@@ -3291,9 +3424,14 @@ class_name ChestProp extends Node3D
 signal opened
 var is_open: bool
 func open(animated: bool = true) -> void        # lid tween 0.5 s + glow; emits opened;
-	# not is_inside_tree() → set_open_instant() + emit opened + push_warning (tweens never run outside the tree)
-func set_open_instant() -> void
+	# not is_inside_tree() → set_open_instant() + emit opened + push_warning (tweens never run outside the tree);
+	# a second open() while the lid still moves adds no early `opened` (the tween's one emission answers every caller);
+	# open() on an open, idle chest re-emits at once
+func set_open_instant() -> void                  # interrupting a running open() still emits its owed `opened` (once)
 ```
+
+Stairs-/Billboard-/Safe-Door-Beschriftung: Palette-Schlüssel `"label"` (Art-Extra), Standard `PropKit.STAIRS_LABEL`
+„NÄCHSTE ETAGE“; ein `RoomSpec.floor_number` für „ETAGE n“ ist für den Slice nicht nötig (zurückgestellt).
 
 ### 8.6 `Vfx`
 
@@ -3311,6 +3449,12 @@ static func for_skill(skill: SkillDef) -> StringName   # skill.vfx or element de
 static func damage_number(parent: Node, at: Vector3, text: String, style: StringName) -> void
 	# Label3D billboard, no_depth_test, rises 0.8 m in 0.8 s; style &"damage", &"crit", &"heal", &"mp", &"miss", &"weak", &"resist", &"status"
 ```
+
+Schadenszahlen mit echtem Renderer (03_ART §7.1, Review M4): Label3D-Farben laufen durch den AgX-Tonemapper (Weiß ≈ 205 Grau),
+daher zeichnet jede Zahl einen **2D-Zwilling** (`Label` auf einem `CanvasLayer` **4** „DamageNumberLayer“ unter dem HUD, Maus
+ignoriert), jeden Frame aus der 3D-Position projiziert (exakte sRGB-Farben, Outline, Weltgröße, Krit-Neigung); der Label3D behält
+den Zustand (Pool, Pop/Steigen/Fade) und ist für Kameras ausgeblendet (`layers = 0`). Headless/ohne Kamera zeichnet der Label3D
+selbst. Der Zwilling folgt `is_visible_in_tree()` (ein ausgeblendeter Elternknoten blendet ihn mit aus).
 
 ---
 
@@ -3376,6 +3520,7 @@ Headless (`DisplayServer.get_name() == "headless"`) → **kein Snapshot** (liefe
 
 | layer | Inhalt | Besitzer |
 |---|---|---|
+| 4 | Schadenszahl-Zwillinge (`DamageNumberLayer`, §8.6) | M4 |
 | 5 | ExplorationHud / BattleHud | M6 / M5 |
 | 20 | TouchControls | M6 |
 | 40 | GlobalUi: ShowOverlay | M6 |
@@ -3387,8 +3532,11 @@ Headless (`DisplayServer.get_name() == "headless"`) → **kein Snapshot** (liefe
 `GlobalUi` (`scenes/ui/global_ui.tscn`) wird von Boot **einmal** per `get_tree().root.add_child.call_deferred(ui)` direkt unter
 `root` gehängt (nicht im Router-Stack, `PROCESS_MODE_ALWAYS`) und schaltet seine Anzeige über `Events.overlay_mode_requested`. `capture.gd` hängt es ebenfalls an (§11.3).
 `ModDialog` (Teil von `GlobalUi`) meldet sich als Dialog-Presenter an: `Game.set_dialog_presenter(true)` in `_ready()`,
-`Game.set_dialog_presenter(false)` in `_exit_tree()`; jede Zeile endet (fertig oder weggeklickt) mit `Events.dialog_finished(tag)`
-(§3.4 Dialog-Pause).
+`Game.set_dialog_presenter(false)` in `_exit_tree()`; **nur blockierende** Zeilen enden (fertig oder weggeklickt) mit
+`Events.dialog_finished(tag)` (§3.4 Dialog-Pause zählt nur blockierende; eine nie gezeigte blockierende Zeile — leerer Text,
+Stimme `chat` — wird mit einem verzögerten `dialog_finished` ausgeglichen). Nicht-blockierende Zeilen laufen nach Lesezeit von
+selbst weiter und melden nur das M6-Signal `ModDialog.line_finished(tag, blocking)`. Wer auf das Ende einer Zeile wartet
+(Boss-Intros, Szenen), spricht sie blockierend (`Show.say(tag, ctx, true)`).
 Pause: `ExplorationHud` (`PROCESS_MODE_PAUSABLE`) öffnet `PauseMenu` auf `pause` und setzt `get_tree().paused = true`
 (`Events.pause_menu_toggled(true)`). **Prozessmodi (gemessen 4.7.2: ein PAUSABLE-Node erhält während der Pause 0
 `_unhandled_input`-Events, ein WHEN_PAUSED-Node 1):** `PauseMenu` und alle aus ihm geöffneten Menüs (`party_menu`, `inventory_menu`,
@@ -3423,11 +3571,49 @@ func set_player(cell: Vector2i, yaw_rad: float) -> void
 func mark_visited(cell: Vector2i) -> void
 func set_prompt(text: String) -> void             # "" hides; the touch "action" button shows the interact icon while a prompt is set
 func set_quest(text: String, progress: float) -> void   # event runs only (Game.mode == &"event_offline"); "" hides
+static func quest_line(q: QuestTracker) -> String # the quest line shown for the LIVE tracker Game.quest: translated q.label()
+	# if a translation exists, else EventInfo.quest_text(q.to_def()) (M3 CR 4: QuestTracker.label()/to_def(), not FloorDef)
 	# Timer (on Events.floor_timer_changed): hidden until floor_timer_started; < 300 s orange, < 60 s red pulsing (+ screenshake 0.15
 	# for 0.3 s every 10 s), <= 10 s Sfx.play_ui(&"timer_warn") once per full second (GDD §2.9)
 
 class_name FloorSummary extends Control           # M6, scenes/ui/floor_summary.tscn
 func setup(params: Dictionary) -> void            # stores {"summary": FloorRun.summary()}; "Weiter" → Game.continue_after_summary()
+```
+
+Private M6-APIs, die andere Module duck-typed nutzen (kein `class_name`, §13.2):
+
+```gdscript
+# scenes/ui/confirm_dialog.tscn (CanvasLayer 60) — Ja/Nein; frees itself after the answer
+signal confirmed()
+signal cancelled()
+signal closed(accepted: bool)
+var answered: bool; var result: bool
+func setup(params: Dictionary) -> void   # {"title", "text" (alias "message"), "yes" (alias "confirm_text"), "no" (alias
+	# "cancel_text"), "default_no": bool (destructive questions focus "no"), "danger": bool, "on_yes"/"on_no": Callable, "capture"}
+func open(text: String, yes: String = "Ja", no: String = "Nein", title: String = "") -> void   # convenience
+func answer(yes: bool) -> void           # ui_cancel / pause = no; process_mode ALWAYS (hosts in the PauseMenu: WHEN_PAUSED)
+func yes_button() -> Button; func no_button() -> Button
+
+# scenes/ui/mod_dialog.tscn (CanvasLayer 45, in GlobalUi; static var current) — M.O.D./Mopsula/Kai box with queue
+signal line_started(text: String, voice: StringName, tag: String)
+signal line_finished(tag: String, blocking: bool)   # every shown line (dialog_finished stays blocking-only)
+signal queue_finished()
+func enqueue(text: String, voice: StringName, tag: String, blocking: bool) -> bool   # false: never shown (chat voice, empty)
+func is_busy() -> bool; func current_line() -> Dictionary; func pending() -> int
+func box_rect() -> Rect2                 # visible box incl. speaker tab, empty while hidden
+func advance() -> void                   # completes the typewriter, then ends a blocking line
+func set_align_right(on: bool) -> void   # safe room: box right of the menu column
+
+# scenes/ui/show_overlay.tscn (CanvasLayer 40, in GlobalUi) — TV overlay
+func set_mode(mode: StringName) -> void  # &"explore" | &"battle" | &"safe_room" | &"menu" | &"hidden" | &"game_over"
+func hype_rect() -> Rect2; func lower_third_rect() -> Rect2; func gift_banner_rect() -> Rect2   # empty while hidden
+func show_lower_third(sponsor_id: String) -> void   # queued; same sponsor within 1 s once
+func announce_gift(gift: Dictionary) -> void        # kind/tier + sender (anonymous by default), never contents
+func post_chat(user: String, text: String, mood: StringName = &"neutral") -> void
+
+# scenes/ui/global_ui.tscn (root/"GlobalUi") — show_overlay, mod_dialog, toasts, debug_overlay
+func occupied_rects() -> Array[Rect2]    # what the persistent UI covers now (hype meter, lower third, gift banner, toasts
+	# — ToastStack.stack_rect() —, M.O.D. box); empty ones left out (M5 CR 1: battle UI avoids them)
 ```
 
 ---
@@ -3466,7 +3652,8 @@ func setup(params: Dictionary) -> void            # stores {"summary": FloorRun.
 - Rechte Seite: **ein** Button `action` (96 px rund bei (1147, 587); Icon „Hand“ mit Prompt, sonst „Schlag“), `map` (64 px),
   `pause` (64 px, oben rechts bei (1227, 40)); alle mit Trefferfläche ≥ 88 px. Buttons lösen `Input.parse_input_event()` mit
   `InputEventAction` (pressed true/false) aus. (Positionen = GDD §14.8 × 2/3, bezogen auf 1280 × 720.)
-- Drag auf freier rechter Fläche → `Events.camera_drag(relative)`.
+- Drag auf freier rechter Fläche → `Events.camera_drag(relative)`; zwei Finger dort = Pinch → `Events.camera_zoom(amount)`
+  (Abstandsänderung × 0.02 m/px, > 0 = Finger zusammen = herauszoomen; währenddessen kein Drag; `CameraRig` klemmt 5–9 m).
 - `emulate_mouse_from_touch = true` (Buttons reagieren auf Touch); keine Maus-Taste ist an Gameplay-Actions gebunden,
   daher keine Fehlauslösung durch emulierte Klicks.
 - Kampf & Menüs: reine Button-UI (Kampfbefehle 2 Spalten × 3 Zeilen, je 200 × 64 px sichtbar / 88 px Treffer); Gegner direkt antippen
@@ -3724,7 +3911,7 @@ M.O.D.-Tags) und `FULLRUN: OK floor_time=<s> battles=<n> level=<kai>/<mopsula> d
 | M4 | Jede Base × Prop baut; Tri-Budgets §12.1; Rigs nur über `add_to_tree()`; `play_and_wait` jeder One-Shot-Anim endet, `impact` feuert genau 1× bei attack/cast/stunt/item; außerhalb des Baums sofortiges Ende; `build_room` für alle 16 Türmasken; `build_safe_room` alle 3 Themes; Log ohne „different indices“ |
 | M5 | Battle-Szene headless mit `auto_battle` bis `BATTLE_END` (time_scale 8, speed 4); HUD-Werte = letzte `hp_after`; CTB-Leiste 12/10 Einträge |
 | M6 | Jede UI-Szene instanziierbar + Default-Fokus; `PauseMenu.process_mode == PROCESS_MODE_WHEN_PAUSED` (und alle Untermenüs); Touch-Trefferflächen ≥ 88; SafeAreaContainer-Ränder ≥ 24; `name_entry` `max_length == 12`; Full-Run-Bot: Helfer/Planer/Story-Beats (`test_m6_fullrun`) + ganzer Lauf über `tools/fullrun.sh` (CI, §11.4.1) |
-| M7 | `real_data()` valide; Mindestmengen laut GDD; jede Etage-1-Encounter mit Startparty (Lv 1–3) per Auto-Kampf (50 Seeds) ≥ 80 % Siegquote, Hausmeister mit Lv 5, Königin mit Lv 7 |
+| M7 | `real_data()` valide; Mindestmengen laut GDD; jede Etage-1-Encounter per Auto-Kampf (50 Seeds) ≥ 80 % Siegquote mit dem Level/der Ausrüstung, die der GDD-Fortschritt dort erwartet (§5.4/§13): Zone A Lv 2 (Tutorial Lv 1), Zone B Lv 3 (Startausrüstung), Zone C Lv 4 + mittlere Ausrüstung, Hausmeister Lv 5, Zone D Lv 6 + späte Ausrüstung, Königin Lv 7; Party-Züge je Sieg: Median aller regulären Encounter 4–6, je Encounter 3–7, Hausmeister 16–22, Königin 20–26 (GDD §13) |
 | M8 | 05_LIVE_MODUS §11.4; zusätzlich `RunSim.step(1) × n ≡ step(n)` und Timer/Hype-Zerfall in Ticks |
 
 ---
@@ -3841,6 +4028,12 @@ jobs:
                    res://scenes/safe_room/safe_room.tscn; do
             GODOT=~/godot/godot prime-time-dungeon/tools/check.sh --shot "$s" "shots/$(basename "$s" .tscn).png" 120 1280x720
           done
+      - name: Render probe (03_ART A11)
+        run: |
+          mkdir -p shots
+          GODOT=~/godot/godot prime-time-dungeon/tools/check.sh --shot res://art/gallery/render_probe.tscn \
+            shots/render_probe.png 60 1280x720 | tee render_probe.log
+          grep -q "RENDER_PROBE: OK" render_probe.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -362,8 +362,7 @@ func _face_camera() -> void:
 		global_rotation = Vector3(0, atan2(to_cam.x, to_cam.z), 0)
 
 
-# --- builders
-# ----------------------------------------------------------------------------------------------------------
+# --- builders ---------------------------------------------------------------------------------------------------------
 
 func _emitter(node_name: String, amount: int, lifetime: float, shape: int, size_min: float, size_max: float,
 		color: Color,

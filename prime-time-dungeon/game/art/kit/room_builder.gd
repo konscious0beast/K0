@@ -202,8 +202,7 @@ func _env_mat(tiles: bool) -> ShaderMaterial:
 	return Materials.env(opts)
 
 
-# --- floor
-# -------------------------------------------------------------------------------------------------------------
+# --- floor ------------------------------------------------------------------------------------------------------------
 
 func _choose_floor_features() -> void:
 	var doorless: Array[int] = []
@@ -338,8 +337,7 @@ func _edge_box(side: int, u: float, length: float, y: float, height: float, w: f
 	return {"mesh": MeshUtil.box(Vector3.ONE), "xform": xf, "color": color, "emission": emission, "metal": metal}
 
 
-# --- walls
-# -------------------------------------------------------------------------------------------------------------
+# --- walls ------------------------------------------------------------------------------------------------------------
 
 func _build_wall(side: int) -> void:
 	var wall_c: Color = pal["wall"]
@@ -613,8 +611,7 @@ func _throne() -> void:
 		{"pos": edge_xf(back, 0.0, 3.0, 3.0).origin, "color": pal["accent"], "energy": 2.0, "range": 8.0})
 
 
-# --- dressing
-# ------------------------------------------------------------------------------------------------------------
+# --- dressing ---------------------------------------------------------------------------------------------------------
 
 const STYLE_PROPS: Dictionary = {
 	"platform": ["bench", "bench", "trash_bin", "lamp", "lamp", "pillar", "crate"],

@@ -6,8 +6,7 @@ func after_each() -> void:
 	Materials.clear_cache()
 
 
-# --- Palette
-# -------------------------------------------------------------------------------------------------------------
+# --- Palette ----------------------------------------------------------------------------------------------------------
 
 func test_palette_contract_constants() -> void:
 	assert_eq(Palette.INK.to_html(false), "140d1c")
@@ -154,8 +153,7 @@ func test_env_glow_vfx_outline_factories() -> void:
 	assert_almost(float(h.get_shader_parameter(&"alpha")), 0.15)
 
 
-# --- shaders
-# -------------------------------------------------------------------------------------------------------------
+# --- shaders ----------------------------------------------------------------------------------------------------------
 
 func _uniform_names(path: String) -> PackedStringArray:
 	var out: PackedStringArray = []
@@ -308,8 +306,7 @@ func test_instance_uniform_order_of_next_pass_pairs() -> void:
 			assert_eq(ua.find(shared_a[i]), ub.find(shared_a[i]), "%s: same index in both shaders" % shared_a[i])
 
 
-# --- MeshUtil
-# ------------------------------------------------------------------------------------------------------------
+# --- MeshUtil ---------------------------------------------------------------------------------------------------------
 
 func test_meshutil_primitive_segments() -> void:
 	var s: SphereMesh = MeshUtil.sphere(0.3)

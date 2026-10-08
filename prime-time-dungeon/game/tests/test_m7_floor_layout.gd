@@ -269,7 +269,7 @@ func test_events_match_gdd() -> void:
 		{"weight": 35, "kind": "item", "id": "itm_bandage", "amount": 2},
 		{"weight": 25, "kind": "credits", "id": "", "amount": 50},
 		{"weight": 15, "kind": "box", "id": "box_bronze", "amount": 1},
-		{"weight": 15, "kind": "nothing", "id": "", "amount": 1},
+		{"weight": 15, "kind": "nothing", "id": "", "amount": 0},   # GDD §2.6 table (M3 CR 5: amount 0 now valid)
 		{"weight": 10, "kind": "encounter", "id": "enc_f1_evt_pigeons", "amount": 1}])
 	# Event props must not share the spot of a group (centre) or a chest (north corners) in the same room.
 	var spots: Dictionary = {}

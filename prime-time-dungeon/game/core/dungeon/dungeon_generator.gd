@@ -9,7 +9,8 @@ const GROW_DRAWS: int = 3                     # growth picks the newest of 3 ran
 const STAIRS_MIN_DEPTH_FRAC: float = 0.35     # depth(stairs) >= ceili(target × 0.35)
 const QB_PATH_FRAC: float = 0.6               # quarter boss at path[roundi((size − 1) × 0.6)]
 const SAFE_DEPTH_FRAC: float = 0.6            # first safe room: depth closest to 0.6 × depth(quarter boss)
-const CHEST_OFFSET_RANGE: float = 4.0         # offset = randf_range(−4, 4) per axis
+const CHEST_OFFSET_RANGE: float = 4.0         # offset per axis within ±4 m …
+const CHEST_OFFSET_CM: int = 400              # … drawn as randi_range(−400, 400) cm (05 §3.3 Nr. 5 / CR-12)
 const CHEST_MIN_RADIUS: float = 2.0           # chests keep the room centre (group spawn) free
 const CHEST_MIN_SPACING: float = 1.5          # two chests in one room
 const SECOND_GROUP_OFFSET: Vector2 = Vector2(3.0, -3.0)   # second group in the same room (only when rooms run out)
@@ -371,8 +372,8 @@ static func _place_chests(l: FloorLayout, def: FloorDef, floor_seed: int, rng: R
 		ch.id = "f%d_c%d" % [def.index, k]
 		ch.cell = ordered[k % ordered.size()]
 		ch.type = "wood"
-		var off: Vector2 = Vector2(rng.randf_range(-CHEST_OFFSET_RANGE, CHEST_OFFSET_RANGE),
-			rng.randf_range(-CHEST_OFFSET_RANGE, CHEST_OFFSET_RANGE))
+		var off: Vector2 = Vector2(rng.randi_range(-CHEST_OFFSET_CM, CHEST_OFFSET_CM),
+			rng.randi_range(-CHEST_OFFSET_CM, CHEST_OFFSET_CM)) / 100.0
 		ch.offset = _chest_offset(l, ch.cell, off)
 		var crng: RandomNumberGenerator = SeedUtil.make_rng(SeedUtil.derive(floor_seed, "chest_table", k))
 		var rolled: Array[LootReward] = LootRoller.roll_chest_table(def, crng)
@@ -385,7 +386,7 @@ static func _place_chests(l: FloorLayout, def: FloorDef, floor_seed: int, rng: R
 
 
 ## Keeps the room centre (group spawn) free and two chests of one room apart; no extra rng draws.
-## Deviation from §7.2 step 9 (plain randf_range(−4, 4) per axis): an offset shorter than CHEST_MIN_RADIUS is pushed out
+## Deviation from §7.2 step 9 (plain offset per axis): an offset shorter than CHEST_MIN_RADIUS is pushed out
 ## to 2.5 m (a group stands at the room centre), a clash with another chest of the room (< CHEST_MIN_SPACING) is turned
 ## by 90° steps. Same two rng draws per chest as the spec, so the rng stream of later steps is unchanged.
 static func _chest_offset(l: FloorLayout, cell: Vector2i, off: Vector2) -> Vector2:

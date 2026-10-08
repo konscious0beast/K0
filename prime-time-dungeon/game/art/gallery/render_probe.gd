@@ -1,16 +1,14 @@
 extends Node3D
 ## Render regression probe (03_ART §11, request A11): checks the outline hull direction (F6) and the particle/MultiMesh
-## color space (F1) in the running renderer. Runs under check.sh --shot (headless has no pixels → skipped).
-## Black background, camera (0, 1, 6), sun (−55, 35, 0); sphere with outline (magenta, 0.1) at x −1.6, plain sphere at
-## x +1.6, a vfx_additive MultiMesh quad (instance color 0.5) at (0, 2.6, 0). After 15 frames: widest row of non-black
-## pixels per half (outline must be ≥ 6 px wider) and the brightest pixel of the center column (0x80 ± 4).
-## The probe renders into its own 960 × 540 SubViewport (own world), so overlays of other modules never affect the
-## pixels.
-## A white `damage` number (Vfx.damage_number at (3, 2.7, 0), frozen after the pop) must reach ≥ 240 luminance in the
-## upper right (03_ART §7.1: pure white; the AgX tonemapper caps Label3D text at ~205, see damage_number.gd).
-## It also listens to the engine log: a "different indices" warning (instance uniforms of toon / toon_outline declared
-## in
-## a different order, 02_TECH §8.3/§11.5) only appears in a real renderer, so it fails here (ERROR line → check.sh).
+## color space (F1) in the running renderer. Runs under check.sh --shot (headless has no pixels → skipped). Black
+## background, camera (0, 1, 6), sun (−55, 35, 0); sphere with outline (magenta, 0.1) at x −1.6, plain sphere at x +1.6,
+## a vfx_additive MultiMesh quad (instance color 0.5) at (0, 2.6, 0). After 15 frames: widest row of non-black pixels
+## per half (outline must be ≥ 6 px wider) and the brightest pixel of the center column (0x80 ± 4). The probe renders
+## into its own 960 × 540 SubViewport (own world), so overlays of other modules never affect the pixels. A white
+## `damage` number (Vfx.damage_number at (3, 2.7, 0), frozen after the pop) must reach ≥ 240 luminance in the upper
+## right (03_ART §7.1: pure white; the AgX tonemapper caps Label3D text at ~205, see damage_number.gd). It also listens
+## to the engine log: a "different indices" warning (instance uniforms of toon / toon_outline declared in a different
+## order, 02_TECH §8.3/§11.5) only appears in a real renderer, so it fails here (ERROR line → check.sh).
 
 const FRAMES: int = 15
 const MIN_EXTRA_PX: int = 6

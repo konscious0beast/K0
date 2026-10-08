@@ -292,6 +292,32 @@ func test_rules_status_kill_is_credited_to_the_applying_party_action() -> void:
 		assert_has(["attack", "skill", "stunt", "item"], by, "documented 'by' values only")
 
 
+## M2 verify: a non-lethal status tick must not credit a LATER actor-less KO of the same enemy to the old status
+## source — the tick entry is cleared by any other damage and consumed by the KO right after a lethal tick.
+func test_rules_stale_status_tick_is_not_credited_later() -> void:
+	var r: ShowRules = _rules()
+	r.feed(_act("p1", K.SKILL, "skl_mop_flame"))
+	r.feed(_ev(ActionEvent.Type.STATUS_ADDED, {"target_id": "e0", "status_id": "sts_burn", "value": 3}))
+	r.feed(_end("p1"))
+	r.feed(_ev(ActionEvent.Type.DAMAGE, {"target_id": "e0", "status_id": "sts_burn", "amount": 3, "hp_after": 9,
+		"max_hp": 24}))
+	# the next damage on e0 is no tick (e.g. a pseudo unit / counter without party actor) and kills it
+	r.feed(_ev(ActionEvent.Type.DAMAGE, {"target_id": "e0", "amount": 9, "hp_after": 0, "max_hp": 24}))
+	var k1: ShowDelta = r.feed(_ko("e0", "enm_rat", ""))
+	assert_eq(k1.stats, {"kills_total": 1}, "not credited to Mopsula's old burn")
+	assert_eq(k1.triggers[0]["payload"]["member"], "")
+	# a lethal tick is still credited, once
+	r.feed(_act("p1", K.SKILL, "skl_mop_flame"))
+	r.feed(_ev(ActionEvent.Type.STATUS_ADDED, {"target_id": "e1", "status_id": "sts_burn", "value": 3}))
+	r.feed(_end("p1"))
+	r.feed(_ev(ActionEvent.Type.DAMAGE, {"target_id": "e1", "status_id": "sts_burn", "amount": 3, "hp_after": 0,
+		"max_hp": 24}))
+	var k2: ShowDelta = r.feed(_ko("e1", "enm_rat", ""))
+	assert_eq(k2.triggers[0]["payload"]["member"], "mopsula")
+	var k3: ShowDelta = r.feed(_ko("e1", "enm_rat", ""))
+	assert_eq(k3.triggers[0]["payload"]["member"], "", "the tick entry was consumed by the first KO")
+
+
 func test_rules_combo_and_stunts() -> void:
 	var r: ShowRules = _rules()
 	r.feed(_act("p1", K.SKILL, "skl_mop_flame"))
@@ -934,6 +960,34 @@ func test_show_sync_from_state_reemits() -> void:
 	assert_eq(vi.size(), 2, "unchanged values are re-sent for the UI")
 	Events.hype_changed.disconnect(cb_h)
 	Events.viewers_changed.disconnect(cb_v)
+
+
+## M5 CR 2: a battle torn down before its end (BattleScene freed) drops Show's battle context: no thresholds,
+## no queue, no follower conversion; waiting external gifts are refused, never applied later.
+func test_show_abort_battle_drops_the_battle_context() -> void:
+	_world()
+	var rejected: Array = []
+	var cb_x: Callable = func(id: String, reason: String) -> void: rejected.append([id, reason])
+	Events.gift_rejected.connect(cb_x)
+	Game.in_battle = true
+	Show.begin_battle(_setup())
+	var g: Dictionary = _dev_gift(7)
+	assert_eq(Show.receive_gift(g)["apply"], "queued")
+	Show.add_hype(30.0)                       # 30 → 60: threshold 50 open
+	Game.in_battle = false
+	var credits: int = Game.state.inventory.credits
+	var followers: int = Show.followers()
+	Show.abort_battle()
+	assert_eq(rejected, [[g["gift_id"], "run_not_active"]], "the waiting gift is refused")
+	assert_eq(Show.take_pending_gift(null), {}, "no threshold gift from the aborted battle")
+	Show.add_hype(30.0)
+	assert_eq(Show.take_pending_gift(null), {}, "outside a battle no threshold opens")
+	assert_eq(Game.state.inventory.credits, credits, "nothing applied")
+	assert_eq(Show.followers(), followers, "no follower conversion")
+	assert_eq(Show.receive_gift(g)["apply"], "now", "the refused gift id was never applied")
+	Show.abort_battle()                       # no battle: no-op
+	assert_len(rejected, 1)
+	Events.gift_rejected.disconnect(cb_x)
 
 
 # --- helpers ----------------------------------------------------------------------------------------------------------

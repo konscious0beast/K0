@@ -1463,7 +1463,9 @@
 					"skin": "#ffffff",
 					"eyes": "#1a1420"
 				},
-				"props": [],
+				"props": [
+					"discount_tag"
+				],
 				"seed": 0,
 				"gltf": ""
 			},

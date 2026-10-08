@@ -101,6 +101,7 @@ var _mesh_opts: Dictionary = {}       # MeshInstance3D → Materials opts
 var _pulses: Array[Dictionary] = []   # {"mesh", "mode", "color", "color2", "phase", "amount"}
 var _anchors: Dictionary = {}         # StringName → Node3D
 var _particles: Array[CPUParticles3D] = []
+var _labels: Array[Label3D] = []           # text on the figure (e.g. Rabattschild percent sign), fades with dissolve
 var _size_k: float = 1.0
 var _center_y: float = 0.9
 var _width: float = 0.6
@@ -262,6 +263,9 @@ func set_dissolve(amount: float) -> void:
 		_model_root.visible = _dissolve < 0.999
 	for p: CPUParticles3D in _particles:
 		p.emitting = _dissolve < 0.5 and not _dead
+	for lb: Label3D in _labels:
+		lb.modulate.a = 1.0 - _dissolve
+		lb.outline_modulate.a = 1.0 - _dissolve
 
 
 ## Instant KO pose (no anim), for loading/standalone states. A running one-shot is finished first (impact once,
@@ -403,7 +407,7 @@ func size_factor() -> float:
 # --- internals: setup ----------------------------------------------------------------------------------------------
 
 ## Called by CharacterBuilder after the node tree exists. info: {"base", "pose", "model_root", "scale", "pivots",
-## "meshes", "mesh_opts", "pulses", "anchors", "particles", "height", "width", "arm_out"}
+## "meshes", "mesh_opts", "pulses", "anchors", "particles", "labels", "height", "width", "arm_out"}
 func _setup(info: Dictionary) -> void:
 	_base = StringName(str(info.get("base", "")))
 	_pose = StringName(str(info.get("pose", "upright")))
@@ -418,6 +422,7 @@ func _setup(info: Dictionary) -> void:
 	_pulses.assign(info.get("pulses", []))
 	_anchors = info.get("anchors", {})
 	_particles.assign(info.get("particles", []))
+	_labels.assign(info.get("labels", []))
 	height = float(info.get("height", 1.0))
 	_width = float(info.get("width", 0.6))
 	_arm_out = float(info.get("arm_out", 6.0))
@@ -498,8 +503,7 @@ func _flush_die_echo() -> void:
 		anim_finished.emit(&"die")
 
 
-# --- internals: per frame
-# ----------------------------------------------------------------------------------------------
+# --- internals: per frame ---------------------------------------------------------------------------------------------
 
 func _process(delta: float) -> void:
 	_clock += delta

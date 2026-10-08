@@ -66,7 +66,7 @@ var _low_hp_done: Dictionary = {}
 var _stunts_ok: int = 0
 var _started: bool = false
 var _status_src: Dictionary = {}             # "<enemy id>|<status id>" → {"actor", "command"} of the applying party action
-var _tick_status: Dictionary = {}            # enemy id → status id of its last status-tick DAMAGE
+var _tick_status: Dictionary = {}            # enemy id → status id while its last DAMAGE was a status tick
 
 
 ## Self-contained: needs only ActionEvent fields + setup.
@@ -200,8 +200,12 @@ func _on_action_start(d: ShowDelta, e: ActionEvent) -> void:
 
 
 func _on_damage(d: ShowDelta, e: ActionEvent) -> void:
+	# _tick_status names the status of the LAST damage on an enemy only while that damage was a status tick: any other
+	# damage clears it, and the KO that follows consumes it (_on_ko) — a later KO is never credited to an old tick.
 	if e.actor_id == "" and e.status_id != "" and _is_enemy(e.target_id):
 		_tick_status[e.target_id] = e.status_id
+	else:
+		_tick_status.erase(e.target_id)
 	if _is_party(e.actor_id) and _is_enemy(e.target_id) and e.status_id == "":
 		if e.crit:
 			_add(d, HYPE_CRIT, &"crit")
@@ -223,6 +227,7 @@ func _on_ko(d: ShowDelta, e: ActionEvent) -> void:
 		var overkill: bool = e.value == 1
 		if not _is_party(e.actor_id):
 			var src: Dictionary = _kill_source(e)
+			_tick_status.erase(e.target_id)
 			if not src.is_empty():
 				by = _by_for(int(src.get("command", BattleCommand.Kind.ATTACK)))
 				member = _member(str(src.get("actor", "")))

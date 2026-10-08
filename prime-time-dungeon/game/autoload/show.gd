@@ -26,7 +26,6 @@ const HYPE_EVENT: float = 5.0
 const HYPE_TIMER_300: float = 10.0
 const HYPE_TIMER_60: float = 15.0
 const ACH_FOLLOWERS: Dictionary = {"box_bronze": 25, "box_silver": 50, "box_gold": 100}
-const MAX_EXTERNAL_PER_BATTLE: int = 1       # 05 §6.10; further external gifts wait for the end of the battle
 const FAN_PACK_HYPE: int = 5                 # 05 §6.10: (5 × effect_pm + 500) // 1000
 ## Battle reasons in announcement order (one M.O.D. line per event, GDD §11).
 const ANNOUNCE_ORDER: Array[StringName] = [&"mopsula_ko", &"kai_ko", &"kill_streak", &"overkill", &"stunt_success",
@@ -51,6 +50,7 @@ var _external_given: int = 0
 var _peak_battle: int = 0                    # viewers_peak_battle (noise-free maximum)
 var _unlocked_battle: PackedStringArray = []
 var _first_fight_said: bool = false
+var _tutorial_turns: int = 0                 # party turns of a tutorial battle (stunt hint after the 2nd, GDD §1.4 B2)
 var _hype_seen: float = -1.0                 # last hype value sent with hype_changed
 var _synced_state: GameState = null
 var _display: float = 0.0
@@ -80,6 +80,7 @@ func _ready() -> void:
 	Events.item_bought.connect(_on_item_bought)
 	Events.explore_tick.connect(_on_explore_tick)
 	Events.sponsor_gift_triggered.connect(_on_sponsor_gift_triggered)
+	Events.floor_entered.connect(_on_floor_entered)
 	Events.new_game_started.connect(_on_new_run)
 	Events.game_loaded.connect(_on_new_run)
 	Events.floor_entered.connect(_on_floor_entered)
@@ -289,6 +290,12 @@ func begin_battle(setup: BattleSetup) -> void:
 	if not _first_fight_said and st.show.stats.get("battles_won", 0) == 0 and st.show.stats.get("battles_fled", 0) == 0:
 		_first_fight_said = true
 		say("first_fight")
+	_tutorial_turns = 0
+	if setup.tutorial:
+		say("tutorial_battle")                     # GDD §1.4 B2 guided hints
+	var story: String = "story_battle:" + setup.encounter_id
+	if _get_announcer().has_lines(story):
+		say(story)                                 # GDD §1.4 story banners (B4: "Die Königin hört von euch.")
 
 
 func on_battle_event(e: ActionEvent) -> void:
@@ -297,6 +304,11 @@ func on_battle_event(e: ActionEvent) -> void:
 	_apply_delta(_rules.feed(e))
 	if e.type == ActionEvent.Type.MOD_LINE and e.text != "":
 		say(e.text)
+	_emit_boss_hp(e)
+	if _setup != null and _setup.tutorial and e.type == ActionEvent.Type.TURN_END and e.actor_id.begins_with("p"):
+		_tutorial_turns += 1
+		if _tutorial_turns == 2:
+			say("tutorial_stunt")                  # GDD §1.4 B2: stunt hint after turn 2
 
 
 ## THE single gift entry (Brief §6b.4) → {"accepted": bool, "reason": String} (+ "ok", "gift_id", "apply": "now" |
@@ -314,7 +326,7 @@ func receive_gift(gift: Dictionary) -> Dictionary:
 	if not _is_system(g):
 		if _is_duplicate(gid):
 			return _rejected(gid, "duplicate")
-		reason = GiftPolicy.check(_live_counters(st), g, _event_rules())
+		reason = GiftPolicy.check(_run_now(st), g, _event_rules())
 		if reason != "":
 			return _rejected(gid, reason)
 	if Game.in_battle:
@@ -324,21 +336,30 @@ func receive_gift(gift: Dictionary) -> Dictionary:
 	return _accepted(gid, "now")
 
 
-## {} = none; battle gives the party situation for weight_mods. (1) first waiting external gift (recorded now),
-## else (2) an open hype threshold → SponsorSystem.pick → Gift.make_system → receive_gift → returned.
-## The controller applies the result with battle.apply_gift.
+## {} = none; battle gives the party situation for weight_mods. (1) first waiting external gift — checked AGAIN now
+## (application_refusal; a refused one leaves the queue with gift_rejected), recorded, booked into the run counters
+## (GiftPolicy.note_applied) — while fewer than rules.gifts.max_per_battle external gifts were delivered in this
+## battle; else (2) an open hype threshold → SponsorSystem.pick → Gift.make_system → receive_gift → returned.
+## The controller applies the result with battle.apply_gift and then calls note_battle_gift(g, events).
 func take_pending_gift(battle: BattleState = null) -> Dictionary:
 	var st: GameState = Game.state
 	if st == null or st.show == null:
 		return {}
-	if _gifts_given < _max_gifts() and _external_given < MAX_EXTERNAL_PER_BATTLE:
-		for i in _queue.size():
+	if _gifts_given < _max_gifts() and GiftPolicy.can_deliver_in_battle(_external_given, _gift_rules_now(st)):
+		var i: int = 0
+		while i < _queue.size():
 			var ext: Dictionary = _queue[i]
 			if _is_system(ext):
+				i += 1
 				continue
 			_queue.remove_at(i)
+			var refusal: String = application_refusal(ext)
+			if refusal != "":
+				_rejected(str(ext.get("gift_id", "")), refusal)
+				continue
 			Game.record({"t": "gift", "gift": ext})
 			_remember_gift(str(ext.get("gift_id", "")))
+			GiftPolicy.note_applied(GiftApplier.live_counters(st), ext, {})
 			_gifts_given += 1
 			_external_given += 1
 			# the external gift may have taken the slot a reserved threshold was waiting for
@@ -417,13 +438,58 @@ func end_battle(result: BattleResult) -> int:
 	var waiting: Array[Dictionary] = _queue.duplicate()
 	_reset_battle()
 	for g: Dictionary in waiting:
-		if not _is_system(g):
-			_apply_outside(g)
+		if _is_system(g):
+			continue
+		var refusal: String = application_refusal(g)
+		if refusal != "":
+			_rejected(str(g.get("gift_id", "")), refusal)
+			continue
+		_apply_outside(g)
 	return gained
 
 
 func unlocked_this_battle() -> PackedStringArray:
 	return _unlocked_battle.duplicate()
+
+
+## Run bookkeeping of a gift the controller applied IN battle (`events` = the ActionEvents of battle.apply_gift):
+## GiftApplier.note_battle_gift — gift items into flags.live.gift_items, load/caps via note_applied (idempotent per id)
+## — exactly as RunSim books it (05 §6.9: run statistics must not depend on where the gift arrived). System gifts:
+## nothing.
+func note_battle_gift(g: Dictionary, events: Array[ActionEvent]) -> void:
+	var st: GameState = Game.state
+	if st == null or g.is_empty():
+		return
+	GiftApplier.note_battle_gift(st, g, events)
+
+
+## A battle torn down before its end (BattleScene freed early: tests, debug, scene change) — the battle context is
+## dropped without end_battle (no followers, no stats); accepted gifts still waiting are refused (gift_rejected
+## "run_not_active"), never applied. No-op without a running battle.
+func abort_battle() -> void:
+	if not _battle_active and _queue.is_empty():
+		return
+	var waiting: Array[Dictionary] = _queue.duplicate()
+	_reset_battle()
+	for g: Dictionary in waiting:
+		if not _is_system(g):
+			_rejected(str(g.get("gift_id", "")), "run_not_active")
+
+
+## "" or why the external gift `g` may not be applied NOW (05 §6.10: the check at application is authoritative —
+## the same rule as RunSim.gift_refusal, so live run and verifier agree): its id was already applied in this run →
+## duplicate; else GiftPolicy.check with the current run counters and tick (deadline_missed, caps, effect factor …).
+## System gifts: "". Read-only.
+func application_refusal(g: Dictionary) -> String:
+	if _is_system(g):
+		return ""
+	var st: GameState = Game.state
+	if st == null:
+		return "run_not_active"
+	var seen: Variant = _live_counters(st).get("gift_ids", [])
+	if seen is Array and (seen as Array).has(str(g.get("gift_id", ""))):
+		return "duplicate"
+	return GiftPolicy.check(_run_now(st), g, _event_rules())
 
 
 # ======================================================================================================================
@@ -633,6 +699,8 @@ func _apply_outside(g: Dictionary) -> void:
 	var rewards: Array[LootReward] = GiftApplier.apply(st, DB.data, g, rng)
 	if not rewards.is_empty():
 		Game.add_rewards(rewards)
+	if str(g.get("kind", "")) == "sponsor_buff":
+		Game.emit_party_changed()   # heals / MP outside a battle (Game is the party_changed emitter, §3.2)
 	_after_delivery(g)
 
 
@@ -656,8 +724,17 @@ func _after_delivery(g: Dictionary) -> void:
 	if not _is_system(g):
 		var sender: Variant = g.get("sender", {})
 		var anon: bool = not (sender is Dictionary) or bool((sender as Dictionary).get("anon", true))
-		var tag: String = "gift_received:credits" if kind == "gold" else ("gift_received:anon" if anon else "gift_received")
-		say(tag)
+		var tag: String = "gift_received:anon" if anon else "gift_received"
+		if kind == "gold":
+			tag = "gift_received:credits"
+		elif kind == "fan_pack" and not anon:
+			tag = "fan_pack_received"
+		# 05 §6.12: {sender} only by opt-in (display_name of a non-anonymous sender), {amount} = credits applied
+		var shown_name: String = str((sender as Dictionary).get("display_name", "")) if sender is Dictionary else ""
+		say(tag, {"sender": shown_name if not anon and shown_name != "" else "einem anonymen Fan",
+			"amount": GiftPolicy.scale(maxi(0, JsonUtil.to_int(g.get("amount", 0))), effect_pm)})
+		if effect_pm < 1000:
+			say("gift_diminished", {"pct": effect_pm / 10})
 	Events.gift_received.emit(g)
 
 
@@ -717,6 +794,32 @@ static func _live_counters(st: GameState) -> Dictionary:
 	return live if live is Dictionary else {}
 
 
+## Copy of the run counters plus "tick" = the run clock (Game.sim) for the GiftPolicy deadline check — the same input
+## RunSim.gift_refusal uses.
+static func _run_now(st: GameState) -> Dictionary:
+	var run: Dictionary = _live_counters(st).duplicate()
+	run["tick"] = Game.sim.tick() if Game.sim != null else 0
+	return run
+
+
+## Rules for the per-battle cap: the event rules, else the run's stored gift rules (RunSim), else the standard.
+func _gift_rules_now(st: GameState) -> Dictionary:
+	var rules: Dictionary = _event_rules()
+	if not rules.is_empty():
+		return rules
+	var gr: Variant = _live_counters(st).get("gift_rules", {})
+	return {"gifts": gr} if gr is Dictionary else {}
+
+
+## boss_hp_changed for quest progress before the victory (05 §1.3): an event with hp_after on a boss enemy unit —
+## the same rule as RunSim._quest_feed_battle.
+func _emit_boss_hp(e: ActionEvent) -> void:
+	if e.hp_after < 0 or e.max_hp <= 0 or not e.target_id.begins_with("e") or not DB.has_id("enemies", e.def_id):
+		return
+	if DB.enemy(e.def_id).boss:
+		Events.boss_hp_changed.emit({"boss_id": e.def_id, "hp": e.hp_after, "max_hp": e.max_hp})
+
+
 ## Event-run gift rules (05 §6.10) if Game exposes them; campaign → {}.
 func _event_rules() -> Dictionary:
 	if Game.has_method("event_rules"):
@@ -736,6 +839,12 @@ func _accepted(gift_id: String, apply: String) -> Dictionary:
 
 func _rejected(gift_id: String, reason: String) -> Dictionary:
 	Events.gift_rejected.emit(gift_id, reason)
+	# 05 §6.12: tell the audience why (never for the Pur-Liga, duplicates or malformed gifts)
+	match reason:
+		"cap_reached", "chest_blocked":
+			say("gift_capped")
+		"not_accepting":
+			say("gift_declined")
 	return {"accepted": false, "ok": false, "reason": reason, "gift_id": gift_id, "apply": ""}
 
 
@@ -846,6 +955,16 @@ func _on_floor_entered(_floor_index: int) -> void:
 func _on_floor_timer_started() -> void:
 	if not Game.replaying:
 		_floor_start_pending = true
+
+
+## GDD §1.4 B1: tutorial hints on the first entry of a floor whose countdown waits for its tutorial battle.
+func _on_floor_entered(floor_index: int) -> void:
+	var def: FloorDef = DB.data.floor_def(floor_index) if DB.data != null else null
+	var st: GameState = Game.state
+	if def == null or def.timer_start_after == "" or st == null or st.floor_run == null or st.floor_run.timer_started:
+		return
+	say("tutorial_explore")
+	say("tutorial_sneak")
 
 
 func _on_sponsor_gift_triggered(sponsor_id: String) -> void:

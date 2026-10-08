@@ -3,8 +3,7 @@ extends TestCase
 ## counts, voices, length/placeholder rules, line ids, Mopsula scenes (conditions, order, flags) and German-only display
 ## texts.
 ## Scene conditions follow GDD §10.2 (`scn_mop_1` `>= 1`, `scn_mop_4` without `first_visit`: a scene skipped on the
-## first visit stays available). 02_TECH §4.4.13 still lists the older first-visit-only conditions — open doc CR (TECH
-## owner).
+## first visit stays available); 02_TECH §4.4.13 was aligned to it in the integration phase.
 
 ## GDD §11.2/§11.3: tag → minimum number of lines.
 const MIN_LINES: Dictionary = {
@@ -220,3 +219,50 @@ func test_pending_story_and_gift_lines() -> void:
 		assert_true(l.text.contains("{sender}"), "05 §6.12: gift_received names {sender}")
 	for l: ModLineDef in d.mod_lines("gift_received:credits"):
 		assert_true(l.text.contains("{amount}"), "05 §6.12: gift_received:credits names {amount}")
+	# story_battle:<encounter_id> (the validator checks the format only, fixtures replace the floor tables)
+	for l: ModLineDef in _all_lines():
+		if l.tag.begins_with("story_battle:"):
+			assert_true(d.has_id("encounters", l.tag.get_slice(":", 1)), l.id + " names an existing encounter")
+	for tag: String in ["gift_diminished", "gift_capped", "gift_declined", "fan_pack_received", "live_closing",
+			"vote_open"]:
+		assert_false(d.mod_lines(tag).is_empty(), "05 §6.12 line " + tag)
+
+
+## GDD §1.4 story beats are spoken by Show (consumers of the tutorial_/story_ lines): B1 hints on the first entry of
+## floor 1 (countdown not started), B2 skill hint at the start and stunt hint after the 2nd party turn of the tutorial
+## battle, B4 banner at the start of enc_f1_b2.
+func test_story_lines_are_spoken() -> void:
+	var lines: Array = []
+	var cb: Callable = func(text: String, _v: StringName, tag: String, _b: bool) -> void: lines.append([tag, text])
+	Events.mod_said.connect(cb)
+	Game.new_game(0, "Kai", 1234)
+	lines.clear()
+	Events.floor_entered.emit(1)
+	var tags: Array = lines.map(func(l: Array) -> String: return str(l[0]))
+	assert_eq(tags, ["tutorial_explore", "tutorial_sneak"], "B1 hints before the tutorial battle")
+	var tut: BattleSetup = Game.make_battle_setup("enc_f1_a1_tutorial", BattleSetup.Advantage.NORMAL, "f1_g0")
+	lines.clear()
+	Show.begin_battle(tut)
+	tags = lines.map(func(l: Array) -> String: return str(l[0]))
+	assert_has(tags, "tutorial_battle", "B2 hint at the tutorial battle start")
+	for i in 2:
+		var e: ActionEvent = ActionEvent.new()
+		e.type = ActionEvent.Type.TURN_END
+		e.actor_id = "p%d" % i
+		Show.on_battle_event(e)
+	assert_eq(str((lines.back() as Array)[0]), "tutorial_stunt", "B2 stunt hint after the 2nd party turn")
+	Show.abort_battle()
+	Game.state.floor_run.timer_started = true
+	lines.clear()
+	Events.floor_entered.emit(1)
+	assert_eq(lines, [], "no tutorial hints once the countdown runs")
+	var b2: BattleSetup = Game.make_battle_setup("enc_f1_b2", BattleSetup.Advantage.NORMAL, "f1_g6")
+	lines.clear()
+	Show.begin_battle(b2)
+	assert_has(lines, ["story_battle:enc_f1_b2", "Die Königin hört von euch."], "B4 banner")
+	Show.abort_battle()
+	Events.mod_said.disconnect(cb)
+	Game.in_battle = false
+	Game.state = null
+	Game.run_log = null
+	Game.sim = null

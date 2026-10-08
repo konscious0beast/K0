@@ -1228,21 +1228,21 @@
 			"id": "mod_gift_received_01",
 			"tag": "gift_received",
 			"voice": "mod",
-			"text": "Ein Paket von einem Fan! NOVA SYNDIKAT nennt das ‚organische Zuschauerbindung‘. Wir nennen es nett.",
+			"text": "Ein Paket von {sender}. NOVA SYNDIKAT verbucht das als ‚organische Zuschauerbindung‘. Wir nennen es nett.",
 			"weight": 1
 		},
 		{
 			"id": "mod_gift_received_02",
 			"tag": "gift_received",
 			"voice": "mod",
-			"text": "Eine Lieferung aus dem Publikum! Die Rechtsabteilung prüft noch, ob Freundlichkeit lizenzpflichtig ist.",
+			"text": "Lieferung von {sender}! Die Rechtsabteilung prüft noch, ob Freundlichkeit lizenzpflichtig ist.",
 			"weight": 1
 		},
 		{
 			"id": "mod_gift_received_credits_01",
 			"tag": "gift_received:credits",
 			"voice": "mod",
-			"text": "Credits von einem Fan. NOVA SYNDIKAT erfindet bestimmt bald eine Gebühr darauf.",
+			"text": "{amount} Credits. NOVA SYNDIKAT behält sich vor, darauf irgendwann eine Gebühr zu erfinden.",
 			"weight": 1
 		},
 		{
@@ -1250,6 +1250,83 @@
 			"tag": "gift_received:anon",
 			"voice": "mod",
 			"text": "Ein anonymer Fan schickt Grüße. Die Marketingabteilung ist neidisch auf so viel Zurückhaltung.",
+			"weight": 1
+		},
+		{
+			"id": "mod_gift_diminished_01",
+			"tag": "gift_diminished",
+			"voice": "mod",
+			"text": "Wirkung dieses Geschenks: {pct} Prozent. Das Regelwerk will es so. Ich habe es nicht geschrieben. Leider.",
+			"weight": 1
+		},
+		{
+			"id": "mod_gift_capped_01",
+			"tag": "gift_capped",
+			"voice": "mod",
+			"text": "Geschenk-Kontingent für diesen Lauf erreicht. Das Publikum bleibt trotzdem das Beste an dieser Sendung.",
+			"weight": 1
+		},
+		{
+			"id": "mod_gift_declined_01",
+			"tag": "gift_declined",
+			"voice": "mod",
+			"text": "Abgelehnt. Kandidat:innen dürfen das. Steht auf Seite 412 der Teilnahmebedingungen, gleich neben ‚Überleben‘.",
+			"weight": 1
+		},
+		{
+			"id": "mod_fan_pack_received_01",
+			"tag": "fan_pack_received",
+			"voice": "mod",
+			"text": "Ein Applaus-Paket von {sender}. Echte Begeisterung — die Aktionäre wissen nicht, wie man die bilanziert.",
+			"weight": 1
+		},
+		{
+			"id": "mod_live_closing_01",
+			"tag": "live_closing",
+			"voice": "mod",
+			"text": "Noch {min} Minuten bis Sendeschluss. Danach geht hier das Licht aus. Und die Etage.",
+			"weight": 1
+		},
+		{
+			"id": "mod_vote_open_01",
+			"tag": "vote_open",
+			"voice": "mod",
+			"text": "Das Publikum entscheidet! Demokratie, aber mit Werbeunterbrechung.",
+			"weight": 1
+		},
+		{
+			"id": "mod_tutorial_explore_01",
+			"tag": "tutorial_explore",
+			"voice": "mod",
+			"text": "Willkommen in der Unterstadt, {name}! Laufen Sie los – die Kamera dreht sich, wenn Sie sie lassen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_tutorial_sneak_01",
+			"tag": "tutorial_sneak",
+			"voice": "mod",
+			"text": "Da vorn schlafen zwei Ratten. Schleichen Sie sich an und schlagen Sie zuerst zu – dann fangen Sie an.",
+			"weight": 1
+		},
+		{
+			"id": "mod_tutorial_battle_01",
+			"tag": "tutorial_battle",
+			"voice": "mod",
+			"text": "Angriff kostet nichts. Mopsulas Adelsflamme kostet MP – und Ratten hassen Feuer. Fast so sehr wie Steuern.",
+			"weight": 1
+		},
+		{
+			"id": "mod_tutorial_stunt_01",
+			"tag": "tutorial_stunt",
+			"voice": "mod",
+			"text": "Tipp der Regie: Stunts sind riskant, laut und teuer. Das Publikum liebt alle drei.",
+			"weight": 1
+		},
+		{
+			"id": "mod_story_battle_enc_f1_b2_01",
+			"tag": "story_battle:enc_f1_b2",
+			"voice": "mod",
+			"text": "Die Königin hört von euch.",
 			"weight": 1
 		}
 	]

@@ -1,0 +1,183 @@
+{
+	"schema": 1,
+	"note": "Canonical JSON test vectors (05 §3.3 Nr. 9). canonical == Python json.dumps(normalize(input), sort_keys=True, separators=(',', ':'), ensure_ascii=False) with integral floats normalized to int; sha256 over its UTF-8 bytes. Shared with the Python/JS/Go implementations.",
+	"vectors": [
+		{
+			"name": "key_order",
+			"input": {
+				"b": 1,
+				"a": [
+					3,
+					2,
+					1
+				],
+				"c": {
+					"z": true,
+					"y": null
+				}
+			},
+			"canonical": "{\"a\":[3,2,1],\"b\":1,\"c\":{\"y\":null,\"z\":true}}",
+			"sha256": "1e249c09afd78992af5138aaba168eace09179252528794ae2211f5e27b42ea0"
+		},
+		{
+			"name": "key_codepoints",
+			"input": {
+				"ab": 1,
+				"aa": 2,
+				"a": 3,
+				"_": 4,
+				"B": 5,
+				"1": 6,
+				"": 7
+			},
+			"canonical": "{\"\":7,\"1\":6,\"B\":5,\"_\":4,\"a\":3,\"aa\":2,\"ab\":1}",
+			"sha256": "ee8a6d07b0863284b7363a9c312045382d7049e309d74f5ec500502a9b1f53cb"
+		},
+		{
+			"name": "integers",
+			"input": [
+				0,
+				-1,
+				1,
+				42,
+				-9007199254740991,
+				9007199254740992,
+				1700000000
+			],
+			"canonical": "[0,-1,1,42,-9007199254740991,9007199254740992,1700000000]",
+			"sha256": "4e16d35171cf1f5c31eb4a790353e9299b0850b55e73a51e2a352cae4b827328"
+		},
+		{
+			"name": "integral_floats",
+			"input": [
+				12.0,
+				-3.0,
+				100.0
+			],
+			"canonical": "[12,-3,100]",
+			"sha256": "2fcb4be0ed6e4f413ac32ee3131fcf0786bde32af76a7aadce19ae4150bc2ca8"
+		},
+		{
+			"name": "nested",
+			"input": [
+				[
+					1,
+					[
+						2,
+						[
+							3,
+							[]
+						]
+					]
+				],
+				{},
+				{
+					"x": {
+						"y": {
+							"z": []
+						}
+					}
+				}
+			],
+			"canonical": "[[1,[2,[3,[]]]],{},{\"x\":{\"y\":{\"z\":[]}}}]",
+			"sha256": "d7dc832e0939e224b20f561ade76b20dd6a9613c0de42db3cb2870b52ac6473e"
+		},
+		{
+			"name": "escapes",
+			"input": "quote\" backslash\\ slash/ tab\t newline\n cr\r bs\b ff\f",
+			"canonical": "\"quote\\\" backslash\\\\ slash/ tab\\t newline\\n cr\\r bs\\b ff\\f\"",
+			"sha256": "47115fd86f98c916919ec5c9abcd67be411d29d2d589f3f87092e318b200cf5b"
+		},
+		{
+			"name": "control_chars",
+			"input": "\u0001\u001f\u000b\u0010",
+			"canonical": "\"\\u0001\\u001f\\u000b\\u0010\"",
+			"sha256": "90e2682a82c7b4b4d33f1f1adb80166585a9e32e0c3b269ddbb6b36f017227bb"
+		},
+		{
+			"name": "unicode",
+			"input": "Grüße aus Gleis 9 – €😀 ",
+			"canonical": "\"Grüße aus Gleis 9 – €😀 \"",
+			"sha256": "a72bf4af8d5e6ff5b5bf5feb94ba4e530f2b47cb70e26a323e973bc4c840c792"
+		},
+		{
+			"name": "empty",
+			"input": {
+				"s": "",
+				"a": [],
+				"o": {}
+			},
+			"canonical": "{\"a\":[],\"o\":{},\"s\":\"\"}",
+			"sha256": "c127f9b3c6f4233b3976f8e2d54486ab15f9a46cfa50fc14ae6d0787d1ac2917"
+		},
+		{
+			"name": "bools_null",
+			"input": [
+				true,
+				false,
+				null
+			],
+			"canonical": "[true,false,null]",
+			"sha256": "4d0f18de2133118249c26acc481838d4f6bb6bc1de882d99abbd19ae9397e8df"
+		},
+		{
+			"name": "gift_like",
+			"input": {
+				"schema": 1,
+				"gift_id": "g_dev_0001",
+				"source": "dev",
+				"kind": "gold",
+				"tier": "",
+				"amount": 100,
+				"sponsor_id": "",
+				"sender": {
+					"display_name": "",
+					"anon": true,
+					"sender_ref": ""
+				},
+				"message_key": "",
+				"target": {
+					"player_id": "local",
+					"run_id": ""
+				},
+				"event_id": "",
+				"window_id": "",
+				"league": "show",
+				"effect_pm": 1000,
+				"load_half": 0,
+				"roll": {},
+				"contents": [],
+				"run_bound": true,
+				"deliver_by_tick": 0,
+				"issued_at": "",
+				"payload": {}
+			},
+			"canonical": "{\"amount\":100,\"contents\":[],\"deliver_by_tick\":0,\"effect_pm\":1000,\"event_id\":\"\",\"gift_id\":\"g_dev_0001\",\"issued_at\":\"\",\"kind\":\"gold\",\"league\":\"show\",\"load_half\":0,\"message_key\":\"\",\"payload\":{},\"roll\":{},\"run_bound\":true,\"schema\":1,\"sender\":{\"anon\":true,\"display_name\":\"\",\"sender_ref\":\"\"},\"source\":\"dev\",\"sponsor_id\":\"\",\"target\":{\"player_id\":\"local\",\"run_id\":\"\"},\"tier\":\"\",\"window_id\":\"\"}",
+			"sha256": "7345c8c67a412a7321a75b8d6de965812c2a093f6731c04a74f54107ddcbdb14"
+		}
+	],
+	"errors": [
+		{
+			"name": "fraction",
+			"input": 1.5
+		},
+		{
+			"name": "nested_fraction",
+			"input": {
+				"a": [
+					1,
+					2,
+					{
+						"b": 0.25
+					}
+				]
+			}
+		},
+		{
+			"name": "negative_fraction",
+			"input": [
+				-0.5
+			]
+		}
+	]
+}

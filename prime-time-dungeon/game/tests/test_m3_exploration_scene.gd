@@ -77,7 +77,8 @@ func _stop_audio() -> void:
 ##   y=6  [2,6 S]-[3,6 n]-[4,6 n]
 ##                 |
 ##   y=7          [3,7 *]
-static func fixture_game_data() -> GameData:
+## lever_success: params.success of fev_t_lever (0.0 → the pull always floods).
+static func fixture_game_data(lever_success: float = 0.6) -> GameData:
 	var raw: Dictionary = {}
 	for t: String in GameData.TABLES:
 		var f: FileAccess = FileAccess.open("res://data/%s.json" % t, FileAccess.READ)
@@ -90,7 +91,7 @@ static func fixture_game_data() -> GameData:
 			base = floors[i]
 			floors.remove_at(i)
 			break
-	floors.insert(0, fixture_floor(base))
+	floors.insert(0, fixture_floor(base, lever_success))
 	var data: GameData = GameData.new()
 	if not data.load_from_tables(raw, "m3_fixture"):
 		printerr("Assertion failed: m3 fixture data invalid: " + "; ".join(data.errors))
@@ -98,7 +99,7 @@ static func fixture_game_data() -> GameData:
 	return data
 
 
-static func fixture_floor(base: Dictionary) -> Dictionary:
+static func fixture_floor(base: Dictionary, lever_success: float = 0.6) -> Dictionary:
 	var f: Dictionary = base.duplicate(true)
 	f["id"] = "floor_1"
 	f["index"] = 1
@@ -153,7 +154,7 @@ static func fixture_floor(base: Dictionary) -> Dictionary:
 			{"id": "fev_t_candidate", "type": "lost_candidate", "cell": [4, 6], "offset": [-3.0, 3.0],
 				"params": {"tag": "heal", "reward_item": "itm_antidote", "followers": 40}},
 			{"id": "fev_t_lever", "type": "lever", "cell": [4, 5], "offset": [3.0, 2.0],
-				"params": {"success": 0.6, "gate": "4,5,N", "flood_pct": 15, "encounter": "enc_t_patrol"}},
+				"params": {"success": lever_success, "gate": "4,5,N", "flood_pct": 15, "encounter": "enc_t_patrol"}},
 			{"id": "fev_t_vending", "type": "broken_vending", "cell": [3, 4], "offset": [-3.0, -2.0],
 				"params": {"base": 0.5, "per_lck": 0.02, "reward_item": "itm_bandage", "reward_amount": 2,
 					"fail_pct": 10, "fail_hype": 4}}],
@@ -1024,17 +1025,48 @@ func test_event_reveal_waits_for_the_prop() -> void:
 
 
 func test_lever_reveal_waits_for_the_prop() -> void:
+	# Flood path (lever success 0): the result toast and the follow-up fight both have to wait for the lever.
+	var flood: GameData = fixture_game_data(0.0)
+	assert_not_null(flood)
+	if flood == null:
+		return
+	DB.data = flood                                     # after_each restores the real data
+	Game.new_game(0, "Kai", 4242)
 	var scene: ExplorationScene = await _make_scene()
 	scene.auto_start_battle = false
 	var it: EventInteractable = scene.get_interactable("fev_t_lever") as EventInteractable
 	assert_not_null(it)
 	if it == null:
 		return
+	var toasts: Array[String] = []
+	var fights: Array[String] = []
+	var gates: Array[Vector2i] = []
+	var on_toast: Callable = func(text: String, _icon: StringName) -> void: toasts.append(text)
+	var on_fight: Callable = func(_group_id: String, enc_id: String, _adv: int) -> void: fights.append(enc_id)
+	var on_gate: Callable = func(cell: Vector2i, _dir: int) -> void: gates.append(cell)
+	Events.toast_requested.connect(on_toast)
+	Events.encounter_triggered.connect(on_fight)
+	Events.gate_opened.connect(on_gate)
 	scene.open_event_dialog(it)
+	var t0: int = Time.get_ticks_msec()
 	scene.active_dialog().call("choose", "pull")
 	assert_true(scene.is_revealing(), "the lever moves first (art-kit or fallback lever)")
+	assert_false(Game.timer_running, "timer paused during the reveal")
+	await wait_frames(3)
+	assert_true(toasts.is_empty() and fights.is_empty() and gates.is_empty(),
+		"no toast, gate or flood fight while the lever moves")
+	assert_false(scene.is_encounter_pending())
 	var done: bool = await wait_until(func() -> bool: return not scene.is_revealing(), 6000)
+	var elapsed_ms: int = int(float(Time.get_ticks_msec() - t0) * Engine.time_scale)   # game time (suite runs ×8)
+	Events.toast_requested.disconnect(on_toast)
+	Events.encounter_triggered.disconnect(on_fight)
+	Events.gate_opened.disconnect(on_gate)
 	assert_true(done, "reveal finished")
+	assert_true(elapsed_ms >= int(EventInteractable.LEVER_SEC * 1000.0),
+		"reveal lasts at least the lever pull (%d ms)" % elapsed_ms)
+	assert_eq(toasts.size(), 1, "result toast after the pull")
+	assert_eq(fights, ["enc_t_patrol"], "flood fight after the reveal")
+	assert_true(gates.is_empty(), "the gate stays shut after a flood")
 
 
 func test_force_encounter_is_ignored_behind_a_dialog() -> void:

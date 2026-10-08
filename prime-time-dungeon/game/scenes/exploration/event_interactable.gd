@@ -7,10 +7,10 @@ extends "res://scenes/exploration/interactable.gd"
 const PROPS: Dictionary = {"photo_drone": &"camera_drone", "lost_candidate": &"phone_booth", "wheel": &"fortune_wheel",
 	"lever": &"lever", "broken_vending": &"broken_vending"}
 
+## Reveal pacing (M3 tuning, no spec value): the same for PropKit (M4) props and fallback props, so how long the timer
+## stays paused does not depend on which art is loaded.
 const LEVER_SEC: float = 0.35
 const WHEEL_SEC: float = 1.2
-## PropKit wheel (M4 PropAnim.play_action): 14 rad/s decaying ×0.35 per second → ~1.7 rad/s after 2 s (slowed down).
-const KIT_WHEEL_SEC: float = 2.0
 const DRONE_SEC: float = 0.4
 const KICK_SEC: float = 0.3
 
@@ -208,8 +208,8 @@ func play_outcome(choice: String, outcome: Dictionary) -> float:
 		"wheel":
 			var spin: Node3D = prop.get_node_or_null("Wheel/Spin") as Node3D
 			if prop.has_method("play_action"):
-				# PropKit wheel (M4 PropAnim): fast spin that slows down to its idle turn.
-				dur = KIT_WHEEL_SEC
+				# PropKit wheel (M4 PropAnim): fast spin slowing down to its idle turn (no segment to land on).
+				dur = WHEEL_SEC
 				prop.call("play_action")
 			elif spin != null:
 				dur = WHEEL_SEC

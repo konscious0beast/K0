@@ -210,8 +210,8 @@ func test_dropped_blocking_line_releases_the_timer() -> void:
 	var got: Array[String] = []
 	var cb: Callable = func(tag: String) -> void: got.append(tag)
 	Events.dialog_finished.connect(cb)
-	# new_game → Show.start_floor already says its non-blocking "floor_start" line (M7 data), so the box may be busy
-	# with that one; the dropped lines must neither start nor queue.
+	# The box may already be busy with an earlier non-blocking line (e.g. "floor_start" once the countdown runs); the
+	# dropped lines must neither start nor queue.
 	var started: Array[String] = []
 	var on_start: Callable = func(_text: String, _voice: StringName, tag: String) -> void: started.append(tag)
 	d.connect("line_started", on_start)

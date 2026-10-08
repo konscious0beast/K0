@@ -1609,6 +1609,30 @@ Skill-Freischaltung künftig wie bei der Party: `learnset[{level, skill}]`. Abwe
 | Follower am Ende E1 | 1 200–1 500 | Kap. 7.6 |
 | Max. Zuschauer E1 | 3 000–5 500 | Kap. 7.2 |
 
+**Messung Full-Run-Bot** (`tools/fullrun.sh`, 02_TECH §11.4.1; Stand 2026-10-08, thorough Seeds 1–10, rush Seeds 1–12 + 4242, Median [Min–Max]; Auto-Kampf =
+`AutoPolicy`, Bot kauft/rüstet Upgrades, heilt mit Items/Safe Rooms). *thorough* bekämpft alle Gruppen, *rush* nur, was auf dem
+Weg zu Safe Rooms, Toren und Bossen angreift. Nur Messwerte — die Ziele oben gelten weiter.
+
+| Kennzahl | Ziel | thorough | rush | Befund |
+|---|---|---|---|---|
+| Party-Züge / Gesamtzüge regulär (Median) | 4–6 / 7–11 | 4,0 [4–4,5] / 7 [6–7,5] | 5,5 [4,5–6,5] / 8,5 [7–11,5] | im Ziel |
+| HP-Verlust pro regulärem Kampf | 20–35 % | 13 % [9–16] | 24 % [16–34] | thorough unter Ziel (überlevelt, Ausrüstung) |
+| Level bei Hausmeister / Königin | 5 / 7 | 6 / 7 | 4 / 6 | 100 % der Gruppen + 1–2 Event-Kämpfe → +1 Level |
+| Hausmeister Party-Züge | 16–22 | 13,5 [11–18] (L6) | 28 [18–40] (L4) | — |
+| Königin Party-Züge | 20–26 | 23 [19–27] (L7) | 33 [23–46] (L6) | im Ziel (thorough) |
+| Game Overs / Boss-Niederlagen | 0–1; Hausmeister ~20 %, Königin ~35 % | 0 | 0 | 0 von 23 Läufen verloren — Bosse mit Auto-Kampf zu leicht |
+| Timer-Verbrauch Etage 1 | 11–15 min | 4:30 [4:03–4:46] | 2:15 | Bot läuft ohne Zögern/Lesen/Schleichen die kürzesten Wege: Untergrenze; 20:00 bindet nicht |
+| Bekämpfte Gruppen | 11–13 von 15 | 15 (+1 Streuner) | 8–9 | — |
+| Credits erwirtschaftet / ausgegeben | ~1 100 / ~800 | 3 878 / 1 540 | 2 225 / 1 600 | ~3,5× (Kämpfe inkl. Meilensteine ~45 %, Lootboxen ~40 %, Truhen/Events ~13 %) |
+| Achievements / Lootboxen | 12–16 / 15–20 | 19 / 25 | 16 / 21 | über Ziel |
+| Follower Ende / max. Zuschauer | 1 200–1 500 / 3 000–5 500 | 6 780 / 22 561 | 2 890 / 11 281 | 4–5× — Hype endet fast jeden Kampf bei 96–100 |
+
+Ursache der Show-Abweichungen: Kampf-Hype (+5 Start, Abwechslung, Kills, Overkill, Schwachstellen, Combos) plus Truhen/Events/
+Achievements in der Erkundung halten Hype dauerhaft nahe 100; der Zerfall (−1/5 s) gleicht das zwischen Kämpfen nicht aus. Bei
+Hype 100 ist der Zuschauerfaktor 2,9 statt ~1,65 und die Follower-Rate 3 % statt ~2 %; Follower erhöhen die Zuschauer der nächsten
+Kämpfe (Rückkopplung). Dauer-Hype ≥ 50/75/100 löst zudem in fast jedem Kampf Sponsor-Geschenke aus (Heilung), was die Bosse
+entschärft. Offene Balancing-Aufgabe (M7), hier nicht geändert.
+
 ---
 
 ## 14. UX-Flows

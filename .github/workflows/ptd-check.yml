@@ -29,6 +29,13 @@ jobs:
           unzip -q godot.zip && mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" godot && chmod +x godot
       - name: Import + tests + autoplay smoke
         run: GODOT=~/godot/godot prime-time-dungeon/tools/check.sh
+      - name: Full run Floor 1 (bot, thorough + rush + dawdle, ~1.5 min)
+        run: GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --strategy=all --log-dir=fullrun-logs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fullrun-logs
+          path: fullrun-logs/
       - name: Screenshots (gl_compatibility)
         run: |
           mkdir -p shots

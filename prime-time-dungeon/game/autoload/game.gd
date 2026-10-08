@@ -132,10 +132,17 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 static func _detect_ephemeral() -> bool:
-	var user_args: PackedStringArray = OS.get_cmdline_user_args()
-	if user_args.has("--autoplay") or user_args.has("--capture"):
+	return is_ephemeral_args(OS.get_cmdline_user_args(), OS.get_cmdline_args())
+
+
+## Tests (-s/--script), capture and autoplay — the smoke run (--autoplay) and the full run (--autoplay=full,
+## 02_TECH §11.4) — never read or write user://settings.cfg.
+static func is_ephemeral_args(user_args: PackedStringArray, args: PackedStringArray) -> bool:
+	if user_args.has("--capture"):
 		return true
-	var args: PackedStringArray = OS.get_cmdline_args()
+	for a: String in user_args:
+		if a == "--autoplay" or a.begins_with("--autoplay="):
+			return true
 	return args.has("-s") or args.has("--script")
 
 

@@ -18,6 +18,8 @@ const SHAKE_EVERY_SEC: int = 10
 const SHAKE_DURATION: float = 0.3
 const SHAKE_STRENGTH: float = 0.15
 const MINIMAP_SIZE: float = 136.0
+const POP_SCALE: float = 1.3                 # timer panel scale when the countdown starts …
+const POP_SEC: float = 0.3                   # … back to 1.0 within this time
 
 
 ## Full-screen map (layer 60, tree paused): every visited cell, legend (same swatches as the map), zone names. Closes on
@@ -125,6 +127,7 @@ var _last_beep: int = -1
 var _last_shake: int = -1
 var _pulse_t: float = 0.0
 var _shake_left: float = 0.0
+var _pop_left: float = 0.0                   # countdown start pop still running (s)
 var _shake_cam_offset: Vector2 = Vector2.ZERO
 var _party_refresh: float = 0.0
 var _modal: Node = null
@@ -186,6 +189,8 @@ func _apply_dirty() -> void:
 		_on_quest_progress(_quest_progress_pending)
 	if d.has("quest_completed"):
 		_on_quest_completed()
+	if d.has("timer_started"):
+		_on_timer_started()
 
 
 func _process(delta: float) -> void:
@@ -194,7 +199,14 @@ func _process(delta: float) -> void:
 	if _party_refresh > 0.5:
 		_party_refresh = 0.0
 		_refresh_party_values()
-	if _timer_started and _seconds >= 0 and _seconds < WARN_RED_SEC:
+	if _pop_left > 0.0:
+		# Countdown start pop (1.3 → 1.0). Driven here, not by a tween: the reset below ran before a tween's first step
+		# and the tween then animated from 1.0 to 1.0 (the pop never showed).
+		_pop_left = maxf(0.0, _pop_left - delta)
+		var p: float = 1.0 + (POP_SCALE - 1.0) * ease(_pop_left / POP_SEC, 2.0)
+		_timer_panel.pivot_offset = _timer_panel.size * 0.5
+		_timer_panel.scale = Vector2(p, p)
+	elif _timer_started and _seconds >= 0 and _seconds < WARN_RED_SEC:
 		var s: float = 1.0 + 0.08 * (0.5 + 0.5 * sin(_pulse_t * TAU * 2.0))
 		_timer_panel.pivot_offset = _timer_panel.size * 0.5
 		_timer_panel.scale = Vector2(s, s)
@@ -516,14 +528,17 @@ func _on_timer_changed(seconds_left: int) -> void:
 
 func _on_timer_started() -> void:
 	if not is_inside_tree():
+		# The tutorial victory starts the countdown while the exploration (and this HUD) is detached for the battle:
+		# show the timer with its pop as soon as the HUD is back, not one second later on the first tick.
+		_dirty["timer_started"] = true
 		return
 	_timer_started = true
 	if Game.state != null:
 		_set_seconds(floori(Game.time_left()))
 	_update_timer_visibility()
 	_timer_panel.pivot_offset = _timer_panel.size * 0.5
-	_timer_panel.scale = Vector2(1.3, 1.3)
-	create_tween().tween_property(_timer_panel, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK)
+	_timer_panel.scale = Vector2(POP_SCALE, POP_SCALE)
+	_pop_left = POP_SEC
 
 
 func _on_timer_warning(seconds_left: int) -> void:

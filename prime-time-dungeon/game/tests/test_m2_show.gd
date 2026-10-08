@@ -949,3 +949,42 @@ static func _dev_gift(n: int) -> Dictionary:
 			"issued_at": "", "payload": {}}
 	g["gift_id"] = "g_01HZY0000000000000000000%02d" % n
 	return g
+
+
+## Full-run finding (GDD §1.4 B2): "floor_start" („Die Uhr läuft …“) comes when the countdown runs in the exploration —
+## not at new game (it played over the title / intro), not at start_floor of an unplayable floor (over the credits).
+## Floor 1: after floor_timer_started (tutorial victory) on the next explore second; a floor whose countdown runs at
+## once: after floor_entered. A fresher line of higher priority only postpones it to a later tick; it comes once.
+func test_floor_start_line_waits_for_the_running_countdown() -> void:
+	var lines: Array[String] = []
+	var cb: Callable = func(_text: String, _voice: StringName, tag: String, _b: bool) -> void: lines.append(tag)
+	Events.mod_said.connect(cb)
+	_world()
+	var tick: Dictionary = {"seconds_since_battle": 1}
+	assert_false(lines.has("floor_start"), "new game (title → intro): no floor_start line yet")
+	Game.state.floor_run.timer_started = false
+	Events.floor_entered.emit(1)
+	Events.explore_tick.emit(tick)
+	assert_false(lines.has("floor_start"), "exploration before the tutorial victory: countdown not running")
+	Game.state.floor_run.timer_started = true
+	Events.floor_timer_started.emit()
+	assert_false(lines.has("floor_start"), "not at the battle end itself")
+	Show.say("death")
+	Events.explore_tick.emit(tick)
+	assert_false(lines.has("floor_start"), "suppressed by the fresher death line (priority window)")
+	Show.set("_now", float(Show.get("_now")) + Show.PRIORITY_WINDOW_SEC + 1.0)
+	Events.explore_tick.emit(tick)
+	assert_eq(lines.count("floor_start"), 1, "said on the next explore second")
+	Events.explore_tick.emit(tick)
+	assert_eq(lines.count("floor_start"), 1, "only once")
+	Game.start_floor(2)
+	Events.explore_tick.emit(tick)
+	assert_eq(lines.count("floor_start"), 1, "start_floor alone (e.g. unplayable floor 2 → credits) says nothing")
+	Game.state.floor_run.timer_started = true
+	Events.floor_entered.emit(2)
+	Events.explore_tick.emit(tick)
+	assert_eq(lines.count("floor_start"), 1, "the tag still cools down (ModAnnouncer 20 s): retried later")
+	Show.set("_now", float(Show.get("_now")) + ModAnnouncer.KEY_COOLDOWN_SEC + 1.0)
+	Events.explore_tick.emit(tick)
+	assert_eq(lines.count("floor_start"), 2, "a floor whose countdown runs at once: after its first entry")
+	Events.mod_said.disconnect(cb)

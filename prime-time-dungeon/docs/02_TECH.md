@@ -99,6 +99,8 @@ Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört gen
 | `export_presets.cfg` | M0 | Export Windows/Linux/macOS/Android/iOS (§12.3) |
 | `icon.svg` | M0 | App-Icon (handgeschriebenes SVG: „PTD“-Logo, Magenta/Cyan) |
 | `../.github/workflows/ptd-check.yml` (Repo-Root `K0/.github/…`) | M0 | CI (§12.4) |
+| `../tools/check.sh` | M0 | Import + Tests + Autoplay-Smoke, `--shot` (§11) |
+| `../tools/fullrun.sh` | M6 | Full-Run-Bot Etage 1 headless (§11.4.1; CI-Schritt §12.4) |
 
 ### 1.2 `autoload/`
 
@@ -257,6 +259,7 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 |---|---|---|
 | `scenes/boot/boot.tscn` + `boot.gd` | M6 (S) | **Main Scene**: Args lesen, Settings anwenden, GlobalUi + ggf. Autoplay anlegen, → Titel |
 | `scenes/boot/autoplay.gd` | M6 | Autoplay-Treiber (§11.4) |
+| `scenes/boot/fullrun.gd` | M6 | Full-Run-Bot `--autoplay=full` (§11.4.1) |
 | `scenes/title/title.tscn` + `title.gd` | M6 (S) | `TitleScreen`: Fortsetzen / Neues Spiel / Laden / Event-Lauf / Optionen / Credits / Beenden (§9.5) |
 | `scenes/title/slot_select.tscn` + `.gd` | M6 | Slot-Auswahl (Neu/Laden) |
 | `scenes/title/name_entry.tscn` + `.gd` | M6 | Namenseingabe (Default „Kai“, `LineEdit.max_length = 12`) + Modus Prime Time / Vorabendprogramm |
@@ -684,7 +687,7 @@ var state: GameState = null          # null until new_game()/Save.load_slot()
 var settings: GameSettings           # created in _init(); loaded from user://settings.cfg unless ephemeral
 var input_scheme: InputScheme = InputScheme.KEYBOARD_MOUSE
 var timer_running: bool = false      # "explore view active": true only via ExplorationScene; Router resets to false on goto/push
-var autoplay: bool = false           # set by Boot from --autoplay
+var autoplay: bool = false           # set by Boot from --autoplay (smoke) and --autoplay=full (full-run bot)
 var auto_battle: bool = false        # party uses AutoPolicy (toggle_auto / Settings / Autoplay)
 var fast_text: bool = false          # dialogs show instantly (Autoplay, text_speed=2)
 var ephemeral: bool = false          # tests, autoplay, capture: settings defaults, never read/written on disk
@@ -770,8 +773,10 @@ func apply_settings() -> void         # audio volumes (Sfx), fullscreen, quality
 
 Laufzeitverhalten:
 - `_init()`: `settings = GameSettings.new()`; **nur wenn nicht ephemer** `settings.load_from_disk()`. Ephemer ist der Lauf, wenn
-  `OS.get_cmdline_user_args()` `--autoplay` oder `--capture` enthält oder das Hauptskript ein `-s`-Skript ist
-  (`OS.get_cmdline_args()` enthält `-s`/`--script`); `run_tests.gd` und `capture.gd` setzen zusätzlich `Game.ephemeral = true`.
+  `OS.get_cmdline_user_args()` `--autoplay`, `--autoplay=<modus>` (z. B. `full`, §11.4.1) oder `--capture` enthält oder das
+  Hauptskript ein `-s`-Skript ist (`OS.get_cmdline_args()` enthält `-s`/`--script`) — Regel als
+  `static func is_ephemeral_args(user_args, args) -> bool` testbar; `run_tests.gd` und `capture.gd` setzen zusätzlich
+  `Game.ephemeral = true`.
   Ephemer: Defaults, `save_to_disk()` ist ein No-op → Tests und Screenshots sind maschinenunabhängig.
 - `_process(delta)`: wenn `state != null`: `state.play_time_sec += delta` (nur Anzeige, nicht im Hash). Wenn `is_timer_ticking()`:
   `_acc += delta`; `n := floori(_acc * TICKS_PER_SEC)`; `_acc -= n / float(TICKS_PER_SEC)`; dann **n-mal einzeln**
@@ -882,7 +887,11 @@ func say(tag: String, ctx: Dictionary = {}, blocking: bool = false) -> String
 	# ModAnnouncer.pick(tag, floor_index, hype, now_sec) → format(line, ctx + name/floor/level/viewers/followers)
 	# → emits mod_said(text, voice, tag, blocking); returns text ("" if no line or suppressed by priority/cooldown)
 func chat(tag: String, ctx: Dictionary = {}) -> void                # voice &"chat" line → emits chat_posted
-func start_floor(floor_index: int) -> void                          # hype := Balance.HYPE_START (30); say("floor_start")
+func start_floor(floor_index: int) -> void                          # hype := Balance.HYPE_START (30); viewers, milestones
+	# "floor_start" kommt NICHT hier (Etage 1 steht dann noch vor Intro/Tutorial, eine nicht spielbare Etage vor dem Abspann),
+	# sondern sobald der Countdown in der Erkundung läuft (GDD §1.4 B2): nach Events.floor_timer_started (Tutorial-Sieg)
+	# bzw. Events.floor_entered mit bereits laufendem Timer → beim nächsten Events.explore_tick say("floor_start");
+	# von höherer Priorität / Tag-Cooldown unterdrückt → nächster Tick, genau 1×. Neues Spiel / Laden setzt das zurück.
 func sync_from_state() -> void                                      # re-emit hype/viewers/followers after load or RunSim tick
 func begin_battle(setup: BattleSetup) -> void
 	# _rules = ShowRules.new(DB.data, setup); _rng seeded Game.next_seed("show"); thresholds/gifts reset; stat
@@ -3650,6 +3659,60 @@ Fehler (Budget überschritten, falscher Ausgang, Watchdog): `printerr("Assertion
 Weitere Boot-Argumente (Entwicklung): `--seed=<int>` (Seed für Neues Spiel), `--goto=explore|safe_room|battle:<enc_id>`
 (überspringt Titel mit `Game.ensure_state()`).
 
+#### 11.4.1 `--autoplay=full` — Full-Run-Bot Etage 1 (`scenes/boot/fullrun.gd`, `tools/fullrun.sh`, M6)
+
+Beweist, dass Etage 1 von Titel bis Abspann durchspielbar ist, ausschließlich über die öffentlichen APIs und die echten
+Interaktionen. `TitleFlow.parse_args` liefert zusätzlich `"autoplay_mode": "" | "smoke" | "full"` (`--autoplay` und unbekannte
+Modi = `smoke`, der Lauf oben bleibt unverändert). Boot bei `--autoplay=full`: wie oben, aber `Engine.time_scale =
+FullRun.TIME_SCALE` (5.0) und **echte** Spielstände in `user://fullrun_saves` (`Save.save_dir`, `read_only = false`, vor und
+nach dem Lauf geleert); Knoten `FullRun` statt `Autoplay`. Weitere User-Argumente: `--seed=<int>` (Default 4242),
+`--strategy=thorough|rush|dawdle`.
+
+`tools/fullrun.sh [--strategy=…|all] [--seed=…] [--log-dir=…]`: isolierte Kopie, Import, dann
+`godot --headless --fixed-fps 60 --quit-after 95000 -- --autoplay=full --strategy=<s>` (feste 60 Frames/s Spielzeit-Takt, nicht an
+die Wanduhr gebunden → deterministisch und so schnell, wie die CPU kann; gemessen thorough ≈ 18 s, rush ≈ 14 s, dawdle ≈ 48 s
+Wanduhr). Bestanden = Exit 0, Zeile `FULLRUN: OK …`, keine `ERR_RE`-Zeile (wie `check.sh`). CI: eigener Schritt `--strategy=all`
+(§12.4).
+
+Ablauf (Planer statt Schritt-Tabelle): Titel → `request_new_game(1, "Kai", false, seed)` (Intro läuft) → Tutorial `f1_g0` →
+Wiederholung von „nächstes Ziel“ bis zur Treppe. Ziele aus dem Spielzustand, nächstes zuerst (BFS über offene Türen,
+`FloorLayout.neighbors` + `opened_gates`; lebende Boss-Räume nur als Ziel; feste Reihenfolge bei Gleichstand): reguläre Gruppen,
+Truhen (verschlossene ohne Schlüssel 1× als Negativprobe), Events (`photo_drone` pose, `lost_candidate` give:<Heilitem>,
+`wheel` 1× „Ignorieren“ dann drehen solange ≥ 80 Cr, `lever` pull, `broken_vending` kick), Tore (ohne Schlüssel 1× Negativprobe),
+Safe Rooms (Erstbesuch), unbesuchte Räume, Streuner ≤ 2 Räume entfernt (max. 3). Danach Quartier-Boss, Etagenboss
+(1 Versuch), Treppe (erst „Noch nicht“, dann „Abstieg“). Vor Bossen / unter 45 % Party-HP Umweg zum nächsten Safe Room.
+
+- **Bewegung:** Kai läuft mit den Move-Actions (Stick-Vektor aus Weltrichtung und Kamera-Yaw, `steer_input`) Raummitte → Türmitte →
+  Raummitte (Treppenraum: 1,6 m vor dem eingezäunten Schacht). Kein Fortschritt von 0,25 m in 1,5 s Spielzeit → Teleport auf den
+  Wegpunkt (gezählt, Soll 0).
+- **Interaktion:** vor dem Interactable stehen (Reach-Punkt + Extent + 1 m), hinschauen, nur wenn es fokussiert ist
+  `ExplorationScene.perform_action()` (= Taste `action`); sonst Fallback `interact()` (gezählt, Soll 0). Gruppen: hinlaufen +
+  Feldschlag, Fallback nach 600 Frames `force_encounter(group)`. Bosse: Raum betreten (5-m-Auslöser). Kämpfe: `Game.auto_battle`.
+- **Safe Room:** Mopsula-Szenen, Lootboxen (`tap`×3, `reveal_all`, `next_box`/`finish`), Automat (Item-Button `pressed`,
+  `set_qty`, `confirm`: erst Ausrüstungs-Upgrades, dann Bandagen bis 3), Ausrüstung (`Game.equip`, bestes je Slot nach
+  Werte-Summe), Speichern (`open_save` → Slot 1, Überschreiben bestätigen), Weiter. Beim Besuch, mit dem alle Safe Rooms besucht sind:
+  Rundlauf Speichern → `Router.goto(SCENE_TITLE)` → „Fortsetzen“ — der geladene `StateHash` muss dem gespeicherten gleichen, danach
+  muss die neu gebaute Karte zum Zustand passen (Truhen, Gruppen inkl. Streuner, Tore, Events).
+- **Prüfungen unterwegs** (Fehler = `Assertion failed: FULLRUN failed in <phase>: <grund>`, `quit(1)`): bei jedem Safe-Room-Besuch
+  `Game.replay_log(run_log)` ≡ Live-`StateHash` (solange das Log bei `new_game` beginnt); nach jedem Kampf `Game.in_battle == false`,
+  Symbol weg, alle ≥ 1 HP, Timer lief höchstens 15 Ticks (Überblendungen), Countdown nach dem Tutorial gestartet und tickt; Timer
+  steht in Event-/Treppen-Dialog, Pausemenü (`pause` → Baum pausiert, `ui_cancel` schließt) und Safe Room; Sieg ⇒ Gruppe in
+  `defeated_groups`; Kein-Fortschritt-Wächter (4× gleiches Ziel bei unverändertem Zustand); Watchdog 90 000 Frames.
+- **Treppe → Ende:** Etagen-Bilanz → „Weiter“ → `floor_run.index == 2`, Autosave in Slot 1 (`floor_index` 2, `location` start) →
+  Abspann → Titel → „Fortsetzen“ muss wieder im Abspann landen (nicht spielbare Etage 2) → Titel. Story-Beats (M.O.D.-Tags):
+  `floor_start` genau 1× und erst mit laufendem Countdown, `first_fight`, `safe_room_enter`, `scene:scn_mop_1`,
+  `boss_intro:enm_boss_hausmeister`, `stairs_found`, `floor_end`.
+- **Strategien:** `thorough` (Default, alles); `rush` (nur Safe Rooms, Tore, Bosse — unterlevelt); `dawdle` (nach dem ersten
+  Speichern stehen bleiben bis zum Etagenkollaps: Warnungen 600/300/60 genau 1× in dieser Reihenfolge, `floor_timer_expired` 1×,
+  Sendeschluss mit Grund `timer`). Nach jedem Game Over: „Letzten Spielstand laden“ (Restzeit ≥ 180 s geprüft) und weiter mit
+  `thorough`; mehr als 3 Game Over = Fehler. Eine verlorene Schlacht erreicht der Bot nie (Auto-Kampf gewinnt jede, auch
+  unterlevelt); diesen Weg (Niederlage → Sendeschluss „defeat“ → `game_overs` +1 im Slot → „Letzten Spielstand laden“ →
+  Erkundung) prüft `test_m6_fullrun.test_lost_battle_game_over_and_load_last` mit den echten Screens.
+
+Ausgabe: je Ereignis `FULLRUN: [<frame>] …`, am Ende `FULLRUN: stats {json}` (GDD-§13-Kennzahlen: Etagenzeit, Kämpfe, Party-Züge,
+HP-Verlust, Level an den Bossen, Credits, Boxen, Achievements, Follower, Zuschauer-Peak, Teleports, Fallbacks, Replay-Prüfungen,
+M.O.D.-Tags) und `FULLRUN: OK floor_time=<s> battles=<n> level=<kai>/<mopsula> deaths=<n> frames=<n>`, `quit(0)`.
+
 ### 11.5 Was jedes Modul testen muss (Minimum)
 
 | Modul | Pflicht-Tests |
@@ -3660,7 +3723,7 @@ Weitere Boot-Argumente (Entwicklung): `--seed=<int>` (Seed für Neues Spiel), `-
 | M3 | `floor_1`-Layout valide + deterministisch; prozedural 200 Seeds §7.2; `FloorEvent` alle Typen; Szene: Spawn ≠ in Wand, `force_encounter` → `Events.encounter_triggered` per Signal-Spion (startet keinen echten Kampf) **oder** mit `Router.adopt(scene)` → danach `Router.current is BattleScene` (per `wait_until`) |
 | M4 | Jede Base × Prop baut; Tri-Budgets §12.1; Rigs nur über `add_to_tree()`; `play_and_wait` jeder One-Shot-Anim endet, `impact` feuert genau 1× bei attack/cast/stunt/item; außerhalb des Baums sofortiges Ende; `build_room` für alle 16 Türmasken; `build_safe_room` alle 3 Themes; Log ohne „different indices“ |
 | M5 | Battle-Szene headless mit `auto_battle` bis `BATTLE_END` (time_scale 8, speed 4); HUD-Werte = letzte `hp_after`; CTB-Leiste 12/10 Einträge |
-| M6 | Jede UI-Szene instanziierbar + Default-Fokus; `PauseMenu.process_mode == PROCESS_MODE_WHEN_PAUSED` (und alle Untermenüs); Touch-Trefferflächen ≥ 88; SafeAreaContainer-Ränder ≥ 24; `name_entry` `max_length == 12` |
+| M6 | Jede UI-Szene instanziierbar + Default-Fokus; `PauseMenu.process_mode == PROCESS_MODE_WHEN_PAUSED` (und alle Untermenüs); Touch-Trefferflächen ≥ 88; SafeAreaContainer-Ränder ≥ 24; `name_entry` `max_length == 12`; Full-Run-Bot: Helfer/Planer/Story-Beats (`test_m6_fullrun`) + ganzer Lauf über `tools/fullrun.sh` (CI, §11.4.1) |
 | M7 | `real_data()` valide; Mindestmengen laut GDD; jede Etage-1-Encounter mit Startparty (Lv 1–3) per Auto-Kampf (50 Seeds) ≥ 80 % Siegquote, Hausmeister mit Lv 5, Königin mit Lv 7 |
 | M8 | 05_LIVE_MODUS §11.4; zusätzlich `RunSim.step(1) × n ≡ step(n)` und Timer/Hype-Zerfall in Ticks |
 
@@ -3763,6 +3826,13 @@ jobs:
           unzip -q godot.zip && mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" godot && chmod +x godot
       - name: Import + tests + autoplay smoke
         run: GODOT=~/godot/godot prime-time-dungeon/tools/check.sh
+      - name: Full run Floor 1 (bot, thorough + rush + dawdle, ~1.5 min)
+        run: GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --strategy=all --log-dir=fullrun-logs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fullrun-logs
+          path: fullrun-logs/
       - name: Screenshots (gl_compatibility)
         run: |
           mkdir -p shots
@@ -3805,7 +3875,8 @@ jobs:
 ```
 
 Android/iOS werden lokal exportiert (Android: JDK 17 + SDK + Debug-Keystore in Editor-Einstellungen; iOS: Xcode auf macOS).
-`check.sh` bleibt unverändert die einzige Prüf-Quelle (CI ruft nur `check.sh`).
+`check.sh` bleibt die Prüf-Quelle für Import, Tests und Smoke; zusätzlich ruft die CI `tools/fullrun.sh --strategy=all`
+(Full-Run-Bot, §11.4.1, ≈ 1,5 min) als eigenen Schritt auf.
 
 ---
 

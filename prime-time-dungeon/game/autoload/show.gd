@@ -61,6 +61,10 @@ var _last_chat_at: float = -INF
 var _now: float = 0.0                        # presentation clock (pauses with the tree)
 var _last_line_prio: int = -1
 var _last_line_at: float = -INF
+## "floor_start" waits for the countdown to run in the exploration (GDD §1.4 B2: "Die Uhr läuft …" after the tutorial
+## victory, never over the title / intro / credits); said on the next explore tick, retried while a fresher line of
+## higher priority suppresses it.
+var _floor_start_pending: bool = false
 
 
 func _ready() -> void:
@@ -78,6 +82,8 @@ func _ready() -> void:
 	Events.sponsor_gift_triggered.connect(_on_sponsor_gift_triggered)
 	Events.new_game_started.connect(_on_new_run)
 	Events.game_loaded.connect(_on_new_run)
+	Events.floor_entered.connect(_on_floor_entered)
+	Events.floor_timer_started.connect(_on_floor_timer_started)
 
 
 ## Display only: smoothing, noise, exploration chat. No game-relevant state changes here.
@@ -228,15 +234,19 @@ func chat(tag: String, ctx: Dictionary = {}) -> void:
 	Events.chat_posted.emit(user, text, _mood())
 
 
-## hype := Balance.HYPE_START (30); say("floor_start").
-func start_floor(floor_index: int) -> void:
+## hype := Balance.HYPE_START (30). The "floor_start" line is not said here (the floor may still be behind the intro,
+## the tutorial or — unplayable — the credits) but once its countdown runs in the exploration: Events.floor_entered
+## with the timer already started, or Events.floor_timer_started (Floor 1 after the tutorial victory), then on the next
+## Events.explore_tick (GDD §1.4 B2).
+func start_floor(_floor_index: int) -> void:
 	var st: GameState = Game.state
 	if st == null or st.show == null:
 		return
+	if not Game.replaying:
+		_floor_start_pending = false
 	_set_hype(ShowModel.HYPE_START, &"floor_start")
 	_update_viewers(true)
 	_check_milestones()
-	say("floor_start", {"floor": floor_index})
 
 
 ## Re-emit hype/viewers/followers after load or RunSim tick (RunSim changes ShowState.hype directly).
@@ -822,6 +832,20 @@ func _on_item_bought(payload: Dictionary) -> void:
 
 func _on_explore_tick(payload: Dictionary) -> void:
 	trigger("explore_tick", payload)
+	if _floor_start_pending and not Game.replaying and Game.state != null and Game.state.floor_run != null:
+		if say("floor_start", {"floor": Game.state.floor_run.index}) != "":
+			_floor_start_pending = false
+
+
+func _on_floor_entered(_floor_index: int) -> void:
+	var st: GameState = Game.state
+	if not Game.replaying and st != null and st.floor_run != null and st.floor_run.timer_started:
+		_floor_start_pending = true
+
+
+func _on_floor_timer_started() -> void:
+	if not Game.replaying:
+		_floor_start_pending = true
 
 
 func _on_sponsor_gift_triggered(sponsor_id: String) -> void:
@@ -832,6 +856,7 @@ func _on_sponsor_gift_triggered(sponsor_id: String) -> void:
 ## New game / loaded save: fresh battle context, fresh presentation pacing (cooldowns, chat spacing).
 func _on_new_run(_slot: int) -> void:
 	_reset_battle()
+	_floor_start_pending = false
 	_first_fight_said = false
 	_unlocked_battle = PackedStringArray()
 	_synced_state = null

@@ -341,9 +341,10 @@ func test_title_flow_helpers() -> void:
 	assert_eq(TitleFlow.clean_name(""), "Kai", "empty → Kai")
 	assert_eq(TitleFlow.clean_name("Abcdefghijklmnop"), "Abcdefghijkl", "max 12")
 	assert_eq(TitleFlow.clean_name("Jö" + String.chr(0x2665)), "Jö", "unsupported glyphs removed")
-	assert_eq(TitleFlow.parse_args(PackedStringArray()), {"autoplay": false, "seed": -1, "goto": ""})
+	assert_eq(TitleFlow.parse_args(PackedStringArray()), {"autoplay": false, "autoplay_mode": "", "seed": -1,
+		"goto": ""})
 	assert_eq(TitleFlow.parse_args(PackedStringArray(["--autoplay", "--seed=4242", "--goto=battle:enc_f1_rats"])),
-		{"autoplay": true, "seed": 4242, "goto": "battle:enc_f1_rats"})
+		{"autoplay": true, "autoplay_mode": "smoke", "seed": 4242, "goto": "battle:enc_f1_rats"})
 	assert_eq(int(TitleFlow.parse_args(PackedStringArray(["--seed=abc"]))["seed"]), -1, "invalid seed ignored")
 	assert_has(TitleFlow.load_error_text(ERR_FILE_NOT_FOUND), "Kein Spielstand")
 

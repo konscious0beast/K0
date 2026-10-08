@@ -72,6 +72,12 @@ func test_timer_started_signal_shows_remaining_time() -> void:
 	Events.floor_timer_started.emit()
 	assert_true(h.is_timer_visible(), "floor_timer_started shows the countdown")
 	assert_eq(h.timer_text(), UiUtil.fmt_time(floori(Game.time_left())))
+	# Start pop 1.3 → 1.0 (regression: the per-frame scale reset of _process undid it before a tween's first step).
+	var panel: Control = h.find_child("Timer", true, false) as Control
+	await wait_frames(1)
+	assert_gt(panel.scale.x, 1.05, "the pop is still visible one frame later")
+	var ok: bool = await wait_until(func() -> bool: return is_equal_approx(panel.scale.x, 1.0), 60)
+	assert_true(ok, "pop settles back to 1.0")
 
 
 func test_prompt_and_touch_icon() -> void:
@@ -248,3 +254,29 @@ func test_detached_hud_refreshes_on_reattach() -> void:
 		return false, 30)
 	assert_true(ok, "party panel refreshed after re-attaching")
 	kai.display_name = ""
+
+
+## Full-run finding: the tutorial victory starts the countdown (Events.floor_timer_started) while the exploration and
+## its HUD are detached for the battle. The HUD must show the timer as soon as it is back (with the start pop), not
+## only on the first second tick afterwards.
+func test_countdown_started_while_detached_shows_on_reattach() -> void:
+	var h: ExplorationHud = _hud()
+	await wait_frames(2)
+	assert_false(h.is_timer_visible(), "no countdown before the tutorial battle")
+	var parent: Node = h.get_parent()
+	parent.remove_child(h)
+	Game.state.floor_run.timer_started = true
+	Events.floor_timer_started.emit()
+	assert_false(h.is_timer_visible(), "nothing applied while detached")
+	parent.add_child(h)
+	var ok: bool = await wait_until(func() -> bool: return h.is_timer_visible(), 5)
+	assert_true(ok, "timer visible right after re-attaching (no floor_timer_changed tick needed)")
+	assert_eq(h.timer_text(), UiUtil.fmt_time(floori(Game.time_left())))
+	var panel: Control = h.find_child("Timer", true, false) as Control
+	var peak: float = panel.scale.x
+	for i in 6:
+		await wait_frames(1)
+		peak = maxf(peak, panel.scale.x)
+	assert_gt(peak, 1.05, "start pop plays on re-attach")
+	ok = await wait_until(func() -> bool: return is_equal_approx(panel.scale.x, 1.0), 60)
+	assert_true(ok, "pop settles back to 1.0")

@@ -60,12 +60,15 @@ static func load_error_text(err: Error) -> String:
 	return base + (": " + detail if detail != "" else ".")
 
 
-## Parses boot user args: {"autoplay": bool, "seed": int (-1), "goto": String}.
+## Parses boot user args: {"autoplay": bool, "autoplay_mode": "" | "smoke" | "full", "seed": int (-1), "goto": String}.
+## `--autoplay` (and `--autoplay=smoke`) = the check.sh smoke run, `--autoplay=full` = the full Floor-1 bot (02_TECH
+## §11.4.1); an unknown mode falls back to the smoke run.
 static func parse_args(args: PackedStringArray) -> Dictionary:
-	var out: Dictionary = {"autoplay": false, "seed": -1, "goto": ""}
+	var out: Dictionary = {"autoplay": false, "autoplay_mode": "", "seed": -1, "goto": ""}
 	for a: String in args:
-		if a == "--autoplay":
+		if a == "--autoplay" or a.begins_with("--autoplay="):
 			out["autoplay"] = true
+			out["autoplay_mode"] = "full" if a == "--autoplay=full" else "smoke"
 		elif a.begins_with("--seed="):
 			var v: String = a.trim_prefix("--seed=")
 			if v.is_valid_int():

@@ -1,13 +1,15 @@
 extends Node
-## Main scene (02_TECH §1.6, §11.4; GDD §14.1): reads the user args (--autoplay, --seed=<int>,
+## Main scene (02_TECH §1.6, §11.4; GDD §14.1): reads the user args (--autoplay[=full], --seed=<int>,
 ## --goto=explore|safe_room|battle:<enc_id>|title|credits|lobby|game_over), applies the settings, adds GlobalUi once
-## under root (deferred) and — with --autoplay — the autoplay driver (max_fps 60, time_scale 5, read-only saves, fast
-## text, ephemeral). Shows the "NOVA SYNDIKAT präsentiert" card for 2 s (any input skips) while pre-warming the shader
-## materials behind it (03_ART §3.10), then routes to the title (or the --goto target).
+## under root (deferred) and — with --autoplay — the smoke driver (max_fps 60, time_scale 5, read-only saves, fast
+## text, ephemeral), with --autoplay=full the full Floor-1 bot instead (fullrun.gd: time_scale FullRun TIME_SCALE,
+## real saves in its own directory). Shows the "NOVA SYNDIKAT präsentiert" card for 2 s (any input skips) while
+## pre-warming the shader materials behind it (03_ART §3.10), then routes to the title (or the --goto target).
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const TitleFlow := preload("res://scenes/title/title_flow.gd")
 const AutoplayScript := preload("res://scenes/boot/autoplay.gd")
+const FullRunScript := preload("res://scenes/boot/fullrun.gd")
 const GLOBAL_UI: String = "res://scenes/ui/global_ui.tscn"
 const EVENT_LOBBY: String = "res://scenes/ui/event_lobby.tscn"
 const LOGO_SEC: float = 2.0
@@ -29,11 +31,18 @@ func _ready() -> void:
 		Game.autoplay = true
 		Game.ephemeral = true
 		Game.fast_text = true
-		Save.read_only = true
 		Engine.max_fps = 60
-		Engine.time_scale = 5.0
-		var ap: Node = AutoplayScript.new()
-		ap.name = "Autoplay"
+		var ap: Node = null
+		if str(args.get("autoplay_mode", "")) == "full":
+			# Full Floor-1 bot (§11.4.1): real saves in its own directory (fullrun.gd prepare_saves in _ready).
+			Engine.time_scale = FullRunScript.TIME_SCALE
+			ap = FullRunScript.new()
+			ap.name = "FullRun"
+		else:
+			Save.read_only = true
+			Engine.time_scale = 5.0
+			ap = AutoplayScript.new()
+			ap.name = "Autoplay"
 		get_tree().root.add_child.call_deferred(ap)
 	Game.apply_settings()
 	if ResourceLoader.exists(GLOBAL_UI):

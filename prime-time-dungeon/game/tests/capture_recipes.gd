@@ -146,7 +146,26 @@ func _explore_ready(scene: Node) -> bool:
 	if Game.state != null and Game.state.floor_run != null and not Game.state.floor_run.timer_started:
 		Game.state.floor_run.timer_started = true
 		Events.floor_timer_started.emit()
+		# Show says "floor_start" on the first explore tick of a running countdown (int-cr, GDD §1.4 B2): in the stills
+		# its M.O.D. box would sit over Kai and the prompt, so that line is skipped (test tool: private Show member).
+		Show.set("_floor_start_pending", false)
+	await _quiet_mod_dialog()
 	return true
+
+
+## Ends whatever the M.O.D. box shows or queues (e.g. tutorial hints) so exploration stills show the scene itself.
+func _quiet_mod_dialog() -> void:
+	var ui: Node = get_tree().root.get_node_or_null("GlobalUi")
+	var d: Node = ui.get("mod_dialog") as Node if ui != null else null
+	if d == null:
+		return
+	await frames(2)
+	for i in 16:
+		if not bool(d.call("is_busy")):
+			return
+		d.call("advance")                # full text …
+		d.call("advance")                # … then end the line
+		await frames(1)
 
 
 func _freeze_enemies(scene: Node) -> void:

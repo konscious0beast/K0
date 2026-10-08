@@ -3872,6 +3872,8 @@ Jede Szene unter `scenes/**` und `art/gallery/**` muss **standalone** instanziie
 **Capture-Rezepte** (`tests/capture_recipes.gd`, Testwerkzeug, kein class_name, darf Autoloads/class_names und private Member der
 Screens benutzen): `run(recipe, scene) -> bool` (Koroutine; unbekannt → `false`). `<familie>_<arg>`-Namen gehen an `_r_<familie>(scene, arg)`.
 Zustände, die nur durch Spielen erreichbar sind, frieren die Rezepte mit `get_tree().paused = true` ein (GlobalUi läuft weiter).
+Erkundungs-Rezepte starten den Countdown wie im Spiel, überspringen aber die danach fällige M.O.D.-Zeile `floor_start` und beenden
+offene M.O.D.-Zeilen, damit die Box nicht über Kai, Prompt und Marker liegt.
 
 | Szene | Rezepte |
 |---|---|

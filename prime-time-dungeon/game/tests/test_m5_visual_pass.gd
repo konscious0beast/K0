@@ -135,10 +135,24 @@ func test_wide_command_shot_shows_the_queen_on_her_wreck() -> void:
 			qid = id
 	assert_ne(qid, "", "queen on the stage")
 	assert_eq(scene.stage.call("home", qid), BattleStageScript.QUEEN_POS)
-	# feet on the roof, not inside the car (wreck collision box top at x 0)
+	# feet on the roof, not inside the car (wreck collision box top at x 0). The stage strips the wreck's body (no
+	# physics in battle, 02_TECH §12.1), so the roof is measured on a fresh PropKit wreck placed like the stage's one.
 	var wreck: Node3D = scene.stage.get_node("Wreck") as Node3D
-	var cs: CollisionShape3D = wreck.find_children("*", "CollisionShape3D", true, false)[0] as CollisionShape3D
-	var top: Vector3 = cs.global_transform * Vector3(0, (cs.shape as BoxShape3D).size.y * 0.5, 0)
+	assert_eq(wreck.find_children("*", "CollisionObject3D", true, false).size(), 0, "stage wreck without physics body")
+	var probe: Node3D = PropKit.build(&"wreck", 0)
+	var shapes: Array[Node] = probe.find_children("*", "CollisionShape3D", true, false)
+	assert_false(shapes.is_empty(), "PropKit wreck keeps its collision box (prop contract)")
+	if shapes.is_empty():
+		probe.free()
+		return
+	var cs: CollisionShape3D = shapes[0] as CollisionShape3D
+	var local: Transform3D = cs.transform
+	var up: Node = cs.get_parent()
+	while up != probe:
+		local = (up as Node3D).transform * local
+		up = up.get_parent()
+	var top: Vector3 = wreck.global_transform * local * Vector3(0, (cs.shape as BoxShape3D).size.y * 0.5, 0)
+	probe.free()
 	assert_true(BattleStageScript.QUEEN_POS.y >= top.y, "queen's feet above the wreck body (%.2f / %.2f)" % [
 		BattleStageScript.QUEEN_POS.y, top.y])
 	var cam: Camera3D = scene.camera

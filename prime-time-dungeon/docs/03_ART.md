@@ -1272,7 +1272,7 @@ laufen als `idle`/`walk`-Varianten im Archetyp.
 | Boden | Box 16×0.2×16 · y −0.1 (Fliesen via `env_tiles`) | `floor` |
 | Wandsegment 2 m | Box 2.0×3.5×0.5; Sockel Box 2.0×0.3×0.6 (Palette `wall` × 0.7); Abschlussleiste Box 2.0×0.12×0.55 | `wall` |
 | Pfeiler (Ecken) | Box 0.7×3.5×0.7 + Kapitell Box 0.9×0.3×0.9; Zone A: Cyl 0.35 + Warnband Cyl 0.36 h 0.3 auf 1.0 m `#F2C230` | `wall` × 0.8 |
-| Türrahmen | 2× Box 0.5×3.0×0.6 + Sturz Box 5.0×0.5×0.6 | `#3A3A44` |
+| Türrahmen | 2× Box 0.5×3.0×0.6 + Sturz Box 5.0×0.5×0.6; Akzentleuchte Box 1.2×0.14×0.02 **E** 0.6 in `accent` bündig auf der Sturz-Innenseite (nur die eigene Raumseite; kein Streifen quer durch die Öffnung) | `#3A3A44` |
 | Varianten (`variant`) | 0 = schlicht; 1 = Poster (Box 1.2×1.6×0.03 **E** 0.6 in `accent`, 2 je Raum); 2 = Rohre (2 Cyl 0.12 waagrecht auf 0.8/3.0 m, `#8A4B2A`); 3 = Graffiti (3 schräge Box-Streifen 0.05 **E** 0.4 `#E23E9B`) + Risse (Wandsegment ±4° verkippt) | je Variante (s. Aufbau) |
 | Zone A Gleisrand | Bahnsteigkante Box 16×0.05×0.6 `#F2C230` an der Seite ohne Tür; dahinter Gleisbett −1.0 m mit Schienen Box 0.08×0.15×16 **M** (Spur 1.435 m) + Schwellen Box 2.4×0.12×0.25 alle 0.67 m |
 | Zone B | Wasserrinne Box 2×0.05×16 · y −0.15 · `#1E4A40` mit `glow` 0.3 (Schimmer) |
@@ -1398,9 +1398,12 @@ Game Over = `ui_tv_overlay.test_card` 0→1 in 0.2 s, Buttons nach 1.5 s.
 
 ### 8.2 Kampf-Bühne (`battle_stage.gd`)
 
-Arena = `EnvKit.build_battle_arena()` (Bühne r 9 m). Party blickt −Z, Gegner +Z. Show-Bildschirm-Titel („DUNGEON PRIME TIME“/„BOSSKAMPF“, y 6.3) und
-„LIVE“-Schild (y 5.1) liegen über 4.6 m: die tiefen Befehls-Shots schneiden die Rückwand dort direkt unter dem HUD-Band ab, so wird
-kein Text halb hinter dem Hype-Meter abgeschnitten (Review M5); Totalen zeigen beide.
+Arena = `EnvKit.build_battle_arena()` (Bühne r 9 m). Party blickt −Z, Gegner +Z. Hinter den Gegnern eine **niedrige LED-Wand**
+(Hologramm 10 × 1.7 m, Mitte y 1.75 m, Text „DUNGEON PRIME TIME“/„BOSSKAMPF“ + „LIVE“ auf der Wand): sie bleibt in den Schulter-Shots
+unter dem HUD-Band oben (die alte 9 × 4 m-Leinwand auf 3.4–7.8 m wurde oben abgeschnitten, ihr LED-Streifen und Titel/„LIVE“
+lagen halb hinter der Hype-Leiste — Review M5 CR 3; die Zwischenlösung „Titel y 6.3 / LIVE y 5.1“ ist damit abgelöst).
+Hinter der Party (+Z) **Publikumstribüne**: Bogen 128°–232°, r 13.5 m, 3 Stufen à 0.7 m, Zuschauer als Box-Silhouetten mit
+Leuchtstäben, LED-Kante in `accent` — Shots Richtung Party (Gegnerzug, Sieg-Orbit) zeigen Publikum statt Schwarz.
 
 | Slot | Position |
 |---|---|
@@ -1409,7 +1412,7 @@ kein Text halb hinter dem Hype-Meter abgeschnitten (Review M5); Totalen zeigen b
 | 2 Gegner | (−1.4, 0, −3.0), (1.4, 0, −3.0) |
 | 3 Gegner | (−2.4, 0, −2.6), (0, 0, −3.4), (2.4, 0, −2.6) |
 | 4 Gegner | (−3.0, 0, −2.4), (−1.0, 0, −3.4), (1.0, 0, −3.4), (3.0, 0, −2.4) |
-| Boss | (0, 0, −4.5); Rattenkönigin auf `wreck` (0, 3.0, −6.0), Party dann z +4.0 |
+| Boss | (0, 0, −4.5); Rattenkönigin auf `wreck` (0, 3.7, −6.0) — Füße auf dem Dach —, Party dann z +4.0 |
 
 ### 8.3 Shots (`battle_camera.gd`: `shot(name, ctx)`)
 
@@ -1419,15 +1422,15 @@ kein Text halb hinter dem Hype-Meter abgeschnitten (Review M5); Totalen zeigen b
 |---|---|---|---|---|---|
 | `establishing` (BATTLE_START) | (6.5, 4.2, 9.0) → (4.5, 3.4, 8.0) | (0, 0.9, −0.5) | 50 | Dolly **1.2 s** | Cut nach Swirl |
 | `boss_intro` | (0, 2.0, −12) hinter dem Boss → `establishing` | Boss-Kopf | 40→50 | Kranfahrt **2.5 s**, Namensbanner | Cut |
-| `command` (Akteur A) | A + (0.9·s, 1.75, 2.3), s = +1 Kai, −1 Mopsula | Gegnermitte + (0, 0.9, 0) | 48 | ±0.03 m Atem-Drift | Blend 0.35 s |
+| `command` (Akteur A) | A + (0.9·s, 1.75, 2.3), s = +1 Kai, −1 Mopsula; Rattenkönigin-Kampf (`wide`): + (0, 0.8, 3.0), FOV 50, Blickpunkt + 0.6 m (Königin auf dem Wrack unter dem HUD-Band) | Gegnermitte + (0, 0.9, 0) | 48 | ±0.03 m Atem-Drift | Blend 0.35 s |
 | `target_select` | wie `command` | Ziel + (0, 1.0, 0) | 44 | Blickpunkt-Blend je Zielwechsel | Blend 0.2 s |
 | `action_side` (Nahkampf) | (7.0·side, 2.2, 0.0) | Mitte Akteur–Ziel + (0, 1.0, 0) | 45 | folgt Dash | Cut |
 | `skill_closeup` | A + A.forward·1.6 + (0.35, 0.9·Höhe, 0) | `head`-Anker von A | 32 | Push-in 0.2 m in 0.55 s (bis `impact`) | Cut |
 | `skill_release` | Ziel + (2.5, 2.0, 4.5); Flächen-Skill: `establishing` | Ziel + (0, 0.9, 0) | 50 | statisch | Cut bei `impact` |
-| `enemy_turn` | Gegner + (−1.2, 2.0, −2.6) | Party-Mitte + (0, 0.9, 0) | 50 | 0.6 s halten | Blend 0.3 s |
+| `enemy_turn` | Gegner + (−1.4·k, 1.4 + 1.6·k, −2.0 − 2.2·k), k = Höhe/1.5 ∈ [0.8, 2] (ganze Figur unten im Bild; vorher saß die Linse über kleinen Gegnern) | Party-Mitte + (0, 0.9, 0), 30 % Richtung Gegnermitte; nahe Gegner vor der Linse ausgeblendet | 50 | 0.6 s halten | Blend 0.3 s |
 | `stunt` | Orbit um A, r 3.0, h 1.5, 90° in 1.2 s | A + (0, 1.0, 0) | 40 | — | Cut |
 | `sponsor_drop` | (3.0, 2.5, 6.0) | Drohne | 50 | folgt | Blend 0.3 s |
-| `victory` | Orbit um (0, 0, 3.1): r 3.8, h 1.3, 210°→150° in 3.0 s | Party-Mitte + (0, 0.9, 0) | 40 | dann Ergebnis-Panel | Cut |
+| `victory` | Orbit um (0, 0, 3.1): r 3.8, h 1.3, 210°→150° in 3.0 s; letzte 1.2 s: r → 5.2 (h steigt mit) | Party-Mitte + (0, 0.9, 0), letzte 1.2 s 1.4 m seitlich verschoben → Party links vom Ergebnis-Panel | 40 | dann Ergebnis-Panel | Cut |
 | `defeat` | Push-in 0.5 m in 1.5 s auf KO-Figur | KO-Figur | 45 | — | Blend 0.5 s |
 
 **Kamera-Trauma:** Offset `0.25 m × trauma²` (Rauschen 18 Hz), Roll `3° × trauma²`, Abbau 1.5/s. Treffer 0.2, Krit 0.35, Stunt 0.5, Zug 0.6, Phasenwechsel 0.4.
@@ -1456,8 +1459,12 @@ Ein Theme für alles: `UiTheme.get_theme()` (`scenes/ui/theme/ui_theme.gd`, M0);
 | Hype-Leiste | oben rechts, 320×14 | Verlauf `NOVA_MAGENTA`→`HYPE_GOLD`, Rauten-Marker 50/75/100, Glanzlicht läuft 0.3 s bei Anstieg |
 | Chat-Ticker | unten, Höhe 22 | `C_PANEL` 70 %, Text 15 px, 80 px/s, Nutzernamen in Akzentfarben |
 | Sponsor-Bauchbinde | links unten über Ticker, 480×64 | Zeile 1 Sponsorname 24 px auf Sponsorfarbe, Zeile 2 Slogan 15 px auf `C_PANEL`; rein 0.25 s, steht 2.5 s, raus 0.2 s |
-| M.O.D.-Textbox | unten Mitte, 740×108 | Rahmen `NOVA_CYAN`, Ikosaeder-Icon (SubViewport 64×64), Text 19 px, 45 Zeichen/s |
+| M.O.D.-Textbox | unten Mitte, 740×108 (Kampf: mittig zwischen Befehlsmenü und Party-Panels, 420–740 breit, wächst nach oben) | Rahmen `NOVA_CYAN`, Ikosaeder-Icon (SubViewport 64×64), Text 19 px, 45 Zeichen/s |
+| Interaktions-Prompt (Erkundung) | 12 px **über** dem Fokus-Marker des Objekts (projiziert), im Band unter Timer/Hype und über der M.O.D.-Box | Schrägbox `C_PANEL` 90 %, Rahmen `HYPE_GOLD`, Tasten-Glyphe + Text 20 px; verdeckt nie das Objekt selbst |
 | REC-Ecken (Erkundung) | 4 Ecken | L-Winkel 28 px, 2 px `PAPER` @ 35 % |
+
+Modale Menüs (Pause, Automat) haben einen **deckenden** Panel-Hintergrund (kein HUD-Text scheint durch); der Safe Room blendet seine
+Menüspalte und das Raum-Namensschild an der Rückwand aus, solange ein Modal offen ist bzw. weil der UI-Kopf den Namen trägt.
 
 Kampf-UI (GDD 14.5, auf 720p umgerechnet × 2/3): Befehlsmenü 240×280 unten links (Zeilen 42 px, aktive Zeile + 4 px Magenta-Balken);
 Zugreihenfolge rechts (Eintrag 1: 64 px, weitere 42 px; Rahmen `ui_party`/`ui_enemy`, Zug grau, Geist 50 %); Party-Panels 254×74 (HP-Leiste 8 px mit nachlaufendem `DANGER`-Segment 0.5 s, MP 6 px);

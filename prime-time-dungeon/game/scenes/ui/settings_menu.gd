@@ -17,6 +17,7 @@ const ROW_H: float = 88.0                  # = UiTheme.TOUCH_HIT
 const CAM_MIN: float = 0.25
 const CAM_MAX: float = 3.0
 const GRABBER_PX: int = 32
+const SCROLLBAR_GUTTER: int = 20         # px between the rows and the scroll bar
 
 static var _grabber: Texture2D = null
 
@@ -171,7 +172,16 @@ func _build() -> void:
 	host.add_child(_scroll)
 	_list = UiUtil.vbox(12)                 # 12 px between the 88 px hit areas
 	_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_scroll.add_child(_list)
+	# rows end left of the scroll bar (the value labels / focus frame touched it; visual pass)
+	var gutter: MarginContainer = MarginContainer.new()
+	gutter.name = "Gutter"
+	gutter.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	gutter.add_theme_constant_override("margin_right", SCROLLBAR_GUTTER)
+	gutter.add_theme_constant_override("margin_left", 0)
+	gutter.add_theme_constant_override("margin_top", 0)
+	gutter.add_theme_constant_override("margin_bottom", 0)
+	_scroll.add_child(gutter)
+	gutter.add_child(_list)
 	var s: GameSettings = Game.settings
 	_section("Audio")
 	_slider("master_volume", "Gesamtlautstärke", s.master_volume)

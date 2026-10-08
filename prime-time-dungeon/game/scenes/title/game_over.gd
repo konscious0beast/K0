@@ -25,6 +25,10 @@ var _busy: bool = false
 var _ready_for_input: bool = false
 
 
+## Capture still (fresh ephemeral state): sample statistics of a lost run.
+const CAPTURE_STATS: Dictionary = {"time_used_sec": 11 * 60 + 47, "kills": 14, "viewers_peak": 4380}
+
+
 func setup(params: Dictionary) -> void:
 	_params = params
 	reason = StringName(str(params.get("reason", "defeat")))
@@ -153,6 +157,8 @@ func _build() -> void:
 		inner.add_child(q)
 	var summary: Dictionary = Game.state.floor_run.summary() if Game.state != null and Game.state.floor_run != null \
 		else {}
+	if bool(_params.get("capture", false)) and int(summary.get("time_used_sec", 0)) == 0:
+		summary = CAPTURE_STATS.duplicate()     # standalone still of a fresh state: sample numbers, not 00:00 / 0 / 0
 	var stats: HBoxContainer = UiUtil.hbox(28)
 	stats.alignment = BoxContainer.ALIGNMENT_CENTER
 	inner.add_child(stats)

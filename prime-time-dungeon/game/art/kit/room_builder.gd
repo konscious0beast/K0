@@ -17,6 +17,10 @@ const WALL_BOTTOM: float = -1.0
 const WALL_TOP: float = 3.5
 const DOOR_HALF: float = 2.0
 const FRAME: Color = Color("#3a3a44")
+## Door accent lamp (length, height): flush on the lintel's inner face (this room's side only; frame depth 0.6 → face
+## at w 0.3).
+const LINTEL_BAND_W: float = 0.31
+const LINTEL_LAMP: Vector2 = Vector2(1.2, 0.14)
 const TRENCH_W: float = 2.4
 const CHANNEL_W: float = 1.6
 ## Kinds whose room gets the extra "Neon" OmniLight on quality high; it fades out from 12 m (gone at 16 m).
@@ -368,7 +372,10 @@ func _build_wall(side: int) -> void:
 		for sx: float in [-1.0, 1.0]:
 			geo.append(_edge_box(side, 2.25 * sx, 0.5, 1.5, 3.0, 0.0, 0.6, FRAME, 0.0, 0.3))
 		geo.append(_edge_box(side, 0.0, 5.0, 3.25, 0.5, 0.0, 0.6, FRAME, 0.0, 0.3))
-		geo.append(_edge_box(side, 0.0, 4.0, 2.96, 0.06, -0.05, 0.62, Palette.mul(pal["accent"], 0.9), 0.5))
+		# short accent lamp flush on the lintel's inner face (this room's side only): the old 4 m strip under the lintel
+		# read as a stray pink line across the opening (and across the walls of neighbour rooms; visual pass)
+		geo.append(_edge_box(side, 0.0, LINTEL_LAMP.x, 3.25, LINTEL_LAMP.y, LINTEL_BAND_W, 0.02,
+			Palette.mul(pal["accent"], 0.9), 0.6))
 		# lintel blocks the camera arm above the door (layer 1)
 		shapes.append({"size": Vector3(5.0, 0.5, 0.6), "xform": edge_xf(side, 0.0, 3.25, 0.0)})
 

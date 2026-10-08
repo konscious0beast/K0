@@ -19,6 +19,8 @@ const SAFE_ANCHORS: Dictionary = {
 const SAFE_CAMERA_POS: Vector3 = Vector3(0.0, 2.9, 6.4)
 const SAFE_CAMERA_TARGET: Vector3 = Vector3(0.45, 1.05, -2.0)
 const SAFE_CAMERA_FOV: float = 50.0
+## Node name of the room-name sign on the back wall (Label3D).
+const SAFE_TITLE_SIGN: String = "TitleSign"
 ## Ceiling beams (z), clear of the door (z −4.3 … 0.3).
 const BEAM_Z: Array[float] = [-4.4, 0.9, 3.4]
 
@@ -82,6 +84,21 @@ static func _label(text: String, size: int, color: Color, outline: Color, xf: Tr
 
 const PARTY_ZONE := Vector3(0, 0, 3.1)
 const ENEMY_ZONE := Vector3(0, 0, -3.0)
+## Show screen on the back wall (hologram quad size / centre): a low, wide LED banner. The command shots (camera at
+## 1.7–2.6 m behind the actor) see the back wall above ~3 m behind the top HUD band, so it ends at 2.6 m.
+const SCREEN_SIZE := Vector2(10.0, 1.7)
+const SCREEN_POS := Vector3(0, 1.75, -13.9)
+## Litter keeps out of this angle (deg, around −Z) in front of the show screen.
+const SCREEN_CLEAR_DEG: float = 32.0
+## Studio audience behind the party (+Z): three stepped tiers on an arc, people as box silhouettes with light sticks,
+## so shots looking at the party (enemy turns, victory orbit) no longer show a black void (visual pass).
+const STANDS_ARC_DEG := Vector2(128.0, 232.0)
+const STANDS_R: float = 13.5
+const STANDS_SEGMENTS: int = 8
+const STANDS_TIERS: int = 3
+const STANDS_TIER_DEPTH: float = 2.0
+const STANDS_STEP: float = 0.7
+const STANDS_PEOPLE: int = 3                 # per segment and tier
 
 static func build_arena(theme_id: String, palette: Dictionary, is_boss: bool, seed: int, quality: StringName) -> Node3D:
 	var pal: Dictionary = Palette.resolve(palette, theme_id)
@@ -128,10 +145,12 @@ static func build_arena(theme_id: String, palette: Dictionary, is_boss: bool, se
 				Palette.mul(wall_c, 0.7), Vector3(0, yaw, 0)))
 			geo.append(_part(MeshUtil.box(Vector3(0.5, 0.25, 0.3)), Vector3(sin(a) * 14.5, 4.2, -cos(a) * 14.5), Palette.SODIUM,
 				Vector3(0, yaw, 0), Vector3.ONE, 1.0))
-	# giant show screen
-	geo.append(_part(MeshUtil.box(Vector3(9.4, 4.4, 0.5)), Vector3(0, 5.6, -14.2), Palette.INK))
-	geo.append(_part(MeshUtil.box(Vector3(9.6, 0.15, 0.6)), Vector3(0, 3.4, -14.15), accent, Vector3.ZERO, Vector3.ONE,
-		1.0))
+	# show screen behind the enemies, low enough that the over-the-shoulder command shots keep it below the top HUD
+	# band (it sat at 3.4–7.8 m: clipped by the frame top, its LED strip right behind the hype meter; visual pass)
+	geo.append(_part(MeshUtil.box(Vector3(SCREEN_SIZE.x + 0.4, SCREEN_SIZE.y + 0.4, 0.5)),
+		SCREEN_POS + Vector3(0, 0, -0.3), Palette.INK))
+	geo.append(_part(MeshUtil.box(Vector3(SCREEN_SIZE.x + 0.6, 0.15, 0.6)),
+		SCREEN_POS + Vector3(0, -SCREEN_SIZE.y * 0.5 - 0.3, -0.25), accent, Vector3.ZERO, Vector3.ONE, 1.0))
 	# light towers with lamp heads
 	for sx: float in [-1.0, 1.0]:
 		for z: float in [-5.0, 5.5]:
@@ -150,6 +169,8 @@ static func build_arena(theme_id: String, palette: Dictionary, is_boss: bool, se
 	for k in 10:
 		var a2: float = rng.randf_range(0.0, TAU)
 		var d2: float = rng.randf_range(10.5, 13.5)
+		if absf(angle_difference(a2, -PI * 0.5)) < deg_to_rad(SCREEN_CLEAR_DEG):
+			a2 += deg_to_rad(SCREEN_CLEAR_DEG * 2.0)          # never in front of the show screen
 		var id: String = ["crate", "barrel", "crate", "pipe"][k % 4]
 		var r: Dictionary = PropKit.recipe(id, seed + k, palette)
 		var xf := Transform3D(Basis(Vector3.UP, rng.randf_range(0.0, TAU)), Vector3(cos(a2) * d2, -0.3, sin(a2) * d2))
@@ -157,25 +178,26 @@ static func build_arena(theme_id: String, palette: Dictionary, is_boss: bool, se
 			var q: Dictionary = (p as Dictionary).duplicate()
 			q["xform"] = xf * ((p as Dictionary)["xform"] as Transform3D)
 			geo.append(q)
+	_build_audience(geo, rng, accent, wall_c)
 	var mat: ShaderMaterial = Materials.env({"shade": pal["shade"], "grout": pal["grout"], "tile_size": 2.0, "dirt": 0.2})
 	root.add_child(_mesh_node("Geometry", geo, mat))
 	# hologram screen content
 	var screen := QuadMesh.new()
-	screen.size = Vector2(9.0, 4.0)
+	screen.size = SCREEN_SIZE
 	var holo := MeshInstance3D.new()
 	holo.name = "ShowScreen"
 	holo.mesh = screen
-	holo.position = Vector3(0, 5.6, -13.9)
+	holo.position = SCREEN_POS + Vector3(0, 0, 0.0)
 	holo.material_override = Materials.hologram(accent if is_boss else Palette.NOVA_MAGENTA, 0.35, 1.2)
 	holo.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	root.add_child(holo)
 	root.add_child(_label("BOSSKAMPF" if is_boss else "DUNGEON PRIME TIME", 150, Palette.PAPER,
 		Palette.DANGER if is_boss else Palette.NOVA_MAGENTA,
-		Transform3D(Basis.IDENTITY, Vector3(0, 6.3, -13.85)), 0.012))
-	# Title and LIVE bug both sit above 4.6 m: the low command shots crop the back wall there, right under the HUD
-	# band, so no text is cut in half behind the hype meter (M5 CR 3); wide shots (frame top ~7.2 m) show both.
+		Transform3D(Basis.IDENTITY, SCREEN_POS + Vector3(-0.5, 0.05, 0.05)), 0.0042))
+	# Title and LIVE bug ride on the low LED screen (M5 CR 3 / visual pass): the command shots crop the back wall above
+	# ~3 m right under the HUD band, so no text sits up there to be cut in half behind the hype meter.
 	root.add_child(_label("LIVE", 110, Palette.PAPER, Palette.LIVE_RED,
-		Transform3D(Basis.IDENTITY, Vector3(-3.4, 5.1, -13.85)), 0.01))
+		Transform3D(Basis.IDENTITY, SCREEN_POS + Vector3(4.15, 0.05, 0.05)), 0.0034))
 	# drones + sponsor billboard (PropKit nodes, animated)
 	var d1: Node3D = PropKit.build(&"camera_drone", seed)
 	d1.position = Vector3(-6.0, 4.2, 4.5)
@@ -212,6 +234,53 @@ static func build_arena(theme_id: String, palette: Dictionary, is_boss: bool, se
 			var target: Vector3 = ENEMY_ZONE if sx < 0.0 else PARTY_ZONE
 			spot.transform = Transform3D.IDENTITY.looking_at(target - from, Vector3.UP).translated(from)
 	return root
+
+
+## Audience stands on the party side (+Z) into the merged arena geometry (≈ 2.5k tris).
+static func _build_audience(geo: Array, rng: RandomNumberGenerator, accent: Color, wall_c: Color) -> void:
+	var a0: float = deg_to_rad(STANDS_ARC_DEG.x)
+	var a1: float = deg_to_rad(STANDS_ARC_DEG.y)
+	var step: float = (a1 - a0) / float(STANDS_SEGMENTS)
+	var crowd: Array[Color] = [Color("#3b3550"), Color("#4a3a5a"), Color("#2f4250"), Color("#5a4048"), Color("#37474f"),
+		Color("#4d3b3b")]
+	var sticks: Array[Color] = [Palette.NOVA_CYAN, Palette.NOVA_MAGENTA, Palette.HYPE_GOLD]
+	var floor_y: float = -0.3
+	for i in STANDS_SEGMENTS:
+		var a: float = a0 + step * (float(i) + 0.5)
+		var yaw: float = rad_to_deg(-a)
+		var dir := Vector3(sin(a), 0.0, -cos(a))
+		var side := Vector3(cos(a), 0.0, sin(a))           # along the arc
+		for k in STANDS_TIERS:
+			var r: float = STANDS_R + STANDS_TIER_DEPTH * (float(k) + 0.5)
+			var top: float = floor_y + STANDS_STEP * float(k + 1)
+			var seg_len: float = 2.0 * r * sin(step * 0.5) + 0.06
+			var c: Vector3 = dir * r
+			geo.append(_part(MeshUtil.box(Vector3(seg_len, top - floor_y, STANDS_TIER_DEPTH)),
+				Vector3(c.x, (top + floor_y) * 0.5, c.z), Palette.mul(wall_c, 0.55 - 0.05 * float(k)), Vector3(0, yaw, 0)))
+			for j in STANDS_PEOPLE:
+				var u: float = (float(j) + 0.5) / float(STANDS_PEOPLE) - 0.5
+				var p: Vector3 = c + side * (u * seg_len * 0.85 + rng.randf_range(-0.15, 0.15)) - dir * 0.2
+				var col: Color = crowd[rng.randi_range(0, crowd.size() - 1)]
+				var hgt: float = rng.randf_range(0.5, 0.65)
+				geo.append(_part(MeshUtil.box(Vector3(0.48, hgt, 0.34)), Vector3(p.x, top + hgt * 0.5, p.z), col,
+					Vector3(0, yaw, 0)))
+				geo.append(_part(MeshUtil.box(Vector3(0.28, 0.28, 0.28)), Vector3(p.x, top + hgt + 0.18, p.z),
+					Palette.mul(col, 1.25), Vector3(0, yaw + rng.randf_range(-20.0, 20.0), 0)))
+				if (i + j + k) % 3 == 0:
+					geo.append(_part(MeshUtil.box(Vector3(0.06, 0.42, 0.06)), Vector3(p.x, top + hgt + 0.55, p.z) + side * 0.22,
+						sticks[(i + k) % sticks.size()], Vector3(rng.randf_range(-25.0, 25.0), yaw, 0), Vector3.ONE, 1.4))
+		# LED rail along the front edge and a back wall with an accent band
+		var front: Vector3 = dir * (STANDS_R - 0.05)
+		var front_len: float = 2.0 * STANDS_R * sin(step * 0.5) + 0.06
+		geo.append(_part(MeshUtil.box(Vector3(front_len, 0.1, 0.08)), Vector3(front.x, floor_y + STANDS_STEP - 0.12,
+			front.z), accent, Vector3(0, yaw, 0), Vector3.ONE, 0.9))
+		var rb: float = STANDS_R + STANDS_TIER_DEPTH * float(STANDS_TIERS) + 0.4
+		var back: Vector3 = dir * rb
+		var back_len: float = 2.0 * rb * sin(step * 0.5) + 0.1
+		geo.append(_part(MeshUtil.box(Vector3(back_len, 5.0, 0.6)), Vector3(back.x, floor_y + 2.5, back.z),
+			Palette.mul(wall_c, 0.6), Vector3(0, yaw, 0)))
+		geo.append(_part(MeshUtil.box(Vector3(back_len, 0.14, 0.1)), Vector3(back.x, floor_y + 4.2, back.z) - dir * 0.32,
+			Palette.NOVA_CYAN if i % 2 == 0 else Palette.NOVA_MAGENTA, Vector3(0, yaw, 0), Vector3.ONE, 1.0))
 
 
 static func _face_center(n: Node3D) -> void:
@@ -345,6 +414,7 @@ static func build_safe(seed: int, quality: StringName, theme: StringName, cutawa
 		root.add_child(n)
 	var title := _label({&"pumphouse": "PUMPENHAUS", &"signalbox": "STELLWERK"}.get(theme, "KIOSK 24/7") as String, 64,
 		Palette.HYPE_GOLD, Palette.INK, Transform3D(Basis.IDENTITY, Vector3(-3.6, 2.9, -hd + 0.06)), 0.006)
+	title.name = SAFE_TITLE_SIGN         # the safe-room screen hides it: its UI header already names the room
 	root.add_child(title)
 	root.add_child(_omni("WarmLight", Vector3(0.0, 2.9, -1.2), Color("#ffe2b8"), 1.5, 13.0))
 	root.add_child(_omni("LampLight", Vector3(2.2, 2.2, -3.2), Palette.HYPE_GOLD, 0.8, 5.0))

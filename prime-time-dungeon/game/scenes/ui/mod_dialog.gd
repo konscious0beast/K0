@@ -36,6 +36,12 @@ const READ_PER_CHAR: float = 0.045
 const MAX_PENDING_SOFT: int = 3                     # queued non-blocking lines kept (older ones are dropped)
 const AUTOPLAY_HOLD: float = 0.4
 const BOX_SIZE: Vector2 = Vector2(740, 108)
+## Narrowest box between reserved bottom corners (Events.dialog_reserve_requested); a narrower box grows upwards.
+const MIN_BOX_W: float = 420.0
+## Box bottom edge above the safe frame's bottom (chat ticker 22 px + gap) and the speaker tab geometry.
+const BOX_BOTTOM: float = 36.0
+const TAB_SIZE: Vector2 = Vector2(220, 28)
+const TAB_INSET: Vector2 = Vector2(18, 24)
 const SPEAKERS: Dictionary = {&"mod": "M.O.D.", &"mopsula": "Graf Mopsula", &"kai": ""}
 const MOOD_HYPE: PackedStringArray = ["achievement", "stunt_success", "kill_streak", "crit", "overkill", "boss_defeated",
 	"level_up", "follower_milestone", "lootbox", "intro", "sponsor_gift"]
@@ -62,6 +68,8 @@ var _portrait_icon: Control
 var _fade: Tween = null
 var _params: Dictionary = {}
 var _align_right: bool = false
+var _mode: StringName = &""
+var _reserves: Dictionary = {}             # overlay mode → Vector2(left, right) reserved bottom corners (canvas px)
 
 
 ## Optional: {"capture": true} → shows a sample M.O.D. line (standalone still).
@@ -80,6 +88,7 @@ func _ready() -> void:
 	Game.set_dialog_presenter(true)
 	Events.mod_said.connect(_on_mod_said)
 	Events.overlay_mode_requested.connect(_on_overlay_mode)
+	Events.dialog_reserve_requested.connect(set_bottom_reserve)
 	_box.visible = false
 	_speaker_panel.visible = false
 	if bool(_params.get("capture", false)):
@@ -119,6 +128,19 @@ func set_align_right(on: bool) -> void:
 
 func is_align_right() -> bool:
 	return _align_right
+
+
+## Bottom corners a screen keeps for its own panels while overlay `mode` is active (Events.dialog_reserve_requested;
+## battle: command menu left, party panels right). The centred box sits in the free span between them, at most
+## BOX_SIZE.x wide and at least MIN_BOX_W (narrower → taller box). (0, 0) clears it.
+func set_bottom_reserve(mode: StringName, left: float, right: float) -> void:
+	_reserves[mode] = Vector2(maxf(left, 0.0), maxf(right, 0.0))
+	if _box != null and mode == _mode:
+		_layout_box()
+
+
+func bottom_reserve() -> Vector2:
+	return _reserves.get(_mode, Vector2.ZERO) as Vector2
 
 
 func is_busy() -> bool:
@@ -219,6 +241,13 @@ func _on_mod_said(text: String, voice: StringName, tag: String, blocking: bool) 
 
 
 func _on_overlay_mode(mode: StringName) -> void:
+	set_overlay_mode(mode)
+
+
+## Layout follows the overlay mode (Events.overlay_mode_requested; GlobalUi passes the initial mode of the active
+## screen when it is created after that screen, e.g. in captures): safe room → right-aligned, reserves per mode.
+func set_overlay_mode(mode: StringName) -> void:
+	_mode = mode
 	set_align_right(mode == &"safe_room")
 
 
@@ -450,27 +479,37 @@ func _build() -> void:
 	_speaker.add_theme_font_override("font", UiTheme.font_bold())
 	_speaker.add_theme_constant_override("outline_size", 0)
 	_speaker_panel.add_child(_speaker)
+	_box.resized.connect(_place_tab)
+	frame.resized.connect(_layout_box)
 	_layout_box()
 
 
-## Bottom center (default) or right-aligned in the safe room (set_align_right), always above the chat ticker.
+## Bottom center (default; inside the free span between reserved corners, see set_bottom_reserve) or right-aligned in
+## the safe room (set_align_right), always above the chat ticker. The box grows upwards when its text needs more lines.
 func _layout_box() -> void:
-	var bottom: float = -22.0 - 14.0
-	if _align_right:
-		_box.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-		_box.offset_right = 0.0
-		_box.offset_left = -BOX_SIZE.x
-		_speaker_panel.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-		_speaker_panel.offset_left = -BOX_SIZE.x + 18.0
-		_speaker_panel.offset_right = -BOX_SIZE.x + 18.0 + 220.0
-	else:
-		_box.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-		_box.offset_left = -BOX_SIZE.x * 0.5
-		_box.offset_right = BOX_SIZE.x * 0.5
-		_speaker_panel.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-		_speaker_panel.offset_left = -BOX_SIZE.x * 0.5 + 18.0
-		_speaker_panel.offset_right = -BOX_SIZE.x * 0.5 + 18.0 + 220.0
-	_box.offset_bottom = bottom
-	_box.offset_top = bottom - BOX_SIZE.y
-	_speaker_panel.offset_bottom = bottom - BOX_SIZE.y + 4.0
-	_speaker_panel.offset_top = bottom - BOX_SIZE.y - 24.0
+	var frame: Control = _box.get_parent() as Control
+	var fw: float = frame.size.x if frame != null else 0.0
+	if fw <= 0.0:
+		fw = (get_viewport().get_visible_rect().size.x if is_inside_tree() else 1280.0) - 48.0
+	var w: float = BOX_SIZE.x
+	var left: float = fw - w
+	if not _align_right:
+		var res: Vector2 = bottom_reserve()
+		var span_l: float = res.x
+		var span_r: float = fw - res.y
+		w = clampf(span_r - span_l, MIN_BOX_W, BOX_SIZE.x)
+		left = clampf((span_l + span_r - w) * 0.5, 0.0, maxf(0.0, fw - w))
+	_box.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	_box.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_box.offset_left = left
+	_box.offset_right = left + w
+	_box.offset_bottom = -BOX_BOTTOM
+	_box.offset_top = -BOX_BOTTOM - BOX_SIZE.y
+	_place_tab()
+
+
+## Speaker tab on the box's top edge (follows the box when a long line makes it taller).
+func _place_tab() -> void:
+	_speaker_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_speaker_panel.position = _box.position + Vector2(TAB_INSET.x, -TAB_INSET.y)
+	_speaker_panel.size = TAB_SIZE

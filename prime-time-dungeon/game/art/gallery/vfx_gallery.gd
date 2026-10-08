@@ -3,6 +3,7 @@ extends Node3D
 ## styles. Spawn times are staggered so that a capture after ~2 s (check.sh --shot … 120) shows every effect mid-flight.
 
 const Stage := preload("res://art/gallery/gallery_stage.gd")
+const NameTags := preload("res://art/gallery/name_tags.gd")
 const COLS: int = 6
 const SPACING: float = 2.6
 ## Fraction of each effect's duration at which it is frozen for a stable still (capture after ~2 s).
@@ -22,6 +23,10 @@ func setup(params: Dictionary) -> void:
 func _ready() -> void:
 	Stage.add_world(self, "metro", {}, &"battle", &"high", 0.3)
 	Stage.add_floor(self, 11.0, {})
+	# kind captions as screen-space tags (the 34 px Label3D captions were ~10 px tall and hard to read in the stills)
+	var tags: CanvasLayer = NameTags.new()
+	tags.name = "NameTags"
+	add_child(tags)
 	var i: int = 0
 	for kind: StringName in Vfx.KINDS:
 		var col: int = i % COLS
@@ -32,10 +37,13 @@ func _ready() -> void:
 		if kind == &"slash" or kind == &"bite" or kind == &"hit" or kind == &"crit":
 			pos.y = 0.9
 		_anchors[kind] = pos
-		var lbl: Label3D = Stage.label(self, String(kind), Vector3(pos.x, 0.05, pos.z + 0.9), 34, Palette.HYPE_GOLD)
-		lbl.no_depth_test = false
+		var anchor := Node3D.new()
+		anchor.name = "Caption_" + String(kind)
+		anchor.position = Vector3(pos.x, 0.0, pos.z + 0.9)
+		add_child(anchor)
+		tags.call("add_tag", anchor, String(kind), Vector3.ZERO, Palette.HYPE_GOLD, 15, true)
 		i += 1
-	Stage.add_camera(self, Vector3(0, 8.5, 9.5), Vector3(0, 0.3, -1.6), 50.0)
+	tags.set("camera", Stage.add_camera(self, Vector3(0, 8.5, 9.5), Vector3(0, 0.3, -1.6), 50.0))
 
 
 func _process(_delta: float) -> void:

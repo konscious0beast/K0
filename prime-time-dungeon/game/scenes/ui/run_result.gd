@@ -114,11 +114,15 @@ func _build() -> void:
 	var qrow: HBoxContainer = UiUtil.hbox(10)
 	qrow.alignment = BoxContainer.ALIGNMENT_CENTER
 	col.add_child(qrow)
-	qrow.add_child(UiIcon.make(&"check" if quest_done else &"cross", UiTheme.C_OK if quest_done else UiTheme.C_DANGER,
-		22))
+	var qicon: Control = UiIcon.make(&"check" if quest_done else &"cross", UiTheme.C_OK if quest_done
+		else UiTheme.C_DANGER, 22)
+	qicon.size_flags_vertical = Control.SIZE_SHRINK_BEGIN       # level with the first text line
+	qrow.add_child(qicon)
 	var ql: Label = UiUtil.label(("Quest erfüllt: " if quest_done else "Quest offen (%d %%): " % roundi(float(
 		summary.get("quest_progress", 0.0)) * 100.0)) + qtext, &"", 20)
-	ql.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER    # wrapped lines stay centered like the rest of col
+	# left-aligned block (icon + text) centred as a whole: centred wrapped lines left the icon floating far left of
+	# a short first line (visual pass)
+	ql.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	qrow.add_child(ql)
 	UiUtil.wrap_label(ql, QUEST_MAX_W)
 	var center: CenterContainer = CenterContainer.new()

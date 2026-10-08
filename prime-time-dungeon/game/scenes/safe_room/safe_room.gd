@@ -20,6 +20,7 @@ const PAUSE_MENU: String = "res://scenes/ui/pause_menu.tscn"
 const DEFAULT_IDLE: PackedStringArray = ["Wir ruhen. Störe Uns nur bei Weltuntergang. Erneut.",
 	"Ein Sofa. Endlich ein Möbel, das Unseren Stand begreift."]
 const SCENE_TIMEOUT_SEC: float = 600.0
+const MENU_SCRIM_W: float = 640.0          # width of the dark gradient behind the menu column
 
 var safe_room_id: String = ""
 var context: Dictionary = {}               # Game.enter_safe_room() result (scene conditions)
@@ -136,6 +137,7 @@ func open_lootboxes() -> Node:
 	layer.call("setup", {"safe_room_id": safe_room_id})
 	add_child(layer)
 	_modal = layer
+	_set_menu_shown(false)
 	layer.connect("closed", func() -> void: _after_modal("lootbox"))
 	return layer
 
@@ -145,6 +147,7 @@ func open_vending() -> Node:
 	layer.call("setup", {"safe_room_id": safe_room_id})
 	add_child(layer)
 	_modal = layer
+	_set_menu_shown(false)
 	layer.connect("closed", func() -> void: _after_modal("vending"))
 	return layer
 
@@ -156,6 +159,7 @@ func open_pause(tab: String) -> Node:
 	pm.call("setup", {"tab": tab, "context": "safe_room"})
 	add_child(pm)
 	_modal = pm
+	_set_menu_shown(false)
 	pm.connect("closed", func() -> void: _after_modal("equipment" if tab == "equipment" else ""))
 	return pm
 
@@ -265,6 +269,10 @@ func _build_world() -> void:
 	_room.name = "Room"
 	add_child(_room)
 	_tv_drone = _room.find_child("TvDrone", true, false) as Node3D     # cached: animated every frame
+	# the UI header names the room (top left): the same name on the back wall right behind the menu read as a duplicate
+	var sign: Node3D = _room.find_child(EnvKit.SAFE_TITLE_SIGN, true, false) as Node3D
+	if sign != null:
+		sign.visible = false
 	var we: WorldEnvironment = WorldEnvironment.new()
 	if stand_in:
 		we.environment = SceneKit.environment(Color("#1a1218"), Color("#8a6a7a"), 0.7, true)
@@ -327,7 +335,15 @@ func _modal_layer() -> CanvasLayer:
 	layer.layer = 60
 	add_child(layer)
 	_modal = layer
+	_set_menu_shown(false)
 	return layer
+
+
+## The menu column is hidden while a modal (slot select, lootboxes, vending, equipment) covers the room: its buttons
+## otherwise shone through the modals' translucent backdrops right under their own lists (visual pass).
+func _set_menu_shown(on: bool) -> void:
+	if _ui != null:
+		_ui.visible = on
 
 
 func _close_modal(layer: Node, focus_id: String) -> void:
@@ -338,6 +354,7 @@ func _close_modal(layer: Node, focus_id: String) -> void:
 
 func _after_modal(focus_id: String) -> void:
 	_modal = null
+	_set_menu_shown(true)
 	_refresh_menu_labels()
 	if is_inside_tree() and menu_buttons.has(focus_id):
 		UiUtil.focus_later((menu_buttons[focus_id] as Control))
@@ -422,11 +439,14 @@ func _build_ui() -> void:
 	_ui.add_child(root)
 	var grad: TextureRect = TextureRect.new()
 	grad.set_anchors_preset(Control.PRESET_LEFT_WIDE)
-	grad.offset_right = 560
+	grad.offset_right = MENU_SCRIM_W
 	grad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# scrim behind the menu column: solid enough that props and their emissive signs (vending machine) read as
+	# background, fading out right of the column (visual pass)
 	var g: Gradient = Gradient.new()
-	g.set_color(0, Color(0.06, 0.03, 0.08, 0.85))
-	g.set_color(1, Color(0.06, 0.03, 0.08, 0.0))
+	g.offsets = PackedFloat32Array([0.0, 0.62, 1.0])
+	g.colors = PackedColorArray([Color(0.06, 0.03, 0.08, 0.9), Color(0.06, 0.03, 0.08, 0.72),
+		Color(0.06, 0.03, 0.08, 0.0)])
 	var gt: GradientTexture2D = GradientTexture2D.new()
 	gt.gradient = g
 	gt.width = 128

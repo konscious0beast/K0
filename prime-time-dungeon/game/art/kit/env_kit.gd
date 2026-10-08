@@ -13,6 +13,8 @@ const WALL_THICKNESS: float = 0.5
 const CLEAR_RADIUS: float = 5.0
 ## Inner wall face distance from the room center (ROOM_SIZE / 2 − WALL_THICKNESS).
 const WALL_INNER: float = 7.5
+## Node name of the room-name sign (Label3D) in build_safe_room(); screens with their own name header may hide it.
+const SAFE_TITLE_SIGN: String = SetBuilder.SAFE_TITLE_SIGN
 ## Explore key light (03_ART §4.3 lists (−55, 35, 0); amended after review M4: side/back key, see make_zone_sun).
 const EXPLORE_SUN_ROTATION := Vector3(-50, -110, 0)
 

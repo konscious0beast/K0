@@ -16,6 +16,9 @@ const SET_CITY: Vector3 = Vector3(100, 0, 0)
 const BAR_TOP: float = 56.0
 const BAR_BOTTOM: float = 96.0             # subtitle zone
 const SKY_SCREEN_EMISSION: float = 0.5
+## Studio shot: camera distance in front of the stage (push-in 0.12 m/s for 6 s); far enough that Kai's mop stays in
+## the 16:9 frame (visual pass).
+const STUDIO_CAM_Z: float = 6.3
 const DEFAULT_INTRO: PackedStringArray = [
 	"Guten Abend, Galaxis! Willkommen bei DUNGEON PRIME TIME – der Show, die Ihren Planeten gekostet hat!",
 	"Kandidat:in {name}, Sie sind live. Bitte nicht in die Kamera weinen, das spiegelt."]
@@ -192,7 +195,7 @@ func _jump_to(i: int) -> void:
 			_shake = 1.0
 			Sfx.play(&"ko")
 		"studio":
-			SceneKit.look(_cam, SET_STUDIO + Vector3(0, 1.65, 5.6), SET_STUDIO + Vector3(0, 0.95, 0))
+			SceneKit.look(_cam, SET_STUDIO + Vector3(0, 1.65, STUDIO_CAM_Z), SET_STUDIO + Vector3(0, 0.95, 0))
 			_env.background_color = Color("#140a22")
 			_env.ambient_light_color = Color("#6a4a9a")
 			Sfx.music(&"title")
@@ -257,7 +260,7 @@ func _animate_shot(delta: float) -> void:
 			if _shot_time > 1.8 and _flash.color.a < 0.95:
 				_flash.color = Color(UiUtil.C_INK, clampf((_shot_time - 1.8) * 1.5, 0.0, 1.0))
 		"studio":
-			_cam.position.z = SET_STUDIO.z + 5.6 - minf(_shot_time, 6.0) * 0.12
+			_cam.position.z = SET_STUDIO.z + STUDIO_CAM_Z - minf(_shot_time, 6.0) * 0.12
 
 
 # --- build -----------------------------------------------------------------------------------------------------------
@@ -365,7 +368,7 @@ func _build_studio() -> void:
 	_world.add_child(_drone)
 	# Both turned 3/4 toward the camera (front = −Z), the pug closer and fully in frame.
 	var kai: Node3D = SceneKit.party_figure("kai")
-	kai.position = SET_STUDIO + Vector3(-1.45, 0.05, 1.35)
+	kai.position = SET_STUDIO + Vector3(-1.3, 0.05, 1.35)
 	kai.rotation.y = deg_to_rad(150)
 	_world.add_child(kai)
 	var pug: Node3D = SceneKit.party_figure("mopsula")

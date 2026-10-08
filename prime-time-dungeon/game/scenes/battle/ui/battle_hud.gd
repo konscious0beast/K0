@@ -32,7 +32,12 @@ const CTB_W: float = 56.0
 const SIDE_GAP: float = 16.0
 ## Bottom clearance in the safe frame: chat ticker of the show overlay (22 px + gap, layer 40).
 const BOTTOM: float = 30.0
-const LIST_BOTTOM: float = 146.0      # sub menus end above the M.O.D. text box (bottom center, layer 45)
+## Sub menus end above the M.O.D. text box incl. its speaker tab (ModDialog: box bottom 36 + 108 + tab 24, layer 45)
+## with a gap; on touch the box between the wide command grid and the party panels may wrap to a third line.
+const LIST_BOTTOM: float = 178.0
+const LIST_BOTTOM_TOUCH: float = 206.0
+## Gap between the command menu / party panels and the M.O.D. box (Events.dialog_reserve_requested).
+const DIALOG_GAP: float = 12.0
 const COLORS: Dictionary = {"kai": "#3aa9a0", "mopsula": "#b07cff"}
 
 var stage: Node3D = null
@@ -244,7 +249,7 @@ func _layout() -> void:
 	action_list.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	action_list.offset_left = menu_w + 12.0
 	action_list.offset_right = action_list.offset_left + ActionList.WIDTH
-	action_list.offset_bottom = -LIST_BOTTOM
+	action_list.offset_bottom = -(LIST_BOTTOM_TOUCH if touch else LIST_BOTTOM)
 	action_list.offset_top = action_list.offset_bottom
 	var tp: Control = target_cursor.get("panel")
 	tp.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
@@ -253,6 +258,13 @@ func _layout() -> void:
 	tp.offset_bottom = -BOTTOM
 	tp.offset_right = 340
 	tp.offset_top = tp.offset_bottom
+	# the M.O.D. box (GlobalUi) keeps clear of the command menu (touch: 2 × 3 grid) and the party panels
+	var left_w: float = tp.offset_right if level == &"target" else menu_w
+	Events.dialog_reserve_requested.emit(&"battle", left_w + DIALOG_GAP, pw + DIALOG_GAP)
+
+
+func _exit_tree() -> void:
+	Events.dialog_reserve_requested.emit(&"battle", 0.0, 0.0)
 
 
 func is_touch() -> bool:

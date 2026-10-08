@@ -82,6 +82,23 @@ Etage betreten → Erkunden (Gegner sichtbar, Truhen, Events, Safe Room)
   dauerhafter Wert, kein Handel, keine Auszahlung), Limits pro Spieler/Lauf, Sponsor-freie Wertung in der Liga,
   Altersprüfung für Käufer, Geo-Sperre wo verboten (z. B. Belgien), **beweisbar faire Server-Würfel** (Seed-Hash vor dem Event
   veröffentlicht). Rechtsprüfung vor Launch ist Pflicht.
+- **Entscheidungen (Nutzer, 2026-10-08), verbindlich** — Wortlaut:
+  > **(1)** „Echtgeld von Zuschauer:innen fließt **ausschließlich an das Spiel bzw. den Betreiber** — **nie** an die
+  > Spielerin/den Spieler (Crawler) und **nie** an Streamer:innen.“
+  >
+  > **(2)** „Zuschauer:innen können **nur begrenzt oft** und **nur zu bestimmten Zeiten** helfen.“
+
+  Folgen (Details `05_LIVE_MODUS.md` Kap. 0, 2, 6.13, 8, 9, 12):
+  - zu (1): Die **Creator-Beteiligung ist gestrichen** (keine Auszahlung, keine Beteiligung, keine Auszahlungskonten an Personen).
+    **Variante B (Twitch Bits)** ist nur noch **kostenlose Interaktion** (Votes, kostenlose Fan-Punkte „Applaus“) — Bits-Erlöse
+    gehen nach unserem Kenntnisstand an die Broadcaster:in **[zu prüfen]**, das widerspricht (1); Bits-Geschenke mit Spielwirkung
+    nur, falls ein Erlösmodell für Entwickler existiert, das (1) erfüllt **[zu prüfen]**. **Variante C (eigener Shop: Web-Shop +
+    App-Store-IAP)** ist der primäre Echtgeld-Weg.
+  - zu (2): **Sponsor-Fenster.** Geschenke von Zuschauer:innen werden nur angenommen, solange ein Fenster offen ist: periodisch in
+    der Erkundung (Standard alle 300 s Laufzeit für 60 s), beim Betreten eines Safe Rooms (solange drinnen, höchstens 90 s) und als
+    **Boss-Countdown** (45 s ab Betreten des Quartier-/Etagenboss-Raums). Je Fenster begrenzte Plätze (Standard 3, wer zuerst
+    kommt) und 1 Geschenk je Zuschauer:in, zusätzlich die Lauf-Caps. Außerhalb: Ablehnung mit `E_WINDOW_CLOSED` bzw.
+    `E_WINDOW_FULL`; die Oberfläche zeigt, wann das nächste Fenster öffnet. Im Kampf öffnet kein Fenster (die Uhr steht).
 
 ## 6. Verbindliche Architektur-Verträge (Kurzform — Details in 02_TECH.md)
 
@@ -128,6 +145,13 @@ Pflichten für den Code **schon im Vertical Slice** (damit der Modus später ohn
    egal ob sie vom Spiel selbst (Hype-Schwelle) oder später von echten Zuschauern kommen.
 5. **Zeitfenster & Quest als Daten:** `floors.json` / `events.json` können `quest` (Ziel-Typ + Parameter) und `window`
    (open/close-Zeit, Dauer) enthalten. Offline gibt es diesen Modus als „Event-Lauf“ mit festem Seed + lokaler Bestenliste.
+6. **Sponsor-Fenster (Entscheidung 2026-10-08 (2), siehe Kap. 5):** Wann Zuschauer:innen helfen dürfen, entscheidet der
+   deterministische Kern in **Ticks** (`RunSim` + `SponsorWindows`, Regeln in `events.json → rules.sponsor_windows`, Standard
+   für Kampagne/Offline) — aufgezeichnet im Run-Log, im Replay identisch, **autoritativ** geprüft in `GiftPolicy.check`
+   (Server-Autorität, 05 Kap. 3). `Show.receive_gift()` bleibt der einzige Eingang; Fenster öffnen/schließen als Signale
+   (`Events.sponsor_window_opened/closed`), das TV-Overlay zeigt den Zustand.
+7. **Erlös nur an den Betreiber (Entscheidung 2026-10-08 (1)):** Kein Code-Pfad, kein Datenfeld und kein Ledger-Konto für
+   Auszahlungen oder Beteiligungen an Spieler:innen/Streamer:innen.
 
 ## 7. Ziel dieses Repos (jetzt)
 

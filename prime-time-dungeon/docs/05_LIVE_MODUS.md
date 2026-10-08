@@ -14,6 +14,12 @@
 >
 > Überarbeitet nach Review (Recht/Spielerschutz und Netcode/Determinismus): neue Leitplanken L11–L15, Seed-Klassen online,
 > eine Simulationsuhr in Ticks, Ganzzahl-Kern, `RunSim` im Slice, Änderungsanträge CR-11 … CR-14.
+>
+> **Überarbeitet nach Nutzerentscheidung 2026-10-08** (Brief Kap. 5/6b): **(1)** Echtgeld von Zuschauer:innen fließt nur an
+> Spiel/Betreiber, nie an Spieler:innen oder Streamer:innen — Creator-Beteiligung **gestrichen** (Kap. 8.8), Twitch Bits (B)
+> nur noch **kostenlose Interaktion**, der **eigene Shop (C: Web-Shop + App-Store-IAP)** ist der primäre Echtgeld-Weg (Kap. 2,
+> 6, 8, 9, 12; L11 neu). **(2)** Zuschauer:innen helfen nur begrenzt oft zu bestimmten Zeiten: **Sponsor-Fenster** (Kap. 6.13,
+> L16; umgesetzt als `SponsorWindows`, CR-15).
 
 ---
 
@@ -25,9 +31,9 @@
 3. Architektur
 4. Netzwerk-Protokoll
 5. Zuschauer / Spectating
-6. Zuschauer-Interaktion (Votes, Geschenke, Sponsorkisten)
+6. Zuschauer-Interaktion (Votes, Geschenke, Sponsorkisten, Sponsor-Fenster)
 7. Beweisbar faire Würfel (Provably Fair)
-8. Monetarisierung & Zahlungsfluss (B: Twitch Bits, C: eigener Shop)
+8. Monetarisierung & Zahlungsfluss (C: eigener Shop — primär; B: Twitch nur kostenlos)
 9. Rechts- & Compliance-Checkliste
 10. Datenmodelle
 11. Was JETZT im Vertical Slice gebaut wird (S0 + Hooks)
@@ -37,26 +43,27 @@
 
 ## 0. Leitplanken auf einen Blick
 
-Diese Leitplanken setzen die Nutzerentscheidung aus Brief Kap. 5 um. Sie sind **nicht verhandelbar**, solange der Brief
+Diese Leitplanken setzen die Nutzerentscheidungen aus Brief Kap. 5 um (2026-10-07; verschärft bzw. ergänzt 2026-10-08: L11, L16). Sie sind **nicht verhandelbar**, solange der Brief
 nicht geändert wird. Jede Zeile nennt, wo sie technisch erzwungen wird.
 
 | # | Leitplanke | Erzwungen durch |
 |---|---|---|
-| L1 | **Veröffentlichte Wahrscheinlichkeiten** pro Kiste, pro Wurf, pro Item — vor dem Kauf sichtbar. **Preis der Kiste** in Echtgeld (C) bzw. in Bits mit Link auf die Twitch-Bits-Preise (B). **Inhalte haben keinen Geldwert und werden nie in Echtgeld bewertet** — keine Euro-Werte für Items oder Credits auf Odds-Seite, im Shop oder in der Extension | Shop-UI, Twitch-Extension-UI, öffentliche Odds-Seite (aus denselben Daten wie der Server generiert), `tables_hash` im Commit (Kap. 7) |
+| L1 | **Veröffentlichte Wahrscheinlichkeiten** pro Kiste, pro Wurf, pro Item — vor dem Kauf sichtbar. **Preis der Kiste** in Echtgeld (C: Web-Shop und App-Store). **Inhalte haben keinen Geldwert und werden nie in Echtgeld bewertet** — keine Euro-Werte für Items oder Credits auf Odds-Seite, im Shop oder in der Extension | Shop-UI (Web/App), Twitch-Extension-UI (nur Odds/Anzeige), öffentliche Odds-Seite (aus denselben Daten wie der Server generiert), `tables_hash` im Commit (Kap. 7) |
 | L2 | **Pity-Garantie** (Käufer-Pity: spätestens jede 10. bezahlte Kiste mit epischem Wurf); Pity-Stand nur **auf Abruf** (Kaufhistorie/Spielerschutz-Center), nie als Kaufanreiz im Kauf-Flow | Gift-Service, verifizierbar über das Gift-Log (Kap. 6.8, 7) |
 | L3 | **Lauf-gebundene Inhalte**: alles aus Geschenken verfällt mit Laufende; kein Handel, keine Übertragung, keine Auszahlung | Live-Läufe nutzen einen **frischen Lauf-Zustand** aus einem Preset, der nie in Kampagnen-Spielstände übergeht (Kap. 6.9) |
 | L4 | **Caps pro Spieler/Lauf** mit **abnehmender Wirkung**; Kisten-Kauf gesperrt, sobald die Wirkung unter `chest_min_effect_pm` fällt (dann nur nicht-zufällige Geschenke) | `GiftPolicy` im Kern + Reservierung im Gift-Service vor dem Kauf (Kap. 6.10) |
 | L5 | **Pur-Liga** ohne jegliche Zuschauer-Geschenke und ohne spielrelevante Votes | Liga-Wahl vor dem Lauf, Server lehnt Gifts ab (Kap. 1.5) |
 | L6 | **Alter:** Käufer:innen **18+ für alle Echtgeld-Geschenke** (zufällig und nicht-zufällig, bis ein Gutachten anderes erlaubt); **Empfang** bezahlter Zufallskisten nur durch altersverifizierte Spieler:innen ab 18 (alle anderen fest `free_only`); Kisten-Kaufknöpfe nur für eingeloggte, altersverifizierte Konten | Account-/Wallet-Service, Kauf-Flow, Extension/Web-Viewer, `gift_accept`-Prüfung (Kap. 6.11, 8.9) |
 | L7 | **Geo-Positivliste** für Zufallskisten: Kauf und Empfang nur in Ländern mit **positivem schriftlichem Gutachten**; Belgien und Niederlande ausdrücklich gesperrt **[zu prüfen]**; Land nicht feststellbar = gesperrt | Geo-Policy-Tabelle im Backend (Standard: verboten), Prüfung bei Kauf **und** Zustellung (Kap. 8.9) |
-| L8 | **Nachprüfbare Server-Würfel** (Provably Fair): Commit vor dem Event (gebunden an Seed, Tabellen, Regeln, Daten), Seed danach; `client_seed` in **jedem** Kaufkanal (auch Bits); **lückenloses** Gift-Log inkl. erstatteter Würfe | Fairness-Service, Commit-Reveal (Kap. 7) |
+| L8 | **Nachprüfbare Server-Würfel** (Provably Fair): Commit vor dem Event (gebunden an Seed, Tabellen, Regeln, Daten), Seed danach; `client_seed` in **jedem** Kaufkanal (Web-Shop, App-IAP); **lückenloses** Gift-Log inkl. erstatteter Würfe | Fairness-Service, Commit-Reveal (Kap. 7) |
 | L9 | **Kein Selbst-Beschenken**: Spieler kaufen sich selbst nichts Zufälliges (Brief Kap. 5) | Gift-Service: `buyer_account ≠ target_account`, Verknüpfungsprüfung (Zahlungsmittel, Gerät — Rechtsgrundlage **[zu prüfen]**, Kap. 9) |
 | L10 | **Rechtsprüfung vor Launch** von S3/S5 ist Pflicht; für S2 eine Prüfung von Jugendschutz, DSA, DSGVO (Zuschauerdaten) und Twitch-Extension-Richtlinien | Exit-Kriterien S2, S3 und S5 (Kap. 2) |
-| L11 | **Kein Erlösfluss an Empfänger:innen aus Zufallskisten**: Creator-Beteiligung gilt nie für `kind: chest`; Zufallskisten per Bits an `target.player_id == broadcaster` gesperrt, bis ein Gutachten vorliegt | Gift-Service (Quote-Prüfung), Ledger (keine `creator_accrual` bei `chest`), Kap. 8.4/8.8 |
+| L11 | **Erlös nur an Spiel/Betreiber (Nutzerentscheidung 2026-10-08):** Echtgeld aus Zuschauer-Geschenken fließt **ausschließlich** an den Betreiber — nie an Spieler:innen (Crawler), nie an Streamer:innen; keine Auszahlung, keine Beteiligung (Creator-Beteiligung **gestrichen**, Kap. 8.8), kein Kaufkanal, dessen Erlös an Dritte geht (Twitch Bits → nur kostenlose Interaktion, Kap. 8.4). *Früher:* „kein Erlösfluss an Empfänger:innen aus Zufallskisten“ — durch die Entscheidung verschärft auf **alle** Geschenke | Ledger (keine Konten/Transaktionsarten für Auszahlungen an Personen, Kap. 8.3/10.3), Gift-Service (Kaufkanäle nur Web-Shop/App-IAP, Kap. 6.4), Kap. 8.4/8.8 |
 | L12 | **Keine Glücksspiel-Optik**: keine Near-Miss-Effekte, keine künstliche Verzögerung, keine Slot-/Walzen-Optik, Ergebnis sofort sichtbar; nutzerseitig neutrale Begriffe („nachprüfbare Zufallsziehung“ statt „Provably Fair“/„Würfel“); öffentlicher Feed zeigt Stufe und (optional) Absender, **keine Inhalte** | Darstellung (Kap. 6.4), Feed (Kap. 4.6), Texte (Kap. 6.12) |
 | L13 | **Kein Kaufdruck**: Dank-Zeilen unabhängig vom Preis, kein Spott über günstige/kostenlose Unterstützung, kein Pity-Countdown, Absendername standardmäßig anonym, keine Kaufaufrufe an Minderjährige | M.O.D.-Zeilen (6.12), Gift-Schema (`anon: true`), Creator-Richtlinien (Kap. 5.4) |
 | L14 | **Echtgeld nur mit Server-Autorität**: Läufe, die bezahlte Geschenke empfangen, werden immer auf dem Dedicated Server simuliert; Umsatz wird erst bei serverseitig bestätigter Zustellung realisiert | Allokator, Gift-Service, Ledger (Kap. 2 S3, 6.4) |
 | L15 | **Kein Token-Verfall** (mind. bis zur rechtlichen Klärung); **Erstattung des Restguthabens** bei Einstellung des Dienstes oder Kontolöschung | Wallet-Service, AGB (Kap. 8.2) |
+| L16 | **Sponsor-Fenster (Nutzerentscheidung 2026-10-08):** Zuschauer:innen helfen **nur begrenzt oft zu bestimmten Zeiten** — externe Geschenke (außer kosmetischem `cheer`) nur in einem offenen Fenster (periodisch, Safe Room, Boss-Countdown), mit begrenzten Plätzen je Fenster und 1 Geschenk je Zuschauer:in und Fenster; **kein Kaufdruck durch die Fenster** (kein Countdown im Kauf-Flow, keine „nur noch X Plätze“-Werbung, keine M.O.D.-Kaufaufrufe, L13) | `RunSim`/`SponsorWindows` (Fahrplan in Ticks, Zustand im Hash), `GiftPolicy.check` (autoritativ, Kap. 3), Gift-Service (Platz-Reservierung bei der Quote, Kap. 6.4), Kap. 6.13 |
 
 **Verhältnis zu GDD Kap. 9 („Kein Echtgeld … nirgends“):** Die im Spiel verdienten **Lootboxen** (Bronze/Silber/Gold/Fan
 aus Achievements, Bossen, Meilensteinen) bleiben **unkäuflich** — in Kampagne **und** Live-Modus. Die hier beschriebenen
@@ -82,6 +89,7 @@ einen Querverweis auf dieses Dokument erhalten (offener Punkt Kap. 12).
 | **Sponsorkiste** | — | Zuschauer-Geschenk mit Zufallsinhalt (Kap. 6.6). Nicht zu verwechseln mit Lootboxen (GDD 9). |
 | **Sponsor-Token** | `ST` | Interne Kauf-Einheit des eigenen Shops (Variante C). |
 | **Applaus** | `AP` | Kostenlose Fan-Währung, verdient durch Zuschauen (S2+). Kein Echtgeldwert, nicht kaufbar. |
+| **Sponsor-Fenster** | `sw_` | Zeitspanne **innerhalb eines Laufs**, in der Zuschauer:innen helfen dürfen (Kap. 6.13): periodisch, im Safe Room, als Boss-Countdown. Nicht zu verwechseln mit dem **Fenster** eines Events (`win_`, Sendetermin). IDs `sw_<n>` je Lauf fortlaufend. |
 
 ### 1.2 Event-Kalender & Zeitfenster
 
@@ -231,7 +239,7 @@ Zeiten gehen nie in die Wertung ein. `floor_timer_left_sec` ist in Grad A (Kap. 
 
 | | **Show-Liga** (`show`) | **Pur-Liga** (`pur`) |
 |---|---|---|
-| Zuschauer-Geschenke (bezahlt & kostenlos) | erlaubt (mit Caps, Kap. 6.10) | **gesperrt** (Server lehnt ab, Shop zeigt „Pur-Liga — keine Geschenke“) |
+| Zuschauer-Geschenke (bezahlt & kostenlos) | erlaubt (mit Caps, Kap. 6.10, nur in Sponsor-Fenstern, Kap. 6.13) | **gesperrt** (Server lehnt ab, Shop zeigt „Pur-Liga — keine Geschenke“; keine Sponsor-Fenster) |
 | Votes | alle (auch spielrelevante Twists) | nur kosmetische Votes |
 | Zuschauen, Applaus/Cheers | ja | ja (rein kosmetisch) |
 | System-Sponsor-Geschenke (Hype-Schwellen, GDD 7.4) | ja | **ja** (Teil des Grundspiels, nicht von Zuschauern) |
@@ -273,9 +281,15 @@ Ausgeschlossen: Items, Credits, Lootboxen, EXP, Kampagnen-Follower, alles mit Ga
 | **S0** | Offline-Event-Lauf (fester Seed, Timer, Quest, lokale Bestenliste) | keiner | nein | Vertical Slice |
 | **S1** | Async Tages-/Wochen-Seeds, Online-Bestenliste, Replays | Backend + Replay-Verifier | nein | Accounts, deterministische Erkundung (Grad B für gewertete Listen) |
 | **S2** | Live-Zuschauen, Votes, kostenlose Fan-Währung | + Spectator-Pipeline | nein | Event-Stream, Delay, Prüfung Jugendschutz/DSA/DSGVO |
-| **S3** | Echtgeld-Geschenke via Twitch Bits | + EBS, Ledger, Fairness-Service, Server-Sim (Solo), Spielerschutz-Center | **ja (B)** | **Rechtsprüfung**, Twitch-Review, Grad B, Altersverifikation |
-| **S4** | Koop 2–4 auf Dedicated Server | + Godot-Headless-Flotte | (B) | Netcode, Koop-Inhalte |
-| **S5** | Große geplante Live-Events + eigener Shop | + Shop, MoR/PSP, Skalierung | **ja (B + C)** | **Rechtsprüfung** C, Steuern |
+| **S3** | Echtgeld-Geschenke über den **eigenen Web-Shop (C)**, nur in Sponsor-Fenstern; Twitch-Extension nur kostenlos | + Shop-API, MoR/PSP, Ledger, Fairness-Service, Server-Sim (Solo), Spielerschutz-Center, EBS (gratis) | **ja (C Web)** | **Rechtsprüfung**, MoR/PSP-Eignung, Grad B, Altersverifikation |
+| **S4** | Koop 2–4 auf Dedicated Server | + Godot-Headless-Flotte | (C) | Netcode, Koop-Inhalte |
+| **S5** | Große geplante Live-Events + **App-Store-IAP (C mobil)** | + IAP-Belegprüfung, Skalierung | **ja (C Web + App)** | **Rechtsprüfung** Store-Regeln, Steuern |
+
+*Stufen-Umbau nach Entscheidung 2026-10-08:* S3 hieß „Echtgeld-Geschenke via Twitch Bits“ und S5 „+ eigener Shop“. Weil
+Bits-Erlöse nach unserem Kenntnisstand an die Broadcaster:in gehen **[zu prüfen]** — unvereinbar mit „Echtgeld nur an den
+Betreiber“ (L11) —, ist der eigene Shop vorgezogen (S3 Web, S5 App) und B nur noch kostenlose Interaktion. Bits mit
+Spielwirkung kämen nur in Frage, wenn ein Erlösmodell für Entwickler existiert, das L11 erfüllt **[zu prüfen]** — dann als
+eigene, neu zu prüfende Stufe.
 
 ### S0 — Offline-Event-Lauf (Teil des Vertical Slice)
 Umfang: Titelmenü-Eintrag „Event-Lauf“, Event aus `res://data/events.json` (fester Seed, Quest, `timer_mode: explore_only`),
@@ -329,27 +343,38 @@ anwenden oder es weglassen.
   Interaktionsrisiken), DSA (Melde-/Abhilfeverfahren, Moderation), DSGVO für Zuschauerdaten (auch Minderjähriger),
   Twitch-Extension-Richtlinien **[zu prüfen]**.
 
-### S3 — Echtgeld-Geschenke via Twitch Bits
-Umfang: Twitch-Extension (Overlay/Panel) mit Bits-Produkten, Extension Backend Service (EBS), Ledger, Fairness-Service
-(Commit-Reveal für Kisten), Odds-Seite, Käufer-Pity, Caps, Geo-Policy (Positivliste), Altersnachweis-Kopplung (Kap. 8.4),
-**Spielerschutz-Center** (Limits, Selbstsperre, Kaufhistorie, „heute/Monat ausgegeben“) über das verknüpfte,
-altersverifizierte PTD-Konto — Bits-Limits in Bits, angerechnet auf dasselbe Gesamtbudget (Kap. 8.9).
+### S3 — Echtgeld-Geschenke über den eigenen Web-Shop (C)
+*Bis 2026-10-08 hieß diese Stufe „Echtgeld-Geschenke via Twitch Bits“ — **gestrichen per Entscheidung 2026-10-08**: Bits-Erlöse
+gehen nach unserem Kenntnisstand an die Broadcaster:in **[zu prüfen]**, Echtgeld darf aber nur an den Betreiber fließen (L11).*
+Umfang: **Web-Shop** mit Sponsor-Token und Euro-Direktkauf über Merchant of Record/PSP (Kap. 8.5), Shop-API, Ledger,
+Fairness-Service (Commit-Reveal für Kisten), Odds-Seite, Käufer-Pity, Caps, **Sponsor-Fenster** (Kap. 6.13: Quote nur bei offenem
+Fenster, Platz-Reservierung), Geo-Policy (Positivliste), Altersnachweis-Kopplung, **Spielerschutz-Center** (Limits in EUR,
+Selbstsperre, Kaufhistorie, „heute/Monat ausgegeben“) am altersverifizierten PTD-Konto. Die **Twitch-Extension** (Overlay/Panel)
+bietet nur **kostenlose** Funktionen: Votes, Applaus/Fan-Pakete, Anzeige des Sponsor-Fensters und der Odds; ein Hinweis bzw.
+Link auf den Web-Shop nur, soweit die Twitch-Richtlinien das erlauben **[zu prüfen]**. Erlös ausschließlich an den Betreiber.
 **Regel (L14):** Läufe, die bezahlte Geschenke empfangen können, werden **immer auf dem Dedicated Server** simuliert
 (Server-Kern aus S4 vorziehen, ohne Koop). Client-Simulation + Verifikation ist für Echtgeld **nicht** zulässig, weil der
-Client sonst Zeitpunkt und Anwendung der Kiste bestimmt. Voraussetzung: Grad B (Kap. 3.3).
+Client sonst Zeitpunkt und Anwendung der Kiste bestimmt — **und die Sponsor-Fenster** (Kap. 6.13). Voraussetzung: Grad B (Kap. 3.3).
 **Exit-Kriterien:**
 - [ ] **Schriftliche Rechtsprüfung** für alle Länder der Positivliste liegt vor; Geo-Policy schaltet **genau diese** Länder
-  frei (Kap. 8.9, 9). Gutachtenfrage „Erlösfluss an Empfänger:in“ (Kap. 9) beantwortet.
-- [ ] Twitch-Extension-Review bestanden; Policy-Fragen zu Zufallsinhalten schriftlich geklärt **[zu prüfen]** (Kap. 8.4).
-- [ ] **Kein Kisten-Kauf ohne aktive Limits:** Ausgabelimits (EUR und Bits), Selbstsperre, Kaufhistorie und Anzeige
+  frei (Kap. 8.9, 9). (Die frühere Gutachtenfrage „Erlösfluss an Empfänger:in“ entfällt durch L11 — es gibt keinen.)
+- [ ] MoR/PSP schriftlich geeignet für virtuelle Währung, Zufallsinhalte, Geschenke an Dritte und Geo-Sperren **[zu prüfen]**.
+- [ ] Twitch-Extension-Review für die **kostenlosen** Funktionen bestanden; Richtlinie zu Hinweisen auf externe Käufe geklärt
+  **[zu prüfen]**.
+- [ ] **Kein Kisten-Kauf ohne aktive Limits:** Ausgabelimits (EUR), Selbstsperre, Kaufhistorie und Anzeige
   „heute/Monat ausgegeben“ sind live, an die verifizierte Identität gekoppelt (konto-übergreifend) und durch Tests belegt.
 - [ ] Altersverifikation (18+) für Käufer:innen **und** Empfänger:innen bezahlter Zufallskisten aktiv; offene Frage 12.2-#6 entschieden.
-- [ ] Ledger: tägliche Abstimmung gegen Twitch-Transaktionsliste ohne Differenz über 14 Tage Beta.
+- [ ] Ledger: tägliche Abstimmung gegen PSP/MoR-Berichte ohne Differenz über 14 Tage Beta; **keine** Konten oder
+  Transaktionsarten für Auszahlungen an Personen (L11, Kap. 10.3).
 - [ ] Verifikationswerkzeug reproduziert 100 % der Kisten eines Beta-Events nach Reveal, **inkl. erstatteter/nicht
   zugestellter Würfe**, und meldet keine Nonce-Lücken.
-- [ ] `client_seed` wird im Bits-Flow bereits beim Quote übertragen (Kap. 6.4) — sonst darf B nicht als „nachprüfbar“ beworben werden.
+- [ ] `client_seed` wird in **jedem** Kaufkanal bereits beim Quote übertragen (Kap. 6.4) — sonst darf der Kanal nicht als
+  „nachprüfbar“ beworben werden.
+- [ ] **Sponsor-Fenster:** Quote nur bei offenem Fenster mit freiem Platz (sonst `E_WINDOW_CLOSED`/`E_WINDOW_FULL` mit
+  `next_window_in_sec`), Reservierung hält bis zur Zustellung (Gnadenfrist `grace_sec`), Instanz und Verifier lehnen Geschenke
+  außerhalb ab — durch automatisierte Tests belegt; Kauf-Flow ohne Countdown-/Knappheitsdruck (L16, R15) geprüft.
 - [ ] Caps/Limits/Geo-Sperre durch automatisierte Tests + manuellen Pen-Test belegt.
-- [ ] Externer Audit (Kap. 7.7) inkl. Fehlerpfade (Erstattung, Timeout, Cap-Kollision) abgeschlossen.
+- [ ] Externer Audit (Kap. 7.7) inkl. Fehlerpfade (Erstattung, Timeout, Cap-Kollision, Fenster-Ende während der Zahlung) abgeschlossen.
 
 ### S4 — Koop 2–4 mit Dedicated Server
 Umfang: Godot-headless-Server (Kap. 3.2), Matchmaking/Lobbys, Positions-Sync, CTB-Lockstep, Reconnect, Koop-Regeln
@@ -365,15 +390,18 @@ Umfang: Godot-headless-Server (Kap. 3.2), Matchmaking/Lobbys, Positions-Sync, CT
 - [ ] Reconnect innerhalb 120 s gelingt in ≥ 99 % der Testfälle ohne Zustandsverlust.
 - [ ] Server-Tick-Budget: p99 < 5 ms pro Instanz-Tick bei Ziel-Packungsdichte (Kap. 3.9).
 
-### S5 — Große geplante Live-Events + eigener Shop (C)
+### S5 — Große geplante Live-Events + App-Store-IAP (C mobil)
 Umfang: Event-Ankündigung mit Anmeldung, vorab hochskalierte Flotte, CDN-Segment-Auslieferung für Zuschauer,
-Web-Shop mit Sponsor-Token über Merchant of Record/PSP, optional Mobile-IAP, Erstattungen/Chargebacks, Erweiterung des
-seit S3 bestehenden Spielerschutz-Centers um Shop-Käufe (EUR-Limits, Verlauf, Selbstsperre gelten kanalübergreifend),
-Kaufprozess nach Verbraucherrecht (Kap. 6.4, 9), später Creator-Beteiligung (nur nach positivem Gutachten, Kap. 8.8).
+**In-App-Kauf über App Store / Google Play** als zweiter Kanal des eigenen Shops (Kap. 8.5; Belegprüfung nur serverseitig),
+Erstattungen/Chargebacks kanalübergreifend, Spielerschutz-Center um IAP-Käufe erweitert (EUR-Limits, Verlauf, Selbstsperre
+gelten kanalübergreifend), Kaufprozess nach Verbraucherrecht (Kap. 6.4, 9). Twitch Bits bleiben kostenlose Interaktion —
+**außer** es wird ein Bits-Erlösmodell für Entwickler nachgewiesen, das L11 erfüllt **[zu prüfen]**; das wäre eine eigene,
+neu zu prüfende Stufe. ~~Später Creator-Beteiligung~~ — **gestrichen per Entscheidung 2026-10-08** (Kap. 8.8).
 **Exit-Kriterien:**
 - [ ] Lasttest: 10 000 gleichzeitige Spieler:innen, 100 000 Zuschauer:innen, Fehlerquote < 0.1 %.
-- [ ] **Rechtsprüfung C** (Verbraucherrecht, Steuern, Glücksspiel, Jugendschutz) liegt schriftlich vor.
-- [ ] Ledger-Abstimmung gegen PSP/MoR-Auszahlungsberichte monatlich ohne ungeklärte Differenz.
+- [ ] **Rechtsprüfung IAP** (Store-Regeln für Geschenke an andere Nutzer:innen und Odds-Offenlegung, Verbraucherrecht, Steuern,
+  Glücksspiel, Jugendschutz) liegt schriftlich vor **[zu prüfen]**.
+- [ ] Ledger-Abstimmung gegen PSP/MoR- und App-Store-Auszahlungsberichte monatlich ohne ungeklärte Differenz.
 - [ ] Chargeback-Quote im Beta-Monat < 0.5 % (Schwelle **[zu prüfen]** je PSP).
 
 ---
@@ -392,8 +420,8 @@ Kaufprozess nach Verbraucherrecht (Kap. 6.4, 9), später Creator-Beteiligung (nu
                          │ Replay-Verifier (Godot headless, Batch)                    │
                          │ Pub/Sub (NATS JetStream) ─► Delay-Puffer ─► WS-Gateways ──┼──► Zuschauer (Web/In-Game)
                          │                                         └► CDN-Segmente ─┼──► Großevents
-                         │ Twitch EBS ◄──────────────────────────────────────────────┼──── Twitch-Extension (Bits)
-                         │ Shop-API ◄── Webhooks ── MoR/PSP                           │◄─── Web-Shop (C)
+                         │ Twitch EBS ◄──────────────────────────────────────────────┼──── Twitch-Extension (gratis)
+                         │ Shop-API ◄── Webhooks ── MoR/PSP                           │◄─── Web-Shop/App-IAP (C)
                          └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -408,7 +436,9 @@ Kaufprozess nach Verbraucherrecht (Kap. 6.4, 9), später Creator-Beteiligung (nu
   (`max_seconds_without_battle` aus Ticks), Vote-Intervalle, Mindestabstand Geschenke, Encounter-Sperren, Zug-Timeouts
   (`deadline_tick`), Hartes Ende. Millisekunden/Sekunden werden **nur für die Anzeige** abgeleitet. Grad B rechnet mit
   30 Hz **unabhängig** von `physics_ticks_per_second = 60` (02_TECH §2); die 60-Hz-Physik ist reine Darstellung.
-  - `timer_mode: explore_only`: Der Lauf-Tick `k` zählt nur Erkundungs-Ticks; Kampf-Commands tragen den `k` ihres
+  - `timer_mode: explore_only`: Der Lauf-Tick `k` zählt Erkundungs-Ticks **und Leerlauf-Ticks im Safe Room** (seit den
+    Sponsor-Fenstern, Kap. 6.13: das Safe-Room-Fenster ist auf 90 s begrenzt — in Ticks); der Etagen-Timer, Hype-Zerfall,
+    Pazifist-Zählung und Streuner laufen **nur** auf Erkundungs-Ticks. Im Kampf steht `k`; Kampf-Commands tragen den `k` ihres
     Kampfes (Timer steht) plus Aktionsindex `n`.
   - `timer_mode: realtime`: `k` zählt **Wanduhr-Ticks** (auch in Kampf, Safe Room, Menüs); **jedes** Command, auch jedes
     Kampf-Command, trägt den echten Sim-Tick, an dem es angewendet wurde → Timerstand, Zug-Timeouts und Hartes Ende sind
@@ -634,7 +664,7 @@ Checkpoint in einem neuen Prozess (Kap. 3.6).
 |---|---|---|
 | S1 Backend (Nakama + Postgres + Verifier) | 2 VMs à 4 vCPU/8 GB, Objektspeicher Replays | 50–200 €/Monat |
 | S2 Spectator-Pipeline | NATS + 2 WS-Gateways, ≤ 2 000 Zuschauer gleichzeitig | +50–150 €/Monat + Traffic |
-| S3 EBS/Ledger/Fairness | klein, hochverfügbar (2× je Dienst) | +50–100 €/Monat |
+| S3 Shop-API/Ledger/Fairness (+ EBS gratis) | klein, hochverfügbar (2× je Dienst) | +50–100 €/Monat |
 | S3/S5 Rechtsprüfung | mehrere Länder, Glücksspiel + Verbraucherrecht + Steuern | einmalig 10 000–40 000 € **(reine Schätzung)** |
 | S4 Game-Server | 1 000 gleichzeitige Spieler ≈ 700–1 000 Instanzen (`p_solo` 0.7) ≈ 20–35 vCPU | Budget-Hoster ~150–400 €/Monat dauerhaft; Hyperscaler ~1–2.50 €/h für Event-Spitzen |
 | S5 Großevent 2 h | 10 000 Spieler (~7 000–10 000 Instanzen ≈ 200–350 vCPU) | ~150–450 € Rechenzeit pro Event |
@@ -730,6 +760,7 @@ Die `cmd_id` steht auch im Run-Log (Kap. 10.6); der Verifier prüft strikte Mono
 | `battle_end` | `{ "battle_id", "result_hash" }` (`result_hash` = SHA-256 über kanonisches `BattleResult`) |
 | `gift_offer` | `{ "gift_id", "preview": { "kind", "tier", "sender" }, "expires_tick" }` — nur bei `gift_accept = "ask"` (10 s = 300 Ticks) |
 | `gift` | `{ "gift": Gift }` (Kap. 6.5) — wird vom Client-Kern an demselben Tick angewendet wie vom Server |
+| `sponsor_window` | `{ "phase": "opened" \| "updated" \| "closed", "window": SponsorWindows.window_view, "reason"?, "next_in_sec" }` (Kap. 6.13) — derselbe Zustand, den Instanz-Kern und Verifier aus den Ticks ableiten; der Client-Kern rechnet ihn selbst nach |
 | `vote` | `{ "vote_id", "phase": "open" \| "result", "options", "result"? , "apply_tick"? }` |
 | `twist` | `{ "id", "vote_id", "apply_tick" }` — Anwendung des Vote-Ergebnisses (externer Eingang, Run-Log `{"t":"twist"}`) |
 | `timer` | `{ "floor_timer_left_ticks", "window_close_at", "phase" }` (alle 5 s + bei Änderungen; Anzeige rechnet in mm:ss um) |
@@ -739,9 +770,15 @@ Die `cmd_id` steht auch im Run-Log (Kap. 10.6); der Verifier prüft strikte Mono
 | `err` | `{ "code", "msg", "ref_seq"? }` |
 | `pong` | `{ "c", "s": server_ms }` |
 
-**Fehlercodes:** `E_PROTO`, `E_DATA_HASH`, `E_AUTH`, `E_WINDOW_CLOSED`, `E_INSTANCE_FULL`, `E_NOT_YOUR_TURN`,
-`E_INVALID_CMD`, `E_RATE_LIMIT`, `E_DESYNC`, `E_LEAGUE_NO_GIFTS`, `E_GIFT_CAP`, `E_GEO`, `E_AGE`, `E_SPEND_LIMIT`,
-`E_SELF_EXCLUDED`, `E_CHEST_BLOCKED` (Wirkungsschwelle, Broadcaster-Sperre L11), `E_INTERNAL`.
+**Fehlercodes:** `E_PROTO`, `E_DATA_HASH`, `E_AUTH`, `E_EVENT_WINDOW_CLOSED` (Sendefenster des Events zu, `join`; hieß bis
+2026-10-08 `E_WINDOW_CLOSED`), `E_INSTANCE_FULL`, `E_NOT_YOUR_TURN`, `E_INVALID_CMD`, `E_RATE_LIMIT`, `E_DESYNC`,
+`E_LEAGUE_NO_GIFTS`, `E_GIFT_CAP`, `E_GEO`, `E_AGE`, `E_SPEND_LIMIT`, `E_SELF_EXCLUDED`, `E_CHEST_BLOCKED`
+(Wirkungsschwelle), **Sponsor-Fenster (Kap. 6.13):** `E_WINDOW_CLOSED` (kein Fenster offen), `E_WINDOW_FULL` (alle Plätze
+belegt/reserviert), `E_WINDOW_SENDER_LIMIT` (diese:r Zuschauer:in hat im Fenster schon geschenkt) — jeweils mit
+`next_window_in_sec`, damit Shop/Overlay anzeigen, wann das nächste Fenster öffnet; `E_INTERNAL`.
+Abbildung der Kern-Gründe von `Show.receive_gift` (Kap. 6.5): `league_pur` → `E_LEAGUE_NO_GIFTS`, `cap_reached` →
+`E_GIFT_CAP`, `chest_blocked` → `E_CHEST_BLOCKED`, `window_closed` / `window_full` / `window_sender_limit` →
+`E_WINDOW_CLOSED` / `E_WINDOW_FULL` / `E_WINDOW_SENDER_LIMIT` (`SponsorWindows.protocol_code`).
 
 ### 4.6 Zuschauer-Stream (Gateway → Zuschauer; Zuschauer → Gateway)
 
@@ -754,11 +791,13 @@ Die `cmd_id` steht auch im Run-Log (Kap. 10.6); der Verifier prüft strikte Mono
 | G → Z | `spec_vote` | `{ "vote_id", "phase": "open" \| "tally" \| "close", "options", "tally"?, "ends_at" }` |
 | G → Z | `spec_feed` | Geschenk-Feed: Absendername (nur bei Opt-in, sonst „Anonym“) + Geschenkart/Kistenstufe — **keine Inhalte**, keine exakten Zeitstempel, keine `gift_id`/Log-ID (L12, Kap. 7.5). Inhalte höchstens aggregiert („heute 120 Sponsorkisten, davon 9 % mit epischem Inhalt“) |
 | G → Z | `spec_board` | Live-Rangliste des Fensters (alle 15 s) |
+| G → Z | `spec_window` | Sponsor-Fenster des beobachteten Laufs (Kap. 6.13): `{ "open": bool, "closes_in_sec"?, "slots_free"?, "next_in_sec"? }` — **unverzögert** (Server-Zeit), damit Kauf-/Geschenk-Oberflächen den echten Zustand zeigen; **ohne** Art/Bezug des Fensters (`kind`/`ref` würden z. B. „Team steht vor dem Boss“ 30 s vor dem Bild verraten, Ghosting); Art und Overlay-Badge kommen mit dem verzögerten Strom |
 | G → Z | `spec_end` | `{ "summary", "replay_id" }` |
 | Z → G | `vote` | `{ "vote_id", "option" }` (1 Stimme je Account/Twitch-ID, letzte zählt) |
 | Z → G | `cheer` | `{ "kind": "confetti" \| "applause" \| "boo" }` (kosmetisch, rate-limitiert 1/5 s) |
 
-Geschenke laufen **nicht** über den Zuschauer-WebSocket, sondern über die Shop-/EBS-REST-APIs (Kap. 6.4) — Zahlungen
+Geschenke laufen **nicht** über den Zuschauer-WebSocket, sondern über die Shop-REST-API (Kap. 6.4; kostenlose Fan-Pakete aus
+der Twitch-Extension über den EBS) — Zahlungen
 brauchen Idempotenz und Belege.
 
 ### 4.7 Binärformat `snap` (Protokoll 1.1)
@@ -799,11 +838,12 @@ Kampfbefehl und Lockstep-Antwort:
 Geschenk-Zustellung (gleiches Format für Spieler und, verzögert, Zuschauer):
 
 ```json
-{"v":"1.0","type":"gift","seq":344,"ack":118,"tick":5130,"body":{"gift":{"schema":1,"gift_id":"g_01JB7Q3M0F5W8V2TQK4N6H8R9S","source":"shop","kind":"chest","tier":"silver","amount":0,"sponsor_id":"","sender":{"display_name":"","anon":true,"sender_ref":"b_7f3a9c"},"message_key":"gift_msg_go_team","target":{"player_id":"p_A","run_id":"run_2Kx"},"event_id":"evt_2026w45_sat","window_id":"eu","league":"show","load_half":4,"effect_pm":769,"roll":{"commit":"3613e6c5…d64a","client_seed":"c0ffee4200000017","nonce":17,"log_id":"l_9f2c41d07ab3e655","table_id":"gift_f1","tables_hash":"5e2d…07","rolls":2,"guarantee":"rare","pity_forced":""},"contents":[{"rarity":"common","item_id":"item_ice_spray","qty":1},{"rarity":"rare","item_id":"item_brutzel_burger","qty":2}],"run_bound":true,"deliver_by_tick":0,"issued_at":"2026-11-07T19:42:05Z","sig":"hmac-sha256:5b1e…"}}}
+{"v":"1.0","type":"gift","seq":344,"ack":118,"tick":5130,"body":{"gift":{"schema":1,"gift_id":"g_01JB7Q3M0F5W8V2TQK4N6H8R9S","source":"shop","kind":"chest","tier":"silver","amount":0,"sponsor_id":"","sender":{"display_name":"","anon":true,"sender_ref":"b_7f3a9c"},"message_key":"gift_msg_go_team","target":{"player_id":"p_A","run_id":"run_2Kx"},"event_id":"evt_2026w45_sat","window_id":"eu","league":"show","load_half":4,"effect_pm":769,"roll":{"commit":"3613e6c5…d64a","client_seed":"c0ffee4200000017","nonce":17,"log_id":"l_9f2c41d07ab3e655","table_id":"gift_f1","tables_hash":"5e2d…07","rolls":2,"guarantee":"rare","pity_forced":""},"contents":[{"rarity":"common","item_id":"item_ice_spray","qty":1},{"rarity":"rare","item_id":"item_brutzel_burger","qty":2}],"run_bound":true,"deliver_by_tick":0,"issued_at":"2026-11-07T19:42:05Z","sponsor_window":"sw_3","sig":"hmac-sha256:5b1e…"}}}
 ```
 
 (Werte entsprechen dem Testvektor Kap. 7.4: Silber-Kiste, Last L = 2 → `effect_pm = 769` → 2 Würfe. Absender standardmäßig
-anonym, L13. Für Zuschauer wird das Gift ohne `roll`/`sender_ref` weitergegeben.)
+anonym, L13. `sponsor_window` = das bei der Quote reservierte Sponsor-Fenster (Kap. 6.13). Für Zuschauer wird das Gift ohne
+`roll`/`sender_ref` weitergegeben.)
 
 Zuschauer-Vote:
 
@@ -846,7 +886,10 @@ Instanz (Server) bzw. Client (S2) ──► Pub/Sub-Thema run.<run_id>  (NATS Je
 Votes und Geschenke berücksichtigen den Delay: Zuschauer sehen den Stand von vor `delay` Sekunden. Vote-Fenster werden
 deshalb in **Zuschauerzeit** geöffnet und das Ergebnis frühestens bei `close + 5 s` (Server-Zeit) angewendet; die M.O.D.
 kündigt den Twist 10 s vorher an. Geschenke kommen beim Spieler „früher“ an, als Zuschauer sie im Feed sehen — Feed zeigt
-die Zustellung bei Erreichen im verzögerten Strom (konsistentes Bild für Zuschauer).
+die Zustellung bei Erreichen im verzögerten Strom (konsistentes Bild für Zuschauer). **Sponsor-Fenster** (Kap. 6.13) gelten in
+Server-Zeit: Ob ein Geschenk angenommen wird, entscheidet der Zustand der Instanz, nicht das verzögerte Bild — deshalb kommt der
+Fensterzustand für Kauf-/Geschenk-Oberflächen unverzögert per `spec_window` (Kap. 4.6), das Overlay im Bild zeigt den Stand von
+vor `delay` Sekunden; die Gnadenfrist (`grace_sec`) deckt Reservierungen in den letzten Sekunden eines Fensters ab.
 
 ### 5.3 Spoiler-Schutz für Parallel-Teams: Fog-of-War (+ Symmetrie als Zusatz)
 
@@ -872,9 +915,9 @@ sieht, findet die Transformation unter höchstens 8 Kandidaten sofort. Deshalb g
 
 | Client | Ab | Technik | Funktionen |
 |---|---|---|---|
-| **In-Game-Zuschauermodus** | S2 | Godot-Client, spielt `spec_*` über dieselben Darstellungsszenen ab (Events-Abspieler, Brief 6b.2) | freie/verfolgende Kamera, Senderwechsel zwischen Läufen, Votes, Cheers, Geschenke (Link zum Shop) |
+| **In-Game-Zuschauermodus** | S2 | Godot-Client, spielt `spec_*` über dieselben Darstellungsszenen ab (Events-Abspieler, Brief 6b.2) | freie/verfolgende Kamera, Senderwechsel zwischen Läufen, Votes, Cheers, Geschenke (Link zum Shop) — nur bei offenem Sponsor-Fenster, sonst „Nächstes Fenster in m:ss“ |
 | **Web-Viewer** | S2 | Godot-**Web-Export** mit `gl_compatibility` (Brief: alle Shader kompatibel); Option ohne Threads, um COOP/COEP-Header-Anforderungen zu vermeiden **[zu prüfen für 4.7]** | wie In-Game, reduzierte Effekte; Fallback „Taktik-Ansicht“ (2D-Karte in HTML/Canvas) für schwache Geräte |
-| **Twitch-Extension** | S2 (Votes), S3 (Bits) | HTML/JS-Overlay bzw. Panel (keine Godot-Engine im Overlay) | Minikarte (Fog-of-War), HP/Hype/Timer/Quest, Votes, Odds-Ansicht, Gift-Feed (ohne Inhalte); **Kisten-Kaufknöpfe nur für eingeloggte, verknüpfte, altersverifizierte (18+) PTD-Konten** — alle anderen sehen höchstens Odds und Feed, ohne Kaufaufruf |
+| **Twitch-Extension** | S2 (Votes), S3 (Sponsor-Fenster-Anzeige) | HTML/JS-Overlay bzw. Panel (keine Godot-Engine im Overlay) | Minikarte (Fog-of-War), HP/Hype/Timer/Quest, Votes, Applaus, Sponsor-Fenster (offen/zu, nächstes), Odds-Ansicht, Gift-Feed (ohne Inhalte); **keine Bits-Produkte und keine Kaufknöpfe** (Entscheidung 2026-10-08, Kap. 8.4); ein Hinweis auf den Web-Shop nur, soweit die Twitch-Richtlinien das erlauben **[zu prüfen]**, und nie als Kaufaufruf |
 | **OBS-Browser-Quelle** | S2 | gleiche Web-Overlay-Seite mit `?mode=obs` | für Streamer:innen auf beliebigen Plattformen (YouTube, Kick …) |
 | **YouTube** | S5 | keine Bits-ähnliche Extension-Schnittstelle bekannt **[zu prüfen]** → Begleit-Webseite (Votes/Geschenke über eigenen Shop C) + OBS-Overlay | Super-Chat-Kopplung an Zufallsinhalte **nicht** planen **[Richtlinien zu prüfen]** |
 
@@ -882,7 +925,8 @@ sieht, findet die Transformation unter höchstens 8 Kandidaten sofort. Deshalb g
 enthalten also Kinder und Jugendliche. Deshalb gilt in **allen** Zuschauer-Clients (In-Game, Web-Viewer, Extension, OBS-Overlay):
 Kaufknöpfe für Geschenke (zufällig und nicht-zufällig) nur für eingeloggte, altersverifizierte (18+) Konten; keine
 Kaufaufforderungen in UI-Texten, M.O.D.-Zeilen oder Overlays („Jetzt Kiste schicken!“ o. Ä.).
-**Creator-Richtlinien / AGB für Streamer:innen** (Pflicht vor Freischaltung von Geschenken im Kanal): keine direkten
+**Creator-Richtlinien / AGB für Streamer:innen** (Pflicht vor Freischaltung von Geschenken im Kanal; Streamer:innen erhalten
+**keine** Beteiligung an Geschenken, Entscheidung 2026-10-08): keine direkten
 Kaufaufrufe an das Publikum (Risiko direkter Kaufaufforderung an Kinder, UWG Anhang Nr. 28 **[zu prüfen]**), Kennzeichnung
 „Zuschauer-Geschenke mit Zufallsinhalt aktiv — Wahrscheinlichkeiten: *Odds-Link*“ im Overlay, Einhaltung der
 Twitch-Richtlinien zu Glücksspiel-ähnlichen Inhalten **[zu prüfen]**; Verstöße → Geschenke im Kanal deaktiviert.
@@ -928,8 +972,8 @@ Wert deutlich niedriger. Lasttest mit einem großen Einzellauf (5 000 Zuschauer,
 |---|---|
 | Verdienen | +1 AP pro voller Minute Zuschauen (angemeldet, Tab sichtbar), +5 AP pro abgegebener Stimme (max. 10 Stimmen/Event) |
 | Obergrenze | 120 AP pro Event, Kontostand max. 300 AP |
-| Ausgeben | Cheers (0 AP, kosmetisch), **Fan-Paket** (30 AP, Gift `source: "fan"`, `kind: "fan_pack"`), Zuschauer-Kosmetik (Avatar-Rahmen im Feed) |
-| Kaufbar | **nein**, nie. Kein Umtausch Token ↔ AP. |
+| Ausgeben | Cheers (0 AP, kosmetisch, jederzeit), **Fan-Paket** (30 AP, Gift `source: "fan"`, `kind: "fan_pack"`; wie jede Hilfe nur in einem offenen **Sponsor-Fenster**, Kap. 6.13), Zuschauer-Kosmetik (Avatar-Rahmen im Feed) |
+| Kaufbar | **nein**, nie. Kein Umtausch Token ↔ AP. Seit 2026-10-08 auch der Weg für Twitch-Zuschauer:innen (B = kostenlose Interaktion: Votes + Applaus, Kap. 8.4) |
 | Verfall | AP verfallen 30 Tage nach Erwerb (keine Wertaufbewahrung, kein Geldwert). |
 
 ### 6.2 Votes (Twists)
@@ -960,48 +1004,58 @@ Wert deutlich niedriger. Lasttest mit einem großen Einzellauf (5 000 Zuschauer,
 
 ### 6.3 Geschenk-Arten
 
-| `kind` | Inhalt | Zufall | Quellen (`source`) | Preis |
-|---|---|---|---|---|
-| `sponsor_buff` | Ein System-Sponsor aus GDD 7.4 (`sponsor_id`) | nein (bei `system`: Auswahl per Show-RNG wie GDD) | `system`, `bits`, `shop` | 150 ST / 150 Bits |
-| `gold` | Credits (`amount`: 100 oder 250) | nein | `bits`, `shop` | 50 ST / 50 Bits je 100 Credits |
-| `chest` | Sponsorkiste Bronze/Silber/Gold | **ja** | `bits` **[Policy zu prüfen; nie an `target` = Broadcaster:in, L11]**, `shop` | Kap. 6.6 |
-| `fan_pack` | 1 Wurf aus Pool `common` + Hype +5 | ja (nur `common`) | `fan` | 30 AP |
-| `cheer` | Konfetti/Applaus-Effekt, Chat-Zeile | nein | `fan`, `bits`, `shop` | 0 AP / ab 10 Bits **[sinnvoll? offen]** |
+| `kind` | Inhalt | Zufall | Quellen (`source`) | Preis | Sponsor-Fenster (Kap. 6.13) |
+|---|---|---|---|---|---|
+| `sponsor_buff` | Ein System-Sponsor aus GDD 7.4 (`sponsor_id`) | nein (bei `system`: Auswahl per Show-RNG wie GDD) | `system`, `shop` | 150 ST | nötig (außer `system`) |
+| `gold` | Credits (`amount`: 100 oder 250) | nein | `shop` | 50 ST je 100 Credits | nötig |
+| `chest` | Sponsorkiste Bronze/Silber/Gold | **ja** | `shop` | Kap. 6.6 | nötig |
+| `fan_pack` | 1 Wurf aus Pool `common` + Hype +5 | ja (nur `common`) | `fan` | 30 AP | nötig |
+| `cheer` | Konfetti/Applaus-Effekt, Chat-Zeile | nein | `fan`, `shop` | 0 AP (kostenlos) | **nicht** nötig (kosmetisch, `exempt_kinds`) |
 
-`source` ∈ `system` (Hype-Schwelle, im Kern erzeugt), `fan` (AP), `bits` (Twitch), `shop` (eigener Shop), `dev` (Test/QA, nur Debug-Builds).
+`source` ∈ `system` (Hype-Schwelle, im Kern erzeugt), `fan` (AP), `shop` (eigener Shop: Web und App-Store-IAP), `dev`
+(Test/QA, nur Debug-Builds), `bits` (**reserviert**, derzeit keine Quelle: Bits-Geschenke mit Spielwirkung bzw. gegen Bits sind
+**gestrichen per Entscheidung 2026-10-08**, Kap. 8.4; der Kern kennt den Wert weiter, damit ein späteres, L11-konformes
+Bits-Erlösmodell **[zu prüfen]** keinen Schemabruch braucht — die Event-Regeln führen ihn nicht in `rules.gifts.sources`).
 
 ### 6.4 Gift-Flow Ende-zu-Ende
 
 ```
- Zuschauer:in (Shop C / Twitch-Extension B) — eingeloggt, verknüpftes PTD-Konto, Altersstatus 18+ (L6)
+ Zuschauer:in (eigener Shop C: Web-Shop, ab S5 App-Store-IAP) — eingeloggt, PTD-Konto, Altersstatus 18+ (L6)
+ (Twitch-Extension B: nur kostenlose Votes/Applaus — Entscheidung 2026-10-08, L11; Fan-Pakete laufen ab Schritt 5 gleich)
    1. wählt Ziel (Lauf/Spieler:in) + Geschenk → Client fragt GET /gifts/quote {target, kind, tier, client_seed}
-      client_seed: Pflicht in JEDEM Kanal (auch Bits), genau 16 Hex-Zeichen (Kap. 7.2)
-      Gift-Service prüft VORAB: Fenster offen, Ziel in Show-Liga, Ziel-Altersstatus + gift_accept, Caps & Last &
-      Wirkungsschwelle (Kap. 6.10), Käufer-Alter/Geo (Positivliste)/Limits/Selbstsperre, kein Selbstgeschenk, L11
-      (keine Bits-Kiste an die Broadcaster:in), Restlaufzeit ≥ min_interval_sec + 120 s
+      client_seed: Pflicht in JEDEM Kaufkanal (Web, App), genau 16 Hex-Zeichen (Kap. 7.2)
+      Gift-Service prüft VORAB: Event-Fenster offen, **Sponsor-Fenster des Ziels offen und Platz frei, Käufer:in hat in
+      diesem Fenster noch nicht geschenkt** (Kap. 6.13; sonst E_WINDOW_CLOSED / E_WINDOW_FULL / E_WINDOW_SENDER_LIMIT
+      mit next_window_in_sec — die Oberfläche zeigt, wann das nächste Fenster öffnet), Ziel in Show-Liga,
+      Ziel-Altersstatus + gift_accept, Caps & Last & Wirkungsschwelle (Kap. 6.10), Käufer-Alter/Geo (Positivliste)/
+      Limits/Selbstsperre, kein Selbstgeschenk, Restlaufzeit ≥ min_interval_sec + 120 s
       → vergibt nonce (fortlaufend je Käufer:in & Event, ab hier verbraucht, lückenlos) und RESERVIERT den Zustellplatz
-        EXKLUSIV bis zur Zustellung (zählt sofort gegen Caps/Mindestabstand; parallele Quotes können ihn nicht belegen)
-      → Antwort: { quote_id, price, rolls, effect_pm, odds_url, expires_in: 60, substitute_rule }
+        EXKLUSIV bis zur Zustellung (zählt sofort gegen Caps/Mindestabstand **und gegen die Plätze des Sponsor-Fensters**;
+        parallele Quotes können ihn nicht belegen)
+      → Antwort: { quote_id, price, rolls, effect_pm, odds_url, expires_in: 60, sponsor_window, substitute_rule }
+        (sponsor_window = ID des reservierten Fensters; der Platz hält über das Fensterende hinaus bis zur Gnadenfrist
+        grace_sec, Standard 15 s — Zahlung und Zustellung müssen in dieser Zeit erfolgen, sonst Erstattung/kein Kauf)
       → bei gift_accept = "ask": gift_offer an die Spieler:in VOR der Zahlung (10 s); erst nach Annahme ist die Quote
         bezahlbar; Ablauf = Ablehnung (Kap. 6.11) → keine Zahlung, kein Wurf
    2. Bestätigungsdialog (vor der Zahlung, Kap. 9 „Kaufprozess“): aktuelle Wurfzahl („Sie erhalten 1 statt 4 Würfe“ bei
-      verminderter Wirkung), Kisten-Kennzahlen für genau diese Wurfzahl, Odds-Link, Ersatzregel bei Nicht-Zustellbarkeit
-      (B, Kap. 8.4) mit ausdrücklicher Bestätigung, Hinweis auf Ausgaben „heute/Monat“; Button „zahlungspflichtig bestellen“
-      (C) bzw. Bits-Bestätigung (B); bei C zusätzlich Zustimmung zum sofortigen Beginn der Leistung **[zu prüfen]**
+      verminderter Wirkung), Kisten-Kennzahlen für genau diese Wurfzahl, Odds-Link, Hinweis auf Ausgaben „heute/Monat“;
+      **kein** Countdown und keine „nur noch X Plätze“-Anzeige im Kauf-Flow (L16: der Platz ist ja schon reserviert);
+      Button „zahlungspflichtig bestellen“ + Zustimmung zum sofortigen Beginn der Leistung **[zu prüfen]**
    3. Kauf
-      C: POST /gifts {quote_id}  → Ledger: Wallet → Escrow (atomar, idempotent über quote_id); Bestätigungs-Mail
+      Web: POST /gifts {quote_id}  → Ledger: Wallet → Escrow (atomar, idempotent über quote_id); Bestätigungs-Mail
          (dauerhafter Datenträger) mit Pflichtinformationen
-      B: Extension ruft useBits(sku) → Twitch liefert Transaktionsbeleg (JWT) → Extension → EBS POST /bits/complete
-         {quote_id, receipt_jwt} → EBS prüft Signatur & SKU & Betrag → Ledger-Memo (Bits, kein Token-Escrow) → weiter mit 4.
+      App (S5): Store-Kauf → signierter Beleg → Shop-API prüft serverseitig (Kap. 8.5) → wie Web weiter mit 4.
+      (B: Bits-Kauf — gestrichen per Entscheidung 2026-10-08; früher useBits → EBS → Ledger-Memo, Kap. 8.4)
    4. Erst JETZT (Zahlung bestätigt, Platz exklusiv reserviert, Zustellung verbindlich) würfelt der Gift-Service:
       gift_id (ULID, intern), log_id (Zufalls-ID ohne Zeitbezug, öffentlich, Kap. 7.5), pity_forced aus den Zählern
       → Fairness-Service: roll_key = HMAC(server_seed, …) → contents (Kap. 7.4) → signiertes Gift-Dictionary
       → gift_log-Eintrag mit Status "rolled" (jede Wurfberechnung wird geloggt, auch spätere Erstattungen)
    5. Zustellung an die Instanz (immer Server-Sim bei Echtgeld, L14) über Game-Gateway
       (Gratis-Gifts im Client-Sim-Modus S2: an den Client, mit deliver_by_tick)
-   6. Instanz: Show.receive_gift(gift) → Gift.validate + GiftPolicy (zweite, autoritative Prüfung; wegen exklusiver
-      Reservierung im Normalfall immer erfolgreich) → Run-Log-Eintrag {"t":"gift"} → Kern wendet an der nächsten sicheren
-      Grenze an (Erkundung: sofort; Kampf: nächste Zuggrenze; Safe Room/Cutscene: danach)
+   6. Instanz: Show.receive_gift(gift) → Gift.validate + GiftPolicy (zweite, autoritative Prüfung inkl. Sponsor-Fenster des
+      Stempels gift.sponsor_window; wegen exklusiver Reservierung + Gnadenfrist im Normalfall immer erfolgreich) → Run-Log-
+      Eintrag {"t":"gift"} → Kern wendet an der nächsten sicheren Grenze an (Erkundung: sofort; Kampf: nächste Zuggrenze —
+      im Kampf öffnet kein Fenster, ein vorher geöffnetes bleibt eingefroren offen; Safe Room: sofort)
       → Ereignis gift_delivered → Darstellung: Sponsor-Drohne, Inhalt SOFORT sichtbar (keine Spannungsanimation, keine
         künstliche Verzögerung, kein Near-Miss, L12) + M.O.D.-Zeile (neutral, L13)
    7. Instanz bestätigt (ack, serverseitig) → Gift-Service → gift_log-Status "delivered" → Ledger: Escrow → verbraucht
@@ -1011,11 +1065,12 @@ Wert deutlich niedriger. Lasttest mit einem großen Einzellauf (5 000 Zuschauer,
    Fehlerpfad: Zustellung trotz Reservierung nicht möglich (Lauf endet vorzeitig: Tod/Abbruch/Disconnect; Spieler:in lehnt
       ab; Instanz-Ausfall ohne Wiederanlauf)
       → gift_log-Status "refunded" bzw. "substituted" mit Grund — der Wurf bleibt im Log und ist nach Reveal nachrechenbar
-      → C: Escrow → Wallet zurück (vollständig);  B: Kap. 8.4 (offengelegte, vorab bestätigte Ersatzleistung)
+      → Escrow → Wallet zurück (vollständig) bzw. Erstattung über PSP/Store (App)
 ```
 
 **Reservierung statt nachträglicher Ablehnung:** Gründe, die nach Kenntnis des Wurfs entstehen könnten (Cap durch
-Parallel-Gifts, Mindestabstand, Timeout), werden **vor** dem Würfeln durch die exklusive Reservierung ausgeschlossen. Was
+Parallel-Gifts, Mindestabstand, Timeout, **volles oder geschlossenes Sponsor-Fenster**), werden **vor** dem Würfeln durch die
+exklusive Reservierung ausgeschlossen. Was
 danach noch scheitern kann (Laufende, Ablehnung, Ausfall), wird mit Status geloggt; `verify_fair.py` meldet Erstattungsquoten
 je Rarität (Kap. 7.6) — eine selektive Nichtzustellung epischer Würfe wäre damit sichtbar.
 
@@ -1025,14 +1080,14 @@ sortiert) angewendet; der Server ist einziger Schreiber. **Idempotenz:** dieselb
 
 ### 6.5 Gift-Dictionary-Schema (exakt, `schema: 1`)
 
-Dieses Dictionary ist das **einzige** Geschenkformat — für System-, Fan-, Bits- und Shop-Geschenke. `Show.receive_gift(gift: Dictionary)`
+Dieses Dictionary ist das **einzige** Geschenkformat — für System-, Fan- und Shop-Geschenke (Bits: reserviert, Kap. 6.3). `Show.receive_gift(gift: Dictionary)`
 nimmt genau dieses Format; der Kern wendet genau dieses Format an (`GiftApplier` außerhalb von Kämpfen, `BattleState.apply_gift` im Kampf, Kap. 11).
 
 | Feld | Typ | Pflicht | Regeln |
 |---|---|---|---|
 | `schema` | int | ja | `1` |
 | `gift_id` | String | ja | ULID mit Präfix `g_` (System: `g_sys_<battle_n>_<k>` deterministisch); eindeutig je Lauf |
-| `source` | String | ja | `system` \| `fan` \| `bits` \| `shop` \| `dev` |
+| `source` | String | ja | `system` \| `fan` \| `bits` (reserviert, derzeit keine Quelle — Kap. 6.3) \| `shop` \| `dev` |
 | `kind` | String | ja | `sponsor_buff` \| `gold` \| `chest` \| `fan_pack` \| `cheer` |
 | `tier` | String | bei `chest` | `bronze` \| `silver` \| `gold`, sonst `""` |
 | `amount` | int | bei `gold` | Credits **vor** Wirkungsfaktor (100 \| 250), sonst `0` |
@@ -1047,6 +1102,7 @@ nimmt genau dieses Format; der Kern wendet genau dieses Format an (`GiftApplier`
 | `roll` | Dictionary | bei Zufall | `{ "commit": hex, "client_seed": hex16, "nonce": int, "log_id": String, "table_id": String, "tables_hash": hex, "rolls": int, "guarantee": "" \| "rare" \| "epic", "pity_forced": "" \| "rare" \| "epic" }`; `client_seed` = **genau 16 Zeichen `[0-9a-f]`** (kein Freitext); `log_id` = `l_` + 16 Hex-Zeichen CSPRNG ohne Zeitbezug (Kap. 7.5); bei `system`/offline: `{ "seed_stream": "show", "nonce": int, … }` |
 | `contents` | Array | bei Zufall | Ergebnis vom Server: `[{ "rarity": String, "item_id": String, "qty": int }]` bzw. `{ "rarity", "credits": int }`. Offline/System leer → Kern würfelt selbst aus Seed-Stream |
 | `run_bound` | bool | ja | immer `true` (Validierung schlägt sonst fehl) |
+| `sponsor_window` | String | nein | `""` oder `sw_<n>`: Sponsor-Fenster, dessen Platz das Geschenk hält (Kap. 6.13) — gestempelt vom Gift-Service bei der Reservierung bzw. von `Show.receive_gift` bei der Annahme; steht im Run-Log. Ein gestempeltes Geschenk wird bis `grace_sec` nach dem Fensterende noch angenommen, ein ungestempeltes nur bei offenem Fenster. `system`-Geschenke: nie |
 | `deliver_by_tick` | int | ja | `0` = keine Frist (Server-Sim). Im Client-Sim-Modus (nur Gratis-Gifts, S2): vom Gift-Service gestempelte Frist (Server-Tick-Schätzung + Toleranz); der Verifier lehnt Läufe ab, deren Log das Gift nicht bis dahin anwendet oder es fehlen lässt |
 | `issued_at` | String | ja | ISO-8601 UTC (nur Anzeige/Audit; **nie** in Kern-Logik verwendet); offline `""` |
 | `sig` | String | ab S3 | `"hmac-sha256:" + hex` über kanonisches JSON (Kap. 3.3 Nr. 9) ohne `sig`, Schlüssel = Service-Schlüssel des Gift-Service. **Zweck:** schützt das Run-Log gegen eingeschleuste Gifts; geprüft **serverseitig** (Instanz, Verifier) mit `Crypto.hmac_digest` (in Godot 4 vorhanden). **Keine** clientseitige Prüfung (ein Schlüssel im Client ist kein Geheimnis; im Client-Sim-Modus wäre sie ohnehin nutzlos). Falls Clients später doch prüfen sollen: ECDSA P-256 oder RSA über `Crypto.verify` (EC-Unterstützung in 4.7 **[zu prüfen]**); Ed25519 nur per GDExtension |
@@ -1054,20 +1110,21 @@ nimmt genau dieses Format; der Kern wendet genau dieses Format an (`GiftApplier`
 Rückgabe von `Show.receive_gift(gift: Dictionary) -> Dictionary`:
 `{ "ok": bool, "reason": String, "gift_id": String, "apply": "now" | "queued" }`. `reason` ∈ `""`, `invalid_schema`,
 `duplicate`, `league_pur`, `not_accepting`, `cap_reached`, `run_not_active`, `effect_mismatch`, `bad_signature`,
-`chest_blocked` (Wirkungsschwelle, Kap. 6.10), `deadline_missed` (Client-Sim, `deliver_by_tick`).
+`chest_blocked` (Wirkungsschwelle, Kap. 6.10), `deadline_missed` (Client-Sim, `deliver_by_tick`), `window_closed`,
+`window_full`, `window_sender_limit` (Sponsor-Fenster, Kap. 6.13 → `E_WINDOW_*`, Kap. 4.5). Prüfreihenfolge in `GiftPolicy.check`:
+Liga → Annahme/Quelle → Frist → Wirkungsfaktor → Caps → Kistenschwelle → **Sponsor-Fenster zuletzt** (ein `window_*`-Grund
+heißt also „alles andere passt, nächstes Fenster abwarten“).
 
 ### 6.6 Sponsorkisten: Stufen & Preise
 
-| Stufe | `tier` | Würfe (bei Wirkung 100 %) | Garantie | Preis Shop (C) | Direktkauf (C) | Preis Bits (B) |
-|---|---|---|---|---|---|---|
-| Bronze-Sponsorkiste | `bronze` | 2 | — | 100 ST | 0,99 € | 100 Bits |
-| Silber-Sponsorkiste | `silver` | 3 | ≥ 1× `rare` oder besser | 300 ST | 2,99 € | 300 Bits |
-| Gold-Sponsorkiste | `gold` | 4 | ≥ 1× `epic` | 800 ST | 7,99 € | 800 Bits |
+| Stufe | `tier` | Würfe (bei Wirkung 100 %) | Garantie | Preis Shop (C) | Direktkauf (C) |
+|---|---|---|---|---|---|
+| Bronze-Sponsorkiste | `bronze` | 2 | — | 100 ST | 0,99 € |
+| Silber-Sponsorkiste | `silver` | 3 | ≥ 1× `rare` oder besser | 300 ST | 2,99 € |
+| Gold-Sponsorkiste | `gold` | 4 | ≥ 1× `epic` | 800 ST | 7,99 € |
 
-**Bits-Preise:** In der Bits-Kauf-UI werden **nur Bits** angezeigt, mit Hinweis/Link auf die aktuellen Twitch-Bits-Preise.
-**Keine Euro-Schätzung** im Kauf-Flow: Zuschauer:innen kaufen Bits in Paketen zu unterschiedlichen (in der Regel höheren als
-1 Cent je Bit) Preisen **[Bits-Preise zu prüfen]**; eine Euro-Umrechnung wäre irreführend. Limits für Bits werden in Bits
-geführt (Kap. 8.9).
+~~Preis Bits (B): 100 / 300 / 800 Bits~~ — **gestrichen per Entscheidung 2026-10-08** (keine Echtgeld-Geschenke über Bits,
+Kap. 8.4). App-Store-Preise (S5) folgen den Preisstufen der Stores, dieselben Würfe/Odds **[Preisstufen zu prüfen]**.
 
 **Sponsor-Token-Pakete (C):** 100 ST = 0,99 € · 500 ST = 4,99 € · 1 000 ST = 9,99 € · 2 000 ST = 19,99 € — **keine
 Bonus-Token** bei größeren Paketen (Transparenz). Das 100-ST-Paket und der **Direktkauf einzelner Kisten in Euro ohne Token**
@@ -1152,7 +1209,8 @@ Zählern; das Feld steht im Gift-Dictionary und im öffentlichen Log.
   Übrig bleiben nur Statistik, Replay, Bestenlisten-Eintrag, Profil-Belohnungen (Kap. 1.6).
 - Koop: Gift-Inhalte gehen in das **Team-Inventar** des Ziels (eine Sendung, ein Inventar, Kap. 1.4). Eine Übergabe an
   andere Teams/Läufe ist technisch ausgeschlossen (verschiedene Instanzen, kein Fallenlassen/Handeln zwischen Instanzen).
-- Keine Auszahlung, kein Rücktausch in Token/AP/Bits, keine Marktplätze, keine Account-Übertragung von Inhalten.
+- Keine Auszahlung, kein Rücktausch in Token/AP, keine Marktplätze, keine Account-Übertragung von Inhalten; Echtgeld fließt nur
+  an den Betreiber, nie an Spieler:innen oder Streamer:innen (L11).
 
 ### 6.10 Caps & abnehmende Wirkung (L4)
 
@@ -1188,8 +1246,8 @@ die beim Kauf angezeigte und bestätigte Wurfzahl; die Abweichung ist im Log nac
 | `sponsor_buff` | Heilung/MP in % × `effect_pm` / 1000 (Ganzzahl); Status-Dauer `max(1, (3 * effect_pm + 500) // 1000)` Züge |
 | `fan_pack` | Wurf unverändert, Hype-Bonus `(5 * effect_pm + 500) // 1000` |
 
-Warum Sperre statt Preisstaffel: Bits-SKUs haben feste Preise, eine Preisskalierung mit `effect_pm` ist für B nicht
-abbildbar. Mit der Schwelle zahlt niemand den vollen Preis für einen Bruchteil (z. B. früher: Gold-Kiste bei L = 24 → 1 Wurf
+Warum Sperre statt Preisstaffel: Kistenpreise sind fest (Shop-Preise, App-Store-Preisstufen), eine Preisskalierung mit
+`effect_pm` wäre intransparent bzw. im Store nicht abbildbar. Mit der Schwelle zahlt niemand den vollen Preis für einen Bruchteil (z. B. früher: Gold-Kiste bei L = 24 → 1 Wurf
 statt 4); innerhalb der Schwelle wird die Minderung offengelegt und bestätigt **[Verbraucherrecht/Preistransparenz zu prüfen]**.
 
 **Harte Caps** (Show-Liga-Standard, in `events.json → rules.gifts`):
@@ -1204,7 +1262,8 @@ statt 4); innerhalb der Schwelle wird die Minderung offengelegt und bestätigt *
 | Verkaufsschluss | kein Verkauf, wenn die Restlaufzeit des Ziels (Fenster bzw. `max_run_wall_sec`) < `min_interval_sec` × (Warteschlangenlänge + 1) + 120 s Puffer |
 | Geschenke pro Kampf | externe max. 1; **gesamt** inkl. System-Geschenke max. `SponsorSystem.MAX_GIFTS_PER_BATTLE` / `MAX_GIFTS_PER_BOSS_BATTLE` (02_TECH §6.1: 1 / 2; GDD 7.4 nennt 2 / 3 — Abgleich offen) — überzählige warten bis Kampfende |
 | Pro Käufer:in → gleiches Ziel und Event | max. 5 Geschenke |
-| Pro Käufer:in Ausgaben | Kap. 8.9 (EUR- **und** Bits-Limits, an die verifizierte Identität gekoppelt) |
+| **Sponsor-Fenster** (Kap. 6.13) | Geschenke nur bei offenem Fenster; je Fenster `slots_per_player` Plätze (3) je Ziel; je Zuschauer:in `per_viewer` (1) Geschenk je Fenster; `cheer` ausgenommen |
+| Pro Käufer:in Ausgaben | Kap. 8.9 (EUR-Limits, an die verifizierte Identität gekoppelt) |
 
 Caps werden **zweimal** geprüft: im Gift-Service vor dem Kauf (**exklusive Reservierung** des Zustellplatzes bis zur
 Zustellung, damit niemand für ein abgelehntes Geschenk bezahlt und parallele Käufe nicht kollidieren) und im Kern bei der
@@ -1229,7 +1288,7 @@ Gift-Service bei der Quote.
 
 Zusätzlich: Absender blockieren (Liste je Spieler:in), „Geschenkpause“ für 10 min (Streamer-Hotkey).
 Abgelehnte Geschenke: bei `ask` vor der Zahlung → keine Kosten; nach Zahlung (Laufende/Ausfall) Erstattung an Käufer:in
-(Kap. 8.6) bzw. Ersatzleistung bei B (Kap. 8.4).
+(Kap. 8.6). (Die frühere Ersatzleistung für Bits entfällt mit Kap. 8.4.)
 
 ### 6.12 M.O.D.-Zeilen (neue Keys in `mod_lines.json`)
 
@@ -1251,9 +1310,99 @@ nie gegen Zuschauer:innen. `{sender}` ist standardmäßig „ein anonymer Fan“
 | `fan_pack_received` | `{sender}` | „Ein Applaus-Paket von {sender}. Echte Begeisterung — die Aktionäre wissen nicht, wie man die bilanziert.“ |
 | `live_closing` | `{min}` | „Noch {min} Minuten bis Sendeschluss. Danach geht hier das Licht aus. Und die Etage.“ |
 | `vote_open` | — | „Das Publikum entscheidet! Demokratie, aber mit Werbeunterbrechung.“ |
+| `sponsor_window_open` | `{seconds}`, `{count}` | „Sponsor-Fenster offen: {seconds} Sekunden, {count} Plätze. NOVA SYNDIKAT nennt das Bürgerbeteiligung.“ (Variante: „… Helfen ist freiwillig, Zuschauen zählt genauso. Nur Zugluft ist Pflicht.“) |
+| `sponsor_window_open:safe_room` | `{seconds}` | „Werbepause mit Sponsor-Fenster, {seconds} Sekunden lang. Wer nur zuschaut, macht auch alles richtig.“ |
+| `sponsor_window_open:boss` | `{seconds}` | „Boss-Countdown! Das Sponsor-Fenster ist {seconds} Sekunden offen. Danach zählt nur noch Können. Und Glück.“ |
+| `sponsor_window_closed` | — | „Sponsor-Fenster zu. Die Regie nennt das Programmstruktur. Ich nenne es: Durchzug verhindern.“ |
+| `sponsor_window_full` | `{count}` | „Alle {count} Plätze im Sponsor-Fenster belegt. Danke – auch dem stillen Publikum. Das zählt hier am meisten.“ |
 | `twist_applied_<id>` | — | je Twist eine Zeile |
 
 `gift_msg_*` (vordefinierte Absender-Botschaften, z. B. `gift_msg_go_team` „Weiter so!“, `gift_msg_for_mopsula` „Für den Grafen!“).
+Sponsor-Fenster-Zeilen (Kap. 6.13) spricht M.O.D. nur in Event-/Live-Läufen, die Zuschauer-Geschenke annehmen; sie nennen Zeit
+und Plätze als Programminformation, nie einen Preis, nie einen Kaufaufruf, nie „schnell, nur noch …“ (L13, L16). In der
+Kampagne bleibt es beim dezenten Hinweis im Overlay.
+
+### 6.13 Sponsor-Fenster (Nutzerentscheidung 2026-10-08, L16)
+
+> Entscheidung (2), Brief Kap. 5: „Zuschauer:innen können **nur begrenzt oft** und **nur zu bestimmten Zeiten** helfen.“
+
+**Idee:** Hilfe kommt wie ein Werbeblock — zu festen Programmpunkten, mit wenigen Plätzen. Das begrenzt die Spielwirkung
+zusätzlich zu den Caps (Kap. 6.10), macht Hilfe zum Show-Moment statt zum Dauerstrom und gibt Spieler:innen planbare Phasen
+ohne Eingriffe von außen.
+
+**Fensterarten** (höchstens **ein** offenes Fenster; Werte = Standard für Kampagne/Offline und jedes Event ohne eigene Angabe):
+
+| Art (`kind`) | öffnet | offen | Plätze | Bemerkung |
+|---|---|---|---|---|
+| `periodic` | alle `periodic.every_sec` = **300 s Erkundungszeit** (das erste nach `first_sec` = 300 s) | `open_sec` = **60 s** | 3 | fällig, während ein anderes Fenster offen ist → entfällt (der Countdown startet neu) |
+| `safe_room` | beim **Betreten eines Safe Rooms** (je Safe Room und Etage einmal, `once_per_room`) | solange drinnen, höchstens `max_sec` = **90 s** | 3 | ersetzt ein offenes Fenster (`superseded`); Verlassen schließt (`left`) |
+| `boss` („**Boss-Countdown**“) | beim **ersten** Betreten des Quartier- bzw. Etagenboss-Raums | `countdown_sec` = **45 s** | 3 | ersetzt ein offenes Fenster; beginnt der Bosskampf vorher, bleibt der Rest eingefroren offen (s. u.) |
+| `dev` | QA-Command `{"t": "sponsor_window", "op": "dev_open", "sec", "slots"}` (Debug-Overlay F5, Tests) | ≤ 600 s | ≤ 16 | nur mit `dev_open: true` (Kampagne/Offline); Live-Events müssen `false` setzen (EventDef prüft das), Server nehmen den Command nie von Clients an |
+
+**Uhr (normativ, deterministisch):** Alles in Lauf-Ticks (`RunSim`, Kap. 3.2), Ganzzahlen, keine Uhrzeit. Ein offenes Fenster
+zählt auf **jedem** Lauf-Tick herunter, der periodische Countdown nur auf **Erkundungs**-Ticks. Im Safe Room laufen
+**Leerlauf-Ticks** (Lauf-Uhr ja, Etagen-Timer/Hype-Zerfall/Streuner nein), damit „höchstens 90 s“ in Ticks gilt und
+Replay/Verifier es nachrechnen. **Im Kampf steht die Lauf-Uhr** (`explore_only`): Es öffnet und schließt kein Fenster, der
+Countdown pausiert; ein **vor** dem Kampf geöffnetes Fenster bleibt mit seiner Restzeit offen — darin angenommene Geschenke
+warten wie bisher bis zur nächsten Zuggrenze (max. 1 externes je Kampf, Kap. 6.10), weitere bis zum Kampfende. Ein
+Etagenwechsel schließt (`floor`) und startet den Countdown neu. (`realtime`, S4: die Lauf-Uhr ist die Wanduhr, Fenster liefen
+auch im Kampf — vor S4 festlegen, Kap. 12.2.)
+
+**Plätze und Limits** (zusätzlich zu allen Caps aus Kap. 6.10):
+- `slots_per_player` (3) Plätze je Fenster und Ziel, **wer zuerst kommt** — der Gift-Service reserviert bei der Quote
+  (Kap. 6.4); in der Instanz halten angenommene, noch auf eine Zuggrenze wartende Geschenke ihren Platz.
+- `per_viewer` (1) Geschenk je Zuschauer:in (`sender_ref`) und Fenster; unbekannter Absender (`""`, nur `dev`) ohne dieses Limit.
+- `exempt_kinds` (`cheer`): kosmetisch, braucht kein Fenster, belegt keinen Platz. System-Geschenke (Hype-Schwellen, GDD 7.4)
+  gehören zum Grundspiel und sind nie betroffen.
+- Gnadenfrist `grace_sec` (15 s): Ein mit `sponsor_window` gestempeltes Geschenk (Reservierung bei der Quote) wird bis 15 s
+  nach dem Fensterende noch angenommen — nur in die Plätze **seines** Fensters. Ungestempelte nur bei offenem Fenster.
+
+**Ablehnung** (Instanz-Kern und Gift-Service mit derselben Regel; Kern-Grund → Protokollcode, Kap. 4.5):
+
+| Lage | Grund (`Show.receive_gift`) | Code |
+|---|---|---|
+| kein Fenster offen (bzw. Stempel weder offen noch in der Gnadenfrist) | `window_closed` | `E_WINDOW_CLOSED` |
+| alle Plätze belegt oder reserviert | `window_full` | `E_WINDOW_FULL` |
+| diese:r Zuschauer:in hat in diesem Fenster schon geschenkt | `window_sender_limit` | `E_WINDOW_SENDER_LIMIT` |
+
+Jede Ablehnung trägt `next_window_in_sec` (nächstes periodisches Fenster in Erkundungszeit; pausiert in Kampf und Safe Room,
+deshalb als „ca.“ anzeigen). Shop, Extension und Overlay **zeigen**, wann das nächste Fenster öffnet — sie werben nicht damit.
+
+**Server-Autorität (Kap. 3):** Der Fensterzustand gehört zum Lauf (`GameState.flags["live"]["sponsor"]`: `seq`, `next_in`,
+`open`, `last` (Gnadenfrist), `rooms`, `exempt`; im `StateHash` und im Save) und wird nur vom Kern geschrieben. Die Instanz
+(S3+) entscheidet; der Gift-Service fragt den Zustand an und reserviert; der Verifier rechnet Fenster aus Ticks und Commands
+nach und meldet Geschenke außerhalb (`RunSim.replay` → `errors`, Kap. 3.7). Client-Sim (S0–S2): nur Gratis-Geschenke, Grenzen
+von Grad A wie bisher.
+
+**Ablauf im Kern** (Slice, Modul M8, CR-15): `SponsorWindows` (Regeln, Fahrplan, Prüfung, Buchung) · `RunSim` (Uhr = Schritt 5
+jedes Ticks; Auslöser `floor`, Erstbesuch `room` einer Boss-Zelle, `safe_room`, `safe_room_exit`, `sponsor_window`) ·
+`GiftPolicy.check` (Fenster **zuletzt**) · `GiftPolicy.note_applied` (Platz buchen bei Anwendung). `Game` ruft dieselben
+`RunSim.sponsor_*()` aus seinen aufzeichnenden Methoden und sendet `Events.sponsor_window_opened(window)` /
+`sponsor_window_closed(id, reason)` (Gründe `time`, `left`, `superseded`, `floor`); `Show.receive_gift` (einziger Eingang)
+stempelt angenommene Geschenke mit `sponsor_window` und sendet beim Buchen `sponsor_window_updated(window)`.
+
+**Darstellung:** TV-Badge am rechten Ende des Laufbands: in Event-/Live-Läufen mit Geschenken „**SPONSOR-FENSTER OFFEN · 0:45 ·
+2/3 Plätze**“ (Gold-Plakette), „… VOLL …“, geschlossen „**Nächstes Fenster in 3:12**“; in der Kampagne dieselbe Information als
+dezente Zeile ohne Plakette und ohne M.O.D.-Zeilen; Pur-Liga ohne Badge (es gibt dort keine Fenster). M.O.D.-Zeilen Kap. 6.12.
+Ansicht: `docs/screenshots/overlay_sponsor_window.png` (`check.sh --shot res://scenes/ui/show_overlay.tscn`, Demo-Werte).
+
+**Daten** (`events.json → rules.sponsor_windows`, Kap. 10.1; Ganzzahlen/Bools, fehlende Schlüssel = Standard, geht in `rules_hash`):
+
+```json
+"sponsor_windows": { "enabled": true, "slots_per_player": 3, "per_viewer": 1, "grace_sec": 15, "exempt_kinds": ["cheer"],
+  "periodic": { "enabled": true, "first_sec": 300, "every_sec": 300, "open_sec": 60 },
+  "safe_room": { "enabled": true, "max_sec": 90, "once_per_room": true },
+  "boss": { "enabled": true, "countdown_sec": 45 }, "dev_open": false }
+```
+
+Fenster laufen nur, wenn der Lauf Zuschauer-Geschenke überhaupt annimmt (`enabled`, `rules.gifts.enabled`, nicht Pur-Liga);
+die Offline-Events des Slice (Pur-Liga) haben deshalb keine, die Kampagne die Standardwerte (QA-Geschenke per Debug-Overlay).
+
+**Spielerschutz (L13, L16):** Countdown + knappe Plätze können als künstliche Dringlichkeit wirken (CPC-Grundsätze, DSA
+Art. 25 **[zu prüfen]**, R15). Deshalb: Restzeit und Plätze nur als Programminformation im Overlay; **im Kauf-Flow** weder
+Countdown noch „nur noch X Plätze“ (der Platz ist dort schon reserviert); keine Push-/Chat-Hinweise „Fenster offen“; M.O.D.-Zeilen
+ohne Kaufbezug; kostenlose Fan-Pakete nutzen dieselben Fenster (ein Fenster ist kein Kaufmoment); Limits/Selbstsperre unverändert.
+Koop (S4): Plätze je Spieler:in (`slots_per_player`), Fenster je Team (eine Sendung) — bei S4 festlegen.
 
 ---
 
@@ -1276,7 +1425,7 @@ bleibt und die Zustellung vor dem Würfeln verbindlich ist (s. u.) — und (c) j
 | **Selektive Nichtzustellung**: Server kennt das Ergebnis vor der Zustellung und erstattet unliebsame (z. B. epische) Würfe | Würfeln **erst nach** Zahlung **und** exklusiver Reservierung (Zustellung verbindlich, Kap. 6.4); `nonce` beim Quote vergeben und lückenlos; Gift-Log enthält **jede** Wurfberechnung mit Status (`delivered`, `refunded`, `substituted`); `verify_fair.py` meldet Nonce-Lücken und Erstattungsquoten je Rarität | verbleibende Fehlerpfade (Laufende, Ausfall) — sichtbar über Statistik |
 | **Insider/Leck**: Wer `server_seed` vor dem Reveal kennt, kann bei frei wählbarem `client_seed` offline Seeds durchprobieren, bis „episch“ kommt | `server_seed` nur im HSM/KMS; Zugriff nur über Vier-Augen-Prinzip mit Audit-Log; Gift-Service erhält nur `roll_key`-Berechnungen über eine Schnittstelle, nie den Seed selbst; Rate-Limit + Anomalie-Erkennung (auffällige Epic-Quote je `sender_ref`) | nicht vollständig ausschließbar — offen benennen |
 | Betreiber unterschlägt Käufe ganz | Belege an Käufer:innen, Abgleich im Log, externer Audit | — |
-| Kanal ohne `client_seed` (früher: Bits) | `client_seed` in jedem Kanal Pflicht (Quote) | bis zur Umsetzung ist B **nicht** vollständig nachprüfbar (Kap. 7.7) |
+| Kanal ohne `client_seed` (früher: Bits — Kanal gestrichen 2026-10-08) | `client_seed` in jedem Kaufkanal Pflicht (Quote; Web-Shop, App-IAP) | ein neuer Kanal ohne `client_seed` ist **nicht** vollständig nachprüfbar (Kap. 7.7) |
 
 ### 7.2 Ablauf (Commit-Reveal)
 
@@ -1404,8 +1553,9 @@ Käufe unterschlägt. Offen zu benennen (Odds-Seite, FAQ):
   senken, aber beseitigen das Risiko nicht.
 - **Selektionsrisiko über Fehlerpfade:** Nach dem Würfeln kann eine Zustellung noch scheitern (Laufende, Ausfall). Diese
   Fälle stehen mit Status im Log; Erstattungsquoten je Rarität sind öffentlich prüfbar.
-- **Variante B:** Solange der `client_seed` im Bits-Flow nicht ab der Quote übertragen und im Beleg ausgegeben wird, ist B
-  **nicht vollständig** nachprüfbar und darf nicht als „nachprüfbar fair“ beworben werden (Kap. 9, Werbeaussagen).
+- **Neue Kaufkanäle** (z. B. App-IAP, S5): Solange ein Kanal den `client_seed` nicht ab der Quote überträgt und im Beleg
+  ausgibt, ist er **nicht vollständig** nachprüfbar und darf nicht als „nachprüfbar fair“ beworben werden (Kap. 9,
+  Werbeaussagen). (Früher für Variante B formuliert — Bits-Geschenke sind seit 2026-10-08 gestrichen.)
 Daher zusätzlich: Belege an Käufer:innen und **externer Audit** der Tabellen, der Implementierung **und der Fehlerpfade**
 (Erstattung, Timeout, Reservierungs-Kollision, Instanz-Ausfall) vor S3 **[Anbieter/Format zu prüfen]**.
 
@@ -1415,19 +1565,24 @@ Daher zusätzlich: Belege an Käufer:innen und **externer Audit** der Tabellen, 
 
 ### 8.1 Überblick
 
-| | **B: Twitch Bits** | **C: Eigener Shop (Sponsor-Token)** |
-|---|---|---|
-| Ab | S3 | S5 |
-| Wer kauft | Twitch-Zuschauer:innen im Kanal einer streamenden Person | Zuschauer:innen mit PTD-Account (Web, später Mobile) |
-| Erlös an | nach unserem Kenntnisstand **an die Broadcaster:in**, nicht an Extension-Entwickler **[zu prüfen — entscheidend für Business-Case]**. Bei Streamer-Läufen ist die Broadcaster:in oft **selbst die beschenkte Spieler:in** → Echtgeld fließt indirekt von Käufer:in zum Empfänger der Zufallsinhalte (Kap. 9, Gutachtenfrage) | uns (abzüglich MoR/PSP-Gebühren, Steuern) |
-| Vertragspartner:in der Käufer:in | **[zu prüfen]** (Twitch für den Bits-Kauf; für die Kiste wir? Twitch?) — bestimmt Gewährleistung, Ersatzregel, Erstattung | wir bzw. MoR (Kap. 8.5) |
-| Zufallskisten | **[zu prüfen: Twitch-Richtlinien zu Bits für Zufallsinhalte; Fallback: B nur für `gold`/`sponsor_buff`/`cheer`]**; **gesperrt** für `target.player_id == broadcaster`, bis das Gutachten zum Erlösfluss vorliegt (L11, Fallback wie R2) | ja, mit allen Leitplanken |
-| Altersnachweis | über Twitch nach unserem Kenntnisstand nicht möglich **[zu prüfen]** → **alle** Bits-Geschenke (auch `gold`/`sponsor_buff`/`cheer` gegen Bits) nur für Käufer:innen mit **verknüpftem PTD-Account mit Altersstatus 18+** (L6) **[Zulässigkeit zu prüfen]** | im Account (Kap. 8.9) |
-| Limits / Selbstsperre | über das verknüpfte PTD-Konto, Limits in Bits (Kap. 8.9) | im Account (Kap. 8.9) |
-| Erstattung | durch Twitch geregelt, für uns nach unserem Kenntnisstand nicht steuerbar **[zu prüfen]** | durch uns + MoR/PSP |
+**Grundsatz (Nutzerentscheidung 2026-10-08, L11):** Echtgeld von Zuschauer:innen fließt **ausschließlich an Spiel/Betreiber** —
+nie an die Spielerin/den Spieler (Crawler), nie an Streamer:innen. Daraus folgt:
 
-Folgerung: **B ist Reichweiten- und Streamer-Motor**, **C ist das eigene Erlösmodell**. Basis-Monetarisierung laut Brief
-(Premium-Kauf/Unlock) bleibt unverändert.
+| | **C: Eigener Shop (Sponsor-Token / Direktkauf)** — **primär** | **B: Twitch** — **nur kostenlos** |
+|---|---|---|
+| Ab | S3 (Web-Shop), S5 (App-Store-IAP) | S2 (Votes), S3 (Anzeige Sponsor-Fenster) |
+| Wer | Zuschauer:innen mit PTD-Account (Web, später App) | Twitch-Zuschauer:innen im Kanal einer streamenden Person |
+| Was | bezahlte Geschenke (`gold`, `sponsor_buff`, `chest`) in Sponsor-Fenstern (Kap. 6.13) | Votes, Applaus (AP) + Fan-Pakete, Anzeige von Odds/Feed/Sponsor-Fenster — **keine Bits-Produkte** |
+| Erlös an | **uns** (abzüglich MoR/PSP- bzw. Store-Gebühren, Steuern) | — (kein Echtgeld). *Bits-Erlöse gingen nach unserem Kenntnisstand an die Broadcaster:in* **[zu prüfen]** *— unvereinbar mit L11; deshalb ist das frühere Bits-Geschenkmodell gestrichen* |
+| Vertragspartner:in der Käufer:in | wir bzw. MoR (Kap. 8.5); im App-Store der Store als Wiederverkäufer **[zu prüfen]** | — |
+| Zufallskisten | ja, mit allen Leitplanken | — |
+| Altersnachweis, Limits, Selbstsperre | im Account (Kap. 8.9) | — (kostenlose Interaktion; Jugendschutz/DSA/DSGVO wie S2) |
+| Erstattung | durch uns + MoR/PSP bzw. Store (Kap. 8.6) | — |
+
+Folgerung: **C ist das (einzige) Echtgeld-Modell**, B der Reichweiten- und Streamer-Motor **ohne Geld**. Ein Bits-Geschenk mit
+Spielwirkung käme nur in Frage, wenn es ein Erlösmodell gibt, bei dem der Erlös an uns (Entwickler) geht und die
+Broadcaster:in nichts erhält **[zu prüfen: Twitch-Monetarisierungsregeln für Extensions]** — dann als eigene Stufe mit neuer
+Rechtsprüfung. Basis-Monetarisierung laut Brief (Premium-Kauf/Unlock) bleibt unverändert.
 
 ### 8.2 Sponsor-Token & Wallet
 
@@ -1447,7 +1602,9 @@ Folgerung: **B ist Reichweiten- und Streamer-Motor**, **C ist das eigene Erlösm
 Sichten nur als Cache), Idempotenz-Schlüssel je externem Ereignis (PSP-Event-ID, Twitch-Transaktions-ID, `quote_id`),
 eigene Postgres-Datenbank, Constraint-Prüfung in der Datenbank, tägliche Abstimmung gegen Anbieter-Berichte.
 
-**Währungen:** `EUR` (Cent), `ST` (Token), `BITS` (nur Memo/Statistik — wir halten keinen Bits-Wert).
+**Währungen:** `EUR` (Cent), `ST` (Token). (~~`BITS` als Memo~~ — gestrichen 2026-10-08, keine Bits-Geschenke.)
+**Keine Konten und keine Transaktionsarten für Auszahlungen oder Beteiligungen an Personen** (L11): Erlöse landen nur auf
+`revenue:*`; die früher geplanten `liability:creator_payable:*` / `creator_accrual` / `creator_payout` sind gestrichen (Kap. 8.8).
 
 **Konten** (Schema `<klasse>:<name>[:<id>]`):
 
@@ -1462,7 +1619,7 @@ eigene Postgres-Datenbank, Constraint-Prüfung in der Datenbank, tägliche Absti
 | `user:<id>:wallet` | Token-Konto (ST) | Guthaben der Person |
 | `escrow:gift:<gift_id>` | Token-Konto (ST) | reservierte Token bis Zustellung |
 | `system:token_mint` / `system:token_burn` | Token-Gegenkonten | Ausgabe / Verbrauch |
-| `memo:bits:<channel>` | Memo (BITS) | Bits-Geschenke je Kanal (Statistik, Abstimmung) |
+| ~~`memo:bits:<channel>`~~ | — | gestrichen 2026-10-08 (keine Bits-Geschenke) |
 
 **Beispiel-Buchungen** (Paket 1 000 ST für 9,99 € inkl. 19 % USt, ohne MoR — mit MoR entfällt die USt-Zeile, der
 MoR rechnet netto ab **[Buchungslogik mit Steuerberatung festlegen]**):
@@ -1486,64 +1643,49 @@ MoR rechnet netto ab **[Buchungslogik mit Steuerberatung festlegen]**):
 Umsatzrealisierung je Token: `deferred_revenue_per_st` des **Kaufpakets** (FIFO über Pakete, Restcent-Ausgleich je Paket).
 Ob USt beim Token-Kauf oder bei Einlösung entsteht (Einzweck-/Mehrzweck-Gutschein, EU-Gutscheinrichtlinie) **[zu prüfen]**.
 
-### 8.4 Variante B: Twitch Bits (S3)
+### 8.4 Variante B: Twitch — nur kostenlose Interaktion
 
-```
-Extension-Frontend (Overlay/Panel)
-  ├─ Twitch-Ext-Helper: Auth (JWT mit opaker Nutzer-ID, Kanal-ID) → EBS
-  ├─ Kaufknöpfe nur bei verknüpftem PTD-Konto mit Altersstatus 18+ (sonst nur Odds/Feed, Kap. 5.4)
-  ├─ GET /gifts/quote {target, kind, tier, client_seed} (EBS → Gift-Service)
-  │     → Prüfungen Kap. 6.4 inkl. L11 (keine Kiste an die Broadcaster:in), Limits in Bits, Selbstsperre
-  │     → nonce vergeben, Zustellplatz exklusiv reserviert; Antwort mit rolls, Ersatzleistung (substitute_rule)
-  ├─ Bestätigungsdialog (Wurfzahl, Odds-Link, Ersatzleistung ausdrücklich bestätigen, Ausgaben heute/Monat in Bits)
-  ├─ twitch.ext.bits.useBits(sku)            SKUs: gift_bronze_100, gift_silver_300, gift_gold_800, gift_credits_50, gift_buff_150
-  └─ onTransactionComplete(receipt) → POST /bits/complete {quote_id, receipt_jwt}
-EBS: Signatur des Belegs mit Extension-Secret prüfen, sku/cost/user/channel/transactionId prüfen, Idempotenz über transactionId
-     → Ledger memo:bits → Gift-Service (Würfeln mit dem bei der Quote übermittelten client_seed, Zustellung)
-     → Antwort an Extension (Beleg inkl. client_seed, nonce, log_id, commit)
-```
+**Entscheidung 2026-10-08 (L11):** Über Twitch fließt **kein** Echtgeld in Geschenke. Die Twitch-Extension (EBS + Overlay/Panel)
+bietet Votes (Kap. 6.2), Applaus/Fan-Pakete (Kap. 6.1, `source: "fan"`), Odds, Gift-Feed und die Anzeige des Sponsor-Fensters
+(`spec_window`, Kap. 4.6). Auth über Twitch-Ext-Helper (JWT mit opaker Nutzer-ID, Kanal-ID) → EBS; Fan-Pakete gehen wie jedes
+Geschenk durch Sponsor-Fenster und Caps. Ein Hinweis auf den eigenen Web-Shop nur, soweit die Twitch-Richtlinien das
+erlauben **[zu prüfen]**, und nie als Kaufaufruf (L13).
 
-**[zu prüfen — alles in diesem Block]:** exakte Twitch-APIs/Belegformate (Ext-Helper `useBits`, Transaktionsbeleg-JWT,
-EventSub-Abo für Extension-Bits-Transaktionen), Extension-Review- und Monetarisierungs-Voraussetzungen, **Richtlinien zu
-zufallsbasierten Inhalten gegen Bits**, Twitch-Richtlinien zu Glücksspiel-ähnlichen Inhalten im Stream (Streamer:in öffnet
-bezahlte Zufallskisten live), Erstattungs-/Rückbuchungsweg bei Bits, Datennutzung (IP-Geolokalisierung im EBS).
+**Gestrichen per Entscheidung 2026-10-08** (Kurzfassung des früheren Plans, nur als Historie): Bits-SKUs (`gift_bronze_100`,
+`gift_silver_300`, `gift_gold_800`, `gift_credits_50`, `gift_buff_150`) über `useBits`, Transaktionsbeleg → EBS → Ledger-Memo →
+Gift-Service; Zufallskisten an die Broadcaster:in gesperrt; Ersatzleistung (Cheer + Fan-Kosmetik) für nicht zustellbare
+Bits-Geschenke. Grund: Bits-Erlöse gehen nach unserem Kenntnisstand an die Broadcaster:in **[zu prüfen]** — bei Streamer-Läufen
+oft die beschenkte Person selbst — und widersprechen damit „Echtgeld nur an den Betreiber“.
 
-**Nicht zustellbare Bits-Geschenke** (Bits sind für uns nach unserem Kenntnisstand nicht rückbuchbar **[zu prüfen]**):
-1. **Technisch vermeiden:** exklusive Reservierung des Zustellplatzes ab der Quote bis zur Zustellung (Kap. 6.4); **kein
-   Verkauf**, wenn der Ziel-Lauf voraussichtlich in weniger als `min_interval_sec` × (Warteschlange + 1) + 120 s Puffer endet;
-   Instanz-Wiederanlauf nach Crash (Kap. 3.6). Übrig bleiben nur Laufende durch Tod/Abbruch/Disconnect.
-2. **Erstattung bevorzugt:** Ob und wie eine Erstattung von Bits über Twitch möglich ist, wird mit Twitch geklärt
-   **[zu prüfen]**. Ist sie möglich, wird erstattet.
-3. **Ersatzleistung nur offengelegt und vorab bestätigt:** Solange keine Erstattung möglich ist, wird die Ersatzleistung
-   **vor dem Kauf** im Bestätigungsdialog deutlich angezeigt und muss ausdrücklich bestätigt werden (keine einseitige
-   Leistungsänderung): (a) Zustellung an dasselbe Ziel **nach** Ablauf des Mindestabstands, falls Lauf noch aktiv und Cap
-   frei; sonst (b) `cheer` + **Fan-Kosmetik** für die Käufer:in. Keine Token-Gutschrift aus Bits (vermeidet
-   Bits→gespeicherter-Wert-Konstrukt) **[mit Twitch-Richtlinien abgleichen]**. Vereinbarkeit mit Gewährleistungsrechten für
-   digitale Produkte (§§ 327 ff. BGB) und AGB-Recht sowie die Vertragspartnerfrage stehen als eigene Zeile in Kap. 9 **[zu prüfen]**.
+**Offen [zu prüfen]:** Gibt es ein Erlösmodell für Extension-Entwickler (Bits-Anteil o. Ä.), bei dem der Erlös **nicht** an die
+Broadcaster:in geht? Nur dann wäre eine Bits-Variante überhaupt denkbar — als eigene Stufe mit Rechtsprüfung, allen
+Leitplanken (inkl. `client_seed`, Limits in Bits, Altersnachweis über das verknüpfte PTD-Konto) und Sponsor-Fenstern.
 
-### 8.5 Variante C: Eigener Shop (S5)
+### 8.5 Variante C: Eigener Shop (primär; S3 Web, S5 App)
 
-**Web:** Konto → Altersnachweis (18+, für alle Echtgeld-Geschenke) → Limits aktiv → Paketkauf bzw. Direktkauf einer Kiste über **Merchant of Record** (übernimmt USt/Verkaufssteuer
+**Web (S3):** Konto → Altersnachweis (18+, für alle Echtgeld-Geschenke) → Limits aktiv → Paketkauf bzw. Direktkauf einer Kiste über **Merchant of Record** (übernimmt USt/Verkaufssteuer
 weltweit, Rechnungen, viele Zahlarten, Chargebacks) — Kandidaten z. B. Paddle, Xsolla, FastSpring **[Eignung für virtuelle
 Währung/Zufallsinhalte und Geo-Sperren zu prüfen; manche MoR schließen Glücksspiel-nahe Produkte aus]**; Alternative PSP
 (Stripe/Adyen) + eigene Steuerabwicklung (EU-OSS) **[zu prüfen]**. Gutschrift **nur** per signiertem Webhook (Signaturprüfung,
 Idempotenz über Event-ID), nie per Client-Rückkehr-URL.
 
-**Mobile (optional, nach S5):** Digitale Güter in Apps → In-App-Kauf über App Store / Google Play **[Store-Regeln für
-Geschenke an andere Nutzer:innen und Odds-Offenlegung zu prüfen]**. Belegprüfung **nur serverseitig**:
+**Mobile (S5, zweiter Kanal von C):** Digitale Güter in Apps → In-App-Kauf über App Store / Google Play **[Store-Regeln für
+Geschenke an andere Nutzer:innen und Odds-Offenlegung zu prüfen]**. Erlös an uns (abzüglich Store-Provision); keine
+Weitergabe an Spieler:innen/Streamer:innen (L11). Belegprüfung **nur serverseitig**:
 - Apple: signierte Transaktion (JWS) prüfen (Zertifikatskette), Abgleich über App Store Server API, Erstattungen über
   App Store Server Notifications (V2) → Storno-Buchung **[aktuelle API-Versionen zu prüfen]**.
 - Google: Kauf-Token per Play Developer API prüfen, Consumable **konsumieren**, Real-time Developer Notifications (Pub/Sub)
   und Voided-Purchases-Abfrage für Erstattungen **[zu prüfen]**.
 - Idempotenz über `transactionId` bzw. `orderId`; Gutschrift erst nach erfolgreicher Prüfung.
-Empfehlung bis zur Klärung: Mobile-Apps **ohne** Kaufoberfläche für Geschenke (nur Zuschauen/Votes); Hinweise auf
-externe Käufe nur im Rahmen der jeweils gültigen Store-Regeln **[zu prüfen]**.
+Bis zur schriftlichen Klärung der Store-Regeln: Mobile-Apps **ohne** Kaufoberfläche für Geschenke (nur Zuschauen/Votes);
+Hinweise auf externe Käufe nur im Rahmen der jeweils gültigen Store-Regeln **[zu prüfen]**. Danach ist IAP der mobile Teil des
+primären Echtgeld-Wegs (Exit-Kriterium S5).
 
 ### 8.6 Erstattungen & Chargebacks
 
 | Fall | Behandlung |
 |---|---|
-| Geschenk nicht zustellbar / abgelehnt | C: automatische Rückbuchung Escrow → Wallet. B: Ersatzregel 8.4 |
+| Geschenk nicht zustellbar / abgelehnt (auch: Sponsor-Fenster samt Gnadenfrist vorbei, bevor die Zahlung bestätigt war) | automatische Rückbuchung Escrow → Wallet bzw. Erstattung über PSP/Store. (Ersatzregel für Bits — gestrichen mit Kap. 8.4) |
 | Widerruf Token-Paket (EU), Token **unverbraucht** | Erstattung möglich, solange nicht durch ausdrückliche Zustimmung zum sofortigen Beginn erloschen **[Rechtslage zu prüfen]**; Token-Storno + EUR-Storno |
 | Erstattung/Chargeback, Token **teilweise verbraucht** | unverbrauchte Token stornieren; verbrauchter Anteil → `expense:chargeback_loss`; Wallet darf negativ werden; Konto: **Kaufsperre** bis Ausgleich; Wiederholung → Sperre/Ban |
 | Kiste **bereits geöffnet** | Inhalte sind lauf-gebunden und meist schon verbraucht/verfallen → **keine Rücknahme beim beschenkten Spieler** (unbeteiligte Dritte, laufende Sendung). Läuft der Lauf noch und ist die Kiste **noch nicht zugestellt**: Zustellung stornieren. |
@@ -1556,40 +1698,34 @@ externe Käufe nur im Rahmen der jeweils gültigen Store-Regeln **[zu prüfen]**
   weitgehend mit MoR.
 - Token: Einordnung als Einzweck- oder Mehrzweck-Gutschein bestimmt den USt-Zeitpunkt.
 - USA: Verkaufssteuer je Bundesstaat (Nexus) — MoR empfohlen.
-- Bits-Erlöse fließen (nach Kenntnisstand) an Broadcaster — steuerlich deren Sache **[zu prüfen]**.
-- Creator-Beteiligungen (8.8) → Meldepflichten für Plattformbetreiber (EU DAC7) **[zu prüfen]**, US-Steuerformulare.
+- ~~Bits-Erlöse an Broadcaster~~ — entfällt (keine Bits-Geschenke, Kap. 8.4).
+- ~~Creator-Beteiligungen → DAC7, US-Steuerformulare~~ — entfällt (gestrichen, Kap. 8.8): Wir zahlen nichts an Personen aus;
+  ob uns DAC7 dann überhaupt betrifft, kurz bestätigen lassen **[zu prüfen]**.
+- App-Store-IAP (S5): Stores agieren je nach Land als Verkäufer/Kommissionär — USt-Behandlung je Store **[zu prüfen]**.
 
-### 8.8 Creator-Beteiligung (später, nach S5)
+### 8.8 ~~Creator-Beteiligung~~ — gestrichen per Entscheidung 2026-10-08
 
-**Ohne positives schriftliches Gutachten (ZAG/GwG/E-Geld, Glücksspiel, Kap. 9) keine Umsetzung.**
-- Idee: Streamer:innen erhalten X % des C-Umsatzes aus **nicht-zufälligen** Geschenken (`gold`, `sponsor_buff`, `cheer`), die in
-  ihren Läufen zugestellt werden (Attributions-Feld `channel` im Gift). **Nie für `kind: chest`** (L11): Sonst flösse
-  Echtgeld von Käufer:in an die Empfänger:in der Zufallsinhalte — das würde das Argument „keine Auszahlung, kein
-  Vermögenswert“ (L3) indirekt aushebeln.
-- Auszahlung **nur über lizenzierte Auszahlungsdienstleister** mit **KYC** (Identität, Steuerdaten, Sanktionslisten) —
-  Kandidaten z. B. Stripe Connect, PayPal Payouts, Tipalti **[zu prüfen]**; wir selbst halten und leiten keine Gelder an
-  Dritte weiter (sonst ggf. Finanztransfergeschäft/Zahlungsdienst nach ZAG **[zu prüfen]**). Mindestbetrag 50 €, monatlich,
-  30 Tage Haltefrist (Chargeback-Fenster).
-- **Deckel pro Creator und Monat** (Startwert z. B. 2 000 € **[zu prüfen]**), **Transaktionsüberwachung** (Muster:
-  wenige Käufer:innen mit hohem Anteil, neue Konten, gleiche Zahlungsmittel/Regionen), Meldeweg bei Verdacht **[GwG-Pflichten zu prüfen]**.
-- Ledger: `liability:creator_payable:<creator>` bei Zustellung (nie bei `chest`), Auszahlung gegen `asset:bank`.
-- Risiko: Kollusion über Strohleute (Freund:in kauft, Streamer:in erhält Anteil) lässt sich **nicht verlässlich**
-  erkennen — „nur von unverbundenen Käufer:innen“ ist nicht feststellbar. Deshalb Deckel + Überwachung + Ausschluss von
-  Zufallskisten statt Vertrauen auf Verbindungsprüfung.
+Geplant war (nach S5, nur nach Gutachten): X % des C-Umsatzes aus nicht-zufälligen Geschenken an Streamer:innen, über lizenzierte
+Auszahlungsdienstleister mit KYC, gedeckelt und überwacht (Ledger `liability:creator_payable`, `creator_accrual`,
+`creator_payout`). **Gestrichen**, weil Echtgeld von Zuschauer:innen nach der Nutzerentscheidung 2026-10-08 nie an Spieler:innen
+oder Streamer:innen fließt (L11). Damit entfallen auch die Fragen nach Finanztransfer/ZAG, KYC, Auszahlungsdeckeln und
+Kollusion über Strohleute (Kap. 9). Streamer:innen bleiben Reichweiten-Partner:innen ohne Erlösbeteiligung an Geschenken
+(Keys, Presskit, Streamer-Modus — 04 Kap. 7.2).
 
 ### 8.9 Spielerschutz: Alter, Limits, Geo
 
 | Maßnahme | Regel |
 |---|---|
-| Alter Käufer:innen | **18+ für alle Echtgeld-Geschenke** (zufällig und nicht-zufällig, alle Kanäle), bis ein Gutachten anderes erlaubt; eine niedrigere Grenze (z. B. 16+ für nicht-zufällige Geschenke) ist nur eine **[zu prüfende]** Option (Kap. 9). Auch nicht-zufällige Bits-Geschenke nur über verknüpfte Konten mit Altersstatus. Nachweis über Altersverifikations-Dienst oder MoR/PSP-Verfahren **[Anbieter zu prüfen]**; gespeichert wird nur das Ergebnis „18+ verifiziert“ |
+| Alter Käufer:innen | **18+ für alle Echtgeld-Geschenke** (zufällig und nicht-zufällig, alle Kanäle), bis ein Gutachten anderes erlaubt; eine niedrigere Grenze (z. B. 16+ für nicht-zufällige Geschenke) ist nur eine **[zu prüfende]** Option (Kap. 9). Nachweis über Altersverifikations-Dienst oder MoR/PSP-Verfahren **[Anbieter zu prüfen]**; gespeichert wird nur das Ergebnis „18+ verifiziert“ |
 | Alter Empfänger:innen | bezahlte Zufallskisten nur an altersverifizierte Spieler:innen ab 18; alle anderen fest `free_only` (Kap. 6.11) |
 | Bindung an die Person | Limits, Selbstsperre und Abkühlung hängen an der **altersverifizierten Identität** (Verifikations-Referenz), nicht am einzelnen Konto → gelten **konto-übergreifend** (Mehrfachkonten) |
-| Ausgabelimits (ab S3) | **EUR** (C): Standard 20 €/Tag, 100 €/Monat. **Bits** (B): eigene Limits in Bits, Standard 2 000 Bits/Tag, 10 000 Bits/Monat **[Werte zu prüfen]**; beide werden auf **ein gemeinsames Gesamtbudget** angerechnet (Umrechnung nur für die Budgetprüfung mit einem konservativen, veröffentlichten Faktor **[zu prüfen]**, nie als Preisangabe). Anzeige „heute/Monat ausgegeben“ (je Kanal + gesamt) im Bestätigungsdialog. **Kein Kisten-Kauf ohne aktive Limits.** Senken sofort; Erhöhen nur nach 7 Tagen Wartezeit, erneuter Bestätigung und Hinweis auf Hilfsangebote (Beratungsstellen **[zu prüfen]**), Obergrenze 250 €/Monat bzw. Bits-Äquivalent **[zu prüfen]** |
+| Ausgabelimits (ab S3) | **EUR**, ein Budget für alle Kanäle von C (Web-Shop, App-IAP): Standard 20 €/Tag, 100 €/Monat **[Werte zu prüfen]**. Anzeige „heute/Monat ausgegeben“ (je Kanal + gesamt) im Bestätigungsdialog. **Kein Kisten-Kauf ohne aktive Limits.** Senken sofort; Erhöhen nur nach 7 Tagen Wartezeit, erneuter Bestätigung und Hinweis auf Hilfsangebote (Beratungsstellen **[zu prüfen]**), Obergrenze 250 €/Monat **[zu prüfen]**. (Bits-Limits — gestrichen mit Kap. 8.4.) |
 | Selbstsperre | 24 h / 7 Tage / 30 Tage / dauerhaft, sofort wirksam, Aufhebung erst nach Ablauf; gilt für alle Kanäle und Konten der Person |
 | Kauf-Abkühlung | Nach 3 Kisten-Käufen in 10 min: Hinweis + 5 min Wartezeit; nach 6 Kisten-Käufen am Tag: 1 h Wartezeit **[Werte zu prüfen]** |
-| Sitzungs-Hinweise | Regelmäßig (z. B. alle 30 min bzw. nach jedem 3. Kauf) neutraler Hinweis „Sie haben in dieser Sitzung X ausgegeben“ (EUR bzw. Bits) mit Link auf Limits/Selbstsperre |
+| Sitzungs-Hinweise | Regelmäßig (z. B. alle 30 min bzw. nach jedem 3. Kauf) neutraler Hinweis „Sie haben in dieser Sitzung X ausgegeben“ (EUR) mit Link auf Limits/Selbstsperre |
+| Sponsor-Fenster (L16) | Hilfe nur in Fenstern mit wenigen Plätzen (Kap. 6.13) — begrenzt zusätzlich die Zahl möglicher Käufe je Lauf; **ohne** Dringlichkeitsdarstellung im Kauf-Flow |
 | Transparenz | Kaufhistorie mit allen Inhalten, Pity-Stand auf Abruf, Export (DSGVO) — ab S3 im Spielerschutz-Center |
-| Geo-Policy | **Positivliste (Standard: verboten)** für `chests_buy`/`chests_receive`: Tabelle `geo_policy` im Backend: Land → `{ chests_buy, chests_receive, gifts_buy, shop, opinion_ref }`. Zufallskisten nur in Ländern mit **positivem schriftlichem Gutachten** (`opinion_ref` Pflicht); die Länder des S3-Gutachtens sind genau die freigeschalteten. **Ausdrücklich gesperrt:** Belgien, Niederlande **[zu prüfen]**. Ermittlung: Rechnungsland (C), Store-Land (Mobile), IP-Geolokalisierung (alle), bei Bits zusätzlich Land des PTD-Kontos — bei Widerspruch oder VPN-/Proxy-Verdacht gilt die **strengste** Regel; **Land nicht feststellbar = gesperrt**. Nicht-zufällige Geschenke (`gifts_buy`) separat bewerten |
+| Geo-Policy | **Positivliste (Standard: verboten)** für `chests_buy`/`chests_receive`: Tabelle `geo_policy` im Backend: Land → `{ chests_buy, chests_receive, gifts_buy, shop, opinion_ref }`. Zufallskisten nur in Ländern mit **positivem schriftlichem Gutachten** (`opinion_ref` Pflicht); die Länder des S3-Gutachtens sind genau die freigeschalteten. **Ausdrücklich gesperrt:** Belgien, Niederlande **[zu prüfen]**. Ermittlung: Rechnungsland (Web), Store-Land (App), IP-Geolokalisierung (alle), Land des PTD-Kontos — bei Widerspruch oder VPN-/Proxy-Verdacht gilt die **strengste** Regel; **Land nicht feststellbar = gesperrt**. Nicht-zufällige Geschenke (`gifts_buy`) separat bewerten |
 | Kein Selbstgeschenk | Konto, Zahlungsmittel-Fingerprint, Geräte-ID dürfen nicht mit Ziel übereinstimmen; Teammitglieder dürfen eigenem Team nichts Zufälliges schenken. Fingerprinting nur mit geprüfter Rechtsgrundlage, nur **gehashte** Merkmale, begrenzte Speicherdauer, Information in der Datenschutzerklärung (Kap. 9) |
 
 ---
@@ -1598,14 +1734,17 @@ externe Käufe nur im Rahmen der jeweils gültigen Store-Regeln **[zu prüfen]**
 
 Alle Einträge: **Status „zu prüfen“** bis eine schriftliche Prüfung vorliegt. Die Spalte „Risiko“ beschreibt unsere
 Einschätzung der Fragestellung, **keine** Rechtsauskunft.
+**Vereinfachung durch die Entscheidung 2026-10-08 (L11):** Es fließt kein Echtgeld an Personen (keine Auszahlung, keine
+Creator-Beteiligung, keine Bits-Geschenke) — die Zeilen zu Erlösfluss an Empfänger:innen, Bits, Ersatzleistung, Auszahlung/KYC
+und ZAG-Finanztransfer schrumpfen auf die verbleibende Frage oder entfallen (unten markiert).
 
 | Thema | Risiko | Maßnahme (geplant) | Status |
 |---|---|---|---|
 | Lootboxen **Belgien** | Bezahlte Zufallsinhalte werden dort nach unserem Kenntnisstand als Glücksspiel eingestuft (Gaming Commission, 2018) **[zu prüfen]** | **Sperrliste**: Kauf **und** Empfang von Zufallskisten gesperrt; nicht-zufällige Geschenke separat bewerten | zu prüfen |
 | Lootboxen **Niederlande** | Rechtsprechung/Regulierung nach unserem Kenntnisstand im Wandel (Kansspelautoriteit; Urteil Raad van State 2022; Verbotsdebatte) **[zu prüfen]** | **Sperrliste** (Kauf und Empfang), Aufhebung nur nach positivem Länder-Gutachten | zu prüfen |
 | **Geo-Policy allgemein** | Twitch-Zuschauer:innen kommen weltweit; Einzelverbote (Negativliste) wären zu riskant | **Positivliste** (Kap. 8.9): Kisten nur in Ländern mit positivem schriftlichem Gutachten; Gutachten-Länder = freigeschaltete Länder; Land nicht feststellbar = gesperrt; VPN/Widerspruch → strengste Regel | zu prüfen |
-| **Besonderheit Fremd-Kauf** | Käufer:in erhält selbst nichts; Kiste nützt Dritten → Einordnung als Glücksspiel/Lotterie/Gewinnspiel könnte anders ausfallen als bei klassischen Lootboxen | explizite Frage im Gutachten — **im Zusammenhang** mit der folgenden Zeile | zu prüfen |
-| **Erlösfluss an Empfänger:in (Bits/Creator-Anteil)** | Bei B fließen Bits-Erlöse nach unserem Kenntnisstand an die Broadcaster:in **[zu prüfen]** — bei Streamer-Läufen oft die beschenkte Spieler:in selbst; mit Creator-Beteiligung (8.8) bekäme das Ziel zusätzlich Geld aus Kisten für den eigenen Lauf. Damit fließt **indirekt Echtgeld von Käufer:in zum Empfänger der Zufallsinhalte** — das kann L3 („keine Auszahlung“) und das Argument „Käufer:in erhält selbst nichts“ untergraben | **Ausdrückliche Gutachtenfrage:** Ist ein Erlösfluss an die Empfänger:in mit der Einordnung „kein Gewinn/kein Vermögenswert“ vereinbar? Bis dahin: Creator-Beteiligung nie für `kind: chest` (L11); Bits-Zufallskisten an `target.player_id == broadcaster` gesperrt (Fallback B = gold/sponsor_buff/cheer, R2) | **zu prüfen (Blocker S3)** |
+| **Besonderheit Fremd-Kauf** | Käufer:in erhält selbst nichts; Kiste nützt Dritten → Einordnung als Glücksspiel/Lotterie/Gewinnspiel könnte anders ausfallen als bei klassischen Lootboxen | explizite Frage im Gutachten; seit 2026-10-08 ohne Erlösfluss an die Empfänger:in (L11), das stützt das Argument „kein Gewinn/kein Vermögenswert“ | zu prüfen |
+| ~~Erlösfluss an Empfänger:in (Bits/Creator-Anteil)~~ | **Entschieden 2026-10-08 (L11):** Echtgeld fließt nur an den Betreiber — keine Bits-Geschenke (Bits-Erlöse gingen nach Kenntnisstand an die Broadcaster:in **[zu prüfen]**), keine Creator-Beteiligung. Die frühere Blocker-Frage „Erlösfluss an die Empfänger:in“ entfällt | Restfrage nur, falls je eine Bits-Variante kommen soll: Gibt es ein Erlösmodell für Entwickler ohne Anteil der Broadcaster:in **[zu prüfen]**? | entschieden (Restfrage zu prüfen) |
 | **Deutschland** Glücksspielrecht (GlüStV 2021) | Glücksspiel setzt u. a. Entgelt + Zufall + Gewinn (Vermögenswert) voraus **[zu prüfen]**; Argument „kein Vermögenswert“ durch Lauf-Bindung/keine Auszahlung. Euro-Werte für Inhalte oder dauerhafte Belohnungen aus bezahlten Inhalten würden das Argument schwächen | Gutachten; Lauf-Bindung, kein Handel, keine Auszahlung strikt umsetzen; **keine Euro-Bewertung von Inhalten** (L1); gesponserte Läufe nur Teilnahme-Plakette (Kap. 1.6) | zu prüfen |
 | **Deutschland** Jugendschutz (JuSchG seit 2021, USK) | Kaufmöglichkeiten/Zufallsmechaniken und Interaktionsrisiken (§ 10b JuSchG **[zu prüfen]**) können Alterskennzeichen und Deskriptoren beeinflussen; IARC-Fragebogen für Stores; glücksspielnahe Darstellung (Live-Öffnung, Casino-Vokabular) kann die Einstufung negativ beeinflussen | USK-/IARC-Angaben korrekt; Altersgrenze Käufer 18+; Präsentationsregeln L12 | zu prüfen |
 | **Zuschauerschaft mit Minderjährigen / Kaufappelle** | Twitch erlaubt nach unserem Kenntnisstand Nutzer:innen ab 13 **[zu prüfen]**; Kaufangebote für Zufallsinhalte und Kaufaufrufe (Streamer:in, M.O.D.) erreichen Kinder → Risiko direkter Kaufaufforderung an Kinder (UWG Anhang Nr. 28 **[zu prüfen]**), JuSchG-Interaktionsrisiken | Kaufknöpfe nur für altersverifizierte 18+-Konten (Kap. 5.4); keine Kaufaufrufe in UI/M.O.D.; Creator-Richtlinien/AGB (keine Kaufaufrufe, Kennzeichnung, Twitch-Glücksspielrichtlinie **[zu prüfen]**) | zu prüfen |
@@ -1613,26 +1752,27 @@ Einschätzung der Fragestellung, **keine** Rechtsauskunft.
 | **Vereinigtes Königreich** | Lootboxen ohne Auszahlung nach unserem Kenntnisstand bisher nicht als Glücksspiel reguliert **[zu prüfen]**; Branchen-Selbstverpflichtungen (u. a. Odds, Kaufbeschränkung Minderjährige) **[Stand zu prüfen]** | Selbstverpflichtungen erfüllen (Odds, Altersgrenze, Ausgabekontrollen); Freischaltung nur nach Gutachten (Positivliste) | zu prüfen |
 | **USA** (Bund/Bundesstaaten) | Einzelstaatliche Gesetzesinitiativen; FTC-Verfahren zu Lootboxen/Dark Patterns bei Minderjährigen; COPPA (< 13) **[jeweils zu prüfen]** | keine Käufe < 18, keine Datenerhebung < 13 ohne Einwilligung; **Preis der Kiste in Echtgeld, Inhalte ohne Geldwert** (L1) | zu prüfen |
 | Weitere Länder (z. B. Australien-Klassifizierung, Südkorea-Odds-Pflicht, China) | Altersfreigaben/Offenlegungspflichten für bezahlte Zufallsinhalte **[zu prüfen]** | **gesperrt**, solange kein positives Gutachten vorliegt (Positivliste) | zu prüfen |
-| **App-Store-Odds-Offenlegung** | Apple/Google verlangen nach unserem Kenntnisstand Offenlegung von Wahrscheinlichkeiten vor Kauf bei Lootbox-artigen Käufen **[zu prüfen]** | Odds-Anzeige (Kap. 6.7) in allen Clients; bis Klärung kein Mobile-Kauf | zu prüfen |
-| **Twitch-Extension & Bits** | Richtlinien zu Bits für **zufallsbasierte** Inhalte, Glücksspiel-ähnliche Stream-Inhalte, Extension-Review, Erlösverteilung | schriftliche Klärung mit Twitch; Fallback B ohne Zufall | **zu prüfen (kritisch)** |
-| **Vertragspartner & Ersatzregel bei Bits** | Unklar, wer bei Bits-Geschenken Vertragspartner:in der Käufer:in ist (Twitch oder wir) **[zu prüfen]**; einseitige Umwandlung nicht zustellbarer Kisten wäre eine Leistungsänderung ohne Zustimmung — ggf. unvereinbar mit Gewährleistungsrechten für digitale Produkte (§§ 327 ff. BGB) bzw. AGB-Recht **[zu prüfen]** | Ersatzleistung vor dem Kauf offenlegen und bestätigen lassen; Fall technisch vermeiden (Reservierung, Verkaufsschluss); Erstattung über Twitch klären (Kap. 8.4) | zu prüfen |
+| **App-Store-IAP (Teil des primären Wegs C, S5)** | Apple/Google verlangen nach unserem Kenntnisstand Offenlegung von Wahrscheinlichkeiten vor Kauf bei Lootbox-artigen Käufen **[zu prüfen]**; Regeln für **Geschenke an andere Nutzer:innen** und für Hinweise auf externe Käufe **[zu prüfen]** | Odds-Anzeige (Kap. 6.7) in allen Clients; bis zur schriftlichen Klärung kein Mobile-Kauf (Exit S5) | zu prüfen |
+| **Twitch-Extension** (nur kostenlos) | Extension-Review für Votes/Applaus/Anzeigen; Glücksspiel-ähnliche Stream-Inhalte (Kisten werden live geöffnet, auch ohne Bits); Hinweise auf externe Käufe (eigener Shop) **[zu prüfen]** | schriftliche Klärung mit Twitch; ohne Freigabe kein Shop-Hinweis in der Extension. (Bits für Zufallsinhalte — entfällt, Kap. 8.4) | zu prüfen |
+| ~~Vertragspartner & Ersatzregel bei Bits~~ | **entfällt** (keine Bits-Geschenke seit 2026-10-08) | — | entfällt |
 | **Altersverifikation** | Selbstauskunft reicht ggf. nicht; Verfahren muss datensparsam sein | Dienstleister/MoR-Verfahren, nur Ergebnis „18+“ speichern | zu prüfen |
-| **Ausgabelimits / Spielerschutz** | Erwartung von Behörden/Selbstverpflichtungen; Reputationsrisiko; Umgehung über Mehrfachkonten | Limits (EUR + Bits), Selbstsperre, Historie, Sitzungs-Hinweise, an die verifizierte Identität gebunden, ab S3 (Kap. 8.9) | zu prüfen |
+| **Ausgabelimits / Spielerschutz** | Erwartung von Behörden/Selbstverpflichtungen; Reputationsrisiko; Umgehung über Mehrfachkonten | Limits (EUR, alle Kanäle von C), Selbstsperre, Historie, Sitzungs-Hinweise, an die verifizierte Identität gebunden, ab S3 (Kap. 8.9) | zu prüfen |
 | **Kaufprozess / Pflichtinformationen** | Button-Lösung („zahlungspflichtig bestellen“, § 312j BGB **[zu prüfen]**), vorvertragliche Pflichtinformationen, Bestätigung auf dauerhaftem Datenträger, Einordnung als Vertrag zugunsten Dritter (Beschenkte:r) **[zu prüfen]**, Widerruf auch für die **Kisten-Bestellung** selbst (nicht nur Token-Pakete), Preistransparenz bei verminderter Wirkung | Bestellfluss Kap. 6.4 (Button-Text, Zustimmung zum sofortigen Beginn, Bestätigungs-Mail, Wurfzahl-Bestätigung); 100-ST-Paket und Euro-Direktkauf ohne Token-Vorabkauf (Kap. 6.6) | zu prüfen |
 | **EU-Verbraucherrecht: Widerruf digitale Inhalte** | Widerrufsrecht erlischt nach unserem Kenntnisstand nur bei ausdrücklicher Zustimmung + Bestätigung der Kenntnis (Verbraucherrechte-RL; Rechtsstand seit 2022 **[zu prüfen]**) | Checkbox im Kauf, Bestätigungs-Mail, Widerruf unverbrauchter Token | zu prüfen |
 | **EU: virtuelle Währungen in Spielen** | Behördliche Grundsätze (CPC-Netzwerk, nach unserem Kenntnisstand 2024 **[Stand und Inhalt zu prüfen]**) u. a. Preisangabe in Echtgeld, keine verschleiernden Paketgrößen, kein erzwungener Vorab-Kauf | Echtgeld-Anzeige des Kistenpreises, Pakete ohne Bonus, 100-ST-Paket, Direktkauf | zu prüfen |
 | **Dark Patterns / Kaufdruck** | Pity-Countdown, Monats-Reset, preisabhängiges Lob, Beschämung günstiger Geschenke, Namensnennung im öffentlichen Feed — Risiken nach CPC-Grundsätzen und DSA Art. 25 **[zu prüfen]**, besonders bei minderjährigem Publikum | L2, L12, L13: Pity nur auf Abruf, kein Zeit-Reset, neutrale M.O.D.-Zeilen, `anon: true` als Standard, Feed ohne Inhalte | zu prüfen |
-| **Werbeaussagen zu Fairness/Odds (UWG)** | Werbung mit „beweisbar fair“ wäre irreführend, wenn ein Kanal (z. B. Bits ohne `client_seed`) die Eigenschaft nicht erfüllt (UWG § 5 **[zu prüfen]**) | Aussagen nur für tatsächlich erfüllte Kanäle; Grenzen offen benennen (Kap. 7.7); neutrale Begriffe (L12) | zu prüfen |
+| **Dringlichkeit durch Sponsor-Fenster** (neu 2026-10-08) | Zeitlich begrenzte Fenster mit knappen Plätzen (Countdown „0:45 · 2/3 Plätze“) können als künstliche Verknappung/Dringlichkeit gelten (CPC-Grundsätze, UWG, DSA Art. 25 **[zu prüfen]**), zumal vor minderjährigem Publikum | L16 / Kap. 6.13: Countdown und Plätze nur als Programminformation im Overlay; im Kauf-Flow kein Countdown, keine „nur noch X“-Hinweise (Platz bei der Quote reserviert); keine Push-/Chat-Aufrufe; Fan-Pakete (kostenlos) nutzen dieselben Fenster; Limits/Selbstsperre unverändert | zu prüfen |
+| **Werbeaussagen zu Fairness/Odds (UWG)** | Werbung mit „beweisbar fair“ wäre irreführend, wenn ein Kanal (z. B. ein neuer Kanal ohne `client_seed`) die Eigenschaft nicht erfüllt (UWG § 5 **[zu prüfen]**) | Aussagen nur für tatsächlich erfüllte Kanäle; Grenzen offen benennen (Kap. 7.7); neutrale Begriffe (L12) | zu prüfen |
 | **DSA / Moderation** | Nutzernamen, Gift-Absendernamen, Chat/Cheers; Melde- und Abhilfeverfahren, Begründungen, Minderjährigenschutz | **kein Freitext** in Geschenken (auch `client_seed` nur Hex), Namensfilter + Melden + Sperren, Transparenzangaben je Plattformgröße | zu prüfen |
 | **DSGVO** — Accounts | Rechtsgrundlagen, Speicherfristen, Auftragsverarbeitung (Hosting, MoR, Altersverifikation), Drittlandtransfer | Verarbeitungsverzeichnis, AVVs, Löschkonzept, Datenschutzerklärung | zu prüfen |
 | **DSGVO** — Zuschauer-Daten | Zuschauerzahlen, Votes, Twitch-IDs (opak), IP für Geo-Sperre; Zuschauer:innen auch minderjährig | Datensparsamkeit: Votes nur aggregiert speichern, IP nur flüchtig, pseudonyme Logs (Kap. 7.5) | zu prüfen |
 | **DSGVO — Datenschutz-Folgenabschätzung** | Öffentliche Gift-Logs, Pseudonymisierung (`sender_ref`, „erschwert verknüpfbar“), Altersverifikation, Fingerprinting, Profilbildung über Kaufverhalten (Spielerschutz) | DSFA nach Art. 35 DSGVO **[Erforderlichkeit zu prüfen]** vor S3 | zu prüfen |
 | **Betrugs-/Verknüpfungsprüfung (Fingerprinting)** | Selbstgeschenk-Prüfung per Geräte-ID und Zahlungsmittel-Fingerprint (L9) braucht eine Rechtsgrundlage: Endgerätezugriff nach § 25 TDDDG, Art. 6 DSGVO **[zu prüfen]** | Rechtsgrundlage festlegen, nur gehashte Merkmale, kurze Speicherdauer, Information in der Datenschutzerklärung, ggf. DSFA | zu prüfen |
-| **Geldwäsche / Zahlungsdiensteaufsicht / E-Geld** | Gespeicherter Wert (ST-Wallet), Übertragung zwischen Personen (Geschenke), Weiterleitung an Creator (8.8); Kollusion (Freund:in kauft, Streamer:in erhält Anteil) | **Konkrete Gutachtenfragen [zu prüfen]:** (1) Fällt die ST-Wallet unter die E-Geld-Ausnahme „begrenztes Netz“? (2) Ist die Creator-Beteiligung Finanztransfergeschäft/Zahlungsdienst nach ZAG, oder greift die Ausnahme für Agenten des Zahlungsempfängers? (3) Welche Struktur mit MoR vermeidet eigene Erlaubnispflichten? (4) GwG-Pflichten (Verpflichteteneigenschaft, Verdachtsmeldung)? Maßnahmen: keine Auszahlung an Käufer:innen, kein Handel, keine P2P-Token-Übertragung, Wallet-Obergrenze; Creator-Beteiligung nur über lizenzierte Dienstleister, nie für Zufallskisten, gedeckelt, mit Transaktionsüberwachung, **ohne positives Gutachten keine Umsetzung** | zu prüfen |
+| **Geldwäsche / Zahlungsdiensteaufsicht / E-Geld** | Gespeicherter Wert (ST-Wallet), Geschenke zwischen Personen. **Deutlich einfacher seit 2026-10-08:** keine Auszahlungen an Personen, keine Creator-Beteiligung, keine Weiterleitung von Geldern an Dritte (L11) | **Verbleibende Gutachtenfragen [zu prüfen]:** (1) Fällt die ST-Wallet unter die E-Geld-Ausnahme „begrenztes Netz“? (2) Welche Struktur mit MoR vermeidet eigene Erlaubnispflichten? (3) GwG-Pflichten (Verpflichteteneigenschaft, Verdachtsmeldung)? ~~(Creator-Beteiligung als Finanztransfergeschäft/ZAG, KYC für Auszahlungen)~~ — **entfällt**. Maßnahmen: keine Auszahlung, kein Handel, keine P2P-Token-Übertragung, Wallet-Obergrenze, Erstattung nur auf das ursprüngliche Zahlungsmittel | zu prüfen |
 | **Gewinnspiele / Preise** | Echtgeld- oder Sachpreise bei Bestenlisten können Gewinnspiel-/Lotterierecht berühren | Belohnungen nur kosmetisch (Kap. 1.6); Sachpreise nur nach Prüfung | zu prüfen |
 | **Werbung / Kennzeichnung** | Fiktive Satire-Sponsoren: voraussichtlich geringes Risiko, Marken-/Parodieprüfung (Ähnlichkeit zu realen Marken) **[zu prüfen]**; echte Kooperationen kennzeichnungspflichtig | echte Sponsoren nie als In-Game-Satire-Marke, Kennzeichnung | zu prüfen |
 | **AGB / Nutzungsbedingungen** | Token-Bedingungen, Lauf-Bindung, Sperren, Einstellung des Dienstes | AGB-Entwurf mit Anwalt | zu prüfen |
-| **Steuern** | USt/OSS, US-Sales-Tax, Gutschein-Einordnung, DAC7 | MoR, Steuerberatung (Kap. 8.7) | zu prüfen |
+| **Steuern** | USt/OSS, US-Sales-Tax, Gutschein-Einordnung, App-Store-USt; ~~DAC7 für Creator-Auszahlungen~~ (entfällt, keine Auszahlungen) | MoR, Steuerberatung (Kap. 8.7) | zu prüfen |
 
 ---
 
@@ -1699,7 +1839,7 @@ Einschätzung der Fragestellung, **keine** Rechtsauskunft.
         "spectate": { "delay_sec": 30 },
         "gifts": {
           "enabled": true,
-          "sources": ["fan", "bits", "shop"],
+          "sources": ["fan", "shop"],
           "load_cap_half": 48, "max_external": 16, "max_chests": 8, "max_gold_chests": 2,
           "min_interval_sec": 45, "sale_close_buffer_sec": 120, "max_per_battle": 1, "per_buyer_per_target": 5,
           "load_weights_half": { "cheer": 0, "gold_per_100": 1, "fan_pack": 2, "sponsor_buff": 2, "bronze": 2, "silver": 4, "gold": 8 },
@@ -1707,6 +1847,13 @@ Einschätzung der Fragestellung, **keine** Rechtsauskunft.
           "chest_min_effect_pm": 500,
           "ask_timeout_sec": 10,
           "table_id": "gift_f1"
+        },
+        "sponsor_windows": {
+          "enabled": true, "slots_per_player": 3, "per_viewer": 1, "grace_sec": 15, "exempt_kinds": ["cheer"],
+          "periodic": { "enabled": true, "first_sec": 300, "every_sec": 300, "open_sec": 60 },
+          "safe_room": { "enabled": true, "max_sec": 90, "once_per_room": true },
+          "boss": { "enabled": true, "countdown_sec": 45 },
+          "dev_open": false
         }
       },
       "votes": { "enabled": true, "interval_sec": 240, "duration_sec": 45, "options": 3,
@@ -1731,7 +1878,8 @@ Einschätzung der Fragestellung, **keine** Rechtsauskunft.
 | `rules.leagues` | Array | Teilmenge von `show`, `pur`; `offline` nur `pur` |
 | `rules.timer_mode` | String | `explore_only` \| `realtime` |
 | `rules.party_preset` | String | ID in `res://data/party_presets.json` (neu, Kap. 11) |
-| `rules.gifts` | Dictionary | Caps/Gewichte Kap. 6.10, **nur Ganzzahlen** (Lasten in Halbpunkten, Faktoren in Promille); `enabled: false` in S0. `rules` geht vollständig in `rules_hash` und damit in den Commit ein (Kap. 7.3) |
+| `rules.gifts` | Dictionary | Caps/Gewichte Kap. 6.10, **nur Ganzzahlen** (Lasten in Halbpunkten, Faktoren in Promille); `enabled: false` in S0; `sources` ⊆ `fan`, `shop`, `dev` (`bits` reserviert, seit 2026-10-08 nicht angeboten). `rules` geht vollständig in `rules_hash` und damit in den Commit ein (Kap. 7.3) |
+| `rules.sponsor_windows` | Dictionary | Sponsor-Fenster (Kap. 6.13): `enabled`, `slots_per_player`, `per_viewer`, `grace_sec`, `exempt_kinds` (⊆ Geschenk-Arten), `periodic {enabled, first_sec, every_sec, open_sec}`, `safe_room {enabled, max_sec, once_per_room}`, `boss {enabled, countdown_sec}`, `dev_open` — nur Ganzzahlen ≥ 1 (`grace_sec` ≥ 0) und Bools, unbekannte Schlüssel sind Fehler (`SponsorWindows.validate_rules`); fehlende Schlüssel = Standard (`SponsorWindows.DEFAULT_RULES`, auch für Kampagne/Offline); `dev_open` muss außer bei `offline` explizit `false` sein |
 | `votes` | Dictionary | Kap. 6.2 |
 | `scoring` | Dictionary | Kap. 1.5, nur Ganzzahlen |
 | `rewards` | Dictionary | nur kosmetische IDs/Titel; `sponsored_runs` ∈ `participation_only` (einziger zulässiger Wert, Kap. 1.6) |
@@ -1741,7 +1889,7 @@ Zeitprüfung im Kern ohne Uhr: `EventDef.window_state(now_unix: int) -> String` 
 
 ### 10.2 Gift-Schema
 
-Siehe Kap. 6.5 (normativ). Zusätzlich `res://data/gift_tables.json`:
+Siehe Kap. 6.5 (normativ; inkl. optionalem Stempel `sponsor_window`, Kap. 6.13). Zusätzlich `res://data/gift_tables.json`:
 
 ```json
 {
@@ -1785,7 +1933,7 @@ Siehe Kap. 6.5 (normativ). Zusätzlich `res://data/gift_tables.json`:
 
 | Feld | Regeln |
 |---|---|
-| `tx_type` | `token_purchase` \| `gift_reserve` \| `gift_deliver` \| `gift_release` \| `bits_gift_memo` \| `refund` \| `chargeback` \| `chargeback_fee` \| `adjustment` \| `creator_accrual` \| `creator_payout` |
+| `tx_type` | `token_purchase` \| `gift_reserve` \| `gift_deliver` \| `gift_release` \| `refund` \| `chargeback` \| `chargeback_fee` \| `adjustment` — ~~`bits_gift_memo`, `creator_accrual`, `creator_payout`~~ **gestrichen per Entscheidung 2026-10-08** (keine Bits-Geschenke, keine Auszahlung/Beteiligung an Personen, L11; die Datenbank lehnt diese Typen per Constraint ab) |
 | `side` / `amount_minor` | `debit`/`credit`, `amount_minor > 0` (Ganzzahl, Cent bzw. Token) |
 | Invariante | Für jede `tx_id` und `currency`: Σ debit = Σ credit (DB-Constraint per Trigger bei Commit) |
 | `reverses` | bei Storno die `tx_id` der Ursprungstransaktion |
@@ -1850,7 +1998,8 @@ S0 lokal: gleiches Schema, `league: "pur"`, `verified: "local"`, `players[0].pla
     { "k": 410,  "id": 3, "c": { "t": "interact", "obj": "f1_c3" } },
     { "k": 980,  "id": 4, "c": { "t": "encounter", "encounter_id": "enc_f1_rats", "group_id": "f1_g2", "advantage": 1 } },
     { "k": 980,  "id": 5, "c": { "t": "battle", "n": 0, "kind": "attack", "actor_id": "p0", "skill_id": "", "item_id": "", "target_ids": ["e1"] } },
-    { "k": 980,  "id": 0, "c": { "t": "gift", "gift": { "schema": 1, "gift_id": "g_dev_0001", "source": "dev", "…": "…" } } }
+    { "k": 980,  "id": 0, "c": { "t": "gift", "gift": { "schema": 1, "gift_id": "g_dev_0001", "source": "dev", "sponsor_window": "sw_2", "…": "…" } } },
+    { "k": 1200, "id": 6, "c": { "t": "sponsor_window", "op": "dev_open", "sec": 60, "slots": 3 } }
   ],
   "checkpoints": [ { "k": 300, "h": "9b1e…" }, { "k": 1300, "h": "0c7a…" } ],
   "result": { "cause": "floor_completed", "score": 14210, "final_hash": "77d2…" }
@@ -1858,7 +2007,9 @@ S0 lokal: gleiches Schema, `league: "pur"`, `verified: "local"`, `players[0].pla
 ```
 
 - `k` = Sim-Tick (30 Hz, eine Simulationsuhr, Kap. 3.2), **normativ je Timer-Modus:**
-  - `explore_only`: `k` zählt nur Erkundungs-Ticks; der Etagen-Timer steht im Kampf, daher tragen Kampf-Commands den `k`
+  - `explore_only`: `k` zählt Erkundungs-Ticks und — seit den Sponsor-Fenstern (Kap. 6.13) — **Leerlauf-Ticks im Safe Room**
+    (nur die Fenster-Uhr läuft, der Etagen-Timer nicht; welcher Tick welcher ist, folgt aus `floor_run.location`, also aus den
+    Commands `safe_room`/`safe_room_exit`); der Etagen-Timer steht im Kampf, daher tragen Kampf-Commands den `k`
     ihres `encounter` und werden über `n` geordnet. Zug-Timeouts gibt es in diesem Modus nicht.
   - `realtime`: `k` zählt **Wanduhr-Ticks** ab Laufstart (Kampf, Safe Room, Menüs eingeschlossen); **jedes** Command, auch
     jedes Kampf-Command und jedes `auto: true`-Timeout-`defend`, trägt den echten Tick seiner Anwendung → Timerstand nach
@@ -1870,7 +2021,11 @@ S0 lokal: gleiches Schema, `league: "pur"`, `verified: "local"`, `players[0].pla
 - `pos`: **Grad A** — Positionsproben `[tick, x_dm, y_dm, z_dm]` (Dezimeter, 2 Hz, nur Darstellung/Replay-Ansicht).
 - `cmds[].c` = Command. Typen (`t`): Erkundungs-Ergebnisse `time`, `room_enter`, `interact`, `encounter`, `descend`;
   Kampf `battle` (Felder = `BattleCommand`, 02_TECH §5.4, plus Aktionsindex `n`); Menüs `menu_use_item`, `equip`, `unequip`,
-  `vendor_buy`, `vendor_sell`, `rest`, `lootbox_open`, `event_choice`; **externe Eingänge** `gift`, `twist`.
+  `vendor_buy`, `vendor_sell`, `rest`, `lootbox_open`, `event_choice`; **externe Eingänge** `gift`, `twist`; QA
+  `sponsor_window {op: "dev_open", sec, slots}` (Kap. 6.13; nur wo `rules.sponsor_windows.dev_open`). Sponsor-Fenster selbst
+  stehen **nicht** im Log — sie folgen deterministisch aus Ticks und Commands (`floor`, `room` einer Boss-Zelle, `safe_room`,
+  `safe_room_exit`); externe Geschenke tragen den Stempel `sponsor_window`, den Replay und Verifier gegen den nachgerechneten
+  Zustand prüfen.
 - System-Geschenke (Hype-Schwellen) stehen **nicht** im Log — sie entstehen deterministisch aus dem Show-RNG
   (`Game.next_seed("show")`), laufen aber ebenfalls durch `Show.receive_gift()` (Kap. 11.3). Externe Geschenke werden bei ihrer
   **Anwendung** aufgezeichnet (im Kampf in `take_pending_gift`, sonst sofort), nicht beim Empfang — nur so kann das Replay sie an
@@ -1915,6 +2070,7 @@ S0 lokal: gleiches Schema, `league: "pur"`, `verified: "local"`, `players[0].pla
 | `core/live/leaderboard.gd` | `Leaderboard` | `func add(entry: Dictionary) -> int` (Rang, 1-basiert; Top 10 bleiben) · `func top(n: int) -> Array[Dictionary]` · `static func is_better(a: Dictionary, b: Dictionary) -> bool` · `func to_dict() -> Dictionary` · `static func from_dict(d: Dictionary) -> Leaderboard` (korrupt → leer) |
 | `core/live/gift.gd` | `Gift` | `static func validate(g: Dictionary) -> String` (Reason-Codes Kap. 6.5, `""` = gültig; prüft u. a. `effect_pm: int`, `client_seed` = 16 Hex-Zeichen, `anon`-Standard, keine Floats) · `static func make_system(sponsor_id: String, battle_n: int, k: int) -> Dictionary` · `static func make_dev(kind: String, tier: String, amount: int) -> Dictionary` |
 | `core/live/gift_policy.gd` | `GiftPolicy` | `static func effect_pm(load_half: int, k_pm: int = 75) -> int` · `static func load_weight_half(g: Dictionary, weights_half: Dictionary) -> int` · `static func rolls_for(base_rolls: int, effect_pm: int) -> int` · `static func scale(value: int, effect_pm: int) -> int` (`(value * effect_pm + 500) / 1000`) · `static func chest_allowed(load_half: int, rules: Dictionary) -> bool` · `static func check(run: Dictionary, g: Dictionary, rules: Dictionary) -> String` (`run` = Gift-Zähler des Laufs aus `GameState.flags["live"]`) — ausschließlich Ganzzahlen (Kap. 6.10) |
+| `core/live/sponsor_windows.gd` | `SponsorWindows` | **Sponsor-Fenster (CR-15, Kap. 6.13):** `const DEFAULT_RULES` · `static func rules_of(rules) -> Dictionary` · `static func active(st, rules) -> bool` · `static func ensure(st, rules) -> Dictionary` · `static func tick(st, rules, explore: bool) -> Array[Dictionary]` · `on_floor` · `on_safe_room_enter(st, rules, room_id)` · `on_safe_room_exit` · `on_room(st, rules, kind)` · `dev_open(st, rules, sec, slots)` / `dev_allowed` · `static func check(run, g) -> String` (`window_closed` \| `window_full` \| `window_sender_limit`, Reservierungen `run["sw_pending"]`) · `static func book(run, g)` · `window_for(run, g)` · `view(st, rules)` / `window_view(w)` · `validate_rules(cfg)` · `protocol_code(reason)` — Zustand `flags["live"]["sponsor"]`, nur Ganzzahlen |
 | `core/live/gift_applier.gd` | `GiftApplier` | `static func apply(state: GameState, data: GameData, g: Dictionary, rng: RandomNumberGenerator) -> Array[LootReward]` — Anwendung **außerhalb** von Kämpfen (`gold`, `chest`, `fan_pack`, `sponsor_buff` als Heilung/MP/Item laut `SponsorDef.gift`); im Kampf wendet `BattleState.apply_gift` an (CR-2) |
 | `core/live/fair_roll.gd` | `FairRoll` | **Hook (nur Tests):** `static func hmac(key: PackedByteArray, msg: String) -> PackedByteArray` (`Crypto.new().hmac_digest(HashingContext.HASH_SHA256, key, msg.to_utf8_buffer())`) · `static func u48(b: PackedByteArray) -> int` · `static func commit(server_seed: PackedByteArray, event_id: String, window_id: String, tables_hash: String, rules_hash: String, data_hash: String, sim_version: int) -> String` (v2) · `static func layout_seed(server_seed: PackedByteArray, event_id: String, window_id: String) -> int` · `static func roll_key(server_seed: PackedByteArray, event_id: String, window_id: String, sender_ref: String, client_seed: String, nonce: int) -> PackedByteArray` · `static func roll_chest(roll_key: PackedByteArray, tier: Dictionary, pool: Dictionary, rolls: int, pity_forced: String) -> Array[Dictionary]` |
 
@@ -1926,7 +2082,7 @@ der volle Server-Ausbau von `RunSim` (mehrere Instanzen, Netzwerk-Befehlsquelle)
 
 | Ort (Besitzer) | Änderung im Slice |
 |---|---|
-| `Events` (M0) | neue Signale: `run_started(event_id: String, league: String)`, `run_finished(summary: Dictionary)`, `quest_progress(progress: float)`, `quest_completed()`, `gift_received(gift: Dictionary)`, `gift_rejected(gift_id: String, reason: String)` (CR-1) |
+| `Events` (M0) | neue Signale: `run_started(event_id: String, league: String)`, `run_finished(summary: Dictionary)`, `quest_progress(progress: float)`, `quest_completed()`, `gift_received(gift: Dictionary)`, `gift_rejected(gift_id: String, reason: String)` (CR-1); `sponsor_window_opened(window: Dictionary)`, `sponsor_window_closed(window_id: String, reason: String)`, `sponsor_window_updated(window: Dictionary)` (CR-15) |
 | `Game` (M0) | `var mode: StringName = &"campaign"` (`&"event_offline"`) · `var run_log: RunLog` · `var quest: QuestTracker` · `func start_event_run(event_id: String) -> void` (Seed aus `EventDef.run_seed()`, `GameState.create_new`, Slot 0 → nie in Kampagnen-Slots gespeichert) · `func record(cmd: Dictionary) -> void` · `func finish_run(cause: StringName) -> Dictionary` (Summary inkl. `party_kos`, `followers_gained_run`, `achievements_in_run`, `quest_progress_ppm` → `ScoreCalc` → `Leaderboard` → `sim.close(cause, {"score"})` → `Save`) · `func event_rules() -> Dictionary` · `func adopt_loaded_state(st, log)` (Save.load_slot) · die Live-Uhr schreibt Checkpoints in `run_log` (`sim.run_log`; alle 300 Ticks, nach Kämpfen/Abstieg) · Quest-Adapter zusätzlich `zones`/`boss_hp` · `func replay_log(p_log: RunLog) -> Dictionary` (`{"final_hash", "result", "mismatch_at"}`; treibt dieselben Funktionen wie die Szenen, ohne Szenen) · **Fassade über `RunSim`** (CR-6): `_process` akkumuliert Frame-`delta` in ganze Ticks (1/30 s) und ruft `RunSim.step(n)`; Timer in ganzen **Ticks** (`time_left_ticks`) + `time`-Commands (CR-3, CR-4); Ergebnisse von `RunSim` werden als Signale weitergereicht. Kampagne zeichnet ebenfalls auf (Brief 6b.3, hilft bei Bug-Reports). |
 | `Show` (M2) | **`func receive_gift(gift: Dictionary) -> Dictionary`** — einziger Eingang für **alle** Geschenke: `Gift.validate` → `GiftPolicy.check` → im Kampf (`Game.in_battle`) Warteschlange bzw. sofort `GiftApplier` (Erkundung); bei `source ≠ "system"` `Game.record({"t": "gift", "gift": gift})` im Moment der **Anwendung** (02_TECH §3.5) · `func take_pending_gift() -> Dictionary` ersetzt `take_sponsor_gift() -> String`: zuerst wartende externe Geschenke, sonst System-Auswahl per `SponsorSystem.pick` → `Gift.make_system(id, …)` → **ebenfalls durch `receive_gift()`** → Rückgabe (leer = nichts) · zwei RNGs: `_rng` (Spiellogik, nur Sponsor-Auswahl) und `_fx_rng` (Chat, Zuschauer-Rauschen, M.O.D.-Zeilenwahl — nicht deterministisch relevant) · wartende externe Geschenke werden bei der **Anwendung** erneut geprüft (`application_refusal`: Duplikat, `GiftPolicy.check` mit Lauf-Zählern + Tick; Kampf-Limit `rules.gifts.max_per_battle`) und im Kampf über `note_battle_gift` gebucht; `abort_battle()` für vorzeitig beendete Kämpfe · **Fassade**: Hype-Drift, `viewers_target`-Neuberechnung und Pazifist-Zählung rechnet `RunSim.step` in Ticks; `Show._process` macht nur noch Anzeige (Glättung, Rauschen, Chat-Takt) (CR-5, CR-6) |
 | `scenes/battle/battle_controller.gd` (M5) | nach `hud.request_command` bzw. `choose_ai_command`: `Game.record({"t": "battle", …, "auto": not player_chosen})`; in `_play`: `var g := Show.take_pending_gift()` → `state.apply_gift(g)` → `Show.note_battle_gift(g, events)` (Lauf-Zähler wie RunSim) (CR-7) |
@@ -1935,7 +2091,8 @@ der volle Server-Ausbau von `RunSim` (mehrere Instanzen, Netzwerk-Befehlsquelle)
 | `scenes/ui/event_lobby.tscn` + `.gd` (M6) | Event-Karte: Name, Quest-Text, Regeln (Timer, „Pur-Liga“), lokale Top 10, Start |
 | `scenes/ui/exploration_hud.gd` (M6) | Quest-Zeile unter dem Timer mit Fortschrittsbalken (nur `Game.mode == &"event_offline"`) |
 | `scenes/ui/run_result.tscn` + `.gd` (M6) | Punkteaufschlüsselung (Kap. 1.5), Rang, „Nochmal“, „Zum Titel“; „Replay ansehen“ erst ab S1 |
-| `scenes/ui/debug_overlay.gd` (M6) | nur Debug-Build: Taste/Knopf „Test-Geschenk“ → `Show.receive_gift(Gift.make_dev("chest", "bronze", 0))` |
+| `scenes/ui/debug_overlay.gd` (M6) | nur Debug-Build: Taste/Knopf „Test-Geschenk“ (F4) → `Show.receive_gift(Gift.make_dev("chest", "bronze", 0, <neue Test-Zuschauer:in>))` — respektiert die Sponsor-Fenster (Ablehnung mit Grund und „nächstes in m:ss“); „Fenster öffnen“ (F5) → `Game.open_dev_sponsor_window(60, 3)` (aufgezeichnet, CR-15) |
+| Sponsor-Fenster (CR-15) | `Game`: Auslöser in `start_floor`/`visit_room`/`enter_safe_room`/`leave_safe_room`, `open_dev_sponsor_window`, `sponsor_window()`, `safe_room_clock` + `is_idle_ticking()` (Leerlauf-Ticks), `replay_log(p_log, until_tick)`; `Show`: Fensterprüfung in `receive_gift` (über `GiftPolicy.check`), Stempel, `sponsor_presentation()`, `sponsor_window_view()`, M.O.D.-Zeilen (nur live); `ShowOverlay`: Badge im Laufband; `SafeRoomScene` setzt `Game.safe_room_clock`; `mod_lines.json` + `DataValidator`-Präfix `sponsor_window_` |
 
 ### 11.4 Tests (`res://tests/`, Runner aus 02_TECH §11.1, `tools/check.sh --tests-only`)
 
@@ -1956,6 +2113,7 @@ der volle Server-Ausbau von `RunSim` (mehrere Instanzen, Netzwerk-Befehlsquelle)
 | `test_m8_fair_roll.gd` | **Testvektor Kap. 7.4 bitgenau** (Commit v2, `layout_seed`, `loot_seed`, `sym`, `roll_key`, `draw`, Silber 3/2 Würfe, Gold 4/3 Würfe, Bronze); Verteilung 100 000 Bronze-Würfe innerhalb ±0.5 %-Punkte der Tabelle |
 | `test_m8_replay.gd` | **headless gegen `RunSim`, ohne Autoloads** (testet denselben Code, den Verifier/Server ausführen): Bot-Event-Lauf mit `auto_battle` und `force_encounter`-Äquivalent über Commands → Replay → gleicher `final_hash`; zweiter Lauf gleicher Seed → gleicher Hash; manipulierter Command → `mismatch_at ≥ 0`. Zusätzlich ein dünner Integrationstest über die `Game`-Fassade (lädt per `load()` nach `process_frame`, 02_TECH §11) |
 | `test_m8_receive_gift.gd` | System-Geschenk aus `take_pending_gift` läuft durch `receive_gift` und erscheint **nicht** im Log; Dev-Geschenk erscheint im Log; Pur-Liga lehnt Dev-Geschenk ab |
+| `test_m8_sponsor_windows.gd` | Sponsor-Fenster (Kap. 6.13): Standardwerte; periodischer Fahrplan in Erkundungs-Ticks (Tick 9000 auf, 10800 zu); `step(1)` × n ≡ `step(n)`; Kampf friert Fenster und Countdown ein, kein Fenster öffnet im Kampf; Plätze (wer zuerst kommt), Pro-Zuschauer-Limit (datengetrieben), Reservierungen wartender Geschenke; Gründe/Codes `window_closed`/`window_full`/`window_sender_limit` → `E_WINDOW_*`; `cheer` ausgenommen; Gnadenfrist gestempelter Geschenke; Safe-Room-Fenster mit Leerlauf-Ticks (Timer steht, ≤ 90 s, einmal je Raum, Verlassen schließt); Boss-Countdown (45 s, ersetzt offenes Fenster, nur Erstbesuch); Etagenwechsel; Pur-Liga/ausgeschaltet ohne Fenster; QA-Fenster nur wo erlaubt; Regel-Validierung (auch `EventDef`); **Replay-Gleichheit** (`RunSim.replay`, Checkpoints) und gefälschtes Geschenk außerhalb eines Fensters → `errors`; Integration: `Show.receive_gift` außerhalb/innerhalb, Signale, Stempel im Log, `Game.replay_log` ≡ live, Reservierungen im Kampf, Leerlauf-Ticks über `Game._process`, Boss-Countdown über `Game.visit_room`, M.O.D.-Zeilen nur live (L13-Wortprüfung), Overlay-Badge-Texte, Debug-Werkzeug |
 
 ### 11.5 Definition of Done (Slice-Anteil SHOWRUN)
 
@@ -1982,6 +2140,7 @@ der volle Server-Ausbau von `RunSim` (mehrere Instanzen, Netzwerk-Befehlsquelle)
 | CR-12 | `core/battle/damage_calc.gd`, `core/battle/ctb_queue.gd` bzw. `battle_state.gd` (M1), `core/progression/progression.gd` (M2), `DungeonGenerator`/`FloorEvent` (M3), `data/` (M7) | Nur Ganzzahl-Zufall/-Arithmetik in spielrelevanten Pfaden: Varianz `randi_range(900, 1100)` ‰ (GDD 0.9–1.1), CTB-Start `base_delay × randi_range(500, 1000)` ‰ (GDD 0.5–1.0), Truhen-Offsets in cm-`int`, Event-Chancen in Basispunkten, EXP-Kurve als Tabelle statt `pow`; Lint-Erweiterung (Kap. 3.3 Nr. 5, 11.4) — **umgesetzt**, `test_m8_no_global_rng` ohne Ausnahmen | Plattformübergreifender Determinismus (ARM64/FMA, libm) |
 | CR-13 | `core/show/stat_ids.gd` (M2), `core/data/data_validator.gd` (M0) | Neue `StatIds`: `viewers_target_peak` (Max, aus rauschfreiem `ShowModel.viewers_for`), `followers_gained_run` (Summe), `hype_100_count` (Zähler) — **integriert** (02_TECH §6.3: Show pflegt sie vor dem jeweiligen Signal; §3.4: der Quest-Adapter in `Game` sendet daraus `{"type": "metric", …}`) | Deterministische Quest-Metriken (Kap. 1.3) |
 | CR-14 | `core/battle/battle_state.gd`, `combatant.gd`, `ctb_queue.gd`, `status_effect.gd` (M1), `core/live/state_hash.gd` (M8) | `to_dict()`/`from_dict()` für `BattleState` inkl. CTB-Zähler, Status, `items`, `action_n`, RNG-`state` (und für `Combatant`, `CTBQueue`, `StatusEffect`); `StateHash.of_battle`; Test `test_m1_battle_snapshot` (Snapshot → `from_dict` → gleicher Hash, Weiterspielen identisch) | Lockstep-Hash, Resync/Reconnect im Kampf (Kap. 3.4, 3.6) |
+| CR-15 | neu `core/live/sponsor_windows.gd` (M8); `run_sim.gd`, `gift_policy.gd`, `gift.gd`, `command.gd`, `event_def.gd` (M8); `core/dungeon/explore_event.gd` (M3); `autoload/events.gd`, `game.gd` (M0), `show.gd` (M2); `scenes/ui/show_overlay.gd`, `debug_overlay.gd`, `scenes/safe_room/safe_room.gd` (M6); `scenes/boot/fullrun.gd`; `core/data/data_validator.gd` + `data/mod_lines.json` (M0/M7) | **Umgesetzt (2026-10-08).** Sponsor-Fenster nach Kap. 6.13: Fahrplan in Ticks (RunSim Schritt 5, Leerlauf-Ticks im Safe Room), Auslöser in den aufzeichnenden Game-Methoden, Prüfung zuletzt in `GiftPolicy.check`, Buchung in `note_applied`, Stempel `sponsor_window`, Command `sponsor_window`, `ExploreEvent.SPONSOR_WINDOW_OPENED/CLOSED`, drei Signale, Overlay-Badge, M.O.D.-Zeilen, Debug-Werkzeug; `Game.replay_log(p_log, until_tick)` für Replay-Prüfungen im Safe Room | Nutzerentscheidung 2026-10-08 (2), Server-Autorität |
 | — | 02_TECH §1 / §11.5 | Modul **M8 „Live-Hooks“** mit Dateien aus 11.2 und Tests aus 11.4 aufnehmen | Ordnung der Zuständigkeiten |
 
 ---
@@ -1994,7 +2153,7 @@ der volle Server-Ausbau von `RunSim` (mehrere Instanzen, Netzwerk-Befehlsquelle)
 | # | Risiko | Wahrscheinl. | Auswirkung | Gegenmaßnahme |
 |---|---|---|---|---|
 | R1 | **Rechtslage** macht Echtgeld-Zufallskisten in wichtigen Märkten unzulässig oder teuer (Lizenzen, Altersprüfung) | mittel–hoch | hoch | Rechtsprüfung **vor** S3-Entwicklung der Bezahlteile; Architektur trennt `kind: chest` sauber → Fallback „nur nicht-zufällige Geschenke“ ohne Umbau |
-| R2 | **Twitch** untersagt Bits für Zufallsinhalte oder lehnt Extension ab; Erlöse gehen ohnehin an Broadcaster — bei Streamer-Läufen an die beschenkte Person selbst (indirekte Auszahlung, Kap. 9) | mittel | hoch für B | frühe schriftliche Anfrage; Gutachtenfrage Erlösfluss; bis dahin keine Bits-Kisten an die Broadcaster:in (L11); Fallback B = Gold/Buff/Cheer; C als eigenes Erlösmodell |
+| R2 | **Twitch** untersagt Zufallsinhalte bzw. Glücksspiel-ähnliche Stream-Inhalte oder Shop-Hinweise in der Extension; ~~Bits-Erlöse an die Broadcaster:in~~ — seit 2026-10-08 kein Bits-Geschenk mehr (L11) | mittel | mittel (B ist nur noch Reichweite) | frühe schriftliche Anfrage zur kostenlosen Extension und zu Shop-Hinweisen; ohne Freigabe Extension nur mit Votes/Applaus; Erlös kommt ausschließlich aus C |
 | R3 | **Determinismus der Erkundung** zu teuer (Physik/Navigation aus der Szene in den Kern ziehen) | mittel | hoch (S1-Verifikation, Replays) | früh im Slice entscheiden (11.2 `ExploreSim`); Notlösung: Erkundung serverautoritativ ohne Replay-Verifikation, Replays mit Positionsproben |
 | R4 | **Pay-to-win-Wahrnehmung** / Shitstorm („Gacha-Satire verkauft Gacha“) | mittel | hoch (Marke) | Pur-Liga als Standard, Odds/Fairness offen, abnehmende Wirkung, Satire-Ton der M.O.D. offen selbstironisch; Community-Beta |
 | R5 | **Kollusion/Betrug**: gestohlene Zahlungsmittel für Geschenke an Freund:innen, Bestenlisten-Manipulation | mittel | mittel | Caps, Käufer-Limits, Kein-Selbstgeschenk-Prüfung, Chargeback-Sperren, Annullierung |
@@ -2006,7 +2165,9 @@ der volle Server-Ausbau von `RunSim` (mehrere Instanzen, Netzwerk-Befehlsquelle)
 | R11 | **Desyncs** zwischen Client-Kern und Server-Kern nach Updates | mittel | mittel | `sim_version`/`data_hash`-Pflicht, Checkpoint-Hashes, Archiv-Builds für alte Replays |
 | R12 | **Plattform-Desyncs** (ARM64 vs. x86-64: FMA-Kontraktion, libm-Abweichungen, float32-`Vector*`) | mittel | hoch (Echtgeld, Koop) | Ganzzahl-/Festkomma-Kern (Kap. 3.3 Nr. 3/5, CR-12), Lint-Test, Plattform-Matrix mit arm64-Runner vor jedem `sim_version`-Bump |
 | R13 | **Vorhersage/Leck** geheimer Seeds (31-Bit-`SeedUtil`, Insider mit `server_seed`) | mittel | hoch | Seed-Klassen online (Kap. 3.3 Nr. 2), HSM/KMS + Vier-Augen, Anomalie-Erkennung, offene Kommunikation (Kap. 7.7) |
-| R14 | **Minderjährige** im Publikum und als Empfänger:innen; Kaufappelle durch Streamer:innen | hoch | hoch (Recht, Marke) | Kaufknöpfe nur 18+, Empfang bezahlter Kisten nur 18+, Creator-Richtlinien, neutrale M.O.D.-Zeilen (L6, L13) |
+| R14 | **Minderjährige** im Publikum und als Empfänger:innen; Kaufappelle durch Streamer:innen | hoch | hoch (Recht, Marke) | Kaufknöpfe nur 18+, Empfang bezahlter Kisten nur 18+, Creator-Richtlinien, neutrale M.O.D.-Zeilen (L6, L13); Streamer:innen ohne Erlösbeteiligung (L11) — weniger Anreiz zu Kaufappellen |
+| R15 | **Sponsor-Fenster erzeugen Dringlichkeit** (Countdown + knappe Plätze ≈ künstliche Verknappung, Dark Pattern) | mittel | hoch (Recht, Marke) | L16 / Kap. 6.13: Countdown nur als Programminformation, im Kauf-Flow weder Countdown noch Knappheit (Platz reserviert), keine Push-/Chat-Aufrufe, M.O.D. ohne Kaufbezug, Fan-Pakete nutzen dieselben Fenster; Rechtsprüfung (Kap. 9 „Dringlichkeit“) |
+| R16 | **Fenster frustrieren oder verraten zu viel**: Zuschauer:innen wollen außerhalb helfen (Abbrüche, Support), ein unverzögerter Fensterzustand verrät Fortschritt (Boss-Countdown = „steht vor dem Boss“) an Parallel-Teams | mittel | mittel | Overlay/Shop zeigen „Nächstes Fenster in …“; Fan-Pakete und Cheers als Wartezeit-Interaktion (Cheers jederzeit); `spec_window` unverzögert, aber ohne Art/Bezug (Kap. 4.6); Fensterwerte per `events.json` justierbar, in Playtests messen |
 
 ### 12.2 Offene Fragen / Entscheidungen
 
@@ -2017,8 +2178,9 @@ der volle Server-Ausbau von `RunSim` (mehrere Instanzen, Netzwerk-Befehlsquelle)
    (Festkomma, Kap. 3.3) ist Voraussetzung für gewertete S1-Bestenlisten, S3 (Echtgeld) und S4. Offen bleibt nur der
    Zeitpunkt: Vorschlag = Benchmark-Prototyp im Slice (Verifier-Budget), Umsetzung vor S1-Wertung. → Entscheidung in `02_TECH.md`.
 3. **Koop 3–4:** Welche zusätzlichen spielbaren Figuren? (Inhalt + Balancing; GDD-Erweiterung nötig.)
-4. **B oder C zuerst?** Wenn Twitch-Bits-Erlöse an Broadcaster gehen **[zu prüfen]**, liefert B keinen eigenen Umsatz.
-   Soll C vorgezogen werden (S3 = C-Web-Shop, S5 = B)?
+4. ~~**B oder C zuerst?**~~ — **entschieden 2026-10-08:** C (eigener Shop) ist der Echtgeld-Weg (S3 Web, S5 App-IAP), B nur
+   kostenlose Interaktion (L11). Offen bleibt nur: Gibt es ein Bits-Erlösmodell für Entwickler, bei dem die Broadcaster:in nichts
+   erhält **[zu prüfen]**? Ohne das kommt Bits nie für Geschenke in Frage.
 5. **Echtgeld-Geschenke vor Dedicated Server?** Empfehlung: Server-Simulation für Solo bereits in S3 (Kap. 2). Zustimmung?
 6. **[S3-Blocker] Empfang durch Minderjährige:** Dürfen Spieler:innen unter 18 überhaupt bezahlte Zufallskisten empfangen?
    Vorläufige Regel (Kap. 6.11, L6): **nein** — Show-Liga mit bezahlten Zufallskisten nur für altersverifizierte Spieler:innen
@@ -2031,9 +2193,17 @@ der volle Server-Ausbau von `RunSim` (mehrere Instanzen, Netzwerk-Befehlsquelle)
 11. **Backend:** Nakama-Selbstbetrieb ab S1 (Empfehlung) oder Supabase-Schnellstart mit späterer Migration?
 12. **Signaturen:** Festgelegt: HMAC-SHA256 mit Service-Schlüssel, **nur serverseitig** geprüft (Instanz, Verifier; Kap. 6.5).
     Offen nur, falls Clients je prüfen sollen: ECDSA P-256/RSA über `Crypto.verify` (EC in 4.7 **[zu prüfen]**), Ed25519 nur per GDExtension.
-13. **Zuschauer-Cheers gegen Bits** (Kap. 6.3): gewünscht (reine Kosmetik, kein Zufall) oder weglassen?
+13. ~~**Zuschauer-Cheers gegen Bits**~~ — entfällt mit der Entscheidung 2026-10-08 (Cheers sind kostenlos, Kap. 6.3).
 14. **Koop-Kämpfe:** Festgelegt: pro Team genau ein Kampf, alle werden hineingezogen (Kap. 1.4). Bestätigen; parallele Kämpfe
     nur als spätere Option mit Inventar-Escrow.
 15. **`RunSim` im Slice (CR-6, dünne Variante):** Zustimmung von M0/M2 nötig, weil `Game`/`Show` zu Fassaden werden.
 16. **Unzuverlässiger Kanal (ENet/WebRTC)** von Anfang an für Koop-Erkundung (Kap. 4.1): webrtc-native-GDExtension für 4.7
     verfügbar **[zu prüfen]**?
+17. **Sponsor-Fenster — Feinabstimmung (Kap. 6.13):** Standardwerte (300 s / 60 s, Safe Room ≤ 90 s, Boss-Countdown 45 s,
+    3 Plätze, 1 je Zuschauer:in, Gnadenfrist 15 s) per Playtest bestätigen. Offen: (a) Gelten die Fenster auch für kostenlose
+    Fan-Pakete (umgesetzt: ja, nur `cheer` ist ausgenommen)? (b) Soll der Boss-Countdown bei erneutem Betreten eines Boss-Raums
+    (Boss noch nicht besiegt) wieder öffnen (umgesetzt: nur beim Erstbesuch)? (c) `realtime`-Modus (S4): laufen Fenster im Kampf
+    weiter? (d) Koop: Plätze je Spieler:in oder je Team? (e) Kampagne: Fenster nur als dezenter Hinweis (umgesetzt) oder dort
+    ganz ausblenden, solange es keine echten Zuschauer gibt?
+18. **Dringlichkeit (R15):** Reicht die Darstellung ohne Countdown im Kauf-Flow, oder soll auch das Overlay nur „offen/zu“
+    ohne Sekunden zeigen? → mit der Rechtsprüfung klären.

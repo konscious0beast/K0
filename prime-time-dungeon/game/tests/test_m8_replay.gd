@@ -55,6 +55,9 @@ func _bot_run(def: EventDef, with_gifts: bool = false) -> Dictionary:
 	for g: EnemySpawn in layout.enemies:
 		if g.encounter_id == fdef.timer_start_after:
 			tutorial_group = g.id
+	if with_gifts:
+		# viewer gifts need an open Sponsor-Fenster (05 §6.13): a recorded QA window, open across the bot run
+		sim.apply({"t": "sponsor_window", "op": "dev_open", "sec": 600, "slots": 4})
 	sim.apply({"t": "encounter", "enc": fdef.timer_start_after, "adv": BattleSetup.Advantage.PREEMPTIVE,
 		"group": tutorial_group})
 	if with_gifts:

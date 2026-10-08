@@ -215,6 +215,12 @@ func test_signature_format() -> void:
 
 func test_reason_codes() -> void:
 	assert_eq(Gift.REASONS, ["", "invalid_schema", "duplicate", "league_pur", "not_accepting", "cap_reached",
-		"run_not_active", "effect_mismatch", "bad_signature", "chest_blocked", "deadline_missed"], "05 §6.5")
+		"run_not_active", "effect_mismatch", "bad_signature", "chest_blocked", "deadline_missed", "window_closed",
+		"window_full", "window_sender_limit"], "05 §6.5, §6.13")
+	for r: String in SponsorWindows.REASONS:
+		assert_has(Gift.REASONS, r, "Sponsor-Fenster reason " + r)
+	assert_eq([SponsorWindows.protocol_code("window_closed"), SponsorWindows.protocol_code("window_full"),
+		SponsorWindows.protocol_code("window_sender_limit")], ["E_WINDOW_CLOSED", "E_WINDOW_FULL",
+		"E_WINDOW_SENDER_LIMIT"], "05 §4.5 protocol codes")
 	assert_true(Gift.is_external(Gift.make_dev("cheer", "", 0)))
 	assert_false(Gift.is_external(Gift.make_system("spn_krawumm", 0, 0)))

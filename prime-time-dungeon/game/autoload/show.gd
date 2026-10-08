@@ -7,6 +7,11 @@ extends Node
 ## Every game-relevant change happens synchronously in the calling method (never in _process), so replays
 ## (Game.replay_log) reproduce it exactly; while Game.replaying only pure presentation (lines, chat) is skipped.
 ##
+## Sponsor-Fenster (05 §6.13): external gifts need an open window (GiftPolicy.check → SponsorWindows.check, with the
+## gifts still waiting in the queue counted as reservations); an accepted gift is stamped with its window id
+## ("sponsor_window") and books its slot when it is applied (GiftPolicy.note_applied). M.O.D. announces windows only
+## in event/live runs (sponsor_presentation() == &"live"); the campaign keeps them to the subtle overlay badge.
+##
 ## Hype is kept in whole points: positive gains are scaled by hype_gain_mult in integer per-mille and rounded half
 ## up (deterministic, integral state hash, 05 §3.3 Nr. 5/9). A battle delta applies its positive parts scaled and its
 ## negative parts unscaled as one change (ShowDelta.hype_gain / hype_loss, GDD §7.3).
@@ -84,6 +89,8 @@ func _ready() -> void:
 	Events.new_game_started.connect(_on_new_run)
 	Events.game_loaded.connect(_on_new_run)
 	Events.floor_timer_started.connect(_on_floor_timer_started)
+	Events.sponsor_window_opened.connect(_on_sponsor_window_opened)
+	Events.sponsor_window_closed.connect(_on_sponsor_window_closed)
 
 
 ## Display only: smoothing, noise, exploration chat. No game-relevant state changes here.
@@ -325,9 +332,13 @@ func receive_gift(gift: Dictionary) -> Dictionary:
 	if not _is_system(g):
 		if _is_duplicate(gid):
 			return _rejected(gid, "duplicate")
-		reason = GiftPolicy.check(_run_now(st), g, _event_rules())
+		var run: Dictionary = _run_now(st)
+		reason = GiftPolicy.check(run, g, _event_rules())
 		if reason != "":
 			return _rejected(gid, reason)
+		var wid: String = SponsorWindows.window_for(run, g)
+		if wid != "" and str(g.get("sponsor_window", "")) == "":
+			g["sponsor_window"] = wid               # 05 §6.13: the window that holds the gift's slot (recorded with it)
 	if Game.in_battle:
 		_queue.append(g)
 		return _accepted(gid, "queued")
@@ -449,6 +460,30 @@ func end_battle(result: BattleResult) -> int:
 
 func unlocked_this_battle() -> PackedStringArray:
 	return _unlocked_battle.duplicate()
+
+
+## How the Sponsor-Fenster are presented: &"off" (no windows: Pur-Liga, gifts disabled, no run), &"subtle" (campaign:
+## dim badge only, no M.O.D. lines), &"live" (event/live runs that take viewer gifts: badge + M.O.D. lines).
+func sponsor_presentation() -> StringName:
+	if Game.state == null or not SponsorWindows.tracked(Game.state):
+		return &"off"
+	return &"subtle" if Game.mode == &"campaign" else &"live"
+
+
+## Game.sponsor_window() (SponsorWindows.view) + "mode" (sponsor_presentation) + "pending" (accepted gifts of the open
+## window still waiting for a turn boundary — they hold a slot). For the overlay badge, the debug tool and a shop UI.
+func sponsor_window_view() -> Dictionary:
+	var v: Dictionary = Game.sponsor_window()
+	v["mode"] = String(sponsor_presentation())
+	var pending: int = 0
+	for q: Dictionary in _queue:
+		if str(q.get("sponsor_window", "")) != "" and str(q.get("sponsor_window", "")) == str(v.get("id", "")):
+			pending += 1
+	v["pending"] = pending
+	if bool(v.get("open", false)):
+		v["free"] = maxi(0, int(v.get("slots", 0)) - int(v.get("used", 0)) - pending)
+		v["full"] = int(v["free"]) == 0
+	return v
 
 
 ## Run bookkeeping of a gift the controller applied IN battle (`events` = the ActionEvents of battle.apply_gift):
@@ -734,7 +769,22 @@ func _after_delivery(g: Dictionary) -> void:
 			"amount": GiftPolicy.scale(maxi(0, JsonUtil.to_int(g.get("amount", 0))), effect_pm)})
 		if effect_pm < 1000:
 			say("gift_diminished", {"pct": effect_pm / 10})
+		_after_window_booking(g)
 	Events.gift_received.emit(g)
+
+
+## The external gift took a slot of the open Sponsor-Fenster: sponsor_window_updated; the last slot → M.O.D. line
+## (live presentation only).
+func _after_window_booking(g: Dictionary) -> void:
+	var wid: String = str(g.get("sponsor_window", ""))
+	if wid == "":
+		return
+	var v: Dictionary = Game.sponsor_window()
+	if not bool(v.get("open", false)) or str(v.get("id", "")) != wid:
+		return
+	Events.sponsor_window_updated.emit(v)
+	if bool(v.get("full", false)) and sponsor_presentation() == &"live":
+		say("sponsor_window_full", {"count": int(v.get("slots", 0))})
 
 
 ## Gift.make_system with a schema-complete local fallback (05 §6.5) while the M8 builder returns nothing.
@@ -794,10 +844,19 @@ static func _live_counters(st: GameState) -> Dictionary:
 
 
 ## Copy of the run counters plus "tick" = the run clock (Game.sim) for the GiftPolicy deadline check — the same input
-## RunSim.gift_refusal uses.
-static func _run_now(st: GameState) -> Dictionary:
+## RunSim.gift_refusal uses — plus the Sponsor-Fenster reservations of the gifts waiting in the queue
+## ([[window id, sender_ref], …]; RunSim applies at once and has none, so a live acceptance is never looser than the
+## replay's).
+func _run_now(st: GameState) -> Dictionary:
 	var run: Dictionary = _live_counters(st).duplicate()
 	run["tick"] = Game.sim.tick() if Game.sim != null else 0
+	var pending: Array = []
+	for q: Dictionary in _queue:
+		if not _is_system(q) and str(q.get("sponsor_window", "")) != "":
+			var s: Variant = q.get("sender", {})
+			pending.append([str(q["sponsor_window"]), str((s as Dictionary).get("sender_ref", "")) if s is Dictionary
+				else ""])
+	run[SponsorWindows.PENDING_KEY] = pending
 	return run
 
 
@@ -948,6 +1007,23 @@ func _on_explore_tick(payload: Dictionary) -> void:
 func _on_floor_timer_started() -> void:
 	if not Game.replaying:
 		_floor_start_pending = true
+
+
+## M.O.D. announces a window (live presentation only; L13: no purchase pressure — the lines name the time, never a
+## price or a call to buy): "sponsor_window_open:<kind>" → "sponsor_window_open" with {seconds} and {count} (slots).
+func _on_sponsor_window_opened(window: Dictionary) -> void:
+	if Game.replaying or sponsor_presentation() != &"live":
+		return
+	say("sponsor_window_open:" + str(window.get("kind", "")), {"seconds": int(window.get("left_sec", 0)),
+		"count": int(window.get("slots", 0))})
+
+
+## Only the natural end ("time") gets a line; "superseded" is followed by the next window's own line, "left" / "floor"
+## end with the scene.
+func _on_sponsor_window_closed(_window_id: String, reason: String) -> void:
+	if Game.replaying or reason != "time" or sponsor_presentation() != &"live":
+		return
+	say("sponsor_window_closed")
 
 
 ## A floor whose countdown already runs (load, descent) queues "floor_start"; one whose countdown waits for its

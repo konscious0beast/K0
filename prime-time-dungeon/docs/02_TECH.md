@@ -200,7 +200,8 @@ Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört gen
 | `core/live/score_calc.gd` | M8 (S) | `ScoreCalc`: Punkte eines Event-Laufs |
 | `core/live/leaderboard.gd` | M8 (S) | `Leaderboard`: lokale Top 10 |
 | `core/live/gift.gd` | M8 (S) | `Gift`: Geschenk-Schema, `validate`, `make_system`, `make_dev` |
-| `core/live/gift_policy.gd` | M8 (S) | `GiftPolicy`: Caps, Wirkungsfaktoren (Ganzzahl) |
+| `core/live/gift_policy.gd` | M8 (S) | `GiftPolicy`: Caps, Wirkungsfaktoren (Ganzzahl); prüft zuletzt die Sponsor-Fenster (`SponsorWindows.check`) |
+| `core/live/sponsor_windows.gd` | M8 | `SponsorWindows`: Sponsor-Fenster (Nutzerentscheidung 2026-10-08, 05 §6.13) — Fahrplan in Ticks (periodisch / Safe Room / Boss-Countdown / QA), Plätze, Pro-Zuschauer-Limit, Gnadenfrist gestempelter Geschenke, Regeln `rules.sponsor_windows` + Standard für Kampagne/Offline; Zustand in `GameState.flags["live"]["sponsor"]` |
 | `core/live/gift_applier.gd` | M8 (S) | `GiftApplier`: Geschenk außerhalb des Kampfes anwenden |
 | `core/live/fair_roll.gd` | M8 (S) | `FairRoll`: Commit-Reveal-Würfel (nur Tests im Slice) |
 
@@ -362,6 +363,7 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `tests/test_m6_ui_scenes.gd` | M6 | Alle UI-Szenen instanziieren, Default-Fokus vorhanden |
 | `tests/test_m7_data_content.gd` | M7 | Inhalt: Mengen laut GDD (11 Gegner, 2 Bosse, 16 Party-Skills, 2 Stunts, 25 Gegner-Skills, 11 Boss-Skills, 29 Achievements, 7 Sponsoren, 6 Meilensteine, 6 Status, 4 Szenen), Balancing-Sanity |
 | `tests/test_m8_*.gd` | M8 | Live-Hooks laut 05_LIVE_MODUS §11.4 (RunLog, RunSim, Command, Gift, Replay …) |
+| `tests/test_m8_sponsor_windows.gd` | M8 | Sponsor-Fenster (05 §6.13): Fahrplan in Ticks, Kampf friert ein, Plätze/Zuschauer-Limit, Codes, Safe Room (Leerlauf-Ticks), Boss-Countdown, Replay-Gleichheit; Integration `Show.receive_gift`, Overlay-Badge, Debug-Werkzeug |
 
 ---
 
@@ -629,6 +631,12 @@ signal quest_progress(progress: float)
 signal quest_completed()
 signal gift_received(gift: Dictionary)                   # every accepted gift, incl. source "system"
 signal gift_rejected(gift_id: String, reason: String)
+# Sponsor-Fenster (05 §6.13, user decision 2026-10-08): viewers may help only while a window is open.
+# window = SponsorWindows.window_view: {"open", "id", "kind" (periodic|safe_room|boss|dev), "ref", "slots", "used",
+# "free", "full", "per_viewer", "left_ticks", "len_ticks", "left_sec"}.
+signal sponsor_window_opened(window: Dictionary)         # Game (RunSim SPONSOR_WINDOW_OPENED)
+signal sponsor_window_closed(window_id: String, reason: String)   # Game (RunSim): reason time|left|superseded|floor
+signal sponsor_window_updated(window: Dictionary)        # Show: a gift took a slot of the open window
 
 # --- UI -----------------------------------------------------------------
 signal toast_requested(text: String, icon: StringName)
@@ -639,11 +647,11 @@ Wer emittiert was (verbindlich):
 | Signal | Emitter |
 |---|---|
 | `scene_changed` | Router |
-| `new_game_started`, `floor_timer_*`, `floor_completed`, `stray_spawn_requested`, `party_changed`, `member_leveled`, `level_up`, `inventory_changed`, `credits_changed`, `lootbox_opened`, `chest_opened` (`open_chest`), `event_completed` (`apply_floor_event`), `input_scheme_changed`, `settings_changed`, `item_bought`, `explore_tick`, `run_started`, `run_finished`, `quest_progress`, `quest_completed` | Game |
+| `new_game_started`, `floor_timer_*`, `floor_completed`, `stray_spawn_requested`, `party_changed`, `member_leveled`, `level_up`, `inventory_changed`, `credits_changed`, `lootbox_opened`, `chest_opened` (`open_chest`), `event_completed` (`apply_floor_event`), `input_scheme_changed`, `settings_changed`, `item_bought`, `explore_tick`, `run_started`, `run_finished`, `quest_progress`, `quest_completed`, `sponsor_window_opened`, `sponsor_window_closed` (`_dispatch` der RunSim-Events) | Game |
 | `game_loaded`, `game_saved` | Save |
 | `floor_entered`, `room_entered`, `enemy_alerted`, `encounter_triggered`, `gate_opened`, `overlay_mode_requested(&"explore")` | ExplorationScene (M3) |
 | `battle_started`, `battle_turn_started`, `battle_ended`, `overlay_mode_requested(&"battle")` | BattleScene/BattleController (M5) |
-| `viewers_changed`, `followers_changed`, `hype_changed`, `achievement_unlocked`, `milestone_reached`, `sponsor_gift_triggered`, `mod_said`, `chat_posted`, `lootbox_earned`, `enemy_killed`, `battle_won`, `battle_fled`, `stunt_resolved`, `combo`, `party_ko`, `boss_defeated`, `boss_hp_changed`, `gift_received`, `gift_rejected` | Show |
+| `viewers_changed`, `followers_changed`, `hype_changed`, `achievement_unlocked`, `milestone_reached`, `sponsor_gift_triggered`, `mod_said`, `chat_posted`, `lootbox_earned`, `enemy_killed`, `battle_won`, `battle_fled`, `stunt_resolved`, `combo`, `party_ko`, `boss_defeated`, `boss_hp_changed`, `gift_received`, `gift_rejected`, `sponsor_window_updated` | Show |
 | `dialog_finished` | ModDialog (M6) |
 | `camera_drag`, `camera_zoom` | TouchControls (M6); `camera_zoom` = Zwei-Finger-Pinch auf der freien Kamerafläche (0.02 m/px Abstandsänderung), `CameraRig` klemmt wie das Mausrad auf 5–9 m |
 | `pause_menu_toggled`, `toast_requested`, `overlay_mode_requested(&"safe_room"/&"menu"/&"hidden"/&"game_over")` | M6-Szenen (`&"game_over"`: GameOver-Screen, nur Scanlines); `toast_requested` darf jeder |
@@ -706,6 +714,8 @@ var in_battle: bool = false          # make_battle_setup → apply_battle_result
                                      # external gifts by it (§3.5)
 var replaying: bool = false          # true while replay_log runs: record() no-op, no Router/Save calls; UI/Show may skip
                                      # pure presentation (M.O.D. lines, toasts)
+var safe_room_clock: bool = false    # SafeRoomScene shown (true in _ready, false on leave/_exit_tree): the run clock keeps
+                                     # ticking there ("idle ticks", Sponsor-Fenster 05 §6.13) — the floor timer does not
 
 func has_state() -> bool
 func new_game(slot: int, player_name: String = "Kai", seed: int = -1, difficulty: StringName = &"prime") -> void
@@ -725,8 +735,14 @@ func ensure_state() -> void          # if not has_state(): ephemeral-safe new_ga
 func floor_def() -> FloorDef         # DB.floor_def(state.floor_run.index)
 func start_floor(floor_index: int) -> void
 	# state.floor_run = FloorRun.create(DB.floor_def(i), state.seed, state.difficulty); clear_blocking_dialogs();
-	# Show.start_floor(i) (hype := 30); record({"t": "floor", "floor": i})
+	# Show.start_floor(i) (hype := 30); record({"t": "floor", "floor": i}); _dispatch(sim.sponsor_floor())
 func is_timer_ticking() -> bool      # timer_running and state.floor_run.timer_started and _blocking_dialogs == 0
+func is_idle_ticking() -> bool       # safe_room_clock, not replaying/in_battle, no blocking dialog, countdown started,
+	# floor_run.location = a safe room, SponsorWindows.tracked(state) → Game._process steps RunSim (idle ticks)
+func open_dev_sponsor_window(sec: int = 60, slots: int = 3) -> bool   # QA (debug overlay F5, tests): recorded
+	# {"t": "sponsor_window", "op": "dev_open", "sec", "slots"} + sim.sponsor_dev_open; false where rules.sponsor_windows.dev_open
+	# forbids it (live events) or no windows run (Pur-Liga)
+func sponsor_window() -> Dictionary  # sim.sponsor_window() = SponsorWindows.view (open window, slots, left/next seconds)
 func complete_floor() -> void
 	# timer_running = false; record({"t": "descend"}); sim.request_checkpoint(); emits floor_completed(index) (Show: trigger +
 	# say("floor_end")); event run → finish_run(&"floor_completed");
@@ -762,7 +778,8 @@ func rest_full_heal() -> void         # record({"t": "rest"}); Progression.full_
 func apply_floor_event(event_id: String, choice: String) -> Dictionary   # §7.4 (FloorEvent resolve/apply + Show + record;
 	# outcome.completed → emits event_completed({"event_id", "choice"}))
 func visit_room(cell: Vector2i) -> bool   # ExplorationScene on every room change; first visit: floor_run.visited.append(cell),
-	# STAIRS → stairs_found = true, record({"t": "room", "cell": [x, y]}); returns first_visit
+	# STAIRS → stairs_found = true, record({"t": "room", "cell": [x, y]}), _dispatch(sim.sponsor_room(cell)) (boss room →
+	# Boss-Countdown, 05 §6.13); returns first_visit
 func open_chest(chest_id: String) -> Array[LootReward]   # §7.3 chest flow without visuals: unknown / already open / locked without
 	# itm_key_master → [] (no change); else record({"t": "chest", "id"}), LootRoller.roll_chest (rng SeedUtil.derive(
 	# floor_run.loot_seed, "chest", k) — 05 CR-11: never the public layout seed; RunSim identical), add_rewards(),
@@ -770,9 +787,10 @@ func open_chest(chest_id: String) -> Array[LootReward]   # §7.3 chest flow with
 func open_gate(key: String) -> void   # requirement checked by the caller (M3); once: record({"t": "gate", "key"}), opened_gates.append
 func enter_safe_room(safe_room_id: String) -> Dictionary
 	# record({"t": "safe_room", "id"}); location = id; safe_room_visits += 1; first_visit := id not in visited_safe_rooms → append;
-	# full heal (Progression.full_heal, not recorded separately); returns scene context {"safe_room_id", "first_visit",
-	# "safe_room_visits", "kai_level"} for scenes.json conditions
-func leave_safe_room() -> void        # ExplorationScene.on_resume({"from_safe_room"}): record({"t": "safe_room_exit"}); location = &"start"
+	# full heal (Progression.full_heal, not recorded separately); _dispatch(sim.sponsor_safe_room(id)); returns scene context
+	# {"safe_room_id", "first_visit", "safe_room_visits", "kai_level"} for scenes.json conditions
+func leave_safe_room() -> void        # ExplorationScene.on_resume({"from_safe_room"}): record({"t": "safe_room_exit"}); location = &"start";
+	# _dispatch(sim.sponsor_safe_room_exit())
 func next_scene(ctx: Dictionary) -> SceneDef      # first SceneDef (priority order) whose condition holds and that was not seen; null
 func mark_scene_seen(scene: SceneDef) -> void     # record({"t": "scene", "id"}); flags scene_<id> = true, set_flag (e.g. mop_pep_talk)
 func set_difficulty(d: StringName) -> bool   # only &"prime" → &"vorabend" (never up); record({"t": "difficulty", "to"});
@@ -780,7 +798,9 @@ func set_difficulty(d: StringName) -> bool   # only &"prime" → &"vorabend" (ne
 func record(cmd: Dictionary) -> void  # run_log.add_cmd(sim.tick(), cmd, cmd_id); no-op if run_log == null or replaying;
 	# cmd_id: "gift"/"twist" (external inputs) → 0, every other command strictly increasing from 1 per run log (05 §10.6;
 	# a new run log — new_game, start_event_run, Save.load_slot — starts at 1 again)
-func replay_log(p_log: RunLog) -> Dictionary   # M8: {"final_hash", "result", "mismatch_at"} — see "Replay" below
+func replay_log(p_log: RunLog, until_tick: int = -1) -> Dictionary   # M8: {"final_hash", "result", "mismatch_at"} — see
+	# "Replay" below; until_tick >= 0: afterwards the clock steps on to that tick (the live sim.tick(): idle ticks in a safe
+	# room move the clock without a command — the full-run bot's replay check in the safe room passes it)
 func set_flag(key: String, value: Variant) -> void   # record({"t": "flag", "key", "value"}) (value bool/int/String); flags[key] = value
 func get_flag(key: String, default: Variant = null) -> Variant
 func time_left() -> float             # state.floor_run.time_left_ticks / float(TICKS_PER_SEC) (display only)
@@ -796,16 +816,19 @@ Laufzeitverhalten:
   `static func is_ephemeral_args(user_args, args) -> bool` testbar; `run_tests.gd` und `capture.gd` setzen zusätzlich
   `Game.ephemeral = true`.
   Ephemer: Defaults, `save_to_disk()` ist ein No-op → Tests und Screenshots sind maschinenunabhängig.
-- `_process(delta)`: wenn `state != null`: `state.play_time_sec += delta` (nur Anzeige, nicht im Hash). Wenn `is_timer_ticking()`:
+- `_process(delta)`: wenn `state != null`: `state.play_time_sec += delta` (nur Anzeige, nicht im Hash). Wenn `is_timer_ticking()`
+  oder `is_idle_ticking()` (Safe Room, Sponsor-Fenster):
   `_acc += delta`; `n := floori(_acc * TICKS_PER_SEC)`; `_acc -= n / float(TICKS_PER_SEC)`; dann **n-mal einzeln**
-  `_dispatch(sim.step(1))` (Abbruch, sobald `is_timer_ticking()` false wird). Einzelticks, damit Reaktionen auf die Events eines Ticks
+  `_dispatch(sim.step(1))` (Abbruch, sobald beides false wird). `RunSim` entscheidet am Zustand (`floor_run.location` ≠
+  `&"start"`), ob ein Tick ein Erkundungs- oder ein Leerlauf-Tick ist — Replay und Verifier ticken damit identisch. Einzelticks, damit Reaktionen auf die Events eines Ticks
   (Show-Hype bei Timer-Warnungen, Achievements bei `explore_tick`) vor dem nächsten Tick greifen — unabhängig von der Framerate;
   `replay_log` tickt genauso.
   **Alle** spielrelevanten Zeitregeln der Erkundung (Etagen-Timer, Warnungen, Hype-Zerfall, Pazifist-Zähler, Streuner) laufen in
   `RunSim.step` auf ganzen Ticks, nie auf `delta` (Brief §6b.1). `_dispatch` übersetzt die `ExploreEvent`s (§7.1):
   `TIMER_SECOND` → `floor_timer_changed`; `TIMER_WARNING` → `floor_timer_warning`; `TIMER_EXPIRED` → `timer_running = false`,
   `floor_timer_expired`, `Router.game_over(&"timer")` (beim Replay nur `on_game_over(&"timer")`); `EXPLORE_TICK` → `explore_tick(payload)`; `HYPE` → `Show.sync_from_state()`;
-  `STRAY_DUE` → `stray_spawn_requested` (ExplorationScene platziert die Gruppe).
+  `STRAY_DUE` → `stray_spawn_requested` (ExplorationScene platziert die Gruppe); `SPONSOR_WINDOW_OPENED` →
+  `sponsor_window_opened(window)`, `SPONSOR_WINDOW_CLOSED` → `sponsor_window_closed(id, reason)`.
 - Dialog-Pause: `_ready()` verbindet `Events.mod_said` (`blocking == true` **und** ein Presenter ist angemeldet →
   `_blocking_dialogs += 1`) und `Events.dialog_finished` (`maxi(0, _blocking_dialogs - 1)`). Presenter = `ModDialog` (M6), meldet sich
   per `Game.set_dialog_presenter(true)` in `_ready()` und `(false)` in `_exit_tree()` an/ab; ohne Presenter (Tests, Standalone-Szenen,
@@ -830,8 +853,15 @@ Laufzeitverhalten:
   `battle {cmd, auto}` (M5, jeder `BattleCommand.to_dict()`), `lootbox {box}`, `buy {item, qty, safe_room}`, `sell {item, qty}`,
   `equip {member, slot, item}`, `use_item {item, member}`, `rest {}`, `event {id, choice}` (FloorEvent-Wahl), `chest {id}`,
   `gate {key}`, `room {cell: [x, y]}` (nur Erstbesuch), `safe_room {id}`, `safe_room_exit {}`, `scene {id}`, `flag {key, value}`,
-  `difficulty {to}`, `descend {}`, `gift {gift}` (nur `source ≠ "system"`, aufgezeichnet bei der **Anwendung**, §3.5; `cmd_id` 0).
+  `difficulty {to}`, `descend {}`, `gift {gift}` (nur `source ≠ "system"`, aufgezeichnet bei der **Anwendung**, §3.5; `cmd_id` 0;
+  mit Stempel `gift.sponsor_window`), `sponsor_window {op: "dev_open", sec, slots}` (QA-Fenster, 05 §6.13).
   `Command.TYPES` (M8) = genau diese Liste.
+- **Sponsor-Fenster** (Nutzerentscheidung 2026-10-08, 05 §6.13): Externe Geschenke nur in offenen Fenstern. Die Auslöser sind die
+  aufzeichnenden Methoden selbst — `start_floor` (schließt, Countdown neu), `visit_room` (Erstbesuch einer Boss-Zelle →
+  Boss-Countdown 45 s), `enter_safe_room` / `leave_safe_room` (Safe-Room-Fenster ≤ 90 s, je Safe Room und Etage einmal),
+  `open_dev_sponsor_window` (QA) — sie rufen die gleichnamige `RunSim.sponsor_*()`-Funktion und `_dispatch`en deren Events; der
+  periodische Fahrplan (alle 300 s Erkundungszeit für 60 s) läuft in `RunSim.step`. Live-Lauf, `replay_log` und `RunSim.replay`
+  öffnen/schließen damit dieselben Fenster an denselben Ticks; der Zustand steht in `flags["live"]["sponsor"]` (Hash, Save).
 - Quest-Adapter (05 CR-4, nur `mode == &"event_offline"`): `enemy_killed` → `{"type": "enemy_killed", "enemy_id"}`,
   `boss_defeated` → `{"type": "boss_defeated", "boss_id"}`, `battle_started` → `{"type": "battle_started"}`, `floor_completed` →
   `{"type": "floor_completed", "floor"}`, `achievement_unlocked` → `{"type": "achievement", "id"}`; Detail-Events wie `RunSim`
@@ -858,7 +888,7 @@ Laufzeitverhalten:
   der Command-Tick prüfen, Uhr **tickweise** wie live bis `k` (`_dispatch(sim.step(1))`), dann **dieselbe** Methode wie live
   (`start_floor`, `open_lootbox`, `buy`, `sell`, `equip`, `use_item`, `rest_full_heal`, `apply_floor_event`, `open_chest`,
   `open_gate`, `visit_room`, `enter_safe_room`, `leave_safe_room`, `mark_scene_seen`, `set_flag`, `set_difficulty`,
-  `descend` → `floor_completed` senden, `gift` außerhalb des Kampfes → `Show.receive_gift`). Kämpfe exakt nach §5.7 ohne Szene:
+  `open_dev_sponsor_window`, `descend` → `floor_completed` senden, `gift` außerhalb des Kampfes → `Show.receive_gift`). Kämpfe exakt nach §5.7 ohne Szene:
   `encounter` → `make_battle_setup` (next_seed "battle") → `BattleState.new` → `Show.begin_battle` (next_seed "show") →
   `battle_started` → `_play(start())`; `battle` → `_play(submit(BattleCommand.from_dict(cmd)))`; `_play` = Events →
   `Show.on_battle_event`, dann (Kampf läuft) ein direkt folgendes `gift`-Command in `Show.receive_gift` und
@@ -939,6 +969,10 @@ func end_battle(result: BattleResult) -> int                        # followers 
 func abort_battle() -> void          # battle torn down before its end (BattleScene freed): drops _rules/_setup/thresholds/queue
 	# without end_battle (no followers/stats); waiting external gifts → gift_rejected(id, "run_not_active"), never applied
 func unlocked_this_battle() -> PackedStringArray
+func sponsor_presentation() -> StringName   # Sponsor-Fenster (05 §6.13): &"off" (no windows: Pur-Liga, gifts disabled),
+	# &"subtle" (campaign: dim overlay line, no M.O.D. lines), &"live" (event/live runs taking viewer gifts: badge + lines)
+func sponsor_window_view() -> Dictionary    # Game.sponsor_window() + "mode" + "pending" (queued gifts holding a slot);
+	# "free"/"full" count the pending reservations — for the overlay badge, the debug tool and a shop UI ("next_in_sec")
 ```
 
 Zustand: ausschließlich `Game.state.show` (`ShowState`) + flüchtig `_rules: ShowRules`, `_queue: Array[Dictionary]` (angenommene,
@@ -947,7 +981,9 @@ noch nicht ausgelieferte Geschenke), `_rng` (Spiellogik: **nur** Sponsor-Auswahl
 
 Geschenke (Brief §6b.4, 05 §6.5): Gift-Dictionary mindestens `{"schema": 1, "gift_id": String, "source": "system"|"fan"|"paid"|"dev",
 "kind": "sponsor_buff"|"gold"|"chest"|"fan_pack", "sponsor_id": String, "payload": Dictionary}`.
-`receive_gift(g)`: `Gift.validate(g)` → bei `source ≠ "system"`: `GiftPolicy.check(...)` → angenommen: **im Kampf**
+`receive_gift(g)`: `Gift.validate(g)` → bei `source ≠ "system"`: `GiftPolicy.check(...)` (zuletzt die **Sponsor-Fenster**,
+05 §6.13: offenes Fenster, freier Platz, Pro-Zuschauer-Limit; wartende Geschenke der Queue zählen als Reservierung →
+`window_closed` / `window_full` / `window_sender_limit`) → Stempel `g["sponsor_window"] = <Fenster-ID>` → angenommen: **im Kampf**
 (`Game.in_battle`, also schon ab `Game.make_battle_setup`, auch während des Swirl-Übergangs) in `_queue`; **außerhalb** sofort
 anwenden = `Game.record({"t": "gift", "gift": g})` (nur `source ≠ "system"`) → `GiftApplier.apply(Game.state, DB.data, g,
 SeedUtil.make_rng(Game.next_seed("gift")))` + `Game.add_rewards()` → `Events.gift_received(g)`; abgelehnt →
@@ -968,7 +1004,12 @@ abgelehnt → `gift_rejected`), sonst wie oben: record → `GiftApplier` → `gi
 Zeilen: `gift_received` mit `{sender}` (nur bei nicht-anonymem Absender, sonst `gift_received:anon`), `gift_received:credits`
 mit `{amount}` (angewendete Credits), `fan_pack_received` mit `{sender}`, `gift_diminished` mit `{pct}` (Wirkung < 100 %),
 Ablehnungen `cap_reached`/`chest_blocked` → `gift_capped`, `not_accepting` → `gift_declined` (05 §6.12; Pur-Liga,
-Duplikate, Schemafehler stumm).
+Duplikate, Schemafehler und `window_*` stumm — das Overlay zeigt, wann das nächste Fenster öffnet).
+Sponsor-Fenster (05 §6.13): ein angewendetes externes Geschenk belegt seinen Platz (`GiftPolicy.note_applied` →
+`SponsorWindows.book`) → `sponsor_window_updated(view)`; letzter Platz → `say("sponsor_window_full")`. Hört auf
+`sponsor_window_opened` → `say("sponsor_window_open:<kind>", {"seconds", "count"})` und `sponsor_window_closed` (nur Grund
+`time`) → `say("sponsor_window_closed")` — **nur** bei `sponsor_presentation() == &"live"`, nie im Replay; die Kampagne bleibt
+beim dezenten Overlay-Hinweis. Zeilen ohne Kaufaufforderung (L13).
 **Aufzeichnung bei Anwendung, nicht bei Empfang:** Nur so ist die Reihenfolge im Log eindeutig (ein `gift`-Command im Kampf steht
 direkt hinter dem `battle`- bzw. `encounter`-Command, an dessen `_play`-Grenze es ausgeliefert wurde) und `Game.replay_log` kann
 es an derselben Stelle wieder einspeisen (§3.4 „Replay“).
@@ -1270,10 +1311,12 @@ const REQUIRED_MOD_TAGS: PackedStringArray = ["intro", "floor_start", "first_fig
 	"lootbox_open_gold", "lootbox_open_fan", "lootbox_pity", "death", "mopsula_ko", "kai_ko", "revive", "boss_defeated",
 	"level_up", "follower_milestone", "safe_room_enter", "vendor_buy", "stairs_found", "floor_end",
 	"chat_hype_high", "chat_hype_mid", "chat_hype_low", "chat_crit", "chat_boring", "chat_mopsula", "chat_handle"]
-## Optional tags: live tags of 05 CR-9 / §6.12 (event_*, gift_*, fan_pack_*, live_*, vote_*, twist_applied_*) and the
-## story beats of GDD §1.4 (tutorial_* hints B1/B2, story_battle:<encounter_id> banners B4).
+## Optional tags: live tags of 05 CR-9 / §6.12 (event_*, gift_*, fan_pack_*, live_*, vote_*, twist_applied_*), the
+## Sponsor-Fenster lines of 05 §6.13 (sponsor_window_open[:periodic|safe_room|boss|dev], sponsor_window_closed,
+## sponsor_window_full) and the story beats of GDD §1.4 (tutorial_* hints B1/B2, story_battle:<encounter_id> banners B4).
 const OPTIONAL_MOD_TAG_PREFIXES: PackedStringArray = ["achievement:", "boss_intro:", "boss_phase:", "event_", "gift_received",
-	"mopsula_idle", "chat_", "gift_", "fan_pack_", "live_", "vote_", "twist_applied_", "tutorial_", "story_"]
+	"mopsula_idle", "chat_", "gift_", "fan_pack_", "live_", "vote_", "twist_applied_", "tutorial_", "story_",
+	"sponsor_window_"]
 ```
 
 `StatIds.ALL` (§6.3) ist das Vokabular für `s.<stat>` in Bedingungen.
@@ -1775,7 +1818,7 @@ sonst niedrigsten HP-Anteil +value % MaxHP). Gewicht = `weight × Π mult` aller
 | F | T | P / Default | Regel |
 |---|---|---|---|
 | `id` | String | ✓ | `mod_` |
-| `tag` | String | ✓ | `REQUIRED_MOD_TAGS`, `timer_warn_<s>`, parametrisiert (`achievement:<ach_id>`, `boss_intro:<enemy_id>`, `boss_phase:<enemy_id>:<n>`, `story_battle:<encounter_id>` — nur Format `enc_…` geprüft, Fixtures ersetzen Etagen; `test_m7_text_content` prüft die Referenz der echten Daten) oder optionale Präfixe (`OPTIONAL_MOD_TAG_PREFIXES`) |
+| `tag` | String | ✓ | `REQUIRED_MOD_TAGS`, `timer_warn_<s>`, parametrisiert (`achievement:<ach_id>`, `boss_intro:<enemy_id>`, `boss_phase:<enemy_id>:<n>`, `story_battle:<encounter_id>` — nur Format `enc_…` geprüft, Fixtures ersetzen Etagen; `test_m7_text_content` prüft die Referenz der echten Daten; `sponsor_window_open:<kind>` mit `kind` ∈ `SponsorWindows.KINDS`) oder optionale Präfixe (`OPTIONAL_MOD_TAG_PREFIXES`) |
 | `voice` | String | `"mod"` | `VOICES` |
 | `text` | String | ✓ | ≤ 110 Zeichen; Platzhalter `{…}` nur aus `TEXT_PLACEHOLDERS` |
 | `user` | String | `""` | nur voice chat: fester Absender; `""` → zufälliger Handle (Tag `chat_handle`) |
@@ -3060,7 +3103,8 @@ static func from_layout(def: FloorDef, floor_seed: int) -> FloorLayout
 
 class_name ExploreEvent extends RefCounted     # core/dungeon/explore_event.gd (M3) — Brief §6b.2 "Ereignisse raus"
 enum Type { ROOM_ENTERED, CHEST_OPENED, ENCOUNTER, ENEMY_STATE, EVENT_CHOICE, GATE_OPENED, ACHIEVEMENT, HYPE,
-	TIMER_SECOND, TIMER_WARNING, TIMER_EXPIRED, EXPLORE_TICK, STRAY_DUE, GIFT_DELIVERED, FLOOR_COMPLETED }
+	TIMER_SECOND, TIMER_WARNING, TIMER_EXPIRED, EXPLORE_TICK, STRAY_DUE, GIFT_DELIVERED, FLOOR_COMPLETED,
+	SPONSOR_WINDOW_OPENED, SPONSOR_WINDOW_CLOSED }   # RunSim (05 §6.13): {"window": view} / {"id", "kind", "reason"}
 var type: ExploreEvent.Type
 var tick: int = 0                   # RunSim tick
 var data: Dictionary = {}           # e.g. TIMER_WARNING {"seconds": 300}, STRAY_DUE {"zone", "group_id", "encounter_id"}
@@ -3091,8 +3135,20 @@ func step(n: int) -> Array[ExploreEvent]        # n ticks; per tick in this orde
 	# 4 spawners: zone without living stray → spawner_ticks[zone] +1; at interval_sec × 30 → group "f<i>_s<stray_counter>",
 	#   encounter = pool[SeedUtil.make_rng(SeedUtil.derive(floor_run.seed, "stray", stray_counter)).randi_range(0, size − 1)],
 	#   floor_run.strays[group] = {"zone", "enc"}, stray_counter +1, ticks reset → STRAY_DUE
-func apply(cmd: Dictionary) -> Array[ExploreEvent]   # M8 replay of recorded explore commands
-func tick() -> int                                    # ticks since run start
+	# 5 Sponsor-Fenster (SponsorWindows.tick, 05 §6.13): open window counts down, periodic countdown (exploration only)
+	#   → SPONSOR_WINDOW_OPENED {"window"} / SPONSOR_WINDOW_CLOSED {"id", "kind", "reason"}
+	# Idle tick: floor_run.location is a safe room (not &"start") → only step 5 (explore = false): the run clock keeps
+	#   ticking in safe rooms (safe room window ≤ 90 s), the floor timer / hype decay / pacifist counter / strays do not
+func apply(cmd: Dictionary) -> Array[ExploreEvent]   # M8 replay of recorded explore commands; triggers the windows
+	# ("floor", first "room" of a boss cell, "safe_room", "safe_room_exit", "sponsor_window" dev_open); external gifts are
+	# checked (gift_refusal → GiftPolicy.check incl. windows) and stamped with their window before they are recorded
+func tick() -> int                                    # ticks since run start (exploration + idle ticks, never in battle)
+func sponsor_floor() -> Array[ExploreEvent]           # Game.start_floor / "floor"
+func sponsor_room(cell: Vector2i) -> Array[ExploreEvent]        # Game.visit_room (first visit) / "room"
+func sponsor_safe_room(room_id: String) -> Array[ExploreEvent]  # Game.enter_safe_room / "safe_room"
+func sponsor_safe_room_exit() -> Array[ExploreEvent]            # Game.leave_safe_room / "safe_room_exit"
+func sponsor_dev_open(sec: int, slots: int) -> Array[ExploreEvent]   # Game.open_dev_sponsor_window / "sponsor_window"
+func sponsor_window() -> Dictionary                   # SponsorWindows.view(state, rules)
 ```
 
 ### 7.2 Algorithmus

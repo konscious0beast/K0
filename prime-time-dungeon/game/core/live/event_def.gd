@@ -292,6 +292,12 @@ func _validate_rules(out: PackedStringArray) -> void:
 			if GiftPolicy.DEFAULT_GIFT_RULES.has(str(k)) and _is_int(GiftPolicy.DEFAULT_GIFT_RULES[str(k)]) \
 					and not _is_int(g[k]):
 				out.append("rules.gifts.%s must be an integer" % str(k))
+	# Sponsor-Fenster (05 §6.13): schema; QA dev windows only offline (a live event must switch them off explicitly)
+	var sw: Variant = rules.get("sponsor_windows", null)
+	out.append_array(SponsorWindows.validate_rules(sw))
+	if kind != "offline" and not (sw is Dictionary and (sw as Dictionary).get("dev_open", true) is bool
+			and not bool((sw as Dictionary)["dev_open"])):
+		out.append("rules.sponsor_windows.dev_open must be false for %s events (QA windows are offline only)" % kind)
 
 
 func _validate_against_data(data: GameData, out: PackedStringArray) -> void:

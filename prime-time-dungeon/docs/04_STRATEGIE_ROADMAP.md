@@ -40,6 +40,9 @@
 5. **PC zuerst** (Steam Early Access, Steam Deck), **Mobile danach** (Android/iOS, Free-Demo + einmaliger Vollversions-Kauf).
 6. **Premium-Modell**: Spieler:innen kaufen das Spiel — **nie Zufallsinhalte**, kein Pay-to-Win, keine Werbung, keine Energie.
 7. Echtgeld-Zuschauergeschenke (Brief Kap. 5) sind ein **späteres Zusatzmodul** (Phase 7, SHOWRUN S3/S5) hinter einer **Rechtsprüfung** — der Business-Case hängt **nicht** daran.
+   **Entscheidung 2026-10-08:** Echtgeld von Zuschauer:innen fließt **nur an Spiel/Betreiber**, nie an Spieler:innen oder
+   Streamer:innen (keine Creator-Beteiligung); Echtgeld-Weg ist der **eigene Shop (Web + App-Store-IAP)**, Twitch nur kostenlose
+   Interaktion. Geholfen werden darf nur in **Sponsor-Fenstern** (begrenzte Plätze, feste Zeitpunkte; 05 Kap. 6.13).
 8. Inhaltlich: **Staffel 1 = Etagen 1–6** bis 1.0; **Staffel 2 = Etagen 7–9** als bezahlte Erweiterung nach 1.0.
 9. Baseline-Szenario: **Solo + KI bis Ende Phase 2**, danach **kleines Team (4–5 Personen)**, finanziert aus Förderung + Publisher oder Crowdfunding.
 10. Marketing beginnt mit der **Steam-Seite in Phase 3** und lebt von **15–30-Sekunden-Clips der Show-Mechanik** (M.O.D.-Sprüche, Stunts, Sponsor-Drops).
@@ -218,6 +221,8 @@ Entscheidung über den finalen Titel: **spätestens bei Exit Phase 2**.
 **Abgrenzung zur Brief-Entscheidung „Zuschauer-Geschenke mit Echtgeld“:** Die Sponsorkisten des Live-Modus (05 Kap. 6/8) sind ein
 **separates System** (nur Live-Modus, nur von Zuschauer:innen an andere, lauf-gebunden, Odds, Pity, Caps, 18+, Geo-Sperre, Pur-Liga).
 Strategische Einordnung: **Phase 7, Stufe S3/S5, nur nach schriftlicher Rechtsprüfung** (05 L10). Kein Umsatz daraus ist im Budget eingeplant.
+Seit der Entscheidung 2026-10-08 fließt dieser Umsatz ausschließlich an den Betreiber (eigener Shop C, 05 Kap. 8); eine
+Creator-Beteiligung ist gestrichen, Twitch Bits tragen kein Echtgeld-Geschenk (nur kostenlose Votes/Applaus).
 
 ### 2.7 Weitere Rechtsbausteine (Checkliste)
 
@@ -402,7 +407,7 @@ Safe Room (Speichern, Automat) → Hausmeister → Treppe/Rattenkönigin → „
 |---|---|---|
 | **Staffel 2** | Etagen 7–9 als bezahlte Erweiterung (2030) | 1.0 ≥ 85 % positiv, Umsatz deckt ≥ 9 Monate Team |
 | **SHOWRUN S2** | Live-Zuschauen, Votes, kostenlose Fan-Währung „Applaus“ | S1 stabil (0 Desyncs in 1 000 Bot-Läufen) |
-| **SHOWRUN S3/S5** | Echtgeld-Zuschauergeschenke (Twitch Bits / eigener Shop) | **schriftliche Rechtsprüfung** für alle Zielländer (05 L10), Twitch-Richtlinien geklärt **[zu prüfen]**, Betriebsteam für Support/Zahlungen vorhanden |
+| **SHOWRUN S3/S5** | Echtgeld-Zuschauergeschenke über den **eigenen Shop** (S3 Web-Shop, S5 App-Store-IAP), nur in Sponsor-Fenstern; Twitch nur kostenlos (Entscheidung 2026-10-08) | **schriftliche Rechtsprüfung** für alle Zielländer (05 L10), Store-Regeln für Geschenke an Dritte geklärt **[zu prüfen]**, Betriebsteam für Support/Zahlungen vorhanden |
 | **SHOWRUN S4** | Koop 2–4 (Dedicated Server) | Netcode-Prototyp, Budget für Server-Betrieb |
 | **Konsolen** | Switch 2 / PlayStation / Xbox — Godot-Konsolenports nur über spezialisierte Portierungspartner **[zu prüfen]** | 1.0-Erfolg, Publisher oder Porting-Partner trägt Kosten |
 | **Saisonale Events** | Event-Läufe mit festen Seeds (S0/S1), kosmetische Belohnungen | Datenformat `events.json` |
@@ -590,7 +595,9 @@ Regionale Preise nach Steam-Empfehlung; erster Rabatt frühestens **3 Monate** n
 2. **Keine Echtgeld-Zufallsinhalte für Spieler:innen** (Brief Kap. 5). Lootboxen werden nur **verdient**.
 3. **Keine Werbung**, keine Energie-/Wartezeit-Mechaniken, keine Verbrauchs-Käufe.
 4. **Kosmetik** ist der einzige zusätzliche Kaufinhalt neben Erweiterungen/Soundtrack.
-5. **Zuschauer-Echtgeldgeschenke** (SHOWRUN S3/S5) nur nach Rechtsprüfung, nur im Live-Modus, mit allen Leitplanken L1–L10 aus 05 — als Zusatz, nicht als Geschäftsgrundlage.
+5. **Zuschauer-Echtgeldgeschenke** (SHOWRUN S3/S5) nur nach Rechtsprüfung, nur im Live-Modus, mit allen Leitplanken L1–L16 aus 05 — als Zusatz, nicht als Geschäftsgrundlage.
+6. **Erlös nur an den Betreiber** (Entscheidung 2026-10-08): keine Auszahlung, keine Beteiligung an Spieler:innen oder
+   Streamer:innen (Creator-Beteiligung gestrichen); Kaufweg ist der eigene Shop (Web + App-Store-IAP), nicht Twitch Bits.
 
 ### 6.3 Umsatz-Szenarien (**Schätzung**, nur zur Einordnung)
 
@@ -629,7 +636,7 @@ für Code, Menschen für Kunst/Text/Musik“.
 |---|---|---|---|---|
 | **Streamer-Modus lite** | EA Update 2 | Chat stimmt per Befehl (z. B. `!1 / !2`) über **Sponsor-Geschenke** ab: welches Geschenk beim nächsten Hype-Schwellenwert kommt, welcher Twist (Nebel, Doppel-Loot, Gegner-Buff); Chat-Namen erscheinen als In-Game-Sponsoren im Chat-Ticker | Client liest den Twitch-Chat direkt (OAuth des Streamers), **kein eigener Server**; Votes gehen über `Show.receive_gift()` (Quelle `fan`) | keins |
 | **SHOWRUN S2** | nach 1.0 | Zuschauen mit Delay, Votes, Applaus-Fanpakete | Spectator-Pipeline (05) | keins |
-| **SHOWRUN S3** | Phase 7, nach Rechtsprüfung | Bits-Geschenke | Twitch-Extension | Bits **[Richtlinien prüfen]** |
+| **SHOWRUN S3** | Phase 7, nach Rechtsprüfung | Twitch-Extension: Votes, Applaus, Sponsor-Fenster-Anzeige — **ohne Bits-Geschenke** (Bits-Erlöse gehen nach Kenntnisstand an Broadcaster:innen **[zu prüfen]**, widerspricht der Entscheidung 2026-10-08); Echtgeld-Geschenke nur über den eigenen Shop | Twitch-Extension + Web-Shop (C) | nur C (an den Betreiber) |
 
 **Streamer-Programm:** ab Demo **200 Keys** an DE/EN-Streamer:innen (50–5 000 Zuschauer:innen, RPG/Variety), Streamer-Presskit
 (Overlay-Hinweise, Spoiler-Policy, „Streamer-Modus aktivieren“-Anleitung), Musik **streaming-sicher** (Lizenzvertrag mit Komponist:in!).
@@ -728,7 +735,7 @@ Skala: Wahrscheinlichkeit (W) / Auswirkung (A) = niedrig · mittel · hoch.
 | R7 | **Art-Upgrade zu teuer / Stilbruch** zwischen Kit und Blender-Modellen | mittel | hoch | 03_ART-Konventionen (gleiche Shader, Vertex-Colors, Pivots), ein Leit-Artist, Stil-Guide; Kit-Optik bleibt als Fallback lauffähig | Figur > 2 Wochen Aufwand |
 | R8 | **Solo-Bus-Faktor / Burnout** | hoch (A) / mittel (B) | hoch | feste Arbeitszeiten, Phasen-Gates statt Dauersprint, Doku + Tests machen Übergabe möglich, KI für Routine | > 3 Wochen ohne Fortschritt |
 | R9 | **Mobile-Performance / Touch-UX** bei 3D + Menüs | mittel | mittel | Budgets ab Slice gemessen, Android-Gerät ab Phase 2 im Test, 30-FPS-Modus, Touch-Layer von Anfang an | < 45 FPS auf Zielgerät |
-| R10 | **Echtgeld-Zuschauergeschenke**: Recht/Plattform/Reputation | mittel | hoch | Phase 7, schriftliche Rechtsprüfung, Pur-Liga Standard, Leitplanken L1–L10; kein Budget davon abhängig | Gutachten negativ → Fallback „nur nicht-zufällig/kostenlos“ |
+| R10 | **Echtgeld-Zuschauergeschenke**: Recht/Plattform/Reputation | mittel | hoch | Phase 7, schriftliche Rechtsprüfung, Pur-Liga Standard, Leitplanken L1–L16, Erlös nur an den Betreiber, Hilfe nur in Sponsor-Fenstern; kein Budget davon abhängig | Gutachten negativ → Fallback „nur nicht-zufällig/kostenlos“ |
 | R11 | **KI-Abhängigkeit**: Codequalität, Wartbarkeit, Offenlegung, Kosten | mittel | mittel | statische Typisierung, Modulverträge, Tests als Pflicht, Code-Reviews, menschliche Abnahme; keine KI-Assets im finalen Spiel | wachsende Bug-Rate pro Update |
 | R12 | **Marktumfeld**: offizielles DCC-Spiel/TV-Start besetzt die Nische — oder Engine-/Store-Änderungen | mittel | mittel | Eigenes Profil (Show-System, europäische Satire); TV-Hype als Chance für das Genre nutzen, ohne DCC zu nennen; Godot-Version pro Phase einfrieren, Updates nur zwischen Phasen | Ankündigungen der Rechteinhaber |
 
@@ -829,4 +836,4 @@ anderen — auch wenn deren Implementierung noch fehlt. Die Tests von M1/M2 nutz
 | E5 | Staffel-Schnitt | Staffel 1 = Etagen 1–6 (1.0), Staffel 2 = 7–9 (Erweiterung) | jetzt (Planungsgrundlage) |
 | E6 | Kickstarter ja/nein | nur bei erfüllten Gates (Kap. 5.4) | Phase-3-Monat 5 |
 | E7 | Lizenz-Track DCC | nur bei erfüllten drei Bedingungen (Kap. 2.4) | frühestens Ende Phase 3 |
-| E8 | Echtgeld-Zuschauergeschenke | bleiben gewollt (Brief), aber **Phase 7 nach Rechtsprüfung**; B vs. C zuerst entscheidet sich nach Twitch-Klärung (05 Kap. 12.2 Nr. 4) | vor Planung von S3 |
+| E8 | Echtgeld-Zuschauergeschenke | bleiben gewollt (Brief), aber **Phase 7 nach Rechtsprüfung**. **Entschieden 2026-10-08:** C (eigener Shop: Web + App-Store-IAP) ist der Echtgeld-Weg, Erlös nur an den Betreiber, B (Twitch Bits) nur kostenlose Interaktion; Hilfe nur in Sponsor-Fenstern (05 Kap. 6.13). Offen nur: gibt es ein Bits-Erlösmodell für Entwickler **[zu prüfen]**? | vor Planung von S3 |

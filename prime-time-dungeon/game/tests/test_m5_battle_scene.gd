@@ -153,6 +153,7 @@ func test_battle_freed_mid_fight_resets_game_and_show() -> void:
 	var scene: BattleScene = _scene(_setup("enc_f1_a2"), {"stay": true})
 	assert_true(await _wait_menu(scene), "the party command menu is up")
 	assert_true(Game.in_battle)
+	assert_true(Game.open_dev_sponsor_window(), "viewer gifts need an open Sponsor-Fenster (05 §6.13)")
 	var queued: Dictionary = Gift.make_dev("gold", "", 100)
 	assert_eq(Show.receive_gift(queued)["apply"], "queued")
 	scene.get_parent().remove_child(scene)
@@ -181,6 +182,7 @@ func test_controller_without_result_never_strands_the_player() -> void:
 	assert_true(ctrl.done)
 	assert_eq(got, [null], "finished(null)")
 	assert_false(Game.in_battle)
+	assert_true(Game.open_dev_sponsor_window())
 	var g: Dictionary = Gift.make_dev("gold", "", 100)
 	assert_eq(Show.receive_gift(g)["apply"], "now", "Show's battle context was dropped")
 

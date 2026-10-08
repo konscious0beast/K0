@@ -226,6 +226,7 @@ func test_recording_and_checkpoints() -> void:
 	sim.state.floor_run.timer_started = true
 	sim.step(10)
 	sim.apply({"t": "rest"})
+	sim.apply({"t": "sponsor_window", "op": "dev_open", "sec": 60, "slots": 3})   # viewer gifts need a window
 	sim.apply({"t": "gift", "gift": Gift.make_dev("gold", "", 100)})
 	sim.step(640)
 	sim.apply({"t": "room", "cell": [3, 6]})
@@ -233,7 +234,9 @@ func test_recording_and_checkpoints() -> void:
 	var meta: Array = []
 	for c: Dictionary in cmds:
 		meta.append([c["k"], c["id"], c["c"]["t"]])
-	assert_eq(meta, [[0, 1, "floor"], [10, 2, "rest"], [10, 0, "gift"], [650, 3, "room"]], "k = tick, gift id 0")
+	assert_eq(meta, [[0, 1, "floor"], [10, 2, "rest"], [10, 3, "sponsor_window"], [10, 0, "gift"], [650, 4, "room"]],
+		"k = tick, gift id 0")
+	assert_eq(cmds[3]["c"]["gift"]["sponsor_window"], "sw_1", "an accepted gift is recorded with its window")
 	var ks: Array = []
 	for cp: Dictionary in rl.checkpoints():
 		ks.append(cp["k"])
@@ -280,6 +283,7 @@ func test_core_effects_of_commands() -> void:
 	sim.apply({"t": "safe_room_exit"})
 	assert_eq(st.floor_run.location, &"start")
 	var gold_before: int = st.inventory.credits
+	sim.apply({"t": "sponsor_window", "op": "dev_open", "sec": 60, "slots": 3})
 	sim.apply({"t": "gift", "gift": Gift.make_dev("gold", "", 100)})
 	assert_eq(st.inventory.credits, gold_before + 100, "gift outside battle → GiftApplier")
 	assert_eq((st.flags["live"]["gift_ids"] as Array).size(), 1)
@@ -312,8 +316,11 @@ func test_gift_policy_at_application() -> void:
 	var camp: RunSim = _sim(42)
 	var credits: int = camp.state.inventory.credits
 	var g: Dictionary = Gift.make_dev("gold", "", 100)
-	assert_eq(camp.gift_refusal(g), "", "campaign: dev gifts allowed")
-	assert_false(camp.state.flags.has("live"), "gift_refusal does not touch the state")
+	assert_eq(camp.gift_refusal(g), "window_closed", "campaign: dev gifts need an open Sponsor-Fenster (05 §6.13)")
+	camp.apply({"t": "sponsor_window", "op": "dev_open", "sec": 60, "slots": 3})
+	var before: String = StateHash.of(camp.state)
+	assert_eq(camp.gift_refusal(g), "", "campaign: dev gifts allowed while a window is open")
+	assert_eq(StateHash.of(camp.state), before, "gift_refusal does not touch the state")
 	camp.apply({"t": "gift", "gift": g})
 	var h2: String = StateHash.of(camp.state)
 	camp.apply({"t": "gift", "gift": g})
@@ -334,6 +341,7 @@ func test_gift_policy_at_application() -> void:
 ## and its load into the run counters; a second external gift in the same battle is refused (max_per_battle 1).
 func test_gifts_in_battle() -> void:
 	var sim: RunSim = _sim(43)
+	sim.apply({"t": "sponsor_window", "op": "dev_open", "sec": 60, "slots": 3})   # open before the battle, frozen in it
 	sim.apply({"t": "encounter", "enc": real_data().floor_def(1).timer_start_after, "adv": 0, "group": ""})
 	assert_not_null(sim.battle)
 	var chest: Dictionary = Gift.make_dev("chest", "bronze", 0)

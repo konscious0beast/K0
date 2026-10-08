@@ -74,6 +74,12 @@ signal quest_progress(progress: float)
 signal quest_completed()
 signal gift_received(gift: Dictionary)                   # every accepted gift, incl. source "system"
 signal gift_rejected(gift_id: String, reason: String)
+# Sponsor-Fenster (05 §6.13, user decision 2026-10-08): viewers may help only while a window is open.
+# window = SponsorWindows.window_view: {"open", "id", "kind" (periodic|safe_room|boss|dev), "ref", "slots", "used",
+# "free", "full", "per_viewer", "left_ticks", "len_ticks", "left_sec"}.
+signal sponsor_window_opened(window: Dictionary)         # Game (RunSim SPONSOR_WINDOW_OPENED)
+signal sponsor_window_closed(window_id: String, reason: String)   # Game (RunSim): reason time|left|superseded|floor
+signal sponsor_window_updated(window: Dictionary)        # Show: a gift took a slot of the open window
 
 # --- UI -----------------------------------------------------------------
 signal toast_requested(text: String, icon: StringName)

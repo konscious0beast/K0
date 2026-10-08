@@ -60,6 +60,7 @@ func _ready() -> void:
 	_info = UiUtil.safe_room_info(safe_room_id)
 	_build_world()
 	context = Game.enter_safe_room(safe_room_id)
+	Game.safe_room_clock = true                # run clock: idle ticks for the Sponsor-Fenster (05 §6.13)
 	pending_scene = Game.next_scene(context)
 	_build_ui()
 	_update_bang()
@@ -70,6 +71,10 @@ func _ready() -> void:
 	Vfx.spawn(&"heal", self, _kai.global_position if _kai.is_inside_tree() else Vector3.ZERO)
 	Show.say("safe_room_enter")
 	_focus_first()
+
+
+func _exit_tree() -> void:
+	Game.safe_room_clock = false
 
 
 func _process(delta: float) -> void:
@@ -217,6 +222,7 @@ func leave() -> void:
 	if _leaving:
 		return
 	_leaving = true
+	Game.safe_room_clock = false
 	Sfx.play(&"door")
 	Router.exit_safe_room()
 

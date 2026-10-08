@@ -6,12 +6,15 @@ class_name Command extends RefCounted
 ## lootbox {"box"}, buy {"item", "qty", "safe_room"}, sell {"item", "qty"}, equip {"member", "slot", "item"},
 ## use_item {"item", "member"}, rest {}, event {"id", "choice"}, chest {"id"}, gate {"key"}, room {"cell": [x, y]},
 ## safe_room {"id"}, safe_room_exit {}, scene {"id"}, flag {"key", "value"}, difficulty {"to"}, descend {},
-## gift {"gift"} (external input, cmd id 0).
+## gift {"gift"} (external input, cmd id 0), sponsor_window {"op": "dev_open", "sec", "slots"} (QA Sponsor-Fenster,
+## SponsorWindows.dev_open, 05 §6.13).
 ## battle.cmd = BattleCommand.to_dict(): {"kind": attack|skill|stunt|item|defend|flee, "actor", "skill", "item",
 ## "targets": [String]}. Additional unknown fields are allowed (additive protocol versions, 05 §4.3).
 
 const TYPES: PackedStringArray = ["floor", "encounter", "battle", "lootbox", "buy", "sell", "equip", "use_item", "rest",
-	"event", "chest", "gate", "room", "safe_room", "safe_room_exit", "scene", "flag", "difficulty", "descend", "gift"]
+	"event", "chest", "gate", "room", "safe_room", "safe_room_exit", "scene", "flag", "difficulty", "descend", "gift",
+	"sponsor_window"]
+const SPONSOR_WINDOW_OPS: PackedStringArray = ["dev_open"]
 ## Inputs from outside the player (cmd id 0, 05 §10.6; == Game.EXTERNAL_CMDS). "twist" is a hook (S2, not in TYPES).
 const EXTERNAL: PackedStringArray = ["gift", "twist"]
 const EQUIP_SLOTS: PackedStringArray = ["weapon", "armor", "accessory"]
@@ -97,6 +100,15 @@ static func _validate_fields(t: String, d: Dictionary) -> String:
 			return ""
 		"difficulty":
 			return "" if DIFFICULTIES.has(str(d.get("to", ""))) else "to must be prime|vorabend"
+		"sponsor_window":
+			if not SPONSOR_WINDOW_OPS.has(str(d.get("op", ""))):
+				return "op must be one of %s" % ", ".join(SPONSOR_WINDOW_OPS)
+			var e6: String = _first([_int_min(d, "sec", 1), _int_min(d, "slots", 1)])
+			if e6 != "":
+				return e6
+			if int(d["sec"]) > SponsorWindows.DEV_MAX_SEC or int(d["slots"]) > SponsorWindows.DEV_MAX_SLOTS:
+				return "sec must be <= %d, slots <= %d" % [SponsorWindows.DEV_MAX_SEC, SponsorWindows.DEV_MAX_SLOTS]
+			return ""
 		"gift":
 			if not (d.get("gift", null) is Dictionary):
 				return "gift must be a Dictionary"

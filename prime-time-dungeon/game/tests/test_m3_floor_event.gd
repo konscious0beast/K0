@@ -201,14 +201,18 @@ func test_wheel_spin_rules() -> void:
 	var data: GameData = _data()
 	var st: GameState = _state(data)
 	var ev: EventSpawn = _wheel()
+	var cost: int = int(ev.params["cost"])
+	var max_spins: int = int(ev.params["max_spins"])
+	# The real Inventory pays every spin: credits for one spin more than allowed, so only max_spins can stop the wheel.
+	st.inventory.credits = cost * (max_spins + 1)
 	assert_eq(FloorEvent.choices(ev, st, data), PackedStringArray(["spin", "ignore"]))
 	var first: Dictionary = FloorEvent.resolve(ev, "spin", st, data, make_rng(5))
 	assert_true(bool(first["completed"]), "first spin completes the event")
 	assert_eq(first["mod_tag"], "event_wheel_spin")
 	var entry: Dictionary = first["wheel"]
 	assert_false(entry.is_empty(), "a wheel entry was hit")
-	var expected_credits: int = -20 + (int(entry["amount"]) if str(entry["kind"]) == "credits" else 0)
-	assert_eq(first["credits"], expected_credits, "spin costs 20 Cr")
+	var expected_credits: int = -cost + (int(entry["amount"]) if str(entry["kind"]) == "credits" else 0)
+	assert_eq(first["credits"], expected_credits, "spin costs the wheel's cost (20 Cr)")
 	# Same seed → same entry.
 	assert_eq(FloorEvent.resolve(ev, "spin", st, data, make_rng(5))["wheel"], entry)
 	FloorEvent.apply(first, ev, "spin", st, data)
@@ -219,11 +223,12 @@ func test_wheel_spin_rules() -> void:
 	assert_false(bool(second["completed"]), "no second completion bonus")
 	FloorEvent.apply(second, ev, "spin", st, data)
 	FloorEvent.apply(FloorEvent.resolve(ev, "spin", st, data, make_rng(7)), ev, "spin", st, data)
-	assert_eq(int(st.floor_run.event_uses[ev.id]), 3)
+	assert_eq(int(st.floor_run.event_uses[ev.id]), max_spins)
+	assert_true(st.inventory.credits >= cost, "credits left for a 4th spin")
 	assert_eq(FloorEvent.choices(ev, st, data), PackedStringArray(), "max_spins reached")
 	# Not enough credits → only ignore.
 	var poor: GameState = _state(data)
-	poor.inventory.credits = 19
+	poor.inventory.credits = cost - 1
 	assert_eq(FloorEvent.choices(ev, poor, data), PackedStringArray(["ignore"]))
 	var ign: Dictionary = FloorEvent.resolve(ev, "ignore", poor, data, make_rng(1))
 	assert_true(bool(ign["valid"]))
@@ -395,7 +400,9 @@ func test_game_apply_floor_event_integration() -> void:
 	assert_len(spy, 1, "only the first spin completes the event")
 	if spy.size() == 1:
 		assert_eq(spy[0], {"event_id": ev.id, "choice": "spin"})
-	# A different use count would draw differently somewhere over the table (the seed really advances).
+	# A different use count would draw differently somewhere over the table (the seed really advances). The two spins
+	# above were paid from the start credits; top them up so a further spin is affordable.
+	Game.state.inventory.credits = int(ev.params["cost"])
 	var differs: bool = false
 	for n in 8:
 		var a: Dictionary = FloorEvent.resolve(ev, "spin", Game.state, DB.data,

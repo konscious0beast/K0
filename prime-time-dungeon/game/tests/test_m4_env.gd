@@ -97,8 +97,7 @@ func _glyphs_ok(text: String) -> bool:
 	return true
 
 
-# --- rooms
-# -------------------------------------------------------------------------------------------------------------
+# --- rooms ------------------------------------------------------------------------------------------------------------
 
 func test_build_room_all_masks_kinds_and_zones() -> void:
 	var t0: int = Time.get_ticks_usec()
@@ -412,8 +411,7 @@ func test_safe_room_all_themes() -> void:
 	assert_eq(EnvKit.safe_room_anchor(&"nowhere"), Transform3D.IDENTITY)
 
 
-# --- environment + sun
-# -------------------------------------------------------------------------------------------------
+# --- environment + sun ------------------------------------------------------------------------------------------------
 
 func test_make_environment() -> void:
 	var ex: Environment = EnvKit.make_environment("metro", {}, &"explore")
@@ -480,8 +478,7 @@ func test_make_sun() -> void:
 		l.free()
 
 
-# --- props
-# -------------------------------------------------------------------------------------------------------------
+# --- props ------------------------------------------------------------------------------------------------------------
 
 func test_every_prop_builds() -> void:
 	for id: String in PropKit.IDS:
@@ -621,6 +618,26 @@ func test_chest_interrupted_open_still_emits_once() -> void:
 		assert_true(chest.is_open)
 		chest.set_open_instant()
 		assert_eq(fired[0], 1, "set_open_instant on an idle chest emits nothing")
+
+
+## M4 verify: a second open() while the lid tween runs must not emit `opened` early (a caller awaiting the first
+## open() would return before the lid is open); the single emission comes when the lid is fully open.
+func test_chest_second_open_during_tween_waits_for_the_lid() -> void:
+	var host := Node3D.new()
+	add_to_tree(host)
+	var chest: ChestProp = PropKit.build(&"chest", 2) as ChestProp
+	host.add_child(chest)
+	var fired: Array[int] = [0]
+	chest.opened.connect(func() -> void: fired[0] += 1)
+	chest.open()
+	await wait_frames(2)
+	chest.open()
+	assert_eq(fired[0], 0, "no early opened while the lid moves")
+	var ok: bool = await wait_until(func() -> bool: return fired[0] == 1, 3000)
+	assert_true(ok, "opened once the lid is open")
+	assert_almost(rad_to_deg((chest.get_node("Lid") as Node3D).rotation.x), ChestProp.LID_OPEN_DEG, 0.5)
+	await wait_frames(10)
+	assert_eq(fired[0], 1, "exactly one emission for both calls")
 
 
 func test_chest_open_outside_tree() -> void:

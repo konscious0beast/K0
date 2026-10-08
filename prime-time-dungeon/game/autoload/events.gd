@@ -27,6 +27,7 @@ signal chest_opened(chest_id: String, rewards: Array)    # Array[LootReward]; Ga
 signal gate_opened(cell: Vector2i, dir: int)             # RoomCell.DOOR_*
 signal stray_spawn_requested(zone_id: String, group_id: String, encounter_id: String)   # Game (RunSim STRAY_DUE)
 signal camera_drag(relative: Vector2)                    # touch camera drag in viewport px
+signal camera_zoom(amount: float)                        # touch pinch: arm length change in m (> 0 = zoom out)
 
 # --- Battle ---------------------------------------------------------------
 signal battle_started(encounter_id: String, is_boss: bool)
@@ -41,6 +42,7 @@ signal stunt_resolved(payload: Dictionary)               # Show (STUNT_RESULT)
 signal combo(payload: Dictionary)                        # Show (COMBO)
 signal party_ko(payload: Dictionary)                     # Show (KO of a party member)
 signal boss_defeated(payload: Dictionary)                # Show.end_battle (VICTORY + is_boss)
+signal boss_hp_changed(payload: Dictionary)              # Show (boss hit, hp_after): {"boss_id", "hp", "max_hp"}
 signal item_bought(payload: Dictionary)                  # Game.buy
 signal event_completed(payload: Dictionary)              # Game.apply_floor_event (FloorEvent done)
 signal explore_tick(payload: Dictionary)                 # Game, once per full explore second (RunSim)

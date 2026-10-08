@@ -75,6 +75,20 @@ static func from_dict(d: Dictionary) -> QuestTracker:
 
 # --- additions ----------------------------------------------------------------------------------------------------
 
+## Localization key of the quest line (events.json quest.label_key; "" = none). The HUD shows its translation, or —
+## without one — the text EventInfo builds from to_def() (M3 CR 4: the HUD reads the live tracker, not FloorDef).
+func label() -> String:
+	return label_key
+
+
+## The quest definition this tracker was built from ({"type", "params", "label_key"?}; sub quests inside params).
+func to_def() -> Dictionary:
+	var d: Dictionary = {"type": type, "params": params.duplicate(true)}
+	if label_key != "":
+		d["label_key"] = label_key
+	return d
+
+
 ## Exact progress 0 … 1 000 000.
 func progress_ppm() -> int:
 	if _done:

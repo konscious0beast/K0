@@ -2,7 +2,8 @@ extends Node
 ## BattleController (02_TECH §5.7, 05_LIVE_MODUS CR-7): drives BattleState — Show.begin_battle, battle_started,
 ## plays every event list through the BattlePlayer (event_played → Show.on_battle_event), asks the HUD for party
 ## commands (or AutoPolicy / EnemyAI), records each command as {"t": "battle", "cmd", "auto"}, delivers pending gifts
-## at the turn boundary (Show.take_pending_gift → BattleState.apply_gift), then battle_ended → Game.apply_battle_result
+## at the turn boundary (Show.take_pending_gift → BattleState.apply_gift → Show.note_battle_gift), then battle_ended →
+## Game.apply_battle_result
 ## → Show.end_battle / unlocked_this_battle → results → Router.end_battle. Private M5 helper (no class_name).
 
 signal finished(result: BattleResult)
@@ -79,6 +80,7 @@ func run(setup: BattleSetup) -> void:
 	running = false
 	result = state.result
 	if result == null:
+		abort_unfinished()
 		return
 	Events.battle_ended.emit(result.outcome, result.encounter_id)
 	var before: Dictionary = _party_snapshot()
@@ -92,6 +94,20 @@ func run(setup: BattleSetup) -> void:
 	finished.emit(result)
 	if exit_on_end:
 		Router.end_battle(result)
+
+
+## The loop stopped without a BattleResult (a BattleState bug: no current actor, or no events for a validated
+## command — reported by push_error). The player must never be stuck on the battle screen: the battle is dropped
+## without rewards (Game.in_battle false, Show.abort_battle), `finished(null)` fires and, with exit_on_end, the Router
+## returns to the previous screen (payload battle_result null).
+func abort_unfinished() -> void:
+	running = false
+	Game.in_battle = false
+	Show.abort_battle()
+	done = true
+	finished.emit(null)
+	if exit_on_end:
+		Router.end_battle(null)
 
 
 ## EnemyAI / AutoPolicy command of the current actor. An invalid one would make submit() return [] without consuming
@@ -116,7 +132,9 @@ func _play(events: Array[ActionEvent]) -> void:
 	var g: Dictionary = Show.take_pending_gift(state)
 	if not g.is_empty():
 		gifts.append(g)
-		await player.play(state.apply_gift(g))
+		var gift_events: Array[ActionEvent] = state.apply_gift(g)
+		Show.note_battle_gift(g, gift_events)    # run counters / gift items, like RunSim (05 §6.9)
+		await player.play(gift_events)
 		if hud != null:
 			hud.sync_from_state(state)
 

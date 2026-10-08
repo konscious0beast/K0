@@ -67,14 +67,17 @@ static func roll_lootbox(box: LootboxDef, data: GameData, floor_index: int, stat
 	return out
 
 
-## Layout chest: wood → 20..40 credits + 1 entry from pools.f<i>.common; metal/locked → contents.
+## Layout chest: non-empty `contents` are given as they are (metal/locked chests, and procedural wood chests whose
+## contents DungeonGenerator rolled from FloorDef.chest_table, 02_TECH §7.2 step 9 — M3 CR 1); a wood chest without
+## contents → 20..40 credits + 1 entry from pools.f<i>.common (handbuilt floors).
 static func roll_chest(chest: Dictionary, data: GameData, floor_index: int, state: GameState,
 		rng: RandomNumberGenerator) -> Array[LootReward]:
 	var out: Array[LootReward] = []
 	if chest.is_empty():
 		return out
 	var type: String = str(chest.get("type", "wood"))
-	if type == "wood":
+	var given: Variant = chest.get("contents", [])
+	if type == "wood" and not (given is Array and not (given as Array).is_empty()):
 		if rng == null:
 			return out
 		out.append(_reward("credits", "", rng.randi_range(WOOD_CREDITS_MIN, WOOD_CREDITS_MAX), "common"))

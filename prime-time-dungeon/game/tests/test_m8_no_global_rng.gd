@@ -5,16 +5,12 @@ extends TestCase
 ## the SceneTree (02_TECH §0.4). Comments and string literals are ignored; a line may opt out with a whitelist comment
 ## `# det-ok: <reason>` (display-only helpers). Findings are reported as "file:line: rule — code".
 ##
-## TOLERATED: findings in files of other modules that predate the lint (05 CR-12 asks the owners to switch to integer
-## draws). The allowance is a maximum per file and rule — any additional finding fails, and core/live/ (M8) has none.
+## TOLERATED: findings in files of other modules that predate the lint (a maximum per file and rule — any additional
+## finding fails). Empty since the integration phase: FloorEvent chances draw in basis points and the procedural
+## chest offsets in centimeters (05 CR-12), so no file in core/ uses float randomness any more.
 
 const ROOT: String = "res://core"
-const TOLERATED: Dictionary = {
-	# M3: FloorEvent lever/broken_vending chances `rng.randf() < chance` (CR-12: rng.randi_range(0, 9999) < bp).
-	"res://core/dungeon/floor_event.gd": {"randf": 2},
-	# M3: procedural chest offsets `rng.randf_range(−4, 4)` (CR-12: integer centimeters).
-	"res://core/dungeon/dungeon_generator.gd": {"randf": 2},
-}
+const TOLERATED: Dictionary = {}
 const RULES: Array = [
 	["global_rng", "(?<![\\w.])(randf|randi|randomize|randf_range|randi_range|randfn|seed)\\s*\\("],
 	["randf", "randf"],

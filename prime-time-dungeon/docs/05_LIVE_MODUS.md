@@ -169,7 +169,7 @@ Beispiel (Live-Sendung „Gleis-9-Räumung“):
   "label_key": "quest_gleis9_clearance",
   "params": {
     "quests": [
-      { "type": "defeat_boss", "params": { "boss_id": "boss_rattenkoenigin" } },
+      { "type": "defeat_boss", "params": { "boss_id": "enm_boss_rattenkoenigin" } },
       { "type": "achievement_hunt", "params": { "ids": ["ach_overkill", "ach_combo_first", "ach_close_call"], "min": 2 } }
     ]
   }
@@ -440,9 +440,11 @@ Kaufprozess nach Verbraucherrecht (Kap. 6.4, 9), später Creator-Beteiligung (nu
      Kampf-Setup (CTB-Startwerte), Kampfaktionen, Quest-Spawns — kommen online aus
      `u48(HMAC(server_seed, "<zweck>|" + scope + "|" + index))` (Kap. 7.3). Der Server schickt **das Ergebnis oder den
      Seed erst bei Auflösung** (z. B. `ev chest_opened{contents}`, `battle_start{ctr}`, `act{action_seed}`).
-     Dafür braucht der Kern einen vom Layout getrennten Loot-Seed: `FloorRun.loot_seed ≠ FloorRun.seed` (CR-11; heute
-     würfelt 02_TECH §7.3 Truhen mit `SeedUtil.derive(floor_run.seed, "chest", k)` — `floor_run.seed` ist aber genau der
-     Layout-Seed, wer das Layout kennt, kennt jeden Truheninhalt).
+     Dafür braucht der Kern einen vom Layout getrennten Loot-Seed: `FloorRun.loot_seed ≠ FloorRun.seed` (CR-11, **umgesetzt**:
+     `Game.open_chest` und `RunSim` würfeln Truhen mit `SeedUtil.derive(floor_run.loot_seed, "chest", k)`; `floor_run.seed` ist
+     der öffentliche Layout-Seed). Offen für S1+: der Inhalt **prozeduraler** Holztruhen wird noch bei der Generierung aus dem
+     Layout-Seed gewürfelt (`derive(floor_seed, "chest_table", k)`, 02_TECH §7.2 Schritt 9) — vor Online-Etagen beim Öffnen aus
+     `loot_seed` würfeln.
    - **Pro-Aktion-Seeds im Kampf:** Vor jeder Kampfaktion (Party **und** Gegner, inkl. KI-Entscheidung) wird `BattleState.rng`
      neu gesetzt: `rng.seed = SeedUtil.derive(setup.seed, "action", action_n)` offline (CR-2); online liefert der Server
      `action_seed` erst bei Auflösung der Aktion (Kap. 3.4).
@@ -476,10 +478,13 @@ Kaufprozess nach Verbraucherrecht (Kap. 6.4, 9), später Creator-Beteiligung (nu
    engine-interne Hilfen wie `rng.randf_range` rechnen in float32 (`randf()*(to-from)+from`) und können auf ARM64 mit
    FMA-Kontraktion anders runden als auf x86-64 (Godot-Buildflags **[zu prüfen]**); ein seltener Kippfall vor `roundi` führt
    dann zum Desync zwischen Linux-Server und Android/iOS/Apple-Silicon-Client. Konkret (CR-12):
-   - Schadensvarianz als `rng.randi_range(920, 1080)` in Promille statt `randf_range(1 − V, 1 + V)` (02_TECH §5.9).
-   - CTB-Startwert NORMAL als `(ts * 3 * rng.randi_range(700, 1000) + 500) / 1000` (Ganzzahl-Division) statt
-     `roundi(ts * 3 * rng.randf_range(0.7, 1.0))` (02_TECH §5.5).
-   - Truhen-Offsets als Ganzzahl in Zentimetern (`rng.randi_range(-400, 400)`) statt `randf_range(−4.0, 4.0)` (02_TECH §7.2).
+   - Schadensvarianz 0.9–1.1 (GDD §3.7 / 02_TECH §5.9) als `rng.randi_range(900, 1100)` in Promille, Heilvarianz 0.95–1.05
+     als `randi_range(950, 1050)` statt `randf_range(…)` — **umgesetzt** (M1).
+   - CTB-Startwert NORMAL `base_delay × [0.5, 1.0]` (GDD §2.4 / 02_TECH §5.5) als
+     `FixedMath.div_round(base_delay × rng.randi_range(500, 1000), 1000)` (Ganzzahl-Division) — **umgesetzt** (M1).
+     (Die früher hier genannten Spannen 920–1080 bzw. 700–1000 waren Entwurfszahlen; maßgeblich sind GDD/02_TECH.)
+   - Truhen-Offsets als Ganzzahl in Zentimetern (`rng.randi_range(-400, 400)`) statt `randf_range(−4.0, 4.0)` (02_TECH §7.2)
+     — **umgesetzt**; ebenso die Etagen-Event-Chancen in Basispunkten (`randi_range(0, 9999) < roundi(p × 10000)`, §7.4).
    - EXP-Kurve als **vorberechnete Tabelle** in `data/party.json` (oder `balance.json`) statt `pow(level, 1.7)` (02_TECH `Progression.exp_to_next`).
    - Lint-Test `test_m8_no_global_rng` prüft zusätzlich `pow(`, `exp(`, `sin(`, `cos(`, `atan2(`, `randf`, `randfn`, `lerp(`
      in `core/`; Ausnahmen nur per Whitelist-Kommentar (`# det-ok: <Grund>`) für reine Anzeige-Hilfen.
@@ -1137,6 +1142,13 @@ Zählern; das Feld steht im Gift-Dictionary und im öffentlichen Log.
   `GameState` (Slot 0, 02_TECH §3.6: wird nie geschrieben) — nie aus einem Kampagnen-Slot und nie zurück in einen.
 - Gift-Inhalte werden zusätzlich in `GameState.flags["live"]["gift_items"]` gezählt (Statistik; `Inventory` kennt nur Mengen,
   02_TECH §6.1); zum Laufende wird der gesamte Lauf-Zustand verworfen.
+- **Lauf-Zähler `GameState.flags["live"]`** (Teil des Zustands-Hashes; geschrieben vom Kern, gelesen von `GiftPolicy.check`):
+  `league`, `gift_rules` (RunSim beim Laufstart aus `rules.leagues`/`rules.gifts`); `gift_ids` (jede angewendete externe
+  Gift-ID, Duplikatschutz — Show/RunSim); `load_half`, `external`, `chests`, `gold_chests`, `per_sender {sender_ref: n}`,
+  `counted` (`GiftPolicy.note_applied`, idempotent je Gift-ID — außerhalb des Kampfes über `GiftApplier.apply`, im Kampf über
+  `GiftApplier.note_battle_gift` nach `BattleState.apply_gift`: `Show.note_battle_gift` bzw. RunSim); `gift_items {item_id: n}`;
+  optional `gift_accept` (Kap. 6.11). Externe Geschenke werden bei der **Anwendung** erneut geprüft (Show
+  `application_refusal` ≡ `RunSim.gift_refusal`), damit Live-Lauf und Verifier dieselben Geschenke annehmen.
   Übrig bleiben nur Statistik, Replay, Bestenlisten-Eintrag, Profil-Belohnungen (Kap. 1.6).
 - Koop: Gift-Inhalte gehen in das **Team-Inventar** des Ziels (eine Sendung, ein Inventar, Kap. 1.4). Eine Übergabe an
   andere Teams/Läufe ist technisch ausgeschlossen (verschiedene Instanzen, kein Fallenlassen/Handeln zwischen Instanzen).
@@ -1642,7 +1654,7 @@ Einschätzung der Fragestellung, **keine** Rechtsauskunft.
       "quest": {
         "type": "all_of", "label_key": "quest_gleis9_clearance",
         "params": { "quests": [
-          { "type": "defeat_boss", "params": { "boss_id": "boss_rattenkoenigin" } },
+          { "type": "defeat_boss", "params": { "boss_id": "enm_boss_rattenkoenigin" } },
           { "type": "achievement_hunt", "params": { "ids": ["ach_overkill", "ach_combo_first", "ach_close_call"], "min": 2 } }
         ] }
       },
@@ -1880,7 +1892,7 @@ S0 lokal: gleiches Schema, `league: "pur"`, `verified: "local"`, `players[0].pla
 | Datei | Besitzer | Inhalt im Slice |
 |---|---|---|
 | `data/events.json` | M7 (Inhalt), M8 (Schema/Loader) | 1–2 Offline-Events (`evt_offline_gleis9` wie Kap. 10.1, optional `evt_offline_pacifist`). Geladen von `EventCatalog` (M8), **nicht** von `GameData` — die 11 Tabellen aus 02_TECH §1.4 bleiben unverändert (CR-9). |
-| `data/mod_lines.json` | M7 | neue, **optionale** Tags `event_run_start`, `event_quest_progress`, `event_quest_complete`, `event_result`, `gift_received`, `gift_received:credits`, `gift_received:anon` (Fallback-Mechanik `a:b → a` aus 02_TECH §6.1; **keine** Varianten je Kistenstufe, L13) — CR-9 |
+| `data/mod_lines.json` | M7 | neue, **optionale** Tags `event_run_start`, `event_quest_progress`, `event_quest_complete`, `event_result`, `gift_received`, `gift_received:credits`, `gift_received:anon` (Fallback-Mechanik `a:b → a` aus 02_TECH §6.1; **keine** Varianten je Kistenstufe, L13) — CR-9; dazu die Zeilen aus Kap. 6.12 (`gift_diminished`, `gift_capped`, `gift_declined`, `fan_pack_received`, `live_closing`, `vote_open`) mit den Platzhaltern `{sender}`, `{amount}`, `{pct}`, `{min}` (`DataValidator.TEXT_PLACEHOLDERS`, optionale Präfixe `gift_`/`fan_pack_`/`live_`/`vote_`/`twist_applied_`) |
 | `data/party.json` bzw. `data/balance.json` | M7 / M2 | EXP-Tabelle `exp_to_next` je Level als Ganzzahlen (ersetzt `pow`, CR-12) |
 | `tests/fixtures/live/gift_tables.json` | M8 | **Hook:** Schema Kap. 10.2; im Slice nur von `FairRoll`-Tests gelesen (kein Eintrag in `data/`) |
 | Party-Preset | — | S0 unterstützt nur `rules.party_preset: "new_game"` (= `GameState.create_new`, 02_TECH §6.1); `party_presets.json` kommt mit S2 |
@@ -1895,7 +1907,7 @@ S0 lokal: gleiches Schema, `league: "pur"`, `verified: "local"`, `players[0].pla
 | `core/live/command.gd` | `Command` | `static func validate(d: Dictionary) -> String` (Schema je `t`: Pflichtfelder, Typen, Wertebereiche; `""` = gültig) · `const TYPES: PackedStringArray` |
 | `core/live/explore_event.gd` | `ExploreEvent` | `enum Type { ROOM_ENTERED, CHEST_OPENED, ENCOUNTER, ENEMY_STATE, EVENT_CHOICE, ACHIEVEMENT, HYPE, TIMER_WARNING, GIFT_DELIVERED, FLOOR_COMPLETED }` · `var type: Type` · `var tick: int` · `var data: Dictionary` · `func to_dict() -> Dictionary` · `static func from_dict(d: Dictionary) -> ExploreEvent` — Brief 6b.2 („Ereignisse raus“) für die Erkundung |
 | `core/live/run_log.gd` | `RunLog` | `var header: Dictionary` · `func add_cmd(tick: int, cmd: Dictionary, cmd_id: int = 0) -> void` · `func add_pos(tick: int, pos: Vector3) -> void` (2 Hz, Grad A) · `func add_checkpoint(tick: int, p_hash: String) -> void` · `func cmds() -> Array[Dictionary]` · `func to_dict() -> Dictionary` · `static func from_dict(d: Dictionary) -> RunLog` · `func digest() -> String` |
-| `core/live/state_hash.gd` | `StateHash` | `static func of(state: GameState) -> String` — SHA-256 über `CanonicalJson` von `state.to_dict()` **ohne** Anzeigefelder (`play_time_sec`, `show.viewers`) · `static func of_battle(state: BattleState) -> String` (CR-14) |
+| `core/live/state_hash.gd` | `StateHash` | `static func of(state: GameState) -> String` — SHA-256 über `CanonicalJson` von `state.to_dict()` **ohne** Anzeige-/Metafelder (`play_time_sec`, `show.viewers`, `slot` — `Save.save_slot` verschiebt den aktiven Slot) · `static func of_battle(state: BattleState) -> String` (CR-14) |
 | `core/live/event_def.gd` | `EventDef` | `static func from_dict(d: Dictionary) -> EventDef` · `func validate() -> PackedStringArray` · `func window_state(now_unix: int) -> StringName` (`&"always"`, `&"scheduled"`, `&"open"`, `&"last_entry"`, `&"closing"`, `&"closed"`) · `func can_start(now_unix: int) -> bool` · `func run_seed() -> int` (nur `fixed`) |
 | `core/live/event_catalog.gd` | `EventCatalog` | `func load_file(path: String) -> bool` · `func get_event(id: String) -> EventDef` · `func all() -> Array[EventDef]` · `var errors: PackedStringArray` |
 | `core/live/quest_tracker.gd` | `QuestTracker` | `static func from_def(q: Dictionary) -> QuestTracker` · `func on_event(ev: Dictionary) -> bool` (true = Fortschritt geändert) · `func progress() -> float` · `func is_complete() -> bool` · `func to_dict() -> Dictionary` · `static func from_dict(d: Dictionary) -> QuestTracker`. Quest-Events (normalisiert, erzeugt vom Adapter in `Game`, CR-4): `{"type": "enemy_killed", "enemy_id"}`, `{"type": "boss_defeated", "boss_id"}`, `{"type": "battle_started"}`, `{"type": "floor_completed", "floor"}`, `{"type": "achievement", "id"}`, `{"type": "metric", "name", "value": int}` — `name` ∈ `viewers_target_peak`, `followers_gained_run`, `hype_100_count` (nur deterministische Ganzzahl-Größen, nie verrauschte Anzeige-Zuschauer; CR-13). S0-Typen: `reach_stairs`, `defeat_boss`, `bounty`, `hype_peak`, `pacifist`, `achievement_hunt`, `all_of` |
@@ -1915,9 +1927,9 @@ der volle Server-Ausbau von `RunSim` (mehrere Instanzen, Netzwerk-Befehlsquelle)
 | Ort (Besitzer) | Änderung im Slice |
 |---|---|
 | `Events` (M0) | neue Signale: `run_started(event_id: String, league: String)`, `run_finished(summary: Dictionary)`, `quest_progress(progress: float)`, `quest_completed()`, `gift_received(gift: Dictionary)`, `gift_rejected(gift_id: String, reason: String)` (CR-1) |
-| `Game` (M0) | `var mode: StringName = &"campaign"` (`&"event_offline"`) · `var run_log: RunLog` · `var quest: QuestTracker` · `func start_event_run(event_id: String) -> void` (Seed aus `EventDef.run_seed()`, `GameState.create_new`, Slot 0 → nie in Kampagnen-Slots gespeichert) · `func record(cmd: Dictionary) -> void` · `func finish_run(cause: StringName) -> Dictionary` (Summary → `ScoreCalc` → `Leaderboard` → `Save`) · `func replay_log(p_log: RunLog) -> Dictionary` (`{"final_hash", "result", "mismatch_at"}`; treibt dieselben Funktionen wie die Szenen, ohne Szenen) · **Fassade über `RunSim`** (CR-6): `_process` akkumuliert Frame-`delta` in ganze Ticks (1/30 s) und ruft `RunSim.step(n)`; Timer in ganzen **Ticks** (`time_left_ticks`) + `time`-Commands (CR-3, CR-4); Ergebnisse von `RunSim` werden als Signale weitergereicht. Kampagne zeichnet ebenfalls auf (Brief 6b.3, hilft bei Bug-Reports). |
-| `Show` (M2) | **`func receive_gift(gift: Dictionary) -> Dictionary`** — einziger Eingang für **alle** Geschenke: `Gift.validate` → `GiftPolicy.check` → im Kampf (`Game.in_battle`) Warteschlange bzw. sofort `GiftApplier` (Erkundung); bei `source ≠ "system"` `Game.record({"t": "gift", "gift": gift})` im Moment der **Anwendung** (02_TECH §3.5) · `func take_pending_gift() -> Dictionary` ersetzt `take_sponsor_gift() -> String`: zuerst wartende externe Geschenke, sonst System-Auswahl per `SponsorSystem.pick` → `Gift.make_system(id, …)` → **ebenfalls durch `receive_gift()`** → Rückgabe (leer = nichts) · zwei RNGs: `_rng` (Spiellogik, nur Sponsor-Auswahl) und `_fx_rng` (Chat, Zuschauer-Rauschen, M.O.D.-Zeilenwahl — nicht deterministisch relevant) · **Fassade**: Hype-Drift, `viewers_target`-Neuberechnung und Pazifist-Zählung rechnet `RunSim.step` in Ticks; `Show._process` macht nur noch Anzeige (Glättung, Rauschen, Chat-Takt) (CR-5, CR-6) |
-| `scenes/battle/battle_controller.gd` (M5) | nach `hud.request_command` bzw. `choose_ai_command`: `Game.record({"t": "battle", …, "auto": not player_chosen})`; in `_play`: `var g := Show.take_pending_gift()` → `state.apply_gift(g)` (CR-7) |
+| `Game` (M0) | `var mode: StringName = &"campaign"` (`&"event_offline"`) · `var run_log: RunLog` · `var quest: QuestTracker` · `func start_event_run(event_id: String) -> void` (Seed aus `EventDef.run_seed()`, `GameState.create_new`, Slot 0 → nie in Kampagnen-Slots gespeichert) · `func record(cmd: Dictionary) -> void` · `func finish_run(cause: StringName) -> Dictionary` (Summary inkl. `party_kos`, `followers_gained_run`, `achievements_in_run`, `quest_progress_ppm` → `ScoreCalc` → `Leaderboard` → `sim.close(cause, {"score"})` → `Save`) · `func event_rules() -> Dictionary` · `func adopt_loaded_state(st, log)` (Save.load_slot) · die Live-Uhr schreibt Checkpoints in `run_log` (`sim.run_log`; alle 300 Ticks, nach Kämpfen/Abstieg) · Quest-Adapter zusätzlich `zones`/`boss_hp` · `func replay_log(p_log: RunLog) -> Dictionary` (`{"final_hash", "result", "mismatch_at"}`; treibt dieselben Funktionen wie die Szenen, ohne Szenen) · **Fassade über `RunSim`** (CR-6): `_process` akkumuliert Frame-`delta` in ganze Ticks (1/30 s) und ruft `RunSim.step(n)`; Timer in ganzen **Ticks** (`time_left_ticks`) + `time`-Commands (CR-3, CR-4); Ergebnisse von `RunSim` werden als Signale weitergereicht. Kampagne zeichnet ebenfalls auf (Brief 6b.3, hilft bei Bug-Reports). |
+| `Show` (M2) | **`func receive_gift(gift: Dictionary) -> Dictionary`** — einziger Eingang für **alle** Geschenke: `Gift.validate` → `GiftPolicy.check` → im Kampf (`Game.in_battle`) Warteschlange bzw. sofort `GiftApplier` (Erkundung); bei `source ≠ "system"` `Game.record({"t": "gift", "gift": gift})` im Moment der **Anwendung** (02_TECH §3.5) · `func take_pending_gift() -> Dictionary` ersetzt `take_sponsor_gift() -> String`: zuerst wartende externe Geschenke, sonst System-Auswahl per `SponsorSystem.pick` → `Gift.make_system(id, …)` → **ebenfalls durch `receive_gift()`** → Rückgabe (leer = nichts) · zwei RNGs: `_rng` (Spiellogik, nur Sponsor-Auswahl) und `_fx_rng` (Chat, Zuschauer-Rauschen, M.O.D.-Zeilenwahl — nicht deterministisch relevant) · wartende externe Geschenke werden bei der **Anwendung** erneut geprüft (`application_refusal`: Duplikat, `GiftPolicy.check` mit Lauf-Zählern + Tick; Kampf-Limit `rules.gifts.max_per_battle`) und im Kampf über `note_battle_gift` gebucht; `abort_battle()` für vorzeitig beendete Kämpfe · **Fassade**: Hype-Drift, `viewers_target`-Neuberechnung und Pazifist-Zählung rechnet `RunSim.step` in Ticks; `Show._process` macht nur noch Anzeige (Glättung, Rauschen, Chat-Takt) (CR-5, CR-6) |
+| `scenes/battle/battle_controller.gd` (M5) | nach `hud.request_command` bzw. `choose_ai_command`: `Game.record({"t": "battle", …, "auto": not player_chosen})`; in `_play`: `var g := Show.take_pending_gift()` → `state.apply_gift(g)` → `Show.note_battle_gift(g, events)` (Lauf-Zähler wie RunSim) (CR-7) |
 | `Save` (M2) | `func load_leaderboard(event_id: String) -> Dictionary` / `func save_leaderboard(event_id: String, d: Dictionary) -> Error` → `user://leaderboards/<event_id>.json` (atomar wie Slots); `func save_replay(p_log: RunLog) -> Error` → `user://replays/<run_id>.json`, max. 20 Dateien (CR-8) |
 | `scenes/title/title.gd` (M6) | Menüeintrag **„Event-Lauf“** zwischen „Laden“ und „Einstellungen“ (CR-10) |
 | `scenes/ui/event_lobby.tscn` + `.gd` (M6) | Event-Karte: Name, Quest-Text, Regeln (Timer, „Pur-Liga“), lokale Top 10, Start |
@@ -1966,8 +1978,8 @@ der volle Server-Ausbau von `RunSim` (mehrere Instanzen, Netzwerk-Befehlsquelle)
 | CR-8 | `autoload/save.gd` (M2) | Bestenlisten-/Replay-Dateien (11.3) | lokale Bestenliste S0 |
 | CR-9 | `core/data/data_validator.gd` (M0), `data/` (M7) | neue `mod_lines`-Tags als optional; `events.json` außerhalb von `GameData` (eigener Loader `EventCatalog`) | 11 Tabellen bleiben stabil |
 | CR-10 | `scenes/title/title.gd`, neue UI-Szenen (M6) | Menüeintrag + `event_lobby`, `run_result`, Quest-Zeile im HUD | Einstieg S0 |
-| CR-11 | `core/progression/floor_run.gd` (M2), Exploration-Szene (M3), `core/data/seed_util.gd`-Doku (M0) | Neues Feld **`FloorRun.loot_seed: int`** (≠ `seed`); Truhen würfeln mit `SeedUtil.derive(floor_run.loot_seed, "chest", k)` statt `floor_run.seed`; offline `loot_seed = SeedUtil.derive(run_seed, "loot", floor)`, online vom Server (geheim, Ergebnis per `ev chest_opened{contents}`); Doku-Hinweis in §4.6: `SeedUtil` ist 31-Bit und gilt als öffentlich | Vorhersage-Schutz (Kap. 3.3 Nr. 1–2): Layout-Seed verrät sonst jeden Truheninhalt |
-| CR-12 | `core/battle/damage_calc.gd`, `core/battle/ctb_queue.gd` bzw. `battle_state.gd` (M1), `core/progression/progression.gd` (M2), `DungeonGenerator` (M3), `data/` (M7) | Nur Ganzzahl-Zufall/-Arithmetik in spielrelevanten Pfaden: Varianz `randi_range(920, 1080)` ‰, CTB-Start `randi_range(700, 1000)` ‰, Truhen-Offsets in cm-`int`, EXP-Kurve als Tabelle statt `pow`; Lint-Erweiterung (Kap. 3.3 Nr. 5, 11.4) | Plattformübergreifender Determinismus (ARM64/FMA, libm) |
+| CR-11 | `core/progression/floor_run.gd` (M2), `Game.open_chest` (M0), `RunSim` (M8), `core/data/seed_util.gd`-Doku (M0) | **Umgesetzt** (prozedurale Holztruhen-Inhalte noch aus dem Layout-Seed, Kap. 3.3 Nr. 2). Neues Feld **`FloorRun.loot_seed: int`** (≠ `seed`); Truhen würfeln mit `SeedUtil.derive(floor_run.loot_seed, "chest", k)` statt `floor_run.seed`; offline `loot_seed = SeedUtil.derive(run_seed, "loot", floor)`, online vom Server (geheim, Ergebnis per `ev chest_opened{contents}`); Doku-Hinweis in §4.6: `SeedUtil` ist 31-Bit und gilt als öffentlich | Vorhersage-Schutz (Kap. 3.3 Nr. 1–2): Layout-Seed verrät sonst jeden Truheninhalt |
+| CR-12 | `core/battle/damage_calc.gd`, `core/battle/ctb_queue.gd` bzw. `battle_state.gd` (M1), `core/progression/progression.gd` (M2), `DungeonGenerator`/`FloorEvent` (M3), `data/` (M7) | Nur Ganzzahl-Zufall/-Arithmetik in spielrelevanten Pfaden: Varianz `randi_range(900, 1100)` ‰ (GDD 0.9–1.1), CTB-Start `base_delay × randi_range(500, 1000)` ‰ (GDD 0.5–1.0), Truhen-Offsets in cm-`int`, Event-Chancen in Basispunkten, EXP-Kurve als Tabelle statt `pow`; Lint-Erweiterung (Kap. 3.3 Nr. 5, 11.4) — **umgesetzt**, `test_m8_no_global_rng` ohne Ausnahmen | Plattformübergreifender Determinismus (ARM64/FMA, libm) |
 | CR-13 | `core/show/stat_ids.gd` (M2), `core/data/data_validator.gd` (M0) | Neue `StatIds`: `viewers_target_peak` (Max, aus rauschfreiem `ShowModel.viewers_for`), `followers_gained_run` (Summe), `hype_100_count` (Zähler) — **integriert** (02_TECH §6.3: Show pflegt sie vor dem jeweiligen Signal; §3.4: der Quest-Adapter in `Game` sendet daraus `{"type": "metric", …}`) | Deterministische Quest-Metriken (Kap. 1.3) |
 | CR-14 | `core/battle/battle_state.gd`, `combatant.gd`, `ctb_queue.gd`, `status_effect.gd` (M1), `core/live/state_hash.gd` (M8) | `to_dict()`/`from_dict()` für `BattleState` inkl. CTB-Zähler, Status, `items`, `action_n`, RNG-`state` (und für `Combatant`, `CTBQueue`, `StatusEffect`); `StateHash.of_battle`; Test `test_m1_battle_snapshot` (Snapshot → `from_dict` → gleicher Hash, Weiterspielen identisch) | Lockstep-Hash, Resync/Reconnect im Kampf (Kap. 3.4, 3.6) |
 | — | 02_TECH §1 / §11.5 | Modul **M8 „Live-Hooks“** mit Dateien aus 11.2 und Tests aus 11.4 aufnehmen | Ordnung der Zuständigkeiten |

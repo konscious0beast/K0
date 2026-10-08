@@ -13,7 +13,8 @@ signal event_played(e: ActionEvent)
 signal frame_ticked
 
 const BEAT_SEC: float = 0.35
-## Length of the camera's victory orbit (03_ART §8.3); BATTLE_END (victory) waits for it at every speed.
+## Length of the camera's victory orbit at speed 1 (03_ART §8.3); BATTLE_END (victory) waits for the whole orbit —
+## like every beat the wait is divided by the playback speed (×2: 1.5 s, autoplay ×4: 0.75 s), the orbit is too.
 const VICTORY_ORBIT_SEC: float = 3.0
 const DUR: Dictionary = {
 	"battle_start": 1.2, "battle_start_boss": 2.5, "turn_start": 0.15, "combo": 0.4, "damage": 0.35,

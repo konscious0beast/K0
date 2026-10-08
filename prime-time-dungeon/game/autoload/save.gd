@@ -77,8 +77,8 @@ func save_slot(slot: int) -> Error:
 	return err
 
 
-## read → SaveCodec.decode → Game.state (+ grace time_left ≥ 180 s, §6.4), Game.sim/run_log new (header like
-## new_game + "from_save": true); emits game_loaded.
+## read → SaveCodec.decode → Game.adopt_loaded_state(state, run log) (+ grace time_left ≥ 180 s, §6.4; Game resets its
+## private run context, new sim/run_log with header like new_game + "from_save": true); emits game_loaded.
 func load_slot(slot: int) -> Error:
 	_last_error = ""
 	if not _valid_slot(slot):
@@ -96,14 +96,9 @@ func load_slot(slot: int) -> Error:
 	st.slot = slot
 	if st.floor_run != null:
 		st.floor_run.time_left_ticks = maxi(st.floor_run.time_left_ticks, GRACE_SECONDS * FloorRun.TICKS_PER_SEC)
-	Game.state = st
-	Game.mode = &"campaign"
-	Game.in_battle = false
-	Game.timer_running = false
-	Game.quest = null
-	Game.run_log = _make_run_log(st)
-	Game.sim = RunSim.new(DB.data, st, {})
-	Game.clear_blocking_dialogs()
+	# Game resets its private run context (event def, finished flag, layout cache, command ids, …) and takes over the
+	# state with a new run log; the live RunSim records its checkpoints into that log.
+	Game.adopt_loaded_state(st, _make_run_log(st))
 	Events.game_loaded.emit(slot)
 	Show.sync_from_state()
 	return OK

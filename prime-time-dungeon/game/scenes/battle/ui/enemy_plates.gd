@@ -210,6 +210,54 @@ func _rebuild_icons(p: Plate) -> void:
 	p.icons.visible = not p.statuses.is_empty() or not p.weak.is_empty()
 
 
+## Final rect of a full plate (`placed` = the plates already placed, nearest first): pushed up above every plate it
+## would overlap; if that would reach into the top HUD band it stays at TOP_BAND and slides sideways next to the
+## plates it touches (nearest free x), else below them — it is never clamped back down onto a placed plate.
+static func place_rect(want: Rect2, placed: Array[Rect2], max_right: float) -> Rect2:
+	var r: Rect2 = want
+	r.position.x = clampf(r.position.x, 4.0, max_right - r.size.x)
+	var guard: int = 0
+	var moved: bool = true
+	while moved and guard < 8:
+		moved = false
+		guard += 1
+		for o: Rect2 in placed:
+			if r.grow(1.0).intersects(o):
+				r.position.y = o.position.y - r.size.y - 3.0
+				moved = true
+	if r.position.y >= TOP_BAND and not _hits(r, placed):
+		return r
+	r.position.y = maxf(r.position.y, TOP_BAND)
+	if not _hits(r, placed):
+		return r
+	var best: Rect2 = r
+	var best_d: float = INF
+	for o: Rect2 in placed:
+		for x: float in [o.end.x + 3.0, o.position.x - r.size.x - 3.0]:
+			if x < 4.0 or x > max_right - r.size.x:
+				continue
+			var c: Rect2 = Rect2(Vector2(x, r.position.y), r.size)
+			if not _hits(c, placed) and absf(x - want.position.x) < best_d:
+				best_d = absf(x - want.position.x)
+				best = c
+	if best_d < INF:
+		return best
+	guard = 0
+	while _hits(best, placed) and guard < placed.size() + 1:
+		guard += 1
+		for o: Rect2 in placed:
+			if best.grow(1.0).intersects(o):
+				best.position.y = maxf(best.position.y, o.end.y + 3.0)
+	return best
+
+
+static func _hits(r: Rect2, placed: Array[Rect2]) -> bool:
+	for o: Rect2 in placed:
+		if r.grow(1.0).intersects(o):
+			return true
+	return false
+
+
 func _process(delta: float) -> void:
 	if stage == null or camera == null:
 		return
@@ -244,18 +292,7 @@ func _process(delta: float) -> void:
 	full.sort_custom(func(a: Plate, b: Plate) -> bool:
 		return (want[a] as Rect2).position.y > (want[b] as Rect2).position.y)
 	for p3: Plate in full:
-		var r: Rect2 = want[p3]
-		r.position.x = clampf(r.position.x, 4.0, vp.x - RIGHT_CLEAR - r.size.x)
-		var guard: int = 0
-		var moved: bool = true
-		while moved and guard < 8:
-			moved = false
-			guard += 1
-			for o: Rect2 in placed:
-				if r.grow(1.0).intersects(o):
-					r.position.y = o.position.y - r.size.y - 3.0
-					moved = true
-		r.position.y = maxf(r.position.y, TOP_BAND)
+		var r: Rect2 = place_rect(want[p3], placed, vp.x - RIGHT_CLEAR)
 		placed.append(r)
 		p3.size = r.size
 		p3.position = r.position

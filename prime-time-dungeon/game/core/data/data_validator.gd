@@ -35,7 +35,7 @@ const MODEL_BASES: PackedStringArray = ["humanoid", "pug", "rodent", "blob", "in
 const MODEL_PROPS: PackedStringArray = ["cape", "crown", "monocle", "top_hat", "cap", "bandana", "apron", "mop", "broom",
 	"knife", "staff", "key_ring", "glasses", "lamp_helmet", "backpack", "mask", "wings", "antennae",
 	"newspaper_head", "briefcase", "bottlecap_chain", "cable_tangle", "spray_cap", "escalator_back", "claws", "helmet",
-	"shield", "halberd", "rat_king_tail", "ticket_crown", "wrench", "axe", "crowbar", "cart"]
+	"shield", "halberd", "rat_king_tail", "ticket_crown", "wrench", "axe", "crowbar", "cart", "discount_tag"]
 const MODEL_POSES: PackedStringArray = ["auto", "quadruped", "upright"]
 const THEMES: PackedStringArray = ["metro", "mall"]
 const SAFE_ROOM_THEMES: PackedStringArray = ["kiosk", "pumphouse", "signalbox"]
@@ -52,15 +52,17 @@ const ACH_TRIGGERS: PackedStringArray = ["enemy_killed", "battle_won", "battle_f
 	"level_up", "event_completed", "explore_tick", "floor_completed"]
 const VOICES: PackedStringArray = ["mod", "mopsula", "kai", "chat"]
 const TEXT_PLACEHOLDERS: PackedStringArray = ["name", "floor", "level", "enemy", "item", "achievement", "viewers", "followers",
-	"sponsor", "count", "member", "seconds"]
+	"sponsor", "count", "member", "seconds", "sender", "amount", "pct", "min"]   # sender/amount/pct/min: 05 §6.12
 const REQUIRED_MOD_TAGS: PackedStringArray = ["intro", "floor_start", "first_fight", "achievement_generic", "low_hp",
 	"kill_streak", "crit", "weakness", "overkill", "stunt_success", "stunt_fail", "boring_fight", "flee", "flee_fail",
 	"sponsor_gift", "timer_warn_300", "timer_warn_60", "timer_expired", "lootbox_open_bronze", "lootbox_open_silver",
 	"lootbox_open_gold", "lootbox_open_fan", "lootbox_pity", "death", "mopsula_ko", "kai_ko", "revive", "boss_defeated",
 	"level_up", "follower_milestone", "safe_room_enter", "vendor_buy", "stairs_found", "floor_end",
 	"chat_hype_high", "chat_hype_mid", "chat_hype_low", "chat_crit", "chat_boring", "chat_mopsula", "chat_handle"]
+## Optional tags: live tags of 05 CR-9 / §6.12 (event_*, gift_*, fan_pack_*, live_*, vote_*, twist_applied_*) and the
+## story beats of GDD §1.4 (tutorial_* hints B1/B2, story_battle:<encounter_id> banners B4).
 const OPTIONAL_MOD_TAG_PREFIXES: PackedStringArray = ["achievement:", "boss_intro:", "boss_phase:", "event_", "gift_received",
-	"mopsula_idle", "chat_"]   # live tags of 05 CR-9 are optional
+	"mopsula_idle", "chat_", "gift_", "fan_pack_", "live_", "vote_", "twist_applied_", "tutorial_", "story_"]
 
 ## Copy of StatIds.ALL (§6.3); test_m2_achievements asserts equality.
 const STAT_IDS: PackedStringArray = ["kills_total", "kills_skill", "battles_won", "battles_fled", "preemptives",
@@ -1229,8 +1231,9 @@ func _n_event_params(ctx: String, etype: String, p: Dictionary) -> void:
 					continue
 				_enum(tctx + ".kind", str(e["kind"]), LOOT_KINDS)
 				_range_i(tctx + ".weight", int(e["weight"]), 1, 100000)
-				_range_i(tctx + ".amount", int(e["amount"]), 1, 99999)
 				var k: String = str(e["kind"])
+				# GDD §2.6 wheel table: "nothing" carries amount 0 (any amount is ignored); every other kind ≥ 1
+				_range_i(tctx + ".amount", int(e["amount"]), 0 if k == "nothing" else 1, 99999)
 				if (k == "item" or k == "box" or k == "encounter") and str(e["id"]) == "":
 					_err(tctx + ".id", "required for kind %s" % k)
 				table.append(e)
@@ -2167,6 +2170,11 @@ func _check_tag_params(ctx: String, tag: String) -> void:
 				_err(ctx, "expected boss_phase:<enemy_id>:<n>")
 			else:
 				_ref(ctx, parts[1], _enemies, "enemy")
+		"story_battle":
+			# format only: test fixtures replace floor tables (and their encounters); test_m7_text_content checks that
+			# every story_battle tag of the real data names an existing encounter
+			if parts.size() != 2 or not parts[1].begins_with("enc_"):
+				_err(ctx, "expected story_battle:<encounter_id>")
 
 
 # ======================================================================================================================

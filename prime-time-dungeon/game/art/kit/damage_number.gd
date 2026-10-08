@@ -5,12 +5,11 @@ extends Label3D
 ## Vfx.DMG_POOL_SIZE Label3D (02_TECH §12.1).
 ##
 ## Screen twin: Label3D vertex colors are clamped to 1.0 and then go through the AgX tonemapper (+ fog), so #FFFFFF
-## reads
-## as ~205 grey and saturated style colors bleach (review M4). When a real renderer draws the parent's viewport, every
-## number therefore renders as a 2D Label on a CanvasLayer (layer 4, below the HUD at 5; mouse ignored), projected from
-## this node every frame: exact sRGB style colors, outline, world-size scaling and the crit tilt (a billboard drops the
-## node rotation). The Label3D keeps all state (text, style colors, position, pop/rise/fade, pooling) and is hidden from
-## cameras (layers = 0) while its twin is shown; headless / without a camera it renders itself.
+## reads as ~205 grey and saturated style colors bleach (review M4). When a real renderer draws the parent's viewport,
+## every number therefore renders as a 2D Label on a CanvasLayer (layer 4, below the HUD at 5; mouse ignored), projected
+## from this node every frame: exact sRGB style colors, outline, world-size scaling and the crit tilt (a billboard drops
+## the node rotation). The Label3D keeps all state (text, style colors, position, pop/rise/fade, pooling) and is hidden
+## from cameras (layers = 0) while its twin is shown; headless / without a camera it renders itself.
 
 const LIFE: float = 0.8
 const STYLES: Dictionary = {
@@ -170,8 +169,7 @@ func _exit_tree() -> void:
 	layers = 1
 
 
-# --- screen twin
-# -------------------------------------------------------------------------------------------------------
+# --- screen twin ------------------------------------------------------------------------------------------------------
 
 ## Whether the parent's viewport is drawn by a real renderer with a 3D camera (else the Label3D renders itself).
 func _screen_camera() -> Camera3D:
@@ -216,7 +214,9 @@ func _update_screen() -> void:
 		return
 	layers = 0
 	var gp: Vector3 = global_position
-	if not visible or cam.is_position_behind(gp):
+	# is_visible_in_tree: the twin sits on a CanvasLayer that ignores Node3D visibility — a hidden battle root (or
+	# any hidden ancestor) must hide the 2D number too
+	if not is_visible_in_tree() or cam.is_position_behind(gp):
 		lbl.visible = false
 		return
 	lbl.visible = true

@@ -101,6 +101,18 @@ func test_achievement_hunt() -> void:
 	assert_true(q.is_complete())
 
 
+## M3 CR 4: the HUD reads the live tracker — label() is the label key, to_def() rebuilds an equal quest.
+func test_label_and_to_def() -> void:
+	var q: QuestTracker = _q(GLEIS9)
+	assert_eq(q.label(), "quest_gleis9_clearance")
+	var d: Dictionary = q.to_def()
+	assert_eq(d["type"], "all_of")
+	assert_eq(QuestTracker.validate_def(d), PackedStringArray())
+	var r: QuestTracker = QuestTracker.from_def(d)
+	assert_eq(r.to_dict(), q.to_dict(), "to_def → from_def round trip")
+	assert_eq(_q({"type": "reach_stairs", "params": {"floor": 1}}).label(), "", "no label key")
+
+
 func test_all_of_is_the_mean() -> void:
 	var q: QuestTracker = _q(GLEIS9)
 	assert_eq(q.label_key, "quest_gleis9_clearance")

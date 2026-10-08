@@ -210,5 +210,165 @@ func _play(battle: BattleState, events: Array[ActionEvent]) -> void:
 		return
 	var g: Dictionary = Show.take_pending_gift(battle)
 	if not g.is_empty():
-		for e: ActionEvent in battle.apply_gift(g):
+		var gift_events: Array[ActionEvent] = battle.apply_gift(g)
+		Show.note_battle_gift(g, gift_events)
+		for e: ActionEvent in gift_events:
 			Show.on_battle_event(e)
+
+
+# --- change requests of the integration phase (M2 CR 1–4, M8 CR 1/2/4/5/7) -------------------------------------------
+
+## §5.7 battle without scenes, both sides on AutoPolicy / EnemyAI; returns the finished battle.
+func _auto_battle(enc_id: String) -> BattleState:
+	var setup: BattleSetup = Game.make_battle_setup(enc_id, BattleSetup.Advantage.NORMAL, "")
+	var battle: BattleState = BattleState.new(setup, DB.data)
+	Show.begin_battle(setup)
+	Events.battle_started.emit(setup.encounter_id, setup.is_boss)
+	_play(battle, battle.start())
+	var guard: int = 0
+	while not battle.is_finished() and guard < 400:
+		guard += 1
+		var cmd: BattleCommand = battle.choose_ai_command()
+		Game.record({"t": "battle", "cmd": cmd.to_dict(), "auto": true})
+		_play(battle, battle.submit(cmd))
+	Events.battle_ended.emit(battle.result.outcome, battle.result.encounter_id)
+	Game.apply_battle_result(battle.result)
+	Show.end_battle(battle.result)
+	return battle
+
+
+## M8 CR 1 / 05 §3.3 Nr. 8: the live clock writes checkpoints into Game.run_log (after battles, every 300 ticks);
+## Game.replay_log matches every one of them and detects a corrupted one.
+func test_live_run_log_gets_checkpoints_that_replay_matches() -> void:
+	Game.auto_battle = true
+	Game.new_game(0, "Kai", 9191)
+	assert_true(Game.sim.run_log == Game.run_log, "the live RunSim records into the run log")
+	_auto_battle(DB.floor_def(1).timer_start_after)
+	assert_true(Game.state.floor_run.timer_started, "tutorial victory starts the countdown")
+	Game.timer_running = true
+	for i in 22:
+		Game._process(0.5)          # 11 s = 330 ticks
+	Game.timer_running = false
+	Game.rest_full_heal()
+	var cps: Array[Dictionary] = Game.run_log.checkpoints()
+	var ks: Array = []
+	for cp: Dictionary in cps:
+		ks.append(int(cp["k"]))
+	assert_eq(ks, [0, 300], "after the battle (written when the clock leaves tick 0) and at tick 300")
+	var res: Dictionary = Game.replay_log(Game.run_log)
+	assert_eq(res["final_hash"], StateHash.of(Game.state))
+	assert_eq(res["mismatch_at"], -1, "every live checkpoint matches the replay")
+	var d: Dictionary = Game.run_log.to_dict()
+	((d["checkpoints"] as Array)[1] as Dictionary)["h"] = "f".repeat(64)
+	assert_eq(int(Game.replay_log(RunLog.from_dict(d))["mismatch_at"]), 1, "a corrupted checkpoint is found")
+	Game.auto_battle = false
+
+
+## M8 CR 1/5: finish_run stores the result in the log (sim.close) and gives ScoreCalc the run-wide summary keys.
+func test_finish_run_closes_the_log_with_the_score() -> void:
+	Game.auto_battle = true
+	Game.start_event_run("evt_offline_gleis9")
+	if not Game.has_state():
+		fail("start_event_run must create a state")
+		return
+	_auto_battle(DB.floor_def(1).timer_start_after)
+	Game.state.floor_run.stats["party_kos"] = 2      # as BattleBridge books party KOs
+	var was_read_only: bool = Save.read_only
+	Save.read_only = true
+	var summary: Dictionary = Game.finish_run(&"test")
+	Save.read_only = was_read_only
+	for key: String in ["party_kos", "followers_gained_run", "achievements_in_run", "quest_progress_ppm", "final_hash"]:
+		assert_true(summary.has(key), "summary key " + key)
+	assert_eq(summary["party_kos"], 2)
+	assert_eq(summary["followers_gained_run"], int(Game.state.show.stats.get("followers_gained_run", 0)))
+	assert_eq(summary["quest_progress_ppm"], Game.quest.progress_ppm())
+	assert_eq(int((summary["breakdown"] as Dictionary)["ko"]), 2 * -150, "KO penalty from the counter (05 §1.5)")
+	var res: Dictionary = Game.run_log.result
+	assert_eq(res["cause"], "test")
+	assert_eq(res["score"], summary["score"])
+	assert_eq(res["final_hash"], StateHash.of(Game.state))
+	assert_eq(res["final_hash"], summary["final_hash"])
+	assert_eq(Game.run_log.checkpoints().back()["h"], res["final_hash"], "final checkpoint")
+	assert_eq(Game.finish_run(&"again"), {}, "once per run")
+	Game.auto_battle = false
+
+
+## M2 CR 3: Save.load_slot goes through adopt_loaded_state — the private context of the previous run is gone.
+func test_adopt_loaded_state_resets_the_private_run_context() -> void:
+	Game.start_event_run("evt_offline_gleis9")
+	if not Game.has_state():
+		fail("start_event_run must create a state")
+		return
+	Game.visit_room(Vector2i(1, 7))          # fills the layout cache
+	Game.record({"t": "rest"})
+	assert_false(Game.event_rules().is_empty(), "event run: rules of the event (M2 CR 2 / M8 CR 2)")
+	assert_eq(Game.event_rules().get("leagues", []), ["pur"])
+	var loaded: GameState = GameState.create_new(DB.data, 2, "Ada", 77, &"prime")
+	var rl: RunLog = RunLog.new()
+	rl.header = {"seed": 77, "from_save": true}
+	Game.adopt_loaded_state(loaded, rl)
+	assert_true(Game.state == loaded)
+	assert_eq(Game.mode, &"campaign")
+	assert_null(Game.quest)
+	assert_eq(Game.event_rules(), {}, "no event def survives the load")
+	assert_null(Game._layout, "layout cache cleared")
+	assert_false(Game._run_finished)
+	assert_true(Game.run_log == rl and Game.sim.run_log == rl, "new log, recorded by the new sim")
+	Game.record({"t": "rest"})
+	assert_eq(rl.cmds()[0]["id"], 1, "command ids restart at 1")
+
+
+## M2 CR 1 / M8 CR 7 (05 CR-11): chests roll from FloorRun.loot_seed, never from the public layout seed.
+func test_open_chest_rolls_from_the_loot_seed() -> void:
+	Game.new_game(0, "Kai", 31337)
+	var fr: FloorRun = Game.state.floor_run
+	assert_ne(fr.loot_seed, fr.seed)
+	var spec: Dictionary = {"id": "f1_c0", "type": "wood", "contents": []}
+	var want: Array[LootReward] = LootRoller.roll_chest(spec, DB.data, 1, Game.state,
+		SeedUtil.make_rng(SeedUtil.derive(fr.loot_seed, "chest", 0)))
+	var got: Array[LootReward] = Game.open_chest("f1_c0")
+	assert_eq(_loot_dicts(got), _loot_dicts(want))
+	var st: GameState = GameState.create_new(DB.data, 0, "Kai", 31337, &"prime")
+	var sim: RunSim = RunSim.new(DB.data, st, {})
+	sim.apply({"t": "floor", "floor": 1})
+	var credits: int = st.inventory.credits
+	sim.apply({"t": "chest", "id": "f1_c0"})
+	var cr: int = 0
+	for r: LootReward in want:
+		if r.kind == "credits":
+			cr += r.amount
+	assert_eq(st.inventory.credits - credits, cr, "RunSim rolls the same chest (same stream as Game)")
+
+
+func _loot_dicts(rewards: Array[LootReward]) -> Array:
+	var out: Array = []
+	for r: LootReward in rewards:
+		out.append(r.to_dict())
+	return out
+
+
+## M8 CR 4: the quest adapter also sends zones (first room visits) and boss_hp (Show.boss_hp_changed).
+func test_quest_adapter_feeds_zones_and_boss_hp() -> void:
+	Game.new_game(0, "Kai", 6)
+	var spy: _SpyQuest = _SpyQuest.new()
+	Game.mode = &"event_offline"
+	Game.quest = spy
+	Game.visit_room(Vector2i(1, 7))
+	Game.visit_room(Vector2i(1, 7))
+	var zones: int = (DB.floor_def(1).layout.get("zones", []) as Array).size()
+	assert_eq(spy.events, [{"type": "zones", "explored": 1, "total": zones}], "only first visits")
+	spy.events.clear()
+	var setup: BattleSetup = Game.make_battle_setup("enc_f1_boss_hausmeister", BattleSetup.Advantage.NORMAL, "")
+	Show.begin_battle(setup)
+	var e: ActionEvent = ActionEvent.new()
+	e.type = ActionEvent.Type.DAMAGE
+	e.actor_id = "p0"
+	e.target_id = "e0"
+	e.def_id = "enm_boss_hausmeister"
+	e.value = 100
+	e.hp_after = 600
+	e.max_hp = 800
+	Show.on_battle_event(e)
+	assert_has(spy.events, {"type": "boss_hp", "boss_id": "enm_boss_hausmeister", "hp": 600, "max_hp": 800})
+	Show.abort_battle()
+	Game.in_battle = false

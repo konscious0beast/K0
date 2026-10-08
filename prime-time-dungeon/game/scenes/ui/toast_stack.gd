@@ -63,6 +63,17 @@ func count() -> int:
 	return n
 
 
+## Screen rect (canvas coordinates) of the visible toasts, empty without any (M5 CR 1: battle UI avoids it).
+func stack_rect() -> Rect2:
+	var r: Rect2 = Rect2()
+	for c: Node in _list.get_children():
+		var ctl: Control = c as Control
+		if ctl == null or c.is_queued_for_deletion() or not ctl.is_visible_in_tree() or ctl.modulate.a <= 0.01:
+			continue
+		r = ctl.get_global_rect() if r.size == Vector2.ZERO else r.merge(ctl.get_global_rect())
+	return r
+
+
 ## Adds a toast. `icon` picks title/icon/color from STYLES (unknown → info).
 func push_toast(text: String, icon: StringName = &"info", color_override: Color = Color(0, 0, 0, 0)) -> Control:
 	if Game.replaying:

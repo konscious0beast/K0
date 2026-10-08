@@ -61,7 +61,8 @@ static func make_setup(state: GameState, data: GameData, encounter_id: String, a
 ## (alive full, KO'd floori(50 %)), credits (+overkill), drops, boss_rewards (items → inventory, boxes →
 ## pending_lootboxes), Werbepause +ceili(max_mp × 0.15) MP for living members, stolen credits refunded;
 ## FLED/DEFEAT: stolen credits lost; VICTORY: defeated_groups += group_id, strays.erase(group_id), flags defeated_<boss_id> + quarter/floor boss flags;
-## bestiary (defeated += 1 per defeated_ids entry, weak_known ∪= weak_found); floor_run.stats.kills += kills;
+## bestiary (defeated += 1 per defeated_ids entry, weak_known ∪= weak_found); floor_run.stats.kills += kills,
+## floor_run.stats.party_kos += party_kos (only once > 0);
 ## VICTORY over FloorDef.timer_start_after → floor_run.timer_started = true.
 static func apply_result(state: GameState, data: GameData, result: BattleResult) -> BattleRewards:
 	var rw: BattleRewards = BattleRewards.new()
@@ -178,6 +179,9 @@ static func apply_result(state: GameState, data: GameData, result: BattleResult)
 		entry["weak_known"] = known
 	if fr != null:
 		fr.stats["kills"] = int(fr.stats.get("kills", 0)) + maxi(0, result.kills)
+		# party KOs of the floor (event score KO penalty, 05 §1.5; the key appears with the first KO)
+		if result.party_kos > 0:
+			fr.stats["party_kos"] = int(fr.stats.get("party_kos", 0)) + result.party_kos
 	return rw
 
 

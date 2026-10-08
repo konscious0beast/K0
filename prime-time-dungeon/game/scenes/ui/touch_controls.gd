@@ -2,7 +2,8 @@ extends CanvasLayer
 ## Touch layer (02_TECH §10.3, §9.4 layer 20; 03_ART §9.4): floating joystick in the left 40 %, one round `action`
 ## button (96 px at (1147, 587); hand icon with a prompt, fist otherwise), `map` (64 px at (1227, 140)) and `pause`
 ## (64 px at (1227, 40)); every hit area ≥ 88 px (UiTheme.ensure_hit_area). Buttons send InputEventAction press/release.
-## Drag on the free right side → Events.camera_drag(relative). Visible when settings.touch_controls == &"on" or
+## Drag on the free right side → Events.camera_drag(relative); two fingers there pinch → Events.camera_zoom(m) (GDD
+## pinch zoom; > 0 = fingers closer = zoom out, PINCH_M_PER_PX). Visible when settings.touch_controls == &"on" or
 ## (&"auto" and a touchscreen is available and Game.input_scheme == TOUCH).
 ## Safe area (§10.4): button offsets and the joystick zone shift by the display cutout insets (recomputed on resize).
 ## Pause (§9.4): this layer is PAUSABLE and gets no touch_up/drag while PauseMenu/BigMap pause the tree, so on
@@ -31,6 +32,8 @@ const HUD_GAP: float = 27.0
 ## right_clearance() of the 1280×720 reference layout without display insets: the pause/map hit areas (88 px around
 ## x = 1227) start at x = 1183; the frame edge is at 1280 − 24 = 1256 → 1256 − 1183 + HUD_GAP.
 const RIGHT_CLEARANCE: float = 100.0
+## Pinch: arm length change per pixel of finger distance (200 px ≈ the whole 5–9 m zoom range of the camera rig).
+const PINCH_M_PER_PX: float = 0.02
 
 var force_visible: bool = false             # captures / tests
 var joystick: Control
@@ -38,6 +41,8 @@ var buttons: Dictionary = {}                # action → Button
 
 var _root: Control
 var _drag_index: int = -1
+var _cam_touches: Dictionary = {}           # touch index → position of fingers on the free camera area
+var _pinch_dist: float = -1.0               # finger distance of the running pinch (-1: fewer than 2 fingers)
 var _prompt: bool = false
 var _params: Dictionary = {}
 var _held: Dictionary = {}                  # action → true while its button is held
@@ -95,6 +100,8 @@ func release_all() -> void:
 	if joystick != null and bool(joystick.get("active")):
 		joystick.call("release")
 	_drag_index = -1
+	_cam_touches.clear()
+	_pinch_dist = -1.0
 	for a: Variant in _held.keys():
 		UiUtil.tap_action(a as StringName, false)
 	_held.clear()
@@ -261,18 +268,40 @@ func _input(event: InputEvent) -> void:
 			var local: Vector2 = joystick.get_global_transform_with_canvas().affine_inverse() * st.position
 			if bool(joystick.call("touch_down", st.index, local)):
 				get_viewport().set_input_as_handled()
-			elif _drag_index < 0:
-				_drag_index = st.index
+			else:
+				_cam_touches[st.index] = st.position
+				if _drag_index < 0:
+					_drag_index = st.index
+				_pinch_dist = _pinch_distance()
 		else:
 			if bool(joystick.call("touch_up", st.index)):
 				get_viewport().set_input_as_handled()
-			elif st.index == _drag_index:
-				_drag_index = -1
+			else:
+				_cam_touches.erase(st.index)
+				if st.index == _drag_index:
+					_drag_index = int(_cam_touches.keys()[0]) if not _cam_touches.is_empty() else -1
+				_pinch_dist = _pinch_distance()
 	elif event is InputEventScreenDrag:
 		var sd: InputEventScreenDrag = event
 		var local_d: Vector2 = joystick.get_global_transform_with_canvas().affine_inverse() * sd.position
 		if bool(joystick.call("touch_move", sd.index, local_d)):
 			get_viewport().set_input_as_handled()
-		elif sd.index == _drag_index:
-			Events.camera_drag.emit(sd.relative)
+		elif _cam_touches.has(sd.index):
+			_cam_touches[sd.index] = sd.position
+			if _cam_touches.size() >= 2:
+				var d: float = _pinch_distance()
+				if _pinch_dist > 0.0 and d > 0.0:
+					Events.camera_zoom.emit((_pinch_dist - d) * PINCH_M_PER_PX)
+				_pinch_dist = d
+			elif sd.index == _drag_index:
+				Events.camera_drag.emit(sd.relative)
 			get_viewport().set_input_as_handled()
+
+
+## Distance of the first two camera-area fingers (-1 with fewer than two).
+func _pinch_distance() -> float:
+	if _cam_touches.size() < 2:
+		return -1.0
+	var keys: Array = _cam_touches.keys()
+	keys.sort()
+	return (_cam_touches[keys[0]] as Vector2).distance_to(_cam_touches[keys[1]] as Vector2)

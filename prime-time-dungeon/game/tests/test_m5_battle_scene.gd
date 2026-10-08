@@ -14,6 +14,7 @@ const ROUTER_FIXTURE: String = "res://tests/fixtures/router/router_screen.tscn"
 const RESULTS_SCENE: String = "res://scenes/battle/ui/battle_results.tscn"
 const BattleHud := preload("res://scenes/battle/ui/battle_hud.gd")
 const BattleController := preload("res://scenes/battle/battle_controller.gd")
+const EnemyPlates := preload("res://scenes/battle/ui/enemy_plates.gd")
 const MAX_FRAMES: int = 20000
 const SPEED: float = 4.0
 
@@ -143,6 +144,62 @@ func test_auto_battle_reaches_battle_end_through_the_router() -> void:
 	assert_false(Game.in_battle, "apply_battle_result ended the battle")
 	assert_true(Game.state.floor_run.timer_started, "tutorial victory starts the floor countdown")
 	assert_true(Game.state.floor_run.defeated_groups.has("f1_g0"))
+
+
+## M5 CR 2: a battle freed before its end leaves neither Game nor Show in battle mode — a gift arriving afterwards in
+## the exploration is applied at once (not queued for a dead battle), and the next battle starts clean.
+func test_battle_freed_mid_fight_resets_game_and_show() -> void:
+	Game.auto_battle = false
+	var scene: BattleScene = _scene(_setup("enc_f1_a2"), {"stay": true})
+	assert_true(await _wait_menu(scene), "the party command menu is up")
+	assert_true(Game.in_battle)
+	var queued: Dictionary = Gift.make_dev("gold", "", 100)
+	assert_eq(Show.receive_gift(queued)["apply"], "queued")
+	scene.get_parent().remove_child(scene)
+	scene.queue_free()
+	await wait_frames(2)
+	assert_false(Game.in_battle, "Game left battle mode")
+	var credits: int = Game.state.inventory.credits
+	var g: Dictionary = Gift.make_dev("gold", "", 100)
+	assert_eq(Show.receive_gift(g)["apply"], "now", "Show has no battle context left")
+	assert_eq(Game.state.inventory.credits, credits + 100)
+	assert_eq(Show.take_pending_gift(null), {}, "the aborted battle's queue is gone")
+
+
+## M5 verify: a loop that ends without a BattleResult (BattleState bug) must not strand the player: the controller
+## drops the battle (Game + Show reset), reports finished(null) and leaves through the Router when exit_on_end.
+func test_controller_without_result_never_strands_the_player() -> void:
+	var ctrl: BattleController = BattleController.new()
+	ctrl.exit_on_end = false
+	add_to_tree(ctrl)
+	var got: Array = []
+	ctrl.finished.connect(func(r: BattleResult) -> void: got.append(r))
+	var s: BattleSetup = _setup("enc_f1_a2")
+	Show.begin_battle(s)
+	assert_true(Game.in_battle)
+	ctrl.abort_unfinished()
+	assert_true(ctrl.done)
+	assert_eq(got, [null], "finished(null)")
+	assert_false(Game.in_battle)
+	var g: Dictionary = Gift.make_dev("gold", "", 100)
+	assert_eq(Show.receive_gift(g)["apply"], "now", "Show's battle context was dropped")
+
+
+## M5 verify: several enemies high in the frame — a plate pushed up into the top HUD band is not clamped back down
+## onto the plates below it; it slides sideways (or below) and never overlaps one, and never enters the band.
+func test_plate_placement_never_overlaps_at_the_top_band() -> void:
+	var sz: Vector2 = Vector2(136, 50)
+	var placed: Array[Rect2] = []
+	for i in 4:
+		var want: Rect2 = Rect2(Vector2(500 + i * 10, 100), sz)     # all heads at the same spot just under the band
+		var r: Rect2 = EnemyPlates.place_rect(want, placed, 1280.0 - EnemyPlates.RIGHT_CLEAR)
+		assert_true(r.position.y >= EnemyPlates.TOP_BAND, "plate %d below the top band" % i)
+		for o: Rect2 in placed:
+			assert_false(r.grow(1.0).intersects(o), "plate %d overlaps a placed plate" % i)
+		assert_true(r.position.x >= 4.0 and r.end.x <= 1280.0 - EnemyPlates.RIGHT_CLEAR, "inside the free area")
+		placed.append(r)
+	var free: Rect2 = EnemyPlates.place_rect(Rect2(Vector2(100, 400), sz), placed, 1188.0)
+	assert_eq(free.position, Vector2(100, 400), "a free plate stays where it wants to be")
 
 
 func test_every_event_is_emitted_once_in_order_and_ends_with_battle_end() -> void:

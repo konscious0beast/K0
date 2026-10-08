@@ -91,6 +91,14 @@ func test_prompt_and_touch_icon() -> void:
 		assert_eq(action.get_node("Icon").get("kind"), &"fist", "field strike without a prompt")
 
 
+## M3 CR 4: the quest line comes from the live QuestTracker (label key translation, else text from its definition).
+func test_quest_line_from_the_live_tracker() -> void:
+	var q: QuestTracker = QuestTracker.from_def({"type": "reach_stairs", "label_key": "quest_reach_stairs_untranslated",
+		"params": {"floor": 1}})
+	assert_eq(ExplorationHud.quest_line(q), "Erreiche die Treppe von Etage 1.", "no translation → generated text")
+	assert_eq(ExplorationHud.quest_line(null), "")
+
+
 func test_quest_line() -> void:
 	var h: ExplorationHud = _hud()
 	await wait_frames(2)
@@ -223,6 +231,53 @@ func test_pausing_releases_touch_joystick_and_buttons() -> void:
 	await wait_frames(1)
 	assert_false(Input.is_action_pressed(&"move_forward"), "Kai does not keep walking after the pause")
 	UiUtil.release_move_actions()
+
+
+## M3 CR 3 / GDD pinch zoom: two fingers on the free camera area send Events.camera_zoom (closer = zoom out, apart =
+## zoom in) instead of camera_drag; one finger keeps dragging the camera.
+func test_two_finger_pinch_sends_camera_zoom() -> void:
+	var t: Node = (load(SCENE_TOUCH) as PackedScene).instantiate()
+	t.call("setup", {"force_visible": true})
+	add_to_tree(t)
+	await wait_frames(2)
+	var zooms: Array[float] = []
+	var drags: Array = []
+	var cb_z: Callable = func(a: float) -> void: zooms.append(a)
+	var cb_d: Callable = func(r: Vector2) -> void: drags.append(r)
+	Events.camera_zoom.connect(cb_z)
+	Events.camera_drag.connect(cb_d)
+	t.call("_input", _st(0, Vector2(900, 400), true))
+	t.call("_input", _sd(0, Vector2(920, 400), Vector2(20, 0)))
+	assert_eq(drags.size(), 1, "one finger drags the camera")
+	t.call("_input", _st(1, Vector2(1020, 400), true))      # second finger: 100 px apart
+	t.call("_input", _sd(1, Vector2(1120, 400), Vector2(100, 0)))   # apart → 200 px: zoom in
+	assert_eq(zooms.size(), 1)
+	if zooms.size() == 1:
+		assert_almost(zooms[0], -100.0 * float(t.get("PINCH_M_PER_PX")), 0.0001, "fingers apart → shorter arm")
+	t.call("_input", _sd(0, Vector2(1020, 400), Vector2(100, 0)))   # together → 100 px: zoom out
+	assert_true(zooms.size() == 2 and zooms[1] > 0.0, "fingers closer → zoom out")
+	assert_eq(drags.size(), 1, "no camera drag while pinching")
+	t.call("_input", _st(1, Vector2(1020, 400), false))
+	t.call("_input", _sd(0, Vector2(1000, 400), Vector2(-20, 0)))
+	assert_eq(drags.size(), 2, "back to dragging with one finger")
+	Events.camera_zoom.disconnect(cb_z)
+	Events.camera_drag.disconnect(cb_d)
+
+
+static func _st(index: int, pos: Vector2, pressed: bool) -> InputEventScreenTouch:
+	var e: InputEventScreenTouch = InputEventScreenTouch.new()
+	e.index = index
+	e.position = pos
+	e.pressed = pressed
+	return e
+
+
+static func _sd(index: int, pos: Vector2, rel: Vector2) -> InputEventScreenDrag:
+	var e: InputEventScreenDrag = InputEventScreenDrag.new()
+	e.index = index
+	e.position = pos
+	e.relative = rel
+	return e
 
 
 ## Detached stack screen (§13.3): party_changed / floor_entered / quest signals while the HUD is out of the tree only

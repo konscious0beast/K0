@@ -79,7 +79,9 @@ func _boundary(battle: BattleState) -> void:
 		return
 	var g: Dictionary = Show.take_pending_gift(battle)
 	if not g.is_empty():
-		_feed(battle.apply_gift(g))
+		var events: Array[ActionEvent] = battle.apply_gift(g)
+		Show.note_battle_gift(g, events)
+		_feed(events)
 
 
 ## Recorded path to a hype threshold: a dev gold gift pays for a Hype-Megafon (Automat), used in battle: 30 + 5
@@ -149,6 +151,93 @@ func test_dev_gift_in_battle_is_logged_at_delivery_and_replays() -> void:
 	var rep: Dictionary = Game.replay_log(Game.run_log)
 	assert_eq(rep["final_hash"], live_hash, "replayed at the same _play boundary (02_TECH §3.4)")
 	_assert_game_checkpoints(Game.run_log, rep)
+
+
+## Fan pack of a service source with a load basis stamped by the gift service (05 §6.10).
+func _fan_pack(n: int, load_half: int) -> Dictionary:
+	var g: Dictionary = Gift.make_dev("fan_pack", "", 0)
+	g["gift_id"] = "g_fan_cr_%d" % n
+	g["source"] = "fan"
+	g["sender"] = {"display_name": "Fan %d" % n, "anon": false, "sender_ref": "f_%d" % n}
+	g["load_half"] = load_half
+	g["effect_pm"] = GiftPolicy.effect_pm(load_half)
+	return g
+
+
+## M8 CR 3 / M2 VERIFY: gifts queued in a battle are checked AGAIN when they are applied (in battle at the turn
+## boundary, or after the battle) and booked into the run counters like RunSim does — two service gifts with the same
+## load basis: the first is applied, the second is refused as effect_mismatch at application (not on reception), and
+## live run ≡ Game.replay_log.
+func test_queued_gifts_are_rechecked_and_booked_at_application() -> void:
+	Game.new_game(0, "Kai", 5150)
+	var g1: Dictionary = _fan_pack(1, 0)
+	var g2: Dictionary = _fan_pack(2, 0)
+	assert_eq(Gift.validate(g1), "", Gift.last_detail)
+	_battle(DB.floor_def(1).timer_start_after, func(_b: BattleState) -> void:
+		assert_eq(Show.receive_gift(g1)["apply"], "queued")
+		assert_eq(Show.receive_gift(g2)["apply"], "queued", "same basis is fine while nothing was applied"))
+	assert_has(_received, g1["gift_id"], "first gift delivered at a turn boundary")
+	assert_false(_received.has(g2["gift_id"]), "second gift not applied")
+	assert_has(_rejected, [g2["gift_id"], "effect_mismatch"], "refused when it was due (after the battle)")
+	var logged: Array = []
+	for c: Array in _gift_cmds():
+		logged.append(c[1])
+	assert_eq(logged, [g1["gift_id"]], "only the applied gift is in the log")
+	var live: Dictionary = Game.state.flags["live"]
+	assert_eq(live["counted"], [g1["gift_id"]], "in-battle delivery booked (GiftPolicy.note_applied)")
+	assert_eq([live["load_half"], live["external"]], [2, 1], "fan_pack weight 2 half-points")
+	assert_true(live.get("gift_items", null) is Dictionary, "gift items booked (GiftApplier.note_battle_gift)")
+	var live_hash: String = StateHash.of(Game.state)
+	var rep: Dictionary = Game.replay_log(Game.run_log)
+	assert_eq(rep["final_hash"], live_hash, "live run ≡ replay (the refused gift is in neither)")
+	_assert_game_checkpoints(Game.run_log, rep)
+
+
+## The deadline (deliver_by_tick, client sim) is checked against the run clock at application.
+func test_queued_gift_past_its_deadline_is_refused_at_application() -> void:
+	Game.new_game(0, "Kai", 5151)
+	var late: Dictionary = Gift.make_dev("gold", "", 100)
+	late["deliver_by_tick"] = 1
+	Game.sim._tick = 5                        # the run clock is past the deadline
+	assert_eq(Show.receive_gift(late)["reason"], "deadline_missed", "outside a battle: checked on reception")
+	Game.sim._tick = 0
+	Game.in_battle = true
+	Show.begin_battle(Game.make_battle_setup(DB.floor_def(1).timer_start_after, BattleSetup.Advantage.NORMAL, ""))
+	assert_eq(Show.receive_gift(late)["apply"], "queued", "tick 0: still in time")
+	Game.sim._tick = 5
+	assert_eq(Show.take_pending_gift(null), {}, "past the deadline when it is due")
+	assert_has(_rejected, [late["gift_id"], "deadline_missed"])
+	Show.abort_battle()
+	Game.in_battle = false
+
+
+## 05 §6.12 gift lines with their placeholders: {sender} only for a non-anonymous sender, {amount} = credits applied,
+## gift_diminished {pct} below full effect, gift_capped / gift_declined on those refusals.
+func test_gift_lines_name_sender_amount_and_refusals() -> void:
+	Game.new_game(0, "Kai", 5152)
+	var lines: Array = []
+	var cb: Callable = func(text: String, _v: StringName, tag: String, _b: bool) -> void: lines.append([tag, text])
+	Events.mod_said.connect(cb)
+	var fan: Dictionary = _fan_pack(9, 0)
+	Show.receive_gift(fan)
+	assert_eq(str(lines[0][0]), "fan_pack_received")
+	assert_true(str(lines[0][1]).contains("Fan 9"), "{sender} = display name: " + str(lines[0][1]))
+	lines.clear()
+	var gold: Dictionary = Gift.make_dev("gold", "", 250)
+	gold["load_half"] = 2
+	gold["effect_pm"] = GiftPolicy.effect_pm(2)
+	Show.receive_gift(gold)
+	var tags: Array = lines.map(func(l: Array) -> String: return str(l[0]))
+	assert_eq(tags, ["gift_received:credits", "gift_diminished"])
+	var credits: int = GiftPolicy.scale(250, gold["effect_pm"])
+	assert_true(str(lines[0][1]).begins_with(str(credits)), "{amount}: " + str(lines[0][1]))
+	assert_true(str(lines[1][1]).contains("%d Prozent" % (int(gold["effect_pm"]) / 10)), "{pct}: " + str(lines[1][1]))
+	assert_false(str(lines[0][1]).contains("{"), "no raw placeholder left")
+	lines.clear()
+	Game.state.flags["live"]["gift_accept"] = "none"
+	Show.receive_gift(Gift.make_dev("gold", "", 100))
+	assert_eq(lines.map(func(l: Array) -> String: return str(l[0])), ["gift_declined"])
+	Events.mod_said.disconnect(cb)
 
 
 func test_pur_league_rejects_dev_gifts() -> void:

@@ -10,6 +10,9 @@ const TYPES: PackedStringArray = ["photo_drone", "lost_candidate", "wheel", "lev
 ## Choices that only close the dialog (the event stays open).
 const PASSIVE_CHOICES: PackedStringArray = ["leave", "ignore"]
 const GIVE_PREFIX: String = "give:"
+## Chances (lever success, vending base/per_lck) are drawn as integers in basis points: rng.randi_range(0, BP − 1)
+## < roundi(chance × BP) — one draw like the former randf() (05 §3.3 Nr. 5 / CR-12: no float randomness in core).
+const BP: int = 10000
 
 
 ## Choices that are possible right now (UI greys out every other option). [] = nothing left to do
@@ -108,7 +111,8 @@ static func resolve(ev: EventSpawn, choice: String, state: GameState, data: Game
 				out["completed"] = first
 		"lever":
 			if choice == "pull":
-				var ok: bool = rng.randf() < float(p.get("success", 0.0))
+				# integer draw in basis points (05 §3.3 Nr. 5 / CR-12): success 0.6 → 6000 of 0..9999
+				var ok: bool = rng.randi_range(0, BP - 1) < roundi(float(p.get("success", 0.0)) * BP)
 				out["success"] = ok
 				if ok:
 					out["open_gate"] = str(p.get("gate", ""))
@@ -127,8 +131,9 @@ static func resolve(ev: EventSpawn, choice: String, state: GameState, data: Game
 			if choice == "kick":
 				var kai: PartyMember = _kai(state)
 				var lck: int = stat_of(kai, data, "lck") if kai != null else 0
-				var chance: float = float(p.get("base", 0.5)) + lck * float(p.get("per_lck", 0.0))
-				var ok: bool = rng.randf() < chance
+				var chance_bp: int = roundi(float(p.get("base", 0.5)) * BP) \
+					+ lck * roundi(float(p.get("per_lck", 0.0)) * BP)
+				var ok: bool = rng.randi_range(0, BP - 1) < chance_bp
 				out["success"] = ok
 				if ok:
 					(out["items_add"] as Dictionary)[str(p.get("reward_item", ""))] = int(p.get("reward_amount", 1))

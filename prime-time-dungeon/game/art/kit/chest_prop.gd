@@ -29,9 +29,12 @@ var _glint_t: float = 0.0
 
 
 ## Lid tween 0.5 s + glow; emits opened. Outside the tree: set_open_instant() + opened + push_warning.
+## A second open() while the lid is still moving adds no early `opened`: the running tween's one emission (lid fully
+## open) answers every caller awaiting it. open() on an open, idle chest re-emits at once.
 func open(animated: bool = true) -> void:
 	if is_open:
-		opened.emit()
+		if not _open_owed:
+			opened.emit()
 		return
 	if not is_inside_tree():
 		push_warning("ChestProp.open() outside the tree: opened instantly")
@@ -229,8 +232,7 @@ static func lid_parts(type: String) -> Array:
 	return parts
 
 
-# --- idle glint (closed chests catch the eye, pillar 4/6)
-# -----------------------------------------------------------------
+# --- idle glint (closed chests catch the eye, pillar 4/6) -------------------------------------------------------------
 
 func _process(delta: float) -> void:
 	if _glint == null:

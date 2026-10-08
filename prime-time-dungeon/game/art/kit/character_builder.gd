@@ -5,6 +5,7 @@ class_name CharacterBuilder extends RefCounted
 
 const Archetypes := preload("res://art/kit/archetypes.gd")
 const GltfRig := preload("res://art/kit/gltf_rig.gd")
+const DamageNumber := preload("res://art/kit/damage_number.gd")
 const MESH_CACHE_MAX: int = 96
 const DEFAULT_MAT: Dictionary = {"bands": 3, "rim": 0.45}
 ## Arm splay (degrees) so arms clear the chibi torso.
@@ -185,6 +186,12 @@ static func _build_procedural(model: Dictionary, seed: int) -> CharacterRig:
 		var host3: Node3D = nodes.get(str(pdd["pivot"]), root)
 		host3.add_child(part)
 		particles.append(part)
+	var labels: Array[Label3D] = []
+	for ldv: Variant in (bp.get("labels", []) as Array):
+		var lb: Label3D = _rig_label(ldv as Dictionary)
+		var host4: Node3D = nodes.get(str((ldv as Dictionary).get("pivot", "")), root)
+		host4.add_child(lb)
+		labels.append(lb)
 	var bounds: AABB = _bounds(rig, meshes)
 	var piv_typed: Dictionary = {}
 	for pname2: String in nodes:
@@ -192,6 +199,7 @@ static func _build_procedural(model: Dictionary, seed: int) -> CharacterRig:
 	rig.call("_setup", {
 		"base": m["base"], "pose": m["pose"], "model_root": root, "scale": eff_scale, "pivots": piv_typed,
 		"meshes": meshes, "mesh_opts": mesh_opts, "pulses": pulses, "anchors": anchors, "particles": particles,
+		"labels": labels,
 		"height": maxf(bounds.end.y, 0.1), "width": maxf(bounds.size.x, bounds.size.z),
 		"arm_out": float(ARM_OUT.get(str(m["base"]), 0.0)), "phase": float(absi(eff_seed) % 97) * 0.173,
 	})
@@ -237,6 +245,24 @@ static func _xform_to(node: Node3D, ancestor: Node) -> Transform3D:
 			xf = (cur as Node3D).transform * xf
 		cur = cur.get_parent()
 	return xf
+
+
+## Text on a figure (blueprint "labels", e.g. the Rabattschild percent sign): unshaded, one-sided, no shadow, bold.
+static func _rig_label(ld: Dictionary) -> Label3D:
+	var lb := Label3D.new()
+	lb.name = "Label_" + str(ld.get("name", "text"))
+	lb.text = str(ld.get("text", ""))
+	lb.font = DamageNumber.bold_font()
+	lb.font_size = int(ld.get("font_size", 96))
+	lb.outline_size = int(ld.get("outline_size", 12))
+	lb.modulate = ld.get("color", Color.WHITE)
+	lb.outline_modulate = ld.get("outline", Color.BLACK)
+	lb.pixel_size = float(ld.get("pixel_size", 0.002))
+	lb.position = ld.get("pos", Vector3.ZERO)
+	lb.rotation_degrees = ld.get("rot", Vector3.ZERO)
+	lb.double_sided = false
+	lb.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return lb
 
 
 ## Looping particles that belong to an archetype (specter paint tail, cable sparks; 03_ART §5.3/§5.5).

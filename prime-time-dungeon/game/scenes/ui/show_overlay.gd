@@ -678,6 +678,11 @@ func lower_third_rect() -> Rect2:
 	return _lower.get_global_rect() if _lower.visible else Rect2()
 
 
+## Screen rect of the viewer-gift banner while it is shown, else empty (M5 CR 1).
+func gift_banner_rect() -> Rect2:
+	return _gift.get_global_rect() if _gift.visible and _gift.modulate.a > 0.01 else Rect2()
+
+
 func _apply_quality() -> void:
 	var high: bool = Game.settings != null and Game.settings.quality == &"high"
 	var path: String = SHADER_HIGH if high and ResourceLoader.exists(SHADER_HIGH) else SHADER_LOW

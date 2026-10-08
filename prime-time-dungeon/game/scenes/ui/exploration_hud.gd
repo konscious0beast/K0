@@ -653,15 +653,29 @@ func _refresh_party_values() -> void:
 		hp_l.add_theme_color_override("font_color", UiTheme.C_DANGER if (low or m.hp <= 0) else UiTheme.C_TEXT)
 
 
+## Event runs: the quest line of the live tracker (Game.quest) — its translated label_key, else the text EventInfo
+## builds from the definition; without a tracker the event of the run log header.
 func _auto_quest() -> void:
-	if Game.mode != &"event_offline" or Game.run_log == null:
+	if Game.mode != &"event_offline":
 		return
-	var event_id: String = str(Game.run_log.header.get("event_id", ""))
-	var info: Dictionary = EventInfo.find(event_id)
-	if info.is_empty():
+	if Game.quest != null:
+		set_quest(quest_line(Game.quest), Game.quest.progress())
 		return
-	var progress: float = Game.quest.progress() if Game.quest != null else 0.0
-	set_quest(EventInfo.quest_text(info.get("quest", {}) as Dictionary), progress)
+	if Game.run_log == null:
+		return
+	var info: Dictionary = EventInfo.find(str(Game.run_log.header.get("event_id", "")))
+	if not info.is_empty():
+		set_quest(EventInfo.quest_text(info.get("quest", {}) as Dictionary), 0.0)
+
+
+## Translated QuestTracker.label() when a translation exists, else EventInfo.quest_text(tracker.to_def()).
+static func quest_line(q: QuestTracker) -> String:
+	if q == null:
+		return ""
+	var key: String = q.label()
+	if key != "" and UiUtil.tr_text(key) != key:
+		return UiUtil.tr_text(key)
+	return EventInfo.quest_text(q.to_def())
 
 
 func _on_quest_progress(progress: float) -> void:

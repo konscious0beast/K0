@@ -78,8 +78,7 @@ static func _label(text: String, size: int, color: Color, outline: Color, xf: Tr
 	return l
 
 
-# --- battle arena (03_ART §8.2: stage r 9 m, party at +Z, enemies at −Z)
-# ------------------------------------------------
+# --- battle arena (03_ART §8.2: stage r 9 m, party at +Z, enemies at −Z) ----------------------------------------------
 
 const PARTY_ZONE := Vector3(0, 0, 3.1)
 const ENEMY_ZONE := Vector3(0, 0, -3.0)
@@ -171,9 +170,12 @@ static func build_arena(theme_id: String, palette: Dictionary, is_boss: bool, se
 	holo.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	root.add_child(holo)
 	root.add_child(_label("BOSSKAMPF" if is_boss else "DUNGEON PRIME TIME", 150, Palette.PAPER,
-		Palette.DANGER if is_boss else Palette.NOVA_MAGENTA, Transform3D(Basis.IDENTITY, Vector3(0, 6.1, -13.85)), 0.012))
+		Palette.DANGER if is_boss else Palette.NOVA_MAGENTA,
+		Transform3D(Basis.IDENTITY, Vector3(0, 6.3, -13.85)), 0.012))
+	# Title and LIVE bug both sit above 4.6 m: the low command shots crop the back wall there, right under the HUD
+	# band, so no text is cut in half behind the hype meter (M5 CR 3); wide shots (frame top ~7.2 m) show both.
 	root.add_child(_label("LIVE", 110, Palette.PAPER, Palette.LIVE_RED,
-		Transform3D(Basis.IDENTITY, Vector3(-3.4, 4.3, -13.85)), 0.01))
+		Transform3D(Basis.IDENTITY, Vector3(-3.4, 5.1, -13.85)), 0.01))
 	# drones + sponsor billboard (PropKit nodes, animated)
 	var d1: Node3D = PropKit.build(&"camera_drone", seed)
 	d1.position = Vector3(-6.0, 4.2, 4.5)

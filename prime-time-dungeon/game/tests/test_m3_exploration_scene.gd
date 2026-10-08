@@ -12,6 +12,7 @@ const GateInteractable := preload("res://scenes/exploration/gate_interactable.gd
 const EventInteractable := preload("res://scenes/exploration/event_interactable.gd")
 const PlayerBody := preload("res://scenes/exploration/player_controller.gd")
 const FB := preload("res://scenes/exploration/fallback_art.gd")
+const CameraRig := preload("res://scenes/exploration/camera_rig.gd")
 const SCENE: String = "res://scenes/exploration/exploration.tscn"
 const ROUTER_FIXTURE: String = "res://tests/fixtures/router/router_screen.tscn"
 const STUB_HEADER: String = "# STUB(M0)"
@@ -229,6 +230,20 @@ func _is_stub(path: String) -> bool:
 
 
 # --- building ---------------------------------------------------------------------------------------------------------
+
+## M3 CR 3: touch pinch (Events.camera_zoom from TouchControls) zooms like the wheel, clamped to 5–9 m.
+func test_camera_rig_pinch_zoom() -> void:
+	var rig: Node3D = CameraRig.new()
+	add_to_tree(rig)
+	var arm: float = float(rig.get("arm_length"))
+	Events.camera_zoom.emit(-1.5)
+	assert_almost(float(rig.get("arm_length")), arm - 1.5, 0.0001, "fingers apart → closer")
+	Events.camera_zoom.emit(50.0)
+	assert_almost(float(rig.get("arm_length")), CameraRig.ZOOM_MAX, 0.0001, "clamped")
+	rig.set("input_enabled", false)
+	Events.camera_zoom.emit(-3.0)
+	assert_almost(float(rig.get("arm_length")), CameraRig.ZOOM_MAX, 0.0001, "no zoom while input is disabled")
+
 
 func test_scene_builds_the_floor() -> void:
 	Events.floor_entered.connect(_record)
@@ -1067,6 +1082,35 @@ func test_lever_reveal_waits_for_the_prop() -> void:
 	assert_eq(toasts.size(), 1, "result toast after the pull")
 	assert_eq(fights, ["enc_t_patrol"], "flood fight after the reveal")
 	assert_true(gates.is_empty(), "the gate stays shut after a flood")
+
+
+## M3 verify (§9.4): pausing during the event reveal (PauseMenu sets get_tree().paused) also pauses the reveal timer —
+## no result toast, gate or follow-up fight under the open pause menu; it finishes after unpausing.
+func test_event_reveal_pauses_with_the_tree() -> void:
+	var scene: ExplorationScene = await _make_scene()
+	scene.auto_start_battle = false
+	var it: EventInteractable = scene.get_interactable("fev_t_wheel") as EventInteractable
+	assert_not_null(it)
+	if it == null:
+		return
+	Events.toast_requested.connect(_record)
+	scene.open_event_dialog(it)
+	scene.active_dialog().call("choose", "spin")
+	assert_true(scene.is_revealing())
+	tree.paused = true
+	var t0: int = Time.get_ticks_msec()
+	var reveal_ms: int = int((EventInteractable.WHEEL_SEC + 1.0) * 1000.0 / Engine.time_scale)
+	while Time.get_ticks_msec() - t0 < reveal_ms:
+		await wait_frames(1)
+	var still: bool = scene.is_revealing()
+	var toasts: int = _spy.size()
+	tree.paused = false
+	assert_true(still, "the reveal timer waits while the tree is paused")
+	assert_eq(toasts, 0, "no result toast under the pause menu")
+	var done: bool = await wait_until(func() -> bool: return not scene.is_revealing(), 6000)
+	Events.toast_requested.disconnect(_record)
+	assert_true(done, "reveal finishes after the pause")
+	assert_eq(_spy.size(), 1, "result toast after unpausing")
 
 
 func test_force_encounter_is_ignored_behind_a_dialog() -> void:

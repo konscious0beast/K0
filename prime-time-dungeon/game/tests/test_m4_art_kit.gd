@@ -82,8 +82,7 @@ func _start_wait(rig: CharacterRig, anim: StringName, speed: float) -> Array[boo
 	return done
 
 
-# --- vocabulary
-# --------------------------------------------------------------------------------------------------------
+# --- vocabulary -------------------------------------------------------------------------------------------------------
 
 func test_vocabulary_matches_validator() -> void:
 	assert_eq(CharacterBuilder.supported_bases(), DataValidator.MODEL_BASES)
@@ -151,6 +150,27 @@ func test_every_base_and_every_prop_builds() -> void:
 	assert_eq(spy.call("found"), PackedStringArray(), "no 'different indices' in the log")
 
 
+## M4 CR 2 (03_ART §5.7): the Rabattschild percent sign — ModelSpec prop discount_tag builds a tag plate and a Label3D
+## (96 px in the accent colour, outline 12 white, readable from the front = −Z) that fades with the dissolve.
+func test_discount_tag_label() -> void:
+	var rig: CharacterRig = _rig(DB.enemy("enm_rabattschild").model)
+	var lb: Label3D = rig.find_child("Label_DiscountTag", true, false) as Label3D
+	assert_not_null(lb, "Rabattschild carries the percent label")
+	if lb != null:
+		assert_true(lb.text.ends_with("%"), lb.text)
+		assert_eq([lb.font_size, lb.outline_size], [96, 12])
+		assert_eq(lb.modulate.to_html(false), "e8455a", "accent colour of the Rabattschild")
+		assert_eq(lb.outline_modulate, Color.WHITE)
+		assert_false(lb.double_sided)
+		var face: Vector3 = lb.global_transform.basis.z.normalized()
+		assert_true(face.z < -0.9, "the label's readable side points to the figure's front (−Z): %s" % face)
+		rig.set_dissolve(1.0)
+		assert_almost(lb.modulate.a, 0.0, 0.001, "fades with the dissolve")
+		rig.set_dissolve(0.0)
+		assert_almost(lb.modulate.a, 1.0, 0.001)
+	_drop(rig)
+
+
 func test_all_props_at_once_on_every_base() -> void:
 	for base: String in CharacterBuilder.supported_bases():
 		var rig: CharacterRig = _rig({"base": base, "props": Array(CharacterBuilder.supported_props())})
@@ -158,8 +178,7 @@ func test_all_props_at_once_on_every_base() -> void:
 		_drop(rig)
 
 
-# --- budgets (02_TECH §12.1, measured with MeshUtil.tri_count, hull not counted)
-# ---------------------------------------
+# --- budgets (02_TECH §12.1, measured with MeshUtil.tri_count, hull not counted) --------------------------------------
 
 func _check_budget(id: String, model: Dictionary, role: String) -> void:
 	var limits: Array = Cast.BUDGETS[role]

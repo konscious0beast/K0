@@ -56,6 +56,25 @@ func _ready() -> void:
 		show_overlay.call("set_mode", initial_mode())
 
 
+## Screen rects (canvas coordinates) the persistent UI currently covers — hype meter, sponsor lower third, viewer-gift
+## banner, toasts, M.O.D. box — empty ones left out (M5 CR 1: battle UI places menus/plates around them instead of
+## hard-coded positions). The instance under root is found with `get_tree().root.get_node_or_null("GlobalUi")`.
+func occupied_rects() -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	var cands: Array[Rect2] = []
+	if show_overlay != null:
+		for m: String in ["hype_rect", "lower_third_rect", "gift_banner_rect"]:
+			cands.append(show_overlay.call(m) as Rect2)
+	if toasts != null:
+		cands.append(toasts.call("stack_rect") as Rect2)
+	if mod_dialog != null:
+		cands.append(mod_dialog.call("box_rect") as Rect2)
+	for r: Rect2 in cands:
+		if r.size.x > 0.0 and r.size.y > 0.0:
+			out.append(r)
+	return out
+
+
 ## Overlay mode for the active screen (Router.current): exploration / battle / safe room, else menu.
 static func initial_mode() -> StringName:
 	var cur: Node = Router.current

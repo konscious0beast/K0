@@ -2,8 +2,9 @@ extends Node3D
 ## Orbit camera of the exploration (02_TECH §7.3, 03_ART §8.1, GDD §2.2): pivot on Kai + 1.4 m (follow lerp 10/s),
 ## SpringArm3D 7.0 m against layer `world` (sphere 0.25, margin 0.25; collisions shorten instantly, return at 4 m/s),
 ## pitch −38° (−65°..−15°), FOV 60, stick yaw 2.6 rad/s (cam_* actions), mouse with RMB held 0.005 rad/px, touch drag
-## 0.006 rad/px (Events.camera_drag), all × camera_sensitivity; wheel zoom 5–9 m; auto-recenter behind Kai after 2.5 s
-## without camera input while he moves (lerp 2/s). The rig node itself is the yaw pivot.
+## 0.006 rad/px (Events.camera_drag), all × camera_sensitivity; wheel / pinch (Events.camera_zoom) zoom 5–9 m;
+## auto-recenter behind Kai after 2.5 s without camera input while he moves (lerp 2/s). The rig node itself is the
+## yaw pivot.
 ##
 ## Rooms have no ceiling, so walls are never "solved" by shortening the arm alone (`pitch` stays the player's pitch,
 ## the effective pitch relaxes back to it):
@@ -98,6 +99,7 @@ func _init() -> void:
 
 func _ready() -> void:
 	Events.camera_drag.connect(_on_camera_drag)
+	Events.camera_zoom.connect(_on_camera_zoom)
 	_cam.current = true
 	_apply()
 
@@ -339,6 +341,14 @@ func _on_camera_drag(relative: Vector2) -> void:
 		return
 	var sens: float = Game.settings.camera_sensitivity if Game.settings != null else 1.0
 	_rotate_by(relative, TOUCH_RAD_PER_PX * sens)
+
+
+## Touch pinch (TouchControls): arm length change in m, clamped to ZOOM_MIN..ZOOM_MAX like the mouse wheel.
+func _on_camera_zoom(amount: float) -> void:
+	if not is_inside_tree() or not input_enabled:
+		return
+	arm_length = clampf(arm_length + amount, ZOOM_MIN, ZOOM_MAX)
+	_since_input = 0.0
 
 
 func _rotate_by(relative: Vector2, rad_per_px: float) -> void:

@@ -290,7 +290,9 @@ func _play(battle: BattleState, events: Array[ActionEvent]) -> void:
 		return
 	var g: Dictionary = Show.take_pending_gift(battle)
 	if not g.is_empty():
-		for e: ActionEvent in battle.apply_gift(g):
+		var gift_events: Array[ActionEvent] = battle.apply_gift(g)
+		Show.note_battle_gift(g, gift_events)
+		for e: ActionEvent in gift_events:
 			Show.on_battle_event(e)
 
 

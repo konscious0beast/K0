@@ -16,6 +16,7 @@ const DEMO: Dictionary = {"event_id": "evt_offline_gleis9", "cause": "floor_comp
 	"quest_progress": 1.0, "score": 17340, "rank": 2, "time_left_sec": 828, "followers_gained": 2600,
 	"breakdown": {"quest": 10000, "time": 4140, "show": 2600, "achievements": 900, "ko": -300}}
 const QUEST_MAX_W: float = 880.0             # quest sentences (data, e.g. all_of + achievement names) wrap here
+const TITLE_MAX_W: float = 1100.0            # event names (data) wrap here; the safe rect is 1232 px wide at 1280x720
 
 ## Last Events.run_finished summary (set by GlobalUi).
 static var last_summary: Dictionary = {}
@@ -96,8 +97,8 @@ func _build() -> void:
 	col.add_child(kicker)
 	var title: Label = UiUtil.label(str(info.get("name", "Event-Lauf")).to_upper(), &"LabelTitle", 42)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART     # event names are data: wrap instead of widening col
 	col.add_child(title)
+	UiUtil.wrap_label(title, TITLE_MAX_W)    # natural width up to the cap, never squeezed to the other rows' width
 	var cause: Array = CAUSES.get(str(summary.get("cause", "")), ["LAUF BEENDET", UiTheme.C_TEXT_DIM])
 	var badge_c: CenterContainer = CenterContainer.new()
 	col.add_child(badge_c)
@@ -117,6 +118,7 @@ func _build() -> void:
 		22))
 	var ql: Label = UiUtil.label(("Quest erfüllt: " if quest_done else "Quest offen (%d %%): " % roundi(float(
 		summary.get("quest_progress", 0.0)) * 100.0)) + qtext, &"", 20)
+	ql.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER    # wrapped lines stay centered like the rest of col
 	qrow.add_child(ql)
 	UiUtil.wrap_label(ql, QUEST_MAX_W)
 	var center: CenterContainer = CenterContainer.new()

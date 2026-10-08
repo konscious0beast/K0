@@ -213,10 +213,13 @@ func test_dropped_blocking_line_releases_the_timer() -> void:
 	# new_game → Show.start_floor already says its non-blocking "floor_start" line (M7 data), so the box may be busy
 	# with that one; the dropped lines must neither start nor queue.
 	var started: Array[String] = []
-	d.connect("line_started", func(_text: String, _voice: StringName, tag: String) -> void: started.append(tag))
+	var on_start: Callable = func(_text: String, _voice: StringName, tag: String) -> void: started.append(tag)
+	d.connect("line_started", on_start)
+	var line_before: Dictionary = d.call("current_line")
 	var pending_before: int = int(d.call("pending"))
 	Events.mod_said.emit("   ", &"mod", "empty_line", true)
 	Events.mod_said.emit("nur fürs Chat-Band", &"chat", "chat_line", true)
+	assert_eq(d.call("current_line") as Dictionary, line_before, "the current line (if any) is untouched")
 	assert_eq(int(d.call("pending")), pending_before, "nothing queued")
 	var ok: bool = await wait_until(func() -> bool: return Game.is_timer_ticking(), 30)
 	assert_true(ok, "timer ticks again after the dropped blocking lines")
@@ -224,6 +227,7 @@ func test_dropped_blocking_line_releases_the_timer() -> void:
 	assert_eq(got, ["empty_line", "chat_line"] as Array[String], "each dropped blocking line is balanced once")
 	assert_eq(int(Game.get("_blocking_dialogs")), 0)
 	Events.dialog_finished.disconnect(cb)
+	d.disconnect("line_started", on_start)
 	Game.timer_running = false
 
 

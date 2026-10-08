@@ -4,9 +4,9 @@ extends TestCase
 ## zone A L2 (tutorial L1), zone B L3 (start party, Lv 1–3), zone C L4, Hausmeister L5, zone D L6, Rattenkönigin L7.
 ## Party turns per won fight are checked against GDD §13 (regular 4–6, median 4.5; Hausmeister 16–22; Königin 20–26).
 ## Boss turn counts hinge on how the AutoPolicy spends MP: formulas (GDD §3/§4), party growth, gear and boss data match
-## the GDD; the 02_TECH §5.8 rule "MP >= 50 % → strongest skill, else ATTACK" gave 34.5 / 42.0 turns (Mopsula hits
-## for 2–3 below 50 % MP), the MP-efficient rule in auto_policy.gd gives ≈ 19.5 / 24 (GDD sim 18 / 23).
-## OPEN DEVIATION (doc CR pending, TECH owner): AutoPolicy rule (2)/(3) differs from 02_TECH §5.8, see auto_policy.gd.
+## the GDD; the former 02_TECH §5.8 rule "MP >= 50 % → strongest skill, else ATTACK" gave 34.5 / 42.0 turns (Mopsula
+## hits for 2–3 below 50 % MP), the MP-efficient rule of §5.8 as amended by CR M7-B1 gives ≈ 19.5 / 24
+## (GDD sim 18 / 23).
 ## OPEN DEVIATION (doc CR pending, TECH owner): 02_TECH §11.5 says "Startparty (Lv 1–3)" for every encounter; zones C/D
 ## use the GDD §5.4/§13 progression (C L4 + mid gear, D L6 + late gear) instead. Not done until §11.5 is amended.
 ## Needs the real M1 battle core: skipped while core/battle/*.gd are still M0 stubs (runs at integration, §0.1 phase C);

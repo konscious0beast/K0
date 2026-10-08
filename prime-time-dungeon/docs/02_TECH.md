@@ -2370,8 +2370,17 @@ Leere Liste nach Filter → `attack_skill` auf `random`. Gleichstände bei `lowe
 
 `AutoPolicy` (Party, Autoplay/Auto-Kampf): (0) steht eine Pseudo-Einheit in `preview_order(3)` vor dem nächsten Zug des Akteurs →
 `DEFEND`; (1) Verbündeter < 35 % HP (oder KO und Wiederbelebung verfügbar) und Heil-Skill/-Item verfügbar → heilen (niedrigste Ratio);
-(2) MP ≥ 50 % → stärkster bezahlbarer Schadens-Skill (höchste `power` × bekannter Element-Mult, bei Gleichstand niedrigste ID) auf den
-Gegner mit niedrigster HP; (3) sonst `ATTACK` auf Gegner mit niedrigster HP. Nie Stunt, nie Flucht.
+(2) bezahlbarer Schadens-Skill mit dem höchsten **Mehrschaden je MP** gegenüber dem Basisangriff, ohne MP-Schwelle, auf den Gegner mit
+niedrigster HP: Erwartungsschaden `E` = GDD §3.7 ohne Varianz, Krit, Verteidigung und Combo (`A·A/(A + D·guard) · power/100`, `fixed`:
+`power`) × bekannter Element-Mult × `hits`; `all_enemies` summiert `E` über alle lebenden Gegner, `random_enemy` mittelt darüber;
+Kandidaten nur mit `E > E(attack_skill)`, Wertung `(E − E(attack_skill)) / max(1, mp_cost)` (Ganzzahl, exakter Vergleich, bei
+Gleichstand niedrigste ID); (3) sonst `ATTACK` auf Gegner mit niedrigster HP. Nie Stunt, nie Flucht.
+
+> **CR M7-B1** (M7-Balancing, Abnahme TECH-Owner beim Merge): Regel (2) lautete „MP ≥ 50 % → stärkster bezahlbarer Schadens-Skill
+> (höchste `power` × Element-Mult)“. Damit blieb die Hälfte der MP aus GDD §4 ungenutzt, Mopsula (STR 5–8) traf unter 50 % MP für 2–3
+> Schaden, und „stärkster“ gab 7 MP für Donnerbellen aus, wo Adelsflamme für 4 MP gleich viel trifft: Hausmeister L5 34.5 und Königin L7
+> 42.0 Party-Züge statt GDD §13 16–22 / 20–26. Neue Regel: ≈ 19.5 / 24 (GDD-Sim 18 / 23), reguläre Kämpfe weiter im Ziel
+> (`test_m7_balance`). Spielersichtbar: Auto-Kampf/Autoplay wirkt Schadens-Skills, solange sie bezahlbar sind und den Angriff schlagen.
 
 ### 5.9 Formeln (`Balance`, Konstanten dürfen per Balancing geändert werden, die Struktur nicht)
 

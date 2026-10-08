@@ -467,7 +467,7 @@ func test_autopolicy_heal_revive_skill_attack() -> void:
 	assert_eq(AutoPolicy.choose(s, kai).to_dict(), BattleCommand.attack("p0", "e1").to_dict())
 
 
-## Rule (2) (auto_policy.gd header; 02_TECH §5.8 CR): expected damage (GDD §3.7 without variance/crit) per MP.
+## Rule (2) (02_TECH §5.8, CR M7-B1): expected damage (GDD §3.7 without variance/crit) per MP.
 func test_autopolicy_damage_skill_is_chosen_by_extra_damage_per_mp() -> void:
 	var s: BattleState = _started(["enm_rat"], {"kai": {"skills": PackedStringArray(
 			["skl_kai_cable_whip", "skl_kai_double", "skl_kai_heavy_swing", "skl_kai_sweep"])}})
@@ -507,6 +507,31 @@ func test_autopolicy_damage_skill_is_chosen_by_extra_damage_per_mp() -> void:
 	assert_eq(AutoPolicy.choose(sb, sb.get_combatant("p0")).to_dict(),
 			BattleCommand.skill("p0", "skl_kai_cable_whip", PackedStringArray(["e0"])).to_dict(),
 			"a weaker-per-MP skill is still used while it beats the attack")
+
+
+## Rule (2), random_enemy: a party actor's random skill draws one living enemy (ActionResolver), so its expected damage
+## is the mean over the living enemies, not the damage on the lowest-HP enemy.
+func test_autopolicy_random_enemy_skill_uses_the_mean_over_living_enemies() -> void:
+	var t: Dictionary = Fx.tables()
+	(t["skills"] as Array).append(Fx._skill("skl_kai_wild_swing", "party", "attack", "random_enemy",
+			{"damage_type": "physical", "element": "physical", "power": 104, "mp_cost": 2}))
+	var s: BattleState = Fx.make_state(fixture_data(t), PackedStringArray(["enm_rat", "enm_pigeon"]),
+			{"kai": {"skills": PackedStringArray(["skl_kai_wild_swing"])}})
+	s.start()
+	var kai: Combatant = s.get_combatant("p0")
+	var rat: Combatant = s.get_combatant("e0")
+	var pigeon: Combatant = s.get_combatant("e1")
+	var wild: SkillDef = s.skill_def("skl_kai_wild_swing")
+	# Kai STR 12, power 104: rat DEF 5 → 149.76 / 17 = 8.809412, pigeon DEF 3 → 149.76 / 15 = 9.984; mean 9.396706.
+	assert_eq(AutoPolicy._expected_damage(s, kai, wild, pigeon), 9396706)
+	assert_eq(AutoPolicy._expected_damage(s, kai, wild, rat), 9396706, "independent of the main target")
+	# Lowest HP = pigeon (20 < 24), attack 144 / 15 = 9.6 > the mean → ATTACK (on the pigeon alone the skill would win).
+	assert_eq(AutoPolicy.choose(s, kai).to_dict(), BattleCommand.attack("p0", "e1").to_dict())
+	pigeon.hp = 0
+	assert_eq(AutoPolicy._expected_damage(s, kai, wild, rat), 8809412, "one living enemy: its damage")
+	assert_eq(AutoPolicy.choose(s, kai).to_dict(),
+			BattleCommand.skill("p0", "skl_kai_wild_swing", PackedStringArray(["e0"])).to_dict(),
+			"8.809412 > attack 8.470588 → skill")
 
 
 func test_autopolicy_never_stunts_or_flees_and_is_valid() -> void:

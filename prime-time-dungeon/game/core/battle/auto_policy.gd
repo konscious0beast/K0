@@ -5,15 +5,16 @@ class_name AutoPolicy extends RefCounted
 ##     ratio (KO counts as 0); skills before items, each in id order;
 ## (2) the damage skill that buys the most extra damage per MP: among the affordable damage skills whose expected
 ##     damage beats the basic attack on the enemy with the lowest HP, the highest (expected − attack) / mp_cost
-##     (ties: lowest id), on that enemy (area skills: all enemies, expected damage summed over them);
+##     (ties: lowest id), on that enemy (all_enemies: expected damage summed over all living enemies; random_enemy:
+##     averaged over them, the party's random skill draws one living enemy); no MP threshold;
 ## (3) otherwise ATTACK the enemy with the lowest HP.
 ## Expected damage = GDD §3.7 without variance, crit, defend and combo: A·A/(A + D·guard) · power/100 · element · hits
 ## (fixed damage: power · element · hits).
-## DEVIATION from 02_TECH §5.8 (CR pending, TECH owner): §5.8 (2)/(3) read "MP >= 50 % → strongest affordable damage
-## skill (power × element), otherwise ATTACK". With the GDD §4 MP pools that leaves half the MP unused and has Mopsula
-## (STR 5–8) hit for 2–3 damage per turn once below 50 %, and "strongest" spends 7 MP on Donnerbellen where Adelsflamme
-## does the same damage for 4: Hausmeister L5 34.5 and Königin L7 42.0 party turns instead of GDD §13 16–22 / 20–26
-## (GDD sim 18 / 23). The MP-efficient choice (no 50 % gate) gives ≈ 19.5 / 24 with unchanged regular fights.
+## Rules (2)/(3) follow 02_TECH §5.8 as amended by CR M7-B1 (M7 balancing; TECH-owner acceptance at merge). The former
+## rule "MP >= 50 % → strongest affordable damage skill (power × element), otherwise ATTACK" left half the GDD §4 MP
+## pool unused, had Mopsula (STR 5–8) hit for 2–3 damage per turn below 50 % and spent 7 MP on Donnerbellen where
+## Adelsflamme does the same damage for 4: Hausmeister L5 34.5 / Königin L7 42.0 party turns instead of GDD §13
+## 16–22 / 20–26.
 
 const FixedMath := preload("res://core/stats/fixed_math.gd")
 const HEAL_BELOW: float = 0.35
@@ -41,8 +42,9 @@ static func choose(state: BattleState, actor: Combatant) -> BattleCommand:
 
 
 ## Expected damage of `skill` used by `actor` with `target` as the main target, in micro HP (1e-6): GDD §3.7 without
-## variance, crit, defend and combo (guard and element included), × hits; area skills (all_enemies) sum over all living
-## units of the target's side. Integer arithmetic like DamageCalc.compute.
+## variance, crit, defend and combo (guard and element included), × hits; all_enemies sums over all living units of
+## the target's side, random_enemy takes the mean over them (ActionResolver draws one living enemy for a party actor
+## and lands every hit on it). Integer arithmetic like DamageCalc.compute.
 static func _expected_damage(state: BattleState, actor: Combatant, skill: SkillDef, target: Combatant) -> int:
 	if skill == null or target == null or not skill.is_damaging():
 		return 0
@@ -50,7 +52,7 @@ static func _expected_damage(state: BattleState, actor: Combatant, skill: SkillD
 	var physical: bool = skill.damage_type != "magical"
 	var a: int = actor.stat(StatBlock.Stat.STR if physical else StatBlock.Stat.MAG)
 	var targets: Array[Combatant] = [target]
-	if skill.target == "all_enemies":
+	if skill.target == "all_enemies" or skill.target == "random_enemy":
 		targets = state.living(target.side)
 	var sum: int = 0
 	for t: Combatant in targets:
@@ -61,6 +63,8 @@ static func _expected_damage(state: BattleState, actor: Combatant, skill: SkillD
 			var den: int = a * FixedMath.PM + d * guard_pm
 			x = FixedMath.div_round(a * a * skill.power * 10000 * FixedMath.PM, den) if den > 0 else 0
 		sum += FixedMath.mul_pm(x, Elements.multiplier_pm(t.element_mods, element))
+	if skill.target == "random_enemy" and targets.size() > 1:
+		sum = FixedMath.div_round(sum, targets.size())
 	return sum * maxi(1, skill.hits)
 
 

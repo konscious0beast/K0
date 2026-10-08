@@ -456,11 +456,57 @@ func test_autopolicy_heal_revive_skill_attack() -> void:
 	rat.hp = 24
 	assert_eq(AutoPolicy.choose(s, mop).to_dict(),
 			BattleCommand.skill("p1", "skl_mop_noble_flame", PackedStringArray(["e0"])).to_dict(),
-			"MP >= 50 % → strongest damage skill on the lowest-HP enemy")
-	mop.mp = 14
-	assert_eq(AutoPolicy.choose(s, mop).to_dict(), BattleCommand.attack("p1", "e0").to_dict(), "MP < 50 % → attack")
+			"damage skill that beats the attack, on the lowest-HP enemy")
+	mop.mp = 5
+	assert_eq(AutoPolicy.choose(s, mop).to_dict(),
+			BattleCommand.skill("p1", "skl_mop_noble_flame", PackedStringArray(["e0"])).to_dict(),
+			"no 50 % MP gate: a caster keeps casting while the skill is affordable")
+	mop.mp = 3
+	assert_eq(AutoPolicy.choose(s, mop).to_dict(), BattleCommand.attack("p1", "e0").to_dict(), "MP < cost → attack")
 	rat.hp = 0
 	assert_eq(AutoPolicy.choose(s, kai).to_dict(), BattleCommand.attack("p0", "e1").to_dict())
+
+
+## Rule (2) (auto_policy.gd header; 02_TECH §5.8 CR): expected damage (GDD §3.7 without variance/crit) per MP.
+func test_autopolicy_damage_skill_is_chosen_by_extra_damage_per_mp() -> void:
+	var s: BattleState = _started(["enm_rat"], {"kai": {"skills": PackedStringArray(
+			["skl_kai_cable_whip", "skl_kai_double", "skl_kai_heavy_swing", "skl_kai_sweep"])}})
+	var kai: Combatant = s.get_combatant("p0")
+	var mop: Combatant = s.get_combatant("p1")
+	var rat: Combatant = s.get_combatant("e0")
+	var atk: SkillDef = s.skill_def("skl_attack_kai")
+	# Kai STR 12 vs rat DEF 5: 144 / 17 = 8.470588 HP; guard: 144 / (12 + 7.5) = 7.384615; Mopsula's Adelsflamme
+	# MAG 13 vs RES 3, fire weak: 169 / 16 × 1.1 × 1.5 = 17.428125.
+	assert_eq(AutoPolicy._expected_damage(s, kai, atk, rat), 8470588)
+	assert_eq(AutoPolicy._expected_damage(s, kai, s.skill_def("skl_kai_heavy_swing"), rat), 13552941)
+	assert_eq(AutoPolicy._expected_damage(s, kai, s.skill_def("skl_kai_double"), rat), 8470588, "2 hits × power 50")
+	assert_eq(AutoPolicy._expected_damage(s, mop, s.skill_def("skl_mop_noble_flame"), rat), 17428125)
+	# One rat: Wuchtschlag (+60 % for 3 MP) beats Kabelpeitsche (+20 % for 8 MP), Rundumfeger (80 %) and the double hit
+	# (2 × 50 = the attack) do not beat the attack at all.
+	assert_eq(AutoPolicy.choose(s, kai).to_dict(),
+			BattleCommand.skill("p0", "skl_kai_heavy_swing", PackedStringArray(["e0"])).to_dict())
+	kai.mp = 2
+	assert_eq(AutoPolicy.choose(s, kai).to_dict(), BattleCommand.attack("p0", "e0").to_dict(),
+			"only the double hit is affordable: no extra damage → attack")
+	var out: Array[ActionEvent] = []
+	ActionResolver.apply_status(s, rat, "sts_guard", 2, "e0", 1.0, 0, out)
+	assert_eq(AutoPolicy._expected_damage(s, kai, atk, rat), 7384615, "guard: D × 1.5")
+	# Three rats: the area skill sums its expected damage (3 × 80 % − 100 % = +140 % for 5 MP > +60 % for 3 MP).
+	var s3: BattleState = _started(["enm_rat", "enm_rat", "enm_rat"], {"kai": {"skills": PackedStringArray(
+			["skl_kai_heavy_swing", "skl_kai_sweep"])}})
+	assert_eq(AutoPolicy.choose(s3, s3.get_combatant("p0")).to_dict(),
+			BattleCommand.skill("p0", "skl_kai_sweep", PackedStringArray(["e0", "e1", "e2"])).to_dict())
+	# Shock-weak boss: Kabelpeitsche is the strongest skill (120 × 1.5 = 180 %) but buys +80 % for 8 MP; Wuchtschlag
+	# buys +60 % for 3 MP and is chosen (the old "strongest" rule spent 8 MP here).
+	var sb: BattleState = _started(["enm_boss_janitor"], {"is_boss": true, "kai": {"skills": PackedStringArray(
+			["skl_kai_cable_whip", "skl_kai_heavy_swing"])}})
+	assert_eq(AutoPolicy.choose(sb, sb.get_combatant("p0")).to_dict(),
+			BattleCommand.skill("p0", "skl_kai_heavy_swing", PackedStringArray(["e0"])).to_dict())
+	sb.get_combatant("p0").mp = 9
+	sb.get_combatant("p0").skills = PackedStringArray(["skl_kai_cable_whip"])
+	assert_eq(AutoPolicy.choose(sb, sb.get_combatant("p0")).to_dict(),
+			BattleCommand.skill("p0", "skl_kai_cable_whip", PackedStringArray(["e0"])).to_dict(),
+			"a weaker-per-MP skill is still used while it beats the attack")
 
 
 func test_autopolicy_never_stunts_or_flees_and_is_valid() -> void:

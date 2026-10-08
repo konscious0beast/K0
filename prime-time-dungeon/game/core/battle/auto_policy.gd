@@ -3,12 +3,21 @@ class_name AutoPolicy extends RefCounted
 ## (0) a pseudo unit acts before the actor's next turn (within preview_order(3)) → DEFEND;
 ## (1) an ally below 35 % HP (or KO and a revive is available) and a heal skill/item is available → heal the lowest
 ##     ratio (KO counts as 0); skills before items, each in id order;
-## (2) MP >= 50 % → strongest affordable damage skill (power × known element multiplier of the target, ties: lowest id)
-##     on the enemy with the lowest HP;
+## (2) the damage skill that buys the most extra damage per MP: among the affordable damage skills whose expected
+##     damage beats the basic attack on the enemy with the lowest HP, the highest (expected − attack) / mp_cost
+##     (ties: lowest id), on that enemy (area skills: all enemies, expected damage summed over them);
 ## (3) otherwise ATTACK the enemy with the lowest HP.
+## Expected damage = GDD §3.7 without variance, crit, defend and combo: A·A/(A + D·guard) · power/100 · element · hits
+## (fixed damage: power · element · hits).
+## DEVIATION from 02_TECH §5.8 (CR pending, TECH owner): §5.8 (2)/(3) read "MP >= 50 % → strongest affordable damage
+## skill (power × element), otherwise ATTACK". With the GDD §4 MP pools that leaves half the MP unused and has Mopsula
+## (STR 5–8) hit for 2–3 damage per turn once below 50 %, and "strongest" spends 7 MP on Donnerbellen where Adelsflamme
+## does the same damage for 4: Hausmeister L5 34.5 and Königin L7 42.0 party turns instead of GDD §13 16–22 / 20–26
+## (GDD sim 18 / 23). The MP-efficient choice (no 50 % gate) gives ≈ 19.5 / 24 with unchanged regular fights.
 
 const FixedMath := preload("res://core/stats/fixed_math.gd")
 const HEAL_BELOW: float = 0.35
+const DAMAGE_TARGETS: PackedStringArray = ["single_enemy", "all_enemies", "random_enemy"]
 
 
 static func choose(state: BattleState, actor: Combatant) -> BattleCommand:
@@ -24,12 +33,35 @@ static func choose(state: BattleState, actor: Combatant) -> BattleCommand:
 	var heal_cmd: BattleCommand = _heal_command(state, actor)
 	if heal_cmd != null:
 		return heal_cmd
-	if actor.max_mp() > 0 and actor.mp * 2 >= actor.max_mp():
-		var dmg_cmd: BattleCommand = _damage_skill_command(state, actor)
-		if dmg_cmd != null:
-			return dmg_cmd
 	var target: Combatant = BattleState.lowest_hp(state.living(_other(actor)))
+	var dmg_cmd: BattleCommand = _damage_skill_command(state, actor, target)
+	if dmg_cmd != null:
+		return dmg_cmd
 	return BattleCommand.attack(actor.id, target.id if target != null else "")
+
+
+## Expected damage of `skill` used by `actor` with `target` as the main target, in micro HP (1e-6): GDD §3.7 without
+## variance, crit, defend and combo (guard and element included), × hits; area skills (all_enemies) sum over all living
+## units of the target's side. Integer arithmetic like DamageCalc.compute.
+static func _expected_damage(state: BattleState, actor: Combatant, skill: SkillDef, target: Combatant) -> int:
+	if skill == null or target == null or not skill.is_damaging():
+		return 0
+	var element: String = actor.attack_element if actor.is_party() and skill.id == actor.attack_skill else skill.element
+	var physical: bool = skill.damage_type != "magical"
+	var a: int = actor.stat(StatBlock.Stat.STR if physical else StatBlock.Stat.MAG)
+	var targets: Array[Combatant] = [target]
+	if skill.target == "all_enemies":
+		targets = state.living(target.side)
+	var sum: int = 0
+	for t: Combatant in targets:
+		var x: int = skill.power * DamageCalc.MICRO
+		if skill.damage_type != "fixed":
+			var d: int = t.stat(StatBlock.Stat.DEF if physical else StatBlock.Stat.RES)
+			var guard_pm: int = FixedMath.pm(Balance.GUARD_DEF_MULT) if t.has_flag("guard") else FixedMath.PM
+			var den: int = a * FixedMath.PM + d * guard_pm
+			x = FixedMath.div_round(a * a * skill.power * 10000 * FixedMath.PM, den) if den > 0 else 0
+		sum += FixedMath.mul_pm(x, Elements.multiplier_pm(t.element_mods, element))
+	return sum * maxi(1, skill.hits)
 
 
 static func _heal_command(state: BattleState, actor: Combatant) -> BattleCommand:
@@ -83,25 +115,27 @@ static func _command(actor: Combatant, src: Dictionary, target: PackedStringArra
 	return BattleCommand.item(actor.id, it.id, item_ids)
 
 
-static func _damage_skill_command(state: BattleState, actor: Combatant) -> BattleCommand:
-	var target: Combatant = BattleState.lowest_hp(state.living(_other(actor)))
+## Rule (2): highest (expected − attack) / mp_cost among affordable damage skills that beat the basic attack (exact
+## comparison by cross-multiplication; skills in id order, so ties keep the lowest id). null → ATTACK.
+static func _damage_skill_command(state: BattleState, actor: Combatant, target: Combatant) -> BattleCommand:
 	if target == null:
 		return null
+	var base: int = _expected_damage(state, actor, state.skill_def(actor.attack_skill), target)
 	var skills: PackedStringArray = state.usable_skills(actor)
 	skills.sort()
 	var best: SkillDef = null
-	var best_score: int = 0
+	var best_gain: int = 0
+	var best_cost: int = 1
 	for sid: String in skills:
 		var sk: SkillDef = state.skill_def(sid)
-		if sk == null or not sk.is_damaging():
+		if sk == null or sid == actor.attack_skill or not sk.is_damaging() or not DAMAGE_TARGETS.has(sk.target):
 			continue
-		if not ["single_enemy", "all_enemies", "random_enemy"].has(sk.target):
-			continue
-		var element: String = actor.attack_element if actor.is_party() and sid == actor.attack_skill else sk.element
-		var score: int = sk.power * Elements.multiplier_pm(target.element_mods, element)
-		if score > best_score:
-			best_score = score
+		var gain: int = _expected_damage(state, actor, sk, target) - base
+		var cost: int = maxi(1, sk.mp_cost)
+		if gain > 0 and gain * best_cost > best_gain * cost:
 			best = sk
+			best_gain = gain
+			best_cost = cost
 	if best == null:
 		return null
 	var ids: PackedStringArray = PackedStringArray([target.id]) if best.target == "single_enemy" \

@@ -77,6 +77,27 @@ func test_late_entry_variants() -> void:
 	assert_eq(EventDef.from_dict(d).window_state(EU_CLOSE - 301), &"open", "no wall limit → no last_entry phase")
 
 
+## 05 §1.2: the standard is last_entry_at = close_at − max_run_wall_sec; "none" / "first_10_min" are opt-ins. A
+## weekly event without late_entry must stay open for days, not 10 minutes.
+func test_late_entry_defaults_to_until_last_entry() -> void:
+	var d: Dictionary = _live()
+	d.erase("late_entry")
+	d["kind"] = "weekly"
+	d["windows"] = [{"id": "w45", "open_at": "2026-11-02T00:00:00Z", "close_at": "2026-11-08T23:59:00Z"}]
+	d["seed_policy"]["commits"] = {"w45": "3613e6c5…d64a"}
+	var def: EventDef = EventDef.from_dict(d)
+	assert_eq(def.validate(), PackedStringArray())
+	assert_eq(def.late_entry, "until_last_entry")
+	assert_eq(EventDef.new().late_entry, "until_last_entry", "the field default too")
+	var open_at: int = int(EventDef.parse_iso_utc("2026-11-02T00:00:00Z")[1])
+	var close_at: int = int(EventDef.parse_iso_utc("2026-11-08T23:59:00Z")[1])
+	assert_eq(def.window_state(open_at + 3600), &"open", "open + 1 h")
+	assert_true(def.can_start(open_at + 3600))
+	assert_eq(def.window_state(close_at - 2700), &"last_entry", "close − max_run_wall_sec (2 700 s)")
+	d["late_entry"] = "none"
+	assert_eq(EventDef.from_dict(d).window_state(open_at + 3600), &"last_entry", "opt-in: first 10 min only")
+
+
 func test_can_start() -> void:
 	var def: EventDef = EventDef.from_dict(_live())
 	assert_true(def.can_start(EU_OPEN + 60))
@@ -141,11 +162,37 @@ func test_offline_rules() -> void:
 		["show league", func(d: Dictionary) -> void: d["rules"]["leagues"] = ["show"], "Pur-Liga only"],
 		["gifts", func(d: Dictionary) -> void: d["rules"]["gifts"]["enabled"] = true, "no gifts (S0)"],
 		["preset", func(d: Dictionary) -> void: d["rules"]["party_preset"] = "preset_f1_l3", "S0 supports only"],
+		["realtime", func(d: Dictionary) -> void: d["rules"]["timer_mode"] = "realtime", "run explore_only"],
 	]
 	for c: Array in cases:
 		var d: Dictionary = _offline()
 		(c[1] as Callable).call(d)
 		assert_has("; ".join(EventDef.from_dict(d).validate()), str(c[2]), str(c[0]))
+
+
+## With the game data: the floor exists and an offline event's floor_timer_sec is the FloorDef timer RunSim/Game use
+## (the lobby shows rules.floor_timer_sec).
+func test_offline_rules_against_the_data() -> void:
+	var data: GameData = real_data()
+	var ok: EventDef = EventDef.from_dict(_offline())
+	assert_eq(ok.validate(data), PackedStringArray(), "events.json matches floors.json")
+	var d: Dictionary = _offline()
+	var t: int = data.floor_def(1).timer_seconds
+	d["rules"]["floor_timer_sec"] = t + 300
+	assert_eq(EventDef.from_dict(d).validate(), PackedStringArray(), "without data: not checkable")
+	assert_has("; ".join(EventDef.from_dict(d).validate(data)),
+		"rules.floor_timer_sec %d != floor 1 timer_seconds %d" % [t + 300, t])
+	d["rules"].erase("floor_timer_sec")
+	assert_eq(EventDef.from_dict(d).validate(data), PackedStringArray(), "optional: the FloorDef timer applies")
+	d["floor"] = 99
+	assert_has("; ".join(EventDef.from_dict(d).validate(data)), "floor 99 does not exist")
+	var cat: EventCatalog = EventCatalog.new()
+	cat.data = data
+	assert_true(cat.load_file("res://data/events.json"), "; ".join(cat.errors))
+	var bad: Dictionary = _offline()
+	bad["rules"]["floor_timer_sec"] = 900
+	assert_false(cat.load_dict({"schema": 1, "events": [bad]}), "the catalog checks against its data")
+	assert_has("; ".join(cat.errors), "floor_timer_sec 900")
 
 
 func test_real_catalog() -> void:

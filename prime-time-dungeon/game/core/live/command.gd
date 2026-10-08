@@ -12,8 +12,8 @@ class_name Command extends RefCounted
 
 const TYPES: PackedStringArray = ["floor", "encounter", "battle", "lootbox", "buy", "sell", "equip", "use_item", "rest",
 	"event", "chest", "gate", "room", "safe_room", "safe_room_exit", "scene", "flag", "difficulty", "descend", "gift"]
-## Inputs from outside the player (cmd id 0, 05 §10.6).
-const EXTERNAL: PackedStringArray = ["gift"]
+## Inputs from outside the player (cmd id 0, 05 §10.6; == Game.EXTERNAL_CMDS). "twist" is a hook (S2, not in TYPES).
+const EXTERNAL: PackedStringArray = ["gift", "twist"]
 const EQUIP_SLOTS: PackedStringArray = ["weapon", "armor", "accessory"]
 const DIFFICULTIES: PackedStringArray = ["prime", "vorabend"]
 const ADVANTAGE_MAX: int = 2           # BattleSetup.Advantage NORMAL 0 / PREEMPTIVE 1 / AMBUSH 2

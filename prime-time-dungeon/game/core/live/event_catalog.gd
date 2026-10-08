@@ -2,12 +2,14 @@ class_name EventCatalog extends RefCounted
 ## Loads + validates data/events.json (05 §10.1, CR-9). Not part of GameData.TABLES (DB never loads it).
 ## File: {"schema": 1, "events": [EventDef dict, …]} — any other top-level key is an error. Every problem is
 ## collected in `errors` ("<path>: <event id>: <problem>"); load_file() returns false then, but valid events stay
-## available (get_event / all), invalid ones are left out.
+## available (get_event / all), invalid ones are left out. With `data` set, every event is also validated against the
+## game data (EventDef.validate(data): floor exists, offline floor_timer_sec == FloorDef.timer_seconds).
 
 const SCHEMA: int = 1
 const TOP_KEYS: PackedStringArray = ["schema", "events"]
 
 var errors: PackedStringArray = []
+var data: GameData = null         # optional: also check the events against the game data
 
 var _events: Array[EventDef] = []
 var _by_id: Dictionary = {}       # id → EventDef
@@ -61,7 +63,7 @@ func _load(d: Dictionary, source: String) -> bool:
 			continue
 		var def: EventDef = EventDef.from_dict(list[i])
 		var label: String = def.id if def.id != "" else "events[%d]" % i
-		var errs: PackedStringArray = def.validate()
+		var errs: PackedStringArray = def.validate(data)
 		if _by_id.has(def.id):
 			errs.append("duplicate event id")
 		if not errs.is_empty():

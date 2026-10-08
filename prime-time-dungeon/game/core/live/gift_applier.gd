@@ -14,12 +14,14 @@ class_name GiftApplier extends RefCounted
 ##   revive_or_heal_lowest, item (count unscaled); statuses only exist in battle (no effect here).
 ## - cheer: cosmetic, nothing.
 ## Equipment the party already owns (inventory, equipped, earlier in this gift) becomes credits:
-## roundi(sell value × LootRoller.DUPLICATE_CREDIT_MULT) per piece (GDD §9.3). External gifts book their items into
-## state.flags["live"]["gift_items"] (L3 statistics) and their load/caps into the run counters
-## (GiftPolicy.note_applied).
+## (sell value × DUPLICATE_CREDIT_PM + 500) // 1000 per piece (GDD §9.3, integers only, 05 §3.3 Nr. 5). External gifts
+## book their items into state.flags["live"]["gift_items"] (L3 statistics) and their load/caps into the run counters
+## (GiftPolicy.note_applied). In battle (BattleState.apply_gift) the caller books the same via note_battle_gift().
 ## Randomness only from `rng` (integer draws), so a replay with the same seed stream ("gift") yields the same result.
 
 const RARITY_ORDER: PackedStringArray = ["common", "rare", "epic"]
+## LootRoller.DUPLICATE_CREDIT_MULT (1.5) in per mille (test_m8_gift_applier keeps both in sync).
+const DUPLICATE_CREDIT_PM: int = 1500
 
 
 static func apply(state: GameState, data: GameData, g: Dictionary, rng: RandomNumberGenerator) -> Array[LootReward]:
@@ -55,6 +57,24 @@ static func apply(state: GameState, data: GameData, g: Dictionary, rng: RandomNu
 		_count_items(live, out)
 		GiftPolicy.note_applied(live, g, {})
 	return out
+
+
+## Run bookkeeping of a gift applied IN battle by BattleState.apply_gift (`events` = its ActionEvents), the same as
+## apply() does outside battles: external gifts count their ITEM_GAINED items (item_id, value) into
+## flags["live"]["gift_items"] and their load/caps into the run counters (GiftPolicy.note_applied). System gifts:
+## nothing. Used by RunSim; Show should call it after battle.apply_gift too (05 §6.9: statistics must not depend on
+## whether the gift arrived in a battle).
+static func note_battle_gift(state: GameState, g: Dictionary, events: Array[ActionEvent]) -> void:
+	if state == null or not Gift.is_external(g):
+		return
+	var live: Dictionary = live_counters(state)
+	if not (live.get("gift_items", null) is Dictionary):
+		live["gift_items"] = {}
+	var items: Dictionary = live["gift_items"]
+	for e: ActionEvent in events:
+		if e != null and e.type == ActionEvent.Type.ITEM_GAINED and e.item_id != "" and e.value > 0:
+			items[e.item_id] = _int(items.get(e.item_id, 0)) + e.value
+	GiftPolicy.note_applied(live, g, {})
 
 
 ## state.flags["live"] (created on first use) — gift counters of the run (GiftPolicy).
@@ -225,7 +245,7 @@ static func _convert_duplicates(state: GameState, data: GameData, out: Array[Loo
 		if r.kind != "item" or not data.has_id("items", r.id) or not data.item(r.id).is_equipment():
 			converted.append(r)
 			continue
-		var piece_credits: int = roundi(data.item(r.id).sell_value() * LootRoller.DUPLICATE_CREDIT_MULT)
+		var piece_credits: int = GiftPolicy.scale(maxi(0, data.item(r.id).sell_value()), DUPLICATE_CREDIT_PM)
 		var dup: int = r.amount
 		if not owned.has(r.id):
 			owned[r.id] = true

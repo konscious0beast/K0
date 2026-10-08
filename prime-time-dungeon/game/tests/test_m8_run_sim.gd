@@ -296,6 +296,68 @@ func test_core_effects_of_commands() -> void:
 		assert_eq(st.floor_run.index, 2)
 
 
+## 05 §6.10 (L4/L5): the core checks external gifts again when it applies them (authoritative) — a refused gift
+## changes nothing, is not recorded and is listed in rejected_cmds.
+func test_gift_policy_at_application() -> void:
+	var rl: RunLog = RunLog.new()
+	var pur: RunSim = _sim(41, {"leagues": ["pur"], "gifts": {"enabled": false}}, rl)
+	var h: String = StateHash.of(pur.state)
+	var dev: Dictionary = Gift.make_dev("gold", "", 250)
+	assert_eq(pur.gift_refusal(dev), "league_pur")
+	assert_eq(pur.apply({"t": "gift", "gift": dev}), [])
+	assert_eq(StateHash.of(pur.state), h, "nothing applied")
+	assert_eq(rl.size(), 1, "only the floor command is recorded")
+	assert_eq(pur.rejected_cmds, [{"k": 0, "t": "gift", "gift_id": dev["gift_id"], "reason": "league_pur"}])
+	assert_eq(pur.gift_refusal(Gift.make_system("spn_gluckwasser", 1, 0)), "", "system gifts are never refused")
+	var camp: RunSim = _sim(42)
+	var credits: int = camp.state.inventory.credits
+	var g: Dictionary = Gift.make_dev("gold", "", 100)
+	assert_eq(camp.gift_refusal(g), "", "campaign: dev gifts allowed")
+	assert_false(camp.state.flags.has("live"), "gift_refusal does not touch the state")
+	camp.apply({"t": "gift", "gift": g})
+	var h2: String = StateHash.of(camp.state)
+	camp.apply({"t": "gift", "gift": g})
+	assert_eq(camp.state.inventory.credits, credits + 100, "the same gift id applies once")
+	assert_eq(StateHash.of(camp.state), h2)
+	assert_eq(camp.rejected_cmds.back()["reason"], "duplicate")
+	var stale: Dictionary = Gift.make_dev("gold", "", 100)
+	stale["effect_pm"] = 500
+	assert_eq(camp.gift_refusal(stale), "effect_mismatch", "GiftPolicy.check with the run counters")
+	var late: Dictionary = Gift.make_dev("gold", "", 100)
+	late["deliver_by_tick"] = 5
+	camp.state.floor_run.timer_started = true
+	camp.step(6)
+	assert_eq(camp.gift_refusal(late), "deadline_missed", "deliver_by_tick against the run tick")
+
+
+## In battle (BattleState.apply_gift) the gift's items count into flags.live.gift_items like outside battles (05 §6.9)
+## and its load into the run counters; a second external gift in the same battle is refused (max_per_battle 1).
+func test_gifts_in_battle() -> void:
+	var sim: RunSim = _sim(43)
+	sim.apply({"t": "encounter", "enc": real_data().floor_def(1).timer_start_after, "adv": 0, "group": ""})
+	assert_not_null(sim.battle)
+	var chest: Dictionary = Gift.make_dev("chest", "bronze", 0)
+	chest["contents"] = [{"rarity": "common", "item_id": "itm_bandage", "qty": 2}, {"rarity": "common", "credits": 40}]
+	sim.apply({"t": "gift", "gift": chest})
+	var live: Dictionary = sim.state.flags["live"]
+	assert_eq(live.get("gift_items", {}), {"itm_bandage": 2}, "ITEM_GAINED of the battle gift → gift_items")
+	assert_eq([live["load_half"], live["chests"], live["external"]], [2, 1, 1])
+	var second: Dictionary = Gift.make_dev("gold", "", 100)
+	assert_eq(sim.gift_refusal(second), "cap_reached", "1 external gift per battle (05 §6.10)")
+	assert_eq(sim.gift_refusal(Gift.make_system("spn_gluckwasser", 1, 0)), "", "system gifts are not capped here")
+	_fight(sim)
+	assert_eq(sim.gift_refusal(second), "", "after the battle")
+
+
+## 05 §3.3 Nr. 5: integer arithmetic in the core — the per-mille constants mirror the balance floats.
+func test_vorabend_timer_in_integers() -> void:
+	assert_eq(RunSim.EASY_TIMER_PM, roundi(Balance.EASY_TIMER_MULT * 1000.0), "Balance.EASY_TIMER_MULT in per mille")
+	var sim: RunSim = _sim(44)
+	sim.state.floor_run.time_left_ticks = 1001
+	sim.apply({"t": "difficulty", "to": "vorabend"})
+	assert_eq(sim.state.floor_run.time_left_ticks, 1502, "1501.5 → 1502 (half up, like roundi)")
+
+
 func test_quest_detail_events_from_the_core() -> void:
 	var sim: RunSim = _sim(61)
 	sim.quest = QuestTracker.from_def({"type": "reach_stairs", "params": {"floor": 1}})

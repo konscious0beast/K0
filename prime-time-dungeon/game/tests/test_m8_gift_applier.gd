@@ -161,3 +161,27 @@ func test_system_and_cheer_gifts() -> void:
 	assert_eq((st2.flags["live"] as Dictionary).get("external", 0), 0, "cheer is not counted as external gift")
 	assert_eq(((st2.flags["live"] as Dictionary).get("counted", []) as Array).size(), 1, "booked once (idempotent id)")
 	assert_eq(GiftApplier.apply(null, real_data(), Gift.make_dev("gold", "", 100), _rng(1)).size(), 0, "no state")
+
+
+## 05 §3.3 Nr. 5: duplicate credits in integers; the per-mille constant mirrors LootRoller's float.
+func test_duplicate_credit_factor_in_integers() -> void:
+	assert_eq(GiftApplier.DUPLICATE_CREDIT_PM, roundi(LootRoller.DUPLICATE_CREDIT_MULT * 1000.0))
+
+
+## In-battle gifts (BattleState.apply_gift) are booked like GiftApplier.apply books them outside battles: ITEM_GAINED
+## items → flags.live.gift_items (05 §6.9), load/caps → run counters. System gifts book nothing.
+func test_note_battle_gift_books_items_and_load() -> void:
+	var st: GameState = _state()
+	var item: ActionEvent = ActionEvent.make(ActionEvent.Type.ITEM_GAINED)
+	item.item_id = "itm_bandage"
+	item.value = 2
+	var credits: ActionEvent = ActionEvent.make(ActionEvent.Type.CREDITS_GAINED)
+	credits.value = 40
+	var events: Array[ActionEvent] = [item, credits, item]
+	GiftApplier.note_battle_gift(st, Gift.make_dev("chest", "bronze", 0), events)
+	var live: Dictionary = st.flags["live"]
+	assert_eq(live["gift_items"], {"itm_bandage": 4})
+	assert_eq([live["load_half"], live["chests"], live["external"]], [2, 1, 1])
+	var sys_state: GameState = _state()
+	GiftApplier.note_battle_gift(sys_state, Gift.make_system("spn_gluckwasser", 1, 0), events)
+	assert_false(sys_state.flags.has("live"), "system gifts are no external gift statistics")

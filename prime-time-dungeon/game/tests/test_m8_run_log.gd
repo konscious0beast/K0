@@ -1,6 +1,7 @@
 extends TestCase
 ## RunLog (Brief §6b.3, 05 §10.6, §11.4): to_dict/from_dict round trip, stable digest(), commands in tick order,
-## strictly increasing cmd ids (duplicate → rejected), 2 Hz position samples, checkpoints.
+## strictly increasing cmd ids (duplicate → rejected), id 0 only for external inputs, 2 Hz position samples,
+## checkpoints.
 
 
 func _log() -> RunLog:
@@ -82,6 +83,34 @@ func test_cmd_ids_strictly_increase() -> void:
 	rl.add_cmd(2, {"t": "rest"}, -2)
 	assert_eq(rl.size(), 4, "negative ids are rejected")
 	assert_eq(rl.rejected, 3)
+
+
+## 05 §10.6: id 0 is for external inputs (gift, twist) only — a player command with id 0 would slip past the id
+## sequence, an external input with a player id would consume one.
+func test_id_zero_only_for_external_inputs() -> void:
+	var rl: RunLog = RunLog.new()
+	var gift: Dictionary = {"t": "gift", "gift": Gift.make_dev("cheer", "", 0)}
+	rl.add_cmd(0, {"t": "rest"}, 1)
+	rl.add_cmd(5, {"t": "rest"}, 0)
+	assert_eq(rl.size(), 1, "player command with id 0 → rejected")
+	rl.add_cmd(5, gift, 2)
+	assert_eq(rl.size(), 1, "external input with a player id → rejected")
+	assert_eq(rl.last_cmd_id(), 1, "the rejected entries consumed no id")
+	rl.add_cmd(5, gift, 0)
+	rl.add_cmd(6, {"t": "rest"}, 2)
+	assert_eq(rl.size(), 3)
+	assert_eq(rl.rejected, 2)
+	var d: Dictionary = rl.to_dict()
+	(d["cmds"] as Array).append({"k": 7, "id": 0, "c": {"t": "descend"}})
+	var back: RunLog = RunLog.from_dict(d)
+	assert_eq([back.size(), back.rejected], [3, 1], "from_dict applies the same rule")
+	# validate() checks the rule too (defense in depth for entries that bypassed add_cmd)
+	back._cmds.append({"k": 8, "id": 0, "c": {"t": "rest"}})
+	back._cmds.append({"k": 8, "id": 2, "c": {"t": "rest"}})
+	var errs: PackedStringArray = back.validate()
+	assert_eq(errs.size(), 2, "; ".join(errs))
+	assert_has(errs[0], "cmd 3 (k 8): player command 'rest' needs a cmd_id >= 1")
+	assert_has(errs[1], "cmd_id 2 is not strictly increasing")
 
 
 func test_from_dict_rejects_manipulated_entries() -> void:

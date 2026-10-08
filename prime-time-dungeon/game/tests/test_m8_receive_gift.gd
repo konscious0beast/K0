@@ -109,8 +109,8 @@ func test_system_gift_runs_through_receive_gift_and_is_not_logged() -> void:
 		assert_false(logged.has(id), "system gift %s is reproducible from the show rng → not logged" % id)
 	var live_hash: String = StateHash.of(Game.state)
 	var res: Dictionary = Game.replay_log(Game.run_log)
-	assert_eq(res["mismatch_at"], -1)
 	assert_eq(res["final_hash"], live_hash, "the replay recreates the system gift by itself")
+	_assert_game_checkpoints(Game.run_log, res)
 
 
 func test_dev_gift_outside_battle_is_logged_and_replays() -> void:
@@ -131,7 +131,7 @@ func test_dev_gift_outside_battle_is_logged_and_replays() -> void:
 	var live_hash: String = StateHash.of(Game.state)
 	var rep: Dictionary = Game.replay_log(Game.run_log)
 	assert_eq(rep["final_hash"], live_hash, "Game.replay_log feeds the gift command to Show.receive_gift")
-	assert_eq(rep["mismatch_at"], -1)
+	_assert_game_checkpoints(Game.run_log, rep)
 
 
 func test_dev_gift_in_battle_is_logged_at_delivery_and_replays() -> void:
@@ -148,6 +148,7 @@ func test_dev_gift_in_battle_is_logged_at_delivery_and_replays() -> void:
 	var live_hash: String = StateHash.of(Game.state)
 	var rep: Dictionary = Game.replay_log(Game.run_log)
 	assert_eq(rep["final_hash"], live_hash, "replayed at the same _play boundary (02_TECH §3.4)")
+	_assert_game_checkpoints(Game.run_log, rep)
 
 
 func test_pur_league_rejects_dev_gifts() -> void:
@@ -164,3 +165,15 @@ func test_pur_league_rejects_dev_gifts() -> void:
 	assert_eq(_gift_cmds(), [], "nothing recorded")
 	assert_eq(Show.receive_gift(Gift.make_system("spn_gluckwasser", 1, 0))["ok"], true,
 		"system sponsor gifts stay part of the base game in the Pur-Liga")
+
+
+## Game.replay_log compares checkpoints, but Game does not record any yet (pending CR 1: Game sets sim.run_log) — on
+## such a log mismatch_at is -1 by construction and proves nothing, so the facade tests rely on final_hash. Once Game
+## records checkpoints this checks both directions: all match, and a corrupted checkpoint hash is detected.
+func _assert_game_checkpoints(rl: RunLog, res: Dictionary) -> void:
+	if rl.checkpoints().is_empty():
+		return
+	assert_eq(res["mismatch_at"], -1, "every checkpoint of the live run matches")
+	var d: Dictionary = rl.to_dict()
+	((d["checkpoints"] as Array)[0] as Dictionary)["h"] = "0".repeat(64)
+	assert_true(int(Game.replay_log(RunLog.from_dict(d))["mismatch_at"]) >= 0, "a corrupted checkpoint is detected")

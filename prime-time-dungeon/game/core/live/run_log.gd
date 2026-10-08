@@ -6,8 +6,9 @@ class_name RunLog extends RefCounted
 ##  "checkpoints": [{"k", "h"}, …], "result": {"cause", "score", "final_hash"}}
 ## - k = sim tick (explore ticks in timer_mode explore_only; battle commands carry the k of their encounter).
 ## - Commands stay in tick order: a command with a smaller k than the previous one is rejected.
-## - id = cmd_id: 0 for external inputs (gift, twist, server commands), else strictly increasing from 1; a repeated or
-##   decreasing id (duplicate) is rejected. Rejections are counted in `rejected` and warned, never applied.
+## - id = cmd_id: 0 for external inputs (Command.is_external: gift, twist) and only for them, else strictly increasing
+##   from 1; a repeated or decreasing id (duplicate) or a player command with id 0 is rejected. Rejections are counted
+##   in `rejected` and warned, never applied (RunSim.replay reports them as errors).
 ## - Checkpoint k = state hash after all commands with k' <= k (one per tick; a later hash for the same k replaces it).
 ## - Everything is stored normalized (integral floats → int, StringName → String), so to_dict()/from_dict() and a JSON
 ##   round trip keep digest() stable.
@@ -32,6 +33,10 @@ func add_cmd(tick: int, cmd: Dictionary, cmd_id: int = 0) -> void:
 		return
 	if cmd_id < 0 or (cmd_id > 0 and cmd_id <= _last_id):
 		_reject("cmd_id %d is not strictly increasing (last %d)" % [cmd_id, _last_id])
+		return
+	var id_err: String = _id_rule(cmd, cmd_id)
+	if id_err != "":
+		_reject(id_err)
 		return
 	_cmds.append({"k": tick, "id": cmd_id, "c": CanonicalJson.normalize(cmd)})
 	if cmd_id > 0:
@@ -132,14 +137,34 @@ func last_cmd_id() -> int:
 	return _last_id
 
 
-## Schema problems of the recorded commands (Command.validate), "cmd <index> (k <tick>): <problem>"; [] = valid.
+## Problems of the recorded commands, "cmd <index> (k <tick>): <problem>"; [] = valid: schema (Command.validate) and
+## the id rule (id 0 exactly for external inputs, player ids strictly increasing, 05 §10.6).
 func validate() -> PackedStringArray:
 	var out: PackedStringArray = []
+	var last: int = 0
 	for i in _cmds.size():
-		var err: String = Command.validate(_cmds[i]["c"])
+		var c: Dictionary = _cmds[i]["c"]
+		var id: int = int(_cmds[i]["id"])
+		var err: String = Command.validate(c)
+		if err == "":
+			err = _id_rule(c, id)
+		if err == "" and id > 0 and id <= last:
+			err = "cmd_id %d is not strictly increasing (last %d)" % [id, last]
+		if id > 0:
+			last = id
 		if err != "":
 			out.append("cmd %d (k %d): %s" % [i, int(_cmds[i]["k"]), err])
 	return out
+
+
+## "" or the violation of "id 0 ⇔ external input" (05 §10.6).
+static func _id_rule(cmd: Dictionary, cmd_id: int) -> String:
+	var external: bool = Command.is_external(cmd)
+	if external and cmd_id != 0:
+		return "external input '%s' must carry cmd_id 0 (got %d)" % [str(cmd.get("t", "")), cmd_id]
+	if not external and cmd_id == 0:
+		return "player command '%s' needs a cmd_id >= 1 (id 0 is for external inputs)" % str(cmd.get("t", ""))
+	return ""
 
 
 func _reject(msg: String) -> void:

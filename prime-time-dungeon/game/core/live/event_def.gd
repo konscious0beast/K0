@@ -23,7 +23,7 @@ var kind: String = "offline"
 var name_key: String = ""
 var floor_index: int = 1          # JSON key "floor" (floor() is a builtin, §13.1)
 var windows: Array[Dictionary] = []
-var late_entry: String = "none"
+var late_entry: String = "until_last_entry"     # 05 §1.2 standard; "none" / "first_10_min" = opt-in
 var seed_policy: Dictionary = {}
 var quest: Dictionary = {}
 var rules: Dictionary = {}
@@ -61,7 +61,7 @@ static func from_dict(d: Dictionary) -> EventDef:
 				e._parse_errors.append("windows entries must be Dictionaries")
 	else:
 		e._parse_errors.append("windows must be an Array")
-	e.late_entry = e._get_str(d, "late_entry", "none")
+	e.late_entry = e._get_str(d, "late_entry", "until_last_entry")
 	e.seed_policy = e._get_dict(d, "seed_policy")
 	e.quest = e._get_dict(d, "quest")
 	e.rules = e._get_dict(d, "rules")
@@ -71,7 +71,10 @@ static func from_dict(d: Dictionary) -> EventDef:
 	return e
 
 
-func validate() -> PackedStringArray:
+## Problems of the definition, [] = valid. With `data`, the event is also checked against the game data: the floor
+## exists, and an offline (S0) event's rules.floor_timer_sec — if given — equals FloorDef.timer_seconds (RunSim/Game
+## run the floor with the FloorDef timer; the lobby shows rules.floor_timer_sec).
+func validate(data: GameData = null) -> PackedStringArray:
 	var out: PackedStringArray = _parse_errors.duplicate()
 	if _id_re == null:
 		_id_re = RegEx.create_from_string("^evt_[a-z0-9_]+$")
@@ -89,6 +92,8 @@ func validate() -> PackedStringArray:
 	_validate_seed_policy(out)
 	out.append_array(QuestTracker.validate_def(quest))
 	_validate_rules(out)
+	if data != null:
+		_validate_against_data(data, out)
 	if votes.has("enabled") and not (votes["enabled"] is bool):
 		out.append("votes.enabled must be a bool")
 	for k: Variant in scoring.keys():
@@ -265,6 +270,8 @@ func _validate_rules(out: PackedStringArray) -> void:
 			out.append("offline events are Pur-Liga only")
 	if not TIMER_MODES.has(str(rules.get("timer_mode", ""))):
 		out.append("rules.timer_mode must be explore_only|realtime")
+	elif kind == "offline" and str(rules["timer_mode"]) != "explore_only":
+		out.append("rules.timer_mode: offline events (S0) run explore_only (RunSim has no realtime clock)")
 	if not (rules.get("party_preset", null) is String):
 		out.append("rules.party_preset must be a String")
 	elif kind == "offline" and not S0_PARTY_PRESETS.has(str(rules["party_preset"])):
@@ -285,6 +292,17 @@ func _validate_rules(out: PackedStringArray) -> void:
 			if GiftPolicy.DEFAULT_GIFT_RULES.has(str(k)) and _is_int(GiftPolicy.DEFAULT_GIFT_RULES[str(k)]) \
 					and not _is_int(g[k]):
 				out.append("rules.gifts.%s must be an integer" % str(k))
+
+
+func _validate_against_data(data: GameData, out: PackedStringArray) -> void:
+	var fdef: FloorDef = data.floor_def(floor_index) if floor_index >= 1 else null
+	if fdef == null:
+		out.append("floor %d does not exist in the game data" % floor_index)
+		return
+	if kind == "offline" and rules.has("floor_timer_sec") and _is_int(rules["floor_timer_sec"]) \
+			and int(rules["floor_timer_sec"]) != fdef.timer_seconds:
+		out.append("rules.floor_timer_sec %d != floor %d timer_seconds %d (offline runs use the FloorDef timer)"
+			% [int(rules["floor_timer_sec"]), floor_index, fdef.timer_seconds])
 
 
 func _get_str(d: Dictionary, key: String, default: String) -> String:

@@ -30,6 +30,67 @@ func test_make_system_is_valid() -> void:
 	assert_eq(Gift.make_system("", 1, 0), {}, "no sponsor → no gift")
 
 
+## 05 §6.3: which source may send which kind; gold carries 100 or 250 credits (dev gifts: any positive amount).
+func test_kinds_per_source() -> void:
+	var cases: Array = [
+		["gold", "shop", true], ["gold", "bits", true], ["gold", "fan", false], ["gold", "system", false],
+		["chest", "shop", true], ["chest", "bits", true], ["chest", "fan", false],
+		["fan_pack", "fan", true], ["fan_pack", "bits", false], ["fan_pack", "shop", false],
+		["sponsor_buff", "bits", true], ["sponsor_buff", "shop", true], ["sponsor_buff", "fan", false],
+		["cheer", "fan", true], ["cheer", "bits", true], ["cheer", "shop", true], ["cheer", "system", false],
+	]
+	for c: Array in cases:
+		var g: Dictionary = _paid_chest() if c[0] == "chest" else \
+			Gift.make_dev(c[0], "spn_novanet" if c[0] == "sponsor_buff" else "", 100)
+		g["source"] = c[1]
+		if c[1] == "system":
+			g["league"] = "pur"
+		assert_eq(Gift.validate(g) == "", c[2], "%s from %s: %s" % [c[0], c[1], Gift.last_detail])
+	for amount: int in [100, 250]:
+		var ok: Dictionary = Gift.make_dev("gold", "", amount)
+		ok["source"] = "bits"
+		assert_eq(Gift.validate(ok), "", "bits gold %d" % amount)
+	var odd: Dictionary = Gift.make_dev("gold", "", 150)
+	assert_eq(Gift.validate(odd), "", "dev gifts may carry any amount (QA)")
+	odd["source"] = "shop"
+	assert_eq(Gift.validate(odd), "invalid_schema", "shop gold must be 100 or 250")
+
+
+## Paid chests carry the server roll AND its result (05 §6.4 step 4, §7.4): one content entry per roll, and the roll
+## count of the tier at the gift's effect factor (05 §6.6/§6.10) — else the client would roll locally.
+func test_paid_chest_needs_the_server_contents() -> void:
+	var empty: Dictionary = _paid_chest()
+	empty["contents"] = []
+	assert_eq(Gift.validate(empty), "invalid_schema", "no contents → would be rolled from the public gift stream")
+	assert_has(Gift.last_detail, "server contents")
+	var short: Dictionary = _paid_chest()
+	(short["contents"] as Array).pop_back()
+	assert_eq(Gift.validate(short), "invalid_schema", "1 entry for 2 rolls")
+	var more: Dictionary = _paid_chest()
+	more["roll"]["rolls"] = 3
+	(more["contents"] as Array).append({"rarity": "common", "credits": 40})
+	assert_eq(Gift.validate(more), "invalid_schema", "silver at effect 769 ‰ has 2 rolls, not 3")
+	assert_has(Gift.last_detail, "has 3 rolls, not 2")
+	var full: Dictionary = _paid_chest()
+	full["load_half"] = 0
+	full["effect_pm"] = 1000
+	assert_eq(Gift.validate(full), "invalid_schema", "silver at full effect has 3 rolls")
+	full["roll"]["rolls"] = 3
+	(full["contents"] as Array).append({"rarity": "common", "credits": 40})
+	assert_eq(Gift.validate(full), "", Gift.last_detail)
+	var dev: Dictionary = Gift.make_dev("chest", "silver", 0)
+	assert_eq(Gift.validate(dev), "", "dev/offline chests stay without contents (the core rolls)")
+
+
+func test_make_dev_ids_survive_restarts() -> void:
+	var re: RegEx = RegEx.create_from_string("^g_dev_[0-9a-f]{16}$")
+	var a: Dictionary = Gift.make_dev("chest", "bronze", 0)
+	var b: Dictionary = Gift.make_dev("chest", "bronze", 0)
+	assert_not_null(re.search(str(a["gift_id"])), "random id, not a per-process counter: %s" % a["gift_id"])
+	assert_ne(a["gift_id"], b["gift_id"])
+	assert_eq(int(b["roll"]["nonce"]), int(a["roll"]["nonce"]) + 1, "the roll nonce does not depend on the id")
+
+
 func test_make_dev_kinds_are_valid_and_unique() -> void:
 	var ids: Dictionary = {}
 	for args: Array in [["gold", "", 100], ["gold", "", 0], ["chest", "silver", 0], ["chest", "nonsense", 0],

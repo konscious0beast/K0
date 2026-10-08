@@ -36,9 +36,15 @@ class_name RunSim extends RefCounted
 ## leaves a tick (state after all commands with k' <= k, 05 §10.6), plus close() at the end.
 ## Event rules (rules.leagues / rules.gifts) are stored in state.flags["live"] on construction, so the gift policy
 ## of the run (Pur-Liga: no external gifts) holds for every gift path (GiftPolicy.check with the run counters).
+## External gifts are checked again when they are applied — the core check is authoritative (05 §6.10, L4/L5):
+## gift_refusal() (duplicate id, GiftPolicy.check incl. league/caps/effect factor/deliver_by_tick, max_per_battle).
+## A refused gift changes nothing, is not recorded and is listed in `rejected_cmds`; RunSim.replay reports every
+## refusal in "errors", so a verifier fails a log that smuggles in gifts.
 
 const TICKS_PER_SEC: int = 30          # == Game.TICKS_PER_SEC == FloorRun.TICKS_PER_SEC
 const CHECKPOINT_TICKS: int = 300      # 05 §3.3 Nr. 8: checkpoint every 300 ticks
+const EASY_TIMER_PM: int = 1500        # Balance.EASY_TIMER_MULT (1.5) in per mille (test_m8_run_sim keeps them in sync)
+const EVENTS_PATH: String = "res://data/events.json"
 
 var data: GameData = null
 var state: GameState = null
@@ -47,12 +53,15 @@ var run_log: RunLog = null             # optional: records applied commands + ch
 var battle: BattleState = null         # battle started by apply({"t": "encounter"}) (RunSim-driven runs only)
 var quest: QuestTracker = null         # optional: fed by apply() with the core quest events (see _quest_feed)
 var last_action_events: Array[ActionEvent] = []   # ActionEvents of the last apply() (battle start/commands/gifts)
+## Commands refused by the core rules (gift policy): {"k", "t", "gift_id", "reason"} in order.
+var rejected_cmds: Array[Dictionary] = []
 
 var _tick: int = 0
 var _cmd_id: int = 0
 var _over: bool = false                # timer expired or battle lost: the run is over
 var _floor_done: bool = false          # "descend" applied; the clock waits for the next "floor"
 var _checkpoint_due: bool = false
+var _battle_external: int = 0          # external gifts applied in the running battle (max_per_battle)
 var _layout: FloorLayout = null
 var _layout_key: String = ""
 
@@ -80,7 +89,8 @@ func step(n: int) -> Array[ExploreEvent]:
 
 
 ## M8 replay of recorded explore commands (02_TECH §3.4 shapes, Command.validate). Invalid commands are refused with a
-## warning (nothing recorded, nothing changes); so are commands after the run ended.
+## warning (nothing recorded, nothing changes); so are commands after the run ended and external gifts the core
+## refuses (gift_refusal → rejected_cmds).
 func apply(cmd: Dictionary) -> Array[ExploreEvent]:
 	var out: Array[ExploreEvent] = []
 	last_action_events = []
@@ -92,6 +102,13 @@ func apply(cmd: Dictionary) -> Array[ExploreEvent]:
 		push_warning("[RunSim] run is over, command '%s' ignored" % str(cmd.get("t", "")))
 		return out
 	var c: Dictionary = CanonicalJson.normalize(cmd)
+	if str(c["t"]) == "gift":
+		var refusal: String = gift_refusal(c["gift"])
+		if refusal != "":
+			var gid: String = str((c["gift"] as Dictionary).get("gift_id", ""))
+			push_warning("[RunSim] gift '%s' refused: %s" % [gid, refusal])
+			rejected_cmds.append({"k": _tick, "t": "gift", "gift_id": gid, "reason": refusal})
+			return out
 	if run_log != null:
 		var cmd_id: int = 0
 		if not Command.is_external(c):
@@ -189,6 +206,30 @@ func next_seed(purpose: String) -> int:
 	return SeedUtil.derive(state.seed, purpose, state.rng_counter)
 
 
+## "" or why the core refuses the external gift `g` now (05 §6.10: the check at application is authoritative):
+## its id was already applied in this run → duplicate; GiftPolicy.check with the run counters (flags.live), the run's
+## rules and the current tick (deliver_by_tick) → league_pur | not_accepting | deadline_missed | effect_mismatch |
+## cap_reached | chest_blocked; in battle more than rules.gifts.max_per_battle external gifts → cap_reached.
+## System gifts are never refused. Read-only (the state is not touched).
+func gift_refusal(g: Dictionary) -> String:
+	if not Gift.is_external(g) or state == null:
+		return ""
+	var live: Variant = state.flags.get("live", {})
+	var run: Dictionary = (live as Dictionary).duplicate() if live is Dictionary else {}
+	var ids: Variant = run.get("gift_ids", [])
+	if ids is Array and (ids as Array).has(str(g.get("gift_id", ""))):
+		return "duplicate"
+	run["tick"] = _tick
+	var reason: String = GiftPolicy.check(run, g, rules)
+	if reason != "":
+		return reason
+	if battle != null and not battle.is_finished():
+		var eff: Dictionary = rules if not rules.is_empty() else {"gifts": run.get("gift_rules", {})}
+		if not GiftPolicy.can_deliver_in_battle(_battle_external, eff):
+			return "cap_reached"
+	return ""
+
+
 ## Ends a recorded run: final checkpoint + run_log.result {"cause", "final_hash", "ticks"} (+ extra, e.g. "score").
 ## Returns the final state hash.
 func close(cause: String, extra: Dictionary = {}) -> String:
@@ -203,27 +244,43 @@ func close(cause: String, extra: Dictionary = {}) -> String:
 
 ## Replays a log with a fresh GameState from its header (seed/run_seed, slot, player_name, difficulty) through
 ## RunSim alone (no autoloads — what a verifier runs): before each command the clock steps to its tick, checkpoints
-## with a smaller tick are compared on the way. rules: the event rules ({} → header["rules"] → none);
-## p_quest: the event quest ({} → header["quest"] → none).
+## with a smaller tick are compared on the way. p_rules / p_quest: the event rules / quest; {} → the event of
+## header.event_id from EVENTS_PATH (EventCatalog, validated against p_data) — never from the log itself; no event_id
+## → none (campaign). An unknown event is an error (no replay without its rules).
 ## → {"final_hash": String, "result": {"ticks", "cmds", "over", "floor", "quest_complete", "quest_progress_ppm"},
-##    "mismatch_at": int (first failing checkpoint index, -1 = none), "errors": PackedStringArray (log schema problems)}
+##    "mismatch_at": int (first failing checkpoint index, -1 = none), "errors": PackedStringArray (log schema / id
+##    problems, entries the RunLog rejected, gifts the core refused, unknown event) — a verifier needs errors == []}
 static func replay(p_data: GameData, p_log: RunLog, p_rules: Dictionary = {}, p_quest: Dictionary = {}) -> Dictionary:
 	var out: Dictionary = {"final_hash": "", "result": {}, "mismatch_at": -1, "errors": PackedStringArray()}
 	if p_log == null:
 		return out
-	out["errors"] = p_log.validate()
+	var errors: PackedStringArray = p_log.validate()
+	out["errors"] = errors
+	if p_log.rejected > 0:
+		errors.append("log: %d entries rejected (out of tick order, duplicate / invalid cmd ids, malformed)"
+			% p_log.rejected)
 	var h: Dictionary = p_log.header
+	var r: Dictionary = p_rules
+	var q: Dictionary = p_quest
+	var event_id: String = str(h.get("event_id", ""))
+	if (r.is_empty() or q.is_empty()) and event_id != "":
+		var cat: EventCatalog = EventCatalog.new()
+		cat.data = p_data
+		cat.load_file(EVENTS_PATH)
+		var def: EventDef = cat.get_event(event_id)
+		if def == null:
+			errors.append("header: event '%s' not found in %s (no replay without its rules)" % [event_id, EVENTS_PATH])
+			out["errors"] = errors
+			return out
+		if r.is_empty():
+			r = def.rules
+		if q.is_empty():
+			q = def.quest
 	var seed_v: Variant = h.get("seed", h.get("run_seed", 1))
 	var st: GameState = GameState.create_new(p_data, int(h.get("slot", 0)), str(h.get("player_name", "Kai")),
 		int(seed_v) if typeof(seed_v) == TYPE_INT or typeof(seed_v) == TYPE_FLOAT else 1,
 		StringName(str(h.get("difficulty", "prime"))))
-	var r: Dictionary = p_rules
-	if r.is_empty() and h.get("rules", null) is Dictionary:
-		r = h["rules"]
 	var sim: RunSim = RunSim.new(p_data, st, r)
-	var q: Dictionary = p_quest
-	if q.is_empty() and h.get("quest", null) is Dictionary:
-		q = h["quest"]
 	if not q.is_empty():
 		sim.quest = QuestTracker.from_def(q)
 	var cps: Array[Dictionary] = p_log.checkpoints()
@@ -237,6 +294,10 @@ static func replay(p_data: GameData, p_log: RunLog, p_rules: Dictionary = {}, p_
 		sim.apply(entry.get("c", {}))
 	while cp < cps.size():
 		cp = sim._compare_checkpoint(cps, cp, out)
+	for rc: Dictionary in sim.rejected_cmds:
+		errors.append("k %d: %s '%s' refused by the core (%s)" % [int(rc["k"]), str(rc["t"]), str(rc["gift_id"]),
+			str(rc["reason"])])
+	out["errors"] = errors
 	out["final_hash"] = StateHash.of(st)
 	out["result"] = {"ticks": sim.tick(), "cmds": cmds.size(), "over": sim.is_over(),
 		"floor": st.floor_run.index if st.floor_run != null else 0,
@@ -361,6 +422,7 @@ func _apply_encounter(enc: String, adv: int, group: String, out: Array[ExploreEv
 	if setup == null:
 		return
 	battle = BattleState.new(setup, data)
+	_battle_external = 0
 	next_seed("show")
 	if state.show != null:
 		state.show.stats["explore_seconds_since_battle"] = 0
@@ -401,16 +463,20 @@ func _end_battle() -> void:
 		_over = true
 
 
+## Applies a gift that passed gift_refusal(): external ids → flags.live.gift_ids; in battle BattleState.apply_gift +
+## GiftApplier.note_battle_gift (gift items + run counters, as GiftApplier.apply does outside battles).
 func _apply_gift(g: Dictionary, out: Array[ExploreEvent]) -> void:
-	var live: Dictionary = GiftApplier.live_counters(state)
 	if Gift.is_external(g):
+		var live: Dictionary = GiftApplier.live_counters(state)
 		if not (live.get("gift_ids", null) is Array):
 			live["gift_ids"] = []
 		(live["gift_ids"] as Array).append(str(g.get("gift_id", "")))
 	if battle != null and not battle.is_finished():
 		last_action_events = battle.apply_gift(g)
 		_quest_feed_battle(last_action_events)
-		GiftPolicy.note_applied(live, g, {})
+		GiftApplier.note_battle_gift(state, g, last_action_events)
+		if Gift.is_external(g):
+			_battle_external += 1
 	else:
 		var rewards: Array[LootReward] = GiftApplier.apply(state, data, g, SeedUtil.make_rng(next_seed("gift")))
 		_add_rewards(rewards)
@@ -522,13 +588,15 @@ func _apply_safe_room(safe_room_id: String) -> void:
 	Progression.full_heal(state, data)
 
 
-## Like Game.set_difficulty: only prime → vorabend, remaining timer ticks × 1.5.
+## Like Game.set_difficulty: only prime → vorabend, remaining timer ticks × 1.5 in integers (05 §3.3 Nr. 5):
+## (ticks × EASY_TIMER_PM + 500) // 1000 (== roundi(ticks × 1.5) for ticks >= 0).
 func _apply_difficulty(d: StringName) -> void:
 	if state.difficulty != &"prime" or d != &"vorabend":
 		return
 	state.difficulty = d
 	if state.floor_run != null:
-		state.floor_run.time_left_ticks = roundi(state.floor_run.time_left_ticks * Balance.EASY_TIMER_MULT)
+		var left: int = maxi(0, state.floor_run.time_left_ticks)
+		state.floor_run.time_left_ticks = (left * EASY_TIMER_PM + 500) / 1000
 
 
 ## Like Game.add_rewards: items → inventory (overflow over max_stack → credits at sell value), credits.

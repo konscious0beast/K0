@@ -2,7 +2,9 @@ extends TestCase
 ## Replay equality (05 §2 S0 exit criteria, §11.4): a bot event run driven headless by RunSim WITHOUT autoloads
 ## (auto battle, force_encounter equivalent via commands, strays, chests, lootbox, rest, gifts, descend) replays via
 ## RunSim.replay to the same final hash; the same seed gives the same run; a manipulated command is detected
-## (mismatch_at >= 0). Plus a thin integration test through the Game facade (event mode, ticks via Game._process).
+## (mismatch_at >= 0); forged gifts (Pur-Liga, repeated gift id) and rejected log entries are reported in "errors";
+## without explicit rules the replay takes them from the event catalog (header.event_id). Plus a thin integration test
+## through the Game facade (event mode, ticks via Game._process).
 
 const EVENT_ID: String = "evt_offline_gleis9"
 const BOT_TICKS: int = 3300
@@ -24,12 +26,20 @@ func _fight(sim: RunSim) -> void:
 		sim.apply({"t": "battle", "cmd": cmd.to_dict(), "auto": true})
 
 
+## The event rules with the Show-Liga and gifts enabled (gifts only outside the Pur-Liga, L5).
+func _show_rules(def: EventDef) -> Dictionary:
+	var r: Dictionary = def.rules.duplicate(true)
+	r["leagues"] = ["show"]
+	r["gifts"] = {"enabled": true}
+	return r
+
+
 ## The bot: {"log": RunLog, "hash": String, "sim": RunSim}.
 func _bot_run(def: EventDef, with_gifts: bool = false) -> Dictionary:
 	var data: GameData = real_data()
 	var seed: int = def.run_seed()
 	var st: GameState = GameState.create_new(data, 0, "Kai", seed, &"prime")
-	var rules: Dictionary = {} if with_gifts else def.rules     # gifts only outside the Pur-Liga
+	var rules: Dictionary = _show_rules(def) if with_gifts else def.rules
 	var sim: RunSim = RunSim.new(data, st, rules)
 	var rl: RunLog = RunLog.new()
 	rl.header = {"schema": 1, "seed": seed, "slot": 0, "player_name": "Kai", "difficulty": "prime",
@@ -173,9 +183,91 @@ func test_gifts_replay() -> void:
 	var live: Dictionary = (run["sim"] as RunSim).state.flags.get("live", {})
 	assert_eq(live.get("gift_ids", []), ["g_dev_bot_1", "g_dev_bot_2"])
 	assert_eq(live.get("load_half", 0), 3, "bronze chest 2 + 100 credits 1 (in-battle gifts are booked too)")
-	var res: Dictionary = RunSim.replay(real_data(), rl, {}, def.quest)
+	assert_eq((run["sim"] as RunSim).rejected_cmds, [] as Array[Dictionary])
+	var res: Dictionary = RunSim.replay(real_data(), rl, _show_rules(def), def.quest)
 	assert_eq(res["final_hash"], run["hash"], "gift in battle (apply_gift) and outside (GiftApplier) replay")
 	assert_eq(res["mismatch_at"], -1)
+	assert_eq(res["errors"], PackedStringArray())
+
+
+## L5: a gift smuggled into a Pur-Liga log is refused by the core at application and reported — the state does not
+## change (same final hash as the honest run, every checkpoint still matches), but the verifier sees the error.
+func test_forged_gift_in_pur_league_is_reported() -> void:
+	var def: EventDef = _event()
+	if def == null:
+		return
+	var run: Dictionary = _bot_run(def)
+	var d: Dictionary = (run["log"] as RunLog).to_dict()
+	var cmds: Array = d["cmds"]
+	var forged: Dictionary = _fixed_gift("gold", "", 7)
+	forged["amount"] = 250
+	var at: int = cmds.size() / 2
+	cmds.insert(at, {"k": int((cmds[at - 1] as Dictionary)["k"]), "id": 0, "c": {"t": "gift", "gift": forged}})
+	var forged_log: RunLog = RunLog.from_dict(d)
+	assert_eq(forged_log.rejected, 0, "a well-formed external input (id 0, tick order)")
+	var res: Dictionary = RunSim.replay(real_data(), forged_log, def.rules, def.quest)
+	assert_eq(res["final_hash"], run["hash"], "the gift changed nothing")
+	assert_eq(res["mismatch_at"], -1)
+	assert_eq((res["errors"] as PackedStringArray).size(), 1, "; ".join(res["errors"]))
+	assert_has("; ".join(res["errors"]), "g_dev_bot_7' refused by the core (league_pur)")
+
+
+## The same gift id twice (05 §6.4 idempotency): the repeat is refused and reported, credits arrive once.
+func test_repeated_gift_id_is_reported() -> void:
+	var def: EventDef = _event()
+	if def == null:
+		return
+	var run: Dictionary = _bot_run(def, true)
+	var d: Dictionary = (run["log"] as RunLog).to_dict()
+	var cmds: Array = d["cmds"]
+	var at: int = -1
+	for i in cmds.size():
+		var c: Dictionary = (cmds[i] as Dictionary)["c"]
+		if c["t"] == "gift" and c["gift"]["gift_id"] == "g_dev_bot_2":
+			at = i
+	assert_gt(at, 0, "the gold gift is in the log")
+	cmds.insert(at + 1, (cmds[at] as Dictionary).duplicate(true))
+	var res: Dictionary = RunSim.replay(real_data(), RunLog.from_dict(d), _show_rules(def), def.quest)
+	assert_eq(res["final_hash"], run["hash"], "applied once")
+	assert_eq((res["errors"] as PackedStringArray).size(), 1, "; ".join(res["errors"]))
+	assert_has("; ".join(res["errors"]), "g_dev_bot_2' refused by the core (duplicate)")
+
+
+## No explicit rules → the event of header.event_id from data/events.json (rules + quest), never from the log.
+func test_replay_takes_rules_and_quest_from_the_catalog() -> void:
+	var def: EventDef = _event()
+	if def == null:
+		return
+	var run: Dictionary = _bot_run(def)
+	var rl: RunLog = run["log"]
+	var res: Dictionary = RunSim.replay(real_data(), rl)
+	assert_eq(res["errors"], PackedStringArray())
+	assert_eq(res["final_hash"], run["hash"], "the Pur-Liga rules (flags.live) come from the catalog")
+	assert_eq(res["mismatch_at"], -1)
+	assert_eq(res["result"]["quest_progress_ppm"], (run["sim"] as RunSim).quest.progress_ppm(), "and the quest")
+	var d: Dictionary = rl.to_dict()
+	(d["header"] as Dictionary)["rules"] = _show_rules(def)
+	var forged: Dictionary = _fixed_gift("gold", "", 8)
+	(d["cmds"] as Array).append({"k": rl.cmds().back()["k"], "id": 0, "c": {"t": "gift", "gift": forged}})
+	var res2: Dictionary = RunSim.replay(real_data(), RunLog.from_dict(d))
+	assert_has("; ".join(res2["errors"]), "league_pur", "rules in the header are ignored (not trustworthy)")
+	(d["header"] as Dictionary)["event_id"] = "evt_missing"
+	var res3: Dictionary = RunSim.replay(real_data(), RunLog.from_dict(d))
+	assert_has("; ".join(res3["errors"]), "event 'evt_missing' not found")
+	assert_eq(res3["final_hash"], "", "no replay without the event rules")
+
+
+## Entries the RunLog dropped on load (tick order, duplicate id, player command with id 0) are errors of the replay.
+func test_rejected_log_entries_are_errors() -> void:
+	var def: EventDef = _event()
+	if def == null:
+		return
+	var run: Dictionary = _bot_run(def)
+	var d: Dictionary = (run["log"] as RunLog).to_dict()
+	(d["cmds"] as Array).insert(3, {"k": 0, "id": 0, "c": {"t": "rest"}})
+	var res: Dictionary = RunSim.replay(real_data(), RunLog.from_dict(d), def.rules, def.quest)
+	assert_eq(res["final_hash"], run["hash"], "the extra player command was dropped")
+	assert_has("; ".join(res["errors"]), "1 entries rejected")
 
 
 # --- thin integration test through the Game facade (02_TECH §3.4 "Replay") -------------------------------------------
@@ -246,8 +338,20 @@ func test_game_event_run_replays_through_the_facade() -> void:
 	var cmds: Array[Dictionary] = Game.run_log.cmds()
 	assert_eq(cmds.back()["k"], 180, "commands after the ticks carry k = 180")
 	var res: Dictionary = Game.replay_log(Game.run_log)
-	assert_eq(res["mismatch_at"], -1)
 	assert_eq(res["final_hash"], live_hash, "Game.replay_log ≡ live event run (incl. Show reactions and ticks)")
 	assert_eq(res["result"]["ticks"], 180)
 	assert_almost(float(res["result"]["quest_progress"]), progress)
 	assert_eq(Game.state.flags["live"]["league"], "pur", "live context restored")
+	_assert_game_checkpoints(Game.run_log, res)
+
+
+## Game.replay_log compares checkpoints, but Game does not record any yet (pending CR 1: Game sets sim.run_log) — on
+## such a log mismatch_at is -1 by construction and proves nothing, so the facade tests rely on final_hash. Once Game
+## records checkpoints this checks both directions: all match, and a corrupted checkpoint hash is detected.
+func _assert_game_checkpoints(rl: RunLog, res: Dictionary) -> void:
+	if rl.checkpoints().is_empty():
+		return
+	assert_eq(res["mismatch_at"], -1, "every checkpoint of the live run matches")
+	var d: Dictionary = rl.to_dict()
+	((d["checkpoints"] as Array)[0] as Dictionary)["h"] = "0".repeat(64)
+	assert_true(int(Game.replay_log(RunLog.from_dict(d))["mismatch_at"]) >= 0, "a corrupted checkpoint is detected")

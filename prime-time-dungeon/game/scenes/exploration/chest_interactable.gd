@@ -21,6 +21,7 @@ func setup_chest(spawn: ChestSpawn, palette: Dictionary, prop_seed: int, opened:
 	prop.name = "Prop"
 	add_child(prop)
 	_make_blocker(Vector3(0.95, 0.6, 0.65), Vector3(0.0, 0.3, 0.0))
+	_drop_prop_collision(prop)
 	_make_area(Rules.INTERACT_RADIUS + extent + 0.8)
 	if opened:
 		is_open = true

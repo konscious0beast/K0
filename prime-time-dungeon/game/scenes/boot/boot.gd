@@ -7,7 +7,9 @@ extends Node
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const TitleFlow := preload("res://scenes/title/title_flow.gd")
-const AutoplayScript := preload("res://scenes/boot/autoplay.gd")
+## Loaded only with --autoplay: the driver type-checks against every screen class, so preloading it here compiled
+## the whole game before the first frame (02_TECH §12.1 "Start").
+const AUTOPLAY_SCRIPT: String = "res://scenes/boot/autoplay.gd"
 const GLOBAL_UI: String = "res://scenes/ui/global_ui.tscn"
 const EVENT_LOBBY: String = "res://scenes/ui/event_lobby.tscn"
 const LOGO_SEC: float = 2.0
@@ -32,7 +34,7 @@ func _ready() -> void:
 		Save.read_only = true
 		Engine.max_fps = 60
 		Engine.time_scale = 5.0
-		var ap: Node = AutoplayScript.new()
+		var ap: Node = (load(AUTOPLAY_SCRIPT) as GDScript).new() as Node
 		ap.name = "Autoplay"
 		get_tree().root.add_child.call_deferred(ap)
 	Game.apply_settings()

@@ -250,6 +250,7 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `art/gallery/character_gallery.tscn` + `.gd` | Alle Archetypen/Party/Gegner aus DB nebeneinander (Screenshot-Ziel) |
 | `art/gallery/env_gallery.tscn` + `.gd` | Raum-Varianten aller Türmasken + Arena + Safe Room |
 | `art/gallery/vfx_gallery.tscn` + `.gd` | Alle Vfx-Arten im Loop |
+| `art/icons/icon_1024.png`, `icon_192.png`, `icon_fg_432.png`, `icon_bg_432.png` | Export-Launcher-Icons (iOS 1024 deckend, Android Legacy + Adaptive Vorder-/Hintergrund), erzeugt aus `icon.svg` von `tools/make_icons.sh` (§12.3) |
 
 ### 1.6 `scenes/`
 
@@ -314,6 +315,7 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `scenes/ui/safe_area_container.gd` | M6 | MarginContainer mit Safe-Area-Rändern |
 | `scenes/ui/input_glyph.gd` | M6 | Tasten-/Button-Symbol je Input-Schema |
 | `scenes/ui/debug_overlay.gd` | M6 | F3: FPS, Draw Calls, Primitives, Seed, Raum |
+| `scenes/ui/icon_mesh.gd` | M6 | Privat: sammelt die Primitive eines Vektor-Icons/Widgets und gibt sie als **ein** Dreiecks-Array aus (ein Canvas-Draw-Call; genutzt von `ui_icon.gd`, `minimap.gd`, Hype-Leiste und `HudStyle.Icon`, §12.1) |
 
 ### 1.7 `tests/`
 
@@ -354,6 +356,10 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `tests/test_m6_ui_scenes.gd` | M6 | Alle UI-Szenen instanziieren, Default-Fokus vorhanden |
 | `tests/test_m7_data_content.gd` | M7 | Inhalt: Mengen laut GDD (11 Gegner, 2 Bosse, 16 Party-Skills, 2 Stunts, 25 Gegner-Skills, 11 Boss-Skills, 29 Achievements, 7 Sponsoren, 6 Meilensteine, 6 Status, 4 Szenen), Balancing-Sanity |
 | `tests/test_m8_*.gd` | M8 | Live-Hooks laut 05_LIVE_MODUS §11.4 (RunLog, RunSim, Command, Gift, Replay …) |
+| `tests/test_perf_router_cycles.gd` | Phase C | Router-Zyklen Erkundung → Kampf → Safe Room ohne Wachstum der Node-/Objekt-Minima, `Sfx.stop_all`, Etagen-Aufbauzeit, Physik-/Licht-Layer der Etage (§12.1, §12.5) |
+| `tests/test_perf_platform.gd` | Phase C | Mobil-Projekteinstellungen, Export-Presets + Launcher-Icons, Boot kompiliert keine Screens vorab (§2.1, §12.3) |
+| `tests/perf/perf_probe.gd` + `perf_runner.gd`, `tests/perf/boot_timer.gd` | Phase C | Mess-Werkzeug für `tools/perf.sh` (§12.5); keine Tests (kein `test_`-Präfix) |
+| `tests/tools/make_icons.gd` | Phase C | Icon-Generator für `tools/make_icons.sh` (§12.3) |
 
 ---
 
@@ -370,6 +376,7 @@ config/name="Prime Time Dungeon"
 config/version="0.1.0"
 config/description="Galaktische Reality-Show-Dungeon-Crawler."
 run/main_scene="res://scenes/boot/boot.tscn"
+run/max_fps.mobile=60
 config/use_custom_user_dir=true
 config/custom_user_dir_name="PrimeTimeDungeon"
 config/quit_on_go_back=false
@@ -457,6 +464,8 @@ Begründungen (kurz):
 - `untyped_declaration=2` macht fehlende Typen zu **Parse-Fehlern** (geprüft: erscheint als `SCRIPT ERROR … (Warning treated as error.)` → `check.sh` schlägt fehl). Alle anderen Warnungen aus, weil JSON-Dictionaries sonst Rauschen erzeugen.
 - `stretch canvas_items + expand`: Referenz 1280×720; auf 19,5:9-Handys wird die sichtbare Fläche breiter (z. B. 1600×720), auf 4:3 höher (1280×960). UI wird **nur über Anker/Container** platziert.
 - `orientation=4` = Sensor Landscape.
+- `run/max_fps.mobile=60`: Telefone mit 90/120-Hz-Panels würden sonst mit Bildwiederholrate rendern (Akku/Wärme); Ziel ist 60 FPS
+  (§12.1). PC bleibt ungedrosselt (V-Sync, Default an, begrenzt). Feature-Override `.mobile` gilt für Android und iOS.
 - `positional_shadow/atlas_size=0`: Omni-/Spot-Schatten sind projektweit deaktiviert.
 - `fallback_to_d3d12=false`: In 4.7.2 ist der Default `true` (gemessen). D3D12 testen wir nicht; Windows nutzt Vulkan und fällt
   ohne Vulkan direkt auf OpenGL 3 (`gl_compatibility`) zurück, das in CI ohnehin geprüft wird.
@@ -862,6 +871,7 @@ Qualitätsstufen (angewendet von `Game.apply_settings()` auf `get_tree().root`; 
 | Directional Shadow | an | aus |
 | Glow | an | aus |
 | Max. aktive OmniLights in Reichweite | 4 | 2 |
+| Raumlichter (03_ART §5; `distance_fade` ab Kamera 24 m / 6 m auf beiden Stufen) | jeder sichtbare Raum (aktueller + per Tür verbundene) hat sein OmniLight; + 1 Neon-Omni im Treppen- und Safe-Room-Raum | nur der aktuelle Raum hat sein OmniLight (`ExplorationScene._set_room_light`, Raumwechsel blendet 0.4 s über); Nachbarräume im Umgebungs- + Sonnenlicht; kein Neon-Omni |
 
 ### 3.5 `Show` (M2)
 
@@ -1018,7 +1028,14 @@ func play_ui(id: StringName) -> void                                            
 func music(id: StringName, fade_sec: float = 0.8) -> void                       # &"" stops; crossfade 2 players
 func set_volume(bus: StringName, linear: float) -> void                         # bus &"Master" allowed
 func get_volume(bus: StringName) -> float
+func stop_all() -> bool                                                         # music + all players, no fade; true if any played
 ```
+
+**Beenden ohne Lecks:** Sfx verlässt den Baum nur beim Prozessende (letztes Autoload, alle Screens sind vorher weg). Der AudioServer
+gibt gestoppte Playbacks erst einen Mix-Schritt später auf seinem Thread frei und wird direkt nach dem Szenenbaum abgebaut — ein
+beim Beenden noch registriertes Playback meldete Godot als „ObjectDB instances were leaked at exit“ (`AudioStreamPlaybackWAV` +
+`AudioStreamWAV`, gemessen 4.7.2, sporadisch in Tests und Autoplay). Daher `_exit_tree()`: `stop_all()` und, falls etwas lief,
+120 ms warten (`SHUTDOWN_DRAIN_MS`).
 
 Busse werden in `_init()` per `AudioServer.add_bus()` angelegt (kein `.tres`). Streams werden **lazy** beim ersten Abspielen
 von `SfxSynth.make(id)`/`SfxSynth.make_music(id)` erzeugt (22050 Hz, 16 Bit mono, `AudioStreamWAV`), danach gecacht.
@@ -3089,6 +3106,17 @@ Weitere Abläufe in der Erkundung (M3, verbindlich):
 | `stray_spawn_requested(zone, group, enc)` | Spawn in der Zelle der Zone mit größter BFS-Distanz zu Kais Zelle (Gleichstand: kleinstes y, dann x), Zustand PATROL |
 | Gegnergruppe besiegt (`on_resume` mit `VICTORY`) | Gruppen-Node `queue_free()` (`defeated_groups`/`strays` hat `BattleBridge` bereits gepflegt) |
 
+Aufbau für die Budgets (§12.1, Phase C, gemessen mit `tools/perf.sh`):
+- **Physik:** `FloorBuilder.build_rooms(rooms_root, world)` zieht die Boxen jedes Raum-„Collision“-Körpers (EnvKit-Vertrag §8.5
+  bleibt) in **einen** `StaticBody3D` „FloorCollision“ unter `World` (Etagen-Koordinaten), die Türstürze kommen dazu.
+  Die dauerhaften Blocker von Truhen und Etagen-Events liegen in **einem** Körper „PropBlockers“ (die Kamera ignoriert ihn wie
+  vorher die einzelnen Blocker); Tore behalten ihren eigenen „Blocker“ (wird beim Öffnen freigegeben). Interactables entfernen
+  den doppelten „Collision“-Körper ihres Art-Props (`_drop_prop_collision`). Etage 1: 76 statische + 19 kinematische → 4 statische + 19 kinematische Körper (dazu unverändert 27 Areas).
+- **Lichter pro Mesh:** Raum-Meshes liegen im Schachbrett-Render-Layer der Zelle (`FloorBuilder.room_layer(c)`: Layer 11 bei
+  gerader x + y, sonst 12; per Tür verbundene Zellen haben immer unterschiedliche Parität), die Raumlichter maskieren die andere
+  Parität aus (`light_cull_mask`). Ein Raum-Mesh bekommt so nur das eigene Licht (+ Neon), nicht mehr bis zu drei Nachbarlichter;
+  Figuren, Props und Effekte bleiben auf Layer 1 und werden von jedem Licht in Reichweite beleuchtet.
+
 ### 7.4 Etagen-Events (`FloorEvent`, GDD §2.6)
 
 `Game.apply_floor_event(event_id: String, choice: String) -> Dictionary`: k = Index des Events in `layout.events`,
@@ -3253,7 +3281,7 @@ const CLEAR_RADIUS: float = 5.0
 static func build_room(spec: RoomSpec) -> Node3D
 	# children: "Geometry" (MeshInstance3D, floor+walls merged, cast_shadow OFF), "Props" (MeshInstance3D merged),
 	# "Collision" (StaticBody3D layer 1: floor box + wall boxes + large prop boxes), optional "Light" (OmniLight3D:
-	# y 3.0, range 9, energy 1.2, no shadow, distance_fade 24 m / length 6 m), kind-specific set pieces:
+	# y 3.0, range 9, energy 1.2, no shadow, distance_fade 24 m / length 6 m, both tiers), kind set pieces:
 	# STAIRS → PropKit stairs_down at anchor stairs; SAFE → PropKit safe_door at anchor safe_door
 static func anchor_for(spec: RoomSpec, anchor: StringName) -> Transform3D
 	# room-local: &"player_spawn" (center), &"stairs" (center), &"boss_spot" (center), &"safe_door" (center of the first wall
@@ -3261,7 +3289,8 @@ static func anchor_for(spec: RoomSpec, anchor: StringName) -> Transform3D
 static func build_battle_arena(theme_id: String, palette: Dictionary, is_boss: bool, seed: int, quality: StringName = &"high") -> Node3D
 	# round stage r = 9 m at origin, backdrop, 2 camera drones, sponsor billboard; no sun (see make_sun)
 static func build_safe_room(seed: int, quality: StringName = &"high", theme: StringName = &"kiosk") -> Node3D
-	# interior 12 × 10 m at origin, incl. vending_machine, save_terminal, couch, door, warm OmniLight;
+	# interior 12 × 10 m at origin, incl. vending_machine, save_terminal, couch, door, warm OmniLight; no physics bodies
+	# (the props' "Collision" bodies are stripped: fixed camera, nobody walks, §12.1);
 	# theme &"kiosk" | &"pumphouse" | &"signalbox" swaps set dressing (03_ART §6.3), anchors identical for all themes
 static func safe_room_anchor(anchor: StringName) -> Transform3D
 	# local transforms inside build_safe_room(): &"vending", &"terminal", &"couch", &"mopsula_spot", &"player_spot", &"door", &"camera"
@@ -3676,16 +3705,17 @@ Referenzgeräte: Mittelklasse-Android (Adreno 610 / Mali-G57), iPhone 11; PC: in
 | Größe | Erkundung | Kampf | Safe Room |
 |---|---|---|---|
 | Ziel-FPS | PC 60, Mobil 60 (Minimum 30) | gleich | gleich |
-| Draw Calls (Monitor `RENDER_TOTAL_DRAW_CALLS_IN_FRAME`) | ≤ 150 | ≤ 150 | ≤ 120 |
+| Draw Calls 3D (Hauptviewport, `viewport_get_render_info` VISIBLE + SHADOW) | ≤ 150 | ≤ 150 | ≤ 120 |
+| Draw Calls 2D/UI (`viewport_get_render_info` CANVAS) | ≤ 100 | ≤ 180 | ≤ 100 |
 | Sichtbare Dreiecke (`RENDER_TOTAL_PRIMITIVES_IN_FRAME`, inkl. Hulls und Schattenpass) | ≤ 120 000 | ≤ 120 000 | ≤ 60 000 |
 | DirectionalLight3D | 1 (Schatten nur „high“) | 1 | 1 |
-| OmniLight3D aktiv im Umkreis 24 m | ≤ 4 (low: 2), keine Schatten | ≤ 2 | ≤ 3 |
-| Lichter pro Mesh | ≤ 3 | ≤ 3 | ≤ 3 |
+| OmniLight3D aktiv (im Umkreis 24 m der Kamera, nicht ausgeblendet, Reichweite schneidet das Sichtfeld) | ≤ 4 Raumlichter (low: 2) + 1 Neon-Signal (Treppe / Safe-Room-Tür, nur „high“), keine Schatten | ≤ 2 (+ 2 Show-Spots und während der ≈ 1 s Zug-Durchfahrt der Stirnlicht-Omni, beides nur „high“, 03_ART §5) | ≤ 3 |
+| Lichter pro Mesh | ≤ 3 | ≤ 3 („high“: Arena-Geometrie 4 = Fill + Back + 2 Spots, + 1 während der Zug-Durchfahrt) | ≤ 3 |
 | Schattenkarte | 2048 PC / 1024 mobil, max. Distanz 30 m | 20 m | 15 m |
 | Materialien (eindeutig, aus `Materials`-Cache) | ≤ 24 | ≤ 24 | ≤ 16 |
 | Partikel | ≤ 400 gleichzeitig, ≤ 6 Emitter | gleich | gleich |
 | `Label3D` gleichzeitig | ≤ 12 (gepoolt) | gleich | gleich |
-| Physik | ≤ 40 Bodies, keine RigidBodies | keine | keine |
+| Physik | ≤ 40 Körper (Static + Character; Areas zählen nicht), keine RigidBodies | keine | keine |
 | RAM | ≤ 400 MB | | |
 | Aufbauzeit | Etage (Layout/Generierung + Bauen) ≤ 500 ms PC / 1,5 s mobil | Arena ≤ 300 ms | ≤ 300 ms |
 
@@ -3699,10 +3729,17 @@ Pro Asset (Tris über `MeshUtil.tri_count`, ohne Hull; `test_m4_art_kit` prüft 
 | Raum | Geometrie ≤ 1 500 + Props ≤ 2 500 | 2 (Geometry, Props) + Interaktives |
 | Arena | ≤ 8 000 | – |
 
+**Draw Calls:** Der Monitor `RENDER_TOTAL_DRAW_CALLS_IN_FRAME` (DebugOverlay) ist die Summe aus 3D-Pässen **und** UI-Canvas
+(gemessen 4.7.2, beide Renderer). Die frühere Einzelzeile „≤ 150“ war als 3D-Budget gerechnet (Asset-Tabelle unten), das HUD allein
+kostete aber 100–200 Canvas-Draw-Calls; deshalb zwei Zeilen. Canvas-Items bündeln nur, solange Textur und Befehlsart gleich bleiben
+(gemessen: jede `StyleBoxFlat` 1 DC, ein Label mit Outline 2 — Outline-Glyphen liegen in eigener Font-Textur —, jedes
+`draw_colored_polygon`/`draw_circle` 1, `draw_rect`/`draw_line` ohne Breite bündeln). Vektor-Icons, Minimap und Hype-Leiste gehen
+deshalb als ein Dreiecks-Array (`scenes/ui/icon_mesh.gd`) raus: Icon 6–11 → 1 DC, Minimap ~150 → 1 DC bei aufgedeckter Etage.
 Jede Figuren-MeshInstance kostet 2 Draw Calls (inkl. Outline-`next_pass`). „Lichter pro Mesh ≤ 3“ begründet sich mit den
 Fragment-Kosten (Licht-Schleife pro Pixel auf Mobile-GPUs), nicht mit Extra-Passes: gemessen bleiben die Draw Calls in Compatibility
 mit 0/1/3/6 OmniLights auf 10 Meshes konstant bei 10. Verboten: SSAO, SSIL, SSR, SDFGI, VoxelGI, Volumetric Fog, GPUParticles,
-Echtzeit-Reflexionen, Texturen > 512 px (es gibt keine). `DebugOverlay` (F3) zeigt FPS, Draw Calls, Primitives.
+Echtzeit-Reflexionen, Texturen > 512 px (es gibt keine). `DebugOverlay` (F3) zeigt FPS, Draw Calls (gesamt, 3D, UI), Primitives.
+Messwerte, Methode und Optimierungen: `docs/PERFORMANCE.md`; Werkzeug: `tools/perf.sh` (§12.5).
 
 ### 12.2 Plattform-Renderer
 
@@ -3725,6 +3762,12 @@ darf **nie** `.gd`-Dateien per `DirAccess` suchen (DB lädt feste Dateiliste).
 | `Android` | `Android` | `../build/android/PrimeTimeDungeon.apk` | `package/unique_name="org.primetimedungeon.game"`, `version/code=1`, `version/name="0.1.0"`, `architectures/arm64-v8a=true`, `architectures/armeabi-v7a=false`, `screen/immersive_mode=true`, `gradle_build/use_gradle_build=false` |
 | `iOS` | `iOS` | `../build/ios/PrimeTimeDungeon.ipa` | `application/bundle_identifier="org.primetimedungeon.game"`, `application/app_store_team_id=""` (lokal setzen), `application/targeted_device_family=2` |
 
+Launcher-Icons: Android `launcher_icons/main_192x192`, `adaptive_foreground_432x432`, `adaptive_background_432x432`, iOS
+`icons/icon_1024x1024` (deckend, ohne Alpha) → `res://art/icons/*.png`, erzeugt aus `icon.svg` mit `tools/make_icons.sh`
+(SVG → PNG in Software, headless). Windows/macOS/Linux nutzen `config/icon`. Geprüft (4.7.2, ohne Templates): `--export-pack "Linux"`
+erzeugt ein lauffähiges Paket (Autoplay aus der `.pck` → `AUTOPLAY: OK`; Skripte als Binär-Tokens, `data/*.json` enthalten), die
+übrigen Presets scheitern nur an fehlenden Export-Templates bzw. Android-SDK (keine Konfigurationsfehler); `test_perf_platform.gd`
+prüft Presets, Filter und Icon-Größen.
 Nicht gelistete Optionen setzt der Editor beim ersten Öffnen auf Defaults; die Datei wird danach so committet.
 Bundle-ID ist ein Platzhalter-Namensraum und wird vor Store-Veröffentlichung auf die eigene Domain umgestellt. `build/` ist per
 Repo-`.gitignore` ausgeschlossen. Plattformnamen wurden gegen 4.7.2 geprüft (`Linux` wird erkannt; Templates fehlen lokal).
@@ -3807,6 +3850,29 @@ jobs:
 Android/iOS werden lokal exportiert (Android: JDK 17 + SDK + Debug-Keystore in Editor-Einstellungen; iOS: Xcode auf macOS).
 `check.sh` bleibt unverändert die einzige Prüf-Quelle (CI ruft nur `check.sh`).
 
+### 12.5 Messung (`tools/perf.sh`, Phase C)
+
+`GODOT=… tools/perf.sh [--driver=opengl3|vulkan] [--quality=high|low] [--only=startup,explore,battle,safe_room,leak]
+[--cycles=20] [--out=<md>] [--shots=<dir>] [--cells] [--headless]` kopiert das Projekt wie `check.sh`, importiert und startet
+1. `tests/perf/boot_timer.gd` — echter Boot (Main Scene) bis Titel interaktiv und weiter über „Neues Spiel“ bis zur Erkundung,
+   ohne vorher Screen-Skripte zu kompilieren (Zeiten ab Prozessstart);
+2. `tests/perf/perf_probe.gd` → `perf_runner.gd` (unter Xvfb; `--driver=vulkan` = Mobile-Renderer, braucht ein Vulkan-ICD, z. B.
+   Mesa lavapipe): je Zelle von Etage 1 vier Kamerarichtungen, jede Begegnung von Etage 1 (Eröffnung), größte Begegnung + beide
+   Bosse als kompletter Auto-Kampf, die drei Safe Rooms. Je Ansicht das Maximum von Draw Calls (gesamt/3D/2D), Primitiven, aktiven
+   Lichtern, Lichtern pro Mesh, eindeutigen Materialien, Label3D, Partikeln, Physik-Körpern, Nodes, RAM, VRAM; Aufbauzeiten; Status
+   gegen §12.1. `leak`: N Router-Zyklen Erkundung (neu gebaut) → Kampf → Safe Room → zurück, Objekt-/Node-/Ressourcen-Zahlen je
+   Zyklus; Urteil über die Minima eines frühen und des letzten Fensters (`perf_runner.leak_growth`, auch von
+   `test_perf_router_cycles.gd` genutzt; Objekte ohne die Einträge der begrenzten Art-Caches, `perf_runner.cache_objects()`).
+   Die Streuner-Spawner (RunSim) werden je Zyklus zurückgesetzt, damit jeder Zyklus dieselbe Etage baut (ein Streuner ist
+   Spielzustand, kein Leck). Letzte Zeilen `PERF: OK|OVER BUDGET (…)`, `LEAK: OK|GROWTH …`; Exit 1 bei Überschreitung.
+Diagnose-Schalter: `--full=<enc,…>` (nur diese kompletten Auto-Kämpfe), `--mat-dump` (je Zeile die eindeutigen Materialien des
+Spitzen-Frames mit Shader, erstem Besitzer und `Materials`-Cache-Schlüssel, Zeilen `MATDUMP …`), `--leak-diff` (je Router-Zyklus,
+welche Node-Arten — Pfad ohne Ziffern + Klasse — sich gegenüber dem Vorzyklus geändert haben, Zeilen `LEAKDIFF …`).
+Materialüberschreitungen nennen die Zahl der betroffenen Frames („Mat 25 > 24 (2 von 270 Frames)“).
+
+Gemessen wird in CI-Umgebungen mit llvmpipe (Software): Draw Calls, Primitive, Lichter, Materialien und Körper sind GPU-unabhängig
+und gelten 1:1; Zeiten sind CPU-gebunden und nur relativ (Vorher/Nachher) aussagekräftig; FPS werden nicht bewertet.
+
 ---
 
 ## 13. Coding-Konventionen
@@ -3850,6 +3916,10 @@ Android/iOS werden lokal exportiert (Android: JDK 17 + SDK + Debug-Keystore in E
    wird nach `await process_frame` per `load()` geholt (§11).
 5. Skripte werden über `class_name` referenziert, **Szenen** über Pfad-Konstanten + `load()` zur Laufzeit; kein `preload()` von
    Szenen anderer Module (verhindert Lade-Zyklen und Kaskaden-Ladefehler). `preload()` nur modulintern.
+6. Skripte, die vor dem ersten Bild kompiliert werden (Autoloads, `boot.gd`, `global_ui.gd` und deren `preload`s), nennen die
+   Screen-Klassen (`ExplorationScene`, `BattleScene`, `SafeRoomScene`) nicht: jede Typ-Referenz kompiliert die Klasse samt
+   Abhängigkeitsbaum mit (gemessen 1,1 s von 2,7 s bis zum ersten Bild). Vergleich über `scene_file_path`/`Router.SCENE_*`;
+   `autoplay.gd` wird nur mit `--autoplay` geladen. `test_perf_platform.gd` prüft das.
 
 ### 13.3 Kommunikation zwischen Modulen
 

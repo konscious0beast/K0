@@ -72,6 +72,10 @@ func build(p_setup: BattleSetup, p_quality: StringName = &"high") -> void:
 	if _queen:
 		var wreck: Node3D = PropKit.build(&"wreck", setup.seed)
 		wreck.name = "Wreck"
+		var wreck_body: Node = wreck.get_node_or_null("Collision")
+		if wreck_body != null:          # the stage has no physics (02_TECH §12.1 "Kampf: keine")
+			wreck.remove_child(wreck_body)
+			wreck_body.free()
 		wreck.position = WRECK_POS
 		add_child(wreck)
 	_build_marker()
@@ -202,7 +206,7 @@ func add_pseudo(id: String, def_id: String) -> void:
 		train = TrainFx.new()
 		train.name = "Train"
 		add_child(train)
-		train.call("setup", party_line_z())
+		train.call("setup", party_line_z(), quality)
 	train.call("set_armed", true)
 
 

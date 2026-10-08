@@ -23,12 +23,16 @@ var _train: Node3D = null
 var _lamps: Array[MeshInstance3D] = []
 var _beams: Array[OmniLight3D] = []
 var _z: float = 3.1
+var _quality: StringName = &"high"
 var _t: float = 0.0
 var _hit_sent: bool = false
 
 
-func setup(line_z: float) -> void:
+## `quality` (02_TECH §3.4): the head-lamp OmniLight only on "high" — on "low" the battle keeps its 2 omni lights
+## (§12.1); the lamps stay emissive.
+func setup(line_z: float, quality: StringName = &"high") -> void:
 	_z = line_z
+	_quality = quality
 	_track = _build_track()
 	add_child(_track)
 	_train = _build_train()
@@ -101,7 +105,9 @@ func _build_track() -> Node3D:
 	var mi: MeshInstance3D = MeshInstance3D.new()
 	mi.name = "Rails"
 	mi.mesh = MeshUtil.merge_no_hull(parts)
-	mi.material_override = Materials.env({"grout_width": 0.0, "dirt": 0.15})
+	# the stage-dressing material of PropKit (env, default palette): the same cached instance as the Königin's wreck,
+	# so the track adds no material of its own (02_TECH §12.1 Materialien ≤ 24 in the boss fight)
+	mi.material_override = PropKit.material_for(false, {})
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	root.add_child(mi)
 	# signal posts with two lamps each at both stage edges
@@ -109,7 +115,7 @@ func _build_track() -> Node3D:
 		var post: MeshInstance3D = MeshInstance3D.new()
 		post.mesh = MeshUtil.merge([MeshUtil.part(MeshUtil.cylinder(0.06, 0.08, 2.4), Vector3(0, 1.2, 0),
 			Palette.DARK_METAL), MeshUtil.part(MeshUtil.box(Vector3(0.5, 0.9, 0.2)), Vector3(0, 2.4, 0), Palette.INK)])
-		post.material_override = Materials.toon_vc({"bands": 3, "rim": 0.3, "outline_width": 0.02})
+		post.material_override = Materials.toon_vc(CharacterBuilder.DEFAULT_MAT)   # = figures' material (§12.1)
 		post.position = Vector3(sx, 0, _z - 1.6)
 		root.add_child(post)
 		for ly: float in [2.6, 2.2]:
@@ -164,7 +170,10 @@ func _build_train() -> Node3D:
 	sign.position = Vector3(4.68, 2.75, 0)
 	sign.rotation = Vector3(0, PI * 0.5, 0)
 	root.add_child(sign)
+	if _quality != &"high":
+		return root
 	var beam: OmniLight3D = OmniLight3D.new()
+	beam.name = "HeadLamp"                # accent light: +1 omni only while the train passes (02_TECH §12.1)
 	beam.light_color = Color("#fff2c8")
 	beam.omni_range = 8.0
 	beam.light_energy = 2.4

@@ -1,6 +1,10 @@
 extends Control
 ## Private M6 vector icon (03_ART §9.2, F8): symbols are drawn shapes, never font glyphs.
 ## `kind` selects the shape; drawn into the control rect (keeps aspect, centered). Works in both renderers.
+## All primitives of one icon go out as ONE triangle array (icon_mesh.gd, 02_TECH §12.1: one canvas draw call per
+## icon instead of one per shape).
+
+const IconMesh := preload("res://scenes/ui/icon_mesh.gd")
 
 const KINDS: Array[StringName] = [&"dot", &"eye", &"heart", &"menu", &"hand", &"fist", &"map", &"gear", &"box",
 	&"star", &"coin", &"clock", &"skull", &"crown", &"check", &"cross", &"arrow_left", &"arrow_right", &"arrow_up",
@@ -31,14 +35,25 @@ static func make(p_kind: StringName, p_color: Color, p_size: float) -> Control:
 	return icon
 
 
+var _m: IconMesh = null
+
+
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
 func _draw() -> void:
+	var m: IconMesh = build_mesh()
+	if m != null:
+		m.commit(self)
+
+
+## The icon's primitives as one IconMesh in drawing order (null without a size). Headless tests use it directly.
+func build_mesh() -> IconMesh:
 	var s: float = minf(size.x, size.y)
 	if s <= 0.0:
-		return
+		return null
+	_m = IconMesh.new()
 	var o: Vector2 = (size - Vector2(s, s)) * 0.5
 	var c2: Color = color_2 if color_2.a > 0.0 else Color("#140d1c")
 	match kind:
@@ -52,7 +67,7 @@ func _draw() -> void:
 			for i in range(1, 16):
 				var t: float = float(i) / 16.0 * PI
 				pts.append(_p(o, s, Vector2(0.5 + 0.48 * cos(t), 0.5 + 0.3 * sin(t))))
-			draw_colored_polygon(pts, color)
+			_m.poly(pts, color)
 			_circle(o, s, Vector2(0.5, 0.5), 0.17, c2)
 			_circle(o, s, Vector2(0.56, 0.44), 0.05, color)
 		&"heart":
@@ -62,7 +77,7 @@ func _draw() -> void:
 				var x: float = 16.0 * pow(sin(t), 3)
 				var y: float = 13.0 * cos(t) - 5.0 * cos(2.0 * t) - 2.0 * cos(3.0 * t) - cos(4.0 * t)
 				pts.append(_p(o, s, Vector2(0.5 + x / 36.0, 0.48 - y / 36.0)))
-			draw_colored_polygon(pts, color)
+			_m.poly(pts, color)
 		&"menu":
 			for i in 3:
 				_rect(o, s, Rect2(0.1, 0.2 + i * 0.25, 0.8, 0.13), color)
@@ -108,7 +123,7 @@ func _draw() -> void:
 				var a: float = -PI * 0.5 + float(i) / 10.0 * TAU
 				var r: float = 0.48 if i % 2 == 0 else 0.2
 				pts.append(_p(o, s, Vector2(0.5 + cos(a) * r, 0.53 + sin(a) * r)))
-			draw_colored_polygon(pts, color)
+			_m.poly(pts, color)
 		&"coin":
 			_circle(o, s, Vector2(0.5, 0.5), 0.45, color)
 			_circle(o, s, Vector2(0.5, 0.5), 0.33, color.darkened(0.2))
@@ -191,7 +206,7 @@ func _draw() -> void:
 					y = 0.62 + sin(t) * r * 1.8
 					x = 0.5 + cos(t) * r * (1.0 + sin(t) * 0.4)
 				pts.append(_p(o, s, Vector2(x, y)))
-			draw_colored_polygon(pts, color)
+			_m.poly(pts, color)
 			_circle(o, s, Vector2(0.5, 0.68), 0.14, color.lightened(0.5))
 		&"snow":
 			for i in 3:
@@ -258,11 +273,12 @@ func _draw() -> void:
 			for i in 6:
 				var a: float = float(i) / 6.0 * TAU + PI / 6.0
 				pts.append(_p(o, s, Vector2(0.5 + cos(a) * 0.36, 0.5 + sin(a) * 0.36)))
-			draw_colored_polygon(pts, color)
+			_m.poly(pts, color)
 			_circle(o, s, Vector2(0.5, 0.5), 0.12, c2)
 			_circle(o, s, Vector2(0.5, 0.5), 0.06, Color("#ff2e88"))
 		_:
 			_circle(o, s, Vector2(0.5, 0.5), 0.4, color)
+	return _m
 
 
 # --- primitives in unit space ----------------------------------------------------------------------------------------
@@ -272,22 +288,22 @@ func _p(o: Vector2, s: float, u: Vector2) -> Vector2:
 
 
 func _circle(o: Vector2, s: float, c: Vector2, r: float, col: Color) -> void:
-	draw_circle(_p(o, s, c), r * s, col, true, -1.0, true)
+	_m.circle(_p(o, s, c), r * s, col, true)
 
 
 func _rect(o: Vector2, s: float, r: Rect2, col: Color) -> void:
-	draw_rect(Rect2(_p(o, s, r.position), r.size * s), col, true)
+	_m.rect(Rect2(_p(o, s, r.position), r.size * s), col)
 
 
 func _poly(o: Vector2, s: float, pts: Array[Vector2], col: Color) -> void:
 	var out: PackedVector2Array = []
 	for v: Vector2 in pts:
 		out.append(_p(o, s, v))
-	draw_colored_polygon(out, col)
+	_m.poly(out, col)
 
 
 func _line(o: Vector2, s: float, a: Vector2, b: Vector2, col: Color, w: float) -> void:
-	draw_line(_p(o, s, a), _p(o, s, b), col, maxf(w * s, 1.0), true)
+	_m.line(_p(o, s, a), _p(o, s, b), col, maxf(w * s, 1.0), true)
 
 
 func _rot_rect(c: Vector2, sz: Vector2, a: float) -> Array[Vector2]:

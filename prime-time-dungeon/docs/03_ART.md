@@ -769,7 +769,7 @@ void fragment() {
 | Volumetric Fog, SSAO, SSIL, SSR, SDFGI | **nein** (Forward+ only) | **nein** | nie; Ersatz: Fog + additive Lichtkegel (`hologram` auf Kegel-Mesh) + Kontakt-Blob |
 | Directional Shadow | ja | ja | Quality `high`; Mobile-Gerät `SHADOW_ORTHOGONAL`, sonst PSSM 2 Splits (02_TECH) |
 | Omni/Spot-Schatten | — | — | projektweit aus (`positional_shadow/atlas_size = 0`, 02_TECH §2.1) |
-| Lichter pro Objekt | 8 Omni + 8 Spot | `max_lights_per_object = 8` | Budget ≤ 4 aktiv in Reichweite (`high`), ≤ 2 (`low`) |
+| Lichter pro Objekt | 8 Omni + 8 Spot | `max_lights_per_object = 8` | Budget ≤ 4 aktiv in Reichweite (`high`), ≤ 2 (`low`); je Mesh ≤ 3 (02_TECH §12.1) |
 | `CPUParticles3D` / `GPUParticles3D` | ja / ja | ja / ja (beide gerendert) | **nur `CPUParticles3D`** (02_TECH §8.1) |
 
 ### 4.2 `EnvKit.make_environment(theme_id, palette, mode, quality)`
@@ -796,11 +796,18 @@ Boss-Phasenwechsel: Ambient 0.25 s auf Palette `neon2`, danach zurück (Tween 0.
 | battle | Palette `key` | 1.25 | `(-50, -30, 0)` (von vorne-links auf die Party) | `high`: an, max. 20 m |
 | safe | `#FFE2B8` | 1.2 | `(-60, 20, 0)` | `high`: an |
 
-**Raumlicht** (02_TECH §8.5): pro Raum eine `OmniLight3D` (y 3.0, Reichweite 9, Energie 1.2, Distance-Fade 24/6 m), Farbe = Palette `light`.
+**Raumlicht** (02_TECH §8.5): pro Raum eine `OmniLight3D` (y 3.0, Reichweite 9, Energie 1.2, Distance-Fade ab Kamera 24/6 m),
+Farbe = Palette `light`. Quality `low` (02_TECH §3.4): nur der aktuelle Raum behält sein Licht, die sichtbaren Nachbarräume stehen
+im Umgebungs- und Sonnenlicht; beim Raumwechsel blendet das Licht in 0.4 s vom alten in den neuen Raum über. Raum-Meshes liegen im
+Schachbrett-Render-Layer ihrer Zelle; das Raumlicht maskiert die Nachbar-Parität aus (fällt nicht auf Boden/Wände der Nachbarräume,
+02_TECH §7.3), Figuren und Props bleiben auf Layer 1.
 **Neon-Akzente** (Art): pro Raum max. **1** zusätzliche Omni an einem Neon-Prop (Farbe `accent` oder `neon2`, Energie 2.0, Reichweite 5,
 `light_specular 0`), nur Quality `high`. Jedes leuchtende Objekt hat zusätzlich emissive Geometrie (`glow`), damit es auch ohne Licht leuchtet.
 **Kampf-Zusatz** (`high`): 2 SpotLights ohne Schatten `#FF2E88` / `#22D3EE`, Energie 3.0, Reichweite 14, Winkel 22°, von (±7, 6, 2)
 auf die Arenamitte; schwenken 1.2 s über die Party bei Sponsor-Geschenk und Stunt-Erfolg. Figuren-Rim im Kampf × 1.3.
+Zug „Gleis 9“ (Rattenkönigin): Stirnlicht-Omni `HeadLamp` (`#FFF2C8`, Energie 2.4, Reichweite 8) nur auf `high` und nur während der
+Durchfahrt; auf `low` leuchten nur die emissiven Stirnlampen (02_TECH §12.1). Gleis und Signalmasten nutzen vorhandene Materialien
+(PropKit-Dekor-`env` = Wrack, Figuren-`toon_vc`), das Sponsor-Paket ebenfalls das Figuren-`toon_vc`.
 **Kontakt-Schatten** (nur Quality `low`, wenn keine Echtzeitschatten): Scheibe `MeshUtil.cylinder(r, r, 0.01)`, r = 0.6 × Figurbreite,
 y 0.01, `Materials.toon(Palette.INK, {"outline": false, "rim": 0.0})`, `cast_shadow OFF`.
 
@@ -1315,7 +1322,11 @@ hängende Deko ohne Kollision; Kamera-`SpringArm3D` nur gegen Layer 1.
 
 ## 7. VFX (`Vfx.KINDS`, nur `CPUParticles3D`)
 
-Partikel = `QuadMesh` + `vfx_additive`. **Pool pro Parent** (02_TECH §8.6): `Vfx.spawn()` hält **keinen** statischen Zustand; der Pool
+Partikel = `QuadMesh` + `vfx_additive`. Einzelne Effekt-Quads (Ringe, Hieb-Bögen, Sponsor-Hologramm, Frost-Kern) tragen ihre
+Tönung als **Vertex-Farbe** eines 4-Vertex-Quads (`VfxNode._tint_quad`, gecacht je Größe + Farbe) und teilen das weiße
+`vfx_additive`-Material ihrer Form — `vfx_additive` multipliziert `COLOR`, das Bild bleibt gleich, aber ein Kampf mit vielen
+Effekt-Farben braucht nur ein Material je Form (02_TECH §12.1 „Materialien ≤ 24“). Neu-Tönen (`play(color)`) tauscht das Mesh,
+nicht das Material. **Pool pro Parent** (02_TECH §8.6): `Vfx.spawn()` hält **keinen** statischen Zustand; der Pool
 liegt als Meta am Parent (`parent.get_meta(&"vfx_pool", {})`, Dictionary `kind → Array[Node3D]`, max. **4** je Kind). Vor jeder
 Wiederverwendung wird geprüft `is_instance_valid(n) and n.is_inside_tree() and n.get_parent() == parent`; ungültige Einträge fliegen
 raus. Wiederverwendung = ältester Eintrag, `global_position = at`, `visible = true`, `restart()` (kein Neubau); nach `duration(kind)` setzt ein Timer
@@ -1523,8 +1534,8 @@ Ziel: ein `.glb` ersetzt einen Archetyp/Prop **ohne Code-Änderung**: Daten setz
 prüfen gegen sie). Kurzfassung der dort festgelegten Werte, an die sich alle Rezepte dieses Dokuments halten:
 Referenzgerät **Adreno 610 / Mali-G57** (wie 04_STRATEGIE §8.2), Quality `low` 60 FPS, `high` ≥ 45 FPS mobil; je Asset (Tris ohne Hull /
 MeshInstances) Held ≤ 2 500 / 8, Gegner ≤ 1 500 / 6 (Schwarm gesamt), Boss ≤ 4 000 (+ `wreck` ≤ 600) / 10, Raum Geometrie ≤ 1 500 +
-Props ≤ 2 500; Draw Calls Erkundung / Kampf / Safe Room ≤ 150 / 150 / 120; sichtbare Tris ≤ 120 000 inkl. Hulls und Schattenpass;
-Aufbauzeit Etage ≤ 500 ms PC / 1,5 s mobil.
+Props ≤ 2 500; 3D-Draw-Calls Erkundung / Kampf / Safe Room ≤ 150 / 150 / 120, UI-Draw-Calls ≤ 100 / 180 / 100 (getrennt gezählt,
+02_TECH §12.1); sichtbare Tris ≤ 120 000 inkl. Hulls und Schattenpass; Aufbauzeit Etage ≤ 500 ms PC / 1,5 s mobil.
 
 Art-Messstand (Rechnung je Figur in 5.3/5.5): Kai 2 040 Tris / 6 Meshes (gemessen), Mopsula ≈ 1 560 / 2, Gegner 390–1 420 / ≤ 6,
 Hausmeister ≈ 3 300 / 8, Rattenkönigin ≈ 3 050 / 5. Draw-Call-Rechnung Kampf: jede Figuren-MeshInstance = 2 Draws (Toon + Hull) →
@@ -1533,7 +1544,9 @@ Hausmeister ≈ 3 300 / 8, Rattenkönigin ≈ 3 050 / 5. Draw-Call-Rechnung Kamp
 Art-Regeln, die die Budgets sichern (keine eigenen Budgets): Vertex-Farben statt Material pro Farbe; Partikel-One-Shots ≤ 48 je Emitter;
 additive Flächen (Lichtsäulen, Hologramme) ≤ 25 % der Bildfläche, `alpha ≤ 0.15`; Leuchtteile mit eigenem Mesh nur, wenn sie pulsieren.
 
-Messen: DebugOverlay (Layer 90) zeigt `Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME`, `RENDER_TOTAL_PRIMITIVES_IN_FRAME`, FPS.
+Messen: DebugOverlay (Layer 90) zeigt `Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME` (gesamt, 3D, UI), `RENDER_TOTAL_PRIMITIVES_IN_FRAME`,
+FPS; flächendeckend `tools/perf.sh` (02_TECH §12.5, Ergebnisse in `docs/PERFORMANCE.md`). UI-Vektorsymbole (`ui_icon.gd`,
+`HudStyle.Icon`), Minimap und Hype-Leiste werden als **ein** Dreiecks-Array gezeichnet (`scenes/ui/icon_mesh.gd`), gleiche Formen.
 `tests/test_m4_art_kit.gd` prüft Tris (`MeshUtil.tri_count()`) und MeshInstances jedes `ModelSpec` aus 5.5 gegen 02_TECH §12.1.
 Screenshot-Prüfung in beiden Renderern: Compatibility `--rendering-driver opengl3`; Mobile lokal mit Mesa-lavapipe
 (`VK_ICD_FILENAMES=<lvp_icd.json>`); Log ohne `SHADER ERROR` und ohne „different indices“-Warnung.

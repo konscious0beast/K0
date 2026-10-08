@@ -212,6 +212,15 @@ static func build_arena(theme_id: String, palette: Dictionary, is_boss: bool, se
 	return root
 
 
+## Frees the prop's "Collision" body: the safe room and the battle stage are pure sets without physics (02_TECH §12.1
+## "Physik: keine"; nobody walks there, the camera is fixed / scripted).
+static func strip_collision(n: Node) -> void:
+	var body: StaticBody3D = n.get_node_or_null("Collision") as StaticBody3D
+	if body != null:
+		n.remove_child(body)
+		body.free()
+
+
 static func _face_center(n: Node3D) -> void:
 	var p: Vector3 = n.position
 	var d := Vector3(-p.x, 0, -p.z)
@@ -340,6 +349,7 @@ static func build_safe(seed: int, quality: StringName, theme: StringName, cutawa
 			[&"safe_door", &"door"]]:
 		var n: Node3D = PropKit.build(pair[0] as StringName, seed, {"label": "AUSGANG"} if pair[0] == &"safe_door" else {})
 		n.transform = safe_anchor(pair[1] as StringName)
+		strip_collision(n)
 		root.add_child(n)
 	var title := _label({&"pumphouse": "PUMPENHAUS", &"signalbox": "STELLWERK"}.get(theme, "KIOSK 24/7") as String, 64,
 		Palette.HYPE_GOLD, Palette.INK, Transform3D(Basis.IDENTITY, Vector3(-3.6, 2.9, -hd + 0.06)), 0.006)

@@ -9,6 +9,12 @@ const FB := preload("res://scenes/exploration/fallback_art.gd")
 
 const LINTEL_Y: float = 3.0              # door lintel underside (03_ART §6.1 "Sturz auf 3.0 m")
 const LINTEL_TOP: float = 3.5            # wall height
+## Room checkerboard render layers (02_TECH §7.3, §12.1 "Lichter pro Mesh"): door-linked cells always differ in the
+## parity of x + y, so a room light that culls the other parity never reaches the neighbour's floor/wall/prop meshes
+## (measured before: own light + up to 3 neighbour lights on a room mesh). Actors, interactables and VFX stay on layer 1
+## and are lit by every light in range as before; the sun and the camera see every layer.
+const ROOM_LAYER_EVEN: int = 1 << 10     # render layer 11
+const ROOM_LAYER_ODD: int = 1 << 11      # render layer 12
 
 var layout: FloorLayout
 var def: FloorDef
@@ -16,6 +22,9 @@ var quality: StringName = &"high"
 var specs: Dictionary = {}           # Vector2i → RoomSpec
 var rooms: Dictionary = {}           # Vector2i → Node3D
 var fallback_rooms: int = 0          # number of rooms completed by the fallback art
+## "FloorCollision": the boxes of every room "Collision" body and of the door lintels in ONE StaticBody3D (layer 1;
+## 02_TECH §12.1 Physik: one static body per floor instead of one per room). Created by build_rooms().
+var collision: StaticBody3D = null
 
 
 func _init(p_layout: FloorLayout, p_def: FloorDef, p_quality: StringName = &"high") -> void:
@@ -54,8 +63,13 @@ func spec_for(c: Vector2i) -> RoomSpec:
 	return spec
 
 
-## Builds every room under `parent` (World/Rooms).
-func build_rooms(parent: Node3D) -> void:
+## Builds every room under `parent` (World/Rooms; only rooms there): room checkerboard layers, room collision moved
+## into the one "FloorCollision" body under `collision_parent` (null → `parent`).
+func build_rooms(parent: Node3D, collision_parent: Node3D = null) -> void:
+	collision = StaticBody3D.new()
+	collision.name = "FloorCollision"
+	collision.collision_layer = 1
+	collision.collision_mask = 0
 	for c: Vector2i in layout.sorted_cells():
 		var spec: RoomSpec = spec_for(c)
 		var room: Node3D = EnvKit.build_room(spec)
@@ -66,18 +80,61 @@ func build_rooms(parent: Node3D) -> void:
 			fallback_rooms += 1
 		room.name = "Room_%d_%d" % [c.x, c.y]
 		room.position = layout.cell_to_world(c)
+		isolate_room_lights(room, c)
+		_take_collision(room)
 		parent.add_child(room)
 		rooms[c] = room
+	(collision_parent if collision_parent != null else parent).add_child(collision)
+
+
+static func room_layer(c: Vector2i) -> int:
+	return ROOM_LAYER_EVEN if posmod(c.x + c.y, 2) == 0 else ROOM_LAYER_ODD
+
+
+## Room meshes go to the cell's checkerboard layer; the room's own lights ignore the other parity.
+static func isolate_room_lights(room: Node3D, c: Vector2i) -> void:
+	var own: int = room_layer(c)
+	var other: int = ROOM_LAYER_ODD if own == ROOM_LAYER_EVEN else ROOM_LAYER_EVEN
+	var stack: Array[Node] = [room]
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		for ch: Node in n.get_children():
+			stack.append(ch)
+		if n is Light3D and not n is DirectionalLight3D:
+			(n as Light3D).light_cull_mask &= ~other
+		elif n is GeometryInstance3D:
+			(n as GeometryInstance3D).layers = own
+
+
+## Moves the shapes of the room's "Collision" body (room-local) into `collision` (floor space) and frees the body.
+func _take_collision(room: Node3D) -> void:
+	var body: StaticBody3D = room.get_node_or_null("Collision") as StaticBody3D
+	if body == null or collision == null:
+		return
+	var to_floor: Transform3D = room.transform * body.transform
+	for ch: Node in body.get_children():
+		var cs: CollisionShape3D = ch as CollisionShape3D
+		if cs == null:
+			continue
+		body.remove_child(cs)
+		cs.transform = to_floor * cs.transform
+		collision.add_child(cs)
+	room.remove_child(body)
+	body.free()
 
 
 ## Collision boxes for the door lintels (layer 1, y 3.0–3.5 m over every door, through both walls): the art kit's
 ## walls only collide beside the openings, but the camera treats the wall above a door as wall (camera_rig.gd).
-## Kai (1.7 m) and the groups never reach that height → no gameplay change. One box per door.
+## Kai (1.7 m) and the groups never reach that height → no gameplay change. One box per door, added to the
+## "FloorCollision" body when build_rooms() ran (else to an own "DoorLintels" body under `parent`).
 func build_door_lintels(parent: Node3D) -> StaticBody3D:
-	var body: StaticBody3D = StaticBody3D.new()
-	body.name = "DoorLintels"
-	body.collision_layer = 1
-	body.collision_mask = 0
+	var body: StaticBody3D = collision
+	if body == null:
+		body = StaticBody3D.new()
+		body.name = "DoorLintels"
+		body.collision_layer = 1
+		body.collision_mask = 0
+		parent.add_child(body)
 	for c: Vector2i in layout.sorted_cells():
 		var rc: RoomCell = layout.cell_at(c)
 		for b: int in RoomCell.DIR_BITS:
@@ -91,7 +148,6 @@ func build_door_lintels(parent: Node3D) -> StaticBody3D:
 			cs.shape = box
 			cs.transform = Transform3D(t.basis, t.origin + Vector3(0.0, (LINTEL_Y + LINTEL_TOP) * 0.5, 0.0))
 			body.add_child(cs)
-	parent.add_child(body)
 	return body
 
 

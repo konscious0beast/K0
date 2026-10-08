@@ -31,6 +31,7 @@ const TIER_NAMES: Dictionary = {"bronze": "Bronze", "silver": "Silber", "gold": 
 
 ## Hype meter 320×14: gradient magenta → gold, diamond markers at 50/75/100, gloss sweep on increase.
 class HypeBar extends Control:
+	const IconMeshB := preload("res://scenes/ui/icon_mesh.gd")
 	var value: float = 0.0
 	var shown: float = 0.0
 	var gloss: float = -1.0                  # 0..1 sweep progress, < 0 = off
@@ -54,29 +55,35 @@ class HypeBar extends Control:
 		queue_redraw()
 
 	func _draw() -> void:
+		build_mesh().commit(self)
+
+	## Bar, gloss, frame and the three threshold diamonds as ONE triangle array (icon_mesh.gd, 02_TECH §12.1).
+	func build_mesh() -> IconMeshB:
+		var m: IconMeshB = IconMeshB.new()
 		var r: Rect2 = Rect2(Vector2.ZERO, size)
-		draw_rect(r, Color(0.08, 0.05, 0.11, 0.85), true)
+		m.rect(r, Color(0.08, 0.05, 0.11, 0.85))
 		var w: float = size.x * clampf(shown / 100.0, 0.0, 1.0)
 		if w > 1.0:
 			var a: Color = Color("#ff2e88")
 			var b: Color = Color("#ff2e88").lerp(Color("#ffc93c"), clampf(shown / 100.0, 0.0, 1.0))
-			draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, size.y), Vector2(0, size.y)]),
+			m.poly_colors(PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, size.y), Vector2(0, size.y)]),
 				PackedColorArray([a, b, b, a]))
 			if gloss >= 0.0:
 				var gx: float = w * gloss
-				draw_rect(Rect2(maxf(gx - 18.0, 0.0), 0, minf(36.0, w - maxf(gx - 18.0, 0.0)), size.y),
-					Color(1, 1, 1, 0.35 * (1.0 - gloss)), true)
-		draw_rect(r, Color(1, 1, 1, 0.25), false, 1.0)
-		for m: float in [50.0, 75.0, 100.0]:
-			var x: float = size.x * m / 100.0
-			var reached: bool = shown >= m
+				m.rect(Rect2(maxf(gx - 18.0, 0.0), 0, minf(36.0, w - maxf(gx - 18.0, 0.0)), size.y),
+					Color(1, 1, 1, 0.35 * (1.0 - gloss)))
+		m.rect_outline(r, Color(1, 1, 1, 0.25), 1.0)
+		for t: float in [50.0, 75.0, 100.0]:
+			var x: float = size.x * t / 100.0
+			var reached: bool = shown >= t
 			var col: Color = Color("#ffc93c") if reached else Color("#f5f0e6", 0.7)
 			var h: float = size.y * 0.5 + 3.0
 			var c: Vector2 = Vector2(minf(x, size.x - 2.0), size.y * 0.5)
-			draw_colored_polygon(PackedVector2Array([c + Vector2(0, -h), c + Vector2(5, 0), c + Vector2(0, h),
-				c + Vector2(-5, 0)]), Color("#140d1c"))
-			draw_colored_polygon(PackedVector2Array([c + Vector2(0, -h + 2), c + Vector2(3.5, 0),
-				c + Vector2(0, h - 2), c + Vector2(-3.5, 0)]), col)
+			m.poly(PackedVector2Array([c + Vector2(0, -h), c + Vector2(5, 0), c + Vector2(0, h), c + Vector2(-5, 0)]),
+				Color("#140d1c"))
+			m.poly(PackedVector2Array([c + Vector2(0, -h + 2), c + Vector2(3.5, 0), c + Vector2(0, h - 2),
+				c + Vector2(-3.5, 0)]), col)
+		return m
 
 
 ## Chat ticker (03_ART §9.2): height 22, scrolls 80 px/s, user names in accent colors.

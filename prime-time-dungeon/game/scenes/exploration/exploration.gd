@@ -36,6 +36,7 @@ const BOSS_EXTRA_ARM: float = 1.5       # boss rooms: longer arm so the large bo
 const HITSTOP_SEC: float = 0.07         # field strike hit: 70 ms freeze + flash before the battle transition
 const REVEAL_BEAT_SEC: float = 0.25     # pause after an event prop animation before its result is shown
 const MARKER_LIFT: float = 0.3          # focus marker above the focused object's visual top
+const ROOM_LIGHT_FADE_SEC: float = 0.4  # quality low: the left room's light fades out, the entered room's fades in
 
 ## Tests may switch this off: encounters then only emit Events.encounter_triggered (no Game/Router battle start).
 var auto_start_battle: bool = true
@@ -78,6 +79,8 @@ var _last_prompt: String = ""
 var _hud_cell: Vector2i = NO_CELL
 var _hud_yaw: float = INF
 var _visible_cells: Dictionary = {}     # Vector2i → true: rooms drawn right now (current + door-linked)
+var _prop_blockers: StaticBody3D = null # "PropBlockers": the permanent blocker boxes of chests and events (one body)
+var _room_lights_set: bool = false      # quality low: first room application sets the lights without fading
 
 
 ## Stores params only: {"spawn": &"start" | &"<safe room id>", "capture": bool}
@@ -294,7 +297,7 @@ func _build_world() -> void:
 	_actors_root = Node3D.new()
 	_actors_root.name = "Actors"
 	_world.add_child(_actors_root)
-	_builder.build_rooms(_rooms_root)
+	_builder.build_rooms(_rooms_root, _world)
 	_builder.build_door_lintels(_world)
 	var fr: FloorRun = Game.state.floor_run
 	var k: int = 0
@@ -331,6 +334,35 @@ func _build_world() -> void:
 		door.transform = _builder.anchor(c, &"safe_door")
 		door.setup_door(sid, str(info.get("name", "")))
 		_add_interactable(door)
+	_merge_prop_blockers()
+
+
+## The permanent blocker boxes of chests and floor events (never removed) move into ONE static body "PropBlockers"
+## (layer 1; 02_TECH §12.1 Physik: before, every interactable had its own body). The camera ignores that body like the
+## single blockers before. Gates keep their own "Blocker" (freed when the gate opens).
+func _merge_prop_blockers() -> void:
+	_prop_blockers = StaticBody3D.new()
+	_prop_blockers.name = "PropBlockers"
+	_prop_blockers.collision_layer = Interactable.LAYER_WORLD
+	_prop_blockers.collision_mask = 0
+	_world.add_child(_prop_blockers)
+	var to_world: Transform3D = _world.global_transform.affine_inverse()
+	for it: Interactable in _interactables:
+		if it is GateInteractable:
+			continue
+		var b: StaticBody3D = it.get_node_or_null("Blocker") as StaticBody3D
+		if b == null:
+			continue
+		var xf: Transform3D = to_world * b.global_transform
+		for ch: Node in b.get_children():
+			var cs: CollisionShape3D = ch as CollisionShape3D
+			if cs == null:
+				continue
+			b.remove_child(cs)
+			cs.transform = xf * cs.transform
+			_prop_blockers.add_child(cs)
+		it.remove_child(b)
+		b.free()
 
 
 ## World transform of a placed object: room centre + offset, facing the room centre (or the entrance when centred).
@@ -359,10 +391,8 @@ func _build_actors() -> void:
 	_actors_root.add_child(_companion)
 	_camera = CameraRig.new()
 	_camera.target = _player
-	for it: Interactable in _interactables:
-		var blocker: StaticBody3D = it.get_node_or_null("Blocker") as StaticBody3D
-		if blocker != null and not it is GateInteractable:
-			_camera.exclude.append(blocker.get_rid())
+	if _prop_blockers != null:
+		_camera.exclude.append(_prop_blockers.get_rid())
 	add_child(_camera)
 	for e: EnemySpawn in _layout.enemies:
 		if not _is_defeated(e):
@@ -627,6 +657,9 @@ func _apply_room_visibility(cell: Vector2i) -> void:
 		var room: Node3D = _builder.rooms[c] as Node3D
 		if room != null and is_instance_valid(room):
 			room.visible = _visible_cells.has(c)
+			if _builder.quality != &"high":
+				_set_room_light(room, c == cell)
+	_room_lights_set = true
 	for it: Interactable in _interactables:
 		if not is_instance_valid(it):
 			continue
@@ -635,6 +668,32 @@ func _apply_room_visibility(cell: Vector2i) -> void:
 			shown = shown or _visible_cells.has(c)
 		it.visible = shown
 	_update_actor_visibility()
+
+
+## Quality low (02_TECH §3.4, §12.1 "OmniLight3D aktiv ≤ 2"): only the current room keeps its omni light; the shown
+## neighbour rooms stay in ambient + sun light. On a room change the old light fades out and the new one in.
+func _set_room_light(room: Node3D, on: bool) -> void:
+	var light: OmniLight3D = room.get_node_or_null("Light") as OmniLight3D
+	if light == null:
+		return
+	if not light.has_meta(&"base_energy"):
+		light.set_meta(&"base_energy", light.light_energy)
+	var base: float = float(light.get_meta(&"base_energy"))
+	var target: float = base if on else 0.0
+	if light.has_meta(&"fade_tween"):
+		var old_tw: Tween = light.get_meta(&"fade_tween") as Tween
+		if old_tw != null and old_tw.is_valid():
+			old_tw.kill()
+	if not _room_lights_set or not is_inside_tree() or not room.visible:
+		light.light_energy = target
+		light.visible = on
+		return
+	light.visible = true
+	var tw: Tween = create_tween()
+	tw.tween_property(light, "light_energy", target, ROOM_LIGHT_FADE_SEC)
+	if not on:
+		tw.tween_callback(func() -> void: light.visible = false)
+	light.set_meta(&"fade_tween", tw)
 
 
 func is_cell_shown(cell: Vector2i) -> bool:

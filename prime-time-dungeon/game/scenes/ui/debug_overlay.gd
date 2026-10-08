@@ -87,7 +87,15 @@ func _process(delta: float) -> void:
 func info_text() -> String:
 	var lines: PackedStringArray = []
 	lines.append("FPS        %d" % roundi(Performance.get_monitor(Performance.TIME_FPS)))
-	lines.append("Draw Calls %d" % int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)))
+	# §12.1: the monitor sums the 3D passes and the UI canvas; the budgets are per part (3D / 2D).
+	var vp: RID = get_viewport().get_viewport_rid()
+	var d3: int = RenderingServer.viewport_get_render_info(vp, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_VISIBLE,
+		RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME) + RenderingServer.viewport_get_render_info(vp,
+		RenderingServer.VIEWPORT_RENDER_INFO_TYPE_SHADOW, RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME)
+	var d2: int = RenderingServer.viewport_get_render_info(vp, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_CANVAS,
+		RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME)
+	lines.append("Draw Calls %d  (3D %d · UI %d)" % [int(Performance.get_monitor(
+		Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)), d3, d2])
 	lines.append("Primitives %s" % UiUtil.fmt_int(int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME))))
 	lines.append("Objekte    %d" % int(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)))
 	lines.append("RAM        %.0f MB" % (Performance.get_monitor(Performance.MEMORY_STATIC) / 1048576.0))

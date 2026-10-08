@@ -78,13 +78,17 @@ func occupied_rects() -> Array[Rect2]:
 
 
 ## Overlay mode for the active screen (Router.current): exploration / battle / safe room, else menu.
+## Compared by scene path, not by class_name: a class_name type check here made compiling GlobalUi (loaded by Boot
+## before the first frame) compile every screen with its whole dependency tree — measured 1.1 s of the 2.7 s from
+## process start to the first frame (02_TECH §12.1 "Start"); the screens now compile when the Router first loads them.
 static func initial_mode() -> StringName:
 	var cur: Node = Router.current
-	if cur is ExplorationScene:
+	var path: String = cur.scene_file_path if cur != null else ""
+	if path == Router.SCENE_EXPLORATION:
 		return &"explore"
-	if cur is BattleScene:
+	if path == Router.SCENE_BATTLE:
 		return &"battle"
-	if cur is SafeRoomScene:
+	if path == Router.SCENE_SAFE_ROOM:
 		return &"safe_room"
 	return &"menu"
 

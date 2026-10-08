@@ -6,6 +6,7 @@ config/name="Prime Time Dungeon"
 config/version="0.1.0"
 config/description="Galaktische Reality-Show-Dungeon-Crawler."
 run/main_scene="res://scenes/boot/boot.tscn"
+run/max_fps.mobile=60
 config/use_custom_user_dir=true
 config/custom_user_dir_name="PrimeTimeDungeon"
 config/quit_on_go_back=false

@@ -54,6 +54,18 @@ func _make_blocker(size: Vector3, pos: Vector3) -> StaticBody3D:
 	return body
 
 
+## The interactable's Blocker decides what blocks: the art prop's own "Collision" body (PropKit / ChestProp) would be a
+## second static body for the same object (02_TECH §12.1 Physik) → removed. Gates: opening then frees every blocking
+## shape at once (before, the lifted prop kept its body).
+func _drop_prop_collision(prop_node: Node) -> void:
+	if prop_node == null:
+		return
+	var body: StaticBody3D = prop_node.get_node_or_null("Collision") as StaticBody3D
+	if body != null:
+		prop_node.remove_child(body)
+		body.free()
+
+
 func _on_body_entered(body: Node3D) -> void:
 	if body != null and body.has_method("is_player_body"):
 		player_inside = true

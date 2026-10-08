@@ -29,6 +29,7 @@ func setup_gate(p_gate: Dictionary, palette: Dictionary, prop_seed: int) -> void
 	prop.name = "Prop"
 	add_child(prop)
 	_blocker = _make_blocker(Vector3(GATE_WIDTH + 0.4, 3.2, 1.0), Vector3(0.0, 1.6, 0.0))
+	_drop_prop_collision(prop)
 	_make_area(Rules.INTERACT_RADIUS + GATE_WIDTH * 0.5 + 0.6)
 
 

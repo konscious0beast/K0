@@ -2,6 +2,7 @@ extends RefCounted
 ## Battle HUD look (03_ART §9: TV broadcast, 12° skewed panels, magenta / gold / cyan on ink) — shared by the M5 UI
 ## scripts. Private M5 helper (no class_name). Symbols are drawn polygons, never text glyphs (03_ART F8).
 
+const IconMesh := preload("res://scenes/ui/icon_mesh.gd")
 const C_INK: Color = Color("#140d1c")
 const C_PAPER: Color = Color("#f5f0e6")
 const C_PARTY: Color = Color("#4aa8ff")       # ui_party (turn order frame)
@@ -42,15 +43,22 @@ class Icon extends Control:
 		draw_icon(self, kind, Rect2(Vector2.ZERO, size), color)
 
 
+	## Draws `kind` into `r` of `ci` (inside its _draw) as ONE triangle array (icon_mesh.gd, 02_TECH §12.1).
 	static func draw_icon(ci: CanvasItem, kind: String, r: Rect2, col: Color) -> void:
+		build_icon_mesh(kind, r, col).commit(ci)
+
+
+	## The primitives of icon `kind` in rect `r`, in drawing order (headless tests use it directly).
+	static func build_icon_mesh(kind: String, r: Rect2, col: Color) -> IconMesh:
+		var m: IconMesh = IconMesh.new()
 		var c: Vector2 = r.get_center()
 		var s: float = minf(r.size.x, r.size.y) * 0.5
 		var ink: Color = C_INK
 		match kind:
 			"element_fire", "fire":
-				_poly(ci, [c + Vector2(0, -s), c + Vector2(s * 0.62, s * 0.1), c + Vector2(s * 0.45, s * 0.7),
+				_poly(m, [c + Vector2(0, -s), c + Vector2(s * 0.62, s * 0.1), c + Vector2(s * 0.45, s * 0.7),
 					c + Vector2(0, s * 0.95), c + Vector2(-s * 0.45, s * 0.7), c + Vector2(-s * 0.62, s * 0.1)], col, ink)
-				_poly(ci, [c + Vector2(0, -s * 0.15), c + Vector2(s * 0.25, s * 0.45), c + Vector2(0, s * 0.7),
+				_poly(m, [c + Vector2(0, -s * 0.15), c + Vector2(s * 0.25, s * 0.45), c + Vector2(0, s * 0.7),
 					c + Vector2(-s * 0.25, s * 0.45)], Color("#ffe08a"), Color(0, 0, 0, 0))
 			"element_ice", "ice":
 				var pts: Array = []
@@ -58,31 +66,31 @@ class Icon extends Control:
 					var a: float = TAU * float(i) / 12.0 - PI * 0.5
 					var rr: float = s * (0.95 if i % 2 == 0 else 0.42)
 					pts.append(c + Vector2(cos(a), sin(a)) * rr)
-				_poly(ci, pts, col, ink)
+				_poly(m, pts, col, ink)
 			"element_shock", "shock":
-				_poly(ci, [c + Vector2(s * 0.2, -s), c + Vector2(s * 0.55, -s), c + Vector2(s * 0.1, -s * 0.05),
+				_poly(m, [c + Vector2(s * 0.2, -s), c + Vector2(s * 0.55, -s), c + Vector2(s * 0.1, -s * 0.05),
 					c + Vector2(s * 0.5, -s * 0.05), c + Vector2(-s * 0.35, s), c + Vector2(-s * 0.05, s * 0.15),
 					c + Vector2(-s * 0.45, s * 0.15)], col, ink)
 			"element_poison", "poison":
-				ci.draw_circle(c + Vector2(-s * 0.2, s * 0.2), s * 0.62, ink)
-				ci.draw_circle(c + Vector2(-s * 0.2, s * 0.2), s * 0.5, col)
-				ci.draw_circle(c + Vector2(s * 0.45, -s * 0.45), s * 0.36, ink)
-				ci.draw_circle(c + Vector2(s * 0.45, -s * 0.45), s * 0.26, col)
-				ci.draw_circle(c + Vector2(-s * 0.38, 0.0), s * 0.13, Color(1, 1, 1, 0.6))
+				m.circle(c + Vector2(-s * 0.2, s * 0.2), s * 0.62, ink)
+				m.circle(c + Vector2(-s * 0.2, s * 0.2), s * 0.5, col)
+				m.circle(c + Vector2(s * 0.45, -s * 0.45), s * 0.36, ink)
+				m.circle(c + Vector2(s * 0.45, -s * 0.45), s * 0.26, col)
+				m.circle(c + Vector2(-s * 0.38, 0.0), s * 0.13, Color(1, 1, 1, 0.6))
 			"element_physical", "physical", "cmd_attack":
 				# sword: blade + guard + grip
 				var d: Vector2 = Vector2(1, -1).normalized()
 				var n: Vector2 = Vector2(d.y, -d.x)
 				var tip: Vector2 = c + d * s * 0.95
 				var base: Vector2 = c - d * s * 0.35
-				_poly(ci, [tip, base + n * s * 0.2, base - n * s * 0.2], col, ink)
-				ci.draw_line(base + n * s * 0.45, base - n * s * 0.45, ink, maxf(3.0, s * 0.3))
-				ci.draw_line(base + n * s * 0.4, base - n * s * 0.4, col, maxf(1.5, s * 0.16))
-				ci.draw_line(base, c - d * s * 0.9, ink, maxf(3.0, s * 0.3))
-				ci.draw_line(base, c - d * s * 0.85, Color("#c9a227"), maxf(1.5, s * 0.15))
+				_poly(m, [tip, base + n * s * 0.2, base - n * s * 0.2], col, ink)
+				m.line(base + n * s * 0.45, base - n * s * 0.45, ink, maxf(3.0, s * 0.3))
+				m.line(base + n * s * 0.4, base - n * s * 0.4, col, maxf(1.5, s * 0.16))
+				m.line(base, c - d * s * 0.9, ink, maxf(3.0, s * 0.3))
+				m.line(base, c - d * s * 0.85, Color("#c9a227"), maxf(1.5, s * 0.15))
 			"element_none", "heal", "none":
 				var w: float = s * 0.36
-				_poly(ci, [c + Vector2(-w, -s), c + Vector2(w, -s), c + Vector2(w, -w), c + Vector2(s, -w),
+				_poly(m, [c + Vector2(-w, -s), c + Vector2(w, -s), c + Vector2(w, -w), c + Vector2(s, -w),
 					c + Vector2(s, w), c + Vector2(w, w), c + Vector2(w, s), c + Vector2(-w, s), c + Vector2(-w, w),
 					c + Vector2(-s, w), c + Vector2(-s, -w), c + Vector2(-w, -w)], col, ink)
 			"stun", "star", "cmd_stunt":
@@ -91,96 +99,96 @@ class Icon extends Control:
 					var a2: float = TAU * float(i) / 10.0 - PI * 0.5
 					var r2: float = s * (0.98 if i % 2 == 0 else 0.42)
 					sp.append(c + Vector2(cos(a2), sin(a2)) * r2)
-				_poly(ci, sp, col, ink)
+				_poly(m, sp, col, ink)
 			"cmd_skill", "sparkle":
 				var kp: Array = []
 				for i in 8:
 					var a3: float = TAU * float(i) / 8.0 - PI * 0.5
 					var r3: float = s * (0.98 if i % 2 == 0 else 0.25)
 					kp.append(c + Vector2(cos(a3), sin(a3)) * r3)
-				_poly(ci, kp, col, ink)
-				ci.draw_circle(c + Vector2(s * 0.62, -s * 0.62), s * 0.16, col)
+				_poly(m, kp, col, ink)
+				m.circle(c + Vector2(s * 0.62, -s * 0.62), s * 0.16, col)
 			"slow":
 				for k in 2:
 					var y: float = -s * 0.45 + s * 0.6 * float(k)
-					_poly(ci, [c + Vector2(-s * 0.85, y), c + Vector2(0, y + s * 0.55), c + Vector2(s * 0.85, y),
+					_poly(m, [c + Vector2(-s * 0.85, y), c + Vector2(0, y + s * 0.55), c + Vector2(s * 0.85, y),
 						c + Vector2(s * 0.85, y + s * 0.3), c + Vector2(0, y + s * 0.85), c + Vector2(-s * 0.85, y + s * 0.3)],
 						col, ink)
 			"haste":
 				for k in 2:
 					var y2: float = s * 0.45 - s * 0.6 * float(k)
-					_poly(ci, [c + Vector2(-s * 0.85, y2), c + Vector2(0, y2 - s * 0.55), c + Vector2(s * 0.85, y2),
+					_poly(m, [c + Vector2(-s * 0.85, y2), c + Vector2(0, y2 - s * 0.55), c + Vector2(s * 0.85, y2),
 						c + Vector2(s * 0.85, y2 - s * 0.3), c + Vector2(0, y2 - s * 0.85), c + Vector2(-s * 0.85, y2 - s * 0.3)],
 						col, ink)
 			"guard", "cmd_defend", "shield":
-				_poly(ci, [c + Vector2(0, -s), c + Vector2(s * 0.85, -s * 0.6), c + Vector2(s * 0.7, s * 0.35),
+				_poly(m, [c + Vector2(0, -s), c + Vector2(s * 0.85, -s * 0.6), c + Vector2(s * 0.7, s * 0.35),
 					c + Vector2(0, s), c + Vector2(-s * 0.7, s * 0.35), c + Vector2(-s * 0.85, -s * 0.6)], col, ink)
-				ci.draw_line(c + Vector2(0, -s * 0.7), c + Vector2(0, s * 0.7), Color(1, 1, 1, 0.45), maxf(1.0, s * 0.14))
+				m.line(c + Vector2(0, -s * 0.7), c + Vector2(0, s * 0.7), Color(1, 1, 1, 0.45), maxf(1.0, s * 0.14))
 			"taunt":
-				ci.draw_circle(c, s * 0.95, ink)
-				ci.draw_circle(c, s * 0.82, col)
-				ci.draw_circle(c, s * 0.5, ink)
-				ci.draw_circle(c, s * 0.36, col)
-				ci.draw_circle(c, s * 0.13, ink)
+				m.circle(c, s * 0.95, ink)
+				m.circle(c, s * 0.82, col)
+				m.circle(c, s * 0.5, ink)
+				m.circle(c, s * 0.36, col)
+				m.circle(c, s * 0.13, ink)
 			"cmd_item", "box", "bag":
-				_poly(ci, [c + Vector2(-s * 0.8, -s * 0.25), c + Vector2(s * 0.8, -s * 0.25), c + Vector2(s * 0.7, s * 0.9),
+				_poly(m, [c + Vector2(-s * 0.8, -s * 0.25), c + Vector2(s * 0.8, -s * 0.25), c + Vector2(s * 0.7, s * 0.9),
 					c + Vector2(-s * 0.7, s * 0.9)], col, ink)
-				_poly(ci, [c + Vector2(-s * 0.4, -s * 0.25), c + Vector2(-s * 0.3, -s * 0.8), c + Vector2(s * 0.3, -s * 0.8),
+				_poly(m, [c + Vector2(-s * 0.4, -s * 0.25), c + Vector2(-s * 0.3, -s * 0.8), c + Vector2(s * 0.3, -s * 0.8),
 					c + Vector2(s * 0.4, -s * 0.25), c + Vector2(s * 0.22, -s * 0.25), c + Vector2(s * 0.15, -s * 0.6),
 					c + Vector2(-s * 0.15, -s * 0.6), c + Vector2(-s * 0.22, -s * 0.25)], col, ink)
-				ci.draw_line(c + Vector2(-s * 0.75, s * 0.15), c + Vector2(s * 0.75, s * 0.15), ink, maxf(1.5, s * 0.14))
+				m.line(c + Vector2(-s * 0.75, s * 0.15), c + Vector2(s * 0.75, s * 0.15), ink, maxf(1.5, s * 0.14))
 			"cmd_flee":
-				_poly(ci, [c + Vector2(s, 0), c + Vector2(s * 0.1, -s * 0.85), c + Vector2(s * 0.1, -s * 0.35),
+				_poly(m, [c + Vector2(s, 0), c + Vector2(s * 0.1, -s * 0.85), c + Vector2(s * 0.1, -s * 0.35),
 					c + Vector2(-s * 0.9, -s * 0.35), c + Vector2(-s * 0.9, s * 0.35), c + Vector2(s * 0.1, s * 0.35),
 					c + Vector2(s * 0.1, s * 0.85)], col, ink)
 			"train":
-				_poly(ci, [c + Vector2(-s * 0.75, -s * 0.85), c + Vector2(s * 0.75, -s * 0.85), c + Vector2(s * 0.85, s * 0.55),
+				_poly(m, [c + Vector2(-s * 0.75, -s * 0.85), c + Vector2(s * 0.75, -s * 0.85), c + Vector2(s * 0.85, s * 0.55),
 					c + Vector2(-s * 0.85, s * 0.55)], col, ink)
-				ci.draw_rect(Rect2(c + Vector2(-s * 0.55, -s * 0.6), Vector2(s * 1.1, s * 0.5)), Color("#ffd27a"), true)
-				ci.draw_circle(c + Vector2(-s * 0.45, s * 0.25), s * 0.14, Color("#fff2c8"))
-				ci.draw_circle(c + Vector2(s * 0.45, s * 0.25), s * 0.14, Color("#fff2c8"))
-				ci.draw_line(c + Vector2(-s * 0.6, s * 0.95), c + Vector2(-s * 0.35, s * 0.55), ink, maxf(2.0, s * 0.15))
-				ci.draw_line(c + Vector2(s * 0.6, s * 0.95), c + Vector2(s * 0.35, s * 0.55), ink, maxf(2.0, s * 0.15))
+				m.rect(Rect2(c + Vector2(-s * 0.55, -s * 0.6), Vector2(s * 1.1, s * 0.5)), Color("#ffd27a"))
+				m.circle(c + Vector2(-s * 0.45, s * 0.25), s * 0.14, Color("#fff2c8"))
+				m.circle(c + Vector2(s * 0.45, s * 0.25), s * 0.14, Color("#fff2c8"))
+				m.line(c + Vector2(-s * 0.6, s * 0.95), c + Vector2(-s * 0.35, s * 0.55), ink, maxf(2.0, s * 0.15))
+				m.line(c + Vector2(s * 0.6, s * 0.95), c + Vector2(s * 0.35, s * 0.55), ink, maxf(2.0, s * 0.15))
 			"coin":
-				ci.draw_circle(c, s * 0.95, ink)
-				ci.draw_circle(c, s * 0.8, Color("#ffc93c"))
-				ci.draw_circle(c, s * 0.5, Color("#e0a020"))
+				m.circle(c, s * 0.95, ink)
+				m.circle(c, s * 0.8, Color("#ffc93c"))
+				m.circle(c, s * 0.5, Color("#e0a020"))
 			"heart":
-				ci.draw_circle(c + Vector2(-s * 0.42, -s * 0.25), s * 0.48, col)
-				ci.draw_circle(c + Vector2(s * 0.42, -s * 0.25), s * 0.48, col)
-				_poly(ci, [c + Vector2(-s * 0.88, -s * 0.12), c + Vector2(s * 0.88, -s * 0.12), c + Vector2(0, s * 0.92)],
+				m.circle(c + Vector2(-s * 0.42, -s * 0.25), s * 0.48, col)
+				m.circle(c + Vector2(s * 0.42, -s * 0.25), s * 0.48, col)
+				_poly(m, [c + Vector2(-s * 0.88, -s * 0.12), c + Vector2(s * 0.88, -s * 0.12), c + Vector2(0, s * 0.92)],
 					col, Color(0, 0, 0, 0))
 			"chevron":
-				_poly(ci, [c + Vector2(-s * 0.5, -s * 0.9), c + Vector2(s * 0.6, 0), c + Vector2(-s * 0.5, s * 0.9),
+				_poly(m, [c + Vector2(-s * 0.5, -s * 0.9), c + Vector2(s * 0.6, 0), c + Vector2(-s * 0.5, s * 0.9),
 					c + Vector2(-s * 0.15, 0)], col, Color(0, 0, 0, 0))
 			"arrow_down":
-				_poly(ci, [c + Vector2(-s, -s * 0.6), c + Vector2(s, -s * 0.6), c + Vector2(0, s * 0.8)], col, ink)
+				_poly(m, [c + Vector2(-s, -s * 0.6), c + Vector2(s, -s * 0.6), c + Vector2(0, s * 0.8)], col, ink)
 			_:
 				if kind.begins_with("rank_"):
 					# rank clocks: `col` rim, ink face, light hands (C_TEXT_HAND), one clock per rank step
 					var n2: int = clampi(kind.trim_prefix("rank_").to_int(), 1, 3)
 					for i in n2:
 						var cc: Vector2 = Vector2(r.position.x + s * 0.95 + float(i) * s * 2.05, c.y)
-						ci.draw_circle(cc, s * 0.95, col)
-						ci.draw_circle(cc, s * 0.72, ink)
+						m.circle(cc, s * 0.95, col)
+						m.circle(cc, s * 0.72, ink)
 						var w2: float = maxf(1.6, s * 0.22)
-						ci.draw_line(cc, cc + Vector2(0, -s * 0.55), C_TEXT_HAND, w2, true)
-						ci.draw_line(cc, cc + Vector2(s * 0.42, s * 0.12), C_TEXT_HAND, w2, true)
-						ci.draw_circle(cc, w2 * 0.6, C_TEXT_HAND)
+						m.line(cc, cc + Vector2(0, -s * 0.55), C_TEXT_HAND, w2, true)
+						m.line(cc, cc + Vector2(s * 0.42, s * 0.12), C_TEXT_HAND, w2, true)
+						m.circle(cc, w2 * 0.6, C_TEXT_HAND)
 				else:
-					ci.draw_circle(c, s * 0.8, ink)
-					ci.draw_circle(c, s * 0.62, col)
+					m.circle(c, s * 0.8, ink)
+					m.circle(c, s * 0.62, col)
+		return m
 
 
-	static func _poly(ci: CanvasItem, pts: Array, fill: Color, outline: Color) -> void:
+	## Filled polygon with a 3 px antialiased ink outline (was draw_polyline(loop, outline, 3.0, true) + fill).
+	static func _poly(m: IconMesh, pts: Array, fill: Color, outline: Color) -> void:
 		var p: PackedVector2Array = PackedVector2Array()
 		for v: Variant in pts:
 			p.append(v as Vector2)
 		if outline.a > 0.0:
-			var loop: PackedVector2Array = p.duplicate()
-			loop.append(p[0])
-			ci.draw_polyline(loop, outline, 3.0, true)
-		ci.draw_colored_polygon(p, fill)
+			m.outline(p, outline, 3.0)
+		m.poly(p, fill)
 
 
 ## Horizontal bar with a trailing (damage) segment that catches up after 0.5 s (03_ART §9.2).

@@ -8,8 +8,10 @@ extends Node
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const TitleFlow := preload("res://scenes/title/title_flow.gd")
-const AutoplayScript := preload("res://scenes/boot/autoplay.gd")
-const FullRunScript := preload("res://scenes/boot/fullrun.gd")
+## Loaded only with --autoplay[=full]: both drivers type-check against every screen class, so preloading them here
+## compiled the whole game before the first frame (02_TECH §12.1 "Start", §13.2 rule 6).
+const AUTOPLAY_SCRIPT: String = "res://scenes/boot/autoplay.gd"
+const FULLRUN_SCRIPT: String = "res://scenes/boot/fullrun.gd"
 const GLOBAL_UI: String = "res://scenes/ui/global_ui.tscn"
 const EVENT_LOBBY: String = "res://scenes/ui/event_lobby.tscn"
 const LOGO_SEC: float = 2.0
@@ -35,13 +37,14 @@ func _ready() -> void:
 		var ap: Node = null
 		if str(args.get("autoplay_mode", "")) == "full":
 			# Full Floor-1 bot (§11.4.1): real saves in its own directory (fullrun.gd prepare_saves in _ready).
-			Engine.time_scale = FullRunScript.TIME_SCALE
-			ap = FullRunScript.new()
+			var fr: GDScript = load(FULLRUN_SCRIPT) as GDScript
+			Engine.time_scale = float(fr.get_script_constant_map().get("TIME_SCALE", 5.0))
+			ap = fr.new() as Node
 			ap.name = "FullRun"
 		else:
 			Save.read_only = true
 			Engine.time_scale = 5.0
-			ap = AutoplayScript.new()
+			ap = (load(AUTOPLAY_SCRIPT) as GDScript).new() as Node
 			ap.name = "Autoplay"
 		get_tree().root.add_child.call_deferred(ap)
 	Game.apply_settings()

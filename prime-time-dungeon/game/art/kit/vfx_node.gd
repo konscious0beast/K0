@@ -6,6 +6,10 @@ extends Node3D
 const CONFETTI_COLORS: Array[Color] = [Color("#ff2e88"), Color("#ffc93c"), Color("#22d3ee"), Color("#2bd66b")]
 const ICE: Color = Color("#7fd8ff")
 const POISON: Color = Color("#7cc242")
+const QUAD_CACHE_MAX: int = 64
+
+## Tinted additive quads (_tint_quad): size + colour → mesh, shared by every VfxNode (pooled effects re-tint often).
+static var _quad_meshes: Dictionary = {}
 
 var kind: StringName = &""
 var life: float = 0.5
@@ -96,12 +100,12 @@ func setup(p_kind: StringName, p_life: float, p_loop: bool) -> void:
 			shards.angular_velocity_min = -360.0
 			shards.angular_velocity_max = 360.0
 			var ring := _quad("FrostRing", Vector2(2.6, 2.6), 2, false, ICE)
-			ring.material_override = Materials.vfx_additive_ex(ICE, 2, 0.35, 3.2, false)
+			ring.material_override = Materials.vfx_additive_ex(Color.WHITE, 2, 0.35, 3.2, false)
 			ring.rotation = Vector3(-PI * 0.5, 0, 0)
 			ring.position = Vector3(0, 0.03, 0)
 			_fx.append({"node": ring, "type": "grow", "max": 1.0, "grow": 0.25, "tint": false})
-			var core := _quad("Core", Vector2(1.2, 1.2), 0, true, Color.WHITE)
-			core.material_override = Materials.vfx_additive_ex(Color("#e6f8ff"), 0, 0.8, 3.0, true)
+			var core := _quad("Core", Vector2(1.2, 1.2), 0, true, Color("#e6f8ff"))
+			core.material_override = Materials.vfx_additive_ex(Color.WHITE, 0, 0.8, 3.0, true)
 			core.position = Vector3(0, 0.6, 0)
 			_fx.append({"node": core, "type": "flash", "time": 0.15, "tint": false})
 		"shock":
@@ -300,10 +304,8 @@ func play(color: Color, scl: float) -> void:
 			p.emitting = false
 	for fx: Dictionary in _fx:
 		var n: Node3D = fx["node"]
-		if bool(fx.get("tint", false)) and color.a > 0.0 and n is MeshInstance3D:
-			var shape: int = int(fx.get("shape", 0))
-			(n as MeshInstance3D).material_override = Materials.vfx_additive_ex(color, shape, 0.5, 2.0,
-				bool(fx.get("billboard", true)))
+		if bool(fx.get("tint", false)) and color.a > 0.0 and n is MeshInstance3D and n.has_meta(&"quad_size"):
+			(n as MeshInstance3D).mesh = _tint_quad(n.get_meta(&"quad_size") as Vector2, color)
 		n.visible = true
 	if kind == &"slash" or kind == &"bite":
 		_face_camera()
@@ -402,13 +404,14 @@ func _sparks(amount: int, color: Color, tint: bool) -> CPUParticles3D:
 	return s
 
 
+## Additive quad: the tint lives in the vertex colours (_tint_quad), the material is the shared white one of its shape
+## — one material per shape instead of one per tint (02_TECH §12.1 Materialien; vfx_additive multiplies COLOR).
 func _quad(node_name: String, size: Vector2, shape: int, billboard: bool, color: Color) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	mi.name = node_name
-	var q := QuadMesh.new()
-	q.size = size
-	mi.mesh = q
-	mi.material_override = Materials.vfx_additive_ex(color, shape, 0.5, 2.0, billboard)
+	mi.mesh = _tint_quad(size, color)
+	mi.set_meta(&"quad_size", size)
+	mi.material_override = Materials.vfx_additive_ex(Color.WHITE, shape, 0.5, 2.0, billboard)
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mi)
 	return mi
@@ -457,31 +460,30 @@ func _build_sponsor() -> void:
 	var parcel := Node3D.new()
 	parcel.name = "Parcel"
 	add_child(parcel)
+	# Box (sponsor colour) + parachute (paper): ONE vertex-coloured mesh with the figures' toon_vc material (+ its
+	# outline), so a drop adds no material of its own instead of one toon material per sponsor colour (02_TECH §12.1
+	# Materialien ≤ 24 while the drop overlaps skill and status effects).
 	var box := MeshInstance3D.new()
 	box.name = "Box"
-	box.mesh = MeshUtil.box(Vector3(0.4, 0.4, 0.4))
-	box.material_override = Materials.toon(Palette.NOVA_MAGENTA, {"bands": 3, "rim": 0.45, "outline_width": 0.02})
+	box.mesh = _parcel_mesh(Palette.NOVA_MAGENTA)
+	box.material_override = Materials.toon_vc(CharacterBuilder.DEFAULT_MAT)
 	parcel.add_child(box)
+	# Ribbon bands + parachute strings: ONE vertex-coloured mesh with the confetti material (02_TECH §12.1: one mesh
+	# instead of six, two unique materials less while the drop overlaps other effects).
+	var parts: Array[Dictionary] = []
 	for rot: float in [0.0, 90.0]:
-		var band := MeshInstance3D.new()
-		band.mesh = MeshUtil.box(Vector3(0.42, 0.42, 0.08))
-		band.rotation_degrees = Vector3(0, rot, 0)
-		band.material_override = Materials.toon(Palette.PAPER, {"bands": 3, "rim": 0.3, "outline": false})
-		parcel.add_child(band)
-	var chute := MeshInstance3D.new()
-	chute.name = "Chute"
-	chute.mesh = MeshUtil.hemisphere(0.4)
-	chute.position = Vector3(0, 0.75, 0)
-	chute.material_override = Materials.toon(Palette.PAPER, {"bands": 3, "rim": 0.45, "outline_width": 0.02})
-	parcel.add_child(chute)
+		parts.append(MeshUtil.part(MeshUtil.box(Vector3(0.42, 0.42, 0.08)), Vector3.ZERO, Palette.PAPER,
+			Vector3(0, rot, 0)))
 	for k in 4:
 		var a: float = TAU * float(k) / 4.0 + PI * 0.25
-		var line := MeshInstance3D.new()
-		line.mesh = MeshUtil.cylinder(0.008, 0.008, 0.6)
-		line.position = Vector3(cos(a) * 0.17, 0.48, sin(a) * 0.17)
-		line.rotation = Vector3(sin(a) * 0.35, 0, -cos(a) * 0.35)
-		line.material_override = Materials.toon(Palette.INK, {"outline": false, "rim": 0.0})
-		parcel.add_child(line)
+		parts.append(MeshUtil.part(MeshUtil.cylinder(0.008, 0.008, 0.6), Vector3(cos(a) * 0.17, 0.48, sin(a) * 0.17),
+			Palette.INK, Vector3(rad_to_deg(sin(a) * 0.35), 0, rad_to_deg(-cos(a) * 0.35))))
+	var trim := MeshInstance3D.new()
+	trim.name = "Trim"
+	trim.mesh = MeshUtil.merge_no_hull(parts)
+	trim.material_override = Materials.toon_vc({"outline": false, "rim": 0.3})
+	trim.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parcel.add_child(trim)
 	_fx.append({"node": parcel, "type": "parcel", "tint": false, "box": box})
 	var conf := _confetti(40)
 	_delays[_delays.size() - 1] = 1.1
@@ -489,6 +491,35 @@ func _build_sponsor() -> void:
 	var holo := _quad("Holo", Vector2(1.6, 0.7), 0, true, Palette.NOVA_MAGENTA)
 	holo.position = Vector3(0, 1.4, 0)
 	_fx.append({"node": holo, "type": "holo", "tint": true})
+
+
+## Quad like QuadMesh(size) (centred, faces +Z, UV 0..1 from the top left) with `color` as vertex colour; cached.
+static func _tint_quad(size: Vector2, color: Color) -> ArrayMesh:
+	var key: String = "%.3f,%.3f|%s" % [size.x, size.y, color.to_html()]
+	if _quad_meshes.has(key):
+		return _quad_meshes[key]
+	if _quad_meshes.size() >= QUAD_CACHE_MAX:
+		_quad_meshes.clear()
+	var h: Vector2 = size * 0.5
+	var arrays: Array = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = PackedVector3Array([Vector3(-h.x, h.y, 0), Vector3(h.x, h.y, 0), Vector3(h.x, -h.y, 0),
+		Vector3(-h.x, -h.y, 0)])
+	arrays[Mesh.ARRAY_NORMAL] = PackedVector3Array([Vector3.BACK, Vector3.BACK, Vector3.BACK, Vector3.BACK])
+	arrays[Mesh.ARRAY_TEX_UV] = PackedVector2Array([Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1)])
+	arrays[Mesh.ARRAY_COLOR] = PackedColorArray([color, color, color, color])
+	arrays[Mesh.ARRAY_INDEX] = PackedInt32Array([0, 1, 2, 0, 2, 3])
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	_quad_meshes[key] = mesh
+	return mesh
+
+
+## Parcel box in `box_color` + paper parachute (0.75 m above), merged with smoothed hull normals for the outline.
+static func _parcel_mesh(box_color: Color) -> ArrayMesh:
+	var parts: Array[Dictionary] = [MeshUtil.part(MeshUtil.box(Vector3(0.4, 0.4, 0.4)), Vector3.ZERO, box_color),
+		MeshUtil.part(MeshUtil.hemisphere(0.4), Vector3(0, 0.75, 0), Palette.PAPER)]
+	return MeshUtil.merge(parts)
 
 
 static func _ramp(colors: Array, offsets: Array) -> Gradient:
@@ -581,7 +612,7 @@ func _animate(delta: float) -> void:
 			"parcel":
 				var box: MeshInstance3D = fx["box"]
 				if _color.a > 0.0 and delta == 0.0:
-					box.material_override = Materials.toon(_color, {"bands": 3, "rim": 0.45, "outline_width": 0.02})
+					box.mesh = _parcel_mesh(_color)
 				if _t < 0.6:
 					var k3: float = _t / 0.6
 					var st := Vector3(8, 6, 4)

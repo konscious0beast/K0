@@ -10,6 +10,9 @@ const POOL_SIZE: int = 12
 const UI_POOL_SIZE: int = 4
 const PITCH_JITTER: float = 0.04
 const SILENT_DB: float = -60.0
+## Exit drain (02_TECH §3.8): the AudioServer releases stopped playbacks on its mix thread one or two mix steps
+## (≈ 10–25 ms each) later; 120 ms covers that with margin on a loaded machine.
+const SHUTDOWN_DRAIN_MS: int = 120
 
 var _pool: Array[AudioStreamPlayer] = []
 var _ui_pool: Array[AudioStreamPlayer] = []
@@ -37,6 +40,29 @@ func _init() -> void:
 		_ui_pool.append(_make_player("Ui%d" % i, BUS_UI))
 	for i in 2:
 		_music_players.append(_make_player("Music%d" % i, BUS_MUSIC))
+
+
+## Sfx leaves the tree only when the process quits (it is the last autoload, so every screen has left before). The
+## AudioServer is torn down right after the scene tree; a playback that is still registered then is never freed and
+## Godot reports "ObjectDB instances were leaked at exit" (AudioStreamPlaybackWAV + its AudioStreamWAV, measured 4.7.2
+## in tests and the autoplay smoke). So: stop everything and give the mix thread time to release the playbacks.
+func _exit_tree() -> void:
+	if stop_all():
+		OS.delay_msec(SHUTDOWN_DRAIN_MS)
+
+
+## Stops the music and every SFX/UI player at once (no fade). Returns true if any player had a playback.
+func stop_all() -> bool:
+	if _music_tween != null and _music_tween.is_valid():
+		_music_tween.kill()
+	_music_tween = null
+	_music_id = &""
+	var had: bool = false
+	for p: AudioStreamPlayer in _pool + _ui_pool + _music_players:
+		if is_instance_valid(p) and p.has_stream_playback():
+			had = true
+			p.stop()
+	return had
 
 
 func _make_player(node_name: String, bus: StringName) -> AudioStreamPlayer:

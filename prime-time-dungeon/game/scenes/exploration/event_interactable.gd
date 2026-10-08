@@ -34,6 +34,7 @@ func setup_event(p_ev: EventSpawn, palette: Dictionary, prop_seed: int) -> void:
 	add_child(prop)
 	if p_ev.type != "photo_drone":
 		_make_blocker(Vector3(1.1, 1.8, 0.9), Vector3(0.0, 0.9, 0.0))
+		_drop_prop_collision(prop)
 	_make_area(Rules.INTERACT_RADIUS + extent + 0.8)
 	refresh()
 

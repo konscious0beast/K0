@@ -482,7 +482,7 @@ func test_debug_overlay_info() -> void:
 	await wait_frames(2)
 	var dbg: CanvasLayer = g.get("debug_overlay") as CanvasLayer
 	var info: String = str(dbg.call("info_text"))
-	for key: String in ["FPS", "Seed"]:
+	for key: String in ["FPS", "Seed", "Draw Calls", "3D", "UI"]:
 		assert_has(info, key, "debug info lists %s" % key)
 	dbg.call("send_test_gift")
 	await wait_frames(1)

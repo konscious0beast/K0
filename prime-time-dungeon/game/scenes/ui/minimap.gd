@@ -4,6 +4,7 @@ extends Control
 ## Data: FloorLayout (M3) — while the generator is a stub, `layout_from_def()` builds a display copy from FloorDef.layout.
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
+const IconMesh := preload("res://scenes/ui/icon_mesh.gd")
 const DIRS: Array[Vector2i] = [Vector2i(0, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0)]   # N E S W
 const DOOR_BITS: Array[int] = [1, 2, 4, 8]
 const MIN_SPAN_SMALL: int = 5           # the HUD map shows at least 5×5 cells around what is known
@@ -19,6 +20,11 @@ var big: bool = false
 var show_unvisited: bool = false        # debug/capture: draw every cell
 var swatch_kind: String = ""            # legend swatch: "player" | "start" | "safe" | "stairs" | "boss" | "gate"
 var _blink: float = 0.0
+## Everything goes out as ONE triangle array (icon_mesh.gd, 02_TECH §12.1: before, every cell, door, marker and gate
+## was its own canvas draw call — ~150 with the whole floor visited). The cell layer is cached until the view, the
+## visited cells, the opened gates or the size change; only the pulsing player arrow is rebuilt every frame.
+var _cells_mesh: IconMesh = null
+var _cells_key: String = ""
 
 
 func _init() -> void:
@@ -37,6 +43,7 @@ static func swatch(p_kind: String, p_size: float = 30.0) -> Control:
 func bind(p_layout: FloorLayout, p_visited: Array[Vector2i]) -> void:
 	layout = p_layout
 	visited = p_visited.duplicate()
+	_cells_mesh = null
 	queue_redraw()
 
 
@@ -111,35 +118,63 @@ static func layout_from_def(def: FloorDef) -> FloorLayout:
 
 
 func _draw() -> void:
+	build_mesh().commit(self)
+
+
+## The whole map (or legend swatch) as one IconMesh in drawing order. Headless tests use it directly.
+func build_mesh() -> IconMesh:
+	var m: IconMesh = IconMesh.new()
 	if swatch_kind != "":
-		_draw_swatch()
-		return
+		_mesh_swatch(m)
+		return m
 	var r: Rect2 = Rect2(Vector2.ZERO, size)
-	draw_rect(r, Color(UiTheme.C_PANEL, 0.78 if not big else 0.55), true)
-	draw_rect(r, Color(UiTheme.C_ACCENT_2, 0.6 if not big else 0.35), false, 2.0)
+	m.rect(r, Color(UiTheme.C_PANEL, 0.78 if not big else 0.55))
+	m.rect_outline(r, Color(UiTheme.C_ACCENT_2, 0.6 if not big else 0.35), 2.0)
 	if layout == null or layout.width <= 0 or layout.height <= 0:
-		return
+		return m
 	var pad: float = 8.0 if not big else 24.0
 	var view: Rect2 = view_cells()
 	var cs: float = minf((size.x - pad * 2.0) / view.size.x, (size.y - pad * 2.0) / view.size.y)
 	cs = minf(cs, MAX_CELL_BIG if big else MAX_CELL_SMALL)
 	var origin: Vector2 = size * 0.5 - (view.position + view.size * 0.5) * cs
-	var gap: float = maxf(1.5, cs * 0.14)
 	var opened: PackedStringArray = []
 	if Game.state != null and Game.state.floor_run != null:
 		opened = Game.state.floor_run.opened_gates
+	var key: String = "%s|%s|%d|%d|%s" % [size, view, visited.size(), opened.size(), show_unvisited]
+	if _cells_mesh == null or key != _cells_key:
+		_cells_mesh = _mesh_cells(origin, cs, opened)
+		_cells_key = key
+	m.append(_cells_mesh)
+	if player_cell.x >= 0 and layout.cells.has(player_cell):
+		var pc: Vector2 = origin + (Vector2(player_cell) + Vector2(0.5, 0.5)) * cs
+		var fwd: Vector2 = Vector2(-sin(player_yaw), -cos(player_yaw))
+		var side: Vector2 = Vector2(-fwd.y, fwd.x)
+		var alen: float = cs * 0.32
+		var pulse: float = 0.8 + 0.2 * sin(_blink * TAU * 1.5)
+		var pts: PackedVector2Array = [pc + fwd * alen, pc - fwd * alen * 0.6 + side * alen * 0.7,
+			pc - fwd * alen * 0.25, pc - fwd * alen * 0.6 - side * alen * 0.7]
+		m.circle(pc, alen * 1.25, Color(UiTheme.C_ACCENT_2, 0.25 * pulse), true)
+		m.poly(pts, UiTheme.C_ACCENT_2)
+		m.polyline(pts, UiUtil.C_INK, 1.5, true)
+	return m
+
+
+## Cells (zone colour + frame), door stubs, kind markers and gate bars.
+func _mesh_cells(origin: Vector2, cs: float, opened: PackedStringArray) -> IconMesh:
+	var m: IconMesh = IconMesh.new()
+	var gap: float = maxf(1.5, cs * 0.14)
 	for key: Variant in layout.cells.keys():
 		var cell: Vector2i = key
 		var rc: RoomCell = layout.cells[key] as RoomCell
 		if rc == null or (not show_unvisited and not visited.has(cell)):
 			continue
 		var cr: Rect2 = Rect2(origin + Vector2(cell) * cs + Vector2(gap, gap), Vector2(cs - gap * 2.0, cs - gap * 2.0))
-		draw_rect(cr, _cell_color(rc), true)
-		draw_rect(cr, Color(1, 1, 1, 0.18), false, 1.0)
+		m.rect(cr, _cell_color(rc))
+		m.rect_outline(cr, Color(1, 1, 1, 0.18), 1.0)
 		for i in 4:
 			if rc.doors & DOOR_BITS[i]:
-				_draw_door(origin, cs, gap, cell, i, _cell_color(rc))
-		_draw_marker(cr, rc)
+				_mesh_door(m, origin, cs, gap, cell, i, _cell_color(rc))
+		_mesh_marker(m, cr, rc)
 	for g: Dictionary in layout.gates:
 		var gcell: Vector2i = g.get("cell", Vector2i.ZERO)
 		if not show_unvisited and not visited.has(gcell):
@@ -152,18 +187,8 @@ func _draw() -> void:
 		var center: Vector2 = origin + (Vector2(gcell) + Vector2(0.5, 0.5)) * cs
 		var d: Vector2 = Vector2(DIRS[i]) * (cs * 0.5)
 		var across: Vector2 = Vector2(-DIRS[i].y, DIRS[i].x) * (cs * 0.28)
-		draw_line(center + d - across, center + d + across, col, maxf(3.0, cs * 0.14))
-	if player_cell.x >= 0 and layout.cells.has(player_cell):
-		var pc: Vector2 = origin + (Vector2(player_cell) + Vector2(0.5, 0.5)) * cs
-		var fwd: Vector2 = Vector2(-sin(player_yaw), -cos(player_yaw))
-		var side: Vector2 = Vector2(-fwd.y, fwd.x)
-		var alen: float = cs * 0.32
-		var pulse: float = 0.8 + 0.2 * sin(_blink * TAU * 1.5)
-		var pts: PackedVector2Array = [pc + fwd * alen, pc - fwd * alen * 0.6 + side * alen * 0.7,
-			pc - fwd * alen * 0.25, pc - fwd * alen * 0.6 - side * alen * 0.7]
-		draw_circle(pc, alen * 1.25, Color(UiTheme.C_ACCENT_2, 0.25 * pulse), true, -1.0, true)
-		draw_colored_polygon(pts, UiTheme.C_ACCENT_2)
-		draw_polyline(pts + PackedVector2Array([pts[0]]), UiUtil.C_INK, 1.5, true)
+		m.line(center + d - across, center + d + across, col, maxf(3.0, cs * 0.14))
+	return m
 
 
 ## Cell-space rect that is drawn: bounding box of the shown cells (visited, or all with show_unvisited) and the player,
@@ -202,26 +227,26 @@ func view_cells() -> Rect2:
 	return Rect2(center - Vector2(w, h) * 0.5, Vector2(w, h))
 
 
-func _draw_swatch() -> void:
+func _mesh_swatch(m: IconMesh) -> void:
 	var cs: float = minf(size.x, size.y)
 	var gap: float = maxf(1.5, cs * 0.1)
 	var cr: Rect2 = Rect2((size - Vector2(cs, cs)) * 0.5 + Vector2(gap, gap), Vector2(cs - gap * 2.0, cs - gap * 2.0))
 	var rc: RoomCell = RoomCell.new()
 	rc.kind = {"safe": RoomCell.Kind.SAFE, "stairs": RoomCell.Kind.STAIRS, "boss": RoomCell.Kind.QUARTER_BOSS,
 		"start": RoomCell.Kind.START}.get(swatch_kind, RoomCell.Kind.NORMAL) as RoomCell.Kind
-	draw_rect(cr, _cell_color(rc), true)
-	draw_rect(cr, Color(1, 1, 1, 0.18), false, 1.0)
-	_draw_marker(cr, rc)
+	m.rect(cr, _cell_color(rc))
+	m.rect_outline(cr, Color(1, 1, 1, 0.18), 1.0)
+	_mesh_marker(m, cr, rc)
 	var c: Vector2 = cr.get_center()
 	if swatch_kind == "gate":
-		draw_line(c + Vector2(cs * 0.5 - 1.0, -cs * 0.28), c + Vector2(cs * 0.5 - 1.0, cs * 0.28), UiTheme.C_DANGER,
+		m.line(c + Vector2(cs * 0.5 - 1.0, -cs * 0.28), c + Vector2(cs * 0.5 - 1.0, cs * 0.28), UiTheme.C_DANGER,
 			maxf(3.0, cs * 0.14))
 	elif swatch_kind == "player":
 		var alen: float = cs * 0.32
 		var pts: PackedVector2Array = [c + Vector2(0, -alen), c + Vector2(alen * 0.7, alen * 0.6),
 			c + Vector2(0, alen * 0.25), c + Vector2(-alen * 0.7, alen * 0.6)]
-		draw_colored_polygon(pts, UiTheme.C_ACCENT_2)
-		draw_polyline(pts + PackedVector2Array([pts[0]]), UiUtil.C_INK, 1.5, true)
+		m.poly(pts, UiTheme.C_ACCENT_2)
+		m.polyline(pts, UiUtil.C_INK, 1.5, true)
 
 
 func _cell_color(rc: RoomCell) -> Color:
@@ -241,28 +266,28 @@ func _cell_color(rc: RoomCell) -> Color:
 	return base.lightened(0.28)
 
 
-func _draw_door(origin: Vector2, cs: float, gap: float, cell: Vector2i, i: int, col: Color) -> void:
+func _mesh_door(m: IconMesh, origin: Vector2, cs: float, gap: float, cell: Vector2i, i: int, col: Color) -> void:
 	var center: Vector2 = origin + (Vector2(cell) + Vector2(0.5, 0.5)) * cs
 	var d: Vector2 = Vector2(DIRS[i])
 	var w: float = maxf(2.0, cs * 0.26)
 	var a: Vector2 = center + d * (cs * 0.5 - gap - 0.5)
 	var b: Vector2 = center + d * (cs * 0.5 + 0.5)
-	draw_line(a, b, col, w)
+	m.line(a, b, col, w)
 
 
-func _draw_marker(cr: Rect2, rc: RoomCell) -> void:
+func _mesh_marker(m: IconMesh, cr: Rect2, rc: RoomCell) -> void:
 	var c: Vector2 = cr.get_center()
 	var s: float = cr.size.x * 0.28
 	match rc.kind:
 		RoomCell.Kind.STAIRS:
 			for i in 3:
-				draw_rect(Rect2(c + Vector2(-s + i * s * 0.4, -s * 0.6 + i * s * 0.45), Vector2(s * 2.0 - i * s * 0.8,
-					s * 0.38)), UiTheme.C_GOLD, true)
+				m.rect(Rect2(c + Vector2(-s + i * s * 0.4, -s * 0.6 + i * s * 0.45), Vector2(s * 2.0 - i * s * 0.8,
+					s * 0.38)), UiTheme.C_GOLD)
 		RoomCell.Kind.SAFE:
-			draw_rect(Rect2(c - Vector2(s * 0.25, s * 0.8), Vector2(s * 0.5, s * 1.6)), UiUtil.C_PAPER, true)
-			draw_rect(Rect2(c - Vector2(s * 0.8, s * 0.25), Vector2(s * 1.6, s * 0.5)), UiUtil.C_PAPER, true)
+			m.rect(Rect2(c - Vector2(s * 0.25, s * 0.8), Vector2(s * 0.5, s * 1.6)), UiUtil.C_PAPER)
+			m.rect(Rect2(c - Vector2(s * 0.8, s * 0.25), Vector2(s * 1.6, s * 0.5)), UiUtil.C_PAPER)
 		RoomCell.Kind.QUARTER_BOSS, RoomCell.Kind.FLOOR_BOSS:
-			draw_circle(c, s * 0.8, UiTheme.C_DANGER, true, -1.0, true)
-			draw_circle(c, s * 0.35, UiUtil.C_INK, true, -1.0, true)
+			m.circle(c, s * 0.8, UiTheme.C_DANGER, true)
+			m.circle(c, s * 0.35, UiUtil.C_INK, true)
 		RoomCell.Kind.START:
-			draw_circle(c, s * 0.45, Color(UiUtil.C_PAPER, 0.7), false, 2.0, true)
+			m.ring(c, s * 0.45, Color(UiUtil.C_PAPER, 0.7), 2.0, true)

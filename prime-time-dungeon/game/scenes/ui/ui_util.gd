@@ -162,6 +162,18 @@ static func label(text: String, variation: StringName = &"", font_size: int = 0,
 	return l
 
 
+## Word-wraps l at max_width while a short text keeps its natural width, so a long data text (quest, event name)
+## cannot widen its container past the safe rect. Call once l is in the tree (measured with the inherited theme font)
+## and again after changing its text.
+static func wrap_label(l: Label, max_width: float) -> Label:
+	l.autowrap_mode = TextServer.AUTOWRAP_OFF
+	l.custom_minimum_size.x = 0.0
+	var natural: float = ceilf(l.get_minimum_size().x)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.custom_minimum_size.x = minf(natural, max_width)
+	return l
+
+
 static func button(text: String, variation: StringName = &"", min_height: int = 0) -> Button:
 	var b: Button = Button.new()
 	b.text = text

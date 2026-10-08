@@ -468,6 +468,29 @@ func _check_safe_rect(paths: Array[String], res: Vector2i) -> void:
 		_dispose(n)
 
 
+## UiUtil.wrap_label: a short text keeps its natural width; a long data text (e.g. an all_of quest with achievement
+## names, run_result) is capped and wraps onto more lines instead of widening its container past the safe rect.
+func test_wrap_label_caps_long_texts() -> void:
+	var col: VBoxContainer = UiUtil.vbox(6)
+	add_to_tree(col)
+	var short: Label = UiUtil.label("Quest erfüllt: Erreiche die Treppe von Etage 1.", &"", 20)
+	col.add_child(short)
+	var natural: float = short.get_minimum_size().x
+	UiUtil.wrap_label(short, 880.0)
+	assert_eq(short.autowrap_mode, TextServer.AUTOWRAP_WORD_SMART)
+	assert_almost(short.get_combined_minimum_size().x, ceilf(natural), 0.5, "a short text keeps its natural width")
+	var long: Label = UiUtil.label("Quest erfüllt: " + "Besiege die Rattenkönigin vor dem Sendeschluss. ".repeat(6),
+		&"", 20)
+	col.add_child(long)
+	assert_gt(long.get_minimum_size().x, 880.0, "the unwrapped text is wider than the cap")
+	UiUtil.wrap_label(long, 880.0)
+	await wait_frames(2)
+	assert_almost(long.get_combined_minimum_size().x, 880.0, 0.5, "a long text is capped")
+	assert_lt(col.size.x, 880.5, "the container is not widened")
+	assert_gt(long.get_line_count(), 1, "the long text wraps")
+	assert_true(long.size.y >= float(long.get_line_count()) * long.get_line_height() - 0.5, "every line has room")
+
+
 ## With the touch layer shown, the pause/map hit areas never cover the minimap or the hype meter and keep exactly
 ## TouchControls.HUD_GAP to them: without insets and with a simulated notch on the right (the display insets move the
 ## buttons inwards; HUD and overlay re-measure the clearance on size_changed).

@@ -6,9 +6,10 @@
 > Entscheidungen dazu stehen gesammelt in §0.1 und sind in die Kapitel eingearbeitet.
 > **Vorrang:** `00_BRIEF` > **dieses Dokument** (alles Kampfrelevante: APIs, Schemas, Befehle, Pfade, Zahlenstruktur) >
 > `06_PROGRESSION_MAROTTEN_KI_ADMIN` (Progression, Marotten, KI-Admin, Twists — einschließlich ihres Verhältnisses zum Kampf:
-> Twists und KI-Zeilen gibt es im Kampf nicht) > `01_GDD` / `02_TECH` / `03_ART` / `05_LIVE_MODUS` (je nach Thema; Bestands-APIs
-> aus 02_TECH gelten, soweit 07 oder 06 sie nicht ändern). Bis zum Abschluss von R5 bleibt der CTB-Kampf hinter dem Schalter
-> `combat_mode` (§12.1) unverändert lauffähig; mit R5 ersetzen §2–§11 dieses Dokuments 01_GDD §3 und 02_TECH §5.
+> Twists und KI-Zeilen gibt es im Kampf nicht) > `08_CASTING` (Persona, Starttalente) > `01_GDD` / `02_TECH` / `03_ART` /
+> `05_LIVE_MODUS` (je nach Thema; Bestands-APIs aus 02_TECH gelten, soweit 07 oder 06 sie nicht ändern). Bis zum Abschluss
+> von R5 bleibt der CTB-Kampf hinter dem Schalter `combat_mode` (§12.1) unverändert lauffähig; mit R5 ersetzen §2–§11 dieses
+> Dokuments 01_GDD §3 und 02_TECH §5.
 > **Reihenfolge:** Die 06-Pakete A–D (Heldenwahl, Talent-Show/Spezies, Marotten, KI-Admin) werden **vor** jeder 07-Umsetzung
 > nach `claude/prime-time-dungeon` gemergt. R1a ist danach der **zweite Vertrags-Commit** (§12.2); Dateieigentum und
 > Merge-Regeln je Datei stehen in §12.3.
@@ -70,8 +71,8 @@
 
 Die Nutzerin/der Nutzer hat Detailentscheidungen delegiert (Maßstab: gute UX, Spaß, Witz, **einfaches, sofort verständliches**
 Konzept; Grundsatzentscheidung „Variante 3 — WoW-light direkt in der Welt“). Ein unabhängiges Review fand 33 Punkte; so sind sie
-entschieden (Nummern = Review-Punkte). E25–E27 sind Entscheidungen des Orchestrators nach dem Review, E28 kommt aus der
-Konsistenzprüfung derselben Revision:
+entschieden (Nummern = Review-Punkte). E25–E27 und E29 sind Entscheidungen des Orchestrators nach dem Review, E28 kommt aus
+der Konsistenzprüfung derselben Revision, E30 ist ein angenommener Änderungsantrag aus `08_CASTING` (CR-24):
 
 | Nr. | Thema (Review) | Entscheidung | Wo |
 |---|---|---|---|
@@ -104,6 +105,7 @@ Konsistenzprüfung derselben Revision:
 | E27 | KI-SHOW (Orchestrator) | Der KI-Partner darf die SHOW nutzen (Party-Abklingzeit 30 s, 5 s Vorrang der Person), damit Talente wie Mopsulas „Taktgefühl“ (`tal_mop_taktgefuehl`, `stunt_window_pm`; hieß bis zur 06-Integration „Dramatische Pause“ und wurde aus Abstandsgründen umbenannt) auch als KI-Partner wirken; Hype nach der bestehenden `by_ai`-Regel | §4.1, §9.1, §9.6 |
 | E28 | Erster Kampf (Konsistenzprüfung) | Der erste Kampf verlangt nur Bewegen, Ziel, Taste 1, SHOW und Ausweichen: Tutorial-Leiste nur Slot 1 + SHOW (Sim-Regel), Trank und Partner-Spezial ab dem zweiten Kampf, Taktik-Chip ab Stufe 3 (der erste Safe Room liegt direkt hinter dem Tutorial), Bedrohungsanzeige erst nach einem eigenen Spott; die schlafende Tutorial-Gruppe weckt auch eine Berührung (sonst bräuchte Held:in Mopsula Zielwahl und Taste 1 schon vor dem Kampf) | §2.2, §2.13, §4.1, §5.2, §8.1 |
 | E29 | Werte E25 abgenommen; Taktik-Hinweis (Orchestrator) | Die nachgestellten KI-Werte aus E25 (25 % „spät“ +45 Ticks, übersehene Telegraphen, Angriffs-Reaktion 15 Ticks) gelten als Startwerte für R4. Dass ein perfekter Mopsula-Spieler mit der Standard-Taktik noch 15–16 % Bossversuche verliert, ist gewollt: die Partner-Taktik ist Teil des Könnens. Damit das verständlich bleibt, zeigt ein einmaliger Kontext-Hinweis `partner_tactic` den Weg zu „Vorsichtig“ (§2.13) | §2.13, §5.2, §11.3 |
+| E30 | Element-Abwehr gegen Prozent-Treffer (08 CR-24, angenommen) | **Prozent-Treffer tragen das Element ihres Skills:** Nach dem Grundwert faltet `rt_damage.gd` zuerst den Element-Faktor des Ziels für dieses Element (`element_mods`, auf 500–1500 ‰ begrenzt, Immunität zählt als 500); ohne Element kein Schritt. ATK, DEF, RES, Krit und Varianz wirken auf Prozent-Treffer weiterhin nicht. So wirken Element-Talente (06 B, Starttalente aus 08) in beiden Kampfmodi; R4 misst die Bänder (§11) mit E30. Dazu ein **gemeinsamer Vertrags-Durchgang R1a + 08 K0** mit genau einem `SIM_VERSION`-Sprung, in dem auch die K0-Zeilen in `data_validator.gd` stehen | §3.9.1, §6.3, §9.6, §10.2, §12.2, §12.3, §12.5 |
 
 ---
 
@@ -912,8 +914,11 @@ amount = max(1, FixedMath.mul_pm(base, f))    sonst
   Validator-Maximum plus 9 Enrage-Stapel → `f = 8000`, Betrag `mul_pm(base, 8000)`, ohne Überlauf; neutrale Faktoren ändern
   nichts (kein Rundungsschritt).
 - **Prozent-Treffer** (`rt.pct_maxhp`, gegnerische Telegraphen §6.3, Zug, „Kreischen“): `base = div_round(max_hp(Ziel) × pct,
-  100)`, ohne Formel, Element, Krit, Varianz und ohne `dmg_pm`; gefaltet werden nur die `dmg_taken_pm`-Faktoren des Ziels und
-  Gepanzert als 667 ‰ (außer `ignore_guard`). Ein Treffer kostet so immer denselben, lesbaren Anteil („ein Viertel deiner HP“).
+  100)`, ohne Formel (also ohne ATK, DEF und RES), Krit, Varianz und ohne `dmg_pm`. Gefaltet werden zuerst der
+  **Element-Faktor des Ziels** für das Element des Skills (**E30**: `element_mods`, auf 500–1500 ‰ begrenzt, Immunität zählt
+  als 500; ohne Element kein Schritt), dann die `dmg_taken_pm`-Faktoren des Ziels und Gepanzert als 667 ‰ (außer
+  `ignore_guard`). Ein Treffer kostet so einen festen, lesbaren Anteil („ein Viertel deiner HP“), den nur Element-Abwehr
+  (Talente aus 06 B und 08) und Status-Faktoren verschieben.
 - `Kraft` = `rt.power` falls gesetzt, sonst `power` (R4 darf Echtzeit-Kräfte getrennt einstellen; nach der CTB-Entfernung wird
   `rt.power` in `power` gebacken).
 - **Combo:** Treffen beide Party-Mitglieder dasselbe Ziel mit schadenden Fähigkeiten (keine Auto-Angriffe) innerhalb von
@@ -1730,8 +1735,8 @@ Bossverlust-Quoten misst der Harness mit `typical` für **beide** Held:innen (`-
 
 - **Schaden:** Jeder gegnerische Telegraph trifft als **Prozent-Treffer** (`rt.pct_maxhp`, §3.9.1): **15–30 % der Max-HP** des
   Getroffenen (leicht 15, mittel 20, schwer 25–30; der Zug 35). Zwei Fehler tun weh, einer ist verkraftbar — Ausweichen lohnt sich
-  spürbar, und die Zahl ist für jede Figur und Ausrüstung gleich lesbar. Auto-Angriffe bleiben klein (≈ 2–8 % je Treffer,
-  Formel).
+  spürbar, und die Zahl hängt nicht an Werten und Ausrüstung, nur an der Element-Abwehr des Getroffenen (E30: Wer Gift-Abwehr
+  hat, verliert im Putzmittelnebel weniger). Auto-Angriffe bleiben klein (≈ 2–8 % je Treffer, Formel).
 - **Warnzeit = Zauberzeit** (`cast_ms`; Vorabendprogramm × 1,25). Der Telegraph erscheint beim Zauberstart, schlägt beim
   Zauberende ein; Unterbrechen/K.O. des Wirkers entfernt ihn (`TELEGRAPH_CANCELLED`).
 - **Nur im Ring:** Treffer und Darstellung enden am Ring (§3.5.4). Wer in einer Türgasse steht, wird nicht getroffen — flieht aber
@@ -2447,7 +2452,7 @@ Twists im Kampf** (06 §5.7) und kein `RtSim.apply_twist`; ein Twist-Befehl trä
 |---|---|---|
 | `stat_flat`, `stat_pct`, `liga_stat_pct` | `Progression.total_stats` | gleich: Werte der `RtUnit` (HP-Skala §3.9.4 danach) |
 | `crit_add_pm` | `Combatant.crit_bonus` | gleich: Krit-Formel §3.9.1 |
-| `element_pm` | `Combatant.element_mods` | gleich: `DamageCalc`; Status-Takte mit Element §3.8 |
+| `element_pm` | `Combatant.element_mods` | gleich: `DamageCalc`; Status-Takte mit Element §3.8; Prozent-Treffer mit Element (E30, §3.9.1) |
 | `post_battle_mp_pm` | `BattleBridge.apply_result` | gleich: Werbepause nach jedem Sieg (§2.7) |
 | `field_range_pm`, `field_cd_pm` | Feldschlag/Bellen (`EncounterRules`) | gleich; die Feldschlag-Reichweite gilt auch für den Pull per Feldschlag |
 | `preemptive_dmg_pm` („Erster Eindruck“, `tal_kai_erster_eindruck`) → `RtUnit.opener_pm` = `Talents.preemptive_dmg_pm(member, data)` (06 §8.3, gesetzt von `make_rt_setup`) | `BattleBridge.make_setup` (Schaden der ersten Runde nach Präventivschlag) | Faktor `opener_pm` in der Faltung (§3.9.1): bei Vorteil `PREEMPTIVE` auf alle Treffer der Einheit gegen Ziele mit `sts_dazed` (die 3 s des Überrumpelns) und auf ihren ersten schadenden Treffer im Kampf (`opener_done`) |
@@ -2458,6 +2463,7 @@ Twists im Kampf** (06 §5.7) und kein `RtSim.apply_twist`; ein Twist-Befehl trä
 Die Talentwahl findet nur in der Talent-Show im Safe Room statt; das Kampfergebnis zeigt höchstens den Chip „TALENT BEREIT“
 (§8.9). Talente brauchen keine `RtMods`-Einträge: Werte-Talente stecken in den `Combatant`-Werten, die zwei Verhaltens-Talente
 setzt `make_rt_setup` als `RtUnit.opener_pm`/`stunt_pm` (Quelle `Talents.*`, 06 §8.3; `core/rt` kennt `Talents` nicht).
+Das Starttalent der Persona (08 §3.3) nutzt nur diese Wirkungsarten und kommt über dieselben `Talents.*`-Abfragen an.
 
 **Marotten (06 §4, Paket C):** Der `MarottenTracker` bekommt im Echtzeitkampf denselben Ereignisstrom (über
 `Show.on_battle_event`, live und im Replay identisch) und liest zusätzlich `by_ai` (R5a, additiv). Regel: **Zähler einer
@@ -2568,7 +2574,8 @@ des `rt`-Blocks von `encounter`) an `RtCommand.validate` (R1a: Stub, R1b: Regeln
 - **Kampf-Prüfpunkte:** alle `CHECKPOINT_TICKS = 300` Kampf-Ticks und beim Kampfende `{"k": k, "ct": ct, "h":
   StateHash.of_rt(sim)}` (`RunLog.add_checkpoint(k, h, ct = -1)`, additiv); danach wie bisher ein Zustands-Prüfpunkt nach dem
   Kampf.
-- Kopf: `"combat_mode": "realtime"`, `"rt_version": 1`; `sim_version` wird erhöht.
+- Kopf: `"combat_mode": "realtime"`, `"rt_version": 1`; `sim_version` ist bereits im gemeinsamen Vertrags-Durchgang R1a + 08
+  K0 erhöht (genau einmal, §12.2); ältere Läufe meldet `RunSim.header_errors` als `old_version` („ältere Version“).
 - Das Kampfende ist **kein** Befehl: die Sim bestimmt es. Ein Kampf-Befehl mit `ct` nach dem Ende ist ein Replay-Fehler
   (`combat_cmd_after_end`). Der End-Prüfpunkt bestätigt Tick und Zustand.
 - `timer_mode: realtime` (05 S4, später): `k = k_encounter + ct`.
@@ -2845,9 +2852,9 @@ er enthält alles, was mehr als eine Phase braucht:
   erste Zeile `# STUB(R1a) — owned by <Phase>. Replace completely, keep the public API.`
 - **Additive Änderungen an geteilten Dateien** (Tabelle §12.3): Felder, Enum-Werte am Ende, Signale, `Command.TYPES`, `Game`-API
   als Stubs, `GameSettings`-Felder (§7.8), in `data_validator.gd` die Hook-Zeile für `validators/rt.gd`, das Tag-Präfix `rt_`,
-  die Payload-Schlüssel und StatIds aus §9.4 (die einzigen Änderungen an der seit 06 eingefrorenen Datei), der Ein-Zeilen-Wächter in
-  `Show.say_external` (§9.3), der Anker `mod_rt_set_quiet_01` in `mod_lines.json`, `data/rt_balance.json` mit den Startwerten
-  (§3.16), `core/data/validators/rt_vocab.gd` vollständig.
+  die Payload-Schlüssel und StatIds aus §9.4 (mit den K0-Zeilen aus 08 die einzigen Änderungen an der seit 06 eingefrorenen
+  Datei), der Ein-Zeilen-Wächter in `Show.say_external` (§9.3), der Anker `mod_rt_set_quiet_01` in `mod_lines.json`,
+  `data/rt_balance.json` mit den Startwerten (§3.16), `core/data/validators/rt_vocab.gd` vollständig.
 - **Fake-Sim und vorgefertigte Ereignisströme** in `tests/fixtures/rt_min/`: Fixture-Daten (Kopie von `data_min` + `rt`-Blöcke,
   zwei Testgegner, ein Testboss, `rt_balance.json`), `fake_rt_sim.gd` (`FakeRtSim extends RtSim`: spielt einen Strom ab —
   Einheiten-Schnappschüsse und Ereignisse je Tick, nimmt Befehle an und protokolliert sie) und die Ströme `regular_win.json`
@@ -2856,6 +2863,10 @@ er enthält alles, was mehr als eine Phase braucht:
   `{"setup": RtSetup.to_dict(), "ticks": [[ct, [ActionEvent.to_dict(), …], {unit_id: snapshot}], …]}`.
 - Gate: `check.sh --tests-only` grün (CTB und 06 unverändert), `test_r1a_contract` grün (alle Signaturen per Reflexion, Fake-Sim
   spielt jeden Strom).
+- **Gemeinsam mit 08 K0 (E30, CR-24):** R1a und der Casting-Vertrag K0 (08 §10.2) sind **ein** Durchgang derselben Person,
+  weil beide `StateHash` und die eingefrorene `data_validator.gd` berühren. `SIM_VERSION` steigt dabei **genau einmal**; vorher
+  läuft die Plattform-Matrix (05 Kap. 2). Ältere Replays und Bestenlisten-Einträge behalten ihre Version und erscheinen als
+  „ältere Version“. Zusätzliches Gate: `test_08_k0_contract`.
 
 **Phasenübergreifende Signaturen — vollständige Stub-Liste von R1a** (alles, was eine Phase von einer anderen aufruft oder
 liest; `test_r1a_contract` prüft jede Zeile per Reflexion):
@@ -2881,7 +2892,7 @@ liest; `test_r1a_contract` prüft jede Zeile per Reflexion):
 
 | Phase | Agent | Inhalt | Startet | Gate (Abnahme) |
 |---|---|---|---|---|
-| **R1a** Vertrag | Integrator | siehe oben | nach dem 06-Merge | `check.sh --tests-only`, `test_r1a_contract` |
+| **R1a** Vertrag | Integrator | siehe oben, zusammen mit 08 K0 | nach dem 06-Merge | `check.sh --tests-only`, `test_r1a_contract`, `test_08_k0_contract` |
 | **R1b** Kern | A „Kern“ | Stufe **I1**: Proben/Plausibilität, Set-Geometrie, Auto-Angriff, Party-Fähigkeiten, Gegenstände, Schadens-Faltung, Ergebnis, Snapshot/Hash. **I2**: Status, Bedrohung, Partner-KI (inkl. menschlicher Reaktion E25), Partner-Spezial, Autopilot, Assist, reine Abfragen. **I3**: Gegner-KI, Telegraphen, Zonen, Phasen, Enrage, Beschwörungen, `RtMods` (Show-Boss mit Belohnung, Twists), `run_to_end`; Regeneration in `RunSim` | nach R1a | Tests §12.5 der Stufe, Golden-Hash fest, Lint grün |
 | **R2** Welt | B „Welt“ | Kampf in der Welt: Director, Tick-Grenze, Puppen, Proben, Set-Ring + Kollision, Telegraph-Layer, Boss-Intro, Flucht, Türen, Kamera, Steuerungswechsel, Ausblenden, `Game`-Live-API, Perf-Szenarien | nach R1a (Fake-Sim) | Szenentests gegen die **echte Sim ab I1**; Fixture-Kampf spielbar; `combat_two_groups` gemessen |
 | **R3** HUD + Eingabe | C „HUD“ | HUD (§8), Input-Map, Touch, Einstellungen, Untertitel-/Overlay-Modus, Hinweiskarten, Fähigkeiten-Menü (Leiste/Varianten/Taktik), `CombatResults` | nach R1a (Fake-Sim, Ströme) | HUD-Tests gegen die **echte Sim ab I1**; Captures 1280 × 720, 1920 × 1080, Touch, Notch |
@@ -2889,10 +2900,10 @@ liest; `test_r1a_contract` prüft jede Zeile per Reflexion):
 | **R5a** Show + Live | E „Integration“ | ShowRules-Profil `rt`, `take_pending_gift_rt`, Marotten-Anpassung, Achievements, RunLog/RunSim-RT, `Game.replay_log`-RT, Kompaktierung | nach R1a (Ströme) | Show-/Replay-Tests gegen die **echte Sim ab I3** |
 | **R5b** Integration | E (+ Rückfragen an A–D) | Full-Run-Bot RT, Autoplay, Performance, Kalibrierung `typical`, Parität (§12.6), Standard `realtime`, CTB-Entfernung, Datenbacken, Save v2, Doku | nach allen Merges | §12.6 erfüllt; `check.sh` + `fullrun.sh` grün |
 
-**Merge-Stufen:** 06 A–D → R1a → R1b-I1 → (R2, R3 in beliebiger Reihenfolge, jede nach ihrem Gate gegen I1) → R1b-I2 → R1b-I3 →
-(R4, R5a, jede nach ihrem Gate gegen I3) → R5b. Nach jedem Merge läuft `check.sh --tests-only` auf dem Integrationszweig. Eine
-Phase, die eine öffentliche Signatur ändern muss, stellt einen Änderungsantrag an den Integrator (02_TECH §0.2); er ändert Vertrag
-und Stub in einem eigenen Commit vor dem Merge.
+**Merge-Stufen:** 06 A–D → R1a (+ 08 K0) → R1b-I1 → (R2, R3 in beliebiger Reihenfolge, jede nach ihrem Gate gegen I1) →
+R1b-I2 → R1b-I3 → (R4, R5a, jede nach ihrem Gate gegen I3) → R5b. Nach jedem Merge läuft `check.sh --tests-only` auf dem
+Integrationszweig. Eine Phase, die eine öffentliche Signatur ändern muss, stellt einen Änderungsantrag an den Integrator
+(02_TECH §0.2); er ändert Vertrag und Stub in einem eigenen Commit vor dem Merge.
 
 ### 12.3 Dateieigentum je Datei (nach dem 06-Merge)
 
@@ -2900,14 +2911,15 @@ Regeln (wie 02_TECH §0.2 und 06 §8.1): Jede Datei hat je Phase genau einen Eig
 geändert — neue Felder, Funktionen und Enum-Werte am Ende, in einem markierten Abschnitt `# --- Echtzeitkampf (07, R<n>) ---`,
 keine Umbenennung, kein Entfernen. Code der 06-Pakete bleibt unberührt; braucht eine Echtzeit-Phase dort eine Verhaltensänderung,
 macht sie der Integrator in R1a oder per Änderungsantrag. Brauchen zwei Phasen dieselbe Datei, legt R1a beide Abschnitte an und
-jede Phase schreibt nur in ihren.
+jede Phase schreibt nur in ihren. Die Casting-Änderungen aus 08 K0 an denselben geteilten Dateien macht der Integrator im selben
+Durchgang (08 §10.2, Dateieigentum 08 §10.7); die 08-Pakete schreiben nie in `core/rt/**` oder `scenes/combat/**`.
 
 | Datei / Bereich | 06-Eigentum | Echtzeit: wer ändert was | Merge-Regel |
 |---|---|---|---|
 | `core/rt/*.gd` (öffentlich + privat) | — | R1a Stubs der öffentlichen Klassen → R1b alles | neu |
 | `core/data/validators/rt_vocab.gd` / `rt.gd` | — | R1a vollständig / R1a Stub → R4 Regeln (§4.10) | neu |
 | `core/data/validators/show_boss.gd` | C (Stub aus 06 Schritt 0; C hat den Show-Boss zurückgestellt) | R4: Regeln des `show_boss`-Blocks (E26, §9.6) | R4 übernimmt die Datei |
-| `core/data/data_validator.gd` | Schritt 0, danach eingefroren | **nur R1a**: Hook-Zeile, `OPTIONAL_MOD_TAG_PREFIXES` += `rt_`, `TRIGGER_PAYLOAD_KEYS`, `STAT_IDS` (§9.4) | Vertrags-Commit |
+| `core/data/data_validator.gd` | Schritt 0, danach eingefroren | **nur R1a**: Hook-Zeile, `OPTIONAL_MOD_TAG_PREFIXES` += `rt_`, `TRIGGER_PAYLOAD_KEYS`, `STAT_IDS` (§9.4); im selben Durchgang die K0-Zeilen aus 08 §10.2 Nr. 6 (CR-24) | Vertrags-Commit (gemeinsam mit 08 K0) |
 | `data/rt_balance.json` | — | R1a Startwerte → **R4 besitzt die Werte**; Schlüssel und Bereiche ändert nur R1 (`rt_balance.gd`) | neu |
 | `tests/fixtures/rt_min/**` | — | R1a; R1b ergänzt; andere lesen | neu |
 | `core/battle/action_event.gd`, `battle_result.gd` | — | R1a: `Type`-Werte am Enum-Ende (§3.13), Felder `tick`, `rt`, `by_ai`; Ergebnisfelder §3.12 | additiv |
@@ -2987,7 +2999,7 @@ Echtzeit-Nachfolger mit Test:
 | R1 | `test_r1_rt_timing` | GCD 45 / Turbo 34 / Minimum 30, Schwungtakt, Zauber + Abbruch-Schwellen (25 % Lauftempo, 40 cm), Queue-Fenster 9, GCD-freie Aktionen, Trinkpause 15, Party-Abklingzeiten (Gegenstände 450, SHOW 900), Wirkzeitpunkt ≥ 1 Tick, Unterbrechungs-Sperre 60, Partner-Spezial-Puffer 45 |
 | R1 | `test_r1_rt_threat` | Kai × 1,5, Wuchtschlag × 2, Heil-Bedrohung geteilt, Spott Spitze × 1,1 + Fixierung 120, Wechsel bei 110 %, Gleichstand, K.O. löscht |
 | R1 | `test_r1_rt_status` | Gift-Stapel (3, Periode 60, min 1, max 12, Boss × 0,5), Kraft-Ticks eingefroren, `refresh`/`replace`/`ignore` mit erhaltener Periodenphase, Ausschlüsse, Betäubung unterbricht, Boss-Dauer × 0,5, Überrumpelt, Erholung, `cleanse`, Immunität/Widerstand (geseedet) |
-| R1 | `test_r1_rt_damage_fold` | Enrage 1–4 Stapel → 75/113/169/253 bei Grundwert 50; Höchstwerte + 9 Stapel → `f = 8000` ohne Überlauf; neutrale Faktoren ändern nichts; Prozent-Treffer mit Gepanzert 667 ‰ |
+| R1 | `test_r1_rt_damage_fold` | Enrage 1–4 Stapel → 75/113/169/253 bei Grundwert 50; Höchstwerte + 9 Stapel → `f = 8000` ohne Überlauf; neutrale Faktoren ändern nichts; Prozent-Treffer mit Gepanzert 667 ‰; Prozent-Treffer mit Element (E30): Element-Faktor des Ziels zuerst, begrenzt auf 500–1500 ‰ (Immunität → 500), ohne Element kein Schritt, DEF/RES/Krit ohne Wirkung |
 | R1 | `test_r1_rt_ai` | Regelreihenfolge, `first_ms`/`every_ms`, Bedingungen, Ziele (zufällige reproduzierbar), Slot-Versatz, Phasen + Ops, Enrage, alle Presets (Heilschwelle, Schalter), KI-Reserve der Füller, Tränke nur mit „Vorsichtig“/Schalter und nie der letzte, SHOW nach 5 s Vorlauf (auch als KI-Partner, E27), FINALE nie; **E25:** Unterbrechen erst ab `ai_seen` (15 + Streuung 0–10, 25 % spät +45, eigener Strom `rt_ai`; ein Autopilot-Wechsel verschiebt keinen Kampfwurf), nie während eines eigenen Zaubers oder in den letzten 5 GCD-Ticks (danach ja), mit 0/0/0 wie ohne E25; Ausweichen mit `REACT_TICKS` 15/12/6 und „übersehen“ 130/130/40 ‰, Angriffs-KI verlässt den Putzmittelnebel rechtzeitig; Autopilot, `suggest` |
 | R1 | `test_r1_rt_telegraph` | alle Formen/Anker, nur im Ring, Einschlag nur im Einschlag-Tick, Ausweichen + knapp, Pflichtprobe-Semantik (Sim-Seite), Zonen-Takte, Unterbrechen entfernt Telegraph, `MAX_TELEGRAPHS`, Zug tötet Adds |
 | R1 | `test_r1_rt_move` | Koppelnavigation geschlossen, Plausibilität (Lauftempo × Δ + Budget 600 mm, Nachfüllung 3 mm/Tick), `POS_CORRECTED`, `walkable`/`project_walkable` (Ring, Türgassen, Waggon), Auftritt ≤ 30 Ticks, Abstoßung, Formation, Flucht nach 60 Ticks, Nebel, geschlossenes Set |

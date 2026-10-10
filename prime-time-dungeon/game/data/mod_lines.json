@@ -100,6 +100,76 @@
 			"weight": 1
 		},
 		{
+			"id": "mod_secret_wall_01",
+			"tag": "secret_wall",
+			"voice": "mod",
+			"text": "Die Wand war aus Pappe. Wie unser Budget. Bitte schneiden Sie das raus.",
+			"weight": 1
+		},
+		{
+			"id": "mod_secret_wall_02",
+			"tag": "secret_wall",
+			"voice": "mod",
+			"text": "Sie haben hinter die Kulissen geschaut. Das kostet normalerweise extra.",
+			"weight": 1
+		},
+		{
+			"id": "mod_regie_note_1_01",
+			"tag": "regie_note:1",
+			"voice": "mod",
+			"text": "Regie-Notiz am Kiosk: ‚Sandwiches sind Requisite. NICHT ESSEN.‘ Das erklärt einiges.",
+			"weight": 1
+		},
+		{
+			"id": "mod_regie_note_2_01",
+			"tag": "regie_note:2",
+			"voice": "mod",
+			"text": "Hinter der Kulisse klebt ein Zettel: ‚Wand ist aus Pappe. Merkt eh keiner.‘ Tja.",
+			"weight": 1
+		},
+		{
+			"id": "mod_regie_note_3_01",
+			"tag": "regie_note:3",
+			"voice": "mod",
+			"text": "Regie-Notiz im Keller: ‚Ratten nach der Show zurück in Kiste 3.‘ Kiste 3 ist leer. Hm.",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_secret_01",
+			"tag": "chat_secret",
+			"voice": "chat",
+			"text": "PAPPWAND LOL",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_secret_02",
+			"tag": "chat_secret",
+			"voice": "chat",
+			"text": "wusste ichs, alles kulisse",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_secret_03",
+			"tag": "chat_secret",
+			"voice": "chat",
+			"text": "secret gefunden!!",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_secret_hint_01",
+			"tag": "chat_secret_hint",
+			"voice": "chat",
+			"text": "die rissige wand da… ist die aus pappe??",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_secret_hint_02",
+			"tag": "chat_secret_hint",
+			"voice": "chat",
+			"text": "hau mal gegen die wand mit dem riss",
+			"weight": 1
+		},
+		{
 			"id": "mod_floor_start_01",
 			"tag": "floor_start",
 			"voice": "mod",

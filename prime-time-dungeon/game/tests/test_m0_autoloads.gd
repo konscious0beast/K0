@@ -19,7 +19,7 @@ const SIGNALS: Dictionary = {
 	"gift_rejected": 2, "toast_requested": 2, "dialog_reserve_requested": 3,
 	"sponsor_window_opened": 1, "sponsor_window_closed": 2,
 	"sponsor_window_updated": 1,
-	"hero_changed": 1, "field_ability_used": 3,          # 06 package A
+	"hero_changed": 1, "field_ability_used": 3, "secret_opened": 1,          # 06 package A
 }
 const ACTIONS: PackedStringArray = ["move_forward", "move_back", "move_left", "move_right", "cam_left", "cam_right",
 	"cam_up", "cam_down", "sneak", "action", "pause", "map", "tab_prev", "tab_next", "toggle_auto", "toggle_speed",

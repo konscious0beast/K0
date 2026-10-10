@@ -29,13 +29,14 @@ const VALID: Array[Dictionary] = [
 	{"t": "descend"},
 	{"t": "hero", "id": "mopsula"},
 	{"t": "hero", "id": "kai"},
+	{"t": "secret", "id": "sec_e1_wall_sewer"},
 ]
 
 
 func test_types_are_the_recorded_list() -> void:
 	assert_eq(Command.TYPES, ["floor", "encounter", "battle", "lootbox", "buy", "sell", "equip", "use_item", "rest",
 		"event", "chest", "gate", "room", "safe_room", "safe_room_exit", "scene", "flag", "difficulty", "descend",
-		"gift", "sponsor_window", "hero"], "02_TECH §3.4 (+ hero, 06 §1.7)")
+		"gift", "sponsor_window", "hero", "secret"], "02_TECH §3.4 (+ hero, 06 §1.7; secret, 06 §2.7)")
 	var covered: Dictionary = {"gift": true}
 	for c: Dictionary in VALID:
 		covered[c["t"]] = true
@@ -105,6 +106,9 @@ func test_invalid_commands() -> void:
 		[{"t": "sponsor_window", "op": "dev_open", "sec": 60, "slots": 17}, "slots <= 16"],
 		[{"t": "hero"}, "hero: id"],
 		[{"t": "hero", "id": "rattenkoenigin"}, "hero: id must be one of kai, mopsula"],
+		[{"t": "secret"}, "secret: id"],
+		[{"t": "secret", "id": ""}, "secret: id must be a non-empty String"],
+		[{"t": "secret", "id": "f1_c3"}, "secret: id must start with sec_"],
 	]
 	for c: Array in cases:
 		var err: String = Command.validate(c[0])

@@ -17,8 +17,10 @@ const ROWS: Array[Dictionary] = [
 	{"key": "followers_gained", "label": "Neue Follower", "icon": &"heart", "fmt": "signed"},
 	{"key": "achievements", "label": "Achievements", "icon": &"trophy", "fmt": "int"},
 ]
+## 06 package A: "Regie-Notizen 1/3" — only when the summary carries regie_notes_total (Game.complete_floor).
+const NOTES_ROW: Dictionary = {"key": "regie_notes", "label": "Regie-Notizen", "icon": &"star", "fmt": "of"}
 const DEMO: Dictionary = {"floor": 1, "time_used_sec": 872, "time_left_sec": 328, "kills": 23, "viewers_peak": 7250,
-	"followers_gained": 1234, "achievements": 9}
+	"followers_gained": 1234, "achievements": 9, "regie_notes": 2, "regie_notes_total": 3}
 
 var summary: Dictionary = {}
 
@@ -95,7 +97,7 @@ func _build() -> void:
 	table.add_theme_constant_override("v_separation", 8)
 	center.add_child(table)
 	var i: int = 0
-	for r: Dictionary in ROWS:
+	for r: Dictionary in rows():
 		var row: PanelContainer = PanelContainer.new()
 		row.custom_minimum_size = Vector2(440, 0)
 		row.add_theme_stylebox_override("panel", UiUtil.box_style(Color(UiTheme.C_PANEL, 0.9),
@@ -117,15 +119,15 @@ func _build() -> void:
 		_value_labels[str(r["key"])] = v
 		var target: int = int(summary.get(str(r["key"]), 0))
 		var fmt: String = str(r["fmt"])
-		v.text = _fmt(target, fmt)
+		v.text = _fmt_row(target, fmt)
 		if is_inside_tree():
 			row.modulate.a = 0.0
 			var tw: Tween = create_tween()
 			tw.tween_interval(ROW_DELAY * i)
 			tw.tween_property(row, "modulate:a", 1.0, 0.2)
-			tw.tween_method(func(x: float) -> void: v.text = _fmt(roundi(x), fmt), 0.0, float(target), COUNT_SEC)
+			tw.tween_method(func(x: float) -> void: v.text = _fmt_row(roundi(x), fmt), 0.0, float(target), COUNT_SEC)
 			tw.tween_callback(func() -> void:
-				v.text = _fmt(target, fmt)
+				v.text = _fmt_row(target, fmt)
 				Sfx.play_ui(&"coin"))
 		i += 1
 	col.add_child(UiUtil.spacer(4))
@@ -155,6 +157,20 @@ func _build() -> void:
 	UiUtil.touch_pad(_continue, 72.0)
 	_continue.pressed.connect(continue_pressed)
 	brow.add_child(_continue)
+
+
+## The table rows of this summary (ROWS + the Regie-Notizen row on floors with notes).
+func rows() -> Array[Dictionary]:
+	var out: Array[Dictionary] = ROWS.duplicate()
+	if int(summary.get("regie_notes_total", 0)) > 0:
+		out.append(NOTES_ROW)
+	return out
+
+
+func _fmt_row(v: int, fmt: String) -> String:
+	if fmt == "of":
+		return "%d/%d" % [v, int(summary.get("regie_notes_total", 0))]
+	return _fmt(v, fmt)
 
 
 static func _fmt(v: int, fmt: String) -> String:

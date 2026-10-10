@@ -267,9 +267,14 @@ func test_floor1_layout_matches_data() -> void:
 		var sc: Vector2i = JsonUtil.arr_to_vec2i(s["cell"])
 		assert_eq(l.safe_room_at(sc), str(s["id"]))
 		assert_eq((l.safe_room_info[str(s["id"])] as Dictionary)["theme"], str(s["theme"]))
-	assert_eq(l.gates.size(), (lay["gates"] as Array).size())
+	# 06 package A: every Kulissenwand of layout.secrets is a closed door "secret:<id>" on top of the data gates
+	var walls: Array = (lay.get("secrets", []) as Array).filter(func(x: Dictionary) -> bool: return x["kind"] == "wall")
+	assert_eq(l.gates.size(), (lay["gates"] as Array).size() + walls.size())
 	for g: Dictionary in l.gates:
 		assert_eq(str(g["key"]), FloorLayout.gate_key(g["cell"], int(g["dir"])))
+	for w: Dictionary in walls:
+		var wg: Dictionary = l.gate_by_key(Secrets.gate_key_of(w))
+		assert_eq(str(wg.get("requires", "")), "secret:" + str(w["id"]), "wall %s is a secret gate" % str(w["id"]))
 
 
 func test_from_layout_fixture() -> void:

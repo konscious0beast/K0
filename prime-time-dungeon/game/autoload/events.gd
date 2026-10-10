@@ -84,6 +84,7 @@ signal sponsor_window_updated(window: Dictionary)        # Show: a gift took a s
 # --- Hero & field abilities (06 §1, package A) ---------------------------------
 signal hero_changed(hero_id: String)                     # Game.set_hero: the controlled character changed
 signal field_ability_used(hero_id: String, ability: StringName, hits: int)   # ExplorationScene: &"strike" | &"bark"
+signal secret_opened(secret_id: String)                  # Game.open_secret: Kulissenwand / Regie-Notiz (06 §2.7)
 
 # --- UI -----------------------------------------------------------------
 signal toast_requested(text: String, icon: StringName)

@@ -66,8 +66,9 @@ var run_log: RunLog = null             # optional: records applied commands + ch
 var battle: BattleState = null         # battle started by apply({"t": "encounter"}) (RunSim-driven runs only)
 var quest: QuestTracker = null         # optional: fed by apply() with the core quest events (see _quest_feed)
 var last_action_events: Array[ActionEvent] = []   # ActionEvents of the last apply() (battle start/commands/gifts)
-## Commands refused by the core rules (gift policy, HeroRules.check for "hero" — 06 §1.7): {"k", "t", "gift_id" (the
-## gift id, or the hero id of a refused "hero"), "reason"} in order.
+## Commands refused by the core rules (gift policy, HeroRules.check for "hero" — 06 §1.7, Secrets.check_open for
+## "secret" — 06 §2.7): {"k", "t", "gift_id" (the gift id, or the hero / secret id of a refused "hero" / "secret"),
+## "reason"} in order.
 var rejected_cmds: Array[Dictionary] = []
 
 var _tick: int = 0
@@ -134,6 +135,11 @@ func apply(cmd: Dictionary) -> Array[ExploreEvent]:
 		push_warning("[RunSim] hero '%s' refused: %s" % [str(c["id"]), hero_refusal])
 		rejected_cmds.append({"k": _tick, "t": "hero", "gift_id": str(c["id"]), "reason": hero_refusal})
 		return out
+	var secret_refusal: String = _secret_refusal(c) if str(c["t"]) == "secret" else ""   # 06 package A
+	if secret_refusal != "":
+		push_warning("[RunSim] secret '%s' refused: %s" % [str(c["id"]), secret_refusal])
+		rejected_cmds.append({"k": _tick, "t": "secret", "gift_id": str(c["id"]), "reason": secret_refusal})
+		return out
 	if run_log != null:
 		var cmd_id: int = 0
 		if not Command.is_external(c):
@@ -193,6 +199,8 @@ func apply(cmd: Dictionary) -> Array[ExploreEvent]:
 			_apply_difficulty(StringName(str(c["to"])))
 		"hero":                                    # 06 package A: HeroRules.check passed above
 			HeroRules.set_hero(state, str(c["id"]))
+		"secret":                                  # 06 package A: Secrets.check_open passed above; like the floor
+			Secrets.open(state, _floor_def(), str(c["id"]))   # events without the show part (followers, M.O.D.)
 		"descend":
 			if state.floor_run != null:
 				_floor_done = true
@@ -477,6 +485,17 @@ static func _zone_has_stray(fr: FloorRun, zone: String) -> bool:
 		if s is Dictionary and str((s as Dictionary).get("zone", "")) == zone:
 			return true
 	return false
+
+
+## 06 package A: FloorDef of the current floor (null without data / floor).
+func _floor_def() -> FloorDef:
+	if data == null or state.floor_run == null:
+		return null
+	return data.floor_def(state.floor_run.index)
+
+
+func _secret_refusal(c: Dictionary) -> String:
+	return Secrets.check_open(state, _floor_def(), str(c["id"]))
 
 
 func _current_layout() -> FloorLayout:

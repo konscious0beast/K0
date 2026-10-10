@@ -12,7 +12,9 @@ extends Node
 ## Safe room (safe_room.tscn): safe_vending, safe_lootbox, safe_lootbox_open, safe_mopsula, safe_equipment.
 ## 06 package A: bark_platform | bark_sewer | bark_cellar (Graf Mopsula leads and barks at a group: cone + rings,
 ##   "?!"), hero_mopsula_<zone> (exploration as Mopsula, Kai follows), safe_hero_switch ("Figur wechseln" pressed:
-##   the Count in front), battle_partner_auto ("Partner automatisch": DU / AUTO pills at the hero's menu).
+##   the Count in front), battle_partner_auto ("Partner automatisch": DU / AUTO pills at the hero's menu),
+##   secret_wall (Kai in front of the Kulissenwand), secret_open (the Count barks it over), secret_note (Kai in
+##   front of a Regie-Notiz: prompt + marker).
 
 const ZONES: Dictionary = {"platform": "zone_platform", "sewer": "zone_sewer", "cellar": "zone_cellar"}
 
@@ -144,6 +146,50 @@ func _r_hero_mopsula(scene: Node, zone_key: String, dist: float = 5.0) -> bool:
 	_reveal_zone(scene, layout, zone)
 	_place_facing(scene, layout, spawn.cell, actor.global_position, dist)
 	await frames(20)
+	return true
+
+
+## 06 §2.7 (package A): the Kulissenwand (5,3)↔(5,2) — "wall": Kai 3.2 m in front of it (cracks, dust); "open": Graf
+## Mopsula barks from 2.9 m and the panel tips over (still mid-fall); "note": Kai in front of Regie-Notiz 1 (kiosk).
+func _r_secret(scene: Node, what: String) -> bool:
+	if not await _explore_ready(scene):
+		return false
+	var layout: FloorLayout = scene.call("get_layout")
+	Game.state.floor_run.defeated_groups.append("f1_g7")
+	var g7: Node = scene.call("get_enemy", "f1_g7") as Node
+	if g7 != null:
+		g7.queue_free()
+	_freeze_enemies(scene)
+	_reveal_zone(scene, layout, "zone_sewer")
+	if what == "note":
+		var note: Node3D = scene.call("get_interactable", "sec_e1_note_1") as Node3D
+		if note == null:
+			return false
+		_place_facing(scene, layout, Vector2i(2, 5), note.global_position, 1.3)
+		await frames(20)
+		return scene.call("focused_interactable") == note
+	var w: Node3D = scene.call("get_wall", "sec_e1_wall_sewer") as Node3D
+	if w == null:
+		return false
+	if what == "open":                     # the Count barks it over from 3 m (cone + falling panel in one still)
+		Game.state.hero = "mopsula"
+		scene.call("refresh_hero")
+	var out: Vector3 = w.global_transform.basis.z.normalized()
+	var dist: float = 3.2 if what == "wall" else 2.9
+	var pos: Vector3 = w.global_position + out * dist + w.global_transform.basis.x * 0.6
+	var to: Vector3 = w.global_position - pos
+	var yaw: float = atan2(-to.x, -to.z)
+	(scene.call("get_player") as Node3D).call("teleport", Vector3(pos.x, 0.05, pos.z), yaw)
+	scene.call("get_camera_rig").call("snap", yaw)
+	var comp: Node = scene.call("get_companion")
+	if comp != null:
+		comp.call("snap_behind")
+	await frames(20)
+	if what == "open":
+		scene.call("perform_action")
+		await until(func() -> bool: return Secrets.is_open(Game.state, "sec_e1_wall_sewer"), 240)
+		await seconds(0.3)
+		freeze()
 	return true
 
 

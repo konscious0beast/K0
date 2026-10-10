@@ -81,7 +81,7 @@ y=0   [D FB  ]---[D TR  ]---[D d3  ]      .       [C     ]---[C QB  ]   [C c2  ]
 y=1      .       [D d2  ]---[D SR3 ]      .       [C c3  ]      .       [C ev  ]      .
                     |                                |                     |
 y=2      .       [D d1  ]      .          .       [C     ]---[C c1  ]---[C     ]      .
-                    ‖                                ‖                     |
+                    ‖                                ‖          ┆          |
 y=3      .       [A a4  ]      .       [B b2  ]---[B ev  ]---[B b3  ]---[B SR2 ]      .
                     |                     |          |          |
 y=4      .       [A a2  ]---[A a3  ]---[B     ]---[B b1  ]---[B     ]      .          .
@@ -93,11 +93,19 @@ y=6      .       [A tut ]      .          .          .          .          .    
 y=7      .       [A ST  ]      .          .          .          .          .          .
 ```
 
-`---`/`|` = offene Tür, `‖` = Tor (Kap. 2.6/2.8). Kürzel: ST Start, tut Tutorial, SR1–3 Safe Rooms, QB Quartier-Boss, FB Etagenboss, TR Treppe, ev Event. **Türregel:** Orthogonal benachbarte Zellen **derselben Zone** sind verbunden,
+`---`/`|` = offene Tür, `‖` = Tor (Kap. 2.6/2.8), `┆` = Kulissenwand (Geheimnis, 06 §2.7). Kürzel: ST Start, tut Tutorial, SR1–3 Safe Rooms, QB Quartier-Boss, FB Etagenboss, TR Treppe, ev Event. **Türregel:** Orthogonal benachbarte Zellen **derselben Zone** sind verbunden,
 außer (5,0)↔(6,0). Zonenübergänge gibt es **nur** an: A(2,4)↔B(3,4), B(6,3)↔C(6,2), Tor `gate_track9` A(1,3)↔D(1,2)
 (benötigt `itm_key_master`), Tor `gate_lever` B(4,3)↔C(4,2) (`requires: "event:fev_lever"`, öffnet bei Erfolg von `fev_lever`).
 (`gate_track9`/`gate_lever` sind Namen in diesem Dokument; in den Daten ist ein Tor `{cell, dir, requires}`.)
+Dazu kommt **eine Kulissenwand** `sec_e1_wall_sewer` B(5,3)↔C(5,2) (06 §2.7, `layout.secrets`): eine rissige Pappwand in einer
+Türöffnung, die nur der Feldschlag oder das Bellen umwirft — dann ist sie eine Abkürzung (2 Zellwechsel je Richtung, solange
+`gate_lever` zu ist; im Bot gemessen ≈ 6 s je Durchquerung). Sie ist **optional**: jede Zelle bleibt ohne sie erreichbar.
 Alle anderen Nachbarschaften zwischen Zonen sind Wände.
+
+**Regie-Notizen** (06 §2.7, `layout.secrets`, je **+15 Follower** genau einmal, M.O.D. liest sie vor `regie_note:<n>`, Zähler
+„Regie-Notizen n/3“ in der Etagen-Bilanz): `sec_e1_note_1` Kiosk-Rückseite (2,5) · `sec_e1_note_2` hinter der Kulissenwand
+(5,2), erscheint erst, wenn die Wand fällt · `sec_e1_note_3` Heizungskeller (6,0). Ein Notizständer mit leuchtendem Post-it,
+Prompt „Regie-Notiz lesen“ (Graf: „… beschnuppern“).
 
 | Zelle | Zone | Art (`RoomCell.Kind`) | Name | Inhalt (Gruppe · Zustand / Truhe · Typ / Event / Sonstiges) |
 |---|---|---|---|---|
@@ -105,7 +113,7 @@ Alle anderen Nachbarschaften zwischen Zonen sind Wände.
 | (1,6) | A | NORMAL | Tutorial-Gang | `f1_g0` = `enc_f1_a1_tutorial` · IDLE, Blick Norden, dreht nie |
 | (1,5) | A | NORMAL | Kreuzung | `fev_photo_drone`; `f1_c0` wood |
 | (0,5) | A | NORMAL | Fundbüro | `f1_g4` = `enc_f1_a_rare` · IDLE (steht still); `f1_c1` metal (`itm_arm_safety_vest`) |
-| (2,5) | A | SAFE | Kiosk 24/7 | `sr_kiosk` |
+| (2,5) | A | SAFE | Kiosk 24/7 | `sr_kiosk`; Regie-Notiz 1 |
 | (1,4) | A | NORMAL | Bahnsteighalle | `f1_g1` = `enc_f1_a2` · PATROL; `f1_c2` wood |
 | (2,4) | A | NORMAL | Ostgang | `f1_g2` = `enc_f1_a3` · IDLE; `fev_lost_candidate` (Telefonzelle); Übergang B |
 | (1,3) | A | NORMAL | Nordende | `f1_g3` = `enc_f1_a4` · PATROL; `f1_c3` wood; Tor `gate_track9` nach Norden |
@@ -116,13 +124,13 @@ Alle anderen Nachbarschaften zwischen Zonen sind Wände.
 | (4,5) | B | NORMAL | Rattennest | `f1_g8` = `enc_f1_b4` · IDLE; `f1_c7` metal (`itm_smelling_salts` ×2) |
 | (3,3) | B | NORMAL | Schieberkammer | `f1_g6` = `enc_f1_b2` · PATROL (Schamanen-Spruch B4) |
 | (4,3) | B | NORMAL | Hebelraum | `fev_lever`; Tor `gate_lever` nach Norden |
-| (5,3) | B | NORMAL | Rohrgang | `f1_g7` = `enc_f1_b3` · PATROL; `f1_c8` wood |
+| (5,3) | B | NORMAL | Rohrgang | `f1_g7` = `enc_f1_b3` · PATROL; `f1_c8` wood; Kulissenwand `sec_e1_wall_sewer` nach Norden |
 | (6,3) | B | SAFE | Pumpenhaus | `sr_pumphouse`; Übergang C nach Norden |
 | (6,2) | C | NORMAL | Kellertreppe | `f1_c9` wood |
-| (5,2) | C | NORMAL | Kohlenkeller | `f1_g9` = `enc_f1_c1` · PATROL |
+| (5,2) | C | NORMAL | Kohlenkeller | `f1_g9` = `enc_f1_c1` · PATROL; Regie-Notiz 2 hinter der Kulissenwand |
 | (4,2) | C | NORMAL | Hebelausgang | `f1_c10` wood |
 | (6,1) | C | NORMAL | Waschkeller | `fev_broken_vending` |
-| (6,0) | C | NORMAL | Heizungskeller | `f1_g10` = `enc_f1_c2` · IDLE; `f1_c11` metal (`itm_acc_gas_mask`) |
+| (6,0) | C | NORMAL | Heizungskeller | `f1_g10` = `enc_f1_c2` · IDLE; `f1_c11` metal (`itm_acc_gas_mask`); Regie-Notiz 3 |
 | (4,1) | C | NORMAL | Kellergang | `f1_g11` = `enc_f1_c3` · PATROL; `f1_c12` locked (`itm_wpn_fire_axe`) |
 | (4,0) | C | NORMAL | Vorzimmer | Türschild „Zutritt nur für Personal“ |
 | (5,0) | C | QUARTER_BOSS | Hausmeister-Büro | `f1_qb` = `enc_f1_boss_hausmeister` |
@@ -293,7 +301,8 @@ Streuner, Uhren auf 0). Grinden kostet also Timer — gewollter Trade-off.
 - Interagieren → Bestätigung: „Etage verlassen? Offene Truhen und der Etagenboss bleiben zurück.“ [Abstieg] [Noch nicht]
 - Abstieg (`Game.complete_floor()`), in dieser Reihenfolge:
   1. Timer stoppt; Trigger `floor_completed {floor, timer_left}`; M.O.D. `floor_end`.
-  2. **Etagen-Bilanz** (`scenes/ui/floor_summary.tscn`) aus `FloorRun.stats = {time_used, kills, viewers_peak, followers_gained, achievements}`.
+  2. **Etagen-Bilanz** (`scenes/ui/floor_summary.tscn`) aus `FloorRun.stats = {time_used, kills, viewers_peak, followers_gained, achievements}`;
+     auf Etagen mit Regie-Notizen zusätzlich die Zeile **„Regie-Notizen n/3“** (06 §2.7).
   3. Nächste Etage existiert (`floor_2`): `Game.start_floor(2)` + `Save.autosave()` (aktiver Slot, Stand Etage 2, Ort `start`).
   4. Ist sie `playable == false` (Slice): Abspann (`SCENE_CREDITS`) mit Teaser-Kamerafahrt → Titel; sonst Erkundung der neuen Etage.
 - Laden eines Slots, dessen Etage nicht spielbar ist → direkt Abspann → Titel.
@@ -1566,8 +1575,11 @@ Validator: max. **110 Zeichen** je Zeile, nur obige Platzhalter.
 | `hero_switch:mopsula` | mod | „Rollentausch! Der Graf führt. Bitte Abstand halten, er bellt in Stereo.“ · „Der Graf übernimmt. {name} darf sich ausruhen. Unter Beobachtung, versteht sich.“ |
 | `tutorial_explore:mopsula` / `tutorial_sneak:mopsula` | mod | B1-Hinweise, wenn der Graf führt (sonst `tutorial_explore`/`tutorial_sneak`): „Willkommen in der Unterstadt, Graf! Laufen Sie los – {name} kommt hinterher. Die Kamera auch.“ / „Da vorn schlafen zwei Ratten. Bellen Sie, Graf – verdutzte Monster erwischt man von jeder Seite zuerst.“ |
 | `chat_bark` | chat | nach einem Bellen mit Treffer: „WUFF IN HD“ · „der graf hat gesprochen“ · „ich hab mich auch erschrocken“ |
+| `secret_wall` | mod | Kulissenwand fällt: „Die Wand war aus Pappe. Wie unser Budget. Bitte schneiden Sie das raus.“ · „Sie haben hinter die Kulissen geschaut. Das kostet normalerweise extra.“ |
+| `regie_note:1` … `:3` | mod | Regie-Notizen: „Regie-Notiz am Kiosk: ‚Sandwiches sind Requisite. NICHT ESSEN.‘ Das erklärt einiges.“ · „Hinter der Kulisse klebt ein Zettel: ‚Wand ist aus Pappe. Merkt eh keiner.‘ Tja.“ · „Regie-Notiz im Keller: ‚Ratten nach der Show zurück in Kiste 3.‘ Kiste 3 ist leer. Hm.“ |
+| `chat_secret` / `chat_secret_hint` | chat | Wand fällt: „PAPPWAND LOL“ · „wusste ichs, alles kulisse“ · „secret gefunden!!“ — erster Raum neben einer stehenden Kulissenwand: „die rissige wand da… ist die aus pappe??“ · „hau mal gegen die wand mit dem riss“ |
 
-(Gesamt: 90 + 46 + 29 = **165 Zeilen**; dazu Block A aus 06 §1.5: 11 Zeilen.)
+(Gesamt: 90 + 46 + 29 = **165 Zeilen**; dazu Block A aus 06 §1.5/§2.7: 21 Zeilen.)
 
 ---
 

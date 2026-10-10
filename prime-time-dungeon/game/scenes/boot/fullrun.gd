@@ -48,6 +48,7 @@ const HEROES: PackedStringArray = ["kai", "mopsula"]
 const TIMER_SLACK_TICKS: int = 15          # timer ticks a pause may lose to its transitions (fade-in 0.25 s + a frame)
 const STAIRS_HUB: float = 1.6              # room middle of the stairs room: in front of the well's entry fence
 const STAND_OFF: float = 1.0               # stand this far in front of an interactable (+ its extent)
+const WALL_STAND: float = 1.3              # 06 package A: in front of a Kulissenwand (strike 1.8 m / bark 4 m reach)
 const HEAL_ITEM_BELOW: float = 0.5         # use a heal item on a member below 50 % HP
 const SAFE_ROOM_BELOW: float = 0.45        # party HP ratio below this → back to the nearest safe room
 const SAFE_ROOM_MAX_DIST: int = 6
@@ -107,6 +108,17 @@ var hero: String = "kai"
 var barks: int = 0                         # barks the bot used (Mopsula) …
 var dazed: int = 0                         # … and groups they dazed
 var hero_switches: int = 0                 # "Figur wechseln" in a safe room
+## 06 package A, E1 secrets (06 §2.7): Kulissenwände knocked over by the field ability, Regie-Notizen read, fallbacks
+## (knock_wall without the ability, counted, Soll 0); shortcut measurement: travels whose shortest path runs through
+## an opened wall and the cell changes it saved against the path with every wall standing; travel_cells/_ticks give
+## the bot's measured seconds per cell change (gain = saved cells × that).
+var walls_knocked: int = 0
+var notes_read: int = 0
+var wall_fallbacks: int = 0
+var shortcut_trips: int = 0
+var shortcut_cells: int = 0
+var travel_cells: int = 0
+var travel_ticks: int = 0
 var timer_warnings: PackedInt32Array = []
 var timer_expired: int = 0
 var attempt_floor_boss: bool = true
@@ -430,8 +442,12 @@ func candidates(layout: FloorLayout, fr: FloorRun, dist: Dictionary = {}) -> Arr
 		var choice: String = event_choice(ev)
 		if not rush and choice != "":
 			out.append({"kind": "event", "id": ev.id, "cell": ev.cell, "why": choice})
+	if not rush and not typical:                  # 06 package A: E1 secrets (thorough / dawdle)
+		out.append_array(_secret_candidates(layout, fr, dist))
 	for g: Dictionary in layout.gates:
 		var req: String = str(g["requires"])
+		if Secrets.is_secret_requirement(req):
+			continue                              # Kulissenwand: a secret objective, never a gate to try
 		if not fr.opened_gates.has(str(g["key"])) and not req.begins_with("event:") and Game.state.inventory.has(req):
 			out.append({"kind": "gate", "id": str(g["key"]), "cell": g["cell"], "why": req})
 		elif not rush and not fr.opened_gates.has(str(g["key"])) and not tried.has(str(g["key"])):
@@ -448,6 +464,26 @@ func candidates(layout: FloorLayout, fr: FloorRun, dist: Dictionary = {}) -> Arr
 				or rc.kind == RoomCell.Kind.STAIRS:
 			continue
 		out.append({"kind": "visit", "id": "", "cell": c, "why": "unvisited"})
+	return out
+
+
+## 06 package A: standing Kulissenwände (goal = the side the bot is closer to) and readable Regie-Notizen.
+func _secret_candidates(layout: FloorLayout, fr: FloorRun, dist: Dictionary) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for g: Dictionary in layout.gates:
+		var sid: String = Secrets.id_of_requirement(str(g["requires"]))
+		if sid == "" or fr.opened_gates.has(str(g["key"])):
+			continue
+		var a: Vector2i = g["cell"]
+		var b: Vector2i = a + RoomCell.dir_offset(int(g["dir"]))
+		var da: int = int(dist.get(a, 1 << 20))
+		var db: int = int(dist.get(b, 1 << 20))
+		out.append({"kind": "wall", "id": sid, "cell": a if da <= db else b, "why": "Kulissenwand"})
+	for sec: Dictionary in Secrets.list(Game.floor_def()):
+		var nid: String = str(sec.get("id", ""))
+		if str(sec.get("kind", "")) == "note" and Secrets.check_open(Game.state, Game.floor_def(), nid) == "":
+			out.append({"kind": "note", "id": nid, "cell": JsonUtil.arr_to_vec2i(sec.get("cell", [])),
+				"why": "Regie-Notiz %d" % int(sec.get("n", 0))})
 	return out
 
 
@@ -563,10 +599,10 @@ func _check_progress(obj: Dictionary) -> bool:
 	var uses: int = 0
 	for v: Variant in fr.event_uses.values():
 		uses += int(v)
-	var sig: String = "%s|%d|%d|%d|%d|%d|%d|%s|%s|%d|%d|%d" % [objective_text(obj), fr.visited.size(),
+	var sig: String = "%s|%d|%d|%d|%d|%d|%d|%s|%s|%d|%d|%d|%d" % [objective_text(obj), fr.visited.size(),
 		fr.opened_chests.size(), fr.defeated_groups.size(), fr.completed_events.size(), fr.opened_gates.size(),
 		fr.safe_room_visits, str(fr.quarter_boss_defeated), str(fr.floor_boss_defeated), battles.size(), uses,
-		tried.size()]
+		tried.size(), Secrets.opened(Game.state).size()]
 	if sig == _last_sig:
 		_same_sig += 1
 		if _same_sig >= NO_PROGRESS_LIMIT:
@@ -599,7 +635,9 @@ func _do(obj: Dictionary) -> bool:
 	match kind:
 		"group":
 			return await _engage(ex, str(obj["id"]))
-		"chest", "event", "safe", "stairs":
+		"wall":
+			return await _knock_wall(ex, str(obj["id"]))
+		"chest", "event", "safe", "stairs", "note":
 			var it: Node = ex.get_interactable(str(obj["id"]))
 			if it == null:
 				return fail("no interactable '%s' in the scene" % str(obj["id"]))
@@ -813,6 +851,11 @@ func _use_interactable(ex: ExplorationScene, it: Node, obj: Dictionary) -> bool:
 				_note("%s %s opened" % [kind, id])
 		"event":
 			return await _event_dialog(ex, str(obj["id"]), str(obj["why"]))
+		"note":
+			if not Secrets.is_open(Game.state, str(obj["id"])):
+				return fail("Regie-Notiz %s was not read" % str(obj["id"]))
+			notes_read += 1
+			_note("Regie-Notiz %s read (%d/%d)" % [str(obj["id"]), Game.secret_notes().x, Game.secret_notes().y])
 		"stairs":
 			var dlg: Node = ex.active_dialog()
 			if dlg == null:
@@ -839,6 +882,44 @@ func _use_interactable(ex: ExplorationScene, it: Node, obj: Dictionary) -> bool:
 			if not await _wait(func() -> bool: return Router.current is SafeRoomScene and not Router.busy, 300,
 					"safe room %s" % str(obj["id"])):
 				return false
+	return true
+
+
+## 06 §2.7: stand 1.3 m in front of the Kulissenwand on this side, face it and use the field ability (`action`:
+## Kai's strike, the Count's bark) until it falls; fallback after 3 tries: ExplorationScene.knock_wall (counted).
+func _knock_wall(ex: ExplorationScene, secret_id: String) -> bool:
+	var w: Node3D = ex.get_wall(secret_id)
+	if w == null or Secrets.is_open(Game.state, secret_id):
+		return true
+	var layout: FloorLayout = ex.get_layout()
+	var center: Vector3 = layout.cell_to_world(ex.get_player_cell())
+	var rp: Vector3 = w.call("reach_point", center)
+	var stand: Vector3 = rp + Rules.flat_dir(rp, center) * WALL_STAND
+	if await walk_to(ex, stand, 0.3) == Walk.INTERRUPTED:
+		return true
+	var body: CharacterBody3D = ex.get_player()
+	for attempt in 3:
+		_face(body, rp)
+		if not await _wait(func() -> bool: return bool(body.call("field_ready")) or _interrupted(ex), 240,
+				"field ability ready"):
+			return false
+		if _interrupted(ex):
+			return true
+		await get_tree().physics_frame
+		if ex.focused_interactable() == null:
+			ex.perform_action()
+		for _i in 40:
+			await get_tree().physics_frame
+			if Secrets.is_open(Game.state, secret_id):
+				break
+		if Secrets.is_open(Game.state, secret_id):
+			walls_knocked += 1
+			_note("Kulissenwand %s knocked over (%s)" % [secret_id, Game.hero()])
+			return true
+	wall_fallbacks += 1
+	_note("Kulissenwand %s did not fall to the field ability → knock_wall()" % secret_id)
+	if not ex.knock_wall(secret_id) or not Secrets.is_open(Game.state, secret_id):
+		return fail("Kulissenwand %s does not open" % secret_id)
 	return true
 
 
@@ -873,7 +954,8 @@ func _event_dialog(ex: ExplorationScene, event_id: String, choice: String) -> bo
 # Walking
 # ======================================================================================================================
 
-## Walks door by door to `cell` (shortest path over open doors; living boss rooms only as the goal).
+## Walks door by door to `cell` (shortest path over open doors; living boss rooms only as the goal). Counts the cell
+## changes and countdown ticks of finished travels and the shortcuts through opened Kulissenwände (06 package A).
 func travel(cell: Vector2i) -> Walk:
 	var ex: ExplorationScene = _ex()
 	var layout: FloorLayout = ex.get_layout()
@@ -883,6 +965,40 @@ func travel(cell: Vector2i) -> Walk:
 	if path.is_empty():
 		fail("no path from %s to %s" % [str(ex.get_player_cell()), str(cell)])
 		return Walk.INTERRUPTED
+	var t0: int = int(fr.stats.get("time_used_ticks", 0))
+	var w: Walk = await _travel_path(ex, layout, fr, path)
+	if w == Walk.ARRIVED and fr == Game.state.floor_run and fr.timer_started:
+		travel_cells += path.size() - 1
+		travel_ticks += int(fr.stats.get("time_used_ticks", 0)) - t0
+		_note_shortcut(layout, fr, path, cell)
+	return w
+
+
+## 06 package A: does the shortest path run through an opened Kulissenwand? Saved cell changes = path length with
+## every wall standing − this path.
+func _note_shortcut(layout: FloorLayout, fr: FloorRun, path: Array[Vector2i], cell: Vector2i) -> void:
+	var standing: PackedStringArray = []
+	var any_wall: bool = false
+	for k: String in fr.opened_gates:
+		var g: Dictionary = layout.gate_by_key(k)
+		if not g.is_empty() and Secrets.is_secret_requirement(str(g["requires"])):
+			any_wall = true
+		else:
+			standing.append(k)
+	if not any_wall or path.size() < 2:
+		return
+	var alt: Array[Vector2i] = find_path(layout, path[0], cell, standing, _boss_blocks(layout, fr, cell))
+	if alt.size() > path.size():
+		shortcut_trips += 1
+		shortcut_cells += alt.size() - path.size()
+
+
+## Seconds of countdown per cell change the bot measured on its travels (0 before the countdown ran).
+func sec_per_cell() -> float:
+	return float(travel_ticks) / Game.TICKS_PER_SEC / travel_cells if travel_cells > 0 else 0.0
+
+
+func _travel_path(ex: ExplorationScene, layout: FloorLayout, fr: FloorRun, path: Array[Vector2i]) -> Walk:
 	var p: Vector3 = ex.get_player_position()
 	var here: Vector3 = hub(ex, path[0])
 	if path.size() > 1 and Rules.flat_dist(p, here) > 3.0:
@@ -1216,6 +1332,14 @@ func _switch_hero_twice(scene: SafeRoomScene) -> bool:
 	return true
 
 
+## 06 package A: every secret of the current floor (walls and notes) is open.
+func _all_secrets_found() -> bool:
+	for sec: Dictionary in Secrets.list(Game.floor_def()):
+		if not Secrets.is_open(Game.state, str(sec.get("id", ""))):
+			return false
+	return true
+
+
 ## Number of safe rooms of the current floor (from the floor's layout).
 func _layout_safe_rooms() -> int:
 	var def: FloorDef = Game.floor_def()
@@ -1268,6 +1392,12 @@ func check_scene_state(ex: ExplorationScene) -> bool:
 		var evi: Node = ex.get_interactable(ev.id)
 		if evi != null and fr.completed_events.has(ev.id) and ev.type != "wheel" and str(evi.call("prompt_text")) != "":
 			return fail("completed event %s still offers an interaction" % ev.id)
+	for sec: Dictionary in Secrets.list(Game.floor_def()):          # 06 package A
+		var sid: String = str(sec["id"])
+		if Secrets.is_open(Game.state, sid) and (ex.get_wall(sid) != null or ex.get_interactable(sid) != null):
+			return fail("secret %s is open in the state but still on the map" % sid)
+		if not Secrets.is_open(Game.state, sid) and ex.get_interactable(sid) == null:
+			return fail("secret %s is closed in the state but missing on the map" % sid)
 	_note("scene matches the loaded state (chests, groups, gates, events)")
 	return true
 
@@ -1472,6 +1602,13 @@ func _after_stairs() -> bool:
 	var fs: FloorSummary = Router.current as FloorSummary
 	summary = fs.summary.duplicate()
 	_note("floor summary %s" % JSON.stringify(summary))
+	if strategy == "thorough" and not _all_secrets_found():
+		return fail("thorough run left E1 secrets behind: %s of %s" % [str(Secrets.opened(Game.state)),
+			str(Secrets.list(Game.floor_def()).map(func(x: Dictionary) -> String: return str(x["id"])))])
+	if int(summary.get("regie_notes_total", 0)) != Game.secret_notes().y \
+			or int(summary.get("regie_notes", -1)) != Game.secret_notes().x:
+		return fail("floor summary shows Regie-Notizen %s/%s, state %s" % [str(summary.get("regie_notes", "-")),
+			str(summary.get("regie_notes_total", "-")), str(Game.secret_notes())])
 	fs.continue_pressed()
 	phase = "credits"
 	if not await _wait(func() -> bool: return Router.current != null and not Router.busy \
@@ -1633,6 +1770,10 @@ func stats() -> Dictionary:
 	return {
 		"pace": pace, "strategy": strategy, "human_wait_sec": roundi(human_wait_sec),
 		"hero": hero, "barks": barks, "dazed": dazed, "hero_switches": hero_switches,
+		"secrets": Secrets.opened(Game.state) if Game.state != null else PackedStringArray(),
+		"walls_knocked": walls_knocked, "notes_read": notes_read, "wall_fallbacks": wall_fallbacks,
+		"shortcut_trips": shortcut_trips, "shortcut_cells": shortcut_cells,
+		"sec_per_cell": snappedf(sec_per_cell(), 0.01), "shortcut_gain_sec": roundi(shortcut_cells * sec_per_cell()),
 		"sponsor_gifts": gifts.size(), "gifts_regular": gifts_regular, "gifts_boss": gifts_boss, "gift_ids": gifts,
 		"boss_outcomes": boss_outcomes, "boss_exp": boss_exp, "boss_kit": boss_kit,
 		"credits_before_floor_boss": credits_before_floor_boss,

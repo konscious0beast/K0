@@ -65,7 +65,7 @@ const REQUIRED_MOD_TAGS: PackedStringArray = ["intro", "floor_start", "first_fig
 const OPTIONAL_MOD_TAG_PREFIXES: PackedStringArray = ["achievement:", "boss_intro:", "boss_phase:", "event_", "gift_received",
 	"mopsula_idle", "chat_", "gift_", "fan_pack_", "live_", "vote_", "twist_applied_", "tutorial_", "story_",
 	"sponsor_window_",
-	"hero_"]                                # 06 package A: hero_pick:<id>, hero_switch:<id>
+	"hero_", "regie_", "secret_"]           # 06 package A: hero_pick/switch:<id>, regie_note:<n>, secret_wall
 
 ## Copy of StatIds.ALL (§6.3); test_m2_achievements asserts equality.
 const STAT_IDS: PackedStringArray = ["kills_total", "kills_skill", "battles_won", "battles_fled", "preemptives",
@@ -235,7 +235,9 @@ const SPEC_WINDOW: Array = [["open_at", "s", ""], ["close_at", "s", ""], ["durat
 const SPEC_ENCOUNTER: Array = [["id", "s"], ["enemies", "sa"], ["weight", "i", 10], ["min_depth", "f", 0.0],
 	["max_depth", "f", 1.0], ["boss", "b", false], ["can_flee", "b", true], ["tutorial", "b", false], ["music", "s", ""]]
 const SPEC_LAYOUT: Array = [["cells", "a"], ["zones", "a"], ["gates", "a", []], ["encounters_placed", "a", []],
-	["chests", "a", []], ["events", "a", []], ["spawners", "a", []], ["safe_rooms", "a", []], ["stairs", "d"]]
+	["chests", "a", []], ["events", "a", []], ["spawners", "a", []], ["safe_rooms", "a", []], ["stairs", "d"],
+	["secrets", "a", []]]                   # 06 package A: Kulissenwände / Regie-Notizen (validators/secrets.gd)
+const SecretsCheck := preload("res://core/data/validators/secrets.gd")
 const SPEC_CELL: Array = [["x", "i"], ["y", "i"], ["zone", "s"], ["kind", "s"], ["doors", "s", ""]]
 const SPEC_ZONE: Array = [["id", "s"], ["name", "s"], ["palette", "d", {}]]
 const SPEC_GATE: Array = [["cell", "c2"], ["dir", "s"], ["requires", "s"]]
@@ -1213,6 +1215,13 @@ func _n_layout(ctx: String, raw: Dictionary, floor_index: int) -> Dictionary:
 	l["safe_rooms"] = srs
 	var st: Dictionary = _norm(ctx + ".stairs", l["stairs"], SPEC_STAIRS)
 	l["stairs"] = st
+	var secrets: Array[Dictionary] = []     # 06 package A
+	var raw_sec: Array = l["secrets"]
+	for i in raw_sec.size():
+		var sec: Dictionary = _norm(_ctx(ctx + ".secrets", i, raw_sec[i]), raw_sec[i], SecretsCheck.SPEC)
+		if not sec.is_empty():
+			secrets.append(sec)
+	l["secrets"] = secrets
 	return l
 
 
@@ -2002,6 +2011,9 @@ func _check_layout(ctx: String, floor_d: Dictionary, lay: Dictionary) -> void:
 			_err(gctx, "closes the same door as gates[%d] (door %s)" % [int(doors_gated[dk]), dk])
 		else:
 			doors_gated[dk] = i
+	# 06 package A: secrets (walls on existing, ungated doors; notes; optional = never needed to reach a cell).
+	for e: String in SecretsCheck.check(ctx, idx, lay.get("secrets", []), cells, gates, MAX_OFFSET):
+		errors.append(e)
 	# Placements: cells exist, offsets, runtime id formats, uniqueness.
 	var group_re: String = "^f%d_(g[0-9]+|qb|fb)$" % idx
 	var chest_re: String = "^f%d_c[0-9]+$" % idx

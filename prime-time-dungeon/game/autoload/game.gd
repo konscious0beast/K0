@@ -300,7 +300,12 @@ func complete_floor() -> void:
 	Events.floor_completed.emit(state.floor_run.index)
 	if mode == &"event_offline":
 		finish_run(&"floor_completed")
-	Router.goto(Router.SCENE_FLOOR_SUMMARY, {"summary": state.floor_run.summary()}, Router.Transition.FADE)
+	var summary: Dictionary = state.floor_run.summary()
+	var notes: Vector2i = secret_notes()           # 06 package A: "Regie-Notizen 1/3" (only floors with notes)
+	if notes.y > 0:
+		summary["regie_notes"] = notes.x
+		summary["regie_notes_total"] = notes.y
+	Router.goto(Router.SCENE_FLOOR_SUMMARY, {"summary": summary}, Router.Transition.FADE)
 
 
 ## Called by FloorSummary "Weiter".
@@ -682,6 +687,34 @@ func set_hero(hero_id: String) -> bool:
 	if changed:
 		Events.hero_changed.emit(hero_id)
 	return true
+
+
+## 06 §2.7 (package A): opens an E1 secret — a Kulissenwand (knocked over by the field strike / bark; its door joins
+## opened_gates) or a Regie-Notiz (+15 followers). Secrets.check_open refuses (unknown, already open, note behind a
+## standing wall) → false, nothing recorded. Else record({"t": "secret", "id"}), Secrets.open, followers / M.O.D. line
+## via Show (like the floor events), emits secret_opened(id). The visuals (wall falls, gate_opened) are the
+## ExplorationScene's (open_secret_visual), like open_gate.
+func open_secret(secret_id: String) -> bool:
+	var def: FloorDef = floor_def() if state != null and state.floor_run != null else null
+	if Secrets.check_open(state, def, secret_id) != "":
+		return false
+	record({"t": "secret", "id": secret_id})
+	var fx: Dictionary = Secrets.open(state, def, secret_id)
+	var followers: int = int(fx.get("followers", 0))
+	if followers != 0:
+		Show.add_followers(followers, &"secret")
+	var tag: String = str(fx.get("mod_tag", ""))
+	if tag != "":
+		Show.say(tag)
+	Events.secret_opened.emit(secret_id)
+	return true
+
+
+## Regie-Notizen of the current floor: Vector2i(found, total) (floor summary "Regie-Notizen 1/3").
+func secret_notes() -> Vector2i:
+	if state == null or state.floor_run == null:
+		return Vector2i.ZERO
+	return Secrets.notes_found(state, floor_def())
 
 
 func _choose_initial_hero(hero_id: String) -> void:
@@ -1253,5 +1286,7 @@ func _replay_apply(c: Dictionary) -> void:
 			open_dev_sponsor_window(int(c.get("sec", 0)), int(c.get("slots", 0)))
 		"hero":                                    # 06 package A
 			set_hero(str(c.get("id", "")))
+		"secret":                                  # 06 package A
+			open_secret(str(c.get("id", "")))
 		_:
 			push_warning("[Game] replay: unknown command '%s'" % str(c.get("t", "")))

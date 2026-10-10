@@ -1246,10 +1246,19 @@ automatischen Partner mit **„AUTO“**) statt eines Sterns — lesbarer auf To
 `kai`), damit jeder Lauf-Log die Wahl explizit trägt; die Event-Lobby bietet noch keine Wahl (`start_event_run(…, hero_id)` ist
 vorbereitet, Default `kai`); Bosse/Fahrscheinfresser „zucken nur“ mit „…“-Blase; die Safe-Room-Liste wurde für sieben Einträge
 umgebaut (einzeiliger Kopf, „Speichern | Weiter“ nebeneinander, Status als Banner oben). Ohne Schritt 0 umgesetzt: die geteilten
-Dateien tragen kleine, markierte Blöcke (`# 06 package A`). **Offen in Paket A:** E1-Geheimnisse (Kulissenwände, Regie-Notizen,
-`secret`-Command, `tests/test_06a_secrets.gd`).
+Dateien tragen kleine, markierte Blöcke (`# 06 package A`).
+**E1-Geheimnisse (zweiter Commit) umgesetzt:** `core/dungeon/secrets.gd` (`Secrets`), `core/data/validators/secrets.gd`,
+`scenes/exploration/scenery_wall.gd` + `note_interactable.gd`, `layout.secrets` (1 Kulissenwand `sec_e1_wall_sewer` B(5,3)↔C(5,2),
+3 Regie-Notizen), Command `secret {id}` / `Game.open_secret`, Signal `secret_opened`, Minimap (stehende Wand = Wand), Etagen-Bilanz
+„Regie-Notizen n/3“, Bot-Ziele `wall`/`note` + Abkürzungs-Messung, `tests/test_06a_secrets.gd`. Abweichungen: **nur eine** Wand —
+`sec_e1_wall_track` (Nische mit Truhe) bräuchte eine neue Zelle und damit eine neue E1-Karte; Notiz 2 hängt hinter der Wand und
+erscheint erst, wenn sie fällt (der Fund gehört zur Wand); Regie-Notizen sind Notizständer mit Post-it statt Post-its an Wänden
+(Offsets ≤ 4,5 m halten die Randstreifen frei). **Zeitgewinn im Bot gemessen: ≈ 6 s** (1 Durchquerung, 2 Zellwechsel à 3,1 s) statt
+der geschätzten 25–35 s: auf der kompakten E1-Karte spart eine Wand höchstens 2 Zellwechsel je Richtung, und nur solange
+`gate_lever` zu ist (der Hebel scheitert in 40 %). Das Ziel „≥ 20 s“ braucht eine Wand an einem längeren Umweg (neue Zelle/Karte, E2).
 Ansichten: `docs/screenshots/19_hero_select.png`, `20_explore_mopsula_bark.png`, `21_safe_room_hero_switch.png`,
-`22_battle_partner_auto.png` (Recipes `hero_mopsula_<zone>`, `bark_<zone>`, `safe_hero_switch`, `battle_partner_auto` in
+`22_battle_partner_auto.png`, `23_secret_wall.png`, `24_secret_wall_falls.png`, `25_regie_notiz.png` (Recipes
+`hero_mopsula_<zone>`, `bark_<zone>`, `safe_hero_switch`, `battle_partner_auto`, `secret_wall|open|note` in
 `tests/capture_recipes.gd`).
 
 ### 8.3 Paket B — Talent-Show + Spezies/Spezialisierung (Datenmodell)

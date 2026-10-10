@@ -101,8 +101,9 @@ Konsistenzprüfung derselben Revision:
 | E24 | Offene Punkte | O1–O10 entschieden (Zeitlupe überall erlaubt mit Kennzeichnung, Pause nur offline, Regeneration nach E12, FINALE in der Sim, …) | §13.2 |
 | E25 | Partner-KI reagiert menschlich (Orchestrator; Werte nach §11.3 nachgestellt) | **Unterbrechen:** Die KI sieht einen unterbrechenswerten Zauber erst nach `AI_INTERRUPT_REACT_TICKS` = 15 (0,5 s) + 0–10 Ticks Streuung aus ihrem eigenen Zufallsstrom, je Zauber mit 25 % „spät“ (+45 Ticks); während eines eigenen Zaubers und in den letzten 5 Ticks ihres GCD unterbricht sie nicht, sie reagiert danach. **Ausweichen:** Je Telegraph übersieht sie ihn mit 13 % (Taktik „Vorsichtig“: 4 %), sonst reagiert sie nach `REACT_TICKS` (Angriff 15 statt 18). Ein perfekter Mensch ist bei beidem schneller. Die Vorgabe „15 % spät, +12 Ticks“ allein ließ Held:in Mopsula im Modell bei 2–5 % Niederlagen (der KI-Tank wich zuverlässiger aus und unterbrach sicherer als ein typischer Mensch), deshalb die Nachstellung — nur KI-Werte, keine Boss-Werte | §3.9.3, §3.16, §5.3, §5.5, §11.3 |
 | E26 | Show-Boss E1 (Orchestrator) | `enc_e1_showboss` „Kanalratten-Gala“ (06 §2.6, von 06 C zurückgestellt) wird nicht im CTB gebaut, sondern direkt im Echtzeitkampf in **R4**: Datenblock und Platzierung, `validators/show_boss.gd`, Regel „alle 8 s ein Strafzettel“, `showboss_*`-Zeilen im R4-Block, Balance-Band; Code-Haken `RtMods.from_show_boss` und Belohnung in R1b-I3 | §9.6, §11.1, §12.2–12.5 |
-| E27 | KI-SHOW (Orchestrator) | Der KI-Partner darf die SHOW nutzen (Party-Abklingzeit 30 s, 5 s Vorrang der Person), damit Talente wie Mopsulas „Dramatische Pause“ (`stunt_window_pm`; der alte Name „Taktgefühl“ entfällt) auch als KI-Partner wirken; Hype nach der bestehenden `by_ai`-Regel | §4.1, §9.1, §9.6 |
+| E27 | KI-SHOW (Orchestrator) | Der KI-Partner darf die SHOW nutzen (Party-Abklingzeit 30 s, 5 s Vorrang der Person), damit Talente wie Mopsulas „Taktgefühl“ (`tal_mop_taktgefuehl`, `stunt_window_pm`; hieß bis zur 06-Integration „Dramatische Pause“ und wurde aus Abstandsgründen umbenannt) auch als KI-Partner wirken; Hype nach der bestehenden `by_ai`-Regel | §4.1, §9.1, §9.6 |
 | E28 | Erster Kampf (Konsistenzprüfung) | Der erste Kampf verlangt nur Bewegen, Ziel, Taste 1, SHOW und Ausweichen: Tutorial-Leiste nur Slot 1 + SHOW (Sim-Regel), Trank und Partner-Spezial ab dem zweiten Kampf, Taktik-Chip ab Stufe 3 (der erste Safe Room liegt direkt hinter dem Tutorial), Bedrohungsanzeige erst nach einem eigenen Spott; die schlafende Tutorial-Gruppe weckt auch eine Berührung (sonst bräuchte Held:in Mopsula Zielwahl und Taste 1 schon vor dem Kampf) | §2.2, §2.13, §4.1, §5.2, §8.1 |
+| E29 | Werte E25 abgenommen; Taktik-Hinweis (Orchestrator) | Die nachgestellten KI-Werte aus E25 (25 % „spät“ +45 Ticks, übersehene Telegraphen, Angriffs-Reaktion 15 Ticks) gelten als Startwerte für R4. Dass ein perfekter Mopsula-Spieler mit der Standard-Taktik noch 15–16 % Bossversuche verliert, ist gewollt: die Partner-Taktik ist Teil des Könnens. Damit das verständlich bleibt, zeigt ein einmaliger Kontext-Hinweis `partner_tactic` den Weg zu „Vorsichtig“ (§2.13) | §2.13, §5.2, §11.3 |
 
 ---
 
@@ -362,7 +363,9 @@ Ziel: Niemand muss vor dem ersten Kampf etwas lesen; jede Regel kommt in dem Mom
   gesteuerten Figur: Kai Slot 3, Mopsula Slot 4; `rt_hint_interrupt`).
 - **Weitere Erst-Hinweise** (`HINT_IDS`; je einmal je Spielstand, höchstens eine Karte je Kampf, gleiche Pausen-Mechanik):
   `zone` (erste Pfütze), `partner_special` (erster Kampf mit sichtbarem Partner-Spezial — nie der Tutorial-Kampf), `finale`
-  (FINALE erstmals nutzbar), `flee` (erstmals den Ring verlassen), `enrage` (erstes Enrage); dazu `interrupt` (oben).
+  (FINALE erstmals nutzbar), `flee` (erstmals den Ring verlassen), `enrage` (erstes Enrage), `partner_tactic`
+  (E29: nach dem ersten verlorenen Bossversuch, oder wenn der KI-Partner in einem Kampf 3 Telegraphen-Treffer abbekommt:
+  „Kai steckt zu viel ein? Stell ihn auf ‚Vorsichtig‘.“ — öffnet direkt den Taktik-Chip); dazu `interrupt` (oben).
 - Einstellung „Kampf-Hinweise“ (`GameSettings.combat_hints`, Standard an): aus → keine Karten, keine Pausen, keine
   `combat_hint`-Befehle. Event-/Liga-Läufe zeigen keine Karten (Regel `rules.combat.hints`, Standard `false` in Ligen).
 
@@ -1156,7 +1159,7 @@ Gegnerwerte in `enemies.json → rt`, Fähigkeitswerte in `skills.json → rt`.
 - **SHOW:** Stunt mit Risiko und viel Hype; **eine Abklingzeit für die ganze Party** (30 s, §3.6.12). Der KI-Partner zündet seine
   eigene SHOW nur, wenn die SHOW schon `AI_SHOW_GRACE_TICKS` = 150 (5 s) bereitliegt und der Schalter „Show-Einlagen“ an ist — die
   Person hat immer den ersten Zugriff („Lässt du die Show liegen, macht es dein Partner.“). Die KI darf die SHOW also nutzen
-  (E27): Talente der Figur wirken dabei wie bei der Person (Mopsulas „Dramatische Pause“ über `RtUnit.stunt_pm`, §9.6); Hype
+  (E27): Talente der Figur wirken dabei wie bei der Person (Mopsulas „Taktgefühl“ über `RtUnit.stunt_pm`, §9.6); Hype
   zählt nach §9.1 (Stunt-Erfolg für die ganze Party, „eigene SHOW“ für Marotten und Achievements nur mit `by_ai == false`).
 - **FINALE** (Bedingung **in der Sim**): Der SHOW-Slot zeigt und wirkt das FINALE, wenn die Figur **mindestens Stufe 6** ist
   (`bar`-Eintrag mit `finale: true`, `level` 6 — vor der Rattenkönigin erreichbar) **und** ihr aktuelles feindliches Ziel **unter
@@ -1381,7 +1384,7 @@ Vokabulare (`RtVocab`, verbindlich): `RT_TARGETS`, `RT_CONDITIONS` (§5.3), `RT_
 `STATUS_TO` (`target`, `self`, `all_enemies`, `all_allies`), `STACK_MODES`, `RT_STATUS_FLAGS`, `RT_PRESETS` (`attack`, `support`,
 `careful`), `RT_TOGGLES` (`interrupt`, `show`, `potions`), `MP_REGEN_MODES` (`hit`, `time`), `RT_ITEM_KINDS` (`heal`, `revive`,
 `mp`, `cure`), `SUMMON_AT` (`door`, `near`), `TUTORIAL_STEPS` (`target`, `bar1`, `show`, `dodge`), `HINT_IDS` (`interrupt`,
-`zone`, `partner_special`, `finale`, `flee`, `enrage`; §2.13), `MOD_OPS` (§9.5), `ICON_IDS`.
+`zone`, `partner_special`, `finale`, `flee`, `enrage`, `partner_tactic`; §2.13), `MOD_OPS` (§9.5), `ICON_IDS`.
 
 | Nr. | Regel |
 |---|---|
@@ -2448,7 +2451,7 @@ Twists im Kampf** (06 §5.7) und kein `RtSim.apply_twist`; ein Twist-Befehl trä
 | `post_battle_mp_pm` | `BattleBridge.apply_result` | gleich: Werbepause nach jedem Sieg (§2.7) |
 | `field_range_pm`, `field_cd_pm` | Feldschlag/Bellen (`EncounterRules`) | gleich; die Feldschlag-Reichweite gilt auch für den Pull per Feldschlag |
 | `preemptive_dmg_pm` („Erster Eindruck“, `tal_kai_erster_eindruck`) → `RtUnit.opener_pm` = `Talents.preemptive_dmg_pm(member, data)` (06 §8.3, gesetzt von `make_rt_setup`) | `BattleBridge.make_setup` (Schaden der ersten Runde nach Präventivschlag) | Faktor `opener_pm` in der Faltung (§3.9.1): bei Vorteil `PREEMPTIVE` auf alle Treffer der Einheit gegen Ziele mit `sts_dazed` (die 3 s des Überrumpelns) und auf ihren ersten schadenden Treffer im Kampf (`opener_done`) |
-| `stunt_window_pm` („Dramatische Pause“, `tal_mop_dramatische_pause`) → `RtUnit.stunt_pm` = `Talents.stunt_window_pm(member, data)` (06 §8.3, gesetzt von `make_rt_setup`) | Stunt-Fenster in `ActionResolver` (Stunt-Chance × pm vor Boss-Abzug und Deckel) | SHOW-Erfolgschance in bp in derselben Reihenfolge: `clampi(div_round((base + LCK × lck) × stunt_pm, 1000) + boss, STUNT_MIN, cap)` — für jede Einheit mit dem Talent, auch für die SHOW der KI (E27) |
+| `stunt_window_pm` („Taktgefühl“, `tal_mop_taktgefuehl`) → `RtUnit.stunt_pm` = `Talents.stunt_window_pm(member, data)` (06 §8.3, gesetzt von `make_rt_setup`) | Stunt-Fenster in `ActionResolver` (Stunt-Chance × pm vor Boss-Abzug und Deckel) | SHOW-Erfolgschance in bp in derselben Reihenfolge: `clampi(div_round((base + LCK × lck) × stunt_pm, 1000) + boss, STUNT_MIN, cap)` — für jede Einheit mit dem Talent, auch für die SHOW der KI (E27) |
 | `marotte_heart` | `MarottenRules` | gleich |
 | `hype_gain_pm`, `follower_pm` | `GameState`-Promille-Produkt | gleich |
 
@@ -2962,7 +2965,7 @@ Echtzeit-Nachfolger mit Test:
 | `battle_controller.gd` „Partner automatisch“ (A) | keiner: Partner immer KI + Partner-Spezial (§5.1); Option im Echtzeitmodus ausgeblendet | R3, R5b | `test_r3_settings` |
 | `BattleBridge.make_setup`: Talent-Krit, -Element (B; `Talents.crit_add_pm`, `element_pm`) | `BattleBridge.make_rt_setup` füllt dieselben `Combatant`-Felder (§9.6) | R1b-I1 | `test_r1_rt_talents` |
 | `BattleBridge.make_setup`: Präventiv-Talent „Erster Eindruck“ (B; `Talents.preemptive_dmg_pm`) | `make_rt_setup` setzt `RtUnit.opener_pm`, gefaltet in `rt_damage.gd` (§3.9.1, §9.6) | R1b-I1 | `test_r1_rt_talents` |
-| `ActionResolver`: Stunt-Fenster „Dramatische Pause“ (B; `Talents.stunt_window_pm`) | `make_rt_setup` setzt `RtUnit.stunt_pm`, SHOW-Erfolgschance in `rt_ability.gd` — auch für die KI-SHOW (§9.6, E27) | R1b-I1 | `test_r1_rt_talents` |
+| `ActionResolver`: Stunt-Fenster „Taktgefühl“ (B; `Talents.stunt_window_pm`) | `make_rt_setup` setzt `RtUnit.stunt_pm`, SHOW-Erfolgschance in `rt_ability.gd` — auch für die KI-SHOW (§9.6, E27) | R1b-I1 | `test_r1_rt_talents` |
 | `ShowBossRules.apply` + Hook in `BattleBridge.make_setup` (C; Stub aus Schritt 0, der Show-Boss ist zurückgestellt und wird im CTB nie gebaut, E26) | `RtMods.from_show_boss` + Belohnung über `boss_rewards` in `make_rt_setup`/`rt_result.gd` (R1b-I3); Daten, Validator, Zeilen, Band (R4, §9.6) | R1b-I3, R4 | `test_r1_rt_mods`, `test_r4_rt_showboss` |
 | `MarottenTracker` über `Show.on_battle_event` (C) | derselbe Weg; `by_ai`, Flucht, `duration_sec` (§9.6) | R5a | `test_r5_marotten_rt` |
 | `Show.take_pending_gift(battle)` (Bestand) | `Show.take_pending_gift_rt(sim)` + `Game.combat_boundary()` (§9.2) | R5a | `test_r5_gifts_in_combat` |
@@ -2990,7 +2993,7 @@ Echtzeit-Nachfolger mit Test:
 | R1 | `test_r1_rt_move` | Koppelnavigation geschlossen, Plausibilität (Lauftempo × Δ + Budget 600 mm, Nachfüllung 3 mm/Tick), `POS_CORRECTED`, `walkable`/`project_walkable` (Ring, Türgassen, Waggon), Auftritt ≤ 30 Ticks, Abstoßung, Formation, Flucht nach 60 Ticks, Nebel, geschlossenes Set |
 | R1 | `test_r1_rt_result` | `BattleResult` (EXP, Credits, Overkill neu, Beute, Diebstahl/Erstattung, Party-HP, Kills, K.O.s, `group_ids`, Zähler nur der gesteuerten Figur, `party_turns` ohne KI), Doppel-K.O. = Sieg, Tutorial-HP ≥ 1 |
 | R1 | `test_r1_rt_mods` | Vokabular-Prüfung, statische Ops, `on`-Reaktionen, `add_rule` mit geteiltem Timer, Show-Boss-Abbildung und -Belohnung (E26), Twist-Tabelle über `from_twists(twists, data)` |
-| R1 | `test_r1_rt_talents` | Krit/Element über `make_rt_setup`; „Erster Eindruck“ (`opener_pm`: überrumpelte Ziele, erster Treffer), „Dramatische Pause“ (`stunt_pm`: Reihenfolge vor Boss-Abzug und Deckel, auch für die SHOW der KI, E27) |
+| R1 | `test_r1_rt_talents` | Krit/Element über `make_rt_setup`; „Erster Eindruck“ (`opener_pm`: überrumpelte Ziele, erster Treffer), „Taktgefühl“ (`stunt_pm`: Reihenfolge vor Boss-Abzug und Deckel, auch für die SHOW der KI, E27) |
 | R1 | `test_r1_rt_tutorial` | Tutorial-Kampf (E28): `bar()` nur Slot 1 + 5, `submit` lehnt andere Slots (`not_learned`), Gegenstände und Partner-Spezial (`forbidden`) ab, KI-Partner spielt normal, Party-HP ≥ 1 |
 | R1 | `test_r1_rt_pure` | 1 000 Aufrufe aller Abfragen ändern `StateHash.of_rt` nicht; Lauf mit Abfragen nach jedem Tick = Lauf ohne |
 | R1 | `test_r1_rt_golden` | festes Setup + ~200 geskriptete Befehle → `StateHash.of_rt` und Ereignisanzahl gleich festen Golden-Werten; zweimal laufen = gleich; geänderte Golden-Werte nur mit Begründung im Commit |
@@ -3080,7 +3083,7 @@ Datentabellen (um `rt` erweitert).
 | 02_TECH | §5 Kampf-Kern | ersetzt durch 07 §3 (der Hinweis „abgelöst durch 07“ steht schon) | R5b |
 | 02_TECH | §6.4 Save, §7.3 Erkundung, §11 Autoplay/Full-Run, §12 Budgets | additive Felder und v2; Auslöser §2.2; §12.5; §8.10 | R5b |
 | 01_GDD | §2.3/2.4, §3, §4.2, §5, §7, §13 | Kampfauslöser; §3 ersetzt durch 07 (Hinweis steht schon); HP × 4 nach dem Backen; Echtzeit-Gegner §6; Hype-Tabelle §9.1; Messwerte | R5b |
-| 06 | §1.4, §2.2 (Spalte „Angewendet in“), §2.6, §4.4 `mar_speed`, §8 | „Partner automatisch“ entfällt; Talent-Anwendung §9.6 (`opener_pm`/`stunt_pm`, „Dramatische Pause“ auch als KI-SHOW, E27); Show-Boss „alle 8 s“, nur im Echtzeitkampf gebaut (E26); Echtzeit-Bedingung mit Etage 2; Verweise auf die gelöschten CTB-Dateien | R5b |
+| 06 | §1.4, §2.2 (Spalte „Angewendet in“), §2.6, §4.4 `mar_speed`, §8 | „Partner automatisch“ entfällt; Talent-Anwendung §9.6 (`opener_pm`/`stunt_pm`, „Taktgefühl“ auch als KI-SHOW, E27); Show-Boss „alle 8 s“, nur im Echtzeitkampf gebaut (E26); Echtzeit-Bedingung mit Etage 2; Verweise auf die gelöschten CTB-Dateien | R5b |
 | 03_ART | §8, §9 | Telegraph-Farben, Kampf-HUD-Elemente, LED-Ring, Decal-Befund | R3 |
 | PERFORMANCE.md | alles | Neumessung mit Echtzeitkampf | R5b |
 

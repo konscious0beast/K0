@@ -192,7 +192,8 @@ func _end_if_finished() -> void:
 
 
 ## Non-battle commands → the same Game/Show method the live run used. false = not applicable (a QA Sponsor-Fenster the
-## rules do not allow, an unknown type); gifts Show refuses are reported through gift_rejected.
+## rules do not allow, a talent pick / casting the core refuses, an unknown type); gifts Show refuses are reported
+## through gift_rejected.
 func _apply(c: Dictionary) -> bool:
 	match str(c.get("t", "")):
 		"floor":
@@ -237,6 +238,10 @@ func _apply(c: Dictionary) -> bool:
 			Show.receive_gift(c.get("gift", {}))
 		"sponsor_window":
 			return game.open_dev_sponsor_window(int(c.get("sec", 0)), int(c.get("slots", 0)))
+		"talent":                                        # 06 package B
+			return game.pick_talent(str(c.get("member", "")), str(c.get("id", "")))
+		"casting":
+			return game.choose_casting(str(c.get("member", "")), str(c.get("species", "")), str(c.get("class", "")))
 		_:
 			push_warning("[GameReplay] unknown command '%s'" % str(c.get("t", "")))
 			return false

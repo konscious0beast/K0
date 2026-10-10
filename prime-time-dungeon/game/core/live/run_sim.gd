@@ -26,10 +26,11 @@ class_name RunSim extends RefCounted
 ##
 ## apply(cmd) — the recorded commands of 02_TECH §3.4 (Command.TYPES) applied with the core rules only — the SAME
 ## functions the live run calls (RunRules: floor start, rooms, chests, gates, lootboxes, floor events, safe rooms,
-## scenes, difficulty; Shop, Progression; battles via BattleBridge/BattleState with enemy and party commands from the
-## log; gifts via GiftApplier outside battles, BattleState.apply_gift inside). Before anything changes,
-## command_refusal() checks the legality a verifier needs against forged logs (rule-breaking floor / scene /
-## difficulty commands, commands after "descend", gifts: GiftPolicy.refusal) → rejected_cmds. RNG streams are consumed
+## scenes, difficulty; Shop, Progression; Talents.pick / Casting.choose (06 package B); battles via
+## BattleBridge/BattleState with enemy and party commands from the log; gifts via GiftApplier outside battles,
+## BattleState.apply_gift inside). Before anything changes, command_refusal() checks the legality a verifier needs
+## against forged logs (rule-breaking floor / scene / difficulty / talent / casting commands, commands after "descend",
+## gifts: GiftPolicy.refusal) → rejected_cmds. RNG streams are consumed
 ## exactly like the live flow (RunRules.next_seed "battle" + "show" per encounter, "lootbox", "gift"; event/stray
 ## seeds from the floor seed, chest seeds from the floor's loot_seed, 05 CR-11). What it does NOT
 ## contain are the reactions of the Show facade (hype/followers from battle events, achievements, milestones, sponsor
@@ -184,6 +185,10 @@ func apply(cmd: Dictionary) -> Array[ExploreEvent]:
 			out.append_array(sponsor_safe_room_exit())
 		"sponsor_window":
 			out.append_array(sponsor_dev_open(int(c["sec"]), int(c["slots"])))
+		"talent":                                # 06 package B (legality: RunRules.command_refusal)
+			Talents.pick(state, data, str(c["member"]), str(c["id"]))
+		"casting":
+			Casting.choose(state, data, str(c["member"]), str(c["species"]), str(c["class"]))
 		"scene":
 			RunRules.mark_scene_seen(state, data.scene_def(str(c["id"])))
 		"flag":
@@ -237,7 +242,8 @@ func next_seed(purpose: String) -> int:
 ## "" or why the core rules refuse the (schema-valid, normalized) command `c` now — the legality check a verifier needs
 ## against forged logs (05 §11.4). Read-only. gift: gift_refusal(); sponsor_window: SponsorWindows.dev_allowed →
 ## not_allowed; every other command: RunRules.command_refusal (after "descend" only the next floor, floor order,
-## no difficulty change in event runs, scenes only as their safe room visit allows).
+## no difficulty change in event runs, scenes only as their safe room visit allows, talent picks / castings only as
+## Talents.check_pick / Casting.check allow).
 func command_refusal(c: Dictionary) -> String:
 	var t: String = str(c.get("t", ""))
 	if t == "gift":

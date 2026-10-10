@@ -1,8 +1,12 @@
 extends "res://scenes/ui/menu_base.gd"
 ## Pause tab "Party" (02_TECH §1.6, GDD §14.4): per member level, HP/MP, EXP to the next level, all 8 stats (total with
-## equipment), equipment and class. Cards are focusable; pressing one jumps to the equipment page (`open_equipment`).
+## equipment and talents), equipment, talents (06 §2.2: picked talents + "Talentwahl offen" badge) and the Casting line
+## (species · specialization, from floor 3). Cards are focusable; pressing one jumps to the equipment page
+## (`open_equipment`).
 
 signal open_equipment(member_id: String)
+
+const TalentText := preload("res://scenes/ui/talent_text.gd")
 
 var _row: HBoxContainer
 
@@ -68,9 +72,7 @@ func _card(m: PartyMember) -> Button:
 	var n: Label = UiUtil.label(UiUtil.member_name(m), &"", 24)
 	n.add_theme_font_override("font", UiTheme.font_bold())
 	names.add_child(n)
-	var cls: String = "Klasse: –" if m.class_id == "" else "Klasse: " + (UiUtil.tr_text(DB.class_def(m.class_id).name)
-		if DB.has_id("classes", m.class_id) else m.class_id)
-	names.add_child(UiUtil.label(cls + "  (Wahl ab Etage 3)", &"LabelSmall", 16))
+	names.add_child(UiUtil.label(casting_text(m), &"LabelSmall", 16))
 	var lv: Label = UiUtil.label("Lv %d" % m.level, &"", 28, UiTheme.C_GOLD)
 	lv.add_theme_font_override("font", UiTheme.font_bold())
 	head.add_child(lv)
@@ -109,7 +111,54 @@ func _card(m: PartyMember) -> Button:
 		r.add_child(sl)
 		r.add_child(UiUtil.label(UiUtil.item_name(item_id), &"", 17))
 		col.add_child(r)
+	col.add_child(UiUtil.spacer(2))
+	col.add_child(_talent_row(m))
 	return b
+
+
+## "Casting ab Etage 3" before the Casting, else "Kachelgolem · Abrissbirne" (species · specialization).
+static func casting_text(m: PartyMember) -> String:
+	if m.species_id == "" and m.class_id == "":
+		return "Spezies & Klasse: Casting ab Etage 3"
+	var parts: PackedStringArray = []
+	if m.species_id != "":
+		parts.append(UiUtil.tr_text(DB.species_def(m.species_id).name) if DB.has_id("species", m.species_id)
+			else m.species_id)
+	if m.class_id != "":
+		parts.append(UiUtil.tr_text(DB.class_def(m.class_id).name) if DB.has_id("classes", m.class_id) else m.class_id)
+	return " · ".join(parts)
+
+
+## Star + "Talente" + the picked talents ("Wischtechnik II, Bissfest") or "noch keine (ab Level 3)"; with an open
+## choice a gold pill "1 Wahl offen" (the Talent-Show waits in the safe room).
+func _talent_row(m: PartyMember) -> HBoxContainer:
+	var r: HBoxContainer = UiUtil.hbox(8)
+	r.name = "Talents"
+	r.add_child(UiIcon.make(&"star", UiTheme.C_GOLD, 18))
+	var tl: Label = UiUtil.label("Talente", &"LabelSmall", 15)
+	tl.custom_minimum_size = Vector2(96, 0)
+	r.add_child(tl)
+	var names: PackedStringArray = TalentText.member_talents(m)
+	var v: Label = UiUtil.label(", ".join(names) if not names.is_empty() else "noch keine (ab Level 3)", &"", 17)
+	v.name = "TalentNames"
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	r.add_child(v)
+	var open: int = Talents.pending_levels(m).size() if Talents.has_choice(Game.state, DB.data, m.id) else 0
+	if open > 0:
+		var pill: PanelContainer = PanelContainer.new()
+		pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		pill.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		var sb: StyleBoxFlat = UiUtil.box_style(UiTheme.C_GOLD, UiUtil.C_INK, 0, 0.0, 10, 1)
+		sb.set_corner_radius_all(12)
+		pill.add_theme_stylebox_override("panel", sb)
+		var hint: Label = UiUtil.label("1 Wahl offen" if open == 1 else "%d Wahlen offen" % open, &"", 15, UiUtil.C_INK)
+		hint.name = "TalentHint"
+		hint.add_theme_font_override("font", UiTheme.font_bold())
+		hint.add_theme_constant_override("outline_size", 0)
+		pill.add_child(hint)
+		r.add_child(pill)
+	return r
 
 
 func _bar_row(label_text: String, value: int, max_value: int, variation: StringName) -> HBoxContainer:

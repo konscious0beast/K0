@@ -434,7 +434,9 @@ func flee_chance() -> float:
 	return clampf(c, Balance.FLEE_MIN, Balance.FLEE_MAX)
 
 
-## GDD §3.6: clampf(success_base + LCK × success_lck + (target_is_boss ? success_boss_mod : 0), 0.05, success_cap).
+## GDD §3.6: clampf((success_base + LCK × success_lck) × talent factor + (target_is_boss ? success_boss_mod : 0), 0.05,
+## success_cap). Talent factor: Combatant.talent_mods.stunt_pm in per-mille (06 §2.2 "Dramatische Pause"; 1000 =
+## neutral) — it scales the chance before the boss modifier and the cap.
 ## target_is_boss: one of `target_ids` (the resolved targets; all-enemy stunts: any of them) is a living boss — a
 ## single-target stunt on a summoned add in a boss fight gets no penalty. Without targets (HUD preview before the
 ## target is chosen) every valid target counts, i.e. the boss value whenever a boss could be hit.
@@ -442,6 +444,7 @@ func stunt_chance(actor: Combatant, skill: SkillDef, target_ids: PackedStringArr
 	if actor == null or skill == null:
 		return 0.0
 	var c: float = skill.success_base + float(actor.stat(StatBlock.Stat.LCK)) * skill.success_lck
+	c *= float(int(actor.talent_mods.get("stunt_pm", 1000))) / 1000.0
 	var ids: PackedStringArray = target_ids if not target_ids.is_empty() else valid_targets(actor, skill.id)
 	for id: String in ids:
 		var t: Combatant = get_combatant(id)

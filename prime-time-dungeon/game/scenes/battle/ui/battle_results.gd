@@ -5,6 +5,8 @@ extends CanvasLayer
 ## defeat show a short card. Autoplay continues on its own after 1.0 s (auto_continue_sec). Layer 6: above the
 ## battle HUD, below the show overlay / M.O.D. box; UiTheme is assigned to the root (CanvasLayer children do not
 ## inherit root.theme). Private M5 script (no class_name).
+## 06 package B: a level-up onto an odd level >= 3 adds the chip "TALENT BEREIT · im Safe Room wählen" under the
+## member's LEVEL UP line — a hint only, the choice itself waits for the Talent-Show (never an interruption here).
 
 signal closed
 signal frame_ticked
@@ -60,6 +62,7 @@ func _ready() -> void:
 
 
 ## Capture still: a victory over two Kanalratten with a level up-free EXP gain, overkill credits and achievements.
+## params {"demo": "talent"} (06 package B): Kai levels up onto L3 — LEVEL UP line + "TALENT BEREIT" chip.
 func _present_demo() -> void:
 	Game.ensure_state()
 	var r: BattleResult = BattleResult.new()
@@ -80,6 +83,18 @@ func _present_demo() -> void:
 		if m != null:
 			before[m.id] = {"level": m.level, "exp": m.exp}
 			m.exp += rw.exp                # ephemeral capture state: the bars fill like after a real battle
+	if str(_params.get("demo", "")) == "talent" and Game.state != null:
+		var kai: PartyMember = Game.state.member("kai")
+		before["kai"] = {"level": 2, "exp": 60}
+		kai.level = 3
+		kai.exp = 11
+		var info: LevelUpInfo = LevelUpInfo.new()
+		info.member_id = "kai"
+		info.old_level = 2
+		info.new_level = 3
+		info.stat_gains = {"hp": 9, "mp": 2, "str": 2, "def": 2, "res": 1}
+		info.learned = PackedStringArray(["skl_kai_sweep"]) if DB.has_id("skills", "skl_kai_sweep") else []
+		rw.level_ups = [info]
 	present(r, rw)
 
 
@@ -310,6 +325,8 @@ func _member_rows(result: BattleResult, rw: BattleRewards) -> void:
 					up.add_child(learned)
 		elif ko and result.outcome == BattleResult.Outcome.VICTORY:
 			row.add_child(HudStyle.label(tr("K.O. – halbe EXP, zurück mit 1 HP"), 15, Color("#ff8080")))
+		if info != null and _talent_levels(info) > 0:               # 06 package B
+			row.add_child(_talent_chip(_talent_levels(info)))
 
 
 ## Credits | Follower | Beute in one row.
@@ -361,6 +378,40 @@ func _cell(row: HBoxContainer, icon: String, icon_col: Color, value: String, val
 	cell.add_child(val)
 	row.add_child(cell)
 	return cell
+
+
+## 06 package B: talent choices earned by this level-up (odd levels >= 3 in old+1..new).
+static func _talent_levels(info: LevelUpInfo) -> int:
+	var n: int = 0
+	for lv in range(info.old_level + 1, info.new_level + 1):
+		if Talents.is_talent_level(lv):
+			n += 1
+	return n
+
+
+## Gold chip "TALENT BEREIT · im Safe Room wählen" ("2 TALENTE BEREIT" for several choices at once).
+func _talent_chip(n: int) -> Control:
+	var wrap: HBoxContainer = HBoxContainer.new()
+	wrap.name = "TalentChip"
+	wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var chip: PanelContainer = PanelContainer.new()
+	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb: StyleBoxFlat = HudStyle.show_box(Color(1.0, 0.79, 0.24, 0.18), Color("#ffc93c"), 2, 0.0,
+		Vector4(10, 3, 12, 3))
+	sb.shadow_size = 0
+	chip.add_theme_stylebox_override("panel", sb)
+	wrap.add_child(chip)
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chip.add_child(row)
+	var star: HudStyle.Icon = HudStyle.Icon.new("star", Color("#ffc93c"), 16)
+	star.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(star)
+	var head: String = tr("TALENT BEREIT") if n <= 1 else tr("%d TALENTE BEREIT") % n
+	row.add_child(HudStyle.label(head, 16, Color("#ffc93c"), true, 3))
+	row.add_child(HudStyle.label(tr("im Safe Room wählen"), 15, Color("#d9d0ea")))
+	return wrap
 
 
 func _achievement_block(ids: PackedStringArray) -> Control:

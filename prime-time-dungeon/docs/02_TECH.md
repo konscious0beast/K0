@@ -150,6 +150,9 @@ Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört gen
 | `core/data/defs/achievement_def.gd` | M0 | `AchievementDef` |
 | `core/data/defs/sponsor_def.gd` | M0 | `SponsorDef` |
 | `core/data/defs/mod_line_def.gd` | M0 | `ModLineDef` |
+| `core/data/defs/talent_def.gd` | 06-B | `TalentDef` (`talents.json`, §4.4.15; Vokabulare `KINDS`, `BEHAVIOUR_KINDS`, `ICONS`) |
+| `core/data/defs/species_def.gd` | 06-B | `SpeciesDef` (`species.json`, §4.4.16) |
+| `core/data/validators/talents.gd`, `species.gd` | 06-B | Regeln der Tabellen `talents`/`species`, von `DataValidator` per `preload` aufgerufen (06 §8.0 Nr. 7: je neuer Tabelle eine Datei; ohne `class_name`) |
 | `core/stats/stat_block.gd` | M1 (S) | `StatBlock` + `enum Stat` (§5.2) |
 | `core/stats/elements.gd` | M1 (S) | `Elements`: Element-Konstanten, Multiplikator-Helfer |
 | `core/stats/balance.gd` | M1 (S) | `Balance`: alle Formelkonstanten (§5.9) |
@@ -186,6 +189,8 @@ Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört gen
 | `core/progression/battle_rewards.gd` | M2 (S) | `BattleRewards` |
 | `core/progression/shop.gd` | M2 (S) | `Shop`: Automat (kaufen/verkaufen) |
 | `core/progression/save_codec.gd` | M2 (S) | `SaveCodec`: Save-Dict ↔ `GameState`, Versionierung, Migration |
+| `core/progression/talents.gd` | 06-B | `Talents`: Talent-Show — offene Wahlen, geseedetes Angebot, Wahl, Wirkungen (§6.5) |
+| `core/progression/casting.gd` | 06-B | `Casting`: Spezies + Spezialisierung ab Etage 3 — Optionen, Regeln, Wahl (§6.5; UI folgt mit Etage 3) |
 | `core/dungeon/room_cell.gd` | M3 (S) | `RoomCell` |
 | `core/dungeon/chest_spawn.gd` | M3 (S) | `ChestSpawn` |
 | `core/dungeon/enemy_spawn.gd` | M3 (S) | `EnemySpawn` |
@@ -200,7 +205,7 @@ Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört gen
 | Datei | Modul | Zweck |
 |---|---|---|
 | `core/live/run_sim.gd` | M8 (S) | `RunSim`: deterministische Erkundungs-Uhr in Ticks (§7.1), Replay von Commands (`RunSim.replay`) |
-| `core/live/run_rules.gd` | M8 | `RunRules`: die gemeinsamen Spielregeln der aufgezeichneten Nicht-Kampf-Commands (Etage, Räume, Truhen, Tore, Lootboxen, Etagen-Events, Safe Rooms, Szenen, Schwierigkeit) und ihre Legalitätsprüfung `command_refusal` — von `Game` und `RunSim` aufgerufen (§7.1) |
+| `core/live/run_rules.gd` | M8 | `RunRules`: die gemeinsamen Spielregeln der aufgezeichneten Nicht-Kampf-Commands (Etage, Räume, Truhen, Tore, Lootboxen, Etagen-Events, Safe Rooms, Szenen, Schwierigkeit) und ihre Legalitätsprüfung `command_refusal` (inkl. `talent`/`casting`, 06-B) — von `Game` und `RunSim` aufgerufen (§7.1) |
 | `core/live/run_log.gd` | M8 (S) | `RunLog`: Seed + Commands + Ticks (Brief §6b.3); `to_dict`/`from_dict`/`digest` |
 | `core/live/command.gd` | M8 (S) | `Command`: Schema-Prüfung der aufgezeichneten Commands (`t`-Typen aus §3.4) |
 | `core/live/canonical_json.gd` | M8 (S) | `CanonicalJson`: kanonische Serialisierung für Hashes; `static var last_error: String` (von den statischen Funktionen gesetzt, gelesen als `CanonicalJson.last_error`) |
@@ -235,6 +240,8 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `data/milestones.json` | Follower-Meilensteine |
 | `data/mod_lines.json` | M.O.D.-, Mopsula-, Kai- und Chat-Zeilen |
 | `data/scenes.json` | Mopsula-Szenen (Safe Room) |
+| `data/talents.json` | Talente der Talent-Show (06-B, Inhalt + Schema §4.4.15) |
+| `data/species.json` | Spezies ab Etage 3 (06-B, Inhalt + Schema §4.4.16) |
 | `data/events.json` | Live-/Offline-Events (M7 Inhalt, M8 Schema); **nicht** in `GameData.TABLES`, geladen von `EventCatalog` (§4.5); eigenes Format `{schema, events}` (Ausnahme von §4.1, 05 §10.1) |
 
 ### 1.5 `art/` (alle M4)
@@ -322,7 +329,9 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `scenes/ui/touch_controls.tscn` + `.gd` | M6 | Touch-Layer (virtueller Stick + Buttons + Kamera-Drag) |
 | `scenes/ui/virtual_joystick.gd` | M6 | Floating Joystick |
 | `scenes/ui/pause_menu.tscn` + `.gd` | M6 | Pause: Party, Inventar, Ausrüstung, Fähigkeiten, Achievements, Bestiarium, Optionen, Zum Titel |
-| `scenes/ui/party_menu.gd` | M6 | Party-Status |
+| `scenes/ui/party_menu.gd` | M6 | Party-Status (+ 06-B: Talente-Zeile mit „n Wahl(en) offen“, Casting-Zeile) |
+| `scenes/ui/talent_show.tscn` + `.gd` | 06-B | Talent-Show (Modal, Ebene 60): je offene Wahl zwei Karten, `pick(i)` → `Game.pick_talent`; „Später“ |
+| `scenes/ui/talent_text.gd` | 06-B | Texte/Icons der Talente (Wirkungszeilen aus den Daten), privat |
 | `scenes/ui/inventory_menu.gd` | M6 | Inventar (Feld-Nutzung) |
 | `scenes/ui/equipment_menu.gd` | M6 | Ausrüstung |
 | `scenes/ui/skills_menu.gd` | M6 | Fähigkeiten + Freischalt-Level (aus `learnset`) |
@@ -349,7 +358,7 @@ Jede Datei unter `tests/` gehört dem genannten Modul; `test_<modul>_*.gd` ist d
 | `tests/capture.gd` | M0 | Screenshot-Werkzeug (§11.3) |
 | `tests/capture_recipes.gd` | M0 | Benannte Capture-Zustände für `--recipe=` (§11.3; per `load()` nach den Autoloads, kein class_name) |
 | `tests/lib/test_case.gd` | M0 | `TestCase`: Basis mit Asserts (§11.2) inkl. `assert_time_budget` (nur mit `PTD_PERF_ASSERTS=1`); liegt in `lib/`, damit der Runner sie nicht als Testdatei lädt |
-| `tests/fixtures/data_min/*.json` | M0 | Minimaler gültiger Datensatz (alle 13 Tabellen aus `GameData.TABLES`) für M0-Tests |
+| `tests/fixtures/data_min/*.json` | M0 | Minimaler gültiger Datensatz (alle 15 Tabellen aus `GameData.TABLES`) für M0-Tests |
 | `tests/fixtures/router/router_screen.tscn` + `.gd` | M0 | Fixture-Screen (nur Screen-Vertrag §9.2) für die generischen Operationen in `test_m0_router` |
 | `tests/fixtures/runner_selftest/test_selftest_cases.gd` | M0 | Absichtlich fehlschlagende, abstürzende und überspringende Fälle; nur im Kindprozess des Runner-Selbsttests (`--root=…`) ausgeführt |
 | `tests/fixtures/live/canonical_vectors.json`, `gift_tables.json` | M8 | Testvektoren `CanonicalJson` (identisch mit Python/JS/Go) und Gift-Tabellen für `FairRoll` (05 §10.2) |
@@ -411,7 +420,7 @@ Jede Datei unter `tests/` gehört dem genannten Modul; `test_<modul>_*.gd` ist d
 | `tests/test_m8_gift.gd` | M8 | Gift-Schema: Pflichtfelder, Art je Quelle, `sender_ref`, Inhaltsgrenzen, Signaturformat |
 | `tests/test_m8_gift_applier.gd` | M8 | `GiftApplier` außerhalb des Kampfes; gleiche Kiste im/außerhalb des Kampfes ergibt dasselbe |
 | `tests/test_m8_gift_policy.gd` | M8 | `effect_pm`-Tabelle, Caps, Kistenschwelle, Buchung je Lieferung, Mindestabstand, Lauf-Bindung |
-| `tests/test_m8_integrity.gd` | M8 | Verifier gegen gefälschte Logs (Schwierigkeit, Header, Etagen-/Szenen-Commands, Geschenke nach `descend`, `wrong_target`, Ledger, `too_soon`), `Game.replay_log`-Vertrag, eindeutige `run_id`s |
+| `tests/test_m8_integrity.gd` | M8 | Verifier gegen gefälschte Logs (Schwierigkeit, Header, Etagen-/Szenen-/Talent-/Casting-Commands, Geschenke nach `descend`, `wrong_target`, Ledger, `too_soon`), `Game.replay_log`-Vertrag, eindeutige `run_id`s |
 | `tests/test_m8_leaderboard.gd` | M8 | Bestenliste: Rang, Top 10, Persistenz, korrupte Datei → leer |
 | `tests/test_m8_no_global_rng.gd` | M8 | Determinismus-Lint für `core/**` (kein globales RNG, keine Uhr, keine Gleitkomma-Funktionen) |
 | `tests/test_m8_quest_tracker.gd` | M8 | Alle S0-Quest-Typen |
@@ -422,6 +431,10 @@ Jede Datei unter `tests/` gehört dem genannten Modul; `test_<modul>_*.gd` ist d
 | `tests/test_m8_score_calc.gd` | M8 | `ScoreCalc`: Beispiel 05 §10.4, Caps, Tie-Break |
 | `tests/test_m8_sponsor_windows.gd` | M8 | Sponsor-Fenster (05 §6.13): Fahrplan in Ticks, Kampf friert ein, Plätze/Zuschauer-Limit, Codes, Safe Room (Leerlauf-Ticks), Boss-Countdown, Replay-Gleichheit; Integration `Show.receive_gift`, Overlay-Badge, Debug-Werkzeug |
 | `tests/test_m8_state_hash.gd` | M8 | `StateHash.of`/`of_battle` ohne Anzeigefelder |
+| `tests/test_06b_talents.gd` | 06-B | `talents.json` + Validator, offene Wahlen (ungerade Level ab L3), geseedetes Angebot, Wahlregeln, jede Wirkungsart an ihrem Ort, Command + Replay (`RunSim`, `Game`-Fassade), Save/Hash-Kompatibilität |
+| `tests/test_06b_species.gd` | 06-B | `species.json` + Validator (kein Kronen-Motiv an Mopsula, `spc_original`), `Casting` (Optionen, Gründe, Re-Spec-Regeln, Werte Klasse × Spezies), Command + Replay, Save |
+| `tests/test_06b_talent_show.gd` | 06-B | Talent-Show-Szene (Karten, „Später“, Erst-Erklärung, Vorschau), TALENT-SHOW-Knopf im Safe Room, Chip „TALENT BEREIT“, Party-Seite |
+| `tests/test_06b_balance.gd` | 06-B | Talentboni bei L10 ≤ +15 % je Kampfwert für jede Wahlfolge (erschöpfend); Boss-Quoten mit Bot-Wahl ±5 Punkte (gepaart, 300 Seeds) |
 | `tests/test_perf_router_cycles.gd` | Phase C | Router-Zyklen Erkundung → Kampf → Safe Room ohne Wachstum der Node-/Objekt-Minima, `Sfx.stop_all`, Etagen-Aufbauzeit, Physik-/Licht-Layer der Etage (§12.1, §12.5) |
 | `tests/test_perf_platform.gd` | Phase C | Mobil-Projekteinstellungen, Export-Presets + Launcher-Icons, Boot kompiliert keine Screens vorab (§2.1, §12.3) |
 | `tests/perf/perf_probe.gd` + `perf_runner.gd`, `tests/perf/boot_timer.gd` | Phase C | Mess-Werkzeug für `tools/perf.sh` (§12.5); keine Tests (kein `test_`-Präfix) |
@@ -702,6 +715,9 @@ signal inventory_changed()
 signal credits_changed(credits: int, delta: int)
 signal lootbox_earned(box_id: String)
 signal lootbox_opened(box_id: String, rewards: Array)    # Array[LootReward]
+# --- Talents & casting (06 §2/§3, package B) ----------------------------------
+signal talent_pending(member_id: String, level: int)     # Game.apply_battle_result: a level-up earned a talent choice
+signal talent_picked(member_id: String, talent_id: String)   # Game.pick_talent (recorded)
 
 # --- Live mode (M8 hooks, Brief §6b; 05_LIVE_MODUS CR-1) ------------------------
 signal run_started(event_id: String, league: String)
@@ -729,7 +745,7 @@ Wer emittiert was (verbindlich):
 | Signal | Emitter |
 |---|---|
 | `scene_changed` | Router |
-| `new_game_started`, `floor_timer_*`, `floor_completed`, `stray_spawn_requested`, `party_changed`, `member_leveled`, `level_up`, `inventory_changed`, `credits_changed`, `lootbox_opened`, `chest_opened` (`open_chest`), `event_completed` (`apply_floor_event`), `input_scheme_changed`, `settings_changed`, `item_bought`, `explore_tick`, `run_started`, `run_finished`, `quest_progress`, `quest_completed`, `sponsor_window_opened`, `sponsor_window_closed` (`_dispatch` der RunSim-Events) | Game |
+| `new_game_started`, `floor_timer_*`, `floor_completed`, `stray_spawn_requested`, `party_changed`, `member_leveled`, `level_up`, `inventory_changed`, `credits_changed`, `lootbox_opened`, `chest_opened` (`open_chest`), `event_completed` (`apply_floor_event`), `input_scheme_changed`, `settings_changed`, `item_bought`, `explore_tick`, `run_started`, `run_finished`, `quest_progress`, `quest_completed`, `sponsor_window_opened`, `sponsor_window_closed` (`_dispatch` der RunSim-Events), `talent_pending` (`apply_battle_result`), `talent_picked` (`pick_talent`) | Game |
 | `game_loaded`, `game_saved` | Save |
 | `floor_entered`, `room_entered`, `enemy_alerted`, `encounter_triggered`, `gate_opened`, `overlay_mode_requested(&"explore")` | ExplorationScene (M3) |
 | `battle_started`, `battle_turn_started`, `battle_ended`, `overlay_mode_requested(&"battle")` | BattleScene/BattleController (M5) |
@@ -767,6 +783,8 @@ func scene_def(id: String) -> SceneDef
 func floor_def(index: int) -> FloorDef
 func encounter(id: String) -> EncounterDef
 func mod_lines(tag: String) -> Array[ModLineDef]
+func talent(id: String) -> TalentDef          # 06-B
+func species_def(id: String) -> SpeciesDef    # 06-B
 func has_id(table: String, id: String) -> bool
 ```
 
@@ -852,7 +870,7 @@ func make_battle_setup(encounter_id: String, advantage: int, group_id: String) -
 func apply_battle_result(result: BattleResult) -> BattleRewards
 	# in_battle = false; BattleBridge.apply_result(state, DB.data, result); sim.request_checkpoint(); emits party_changed,
 	# inventory_changed, credits_changed, member_leveled + level_up({"member", "level"}) per level; floor_timer_started if
-	# timer_started flipped
+	# timer_started flipped; talent_pending(member, level) per new level that earns a talent choice (06-B, Talents)
 func open_lootbox(box_id: String) -> Array[LootReward]
 	# record({"t": "lootbox", "box": box_id}); removes one box_id from state.pending_lootboxes;
 	# LootRoller.roll_lootbox(box, DB.data, floor_index, state, rng from next_seed("lootbox")); add_rewards(); emits lootbox_opened
@@ -865,6 +883,11 @@ func equip(member_id: String, slot: String, item_id: String) -> bool   # record;
 func use_item(item_id: String, member_id: String) -> bool   # inventory menu (field use): record({"t": "use_item", "item", "member"});
 	# Progression.use_item(state, DB.data, item_id, member_id); emits party_changed, inventory_changed
 func rest_full_heal() -> void         # record({"t": "rest"}); Progression.full_heal(state, DB.data); emits party_changed
+func pick_talent(member_id: String, talent_id: String) -> bool   # 06-B Talent-Show: Talents.check_pick == "" (safe room,
+	# oldest open choice of the member, id in its offer, rank < max_rank) → record({"t": "talent", "member", "id"});
+	# Talents.pick; emits talent_picked, party_changed. Refused → false, nothing recorded
+func choose_casting(member_id: String, species_id: String, class_id: String) -> bool   # 06-B (UI: Etage 3): Casting.check
+	# == "" → record({"t": "casting", "member", "species", "class"}); Casting.choose; emits party_changed. Refused → false
 func apply_floor_event(event_id: String, choice: String) -> Dictionary   # §7.4 (FloorEvent resolve/apply + Show + record;
 	# outcome.completed → emits event_completed({"event_id", "choice"}))
 func visit_room(cell: Vector2i) -> bool   # ExplorationScene on every room change; first visit: floor_run.visited.append(cell),
@@ -944,6 +967,9 @@ Laufzeitverhalten:
   `open_lootbox`, `apply_floor_event`, `enter_safe_room`/`leave_safe_room`, `mark_scene_seen` und `set_difficulty` ändern den
   Zustand ausschließlich über die gleichnamigen statischen `RunRules`-Funktionen, die auch `RunSim.apply` aufruft; `Game` ergänzt
   nur `record()`, Signale, Show-Reaktionen und Sponsor-Fenster. Eine Regeländerung passiert damit an genau einer Stelle.
+  Talent-Show und Casting (06-B) folgen demselben Muster mit eigenen Kernklassen: `pick_talent`/`choose_casting` ändern den
+  Zustand nur über `Talents.pick`/`Casting.choose` (auch in `RunSim.apply`), ihre Legalität (`Talents.check_pick`/
+  `Casting.check`) steht in `RunRules.command_refusal`.
 - **Aufzeichnungsregel:** Jede Zustandsänderung, die von außerhalb des Kerns (Szenen, UI) ausgelöst wird, läuft über eine
   aufzeichnende `Game`-Methode; Szenen/UI schreiben **nie** direkt in `Game.state` (auch nicht `floor_run.visited`, `location`,
   `opened_chests`, `flags`). Reaktionen (Show auf `Events`-Signale, `BattleBridge`, `RunSim`) sind deterministisch und werden nicht
@@ -953,8 +979,11 @@ Laufzeitverhalten:
   `equip {member, slot, item}`, `use_item {item, member}`, `rest {}`, `event {id, choice}` (FloorEvent-Wahl), `chest {id}`,
   `gate {key}`, `room {cell: [x, y]}` (nur Erstbesuch), `safe_room {id}`, `safe_room_exit {}`, `scene {id}`, `flag {key, value}`,
   `difficulty {to}`, `descend {}`, `gift {gift}` (nur `source ≠ "system"`, aufgezeichnet bei der **Anwendung**, §3.5; `cmd_id` 0;
-  mit Stempel `gift.sponsor_window`), `sponsor_window {op: "dev_open", sec, slots}` (QA-Fenster, 05 §6.13).
-  `Command.TYPES` (M8) = genau diese Liste.
+  mit Stempel `gift.sponsor_window`), `sponsor_window {op: "dev_open", sec, slots}` (QA-Fenster, 05 §6.13),
+  `talent {member, id}` (06-B, `pick_talent`), `casting {member, species, class}` (06-B, `choose_casting`).
+  `Command.TYPES` (M8) = genau diese Liste. Ein `talent`/`casting`-Command, das die Regeln nicht erlauben, lehnt
+  `RunRules.command_refusal` ab (`Talents.check_pick` / `Casting.check`, deren Grund) — beide Verifier (`RunSim.replay`,
+  `Game.replay_log`) melden es in `errors`, der Zustand bleibt unverändert.
 - **Sponsor-Fenster** (Nutzerentscheidung 2026-10-08, 05 §6.13): Externe Geschenke nur in offenen Fenstern. Die Auslöser sind die
   aufzeichnenden Methoden selbst — `start_floor` (schließt, Countdown neu), `visit_room` (Erstbesuch einer Boss-Zelle →
   Boss-Countdown 45 s), `enter_safe_room` / `leave_safe_room` (Safe-Room-Fenster ≤ 90 s, je Safe Room und Etage einmal),
@@ -989,7 +1018,7 @@ Laufzeitverhalten:
   prüft zuerst `RunRules.command_refusal` (dieselbe Legalität wie `RunSim.command_refusal`), dann ruft der Motor **dieselbe**
   Methode wie live (`start_floor`, `open_lootbox`, `buy`, `sell`, `equip`, `use_item`, `rest_full_heal`, `apply_floor_event`,
   `open_chest`, `open_gate`, `visit_room`, `enter_safe_room`, `leave_safe_room`, `mark_scene_seen`, `set_flag`, `set_difficulty`,
-  `open_dev_sponsor_window`, `descend` → `floor_completed` senden, `gift` außerhalb des Kampfes → `Show.receive_gift`). Kämpfe
+  `open_dev_sponsor_window`, `pick_talent`, `choose_casting` (06-B), `descend` → `floor_completed` senden, `gift` außerhalb des Kampfes → `Show.receive_gift`). Kämpfe
   exakt nach §5.7 ohne Szene: `encounter` → `make_battle_setup` (next_seed "battle") → `BattleState.new` → `Show.begin_battle`
   (next_seed "show") → `battle_started` → `_play(start())`; `battle` → `BattleState.validate`, dann
   `_play(submit(BattleCommand.from_dict(cmd)))`; `_play` = Events → `Show.on_battle_event`, dann (Kampf läuft) ein direkt
@@ -1318,7 +1347,7 @@ Fokus-Stil aller Buttons: 3 px `C_ACCENT_2`-Rahmen (StyleBox `focus`).
 
 ### 4.1 Konventionen
 
-- Jede Datei der 13 `GameData.TABLES`: **ein Objekt** `{"schema": 1, "entries": [ {...}, ... ]}`. Encounters sind in
+- Jede Datei der 15 `GameData.TABLES`: **ein Objekt** `{"schema": 1, "entries": [ {...}, ... ]}`. Encounters sind in
   `floors.json` eingebettet. Zusätzliche Top-Level-Schlüssel sind **nur** diese: `party.json` → `start`; `enemies.json` →
   `pseudo_units`; `lootboxes.json` → `pools`, `pity`. Jeder andere Top-Level-Schlüssel ist ein Fehler.
   **Ausnahme `data/events.json`:** `{"schema": 1, "events": [ … ]}` (Schema 05 §10.1), geladen von `EventCatalog` (M8),
@@ -1357,6 +1386,8 @@ Fokus-Stil aller Buttons: 3 px `C_ACCENT_2`-Rahmen (StyleBox `focus`).
 | scenes | `scn_` | `^scn_[a-z0-9_]+$` | `scn_mop_4` |
 | Passiva (in classes.json) | `pas_` | `^pas_[a-z0-9_]+$` | `pas_thick_skin` |
 | Live-Events (`events.json`, M8) | `evt_` | `^evt_[a-z0-9_]+$` | `evt_offline_gleis9` |
+| talents (06-B) | `tal_` | `^tal_[a-z0-9_]+$` | `tal_kai_wischtechnik`, `tal_mop_pluralis` |
+| species (06-B) | `spc_` | `^spc_[a-z0-9_]+$` | `spc_original`, `spc_kai_kachelgolem` |
 
 IDs sind **global eindeutig** über alle Tabellen (inkl. Encounter-, Etagen-Event-, Zonen- und Safe-Room-IDs).
 Laufzeit-IDs (nicht in Daten): Kampfteilnehmer `p0..p3`, `e0..eN`, Pseudo-Einheiten `u0..`; Gegnergruppen `f<etage>_g<i>`,
@@ -2007,6 +2038,54 @@ aufrecht, sonst Vierbeiner; `"quadruped"`/`"upright"` erzwingen — `enm_boss_ra
 Schaufensterpuppe: Übergangsregel `colors.eyes == colors.skin` → gesichtslose Puppe (`humanoid`); ein expliziter Schalter
 (Prop/Variante) folgt mit Etage 2.
 
+#### 4.4.15 `talents.json` (06-B, Talent-Show; 06 §2.2)
+
+```json
+{"id": "tal_kai_wischtechnik", "name": "Wischtechnik", "desc": "Jahre am Bahnsteig gewischt. Jeder Hieb sitzt.",
+ "for": ["kai"], "max_rank": 2, "weight": 2, "min_level": 3, "icon": "atk",
+ "effects": [{"kind": "stat_flat", "stat": "str", "value": 1}]}
+```
+
+`name` ✓ ≤ 32 Zeichen, `desc` ≤ 60 (eine Kartenzeile), `for` ⊂ Party-IDs (`[]` = alle), `max_rank` 1..2 (1), `weight` 1..10
+(1; Ziehgewicht im Angebot), `min_level` 3..99 (3), `icon` ✓ ∈ `TalentDef.ICONS` (`hp mp atk mag def res spd lck crit element
+show field stunt liga`), `effects` ✓ 1..3 Wirkungen. Texte ohne Fuß-/Schuh-Wörter (06 §0.3 Nr. 2; `FORBIDDEN_WORDS`).
+Wirkungsarten (`TalentDef.KINDS`, alle Zahlen int, je Rang einmal angewandt; Bereich = Validator):
+
+| `kind` | Felder (Bereich) | Wirkung (Auswertung in `Talents`) |
+|---|---|---|
+| `stat_flat` | `stat` ∈ STATS, `value` 1..3 | +value auf den Wert (vor den Multiplikatoren) |
+| `stat_pct` | `stat`, `pm` 30..50 | +pm ‰ des Level-+Ausrüstungswerts (Summe aller ‰, dann einmal gerundet) |
+| `crit_add_pm` | `pm` 10..30 | Kritchance +pm ‰ (`Combatant.crit_bonus`) |
+| `element_pm` | `element` ∈ ELEMENTS ohne `none`, `pm` 700..1000 | erlittener Schaden dieses Elements × pm ‰ (`Combatant.element_mods`, multiplikativ) |
+| `post_battle_mp_pm` | `pm` 30..50 | Werbepause regeneriert zusätzlich pm ‰ MaxMP (`BattleBridge`) |
+| `field_range_pm` | `pm` 1000..1500 | Reichweite der Feldfähigkeit × pm ‰ — **Wert gespeichert, Auswertung mit Paket A** |
+| `field_cd_pm` | `pm` 500..1000 | Abklingzeit der Feldfähigkeit × pm ‰ — Auswertung mit Paket A |
+| `preemptive_dmg_pm` | `pm` 1000..1200 | Präventivschlag: erster eigener Zug macht × pm ‰ Schaden (`ActionResolver`) |
+| `stunt_window_pm` | `pm` 1000..1250 | Stunt-Erfolgschance × pm ‰ vor der Obergrenze (`BattleState.stunt_chance`) |
+| `marotte_heart` | `per_floor` 1 | 1× je Etage +1 Herz für die aktive Marotte — Auswertung mit Paket C |
+| `liga_stat_pct` | `stat`, `pm` 30..50 | wie `stat_pct`, nur solange **dieses** Mitglied weder Rüstung noch Accessoire trägt („Unterhosen-Liga“) |
+| `hype_gain_pm` | `pm` 1000..1200 | Hype-Gewinn × pm ‰ (`GameState.hype_gain_mult`) |
+| `follower_pm` | `pm` 1000..1200 | Follower-Gewinn × pm ‰ (`GameState.follower_mult`) |
+
+`TalentDef.BEHAVIOUR_KINDS` (Karte „VERHALTEN“, cyan): `field_range_pm`, `field_cd_pm`, `preemptive_dmg_pm`, `stunt_window_pm`,
+`marotte_heart`, `liga_stat_pct`; alle übrigen sind „WERT“ (grün).
+
+#### 4.4.16 `species.json` (06-B, Casting ab Etage 3; 06 §3)
+
+```json
+{"id": "spc_kai_kachelgolem", "name": "Kachelgolem", "desc": "Fliesen statt Haut. Steht, fällt selten.", "for": ["kai"],
+ "min_floor": 3, "stat_mult": {"hp": 1.15, "def": 1.15, "spd": 0.9}, "growth_add": {},
+ "passive": {"id": "pas_grout", "params": {"first_hit_taken_pm": 700}}, "recommended_classes": ["cls_kai_wrecker"],
+ "model_hint": {"props_add": [], "colors": {"primary": "#2f8f9a", "secondary": "#e8eef0"}}}
+```
+
+Teilmenge von ClassDef: `name` ✓ ≤ 32, `desc` ≤ 60, `for` (`[]` = alle), `min_floor` 1..99 (3), `stat_mult` 0.5..2.0 je Wert,
+`growth_add` 0..20 je Wert (pro Level ab 1, wie Klassen), `passive` ✓ (`{id: pas_…, params}`; **validiert, im Slice nicht
+ausgewertet** — 06 §3.4), `recommended_classes` (existieren und passen zu jedem Mitglied der Spezies), `model_hint {props_add ⊂
+MODEL_PROPS, colors ⊂ MODEL_COLOR_KEYS (hex)}` (Look-Hinweis für die spätere Casting-Szene). Für Graf Mopsula sind `crown` und
+`ticket_crown` verboten (04 §2.3). Strikte Inhaltsregel (`load_dir`): `spc_original` existiert mit `for: []` und `stat_mult: {}`
+(„Original bleiben“ ist immer eine vollwertige Wahl).
+
 ### 4.5 Validierung (`DataValidator`) und `GameData`-API
 
 Ablauf `GameData.load_dir(dir)`: (1) alle Dateien aus `TABLES` parsen; (2) je Eintrag Schema prüfen + normalisieren; (3) zweiter
@@ -2040,11 +2119,15 @@ Regeln (jede Verletzung = ein Eintrag in `errors`, Format `"<table>[<index>|<id>
    (`{Name}`, `{name`, `}`, `{ floor }`) ist ein Fehler (`String.format` ließe sie im HUD stehen).
 10. `achievements.condition` und `scenes.condition` parsen fehlerfrei; `s.`-Operanden ∈ `StatIds.ALL` (DataValidator hält eine Kopie
     `STAT_IDS`; `test_m2_achievements` prüft Gleichheit); `e.`-Schlüssel ∈ Payload-Schlüssel des Triggers (§6.3).
+11. (06-B) `talents`/`species`: Regeln aus §4.4.15/16. Sie liegen je Tabelle in einer eigenen Datei
+    (`core/data/validators/talents.gd`, `species.gd`, 06 §8.0 Nr. 7); `DataValidator` ruft deren `normalize` / `check_refs` /
+    `check_content` an markierten Stellen auf. Die Präfixe `talent_` und `casting_` sind optionale `mod_lines`-Tags.
 
 ```gdscript
 class_name GameData extends RefCounted
 const TABLES: PackedStringArray = ["statuses", "skills", "items", "classes", "party", "enemies", "floors",
-	"lootboxes", "achievements", "sponsors", "milestones", "mod_lines", "scenes"]
+	"lootboxes", "achievements", "sponsors", "milestones", "mod_lines", "scenes",
+	"talents", "species"]                       # 06-B (§4.4.15/16)
 var source: String = ""                    # dir or "dicts"
 var errors: PackedStringArray = []
 var warnings: PackedStringArray = []
@@ -2071,6 +2154,11 @@ func floor_def(index: int) -> FloorDef      # null (no error) if index has no fl
 func floor_by_id(id: String) -> FloorDef
 func encounter(id: String) -> EncounterDef
 func mod_lines(tag: String) -> Array[ModLineDef]   # [] if none (no error)
+func talent(id: String) -> TalentDef               # 06-B
+func species_def(id: String) -> SpeciesDef         # 06-B
+func all_talents() -> Array[TalentDef]             # 06-B, sorted by id
+func talents_for(member_id: String) -> Array[TalentDef]   # 06-B: pool of one member (for == [] or contains id), id order
+func all_species() -> Array[SpeciesDef]            # 06-B, sorted by id
 func party_start() -> Dictionary                   # {"inventory": {id: int}, "credits": int}
 func loot_pool(floor_index: int, rarity: String) -> Array[Dictionary]   # pools.f<i> (fallback highest ≤ i); rarity incl. "fan"
 func pity_limits() -> Dictionary                   # {"rare": 4, "epic": 8}
@@ -2529,7 +2617,8 @@ Regeln (GDD §3):
   bei aktivem Stun `STATUS_BLOCKED`.
 - **Flucht**: `clampf(0.40 + (Ø SPD Party − Ø SPD Gegner) × 0.03 + 0.15 × failed_flee_attempts + (PREEMPTIVE ? 0.25 : 0.0), 0.10, 0.95)`;
   `flee_guaranteed`-Item (`itm_smoke`) → 1.0; Boss/`can_flee == false`/Tutorial → Befehl ungültig. Fehlschlag: Rang 2, `failed_flee_attempts += 1`.
-- **Stunt** (GDD §3.6): Chance `clampf(success_base + LCK × success_lck + (target_is_boss ? success_boss_mod : 0.0), 0.05, success_cap)`,
+- **Stunt** (GDD §3.6): Chance `clampf((success_base + LCK × success_lck) × stunt_pm / 1000 + (target_is_boss ? success_boss_mod :
+  0.0), 0.05, success_cap)` (`stunt_pm` = `Combatant.talent_mods.stunt_pm`, Talent „Dramatische Pause“, 06-B; ohne Talent 1000),
   `target_is_boss` = eines der aufgelösten Ziele ist ein lebender Boss (Alle-Gegner-Stunts: irgendeines; ein Einzelziel-Stunt
   auf einen beschworenen Begleiter im Bosskampf bekommt **keinen** Abzug; Kappung **nach** dem Boss-Modifikator);
   Erfolg → Skill-Effekt; Fehlschlag → `fail_effect` (Selbstschaden `roundi(max_hp × self_dmg_pct / 100)` als `DAMAGE` ohne Tod
@@ -2869,7 +2958,10 @@ var mp: int
 var equipment: Dictionary = {"weapon": "", "armor": "", "accessory": ""}
 var skills: PackedStringArray = []     # learned (learnset up to level)
 var class_id: String = ""
-func to_dict() -> Dictionary
+var talents: Dictionary = {}           # 06-B: talent id → rank (1..max_rank); open choices are derived (§6.5)
+var species_id: String = ""            # 06-B: "" = original; set by the casting (floor 3)
+var casting: Dictionary = {}           # 06-B: {"floor", "visit", "class_floor", "class_visit"} of the casting choices
+func to_dict() -> Dictionary           # the three 06-B keys only when set (old saves/hashes stay byte-identical)
 static func from_dict(d: Dictionary) -> PartyMember
 
 class_name Inventory extends RefCounted
@@ -2944,8 +3036,8 @@ static func create_new(data: GameData, slot: int, player_name: String, seed: int
 	# party from party.json (level 1, full hp/mp, learnset level ≤ 1, start equipment); inventory + credits from
 	# data.party_start() (3× itm_bandage, 1× itm_antidote, 50 Cr); show: hype 30, followers 0; floor_run = null (Game.start_floor)
 func member(id: String) -> PartyMember
-func hype_gain_mult(data: GameData) -> float     # product of equipped show_mods.hype_gain_mult
-func follower_mult(data: GameData) -> float      # product of equipped show_mods.follower_mult
+func hype_gain_mult(data: GameData) -> float     # product of equipped show_mods.hype_gain_mult × Talents.hype_pm / 1000
+func follower_mult(data: GameData) -> float      # product of equipped show_mods.follower_mult × Talents.follower_pm / 1000
 func to_dict() -> Dictionary
 static func from_dict(d: Dictionary) -> GameState
 
@@ -2958,9 +3050,15 @@ var learned: PackedStringArray
 
 class_name Progression extends RefCounted
 static func exp_to_next(level: int) -> int                       # level >= Balance.LEVEL_CAP → 0; else floori(18.0 × pow(level, 1.7) + 15.0)
-static func base_stats_at(def: PartyMemberDef, level: int, class_def: ClassDef = null) -> StatBlock
-	# floori(base + (growth + growth_add) × (level − 1)) per stat (GDD §4.1)
-static func total_stats(member: PartyMember, data: GameData) -> StatBlock # + equipment stats, × class stat_mult
+static func base_stats_at(def: PartyMemberDef, level: int, class_def: ClassDef = null,
+		species: SpeciesDef = null) -> StatBlock
+	# floori(base + (growth + class growth_add + species growth_add) × (level − 1)) per stat (GDD §4.1)
+static func total_stats(member: PartyMember, data: GameData) -> StatBlock
+	# order (06-B): level stats → + equipment → + talents (Talents.stat_bonus: flat, then the summed ‰ of stat_pct and
+	# active liga_stat_pct on that value, round half up) → × class stat_mult → × species stat_mult (each round half up)
+static func follow_max_vitals(member: PartyMember, before: StatBlock, after: StatBlock) -> void
+	# 06-B: a raised MaxHP/MaxMP raises hp/mp by the delta (like a level-up); a lowered one clamps (KO stays 0)
+static func class_skills_up_to(member: PartyMember, data: GameData, level: int) -> PackedStringArray   # 06-B (casting)
 static func add_exp(member: PartyMember, amount: int, data: GameData) -> Array[LevelUpInfo]
 	# level up raises hp/mp by the max delta (no full heal); at LEVEL_CAP surplus EXP is discarded
 static func equip(member: PartyMember, inventory: Inventory, data: GameData, slot: String, item_id: String) -> bool   # "" unequips
@@ -2969,7 +3067,9 @@ static func use_item(state: GameState, data: GameData, item_id: String, member_i
 	# field use: usable "field"/"both", count > 0; use_skill on the member outside battle (heal by heal_mode without
 	# variance/crit, cleanse, mp_restore/_pct, revive only for target single_ally_ko), −1 item; false = nothing changed
 static func to_combatant(member: PartyMember, data: GameData, id: String, slot: int) -> Combatant
-	# crit_bonus = Σ equipment crit_bonus; element_mods = Π; status_immune = ∪; status_resist from def; attack_element from weapon
+	# crit_bonus = Σ equipment crit_bonus (+ talent crit_add_pm / 1000); element_mods = Π (× talent element_pm / 1000);
+	# status_immune = ∪; status_resist from def; attack_element from weapon;
+	# talent_mods = Talents.battle_mods (06-B: {"preemptive_dmg_pm", "stunt_pm"}, only non-neutral keys; to_dict only if set)
 
 class_name BattleRewards extends RefCounted
 var exp: int = 0
@@ -2997,7 +3097,8 @@ static func apply_result(state: GameState, data: GameData, result: BattleResult)
 	# the thief escaped, GDD §3.11) is deducted → credits_lost; VICTORY: credits_refunded = result.credits_refunded;
 	# (4) VICTORY: EXP per member (alive full, KO'd floori(50 %) — while still at 0 HP, so a level-up never heals a KO'd
 	# member), credits (+overkill), drops, boss_rewards (items → inventory, boxes → pending_lootboxes), Werbepause
-	# +ceili(max_mp × 0.15) MP for living members; (5) KO → 1 HP unless DEFEAT (GDD §3.12 "Danach"); (6) VICTORY:
+	# +ceil(max_mp × (150 + Talents.post_battle_mp_pm) ‰) MP for living members (06-B; without talents the same value
+	# as ceili(max_mp × 0.15)); (5) KO → 1 HP unless DEFEAT (GDD §3.12 "Danach"); (6) VICTORY:
 	# defeated_groups += group_id, strays.erase(group_id), flags defeated_<boss_id> + quarter/floor boss flags, VICTORY over
 	# FloorDef.timer_start_after → floor_run.timer_started = true; (7) bestiary (defeated += 1 per defeated_ids entry,
 	# weak_known ∪= weak_found); floor_run.stats.kills += kills, floor_run.stats.party_kos += party_kos (key appears with
@@ -3165,12 +3266,65 @@ Datei `user://saves/slot_<1..3>.json` (bei `use_custom_user_dir` unter `…/Prim
 ```
 
 Regeln: `Vector2i` als `[x, y]`; Zahlen beim Laden mit `int()` konvertieren; unbekannte Item-/Skill-IDs beim Laden verwerfen
-(Warnung, nicht fatal); fehlende Felder → Defaults; `version > VERSION` → Laden verweigern („Spielstand stammt aus neuerer Version“).
+(Warnung, nicht fatal); 06-B: optionale Party-Felder `talents {id: rank}`, `species_id`, `casting {floor, visit, class_floor,
+class_visit}` — fehlen sie, gelten die Defaults (alte Spielstände laden unverändert, gleicher StateHash);
+`SaveCodec._sanitize_b` verwirft unbekannte oder fremde Talente/Spezies und klemmt Ränge auf `1..max_rank`; fehlende Felder → Defaults; `version > VERSION` → Laden verweigern („Spielstand stammt aus neuerer Version“).
 Speichern nur im Safe Room (manuell, `location` = Safe-Room-ID) + Autosave in `Game.continue_after_summary()`.
 **Gnadenfrist:** `Save.load_slot` setzt nach dem Dekodieren `time_left_ticks = maxi(time_left_ticks, 180 × 30)` (GDD §2.9).
 Nach dem Laden: Etage nicht spielbar (`playable == false`) → `Router.goto(SCENE_CREDITS)`; sonst
 `Router.goto(SCENE_EXPLORATION, {"spawn": state.floor_run.location})`; bei einer Safe-Room-ID ruft die Erkundung nach Aufbau
 `Router.enter_safe_room(id)` auf.
+
+### 6.5 Talente und Casting (06-B; `core/progression/talents.gd`, `casting.gd`)
+
+**Talent-Show** (06 §2.2, GDD §4.7): Ab Level 3 bringt jedes ungerade Level (L3, L5, L7, L9 …) jedem Mitglied eine
+Talentwahl — 1 aus 2 Talenten seines Pools (`talents_for(member)`). Offene Wahlen sind **abgeleitet**, nicht gespeichert:
+die ungeraden Level ≥ 3 bis zum eigenen Level minus Anzahl der Wahlen (Summe der Ränge); es wird immer die älteste offene
+Wahl zuerst gelöst. Gewählt wird nur im Safe Room (`floor_run.location != &"start"`), nichts unterbricht Kampf oder Erkundung.
+
+```gdscript
+class_name Talents extends RefCounted
+const OFFER_SIZE: int = 2
+const FIRST_LEVEL: int = 3
+static func is_talent_level(level: int) -> bool                   # odd and >= FIRST_LEVEL
+static func picks(member: PartyMember) -> int                     # Σ ranks
+static func picks_in_party(state: GameState) -> int
+static func pending_levels(member: PartyMember) -> PackedInt32Array   # open talent levels, oldest first
+static func rank(member: PartyMember, talent_id: String) -> int
+static func offer(state: GameState, data: GameData, member_id: String, level: int) -> PackedStringArray
+	# weighted draw without replacement over the id-sorted pool (min_level <= level, rank < max_rank) with
+	# SeedUtil.make_rng(SeedUtil.derive(state.seed, "talent:" + member_id, level)) — a pure function of
+	# (run seed, member, level, current ranks): reloading never rerolls it, it is never recorded
+static func current_offer(state, data, member_id) -> PackedStringArray     # offer of the oldest open level ([] if none)
+static func has_choice(state, data, member_id) -> bool
+static func open_choices(state, data) -> int                       # Σ over the party
+static func in_safe_room(state: GameState) -> bool
+static func check_pick(state, data, member_id, talent_id) -> String
+	# "" | "unknown_member" | "unknown_talent" | "no_pending" | "not_in_safe_room" | "max_rank" | "not_offered"
+static func pick(state, data, member_id, talent_id) -> bool        # check_pick == "" → rank += 1, follow_max_vitals
+# effects (06 §2.2; §4.4.15): stat_bonus(member, data, stat_index, base), liga_dressed(member), crit_add_pm, element_pm,
+# elements, post_battle_mp_pm, field_range_pm, field_cd_pm, preemptive_dmg_pm, stunt_window_pm, battle_mods,
+# marotte_bonus_hearts(state, data), hype_pm(state, data), follower_pm(state, data)
+```
+
+**Casting** (06 §3, GDD §12.1; Datenmodell + Regeln, die UI folgt mit Etage 3): je Mitglied Spezies („Wer bist du?“) +
+erste Spezialisierung (Klasse). Regeln: nur im Safe Room, Etage ≥ `min_floor` von Spezies und Klasse (3); die **erste** Wahl
+geht in jedem Safe Room einer solchen Etage; Spezies frei änderbar während des Besuchs der Wahl, danach fest; Klasse änderbar
+im selben Besuch und einmal je späterer Etage im ersten Safe Room dieser Etage („Umschulung“). `spc_original` ist immer eine
+vollwertige Wahl.
+
+```gdscript
+class_name Casting extends RefCounted
+static func options(state, data, member_id) -> Dictionary          # {"species": [ids], "classes": [ids]} (for + min_floor)
+static func check(state, data, member_id, species_id, class_id) -> String
+	# "" | "floor_too_low" | "not_for_member" | "unknown_species" | "unknown_class" | "locked" | "not_in_safe_room"
+static func choose(state, data, member_id, species_id, class_id) -> bool
+	# check == "" → species_id/class_id/casting bookkeeping; learns the class learnset up to the level; follow_max_vitals
+```
+
+Aufgezeichnet: `talent {member, id}` (`Game.pick_talent`), `casting {member, species, class}` (`Game.choose_casting`);
+`RunSim.apply` wendet beide mit denselben Funktionen an, die Legalität prüft `RunRules.command_refusal` (§3.4, §7.1) —
+gefälschte Wahlen melden `RunSim.replay` und `Game.replay_log` als Fehler (`test_m8_integrity`).
 
 ---
 
@@ -3347,7 +3501,8 @@ static func lower_difficulty(state: GameState, d: StringName) -> bool   # prime 
 static func command_refusal(state: GameState, data: GameData, rules: Dictionary, c: Dictionary, floor_done: bool,
 	scene_ctx: Dictionary) -> String   # after "descend" only "floor" (anything else → run_not_active); "floor" only as
 	# the first floor or index + 1 after descend; "difficulty" refused in event runs (rules not empty); "scene" only in a
-	# safe room, not yet seen, with its context and a holding condition → else "not_allowed"
+	# safe room, not yet seen, with its context and a holding condition → else "not_allowed"; 06-B: "talent" →
+	# Talents.check_pick, "casting" → Casting.check (their reason, e.g. "not_offered", "floor_too_low")
 ```
 
 ### 7.2 Algorithmus
@@ -3851,6 +4006,11 @@ func setup(params: Dictionary) -> void            # stores params only: {"safe_r
 	# ModDialog (blocking lines in order) and then Game.mark_scene_seen(); no scene → random line tag "mopsula_idle" (optional)
 	# Shop: Shop.stock(Game.floor_def(), id) via vending_menu; buying via Game.buy(item, qty, id)
 	# The UI header names the room → the set's SAFE_TITLE_SIGN is hidden; the menu column is hidden while a modal is open
+	# 06-B: with an open talent choice (Talents.open_choices > 0) a gold CTA button "TALENT-SHOW" + "n Talentwahlen offen"
+	# sits bottom right OUTSIDE the six-entry menu column (menu_buttons["talents"], ui_right from the menu, first focus after
+	# lootboxes); activate("talents") / open_talent_show() → scenes/ui/talent_show.tscn (CanvasLayer 60, signal closed)
+func talent_show_available() -> bool              # 06-B: the CTA is shown (Talents.open_choices(Game.state, DB.data) > 0)
+func open_talent_show() -> Node                   # 06-B: adds and returns the TalentShow layer (a modal like the shop)
 
 class_name ExplorationHud extends CanvasLayer     # M6, instanced by ExplorationScene
 func bind_layout(layout: FloorLayout, visited: Array[Vector2i]) -> void
@@ -4128,9 +4288,9 @@ offene M.O.D.-Zeilen, damit die Box nicht über Kai, Prompt und Marker liegt.
 
 | Szene | Rezepte |
 |---|---|
-| `exploration.tscn` | `explore_platform` / `explore_sewer` / `explore_cellar` (Gruppe der Zone 6 m vor Kai), `prompt_<zone>` (Kai vor einer Truhe: Prompt + Marker), `bigmap`, `pause_party` / `pause_inventory` / `pause_equipment` / `pause_skills` / `pause_settings` |
+| `exploration.tscn` | `explore_platform` / `explore_sewer` / `explore_cellar` (Gruppe der Zone 6 m vor Kai), `prompt_<zone>` (Kai vor einer Truhe: Prompt + Marker), `bigmap`, `pause_party` / `pause_inventory` / `pause_equipment` / `pause_skills` / `pause_settings`, `talents_party` (06-B: Party-Seite mit Talenten und offener Wahl) |
 | `battle.tscn` | `battle_menu`, `battle_skills`, `battle_target`, `battle_damage`, `battle_enemy_turn`, `boss_intro` (mit `--params={"encounter": "<boss enc>", "capture": false, "speed": 1.0}`), `boss_phase`, `battle_gift`, `battle_victory` / `battle_results` (mit `--params={"capture_turns": 99}`) |
-| `safe_room.tscn` | `safe_vending`, `safe_equipment`, `safe_lootbox`, `safe_lootbox_open`, `safe_mopsula` |
+| `safe_room.tscn` | `safe_vending`, `safe_equipment`, `safe_lootbox`, `safe_lootbox_open`, `safe_mopsula`, `safe_talents_menu` / `safe_talent_show` (06-B: TALENT-SHOW-Knopf / Talent-Show) |
 
 Beispiel (Handy-Format, Touch an): `tools/check.sh --shot res://scenes/battle/battle.tscn /tmp/b.png 5 2400x1080 --touch --recipe=battle_skills`.
 `test_m6_visual_pass` prüft, dass alle Rezepte existieren.
@@ -4210,7 +4370,9 @@ Safe Rooms (Erstbesuch), unbesuchte Räume, Streuner ≤ 2 Räume entfernt (max.
   Feldschlag, Fallback nach 600 Frames `force_encounter(group)`. Bosse: Raum betreten (5-m-Auslöser). Kämpfe: `Game.auto_battle`.
 - **Safe Room:** Mopsula-Szenen, Lootboxen (`tap`×3, `reveal_all`, `next_box`/`finish`), Automat (Item-Button `pressed`,
   `set_qty`, `confirm`: erst Ausrüstungs-Upgrades, dann Bandagen bis 3), Ausrüstung (`Game.equip`, bestes je Slot nach
-  Werte-Summe), Speichern (`open_save` → Slot 1, Überschreiben bestätigen), Weiter. Beim Besuch, mit dem alle Safe Rooms besucht sind:
+  Werte-Summe), Talent-Show (06-B: nach den Lootboxen, solange `talent_show_available()`, je offene Wahl `pick(0)` = erstes
+  Angebot; `stats().talents_picked`), Speichern (`open_save` → Slot 1, Überschreiben bestätigen), Weiter. Beim Besuch, mit dem
+  alle Safe Rooms besucht sind:
   Rundlauf Speichern → `Router.goto(SCENE_TITLE)` → „Fortsetzen“ — der geladene `StateHash` muss dem gespeicherten gleichen, danach
   muss die neu gebaute Karte zum Zustand passen (Truhen, Gruppen inkl. Streuner, Tore, Events).
 - **Prüfungen unterwegs** (Fehler = `Assertion failed: FULLRUN failed in <phase>: <grund>`, `quit(1)`): bei jedem Safe-Room-Besuch

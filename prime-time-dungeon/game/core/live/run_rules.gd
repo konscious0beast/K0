@@ -1,7 +1,9 @@
 class_name RunRules extends RefCounted
 ## THE state changes of the recorded exploration commands (02_TECH §3.4) — one implementation per rule, shared by the
 ## live run (Game: plus record(), Events signals and the Show reactions) and the verifier (RunSim.apply). Live run and
-## replay therefore cannot drift apart when a rule changes (02_TECH §7.1).
+## replay therefore cannot drift apart when a rule changes (02_TECH §7.1). The Talent-Show and Casting commands (06
+## package B) follow the same pattern with their own core classes: Talents.pick / Casting.choose are the state changes
+## (called by Game and RunSim.apply), their legality is part of command_refusal.
 ## No autoloads, no SceneTree; randomness only from the seed streams named per function (05 §3.3).
 
 const KEY_MASTER: String = "itm_key_master"        # opens locked chests (02_TECH §7.3)
@@ -178,6 +180,8 @@ static func lower_difficulty(state: GameState, d: StringName) -> bool:
 ## - floor: the first floor of the run, or exactly floor_run.index + 1 after "descend" → not_allowed
 ## - difficulty: event runs (rules non-empty) play the event's difficulty (05 §10.1) → not_allowed
 ## - scene: only in a safe room, not yet seen (once) and its condition true for the visit (scene_allowed) → not_allowed
+## - talent (06 §2.2): Talents.check_pick — in a safe room, from the offer of the oldest open level → its reason
+## - casting (06 §3.4/§3.6): Casting.check — floor >= min_floor, in a safe room, re-spec locks → its reason
 ## (flag keys are whitelisted by Command.validate; QA Sponsor-Fenster by SponsorWindows.dev_allowed.)
 static func command_refusal(state: GameState, data: GameData, rules: Dictionary, c: Dictionary, floor_done: bool,
 		scene_ctx: Dictionary) -> String:
@@ -198,4 +202,9 @@ static func command_refusal(state: GameState, data: GameData, rules: Dictionary,
 			if data == null or not data.has_id("scenes", sid) or not in_safe_room(state) or scene_ctx.is_empty() \
 					or not scene_allowed(state, data.scene_def(sid), scene_ctx):
 				return "not_allowed"
+		"talent":
+			return Talents.check_pick(state, data, str(c.get("member", "")), str(c.get("id", "")))
+		"casting":
+			return Casting.check(state, data, str(c.get("member", "")), str(c.get("species", "")),
+				str(c.get("class", "")))
 	return ""

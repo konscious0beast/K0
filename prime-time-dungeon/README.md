@@ -45,11 +45,14 @@ Prüfwerkzeuge (`tools/`).
 - Etage 1 ist von Titel bis Abspann spielbar: Intro, Tutorial-Kampf und 14 weitere Gegnergruppen, Streuner, 5 Events,
   16 Truhen, 3 Safe Rooms (Heilen, Speichern, Automat, Lootboxen, Mopsula-Szenen), der Quartier-Boss **Der Hausmeister**
   und der Etagenboss **Die Rattenkönigin von Gleis 9**, danach Etagen-Bilanz, Autosave und Abspann.
+- **Talent-Show** (06 Paket B): Ab Level 3 bringt jedes ungerade Level jeder Figur eine Talentwahl (1 aus 2, gewählt im
+  Safe Room über den goldenen Knopf „TALENT-SHOW“). Spezies und Spezialisierung ab Etage 3 sind als geprüftes Datenmodell
+  angelegt (`species.json`, Command `casting`); die Casting-Oberfläche folgt mit Etage 3.
 - Etage 2 ist nur angelegt (`floors.json`: `playable = false`). Wer abgestiegen ist, landet nach „Fortsetzen“ im Abspann.
 - 3 Speicherslots (JSON in `user://saves/`), Einstellungen, Pausemenü, Touch-Steuerung.
 - SHOWRUN S0: 2 Offline-Events (`evt_offline_gleis9`, `evt_offline_pacifist`), Event-Lobby, Ergebnis-Screen, lokale Bestenliste,
   Replay-Prüfung.
-- Qualitätssicherung: rund 830 automatische Tests, Autoplay-Smoke-Test (`AUTOPLAY: OK`), Full-Run-Bot, der Etage 1 mit
+- Qualitätssicherung: rund 890 automatische Tests, Autoplay-Smoke-Test (`AUTOPLAY: OK`), Full-Run-Bot, der Etage 1 mit
   drei Strategien durchspielt, Performance-Probe (`PERF: OK`) und der CI-Workflow `ptd-check`.
 
 **Bekannte Lücken:**
@@ -167,15 +170,15 @@ prime-time-dungeon/
 └── game/                Godot-Projekt (= res://), project.godot, export_presets.cfg, icon.svg
     ├── autoload/        Events, DB, Game, Show, Save, Router, Sfx (+ private Helfer wie game_replay.gd)
     ├── core/            reine Logik (RefCounted, headless testbar, ohne Autoloads)
-    │   ├── data/        GameData, Defs, DataValidator, SeedUtil, JsonUtil
+    │   ├── data/        GameData, Defs, DataValidator (+ validators/ je neuer Tabelle), SeedUtil, JsonUtil
     │   ├── stats/       StatBlock, Elemente, Balance-Konstanten, FixedMath
     │   ├── battle/      CTB-Kampf: BattleState, CTB-Queue, Schadensformeln, Status, Gegner-KI, ActionEvent
     │   ├── show/        ShowModel (Hype, Zuschauer, Follower), Achievements, Sponsoren, M.O.D.-Ansagen
     │   ├── loot/        LootRoller (Lootboxen, Truhen, Pools)
-    │   ├── progression/ GameState, FloorRun, Party, Inventar, EXP, Shop, BattleBridge, SaveCodec
+    │   ├── progression/ GameState, FloorRun, Party, Inventar, EXP, Shop, BattleBridge, SaveCodec, Talents, Casting
     │   ├── dungeon/     FloorLayout, DungeonGenerator, Spawns, Etagen-Events, ExploreEvent
     │   └── live/        SHOWRUN: RunLog, RunSim, RunRules, StateHash, Gift, GiftPolicy, Sponsor-Fenster, Quest, Bestenliste
-    ├── data/            14 JSON-Dateien: 13 GameData-Tabellen + events.json (SHOWRUN-Events)
+    ├── data/            16 JSON-Dateien: 15 GameData-Tabellen + events.json (SHOWRUN-Events)
     ├── art/             shaders/, materials/, kit/ (prozedurale Figuren, Räume, Props, VFX), gallery/, icons/
     ├── scenes/          boot/, title/, exploration/, battle/, safe_room/, ui/
     └── tests/           run_tests.gd, test_*.gd, lib/, fixtures/, perf/, tools/, capture.gd, capture_recipes.gd
@@ -187,7 +190,7 @@ Ordner stehen in `.gitignore`.
 
 ## 8. Dokumente
 
-Bei Widersprüchen gilt die Rangfolge **00_BRIEF > 02_TECH > 01_GDD > 03_ART > 04 / 05**.
+Bei Widersprüchen gilt die Rangfolge **00_BRIEF > 02_TECH > 06 (neue Systeme) > 01_GDD > 03_ART > 04 / 05**.
 
 | Dokument | Inhalt |
 |---|---|
@@ -197,6 +200,7 @@ Bei Widersprüchen gilt die Rangfolge **00_BRIEF > 02_TECH > 01_GDD > 03_ART > 0
 | [`docs/03_ART.md`](docs/03_ART.md) | Art Direction Option B: Farben, Shader, prozedurale Figuren und Umgebung, VFX, UI-Look |
 | [`docs/04_STRATEGIE_ROADMAP.md`](docs/04_STRATEGIE_ROADMAP.md) | Strategie: Positionierung, IP und Recht, Phasenplan 0–7, Team, Finanzierung, Monetarisierung |
 | [`docs/05_LIVE_MODUS.md`](docs/05_LIVE_MODUS.md) | Live-Modus SHOWRUN: Stufen S0–S5, Determinismus, Protokoll, Geschenke, Sponsor-Fenster, Wirtschaft, Recht |
+| [`docs/06_PROGRESSION_MAROTTEN_KI_ADMIN.md`](docs/06_PROGRESSION_MAROTTEN_KI_ADMIN.md) | Neue Systeme in Paketen A–D: Figurenwahl, Talent-Show und Spezies (Paket B, umgesetzt), M.O.D.-Marotten, KI-Admin |
 | [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) | Messergebnisse der Performance-Probe gegen die Budgets aus 02_TECH §12.1 |
 
 ## 9. Screenshots

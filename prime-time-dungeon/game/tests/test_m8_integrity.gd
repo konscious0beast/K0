@@ -121,6 +121,35 @@ func test_forged_commands_are_refused_and_reported() -> void:
 	assert_eq(sim.state.flags.get("live", {}), live, "refused by the schema: the gift counters stay (reviewer probe)")
 
 
+## 06 package B: talent picks and castings pass RunRules.command_refusal (Talents.check_pick / Casting.check) in BOTH
+## verifiers — a forged pick or casting is an error and changes nothing, like every other refused command.
+func test_forged_talent_and_casting_commands_are_refused_by_both_verifiers() -> void:
+	var forged: Array = [{"t": "talent", "member": "kai", "id": "tal_kai_wischtechnik"},
+		{"t": "casting", "member": "mopsula", "species": "spc_original", "class": "cls_mop_diva"}]
+	var run: Dictionary = _bot(_event())
+	var res: Dictionary = RunSim.replay(real_data(), RunLog.from_dict(_with_cmds_before_descend(run, forged)))
+	var errs: String = "; ".join(res["errors"])
+	assert_has(errs, "talent '' refused by the core (", "a pick outside the Talent-Show rules (RunSim.replay)")
+	assert_has(errs, "casting '' refused by the core (floor_too_low)", "a casting on floor 1 (RunSim.replay)")
+	assert_eq(res["final_hash"], run["hash"], "refused commands change nothing")
+	var sim: RunSim = _sim({})
+	sim.apply(forged[0])
+	assert_eq(sim.rejected_cmds.back()["reason"], "no_pending", "RunSim.apply: L1 has no open talent choice")
+	Game.new_game(0, "Kai", 4242)
+	var d: Dictionary = Game.run_log.to_dict()
+	var cmds: Array = d["cmds"]
+	var last: Dictionary = cmds.back()
+	for i in forged.size():
+		cmds.append({"k": int(last["k"]), "id": int(last["id"]) + 1 + i, "c": forged[i]})
+	d["checkpoints"] = []
+	var live: String = StateHash.of(Game.state)
+	var g: Dictionary = Game.replay_log(RunLog.from_dict(d))
+	var gerrs: String = "; ".join(g["errors"])
+	assert_has(gerrs, "(talent): refused by the rules (no_pending)", "Game.replay_log: no open choice at L1")
+	assert_has(gerrs, "(casting): refused by the rules (floor_too_low)", "Game.replay_log: casting on floor 1")
+	assert_eq(g["final_hash"], live, "refused commands change nothing (Game.replay_log)")
+
+
 func test_gifts_after_descend_are_refused() -> void:
 	var sim: RunSim = _sim({})
 	sim.apply({"t": "sponsor_window", "op": "dev_open", "sec": 600, "slots": 3})

@@ -67,6 +67,9 @@ signal inventory_changed()
 signal credits_changed(credits: int, delta: int)
 signal lootbox_earned(box_id: String)
 signal lootbox_opened(box_id: String, rewards: Array)    # Array[LootReward]
+# --- Talents & casting (06 §2/§3, package B) ----------------------------------
+signal talent_pending(member_id: String, level: int)     # Game.apply_battle_result: a level-up earned a talent choice
+signal talent_picked(member_id: String, talent_id: String)   # Game.pick_talent (recorded)
 
 # --- Live mode (M8 hooks, Brief §6b; 05_LIVE_MODUS CR-1) ------------------------
 signal run_started(event_id: String, league: String)

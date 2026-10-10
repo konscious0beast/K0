@@ -45,6 +45,9 @@ var last_action_key: String = ""             # "attack" / skill id / item id / "
 var left_battle: bool = false                # escaped enemy / removed pseudo unit: out of the battle and the CTB order
 var pseudo_def: PseudoUnitDef = null         # pseudo units only (action, ctr_after, warning)
 var warned: bool = false                     # pseudo units: M.O.D. warning given since the unit's last action
+## 06 package B: battle-time talent factors of a party member (Talents.battle_mods): {"preemptive_dmg_pm": int,
+## "stunt_pm": int}, only non-neutral entries; part of the snapshot only when set (old snapshots stay identical).
+var talent_mods: Dictionary = {}
 
 
 static func create_enemy(def: EnemyDef, id: String, slot: int) -> Combatant:
@@ -260,6 +263,7 @@ func duplicate_combatant() -> Combatant:
 	c.left_battle = left_battle
 	c.pseudo_def = pseudo_def
 	c.warned = warned
+	c.talent_mods = talent_mods.duplicate()
 	return c
 
 
@@ -281,7 +285,7 @@ func to_dict() -> Dictionary:
 		"own_turns": own_turns, "is_boss": is_boss, "is_summon": is_summon, "exp_reward": exp_reward,
 		"credit_reward": credit_reward, "last_action_key": last_action_key, "left_battle": left_battle,
 		"warned": warned,
-	}
+	}.merged({"talent_mods": talent_mods.duplicate()} if not talent_mods.is_empty() else {})
 
 
 static func from_dict(d: Dictionary, data: GameData) -> Combatant:
@@ -325,6 +329,10 @@ static func from_dict(d: Dictionary, data: GameData) -> Combatant:
 	c.last_action_key = str(d.get("last_action_key", ""))
 	c.left_battle = bool(d.get("left_battle", false))
 	c.warned = bool(d.get("warned", false))
+	var tm: Variant = d.get("talent_mods", {})
+	if tm is Dictionary:
+		for k: Variant in (tm as Dictionary).keys():
+			c.talent_mods[str(k)] = JsonUtil.to_int((tm as Dictionary)[k], 1000)
 	if data != null:
 		if c.is_pseudo:
 			if data.has_id("pseudo_units", c.def_id):

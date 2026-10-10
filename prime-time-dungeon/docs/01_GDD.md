@@ -19,7 +19,7 @@
 1. Story & Figuren
 2. Erkundung
 3. Kampf (CTB)
-4. Party: Werte, Wachstum, EXP, Fähigkeiten
+4. Party: Werte, Wachstum, EXP, Fähigkeiten, Talente
 5. Gegner & Bosse Etage 1
 6. Items & Ausrüstung
 7. Show-System
@@ -27,7 +27,7 @@
 9. Lootboxen
 10. Safe Room
 11. M.O.D. — Stimme & Sprüche
-12. Klassensystem (ab Etage 3)
+12. Klassensystem & Spezies (ab Etage 3)
 13. Balancing-Ziele
 14. UX-Flows
 15. Etage 2 (Stub)
@@ -421,9 +421,10 @@ Riskante Show-Aktion: Erfolg = viel Schaden + viel Hype; Fehlschlag = Peinlichke
 | `stunt_mop_entrance` | Mopsula | **Auftritt Seiner Durchlaucht** | alle Gegner | `0.55 + LCK × 0.01`, max 0.85 | `power 140`, `fire`, MAG | Mopsula stolpert über den Umhang: Status `stun` auf sich selbst |
 
 ```text
-success_chance = clamp(success_base + LCK_eff * success_lck + (target_is_boss ? success_boss_mod : 0.0), 0.05, success_cap)
+success_chance = clamp((success_base + LCK_eff * success_lck) * talent + (target_is_boss ? success_boss_mod : 0.0), 0.05, success_cap)
 ```
 
+`talent` = 1.0; mit dem Talent „Dramatische Pause“ (Kap. 4.7) 1.2 — es wirkt vor Boss-Abzug und Obergrenze.
 Gegen Bosse: `success_boss_mod = −0.15` (Kai L5 mit LCK 10: 0.70, gegen Bosse 0.55). Hype: Erfolg +20, Fehlschlag +8 (Kap. 7).
 Cooldown: Nach dem Stunt-Zug gilt `Combatant.stunt_cooldown = 3`; jedes folgende eigene `turn_end` −1; Stunt wählbar bei 0
 (→ gesperrt in den 3 folgenden eigenen Zügen). Kampfstart: 0. Datenfelder (Kap. 4.4):
@@ -614,6 +615,7 @@ ohne Belohnung für die Geflohenen; die Gruppe verschwindet von der Karte.
 
 ```text
 stat(L) = floori(base + growth * (L - 1)) + Ausrüstung          # Progression.base_stats_at + total_stats
+        + Talente (Kap. 4.7)  → × Klasse → × Spezies              # ab Etage 3 (Kap. 12), je Schritt „round half up“
 ```
 
 Level-Up: HP/MP steigen um die Differenz (aktuelle Werte + Delta), **keine** Vollheilung. Level-Cap im Slice: **10**
@@ -757,6 +759,41 @@ Die Skill-Tabellen (Kap. 3.6, 4.5, 4.6, 5.1–5.3, 6.1) nutzen Kurzspalten. Verb
 | 6 | `mop_mass_lick` | Massen-Schlabbern | 10 | 60 | 3 | `all_allies` | none | mag (heal) | Heilung + heilt `poison`. |
 | 7 | `mop_revive` | Sabber der Wiederkehr | 14 | 40 | 4 | `ko_ally` | none | revive | Belebt mit 40 % MaxHP (`heal_mode "pct"`, `power 40`, Ziel `single_ally_ko`). |
 | 9 | `mop_inferno` | Gräfliches Inferno | 14 | 130 | 4 | `all_enemies` | fire | mag | „Für die Ahnen. Alle 300 davon.“ |
+
+### 4.7 Talent-Show (ab Level 3; 06 Kap. 2.2, `talents.json`)
+
+**Regel in einem Satz:** Ab Level 3 verdient jede Figur auf jedem zweiten Level (L3, L5, L7, L9) eine Talentwahl; in der
+**Talent-Show** im Safe Room wählt man je offener Wahl **eines von zwei** Talenten.
+
+- **Wann/wo:** Wahlen sammeln sich; gewählt wird nur im Safe Room (goldener Knopf „TALENT-SHOW“, Kap. 14.7). Nichts unterbricht
+  Kampf oder Erkundung — die Kampfergebnisse zeigen nur einen Chip „TALENT BEREIT · im Safe Room wählen“ (Kap. 14.5).
+- **Angebot:** 2 verschiedene Talente aus dem Pool der Figur (12 je Figur, ⅓ Verhaltens-Talente), gewichtet gezogen; das Angebot
+  hängt nur von Spielstand-Seed, Figur, Level und bisherigen Rängen ab — **Neuladen ändert es nicht**.
+- **Später:** „Später“ schließt die Show, die Wahl bleibt offen (Party-Seite im Pausemenü: „1 Wahl offen“).
+- **Stapeln:** Talente mit `max_rank` 2 können ein zweites Mal kommen („Wischtechnik II“).
+- **Karten:** Icon, Name, Typ („WERT“ grün / „VERHALTEN“ cyan), ein Satz Witz, die Wirkung groß („Stärke +1“, „Gift-Schaden
+  -25 %“) und eine Vorschau mit den echten Zahlen („Jetzt: Stärke 20 -> 21“).
+- **M.O.D.:** beim ersten Mal `talent_show_open` (Ein-Satz-Erklärung), nach jeder Wahl `talent_pick` bzw. `talent_pick:mopsula`.
+- **Umfang:** Summe aller Talentboni je Kampfwert bei L10 ≤ +15 % für jede Wahlfolge; Boss-Quoten mit Talenten ±5 Punkte (Kap. 13).
+
+| Kai (`tal_kai_*`) | Wirkung | Rang | Graf Mopsula (`tal_mop_*`) | Wirkung | Rang |
+|---|---|---|---|---|---|
+| Wischtechnik | STR +1 | 2 | Pluralis Majestatis | MAG +1 | 2 |
+| Dicke Haut (tierheimgeprüft) | DEF +1 | 2 | Majestätisches Schnarchen | +5 % MaxMP nach jedem Sieg | 2 |
+| Nachtschicht-Kondition | HP +5 % | 2 | Hoher Kragen | RES +1 | 2 |
+| Hausverstand | RES +1 | 1 | Leberwurst-Diät | HP +5 % | 2 |
+| Glückspfote | LCK +1, Krit +2 % | 1 | Monokel-Fokus (selten) | SPD +1 | 1 |
+| Fester Griff | Krit +3 % | 2 | Zwinger 7 überlebt | LCK +2 | 1 |
+| Bissfest | Gift-Schaden −25 % | 1 | Nachtaktiv | MP +5 % | 2 |
+| Automatenkaffee | +5 % MaxMP nach jedem Sieg | 2 | Doppelter Unterpelz | Eis-Schaden −25 % | 1 |
+| *Weit ausholen* | Feldschlag reicht 25 % weiter ¹ | 1 | *Bellen in Stereo* | Bellen reicht 25 % weiter ¹ | 1 |
+| *Erster Eindruck* | nach Präventivschlag: 1. Zug +15 % Schaden | 1 | *Schwer vermittelbar* | Bellen 30 % schneller bereit ¹ | 1 |
+| *Kamera 3 kennt mich* | 1× je Etage +1 Herz für M.O.D.s Vorliebe ² | 1 | *Dramatische Pause* | Stunts gelingen 20 % öfter | 1 |
+| *Abgehärtet* | ohne Rüstung & ohne Accessoire: DEF +5 % | 1 | *Würde genügt* | ohne Rüstung & ohne Accessoire: RES +5 % | 1 |
+
+*Kursiv* = Verhaltens-Talent. ¹ wirkt mit der Feldfähigkeit der Held:in (06 Paket A), ² mit den Marotten (06 Paket C) — bis dahin
+sind die Werte gespeichert und die Karte sagt, wann sie wirken. Die beiden Liga-Talente gelten je Figur, solange **diese** Figur
+weder Rüstung noch Accessoire trägt (Vorgeschmack auf die „Unterhosen-Liga“, 06 Kap. 4.3).
 
 ---
 
@@ -1563,13 +1600,20 @@ Validator: max. **110 Zeichen** je Zeile, nur obige Platzhalter.
 
 ---
 
-## 12. Klassensystem (ab Etage 3) — Datenvorbereitung
+## 12. Klassensystem & Spezies (ab Etage 3) — Datenvorbereitung
 
 ### 12.1 Regeln
 
-- Klassenwahl einmalig zu Beginn von Etage 3 im Safe-Room-Event „**Casting**“ (M.O.D. als Jury). Jede:r Charakter wählt 1 von 4.
-- Klassen **ergänzen** (ersetzen nicht) die Basis-Skills. Kein Wechsel im Slice-Folgeumfang (Respec später als Gold-Box-Belohnung denkbar → nicht geplant).
-- Datenmodell **jetzt**: `PartyMember.class_id: ""` im Spielstand (02_TECH §6.1/§6.4). `classes.json` existiert mit 8 Einträgen, wird im Slice nicht ausgewertet (DB validiert aber).
+- Spezies- und Klassenwahl auf Etage 3 im Safe-Room-Event „**Casting**“ (M.O.D. als Jury; 06 Kap. 3). Jede Figur wählt
+  **Spezies** („Wer bist du?“, Kap. 12.4; „Original bleiben“ ist immer eine vollwertige Wahl) und **Spezialisierung** = 1 von 4
+  Klassen („Was kannst du?“). Die erste Wahl geht in **jedem** Safe Room einer Etage ≥ 3.
+- Klassen **ergänzen** (ersetzen nicht) die Basis-Skills. **Umentscheiden** (06 Kap. 3.6, ersetzt „kein Wechsel“): Spezies frei
+  änderbar, solange man den Casting-Safe-Room nicht verlassen hat, danach fest; Spezialisierung im selben Besuch und **1× je
+  späterer Etage** im ersten Safe Room der Etage („Umschulung“). Talent-Reset folgt mit der Casting-UI.
+- Datenmodell **jetzt** (06 Paket B): `PartyMember.class_id`, `species_id`, `casting` im Spielstand (02_TECH §6.1/§6.4/§6.5);
+  Regeln in `Casting` (Command `casting`). `classes.json` (8) und `species.json` (8) werden validiert; Werte-Multiplikatoren
+  wirken in `Progression.total_stats` (Klasse, dann Spezies); Passiva sind validiert, aber noch nicht ausgewertet; **noch keine
+  Casting-UI** (kommt mit Etage 3).
 
 ### 12.2 Schema `classes.json` (= `ClassDef`, 02_TECH §4.4.4 erweitert)
 
@@ -1608,6 +1652,21 @@ ausgewertet, nur validiert (`id` beginnt mit `pas_`, `params` ist ein Dictionary
 
 4 Klassen je Figur (8 Einträge). Die Skill-Listen der Klassen (je 4 Skills L11–L17) werden mit Etage 3 spezifiziert; IDs folgen dem Muster `skl_<kai|mop>_<name>`.
 Skill-Freischaltung künftig wie bei der Party: `learnset[{level, skill}]`. Abweichende `show_mods` (Stunt-Cooldown, Sponsor-Schwellen) überschreiben die Konstanten aus Kap. 16.3 für die jeweilige Figur bzw. Show.
+
+### 12.4 Spezies (`species.json`, 06 Kap. 3.2; Schema 02_TECH §4.4.16)
+
+| ID | für | Name | `stat_mult` | Passiv (validiert, später ausgewertet) | Empfohlen |
+|---|---|---|---|---|---|
+| `spc_original` | alle | **Original-Verpackung** | — | `pas_authentic`: Follower +10 % | — |
+| `spc_kai_kachelgolem` | kai | **Kachelgolem** | HP 1.15, DEF 1.15, SPD 0.90 | `pas_grout`: erster erlittener Treffer je Kampf −30 % | Abrissbirne |
+| `spc_kai_neonfalter` | kai | **Neonfalter** | SPD 1.10, LCK 1.15, DEF 0.90 | `pas_lightdrunk`: Krit +10 % ab Hype 70 | Gleisläufer:in, Showrunner:in |
+| `spc_kai_pilzling` | kai | **Pilzling** | HP 1.10, RES 1.10, SPD 0.95 | `pas_spores`: gift-immun, 3 % MaxHP je Zug | Abrissbirne, Showrunner:in |
+| `spc_kai_teilautomat` | kai | **Teilautomat** | MAG 1.10, DEF 1.05, LCK 0.95 | `pas_coin_slot`: Verbrauchsitems +25 % | Schrott-Tüftler:in |
+| `spc_mop_glutmops` | mopsula | **Glutmops** | MAG 1.15, RES 0.95 | `pas_ember`: Feuer-Skills +15 % | Hofmagier |
+| `spc_mop_spukmops` | mopsula | **Spukmops** | SPD 1.10, LCK 1.10, HP 0.90 | `pas_see_through`: erster gegnerischer Treffer −50 % | Fluchgraf, Diva |
+| `spc_mop_flattermops` | mopsula | **Flattermops** | SPD 1.15, DEF 0.95 | `pas_court_flight`: Kampfstart mit `haste`; Bellen +50 % | Leibarzt, Diva |
+
+Kein Kronen-Motiv an Mopsula, auch nicht über eine Spezies-Optik (Validator: `crown`/`ticket_crown` verboten).
 
 ---
 
@@ -1695,6 +1754,12 @@ Staffel: Follower, Zuschauer, Geschenke, Achievements, Boxen und Hype-Dramaturgi
 Geschenken: Hausmeister 17 %, Königin 29 % bei 100 Seeds, Band 10–30 % / 25–45 %) und `test_m7_balance.gd` (Bosse ohne
 Geschenke ≥ 50 % Sieg, Party-Züge in den Bändern).
 
+**Talente (Kap. 4.7, `test_06b_balance.gd`):** Summe aller Talentboni je Kampfwert bei L10 ≤ +15 % für **jede** mögliche
+Wahlfolge (erschöpfend, gemessen gegen die Level-Werte ohne Ausrüstung; Krit höchstens +8 Punkte, Werbepause höchstens +10 %
+MaxMP). Boss-Quoten mit der Bot-Wahl „erstes Angebot“ gegen dieselben Kämpfe ohne Talente (gepaart, 300 Seeds, Geschenke wie im
+Spiel): Hausmeister +0,3, Königin +3,7 Punkte Siegquote — Band ±5 Punkte. Auf 100 Seeds ist der Stichprobenfehler (~4 Punkte)
+so groß wie das Band; deshalb misst der Test gepaart auf 300.
+
 **Restabweichungen:**
 
 - **Credits bis zur Königin ~1,55× Ziel** (1 700 statt ~1 100; vorher 3,3×): Je Quelle liegt die Etage jetzt im Plan — 12 von
@@ -1769,6 +1834,8 @@ der ersten Begegnung (Name, Modell, Lv), Werte/HP ab `defeated ≥ 1`, Schwäche
 
 Zielwahl: Pfeil/Highlight + Name; Links/Rechts wechselt, Bestätigen führt aus, Zurück bricht ab. Schadenszahlen: Popups (weiß normal, gelb Schwachstelle, orange Krit, grün Heilung, grau resistent).
 Kampfende: Ergebnis-Panel (EXP-Leisten füllen sich, Level-Up-Banner, Credits, Drops, Follower +X) → Bestätigen → Erkundung.
+Erreicht eine Figur ein Talent-Level (L3/L5/L7/L9), zeigt das Panel zusätzlich den Chip **„TALENT BEREIT“** („im Safe Room wählen“) —
+keine Wahl im Kampfende (Kap. 4.7).
 
 ### 14.6 Game Over „Sendeschluss“
 
@@ -1780,6 +1847,8 @@ Buttons: **Letzten Spielstand laden** (Gnadenfrist 3:00) · **Zum Titel**. `s.ga
 
 Beim Betreten: Heil-Animation + `safe_room_enter`. Menü (vertikale Liste links, Szene rechts):
 **Speichern** · **Lootboxen (n)** · **Automat** · **Ausrüstung** · **Mopsula** (! wenn Szene verfügbar) · **Weiter**.
+Mit offener Talentwahl (Kap. 4.7) zusätzlich unten rechts der goldene Knopf **TALENT-SHOW** („n Talentwahlen offen“; Fokus:
+Rechts aus dem Menü, erster Fokus nach offenen Lootboxen); er verschwindet, sobald nichts mehr offen ist.
 
 ### 14.8 Touch-Layout (nur Querformat, 720p)
 
@@ -1844,6 +1913,7 @@ Tabellen in diesem Dokument nennen Kurz-IDs. Die Daten-IDs (Regexe aus 02_TECH �
 | M.O.D.-Zeilen | Tag `intro`, `boss_intro:enm_boss_hausmeister` | `mod_intro_01`, `mod_boss_intro_enm_boss_hausmeister_01` | `mod_` + Tag (`:` → `_`) + `_<nn>` |
 | Etagen-Events | `evt_photo_drone` (alt) | `fev_photo_drone` | `fev_` (`evt_` = Live-Events, 05) |
 | Mopsula-Szenen | `mop_scene_1` (alt) | `scn_mop_1` | `scn_mop_<n>` |
+| Talente, Spezies (06 Paket B) | — | `tal_kai_wischtechnik`, `tal_mop_pluralis`, `spc_original`, `spc_kai_kachelgolem` | `tal_<kai\|mop>_` / `spc_` |
 | Unverändert | `ach_*`, `cls_*`, `pas_*`, `ms_*`, `zone_*`, `sr_*`, `kai`, `mopsula`, `floor_<n>` | gleich | — |
 | Laufzeit-/Layout-IDs | Truhen `f1_c<k>`, Gruppen `f1_g<k>`/`f1_qb`/`f1_fb`/Streuner `f1_s<n>`, Pseudo-Einheiten im Kampf `u0..` | gleich | `gate_*` sind nur Namen in diesem Dokument |
 
@@ -1872,6 +1942,8 @@ auf oberster Ebene. Ausnahme: `data/events.json` hat `{"schema": 1, "events": [.
 | 7.7 | `milestones.json` | 6 `MilestoneDef` |
 | 7.5, 11 | `mod_lines.json` | eine Zeile je Eintrag (Kap. 11) |
 | 10.2 | `scenes.json` | 4 Mopsula-Szenen (neue Tabelle in `GameData.TABLES`, Präfix `scn_`) |
+| 4.7 | `talents.json` | 24 `TalentDef` (12 je Figur, Präfix `tal_`; 06 Kap. 2.2) |
+| 12.4 | `species.json` | 8 `SpeciesDef` (`spc_original` + 4 Kai + 3 Mopsula, Präfix `spc_`; 06 Kap. 3) |
 
 **`floors.json → floor_1.layout`** (Schema 02_TECH §4.4.7; Inhalt = Karte und Zellentabelle Kap. 1.3; Türen als String aus `"NESW"`,
 nach der Türregel Kap. 1.3 berechnet und explizit gespeichert; `kind` klein geschrieben; Zonen-Paletten = 03_ART §2.2, Boss-Räume

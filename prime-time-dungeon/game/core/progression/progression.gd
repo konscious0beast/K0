@@ -1,5 +1,5 @@
 class_name Progression extends RefCounted
-## EXP curve, level-up, stats, equipment, field item use (02_TECH §6.1, GDD §4).
+## EXP curve, level-up, stats, equipment, field item use (02_TECH §6.1, GDD §4); talents and species (06 §2.2/§3.4).
 ##
 ## Integer arithmetic only (05 §3.3 Nr. 5, CR-12): the EXP curve is a precomputed table, growth values are applied in
 ## per-mille, class multipliers round half up. StatBlocks are built by setting `values` directly.
@@ -18,8 +18,9 @@ static func exp_to_next(level: int) -> int:
 	return EXP_TABLE[i]
 
 
-## floori(base + (growth + growth_add) × (level − 1)) per stat (GDD §4.1).
-static func base_stats_at(def: PartyMemberDef, level: int, class_def: ClassDef = null) -> StatBlock:
+## floori(base + (growth + growth_add) × (level − 1)) per stat (GDD §4.1); growth_add of class and species (06 §3.4).
+static func base_stats_at(def: PartyMemberDef, level: int, class_def: ClassDef = null,
+		species: SpeciesDef = null) -> StatBlock:
 	var vals: PackedInt32Array = []
 	vals.resize(StatBlock.KEYS.size())
 	if def == null:
@@ -30,12 +31,15 @@ static func base_stats_at(def: PartyMemberDef, level: int, class_def: ClassDef =
 		var growth_pm: int = roundi(float(def.growth.get(key, 0.0)) * _PM)
 		if class_def != null:
 			growth_pm += roundi(float(class_def.growth_add.get(key, 0.0)) * _PM)
+		if species != null:
+			growth_pm += roundi(float(species.growth_add.get(key, 0.0)) * _PM)
 		# growth / growth_add are >= 0 (validator), so integer division is floori
 		vals[i] = int(def.base_stats.get(key, 0)) + maxi(0, growth_pm) * steps / _PM
 	return _block(vals)
 
 
-## Level stats + equipment stats, × class stat_mult (round half up). HP >= 1, other stats >= 0.
+## Level stats + equipment stats + talents (Talents.stat_bonus), × class stat_mult, × species stat_mult (round half
+## up each, 06 §3.1). HP >= 1, other stats >= 0.
 static func total_stats(member: PartyMember, data: GameData) -> StatBlock:
 	var vals: PackedInt32Array = []
 	vals.resize(StatBlock.KEYS.size())
@@ -43,18 +47,22 @@ static func total_stats(member: PartyMember, data: GameData) -> StatBlock:
 		return _block(vals)
 	var def: PartyMemberDef = data.party_member(member.id)
 	var cls: ClassDef = _class_of(member, data)
-	vals = base_stats_at(def, member.level, cls).values.duplicate()
+	var spc: SpeciesDef = _species_of(member, data)
+	vals = base_stats_at(def, member.level, cls, spc).values.duplicate()
 	for item_id: String in _equipped(member, data):
 		var item: ItemDef = data.item(item_id)
 		for key: Variant in item.stats.keys():
 			var i: int = StatBlock.KEYS.find(str(key))
 			if i >= 0:
 				vals[i] += JsonUtil.to_int(item.stats[key])
-	if cls != null:
-		for key: Variant in cls.stat_mult.keys():
+	if not member.talents.is_empty():
+		for i in vals.size():
+			vals[i] += Talents.stat_bonus(member, data, i, vals[i])
+	for mults: Dictionary in [cls.stat_mult if cls != null else {}, spc.stat_mult if spc != null else {}]:
+		for key: Variant in mults.keys():
 			var i: int = StatBlock.KEYS.find(str(key))
 			if i >= 0:
-				var mult_pm: int = roundi(float(cls.stat_mult[key]) * _PM)
+				var mult_pm: int = roundi(float(mults[key]) * _PM)
 				vals[i] = (maxi(0, vals[i]) * mult_pm + _PM / 2) / _PM
 	for i in vals.size():
 		vals[i] = maxi(1 if i == StatBlock.Stat.HP else 0, vals[i])
@@ -176,8 +184,8 @@ static func use_item(state: GameState, data: GameData, item_id: String, member_i
 	return changed
 
 
-## crit_bonus = Σ equipment crit_bonus; element_mods = Π; status_immune = ∪; status_resist from def;
-## attack_element from weapon.
+## crit_bonus = Σ equipment crit_bonus + talent crit; element_mods = Π (equipment, talents); status_immune = ∪;
+## status_resist from def; attack_element from weapon; talent_mods = Talents.battle_mods (06 §2.2).
 static func to_combatant(member: PartyMember, data: GameData, id: String, slot: int) -> Combatant:
 	if member == null or data == null or not data.has_id("party", member.id):
 		return null
@@ -201,6 +209,11 @@ static func to_combatant(member: PartyMember, data: GameData, id: String, slot: 
 				immune.append(s)
 		if item.type == "weapon" and item.attack_element != "":
 			attack_element = item.attack_element
+	if not member.talents.is_empty():
+		crit += float(Talents.crit_add_pm(member, data)) / float(_PM)
+		for el: String in Talents.elements(member, data):
+			var f: float = float(Talents.element_pm(member, data, el)) / float(_PM)
+			element_mods[el] = float(element_mods.get(el, 1.0)) * f
 	var skills: PackedStringArray = member.skills.duplicate()
 	var stunts: PackedStringArray = def.stunts.duplicate()
 	var c: Combatant = Combatant.create_party(def, id, slot, member.display_name, member.level, stats, hp, mp, skills,
@@ -226,6 +239,7 @@ static func to_combatant(member: PartyMember, data: GameData, id: String, slot: 
 		c.crit_bonus = crit
 		c.model = def.model.duplicate(true)
 	c.status_resist = def.status_resist.duplicate(true)
+	c.talent_mods = Talents.battle_mods(member, data)
 	return c
 
 
@@ -241,6 +255,36 @@ static func _class_of(member: PartyMember, data: GameData) -> ClassDef:
 	if member.class_id == "" or not data.has_id("classes", member.class_id):
 		return null
 	return data.class_def(member.class_id)
+
+
+static func _species_of(member: PartyMember, data: GameData) -> SpeciesDef:
+	if member.species_id == "" or not data.has_id("species", member.species_id):
+		return null
+	return data.species_def(member.species_id)
+
+
+## After a change of the maxima outside a level-up (talent pick, casting): HP / MP rise or fall by the max delta like a
+## level-up (no full heal; a KO'd member stays at 0 HP), clamped to the new maxima.
+static func follow_max_vitals(member: PartyMember, before: StatBlock, after: StatBlock) -> void:
+	var hp_delta: int = after.values[StatBlock.Stat.HP] - before.values[StatBlock.Stat.HP]
+	var mp_delta: int = after.values[StatBlock.Stat.MP] - before.values[StatBlock.Stat.MP]
+	if member.hp > 0:
+		member.hp = clampi(member.hp + hp_delta, 1, after.values[StatBlock.Stat.HP])
+	member.mp = clampi(member.mp + mp_delta, 0, after.values[StatBlock.Stat.MP])
+
+
+## Known skills of the member's class learnset up to `level` (data order).
+static func class_skills_up_to(member: PartyMember, data: GameData, level: int) -> PackedStringArray:
+	var out: PackedStringArray = []
+	var cls: ClassDef = _class_of(member, data) if data != null else null
+	if cls == null:
+		return out
+	for entry: Variant in cls.learnset:
+		var e: Dictionary = entry
+		var skill_id: String = str(e.get("skill", ""))
+		if int(e.get("level", 0)) <= level and data.has_id("skills", skill_id) and not out.has(skill_id):
+			out.append(skill_id)
+	return out
 
 
 ## Known equipped item ids in slot order.

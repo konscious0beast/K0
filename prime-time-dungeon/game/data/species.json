@@ -1,0 +1,251 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "spc_original",
+			"name": "Original-Verpackung",
+			"desc": "Bleibt, wie es ist. Das Publikum liebt Echtes.",
+			"for": [],
+			"min_floor": 3,
+			"stat_mult": {},
+			"growth_add": {},
+			"passive": {
+				"id": "pas_authentic",
+				"params": {
+					"follower_pm": 1100
+				}
+			},
+			"recommended_classes": [],
+			"model_hint": {}
+		},
+		{
+			"id": "spc_kai_kachelgolem",
+			"name": "Kachelgolem",
+			"desc": "Fliesen statt Haut. Steht, fällt selten.",
+			"for": [
+				"kai"
+			],
+			"min_floor": 3,
+			"stat_mult": {
+				"hp": 1.15,
+				"def": 1.15,
+				"spd": 0.9
+			},
+			"growth_add": {},
+			"passive": {
+				"id": "pas_grout",
+				"params": {
+					"first_hit_taken_pm": 700
+				}
+			},
+			"recommended_classes": [
+				"cls_kai_wrecker"
+			],
+			"model_hint": {
+				"props_add": [],
+				"colors": {
+					"primary": "#2f8f9a",
+					"secondary": "#e8eef0"
+				}
+			}
+		},
+		{
+			"id": "spc_kai_neonfalter",
+			"name": "Neonfalter",
+			"desc": "Staubige Flügel, leuchtende Augen, schnell im Licht.",
+			"for": [
+				"kai"
+			],
+			"min_floor": 3,
+			"stat_mult": {
+				"spd": 1.1,
+				"lck": 1.15,
+				"def": 0.9
+			},
+			"growth_add": {},
+			"passive": {
+				"id": "pas_lightdrunk",
+				"params": {
+					"crit_add_pm": 100,
+					"min_hype": 70
+				}
+			},
+			"recommended_classes": [
+				"cls_kai_runner",
+				"cls_kai_showrunner"
+			],
+			"model_hint": {
+				"props_add": [
+					"wings",
+					"antennae"
+				],
+				"colors": {
+					"primary": "#ff4fa0",
+					"secondary": "#22d3ee"
+				}
+			}
+		},
+		{
+			"id": "spc_kai_pilzling",
+			"name": "Pilzling",
+			"desc": "Pilzhut statt Haaren. Gift? Schmeckt nach Waldboden.",
+			"for": [
+				"kai"
+			],
+			"min_floor": 3,
+			"stat_mult": {
+				"hp": 1.1,
+				"res": 1.1,
+				"spd": 0.95
+			},
+			"growth_add": {},
+			"passive": {
+				"id": "pas_spores",
+				"params": {
+					"status_immune": [
+						"sts_poison"
+					],
+					"regen_pm_per_turn": 30
+				}
+			},
+			"recommended_classes": [
+				"cls_kai_wrecker",
+				"cls_kai_showrunner"
+			],
+			"model_hint": {
+				"props_add": [],
+				"colors": {
+					"primary": "#c8553d",
+					"secondary": "#f2e8cf"
+				}
+			}
+		},
+		{
+			"id": "spc_kai_teilautomat",
+			"name": "Teilautomat",
+			"desc": "Münzschlitz in der Brust. Snacks wirken doppelt gut.",
+			"for": [
+				"kai"
+			],
+			"min_floor": 3,
+			"stat_mult": {
+				"mag": 1.1,
+				"def": 1.05,
+				"lck": 0.95
+			},
+			"growth_add": {},
+			"passive": {
+				"id": "pas_coin_slot",
+				"params": {
+					"consumable_pm": 1250
+				}
+			},
+			"recommended_classes": [
+				"cls_kai_tinker"
+			],
+			"model_hint": {
+				"props_add": [],
+				"colors": {
+					"primary": "#8a9aa8",
+					"secondary": "#ffd59e"
+				}
+			}
+		},
+		{
+			"id": "spc_mop_glutmops",
+			"name": "Glutmops",
+			"desc": "Glut in den Falten. Niest gelegentlich Rauch.",
+			"for": [
+				"mopsula"
+			],
+			"min_floor": 3,
+			"stat_mult": {
+				"mag": 1.15,
+				"res": 0.95
+			},
+			"growth_add": {},
+			"passive": {
+				"id": "pas_ember",
+				"params": {
+					"fire_skill_pm": 1150
+				}
+			},
+			"recommended_classes": [
+				"cls_mop_archmage"
+			],
+			"model_hint": {
+				"props_add": [],
+				"colors": {
+					"primary": "#ff6a2b",
+					"secondary": "#2a2024"
+				}
+			}
+		},
+		{
+			"id": "spc_mop_spukmops",
+			"name": "Spukmops",
+			"desc": "Halb durchsichtig, schwebt fünf Zentimeter. Gruselig süß.",
+			"for": [
+				"mopsula"
+			],
+			"min_floor": 3,
+			"stat_mult": {
+				"spd": 1.1,
+				"lck": 1.1,
+				"hp": 0.9
+			},
+			"growth_add": {},
+			"passive": {
+				"id": "pas_see_through",
+				"params": {
+					"first_hit_taken_pm": 500
+				}
+			},
+			"recommended_classes": [
+				"cls_mop_hexer",
+				"cls_mop_diva"
+			],
+			"model_hint": {
+				"props_add": [],
+				"colors": {
+					"primary": "#b8a9ff",
+					"secondary": "#2a2024"
+				}
+			}
+		},
+		{
+			"id": "spc_mop_flattermops",
+			"name": "Flattermops",
+			"desc": "Winzige Flügel, großes Ego. Startet immer schnell.",
+			"for": [
+				"mopsula"
+			],
+			"min_floor": 3,
+			"stat_mult": {
+				"spd": 1.15,
+				"def": 0.95
+			},
+			"growth_add": {},
+			"passive": {
+				"id": "pas_court_flight",
+				"params": {
+					"start_haste_turns": 1,
+					"bark_range_pm": 1500
+				}
+			},
+			"recommended_classes": [
+				"cls_mop_physician",
+				"cls_mop_diva"
+			],
+			"model_hint": {
+				"props_add": [
+					"wings"
+				],
+				"colors": {
+					"primary": "#d8b98a",
+					"secondary": "#7b2cbf"
+				}
+			}
+		}
+	]
+}

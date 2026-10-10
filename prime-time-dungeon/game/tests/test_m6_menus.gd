@@ -53,7 +53,8 @@ func before_each() -> void:
 	Game.run_log = _spy
 	var s: GameSettings = Game.settings
 	_saved_settings = {"text_speed": s.text_speed, "master_volume": s.master_volume, "battle_speed": s.battle_speed,
-		"show_fps": s.show_fps, "camera_invert_y": s.camera_invert_y, "auto_battle_default": s.auto_battle_default}
+		"show_fps": s.show_fps, "camera_invert_y": s.camera_invert_y, "auto_battle_default": s.auto_battle_default,
+		"show_bets_hud": s.show_bets_hud}
 
 
 func after_each() -> void:
@@ -67,6 +68,7 @@ func after_each() -> void:
 	s.show_fps = bool(_saved_settings["show_fps"])
 	s.camera_invert_y = bool(_saved_settings["camera_invert_y"])
 	s.auto_battle_default = bool(_saved_settings["auto_battle_default"])
+	s.show_bets_hud = bool(_saved_settings["show_bets_hud"])
 	Game.auto_battle = false
 	Game.apply_settings()
 	await _settle_router()
@@ -228,7 +230,7 @@ func test_settings_rows_write_game_settings() -> void:
 	var rows: Dictionary = sm.get("rows")
 	for key: String in ["master_volume", "music_volume", "sfx_volume", "battle_speed", "text_speed",
 			"auto_battle_default", "camera_sensitivity", "camera_invert_x", "camera_invert_y", "touch_controls", "quality",
-			"show_fps", "language", "difficulty"]:
+			"show_fps", "show_bets_hud", "language", "difficulty"]:
 		assert_true(rows.has(key), "settings row '%s'" % key)
 	var changed: Array[int] = [0]
 	var cb: Callable = func() -> void: changed[0] += 1
@@ -241,6 +243,8 @@ func test_settings_rows_write_game_settings() -> void:
 	assert_eq(Game.settings.show_fps, not bool(_saved_settings["show_fps"]))
 	(rows["auto_battle_default"] as Button).call("step", 1)
 	assert_eq(Game.auto_battle, Game.settings.auto_battle_default, "auto battle follows its default")
+	(rows["show_bets_hud"] as Button).call("step", 1)
+	assert_eq(Game.settings.show_bets_hud, not bool(_saved_settings["show_bets_hud"]), "06-C: show chip switch")
 	(rows["master_volume"] as HSlider).value = 35.0
 	assert_almost(Game.settings.master_volume, 0.35, 0.001, "slider 0..100 → 0..1")
 	assert_true(changed[0] >= 5, "every change applies settings (settings_changed)")

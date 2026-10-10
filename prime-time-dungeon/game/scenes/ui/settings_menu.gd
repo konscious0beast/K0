@@ -206,6 +206,7 @@ func _build() -> void:
 		_cycler("fullscreen", "Vollbild", ["Aus", "An"], 1 if s.fullscreen else 0)
 	_cycler("quality", "Grafikqualität", ["Hoch", "Niedrig"], 0 if s.quality == &"high" else 1)
 	_cycler("show_fps", "FPS anzeigen", ["Aus", "An"], 1 if s.show_fps else 0)
+	_cycler("show_bets_hud", "Show-Wetten anzeigen", ["Aus", "An"], 1 if s.show_bets_hud else 0)   # 06-C
 	var lang: Cycler = _cycler("language", "Sprache", ["Deutsch"], 0)
 	lang.disabled = true
 	lang.text = "Deutsch"
@@ -480,6 +481,8 @@ func _set_choice(key: String, i: int) -> void:
 			s.quality = &"high" if i == 0 else &"low"
 		"show_fps":
 			s.show_fps = i == 1
+		"show_bets_hud":                                   # 06-C
+			s.show_bets_hud = i == 1
 	_commit()
 
 

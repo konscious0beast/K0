@@ -11,7 +11,8 @@ class_name Talents extends RefCounted
 ##
 ## Where the effects apply (06 §2.2 table):
 ##   stat_flat / stat_pct / liga_stat_pct → Progression.total_stats (after equipment, before class / species);
-##     liga_stat_pct only while the member itself fights "ohne Rüstung & ohne Accessoire" (armor + accessory empty)
+##     liga_stat_pct only while the member fights in the Unterhosen-Liga — the single source of truth is package C's
+##     tier (MarottenRules.in_liga: the controlled hero from tier 1, the partner in tier 2), passed in as `liga`
 ##   crit_add_pm, element_pm → Progression.to_combatant (crit_bonus, element_mods)
 ##   preemptive_dmg_pm, stunt_window_pm → Combatant.talent_mods → ActionResolver (first own turn after a preemptive
 ##     strike) / BattleState.stunt_chance (success chance before success_cap)
@@ -22,7 +23,6 @@ class_name Talents extends RefCounted
 const OFFER_SIZE: int = 2
 const FIRST_LEVEL: int = 3
 const PM: int = 1000
-const LIGA_SLOTS: PackedStringArray = ["armor", "accessory"]
 
 
 ## True for the levels that earn a choice (odd, >= 3).
@@ -162,14 +162,14 @@ static func pick(state: GameState, data: GameData, member_id: String, talent_id:
 # --- effects ----------------------------------------------------------------------------------------------------------
 
 ## Bonus to add to `base` (level stat + equipment) for StatBlock index `stat_index`: flat values, then the summed
-## per-mille of stat_pct (+ liga_stat_pct while the member wears neither armor nor accessory), round half up.
-static func stat_bonus(member: PartyMember, data: GameData, stat_index: int, base: int) -> int:
+## per-mille of stat_pct (+ liga_stat_pct when `liga`: the member fights in the Unterhosen-Liga — callers ask
+## MarottenRules.in_liga / liga_member, package C's tier), round half up.
+static func stat_bonus(member: PartyMember, data: GameData, stat_index: int, base: int, liga: bool = false) -> int:
 	if member == null or member.talents.is_empty() or data == null:
 		return 0
 	var key: String = StatBlock.KEYS[stat_index]
 	var flat: int = 0
 	var pct: int = 0
-	var liga: bool = liga_dressed(member)
 	for e: Array in _effects(member, data):
 		var fx: Dictionary = e[0]
 		if str(fx.get("stat", "")) != key:
@@ -186,16 +186,6 @@ static func stat_bonus(member: PartyMember, data: GameData, stat_index: int, bas
 	if pct != 0:
 		v = (maxi(0, v) * (PM + pct) + PM / 2) / PM
 	return v - base
-
-
-## The Liga dress rule for one member (06 §4.3): armor and accessory slot empty (the weapon is allowed).
-static func liga_dressed(member: PartyMember) -> bool:
-	if member == null:
-		return false
-	for slot: String in LIGA_SLOTS:
-		if str(member.equipment.get(slot, "")) != "":
-			return false
-	return true
 
 
 ## Summed crit chance bonus in per-mille (+30 = +3 % crit).

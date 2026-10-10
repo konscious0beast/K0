@@ -511,7 +511,9 @@ static func member_stats(m: PartyMember) -> Dictionary:
 	var out: Dictionary = {}
 	if m == null:
 		return out
-	var sb: StatBlock = Progression.total_stats(m, DB.data)
+	# 06 B × C: Liga talents count while the member is in the Unterhosen-Liga (package C's tier, single source)
+	var liga: bool = Game.state != null and MarottenRules.liga_member(Game.state, m.id, Game.event_rules())
+	var sb: StatBlock = Progression.total_stats(m, DB.data, liga)
 	if sb != null and sb.values.size() == 8:
 		var total: int = 0
 		for v: int in sb.values:

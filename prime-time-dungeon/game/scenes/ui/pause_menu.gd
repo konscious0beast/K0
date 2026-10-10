@@ -1,12 +1,13 @@
 extends CanvasLayer
-## Pause menu (02_TECH §1.6, §9.4 layer 60, GDD §14.4): tabs Party · Inventar · Ausrüstung · Fähigkeiten · Achievements
-## · Bestiarium · Optionen · Zum Titel. Opening pauses the tree (Game timer stops) and emits pause_menu_toggled(true);
-## the menu itself closes on pause / ui_cancel (from the tab bar) or the visible "Schließen" button (touch has no
-## Esc/Back: the touch pause button sits under the paused HUD), unpauses and emits pause_menu_toggled(false).
+## Pause menu (02_TECH §1.6, §9.4 layer 60, GDD §14.4): tabs Party · Inventar · Ausrüstung · Fähigkeiten · Show
+## (06 §4.7: M.O.D.'s preferences + Unterhosen-Liga) · Achievements · Bestiarium · Optionen · Zum Titel. Opening pauses
+## the tree (Game timer stops) and emits pause_menu_toggled(true); the menu itself closes on pause / ui_cancel (from
+## the tab bar) or the visible "Schließen" button (touch has no Esc/Back: the touch pause button sits under the paused
+## HUD), unpauses and emits pause_menu_toggled(false).
 ## process_mode WHEN_PAUSED — also every page and dialog opened from here (§9.4). tab_prev / tab_next switch tabs.
 ## Layout: one tab bar (icon over caption, 64 px visible / 88 px hit, 12 px apart) with the close button at its end;
 ## ui_left/ui_right move along the bar, ui_down enters the page, ui_cancel in a page returns to the bar.
-## setup({"tab": "party"|"inventory"|"equipment"|"skills"|"achievements"|"bestiary"|"settings", "context":
+## setup({"tab": "party"|"inventory"|"equipment"|"skills"|"show"|"achievements"|"bestiary"|"settings", "context":
 ## "explore"|"safe_room"}).
 
 signal closed()
@@ -22,6 +23,7 @@ const TABS: Array[Dictionary] = [
 	{"id": "inventory", "label": "Inventar", "icon": &"potion", "script": "res://scenes/ui/inventory_menu.gd"},
 	{"id": "equipment", "label": "Ausrüstung", "icon": &"sword", "script": "res://scenes/ui/equipment_menu.gd"},
 	{"id": "skills", "label": "Fähigkeiten", "icon": &"star", "script": "res://scenes/ui/skills_menu.gd"},
+	{"id": "show", "label": "Show", "icon": &"heart", "script": "res://scenes/ui/bets_menu.gd"},   # 06-C (06 §4.7)
 	{"id": "achievements", "label": "Achievements", "icon": &"trophy", "script": "res://scenes/ui/achievements_menu.gd"},
 	{"id": "bestiary", "label": "Bestiarium", "icon": &"skull", "script": "res://scenes/ui/bestiary_menu.gd"},
 	{"id": "settings", "label": "Optionen", "icon": &"gear", "script": ""},
@@ -367,6 +369,12 @@ func _tab_button(icon: StringName, caption: String, icon_color: Color) -> Button
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	col.add_child(l)
+	# 06-C: ten tabs since "Show" — a tab is at least as wide as its caption (+ 12 px), the rest is shared equally,
+	# so "Achievements" is never cut to "Achievemen…"
+	var font: Font = l.get_theme_font(&"font")
+	if font != null:
+		var w: float = font.get_string_size(caption, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
+		b.custom_minimum_size.x = maxf(UiTheme.MIN_TOUCH, ceilf(w) + 12.0)
 	var flat: StyleBoxFlat = UiUtil.box_style(Color(UiTheme.C_PANEL, 0.6), Color(UiTheme.C_ACCENT_2, 0.35), 1, 0.0, 6, 4)
 	b.add_theme_stylebox_override("normal", flat)
 	var on: StyleBoxFlat = UiUtil.box_style(Color(UiTheme.C_ACCENT, 0.3), UiTheme.C_ACCENT, 0, 0.0, 6, 4)

@@ -99,10 +99,12 @@ func after_each() -> void:
 
 ## One Floor-1 season → {"followers", "viewers_max", "gifts", "achievements", "boxes", "hype_start": Array[int],
 ## "hype_end": Array[int], "boss": {encounter: won}, "boss_hype_start": {encounter: int}}.
-## `skip`: encounters left out (a player who fights fewer groups).
-func run_season(seed: int, policy: String, pace_sec: float, skip: PackedStringArray = []) -> Dictionary:
+## `skip`: encounters left out (a player who fights fewer groups). `liga` (06-C, test_06c_balance): 1 = Kai, 2 = both
+## fight without armor and accessory (Unterhosen-Liga, in the state and in every battle's gear).
+func run_season(seed: int, policy: String, pace_sec: float, skip: PackedStringArray = [], liga: int = 0) -> Dictionary:
 	var d: GameData = real_data()
 	Game.state = GameState.create_new(d, 0, "Kai", seed)
+	strip_liga(Game.state, liga)
 	Game.in_battle = false
 	Show.start_floor(1)
 	_boxes = 0
@@ -147,7 +149,7 @@ func run_season(seed: int, policy: String, pace_sec: float, skip: PackedStringAr
 				var adv: BattleSetup.Advantage = BattleSetup.Advantage.AMBUSH if parts.size() > 2 \
 					else BattleSetup.Advantage.NORMAL
 				var r: Dictionary = show_battle(parts[1], level, str(p[1]), str(p[2]),
-					SeedUtil.derive(seed, "m7_season", i), policy, true, adv)
+					SeedUtil.derive(seed, "m7_season", i), policy, true, adv, {}, liga)
 				out["battles"] = int(out["battles"]) + 1
 				out["followers_battles"] = int(out.get("followers_battles", 0)) + int(r["followers"])
 				if enc.boss:
@@ -167,6 +169,8 @@ func run_season(seed: int, policy: String, pace_sec: float, skip: PackedStringAr
 	out["gifts"] = int(show.stats.get("sponsor_gifts", 0))
 	out["achievements"] = show.achievements.size()
 	out["boxes"] = _boxes
+	out["bets_won"] = int(show.stats.get("bets_won", 0))          # 06-C
+	out["liga_battles"] = int(show.stats.get("liga_battles", 0))
 	Game.state = null
 	return out
 
@@ -186,7 +190,7 @@ func _explore(pace_sec: float, decay_ticks: int) -> int:
 ## `loadout` {"gear": {member: [weapon, armor, accessory]}, "items": {item: n}} replaces the PLAN gear/items when given.
 func show_battle(enc_id: String, level: int, gear: String, items: String, seed: int, policy: String,
 		gifts_on: bool = true, advantage: BattleSetup.Advantage = BattleSetup.Advantage.NORMAL,
-		loadout: Dictionary = {}) -> Dictionary:
+		loadout: Dictionary = {}, liga: int = 0) -> Dictionary:
 	var d: GameData = real_data()
 	var enc: EncounterDef = d.encounter(enc_id)
 	var setup: BattleSetup = BattleSetup.new()
@@ -206,7 +210,11 @@ func show_battle(enc_id: String, level: int, gear: String, items: String, seed: 
 	var party: Array[Combatant] = []
 	var slot: int = 0
 	for def: PartyMemberDef in d.all_party():
-		party.append(_m7.call("_make_member", d, def, slot, level, gear_set[def.id]))
+		var g: Array = (gear_set[def.id] as Array).duplicate()
+		if liga >= 2 or (liga == 1 and def.id == "kai"):
+			g[1] = ""                                   # 06-C Liga: no armor,
+			g[2] = ""                                   # no accessory (the weapon stays)
+		party.append(_m7.call("_make_member", d, def, slot, level, g))
 		slot += 1
 	setup.party = party
 	Game.in_battle = true
@@ -239,6 +247,17 @@ func show_battle(enc_id: String, level: int, gear: String, items: String, seed: 
 				Events.lootbox_earned.emit(str(br.get("id", "")))
 	var f: int = Show.end_battle(st.result)
 	return {"win": win, "hype_end": roundi(Show.hype()), "gifts": gifts, "turns": st.result.party_turns, "followers": f}
+
+
+## 06-C: the Liga in the state (Show freezes the tier from the state's equipment at battle start): 1 = Kai, 2 = both
+## without armor and accessory.
+static func strip_liga(st: GameState, liga: int) -> void:
+	if liga <= 0 or st == null:
+		return
+	for m: PartyMember in st.party:
+		if liga >= 2 or m.id == "kai":
+			m.equipment["armor"] = ""
+			m.equipment["accessory"] = ""
 
 
 ## AUTO: AutoPolicy (BattleState.choose_ai_command); STUNTS: the actor's stunt on the weakest enemy whenever valid.

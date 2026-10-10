@@ -54,6 +54,9 @@ Prüfwerkzeuge (`tools/`).
   Casting-Oberfläche folgt mit Etage 3.
 - Etage 2 ist nur angelegt (`floors.json`: `playable = false`). Wer abgestiegen ist, landet nach „Fortsetzen“ im Abspann.
 - 3 Speicherslots (JSON in `user://saves/`), Einstellungen, Pausemenü, Touch-Steuerung.
+- **M.O.D.-Marotten & Unterhosen-Liga** (06 Kap. 4): M.O.D. verrät je Etage, was sie heute mag (Show-Wetten mit Herzen,
+  Fanpost-Paket bei drei Treffern); wer ohne Rüstung & ohne Accessoire kämpft, spielt in der Liga und bekommt mehr Hype und
+  Follower. Show-Chip im Overlay, Pausemenü-Reiter „Show“, Achievement-Kette „Ohne alles“.
 - SHOWRUN S0: 2 Offline-Events (`evt_offline_gleis9`, `evt_offline_pacifist`), Event-Lobby, Ergebnis-Screen, lokale Bestenliste,
   Replay-Prüfung.
 - Qualitätssicherung: rund 950 automatische Tests, Autoplay-Smoke-Test (`AUTOPLAY: OK`), Full-Run-Bot, der Etage 1 mit
@@ -177,12 +180,12 @@ prime-time-dungeon/
     │   ├── data/        GameData, Defs, DataValidator (+ validators/ je neuer Tabelle), SeedUtil, JsonUtil
     │   ├── stats/       StatBlock, Elemente, Balance-Konstanten, FixedMath
     │   ├── battle/      CTB-Kampf: BattleState, CTB-Queue, Schadensformeln, Status, Gegner-KI, ActionEvent
-    │   ├── show/        ShowModel (Hype, Zuschauer, Follower), Achievements, Sponsoren, M.O.D.-Ansagen
+    │   ├── show/        ShowModel (Hype, Zuschauer, Follower), Achievements, Sponsoren, M.O.D.-Ansagen, Marotten/Liga
     │   ├── loot/        LootRoller (Lootboxen, Truhen, Pools)
-    │   ├── progression/ GameState, FloorRun, Party, Inventar, EXP, Shop, BattleBridge, SaveCodec, Talents, Casting
+    │   ├── progression/ GameState, FloorRun, Party, Inventar, EXP, Shop, BattleBridge, SaveCodec, Talents, Casting, HeroRules
     │   ├── dungeon/     FloorLayout, DungeonGenerator, Spawns, Etagen-Events, ExploreEvent
     │   └── live/        SHOWRUN: RunLog, RunSim, RunRules, StateHash, Gift, GiftPolicy, Sponsor-Fenster, Quest, Bestenliste
-    ├── data/            16 JSON-Dateien: 15 GameData-Tabellen + events.json (SHOWRUN-Events)
+    ├── data/            17 JSON-Dateien: 16 GameData-Tabellen + events.json (SHOWRUN-Events)
     ├── art/             shaders/, materials/, kit/ (prozedurale Figuren, Räume, Props, VFX), gallery/, icons/
     ├── scenes/          boot/, title/, exploration/, battle/, safe_room/, ui/
     └── tests/           run_tests.gd, test_*.gd, lib/, fixtures/, perf/, tools/, capture.gd, capture_recipes.gd
@@ -212,20 +215,26 @@ Systeme) > 01_GDD / 02_TECH / 03_ART / 05 (je nach Thema) > 04**.
 ## 9. Screenshots
 
 Alle Bilder stammen aus dem Spiel selbst (Compatibility-Renderer unter Xvfb, 1280 × 720; Bild 18 im Handy-Format
-2400 × 1080 mit Touch-Steuerung).
+2400 × 1080 und Bild 26 im Handy-Format 1600 × 720, beide mit Touch-Steuerung).
 
 | | |
 |---|---|
 | ![Titel](docs/screenshots/01_title_menu.png) **01** Titelmenü | ![Intro](docs/screenshots/02_intro_mod_studio.png) **02** Intro im Studio von M.O.D. |
-| ![U-Bahn-Gleise](docs/screenshots/03_explore_ubahn_gleise_enemy_group.png) **03** Erkundung, Zone U-Bahn-Gleise mit Gegnergruppe | ![Kanalisation](docs/screenshots/04_explore_kanalisation_enemy_group.png) **04** Erkundung, Zone Kanalisation mit Gegnergruppe |
+| ![U-Bahn-Gleise](docs/screenshots/03_explore_ubahn_gleise_enemy_group.png) **03** Erkundung, Zone U-Bahn-Gleise mit Gegnergruppe (rechts der Show-Chip) | ![Kanalisation](docs/screenshots/04_explore_kanalisation_enemy_group.png) **04** Erkundung, Zone Kanalisation mit Gegnergruppe |
 | ![Keller](docs/screenshots/05_explore_keller_chest_prompt.png) **05** Zone Keller: Kai vor einer Truhe mit Prompt | ![Karte](docs/screenshots/06_explore_floor_map.png) **06** Etagenkarte |
-| ![Pausemenü](docs/screenshots/07_pause_menu_equipment.png) **07** Pausemenü, Reiter Ausrüstung | ![Befehlsmenü](docs/screenshots/08_battle_command_menu.png) **08** Kampf: Befehlsmenü und Zugfolge-Leiste |
+| ![Pausemenü](docs/screenshots/07_pause_menu_equipment.png) **07** Pausemenü, Reiter Ausrüstung (mit Liga-Zeile) | ![Befehlsmenü](docs/screenshots/08_battle_command_menu.png) **08** Kampf: Befehlsmenü und Zugfolge-Leiste |
 | ![Rattenkönigin](docs/screenshots/09_battle_boss_intro_rattenkoenigin.png) **09** Boss-Intro: Die Rattenkönigin von Gleis 9 | ![Hausmeister](docs/screenshots/10_battle_boss_phase_hausmeister.png) **10** Phasenwechsel des Hausmeisters |
 | ![Sponsor-Geschenk](docs/screenshots/11_battle_sponsor_gift.png) **11** Sponsor-Geschenk mitten im Kampf | ![Sieg](docs/screenshots/12_battle_victory_results.png) **12** Sieg und Ergebnis-Screen |
 | ![Mopsula](docs/screenshots/13_safe_room_mopsula_scene.png) **13** Safe Room: Szene mit Graf Mopsula | ![Lootbox](docs/screenshots/14_safe_room_lootbox_reveal_odds.png) **14** Lootbox-Öffnung mit veröffentlichten Wahrscheinlichkeiten |
 | ![Event-Lobby](docs/screenshots/15_event_run_lobby.png) **15** SHOWRUN-Event-Lobby mit lokaler Bestenliste | ![Cast](docs/screenshots/16_gallery_cast_floor1.png) **16** Galerie: Besetzung von Etage 1 |
 | ![VFX](docs/screenshots/17_gallery_vfx.png) **17** Galerie: Effekte | ![Handy](docs/screenshots/18_phone_battle_skill_list_touch.png) **18** Handy-Format: Fähigkeitenliste mit Touch-Steuerung |
-| ![Sponsor-Fenster](docs/screenshots/overlay_sponsor_window.png) **Overlay** Show-Overlay mit offenem Sponsor-Fenster (Demo-Werte) | |
+| ![Figurenwahl](docs/screenshots/19_hero_select.png) **19** Figurenwahl: Kai oder Graf Mopsula (06 Paket A) | ![Bellen](docs/screenshots/20_explore_mopsula_bark.png) **20** Graf Mopsula führt und bellt eine Gruppe an |
+| ![Figur wechseln](docs/screenshots/21_safe_room_hero_switch.png) **21** Safe Room nach „Figur wechseln“ | ![Partner automatisch](docs/screenshots/22_battle_partner_auto.png) **22** Kampf mit „Partner automatisch“ (DU / AUTO) |
+| ![Kulissenwand](docs/screenshots/23_secret_wall.png) **23** Kulissenwand (E1-Geheimnis) | ![Wand fällt](docs/screenshots/24_secret_wall_falls.png) **24** Der Graf bellt die Kulissenwand um |
+| ![Regie-Notiz](docs/screenshots/25_regie_notiz.png) **25** Regie-Notiz mit Prompt | ![Handy Safe Room](docs/screenshots/26_safe_room_hero_talents_phone.png) **26** Handy-Format: Safe Room mit TALENT-SHOW-Knopf und M.O.D.-Kasten |
+| ![Show](docs/screenshots/27_pause_show_unterhosen_liga.png) **27** Pausemenü, Reiter Show: M.O.D.s Vorliebe und Unterhosen-Liga (06 Paket C) | ![Show-Wette](docs/screenshots/28_battle_results_show_bet_won.png) **28** Kampfergebnis: dritter Herz-Treffer, Show-Wette gewonnen (Fanpost-Paket) |
+| ![Talent-Show](docs/screenshots/talent_show.png) **Talent-Show** (06 Paket B): zwei Karten je Wahl | ![TALENT-SHOW](docs/screenshots/safe_talents_menu.png) **Safe Room** mit offener Talentwahl |
+| ![Sponsor-Fenster](docs/screenshots/overlay_sponsor_window.png) **Overlay** Show-Overlay (Demo-Werte): Sponsor-Fenster offen mit Platz-Punkten, Show-Chip „M.O.D. mag heute“ mit Herzen und Liga-Stufe | ![Party](docs/screenshots/talents_party.png) **Party-Seite** mit Talenten und offener Wahl |
 
 **Neu erzeugen:** `tools/check.sh --shot` rendert eine Szene. Zustände, die man nur durch Spielen erreicht, stellen die
 Capture-Rezepte in `game/tests/capture_recipes.gd` her (02_TECH §11.3). Beispiele:
@@ -252,6 +261,15 @@ GODOT=… $T --shot res://art/gallery/character_gallery.tscn shot.png 120 1280x7
 GODOT=… $T --shot res://art/gallery/vfx_gallery.tscn shot.png 120 1280x720                                   # 17
 GODOT=… $T --shot res://scenes/battle/battle.tscn shot.png 5 2400x1080 --touch --recipe=battle_skills       # 18
 GODOT=… $T --shot res://scenes/ui/show_overlay.tscn shot.png 120 1280x720                                    # Overlay
+GODOT=… $T --shot res://scenes/title/hero_select.tscn shot.png 60 1280x720                                  # 19
+GODOT=… $T --shot res://scenes/exploration/exploration.tscn shot.png 5 1280x720 --recipe=bark_platform      # 20
+GODOT=… $T --shot res://scenes/safe_room/safe_room.tscn shot.png 5 1280x720 --recipe=safe_hero_switch       # 21
+GODOT=… $T --shot res://scenes/battle/battle.tscn shot.png 5 1280x720 --recipe=battle_partner_auto          # 22
+GODOT=… $T --shot res://scenes/exploration/exploration.tscn shot.png 5 1280x720 --recipe=secret_wall        # 23 (24: secret_open, 25: secret_note)
+GODOT=… $T --shot res://scenes/safe_room/safe_room.tscn shot.png 5 1600x720 --touch --recipe=safe_hero_talents  # 26
+GODOT=… $T --shot res://scenes/exploration/exploration.tscn shot.png 5 1280x720 --recipe=pause_show         # 27
+GODOT=… $T --shot res://scenes/battle/battle.tscn shot.png 5 1280x720 --recipe=battle_results_show          # 28
+GODOT=… $T --shot res://scenes/safe_room/safe_room.tscn shot.png 5 1280x720 --recipe=safe_talent_show       # Talent-Show
 ```
 
 ## 10. Nächste Schritte

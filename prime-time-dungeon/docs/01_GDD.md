@@ -107,6 +107,10 @@ Alle anderen Nachbarschaften zwischen Zonen sind Wände.
 (5,2), erscheint erst, wenn die Wand fällt · `sec_e1_note_3` Heizungskeller (6,0). Ein Notizständer mit leuchtendem Post-it,
 Prompt „Regie-Notiz lesen“ (Graf: „… beschnuppern“).
 
+**Show-Boss auf Etage 1** (06 §2.6, goldgerahmte Elite-Gruppe „Kanalratten-Gala“): **Orchestrator-Entscheidung 2026-10-10** — er
+wird **nicht** im CTB-Kampf gebaut, sondern direkt im Echtzeitkampf (`07_ECHTZEITKAMPF.md`, Phase R4); bis dahin hat Etage 1
+keinen Show-Boss (keine Wegwerf-Inhalte für den CTB).
+
 | Zelle | Zone | Art (`RoomCell.Kind`) | Name | Inhalt (Gruppe · Zustand / Truhe · Typ / Event / Sonstiges) |
 |---|---|---|---|---|
 | (1,7) | A | START | Kopfende Bahnsteig | Spawn Kai + Mopsula, Intro-Ende |
@@ -806,9 +810,11 @@ Die Skill-Tabellen (Kap. 3.6, 4.5, 4.6, 5.1–5.3, 6.1) nutzen Kurzspalten. Verb
 | *Kamera 3 kennt mich* | 1× je Etage +1 Herz für M.O.D.s Vorliebe ² | 1 | *Taktgefühl* | Stunts gelingen 20 % öfter | 1 |
 | *Liga-Routine* | ohne Rüstung & ohne Accessoire: DEF +5 % | 1 | *Liga-Gelassenheit* | ohne Rüstung & ohne Accessoire: RES +5 % | 1 |
 
-*Kursiv* = Verhaltens-Talent. ¹ wirkt mit der Feldfähigkeit der Held:in (06 Paket A), ² mit den Marotten (06 Paket C) — bis dahin
-sind die Werte gespeichert und die Karte sagt, wann sie wirken. Die beiden Liga-Talente gelten je Figur, solange **diese** Figur
-weder Rüstung noch Accessoire trägt (Vorgeschmack auf die „Unterhosen-Liga“, 06 Kap. 4.3).
+*Kursiv* = Verhaltens-Talent. ¹ wirkt mit der Feldfähigkeit, solange die eigene Figur führt (06 Paket A; die Talente der
+folgenden Figur ruhen); ² das erste Herz einer Etage für M.O.D.s Vorliebe zählt doppelt (Kap. 7.8, 06 Paket C). Die Karte sagt,
+wann ein Verhaltens-Talent wirkt. Die beiden Liga-Talente wirken, solange ihre Figur in der **Unterhosen-Liga** kämpft (Kap.
+7.8, eine Quelle: die Liga-Stufe): die gesteuerte Figur ab Stufe 1 (sie selbst ohne Rüstung & ohne Accessoire), die andere nur
+in der Duo-Liga (beide); nie im Tutorial-Kampf.
 
 ---
 
@@ -1252,9 +1258,55 @@ Schema (`MilestoneDef`): `{"id": "ms_500", "followers": 500, "reward_box": "", "
 `ms_5000`: `"title": "Quotenkönig:in"`, `"min_floor": 2` (Titel setzt Flag `title_ms_5000`). Jeder Meilenstein wird genau 1× vergeben
 (gespeichert in `ShowState.milestones`), sobald `followers ≥ followers`-Wert und die Etage ≥ `min_floor` ist.
 
+### 7.8 M.O.D.-Marotten (Show-Wetten) & Unterhosen-Liga (Paket 06-C)
+
+Regeln und Herleitung: `06_PROGRESSION_MAROTTEN_KI_ADMIN.md` Kap. 4; Daten `marotten.json` (02_TECH §4.4.17). In einem Satz:
+**M.O.D. sagt, was sie heute mag — wer es dreimal liefert, gewinnt die Wette; wer ohne Rüstung & ohne Accessoire kämpft, spielt
+in der Unterhosen-Liga und bekommt dauerhaft mehr Hype und Follower.** Alles freiwillig, nie Pflicht, nie Strafe, nichts kaufbar.
+
+- **Vorlieben je Etage:** E1 eine (nur Starter), ab E2 zwei — aus dem Seed (`SeedUtil.derive(seed, "marotte", etage)`), möglichst
+  ohne Wiederholung der Vor-Etage. M.O.D. sagt sie an, sobald der Countdown läuft (E1: nach dem Tutorial-Kampf, direkt nach
+  `floor_start`). 11 rotierende Vorlieben:
+
+| ID | Name (HUD) | Regel (Menütext) | E1-Starter | ab E |
+|---|---|---|---|---|
+| `mar_mop_only` | Nur der Mopp | Gewinne Kämpfe, während Kai den Wischmopp trägt. | ✓ | 1 |
+| `mar_graf_finale` | Der Graf hat das letzte Wort | Graf Mopsula erledigt den letzten Gegner eines Kampfes. | ✓ | 1 |
+| `mar_variety` | Stilnote | Nutze in einem Kampf mindestens vier verschiedene Aktionen. | ✓ | 1 |
+| `mar_sneaky` | Schleichwerbung | Beginne Kämpfe mit einem Präventivschlag: anschleichen, zuerst zuschlagen. | ✓ | 1 |
+| `mar_pacifist` | Friedliche Runde | Betritt drei neue Räume hintereinander, ohne zu kämpfen. | — | 2 |
+| `mar_secondhand` | Second-Hand-Schick | Gewinne nur mit gewöhnlicher Ausrüstung: keine seltenen Teile am Körper. | — | 2 |
+| `mar_speed` | Schnellschnitt | Gewinne einen normalen Kampf in höchstens drei Zügen. | — | 2 |
+| `mar_stunt` | Akrobatik-Abend | Lande in einem Kampf mindestens einen Stunt. | — | 2 |
+| `mar_bio` | Bio-Siegel | Gewinne ohne Items und ohne Sponsor-Geschenke. | — | 2 |
+| `mar_brave` | Kein Schritt zurück | Gewinne, ohne zu verteidigen und ohne Fluchtversuch. | — | 2 |
+| `mar_gourmet` | Schwachstellen-Gourmet | Triff in einem Kampf dreimal eine Schwachstelle. | — | 2 |
+
+- **Herzen & Wette:** Ein gewonnener Kampf (bzw. bei `mar_pacifist` der dritte neue Raum ohne Kampf), der eine Vorliebe erfüllt,
+  füllt **ein Herz** (je Vorliebe und Kampf höchstens eins): Hype **+6**, Follower dieses Kampfes **×1,15**. **Drei Herzen** =
+  Wette gewonnen: **Fanpost-Paket** (`box_fan`), **+30 Follower**, +5 Hype, Zähler `bets_won`. Nicht gewonnene Wetten verfallen mit
+  der Etage ohne Abzug (M.O.D. schmollt höchstens einmal, `marotte_missed`). Tutorial, Niederlage und Flucht zählen nie.
+- **Unterhosen-Liga** (immer verfügbar, Regeltext überall „**ohne Rüstung & ohne Accessoire**“, die Waffe bleibt): Stufe beim
+  Kampfstart eingefroren — **Stufe 1** = die **gesteuerte** Figur trägt weder Rüstung noch Accessoire: Hype-Gewinne im Kampf
+  **×1,2**, Follower **×1,15**; **Stufe 2 „Duo-Liga“** (ultimativ) = beide: **×1,4 / ×1,35**. Etagen-Bonus: alle (≥ 3) Siege
+  einer Etage in Stufe ≥ 1 → 1 Fanpost-Paket („Mut-Paket“) in der Etagen-Bilanz. Wieder anziehen kostet nichts (Zeile
+  `liga_leave`). M.O.D. verrät die Liga einmalig in der Etagen-Bilanz von E1 (`liga_hint`), bis dahin steht sie im Pausemenü-Tab
+  „Show“. Startwerte aus 06 §4.3 (×1,25/×1,20 bzw. ×1,5/×1,4) wurden auf das Band „Follower ≤ 2 000 am Ende von E1“ gesenkt
+  (Kap. 13).
+- **Anzeige:** **ein** Show-Chip „**M.O.D. mag heute: Nur der Mopp ♥♥♡**“ (gewonnen: goldener Haken), bei aktiver Liga
+  dahinter „LIGA ×1,2“ bzw. „DUO-LIGA ×1,4“ (Event-Läufe: nur „LIGA“) — in der Erkundung unter der Minimap-Spalte, im Kampf unter der Hype-Leiste (während des Ergebnis-Panels ausgeblendet —
+  das Panel zeigt die Herzen selbst); ab E2 wechseln
+  zwei Vorlieben alle 4 s; erst sichtbar, wenn der Countdown läuft. Abschaltbar: Optionen → „Show-Wetten anzeigen“. Pausemenü-Tab
+  **„Show“**: Vorlieben mit Regel, Herzen, Status; Liga mit Regeltext, Stufe, Faktoren und „Liga blockiert durch: …“ je Figur
+  (Sprung ins Ausrüstungsmenü, das dieselbe Zeile zeigt). Ergebnisbildschirm: Zeile „Show“ mit den Herzen des Kampfes und der
+  Liga-Stufe; Toasts „M.O.D. mag das: … (2/3)“ / „Wette gewonnen: …!“.
+- **Event-Läufe** (06 §4.8 Nr. 4, Option a): Vorlieben und Liga werden angezeigt und gezählt, zahlen aber **nichts** (keine
+  Faktoren, Boxen, Follower, keine `show_bet`-Achievements) — die Wertung hängt nie daran; `rules.marotten.enabled` /
+  `rules.liga.enabled` schalten beides ab.
+
 ---
 
-## 8. Achievements (29)
+## 8. Achievements (35)
 
 **Modell** (`achievements.json`, `AchievementDef` ersetzt das `stat`/`gte`-Schema):
 `{id, name, desc, trigger, condition, box, followers, hidden, mod_tag}`.
@@ -1287,13 +1339,15 @@ gold 80 + Hype +5 + M.O.D.-Spruch (Tag `achievement:<id>`, Fallback `achievement
 | `event_completed` | Etagen-Event | `event_id, choice` |
 | `explore_tick` | jede 1.0 s laufender Timer | `seconds_since_battle` |
 | `floor_completed` | Abstieg | `floor, timer_left` (Sekunden, int) |
+| `show_bet` | Show-Wette / Unterhosen-Liga (Kap. 7.8, nur Kampagne) | `kind ("liga" \| "marotte"), event ("battle" \| "floor" \| "won"), id, tier, floor_tier, battles, is_boss, is_floor_boss, boss_id, party_kos, floor` |
 
 `BattleResult` liefert dafür zusätzlich: `party_turns, min_party_hp, min_party_hp_pct, crits, weakness_hits, items_used, party_kos,
 advantage, boss_id, overkill_credits`. Alle Trigger sind `Events`-Signale mit `(payload: Dictionary)`.
 
 **Zähler `s.` (`StatIds.ALL`):** `kills_total, kills_skill, battles_won, battles_fled, preemptives, ambushes_won, crits_total,
 stunts_success, stunts_fail, chests_opened, sponsor_gifts, credits_spent_vendor, lootboxes_opened, events_completed,
-game_overs, ko_mopsula, explore_seconds_since_battle, viewers_max`.
+game_overs, ko_mopsula, explore_seconds_since_battle, viewers_max` (+ Quest-Metriken 05 CR-13) und `bets_won`, `liga_battles`
+(Kap. 7.8).
 (`explore_seconds_since_battle` wird bei jedem Kampfstart 0; `viewers_max` = Maximum; `credits_spent_vendor` nur Automatenkäufe.)
 
 | ID | Name | Beschreibung (`desc`) | Trigger | Bedingung | Box | Hidden | M.O.D.-Spruch (`achievement:<id>`) |
@@ -1328,7 +1382,21 @@ game_overs, ko_mopsula, explore_seconds_since_battle, viewers_max`.
 | `ach_speedrun` | Expresszug | Verlasse Etage 1 mit mindestens 10:00 Restzeit. | `floor_completed` | `e.floor == 1 && e.timer_left >= 600` | gold | — | „Mit zehn Minuten Rest. Sie sind entweder genial oder haben nichts gesehen.“ |
 | `ach_last_minute` | Auf den letzten Drücker | Verlasse Etage 1 mit weniger als 1:00 Restzeit. | `floor_completed` | `e.floor == 1 && e.timer_left < 60` | silver | ✓ | „Unter einer Minute! Mein Regieraum hat geschrien. Vor Freude.“ |
 
-(29 Einträge — alle im Slice erreichbar; `ach_viewers_5000` braucht ≈ 1 450 Follower und Hype 100 (`(1000 + 0.5 × 1450) × 2.9`),
+**Kette „Ohne alles“** (Paket 06-C, Unterhosen-Liga und Show-Wetten, Kap. 7.8; Trigger `show_bet`):
+
+| ID | Name | Beschreibung (`desc`) | Trigger | Bedingung | Box | Hidden | M.O.D.-Spruch (`achievement:<id>`) |
+|---|---|---|---|---|---|---|---|
+| `ach_ul_first` | Einmal ohne alles | Gewinne einen Kampf in der Unterhosen-Liga (ohne Rüstung & ohne Accessoire). | `show_bet` | `e.kind == "liga" && e.event == "battle" && e.tier >= 1` | bronze | — | „Einmal ohne alles! Die Imbissbude nebenan bietet Ihnen einen Werbevertrag an.“ |
+| `ach_ul_boss` | Frische Brise im Revier | Besiege einen Boss in der Unterhosen-Liga. | `show_bet` | `… && e.tier >= 1 && e.is_boss == true` | silver | — | „Ein Boss, besiegt ohne Rüstung. Die Kantine benennt ein Gericht nach Ihnen. Es ist leicht bekömmlich.“ |
+| `ach_duo_first` | Doppel-Feinripp | Gewinne einen Kampf in der Duo-Liga: beide ohne Rüstung & ohne Accessoire. | `show_bet` | `… && e.tier == 2` | silver | — | „Doppel-Feinripp! Der Graf nennt es ‚Sommerkollektion‘. Ich nenne es Quote.“ |
+| `ach_duo_floor` | Eine Etage Feinripp | Gewinne alle Kämpfe einer Etage (mindestens 5) in der Duo-Liga. | `show_bet` | `e.kind == "liga" && e.event == "floor" && e.floor_tier == 2 && e.battles >= 5` | gold | — | „Eine ganze Etage im Doppel-Feinripp! Ich habe das Archiv angewiesen, es nie zu löschen.“ |
+| `ach_duo_flawless` | Ohne Kratzer, ohne Rüstung | Besiege den Etagenboss in der Duo-Liga, ohne dass jemand K.O. geht. | `show_bet` | `… && e.tier == 2 && e.is_floor_boss == true && e.party_kos == 0` | gold | ✓ | „Der Etagenboss, kein K.O., keine Rüstung. Ich muss mich setzen. Ich habe keinen Stuhl.“ |
+| `ach_bets_5` | M.O.D.s Liebling | Gewinne fünf Show-Wetten (M.O.D.s Vorlieben). | `show_bet` | `e.kind == "marotte" && e.event == "won" && s.bets_won == 5` | silver | — | „Fünf Wetten gewonnen. Sie kennen mich besser als meine Programmierer.“ |
+
+(`…` = `e.kind == "liga" && e.event == "battle"`.)
+
+(35 Einträge — die 29 des Slices alle erreichbar; die Kette „Ohne alles“ verlangt bewusst die Liga (`ach_bets_5` frühestens auf
+E3, weil E1 eine und E2 zwei Wetten anbieten); `ach_viewers_5000` braucht ≈ 1 450 Follower und Hype 100 (`(1000 + 0.5 × 1450) × 2.9`),
 also einen Top-Kampf gegen Ende der Etage; `ach_speedrun` (≥ 10:00 Rest) nur, wer deutlich unter der Ziel-Etagenzeit von
 11–15 min bleibt — vorher 8:00, was auch der gemessene Erstspieler-Takt erreichte.)
 `items_used` zählt nur Items, die die Party im Kampf einsetzt (keine Sponsor-Geschenke). `ach_` IDs bleiben unverändert (kein Präfix-Zusatz).
@@ -1610,7 +1678,7 @@ Validator: max. **110 Zeichen** je Zeile, nur obige Platzhalter.
 | `event_lever_flood` | mod | „Das war der Spülhebel. Für die ganze Kanalisation. Herzlichen Glückwunsch.“ |
 | `event_broken_vending_ok` | mod | „Zwei Dosen KRAWUMM! Vandalismus lohnt sich. Das haben Sie nicht von mir.“ |
 | `event_broken_vending_fail` | mod | „Der Automat hat zurückgetreten. Mit 230 Volt. Das Publikum klatscht.“ |
-| `achievement:<id>` | mod | je 1 Zeile aus Kap. 8 (29) |
+| `achievement:<id>` | mod | je 1 Zeile aus Kap. 8 (35) |
 | `hero_pick:kai` / `hero_pick:mopsula` | mod | Intro-Schluss nach der Figurenwahl (06 §1.5): „Kandidat:in {name} übernimmt. Der Graf assistiert. Unter Protest, aber in HD.“ / „Der Graf hat die Fernbedienung an sich genommen. {name} darf folgen. Die Quote jubelt.“ |
 | `hero_switch:kai` | mod | „Rollentausch! {name} führt wieder. Der Graf nennt es ‚wohlverdiente Siesta‘.“ · „{name} übernimmt die Führung, der Graf das Sofa. Gerechte Arbeitsteilung.“ |
 | `hero_switch:mopsula` | mod | „Rollentausch! Der Graf führt. Bitte Abstand halten, er bellt in Stereo.“ · „Der Graf übernimmt. {name} darf sich ausruhen. Unter Beobachtung, versteht sich.“ |
@@ -1619,8 +1687,11 @@ Validator: max. **110 Zeichen** je Zeile, nur obige Platzhalter.
 | `secret_wall` | mod | Kulissenwand fällt: „Die Wand war aus Pappe. Wie unser Budget. Bitte schneiden Sie das raus.“ · „Sie haben hinter die Kulissen geschaut. Das kostet normalerweise extra.“ |
 | `regie_note:1` … `:3` | mod | Regie-Notizen: „Regie-Notiz am Kiosk: ‚Sandwiches sind Requisite. NICHT ESSEN.‘ Das erklärt einiges.“ · „Hinter der Kulisse klebt ein Zettel: ‚Wand ist aus Pappe. Merkt eh keiner.‘ Tja.“ · „Regie-Notiz im Keller: ‚Ratten nach der Show zurück in Kiste 3.‘ Kiste 3 ist leer. Hm.“ |
 | `chat_secret` / `chat_secret_hint` | chat | Wand fällt: „PAPPWAND LOL“ · „wusste ichs, alles kulisse“ · „secret gefunden!!“ — erster Raum neben einer stehenden Kulissenwand: „die rissige wand da… ist die aus pappe??“ · „hau mal gegen die wand mit dem riss“ |
+| `marotte_announce:<id>` / `marotte_hit:<id>` | mod | je Vorliebe Ansage + Treffer (Kap. 7.8, Texte in `mod_lines.json`), z. B. „Ich habe heute eine Schwäche für Wischmopps. Fragen Sie nicht. Wischen Sie.“ / „Mit dem Mopp! Ich bekomme Gänsehaut. Ich habe keine Haut.“ |
+| `marotte_won[:<id>]` / `marotte_missed` | mod | „Wette gewonnen! Sie haben verstanden, was ich mag. Das ist mir fast unheimlich.“ · „Meine Vorliebe blieb unerfüllt. Ich trage es mit Fassung. Und Statistik.“ |
+| `liga_hint` / `liga_enter:1[:mopsula]` / `liga_enter:2` / `liga_win` / `liga_floor` / `liga_leave` | mod | „Kandidat:in ohne Rüstung, ohne Accessoire. § 3 Kleiderordnung sagt nein, die Quote sagt JA.“ · „Einmal Doppel-Feinripp, bitte. Mit scharf? Nein, mit Wischmopp.“ — nie sexuell, Unterwäsche bleibt an, keine Fuß-Bezüge (Validator-Sperre, 06 §0.3) |
 
-(Gesamt: 90 + 46 + 29 = **165 Zeilen**; dazu Block A aus 06 §1.5/§2.7: 21 Zeilen.)
+(Gesamt: 90 + 46 + 35 = **171 Zeilen**; dazu Block A aus 06 §1.5/§2.7: 21 Zeilen und 37 Marotten-/Liga-Zeilen aus Paket 06-C.)
 
 ---
 
@@ -1712,8 +1783,11 @@ Kein Kronen-Motiv an Mopsula, auch nicht über eine Spezies-Optik (Validator: `c
 | Bekämpfte Gruppen | 11–13 von 15 regulären | — |
 | Credits bei Königin | ~1 100 erwirtschaftet, ~800 ausgegeben | — |
 | Sponsor-Geschenke pro Etage | 4–7 | Schwellen 70/85/100, max. 1 (Boss 2) je Kampf (Kap. 7.4) |
-| Achievements pro Etage (Erstdurchlauf) | 12–16 von 29 | — |
-| Lootboxen pro Etage | 15–20 | Achievements + Bosse + Meilensteine 250/1 000 (+ Glücksrad) |
+| Achievements pro Etage (Erstdurchlauf) | 12–16 von 35 (29 ohne die Liga-Kette) | — |
+| Lootboxen pro Etage | 15–22 (06 §4.5; vor den Show-Wetten 15–20) | Achievements + Bosse + Meilensteine 250/1 000 (+ Glücksrad) + Show-Wette/Mut-Paket (Kap. 7.8) |
+| Show-Wetten je Etage (06 §4.10) | ohne gezieltes Spielen 0–1, gezielt alle | Staffel-Simulation E1 (Auto-Kampf, 8 Seeds): höchstens 1 gewonnen |
+| Unterhosen-Liga: Boss-Niederlage 1. Versuch | Stufe 1 ≤ 40 % / ≤ 55 %, Stufe 2 ≤ 55 % / ≤ 70 % (Hausmeister / Königin) | `test_06c_balance` (100 Seeds, Geschenke wie im Spiel): Stufe 1 26 % / 42 %, Stufe 2 37 % / 57 % |
+| Follower Ende E1 im Liga-Durchlauf | ≤ 2 000 in der Simulation (Rückkopplung gedämpft, Kap. 7.2); Duo-Liga darf den Meilenstein 2 000 erreichen | Staffel-Simulation (Median 8 Seeds): ohne Liga 1 357, Stufe 1 1 630, Stufe 2 1 855; Lootboxen 20 / 23 / 21,5. Full-Run-Bot `human`, *thorough*, Seeds 1–3: 1 562 / 1 928 / 2 299, Boxen 20 / 23 / 24, Königin-Niederlage 1. Versuch 0/3 / 1/3 / 2/3 (Bewertung 06 Kap. 8.4 „Stand Paket C“) |
 | Follower am Ende E1 | 1 200–1 500 | Kap. 7.6 |
 | Max. Zuschauer E1 | 3 000–5 500 | Kap. 7.2 |
 | Hype am Kampfanfang / -ende (Median regulär) | 25–45 / 45–65 | Kap. 7.3 Dramaturgie: Abkühlen auf 25, Routinekampf +15–25, Sponsoren erst ab 70 |

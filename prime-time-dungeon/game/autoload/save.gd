@@ -148,6 +148,8 @@ func newest_slot() -> int:
 
 
 ## Read-modify-write: state.show.stats.game_overs += 1 in the slot file; slot 0 or an event run → OK, no write.
+## 06-C (06 §6 decision 3): a lost boss attempt of the dying run (SponsorWindows comeback mark) is carried into the
+## slot's state when it is on the same floor — the comeback window opens on the next entry of that boss room.
 func record_game_over(slot: int) -> Error:
 	_last_error = ""
 	if slot == 0 or read_only or not _campaign():
@@ -171,6 +173,8 @@ func record_game_over(slot: int) -> Error:
 		show["stats"] = {}
 	var stats: Dictionary = show["stats"]
 	stats["game_overs"] = JsonUtil.to_int(stats.get("game_overs", 0)) + 1
+	if Game.state != null:
+		SponsorWindows.merge_comeback(st, SponsorWindows.comeback_record(Game.state))   # 06-C
 	return _atomic_write(path, d)
 
 

@@ -150,7 +150,7 @@ static func make_debug_setup(encounter_id: String = "") -> BattleSetup:
 	if enc_id == "":
 		return null
 	var s: BattleSetup = BattleBridge.make_setup(Game.state, DB.data, enc_id, BattleSetup.Advantage.NORMAL, "",
-		DEBUG_SEED)
+		DEBUG_SEED, Game.event_rules())
 	if s != null:
 		s.auto_battle = Game.auto_battle
 		Game.in_battle = true

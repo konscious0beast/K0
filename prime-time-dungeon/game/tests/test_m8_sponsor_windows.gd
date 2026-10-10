@@ -525,28 +525,41 @@ func test_mod_lines_only_in_the_live_presentation() -> void:
 	assert_has(tags, "sponsor_window_full")
 	Events.mod_said.disconnect(cb)
 	for tag: String in ["sponsor_window_open", "sponsor_window_open:safe_room", "sponsor_window_open:boss",
-			"sponsor_window_closed", "sponsor_window_full"]:
+			"sponsor_window_open:boss_comeback", "sponsor_window_closed", "sponsor_window_full"]:
 		assert_gt(DB.data.mod_lines(tag).size(), 0, "lines for " + tag)
 		assert_true(DataValidator.is_valid_mod_tag(tag), tag)
-	for l: ModLineDef in DB.data.mod_lines("sponsor_window_open") + DB.data.mod_lines("sponsor_window_full"):
-		for word: String in ["kauf", "jetzt", "schick"]:
-			assert_false(l.text.to_lower().contains(word), "L13 no purchase pressure: %s" % l.id)
+	# L13/L16 + 06 §6 decision 1 (06-C): no purchase pressure, no urgency words, no seconds / slot counts
+	var checked: int = 0
+	for raw: Variant in (JsonUtil.read_file("res://data/mod_lines.json") as Dictionary)["entries"]:
+		var l: Dictionary = raw
+		if not str(l.get("tag", "")).begins_with("sponsor_window_"):
+			continue
+		checked += 1
+		var text: String = str(l.get("text", ""))
+		for word: String in ["kauf", "jetzt", "schick", "schnell", "nur noch", "letzte chance", "sekunde"]:
+			assert_false(text.to_lower().contains(word), "L13/L16 no pressure ('%s'): %s" % [word, str(l["id"])])
+		for ph: String in ["seconds", "count"]:
+			assert_false(DataValidator.placeholders_in(text).has(ph), "no {%s} in %s (06 §6)" % [ph, str(l["id"])])
+	assert_gt(checked, 7, "every sponsor_window_* line checked")
 
 
 # --- overlay badge and debug tool -------------------------------------------------------------------------------------
 
+## 06 §6 decision 1 (06-C): the badge shows the window STATE — open / full / next in ~N minutes — never a seconds
+## countdown (the slots are pips next to the text, tested in test_06c_sponsor_display).
 func test_badge_texts() -> void:
 	var OverlayScript: GDScript = load("res://scenes/ui/show_overlay.gd")
 	var live_open: Dictionary = {"tracked": true, "mode": "live", "open": true, "left_sec": 45, "slots": 3, "free": 1,
 		"full": false}
-	assert_eq(OverlayScript.call("sponsor_text", live_open), "SPONSOR-FENSTER OFFEN · 0:45 · 2/3 Plätze")
+	assert_eq(OverlayScript.call("sponsor_text", live_open), "SPONSOR-FENSTER OFFEN")
+	assert_eq(OverlayScript.call("sponsor_slots", live_open), Vector2i(2, 3), "2 of 3 slots taken (pips)")
 	live_open["free"] = 0
 	live_open["full"] = true
-	assert_eq(OverlayScript.call("sponsor_text", live_open), "SPONSOR-FENSTER VOLL · 0:45 · 3/3 Plätze")
+	assert_eq(OverlayScript.call("sponsor_text", live_open), "SPONSOR-FENSTER VOLL – danke!")
 	assert_eq(OverlayScript.call("sponsor_text", {"tracked": true, "mode": "live", "open": false, "next_in_sec": 192}),
-		"Nächstes Fenster in 3:12")
+		"Nächstes Fenster in ~4 Min.")
 	assert_eq(OverlayScript.call("sponsor_text", {"tracked": true, "mode": "subtle", "open": true, "left_sec": 60,
-		"slots": 3, "free": 3}), "Sponsor-Fenster offen · 1:00 · 0/3 Plätze")
+		"slots": 3, "free": 3}), "Sponsor-Fenster offen")
 	assert_eq(OverlayScript.call("sponsor_text", {"tracked": true, "mode": "off", "open": true}), "", "Pur-Liga")
 	assert_eq(OverlayScript.call("sponsor_text", {"tracked": true, "mode": "live", "open": false, "next_in_sec": -1}),
 		"", "nothing scheduled")
@@ -560,20 +573,22 @@ func test_overlay_badge_follows_the_run() -> void:
 	await wait_frames(1)
 	o.call("set_mode", &"explore")
 	o.call("refresh_sponsor_badge")
-	assert_eq(o.call("sponsor_badge_text"), "Nächstes Fenster in 5:00")
+	assert_eq(o.call("sponsor_badge_text"), "Nächstes Fenster in ~5 Min.")
 	assert_eq(o.call("sponsor_badge_style"), "subtle", "campaign: dim line")
 	Game.open_dev_sponsor_window(60, 3)
 	await wait_frames(1)
-	assert_eq(o.call("sponsor_badge_text"), "Sponsor-Fenster offen · 1:00 · 0/3 Plätze", "refreshed on the signal")
+	assert_eq(o.call("sponsor_badge_text"), "Sponsor-Fenster offen", "refreshed on the signal")
+	assert_eq(o.call("sponsor_badge_pips"), "○○○", "three free slots")
 	Game.mode = &"event_offline"
 	o.call("refresh_sponsor_badge")
 	assert_eq(o.call("sponsor_badge_style"), "live_open")
-	assert_eq(o.call("sponsor_badge_text"), "SPONSOR-FENSTER OFFEN · 1:00 · 0/3 Plätze")
+	assert_eq(o.call("sponsor_badge_text"), "SPONSOR-FENSTER OFFEN")
 	var demo: CanvasLayer = (load("res://scenes/ui/show_overlay.tscn") as PackedScene).instantiate() as CanvasLayer
 	demo.call("setup", {"capture": true})
 	add_to_tree(demo)
 	await wait_frames(1)
-	assert_eq(demo.call("sponsor_badge_text"), "SPONSOR-FENSTER OFFEN · 0:45 · 2/3 Plätze", "capture still")
+	assert_eq(demo.call("sponsor_badge_text"), "SPONSOR-FENSTER OFFEN", "capture still")
+	assert_eq(demo.call("sponsor_badge_pips"), "●●○", "capture still: 2 of 3 taken")
 	o.queue_free()
 	demo.queue_free()
 

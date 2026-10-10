@@ -15,6 +15,11 @@ extends Node
 ## Hype is kept in whole points: positive gains are scaled by GameState.hype_gain_pm (equipment × talents, integer
 ## per mille) and rounded half up (deterministic, integral state hash, 05 §3.3 Nr. 5/9). A battle delta applies its
 ## positive parts scaled and its negative parts unscaled as one change (ShowDelta.hype_gain / hype_loss, GDD §7.3).
+##
+## 06-C (06 §4): M.O.D.'s preferences and the Unterhosen-Liga are Show reactions like the achievements — MarottenRules
+## (static, ShowState.marotten) decides, this facade applies hype / followers / boxes / show_bet triggers and says the
+## lines. The Liga tier is frozen in begin_battle and scales that battle's hype gains and followers (campaign only) on
+## top of the equipment × talent factors (integer per mille, each step half up).
 
 const CHAT_MIN_INTERVAL: float = 2.5         # GDD §7.5: max. 1 chat line per 2.5 s
 const CHAT_INTERVAL: float = 6.0             # exploration chat every 6 ± 2 s by hype band
@@ -71,6 +76,14 @@ var _last_line_at: float = -INF
 ## victory, never over the title / intro / credits); said on the next explore tick, retried while a fresher line of
 ## higher priority suppresses it.
 var _floor_start_pending: bool = false
+# --- 06-C: M.O.D.-Marotten / Unterhosen-Liga: volatile battle context + presentation pacing (never game state) --------
+var _marotten: MarottenTracker = null       # tally of the running battle (like _rules)
+var _liga_hype_pm: int = 1000               # Liga factors of the running battle, frozen in begin_battle
+var _liga_follower_pm: int = 1000
+var _last_marotten: Dictionary = {}         # the last battle's hearts / won bets / Liga tier (results screen)
+var _announce_queue: PackedStringArray = [] # preferences M.O.D. still announces (after the "floor_start" line)
+var _liga_said: Dictionary = {}             # "<floor>:<tag>" → true: Liga lines once per floor
+var _last_liga_tier: int = -1
 
 
 func _ready() -> void:
@@ -249,7 +262,7 @@ func chat(tag: String, ctx: Dictionary = {}) -> void:
 ## the tutorial or — unplayable — the credits) but once its countdown runs in the exploration: Events.floor_entered
 ## with the timer already started, or Events.floor_timer_started (Floor 1 after the tutorial victory), then on the next
 ## Events.explore_tick (GDD §1.4 B2).
-func start_floor(_floor_index: int) -> void:
+func start_floor(floor_index: int) -> void:
 	var st: GameState = Game.state
 	if st == null or st.show == null:
 		return
@@ -258,6 +271,7 @@ func start_floor(_floor_index: int) -> void:
 	_set_hype(ShowModel.HYPE_START, &"floor_start")
 	_update_viewers(true)
 	_check_milestones()
+	_marotten_floor_start(floor_index)                # 06-C: today's preferences (from the seed)
 
 
 ## Re-emit hype/viewers/followers after load or RunSim tick (RunSim changes ShowState.hype directly).
@@ -307,12 +321,15 @@ func begin_battle(setup: BattleSetup) -> void:
 	var story: String = "story_battle:" + setup.encounter_id
 	if _get_announcer().has_lines(story):
 		say(story)                                 # GDD §1.4 story banners (B4: "Die Königin hört von euch.")
+	_marotten_begin(setup)                         # 06-C: tally + Liga tier of this battle
 
 
 func on_battle_event(e: ActionEvent) -> void:
 	if e == null or _rules == null:
 		return
 	_apply_delta(_rules.feed(e))
+	if _marotten != null:
+		_marotten.on_battle_event(e)               # 06-C
 	if e.type == ActionEvent.Type.MOD_LINE and e.text != "":
 		say(e.text)
 	_emit_boss_hp(e)
@@ -439,8 +456,9 @@ func end_battle(result: BattleResult) -> int:
 			bump_stat("battles_won")
 			if result.advantage == BattleSetup.Advantage.AMBUSH:
 				bump_stat("ambushes_won")
+			var mres: Dictionary = _marotten_battle_end(result)   # 06-C: hearts → hit hype before the conversion
 			var peak: int = maxi(_peak_battle, viewers())
-			gained = ShowModel.followers_for_battle_pm(peak, hype(), result.is_boss, st.follower_pm(DB.data))
+			gained = ShowModel.followers_for_battle_pm(peak, hype(), result.is_boss, _battle_follower_pm(st, mres))
 			add_followers(gained, &"battle")
 			var payload: Dictionary = {"party_turns": result.party_turns, "min_party_hp": result.min_party_hp,
 				"min_party_hp_pct": result.min_party_hp_pct, "crits": result.crits, "weakness_hits": result.weakness_hits,
@@ -454,6 +472,7 @@ func end_battle(result: BattleResult) -> int:
 				Events.boss_defeated.emit(boss_payload)
 				trigger("boss_defeated", boss_payload)
 				say("boss_defeated")
+			_marotten_rewards(mres, result)             # 06-C: won bets, Liga, show_bet achievements
 		BattleResult.Outcome.FLED:
 			bump_stat("battles_fled")
 			var lost: int = ShowModel.followers_lost_on_flee(st.show.followers)
@@ -574,7 +593,9 @@ func _add_hype_parts(gain: float, loss: float, reason: StringName) -> void:
 	var points: int = roundi(loss)
 	var gain_points: int = roundi(gain)
 	if gain_points > 0:
-		var mult_pm: int = st.hype_gain_pm(DB.data)
+		var mult_pm: int = st.hype_gain_pm(DB.data)          # equipment × talents (06 §8.0 Nr. 4)
+		if _battle_active and _liga_hype_pm != 1000:           # 06-C: Liga tier of the running battle
+			mult_pm = (mult_pm * _liga_hype_pm + 500) / 1000
 		points += (gain_points * mult_pm + 500) / 1000
 	if points == 0:
 		return
@@ -799,7 +820,7 @@ func _after_window_booking(g: Dictionary) -> void:
 		return
 	Events.sponsor_window_updated.emit(v)
 	if bool(v.get("full", false)) and sponsor_presentation() == &"live":
-		say("sponsor_window_full", {"count": int(v.get("slots", 0))})
+		say("sponsor_window_full")
 
 
 ## Gift.make_system for the k-th system gift of this battle (05 §6.5: g_sys_<battle_n>_<k>).
@@ -919,6 +940,9 @@ func _battle_party(battle: BattleState) -> Array:
 func _reset_battle() -> void:
 	_rules = null
 	_setup = null
+	_marotten = null                               # 06-C
+	_liga_hype_pm = 1000
+	_liga_follower_pm = 1000
 	_battle_active = false
 	_battle_closing = false
 	_open_thresholds = PackedInt32Array()
@@ -953,6 +977,7 @@ func _on_floor_completed(floor_index: int) -> void:
 	var left: int = st.floor_run.time_left_ticks / FloorRun.TICKS_PER_SEC if st != null and st.floor_run != null else 0
 	trigger("floor_completed", {"floor": floor_index, "timer_left": left})
 	say("floor_end")
+	_marotten_floor_end(floor_index)               # 06-C: Liga floor bonus, missed preferences, Liga hint
 
 
 func _on_room_entered(_cell: Vector2i, room_kind: int, first_visit: bool) -> void:
@@ -997,6 +1022,10 @@ func _on_explore_tick(payload: Dictionary) -> void:
 	if _floor_start_pending and not Game.replaying and Game.state != null and Game.state.floor_run != null:
 		if say("floor_start", {"floor": Game.state.floor_run.index}) != "":
 			_floor_start_pending = false
+	elif not _announce_queue.is_empty() and not Game.replaying and Game.state != null \
+			and Game.state.floor_run != null and Game.state.floor_run.timer_started:
+		if say("marotte_announce:" + _announce_queue[0]) != "":   # 06-C: after "floor_start", one per tick
+			_announce_queue.remove_at(0)
 
 
 func _on_floor_timer_started() -> void:
@@ -1004,13 +1033,16 @@ func _on_floor_timer_started() -> void:
 		_floor_start_pending = true
 
 
-## M.O.D. announces a window (live presentation only; L13: no purchase pressure — the lines name the time, never a
-## price or a call to buy): "sponsor_window_open:<kind>" → "sponsor_window_open" with {seconds} and {count} (slots).
+## M.O.D. announces a window (live presentation only; L13/L16, 06 §6 decision 1: no purchase pressure — the lines name
+## neither seconds nor slots, a price or a call to buy): "sponsor_window_open:<kind>" (the comeback window after a lost
+## boss attempt: "sponsor_window_open:boss_comeback") → "sponsor_window_open".
 func _on_sponsor_window_opened(window: Dictionary) -> void:
 	if Game.replaying or sponsor_presentation() != &"live":
 		return
-	say("sponsor_window_open:" + str(window.get("kind", "")), {"seconds": int(window.get("left_sec", 0)),
-		"count": int(window.get("slots", 0))})
+	var kind: String = str(window.get("kind", ""))
+	if bool(window.get("comeback", false)):
+		kind = SponsorWindows.COMEBACK_TAG
+	say("sponsor_window_open:" + kind)
 
 
 ## Only the natural end ("time") gets a line; "superseded" is followed by the next window's own line, "left" / "floor"
@@ -1045,6 +1077,7 @@ func _on_sponsor_gift_triggered(sponsor_id: String) -> void:
 func _on_new_run(_slot: int) -> void:
 	_reset_battle()
 	_floor_start_pending = false
+	_marotten_new_run()                            # 06-C
 	_first_fight_said = false
 	_unlocked_battle = PackedStringArray()
 	_synced_state = null
@@ -1141,3 +1174,211 @@ static func _known_stat(stat_id: String) -> bool:
 		return true
 	push_warning("[Show] unknown stat id '%s'" % stat_id)
 	return false
+
+
+# ======================================================================================================================
+# 06-C: M.O.D.-Marotten (show bets) and the Unterhosen-Liga (06 §4) — MarottenRules decides, Show applies and presents
+# ======================================================================================================================
+
+## Today's preferences and the Liga for the HUD chip / pause tab "Show" (MarottenRules.view with the run's rules):
+## {"floor", "items": [{"id", "name", "desc", "hits", "goal", "won"}], "liga_tier", "liga_hype_pm",
+## "liga_follower_pm", "rewards"}.
+func marotten_view() -> Dictionary:
+	return MarottenRules.view(Game.state, DB.data, _marotten_rules())
+
+
+## The last won battle's part (results screen): {"hits": [{"id", "name", "hits", "goal", "won"}], "liga_tier"}; {}
+## after a battle without hearts and outside the Liga.
+func last_marotten() -> Dictionary:
+	return _last_marotten.duplicate(true)
+
+
+## Game.visit_room (first visit, recorded "room" command): the pacifist counter / explore preferences — only while the
+## countdown runs and never for safe room cells (06 §4.4 mar_pacifist).
+func on_room_visited(room_kind: int, zone: String) -> void:
+	var st: GameState = Game.state
+	if st == null or st.floor_run == null or not st.floor_run.timer_started or room_kind == RoomCell.Kind.SAFE:
+		return
+	var res: Dictionary = MarottenRules.on_zone(st, DB.data, zone, _marotten_rules())
+	if int(res["hype"]) > 0:
+		add_hype(float(res["hype"]), &"marotte")
+	_marotten_apply(res)
+
+
+## Event runs pass their rules (no rewards, rules.marotten / rules.liga switches); the campaign {}.
+func _marotten_rules() -> Dictionary:
+	return Game.event_rules()
+
+
+func _marotten_floor_start(floor_index: int) -> void:
+	var res: Dictionary = MarottenRules.on_floor(Game.state, DB.data, floor_index, _marotten_rules())
+	var ids: PackedStringArray = res["announce"]
+	Events.marotten_announced.emit(ids)
+	if not Game.replaying:
+		_announce_queue = ids.duplicate()
+		_liga_said = {}
+
+
+## New game / loaded save: old saves get the floor's preferences (deterministic from the seed); M.O.D. announces them
+## only while the floor's countdown has not started yet (Floor 1: after the tutorial battle, GDD §1.4 B2).
+func _marotten_new_run() -> void:
+	_announce_queue = PackedStringArray()
+	_liga_said = {}
+	_last_liga_tier = -1
+	_last_marotten = {}
+	var st: GameState = Game.state
+	if st == null or st.show == null:
+		return
+	MarottenRules.ensure_floor(st, DB.data, _marotten_rules())
+	if st.floor_run != null and not st.floor_run.timer_started:
+		_announce_queue = JsonUtil.to_str_array(st.show.marotten.get("active", []))
+
+
+## begin_battle: pacifist counter reset, tally, the Liga tier of this battle (tutorial: none) and its factors.
+func _marotten_begin(setup: BattleSetup) -> void:
+	var st: GameState = Game.state
+	var rules: Dictionary = _marotten_rules()
+	MarottenRules.on_battle_start(st)
+	var tier: int = 0 if setup.tutorial else MarottenRules.liga_tier(st, rules)
+	_marotten = MarottenTracker.new()
+	_marotten.begin(setup, tier)
+	var paid: bool = MarottenRules.rewards_on(rules)
+	_liga_hype_pm = MarottenRules.liga_pm(DB.data, tier, &"hype") if paid else 1000
+	_liga_follower_pm = MarottenRules.liga_pm(DB.data, tier, &"follower") if paid else 1000
+	if tier != _last_liga_tier:
+		var left: bool = tier == 0 and _last_liga_tier > 0
+		_last_liga_tier = tier
+		Events.liga_changed.emit(tier)
+		if tier > 0:
+			_liga_line("liga_enter:%d" % tier + (":" + MarottenRules.hero_of(st) if tier == 1 else ""), tier)
+		elif left:
+			_liga_line("liga_leave", 0)
+
+
+## Victory, before the follower conversion: hearts of this battle (MarottenRules.on_battle_end), their hit hype.
+func _marotten_battle_end(result: BattleResult) -> Dictionary:
+	var tally: Dictionary = _marotten.tally() if _marotten != null else {}
+	tally["gifts"] = _gifts_given
+	var res: Dictionary = MarottenRules.on_battle_end(Game.state, DB.data, result, tally, _marotten_rules())
+	if int(res["hype"]) > 0:
+		add_hype(float(res["hype"]), &"marotte")
+	return res
+
+
+## GameState.follower_pm (equipment × talents) × the Liga factor of this battle × the hearts' follower factor, integer
+## per mille with each step rounded half up (06 §8.0 Nr. 4) — without talents bit-identical to package C's float path.
+func _battle_follower_pm(st: GameState, mres: Dictionary) -> int:
+	var pm: int = st.follower_pm(DB.data)
+	var extra: int = (_liga_follower_pm * int(mres.get("follower_pm", 1000)) + 500) / 1000
+	return pm if extra == 1000 else (pm * extra + 500) / 1000
+
+
+## After battle_won: won bets (boxes, followers, hype, show_bet achievements), the Liga battle payload; lines.
+func _marotten_rewards(mres: Dictionary, result: BattleResult) -> void:
+	var tier: int = int(mres.get("liga_tier", 0))
+	_last_marotten = {"hits": _marotten_items(mres["hits"] as Array), "liga_tier": tier}
+	_marotten_apply(mres)
+	if tier > 0 and result.is_boss and not Game.replaying:
+		say("liga_win")
+
+
+## Shared by battles and room visits: boxes → pending_lootboxes, followers / hype of won bets, show_bet triggers,
+## signals; presentation: hit / won lines and toasts.
+func _marotten_apply(res: Dictionary) -> void:
+	var st: GameState = Game.state
+	for box: Variant in (res["boxes"] as Array):
+		st.pending_lootboxes.append(str(box))
+		Events.lootbox_earned.emit(str(box))
+	if int(res["followers"]) > 0:
+		add_followers(int(res["followers"]), &"marotte")
+	if int(res["won_hype"]) > 0:
+		add_hype(float(res["won_hype"]), &"marotte")
+	var hits: Dictionary = st.show.marotten.get("hits", {}) if st.show.marotten.get("hits", {}) is Dictionary else {}
+	for id: Variant in (res["hits"] as Array):
+		var def: MarotteDef = DB.data.marotte(str(id)) if DB.data.has_id("marotten", str(id)) else null
+		Events.marotte_progress.emit(str(id), int(hits.get(str(id), 0)), def.goal if def != null else 0)
+	for id: Variant in (res["won"] as Array):
+		Events.marotte_won.emit(str(id))
+	for p: Variant in (res["show_bet"] as Array):
+		trigger("show_bet", p as Dictionary)
+	if Game.replaying:
+		return
+	if str(res.get("bonus", "")) != "":                       # 06 B × C: "Kamera 3 kennt mich" (marotte_heart)
+		Events.toast_requested.emit("Talent: Extra-Herz für M.O.D.s Vorliebe!", &"marotte")
+	for item: Dictionary in _marotten_items(res["hits"] as Array):
+		if bool(item["won"]):
+			say("marotte_won:" + str(item["id"]))
+			Events.toast_requested.emit("Wette gewonnen: %s! Ein Fanpost-Paket ist unterwegs." % str(item["name"]),
+				&"marotte")
+		else:
+			say("marotte_hit:" + str(item["id"]))
+			Events.toast_requested.emit("M.O.D. mag das: %s (%d/%d)" % [str(item["name"]), int(item["hits"]),
+				int(item["goal"])], &"marotte")
+
+
+## Floor done: the Liga floor bonus (box + show_bet "floor"), then the lines: a whole Duo-Liga floor, one sulk for
+## missed preferences, and the Liga hint at the end of floor 1 for those who never tried it (06 §4.3).
+func _marotten_floor_end(floor_index: int) -> void:
+	var st: GameState = Game.state
+	if st == null or st.show == null:
+		return
+	var res: Dictionary = MarottenRules.on_floor_end(st, DB.data, floor_index, _marotten_rules())
+	for box: Variant in (res["boxes"] as Array):
+		st.pending_lootboxes.append(str(box))
+		Events.lootbox_earned.emit(str(box))
+	for p: Variant in (res["show_bet"] as Array):
+		trigger("show_bet", p as Dictionary)
+	if Game.replaying:
+		return
+	if int(res["floor_tier"]) == 2 and int(res["battles"]) >= MarottenRules.DUO_FLOOR_MIN_BATTLES:
+		say("liga_floor")
+	elif not (res["missed"] as Array).is_empty():
+		say("marotte_missed")
+	if floor_index == 1 and int(res["liga_battles"]) == 0 and MarottenRules.liga_enabled(_marotten_rules()):
+		say("liga_hint")
+
+
+## Hit ids → [{"id", "name", "hits", "goal", "won"}] with the current hearts.
+func _marotten_items(ids: Array) -> Array:
+	var out: Array = []
+	var st: GameState = Game.state
+	var m: Dictionary = st.show.marotten if st != null and st.show != null else {}
+	var hits: Dictionary = m.get("hits", {}) if m.get("hits", {}) is Dictionary else {}
+	var won: PackedStringArray = JsonUtil.to_str_array(m.get("won", []))
+	for id: Variant in ids:
+		var sid: String = str(id)
+		if not DB.data.has_id("marotten", sid):
+			continue
+		var def: MarotteDef = DB.data.marotte(sid)
+		out.append({"id": sid, "name": tr(def.name), "hits": mini(int(hits.get(sid, 0)), def.goal), "goal": def.goal,
+			"won": won.has(sid)})
+	return out
+
+
+## Liga lines once per floor (presentation only) + a toast with the rule in its one sentence (06 §0.5).
+func _liga_line(tag: String, tier: int) -> void:
+	if Game.replaying:
+		return
+	var key: String = "%d:%s" % [_floor_index(), tag.get_slice(":", 0) + str(tier)]
+	if _liga_said.has(key):
+		return
+	_liga_said[key] = true
+	say(tag)
+	if tier <= 0:
+		return
+	var who: String = "Beide ohne" if tier == 2 else "Ohne"
+	var text: String = "%s Rüstung & ohne Accessoire" % who
+	if MarottenRules.rewards_on(_marotten_rules()):
+		text += ": Hype ×%s · Follower ×%s" % [pm_text(MarottenRules.liga_pm(DB.data, tier, &"hype")),
+			pm_text(MarottenRules.liga_pm(DB.data, tier, &"follower"))]
+	Events.toast_requested.emit(text, &"liga_duo" if tier == 2 else &"liga")
+
+
+## 1250 → "1,25", 1500 → "1,5", 1000 → "1" (German decimal comma, trailing zeros dropped).
+static func pm_text(pm: int) -> String:
+	var whole: int = pm / 1000
+	var frac: int = pm % 1000
+	if frac == 0:
+		return str(whole)
+	var f: String = ("%03d" % frac).rstrip("0")
+	return "%d,%s" % [whole, f]

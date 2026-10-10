@@ -319,6 +319,72 @@
 			"followers": -1,
 			"hidden": true,
 			"mod_tag": ""
+		},
+		{
+			"id": "ach_ul_first",
+			"name": "Einmal ohne alles",
+			"desc": "Gewinne einen Kampf in der Unterhosen-Liga (ohne Rüstung & ohne Accessoire).",
+			"trigger": "show_bet",
+			"condition": "e.kind == \"liga\" && e.event == \"battle\" && e.tier >= 1",
+			"box": "box_bronze",
+			"followers": -1,
+			"hidden": false,
+			"mod_tag": ""
+		},
+		{
+			"id": "ach_ul_boss",
+			"name": "Frische Brise im Revier",
+			"desc": "Besiege einen Boss in der Unterhosen-Liga.",
+			"trigger": "show_bet",
+			"condition": "e.kind == \"liga\" && e.event == \"battle\" && e.tier >= 1 && e.is_boss == true",
+			"box": "box_silver",
+			"followers": -1,
+			"hidden": false,
+			"mod_tag": ""
+		},
+		{
+			"id": "ach_duo_first",
+			"name": "Doppel-Feinripp",
+			"desc": "Gewinne einen Kampf in der Duo-Liga: beide ohne Rüstung & ohne Accessoire.",
+			"trigger": "show_bet",
+			"condition": "e.kind == \"liga\" && e.event == \"battle\" && e.tier == 2",
+			"box": "box_silver",
+			"followers": -1,
+			"hidden": false,
+			"mod_tag": ""
+		},
+		{
+			"id": "ach_duo_floor",
+			"name": "Eine Etage Feinripp",
+			"desc": "Gewinne alle Kämpfe einer Etage (mindestens 5) in der Duo-Liga.",
+			"trigger": "show_bet",
+			"condition": "e.kind == \"liga\" && e.event == \"floor\" && e.floor_tier == 2 && e.battles >= 5",
+			"box": "box_gold",
+			"followers": -1,
+			"hidden": false,
+			"mod_tag": ""
+		},
+		{
+			"id": "ach_duo_flawless",
+			"name": "Ohne Kratzer, ohne Rüstung",
+			"desc": "Besiege den Etagenboss in der Duo-Liga, ohne dass jemand K.O. geht.",
+			"trigger": "show_bet",
+			"condition": "e.kind == \"liga\" && e.event == \"battle\" && e.tier == 2 && e.is_floor_boss == true && e.party_kos == 0",
+			"box": "box_gold",
+			"followers": -1,
+			"hidden": true,
+			"mod_tag": ""
+		},
+		{
+			"id": "ach_bets_5",
+			"name": "M.O.D.s Liebling",
+			"desc": "Gewinne fünf Show-Wetten (M.O.D.s Vorlieben).",
+			"trigger": "show_bet",
+			"condition": "e.kind == \"marotte\" && e.event == \"won\" && s.bets_won == 5",
+			"box": "box_silver",
+			"followers": -1,
+			"hidden": false,
+			"mod_tag": ""
 		}
 	]
 }

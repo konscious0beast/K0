@@ -14,6 +14,7 @@ var fullscreen: bool = false                # display/fullscreen
 var quality: StringName = &"high"           # display/quality: &"high" | &"low" (mobile default &"low")
 var touch_controls: StringName = &"auto"    # display/touch_controls: &"auto" | &"on" | &"off"
 var show_fps: bool = false                  # display/show_fps
+var show_bets_hud: bool = true              # display/show_bets_hud — 06-C: M.O.D.'s show chip (06 §4.7/§4.8 Nr. 8)
 var camera_invert_x: bool = false           # input/camera_invert_x
 var camera_invert_y: bool = false           # input/camera_invert_y
 var camera_sensitivity: float = 1.0         # input/camera_sensitivity, 0.25..3.0
@@ -38,6 +39,7 @@ func reset_defaults() -> void:
 	quality = &"low" if OS.has_feature("mobile") else &"high"
 	touch_controls = &"auto"
 	show_fps = false
+	show_bets_hud = true                          # 06-C
 	camera_invert_x = false
 	camera_invert_y = false
 	camera_sensitivity = 1.0
@@ -66,6 +68,7 @@ func load_from_disk() -> void:
 	var tc: StringName = StringName(str(cfg.get_value("display", "touch_controls", touch_controls)))
 	touch_controls = tc if (tc == &"auto" or tc == &"on" or tc == &"off") else touch_controls
 	show_fps = bool(cfg.get_value("display", "show_fps", show_fps))
+	show_bets_hud = bool(cfg.get_value("display", "show_bets_hud", show_bets_hud))   # 06-C
 	camera_invert_x = bool(cfg.get_value("input", "camera_invert_x", camera_invert_x))
 	camera_invert_y = bool(cfg.get_value("input", "camera_invert_y", camera_invert_y))
 	camera_sensitivity = clampf(float(cfg.get_value("input", "camera_sensitivity", camera_sensitivity)), 0.25, 3.0)
@@ -87,6 +90,7 @@ func save_to_disk() -> Error:
 	cfg.set_value("display", "quality", String(quality))
 	cfg.set_value("display", "touch_controls", String(touch_controls))
 	cfg.set_value("display", "show_fps", show_fps)
+	cfg.set_value("display", "show_bets_hud", show_bets_hud)   # 06-C
 	cfg.set_value("input", "camera_invert_x", camera_invert_x)
 	cfg.set_value("input", "camera_invert_y", camera_invert_y)
 	cfg.set_value("input", "camera_sensitivity", camera_sensitivity)
@@ -106,6 +110,7 @@ func to_dict() -> Dictionary:
 		"quality": quality,
 		"touch_controls": touch_controls,
 		"show_fps": show_fps,
+		"show_bets_hud": show_bets_hud,               # 06-C
 		"camera_invert_x": camera_invert_x,
 		"camera_invert_y": camera_invert_y,
 		"camera_sensitivity": camera_sensitivity,

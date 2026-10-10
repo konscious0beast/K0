@@ -12,8 +12,12 @@ const NO_COOLDOWN_TAGS: PackedStringArray = ["death", "intro"]
 ## GDD §1.4 B3/B6/B8, §11.1): never dropped by Show's priority window — they queue behind the running line (ModDialog)
 ## and leave the window as it is. (Measured with the full-run bot: a purchase right after the lootbox lines and the
 ## descent right after an achievement line — ach_speedrun / ach_last_minute fire on floor_completed — were swallowed.)
+## 06-B: the one-sentence rule of the first Talent-Show. 06-C: M.O.D. announcing her preferences, a won bet and the
+## one-off Liga hint queue the same way (06 §4.2/§4.3); a tag matches by its base ("marotte_won:mar_mop_only" →
+## "marotte_won").
 const ALWAYS_SAID_TAGS: PackedStringArray = ["vendor_buy", "safe_room_enter", "stairs_found", "floor_end",
-	"talent_show_open"]                         # 06 package B: the one-sentence rule of the first Talent-Show
+	"talent_show_open",                         # 06 package B
+	"marotte_announce", "marotte_won", "liga_hint"]   # 06 package C
 
 var _data: GameData = null
 var _rng: RandomNumberGenerator = null
@@ -78,7 +82,7 @@ static func priority(tag: String) -> int:
 
 ## ALWAYS_SAID_TAGS: exempt from Show's priority window (and they never suppress anything themselves).
 static func always_said(tag: String) -> bool:
-	return ALWAYS_SAID_TAGS.has(tag)
+	return ALWAYS_SAID_TAGS.has(tag) or ALWAYS_SAID_TAGS.has(tag.get_slice(":", 0))
 
 
 ## text.format(ctx); missing keys stay visible. Show always adds ctx name, floor, level, viewers, followers.

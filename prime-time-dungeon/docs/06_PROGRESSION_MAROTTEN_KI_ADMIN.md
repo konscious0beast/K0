@@ -8,7 +8,8 @@
 >
 > **Status:** Planungs- und Entscheidungsdokument für den nächsten Umsetzungsdurchgang (Pakete A–D, Kap. 8). Es **ergänzt**
 > GDD/TECH/05; wo es ihnen widerspricht, gilt bis zur Einarbeitung dieses Dokument für die genannten Punkte (Liste Kap. 8.7).
-> Der Brief bleibt vorrangig. **Rangfolge:** `00_BRIEF` > `02_TECH` (APIs/Schemas) > **`06`** (neue Systeme) > `01_GDD` > `03_ART` > `04`/`05`.
+> Der Brief bleibt vorrangig. **Rangfolge** (Vorrang-Klausel des Briefs, 2026-10-10): `00_BRIEF` > `07_ECHTZEITKAMPF` (alles
+> Kampfrelevante) > **`06`** (neue Systeme) > `01_GDD` / `02_TECH` / `03_ART` / `05` (je nach Thema) > `04`.
 >
 > Konventionen: Prosa Deutsch; IDs, Pfade, JSON-Keys, Signal-/Methodennamen Englisch. **[zu prüfen]** = reale Fakten (Preise,
 > Plattformregeln, Recht), vor einer Entscheidung zu verifizieren. Alle Zahlen sind **Startwerte** für Simulation und Playtests.
@@ -366,7 +367,9 @@ echte Spielergilden (Kap. 7).
 - Je Etage weiterhin **Revier-Boss** (Pflicht) + **Etagenboss** (optional, GDD §1.4).
 - **Show-Bosse**: seltene, von M.O.D. angekündigte **Elite-Varianten** regulärer Gegner („Sonderausgabe!“) mit **einer**
   Zusatzregel, Belohnung Fanpost-Paket (ab E2 zusätzlich Sammelkarte). Optional, sichtbar auf der Karte (goldener Rahmen), nie im Weg.
-  - **E1-Kostprobe (Paket C):** genau **ein** Show-Boss `enc_e1_showboss` „Kanalratten-Gala“ in Zone B (abseits des Pflichtwegs):
+  - **E1-Kostprobe:** **Orchestrator-Entscheidung 2026-10-10 — nicht im CTB, sondern direkt im Echtzeitkampf
+    (`07_ECHTZEITKAMPF.md`, Phase R4; keine Wegwerf-CTB-Inhalte, Kap. 8.8).** Geplant war (Paket C):
+    genau **ein** Show-Boss `enc_e1_showboss` „Kanalratten-Gala“ in Zone B (abseits des Pflichtwegs):
     Gruppe der Zone als Elite (+20 % HP/STR), Zusatzregel **„Hausordnung verschärft“**: jeder 3. Gegnerzug belegt das Ziel mit
     `sts_slow` (vorhandener Status, 1 Zug). Belohnung: 1 Fanpost-Paket (`box_fan`) + M.O.D.-Zeile `showboss_won`. Ansage beim
     Betreten der Zone (`showboss_spotted`), keine Tutorial-Zeile — die Regel steht auf der Kampf-Bauchbinde.
@@ -562,8 +565,11 @@ nennt deshalb nie Schuhe oder Füße. Die **Waffe ist erlaubt**.
 | Stufe | Bedingung (zu Kampfbeginn geprüft, gilt den ganzen Kampf) | Hype-Gewinne | Follower | Show-Chip-Zusatz |
 |---|---|---|---|---|
 | 0 | sonst | ×1.0 | ×1.0 | — |
-| **1 „Unterhosen-Liga“** | **gesteuerte Figur** (`GameState.hero`): `armor == ""` **und** `accessory == ""` | **×1.25** | **×1.20** | „LIGA ×1,25“ |
-| **2 „Duo-Liga“** (ultimativ) | **beide** Figuren: `armor == ""` und `accessory == ""` | **×1.50** | **×1.40** | „DUO-LIGA ×1,5“ |
+| **1 „Unterhosen-Liga“** | **gesteuerte Figur** (`GameState.hero`): `armor == ""` **und** `accessory == ""` | **×1.20** (Plan ×1.25) | **×1.15** (Plan ×1.20) | „LIGA ×1,2“ |
+| **2 „Duo-Liga“** (ultimativ) | **beide** Figuren: `armor == ""` und `accessory == ""` | **×1.40** (Plan ×1.50) | **×1.35** (Plan ×1.40) | „DUO-LIGA ×1,4“ |
+
+*Paket C (gemessen):* Mit den Planwerten lag die Duo-Liga-Staffel bei 2 096 Followern am Ende von E1 (Band 4.10: ≤ 2 000) —
+die Faktoren sind deshalb auf 1,2/1,15 bzw. 1,4/1,35 gesenkt (Daten `marotten.json`, Band als Test `test_06c_balance`).
 
 Die Multiplikatoren wirken auf die **Kampagnen-Show-Währung**; in gewerteten Event-Läufen zählen sie nicht in die Punkte (4.8 Nr. 4).
 
@@ -611,14 +617,14 @@ ist bei Kampf-Marotten implizit (nur Siege werden ausgewertet).
 | `mar_mop_only` | **Nur der Mopp** | Kampf: `e.kai_weapon == "itm_wpn_mop"` | ✓ | „Ich habe heute eine Schwäche für Wischmopps. Fragen Sie nicht. Wischen Sie.“ | „Mit dem Mopp! Ich bekomme Gänsehaut. Ich habe keine Haut.“ |
 | `mar_graf_finale` | **Der Graf hat das letzte Wort** | Kampf: `e.last_kill_member == "mopsula"` | ✓ | „Heute will ich den Grafen glänzen sehen. Den letzten Treffer, bitte. Mit Etikette.“ | „Der Graf beendet es. Mit einem Niesen. Zeitlos.“ |
 | `mar_variety` | **Stilnote** | Kampf: `e.distinct_actions >= 4` | ✓ | „Heute zählt Stil. Vier verschiedene Aktionen in einem Kampf, und ich vergebe Herzchen.“ | „Abwechslung! Die Jury zückt die Zehn.“ |
-| `mar_sneaky` | **Leise Sohle** | Kampf: `e.encounter_type == "preemptive"` | ✓ | „Ich mag heute Überraschungen. Von hinten. Oder mit Gebell. Hauptsache zuerst.“ | „Erwischt, bevor sie es merkten. Ich liebe Pünktlichkeit.“ |
+| `mar_sneaky` | **Schleichwerbung** (Paket C; „Leise Sohle“ ist schon `ach_preemptive_3` und streift die Fuß-Regel 0.3) | Kampf: `e.encounter_type == "preemptive"` | ✓ | „Ich mag heute Überraschungen. Von hinten. Oder mit Gebell. Hauptsache zuerst.“ | „Erwischt, bevor sie es merkten. Ich liebe Pünktlichkeit.“ |
 | `mar_pacifist` | **Friedliche Runde** | `explore_zone`: `e.zones_since_battle >= 3` (3 Räume/Zonen-Zellen erstmals betreten ohne Kampf dazwischen) | — | „Heute mag ich es ruhig. Drei neue Räume ohne Prügelei, und ich werde sentimental.“ | „Drei Räume Frieden. Die Werbekunden sind nervös. Ich bin gerührt.“ |
 | `mar_secondhand` | **Second-Hand-Schick** | Kampf: `e.equip_all_common == true` (alle belegten Slots beider Figuren `common`) | — | „Meine Laune heute: Flohmarkt. Nur gewöhnliche Ausrüstung, bitte. Vintage ist Quote.“ | „Gewonnen in Ramsch-Couture. Die Modeabteilung weint vor Glück.“ |
 | `mar_speed` | **Schnellschnitt** | Kampf: `e.party_turns <= 3 && e.is_boss == false` | — | „Ich habe heute wenig Sendezeit. Kämpfe in höchstens drei Zügen, und ich liebe Sie.“ | „Zack, fertig! So schnell schneidet nicht mal mein Praktikant.“ |
 | `mar_stunt` | **Akrobatik-Abend** | Kampf: `e.stunts_success >= 1` | — | „Heute Abend: Akrobatik! Ein gelungener Stunt pro Kampf, und ich bin Ihr Fan.“ | „Gelandet! Ich habe die Zeitlupe schon dreimal angesehen.“ |
 | `mar_bio` | **Bio-Siegel** | Kampf: `e.items_used == 0 && e.gifts == 0` | — | „Heute bin ich auf Natur. Keine Items, keine Sponsoren. Ja, ich höre mich selbst.“ | „Ohne Zusatzstoffe gewonnen. Ich verleihe Ihnen das Siegel ‚garantiert ungesponsert‘.“ |
 | `mar_brave` | **Kein Schritt zurück** | Kampf: `e.defends == 0 && e.flee_attempts == 0` | — | „Heute mag ich Mut. Kein Verteidigen, kein Weglaufen. Nur nach vorn.“ | „Nicht einen Schritt zurück! Die Versicherung hat aufgelegt.“ |
-| `mar_gourmet` | **Schwachstellen-Feinschmecker:in** | Kampf: `e.weakness_hits >= 3` | — | „Ich habe Appetit auf Schwachstellen. Drei pro Kampf, serviert mit Stil.“ | „Genau da, wo es wehtut. Drei Gänge, null Mitleid.“ |
+| `mar_gourmet` | **Schwachstellen-Gourmet** (Paket C: passt in 28 Zeichen) | Kampf: `e.weakness_hits >= 3` | — | „Ich habe Appetit auf Schwachstellen. Drei pro Kampf, serviert mit Stil.“ | „Genau da, wo es wehtut. Drei Gänge, null Mitleid.“ |
 
 Sonderzeilen: `marotte_won:<id>` (Fallback `marotte_won`: „Wette gewonnen! Sie haben verstanden, was ich mag. Das ist mir fast
 unheimlich.“), `marotte_missed` („Meine Vorliebe blieb unerfüllt. Ich trage es mit Fassung. Und Statistik.“).
@@ -702,7 +708,7 @@ floor_tier, battles, is_boss, is_floor_boss, boss_id, party_kos, floor`. Neue `S
  {"id": "mar_unterhose", "name": "Unterhosen-Liga", "desc": "Ohne Rüstung & ohne Accessoire kämpfen.",
   "kind": "liga", "trigger": "marotte_battle", "condition": "e.liga_tier >= 1",
   "goal": 0, "rotation": false, "starter": false, "min_floor": 1, "weight": 1,
-  "reward": {"tiers": [{"tier": 1, "hype_pm": 1250, "follower_pm": 1200}, {"tier": 2, "hype_pm": 1500, "follower_pm": 1400}],
+  "reward": {"tiers": [{"tier": 1, "hype_pm": 1200, "follower_pm": 1150}, {"tier": 2, "hype_pm": 1400, "follower_pm": 1350}],
              "floor_box": "box_fan"},
   "mod_tag": "liga"}
 ]}
@@ -1038,6 +1044,10 @@ Cache-Schreibvorgänge/h (Start, Pausen > 5 min). Preise: Stand Skill-Referenz 2
 
 ## 6. Entscheidungen zu den fünf offenen Sponsor-Fenster-Fragen (05 Kap. 12.2 Nr. 17/18)
 
+> **Stand Paket C (2026-10-10): alle fünf umgesetzt bzw. dokumentiert** — 1 Overlay/Zeilen ohne Sekunden, 2 geprüft (Fan-Pakete
+> fensterpflichtig, Cheers nie), 3 Comeback-Fenster im Kern (`boss.comeback`), 4 `SponsorWindows.team_slots` + Regeltext 05 Kap. 6.13
+> (Umsetzung im Kern mit S4), 5 Regeltext + Test (`bits` nie Geschenkquelle). 05 Kap. 1.5/6.12/6.13/12.2 nachgezogen.
+
 | # | Frage | **Entscheidung** | Begründung |
 |---|---|---|---|
 | 1 | Overlay mit Sekunden-Countdown? | **Nein.** Offen: **„SPONSOR-FENSTER OFFEN“** + Platz-Symbole (●●○ = 2 von 3 belegt), voll: „SPONSOR-FENSTER VOLL — danke!“, zu: **„Nächstes Fenster in ~3 Min.“** (aufgerundete Minuten; < 60 s: „in Kürze“; „~“, weil Kampf/Safe Room pausieren). Keine Dringlichkeitswörter („schnell“, „nur noch“, „letzte Chance“). M.O.D.-Zeilen `sponsor_window_open*` ohne `{seconds}`/`{count}`. **Kauf-Flow zeigt nie Timer oder Knappheit** (Platz ist bei der Quote reserviert). Kern rechnet weiter in Ticks — nur die Darstellung ändert sich. | Countdown + knappe Plätze wirken als künstliche Dringlichkeit (R15, L16; Dark-Pattern-Regeln wie DSA Art. 25 **[zu prüfen]**). Die Information „offen/zu/voll/wann ungefähr“ reicht zum Planen und ist einfacher zu lesen. Schließt 05 Nr. 18. |
@@ -1293,8 +1303,9 @@ Der TALENT-SHOW-Knopf (B-2) sitzt jetzt **oben rechts** auf Höhe des ersten Ein
 M.O.D.-Kasten, der bei jedem Besuch und nach „Figur wechseln“ spricht. Recipe `safe_hero_talents`, Ansicht
 `docs/screenshots/26_safe_room_hero_talents_phone.png`. (3) **Held:in × Talente:** Angebote, Wahlen und Wirkungen hängen am
 Mitglied, nie an der gesteuerten Figur; „Partner automatisch“ spielt den Partner mit AutoPolicy auf dem Combatant **mit** seinen
-Talenten (Werte, Krit, Element, `talent_mods`). Offen (Design): AutoPolicy stuntet nie — „Taktgefühl“ wirkt für einen automatischen
-Partner (wie im ganzen Auto-Kampf) nicht. Tests: `tests/test_06ab_hero_talents.gd` (je Held:in ein Integrationstest).
+Talenten (Werte, Krit, Element, `talent_mods`). Bekannte CTB-Grenze bis R5 (Orchestrator-Entscheidung, Kap. 8.8): AutoPolicy
+stuntet nie — „Taktgefühl“ hilft nur, wenn Graf Mopsula gesteuert wird. Tests: `tests/test_06ab_hero_talents.gd` (je Held:in ein
+Integrationstest).
 
 ### 8.3 Paket B — Talent-Show + Spezies/Spezialisierung (Datenmodell)
 
@@ -1360,7 +1371,7 @@ Angebotsfolgen der 4 Wahlen je Figur geprüft); Anteil Verhaltens-Talente je Poo
 | B-5 | `stunt_window_pm` = Stunt-Zeitfenster | Faktor auf die **Stunt-Erfolgschance** vor Boss-Abzug und Obergrenze (`BattleState.stunt_chance`, GDD §3.6) | die Stunts haben im Slice kein Zeitfenster (Erfolg ist eine Chance); Kartentext „Stunts gelingen 20 % öfter“ |
 | B-6 | Krit/Element/Präventiv in `BattleBridge.make_setup` | Krit/Element in `Progression.to_combatant` (wie die Ausrüstung), Präventiv als `Combatant.talent_mods` → `ActionResolver` (nur erster eigener Zug nach Präventivschlag) | ein Ort für alle Combatant-Werte; Replays und M7-Simulation nutzen denselben Weg |
 | B-7 | — | eine Wahl hebt MaxHP/MaxMP-Zuwachs sofort auf HP/MP (wie ein Level-up, `Progression.follow_max_vitals`) | sonst wirkt „HP +5 %“ erst nach der nächsten Heilung |
-| B-8 | `field_range_pm`, `field_cd_pm`, `marotte_heart` | Werte und APIs da (`Talents.field_range_pm/field_cd_pm/marotte_bonus_hearts`), **Auswertung** folgt mit Paket A (Feldfähigkeit) bzw. C (`MarottenRules`); Feldfähigkeit umgesetzt in der Integration A × B (`HeroRules.field_mods`, Talente der führenden Figur) | Besitzgrenzen 8.1; die Karte sagt „Wirkt, wenn … die Gruppe anführt.“ |
+| B-8 | `field_range_pm`, `field_cd_pm`, `marotte_heart` | Werte und APIs da (`Talents.field_range_pm/field_cd_pm/marotte_bonus_hearts`), **Auswertung** folgt mit Paket A (Feldfähigkeit) bzw. C (`MarottenRules`); Feldfähigkeit umgesetzt in der Integration A × B (`HeroRules.field_mods`, Talente der führenden Figur), `marotte_heart` in der Integration B × C (`MarottenRules`: erstes Herz der Etage +1, Kap. 8.8) | Besitzgrenzen 8.1; die Karte sagt „Wirkt, wenn … die Gruppe anführt.“ |
 | B-9 | `hype_gain_pm`/`follower_pm` | im Kern verdrahtet als **Ganzzahl-Promille** (`GameState.hype_gain_pm/follower_pm` = Ausrüstung, einmal `roundi(x × 1000)`, × `Talents.hype_pm/follower_pm`, je Schritt `(a × b + 500) / 1000`; Show nutzt nur diese; `hype_gain_mult/follower_mult` bleiben reine Ausrüstungs-Floats), im Pool **nicht** verwendet | Kap. 4.8 Nr. 4: Event-Wertung ohne Talent-Multiplikatoren bleibt trivial erfüllt |
 | B-10 | Talent-Reset beim Casting | noch nicht gebaut | kommt mit der Casting-UI (Etage 3) |
 | B-11 | Verifier: `Talents.pick`/`Casting.choose` prüfen selbst (ein gefälschtes Command ändert nichts, der Hash weicht ab) | Integration (Merge mit dem Final-Review): die Legalität steht zusätzlich in `RunRules.command_refusal` — ein gefälschtes `talent`/`casting` ist für `RunSim.replay` **und** `Game.replay_log` ein Fehler in `errors` | gleicher Vertrag wie alle übrigen Commands (05 §11.4, `test_m8_integrity`) |
@@ -1430,6 +1441,85 @@ mit Doppelpunkt im Badge, „~“-Minuten, „in Kürze“); Comeback-Fenster ge
 **DoD:** Gate 8.6; `fullrun --strategy=all` grün, zusätzlich `--liga=1` und `--liga=2` (Seeds 1–3) mit gemessenen Quoten in GDD §13;
 GDD §7/§8/§11/§13, 05 Kap. 1.5 (Wertung Option a), 6.13 (Darstellung) + Kap. 12.2 (Nr. 17/18 geschlossen) nachgezogen; Screenshots
 Overlay mit Show-Chip (ohne/mit Liga), Ausrüstungsmenü mit Liga-Blocker, Show-Boss-Bauchbinde, Sponsor-Badge neu.
+
+#### Stand Paket C (umgesetzt 2026-10-10, Branch `ptd/feat-quirks`)
+
+**Gebaut:** `data/marotten.json` (11 rotierende Vorlieben + `mar_unterhose`), `MarotteDef`, privater Validator-Helfer
+`core/data/validators/marotten.gd` (Schema, Kontext-Schlüssel, Pflicht-Zeilen, Fuß-Wörter-Sperre), `MarottenRules` (statisch,
+rein: Auswahl je Seed/Etage, Liga-Stufe/-Faktoren, Kontext, Herzen, Wetten, Etagen-Bonus, `show_bet`), `MarottenTracker`
+(Strichliste je Kampf), `ShowState.marotten` (Save + Hash), `StatIds` `bets_won`/`liga_battles`, Trigger `show_bet`, 6 Achievements
+(Kette **„Ohne alles“**), 37 M.O.D.-Zeilen (`marotte_*`, `liga_*`) + `sponsor_window_open:boss_comeback`, Show-Chip im Overlay,
+Pausemenü-Tab „Show“ (`bets_menu.gd`), Liga-Zeile im Ausrüstungsmenü, Zeile „Show“ im Kampfergebnis, Toasts, Optionen-Schalter
+„Show-Wetten anzeigen“, Full-Run-Bot `--liga=1|2`; Sponsor-Fenster-Entscheidungen 1–5 (Kap. 6). Tests: `test_06c_marotten`,
+`test_06c_liga`, `test_06c_sponsor_display`, `test_06c_balance` (+ angepasste M0/M2/M6/M7/M8-Tests).
+
+**Bewusste Abweichungen vom Plan oben:**
+
+1. **Strichliste flüchtig** (`MarottenTracker` in `Show`, wie `ShowRules`) statt `ShowState.marotten.tally`: Gespeichert wird nie
+   im Kampf, und `RunSim`/Verifier rechnen keine Show-Reaktionen (wie bei den Achievements). Die Auswertung ist trotzdem
+   replay-sicher: Reaktion auf aufgezeichnete Commands, `Game.replay_log` ergibt denselben `StateHash` (Tests mit Wetten und
+   Liga-Kämpfen). Weil Event-Läufe nichts auszahlen (Nr. 2), braucht der Verifier die Wetten nicht.
+2. **Event-Wertung Option a ohne `followers_gained_base`:** In Läufen mit Event-Regeln wenden `Show`/`MarottenRules` keine
+   Faktoren an, zahlen keine Boxen/Follower/Hype und feuern keinen `show_bet` — `show_pts`/`ach_pts` sind dadurch unabhängig von
+   Liga und Wetten; `score_calc.gd` bleibt unverändert. Anzeige und Zählung laufen weiter (Spaß und Kommentar);
+   `rules.marotten.enabled`/`rules.liga.enabled` (`{"enabled": bool}`) im `rules_hash`.
+3. **Liga-Faktoren gesenkt** (Kap. 4.3): ×1,2/×1,15 und ×1,4/×1,35.
+4. **Namen:** `mar_sneaky` „Schleichwerbung“, `mar_gourmet` „Schwachstellen-Gourmet“, `ach_ul_first` „Einmal ohne alles“,
+   `ach_duo_flawless` „Ohne Kratzer, ohne Rüstung“; die Kette heißt „Ohne alles“. Regeltext der Liga überall „ohne Rüstung & ohne
+   Accessoire“; der Validator lehnt Fuß-/Schuh-Wörter in Marotten-Texten und `liga_*`/`marotte_*`-Zeilen ab.
+5. **`mar_pacifist`** ab E2 (`min_floor` 2): zählt über `Game.visit_room` → `Show.on_room_visited` nur Erstbesuche bei laufendem
+   Countdown, keine Safe-Room-Zellen; Kampfbeginn setzt 0, Latch nach dem Treffer; der Zähler steht in `ShowState.marotten.zones`.
+6. **Show-Chip:** in der Erkundung unter der Minimap-Spalte (rechts oben ist dort frei), im Kampf unter der Hype-Leiste;
+   erst sichtbar, wenn der Countdown läuft (E1: nach dem Tutorial — eine neue Sache nach der anderen, 0.6).
+7. **Kampfende-Feedback:** Zeile „Show“ im Ergebnis-Panel (Herzen + Liga-Stufe) und Toasts statt eines eigenen Herz-Flug-FX
+   (`bets_results_fx.gd` entfällt); der Chip blendet sich aus, solange das Ergebnis-Panel steht (es reicht mit Level-ups bis
+   unter die Hype-Leiste).
+8. **Ansage:** `marotte_announce:<id>` direkt nach `floor_start` in derselben Tick-Warteschlange (E1 nach dem Tutorial-Kampf);
+   `marotte_announce`, `marotte_won` und `liga_hint` stehen in `ModAnnouncer.ALWAYS_SAID_TAGS` (gehen nie im Prioritätsfenster unter).
+9. **Full-Run-Bot `--liga`** statt Hook `_apply_liga_strategy`: `equip_best` lässt Rüstung/Accessoire der gesteuerten Figur (1)
+   bzw. beider (2) leer; die Story-Beat-Prüfung verlangt die Ansage der Vorliebe mit laufendem Countdown und bei `--liga` mindestens
+   einen Liga-Sieg.
+10. **E1-Show-Boss (Kap. 2.6, `enc_e1_showboss`, `ShowBossRules`, `test_06c_show_boss`) zurückgestellt:** berührt `floors.json`
+    (Layout Zone B, Besitz Paket A) und die Gegner-KI-Grammatik; Folgeaufgabe nach dem Merge von A. Ohne ihn bringt E1
+    höchstens 2 Show-Boxen (Wette + Mut-Paket) statt 3. **Orchestrator-Entscheidung 2026-10-10:** er wird nicht im CTB
+    nachgebaut, sondern direkt im Echtzeitkampf (07, Phase R4) — keine Wegwerf-CTB-Inhalte (Kap. 8.8).
+11. **Optionen-Schalter** „Show-Wetten anzeigen“ als `GameSettings.show_bets_hud` (`display/show_bets_hud`, Standard an) — kleine,
+    markierte Änderung in `game_settings.gd`/`settings_menu.gd`.
+
+**Gemessen** (`test_06c_balance`, echtes `Show` im Kampf-Loop; Ziele Kap. 4.10):
+
+| Kennzahl | Ziel | Ergebnis |
+|---|---|---|
+| Boss-Niederlage 1. Versuch, Liga 1 (Hausmeister / Königin, 100 Seeds, Geschenke) | ≤ 40 % / ≤ 55 % | 26 % / 42 % |
+| dto. Liga 2 | ≤ 55 % / ≤ 70 % | 37 % / 57 % |
+| Follower Ende E1 (Staffel, Median 8 Seeds): ohne Liga / Liga 1 / Liga 2 | Liga ≤ 2 000 | 1 357 / 1 630 / 1 855 |
+| Lootboxen E1: ohne Liga / Liga 1 / Liga 2 | 15–22 | 20 / 23 / 21,5 (Liga-Läufe dürfen bis 28: Mut-Paket + Kette) |
+| Gewonnene Wetten E1 ohne gezieltes Spielen | 0–1 | höchstens 1 |
+
+**Full-Run-Bot im echten Spiel** (`tools/fullrun.sh --pace=human --liga=0|1|2`, Strategie *thorough* — der Bot nimmt alle Gruppen,
+Kisten und Events mit —, Seeds 1–3, Median [Min–Max]):
+
+| Kennzahl | ohne Liga | Liga 1 | Liga 2 (Duo) |
+|---|---|---|---|
+| Follower Ende E1 | 1 562 [1 445–1 615] | 1 928 [1 521–2 005] | **2 299** [2 271–2 866] |
+| Zuschauer-Peak | 5 165 | 5 696 | 5 933 |
+| Hype Kampfstart / -ende (Median regulär) | 37 / 60,5 | 37 / 64 | 41 / 75 |
+| Lootboxen | 20 | 23 | 24 |
+| Liga-Siege / gewonnene Wetten | 0 / 1 | 18 / 1 | 17 / 1 |
+| Boss-Niederlage 1. Versuch Hausmeister · Königin | 0/3 · 0/3 | 0/3 · 1/3 | 0/3 · 2/3 |
+| Liga-Achievements | — | `ach_ul_first`, `ach_ul_boss` (3/3) | + `ach_duo_first`, `ach_duo_floor` (3/3) |
+| Etagenzeit | 11:17 | 10:59 | 11:10 |
+
+Takt `fast` (Gate-Läufe, ohne Pausen): Liga 1 Follower 1 995–2 247, Liga 2 2 577–3 186, alle `FULLRUN: OK`.
+
+**Bewertung:** Der Band-Test (Simulation) hält ≤ 2 000. Der Bot im echten Spiel liegt — wie schon ohne Liga (+15 % gegenüber der
+Simulation, weil er alles mitnimmt) — darüber, in der Duo-Liga deutlich. Treiber ist weniger der Follower-Faktor als die
+Dramaturgie: Liga-Kämpfe dauern länger und enden öfter knapp → mehr Hype (Kampfende 75 statt 60) → mehr Zuschauer und Geschenke.
+Ein Gegenversuch mit kleineren Faktoren (×1,15/×1,1 und ×1,25/×1,15) änderte die Duo-Liga nicht messbar (2 362 [1 944–2 452])
+und machte Liga 1 unattraktiv (1 447, unter der Referenz). **Entscheidung:** Faktoren bleiben (×1,2/×1,15, ×1,4/×1,35); der
+Duo-Liga-Durchlauf erreicht den Meilenstein 2 000 (Gold-Box, GDD §7.7 „nur mit Top-Spiel“) — gewollt als Belohnung der
+ultimativen Spielweise. Playtest-Punkt: die Rückkopplung auf E2 (Zuschauer +0,5 je Follower) beobachten; falls nötig einen Deckel
+auf den Liga-Follower-Bonus je Etage statt kleinerer Faktoren.
 
 ### 8.5 Paket D — KI-Admin: Schnittstelle, Twists, Referenz-Dienst
 
@@ -1518,6 +1608,25 @@ aufzeichnende `Game`-Methode. Alle bisherigen ~806 Tests bleiben grün; jedes Pa
 | `03_ART` | Bellen-VFX, Mopsula als Spielerkörper, Riss-Wand/Regie-Notiz, Show-Boss-Goldrahmen, Liga-Optik (später; **kein** Fuß-/Barfuß-Rig, nie in Key Art), Spezies-Optik (später), Partyhut-Prop (später) | A/C (+ später) |
 | `04_STRATEGIE` | Kap. 2.3 Distanz-Review + „Unterhosen-Liga“ (**Nähe hoch**, Maßnahmen 0.3 Nr. 1–6) + Mopsula-Talentnamen (Kap. 2.2); Marketing-Regel „keine Liga-Optik von Kai in Key Art/Trailer/Store“; Kap. 3 Roadmap-Ergänzungen (Kap. 7); Kap. 11 erledigte Entscheidungen | Integrator |
 | `05_LIVE_MODUS` | **Kap. 1.5** Wertung: `show_pts` aus `followers_gained_base`, `show_bet`-Achievements ohne `ach_pts`, `rules.marotten`/`rules.liga` in `rules_hash` (4.8 Nr. 4, Option a); **Kap. 4.5** Nachricht `twist` → `{id, src, params, tick, vote_id?}` (`apply_tick` heißt jetzt `tick`); Kap. 6.2 Twist-Katalog → `twists.json` dieses Dokuments, Twist-Command-Schema; Kap. 6.13 Darstellung ohne Sekunden, Comeback-Fenster; Kap. 10.5 Schema; **Kap. 10.6** Run-Log: `twist` mit `tick`, Puffer-/Abweichungsregel; Kap. 11.1 `twists.json` jetzt im Slice; Kap. 12.2 Nr. 4/13/17/18 geschlossen | C/D |
+
+
+### 8.8 Integrationsstand & Orchestrator-Entscheidungen (Branch `ptd/int-06`)
+
+| Runde | Inhalt | Stand |
+|---|---|---|
+| 1 / 1b | Paket B mit den Review-Fixes von `main`; Talent-Legalität in `RunRules.command_refusal`; IP-Umbenennungen; Show-Faktoren als Ganzzahl-Promille; Replay-Prüfung nach dem Laden (Anker) | gemergt |
+| 2 | Paket A; Feld-Talente → Feldfähigkeiten (`HeroRules.field_mods`); Safe-Room-Menü in 5 Zeilen mit 88-px-Trefferflächen, TALENT-SHOW oben rechts; Held:in × Talente (`test_06ab_hero_talents`) | gemergt |
+| 3 | `main` (07_ECHTZEITKAMPF, Brief-Vorrang); Paket C; Liga-Talente ← Liga-Stufe; „Kamera 3 kennt mich“ → Herzen; Screenshots von C als 27/28 | gemergt |
+| 4 | Paket D (KI-Admin, Twists) | offen |
+
+| # | Entscheidung (Orchestrator, 2026-10-10) | Umsetzung / Folge |
+|---|---|---|
+| I-1 | **Kein E1-Show-Boss im CTB.** Der von Paket C zurückgestellte Show-Boss (Kap. 2.6) wird direkt im Echtzeitkampf gebaut (`07_ECHTZEITKAMPF.md`, Phase R4). | keine Wegwerf-CTB-Inhalte; GDD §1 vermerkt es; E1 bringt bis dahin höchstens 2 Show-Boxen (Wette + Mut-Paket) |
+| I-2 | **Bekannte CTB-Grenze bis R5:** ein automatischer Partner („Partner automatisch“, Kap. 1.4) stuntet nie (AutoPolicy) — „Taktgefühl“ hilft im CTB nur, wenn Graf Mopsula gesteuert wird. Im Echtzeitkampf nutzt auch die KI SHOW, dort wirkt es. | nur hier vermerkt, **kein UI-Text** |
+| I-3 | **Liga-Stufe = einzige Quelle** für die Liga-Talente (`tal_kai_liga_routine`, `tal_mop_liga_gelassen`): `MarottenRules.in_liga` — die gesteuerte Figur ab Stufe 1, die andere nur in der Duo-Liga (Stufe 2); nie im Tutorial-Kampf, nie bei `rules.liga.enabled = false`. | `BattleBridge.make_setup` (Kampfwerte, Regeln des Laufs), `UiUtil.member_stats`, Talent-Show-Vorschau; `Talents.liga_dressed` entfällt; `liga_stat_pct` nur für Kampfwerte (nie HP/MP, Validator); Ganzzahl-Promille; Tests `test_06abc_liga_talents` |
+| I-4 | **„Kamera 3 kennt mich“** (`marotte_heart`) wirkt in C's Herz-Logik: das erste Herz einer Etage zählt doppelt (Party-Summe, einmal je Etage, bis zum Ziel), für beide Held:innen, auch in Event-Läufen (zählen ja, zahlen nicht); Toast „Talent: Extra-Herz …“. | `MarottenRules._bonus_hearts`, `ShowState.marotten["bonus"]` (Save + Hash, `Game.replay_log`-gleich) |
+| I-5 | **Gesteuerte Figur:** die Liga-Stufe liest `GameState.hero` (Paket A) direkt. | `MarottenRules.hero_of`; Tests für Kai und Graf Mopsula |
+| I-6 | **IP:** Kai und Graf Mopsula; keine Kronen-/Majestäts-/Königsmotive für Mopsula; ohne Rüstung zu spielen ist ein Spielstil, nie ein Charakterzug; der allgemeine „Wir/Uns“-Stil des Grafen bekommt einen eigenen Stimm-Durchgang nach allen vier Paketen. | Liste der Stellen im Integrationsbericht |
 
 ---
 

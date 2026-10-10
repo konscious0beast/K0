@@ -9,7 +9,8 @@ const NAME_MAX: int = 32                    # card title
 const DESC_MAX: int = 90                    # at most two card lines (06 §2.2; the Liga talents name their rule)
 const MAX_EFFECTS: int = 3
 ## Fields per effect kind (besides "kind") and the allowed range of its number (06 §2.2 table; all integers).
-## [field, type, lo, hi] — type "stat" (DataValidator.STATS), "element" (ELEMENTS without none) or "i".
+## [field, type, lo, hi] — type "stat" (DataValidator.STATS), "battle_stat" (STATS without hp / mp), "element"
+## (ELEMENTS without none) or "i".
 const KIND_FIELDS: Dictionary = {
 	"stat_flat": [["stat", "stat"], ["value", "i", 1, 3]],
 	"stat_pct": [["stat", "stat"], ["pm", "i", 30, 50]],
@@ -21,10 +22,13 @@ const KIND_FIELDS: Dictionary = {
 	"preemptive_dmg_pm": [["pm", "i", 1000, 1200]],
 	"stunt_window_pm": [["pm", "i", 1000, 1250]],
 	"marotte_heart": [["per_floor", "i", 1, 1]],
-	"liga_stat_pct": [["stat", "stat"], ["pm", "i", 30, 50]],
+	"liga_stat_pct": [["stat", "battle_stat"], ["pm", "i", 30, 50]],   # 06 B × C: never HP / MP (see LIGA_STATS)
 	"hype_gain_pm": [["pm", "i", 1000, 1200]],
 	"follower_pm": [["pm", "i", 1000, 1200]],
 }
+## liga_stat_pct follows package C's Liga tier, which only exists in battle (and the UI): max HP / MP stay
+## member-local, so a Liga talent may only raise the battle stats.
+const LIGA_STATS: PackedStringArray = ["str", "mag", "def", "res", "spd", "lck"]
 ## IP distance (06 §0.3 Nr. 2): no foot / barefoot words in any talent text (lower-case substrings).
 const FORBIDDEN_WORDS: PackedStringArray = ["barfuß", "barfuss", "schuh", "füße", "fuß", "socke"]
 ## IP distance (orchestrator decision 2026-10-10): no royalty / majesty motif for Graf Mopsula — checked in the texts of
@@ -75,6 +79,8 @@ static func normalize_effect(v: DataValidator, ctx: String, raw: Variant) -> Dic
 		match str(f[1]):
 			"stat":
 				v._enum(ctx + "." + field, str(e[field]), DataValidator.STATS)
+			"battle_stat":
+				v._enum(ctx + "." + field, str(e[field]), LIGA_STATS)
 			"element":
 				var els: PackedStringArray = DataValidator.ELEMENTS.duplicate()
 				els.remove_at(els.find("none"))

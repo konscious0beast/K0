@@ -5,7 +5,8 @@ class_name GameData extends RefCounted
 
 const TABLES: PackedStringArray = ["statuses", "skills", "items", "classes", "party", "enemies", "floors",
 	"lootboxes", "achievements", "sponsors", "milestones", "mod_lines", "scenes",
-	"talents", "species"]                       # 06 package B
+	"talents", "species",                       # 06 package B
+	"marotten"]                                 # 06-C
 
 var source: String = ""                    # dir or "dicts"
 var errors: PackedStringArray = []
@@ -28,6 +29,7 @@ var _milestones: Dictionary = {}
 var _mod_lines: Dictionary = {}            # id → ModLineDef
 var _mod_lines_by_tag: Dictionary = {}     # tag → Array[ModLineDef]
 var _scenes: Dictionary = {}
+var _marotten: Dictionary = {}             # 06-C: id → MarotteDef
 var _party_start: Dictionary = {"inventory": {}, "credits": 0}
 var _pools: Dictionary = {}
 var _pity: Dictionary = {"rare": 4, "epic": 8}
@@ -49,6 +51,7 @@ var _talents: Dictionary = {}              # id → TalentDef
 var _species: Dictionary = {}              # id → SpeciesDef
 var _all_talents: Array[TalentDef] = []    # sorted by id
 var _all_species: Array[SpeciesDef] = []   # file order
+var _all_marotten: Array[MarotteDef] = []  # 06-C: file order
 
 
 ## Loads all TABLES from `dir` (<table>.json). Full validation (rules 1–10). True if no errors.
@@ -171,6 +174,11 @@ func talents_for(member_id: String) -> Array[TalentDef]:
 ## File order (spc_original first in the real data).
 func all_species() -> Array[SpeciesDef]:
 	return _all_species.duplicate()
+
+
+## 06-C: M.O.D. preference / Unterhosen-Liga (marotten.json, 06 §4.9).
+func marotte(id: String) -> MarotteDef:
+	return _get_def(_marotten, "marotten", id) as MarotteDef
 
 
 ## null (no error) if `index` has no floor → end of content.
@@ -296,6 +304,11 @@ func all_scenes() -> Array[SceneDef]:
 	return _all_scenes.duplicate()
 
 
+## 06-C: all marotten (file order).
+func all_marotten() -> Array[MarotteDef]:
+	return _all_marotten.duplicate()
+
+
 ## All pseudo units (enemies.json → pseudo_units), file order.
 func all_pseudo_units() -> Array[PseudoUnitDef]:
 	var out: Array[PseudoUnitDef] = []
@@ -322,7 +335,7 @@ func _clear() -> void:
 	warnings = PackedStringArray()
 	for d: Dictionary in [_statuses, _skills, _items, _classes, _party, _enemies, _pseudo, _floors, _floors_by_id,
 			_encounters, _lootboxes, _achievements, _sponsors, _milestones, _mod_lines, _mod_lines_by_tag, _scenes,
-			_talents, _species]:
+			_talents, _species, _marotten]:
 		d.clear()
 	_party_start = {"inventory": {}, "credits": 0}
 	_pools = {}
@@ -341,6 +354,7 @@ func _clear() -> void:
 	_all_scenes.clear()
 	_all_talents.clear()
 	_all_species.clear()
+	_all_marotten.clear()
 
 
 func _build(norm: Dictionary) -> void:
@@ -440,6 +454,11 @@ func _build(norm: Dictionary) -> void:
 		if not _species.has(s.id):
 			_species[s.id] = s
 			_all_species.append(s)
+	for d: Dictionary in norm.get("marotten", []):             # 06-C
+		var s: MarotteDef = MarotteDef.from_dict(d)
+		if not _marotten.has(s.id):
+			_marotten[s.id] = s
+			_all_marotten.append(s)
 	_party_start = (norm.get("party_start", {"inventory": {}, "credits": 0}) as Dictionary).duplicate(true)
 	_pools = (norm.get("lootbox_pools", {}) as Dictionary).duplicate(true)
 	_pity = (norm.get("lootbox_pity", {"rare": 4, "epic": 8}) as Dictionary).duplicate(true)
@@ -452,7 +471,8 @@ func _build(norm: Dictionary) -> void:
 ## Packed*Array fields cannot be locked by Godot (they are shared references too): never mutate them.
 func _freeze_defs() -> void:
 	for table: Dictionary in [_statuses, _skills, _items, _classes, _party, _enemies, _pseudo, _floors_by_id,
-			_encounters, _lootboxes, _achievements, _sponsors, _milestones, _mod_lines, _scenes, _talents, _species]:
+			_encounters, _lootboxes, _achievements, _sponsors, _milestones, _mod_lines, _scenes, _talents, _species,
+			_marotten]:
 		for def: Variant in table.values():
 			_freeze_object(def as Object)
 	for list: Variant in _mod_lines_by_tag.values():
@@ -520,6 +540,8 @@ func _table_dict(table: String) -> Dictionary:
 			return _talents
 		"species":
 			return _species
+		"marotten":
+			return _marotten
 	return {}
 
 

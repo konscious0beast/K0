@@ -12,7 +12,12 @@ class_name SponsorWindows extends RefCounted
 ##   safe_room — on entering a safe room (once per safe room and floor with safe_room.once_per_room), open while inside,
 ##               at most safe_room.max_sec; the run clock keeps ticking in safe rooms ("idle ticks": no floor timer, no
 ##               hype decay, no strays) — so the limit is ticks, too
-##   boss      — "Boss-Countdown": on the first entry of a quarter/floor boss room, boss.countdown_sec
+##   boss      — "Boss-Countdown": on the first entry of a quarter/floor boss room, boss.countdown_sec; after a LOST
+##               boss attempt it opens once more on the next entry of that boss room ("Comeback-Fenster", 06 §6
+##               decision 3, boss.comeback 1/0): on_battle_result marks the boss kind pending (state "comeback"
+##               {"floor", "pending", "done"}), on_room opens the window with "comeback": true and moves it to done —
+##               at most once per boss and floor, never after the boss is beaten. The campaign carries the mark over
+##               the game over into the save slot (Save.record_game_over → merge_comeback).
 ##   dev       — QA command {"t": "sponsor_window", "op": "dev_open", "sec", "slots"} (rules.dev_open; never accepted
 ##               from clients by a server)
 ## A safe_room / boss / dev window supersedes an open window. Battles stop the run clock, so an open window freezes
@@ -30,6 +35,9 @@ const STATE_KEY: String = "sponsor"    # GameState.flags["live"][STATE_KEY]
 ## Key of the pending reservations in the `run` dictionary of check(): [[window_id, sender_ref], …] (Show's queue).
 const PENDING_KEY: String = "sw_pending"
 const KINDS: PackedStringArray = ["periodic", "safe_room", "boss", "dev"]
+## 06-C: M.O.D. tag suffix of the comeback window ("sponsor_window_open:boss_comeback", live presentation only).
+const COMEBACK_TAG: String = "boss_comeback"
+const COMEBACK_KEY: String = "comeback"
 const CLOSE_REASONS: PackedStringArray = ["time", "left", "superseded", "floor"]
 const REASONS: PackedStringArray = ["window_closed", "window_full", "window_sender_limit"]
 const PROTOCOL_CODES: Dictionary = {"window_closed": "E_WINDOW_CLOSED", "window_full": "E_WINDOW_FULL",
@@ -45,12 +53,15 @@ const DEFAULT_RULES: Dictionary = {
 	"exempt_kinds": ["cheer"],
 	"periodic": {"enabled": true, "first_sec": 300, "every_sec": 300, "open_sec": 60},
 	"safe_room": {"enabled": true, "max_sec": 90, "once_per_room": true},
-	"boss": {"enabled": true, "countdown_sec": 45},
+	"boss": {"enabled": true, "countdown_sec": 45, "comeback": 1},   # 06-C: comeback 1 = once after a defeat
 	"dev_open": true,
 }
 ## Integer keys (validate): path → minimum.
 const INT_KEYS: Dictionary = {"slots_per_player": 1, "per_viewer": 1, "grace_sec": 0, "periodic.first_sec": 1,
-	"periodic.every_sec": 1, "periodic.open_sec": 1, "safe_room.max_sec": 1, "boss.countdown_sec": 1}
+	"periodic.every_sec": 1, "periodic.open_sec": 1, "safe_room.max_sec": 1, "boss.countdown_sec": 1,
+	"boss.comeback": 0}
+## Integer keys with an upper bound (validate): path → maximum.
+const INT_MAX: Dictionary = {"boss.comeback": 1}
 const BOOL_KEYS: PackedStringArray = ["enabled", "dev_open", "periodic.enabled", "safe_room.enabled",
 	"safe_room.once_per_room", "boss.enabled"]
 
@@ -151,6 +162,7 @@ static func on_floor(st: GameState, rules: Dictionary) -> Array[Dictionary]:
 	sw["last"] = {}
 	sw["next_in"] = _first_ticks(rules_of(rules))
 	sw["rooms"] = []
+	sw.erase(COMEBACK_KEY)                     # 06-C: comeback marks belong to their floor
 	return out
 
 
@@ -185,19 +197,142 @@ static func on_safe_room_exit(st: GameState, rules: Dictionary) -> Array[Diction
 	return out
 
 
-## First entry of a room ("room" command): a quarter/floor boss room opens the Boss-Countdown (ref = the cell kind).
-static func on_room(st: GameState, rules: Dictionary, kind: int) -> Array[Dictionary]:
+## Entry of a room ("room" command): the first entry of a quarter/floor boss room opens the Boss-Countdown (ref = the
+## cell kind); a later entry only while a comeback is due for that boss (06-C) — then, and on a first entry with a due
+## comeback, the window carries "comeback": true and the mark is used up.
+static func on_room(st: GameState, rules: Dictionary, kind: int, first: bool = true) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if kind != RoomCell.Kind.QUARTER_BOSS and kind != RoomCell.Kind.FLOOR_BOSS:
+		return out
+	var comeback: bool = comeback_due(st, rules, kind)
+	if not first and not comeback:
 		return out
 	var sw: Dictionary = ensure(st, rules)
 	var swr: Dictionary = rules_of(rules)
 	var cfg: Dictionary = swr["boss"]
 	if sw.is_empty() or not bool(cfg.get("enabled", true)):
 		return out
+	var extra: Dictionary = {}
+	if comeback:
+		extra[COMEBACK_KEY] = true
+		_use_comeback(sw, RoomCell.KIND_NAMES[kind])
 	_open(sw, swr, rules, "boss", RoomCell.KIND_NAMES[kind], _int(cfg["countdown_sec"]) * TICKS_PER_SEC,
-		_int(swr["slots_per_player"]), out)
+		_int(swr["slots_per_player"]), out, extra)
 	return out
+
+
+# --- 06-C: comeback window after a lost boss attempt (06 §6 decision 3) -----------------------------------------------
+
+## After every battle (Game.apply_battle_result / RunSim._end_battle, after BattleBridge.apply_result): a lost battle
+## against the floor's quarter / floor boss marks that boss kind pending (unless its comeback was used on this
+## floor); a won one clears the mark. No-op when windows are not tracked or boss.comeback is 0.
+static func on_battle_result(st: GameState, rules: Dictionary, data: GameData, result: BattleResult) -> void:
+	var sw: Dictionary = state_of(st)
+	if sw.is_empty() or result == null or not result.is_boss or st.floor_run == null:
+		return
+	var cfg: Dictionary = rules_of(rules)["boss"]
+	if _int(cfg.get("comeback", 1)) < 1 or not bool(cfg.get("enabled", true)):
+		return
+	var kind: String = boss_kind_of(data, st.floor_run.index, result.encounter_id)
+	if kind == "":
+		return
+	var cb: Dictionary = _comeback(sw, st.floor_run.index)
+	var pending: Array = cb["pending"]
+	if result.outcome == BattleResult.Outcome.DEFEAT:
+		if not pending.has(kind) and not (cb["done"] as Array).has(kind):
+			pending.append(kind)
+	elif result.outcome == BattleResult.Outcome.VICTORY:
+		pending.erase(kind)
+
+
+## 06 §6 decision 4 (co-op, S4): one window per team (one broadcast), `slots_per_player` slots for EACH player — the
+## team's window holds slots_per_player × players slots, so the best-known streamer cannot take them all; per_viewer
+## stays per window and team (one viewer cannot gift every player). Solo runs: players = 1.
+static func team_slots(rules: Dictionary, players: int) -> int:
+	return maxi(1, _int(rules_of(rules)["slots_per_player"])) * maxi(1, players)
+
+
+## True while a comeback is due for the boss room kind `kind` (RoomCell.Kind) on the current floor.
+static func comeback_due(st: GameState, rules: Dictionary, kind: int) -> bool:
+	if kind != RoomCell.Kind.QUARTER_BOSS and kind != RoomCell.Kind.FLOOR_BOSS:
+		return false
+	if st == null or st.floor_run == null:
+		return false
+	var cfg: Dictionary = rules_of(rules)["boss"]
+	if _int(cfg.get("comeback", 1)) < 1 or not bool(cfg.get("enabled", true)):
+		return false
+	var cb: Variant = state_of(st).get(COMEBACK_KEY, null)
+	if not (cb is Dictionary) or _int((cb as Dictionary).get("floor", 0)) != st.floor_run.index:
+		return false
+	var pending: Variant = (cb as Dictionary).get("pending", [])
+	return pending is Array and (pending as Array).has(RoomCell.KIND_NAMES[kind])
+
+
+## "quarter_boss" | "floor_boss" | "" for an encounter of floor `floor_index` (FloorDef.quarter_boss / floor_boss).
+static func boss_kind_of(data: GameData, floor_index: int, encounter_id: String) -> String:
+	var def: FloorDef = data.floor_def(floor_index) if data != null else null
+	if def == null or encounter_id == "":
+		return ""
+	if encounter_id == def.quarter_boss:
+		return RoomCell.KIND_NAMES[RoomCell.Kind.QUARTER_BOSS]
+	if encounter_id == def.floor_boss:
+		return RoomCell.KIND_NAMES[RoomCell.Kind.FLOOR_BOSS]
+	return ""
+
+
+## The comeback record of the run ({} = none) — Save.record_game_over carries it into the slot.
+static func comeback_record(st: GameState) -> Dictionary:
+	var cb: Variant = state_of(st).get(COMEBACK_KEY, null)
+	return (cb as Dictionary).duplicate(true) if cb is Dictionary else {}
+
+
+## Campaign game over (Save.record_game_over): the dying run's comeback record → the slot's saved state (raw save
+## dictionary), when that save is on the same floor and tracks Sponsor-Fenster: its pending marks are added, its done
+## marks too (a used comeback stays used — no farming by reloading). false = nothing to carry.
+static func merge_comeback(saved_state: Dictionary, record: Dictionary) -> bool:
+	if record.is_empty():
+		return false
+	var fr: Variant = saved_state.get("floor_run", null)
+	if not (fr is Dictionary) or _int((fr as Dictionary).get("index", 0)) != _int(record.get("floor", 0)):
+		return false
+	var flags: Variant = saved_state.get("flags", null)
+	var live: Variant = (flags as Dictionary).get("live", null) if flags is Dictionary else null
+	var sw: Variant = (live as Dictionary).get(STATE_KEY, null) if live is Dictionary else null
+	if not (sw is Dictionary) or (sw as Dictionary).is_empty():
+		return false
+	var cb: Dictionary = _comeback(sw, _int(record.get("floor", 0)))
+	for key: String in ["pending", "done"]:
+		var dst: Array = cb[key]
+		var src: Variant = record.get(key, [])
+		if src is Array:
+			for k: Variant in (src as Array):
+				if not dst.has(str(k)):
+					dst.append(str(k))
+	for k: Variant in (cb["done"] as Array):
+		(cb["pending"] as Array).erase(k)
+	return true
+
+
+static func _comeback(sw: Dictionary, floor_index: int) -> Dictionary:
+	var cb: Variant = sw.get(COMEBACK_KEY, null)
+	if not (cb is Dictionary) or _int((cb as Dictionary).get("floor", 0)) != floor_index:
+		cb = {"floor": floor_index, "pending": [], "done": []}
+		sw[COMEBACK_KEY] = cb
+	for key: String in ["pending", "done"]:
+		if not ((cb as Dictionary).get(key, null) is Array):
+			(cb as Dictionary)[key] = []
+	return cb
+
+
+static func _use_comeback(sw: Dictionary, kind_name: String) -> void:
+	var cb: Variant = sw.get(COMEBACK_KEY, null)
+	if not (cb is Dictionary):
+		return
+	((cb as Dictionary).get("pending", []) as Array).erase(kind_name)
+	var done: Array = (cb as Dictionary).get("done", []) as Array
+	if not done.has(kind_name):
+		done.append(kind_name)
+	(cb as Dictionary)["done"] = done
 
 
 ## QA: a dev window of `sec` seconds with `slots` slots (rules.dev_open). [] when not allowed / not tracked.
@@ -315,7 +450,7 @@ static func window_view(w: Dictionary) -> Dictionary:
 	return {"open": true, "id": str(w.get("id", "")), "kind": str(w.get("kind", "")), "ref": str(w.get("ref", "")),
 		"slots": slots, "used": used, "free": maxi(0, slots - used), "full": used >= slots,
 		"per_viewer": _int(w.get("per_viewer", 1)), "left_ticks": left, "len_ticks": _int(w.get("len", 0)),
-		"left_sec": (left + TICKS_PER_SEC - 1) / TICKS_PER_SEC}
+		"left_sec": (left + TICKS_PER_SEC - 1) / TICKS_PER_SEC, "comeback": bool(w.get(COMEBACK_KEY, false))}
 
 
 # --- validation (EventDef) --------------------------------------------------------------------------------------------
@@ -335,6 +470,8 @@ static func validate_rules(cfg: Variant) -> PackedStringArray:
 		var v: Variant = _at(merged, path)
 		if not _is_int(v) or int(v) < int(INT_KEYS[path]):
 			out.append("rules.sponsor_windows.%s must be an integer >= %d" % [path, int(INT_KEYS[path])])
+		elif INT_MAX.has(path) and int(v) > int(INT_MAX[path]):
+			out.append("rules.sponsor_windows.%s must be <= %d" % [path, int(INT_MAX[path])])
 	for path: String in BOOL_KEYS:
 		if not (_at(merged, path) is bool):
 			out.append("rules.sponsor_windows.%s must be a bool" % path)
@@ -351,13 +488,14 @@ static func validate_rules(cfg: Variant) -> PackedStringArray:
 # --- internals --------------------------------------------------------------------------------------------------------
 
 static func _open(sw: Dictionary, swr: Dictionary, rules: Dictionary, kind: String, ref: String, len_ticks: int,
-		slots: int, out: Array[Dictionary]) -> void:
+		slots: int, out: Array[Dictionary], extra: Dictionary = {}) -> void:
 	if not _dict(sw, "open").is_empty():
 		_close(sw, rules, "superseded", out)
 	sw["seq"] = _int(sw.get("seq", 0)) + 1
 	var w: Dictionary = {"id": "sw_%d" % _int(sw["seq"]), "kind": kind, "ref": ref, "slots": maxi(1, slots),
 		"used": 0, "per_viewer": maxi(1, _int(swr["per_viewer"])), "senders": {}, "left": maxi(1, len_ticks),
 		"len": maxi(1, len_ticks)}
+	w.merge(extra, true)
 	sw["open"] = w
 	out.append({"type": "opened", "window": window_view(w)})
 

@@ -118,6 +118,9 @@ var shortcut_trips: int = 0
 var shortcut_cells: int = 0
 var travel_cells: int = 0
 var travel_ticks: int = 0
+## 06-C (06 §4.3) --liga=0|1|2: the Unterhosen-Liga strategy — 1: the controlled hero never wears armor or an
+## accessory (taken off at once), 2: both (Duo-Liga). 0 (default): the bot equips its best gear as before.
+var liga: int = 0
 var timer_warnings: PackedInt32Array = []
 var timer_expired: int = 0
 var attempt_floor_boss: bool = true
@@ -180,6 +183,7 @@ func _ready() -> void:
 		strategy = strategy_from_args(OS.get_cmdline_user_args())
 		pace = pace_from_args(OS.get_cmdline_user_args())
 		hero = hero_from_args(OS.get_cmdline_user_args())
+		liga = liga_from_args(OS.get_cmdline_user_args())
 	# Counters ignore Game.replay_log() (the replay check re-emits the same signals).
 	Events.battle_started.connect(_on_battle_started)
 	Events.credits_changed.connect(_on_credits_changed)
@@ -258,6 +262,25 @@ static func hero_from_args(args: PackedStringArray) -> String:
 		if args.has("--hero=" + h):
 			return h
 	return "kai"
+
+
+## 06-C: --liga=1|2 → that Liga tier; anything else → 0.
+static func liga_from_args(args: PackedStringArray) -> int:
+	for t: int in [1, 2]:
+		if args.has("--liga=%d" % t):
+			return t
+	return 0
+
+
+## 06-C: the members the Liga strategy keeps without armor / accessory (tier 1: the controlled hero, 2: both).
+func liga_members() -> PackedStringArray:
+	var out: PackedStringArray = []
+	if liga <= 0 or Game.state == null:
+		return out
+	for m: PartyMember in Game.state.party:
+		if liga >= 2 or m.id == MarottenRules.hero_of(Game.state):
+			out.append(m.id)
+	return out
 
 
 ## Real saves into a private directory (Boot: --autoplay=full), emptied first.
@@ -1523,10 +1546,16 @@ func _upgrade_for(def: ItemDef) -> String:
 	return ""
 
 
-## Equips the best owned item per member and slot (Game.equip, the equipment menu's path).
+## Equips the best owned item per member and slot (Game.equip, the equipment menu's path). 06-C --liga: the Liga
+## members take armor and accessory off instead (MarottenRules.LIGA_SLOTS).
 func equip_best() -> void:
+	var bare: PackedStringArray = liga_members()
 	for m: PartyMember in Game.state.party:
 		for slot: String in EQUIP_SLOTS:
+			if bare.has(m.id) and MarottenRules.LIGA_SLOTS.has(slot):
+				if str(m.equipment.get(slot, "")) != "" and Game.equip(m.id, slot, ""):
+					_note("%s takes off %s (Liga %d)" % [m.id, slot, liga])
+				continue
 			var best: String = ""
 			var best_score: int = item_score(str(m.equipment.get(slot, "")))
 			for item_id: String in Game.state.inventory.ids_of_type(DB.data, slot):
@@ -1758,6 +1787,18 @@ func check_story_beats() -> bool:
 			found = found or t.get_slice("@", 0) == tag
 		if not found:
 			return fail("M.O.D. beat '%s' never played" % tag)
+	# 06-C: M.O.D. announces her preference of the floor once the countdown runs (06 §4.2)
+	var announced: bool = false
+	for t: String in mod_tags:
+		if t.begins_with("marotte_announce:"):
+			if not t.ends_with("@countdown"):
+				return fail("a preference was announced before the countdown (%s)" % t)
+			announced = true
+	var show: ShowState = Game.state.show if Game.state != null else null
+	if not announced and show != null and not (show.marotten.get("active", []) as Array).is_empty():
+		return fail("M.O.D. never announced her preference of the floor")
+	if liga > 0 and (show == null or int(show.stats.get("liga_battles", 0)) == 0):
+		return fail("--liga=%d: no battle was won in the Liga" % liga)
 	return true
 
 
@@ -1837,6 +1878,10 @@ func stats() -> Dictionary:
 		"purchases": purchases, "saves": saves, "teleports": teleports, "direct_interactions": direct_interactions,
 		"forced_encounters": forced_encounters, "replay_checks": replay_checks, "frames": frames,
 		"mod_tags": mod_tags, "talents_picked": talents_picked,
+		# 06-C: M.O.D.'s preferences of the floor and the Unterhosen-Liga (06 §4.10)
+		"liga": liga, "marotten": show.marotten.duplicate(true) if show != null else {},
+		"bets_won": int(show.stats.get("bets_won", 0)) if show != null else 0,
+		"liga_battles": int(show.stats.get("liga_battles", 0)) if show != null else 0,
 	}
 
 

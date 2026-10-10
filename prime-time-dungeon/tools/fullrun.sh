@@ -6,7 +6,7 @@
 #
 # Usage:
 #   tools/fullrun.sh [--strategy=thorough|rush|dawdle|typical|all] [--hero=kai|mopsula] [--seed=<int>]
-#                    [--pace=fast|human] [--log-dir=<dir>]
+#                    [--pace=fast|human] [--liga=0|1|2] [--log-dir=<dir>]
 #     thorough (default)  every group, chest, event and room; bosses; stairs → summary → credits
 #     rush                safe rooms, gates and bosses only (under-levelled)
 #     dawdle              idles after the first save until the floor collapses → Sendeschluss → load → finishes
@@ -14,6 +14,8 @@
 #     all                 thorough, rush and dawdle as Kai plus thorough as Graf Mopsula after one import (CI)
 #   --hero=mopsula        the run controls Graf Mopsula (06 §1: bark instead of the field strike, safe-room switch)
 #   --pace=human          human-pace model (02_TECH §11.4.1: looks around, decides, reads) for the GDD §13 floor time
+#   --liga=1|2            06-C Unterhosen-Liga strategy: the controlled hero (1) / both (2) never wear armor or an
+#                         accessory (06 §4.3; the run must win at least one battle in the Liga)
 #
 # Env: GODOT=<path to godot 4.7 binary> (default: "godot" on PATH)
 set -uo pipefail
@@ -27,6 +29,7 @@ HERO="kai"
 ALL=0
 SEED_ARG=()
 PACE_ARG=()
+LIGA_ARG=()
 LOG_DIR=""
 for a in "$@"; do
   case "$a" in
@@ -35,6 +38,7 @@ for a in "$@"; do
     --hero=kai|--hero=mopsula) HERO="${a#--hero=}" ;;
     --seed=*) SEED_ARG=("$a") ;;
     --pace=fast|--pace=human) PACE_ARG=("$a") ;;
+    --liga=0|--liga=1|--liga=2) LIGA_ARG=("$a") ;;
     --log-dir=*) LOG_DIR="${a#--log-dir=}" ;;
     *) echo "fullrun.sh: unknown argument $a" >&2; exit 2 ;;
   esac
@@ -76,14 +80,16 @@ status=0
 for run in "${RUNS[@]}"; do
   st="${run%%:*}"
   hero="${run##*:}"
-  echo "== full run: strategy $st hero $hero ${SEED_ARG[*]:-} ${PACE_ARG[*]:-} (Floor 1, headless, fixed 60 fps) =="
+  echo "== full run: strategy $st hero $hero ${SEED_ARG[*]:-} ${PACE_ARG[*]:-} ${LIGA_ARG[*]:-} (Floor 1, headless, fixed 60 fps) =="
   start=$(date +%s)
   out="$(timeout 900 "$GODOT" --headless --path "$WORK" --fixed-fps 60 --quit-after "$QUIT_AFTER" \
-        -- --autoplay=full "--strategy=$st" "--hero=$hero" "${SEED_ARG[@]}" "${PACE_ARG[@]}" 2>&1 | filter_noise)"
+        -- --autoplay=full "--strategy=$st" "--hero=$hero" "${SEED_ARG[@]}" "${PACE_ARG[@]}" "${LIGA_ARG[@]}" \
+        2>&1 | filter_noise)"
   code=${PIPESTATUS[0]}
   end=$(date +%s)
   log_name="fullrun_$st"
   [ "$hero" != "kai" ] && log_name="fullrun_${st}_$hero"
+  [ ${#LIGA_ARG[@]} -gt 0 ] && log_name="${log_name}_liga${LIGA_ARG[0]#--liga=}"
   if [ -n "$LOG_DIR" ]; then mkdir -p "$LOG_DIR" && printf '%s\n' "$out" > "$LOG_DIR/$log_name.log"; fi
   echo "$out" | grep -E '^FULLRUN: (\[|stats|OK)|Assertion failed|SCRIPT ERROR|ERROR:' | grep -v '^FULLRUN: \[[0-9]*\]   hype' \
     | tail -n 120

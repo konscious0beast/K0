@@ -58,7 +58,8 @@ const GIFT_KINDS: PackedStringArray = ["heal_party_pct", "heal_party_flat", "mp_
 const SPONSOR_WEIGHT_CONDS: PackedStringArray = ["ally_hp_below", "ally_mp_below", "ally_ko", "is_boss"]
 const ACH_TRIGGERS: PackedStringArray = ["enemy_killed", "battle_won", "battle_fled", "battle_started",
 	"stunt_resolved", "combo", "party_ko", "boss_defeated", "sponsor_gift", "viewers_changed", "chest_opened",
-	"item_bought", "lootbox_opened", "level_up", "event_completed", "explore_tick", "floor_completed"]
+	"item_bought", "lootbox_opened", "level_up", "event_completed", "explore_tick", "floor_completed",
+	"show_bet"]                                                     # 06-C: show bets / Unterhosen-Liga (06 §4.6)
 const VOICES: PackedStringArray = ["mod", "mopsula", "kai", "chat"]
 # sender/amount/pct/min: 05 §6.12
 const TEXT_PLACEHOLDERS: PackedStringArray = ["name", "floor", "level", "enemy", "item", "achievement", "viewers",
@@ -73,18 +74,20 @@ const REQUIRED_MOD_TAGS: PackedStringArray = ["intro", "floor_start", "first_fig
 ## Sponsor-Fenster lines of 05 §6.13 (sponsor_window_open[:periodic|safe_room|boss|dev], sponsor_window_closed,
 ## sponsor_window_full), the story beats of GDD §1.4 (tutorial_* hints B1/B2, story_battle:<encounter_id> banners
 ## B4) and the lines of the 06 packages (A: hero_pick/hero_switch:<id>, regie_note:<n>, secret_wall; B: talent_*,
-## casting_*).
+## casting_*; C: marotte_*, liga_*).
 const OPTIONAL_MOD_TAG_PREFIXES: PackedStringArray = ["achievement:", "boss_intro:", "boss_phase:", "event_",
 	"gift_received", "mopsula_idle", "chat_", "gift_", "fan_pack_", "live_", "vote_", "twist_applied_", "tutorial_",
 	"story_", "sponsor_window_",
 	"hero_", "regie_", "secret_",               # 06 package A
-	"talent_", "casting_"]                      # 06 package B: Talent-Show / Casting lines
+	"talent_", "casting_",                      # 06 package B: Talent-Show / Casting lines
+	"marotte_", "liga_"]                        # 06 package C: M.O.D. preferences + Liga (06 §4)
 
 ## Copy of StatIds.ALL (§6.3); test_m2_achievements asserts equality.
 const STAT_IDS: PackedStringArray = ["kills_total", "kills_skill", "battles_won", "battles_fled", "preemptives",
 	"ambushes_won", "crits_total", "stunts_success", "stunts_fail", "chests_opened", "sponsor_gifts",
 	"credits_spent_vendor", "lootboxes_opened", "events_completed", "game_overs", "ko_mopsula",
-	"explore_seconds_since_battle", "viewers_max", "viewers_target_peak", "followers_gained_run", "hype_100_count"]
+	"explore_seconds_since_battle", "viewers_max", "viewers_target_peak", "followers_gained_run", "hype_100_count",
+	"bets_won", "liga_battles"]                                     # 06-C (06 §4.6)
 
 ## Trigger payload keys (§6.3) — the `e.` vocabulary of achievement conditions.
 const TRIGGER_PAYLOAD_KEYS: Dictionary = {
@@ -106,6 +109,9 @@ const TRIGGER_PAYLOAD_KEYS: Dictionary = {
 	"event_completed": ["event_id", "choice"],
 	"explore_tick": ["seconds_since_battle"],
 	"floor_completed": ["floor", "timer_left"],
+	# 06-C (06 §4.6): MarottenRules show_bet payloads
+	"show_bet": ["kind", "event", "id", "tier", "floor_tier", "battles", "is_boss", "is_floor_boss", "boss_id",
+		"party_kos", "floor"],
 }
 
 ## Safe-room context of scene conditions (§4.4.13, Game.enter_safe_room).
@@ -136,11 +142,13 @@ const ID_PATTERNS: Dictionary = {
 	# --- 06 package B: talents + species -------------------------------------------------------------------------
 	"talents": "^tal_[a-z0-9_]+$",
 	"species": "^spc_[a-z0-9_]+$",
+	"marotten": "^mar_[a-z0-9_]+$",                                # 06-C
 }
 
 const TABLES: PackedStringArray = ["statuses", "skills", "items", "classes", "party", "enemies", "floors",
 	"lootboxes", "achievements", "sponsors", "milestones", "mod_lines", "scenes",
-	"talents", "species"]                       # 06 package B
+	"talents", "species",                       # 06 package B
+	"marotten"]                                 # 06-C
 ## Allowed extra top-level keys per file (§4.1); everything else is an error.
 const TABLE_EXTRA_KEYS: Dictionary = {"party": ["start"], "enemies": ["pseudo_units"], "lootboxes": ["pools", "pity"]}
 const REQUIRED_BOXES: PackedStringArray = ["box_bronze", "box_silver", "box_gold", "box_fan"]
@@ -184,6 +192,8 @@ const DIR_OFFSETS: Dictionary = {"N": Vector2i(0, -1), "E": Vector2i(1, 0), "S":
 const DIR_OPPOSITE: Dictionary = {"N": "S", "E": "W", "S": "N", "W": "E"}
 
 const REQ: String = "<required>"   # spec marker: field has no default
+## 06-C: rules of marotten.json live in their own private helper (06 §8.0 Nr. 7).
+const MarottenCheck := preload("res://core/data/validators/marotten.gd")
 
 # --- 06 package B: per-table rule files (06 §8.0 Nr. 7) ------------------------------------------------------------
 const TalentsRules := preload("res://core/data/validators/talents.gd")
@@ -328,6 +338,7 @@ var _boxes: Dictionary = {}
 var _achievements: Dictionary = {}
 var _sponsors: Dictionary = {}
 var _milestones: Dictionary = {}
+var _marotten: Dictionary = {}              # 06-C: id → normalized marotte
 var _mod_tags: Dictionary = {}              # tag → line count
 var _referenced_tags: Dictionary = {}       # tag → ctx (rule 9)
 
@@ -591,6 +602,8 @@ func _normalize_entry(t: String, i: int, raw: Variant) -> Dictionary:
 			return TalentsRules.normalize(self, ctx, raw)
 		"species":
 			return SpeciesRules.normalize(self, ctx, raw)
+		"marotten":
+			return MarottenCheck.normalize(self, ctx, raw)          # 06-C
 	return {}
 
 
@@ -1484,6 +1497,7 @@ func _build_lookups() -> void:
 	_achievements = _index(_out["achievements"])
 	_sponsors = _index(_out["sponsors"])
 	_milestones = _index(_out["milestones"])
+	_marotten = _index(_out["marotten"])                       # 06-C
 
 
 func _index(list: Array) -> Dictionary:
@@ -1547,6 +1561,7 @@ func _check_references() -> void:
 	_refs_misc()
 	TalentsRules.check_refs(self)              # 06 package B
 	SpeciesRules.check_refs(self)
+	MarottenCheck.check_refs(self, _out["marotten"], _boxes)   # 06-C
 
 
 func _ref(ctx: String, id: String, table: Dictionary, what: String) -> bool:
@@ -2196,6 +2211,7 @@ func _check_mod_line_rules() -> void:
 		var ctx: String = _ctx("mod_lines", i, mls[i])
 		_check_placeholders(ctx + ".text", str(mls[i]["text"]))
 		_check_tag_params(ctx + ".tag", str(mls[i]["tag"]))
+	MarottenCheck.check_lines(self, mls)                        # 06-C: no foot words in liga_/marotte_ lines
 	var scs: Array = _out["scenes"]
 	for i in scs.size():
 		var lines: Array = scs[i]["lines"]
@@ -2237,8 +2253,15 @@ func _check_tag_params(ctx: String, tag: String) -> void:
 			if parts.size() != 2 or not parts[1].begins_with("enc_"):
 				_err(ctx, "expected story_battle:<encounter_id>")
 		"sponsor_window_open":
-			if parts.size() > 2 or (parts.size() == 2 and not SponsorWindows.KINDS.has(parts[1])):
-				_err(ctx, "expected sponsor_window_open[:%s]" % "|".join(SponsorWindows.KINDS))
+			if parts.size() > 2 or (parts.size() == 2 and not SponsorWindows.KINDS.has(parts[1])
+					and parts[1] != SponsorWindows.COMEBACK_TAG):
+				_err(ctx, "expected sponsor_window_open[:%s|%s]" % ["|".join(SponsorWindows.KINDS),
+					SponsorWindows.COMEBACK_TAG])
+		"marotte_announce", "marotte_hit", "marotte_won":            # 06-C: <tag>[:<marotte id>]
+			if parts.size() > 2:
+				_err(ctx, "expected %s[:<marotte id>]" % parts[0])
+			elif parts.size() == 2:
+				_ref(ctx, parts[1], _marotten, "marotte")
 
 
 # ======================================================================================================================
@@ -2255,6 +2278,7 @@ func _check_conditions() -> void:
 	for i in scs.size():
 		_check_condition(_ctx("scenes", i, scs[i]) + ".condition", str(scs[i]["condition"]), SCENE_CONTEXT_KEYS,
 			"safe room context")
+	MarottenCheck.check_conditions(self, _out["marotten"])       # 06-C
 
 
 func _check_condition(ctx: String, src: String, e_keys: PackedStringArray, what: String) -> void:

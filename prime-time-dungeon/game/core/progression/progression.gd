@@ -39,8 +39,10 @@ static func base_stats_at(def: PartyMemberDef, level: int, class_def: ClassDef =
 
 
 ## Level stats + equipment stats + talents (Talents.stat_bonus), × class stat_mult, × species stat_mult (round half
-## up each, 06 §3.1). HP >= 1, other stats >= 0.
-static func total_stats(member: PartyMember, data: GameData) -> StatBlock:
+## up each, 06 §3.1). HP >= 1, other stats >= 0. `liga`: the member fights in the Unterhosen-Liga (package C's tier,
+## MarottenRules.in_liga) — only then do its liga_stat_pct talents count (never HP / MP: the validator keeps them
+## to the battle stats, so max HP / MP stay member-local).
+static func total_stats(member: PartyMember, data: GameData, liga: bool = false) -> StatBlock:
 	var vals: PackedInt32Array = []
 	vals.resize(StatBlock.KEYS.size())
 	if member == null or data == null or not data.has_id("party", member.id):
@@ -57,7 +59,7 @@ static func total_stats(member: PartyMember, data: GameData) -> StatBlock:
 				vals[i] += JsonUtil.to_int(item.stats[key])
 	if not member.talents.is_empty():
 		for i in vals.size():
-			vals[i] += Talents.stat_bonus(member, data, i, vals[i])
+			vals[i] += Talents.stat_bonus(member, data, i, vals[i], liga)
 	for mults: Dictionary in [cls.stat_mult if cls != null else {}, spc.stat_mult if spc != null else {}]:
 		for key: Variant in mults.keys():
 			var i: int = StatBlock.KEYS.find(str(key))
@@ -185,12 +187,13 @@ static func use_item(state: GameState, data: GameData, item_id: String, member_i
 
 
 ## crit_bonus = Σ equipment crit_bonus + talent crit; element_mods = Π (equipment, talents); status_immune = ∪;
-## status_resist from def; attack_element from weapon; talent_mods = Talents.battle_mods (06 §2.2).
-static func to_combatant(member: PartyMember, data: GameData, id: String, slot: int) -> Combatant:
+## status_resist from def; attack_element from weapon; talent_mods = Talents.battle_mods (06 §2.2). `liga` as in
+## total_stats (BattleBridge: MarottenRules.in_liga at the battle's tier).
+static func to_combatant(member: PartyMember, data: GameData, id: String, slot: int, liga: bool = false) -> Combatant:
 	if member == null or data == null or not data.has_id("party", member.id):
 		return null
 	var def: PartyMemberDef = data.party_member(member.id)
-	var stats: StatBlock = total_stats(member, data)
+	var stats: StatBlock = total_stats(member, data, liga)
 	var max_hp: int = stats.values[StatBlock.Stat.HP]
 	var max_mp: int = stats.values[StatBlock.Stat.MP]
 	var hp: int = clampi(member.hp, 0, max_hp)

@@ -12,6 +12,11 @@ var stats: Dictionary = {}                   # StatIds → int
 var achievements: PackedStringArray = []     # unlocked ids
 var milestones: PackedStringArray = []       # reached ms ids
 var sponsor_uses: Dictionary = {}            # sponsor id → total gifts given
+## 06-C: M.O.D.'s preferences of the floor and the Liga counters (06 §4; MarottenRules owns every write):
+## {"floor": int, "active": [mar ids], "hits": {id: int}, "won": [ids won this floor], "prev": [ids of the previous
+## floor], "zones": int (mar_pacifist: new rooms since the last battle / hit), "liga": {"battles", "t1", "t2"} (won
+## battles of the floor, of them at Liga tier >= 1 / tier 2)}. {} = none yet (old saves, before the first floor).
+var marotten: Dictionary = {}
 
 
 func to_dict() -> Dictionary:
@@ -23,6 +28,7 @@ func to_dict() -> Dictionary:
 		"achievements": Array(achievements),
 		"milestones": Array(milestones),
 		"sponsor_uses": _int_dict(sponsor_uses),
+		"marotten": marotten_dict(marotten),                     # 06-C
 	}
 
 
@@ -40,7 +46,27 @@ static func from_dict(d: Dictionary) -> ShowState:
 	var raw_uses: Variant = d.get("sponsor_uses", {})
 	if raw_uses is Dictionary:
 		s.sponsor_uses = _int_dict(raw_uses)
+	s.marotten = marotten_dict(d.get("marotten", {}))           # 06-C
 	return s
+
+
+## 06-C: the marotten record with JSON-stable types (ints, String arrays, sorted int dictionaries); {} for anything
+## that is not a Dictionary or an empty one.
+static func marotten_dict(raw: Variant) -> Dictionary:
+	if not (raw is Dictionary) or (raw as Dictionary).is_empty():
+		return {}
+	var d: Dictionary = raw
+	var hits: Variant = d.get("hits", {})
+	var liga: Variant = d.get("liga", {})
+	return {
+		"floor": maxi(0, JsonUtil.to_int(d.get("floor", 0))),
+		"active": Array(_unique(JsonUtil.to_str_array(d.get("active", [])))),
+		"hits": _int_dict(hits if hits is Dictionary else {}),
+		"won": Array(_unique(JsonUtil.to_str_array(d.get("won", [])))),
+		"prev": Array(_unique(JsonUtil.to_str_array(d.get("prev", [])))),
+		"zones": maxi(0, JsonUtil.to_int(d.get("zones", 0))),
+		"liga": _int_dict(liga if liga is Dictionary else {}),
+	}
 
 
 ## Sorted String keys, int values.

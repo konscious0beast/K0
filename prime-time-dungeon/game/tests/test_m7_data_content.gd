@@ -189,7 +189,7 @@ func test_quantities_match_gdd() -> void:
 			regular += 1
 	assert_eq(regular, 11, "10 regular enemies + 1 rarity")
 	assert_eq(bosses, 2)
-	assert_len(d.all_achievements(), 29)
+	assert_len(d.all_achievements(), 35)            # 29 + the "Ohne alles" chain of 06-C (06 §4.3)
 	assert_len(d.all_sponsors(), 7)
 	assert_len(d.all_milestones(), 6)
 	assert_len(d.all_scenes(), 4)
@@ -708,9 +708,22 @@ func test_achievements_match_gdd() -> void:
 		assert_eq(a.followers, -1, a.id + " followers by tier")
 		assert_gt(d.mod_lines("achievement:" + a.id).size(), 0, a.id + " has its M.O.D. line")
 		assert_not_null(a.expr, a.id)
-	assert_eq(tiers, {"box_bronze": 18, "box_silver": 8, "box_gold": 3})
+	# 06-C adds 1 bronze, 3 silver, 2 gold (ach_ul_first · ach_ul_boss, ach_duo_first, ach_bets_5 · ach_duo_floor,
+	# ach_duo_flawless) and one hidden (ach_duo_flawless)
+	assert_eq(tiers, {"box_bronze": 19, "box_silver": 11, "box_gold": 5})
 	hidden.sort()
-	assert_eq(hidden, ["ach_last_minute", "ach_mimic", "ach_mopsula_ko", "ach_one_hp", "ach_stunt_fail_3"])
+	assert_eq(hidden, ["ach_duo_flawless", "ach_last_minute", "ach_mimic", "ach_mopsula_ko", "ach_one_hp",
+		"ach_stunt_fail_3"])
+	var liga_battle: Dictionary = {"kind": "liga", "event": "battle", "tier": 1, "is_boss": false,
+		"is_floor_boss": false, "party_kos": 0}
+	assert_true(d.achievement("ach_ul_first").expr.eval(liga_battle, {}, {}))
+	assert_false(d.achievement("ach_ul_boss").expr.eval(liga_battle, {}, {}), "the Liga boss needs a boss")
+	assert_false(d.achievement("ach_duo_first").expr.eval(liga_battle, {}, {}), "tier 1 is not the Duo-Liga")
+	assert_true(d.achievement("ach_duo_floor").expr.eval({"kind": "liga", "event": "floor", "floor_tier": 2,
+		"battles": 5}, {}, {}))
+	assert_false(d.achievement("ach_duo_floor").expr.eval({"kind": "liga", "event": "floor", "floor_tier": 2,
+		"battles": 4}, {}, {}))
+	assert_true(d.achievement("ach_bets_5").expr.eval({"kind": "marotte", "event": "won"}, {"bets_won": 5}, {}))
 	# Sample evaluations (ConditionExpr semantics, §4.4.9).
 	assert_true(d.achievement("ach_first_blood").expr.eval({}, {"kills_total": 1}, {}))
 	assert_false(d.achievement("ach_first_blood").expr.eval({}, {"kills_total": 2}, {}))

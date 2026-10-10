@@ -12,9 +12,10 @@ const KO_EXP_PCT: int = 50                   # KO'd members get floori(50 %) of 
 ## can_flee, tutorial; bosses force NORMAL;
 ## enemy_dmg_mult = (vorabend 0.75) × (tutorial 0.5); exp_mult (vorabend 1.2); show_mods = state.hype_gain_mult /
 ## follower_mult; floor palette/theme; is_boss and flags["mop_pep_talk"] → both party combatants start with
-## sts_guard 2, flag erased (GDD §10.2). Unknown encounter → null.
+## sts_guard 2, flag erased (GDD §10.2). Unknown encounter → null. `rules` = the run's rules (campaign {}): the
+## Unterhosen-Liga tier (MarottenRules.liga_tier, never in the tutorial) decides who counts liga_stat_pct talents.
 static func make_setup(state: GameState, data: GameData, encounter_id: String, advantage: int, group_id: String,
-		seed: int) -> BattleSetup:
+		seed: int, rules: Dictionary = {}) -> BattleSetup:
 	if state == null or data == null or not data.has_id("encounters", encounter_id):
 		push_warning("[BattleBridge] unknown encounter '%s'" % encounter_id)
 		return null
@@ -43,11 +44,15 @@ static func make_setup(state: GameState, data: GameData, encounter_id: String, a
 		setup.credits_available = state.inventory.credits
 	setup.owned_equipment = _owned_equipment(state, data)
 	var party: Array[Combatant] = []
+	# 06 B × C: the Liga talents follow the battle's Unterhosen-Liga tier — the tier Show freezes in begin_battle
+	# (tutorial: none; rules = the run's rules, Game.event_rules / RunSim.rules)
+	var liga_tier: int = 0 if enc.tutorial else MarottenRules.liga_tier(state, rules)
 	for i in state.party.size():
 		var m: PartyMember = state.party[i]
 		if m == null or not data.has_id("party", m.id):
 			continue
-		var c: Combatant = Progression.to_combatant(m, data, "p%d" % party.size(), data.party_member(m.id).battle_slot)
+		var c: Combatant = Progression.to_combatant(m, data, "p%d" % party.size(), data.party_member(m.id).battle_slot,
+			MarottenRules.in_liga(state, m.id, liga_tier))
 		if c != null:
 			party.append(c)
 	setup.party = party

@@ -308,13 +308,14 @@ func sponsor_floor() -> Array[ExploreEvent]:
 	return _sponsor_events(SponsorWindows.on_floor(state, rules))
 
 
-## First entry of `cell` (a boss cell opens the Boss-Countdown).
-func sponsor_room(cell: Vector2i) -> Array[ExploreEvent]:
+## Entry of `cell`: the first entry of a boss cell opens the Boss-Countdown; a later one (first = false) only the
+## comeback window after a lost boss attempt (06-C, SponsorWindows.on_room).
+func sponsor_room(cell: Vector2i, first: bool = true) -> Array[ExploreEvent]:
 	var layout: FloorLayout = _current_layout()
 	var rc: RoomCell = layout.cell_at(cell) if layout != null else null
 	if rc == null:
 		return []
-	return _sponsor_events(SponsorWindows.on_room(state, rules, int(rc.kind)))
+	return _sponsor_events(SponsorWindows.on_room(state, rules, int(rc.kind), first))
 
 
 func sponsor_safe_room(room_id: String) -> Array[ExploreEvent]:
@@ -646,7 +647,7 @@ func _apply_encounter(enc: String, adv: int, group: String, out: Array[ExploreEv
 	if battle != null:
 		push_warning("[RunSim] encounter '%s' while a battle is running" % enc)
 		return
-	var setup: BattleSetup = BattleBridge.make_setup(state, data, enc, adv, group, next_seed("battle"))
+	var setup: BattleSetup = BattleBridge.make_setup(state, data, enc, adv, group, next_seed("battle"), rules)
 	if setup == null:
 		return
 	battle = BattleState.new(setup, data)
@@ -685,6 +686,7 @@ func _end_battle() -> void:
 	if result == null:
 		return
 	BattleBridge.apply_result(state, data, result)
+	SponsorWindows.on_battle_result(state, rules, data, result)   # 06-C: comeback mark after a lost boss attempt
 	if result.outcome == BattleResult.Outcome.VICTORY and result.is_boss:
 		_quest_feed({"type": "boss_defeated", "boss_id": result.boss_id})
 	if result.outcome == BattleResult.Outcome.DEFEAT:
@@ -724,8 +726,7 @@ func _apply_room(cell: Vector2i, out: Array[ExploreEvent]) -> void:
 		_quest_feed_zones(fr, layout)
 	out.append(ExploreEvent.make(ExploreEvent.Type.ROOM_ENTERED, _tick, {"cell": [cell.x, cell.y], "kind": kind,
 		"first_visit": first}))
-	if first:
-		out.append_array(sponsor_room(cell))
+	out.append_array(sponsor_room(cell, first))   # 06-C: a revisit opens only a due comeback window
 
 
 ## RunRules.openable_chest / open_chest (like Game.open_chest): unknown / opened / locked without itm_key_master →

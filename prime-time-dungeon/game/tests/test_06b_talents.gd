@@ -117,6 +117,7 @@ func test_validator_rejects_bad_talents() -> void:
 		[_talent([{"kind": "stunt_window_pm", "pm": 1300}]), "out of range 1000..1250"],
 		[_talent([{"kind": "marotte_heart", "per_floor": 2}]), "out of range 1..1"],
 		[_talent([{"kind": "liga_stat_pct", "stat": "xyz", "pm": 50}]), "'xyz' not in"],
+		[_talent([{"kind": "liga_stat_pct", "stat": "hp", "pm": 50}]), "'hp' not in"],   # battle stats only (06 B × C)
 		[_talent([{"kind": "teleport", "pm": 1000}]), "kind: 'teleport' not in"],
 		[_talent([{"kind": "stat_flat", "stat": "str"}]), "value: missing required field"],
 		[_talent([{"kind": "crit_add_pm", "pm": 20, "stat": "str"}]), "stat: unknown key"],
@@ -352,17 +353,20 @@ func test_stat_talents_flat_then_per_mille_round_half_up() -> void:
 	assert_eq(Talents.stat_bonus(plain, d, StatBlock.Stat.HP, 110), 0, "no talents → 0")
 
 
-func test_liga_talent_needs_no_armor_and_no_accessory() -> void:
+## Integration round 3 (orchestrator decision): the Liga talents follow package C's Unterhosen-Liga tier, the single
+## source of truth (MarottenRules.in_liga; test_06abc_liga_talents covers who is in the Liga). Talents no longer has
+## its own dress check (liga_dressed is gone) — it applies liga_stat_pct exactly when told `liga`.
+func test_liga_talent_counts_only_in_the_liga() -> void:
 	var d: GameData = real_data()
-	var dressed: PartyMember = _member("kai", 9, {"tal_kai_liga_routine": 1}, {"weapon": "itm_wpn_mop",
-		"armor": "itm_arm_hoodie"})
-	assert_false(Talents.liga_dressed(dressed))
-	assert_eq(Talents.stat_bonus(dressed, d, StatBlock.Stat.DEF, 30), 0, "with armor: no Liga bonus")
-	var liga: PartyMember = _member("kai", 9, {"tal_kai_liga_routine": 1}, {"weapon": "itm_wpn_mop"})
-	assert_true(Talents.liga_dressed(liga), "the weapon is allowed")
-	assert_eq(Talents.stat_bonus(liga, d, StatBlock.Stat.DEF, 30), 2, "30 × 1.05 = 31.5 → 32")
-	liga.equipment["accessory"] = "itm_acc_lucky_ticket"
-	assert_eq(Talents.stat_bonus(liga, d, StatBlock.Stat.DEF, 30), 0, "an accessory blocks the Liga too")
+	var m: PartyMember = _member("kai", 9, {"tal_kai_liga_routine": 1}, {"weapon": "itm_wpn_mop"})
+	assert_eq(Talents.stat_bonus(m, d, StatBlock.Stat.DEF, 30), 0, "outside the Liga: no bonus")
+	assert_eq(Talents.stat_bonus(m, d, StatBlock.Stat.DEF, 30, true), 2, "in the Liga: 30 × 1.05 = 31.5 → 32")
+	assert_eq(Talents.stat_bonus(m, d, StatBlock.Stat.RES, 30, true), 0, "only its own stat")
+	var base: int = Progression.total_stats(m, d).values[StatBlock.Stat.DEF]
+	assert_eq(Progression.total_stats(m, d, true).values[StatBlock.Stat.DEF], (base * 1050 + 500) / 1000,
+		"total_stats(…, liga): DEF + 5 % per mille, half up")
+	assert_eq(Progression.to_combatant(m, d, "p0", 0, true).stat(StatBlock.Stat.DEF), (base * 1050 + 500) / 1000)
+	assert_eq(Progression.to_combatant(m, d, "p0", 0).stat(StatBlock.Stat.DEF), base, "default: outside the Liga")
 
 
 func test_combat_talents_reach_the_combatant() -> void:

@@ -226,6 +226,307 @@
 			"weight": 1
 		},
 		{
+			"id": "mod_marotte_announce_mar_mop_only_01",
+			"tag": "marotte_announce:mar_mop_only",
+			"voice": "mod",
+			"text": "Ich habe heute eine Schwäche für Wischmopps. Fragen Sie nicht. Wischen Sie.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_hit_mar_mop_only_01",
+			"tag": "marotte_hit:mar_mop_only",
+			"voice": "mod",
+			"text": "Mit dem Mopp! Ich bekomme Gänsehaut. Ich habe keine Haut.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_announce_mar_graf_finale_01",
+			"tag": "marotte_announce:mar_graf_finale",
+			"voice": "mod",
+			"text": "Heute will ich den Grafen glänzen sehen. Den letzten Treffer, bitte. Mit Etikette.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_hit_mar_graf_finale_01",
+			"tag": "marotte_hit:mar_graf_finale",
+			"voice": "mod",
+			"text": "Der Graf beendet es. Mit einem Niesen. Zeitlos.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_announce_mar_variety_01",
+			"tag": "marotte_announce:mar_variety",
+			"voice": "mod",
+			"text": "Heute zählt Stil: vier verschiedene Aktionen in einem Kampf, und ich vergebe Herzchen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_hit_mar_variety_01",
+			"tag": "marotte_hit:mar_variety",
+			"voice": "mod",
+			"text": "Abwechslung! Die Jury zückt die Zehn.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_announce_mar_sneaky_01",
+			"tag": "marotte_announce:mar_sneaky",
+			"voice": "mod",
+			"text": "Heute mag ich Schleichwerbung: anschleichen, zuerst zuschlagen. Überraschung ist Quote.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_hit_mar_sneaky_01",
+			"tag": "marotte_hit:mar_sneaky",
+			"voice": "mod",
+			"text": "Erwischt, bevor sie es merkten. Ich liebe Pünktlichkeit.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_announce_mar_pacifist_01",
+			"tag": "marotte_announce:mar_pacifist",
+			"voice": "mod",
+			"text": "Heute mag ich es ruhig. Drei neue Räume ohne Prügelei, und ich werde sentimental.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_hit_mar_pacifist_01",
+			"tag": "marotte_hit:mar_pacifist",
+			"voice": "mod",
+			"text": "Drei Räume Frieden. Die Werbekunden sind nervös. Ich bin gerührt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_announce_mar_secondhand_01",
+			"tag": "marotte_announce:mar_secondhand",
+			"voice": "mod",
+			"text": "Meine Laune heute: Flohmarkt. Nur gewöhnliche Ausrüstung, bitte. Vintage ist Quote.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_hit_mar_secondhand_01",
+			"tag": "marotte_hit:mar_secondhand",
+			"voice": "mod",
+			"text": "Gewonnen in Ramsch-Couture. Die Modeabteilung weint vor Glück.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_announce_mar_speed_01",
+			"tag": "marotte_announce:mar_speed",
+			"voice": "mod",
+			"text": "Ich habe heute wenig Sendezeit. Kämpfe in höchstens drei Zügen, und ich liebe Sie.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_hit_mar_speed_01",
+			"tag": "marotte_hit:mar_speed",
+			"voice": "mod",
+			"text": "Zack, fertig! So schnell schneidet nicht mal mein Praktikant.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_announce_mar_stunt_01",
+			"tag": "marotte_announce:mar_stunt",
+			"voice": "mod",
+			"text": "Heute Abend: Akrobatik! Ein gelungener Stunt pro Kampf, und ich bin Ihr Fan.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_hit_mar_stunt_01",
+			"tag": "marotte_hit:mar_stunt",
+			"voice": "mod",
+			"text": "Gelandet! Ich habe die Zeitlupe schon dreimal angesehen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_announce_mar_bio_01",
+			"tag": "marotte_announce:mar_bio",
+			"voice": "mod",
+			"text": "Heute bin ich auf Natur. Keine Items, keine Sponsoren. Ja, ich höre mich selbst.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_hit_mar_bio_01",
+			"tag": "marotte_hit:mar_bio",
+			"voice": "mod",
+			"text": "Ohne Zusatzstoffe gewonnen. Ich verleihe Ihnen das Siegel ‚garantiert ungesponsert‘.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_announce_mar_brave_01",
+			"tag": "marotte_announce:mar_brave",
+			"voice": "mod",
+			"text": "Heute mag ich Mut. Kein Verteidigen, kein Weglaufen. Nur nach vorn.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_hit_mar_brave_01",
+			"tag": "marotte_hit:mar_brave",
+			"voice": "mod",
+			"text": "Nicht einen Schritt zurück! Die Versicherung hat aufgelegt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_announce_mar_gourmet_01",
+			"tag": "marotte_announce:mar_gourmet",
+			"voice": "mod",
+			"text": "Ich habe Appetit auf Schwachstellen. Drei pro Kampf, serviert mit Stil.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_hit_mar_gourmet_01",
+			"tag": "marotte_hit:mar_gourmet",
+			"voice": "mod",
+			"text": "Genau da, wo es wehtut. Drei Gänge, null Mitleid.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_won_01",
+			"tag": "marotte_won",
+			"voice": "mod",
+			"text": "Wette gewonnen! Sie haben verstanden, was ich mag. Das ist mir fast unheimlich.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_won_02",
+			"tag": "marotte_won",
+			"voice": "mod",
+			"text": "Drei Herzen voll! Ein Fanpost-Paket ist unterwegs. Die Poststelle stöhnt schon.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_won_mar_mop_only_01",
+			"tag": "marotte_won:mar_mop_only",
+			"voice": "mod",
+			"text": "Drei Siege mit dem Mopp. Ich lasse ihn vergolden. Also den Mopp, nicht Sie.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_won_mar_graf_finale_01",
+			"tag": "marotte_won:mar_graf_finale",
+			"voice": "mod",
+			"text": "Dreimal das letzte Wort für den Grafen. Er hat es sich notiert. Auf Pergament.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_missed_01",
+			"tag": "marotte_missed",
+			"voice": "mod",
+			"text": "Meine Vorliebe blieb unerfüllt. Ich trage es mit Fassung. Und Statistik.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_missed_02",
+			"tag": "marotte_missed",
+			"voice": "mod",
+			"text": "Sie haben ignoriert, was ich mag. Mutig. Ich schreibe es in mein Tagebuch. In Großbuchstaben.",
+			"weight": 1
+		},
+		{
+			"id": "mod_liga_hint_01",
+			"tag": "liga_hint",
+			"voice": "mod",
+			"text": "Übrigens: Wer ohne Rüstung und ohne Accessoire kämpft, kriegt bei mir Bonuspunkte. Ich sage das nur.",
+			"weight": 1
+		},
+		{
+			"id": "mod_liga_enter_1_01",
+			"tag": "liga_enter:1",
+			"voice": "mod",
+			"text": "Kandidat:in ohne Rüstung, ohne Accessoire. § 3 Kleiderordnung sagt nein, die Quote sagt JA.",
+			"weight": 1
+		},
+		{
+			"id": "mod_liga_enter_1_02",
+			"tag": "liga_enter:1",
+			"voice": "mod",
+			"text": "Unterhosen-Liga! Die Versicherung hat gekündigt, das Publikum hat abonniert.",
+			"weight": 1
+		},
+		{
+			"id": "mod_liga_enter_1_mopsula_01",
+			"tag": "liga_enter:1:mopsula",
+			"voice": "mod",
+			"text": "Der Graf trägt heute: Würde. Und sein Fell. Das Publikum ist entzückt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_liga_enter_2_01",
+			"tag": "liga_enter:2",
+			"voice": "mod",
+			"text": "Einmal Doppel-Feinripp, bitte. Mit scharf? Nein, mit Wischmopp.",
+			"weight": 1
+		},
+		{
+			"id": "mod_liga_enter_2_02",
+			"tag": "liga_enter:2",
+			"voice": "mod",
+			"text": "Beide ohne Rüstung. Die Kostümabteilung hat heute frei. Die Quote nicht.",
+			"weight": 1
+		},
+		{
+			"id": "mod_liga_win_01",
+			"tag": "liga_win",
+			"voice": "mod",
+			"text": "Gewonnen. Im Feinripp. Ich reiche die Szene beim Preis für Zivilcourage ein.",
+			"weight": 1
+		},
+		{
+			"id": "mod_liga_floor_01",
+			"tag": "liga_floor",
+			"voice": "mod",
+			"text": "Eine ganze Etage im Doppel-Feinripp. Die Rechtsabteilung prüft, ob das legal ist. Es ist legendär.",
+			"weight": 1
+		},
+		{
+			"id": "mod_liga_leave_01",
+			"tag": "liga_leave",
+			"voice": "mod",
+			"text": "Rüstung wieder an? Verständlich. Die Zuschauer:innen seufzen leise.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_ul_first_01",
+			"tag": "achievement:ach_ul_first",
+			"voice": "mod",
+			"text": "Einmal ohne alles! Die Imbissbude nebenan bietet Ihnen einen Werbevertrag an.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_duo_first_01",
+			"tag": "achievement:ach_duo_first",
+			"voice": "mod",
+			"text": "Doppel-Feinripp! Der Graf nennt es ‚Sommerkollektion‘. Ich nenne es Quote.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_bets_5_01",
+			"tag": "achievement:ach_bets_5",
+			"voice": "mod",
+			"text": "Fünf Wetten gewonnen. Sie kennen mich besser als meine Programmierer.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_ul_boss_01",
+			"tag": "achievement:ach_ul_boss",
+			"voice": "mod",
+			"text": "Ein Boss, besiegt ohne Rüstung. Die Kantine benennt ein Gericht nach Ihnen. Es ist leicht bekömmlich.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_duo_floor_01",
+			"tag": "achievement:ach_duo_floor",
+			"voice": "mod",
+			"text": "Eine ganze Etage im Doppel-Feinripp! Ich habe das Archiv angewiesen, es nie zu löschen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_duo_flawless_01",
+			"tag": "achievement:ach_duo_flawless",
+			"voice": "mod",
+			"text": "Der Etagenboss, kein K.O., keine Rüstung. Ich muss mich setzen. Ich habe keinen Stuhl.",
+			"weight": 1
+		},
+		{
 			"id": "mod_low_hp_01",
 			"tag": "low_hp",
 			"voice": "mod",
@@ -1480,7 +1781,7 @@
 			"id": "mod_sponsor_window_open_01",
 			"tag": "sponsor_window_open",
 			"voice": "mod",
-			"text": "Sponsor-Fenster offen: {seconds} Sekunden, {count} Plätze. NOVA SYNDIKAT nennt das Bürgerbeteiligung.",
+			"text": "Das Sponsor-Fenster ist offen. Wer helfen mag, hilft. Wer zuschaut, zählt genauso.",
 			"weight": 1
 		},
 		{
@@ -1494,14 +1795,21 @@
 			"id": "mod_sponsor_window_open_safe_room_01",
 			"tag": "sponsor_window_open:safe_room",
 			"voice": "mod",
-			"text": "Werbepause mit Sponsor-Fenster, {seconds} Sekunden lang. Wer nur zuschaut, macht auch alles richtig.",
+			"text": "Werbepause mit Sponsor-Fenster. Wer nur zuschaut, macht auch alles richtig.",
 			"weight": 1
 		},
 		{
 			"id": "mod_sponsor_window_open_boss_01",
 			"tag": "sponsor_window_open:boss",
 			"voice": "mod",
-			"text": "Boss-Countdown! Das Sponsor-Fenster ist {seconds} Sekunden offen. Danach zählt nur noch Können. Und Glück.",
+			"text": "Vor dem Boss öffnet das Sponsor-Fenster. Danach entscheiden Können und Glück. Vor allem Glück.",
+			"weight": 1
+		},
+		{
+			"id": "mod_sponsor_window_open_boss_comeback_01",
+			"tag": "sponsor_window_open:boss_comeback",
+			"voice": "mod",
+			"text": "Comeback-Runde! Das Sponsor-Fenster öffnet noch einmal. Das Publikum glaubt an Sie. Ich auch, fast.",
 			"weight": 1
 		},
 		{
@@ -1522,7 +1830,7 @@
 			"id": "mod_sponsor_window_full_01",
 			"tag": "sponsor_window_full",
 			"voice": "mod",
-			"text": "Alle {count} Plätze im Sponsor-Fenster belegt. Danke – auch dem stillen Publikum. Das zählt hier am meisten.",
+			"text": "Alle Plätze im Sponsor-Fenster sind belegt. Danke – auch dem stillen Publikum. Das zählt hier am meisten.",
 			"weight": 1
 		},
 		{

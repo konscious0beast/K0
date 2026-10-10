@@ -257,6 +257,8 @@ static func tables() -> Dictionary:
 				"condition": "s.explore_seconds_since_battle >= 300", "box": "box_bronze"},
 			{"id": "ach_speedrun", "name": "Expresszug", "desc": "d", "trigger": "floor_completed",
 				"condition": "e.floor == 1 && e.timer_left >= 480", "box": "box_gold"},
+			{"id": "ach_bets_5", "name": "M.O.D.s Liebling", "desc": "d", "trigger": "show_bet",
+				"condition": "e.kind == \"marotte\" && e.event == \"won\" && s.bets_won == 5", "box": "box_silver"},
 		],
 		"sponsors": [
 			{"id": "spn_heal", "name": "Glückwasser", "color": "#4ad9d9", "gift": [{"kind": "heal_party_pct", "value": 35}],

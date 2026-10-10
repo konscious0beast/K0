@@ -6,9 +6,10 @@ extends Node
 ##
 ## Exploration (exploration.tscn): explore_platform | explore_sewer | explore_cellar (zone room with an enemy group in
 ##   view), prompt_platform | prompt_sewer | prompt_cellar (Kai in front of a chest: HUD prompt + marker), bigmap,
-##   pause_party | pause_inventory | pause_equipment | pause_skills | pause_settings.
+##   pause_party | pause_inventory | pause_equipment | pause_skills | pause_show (06-C) | pause_settings.
 ## Battle (battle.tscn, optional --params={"encounter": "<enc id>"}): battle_menu, battle_skills, battle_target,
-##   battle_damage, battle_enemy_turn, boss_intro, boss_phase, battle_gift, battle_victory, battle_results.
+##   battle_damage, battle_enemy_turn, boss_intro, boss_phase, battle_gift, battle_victory, battle_results,
+##   battle_results_show (06-C: a won show bet in the results).
 ## Safe room (safe_room.tscn): safe_vending, safe_lootbox, safe_lootbox_open, safe_mopsula, safe_equipment,
 ##   safe_talents_menu (menu + the gold TALENT-SHOW button), safe_talent_show (the Talent-Show, 06 package B),
 ##   safe_hero_talents (integration A × B: open choices + "Figur wechseln" → TALENT-SHOW and M.O.D. box side by side).
@@ -237,6 +238,8 @@ func _explore_ready(scene: Node) -> bool:
 		# Show says "floor_start" on the first explore tick of a running countdown (int-cr, GDD §1.4 B2): in the stills
 		# its M.O.D. box would sit over Kai and the prompt, so that line is skipped (test tool: private Show member).
 		Show.set("_floor_start_pending", false)
+		# 06-C: M.O.D. announces the floor's preference right after "floor_start" — skipped in the stills as well
+		Show.set("_announce_queue", PackedStringArray())
 	await _quiet_mod_dialog()
 	return true
 
@@ -500,6 +503,18 @@ func _r_battle_results(scene: Node) -> bool:
 		return r != null and bool(r.get("shown")), 15000)
 	await seconds(1.2)
 	return ok
+
+
+## 06-C: like battle_results, but M.O.D.'s preference of the floor is "Kein Schritt zurück" with two hearts already —
+## this battle fills the third: the results show the "Show" row and the bet is won (toast + line).
+func _r_battle_results_show(scene: Node) -> bool:
+	if Game.state != null and Game.state.show != null:
+		Game.state.show.marotten["active"] = ["mar_brave"]
+		Game.state.show.marotten["hits"] = {"mar_brave": 2}
+		Game.state.show.marotten["won"] = []
+		if Game.state.floor_run != null:
+			Game.state.floor_run.timer_started = true      # the chip shows once the countdown runs (debug setup: not yet)
+	return await _r_battle_results(scene)
 
 
 # --- safe room -------------------------------------------------------------------------------------------------------

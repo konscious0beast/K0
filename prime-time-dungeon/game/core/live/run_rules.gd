@@ -1,9 +1,9 @@
 class_name RunRules extends RefCounted
 ## THE state changes of the recorded exploration commands (02_TECH §3.4) — one implementation per rule, shared by the
 ## live run (Game: plus record(), Events signals and the Show reactions) and the verifier (RunSim.apply). Live run and
-## replay therefore cannot drift apart when a rule changes (02_TECH §7.1). The Talent-Show and Casting commands (06
-## package B) follow the same pattern with their own core classes: Talents.pick / Casting.choose are the state changes
-## (called by Game and RunSim.apply), their legality is part of command_refusal.
+## replay therefore cannot drift apart when a rule changes (02_TECH §7.1). The commands of the 06 packages follow the
+## same pattern with their own core classes — Talents.pick / Casting.choose (B), HeroRules.set_hero / Secrets.open (A)
+## are the state changes (called by Game and RunSim.apply), their legality is part of command_refusal.
 ## No autoloads, no SceneTree; randomness only from the seed streams named per function (05 §3.3).
 
 const KEY_MASTER: String = "itm_key_master"        # opens locked chests (02_TECH §7.3)
@@ -182,6 +182,10 @@ static func lower_difficulty(state: GameState, d: StringName) -> bool:
 ## - scene: only in a safe room, not yet seen (once) and its condition true for the visit (scene_allowed) → not_allowed
 ## - talent (06 §2.2): Talents.check_pick — in a safe room, from the offer of the oldest open level → its reason
 ## - casting (06 §3.4/§3.6): Casting.check — floor >= min_floor, in a safe room, re-spec locks → its reason
+## - hero (06 §1.7): HeroRules.check — the choice of a new run before it started, later switches in a safe room →
+##   its reason
+## - secret (06 §2.7): Secrets.check_open on the current floor — unknown, already open, note behind a standing wall →
+##   its reason
 ## (flag keys are whitelisted by Command.validate; QA Sponsor-Fenster by SponsorWindows.dev_allowed.)
 static func command_refusal(state: GameState, data: GameData, rules: Dictionary, c: Dictionary, floor_done: bool,
 		scene_ctx: Dictionary) -> String:
@@ -207,4 +211,10 @@ static func command_refusal(state: GameState, data: GameData, rules: Dictionary,
 		"casting":
 			return Casting.check(state, data, str(c.get("member", "")), str(c.get("species", "")),
 				str(c.get("class", "")))
+		"hero":
+			return HeroRules.check(state, str(c.get("id", "")))
+		"secret":
+			var def: FloorDef = data.floor_def(state.floor_run.index) if data != null and state.floor_run != null \
+				else null
+			return Secrets.check_open(state, def, str(c.get("id", "")))
 	return ""

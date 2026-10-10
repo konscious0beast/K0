@@ -10,8 +10,14 @@ extends Node
 ## Battle (battle.tscn, optional --params={"encounter": "<enc id>"}): battle_menu, battle_skills, battle_target,
 ##   battle_damage, battle_enemy_turn, boss_intro, boss_phase, battle_gift, battle_victory, battle_results.
 ## Safe room (safe_room.tscn): safe_vending, safe_lootbox, safe_lootbox_open, safe_mopsula, safe_equipment,
-##   safe_talents_menu (menu + the gold TALENT-SHOW button), safe_talent_show (the Talent-Show, 06 package B).
+##   safe_talents_menu (menu + the gold TALENT-SHOW button), safe_talent_show (the Talent-Show, 06 package B),
+##   safe_hero_talents (integration A × B: open choices + "Figur wechseln" → TALENT-SHOW and M.O.D. box side by side).
 ## Exploration + pause: talents_party (party page with talents and an open choice, 06 package B).
+## 06 package A: bark_platform | bark_sewer | bark_cellar (Graf Mopsula leads and barks at a group: cone + rings,
+##   "?!"), hero_mopsula_<zone> (exploration as Mopsula, Kai follows), safe_hero_switch ("Figur wechseln" pressed:
+##   the Count in front), battle_partner_auto ("Partner automatisch": DU / AUTO pills at the hero's menu),
+##   secret_wall (Kai in front of the Kulissenwand), secret_open (the Count barks it over), secret_note (Kai in
+##   front of a Regie-Notiz: prompt + marker).
 
 const ZONES: Dictionary = {"platform": "zone_platform", "sewer": "zone_sewer", "cellar": "zone_cellar"}
 
@@ -107,6 +113,86 @@ func _r_prompt(scene: Node, zone_key: String) -> bool:
 	var target: Vector3 = it.global_position if it != null else layout.local_to_world(chest.cell, chest.offset)
 	_place_facing(scene, layout, chest.cell, target, 1.6)
 	await frames(30)
+	return true
+
+
+## 06 package A: Graf Mopsula leads (bodies swapped), stands 3.4 m in front of a group of `zone` and barks: the violet
+## cone and sound rings, the group dazed ("?!"), Kai behind the Count.
+func _r_bark(scene: Node, zone_key: String) -> bool:
+	if not await _r_hero_mopsula(scene, zone_key, 3.4):
+		return false
+	scene.call("perform_action")
+	await seconds(0.12)
+	freeze()
+	return true
+
+
+## 06 package A: exploration with Graf Mopsula as the player body, `dist` m in front of a group of `zone`.
+func _r_hero_mopsula(scene: Node, zone_key: String, dist: float = 5.0) -> bool:
+	if not await _explore_ready(scene):
+		return false
+	Game.state.hero = "mopsula"
+	scene.call("refresh_hero")
+	var layout: FloorLayout = scene.call("get_layout")
+	var zone: String = str(ZONES.get(zone_key, zone_key))
+	var spawn: EnemySpawn = null
+	for e: EnemySpawn in layout.enemies:
+		var rc: RoomCell = layout.cell_at(e.cell)
+		if rc != null and rc.zone == zone and not e.is_boss and scene.call("get_enemy", e.id) != null:
+			spawn = e
+			break
+	if spawn == null:
+		push_warning("[CaptureRecipes] no enemy group in %s" % zone)
+		return false
+	_freeze_enemies(scene)
+	var actor: Node3D = scene.call("get_enemy", spawn.id) as Node3D
+	_reveal_zone(scene, layout, zone)
+	_place_facing(scene, layout, spawn.cell, actor.global_position, dist)
+	await frames(20)
+	return true
+
+
+## 06 §2.7 (package A): the Kulissenwand (5,3)↔(5,2) — "wall": Kai 3.2 m in front of it (cracks, dust); "open": Graf
+## Mopsula barks from 2.9 m and the panel tips over (still mid-fall); "note": Kai in front of Regie-Notiz 1 (kiosk).
+func _r_secret(scene: Node, what: String) -> bool:
+	if not await _explore_ready(scene):
+		return false
+	var layout: FloorLayout = scene.call("get_layout")
+	Game.state.floor_run.defeated_groups.append("f1_g7")
+	var g7: Node = scene.call("get_enemy", "f1_g7") as Node
+	if g7 != null:
+		g7.queue_free()
+	_freeze_enemies(scene)
+	_reveal_zone(scene, layout, "zone_sewer")
+	if what == "note":
+		var note: Node3D = scene.call("get_interactable", "sec_e1_note_1") as Node3D
+		if note == null:
+			return false
+		_place_facing(scene, layout, Vector2i(2, 5), note.global_position, 1.3)
+		await frames(20)
+		return scene.call("focused_interactable") == note
+	var w: Node3D = scene.call("get_wall", "sec_e1_wall_sewer") as Node3D
+	if w == null:
+		return false
+	if what == "open":                     # the Count barks it over from 3 m (cone + falling panel in one still)
+		Game.state.hero = "mopsula"
+		scene.call("refresh_hero")
+	var out: Vector3 = w.global_transform.basis.z.normalized()
+	var dist: float = 3.2 if what == "wall" else 2.9
+	var pos: Vector3 = w.global_position + out * dist + w.global_transform.basis.x * 0.6
+	var to: Vector3 = w.global_position - pos
+	var yaw: float = atan2(-to.x, -to.z)
+	(scene.call("get_player") as Node3D).call("teleport", Vector3(pos.x, 0.05, pos.z), yaw)
+	scene.call("get_camera_rig").call("snap", yaw)
+	var comp: Node = scene.call("get_companion")
+	if comp != null:
+		comp.call("snap_behind")
+	await frames(20)
+	if what == "open":
+		scene.call("perform_action")
+		await until(func() -> bool: return Secrets.is_open(Game.state, "sec_e1_wall_sewer"), 240)
+		await seconds(0.3)
+		freeze()
 	return true
 
 
@@ -285,6 +371,21 @@ func _skill_turn(scene: Node) -> bool:
 
 func _r_battle_menu(scene: Node) -> bool:
 	return await _wait_menu(scene)
+
+
+## 06 package A: "Partner automatisch" on — the menu waits for the hero, the panels read DU / AUTO.
+func _r_battle_partner_auto(scene: Node) -> bool:
+	Game.settings.partner_auto = true
+	var ctrl: Node = scene.get("controller") as Node
+	if ctrl == null:
+		return false
+	ctrl.set("force_manual", false)
+	ctrl.set("auto_turns", 0)
+	if not await _wait_menu(scene):
+		return false
+	ctrl.call("mark_roles")
+	await frames(10)
+	return true
 
 
 func _r_battle_skills(scene: Node) -> bool:
@@ -469,6 +570,17 @@ func _r_safe_lootbox_open(scene: Node) -> bool:
 	return true
 
 
+## 06 package A: "Figur wechseln" pressed — the Count stands in front, M.O.D. comments, the status banner names him.
+func _r_safe_hero_switch(scene: Node) -> bool:
+	if not await _safe_ready(scene):
+		return false
+	await frames(10)
+	scene.call("activate", "hero")
+	await seconds(1.2)
+	freeze()
+	return true
+
+
 func _r_safe_mopsula(scene: Node) -> bool:
 	if not await _safe_ready(scene):
 		return false
@@ -498,6 +610,20 @@ func _r_safe_talents_menu(scene: Node) -> bool:
 	scene.call("_refresh_menu_labels")
 	scene.call("_focus_first")
 	await seconds(3.4)                           # the heal banner fades
+	return true
+
+
+## Integration 06 A × B: open talent choices + "Figur wechseln" pressed — the TALENT-SHOW button (top right) stays
+## clear of the M.O.D. box (bottom right) that comments on the switch.
+func _r_safe_hero_talents(scene: Node) -> bool:
+	if not await _safe_ready(scene):
+		return false
+	_talent_party()
+	scene.call("_refresh_menu_labels")
+	await frames(10)
+	scene.call("activate", "hero")
+	await seconds(1.2)
+	freeze()
 	return true
 
 

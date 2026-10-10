@@ -189,7 +189,10 @@ func test_capture_recipes_cover_the_screenshot_matrix() -> void:
 	for m: String in ["_r_explore", "_r_prompt", "_r_bigmap", "_r_pause", "_r_battle_menu", "_r_battle_skills",
 			"_r_battle_target", "_r_battle_damage", "_r_battle_enemy_turn", "_r_boss_intro", "_r_boss_phase",
 			"_r_battle_gift", "_r_battle_victory", "_r_battle_results", "_r_safe_vending", "_r_safe_equipment",
-			"_r_safe_lootbox", "_r_safe_lootbox_open", "_r_safe_mopsula"]:
+			"_r_safe_lootbox", "_r_safe_lootbox_open", "_r_safe_mopsula",
+			"_r_bark", "_r_hero_mopsula", "_r_battle_partner_auto", "_r_safe_hero_switch",   # 06 package A
+			"_r_safe_talents_menu", "_r_safe_talent_show", "_r_talents_party",                # 06 package B
+			"_r_safe_hero_talents"]:                                                          # integration A × B
 		assert_true(r.has_method(m), "recipe " + m)
 	var ok: Variant = await r.call("run", "no_such_recipe", r)
 	assert_false(bool(ok), "unknown recipe → false")

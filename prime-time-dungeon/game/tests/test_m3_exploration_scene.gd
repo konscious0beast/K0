@@ -259,10 +259,11 @@ func test_scene_builds_the_floor() -> void:
 		if start_room != null:
 			assert_eq(start_room.position, layout.cell_to_world(layout.start))
 			assert_gt(start_room.get_child_count(), 0, "art kit or fallback built the room")
+	var notes: int = Secrets.list(Game.floor_def()).filter(func(x: Dictionary) -> bool: return x["kind"] == "note").size()
 	var expected_interactables: int = layout.chests.size() + layout.events.size() + 1 + layout.safe_rooms.size() \
-		+ layout.gates.size()
+		+ layout.gates.size() + notes
 	assert_eq(scene.get_node("World/Interactables").get_child_count(), expected_interactables,
-		"chests + events + stairs + safe doors + closed gates")
+		"chests + events + stairs + safe doors + closed gates / Kulissenwände + Regie-Notizen (06 §2.7)")
 	assert_eq(scene.living_groups().size(), layout.enemies.size(), "every group of a fresh floor is alive")
 	assert_eq(scene.get_player_cell(), layout.start, "Kai starts in the START cell")
 	assert_true(Game.timer_running, "exploration view active")

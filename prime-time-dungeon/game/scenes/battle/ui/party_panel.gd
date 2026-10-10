@@ -34,6 +34,9 @@ var _ko_label: Label = null
 var _box: StyleBoxFlat = null
 var _box_active: StyleBoxFlat = null
 var _accent: Color = Color("#22d3ee")
+var _role: PanelContainer = null      # 06 package A: "DU" (the controlled character) / "AUTO" (partner plays itself)
+var _role_label: Label = null
+var role: String = ""                 # "" | "lead" | "auto"
 
 
 func setup(p_id: String, display_name: String, p_hp: int, p_max_hp: int, p_mp: int, p_max_mp: int,
@@ -92,6 +95,15 @@ func setup(p_id: String, display_name: String, p_hp: int, p_max_hp: int, p_mp: i
 	top.add_theme_constant_override("separation", 4)
 	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(top)
+	_role = PanelContainer.new()
+	_role.name = "Role"
+	_role.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_role.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_role.visible = false
+	top.add_child(_role)
+	_role_label = HudStyle.label("", 15, HudStyle.C_INK, true, 0)
+	_role_label.add_theme_constant_override("outline_size", 0)
+	_role.add_child(_role_label)
 	_name = HudStyle.label(display_name, 15, HudStyle.C_PAPER, true, 3)
 	_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_name.clip_text = true
@@ -132,6 +144,27 @@ func setup(p_id: String, display_name: String, p_hp: int, p_max_hp: int, p_mp: i
 	set_hp(p_hp, false)
 	set_mp(p_mp, false)
 	set_stunt(0)
+
+
+## 06 §1.4 (package A): `lead` marks the controlled character ("DU", gold), `auto` the partner that AutoPolicy plays
+## ("Partner automatisch": "AUTO", cyan); both false hides the pill.
+func set_role(lead: bool, auto: bool) -> void:
+	role = "auto" if auto else ("lead" if lead else "")
+	if _role == null:
+		return
+	_role.visible = role != ""
+	if role == "":
+		return
+	var col: Color = Color("#22d3ee") if role == "auto" else Color("#ffc93c")
+	var sb: StyleBoxFlat = StyleBoxFlat.new()
+	sb.bg_color = col
+	sb.set_corner_radius_all(4)
+	sb.content_margin_left = 5
+	sb.content_margin_right = 5
+	sb.content_margin_top = 0
+	sb.content_margin_bottom = 0
+	_role.add_theme_stylebox_override("panel", sb)
+	_role_label.text = "AUTO" if role == "auto" else "DU"
 
 
 func _bar_row(tag: String) -> HBoxContainer:

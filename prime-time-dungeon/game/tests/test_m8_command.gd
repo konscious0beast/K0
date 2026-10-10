@@ -27,6 +27,9 @@ const VALID: Array[Dictionary] = [
 	{"t": "difficulty", "to": "vorabend"},
 	{"t": "sponsor_window", "op": "dev_open", "sec": 60, "slots": 3},
 	{"t": "descend"},
+	{"t": "hero", "id": "mopsula"},
+	{"t": "hero", "id": "kai"},
+	{"t": "secret", "id": "sec_e1_wall_sewer"},
 	{"t": "talent", "member": "kai", "id": "tal_kai_wischtechnik"},                     # 06 package B
 	{"t": "casting", "member": "mopsula", "species": "spc_original", "class": "cls_mop_diva"},
 ]
@@ -35,7 +38,8 @@ const VALID: Array[Dictionary] = [
 func test_types_are_the_recorded_list() -> void:
 	assert_eq(Command.TYPES, ["floor", "encounter", "battle", "lootbox", "buy", "sell", "equip", "use_item", "rest",
 		"event", "chest", "gate", "room", "safe_room", "safe_room_exit", "scene", "flag", "difficulty", "descend",
-		"gift", "sponsor_window", "talent", "casting"], "02_TECH §3.4")
+		"gift", "sponsor_window", "hero", "talent", "casting", "secret"],
+		"02_TECH §3.4 (+ hero / secret 06 §1.7 / §2.7, talent / casting 06 §2.2 / §3.4)")
 	var covered: Dictionary = {"gift": true}
 	for c: Dictionary in VALID:
 		covered[c["t"]] = true
@@ -105,6 +109,11 @@ func test_invalid_commands() -> void:
 		[{"t": "sponsor_window", "op": "dev_open", "sec": 0, "slots": 3}, "sponsor_window: sec"],
 		[{"t": "sponsor_window", "op": "dev_open", "sec": 601, "slots": 3}, "sponsor_window: sec must be <= 600"],
 		[{"t": "sponsor_window", "op": "dev_open", "sec": 60, "slots": 17}, "slots <= 16"],
+		[{"t": "hero"}, "hero: id"],
+		[{"t": "hero", "id": "rattenkoenigin"}, "hero: id must be one of kai, mopsula"],
+		[{"t": "secret"}, "secret: id"],
+		[{"t": "secret", "id": ""}, "secret: id must be a non-empty String"],
+		[{"t": "secret", "id": "f1_c3"}, "secret: id must start with sec_"],
 		[{"t": "talent", "member": "kai"}, "talent: id"],
 		[{"t": "talent", "member": "", "id": "tal_kai_wischtechnik"}, "talent: member"],
 		[{"t": "casting", "member": "kai", "species": "spc_original"}, "casting: class"],

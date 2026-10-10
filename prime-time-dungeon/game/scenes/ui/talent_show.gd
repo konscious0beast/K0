@@ -284,7 +284,8 @@ func _card(m: PartyMember, def: TalentDef, index: int) -> Button:
 
 
 ## Value talents: "Jetzt: Stärke 22 -> 24" (the member's real numbers with this talent). A Liga talent whose rule the
-## member does not fulfil right now says so; other behaviour talents say where they work.
+## member does not fulfil right now says so; other behaviour talents say where they work (a field talent: right away
+## when the member leads the duo — HeroRules.field_mods —, otherwise once it does).
 func _preview(m: PartyMember, def: TalentDef) -> String:
 	var before: Dictionary = UiUtil.member_stats(m)
 	var probe: PartyMember = PartyMember.from_dict(m.to_dict())
@@ -300,7 +301,9 @@ func _preview(m: PartyMember, def: TalentDef) -> String:
 		match str(fx.get("kind", "")):
 			"liga_stat_pct":
 				return "Ruht gerade: %s trägt Rüstung oder Accessoire." % _member_name(m.id)
-			"field_range_pm", "field_cd_pm":
+			"field_range_pm", "field_cd_pm":     # integration 06 A × B: the leader's own field talents count
+				if Game.state != null and Game.state.hero == m.id:
+					return "Wirkt sofort: %s führt die Gruppe an." % _member_name(m.id)
 				return "Wirkt, wenn %s die Gruppe anführt." % _member_name(m.id)
 			"marotte_heart":
 				return "M.O.D.s Vorlieben: angesagt zu Beginn jeder Etage."

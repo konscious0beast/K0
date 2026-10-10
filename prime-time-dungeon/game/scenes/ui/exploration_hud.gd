@@ -545,8 +545,24 @@ func _build_hints() -> void:
 	_hints.alignment = BoxContainer.ALIGNMENT_END
 	_frame.add_child(_hints)
 	_hints.add_child(InputGlyph.make(&"sneak", "Schleichen", 16))
-	_hints.add_child(InputGlyph.make(&"action", "Schlag", 16))
+	var field: Control = InputGlyph.make(&"action", field_hint(), 16)
+	field.name = "FieldHint"
+	_hints.add_child(field)
 	_hints.add_child(InputGlyph.make(&"pause", "Menü", 16))
+
+
+## 06 package A: the control hint of the hero's field ability ("Schlag" for Kai, "Bellen" for Graf Mopsula).
+static func field_hint() -> String:
+	return "Bellen" if Game.hero() == "mopsula" else "Schlag"
+
+
+## 06 package A: after a hero switch (ExplorationScene.refresh_hero): hint text and touch action icon.
+func refresh_hero() -> void:
+	var field: Node = _hints.get_node_or_null("FieldHint") if _hints != null else null
+	if field != null:
+		field.set("caption", field_hint())
+	if touch != null:
+		touch.call("refresh_hero")
 
 
 # --- timer ------------------------------------------------------------------------------------------------------------

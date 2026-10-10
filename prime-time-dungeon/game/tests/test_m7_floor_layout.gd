@@ -1,7 +1,8 @@
 extends TestCase
 ## M7 Floor-1 hand-built layout (01_GDD §1.3, §2.5–2.8, §10.1; 02_TECH §4.4.7): cells, zones, door rule, gates,
 ## chests f1_c0..15, groups f1_g0..14 + bosses, events, strays, safe rooms, stairs, and the routes they imply
-## (key gate locks Gleis 9, the lever shortcut saves 4 cell changes per direction).
+## (key gate locks Gleis 9, the lever shortcut saves 4 cell changes per direction; 06 §2.7: the optional Kulissenwand
+## (5,3)↔(5,2) is one more B→C door, closed until knocked over, and saves 2 cell changes while the lever is shut).
 
 const DIRS: Dictionary = {"N": Vector2i(0, -1), "E": Vector2i(1, 0), "S": Vector2i(0, 1), "W": Vector2i(-1, 0)}
 const OPPOSITE: Dictionary = {"N": "S", "E": "W", "S": "N", "W": "E"}
@@ -90,9 +91,12 @@ func _bfs(start: Vector2i, closed: PackedStringArray) -> Dictionary:
 
 
 func _gate_keys() -> Dictionary:
-	var out: Dictionary = {}   # requires → door key
+	var out: Dictionary = {}   # requires → door key ("secret:<id>" for the Kulissenwände of layout.secrets)
 	for g: Dictionary in _layout()["gates"]:
 		out[str(g["requires"])] = DataValidator.door_key(_v(g["cell"]), str(g["dir"]))
+	for s: Dictionary in _layout().get("secrets", []):
+		if str(s["kind"]) == "wall":
+			out["secret:" + str(s["id"])] = DataValidator.door_key(_v(s["cell"]), str(s["dir"]))
 	return out
 
 
@@ -132,6 +136,9 @@ func test_door_rule() -> void:
 	var cells: Dictionary = _cells()
 	var transitions: Array = [[Vector2i(2, 4), Vector2i(3, 4)], [Vector2i(6, 3), Vector2i(6, 2)],
 		[Vector2i(1, 3), Vector2i(1, 2)], [Vector2i(4, 3), Vector2i(4, 2)]]
+	# 06 §2.7: the fifth B→C door is the Kulissenwand — it exists only as a secret wall
+	var secret_door: String = DataValidator.door_key(Vector2i(5, 3), "N")
+	assert_eq(str(_gate_keys().get("secret:sec_e1_wall_sewer", "")), secret_door, "Kulissenwand (5,3)↔(5,2)")
 	for pos: Vector2i in cells:
 		var doors: String = str(cells[pos]["doors"])
 		for ch: String in DIRS:
@@ -148,7 +155,7 @@ func test_door_rule() -> void:
 					is_transition = true
 			var excluded: bool = (pos == Vector2i(5, 0) and n == Vector2i(6, 0)) \
 				or (pos == Vector2i(6, 0) and n == Vector2i(5, 0))
-			var want: bool = (same and not excluded) or is_transition
+			var want: bool = (same and not excluded) or is_transition or DataValidator.door_key(pos, ch) == secret_door
 			assert_eq(has_door, want, "door %s of %s" % [ch, str(pos)])
 
 
@@ -167,7 +174,9 @@ func test_gates() -> void:
 
 func test_routes_and_progression_locks() -> void:
 	var keys: Dictionary = _gate_keys()
-	var both_closed: PackedStringArray = PackedStringArray([str(keys["itm_key_master"]), str(keys["event:fev_lever"])])
+	var wall: String = str(keys["secret:sec_e1_wall_sewer"])    # 06 §2.7: optional — the routes below without it
+	var both_closed: PackedStringArray = PackedStringArray([str(keys["itm_key_master"]), str(keys["event:fev_lever"]),
+		wall])
 	var start: Vector2i = Vector2i(1, 7)
 	var d0: Dictionary = _bfs(start, both_closed)
 	assert_false(d0.has(Vector2i(1, 0)), "stairs need the Generalschlüssel")
@@ -178,17 +187,24 @@ func test_routes_and_progression_locks() -> void:
 		var letter: String = CELLS[pos][0]
 		assert_eq(d0.has(pos), letter != "D", "only zone D is locked: %s" % str(pos))
 	assert_eq(int(d0[Vector2i(5, 0)]), 15, "start → Hausmeister-Büro without the lever")
-	var key_open: PackedStringArray = PackedStringArray([str(keys["event:fev_lever"])])
+	var key_open: PackedStringArray = PackedStringArray([str(keys["event:fev_lever"]), wall])
 	var from_qb: Dictionary = _bfs(Vector2i(5, 0), key_open)
 	assert_eq(int(from_qb[Vector2i(1, 0)]), 16, "Hausmeister → stairs through gate_track9")
-	var with_lever: Dictionary = _bfs(start, PackedStringArray([str(keys["itm_key_master"])]))
+	var with_lever: Dictionary = _bfs(start, PackedStringArray([str(keys["itm_key_master"]), wall]))
 	assert_eq(int(d0[Vector2i(5, 0)]) - int(with_lever[Vector2i(5, 0)]), 4, "lever shortcut saves 4 cell changes")
-	var all_open: Dictionary = _bfs(Vector2i(5, 0), PackedStringArray())
+	var all_open: Dictionary = _bfs(Vector2i(5, 0), PackedStringArray([wall]))
 	assert_eq(int(from_qb[Vector2i(1, 0)]) - int(all_open[Vector2i(1, 0)]), 4, "…in both directions")
 	assert_eq(int(all_open[Vector2i(0, 0)]), int(all_open[Vector2i(1, 0)]) + 1, "throne room next to the stairs")
 	# GDD §1.3: main path start → office → stairs ≈ 25 cell changes (lever open).
 	assert_between(int(with_lever[Vector2i(5, 0)]) + int(all_open[Vector2i(1, 0)]), 22, 28)
 	assert_eq(_layout()["stairs"]["cell"], [1, 0])
+	# 06 §2.7: the Kulissenwand is a shortcut while the lever is shut (2 cell changes per direction), none after it
+	var with_wall: Dictionary = _bfs(start, PackedStringArray([str(keys["itm_key_master"]), str(keys["event:fev_lever"])]))
+	assert_eq(int(d0[Vector2i(5, 0)]) - int(with_wall[Vector2i(5, 0)]), 2, "Kulissenwand saves 2 cell changes")
+	var wall_and_lever: Dictionary = _bfs(start, PackedStringArray([str(keys["itm_key_master"])]))
+	assert_eq(int(wall_and_lever[Vector2i(5, 0)]), int(with_lever[Vector2i(5, 0)]), "after the lever: no gain")
+	for pos: Vector2i in CELLS:
+		assert_eq(with_wall.has(pos), d0.has(pos), "the wall opens no new cell (optional secret): %s" % str(pos))
 
 
 # --- placements ----------------------------------------------------------------------------------------------------

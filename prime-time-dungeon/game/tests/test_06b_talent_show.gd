@@ -1,6 +1,8 @@
 extends TestCase
 ## 06 package B — Talent-Show UI (06 §2.2 "UI Talent-Show", GDD §4.7): the safe room offers a gold call-to-action
-## only with an open choice (outside the six-entry menu, first focus, reachable with ui_right); the modal shows two
+## only with an open choice (outside the menu column — seven entries since package A —, first focus, reachable with
+## ui_right from every menu row; integration A × B: >= 88 px hit area, top right level with the first row, clear of
+## the M.O.D. box at the bottom right); the modal shows two
 ## cards per choice (name, sentence, effect, stat preview), picks through Game.pick_talent (recorded), walks through
 ## every open choice of both members and closes by itself; "Später" / ui_cancel close it with choices still open; the
 ## one-sentence rule line comes once; cards are focusable with >= 88 px hit areas. The battle results show
@@ -12,6 +14,7 @@ const SCENE_SHOW: String = "res://scenes/ui/talent_show.tscn"
 const RESULTS_SCENE: String = "res://scenes/battle/ui/battle_results.tscn"
 const TalentText := preload("res://scenes/ui/talent_text.gd")
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
+const ModDialogScript := preload("res://scenes/ui/mod_dialog.gd")
 const WAIT: int = 600
 
 
@@ -52,26 +55,34 @@ func test_safe_room_offers_the_talent_show_only_with_an_open_choice() -> void:
 	var r: Node = _room()
 	await wait_frames(3)
 	assert_false(bool(r.call("talent_show_available")), "L1: no Talent-Show button")
-	var menu6: PackedStringArray = ["save", "lootbox", "vending", "equipment", "mopsula", "leave"]
-	assert_eq(r.call("menu_ids"), menu6, "the menu column keeps its six entries")
+	# package A's menu (06 §1.6): "Figur wechseln" joined, Speichern | Weiter share the bottom row
+	var menu7: PackedStringArray = ["lootbox", "vending", "equipment", "hero", "mopsula", "save", "leave"]
+	assert_eq(r.call("menu_ids"), menu7, "the menu column keeps its seven entries")
 	r.queue_free()
 	await wait_frames(2)
 	_levels(3)
 	var r2: Node = _room()
 	await wait_frames(3)
 	assert_true(bool(r2.call("talent_show_available")))
-	assert_eq(r2.call("menu_ids"), menu6, "the Talent-Show is a separate call-to-action, not a 7th entry")
+	assert_eq(r2.call("menu_ids"), menu7, "the Talent-Show is a separate call-to-action, not an 8th entry")
 	var b: Button = (r2.get("menu_buttons") as Dictionary)["talents"] as Button
 	assert_eq((b.find_child("Text", true, false) as Label).text, "TALENT-SHOW")
 	assert_eq((b.find_child("Sub", true, false) as Label).text, "2 Talentwahlen offen", "one open choice per member")
 	assert_true(await wait_until(func() -> bool: return b.has_focus(), 30), "first focus: the open Talent-Show")
 	assert_true(b.size.y >= UiTheme.TOUCH_HIT - 8 and b.size.y >= UiTheme.MIN_TOUCH, "button height %.0f" % b.size.y)
+	assert_true(b.size.y >= UiTheme.TOUCH_HIT, "hit area >= 88 px (02_TECH §10.2 rule 5): %.0f" % b.size.y)
 	var vp: Vector2 = b.get_viewport_rect().size
 	var rect: Rect2 = b.get_global_rect()
 	assert_true(rect.end.x <= vp.x and rect.end.y <= vp.y - 60, "inside the screen, above the input hints: %s" % rect)
-	var save: Button = (r2.get("menu_buttons") as Dictionary)["save"] as Button
-	assert_eq(save.get_node(save.focus_neighbor_right), b, "ui_right from the menu reaches it")
-	assert_eq(b.get_node(b.focus_neighbor_left), save, "ui_left leads back to the menu")
+	var buttons: Dictionary = r2.get("menu_buttons") as Dictionary
+	var first: Button = buttons["lootbox"] as Button
+	assert_almost(rect.position.y, first.get_global_rect().position.y, 1.0, "level with the first menu row")
+	var mod_top: float = vp.y - 24.0 - ModDialogScript.BOX_BOTTOM - 2.0 * ModDialogScript.BOX_SIZE.y
+	assert_lt(rect.end.y, mod_top, "clear of the right-aligned M.O.D. box, even a three-line one")
+	for id: String in ["lootbox", "equipment", "hero", "mopsula", "leave"]:   # the right end of every row
+		var e: Button = buttons[id] as Button
+		assert_eq(e.get_node(e.focus_neighbor_right), b, "ui_right from %s reaches it" % id)
+	assert_eq(b.get_node(b.focus_neighbor_left), first, "ui_left leads back to the menu (the first row)")
 	b.pressed.emit()
 	await wait_frames(3)
 	assert_not_null(_modal(r2), "pressing it opens the Talent-Show")

@@ -427,16 +427,21 @@ static func _dark_overlay() -> Material:
 
 ## Flat 100° ring sector (front = −Z, r 0.5–1.8 m) for the field-strike swoosh; UV.y 0 at the outer edge.
 static func strike_arc_mesh() -> ArrayMesh:
+	return arc_mesh(1.8, 0.5, 100.0)
+
+
+## Flat ring segment in the XZ plane around −Z (forward): `arc_deg` wide, from `inner` to `outer` m. The field strike
+## swoosh (1.8 / 0.5 / 100°) and Graf Mopsula's bark cone and sound-wave rings (06 §1.3) use it.
+static func arc_mesh(outer: float, inner: float, arc_deg: float, segs: int = 14) -> ArrayMesh:
 	var verts: PackedVector3Array = PackedVector3Array()
 	var uvs: PackedVector2Array = PackedVector2Array()
-	var segs: int = 14
-	var half: float = deg_to_rad(50.0)
+	var half: float = deg_to_rad(arc_deg * 0.5)
 	for i in segs:
 		var a0: float = -half + 2.0 * half * i / segs
 		var a1: float = -half + 2.0 * half * (i + 1) / segs
 		var o0: Vector3 = Vector3(sin(a0), 0.0, -cos(a0))
 		var o1: Vector3 = Vector3(sin(a1), 0.0, -cos(a1))
-		var quad: Array[Vector3] = [o0 * 1.8, o1 * 1.8, o1 * 0.5, o0 * 0.5]
+		var quad: Array[Vector3] = [o0 * outer, o1 * outer, o1 * inner, o0 * inner]
 		var quv: Array[Vector2] = [Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1)]
 		for k: int in [0, 1, 2, 0, 2, 3]:
 			verts.append(quad[k])

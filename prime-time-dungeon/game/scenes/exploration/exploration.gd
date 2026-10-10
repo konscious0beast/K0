@@ -7,6 +7,10 @@ class_name ExplorationScene extends Node3D
 ## (Events.encounter_triggered → Game.make_battle_setup → Router.start_battle), Events.stray_spawn_requested, and the
 ## stack protocol of the Router (setup / on_suspend / on_resume). The floor timer runs through Game (timer_running).
 ## Serializable ExploreEvents of what happened are kept in a short log (recent_events(); Brief §6b.2 "events out").
+## 06 §1 (package A): the player body is the controlled character (Game.hero(): Kai or Graf Mopsula), the partner
+## follows; `action` without a prompt uses the hero's field ability — Kai's field strike or Mopsula's bark (dazes the
+## groups in the cone with line of sight, never starts a battle; contact with a dazed group = PREEMPTIVE). A switch in
+## the safe room is applied on_resume (refresh_hero).
 
 const Rules := preload("res://scenes/exploration/encounter_rules.gd")
 const FB := preload("res://scenes/exploration/fallback_art.gd")
@@ -21,6 +25,8 @@ const GateInteractable := preload("res://scenes/exploration/gate_interactable.gd
 const EventInteractable := preload("res://scenes/exploration/event_interactable.gd")
 const StairsInteractable := preload("res://scenes/exploration/stairs_interactable.gd")
 const SafeDoorInteractable := preload("res://scenes/exploration/safe_door_interactable.gd")
+const SceneryWall := preload("res://scenes/exploration/scenery_wall.gd")         # 06 package A: Kulissenwand
+const NoteInteractable := preload("res://scenes/exploration/note_interactable.gd")   # 06 package A: Regie-Notiz
 const ChoiceDialog := preload("res://scenes/exploration/choice_dialog.gd")
 const PLAYER_SCENE: PackedScene = preload("res://scenes/exploration/player.tscn")
 const ENEMY_SCENE: PackedScene = preload("res://scenes/exploration/enemy_actor.tscn")
@@ -39,6 +45,7 @@ const REVEAL_BEAT_SEC: float = 0.25     # pause after an event prop animation be
 const MARKER_LIFT: float = 0.3          # focus marker above the focused object's visual top
 const PROMPT_LIFT: float = 0.35         # HUD prompt anchor above the marker
 const ROOM_LIGHT_FADE_SEC: float = 0.4  # quality low: the left room's light fades out, the entered room's fades in
+const WALL_REACH_BONUS: float = 0.3     # 06 package A: the strike reaches the panel's face (half its depth + margin)
 
 ## Tests may switch this off: encounters then only emit Events.encounter_triggered (no Game/Router battle start).
 var auto_start_battle: bool = true
@@ -83,6 +90,10 @@ var _hud_yaw: float = INF
 var _visible_cells: Dictionary = {}     # Vector2i → true: rooms drawn right now (current + door-linked)
 var _prop_blockers: StaticBody3D = null # "PropBlockers": the permanent blocker boxes of chests and events (one body)
 var _room_lights_set: bool = false      # quality low: first room application sets the lights without fading
+var _strike_open: bool = false          # 06 package A: a strike is running and not yet reported (field_ability_used)
+var _walls: Dictionary = {}             # 06 package A: secret id → SceneryWall (standing Kulissenwände)
+var _notes: Dictionary = {}             # 06 package A: secret id → NoteInteractable
+var _wall_hint_given: bool = false      # 06 package A: one chat hint per visit of the floor view
 
 
 ## Stores params only: {"spawn": &"start" | &"<safe room id>", "capture": bool}
@@ -149,6 +160,7 @@ func on_resume(payload: Dictionary) -> void:
 		_after_battle(payload["battle_result"] as BattleResult)
 	elif payload.has("from_safe_room"):
 		_after_safe_room(str(payload["from_safe_room"]))
+	refresh_hero()                          # 06 package A: a switch in the safe room
 	_sync_groups()
 	_companion.snap_behind()
 	for it: Interactable in _interactables:
@@ -273,6 +285,38 @@ func perform_action() -> void:
 	_on_player_action()
 
 
+## 06 package A: the bodies follow Game.hero() — the player becomes the hero, the follower the partner (spawn and after
+## a switch in the safe room). No-op when they already match.
+func refresh_hero() -> void:
+	if _player == null or _companion == null:
+		return
+	var hero: String = Game.hero()
+	var partner: String = Game.partner()
+	_apply_field_talents()                  # talents may have been picked in the safe room, with or without a switch
+	if _player.hero_id == hero and _companion.member_id == partner:
+		return
+	_player.name = "Hero"                   # free the node names before the follower takes "Kai" / "Mopsula"
+	_companion.set_member(partner)
+	_player.set_hero(hero)
+	_player.name = _node_name(hero)
+	_companion.snap_behind()
+	if _hud != null and _hud.has_method("refresh_hero"):
+		_hud.call("refresh_hero")
+	_last_prompt = "<refresh>"
+
+
+static func _node_name(member_id: String) -> String:
+	return "Mopsula" if member_id == "mopsula" else "Kai"
+
+
+## 06 packages A × B: the leader's field talents (HeroRules.field_mods — "Weit ausholen" → Feldschlag reach, "Bellen
+## in Stereo" → Bellen reach, "Schwer vermittelbar" → Bellen cooldown) onto the player body. On spawn and on every
+## resume (talents are only picked in the safe room); nothing is recorded — the encounter / secret it causes is.
+func _apply_field_talents() -> void:
+	if _player != null:
+		_player.set_field_mods(HeroRules.field_mods(Game.state, DB.data))
+
+
 # ======================================================================================================================
 # Building
 # ======================================================================================================================
@@ -308,6 +352,14 @@ func _build_world() -> void:
 		var key: String = str(g["key"])
 		if fr.opened_gates.has(key):
 			continue
+		if Secrets.is_secret_requirement(str(g["requires"])):     # 06 package A: Kulissenwand instead of a gate
+			var wall: SceneryWall = SceneryWall.new()
+			wall.transform = _builder.door_transform(g["cell"], int(g["dir"]))
+			wall.setup_gate(g, _builder.palette_at(g["cell"]), SeedUtil.derive(_layout.seed, "gate", k))
+			_add_interactable(wall)
+			_gates[key] = wall
+			_walls[wall.secret_id] = wall
+			continue
 		var gate: GateInteractable = GateInteractable.new()
 		gate.transform = _builder.door_transform(g["cell"], int(g["dir"]))
 		gate.setup_gate(g, _builder.palette_at(g["cell"]), SeedUtil.derive(_layout.seed, "gate", k))
@@ -325,6 +377,7 @@ func _build_world() -> void:
 		evi.transform = _placement(ev.cell, ev.offset)
 		_add_interactable(evi)
 		evi.setup_event(ev, _builder.palette_at(ev.cell), SeedUtil.derive(_layout.seed, "event_prop", i))
+	_build_notes()
 	var stairs: StairsInteractable = StairsInteractable.new()
 	stairs.transform = _builder.anchor(_layout.stairs, &"stairs")
 	stairs.setup_stairs(_def.index + 1)
@@ -337,6 +390,21 @@ func _build_world() -> void:
 		door.setup_door(sid, str(info.get("name", "")))
 		_add_interactable(door)
 	_merge_prop_blockers()
+
+
+## 06 package A: Regie-Notizen of the floor that were not read yet (a note behind a standing wall stays hidden).
+func _build_notes() -> void:
+	for s: Dictionary in Secrets.list(_def):
+		var sid: String = str(s.get("id", ""))
+		if str(s.get("kind", "")) != "note" or Secrets.is_open(Game.state, sid):
+			continue
+		var note: NoteInteractable = NoteInteractable.new()
+		var cell: Vector2i = JsonUtil.arr_to_vec2i(s.get("cell", []), Vector2i.ZERO)
+		note.transform = _placement(cell, JsonUtil.arr_to_vec2(s.get("offset", [])))
+		var behind: String = str(s.get("behind", ""))
+		note.setup_note(s, behind != "" and not Secrets.is_open(Game.state, behind))
+		_add_interactable(note)
+		_notes[sid] = note
 
 
 ## The permanent blocker boxes of chests and floor events (never removed) move into ONE static body "PropBlockers"
@@ -385,10 +453,13 @@ func _add_interactable(it: Interactable) -> void:
 
 func _build_actors() -> void:
 	_player = PLAYER_SCENE.instantiate() as PlayerBody
-	_player.name = "Kai"
+	_player.set_hero(Game.hero())           # 06 package A: Kai or Graf Mopsula leads
+	_player.name = _node_name(_player.hero_id)
+	_apply_field_talents()
 	_actors_root.add_child(_player)
 	_player.action_requested.connect(_on_player_action)
 	_companion = Companion.new()
+	_companion.member_id = Game.partner()
 	_companion.leader = _player
 	_actors_root.add_child(_companion)
 	_camera = CameraRig.new()
@@ -620,6 +691,8 @@ func _physics_process(delta: float) -> void:
 	_update_focus()
 	_place_marker()
 	_check_strike()
+	if _strike_open and not _player.is_striking():
+		_report_field_ability(&"strike", 0)
 	if _hud != null:
 		var yaw: float = _player.rotation.y
 		if _cur_cell != _hud_cell or absf(wrapf(yaw - _hud_yaw, -PI, PI)) > 0.02:
@@ -640,6 +713,7 @@ func _update_room(force: bool) -> void:
 	Events.room_entered.emit(cell, int(rc.kind), first)
 	_log_event(ExploreEvent.Type.ROOM_ENTERED, {"cell": [cell.x, cell.y], "kind": RoomCell.kind_to_string(rc.kind),
 		"first_visit": first})
+	_hint_wall(cell)
 	_zone_environment(cell)
 	_apply_room_visibility(cell)
 	if _camera != null:
@@ -796,11 +870,72 @@ func _on_player_action() -> void:
 	if _focused != null and is_instance_valid(_focused) and _focused.is_available():
 		_focused.interact()
 		return
+	if _player.field_ability() == &"bark":     # 06 package A: Graf Mopsula leads
+		if _player.start_bark():
+			_camera.kick_strike()
+			bark_now()
+		return
 	if _player.start_strike():
 		_camera.kick_strike()
+		_strike_open = true
 
 
-## Field strike: the first group inside the 100° / 1.8 m arc during the hitting part of the swing starts the battle.
+## 06 §1.3: dazes every group in the bark cone (Rules.bark_hits with the hero's reach) that the bark can reach (line of
+## sight on layer `world`); bosses and groups that perceive nothing only twitch. Never starts a battle. Returns the
+## number of dazed groups (Events.field_ability_used, chat line on a hit).
+func bark_now() -> int:
+	var pos: Vector3 = _player.global_position
+	var fwd: Vector3 = _player.flat_forward()
+	var hits: int = 0
+	for gid: Variant in _enemies.keys():
+		var a: EnemyActor = _actor_at(gid)
+		if a == null or not is_instance_valid(a):
+			continue
+		if not Rules.bark_hits(pos, fwd, a.global_position, _player.field_range_pm):
+			continue
+		if not _bark_reaches(pos, a.global_position):
+			continue
+		if a.daze():
+			hits += 1
+	_report_field_ability(&"bark", hits)
+	if hits > 0:
+		Show.chat("chat_bark")
+	for sid: Variant in _walls.keys():                 # 06 §2.7: the bark knocks Kulissenwände over, too
+		var w: SceneryWall = _walls[sid] as SceneryWall
+		if w == null or not is_instance_valid(w) or w.opened:
+			continue
+		var wp: Vector3 = w.reach_point(pos)
+		if Rules.bark_hits(pos, fwd, wp, _player.field_range_pm) and _bark_reaches(pos, wp, w.blocker_rid()):
+			knock_wall(str(sid))
+	return hits
+
+
+## The bark is blocked by walls (ray on layer `world` at knee height, like the enemies' line of sight); `also` = one
+## more body the ray ignores (the Kulissenwand the bark aims at).
+func _bark_reaches(from: Vector3, to: Vector3, also: RID = RID()) -> bool:
+	if not is_inside_tree():
+		return true
+	var q: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(from + Vector3(0.0, 0.5, 0.0),
+		to + Vector3(0.0, 0.5, 0.0), Interactable.LAYER_WORLD)
+	var ex: Array[RID] = []
+	if _prop_blockers != null:
+		ex.append(_prop_blockers.get_rid())
+	if also.is_valid():
+		ex.append(also)
+	q.exclude = ex
+	return get_world_3d().direct_space_state.intersect_ray(q).is_empty()
+
+
+func _report_field_ability(ability: StringName, hits: int) -> void:
+	if ability == &"strike":
+		if not _strike_open:
+			return
+		_strike_open = false
+	Events.field_ability_used.emit(_player.hero_id, ability, hits)
+
+
+## Field strike: the first group inside the 100° arc of the strike reach (1.8 m × Kai's field_range_pm talents) during
+## the hitting part of the swing starts the battle.
 func _check_strike() -> void:
 	if _encounter_pending or not _player.is_strike_hitting():
 		return
@@ -812,7 +947,7 @@ func _check_strike() -> void:
 		var a: EnemyActor = _actor_at(gid)
 		if a == null or not is_instance_valid(a):
 			continue
-		if not Rules.in_arc(pos, fwd, a.global_position, Rules.STRIKE_RANGE, Rules.STRIKE_ARC_DEG):
+		if not Rules.in_arc(pos, fwd, a.global_position, _player.strike_reach(), Rules.STRIKE_ARC_DEG):
 			continue
 		var d: float = Rules.flat_dist(pos, a.global_position)
 		if d < hit_d:
@@ -821,7 +956,14 @@ func _check_strike() -> void:
 	if hit != null:
 		var adv: int = Rules.strike_advantage(hit.state, hit.global_position, hit.flat_forward(), pos, hit.is_boss(),
 			Balance.BACK_DOT)
+		_report_field_ability(&"strike", 1)
 		_strike_hit(hit, adv)
+		return
+	for sid: Variant in _walls.keys():                 # 06 §2.7: no group in reach → a Kulissenwand?
+		var w: SceneryWall = _walls[sid] as SceneryWall
+		if w != null and is_instance_valid(w) and not w.opened and Rules.in_arc(pos, fwd, w.reach_point(pos),
+				_player.strike_reach() + WALL_REACH_BONUS, Rules.STRIKE_ARC_DEG):
+			knock_wall(str(sid))
 
 
 ## Hit confirm: everything freezes for hitstop_sec while the struck group flashes white, then the battle starts.
@@ -963,6 +1105,82 @@ func on_chest_opened(chest: ChestInteractable, rewards: Array[LootReward]) -> vo
 	_log_event(ExploreEvent.Type.CHEST_OPENED, {"chest_id": chest.chest.id, "rewards": data})
 	var text: String = tr("Truhe: %s") % ", ".join(parts) if not parts.is_empty() else tr("Truhe geöffnet")
 	Events.toast_requested.emit(text, &"chest")
+
+
+# --- 06 package A: E1 secrets -----------------------------------------------------------------------------------------
+
+## The field strike / bark hit the Kulissenwand `secret_id`: Game.open_secret (recorded) → it falls. false when the
+## core refuses (already open, unknown).
+func knock_wall(secret_id: String) -> bool:
+	var w: SceneryWall = _walls.get(secret_id) as SceneryWall
+	if w == null or not is_instance_valid(w) or w.opened:
+		return false
+	if not Game.open_secret(secret_id):
+		return false
+	w.set_fall_from(_player.global_position)
+	open_secret_visual(secret_id)
+	return true
+
+
+## "Regie-Notiz lesen": Game.open_secret (+15 followers, M.O.D. regie_note:<n>) → the post-it flies off.
+func read_note(note: NoteInteractable) -> void:
+	if note == null or note.collected or note.hidden_behind:
+		return
+	if not Game.open_secret(note.secret_id):
+		Sfx.play_ui(&"ui_error")
+		return
+	open_secret_visual(note.secret_id)
+
+
+## Visuals of an opened secret (state already changed by Game.open_secret): a wall falls (gate_opened, notes behind it
+## appear, chat), a note is collected (toast "Regie-Notiz n/total · +15 Follower").
+func open_secret_visual(secret_id: String) -> void:
+	var w: SceneryWall = _walls.get(secret_id) as SceneryWall
+	if w != null and is_instance_valid(w):
+		_walls.erase(secret_id)
+		w.open_visual(true)
+		_camera.kick_strike()
+		Events.gate_opened.emit(w.gate["cell"], int(w.gate["dir"]))
+		_log_event(ExploreEvent.Type.GATE_OPENED, {"key": w.key, "secret": secret_id})
+		for nid: Variant in _notes.keys():
+			var n: NoteInteractable = _notes[nid] as NoteInteractable
+			if n != null and is_instance_valid(n) and str(n.secret.get("behind", "")) == secret_id:
+				n.reveal()
+		Show.chat("chat_secret")
+		Events.toast_requested.emit(tr("Kulissenwand! Der Weg ist frei."), &"star")
+		return
+	var note: NoteInteractable = _notes.get(secret_id) as NoteInteractable
+	if note != null and is_instance_valid(note):
+		note.collect_visual(true)
+		var cnt: Vector2i = Game.secret_notes()
+		Events.toast_requested.emit(tr("Regie-Notiz %d/%d · +%d Follower") % [cnt.x, cnt.y, Secrets.NOTE_FOLLOWERS],
+			&"heart")
+
+
+## Standing Kulissenwände of the floor (secret ids).
+func standing_walls() -> PackedStringArray:
+	var out: PackedStringArray = []
+	for sid: Variant in _walls.keys():
+		var w: SceneryWall = _walls[sid] as SceneryWall
+		if w != null and is_instance_valid(w) and not w.opened:
+			out.append(str(sid))
+	return out
+
+
+func get_wall(secret_id: String) -> SceneryWall:
+	return _walls.get(secret_id) as SceneryWall
+
+
+## First room next to a standing Kulissenwand: one chat hint ("… sieht nach Pappe aus"), presentation only.
+func _hint_wall(cell: Vector2i) -> void:
+	if _wall_hint_given or Game.replaying:
+		return
+	for sid: Variant in _walls.keys():
+		var w: SceneryWall = _walls[sid] as SceneryWall
+		if w != null and is_instance_valid(w) and not w.opened and w.occupied_cells(_layout).has(cell):
+			_wall_hint_given = true
+			Show.chat("chat_secret_hint")
+			return
 
 
 ## Gate visuals + Events.gate_opened (state was changed by Game.open_gate / FloorEvent.apply).

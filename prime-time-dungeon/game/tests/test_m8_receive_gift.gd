@@ -148,8 +148,8 @@ func test_dev_gift_in_battle_is_logged_at_delivery_and_replays() -> void:
 	var kinds: Array = []
 	for c: Dictionary in Game.run_log.cmds():
 		kinds.append(c["c"]["t"])
-	assert_eq(kinds.slice(0, 4), ["floor", "sponsor_window", "encounter", "gift"],
-		"recorded at the turn boundary where it was delivered")
+	assert_eq(kinds.slice(0, 5), ["floor", "hero", "sponsor_window", "encounter", "gift"],
+		"recorded at the turn boundary where it was delivered (hero: the new game's choice, 06 §1.7)")
 	assert_has(_received, dev["gift_id"])
 	var live_hash: String = StateHash.of(Game.state)
 	var rep: Dictionary = Game.replay_log(Game.run_log)

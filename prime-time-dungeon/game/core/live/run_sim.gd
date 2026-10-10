@@ -72,7 +72,9 @@ var run_log: RunLog = null             # optional: records applied commands + ch
 var battle: BattleState = null         # battle started by apply({"t": "encounter"}) (RunSim-driven runs only)
 var quest: QuestTracker = null         # optional: fed by apply() with the core quest events (see _quest_feed)
 var last_action_events: Array[ActionEvent] = []   # ActionEvents of the last apply() (battle start/commands/gifts)
-## Commands refused by the core rules (command_refusal: gift policy, rule checks): {"k", "t", "gift_id", "reason"}.
+## Commands refused by the core rules (command_refusal: gift policy, rule checks — incl. HeroRules.check for "hero",
+## 06 §1.7, and Secrets.check_open for "secret", 06 §2.7): {"k", "t", "gift_id" (the gift id, or the hero / secret id
+## of a refused "hero" / "secret"), "reason"} in order.
 var rejected_cmds: Array[Dictionary] = []
 ## Run identity {"run_id", "event_id", "player_id", "window_id", "league"} (RunLog header; Game passes the same): gifts
 ## must be bound to it (GiftPolicy: wrong_target); "league" picks the run's league in a multi-league event.
@@ -129,7 +131,7 @@ func apply(cmd: Dictionary) -> Array[ExploreEvent]:
 	var c: Dictionary = CanonicalJson.normalize(cmd)
 	var refusal: String = command_refusal(c)
 	if refusal != "":
-		var gid: String = str((c["gift"] as Dictionary).get("gift_id", "")) if str(c["t"]) == "gift" else ""
+		var gid: String = _refused_id(c)
 		push_warning("[RunSim] %s %s refused: %s" % [str(c["t"]), gid, refusal])
 		rejected_cmds.append({"k": _tick, "t": str(c["t"]), "gift_id": gid, "reason": refusal})
 		return out
@@ -195,6 +197,10 @@ func apply(cmd: Dictionary) -> Array[ExploreEvent]:
 			state.flags[str(c["key"])] = c["value"]       # whitelisted keys only (Command.FLAG_KEYS)
 		"difficulty":
 			RunRules.lower_difficulty(state, StringName(str(c["to"])))
+		"hero":                                    # 06 package A (legality: RunRules.command_refusal)
+			HeroRules.set_hero(state, str(c["id"]))
+		"secret":                                  # 06 package A; like the floor events without the show part
+			Secrets.open(state, _floor_def(), str(c["id"]))   # (followers, M.O.D. line: Game.open_secret)
 		"descend":
 			if state.floor_run != null:
 				_floor_done = true
@@ -589,6 +595,24 @@ static func _zone_has_stray(fr: FloorRun, zone: String) -> bool:
 		if s is Dictionary and str((s as Dictionary).get("zone", "")) == zone:
 			return true
 	return false
+
+
+## 06 package A: FloorDef of the current floor (null without data / floor).
+func _floor_def() -> FloorDef:
+	if data == null or state.floor_run == null:
+		return null
+	return data.floor_def(state.floor_run.index)
+
+
+## The id a refused command reports in rejected_cmds["gift_id"]: the gift id of a gift, the hero / secret id of a
+## "hero" / "secret" command (06 package A), else "".
+static func _refused_id(c: Dictionary) -> String:
+	match str(c["t"]):
+		"gift":
+			return str((c["gift"] as Dictionary).get("gift_id", ""))
+		"hero", "secret":
+			return str(c["id"])
+	return ""
 
 
 func _current_layout() -> FloorLayout:

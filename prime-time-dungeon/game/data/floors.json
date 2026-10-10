@@ -380,7 +380,7 @@
 						"y": 2,
 						"zone": "zone_cellar",
 						"kind": "normal",
-						"doors": "EW"
+						"doors": "ESW"
 					},
 					{
 						"x": 6,
@@ -415,7 +415,7 @@
 						"y": 3,
 						"zone": "zone_sewer",
 						"kind": "normal",
-						"doors": "ESW"
+						"doors": "NESW"
 					},
 					{
 						"x": 6,
@@ -1394,6 +1394,57 @@
 							"itm_acc_sneakers",
 							"itm_acc_gas_mask"
 						]
+					}
+				],
+				"secrets": [
+					{
+						"id": "sec_e1_wall_sewer",
+						"kind": "wall",
+						"cell": [
+							5,
+							3
+						],
+						"dir": "N"
+					},
+					{
+						"id": "sec_e1_note_1",
+						"kind": "note",
+						"cell": [
+							2,
+							5
+						],
+						"offset": [
+							3.5,
+							3.8
+						],
+						"n": 1
+					},
+					{
+						"id": "sec_e1_note_2",
+						"kind": "note",
+						"cell": [
+							5,
+							2
+						],
+						"offset": [
+							2.9,
+							4.3
+						],
+						"n": 2,
+						"behind": "sec_e1_wall_sewer"
+					},
+					{
+						"id": "sec_e1_note_3",
+						"kind": "note",
+						"cell": [
+							6,
+							0
+						],
+						"offset": [
+							3.6,
+							-3.6
+						],
+						"n": 3
 					}
 				],
 				"stairs": {

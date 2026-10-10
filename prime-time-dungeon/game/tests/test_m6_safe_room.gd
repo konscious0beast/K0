@@ -65,8 +65,8 @@ func test_enter_records_and_heals() -> void:
 	assert_eq(_spy.of_type("safe_room"), [{"t": "safe_room", "id": sr}] as Array[Dictionary], "Game.enter_safe_room")
 	assert_eq(kai.hp, Progression.total_stats(kai, DB.data).values[StatBlock.Stat.HP],
 		"full heal on entering (Progression.full_heal)")
-	assert_eq(r.call("menu_ids"), PackedStringArray(["save", "lootbox", "vending", "equipment", "mopsula", "leave"]),
-		"menu order (GDD §14.7)")
+	assert_eq(r.call("menu_ids"), PackedStringArray(["lootbox", "vending", "equipment", "hero", "mopsula", "save",
+		"leave"]), "menu order (GDD §14.7; \"Figur wechseln\" 06 §1.6, bottom row Speichern | Weiter)")
 
 
 func test_vending_modal_returns_focus() -> void:

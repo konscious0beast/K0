@@ -197,8 +197,8 @@ func _end_if_finished() -> void:
 
 
 ## Non-battle commands → the same Game/Show method the live run used. false = not applicable (a QA Sponsor-Fenster the
-## rules do not allow, a talent pick / casting the core refuses, an unknown type); gifts Show refuses are reported
-## through gift_rejected.
+## rules do not allow, a talent pick / casting / hero switch / secret the core refuses, an unknown type); gifts Show
+## refuses are reported through gift_rejected.
 func _apply(c: Dictionary) -> bool:
 	match str(c.get("t", "")):
 		"floor":
@@ -247,6 +247,10 @@ func _apply(c: Dictionary) -> bool:
 			return game.pick_talent(str(c.get("member", "")), str(c.get("id", "")))
 		"casting":
 			return game.choose_casting(str(c.get("member", "")), str(c.get("species", "")), str(c.get("class", "")))
+		"hero":                                          # 06 package A
+			return game.set_hero(str(c.get("id", "")))
+		"secret":
+			return game.open_secret(str(c.get("id", "")))
 		_:
 			push_warning("[GameReplay] unknown command '%s'" % str(c.get("t", "")))
 			return false

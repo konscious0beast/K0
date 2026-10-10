@@ -5,6 +5,10 @@ extends CharacterBody3D
 ## giveup_no_sight s without sight, > leash m from the leash point or max_chase s → RETURN (3 m/s, ignores Kai 2 s).
 ## Contact ≤ 1.1 m → ExplorationScene.on_enemy_contact (advantage by encounter_rules). Bosses stand at boss_spot and
 ## fight when Kai comes within 5 m (always NORMAL). Layer 3 `enemy`, mask `world`.
+## 06 §1.3 (package A): Graf Mopsula's bark puts a group into DAZED for DAZE_SEC (stands still, "?!", perceives
+## nothing; contact = PREEMPTIVE from every side), at most once per DAZE_IMMUNE_SEC; afterwards it returns to its
+## previous state (ALERT if it perceives the hero, RETURN if it had been chasing). Bosses and groups that perceive
+## nothing (Fahrscheinfresser) only twitch.
 ## Standalone (scene root, capture of enemy_actor.tscn) it shows the first enemy of the data on a preview stage.
 
 signal state_changed(group_id: String, state: StringName)
@@ -16,6 +20,9 @@ const PATROL: StringName = &"PATROL"
 const ALERT: StringName = &"ALERT"
 const CHASE: StringName = &"CHASE"
 const RETURN: StringName = &"RETURN"
+const DAZED: StringName = Rules.DAZED     # 06 package A
+const TWITCH_SEC: float = 0.6
+const C_DAZED: Color = Color("#c79bff")   # Mopsula violet (03_ART bark FX)
 const IDLE_TURN_SEC: float = 4.0
 const IDLE_TURN_DEG: float = 60.0
 const ALERT_SEC: float = 0.6
@@ -52,6 +59,10 @@ var _bubble: Label3D = null
 var _zz: Label3D = null
 var _zz_base_y: float = 0.0
 var _preview: bool = false
+var _pre_daze: StringName = IDLE      # 06 package A: state before the daze
+var _daze_cool: float = 0.0           # > 0: immune to another daze (DAZE_IMMUNE_SEC from the last daze)
+var _twitch_t: float = 0.0            # > 0: "zuckt nur" bubble (boss / Fahrscheinfresser barked at)
+var _daze_sec: float = Rules.DAZE_SEC
 
 
 func _ready() -> void:
@@ -117,6 +128,33 @@ func can_ambush() -> bool:
 	return float(explore.get("field_speed", 0.0)) > 0.0
 
 
+## 06 §1.3: the bark hits this group. DAZED for `sec` (default DAZE_SEC) → true; false while immune (a daze less than
+## DAZE_IMMUNE_SEC ago), for bosses and for groups that perceive nothing (they only twitch: "…" bubble).
+func daze(sec: float = Rules.DAZE_SEC) -> bool:
+	if spawn == null:
+		return false
+	if not Rules.can_be_dazed(is_boss(), explore):
+		_twitch_t = TWITCH_SEC
+		_update_bubble()
+		return false
+	if _daze_cool > 0.0 or state == DAZED:
+		return false
+	_pre_daze = state
+	_daze_cool = Rules.DAZE_IMMUNE_SEC
+	_daze_sec = sec
+	_set_state(DAZED)
+	return true
+
+
+func is_dazed() -> bool:
+	return state == DAZED
+
+
+## Seconds until this group can be dazed again (0 = now).
+func daze_cooldown() -> float:
+	return _daze_cool
+
+
 ## Battle over / flight: go back to the leash point (ignores Kai for 2 s).
 func force_return() -> void:
 	if is_boss():
@@ -133,6 +171,11 @@ func _physics_process(delta: float) -> void:
 		_animate(0.0)
 		return
 	_state_t += delta
+	_daze_cool = maxf(0.0, _daze_cool - delta)
+	if _twitch_t > 0.0:
+		_twitch_t = maxf(0.0, _twitch_t - delta)
+		if _twitch_t <= 0.0:
+			_update_bubble()
 	var kai: Vector3 = player.global_position if player != null and is_instance_valid(player) else Vector3(INF, 0, INF)
 	var hidden: bool = player == null or not is_instance_valid(player) or \
 		(player.has_method("is_hidden") and bool(player.call("is_hidden")))
@@ -173,6 +216,9 @@ func _physics_process(delta: float) -> void:
 				move = dir * float(explore["field_speed"])
 				if dir != Vector3.ZERO:
 					_turn_towards(Rules.yaw_of(dir), delta, 12.0)
+		DAZED:
+			if _state_t >= _daze_sec:
+				_end_daze(kai, hidden)
 		RETURN:
 			var to_home: Vector3 = Vector3(home.x - global_position.x, 0.0, home.z - global_position.z)
 			if to_home.length() <= HOME_EPS:
@@ -195,6 +241,22 @@ func _physics_process(delta: float) -> void:
 	_animate(Vector2(velocity.x, velocity.z).length())
 	if not hidden and Rules.flat_dist(global_position, kai) <= Rules.CONTACT_RADIUS:
 		_contact()
+
+
+## Back from the daze: perceiving the hero → ALERT; a group that was chasing has lost him → RETURN; else its
+## previous state (IDLE / PATROL / RETURN).
+func _end_daze(kai: Vector3, hidden: bool) -> void:
+	if not hidden and not is_asleep_spawn() and _perceives(kai):
+		_set_state(ALERT)
+	elif _pre_daze == ALERT or _pre_daze == CHASE:
+		_set_state(RETURN)
+	else:
+		_set_state(_pre_daze)
+
+
+## A sleeping tutorial group (never turns, starts IDLE) stays asleep after a daze.
+func is_asleep_spawn() -> bool:
+	return spawn != null and not spawn.can_turn and spawn.start_state == IDLE
 
 
 func _boss_tick(kai: Vector3, hidden: bool) -> void:
@@ -276,14 +338,29 @@ func _set_state(s: StringName) -> void:
 	if s == PATROL and prev != PATROL:
 		_wp_index = _nearest_waypoint()
 		_circle_angle = _angle_on_circle()
-	if _bubble != null:
-		_bubble.visible = s == ALERT or s == CHASE
-		_bubble.text = "!" if s == ALERT else "!!"
+	_update_bubble()
 	_update_zz()
 	if s == ALERT:
 		Events.enemy_alerted.emit(group_id())
 	if spawn != null:
 		state_changed.emit(group_id(), s)
+
+
+## "!" (ALERT), "!!" (CHASE), violet "?!" (DAZED, 06 §1.3), "…" (barked at, but it only twitches).
+func _update_bubble() -> void:
+	if _bubble == null:
+		return
+	var dazed: bool = state == DAZED
+	_bubble.visible = state == ALERT or state == CHASE or dazed or _twitch_t > 0.0
+	if dazed:
+		_bubble.text = "?!"
+		_bubble.modulate = C_DAZED
+	elif state == ALERT or state == CHASE:
+		_bubble.text = "!" if state == ALERT else "!!"
+		_bubble.modulate = Color("#ffc93c")
+	else:
+		_bubble.text = "…"
+		_bubble.modulate = Color("#f5f0e6")
 
 
 ## Position in world space (the actor may still be outside the tree right after setup_spawn: parent at the origin).
@@ -316,6 +393,13 @@ func _animate(speed: float) -> void:
 	if rig.has_method("set_locomotion"):
 		rig.call("set_locomotion", speed)
 	FB.animate_character(rig, _anim_t, speed)
+	# 06 package A: dazed groups wobble on the spot, a twitch is a short shudder
+	if state == DAZED:
+		rig.rotation.z = sin(_anim_t * 9.0) * 0.12
+	elif _twitch_t > 0.0:
+		rig.rotation.z = sin(_anim_t * 40.0) * 0.05
+	elif rig.rotation.z != 0.0:
+		rig.rotation.z = 0.0
 
 
 ## "Z z" only while asleep (hidden from ALERT on); slow bob.

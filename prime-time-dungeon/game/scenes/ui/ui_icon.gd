@@ -10,7 +10,7 @@ const KINDS: Array[StringName] = [&"dot", &"eye", &"heart", &"menu", &"hand", &"
 	&"star", &"coin", &"clock", &"skull", &"crown", &"check", &"cross", &"arrow_left", &"arrow_right", &"arrow_up",
 	&"arrow_down", &"diamond", &"key", &"floppy", &"door", &"paw", &"person", &"chat", &"bolt", &"flame", &"snow",
 	&"bubble", &"trophy", &"gift", &"play", &"pause", &"stairs", &"vending", &"sword", &"shield", &"ring", &"potion",
-	&"camera", &"mic", &"tv", &"drone"]
+	&"camera", &"mic", &"tv", &"drone", &"bark", &"swap"]
 
 @export var kind: StringName = &"dot":
 	set(v):
@@ -276,6 +276,21 @@ func build_mesh() -> IconMesh:
 			_m.poly(pts, color)
 			_circle(o, s, Vector2(0.5, 0.5), 0.12, c2)
 			_circle(o, s, Vector2(0.5, 0.5), 0.06, Color("#ff2e88"))
+		&"bark":                               # 06 package A: Graf Mopsula's bark — a snout and sound waves
+			_circle(o, s, Vector2(0.2, 0.5), 0.14, color)
+			_poly(o, s, [Vector2(0.24, 0.38), Vector2(0.42, 0.44), Vector2(0.42, 0.56), Vector2(0.24, 0.62)], color)
+			for i in 3:
+				var r: float = 0.2 + 0.15 * i
+				for k in 5:
+					var a0: float = -0.75 + 1.5 * float(k) / 5.0
+					var a1: float = -0.75 + 1.5 * float(k + 1) / 5.0
+					_line(o, s, Vector2(0.3 + cos(a0) * r, 0.5 + sin(a0) * r),
+						Vector2(0.3 + cos(a1) * r, 0.5 + sin(a1) * r), color, 0.07)
+		&"swap":                               # 06 package A: "Figur wechseln" — two opposed arrows
+			_rect(o, s, Rect2(0.12, 0.26, 0.56, 0.12), color)
+			_poly(o, s, [Vector2(0.62, 0.12), Vector2(0.9, 0.32), Vector2(0.62, 0.52)], color)
+			_rect(o, s, Rect2(0.32, 0.62, 0.56, 0.12), color)
+			_poly(o, s, [Vector2(0.38, 0.48), Vector2(0.1, 0.68), Vector2(0.38, 0.88)], color)
 		_:
 			_circle(o, s, Vector2(0.5, 0.5), 0.4, color)
 	return _m

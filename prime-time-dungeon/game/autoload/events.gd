@@ -85,6 +85,11 @@ signal sponsor_window_opened(window: Dictionary)         # Game (RunSim SPONSOR_
 signal sponsor_window_closed(window_id: String, reason: String)   # Game (RunSim): reason time|left|superseded|floor
 signal sponsor_window_updated(window: Dictionary)        # Show: a gift took a slot of the open window
 
+# --- Hero & field abilities (06 §1, package A) ---------------------------------
+signal hero_changed(hero_id: String)                     # Game.set_hero: the controlled character changed
+signal field_ability_used(hero_id: String, ability: StringName, hits: int)   # ExplorationScene: &"strike" | &"bark"
+signal secret_opened(secret_id: String)                  # Game.open_secret: Kulissenwand / Regie-Notiz (06 §2.7)
+
 # --- UI -----------------------------------------------------------------
 signal toast_requested(text: String, icon: StringName)
 ## Bottom corners (canvas px inside the safe frame) a screen keeps for its own panels while overlay `mode` is active;

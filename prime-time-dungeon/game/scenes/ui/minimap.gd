@@ -109,6 +109,15 @@ static func layout_from_def(def: FloorDef) -> FloorLayout:
 		var bit: int = DOOR_BITS["NESW".find(dir_s)] if "NESW".find(dir_s) >= 0 else 1
 		fl.gates.append({"cell": Vector2i(int(cell[0]), int(cell[1])), "dir": bit, "requires": str(gd.get("requires", "")),
 			"key": "%d,%d,%s" % [int(cell[0]), int(cell[1]), dir_s]})
+	for sv: Variant in def.layout.get("secrets", []):          # 06 package A: Kulissenwände (hidden until opened)
+		var sd: Dictionary = sv
+		if str(sd.get("kind", "")) != "wall":
+			continue
+		var scell: Array = sd.get("cell", [0, 0])
+		var sdir: String = str(sd.get("dir", "N"))
+		var sbit: int = DOOR_BITS["NESW".find(sdir)] if "NESW".find(sdir) >= 0 else 1
+		fl.gates.append({"cell": Vector2i(int(scell[0]), int(scell[1])), "dir": sbit,
+			"requires": Secrets.REQUIRES_PREFIX + str(sd.get("id", "")), "key": Secrets.gate_key_of(sd)})
 	for sr: Variant in def.layout.get("safe_rooms", []):
 		var sd: Dictionary = sr
 		var cell: Array = sd.get("cell", [0, 0])
@@ -173,13 +182,15 @@ func _mesh_cells(origin: Vector2, cs: float, opened: PackedStringArray) -> IconM
 		m.rect(cr, _cell_color(rc))
 		m.rect_outline(cr, Color(1, 1, 1, 0.18), 1.0)
 		for i in 4:
-			if rc.doors & DOOR_BITS[i]:
+			if rc.doors & DOOR_BITS[i] and not _closed_secret(cell, DOOR_BITS[i], opened):
 				_mesh_door(m, origin, cs, gap, cell, i, _cell_color(rc))
 		_mesh_marker(m, cr, rc)
 	for g: Dictionary in layout.gates:
 		var gcell: Vector2i = g.get("cell", Vector2i.ZERO)
 		if not show_unvisited and not visited.has(gcell):
 			continue
+		if Secrets.is_secret_requirement(str(g.get("requires", ""))):
+			continue                            # a Kulissenwand: wall while it stands, a plain door once it fell
 		var key_s: String = str(g.get("key", ""))
 		var col: Color = UiTheme.C_DANGER if not opened.has(key_s) else Color(UiTheme.C_OK, 0.6)
 		var i: int = DOOR_BITS.find(int(g.get("dir", 1)))
@@ -265,6 +276,13 @@ func _cell_color(rc: RoomCell) -> Color:
 		if hexs.is_valid_html_color():
 			base = Color.from_string(hexs, base)
 	return base.lightened(0.28)
+
+
+## 06 package A: is the door `bit` of `cell` a Kulissenwand that still stands? (drawn as wall: no door stub)
+func _closed_secret(cell: Vector2i, bit: int, opened: PackedStringArray) -> bool:
+	var g: Dictionary = layout.gate_at(cell, bit)
+	return not g.is_empty() and Secrets.is_secret_requirement(str(g.get("requires", ""))) \
+		and not opened.has(str(g.get("key", "")))
 
 
 func _mesh_door(m: IconMesh, origin: Vector2, cs: float, gap: float, cell: Vector2i, i: int, col: Color) -> void:

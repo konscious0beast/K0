@@ -1,15 +1,23 @@
 class_name SafeRoomScene extends Node3D
 ## Safe room (02_TECH §9.5, GDD §10, §14.7): EnvKit.build_safe_room(seed, quality, theme) with fixed camera (FOV 50),
 ## Kai + Graf Mopsula; Game.enter_safe_room(id) (full heal, scene context), Show.say("safe_room_enter"), overlay
-## &"safe_room". Menu (left list, scene right): Speichern · Lootboxen (n) · Automat · Ausrüstung · Mopsula (!) · Weiter.
+## &"safe_room". Menu (left column, scene right; 06 package A order): Lootboxen (n) · [Automat | Ausrüstung] ·
+## Figur wechseln · Mopsula (!) · [Speichern | Weiter] — five rows of 64 px boxes in hit areas >= 88 px, 12 px apart
+## (02_TECH §10.2 rule 5), so all seven entries fit between the header and the chat ticker at 720 px height, also in
+## the phone touch layout (integration 06 A × B).
+## "Figur wechseln" (06 §1.6, package A) makes the partner the controlled character
+## (Game.set_hero, recorded; only here, free of charge): the two figures swap places (the hero stands in front, the
+## partner rests on the sofa spot), M.O.D. comments (`hero_switch:<id>`).
 ## Mopsula scenes (scenes.json) play through ModDialog as blocking lines, then Game.mark_scene_seen(); the next
 ## qualifying scene of the same visit becomes pending right away (several scenes per visit, e.g. scn_mop_2 +
 ## scn_mop_4, "NEU" badge + "!" stay); without a scene a `mopsula_idle` line. Shop via vending_menu (Game.buy),
 ## lootboxes via lootbox_opening (Game.open_lootbox).
 ## ModDialog sits right-aligned here (overlay mode &"safe_room"), so the menu column stays readable while M.O.D. talks.
 ## 06 package B: while a talent choice is open (L3, L5 …) a gold "TALENT-SHOW · n offen" call-to-action button sits at
-## the bottom right of the room (outside the menu column, which keeps its six entries); it opens
-## scenes/ui/talent_show.tscn (activate("talents")). Focus: first focus after pending lootboxes, ui_right from the menu.
+## the top right, level with the first menu row (outside the menu column; integration 06 A × B: clear of the
+## right-aligned M.O.D. box at the bottom right, which talks on every visit and after "Figur wechseln"); it opens
+## scenes/ui/talent_show.tscn (activate("talents")). Focus: first focus after pending lootboxes, ui_right from the
+## right end of every menu row.
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const InputGlyph := preload("res://scenes/ui/input_glyph.gd")
@@ -26,6 +34,16 @@ const DEFAULT_IDLE: PackedStringArray = ["Wir ruhen. Störe Uns nur bei Weltunte
 	"Ein Sofa. Endlich ein Möbel, das Unseren Stand begreift."]
 const SCENE_TIMEOUT_SEC: float = 600.0
 const MENU_SCRIM_W: float = 640.0          # width of the dark gradient behind the menu column
+const MENU_GAP: int = 12                   # 02_TECH §10.2 rule 5: 12 px between the hit areas
+const MENU_W: float = 380.0                # menu column width (a row of two: 2 × 184 + 12)
+const MENU_BOX_H: float = 64.0             # visible box of an entry; its hit area is UiTheme.TOUCH_HIT (88) high
+const TITLE_SIZE: int = 32                 # 06 package A: one header line (tag + name) — 7 entries fit above the ticker
+const CTA_TOP: float = 142.0               # TALENT-SHOW hit area top in frame px = the first menu row's top (test)
+## Menu rows in reading order (menu_ids()): 5 rows × 88 px + 4 × 12 px = 488 px between header and chat ticker.
+const MENU_ROWS: Array = [["lootbox"], ["vending", "equipment"], ["hero"], ["mopsula"], ["save", "leave"]]
+const MENU_ENTRIES: Dictionary = {"lootbox": ["Lootboxen", &"box"], "vending": ["Automat", &"vending"],
+	"equipment": ["Ausrüstung", &"sword"], "hero": ["Figur wechseln", &"swap"], "mopsula": ["Mopsula", &"paw"],
+	"save": ["Speichern", &"floppy"], "leave": ["Weiter", &"door"]}
 
 var safe_room_id: String = ""
 var context: Dictionary = {}               # Game.enter_safe_room() result (scene conditions)
@@ -46,6 +64,8 @@ var _bang: Label3D
 var _ui: CanvasLayer
 var _menu: VBoxContainer
 var _status: Label
+var _status_panel: PanelContainer = null
+var _status_tween: Tween = null
 var _heal_banner: PanelContainer
 var _header_sub: Label
 var _modal: Node = null
@@ -117,6 +137,8 @@ func activate(id: String) -> void:
 			open_vending()
 		"equipment":
 			open_pause("equipment")
+		"hero":
+			switch_hero()
 		"mopsula":
 			talk_to_mopsula()
 		"talents":
@@ -193,6 +215,40 @@ func open_pause(tab: String) -> Node:
 	return pm
 
 
+## 06 §1.6: the partner takes the lead (Game.set_hero → recorded "hero" command). The figures swap places, the menu
+## label follows, M.O.D. comments. false when the core refuses (not in a safe room, no state).
+func switch_hero() -> bool:
+	var next: String = Game.partner()
+	if not Game.set_hero(next):
+		Sfx.play_ui(&"ui_error")
+		return false
+	Sfx.play_ui(&"ui_confirm")
+	_place_figures()
+	_refresh_menu_labels()
+	_set_status("Jetzt führt: %s." % _hero_name(next), UiTheme.C_GOLD)
+	Show.say("hero_switch:" + next)
+	var lead: Node3D = _mopsula if next == "mopsula" else _kai
+	if lead != null and lead.has_method("play"):
+		lead.call("play", &"victory")
+	return true
+
+
+## "Kai" (the player's name) | "Graf Mopsula".
+static func _hero_name(member_id: String) -> String:
+	return "Graf Mopsula" if member_id == "mopsula" else UiUtil.player_name()
+
+
+## The controlled character stands on the player spot, the partner on the sofa spot (06 §1.6).
+func _place_figures() -> void:
+	if _kai == null or _mopsula == null:
+		return
+	var mop_leads: bool = Game.hero() == "mopsula"
+	_kai.transform = SafeRoomSet.anchor(&"mopsula_spot" if mop_leads else &"player_spot", stand_in)
+	_mopsula.transform = SafeRoomSet.anchor(&"player_spot" if mop_leads else &"mopsula_spot", stand_in)
+	if _bang != null:
+		_bang.position = Vector3(0, _bang_base_y(), 0)
+
+
 ## Plays the pending Mopsula scene (blocking ModDialog lines, then Game.mark_scene_seen) or an idle line.
 func talk_to_mopsula() -> void:
 	if pending_scene == null:
@@ -255,11 +311,23 @@ func leave() -> void:
 	Router.exit_safe_room()
 
 
+## Menu entry ids in reading order (rows top to bottom, a row of two left to right; [Speichern | Weiter] last).
 func menu_ids() -> PackedStringArray:
 	var out: PackedStringArray = []
+	for b: Button in _menu_buttons_in_order():
+		out.append(str(b.get_meta("menu_id")))
+	return out
+
+
+func _menu_buttons_in_order() -> Array[Button]:
+	var out: Array[Button] = []
 	for c: Node in _menu.get_children():
-		if c.has_meta("menu_id"):
-			out.append(str(c.get_meta("menu_id")))
+		var row: Array[Node] = [c]
+		if not c is Button:
+			row = c.get_children()
+		for n: Node in row:
+			if n is Button and n.has_meta("menu_id"):
+				out.append(n as Button)
 	return out
 
 
@@ -326,6 +394,7 @@ func _build_world() -> void:
 	_mopsula.name = "Mopsula"
 	_mopsula.transform = SafeRoomSet.anchor(&"mopsula_spot", stand_in)
 	add_child(_mopsula)
+	_place_figures()                           # 06 package A: the hero stands in front
 	_bang = Label3D.new()
 	_bang.name = "SceneMarker"
 	_bang.text = "!"
@@ -410,11 +479,19 @@ func _idle_line() -> void:
 func _set_status(text: String, col: Color) -> void:
 	_status.text = UiUtil.glyph_safe(text)
 	_status.add_theme_color_override("font_color", col)
-	_status.modulate.a = 1.0
-	if is_inside_tree():
-		var tw: Tween = create_tween()
-		tw.tween_interval(4.0)
-		tw.tween_property(_status, "modulate:a", 0.0, 0.5)
+	if _status_panel != null:
+		_status_panel.add_theme_stylebox_override("panel", UiUtil.box_style(Color(UiTheme.C_PANEL, 0.92), col, 2, 0.21,
+			18, 6))
+		_status_panel.visible = text != ""
+		_status_panel.modulate.a = 1.0
+	if _heal_banner != null:
+		_heal_banner.visible = false            # one banner at a time
+	if _status_tween != null and _status_tween.is_valid():
+		_status_tween.kill()
+	if is_inside_tree() and _status_panel != null:
+		_status_tween = create_tween()
+		_status_tween.tween_interval(4.0)
+		_status_tween.tween_property(_status_panel, "modulate:a", 0.0, 0.5)
 
 
 func _refresh_menu_labels() -> void:
@@ -424,25 +501,27 @@ func _refresh_menu_labels() -> void:
 	_set_button_text("lootbox", "Lootboxen (%d)" % n)
 	(menu_buttons["lootbox"] as Button).disabled = n <= 0
 	_set_button_text("mopsula", "Mopsula")
+	var lead_l: Label = (menu_buttons["hero"] as Button).find_child("Lead", true, false) as Label
+	if lead_l != null:
+		lead_l.text = "%s führt" % ("Graf" if Game.hero() == "mopsula" else UiUtil.player_name())
 	var badge: Control = (menu_buttons["mopsula"] as Button).find_child("Badge", true, false) as Control
 	if badge != null:
 		badge.visible = pending_scene != null
-	_set_button_text("save", "Speichern" if Game.mode != &"event_offline" else "Speichern (Event: aus)")
+	_set_button_text("save", "Speichern")
 	_header_sub.text = "Credits %s  ·  Countdown angehalten%s" % [UiUtil.fmt_int(UiUtil.credits()),
 		(": " + UiUtil.fmt_time(floori(Game.time_left()))) if Game.state != null and Game.state.floor_run != null and
 		Game.state.floor_run.timer_started else ""]
-	var list: Array[Control] = []
-	for c: Node in _menu.get_children():
-		if c is Button:
-			list.append(c as Control)
-			_style_enabled(c as Button)
-	UiUtil.wire_vertical(list)
-	_refresh_talent_cta(list)
+	for b: Button in _menu_buttons_in_order():
+		_style_enabled(b)
+	var save_b: Button = menu_buttons.get("save") as Button
+	if save_b != null and Game.mode == &"event_offline":   # no saving in event runs: dimmed, the press explains why
+		(save_b.find_child("Text", true, false) as Label).add_theme_color_override("font_color", UiTheme.C_TEXT_DIM)
+	_refresh_talent_cta()
+	_wire_menu_focus()
 
 
-## 06 package B: the call-to-action shows the open talent choices; ui_right from every menu entry reaches it,
-## ui_left leads back to the first menu entry.
-func _refresh_talent_cta(list: Array[Control]) -> void:
+## 06 package B: the call-to-action shows the open talent choices (its focus: _wire_menu_focus).
+func _refresh_talent_cta() -> void:
 	if _talent_cta == null:
 		return
 	var n: int = Talents.open_choices(Game.state, DB.data) if Game.state != null else 0
@@ -450,26 +529,60 @@ func _refresh_talent_cta(list: Array[Control]) -> void:
 	var sub: Label = _talent_cta.find_child("Sub", true, false) as Label
 	if sub != null:
 		sub.text = "1 Talentwahl offen" if n == 1 else "%d Talentwahlen offen" % n
-	for c: Control in list:
-		c.focus_neighbor_right = c.get_path_to(_talent_cta) if n > 0 else NodePath("")
-	if not list.is_empty():
-		_talent_cta.focus_neighbor_left = _talent_cta.get_path_to(list[0])
-	_talent_cta.focus_neighbor_top = _talent_cta.get_path_to(_talent_cta)
-	_talent_cta.focus_neighbor_bottom = _talent_cta.get_path_to(_talent_cta)
-	_talent_cta.focus_neighbor_right = _talent_cta.get_path_to(_talent_cta)
+
+
+## Focus through the menu rows (02_TECH §10.2 rule 2): ui_up / ui_down move between the rows and wrap (from a row of
+## two to its left entry), a row of two is crossed with ui_left / ui_right; ui_right from the right end of every row
+## reaches the TALENT-SHOW button while it is shown (06 package B), ui_left from there leads back to the first row
+## (level with it). Tab order = reading order (menu_ids(), then the TALENT-SHOW button).
+func _wire_menu_focus() -> void:
+	var rows: Array[Array] = []
+	for c: Node in _menu.get_children():
+		var kids: Array[Node] = [c]
+		if not c is Button:
+			kids = c.get_children()
+		var row: Array[Control] = []
+		for n: Node in kids:
+			if n is Button and n.has_meta("menu_id"):
+				row.append(n as Control)
+		if not row.is_empty():
+			rows.append(row)
+	var cta: Control = _talent_cta if _talent_cta != null and _talent_cta.visible else null
+	var order: Array[Control] = []
+	for i in rows.size():
+		var row: Array = rows[i]
+		var above: Array = rows[(i + rows.size() - 1) % rows.size()]
+		var below: Array = rows[(i + 1) % rows.size()]
+		for j in row.size():
+			var b: Control = row[j]
+			b.focus_neighbor_top = b.get_path_to(above[mini(j, above.size() - 1)])
+			b.focus_neighbor_bottom = b.get_path_to(below[mini(j, below.size() - 1)])
+			b.focus_neighbor_left = b.get_path_to(row[j - 1] if j > 0 else b)
+			var right: Control = row[j + 1] if j < row.size() - 1 else (cta if cta != null else b)
+			b.focus_neighbor_right = b.get_path_to(right)
+			order.append(b)
+	if cta != null:
+		order.append(cta)
+		var first: Array = rows[0]
+		cta.focus_neighbor_left = cta.get_path_to(first[first.size() - 1])
+		cta.focus_neighbor_top = cta.get_path_to(cta)
+		cta.focus_neighbor_bottom = cta.get_path_to(cta)
+		cta.focus_neighbor_right = cta.get_path_to(cta)
+	for k in order.size():
+		order[k].focus_previous = order[k].get_path_to(order[(k + order.size() - 1) % order.size()])
+		order[k].focus_next = order[k].get_path_to(order[(k + 1) % order.size()])
 
 
 func _build_talent_cta(frame: Control) -> void:
 	var b: Button = UiUtil.button("", &"ButtonBig")
 	b.name = "TalentShowButton"
 	b.set_meta("menu_id", "talents")
-	b.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	b.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	b.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	b.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	b.offset_left = -380
 	b.offset_right = -8
-	b.offset_top = -78 - 80
-	b.offset_bottom = -78
+	b.offset_top = CTA_TOP                     # hit area 88 px, visible box 80 px (touch_pad below)
+	b.offset_bottom = CTA_TOP + UiTheme.TOUCH_HIT
 	var normal: StyleBoxFlat = UiUtil.box_style(Color(UiTheme.C_PANEL, 0.95), UiTheme.C_GOLD, 3, 0.0, 16, 8)
 	normal.set_corner_radius_all(8)
 	var hover: StyleBoxFlat = normal.duplicate() as StyleBoxFlat
@@ -497,6 +610,7 @@ func _build_talent_cta(frame: Control) -> void:
 	sub.name = "Sub"
 	col.add_child(sub)
 	b.pressed.connect(func() -> void: activate("talents"))
+	UiUtil.touch_pad(b, 80.0)
 	b.visible = false
 	frame.add_child(b)
 	_talent_cta = b
@@ -561,57 +675,53 @@ func _build_ui() -> void:
 	col.position = Vector2(8, 60)
 	col.custom_minimum_size = Vector2(380, 0)
 	frame.add_child(col)
+	# 06 package A: tag and room name share one line (7 menu entries must fit above the chat ticker)
+	var head: HBoxContainer = UiUtil.hbox(12)
+	col.add_child(head)
 	var tag: PanelContainer = PanelContainer.new()
 	tag.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	tag.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	tag.add_theme_stylebox_override("panel", UiUtil.box_style(UiUtil.C_EXIT, Color(0, 0, 0, 0), 0, 0.21, 14, 2))
-	col.add_child(tag)
+	head.add_child(tag)
 	var tl: Label = UiUtil.label("SAFE ROOM", &"", 15, UiUtil.C_INK)
 	tl.add_theme_font_override("font", UiTheme.font_bold())
 	tl.add_theme_constant_override("outline_size", 0)
 	tag.add_child(tl)
-	var title: Label = UiUtil.label(str(_info.get("name", "Safe Room")).to_upper(), &"LabelTitle", 38)
-	col.add_child(title)
+	var title: Label = UiUtil.label(str(_info.get("name", "Safe Room")).to_upper(), &"LabelTitle", TITLE_SIZE)
+	title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head.add_child(title)
 	_header_sub = UiUtil.label("", &"LabelSmall", 16)
 	col.add_child(_header_sub)
-	col.add_child(UiUtil.spacer(4))
-	_menu = UiUtil.vbox(12)                  # 12 px between hit areas (02_TECH §10.2 rule 5)
+	col.add_child(UiUtil.spacer(2))
+	_menu = UiUtil.vbox(MENU_GAP)            # 12 px between the hit areas (02_TECH §10.2 rule 5)
 	_menu.name = "Menu"
 	col.add_child(_menu)
-	for e: Array in [["save", "Speichern", &"floppy"], ["lootbox", "Lootboxen", &"box"],
-		["vending", "Automat", &"vending"],
-			["equipment", "Ausrüstung", &"sword"], ["mopsula", "Mopsula", &"paw"], ["leave", "Weiter", &"door"]]:
-		var b: Button = UiUtil.button("", &"ButtonBig")
-		b.name = "Menu_" + str(e[0])
-		b.set_meta("menu_id", str(e[0]))
-		b.custom_minimum_size = Vector2(380, 64)
-		var row: HBoxContainer = UiUtil.hbox(14)
-		UiUtil.full_rect(row)
-		row.offset_left = 20
-		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		b.add_child(row)
-		var icon_col: Color = UiUtil.C_EXIT if str(e[0]) == "leave" else (UiTheme.C_GOLD if str(e[0]) == "mopsula"
-			else UiTheme.C_ACCENT_2)
-		var ic: Control = UiIcon.make(e[2] as StringName, icon_col, 28)
-		ic.name = "Icon"
-		ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		row.add_child(ic)
-		var l: Label = UiUtil.label(str(e[1]), &"", 24)
-		l.name = "Text"
-		l.add_theme_font_override("font", UiTheme.font_bold())
-		l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(l)
-		if str(e[0]) == "mopsula":
-			row.add_child(_new_badge())
-		row.add_child(UiUtil.spacer(0, 16))
-		var id: String = str(e[0])
-		b.pressed.connect(func() -> void: activate(id))
-		_menu.add_child(b)
-		menu_buttons[id] = b
-	_status = UiUtil.label("", &"", 17, UiTheme.C_OK)
+	for ids: Array in MENU_ROWS:
+		if ids.size() == 1:
+			_menu.add_child(_menu_button(str(ids[0]), false))
+			continue
+		var pair: HBoxContainer = UiUtil.hbox(MENU_GAP)
+		pair.name = "Row_" + "_".join(PackedStringArray(ids))
+		_menu.add_child(pair)
+		for id_v: Variant in ids:
+			pair.add_child(_menu_button(str(id_v), true))
+	# 06 package A: the status (saved, switched, …) is a top-centre banner like the heal banner — the menu column has
+	# no room left below its 7 entries
+	_status_panel = PanelContainer.new()
+	_status_panel.name = "StatusBanner"
+	_status_panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_status_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_status_panel.offset_top = 70
+	_status_panel.offset_left = -40
+	_status_panel.offset_right = 120
+	_status_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_status_panel.visible = false
+	frame.add_child(_status_panel)
+	_status = UiUtil.label("", &"", 18, UiTheme.C_OK)
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_status.custom_minimum_size = Vector2(380, 0)
-	col.add_child(_status)
+	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_status_panel.add_child(_status)
 	var hints: HBoxContainer = UiUtil.hbox(14)
 	_hints = hints
 	hints.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
@@ -642,6 +752,44 @@ func _build_ui() -> void:
 		tw.tween_interval(2.6)
 		tw.tween_property(_heal_banner, "modulate:a", 0.0, 0.5)
 	_refresh_menu_labels()
+
+
+## One menu entry (icon + bold label; Mopsula: "NEU" badge, Figur wechseln: "… führt"): a 64 px visible box inside a
+## hit area of UiTheme.TOUCH_HIT (UiUtil.touch_pad, 02_TECH §10.2 rule 5) — full width or half of a row of two.
+func _menu_button(id: String, half: bool) -> Button:
+	var entry: Array = MENU_ENTRIES[id]
+	var b: Button = UiUtil.button("", &"ButtonBig")
+	b.name = "Menu_" + id
+	b.set_meta("menu_id", id)
+	b.custom_minimum_size = Vector2((MENU_W - MENU_GAP) * 0.5 if half else MENU_W, MENU_BOX_H)
+	var row: HBoxContainer = UiUtil.hbox(8 if half else 14)
+	UiUtil.full_rect(row)
+	row.offset_left = 12 if half else 20
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(row)
+	var icon_col: Color = UiUtil.C_EXIT if id == "leave" else (UiTheme.C_GOLD if id == "mopsula" else UiTheme.C_ACCENT_2)
+	var ic: Control = UiIcon.make(entry[1] as StringName, icon_col, 26 if half else 28)
+	ic.name = "Icon"
+	ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(ic)
+	var l: Label = UiUtil.label(str(entry[0]), &"", 21 if half else 24)   # "Ausrüstung" fits a half row
+	l.name = "Text"
+	l.add_theme_font_override("font", UiTheme.font_bold())
+	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(l)
+	if id == "mopsula":
+		row.add_child(_new_badge())
+	if id == "hero":
+		var lead: Label = UiUtil.label("", &"", 16, UiTheme.C_TEXT_DIM)
+		lead.name = "Lead"
+		lead.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(lead)
+	row.add_child(UiUtil.spacer(0, 8 if half else 16))
+	b.pressed.connect(func() -> void: activate(id))
+	UiUtil.touch_pad(b, MENU_BOX_H)
+	menu_buttons[id] = b
+	return b
 
 
 ## Gold "NEU" pill on the Mopsula entry while a scene is pending (HYPE_GOLD with INK text, 03_ART §2.4).

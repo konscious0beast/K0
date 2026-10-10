@@ -81,7 +81,7 @@ y=0   [D FB  ]---[D TR  ]---[D d3  ]      .       [C     ]---[C QB  ]   [C c2  ]
 y=1      .       [D d2  ]---[D SR3 ]      .       [C c3  ]      .       [C ev  ]      .
                     |                                |                     |
 y=2      .       [D d1  ]      .          .       [C     ]---[C c1  ]---[C     ]      .
-                    ‖                                ‖                     |
+                    ‖                                ‖          ┆          |
 y=3      .       [A a4  ]      .       [B b2  ]---[B ev  ]---[B b3  ]---[B SR2 ]      .
                     |                     |          |          |
 y=4      .       [A a2  ]---[A a3  ]---[B     ]---[B b1  ]---[B     ]      .          .
@@ -93,11 +93,19 @@ y=6      .       [A tut ]      .          .          .          .          .    
 y=7      .       [A ST  ]      .          .          .          .          .          .
 ```
 
-`---`/`|` = offene Tür, `‖` = Tor (Kap. 2.6/2.8). Kürzel: ST Start, tut Tutorial, SR1–3 Safe Rooms, QB Quartier-Boss, FB Etagenboss, TR Treppe, ev Event. **Türregel:** Orthogonal benachbarte Zellen **derselben Zone** sind verbunden,
+`---`/`|` = offene Tür, `‖` = Tor (Kap. 2.6/2.8), `┆` = Kulissenwand (Geheimnis, 06 §2.7). Kürzel: ST Start, tut Tutorial, SR1–3 Safe Rooms, QB Quartier-Boss, FB Etagenboss, TR Treppe, ev Event. **Türregel:** Orthogonal benachbarte Zellen **derselben Zone** sind verbunden,
 außer (5,0)↔(6,0). Zonenübergänge gibt es **nur** an: A(2,4)↔B(3,4), B(6,3)↔C(6,2), Tor `gate_track9` A(1,3)↔D(1,2)
 (benötigt `itm_key_master`), Tor `gate_lever` B(4,3)↔C(4,2) (`requires: "event:fev_lever"`, öffnet bei Erfolg von `fev_lever`).
 (`gate_track9`/`gate_lever` sind Namen in diesem Dokument; in den Daten ist ein Tor `{cell, dir, requires}`.)
+Dazu kommt **eine Kulissenwand** `sec_e1_wall_sewer` B(5,3)↔C(5,2) (06 §2.7, `layout.secrets`): eine rissige Pappwand in einer
+Türöffnung, die nur der Feldschlag oder das Bellen umwirft — dann ist sie eine Abkürzung (2 Zellwechsel je Richtung, solange
+`gate_lever` zu ist; im Bot gemessen ≈ 6 s je Durchquerung). Sie ist **optional**: jede Zelle bleibt ohne sie erreichbar.
 Alle anderen Nachbarschaften zwischen Zonen sind Wände.
+
+**Regie-Notizen** (06 §2.7, `layout.secrets`, je **+15 Follower** genau einmal, M.O.D. liest sie vor `regie_note:<n>`, Zähler
+„Regie-Notizen n/3“ in der Etagen-Bilanz): `sec_e1_note_1` Kiosk-Rückseite (2,5) · `sec_e1_note_2` hinter der Kulissenwand
+(5,2), erscheint erst, wenn die Wand fällt · `sec_e1_note_3` Heizungskeller (6,0). Ein Notizständer mit leuchtendem Post-it,
+Prompt „Regie-Notiz lesen“ (Graf: „… beschnuppern“).
 
 | Zelle | Zone | Art (`RoomCell.Kind`) | Name | Inhalt (Gruppe · Zustand / Truhe · Typ / Event / Sonstiges) |
 |---|---|---|---|---|
@@ -105,7 +113,7 @@ Alle anderen Nachbarschaften zwischen Zonen sind Wände.
 | (1,6) | A | NORMAL | Tutorial-Gang | `f1_g0` = `enc_f1_a1_tutorial` · IDLE, Blick Norden, dreht nie |
 | (1,5) | A | NORMAL | Kreuzung | `fev_photo_drone`; `f1_c0` wood |
 | (0,5) | A | NORMAL | Fundbüro | `f1_g4` = `enc_f1_a_rare` · IDLE (steht still); `f1_c1` metal (`itm_arm_safety_vest`) |
-| (2,5) | A | SAFE | Kiosk 24/7 | `sr_kiosk` |
+| (2,5) | A | SAFE | Kiosk 24/7 | `sr_kiosk`; Regie-Notiz 1 |
 | (1,4) | A | NORMAL | Bahnsteighalle | `f1_g1` = `enc_f1_a2` · PATROL; `f1_c2` wood |
 | (2,4) | A | NORMAL | Ostgang | `f1_g2` = `enc_f1_a3` · IDLE; `fev_lost_candidate` (Telefonzelle); Übergang B |
 | (1,3) | A | NORMAL | Nordende | `f1_g3` = `enc_f1_a4` · PATROL; `f1_c3` wood; Tor `gate_track9` nach Norden |
@@ -116,13 +124,13 @@ Alle anderen Nachbarschaften zwischen Zonen sind Wände.
 | (4,5) | B | NORMAL | Rattennest | `f1_g8` = `enc_f1_b4` · IDLE; `f1_c7` metal (`itm_smelling_salts` ×2) |
 | (3,3) | B | NORMAL | Schieberkammer | `f1_g6` = `enc_f1_b2` · PATROL (Schamanen-Spruch B4) |
 | (4,3) | B | NORMAL | Hebelraum | `fev_lever`; Tor `gate_lever` nach Norden |
-| (5,3) | B | NORMAL | Rohrgang | `f1_g7` = `enc_f1_b3` · PATROL; `f1_c8` wood |
+| (5,3) | B | NORMAL | Rohrgang | `f1_g7` = `enc_f1_b3` · PATROL; `f1_c8` wood; Kulissenwand `sec_e1_wall_sewer` nach Norden |
 | (6,3) | B | SAFE | Pumpenhaus | `sr_pumphouse`; Übergang C nach Norden |
 | (6,2) | C | NORMAL | Kellertreppe | `f1_c9` wood |
-| (5,2) | C | NORMAL | Kohlenkeller | `f1_g9` = `enc_f1_c1` · PATROL |
+| (5,2) | C | NORMAL | Kohlenkeller | `f1_g9` = `enc_f1_c1` · PATROL; Regie-Notiz 2 hinter der Kulissenwand |
 | (4,2) | C | NORMAL | Hebelausgang | `f1_c10` wood |
 | (6,1) | C | NORMAL | Waschkeller | `fev_broken_vending` |
-| (6,0) | C | NORMAL | Heizungskeller | `f1_g10` = `enc_f1_c2` · IDLE; `f1_c11` metal (`itm_acc_gas_mask`) |
+| (6,0) | C | NORMAL | Heizungskeller | `f1_g10` = `enc_f1_c2` · IDLE; `f1_c11` metal (`itm_acc_gas_mask`); Regie-Notiz 3 |
 | (4,1) | C | NORMAL | Kellergang | `f1_g11` = `enc_f1_c3` · PATROL; `f1_c12` locked (`itm_wpn_fire_axe`) |
 | (4,0) | C | NORMAL | Vorzimmer | Türschild „Zutritt nur für Personal“ |
 | (5,0) | C | QUARTER_BOSS | Hausmeister-Büro | `f1_qb` = `enc_f1_boss_hausmeister` |
@@ -171,12 +179,14 @@ Schaufensterpuppen, Food-Court mit Pilzbewuchs, Dauer-Durchsagen „Nur heute!�
 | Schleichen | **2.5 m/s**, solange Action `sneak` gehalten wird (Shift / L3 / LT); Touch: Stick-Auslenkung ≤ 0.6 (Kap. 14.8). Hör-Radius der Gegner 4.0 → 1.5 m |
 | Beschleunigung / Abbremsen | 30 m/s² / 40 m/s² |
 | Drehgeschwindigkeit Modell | Slerp 12 rad/s zur Bewegungsrichtung |
-| Kollision | `CapsuleShape3D` r = 0.4 m, h = 1.7 m |
+| Gesteuerte Figur (06 §1) | **Kai** (Standard) oder **Graf Mopsula** — Wahl bei „Neues Spiel“ (Kap. 14.2), Wechsel jederzeit im Safe Room („Figur wechseln“, Kap. 14.7). Die andere Figur folgt. Tempo, Beschleunigung und Kamera sind für beide gleich (Timer-Balancing unverändert) |
+| Kollision | Kai `CapsuleShape3D` r = 0.4 m, h = 1.7 m; Graf Mopsula r = 0.35 m, h = 0.9 m |
 | Springen / Sprinten | keins |
-| **Aktion** (eine Action `action`: F / Space / Enter, Gamepad A (Button 0), Touch-Button „Aktion“ 96 px) | Liegt ein Interactable im Radius 1.5 m und im 120°-Kegel vor Kai (Prompt sichtbar) → **Interagieren** (hat Vorrang). Sonst → **Feldschlag**: Bogen 100°, Reichweite 1.8 m, Dauer 0.45 s, Cooldown 0.6 s |
-| Mopsula folgt | Zielabstand 1.8 m hinter Kai (NavigationAgent3D), Teleport, wenn > 10 m entfernt |
+| **Aktion** (eine Action `action`: F / Space / Enter, Gamepad A (Button 0), Touch-Button „Aktion“ 96 px) | Liegt ein Interactable im Radius 1.5 m und im 120°-Kegel vor der Figur (Prompt sichtbar) → **Interagieren** (hat Vorrang; Mopsula öffnet Truhen „mit der Schnauze“). Sonst die **Feldfähigkeit**: Kai **Feldschlag** (Bogen 100°, Reichweite 1.8 m, Dauer 0.45 s, Cooldown 0.6 s); Graf Mopsula **Bellen** (Kegel 120°, 4.0 m, 0.4 s, Cooldown 3.0 s): Gruppen im Kegel mit Sichtlinie sind 2.5 s **verdutzt** (stehen still, violettes „?!“, sehen und hören nichts). Bellen startet **nie** einen Kampf; jede Gruppe ist höchstens 1× je 15 s verdutzbar; Bosse und der Fahrscheinfresser „zucken nur“ |
+| Begleiter:in folgt | Zielabstand 1.8 m hinter der gesteuerten Figur (Spur, ohne NavigationServer), Teleport, wenn > 10 m entfernt |
 
 Q/E bleiben Kamera-Drehung (`cam_left`/`cam_right`). Es gibt **keine** getrennten Actions `attack`/`interact` und keine Action `sprint`.
+Spielweisen: Kai eröffnet Kämpfe sauber (Feldschlag), der Graf schleicht vorbei oder erwischt verdutzte Gruppen von vorn.
 
 ### 2.2 Kamera (Werte identisch mit 02_TECH §7.3 und 03_ART §8.1)
 
@@ -230,7 +240,7 @@ gleich für alle Regeln. Die Regel gilt identisch in 02_TECH §7.3.
 
 | Ergebnis (`BattleSetup.Advantage`) | Bedingung (in dieser Reihenfolge geprüft) | Effekt im Kampf |
 |---|---|---|
-| **Präventivschlag** (`PREEMPTIVE`) | (a) Feldschlag trifft Symbol UND (`state` ∈ {`IDLE`,`PATROL`} ODER `dot(fwd_e, d_ek) < BACK_DOT`) — ODER — (b) Kontakt, Symbol **nicht** in `CHASE` UND `dot(fwd_e, d_ek) < BACK_DOT` (Kai berührt den Rücken) | Party startet mit `ctr = 0`, Gegner mit `ctr = base_delay` (voller Zug). Hype +3. Flucht +25 %. |
+| **Präventivschlag** (`PREEMPTIVE`) | (a) Feldschlag trifft Symbol UND (`state` ∈ {`IDLE`,`PATROL`,`DAZED`} ODER `dot(fwd_e, d_ek) < BACK_DOT`) — ODER — (b) Kontakt mit einem **verdutzten** Symbol (`DAZED`, Bellen) aus **jeder** Richtung — ODER — (c) Kontakt, Symbol **nicht** in `CHASE` UND `dot(fwd_e, d_ek) < BACK_DOT` (die Figur berührt den Rücken) | Party startet mit `ctr = 0`, Gegner mit `ctr = base_delay` (voller Zug). Hype +3. Flucht +25 %. |
 | **Hinterhalt** (`AMBUSH`) | Kontakt, Symbol in `CHASE` UND `dot(fwd_k, d_ke) < BACK_DOT` (Gegner kommt von hinten) | Gegner starten mit `ctr = 0`, Party mit `ctr = base_delay`. Hype +5 (Drama). |
 | **Normal** (`NORMAL`) | alles andere (auch Feldschlag auf `ALERT`/`CHASE` von vorn) | Alle `ctr = roundi(base_delay × rng.randf_range(0.5, 1.0))` |
 
@@ -291,7 +301,8 @@ Streuner, Uhren auf 0). Grinden kostet also Timer — gewollter Trade-off.
 - Interagieren → Bestätigung: „Etage verlassen? Offene Truhen und der Etagenboss bleiben zurück.“ [Abstieg] [Noch nicht]
 - Abstieg (`Game.complete_floor()`), in dieser Reihenfolge:
   1. Timer stoppt; Trigger `floor_completed {floor, timer_left}`; M.O.D. `floor_end`.
-  2. **Etagen-Bilanz** (`scenes/ui/floor_summary.tscn`) aus `FloorRun.stats = {time_used, kills, viewers_peak, followers_gained, achievements}`.
+  2. **Etagen-Bilanz** (`scenes/ui/floor_summary.tscn`) aus `FloorRun.stats = {time_used, kills, viewers_peak, followers_gained, achievements}`;
+     auf Etagen mit Regie-Notizen zusätzlich die Zeile **„Regie-Notizen n/3“** (06 §2.7).
   3. Nächste Etage existiert (`floor_2`): `Game.start_floor(2)` + `Save.autosave()` (aktiver Slot, Stand Etage 2, Ort `start`).
   4. Ist sie `playable == false` (Slice): Abspann (`SCENE_CREDITS`) mit Teaser-Kamerafahrt → Titel; sonst Erkundung der neuen Etage.
 - Laden eines Slots, dessen Etage nicht spielbar ist → direkt Abspann → Titel.
@@ -1410,6 +1421,7 @@ Pro Wurf: zuerst Rarität nach diesen Gewichten, dann Eintrag aus `pools.f<etage
 | **Lootboxen** | Öffnen (Kap. 9.4) |
 | **Automat** | Kaufen / Verkaufen (Kap. 6.5), Mengenwahl 1–9, Vorschau Stat-Änderung (grün/rot) |
 | **Ausrüstung** | Ausrüsten beider Charaktere |
+| **Figur wechseln** (06 §1.6) | Kai ↔ Graf Mopsula als gesteuerte Figur; kostenlos, nur hier (die Erkundung bleibt lesbar). Die Figuren tauschen im Raum die Plätze, Banner „Jetzt führt: …“, M.O.D. `hero_switch:<id>`; aufgezeichnet (Command `hero`) |
 | **Mopsula** | Gesprächsszene, wenn eine verfügbar ist (Ausrufezeichen über Mopsula); sonst Zufalls-Einzeiler (Tag `mopsula_idle`, Kap. 11.3) |
 | **Verlassen** | Tür → Erkundung (`FloorRun.location = &"start"`), Timer läuft weiter |
 
@@ -1595,8 +1607,16 @@ Validator: max. **110 Zeichen** je Zeile, nur obige Platzhalter.
 | `event_broken_vending_ok` | mod | „Zwei Dosen KRAWUMM! Vandalismus lohnt sich. Das haben Sie nicht von mir.“ |
 | `event_broken_vending_fail` | mod | „Der Automat hat zurückgetreten. Mit 230 Volt. Das Publikum klatscht.“ |
 | `achievement:<id>` | mod | je 1 Zeile aus Kap. 8 (29) |
+| `hero_pick:kai` / `hero_pick:mopsula` | mod | Intro-Schluss nach der Figurenwahl (06 §1.5): „Kandidat:in {name} übernimmt. Der Graf assistiert. Unter Protest, aber in HD.“ / „Der Graf hat die Fernbedienung an sich genommen. {name} darf folgen. Die Quote jubelt.“ |
+| `hero_switch:kai` | mod | „Rollentausch! {name} führt wieder. Der Graf nennt es ‚wohlverdiente Siesta‘.“ · „{name} übernimmt die Führung, der Graf das Sofa. Gerechte Arbeitsteilung.“ |
+| `hero_switch:mopsula` | mod | „Rollentausch! Der Graf führt. Bitte Abstand halten, er bellt in Stereo.“ · „Der Graf übernimmt. {name} darf sich ausruhen. Unter Beobachtung, versteht sich.“ |
+| `tutorial_explore:mopsula` / `tutorial_sneak:mopsula` | mod | B1-Hinweise, wenn der Graf führt (sonst `tutorial_explore`/`tutorial_sneak`): „Willkommen in der Unterstadt, Graf! Laufen Sie los – {name} kommt hinterher. Die Kamera auch.“ / „Da vorn schlafen zwei Ratten. Bellen Sie, Graf – verdutzte Monster erwischt man von jeder Seite zuerst.“ |
+| `chat_bark` | chat | nach einem Bellen mit Treffer: „WUFF IN HD“ · „der graf hat gesprochen“ · „ich hab mich auch erschrocken“ |
+| `secret_wall` | mod | Kulissenwand fällt: „Die Wand war aus Pappe. Wie unser Budget. Bitte schneiden Sie das raus.“ · „Sie haben hinter die Kulissen geschaut. Das kostet normalerweise extra.“ |
+| `regie_note:1` … `:3` | mod | Regie-Notizen: „Regie-Notiz am Kiosk: ‚Sandwiches sind Requisite. NICHT ESSEN.‘ Das erklärt einiges.“ · „Hinter der Kulisse klebt ein Zettel: ‚Wand ist aus Pappe. Merkt eh keiner.‘ Tja.“ · „Regie-Notiz im Keller: ‚Ratten nach der Show zurück in Kiste 3.‘ Kiste 3 ist leer. Hm.“ |
+| `chat_secret` / `chat_secret_hint` | chat | Wand fällt: „PAPPWAND LOL“ · „wusste ichs, alles kulisse“ · „secret gefunden!!“ — erster Raum neben einer stehenden Kulissenwand: „die rissige wand da… ist die aus pappe??“ · „hau mal gegen die wand mit dem riss“ |
 
-(Gesamt: 90 + 46 + 29 = **165 Zeilen**.)
+(Gesamt: 90 + 46 + 29 = **165 Zeilen**; dazu Block A aus 06 §1.5/§2.7: 21 Zeilen.)
 
 ---
 
@@ -1796,10 +1816,15 @@ Menü (`TitleScreen`): **Fortsetzen** (Slot mit dem neuesten `saved_at_unix`, nu
 ### 14.2 Neues Spiel
 
 1. Slot wählen (3 Slots; belegte zeigen Name, Etage, Level, Spielzeit, Datum) → bei belegtem: „Überschreiben?“
-2. Name eingeben (Standard „Kai“, `LineEdit.max_length = 12`; Bildschirmtastatur für Gamepad/Touch)
-3. Modus: **Prime Time** (Normal) / **Vorabendprogramm** (Leicht: Timer 30:00, Gegnerschaden ×0.75, EXP ×1.2) — später im
+2. **Figurenwahl** „Wen steuerst du?“ (06 §1.1, `hero_select`): zwei große Karten nebeneinander — **Kai** („Tierpfleger:in.
+   Wischmopp. Haut zu.“ · Feldschlag · Nahkampf/Tank) und **Graf Mopsula** („Mops. Magier. Schwer vermittelbar.“ · Bellen ·
+   Magie/Heilung), je mit drehender 3D-Vorschau; Kai hat den Fokus, Links/Rechts wechselt, ein Druck wählt, Zurück → Slots.
+   Fußzeile: „Ihr startet immer zu zweit. Wechseln kannst du jederzeit im Safe Room.“
+3. Name eingeben — immer **Kais** Name (Standard „Kai“, `LineEdit.max_length = 12`; Bildschirmtastatur für Gamepad/Touch). Führt
+   der Graf, fragt er im Pluralis Majestatis: „Wie heißt Unser:e Begleiter:in?“ (Überschrift „BEGLEITER:IN“); Zurück → Figurenwahl
+4. Modus: **Prime Time** (Normal) / **Vorabendprogramm** (Leicht: Timer 30:00, Gegnerschaden ×0.75, EXP ×1.2) — später im
    Optionsmenü nur absenkbar, nicht anhebbar (`GameState.difficulty`, Kap. 2.9)
-4. Intro-Cutscene (B0) → Erkundung Etage 1
+5. Intro-Cutscene (B0, letzte Studiozeile M.O.D. `hero_pick:<id>`) → Erkundung Etage 1
 
 ### 14.3 Erkundungs-HUD
 
@@ -1813,7 +1838,8 @@ Interaktionsprompt über Objekt.
 Tabs: **Party** (Werte, EXP) · **Inventar** (benutzen außerhalb des Kampfes) · **Ausrüstung** · **Fähigkeiten** (Liste + Freischalt-Level,
 `scenes/ui/skills_menu.gd`) · **Achievements** (erhalten / verborgen „???“, `scenes/ui/achievements_menu.gd`) · **Bestiarium**
 (`scenes/ui/bestiary_menu.gd`) · **Optionen** (Lautstärke Master/Musik/SFX, Kampfgeschwindigkeit, Kamera-Empfindlichkeit, Kamera
-invertieren, Modus, Sprache) · **Zum Titel** (Warnung: „Fortschritt seit dem letzten Safe Room geht verloren.“).
+invertieren, Modus, Sprache, **Partner automatisch** — Aus/An, Hilfezeile „Dein:e Partner:in kämpft von selbst.“: die nicht gesteuerte
+Figur kämpft per `AutoPolicy`, nie Stunt/Flucht; ohne Tutorial, 06 §1.4) · **Zum Titel** (Warnung: „Fortschritt seit dem letzten Safe Room geht verloren.“).
 
 **Bestiarium:** Zustand `GameState.bestiary: Dictionary` = `enemy_id → {defeated: int, weak_known: PackedStringArray}`; `defeated` pflegt
 `BattleBridge.apply_result` (Sieg), `weak_known` ergänzt `ShowRules` bei jedem Schwachstellen-Treffer (Element). Einträge erscheinen ab
@@ -1826,7 +1852,7 @@ der ersten Begegnung (Name, Modell, Lv), Werte/HP ab `defeated ≥ 1`, Schwäche
 | Zugreihenfolge | rechter Rand, vertikal; Eintrag 1: 64 px, 2–12: 42 px | Porträt-Icons (Party blau umrandet #4AA8FF, Gegner rot #E8455A, Zug grau), Geist-Vorschau |
 | Befehlsmenü | unten links, 240×280 px (Zeilen 42 px) | Angriff / Fähigkeit / Item / Stunt (mit Cooldown-Zahl) / Verteidigen / Flucht |
 | Untermenü (Skills/Items) | rechts neben Befehlsmenü | Name, MP-Kosten, Element-Icon, Rang als 1–3 Uhr-Symbole, Beschreibung unten |
-| Party-Panels | unten Mitte/rechts, je 254×74 px | Name, HP-Leiste + Zahl, MP-Leiste + Zahl, Status-Icons, Stunt-Bereitschaft |
+| Party-Panels | unten Mitte/rechts, je 254×74 px | Name, HP-Leiste + Zahl, MP-Leiste + Zahl, Status-Icons, Stunt-Bereitschaft; Pille **DU** (gold) an der gesteuerten Figur, **AUTO** (cyan) an der Partner-Figur, wenn „Partner automatisch“ an ist (06 §1.4) |
 | Gegner-Info | über dem Gegner | Name, HP-Leiste (Zahl erst ab `bestiary.defeated ≥ 1` für den Typ), Status-Icons, Schwächen nach Entdeckung (`weak_known`) |
 | Show-Leiste | oben | LIVE + Zuschauer + Hype-Leiste mit Schwellen-Markern; Sponsor-Bauchbinde links unten über dem Ticker |
 | Chat-Ticker | unten, 22 px | — |
@@ -1846,10 +1872,14 @@ Buttons: **Letzten Spielstand laden** (Gnadenfrist 3:00) · **Zum Titel**. `s.ga
 
 ### 14.7 Safe-Room-Menü
 
-Beim Betreten: Heil-Animation + `safe_room_enter`. Menü (vertikale Liste links, Szene rechts):
-**Speichern** · **Lootboxen (n)** · **Automat** · **Ausrüstung** · **Mopsula** (! wenn Szene verfügbar) · **Weiter**.
-Mit offener Talentwahl (Kap. 4.7) zusätzlich unten rechts der goldene Knopf **TALENT-SHOW** („n Talentwahlen offen“; Fokus:
-Rechts aus dem Menü, erster Fokus nach offenen Lootboxen); er verschwindet, sobald nichts mehr offen ist.
+Beim Betreten: Heil-Animation + `safe_room_enter`. Menü (Spalte links, Szene rechts), fünf Zeilen:
+**Lootboxen (n)** · **Automat | Ausrüstung** (nebeneinander, je halbe Breite) · **Figur wechseln** (Zeile „Kai führt“ / „Graf
+führt“) · **Mopsula** (! wenn Szene verfügbar) · **Speichern | Weiter** (nebeneinander). Jeder Eintrag ist 64 px hoch sichtbar mit
+88 px Trefferfläche, 12 px Abstand — so passen alle sieben Einträge auch im Touch-Layout über den Chat-Ticker, „Weiter“ ohne
+Scrollen. Kopf einzeilig (Raumschild + Name), Statusmeldungen („Gespeichert …“, „Jetzt führt: …“) als Banner oben Mitte.
+Mit offener Talentwahl (Kap. 4.7) zusätzlich oben rechts, auf Höhe des ersten Eintrags, der goldene Knopf **TALENT-SHOW**
+(„n Talentwahlen offen“; frei vom M.O.D.-Kasten unten rechts; Fokus: Rechts vom Ende jeder Menüzeile, erster Fokus nach offenen
+Lootboxen); er verschwindet, sobald nichts mehr offen ist.
 
 ### 14.8 Touch-Layout (nur Querformat, 720p)
 
@@ -1857,7 +1887,7 @@ Rechts aus dem Menü, erster Fokus nach offenen Lootboxen); er verschwindet, sob
 |---|---|---|
 | Virtueller Stick | dynamisch: erscheint am Fingerpunkt in den linken 40 % der Breite; Ruhe-Anzeige bei (147, 573) | Radius 90 px, Knopf 40 px, Deadzone 0.15; Auslenkung > 0.6 = Laufen, ≤ 0.6 = Schleichen |
 | Kamera | Drag in der rechten Fläche (außerhalb von Buttons), Pinch = Zoom | — |
-| **Aktion** (`action`: Interagieren, sonst Feldschlag) | (1147, 587) | 96 px rund, Icon Hand (Prompt aktiv) bzw. Faust |
+| **Aktion** (`action`: Interagieren, sonst Feldfähigkeit) | (1147, 587) | 96 px rund, Icon Hand (Prompt aktiv) bzw. Faust (Kai) / Schallwelle (Graf Mopsula) |
 | Karte (`map`) | (1227, 140) | 64 px |
 | Menü ☰ (`pause`) | (1227, 40) | 64 px |
 | Kampf-Befehle | unten links, 2 Spalten × 3 Zeilen | je 200×64 px sichtbar, 88 px hohe Trefferfläche |

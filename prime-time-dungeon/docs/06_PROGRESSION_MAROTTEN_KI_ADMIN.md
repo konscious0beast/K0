@@ -1256,6 +1256,46 @@ Held:innen-Befehle manuell; Hero-Select-Szene: Default-Fokus, Touch-Trefferfläc
 `tools/perf.sh` ohne Budget-Überschreitung; Screenshots `hero_select`, Erkundung als Mopsula, Kulissenwand vor/nach dem Öffnen;
 GDD §1 (E1-Geheimnisse), §2.1/§14.2 und 03_ART (Bellen-VFX, Riss-Wand) nachgezogen.
 
+**Stand Paket A (2026-10-10, Branch `ptd/feat-hero`):** Kap. 1 **umgesetzt** — Figurenwahl (Slot → Figur → Name → Modus → Intro mit
+`hero_pick:<id>`), Held:in-Steuerung in der Erkundung (Rig + Kapsel je Figur, Partner folgt), Bellen/`DAZED` mit Vorteilsregel,
+„Partner automatisch“, „Figur wechseln“ im Safe Room, M.O.D.-/Chat-Block A, `hero`-Command inkl. `RunSim`/Replay, Save ohne
+Versionssprung, Bot `--hero=mopsula` (in `--strategy=all`). Verträge: 02_TECH CR-16 (§0.5), GDD §2.1/§2.4/§10.1/§11.3/§14.2/§14.4/
+§14.5/§14.7/§14.8, 03_ART Kap. 7 + A16. Abweichungen (bewusst): Party-Panel markiert die Held:in mit einer Pille **„DU“** (und den
+automatischen Partner mit **„AUTO“**) statt eines Sterns — lesbarer auf Touch; die Startwahl wird **immer** aufgezeichnet (auch
+`kai`), damit jeder Lauf-Log die Wahl explizit trägt; die Event-Lobby bietet noch keine Wahl (`start_event_run(…, hero_id)` ist
+vorbereitet, Default `kai`); Bosse/Fahrscheinfresser „zucken nur“ mit „…“-Blase; die Safe-Room-Liste wurde für sieben Einträge
+umgebaut (einzeiliger Kopf, „Speichern | Weiter“ nebeneinander, Status als Banner oben). Ohne Schritt 0 umgesetzt: die geteilten
+Dateien tragen kleine, markierte Blöcke (`# 06 package A`).
+**E1-Geheimnisse (zweiter Commit) umgesetzt:** `core/dungeon/secrets.gd` (`Secrets`), `core/data/validators/secrets.gd`,
+`scenes/exploration/scenery_wall.gd` + `note_interactable.gd`, `layout.secrets` (1 Kulissenwand `sec_e1_wall_sewer` B(5,3)↔C(5,2),
+3 Regie-Notizen), Command `secret {id}` / `Game.open_secret`, Signal `secret_opened`, Minimap (stehende Wand = Wand), Etagen-Bilanz
+„Regie-Notizen n/3“, Bot-Ziele `wall`/`note` + Abkürzungs-Messung, `tests/test_06a_secrets.gd`. Abweichungen: **nur eine** Wand —
+`sec_e1_wall_track` (Nische mit Truhe) bräuchte eine neue Zelle und damit eine neue E1-Karte; Notiz 2 hängt hinter der Wand und
+erscheint erst, wenn sie fällt (der Fund gehört zur Wand); Regie-Notizen sind Notizständer mit Post-it statt Post-its an Wänden
+(Offsets ≤ 4,5 m halten die Randstreifen frei). **Zeitgewinn im Bot gemessen: ≈ 6 s** (1 Durchquerung, 2 Zellwechsel à 3,1 s) statt
+der geschätzten 25–35 s: auf der kompakten E1-Karte spart eine Wand höchstens 2 Zellwechsel je Richtung, und nur solange
+`gate_lever` zu ist (der Hebel scheitert in 40 %). Das Ziel „≥ 20 s“ braucht eine Wand an einem längeren Umweg (neue Zelle/Karte, E2).
+Ansichten: `docs/screenshots/19_hero_select.png`, `20_explore_mopsula_bark.png`, `21_safe_room_hero_switch.png`,
+`22_battle_partner_auto.png`, `23_secret_wall.png`, `24_secret_wall_falls.png`, `25_regie_notiz.png` (Recipes
+`hero_mopsula_<zone>`, `bark_<zone>`, `safe_hero_switch`, `battle_partner_auto`, `secret_wall|open|note` in
+`tests/capture_recipes.gd`).
+
+**Integration A × B (Runde 2, Branch `ptd/int-06`):** (1) **Feld-Talente** verdrahtet: `HeroRules.field_mods(state, data)` liefert
+`field_range_pm`/`field_cd_pm` aus den Talenten der **führenden** Figur (die Talente der folgenden Figur ruhen — „Wirkt, wenn …
+die Gruppe anführt.“); `ExplorationScene` setzt sie beim Aufbau und bei jedem `on_resume` (`PlayerController.set_field_mods`);
+`EncounterRules.scale_pm` rechnet in ganzen Milli-Einheiten mit Rundung (a · pm + 500) / 1000 (1000 = bitgleich): „Weit ausholen“
+→ Feldschlag 2,25 m (auch gegen Kulissenwände), „Bellen in Stereo“ → Bellen 5,0 m (Kegel-FX skaliert), „Schwer vermittelbar“ →
+Bellen-Cooldown 2,1 s. Nicht aufgezeichnet (Szenenlogik), Replays sehen das ausgelöste `encounter`/`secret`. Die Talent-Show-Karte
+sagt bei der führenden Figur „Wirkt sofort: … führt die Gruppe an.“ (2) **Safe-Room-Menü** in fünf Zeilen — Lootboxen ·
+[Automat | Ausrüstung] · Figur wechseln · Mopsula · [Speichern | Weiter] —, jeder Eintrag 64 px sichtbar in 88 px Trefferfläche
+(02_TECH §10.2 Regel 5): passt bei 1280×720 und im Handy-Touch-Layout (1600×720) über den Chat-Ticker, „Weiter“ ohne Scrollen.
+Der TALENT-SHOW-Knopf (B-2) sitzt jetzt **oben rechts** auf Höhe des ersten Eintrags: unten rechts verdeckte ihn der rechtsbündige
+M.O.D.-Kasten, der bei jedem Besuch und nach „Figur wechseln“ spricht. Recipe `safe_hero_talents`, Ansicht
+`docs/screenshots/26_safe_room_hero_talents_phone.png`. (3) **Held:in × Talente:** Angebote, Wahlen und Wirkungen hängen am
+Mitglied, nie an der gesteuerten Figur; „Partner automatisch“ spielt den Partner mit AutoPolicy auf dem Combatant **mit** seinen
+Talenten (Werte, Krit, Element, `talent_mods`). Offen (Design): AutoPolicy stuntet nie — „Taktgefühl“ wirkt für einen automatischen
+Partner (wie im ganzen Auto-Kampf) nicht. Tests: `tests/test_06ab_hero_talents.gd` (je Held:in ein Integrationstest).
+
 ### 8.3 Paket B — Talent-Show + Spezies/Spezialisierung (Datenmodell)
 
 **Ziel:** Talent-Show spielbar (Kap. 2.2: ungerade Level ab L3, gesammelt im Safe Room); Spezies/Casting als geprüftes Datenmodell
@@ -1314,13 +1354,13 @@ Angebotsfolgen der 4 Wahlen je Figur geprüft); Anteil Verhaltens-Talente je Poo
 | # | Entwurf | Gebaut | Grund |
 |---|---|---|---|
 | B-1 | `PartyMember.talent_pending` (gespeicherte Level-Liste) | offene Wahlen **abgeleitet**: ungerade Level ≥ 3 bis zum Level minus Σ Ränge (`Talents.pending_levels`) | kein zweiter Zustand, der auseinanderlaufen kann; alte Spielstände und `StateHash` bleiben byte-gleich (neue Felder nur, wenn gesetzt) |
-| B-2 | Menüeintrag „Talent-Show“ mit „!“-Badge in der Safe-Room-Spalte | **goldener Knopf „TALENT-SHOW“ + „n Talentwahlen offen“** unten rechts, nur solange eine Wahl offen ist; die Menüspalte bleibt bei 6 Einträgen; Pausemenü → Party zeigt „n Wahl(en) offen“ | ein 7. Eintrag schob „Weiter“ aus dem Bild (720p); der Knopf ist auffälliger, verschwindet von selbst und kollidiert nicht mit Paket A („Figur wechseln“) |
+| B-2 | Menüeintrag „Talent-Show“ mit „!“-Badge in der Safe-Room-Spalte | **goldener Knopf „TALENT-SHOW“ + „n Talentwahlen offen“** unten rechts, nur solange eine Wahl offen ist; die Menüspalte bleibt bei 6 Einträgen; Pausemenü → Party zeigt „n Wahl(en) offen“. Integration A × B: oben rechts auf Höhe des ersten Eintrags (unten rechts spricht der M.O.D.-Kasten), Menü in 5 Zeilen mit 88-px-Trefferflächen | ein 7. Eintrag schob „Weiter“ aus dem Bild (720p); der Knopf ist auffälliger, verschwindet von selbst und kollidiert nicht mit Paket A („Figur wechseln“) |
 | B-3 | Liga-Talente wirken bei `MarottenRules.liga_tier(state) ≥ 1` | wirken, solange **diese Figur** weder Rüstung noch Accessoire trägt (`Talents.liga_dressed`) | Paket C (`MarottenRules`) existiert noch nicht; die Regel „ohne Rüstung & ohne Accessoire“ ist je Figur sofort verständlich. Paket C darf auf `liga_tier` umstellen (eine Funktion) |
 | B-4 | Werte-Talente +3–5 % je Rang | STR/MAG/DEF/RES/LCK/SPD als **flache Punkte** (+1/+2), HP/MP/Liga als +5 % | bei L10 sind DEF/RES/LCK ~10–30 Punkte; +5 % wäre 0–1 Punkt (unlesbar) oder durch Rundung sprunghaft. Erschöpfender Test (L10, ohne Ausrüstung): Kai höchstens +15 HP auf 145, +3 DEF auf 22; Mopsula +10 HP auf 96, +3 RES auf 25, +2 LCK auf 18 — alle ≤ +15 % |
 | B-5 | `stunt_window_pm` = Stunt-Zeitfenster | Faktor auf die **Stunt-Erfolgschance** vor Boss-Abzug und Obergrenze (`BattleState.stunt_chance`, GDD §3.6) | die Stunts haben im Slice kein Zeitfenster (Erfolg ist eine Chance); Kartentext „Stunts gelingen 20 % öfter“ |
 | B-6 | Krit/Element/Präventiv in `BattleBridge.make_setup` | Krit/Element in `Progression.to_combatant` (wie die Ausrüstung), Präventiv als `Combatant.talent_mods` → `ActionResolver` (nur erster eigener Zug nach Präventivschlag) | ein Ort für alle Combatant-Werte; Replays und M7-Simulation nutzen denselben Weg |
 | B-7 | — | eine Wahl hebt MaxHP/MaxMP-Zuwachs sofort auf HP/MP (wie ein Level-up, `Progression.follow_max_vitals`) | sonst wirkt „HP +5 %“ erst nach der nächsten Heilung |
-| B-8 | `field_range_pm`, `field_cd_pm`, `marotte_heart` | Werte und APIs da (`Talents.field_range_pm/field_cd_pm/marotte_bonus_hearts`), **Auswertung** folgt mit Paket A (Feldfähigkeit) bzw. C (`MarottenRules`) | Besitzgrenzen 8.1; die Karte sagt „Wirkt, wenn … die Gruppe anführt.“ |
+| B-8 | `field_range_pm`, `field_cd_pm`, `marotte_heart` | Werte und APIs da (`Talents.field_range_pm/field_cd_pm/marotte_bonus_hearts`), **Auswertung** folgt mit Paket A (Feldfähigkeit) bzw. C (`MarottenRules`); Feldfähigkeit umgesetzt in der Integration A × B (`HeroRules.field_mods`, Talente der führenden Figur) | Besitzgrenzen 8.1; die Karte sagt „Wirkt, wenn … die Gruppe anführt.“ |
 | B-9 | `hype_gain_pm`/`follower_pm` | im Kern verdrahtet als **Ganzzahl-Promille** (`GameState.hype_gain_pm/follower_pm` = Ausrüstung, einmal `roundi(x × 1000)`, × `Talents.hype_pm/follower_pm`, je Schritt `(a × b + 500) / 1000`; Show nutzt nur diese; `hype_gain_mult/follower_mult` bleiben reine Ausrüstungs-Floats), im Pool **nicht** verwendet | Kap. 4.8 Nr. 4: Event-Wertung ohne Talent-Multiplikatoren bleibt trivial erfüllt |
 | B-10 | Talent-Reset beim Casting | noch nicht gebaut | kommt mit der Casting-UI (Etage 3) |
 | B-11 | Verifier: `Talents.pick`/`Casting.choose` prüfen selbst (ein gefälschtes Command ändert nichts, der Hash weicht ab) | Integration (Merge mit dem Final-Review): die Legalität steht zusätzlich in `RunRules.command_refusal` — ein gefälschtes `talent`/`casting` ist für `RunSim.replay` **und** `Game.replay_log` ein Fehler in `errors` | gleicher Vertrag wie alle übrigen Commands (05 §11.4, `test_m8_integrity`) |

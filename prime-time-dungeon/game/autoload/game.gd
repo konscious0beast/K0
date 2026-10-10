@@ -174,8 +174,10 @@ func has_state() -> bool:
 	return state != null
 
 
-## seed -1 → time based. Creates GameState, RunLog, RunSim, starts floor 1, emits new_game_started(slot).
-func new_game(slot: int, player_name: String = "Kai", seed: int = -1, difficulty: StringName = &"prime") -> void:
+## seed -1 → time based. Creates GameState, RunLog, RunSim, starts floor 1, records the controlled character
+## (`hero_id`, 06 §1: "kai" | "mopsula", right after "floor"), emits new_game_started(slot).
+func new_game(slot: int, player_name: String = "Kai", seed: int = -1, difficulty: StringName = &"prime",
+		hero_id: String = HeroRules.DEFAULT_HERO) -> void:
 	var run_seed: int = seed
 	if run_seed == -1:
 		run_seed = int(Time.get_unix_time_from_system() * 1000.0) & 0x7FFFFFFF
@@ -188,12 +190,14 @@ func new_game(slot: int, player_name: String = "Kai", seed: int = -1, difficulty
 	run_log = _make_run_log(run_seed, slot, player_name, difficulty, "")
 	sim = _make_sim(state, {})
 	start_floor(1)
+	_choose_initial_hero(hero_id)
 	Events.new_game_started.emit(slot)
 
 
 ## M8: EventCatalog → EventDef.run_seed(); mode = &"event_offline"; slot 0 (never saved into campaign slots).
 ## p_league: the league the player plays in a multi-league event (05 §10.1); "" → the single league / "pur".
-func start_event_run(event_id: String, p_league: String = "") -> void:
+## `hero_id` (06 §1.7): the controlled character, recorded right after "floor" like in new_game.
+func start_event_run(event_id: String, p_league: String = "", hero_id: String = HeroRules.DEFAULT_HERO) -> void:
 	var def: EventDef = _load_event_def(event_id)
 	if def == null:
 		push_warning("[Game] unknown event '%s'" % event_id)
@@ -212,6 +216,7 @@ func start_event_run(event_id: String, p_league: String = "") -> void:
 	run_log = _make_run_log(run_seed, 0, "Kai", &"prime", event_id, league)
 	sim = _make_sim(state, def.rules)
 	start_floor(maxi(1, def.floor_index))
+	_choose_initial_hero(hero_id)
 	Events.run_started.emit(event_id, league)
 
 
@@ -313,7 +318,12 @@ func complete_floor() -> void:
 	Events.floor_completed.emit(state.floor_run.index)
 	if mode == &"event_offline":
 		finish_run(&"floor_completed")
-	Router.goto(Router.SCENE_FLOOR_SUMMARY, {"summary": state.floor_run.summary()}, Router.Transition.FADE)
+	var summary: Dictionary = state.floor_run.summary()
+	var notes: Vector2i = secret_notes()           # 06 package A: "Regie-Notizen 1/3" (only floors with notes)
+	if notes.y > 0:
+		summary["regie_notes"] = notes.x
+		summary["regie_notes_total"] = notes.y
+	Router.goto(Router.SCENE_FLOOR_SUMMARY, {"summary": summary}, Router.Transition.FADE)
 
 
 ## Called by FloorSummary "Weiter".
@@ -657,6 +667,68 @@ func set_difficulty(d: StringName) -> bool:
 ## The settings menu offers lowering the mode only where set_difficulty would accept it.
 func can_lower_difficulty() -> bool:
 	return state != null and mode == &"campaign" and state.difficulty == &"prime"
+
+
+# --- 06 package A: hero choice (HeroRules) ----------------------------------------------------------------------------
+
+## The controlled character (06 §1): "kai" | "mopsula" ("kai" without a run).
+func hero() -> String:
+	return state.hero if state != null else HeroRules.DEFAULT_HERO
+
+
+## The character that follows / may fight on its own ("Partner automatisch").
+func partner() -> String:
+	return HeroRules.partner_of(state)
+
+
+## Records {"t": "hero", "id"} and makes `hero_id` the controlled character. Before the run started (new game, event
+## run) HeroRules.check_initial applies, afterwards check_set (only in a safe room, only a real change). false (nothing
+## recorded, nothing changes) when the check refuses. Emits hero_changed when the hero actually changed.
+func set_hero(hero_id: String) -> bool:
+	if state == null or HeroRules.check(state, hero_id) != "":
+		return false
+	record({"t": "hero", "id": hero_id})
+	var changed: bool = state.hero != hero_id
+	HeroRules.set_hero(state, hero_id)
+	if changed:
+		Events.hero_changed.emit(hero_id)
+	return true
+
+
+## 06 §2.7 (package A): opens an E1 secret — a Kulissenwand (knocked over by the field strike / bark; its door joins
+## opened_gates) or a Regie-Notiz (+15 followers). Secrets.check_open refuses (unknown, already open, note behind a
+## standing wall) → false, nothing recorded. Else record({"t": "secret", "id"}), Secrets.open, followers / M.O.D. line
+## via Show (like the floor events), emits secret_opened(id). The visuals (wall falls, gate_opened) are the
+## ExplorationScene's (open_secret_visual), like open_gate.
+func open_secret(secret_id: String) -> bool:
+	var def: FloorDef = floor_def() if state != null and state.floor_run != null else null
+	if Secrets.check_open(state, def, secret_id) != "":
+		return false
+	record({"t": "secret", "id": secret_id})
+	var fx: Dictionary = Secrets.open(state, def, secret_id)
+	var followers: int = int(fx.get("followers", 0))
+	if followers != 0:
+		Show.add_followers(followers, &"secret")
+	var tag: String = str(fx.get("mod_tag", ""))
+	if tag != "":
+		Show.say(tag)
+	Events.secret_opened.emit(secret_id)
+	return true
+
+
+## Regie-Notizen of the current floor: Vector2i(found, total) (floor summary "Regie-Notizen 1/3").
+func secret_notes() -> Vector2i:
+	if state == null or state.floor_run == null:
+		return Vector2i.ZERO
+	return Secrets.notes_found(state, floor_def())
+
+
+func _choose_initial_hero(hero_id: String) -> void:
+	var id: String = HeroRules.sanitize(hero_id)
+	if id != hero_id:
+		push_warning("[Game] unknown hero '%s' → %s" % [hero_id, id])
+	if not set_hero(id):
+		push_warning("[Game] hero choice '%s' refused (%s)" % [id, HeroRules.check(state, id)])
 
 
 ## run_log.add_cmd(sim.tick(), cmd, cmd_id); no-op if run_log == null or while replaying.

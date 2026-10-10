@@ -69,6 +69,15 @@ static func from_layout(def: FloorDef, floor_seed: int) -> FloorLayout:
 		var gd: int = RoomCell.dir_bit(str(g.get("dir", "")))
 		l.gates.append({"cell": gc, "dir": gd, "requires": str(g.get("requires", "")),
 			"key": FloorLayout.gate_key(gc, gd)})
+	# 06 package A: a Kulissenwand is a closed door ("secret:<id>") until the strike / bark knocks it over (Secrets).
+	for sv: Variant in lay.get("secrets", []):
+		var sd: Dictionary = sv
+		if str(sd.get("kind", "")) != "wall":
+			continue
+		var wc: Vector2i = JsonUtil.arr_to_vec2i(sd.get("cell", []), Vector2i(-999, -999))
+		var wd: int = RoomCell.dir_bit(str(sd.get("dir", "")))
+		l.gates.append({"cell": wc, "dir": wd, "requires": Secrets.REQUIRES_PREFIX + str(sd.get("id", "")),
+			"key": FloorLayout.gate_key(wc, wd)})
 	_finish_graph(l)
 	var vrng: RandomNumberGenerator = SeedUtil.make_rng(floor_seed)
 	for c: Vector2i in l.sorted_cells():

@@ -1399,6 +1399,26 @@ Budget (02_TECH §12.1): ≤ 400 Partikel gleichzeitig, ≤ 6 aktive Emitter. St
 poison 3 Blasen, stun 3 Prism-Sterne `#F5D90A` kreisen r 0.25 @ 2 rad/s, slow Torus 0.35/0.40 `hologram` `#5B8DEF` am Boden,
 haste 2 Prism-Chevrons `#FF7A1A`, guard Hex-Schild `#9AA7B8` α 0.15, taunt Cone 0.08/0.2 `#E8455A` hüpft 0.1 m @ 2 Hz.
 
+**Feldfähigkeiten in der Erkundung** (Szenen-Effekte, kein `Vfx`-Kind, nur Szenen-Meshes mit `FallbackArt.beam`):
+- **Feldschlag (Kai):** goldener Wischmopp-Bogen 100° / 1.8 m in 0.9 m Höhe, `HYPE_GOLD`, 0.15 s ab dem Treffer-Teil des Schwungs.
+- **Bellen (Graf Mopsula, 06 §1.3):** Mopsula-Violett **`#C79BFF`** in 0.45 m Höhe — Kegel-Fläche 120° / 4.0 m (Bogen-Mesh
+  `FallbackArt.arc_mesh`, α 0.35) blitzt 0.18 s, danach laufen **2 Schallwellen-Ringe** (100°-Bogenstreifen, aufgehellt, α 0.85,
+  versetzt) in `BARK_DURATION` 0.4 s von 0.6 m bis zur Reichweite; Kamera-Kick wie beim Schlag; `Sfx` `bark`.
+- **Verdutzt (`DAZED`):** violette „?!“-Blase (`#C79BFF`) über der Gruppe, das Rig wackelt auf der Stelle; Bosse/Fahrscheinfresser
+  „zucken nur“ (kurzes Schütteln + „…“-Blase).
+
+**E1-Geheimnisse** (06 §2.7, `scenes/exploration/scenery_wall.gd`, `note_interactable.gd`):
+- **Kulissenwand:** Pappwand 3.96 × 3.0 × 0.22 m in der Türöffnung (bis zum Sturz). Vorderseite mit dem **Umgebungs-Material der
+  Zone** (`env_tiles`, Fliesen weltfest → die Fugen laufen mit der echten Wand weiter), Farbe = Zonen-`wall` um 15 % aufgehellt;
+  7 Riss-Segmente als Zickzack (INK-Kern 0.06 m mit Putzrand `#B9AD94` 0.15 m — auf dunklen wie hellen Wänden lesbar),
+  8 Staubkörnchen `#CBBFA8` rieseln (CPUParticles3D, ein Emitter). Rückseite: zwei schräge Sperrholz-Streben + Schwelle
+  `#A27B4F` („nur Kulisse“). Risse/Streben/Schwelle = **ein** gemergtes Mesh (`MeshUtil.merge`, `Materials.toon_vc`), Front =
+  ein Mesh → 2 Draw Calls + Staub. Umfallen: kippt um die Unterkante **von der Figur weg** (0.45 s, `TRANS_QUAD`/`EASE_IN`),
+  `hit` beim Start, `door` + Staubwolke (`Vfx` `smoke`, `#CBBFA8`, ×2) beim Aufschlag, nach 0.9 s versinkt sie (0.5 s).
+- **Regie-Notiz:** Notizständer (Stange 1.0 m `#55505E`, Klemmbrett 0.72 × 0.5 `#2A2530`, um 28° zurückgelehnt, zur Raummitte
+  gedreht) mit Post-it `#FFE14D` (0.34 m, Emission 0.6, drei INK-Zeilen) und kleinem Glanzpunkt darüber (`glow`, pulsiert).
+  Lesen: das Post-it fliegt 1.2 m hoch, dreht 1.5× und schrumpft (0.6 s), `coin`; der Ständer bleibt.
+
 ### 7.1 Schadenszahlen (`Vfx.damage_number`, Stile aus 02_TECH)
 
 `Label3D`, `billboard ENABLED`, `no_depth_test true`, `pixel_size 0.004`, `font_size 64`, `outline_size 12`, `outline_modulate INK`, `render_priority 10`.
@@ -1436,7 +1456,7 @@ Game Over = `ui_tv_overlay.test_card` 0→1 in 0.2 s, Buttons nach 1.5 s.
 ### 8.1 Erkundung (`scenes/exploration/camera_rig.gd`, Werte 02_TECH §7.3)
 
 `SpringArm3D` **7.0 m**, Pitch **−38°** (−65…−15), FOV **60**, Kollisionsmaske `world`, Stick-Yaw 2.6 rad/s. Art-Zusätze:
-- Pivot auf Kai + 1.4 m, Follow-Lerp 10/s; `SpringArm3D.shape = SphereShape3D(0.25)`, `margin 0.25`.
+- Pivot auf der gesteuerten Figur (Kai oder Graf Mopsula, 06 §1.2 — gleiche Werte für beide) + 1.4 m, Follow-Lerp 10/s; `SpringArm3D.shape = SphereShape3D(0.25)`, `margin 0.25`.
 - Schwung-Kick: FOV 60→57→60 in 0.15 s. Gegner bemerkt Kai: Armlänge 7.0→6.3→7.0 in 0.4 s.
 - Bei Kollision Arm sofort kürzen (keine Clipping-Frames), Rückkehr mit 4 m/s.
 - Safe Room: feste Kamera am Anker `&"camera"` (FOV 50), kein Orbit.
@@ -1633,3 +1653,4 @@ Rangfolge bei Widersprüchen: 00_BRIEF > 02_TECH (APIs, Schemas, Pfade) > 01_GDD
 | A13 | Glyphen-Test | **übernommen** in 02_TECH §11.5 (M6 + M4); umgesetzt in `test_m6_ui_scenes`, `test_m4_env`, `test_m4_vfx` | `test_m6_ui_scenes`: alle statischen UI- und `Label3D`-Texte bestehen `ThemeDB.fallback_font.has_char()` Zeichen für Zeichen (F8). |
 | A14 | Porträts / M.O.D.-Icon | Art-Regel (9.2, 5.6) | `ViewportTexture` lebender SubViewports statt `get_image()`-Cache (F9). |
 | A15 | DCC-Abstand (04_STRATEGIE §2.3) | **umgesetzt** | Mopsula ohne Kronen-Motiv: Signatur = goldene Siegel-Plakette (`itm_wpn_collar_signet` „Siegel-Halsband“), kein `crown` am Mopsula-Rig; `itm_acc_queen_crown` nur Kai. Anzeigenamen wie „Fan-Box“, „NOVA SYNDIKAT“, „Quartier-Boss“ stehen im Brief und bleiben; Art referenziert nur neutrale IDs (`fan`, `NOVA_*`-Farbkonstanten, `boss_hausmeister`), Umbenennungen nach Roadmap E2 sind reine Textänderungen. |
+| A16 | Figurenwahl (06 §1, Paket A) | **umgesetzt** | Graf Mopsula als **Spielerkörper** (Archetyp `pug`, Kapsel r 0.35 / h 0.9, gleiche Kamera), Kai folgt; Bellen-VFX in Mopsula-Violett `#C79BFF` (Kap. 7); Figurenwahl-Karten (540 × 452 px, je SubViewport-Drehbühne: Figur dreht ±28°, Bühnenscheibe nach Figurengröße, Akzent Kai `#3AA9A0` / Graf `#B05CFF`); Party-Panel-Pillen „DU“ (`HYPE_GOLD`) / „AUTO“ (Cyan); E1-Geheimnisse Kulissenwand (Riss-Wand) + Regie-Notiz (Kap. 7). **Kein** Fuß-/Barfuß-Motiv (06 §0.3). |

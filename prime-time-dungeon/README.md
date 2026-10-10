@@ -45,15 +45,19 @@ Prüfwerkzeuge (`tools/`).
 - Etage 1 ist von Titel bis Abspann spielbar: Intro, Tutorial-Kampf und 14 weitere Gegnergruppen, Streuner, 5 Events,
   16 Truhen, 3 Safe Rooms (Heilen, Speichern, Automat, Lootboxen, Mopsula-Szenen), der Quartier-Boss **Der Hausmeister**
   und der Etagenboss **Die Rattenkönigin von Gleis 9**, danach Etagen-Bilanz, Autosave und Abspann.
+- **Figurenwahl** (06 Paket A): Zu Beginn wählt man, wen man steuert — Kai (Feldschlag) oder Graf Mopsula (Bellen: verdutzt
+  Gegnergruppen, die man dann von jeder Seite zuerst erwischt); die andere Figur folgt. „Figur wechseln“ im Safe Room,
+  „Partner automatisch“ in den Optionen, auf Etage 1 eine Kulissenwand und drei Regie-Notizen als Geheimnisse.
 - **Talent-Show** (06 Paket B): Ab Level 3 bringt jedes ungerade Level jeder Figur eine Talentwahl (1 aus 2, gewählt im
-  Safe Room über den goldenen Knopf „TALENT-SHOW“). Spezies und Spezialisierung ab Etage 3 sind als geprüftes Datenmodell
-  angelegt (`species.json`, Command `casting`); die Casting-Oberfläche folgt mit Etage 3.
+  Safe Room über den goldenen Knopf „TALENT-SHOW“). Feld-Talente wirken für die Figur, die gerade führt. Spezies und
+  Spezialisierung ab Etage 3 sind als geprüftes Datenmodell angelegt (`species.json`, Command `casting`); die
+  Casting-Oberfläche folgt mit Etage 3.
 - Etage 2 ist nur angelegt (`floors.json`: `playable = false`). Wer abgestiegen ist, landet nach „Fortsetzen“ im Abspann.
 - 3 Speicherslots (JSON in `user://saves/`), Einstellungen, Pausemenü, Touch-Steuerung.
 - SHOWRUN S0: 2 Offline-Events (`evt_offline_gleis9`, `evt_offline_pacifist`), Event-Lobby, Ergebnis-Screen, lokale Bestenliste,
   Replay-Prüfung.
-- Qualitätssicherung: rund 890 automatische Tests, Autoplay-Smoke-Test (`AUTOPLAY: OK`), Full-Run-Bot, der Etage 1 mit
-  drei Strategien durchspielt, Performance-Probe (`PERF: OK`) und der CI-Workflow `ptd-check`.
+- Qualitätssicherung: rund 950 automatische Tests, Autoplay-Smoke-Test (`AUTOPLAY: OK`), Full-Run-Bot, der Etage 1 mit
+  drei Strategien und als Graf Mopsula durchspielt, Performance-Probe (`PERF: OK`) und der CI-Workflow `ptd-check`.
 
 **Bekannte Lücken:**
 
@@ -200,7 +204,7 @@ Bei Widersprüchen gilt die Rangfolge **00_BRIEF > 02_TECH > 06 (neue Systeme) >
 | [`docs/03_ART.md`](docs/03_ART.md) | Art Direction Option B: Farben, Shader, prozedurale Figuren und Umgebung, VFX, UI-Look |
 | [`docs/04_STRATEGIE_ROADMAP.md`](docs/04_STRATEGIE_ROADMAP.md) | Strategie: Positionierung, IP und Recht, Phasenplan 0–7, Team, Finanzierung, Monetarisierung |
 | [`docs/05_LIVE_MODUS.md`](docs/05_LIVE_MODUS.md) | Live-Modus SHOWRUN: Stufen S0–S5, Determinismus, Protokoll, Geschenke, Sponsor-Fenster, Wirtschaft, Recht |
-| [`docs/06_PROGRESSION_MAROTTEN_KI_ADMIN.md`](docs/06_PROGRESSION_MAROTTEN_KI_ADMIN.md) | Neue Systeme in Paketen A–D: Figurenwahl, Talent-Show und Spezies (Paket B, umgesetzt), M.O.D.-Marotten, KI-Admin |
+| [`docs/06_PROGRESSION_MAROTTEN_KI_ADMIN.md`](docs/06_PROGRESSION_MAROTTEN_KI_ADMIN.md) | Neue Systeme in Paketen A–D: Figurenwahl (Paket A, umgesetzt), Talent-Show und Spezies (Paket B, umgesetzt), M.O.D.-Marotten, KI-Admin |
 | [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) | Messergebnisse der Performance-Probe gegen die Budgets aus 02_TECH §12.1 |
 
 ## 9. Screenshots

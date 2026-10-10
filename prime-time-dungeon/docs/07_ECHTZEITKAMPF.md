@@ -42,26 +42,36 @@
 
 ## 0. Kurzfassung
 
+> **So spielt sich ein Kampf** (für Spielerinnen und Spieler, so erklärt es auch die Hilfe):
+> 1. Greifst du einen Gegner an oder erwischt er dich, leuchtet ein Lichtring auf dem Boden auf, und ihr kämpft genau dort —
+>    ohne Ladebildschirm.
+> 2. Tippe einen Gegner an (oder drück Tab): Er ist dein Ziel, und deine Figur greift ihn von selbst an.
+> 3. Drück die 1 (Touch: der große Knopf) für deine Hauptfähigkeit und SHOW, wenn du Applaus willst — riskant, aber das
+>    Publikum liebt es.
+> 4. Wird der Boden unter dir rot, lauf raus, bevor es einschlägt.
+> 5. Dein Partner kämpft von selbst mit, und jede weitere Taste kommt erst dazu, wenn du sie brauchst.
+
 | Thema | Entscheidung |
 |---|---|
 | Ort | Gekämpft wird in dem Raum, in dem man sich trifft. Ein leuchtender Studio-Klebeband-Ring (LED) markiert das **Kampf-Set** (Radius 4,8 m, Bossräume 6,0 m); verlassen kann man es nur durch die Türgassen (= Fluchtversuch). Keine Kampfszene, kein Szenenwechsel, kein Swirl (§2). |
 | Start | **Pull** (Feldschlag, Fähigkeit oder Gegenstand auf einen Anführer), ein verfolgender Anführer erreicht dich (**Waffenreichweite**), oder **4 s Verfolgung** im selben Raum. Gesehen werden allein startet keinen Kampf — Schleichen und Entkommen bleiben möglich. Erstschlag/Hinterhalt bleiben (§2.2). |
 | Bedienung | Ziel wählen (Tab / Klick / Antippen), Auto-Angriff läuft automatisch, Aktionsleiste: 4 Fähigkeiten + **SHOW** + **Trank** (PC-Tasten 1–6), dazu **eine** Taste **Partner-Spezial** (`R`). |
 | Ressource | **MP für beide** („Energie“, eine blaue Leiste). Kai lädt durch eigene Auto-Treffer **und** erlittene Treffer, Graf Mopsula über Zeit; Kais Hauptfähigkeit kostet 2 MP (§3.10). |
-| Partner | Gesteuert wird die gewählte Figur (`GameState.hero`, 06 §1). Die andere spielt die KI mit 3 Taktiken und 3 Schaltern; „Partner-Spezial“ befiehlt ihre Signatur sofort (Kai: Spott, Mopsula: Heiliges Schlabbern). Bei K.O. der gesteuerten Figur wechselt die Steuerung vorübergehend zur lebenden (§5). |
+| Partner | Gesteuert wird die gewählte Figur (`GameState.hero`, 06 §1). Die andere spielt die KI mit 3 Taktiken und 3 Schaltern; „Partner-Spezial“ befiehlt ihre Signatur sofort (Kai: Spott, Mopsula: Heiliges Schlabbern). Die KI reagiert mit menschlicher Verzögerung — ein aufmerksamer Mensch ist beim Unterbrechen und Ausweichen schneller (§5.3, §5.5). Bei K.O. der gesteuerten Figur wechselt die Steuerung vorübergehend zur lebenden (§5). |
 | Gegner | Bedrohungsliste, sichtbare Zauberleisten, **markierte** unterbrechenswerte Zauber, Boden-**Telegraphen** (Kreis, Kegel, Ring, Linie), die 15–30 % der Max-HP kosten; jede Gegnerfamilie hat genau eine Signatur-Mechanik (§6). |
 | Bosse | Drei Phasen mit je einer neuen Mechanik, weiches Enrage; Rattenkönigin mit einfahrendem Zug als Linien-Telegraph über ebenerdige Gleise (§6.7). |
 | Determinismus | `RtSim` (`core/rt/`, RefCounted) mit 30 Ticks/s, nur Ganzzahlen (HP, MP, cm, Ticks, ‰), Zufall pro Ereignis aus `SeedUtil.derive`. **Spielerbewegung** geht als aufgezeichnete Positionsproben mit Plausibilitätsgrenzen in die Sim (Grad A, 05 §3.3); Gegner, KI-Partner, Status, Schaden rechnet nur die Sim, die Szene stellt dar (§3.5). |
 | Show | Neue Hype-Anlässe: Unterbrechen und Ausweichen (angerechnet nur der gesteuerten Figur), perfekte Bossphase, Zug-Kill; Sponsor-Geschenke ohne Pause mit kurzem Banner; M.O.D. kommentiert mit geschriebenen Untertiteln; Talente, Marotten, Show-Boss und Twists sind abgebildet (§9). |
 | Uhr | Der Etagen-Timer steht im Kampf („die Uhr steht“, Brief); im Kampf öffnet kein Sponsor-Fenster, kein Twist, keine KI-Zeile (§2.10, §9.3, §9.5). |
-| Einstieg | Tutorial-Kampf in vier Schritten (Ziel → Taste 1 → SHOW → Ausweichen), die Sim wartet während jeder Hinweiskarte; Unterbrechen lernt man später beim ersten passenden Gegner (§2.13). |
+| Einstieg | Tutorial-Kampf in vier Schritten (Ziel → Taste 1 → SHOW → Ausweichen); die Leiste zeigt dort nur Taste 1 und SHOW, die Sim wartet während jeder Hinweiskarte; Trank, Partner-Spezial, Taktik und Unterbrechen kommen später einzeln dazu (§2.13, §8.1). |
 | Umsetzung | 06 zuerst gemergt → R1a Vertrags-Commit → R1b Kern in Stufen → parallel R2 Welt, R3 HUD+Eingabe, R4 Inhalte+Balance, R5a Show/Live → R5b Integration, CTB-Entfernung (§12). |
 
 ### 0.1 Entscheidungen 2026-10-10 (nach Review)
 
 Die Nutzerin/der Nutzer hat Detailentscheidungen delegiert (Maßstab: gute UX, Spaß, Witz, **einfaches, sofort verständliches**
 Konzept; Grundsatzentscheidung „Variante 3 — WoW-light direkt in der Welt“). Ein unabhängiges Review fand 33 Punkte; so sind sie
-entschieden (Nummern = Review-Punkte):
+entschieden (Nummern = Review-Punkte). E25–E27 sind Entscheidungen des Orchestrators nach dem Review, E28 kommt aus der
+Konsistenzprüfung derselben Revision:
 
 | Nr. | Thema (Review) | Entscheidung | Wo |
 |---|---|---|---|
@@ -71,7 +81,7 @@ entschieden (Nummern = Review-Punkte):
 | E4 | Schadensrechnung (4) | Faktoren einzeln mit `FixedMath.mul_pm` falten, neutrale 1000 überspringen, Gesamtfaktor deckeln (0…8000 ‰); Überlauftest mit Höchst-Stapeln | §3.9.1 |
 | E5 | Replay-Schleife (5) | je Tick `c`: Tick-Grenze(c, Log-Geschenk bei c) → alle Einträge mit `ct == c` in Log-Reihenfolge → `step()`; höchstens ein Geschenk je Grenze; Test: externes + System-Geschenk im selben Tick | §9.2, §10.6 |
 | E6 | Brief (6) | Brief-Änderung mit Wortlaut („Variante 3 bitte“), CTB-Nennungen „bis R5“; Voraussetzung für R1a | 00_BRIEF |
-| E7 | 06-Abbildung (7) | Man steuert `GameState.hero`; Partner = KI mit Taktik + **Partner-Spezial**-Taste (Touch: 88 px neben dem Party-Rahmen); Steuerung folgt dem Leben vorübergehend (CombatDirector); Bellen → `DAZED` → Pull = Erstschlag; Talent- und Marotten-Abbildung, Show-Boss „alle 8 s“; 06-ID-Präfixe; Talentwahl nur im Safe Room; Kai 550 cm/s, Mopsula Radius 35 cm | §5.1, §9.6 |
+| E7 | 06-Abbildung (7) | Man steuert `GameState.hero`; Partner = KI mit Taktik + **Partner-Spezial**-Taste (Touch: 88 px neben dem Party-Rahmen); Steuerung folgt dem Leben vorübergehend (CombatDirector); Bellen → `DAZED` → Pull = Erstschlag; Talent- und Marotten-Abbildung, Show-Boss „alle 8 s“; 06-ID-Präfixe; Talentwahl nur im Safe Room; Lauftempo beider 5,5 m/s (`PLAYER_RUN_CM_S` 550; sim-gesteuert 540 cm/s, §4.8), Mopsula Radius 35 cm | §5.1, §9.6 |
 | E8 | IP (8) | kein Kronen-Motiv an Mopsula (Siegel-Plakette, Monokel); Liga-Wortlaut nur „ohne Rüstung & ohne Accessoire“, kein Kampfabzug als Beispiel | §4.3, §9.5 |
 | E9 | Tick-Ablauf, Reinheit (9, 10) | Spielerposition in Schritt 1 des Ticks; jede Sofortwirkung frühestens 1 Tick nach dem Start; Refresh behält die Periodenphase; `can_use`/`suggest` rein (kein Wurf, keine Schreibzugriffe) + Hash-Invarianz-Test | §3.3, §3.4 |
 | E10 | FINALE (11, 19) | Bedingung in der Sim: ab Stufe 6, nur wenn das Ziel unter 30 % HP hat (echter Finisher); Hype nur Darstellung | §4.1 |
@@ -85,10 +95,14 @@ entschieden (Nummern = Review-Punkte):
 | E18 | Unterbrechen (20) | `interrupt_worthy` an Gegnerfähigkeiten; Füller nicht unterbrechbar; Gold-Rand, Ton und KI nur für markierte Zauber | §6.2, §6.5 |
 | E19 | Touch (21) | Stick-Zone im Kampf nur unten links; Tippen ≠ Ziehen; alle Ziele ≥ 88 px; weiche Zielführung der Kamera auf Touch standardmäßig an | §7.3, §7.5 |
 | E20 | Zauberabbruch (22) | Bewegung bricht einen Zauber erst ab 25 % Lauftempo oder > 40 cm seit Zauberbeginn | §3.6 |
-| E21 | Einstieg (23) | Tutorial in Schritten (Ziel → Slot 1 → SHOW → Ausweichen); Unterbrechen später als Kontext-Hinweis; CombatDirector pausiert die Sim während Hinweiskarten (aufgezeichnet); mehr Tutorial-HP; GDD-B1-Erstschlag über eine schlafende (`DAZED`) Tutorial-Gruppe | §2.13 |
+| E21 | Einstieg (23) | Tutorial in Schritten (Ziel → Slot 1 → SHOW → Ausweichen); Unterbrechen später als Kontext-Hinweis; CombatDirector pausiert die Sim während Hinweiskarten (aufgezeichnet); mehr Tutorial-HP; GDD-B1-Erstschlag über eine schlafende Tutorial-Gruppe (`EnemyActor.is_asleep()`; Pull oder Berührung, E28) | §2.13 |
 | E22 | Sichtung (24) | CHASE bleibt; Kampf ab Waffenreichweite, per Pull oder nach 4 s Verfolgung im selben Raum | §2.2 |
-| E23 | Kleinere Punkte (25–30, 32) | Flächen der Party: Radius + Zielradius; HUD schrittweise (Bedrohungspunkte nach dem ersten Spott, Taktik-Chip nach dem ersten Safe Room, Restsekunden per langem Druck); Koop-Hinweise in §10.8; CI 5 Seeds je regulärer Begegnung, 10 je Boss, nachts 200; Etagen-Bänder im R5-Full-Run plus Etagenfolge-Harness, `typical` aus Replays kalibriert; zweite Gruppe nur bis 6 Einheiten insgesamt, fester Anker für gruppenlose Kämpfe | §2.3, §6.3, §8.1, §10.8, §11.4 |
+| E23 | Kleinere Punkte (25–30, 32) | Flächen der Party: Radius + Zielradius; HUD schrittweise (Bedrohungspunkte nach dem ersten eigenen Spott, Taktik-Chip ab Stufe 3 — beides präzisiert durch E28, Restsekunden per langem Druck); Koop-Hinweise in §10.8; CI 5 Seeds je regulärer Begegnung, 10 je Boss, nachts 200; Etagen-Bänder im R5-Full-Run plus Etagenfolge-Harness, `typical` aus Replays kalibriert; zweite Gruppe nur bis 6 Einheiten insgesamt, fester Anker für gruppenlose Kämpfe | §2.3, §6.3, §8.1, §10.8, §11.4 |
 | E24 | Offene Punkte | O1–O10 entschieden (Zeitlupe überall erlaubt mit Kennzeichnung, Pause nur offline, Regeneration nach E12, FINALE in der Sim, …) | §13.2 |
+| E25 | Partner-KI reagiert menschlich (Orchestrator; Werte nach §11.3 nachgestellt) | **Unterbrechen:** Die KI sieht einen unterbrechenswerten Zauber erst nach `AI_INTERRUPT_REACT_TICKS` = 15 (0,5 s) + 0–10 Ticks Streuung aus ihrem eigenen Zufallsstrom, je Zauber mit 25 % „spät“ (+45 Ticks); während eines eigenen Zaubers und in den letzten 5 Ticks ihres GCD unterbricht sie nicht, sie reagiert danach. **Ausweichen:** Je Telegraph übersieht sie ihn mit 13 % (Taktik „Vorsichtig“: 4 %), sonst reagiert sie nach `REACT_TICKS` (Angriff 15 statt 18). Ein perfekter Mensch ist bei beidem schneller. Die Vorgabe „15 % spät, +12 Ticks“ allein ließ Held:in Mopsula im Modell bei 2–5 % Niederlagen (der KI-Tank wich zuverlässiger aus und unterbrach sicherer als ein typischer Mensch), deshalb die Nachstellung — nur KI-Werte, keine Boss-Werte | §3.9.3, §3.16, §5.3, §5.5, §11.3 |
+| E26 | Show-Boss E1 (Orchestrator) | `enc_e1_showboss` „Kanalratten-Gala“ (06 §2.6, von 06 C zurückgestellt) wird nicht im CTB gebaut, sondern direkt im Echtzeitkampf in **R4**: Datenblock und Platzierung, `validators/show_boss.gd`, Regel „alle 8 s ein Strafzettel“, `showboss_*`-Zeilen im R4-Block, Balance-Band; Code-Haken `RtMods.from_show_boss` und Belohnung in R1b-I3 | §9.6, §11.1, §12.2–12.5 |
+| E27 | KI-SHOW (Orchestrator) | Der KI-Partner darf die SHOW nutzen (Party-Abklingzeit 30 s, 5 s Vorrang der Person), damit Talente wie Mopsulas „Dramatische Pause“ (`stunt_window_pm`; der alte Name „Taktgefühl“ entfällt) auch als KI-Partner wirken; Hype nach der bestehenden `by_ai`-Regel | §4.1, §9.1, §9.6 |
+| E28 | Erster Kampf (Konsistenzprüfung) | Der erste Kampf verlangt nur Bewegen, Ziel, Taste 1, SHOW und Ausweichen: Tutorial-Leiste nur Slot 1 + SHOW (Sim-Regel), Trank und Partner-Spezial ab dem zweiten Kampf, Taktik-Chip ab Stufe 3 (der erste Safe Room liegt direkt hinter dem Tutorial), Bedrohungsanzeige erst nach einem eigenen Spott; die schlafende Tutorial-Gruppe weckt auch eine Berührung (sonst bräuchte Held:in Mopsula Zielwahl und Taste 1 schon vor dem Kampf) | §2.2, §2.13, §4.1, §5.2, §8.1 |
 
 ---
 
@@ -100,9 +114,10 @@ entschieden (Nummern = Review-Punkte):
    Freies Zielen/Skillshots des Spielers, Kombopunkte, zweite Ressource, Eigenbeschuss (Friendly Fire), Rüstungsklassen,
    Trefferchance-Würfe (alles trifft; Würfel nur für Varianz, Krit, Status, Stunt-Erfolg).
 2. **Einfach und sofort verständlich.** Höchstens 5 Fähigkeiten pro Figur (4 + SHOW) plus Trank, dazu eine Taste für den
-   Partner. Die Leiste **wächst mit dem Level** (Stufe 1: Kai 1 Fähigkeit + SHOW, Mopsula 2 + SHOW; ab Stufe 4 voll). Pro
-   Gegnerfamilie genau **eine** neue Mechanik, pro Bossphase genau **eine** neue Mechanik. Jede gefährliche Aktion ist dreifach
-   angekündigt: Bodenform + Ton + Zauberleiste mit Namen. Der Kampfort ist sichtbar begrenzt (LED-Ring des Sets, §2.1).
+   Partner. Die Leiste **wächst mit dem Level** (Tutorial-Kampf: nur Taste 1 + SHOW; Stufe 1: Kai 1 Fähigkeit + SHOW, Mopsula
+   2 + SHOW; ab Stufe 4 voll). Pro Gegnerfamilie genau **eine** neue Mechanik, pro Bossphase genau **eine** neue Mechanik. Jede
+   gefährliche Aktion ist dreifach angekündigt: Bodenform + Ton + Zauberleiste mit Namen. Der Kampfort ist sichtbar begrenzt
+   (LED-Ring des Sets, §2.1).
 3. **Auf einen Blick lesbar.** Formen statt Zahlen: rot-weiß gestreifte Bodenflächen = „raus da“, goldener Rand an einer
    Zauberleiste = „jetzt unterbrechen lohnt sich“, Punkt über dem Gegner in Partyfarbe = „wen er angreift“. Schadenszahlen klein
    und kurz, Wichtiges groß (UNTERBROCHEN!, AUSGEWICHEN). Das HUD zeigt Neues erst, wenn es gebraucht wird (§8.1).
@@ -149,11 +164,12 @@ Leine oder 8 s ab) oder die Gruppe anbellen. Ein Kampf beginnt nur so:
 | **Pull:** Feldschlag trifft eine Gruppe (Kai: Bogen 100°, 1,8 m, unverändert) oder eine Fähigkeit/ein Gegenstand der gesteuerten Figur auf einen Anführer im eigenen Raum — und die Gruppe ist IDLE, PATROL oder **DAZED** (angebellt, 06 §1.3), oder die Figur steht hinter dem Anführer (`dot(fwd_e, d_ek) < BACK_DOT`) | `PREEMPTIVE` („Erstschlag!“) |
 | Pull auf eine Gruppe in ALERT/CHASE, die die Figur sieht | `NORMAL` |
 | **Waffenreichweite:** der Anführer einer verfolgenden Gruppe (CHASE) kommt der gesteuerten Figur auf `reach_cm` + beide Radien nahe (Werte aus `enemies.json → rt`, z. B. Kanalratte 220 + 30 + 40 = 2,9 m) | `AMBUSH` („Hinterhalt!“), wenn die Figur ihm den Rücken zukehrt (`dot(fwd_k, d_ke) < BACK_DOT`), sonst `NORMAL` |
-| **4 s Verfolgung:** ein Anführer verfolgt ohne Unterbrechung `CHASE_COMBAT_SEC` = 4,0 s und steht dabei mit der Figur in derselben Zelle (Raumwechsel setzt den Zähler auf 0) | `NORMAL` („Die Kamera hat euch!“) |
+| **4 s Verfolgung:** ein Anführer verfolgt ohne Unterbrechung `CHASE_COMBAT_SEC_X10` = 40 (4,0 s) und steht dabei mit der Figur in derselben Zelle (Raumwechsel setzt den Zähler auf 0) | `NORMAL` („Die Kamera hat euch!“) |
 | Boss (5 m um `boss_spot`), Etagen-Event-Kampf | `NORMAL` |
-| Tutorial-Gruppe: schläft (`DAZED` ohne Ablauf, nimmt nichts wahr, 06-`is_asleep_spawn`) — nur ein Pull weckt sie | immer `PREEMPTIVE` (GDD B1 „Erstschlag“ bleibt erhalten) |
+| Tutorial-Gruppe: schläft (Bestand `EnemyActor.is_asleep()`: IDLE ohne Drehen, nimmt nichts wahr) — ein Pull **oder eine Berührung** (Kontakt 1,1 m, wie GDD B1) weckt sie; so startet auch Held:in Mopsula den ersten Kampf, ohne vorher Zielwahl und Taste 1 kennen zu müssen | immer `PREEMPTIVE` (GDD B1 „Erstschlag“ bleibt erhalten) |
 
-- Der Kontakt bei 1,1 m (`CONTACT_RADIUS`) entfällt als Auslöser im Echtzeitmodus.
+- Der Kontakt bei 1,1 m (`CONTACT_RADIUS`) entfällt als Auslöser im Echtzeitmodus (einzige Ausnahme: die schlafende
+  Tutorial-Gruppe, Tabelle oben).
 - Mopsula als Held:in: Bellen startet nie einen Kampf (06 §1.3); ihr Pull ist eine Fähigkeit auf einen Anführer (Slot 1
   Adelsflamme, Slot 3 Frostniesen) oder ein Gegenstand. Eine `DAZED`-Gruppe ist aus jeder Richtung `PREEMPTIVE`
   (06-Regel `EncounterRules.advantage_for_contact`, auch für Pulls).
@@ -193,10 +209,10 @@ Gegner (Treffer bei `ct = 9`). Außerhalb des Kampfes sind Fähigkeiten nur als 
 ### 2.4 Kampfzustand pro Raum, das Set
 
 - Es läuft höchstens ein Kampf. Die Set-Zelle ist die Zelle der gesteuerten Figur beim Start (`FloorLayout.world_to_cell`).
-- **Radius nach Raumart** (`RtGeo.set_radius(kind)`, Werte in `data/rt_balance.json`): `NORMAL`, `START`, `GATE`, `SAFE` →
-  480 cm; `QUARTER_BOSS`, `FLOOR_BOSS` → 600 cm. Herleitung: Requisiten und Kollisionen halten heute einen Freiradius von 5,0 m
-  (`EnvKit.CLEAR_RADIUS`, geprüft durch `test_m4_env`), Gleisgraben/Kanal beginnen erst bei 5,1 m bzw. 5,9 m, Türkorridore sind
-  frei — der 4,8-m-Ring liegt also immer auf freiem, ebenem Boden. Bossräume (nur 2 Requisiten + Schreibtisch/Wrack an der
+- **Radius nach Raumart** (`RtGeo.set_radius(kind, bal)`, Werte `SET_R_CM` in `data/rt_balance.json`): `NORMAL`, `START`, `GATE`,
+  `SAFE` → 480 cm; `QUARTER_BOSS`, `FLOOR_BOSS` → 600 cm. Herleitung: Requisiten und Kollisionen halten heute einen Freiradius von
+  5,0 m (`EnvKit.CLEAR_RADIUS`, geprüft durch `test_m4_env`), Gleisgraben/Kanal beginnen erst bei 5,1 m bzw. 5,9 m, Türkorridore
+  sind frei — der 4,8-m-Ring liegt also immer auf freiem, ebenem Boden. Bossräume (nur 2 Requisiten + Schreibtisch/Wrack an der
   Wand) halten künftig **6,2 m** frei (`EnvKit.CLEAR_RADIUS_BOSS`, R4 rückt Schreibtisch und Wrack an die Wand, `test_m4_env`
   prüft es), damit Bosskämpfe Platz haben.
 - **Treppenraum** (`STAIRS`): Die Treppe belegt die Raummitte — dort gibt es kein Set. Gegner betreten den Treppenraum nicht (eine
@@ -309,8 +325,9 @@ bisher (gleiche Bedeutung für Show, Achievements, Musik).
 1. Kai schleicht von hinten an eine patrouillierende Gruppe (Kanalratte, Taubenschwarm, Kanalratte), wählt die Ratte (Tab) und
    drückt `1` → Pull, `PREEMPTIVE`, `ct = 0`. Der Anführer steht bei (4 m, 4 m) außerhalb des Rings und läuft herein; die
    Komparsen erscheinen am Eintrittspunkt; alle Gegner sind 3 s überrumpelt. Wuchtschlag startet (2 MP, GCD 1,5 s).
-2. `ct = 9`: Wuchtschlag trifft (≈ 22 Schaden, + 15 % mit „Erster Eindruck“; Kanalratte 168 → 146). Auto-Angriff läuft seitdem
-   alle 2,0 s; jeder Auto-Treffer und jeder erlittene Biss bringt Kai 1 MP.
+2. `ct = 9`: Wuchtschlag trifft (≈ 22 Schaden; Kanalratte 168 → 146 — das Talent „Erster Eindruck“, frühestens ab Stufe 3,
+   gäbe + 15 %). Auto-Angriff läuft seitdem alle 2,0 s; jeder Auto-Treffer und jeder erlittene Biss bringt Kai 1 MP (Bisse
+   höchstens 1 MP je Sekunde).
 3. Graf Mopsula (KI, „Unterstützen“) niest Kais Ziel mit Frostniesen an und zaubert danach Adelsflamme (1,5 s).
 4. `ct ≈ 190`: Der Taubenschwarm kündigt „Sturzflug“ an — roter Kreis unter Mopsula, 1,2 s. Mopsula weicht nach 12 Ticks aus.
    Ein Treffer hätte sie 15 % ihrer Max-HP gekostet. Kai drückt `R` (Partner-Spezial): Mopsula schlabbert ihn sofort heil.
@@ -321,8 +338,12 @@ bisher (gleiche Bedeutung für Show, Achievements, Musik).
 Ziel: Niemand muss vor dem ersten Kampf etwas lesen; jede Regel kommt in dem Moment, in dem sie gebraucht wird (06 L-1/L-2).
 
 - **Tutorial-Begegnung** `enc_f1_a1_tutorial` (Echtzeit-Fassung über `floors.json → encounters[].rt`): zwei Azubi-Kanalratten
-  (`enm_kanalratte_azubi`, je 280 HP — mehr als eine normale Ratte, damit alle Schritte Platz haben), Gruppe schläft (§2.2,
-  immer `PREEMPTIVE`), Set geschlossen, Gegnerschaden × 0,5, Party-HP ≥ 1.
+  (`enm_kanalratte_azubi`, je 280 HP — mehr als eine normale Ratte, damit alle Schritte Platz haben), Gruppe schläft (§2.2:
+  Pull oder Berührung weckt sie, immer `PREEMPTIVE`), Set geschlossen, Gegnerschaden × 0,5, Party-HP ≥ 1.
+- **Nur das Nötigste auf der Leiste (E28):** Im Tutorial-Kampf (`RtSetup.tutorial`) liefert `RtSim.bar()` für die gesteuerte
+  Figur nur Slot 1 und SHOW; `submit` lehnt dort andere Leisten-Fähigkeiten (`not_learned`), `combat_item` und
+  `partner_special` (`forbidden`) ab. HUD und Eingabe zeigen also nur Ziel, Taste 1, SHOW und die Bewegung; Trank-Slot und
+  Partner-Spezial erscheinen ab dem nächsten Kampf, die übrigen Slots mit der Stufe (§8.1). Der KI-Partner spielt normal.
 - **Vier Schritte** (`floors.json → encounters[].rt.tutorial` = `["target", "bar1", "show", "dodge"]`), jeweils als Hinweiskarte
   (Untertitel-Box mit Bild der Taste/Geste, M.O.D.-Zeile `rt_tutorial_<schritt>`):
   1. `target` bei `ct = 0`: „Wähle ein Ziel — antippen oder Tab.“ Weiter, sobald ein `target_change` angenommen ist.
@@ -337,10 +358,11 @@ Ziel: Niemand muss vor dem ersten Kampf etwas lesen; jede Regel kommt in dem Mom
   selben `ct`, und „schon gezeigt“ übersteht Speichern/Laden.
 - **Unterbrechen** wird nicht im Tutorial gelehrt (auf Stufe 1 hat niemand einen Unterbrecher), sondern als **Kontext-Hinweis**:
   beim ersten `interrupt_worthy`-Zauber eines Gegners, sobald die gesteuerte Figur einen Unterbrecher gelernt hat (Stufe 3, Zone B:
-  Rattenschamane): „Goldener Rand = jetzt unterbrechen! Drück 3.“ (`rt_hint_interrupt`).
-- **Weitere Erst-Hinweise** (je einmal je Spielstand, höchstens eine Karte je Kampf, gleiche Pausen-Mechanik): `zone` (erste
-  Pfütze), `partner_special` (erster Kampf mit verfügbarem Partner-Spezial), `finale` (FINALE erstmals nutzbar), `flee` (erstmals
-  den Ring verlassen), `enrage` (erstes Enrage).
+  Rattenschamane): „Goldener Rand = jetzt unterbrechen! Drück 3.“ bzw. als Mopsula „… Drück 4.“ (Taste des Unterbrechers der
+  gesteuerten Figur: Kai Slot 3, Mopsula Slot 4; `rt_hint_interrupt`).
+- **Weitere Erst-Hinweise** (`HINT_IDS`; je einmal je Spielstand, höchstens eine Karte je Kampf, gleiche Pausen-Mechanik):
+  `zone` (erste Pfütze), `partner_special` (erster Kampf mit sichtbarem Partner-Spezial — nie der Tutorial-Kampf), `finale`
+  (FINALE erstmals nutzbar), `flee` (erstmals den Ring verlassen), `enrage` (erstes Enrage); dazu `interrupt` (oben).
 - Einstellung „Kampf-Hinweise“ (`GameSettings.combat_hints`, Standard an): aus → keine Karten, keine Pausen, keine
   `combat_hint`-Befehle. Event-/Liga-Läufe zeigen keine Karten (Regel `rules.combat.hints`, Standard `false` in Ligen).
 
@@ -372,7 +394,7 @@ core/data/validators/rt.gd, rt_vocab.gd (R1a) ← DataValidator (eine Hook-Zeile
 | `core/rt/rt_geo.gd` | `RtGeo` | Set-Geometrie (Ring, Türgassen, Sperrflächen), Sichtlinie, Formen-Test, Formation, Auftritt-Anker, Ausweichpunkte |
 | `core/rt/det_math.gd` | `DetMath` | Ganzzahl-Trigonometrie (Tabellen), `isqrt`, Gier-Winkel (u8) |
 | `core/rt/rt_balance.gd` | `RtBalance` | typisierte Stellwerte: Schlüssel, Typen, Bereiche, Startwerte (R1); die Werte selbst stehen in `data/rt_balance.json` (Eigentum R4, §3.16) |
-| `core/rt/rt_mods.gd` | `RtMods` | statische Modifikatoren aus Spezies, Spezialisierung, Ausrüstung, Show-Boss und Kampf-Twists (§9.5); Talente wirken über `talent_mods` (§9.6) |
+| `core/rt/rt_mods.gd` | `RtMods` | statische Modifikatoren aus Spezies, Spezialisierung, Ausrüstung, Show-Boss und Kampf-Twists (§9.5); Talente wirken über die `Combatant`-Werte und `RtUnit.opener_pm`/`stunt_pm` (§9.6) |
 | `core/rt/rt_ability.gd` | — (privat) | Fähigkeiten/Gegenstände: Prüfung, Kosten, Zauber, Kanal, Wirkung, Partner-Spezial |
 | `core/rt/rt_damage.gd` | — (privat) | Echtzeit-Faktoren um `DamageCalc` herum (Faltung §3.9.1), Prozent-Treffer, Eröffnungsbonus |
 | `core/rt/rt_threat.gd` | — (privat) | Bedrohungslisten, Spott, Zielwechsel |
@@ -448,7 +470,7 @@ var auto_retarget: bool = true              # pick the next target when the curr
 var opener: Dictionary = {}                 # {} | {"kind": "strike", "target": "e0"} | {"kind": "skill", "u": "p0", "skill": id, "target": "e0"} | {"kind": "item", "u", "item", "target"}
 var mods: Array[Dictionary] = []            # RtMods entries (§9.5), canonical, static for the whole combat
 var rules: Dictionary = {}                  # combat-relevant run rules (§10.7), canonical
-var difficulty: StringName = &"prime"       # &"vorabend": telegraph warn times × balance.easy_warn_pm
+var difficulty: StringName = &"prime"       # &"vorabend": telegraph warn times × EASY_WARN_PM (§3.16)
 var tutorial_steps: PackedStringArray = []  # §2.13; presentation only (the sim never reads it), part of to_dict()
 var balance: RtBalance = null               # data/rt_balance.json (§3.16); pinned by the data hash, not serialized
 
@@ -457,8 +479,9 @@ func to_dict() -> Dictionary                 # canonical (BattleSetup.to_dict() 
 
 ```gdscript
 class_name RtUnit extends Combatant
-## A combatant with position, timers, cast, threat. Ids, stats, hp/mp, statuses (RtStatus), element mods, rewards and
-## talent_mods (06 B): inherited from Combatant (02_TECH §5.4). max_hp() is already scaled (§3.9.4).
+## A combatant with position, timers, cast, threat. Ids, stats, hp/mp, statuses (RtStatus), element mods, crit bonus,
+## rewards: inherited from Combatant (02_TECH §5.4); value talents arrive through these fields (06 B), the two behaviour
+## talents as opener_pm/stunt_pm below (§9.6). max_hp() is already scaled (§3.9.4).
 enum Driver { PLAYER, AI, AUTOPILOT }      # not "Control": would shadow the global Control class
 var driver: RtUnit.Driver = Driver.AI
 var x: int = 0                              # cm, room-local
@@ -495,7 +518,9 @@ var rule_ready: Dictionary = {}             # rule key → ct when the rule may 
 var follow_up: Dictionary = {}              # {} | {"skill", "target", "at"}: queued "then" skill of a rule (§5.3)
 var preset: String = ""                     # party AI preset
 var toggles: Dictionary = {}                # party AI switches
-var react_at: int = -1                      # AI: ct at which the pending telegraph reaction starts
+var react_at: int = -1                      # AI: ct at which the pending telegraph reaction starts (§5.5; unset if overlooked)
+var ai_seen: Dictionary = {}                # AI: caster unit id → ct from which this unit reacts to that caster's current
+                                            #     interrupt-worthy cast (E25, §5.3); drawn at CAST_START, erased at its end
 var mp_regen: Dictionary = {}               # {"mode": "hit"|"time", "amount", "taken", "taken_every_ticks", "every_ticks"}
 var mp_regen_next: int = 0
 var mp_hit_ready: int = 0                   # "hit" mode: ct from which a taken hit gives MP again
@@ -506,7 +531,9 @@ var outside_since: int = -1                 # controlled unit: first ct outside 
 var pop_in_until: int = 0                   # formation members: no actions before this ct
 var phase_perfect: bool = true              # bosses: no telegraph hit on the party during the current phase
 var opener_done: bool = false               # party: first damaging hit of the combat already dealt (opener bonus, §9.6)
-var bar: Dictionary = {}                    # party: slot (1..5) → skill id (current loadout, level-filtered)
+var opener_pm: int = 1000                   # party: Talents.preemptive_dmg_pm (06 B), set by make_rt_setup (§9.6)
+var stunt_pm: int = 1000                    # party: Talents.stunt_window_pm (06 B): SHOW success, also as AI partner (§9.6)
+var bar: Dictionary = {}                    # party: slot (1..5) → skill id (loadout, level-filtered; tutorial: 1 + 5, §2.13)
 
 func snapshot() -> Dictionary               # canonical, all fields above + Combatant.to_dict()
 ```
@@ -576,7 +603,8 @@ func snapshot() -> Dictionary               # canonical, complete (StateHash.of_
 func can_use(unit_id: String, skill_id: String, target_id: String) -> String   # "" or refusal reason (HUD states)
 func can_use_item(unit_id: String, item_id: String, target_id: String) -> String
 func suggest(unit_id: String) -> String     # Assist (§5.6): skill id of the next suggested ability or ""
-func bar(unit_id: String) -> Dictionary     # slot (1..6) → skill/item id shown right now (FINALE, context variants, potion pick)
+func bar(unit_id: String) -> Dictionary     # slot (1..6) → skill/item id shown right now (FINALE, context variants, potion pick;
+                                            #   tutorial: slots 1 and 5 only, §2.13)
 func partner_special_skill(unit_id: String) -> String   # skill the Partner-Spezial would order now ("" = none)
 func cooldown_left(unit_id: String, skill_id: String) -> int     # ticks (SHOW/FINALE: party-shared "show" cooldown)
 func cooldown_total(unit_id: String, skill_id: String) -> int    # length of the running cooldown in ticks (0 = none)
@@ -603,18 +631,22 @@ Befehl (§10.2).
 `target_id`, `rng_n`, Cache), keine Ereignisse. `test_r1_rt_pure`: 1 000 Aufrufe aller Abfragen in einem laufenden Kampf lassen
 `StateHash.of_rt` unverändert, und ein Lauf mit Abfragen nach jedem Tick hat denselben End-Hash wie ohne.
 
-**Phasenübergreifende Signaturen** (R1a legt sie als Stubs an, §12.2): `RtCommand.ability(ct, u, skill, target)`, `.target(ct,
-u, target)`, `.move(ct, u, x, z, vx, vz, yaw)`, `.item(ct, u, item, target)`, `.preset(ct, u, preset, tog)`, `.auto_attack(ct,
-u, on)`, `.autopilot(ct, u, on)`, `.partner_special(ct, u)`, `.hint(ct, id)` (alle `-> Dictionary`), `RtCommand.validate(d) ->
-String`; `RtGeo.set_radius(room_kind: int, bal: RtBalance) -> int`, `.make_geo(cell_kind: int, doors: int, closed: bool, bal:
+**Phasenübergreifende Signaturen des Kerns** (R1a legt sie als Stubs an; die vollständige Stub-Liste aller Phasen steht in
+§12.2): `RtCommand.ability(ct, u, skill, target)`, `.target(ct, u, target)`, `.move(ct, u, x, z, vx, vz, yaw)`, `.item(ct, u,
+item, target)`, `.preset(ct, u, preset, tog)`, `.auto_attack(ct, u, on)`, `.autopilot(ct, u, on)`, `.partner_special(ct, u)`,
+`.hint(ct, id)`, `.speed(pm)` (alle `-> Dictionary`), `RtCommand.validate(d: Dictionary) -> String`, `RtCommand.REASONS`;
+`RtGeo.set_radius(room_kind: int, bal: RtBalance) -> int`, `.make_geo(cell_kind: int, doors: int, closed: bool, bal:
 RtBalance) -> Dictionary`, `.in_set(geo, x, z) -> bool`, `.walkable(geo, x, z, r, party: bool) -> bool`,
 `.project_walkable(geo, x, z, r, party: bool) -> Vector2i`, `.los(geo, ax, az, bx, bz) -> bool`, `.formation(slot: int, ax: int,
 az: int, yaw: int) -> Vector2i`, `.group_anchor(geo, cx: int, cz: int) -> Vector2i`, `.escape_point(sim: RtSim, u: RtUnit) ->
 Vector2i`; `RtRules.compile(rules: Array, key_prefix: String) -> Array[Dictionary]`, `.choose(sim: RtSim, u: RtUnit) ->
 Dictionary` (rein: `{}` oder `{"skill"|"item", "target", "goal"}`), `.eval_cond(sim: RtSim, u: RtUnit, cond: Dictionary,
-target_id: String) -> bool`; `RtBalance.from_data(data: GameData) -> RtBalance`; `RtMods.validate`, `.apply_static`, `.on_event`,
-`.from_twists(state: GameState, data: GameData) -> Array[Dictionary]`, `.from_show_boss(enc: EncounterDef) -> Array[Dictionary]`
-(§9.5).
+target_id: String) -> bool`; `RtBalance.from_data(data: GameData) -> RtBalance`; `RtMods.validate(mods: Array) ->
+PackedStringArray`, `.apply_static(setup: RtSetup, data: GameData) -> void`, `.on_event(sim: RtSim, e: ActionEvent) ->
+Array[ActionEvent]`, `.from_twists(twists: Array, data: GameData) -> Array[Dictionary]`, `.from_show_boss(enc: EncounterDef) ->
+Array[Dictionary]` (§9.5); `BattleBridge.make_rt_setup(state: GameState, data: GameData, cmd: Dictionary, seed: int) ->
+RtSetup` (core/progression, §10.5); `StateHash.of_rt(sim: RtSim) -> String` (§10.4). `core/rt` kennt weder `GameState` noch
+`BattleBridge` (Schichten §3.1): Was es aus dem Spielstand braucht, reicht `make_rt_setup` als Werte herein.
 
 ### 3.5 Bewegung und Positionen
 
@@ -703,7 +735,7 @@ sonst                      → Position auf der Strecke p → s auf step_max + u
 #### 3.5.4 Set-Geometrie, Sichtlinie
 
 ```
-geo.r                         = RtGeo.set_radius(room_kind): 480 (NORMAL, START, GATE, SAFE) | 600 (QUARTER_BOSS, FLOOR_BOSS)
+geo.r                         = RtGeo.set_radius(room_kind, bal): 480 (NORMAL, START, GATE, SAFE) | 600 (QUARTER_BOSS, FLOOR_BOSS)
 in_set(p)                     = |p| ≤ geo.r                                          # Telegraph-Wirkung und -Darstellung
 walkable(p, r_u, party=false) = |p| ≤ geo.r − r_u  ∧  p liegt nicht in einer um r_u vergrößerten Sperrfläche
 walkable(p, r_u, party=true)  = walkable(p, r_u, false)  ∨  in_gap(p, r_u)
@@ -711,9 +743,10 @@ in_gap(p, r_u)                = ¬geo.closed ∧ ∃ Tür d in geo.doors: |quer_
                                 ∧ geo.r − r_u < längs_d(p) ≤ CELL_HALF_CM (800)
 ```
 
-`längs_d` misst von der Raummitte in Richtung der Tür (Tür bei 750, Zellrand bei 800), `quer_d` quer dazu. Grundlage sind die
-geprüften Raumbau-Regeln (§2.4): Requisiten und Kollisionen ab 5,0 m (Bossräume künftig 6,2 m), Türkorridore frei, Gleisgraben
-ab 5,1 m, Kanal ab 5,9 m — der Ring liegt immer auf freiem, ebenem Boden. Der Treppenraum hat kein Set.
+`längs_d` misst von der Raummitte in Richtung der Tür (Tür bei `ROOM_INNER_CM` = 750, Zellrand bei `CELL_HALF_CM` = 800), `quer_d`
+quer dazu. Grundlage sind die geprüften Raumbau-Regeln (§2.4): Requisiten und Kollisionen ab 5,0 m (Bossräume künftig 6,2 m),
+Türkorridore frei, Gleisgraben ab 5,1 m, Kanal ab 5,9 m — der Ring liegt immer auf freiem, ebenem Boden. Der Treppenraum hat kein
+Set.
 
 - **Sperrflächen** (`geo.blockers`, achsparallele Rechtecke in cm) kommen aus festen Aufbauten im Set. Auf Etage 1 gibt es genau
   eine: den entgleisten Waggon der Rattenkönigin `[-160, -80, 160, 80]` (§6.7); niemand läuft hindurch, die Königin steht in
@@ -803,7 +836,7 @@ Kampfes ausgeblendet (§2.3).
   sein Ziel, bis eine andere Einheit `> aktuell × THREAT_SWITCH_PM (1100) / 1000` hat; Gleichstand → kleinerer Slot.
 - K.O. setzt die Bedrohung der Einheit auf allen Gegnern auf 0 (nach Wiederbelebung neu ab 0).
 - Partner-KI und Spieler wählen Ziele **nicht** nach Bedrohung (§5).
-- Anzeige (ab dem ersten Spott, §8.1): Namensplaketten zeigen einen Punkt in der Farbe des angegriffenen Party-Mitglieds;
+- Anzeige (ab dem ersten eigenen Spott, §8.1): Namensplaketten zeigen einen Punkt in der Farbe des angegriffenen Party-Mitglieds;
   Party-Rahmen zeigen „×2“ für die Zahl der Gegner, die gerade dieses Mitglied angreifen (§8.4).
 
 ### 3.8 Status-Effekte in Echtzeit
@@ -910,12 +943,19 @@ var rng: RandomNumberGenerator = SeedUtil.make_rng(SeedUtil.derive(setup.seed, "
 `suggest`) würfeln nie (§3.4). Beute bei `VICTORY`: `SeedUtil.derive(setup.seed, "drops", 0)` wie bisher. Online liefert der
 Server die Würfe aus dem geheimen Server-Seed (§10.8).
 
+**Eigener Strom der KI-Reaktionen (E25):** Streuung, „spät“ und „übersehen“ der KI (§5.3, §5.5) würfeln aus
+`SeedUtil.derive(setup.seed, "rt_ai", ai_rng_n)` mit eigenem Zähler `ai_rng_n` (im Snapshot). Gewürfelt wird bei `CAST_START`
+eines unterbrechenswerten Zaubers (Streuung, dann „spät“) bzw. bei `TELEGRAPH_START` („übersehen“) für **jede lebende
+Party-Einheit** in Slot-Reihenfolge, gleich ob Mensch, KI oder Autopilot sie gerade steuert — so verschiebt weder ein
+Autopilot-Wechsel noch die KI selbst einen Schadens-, Status- oder Beute-Wurf.
+
 #### 3.9.4 HP-Skala und lesbare Zahlen
 
 | Wert | Faktor (bis R5b zur Laufzeit, ab R5b in die Daten gebacken) |
 |---|---|
-| Party Max-HP | × 4 (`PartyMember.hp_scale_pm = 4000`, letzter Schritt von `Progression.total_stats`, nach Klasse und Spezies) |
+| Party Max-HP | × 4 (`PartyMember.hp_scale_pm`: Standard 1000 = CTB, ein Echtzeit-Spielstand setzt beim Anlegen `HP_SCALE_PM` = 4000; letzter Schritt von `Progression.total_stats`, nach Klasse und Spezies) |
 | Reguläre Gegner Max-HP | × 7 (`EnemyDef.rt.hp_pm`, Standard `ENEMY_HP_PM` = 7000 aus `rt_balance.json`; Kanalschleim 4800, Azubi absolut 280) |
+| Beschworene Adds (`is_summon`) | × 4 (`SUMMON_HP_PM` = 4000 statt `rt.hp_pm`, §3.12): Adds fallen schnell, der Zug räumt sie ab |
 | Bosse Max-HP | absolut (`EnemyDef.rt.hp`): Hausmeister 5 000, Rattenkönigin 7 600 (Startwerte §6.6–6.7) |
 | Feste Heilung/fester Schaden | × 4 (`FIXED_SCALE_PM`) |
 | Schaden pro Treffer, `mag`-Heilung, Prozentwerte, MP | unverändert |
@@ -975,7 +1015,8 @@ trotzdem: Kai lädt durch Treffen und Getroffenwerden.
 - Beschwörung (`summon` in Regeln/Phasen): höchstens `MAX_ENEMIES = 6` lebende Gegner; Ort `door` (Ende der Türgasse der nächsten
   Tür zur Party-Mitte, Gleichstand N, E, S, W; im geschlossenen Set der Ringpunkt vor dieser Tür) oder `near` (Formation um den
   Beschwörer); mit Auftritt; `is_summon = true` (keine EXP/Beute), Bedrohung 1 auf der nächsten Party-Einheit. Ereignis `SUMMON`
-  (bestehend).
+  (bestehend). Max-HP beschworener Adds = `stats.hp × SUMMON_HP_PM / 1000` (`SUMMON_HP_PM` = 4000 statt `rt.hp_pm`; Kanalratte
+  96 HP) — so sind die Bosskämpfe in §11.3 gerechnet.
 - Entkommen (`special.kind == "escape"`): Einheit verlässt den Kampf (`ESCAPED`, bestehend), zählt für `VICTORY` nicht mehr.
 - `BattleResult` wird wie bisher gefüllt (EXP, Credits, Overkill-Credits, Diebstahl/Erstattung, Beute, Boss-Belohnungen, Party-HP/
   -MP, `item_delta`, Kills, Bestiarium, Schwächen, Schaden, Krits, Schwächetreffer, Gegenstände, Party-K.O.) und ergänzt um
@@ -1066,7 +1107,9 @@ Struktur ohne R1. Startwerte:
  "INTERRUPT_LOCKOUT_TICKS": 60, "ITEM_CD_TICKS": 450, "ITEM_MAX_PER_COMBAT": 3, "DRINK_TICKS": 15,
  "SHOW_CD_TICKS": 900, "AI_SHOW_GRACE_TICKS": 150, "PARTNER_ORDER_TICKS": 45, "FINALE_TARGET_BELOW_PM": 300,
  "FIRST_SWING_TICKS": 30, "POP_IN_TICKS": 15, "ENTER_MAX_TICKS": 30, "AI_SLOT_OFFSET_TICKS": 9,
- "REACT_TICKS": {"attack": 18, "support": 12, "careful": 6}, "AI_INTERRUPT_REACT_TICKS": 0,
+ "REACT_TICKS": {"attack": 15, "support": 12, "careful": 6}, "AI_DODGE_MISS_PM": {"attack": 130, "support": 130, "careful": 40},
+ "AI_INTERRUPT_REACT_TICKS": 15, "AI_INTERRUPT_JITTER_TICKS": 10, "AI_INTERRUPT_LATE_PM": 250, "AI_INTERRUPT_LATE_TICKS": 45,
+ "AI_INTERRUPT_GCD_TAIL_TICKS": 5,
  "ESCAPE_MARGIN_CM": 60, "RANDOM_POINT_MIN_CM": 300, "FLEE_TICKS": 60, "FLEE_WARN_TICKS": 15,
  "DR_THRESHOLD_CM": 15, "DR_VEL_THRESHOLD": 15, "DR_YAW_THRESHOLD": 8, "DR_MAX_TICKS": 30, "HEARTBEAT_TICKS": 15,
  "FORCE_SAMPLE_CM": 2, "MOVE_BUDGET_MM": 600, "MOVE_REFILL_MM_TICK": 3, "SPEED_TOLERANCE_PM": 1250, "PLAYER_RUN_CM_S": 550,
@@ -1076,14 +1119,16 @@ Struktur ohne R1. Startwerte:
  "HEAL_THREAT_PM": 500, "DEBUFF_THREAT": 10, "COMBO_WINDOW_TICKS": 30, "COMBO_COOLDOWN_TICKS": 150, "COMBO_PM": 1100,
  "OVERKILL_PM": 500, "DMG_FACTOR_MAX_PM": 8000, "PCT_GUARD_PM": 667, "CLOSE_DODGE_TICKS": 9, "HIT_MP_EVERY_TICKS": 30,
  "MAX_PARTY": 4, "MAX_ENEMIES": 6, "MAX_TELEGRAPHS": 10, "MAX_COMBAT_TICKS": 18000, "CHECKPOINT_TICKS": 300,
- "HP_SCALE_PM": 4000, "FIXED_SCALE_PM": 4000, "ENEMY_HP_PM": 7000, "STUN_BOSS_PM": 500, "EASY_WARN_PM": 1250,
+ "HP_SCALE_PM": 4000, "FIXED_SCALE_PM": 4000, "ENEMY_HP_PM": 7000, "SUMMON_HP_PM": 4000, "EASY_WARN_PM": 1250,
  "REVIVE_GUARD_MS": 3000, "REGEN_PERIOD_TICKS": 90, "REGEN_HP_DELAY_TICKS": 150, "REGEN_HP_PM": 5, "REGEN_MP_PM": 20,
  "CHASE_COMBAT_SEC_X10": 40
 }}
 ```
 
 Strukturkonstanten, die keine Balance sind (`TICKS_PER_SEC`, Enum-Werte, Vokabulare), bleiben Code; `TICKS_PER_SEC` steht nur zur
-Prüfung in der Datei (muss 30 sein). `CHASE_COMBAT_SEC_X10` liest die Erkundung (Szenenlogik) als 4,0 s.
+Prüfung in der Datei (muss 30 sein). `CHASE_COMBAT_SEC_X10` liest die Erkundung (Szenenlogik) als 4,0 s. Zahlen mit einem Ort in
+den Daten stehen nur dort, nie doppelt: Boss-Dauerfaktoren je Status in `statuses.json → rt.boss_ms_pm` (Betäubung 500, §3.8),
+Gegnerwerte in `enemies.json → rt`, Fähigkeitswerte in `skills.json → rt`.
 
 ---
 
@@ -1101,16 +1146,18 @@ Prüfung in der Datei (muss 30 sein). `CHASE_COMBAT_SEC_X10` liest die Erkundung
 | 6 | **Trank** (automatische Wahl, §3.11; Gegenstandsrad per Rechtsklick/Halten) | `6` / LB |
 | — | **Partner-Spezial** (eigener Knopf neben dem Party-Rahmen, §7.3, §8.4) | `R` / Steuerkreuz links |
 
-- **Die Leiste wächst mit dem Level:** Slots ohne freigeschaltete Fähigkeit werden nicht angezeigt (Stufe 1: Kai Slot 1 + 5 + 6,
-  Mopsula Slot 1 + 2 + 5 + 6; ab Stufe 4 sind alle Slots belegt). Die Freischaltung steht in `party.json` → `rt.bar` (unabhängig
-  von der CTB-Lernliste, §4.8), sodass CTB bis zur Entfernung unverändert bleibt.
+- **Die Leiste wächst mit dem Level:** Slots ohne freigeschaltete Fähigkeit werden nicht angezeigt (Tutorial-Kampf: nur Slot 1 +
+  5, §2.13; danach Stufe 1: Kai Slot 1 + 5 + 6, Mopsula Slot 1 + 2 + 5 + 6; ab Stufe 4 sind alle Slots belegt). Die Freischaltung
+  steht in `party.json` → `rt.bar` (unabhängig von der CTB-Lernliste, §4.8), sodass CTB bis zur Entfernung unverändert bleibt.
 - **Varianten:** Ab Stufe 4–7 erhalten Slots 2–4 je eine Alternative. Die Belegung wählt man außerhalb des Kampfes im
   Fähigkeiten-Menü (`PartyMember.rt_loadout`, Standard = Grundfähigkeit). Spezies und Spezialisierung (06, ab Etage 3) dürfen
   weitere Varianten freischalten (`unlock_variant`, §9.5).
 - **Kontext-Variante:** Mopsulas Slot 2 wird auf einem K.O.-Ziel automatisch zu „Sabber der Wiederkehr“ (ab Stufe 7).
 - **SHOW:** Stunt mit Risiko und viel Hype; **eine Abklingzeit für die ganze Party** (30 s, §3.6.12). Der KI-Partner zündet seine
   eigene SHOW nur, wenn die SHOW schon `AI_SHOW_GRACE_TICKS` = 150 (5 s) bereitliegt und der Schalter „Show-Einlagen“ an ist — die
-  Person hat immer den ersten Zugriff („Lässt du die Show liegen, macht es dein Partner.“).
+  Person hat immer den ersten Zugriff („Lässt du die Show liegen, macht es dein Partner.“). Die KI darf die SHOW also nutzen
+  (E27): Talente der Figur wirken dabei wie bei der Person (Mopsulas „Dramatische Pause“ über `RtUnit.stunt_pm`, §9.6); Hype
+  zählt nach §9.1 (Stunt-Erfolg für die ganze Party, „eigene SHOW“ für Marotten und Achievements nur mit `by_ai == false`).
 - **FINALE** (Bedingung **in der Sim**): Der SHOW-Slot zeigt und wirkt das FINALE, wenn die Figur **mindestens Stufe 6** ist
   (`bar`-Eintrag mit `finale: true`, `level` 6 — vor der Rattenkönigin erreichbar) **und** ihr aktuelles feindliches Ziel **unter
   30 % HP** hat (`FINALE_TARGET_BELOW_PM` = 300). Es ist ein echter Finisher; `can_use` meldet sonst `target_hp`. FINALE teilt die
@@ -1118,7 +1165,8 @@ Prüfung in der Datei (muss 30 sein). `CHASE_COMBAT_SEC_X10` liest die Erkundung
   Regel; er steuert nur die Darstellung (M.O.D.-Reaktion, bei Hype ≥ 85 großes Konfetti).
 - **Partner-Spezial:** befiehlt dem KI-Partner sofort seine Signatur (`party.json` → `rt.partner_special`): Kai „Hier spielt die
   Musik!“ (Spott, ab Stufe 2), Graf Mopsula „Heiliges Schlabbern“ (Heilung, Smart-Ziel, ab Stufe 1) — mit deren normaler
-  Abklingzeit und MP (§3.6.13). Der Knopf erscheint, sobald der Partner die Fähigkeit hat, und zeigt deren Abklingzeit.
+  Abklingzeit und MP (§3.6.13). Der Knopf erscheint, sobald der Partner die Fähigkeit hat — nie im Tutorial-Kampf (§2.13) —, und
+  zeigt deren Abklingzeit.
 
 ### 4.2 Kai (Nahkampf, Beschützer)
 
@@ -1225,7 +1273,7 @@ Optionaler Block je Skill. Pflicht für jeden Skill, der im Echtzeitkampf vorkom
 | `telegraph` | Dictionary | `{}` | `{"shape": "circle"\|"cone"\|"ring"\|"line", "anchor": "self"\|"target_pos"\|"each_enemy"\|"random"\|"lane", "radius_cm", "inner_cm", "angle_deg", "length_cm", "width_cm", "count": 1..4, "lanes": [int, …]}` (§6.3) |
 | `zone` | Dictionary | `{}` | `{"ms": int, "period_ms": int, "status": String, "skill": String}` (genau eins von `status`/`skill`) |
 | `dash` | bool | `false` | Linien-Telegraph: Wirker springt beim Einschlag ans Linienende |
-| `pct_maxhp` | int | 0 | Prozent-Treffer: Schaden in % der Max-HP des Ziels statt Formel (§3.9.1); **Pflicht für jeden gegnerischen Telegraphen** (10…40; Zug 35) und für schadende unterbrechenswerte Zauber ohne Telegraph |
+| `pct_maxhp` | int | 0 | Prozent-Treffer: Schaden in % der Max-HP des Ziels statt Formel (§3.9.1); **Pflicht für jeden gegnerischen Telegraphen** (15…35: leicht 15, mittel 20, schwer 25–30, Zug 35; §6.3) und für schadende unterbrechenswerte Zauber ohne Telegraph |
 | `ignore_guard` | bool | `false` | `sts_guard` wirkt nicht |
 | `kill_adds` | bool | `false` | trifft auch die eigene Seite und setzt getroffene Beschwörungen sofort K.O. (Zug) |
 | `fail_ms` | int | 0 | Stunt: Dauer der Selbst-Betäubung bei Fehlschlag (überschreibt `fail_effect.status`-Dauer) |
@@ -1250,7 +1298,7 @@ Optionaler Block je Skill. Pflicht für jeden Skill, der im Echtzeitkampf vorkom
 
 ```json
 "rt": {
-  "radius_cm": 40, "move_cm_s": 550, "threat_pm": 1500,
+  "radius_cm": 40, "move_cm_s": 540, "threat_pm": 1500,
   "auto_skill": "skl_attack_kai", "swing_ms": 2000, "reach_cm": 250,
   "mp_regen": {"mode": "hit", "amount": 1, "taken": 1, "taken_every_ms": 1000},
   "keep_cm": {"attack": 0, "support": 0, "careful": 0}, "follow_cm": 600,
@@ -1273,12 +1321,16 @@ Optionaler Block je Skill. Pflicht für jeden Skill, der im Echtzeitkampf vorkom
 }
 ```
 
-Mopsula: `radius_cm` 35 (Kapsel 0,35 m, 06 §1.2), `move_cm_s` 550 (beide laufen gleich schnell, 06 §1.2), `threat_pm` 1000,
+Mopsula: `radius_cm` 35 (Kapsel 0,35 m, 06 §1.2), `move_cm_s` 540 (beide gleich schnell, 06 §1.2), `threat_pm` 1000,
 `auto_skill` `skl_rt_auto_mopsula`, `swing_ms` 2400, `reach_cm` 1000, `mp_regen` `{"mode": "time", "amount": 1, "every_ms":
 1500}`, `keep_cm` `{"attack": 450, "support": 600, "careful": 700}` (bevorzugter Abstand zum Ziel je Taktik, höchstens 700 —
 im 4,8-m-Set erreichbar), `follow_cm` 700, `partner_special` `skl_mop_holy_lick`, `bar` nach §4.3 (FINALE `level` 6),
 `context` `[{"slot": 2, "skill": "skl_mop_revive", "when": "target_ko", "level": 7}]`, `default_preset` `support`,
 `assist_preset` `support`. Die Regel-Listen der Presets stehen in §5.4.
+
+`move_cm_s` gilt für sim-gesteuerte Bewegung (KI-Partner, Autopilot) und muss ein Vielfaches von 30 sein (V2): 540 = 18 cm/Tick
+(= Standard `RtUnit.move_cm_tick`). Die gesteuerte Figur läuft in der Szene wie bisher 5,5 m/s und wird mit `PLAYER_RUN_CM_S` =
+550 geprüft (§3.5.2).
 
 `items.json` → `rt` (optional): `{"wheel": int}` = Sortierung im Gegenstandsrad (0…99, Standard: Datenreihenfolge).
 Kampftaugliche Gegenstände (`usable` `battle`/`both`) brauchen einen `use_skill` mit `rt`-Block.
@@ -1319,16 +1371,17 @@ Kampftaugliche Gegenstände (`usable` `battle`/`both`) brauchen einen `use_skill
 06 hat den Validator je Tabelle aufgeteilt (`core/data/validators/*.gd`, `data_validator.gd` danach eingefroren). Der
 Echtzeitkampf folgt dem: **R1a** legt `core/data/validators/rt_vocab.gd` (`RtVocab`, alle Vokabulare und `ICON_IDS` als Konstanten
 — R1 braucht sie in `RtCommand`/`RtMods`, R3 für Symbole, R4 für Daten) und `core/data/validators/rt.gd` (statisch, ohne
-`class_name`, wie `validators/talents.gd`: `check(v: DataValidator) -> void`, im Stub leer) an und fügt in `data_validator.gd`
-genau **eine** Hook-Zeile ein; **R4** füllt `rt.gd` mit den Regeln unten. Außerdem trägt R1a in `data_validator.gd` das Tag-Präfix
-`rt_`, die neuen Payload-Schlüssel und StatIds ein (Konstanten, §9.4) — danach ändert niemand die Datei.
+`class_name`, mit derselben Signatur wie die 06-Validatoren `validators/talents.gd` usw.: statisch `check(data, errors)`, 06 §8.0
+Nr. 7; im Stub leer) an und fügt in `data_validator.gd` genau **eine** Hook-Zeile ein; **R4** füllt `rt.gd` mit den Regeln unten.
+Außerdem trägt R1a in `data_validator.gd` das Tag-Präfix `rt_`, die neuen Payload-Schlüssel und StatIds ein (Konstanten, §9.4) —
+danach ändert niemand die Datei.
 
 Vokabulare (`RtVocab`, verbindlich): `RT_TARGETS`, `RT_CONDITIONS` (§5.3), `RT_PHASE_OPS`, `TELEGRAPH_SHAPES` (`circle`, `cone`,
 `ring`, `line`), `TELEGRAPH_ANCHORS` (`self`, `target_pos`, `each_enemy`, `random`, `lane`), `AOE_CENTERS` (`self`, `target`),
 `STATUS_TO` (`target`, `self`, `all_enemies`, `all_allies`), `STACK_MODES`, `RT_STATUS_FLAGS`, `RT_PRESETS` (`attack`, `support`,
 `careful`), `RT_TOGGLES` (`interrupt`, `show`, `potions`), `MP_REGEN_MODES` (`hit`, `time`), `RT_ITEM_KINDS` (`heal`, `revive`,
-`mp`, `cure`), `SUMMON_AT` (`door`, `near`), `TUTORIAL_STEPS` (`target`, `bar1`, `show`, `dodge`), `HINT_IDS` (§2.13),
-`MOD_OPS` (§9.5), `ICON_IDS`.
+`mp`, `cure`), `SUMMON_AT` (`door`, `near`), `TUTORIAL_STEPS` (`target`, `bar1`, `show`, `dodge`), `HINT_IDS` (`interrupt`,
+`zone`, `partner_special`, `finale`, `flee`, `enrage`; §2.13), `MOD_OPS` (§9.5), `ICON_IDS`.
 
 | Nr. | Regel |
 |---|---|
@@ -1336,7 +1389,7 @@ Vokabulare (`RtVocab`, verbindlich): `RT_TARGETS`, `RT_CONDITIONS` (§5.3), `RT_
 | V2 | Alle `*_ms`-Felder ≥ 0 und `% 100 == 0` (Ausnahme: −1 bei `default_ms`/`statuses[].ms`/`status_self.ms` = bis Kampfende). Alle `move_cm_s` `% 30 == 0`. |
 | V3 | Wertebereiche: `cast_ms` ≤ 5000, `channel_ms` ≤ 5000 und `% period_ms == 0`, `cooldown_ms` ≤ 120000, `impact_ms` ≤ 1500, `range_cm` ≤ 3000, `aoe.radius_cm` ≤ 1600, `aoe.cone_deg` ≤ 180, `max_targets` ≤ 8, `threat_pm` ≤ 10000, `power` ≤ 500, `mp` ≤ 99, `pct_maxhp` ≤ 100, `statuses[].tick_power` ≤ 100. |
 | V4 | Referenzen: `statuses[].id`, `cleanse[]`, `zone.status`, `immune[]`, `enrage.status`, `status_self.status` sind Status-Ids; `zone.skill`, `auto_skill`, `auto_ranged_skill`, Regel-`skill`, `then.skill`, `telegraph`-Op-`skill`, Leisten-/Kontext-Skills, `partner_special` sind Skill-Ids mit `rt`-Block; `summon.enemy` ist eine Gegner-Id mit `rt`; `icon` ∈ `ICON_IDS`. |
-| V5 | Telegraph: Form/Anker aus den Vokabularen; Geometrie vollständig (Kreis: `radius_cm`; Kegel: `radius_cm`, `angle_deg` 1…180; Ring: `radius_cm` > `inner_cm` ≥ 0; Linie: `length_cm`, `width_cm`); `count` 1…4; `lanes` nur bei `lane`; `cast_ms` ≥ 600; nur Skills mit `user` `enemy`/`any`; **`pct_maxhp` 10…40**. |
+| V5 | Telegraph: Form/Anker aus den Vokabularen; Geometrie vollständig (Kreis: `radius_cm`; Kegel: `radius_cm`, `angle_deg` 1…180; Ring: `radius_cm` > `inner_cm` ≥ 0; Linie: `length_cm`, `width_cm`); `count` 1…4; `lanes` nur bei `lane`; `cast_ms` ≥ 600; nur Skills mit `user` `enemy`/`any`; **`pct_maxhp` 15…35** (E14). |
 | V6 | Zone: `ms` 1000…30000, `period_ms` 500…5000, genau eins von `status`/`skill`. |
 | V7 | Status-`rt`: Bereiche §4.7; `flags` ⊆ `RT_STATUS_FLAGS` ∪ `STATUS_FLAGS`; schädliches `tick_pct` (< 0) braucht `tick_max` > 0. |
 | V8 | Party-`rt`: alle Felder vorhanden; `bar` hat Slot 1 und Slot 5 mit `level` 1; jeder Slot 1…5 hat höchstens eine Grundfähigkeit (ohne `variant`/`finale`); `finale` nur in Slot 5; Skills haben `user` `party`; `presets` hat genau `attack`, `support`, `careful`; `default_preset`/`assist_preset` ∈ `RT_PRESETS`; `keep_cm`-Werte 0…700; `partner_special` ist eine Leisten-Fähigkeit dieser Figur. |
@@ -1379,11 +1432,11 @@ Neue Einträge (R4): Skills `skl_rt_auto_mopsula`, `skl_e_azubi_hop`, `skl_q_tra
 - **Man steuert die gewählte Figur** (06 §1): `RtSetup.controlled_id` = Einheit von `GameState.hero` (`"kai"` oder
   `"mopsula"`; `BattleBridge.make_rt_setup` bildet die Mitglieds-Id auf `p<battle_slot>` ab). Die gesteuerte Einheit hat
   `driver = PLAYER` (Bewegung aus Proben, Fähigkeiten aus Befehlen), die andere `AI`.
-- **Der Partner ist immer KI** mit Taktik und Schaltern (§5.2) — und **einer** direkten Anordnung: **Partner-Spezial** (Taste
-  `R`, Gamepad Steuerkreuz links, Touch-Knopf neben dem Party-Rahmen). Sie befiehlt sofort die Signatur des Partners mit deren
-  normaler Abklingzeit (Kai: „Hier spielt die Musik!“ — Spott, ab Stufe 2; Mopsula: „Heiliges Schlabbern“ — Heilung auf das
-  Smart-Ziel, ab Stufe 1), §3.6.13. Einfach, lesbar, und man hat den Partner im entscheidenden Moment in der Hand. Die so
-  ausgelöste Aktion zählt als Aktion der Person (`by_ai = false`, §9.1).
+- **Der Partner ist immer KI** mit Taktik und Schaltern (§5.2) — und **einer** direkten Anordnung: **Partner-Spezial** (Taste `R`,
+  Gamepad Steuerkreuz links, Touch-Knopf neben dem Party-Rahmen). Sie befiehlt sofort die Signatur des Partners mit deren normaler
+  Abklingzeit (Kai: „Hier spielt die Musik!“ — Spott, ab Stufe 2; Mopsula: „Heiliges Schlabbern“ — Heilung auf das Smart-Ziel, ab
+  Stufe 1; nie im Tutorial-Kampf, §2.13), §3.6.13. Einfach, lesbar, und man hat den Partner im entscheidenden Moment in der Hand.
+  Die so ausgelöste Aktion zählt als Aktion der Person (`by_ai = false`, §9.1).
 - 06 „Partner automatisch“ (`GameSettings.partner_auto`) betrifft nur den CTB-Modus; im Echtzeitkampf ist der Partner immer KI.
   Die Optionszeile wird im Echtzeitmodus ausgeblendet und entfällt mit R5b (06 §1.4 wird dann nachgezogen, §12.8).
 - **Steuerung folgt dem Leben** (§2.6): K.O. der gesteuerten Einheit → die erste lebende KI-Einheit wird `PLAYER`
@@ -1400,9 +1453,9 @@ Neue Einträge (R4): Skills `skl_rt_auto_mopsula`, `skl_e_azubi_hop`, `skl_q_tra
 
 | Taktik (`preset`) | UI-Name | Ausweich-Reaktion | Abstand Mopsula | Heil-Schwelle (Mopsula) | Tränke | SHOW |
 |---|---|---|---|---|---|---|
-| `attack` | Angriff | 18 Ticks (0,6 s) | 450 cm | Verbündeter < 35 % | nur mit Schalter | ja (Schalter) |
-| `support` | Unterstützen | 12 Ticks (0,4 s) | 600 cm | Verbündeter < 60 % | nur mit Schalter (eigene HP < 35 %) | ja, sparsam |
-| `careful` | Vorsichtig | 6 Ticks (0,2 s) | 700 cm | Verbündeter < 75 % | **immer** (eigene HP < 50 %) | nein |
+| `attack` | Angriff | 15 Ticks (0,5 s), übersieht 13 % | 450 cm | Verbündeter < 35 % | nur mit Schalter (eigene HP < 35 %) | ja (Schalter) |
+| `support` | Unterstützen | 12 Ticks (0,4 s), übersieht 13 % | 600 cm | Verbündeter < 60 % | nur mit Schalter (eigene HP < 35 %) | ja, sparsam |
+| `careful` | Vorsichtig | 6 Ticks (0,2 s), übersieht 4 % | 700 cm | Verbündeter < 75 % | **immer** (eigene HP < 50 %) | nein |
 
 | Schalter (`tog`) | Standard | Wirkung |
 |---|---|---|
@@ -1412,8 +1465,9 @@ Neue Einträge (R4): Skills `skl_rt_auto_mopsula`, `skl_e_azubi_hop`, `skl_q_tra
 
 Standard: Kai als Partner `attack`, Mopsula als Partner `support` (`party.json` `rt.default_preset`). Die Wahl wird je Mitglied
 gespeichert (`PartyMember.rt_preset`, `rt_toggles`) und im Kampf mit dem Befehl `partner_preset` geändert (§7: Taste `G`,
-Steuerkreuz rechts, Antippen des Taktik-Chips). Der Taktik-Chip erscheint im HUD erst nach dem ersten Safe-Room-Besuch (§8.1);
-bis dahin gilt der Standard.
+Steuerkreuz rechts, Antippen des Taktik-Chips). Der Taktik-Chip erscheint im HUD erst **ab Stufe 3** — dann bekommt der Partner
+seinen Unterbrecher, und die Schalter bedeuten etwas (§8.1, E28; der erste Safe Room liegt in Zone A gleich nach dem Tutorial und
+wäre zu früh). Bis dahin gilt der Standard, und `G`/Steuerkreuz rechts senden nichts.
 
 ### 5.3 Regel-Engine `RtRules` (gemeinsam für Partner-KI, Autopilot, Assist und Gegner-KI)
 
@@ -1485,9 +1539,23 @@ Erste Bereitschaft: `first_ms` + (Gegner) Slot × `AI_SLOT_OFFSET_TICKS`, damit 
 | `caster` | Gegner mit **unterbrechenswertem** Zauber in Reichweite der Fähigkeit, kürzeste Restzeit zuerst (Füller zählen nie) |
 | `none` | ohne Ziel |
 
-KI-gesteuerte Party-Einheiten (KI-Partner, Autopilot) sehen einen unterbrechenswerten Zauber (für `caster`, `caster_within_cm`,
-`target_casting`) erst, wenn er seit `AI_INTERRUPT_REACT_TICKS` Ticks läuft (Startwert 0; Stellschraube gegen eine zu perfekte
-Partner-KI, §11.3).
+**Die KI unterbricht wie ein Mensch, nicht wie eine Maschine (E25).** Beginnt ein unterbrechenswerter Zauber (`CAST_START` mit
+`rt.worthy`), würfelt die Sim aus dem KI-Strom (§3.9.3) für jede lebende Party-Einheit `ai_seen[caster] = start +
+AI_INTERRUPT_REACT_TICKS (15) + j`, `j` gleichverteilt in 0…`AI_INTERRUPT_JITTER_TICKS` (10), und mit `AI_INTERRUPT_LATE_PM`
+(250) ‰ Wahrscheinlichkeit „spät“ zusätzlich `AI_INTERRUPT_LATE_TICKS` (45). Für eine KI-gesteuerte Einheit (KI-Partner,
+Autopilot) gilt:
+
+1. Vor `ai_seen` sieht sie den Zauber nicht (`caster`, `caster_within_cm`, `target_casting` sind für sie falsch).
+2. Danach feuert eine Regel mit diesen Bedingungen/Zielen nur, wenn die Einheit **keinen eigenen Zauber oder Kanal** wirkt und
+   **nicht in den letzten `AI_INTERRUPT_GCD_TAIL_TICKS` (5) Ticks** ihres GCD steckt (`0 < gcd_until − c ≤ 5`); sonst reagiert
+   sie im ersten Tick danach, solange der Zauber noch läuft. Einen eigenen Zauber bricht sie dafür nie ab.
+3. `ai_seen[caster]` wird bei Zauberende, Unterbrechung oder K.O. des Wirkers gelöscht.
+
+Folge: Die KI unterbricht in 0,5–0,85 s, 2,5- und 3-s-Zauber fast immer, 2-s-Zauber aber nur ohne Verspätung (in 25 % der Fälle
+reagiert sie 1,5 s später) und nicht, solange sie selbst zaubert. Ein Mensch reagiert ab dem ersten Tick, darf auch während eines
+eigenen Zaubers unterbrechen (Unterbrecher sind GCD-frei) und ist deshalb immer schneller — die Person ist die beste
+Unterbrecherin. Die Werte sind Stellschrauben (§11.2); mit 0/0/0 verhält sich die KI wie im ersten Entwurf (Prüffall in
+`test_r1_rt_ai`).
 
 ### 5.4 Prioritätslisten (Startwerte, `party.json` → `rt.presets`)
 
@@ -1495,6 +1563,7 @@ Kai:
 
 ```json
 "attack": [
+  {"item": "heal", "target": "self", "cond": {"toggle": "potions", "self_hp_below_pm": 350}},
   {"skill": "skl_kai_leash_trip", "target": "caster", "cond": {"toggle": "interrupt"}},
   {"skill": "skl_kai_cable_whip", "target": "caster", "cond": {"toggle": "interrupt"}},
   {"skill": "skl_kai_taunt", "target": "self", "cond": {"enemy_on_ally": true}},
@@ -1543,6 +1612,7 @@ Graf Mopsula:
 "attack": [
   {"skill": "skl_mop_revive", "target": "ko_ally", "cond": {"ally_ko": true}},
   {"skill": "skl_mop_holy_lick", "target": "lowest_hp_pct_ally", "cond": {"ally_hp_below_pm": 350}},
+  {"item": "heal", "target": "self", "cond": {"toggle": "potions", "self_hp_below_pm": 350}},
   {"skill": "skl_mop_thunder_bark", "target": "self", "cond": {"toggle": "interrupt", "caster_within_cm": 600}},
   {"skill": "skl_stunt_mop_entrance", "target": "self", "cond": {"toggle": "show", "enemies_in_radius": {"r_cm": 800, "min": 2}}},
   {"skill": "skl_mop_frost_sneeze", "target": "assist", "filler": true},
@@ -1564,13 +1634,17 @@ dürfen die Unterbrecher-Reserve aufbrauchen.
 ### 5.5 Bewegung und Ausweichen der KI
 
 - **Ausweichen:** Beginnt ein gegnerischer Telegraph (`TELEGRAPH_START`), dessen Form die Einheit (mit `ESCAPE_MARGIN_CM = 60`
-  aufgeblasen) enthält, setzt sie `react_at = start + REACT_TICKS[preset]`. Ab `react_at` ist ihr Bewegungsziel
-  `RtGeo.escape_point(sim, unit)`: Kandidaten = 16 Richtungen (`yaw = k × 16`) × Abstände 100/200/300/450/600 cm; der erste
-  Kandidat (sortiert nach Abstand, dann nach Winkelnähe zur bevorzugten Richtung — Nahkampf: zum Ziel, Fernkampf: weg vom
-  nächsten Gegner —, dann `k`), der begehbar ist (im Ring, nicht in einer Sperrfläche) und außerhalb aller aufgeblasenen
-  gegnerischen Formen liegt, die in den nächsten 60 Ticks einschlagen, und außerhalb aller Zonen. Kein Kandidat → stehen bleiben.
-  Läuft ein eigener Zauber mit `moving_cancels` und endet er nicht vor dem Einschlag minus Laufzeit, bricht die KI ihn ab
-  (`CAST_FAILED moved`).
+  aufgeblasen) enthält, setzt sie `react_at = start + REACT_TICKS[preset]` — außer sie **übersieht** ihn (E25): Je Telegraph
+  würfelt die Sim aus dem KI-Strom für jede lebende Party-Einheit; mit `AI_DODGE_MISS_PM[preset]` ‰ (Angriff und Unterstützen 130,
+  Vorsichtig 40) setzt eine KI-gesteuerte Einheit kein `react_at` und bleibt bei ihrer Aktion, wie ein Mensch, der gerade nicht
+  hinsieht — „Vorsichtig“ ist die aufmerksame Taktik. `REACT_TICKS` sind so gewählt, dass die KI jede Form der Etage 1 rechtzeitig
+  verlässt, wenn sie hinsieht (Angriff 15 Ticks: + 14 Ticks Laufweg für 250 cm passen in den 1,0-s-Putzmittelnebel; mit 18 stünde
+  der KI-Kai immer darin). Ab `react_at` ist ihr Bewegungsziel `RtGeo.escape_point(sim, unit)`: Kandidaten = 16 Richtungen
+  (`yaw = k × 16`) × Abstände 100/200/300/450/600 cm; der erste Kandidat (sortiert nach Abstand, dann nach Winkelnähe zur
+  bevorzugten Richtung — Nahkampf: zum Ziel, Fernkampf: weg vom nächsten Gegner —, dann `k`), der begehbar ist (im Ring, nicht in
+  einer Sperrfläche) und außerhalb aller aufgeblasenen gegnerischen Formen liegt, die in den nächsten 60 Ticks einschlagen, und
+  außerhalb aller Zonen. Kein Kandidat → stehen bleiben. Läuft ein eigener Zauber mit `moving_cancels` und endet er nicht vor dem
+  Einschlag minus Laufzeit, bricht die KI ihn ab (`CAST_FAILED moved`).
 - **Zonen** meidet die KI immer (Bewegungsziele in Zonen werden auf `escape_point` umgelenkt).
 - **Abstand:** Mopsula hält `keep_cm[preset]` (≤ 700) zum Ziel, so weit der Ring es zulässt, und bleibt ≤ `follow_cm` von der
   gesteuerten Figur, wenn kein Ziel besteht; Kai geht in Nahkampf. Verlässt die gesteuerte Figur den Ring, folgt der Partner
@@ -1765,7 +1839,7 @@ Neuer Baustein für Etage 2: `rt.counter` = `{"every_ms", "max", "at_max_skill",
 | Fähigkeiten | `1`–`5` mit Ziel = Pull (§2.2) | `1`–`5` (Klick auf Slot ebenso) |
 | Trank | — (Feldnutzung im Menü wie bisher) | `6`; Rechtsklick auf Slot 6 = Gegenstandsrad |
 | **Partner-Spezial** | — | `R` (Klick auf den Knopf am Partner-Rahmen ebenso) |
-| Partner-Taktik | — | `G` (zyklisch Angriff → Unterstützen → Vorsichtig), Klick auf den Taktik-Chip öffnet Taktik + Schalter |
+| Partner-Taktik | — | ab Stufe 3 (§5.2): `G` (zyklisch Angriff → Unterstützen → Vorsichtig), Klick auf den Taktik-Chip öffnet Taktik + Schalter |
 | Autopilot | — | `T` (`toggle_auto`) |
 | Interagieren / Feldfähigkeit | `F`/`Leertaste`/`Enter` (unverändert; Kai: Feldschlag, Mopsula: Bellen, 06 §1.3) | gesperrt |
 | Karte | `M` (Tab entfällt) | gesperrt (Hinweis „Nicht während der Aufnahme!“) |
@@ -1807,7 +1881,7 @@ Kampf (Referenz 1280 × 720, Zentren in px, verschieben sich mit den Safe-Area-I
 | Ziel wechseln | (1227, 360) | 64 / 88 | wie `target_next`; halten = vorheriges |
 | Pause | (1227, 40) | 64 / 88 | unverändert |
 | **Partner-Spezial** | (300, 192) | 64 / **88** | neben dem Partner-Rahmen; Symbol der Signatur, Abklingzeit als Sweep |
-| Taktik-Chip | (108, 268) | 168 × 36 / 168 × 88 | erst nach dem ersten Safe-Room-Besuch (§8.1); öffnet Taktik + Schalter |
+| Taktik-Chip | (108, 268) | 168 × 36 / 168 × 88 | erst ab Stufe 3 (§8.1); öffnet Taktik + Schalter |
 | Karte | — | — | im Kampf ausgeblendet |
 
 Geprüfte Abstände (Mittelpunkte ≥ Summe der halben Trefferflächen): Slot1–Slot2/3/4 = 136, Slot1–SHOW = 140 (≥ 100); Slot2–Slot3 =
@@ -1932,11 +2006,12 @@ auf E1 nicht dichter als dieses):
 
 | Element | erscheint |
 |---|---|
-| Party-Rahmen (HP/MP), Zielrahmen, Slot 1 + SHOW + Trank, Kampftext, Telegraphen, Zauberleisten | ab dem ersten Kampf |
-| Slots 2–4 | mit der jeweiligen Stufe (die Leiste wächst, §4.1) |
-| Partner-Spezial | sobald der Partner seine Signatur hat (Mopsula als Partner: Stufe 1; Kai als Partner: Stufe 2) |
-| Bedrohungspunkte auf Plaketten, Aggro-Zähler „×2“ | nach dem ersten Spott der Party (StatId `taunts_total` > 0) |
-| Taktik-Chip | nach dem ersten Safe-Room-Besuch |
+| Party-Rahmen (HP/MP), Zielrahmen, Slot 1 + SHOW, Kampftext, Telegraphen, Zauberleisten | ab dem ersten Kampf (Tutorial) |
+| Trank (Slot 6) | ab dem zweiten Kampf (im Tutorial-Kampf ausgeblendet, §2.13) |
+| Slots 2–4 | mit der jeweiligen Stufe (die Leiste wächst, §4.1), nie im Tutorial-Kampf |
+| Partner-Spezial | sobald der Partner seine Signatur hat (Mopsula als Partner: Stufe 1; Kai als Partner: Stufe 2), nie im Tutorial-Kampf; beim ersten Mal mit Hinweiskarte `partner_special` |
+| Bedrohungspunkte auf Plaketten, Aggro-Zähler „×2“ | nach dem ersten **eigenen** Spott (Taste der gesteuerten Figur oder Partner-Spezial; StatId `taunts_total` > 0, zählt nur `by_ai == false`) — ein KI-Spott deckt nichts auf |
+| Taktik-Chip | ab Stufe 3 (wenn der Partner unterbrechen kann, §5.2) |
 | Restsekunden der Status | nur per langem Druck (Touch) bzw. Mauszeiger (PC) |
 | Boss-Rahmen, Phasen-Rauten, Enrage-Countdown | nur in Bosskämpfen |
 
@@ -1999,9 +2074,9 @@ Ton „Plattennadel-Kratzer“.
 
 ### 8.4 Einheitenrahmen und Status-Symbole
 
-- Party: HP-Leiste in Partyfarbe (`ui_party` #4AA8FF) mit nachlaufendem roten Schadensstück (0,4 s) und grünem Heil-Aufblitzen;
-  MP in `MANA`; K.O. = grau + „K.O.“; Pille „DU“ an der gesteuerten Figur (06 A; nach einem Steuerungswechsel wandert sie mit);
-  **Aggro-Zähler** (rotes Abzeichen „×2“ = so viele Gegner greifen dieses Mitglied an) ab dem ersten Spott (§8.1).
+- Party: HP-Leiste in Partyfarbe (`ui_party` #4AA8FF) mit nachlaufendem roten Schadensstück (0,4 s) und grünem Heil-Aufblitzen; MP
+  in `MANA`; K.O. = grau + „K.O.“; Pille „DU“ an der gesteuerten Figur (06 A; nach einem Steuerungswechsel wandert sie mit);
+  **Aggro-Zähler** (rotes Abzeichen „×2“ = so viele Gegner greifen dieses Mitglied an) ab dem ersten eigenen Spott (§8.1).
 - Partner-Spezial-Knopf am Partner-Rahmen (§8.1, §7.3): Symbol, Abklingzeit-Sweep, bei Ablehnung Rütteln + Kurztext.
 - Ziel: HP in Gegnerfarbe (`ui_enemy` #E8455A), Elite/Boss-Marke, Schwert-Schalter für Auto-Angriff.
 - Boss: Phasen-Rauten (gefüllt = erreicht), HP-Prozent, in der letzten Minute vor dem Enrage „Feierabend in 0:42“.
@@ -2015,11 +2090,11 @@ Ton „Plattennadel-Kratzer“.
 
 2D, projiziert über `Camera3D.unproject_position` (geprüft) auf Kopfhöhe + 0,4 m, für alle Gegner im Kampf: HP-Leiste 64 × 6,
 Zauberleiste 64 × 4 (nur beim Zaubern), bis zu 3 Statuspunkte in Statusfarbe, links ein **Zielpunkt** in der Farbe des
-angegriffenen Party-Mitglieds (`party.json` `portrait_color`, ab dem ersten Spott, §8.1). Name nur für das aktuelle Ziel, Elite und
-Boss. Ausgeblendet hinter der Kamera/außerhalb des Bildes, ab 20 m ausgeblendet. Umsetzung (geprüft): alle Leisten/Punkte in
-**einem** Dreiecks-Array (1 Draw Call) + höchstens 8 Labels ohne Outline (≈ 1 Draw Call): 8 Plaketten = 2 Draw Calls (als
-`PanelContainer` + `ProgressBar` gemessen: 24). **Keine `Label3D`-Plaketten** (geprüft: je Billboard-`Label3D` mit Outline
-2 Draw Calls in Compatibility, 1 in Mobile).
+angegriffenen Party-Mitglieds (`party.json` `portrait_color`, ab dem ersten eigenen Spott, §8.1). Name nur für das aktuelle Ziel,
+Elite und Boss. Ausgeblendet hinter der Kamera/außerhalb des Bildes, ab 20 m ausgeblendet. Umsetzung (geprüft): alle
+Leisten/Punkte in **einem** Dreiecks-Array (1 Draw Call) + höchstens 8 Labels ohne Outline (≈ 1 Draw Call): 8 Plaketten = 2 Draw
+Calls (als `PanelContainer` + `ProgressBar` gemessen: 24). **Keine `Label3D`-Plaketten** (geprüft: je Billboard-`Label3D` mit
+Outline 2 Draw Calls in Compatibility, 1 in Mobile).
 
 ### 8.6 Kampftext
 
@@ -2288,7 +2363,8 @@ dann dieselbe Grenze auf — System-Geschenke entstehen dabei aus denselben Erei
 - Neue Payload-Schlüssel (additiv; R1a trägt sie in `DataValidator.TRIGGER_PAYLOAD_KEYS` ein, §12.3): `battle_won.duration_sec`,
   `.interrupts`, `.dodges`, `.telegraph_hits` (diese drei nur für die gesteuerte Figur), `.train_kills`, `.perfect_phases`.
   Neue `StatIds` (R1a in `stat_ids.gd` und der Validator-Kopie): `interrupts_total`, `dodges_total` (gesteuerte Figur),
-  `train_kills`.
+  `train_kills`, `taunts_total` (Spott-Aktionen der Person: eigene Taste oder Partner-Spezial, `by_ai == false`; deckt die
+  Bedrohungsanzeige auf, §8.1).
 - Neue Achievements (Entscheidung O7, R5a; Unterbrechen und Ausweichen zählen nur für die gesteuerte Figur): `ach_interrupt_10`
   „Wort abgeschnitten“ (`s.interrupts_total >= 10`), `ach_dodge_25` „Tanz auf dem Bahnsteig“ (`s.dodges_total >= 25`),
   `ach_train_adds` „Bitte zurückbleiben!“ (`e.train_kills >= 3`), `ach_perfect_phase` „Fehlerfrei auf Sendung“
@@ -2297,11 +2373,12 @@ dann dieselbe Grenze auf — System-Geschenke entstehen dabei aus denselben Erei
 ### 9.5 `RtMods`: statische Modifikatoren
 
 Systeme außerhalb des Kampfes (Talente, Spezies, Spezialisierung, Ausrüstung, Show-Boss, Kampf-Twists) wirken auf den Kampf
-**nur** über Werte, die vor dem Kampf feststehen: über die Combatant-Werte (`Progression.total_stats`, `talent_mods`, §9.6) und
-über eine geschlossene Liste von Modifikatoren in `RtSetup.mods`. `BattleBridge.make_rt_setup` (R1) sammelt sie in fester
-Reihenfolge (Ausrüstung → Spezies → Spezialisierung → Show-Boss → Twists), kanonisch, Teil von `RtSetup.to_dict()` und damit
-jedes Hashes. Während des Kampfes ändert sich die Liste nie — es gibt **keine Twists im Kampf** (06 §5.7) und kein
-`RtSim.apply_twist`; ein Twist-Befehl trägt weiterhin nur den Erkundungs-Tick `tick` (kein `ct`).
+**nur** über Werte, die vor dem Kampf feststehen: über die Combatant-Werte (`Progression.total_stats`, Krit, Element) und die
+Talent-Faktoren `RtUnit.opener_pm`/`stunt_pm` (§9.6) und über eine geschlossene Liste von Modifikatoren in `RtSetup.mods`.
+`BattleBridge.make_rt_setup` (R1) sammelt sie in fester Reihenfolge (Ausrüstung → Spezies → Spezialisierung → Show-Boss → Twists),
+kanonisch, Teil von `RtSetup.to_dict()` und damit jedes Hashes. Während des Kampfes ändert sich die Liste nie — es gibt **keine
+Twists im Kampf** (06 §5.7) und kein `RtSim.apply_twist`; ein Twist-Befehl trägt weiterhin nur den Erkundungs-Tick `tick` (kein
+`ct`).
 
 ```json
 {"src": "species:<spc_id>" | "spec:<cls_id>" | "equip:<itm_id>" | "showboss:<enc_id>" | "twist:<tw_id>",
@@ -2324,14 +2401,15 @@ jedes Hashes. Während des Kampfes ändert sich die Liste nie — es gibt **kein
 
 - API (`core/rt/rt_mods.gd`, R1): `validate(mods: Array) -> PackedStringArray` (Fehlerliste, nur Ganzzahlen, Vokabulare aus
   `RtVocab`), `apply_static(setup: RtSetup, data: GameData) -> void` (alle Ops außer `on`, in Listenreihenfolge, beim Aufbau),
-  `on_event(sim: RtSim, e: ActionEvent) -> Array[ActionEvent]` (nur `on`), `from_twists(state: GameState, data: GameData) ->
-  Array[Dictionary]`, `from_show_boss(enc: EncounterDef) -> Array[Dictionary]`.
+  `on_event(sim: RtSim, e: ActionEvent) -> Array[ActionEvent]` (nur `on`), `from_twists(twists: Array, data: GameData) ->
+  Array[Dictionary]` (`twists` = die aktiven Twist-Einträge, die `make_rt_setup` aus dem Spielstand liest — `core/rt` kennt
+  `GameState` nicht, §3.1), `from_show_boss(enc: EncounterDef) -> Array[Dictionary]`.
 - Show-Wirkungen (Hype-, Follower-, Liga-Faktoren, Marotten) bleiben im Show-System. Die Unterhosen-Liga ist eine Ausrüstungsregel
   („ohne Rüstung & ohne Accessoire“, 06 §4.3) und wirkt nur über die Werte der Ausrüstung und über Show-Faktoren — nie über eine
   eigene Kampfregel.
-- **Kampf-Twists** (06 §5.6, Bereich `battle`/`boss`): `RtMods.from_twists` liest beim Aufbau die aktiven Einträge in
-  `GameState.flags["live"]["twist"]` mit `battles_left > 0`; heruntergezählt wird unverändert in `TwistApplier.on_battle_end`
-  (über `Game.apply_battle_result`).
+- **Kampf-Twists** (06 §5.6, Bereich `battle`/`boss`): `BattleBridge.make_rt_setup` übergibt `RtMods.from_twists` beim Aufbau
+  die aktiven Einträge aus `GameState.flags["live"]["twist"]["active"]` mit `battles_left > 0` (in gespeicherter Reihenfolge);
+  heruntergezählt wird unverändert in `TwistApplier.on_battle_end` (über `Game.apply_battle_result`).
 
 | Twist (06 §5.6) | Bereich | Wirkung im Echtzeitkampf | Slice |
 |---|---|---|---|
@@ -2353,7 +2431,7 @@ jedes Hashes. Während des Kampfes ändert sich die Liste nie — es gibt **kein
 | 06 | Echtzeitkampf |
 |---|---|
 | `GameState.hero` (`"kai"` \| `"mopsula"`) | gesteuerte Einheit `RtSetup.controlled_id`; der Partner ist immer KI mit Taktik und **Partner-Spezial** (§5.1) |
-| Kapsel/Tempo je Figur (06 §1.2) | `party.json → rt`: Kai Radius 40 cm, Mopsula 35 cm; beide 550 cm/s |
+| Kapsel/Tempo je Figur (06 §1.2) | `party.json → rt`: Kai Radius 40 cm, Mopsula 35 cm; beide laufen in der Szene 5,5 m/s (`PLAYER_RUN_CM_S` 550), sim-gesteuert 540 cm/s (`rt.move_cm_s`, Vielfaches von 30, §4.8) |
 | Feldschlag (Kai) / Bellen → `DAZED` (Mopsula, 06 §1.3) | Feldschlag ist ein Pull; Bellen startet nie einen Kampf, aber ein Pull auf eine angebellte Gruppe ist ein Erstschlag (§2.2) |
 | „Partner automatisch“ (06 §1.4, nur CTB) | entfällt — im Echtzeitkampf ist der Partner immer KI; die Optionszeile ist im Echtzeitmodus ausgeblendet |
 | Stern-Marker am Party-Panel (Paket A) | Pille „DU“ am Party-Rahmen der gesteuerten Figur (§8.4) |
@@ -2369,13 +2447,14 @@ jedes Hashes. Während des Kampfes ändert sich die Liste nie — es gibt **kein
 | `element_pm` | `Combatant.element_mods` | gleich: `DamageCalc`; Status-Takte mit Element §3.8 |
 | `post_battle_mp_pm` | `BattleBridge.apply_result` | gleich: Werbepause nach jedem Sieg (§2.7) |
 | `field_range_pm`, `field_cd_pm` | Feldschlag/Bellen (`EncounterRules`) | gleich; die Feldschlag-Reichweite gilt auch für den Pull per Feldschlag |
-| `preemptive_dmg_pm` („Erster Eindruck“) → `talent_mods.preemptive_dmg_pm` | erster eigener Zug nach einem Präventivschlag | Faktor `opener_pm` in der Faltung (§3.9.1): bei Vorteil `PREEMPTIVE` auf alle Treffer der Einheit gegen Ziele mit `sts_dazed` (die 3 s des Überrumpelns) und auf ihren ersten schadenden Treffer im Kampf (`opener_done`) |
-| `stunt_window_pm` („Taktgefühl“) → `talent_mods.stunt_pm` | Stunt-Chance × pm vor Boss-Abzug und Deckel | SHOW-Erfolgschance in bp in derselben Reihenfolge: `clampi(div_round((base + LCK × lck) × stunt_pm, 1000) + boss, STUNT_MIN, cap)` |
+| `preemptive_dmg_pm` („Erster Eindruck“, `tal_kai_erster_eindruck`) → `RtUnit.opener_pm` = `Talents.preemptive_dmg_pm(member, data)` (06 §8.3, gesetzt von `make_rt_setup`) | `BattleBridge.make_setup` (Schaden der ersten Runde nach Präventivschlag) | Faktor `opener_pm` in der Faltung (§3.9.1): bei Vorteil `PREEMPTIVE` auf alle Treffer der Einheit gegen Ziele mit `sts_dazed` (die 3 s des Überrumpelns) und auf ihren ersten schadenden Treffer im Kampf (`opener_done`) |
+| `stunt_window_pm` („Dramatische Pause“, `tal_mop_dramatische_pause`) → `RtUnit.stunt_pm` = `Talents.stunt_window_pm(member, data)` (06 §8.3, gesetzt von `make_rt_setup`) | Stunt-Fenster in `ActionResolver` (Stunt-Chance × pm vor Boss-Abzug und Deckel) | SHOW-Erfolgschance in bp in derselben Reihenfolge: `clampi(div_round((base + LCK × lck) × stunt_pm, 1000) + boss, STUNT_MIN, cap)` — für jede Einheit mit dem Talent, auch für die SHOW der KI (E27) |
 | `marotte_heart` | `MarottenRules` | gleich |
 | `hype_gain_pm`, `follower_pm` | `GameState`-Promille-Produkt | gleich |
 
 Die Talentwahl findet nur in der Talent-Show im Safe Room statt; das Kampfergebnis zeigt höchstens den Chip „TALENT BEREIT“
-(§8.9). Talente brauchen keine `RtMods`-Einträge: `RtUnit` erbt `talent_mods` von `Combatant`.
+(§8.9). Talente brauchen keine `RtMods`-Einträge: Werte-Talente stecken in den `Combatant`-Werten, die zwei Verhaltens-Talente
+setzt `make_rt_setup` als `RtUnit.opener_pm`/`stunt_pm` (Quelle `Talents.*`, 06 §8.3; `core/rt` kennt `Talents` nicht).
 
 **Marotten (06 §4, Paket C):** Der `MarottenTracker` bekommt im Echtzeitkampf denselben Ereignisstrom (über
 `Show.on_battle_event`, live und im Replay identisch) und liest zusätzlich `by_ai` (R5a, additiv). Regel: **Zähler einer
@@ -2406,8 +2485,18 @@ Spielweise zählen nur Aktionen der Person** (`by_ai == false`); Zustände und E
 | `mar_speed` | kein Starter, auf Etage 1 nie aktiv; mit Etage 2 bekommt `marotten.json` die Echtzeit-Bedingung `e.duration_sec <= 15 && e.is_boss == false` („Kämpfe unter 15 Sekunden“) |
 | Unterhosen-Liga (`mar_unterhose`) | Stufe zu Kampfbeginn wie bisher; wirkt über Hype-/Follower-Faktoren, im Kampf ohne eigene Regel |
 
-**Show-Boss (06 §2.6, Paket C):** `ShowBossRules.apply` (CTB: Elite + Zusatzaktion „jeder 3. Gegnerzug“) hat im Echtzeitkampf
-den Nachfolger `RtMods.from_show_boss(enc)`; er liest denselben `show_boss`-Block von `enc_e1_showboss`:
+**Show-Boss (06 §2.6; E26 — 06 C hat ihn zurückgestellt, er wird nicht im CTB, sondern nur im Echtzeitkampf gebaut, R4):**
+`enc_e1_showboss` „Kanalratten-Gala“ steht in Zone B abseits des Pflichtwegs (Startwert: die Gruppe von `enc_f1_b2` —
+Rattenschamane + 2 Kanalratten — als Elite) und wird nur im Echtzeitmodus gespawnt (R2 lässt Gruppen, deren Begegnung einen nicht
+leeren `show_boss`-Block hat, im CTB-Modus weg). Datenblock (R4 in `floors.json`; Prüfung in `validators/show_boss.gd`, den R4 vom
+06-C-Stub übernimmt):
+
+```json
+"show_boss": {"elite_pm": 1200, "banner_tag": "showboss_rule", "reward": {"kind": "box", "id": "box_fan"},
+              "rule": {"skill": "skl_e_showboss_slow", "target": "threat_top", "first_ms": 4000, "every_ms": 8000}}
+```
+
+`RtMods.from_show_boss(enc)` (R1b-I3) macht daraus:
 
 ```json
 [{"src": "showboss:enc_e1_showboss", "op": "stat_pm", "unit": "enemies", "stat": "max_hp", "pm": 1200},
@@ -2417,8 +2506,12 @@ den Nachfolger `RtMods.from_show_boss(enc)`; er liest denselben `show_boss`-Bloc
 ```
 
 „Hausordnung verschärft“ heißt im Echtzeitkampf: **alle 8 s** verteilt die Gruppe einen Strafzettel (`skl_e_showboss_slow`, neu
-R4: sofort, Reichweite 1500, kein Schaden, `sts_slow` 3 s zu 100 %, GCD-frei). Die Regel steht beim Kampfstart auf der
-Bauchbinde („Hausordnung verschärft: alle 8 Sekunden ein Strafzettel“). Belohnung und Zeilen (`showboss_*`) bleiben bei 06.
+R4: sofort, Reichweite 1500, kein Schaden, `sts_slow` 3 s zu 100 %, GCD-frei). M.O.D.: `showboss_spotted` beim ersten Betreten
+von Zone B (R2 sendet das 06-Signal `Events.show_boss_spotted`), `showboss_rule` als Bauchbinde beim Kampfstart („Hausordnung
+verschärft: alle 8 Sekunden ein Strafzettel“, R3), `showboss_won` nach dem Sieg (R5a über `Show`) — die Zeilen legt R4 in seinem
+Block hinter dem Anker `mod_rt_set_quiet_01` an, sofern 06 C sie nicht schon angelegt hat (Präfix `showboss_` trägt 06 Schritt 0
+ein). Belohnung genau 1 Fanpost-Paket über den bestehenden Weg `BattleResult.boss_rewards` (`rt_result.gd` hängt
+`show_boss.reward` bei `VICTORY` an, R1b-I3). Goldrahmen am Anführer (R2) und auf der Karte (R3). Balance-Band §11.1.
 
 **Spezies-Passive (06 §3.2, ab Etage 3 — Vorschlag, gebaut mit Etage 3):** `pas_authentic` → nur Show; `pas_grout` →
 `first_hit_taken_pm` 700; `pas_lightdrunk` → Krit +10 % am Combatant, wenn der Hype **beim Kampfstart** ≥ 70 ist (statisch, weil
@@ -2451,15 +2544,16 @@ und Prüfung in `RtCommand` (§3.4).
 | `combat_hint` | `{"t": "combat_hint", "ct", "id"}` | Hinweiskarte gezeigt (§2.13); die Sim ignoriert ihn, `RunSim`/`GameReplay` setzen `flags["rt_hints"][id]` |
 | `move_input` | `{"t": "move_input", "ct", "u", "dir": [dx, dz], "run": bool}` (`dx`, `dz` −127…127) | **reserviert für Grad B** (Server rechnet die Spielerbewegung, §10.8); bis dahin lehnt `submit` mit `grade_b` ab |
 | `gift` (im Kampf) | bestehend + `"ct"` | extern, Id 0, aufgezeichnet bei der Anwendung an der Tick-Grenze (§9.2) |
-| `combat_speed` | `{"t": "combat_speed", "pm": 850}` | Spieltempo geändert (oder ≠ 1000 beim Laufstart); keine Sim-Wirkung, Kennzeichnung „Zeitlupe“ (§10.7) |
+| `combat_speed` | `{"t": "combat_speed", "pm": 850}` (`RtCommand.speed(pm)`) | Spieltempo geändert (oder ≠ 1000 beim Laufstart); keine Sim-Wirkung, Kennzeichnung „Zeitlupe“ (§10.7). `Game` zeichnet ihn selbst auf: beim Laufstart, wenn `GameSettings.combat_speed_pm` ≠ 1000, und nach jedem `Events.settings_changed`, das den Wert ändert (R2) |
 | `move_batch` | `{"t": "move_batch", "u", "id0", "s": [[dct, x, z, vx, vz, yaw], …]}` | nur in gespeicherten Logs (§10.3) |
 
 Ein `twist`-Befehl kommt im Kampf nie vor (06 §5.7: Anwendung nur in der Erkundung); er trägt weiterhin nur `tick`, kein `ct`.
 
-`RtCommand.validate(d) -> String`: Typ bekannt, Pflichtfelder, Ganzzahlen, `ct ≥ 0`, `|x|, |z| ≤ 2400`, `|vx|, |vz| ≤ 400`,
-`yaw` 0…255, `|dx|, |dz| ≤ 127`, Einheiten-Id `^p[0-3]$` bzw. `^e[0-9]+$`, `preset` ∈ `RT_PRESETS`, `tog`-Schlüssel ∈
-`RT_TOGGLES`, `id` ∈ `TUTORIAL_STEPS` ∪ `HINT_IDS`, `pm` ∈ {1000, 850, 700}. `Command.TYPES` wird um die neuen Typen erweitert und
-delegiert ihre Prüfung an `RtCommand.validate` (R1a: Stub, R1b: Regeln).
+`RtCommand.validate(d) -> String`: Typ bekannt, Pflichtfelder, Ganzzahlen, `ct ≥ 0`, `|x|, |z| ≤ 2400`, `|vx|, |vz| ≤ 400`, `yaw`
+0…255, `|dx|, |dz| ≤ 127`, Einheiten-Id `^p[0-3]$` bzw. `^e[0-9]+$`, `preset` ∈ `RT_PRESETS`, `tog`-Schlüssel ∈ `RT_TOGGLES`, `id`
+∈ `TUTORIAL_STEPS` ∪ `HINT_IDS`, `pm` ∈ {1000, 850, 700}; für `encounter` prüft sie zusätzlich den `rt`-Block (`v` = 1, Zelle,
+Einheiten-Ids, Gruppen, Presets, `diff`). `Command.TYPES` wird um die neuen Typen erweitert und delegiert ihre Prüfung (und die
+des `rt`-Blocks von `encounter`) an `RtCommand.validate` (R1a: Stub, R1b: Regeln).
 
 ### 10.2 Aufzeichnung und Reihenfolge
 
@@ -2488,10 +2582,10 @@ Form; Hashes sind unabhängig davon. Live-Streams übertragen unkompaktierte Ein
 
 `StateHash.of_rt(sim: RtSim) -> String` = Hash über `CanonicalJson` von `sim.snapshot()`:
 
-- Kampf: `ct`, `rng_n`, nächste Einheiten-/Telegraph-Nummer, `controlled_id`, Ende/Ergebnis, Party-Abklingzeiten (`show`,
-  Verbrauchsgüter, Anzahl benutzt), Combo-/Serien-Zähler, Bilanzzähler.
+- Kampf: `ct`, `rng_n`, `ai_rng_n` (E25), nächste Einheiten-/Telegraph-Nummer, `controlled_id`, Ende/Ergebnis, Party-Abklingzeiten
+  (`show`, Verbrauchsgüter, Anzahl benutzt), Combo-/Serien-Zähler, Bilanzzähler.
 - Je Einheit: alle Felder aus §3.4 (`RtUnit`) plus `Combatant`-Felder (HP, MP, Werte, Status als `RtStatus.to_dict`, Phase,
-  `used_once`, Belohnungen, `talent_mods`); Wörterbücher (`threat`, `cooldowns`, `rule_ready`) mit sortierten Schlüsseln.
+  `used_once`, Belohnungen); Wörterbücher (`threat`, `cooldowns`, `rule_ready`, `ai_seen`) mit sortierten Schlüsseln.
 - Telegraphen/Zonen (alle Felder, `inside_last` sortiert), ausstehende Treffer, eingereihte Befehle (nach `ct`, Reihenfolge),
   `RtSetup.mods`.
 - Nichts Spielrelevantes ist ausgenommen (die Sim enthält keine Darstellungsdaten).
@@ -2522,11 +2616,15 @@ reproduziert `Game.replay_log`.
 
 ### 10.6 `Game.replay_log`-Äquivalenz: die exakte Schleife
 
-`Game` (R2-Abschnitt) bietet `make_rt_setup(cmd: Dictionary) -> RtSetup` (zeichnet `encounter` auf, zieht die Seeds, ruft
-`Show.begin_battle`), `combat_boundary() -> void` (§9.2), `combat_submit(cmd: Dictionary) -> String` (`RtSim.submit` + `record`),
-`combat_hint(id: String) -> void`, `combat_step() -> Array[ActionEvent]` (ein Tick, speist jedes Ereignis in
-`Show.on_battle_event` und `Events.combat_event`, schreibt Kampf-Prüfpunkte) und `end_combat() -> BattleRewards`. Der Live-
-`CombatDirector` und `GameReplay` benutzen **genau diese** Funktionen:
+`Game` (R2-Abschnitt) hält den laufenden Kampf in `var combat: RtSim` und bietet `make_rt_setup(cmd: Dictionary) -> RtSetup`
+(zeichnet `encounter` auf, zieht die Seeds `battle` und `show`, baut das Setup über `BattleBridge.make_rt_setup`, legt `combat =
+RtSim.new(setup, DB.data)` an, setzt `in_battle`, ruft `Show.begin_battle(setup)`, speist die Ereignisse von `combat.start()` in
+`Show.on_battle_event`/`Events.combat_event` und sendet `Events.combat_started(combat)` und `Events.battle_started`),
+`combat_boundary() -> void` (§9.2), `combat_submit(cmd: Dictionary) -> String` (`RtSim.submit` + `record`), `combat_hint(id:
+String) -> void`, `combat_step() -> Array[ActionEvent]` (ein Tick, speist jedes Ereignis in `Show.on_battle_event` und
+`Events.combat_event`, schreibt Kampf-Prüfpunkte) und `end_combat() -> BattleRewards` (`apply_battle_result`, `Show.end_battle`,
+`Events.combat_finished(result)`, `Events.battle_ended`, danach `combat = null`). Der Live-`CombatDirector` und `GameReplay`
+benutzen **genau diese** Funktionen:
 
 ```
 Game.make_rt_setup(encounter)
@@ -2594,7 +2692,8 @@ Achievements, Marotten-Strichliste). Die FINALE-Bedingung prüft die Sim selbst 
 | HP-Verlust der Party je regulärem Kampf (ohne Tränke, in % der Summe Max-HP) | 20–35 % | GDD §13; Harness |
 | Kämpfe zwischen zwei Safe Rooms ohne Tränke | 2–3 | GDD §13; Etagenfolge-Harness (prüft die Regeneration §2.7) |
 | Verbrauchte Heilgegenstände je Etage | 4–9 (Bosskämpfe je höchstens 3) | neu; Etagenfolge-Harness |
-| Erstversuch-Niederlage Hausmeister / Königin, **je Held:in** | ≈ 20 % (10–30 %) / ≈ 35 % (25–45 %) | GDD §13; Harness `--hero=kai` und `--hero=mopsula` |
+| Erstversuch-Niederlage Hausmeister / Königin, **je Held:in** | ≈ 20 % / ≈ 35 % (Startwerte 15–25 % / 30–40 %; Harness-Band 10–30 % / 25–45 %) | GDD §13; Harness `--hero=kai` und `--hero=mopsula` |
+| Show-Boss `enc_e1_showboss` (Stufe 3, optional, E26), **je Held:in** | Dauer 20–40 s, HP-Verlust ohne Tränke 20–40 %, Erstversuch-Niederlage ≤ 5 % | 06 §2.6; Harness |
 | … in der Unterhosen-Liga Stufe 1 / Stufe 2 | ≤ 40 % / ≤ 55 % bzw. ≤ 55 % / ≤ 70 % | 06 §4.10; Harness `--liga=1|2` |
 | Stufe bei Hausmeister / Königin | 5 / 7 | GDD §13; R5-Full-Run |
 | Etagenzeit Timer-Nutzung (Erkundung) / gesamt | 11–15 min / 22–28 min | GDD §13; R5-Full-Run |
@@ -2612,8 +2711,9 @@ nicht.
 3. Telegraph-Warnzeiten, Zonen-Dauer → Fairness, Ausweichquote.
 4. Party: `rt.power`/`rt.mp`/`cooldown_ms` einzelner Fähigkeiten, MP-Laden (`mp_regen`, `HIT_MP_EVERY_TICKS`), `HP_SCALE_PM`.
 5. `REGEN_*`, `ITEM_CD_TICKS`, `ITEM_MAX_PER_COMBAT` → Tränke je Etage, Kämpfe zwischen Safe Rooms.
-6. Partner-KI: `REACT_TICKS`, `AI_INTERRUPT_REACT_TICKS` (Startwert 0), Heil-Schwellen der Presets → Abstand zwischen den
-   Held:innen (§11.3).
+6. Partner-KI: `AI_DODGE_MISS_PM`, `AI_INTERRUPT_LATE_PM`/`_LATE_TICKS`, `REACT_TICKS`, `AI_INTERRUPT_REACT_TICKS` (E25),
+   Heil-Schwellen der Presets → Schwierigkeit je Held:in (§11.3). Beide Held:innen bewegen sich dabei gemeinsam; den Abstand
+   zwischen ihnen bestimmt, wer tankt (bei Held:in Mopsula tankt die KI).
 7. Enrage-Zeit (weich), Boss-Phasenschwellen.
 8. ShowRules-`RT_*` → Hype/Geschenke/Follower.
 
@@ -2623,40 +2723,62 @@ Formeln (GDD §3.7) und Krit/Varianz bleiben fest.
 
 Die Startwerte dieses Dokuments sind mit einem vereinfachten Modell nachgerechnet (Python, Wegwerf-Skript außerhalb des
 Repositorys; ganzzahlige Formel GDD §3.7, Taktung, GCD, MP-Ökonomie §3.10, Telegraphen als Prozent-Treffer, DoT-Deckel, Tränke mit
-Party-Abklingzeit und Deckel, Partner-KI nach §5.4, Bot-Profile §5.7; 200 Seeds je regulärer Begegnung, 400 je Boss und Profil).
-Maßgeblich sind später die Harness-Messwerte (§11.5); die Tabelle zeigt, dass die Startwerte in den Bändern liegen.
+Party-Abklingzeit und Deckel, Adds mit `SUMMON_HP_PM`, Partner-KI nach §5.4 mit E25, Bot-Profile §5.7; 200 Seeds je regulärer
+Begegnung, 600 je Boss für `typical`, 400 für `perfect`/`sloppy`). Seit der Konsistenzprüfung (E25) rechnet es außerdem:
+(a) **unterbrechenswerte Zauber mit ihrer Zauberzeit** — die Person versucht es nach Profil (Reaktion 0/9/18 Ticks, auch während
+eines eigenen Zaubers), die KI nach §5.3; (b) **Ausweichen mit Laufweg** — ein Telegraph ist nur zu verlassen, wenn Reaktion plus
+Laufweg (540 cm/s, Fußpunkt-Abstände je Form, z. B. 250 cm aus dem Putzmittelnebel) vor dem Einschlag fertig sind; dazu die
+Fehlerquote der Person, „übersehen“ der KI und 3 % Restfehler der KI (Weg verstellt); (c) das Bot-Profil gilt für die **jeweils
+gesteuerte** Figur (die Vorfassung ließ eine menschliche Mopsula jeden GCD nutzen). Maßgeblich sind später die Harness-Messwerte
+(§11.5); die Tabellen zeigen, dass die Startwerte in den Bändern liegen.
 
-| Begegnung (Stufe) | TTK Median [P10–P90] | HP-Verlust Median |
+| Begegnung (Stufe), Held:in Kai | TTK Median [P10–P90] | HP-Verlust Median |
 |---|---|---|
-| `enc_f1_a1_tutorial` (1) | 22,0 s [19,5–24,0] (ohne Hinweiskarten) | 10 % (Gegnerschaden × 0,5) |
+| `enc_f1_a1_tutorial` (1) | 22,0 s [19,5–24,0] (ohne Hinweiskarten) | 11 % (Gegnerschaden × 0,5) |
 | `enc_f1_a2` / `a3` / `a4` (2) | 16,0 / 16,5 / 16,0 s | 20 / 16 / 20 % |
-| `enc_f1_b1` / `b2` / `b3` / `b4` (3) | 19,5 / 18,1 / 20,0 / 33,3 s | 22 / 21 / 19 / 22 % |
-| `enc_f1_c1` (4), `c2` / `c3` (5) | 15,7 / 18,0 / 24,0 s | 22 / 14 / 23 % |
-| `enc_f1_d1` / `d3` (6), `d2` (7) | 20,2 / 28,5 / 22,5 s | 14 / 21 / 21 % |
-| **alle regulären** | **Median 19,8 s (15,7–33,3 s)** | **Median 21 % (10–23 %)** |
+| `enc_f1_b1` / `b2` / `b3` / `b4` (3) | 21,0 / 19,2 / 21,0 / 34,5 s | 21 / 21 / 20 / 22 % |
+| `enc_f1_c1` (4), `c2` / `c3` (5) | 16,0 / 18,0 / 23,0 s | 22 / 17 / 22 % |
+| `enc_f1_d1` / `d3` (6), `d2` (7) | 19,8 / 28,5 / 24,1 s | 14 / 21 / 20 % |
+| **alle regulären** | **Median 20,4 s (16,0–34,5 s)** | **Median 20 % (11–22 %)** |
+| alle regulären, Held:in Mopsula | Median 18,1 s (13,5–30,4 s) | Median 21 % (9–23 %) |
+| Show-Boss `enc_e1_showboss` (3; Startwert `b2` als Elite + Strafzettel alle 8 s), Kai / Mopsula | 26,0 / 21,5 s, Niederlage 0 % | 23 % / 23 % |
 
 Kai drückt den Wuchtschlag auf ≈ 75 % seiner GCDs (MP-Ökonomie §3.10 trägt). Ohne die eigene HP-Zahl des Kanalschleims
-(`rt.hp_pm` 4800) dauerte `b4` (zwei Schleime + Schamane) 42 s — der Schleim halbiert physischen Schaden.
+(`rt.hp_pm` 4800) dauerte `b4` (zwei Schleime + Schamane) über 40 s — der Schleim halbiert physischen Schaden. Mit Held:in Mopsula
+sind reguläre Kämpfe schneller (der KI-Kai nutzt jeden GCD, den seine MP erlauben): Median 18 s liegt knapp unter dem Median-Band
+20–25 s (§11.1); R4 misst beide Held:innen und entscheidet, ob das so bleibt.
 
-| Boss (Stufe), Profil | Niederlage | Dauer Median [P10–P90] | Tränke | unterbrochen | Telegraph-Treffer |
+| Boss (Stufe), Profil, Held:in | Niederlage | Dauer Median [P10–P90] | Tränke | unterbrochen (Person / KI) | Telegraph-Treffer |
 |---|---|---|---|---|---|
-| Hausmeister (5), `typical`, Held:in Kai | **19 %** | **2:41** [2:33–2:51] | 3,0 | 94 % | 12 % |
-| Hausmeister, `perfect` / `sloppy` | 0 % / 90 % | 2:28 / 3:10 | 3,0 / 3,0 | 96 / 62 % | 2 / 23 % |
-| Hausmeister, `typical`, Held:in Mopsula | 3 % | 2:42 | 3,0 | 95 % | 11 % |
-| Rattenkönigin (7), `typical`, Held:in Kai | **37 %** | **3:23** [3:14–3:33] | 3,0 | 86 % | 11 % |
-| Rattenkönigin, `perfect` / `sloppy` | 2 % / 95 % | 3:06 / 3:56 | 3,0 / 2,9 | 93 / 64 % | 3 / 19 % |
-| Rattenkönigin, `typical`, Held:in Mopsula | 3 % | 3:24 | 2,6 | 95 % | 12 % |
+| Hausmeister (5), `typical`, Kai | **17 %** | **2:45** [2:36–2:56] | 3,0 | 89 % (47 / 42) | 14 % |
+| Hausmeister (5), `typical`, Mopsula | **22 %** | **2:41** [2:35–2:50] | 3,0 | 88 % (27 / 61) | 15 % |
+| Hausmeister, `perfect`, Kai / Mopsula | 0 % / 15 % (Kai-KI auf „Vorsichtig“: 3 %) | 2:32 / 2:41 | 3,0 / 3,0 | 90 / 87 % | 8 / 8 % |
+| Hausmeister, `sloppy`, Kai / Mopsula | 100 % / 66 % | kein Sieg / 2:48 | 3,0 / 3,0 | 61 / 84 % | 36 / 43 % |
+| Rattenkönigin (7), `typical`, Kai | **40 %** | **3:27** [3:18–3:36] | 3,0 | 82 % (44 / 38) | 15 % |
+| Rattenkönigin (7), `typical`, Mopsula | **30 %** | **3:22** [3:15–3:30] | 2,9 | 82 % (22 / 61) | 15 % |
+| Rattenkönigin, `perfect`, Kai / Mopsula | 6 % / 16 % (Kai-KI auf „Vorsichtig“: 3 %) | 3:10 / 3:18 | 3,0 / 2,9 | 83 / 81 % | 8 / 8 % |
+| Rattenkönigin, `sloppy`, Kai / Mopsula | 98 % / 42 % | 3:50 / 3:29 | 2,9 / 2,7 | 62 / 81 % | 25 / 28 % |
 
 Lesart und Folgen für R4:
 
-- `typical` mit Held:in Kai trifft die Ziele (≈ 20 % / ≈ 35 %, Dauer im Band); Unterbrechungen und Telegraph-Treffer liegen weit
-  innerhalb der Grenzen. Bosskämpfe brauchen die erlaubten 3 Tränke — der Deckel wirkt, Tränke zählen, entscheiden aber nicht.
-- Die Kurve zwischen `perfect` und `sloppy` ist steil (0–2 % gegen 90–95 %): Ein Bosskampf belohnt Können deutlich. R5b kalibriert
-  `typical` an echten Probespiel-Läufen (§11.4), bevor die Bänder als hart gelten.
-- **Held:in Mopsula ist im Modell deutlich leichter** (3 %): Dort spielt die KI den Kai und unterbricht ohne menschliche Verzögerung
-  fast jeden Zauber, während die Person heilt. Der Harness misst deshalb **beide** Held:innen; liegt Mopsula unter 10 %, erhöht
-  R4 zuerst `AI_INTERRUPT_REACT_TICKS` (KI-Unterbrechungen erst nach dieser Zauberzeit, §5.3) und danach die Heil-Schwellen —
-  nicht die Boss-Werte, damit die Kai-Kurve bleibt.
+- **Beide Held:innen** liegen mit `typical` in den Startwert-Bändern (Hausmeister 17 % / 22 %, Königin 40 % / 30 %; je ±2
+  Prozentpunkte Stichprobenfehler), Dauer im Band. Bosskämpfe brauchen die erlaubten 3 Tränke — der Deckel wirkt, Tränke zählen,
+  entscheiden aber nicht. Unterbrechungen (≥ 82 %) und Telegraph-Treffer (≤ 15 %) liegen innerhalb der Grenzen.
+- **Warum E25 nachgestellt ist:** Mit der Vorgabe (nur Unterbrechen: 15 + 0–10 Ticks, 15 % spät um 12 Ticks) blieb Held:in Mopsula
+  bei 2–5 % Niederlagen. Ausschlaggebend war nicht das Unterbrechen, sondern der Tank: Weicht der menschliche Kai so sicher aus
+  wie die KI (97 %), fällt auch Held:in Kai auf 1 % / 4 %. Deshalb übersieht die KI jetzt 13 % der Telegraphen (ein typischer
+  Mensch 15 %) und ist bei 25 % der unterbrechenswerten Zauber 1,5 s zu spät; die Angriffs-Reaktion sinkt von 18 auf 15 Ticks,
+  weil der KI-Kai sonst nie aus dem 1,0-s-Putzmittelnebel käme (im Modell 100 % Niederlage für Held:in Mopsula). Reine
+  Unterbrecher-Werte reichen nicht: Selbst ohne jede KI-Unterbrechung bliebe der Hausmeister mit Held:in Mopsula bei ≈ 6 %,
+  während die Königin auf ≈ 89 % springt.
+- **Ein perfekter Mensch schlägt die KI:** Er reagiert ab dem ersten Tick, unterbricht auch während eines eigenen Zaubers und
+  übersieht nichts (Held:in Kai `perfect`: 0 % / 6 %). Spielt die KI den Tank, bleiben ihre Fehler (15 % / 16 %); wer die Taktik
+  des KI-Kai auf „Vorsichtig“ stellt (ab Stufe 3, übersieht 4 %, Reaktion 6 Ticks), senkt das auf 3 % / 3 % — Können zeigt sich
+  hier über die Taktik.
+- Die Kurve zwischen `perfect` und `sloppy` ist steil: Ein Bosskampf belohnt Können deutlich. R5b kalibriert `typical` an echten
+  Probespiel-Läufen (§11.4), bevor die Bänder als hart gelten. Liegt eine Held:in im Harness außerhalb, stellt R4 zuerst
+  `AI_DODGE_MISS_PM` und `AI_INTERRUPT_LATE_PM` nach (beide Held:innen bewegen sich gemeinsam, Held:in Mopsula stärker) — nicht
+  die Boss-Werte.
 
 ### 11.4 Messmethode
 
@@ -2665,12 +2787,14 @@ Lesart und Folgen für R4:
   nicht direkt referenzieren): baut für jede Begegnung der Etage 1 ein `RtSetup` mit Party auf der Zielstufe der Zone (A 1–2,
   B 3, C 4–5, D 6–7, Bosse 5/7), der Ausrüstung des Zonen-Kaufplans und der Bot-Talentwahl (erstes Angebot, 06 §2.2), für
   `--hero=kai|mopsula` und `--liga=0|1|2`, spielt N Seeds mit `RtBotPlayer` (§5.7, Profile `perfect`/`typical`/`sloppy`) und dem
-  Partner auf Standard-Taktik, rein über `RtSim` (keine Szene).
+  Partner auf Standard-Taktik (`--partner-preset=` für Gegenproben, z. B. „Vorsichtig“), rein über `RtSim` (keine Szene). Der
+  Show-Boss `enc_e1_showboss` gehört mit seinen `RtMods` dazu (E26).
 - Ausgabe je Begegnung und Profil: Median/P10/P90 der Dauer, HP-Verlust, Tränke, K.O.s, Niederlagen-Quote, Unterbrechungsquote,
   Ausweichquote, Hype-relevante Ereignisse/Minute; Tabelle auf stdout + JSON (`--out=<datei>`).
 - **CI** (`test_r4_rt_balance.gd`, Laufzeit < 60 s): **5 Seeds** `typical` je regulärer Begegnung (Dauer ± 20 %, HP-Verlust ± 5
-  Prozentpunkte gegen §11.1), **10 Seeds** je Boss und Held:in (Niederlagen-Quote grob 0–60 % bzw. 10–70 %, Dauer ± 20 %). Die
-  engen Bänder prüft der **nächtliche** Lauf mit **200 Seeds** (`tools/rt_balance.sh --seeds=200`, CI-Job `nightly`).
+  Prozentpunkte gegen §11.1), **10 Seeds** je Boss und Held:in (Niederlagen-Quote grob 0–60 % bzw. 10–70 %, Dauer ± 20 %) und je
+  Held:in für den Show-Boss (Niederlagen ≤ 20 %, Dauer 20–40 s ± 20 %). Die engen Bänder prüft der **nächtliche** Lauf mit **200
+  Seeds** (`tools/rt_balance.sh --seeds=200`, CI-Job `nightly`).
 - **Etagenfolge-Harness** (`--sequence`, R4): spielt die Begegnungen der Etage in Zonenreihenfolge zwischen den Safe Rooms, mit
   Regenerations-Ticks aus der gemessenen Laufzeit des Full-Run-Bots zwischen zwei Kämpfen (≈ 45–60 s), Werbepause und
   Safe-Room-Vollheilung; prüft „2–3 Kämpfe zwischen zwei Safe Rooms ohne Tränke“ und die Heilgegenstände je Etage. Gate für die
@@ -2714,10 +2838,8 @@ R5“ und die Vorrangregel (00_BRIEF, mit diesem Dokumentstand geändert, §12.8
 **R1a ist der zweite Vertrags-Commit** (der erste war 06 Schritt 0). Ihn macht der Integrator, bevor ein Echtzeit-Agent startet;
 er enthält alles, was mehr als eine Phase braucht:
 
-- **Stubs** aller öffentlichen Dateien aus §3.1 und der Szenen-Schnittstellen (`CombatDirector.submit(cmd)` und Signale,
-  `CombatResults` mit `results_shown`/`show_slot`/`present`, `ExplorationScene.control_temporarily(member_id)`): exakte
-  `class_name`, Signaturen aus §3.4, §9.5, §10.6, Standardrückgaben; erste Zeile `# STUB(R1a) — owned by <Phase>. Replace
-  completely, keep the public API.`
+- **Stubs** aller phasenübergreifenden Signaturen (vollständige Liste unten): exakte `class_name`, Signaturen, Standardrückgaben;
+  erste Zeile `# STUB(R1a) — owned by <Phase>. Replace completely, keep the public API.`
 - **Additive Änderungen an geteilten Dateien** (Tabelle §12.3): Felder, Enum-Werte am Ende, Signale, `Command.TYPES`, `Game`-API
   als Stubs, `GameSettings`-Felder (§7.8), in `data_validator.gd` die Hook-Zeile für `validators/rt.gd`, das Tag-Präfix `rt_`,
   die Payload-Schlüssel und StatIds aus §9.4 (die einzigen Änderungen an der seit 06 eingefrorenen Datei), der Ein-Zeilen-Wächter in
@@ -2732,13 +2854,35 @@ er enthält alles, was mehr als eine Phase braucht:
 - Gate: `check.sh --tests-only` grün (CTB und 06 unverändert), `test_r1a_contract` grün (alle Signaturen per Reflexion, Fake-Sim
   spielt jeden Strom).
 
+**Phasenübergreifende Signaturen — vollständige Stub-Liste von R1a** (alles, was eine Phase von einer anderen aufruft oder
+liest; `test_r1a_contract` prüft jede Zeile per Reflexion):
+
+| Datei (Eigentum: Stub → Umsetzung) | Signaturen | Nutzer |
+|---|---|---|
+| `core/rt/rt_sim.gd`, `rt_setup.gd`, `rt_unit.gd`, `rt_status.gd`, `rt_telegraph.gd` (R1a → R1b) | §3.4 vollständig: Felder, `_init`, `start`, `submit`, `step`, `tick`, Getter, reine Abfragen, `apply_gift`, `run_to_end`, `to_dict`/`snapshot` | R2, R3, R4, R5a |
+| `core/rt/rt_command.gd` (R1a → R1b) | Bauhelfer `ability`, `target`, `move`, `item`, `preset`, `auto_attack`, `autopilot`, `partner_special`, `hint`, `speed` (§3.4); `validate(d: Dictionary) -> String`; `REASONS` | R2, R3, R4, R5a |
+| `core/rt/rt_geo.gd`, `rt_rules.gd`, `rt_mods.gd`, `rt_balance.gd` (R1a → R1b; Schlüssel und Bereiche von `RtBalance` nur R1) | §3.4 und §9.5 (`RtGeo.*`, `RtRules.compile/choose/eval_cond`, `RtMods.validate/apply_static/on_event/from_twists/from_show_boss`, `RtBalance.from_data`) | R2 (Geo, Balance), R4 (Rules, Mods, Balance) |
+| `core/data/validators/rt_vocab.gd` (R1a, vollständig) | Konstanten §4.10 | alle |
+| `core/data/validators/rt.gd` (R1a Stub → R4) | statisch `check(data, errors)` wie die 06-Validatoren | `DataValidator` |
+| `core/progression/battle_bridge.gd`, eigener Abschnitt (R1a → R1b) | `static func make_rt_setup(state: GameState, data: GameData, cmd: Dictionary, seed: int) -> RtSetup`; `apply_result` liest `group_ids` | R2 (`Game`), R4 (Harness), R5a (`RunSim`) |
+| `core/live/state_hash.gd`, Abschnitt (R1a → R1b) | `static func of_rt(sim: RtSim) -> String` | R2, R5a |
+| `core/live/run_log.gd`, Abschnitt (R1a → R5a) | `add_checkpoint(k, h, ct = -1)` (R1a fertig), `compact() -> void`, `expand() -> void` | R2, R5a |
+| `autoload/game.gd`, Abschnitt (R1a → R2 Live, R5a Replay-Zweig) | `var combat: RtSim`, `make_rt_setup(cmd: Dictionary) -> RtSetup`, `combat_boundary() -> void`, `combat_submit(cmd: Dictionary) -> String`, `combat_hint(id: String) -> void`, `combat_step() -> Array[ActionEvent]`, `end_combat() -> BattleRewards` (§10.6) | R2 (Director), R3, R5a (`GameReplay`) |
+| `autoload/show.gd`, Abschnitt (R1a → R5a) | `take_pending_gift_rt(sim: RtSim) -> Dictionary`; Wächter in `say_external` (R1a fertig) | R2 (`Game.combat_boundary`) |
+| `autoload/events.gd` (R1a, fertig) | `combat_started(sim)`, `combat_event(e)`, `combat_finished(result)` — ungetypt wie der ganze Bus (02_TECH §3.2), die Typen `RtSim`/`ActionEvent`/`BattleResult` stehen im Kommentar —, `dialog_layout_requested(mode: StringName, layout: Dictionary)` | R2 sendet; R3, R5a hören |
+| `autoload/game_settings.gd`, `core/progression/{party_member,game_state,floor_run}.gd`, `core/battle/{action_event,battle_result}.gd`, `core/data/defs/*_def.gd`, `core/show/stat_ids.gd`, `core/live/command.gd` (R1a, fertig) | Felder und Enum-Werte §3.12, §3.13, §4.6–4.9, §7.8, §9.4, §10.4; `Command.TYPES` + Delegation | alle |
+| `scenes/combat/combat_director.gd` (R1a → R2) | `class_name CombatDirector extends Node`; `submit(cmd: Dictionary) -> void` (Eingabe mit `ct` = `Game.combat.tick()`, der Director reicht sie in Schritt (2) dieses Ticks an `Game.combat_submit`), `pause_for_hint(id: String) -> void` (zeichnet über `Game.combat_hint` auf und hält die Ticks an), `resume() -> void`, `unit_position(unit_id: String) -> Vector3` (Welt-Position von Körper oder Puppe, interpoliert); keine eigenen Signale — Beginn, Ereignisse und Ende laufen über `Events.combat_*` | R3 (Eingabe, Hinweiskarten, Plaketten, Kampftext) |
+| `scenes/combat/ui/combat_results.gd` (R1a → R3) | `signal results_shown(result: BattleResult)`, `var show_slot: Control`, `func present(result: BattleResult, rewards: BattleRewards) -> void` (§8.9) | R2, 06 C (`bets_results_fx.gd`) |
+| `scenes/exploration/exploration.gd`, Abschnitt (R1a → R2) | `func control_temporarily(member_id: String) -> void` (§2.6) | R2 (Director) |
+| `tests/fixtures/rt_min/` (R1a; R1b ergänzt) | `FakeRtSim extends RtSim` + Ströme (oben) | R2, R3, R5a |
+
 | Phase | Agent | Inhalt | Startet | Gate (Abnahme) |
 |---|---|---|---|---|
 | **R1a** Vertrag | Integrator | siehe oben | nach dem 06-Merge | `check.sh --tests-only`, `test_r1a_contract` |
-| **R1b** Kern | A „Kern“ | Stufe **I1**: Proben/Plausibilität, Set-Geometrie, Auto-Angriff, Party-Fähigkeiten, Gegenstände, Schadens-Faltung, Ergebnis, Snapshot/Hash. **I2**: Status, Bedrohung, Partner-KI, Partner-Spezial, Autopilot, Assist, reine Abfragen. **I3**: Gegner-KI, Telegraphen, Zonen, Phasen, Enrage, Beschwörungen, `RtMods` (Show-Boss, Twists), `run_to_end`; Regeneration in `RunSim` | nach R1a | Tests §12.5 der Stufe, Golden-Hash fest, Lint grün |
+| **R1b** Kern | A „Kern“ | Stufe **I1**: Proben/Plausibilität, Set-Geometrie, Auto-Angriff, Party-Fähigkeiten, Gegenstände, Schadens-Faltung, Ergebnis, Snapshot/Hash. **I2**: Status, Bedrohung, Partner-KI (inkl. menschlicher Reaktion E25), Partner-Spezial, Autopilot, Assist, reine Abfragen. **I3**: Gegner-KI, Telegraphen, Zonen, Phasen, Enrage, Beschwörungen, `RtMods` (Show-Boss mit Belohnung, Twists), `run_to_end`; Regeneration in `RunSim` | nach R1a | Tests §12.5 der Stufe, Golden-Hash fest, Lint grün |
 | **R2** Welt | B „Welt“ | Kampf in der Welt: Director, Tick-Grenze, Puppen, Proben, Set-Ring + Kollision, Telegraph-Layer, Boss-Intro, Flucht, Türen, Kamera, Steuerungswechsel, Ausblenden, `Game`-Live-API, Perf-Szenarien | nach R1a (Fake-Sim) | Szenentests gegen die **echte Sim ab I1**; Fixture-Kampf spielbar; `combat_two_groups` gemessen |
 | **R3** HUD + Eingabe | C „HUD“ | HUD (§8), Input-Map, Touch, Einstellungen, Untertitel-/Overlay-Modus, Hinweiskarten, Fähigkeiten-Menü (Leiste/Varianten/Taktik), `CombatResults` | nach R1a (Fake-Sim, Ströme) | HUD-Tests gegen die **echte Sim ab I1**; Captures 1280 × 720, 1920 × 1080, Touch, Notch |
-| **R4** Inhalte + Balance | D „Inhalt“ | `rt`-Daten aller Etage-1-Inhalte, neue Status/Skills/Gegner, Bosse, Validator-Regeln (`validators/rt.gd`), `rt_balance.json`-Werte, Gleis-9-Bühne, Bossraum-Freiradius, M.O.D.-Block, Harness + Bot | nach R1a (Fixtures) | Validator grün; Harness-Bänder (CI) gegen die **echte Sim ab I3**; §11.5 ausgefüllt |
+| **R4** Inhalte + Balance | D „Inhalt“ | `rt`-Daten aller Etage-1-Inhalte, neue Status/Skills/Gegner, Bosse, Validator-Regeln (`validators/rt.gd`), `rt_balance.json`-Werte, Gleis-9-Bühne, Bossraum-Freiradius, M.O.D.-Block, Harness + Bot; **Show-Boss E1** (E26, §9.6): `enc_e1_showboss` mit `show_boss`-Block, `rt` und Platzierung in Zone B, `validators/show_boss.gd`, `skl_e_showboss_slow`, `showboss_*`-Zeilen im R4-Block, Balance-Band §11.1 | nach R1a (Fixtures) | Validator grün; Harness-Bänder (CI) gegen die **echte Sim ab I3**, auch für den Show-Boss; §11.5 ausgefüllt |
 | **R5a** Show + Live | E „Integration“ | ShowRules-Profil `rt`, `take_pending_gift_rt`, Marotten-Anpassung, Achievements, RunLog/RunSim-RT, `Game.replay_log`-RT, Kompaktierung | nach R1a (Ströme) | Show-/Replay-Tests gegen die **echte Sim ab I3** |
 | **R5b** Integration | E (+ Rückfragen an A–D) | Full-Run-Bot RT, Autoplay, Performance, Kalibrierung `typical`, Parität (§12.6), Standard `realtime`, CTB-Entfernung, Datenbacken, Save v2, Doku | nach allen Merges | §12.6 erfüllt; `check.sh` + `fullrun.sh` grün |
 
@@ -2759,6 +2903,7 @@ jede Phase schreibt nur in ihren.
 |---|---|---|---|
 | `core/rt/*.gd` (öffentlich + privat) | — | R1a Stubs der öffentlichen Klassen → R1b alles | neu |
 | `core/data/validators/rt_vocab.gd` / `rt.gd` | — | R1a vollständig / R1a Stub → R4 Regeln (§4.10) | neu |
+| `core/data/validators/show_boss.gd` | C (Stub aus 06 Schritt 0; C hat den Show-Boss zurückgestellt) | R4: Regeln des `show_boss`-Blocks (E26, §9.6) | R4 übernimmt die Datei |
 | `core/data/data_validator.gd` | Schritt 0, danach eingefroren | **nur R1a**: Hook-Zeile, `OPTIONAL_MOD_TAG_PREFIXES` += `rt_`, `TRIGGER_PAYLOAD_KEYS`, `STAT_IDS` (§9.4) | Vertrags-Commit |
 | `data/rt_balance.json` | — | R1a Startwerte → **R4 besitzt die Werte**; Schlüssel und Bereiche ändert nur R1 (`rt_balance.gd`) | neu |
 | `tests/fixtures/rt_min/**` | — | R1a; R1b ergänzt; andere lesen | neu |
@@ -2778,21 +2923,23 @@ jede Phase schreibt nur in ihren.
 | `core/show/show_rules.gd`, `sponsor_system.gd`, `achievement_tracker.gd` | — | R5a | Abschnitte |
 | `core/show/stat_ids.gd` | Schritt 0 | R1a: neue Ids (§9.4) | additiv |
 | `core/show/marotten_tracker.gd`, `marotten_rules.gd` | C | R5a: `by_ai`, `flee_attempts` aus dem Ergebnis, Schlüssel `duration_sec` (§9.6) | eigener Abschnitt |
-| `core/battle/show_boss_rules.gd` | C | — (nur CTB; Nachfolger `RtMods.from_show_boss`, §12.4) | R5b löscht |
-| `data/mod_lines.json` | Anker A–D | R1a: Anker `mod_rt_set_quiet_01` hinter Block D → R4: Block direkt dahinter | Blöcke |
-| `data/floors.json` | A (`layout.secrets`), C (`enc_e1_showboss`) | R4: `encounters[].rt`, Boss-Spot der Königin | eigene Schlüssel |
+| `core/battle/show_boss_rules.gd` | C (Stub; im CTB nie gebaut, E26) | — (Nachfolger `RtMods.from_show_boss`, §12.4) | R5b löscht |
+| `data/mod_lines.json` | Anker A–D | R1a: Anker `mod_rt_set_quiet_01` hinter Block D → R4: Block direkt dahinter (alle `rt_*`-Zeilen und die `showboss_*`-Zeilen, die 06 C nicht angelegt hat, E26) | Blöcke |
+| `data/floors.json` | A (`layout.secrets`), C (Platzhalter `enc_e1_showboss`) | R4: `encounters[].rt`, Boss-Spot der Königin, Show-Boss `enc_e1_showboss` (Gruppe, `show_boss`-Block, `rt`, Platzierung in Zone B; E26) | eigene Schlüssel |
 | `data/skills.json`, `statuses.json`, `enemies.json`, `items.json`, `party.json` | — | R4: `rt`-Blöcke, neue Einträge (§4.11) | additiv |
 | `data/achievements.json`, `tests/test_m7_data_content.gd` | C (+6) | R5a: +4 (§9.4) | am Ende |
-| `scenes/combat/*.gd`, `art/shaders/rt_telegraph.gdshader`, Set-Ring | — | R1a Stub `combat_director.gd` → R2 | neu |
-| `scenes/combat/ui/*`, `art/shaders/ui_cooldown_sweep.gdshader` | — | R1a Stub `combat_results.gd` → R3 | neu |
-| `scenes/exploration/exploration.gd` | A (Held:in/Partner, Geheimnisse) | R2: Kampfstart-Zweig, `control_temporarily`, Ausblenden | Abschnitt |
-| `scenes/exploration/enemy_actor.gd` | A (`DAZED`), Schritt 0 (Twist-Zeile) | R2: Puppenmodus, Sperren | Abschnitt |
+| `scenes/combat/*.gd` (`combat_director.gd`, `move_sampler.gd`, `telegraph_layer.gd`, Set-Ring, Puppen), `art/shaders/rt_telegraph.gdshader` | — | R1a Stub `combat_director.gd` → R2 | neu |
+| `scenes/combat/ui/*` (HUD, Aktionsleiste, `unit_frames.gd`, Plaketten, Hinweiskarten, `combat_input.gd` = `CombatInput`, `combat_results.gd`), `art/shaders/ui_cooldown_sweep.gdshader` | — | R1a Stub `combat_results.gd` → R3 | neu |
+| `scenes/exploration/exploration.gd` | A (Held:in/Partner, Geheimnisse) | R2: Kampfstart-Zweig, `control_temporarily`, Ausblenden, Show-Boss nur im Echtzeitmodus spawnen + `Events.show_boss_spotted` | Abschnitt |
+| `scenes/exploration/enemy_actor.gd` | A (`DAZED`), Schritt 0 (Twist-Zeile) | R2: Puppenmodus, Sperren, Goldrahmen des Show-Boss | Abschnitt |
 | `scenes/exploration/player_controller.gd`, `companion_follower.gd`, `encounter_rules.gd` | A | R2: Kampfmodus, Auslöser §2.2 (Pull, Reichweite, 4 s), Puppe | Abschnitte |
 | `scenes/exploration/camera_rig.gd`, `interactable.gd` | — | R2 | additiv |
 | `scenes/ui/settings_menu.gd` | A (+ Zeilen für C/D) | R3: Abschnitt Kampf; „Partner automatisch“ im Echtzeitmodus ausgeblendet | Abschnitt |
 | `scenes/ui/show_overlay.gd` | C (Show-Chip, Sponsor-Badge) | R3: Overlay-Modus `combat` (Timer-Chip) | Abschnitt |
 | `scenes/ui/touch_controls.gd` | A (Aktionssymbol) | R3: Kampfmodus | Abschnitt |
 | `scenes/ui/mod_dialog.gd`, `exploration_hud.gd`, `input_glyph.gd`, `skills_menu.gd`, `ui_icon.gd`, `icon_mesh.gd` | — | R3 | additiv |
+| `scenes/ui/minimap.gd` | A (geöffnete Wände) | R3: Goldrahmen des Show-Boss auf der Karte | Abschnitt |
+| `tests/tools/rt_harness.gd`, `rt_harness_main.gd`, `rt_bot_player.gd`, `tools/rt_balance.sh` | — | R4 (§5.7, §11.4) | neu |
 | `project.godot` (`[input]`) | — | R3 (§7.7) | additiv |
 | `art/kit/character_rig.gd` / `vfx.gd` / `env_kit.gd` + Bühnenbau | — | R2 Animationen / R3 Kampftext-Stile / R4 `CLEAR_RADIUS_BOSS`, Gleis 9 | Abschnitte |
 | `autoload/sfx_synth.gd` | — | R2 Klänge | additiv |
@@ -2813,9 +2960,10 @@ Echtzeit-Nachfolger mit Test:
 | `battle_results.gd`: `results_shown`, `show_slot`, Chip „Talent bereit“ (B; C hängt `bets_results_fx.gd` an) | `scenes/combat/ui/combat_results.gd` mit derselben API (§8.9); `bets_results_fx.gd` hängt sich unverändert an | R1a Stub, R3 | `test_r3_combat_results` |
 | `party_panel.gd` Stern-Marker der Held:in (A) | Pille „DU“ in `unit_frames.gd` (§8.4) | R3 | `test_r3_hud_layout` |
 | `battle_controller.gd` „Partner automatisch“ (A) | keiner: Partner immer KI + Partner-Spezial (§5.1); Option im Echtzeitmodus ausgeblendet | R3, R5b | `test_r3_settings` |
-| `action_resolver.gd` `_talent_first_strike` (B) | `opener_pm` in `rt_damage.gd` (§9.6) | R1b-I1 | `test_r1_rt_talents` |
-| `battle_state.gd` `stunt_chance` × `stunt_pm` (B) | SHOW-Erfolgschance in `rt_ability.gd` (§9.6) | R1b-I1 | `test_r1_rt_talents` |
-| `ShowBossRules.apply` + Hook in `BattleBridge.make_setup` (C) | `RtMods.from_show_boss` in `make_rt_setup` (§9.6) | R1b-I3 | `test_r1_rt_mods` |
+| `BattleBridge.make_setup`: Talent-Krit, -Element (B; `Talents.crit_add_pm`, `element_pm`) | `BattleBridge.make_rt_setup` füllt dieselben `Combatant`-Felder (§9.6) | R1b-I1 | `test_r1_rt_talents` |
+| `BattleBridge.make_setup`: Präventiv-Talent „Erster Eindruck“ (B; `Talents.preemptive_dmg_pm`) | `make_rt_setup` setzt `RtUnit.opener_pm`, gefaltet in `rt_damage.gd` (§3.9.1, §9.6) | R1b-I1 | `test_r1_rt_talents` |
+| `ActionResolver`: Stunt-Fenster „Dramatische Pause“ (B; `Talents.stunt_window_pm`) | `make_rt_setup` setzt `RtUnit.stunt_pm`, SHOW-Erfolgschance in `rt_ability.gd` — auch für die KI-SHOW (§9.6, E27) | R1b-I1 | `test_r1_rt_talents` |
+| `ShowBossRules.apply` + Hook in `BattleBridge.make_setup` (C; Stub aus Schritt 0, der Show-Boss ist zurückgestellt und wird im CTB nie gebaut, E26) | `RtMods.from_show_boss` + Belohnung über `boss_rewards` in `make_rt_setup`/`rt_result.gd` (R1b-I3); Daten, Validator, Zeilen, Band (R4, §9.6) | R1b-I3, R4 | `test_r1_rt_mods`, `test_r4_rt_showboss` |
 | `MarottenTracker` über `Show.on_battle_event` (C) | derselbe Weg; `by_ai`, Flucht, `duration_sec` (§9.6) | R5a | `test_r5_marotten_rt` |
 | `Show.take_pending_gift(battle)` (Bestand) | `Show.take_pending_gift_rt(sim)` + `Game.combat_boundary()` (§9.2) | R5a | `test_r5_gifts_in_combat` |
 | `GameReplay._begin_battle`/`_play`/`_end_if_finished` (Bestand) | Schleife §10.6 | R5a | `test_r5_rt_live_equivalence` |
@@ -2837,17 +2985,18 @@ Echtzeit-Nachfolger mit Test:
 | R1 | `test_r1_rt_threat` | Kai × 1,5, Wuchtschlag × 2, Heil-Bedrohung geteilt, Spott Spitze × 1,1 + Fixierung 120, Wechsel bei 110 %, Gleichstand, K.O. löscht |
 | R1 | `test_r1_rt_status` | Gift-Stapel (3, Periode 60, min 1, max 12, Boss × 0,5), Kraft-Ticks eingefroren, `refresh`/`replace`/`ignore` mit erhaltener Periodenphase, Ausschlüsse, Betäubung unterbricht, Boss-Dauer × 0,5, Überrumpelt, Erholung, `cleanse`, Immunität/Widerstand (geseedet) |
 | R1 | `test_r1_rt_damage_fold` | Enrage 1–4 Stapel → 75/113/169/253 bei Grundwert 50; Höchstwerte + 9 Stapel → `f = 8000` ohne Überlauf; neutrale Faktoren ändern nichts; Prozent-Treffer mit Gepanzert 667 ‰ |
-| R1 | `test_r1_rt_ai` | Regelreihenfolge, `first_ms`/`every_ms`, Bedingungen, Ziele (zufällige reproduzierbar), Slot-Versatz, Phasen + Ops, Enrage, alle Presets (Heilschwelle, Schalter), KI-Reserve der Füller, Tränke nur mit „Vorsichtig“/Schalter und nie der letzte, SHOW nach 5 s Vorlauf, FINALE nie, `AI_INTERRUPT_REACT_TICKS`, Autopilot, `suggest` |
+| R1 | `test_r1_rt_ai` | Regelreihenfolge, `first_ms`/`every_ms`, Bedingungen, Ziele (zufällige reproduzierbar), Slot-Versatz, Phasen + Ops, Enrage, alle Presets (Heilschwelle, Schalter), KI-Reserve der Füller, Tränke nur mit „Vorsichtig“/Schalter und nie der letzte, SHOW nach 5 s Vorlauf (auch als KI-Partner, E27), FINALE nie; **E25:** Unterbrechen erst ab `ai_seen` (15 + Streuung 0–10, 25 % spät +45, eigener Strom `rt_ai`; ein Autopilot-Wechsel verschiebt keinen Kampfwurf), nie während eines eigenen Zaubers oder in den letzten 5 GCD-Ticks (danach ja), mit 0/0/0 wie ohne E25; Ausweichen mit `REACT_TICKS` 15/12/6 und „übersehen“ 130/130/40 ‰, Angriffs-KI verlässt den Putzmittelnebel rechtzeitig; Autopilot, `suggest` |
 | R1 | `test_r1_rt_telegraph` | alle Formen/Anker, nur im Ring, Einschlag nur im Einschlag-Tick, Ausweichen + knapp, Pflichtprobe-Semantik (Sim-Seite), Zonen-Takte, Unterbrechen entfernt Telegraph, `MAX_TELEGRAPHS`, Zug tötet Adds |
 | R1 | `test_r1_rt_move` | Koppelnavigation geschlossen, Plausibilität (Lauftempo × Δ + Budget 600 mm, Nachfüllung 3 mm/Tick), `POS_CORRECTED`, `walkable`/`project_walkable` (Ring, Türgassen, Waggon), Auftritt ≤ 30 Ticks, Abstoßung, Formation, Flucht nach 60 Ticks, Nebel, geschlossenes Set |
 | R1 | `test_r1_rt_result` | `BattleResult` (EXP, Credits, Overkill neu, Beute, Diebstahl/Erstattung, Party-HP, Kills, K.O.s, `group_ids`, Zähler nur der gesteuerten Figur, `party_turns` ohne KI), Doppel-K.O. = Sieg, Tutorial-HP ≥ 1 |
-| R1 | `test_r1_rt_mods` | Vokabular-Prüfung, statische Ops, `on`-Reaktionen, `add_rule` mit geteiltem Timer, Show-Boss-Abbildung, Twist-Tabelle |
-| R1 | `test_r1_rt_talents` | „Erster Eindruck“ (überrumpelte Ziele, erster Treffer), „Taktgefühl“ (Reihenfolge vor Boss-Abzug und Deckel) |
+| R1 | `test_r1_rt_mods` | Vokabular-Prüfung, statische Ops, `on`-Reaktionen, `add_rule` mit geteiltem Timer, Show-Boss-Abbildung und -Belohnung (E26), Twist-Tabelle über `from_twists(twists, data)` |
+| R1 | `test_r1_rt_talents` | Krit/Element über `make_rt_setup`; „Erster Eindruck“ (`opener_pm`: überrumpelte Ziele, erster Treffer), „Dramatische Pause“ (`stunt_pm`: Reihenfolge vor Boss-Abzug und Deckel, auch für die SHOW der KI, E27) |
+| R1 | `test_r1_rt_tutorial` | Tutorial-Kampf (E28): `bar()` nur Slot 1 + 5, `submit` lehnt andere Slots (`not_learned`), Gegenstände und Partner-Spezial (`forbidden`) ab, KI-Partner spielt normal, Party-HP ≥ 1 |
 | R1 | `test_r1_rt_pure` | 1 000 Aufrufe aller Abfragen ändern `StateHash.of_rt` nicht; Lauf mit Abfragen nach jedem Tick = Lauf ohne |
 | R1 | `test_r1_rt_golden` | festes Setup + ~200 geskriptete Befehle → `StateHash.of_rt` und Ereignisanzahl gleich festen Golden-Werten; zweimal laufen = gleich; geänderte Golden-Werte nur mit Begründung im Commit |
 | R1 | `test_r1_rt_int_only` | §3.14 Regel 1 |
 | R1 | `test_r1_regen` | RunSim-Schritt 6 nur bei `realtime` (CTB-Lauf bitgleich), MP sofort, HP erst nach 150 Ticks, Zähler-Reset durch Kampf/Schaden, Hash-Abdeckung |
-| R2 | `test_r2_combat_world` | Auslöser (Pull, Waffenreichweite, 4 s Verfolgung, Sichtung allein nicht), Vorteil-Tabelle inkl. `DAZED`, Auftritt, Mitziehen ≤ 6, ausgeblendete Akteure, Ring + Kollision + Türgassen, Puppen = Sim-Positionen (±1 cm nach Interpolation 1,0), Interaktionssperre, Bosstüren, Flucht 2 s, Sieg entfernt Gruppe, Rücksetzen, Steuerungswechsel mit Körpertausch und `refresh_hero` |
+| R2 | `test_r2_combat_world` | Auslöser (Pull, Waffenreichweite, 4 s Verfolgung, Sichtung allein nicht, schlafende Tutorial-Gruppe auch per Berührung — beide Held:innen), Vorteil-Tabelle inkl. `DAZED`, Show-Boss nur im Echtzeitmodus gespawnt, Auftritt, Mitziehen ≤ 6, ausgeblendete Akteure, Ring + Kollision + Türgassen, Puppen = Sim-Positionen (±1 cm nach Interpolation 1,0), Interaktionssperre, Bosstüren, Flucht 2 s, Sieg entfernt Gruppe, Rücksetzen, Steuerungswechsel mit Körpertausch und `refresh_hero` |
 | R2 | `test_r2_tick_boundary` | Reihenfolge Grenze → Eingaben → `step`, höchstens ein Geschenk je Grenze, Hinweiskarte = kein Tick |
 | R2 | `test_r2_move_sampler` | Schwellen 15 cm / 15 mm/Tick / 8 Stufen / 15 Ticks, Stopp-Probe, Pflichtprobe vor Einschlag, ehrliche Läufe ohne `POS_CORRECTED` |
 | R2 | `test_r2_telegraph_layer` | Pool ≤ 10, Instanz-Uniforms je Form, Fortschritt, Set-Uniforms (Beschneiden), Farben/Kontrastmodus |
@@ -2855,17 +3004,19 @@ Echtzeit-Nachfolger mit Test:
 | R3 | `test_r3_action_bar` | Zustände aus der Sim (Abklingzeit, GCD, MP, Reichweite, Queue, Assist, SHOW → FINALE ab Stufe 6 bei Ziel < 30 %), Leiste wächst mit dem Level, Trank „2/3“ |
 | R3 | `test_r3_combat_input` | Tasten/Gamepad/Touch → Befehle (inkl. `exact_match` für Shift+Tab, `R` = Partner-Spezial), Tab-Reihenfolge, Klick-Auswahl, Kontexttrennung Erkundung/Kampf |
 | R3 | `test_r3_touch_layout` | Positionen §7.3, Trefferflächen ≥ 88 px, keine Überlappungen, Stick-Zone nur unten links, Tippen ≠ Ziehen (0,25 s, 12 px), Safe-Area-Verschiebung |
-| R3 | `test_r3_hud_layout` | keine Überlappung bei 1280 × 720 und 1920 × 1080, schrittweises Aufdecken (§8.1), Pille „DU“ |
+| R3 | `test_r3_hud_layout` | keine Überlappung bei 1280 × 720 und 1920 × 1080, schrittweises Aufdecken (§8.1: Tutorial nur Slot 1 + SHOW, Trank und Partner-Spezial ab Kampf 2, Taktik-Chip ab Stufe 3, Bedrohung erst nach eigenem Spott), Pille „DU“ |
+| R3 | `test_r3_hints` | Tutorial-Schritte und Erst-Hinweise §2.13 über `CombatDirector.pause_for_hint`/`resume` (kein Tick während der Karte, `combat_hint` am angehaltenen `ct`), je einmal je Spielstand, höchstens eine Karte je Kampf, `partner_special` nie im Tutorial, Unterbrecher-Taste je Held:in (3 bzw. 4), keine Karten bei `combat_hints = false` und in Ligen |
 | R3 | `test_r3_combat_results`, `test_r3_settings` | API wie `battle_results` (Signal, Slot, Talent-Chip); Einstellungen §7.8, „Partner automatisch“ ausgeblendet |
 | R4 | `test_r4_rt_data` | Validator-Regeln §4.10 positiv/negativ, alle Etage-1-Inhalte haben `rt`, `rt_balance.json` |
-| R4 | `test_r4_rt_balance` | CI-Bänder (5 Seeds je reguläre Begegnung, 10 je Boss und Held:in, §11.4); nächtlich 200 Seeds und `--sequence` |
-| R5a | `test_r5_show_rt` | Hype-Tabelle §9.1 inkl. Zuordnung (`by_ai`, gesteuerte Figur, Slot 1 ohne Abzug), Langeweile per `SECOND`, Schleppen, perfekte Phase, Combo, Serie, Zug-Kill; keine KI-Zeilen im Kampf; CTB-Profil unverändert |
+| R4 | `test_r4_rt_balance` | CI-Bänder (5 Seeds je reguläre Begegnung, 10 je Boss und Held:in, Show-Boss je Held:in, §11.4); nächtlich 200 Seeds und `--sequence` |
+| R4 | `test_r4_rt_showboss` | Show-Boss (E26): `show_boss`-Block gültig (Validator positiv/negativ), Abbildung auf `RtMods` (Elite 1200, geteilte Regel alle 8 s), genau 1 Fanpost-Paket, `showboss_*`-Zeilen vorhanden und im R4-Block, Platzierung in Zone B abseits des Pflichtwegs |
+| R5a | `test_r5_show_rt` | Hype-Tabelle §9.1 inkl. Zuordnung (`by_ai`, gesteuerte Figur, Slot 1 ohne Abzug; KI-SHOW zählt für die Party, nicht als eigene SHOW, E27), `taunts_total` nur für Spott der Person, Langeweile per `SECOND`, Schleppen, perfekte Phase, Combo, Serie, Zug-Kill; keine KI-Zeilen im Kampf; CTB-Profil unverändert |
 | R5a | `test_r5_marotten_rt`, `test_r5_achievements_rt` | Kontext-Schlüssel §9.6, Starter-Marotten auf Stufe 1 erreichbar; neue Payloads, StatIds, Achievements |
 | R5a | `test_r5_rt_replay` | `RunSim.replay` eines Echtzeit-Laufs bitgenau, Kampf-Prüfpunkte, Abbruch bei Abweichung, Befehl nach Kampfende = Fehler, `compact`/`expand` verlustfrei |
 | R5a | `test_r5_gifts_in_combat` | eingefrorenes Fenster nimmt an, Anwendung an der nächsten Grenze, Id 0 + `ct`, System-Geschenke ≤ 1/2, extern + System im selben Tick (§9.2), Pur-Liga lehnt ab |
 | R5a | `test_r5_rt_live_equivalence` | geskripteter Live-Lauf ≡ `Game.replay_log` (Hashes, Prüfpunkte, Show-Zahlen, Marotten-Strichliste) |
 | R5b | `test_m6_autoplay` (angepasst) | Schritte `force_battle` → `force_combat` (60 Frames), `battle` → `combat` (900 Frames, Autopilot, `Events.battle_ended` VICTORY) |
-| R5b | `test_m6_fullrun` + `tools/fullrun.sh --combat=realtime` | Etage 1 vollständig mit Autopilot (alle Strategien, beide Held:innen), Zeitbänder |
+| R5b | `test_m6_fullrun` + `tools/fullrun.sh --combat=realtime` | Etage 1 vollständig mit Autopilot (alle Strategien, beide Held:innen), Zeitbänder; der Show-Boss bleibt optional (der Bot erreicht die Treppe auch ohne ihn) |
 
 ### 12.6 Parität und CTB-Entfernung
 
@@ -2908,12 +3059,12 @@ Danach (R5b), in dieser Reihenfolge, je ein Commit:
 ### 12.7 Unverändert wiederverwendet
 
 Schadensformel (`DamageCalc`, GDD §3.7), `Elements`, `StatBlock`, Krit/Varianz/Element-Konstanten in `Balance`, EXP-Kurve,
-Stufenwachstum (außer HP-Skala), `Combatant` (Basisklasse, inkl. `talent_mods`), `StatusEffect` (Basisklasse), `HitResult`,
-`BattleSetup` (Basisklasse), `BattleResult` (erweitert), `BattleBridge.apply_result`, Beute (`LootRoller`, Drops), Show
-(ShowModel, SponsorSystem-Schwellen, Gifts, GiftPolicy, GiftApplier, SponsorWindows, Achievements, M.O.D.-Ansager), 06-Systeme
-(HeroRules, Talents, Casting, MarottenRules, TwistApplier, RegieDirector, ModLiveLink), Save (additiv), Erkundung (Wahrnehmung,
-Patrouillen, Streuner, Kamera, Bellen/`DAZED`), Art-Kit (`CharacterRig` + neue Animationen, `CharacterBuilder`, `Vfx`,
-`icon_mesh`), `Sfx`, `RunSim`/`RunLog`/`StateHash`/`Command` (erweitert), `SeedUtil`, `FixedMath`, `CanonicalJson`, alle
+Stufenwachstum (außer HP-Skala), `Combatant` (Basisklasse, inkl. der Talent-Felder aus 06 B), `StatusEffect` (Basisklasse),
+`HitResult`, `BattleSetup` (Basisklasse), `BattleResult` (erweitert), `BattleBridge.apply_result`, Beute (`LootRoller`, Drops),
+Show (ShowModel, SponsorSystem-Schwellen, Gifts, GiftPolicy, GiftApplier, SponsorWindows, Achievements, M.O.D.-Ansager),
+06-Systeme (HeroRules, Talents, Casting, MarottenRules, TwistApplier, RegieDirector, ModLiveLink), Save (additiv), Erkundung
+(Wahrnehmung, Patrouillen, Streuner, Kamera, Bellen/`DAZED`), Art-Kit (`CharacterRig` + neue Animationen, `CharacterBuilder`,
+`Vfx`, `icon_mesh`), `Sfx`, `RunSim`/`RunLog`/`StateHash`/`Command` (erweitert), `SeedUtil`, `FixedMath`, `CanonicalJson`, alle
 Datentabellen (um `rt` erweitert).
 
 ### 12.8 Änderungen an bestehenden Verträgen (Übersicht)
@@ -2929,7 +3080,7 @@ Datentabellen (um `rt` erweitert).
 | 02_TECH | §5 Kampf-Kern | ersetzt durch 07 §3 (der Hinweis „abgelöst durch 07“ steht schon) | R5b |
 | 02_TECH | §6.4 Save, §7.3 Erkundung, §11 Autoplay/Full-Run, §12 Budgets | additive Felder und v2; Auslöser §2.2; §12.5; §8.10 | R5b |
 | 01_GDD | §2.3/2.4, §3, §4.2, §5, §7, §13 | Kampfauslöser; §3 ersetzt durch 07 (Hinweis steht schon); HP × 4 nach dem Backen; Echtzeit-Gegner §6; Hype-Tabelle §9.1; Messwerte | R5b |
-| 06 | §1.4, §2.2 (Spalte „Angewendet in“), §2.6, §4.4 `mar_speed`, §8 | „Partner automatisch“ entfällt; Talent-Anwendung §9.6; Show-Boss „alle 8 s“; Echtzeit-Bedingung mit Etage 2; Verweise auf die gelöschten CTB-Dateien | R5b |
+| 06 | §1.4, §2.2 (Spalte „Angewendet in“), §2.6, §4.4 `mar_speed`, §8 | „Partner automatisch“ entfällt; Talent-Anwendung §9.6 (`opener_pm`/`stunt_pm`, „Dramatische Pause“ auch als KI-SHOW, E27); Show-Boss „alle 8 s“, nur im Echtzeitkampf gebaut (E26); Echtzeit-Bedingung mit Etage 2; Verweise auf die gelöschten CTB-Dateien | R5b |
 | 03_ART | §8, §9 | Telegraph-Farben, Kampf-HUD-Elemente, LED-Ring, Decal-Befund | R3 |
 | PERFORMANCE.md | alles | Neumessung mit Echtzeitkampf | R5b |
 
@@ -2965,8 +3116,8 @@ Datentabellen (um `rt` erweitert).
 | 2 | Lesbarkeit auf kleinen Bildschirmen: Telegraphen unter Figuren, Kamera im Weg | requisitenfreies Set mit LED-Ring, Fußpunkt-Regel, am Ring beschnittene Flächen, Kontrastmodus, Kamera-Zoom, weiche Zielführung auf Touch, Capture-Reviews, Gerätetest |
 | 3 | Draw Calls: schlechtester gemessener Fall 147 von 150 (Compatibility high, ohne Effekte) | Komparsen/Beschwörungen ohne Echtzeitschatten, Akteure anderer Räume ausgeblendet, höchstens 6 Einheiten, frühe Messung mit Effekten (R2), Rig-LOD und Funken-Deckel als Reserve (§8.10) |
 | 4 | Balance-Verschiebung durch HP-Skala, Regeneration, Taktung, MP-Ökonomie | Harness in CI (5/10 Seeds) und nächtlich (200), Etagenfolge-Harness, alle Stellschrauben in Daten (§11.2) |
-| 5 | Partner-KI zu stark oder zu schwach (im Modell ist Held:in Mopsula deutlich leichter, §11.3) | beide Held:innen messen, `AI_INTERRUPT_REACT_TICKS` und Heil-Schwellen als Stellschrauben, Probespiel |
-| 6 | Steile Boss-Lernkurve (`perfect` 0–2 %, `sloppy` 90–95 % Niederlagen) | `typical` aus echten Läufen kalibrieren; Vorabendprogramm (Warnzeiten × 1,25), Autopilot, Comeback-Sponsor-Fenster (06 §6); Probespiel |
+| 5 | Partner-KI zu stark oder zu schwach: Mit Held:in Mopsula tankt die KI, und eine fehlerfreie KI machte die Bosse dort fast risikolos (Modell vor E25: 2–5 %); eine zu fehlerhafte KI bestraft dagegen auch Könner:innen | E25: KI übersieht Telegraphen und unterbricht mit menschlicher Verzögerung (§5.3, §5.5); „Vorsichtig“ als aufmerksame Taktik (Könner:innen senken damit die KI-Fehler); beide Held:innen im Harness messen, `AI_DODGE_MISS_PM`/`AI_INTERRUPT_LATE_PM` als erste Stellschrauben (§11.2), Probespiel |
+| 6 | Steile Boss-Lernkurve (Held:in Kai: `perfect` 0–6 %, `sloppy` 98–100 % Niederlagen; Held:in Mopsula flacher, 15–16 % / 42–66 %, §11.3) | `typical` aus echten Läufen kalibrieren; Vorabendprogramm (Warnzeiten × 1,25), Autopilot, Comeback-Sponsor-Fenster (06 §6); Probespiel |
 | 7 | Abhängigkeit von 06 (Heldenwahl, Talente, Marotten, Twists) und zwei Kampfpfade bis R5b | 06 zuerst gemergt, R1a-Vertrag, Nachfolger-Tabelle §12.4, ein Schalter mit wenigen Verzweigungspunkten, CTB- und 06-Tests als Gate |
 | 8 | Log-Größe durch Proben | Schwellen, Kompaktierung, gzip (§10.3) |
 | 9 | Hype-Ökonomie: mehr Ereignisse pro Minute, KI-„Farming“ | Zuordnung nach `by_ai` und gesteuerter Figur (§9.1), kleinere RT-Werte, Messung gegen GDD §13 im R5b-Full-Run |

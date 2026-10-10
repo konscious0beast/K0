@@ -13,9 +13,9 @@ extends CanvasLayer
 ## pending blocking line early (the floor countdown would run while a blocking line is still on screen). M3/M5 code
 ## must therefore wait for dialog_finished only after emitting a line with blocking = true (e.g. boss intros:
 ## say(tag, ctx, true)); for non-blocking lines use the private M6 signal `line_finished(tag, blocking)` of
-## ModDialog.current instead.
-## Input: the box only takes ui_accept/action/tap while no menu above it (CanvasLayer > 45, e.g. PauseMenu) owns the
-## focus and the tree is not paused, so menus opened over a waiting line keep their own confirm input.
+## ModDialog.current instead. Input: the box only takes ui_accept/action/tap while no menu above it (CanvasLayer > 45,
+## e.g. PauseMenu) owns the focus and the tree is not paused, so menus opened over a waiting line keep their own confirm
+## input.
 
 signal line_started(text: String, voice: StringName, tag: String)
 ## Every shown line, blocking or not (M6-internal; Events.dialog_finished stays blocking-only, see header).
@@ -43,7 +43,8 @@ const BOX_BOTTOM: float = 36.0
 const TAB_SIZE: Vector2 = Vector2(220, 28)
 const TAB_INSET: Vector2 = Vector2(18, 24)
 const SPEAKERS: Dictionary = {&"mod": "M.O.D.", &"mopsula": "Graf Mopsula", &"kai": ""}
-const MOOD_HYPE: PackedStringArray = ["achievement", "stunt_success", "kill_streak", "crit", "overkill", "boss_defeated",
+const MOOD_HYPE: PackedStringArray = ["achievement", "stunt_success", "kill_streak", "crit", "overkill",
+	"boss_defeated",
 	"level_up", "follower_milestone", "lootbox", "intro", "sponsor_gift"]
 const MOOD_DANGER: PackedStringArray = ["death", "low_hp", "timer", "kai_ko", "mopsula_ko", "boss_intro", "boss_phase",
 	"flee", "boring_fight", "stunt_fail"]

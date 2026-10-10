@@ -26,11 +26,12 @@ func _fight(sim: RunSim) -> void:
 		sim.apply({"t": "battle", "cmd": cmd.to_dict(), "auto": true})
 
 
-## The event rules with the Show-Liga and gifts enabled (gifts only outside the Pur-Liga, L5).
+## The event rules with the Show-Liga and gifts enabled (gifts only outside the Pur-Liga, L5); the bot's QA gifts need
+## "dev" in rules.gifts.sources (live-integrity-4: event rules accept dev gifts only when they list them).
 func _show_rules(def: EventDef) -> Dictionary:
 	var r: Dictionary = def.rules.duplicate(true)
 	r["leagues"] = ["show"]
-	r["gifts"] = {"enabled": true}
+	r["gifts"] = {"enabled": true, "sources": ["dev"]}
 	return r
 
 
@@ -251,7 +252,9 @@ func test_replay_takes_rules_and_quest_from_the_catalog() -> void:
 	var d: Dictionary = rl.to_dict()
 	(d["header"] as Dictionary)["rules"] = _show_rules(def)
 	var forged: Dictionary = _fixed_gift("gold", "", 8)
-	(d["cmds"] as Array).append({"k": rl.cmds().back()["k"], "id": 0, "c": {"t": "gift", "gift": forged}})
+	var cmds: Array = d["cmds"]
+	# before descend
+	cmds.insert(cmds.size() - 1, {"k": rl.cmds().back()["k"], "id": 0, "c": {"t": "gift", "gift": forged}})
 	var res2: Dictionary = RunSim.replay(real_data(), RunLog.from_dict(d))
 	assert_has("; ".join(res2["errors"]), "league_pur", "rules in the header are ignored (not trustworthy)")
 	(d["header"] as Dictionary)["event_id"] = "evt_missing"

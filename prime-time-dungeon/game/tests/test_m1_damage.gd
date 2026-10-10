@@ -223,13 +223,19 @@ func test_stunt_chance() -> void:
 	assert_almost(s.stunt_chance(kai, suplex), 0.68, 0.000001, "0.60 + 8 × 0.01")
 	kai.stats.set_stat(StatBlock.Stat.LCK, 30)
 	assert_almost(s.stunt_chance(kai, suplex), 0.85, 0.000001, "cap 0.85")
-	var b: BattleState = Fx.make_state(data, PackedStringArray(["enm_boss_janitor"]), {"is_boss": true})
+	var b: BattleState = Fx.make_state(data, PackedStringArray(["enm_boss_janitor", "enm_rat"]), {"is_boss": true})
 	b.start()
 	var bk: Combatant = b.get_combatant("p0")
-	assert_almost(b.stunt_chance(bk, suplex), 0.53, 0.000001, "living boss: − 0.15")
+	assert_true(b.get_combatant("e0").is_boss and not b.get_combatant("e1").is_boss)
+	assert_almost(b.stunt_chance(bk, suplex, PackedStringArray(["e0"])), 0.53, 0.000001, "boss target: − 0.15")
+	assert_almost(b.stunt_chance(bk, suplex, PackedStringArray(["e1"])), 0.68, 0.000001,
+		"GDD §3.6 target_is_boss: a suplex on the add next to the boss gets no penalty")
+	assert_almost(b.stunt_chance(bk, suplex), 0.53, 0.000001, "preview without a target: a boss could be hit")
 	bk.stats.set_stat(StatBlock.Stat.LCK, 30)
-	assert_almost(b.stunt_chance(bk, suplex), 0.70, 0.000001, "min(0.9, 0.85) − 0.15 (02_TECH §5.6)")
+	assert_almost(b.stunt_chance(bk, suplex, PackedStringArray(["e0"])), 0.75, 0.000001,
+		"clamp(0.60 + 0.30 − 0.15, 0.05, 0.85): the cap applies after the boss mod (GDD §3.6)")
+	assert_almost(b.stunt_chance(bk, suplex, PackedStringArray(["e1"])), 0.85, 0.000001, "cap 0.85")
 	var weak_stunt: SkillDef = SkillDef.from_dict({"id": "skl_y", "name": "y", "category": "stunt",
 		"target": "single_enemy",
 		"success_base": 0.05, "success_lck": 0.0, "success_boss_mod": -1.0})
-	assert_almost(b.stunt_chance(bk, weak_stunt), 0.05, 0.000001, "min 0.05")
+	assert_almost(b.stunt_chance(bk, weak_stunt, PackedStringArray(["e0"])), 0.05, 0.000001, "min 0.05")

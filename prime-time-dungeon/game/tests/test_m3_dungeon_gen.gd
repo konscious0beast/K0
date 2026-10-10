@@ -414,7 +414,7 @@ func test_procedural_200_seeds_invariants_determinism_runtime() -> void:
 	var avg_ms: float = total_us / 1000.0 / SEEDS
 	print("[test_m3_dungeon_gen] procedural avg %.2f ms over %d seeds, %d distinct maps" % [avg_ms, SEEDS,
 		distinct.size()])
-	assert_lt(avg_ms, MAX_AVG_MS, "average generation time")
+	assert_time_budget(avg_ms, MAX_AVG_MS, "average generation time")
 	assert_gt(distinct.size(), SEEDS / 2, "seeds produce varied maps")
 
 

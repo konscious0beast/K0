@@ -79,8 +79,9 @@ func test_server_contents_and_equipment_duplicates() -> void:
 	var state_before: int = rng.state
 	var rewards: Array[LootReward] = GiftApplier.apply(st, data, g, rng)
 	assert_eq(rng.state, state_before, "server contents: no local draws")
-	var dup_value: int = roundi(data.item(owned).sell_value() * LootRoller.DUPLICATE_CREDIT_MULT)
-	var fresh_value: int = roundi(data.item(fresh).sell_value() * LootRoller.DUPLICATE_CREDIT_MULT)
+	var dup_value: int = data.item(owned).duplicate_credits()
+	var fresh_value: int = data.item(fresh).duplicate_credits()
+	assert_eq(dup_value, roundi(data.item(owned).sell_value() * 0.5), "GDD §9.3: half the sell value")
 	var got: Array = []
 	for r: LootReward in rewards:
 		got.append([r.kind, r.id, r.amount, r.converted_from])
@@ -159,13 +160,18 @@ func test_system_and_cheer_gifts() -> void:
 	var st2: GameState = _state()
 	assert_eq(GiftApplier.apply(st2, real_data(), Gift.make_dev("cheer", "", 0), _rng(1)).size(), 0, "cosmetic")
 	assert_eq((st2.flags["live"] as Dictionary).get("external", 0), 0, "cheer is not counted as external gift")
-	assert_eq(((st2.flags["live"] as Dictionary).get("counted", []) as Array).size(), 1, "booked once (idempotent id)")
+	assert_eq((st2.flags["live"] as Dictionary).get("load_half", -1), 0, "booked (weight 0), no interval for cheer")
+	assert_false((st2.flags["live"] as Dictionary).has("last_delivery_tick"))
 	assert_eq(GiftApplier.apply(null, real_data(), Gift.make_dev("gold", "", 100), _rng(1)).size(), 0, "no state")
 
 
-## 05 §3.3 Nr. 5: duplicate credits in integers; the per-mille constant mirrors LootRoller's float.
+## 05 §3.3 Nr. 5 / GDD §9.3: THE duplicate rule (ItemDef.duplicate_credits, lootboxes, chests and gifts in and out of
+## battle) in integers: sell value × 0.5, half up — the same values as roundi(sell × 0.5).
 func test_duplicate_credit_factor_in_integers() -> void:
-	assert_eq(GiftApplier.DUPLICATE_CREDIT_PM, roundi(LootRoller.DUPLICATE_CREDIT_MULT * 1000.0))
+	assert_eq(ItemDef.DUPLICATE_CREDIT_PM, 500)
+	for sell in 12:
+		var def: ItemDef = ItemDef.from_dict({"id": "itm_x", "type": "weapon", "sell": sell})
+		assert_eq(def.duplicate_credits(), roundi(sell * 0.5), "sell %d" % sell)
 
 
 ## In-battle gifts (BattleState.apply_gift) are booked like GiftApplier.apply books them outside battles: ITEM_GAINED
@@ -185,3 +191,38 @@ func test_note_battle_gift_books_items_and_load() -> void:
 	var sys_state: GameState = _state()
 	GiftApplier.note_battle_gift(sys_state, Gift.make_system("spn_gluckwasser", 1, 0), events)
 	assert_false(sys_state.flags.has("live"), "system gifts are no external gift statistics")
+
+
+## live-integrity-15 (05 §6.9: "Statistiken dürfen nicht davon abhängen, ob das Geschenk im Kampf ankam"): one chest
+## with the same contents leaves the same inventory, credits and gift_items whether it arrives outside a battle
+## (GiftApplier.apply + add_rewards) or in one (BattleState.apply_gift → note_battle_gift → BattleBridge.apply_result) —
+## an owned weapon and the second piece of a new one become credits in both places.
+func test_chest_in_and_out_of_battle_gives_the_same_result() -> void:
+	var data: GameData = real_data()
+	var outside: GameState = _state()
+	var inside: GameState = _state()
+	var owned: String = str(outside.party[0].equipment["weapon"])
+	var fresh: String = ""
+	for it: ItemDef in data.all_items():
+		if it.is_equipment() and it.sell_value() > 0 and not LootRoller.owned_equipment(outside).has(it.id):
+			fresh = it.id
+			break
+	assert_ne(fresh, "")
+	var g: Dictionary = Gift.make_dev("chest", "silver", 0)
+	g["contents"] = [{"rarity": "epic", "item_id": owned, "qty": 1}, {"rarity": "rare", "item_id": fresh, "qty": 2},
+		{"rarity": "common", "credits": 40}, {"rarity": "common", "item_id": "itm_bandage", "qty": 2}]
+	outside.inventory.add_rewards(data, GiftApplier.apply(outside, data, g.duplicate(true), _rng(3)))
+	var setup: BattleSetup = BattleBridge.make_setup(inside, data, "enc_f1_b4", 0, "", 5)
+	assert_has(setup.owned_equipment, owned, "the setup knows the owned equipment")
+	var battle: BattleState = BattleState.new(setup, data)
+	battle.start()
+	var events: Array[ActionEvent] = battle.apply_gift(g.duplicate(true))
+	GiftApplier.note_battle_gift(inside, g, events)
+	var r: BattleResult = BattleResult.new()
+	r.outcome = BattleResult.Outcome.FLED
+	r.item_delta = (battle.tally["item_delta"] as Dictionary).duplicate()
+	r.credits_delta = int(battle.tally["credits_delta"])
+	BattleBridge.apply_result(inside, data, r)
+	assert_eq(inside.inventory.to_dict(), outside.inventory.to_dict(), "same items and credits")
+	assert_eq(inside.flags["live"]["gift_items"], outside.flags["live"]["gift_items"], "same gift_items statistics")
+	assert_eq(outside.flags["live"]["gift_items"], {fresh: 1, "itm_bandage": 2})

@@ -17,6 +17,29 @@ func add(item_id: String, n: int = 1, max_stack: int = 9) -> int:
 	return added
 
 
+## THE overflow rule (chests, lootboxes, floor events, battle items, gifts, milestones): n of `item_id` up to
+## ItemDef.max_stack, the rest becomes credits at Shop.sell_value each. Unknown item → nothing. Returns the stored
+## count.
+func add_item_or_credits(data: GameData, item_id: String, n: int) -> int:
+	if data == null or n <= 0 or not data.has_id("items", item_id):
+		return 0
+	var added: int = add(item_id, n, data.item(item_id).max_stack)
+	if added < n:
+		add_credits((n - added) * Shop.sell_value(data, item_id))
+	return added
+
+
+## LootRewards → inventory: "credits" → add_credits, "item" → add_item_or_credits.
+func add_rewards(data: GameData, rewards: Array[LootReward]) -> void:
+	for r: LootReward in rewards:
+		if r == null:
+			continue
+		if r.kind == "credits":
+			add_credits(r.amount)
+		elif r.kind == "item":
+			add_item_or_credits(data, r.id, r.amount)
+
+
 func remove(item_id: String, n: int = 1) -> bool:
 	if n <= 0 or not has(item_id, n):
 		return false

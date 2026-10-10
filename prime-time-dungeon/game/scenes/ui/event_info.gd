@@ -7,7 +7,8 @@ const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const EVENTS_PATH: String = "res://data/events.json"
 const KIND_NAMES: Dictionary = {"offline": "Offline-Event", "daily": "Tagesquote", "weekly": "Wochenshow",
 	"live_show": "Live-Sendung", "special": "Großevent"}
-const NAME_KEYS: Dictionary = {"evt_offline_gleis9_name": "Gleis-9-Räumung", "evt_saturday_show_name": "Samstagabend-Show",
+const NAME_KEYS: Dictionary = {"evt_offline_gleis9_name": "Gleis-9-Räumung",
+	"evt_saturday_show_name": "Samstagabend-Show",
 	"evt_offline_pacifist_name": "Pazifist:in der Unterstadt"}
 const METRIC_TEXT: Dictionary = {"viewers_target_peak": "Erreiche %s Zuschauer.",
 	"followers_gained_run": "Gewinne %s Follower.", "hype_100_count": "Bringe den Hype %s× auf 100."}

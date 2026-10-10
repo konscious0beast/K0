@@ -2,7 +2,7 @@
 
 > Grundlage: `00_BRIEF.md` (verbindlich, insb. Kap. 5 „Entscheidung Zuschauer-Geschenke“ und Kap. 6b „SHOWRUN“),
 > `01_GDD.md` (Show-System Kap. 7, Achievements Kap. 8, Lootboxen Kap. 9, Etagen-Timer Kap. 2.9).
-> `02_TECH.md` (verbindlicher Technik-Vertrag, Stand: in Arbeit) ist berücksichtigt: Kap. 11 verwendet dessen Namen
+> `02_TECH.md` (verbindlicher Technik-Vertrag; letzter Abgleich 2026-10-10, Branch `ptd/final-a`) ist berücksichtigt: Kap. 11 verwendet dessen Namen
 > (`SeedUtil`, `GameState`, `FloorRun`, `BattleState`, `BattleCommand`, `ActionEvent`, `SponsorSystem`, `Show`, Modul-/Testkonventionen).
 > Was 02_TECH für SHOWRUN noch fehlt, steht als **Änderungsantrag** in Kap. 11.6 (gemäß 02_TECH §0.2 werden fremde
 > APIs nicht eigenmächtig geändert, sondern im Vertrag beantragt).
@@ -296,16 +296,28 @@ Umfang: Titelmenü-Eintrag „Event-Lauf“, Event aus `res://data/events.json` 
 Party-Preset, Quest-HUD, Ergebnis-Bildschirm mit Punkteaufschlüsselung, lokale Bestenliste (Top 10 je Event,
 `user://leaderboards/<event_id>.json`), Run-Log-Aufzeichnung + Wiedergabe (headless), alle System-Sponsor-Geschenke über
 das Gift-Format (Kap. 6.5).
-**Exit-Kriterien:**
+**Exit-Kriterien** (Stand 2026-10-10; abgehakt = durch die genannten Tests belegt):
 - [ ] Event-Lauf von Titel bis Ergebnis spielbar (Tastatur/Gamepad), Quest-Typen `reach_stairs`, `defeat_boss`, `bounty`, `hype_peak`, `pacifist`, `achievement_hunt`, `all_of` in Tests grün.
+  *Teilweise:* alle Quest-Typen grün in `test_m8_quest_tracker.gd`; Lobby, Ergebnis-Screen und Fokus-Navigation in
+  `test_m6_menus.gd` (`test_event_lobby_lists_offline_events`, `test_run_result_shows_breakdown_and_total`) und
+  `test_m6_ui_scenes.gd`; Event-Lauf über die `Game`-Fassade in `test_m8_replay.gd::test_game_event_run_replays_through_the_facade`.
+  **Offen:** ein automatisierter Durchlauf Titel → Event-Lauf → Ergebnis mit den echten Screens (der Full-Run-Bot spielt
+  nur die Kampagne) und ein Handtest mit Gamepad.
 - [ ] **Replay-Gleichheit (Grad A, Kap. 3.3):** 20 aufgezeichnete Bot-Läufe (Autoplay) ergeben bei Wiedergabe exakt denselben `state_hash` (Kämpfe, Beute, Show-Werte, Quest, Punkte).
-- [ ] Lint-Test: kein `randf()`, `randi()`, `randomize()`, `Time.`, `OS.get_ticks` in `res://core/` (Kap. 11.4).
+  *Teilweise:* der Full-Run-Bot prüft bei jedem Safe-Room-Besuch `Game.replay_log` ≡ Live-`StateHash` und leere `errors`
+  (CI: 3 Strategien je Lauf, 02_TECH §11.4.1); `test_m8_replay.gd` (Bot-Lauf bitgenau, gleicher Seed → gleicher Hash).
+  **Offen:** die Serie von 20 Läufen mit Event-Quest und Punkten als eigener Gate-Schritt.
+- [x] Lint-Test: kein `randf()`, `randi()`, `randomize()`, `Time.`, `OS.get_ticks` in `res://core/` (Kap. 11.4) —
+  `test_m8_no_global_rng.gd` (ohne Ausnahmen, inkl. der Gleitkomma-Funktionen aus CR-12).
 - [ ] **Plattform-Matrix** (Pflicht, auch für S1/S4 und vor jedem `sim_version`-Bump): Linux x86-64 (Referenz = späterer
   Server/Verifier) gegen Windows x64, Android arm64, iOS bzw. macOS arm64 (Apple Silicon) und Web (wasm) — je mindestens
   **20 Bot-Läufe** mit identischem `final_hash` und identischen Checkpoint-Hashes. CI headless mit mindestens einem
   **arm64-Runner** (z. B. Linux arm64); Mobile über Device-Farm oder dokumentiertes manuelles Gate.
-- [ ] `RunSim` (dünne Variante, CR-6) treibt den Bot-Lauf **ohne Autoloads**; `test_m8_replay` läuft headless gegen `RunSim`.
-- [ ] Lokale Bestenliste übersteht Neustart; korrupte Datei → wird verworfen, Spiel läuft weiter.
+  **Offen:** bisher läuft nur Linux x86-64 (lokal und CI); es gibt weder arm64-Runner noch Geräte-Läufe.
+- [x] `RunSim` (dünne Variante, CR-6) treibt den Bot-Lauf **ohne Autoloads**; `test_m8_replay` läuft headless gegen `RunSim` —
+  `test_m8_replay.gd::test_bot_run_replays_bit_for_bit`, `test_m8_run_sim.gd`.
+- [x] Lokale Bestenliste übersteht Neustart; korrupte Datei → wird verworfen, Spiel läuft weiter —
+  `test_m8_leaderboard.gd` (`test_persistence_through_save`, `test_corrupt_data_gives_an_empty_board`).
 
 ### S1 — Async Seeds, Online-Bestenliste, Replays
 Umfang: Accounts (Gast + Plattform-Login), Event-Kalender vom Server, Tagesquote/Wochenshow mit Commit-Reveal-Seeds,
@@ -751,7 +763,7 @@ Die `cmd_id` steht auch im Run-Log (Kap. 10.6); der Verifier prüft strikte Mono
 | `team_roster` | `{ "team_id", "members": [{ "player_id", "display_name", "role", "connected": bool }], "roster_changed": bool }` |
 | `ready_state` | `{ "player_id", "ready": bool }` (Broadcast an das Team) |
 | `snap` | `{ "tick", "ack_in", "ents": [[id, x, y, z, yaw, anim, flags], …] }` (JSON 1.0; Binär 1.1, Kap. 4.7; unzuverlässiger Kanal) |
-| `ev` | `{ "tick", "events": [ExploreEvent, …] }` (Schema `ExploreEvent`, Kap. 11.2) z. B. `chest_opened{contents}`, `enemy_state`, `event_choice`, `achievement`, `hype` |
+| `ev` | `{ "tick", "events": [ExploreEvent, …] }` (Schema `ExploreEvent`, Kap. 11.2 bzw. 02_TECH §7.1) z. B. `chest_opened{contents}`, `enemy_state`, `event_choice`, `achievement`, `hype` |
 | `ack_cmd` | `{ "cmd_id", "result" }` (Kap. 4.2) |
 | `battle_start` | `{ "battle_id", "n0", "group_id", "encounter_type", "units", "ctr", "state_hash" }` — `ctr` (CTB-Startwerte) kommt vom Server, `state_hash` = `of_battle` vor Aktion 0 |
 | `battle_join` | `{ "battle_id", "unit", "ctr" }` — Nachzügler an der Zuggrenze (Kap. 1.4) |
@@ -838,7 +850,7 @@ Kampfbefehl und Lockstep-Antwort:
 Geschenk-Zustellung (gleiches Format für Spieler und, verzögert, Zuschauer):
 
 ```json
-{"v":"1.0","type":"gift","seq":344,"ack":118,"tick":5130,"body":{"gift":{"schema":1,"gift_id":"g_01JB7Q3M0F5W8V2TQK4N6H8R9S","source":"shop","kind":"chest","tier":"silver","amount":0,"sponsor_id":"","sender":{"display_name":"","anon":true,"sender_ref":"b_7f3a9c"},"message_key":"gift_msg_go_team","target":{"player_id":"p_A","run_id":"run_2Kx"},"event_id":"evt_2026w45_sat","window_id":"eu","league":"show","load_half":4,"effect_pm":769,"roll":{"commit":"3613e6c5…d64a","client_seed":"c0ffee4200000017","nonce":17,"log_id":"l_9f2c41d07ab3e655","table_id":"gift_f1","tables_hash":"5e2d…07","rolls":2,"guarantee":"rare","pity_forced":""},"contents":[{"rarity":"common","item_id":"item_ice_spray","qty":1},{"rarity":"rare","item_id":"item_brutzel_burger","qty":2}],"run_bound":true,"deliver_by_tick":0,"issued_at":"2026-11-07T19:42:05Z","sponsor_window":"sw_3","sig":"hmac-sha256:5b1e…"}}}
+{"v":"1.0","type":"gift","seq":344,"ack":118,"tick":5130,"body":{"gift":{"schema":1,"gift_id":"g_01JB7Q3M0F5W8V2TQK4N6H8R9S","source":"shop","kind":"chest","tier":"silver","amount":0,"sponsor_id":"","sender":{"display_name":"","anon":true,"sender_ref":"b_7f3a9c0d1e2f"},"message_key":"gift_msg_go_team","target":{"player_id":"p_A","run_id":"run_2Kx"},"event_id":"evt_2026w45_sat","window_id":"eu","league":"show","load_half":4,"effect_pm":769,"roll":{"commit":"3613e6c5…d64a","client_seed":"c0ffee4200000017","nonce":17,"log_id":"l_9f2c41d07ab3e655","table_id":"gift_f1","tables_hash":"5e2d…07","rolls":2,"guarantee":"rare","pity_forced":""},"contents":[{"rarity":"common","item_id":"item_ice_spray","qty":1},{"rarity":"rare","item_id":"item_brutzel_burger","qty":2}],"run_bound":true,"deliver_by_tick":0,"issued_at":"2026-11-07T19:42:05Z","sponsor_window":"sw_3","sig":"hmac-sha256:5b1e…"}}}
 ```
 
 (Werte entsprechen dem Testvektor Kap. 7.4: Silber-Kiste, Last L = 2 → `effect_pm = 769` → 2 Würfe. Absender standardmäßig
@@ -1010,12 +1022,15 @@ Wert deutlich niedriger. Lasttest mit einem großen Einzellauf (5 000 Zuschauer,
 | `gold` | Credits (`amount`: 100 oder 250) | nein | `shop` | 50 ST je 100 Credits | nötig |
 | `chest` | Sponsorkiste Bronze/Silber/Gold | **ja** | `shop` | Kap. 6.6 | nötig |
 | `fan_pack` | 1 Wurf aus Pool `common` + Hype +5 | ja (nur `common`) | `fan` | 30 AP | nötig |
-| `cheer` | Konfetti/Applaus-Effekt, Chat-Zeile | nein | `fan`, `shop` | 0 AP (kostenlos) | **nicht** nötig (kosmetisch, `exempt_kinds`) |
+| `cheer` | Konfetti/Applaus-Effekt, Chat-Zeile | nein | `fan`, `shop`, `bits` (reserviert) | 0 AP (kostenlos) | **nicht** nötig (kosmetisch, `exempt_kinds`) |
 
 `source` ∈ `system` (Hype-Schwelle, im Kern erzeugt), `fan` (AP), `shop` (eigener Shop: Web und App-Store-IAP), `dev`
 (Test/QA, nur Debug-Builds), `bits` (**reserviert**, derzeit keine Quelle: Bits-Geschenke mit Spielwirkung bzw. gegen Bits sind
 **gestrichen per Entscheidung 2026-10-08**, Kap. 8.4; der Kern kennt den Wert weiter, damit ein späteres, L11-konformes
 Bits-Erlösmodell **[zu prüfen]** keinen Schemabruch braucht — die Event-Regeln führen ihn nicht in `rules.gifts.sources`).
+Die Spalte „Quellen“ ist verbindlich: `Gift.validate` lehnt jede andere Kombination ab (`Gift.KIND_SOURCES`); `bits` darf
+ausschließlich das kosmetische `cheer` tragen, nie ein Geschenk mit Spielwirkung. `dev` darf jede Art senden, wird aber in
+Event-Läufen nur angenommen, wenn die Event-Regeln `dev` in `rules.gifts.sources` nennen (Kap. 10.1).
 
 ### 6.4 Gift-Flow Ende-zu-Ende
 
@@ -1087,12 +1102,12 @@ nimmt genau dieses Format; der Kern wendet genau dieses Format an (`GiftApplier`
 |---|---|---|---|
 | `schema` | int | ja | `1` |
 | `gift_id` | String | ja | ULID mit Präfix `g_` (System: `g_sys_<battle_n>_<k>` deterministisch); eindeutig je Lauf |
-| `source` | String | ja | `system` \| `fan` \| `bits` (reserviert, derzeit keine Quelle — Kap. 6.3) \| `shop` \| `dev` |
+| `source` | String | ja | `system` \| `fan` \| `bits` (reserviert, nur `cheer` — Kap. 6.3) \| `shop` \| `dev`; erlaubte Kombination mit `kind` laut Tabelle Kap. 6.3 |
 | `kind` | String | ja | `sponsor_buff` \| `gold` \| `chest` \| `fan_pack` \| `cheer` |
 | `tier` | String | bei `chest` | `bronze` \| `silver` \| `gold`, sonst `""` |
 | `amount` | int | bei `gold` | Credits **vor** Wirkungsfaktor (100 \| 250), sonst `0` |
 | `sponsor_id` | String | bei `sponsor_buff` | ID aus `sponsors.json` (z. B. `sp_gluckwasser`), sonst `""` |
-| `sender` | Dictionary | ja | `{ "display_name": String (≤ 24, gefiltert), "anon": bool, "sender_ref": String }`; **Standard `anon: true`, `display_name: ""`** — Namensnennung nur per Opt-in der Käufer:in (L13); `system`: `{ "display_name": "", "anon": true, "sender_ref": "" }`. `sender_ref` = pseudonymer Käufer-Schlüssel je Event (Kap. 7.5), wird nie an Zuschauer ausgeliefert |
+| `sender` | Dictionary | ja | `{ "display_name": String (≤ 24, gefiltert), "anon": bool, "sender_ref": String }`; **Standard `anon: true`, `display_name: ""`** — Namensnennung nur per Opt-in der Käufer:in (L13); `system`: `{ "display_name": "", "anon": true, "sender_ref": "" }`. `sender_ref` = pseudonymer Käufer-Schlüssel je Event (Kap. 7.5), Format **`b_` + 12 Zeichen `[0-9a-f]`**, Pflicht bei den Käufer-Quellen `fan`/`bits`/`shop` (die Caps je Käufer:in hängen daran), wird nie an Zuschauer ausgeliefert |
 | `message_key` | String | ja | **nur vordefinierte** Botschaften (`gift_msg_*` in `mod_lines.json`), `""` erlaubt. **Kein Freitext** (Moderation/DSA) |
 | `target` | Dictionary | ja | `{ "player_id": String, "run_id": String }` (S0 offline: `player_id: "local"`) |
 | `event_id` | String | ja | `""` außerhalb von Events |
@@ -1100,7 +1115,7 @@ nimmt genau dieses Format; der Kern wendet genau dieses Format an (`GiftApplier`
 | `league` | String | ja | `show` \| `pur` — Gift mit `source ≠ system` und `league = pur` ist ungültig |
 | `effect_pm` | int | ja | vom Gift-Service berechneter Wirkungsfaktor in **Promille** (Kap. 6.10), `1000` bei `system`; dazu Pflichtfeld `load_half: int` = Lastbasis bei Reservierung (alle **vorher reservierten** externen Geschenke). Kern prüft `effect_pm == effect_pm(load_half)` exakt **und** `load_half ≥` Summe der bereits angewendeten Lasten; sonst `effect_mismatch`. Ersetzt das frühere `effect_mult: float` (keine Floats in signierten Strukturen, Kap. 3.3 Nr. 9) |
 | `roll` | Dictionary | bei Zufall | `{ "commit": hex, "client_seed": hex16, "nonce": int, "log_id": String, "table_id": String, "tables_hash": hex, "rolls": int, "guarantee": "" \| "rare" \| "epic", "pity_forced": "" \| "rare" \| "epic" }`; `client_seed` = **genau 16 Zeichen `[0-9a-f]`** (kein Freitext); `log_id` = `l_` + 16 Hex-Zeichen CSPRNG ohne Zeitbezug (Kap. 7.5); bei `system`/offline: `{ "seed_stream": "show", "nonce": int, … }` |
-| `contents` | Array | bei Zufall | Ergebnis vom Server: `[{ "rarity": String, "item_id": String, "qty": int }]` bzw. `{ "rarity", "credits": int }`. Offline/System leer → Kern würfelt selbst aus Seed-Stream |
+| `contents` | Array | bei Zufall | Ergebnis vom Server: `[{ "rarity": String, "item_id": String, "qty": int }]` bzw. `{ "rarity", "credits": int }`; `qty` 1–9, `credits` 1–1000; `fan_pack` höchstens ein `common`-Eintrag; unbekannte `item_id` → `invalid_schema`. Offline/System leer → Kern würfelt selbst aus Seed-Stream |
 | `run_bound` | bool | ja | immer `true` (Validierung schlägt sonst fehl) |
 | `sponsor_window` | String | nein | `""` oder `sw_<n>`: Sponsor-Fenster, dessen Platz das Geschenk hält (Kap. 6.13) — gestempelt vom Gift-Service bei der Reservierung bzw. von `Show.receive_gift` bei der Annahme; steht im Run-Log. Ein gestempeltes Geschenk wird bis `grace_sec` nach dem Fensterende noch angenommen, ein ungestempeltes nur bei offenem Fenster. `system`-Geschenke: nie |
 | `deliver_by_tick` | int | ja | `0` = keine Frist (Server-Sim). Im Client-Sim-Modus (nur Gratis-Gifts, S2): vom Gift-Service gestempelte Frist (Server-Tick-Schätzung + Toleranz); der Verifier lehnt Läufe ab, deren Log das Gift nicht bis dahin anwendet oder es fehlen lässt |
@@ -1111,9 +1126,12 @@ Rückgabe von `Show.receive_gift(gift: Dictionary) -> Dictionary`:
 `{ "ok": bool, "reason": String, "gift_id": String, "apply": "now" | "queued" }`. `reason` ∈ `""`, `invalid_schema`,
 `duplicate`, `league_pur`, `not_accepting`, `cap_reached`, `run_not_active`, `effect_mismatch`, `bad_signature`,
 `chest_blocked` (Wirkungsschwelle, Kap. 6.10), `deadline_missed` (Client-Sim, `deliver_by_tick`), `window_closed`,
-`window_full`, `window_sender_limit` (Sponsor-Fenster, Kap. 6.13 → `E_WINDOW_*`, Kap. 4.5). Prüfreihenfolge in `GiftPolicy.check`:
-Liga → Annahme/Quelle → Frist → Wirkungsfaktor → Caps → Kistenschwelle → **Sponsor-Fenster zuletzt** (ein `window_*`-Grund
-heißt also „alles andere passt, nächstes Fenster abwarten“).
+`window_full`, `window_sender_limit` (Sponsor-Fenster, Kap. 6.13 → `E_WINDOW_*`, Kap. 4.5), `wrong_target` (Geschenk nennt
+einen anderen Lauf, Spieler, Event oder ein anderes Fenster, Kap. 6.9), `too_soon` (Mindestabstand, Kap. 6.10). Vor
+`GiftPolicy.check` prüft `GiftPolicy.refusal` Duplikat und unbekannte Inhalte. Prüfreihenfolge in `GiftPolicy.check`:
+Liga (bei mehreren Ligen ohne Lauf-Liga `not_accepting`) → Lauf-Bindung → Annahme/Quelle → Frist → Wirkungsfaktor →
+Mindestabstand → Caps → Kistenschwelle → **Sponsor-Fenster zuletzt** (ein `window_*`-Grund heißt also „alles andere passt,
+nächstes Fenster abwarten“).
 
 ### 6.6 Sponsorkisten: Stufen & Preise
 
@@ -1201,11 +1219,18 @@ Zählern; das Feld steht im Gift-Dictionary und im öffentlichen Log.
   02_TECH §6.1); zum Laufende wird der gesamte Lauf-Zustand verworfen.
 - **Lauf-Zähler `GameState.flags["live"]`** (Teil des Zustands-Hashes; geschrieben vom Kern, gelesen von `GiftPolicy.check`):
   `league`, `gift_rules` (RunSim beim Laufstart aus `rules.leagues`/`rules.gifts`); `gift_ids` (jede angewendete externe
-  Gift-ID, Duplikatschutz — Show/RunSim); `load_half`, `external`, `chests`, `gold_chests`, `per_sender {sender_ref: n}`,
-  `counted` (`GiftPolicy.note_applied`, idempotent je Gift-ID — außerhalb des Kampfes über `GiftApplier.apply`, im Kampf über
-  `GiftApplier.note_battle_gift` nach `BattleState.apply_gift`: `Show.note_battle_gift` bzw. RunSim); `gift_items {item_id: n}`;
+  Gift-ID, Duplikatschutz — `GiftPolicy.remember`); `load_half`, `external`, `chests`, `gold_chests`,
+  `per_sender {sender_ref: n}`, `last_delivery_tick` (`GiftPolicy.note_applied`: bucht **jede** Anwendung genau einmal —
+  außerhalb des Kampfes über `GiftApplier.apply`, im Kampf beim Ausgeben durch `Show.take_pending_gift` bzw. in RunSim über
+  `GiftApplier.note_battle_gift`; der Duplikatschutz liegt allein bei `gift_ids`); `gift_items {item_id: n}`;
   optional `gift_accept` (Kap. 6.11). Externe Geschenke werden bei der **Anwendung** erneut geprüft (Show
-  `application_refusal` ≡ `RunSim.gift_refusal`), damit Live-Lauf und Verifier dieselben Geschenke annehmen.
+  `application_refusal` ≡ `RunSim.gift_refusal`, beide über `GiftPolicy.refusal`), damit Live-Lauf und Verifier dieselben
+  Geschenke annehmen.
+- **Bindung an genau einen Lauf:** Der Kern vergleicht `target.run_id`, `target.player_id`, `window_id` und `event_id` des
+  Geschenks mit der Lauf-Identität aus dem Run-Log-Header (`run_id`, `player_id` — S0: `"local"` —, `window_id`, `event_id`,
+  Kap. 10.6). Jede bekannte, abweichende Angabe → `wrong_target`; ein Geschenk für ein Event passt nie in einen
+  Kampagnen-Lauf. Bei Events mit mehreren Ligen muss der Lauf eine Liga gewählt haben (sonst `not_accepting`), und der
+  Header nennt sie (`league`).
   Übrig bleiben nur Statistik, Replay, Bestenlisten-Eintrag, Profil-Belohnungen (Kap. 1.6).
 - Koop: Gift-Inhalte gehen in das **Team-Inventar** des Ziels (eine Sendung, ein Inventar, Kap. 1.4). Eine Übergabe an
   andere Teams/Läufe ist technisch ausgeschlossen (verschiedene Instanzen, kein Fallenlassen/Handeln zwischen Instanzen).
@@ -1258,7 +1283,7 @@ statt 4); innerhalb der Schwelle wird die Minderung offengelegt und bestätigt *
 | Kisten-Kauf | nur solange `effect_pm ≥ chest_min_effect_pm` (Standard 500) |
 | Externe Geschenke pro Ziel und Lauf | 16 |
 | Kisten pro Ziel und Lauf | 8, davon max. 2 Gold-Kisten (praktisch begrenzt meist schon die Wirkungsschwelle) |
-| Mindestabstand zwischen zwei Zustellungen an ein Ziel | 45 s = 1 350 Ticks Lauf-Zeit (Warteschlange, Reihenfolge nach Reservierung) |
+| Mindestabstand zwischen zwei Zustellungen an ein Ziel | 45 s = 1 350 Ticks Lauf-Zeit (Warteschlange, Reihenfolge nach Reservierung). Auch der Kern prüft ihn (`too_soon`: `tick − last_delivery_tick < min_interval_sec × 30`) für Service-Geschenke (`fan`/`shop`/`bits`); ausgenommen `cheer`, `system` und `dev`. Im Kampf hält `Show` ein solches Geschenk zurück, bis der Abstand erfüllt ist |
 | Verkaufsschluss | kein Verkauf, wenn die Restlaufzeit des Ziels (Fenster bzw. `max_run_wall_sec`) < `min_interval_sec` × (Warteschlangenlänge + 1) + 120 s Puffer |
 | Geschenke pro Kampf | externe max. 1; **gesamt** inkl. System-Geschenke max. `SponsorSystem.MAX_GIFTS_PER_BATTLE` / `MAX_GIFTS_PER_BOSS_BATTLE` (02_TECH §6.1: 1 / 2; GDD 7.4 nennt 2 / 3 — Abgleich offen) — überzählige warten bis Kampfende |
 | Pro Käufer:in → gleiches Ziel und Event | max. 5 Geschenke |
@@ -1503,7 +1528,7 @@ commit v2 (Test-Eingaben: tables_hash = "11"×32, rules_hash = "22"×32, data_ha
 layout_seed = 266222357384372
 loot_seed("chest", 3) = 64833286715105
 sym("t_01") = 2, sym("t_02") = 1
-roll_key(sender_ref "b_7f3a9c", client_seed "c0ffee4200000017", nonce 17)
+roll_key(sender_ref "b_7f3a9c", client_seed "c0ffee4200000017", nonce 17)   (Testvektor: kurzer Platzhalter; echte sender_ref = "b_" + 12 Hex, Kap. 7.5)
          = 25e3afcc14e3ccde26f918e41da45f508541add54dac4594c3718b0987c26992
 draw(0, "rarity") = 255368109740746   (mod 100 = 46 → common bei Silber)
 Silber-Kiste, 3 Würfe, Garantie rare, ohne Pity, Pool gift_f1:
@@ -1875,10 +1900,11 @@ und ZAG-Finanztransfer schrumpfen auf die verbleibende Frage oder entfallen (unt
 | `seed_policy.type` | String | `fixed` (nur `offline`, mit `run_seed: int`) \| `daily_derived` (nur Training) \| `commit_reveal` (mit `commits` je Fenster) |
 | `quest` | Dictionary | Kap. 1.3 |
 | `rules.mode` | String | `solo` \| `coop` |
-| `rules.leagues` | Array | Teilmenge von `show`, `pur`; `offline` nur `pur` |
+| `rules.leagues` | Array | Teilmenge von `show`, `pur`; `offline` nur `pur`. Bei mehreren Ligen wählt der Lauf eine (`Game.start_event_run(id, league)`), sie steht im Log-Header (Kap. 10.6) |
 | `rules.timer_mode` | String | `explore_only` \| `realtime` |
+| `rules.difficulty` | String | `prime_time` (einziger Wert in S0): Event-Läufe spielen immer die Schwierigkeit `prime`; `Game.set_difficulty` wirkt nur in der Kampagne, ein `difficulty`-Command im Log eines Event-Laufs wird abgelehnt (`RunRules.command_refusal`), ein Header mit anderer Schwierigkeit ist ein Verifier-Fehler (Kap. 11.4) |
 | `rules.party_preset` | String | ID in `res://data/party_presets.json` (neu, Kap. 11) |
-| `rules.gifts` | Dictionary | Caps/Gewichte Kap. 6.10, **nur Ganzzahlen** (Lasten in Halbpunkten, Faktoren in Promille); `enabled: false` in S0; `sources` ⊆ `fan`, `shop`, `dev` (`bits` reserviert, seit 2026-10-08 nicht angeboten). `rules` geht vollständig in `rules_hash` und damit in den Commit ein (Kap. 7.3) |
+| `rules.gifts` | Dictionary | Caps/Gewichte Kap. 6.10, **nur Ganzzahlen** (Lasten in Halbpunkten, Faktoren in Promille); `enabled: false` in S0; `sources` (Array) ⊆ `fan`, `shop`, `dev` (`bits` reserviert, seit 2026-10-08 nicht angeboten; `dev` = QA nur in `offline`-Events; `EventDef.validate` meldet Verstöße). Ohne `sources` nimmt ein Event-Lauf `fan`/`shop` an, aber nie `dev` (`GiftPolicy.check`). `rules` geht vollständig in `rules_hash` und damit in den Commit ein (Kap. 7.3) |
 | `rules.sponsor_windows` | Dictionary | Sponsor-Fenster (Kap. 6.13): `enabled`, `slots_per_player`, `per_viewer`, `grace_sec`, `exempt_kinds` (⊆ Geschenk-Arten), `periodic {enabled, first_sec, every_sec, open_sec}`, `safe_room {enabled, max_sec, once_per_room}`, `boss {enabled, countdown_sec}`, `dev_open` — nur Ganzzahlen ≥ 1 (`grace_sec` ≥ 0) und Bools, unbekannte Schlüssel sind Fehler (`SponsorWindows.validate_rules`); fehlende Schlüssel = Standard (`SponsorWindows.DEFAULT_RULES`, auch für Kampagne/Offline); `dev_open` muss außer bei `offline` explizit `false` sein |
 | `votes` | Dictionary | Kap. 6.2 |
 | `scoring` | Dictionary | Kap. 1.5, nur Ganzzahlen |
@@ -1972,7 +1998,12 @@ Siehe Kap. 6.5 (normativ; inkl. optionalem Stempel `sponsor_window`, Kap. 6.13).
 `verified` ∈ `pending` \| `plausible` (Grad A, ungewertet, Kap. 2 S1) \| `ok` \| `failed` \| `annulled`.
 `run_wall_ms` und `finished_at` sind serverseitig ermittelt (Kap. 1.5). Läufe mit `flags` ∋ `sponsored` erhalten nur die
 Teilnahme-Plakette (Kap. 1.6). Rang wird beim Lesen berechnet (Tie-Break Kap. 1.5).
-S0 lokal: gleiches Schema, `league: "pur"`, `verified: "local"`, `players[0].player_id: "local"`.
+S0 lokal: gleiches Schema, `league: "pur"`, `verified: "local"`, `players[0].player_id: "local"`; `run_id`/`replay_id` =
+`run_id` des Log-Headers, `run_log_hash` = `RunLog.digest()`, `data_hash` = `DB.data_hash()` (SHA-256 über alle Dateien in
+`res://data/`), dazu `difficulty`, `sim_version`, `client_version`, `finished_at`; `Game.finish_run` gibt den Eintrag in
+`summary["entry"]` zurück. **Lokale Bestenlisten und Replays** (`user://leaderboards/`, `user://replays/`) sind normales,
+editierbares JSON: Sie werden nie hochgeladen und nie als vertrauenswürdig behandelt (gewertet wird erst serverseitig ab S1).
+Event-Läufe werden nie in einen Spielstand-Slot gespeichert (02_TECH §3.6).
 
 ### 10.5 Twist-Definition (`res://data/twists.json`)
 
@@ -2006,6 +2037,11 @@ S0 lokal: gleiches Schema, `league: "pur"`, `verified: "local"`, `players[0].pla
 }
 ```
 
+- **Header im Slice** (`Game._make_run_log`): `schema`, `seed`, `slot`, `player_name`, `mode`, `difficulty`, `game_version`,
+  `sim_hz`, `sim_version` (`RunSim.SIM_VERSION`) und die **Lauf-Identität** `event_id`, `run_id` (je Versuch eindeutig,
+  `RunLog.local_run_id(seed)` = `run_local_<seed>_<8 hex>`), `player_id` (S0 `"local"`), `window_id` (`""` offline), `league`.
+  Gegen die Identität prüft der Kern die Lauf-Bindung von Geschenken (Kap. 6.9); die Verifier prüfen bei Katalog-Events
+  festen Seed, Schwierigkeit `prime` und Liga (Kap. 11.4). Das Beispiel oben zeigt das Ziel-Format ab S1.
 - `k` = Sim-Tick (30 Hz, eine Simulationsuhr, Kap. 3.2), **normativ je Timer-Modus:**
   - `explore_only`: `k` zählt Erkundungs-Ticks und — seit den Sponsor-Fenstern (Kap. 6.13) — **Leerlauf-Ticks im Safe Room**
     (nur die Fenster-Uhr läuft, der Etagen-Timer nicht; welcher Tick welcher ist, folgt aus `floor_run.location`, also aus den
@@ -2036,19 +2072,20 @@ S0 lokal: gleiches Schema, `league: "pur"`, `verified: "local"`, `players[0].pla
 
 ## 11. Was JETZT im Vertical Slice gebaut wird (S0 + Hooks)
 
-> Abgestimmt auf `02_TECH.md` (Stand: in Arbeit). Grundsatz: Der Slice baut S0 vollständig und legt für S1–S5 nur
+> Abgestimmt auf `02_TECH.md` (Stand des Abgleichs: 2026-10-10, Branch `ptd/final-a`; bei Abweichungen gelten Namen und
+> Signaturen von 02_TECH §7.1). Grundsatz: Der Slice baut S0 vollständig und legt für S1–S5 nur
 > **Hooks** an, die heute schon testbar sind. Neue Dateien gehören einem neuen Modul **M8 „Live-Hooks“** (Ordner
 > `core/live/`, Tests `tests/test_m8_*.gd`). Änderungen an Dateien anderer Module sind als Änderungsanträge **CR-1 … CR-14**
-> in Kap. 11.6 formuliert (02_TECH §0.2). Alles in `core/live/` ist `RefCounted`, statisch typisiert, ohne Autoloads,
+> in Kap. 11.6 formuliert (02_TECH §0.2) und inzwischen alle umgesetzt. Alles in `core/live/` ist `RefCounted`, statisch typisiert, ohne Autoloads,
 > ohne SceneTree, ohne `Time`, Zufall nur per übergebenem `RandomNumberGenerator` (02_TECH §0.4).
 
 ### 11.1 Daten
 
 | Datei | Besitzer | Inhalt im Slice |
 |---|---|---|
-| `data/events.json` | M7 (Inhalt), M8 (Schema/Loader) | 1–2 Offline-Events (`evt_offline_gleis9` wie Kap. 10.1, optional `evt_offline_pacifist`). Geladen von `EventCatalog` (M8), **nicht** von `GameData` — die 11 Tabellen aus 02_TECH §1.4 bleiben unverändert (CR-9). |
+| `data/events.json` | M7 (Inhalt), M8 (Schema/Loader) | 1–2 Offline-Events (`evt_offline_gleis9` wie Kap. 10.1, optional `evt_offline_pacifist`). Geladen von `EventCatalog` (M8), **nicht** von `GameData` — die 13 Tabellen aus `GameData.TABLES` (02_TECH §1.4) bleiben unverändert (CR-9). |
 | `data/mod_lines.json` | M7 | neue, **optionale** Tags `event_run_start`, `event_quest_progress`, `event_quest_complete`, `event_result`, `gift_received`, `gift_received:credits`, `gift_received:anon` (Fallback-Mechanik `a:b → a` aus 02_TECH §6.1; **keine** Varianten je Kistenstufe, L13) — CR-9; dazu die Zeilen aus Kap. 6.12 (`gift_diminished`, `gift_capped`, `gift_declined`, `fan_pack_received`, `live_closing`, `vote_open`) mit den Platzhaltern `{sender}`, `{amount}`, `{pct}`, `{min}` (`DataValidator.TEXT_PLACEHOLDERS`, optionale Präfixe `gift_`/`fan_pack_`/`live_`/`vote_`/`twist_applied_`) |
-| `data/party.json` bzw. `data/balance.json` | M7 / M2 | EXP-Tabelle `exp_to_next` je Level als Ganzzahlen (ersetzt `pow`, CR-12) |
+| `Progression.EXP_TABLE` (`core/progression/progression.gd`) | M2 | EXP-Tabelle als Ganzzahl-Konstante je Level (GDD §4.3; ersetzt `pow`, CR-12) — keine Datei in `data/` |
 | `tests/fixtures/live/gift_tables.json` | M8 | **Hook:** Schema Kap. 10.2; im Slice nur von `FairRoll`-Tests gelesen (kein Eintrag in `data/`) |
 | Party-Preset | — | S0 unterstützt nur `rules.party_preset: "new_game"` (= `GameState.create_new`, 02_TECH §6.1); `party_presets.json` kommt mit S2 |
 | `twists.json`, `party_presets.json` | — | **nicht** im Slice |
@@ -2058,9 +2095,10 @@ S0 lokal: gleiches Schema, `league: "pur"`, `verified: "local"`, `players[0].pla
 | Datei | `class_name` | Öffentliche API |
 |---|---|---|
 | `core/live/canonical_json.gd` | `CanonicalJson` | `static func stringify(v: Variant) -> String` (JCS-Profil Kap. 3.3 Nr. 9: Schlüssel ASCII, nach Codepunkt sortiert, keine Leerzeichen, ganzzahlige Floats → `int`, nicht-ganzzahlige Zahlen → Fehler, Escape-Regeln wie spezifiziert) · `static func sha256_hex(v: Variant) -> String` · `static var last_error: String` (statisch, damit die statischen Funktionen ihn setzen können; Aufrufer lesen `CanonicalJson.last_error`, `""` = letzter Aufruf ok) |
-| `core/live/run_sim.gd` | `RunSim` | **Dünne Variante im Slice (CR-6):** `func _init(data: GameData, state: GameState, rules: Dictionary)` · `func step(ticks: int) -> Array[Dictionary]` (Timer, Hype-Drift, `viewers_target`, Pazifist-Zählung, Timer-Warnungen; liefert Events) · `func apply(cmd: Dictionary) -> Array[Dictionary]` · `func tick() -> int` · keine Autoloads, kein SceneTree |
-| `core/live/command.gd` | `Command` | `static func validate(d: Dictionary) -> String` (Schema je `t`: Pflichtfelder, Typen, Wertebereiche; `""` = gültig) · `const TYPES: PackedStringArray` |
-| `core/live/explore_event.gd` | `ExploreEvent` | `enum Type { ROOM_ENTERED, CHEST_OPENED, ENCOUNTER, ENEMY_STATE, EVENT_CHOICE, ACHIEVEMENT, HYPE, TIMER_WARNING, GIFT_DELIVERED, FLOOR_COMPLETED }` · `var type: Type` · `var tick: int` · `var data: Dictionary` · `func to_dict() -> Dictionary` · `static func from_dict(d: Dictionary) -> ExploreEvent` — Brief 6b.2 („Ereignisse raus“) für die Erkundung |
+| `core/live/run_sim.gd` | `RunSim` | **Dünne Variante im Slice (CR-6), umgesetzt** — Signaturen und Tick-Reihenfolge normativ in 02_TECH §7.1: `func _init(p_data: GameData, p_state: GameState, p_rules: Dictionary, p_identity: Dictionary = {})` (Lauf-Identität `run_id`/`event_id`/`player_id`/`window_id`/`league` aus dem Log-Header, `identity_of`) · `func step(n: int) -> Array[ExploreEvent]` (je Tick: Etagen-Timer `FloorRun.tick_timer`, Pazifist-Sekunden, Hype-Abkühlung über `ShowModel.decay_step` alle `HYPE_DECAY_TICKS`, Streuner, Sponsor-Fenster; Leerlauf-Ticks im Safe Room nur Sponsor-Fenster) · `func apply(cmd: Dictionary) -> Array[ExploreEvent]` (prüft zuerst `command_refusal`, abgelehnte Commands → `rejected_cmds`) · `func tick() -> int` · `func command_refusal(c) -> String` / `func gift_refusal(g) -> String` · `static func replay(p_data, p_log, p_rules = {}, p_quest = {}, p_ledger = []) -> Dictionary` (`{"final_hash", "result", "mismatch_at", "errors"}`, Kap. 11.4) · `static func header_errors(h, def, rules)` · `const SIM_VERSION` · keine Autoloads, kein SceneTree |
+| `core/live/command.gd` | `Command` | `static func validate(d: Dictionary) -> String` (Schema je `t`: Pflichtfelder, Typen, Wertebereiche, `flag`-Schlüssel nur aus `FLAG_KEYS`; `""` = gültig) · `const TYPES: PackedStringArray` |
+| `core/live/run_rules.gd` | `RunRules` | Die gemeinsamen Spielregeln der aufgezeichneten Nicht-Kampf-Commands, die `Game` (live) und `RunSim` (Verifier) beide aufrufen: `start_floor`, `visit_room`, `open_chest`, `open_lootbox`, `open_gate`, `apply_floor_event`, `enter_safe_room`/`leave_safe_room`, `mark_scene_seen`, `lower_difficulty`, `next_seed` · `static func command_refusal(state, data, rules, c, floor_done, scene_ctx) -> String` (Legalität für Verifier: nach `descend` nur noch die nächste Etage, Etagen nur der Reihe nach, Schwierigkeit nur in der Kampagne, Szenen nur im Safe Room mit erfüllter Bedingung) — 02_TECH §7.1 |
+| `core/dungeon/explore_event.gd` (Modul **M3**, 02_TECH §1.3) | `ExploreEvent` | `enum Type { ROOM_ENTERED, CHEST_OPENED, ENCOUNTER, ENEMY_STATE, EVENT_CHOICE, GATE_OPENED, ACHIEVEMENT, HYPE, TIMER_SECOND, TIMER_WARNING, TIMER_EXPIRED, EXPLORE_TICK, STRAY_DUE, GIFT_DELIVERED, FLOOR_COMPLETED, SPONSOR_WINDOW_OPENED, SPONSOR_WINDOW_CLOSED }` (17 Werte; die letzten beiden aus CR-15) · `const TYPE_NAMES` (serialisierte Namen, Index = Typ) · `var type: Type` · `var tick: int` · `var data: Dictionary` · `static func make(type, tick, data)` · `func to_dict() -> Dictionary` · `static func from_dict(d: Dictionary) -> ExploreEvent` — Brief 6b.2 („Ereignisse raus“) für die Erkundung; maßgeblich ist 02_TECH §7.1 |
 | `core/live/run_log.gd` | `RunLog` | `var header: Dictionary` · `func add_cmd(tick: int, cmd: Dictionary, cmd_id: int = 0) -> void` · `func add_pos(tick: int, pos: Vector3) -> void` (2 Hz, Grad A) · `func add_checkpoint(tick: int, p_hash: String) -> void` · `func cmds() -> Array[Dictionary]` · `func to_dict() -> Dictionary` · `static func from_dict(d: Dictionary) -> RunLog` · `func digest() -> String` |
 | `core/live/state_hash.gd` | `StateHash` | `static func of(state: GameState) -> String` — SHA-256 über `CanonicalJson` von `state.to_dict()` **ohne** Anzeige-/Metafelder (`play_time_sec`, `show.viewers`, `slot` — `Save.save_slot` verschiebt den aktiven Slot) · `static func of_battle(state: BattleState) -> String` (CR-14) |
 | `core/live/event_def.gd` | `EventDef` | `static func from_dict(d: Dictionary) -> EventDef` · `func validate() -> PackedStringArray` · `func window_state(now_unix: int) -> StringName` (`&"always"`, `&"scheduled"`, `&"open"`, `&"last_entry"`, `&"closing"`, `&"closed"`) · `func can_start(now_unix: int) -> bool` · `func run_seed() -> int` (nur `fixed`) |
@@ -2068,10 +2106,10 @@ S0 lokal: gleiches Schema, `league: "pur"`, `verified: "local"`, `players[0].pla
 | `core/live/quest_tracker.gd` | `QuestTracker` | `static func from_def(q: Dictionary) -> QuestTracker` · `func on_event(ev: Dictionary) -> bool` (true = Fortschritt geändert) · `func progress() -> float` · `func is_complete() -> bool` · `func to_dict() -> Dictionary` · `static func from_dict(d: Dictionary) -> QuestTracker`. Quest-Events (normalisiert, erzeugt vom Adapter in `Game`, CR-4): `{"type": "enemy_killed", "enemy_id"}`, `{"type": "boss_defeated", "boss_id"}`, `{"type": "battle_started"}`, `{"type": "floor_completed", "floor"}`, `{"type": "achievement", "id"}`, `{"type": "metric", "name", "value": int}` — `name` ∈ `viewers_target_peak`, `followers_gained_run`, `hype_100_count` (nur deterministische Ganzzahl-Größen, nie verrauschte Anzeige-Zuschauer; CR-13). S0-Typen: `reach_stairs`, `defeat_boss`, `bounty`, `hype_peak`, `pacifist`, `achievement_hunt`, `all_of` |
 | `core/live/score_calc.gd` | `ScoreCalc` | `static func score(summary: Dictionary, scoring: Dictionary) -> Dictionary` → `{ "score": int, "breakdown": Dictionary }` |
 | `core/live/leaderboard.gd` | `Leaderboard` | `func add(entry: Dictionary) -> int` (Rang, 1-basiert; Top 10 bleiben) · `func top(n: int) -> Array[Dictionary]` · `static func is_better(a: Dictionary, b: Dictionary) -> bool` · `func to_dict() -> Dictionary` · `static func from_dict(d: Dictionary) -> Leaderboard` (korrupt → leer) |
-| `core/live/gift.gd` | `Gift` | `static func validate(g: Dictionary) -> String` (Reason-Codes Kap. 6.5, `""` = gültig; prüft u. a. `effect_pm: int`, `client_seed` = 16 Hex-Zeichen, `anon`-Standard, keine Floats) · `static func make_system(sponsor_id: String, battle_n: int, k: int) -> Dictionary` · `static func make_dev(kind: String, tier: String, amount: int) -> Dictionary` |
-| `core/live/gift_policy.gd` | `GiftPolicy` | `static func effect_pm(load_half: int, k_pm: int = 75) -> int` · `static func load_weight_half(g: Dictionary, weights_half: Dictionary) -> int` · `static func rolls_for(base_rolls: int, effect_pm: int) -> int` · `static func scale(value: int, effect_pm: int) -> int` (`(value * effect_pm + 500) / 1000`) · `static func chest_allowed(load_half: int, rules: Dictionary) -> bool` · `static func check(run: Dictionary, g: Dictionary, rules: Dictionary) -> String` (`run` = Gift-Zähler des Laufs aus `GameState.flags["live"]`) — ausschließlich Ganzzahlen (Kap. 6.10) |
+| `core/live/gift.gd` | `Gift` | `static func validate(g: Dictionary) -> String` (Reason-Codes Kap. 6.5, `""` = gültig; prüft u. a. `effect_pm: int`, `client_seed` = 16 Hex-Zeichen, `anon`-Standard, keine Floats) · `static func make_system(sponsor_id: String, battle_n: int, k: int) -> Dictionary` · `static func make_dev(kind: String, tier: String, amount: int, sender_ref: String = "") -> Dictionary` · `static func is_external(g) -> bool`; prüft außerdem `sender_ref` (`^b_[0-9a-f]{12}$`, Pflicht für Käufer-Quellen), Art je Quelle (`KIND_SOURCES`: `bits` nur `cheer`) und Inhaltsgrenzen (`MAX_CONTENT_QTY` 9, `MAX_CONTENT_CREDITS` 1000) |
+| `core/live/gift_policy.gd` | `GiftPolicy` | `static func effect_pm(load_half: int, k_pm: int = 75) -> int` · `static func load_weight_half(g: Dictionary, weights_half: Dictionary) -> int` · `static func rolls_for(base_rolls: int, effect_pm: int) -> int` · `static func scale(value: int, effect_pm: int) -> int` (`(value * effect_pm + 500) / 1000`) · `static func chest_allowed(load_half: int, rules: Dictionary) -> bool` · `static func check(run: Dictionary, g: Dictionary, rules: Dictionary) -> String` (`run` = Gift-Zähler des Laufs aus `GameState.flags["live"]`, ergänzt um `tick` und Lauf-Identität) · `static func refusal(state, data, g, rules, extra) -> String` (DIE Anwendungsprüfung von Show und `RunSim.gift_refusal`: Duplikat, unbekannte Inhalte, dann `check`) · `static func remember(state, gift_id)` · `static func note_applied(run, g, rules, tick = -1)` (bucht jedes angewandte externe Geschenk genau einmal) · `run_league` · `can_deliver_in_battle` — ausschließlich Ganzzahlen (Kap. 6.10) |
 | `core/live/sponsor_windows.gd` | `SponsorWindows` | **Sponsor-Fenster (CR-15, Kap. 6.13):** `const DEFAULT_RULES` · `static func rules_of(rules) -> Dictionary` · `static func active(st, rules) -> bool` · `static func ensure(st, rules) -> Dictionary` · `static func tick(st, rules, explore: bool) -> Array[Dictionary]` · `on_floor` · `on_safe_room_enter(st, rules, room_id)` · `on_safe_room_exit` · `on_room(st, rules, kind)` · `dev_open(st, rules, sec, slots)` / `dev_allowed` · `static func check(run, g) -> String` (`window_closed` \| `window_full` \| `window_sender_limit`, Reservierungen `run["sw_pending"]`) · `static func book(run, g)` · `window_for(run, g)` · `view(st, rules)` / `window_view(w)` · `validate_rules(cfg)` · `protocol_code(reason)` — Zustand `flags["live"]["sponsor"]`, nur Ganzzahlen |
-| `core/live/gift_applier.gd` | `GiftApplier` | `static func apply(state: GameState, data: GameData, g: Dictionary, rng: RandomNumberGenerator) -> Array[LootReward]` — Anwendung **außerhalb** von Kämpfen (`gold`, `chest`, `fan_pack`, `sponsor_buff` als Heilung/MP/Item laut `SponsorDef.gift`); im Kampf wendet `BattleState.apply_gift` an (CR-2) |
+| `core/live/gift_applier.gd` | `GiftApplier` | `static func apply(state: GameState, data: GameData, g: Dictionary, rng: RandomNumberGenerator, tick: int = -1) -> Array[LootReward]` — Anwendung **außerhalb** von Kämpfen (`gold`, `chest`, `fan_pack`, `sponsor_buff` als Heilung/MP/Item laut `SponsorDef.gift`; Ausrüstungs-Duplikate → Credits über `ItemDef.duplicate_credits`) · `static func note_battle_gift(state, g, events, tick = -1)` / `count_battle_items` (Buchung eines im Kampf angewandten Geschenks); im Kampf wendet `BattleState.apply_gift` an (CR-2) und rechnet Duplikate gleich um |
 | `core/live/fair_roll.gd` | `FairRoll` | **Hook (nur Tests):** `static func hmac(key: PackedByteArray, msg: String) -> PackedByteArray` (`Crypto.new().hmac_digest(HashingContext.HASH_SHA256, key, msg.to_utf8_buffer())`) · `static func u48(b: PackedByteArray) -> int` · `static func commit(server_seed: PackedByteArray, event_id: String, window_id: String, tables_hash: String, rules_hash: String, data_hash: String, sim_version: int) -> String` (v2) · `static func layout_seed(server_seed: PackedByteArray, event_id: String, window_id: String) -> int` · `static func roll_key(server_seed: PackedByteArray, event_id: String, window_id: String, sender_ref: String, client_seed: String, nonce: int) -> PackedByteArray` · `static func roll_chest(roll_key: PackedByteArray, tier: Dictionary, pool: Dictionary, rolls: int, pity_forced: String) -> Array[Dictionary]` |
 
 Bewusst **nicht** im Slice: `ExploreSim` (Grad B, Kap. 3.3 — aber Benchmark-Prototyp für das Verifier-Budget, Kap. 2 S1),
@@ -2083,9 +2121,9 @@ der volle Server-Ausbau von `RunSim` (mehrere Instanzen, Netzwerk-Befehlsquelle)
 | Ort (Besitzer) | Änderung im Slice |
 |---|---|
 | `Events` (M0) | neue Signale: `run_started(event_id: String, league: String)`, `run_finished(summary: Dictionary)`, `quest_progress(progress: float)`, `quest_completed()`, `gift_received(gift: Dictionary)`, `gift_rejected(gift_id: String, reason: String)` (CR-1); `sponsor_window_opened(window: Dictionary)`, `sponsor_window_closed(window_id: String, reason: String)`, `sponsor_window_updated(window: Dictionary)` (CR-15) |
-| `Game` (M0) | `var mode: StringName = &"campaign"` (`&"event_offline"`) · `var run_log: RunLog` · `var quest: QuestTracker` · `func start_event_run(event_id: String) -> void` (Seed aus `EventDef.run_seed()`, `GameState.create_new`, Slot 0 → nie in Kampagnen-Slots gespeichert) · `func record(cmd: Dictionary) -> void` · `func finish_run(cause: StringName) -> Dictionary` (Summary inkl. `party_kos`, `followers_gained_run`, `achievements_in_run`, `quest_progress_ppm` → `ScoreCalc` → `Leaderboard` → `sim.close(cause, {"score"})` → `Save`) · `func event_rules() -> Dictionary` · `func adopt_loaded_state(st, log)` (Save.load_slot) · die Live-Uhr schreibt Checkpoints in `run_log` (`sim.run_log`; alle 300 Ticks, nach Kämpfen/Abstieg) · Quest-Adapter zusätzlich `zones`/`boss_hp` · `func replay_log(p_log: RunLog) -> Dictionary` (`{"final_hash", "result", "mismatch_at"}`; treibt dieselben Funktionen wie die Szenen, ohne Szenen) · **Fassade über `RunSim`** (CR-6): `_process` akkumuliert Frame-`delta` in ganze Ticks (1/30 s) und ruft `RunSim.step(n)`; Timer in ganzen **Ticks** (`time_left_ticks`) + `time`-Commands (CR-3, CR-4); Ergebnisse von `RunSim` werden als Signale weitergereicht. Kampagne zeichnet ebenfalls auf (Brief 6b.3, hilft bei Bug-Reports). |
-| `Show` (M2) | **`func receive_gift(gift: Dictionary) -> Dictionary`** — einziger Eingang für **alle** Geschenke: `Gift.validate` → `GiftPolicy.check` → im Kampf (`Game.in_battle`) Warteschlange bzw. sofort `GiftApplier` (Erkundung); bei `source ≠ "system"` `Game.record({"t": "gift", "gift": gift})` im Moment der **Anwendung** (02_TECH §3.5) · `func take_pending_gift() -> Dictionary` ersetzt `take_sponsor_gift() -> String`: zuerst wartende externe Geschenke, sonst System-Auswahl per `SponsorSystem.pick` → `Gift.make_system(id, …)` → **ebenfalls durch `receive_gift()`** → Rückgabe (leer = nichts) · zwei RNGs: `_rng` (Spiellogik, nur Sponsor-Auswahl) und `_fx_rng` (Chat, Zuschauer-Rauschen, M.O.D.-Zeilenwahl — nicht deterministisch relevant) · wartende externe Geschenke werden bei der **Anwendung** erneut geprüft (`application_refusal`: Duplikat, `GiftPolicy.check` mit Lauf-Zählern + Tick; Kampf-Limit `rules.gifts.max_per_battle`) und im Kampf über `note_battle_gift` gebucht; `abort_battle()` für vorzeitig beendete Kämpfe · **Fassade**: Hype-Drift, `viewers_target`-Neuberechnung und Pazifist-Zählung rechnet `RunSim.step` in Ticks; `Show._process` macht nur noch Anzeige (Glättung, Rauschen, Chat-Takt) (CR-5, CR-6) |
-| `scenes/battle/battle_controller.gd` (M5) | nach `hud.request_command` bzw. `choose_ai_command`: `Game.record({"t": "battle", …, "auto": not player_chosen})`; in `_play`: `var g := Show.take_pending_gift()` → `state.apply_gift(g)` → `Show.note_battle_gift(g, events)` (Lauf-Zähler wie RunSim) (CR-7) |
+| `Game` (M0) | `var mode: StringName = &"campaign"` (`&"event_offline"`) · `var run_log: RunLog` · `var quest: QuestTracker` · `func start_event_run(event_id: String, p_league: String = "") -> void` (Seed aus `EventDef.run_seed()`, `GameState.create_new`, Liga im Log-Header, Slot 0 → Event-Läufe werden nie in Spielstand-Slots gespeichert) · `func accepts_gifts() -> bool` · `func gift_context() -> Dictionary` (Tick + Lauf-Identität für `GiftPolicy.refusal`) · `func can_lower_difficulty() -> bool` (nur Kampagne) · `func record(cmd: Dictionary) -> void` · `func finish_run(cause: StringName) -> Dictionary` (Summary inkl. `party_kos`, `followers_gained_run`, `achievements_in_run`, `quest_progress_ppm` → `ScoreCalc` → `Leaderboard` → `sim.close(cause, {"score"})` → `Save`) · `func event_rules() -> Dictionary` · `func adopt_loaded_state(st, log)` (Save.load_slot) · die Live-Uhr schreibt Checkpoints in `run_log` (`sim.run_log`; alle 300 Ticks, nach Kämpfen/Abstieg) · Quest-Adapter zusätzlich `zones`/`boss_hp` · `func replay_log(p_log: RunLog, until_tick: int = -1) -> Dictionary` (`{"final_hash", "result", "mismatch_at", "errors"}`; treibt dieselben Funktionen wie die Szenen, ohne Szenen; Motor im privaten Helfer `autoload/game_replay.gd`; Vertrag Kap. 11.4) · **Fassade über `RunSim`** (CR-6): `_process` akkumuliert Frame-`delta` in ganze Ticks (1/30 s) und ruft `RunSim.step(n)`; Timer in ganzen **Ticks** (`time_left_ticks`) + `time`-Commands (CR-3, CR-4); Ergebnisse von `RunSim` werden als Signale weitergereicht. Kampagne zeichnet ebenfalls auf (Brief 6b.3, hilft bei Bug-Reports). |
+| `Show` (M2) | **`func receive_gift(gift: Dictionary) -> Dictionary`** — einziger Eingang für **alle** Geschenke: `Gift.validate` → `GiftPolicy.check` → im Kampf (`Game.in_battle`) Warteschlange bzw. sofort `GiftApplier` (Erkundung); bei `source ≠ "system"` `Game.record({"t": "gift", "gift": gift})` im Moment der **Anwendung** (02_TECH §3.5) · `func take_pending_gift() -> Dictionary` ersetzt `take_sponsor_gift() -> String`: zuerst wartende externe Geschenke, sonst System-Auswahl per `SponsorSystem.pick` → `Gift.make_system(id, …)` → **ebenfalls durch `receive_gift()`** → Rückgabe (leer = nichts) · zwei RNGs: `_rng` (Spiellogik, nur Sponsor-Auswahl) und `_fx_rng` (Chat, Zuschauer-Rauschen, M.O.D.-Zeilenwahl — nicht deterministisch relevant) · wartende externe Geschenke werden bei der **Anwendung** erneut geprüft (`application_refusal`: Duplikat, `GiftPolicy.check` mit Lauf-Zählern + Tick; Kampf-Limit `rules.gifts.max_per_battle`) und im Kampf beim Ausgeben (`take_pending_gift`) genau einmal gebucht; `abort_battle()` für vorzeitig beendete Kämpfe · **Fassade**: Hype-Abkühlung (`ShowModel.decay_step`) und Pazifist-Zählung rechnet `RunSim.step` in Ticks; die Zuschauerzahl leitet `ShowModel.viewers_for` rauschfrei aus Hype und Followern ab; `Show._process` macht nur noch Anzeige (Glättung, Rauschen, Chat-Takt) (CR-5, CR-6) · Annahme und Ausgabe prüfen beide `GiftPolicy.refusal` (Kap. 6.10); im Kampf wartet ein Service-Geschenk, solange `too_soon` gilt |
+| `scenes/battle/battle_controller.gd` (M5) | nach `hud.request_command` bzw. `choose_ai_command`: `Game.record({"t": "battle", …, "auto": not player_chosen})`; in `_play`: `var g := Show.take_pending_gift()` → `state.apply_gift(g)` → `Show.note_battle_gift(g, events)` (zählt die Geschenk-Items; die Lauf-Zähler bucht `take_pending_gift` genau einmal, wie RunSim über `GiftApplier.note_battle_gift`) (CR-7) |
 | `Save` (M2) | `func load_leaderboard(event_id: String) -> Dictionary` / `func save_leaderboard(event_id: String, d: Dictionary) -> Error` → `user://leaderboards/<event_id>.json` (atomar wie Slots); `func save_replay(p_log: RunLog) -> Error` → `user://replays/<run_id>.json`, max. 20 Dateien (CR-8) |
 | `scenes/title/title.gd` (M6) | Menüeintrag **„Event-Lauf“** zwischen „Laden“ und „Einstellungen“ (CR-10) |
 | `scenes/ui/event_lobby.tscn` + `.gd` (M6) | Event-Karte: Name, Quest-Text, Regeln (Timer, „Pur-Liga“), lokale Top 10, Start |
@@ -2100,20 +2138,31 @@ der volle Server-Ausbau von `RunSim` (mehrere Instanzen, Netzwerk-Befehlsquelle)
 |---|---|
 | `test_m8_canonical_json.gd` | Schlüsselreihenfolge, Ganzzahl-Formatierung, verschachtelte Arrays, Unicode/Steuerzeichen-Escapes, `/` unescaped, nicht-ganzzahlige Zahl → Fehler, `JSON.parse`-Rundlauf stabil; feste SHA-256-Referenzwerte, **identisch** mit den Python-/JS-/Go-Testvektoren (`tests/fixtures/live/canonical_vectors.json`) |
 | `test_m8_run_log.gd` | `to_dict`/`from_dict`-Rundlauf, `digest()` stabil, Commands bleiben in Tick-Reihenfolge, `cmd_id` strikt monoton (Duplikat → abgelehnt) |
-| `test_m8_command.gd` | `Command.validate` je `t` (Pflichtfelder, Typen, unbekannter Typ → Fehler); `ExploreEvent`-Rundlauf `to_dict`/`from_dict` |
-| `test_m8_run_sim.gd` | `RunSim` ohne Autoloads: `step(n)` zieht Timer in Ticks ab, Hype-Drift/`viewers_target`/Pazifist-Zählung deterministisch; `step(1)` × n ≡ `step(n)` |
+| `test_m8_command.gd` | `Command.validate` je `t` (Pflichtfelder, Typen, unbekannter Typ → Fehler, `flag`-Schlüssel nur aus `FLAG_KEYS`); jeder Typ aus `Command.TYPES` hat einen Zweig in `RunSim.apply` **und** im Replay-Motor von `Game.replay_log`; `ExploreEvent`-Rundlauf `to_dict`/`from_dict` |
+| `test_m8_run_sim.gd` | `RunSim` ohne Autoloads: `step(n)` zieht Timer in Ticks ab, Hype-Abkühlung (`ShowModel.decay_step`), Pazifist-Zählung und Streuner deterministisch; `step(1)` × n ≡ `step(n)` |
+| `test_m8_integrity.gd` | Verifier gegen gefälschte Logs: Schwierigkeit nur in der Kampagne und Header-Prüfung (fester Seed, `prime`, Liga), regelwidrige Etagen-/Szenen-Commands, Geschenke nach `descend`, Vertrag von `Game.replay_log` (`errors`), Liga-Bindung bei mehreren Ligen, `wrong_target` und Ledger-Abgleich (eingeschleust/fehlend/verspätet), Mindestabstand `too_soon`, eindeutige `run_id`s und Bestenlisten-Eintrag |
 | `test_m8_no_global_rng.gd` | durchsucht `res://core/**/*.gd` nach `randf(`, `randi(`, `randomize(`, `randf_range(`/`randi_range(` ohne Objekt-Präfix, `Time.`, `OS.get_ticks` **sowie** `pow(`, `exp(`, `sin(`, `cos(`, `atan2(`, `randf` (auch mit Objekt-Präfix), `randfn`, `lerp(` → Fehler mit Datei:Zeile; Ausnahmen nur mit Whitelist-Kommentar `# det-ok: <Grund>` (Kap. 3.3 Nr. 5) |
 | `test_m8_event_def.gd` | `window_state` mit festen Unix-Zeiten (vor/zwischen/nach Fenstern, `last_entry`, `closing`, `always`); Validierungsfehler (überlappende Fenster, `fixed` ohne Seed, unbekannter Quest-Typ) |
 | `test_m8_quest_tracker.gd` | jeder S0-Quest-Typ mit festen synthetischen Event-Folgen (erfüllt / nicht erfüllt / Fortschritt); `hype_peak` nur über `viewers_target_peak`/`followers_gained_run`/`hype_100_count` (verrauschte Anzeige-Zuschauer ändern nichts); `pacifist` scheitert beim 4. Kampf; `all_of` = Mittelwert; Rundlauf `to_dict`/`from_dict` |
 | `test_m8_score_calc.gd` | Beispielrechnung Kap. 10.4 (17 340), unvollständige Quest, Tie-Break-Reihenfolge |
 | `test_m8_leaderboard.gd` | Einfügen, Top 10, Sortierung, Persistenz-Rundlauf, korrupte Daten → leer |
 | `test_m8_gift.gd` | Pflichtfelder, `run_bound = false` → ungültig, `league = "pur"` + `source ≠ "system"` → `league_pur`, Duplikat → `duplicate`, `make_system` erzeugt gültiges Gift |
-| `test_m8_gift_policy.gd` | `effect_pm`-Tabelle Kap. 6.10 **exakt** (1000/769/625/526/454/357/294/217), `rolls_for` inkl. Gold bei L = 4 → 3, `chest_allowed` (Schwelle 500 → gesperrt ab `load_half` 14), Caps (`load_half` 48, 16 Geschenke, 8 Kisten, 2 Gold-Kisten, 1 extern pro Kampf) |
-| `test_m8_gift_applier.gd` | Bronze-Dev-Kiste fügt Items hinzu und zählt sie in `flags["live"]["gift_items"]`; `gold` × Wirkungsfaktor; Ausrüstungs-Duplikat → Credits |
+| `test_m8_gift_policy.gd` | `effect_pm`-Tabelle Kap. 6.10 **exakt** (1000/769/625/526/454/357/294/217), `rolls_for` inkl. Gold bei L = 4 → 3, `chest_allowed` (Schwelle 500 → gesperrt ab `load_half` 14), Caps (`load_half` 48, 16 Geschenke, 8 Kisten, 2 Gold-Kisten, 1 extern pro Kampf), jede Lieferung genau einmal gebucht, Mindestabstand, Lauf-Bindung |
+| `test_m8_gift_applier.gd` | Bronze-Dev-Kiste fügt Items hinzu und zählt sie in `flags["live"]["gift_items"]`; `gold` × Wirkungsfaktor; Ausrüstungs-Duplikat → Credits; dieselbe Kiste ergibt im und außerhalb des Kampfs dasselbe Inventar, dieselben Credits und dieselben `gift_items` |
 | `test_m8_fair_roll.gd` | **Testvektor Kap. 7.4 bitgenau** (Commit v2, `layout_seed`, `loot_seed`, `sym`, `roll_key`, `draw`, Silber 3/2 Würfe, Gold 4/3 Würfe, Bronze); Verteilung 100 000 Bronze-Würfe innerhalb ±0.5 %-Punkte der Tabelle |
 | `test_m8_replay.gd` | **headless gegen `RunSim`, ohne Autoloads** (testet denselben Code, den Verifier/Server ausführen): Bot-Event-Lauf mit `auto_battle` und `force_encounter`-Äquivalent über Commands → Replay → gleicher `final_hash`; zweiter Lauf gleicher Seed → gleicher Hash; manipulierter Command → `mismatch_at ≥ 0`. Zusätzlich ein dünner Integrationstest über die `Game`-Fassade (lädt per `load()` nach `process_frame`, 02_TECH §11) |
 | `test_m8_receive_gift.gd` | System-Geschenk aus `take_pending_gift` läuft durch `receive_gift` und erscheint **nicht** im Log; Dev-Geschenk erscheint im Log; Pur-Liga lehnt Dev-Geschenk ab |
 | `test_m8_sponsor_windows.gd` | Sponsor-Fenster (Kap. 6.13): Standardwerte; periodischer Fahrplan in Erkundungs-Ticks (Tick 9000 auf, 10800 zu); `step(1)` × n ≡ `step(n)`; Kampf friert Fenster und Countdown ein, kein Fenster öffnet im Kampf; Plätze (wer zuerst kommt), Pro-Zuschauer-Limit (datengetrieben), Reservierungen wartender Geschenke; Gründe/Codes `window_closed`/`window_full`/`window_sender_limit` → `E_WINDOW_*`; `cheer` ausgenommen; Gnadenfrist gestempelter Geschenke; Safe-Room-Fenster mit Leerlauf-Ticks (Timer steht, ≤ 90 s, einmal je Raum, Verlassen schließt); Boss-Countdown (45 s, ersetzt offenes Fenster, nur Erstbesuch); Etagenwechsel; Pur-Liga/ausgeschaltet ohne Fenster; QA-Fenster nur wo erlaubt; Regel-Validierung (auch `EventDef`); **Replay-Gleichheit** (`RunSim.replay`, Checkpoints) und gefälschtes Geschenk außerhalb eines Fensters → `errors`; Integration: `Show.receive_gift` außerhalb/innerhalb, Signale, Stempel im Log, `Game.replay_log` ≡ live, Reservierungen im Kampf, Leerlauf-Ticks über `Game._process`, Boss-Countdown über `Game.visit_room`, M.O.D.-Zeilen nur live (L13-Wortprüfung), Overlay-Badge-Texte, Debug-Werkzeug |
+
+**Verifier-Vertrag (beide Replays).** `RunSim.replay(data, log, rules = {}, quest = {}, ledger = [])` (Kern-Lauf, Server/Verifier)
+und `Game.replay_log(log, until_tick = -1)` (kompletter Live-Lauf inkl. Show-Fassade) liefern
+`{"final_hash", "result", "mismatch_at", "errors"}`. Ein Log gilt nur als bestätigt, wenn `mismatch_at == -1` **und** `errors`
+leer ist. `errors` sammelt: `RunLog.validate()` und abgelehnte Log-Einträge; Header-Fehler von Katalog-Events
+(`RunSim.header_errors`: nicht der feste Seed des Events, Schwierigkeit ≠ `prime`, Liga nicht in `rules.leagues`); jeden Command,
+den `RunRules.command_refusal` bzw. die Kampfprüfung (`BattleState.validate`) ablehnt; jedes Geschenk, das die Kernprüfung
+ablehnt (`GiftPolicy.refusal`, u. a. `wrong_target`, `too_soon`, Fenster); bei `RunSim.replay` mit `ledger` zusätzlich den
+Abgleich mit dem Geschenk-Ledger (eingeschleust, fehlend, nach `deliver_by_tick`). Der Full-Run-Bot bricht bei nicht leerem
+`errors` ab (02_TECH §11.4.1).
 
 ### 11.5 Definition of Done (Slice-Anteil SHOWRUN)
 
@@ -2128,13 +2177,13 @@ der volle Server-Ausbau von `RunSim` (mehrere Instanzen, Netzwerk-Befehlsquelle)
 |---|---|---|---|
 | CR-1 | `autoload/events.gd` (M0) | Signale aus 11.3 ergänzen | Quest-HUD, Ergebnis, Gift-Darstellung |
 | CR-2 | `core/battle/battle_state.gd` (M1) | (a) vor jeder Aktion `rng.seed = SeedUtil.derive(setup.seed, "action", action_n)`; `var action_n: int`; optional `func set_action_seed_source(c: Callable)` für S4 · (b) `func apply_gift(g: Dictionary) -> Array[ActionEvent]` (`sponsor_buff` → bisheriges `apply_sponsor_gift`, `gold` → neues `ActionEvent.Type.CREDITS_GAINED` (`value` = Betrag), `chest`/`fan_pack` → `ITEM_GAINED` je Item-Inhalt bzw. `CREDITS_GAINED` je Credits-Inhalt; erst nach Kampfende übernommen über `item_delta` bzw. neues **`BattleResult.credits_delta: int`**) | Vorhersage-Schutz online (Kap. 3.4), ein Geschenkweg; Credits im Kampf sind heute nicht abbildbar |
-| CR-3 | `core/progression/floor_run.gd` (M2), `autoload/game.gd` (M0) | `time_left` als **ganze Ticks** (`time_left_ticks: int`, 1 Tick = 1/30 s, Kap. 3.2); `FloorRun.tick(n)` zieht ab, aufgerufen von `RunSim.step`; `Game._process` akkumuliert nur Frame-`delta` in ganze Ticks; Warnungen/Expire in Ticks; Millisekunden nur für die Anzeige | Eine Simulationsuhr; Replay-Gleichheit des Timers |
-| CR-4 | `autoload/game.gd` (M0) | API aus 11.3; Aufzeichnung an den bestehenden Stellen (`make_battle_setup` → `encounter`, `open_lootbox`, Shop, Ausrüsten, Ruhe, `complete_floor` → `descend`); Quest-Adapter (Signale/`ActionEvent`-KOs → Quest-Events) | Brief 6b.3 (Run-Log), 6b.5 (Quest) |
-| CR-5 | `autoload/show.gd` (M2), `core/show/show_model.gd` (M2) | `receive_gift`, `take_pending_gift` (ersetzt `take_sponsor_gift`), RNG-Trennung `_rng`/`_fx_rng`; spielrelevante Zeitregeln (Hype-Drift 0,25/s, `viewers_target`, `max_seconds_without_battle`) als Tick-Funktionen in `ShowModel` (z. B. `ShowModel.drift(hype, ticks)`), aufgerufen von `RunSim.step`; `Show._process` nur noch Anzeige | Brief 6b.4; Determinismus (Chat-Zeilen dürfen den Sponsor-RNG nicht verschieben) |
-| CR-6 | neu `core/live/run_sim.gd` (M8), `autoload/game.gd` + `autoload/show.gd` (M0/M2) — **dünne Variante im Slice** | `RunSim` (RefCounted) hält `GameState`, `step(ticks)` tickt alle zeitabhängigen Regeln (`FloorRun.tick`, `ShowModel.drift`/`viewers_target`, Pazifist-Zählung, Timer-Warnungen), `apply(cmd)` nimmt Commands an; `Game`/`Show` werden Fassaden. Voller Server-Ausbau (mehrere Instanzen, Netzwerkquelle) S1/S4 | Brief 6b („ohne Umbau“), Kap. 3.2; `test_m8_replay` ohne Autoloads |
+| CR-3 | `core/progression/floor_run.gd` (M2), `autoload/game.gd` (M0) | **Umgesetzt.** `time_left` als **ganze Ticks** (`FloorRun.time_left_ticks: int`, 1 Tick = 1/30 s, Kap. 3.2); `FloorRun.tick_timer(n, warnings)` zieht ab (aufgerufen von `RunSim.step`); `Game._process` akkumuliert nur Frame-`delta` in ganze Ticks; Warnungen/Expire in Ticks; Millisekunden nur für die Anzeige | Eine Simulationsuhr; Replay-Gleichheit des Timers |
+| CR-4 | `autoload/game.gd` (M0) | **Umgesetzt.** API aus 11.3; Aufzeichnung an den bestehenden Stellen (`make_battle_setup` → `encounter`, `open_lootbox`, Shop, Ausrüsten, Ruhe, `complete_floor` → `descend`); Quest-Adapter (Signale/`ActionEvent`-KOs → Quest-Events) | Brief 6b.3 (Run-Log), 6b.5 (Quest) |
+| CR-5 | `autoload/show.gd` (M2), `core/show/show_model.gd` (M2) | **Umgesetzt.** `receive_gift`, `take_pending_gift` (ersetzt `take_sponsor_gift`), RNG-Trennung `_rng`/`_fx_rng`; die spielrelevante Zeitregel der Erkundung ist die Hype-Abkühlung `ShowModel.decay_step(hype)` (alle `ShowModel.HYPE_DECAY_TICKS` Ticks 10 % des Überschusses über `HYPE_EXPLORE_FLOOR` 25, mind. 1), aufgerufen von `RunSim.step`; Zuschauer leitet `ShowModel.viewers_for` ohne eigenen Zustand aus Hype/Followern ab (kein `viewers_target`, keine Drift-Funktion); `Show._process` nur noch Anzeige | Brief 6b.4; Determinismus (Chat-Zeilen dürfen den Sponsor-RNG nicht verschieben) |
+| CR-6 | neu `core/live/run_sim.gd` (M8), `autoload/game.gd` + `autoload/show.gd` (M0/M2) — **dünne Variante im Slice** | **Umgesetzt.** `RunSim` (RefCounted) hält `GameState`, `step(n) -> Array[ExploreEvent]` tickt alle zeitabhängigen Regeln (`FloorRun.tick_timer`, Pazifist-Sekunden, `ShowModel.decay_step`, Streuner, Sponsor-Fenster), `apply(cmd) -> Array[ExploreEvent]` nimmt Commands an (gemeinsame Regeln in `RunRules`); `Game`/`Show` sind Fassaden. Voller Server-Ausbau (mehrere Instanzen, Netzwerkquelle) S1/S4 | Brief 6b („ohne Umbau“), Kap. 3.2; `test_m8_replay` ohne Autoloads |
 | CR-7 | `scenes/battle/battle_controller.gd` (M5) | Commands aufzeichnen; `take_pending_gift` + `apply_gift` statt `take_sponsor_gift` + `apply_sponsor_gift` | Run-Log, ein Geschenkweg |
 | CR-8 | `autoload/save.gd` (M2) | Bestenlisten-/Replay-Dateien (11.3) | lokale Bestenliste S0 |
-| CR-9 | `core/data/data_validator.gd` (M0), `data/` (M7) | neue `mod_lines`-Tags als optional; `events.json` außerhalb von `GameData` (eigener Loader `EventCatalog`) | 11 Tabellen bleiben stabil |
+| CR-9 | `core/data/data_validator.gd` (M0), `data/` (M7) | neue `mod_lines`-Tags als optional; `events.json` außerhalb von `GameData` (eigener Loader `EventCatalog`) | die 13 Tabellen aus `GameData.TABLES` bleiben stabil |
 | CR-10 | `scenes/title/title.gd`, neue UI-Szenen (M6) | Menüeintrag + `event_lobby`, `run_result`, Quest-Zeile im HUD | Einstieg S0 |
 | CR-11 | `core/progression/floor_run.gd` (M2), `Game.open_chest` (M0), `RunSim` (M8), `core/data/seed_util.gd`-Doku (M0) | **Umgesetzt** (prozedurale Holztruhen-Inhalte noch aus dem Layout-Seed, Kap. 3.3 Nr. 2). Neues Feld **`FloorRun.loot_seed: int`** (≠ `seed`); Truhen würfeln mit `SeedUtil.derive(floor_run.loot_seed, "chest", k)` statt `floor_run.seed`; offline `loot_seed = SeedUtil.derive(run_seed, "loot", floor)`, online vom Server (geheim, Ergebnis per `ev chest_opened{contents}`); Doku-Hinweis in §4.6: `SeedUtil` ist 31-Bit und gilt als öffentlich | Vorhersage-Schutz (Kap. 3.3 Nr. 1–2): Layout-Seed verrät sonst jeden Truheninhalt |
 | CR-12 | `core/battle/damage_calc.gd`, `core/battle/ctb_queue.gd` bzw. `battle_state.gd` (M1), `core/progression/progression.gd` (M2), `DungeonGenerator`/`FloorEvent` (M3), `data/` (M7) | Nur Ganzzahl-Zufall/-Arithmetik in spielrelevanten Pfaden: Varianz `randi_range(900, 1100)` ‰ (GDD 0.9–1.1), CTB-Start `base_delay × randi_range(500, 1000)` ‰ (GDD 0.5–1.0), Truhen-Offsets in cm-`int`, Event-Chancen in Basispunkten, EXP-Kurve als Tabelle statt `pow`; Lint-Erweiterung (Kap. 3.3 Nr. 5, 11.4) — **umgesetzt**, `test_m8_no_global_rng` ohne Ausnahmen | Plattformübergreifender Determinismus (ARM64/FMA, libm) |

@@ -4,7 +4,8 @@ class_name Gift extends RefCounted
 ## battle) apply it. No floats anywhere (effect factors are per mille, loads in half points; 05 §3.3 Nr. 9).
 ##
 ## validate() checks the schema only (types, required fields, value ranges, kind ↔ source and gold amounts of 05 §6.3,
-## paid chests with the server roll and its contents, league, signature format). Run-dependent rules (caps,
+## buyer pseudonym sender_ref of fan/shop/bits gifts, contents bounds (fan_pack: one common entry), paid chests with
+## the server roll and its contents, league, signature format). Run-dependent rules (caps,
 ## duplicates, effect factor against the run's load, league of the run) are GiftPolicy.check() / Show / RunSim.
 ## Unknown additional fields are allowed (protocol minor versions are additive, 05 §4.3); they must still be
 ## canonically serializable. `last_detail` explains the last rejection (diagnostics only, never game logic).
@@ -14,14 +15,23 @@ const SOURCES: PackedStringArray = ["system", "fan", "bits", "shop", "dev"]
 const PAID_SOURCES: PackedStringArray = ["bits", "shop"]
 const KINDS: PackedStringArray = ["sponsor_buff", "gold", "chest", "fan_pack", "cheer"]
 const RANDOM_KINDS: PackedStringArray = ["chest", "fan_pack"]
-## Sources each kind may come from (05 §6.3); "dev" (QA, debug builds) may send every kind.
+## Sources each kind may come from (05 §6.3); "dev" (QA, debug builds) may send every kind. "bits" is reserved
+## (decision 2026-10-08, L11: Bits only for free interaction, revenue only to the operator) — cosmetic "cheer" only,
+## never a gift with game effect.
 const KIND_SOURCES: Dictionary = {
-	"sponsor_buff": ["system", "bits", "shop", "dev"],
-	"gold": ["bits", "shop", "dev"],
-	"chest": ["bits", "shop", "dev"],
+	"sponsor_buff": ["system", "shop", "dev"],
+	"gold": ["shop", "dev"],
+	"chest": ["shop", "dev"],
 	"fan_pack": ["fan", "dev"],
 	"cheer": ["fan", "bits", "shop", "dev"],
 }
+## Sources whose gifts come from the gift service: they carry the buyer's pseudonym sender_ref = "b_" + 12 hex
+## characters (05 §7.5) — the per-buyer caps (per_buyer_per_target, Sponsor-Fenster per_viewer) depend on it.
+const BUYER_SOURCES: PackedStringArray = ["fan", "bits", "shop"]
+## Bounds of every contents entry (05 §6.5): qty 1..MAX_CONTENT_QTY (max stack), credits 1..MAX_CONTENT_CREDITS (the
+## largest pool entry is 600). A fan_pack carries no contents or exactly one "common" entry (05 §6.3: one common roll).
+const MAX_CONTENT_QTY: int = 9
+const MAX_CONTENT_CREDITS: int = 1000
 ## Credit amounts a gold gift may carry (05 §6.3: 100 or 250); dev gifts may carry any positive amount.
 const GOLD_AMOUNTS: PackedInt32Array = [100, 250]
 ## Rolls of a chest tier at full effect (05 §6.6); paid chests carry rolls = GiftPolicy.rolls_for(base, effect_pm).
@@ -37,9 +47,11 @@ const REQUIRED: PackedStringArray = ["schema", "gift_id", "source", "kind", "tie
 	"message_key", "target", "event_id", "window_id", "league", "effect_pm", "load_half", "run_bound",
 	"deliver_by_tick", "issued_at"]
 ## Reason codes of Show.receive_gift (05 §6.5); window_* = Sponsor-Fenster (SponsorWindows, 05 §6.13).
+## wrong_target: the gift names another run / player / event / window (05 §6.9 Lauf-Bindung); too_soon: less than
+## rules.gifts.min_interval_sec since the last service delivery to this run (05 §6.10).
 const REASONS: PackedStringArray = ["", "invalid_schema", "duplicate", "league_pur", "not_accepting", "cap_reached",
 	"run_not_active", "effect_mismatch", "bad_signature", "chest_blocked", "deadline_missed", "window_closed",
-	"window_full", "window_sender_limit"]
+	"window_full", "window_sender_limit", "wrong_target", "too_soon"]
 ## Optional field "sponsor_window": "" or the id of the Sponsor-Fenster the gift was accepted into ("sw_<n>", stamped by
 ## Show at acceptance / by the gift service at its reservation, 05 §6.4).
 const SPONSOR_WINDOW_PREFIX: String = "sw_"
@@ -50,6 +62,7 @@ static var _crypto: Crypto = null
 static var _hex16: RegEx = null
 static var _hex64: RegEx = null
 static var _log_id: RegEx = null
+static var _sender_ref: RegEx = null
 
 
 ## Reason codes 05 §6.5, "" = valid. (invalid_schema | league_pur | bad_signature)
@@ -224,6 +237,9 @@ static func _check_kind_fields(g: Dictionary, kind: String, source: String) -> S
 		reason = _check_content(c)
 		if reason != "":
 			return reason
+	if kind == "fan_pack" and not (contents as Array).is_empty():
+		if (contents as Array).size() != 1 or str(((contents as Array)[0] as Dictionary).get("rarity", "")) != "common":
+			return _bad("fan_pack contents: none or exactly one common entry (05 §6.3)")
 	if paid_chest:
 		return _check_paid_chest(g, tier, roll, contents)
 	return ""
@@ -291,13 +307,14 @@ static func _check_content(c: Variant) -> String:
 	if not RARITIES.has(_str(d.get("rarity", ""))):
 		return _bad("content rarity must be common|rare|epic")
 	if d.has("credits"):
-		if not _is_int(d["credits"]) or int(d["credits"]) <= 0 or d.has("item_id"):
-			return _bad("credits content needs credits > 0 and no item_id")
+		if not _is_int(d["credits"]) or int(d["credits"]) <= 0 or int(d["credits"]) > MAX_CONTENT_CREDITS \
+				or d.has("item_id"):
+			return _bad("credits content needs 1..%d credits and no item_id" % MAX_CONTENT_CREDITS)
 		return ""
 	if not (d.get("item_id") is String) or str(d.get("item_id")) == "":
 		return _bad("item content needs an item_id")
-	if not _is_int(d.get("qty", null)) or int(d["qty"]) < 1:
-		return _bad("item content needs qty >= 1")
+	if not _is_int(d.get("qty", null)) or int(d["qty"]) < 1 or int(d["qty"]) > MAX_CONTENT_QTY:
+		return _bad("item content needs qty 1..%d" % MAX_CONTENT_QTY)
 	return ""
 
 
@@ -314,6 +331,11 @@ static func _check_sender(sender: Variant, source: String) -> String:
 		return _bad("anonymous senders have no display_name")
 	if source == "system" and (display != "" or not bool(s["anon"]) or str(s["sender_ref"]) != ""):
 		return _bad("system gifts have an empty anonymous sender")
+	if BUYER_SOURCES.has(source):
+		if _sender_ref == null:
+			_sender_ref = RegEx.create_from_string("^b_[0-9a-f]{12}$")
+		if _sender_ref.search(str(s["sender_ref"])) == null:
+			return _bad("%s gifts need sender.sender_ref 'b_' + 12 hex characters (05 §7.5)" % source)
 	return ""
 
 

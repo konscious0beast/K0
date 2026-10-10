@@ -17,7 +17,8 @@ var show_fps: bool = false                  # display/show_fps
 var camera_invert_x: bool = false           # input/camera_invert_x
 var camera_invert_y: bool = false           # input/camera_invert_y
 var camera_sensitivity: float = 1.0         # input/camera_sensitivity, 0.25..3.0
-var ephemeral: bool = false                 # true: save_to_disk() is a no-op returning OK, load_from_disk() keeps defaults
+# true: save_to_disk() is a no-op returning OK, load_from_disk() keeps defaults
+var ephemeral: bool = false
 
 
 func _init() -> void:

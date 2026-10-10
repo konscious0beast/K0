@@ -616,8 +616,10 @@ func test_apply_gift_rolled_chest_is_deterministic() -> void:
 
 
 ## Rarity of one rolled chest entry in the fixture pool f1 (common: credits/bandage, rare: salts, epic: axe).
+## Rarity of the pool entry behind a gift event; duplicate equipment arrives as CREDITS_GAINED with item_id = the
+## piece it replaces (live-integrity-15), so it still counts as that piece's roll.
 func _pool_rarity(e: ActionEvent) -> int:
-	if e.type == ActionEvent.Type.CREDITS_GAINED or e.item_id == "itm_bandage":
+	if e.item_id == "" or e.item_id == "itm_bandage":
 		return 0
 	return 1 if e.item_id == "itm_smelling_salts" else 2
 

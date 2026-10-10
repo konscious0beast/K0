@@ -15,7 +15,6 @@ const FB := preload("res://scenes/exploration/fallback_art.gd")
 const CameraRig := preload("res://scenes/exploration/camera_rig.gd")
 const SCENE: String = "res://scenes/exploration/exploration.tscn"
 const ROUTER_FIXTURE: String = "res://tests/fixtures/router/router_screen.tscn"
-const STUB_HEADER: String = "# STUB(M0)"
 const MAX_FRAMES: int = 240
 
 var _spy: Array[Array] = []
@@ -224,11 +223,6 @@ static func _start_neighbor(layout: FloorLayout) -> Vector2i:
 	return ns[0] if not ns.is_empty() else layout.start
 
 
-func _is_stub(path: String) -> bool:
-	var f: FileAccess = FileAccess.open(path, FileAccess.READ)
-	return f == null or f.get_line().begins_with(STUB_HEADER)
-
-
 # --- building ---------------------------------------------------------------------------------------------------------
 
 ## M3 CR 3: touch pinch (Events.camera_zoom from TouchControls) zooms like the wheel, clamped to 5–9 m.
@@ -312,7 +306,8 @@ func test_player_moves_with_input() -> void:
 	var scene: ExplorationScene = await _make_scene()
 	var p0: Vector3 = scene.get_player_position()
 	Input.action_press(&"move_forward")
-	await wait_frames(12)
+	# an observable condition with a generous cap instead of a fixed frame count (headless frames are uncapped)
+	await wait_until(func() -> bool: return Rules.flat_dist(p0, scene.get_player_position()) > 1.0, 600)
 	Input.action_release(&"move_forward")
 	await wait_frames(2)
 	var moved: float = Rules.flat_dist(p0, scene.get_player_position())
@@ -401,9 +396,6 @@ func test_force_encounter_specific_and_fallback() -> void:
 
 
 func test_force_encounter_starts_battle_via_router() -> void:
-	if _is_stub("res://core/progression/battle_bridge.gd"):
-		skip("BattleBridge (M2) is still the M0 stub: no BattleSetup")
-		return
 	var scene: ExplorationScene = await _make_scene()
 	assert_eq(Router.current, scene, "add_to_tree adopted the screen")
 	scene.force_encounter("")
@@ -717,7 +709,7 @@ func test_open_gate_visual_emits_gate_opened() -> void:
 		assert_eq(_spy[0][1], int(g["dir"]))
 	assert_true(bool(gate.get("opened")))
 	assert_true(layout.neighbors(cell, Game.state.floor_run.opened_gates).has(other), "open gate passes")
-	await wait_frames(30)
+	await wait_until(func() -> bool: return gate.get_node_or_null("Blocker") == null, 600)
 	assert_null(gate.get_node_or_null("Blocker"), "blocking body removed")
 
 
@@ -856,10 +848,18 @@ func test_companion_follows_trail() -> void:
 	var scene: ExplorationScene = await _make_scene()
 	var kai: Node3D = scene.get_player()
 	var mop: Node3D = scene.get_companion()
+	var start: Vector3 = kai.global_position
 	Input.action_press(&"move_forward")
-	await wait_frames(10)
+	await wait_until(func() -> bool: return Rules.flat_dist(start, kai.global_position) > 1.5, 600)
 	Input.action_release(&"move_forward")
-	await wait_frames(20)
+	# Mopsula catches up along the trail: settled = within 4 m and no longer moving
+	var last: Array[Vector3] = [mop.global_position]
+	var settled: Callable = func() -> bool:
+		var ok: bool = Rules.flat_dist(kai.global_position, mop.global_position) <= 4.0 \
+			and mop.global_position.distance_to(last[0]) < 0.01
+		last[0] = mop.global_position
+		return ok
+	await wait_until(settled, 600)
 	var d: float = Rules.flat_dist(kai.global_position, mop.global_position)
 	assert_between(d, 0.5, 4.0, "Mopsula keeps about 1.8 m behind Kai")
 	# Too far → teleport.

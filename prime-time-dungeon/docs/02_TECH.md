@@ -43,6 +43,10 @@
 
 ### 0.2 Stub-Regel (Phase A)
 
+> **Stand 2026-10-10:** Phasen A–C sind abgeschlossen, jede Stub-Datei ist ersetzt. Es gibt keinen Stub-Header und keinen
+> Stub-Pfad mehr (`test_m0_compile_all` prüft keine Stub-Header mehr, Tests enthalten keine Stub-Wächter, Autoplay meldet nur
+> noch `AUTOPLAY: OK`). Die Regeln unten bleiben als Historie und für künftige neue Module.
+
 - M0 legt für **jede** Datei, deren öffentliche API in §3, §5, §6, §7, §8, §9 definiert ist, einen **Stub** an:
   exakte `class_name`, exakte Signaturen, Rümpfe geben Default-Werte zurück (`return null`, `return []`, `pass`).
   Erste Zeile jedes Stubs: `# STUB(M0) — owned by Mx. Replace completely, keep the public API.`
@@ -76,9 +80,9 @@ autoload/* (M0/M2) ← core/*
 scenes/* (M3/M5/M6) ← autoload/*, core/*, art/*
 ```
 
-Ausnahme in der Stub-Phase: `autoload/game.gd` (M0) hält `RunSim`/`RunLog` (M8-Stubs), `Show` nutzt `Gift`/`GiftPolicy`/
-`GiftApplier` (M8-Stubs). Die Stubs liefern neutrale Werte (`step()` → `[]`, `validate()` → `""`), bis M8 sie ersetzt;
-die Timer-Logik in `RunSim.step` ist Pflicht für Phase B (ohne sie läuft kein Countdown).
+`autoload/game.gd` (M0) hält `RunSim`/`RunLog` und ruft `RunRules` (M8), `Show` nutzt `Gift`/`GiftPolicy`/`GiftApplier` (M8) —
+das ist die normale Richtung `autoload ← core`. Spielregeln, die Live-Lauf und Verifier teilen, liegen in `core/live/run_rules.gd`
+(nicht in `Game`), damit `RunSim` sie ohne Autoloads aufrufen kann (§7.1).
 
 - `core/**` greift **nie** auf Autoloads (`Events`, `DB`, `Game`, `Show`, `Save`, `Router`, `Sfx`) oder den SceneTree zu.
   Daten kommen als `GameData`-Instanz, Zufall als `RandomNumberGenerator` per Parameter.
@@ -89,7 +93,8 @@ die Timer-Logik in `RunSim.step` ist Pflicht für Phase B (ohne sie läuft kein 
 ## 1. Dateibaum und Modulzuordnung
 
 Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört genau **einem** Modul.
-`(S)` = von M0 in Phase A als Stub angelegt.
+`(S)` = von M0 in Phase A als Stub angelegt (historisch; alle Stubs sind ersetzt, §0.2). Private Helfer ohne `class_name`
+(§0.3) dürfen ungelistet bleiben; die, auf die andere Abschnitte verweisen, stehen in §1.8.
 
 ### 1.1 Projektwurzel
 
@@ -101,6 +106,9 @@ Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört gen
 | `../.github/workflows/ptd-check.yml` (Repo-Root `K0/.github/…`) | M0 | CI (§12.4) |
 | `../tools/check.sh` | M0 | Import + Tests + Autoplay-Smoke, `--shot` (§11) |
 | `../tools/fullrun.sh` | M6 | Full-Run-Bot Etage 1 headless (§11.4.1; CI-Schritt §12.4) |
+| `../tools/perf.sh` | M0 (Phase C) | Performance-Probe unter Xvfb + Leak-Schleife (§12.5, `docs/PERFORMANCE.md`) |
+| `../tools/make_icons.sh` | M0 (Phase C) | Launcher-Icons aus `icon.svg` neu erzeugen (§12.3) |
+| `../README.md` | M0 | Einstieg: Öffnen/Starten, Steuerung, Dev-Argumente, Werkzeuge, Ordner, Doku-Index, Screenshots |
 
 ### 1.2 `autoload/`
 
@@ -109,6 +117,7 @@ Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört gen
 | `autoload/events.gd` | M0 | Autoload `Events`: globaler Signal-Bus, nur Signale (§3.2) |
 | `autoload/db.gd` | M0 | Autoload `DB`: lädt `GameData` in `_init()`, Getter-Fassade (§3.3) |
 | `autoload/game.gd` | M0 | Autoload `Game`: hält `GameState`, Etagen-Timer, Settings, Input-Schema, Flow-Helfer (§3.4) |
+| `autoload/game_replay.gd` | M0 | Privater Helfer von `Game` (kein class_name, per `preload`): Replay-Motor hinter `Game.replay_log` (§3.4, 05 §11.4) |
 | `autoload/game_settings.gd` | M0 | `class_name GameSettings`: Einstellungen, persistiert in `user://settings.cfg` |
 | `autoload/show.gd` | M2 (S) | Autoload `Show`: Hype/Zuschauer/Follower, Achievements, Sponsoren, M.O.D. (§3.5) |
 | `autoload/save.gd` | M2 (S) | Autoload `Save`: Slots, Datei-I/O, Autosave (§3.6) |
@@ -165,7 +174,7 @@ Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört gen
 | `core/show/sponsor_system.gd` | M2 (S) | `SponsorSystem`: Sponsor-Auswahl |
 | `core/show/mod_announcer.gd` | M2 (S) | `ModAnnouncer`: M.O.D.-/Chat-Zeilen wählen + formatieren |
 | `core/loot/loot_reward.gd` | M2 (S) | `LootReward` |
-| `core/loot/loot_roller.gd` | M2 (S) | `LootRoller`: Lootbox/Truhe/Drops würfeln |
+| `core/loot/loot_roller.gd` | M2 (S) | `LootRoller`: Lootbox/Truhe würfeln, Pools, Besitz-Menge für die Duplikat-Regel (Kampf-Drops: `BattleState.roll_drops`) |
 | `core/progression/game_state.gd` | M2 (S) | `GameState`: kompletter Laufzeit-Spielstand |
 | `core/progression/party_member.gd` | M2 (S) | `PartyMember` |
 | `core/progression/inventory.gd` | M2 (S) | `Inventory` (Items + Credits) |
@@ -189,7 +198,8 @@ Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört gen
 
 | Datei | Modul | Zweck |
 |---|---|---|
-| `core/live/run_sim.gd` | M8 (S) | `RunSim`: deterministische Erkundungs-Uhr in Ticks (§7.1), Replay von Commands |
+| `core/live/run_sim.gd` | M8 (S) | `RunSim`: deterministische Erkundungs-Uhr in Ticks (§7.1), Replay von Commands (`RunSim.replay`) |
+| `core/live/run_rules.gd` | M8 | `RunRules`: die gemeinsamen Spielregeln der aufgezeichneten Nicht-Kampf-Commands (Etage, Räume, Truhen, Tore, Lootboxen, Etagen-Events, Safe Rooms, Szenen, Schwierigkeit) und ihre Legalitätsprüfung `command_refusal` — von `Game` und `RunSim` aufgerufen (§7.1) |
 | `core/live/run_log.gd` | M8 (S) | `RunLog`: Seed + Commands + Ticks (Brief §6b.3); `to_dict`/`from_dict`/`digest` |
 | `core/live/command.gd` | M8 (S) | `Command`: Schema-Prüfung der aufgezeichneten Commands (`t`-Typen aus §3.4) |
 | `core/live/canonical_json.gd` | M8 (S) | `CanonicalJson`: kanonische Serialisierung für Hashes; `static var last_error: String` (von den statischen Funktionen gesetzt, gelesen als `CanonicalJson.last_error`) |
@@ -199,10 +209,10 @@ Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört gen
 | `core/live/quest_tracker.gd` | M8 (S) | `QuestTracker`: Quest-Fortschritt aus normalisierten Events |
 | `core/live/score_calc.gd` | M8 (S) | `ScoreCalc`: Punkte eines Event-Laufs |
 | `core/live/leaderboard.gd` | M8 (S) | `Leaderboard`: lokale Top 10 |
-| `core/live/gift.gd` | M8 (S) | `Gift`: Geschenk-Schema, `validate`, `make_system`, `make_dev` |
-| `core/live/gift_policy.gd` | M8 (S) | `GiftPolicy`: Caps, Wirkungsfaktoren (Ganzzahl); prüft zuletzt die Sponsor-Fenster (`SponsorWindows.check`) |
+| `core/live/gift.gd` | M8 (S) | `Gift`: Geschenk-Schema, `validate` (Art je Quelle, `sender_ref`, Inhaltsgrenzen), `make_system`, `make_dev`, `is_external` |
+| `core/live/gift_policy.gd` | M8 (S) | `GiftPolicy`: Caps, Wirkungsfaktoren (Ganzzahl), Lauf-Bindung, Mindestabstand; `refusal` = DIE Anwendungsprüfung (Show und RunSim), `remember`/`note_applied` = Buchung; prüft zuletzt die Sponsor-Fenster (`SponsorWindows.check`) |
 | `core/live/sponsor_windows.gd` | M8 | `SponsorWindows`: Sponsor-Fenster (Nutzerentscheidung 2026-10-08, 05 §6.13) — Fahrplan in Ticks (periodisch / Safe Room / Boss-Countdown / QA), Plätze, Pro-Zuschauer-Limit, Gnadenfrist gestempelter Geschenke, Regeln `rules.sponsor_windows` + Standard für Kampagne/Offline; Zustand in `GameState.flags["live"]["sponsor"]` |
-| `core/live/gift_applier.gd` | M8 (S) | `GiftApplier`: Geschenk außerhalb des Kampfes anwenden |
+| `core/live/gift_applier.gd` | M8 (S) | `GiftApplier`: Geschenk außerhalb des Kampfes anwenden; Buchung im Kampf angewandter Geschenke (`note_battle_gift`) |
 | `core/live/fair_roll.gd` | M8 (S) | `FairRoll`: Commit-Reveal-Würfel (nur Tests im Slice) |
 
 Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (dort normativ; Namen/Typen dieses Dokuments haben Vorrang).
@@ -224,7 +234,7 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `data/milestones.json` | Follower-Meilensteine |
 | `data/mod_lines.json` | M.O.D.-, Mopsula-, Kai- und Chat-Zeilen |
 | `data/scenes.json` | Mopsula-Szenen (Safe Room) |
-| `data/events.json` | Live-/Offline-Events (M7 Inhalt, M8 Schema); **nicht** in `GameData.TABLES`, geladen von `EventCatalog` (§4.5) |
+| `data/events.json` | Live-/Offline-Events (M7 Inhalt, M8 Schema); **nicht** in `GameData.TABLES`, geladen von `EventCatalog` (§4.5); eigenes Format `{schema, events}` (Ausnahme von §4.1, 05 §10.1) |
 
 ### 1.5 `art/` (alle M4)
 
@@ -324,54 +334,111 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `scenes/ui/confirm_dialog.tscn` + `.gd` | M6 | Ja/Nein-Dialog |
 | `scenes/ui/safe_area_container.gd` | M6 | MarginContainer mit Safe-Area-Rändern |
 | `scenes/ui/input_glyph.gd` | M6 | Tasten-/Button-Symbol je Input-Schema |
-| `scenes/ui/debug_overlay.gd` | M6 | F3: FPS, Draw Calls, Primitives, Seed, Raum |
+| `scenes/ui/debug_overlay.gd` | M6 | Nur Debug-Build: F3 FPS, Draw Calls, Primitives, Seed, Raum, Show-Werte, Sponsor-Fenster; bei offenem Overlay F4 Test-Geschenk, F5 QA-Sponsor-Fenster (05 §11.3) |
 | `scenes/ui/icon_mesh.gd` | M6 | Privat: sammelt die Primitive eines Vektor-Icons/Widgets und gibt sie als **ein** Dreiecks-Array aus (ein Canvas-Draw-Call; genutzt von `ui_icon.gd`, `minimap.gd`, Hype-Leiste und `HudStyle.Icon`, §12.1) |
 
 ### 1.7 `tests/`
 
+Jede Datei unter `tests/` gehört dem genannten Modul; `test_<modul>_*.gd` ist die Pflicht-Benennung (Runner lädt alle
+`test_*.gd` außer in `tests/lib/` und `tests/fixtures/`).
+
 | Datei | Modul | Zweck |
 |---|---|---|
-| `tests/run_tests.gd` | M0 | Test-Runner (§11.1) |
+| `tests/run_tests.gd` | M0 | Test-Runner (§11.1): Fehler schlagen Skips; ein Skip lässt den Lauf scheitern, außer er steht mit Grund in `ALLOWED_SKIPS` oder `--allow-skips` ist gesetzt |
 | `tests/capture.gd` | M0 | Screenshot-Werkzeug (§11.3) |
 | `tests/capture_recipes.gd` | M0 | Benannte Capture-Zustände für `--recipe=` (§11.3; per `load()` nach den Autoloads, kein class_name) |
-| `tests/lib/test_case.gd` | M0 | `TestCase`: Basis mit Asserts (§11.2); liegt in `lib/`, damit der Runner sie nicht als Testdatei lädt |
+| `tests/lib/test_case.gd` | M0 | `TestCase`: Basis mit Asserts (§11.2) inkl. `assert_time_budget` (nur mit `PTD_PERF_ASSERTS=1`); liegt in `lib/`, damit der Runner sie nicht als Testdatei lädt |
 | `tests/fixtures/data_min/*.json` | M0 | Minimaler gültiger Datensatz (alle 13 Tabellen aus `GameData.TABLES`) für M0-Tests |
-| `tests/fixtures/router/router_screen.tscn` + `.gd` | M0 | Fixture-Screen (nur Screen-Vertrag §9.2) für `test_m0_router` — unabhängig von den echten Screens |
-| `tests/fixtures/runner_selftest/test_selftest_cases.gd` | M0 | Absichtlich abstürzende Tests; nur im Kindprozess des Runner-Selbsttests (`--root=…`) ausgeführt |
-| `tests/test_m0_harness.gd` | M0 | Selbsttest Asserts/Runner (inkl. Kindprozess: SCRIPT ERROR → FAIL, Exit 1) |
+| `tests/fixtures/router/router_screen.tscn` + `.gd` | M0 | Fixture-Screen (nur Screen-Vertrag §9.2) für die generischen Operationen in `test_m0_router` |
+| `tests/fixtures/runner_selftest/test_selftest_cases.gd` | M0 | Absichtlich fehlschlagende, abstürzende und überspringende Fälle; nur im Kindprozess des Runner-Selbsttests (`--root=…`) ausgeführt |
+| `tests/fixtures/live/canonical_vectors.json`, `gift_tables.json` | M8 | Testvektoren `CanonicalJson` (identisch mit Python/JS/Go) und Gift-Tabellen für `FairRoll` (05 §10.2) |
+| `tests/test_m0_harness.gd` | M0 | Selbsttest Asserts/Runner (Kindprozess: SCRIPT ERROR → FAIL, Fehler schlagen Skip, nicht zugelassener Skip → Exit 1) |
 | `tests/test_m0_autoloads.gd` | M0 | `project.godot`-Vertrag, Autoload-Reihenfolge, Events-Signalliste, Game/Settings-Grundlagen, UiTheme |
-| `tests/test_m0_router.gd` | M0 | Router: Stack, Queue, goto/push/pop, Fehlerpfade; Helfer zu echten Ziel-Screens nur, solange diese M0-Stubs sind |
-| `tests/test_m0_game.gd` | M0 | Game: Command-IDs, Dialog-Pause-Reset, Quest-Metriken, Replay-Kontext; Replay-Integration (übersprungen, solange Abhängigkeiten Stubs sind) |
+| `tests/test_m0_router.gd` | M0 | Router: Stack, Queue, goto/push/pop, Fehlerpfade; Kampf-, Safe-Room- und Game-Over-Helfer gegen die echten Screens (`Router.current.scene_file_path`, Payloads) |
+| `tests/test_m0_game.gd` | M0 | Game: Command-IDs, Dialog-Pause-Reset, Quest-Metriken, Replay-Kontext; Integration Live-Lauf ≡ `replay_log` |
 | `tests/test_m0_db.gd` | M0 | Laden/Validieren/Fehlerfälle von `GameData` |
-| `tests/test_m0_compile_all.gd` | M0 | Lädt jede `.gd`/`.tscn` unter `res://` → fängt Parse-Fehler |
+| `tests/test_m0_compile_all.gd` | M0 | Lädt jede `.gd`/`.tscn`/`.gdshader` unter `res://` → fängt Parse-Fehler; §13.4 tscn-Format; §13.1 Zeilenlänge ≤ 120 (Tab = 1 Zeichen) |
 | `tests/test_m0_seed_util.gd` | M0 | Determinismus `SeedUtil` |
-| `tests/test_m0_sfx.gd` | M0 | Musik-Loop läuft weiter (`loop_end`), unbekannte ID ohne Absturz |
+| `tests/test_m0_sfx.gd` | M0 | Busse, jede ID baut, Musik-Loop läuft weiter (`loop_end`), unbekannte ID ohne Absturz |
 | `tests/test_m0_condition_expr.gd` | M0 | `ConditionExpr`: Grammatik, Typvergleiche, Fehlerfälle |
+| `tests/test_m1_fixture.gd` | M1 | Mini-Datensatz unabhängig von `res://data` + gemeinsame Helfer der `test_m1_*` (per `preload`), mit Selbsttest |
 | `tests/test_m1_stats.gd` | M1 | StatBlock, Elemente |
 | `tests/test_m1_ctb.gd` | M1 | Tick-System, Vorschau, Haste/Slow, Präventiv/Hinterhalt |
-| `tests/test_m1_damage.gd` | M1 | Formeln, Krit, Elemente, Verteidigen, Treffer |
+| `tests/test_m1_damage.gd` | M1 | Formeln, Krit, Elemente, Verteidigen, Treffer, Stunt-Chance |
 | `tests/test_m1_status.gd` | M1 | Statusdauer, Gift am Zugbeginn, Stun-Verzögerung, Haste/Slow-Ausschluss, Resistenz, Immunität |
 | `tests/test_m1_ai.gd` | M1 | EnemyAI-Bedingungen/Zielregeln/Taunt, Phasen-Ops, Pseudo-Einheit, AutoPolicy |
-| `tests/test_m1_battle_flow.gd` | M1 | Kompletter Kampf bis Sieg/Niederlage/Flucht, Event-Invarianten |
+| `tests/test_m1_battle_flow.gd` | M1 | Kompletter Kampf bis Sieg/Niederlage/Flucht, Event-Invarianten, Drops |
+| `tests/test_m1_battle_snapshot.gd` | M1 | `BattleState.to_dict`/`from_dict` (05 CR-14): hash-stabil, ohne Floats, Weiterspielen identisch |
+| `tests/test_m2_fixtures.gd` | M2 | Mini-Datensatz + Helfer der `test_m2_*` (per `preload`) |
 | `tests/test_m2_show.gd` | M2 | ShowRules-Hype, Zuschauer, Follower, Sponsor-Trigger |
 | `tests/test_m2_achievements.gd` | M2 | Zähler, Schwellen, Belohnungen |
-| `tests/test_m2_loot.gd` | M2 | Lootbox/Truhe/Drops deterministisch |
-| `tests/test_m2_progression.gd` | M2 | EXP-Kurve, Level-Up, Equip, BattleBridge |
+| `tests/test_m2_loot.gd` | M2 | Lootbox/Truhe deterministisch, Ausrüstungs-Duplikate → Credits, Drop-Regel `BattleState.roll_drops` |
+| `tests/test_m2_progression.gd` | M2 | EXP-Kurve, Level-Up, Equip, BattleBridge (Diebstahl bei geflohenem Dieb, KO-Rückkehr mit 1 HP nach der EXP) |
 | `tests/test_m2_save.gd` | M2 | Roundtrip, Migration, kaputte Dateien, Slots |
 | `tests/test_m2_shop.gd` | M2 | Kaufen/Verkaufen |
 | `tests/test_m3_dungeon_gen.gd` | M3 | `floor_1`-Layout valide/deterministisch; 200 Seeds prozedural: Invarianten, Determinismus, Laufzeit |
 | `tests/test_m3_floor_event.gd` | M3 | `FloorEvent.choices/resolve/apply` für alle 5 Typen mit festen Seeds |
 | `tests/test_m3_exploration_scene.gd` | M3 | Szene headless instanziieren, Spawn, Encounter auslösen (Signal-Spion) |
 | `tests/test_m4_art_kit.gd` | M4 | Alle Bases/Props/Räume bauen, Tri-Budgets, Anim-Interface |
+| `tests/test_m4_env.gd` | M4 | `build_room` für alle Türmasken × Arten × Zonenstile (Budgets, Türen, Wände, Determinismus, Aufbauzeit), Arena, Safe Rooms, Glyphen (`has_char`) |
+| `tests/test_m4_galleries.gd` | M4 | Jede Galerie-Szene instanziiert, baut und läuft einige Frames ohne Skriptfehler |
+| `tests/test_m4_materials.gd` | M4 | Palette, Materials-Cache, MeshUtil, Shader-Verträge (§8.2/§8.3) |
+| `tests/test_m4_style.gd` | M4 | §13.1 Zeilenlänge in `art/**` und den M4-Tests (seit `test_m0_compile_all` projektweit auch dort geprüft) |
+| `tests/test_m4_vfx.gd` | M4 | Jede Vfx-Art (CPUParticles, Budgets, Pool, Dauer), Schadenszahlen, Glyphen (`has_char`) |
+| `tests/test_m4_visual_pass.gd` | M4 | Befunde der Screenshot-Matrix im Art-Kit (Türsturz-Lampe, Arena-Bildschirm, Müll-Abstand …) |
 | `tests/test_m5_battle_scene.gd` | M5 | Battle-Szene headless mit Auto-Kampf bis Ende |
-| `tests/test_m6_ui_scenes.gd` | M6 | Alle UI-Szenen instanziieren, Default-Fokus vorhanden |
+| `tests/test_m5_visual_pass.gd` | M5 | Kampf-Framing/HUD-Layout der Screenshot-Matrix (reservierte Ecken der M.O.D.-Box, Untermenüs darüber) |
+| `tests/test_m6_ui_scenes.gd` | M6 | Alle UI-Szenen instanziieren, Default-Fokus vorhanden, Glyphen statischer Texte (`has_char`) |
+| `tests/test_m6_autoplay.gd` | M6 | Autoplay-Schritttabelle, Trockenlauf über `boot_to_title`, Watchdog, Safe-Room-Wahl, Boot-Argumente |
+| `tests/test_m6_fullrun.gd` | M6 | Full-Run-Bot: Argumente, reine Helfer (Wege, Stick-Eingabe, Bewertungen), Niederlage → Game Over → Laden mit echten Screens |
+| `tests/test_m6_hud.gd` | M6 | `ExplorationHud`: API, Etagen-Timer-Stufen, Party-Mini-Status, Minimap, Prompt, Quest-Zeile |
+| `tests/test_m6_lootbox_odds.gd` | M6 | Angezeigte Lootbox-Wahrscheinlichkeiten ≡ Würfelregeln (GDD §9.3) |
+| `tests/test_m6_menus.gd` | M6 | Menüs ändern den Zustand nur über aufgezeichnete Game-Commands; Bestätigungsdialog, Einstellungen (Schwierigkeit nur Kampagne), Titel, Event-Lobby, Ergebnis |
+| `tests/test_m6_overlay.gd` | M6 | ShowOverlay (Modi, Zahlenformate, Sponsor-Bauchbinde, Geschenk-Banner, Chat), ModDialog, Toasts, DebugOverlay |
+| `tests/test_m6_safe_room.gd` | M6 | Safe Room: Aufzeichnung + Vollheilung, Menüreihenfolge, Modals mit Fokus-Rückgabe, Mopsula-Szenen, Event-Läufe speichern nicht |
+| `tests/test_m6_visual_pass.gd` | M6 | UI-Layout-Verträge der Screenshot-Matrix; alle Capture-Rezepte existieren |
 | `tests/test_m7_data_content.gd` | M7 | Inhalt: Mengen laut GDD (11 Gegner, 2 Bosse, 16 Party-Skills, 2 Stunts, 25 Gegner-Skills, 11 Boss-Skills, 29 Achievements, 7 Sponsoren, 6 Meilensteine, 6 Status, 4 Szenen), Balancing-Sanity |
-| `tests/test_m8_*.gd` | M8 | Live-Hooks laut 05_LIVE_MODUS §11.4 (RunLog, RunSim, Command, Gift, Replay …) |
+| `tests/test_m7_balance.gd` | M7 | Jede reguläre Begegnung von Etage 1 ≥ 80 % Siegquote (50 Seeds) auf GDD-§13-Level und -Ausrüstung; Boss-Bänder |
+| `tests/test_m7_show_balance.gd` | M7 | Etage 1 als Show-Staffel mit dem echten `Show`-Autoload: Follower-, Hype- und Geschenk-Bänder (GDD §13) |
+| `tests/test_m7_events.gd` | M7 | Inhalt von `data/events.json` gegen das Schema (05 §10.1) und die Spieldaten |
+| `tests/test_m7_floor_layout.gd` | M7 | Handgebautes Layout Etage 1 (Zellen, Zonen, Tore, Truhen, Gruppen, Events, Streuner, Safe Rooms, Treppe, Routen) |
+| `tests/test_m7_text_content.gd` | M7 | M.O.D.-/Chat-/Mopsula-Zeilen (Mindestzahlen, Längen, Platzhalter, IDs), Szenen, deutsche Anzeigetexte |
+| `tests/test_m8_canonical_json.gd` | M8 | `CanonicalJson` gegen die gemeinsamen Testvektoren |
+| `tests/test_m8_command.gd` | M8 | `Command.validate` je Typ; jeder Typ hat einen Zweig in `RunSim.apply` und im Replay-Motor von `Game.replay_log` |
+| `tests/test_m8_event_def.gd` | M8 | `EventDef`/`EventCatalog`: Fenster, ISO-Zeiten, Validierung (u. a. `rules.gifts.sources`) |
+| `tests/test_m8_fair_roll.gd` | M8 | `FairRoll`: Testvektor 05 §7.4 bitgenau, Verteilung |
+| `tests/test_m8_gift.gd` | M8 | Gift-Schema: Pflichtfelder, Art je Quelle, `sender_ref`, Inhaltsgrenzen, Signaturformat |
+| `tests/test_m8_gift_applier.gd` | M8 | `GiftApplier` außerhalb des Kampfes; gleiche Kiste im/außerhalb des Kampfes ergibt dasselbe |
+| `tests/test_m8_gift_policy.gd` | M8 | `effect_pm`-Tabelle, Caps, Kistenschwelle, Buchung je Lieferung, Mindestabstand, Lauf-Bindung |
+| `tests/test_m8_integrity.gd` | M8 | Verifier gegen gefälschte Logs (Schwierigkeit, Header, Etagen-/Szenen-Commands, Geschenke nach `descend`, `wrong_target`, Ledger, `too_soon`), `Game.replay_log`-Vertrag, eindeutige `run_id`s |
+| `tests/test_m8_leaderboard.gd` | M8 | Bestenliste: Rang, Top 10, Persistenz, korrupte Datei → leer |
+| `tests/test_m8_no_global_rng.gd` | M8 | Determinismus-Lint für `core/**` (kein globales RNG, keine Uhr, keine Gleitkomma-Funktionen) |
+| `tests/test_m8_quest_tracker.gd` | M8 | Alle S0-Quest-Typen |
+| `tests/test_m8_receive_gift.gd` | M8 | `Show.receive_gift` als einziger Geschenk-Eingang (System nicht im Log, Dev im Log, Pur-Liga) |
+| `tests/test_m8_replay.gd` | M8 | Replay-Gleichheit headless gegen `RunSim` und über die `Game`-Fassade; gefälschte Commands/Geschenke → `errors` |
+| `tests/test_m8_run_log.gd` | M8 | `RunLog`: Rundlauf, `digest`, Tick-Reihenfolge, Command-IDs, Positionsproben, Checkpoints |
+| `tests/test_m8_run_sim.gd` | M8 | `RunSim` ohne Autoloads: Timer, Hype-Abkühlung, Pazifist-Zählung, Streuner in Ticks; `step(1)` × n ≡ `step(n)` |
+| `tests/test_m8_score_calc.gd` | M8 | `ScoreCalc`: Beispiel 05 §10.4, Caps, Tie-Break |
+| `tests/test_m8_sponsor_windows.gd` | M8 | Sponsor-Fenster (05 §6.13): Fahrplan in Ticks, Kampf friert ein, Plätze/Zuschauer-Limit, Codes, Safe Room (Leerlauf-Ticks), Boss-Countdown, Replay-Gleichheit; Integration `Show.receive_gift`, Overlay-Badge, Debug-Werkzeug |
+| `tests/test_m8_state_hash.gd` | M8 | `StateHash.of`/`of_battle` ohne Anzeigefelder |
 | `tests/test_perf_router_cycles.gd` | Phase C | Router-Zyklen Erkundung → Kampf → Safe Room ohne Wachstum der Node-/Objekt-Minima, `Sfx.stop_all`, Etagen-Aufbauzeit, Physik-/Licht-Layer der Etage (§12.1, §12.5) |
 | `tests/test_perf_platform.gd` | Phase C | Mobil-Projekteinstellungen, Export-Presets + Launcher-Icons, Boot kompiliert keine Screens vorab (§2.1, §12.3) |
 | `tests/perf/perf_probe.gd` + `perf_runner.gd`, `tests/perf/boot_timer.gd` | Phase C | Mess-Werkzeug für `tools/perf.sh` (§12.5); keine Tests (kein `test_`-Präfix) |
 | `tests/tools/make_icons.gd` | Phase C | Icon-Generator für `tools/make_icons.sh` (§12.3) |
-| `tests/test_m8_sponsor_windows.gd` | M8 | Sponsor-Fenster (05 §6.13): Fahrplan in Ticks, Kampf friert ein, Plätze/Zuschauer-Limit, Codes, Safe Room (Leerlauf-Ticks), Boss-Countdown, Replay-Gleichheit; Integration `Show.receive_gift`, Overlay-Badge, Debug-Werkzeug |
+
+### 1.8 Private Helfer, auf die andere Abschnitte verweisen (§0.3)
+
+Ohne `class_name`, genutzt per `const X := preload("res://…")` innerhalb des Moduls:
+
+| Datei | Modul | Inhalt |
+|---|---|---|
+| `core/stats/fixed_math.gd` | M1 | `FixedMath`: Ganzzahl-/Promille-/Basispunkt-Arithmetik (`div_round`, `roll_bp`, …), CR-12 |
+| `autoload/game_replay.gd` | M0 | Replay-Motor von `Game.replay_log` (§3.4) |
+| `scenes/title/title_flow.gd` | M6 | `TitleFlow.parse_args` (Boot-Argumente, §11.4) |
+| `scenes/battle/ui/hud_style.gd` | M5 | `HudStyle` inkl. `HudStyle.Icon` (§12.1) |
+| `scenes/exploration/encounter_rules.gd`, `choice_dialog.gd` | M3 | Kontakt-/Vorteilsregeln (`CONTACT_RADIUS`, `GRACE_*`), Wahl-Dialog der Etagen-Events |
+| `scenes/ui/ui_util.gd`, `menu_base.gd`, `scene_kit.gd`, `broadcast_bg.gd` | M6 | UI-Bausteine, Menü-Basis, Safe-Room-/Studio-Kulissen, TV-Hintergrund |
+| `art/kit/room_builder.gd`, `set_builder.gd`, `gltf_rig.gd` | M4 | Raum-/Kulissenbau und glTF-Rig hinter `EnvKit`/`CharacterBuilder` |
 
 ---
 
@@ -736,10 +803,16 @@ func has_state() -> bool
 func new_game(slot: int, player_name: String = "Kai", seed: int = -1, difficulty: StringName = &"prime") -> void
 	# seed -1 → int(Time.get_unix_time_from_system() * 1000.0) & 0x7FFFFFFF
 	# state = GameState.create_new(DB.data, slot, player_name, seed, difficulty); run_log = RunLog.new() (header: schema, seed,
-	# slot, player_name, mode, difficulty, game_version, sim_hz, event_id, run_id); sim = RunSim.new(DB.data, state, {})
-	# with sim.run_log = run_log (checkpoints, see below); start_floor(1); emits new_game_started(slot)
-func start_event_run(event_id: String) -> void   # M8: EventCatalog → EventDef.run_seed(); mode = &"event_offline"; slot 0
-	# (sim = RunSim.new(…, def.rules) with sim.run_log = run_log, like new_game)
+	# slot, player_name, mode, difficulty, game_version, sim_hz, sim_version, run identity event_id / run_id
+	# (RunLog.local_run_id(seed), unique per attempt) / player_id "local" / window_id "" / league — 05 §10.6);
+	# sim = RunSim.new(DB.data, state, {}, RunSim.identity_of(header)) with sim.run_log = run_log (checkpoints, see below);
+	# start_floor(1); emits new_game_started(slot)
+func start_event_run(event_id: String, p_league: String = "") -> void   # M8: EventCatalog → EventDef.run_seed();
+	# mode = &"event_offline"; slot 0 — an event run is never saved to a save slot (§3.6); league = p_league if it is one of
+	# rules.leagues, else the only / "pur" league (header "league"); sim = RunSim.new(…, def.rules, identity) like new_game
+func accepts_gifts() -> bool         # Show.receive_gift: a run is active and not finished, no "descend" since start_floor
+func gift_context() -> Dictionary    # sim.gift_context(): {"tick", "run_id", "event_id", "player_id", "window_id"} — the
+	# `extra` of GiftPolicy.refusal (§7.1), identical to what RunSim.replay derives from the log header
 func adopt_loaded_state(st: GameState, p_log: RunLog) -> void   # Save.load_slot: resets the PRIVATE run context
 	# (event def, finished flag, quest + metric memory, layout cache, command ids, dialog/timer state — as for a new game),
 	# mode = &"campaign", state = st, run_log = p_log (header "from_save"), sim = RunSim.new(DB.data, st, {}) recording
@@ -782,7 +855,8 @@ func apply_battle_result(result: BattleResult) -> BattleRewards
 func open_lootbox(box_id: String) -> Array[LootReward]
 	# record({"t": "lootbox", "box": box_id}); removes one box_id from state.pending_lootboxes;
 	# LootRoller.roll_lootbox(box, DB.data, floor_index, state, rng from next_seed("lootbox")); add_rewards(); emits lootbox_opened
-func add_rewards(rewards: Array[LootReward]) -> void   # items → inventory (overflow over max_stack → credits at sell value), credits
+func add_rewards(rewards: Array[LootReward]) -> void   # Inventory.add_rewards (items; overflow over max_stack → credits at
+	# Shop.sell_value; credits) + inventory_changed / credits_changed
 func buy(item_id: String, qty: int, safe_room_id: String) -> bool
 	# record({"t": "buy", ...}); Shop.buy(); emits inventory_changed, credits_changed, item_bought({"item_id", "qty", "cost", "safe_room_id"})
 func sell(item_id: String, qty: int) -> bool          # record; Shop.sell(); emits inventory_changed, credits_changed
@@ -795,10 +869,10 @@ func apply_floor_event(event_id: String, choice: String) -> Dictionary   # §7.4
 func visit_room(cell: Vector2i) -> bool   # ExplorationScene on every room change; first visit: floor_run.visited.append(cell),
 	# STAIRS → stairs_found = true, record({"t": "room", "cell": [x, y]}), _dispatch(sim.sponsor_room(cell)) (boss room →
 	# Boss-Countdown, 05 §6.13); returns first_visit
-func open_chest(chest_id: String) -> Array[LootReward]   # §7.3 chest flow without visuals: unknown / already open / locked without
-	# itm_key_master → [] (no change); else record({"t": "chest", "id"}), LootRoller.roll_chest (rng SeedUtil.derive(
-	# floor_run.loot_seed, "chest", k) — 05 CR-11: never the public layout seed; RunSim identical), add_rewards(),
-	# opened_chests.append(id), emits chest_opened(id, rewards)
+func open_chest(chest_id: String) -> Array[LootReward]   # §7.3 chest flow without visuals: RunRules.openable_chest — unknown /
+	# already open / locked without itm_key_master → [] (no change); else record({"t": "chest", "id"}), RunRules.open_chest
+	# (LootRoller.roll_chest with rng SeedUtil.derive(floor_run.loot_seed, "chest", k) — 05 CR-11: never the public layout
+	# seed; RunSim calls the same function), opened_chests.append(id), emits chest_opened(id, rewards)
 func open_gate(key: String) -> void   # requirement checked by the caller (M3); once: record({"t": "gate", "key"}), opened_gates.append
 func enter_safe_room(safe_room_id: String) -> Dictionary
 	# record({"t": "safe_room", "id"}); location = id; safe_room_visits += 1; first_visit := id not in visited_safe_rooms → append;
@@ -808,15 +882,18 @@ func leave_safe_room() -> void        # ExplorationScene.on_resume({"from_safe_r
 	# _dispatch(sim.sponsor_safe_room_exit())
 func next_scene(ctx: Dictionary) -> SceneDef      # first SceneDef (priority order) whose condition holds and that was not seen; null
 func mark_scene_seen(scene: SceneDef) -> void     # record({"t": "scene", "id"}); flags scene_<id> = true, set_flag (e.g. mop_pep_talk)
-func set_difficulty(d: StringName) -> bool   # only &"prime" → &"vorabend" (never up); record({"t": "difficulty", "to"});
-	# remaining timer ticks × 1.5
+func set_difficulty(d: StringName) -> bool   # only &"prime" → &"vorabend" (never up), campaign only (event runs: false);
+	# record({"t": "difficulty", "to"}); damage/EXP from the next battle, timer ×1.5 from the next floor start
+	# (FloorRun.create, GDD §2.9) — the running floor timer is NOT changed
+func can_lower_difficulty() -> bool   # state, mode campaign, difficulty prime (settings menu enables its mode row by it)
 func record(cmd: Dictionary) -> void  # run_log.add_cmd(sim.tick(), cmd, cmd_id); no-op if run_log == null or replaying;
 	# cmd_id: "gift"/"twist" (external inputs) → 0, every other command strictly increasing from 1 per run log (05 §10.6;
 	# a new run log — new_game, start_event_run, Save.load_slot — starts at 1 again)
-func replay_log(p_log: RunLog, until_tick: int = -1) -> Dictionary   # M8: {"final_hash", "result", "mismatch_at"} — see
+func replay_log(p_log: RunLog, until_tick: int = -1) -> Dictionary   # M8: {"final_hash", "result", "mismatch_at", "errors"} — see
 	# "Replay" below; until_tick >= 0: afterwards the clock steps on to that tick (the live sim.tick(): idle ticks in a safe
 	# room move the clock without a command — the full-run bot's replay check in the safe room passes it)
-func set_flag(key: String, value: Variant) -> void   # record({"t": "flag", "key", "value"}) (value bool/int/String); flags[key] = value
+func set_flag(key: String, value: Variant) -> void   # only player flags (Command.FLAG_KEYS, e.g. "intro_seen"; other keys →
+	# warning, no change): record({"t": "flag", "key", "value"}) (value bool/int/String); flags[key] = value
 func get_flag(key: String, default: Variant = null) -> Variant
 func time_left() -> float             # state.floor_run.time_left_ticks / float(TICKS_PER_SEC) (display only)
 func clear_blocking_dialogs() -> void # _blocking_dialogs = 0 — Router at every goto (old screens freed), start_floor
@@ -847,7 +924,7 @@ Laufzeitverhalten:
 - Dialog-Pause: `_ready()` verbindet `Events.mod_said` (`blocking == true` **und** ein Presenter ist angemeldet →
   `_blocking_dialogs += 1`) und `Events.dialog_finished` (`maxi(0, _blocking_dialogs - 1)`). Presenter = `ModDialog` (M6), meldet sich
   per `Game.set_dialog_presenter(true)` in `_ready()` und `(false)` in `_exit_tree()` an/ab; ohne Presenter (Tests, Standalone-Szenen,
-  Boot-Stub ohne `GlobalUi`) pausiert keine Zeile den Countdown — sonst bliebe er für den Rest des Laufs stehen. Zurückgesetzt wird
+  Szenen ohne `GlobalUi`) pausiert keine Zeile den Countdown — sonst bliebe er für den Rest des Laufs stehen. Zurückgesetzt wird
   der Zähler zusätzlich bei jedem `Router.goto` (`clear_blocking_dialogs()` nach dem Freigeben der alten Screens, vor `add_child` des
   neuen, damit dessen `_ready()`-Zeilen zählen), in `start_floor`, beim Abmelden des Presenters und bei jedem neuen Lauf.
   Cutscenes und Lootbox-Öffnen laufen außerhalb der Erkundung (Timer steht ohnehin).
@@ -860,6 +937,10 @@ Laufzeitverhalten:
 - `timer_running` setzt **nur** die `ExplorationScene` auf `true` (`_ready()`, `on_resume()`); `Router` setzt es bei **jedem**
   `goto`/`push` auf `false`. Der Countdown einer Etage beginnt erst mit `FloorRun.timer_started` (Etage 1: nach dem Sieg über
   `FloorDef.timer_start_after` = `enc_f1_a1_tutorial`, GDD B2).
+- **Gemeinsame Regeln (`RunRules`, §7.1):** Die aufzeichnenden Methoden `start_floor`, `visit_room`, `open_chest`, `open_gate`,
+  `open_lootbox`, `apply_floor_event`, `enter_safe_room`/`leave_safe_room`, `mark_scene_seen` und `set_difficulty` ändern den
+  Zustand ausschließlich über die gleichnamigen statischen `RunRules`-Funktionen, die auch `RunSim.apply` aufruft; `Game` ergänzt
+  nur `record()`, Signale, Show-Reaktionen und Sponsor-Fenster. Eine Regeländerung passiert damit an genau einer Stelle.
 - **Aufzeichnungsregel:** Jede Zustandsänderung, die von außerhalb des Kerns (Szenen, UI) ausgelöst wird, läuft über eine
   aufzeichnende `Game`-Methode; Szenen/UI schreiben **nie** direkt in `Game.state` (auch nicht `floor_run.visited`, `location`,
   `opened_chests`, `flags`). Reaktionen (Show auf `Events`-Signale, `BattleBridge`, `RunSim`) sind deterministisch und werden nicht
@@ -896,22 +977,29 @@ Laufzeitverhalten:
   `cause`, `event_id`, `quest_complete`, `quest_progress`, `quest_progress_ppm`, `party_kos` (`floor_run.stats.party_kos`,
   BattleBridge), `followers`, `followers_gained_run`, `achievements_total`, `achievements_in_run` (Event-Läufe starten bei
   `create_new` → = Anzahl), `score`, `breakdown`, `rank`, `final_hash`.
-- **Replay** (`replay_log(p_log)`): sichert den Live-Kontext (`state`, `run_log`, `sim`, `quest`, `mode`, Zähler …), setzt
-  `replaying = true`, baut `state = GameState.create_new(DB.data, header.slot, header.player_name, header.seed, header.difficulty)`,
-  bei `header.event_id != ""` `mode = &"event_offline"`, `EventCatalog` → `EventDef` → `RunSim.new(…, def.rules)` und
-  `quest = QuestTracker.from_def(def.quest)`, sonst Regeln `{}`. Dann je Command (Reihenfolge des Logs): Checkpoints mit `k` kleiner als
-  der Command-Tick prüfen, Uhr **tickweise** wie live bis `k` (`_dispatch(sim.step(1))`), dann **dieselbe** Methode wie live
-  (`start_floor`, `open_lootbox`, `buy`, `sell`, `equip`, `use_item`, `rest_full_heal`, `apply_floor_event`, `open_chest`,
-  `open_gate`, `visit_room`, `enter_safe_room`, `leave_safe_room`, `mark_scene_seen`, `set_flag`, `set_difficulty`,
-  `open_dev_sponsor_window`, `descend` → `floor_completed` senden, `gift` außerhalb des Kampfes → `Show.receive_gift`). Kämpfe exakt nach §5.7 ohne Szene:
-  `encounter` → `make_battle_setup` (next_seed "battle") → `BattleState.new` → `Show.begin_battle` (next_seed "show") →
-  `battle_started` → `_play(start())`; `battle` → `_play(submit(BattleCommand.from_dict(cmd)))`; `_play` = Events →
-  `Show.on_battle_event`, dann (Kampf läuft) ein direkt folgendes `gift`-Command in `Show.receive_gift` und
-  `Show.take_pending_gift(battle)` → `apply_gift` → `Show.note_battle_gift(g, events)`; Kampfende → `battle_ended`, `apply_battle_result`, `Show.end_battle`,
-  DEFEAT → `on_game_over(&"defeat")`. Checkpoint `k` = Zustand nach allen Commands mit `k' ≤ k`. Danach Live-Kontext zurück,
-  `replaying = false`, `Show.sync_from_state()`. RNG-Verbrauch, Show-Reaktionen, Meilensteine und Safe-Room-Buchhaltung sind damit
-  per Konstruktion identisch. Nicht während eines Kampfes (`in_battle` → Warnung, leeres Ergebnis): Shows Kampfzustand würde
-  überschrieben. Logs mit `header.from_save` (nach `Save.load_slot`) → Warnung, leeres Ergebnis.
+- **Replay** (`replay_log(p_log, until_tick)`, Motor im privaten Helfer `autoload/game_replay.gd`): sichert den Live-Kontext
+  (`state`, `run_log`, `sim`, `quest`, `mode`, Zähler …), setzt `replaying = true`, baut `state = GameState.create_new(DB.data,
+  header.slot, header.player_name, header.seed, header.difficulty)`, bei `header.event_id != ""` `mode = &"event_offline"`,
+  `EventCatalog` → `EventDef` → `RunSim.new(…, def.rules, RunSim.identity_of(header))` und `quest = QuestTracker.from_def(def.quest)`,
+  sonst Regeln `{}`. Die Reihenfolge liefert `RunLog.walk` (gemeinsam mit `RunSim.replay`): Checkpoints mit `k` kleiner als der
+  Command-Tick prüfen, Uhr **tickweise** wie live bis `k` (`_dispatch(sim.step(1))`), dann das Command: Nicht-Kampf-Commands
+  prüft zuerst `RunRules.command_refusal` (dieselbe Legalität wie `RunSim.command_refusal`), dann ruft der Motor **dieselbe**
+  Methode wie live (`start_floor`, `open_lootbox`, `buy`, `sell`, `equip`, `use_item`, `rest_full_heal`, `apply_floor_event`,
+  `open_chest`, `open_gate`, `visit_room`, `enter_safe_room`, `leave_safe_room`, `mark_scene_seen`, `set_flag`, `set_difficulty`,
+  `open_dev_sponsor_window`, `descend` → `floor_completed` senden, `gift` außerhalb des Kampfes → `Show.receive_gift`). Kämpfe
+  exakt nach §5.7 ohne Szene: `encounter` → `make_battle_setup` (next_seed "battle") → `BattleState.new` → `Show.begin_battle`
+  (next_seed "show") → `battle_started` → `_play(start())`; `battle` → `BattleState.validate`, dann
+  `_play(submit(BattleCommand.from_dict(cmd)))`; `_play` = Events → `Show.on_battle_event`, dann (Kampf läuft) ein direkt
+  folgendes `gift`-Command in `Show.receive_gift` und `Show.take_pending_gift(battle)` → `apply_gift` →
+  `Show.note_battle_gift(g, events)`; Kampfende → `battle_ended`, `apply_battle_result`, `Show.end_battle`, DEFEAT →
+  `on_game_over(&"defeat")`. Checkpoint `k` = Zustand nach allen Commands mit `k' ≤ k`. Danach Live-Kontext zurück,
+  `replaying = false`, `Show.sync_from_state()`. RNG-Verbrauch, Show-Reaktionen, Meilensteine und Safe-Room-Buchhaltung sind
+  damit per Konstruktion identisch.
+  **Vertrag (05 §11.4):** `errors` (PackedStringArray) sammelt `RunLog.validate()` und abgelehnte Log-Einträge, Header-Fehler
+  von Katalog-Events (`RunSim.header_errors`: fester Seed, Schwierigkeit `prime`, Liga), jedes Command, das `command_refusal`
+  oder `BattleState.validate` ablehnt oder das nicht anwendbar ist, und jedes Geschenk, das Show ablehnt (`gift_rejected`).
+  Bestätigt ist ein Log nur bei `mismatch_at == -1` **und** leerem `errors`. Nicht während eines Replays oder Kampfes und nicht
+  für Logs mit `header.from_save` (nach `Save.load_slot`) — dann leeres Ergebnis mit Fehlertext in `errors`.
 
 `GameSettings` (M0, `autoload/game_settings.gd`):
 
@@ -977,10 +1065,10 @@ func on_battle_event(e: ActionEvent) -> void
 	# M.O.D. lines for delta.reasons; viewers_peak_battle = max(viewers()); sponsor threshold check (§6.2)
 func receive_gift(gift: Dictionary) -> Dictionary                   # THE single gift entry (Brief §6b.4) → {"accepted": bool, "reason": String}
 func take_pending_gift(battle: BattleState = null) -> Dictionary   # {} = none; battle gives the party situation for weight_mods
-func note_battle_gift(g: Dictionary, events: Array[ActionEvent]) -> void   # after battle.apply_gift(g): run bookkeeping
-	# (GiftApplier.note_battle_gift: gift items + load/caps, idempotent per gift id) exactly as RunSim books it
-func application_refusal(g: Dictionary) -> String                  # "" or why an external gift may not be applied NOW
-	# (duplicate | GiftPolicy.check with the run counters + run tick) — same rule as RunSim.gift_refusal
+func note_battle_gift(g: Dictionary, events: Array[ActionEvent]) -> void   # after battle.apply_gift(g): counts the gift
+	# items (GiftApplier.count_battle_items); the run counters were booked once in take_pending_gift
+func application_refusal(g: Dictionary) -> String                  # "" or why an external gift may not be applied NOW:
+	# GiftPolicy.refusal(Game.state, DB.data, g, event rules, _gift_extra()) — THE rule RunSim.gift_refusal uses too
 func end_battle(result: BattleResult) -> int                        # followers gained; stats; battle_won/battle_fled/boss_defeated
 func abort_battle() -> void          # battle torn down before its end (BattleScene freed): drops _rules/_setup/thresholds/queue
 	# without end_battle (no followers/stats); waiting external gifts → gift_rejected(id, "run_not_active"), never applied
@@ -995,21 +1083,28 @@ Zustand: ausschließlich `Game.state.show` (`ShowState`) + flüchtig `_rules: Sh
 noch nicht ausgelieferte Geschenke), `_rng` (Spiellogik: **nur** Sponsor-Auswahl, Seed `Game.next_seed("show")` bei
 `begin_battle`) und `_fx_rng` (Chat, Zuschauer-Rauschen, M.O.D.-Zeilenwahl; nicht spielrelevant).
 
-Geschenke (Brief §6b.4, 05 §6.5): Gift-Dictionary mindestens `{"schema": 1, "gift_id": String, "source": "system"|"fan"|"paid"|"dev",
-"kind": "sponsor_buff"|"gold"|"chest"|"fan_pack", "sponsor_id": String, "payload": Dictionary}`.
-`receive_gift(g)`: `Gift.validate(g)` → bei `source ≠ "system"`: `GiftPolicy.check(...)` (zuletzt die **Sponsor-Fenster**,
+Geschenke (Brief §6b.4, 05 §6.5): das Gift-Dictionary aus 05 §6.5 (`source` ∈ `system`/`fan`/`bits`/`shop`/`dev`, erlaubte
+Art je Quelle laut 05 §6.3).
+`receive_gift(g)`: kein Lauf oder `not Game.accepts_gifts()` (Etage per `descend` beendet, Event-Lauf fertig) → `run_not_active`;
+`Gift.validate(g)`; `dev` außerhalb von Debug-Builds → `not_accepting` → bei `source ≠ "system"`: Duplikat, dann
+`GiftPolicy.refusal(Game.state, DB.data, g, Game.event_rules(), _gift_extra())` (`_gift_extra` = `Game.gift_context()` — Tick
+und Lauf-Identität — plus die Reservierungen der Queue; Lauf-Bindung `wrong_target`, Mindestabstand `too_soon`, Caps …, zuletzt
+die **Sponsor-Fenster**,
 05 §6.13: offenes Fenster, freier Platz, Pro-Zuschauer-Limit; wartende Geschenke der Queue zählen als Reservierung →
 `window_closed` / `window_full` / `window_sender_limit`) → Stempel `g["sponsor_window"] = <Fenster-ID>` → angenommen: **im Kampf**
 (`Game.in_battle`, also schon ab `Game.make_battle_setup`, auch während des Swirl-Übergangs) in `_queue`; **außerhalb** sofort
 anwenden = `Game.record({"t": "gift", "gift": g})` (nur `source ≠ "system"`) → `GiftApplier.apply(Game.state, DB.data, g,
-SeedUtil.make_rng(Game.next_seed("gift")))` + `Game.add_rewards()` → `Events.gift_received(g)`; abgelehnt →
+SeedUtil.make_rng(Game.next_seed("gift")), tick)` (Show merkt sich die ID per `GiftPolicy.remember`; `apply` bucht genau einmal
+über `GiftPolicy.note_applied`) +
+`Game.add_rewards()` → `Events.gift_received(g)`; abgelehnt →
 `Events.gift_rejected(gift_id, reason)`.
 `take_pending_gift(battle)`: (1) erstes wartendes externes Geschenk, solange in diesem Kampf weniger als
 `rules.gifts.max_per_battle` (Standard 1, `GiftPolicy.can_deliver_in_battle`) externe ausgeliefert wurden → **erneut geprüft**
-(`application_refusal`: Duplikat, `GiftPolicy.check` mit aktuellen Lauf-Zählern und `tick = Game.sim.tick()` — Frist, Caps,
-Wirkungsfaktor; abgelehnt → aus der Queue, `gift_rejected`, nicht aufgezeichnet) → **jetzt** `Game.record({"t": "gift",
-"gift": g})` + `GiftPolicy.note_applied` → Rückgabe (der Controller wendet es per `battle.apply_gift` an und ruft
-`note_battle_gift(g, events)`); sonst (2) ist eine Hype-Schwelle offen (§6.2):
+(`application_refusal` = `GiftPolicy.refusal` mit aktuellen Lauf-Zählern und `tick = Game.sim.tick()` — Duplikat, Frist,
+Caps, Wirkungsfaktor, Lauf-Bindung; `too_soon` bleibt in der Queue für eine spätere Zuggrenze, jeder andere Grund → aus der
+Queue, `gift_rejected`, nicht aufgezeichnet) → **jetzt** `Game.record({"t": "gift", "gift": g})` + `GiftPolicy.remember` +
+`GiftPolicy.note_applied(…, tick)` (die **eine** Buchung eines Geschenks im Kampf) → Rückgabe (der Controller wendet es per
+`battle.apply_gift` an und ruft `note_battle_gift(g, events)`); sonst (2) ist eine Hype-Schwelle offen (§6.2):
 `SponsorSystem.pick(DB.data, {"floor_index", "is_boss", "party": battle.party()}, _rng)` → `Gift.make_system(sponsor_id, battle_n, k)` → **ebenfalls** `receive_gift()` → Rückgabe.
 Der Hype-Schwellen-Trigger hat damit keinen eigenen Geschenkweg. Externe Geschenke, die bei `end_battle` noch warten, werden als
 **letzter** Schritt von `end_battle` außerhalb des Kampfes angewendet — ebenfalls nach erneuter Prüfung (`application_refusal`;
@@ -1075,7 +1170,8 @@ func has_save(slot: int) -> bool
 func slot_summary(slot: int) -> Dictionary   # {} empty; {"corrupt": true} unreadable; else SaveCodec summary keys
 func save_slot(slot: int) -> Error           # Game.state → SaveCodec.encode → atomic write; emits game_saved; after a
                                              # successful write `slot` becomes the active slot (Game.state.slot — autosave
-                                             # and record_game_over follow it); `slot` is meta data, not in StateHash
+                                             # and record_game_over follow it); `slot` is meta data, not in StateHash;
+                                             # event runs (Game.mode ≠ campaign) are never written → ERR_UNAVAILABLE
 func load_slot(slot: int) -> Error           # read → SaveCodec.decode (+ grace time_left ≥ 180 s, §6.4) →
                                              # Game.adopt_loaded_state(state, run_log) (privater Lauf-Kontext zurückgesetzt;
                                              # Header wie new_game + "from_save": true; nur für Bug-Reports — replay_log
@@ -1086,9 +1182,14 @@ func newest_slot() -> int                    # slot with the latest saved_at_uni
 func record_game_over(slot: int) -> Error    # read-modify-write: state.show.stats.game_overs += 1 in the slot file; slot 0 → OK
 func load_leaderboard(event_id: String) -> Dictionary            # M8 (05 CR-8): user://leaderboards/<event_id>.json
 func save_leaderboard(event_id: String, d: Dictionary) -> Error  # atomic like slots
-func save_replay(p_log: RunLog) -> Error                         # user://replays/<run_id>.json, max. 20 files
+func save_replay(p_log: RunLog) -> Error                         # user://replays/<run_id>.json, max. 20 files (run_id
+                                                                 # unique per attempt, RunLog.local_run_id)
 func last_error() -> String
 ```
+
+Event-Läufe (`Game.mode == &"event_offline"`, Slot 0) werden nie in einen Spielstand-Slot geschrieben — weder `save_slot`
+noch `autosave` noch `record_game_over` berühren dann Slot-Dateien; sie hinterlassen nur Bestenliste und Replay. Lokale
+Bestenlisten und Replays sind normales, editierbares JSON: nie hochgeladen, nie vertrauenswürdig (05 §10.4).
 
 Atomar schreiben: `slot_N.json.tmp` schreiben → existierende `slot_N.json` nach `slot_N.json.bak` → tmp nach `slot_N.json`
 umbenennen (`DirAccess.rename_absolute`). Laden: bei Parse-Fehler automatisch `.bak` versuchen.
@@ -1214,9 +1315,11 @@ Fokus-Stil aller Buttons: 3 px `C_ACCENT_2`-Rahmen (StyleBox `focus`).
 
 ### 4.1 Konventionen
 
-- Jede Datei: **ein Objekt** `{"schema": 1, "entries": [ {...}, ... ]}`. Encounters sind in `floors.json` eingebettet.
-  Zusätzliche Top-Level-Schlüssel sind **nur** diese: `party.json` → `start`; `enemies.json` → `pseudo_units`;
-  `lootboxes.json` → `pools`, `pity`. Jeder andere Top-Level-Schlüssel ist ein Fehler.
+- Jede Datei der 13 `GameData.TABLES`: **ein Objekt** `{"schema": 1, "entries": [ {...}, ... ]}`. Encounters sind in
+  `floors.json` eingebettet. Zusätzliche Top-Level-Schlüssel sind **nur** diese: `party.json` → `start`; `enemies.json` →
+  `pseudo_units`; `lootboxes.json` → `pools`, `pity`. Jeder andere Top-Level-Schlüssel ist ein Fehler.
+  **Ausnahme `data/events.json`:** `{"schema": 1, "events": [ … ]}` (Schema 05 §10.1), geladen von `EventCatalog` (M8),
+  nicht von `GameData`; geprüft von `EventDef.validate`.
 - Texte (`name`, `desc`, `text`, `slogan`) sind **deutscher Quelltext**; Anzeige immer über `tr(text)`
   (gettext-Stil: msgid = deutscher Text; spätere EN-Übersetzung per `.po`, kein Key-System). Das erfüllt die `tr()`-Pflicht
   aus Brief §4; die `name_key`/`desc_key`-Spalten des GDD werden direkt als deutscher Text in `name`/`desc` geschrieben (§4.4.0).
@@ -1488,6 +1591,8 @@ Pflicht-Skills: jeder Party-Member und jeder Gegner braucht `attack_skill` (Kate
 | `attack_element` | String | `"physical"` | weapon: Element des Basisangriffs |
 | `icon` | String | `""` | |
 | `color` | String | `"#ffffff"` | |
+
+Helfer: `ItemDef.sell_value()` (`sell`, −1 → `floori(price / 2)`) und `ItemDef.duplicate_credits()` = `(max(0, sell_value()) × DUPLICATE_CREDIT_PM + 500) / 1000` mit `DUPLICATE_CREDIT_PM = 500` — die eine Duplikat-Regel (GDD §9.3: bereits besessene Ausrüstung aus Lootboxen, Truhen und Geschenken wird zu 50 % des Verkaufswerts in Credits), genutzt von `LootRoller`, `GiftApplier` und `ActionResolver` (Geschenke im Kampf).
 
 ```json
 {"id": "itm_bandage", "name": "Werbepflaster", "desc": "Heilt 45 HP.", "type": "consumable", "price": 25,
@@ -2098,7 +2203,8 @@ enum Type {
 	PSEUDO_REMOVED,  # target_id (pseudo unit leaves the CTB order)
 	ESCAPED,         # actor_id (enemy leaves the battle, no rewards for it)
 	CREDITS_STOLEN,  # actor_id, value = amount (refunded on VICTORY if refund_on_win)
-	CREDITS_GAINED,  # value = amount (gift; applied after battle via BattleResult.credits_delta)
+	CREDITS_GAINED,  # value = amount (gift; applied after battle via BattleResult.credits_delta); item_id = the
+	                 # duplicate equipment the credits replace (GDD §9.3, ItemDef.duplicate_credits), else ""
 	STUNT_RESULT,    # actor_id, skill_id, success
 	FLEE_RESULT,     # actor_id, success
 	ITEM_GAINED,     # item_id, value = count (gift)
@@ -2172,6 +2278,8 @@ var theme_id: String = "metro"
 var palette: Dictionary = {}
 var floor_index: int = 1
 var auto_battle: bool = false
+var owned_equipment: PackedStringArray = []  # equipment the party owns (inventory + equipped, BattleBridge): an in-battle
+                                             # gift turns duplicates into credits like GiftApplier (ItemDef.duplicate_credits)
 
 class_name Combatant extends RefCounted
 enum Side { PARTY, ENEMY }
@@ -2272,7 +2380,9 @@ var party_turns: int = 0               # TURN_START of party members
 var exp: int                           # sum of exp_reward of defeated non-summoned enemies × exp_mult (VICTORY only)
 var credits: int                       # sum of credit_reward (incl. overkill bonus)
 var overkill_credits: int = 0          # part of `credits` that came from overkill × 1.25
-var credits_stolen: int = 0            # steal_credits total (VICTORY + refund_on_win → refunded)
+var credits_stolen: int = 0            # stolen credits the enemies KEEP (escaped/surviving thief; every thief unless
+                                       # VICTORY) — BattleBridge always deducts them (GDD §3.11)
+var credits_refunded: int = 0          # stolen credits given back (VICTORY + refund_on_win + thief KO'd)
 var credits_delta: int = 0             # gift credits (05 CR-2)
 var drops: PackedStringArray = []      # item ids rolled with battle rng at victory
 var boss_rewards: Array[Dictionary] = []   # EnemyDef.boss_drops of defeated bosses ({kind, id, amount})
@@ -2380,7 +2490,10 @@ static func from_dict(d: Dictionary, p_data: GameData) -> BattleState   # CR-14:
 func ghost_overrides(actor: Combatant, skill_id: String, target_ids: PackedStringArray) -> Dictionary
 	# {combatant_id: ctr} for preview_order (stun ghost preview; haste/slow only change FUTURE delays → not shown)
 func flee_chance() -> float                                  # formula below (HUD); flee_allowed() -> bool
-func stunt_chance(actor: Combatant, skill: SkillDef) -> float
+func stunt_chance(actor: Combatant, skill: SkillDef, target_ids: PackedStringArray = []) -> float   # formula below;
+	# [] = HUD preview before the target is chosen: every valid target counts
+static func roll_drops(drops: Array, lck_sum: int, members: int, rng: RandomNumberGenerator) -> PackedStringArray
+	# THE victory drop rule (formula below); used by _build_result, tested by test_m2_loot
 func skill_def(id: String) -> SkillDef                       # also item_def(id), status_def(id) (data lookups for HUD)
 func free_enemy_slot() -> int                                # -1 if 4 living enemies
 func pseudo_units() -> Array[Combatant]
@@ -2413,7 +2526,9 @@ Regeln (GDD §3):
   bei aktivem Stun `STATUS_BLOCKED`.
 - **Flucht**: `clampf(0.40 + (Ø SPD Party − Ø SPD Gegner) × 0.03 + 0.15 × failed_flee_attempts + (PREEMPTIVE ? 0.25 : 0.0), 0.10, 0.95)`;
   `flee_guaranteed`-Item (`itm_smoke`) → 1.0; Boss/`can_flee == false`/Tutorial → Befehl ungültig. Fehlschlag: Rang 2, `failed_flee_attempts += 1`.
-- **Stunt**: Chance `clampf(minf(success_base + LCK × success_lck, success_cap) + (lebender Boss-Gegner ? success_boss_mod : 0.0), 0.05, 1.0)`;
+- **Stunt** (GDD §3.6): Chance `clampf(success_base + LCK × success_lck + (target_is_boss ? success_boss_mod : 0.0), 0.05, success_cap)`,
+  `target_is_boss` = eines der aufgelösten Ziele ist ein lebender Boss (Alle-Gegner-Stunts: irgendeines; ein Einzelziel-Stunt
+  auf einen beschworenen Begleiter im Bosskampf bekommt **keinen** Abzug; Kappung **nach** dem Boss-Modifikator);
   Erfolg → Skill-Effekt; Fehlschlag → `fail_effect` (Selbstschaden `roundi(max_hp × self_dmg_pct / 100)` als `DAMAGE` ohne Tod
   (min 1 HP), nach `on_acted` `add_delay(roundi(base_delay × delay_pct / 100))`, `status` auf sich). Danach `stunt_cooldown = cooldown`.
 - **Combo** (GDD §7.3): Party-Aktion mit genau einem gegnerischen Ziel und Schaden, wenn die direkt vorherige Aktion
@@ -2433,8 +2548,9 @@ Regeln (GDD §3):
   `escape` → `ESCAPED`, Einheit verlässt Kampf und Zugreihenfolge (keine EXP/Credits/Drops; Gruppe gilt danach als erledigt).
 - **Wiederbelebung**: `REVIVE`, Zähler `base_delay`. **Tutorial**: Party-HP fällt durch Schaden nie unter 1.
 - **Sieg**, wenn kein echter Gegner mehr lebt (getötet oder geflohen): Drops je getötetem, nicht beschworenem Gegner
-  `rng.randi_range(0, 999999) < roundi(clampf(chance × (1 + Ø LCK der lebenden Party / 100), 0, 1) × 10^6)` (`LootRoller.roll_drops`,
-  Ganzzahl-ppm, 05 CR-12); `boss_drops` immer; EXP/Credits summiert (Overkill: Credits
+  `chance × (1 + Ø LCK / 100)` mit Ø über **alle** Party-Mitglieder (auch KO, GDD §3.12) in Basispunkten:
+  `bp = bp(chance) × (100·n + ΣLCK) // (100·n)`, `FixedMath.roll_bp` (ein `randi_range(0, 9999)` je Eintrag, kein Zug bei 0 % / ≥ 100 %;
+  `BattleState.roll_drops` — die einzige Implementierung, 05 CR-12); `boss_drops` immer; EXP/Credits summiert (Overkill: Credits
   dieses Gegners × 1.25, Differenz in `overkill_credits`), `exp × exp_mult`.
 - `apply_gift(g)`: `kind: "sponsor_buff"` → `SPONSOR_GIFT` + Effekte aus `SponsorDef.gift` (§4.4.10, RNG `"gift"`); `gold` →
   `CREDITS_GAINED`; `chest`/`fan_pack` → `ITEM_GAINED`/`CREDITS_GAINED` je Inhalt. Ändert sich die Reihenfolge (Status), folgt `CTB_ORDER`.
@@ -2727,7 +2843,6 @@ static func roll_chest(chest: Dictionary, data: GameData, floor_index: int, stat
 	# non-empty contents → exactly those (metal/locked, and procedural wood chests whose contents DungeonGenerator rolled
 	# from chest_table, §7.2 step 9); wood without contents → randi_range(20, 40) credits + 1 entry from pools.f<i>.common
 static func roll_chest_table(def: FloorDef, rng: RandomNumberGenerator) -> Array[LootReward]   # procedural floors: 1 roll (+1 at 20 %)
-static func roll_drops(drops: Array[Dictionary], avg_party_lck: float, rng: RandomNumberGenerator) -> PackedStringArray
 static func best_rarity(rewards: Array[LootReward]) -> String
 ```
 
@@ -2758,6 +2873,10 @@ class_name Inventory extends RefCounted
 var counts: Dictionary = {}            # item id → int > 0 (equipped items are NOT counted)
 var credits: int = 0
 func add(item_id: String, n: int = 1, max_stack: int = 9) -> int   # returns how many were actually added (cap max_stack)
+func add_item_or_credits(data: GameData, item_id: String, n: int) -> int   # THE overflow rule (chests, lootboxes, floor
+	# events, battle items, gifts, milestones): up to ItemDef.max_stack, the rest → credits at Shop.sell_value each; unknown
+	# item → nothing; returns the stored count
+func add_rewards(data: GameData, rewards: Array[LootReward]) -> void   # "credits" → add_credits, "item" → add_item_or_credits
 func remove(item_id: String, n: int = 1) -> bool
 func count(item_id: String) -> int
 func has(item_id: String, n: int = 1) -> bool
@@ -2853,8 +2972,8 @@ class_name BattleRewards extends RefCounted
 var exp: int = 0
 var credits: int = 0                   # incl. overkill bonus
 var overkill_credits: int = 0
-var credits_refunded: int = 0          # stolen credits returned on victory
-var credits_lost: int = 0              # stolen credits kept by the enemy (fled/defeat)
+var credits_refunded: int = 0          # = result.credits_refunded on VICTORY (never left the inventory; shown as +Cr)
+var credits_lost: int = 0              # = min(result.credits_stolen, credits): kept by the enemy, every outcome
 var items: PackedStringArray = []
 var boxes: PackedStringArray = []      # boss boxes → pending_lootboxes
 var level_ups: Array[LevelUpInfo] = []
@@ -2870,13 +2989,16 @@ static func make_setup(state: GameState, data: GameData, encounter_id: String, a
 	# exp_mult (vorabend 1.2); show_mods = state.hype_gain_mult/follower_mult; floor palette/theme;
 	# is_boss and flags["mop_pep_talk"] → both party combatants start with sts_guard 2, flag erased (GDD §10.2)
 static func apply_result(state: GameState, data: GameData, result: BattleResult) -> BattleRewards
-	# hp/mp writeback; KO → 1 HP unless DEFEAT; item_delta → inventory; credits_delta; VICTORY: EXP per member (alive full,
-	# KO'd floori(50 %)), credits (+overkill), drops, boss_rewards (items → inventory, boxes → pending_lootboxes),
-	# Werbepause +ceili(max_mp × 0.15) MP for living members, stolen credits refunded; FLED/DEFEAT: stolen credits lost;
-	# VICTORY: defeated_groups += group_id, strays.erase(group_id), flags defeated_<boss_id> + quarter/floor boss flags;
-	# bestiary (defeated += 1 per defeated_ids entry, weak_known ∪= weak_found); floor_run.stats.kills += kills,
-	# floor_run.stats.party_kos += party_kos (key appears with the first KO; event score KO penalty, 05 §1.5);
-	# VICTORY over FloorDef.timer_start_after → floor_run.timer_started = true
+	# in this order (private steps _writeback … _bestiary_and_kills): (1) hp/mp writeback, KO'd members stay at 0 HP;
+	# (2) item_delta → inventory, credits_delta; (3) result.credits_stolen (what the thieves kept — also on a VICTORY when
+	# the thief escaped, GDD §3.11) is deducted → credits_lost; VICTORY: credits_refunded = result.credits_refunded;
+	# (4) VICTORY: EXP per member (alive full, KO'd floori(50 %) — while still at 0 HP, so a level-up never heals a KO'd
+	# member), credits (+overkill), drops, boss_rewards (items → inventory, boxes → pending_lootboxes), Werbepause
+	# +ceili(max_mp × 0.15) MP for living members; (5) KO → 1 HP unless DEFEAT (GDD §3.12 "Danach"); (6) VICTORY:
+	# defeated_groups += group_id, strays.erase(group_id), flags defeated_<boss_id> + quarter/floor boss flags, VICTORY over
+	# FloorDef.timer_start_after → floor_run.timer_started = true; (7) bestiary (defeated += 1 per defeated_ids entry,
+	# weak_known ∪= weak_found); floor_run.stats.kills += kills, floor_run.stats.party_kos += party_kos (key appears with
+	# the first KO; event score KO penalty, 05 §1.5)
 
 class_name Shop extends RefCounted
 static func stock(def: FloorDef, safe_room_id: String) -> PackedStringArray    # layout safe room shop, else def.shop
@@ -3154,11 +3276,16 @@ static func apply(outcome: Dictionary, ev: EventSpawn, choice: String, state: Ga
 	# mutates GameState only (credits, items, hp (never below 1), opened_gates, completed_events, event_uses); hype/followers via Show
 ```
 
-Erkundungs-Uhr `RunSim` (`core/live/run_sim.gd`, M8, dünne Variante 05 CR-6; M0 legt den Stub an):
+Erkundungs-Uhr `RunSim` (`core/live/run_sim.gd`, M8, dünne Variante 05 CR-6) und die gemeinsamen Regeln `RunRules`:
 
 ```gdscript
 class_name RunSim extends RefCounted
-func _init(p_data: GameData, p_state: GameState, p_rules: Dictionary) -> void
+const TICKS_PER_SEC: int = 30
+const CHECKPOINT_TICKS: int = 300
+const SIM_VERSION: int = 1                            # in the run-log header; bump on any rule change (05 §10.6)
+var identity: Dictionary                              # run_id / event_id / player_id / window_id / league (log header)
+var rejected_cmds: Array[Dictionary]                  # {"k", "t", "gift_id", "reason"} of refused commands
+func _init(p_data: GameData, p_state: GameState, p_rules: Dictionary, p_identity: Dictionary = {}) -> void
 func step(n: int) -> Array[ExploreEvent]        # n ticks; per tick in this order:
 	# 1 timer: floor_run.time_left_ticks −1, stats.time_used_ticks +1 → TIMER_SECOND on integer-second change,
 	#   TIMER_WARNING when crossing a value of FloorDef.timer_warnings (once, floor_run.warned), TIMER_EXPIRED at 0 (stops)
@@ -3171,9 +3298,21 @@ func step(n: int) -> Array[ExploreEvent]        # n ticks; per tick in this orde
 	#   → SPONSOR_WINDOW_OPENED {"window"} / SPONSOR_WINDOW_CLOSED {"id", "kind", "reason"}
 	# Idle tick: floor_run.location is a safe room (not &"start") → only step 5 (explore = false): the run clock keeps
 	#   ticking in safe rooms (safe room window ≤ 90 s), the floor timer / hype decay / pacifist counter / strays do not
-func apply(cmd: Dictionary) -> Array[ExploreEvent]   # M8 replay of recorded explore commands; triggers the windows
-	# ("floor", first "room" of a boss cell, "safe_room", "safe_room_exit", "sponsor_window" dev_open); external gifts are
-	# checked (gift_refusal → GiftPolicy.check incl. windows) and stamped with their window before they are recorded
+func apply(cmd: Dictionary) -> Array[ExploreEvent]   # M8 replay of recorded commands: command_refusal first (refused →
+	# rejected_cmds, no change), then the SAME RunRules / Shop / Progression / BattleBridge functions the live run uses;
+	# triggers the windows ("floor", first "room" of a boss cell, "safe_room", "safe_room_exit", "sponsor_window" dev_open);
+	# accepted external gifts are stamped with their window before they are recorded
+func command_refusal(c: Dictionary) -> String         # "" or why the command is illegal here: gifts → gift_refusal;
+	# others → RunRules.command_refusal; "sponsor_window" only where rules allow dev_open
+func gift_refusal(g: Dictionary) -> String            # floor done / run over → run_not_active; GiftPolicy.refusal(state, data,
+	# g, rules, gift_context()) (duplicate, unknown contents, league, wrong_target, too_soon, caps, windows …); battle cap
+func gift_context() -> Dictionary                     # {"tick"} + run identity (run_id, event_id, player_id, window_id)
+static func identity_of(header: Dictionary) -> Dictionary
+static func header_errors(h: Dictionary, def: EventDef, rules: Dictionary) -> PackedStringArray   # catalog events: fixed
+	# seed, difficulty "prime", league ∈ rules.leagues
+static func replay(p_data: GameData, p_log: RunLog, p_rules: Dictionary = {}, p_quest: Dictionary = {},
+	p_ledger: Array = []) -> Dictionary   # core verifier along RunLog.walk → {"final_hash", "result", "mismatch_at",
+	# "errors"}; errors: log problems, header_errors, rejected_cmds, ledger (injected / missing / late) — 05 §11.4
 func tick() -> int                                    # ticks since run start (exploration + idle ticks, never in battle)
 func sponsor_floor() -> Array[ExploreEvent]           # Game.start_floor / "floor"
 func sponsor_room(cell: Vector2i) -> Array[ExploreEvent]        # Game.visit_room (first visit) / "room"
@@ -3181,6 +3320,31 @@ func sponsor_safe_room(room_id: String) -> Array[ExploreEvent]  # Game.enter_saf
 func sponsor_safe_room_exit() -> Array[ExploreEvent]            # Game.leave_safe_room / "safe_room_exit"
 func sponsor_dev_open(sec: int, slots: int) -> Array[ExploreEvent]   # Game.open_dev_sponsor_window / "sponsor_window"
 func sponsor_window() -> Dictionary                   # SponsorWindows.view(state, rules)
+
+class_name RunRules extends RefCounted                # core/live/run_rules.gd (M8): the rule of every recorded
+	# non-battle command, called by Game (live, + record/signals/Show) AND RunSim.apply (verifier) — one implementation
+const KEY_MASTER: String = "itm_key_master"
+static func next_seed(state: GameState, purpose: String) -> int
+static func start_floor(state: GameState, data: GameData, index: int) -> bool   # FloorRun.create with the current
+	# difficulty (Vorabend timer factor from this floor on, GDD §2.9)
+static func visit_room(state: GameState, layout: FloorLayout, cell: Vector2i) -> bool
+static func openable_chest(state: GameState, layout: FloorLayout, chest_id: String) -> ChestSpawn
+static func open_chest(state: GameState, data: GameData, chest: ChestSpawn) -> Array[LootReward]   # loot_seed (CR-11)
+static func lootbox_pending(state: GameState, data: GameData, box_id: String) -> bool
+static func open_lootbox(state: GameState, data: GameData, box_id: String) -> Array[LootReward]
+static func open_gate(state: GameState, key: String) -> bool
+static func apply_floor_event(state: GameState, data: GameData, layout: FloorLayout, event_id: String,
+	choice: String) -> Dictionary                     # FloorEvent resolve/apply (§7.4), rng from the floor seed
+static func add_event_boxes(state: GameState, outcome: Dictionary) -> void   # outcome["boxes"] → pending_lootboxes
+static func enter_safe_room(state: GameState, data: GameData, safe_room_id: String) -> Dictionary   # scene ctx
+static func leave_safe_room(state: GameState) -> void
+static func scene_allowed(state: GameState, scene: SceneDef, ctx: Dictionary) -> bool
+static func mark_scene_seen(state: GameState, scene: SceneDef) -> void
+static func lower_difficulty(state: GameState, d: StringName) -> bool   # prime → vorabend only
+static func command_refusal(state: GameState, data: GameData, rules: Dictionary, c: Dictionary, floor_done: bool,
+	scene_ctx: Dictionary) -> String   # after "descend" only "floor" (anything else → run_not_active); "floor" only as
+	# the first floor or index + 1 after descend; "difficulty" refused in event runs (rules not empty); "scene" only in a
+	# safe room, not yet seen, with its context and a holding condition → else "not_allowed"
 ```
 
 ### 7.2 Algorithmus
@@ -3812,7 +3976,7 @@ Geprüftes Verhalten (4.7.2), aus dem die Regeln folgen:
 extends SceneTree   — enthält KEINE class_name-Referenzen und KEINE Autoload-Bezeichner.
 _initialize():
   args = OS.get_cmdline_user_args(): optional --filter=<substring>, --verbose, --root=<res://dir> (Default res://tests;
-         nur für den Runner-Selbsttest mit res://tests/fixtures/runner_selftest)
+         nur für den Runner-Selbsttest mit res://tests/fixtures/runner_selftest), --allow-skips (lokale Experimente)
   await process_frame                     # Autoloads bereit (DB geladen)
   OS.add_logger(<private Logger-Unterklasse>)   # zählt Fehler mit error_type == Logger.ERROR_TYPE_SCRIPT (SCRIPT ERROR)
   root.get_node("Game").set("ephemeral", true)   # per node path, no autoload identifier (settings defaults, §3.4)
@@ -3835,6 +3999,9 @@ _initialize():
       inst.call("_tc_begin", name); await inst.call("before_each"); await inst.call(name); await inst.call("after_each")
       ergebnis := inst.call("_tc_end")   # Dictionary {"failures": PackedStringArray, "skipped": String}
       Zähler > n0 → Test gilt als FAIL "SCRIPT ERROR (<n>, see log above)" (auch wenn skip() gerufen wurde)
+      Fehlschläge schlagen Skip: hat ein Test Fehler gesammelt und danach skip() gerufen → FAIL
+      Skip ohne Fehler → FAIL "skipped (<grund>) but not in run_tests.gd ALLOWED_SKIPS", außer "<file> :: <method>" steht
+        mit Begründung in ALLOWED_SKIPS (in der echten Suite leer; nur der Runner-Selbsttest nutzt es) oder --allow-skips
       Ausgabe-Zeile (s. u.)
   Zusammenfassung; quit(1) wenn failed > 0 oder errors > 0 oder Anzahl Tests == 0, sonst quit(0)
   Laufzeitfehler in einem Test (SCRIPT ERROR) brechen nur diese Testmethode ab; der Runner läuft weiter (geprüft).
@@ -3844,8 +4011,8 @@ Ausgabeformat (stdout):
 ```
 [PASS] test_m1_ctb.gd :: test_fast_actor_goes_first (2 ms)
 [FAIL] test_m1_ctb.gd :: test_haste_halves_delay — expected 10, got 20 (Haste)
-[SKIP] test_m3_exploration_scene.gd :: test_touch — needs display
-RESULT: 143 passed, 1 failed, 1 skipped, 0 errors in 1.92 s
+[SKIP] test_selftest_cases.gd :: test_g_allowlisted_skip — runner self-test   (nur mit ALLOWED_SKIPS / --allow-skips)
+RESULT: 143 passed, 1 failed, 0 skipped, 0 errors in 1.92 s
 ```
 Bei Fehlschlägen zusätzlich `printerr("Assertion failed: <file>::<test> — <msg>")` (trifft `ERR_RE` in `check.sh`).
 Ein `SCRIPT ERROR` bricht die Testmethode ab (Asserts danach laufen nie); der Runner zählt ihn über den Logger
@@ -3874,7 +4041,11 @@ func assert_not_null(v: Variant, msg: String = "") -> void
 func assert_has(container: Variant, item: Variant, msg: String = "") -> void        # Array/Packed*/Dictionary key/String
 func assert_len(container: Variant, n: int, msg: String = "") -> void
 func fail(msg: String) -> void
-func skip(reason: String) -> void          # marks test skipped; further asserts ignored
+func skip(reason: String) -> void          # marks test skipped; further asserts ignored; fails the run unless allowlisted
+                                           # (§11.1) — a skip is a deliberate decision, never a silent guard
+func assert_time_budget(ms: float, budget_ms: float, msg: String = "") -> void   # wall-clock budget: asserted only with
+                                           # env PTD_PERF_ASSERTS=1 (CI check job), else printed as "[TIMING] …" —
+                                           # check.sh runs in parallel copies; real budgets live in tools/perf.sh
 func make_rng(seed: int = 1) -> RandomNumberGenerator
 func real_data() -> GameData               # cached GameData.load_dir("res://data")
 func fixture_data(tables: Dictionary) -> GameData   # GameData.load_from_dicts(tables); fails test if invalid
@@ -3953,7 +4124,8 @@ Beispiel (Handy-Format, Touch an): `tools/check.sh --shot res://scenes/battle/ba
 
 `check.sh` startet `godot --headless --path <tmp> --quit-after 900 -- --autoplay` (900 Frames = reines Sicherheitsnetz; normal beendet
 Autoplay selbst mit `quit(0)`/`quit(1)`). `run_smoke` in `check.sh` **muss** den Exit-Code prüfen (`code=${PIPESTATUS[0]}`, ≠ 0 → Fehler)
-und verlangt die Zeile `AUTOPLAY: OK` (Phase A: `AUTOPLAY: SKIPPED (stub)`), Regex `AUTOPLAY: (OK|SKIPPED \(stub\))`; fehlt sie → Fehler.
+und verlangt die Zeile `AUTOPLAY: OK`; fehlt sie → Fehler. (Den Phase-A-Pfad `AUTOPLAY: SKIPPED (stub)` gibt es nicht mehr —
+Autoplay hat keinen Überspringen-Zweig, §0.2.)
 Gemessen: headless ohne FPS-Limit ≈ 144 Frames/s;
 mit `Engine.max_fps = 60` exakt 16,7 ms/Frame; `Engine.time_scale` skaliert `_process`-/Physik-Delta, Tweens und Timer (geprüft).
 
@@ -3976,8 +4148,20 @@ Schritte (Frame-Budgets ab Start des Schritts; Summe 600; Watchdog gesamt 640 Fr
 Fehler (Budget überschritten, falscher Ausgang, Watchdog): `printerr("Assertion failed: AUTOPLAY step '<name>' failed: <grund>")`
 (trifft `ERR_RE`) und `get_tree().quit(1)`. Fortschritt je Schritt: `print("AUTOPLAY: <name> ok @frame <n>")`.
 
-Weitere Boot-Argumente (Entwicklung): `--seed=<int>` (Seed für Neues Spiel), `--goto=explore|safe_room|battle:<enc_id>`
-(überspringt Titel mit `Game.ensure_state()`).
+Weitere Boot-Argumente (Entwicklung, `TitleFlow.parse_args`, `boot.gd route()`): `--seed=<int>` (Seed für Neues Spiel und
+für den Dev-Zustand der `--goto`-Ziele) und `--goto=<ziel>` nach der Boot-Karte:
+
+| Ziel | Wirkung |
+|---|---|
+| `title` (oder leer) | Titel (Standard) |
+| `explore` | `_ensure_dev_state()` (`Game.new_game(0, "Kai", seed)` mit `--seed`, sonst `Game.ensure_state()`), Erkundung am Startpunkt |
+| `safe_room` | wie `explore`, danach `Router.enter_safe_room(<erster Safe Room der Etage>)` |
+| `battle:<enc_id>` | wie `explore`, dann `Game.make_battle_setup(enc_id, 0, "")` → `Router.start_battle(setup)` (z. B. `battle:enc_f1_boss_hausmeister`) |
+| `credits` | Abspann mit `{"from_title": true}` (zurück zum Titel) |
+| `lobby` | Event-Lobby `scenes/ui/event_lobby.tscn` |
+| `game_over` | `_ensure_dev_state()`, Game-Over-Screen mit Grund `&"timer"` |
+
+Unbekannte Ziele → Warnung, Titel. Im Editor stehen die Argumente unter Projekteinstellungen → Editor → Run → Main Run Args.
 
 #### 11.4.1 `--autoplay=full` — Full-Run-Bot Etage 1 (`scenes/boot/fullrun.gd`, `tools/fullrun.sh`, M6)
 
@@ -4049,15 +4233,15 @@ Kampfstart/-ende/-peak, Teleports, Fallbacks, Replay-Prüfungen, M.O.D.-Tags) un
 
 | Modul | Pflicht-Tests |
 |---|---|
-| M0 | Harness-Selbsttest (inkl. `_deep_eq`-Fälle, `await_signal`-Timeout, Methoden-Deduplizierung, Runner wertet SCRIPT ERROR als FAIL); `GameData` lädt `tests/fixtures/data_min` fehlerfrei; ≥ 1 Negativtest je Validierungsregel 1–10; Defs read-only; compile-all; SeedUtil-Golden-Values; Musik-Loop (§3.8); `ConditionExpr`; Router mit leerem Stack/`adopt` über den Fixture-Screen (echte Ziel-Screens von M5/M6 nur, solange deren Skript noch der M0-Stub ist — danach `skip`, Abdeckung durch Autoplay/Integration; Screens müssen beliebige `setup(params)` also nicht für M0-Tests vertragen); Game: Command-IDs, Dialog-Pause, Quest-Metriken, Replay ≡ Live (Integration, ab Phase C) |
+| M0 | Harness-Selbsttest (inkl. `_deep_eq`-Fälle, `await_signal`-Timeout, Methoden-Deduplizierung, Runner wertet SCRIPT ERROR als FAIL, Fehler schlagen Skip, nicht zugelassener Skip → Exit 1); `GameData` lädt `tests/fixtures/data_min` fehlerfrei; ≥ 1 Negativtest je Validierungsregel 1–10; Defs read-only; compile-all inkl. Zeilenlänge §13.1; SeedUtil-Golden-Values; Musik-Loop (§3.8); `ConditionExpr`; Router mit leerem Stack/`adopt` über den Fixture-Screen, Kampf-/Safe-Room-/Game-Over-Helfer und Rückfall auf den Titel gegen die **echten** Ziel-Screens (kein Skip); Game: Command-IDs, Dialog-Pause, Quest-Metriken, Replay ≡ Live |
 | M1 | `base_delay`-Tabelle §5.5; Startwerte NORMAL/PREEMPTIVE/AMBUSH; Preview 12 inkl. `pending_rank`, Overrides, Pseudo-Einheit; Haste 0.6/Slow 1.5; jede Formel aus §5.9 mit festen Zahlen (inkl. Combo, Fixschaden, Heilmodi, Krit-Cap); Status (Gift am Zugbeginn, Stun-Verzögerung + Boss × 0.5, Resist, Reapply setzt Dauer); Flucht-/Stunt-Chancen; Cooldown 3; AI-Bedingungen/Zielregeln/Taunt 80 %; Phasen-Ops; `steal_credits`/`escape`; `BattleCommand`/`ActionEvent` `to_dict`↔`from_dict`; gleicher Seed + gleiche Befehle → identische `to_dict()`-Liste; 100 Seeds Auto-vs-Auto terminiert < 200 Züge; Event-Reihenfolge (§5.3) |
 | M2 | Hype-Tabelle §6.2 Zeile für Zeile; Abkühlen (proportional, Boden 25); Sponsor-Schwellen 70/85/100, Limits 1/2, Hype → 80, `weight_mods`; Prioritätsfenster inkl. `ALWAYS_SAID_TAGS`; Achievement-Bedingungen mit allen Triggern (Payloads §6.3) + Tier-Belohnung; Meilensteine; Lootbox: Rarität→Pool, Garantie letzter Wurf, Pity 4/8 persistent, Duplikat → Credits × 0.5; EXP-Tabelle GDD §4.3 (33/73/131/205/292/393/506/632/769, Cap 10); Equip/Unequip; BattleBridge (MP-Regen 15 %, KO → 1 HP, Pep-Talk, Timer-Start nach Tutorial); Save-Roundtrip (encode→decode→encode identisch), Gnadenfrist 180 s, v0-Migration-Stub, kaputte Datei → `.bak` |
 | M3 | `floor_1`-Layout valide + deterministisch; prozedural 200 Seeds §7.2; `FloorEvent` alle Typen; Szene: Spawn ≠ in Wand, `force_encounter` → `Events.encounter_triggered` per Signal-Spion (startet keinen echten Kampf) **oder** mit `Router.adopt(scene)` → danach `Router.current is BattleScene` (per `wait_until`) |
-| M4 | Jede Base × Prop baut; Tri-Budgets §12.1; Rigs nur über `add_to_tree()`; `play_and_wait` jeder One-Shot-Anim endet, `impact` feuert genau 1× bei attack/cast/stunt/item; außerhalb des Baums sofortiges Ende; `build_room` für alle 16 Türmasken; `build_safe_room` alle 3 Themes; Log ohne „different indices“ |
+| M4 | Jede Base × Prop baut; Tri-Budgets §12.1; Rigs nur über `add_to_tree()`; `play_and_wait` jeder One-Shot-Anim endet, `impact` feuert genau 1× bei attack/cast/stunt/item; außerhalb des Baums sofortiges Ende; `build_room` für alle 16 Türmasken; `build_safe_room` alle 3 Themes; Log ohne „different indices“; alle festen `Label3D`-/Schadenszahl-Texte bestehen `ThemeDB.fallback_font.has_char()` Zeichen für Zeichen (03_ART A13, `test_m4_env`, `test_m4_vfx`) |
 | M5 | Battle-Szene headless mit `auto_battle` bis `BATTLE_END` (time_scale 8, speed 4); HUD-Werte = letzte `hp_after`; CTB-Leiste 12/10 Einträge |
-| M6 | Jede UI-Szene instanziierbar + Default-Fokus; `PauseMenu.process_mode == PROCESS_MODE_WHEN_PAUSED` (und alle Untermenüs); Touch-Trefferflächen ≥ 88; SafeAreaContainer-Ränder ≥ 24; `name_entry` `max_length == 12`; Full-Run-Bot: Helfer/Planer/Story-Beats (`test_m6_fullrun`) + ganzer Lauf über `tools/fullrun.sh` (CI, §11.4.1) |
+| M6 | Jede UI-Szene instanziierbar + Default-Fokus; alle statischen UI- und `Label3D`-Texte bestehen `ThemeDB.fallback_font.has_char()` Zeichen für Zeichen (03_ART A13/F8, `test_m6_ui_scenes`); `PauseMenu.process_mode == PROCESS_MODE_WHEN_PAUSED` (und alle Untermenüs); Touch-Trefferflächen ≥ 88; SafeAreaContainer-Ränder ≥ 24; `name_entry` `max_length == 12`; Full-Run-Bot: Helfer/Planer/Story-Beats (`test_m6_fullrun`) + ganzer Lauf über `tools/fullrun.sh` (CI, §11.4.1) |
 | M7 | `real_data()` valide; Mindestmengen laut GDD; jede reguläre Etage-1-Encounter per Auto-Kampf (50 Seeds) ≥ 80 % Siegquote mit dem Level/der Ausrüstung, die der GDD-Fortschritt dort erwartet (§5.4/§13): Zone A Lv 2 (Tutorial Lv 1), Zone B Lv 3 (Startausrüstung), Zone C Lv 4 + mittlere Ausrüstung, Hausmeister Lv 5, Zone D Lv 6 + späte Ausrüstung, Königin Lv 7; Bosse ohne Geschenke ≥ 50 %; Party-Züge je Sieg: Median aller regulären Encounter 4–6, je Encounter 3–7, Hausmeister 16–22, Königin 20–26 (GDD §13). **Show-Bilanz** (`test_m7_show_balance.gd`, echtes `Show` im Kampf-Loop, Geschenke wie im `BattleController`): Etage 1 als Staffel (Kämpfe in Kartenreihenfolge auf Plan-Level, Abkühlen im Bot-Takt `--pace=human`, Truhen/Events/Level-ups/Lootboxen über `Events`) → Follower, Zuschauer-Peak, Sponsor-Geschenke, Achievements, Lootboxen, Hype am Kampfanfang/-ende in den GDD-§13-Bändern; Boss-Niederlagequote auf Ziel-Level mit Geschenken (100 Seeds; Hype beim Kampfstart = Abkühl-Boden 25, Ausrüstung/Items wie vom Bot vor den Bossen gemessen): Hausmeister 10–30 %, Königin 25–45 % (GDD ~20 / ~35 %) |
-| M8 | 05_LIVE_MODUS §11.4; zusätzlich `RunSim.step(1) × n ≡ step(n)` und Timer/Hype-Zerfall in Ticks |
+| M8 | 05_LIVE_MODUS §11.4; zusätzlich `RunSim.step(1) × n ≡ step(n)` und Timer/Hype-Zerfall in Ticks; Verifier gegen gefälschte Logs (`test_m8_integrity`); jeder `Command.TYPES`-Eintrag hat einen Zweig in `RunSim.apply` und im Replay-Motor (`test_m8_command`) |
 
 ---
 
@@ -4171,7 +4355,9 @@ jobs:
           curl -fsSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
           unzip -q godot.zip && mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" godot && chmod +x godot
       - name: Import + tests + autoplay smoke
-        run: GODOT=~/godot/godot prime-time-dungeon/tools/check.sh
+        # one test process on a dedicated runner: the wall-clock budgets of the unit tests are asserted here only
+        # (TestCase.assert_time_budget); local parallel check.sh runs print them
+        run: PTD_PERF_ASSERTS=1 GODOT=~/godot/godot prime-time-dungeon/tools/check.sh
       - name: Full run Floor 1 (bot, thorough + rush + dawdle, ~1.5 min)
         run: GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --strategy=all --log-dir=fullrun-logs
       - uses: actions/upload-artifact@v4
@@ -4237,8 +4423,10 @@ Android/iOS werden lokal exportiert (Android: JDK 17 + SDK + Debug-Keystore in E
 1. `tests/perf/boot_timer.gd` — echter Boot (Main Scene) bis Titel interaktiv und weiter über „Neues Spiel“ bis zur Erkundung,
    ohne vorher Screen-Skripte zu kompilieren (Zeiten ab Prozessstart);
 2. `tests/perf/perf_probe.gd` → `perf_runner.gd` (unter Xvfb; `--driver=vulkan` = Mobile-Renderer, braucht ein Vulkan-ICD, z. B.
-   Mesa lavapipe): je Zelle von Etage 1 vier Kamerarichtungen, jede Begegnung von Etage 1 (Eröffnung), größte Begegnung + beide
-   Bosse als kompletter Auto-Kampf, die drei Safe Rooms. Je Ansicht das Maximum von Draw Calls (gesamt/3D/2D), Primitiven, aktiven
+   Mesa lavapipe): je Zelle von Etage 1 vier Kamerarichtungen, jede Begegnung von Etage 1 (Eröffnung), größte Begegnung (Party
+   Lv 4) + beide Bosse als kompletter Auto-Kampf, die drei Safe Rooms. Die Boss-Läufe messen den **ganzen** Kampf (Phasenwechsel,
+   Zug der Königin, Haste): Party Lv 10 mit der Vor-Boss-Ausrüstung des Full-Run-Bots (`BOSS_KIT`, `BOSS_ITEMS`); ein Boss-Lauf,
+   der nicht mit VICTORY endet, lässt die Probe scheitern (`PERF: OVER BUDGET … kein Sieg`). Je Ansicht das Maximum von Draw Calls (gesamt/3D/2D), Primitiven, aktiven
    Lichtern, Lichtern pro Mesh, eindeutigen Materialien, Label3D, Partikeln, Physik-Körpern, Nodes, RAM, VRAM; Aufbauzeiten; Status
    gegen §12.1. `leak`: N Router-Zyklen Erkundung (neu gebaut) → Kampf → Safe Room → zurück, Objekt-/Node-/Ressourcen-Zahlen je
    Zyklus; Urteil über die Minima eines frühen und des letzten Fensters (`perf_runner.leak_growth`, auch von
@@ -4266,7 +4454,8 @@ und gelten 1:1; Zeiten sind CPU-gebunden und nur relativ (Vorher/Nachher) aussag
 - **Schleifenvariablen** über Array/Dictionary brauchen einen Typ (sonst unter `untyped_declaration=2` Fehler, gemessen:
   `"for" iterator variable "x" has no static type. (Warning treated as error.)`): `for e: Variant in raw_array:`,
   `for key: String in dict:`, `for d: Dictionary in list:`. Iteratoren über `int`/`range()` (`for i in n:`) dürfen untypisiert bleiben.
-- Einrückung Tabs; Zeilen ≤ 120 Zeichen; `##`-Doc-Kommentare für öffentliche APIs; Kommentare Englisch.
+- Einrückung Tabs; Zeilen ≤ 120 Zeichen (ein Tab zählt als **ein** Zeichen; geprüft für jede `.gd`/`.gdshader` unter `res://`
+  von `test_m0_compile_all.test_line_length`); `##`-Doc-Kommentare für öffentliche APIs; Kommentare Englisch.
 - Namen: Dateien `snake_case.gd`; `class_name` = PascalCase des Dateinamens; Konstanten `UPPER_SNAKE`; Methoden/Variablen
   `snake_case`; privat `_prefix`; Bools `is_/has_/can_`; Signale im Partizip (`chest_opened`), Anfragen `*_requested`.
 - **Enum-Typen in `class_name`-Skripten immer voll qualifiziert annotieren — auch in der deklarierenden Klasse selbst:**
@@ -4342,5 +4531,5 @@ und gelten 1:1; Zeiten sind CPU-gebunden und nur relativ (Vorher/Nachher) aussag
 6. Spielstand aus Slot laden stellt Etage (gleiches Layout), geöffnete Truhen/Tore, abgeschlossene Events, besiegte Gruppen, Streuner,
    Safe-Room-Position, Timer (mind. 3:00 Gnadenfrist), Pity-Zähler, Bestiarium und Show-Werte wieder her.
 7. Gleicher Seed + aufgezeichneter `RunLog` → `Game.replay_log()` liefert denselben `StateHash` (Brief §6b.1–3); automatisch geprüft
-   von `test_m0_game.test_replay_matches_live_run_integration` (Kampf → Lootbox → Ruhe, auch nach JSON-Rundlauf), sobald
-   RunLog/StateHash/RunSim/GameState/BattleBridge/BattleState/LootRoller/Show keine Stubs mehr sind.
+   von `test_m0_game.test_replay_matches_live_run_integration` (Kampf → Lootbox → Ruhe, auch nach JSON-Rundlauf), vom
+   Full-Run-Bot bei jedem Safe-Room-Besuch (`errors` leer) und gegen gefälschte Logs von `test_m8_integrity`.

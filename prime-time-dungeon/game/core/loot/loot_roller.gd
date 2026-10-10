@@ -9,9 +9,7 @@ class_name LootRoller extends RefCounted
 const RARITY_ORDER: PackedStringArray = ["common", "rare", "epic"]
 const WOOD_CREDITS_MIN: int = 10
 const WOOD_CREDITS_MAX: int = 25
-const DUPLICATE_CREDIT_MULT: float = 0.5      # duplicate equipment → roundi(sell value × 0.5) credits
 const EXTRA_CHEST_ROLL_PCT: int = 20          # procedural chests: second roll chance
-const _PPM: int = 1_000_000
 
 
 ## GDD §9: [fan entry (display rarity epic)] + `rolls` rolls; roll 0 forced epic/rare by pity (epic first), last roll
@@ -23,7 +21,7 @@ static func roll_lootbox(box: LootboxDef, data: GameData, floor_index: int, stat
 	var out: Array[LootReward] = []
 	if box == null or data == null or rng == null:
 		return out
-	var owned: Dictionary = _owned_equipment(state)
+	var owned: Dictionary = owned_equipment(state)
 	if box.fixed_pool != "":
 		var fan: Dictionary = _pick_entry(data.loot_pool(floor_index, box.fixed_pool), rng)
 		if not fan.is_empty():
@@ -49,7 +47,7 @@ static func roll_lootbox(box: LootboxDef, data: GameData, floor_index: int, stat
 			rarity = box.guarantee
 		else:
 			rarity = _roll_rarity(box.rarity_weights, rng)
-		var picked: Dictionary = _pick_with_fallback(data, floor_index, rarity, rng)
+		var picked: Dictionary = pick_from_pool(data, floor_index, rarity, rng)
 		if picked.is_empty():
 			continue
 		var used: String = str(picked["rarity"])
@@ -117,20 +115,6 @@ static func roll_chest_table(def: FloorDef, rng: RandomNumberGenerator) -> Array
 	return out
 
 
-## Each drop {item, chance} hits with chance × (1 + avg_party_lck / 100) (GDD §3.12), one integer draw per entry.
-static func roll_drops(drops: Array[Dictionary], avg_party_lck: float, rng: RandomNumberGenerator) -> PackedStringArray:
-	var out: PackedStringArray = []
-	if rng == null:
-		return out
-	for d: Dictionary in drops:
-		var chance: float = float(d.get("chance", 0.0)) * (1.0 + avg_party_lck / Balance.DROP_LCK_DIV)
-		var threshold: int = roundi(clampf(chance, 0.0, 1.0) * _PPM)
-		var draw: int = rng.randi_range(0, _PPM - 1)
-		if draw < threshold:
-			out.append(str(d.get("item", "")))
-	return out
-
-
 static func best_rarity(rewards: Array[LootReward]) -> String:
 	var best: int = 0
 	for r: LootReward in rewards:
@@ -162,15 +146,16 @@ static func _entry_reward(e: Dictionary, rarity: String, data: GameData, owned: 
 		var def: ItemDef = data.item(item_id)
 		if def.is_equipment():
 			if owned.has(item_id):
-				var r: LootReward = _reward("credits", "", roundi(def.sell_value() * DUPLICATE_CREDIT_MULT), rarity)
+				var r: LootReward = _reward("credits", "", def.duplicate_credits(), rarity)
 				r.converted_from = item_id
 				return r
 			owned[item_id] = true
 	return _reward("item", item_id, amount, rarity)
 
 
-## Item ids of equipment in the inventory or equipped by any party member.
-static func _owned_equipment(state: GameState) -> Dictionary:
+## {item id: true} of everything in the inventory or equipped by any party member (the "already owned" set of the
+## duplicate rule, ItemDef.duplicate_credits; lootboxes, chests, gifts and BattleSetup.owned_equipment).
+static func owned_equipment(state: GameState) -> Dictionary:
 	var owned: Dictionary = {}
 	if state == null:
 		return owned
@@ -211,8 +196,9 @@ static func _roll_rarity(weights: Dictionary, rng: RandomNumberGenerator) -> Str
 	return "common"
 
 
-## {"entry": Dictionary, "rarity": String} from the rarity's pool, falling back to lower rarities; {} if all empty.
-static func _pick_with_fallback(data: GameData, floor_index: int, rarity: String,
+## {"entry": Dictionary, "rarity": String}: one weighted entry of loot_pool(floor, rarity) (one draw), an empty pool
+## falls back to the next lower rarity; {} if all are empty. Lootboxes and gift rolls (GiftApplier).
+static func pick_from_pool(data: GameData, floor_index: int, rarity: String,
 		rng: RandomNumberGenerator) -> Dictionary:
 	var idx: int = maxi(0, RARITY_ORDER.find(rarity))
 	while idx >= 0:

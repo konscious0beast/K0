@@ -397,7 +397,7 @@ func test_text_speed_instant_shows_everything_at_once() -> void:
 	d.call("advance")
 
 
-# --- toasts ------------------------------------------------------------------------------------------------------------
+# --- toasts -----------------------------------------------------------------------------------------------------------
 
 func test_toasts_stack_max_three_and_expire() -> void:
 	var t: CanvasLayer = ToastStackScript.new()
@@ -428,7 +428,7 @@ func test_toasts_are_silent_while_replaying() -> void:
 	assert_eq(int(t.call("count")), 0, "presentation is skipped during replay")
 
 
-# --- GlobalUi ----------------------------------------------------------------------------------------------------------
+# --- GlobalUi ---------------------------------------------------------------------------------------------------------
 
 func test_global_ui_composition_and_single_instance() -> void:
 	var g: Node = _global({})
@@ -488,7 +488,7 @@ func test_debug_overlay_info() -> void:
 	await wait_frames(1)
 
 
-# --- helpers -------------------------------------------------------------------------------------------------------------
+# --- helpers ----------------------------------------------------------------------------------------------------------
 
 func _overlay(params: Dictionary) -> CanvasLayer:
 	var o: CanvasLayer = (load(SCENE_OVERLAY) as PackedScene).instantiate() as CanvasLayer

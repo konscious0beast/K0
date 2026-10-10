@@ -9,7 +9,8 @@ var exp: int = 0                            # JSON key; the global exp function 
 var credits: int = 0
 var attack_skill: String = ""
 var ai: Dictionary = {"type": "weighted", "actions": []}   # actions: Array[Dictionary] AiAction
-var phases: Array[Dictionary] = []          # [{"hp_above": float, "on_enter": Array[Dictionary], "actions": Array[Dictionary]}]
+# [{"hp_above": float, "on_enter": Array[Dictionary], "actions": Array[Dictionary]}]
+var phases: Array[Dictionary] = []
 var element_mods: Dictionary = {}
 var status_immune: PackedStringArray = []
 var status_resist: Dictionary = {}

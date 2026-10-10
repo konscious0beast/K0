@@ -46,6 +46,7 @@ var _fx_rng: RandomNumberGenerator = RandomNumberGenerator.new()   # presentatio
 var _announcer: ModAnnouncer = null
 var _announcer_data: GameData = null
 var _battle_active: bool = false
+var _battle_closing: bool = false            # end_battle past its last turn boundary: no new threshold reservations
 var _battle_n: int = 0                       # deterministic battle number for system gift ids (Game.next_seed index)
 var _gift_k: int = 0
 var _fired: PackedInt32Array = []            # thresholds crossed in this battle
@@ -290,6 +291,7 @@ func begin_battle(setup: BattleSetup) -> void:
 	_external_given = 0
 	_unlocked_battle = PackedStringArray()
 	_battle_active = true
+	_battle_closing = false
 	_peak_battle = viewers()
 	set_stat("explore_seconds_since_battle", 0)
 	if setup.advantage == BattleSetup.Advantage.PREEMPTIVE:
@@ -327,18 +329,22 @@ func receive_gift(gift: Dictionary) -> Dictionary:
 	var g: Dictionary = gift.duplicate(true)
 	var gid: String = str(g.get("gift_id", ""))
 	var st: GameState = Game.state
-	if st == null:
-		return _rejected(gid, "run_not_active")
+	if st == null or not Game.accepts_gifts():
+		return _rejected(gid, "run_not_active")           # no run, its floor is done or the event run finished
 	var reason: String = Gift.validate(g)
 	if reason != "":
 		return _rejected(gid, reason)
+	if str(g.get("source", "")) == "dev" and not OS.is_debug_build():
+		return _rejected(gid, "not_accepting")            # QA gifts only in debug builds (05 §6.3)
 	if not _is_system(g):
 		if _is_duplicate(gid):
 			return _rejected(gid, "duplicate")
-		var run: Dictionary = _run_now(st)
-		reason = GiftPolicy.check(run, g, _event_rules())
+		var extra: Dictionary = _gift_extra()
+		reason = GiftPolicy.refusal(st, DB.data, g, _event_rules(), extra)
 		if reason != "":
 			return _rejected(gid, reason)
+		var run: Dictionary = _live_counters(st).duplicate()
+		run.merge(extra, true)
 		var wid: String = SponsorWindows.window_for(run, g)
 		if wid != "" and str(g.get("sponsor_window", "")) == "":
 			g["sponsor_window"] = wid               # 05 §6.13: the window that holds the gift's slot (recorded with it)
@@ -350,9 +356,10 @@ func receive_gift(gift: Dictionary) -> Dictionary:
 
 
 ## {} = none; battle gives the party situation for weight_mods. (1) first waiting external gift — checked AGAIN now
-## (application_refusal; a refused one leaves the queue with gift_rejected), recorded, booked into the run counters
-## (GiftPolicy.note_applied) — while fewer than rules.gifts.max_per_battle external gifts were delivered in this
-## battle; else (2) an open hype threshold → SponsorSystem.pick → Gift.make_system → receive_gift → returned.
+## (application_refusal; "too_soon" stays in the queue for a later boundary, any other refusal leaves the queue with
+## gift_rejected), recorded, remembered and booked into the run counters (GiftPolicy.note_applied — the one booking of
+## an in-battle gift) — while fewer than rules.gifts.max_per_battle external gifts were delivered in this battle;
+## else (2) an open hype threshold → SponsorSystem.pick → Gift.make_system → receive_gift → returned.
 ## The controller applies the result with battle.apply_gift and then calls note_battle_gift(g, events).
 func take_pending_gift(battle: BattleState = null) -> Dictionary:
 	var st: GameState = Game.state
@@ -365,14 +372,18 @@ func take_pending_gift(battle: BattleState = null) -> Dictionary:
 			if _is_system(ext):
 				i += 1
 				continue
-			_queue.remove_at(i)
+			_queue.remove_at(i)                            # checked without its own window reservation
 			var refusal: String = application_refusal(ext)
+			if refusal == "too_soon":
+				_queue.insert(i, ext)                      # min_interval_sec: hold it for a later boundary
+				i += 1
+				continue
 			if refusal != "":
 				_rejected(str(ext.get("gift_id", "")), refusal)
 				continue
 			Game.record({"t": "gift", "gift": ext})
-			_remember_gift(str(ext.get("gift_id", "")))
-			GiftPolicy.note_applied(GiftApplier.live_counters(st), ext, {})
+			GiftPolicy.remember(st, str(ext.get("gift_id", "")))
+			GiftPolicy.note_applied(GiftApplier.live_counters(st), ext, {}, _tick())
 			_gifts_given += 1
 			_external_given += 1
 			# the external gift may have taken the slot a reserved threshold was waiting for
@@ -420,6 +431,9 @@ func end_battle(result: BattleResult) -> int:
 	# now, before the follower conversion — hype_end and the peak are then the same whether a gift slot was free
 	# when 100 was crossed (reset here) or not (reset at once in _check_thresholds).
 	_drop_unservable_thresholds(0)
+	# No turn boundary is left: crossings from here on (achievement hype of battle_won / boss_defeated / milestones)
+	# can never get their gift — they take the "no gift possible" path (top threshold → reset to 80, GDD §7.4).
+	_battle_closing = true
 	match result.outcome:
 		BattleResult.Outcome.VICTORY:
 			bump_stat("battles_won")
@@ -490,14 +504,14 @@ func sponsor_window_view() -> Dictionary:
 
 
 ## Run bookkeeping of a gift the controller applied IN battle (`events` = the ActionEvents of battle.apply_gift):
-## GiftApplier.note_battle_gift — gift items into flags.live.gift_items, load/caps via note_applied (idempotent per id)
-## — exactly as RunSim books it (05 §6.9: run statistics must not depend on where the gift arrived). System gifts:
-## nothing.
+## GiftApplier.count_battle_items — gift items into flags.live.gift_items; the load/caps were booked once at the
+## hand-out (take_pending_gift) — the same end state as RunSim's note_battle_gift (05 §6.9: run statistics must not
+## depend on where the gift arrived). System gifts: nothing.
 func note_battle_gift(g: Dictionary, events: Array[ActionEvent]) -> void:
 	var st: GameState = Game.state
 	if st == null or g.is_empty():
 		return
-	GiftApplier.note_battle_gift(st, g, events)
+	GiftApplier.count_battle_items(st, g, events)
 
 
 ## A battle torn down before its end (BattleScene freed early: tests, debug, scene change) — the battle context is
@@ -513,20 +527,17 @@ func abort_battle() -> void:
 			_rejected(str(g.get("gift_id", "")), "run_not_active")
 
 
-## "" or why the external gift `g` may not be applied NOW (05 §6.10: the check at application is authoritative —
-## the same rule as RunSim.gift_refusal, so live run and verifier agree): its id was already applied in this run →
-## duplicate; else GiftPolicy.check with the current run counters and tick (deadline_missed, caps, effect factor …).
-## System gifts: "". Read-only.
+## "" or why the external gift `g` may not be applied NOW (05 §6.10: the check at application is authoritative):
+## GiftPolicy.refusal — the same function RunSim.gift_refusal runs, so live run and verifier agree (duplicate id,
+## unknown content items, league, run binding, deadline, effect factor, interval, caps, Sponsor-Fenster) with the run
+## clock and identity of Game.gift_context. No run / floor done → run_not_active. System gifts: "". Read-only.
 func application_refusal(g: Dictionary) -> String:
 	if _is_system(g):
 		return ""
 	var st: GameState = Game.state
-	if st == null:
+	if st == null or not Game.accepts_gifts():
 		return "run_not_active"
-	var seen: Variant = _live_counters(st).get("gift_ids", [])
-	if seen is Array and (seen as Array).has(str(g.get("gift_id", ""))):
-		return "duplicate"
-	return GiftPolicy.check(_run_now(st), g, _event_rules())
+	return GiftPolicy.refusal(st, DB.data, g, _event_rules(), _gift_extra())
 
 
 # ======================================================================================================================
@@ -574,7 +585,7 @@ func _add_hype_parts(gain: float, loss: float, reason: StringName) -> void:
 func _check_thresholds(prev: float, now: float) -> void:
 	for t: int in SponsorSystem.crossed(prev, now, _fired):
 		_fired.append(t)
-		if _gifts_given + _open_thresholds.size() < _max_gifts():
+		if not _battle_closing and _gifts_given + _open_thresholds.size() < _max_gifts():
 			_open_thresholds.append(t)
 			_open_thresholds.sort()   # ascending even when a nested change (achievement hype) crossed a higher one first
 		elif t == _top_threshold():
@@ -731,9 +742,9 @@ func _apply_outside(g: Dictionary) -> void:
 		return
 	if not _is_system(g):
 		Game.record({"t": "gift", "gift": g})
-		_remember_gift(str(g.get("gift_id", "")))
+		GiftPolicy.remember(st, str(g.get("gift_id", "")))
 	var rng: RandomNumberGenerator = SeedUtil.make_rng(Game.next_seed("gift"))
-	var rewards: Array[LootReward] = GiftApplier.apply(st, DB.data, g, rng)
+	var rewards: Array[LootReward] = GiftApplier.apply(st, DB.data, g, rng, _tick())
 	if not rewards.is_empty():
 		Game.add_rewards(rewards)
 	if str(g.get("kind", "")) == "sponsor_buff":
@@ -790,21 +801,11 @@ func _after_window_booking(g: Dictionary) -> void:
 		say("sponsor_window_full", {"count": int(v.get("slots", 0))})
 
 
-## Gift.make_system with a schema-complete local fallback (05 §6.5) while the M8 builder returns nothing.
+## Gift.make_system for the k-th system gift of this battle (05 §6.5: g_sys_<battle_n>_<k>).
 func _system_gift(sponsor_id: String) -> Dictionary:
 	var k: int = _gift_k
 	_gift_k += 1
-	var g: Dictionary = Gift.make_system(sponsor_id, _battle_n, k)
-	if not g.is_empty():
-		return g
-	return {
-		"schema": 1, "gift_id": "g_sys_%d_%d" % [_battle_n, k], "source": "system", "kind": "sponsor_buff",
-		"tier": "", "amount": 0, "sponsor_id": sponsor_id,
-		"sender": {"display_name": "", "anon": true, "sender_ref": ""}, "message_key": "",
-		"target": {"player_id": "local", "run_id": ""}, "event_id": "", "window_id": "", "league": "pur",
-		"effect_pm": 1000, "load_half": 0, "roll": {}, "contents": [], "run_bound": true, "deliver_by_tick": 0,
-		"issued_at": "", "payload": {},
-	}
+	return Gift.make_system(sponsor_id, _battle_n, k)
 
 
 func _take_from_queue(gift_id: String) -> void:
@@ -826,19 +827,6 @@ func _is_duplicate(gift_id: String) -> bool:
 	return seen is Array and (seen as Array).has(gift_id)
 
 
-## Records an applied external gift id (reaction at application time; replays reach the same state).
-func _remember_gift(gift_id: String) -> void:
-	var st: GameState = Game.state
-	if st == null or gift_id == "":
-		return
-	if not (st.flags.get("live", null) is Dictionary):
-		st.flags["live"] = {}
-	var live: Dictionary = st.flags["live"]
-	if not (live.get("gift_ids", null) is Array):
-		live["gift_ids"] = []
-	(live["gift_ids"] as Array).append(gift_id)
-
-
 static func _live_counters(st: GameState) -> Dictionary:
 	if st == null:
 		return {}
@@ -846,13 +834,14 @@ static func _live_counters(st: GameState) -> Dictionary:
 	return live if live is Dictionary else {}
 
 
-## Copy of the run counters plus "tick" = the run clock (Game.sim) for the GiftPolicy deadline check — the same input
-## RunSim.gift_refusal uses — plus the Sponsor-Fenster reservations of the gifts waiting in the queue
+## The `extra` of GiftPolicy.refusal: Game.gift_context ("tick" = the run clock, run identity — the same input
+## RunSim.gift_refusal uses) plus the Sponsor-Fenster reservations of the gifts waiting in the queue
 ## ([[window id, sender_ref], …]; RunSim applies at once and has none, so a live acceptance is never looser than the
 ## replay's).
-func _run_now(st: GameState) -> Dictionary:
-	var run: Dictionary = _live_counters(st).duplicate()
-	run["tick"] = Game.sim.tick() if Game.sim != null else 0
+func _gift_extra() -> Dictionary:
+	var run: Dictionary = Game.gift_context()
+	if not run.has("tick"):
+		run["tick"] = _tick()
 	var pending: Array = []
 	for q: Dictionary in _queue:
 		if not _is_system(q) and str(q.get("sponsor_window", "")) != "":
@@ -881,13 +870,14 @@ func _emit_boss_hp(e: ActionEvent) -> void:
 		Events.boss_hp_changed.emit({"boss_id": e.def_id, "hp": e.hp_after, "max_hp": e.max_hp})
 
 
-## Event-run gift rules (05 §6.10) if Game exposes them; campaign → {}.
+## Event-run gift rules (05 §6.10); campaign → {}.
 func _event_rules() -> Dictionary:
-	if Game.has_method("event_rules"):
-		var rules: Variant = Game.call("event_rules")
-		if rules is Dictionary:
-			return rules
-	return {}
+	return Game.event_rules()
+
+
+## The run clock (Game.sim): last_delivery_tick of the gift bookings.
+func _tick() -> int:
+	return Game.sim.tick() if Game.sim != null else 0
 
 
 static func _is_system(g: Dictionary) -> bool:
@@ -929,6 +919,7 @@ func _reset_battle() -> void:
 	_rules = null
 	_setup = null
 	_battle_active = false
+	_battle_closing = false
 	_open_thresholds = PackedInt32Array()
 	_fired = PackedInt32Array()
 	_queue.clear()

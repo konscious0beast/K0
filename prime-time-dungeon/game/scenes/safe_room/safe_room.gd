@@ -4,7 +4,8 @@ class_name SafeRoomScene extends Node3D
 ## &"safe_room". Menu (left list, scene right): Speichern · Lootboxen (n) · Automat · Ausrüstung · Mopsula (!) · Weiter.
 ## Mopsula scenes (scenes.json) play through ModDialog as blocking lines, then Game.mark_scene_seen(); the next
 ## qualifying scene of the same visit becomes pending right away (several scenes per visit, e.g. scn_mop_2 +
-## scn_mop_4, "NEU" badge + "!" stay); without a scene a `mopsula_idle` line. Shop via vending_menu (Game.buy), lootboxes via lootbox_opening (Game.open_lootbox).
+## scn_mop_4, "NEU" badge + "!" stay); without a scene a `mopsula_idle` line. Shop via vending_menu (Game.buy),
+## lootboxes via lootbox_opening (Game.open_lootbox).
 ## ModDialog sits right-aligned here (overlay mode &"safe_room"), so the menu column stays readable while M.O.D. talks.
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
@@ -97,7 +98,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		open_pause("party")
 
 
-# --- menu actions -------------------------------------------------------------------------------------------------------
+# --- menu actions -----------------------------------------------------------------------------------------------------
 
 func activate(id: String) -> void:
 	if _busy or _leaving or (_modal != null and is_instance_valid(_modal)):
@@ -431,7 +432,7 @@ func _set_button_text(id: String, text: String) -> void:
 			l.text = text
 
 
-# --- UI -----------------------------------------------------------------------------------------------------------------
+# --- UI ---------------------------------------------------------------------------------------------------------------
 
 func _build_ui() -> void:
 	_ui = CanvasLayer.new()
@@ -487,7 +488,8 @@ func _build_ui() -> void:
 	_menu = UiUtil.vbox(12)                  # 12 px between hit areas (02_TECH §10.2 rule 5)
 	_menu.name = "Menu"
 	col.add_child(_menu)
-	for e: Array in [["save", "Speichern", &"floppy"], ["lootbox", "Lootboxen", &"box"], ["vending", "Automat", &"vending"],
+	for e: Array in [["save", "Speichern", &"floppy"], ["lootbox", "Lootboxen", &"box"],
+		["vending", "Automat", &"vending"],
 			["equipment", "Ausrüstung", &"sword"], ["mopsula", "Mopsula", &"paw"], ["leave", "Weiter", &"door"]]:
 		var b: Button = UiUtil.button("", &"ButtonBig")
 		b.name = "Menu_" + str(e[0])

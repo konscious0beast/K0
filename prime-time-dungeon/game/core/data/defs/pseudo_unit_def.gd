@@ -4,7 +4,8 @@ class_name PseudoUnitDef extends RefCounted
 var id: String = ""
 var name: String = ""
 var icon: String = ""
-var action: Dictionary = {}                 # {"fixed_pct_maxhp": int, "element": String, "ignores_guard": bool, "target": "all_party"}
+# {"fixed_pct_maxhp": int, "element": String, "ignores_guard": bool, "target": "all_party"}
+var action: Dictionary = {}
 var ctr_after: int = 100
 var warn_tag: String = ""
 var warn_at: int = 2

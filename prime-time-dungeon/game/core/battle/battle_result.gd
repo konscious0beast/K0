@@ -17,7 +17,9 @@ var party_turns: int = 0               # TURN_START of party members
 var exp: int = 0                       # sum of exp_reward of defeated non-summoned enemies × exp_mult (VICTORY only)
 var credits: int = 0                   # sum of credit_reward (incl. overkill bonus)
 var overkill_credits: int = 0          # part of credits that came from overkill × 1.25
-var credits_stolen: int = 0            # steal_credits total (VICTORY + refund_on_win → refunded)
+var credits_stolen: int = 0            # stolen credits the enemies KEEP (escaped or surviving thieves; every thief
+                                       # unless VICTORY) — BattleBridge always deducts them (GDD §3.11)
+var credits_refunded: int = 0          # stolen credits given back: VICTORY + refund_on_win + thief KO'd
 var credits_delta: int = 0             # gift credits (05 CR-2)
 var drops: PackedStringArray = []      # item ids rolled with battle rng at victory
 var boss_rewards: Array[Dictionary] = []   # EnemyDef.boss_drops of defeated bosses ({kind, id, amount})
@@ -54,7 +56,8 @@ func to_dict() -> Dictionary:
 		"outcome": int(outcome), "encounter_id": encounter_id, "group_id": group_id, "is_boss": is_boss,
 		"boss_id": boss_id, "advantage": advantage, "turns": turns, "party_turns": party_turns, "exp": exp,
 		"credits": credits, "overkill_credits": overkill_credits, "credits_stolen": credits_stolen,
-		"credits_delta": credits_delta, "drops": Array(drops), "boss_rewards": rewards,
+		"credits_refunded": credits_refunded, "credits_delta": credits_delta, "drops": Array(drops),
+		"boss_rewards": rewards,
 		"party_hp": party_hp.duplicate(true), "party_mp": party_mp.duplicate(true),
 		"item_delta": item_delta.duplicate(true), "kills": kills, "defeated_ids": Array(defeated_ids),
 		"weak_found": wf, "escaped": Array(escaped), "damage_taken": damage_taken, "min_party_hp": min_party_hp,
@@ -78,6 +81,7 @@ static func from_dict(d: Dictionary) -> BattleResult:
 	r.credits = JsonUtil.to_int(d.get("credits", 0))
 	r.overkill_credits = JsonUtil.to_int(d.get("overkill_credits", 0))
 	r.credits_stolen = JsonUtil.to_int(d.get("credits_stolen", 0))
+	r.credits_refunded = JsonUtil.to_int(d.get("credits_refunded", 0))
 	r.credits_delta = JsonUtil.to_int(d.get("credits_delta", 0))
 	r.drops = JsonUtil.to_str_array(d.get("drops", []))
 	for v: Variant in (d.get("boss_rewards", []) as Array):

@@ -162,7 +162,7 @@ func _fan_pack(n: int, load_half: int) -> Dictionary:
 	var g: Dictionary = Gift.make_dev("fan_pack", "", 0)
 	g["gift_id"] = "g_fan_cr_%d" % n
 	g["source"] = "fan"
-	g["sender"] = {"display_name": "Fan %d" % n, "anon": false, "sender_ref": "f_%d" % n}
+	g["sender"] = {"display_name": "Fan %d" % n, "anon": false, "sender_ref": "b_" + str(n).pad_zeros(12)}
 	g["load_half"] = load_half
 	g["effect_pm"] = GiftPolicy.effect_pm(load_half)
 	return g
@@ -189,7 +189,8 @@ func test_queued_gifts_are_rechecked_and_booked_at_application() -> void:
 		logged.append(c[1])
 	assert_eq(logged, [g1["gift_id"]], "only the applied gift is in the log")
 	var live: Dictionary = Game.state.flags["live"]
-	assert_eq(live["counted"], [g1["gift_id"]], "in-battle delivery booked (GiftPolicy.note_applied)")
+	assert_eq(live["gift_ids"], [g1["gift_id"]], "in-battle delivery remembered once")
+	assert_false(live.has("counted"), "booked once at the hand-out — no second id list (quality-6)")
 	assert_eq([live["load_half"], live["external"]], [2, 1], "fan_pack weight 2 half-points")
 	assert_true(live.get("gift_items", null) is Dictionary, "gift items booked (GiftApplier.note_battle_gift)")
 	var live_hash: String = StateHash.of(Game.state)

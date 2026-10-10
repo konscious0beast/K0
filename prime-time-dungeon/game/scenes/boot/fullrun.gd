@@ -394,7 +394,7 @@ func candidates(layout: FloorLayout, fr: FloorRun, dist: Dictionary = {}) -> Arr
 			if a != null and int(dist.get(sc, 99)) <= STRAY_HUNT_DIST:
 				out.append({"kind": "group", "id": str(gid), "cell": sc,
 					"why": "stray " + str((fr.strays[gid] as Dictionary).get("enc", ""))})
-	var has_key: bool = Game.state.inventory.has(Game.KEY_MASTER)
+	var has_key: bool = Game.state.inventory.has(RunRules.KEY_MASTER)
 	for ch: ChestSpawn in layout.chests:
 		if not rush and not fr.opened_chests.has(ch.id) and (ch.type != "locked" or has_key):
 			out.append({"kind": "chest", "id": ch.id, "cell": ch.cell, "why": ch.type})
@@ -1148,7 +1148,8 @@ func _layout_safe_rooms() -> int:
 	return layout.safe_rooms.size() if layout != null else 0
 
 
-## Game.replay_log(run log) must reproduce the live StateHash (Brief §6b; only while the log starts at new_game).
+## Game.replay_log(run log) must reproduce the live StateHash with zero verifier errors (Brief §6b, 05 §11.4; only
+## while the log starts at new_game).
 func _replay_check() -> bool:
 	if Game.run_log == null or bool(Game.run_log.header.get("from_save", false)):
 		return true
@@ -1159,6 +1160,9 @@ func _replay_check() -> bool:
 	if str(out.get("final_hash", "")) != live:
 		return fail("replay of the run log (%d commands) does not reproduce the live state (mismatch at checkpoint %d)"
 			% [Game.run_log.cmds().size(), int(out.get("mismatch_at", -1))])
+	var errors: PackedStringArray = out.get("errors", PackedStringArray())
+	if not errors.is_empty():
+		return fail("the verifier (Game.replay_log) reports %d error(s): %s" % [errors.size(), "; ".join(errors)])
 	_note("replay check: %d commands reproduce the live StateHash" % Game.run_log.cmds().size())
 	return true
 

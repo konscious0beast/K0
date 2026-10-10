@@ -120,7 +120,7 @@ func test_floor_build_time_and_physics_layout() -> void:
 	scene.setup({"spawn": &"start"})
 	add_to_tree(scene)
 	var ms: float = (Time.get_ticks_usec() - t0) / 1000.0
-	assert_lt(ms, FLOOR_BUILD_MS_MAX, "floor 1 builds in %.0f ms" % ms)
+	assert_time_budget(ms, FLOOR_BUILD_MS_MAX, "floor 1 build time")
 	# §12.1 Physik: one static body for all room boxes + lintels, one for the permanent prop blockers, gates own.
 	var statics: Array[String] = []
 	var kinematic: int = 0
@@ -176,8 +176,10 @@ func test_low_quality_lights_only_the_current_room() -> void:
 	var next: Vector2i = layout.linked(scene.get_player_cell())[0]
 	scene.get_player().teleport(layout.cell_to_world(next) + Vector3(0.0, 0.05, 0.0), 0.0)
 	await wait_until(func() -> bool: return scene.get_player_cell() == next, 60)
-	await wait_frames(30)                   # 0.4 s fade at time_scale 8
-	assert_eq(_lit_rooms(scene, layout), [next] as Array[Vector2i], "the light follows Kai into the next room")
+	var want: Array[Vector2i] = [next]
+	# the 0.4 s light fade ends whenever the frames do: wait for the observable state, not a frame count
+	await wait_until(func() -> bool: return _lit_rooms(scene, layout) == want, 600)
+	assert_eq(_lit_rooms(scene, layout), want, "the light follows Kai into the next room")
 
 
 func _lit_rooms(scene: Node, layout: FloorLayout) -> Array[Vector2i]:

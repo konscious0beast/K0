@@ -1,33 +1,35 @@
 # PRIME TIME DUNGEON — Performance (Phase C)
 
-Stand: Branch `ptd/int-perf`, Godot 4.7.2. Budgets: 02_TECH §12.1, Messwerkzeug: `tools/perf.sh` (02_TECH §12.5).
+Stand: 2026-10-10, Branch `ptd/final-a` (komplett nachgemessen nach Boss-Balancing, Sponsor-Fenster und Abschluss-Review, §3.5),
+Godot 4.7.2. Erste Fassung: Branch `ptd/int-perf` (Phase C). Budgets: 02_TECH §12.1, Messwerkzeug: `tools/perf.sh` (02_TECH §12.5).
 Dieses Dokument hält fest, **was** gemessen wurde, **wie**, was vorher/nachher herauskam und welche Abweichungen bewusst bleiben.
 
 ---
 
 ## 1. Ergebnis auf einen Blick
 
-Maximum über alle gemessenen Ansichten bzw. Frames (Methode §2). „vorher“ = Stand vor Phase C (`799f92c`), Compatibility high.
+Maximum über alle gemessenen Ansichten bzw. Frames (Methode §2). „vorher“ = Stand vor Phase C (`799f92c`), Compatibility high;
+„heute“ = Nachmessung 2026-10-10 (§3.5) mit dem Boss-Lauf bis zum Sieg (§2).
 
-| Größe (02_TECH §12.1) | Budget | vorher | **nachher** Compat. high | Compat. low | Mobile (Vulkan) high |
+| Größe (02_TECH §12.1) | Budget | vorher | **heute** Compat. high | Compat. low | Mobile (Vulkan) high |
 |---|---|---:|---:|---:|---:|
-| Erkundung: Draw Calls 3D | 150 | 112 | **112** | 54 | 68 (32 + 36 Schatten) |
-| Erkundung: Draw Calls UI | 100 | 198 ✗ | **83** | 83 | 81 |
+| Erkundung: Draw Calls 3D | 150 | 112 | **112** | 58 | 68 (32 + 36 Schatten) |
+| Erkundung: Draw Calls UI | 100 | 198 ✗ | **85** | 85 | 85 |
 | Erkundung: Omni aktiv | 4 + 1 Neon (low 2) | 4 + 1 | **4 + 1** | 2 | 4 + 1 |
 | Erkundung: Lichter pro Mesh | 3 | 4–5 ✗ | **2** | 1 | 2 |
 | Erkundung: Physik-Körper (ohne Areas) | 40 | 95 ✗ | **23** | 23 | 23 |
-| Erkundung: Materialien | 24 | 20 | **21** | 20 | 21 |
-| Kampf: Draw Calls 3D | 150 | 130 | **130** | 118 | 84 |
-| Kampf: Draw Calls UI | 180 | 204 ✗ | **165** | 179 | 165 |
+| Erkundung: Materialien | 24 | 20 | **21** | 21 | 21 |
+| Kampf: Draw Calls 3D | 150 | 130 | **133** | 96 | 118 (88 + 30 Schatten) |
+| Kampf: Draw Calls UI | 180 | 204 ✗ | **158** | 170 | 158 |
 | Kampf: Omni / Show-Spots | 2 / 2 (nur high) | 2 / 2 | **2 / 2** | 2 / 0 | 2 / 2 |
-| Kampf: Materialien (Bosse) | 24 | 28 ✗ | **21** | 23 | 22 |
-| Safe Room: Draw Calls 3D / UI | 120 / 100 | 75 / 95 | **76 / 84** | 46 / 86 | 44 / 84 |
+| Kampf: Materialien (Bosse) | 24 | 28 ✗ | **20** | 21 | 20 |
+| Safe Room: Draw Calls 3D / UI | 120 / 100 | 75 / 95 | **74 / 87** | 44 / 88 | 43 / 87 |
 | Safe Room: Physik-Körper | 0 | 3 ✗ | **0** | 0 | 0 |
-| RAM (Godot, Spitze im Kampf) | 400 MB | 255 MB | **265 MB** | 278 MB | 271 MB |
-| Etage 1 bauen, warm | 500 ms | 181 ms | **≈ 200 ms** | 229 ms | 222 ms |
+| RAM (Godot, Spitze im Kampf) | 400 MB | 255 MB | **218 MB** | 262 MB | 230 MB (VRAM 251 MB) |
+| Etage 1 bauen, warm | 500 ms | 181 ms | **242 ms** | – | – |
 | Router-Zyklen (20×), Wachstum | 0 | – | **0 Nodes, 0 Ressourcen** | | |
 | „ObjectDB instances leaked at exit“ | 0 | 6 (sporadisch) ✗ | **0** | | |
-| Erstes Bild nach Prozessstart (llvmpipe) | – | 3,0–3,1 s | **2,0–2,4 s** | | |
+| Erstes Bild nach Prozessstart (llvmpipe) | – | 3,0–3,1 s | 2,0–2,4 s (Phase C); heute 5,2–5,4 s auf einer anderen, geteilten Maschine — Basisstand gleich schnell, §3.5 | | |
 
 ✗ = über Budget. Dazu: Kampf-Lichter pro Mesh 4 auf der Arena-Geometrie (Fill + Back + 2 Show-Spots, nur high) und das Neon-
 Akzentlicht sind bewusst im Budget verankert (§8). Etagen-Aufbau „warm“ = Median aus 12 Neubauten (headless, `bench`), vorher/nachher
@@ -56,7 +58,13 @@ ohne Treiber), VRAM = `RENDER_VIDEO_MEM_USED`.
      nach 3 Physik-Frames; je Zone das Maximum jeder Größe, die schlechteste Einzelansicht und das Etagen-Maximum; `--cells`
      zusätzlich je Zelle.
    - **Kampf**: jede Begegnung von Etage 1 (Frames 20–30 nach Szenenstart = Eröffnung mit Kamerafahrt), danach die größte Begegnung
-     (meiste Gegner, Party Lv 4) und **beide Bosse** (Hausmeister, Rattenkönigin; Party Lv 7) als kompletter Auto-Kampf, jeder Frame.
+     (meiste Gegner, Party Lv 4) und **beide Bosse** (Hausmeister, Rattenkönigin) als kompletter Auto-Kampf, jeder Frame. Die
+     Boss-Läufe sollen die späten Phasen messen (Phasenwechsel, Zug der Königin, Haste) und müssen deshalb gewonnen werden: Party
+     Lv 10 mit der Vor-Boss-Ausrüstung des Full-Run-Bots (`perf_runner.BOSS_KIT`/`BOSS_ITEMS`: Feuerwehraxt, Warnweste,
+     Glücks-Fahrschein bzw. Siegel-Halsband, Samtcape, Glücks-Fahrschein; Werbepflaster, Riechsalz, KRAWUMM-Dose, Elixier).
+     Die Probe **verlangt VICTORY**: jeder andere Ausgang ist eine Überschreitung (`PERF: OVER BUDGET … kein Sieg — die späten
+     Phasen sind nicht gemessen`). Seit dem Boss-Balancing (`ce2f980`, Königin STR 26 → 52) verlor die alte Probe (Lv 7 ohne
+     Ausrüstung) die Königin nach 91 Frames und maß ihre späten Phasen nicht mehr.
    - **Safe Room**: die drei Safe Rooms von Etage 1, je 30 Frames.
    - **Router-Zyklen** (`leak`): 20 × Erkundung (neu gebaut) → Kampf → Safe Room → zurück über den echten `Router`.
 3. Je Zeile Status gegen 02_TECH §12.1; letzte Zeilen `PERF: OK|OVER BUDGET (…)` und `LEAK: OK|GROWTH …`.
@@ -78,7 +86,7 @@ umgerechnet, wo das möglich ist).
 
 ---
 
-## 3. Messwerte nachher
+## 3. Messwerte (Nachmessung 2026-10-10)
 
 Alle Werte: Maximum über die gemessenen Frames. „DC 3D“ = sichtbarer Pass + Schattenpass (Compatibility rendert die Sonnen-
 Schatten im selben Pass, daher „+ 0“; Mobile zählt ihn getrennt, §3.4). Status gegen 02_TECH §12.1: überall **OK**.
@@ -87,70 +95,86 @@ Schatten im selben Pass, daher „+ 0“; Mobile zählt ihn getrennt, §3.4). St
 
 | Zone (Zellen) | meiste DC in | DC gesamt max (Ø) | DC 3D | DC UI | Primitive | Omni aktiv (≤ 24 m) | Lichter/Mesh | Materialien | Körper stat./kin. (Areas) | RAM MB |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| zone_cellar (7) | (4, 0) normal, 2 Gegner | 166 (133) | 83 | 79 | 41 112 | 4 (5) | 2 | 14 | 4 / 19 (27) | 134 |
-| zone_office (1) | (5, 0) Viertelboss, 1 Gegner | 160 (152) | 77 | 78 | 40 888 | 2 (2) | 1 | 10 | 4 / 19 (27) | 134 |
-| zone_platform (8) | (1, 4) normal, 3 Gegner | 181 (132) | 112 | 69 | 47 332 | 4 (5) | 2 | 16 | 4 / 19 (27) | 135 |
-| zone_sewer (9) | (3, 4) normal, 3 Gegner | 153 (129) | 84 | 69 | 40 452 | 4 (5) | 2 | 18 | 4 / 19 (27) | 135 |
-| zone_throne (1) | (0, 0) Etagenboss, 1 Gegner | 155 (138) | 72 | 78 | 47 330 | 2 (3) | 2 | 15 | 4 / 19 (27) | 134 |
-| zone_track9 (5) | (1, 0) Treppe, 3 Gegner | 186 (155) | 101 | 83 | 47 690 | 4 + 1 Neon | 2 | 21 | 4 / 19 (27) | 134 |
-| **Schlechtester Raum mit Gegnern** | (1, 0) Treppe, 3 Gegner | **186** (149) | 98 | 83 | 47 690 | 4 + 1 Neon | 2 | 21 | 4 / 19 (27) | 134 |
-| **Etage gesamt** | | 186 | **112** / 150 | **83** / 100 | 47 690 / 120 000 | 4 + 1 Neon / 4 + 1 | **2** / 3 | **21** / 24 | **23** / 40 | 135 / 400 |
+| zone_cellar (7) | (4, 0) normal, 2 Gegner | 168 (139) | 83 | 81 | 41 310 | 4 (5) | 2 | 14 | 4 / 19 (27) | 136 |
+| zone_office (1) | (5, 0) Viertelboss, 1 Gegner | 162 (153) | 77 | 80 | 41 086 | 2 (2) | 1 | 10 | 4 / 19 (27) | 136 |
+| zone_platform (8) | (1, 3) normal, 3 Gegner | 194 (137) | 112 | 81 | 47 412 | 4 (5) | 2 | 16 | 4 / 19 (27) | 136 |
+| zone_sewer (9) | (3, 3) normal, 1 Gegner | 163 (135) | 88 | 81 | 43 374 | 4 (5) | 2 | 18 | 4 / 19 (27) | 136 |
+| zone_throne (1) | (0, 0) Etagenboss, 1 Gegner | 155 (140) | 72 | 78 | 47 412 | 2 (3) | 2 | 15 | 4 / 19 (27) | 135 |
+| zone_track9 (5) | (1, 0) Treppe, 3 Gegner | 188 (156) | 101 | 85 | 47 868 | 4 + 1 Neon | 2 | 21 | 4 / 19 (27) | 136 |
+| **Schlechteste Einzelansicht** | (1, 3) normal, 3 Gegner | **194** (166) | 108 | 81 | 42 270 | 3 (3) | 2 | 16 | 4 / 19 (27) | 136 |
+| **Etage gesamt** | | 194 | **112** / 150 | **85** / 100 | 47 868 / 120 000 | 4 + 1 Neon / 4 + 1 | **2** / 3 | **21** / 24 | **23** / 40 | 136 / 400 |
 
 Je-Zelle-Tabelle: `tools/perf.sh --cells`. Schlechteste Zelle in jeder Größe ist ein Raum mit 3 sichtbaren Gegnern; die Treppe
-(1, 0) hat zusätzlich das Neon-Akzentlicht (§8).
+(1, 0) hat zusätzlich das Neon-Akzentlicht (§8; die Probe zählt es als fünftes Omni der Zone).
 
 ### 3.2 Kampf — Compatibility, Quality high
 
-Eröffnung aller 17 normalen Begegnungen von Etage 1 (Frames 20–30): DC gesamt 188–270, **DC 3D 61–128**, **DC UI 122–165**,
-Primitive 29 087–45 855, Omni 2 + 2 Show-Spots, Lichter/Mesh 4 (Arena-Geometrie in Fill + Back + 2 Spots, §8), Materialien 14–19,
-Label3D ≤ 8, Partikel ≤ 56 in ≤ 5 Emittern, keine Körper.
+Eröffnung aller 17 normalen Begegnungen von Etage 1 (Frames 20–30): DC gesamt 183–263, **DC 3D 55–126**, **DC UI 124–158**,
+Primitive 32 009–48 171, Omni 2 + 2 Show-Spots, Lichter/Mesh 4 (Arena-Geometrie in Fill + Back + 2 Spots, §8), Materialien 14–20,
+Label3D ≤ 7, Partikel ≤ 57 in ≤ 5 Emittern, keine Körper.
 
-| Kompletter Auto-Kampf | Frames | DC gesamt max (Ø) | DC 3D | DC UI | Primitive | Omni / Spot | Lichter/Mesh | Materialien | Partikel (Emitter) | RAM MB |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| enc_f1_d2 (größte Begegnung, 4 Gegner) | 132 | 279 (205) | 130 | 148 | 53 446 | 2 / 2 | 4 | 18 | 42 (4) | 256 |
-| enc_f1_boss_hausmeister | 155 | 242 (192) | 105 | 140 | 49 174 | 2 / 2 | 4 | 20 | 50 (4) | 258 |
-| enc_f1_boss_rattenkoenigin | 298 | 255 (173) | 120 | 152 | 54 798 | 2 / 2 | 4 | 21 | 34 (3) | 265 |
-| **Budget** | | | 150 | 180 | 120 000 | 2 / 2 | 3 (+1 Spots) | 24 | 400 (6) | 400 |
+| Kompletter Auto-Kampf | Frames | Ausgang | DC gesamt max (Ø) | DC 3D | DC UI | Primitive | Omni / Spot | Lichter/Mesh | Materialien | Partikel (Emitter) | RAM MB |
+|---|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| enc_f1_d2 (größte Begegnung, 4 Gegner, Party Lv 4) | 132 | VICTORY | 278 (205) | 131 | 148 | 56 114 | 2 / 2 | 4 | 18 | 42 (4) | 215 |
+| enc_f1_boss_hausmeister (Party Lv 10 + Kit) | 74 | VICTORY | 236 (201) | 105 | 145 | 51 940 | 2 / 2 | 4 | 17 | 40 (3) | 215 |
+| enc_f1_boss_rattenkoenigin (Party Lv 10 + Kit) | 82 | VICTORY | 284 (184) | 133 | 158 | 66 533 | 2 / 2 | 4 | 20 | 40 (3) | 217 |
+| **Budget** | | VICTORY | | 150 | 180 | 120 000 | 2 / 2 | 3 (+1 Spots) | 24 | 400 (6) | 400 |
 
 ### 3.3 Safe Room — Compatibility, Quality high
 
 | Raum | DC gesamt max (Ø) | DC 3D | DC UI | Primitive | Omni | Lichter/Mesh | Materialien | Körper |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| sr_kiosk | 164 (157) | 75 | 84 | 27 976 | 3 | 3 | 14 | 0 |
-| sr_pumphouse | 144 (143) | 75 | 64 | 27 896 | 3 | 3 | 14 | 0 |
-| sr_signalbox | 145 (144) | 76 | 64 | 29 774 | 3 | 3 | 15 | 0 |
+| sr_kiosk | 165 (155) | 73 | 87 | 27 912 | 3 | 3 | 14 | 0 |
+| sr_pumphouse | 147 (144) | 73 | 69 | 27 792 | 3 | 3 | 14 | 0 |
+| sr_signalbox | 146 (145) | 74 | 68 | 29 758 | 3 | 3 | 15 | 0 |
 | **Budget** | | 120 | 100 | 60 000 | 3 | 3 | 16 | 0 |
 
 ### 3.4 Quality low (Mobil-Standard) und Mobile-Renderer
 
 | | Compatibility low | Mobile (Vulkan) high | Budget |
 |---|---|---|---|
-| Erkundung: DC 3D / UI max | 54 / 83 | 32 + 36 Schatten / 81 | 150 / 100 |
-| Erkundung: Primitive max | 27 982 | 47 654 | 120 000 |
+| Erkundung: DC 3D / UI max | 58 / 85 | 32 + 36 Schatten / 85 | 150 / 100 |
+| Erkundung: Primitive max | 28 120 | 48 760 | 120 000 |
 | Erkundung: Omni aktiv / Lichter pro Mesh | 2 / 1 | 4 + 1 Neon / 2 | low 2 · high 4 + 1 / 3 |
-| Erkundung: Materialien / Körper | 20 / 23 | 21 / 23 | 24 / 40 |
-| Kampf-Eröffnungen (17): DC 3D / UI | 20–88 / 131–179 | 37–81 / 122–165 | 150 / 180 |
-| Kampf komplett (größte, Hausmeister, Königin): DC 3D | 118 / 62 / 99 | 84 / 69 / 101 | 150 |
-| … DC UI | 156 / 140 / 156 | 148 / 140 / 152 | 180 |
+| Erkundung: Materialien / Körper | 21 / 23 | 21 / 23 | 24 / 40 |
+| Kampf-Eröffnungen (17): DC 3D / UI | 38–72 / 134–170 | 35–76 / 124–156 | 150 / 180 |
+| Kampf komplett (größte¹, Hausmeister, Königin): DC 3D | 58 / 60 / 96 | 88 + 30 / 37 + 30 / 73 + 33 | 150 |
+| … Frames, Ausgang | 42 / 76 / 88, alle VICTORY | 43 / 74 / 82, alle VICTORY | VICTORY |
+| … DC UI | 143 / 155 / 158 | 134 / 142 / 158 | 180 |
 | … Omni / Spot · Lichter pro Mesh | 2 / 0 · 2 | 2 / 2 · 4 | 2 / 2 (high) · 3 (high Arena 4) |
-| … Materialien | 17 / 21 / 23 | 18 / 19 / 22 | 24 |
-| … Partikel (Emitter) | ≤ 83 (6) | ≤ 66 (3) | 400 (6) |
-| Safe Room: DC 3D / UI · Omni · Lichter pro Mesh | 45–46 / 82–86 · 2 · 2 | 43–44 / 64–84 · 3 · 3 | 120 / 100 · 3 · 3 |
-| RAM max | 278 MB | 271 MB (VRAM 290 MB) | 400 MB |
-| Etage 1 bauen kalt / warm | 300 / 229 ms | 520 / 222 ms (kalt = erste Pipeline-Kompilierung in lavapipe) | 500 ms |
+| … Materialien | 19 / 18 / 21 | 17 / 17 / 20 | 24 |
+| … Partikel (Emitter) | ≤ 78 (4) | ≤ 58 (5) | 400 (6) |
+| Safe Room: DC 3D / UI · Omni · Lichter pro Mesh | 43–44 / 86–88 · 2 · 2 | 26–27 + 16 / 69–87 · 3 · 3 | 120 / 100 · 3 · 3 |
+| RAM max | 262 MB | 230 MB (VRAM 251 MB) | 400 MB |
 
-Mobile zählt den Sonnen-Schattenpass getrennt (Compatibility rendert ihn im Hauptpass); die 3D-Draw-Calls liegen dort trotzdem bei
-weniger als der Hälfte des Budgets. Quality low (Mobil-Standard) halbiert die Primitive (keine Schatten, kein Glow, Skalierung 0,7).
+¹ „größte Begegnung“ = meiste Gegner, bei Gleichstand die meisten Draw Calls der Eröffnung — je Lauf neu bestimmt: high
+`enc_f1_d2`, low `enc_f1_b1`, Mobile `enc_f1_a2`. Aufbauzeiten low/Mobile: Phase-C-Werte in §6 (heute nicht erneut gemessen).
 
-### 3.5 Nachmessung nach dem Zusammenführen mit dem Visual-Pass und dem Full-Run-Bot
+Mobile zählt den Sonnen-Schattenpass getrennt (Compatibility rendert ihn im Hauptpass); die 3D-Draw-Calls liegen dort in der
+Erkundung trotzdem bei weniger als der Hälfte des Budgets, im Kampf bei ≤ 118 von 150. Quality low (Mobil-Standard) halbiert die Primitive (keine Schatten, kein Glow, Skalierung 0,7).
 
-`tools/perf.sh` (Compatibility high, llvmpipe) auf dem zusammengeführten Stand (Phase C + Visual-Pass `ptd/int-visual` + int-cr /
-int-play): **`PERF: OK`, `LEAK: OK`**. Erkundung DC 3D max 112, UI 83, Omni 4 + 1, Lichter/Mesh 2, Materialien 21, Körper
-4 statisch / 19 kinematisch; Kampf-Eröffnungen DC 3D 55–126, **UI 122–167** (Tutorial-Kampf mit M.O.D.-Box zwischen den
-reservierten Ecken), Primitive max 48 315; komplette Kämpfe DC 3D ≤ 131, UI ≤ 151, Primitive max 66 493 (Rattenkönigin; die
-Publikumstribüne des Visual-Pass liegt in der einen Arena-Geometrie: +≈ 2 500 Tris, kein zusätzlicher Draw Call), Materialien ≤ 21;
-Safe Rooms DC 3D 73–74 / UI 64–84, 0 Körper. Erstes Bild 2,3 s; Etage 1 bauen 281 ms warm; 20 Router-Zyklen ohne Wachstum.
-Der Full-Run-Bot (`--autoplay=full`) wird wie der Smoke-Treiber erst mit dem Argument geladen (§4.6).
+### 3.5 Nachmessungen
+
+**2026-10-10, Branch `ptd/final-a`** (nach Boss-Balancing `ce2f980`, Sponsor-Fenster und Abschluss-Review): `tools/perf.sh`
+Compatibility high (alle Abschnitte), Compatibility low und Mobile/Vulkan (Erkundung, Kampf, Safe Room) — überall **`PERF: OK`**,
+`LEAK: OK`. Die Tabellen in §1 und §3.1–§3.4 sind diese Messung. Unterschiede zur Phase-C-Messung:
+- **Boss-Läufe:** Die Probe spielt die Bosse jetzt mit Lv 10 und der Vor-Boss-Ausrüstung des Full-Run-Bots und verlangt VICTORY
+  (§2). Hausmeister 74 Frames, Königin 82 Frames, beide gewonnen (high; low 76 / 88, Mobile 74 / 82). Vorher (Lv 7 ohne
+  Ausrüstung) endete die Königin seit dem Boss-Balancing nach 91 Frames mit DEFEAT, die späten Phasen fehlten unbemerkt. Die
+  Königin bleibt die teuerste Kampfansicht: DC 3D 133 / 150, UI 158 / 180, Primitive 66 533, Materialien 20 / 24.
+- **Kampf-UI:** Eröffnungen high UI 124–158 (Phase C 122–165), low bis 170 (Phase C 179) — Abstand zum Budget 180 größer.
+- **RAM-Spitze** high 218 MB (Phase C 265 MB): weniger komplette Kampf-Frames, da die Bosse schneller fallen.
+- **Startzeiten:** Erstes Bild 5,2–5,4 s, Titel interaktiv 9,7 s (Phase C 2,0–2,4 s / 4,6–4,9 s). Die Messmaschine ist eine andere,
+  geteilte Container-Instanz (Last ≈ 3–4,5 auf 4 Kernen durch parallele Läufe); der Basisstand ohne die Änderungen dieses Branches
+  misst dort gleich (erstes Bild 5,2 s, Titel 9,9 s), also keine Regression. Zeiten sind nur auf derselben Maschine vergleichbar (§2).
+- **Aufbau** (high): Etage 1 kalt / warm 285 / 242 ms, Arena 175 / 49 ms, Boss-Arena 157 ms, Safe Room 80 / 14 ms — alle im Budget.
+- **Router-Zyklen** (20, high): Objekte +1 (ohne Cache-Einträge +0), Nodes +0, Ressourcen +0, RAM +0,2 MB.
+
+**Nach dem Zusammenführen mit dem Visual-Pass und dem Full-Run-Bot** (Phase C + `ptd/int-visual` + int-cr / int-play): `PERF: OK`,
+`LEAK: OK`; Erkundung DC 3D max 112, UI 83; Kampf-Eröffnungen DC 3D 55–126, UI 122–167; komplette Kämpfe DC 3D ≤ 131, UI ≤ 151,
+Primitive max 66 493 (die Publikumstribüne des Visual-Pass liegt in der einen Arena-Geometrie: +≈ 2 500 Tris, kein zusätzlicher
+Draw Call); Safe Rooms DC 3D 73–74 / UI 64–84; erstes Bild 2,3 s; Etage 1 bauen 281 ms warm. Der Full-Run-Bot (`--autoplay=full`)
+wird wie der Smoke-Treiber erst mit dem Argument geladen (§4.6).
 
 ---
 
@@ -279,10 +303,11 @@ nach vorherigem Durchlauf aller Etagen-Ansichten. Je Zyklus nach 4 Frames: Objek
 
 | Lauf | Objekte (ohne Caches) | Nodes | Ressourcen | verwaiste Nodes | RAM |
 |---|---:|---:|---:|---:|---:|
-| Compatibility high, Minimum Zyklen 2–6 → 16–20 | +22 (+11) | **+0** | **+0** | 0 | +4,5 MB (bis Zyklus 4, danach +0,3 MB über 16 Zyklen) |
+| Compatibility high, Minimum Zyklen 2–6 → 16–20 (2026-10-10) | +1 (+0) | **+0** | **+0** | 0 | +0,2 MB |
+| Compatibility high, Minimum Zyklen 2–6 → 16–20 (Phase C) | +22 (+11) | **+0** | **+0** | 0 | +4,5 MB (bis Zyklus 4, danach +0,3 MB über 16 Zyklen) |
 | headless, Minimum Zyklen 2–6 → 16–20 | +18 (+7) | **+0** | **+0** | 0 | +8,4 MB (bis Zyklus 6, danach +0,3 MB) |
 
-Urteil `LEAK: OK` in beiden Läufen. Die Node-Zahl schwankt nur um Toasts und Ticker-Einträge der Show-Leiste (`--leak-diff`: je Zyklus
+Urteil `LEAK: OK` in allen Läufen. Die Node-Zahl schwankt nur um Toasts und Ticker-Einträge der Show-Leiste (`--leak-diff`: je Zyklus
 ±2–12 Nodes unter `GlobalUi/Toasts` und `…/Ticker`), Ressourcen bleiben exakt gleich. Der RAM-Anstieg in den ersten Zyklen ist das
 einmalige Füllen der Caches (Sfx-Streams werden beim ersten Abspielen synthetisiert, Figuren-Meshes, Materialien), danach flach.
 
@@ -373,11 +398,12 @@ unter dem Budget. Auch der Mobil-Richtwert 1,5 s (Etage) ist mit Abstand eingeha
 
 - **Nur Software-Renderer gemessen.** FPS, Thermik, Akku und Shader-/Pipeline-Kompilierruckler (erste Effekte, erster Kampf) müssen
   auf den Referenzgeräten (Adreno 610 / Mali-G57, iPhone 11) gemessen werden; die Zählgrößen hier gelten 1:1, die Zeiten nicht.
-- **RAM je neuer Begegnung** im gerenderten Lauf ≈ +4 MB (renderer-seitig, §5.1, vor Phase C ebenso). Spitze 265–278 MB nach 20
-  verschiedenen Kämpfen ist unter 400 MB; ein Lauf über beide Etagen auf dem Gerät sollte das bestätigen.
-- **Kampf-UI nahe am Budget:** Tutorial-Kampf auf low bis 179 von 180 Canvas-DC (Tutorial-Hinweis + Befehlsmenü + Show-Leiste).
+- **RAM je neuer Begegnung** im gerenderten Lauf ≈ +4 MB (renderer-seitig, §5.1, vor Phase C ebenso). Spitze 218–278 MB nach 20
+  verschiedenen Kämpfen (2026-10-10: high 218, low 262, Mobile 230 MB) ist unter 400 MB; ein Lauf über beide Etagen auf dem Gerät sollte das bestätigen.
+- **Kampf-UI nahe am Budget:** Eröffnungen auf low bis 170 von 180 Canvas-DC (Phase C: Tutorial 179; Tutorial-Hinweis +
+  Befehlsmenü + Show-Leiste).
   Nächster Hebel: Ticker/Chat-Zeilen der Show-Leiste ohne Outline oder als ein Label.
-- **Materialien im Kampf:** Spitzen 21–23 von 24, wenn Sponsor-Drop, Status- und Skill-Effekte zusammenfallen. Nächster Hebel:
+- **Materialien im Kampf:** Spitzen 20–21 von 24 (Phase C 21–23), wenn Sponsor-Drop, Status- und Skill-Effekte zusammenfallen. Nächster Hebel:
   Status-Effekte (Glow/Hologramm je Status-Farbe) ebenfalls über Vertex-Farbe oder Instanz-Uniform tönen.
 - **Erste Erkundung** kompiliert jetzt hinter „Neues Spiel“ (+0,5 s, verdeckt von der Blende); auf langsamen Geräten ggf. eine
   Lade-Animation in der Blende oder das Kompilieren während der Logo-Karte im Hintergrund (`ResourceLoader.load_threaded_request`).

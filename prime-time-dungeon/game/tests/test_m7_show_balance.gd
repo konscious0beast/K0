@@ -10,7 +10,6 @@ extends TestCase
 ## level_up) and the lootboxes opened in the safe rooms. Measures followers, peak viewers, sponsor gifts, achievements,
 ## lootboxes and the hype at the start / end of each regular fight; the boss tests measure the loss rates at the GDD
 ## levels with the gifts as they occur (boss fight starting at the exploration floor with the bot's loadout).
-## Needs the real M1 core (as test_m7_balance) — skipped while it is a stub.
 
 const M7 := preload("res://tests/test_m7_balance.gd")
 const STUNTS: String = "stunts"
@@ -263,17 +262,9 @@ static func median(values: Array) -> float:
 	return float(s[n / 2]) if n % 2 == 1 else (float(s[n / 2 - 1]) + float(s[n / 2])) / 2.0
 
 
-func _stub_reason() -> String:
-	return str(_m7.call("_m1_stub_reason"))
-
-
 # --- tests ------------------------------------------------------------------------------------------------------------
 
 func test_season_is_deterministic() -> void:
-	var reason: String = _stub_reason()
-	if reason != "":
-		skip(reason)
-		return
 	var a: Dictionary = run_season(11, AUTO, PACE_HUMAN)
 	var b: Dictionary = run_season(11, AUTO, PACE_HUMAN)
 	assert_eq(a, b, "same seed + same data = same season")
@@ -281,10 +272,6 @@ func test_season_is_deterministic() -> void:
 
 ## GDD §13 bands, median over SEASON_SEEDS seasons of the reference player (auto battles, --pace=human, every group).
 func test_season_show_economy_in_gdd_bands() -> void:
-	var reason: String = _stub_reason()
-	if reason != "":
-		skip(reason)
-		return
 	var rows: Array[Dictionary] = _seasons(AUTO, PACE_HUMAN, SEASON_SEEDS)
 	var m: Dictionary = _medians(rows)
 	var info: String = " (season medians %s)" % str(m)
@@ -316,10 +303,6 @@ func test_season_show_economy_in_gdd_bands() -> void:
 ## keeps the hype between fights) earn more — by design — but within the caps: at most 1 gift per regular fight, 2 per
 ## boss.
 func test_season_extremes_stay_bounded() -> void:
-	var reason: String = _stub_reason()
-	if reason != "":
-		skip(reason)
-		return
 	var human: Dictionary = _medians(_seasons(AUTO, PACE_HUMAN, EXTREME_SEEDS))
 	for v: Array in [[STUNTS, PACE_HUMAN], [AUTO, PACE_FAST]]:
 		var rows: Array[Dictionary] = _seasons(str(v[0]), float(v[1]), EXTREME_SEEDS)
@@ -346,10 +329,6 @@ func test_season_extremes_stay_bounded() -> void:
 ## bot, 30 human-pace runs: median hype at the start 25 Hausmeister / 30 Königin). The bot's own first-try loss rates on
 ## the real game are in the GDD §13 table.
 func test_boss_loss_rates_with_gifts() -> void:
-	var reason: String = _stub_reason()
-	if reason != "":
-		skip(reason)
-		return
 	for enc_id: String in BOSS_WIN_BAND:
 		var hype0: float = BOSS_HYPE_START
 		var with_gifts: Dictionary = _boss_series(enc_id, hype0, true)

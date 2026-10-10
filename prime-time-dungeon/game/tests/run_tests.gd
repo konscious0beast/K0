@@ -1,12 +1,19 @@
 extends SceneTree
 ## Test runner (02_TECH §11.1). Contains NO class_name references and NO autoload identifiers (-s entry script).
-## Usage: godot --headless --path <game> -s res://tests/run_tests.gd [-- --filter=<substr> --verbose --root=<res://dir>]
+## Usage: godot --headless --path <game> -s res://tests/run_tests.gd [-- --filter=<substr> --verbose --root=<res://dir>
+##   --allow-skips]
 ## A test that raises a SCRIPT ERROR fails even if its asserts passed (counted by a Logger, so the exit code is
-## reliable without check.sh's output grep).
+## reliable without check.sh's output grep). Recorded failures win over a later skip(). A skip needs a deliberate
+## decision: it fails the run unless "<file> :: <method>" is in ALLOWED_SKIPS (with its reason) or --allow-skips is
+## given (local experiments) — a dead test can no longer hide as a quiet SKIP line.
 
 const TEST_ROOT: String = "res://tests"
 const SKIP_DIRS: PackedStringArray = ["res://tests/lib", "res://tests/fixtures"]
 const TEST_CASE_PATH: String = "res://tests/lib/test_case.gd"
+## "<file> :: <method>" → why this test may skip. Keep it empty in the real suite; only the runner self-test uses it.
+const ALLOWED_SKIPS: Dictionary = {
+	"test_selftest_cases.gd :: test_g_allowlisted_skip": "runner self-test (test_m0_harness): an allowlisted skip",
+}
 
 
 ## Counts SCRIPT ERRORs (runtime errors in GDScript). Thread-safe: the engine may log from other threads.
@@ -34,12 +41,15 @@ class _ScriptErrorCounter extends Logger:
 func _initialize() -> void:
 	var filter: String = ""
 	var verbose: bool = false
+	var allow_skips: bool = false
 	var test_root: String = TEST_ROOT
 	for a: String in OS.get_cmdline_user_args():
 		if a.begins_with("--filter="):
 			filter = a.trim_prefix("--filter=")
 		elif a == "--verbose":
 			verbose = true
+		elif a == "--allow-skips":
+			allow_skips = true
 		elif a.begins_with("--root="):
 			test_root = a.trim_prefix("--root=")      # harness self-test runs fixture tests (test_m0_harness)
 	await process_frame                                   # autoloads ready (DB loaded)
@@ -100,6 +110,13 @@ func _initialize() -> void:
 				# A SCRIPT ERROR aborted (part of) the test: asserts after it never ran → never a pass or a skip.
 				failures.insert(0, "SCRIPT ERROR (%d, see log above)" % crashed)
 				skip_reason = ""
+			if failures.is_empty() and skip_reason != "" and not allow_skips \
+					and not ALLOWED_SKIPS.has("%s :: %s" % [file_name, method]):
+				failures.append("skipped (%s) but not in run_tests.gd ALLOWED_SKIPS — fix the test or allowlist it"
+					% skip_reason)
+				skip_reason = ""
+			if not failures.is_empty():
+				skip_reason = ""                          # failures recorded before skip() win
 			if skip_reason != "":
 				skipped += 1
 				print("[SKIP] %s :: %s — %s" % [file_name, method, skip_reason])

@@ -36,7 +36,7 @@ func say(text: String) -> void:
 	status.emit(text)
 
 
-# --- helpers -----------------------------------------------------------------------------------------------------------
+# --- helpers ----------------------------------------------------------------------------------------------------------
 
 static func first_focusable(root: Node) -> Control:
 	for c: Node in root.get_children():

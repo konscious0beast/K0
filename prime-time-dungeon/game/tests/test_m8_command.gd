@@ -22,8 +22,8 @@ const VALID: Array[Dictionary] = [
 	{"t": "safe_room_exit"},
 	{"t": "scene", "id": "scn_mop_1"},
 	{"t": "flag", "key": "intro_seen", "value": true},
-	{"t": "flag", "key": "count", "value": 3},
-	{"t": "flag", "key": "name", "value": "Kai"},
+	{"t": "flag", "key": "intro_seen", "value": 3},
+	{"t": "flag", "key": "intro_seen", "value": "Kai"},
 	{"t": "difficulty", "to": "vorabend"},
 	{"t": "sponsor_window", "op": "dev_open", "sec": 60, "slots": 3},
 	{"t": "descend"},
@@ -91,9 +91,11 @@ func test_invalid_commands() -> void:
 		[{"t": "gate", "key": "3;5;S"}, "gate: key"],
 		[{"t": "room", "cell": [1]}, "room: cell"],
 		[{"t": "room", "cell": [1, 0.5]}, "room: cell"],
-		[{"t": "flag", "key": "x"}, "flag: missing 'value'"],
-		[{"t": "flag", "key": "x", "value": 0.5}, "flag: value"],
-		[{"t": "flag", "key": "x", "value": [1]}, "flag: value"],
+		[{"t": "flag", "key": "intro_seen"}, "flag: missing 'value'"],
+		[{"t": "flag", "key": "intro_seen", "value": 0.5}, "flag: value"],
+		[{"t": "flag", "key": "intro_seen", "value": [1]}, "flag: value"],
+		[{"t": "flag", "key": "live", "value": 0}, "flag: key 'live' is not a player flag"],
+		[{"t": "flag", "key": "mop_pep_talk", "value": true}, "flag: key 'mop_pep_talk'"],
 		[{"t": "difficulty", "to": "hard"}, "difficulty: to"],
 		[{"t": "gift"}, "gift: gift must be"],
 		[{"t": "gift", "gift": {"schema": 1}}, "gift: invalid_schema"],
@@ -161,3 +163,29 @@ func test_commands_recorded_by_game_are_valid() -> void:
 	Game.run_log = null
 	Game.sim = null
 	Game.in_battle = false
+
+
+## quality-12: a new command type needs a case in BOTH dispatchers — RunSim.apply (core verifier) and the Game replay
+## engine (GameReplay._cmd / _apply) — the recording side is Command.TYPES. Source scan of the match cases.
+func test_every_command_type_has_both_dispatchers() -> void:
+	var sim_body: String = _func_body("res://core/live/run_sim.gd", "func apply(")
+	var replay_body: String = _func_body("res://autoload/game_replay.gd", "func _cmd(") \
+		+ _func_body("res://autoload/game_replay.gd", "func _apply(")
+	assert_gt(sim_body.length(), 100)
+	assert_gt(replay_body.length(), 100)
+	for t: String in Command.TYPES:
+		assert_true(sim_body.contains("\"%s\":" % t), "RunSim.apply handles '%s'" % t)
+		assert_true(replay_body.contains("\"%s\":" % t), "GameReplay handles '%s'" % t)
+
+
+## Source of one function: from `header` up to the next top-level func.
+func _func_body(path: String, header: String) -> String:
+	var src: String = FileAccess.get_file_as_string(path)
+	var start: int = src.find(header)
+	if start < 0:
+		return ""
+	var end: int = src.find("\nfunc ", start + header.length())
+	var end_static: int = src.find("\nstatic func ", start + header.length())
+	if end < 0 or (end_static >= 0 and end_static < end):
+		end = end_static
+	return src.substr(start, (end - start) if end >= 0 else -1)

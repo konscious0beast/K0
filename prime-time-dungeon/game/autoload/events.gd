@@ -55,7 +55,8 @@ signal hype_changed(hype: float, delta: float, reason: StringName)
 signal achievement_unlocked(achievement_id: String)
 signal milestone_reached(milestone_id: String)
 signal sponsor_gift_triggered(sponsor_id: String)
-signal mod_said(text: String, voice: StringName, tag: String, blocking: bool)   # voice: &"mod", &"mopsula", &"kai", &"chat"
+# voice: &"mod", &"mopsula", &"kai", &"chat"
+signal mod_said(text: String, voice: StringName, tag: String, blocking: bool)
 signal dialog_finished(tag: String)                      # emitted by ModDialog when a line is done/dismissed
 signal chat_posted(user: String, text: String, mood: StringName)  # mood: &"hype", &"neutral", &"bored"
 

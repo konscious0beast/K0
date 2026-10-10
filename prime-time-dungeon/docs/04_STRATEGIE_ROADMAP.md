@@ -11,7 +11,8 @@
 >   Nichts in diesem Dokument ist Rechts- oder Steuerberatung.
 > - **Schätzung** = Planungswerte (Budgets, Dauern, Wishlists). Sie sind bewusst konkret, damit man sie messen und korrigieren kann.
 >
-> Stand: 2026-10-07. Phase 0 abgeschlossen; dieses Repo arbeitet an Phase 1 → Phase 2 (Vertical Slice).
+> Stand: 2026-10-10. Phase 0 abgeschlossen; Phase 1 (Grey-Box-Loop) und der technische Teil von Phase 2 (Etage 1 spielbar,
+> SHOWRUN S0) sind gebaut; offen sind die Exit-Punkte von Phase 2 (Kap. 3.4, Stand in Kap. 10.1).
 
 ---
 
@@ -277,7 +278,7 @@ Dauer-Faktoren: Szenario A (Solo + KI durchgehend) **× 1,8**; Szenario C (Team 
 |---|---|
 | **Ergebnis** | `00_BRIEF.md` (verbindlich), `01_GDD.md`, `02_TECH.md`, `03_ART.md`, `04_STRATEGIE_ROADMAP.md`, `05_LIVE_MODUS.md`, `tools/check.sh` |
 | **DoD** | Alle Systeme des Slice haben Zahlen, Datenfelder, Dateibesitzer; Architekturverträge (Autoloads, Ordner, Modul-APIs) festgelegt; Godot-APIs gegen 4.7.2 geprüft |
-| **Offen** | Änderungsanträge CR-1…CR-10 aus 05 Kap. 11.6 in `02_TECH.md` einarbeiten (Schritt 1 in Kap. 10) |
+| **Erledigt** | Änderungsanträge CR-1…CR-15 aus 05 Kap. 11.6 sind in `02_TECH.md` eingearbeitet und umgesetzt (Schritt 1 in Kap. 10) |
 
 ### 3.3 Phase 1 — Prototyp (Grey Box) — 2–4 Wochen
 
@@ -784,7 +785,7 @@ Verifikation vor jedem Push. Godot-Binary: 4.7.2-stable (lokal installiert; in C
 
 | # | Schritt | Was ich tue | Gate (muss grün sein, bevor es weitergeht) |
 |---|---|---|---|
-| **1** | **Docs konsolidieren** | Änderungsanträge CR-1…CR-10 aus 05 Kap. 11.6 in `02_TECH.md` einarbeiten (Signale, `receive_gift`, `time_left_ms`, Modul M8); Widersprüche Brief ↔ GDD ↔ TECH ↔ ART ↔ LIVE auflisten und nach Brief-Vorrang auflösen | Keine offenen Widersprüche; Dateibesitz für **jede** Datei eindeutig (02_TECH §1) |
+| **1** | **Docs konsolidieren** | Änderungsanträge CR-1…CR-10 aus 05 Kap. 11.6 in `02_TECH.md` einarbeiten (Signale, `receive_gift`, `time_left_ticks`, Modul M8); Widersprüche Brief ↔ GDD ↔ TECH ↔ ART ↔ LIVE auflisten und nach Brief-Vorrang auflösen | Keine offenen Widersprüche; Dateibesitz für **jede** Datei eindeutig (02_TECH §1) |
 | **2** | **M0 Fundament** (Phase A, allein) | `project.godot` (§2), Input-Map, 7 Autoloads + `GameSettings`/`SfxSynth`, `GameData`/`DataValidator`/`JsonUtil`/`SeedUtil` + Defs, Test-Harness (`run_tests.gd`, `test_case.gd`, `capture.gd`), `UiTheme`, **Stubs aller Modul-Dateien** mit exakten Signaturen, minimale `data/*.json`, Fixtures, `export_presets.cfg`, CI-Workflow `ptd-check.yml` | `GODOT=<godot> tools/check.sh --tests-only` grün; `test_m0_compile_all` lädt jede Datei |
 | **3** | **Module M1–M7 parallel** (Phase B) | Je Modul ein eigener Arbeitsstrang (Sub-Agent), der **nur seine Dateien** ersetzt: **M1** Kampf-Logik (CTB, Formeln, Status, KI, `ActionEvent`) · **M2** Show/Loot/Progression/Save · **M3** Dungeon-Generator + Erkundungsszene · **M4** Art-Kit (Shader, Figuren, Umgebung, VFX, Galerien) · **M5** Kampf-Darstellung (Bühne, Kamera, HUD, CTB-Leiste, Ergebnis) · **M6** UI & Meta-Szenen (Boot, Titel, Intro, Safe Room, Overlay, Menüs, Touch, Autoplay) · **M7** Datensätze Etage 1 (GDD-Zahlen) | Pro Modul: eigene Pflicht-Tests (02_TECH §11.5) grün mit `check.sh --tests-only`; **Diff-Prüfung**: keine Änderung an fremden Dateien (sonst Änderungsantrag) |
 | **4** | **Zusammenführen** | Reihenfolge nach Abhängigkeit: **M7 → M1 → M2 → M3 → M4 → M5 → M6**; nach **jedem** Merge kompletter Testlauf | `check.sh --tests-only` nach jedem Merge grün |
@@ -794,6 +795,23 @@ Verifikation vor jedem Push. Godot-Binary: 4.7.2-stable (lokal installiert; in C
 | **8** | **Review-Schleife** | Code-Review je Modul (Korrektheit, statische Typisierung, Verträge, Schichtregeln 02_TECH §0.4), Integrations-Checkliste 02_TECH §14 Punkt für Punkt, Docs-Abgleich (Code ↔ GDD-Zahlen); Funde beheben → zurück zu Schritt 7. **Maximal 3 Runden**; was danach offen ist, kommt als Liste zu dir | 0 offene Befunde der Schwere „Bug“; Rest dokumentiert |
 | **9** | **Commit & Push** | Commits je Modul/Schritt mit klaren Nachrichten, Push auf den Arbeitszweig; CI-Workflow `ptd-check` muss dort grün laufen (Screenshots als Artefakt) | CI grün |
 | **10** | **Übergabe an dich** | Kurzbericht: was läuft, Screenshots, bekannte Lücken, **Anleitung zum Selbstspielen** (Godot 4.7.2 öffnen → `prime-time-dungeon/game/project.godot` → F5; Tastatur/Gamepad-Belegung), Playtest-Fragebogen für Phase-2-Tests | — |
+
+**Stand 2026-10-10** (Branch `ptd/final-a`):
+
+| # | Stand |
+|---|---|
+| 1 | erledigt — CR-1…CR-15 eingearbeitet und umgesetzt; Dateibesitz in 02_TECH §1 (inkl. aller Tests, §1.7) |
+| 2–4 | erledigt — M0–M7 implementiert und zusammengeführt, alle Stubs ersetzt (02_TECH §0.2) |
+| 5 | erledigt — Meilenstein M-P1: `tools/check.sh` grün inkl. `AUTOPLAY: OK` |
+| 6 | erledigt — SHOWRUN-Hooks M8 inkl. Sponsor-Fenster, Verifier (`RunSim.replay`, `Game.replay_log`) mit `errors`-Vertrag |
+| 7 | erledigt — Tests (~830), Screenshots (`docs/screenshots/`), Full-Run-Bot in 3 Strategien, Performance-Probe `PERF: OK` (`docs/PERFORMANCE.md`), Balancing GDD §13 |
+| 8 | erledigt — Review-Runden inkl. Abschluss-Review (core-logic, live-integrity, docs-truth, quality); Befunde behoben |
+| 9 | erledigt — CI `ptd-check` (Import, Tests, Smoke, Full-Run, Screenshots, Exports) |
+| 10 | teilweise — Anleitung zum Selbstspielen: `prime-time-dungeon/README.md`; offen: Playtest-Fragebogen |
+
+**Offen für den Exit von Phase 2** (Kap. 3.4): 15 externe Playtests, Performance-Budgets auf PC-iGPU und einem echten
+Android-Mittelklassegerät, Distanz-Review (E2), Titel-Entscheidung (E3), Gameplay-Video, Android-Debug-APK; dazu
+sichtbare Ausrüstung (03_ART A8) und die Plattform-Matrix der Stufe S0 (05 Kap. 2).
 
 ### 10.2 Abhängigkeiten der Module (warum parallel möglich ist)
 

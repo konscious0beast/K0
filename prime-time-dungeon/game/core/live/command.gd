@@ -1,12 +1,11 @@
 class_name Command extends RefCounted
 ## Schema check of recorded commands (02_TECH §3.4 "t" types, 05 §10.6). Commands are the "Befehle rein" half of the
 ## live contract (Brief §6b.2): plain JSON dictionaries; after a JSON round trip every number is a float, so integer
-## fields accept integral floats.
-## Shapes recorded by Game: floor {"floor"}, encounter {"enc", "adv", "group"}, battle {"cmd", "auto"},
-## lootbox {"box"}, buy {"item", "qty", "safe_room"}, sell {"item", "qty"}, equip {"member", "slot", "item"},
-## use_item {"item", "member"}, rest {}, event {"id", "choice"}, chest {"id"}, gate {"key"}, room {"cell": [x, y]},
-## safe_room {"id"}, safe_room_exit {}, scene {"id"}, flag {"key", "value"}, difficulty {"to"}, descend {},
-## gift {"gift"} (external input, cmd id 0), sponsor_window {"op": "dev_open", "sec", "slots"} (QA Sponsor-Fenster,
+## fields accept integral floats. Shapes recorded by Game: floor {"floor"}, encounter {"enc", "adv", "group"}, battle
+## {"cmd", "auto"}, lootbox {"box"}, buy {"item", "qty", "safe_room"}, sell {"item", "qty"}, equip {"member", "slot",
+## "item"}, use_item {"item", "member"}, rest {}, event {"id", "choice"}, chest {"id"}, gate {"key"}, room {"cell": [x,
+## y]}, safe_room {"id"}, safe_room_exit {}, scene {"id"}, flag {"key" ∈ FLAG_KEYS, "value"}, difficulty {"to"}, descend
+## {}, gift {"gift"} (external input, cmd id 0), sponsor_window {"op": "dev_open", "sec", "slots"} (QA Sponsor-Fenster,
 ## SponsorWindows.dev_open, 05 §6.13).
 ## battle.cmd = BattleCommand.to_dict(): {"kind": attack|skill|stunt|item|defend|flee, "actor", "skill", "item",
 ## "targets": [String]}. Additional unknown fields are allowed (additive protocol versions, 05 §4.3).
@@ -19,6 +18,9 @@ const SPONSOR_WINDOW_OPS: PackedStringArray = ["dev_open"]
 const EXTERNAL: PackedStringArray = ["gift", "twist"]
 const EQUIP_SLOTS: PackedStringArray = ["weapon", "armor", "accessory"]
 const DIFFICULTIES: PackedStringArray = ["prime", "vorabend"]
+## Flag keys a player command may set (Game.set_flag: only the intro). Every other flag is a reaction of the core
+## (scene_*, defeated_*, title_*, mop_pep_talk, "live" — the gift counters) and never a recorded write (05 §11.4).
+const FLAG_KEYS: PackedStringArray = ["intro_seen"]
 const ADVANTAGE_MAX: int = 2           # BattleSetup.Advantage NORMAL 0 / PREEMPTIVE 1 / AMBUSH 2
 
 static var _gate_key: RegEx = null
@@ -92,6 +94,8 @@ static func _validate_fields(t: String, d: Dictionary) -> String:
 			var e5: String = _id(d, "key")
 			if e5 != "":
 				return e5
+			if not FLAG_KEYS.has(str(d["key"])):
+				return "key '%s' is not a player flag (%s)" % [str(d["key"]), ", ".join(FLAG_KEYS)]
 			if not d.has("value"):
 				return "missing 'value'"
 			var v: Variant = d["value"]

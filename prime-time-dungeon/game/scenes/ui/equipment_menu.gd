@@ -1,7 +1,7 @@
 extends "res://scenes/ui/menu_base.gd"
 ## Pause tab / safe room "Ausrüstung" (02_TECH §1.6, GDD §10.1): member tabs, three slots, candidate list (inventory
-## items of the slot type the member may wear + "Ablegen") with stat preview (green/red), Game.equip(member, slot, item).
-## Layout: slots | candidates | stat column (full stat names, same as the party page).
+## items of the slot type the member may wear + "Ablegen") with stat preview (green/red), Game.equip(member, slot,
+## item). Layout: slots | candidates | stat column (full stat names, same as the party page).
 
 var member_id: String = "kai"
 var slot: String = ""                 # "" = slot level, else candidate level

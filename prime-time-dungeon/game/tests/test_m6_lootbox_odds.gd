@@ -1,7 +1,8 @@
 extends TestCase
 ## Published lootbox odds (GDD §9.3, 02_TECH §6.1 LootRoller rules) — the numbers the lootbox screen shows must match
-## the roll rules: per-roll weights, "at least one" chances over all rolls, the guarantee forcing the LAST roll to exactly
-## the guarantee rarity, pity forcing the FIRST roll (epic before rare). Uses fixture boxes (independent of M7 data).
+## the roll rules: per-roll weights, "at least one" chances over all rolls, the guarantee forcing the LAST roll to
+## exactly the guarantee rarity, pity forcing the FIRST roll (epic before rare). Uses fixture boxes (independent of M7
+## data).
 
 const Odds := preload("res://scenes/safe_room/lootbox_odds.gd")
 const LIMITS: Dictionary = {"rare": 4, "epic": 8}

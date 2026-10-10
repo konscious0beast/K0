@@ -1,14 +1,11 @@
 extends TestCase
-## Autoplay driver (02_TECH §11.4): stub detection (missing or "# STUB(M0)" first line), the step table budgets, the
-## skip path ("AUTOPLAY: SKIPPED (stub)" after boot_to_title while modules are stubs) in dry-run mode (no quit, no
-## print), the safe room choice, and the boot arguments.
+## Autoplay driver (02_TECH §11.4): the step table budgets, the dry run (no quit, no print) past boot_to_title (there
+## is no skip path: check.sh requires "AUTOPLAY: OK"), the watchdog, the safe room choice and the boot arguments.
 
 const AutoplayScript := preload("res://scenes/boot/autoplay.gd")
 const TitleFlow := preload("res://scenes/title/title_flow.gd")
 const ROUTER_FIXTURE: String = "res://tests/fixtures/router/router_screen.tscn"
 const SCENE_TITLE: String = "res://scenes/title/title.tscn"
-const STUB_PROBE: String = "user://m6_autoplay_stub_probe.gd"
-const REAL_PROBE: String = "user://m6_autoplay_real_probe.gd"
 
 
 func before_each() -> void:
@@ -18,9 +15,6 @@ func before_each() -> void:
 
 func after_each() -> void:
 	Engine.time_scale = 1.0
-	for p: String in [STUB_PROBE, REAL_PROBE]:
-		if FileAccess.file_exists(p):
-			DirAccess.remove_absolute(ProjectSettings.globalize_path(p))
 	Router.adopt(null)
 
 
@@ -37,23 +31,7 @@ func test_step_table_matches_spec() -> void:
 	assert_eq(AutoplayScript.AUTOPLAY_SEED, 4242)
 
 
-func test_stub_detection() -> void:
-	var f: FileAccess = FileAccess.open(STUB_PROBE, FileAccess.WRITE)
-	f.store_string("# STUB(M0) — probe\nextends RefCounted\n")
-	f.close()
-	var g: FileAccess = FileAccess.open(REAL_PROBE, FileAccess.WRITE)
-	g.store_string("extends RefCounted\n## real implementation\n")
-	g.close()
-	var missing: String = "res://scenes/does_not_exist_m6_probe.gd"
-	var out: PackedStringArray = AutoplayScript.stub_dependencies(PackedStringArray([STUB_PROBE, REAL_PROBE, missing]))
-	assert_eq(out, PackedStringArray([STUB_PROBE, missing]), "stub header and missing files count, real files not")
-	assert_false(AutoplayScript.stub_dependencies(PackedStringArray(["res://scenes/title/title.gd"])).has(
-		"res://scenes/title/title.gd"), "the M6 title screen is a real implementation")
-	for p: String in AutoplayScript.REQUIRED:
-		assert_true(p.begins_with("res://") and p.ends_with(".gd"), "required script path %s" % p)
-
-
-func test_dry_run_reaches_title_then_skips_or_continues() -> void:
+func test_dry_run_reaches_title_and_continues() -> void:
 	var title: Node = (load(SCENE_TITLE) as PackedScene).instantiate()
 	title.call("setup", {})
 	add_to_tree(title)
@@ -62,16 +40,10 @@ func test_dry_run_reaches_title_then_skips_or_continues() -> void:
 	var ap: Node = AutoplayScript.new()
 	ap.set("dry_run", true)
 	add_to_tree(ap)
-	var stubs: PackedStringArray = AutoplayScript.stub_dependencies()
 	var ok: bool = await wait_until(func() -> bool: return bool(ap.get("finished")) or int(ap.get("step")) >= 1, 120)
 	assert_true(ok, "boot_to_title is reached within its budget")
-	if not stubs.is_empty():
-		assert_true(bool(ap.get("finished")), "with stub modules the run ends after boot_to_title")
-		assert_eq(int(ap.get("result_code")), 0)
-		assert_eq(str(ap.get("result_line")), "AUTOPLAY: SKIPPED (stub)", "exact skip line (check.sh regex)")
-	else:
-		assert_eq(int(ap.get("step")), 1, "all modules real: continues with new_game")
-		ap.set("finished", true)          # stop before it starts a real game inside the test run
+	assert_eq(int(ap.get("step")), 1, "continues with new_game (no skip after boot_to_title)")
+	ap.set("finished", true)              # stop before it starts a real game inside the test run
 	assert_eq(ap.process_mode, Node.PROCESS_MODE_ALWAYS)
 
 
@@ -83,7 +55,8 @@ func test_watchdog_failure_is_reported_not_quit_in_dry_run() -> void:
 	var ok: bool = await wait_until(func() -> bool: return bool(ap.get("finished")), 400)
 	assert_true(ok, "budget exceeded ends the run")
 	assert_eq(int(ap.get("result_code")), 1)
-	assert_has(str(ap.get("result_line")), "Assertion failed: AUTOPLAY step 'boot_to_title' failed", "check.sh ERR_RE line")
+	assert_has(str(ap.get("result_line")), "Assertion failed: AUTOPLAY step 'boot_to_title' failed",
+		"check.sh ERR_RE line")
 
 
 func test_smallest_safe_room() -> void:

@@ -7,6 +7,7 @@ const DATA_DIR: String = "res://data"
 
 var data: GameData            # created + loaded in _init()
 var ok: bool                  # data.is_valid()
+var _data_hash: String = ""
 
 
 func _init() -> void:
@@ -92,3 +93,20 @@ func mod_lines(tag: String) -> Array[ModLineDef]:
 
 func has_id(table: String, id: String) -> bool:
 	return data.has_id(table, id)
+
+
+## SHA-256 (hex) over the game data files (res://data/*.json, sorted by name: name + per-file SHA-256) — the
+## data_hash of leaderboard entries and commits (05 §7.3/§10.4). Cached after the first call.
+func data_hash() -> String:
+	if _data_hash != "":
+		return _data_hash
+	var names: PackedStringArray = []
+	for f: String in DirAccess.get_files_at(DATA_DIR):
+		if f.get_extension() == "json":
+			names.append(f)
+	names.sort()
+	var parts: PackedStringArray = []
+	for f: String in names:
+		parts.append(f + ":" + FileAccess.get_sha256(DATA_DIR.path_join(f)))
+	_data_hash = "|".join(parts).sha256_text()
+	return _data_hash

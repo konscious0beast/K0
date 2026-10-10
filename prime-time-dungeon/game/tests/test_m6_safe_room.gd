@@ -3,7 +3,6 @@ extends TestCase
 ## lootboxes, pause/equipment) with focus return, Mopsula scenes as blocking ModDialog lines tagged "scene:<id>" that
 ## end in Game.mark_scene_seen, event runs cannot save.
 
-const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const SCENE_SAFE_ROOM: String = "res://scenes/safe_room/safe_room.tscn"
 const SCENE_DIALOG: String = "res://scenes/ui/mod_dialog.tscn"
 const WAIT: int = 1500
@@ -54,17 +53,18 @@ func _room() -> Node:
 
 func test_enter_records_and_heals() -> void:
 	var kai: PartyMember = Game.state.member("kai")
-	if kai != null:
-		kai.hp = 1
+	assert_not_null(kai, "precondition: Kai in the party")
+	if kai == null:
+		return
+	kai.hp = 1
 	var r: Node = _room()
 	await wait_frames(2)
 	assert_true(r is SafeRoomScene)
 	var sr: String = str(r.get("safe_room_id"))
 	assert_ne(sr, "", "safe room id resolved")
 	assert_eq(_spy.of_type("safe_room"), [{"t": "safe_room", "id": sr}] as Array[Dictionary], "Game.enter_safe_room")
-	# The heal itself is Progression.full_heal (M2); only checked once that module is real.
-	if kai != null and not UiUtil.is_stub("res://core/progression/progression.gd"):
-		assert_gt(kai.hp, 1, "full heal on entering")
+	assert_eq(kai.hp, Progression.total_stats(kai, DB.data).values[StatBlock.Stat.HP],
+		"full heal on entering (Progression.full_heal)")
 	assert_eq(r.call("menu_ids"), PackedStringArray(["save", "lootbox", "vending", "equipment", "mopsula", "leave"]),
 		"menu order (GDD §14.7)")
 

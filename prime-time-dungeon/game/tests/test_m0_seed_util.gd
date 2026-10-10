@@ -10,7 +10,8 @@ func test_golden_values() -> void:
 
 func test_deterministic_and_31_bit() -> void:
 	for base: int in [0, 1, 7, 4242, 123456789, 0x7FFFFFFF]:
-		for purpose: String in ["floor", "battle", "lootbox", "chest", "show", "event", "stray", "ctb", "action", "ai", "gift"]:
+		for purpose: String in ["floor", "battle", "lootbox", "chest", "show", "event", "stray", "ctb", "action", "ai",
+			"gift"]:
 			for i in 4:
 				var a: int = SeedUtil.derive(base, purpose, i)
 				assert_eq(a, SeedUtil.derive(base, purpose, i))

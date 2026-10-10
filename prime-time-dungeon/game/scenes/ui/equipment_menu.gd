@@ -2,6 +2,8 @@ extends "res://scenes/ui/menu_base.gd"
 ## Pause tab / safe room "Ausrüstung" (02_TECH §1.6, GDD §10.1): member tabs, three slots, candidate list (inventory
 ## items of the slot type the member may wear + "Ablegen") with stat preview (green/red), Game.equip(member, slot,
 ## item). Layout: slots | candidates | stat column (full stat names, same as the party page).
+## 06-C (06 §4.3): under the slots the Unterhosen-Liga line of the member ("Liga-bereit" / "Liga blockiert durch: …")
+## and the team's current tier — the rule is always phrased "ohne Rüstung & ohne Accessoire".
 
 var member_id: String = "kai"
 var slot: String = ""                 # "" = slot level, else candidate level
@@ -13,6 +15,8 @@ var _cand_title: Label
 var _preview: GridContainer
 var _slot_buttons: Array[Control] = []
 var _cand_buttons: Array[Control] = []
+var liga_line: Label                   # 06-C: "Liga blockiert durch: Tierheim-Hoodie" / "Liga-bereit: …"
+var liga_tier_line: Label              # 06-C: "Aktuell: Unterhosen-Liga (Hype ×1,2)" / "Aktuell: keine Liga"
 
 
 func _ready() -> void:
@@ -30,6 +34,13 @@ func _ready() -> void:
 	row.add_child(left)
 	_slots = UiUtil.vbox(12)                # 12 px between the 88 px hit areas
 	left.add_child(_slots)
+	liga_line = UiUtil.label("", &"LabelSmall", 16)
+	liga_line.name = "LigaLine"
+	liga_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	left.add_child(liga_line)
+	liga_tier_line = UiUtil.label("", &"LabelSmall", 15, UiTheme.C_TEXT_DIM)
+	liga_tier_line.name = "LigaTierLine"
+	left.add_child(liga_tier_line)
 	var mid: VBoxContainer = UiUtil.vbox(8)
 	mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(mid)
@@ -84,6 +95,7 @@ func refresh() -> void:
 		_slot_buttons.append(b)
 	UiUtil.wire_vertical(_slot_buttons)
 	_show_preview({})
+	_refresh_liga()
 	if slot != "":
 		_show_candidates(slot, false)
 
@@ -195,6 +207,28 @@ func _show_preview(delta: Dictionary) -> void:
 		vl.add_theme_font_override("font", UiTheme.font_mono())
 		vl.custom_minimum_size = Vector2(100, 0)
 		_preview.add_child(vl)
+
+
+## 06-C: the Liga lines for the selected member and the team (MarottenRules.liga_blockers / Show.marotten_view).
+func _refresh_liga() -> void:
+	if liga_line == null or Game.state == null:
+		return
+	var blockers: PackedStringArray = MarottenRules.liga_blockers(Game.state, member_id)
+	if blockers.is_empty():
+		liga_line.text = "Liga-bereit: ohne Rüstung & ohne Accessoire"
+		liga_line.add_theme_color_override("font_color", UiTheme.C_OK)
+	else:
+		var names: PackedStringArray = []
+		for iid: String in blockers:
+			names.append(UiUtil.item_name(iid))
+		liga_line.text = UiUtil.glyph_safe("Liga blockiert durch: " + ", ".join(names))
+		liga_line.add_theme_color_override("font_color", UiTheme.C_TEXT_DIM)
+	var v: Dictionary = Show.marotten_view()
+	var tier: int = int(v.get("liga_tier", 0))
+	var bonus: String = ""
+	if bool(v.get("rewards", true)) and tier > 0:
+		bonus = " (Hype ×%s)" % Show.pm_text(int(v.get("liga_hype_pm", 1000)))
+	liga_tier_line.text = "Aktuell: " + (["keine Liga", "Unterhosen-Liga", "Duo-Liga"][clampi(tier, 0, 2)]) + bonus
 
 
 static func _delta_text(delta: Dictionary) -> String:

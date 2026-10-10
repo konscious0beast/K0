@@ -131,6 +131,7 @@ Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört gen
 |---|---|---|
 | `core/data/game_data.gd` | M0 | `GameData`: Laden, Normalisieren, Validieren, Getter (§4.5) |
 | `core/data/data_validator.gd` | M0 | `DataValidator`: Schema-/Referenz-/Wertebereichsprüfung, Vokabular-Konstanten (§4.3) |
+| `core/data/validators/marotten.gd` | 06-C | Privater Helfer (§0.3, ohne `class_name`; in `DataValidator` als `MarottenCheck` vorgeladen): Schema, Referenzen, Bedingungs-Schlüssel und Zeilen-Pflicht von `marotten.json`, Fuß-Wörter-Sperre (§4.4.15) |
 | `core/data/json_util.gd` | M0 | `JsonUtil`: Datei lesen, `to_int`, `to_str_array`, `vec2i_to_arr`, `arr_to_vec2i` |
 | `core/data/seed_util.gd` | M0 | `SeedUtil`: deterministische Seed-Ableitung (§4.6) |
 | `core/data/condition_expr.gd` | M0 | `ConditionExpr`: Parser/Auswerter für Achievement- und Szenen-Bedingungen (§4.4.9, §6.1) |
@@ -149,6 +150,7 @@ Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört gen
 | `core/data/defs/achievement_def.gd` | M0 | `AchievementDef` |
 | `core/data/defs/sponsor_def.gd` | M0 | `SponsorDef` |
 | `core/data/defs/mod_line_def.gd` | M0 | `ModLineDef` |
+| `core/data/defs/marotte_def.gd` | 06-C | `MarotteDef` (`marotten.json`, §4.4.15) |
 | `core/stats/stat_block.gd` | M1 (S) | `StatBlock` + `enum Stat` (§5.2) |
 | `core/stats/elements.gd` | M1 (S) | `Elements`: Element-Konstanten, Multiplikator-Helfer |
 | `core/stats/balance.gd` | M1 (S) | `Balance`: alle Formelkonstanten (§5.9) |
@@ -173,6 +175,8 @@ Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört gen
 | `core/show/achievement_tracker.gd` | M2 (S) | `AchievementTracker` |
 | `core/show/sponsor_system.gd` | M2 (S) | `SponsorSystem`: Sponsor-Auswahl |
 | `core/show/mod_announcer.gd` | M2 (S) | `ModAnnouncer`: M.O.D.-/Chat-Zeilen wählen + formatieren |
+| `core/show/marotten_rules.gd` | 06-C | `MarottenRules`: M.O.D.-Marotten (Show-Wetten) + Unterhosen-Liga, statisch und rein — Auswahl je Etage aus dem Seed, Liga-Stufe/-Faktoren, Kampf-/Raum-Kontext, Herzen, gewonnene Wetten, Etagen-Bonus, `show_bet`-Payloads; einziger Schreiber von `ShowState.marotten` (§3.5 „Marotten“, 06 §4) |
+| `core/show/marotten_tracker.gd` | 06-C | `MarottenTracker`: Strichliste eines Kampfes aus dem `ActionEvent`-Strom (Verteidigen, Fluchtversuche, verschiedene Aktionen, Stunts, letzter Treffer) — flüchtig wie `ShowRules` |
 | `core/loot/loot_reward.gd` | M2 (S) | `LootReward` |
 | `core/loot/loot_roller.gd` | M2 (S) | `LootRoller`: Lootbox/Truhe würfeln, Pools, Besitz-Menge für die Duplikat-Regel (Kampf-Drops: `BattleState.roll_drops`) |
 | `core/progression/game_state.gd` | M2 (S) | `GameState`: kompletter Laufzeit-Spielstand |
@@ -211,7 +215,7 @@ Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört gen
 | `core/live/leaderboard.gd` | M8 (S) | `Leaderboard`: lokale Top 10 |
 | `core/live/gift.gd` | M8 (S) | `Gift`: Geschenk-Schema, `validate` (Art je Quelle, `sender_ref`, Inhaltsgrenzen), `make_system`, `make_dev`, `is_external` |
 | `core/live/gift_policy.gd` | M8 (S) | `GiftPolicy`: Caps, Wirkungsfaktoren (Ganzzahl), Lauf-Bindung, Mindestabstand; `refusal` = DIE Anwendungsprüfung (Show und RunSim), `remember`/`note_applied` = Buchung; prüft zuletzt die Sponsor-Fenster (`SponsorWindows.check`) |
-| `core/live/sponsor_windows.gd` | M8 | `SponsorWindows`: Sponsor-Fenster (Nutzerentscheidung 2026-10-08, 05 §6.13) — Fahrplan in Ticks (periodisch / Safe Room / Boss-Countdown / QA), Plätze, Pro-Zuschauer-Limit, Gnadenfrist gestempelter Geschenke, Regeln `rules.sponsor_windows` + Standard für Kampagne/Offline; Zustand in `GameState.flags["live"]["sponsor"]` |
+| `core/live/sponsor_windows.gd` | M8 | `SponsorWindows`: Sponsor-Fenster (Nutzerentscheidung 2026-10-08, 05 §6.13) — Fahrplan in Ticks (periodisch / Safe Room / Boss-Countdown / QA), Plätze, Pro-Zuschauer-Limit, Gnadenfrist gestempelter Geschenke, Regeln `rules.sponsor_windows` + Standard für Kampagne/Offline; Zustand in `GameState.flags["live"]["sponsor"]`; 06-C: Comeback-Fenster nach verlorenem Boss-Versuch (`on_battle_result`, `comeback_due`, `merge_comeback`), Koop-Plätze je Spieler (`team_slots`) |
 | `core/live/gift_applier.gd` | M8 (S) | `GiftApplier`: Geschenk außerhalb des Kampfes anwenden; Buchung im Kampf angewandter Geschenke (`note_battle_gift`) |
 | `core/live/fair_roll.gd` | M8 (S) | `FairRoll`: Commit-Reveal-Würfel (nur Tests im Slice) |
 
@@ -233,6 +237,7 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `data/sponsors.json` | Sponsoren + Geschenke + Gewichtungsregeln |
 | `data/milestones.json` | Follower-Meilensteine |
 | `data/mod_lines.json` | M.O.D.-, Mopsula-, Kai- und Chat-Zeilen |
+| `data/marotten.json` | 06-C: M.O.D.-Marotten (11 rotierende Vorlieben) + Unterhosen-Liga (`mar_unterhose`), §4.4.15 |
 | `data/scenes.json` | Mopsula-Szenen (Safe Room) |
 | `data/events.json` | Live-/Offline-Events (M7 Inhalt, M8 Schema); **nicht** in `GameData.TABLES`, geladen von `EventCatalog` (§4.5); eigenes Format `{schema, events}` (Ausnahme von §4.1, 05 §10.1) |
 
@@ -307,23 +312,24 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `scenes/battle/ui/command_menu.gd` | M5 | Angriff/Fähigkeit/Stunt (mit Cooldown-Zahl)/Item/Verteidigen/Flucht |
 | `scenes/battle/ui/action_list.gd` | M5 | Untermenü Fähigkeiten/Stunts/Items |
 | `scenes/battle/ui/target_cursor.gd` | M5 | Zielauswahl |
-| `scenes/battle/ui/battle_results.tscn` + `.gd` | M5 | Ergebnis: EXP, Credits, Items, Level-Ups, Follower, Achievements |
+| `scenes/battle/ui/battle_results.tscn` + `.gd` | M5 | Ergebnis: EXP, Credits, Items, Level-Ups, Follower, Achievements; 06-C: Zeile „Show“ (Herzen der Vorlieben, Liga-Stufe) |
 | `scenes/safe_room/safe_room.tscn` + `safe_room.gd` | M6 (S) | `SafeRoomScene`: Innenraum (Theme je Safe Room) + Menü + Mopsula-Szenen (`scenes.json`) |
 | `scenes/safe_room/vending_menu.tscn` + `.gd` | M6 | Automat (Shop) |
 | `scenes/safe_room/lootbox_opening.tscn` + `.gd` | M6 | Lootbox-Öffnung mit M.O.D.-Kommentar |
 | `scenes/ui/theme/ui_theme.gd` | **M0** | `UiTheme`: Basis-Theme (Code-generiert) |
 | `scenes/ui/global_ui.tscn` + `global_ui.gd` | M6 (S) | Persistente UI: ShowOverlay, ModDialog, Toasts, DebugOverlay |
-| `scenes/ui/show_overlay.tscn` + `.gd` | M6 | TV-Overlay: LIVE, Zuschauer, Follower, Hype-Meter, Sponsor-Banner, Chat-Ticker |
+| `scenes/ui/show_overlay.tscn` + `.gd` | M6 | TV-Overlay: LIVE, Zuschauer, Follower, Hype-Meter, Sponsor-Banner, Chat-Ticker; 06-C: Show-Chip „M.O.D. mag heute: …“ (Herzen + Liga) unter der Hype-Leiste, Sponsor-Badge mit Zustand + Platz-Punkten statt Sekunden |
 | `scenes/ui/mod_dialog.tscn` + `.gd` | M6 | M.O.D.-/Mopsula-Textbox mit Queue; Dialog-Presenter (`Game.set_dialog_presenter`, §9.4) |
 | `scenes/ui/toast_stack.gd` | M6 | Achievement-/Hinweis-Toasts |
 | `scenes/ui/exploration_hud.tscn` + `.gd` | M6 (S) | `ExplorationHud`: Timer, Etage, Party-Mini-Status, Minimap, Prompt, Touch, Pause |
 | `scenes/ui/minimap.gd` | M6 | Minimap + große Karte |
 | `scenes/ui/touch_controls.tscn` + `.gd` | M6 | Touch-Layer (virtueller Stick + Buttons + Kamera-Drag) |
 | `scenes/ui/virtual_joystick.gd` | M6 | Floating Joystick |
-| `scenes/ui/pause_menu.tscn` + `.gd` | M6 | Pause: Party, Inventar, Ausrüstung, Fähigkeiten, Achievements, Bestiarium, Optionen, Zum Titel |
+| `scenes/ui/pause_menu.tscn` + `.gd` | M6 | Pause: Party, Inventar, Ausrüstung, Fähigkeiten, Show (06-C), Achievements, Bestiarium, Optionen, Zum Titel |
 | `scenes/ui/party_menu.gd` | M6 | Party-Status |
 | `scenes/ui/inventory_menu.gd` | M6 | Inventar (Feld-Nutzung) |
-| `scenes/ui/equipment_menu.gd` | M6 | Ausrüstung |
+| `scenes/ui/equipment_menu.gd` | M6 | Ausrüstung; 06-C: je Figur „Liga: aktiv“ bzw. „Liga blockiert durch: <Item>“ + Stufe der Party |
+| `scenes/ui/bets_menu.gd` | 06-C | Pausemenü-Tab „Show“: Vorlieben der Etage (Regel im Klartext, Herzen, gewonnen), Unterhosen-Liga (Regeltext, Stufe, Faktoren, Blocker je Figur → Ausrüstung) |
 | `scenes/ui/skills_menu.gd` | M6 | Fähigkeiten + Freischalt-Level (aus `learnset`) |
 | `scenes/ui/achievements_menu.gd` | M6 | Achievements (erhalten / verborgen „???“) |
 | `scenes/ui/bestiary_menu.gd` | M6 | Bestiarium aus `GameState.bestiary` |
@@ -348,7 +354,7 @@ Jede Datei unter `tests/` gehört dem genannten Modul; `test_<modul>_*.gd` ist d
 | `tests/capture.gd` | M0 | Screenshot-Werkzeug (§11.3) |
 | `tests/capture_recipes.gd` | M0 | Benannte Capture-Zustände für `--recipe=` (§11.3; per `load()` nach den Autoloads, kein class_name) |
 | `tests/lib/test_case.gd` | M0 | `TestCase`: Basis mit Asserts (§11.2) inkl. `assert_time_budget` (nur mit `PTD_PERF_ASSERTS=1`); liegt in `lib/`, damit der Runner sie nicht als Testdatei lädt |
-| `tests/fixtures/data_min/*.json` | M0 | Minimaler gültiger Datensatz (alle 13 Tabellen aus `GameData.TABLES`) für M0-Tests |
+| `tests/fixtures/data_min/*.json` | M0 | Minimaler gültiger Datensatz (alle 14 Tabellen aus `GameData.TABLES`) für M0-Tests |
 | `tests/fixtures/router/router_screen.tscn` + `.gd` | M0 | Fixture-Screen (nur Screen-Vertrag §9.2) für die generischen Operationen in `test_m0_router` |
 | `tests/fixtures/runner_selftest/test_selftest_cases.gd` | M0 | Absichtlich fehlschlagende, abstürzende und überspringende Fälle; nur im Kindprozess des Runner-Selbsttests (`--root=…`) ausgeführt |
 | `tests/fixtures/live/canonical_vectors.json`, `gift_tables.json` | M8 | Testvektoren `CanonicalJson` (identisch mit Python/JS/Go) und Gift-Tabellen für `FairRoll` (05 §10.2) |
@@ -397,7 +403,7 @@ Jede Datei unter `tests/` gehört dem genannten Modul; `test_<modul>_*.gd` ist d
 | `tests/test_m6_overlay.gd` | M6 | ShowOverlay (Modi, Zahlenformate, Sponsor-Bauchbinde, Geschenk-Banner, Chat), ModDialog, Toasts, DebugOverlay |
 | `tests/test_m6_safe_room.gd` | M6 | Safe Room: Aufzeichnung + Vollheilung, Menüreihenfolge, Modals mit Fokus-Rückgabe, Mopsula-Szenen, Event-Läufe speichern nicht |
 | `tests/test_m6_visual_pass.gd` | M6 | UI-Layout-Verträge der Screenshot-Matrix; alle Capture-Rezepte existieren |
-| `tests/test_m7_data_content.gd` | M7 | Inhalt: Mengen laut GDD (11 Gegner, 2 Bosse, 16 Party-Skills, 2 Stunts, 25 Gegner-Skills, 11 Boss-Skills, 29 Achievements, 7 Sponsoren, 6 Meilensteine, 6 Status, 4 Szenen), Balancing-Sanity |
+| `tests/test_m7_data_content.gd` | M7 | Inhalt: Mengen laut GDD (11 Gegner, 2 Bosse, 16 Party-Skills, 2 Stunts, 25 Gegner-Skills, 11 Boss-Skills, 35 Achievements, 7 Sponsoren, 6 Meilensteine, 6 Status, 4 Szenen), Balancing-Sanity |
 | `tests/test_m7_balance.gd` | M7 | Jede reguläre Begegnung von Etage 1 ≥ 80 % Siegquote (50 Seeds) auf GDD-§13-Level und -Ausrüstung; Boss-Bänder |
 | `tests/test_m7_show_balance.gd` | M7 | Etage 1 als Show-Staffel mit dem echten `Show`-Autoload: Follower-, Hype- und Geschenk-Bänder (GDD §13) |
 | `tests/test_m7_events.gd` | M7 | Inhalt von `data/events.json` gegen das Schema (05 §10.1) und die Spieldaten |
@@ -419,8 +425,12 @@ Jede Datei unter `tests/` gehört dem genannten Modul; `test_<modul>_*.gd` ist d
 | `tests/test_m8_run_log.gd` | M8 | `RunLog`: Rundlauf, `digest`, Tick-Reihenfolge, Command-IDs, Positionsproben, Checkpoints |
 | `tests/test_m8_run_sim.gd` | M8 | `RunSim` ohne Autoloads: Timer, Hype-Abkühlung, Pazifist-Zählung, Streuner in Ticks; `step(1)` × n ≡ `step(n)` |
 | `tests/test_m8_score_calc.gd` | M8 | `ScoreCalc`: Beispiel 05 §10.4, Caps, Tie-Break |
-| `tests/test_m8_sponsor_windows.gd` | M8 | Sponsor-Fenster (05 §6.13): Fahrplan in Ticks, Kampf friert ein, Plätze/Zuschauer-Limit, Codes, Safe Room (Leerlauf-Ticks), Boss-Countdown, Replay-Gleichheit; Integration `Show.receive_gift`, Overlay-Badge, Debug-Werkzeug |
+| `tests/test_m8_sponsor_windows.gd` | M8 | Sponsor-Fenster (05 §6.13): Fahrplan in Ticks, Kampf friert ein, Plätze/Zuschauer-Limit, Codes, Safe Room (Leerlauf-Ticks), Boss-Countdown, Replay-Gleichheit; Integration `Show.receive_gift`, Overlay-Badge (06-C: Zustand statt Sekunden), Druckwort-Prüfung aller `sponsor_window_*`-Zeilen, Debug-Werkzeug |
 | `tests/test_m8_state_hash.gd` | M8 | `StateHash.of`/`of_battle` ohne Anzeigefelder |
+| `tests/test_06c_marotten.gd` | 06-C | Marotten: Daten + Validator, Auswahl je Seed/Etage, jede Bedingung trifft/trifft nicht, 1 Herz je Kampf, gewonnene Wette (Box, Follower, Hype, `bets_won`, `show_bet`), Tutorial/Niederlage/Event-Lauf, Pazifist-Zähler (Latch, Countdown, Save/Load), Strichliste, Ansage nach `floor_start`, Replay-Gleichheit |
+| `tests/test_06c_liga.gd` | 06-C | Unterhosen-Liga: Stufen 0/1/2 je gesteuerter Figur, Blocker, Promille-Faktoren (beim Kampfstart eingefroren, nur Kampagne), Etagen-Bonus, Kette „Ohne alles“ erreichbar, Regel-Schalter im `rules_hash`, UI (Ausrüstung, Tab „Show“, Chip, Ergebniszeile), Replay |
+| `tests/test_06c_sponsor_display.gd` | 06-C | Die fünf Sponsor-Fenster-Entscheidungen (06 §6): Badge ohne Sekunden/Druckwörter + Platz-Punkte, Fan-Pakete nur im Fenster/Cheers immer, Comeback-Fenster (Regeln, Save-Übertrag, genau einmal, Live-Zeile), Koop-Plätze je Spieler, Bits nie Geschenkquelle |
+| `tests/test_06c_balance.gd` | 06-C | Balance-Bänder 06 §4.10 mit dem echten `Show`: Boss-Niederlagequote Liga 1/2 (100 Seeds), Staffel Etage 1 (Follower ≤ 2 000, Lootboxen, Liga-Kämpfe, Referenz ≤ 1 Wette) |
 | `tests/test_perf_router_cycles.gd` | Phase C | Router-Zyklen Erkundung → Kampf → Safe Room ohne Wachstum der Node-/Objekt-Minima, `Sfx.stop_all`, Etagen-Aufbauzeit, Physik-/Licht-Layer der Etage (§12.1, §12.5) |
 | `tests/test_perf_platform.gd` | Phase C | Mobil-Projekteinstellungen, Export-Presets + Launcher-Icons, Boot kompiliert keine Screens vorab (§2.1, §12.3) |
 | `tests/perf/perf_probe.gd` + `perf_runner.gd`, `tests/perf/boot_timer.gd` | Phase C | Mess-Werkzeug für `tools/perf.sh` (§12.5); keine Tests (kein `test_`-Präfix) |
@@ -711,10 +721,17 @@ signal gift_received(gift: Dictionary)                   # every accepted gift, 
 signal gift_rejected(gift_id: String, reason: String)
 # Sponsor-Fenster (05 §6.13, user decision 2026-10-08): viewers may help only while a window is open.
 # window = SponsorWindows.window_view: {"open", "id", "kind" (periodic|safe_room|boss|dev), "ref", "slots", "used",
-# "free", "full", "per_viewer", "left_ticks", "len_ticks", "left_sec"}.
+# "free", "full", "per_viewer", "left_ticks", "len_ticks", "left_sec"} (+ "comeback": true, 06-C: the boss window
+# re-opened after a lost boss attempt).
 signal sponsor_window_opened(window: Dictionary)         # Game (RunSim SPONSOR_WINDOW_OPENED)
 signal sponsor_window_closed(window_id: String, reason: String)   # Game (RunSim): reason time|left|superseded|floor
 signal sponsor_window_updated(window: Dictionary)        # Show: a gift took a slot of the open window
+
+# --- Show bets / Marotten / Unterhosen-Liga (06-C, 06 §4) ---------------------
+signal marotten_announced(ids: PackedStringArray)        # Show.start_floor: M.O.D.'s preferences of the floor
+signal marotte_progress(marotte_id: String, hits: int, goal: int)   # Show: a heart filled (battle / room visit)
+signal marotte_won(marotte_id: String)                   # Show: `goal` hearts — the bet is won
+signal liga_changed(tier: int)                           # Show.begin_battle: the battle's Liga tier differs (0/1/2)
 
 # --- UI -----------------------------------------------------------------
 signal toast_requested(text: String, icon: StringName)
@@ -732,7 +749,7 @@ Wer emittiert was (verbindlich):
 | `game_loaded`, `game_saved` | Save |
 | `floor_entered`, `room_entered`, `enemy_alerted`, `encounter_triggered`, `gate_opened`, `overlay_mode_requested(&"explore")` | ExplorationScene (M3) |
 | `battle_started`, `battle_turn_started`, `battle_ended`, `overlay_mode_requested(&"battle")` | BattleScene/BattleController (M5) |
-| `viewers_changed`, `followers_changed`, `hype_changed`, `achievement_unlocked`, `milestone_reached`, `sponsor_gift_triggered`, `mod_said`, `chat_posted`, `lootbox_earned`, `enemy_killed`, `battle_won`, `battle_fled`, `stunt_resolved`, `combo`, `party_ko`, `boss_defeated`, `boss_hp_changed`, `gift_received`, `gift_rejected`, `sponsor_window_updated` | Show |
+| `viewers_changed`, `followers_changed`, `hype_changed`, `achievement_unlocked`, `milestone_reached`, `sponsor_gift_triggered`, `mod_said`, `chat_posted`, `lootbox_earned`, `enemy_killed`, `battle_won`, `battle_fled`, `stunt_resolved`, `combo`, `party_ko`, `boss_defeated`, `boss_hp_changed`, `gift_received`, `gift_rejected`, `sponsor_window_updated`, `marotten_announced`, `marotte_progress`, `marotte_won`, `liga_changed` (06-C) | Show |
 | `dialog_finished` | ModDialog (M6) |
 | `camera_drag`, `camera_zoom` | TouchControls (M6); `camera_zoom` = Zwei-Finger-Pinch auf der freien Kamerafläche (0.02 m/px Abstandsänderung), `CameraRig` klemmt wie das Mausrad auf 5–9 m |
 | `dialog_reserve_requested` | Screens mit eigenen Panels unten links/rechts (BattleHud M5: `&"battle"`); Empfänger ModDialog (M6) |
@@ -948,7 +965,7 @@ Laufzeitverhalten:
 - Aufgezeichnete Commands (`record`, Brief §6b.2/3) mit Feldern: `floor {floor}`, `encounter {enc, adv, group}`,
   `battle {cmd, auto}` (M5, jeder `BattleCommand.to_dict()`), `lootbox {box}`, `buy {item, qty, safe_room}`, `sell {item, qty}`,
   `equip {member, slot, item}`, `use_item {item, member}`, `rest {}`, `event {id, choice}` (FloorEvent-Wahl), `chest {id}`,
-  `gate {key}`, `room {cell: [x, y]}` (nur Erstbesuch), `safe_room {id}`, `safe_room_exit {}`, `scene {id}`, `flag {key, value}`,
+  `gate {key}`, `room {cell: [x, y]}` (Erstbesuch; 06-C: auch der Wiederbesuch einer Boss-Zelle, für die ein Comeback-Fenster fällig ist), `safe_room {id}`, `safe_room_exit {}`, `scene {id}`, `flag {key, value}`,
   `difficulty {to}`, `descend {}`, `gift {gift}` (nur `source ≠ "system"`, aufgezeichnet bei der **Anwendung**, §3.5; `cmd_id` 0;
   mit Stempel `gift.sponsor_window`), `sponsor_window {op: "dev_open", sec, slots}` (QA-Fenster, 05 §6.13).
   `Command.TYPES` (M8) = genau diese Liste.
@@ -956,7 +973,13 @@ Laufzeitverhalten:
   aufzeichnenden Methoden selbst — `start_floor` (schließt, Countdown neu), `visit_room` (Erstbesuch einer Boss-Zelle →
   Boss-Countdown 45 s), `enter_safe_room` / `leave_safe_room` (Safe-Room-Fenster ≤ 90 s, je Safe Room und Etage einmal),
   `open_dev_sponsor_window` (QA) — sie rufen die gleichnamige `RunSim.sponsor_*()`-Funktion und `_dispatch`en deren Events; der
-  periodische Fahrplan (alle 300 s Erkundungszeit für 60 s) läuft in `RunSim.step`. Live-Lauf, `replay_log` und `RunSim.replay`
+  periodische Fahrplan (alle 300 s Erkundungszeit für 60 s) läuft in `RunSim.step`. **Comeback-Fenster** (06-C, 06 §6
+  Entscheidung 3): `apply_battle_result` ruft `SponsorWindows.on_battle_result` (wie `RunSim._end_battle`) — ein verlorener
+  Versuch gegen Quartier-/Etagenboss vermerkt die Boss-Art (`flags.live.sponsor.comeback` `{"floor", "pending", "done"}`); das
+  nächste Betreten der Boss-Zelle (`visit_room` → `_comeback_room`, aufgezeichnet als `room`) öffnet das Boss-Fenster einmal
+  neu (`"comeback": true`), höchstens 1× je Boss und Etage, nie nach dem Sieg. Kampagne: `Save.record_game_over` trägt die
+  Markierung per `SponsorWindows.merge_comeback` in den Slot (gleiche Etage), damit „Letzten Spielstand laden“ das Fenster
+  wieder findet. Live-Lauf, `replay_log` und `RunSim.replay`
   öffnen/schließen damit dieselben Fenster an denselben Ticks; der Zustand steht in `flags["live"]["sponsor"]` (Hash, Save).
 - Quest-Adapter (05 CR-4, nur `mode == &"event_offline"`): `enemy_killed` → `{"type": "enemy_killed", "enemy_id"}`,
   `boss_defeated` → `{"type": "boss_defeated", "boss_id"}`, `battle_started` → `{"type": "battle_started"}`, `floor_completed` →
@@ -1015,6 +1038,7 @@ Laufzeitverhalten:
 | `quality` | StringName &"high"/&"low" | PC &"high", `OS.has_feature("mobile")` &"low" | `display/quality` |
 | `touch_controls` | StringName &"auto"/&"on"/&"off" | &"auto" | `display/touch_controls` |
 | `show_fps` | bool | false | `display/show_fps` |
+| `show_bets_hud` | bool | true | `display/show_bets_hud` (06-C: Show-Chip „M.O.D. mag heute“; Optionen → „Show-Wetten anzeigen“) |
 | `camera_invert_x` / `camera_invert_y` | bool | false | `input/…` |
 | `camera_sensitivity` | float 0.25..3.0 | 1.0 | `input/camera_sensitivity` |
 
@@ -1077,6 +1101,13 @@ func sponsor_presentation() -> StringName   # Sponsor-Fenster (05 §6.13): &"off
 	# &"subtle" (campaign: dim overlay line, no M.O.D. lines), &"live" (event/live runs taking viewer gifts: badge + lines)
 func sponsor_window_view() -> Dictionary    # Game.sponsor_window() + "mode" + "pending" (queued gifts holding a slot);
 	# "free"/"full" count the pending reservations — for the overlay badge, the debug tool and a shop UI ("next_in_sec")
+# --- 06-C: M.O.D.-Marotten (show bets) + Unterhosen-Liga (06 §4) ---
+func marotten_view() -> Dictionary          # MarottenRules.view(Game.state, DB.data, Game.event_rules()): {"floor",
+	# "items": [{"id", "name", "desc", "hits", "goal", "won"}], "liga_tier", "liga_hype_pm", "liga_follower_pm", "rewards"}
+	# — HUD chip, pause tab "Show", equipment menu
+func last_marotten() -> Dictionary          # the last won battle's hearts + Liga tier (results screen); {} = nothing to show
+func on_room_visited(room_kind: int, zone: String) -> void   # Game.visit_room (first visit): pacifist counter — only
+	# while the countdown runs, never safe room cells
 ```
 
 Zustand: ausschließlich `Game.state.show` (`ShowState`) + flüchtig `_rules: ShowRules`, `_queue: Array[Dictionary]` (angenommene,
@@ -1118,9 +1149,31 @@ Ablehnungen `cap_reached`/`chest_blocked` → `gift_capped`, `not_accepting` →
 Duplikate, Schemafehler und `window_*` stumm — das Overlay zeigt, wann das nächste Fenster öffnet).
 Sponsor-Fenster (05 §6.13): ein angewendetes externes Geschenk belegt seinen Platz (`GiftPolicy.note_applied` →
 `SponsorWindows.book`) → `sponsor_window_updated(view)`; letzter Platz → `say("sponsor_window_full")`. Hört auf
-`sponsor_window_opened` → `say("sponsor_window_open:<kind>", {"seconds", "count"})` und `sponsor_window_closed` (nur Grund
+`sponsor_window_opened` → `say("sponsor_window_open:<kind>")` (Comeback: `<kind>` = `boss_comeback`) und `sponsor_window_closed` (nur Grund
 `time`) → `say("sponsor_window_closed")` — **nur** bei `sponsor_presentation() == &"live"`, nie im Replay; die Kampagne bleibt
-beim dezenten Overlay-Hinweis. Zeilen ohne Kaufaufforderung (L13).
+beim dezenten Overlay-Hinweis. Zeilen ohne Kaufaufforderung (L13). 06-C (06 §6 Entscheidung 1): die Zeilen nennen weder
+Sekunden noch Plätze (`say` ohne `{seconds}`/`{count}`); das Comeback-Fenster sagt `sponsor_window_open:boss_comeback`;
+`test_m8_sponsor_windows` prüft alle `sponsor_window_*`-Zeilen auf „kauf/jetzt/schick/schnell/nur noch/letzte Chance/Sekunde“.
+
+**Marotten & Unterhosen-Liga (06-C, 06 §4).** Reaktionen wie die Achievements — **nicht** aufgezeichnet, im Replay identisch;
+`MarottenRules` (statisch, rein) entscheidet und schreibt `ShowState.marotten`, `Show` wendet an und präsentiert:
+`start_floor` → `MarottenRules.on_floor` (Auswahl `SeedUtil.derive(seed, "marotte", floor)`: E1 eine Starter-Vorliebe, ab E2
+zwei, möglichst ohne Wiederholung der Vor-Etage; verbraucht keinen `rng_counter`) → `marotten_announced`; M.O.D. sagt
+`marotte_announce:<id>` erst nach `floor_start` (gleiche Tick-Warteschlange, nie im Replay). `begin_battle` → Pazifist-Zähler 0,
+`MarottenTracker` neu, **Liga-Stufe eingefroren** (`MarottenRules.liga_tier`: gesteuerte Figur `GameState.hero` — Feld aus
+Paket A, Standard `"kai"` — bzw. beide ohne Rüstung **und** ohne Accessoire; Tutorial 0) → Promille-Faktoren `hype_pm`/
+`follower_pm` aus `marotten.json` (`add_hype` im Kampf: `(mult_pm × hype_pm + 500) / 1000`), `liga_changed` + `liga_enter:<n>`/
+`liga_leave` (je Etage einmal). `on_battle_event` füttert die Strichliste. `end_battle` (nur Sieg, nicht Tutorial):
+`MarottenRules.on_battle_end` → Herzen (je Vorliebe höchstens 1 je Kampf; Treffer-Hype **vor** der Follower-Umrechnung,
+Follower-Faktor = Ausrüstung × Liga × Treffer-Promille) → nach `battle_won`: gewonnene Wetten (`box_fan` →
+`pending_lootboxes`, Follower, Hype, `bets_won` +1), Liga-Kampf (`liga_battles` +1), `trigger("show_bet", payload)` je Ereignis,
+Zeilen/Toasts. `floor_completed` → `MarottenRules.on_floor_end`: Liga-Etagenbonus (alle ≥ 3 Siege der Etage in Stufe ≥ 1 →
+`box_fan`; alle ≥ 5 in Stufe 2 → `show_bet` `floor`), eine Schmoll-Zeile `marotte_missed`, `liga_hint` am Ende von E1 für alle,
+die die Liga nie probiert haben. **Event-Läufe** (`Game.event_rules()` nicht leer, 06 §4.8 Nr. 4 Option a): Vorlieben und
+Liga werden angezeigt und gezählt, aber **ohne** Faktoren, Boxen, Follower, Hype und ohne `show_bet`-Trigger — die Wertung
+hängt nie daran; `rules.marotten.enabled` / `rules.liga.enabled` (`{"enabled": bool}`, Standard an, `MarottenRules.
+validate_rules` in `EventDef.validate`) schalten Anzeige und Zählung ab und gehen in den `rules_hash` ein. `RunSim` rechnet
+keine Show-Reaktionen (wie Achievements); die Strichliste ist flüchtig (gespeichert wird nie im Kampf).
 **Aufzeichnung bei Anwendung, nicht bei Empfang:** Nur so ist die Reihenfolge im Log eindeutig (ein `gift`-Command im Kampf steht
 direkt hinter dem `battle`- bzw. `encounter`-Command, an dessen `_play`-Grenze es ausgeliefert wurde) und `Game.replay_log` kann
 es an derselben Stelle wieder einspeisen (§3.4 „Replay“).
@@ -1315,7 +1368,7 @@ Fokus-Stil aller Buttons: 3 px `C_ACCENT_2`-Rahmen (StyleBox `focus`).
 
 ### 4.1 Konventionen
 
-- Jede Datei der 13 `GameData.TABLES`: **ein Objekt** `{"schema": 1, "entries": [ {...}, ... ]}`. Encounters sind in
+- Jede Datei der 14 `GameData.TABLES`: **ein Objekt** `{"schema": 1, "entries": [ {...}, ... ]}`. Encounters sind in
   `floors.json` eingebettet. Zusätzliche Top-Level-Schlüssel sind **nur** diese: `party.json` → `start`; `enemies.json` →
   `pseudo_units`; `lootboxes.json` → `pools`, `pity`. Jeder andere Top-Level-Schlüssel ist ein Fehler.
   **Ausnahme `data/events.json`:** `{"schema": 1, "events": [ … ]}` (Schema 05 §10.1), geladen von `EventCatalog` (M8),
@@ -1352,6 +1405,7 @@ Fokus-Stil aller Buttons: 3 px `C_ACCENT_2`-Rahmen (StyleBox `focus`).
 | milestones | `ms_` | `^ms_[0-9]+$` | `ms_1000` |
 | mod_lines | `mod_` | `^mod_[a-z0-9_]+$` | `mod_floor_start_01` |
 | scenes | `scn_` | `^scn_[a-z0-9_]+$` | `scn_mop_4` |
+| marotten (06-C) | `mar_` | `^mar_[a-z0-9_]+$` | `mar_mop_only`, `mar_unterhose` |
 | Passiva (in classes.json) | `pas_` | `^pas_[a-z0-9_]+$` | `pas_thick_skin` |
 | Live-Events (`events.json`, M8) | `evt_` | `^evt_[a-z0-9_]+$` | `evt_offline_gleis9` |
 
@@ -1427,7 +1481,8 @@ const GIFT_KINDS: PackedStringArray = ["heal_party_pct", "heal_party_flat", "mp_
 const SPONSOR_WEIGHT_CONDS: PackedStringArray = ["ally_hp_below", "ally_mp_below", "ally_ko", "is_boss"]
 const ACH_TRIGGERS: PackedStringArray = ["enemy_killed", "battle_won", "battle_fled", "battle_started", "stunt_resolved", "combo",
 	"party_ko", "boss_defeated", "sponsor_gift", "viewers_changed", "chest_opened", "item_bought", "lootbox_opened",
-	"level_up", "event_completed", "explore_tick", "floor_completed"]
+	"level_up", "event_completed", "explore_tick", "floor_completed",
+	"show_bet"]                                                     # 06-C: show bets / Unterhosen-Liga (06 §4.6)
 const VOICES: PackedStringArray = ["mod", "mopsula", "kai", "chat"]
 const TEXT_PLACEHOLDERS: PackedStringArray = ["name", "floor", "level", "enemy", "item", "achievement", "viewers", "followers",
 	"sponsor", "count", "member", "seconds", "sender", "amount", "pct", "min"]   # sender/amount/pct/min: 05 §6.12
@@ -1439,10 +1494,11 @@ const REQUIRED_MOD_TAGS: PackedStringArray = ["intro", "floor_start", "first_fig
 	"chat_hype_high", "chat_hype_mid", "chat_hype_low", "chat_crit", "chat_boring", "chat_mopsula", "chat_handle"]
 ## Optional tags: live tags of 05 CR-9 / §6.12 (event_*, gift_*, fan_pack_*, live_*, vote_*, twist_applied_*), the
 ## Sponsor-Fenster lines of 05 §6.13 (sponsor_window_open[:periodic|safe_room|boss|dev], sponsor_window_closed,
-## sponsor_window_full) and the story beats of GDD §1.4 (tutorial_* hints B1/B2, story_battle:<encounter_id> banners B4).
+## sponsor_window_full) and the story beats of GDD §1.4 (tutorial_* hints B1/B2, story_battle:<encounter_id> banners B4);
+## 06-C: M.O.D.'s preferences and the Liga (marotte_announce|hit|won[:<mar id>], marotte_missed, liga_*; §4.4.15).
 const OPTIONAL_MOD_TAG_PREFIXES: PackedStringArray = ["achievement:", "boss_intro:", "boss_phase:", "event_", "gift_received",
 	"mopsula_idle", "chat_", "gift_", "fan_pack_", "live_", "vote_", "twist_applied_", "tutorial_", "story_",
-	"sponsor_window_"]
+	"sponsor_window_", "marotte_", "liga_"]
 ```
 
 `StatIds.ALL` (§6.3) ist das Vokabular für `s.<stat>` in Bedingungen.
@@ -1946,7 +2002,7 @@ sonst niedrigsten HP-Anteil +value % MaxHP). Gewicht = `weight × Π mult` aller
 | F | T | P / Default | Regel |
 |---|---|---|---|
 | `id` | String | ✓ | `mod_` |
-| `tag` | String | ✓ | `REQUIRED_MOD_TAGS`, `timer_warn_<s>`, parametrisiert (`achievement:<ach_id>`, `boss_intro:<enemy_id>`, `boss_phase:<enemy_id>:<n>`, `story_battle:<encounter_id>` — nur Format `enc_…` geprüft, Fixtures ersetzen Etagen; `test_m7_text_content` prüft die Referenz der echten Daten; `sponsor_window_open:<kind>` mit `kind` ∈ `SponsorWindows.KINDS`) oder optionale Präfixe (`OPTIONAL_MOD_TAG_PREFIXES`) |
+| `tag` | String | ✓ | `REQUIRED_MOD_TAGS`, `timer_warn_<s>`, parametrisiert (`achievement:<ach_id>`, `boss_intro:<enemy_id>`, `boss_phase:<enemy_id>:<n>`, `story_battle:<encounter_id>` — nur Format `enc_…` geprüft, Fixtures ersetzen Etagen; `test_m7_text_content` prüft die Referenz der echten Daten; `sponsor_window_open:<kind>` mit `kind` ∈ `SponsorWindows.KINDS` oder `boss_comeback` (06-C); `marotte_announce|hit|won:<mar id>` mit existierender Marotte (06-C)) oder optionale Präfixe (`OPTIONAL_MOD_TAG_PREFIXES`) |
 | `voice` | String | `"mod"` | `VOICES` |
 | `text` | String | ✓ | ≤ 110 Zeichen; Platzhalter `{…}` nur aus `TEXT_PLACEHOLDERS` |
 | `user` | String | `""` | nur voice chat: fester Absender; `""` → zufälliger Handle (Tag `chat_handle`) |
@@ -2004,6 +2060,43 @@ aufrecht, sonst Vierbeiner; `"quadruped"`/`"upright"` erzwingen — `enm_boss_ra
 Schaufensterpuppe: Übergangsregel `colors.eyes == colors.skin` → gesichtslose Puppe (`humanoid`); ein expliziter Schalter
 (Prop/Variante) folgt mit Etage 2.
 
+#### 4.4.15 `marotten.json` → `MarotteDef` (06-C, 06 §4.9)
+
+M.O.D.s Vorlieben (Show-Wetten) und die Unterhosen-Liga. Regeln im privaten Helfer `core/data/validators/marotten.gd`.
+
+| F | T | P / Default | Regel |
+|---|---|---|---|
+| `id` | String | ✓ | `mar_` |
+| `name` | String | ✓ | ≤ 28 Zeichen (HUD-Chip „M.O.D. mag heute: <name>“) |
+| `desc` | String | `""` | ≤ 80 Zeichen; die Regel in einem Satz (Pausemenü-Tab „Show“) |
+| `kind` | String | ✓ | `battle` \| `explore` \| `liga` (höchstens ein `liga`-Eintrag) |
+| `trigger` | String | ✓ | passend zu `kind`: `battle`/`liga` → `marotte_battle`, `explore` → `explore_zone` |
+| `condition` | String | ✓ | `ConditionExpr`; `e.`-Schlüssel nur aus dem Kontext des Triggers (unten), `s.` = `StatIds.ALL` |
+| `goal` | int | 3 | Herzen bis zur gewonnenen Wette, 1..9; `liga`: 0 |
+| `rotation` | bool | true | Teil der Auswahl je Etage; `liga`: false |
+| `starter` | bool | false | auch auf Etage 1 wählbar (mindestens eine rotierende Starter-Vorliebe); `liga`: false |
+| `min_floor` | int | 1 | 1..99 |
+| `weight` | int | 1 | 1..10, Gewicht der Auswahl |
+| `reward` | Dictionary | `{}` | rotierend: `hit_hype` 0..50, `hit_follower_pm` 1000..2000, `won_box` (Lootbox-ID oder `""`), `won_followers` 0..500, `won_hype` 0..50; `liga`: `tiers` (1–2 × `{tier` 1..2, `hype_pm` 1000..2000, `follower_pm` 1000..2000`}`, Stufe eindeutig), `floor_box` (Lootbox-ID) |
+| `mod_tag` | String | `""` | Tag-Stamm der Zeilen (Information für Autor:innen) |
+
+Kontext `marotte_battle` (`MarottenRules.battle_context`): `won, hero, party_turns, items_used, gifts, defends, flee_attempts,
+distinct_actions, stunts_success, weakness_hits, min_party_hp_pct, party_kos, last_kill_member, encounter_type, is_boss,
+is_floor_boss, boss_id, kai_weapon, equip_all_common, hero_armor_empty, hero_acc_empty, party_armor_empty, party_acc_empty,
+liga_tier`. Kontext `explore_zone`: `zones_since_battle, zone, floor`. Pflicht-Zeilen (Regel 9): je rotierender Vorliebe
+`marotte_announce:<id>` und `marotte_hit:<id>`, dazu `marotte_won`, `marotte_missed`; mit Liga-Eintrag `liga_hint`,
+`liga_enter:1`, `liga_enter:2`, `liga_leave`, `liga_floor` (optional `liga_enter:1:<hero>`, `liga_win`, `marotte_won:<id>`).
+Distanz-Regel 06 §0.3: `name`/`desc` aller Einträge und alle `liga_*`/`marotte_*`-Zeilen dürfen keine Fuß-/Schuh-Wörter enthalten
+(`barfuß`, `Schuh`, `Füße`, `Socke`, `Zehen` …); der Spieltext der Liga lautet überall „ohne Rüstung & ohne Accessoire“.
+
+```json
+{"id": "mar_unterhose", "name": "Unterhosen-Liga", "desc": "Ohne Rüstung & ohne Accessoire kämpfen: mehr Hype, mehr Follower.",
+ "kind": "liga", "trigger": "marotte_battle", "condition": "e.liga_tier >= 1", "goal": 0, "rotation": false,
+ "starter": false, "min_floor": 1, "weight": 1,
+ "reward": {"tiers": [{"tier": 1, "hype_pm": 1200, "follower_pm": 1150}, {"tier": 2, "hype_pm": 1400, "follower_pm": 1350}],
+            "floor_box": "box_fan"}, "mod_tag": "liga"}
+```
+
 ### 4.5 Validierung (`DataValidator`) und `GameData`-API
 
 Ablauf `GameData.load_dir(dir)`: (1) alle Dateien aus `TABLES` parsen; (2) je Eintrag Schema prüfen + normalisieren; (3) zweiter
@@ -2037,11 +2130,14 @@ Regeln (jede Verletzung = ein Eintrag in `errors`, Format `"<table>[<index>|<id>
    (`{Name}`, `{name`, `}`, `{ floor }`) ist ein Fehler (`String.format` ließe sie im HUD stehen).
 10. `achievements.condition` und `scenes.condition` parsen fehlerfrei; `s.`-Operanden ∈ `StatIds.ALL` (DataValidator hält eine Kopie
     `STAT_IDS`; `test_m2_achievements` prüft Gleichheit); `e.`-Schlüssel ∈ Payload-Schlüssel des Triggers (§6.3).
+11. (06-C) `marotten.json` nach §4.4.15 (Schema, Bereiche, Lootbox-Referenzen, Pflicht-Zeilen, Bedingungs-Kontexte,
+    Fuß-Wörter-Sperre); `mod_lines`-Tags `marotte_announce|hit|won:<id>` verweisen auf eine existierende Marotte.
 
 ```gdscript
 class_name GameData extends RefCounted
 const TABLES: PackedStringArray = ["statuses", "skills", "items", "classes", "party", "enemies", "floors",
-	"lootboxes", "achievements", "sponsors", "milestones", "mod_lines", "scenes"]
+	"lootboxes", "achievements", "sponsors", "milestones", "mod_lines", "scenes",
+	"marotten"]                                                     # 06-C
 var source: String = ""                    # dir or "dicts"
 var errors: PackedStringArray = []
 var warnings: PackedStringArray = []
@@ -2086,6 +2182,8 @@ func all_achievements_for(trigger_id: String) -> Array[AchievementDef]
 func all_sponsors() -> Array[SponsorDef]
 func all_milestones() -> Array[MilestoneDef]       # sorted by followers
 func all_scenes() -> Array[SceneDef]               # sorted by priority, then id
+func marotte(id: String) -> MarotteDef             # 06-C
+func all_marotten() -> Array[MarotteDef]           # 06-C: file order (the rotation order of MarottenRules.announce)
 ```
 
 Def-Klassen (`core/data/defs/*.gd`): `class_name XxxDef extends RefCounted`, ein typisiertes Feld pro JSON-Feld
@@ -2759,8 +2857,39 @@ var stats: Dictionary = {}                   # StatIds → int
 var achievements: PackedStringArray = []     # unlocked ids
 var milestones: PackedStringArray = []       # reached ms ids
 var sponsor_uses: Dictionary = {}            # sponsor id → total gifts given
+var marotten: Dictionary = {}                # 06-C (only MarottenRules writes): {"floor", "active": [mar ids], "hits": {id: int},
+	# "won": [ids won this floor], "prev": [ids of the previous floor], "zones": int (mar_pacifist: new rooms since the last
+	# battle / heart), "liga": {"battles", "t1", "t2"} (won battles of the floor, of them at tier >= 1 / tier 2)}; {} = none yet
 func to_dict() -> Dictionary
 static func from_dict(d: Dictionary) -> ShowState
+static func marotten_dict(raw: Variant) -> Dictionary   # 06-C: JSON-stable types (ints, sorted String arrays); {} otherwise
+
+class_name MarottenRules extends RefCounted   # 06-C, static + pure (GameState/ShowState + GameData), caller: Show (§3.5)
+static func enabled(rules: Dictionary) -> bool              # rules.marotten.enabled (default true)
+static func liga_enabled(rules: Dictionary) -> bool         # rules.liga.enabled (default true)
+static func rewards_on(rules: Dictionary) -> bool           # campaign only (rules empty): factors, boxes, followers, show_bet
+static func validate_rules(rules: Dictionary) -> PackedStringArray   # EventDef.validate: {"enabled": bool} objects
+static func announce(state: GameState, data: GameData, floor_index: int, prev: PackedStringArray = []) -> PackedStringArray
+static func on_floor(state, data, floor_index, rules) -> Dictionary          # resets the floor record → {"announce": ids}
+static func ensure_floor(state, data, rules) -> void                         # old saves / load: record of the current floor
+static func hero_of(state: GameState) -> String             # state.get("hero") (package A field) or "kai"
+static func liga_tier(state: GameState, rules: Dictionary = {}) -> int       # 0 | 1 | 2 (armor + accessory empty)
+static func liga_blockers(state: GameState, member_id: String) -> PackedStringArray   # item ids in armor / accessory
+static func liga_pm(data: GameData, tier: int, what: StringName) -> int      # &"hype" | &"follower"; 1000 = neutral
+static func on_battle_start(state: GameState) -> void       # pacifist counter := 0
+static func battle_context(state, data, result: BattleResult, tally: Dictionary) -> Dictionary   # marotte_battle (§4.4.15)
+static func on_battle_end(state, data, result, tally, rules) -> Dictionary
+	# victory only, never tutorial: {"hits", "won", "hype", "follower_pm", "boxes", "followers", "won_hype", "show_bet",
+	# "liga_tier"}; writes ShowState.marotten + bets_won / liga_battles (before the show_bet payloads)
+static func on_zone(state, data, zone: String, rules) -> Dictionary          # explore preferences (mar_pacifist, latch)
+static func on_floor_end(state, data, floor_index, rules) -> Dictionary      # Liga floor bonus, missed preferences
+static func view(state, data, rules) -> Dictionary                           # Show.marotten_view
+
+class_name MarottenTracker extends RefCounted  # 06-C: tally of ONE battle (volatile, like ShowRules)
+var liga_tier: int; var tutorial: bool; var gifts: int
+func begin(setup: BattleSetup, p_liga_tier: int) -> void
+func on_battle_event(e: ActionEvent) -> void   # defends, flee attempts, distinct party actions, stunts, last kill member
+func tally() -> Dictionary
 
 class_name ShowModel extends RefCounted
 const VIEWER_BASE: int = 1000
@@ -3095,6 +3224,8 @@ Top-Kampf am Etagenende; Ziel-Peak der Etage 3 000–5 500.
 | `viewers_target_peak` | Max | Show (`viewers_changed`, wie `viewers_max`) | rauschfreier Wert; Quest-Metrik `hype_peak` (05 CR-13) |
 | `followers_gained_run` | Summe | Show (`add_followers` mit n > 0, **vor** `followers_changed`) | Quest-Metrik (CR-13); im Event-Lauf = Lauf-Summe (frischer `GameState`) |
 | `hype_100_count` | Zähler | Show (`add_hype` erreicht 100 von unten, **vor** `hype_changed`) | Quest-Metrik (CR-13) |
+| `bets_won` | Zähler | `MarottenRules` (vor dem `show_bet`-Trigger) | gewonnene Show-Wette (06-C, nur Kampagne) |
+| `liga_battles` | Zähler | `MarottenRules` (vor dem `show_bet`-Trigger) | Sieg in Liga-Stufe ≥ 1 (06-C, nur Kampagne) |
 
 Trigger-Payloads (`e.`-Schlüssel; der Validator prüft Bedingungen dagegen):
 
@@ -3117,6 +3248,7 @@ Trigger-Payloads (`e.`-Schlüssel; der Validator prüft Bedingungen dagegen):
 | `event_completed` | `event_id`, `choice` |
 | `explore_tick` | `seconds_since_battle` |
 | `floor_completed` | `floor`, `timer_left` (Sekunden, int) |
+| `show_bet` (06-C) | `kind` (`liga`/`marotte`), `event` (`battle`/`floor`/`won`), `id`, `tier`, `floor_tier`, `battles`, `is_boss`, `is_floor_boss`, `boss_id`, `party_kos`, `floor` — nur Kampagne (Event-Läufe feuern ihn nicht) |
 
 ### 6.4 Save-Format (Version 1)
 
@@ -3155,7 +3287,9 @@ Datei `user://saves/slot_<1..3>.json` (bei `use_custom_user_dir` unter `…/Prim
                   "location": "sr_kiosk", "visited_safe_rooms": ["sr_kiosk"], "safe_room_visits": 1,
                   "stats": {"time_used_ticks": 13974, "kills": 6, "viewers_peak": 2210, "followers_gained": 420, "achievements": 4}},
     "show": {"viewers": 1800, "followers": 420, "hype": 35.0, "stats": {"kills_total": 6},
-             "achievements": ["ach_first_blood"], "milestones": ["ms_100", "ms_250"], "sponsor_uses": {"spn_gluckwasser": 1}},
+             "achievements": ["ach_first_blood"], "milestones": ["ms_100", "ms_250"], "sponsor_uses": {"spn_gluckwasser": 1},
+             "marotten": {"floor": 1, "active": ["mar_mop_only"], "hits": {"mar_mop_only": 1}, "won": [], "prev": [],
+                          "zones": 0, "liga": {"battles": 4, "t1": 0, "t2": 0}}},
     "flags": {"intro_seen": true, "scene_scn_mop_1": true}
   }
 }
@@ -4113,8 +4247,8 @@ offene M.O.D.-Zeilen, damit die Box nicht über Kai, Prompt und Marker liegt.
 
 | Szene | Rezepte |
 |---|---|
-| `exploration.tscn` | `explore_platform` / `explore_sewer` / `explore_cellar` (Gruppe der Zone 6 m vor Kai), `prompt_<zone>` (Kai vor einer Truhe: Prompt + Marker), `bigmap`, `pause_party` / `pause_inventory` / `pause_equipment` / `pause_skills` / `pause_settings` |
-| `battle.tscn` | `battle_menu`, `battle_skills`, `battle_target`, `battle_damage`, `battle_enemy_turn`, `boss_intro` (mit `--params={"encounter": "<boss enc>", "capture": false, "speed": 1.0}`), `boss_phase`, `battle_gift`, `battle_victory` / `battle_results` (mit `--params={"capture_turns": 99}`) |
+| `exploration.tscn` | `explore_platform` / `explore_sewer` / `explore_cellar` (Gruppe der Zone 6 m vor Kai), `prompt_<zone>` (Kai vor einer Truhe: Prompt + Marker), `bigmap`, `pause_party` / `pause_inventory` / `pause_equipment` / `pause_skills` / `pause_show` (06-C) / `pause_settings` |
+| `battle.tscn` | `battle_menu`, `battle_skills`, `battle_target`, `battle_damage`, `battle_enemy_turn`, `boss_intro` (mit `--params={"encounter": "<boss enc>", "capture": false, "speed": 1.0}`), `boss_phase`, `battle_gift`, `battle_victory` / `battle_results` / `battle_results_show` (06-C: gewonnene Show-Wette im Ergebnis; mit `--params={"capture_turns": 99}`) |
 | `safe_room.tscn` | `safe_vending`, `safe_equipment`, `safe_lootbox`, `safe_lootbox_open`, `safe_mopsula` |
 
 Beispiel (Handy-Format, Touch an): `tools/check.sh --shot res://scenes/battle/battle.tscn /tmp/b.png 5 2400x1080 --touch --recipe=battle_skills`.
@@ -4170,9 +4304,10 @@ Interaktionen. `TitleFlow.parse_args` liefert zusätzlich `"autoplay_mode": "" |
 Modi = `smoke`, der Lauf oben bleibt unverändert). Boot bei `--autoplay=full`: wie oben, aber `Engine.time_scale =
 FullRun.TIME_SCALE` (5.0) und **echte** Spielstände in `user://fullrun_saves` (`Save.save_dir`, `read_only = false`, vor und
 nach dem Lauf geleert); Knoten `FullRun` statt `Autoplay`. Weitere User-Argumente: `--seed=<int>` (Default 4242),
-`--strategy=thorough|rush|dawdle|typical`, `--pace=fast|human` (Default `fast`).
+`--strategy=thorough|rush|dawdle|typical`, `--pace=fast|human` (Default `fast`), `--liga=0|1|2` (06-C, Default 0: Strategie
+Unterhosen-Liga — `equip_best` lässt Rüstung und Accessoire der gesteuerten Figur bzw. beider Figuren leer und zieht sie aus).
 
-`tools/fullrun.sh [--strategy=…|all] [--seed=…] [--pace=…] [--log-dir=…]`: isolierte Kopie, Import, dann
+`tools/fullrun.sh [--strategy=…|all] [--seed=…] [--pace=…] [--liga=…] [--log-dir=…]`: isolierte Kopie, Import, dann
 `godot --headless --fixed-fps 60 --quit-after 95000 -- --autoplay=full --strategy=<s>` (feste 60 Frames/s Spielzeit-Takt, nicht an
 die Wanduhr gebunden → reproduzierbar bis auf wenige Frames Jitter zwischen zwei Läufen, der selten einen Kampf anders
 ausgehen lässt (GDD §13), und so schnell, wie die CPU kann; gemessen thorough ≈ 18 s, rush ≈ 21 s (verliert seit dem
@@ -4206,7 +4341,9 @@ Safe Rooms (Erstbesuch), unbesuchte Räume, Streuner ≤ 2 Räume entfernt (max.
 - **Treppe → Ende:** Etagen-Bilanz → „Weiter“ → `floor_run.index == 2`, Autosave in Slot 1 (`floor_index` 2, `location` start) →
   Abspann → Titel → „Fortsetzen“ muss wieder im Abspann landen (nicht spielbare Etage 2) → Titel. Story-Beats (M.O.D.-Tags):
   `floor_start` genau 1× und erst mit laufendem Countdown, `first_fight`, `safe_room_enter`, `scene:scn_mop_1`,
-  `boss_intro:enm_boss_hausmeister`, `stairs_found`, `floor_end`.
+  `boss_intro:enm_boss_hausmeister`, `stairs_found`, `floor_end`; 06-C: `marotte_announce:<id>` mit laufendem Countdown (die
+  Vorliebe der Etage), bei `--liga≥1` mindestens ein Liga-Sieg (`liga_battles`). `FULLRUN: stats` enthält zusätzlich `liga`,
+  `marotten`, `bets_won`, `liga_battles`.
 - **Strategien:** `thorough` (Default, alles); `rush` (nur Safe Rooms, Tore, Bosse — unterlevelt); `dawdle` (nach dem ersten
   Speichern stehen bleiben bis zum Etagenkollaps: Warnungen 600/300/60 genau 1× in dieser Reihenfolge, `floor_timer_expired` 1×,
   Sendeschluss mit Grund `timer`); `typical` (wie `thorough`, aber ohne die Nebengruppen a4/b3/c2 und ohne Streuner-Jagd —
@@ -4242,6 +4379,7 @@ Kampfstart/-ende/-peak, Teleports, Fallbacks, Replay-Prüfungen, M.O.D.-Tags) un
 | M6 | Jede UI-Szene instanziierbar + Default-Fokus; alle statischen UI- und `Label3D`-Texte bestehen `ThemeDB.fallback_font.has_char()` Zeichen für Zeichen (03_ART A13/F8, `test_m6_ui_scenes`); `PauseMenu.process_mode == PROCESS_MODE_WHEN_PAUSED` (und alle Untermenüs); Touch-Trefferflächen ≥ 88; SafeAreaContainer-Ränder ≥ 24; `name_entry` `max_length == 12`; Full-Run-Bot: Helfer/Planer/Story-Beats (`test_m6_fullrun`) + ganzer Lauf über `tools/fullrun.sh` (CI, §11.4.1) |
 | M7 | `real_data()` valide; Mindestmengen laut GDD; jede reguläre Etage-1-Encounter per Auto-Kampf (50 Seeds) ≥ 80 % Siegquote mit dem Level/der Ausrüstung, die der GDD-Fortschritt dort erwartet (§5.4/§13): Zone A Lv 2 (Tutorial Lv 1), Zone B Lv 3 (Startausrüstung), Zone C Lv 4 + mittlere Ausrüstung, Hausmeister Lv 5, Zone D Lv 6 + späte Ausrüstung, Königin Lv 7; Bosse ohne Geschenke ≥ 50 %; Party-Züge je Sieg: Median aller regulären Encounter 4–6, je Encounter 3–7, Hausmeister 16–22, Königin 20–26 (GDD §13). **Show-Bilanz** (`test_m7_show_balance.gd`, echtes `Show` im Kampf-Loop, Geschenke wie im `BattleController`): Etage 1 als Staffel (Kämpfe in Kartenreihenfolge auf Plan-Level, Abkühlen im Bot-Takt `--pace=human`, Truhen/Events/Level-ups/Lootboxen über `Events`) → Follower, Zuschauer-Peak, Sponsor-Geschenke, Achievements, Lootboxen, Hype am Kampfanfang/-ende in den GDD-§13-Bändern; Boss-Niederlagequote auf Ziel-Level mit Geschenken (100 Seeds; Hype beim Kampfstart = Abkühl-Boden 25, Ausrüstung/Items wie vom Bot vor den Bossen gemessen): Hausmeister 10–30 %, Königin 25–45 % (GDD ~20 / ~35 %) |
 | M8 | 05_LIVE_MODUS §11.4; zusätzlich `RunSim.step(1) × n ≡ step(n)` und Timer/Hype-Zerfall in Ticks; Verifier gegen gefälschte Logs (`test_m8_integrity`); jeder `Command.TYPES`-Eintrag hat einen Zweig in `RunSim.apply` und im Replay-Motor (`test_m8_command`) |
+| 06-C | Marotten (`test_06c_marotten`): Auswahl deterministisch je Seed/Etage (E1 nur Starter, möglichst ohne Wiederholung), jede Bedingung trifft/trifft nicht, ≤ 1 Herz je Vorliebe und Kampf, Wette → Box/Follower/Hype/`bets_won`/`show_bet`, Tutorial/Niederlage/Event-Lauf zahlen nichts, Pazifist (Erstbesuch, Countdown, kein Safe Room, Latch, Save/Load), Replay-Gleichheit; Liga (`test_06c_liga`): Stufen je gesteuerter Figur, Blocker, Faktoren beim Kampfstart eingefroren, Etagen-Bonus, Kette „Ohne alles“, Regel-Schalter im `rules_hash`, UI; Sponsor-Fenster-Entscheidungen (`test_06c_sponsor_display`); Balance-Bänder 06 §4.10 (`test_06c_balance`) |
 
 ---
 

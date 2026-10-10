@@ -378,6 +378,8 @@ func apply_battle_result(result: BattleResult) -> BattleRewards:
 	if rewards == null:
 		rewards = BattleRewards.new()
 	if sim != null:
+		SponsorWindows.on_battle_result(state, sim.rules, DB.data, result)   # 06-C: comeback mark (06 §6 decision 3)
+	if sim != null:
 		sim.request_checkpoint()   # 05 §3.3 Nr. 8: a checkpoint after every battle (written when the clock moves on)
 	Events.party_changed.emit()
 	Events.inventory_changed.emit()
@@ -518,10 +520,13 @@ func visit_room(cell: Vector2i) -> bool:
 		return false
 	var fr: FloorRun = state.floor_run
 	if fr.visited.has(cell):
+		_comeback_room(cell)                      # 06-C
 		return false
 	record({"t": "room", "cell": JsonUtil.vec2i_to_arr(cell)})
 	var layout: FloorLayout = _current_layout()
 	RunRules.visit_room(state, layout, cell)
+	var rc: RoomCell = layout.cell_at(cell) if layout != null else null           # 06-C: pacifist preference
+	Show.on_room_visited(int(rc.kind) if rc != null else -1, rc.zone if rc != null else "")
 	_quest_feed(RunSim.zones_event(fr, layout))   # reach_stairs progress before the stairs (05 §1.3, same as RunSim)
 	if sim != null:
 		_dispatch(sim.sponsor_room(cell))         # boss room → Boss-Countdown (05 §6.13)
@@ -544,6 +549,18 @@ func open_chest(chest_id: String) -> Array[LootReward]:
 	_emit_inventory(credits_before)
 	Events.chest_opened.emit(chest_id, rewards)
 	return rewards
+
+
+## 06-C (06 §6 decision 3): re-entering a boss room while its comeback is due (a lost boss attempt) opens the
+## Sponsor-Fenster once more — recorded as a "room" command like a first visit (RunSim._apply_room runs the same rule
+## through SponsorWindows.on_room(first = false)). Every other revisit records nothing.
+func _comeback_room(cell: Vector2i) -> void:
+	var layout: FloorLayout = _current_layout()
+	var rc: RoomCell = layout.cell_at(cell) if layout != null else null
+	if rc == null or sim == null or not SponsorWindows.comeback_due(state, sim.rules, int(rc.kind)):
+		return
+	record({"t": "room", "cell": JsonUtil.vec2i_to_arr(cell)})
+	_dispatch(sim.sponsor_room(cell, false))
 
 
 ## Gate requirement checked by M3: opened_gates.append(key) (once), record({"t": "gate", "key"}).

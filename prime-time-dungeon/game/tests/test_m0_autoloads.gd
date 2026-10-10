@@ -19,6 +19,7 @@ const SIGNALS: Dictionary = {
 	"gift_rejected": 2, "toast_requested": 2, "dialog_reserve_requested": 3,
 	"sponsor_window_opened": 1, "sponsor_window_closed": 2,
 	"sponsor_window_updated": 1,
+	"marotten_announced": 1, "marotte_progress": 3, "marotte_won": 1, "liga_changed": 1,   # 06-C
 }
 const ACTIONS: PackedStringArray = ["move_forward", "move_back", "move_left", "move_right", "cam_left", "cam_right",
 	"cam_up", "cam_down", "sneak", "action", "pause", "map", "tab_prev", "tab_next", "toggle_auto", "toggle_speed",
@@ -122,12 +123,13 @@ func test_game_settings_dict_and_defaults() -> void:
 	var d: Dictionary = s.to_dict()
 	for key: String in ["master_volume", "music_volume", "sfx_volume", "battle_speed", "text_speed",
 			"auto_battle_default", "fullscreen", "quality", "touch_controls", "show_fps", "camera_invert_x",
-			"camera_invert_y", "camera_sensitivity"]:
+			"camera_invert_y", "camera_sensitivity", "show_bets_hud"]:
 		assert_true(d.has(key), "settings key " + key)
 	assert_eq(d["music_volume"], 0.6)
 	assert_eq(d["battle_speed"], 1.0)
 	assert_eq(d["text_speed"], 1)
 	assert_eq(d["touch_controls"], &"auto")
+	assert_eq(d["show_bets_hud"], true, "06-C: the show chip is on by default")
 
 
 func test_game_without_state_is_safe() -> void:

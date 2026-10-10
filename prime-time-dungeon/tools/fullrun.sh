@@ -5,13 +5,16 @@
 # "FULLRUN: OK …", exits 0 and logs no error line (same ERR_RE as check.sh).
 #
 # Usage:
-#   tools/fullrun.sh [--strategy=thorough|rush|dawdle|typical|all] [--seed=<int>] [--pace=fast|human] [--log-dir=<dir>]
+#   tools/fullrun.sh [--strategy=thorough|rush|dawdle|typical|all] [--seed=<int>] [--pace=fast|human] [--liga=0|1|2]
+#                    [--log-dir=<dir>]
 #     thorough (default)  every group, chest, event and room; bosses; stairs → summary → credits
 #     rush                safe rooms, gates and bosses only (under-levelled)
 #     dawdle              idles after the first save until the floor collapses → Sendeschluss → load → finishes
 #     typical             thorough without the side groups a4/b3/c2 and without stray hunting (GDD §13 player)
 #     all                 thorough, rush and dawdle after one import (CI)
 #   --pace=human          human-pace model (02_TECH §11.4.1: looks around, decides, reads) for the GDD §13 floor time
+#   --liga=1|2            06-C Unterhosen-Liga strategy: the controlled hero (1) / both (2) never wear armor or an
+#                         accessory (06 §4.3; the run must win at least one battle in the Liga)
 #
 # Env: GODOT=<path to godot 4.7 binary> (default: "godot" on PATH)
 set -uo pipefail
@@ -23,6 +26,7 @@ QUIT_AFTER=95000          # frames; safety net behind the bot's own watchdog (Fu
 STRATEGIES=(thorough)
 SEED_ARG=()
 PACE_ARG=()
+LIGA_ARG=()
 LOG_DIR=""
 for a in "$@"; do
   case "$a" in
@@ -30,6 +34,7 @@ for a in "$@"; do
     --strategy=thorough|--strategy=rush|--strategy=dawdle|--strategy=typical) STRATEGIES=("${a#--strategy=}") ;;
     --seed=*) SEED_ARG=("$a") ;;
     --pace=fast|--pace=human) PACE_ARG=("$a") ;;
+    --liga=0|--liga=1|--liga=2) LIGA_ARG=("$a") ;;
     --log-dir=*) LOG_DIR="${a#--log-dir=}" ;;
     *) echo "fullrun.sh: unknown argument $a" >&2; exit 2 ;;
   esac
@@ -64,10 +69,10 @@ fi
 
 status=0
 for st in "${STRATEGIES[@]}"; do
-  echo "== full run: strategy $st ${SEED_ARG[*]:-} ${PACE_ARG[*]:-} (Floor 1, headless, fixed 60 fps) =="
+  echo "== full run: strategy $st ${SEED_ARG[*]:-} ${PACE_ARG[*]:-} ${LIGA_ARG[*]:-} (Floor 1, headless, fixed 60 fps) =="
   start=$(date +%s)
   out="$(timeout 900 "$GODOT" --headless --path "$WORK" --fixed-fps 60 --quit-after "$QUIT_AFTER" \
-        -- --autoplay=full "--strategy=$st" "${SEED_ARG[@]}" "${PACE_ARG[@]}" 2>&1 | filter_noise)"
+        -- --autoplay=full "--strategy=$st" "${SEED_ARG[@]}" "${PACE_ARG[@]}" "${LIGA_ARG[@]}" 2>&1 | filter_noise)"
   code=${PIPESTATUS[0]}
   end=$(date +%s)
   if [ -n "$LOG_DIR" ]; then mkdir -p "$LOG_DIR" && printf '%s\n' "$out" > "$LOG_DIR/fullrun_$st.log"; fi

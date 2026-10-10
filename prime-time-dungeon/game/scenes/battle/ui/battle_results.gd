@@ -198,6 +198,10 @@ func _build(result: BattleResult, rw: BattleRewards) -> void:
 		_member_rows(result, rw)
 		v.add_child(_rule(Color(1, 1, 1, 0.15)))
 		v.add_child(_reward_row(result, rw))
+		if result.outcome == BattleResult.Outcome.VICTORY:
+			var show_row: Control = _show_row(Show.last_marotten())   # 06-C: hearts of M.O.D.'s preferences, Liga
+			if show_row != null:
+				v.add_child(show_row)
 	else:
 		var l: Label = HudStyle.label(tr("Die Party ist gefallen. Die Quote war trotzdem gut."), 20, HudStyle.C_PAPER)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -360,6 +364,41 @@ func _cell(row: HBoxContainer, icon: String, icon_col: Color, value: String, val
 	val.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	cell.add_child(val)
 	row.add_child(cell)
+	return cell
+
+
+## 06-C (06 §4.7): "♥ M.O.D. mag das: Nur der Mopp 2/3" per filled heart (golden "Wette gewonnen" at the goal) and
+## the battle's Liga tier ("UNTERHOSEN-LIGA" / "DUO-LIGA"); null when the battle filled no heart outside the Liga.
+## `info` = Show.last_marotten().
+func _show_row(info: Dictionary) -> Control:
+	var items: Array = info.get("hits", []) if info.get("hits", []) is Array else []
+	var tier: int = int(info.get("liga_tier", 0))
+	if items.is_empty() and tier <= 0:
+		return null
+	var row: HFlowContainer = HFlowContainer.new()
+	row.name = "ShowRow"
+	row.add_theme_constant_override("h_separation", 22)
+	row.add_theme_constant_override("v_separation", 4)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for it: Variant in items:
+		var d: Dictionary = it as Dictionary
+		var won: bool = bool(d.get("won", false))
+		var text: String = tr("Wette gewonnen: %s") % str(d.get("name", "")) if won else tr("M.O.D. mag das: %s %d/%d") % [
+			str(d.get("name", "")), int(d.get("hits", 0)), int(d.get("goal", 3))]
+		var cell: HBoxContainer = _cell_box("heart", Color("#ff2e88"), text, Color("#ffc93c") if won else Color("#ff8fc4"))
+		row.add_child(cell)
+	if tier > 0:
+		row.add_child(_cell_box("star", Color("#ffc93c"), tr("DUO-LIGA") if tier == 2 else tr("UNTERHOSEN-LIGA"),
+			Color("#ffc93c") if tier == 2 else Color("#ff8fc4")))
+	return row
+
+
+func _cell_box(icon: String, icon_col: Color, value: String, value_col: Color) -> HBoxContainer:
+	var holder: HBoxContainer = HBoxContainer.new()
+	_cell(holder, icon, icon_col, value, value_col)
+	var cell: HBoxContainer = holder.get_child(0) as HBoxContainer
+	holder.remove_child(cell)
+	holder.free()
 	return cell
 
 

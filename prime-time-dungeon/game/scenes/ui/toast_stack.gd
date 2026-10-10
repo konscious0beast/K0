@@ -20,6 +20,10 @@ const STYLES: Dictionary = {
 	&"credits": ["CREDITS", &"coin", Color("#ffc93c")],
 	&"milestone": ["FOLLOWER-MEILENSTEIN", &"heart", Color("#ff2e88")],
 	&"info": ["HINWEIS", &"dot", Color("#22d3ee")],
+	# 06-C: show bets (hearts) and the Unterhosen-Liga (06 §4.7)
+	&"marotte": ["M.O.D. MAG DAS", &"heart", Color("#ff2e88")],
+	&"liga": ["UNTERHOSEN-LIGA", &"star", Color("#ff2e88")],
+	&"liga_duo": ["DUO-LIGA", &"star", Color("#ffc93c")],
 }
 
 var _root: Control

@@ -229,6 +229,13 @@ ko_pen      = party_kos * scoring.per_ko                                        
 score       = quest_pts + time_pts + show_pts + ach_pts + ko_pen
 ```
 
+**M.O.D.-Marotten & Unterhosen-Liga in Event-Läufen** (06 Kap. 4.8 Nr. 4, Option a; umgesetzt Paket 06-C): Vorlieben und Liga
+werden angezeigt und gezählt (Herzen, Zeilen), wirken aber **nicht** auf die Wertung — in Läufen mit Event-Regeln wenden
+`Show`/`MarottenRules` weder Liga- noch Treffer-Faktoren an, geben keine Wett-Follower/-Boxen/-Hype und feuern keinen
+`show_bet`-Trigger. `followers_gained` ist damit schon die Basis ohne Liga/Wetten (`followers_gained_base` aus 06 entfällt), und
+`ach_pts` enthält nie ein `show_bet`-Achievement. `rules.marotten.enabled` / `rules.liga.enabled` (`{"enabled": bool}`,
+Standard an) schalten Anzeige und Zählung ab und gehen in den `rules_hash` ein (`test_06c_liga`).
+
 Tie-Break: `score` absteigend → `run_wall_ms` aufsteigend → `finished_at` aufsteigend. Beide Werte sind **serverseitig**:
 `run_wall_ms` = Zeitraum zwischen vom Server ausgestelltem Run-Start-Ticket und Server-Eingang des Run-Logs (Async) bzw.
 Instanz-Start/-Ende (Server-Sim), gedeckelt auf `max_run_wall_sec`; `finished_at` = Server-Eingangszeitpunkt. Client-gemessene
@@ -1335,11 +1342,12 @@ nie gegen Zuschauer:innen. `{sender}` ist standardmäßig „ein anonymer Fan“
 | `fan_pack_received` | `{sender}` | „Ein Applaus-Paket von {sender}. Echte Begeisterung — die Aktionäre wissen nicht, wie man die bilanziert.“ |
 | `live_closing` | `{min}` | „Noch {min} Minuten bis Sendeschluss. Danach geht hier das Licht aus. Und die Etage.“ |
 | `vote_open` | — | „Das Publikum entscheidet! Demokratie, aber mit Werbeunterbrechung.“ |
-| `sponsor_window_open` | `{seconds}`, `{count}` | „Sponsor-Fenster offen: {seconds} Sekunden, {count} Plätze. NOVA SYNDIKAT nennt das Bürgerbeteiligung.“ (Variante: „… Helfen ist freiwillig, Zuschauen zählt genauso. Nur Zugluft ist Pflicht.“) |
-| `sponsor_window_open:safe_room` | `{seconds}` | „Werbepause mit Sponsor-Fenster, {seconds} Sekunden lang. Wer nur zuschaut, macht auch alles richtig.“ |
-| `sponsor_window_open:boss` | `{seconds}` | „Boss-Countdown! Das Sponsor-Fenster ist {seconds} Sekunden offen. Danach zählt nur noch Können. Und Glück.“ |
+| `sponsor_window_open` | — (06-C: keine Sekunden/Plätze) | „Das Sponsor-Fenster ist offen. Wer helfen mag, hilft. Wer zuschaut, zählt genauso.“ (Variante: „Das Sponsor-Fenster steht offen. Helfen ist freiwillig, Zuschauen zählt genauso. Nur Zugluft ist Pflicht.“) |
+| `sponsor_window_open:safe_room` | — | „Werbepause mit Sponsor-Fenster. Wer nur zuschaut, macht auch alles richtig.“ |
+| `sponsor_window_open:boss` | — | „Vor dem Boss öffnet das Sponsor-Fenster. Danach entscheiden Können und Glück. Vor allem Glück.“ |
+| `sponsor_window_open:boss_comeback` | — | „Comeback-Runde! Das Sponsor-Fenster öffnet noch einmal. Das Publikum glaubt an Sie. Ich auch, fast.“ (06-C, Kap. 6.13) |
 | `sponsor_window_closed` | — | „Sponsor-Fenster zu. Die Regie nennt das Programmstruktur. Ich nenne es: Durchzug verhindern.“ |
-| `sponsor_window_full` | `{count}` | „Alle {count} Plätze im Sponsor-Fenster belegt. Danke – auch dem stillen Publikum. Das zählt hier am meisten.“ |
+| `sponsor_window_full` | — | „Alle Plätze im Sponsor-Fenster sind belegt. Danke – auch dem stillen Publikum. Das zählt hier am meisten.“ |
 | `twist_applied_<id>` | — | je Twist eine Zeile |
 
 `gift_msg_*` (vordefinierte Absender-Botschaften, z. B. `gift_msg_go_team` „Weiter so!“, `gift_msg_for_mopsula` „Für den Grafen!“).
@@ -1361,7 +1369,7 @@ ohne Eingriffe von außen.
 |---|---|---|---|---|
 | `periodic` | alle `periodic.every_sec` = **300 s Erkundungszeit** (das erste nach `first_sec` = 300 s) | `open_sec` = **60 s** | 3 | fällig, während ein anderes Fenster offen ist → entfällt (der Countdown startet neu) |
 | `safe_room` | beim **Betreten eines Safe Rooms** (je Safe Room und Etage einmal, `once_per_room`) | solange drinnen, höchstens `max_sec` = **90 s** | 3 | ersetzt ein offenes Fenster (`superseded`); Verlassen schließt (`left`) |
-| `boss` („**Boss-Countdown**“) | beim **ersten** Betreten des Quartier- bzw. Etagenboss-Raums | `countdown_sec` = **45 s** | 3 | ersetzt ein offenes Fenster; beginnt der Bosskampf vorher, bleibt der Rest eingefroren offen (s. u.) |
+| `boss` („**Boss-Countdown**“) | beim **ersten** Betreten des Quartier- bzw. Etagenboss-Raums; **Comeback-Fenster** (06 §6 Entscheidung 3, `boss.comeback` 1): nach einem **verlorenen** Versuch gegen diesen Boss noch **einmal** beim nächsten Betreten (Fenster mit `"comeback": true`) | `countdown_sec` = **45 s** | 3 | ersetzt ein offenes Fenster; beginnt der Bosskampf vorher, bleibt der Rest eingefroren offen (s. u.); Comeback höchstens 1× je Boss und Etage, nie nach dem Sieg |
 | `dev` | QA-Command `{"t": "sponsor_window", "op": "dev_open", "sec", "slots"}` (Debug-Overlay F5, Tests) | ≤ 600 s | ≤ 16 | nur mit `dev_open: true` (Kampagne/Offline); Live-Events müssen `false` setzen (EventDef prüft das), Server nehmen den Command nie von Clients an |
 
 **Uhr (normativ, deterministisch):** Alles in Lauf-Ticks (`RunSim`, Kap. 3.2), Ganzzahlen, keine Uhrzeit. Ein offenes Fenster
@@ -1406,10 +1414,14 @@ jedes Ticks; Auslöser `floor`, Erstbesuch `room` einer Boss-Zelle, `safe_room`,
 `sponsor_window_closed(id, reason)` (Gründe `time`, `left`, `superseded`, `floor`); `Show.receive_gift` (einziger Eingang)
 stempelt angenommene Geschenke mit `sponsor_window` und sendet beim Buchen `sponsor_window_updated(window)`.
 
-**Darstellung:** TV-Badge am rechten Ende des Laufbands: in Event-/Live-Läufen mit Geschenken „**SPONSOR-FENSTER OFFEN · 0:45 ·
-2/3 Plätze**“ (Gold-Plakette), „… VOLL …“, geschlossen „**Nächstes Fenster in 3:12**“; in der Kampagne dieselbe Information als
-dezente Zeile ohne Plakette und ohne M.O.D.-Zeilen; Pur-Liga ohne Badge (es gibt dort keine Fenster). M.O.D.-Zeilen Kap. 6.12.
-Ansicht: `docs/screenshots/overlay_sponsor_window.png` (`check.sh --shot res://scenes/ui/show_overlay.tscn`, Demo-Werte).
+**Darstellung** (06 §6 Entscheidung 1, umgesetzt 06-C — **ohne Sekunden-Countdown**): TV-Badge am rechten Ende des Laufbands: in
+Event-/Live-Läufen mit Geschenken „**SPONSOR-FENSTER OFFEN**“ + Platz-Punkte (●●○ = 2 von 3 belegt; Gold-Plakette), „**SPONSOR-FENSTER
+VOLL – danke!**“, nach einer Boss-Niederlage „**COMEBACK-FENSTER OFFEN**“, geschlossen „**Nächstes Fenster in ~3 Min.**“
+(aufgerundete Minuten, unter 60 s „in Kürze“; „~“, weil Kampf und Safe Room pausieren); in der Kampagne dieselbe Information als
+dezente Zeile ohne Plakette und ohne M.O.D.-Zeilen; Pur-Liga ohne Badge (es gibt dort keine Fenster). Keine Dringlichkeitswörter
+(„schnell“, „nur noch“, „letzte Chance“); die M.O.D.-Zeilen `sponsor_window_*` nennen weder Sekunden noch Plätze (Kap. 6.12,
+`test_m8_sponsor_windows` prüft jede Zeile). Der Kern rechnet weiter in Ticks — nur die Darstellung ist ohne Sekunden.
+Ansicht: `docs/screenshots/overlay_sponsor_window.png` (`check.sh --shot res://scenes/ui/show_overlay.tscn`, Demo-Werte: offen, 2 von 3 Plätzen belegt).
 
 **Daten** (`events.json → rules.sponsor_windows`, Kap. 10.1; Ganzzahlen/Bools, fehlende Schlüssel = Standard, geht in `rules_hash`):
 
@@ -1417,8 +1429,15 @@ Ansicht: `docs/screenshots/overlay_sponsor_window.png` (`check.sh --shot res://s
 "sponsor_windows": { "enabled": true, "slots_per_player": 3, "per_viewer": 1, "grace_sec": 15, "exempt_kinds": ["cheer"],
   "periodic": { "enabled": true, "first_sec": 300, "every_sec": 300, "open_sec": 60 },
   "safe_room": { "enabled": true, "max_sec": 90, "once_per_room": true },
-  "boss": { "enabled": true, "countdown_sec": 45 }, "dev_open": false }
+  "boss": { "enabled": true, "countdown_sec": 45, "comeback": 1 }, "dev_open": false }
 ```
+
+`boss.comeback` (0..1, Standard 1; 0 = kein Comeback-Fenster): Ein verlorener Versuch gegen Quartier-/Etagenboss vermerkt die
+Boss-Art im Fensterzustand (`comeback` `{"floor", "pending", "done"}`, `SponsorWindows.on_battle_result` in `Game` und `RunSim`);
+das nächste Betreten der Boss-Zelle wird als `room`-Command aufgezeichnet (auch als Wiederbesuch) und öffnet das Fenster genau
+einmal. Kampagne: `Save.record_game_over` trägt die Markierung in den Slot (gleiche Etage), damit „Letzten Spielstand laden“ es
+findet; ein verbrauchtes Comeback bleibt verbraucht (kein Farmen durch Neuladen). M.O.D. (nur live):
+`sponsor_window_open:boss_comeback`.
 
 Fenster laufen nur, wenn der Lauf Zuschauer-Geschenke überhaupt annimmt (`enabled`, `rules.gifts.enabled`, nicht Pur-Liga);
 die Offline-Events des Slice (Pur-Liga) haben deshalb keine, die Kampagne die Standardwerte (QA-Geschenke per Debug-Overlay).
@@ -1426,8 +1445,13 @@ die Offline-Events des Slice (Pur-Liga) haben deshalb keine, die Kampagne die St
 **Spielerschutz (L13, L16):** Countdown + knappe Plätze können als künstliche Dringlichkeit wirken (CPC-Grundsätze, DSA
 Art. 25 **[zu prüfen]**, R15). Deshalb: Restzeit und Plätze nur als Programminformation im Overlay; **im Kauf-Flow** weder
 Countdown noch „nur noch X Plätze“ (der Platz ist dort schon reserviert); keine Push-/Chat-Hinweise „Fenster offen“; M.O.D.-Zeilen
-ohne Kaufbezug; kostenlose Fan-Pakete nutzen dieselben Fenster (ein Fenster ist kein Kaufmoment); Limits/Selbstsperre unverändert.
-Koop (S4): Plätze je Spieler:in (`slots_per_player`), Fenster je Team (eine Sendung) — bei S4 festlegen.
+ohne Kaufbezug; kostenlose Fan-Pakete nutzen dieselben Fenster (ein Fenster ist kein Kaufmoment), **Cheers** sind immer kostenlos
+und nie fensterpflichtig (`exempt_kinds`, `test_06c_sponsor_display`); Limits/Selbstsperre unverändert. Das Overlay zeigt seit
+06-C auch selbst keine Sekunden mehr (s. Darstellung).
+Koop (S4, **entschieden** 06 §6 Entscheidung 4): **ein Fenster je Team** (eine Sendung), **`slots_per_player` Plätze je
+Spieler:in** — das Team-Fenster hat `slots_per_player × Spieler:innen` Plätze (`SponsorWindows.team_slots`), damit die
+bekannteste Streamer:in nicht alle belegt; `per_viewer` gilt je Fenster und Team (eine Zuschauer:in kann nicht alle beschenken);
+Caps je Spieler:in (L4) bleiben. Umsetzung im Kern mit S4.
 
 ---
 
@@ -2228,8 +2252,10 @@ Abgleich mit dem Geschenk-Ledger (eingeschleust, fehlend, nach `deliver_by_tick`
    Zeitpunkt: Vorschlag = Benchmark-Prototyp im Slice (Verifier-Budget), Umsetzung vor S1-Wertung. → Entscheidung in `02_TECH.md`.
 3. **Koop 3–4:** Welche zusätzlichen spielbaren Figuren? (Inhalt + Balancing; GDD-Erweiterung nötig.)
 4. ~~**B oder C zuerst?**~~ — **entschieden 2026-10-08:** C (eigener Shop) ist der Echtgeld-Weg (S3 Web, S5 App-IAP), B nur
-   kostenlose Interaktion (L11). Offen bleibt nur: Gibt es ein Bits-Erlösmodell für Entwickler, bei dem die Broadcaster:in nichts
-   erhält **[zu prüfen]**? Ohne das kommt Bits nie für Geschenke in Frage.
+   kostenlose Interaktion (L11). **Geschlossen (06 §6 Entscheidung 5):** Twitch Bits = nur kostenlose Interaktion (Votes,
+   Applaus), nie eine Geschenkquelle (`bits` bleibt reserviert und steht in keinem `rules.gifts.sources`; Test
+   `test_06c_sponsor_display`). Ein Bits-Erlösmodell, bei dem die Broadcaster:in nichts erhält **[zu prüfen]**, wäre eine neue
+   Entscheidung.
 5. **Echtgeld-Geschenke vor Dedicated Server?** Empfehlung: Server-Simulation für Solo bereits in S3 (Kap. 2). Zustimmung?
 6. **[S3-Blocker] Empfang durch Minderjährige:** Dürfen Spieler:innen unter 18 überhaupt bezahlte Zufallskisten empfangen?
    Vorläufige Regel (Kap. 6.11, L6): **nein** — Show-Liga mit bezahlten Zufallskisten nur für altersverifizierte Spieler:innen
@@ -2242,17 +2268,18 @@ Abgleich mit dem Geschenk-Ledger (eingeschleust, fehlend, nach `deliver_by_tick`
 11. **Backend:** Nakama-Selbstbetrieb ab S1 (Empfehlung) oder Supabase-Schnellstart mit späterer Migration?
 12. **Signaturen:** Festgelegt: HMAC-SHA256 mit Service-Schlüssel, **nur serverseitig** geprüft (Instanz, Verifier; Kap. 6.5).
     Offen nur, falls Clients je prüfen sollen: ECDSA P-256/RSA über `Crypto.verify` (EC in 4.7 **[zu prüfen]**), Ed25519 nur per GDExtension.
-13. ~~**Zuschauer-Cheers gegen Bits**~~ — entfällt mit der Entscheidung 2026-10-08 (Cheers sind kostenlos, Kap. 6.3).
+13. ~~**Zuschauer-Cheers gegen Bits**~~ — entfällt mit der Entscheidung 2026-10-08 (Cheers sind kostenlos, Kap. 6.3); bestätigt
+    06 §6 Entscheidung 5.
 14. **Koop-Kämpfe:** Festgelegt: pro Team genau ein Kampf, alle werden hineingezogen (Kap. 1.4). Bestätigen; parallele Kämpfe
     nur als spätere Option mit Inventar-Escrow.
 15. **`RunSim` im Slice (CR-6, dünne Variante):** Zustimmung von M0/M2 nötig, weil `Game`/`Show` zu Fassaden werden.
 16. **Unzuverlässiger Kanal (ENet/WebRTC)** von Anfang an für Koop-Erkundung (Kap. 4.1): webrtc-native-GDExtension für 4.7
     verfügbar **[zu prüfen]**?
 17. **Sponsor-Fenster — Feinabstimmung (Kap. 6.13):** Standardwerte (300 s / 60 s, Safe Room ≤ 90 s, Boss-Countdown 45 s,
-    3 Plätze, 1 je Zuschauer:in, Gnadenfrist 15 s) per Playtest bestätigen. Offen: (a) Gelten die Fenster auch für kostenlose
-    Fan-Pakete (umgesetzt: ja, nur `cheer` ist ausgenommen)? (b) Soll der Boss-Countdown bei erneutem Betreten eines Boss-Raums
-    (Boss noch nicht besiegt) wieder öffnen (umgesetzt: nur beim Erstbesuch)? (c) `realtime`-Modus (S4): laufen Fenster im Kampf
-    weiter? (d) Koop: Plätze je Spieler:in oder je Team? (e) Kampagne: Fenster nur als dezenter Hinweis (umgesetzt) oder dort
-    ganz ausblenden, solange es keine echten Zuschauer gibt?
-18. **Dringlichkeit (R15):** Reicht die Darstellung ohne Countdown im Kauf-Flow, oder soll auch das Overlay nur „offen/zu“
-    ohne Sekunden zeigen? → mit der Rechtsprüfung klären.
+    3 Plätze, 1 je Zuschauer:in, Gnadenfrist 15 s) per Playtest bestätigen. **Entschieden (06 §6, umgesetzt 06-C):** (a) ja,
+    kostenlose Fan-Pakete brauchen ein Fenster, Cheers nie; (b) ja, **einmal** als Comeback-Fenster nach einem verlorenen
+    Versuch (`boss.comeback`, Kap. 6.13); (d) Fenster je Team, Plätze je Spieler:in (Kap. 6.13, Umsetzung mit S4); (e) Kampagne
+    behält den dezenten Hinweis, ebenfalls ohne Sekunden. Offen bleibt nur (c) `realtime`-Modus (S4): laufen Fenster im Kampf weiter?
+18. ~~**Dringlichkeit (R15)**~~ — **entschieden (06 §6 Entscheidung 1, umgesetzt 06-C):** auch das Overlay zeigt nur den Zustand
+    (offen + Platz-Punkte / voll / „Nächstes Fenster in ~N Min.“), nie Sekunden oder Knappheitswörter; der Kauf-Flow zeigt nie
+    Timer oder Knappheit. Rechtsprüfung (DSA Art. 25 **[zu prüfen]**) bleibt für S3.

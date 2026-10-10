@@ -188,8 +188,8 @@ func test_capture_recipes_cover_the_screenshot_matrix() -> void:
 	var r: Node = script.new() as Node
 	for m: String in ["_r_explore", "_r_prompt", "_r_bigmap", "_r_pause", "_r_battle_menu", "_r_battle_skills",
 			"_r_battle_target", "_r_battle_damage", "_r_battle_enemy_turn", "_r_boss_intro", "_r_boss_phase",
-			"_r_battle_gift", "_r_battle_victory", "_r_battle_results", "_r_safe_vending", "_r_safe_equipment",
-			"_r_safe_lootbox", "_r_safe_lootbox_open", "_r_safe_mopsula"]:
+			"_r_battle_gift", "_r_battle_victory", "_r_battle_results", "_r_battle_results_show", "_r_safe_vending",
+			"_r_safe_equipment", "_r_safe_lootbox", "_r_safe_lootbox_open", "_r_safe_mopsula"]:
 		assert_true(r.has_method(m), "recipe " + m)
 	var ok: Variant = await r.call("run", "no_such_recipe", r)
 	assert_false(bool(ok), "unknown recipe → false")

@@ -8,6 +8,9 @@ const KILL: Dictionary = {"enemy_id": "enm_rat", "overkill": false, "by": "attac
 const WON: Dictionary = {"party_turns": 4, "min_party_hp": 30, "min_party_hp_pct": 0.5, "crits": 0, "weakness_hits": 0,
 	"items_used": 1, "party_kos": 0, "damage_taken": 20, "is_boss": false, "boss_id": "", "encounter_type": "normal",
 	"group_id": "f1_g1"}
+## 06-C: a won show bet (MarottenRules show_bet payload, 06 §4.6).
+const BET: Dictionary = {"kind": "marotte", "event": "won", "id": "mar_mop_only", "tier": 0, "floor_tier": 0,
+	"battles": 0, "is_boss": false, "is_floor_boss": false, "boss_id": "", "party_kos": 0, "floor": 1}
 
 var _prev_data: GameData = null
 
@@ -26,7 +29,7 @@ static func _with(base: Dictionary, changes: Dictionary) -> Dictionary:
 
 func test_stat_ids_equal_validator_copy() -> void:
 	assert_eq(StatIds.ALL, DataValidator.STAT_IDS, "StatIds.ALL == DataValidator.STAT_IDS (§6.3)")
-	assert_len(StatIds.ALL, 21)
+	assert_len(StatIds.ALL, 23)                     # 21 + bets_won, liga_battles (06-C)
 
 
 ## [id, trigger, flags, stats_bad, payload_bad, stats_ok, payload_ok]
@@ -71,6 +74,7 @@ func _cases() -> Array:
 		["ach_pacifist", "explore_tick", {}, {"explore_seconds_since_battle": 299}, {"seconds_since_battle": 299},
 			{"explore_seconds_since_battle": 300}, {"seconds_since_battle": 300}],
 		["ach_speedrun", "floor_completed", {}, {}, {"floor": 1, "timer_left": 479}, {}, {"floor": 1, "timer_left": 480}],
+		["ach_bets_5", "show_bet", {}, {"bets_won": 4}, BET, {"bets_won": 5}, BET],
 	]
 
 

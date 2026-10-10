@@ -1,10 +1,15 @@
 extends CanvasLayer
 ## ShowOverlay (02_TECH §1.6, §9.4 layer 40; 03_ART §9.2): the show IS the UI. LIVE badge, viewer counter, followers,
 ## hype meter (markers at SponsorSystem.THRESHOLDS), sponsor lower third, chat ticker, gift drop announcement, REC
-## corners and the TV scanline/vignette layer, Sponsor-Fenster badge (05 §6.13) on the right end of the ticker:
-## "SPONSOR-FENSTER OFFEN · 0:45 · 2/3 Plätze" / "Nächstes Fenster in 3:12" in event/live runs
-## (Show.sponsor_presentation &"live"), the same as a dim one-liner in the campaign (&"subtle"), hidden without windows
-## (Pur-Liga). Mode via Events.overlay_mode_requested: &"explore", &"battle", &"safe_room", &"menu" (scanlines only),
+## corners and the TV scanline/vignette layer, Sponsor-Fenster badge (05 §6.13) on the right end of the ticker — 06 §6
+## decision 1: the window STATE without a seconds countdown or urgency words: "SPONSOR-FENSTER OFFEN" + slot pips
+## (filled = taken), "SPONSOR-FENSTER VOLL – danke!", closed "Nächstes Fenster in ~3 Min." ("in Kürze" under a minute)
+## in event/live runs (Show.sponsor_presentation &"live"), the same as a dim one-liner in the campaign (&"subtle"),
+## hidden without windows (Pur-Liga). 06-C show chip (06 §4.7): "M.O.D. mag heute: <preference>" + hearts, and the
+## Liga tier ("LIGA ×1,2" / "DUO-LIGA ×1,4") — one compact line under the right column (exploration: below the
+## minimap, battle: under the hype meter), hidden before the countdown runs (Floor 1: tutorial) and when switched off
+## (Optionen → "Show-Wetten anzeigen", GameSettings.show_bets_hud).
+## Mode via Events.overlay_mode_requested: &"explore", &"battle", &"safe_room", &"menu" (scanlines only),
 ## &"hidden", &"game_over" (scanlines only, M6-internal). Reads Show for numbers (never writes state).
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
@@ -30,7 +35,13 @@ const IDENTS: PackedStringArray = ["NOVA SYNDIKAT präsentiert: DUNGEON PRIME TI
 const KIND_NAMES: Dictionary = {"chest": "Sponsorkiste", "gold": "Credits-Geschenk", "fan_pack": "Applaus-Paket",
 	"sponsor_buff": "Sponsor-Paket", "cheer": "Applaus"}
 const TIER_NAMES: Dictionary = {"bronze": "Bronze", "silver": "Silber", "gold": "Gold"}
-const SPONSOR_REFRESH_SEC: float = 0.2     # badge countdown refresh (and at once on the sponsor_window_* signals)
+const SPONSOR_REFRESH_SEC: float = 0.2     # badge refresh (and at once on the sponsor_window_* signals)
+## 06-C show chip: top offset in the exploration — under the exploration HUD's right column (minimap 50 + 136 px and
+## its "Karte" hint, exploration_hud.gd MINIMAP_SIZE); in battle under the hype meter.
+const CHIP_TOP_EXPLORE: float = 220.0
+const CHIP_TOP_BATTLE: float = 44.0
+const CHIP_REFRESH_SEC: float = 0.25
+const CHIP_PREFIX: String = "M.O.D. mag heute: "
 
 
 ## Hype meter 320×14: gradient magenta → gold, diamond markers at SponsorSystem.THRESHOLDS, gloss sweep on increase.
@@ -223,6 +234,17 @@ var _sw_dot: Control
 var _sw_t: float = 0.0
 var _sw_demo: Dictionary = {}
 var _sw_style: String = ""
+var _sw_pips: HBoxContainer
+var _sw_pip_key: String = ""
+# --- 06-C show chip ---
+var _chip: PanelContainer
+var _chip_label: Label
+var _chip_hearts: HBoxContainer
+var _chip_liga: Label
+var _chip_t: float = 0.0
+var _chip_key: String = ""
+var _chip_demo: Dictionary = {}
+var _chip_results: bool = false             # the battle is over: its results panel shows the hearts (no overlap)
 
 
 ## Stores params only (screen contract); {"capture": true} → demo still with sample numbers.
@@ -248,6 +270,15 @@ func _ready() -> void:
 	Events.sponsor_window_opened.connect(_on_sponsor_window_signal)
 	Events.sponsor_window_updated.connect(_on_sponsor_window_signal)
 	Events.sponsor_window_closed.connect(_on_sponsor_window_closed)
+	Events.marotten_announced.connect(func(_ids: PackedStringArray) -> void: refresh_show_chip())   # 06-C
+	Events.marotte_progress.connect(func(_id: String, _hits: int, _goal: int) -> void: refresh_show_chip())
+	Events.marotte_won.connect(func(_id: String) -> void: refresh_show_chip())
+	Events.liga_changed.connect(func(_tier: int) -> void: refresh_show_chip())
+	Events.party_changed.connect(refresh_show_chip)
+	Events.floor_timer_started.connect(refresh_show_chip)
+	Events.settings_changed.connect(refresh_show_chip)
+	Events.battle_started.connect(func(_enc: String, _boss: bool) -> void: _set_chip_results(false))
+	Events.battle_ended.connect(func(_outcome: int, _enc: String) -> void: _set_chip_results(true))
 	get_viewport().size_changed.connect(_layout_hype)      # display insets move the touch pause/map buttons
 	_apply_quality()
 	_target_viewers = Show.display_viewers()
@@ -294,6 +325,9 @@ func _process(delta: float) -> void:
 		refresh_sponsor_badge()
 	if _sw_dot != null and _sw_dot.visible:
 		_sw_dot.modulate.a = 0.35 + 0.65 * (0.5 + 0.5 * cos(_time * TAU))
+	_chip_t -= delta
+	if _chip_t <= 0.0:
+		refresh_show_chip()
 	var touch_on: bool = TouchScript.active != null and is_instance_valid(TouchScript.active)
 	if touch_on != _touch_shift:
 		_touch_shift = touch_on
@@ -304,6 +338,8 @@ func _process(delta: float) -> void:
 
 func set_mode(p_mode: StringName) -> void:
 	mode = p_mode if MODES.has(p_mode) else &"hidden"
+	if mode != &"battle":
+		_chip_results = false                      # 06-C: back from the results screen
 	if _root == null:
 		return
 	var show_bar: bool = mode == &"explore" or mode == &"battle" or mode == &"safe_room"
@@ -312,6 +348,7 @@ func set_mode(p_mode: StringName) -> void:
 	_rec.visible = mode == &"explore"
 	_hype_box.visible = mode != &"safe_room"
 	_ticker_panel.visible = show_bar
+	refresh_show_chip()
 	if mode == &"safe_room":
 		_badge_label.text = "WERBEPAUSE"
 		_badge.add_theme_stylebox_override("panel", _pill(UiTheme.C_GOLD))
@@ -352,6 +389,7 @@ func _layout_hype() -> void:
 		_hype_box.offset_right = right
 	_hype_box.offset_top = 2
 	_hype_box.offset_bottom = 40
+	_layout_chip()
 
 
 func hype_rect() -> Rect2:
@@ -460,9 +498,10 @@ func refresh_sponsor_badge() -> void:
 	show_sponsor_window(_sw_demo if _demo else Show.sponsor_window_view())
 
 
-## Badge for a Show.sponsor_window_view() dictionary (05 §6.13). Live: gold TV bug "SPONSOR-FENSTER OFFEN · 0:45 ·
-## 2/3 Plätze" (taken incl. reservations / slots), "… VOLL …" when no slot is free, "Nächstes Fenster in 3:12" while
-## closed; campaign (subtle): the same information as a dim line without plate; off / nothing scheduled: hidden.
+## Badge for a Show.sponsor_window_view() dictionary (05 §6.13, 06 §6 decision 1). Live: gold TV bug "SPONSOR-FENSTER
+## OFFEN" + slot pips (taken incl. reservations), "SPONSOR-FENSTER VOLL – danke!" when no slot is free, "Nächstes
+## Fenster in ~3 Min." while closed; campaign (subtle): the same information as a dim line without plate; off /
+## nothing scheduled: hidden. Never seconds, never scarcity words.
 func show_sponsor_window(v: Dictionary) -> void:
 	var text: String = sponsor_text(v)
 	var mode_s: String = str(v.get("mode", "off"))
@@ -476,6 +515,12 @@ func show_sponsor_window(v: Dictionary) -> void:
 	var style: String = "subtle"
 	if mode_s == "live":
 		style = "live_closed" if not open else ("live_full" if full else "live_open")
+	var slots: Vector2i = sponsor_slots(v)
+	var pip_key: String = "%s:%d:%d" % [style, slots.x, slots.y]
+	if pip_key != _sw_pip_key:
+		_sw_pip_key = pip_key
+		_build_pips(slots, UiUtil.C_INK if style == "live_open" else (UiTheme.C_GOLD if style == "live_full"
+			else Color(UiTheme.C_TEXT_DIM, 0.8)))
 	if style == _sw_style:
 		return
 	_sw_style = style
@@ -500,26 +545,64 @@ func show_sponsor_window(v: Dictionary) -> void:
 	_sw_dot.set("color", UiUtil.C_INK)
 
 
-## "SPONSOR-FENSTER OFFEN · 0:45 · 2/3 Plätze" / "… VOLL …" / "Nächstes Fenster in 3:12" (live);
-## "Sponsor-Fenster offen · 0:45 · 2/3 Plätze" / "Nächstes Fenster in 3:12" (subtle); "" = no badge.
+## 06 §6 decision 1 — the window state, never a seconds countdown: "SPONSOR-FENSTER OFFEN" / "SPONSOR-FENSTER VOLL –
+## danke!" / "COMEBACK-FENSTER OFFEN" (live; the slots are the pips next to it) and "Nächstes Fenster in ~3 Min." /
+## "Nächstes Fenster in Kürze" while closed; subtle (campaign): the same in sentence case; "" = no badge.
 static func sponsor_text(v: Dictionary) -> String:
 	var mode_s: String = str(v.get("mode", "off"))
 	if mode_s == "off" or not bool(v.get("tracked", false)):
 		return ""
 	if bool(v.get("open", false)):
-		var slots: int = int(v.get("slots", 0))
-		var taken: int = slots - int(v.get("free", 0))
 		var full: bool = bool(v.get("full", false))
-		var head: String = ("SPONSOR-FENSTER VOLL" if full else "SPONSOR-FENSTER OFFEN") if mode_s == "live" \
-			else ("Sponsor-Fenster voll" if full else "Sponsor-Fenster offen")
-		return "%s · %s · %d/%d Plätze" % [head, _mmss(int(v.get("left_sec", 0))), taken, slots]
+		var what: String = "Comeback-Fenster" if bool(v.get("comeback", false)) else "Sponsor-Fenster"
+		var head: String = "%s %s" % [what, "voll – danke!" if full else "offen"]
+		return head.to_upper().replace("DANKE!", "danke!") if mode_s == "live" else head
 	var next: int = int(v.get("next_in_sec", -1))
-	return "Nächstes Fenster in %s" % _mmss(next) if next >= 0 else ""
+	return "Nächstes Fenster %s" % next_text(next) if next >= 0 else ""
 
 
-static func _mmss(sec: int) -> String:
-	var s: int = maxi(0, sec)
-	return "%d:%02d" % [s / 60, s % 60]
+## "in ~3 Min." (whole minutes rounded up — "~" because battles and safe rooms pause the countdown) or "in Kürze"
+## under a minute.
+static func next_text(sec: int) -> String:
+	if sec < 60:
+		return "in Kürze"
+	return "in ~%d Min." % ((sec + 59) / 60)
+
+
+## Vector2i(taken incl. reservations, slots) of an open window (the pips); (0, 0) while closed.
+static func sponsor_slots(v: Dictionary) -> Vector2i:
+	if not bool(v.get("open", false)):
+		return Vector2i.ZERO
+	var slots: int = maxi(0, int(v.get("slots", 0)))
+	return Vector2i(clampi(slots - int(v.get("free", 0)), 0, slots), slots)
+
+
+## The pips shown in the badge as text ("●●○" = 2 of 3 taken; "" = none) — tests and the debug overlay.
+func sponsor_badge_pips() -> String:
+	if _sw_pips == null or not _sw_panel.visible:
+		return ""
+	var out: String = ""
+	for c: Node in _sw_pips.get_children():
+		out += "●" if bool(c.get_meta(&"taken", false)) else "○"
+	return out
+
+
+func _build_pips(slots: Vector2i, col: Color) -> void:
+	for c: Node in _sw_pips.get_children():
+		c.queue_free()
+		_sw_pips.remove_child(c)
+	_sw_pips.visible = slots.y > 0
+	for i in slots.y:
+		var pip: Panel = Panel.new()
+		pip.custom_minimum_size = Vector2(10, 10)
+		pip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		pip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var taken: bool = i < slots.x
+		var sb: StyleBoxFlat = UiUtil.box_style(col if taken else Color(0, 0, 0, 0), col, 0 if taken else 2, 0.0, 0, 0)
+		sb.set_corner_radius_all(5)
+		pip.add_theme_stylebox_override("panel", sb)
+		pip.set_meta(&"taken", taken)
+		_sw_pips.add_child(pip)
 
 
 func viewers_text() -> String:
@@ -562,6 +645,7 @@ func _build() -> void:
 	_build_ticker()
 	_build_lower_third()
 	_build_gift_banner()
+	_build_show_chip()
 
 
 func _build_top_left() -> void:
@@ -680,6 +764,11 @@ func _build_ticker() -> void:
 	_sw_label.add_theme_constant_override("outline_size", 0)
 	_sw_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	swr.add_child(_sw_label)
+	_sw_pips = UiUtil.hbox(3)
+	_sw_pips.name = "SponsorWindowSlots"
+	_sw_pips.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_sw_pips.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	swr.add_child(_sw_pips)
 
 
 func _build_lower_third() -> void:
@@ -902,8 +991,158 @@ func _start_demo() -> void:
 	_sw_demo = {"tracked": true, "mode": "live", "open": true, "kind": "periodic", "left_sec": 45, "slots": 3,
 		"free": 1, "full": false, "next_in_sec": -1}
 	refresh_sponsor_badge()
+	var chip: Variant = _params.get("chip", null)
+	_chip_demo = chip if chip is Dictionary else {"items": [{"id": "mar_mop_only", "name": "Nur der Mopp", "hits": 2,
+		"goal": 3, "won": false}], "liga_tier": 1, "liga_hype_pm": 1200, "rewards": true}
+	refresh_show_chip()
 	announce_gift({"kind": "chest", "tier": "bronze", "source": "dev", "sender": {"anon": true}})
 	if _gift_tween != null and _gift_tween.is_valid():
 		_gift_tween.kill()
 	_gift.scale = Vector2.ONE
 	_gift.modulate.a = 1.0
+
+
+# --- 06-C: show chip "M.O.D. mag heute: …" (06 §4.7) ------------------------------------------------------------------
+
+## Text of the chip while it is shown ("" = hidden): "M.O.D. mag heute: Nur der Mopp" (the hearts and the Liga part are
+## separate controls: show_chip_hearts(), show_chip_liga()).
+func show_chip_text() -> String:
+	return _chip_label.text if _chip != null and _chip.visible else ""
+
+
+## The hearts of the chip as text ("♥♥♡" = 2 of 3; "✓" = bet won), "" while hidden.
+func show_chip_hearts() -> String:
+	if _chip == null or not _chip.visible:
+		return ""
+	var out: String = ""
+	for c: Node in _chip_hearts.get_children():
+		out += str(c.get_meta(&"glyph", ""))
+	return out
+
+
+## "LIGA ×1,2" / "DUO-LIGA ×1,4" / "LIGA" (event runs) while the chip shows the Liga, else "".
+func show_chip_liga() -> String:
+	return _chip_liga.text if _chip != null and _chip.visible and _chip_liga.visible else ""
+
+
+## Re-reads Show.marotten_view() (demo values in a capture still) and redraws the chip.
+func refresh_show_chip() -> void:
+	_chip_t = CHIP_REFRESH_SEC
+	if _chip == null:
+		return
+	var v: Dictionary = _chip_demo if _demo else (Show.marotten_view() if Game.state != null else {})
+	var shown: bool = (mode == &"explore" or (mode == &"battle" and not _chip_results)) and _chip_allowed()
+	var items: Array = v.get("items", []) if v.get("items", []) is Array else []
+	var tier: int = int(v.get("liga_tier", 0))
+	shown = shown and (not items.is_empty() or tier > 0)
+	_chip.visible = shown
+	if not shown:
+		_chip_key = ""
+		return
+	# E2+: two preferences take turns every 4 s in the same chip (06 §4.7); a won one stays golden with a check
+	var item: Dictionary = items[int(_time / 4.0) % items.size()] if not items.is_empty() else {}
+	var key: String = "%s|%d|%s|%s" % [str(item), tier, str(v.get("liga_hype_pm", 1000)), str(v.get("rewards", true))]
+	if key == _chip_key:
+		return
+	_chip_key = key
+	_chip_label.text = UiUtil.glyph_safe(CHIP_PREFIX + str(item.get("name", ""))) if not item.is_empty() else ""
+	_chip_label.visible = not item.is_empty()
+	var won: bool = bool(item.get("won", false))
+	_chip_label.add_theme_color_override("font_color", UiTheme.C_GOLD if won else UiTheme.C_TEXT)
+	for c: Node in _chip_hearts.get_children():
+		_chip_hearts.remove_child(c)
+		c.queue_free()
+	if not item.is_empty():
+		if won:
+			_add_heart(&"check", UiTheme.C_GOLD, "✓")
+		else:
+			for i in maxi(1, int(item.get("goal", 3))):
+				var full: bool = i < int(item.get("hits", 0))
+				_add_heart(&"heart", UiTheme.C_ACCENT if full else Color(UiTheme.C_TEXT_DIM, 0.45), "♥" if full else "♡")
+	_chip_liga.visible = tier > 0
+	if tier > 0:
+		var pm: int = int(v.get("liga_hype_pm", 1000))
+		var name_s: String = "DUO-LIGA" if tier == 2 else "LIGA"
+		_chip_liga.text = name_s + (" ×" + Show.pm_text(pm) if bool(v.get("rewards", true)) and pm > 1000 else "")
+		_chip_liga.add_theme_color_override("font_color", UiTheme.C_GOLD if tier == 2 else UiTheme.C_ACCENT)
+
+
+## 06-C: after Events.battle_ended the results panel (taller with level-ups) owns the top of the screen and shows the
+## battle's hearts in its "Show" row — the chip waits until the next battle starts or the overlay leaves the battle.
+func _set_chip_results(on: bool) -> void:
+	_chip_results = on
+	refresh_show_chip()
+
+
+## Screen rect of the chip while shown (layout tests: never over the minimap / hype meter).
+func show_chip_rect() -> Rect2:
+	return _chip.get_global_rect() if _chip != null and _chip.visible else Rect2()
+
+
+## Hidden before the countdown runs (Floor 1: the tutorial — one new thing at a time, 06 §0.6) and when the player
+## switched the show bets off (Optionen → "Show-Wetten anzeigen", GameSettings.show_bets_hud).
+func _chip_allowed() -> bool:
+	if _demo:
+		return true
+	var st: GameState = Game.state
+	if st == null or st.floor_run == null or not st.floor_run.timer_started:
+		return false
+	return Game.settings == null or Game.settings.show_bets_hud
+
+
+func _add_heart(kind: StringName, col: Color, glyph: String) -> void:
+	var ic: Control = UiIcon.make(kind, col, 14)
+	ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	ic.set_meta(&"glyph", glyph)
+	_chip_hearts.add_child(ic)
+
+
+func _build_show_chip() -> void:
+	_chip = PanelContainer.new()
+	_chip.name = "ShowChip"
+	_chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_chip.visible = false
+	_chip.add_theme_stylebox_override("panel", UiUtil.box_style(Color(UiTheme.C_PANEL, 0.82),
+		Color(UiTheme.C_ACCENT, 0.55), 1, 0.21, 12, 2))
+	_frame.add_child(_chip)
+	var row: HBoxContainer = UiUtil.hbox(8)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_chip.add_child(row)
+	_chip_label = UiUtil.label("", &"", 15, UiTheme.C_TEXT)
+	_chip_label.name = "ChipText"
+	_chip_label.add_theme_constant_override("outline_size", 0)
+	_chip_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(_chip_label)
+	_chip_hearts = UiUtil.hbox(2)
+	_chip_hearts.name = "ChipHearts"
+	_chip_hearts.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_chip_hearts.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(_chip_hearts)
+	_chip_liga = UiUtil.label("", &"", 15, UiTheme.C_ACCENT)
+	_chip_liga.name = "ChipLiga"
+	_chip_liga.add_theme_font_override("font", UiTheme.font_bold())
+	_chip_liga.add_theme_constant_override("outline_size", 0)
+	_chip_liga.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(_chip_liga)
+	_layout_chip()
+
+
+## Exploration: right-aligned under the HUD's right column (same touch clearance as the hype meter); battle: centred
+## under the hype meter.
+func _layout_chip() -> void:
+	if _chip == null:
+		return
+	if mode == &"battle":
+		_chip.set_anchors_preset(Control.PRESET_CENTER_TOP)
+		_chip.grow_horizontal = Control.GROW_DIRECTION_BOTH
+		_chip.offset_left = -160
+		_chip.offset_right = 160
+		_chip.offset_top = CHIP_TOP_BATTLE
+	else:
+		_chip.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		_chip.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+		var right: float = _hype_box.offset_right if _hype_box != null else 0.0
+		_chip.offset_left = right - 120.0
+		_chip.offset_right = right
+		_chip.offset_top = CHIP_TOP_EXPLORE
+	_chip.offset_bottom = _chip.offset_top + 24.0

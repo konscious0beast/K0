@@ -179,9 +179,16 @@ func test_story_beats_check() -> void:
 	var bot: Node = _bot()
 	var ok_tags: PackedStringArray = ["first_fight@before", "floor_start@countdown", "safe_room_enter@countdown",
 		"scene:scn_mop_1@countdown", "boss_intro:enm_boss_hausmeister@countdown", "stairs_found@countdown",
-		"floor_end@countdown"]
+		"floor_end@countdown", "marotte_announce:mar_mop_only@countdown"]
 	bot.set("mod_tags", ok_tags)
 	assert_true(bool(bot.call("check_story_beats")), "all GDD beats, floor_start once with the countdown")
+	# 06-C: M.O.D.'s preference of the floor is announced once the countdown runs (06 §4.2)
+	var bet_early: PackedStringArray = ok_tags.duplicate()
+	bet_early[bet_early.size() - 1] = "marotte_announce:mar_mop_only@before"
+	var bot4: Node = _bot()
+	bot4.set("mod_tags", bet_early)
+	assert_false(bool(bot4.call("check_story_beats")))
+	assert_has(str(bot4.get("result_line")), "announced before the countdown")
 	var early: PackedStringArray = ok_tags.duplicate()
 	early.insert(0, "floor_start@before")
 	var bot2: Node = _bot()

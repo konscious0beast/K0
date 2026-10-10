@@ -32,7 +32,8 @@ const SCENE_DIALOG: String = "res://scenes/ui/mod_dialog.tscn"
 const SCENE_TOUCH: String = "res://scenes/ui/touch_controls.tscn"
 const SCENE_GLOBAL: String = "res://scenes/ui/global_ui.tscn"
 const DAMAGE_STYLES: Array[StringName] = [&"damage", &"crit", &"heal", &"mp", &"miss", &"weak", &"resist", &"status"]
-const PAUSE_PAGES: Array[String] = ["party", "inventory", "equipment", "skills", "achievements", "bestiary", "settings"]
+const PAUSE_PAGES: Array[String] = ["party", "inventory", "equipment", "skills", "show", "achievements", "bestiary",
+	"settings"]                                                     # 06-C: tab "Show" (06 §4.7)
 const MENU_SCENES: Array[String] = [SCENE_TITLE, SCENE_SLOTS, SCENE_NAME, SCENE_INTRO, SCENE_GAME_OVER, SCENE_CREDITS,
 	SCENE_SAFE_ROOM, SCENE_VENDING, SCENE_LOOTBOX, SCENE_SETTINGS, SCENE_CONFIRM, SCENE_LOBBY, SCENE_RESULT,
 	SCENE_SUMMARY]

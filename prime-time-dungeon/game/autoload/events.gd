@@ -82,6 +82,12 @@ signal sponsor_window_opened(window: Dictionary)         # Game (RunSim SPONSOR_
 signal sponsor_window_closed(window_id: String, reason: String)   # Game (RunSim): reason time|left|superseded|floor
 signal sponsor_window_updated(window: Dictionary)        # Show: a gift took a slot of the open window
 
+# --- Show bets / Marotten / Unterhosen-Liga (06 §4, package C) --------------------
+signal marotten_announced(ids: PackedStringArray)        # Show.start_floor: M.O.D.'s preferences of the floor
+signal marotte_progress(marotte_id: String, hits: int, goal: int)   # Show: a heart filled (battle / room visit)
+signal marotte_won(marotte_id: String)                   # Show: `goal` hearts — the bet is won
+signal liga_changed(tier: int)                           # Show.begin_battle: the battle's Liga tier differs (0/1/2)
+
 # --- UI -----------------------------------------------------------------
 signal toast_requested(text: String, icon: StringName)
 ## Bottom corners (canvas px inside the safe frame) a screen keeps for its own panels while overlay `mode` is active;

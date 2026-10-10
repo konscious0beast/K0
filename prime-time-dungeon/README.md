@@ -47,6 +47,9 @@ Prüfwerkzeuge (`tools/`).
   und der Etagenboss **Die Rattenkönigin von Gleis 9**, danach Etagen-Bilanz, Autosave und Abspann.
 - Etage 2 ist nur angelegt (`floors.json`: `playable = false`). Wer abgestiegen ist, landet nach „Fortsetzen“ im Abspann.
 - 3 Speicherslots (JSON in `user://saves/`), Einstellungen, Pausemenü, Touch-Steuerung.
+- **M.O.D.-Marotten & Unterhosen-Liga** (06 Kap. 4): M.O.D. verrät je Etage, was sie heute mag (Show-Wetten mit Herzen,
+  Fanpost-Paket bei drei Treffern); wer ohne Rüstung & ohne Accessoire kämpft, spielt in der Liga und bekommt mehr Hype und
+  Follower. Show-Chip im Overlay, Pausemenü-Reiter „Show“, Achievement-Kette „Ohne alles“.
 - SHOWRUN S0: 2 Offline-Events (`evt_offline_gleis9`, `evt_offline_pacifist`), Event-Lobby, Ergebnis-Screen, lokale Bestenliste,
   Replay-Prüfung.
 - Qualitätssicherung: rund 830 automatische Tests, Autoplay-Smoke-Test (`AUTOPLAY: OK`), Full-Run-Bot, der Etage 1 mit
@@ -207,15 +210,16 @@ Alle Bilder stammen aus dem Spiel selbst (Compatibility-Renderer unter Xvfb, 128
 | | |
 |---|---|
 | ![Titel](docs/screenshots/01_title_menu.png) **01** Titelmenü | ![Intro](docs/screenshots/02_intro_mod_studio.png) **02** Intro im Studio von M.O.D. |
-| ![U-Bahn-Gleise](docs/screenshots/03_explore_ubahn_gleise_enemy_group.png) **03** Erkundung, Zone U-Bahn-Gleise mit Gegnergruppe | ![Kanalisation](docs/screenshots/04_explore_kanalisation_enemy_group.png) **04** Erkundung, Zone Kanalisation mit Gegnergruppe |
+| ![U-Bahn-Gleise](docs/screenshots/03_explore_ubahn_gleise_enemy_group.png) **03** Erkundung, Zone U-Bahn-Gleise mit Gegnergruppe (rechts der Show-Chip) | ![Kanalisation](docs/screenshots/04_explore_kanalisation_enemy_group.png) **04** Erkundung, Zone Kanalisation mit Gegnergruppe |
 | ![Keller](docs/screenshots/05_explore_keller_chest_prompt.png) **05** Zone Keller: Kai vor einer Truhe mit Prompt | ![Karte](docs/screenshots/06_explore_floor_map.png) **06** Etagenkarte |
-| ![Pausemenü](docs/screenshots/07_pause_menu_equipment.png) **07** Pausemenü, Reiter Ausrüstung | ![Befehlsmenü](docs/screenshots/08_battle_command_menu.png) **08** Kampf: Befehlsmenü und Zugfolge-Leiste |
+| ![Pausemenü](docs/screenshots/07_pause_menu_equipment.png) **07** Pausemenü, Reiter Ausrüstung (mit Liga-Zeile) | ![Befehlsmenü](docs/screenshots/08_battle_command_menu.png) **08** Kampf: Befehlsmenü und Zugfolge-Leiste |
 | ![Rattenkönigin](docs/screenshots/09_battle_boss_intro_rattenkoenigin.png) **09** Boss-Intro: Die Rattenkönigin von Gleis 9 | ![Hausmeister](docs/screenshots/10_battle_boss_phase_hausmeister.png) **10** Phasenwechsel des Hausmeisters |
 | ![Sponsor-Geschenk](docs/screenshots/11_battle_sponsor_gift.png) **11** Sponsor-Geschenk mitten im Kampf | ![Sieg](docs/screenshots/12_battle_victory_results.png) **12** Sieg und Ergebnis-Screen |
 | ![Mopsula](docs/screenshots/13_safe_room_mopsula_scene.png) **13** Safe Room: Szene mit Graf Mopsula | ![Lootbox](docs/screenshots/14_safe_room_lootbox_reveal_odds.png) **14** Lootbox-Öffnung mit veröffentlichten Wahrscheinlichkeiten |
 | ![Event-Lobby](docs/screenshots/15_event_run_lobby.png) **15** SHOWRUN-Event-Lobby mit lokaler Bestenliste | ![Cast](docs/screenshots/16_gallery_cast_floor1.png) **16** Galerie: Besetzung von Etage 1 |
 | ![VFX](docs/screenshots/17_gallery_vfx.png) **17** Galerie: Effekte | ![Handy](docs/screenshots/18_phone_battle_skill_list_touch.png) **18** Handy-Format: Fähigkeitenliste mit Touch-Steuerung |
-| ![Sponsor-Fenster](docs/screenshots/overlay_sponsor_window.png) **Overlay** Show-Overlay mit offenem Sponsor-Fenster (Demo-Werte) | |
+| ![Sponsor-Fenster](docs/screenshots/overlay_sponsor_window.png) **Overlay** Show-Overlay (Demo-Werte): Sponsor-Fenster offen mit Platz-Punkten, Show-Chip „M.O.D. mag heute“ mit Herzen und Liga-Stufe | ![Show](docs/screenshots/19_pause_show_unterhosen_liga.png) **19** Pausemenü, Reiter Show: M.O.D.s Vorliebe und Unterhosen-Liga |
+| ![Show-Wette](docs/screenshots/20_battle_results_show_bet_won.png) **20** Kampfergebnis: dritter Herz-Treffer, Show-Wette gewonnen (Fanpost-Paket) | |
 
 **Neu erzeugen:** `tools/check.sh --shot` rendert eine Szene. Zustände, die man nur durch Spielen erreicht, stellen die
 Capture-Rezepte in `game/tests/capture_recipes.gd` her (02_TECH §11.3). Beispiele:

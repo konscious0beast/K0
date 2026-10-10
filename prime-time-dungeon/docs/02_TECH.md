@@ -2020,6 +2020,10 @@ Golden Values (gemessen mit 4.7.2, Pflicht in `test_m0_seed_util.gd`): `mix(1, 2
 
 ## 5. Kampf-Kern (M1)
 
+> **Hinweis (2026-10-10):** Dieser Abschnitt wird durch [`07_ECHTZEITKAMPF.md`](07_ECHTZEITKAMPF.md) (Echtzeitkampf,
+> Kern `core/rt/`) ersetzt, sobald Phase R5 abgeschlossen ist (07 §12.5). Bis dahin gilt er unverändert für den CTB-Modus
+> (`combat_mode = ctb`); für den Echtzeitmodus gilt 07.
+
 Alle Klassen `extends RefCounted`, keine Autoloads, keine Nodes, kein `await`. Jede Zufallsentscheidung nutzt RNGs, die aus
 `BattleSetup.seed` abgeleitet sind → gleicher Seed + gleiche Befehle = identische Events (Brief §6b.1). Zahlen und Regeln
 folgen GDD §3 (Formeln kanonisch, Konstanten in `Balance`, §5.9).

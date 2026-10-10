@@ -319,6 +319,10 @@ auf Vorabend umstellbar, nie zurück. Schaden/EXP wirken sofort, der Timer-Fakto
 
 ## 3. Kampf (CTB — Conditional Turn-Based)
 
+> **Hinweis (2026-10-10):** Dieser Abschnitt wird durch [`07_ECHTZEITKAMPF.md`](07_ECHTZEITKAMPF.md) (Echtzeitkampf
+> „WoW-light“ direkt in der Welt) ersetzt, sobald Phase R5 abgeschlossen ist (07 §12.5). Bis dahin gilt er unverändert für den
+> CTB-Modus (`combat_mode = ctb`); für den Echtzeitmodus gilt 07.
+
 ### 3.1 Grundprinzip
 
 Jede Einheit hat einen Zähler `ctr: int` (Ticks bis zum nächsten Zug; im Code `Combatant.ctb_counter`, Klasse `CTBQueue`). Es handelt

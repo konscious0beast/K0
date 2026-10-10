@@ -84,6 +84,17 @@ die Timer-Logik in `RunSim.step` ist Pflicht für Phase B (ohne sie läuft kein 
   Daten kommen als `GameData`-Instanz, Zufall als `RandomNumberGenerator` per Parameter.
 - `art/**` greift nie auf `Game`, `Show`, `Save`, `Router` zu; `Sfx`/`DB` nur in Gallery-Szenen.
 
+### 0.5 Änderungsanträge aus `06_PROGRESSION_MAROTTEN_KI_ADMIN.md` (CR-16 … CR-19)
+
+Die Pakete A–D aus 06 Kap. 8 ändern diesen Vertrag; Module `06-A` … `06-D` in §1. CR-1 … CR-15 stehen in 05 Kap. 11.6.
+
+| CR | Paket | Inhalt | Stand |
+|---|---|---|---|
+| CR-16 | 06-A | Figurenwahl & Feldfähigkeiten (06 §1): `GameState.hero` (§6.1, Save ohne Versionssprung), `HeroRules` (§6.1), Command `hero {id}` + `Game.hero()/partner()/set_hero()` + `new_game(…, hero_id)`/`start_event_run(…, hero_id)` (§3.4), Signale `hero_changed`, `field_ability_used` (§3.2), `GameSettings.partner_auto` (§3.4, §5.7), Bellen/`DAZED` (§7.3), SFX `bark` (§3.8), Tag-Präfix `hero_` (§4.3), Szene `hero_select` (§1.6, §9.1, §9.5), Safe-Room-Eintrag „Figur wechseln“ (§9.5), Bot `--hero` (§11.4.1) | **umgesetzt** (2026-10-10); E1-Geheimnisse (`secret`-Command, `layout.secrets`) folgen |
+| CR-17 | 06-B | Talent-Show, Spezies/Spezialisierung (Datenmodell) | offen |
+| CR-18 | 06-C | Marotten, Show-Wetten, Unterhosen-Liga, E1-Show-Boss | offen |
+| CR-19 | 06-D | KI-Admin: Twist-Command, `mod_live`, Referenz-Dienst | offen |
+
 ---
 
 ## 1. Dateibaum und Modulzuordnung
@@ -176,6 +187,7 @@ Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört gen
 | `core/progression/battle_rewards.gd` | M2 (S) | `BattleRewards` |
 | `core/progression/shop.gd` | M2 (S) | `Shop`: Automat (kaufen/verkaufen) |
 | `core/progression/save_codec.gd` | M2 (S) | `SaveCodec`: Save-Dict ↔ `GameState`, Versionierung, Migration |
+| `core/progression/hero_rules.gd` | 06-A | `HeroRules`: gesteuerte Figur prüfen/setzen (Startwahl vs. Safe-Room-Wechsel), Partner, Feldfähigkeit (06 §1.7, CR-16) |
 | `core/dungeon/room_cell.gd` | M3 (S) | `RoomCell` |
 | `core/dungeon/chest_spawn.gd` | M3 (S) | `ChestSpawn` |
 | `core/dungeon/enemy_spawn.gd` | M3 (S) | `EnemySpawn` |
@@ -269,19 +281,21 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `scenes/boot/autoplay.gd` | M6 | Autoplay-Treiber (§11.4) |
 | `scenes/boot/fullrun.gd` | M6 | Full-Run-Bot `--autoplay=full` (§11.4.1) |
 | `scenes/title/title.tscn` + `title.gd` | M6 (S) | `TitleScreen`: Fortsetzen / Neues Spiel / Laden / Event-Lauf / Optionen / Credits / Beenden (§9.5) |
-| `scenes/title/slot_select.tscn` + `.gd` | M6 | Slot-Auswahl (Neu/Laden) |
-| `scenes/title/name_entry.tscn` + `.gd` | M6 | Namenseingabe (Default „Kai“, `LineEdit.max_length = 12`) + Modus Prime Time / Vorabendprogramm |
+| `scenes/title/slot_select.tscn` + `.gd` | M6 | Slot-Auswahl (Neu/Laden); „Neu“ → Figurenwahl |
+| `scenes/title/hero_select.tscn` + `.gd` | 06-A | Figurenwahl „Wen steuerst du?“: zwei Karten Kai / Graf Mopsula mit 3D-Vorschau (06 §1.1, CR-16) |
+| `scenes/title/name_entry.tscn` + `.gd` | M6 | Namenseingabe (Default „Kai“, `LineEdit.max_length = 12`, Überschrift je Figur, 06 §1.1) + Modus Prime Time / Vorabendprogramm |
 | `scenes/title/intro.tscn` + `.gd` | M6 | M.O.D.-Intro-Sequenz |
 | `scenes/title/game_over.tscn` + `.gd` | M6 | Game Over (Grund: `defeat`/`timer`) |
 | `scenes/title/credits.tscn` + `.gd` | M6 | „Etage 2 folgt“-Abspann |
 | `scenes/exploration/exploration.tscn` + `exploration.gd` | M3 (S) | `ExplorationScene`: Etage aufbauen, Spieler/Gegner/Interaktion, Encounter |
 | `scenes/exploration/floor_builder.gd` | M3 | `FloorLayout` → Raum-Nodes via `EnvKit`/`PropKit` |
-| `scenes/exploration/player.tscn` + `player_controller.gd` | M3 | CharacterBody3D + `CharacterRig`, Laufen/Schleichen, Feldschlag/Interagieren (`action`) |
-| `scenes/exploration/companion_follower.gd` | M3 | Mopsula folgt Kais Spur (ohne NavigationServer, §7.3) |
+| `scenes/exploration/player.tscn` + `player_controller.gd` | M3 | CharacterBody3D + `CharacterRig` der gesteuerten Figur (`set_hero`), Laufen/Schleichen, Feldfähigkeit Feldschlag/Bellen + Interagieren (`action`) |
+| `scenes/exploration/companion_follower.gd` | M3 | Die Partner-Figur folgt der Spur der Held:in (ohne NavigationServer, §7.3) |
+| `scenes/exploration/encounter_rules.gd` | M3 | Privat, rein: Vorteilsregel bei Kontakt/Feldschlag, Bellen-Kegel (`BARK_*`, `DAZE_*`, §7.3) |
 | `scenes/exploration/camera_rig.gd` | M3 | Orbit-Kamera mit SpringArm3D |
-| `scenes/exploration/enemy_actor.tscn` + `enemy_actor.gd` | M3 | Sichtbare Gegnergruppe: IDLE/PATROL/ALERT/CHASE/RETURN, Kontakt |
+| `scenes/exploration/enemy_actor.tscn` + `enemy_actor.gd` | M3 | Sichtbare Gegnergruppe: IDLE/PATROL/ALERT/CHASE/RETURN/DAZED, Kontakt |
 | `scenes/exploration/interactable.gd` | M3 | Basis Area3D-Interaktion (Prompt-Text, `interact()`) |
-| `scenes/exploration/chest_interactable.gd` | M3 | Truhe (wood/metal/locked) |
+| `scenes/exploration/chest_interactable.gd` | M3 | Truhe (wood/metal/locked); Prompt je Figur („mit der Schnauze“) |
 | `scenes/exploration/gate_interactable.gd` | M3 | Tor (benötigt Schlüssel/Event) |
 | `scenes/exploration/event_interactable.gd` | M3 | Etagen-Event mit Wahl-Dialog (§7.4) |
 | `scenes/exploration/stairs_interactable.gd` | M3 | Treppe |
@@ -292,13 +306,13 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `scenes/battle/battle_stage.gd` | M5 | Arena, Slot-Positionen, Rigs |
 | `scenes/battle/battle_camera.gd` | M5 | Kamera-Shots |
 | `scenes/battle/ui/battle_hud.tscn` + `.gd` | M5 | Kampf-HUD (CanvasLayer 5): Party-Panels, CTB-Leiste, Menüs |
-| `scenes/battle/ui/party_panel.gd` | M5 | HP/MP/Status je Partymitglied |
+| `scenes/battle/ui/party_panel.gd` | M5 | HP/MP/Status je Partymitglied; Rollen-Pille „DU“/„AUTO“ (06 §1.4) |
 | `scenes/battle/ui/ctb_bar.gd` | M5 | Zugreihenfolge-Leiste rechts (12 Einträge, bei Schema TOUCH 10; Pseudo-Icons, Geist-Vorschau) |
 | `scenes/battle/ui/command_menu.gd` | M5 | Angriff/Fähigkeit/Stunt (mit Cooldown-Zahl)/Item/Verteidigen/Flucht |
 | `scenes/battle/ui/action_list.gd` | M5 | Untermenü Fähigkeiten/Stunts/Items |
 | `scenes/battle/ui/target_cursor.gd` | M5 | Zielauswahl |
 | `scenes/battle/ui/battle_results.tscn` + `.gd` | M5 | Ergebnis: EXP, Credits, Items, Level-Ups, Follower, Achievements |
-| `scenes/safe_room/safe_room.tscn` + `safe_room.gd` | M6 (S) | `SafeRoomScene`: Innenraum (Theme je Safe Room) + Menü + Mopsula-Szenen (`scenes.json`) |
+| `scenes/safe_room/safe_room.tscn` + `safe_room.gd` | M6 (S) | `SafeRoomScene`: Innenraum (Theme je Safe Room) + Menü (inkl. „Figur wechseln“, 06 §1.6) + Mopsula-Szenen (`scenes.json`) |
 | `scenes/safe_room/vending_menu.tscn` + `.gd` | M6 | Automat (Shop) |
 | `scenes/safe_room/lootbox_opening.tscn` + `.gd` | M6 | Lootbox-Öffnung mit M.O.D.-Kommentar |
 | `scenes/ui/theme/ui_theme.gd` | **M0** | `UiTheme`: Basis-Theme (Code-generiert) |
@@ -320,7 +334,7 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `scenes/ui/floor_summary.tscn` + `.gd` | M6 | `FloorSummary`: Etagen-Bilanz (Zeit, Kills, Zuschauer-Peak, Follower, Achievements) → `Game.continue_after_summary()` |
 | `scenes/ui/event_lobby.tscn` + `.gd` | M6 | Event-Lauf-Karte (05 CR-10) |
 | `scenes/ui/run_result.tscn` + `.gd` | M6 | Event-Lauf-Ergebnis (05 CR-10) |
-| `scenes/ui/settings_menu.tscn` + `.gd` | M6 | Einstellungen |
+| `scenes/ui/settings_menu.tscn` + `.gd` | M6 | Einstellungen (inkl. „Partner automatisch“, 06 §1.4) |
 | `scenes/ui/confirm_dialog.tscn` + `.gd` | M6 | Ja/Nein-Dialog |
 | `scenes/ui/safe_area_container.gd` | M6 | MarginContainer mit Safe-Area-Rändern |
 | `scenes/ui/input_glyph.gd` | M6 | Tasten-/Button-Symbol je Input-Schema |
@@ -367,6 +381,10 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `tests/test_m6_ui_scenes.gd` | M6 | Alle UI-Szenen instanziieren, Default-Fokus vorhanden |
 | `tests/test_m7_data_content.gd` | M7 | Inhalt: Mengen laut GDD (11 Gegner, 2 Bosse, 16 Party-Skills, 2 Stunts, 25 Gegner-Skills, 11 Boss-Skills, 29 Achievements, 7 Sponsoren, 6 Meilensteine, 6 Status, 4 Szenen), Balancing-Sanity |
 | `tests/test_m8_*.gd` | M8 | Live-Hooks laut 05_LIVE_MODUS §11.4 (RunLog, RunSim, Command, Gift, Replay …) |
+| `tests/test_06a_hero.gd` | 06-A | `HeroRules`, `Game.new_game(…, hero)`/`set_hero`, `hero`-Command (Start- vs. Safe-Room-Prüfung, `RunSim`-Ablehnung), Save-Rundlauf/Altstand → `kai`, Replay-Hash (auch Lauf als Mopsula), Erkundung mit Mopsula als Spielerkörper |
+| `tests/test_06a_bark.gd` | 06-A | Bellen: Kegel/Reichweite/Sichtlinie, `DAZED` (Dauer, Immunität 15 s, Rückkehr), Vorteilsregel `DAZED` → `PREEMPTIVE` aus jeder Richtung, Bosse/Fahrscheinfresser unbeeinflusst, Cooldown, Szene (Signal `field_ability_used`, Chat) |
+| `tests/test_06a_partner_auto.gd` | 06-A | `GameSettings.partner_auto` (Default, Rundlauf, Optionszeile), Kampf: Partner-Züge `auto: true`, Menü nur für die Held:in, Rollen-Pillen |
+| `tests/test_06a_hero_ui.gd` | 06-A | Ablauf Slot → Figur → Name → Intro (Fokus, Navigation, Zurück), Safe-Room-Wechsel (aufgezeichnet, Figuren tauschen, M.O.D.-Zeile), Menü passt über den Chat-Ticker, Zeilen-Block A |
 | `tests/test_perf_router_cycles.gd` | Phase C | Router-Zyklen Erkundung → Kampf → Safe Room ohne Wachstum der Node-/Objekt-Minima, `Sfx.stop_all`, Etagen-Aufbauzeit, Physik-/Licht-Layer der Etage (§12.1, §12.5) |
 | `tests/test_perf_platform.gd` | Phase C | Mobil-Projekteinstellungen, Export-Presets + Launcher-Icons, Boot kompiliert keine Screens vorab (§2.1, §12.3) |
 | `tests/perf/perf_probe.gd` + `perf_runner.gd`, `tests/perf/boot_timer.gd` | Phase C | Mess-Werkzeug für `tools/perf.sh` (§12.5); keine Tests (kein `test_`-Präfix) |
@@ -649,6 +667,10 @@ signal sponsor_window_opened(window: Dictionary)         # Game (RunSim SPONSOR_
 signal sponsor_window_closed(window_id: String, reason: String)   # Game (RunSim): reason time|left|superseded|floor
 signal sponsor_window_updated(window: Dictionary)        # Show: a gift took a slot of the open window
 
+# --- Hero & field abilities (06 §1, package A; CR-16) ---------------------------
+signal hero_changed(hero_id: String)                     # Game.set_hero: the controlled character changed
+signal field_ability_used(hero_id: String, ability: StringName, hits: int)   # ExplorationScene: &"strike" | &"bark"
+
 # --- UI -----------------------------------------------------------------
 signal toast_requested(text: String, icon: StringName)
 ## Bottom corners (canvas px inside the safe frame) a screen keeps for its own panels while overlay `mode` is active;
@@ -661,9 +683,9 @@ Wer emittiert was (verbindlich):
 | Signal | Emitter |
 |---|---|
 | `scene_changed` | Router |
-| `new_game_started`, `floor_timer_*`, `floor_completed`, `stray_spawn_requested`, `party_changed`, `member_leveled`, `level_up`, `inventory_changed`, `credits_changed`, `lootbox_opened`, `chest_opened` (`open_chest`), `event_completed` (`apply_floor_event`), `input_scheme_changed`, `settings_changed`, `item_bought`, `explore_tick`, `run_started`, `run_finished`, `quest_progress`, `quest_completed`, `sponsor_window_opened`, `sponsor_window_closed` (`_dispatch` der RunSim-Events) | Game |
+| `new_game_started`, `floor_timer_*`, `floor_completed`, `stray_spawn_requested`, `party_changed`, `member_leveled`, `level_up`, `inventory_changed`, `credits_changed`, `lootbox_opened`, `chest_opened` (`open_chest`), `event_completed` (`apply_floor_event`), `input_scheme_changed`, `settings_changed`, `item_bought`, `explore_tick`, `run_started`, `run_finished`, `quest_progress`, `quest_completed`, `sponsor_window_opened`, `sponsor_window_closed` (`_dispatch` der RunSim-Events), `hero_changed` (`set_hero`, nur bei echtem Wechsel) | Game |
 | `game_loaded`, `game_saved` | Save |
-| `floor_entered`, `room_entered`, `enemy_alerted`, `encounter_triggered`, `gate_opened`, `overlay_mode_requested(&"explore")` | ExplorationScene (M3) |
+| `floor_entered`, `room_entered`, `enemy_alerted`, `encounter_triggered`, `gate_opened`, `overlay_mode_requested(&"explore")`, `field_ability_used` (Feldschlag: `hits` 0/1 je Schlag; Bellen: Zahl der verdutzten Gruppen) | ExplorationScene (M3) |
 | `battle_started`, `battle_turn_started`, `battle_ended`, `overlay_mode_requested(&"battle")` | BattleScene/BattleController (M5) |
 | `viewers_changed`, `followers_changed`, `hype_changed`, `achievement_unlocked`, `milestone_reached`, `sponsor_gift_triggered`, `mod_said`, `chat_posted`, `lootbox_earned`, `enemy_killed`, `battle_won`, `battle_fled`, `stunt_resolved`, `combo`, `party_ko`, `boss_defeated`, `boss_hp_changed`, `gift_received`, `gift_rejected`, `sponsor_window_updated` | Show |
 | `dialog_finished` | ModDialog (M6) |
@@ -733,13 +755,16 @@ var safe_room_clock: bool = false    # SafeRoomScene shown (true in _ready, fals
                                      # ticking there ("idle ticks", Sponsor-Fenster 05 §6.13) — the floor timer does not
 
 func has_state() -> bool
-func new_game(slot: int, player_name: String = "Kai", seed: int = -1, difficulty: StringName = &"prime") -> void
+func new_game(slot: int, player_name: String = "Kai", seed: int = -1, difficulty: StringName = &"prime",
+		hero_id: String = HeroRules.DEFAULT_HERO) -> void
 	# seed -1 → int(Time.get_unix_time_from_system() * 1000.0) & 0x7FFFFFFF
 	# state = GameState.create_new(DB.data, slot, player_name, seed, difficulty); run_log = RunLog.new() (header: schema, seed,
 	# slot, player_name, mode, difficulty, game_version, sim_hz, event_id, run_id); sim = RunSim.new(DB.data, state, {})
-	# with sim.run_log = run_log (checkpoints, see below); start_floor(1); emits new_game_started(slot)
-func start_event_run(event_id: String) -> void   # M8: EventCatalog → EventDef.run_seed(); mode = &"event_offline"; slot 0
-	# (sim = RunSim.new(…, def.rules) with sim.run_log = run_log, like new_game)
+	# with sim.run_log = run_log (checkpoints, see below); start_floor(1); set_hero(HeroRules.sanitize(hero_id)) — always
+	# recorded as {"t": "hero", "id"} right after "floor" (also for "kai"; 06 §1.7, CR-16); emits new_game_started(slot)
+func start_event_run(event_id: String, hero_id: String = HeroRules.DEFAULT_HERO) -> void   # M8: EventCatalog →
+	# EventDef.run_seed(); mode = &"event_offline"; slot 0 (sim = RunSim.new(…, def.rules) with sim.run_log = run_log, like
+	# new_game; hero choice recorded after "floor" like new_game — the event lobby does not offer a choice yet → "kai")
 func adopt_loaded_state(st: GameState, p_log: RunLog) -> void   # Save.load_slot: resets the PRIVATE run context
 	# (event def, finished flag, quest + metric memory, layout cache, command ids, dialog/timer state — as for a new game),
 	# mode = &"campaign", state = st, run_log = p_log (header "from_save"), sim = RunSim.new(DB.data, st, {}) recording
@@ -810,6 +835,13 @@ func next_scene(ctx: Dictionary) -> SceneDef      # first SceneDef (priority ord
 func mark_scene_seen(scene: SceneDef) -> void     # record({"t": "scene", "id"}); flags scene_<id> = true, set_flag (e.g. mop_pep_talk)
 func set_difficulty(d: StringName) -> bool   # only &"prime" → &"vorabend" (never up); record({"t": "difficulty", "to"});
 	# remaining timer ticks × 1.5
+# --- 06 package A (CR-16): who leads the duo ---
+func hero() -> String                 # state.hero ("kai" without a run)
+func partner() -> String              # HeroRules.partner_of(state): the character that follows / fights on its own
+func set_hero(hero_id: String) -> bool   # HeroRules.check(state, id) != "" → false (nothing recorded); else
+	# record({"t": "hero", "id"}); HeroRules.set_hero; emits hero_changed(id) only on a real change. Before the run started
+	# (rng_counter == 0 and floor_run.stats.time_used_ticks == 0) check_initial applies, afterwards check_set (safe room
+	# only: floor_run.location != &"start", not the current hero) — Safe Room "Figur wechseln" calls it
 func record(cmd: Dictionary) -> void  # run_log.add_cmd(sim.tick(), cmd, cmd_id); no-op if run_log == null or replaying;
 	# cmd_id: "gift"/"twist" (external inputs) → 0, every other command strictly increasing from 1 per run log (05 §10.6;
 	# a new run log — new_game, start_event_run, Save.load_slot — starts at 1 again)
@@ -869,7 +901,9 @@ Laufzeitverhalten:
   `equip {member, slot, item}`, `use_item {item, member}`, `rest {}`, `event {id, choice}` (FloorEvent-Wahl), `chest {id}`,
   `gate {key}`, `room {cell: [x, y]}` (nur Erstbesuch), `safe_room {id}`, `safe_room_exit {}`, `scene {id}`, `flag {key, value}`,
   `difficulty {to}`, `descend {}`, `gift {gift}` (nur `source ≠ "system"`, aufgezeichnet bei der **Anwendung**, §3.5; `cmd_id` 0;
-  mit Stempel `gift.sponsor_window`), `sponsor_window {op: "dev_open", sec, slots}` (QA-Fenster, 05 §6.13).
+  mit Stempel `gift.sponsor_window`), `sponsor_window {op: "dev_open", sec, slots}` (QA-Fenster, 05 §6.13), `hero {id}`
+  (`"kai" | "mopsula"`, 06 §1.7: Startwahl direkt hinter `floor`, später Wechsel im Safe Room; `RunSim.apply` prüft
+  `HeroRules.check` **vor** der Aufzeichnung und verwirft sonst mit `rejected_cmds {"k", "t": "hero", "gift_id": <hero-id>, "reason"}`).
   `Command.TYPES` (M8) = genau diese Liste.
 - **Sponsor-Fenster** (Nutzerentscheidung 2026-10-08, 05 §6.13): Externe Geschenke nur in offenen Fenstern. Die Auslöser sind die
   aufzeichnenden Methoden selbst — `start_floor` (schließt, Countdown neu), `visit_room` (Erstbesuch einer Boss-Zelle →
@@ -903,7 +937,7 @@ Laufzeitverhalten:
   der Command-Tick prüfen, Uhr **tickweise** wie live bis `k` (`_dispatch(sim.step(1))`), dann **dieselbe** Methode wie live
   (`start_floor`, `open_lootbox`, `buy`, `sell`, `equip`, `use_item`, `rest_full_heal`, `apply_floor_event`, `open_chest`,
   `open_gate`, `visit_room`, `enter_safe_room`, `leave_safe_room`, `mark_scene_seen`, `set_flag`, `set_difficulty`,
-  `open_dev_sponsor_window`, `descend` → `floor_completed` senden, `gift` außerhalb des Kampfes → `Show.receive_gift`). Kämpfe exakt nach §5.7 ohne Szene:
+  `open_dev_sponsor_window`, `set_hero`, `descend` → `floor_completed` senden, `gift` außerhalb des Kampfes → `Show.receive_gift`). Kämpfe exakt nach §5.7 ohne Szene:
   `encounter` → `make_battle_setup` (next_seed "battle") → `BattleState.new` → `Show.begin_battle` (next_seed "show") →
   `battle_started` → `_play(start())`; `battle` → `_play(submit(BattleCommand.from_dict(cmd)))`; `_play` = Events →
   `Show.on_battle_event`, dann (Kampf läuft) ein direkt folgendes `gift`-Command in `Show.receive_gift` und
@@ -929,6 +963,7 @@ Laufzeitverhalten:
 | `show_fps` | bool | false | `display/show_fps` |
 | `camera_invert_x` / `camera_invert_y` | bool | false | `input/…` |
 | `camera_sensitivity` | float 0.25..3.0 | 1.0 | `input/camera_sensitivity` |
+| `partner_auto` | bool | false | `game/partner_auto` — „Partner automatisch“: die Züge der nicht gesteuerten Figur wählt `AutoPolicy` (§5.7, 06 §1.4) |
 
 Methoden: `func load_from_disk() -> void`, `func save_to_disk() -> Error` (ephemer: `OK` ohne Schreiben), `func to_dict() -> Dictionary`.
 Der Spielmodus (Prime Time / Vorabendprogramm) ist **keine** Einstellung, sondern `GameState.difficulty` (pro Spielstand).
@@ -1161,7 +1196,8 @@ Unbekannte ID → einmal `push_warning`, kein Absturz.
 
 Feste IDs — SFX: `ui_move, ui_confirm, ui_cancel, ui_error, step, swing, hit, hit_crit, hit_weak, miss, magic, fire, ice,
 shock, toxic, light, dark, heal, buff, debuff, ko, defend, flee, stunt_success, stunt_fail, level_up, chest_open, coin,
-lootbox_shake, lootbox_open, lootbox_rare, sponsor, achievement, timer_warn, stairs, swirl, door, mod_blip, chat_pop, vending`.
+lootbox_shake, lootbox_open, lootbox_rare, sponsor, achievement, timer_warn, stairs, swirl, door, mod_blip, chat_pop, vending,
+bark` (`bark`: Graf Mopsulas Bellen, 06 §1.3 — zwei fallende Säge-Beller mit Rauschen).
 Musik: `title, explore, battle, boss, safe_room, victory, game_over, credits` (Loops 4–8 s, Loop-Regel oben).
 
 ### 3.9 `UiTheme` (M0, `scenes/ui/theme/ui_theme.gd`) — Basis-Theme für M5/M6
@@ -1337,9 +1373,12 @@ const REQUIRED_MOD_TAGS: PackedStringArray = ["intro", "floor_start", "first_fig
 ## Optional tags: live tags of 05 CR-9 / §6.12 (event_*, gift_*, fan_pack_*, live_*, vote_*, twist_applied_*), the
 ## Sponsor-Fenster lines of 05 §6.13 (sponsor_window_open[:periodic|safe_room|boss|dev], sponsor_window_closed,
 ## sponsor_window_full) and the story beats of GDD §1.4 (tutorial_* hints B1/B2, story_battle:<encounter_id> banners B4).
+## 06 package A (CR-16): hero_pick:<id> (intro), hero_switch:<id> (safe room); tutorial_*:mopsula and chat_bark are covered
+## by the existing prefixes.
 const OPTIONAL_MOD_TAG_PREFIXES: PackedStringArray = ["achievement:", "boss_intro:", "boss_phase:", "event_", "gift_received",
 	"mopsula_idle", "chat_", "gift_", "fan_pack_", "live_", "vote_", "twist_applied_", "tutorial_", "story_",
-	"sponsor_window_"]
+	"sponsor_window_",
+	"hero_"]
 ```
 
 `StatIds.ALL` (§6.3) ist das Vokabular für `s.<stat>` in Bedingungen.
@@ -2454,7 +2493,8 @@ func run(setup: BattleSetup) -> void:
 		var actor: Combatant = state.current_actor()
 		Events.battle_turn_started.emit(actor.id, actor.is_party())
 		var cmd: BattleCommand
-		var chosen: bool = actor.is_party() and not Game.auto_battle
+		var chosen: bool = actor.is_party() and not Game.auto_battle \
+			and not is_partner_auto(actor.def_id)   # 06 §1.4 (CR-16): settings.partner_auto and def_id == Game.partner()
 		if chosen:
 			cmd = await hud.request_command(state, actor)     # menus, target cursor, CTB preview via state.preview_order
 		else:
@@ -2818,6 +2858,8 @@ var floor_run: FloorRun
 var show: ShowState
 var flags: Dictionary = {}
 var rng_counter: int = 0
+var hero: String = "kai"               # 06 §1 (CR-16): controlled character "kai" | "mopsula"; in to_dict/hash; from_dict
+                                       # HeroRules.sanitize(d.get("hero", "kai")) → old saves "kai", no save version bump
 static func create_new(data: GameData, slot: int, player_name: String, seed: int, difficulty: StringName = &"prime") -> GameState
 	# party from party.json (level 1, full hp/mp, learnset level ≤ 1, start equipment); inventory + credits from
 	# data.party_start() (3× itm_bandage, 1× itm_antidote, 50 Cr); show: hype 30, followers 0; floor_run = null (Game.start_floor)
@@ -2826,6 +2868,19 @@ func hype_gain_mult(data: GameData) -> float     # product of equipped show_mods
 func follower_mult(data: GameData) -> float      # product of equipped show_mods.follower_mult
 func to_dict() -> Dictionary
 static func from_dict(d: Dictionary) -> GameState
+
+class_name HeroRules extends RefCounted   # 06 §1.7 (CR-16), pure: who leads the duo
+const HEROES: PackedStringArray = ["kai", "mopsula"]
+const DEFAULT_HERO: String = "kai"
+const FIELD_ABILITIES: Dictionary = {"kai": &"strike", "mopsula": &"bark"}
+static func run_started(state: GameState) -> bool      # rng_counter > 0 or floor_run.stats.time_used_ticks > 0
+static func check_initial(state: GameState, hero_id: String) -> String   # "" | "unknown_hero" | "run_started"
+static func check_set(state: GameState, hero_id: String) -> String       # "" | "unknown_hero" | "not_in_safe_room" | "same"
+static func check(state: GameState, hero_id: String) -> String           # check_initial before run_started, else check_set
+static func set_hero(state: GameState, hero_id: String) -> bool          # check() == "" → state.hero = hero_id
+static func partner_of(state: GameState) -> String     # the other one
+static func field_ability(hero_id: String) -> StringName   # &"strike" | &"bark"
+static func sanitize(hero_id: String) -> String        # unknown → "kai"
 
 class_name LevelUpInfo extends RefCounted
 var member_id: String
@@ -3034,13 +3089,14 @@ Datei `user://saves/slot_<1..3>.json` (bei `use_custom_user_dir` unter `…/Prim
                   "stats": {"time_used_ticks": 13974, "kills": 6, "viewers_peak": 2210, "followers_gained": 420, "achievements": 4}},
     "show": {"viewers": 1800, "followers": 420, "hype": 35.0, "stats": {"kills_total": 6},
              "achievements": ["ach_first_blood"], "milestones": ["ms_100", "ms_250"], "sponsor_uses": {"spn_gluckwasser": 1}},
-    "flags": {"intro_seen": true, "scene_scn_mop_1": true}
+    "flags": {"intro_seen": true, "scene_scn_mop_1": true},
+    "hero": "kai"
   }
 }
 ```
 
 Regeln: `Vector2i` als `[x, y]`; Zahlen beim Laden mit `int()` konvertieren; unbekannte Item-/Skill-IDs beim Laden verwerfen
-(Warnung, nicht fatal); fehlende Felder → Defaults; `version > VERSION` → Laden verweigern („Spielstand stammt aus neuerer Version“).
+(Warnung, nicht fatal); fehlende Felder → Defaults (z. B. `hero` → `"kai"`, 06 §1.7: kein Versionssprung); `version > VERSION` → Laden verweigern („Spielstand stammt aus neuerer Version“).
 Speichern nur im Safe Room (manuell, `location` = Safe-Room-ID) + Autosave in `Game.continue_after_summary()`.
 **Gnadenfrist:** `Save.load_slot` setzt nach dem Dekodieren `time_left_ticks = maxi(time_left_ticks, 180 × 30)` (GDD §2.9).
 Nach dem Laden: Etage nicht spielbar (`playable == false`) → `Router.goto(SCENE_CREDITS)`; sonst
@@ -3236,8 +3292,18 @@ Kollisionslayer: 1 `world` (Wände/Boden/große Props/geschlossene Tore), 2 `pla
 
 Spieler (GDD §2.1): Kapsel r 0.4 / h 1.7, **Laufen 5.5 m/s**, **Schleichen 2.5 m/s** (Action `sneak` halten; Touch: Stick-Auslenkung
 ≤ 0.6), Beschleunigung 30 m/s², Abbremsen 40 m/s², Drehrate 12 rad/s, Gravitation 20 m/s², kein Sprung.
-Action `action` (eine Taste): liegt ein Interactable im Radius 1.5 m und im 120°-Kegel vor Kai → `interact()` (Vorrang),
-sonst **Feldschlag** (Bogen 100°, Reichweite 1.8 m, Dauer 0.45 s, Cooldown 0.6 s).
+Gesteuerte Figur (06 §1.2, CR-16): der Spielerkörper ist `Game.hero()` — Kai (Kapsel wie oben) oder Graf Mopsula (Mops-Rig,
+Kapsel r 0.35 / h 0.9); Tempo, Beschleunigung und Kamera sind für beide identisch. `PlayerController.set_hero(id)` baut Rig und
+Kapsel um (`ExplorationScene.refresh_hero()` nach einem Safe-Room-Wechsel, `on_resume`); `CompanionFollower.set_member(id)` macht
+die andere Figur zur Begleitung.
+Action `action` (eine Taste): liegt ein Interactable im Radius 1.5 m und im 120°-Kegel vor der Figur → `interact()` (Vorrang),
+sonst die **Feldfähigkeit** der Figur (`HeroRules.field_ability`): Kai **Feldschlag** (Bogen 100°, Reichweite 1.8 m, Dauer
+0.45 s, Cooldown 0.6 s); Graf Mopsula **Bellen** (06 §1.3; `EncounterRules.BARK_*`: Kegel 120°, 4.0 m, Dauer 0.4 s, Cooldown
+3.0 s; Talent-Faktoren `PlayerController.field_range_pm`/`field_cd_pm`, Standard 1000). Bellen verdutzt beim Start jede Gruppe im
+Kegel, zu der ein Strahl (Kniehöhe, Layer `world` ohne „PropBlockers“) frei ist (`EnemyActor.daze()` → `DAZED`); es startet
+**nie** einen Kampf und wird nicht aufgezeichnet (Szenenlogik wie der Feldschlag; aufgezeichnet wird nur das `encounter {adv}`
+eines späteren Kontakts). Signal `field_ability_used(hero, &"bark", verdutzte Gruppen)`, bei ≥ 1 Treffer Chat `chat_bark`,
+`Sfx` `bark`, violetter Kegel + 2 Ringe (03_ART).
 Kamera (verbindlich hier und in 03_ART; GDD-Werte 6 m/−22°/FOV 65 gelten nicht): SpringArm3D Länge 7.0 m (Kollisionsmaske
 `world`), Pitch −38° (Bereich −65°..−15°), FOV 60, Stick-Yaw 2.6 rad/s, Maus (RMT halten) 0.005 rad/px × Empfindlichkeit,
 Touch-Drag 0.006 rad/px; Zoom 5–9 m per Mausrad (0.5 m) oder Zwei-Finger-Pinch (`Events.camera_zoom`, §10.3).
@@ -3248,7 +3314,7 @@ Wand bleiben (flachster Pitch, aus dem Kopf und Füße sichtbar); Türstürze ha
 +1.5 m Arm (`frame_extra_arm`); Kamera < 1.5 m an Kais Kopf → sein Rig blendet aus.
 
 Begleiter `companion_follower.gd` (M3, **ohne** NavigationServer): Spur aus Spielerpositionen (alle 0.25 m ein Punkt, Ringpuffer 64);
-Mopsula (`CharacterBody3D`, Layer 0, Maske `world`) folgt der Spur mit 1.8 m Bogenlänge Abstand per `move_and_slide()` mit
+die Partner-Figur (`Game.partner()`, Standard Mopsula; `CharacterBody3D`, Layer 0, Maske `world`) folgt der Spur mit 1.8 m Bogenlänge Abstand per `move_and_slide()` mit
 Spielergeschwindigkeit; Abstand > 10 m oder Spawn/`on_resume` → Teleport auf den Spurpunkt bzw. 1.8 m hinter Kai. Kein Kampfauslöser.
 
 Gegner (`enemy_actor.gd`, GDD §2.3, Werte aus `EnemyDef.explore`):
@@ -3260,6 +3326,7 @@ Gegner (`enemy_actor.gd`, GDD §2.3, Werte aus `EnemyDef.explore`):
 | `ALERT` | bleibt stehen, „!“-Blase, 0.6 s Telegraph → `CHASE`; `Events.enemy_alerted` |
 | `CHASE` | verfolgt mit `field_speed` (0 = steht, kann nie verfolgen/Hinterhalt) |
 | `RETURN` | zurück zum Leash-Punkt mit 3.0 m/s; ignoriert Kai 2 s |
+| `DAZED` | (06 §1.3) vom Bellen verdutzt: steht `DAZE_SEC` 2.5 s still, violette „?!“-Blase, nimmt nichts wahr; danach Spieler wahrgenommen → `ALERT`, war `ALERT`/`CHASE` → `RETURN`, sonst voriger Zustand (schlafende Tutorial-Gruppe bleibt `IDLE`). Je Gruppe höchstens 1× je `DAZE_IMMUNE_SEC` 15 s. Bosse und Gruppen ohne Wahrnehmung (Fahrscheinfresser: Sicht/Gehör 0) werden nicht verdutzt, sie „zucken nur“ („…“-Blase) |
 
 Wahrnehmung: Sichtkegel `sight_range`/`sight_angle_deg` (10 m / 110°) mit Raycast (Maske `world`); Hörradius 360° `hear_run` 4.0 m
 beim Laufen, `hear_sneak` 1.5 m beim Schleichen. Aufgabe: `giveup_no_sight` 4 s ohne Sicht **oder** > `leash` 20 m vom Leash-Punkt
@@ -3271,7 +3338,8 @@ Vorteil (Brief §4 hat Vorrang; `fwd_e`/`fwd_k` Blickrichtungen, `d_ek` Richtung
 
 | Ergebnis | Bedingung |
 |---|---|
-| PREEMPTIVE | Feldschlag trifft die Gruppe **und** (Zustand ∈ {IDLE, PATROL} **oder** `dot(fwd_e, d_ek) < BACK_DOT`) |
+| PREEMPTIVE | Feldschlag trifft die Gruppe **und** (Zustand ∈ {IDLE, PATROL, DAZED} **oder** `dot(fwd_e, d_ek) < BACK_DOT`) |
+| PREEMPTIVE | die Figur berührt eine Gruppe in `DAZED` — aus **jeder** Richtung (06 §1.3; `EncounterRules.advantage_for_contact`) |
 | PREEMPTIVE | Kai berührt eine Gruppe, die **nicht** in `CHASE` ist, von hinten: `dot(fwd_e, d_ek) < BACK_DOT` |
 | AMBUSH | Gruppe in `CHASE` berührt Kai von hinten: `dot(fwd_k, d_ke) < BACK_DOT` |
 | NORMAL | alles andere; Bosse immer |
@@ -3567,7 +3635,7 @@ selbst. Der Zwilling folgt `is_visible_in_tree()` (ein ausgeblendeter Elternknot
 ```mermaid
 flowchart LR
   Boot --> Title
-  Title -->|Neues Spiel| SlotSelect --> NameEntry --> Intro --> Exploration
+  Title -->|Neues Spiel| SlotSelect --> HeroSelect --> NameEntry --> Intro --> Exploration
   Title -->|Laden| SlotSelect2[SlotSelect] --> Exploration
   Exploration -->|push SWIRL| Battle -->|pop FADE| Exploration
   Battle -->|DEFEAT goto| GameOver
@@ -3654,10 +3722,15 @@ Kind-Node `InputSchemeWatcher` (`PROCESS_MODE_ALWAYS`, §3.4). `GlobalUi`, `Rout
 
 ```gdscript
 class_name TitleScreen extends Control            # M6
-func request_new_game(slot: int, player_name: String, skip_intro: bool, seed: int = -1, difficulty: StringName = &"prime") -> void
-	# same code path as the menu: Game.new_game(...) → goto(SCENE_INTRO) or, if skip_intro, goto(SCENE_EXPLORATION, {"spawn": &"start"})
+func request_new_game(slot: int, player_name: String, skip_intro: bool, seed: int = -1, difficulty: StringName = &"prime",
+		hero_id: String = "kai") -> void
+	# same code path as the menu: Game.new_game(..., hero_id) → goto(SCENE_INTRO) or, if skip_intro, goto(SCENE_EXPLORATION,
+	# {"spawn": &"start"})
 	# Menu (GDD §14.1): Fortsetzen (Save.newest_slot() > 0 only) · Neues Spiel · Laden · Event-Lauf (05 CR-10) · Optionen · Credits ·
-	# Beenden (not OS.has_feature("mobile")). name_entry: LineEdit.max_length = 12, default "Kai"; mode Prime Time / Vorabendprogramm
+	# Beenden (not OS.has_feature("mobile")). Neues Spiel: slot_select {"mode": "new"} → hero_select {"slot", "hero"} (06 §1.1;
+	# two cards, Kai focused, ui_cancel → slot select) → name_entry {"slot", "hero"}: LineEdit.max_length = 12, default "Kai"
+	# (always Kai's name; with Mopsula the heading reads „Wie heißt Unser:e Begleiter:in?“), mode Prime Time / Vorabendprogramm;
+	# back → hero_select. The intro ends with the M.O.D. line hero_pick:<hero>.
 
 class_name BattleScene extends Node3D             # M5
 func setup(params: Dictionary) -> void            # {"setup": BattleSetup}; missing → Game.ensure_state() + debug setup
@@ -3673,6 +3746,9 @@ func setup(params: Dictionary) -> void            # stores params only: {"safe_r
 	# ModDialog (blocking lines in order) and then Game.mark_scene_seen(); no scene → random line tag "mopsula_idle" (optional)
 	# Shop: Shop.stock(Game.floor_def(), id) via vending_menu; buying via Game.buy(item, qty, id)
 	# The UI header names the room → the set's SAFE_TITLE_SIGN is hidden; the menu column is hidden while a modal is open
+	# Menu order (06 §1.6, CR-16): Lootbox · Automat · Ausrüstung · Figur wechseln · Mopsula · [Speichern | Weiter] (last row
+	# two half-width buttons). "Figur wechseln" → Game.set_hero(Game.partner()) (recorded), the figures swap their anchors
+	# (the hero stands in front), status banner „Jetzt führt: …“, Show.say("hero_switch:<id>"); menu_ids() lists the order
 
 class_name ExplorationHud extends CanvasLayer     # M6, instanced by ExplorationScene
 func bind_layout(layout: FloorLayout, visited: Array[Vector2i]) -> void
@@ -3761,7 +3837,8 @@ func occupied_rects() -> Array[Rect2]    # what the persistent UI covers now (hy
   `Game.input_scheme == TOUCH`); bei Wechsel auf Tastatur/Gamepad ausgeblendet.
 - Linke 40 % Bildbreite: Floating-Joystick (erscheint am Berührpunkt, Ruhe-Anzeige bei (147, 573)), Radius 90 px, Knopf 40 px,
   Deadzone 0.15; setzt `Input.action_press(&"move_*", strength)` / `action_release`; Auslenkung ≤ 0.6 hält zusätzlich `sneak`.
-- Rechte Seite: **ein** Button `action` (96 px rund bei (1147, 587); Icon „Hand“ mit Prompt, sonst „Schlag“), `map` (64 px),
+- Rechte Seite: **ein** Button `action` (96 px rund bei (1147, 587); Icon „Hand“ mit Prompt, sonst die Feldfähigkeit der
+  gesteuerten Figur: Faust „Schlag“ bzw. Schallwelle „Bellen“, 06 §1.3), `map` (64 px),
   `pause` (64 px, oben rechts bei (1227, 40)); alle mit Trefferfläche ≥ 88 px. Buttons lösen `Input.parse_input_event()` mit
   `InputEventAction` (pressed true/false) aus. (Positionen = GDD §14.8 × 2/3, bezogen auf 1280 × 720.)
 - Drag auf freier rechter Fläche → `Events.camera_drag(relative)`; zwei Finger dort = Pinch → `Events.camera_zoom(amount)`
@@ -3942,9 +4019,9 @@ offene M.O.D.-Zeilen, damit die Box nicht über Kai, Prompt und Marker liegt.
 
 | Szene | Rezepte |
 |---|---|
-| `exploration.tscn` | `explore_platform` / `explore_sewer` / `explore_cellar` (Gruppe der Zone 6 m vor Kai), `prompt_<zone>` (Kai vor einer Truhe: Prompt + Marker), `bigmap`, `pause_party` / `pause_inventory` / `pause_equipment` / `pause_skills` / `pause_settings` |
-| `battle.tscn` | `battle_menu`, `battle_skills`, `battle_target`, `battle_damage`, `battle_enemy_turn`, `boss_intro` (mit `--params={"encounter": "<boss enc>", "capture": false, "speed": 1.0}`), `boss_phase`, `battle_gift`, `battle_victory` / `battle_results` (mit `--params={"capture_turns": 99}`) |
-| `safe_room.tscn` | `safe_vending`, `safe_equipment`, `safe_lootbox`, `safe_lootbox_open`, `safe_mopsula` |
+| `exploration.tscn` | `explore_platform` / `explore_sewer` / `explore_cellar` (Gruppe der Zone 6 m vor Kai), `prompt_<zone>` (Kai vor einer Truhe: Prompt + Marker), `bigmap`, `pause_party` / `pause_inventory` / `pause_equipment` / `pause_skills` / `pause_settings`; 06-A: `hero_mopsula_<zone>` (Graf Mopsula führt, Kai folgt), `bark_<zone>` (Graf bellt die Gruppe der Zone an: Kegel, Ringe, „?!“) |
+| `battle.tscn` | `battle_menu`, `battle_skills`, `battle_target`, `battle_damage`, `battle_enemy_turn`, `boss_intro` (mit `--params={"encounter": "<boss enc>", "capture": false, "speed": 1.0}`), `boss_phase`, `battle_gift`, `battle_victory` / `battle_results` (mit `--params={"capture_turns": 99}`), `battle_partner_auto` (06-A: „Partner automatisch“ an, Pillen „DU“/„AUTO“) |
+| `safe_room.tscn` | `safe_vending`, `safe_equipment`, `safe_lootbox`, `safe_lootbox_open`, `safe_mopsula`, `safe_hero_switch` (06-A: nach „Figur wechseln“) |
 
 Beispiel (Handy-Format, Touch an): `tools/check.sh --shot res://scenes/battle/battle.tscn /tmp/b.png 5 2400x1080 --touch --recipe=battle_skills`.
 `test_m6_visual_pass` prüft, dass alle Rezepte existieren.
@@ -3986,16 +4063,19 @@ Interaktionen. `TitleFlow.parse_args` liefert zusätzlich `"autoplay_mode": "" |
 Modi = `smoke`, der Lauf oben bleibt unverändert). Boot bei `--autoplay=full`: wie oben, aber `Engine.time_scale =
 FullRun.TIME_SCALE` (5.0) und **echte** Spielstände in `user://fullrun_saves` (`Save.save_dir`, `read_only = false`, vor und
 nach dem Lauf geleert); Knoten `FullRun` statt `Autoplay`. Weitere User-Argumente: `--seed=<int>` (Default 4242),
-`--strategy=thorough|rush|dawdle|typical`, `--pace=fast|human` (Default `fast`).
+`--strategy=thorough|rush|dawdle|typical`, `--pace=fast|human` (Default `fast`), `--hero=kai|mopsula` (Default `kai`; 06 §1,
+CR-16: gesteuerte Figur des neuen Spiels).
 
-`tools/fullrun.sh [--strategy=…|all] [--seed=…] [--pace=…] [--log-dir=…]`: isolierte Kopie, Import, dann
-`godot --headless --fixed-fps 60 --quit-after 95000 -- --autoplay=full --strategy=<s>` (feste 60 Frames/s Spielzeit-Takt, nicht an
+`tools/fullrun.sh [--strategy=…|all] [--hero=…] [--seed=…] [--pace=…] [--log-dir=…]`: isolierte Kopie, Import, dann
+`godot --headless --fixed-fps 60 --quit-after 95000 -- --autoplay=full --strategy=<s> --hero=<h>` (feste 60 Frames/s Spielzeit-Takt, nicht an
 die Wanduhr gebunden → reproduzierbar bis auf wenige Frames Jitter zwischen zwei Läufen, der selten einen Kampf anders
 ausgehen lässt (GDD §13), und so schnell, wie die CPU kann; gemessen thorough ≈ 18 s, rush ≈ 21 s (verliert seit dem
 Balancing einen Boss und spielt dann `thorough` weiter), dawdle ≈ 46 s Wanduhr). Bestanden = Exit 0, Zeile `FULLRUN: OK …`, keine `ERR_RE`-Zeile (wie `check.sh`). CI: eigener Schritt `--strategy=all`
-(§12.4).
+(§12.4). `--strategy=all` = `thorough`, `rush`, `dawdle` als Kai **plus** `thorough` als Graf Mopsula (Log
+`fullrun_thorough_mopsula.log`); gemessen Mopsula ≈ 20 s Wanduhr.
 
-Ablauf (Planer statt Schritt-Tabelle): Titel → `request_new_game(1, "Kai", false, seed)` (Intro läuft) → Tutorial `f1_g0` →
+Ablauf (Planer statt Schritt-Tabelle): Titel → `request_new_game(1, "Kai", false, seed, &"prime", hero)` (Intro läuft; danach
+prüft `check_hero`: `Game.hero()`, Spielerkörper und Begleiter:in passen zur Wahl) → Tutorial `f1_g0` →
 Wiederholung von „nächstes Ziel“ bis zur Treppe. Ziele aus dem Spielzustand, nächstes zuerst (BFS über offene Türen,
 `FloorLayout.neighbors` + `opened_gates`; lebende Boss-Räume nur als Ziel; feste Reihenfolge bei Gleichstand): reguläre Gruppen,
 Truhen (verschlossene ohne Schlüssel 1× als Negativprobe), Events (`photo_drone` pose, `lost_candidate` give:<Heilitem>,
@@ -4008,10 +4088,13 @@ Safe Rooms (Erstbesuch), unbesuchte Räume, Streuner ≤ 2 Räume entfernt (max.
   Wegpunkt (gezählt, Soll 0).
 - **Interaktion:** vor dem Interactable stehen (Reach-Punkt + Extent + 1 m), hinschauen, nur wenn es fokussiert ist
   `ExplorationScene.perform_action()` (= Taste `action`); sonst Fallback `interact()` (gezählt, Soll 0). Gruppen: hinlaufen +
-  Feldschlag, Fallback nach 600 Frames `force_encounter(group)`. Bosse: Raum betreten (5-m-Auslöser). Kämpfe: `Game.auto_battle`.
+  Feldschlag, Fallback nach 600 Frames `force_encounter(group)`. Als Graf Mopsula (`--hero=mopsula`): ab 3 m Abstand bellen
+  (`perform_action`, wenn `bark_ready` und die Gruppe verdutzbar ist), dann in die verdutzte Gruppe laufen (Kontakt =
+  PREEMPTIVE). Bosse: Raum betreten (5-m-Auslöser). Kämpfe: `Game.auto_battle`.
 - **Safe Room:** Mopsula-Szenen, Lootboxen (`tap`×3, `reveal_all`, `next_box`/`finish`), Automat (Item-Button `pressed`,
   `set_qty`, `confirm`: erst Ausrüstungs-Upgrades, dann Bandagen bis 3), Ausrüstung (`Game.equip`, bestes je Slot nach
-  Werte-Summe), Speichern (`open_save` → Slot 1, Überschreiben bestätigen), Weiter. Beim Besuch, mit dem alle Safe Rooms besucht sind:
+  Werte-Summe), Speichern (`open_save` → Slot 1, Überschreiben bestätigen), Weiter; als Mopsula beim ersten Safe-Room-Besuch
+  zweimal „Figur wechseln“ (Mopsula → Kai → Mopsula, zwei aufgezeichnete `hero`-Commands, die die Replay-Prüfung abdeckt). Beim Besuch, mit dem alle Safe Rooms besucht sind:
   Rundlauf Speichern → `Router.goto(SCENE_TITLE)` → „Fortsetzen“ — der geladene `StateHash` muss dem gespeicherten gleichen, danach
   muss die neu gebaute Karte zum Zustand passen (Truhen, Gruppen inkl. Streuner, Tore, Events).
 - **Prüfungen unterwegs** (Fehler = `Assertion failed: FULLRUN failed in <phase>: <grund>`, `quit(1)`): bei jedem Safe-Room-Besuch
@@ -4043,7 +4126,7 @@ Ausgabe: je Ereignis `FULLRUN: [<frame>] …` (Kämpfe mit Hype Start → Ende, 
 (GDD-§13-Kennzahlen: Etagenzeit, Takt + Wartezeit, Kämpfe, Party-Züge, HP-Verlust, Level/EXP/Ausrüstung/Items an den Bossen,
 Boss-Ausgänge je Versuch, Credits gesamt / bis zur Königin / nach Quelle / aus Lootboxen, Boxen je Typ, Achievements (IDs),
 Meilensteine, Follower gesamt / aus Kämpfen / aus Achievements, Zuschauer-Peak, Sponsor-Geschenke regulär/Boss, Hype-Mediane
-Kampfstart/-ende/-peak, Teleports, Fallbacks, Replay-Prüfungen, M.O.D.-Tags) und `FULLRUN: OK floor_time=<s> battles=<n> level=<kai>/<mopsula> deaths=<n> frames=<n>`, `quit(0)`.
+Kampfstart/-ende/-peak, Teleports, Fallbacks, Replay-Prüfungen, M.O.D.-Tags, `hero`, `barks`, `dazed`, `hero_switches`) und `FULLRUN: OK floor_time=<s> battles=<n> level=<kai>/<mopsula> deaths=<n> frames=<n>`, `quit(0)`.
 
 ### 11.5 Was jedes Modul testen muss (Minimum)
 
@@ -4058,6 +4141,7 @@ Kampfstart/-ende/-peak, Teleports, Fallbacks, Replay-Prüfungen, M.O.D.-Tags) un
 | M6 | Jede UI-Szene instanziierbar + Default-Fokus; `PauseMenu.process_mode == PROCESS_MODE_WHEN_PAUSED` (und alle Untermenüs); Touch-Trefferflächen ≥ 88; SafeAreaContainer-Ränder ≥ 24; `name_entry` `max_length == 12`; Full-Run-Bot: Helfer/Planer/Story-Beats (`test_m6_fullrun`) + ganzer Lauf über `tools/fullrun.sh` (CI, §11.4.1) |
 | M7 | `real_data()` valide; Mindestmengen laut GDD; jede reguläre Etage-1-Encounter per Auto-Kampf (50 Seeds) ≥ 80 % Siegquote mit dem Level/der Ausrüstung, die der GDD-Fortschritt dort erwartet (§5.4/§13): Zone A Lv 2 (Tutorial Lv 1), Zone B Lv 3 (Startausrüstung), Zone C Lv 4 + mittlere Ausrüstung, Hausmeister Lv 5, Zone D Lv 6 + späte Ausrüstung, Königin Lv 7; Bosse ohne Geschenke ≥ 50 %; Party-Züge je Sieg: Median aller regulären Encounter 4–6, je Encounter 3–7, Hausmeister 16–22, Königin 20–26 (GDD §13). **Show-Bilanz** (`test_m7_show_balance.gd`, echtes `Show` im Kampf-Loop, Geschenke wie im `BattleController`): Etage 1 als Staffel (Kämpfe in Kartenreihenfolge auf Plan-Level, Abkühlen im Bot-Takt `--pace=human`, Truhen/Events/Level-ups/Lootboxen über `Events`) → Follower, Zuschauer-Peak, Sponsor-Geschenke, Achievements, Lootboxen, Hype am Kampfanfang/-ende in den GDD-§13-Bändern; Boss-Niederlagequote auf Ziel-Level mit Geschenken (100 Seeds; Hype beim Kampfstart = Abkühl-Boden 25, Ausrüstung/Items wie vom Bot vor den Bossen gemessen): Hausmeister 10–30 %, Königin 25–45 % (GDD ~20 / ~35 %) |
 | M8 | 05_LIVE_MODUS §11.4; zusätzlich `RunSim.step(1) × n ≡ step(n)` und Timer/Hype-Zerfall in Ticks |
+| 06-A | 06 §8.2 (`tests/test_06a_*.gd`): Startwahl/Safe-Room-Wechsel inkl. Ablehnungsgründe und `RunSim`-Gleichheit, Replay-Hash auch für einen Lauf als Mopsula, Altstand ohne `hero` → `kai`; Bellen-Geometrie/Sichtlinie/Immunität/Bosse, `DAZED` → PREEMPTIVE aus jeder Richtung; Partner automatisch (`auto: true` nur für den Partner); Figurenwahl-Szene (Fokus, Touch-Flächen), Safe-Room-Menü passt über den Chat-Ticker; Full-Run-Bot `--hero=mopsula` |
 
 ---
 

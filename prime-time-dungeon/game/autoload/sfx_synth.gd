@@ -7,7 +7,8 @@ const MIX_RATE: int = 22050
 const SFX_IDS: PackedStringArray = ["ui_move", "ui_confirm", "ui_cancel", "ui_error", "step", "swing", "hit", "hit_crit",
 	"hit_weak", "miss", "magic", "fire", "ice", "shock", "toxic", "light", "dark", "heal", "buff", "debuff", "ko", "defend",
 	"flee", "stunt_success", "stunt_fail", "level_up", "chest_open", "coin", "lootbox_shake", "lootbox_open", "lootbox_rare",
-	"sponsor", "achievement", "timer_warn", "stairs", "swirl", "door", "mod_blip", "chat_pop", "vending"]
+	"sponsor", "achievement", "timer_warn", "stairs", "swirl", "door", "mod_blip", "chat_pop", "vending",
+	"bark"]                                 # 06 package A
 const MUSIC_IDS: PackedStringArray = ["title", "explore", "battle", "boss", "safe_room", "victory", "game_over", "credits"]
 
 ## Tone: [wave, f0, f1, duration s, volume, start s (-1 = after previous)]. Waves: sin sq saw tri noise.
@@ -60,6 +61,9 @@ const SFX: Dictionary = {
 	"chat_pop": [["sin", 900.0, 1100.0, 0.04, 0.15, -1.0]],
 	"vending": [["sq", 300.0, 300.0, 0.1, 0.2, -1.0], ["noise", 900.0, 600.0, 0.12, 0.2, -1.0],
 		["sq", 988.0, 988.0, 0.05, 0.18, -1.0], ["sq", 1318.0, 1318.0, 0.12, 0.18, -1.0]],
+	# 06 package A: "Wuff-wuff" — two short falling saw barks with a breathy attack
+	"bark": [["saw", 520.0, 300.0, 0.09, 0.38, -1.0], ["noise", 1400.0, 500.0, 0.05, 0.18, 0.0],
+		["saw", 480.0, 260.0, 0.11, 0.38, 0.15], ["noise", 1200.0, 450.0, 0.05, 0.16, 0.15]],
 }
 
 ## Music loops: bpm, bars (4/4), root (MIDI), minor, bass (scale degree per beat, -99 rest),

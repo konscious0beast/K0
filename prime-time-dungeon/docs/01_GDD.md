@@ -171,12 +171,14 @@ Schaufensterpuppen, Food-Court mit Pilzbewuchs, Dauer-Durchsagen „Nur heute!�
 | Schleichen | **2.5 m/s**, solange Action `sneak` gehalten wird (Shift / L3 / LT); Touch: Stick-Auslenkung ≤ 0.6 (Kap. 14.8). Hör-Radius der Gegner 4.0 → 1.5 m |
 | Beschleunigung / Abbremsen | 30 m/s² / 40 m/s² |
 | Drehgeschwindigkeit Modell | Slerp 12 rad/s zur Bewegungsrichtung |
-| Kollision | `CapsuleShape3D` r = 0.4 m, h = 1.7 m |
+| Gesteuerte Figur (06 §1) | **Kai** (Standard) oder **Graf Mopsula** — Wahl bei „Neues Spiel“ (Kap. 14.2), Wechsel jederzeit im Safe Room („Figur wechseln“, Kap. 14.7). Die andere Figur folgt. Tempo, Beschleunigung und Kamera sind für beide gleich (Timer-Balancing unverändert) |
+| Kollision | Kai `CapsuleShape3D` r = 0.4 m, h = 1.7 m; Graf Mopsula r = 0.35 m, h = 0.9 m |
 | Springen / Sprinten | keins |
-| **Aktion** (eine Action `action`: F / Space / Enter, Gamepad A (Button 0), Touch-Button „Aktion“ 96 px) | Liegt ein Interactable im Radius 1.5 m und im 120°-Kegel vor Kai (Prompt sichtbar) → **Interagieren** (hat Vorrang). Sonst → **Feldschlag**: Bogen 100°, Reichweite 1.8 m, Dauer 0.45 s, Cooldown 0.6 s |
-| Mopsula folgt | Zielabstand 1.8 m hinter Kai (NavigationAgent3D), Teleport, wenn > 10 m entfernt |
+| **Aktion** (eine Action `action`: F / Space / Enter, Gamepad A (Button 0), Touch-Button „Aktion“ 96 px) | Liegt ein Interactable im Radius 1.5 m und im 120°-Kegel vor der Figur (Prompt sichtbar) → **Interagieren** (hat Vorrang; Mopsula öffnet Truhen „mit der Schnauze“). Sonst die **Feldfähigkeit**: Kai **Feldschlag** (Bogen 100°, Reichweite 1.8 m, Dauer 0.45 s, Cooldown 0.6 s); Graf Mopsula **Bellen** (Kegel 120°, 4.0 m, 0.4 s, Cooldown 3.0 s): Gruppen im Kegel mit Sichtlinie sind 2.5 s **verdutzt** (stehen still, violettes „?!“, sehen und hören nichts). Bellen startet **nie** einen Kampf; jede Gruppe ist höchstens 1× je 15 s verdutzbar; Bosse und der Fahrscheinfresser „zucken nur“ |
+| Begleiter:in folgt | Zielabstand 1.8 m hinter der gesteuerten Figur (Spur, ohne NavigationServer), Teleport, wenn > 10 m entfernt |
 
 Q/E bleiben Kamera-Drehung (`cam_left`/`cam_right`). Es gibt **keine** getrennten Actions `attack`/`interact` und keine Action `sprint`.
+Spielweisen: Kai eröffnet Kämpfe sauber (Feldschlag), der Graf schleicht vorbei oder erwischt verdutzte Gruppen von vorn.
 
 ### 2.2 Kamera (Werte identisch mit 02_TECH §7.3 und 03_ART §8.1)
 
@@ -230,7 +232,7 @@ gleich für alle Regeln. Die Regel gilt identisch in 02_TECH §7.3.
 
 | Ergebnis (`BattleSetup.Advantage`) | Bedingung (in dieser Reihenfolge geprüft) | Effekt im Kampf |
 |---|---|---|
-| **Präventivschlag** (`PREEMPTIVE`) | (a) Feldschlag trifft Symbol UND (`state` ∈ {`IDLE`,`PATROL`} ODER `dot(fwd_e, d_ek) < BACK_DOT`) — ODER — (b) Kontakt, Symbol **nicht** in `CHASE` UND `dot(fwd_e, d_ek) < BACK_DOT` (Kai berührt den Rücken) | Party startet mit `ctr = 0`, Gegner mit `ctr = base_delay` (voller Zug). Hype +3. Flucht +25 %. |
+| **Präventivschlag** (`PREEMPTIVE`) | (a) Feldschlag trifft Symbol UND (`state` ∈ {`IDLE`,`PATROL`,`DAZED`} ODER `dot(fwd_e, d_ek) < BACK_DOT`) — ODER — (b) Kontakt mit einem **verdutzten** Symbol (`DAZED`, Bellen) aus **jeder** Richtung — ODER — (c) Kontakt, Symbol **nicht** in `CHASE` UND `dot(fwd_e, d_ek) < BACK_DOT` (die Figur berührt den Rücken) | Party startet mit `ctr = 0`, Gegner mit `ctr = base_delay` (voller Zug). Hype +3. Flucht +25 %. |
 | **Hinterhalt** (`AMBUSH`) | Kontakt, Symbol in `CHASE` UND `dot(fwd_k, d_ke) < BACK_DOT` (Gegner kommt von hinten) | Gegner starten mit `ctr = 0`, Party mit `ctr = base_delay`. Hype +5 (Drama). |
 | **Normal** (`NORMAL`) | alles andere (auch Feldschlag auf `ALERT`/`CHASE` von vorn) | Alle `ctr = roundi(base_delay × rng.randf_range(0.5, 1.0))` |
 
@@ -1373,6 +1375,7 @@ Pro Wurf: zuerst Rarität nach diesen Gewichten, dann Eintrag aus `pools.f<etage
 | **Lootboxen** | Öffnen (Kap. 9.4) |
 | **Automat** | Kaufen / Verkaufen (Kap. 6.5), Mengenwahl 1–9, Vorschau Stat-Änderung (grün/rot) |
 | **Ausrüstung** | Ausrüsten beider Charaktere |
+| **Figur wechseln** (06 §1.6) | Kai ↔ Graf Mopsula als gesteuerte Figur; kostenlos, nur hier (die Erkundung bleibt lesbar). Die Figuren tauschen im Raum die Plätze, Banner „Jetzt führt: …“, M.O.D. `hero_switch:<id>`; aufgezeichnet (Command `hero`) |
 | **Mopsula** | Gesprächsszene, wenn eine verfügbar ist (Ausrufezeichen über Mopsula); sonst Zufalls-Einzeiler (Tag `mopsula_idle`, Kap. 11.3) |
 | **Verlassen** | Tür → Erkundung (`FloorRun.location = &"start"`), Timer läuft weiter |
 
@@ -1558,8 +1561,13 @@ Validator: max. **110 Zeichen** je Zeile, nur obige Platzhalter.
 | `event_broken_vending_ok` | mod | „Zwei Dosen KRAWUMM! Vandalismus lohnt sich. Das haben Sie nicht von mir.“ |
 | `event_broken_vending_fail` | mod | „Der Automat hat zurückgetreten. Mit 230 Volt. Das Publikum klatscht.“ |
 | `achievement:<id>` | mod | je 1 Zeile aus Kap. 8 (29) |
+| `hero_pick:kai` / `hero_pick:mopsula` | mod | Intro-Schluss nach der Figurenwahl (06 §1.5): „Kandidat:in {name} übernimmt. Der Graf assistiert. Unter Protest, aber in HD.“ / „Der Graf hat die Fernbedienung an sich genommen. {name} darf folgen. Die Quote jubelt.“ |
+| `hero_switch:kai` | mod | „Rollentausch! {name} führt wieder. Der Graf nennt es ‚wohlverdiente Siesta‘.“ · „{name} übernimmt die Führung, der Graf das Sofa. Gerechte Arbeitsteilung.“ |
+| `hero_switch:mopsula` | mod | „Rollentausch! Der Graf führt. Bitte Abstand halten, er bellt in Stereo.“ · „Der Graf übernimmt. {name} darf sich ausruhen. Unter Beobachtung, versteht sich.“ |
+| `tutorial_explore:mopsula` / `tutorial_sneak:mopsula` | mod | B1-Hinweise, wenn der Graf führt (sonst `tutorial_explore`/`tutorial_sneak`): „Willkommen in der Unterstadt, Graf! Laufen Sie los – {name} kommt hinterher. Die Kamera auch.“ / „Da vorn schlafen zwei Ratten. Bellen Sie, Graf – verdutzte Monster erwischt man von jeder Seite zuerst.“ |
+| `chat_bark` | chat | nach einem Bellen mit Treffer: „WUFF IN HD“ · „der graf hat gesprochen“ · „ich hab mich auch erschrocken“ |
 
-(Gesamt: 90 + 46 + 29 = **165 Zeilen**.)
+(Gesamt: 90 + 46 + 29 = **165 Zeilen**; dazu Block A aus 06 §1.5: 11 Zeilen.)
 
 ---
 
@@ -1730,10 +1738,15 @@ Menü (`TitleScreen`): **Fortsetzen** (Slot mit dem neuesten `saved_at_unix`, nu
 ### 14.2 Neues Spiel
 
 1. Slot wählen (3 Slots; belegte zeigen Name, Etage, Level, Spielzeit, Datum) → bei belegtem: „Überschreiben?“
-2. Name eingeben (Standard „Kai“, `LineEdit.max_length = 12`; Bildschirmtastatur für Gamepad/Touch)
-3. Modus: **Prime Time** (Normal) / **Vorabendprogramm** (Leicht: Timer 30:00, Gegnerschaden ×0.75, EXP ×1.2) — später im
+2. **Figurenwahl** „Wen steuerst du?“ (06 §1.1, `hero_select`): zwei große Karten nebeneinander — **Kai** („Tierpfleger:in.
+   Wischmopp. Haut zu.“ · Feldschlag · Nahkampf/Tank) und **Graf Mopsula** („Mops. Magier. Schwer vermittelbar.“ · Bellen ·
+   Magie/Heilung), je mit drehender 3D-Vorschau; Kai hat den Fokus, Links/Rechts wechselt, ein Druck wählt, Zurück → Slots.
+   Fußzeile: „Ihr startet immer zu zweit. Wechseln kannst du jederzeit im Safe Room.“
+3. Name eingeben — immer **Kais** Name (Standard „Kai“, `LineEdit.max_length = 12`; Bildschirmtastatur für Gamepad/Touch). Führt
+   der Graf, fragt er im Pluralis Majestatis: „Wie heißt Unser:e Begleiter:in?“ (Überschrift „BEGLEITER:IN“); Zurück → Figurenwahl
+4. Modus: **Prime Time** (Normal) / **Vorabendprogramm** (Leicht: Timer 30:00, Gegnerschaden ×0.75, EXP ×1.2) — später im
    Optionsmenü nur absenkbar, nicht anhebbar (`GameState.difficulty`, Kap. 2.9)
-4. Intro-Cutscene (B0) → Erkundung Etage 1
+5. Intro-Cutscene (B0, letzte Studiozeile M.O.D. `hero_pick:<id>`) → Erkundung Etage 1
 
 ### 14.3 Erkundungs-HUD
 
@@ -1747,7 +1760,8 @@ Interaktionsprompt über Objekt.
 Tabs: **Party** (Werte, EXP) · **Inventar** (benutzen außerhalb des Kampfes) · **Ausrüstung** · **Fähigkeiten** (Liste + Freischalt-Level,
 `scenes/ui/skills_menu.gd`) · **Achievements** (erhalten / verborgen „???“, `scenes/ui/achievements_menu.gd`) · **Bestiarium**
 (`scenes/ui/bestiary_menu.gd`) · **Optionen** (Lautstärke Master/Musik/SFX, Kampfgeschwindigkeit, Kamera-Empfindlichkeit, Kamera
-invertieren, Modus, Sprache) · **Zum Titel** (Warnung: „Fortschritt seit dem letzten Safe Room geht verloren.“).
+invertieren, Modus, Sprache, **Partner automatisch** — Aus/An, Hilfezeile „Dein:e Partner:in kämpft von selbst.“: die nicht gesteuerte
+Figur kämpft per `AutoPolicy`, nie Stunt/Flucht; ohne Tutorial, 06 §1.4) · **Zum Titel** (Warnung: „Fortschritt seit dem letzten Safe Room geht verloren.“).
 
 **Bestiarium:** Zustand `GameState.bestiary: Dictionary` = `enemy_id → {defeated: int, weak_known: PackedStringArray}`; `defeated` pflegt
 `BattleBridge.apply_result` (Sieg), `weak_known` ergänzt `ShowRules` bei jedem Schwachstellen-Treffer (Element). Einträge erscheinen ab
@@ -1760,7 +1774,7 @@ der ersten Begegnung (Name, Modell, Lv), Werte/HP ab `defeated ≥ 1`, Schwäche
 | Zugreihenfolge | rechter Rand, vertikal; Eintrag 1: 64 px, 2–12: 42 px | Porträt-Icons (Party blau umrandet #4AA8FF, Gegner rot #E8455A, Zug grau), Geist-Vorschau |
 | Befehlsmenü | unten links, 240×280 px (Zeilen 42 px) | Angriff / Fähigkeit / Item / Stunt (mit Cooldown-Zahl) / Verteidigen / Flucht |
 | Untermenü (Skills/Items) | rechts neben Befehlsmenü | Name, MP-Kosten, Element-Icon, Rang als 1–3 Uhr-Symbole, Beschreibung unten |
-| Party-Panels | unten Mitte/rechts, je 254×74 px | Name, HP-Leiste + Zahl, MP-Leiste + Zahl, Status-Icons, Stunt-Bereitschaft |
+| Party-Panels | unten Mitte/rechts, je 254×74 px | Name, HP-Leiste + Zahl, MP-Leiste + Zahl, Status-Icons, Stunt-Bereitschaft; Pille **DU** (gold) an der gesteuerten Figur, **AUTO** (cyan) an der Partner-Figur, wenn „Partner automatisch“ an ist (06 §1.4) |
 | Gegner-Info | über dem Gegner | Name, HP-Leiste (Zahl erst ab `bestiary.defeated ≥ 1` für den Typ), Status-Icons, Schwächen nach Entdeckung (`weak_known`) |
 | Show-Leiste | oben | LIVE + Zuschauer + Hype-Leiste mit Schwellen-Markern; Sponsor-Bauchbinde links unten über dem Ticker |
 | Chat-Ticker | unten, 22 px | — |
@@ -1779,7 +1793,9 @@ Buttons: **Letzten Spielstand laden** (Gnadenfrist 3:00) · **Zum Titel**. `s.ga
 ### 14.7 Safe-Room-Menü
 
 Beim Betreten: Heil-Animation + `safe_room_enter`. Menü (vertikale Liste links, Szene rechts):
-**Speichern** · **Lootboxen (n)** · **Automat** · **Ausrüstung** · **Mopsula** (! wenn Szene verfügbar) · **Weiter**.
+**Lootboxen (n)** · **Automat** · **Ausrüstung** · **Figur wechseln** (Zeile „Kai führt“ / „Graf führt“) · **Mopsula** (! wenn Szene
+verfügbar) · letzte Zeile **Speichern | Weiter** nebeneinander (je halbe Breite). Kopf einzeilig (Raumschild + Name), Statusmeldungen
+(„Gespeichert …“, „Jetzt führt: …“) als Banner oben Mitte — so passen sieben Einträge über den Chat-Ticker.
 
 ### 14.8 Touch-Layout (nur Querformat, 720p)
 
@@ -1787,7 +1803,7 @@ Beim Betreten: Heil-Animation + `safe_room_enter`. Menü (vertikale Liste links,
 |---|---|---|
 | Virtueller Stick | dynamisch: erscheint am Fingerpunkt in den linken 40 % der Breite; Ruhe-Anzeige bei (147, 573) | Radius 90 px, Knopf 40 px, Deadzone 0.15; Auslenkung > 0.6 = Laufen, ≤ 0.6 = Schleichen |
 | Kamera | Drag in der rechten Fläche (außerhalb von Buttons), Pinch = Zoom | — |
-| **Aktion** (`action`: Interagieren, sonst Feldschlag) | (1147, 587) | 96 px rund, Icon Hand (Prompt aktiv) bzw. Faust |
+| **Aktion** (`action`: Interagieren, sonst Feldfähigkeit) | (1147, 587) | 96 px rund, Icon Hand (Prompt aktiv) bzw. Faust (Kai) / Schallwelle (Graf Mopsula) |
 | Karte (`map`) | (1227, 140) | 64 px |
 | Menü ☰ (`pause`) | (1227, 40) | 64 px |
 | Kampf-Befehle | unten links, 2 Spalten × 3 Zeilen | je 200×64 px sichtbar, 88 px hohe Trefferfläche |

@@ -1,7 +1,11 @@
 class_name SafeRoomScene extends Node3D
 ## Safe room (02_TECH §9.5, GDD §10, §14.7): EnvKit.build_safe_room(seed, quality, theme) with fixed camera (FOV 50),
 ## Kai + Graf Mopsula; Game.enter_safe_room(id) (full heal, scene context), Show.say("safe_room_enter"), overlay
-## &"safe_room". Menu (left list, scene right): Speichern · Lootboxen (n) · Automat · Ausrüstung · Mopsula (!) · Weiter.
+## &"safe_room". Menu (left list, scene right): Lootboxen (n) · Automat · Ausrüstung · Figur wechseln · Mopsula (!) ·
+## [Speichern | Weiter] (one row at the bottom, 06 package A — seven entries fit above the chat ticker).
+## "Figur wechseln" (06 §1.6, package A) makes the partner the controlled character
+## (Game.set_hero, recorded; only here, free of charge): the two figures swap places (the hero stands in front, the
+## partner rests on the sofa spot), M.O.D. comments (`hero_switch:<id>`).
 ## Mopsula scenes (scenes.json) play through ModDialog as blocking lines, then Game.mark_scene_seen(); the next
 ## qualifying scene of the same visit becomes pending right away (several scenes per visit, e.g. scn_mop_2 +
 ## scn_mop_4, "NEU" badge + "!" stay); without a scene a `mopsula_idle` line. Shop via vending_menu (Game.buy), lootboxes via lootbox_opening (Game.open_lootbox).
@@ -21,6 +25,8 @@ const DEFAULT_IDLE: PackedStringArray = ["Wir ruhen. Störe Uns nur bei Weltunte
 	"Ein Sofa. Endlich ein Möbel, das Unseren Stand begreift."]
 const SCENE_TIMEOUT_SEC: float = 600.0
 const MENU_SCRIM_W: float = 640.0          # width of the dark gradient behind the menu column
+const MENU_GAP: int = 12                   # 02_TECH §10.2 rule 5: 12 px between the hit areas
+const TITLE_SIZE: int = 32                 # 06 package A: one header line (tag + name) — 7 entries fit above the ticker
 
 var safe_room_id: String = ""
 var context: Dictionary = {}               # Game.enter_safe_room() result (scene conditions)
@@ -41,6 +47,8 @@ var _bang: Label3D
 var _ui: CanvasLayer
 var _menu: VBoxContainer
 var _status: Label
+var _status_panel: PanelContainer = null
+var _status_tween: Tween = null
 var _heal_banner: PanelContainer
 var _header_sub: Label
 var _modal: Node = null
@@ -111,6 +119,8 @@ func activate(id: String) -> void:
 			open_vending()
 		"equipment":
 			open_pause("equipment")
+		"hero":
+			switch_hero()
 		"mopsula":
 			talk_to_mopsula()
 		"leave":
@@ -167,6 +177,40 @@ func open_pause(tab: String) -> Node:
 	_set_menu_shown(false)
 	pm.connect("closed", func() -> void: _after_modal("equipment" if tab == "equipment" else ""))
 	return pm
+
+
+## 06 §1.6: the partner takes the lead (Game.set_hero → recorded "hero" command). The figures swap places, the menu
+## label follows, M.O.D. comments. false when the core refuses (not in a safe room, no state).
+func switch_hero() -> bool:
+	var next: String = Game.partner()
+	if not Game.set_hero(next):
+		Sfx.play_ui(&"ui_error")
+		return false
+	Sfx.play_ui(&"ui_confirm")
+	_place_figures()
+	_refresh_menu_labels()
+	_set_status("Jetzt führt: %s." % _hero_name(next), UiTheme.C_GOLD)
+	Show.say("hero_switch:" + next)
+	var lead: Node3D = _mopsula if next == "mopsula" else _kai
+	if lead != null and lead.has_method("play"):
+		lead.call("play", &"victory")
+	return true
+
+
+## "Kai" (the player's name) | "Graf Mopsula".
+static func _hero_name(member_id: String) -> String:
+	return "Graf Mopsula" if member_id == "mopsula" else UiUtil.player_name()
+
+
+## The controlled character stands on the player spot, the partner on the sofa spot (06 §1.6).
+func _place_figures() -> void:
+	if _kai == null or _mopsula == null:
+		return
+	var mop_leads: bool = Game.hero() == "mopsula"
+	_kai.transform = SafeRoomSet.anchor(&"mopsula_spot" if mop_leads else &"player_spot", stand_in)
+	_mopsula.transform = SafeRoomSet.anchor(&"player_spot" if mop_leads else &"mopsula_spot", stand_in)
+	if _bang != null:
+		_bang.position = Vector3(0, _bang_base_y(), 0)
 
 
 ## Plays the pending Mopsula scene (blocking ModDialog lines, then Game.mark_scene_seen) or an idle line.
@@ -231,11 +275,23 @@ func leave() -> void:
 	Router.exit_safe_room()
 
 
+## Menu entry ids in reading order (the bottom row [Speichern | Weiter] last).
 func menu_ids() -> PackedStringArray:
 	var out: PackedStringArray = []
+	for b: Button in _menu_buttons_in_order():
+		out.append(str(b.get_meta("menu_id")))
+	return out
+
+
+func _menu_buttons_in_order() -> Array[Button]:
+	var out: Array[Button] = []
 	for c: Node in _menu.get_children():
-		if c.has_meta("menu_id"):
-			out.append(str(c.get_meta("menu_id")))
+		var row: Array[Node] = [c]
+		if not c is Button:
+			row = c.get_children()
+		for n: Node in row:
+			if n is Button and n.has_meta("menu_id"):
+				out.append(n as Button)
 	return out
 
 
@@ -302,6 +358,7 @@ func _build_world() -> void:
 	_mopsula.name = "Mopsula"
 	_mopsula.transform = SafeRoomSet.anchor(&"mopsula_spot", stand_in)
 	add_child(_mopsula)
+	_place_figures()                           # 06 package A: the hero stands in front
 	_bang = Label3D.new()
 	_bang.name = "SceneMarker"
 	_bang.text = "!"
@@ -384,11 +441,19 @@ func _idle_line() -> void:
 func _set_status(text: String, col: Color) -> void:
 	_status.text = UiUtil.glyph_safe(text)
 	_status.add_theme_color_override("font_color", col)
-	_status.modulate.a = 1.0
-	if is_inside_tree():
-		var tw: Tween = create_tween()
-		tw.tween_interval(4.0)
-		tw.tween_property(_status, "modulate:a", 0.0, 0.5)
+	if _status_panel != null:
+		_status_panel.add_theme_stylebox_override("panel", UiUtil.box_style(Color(UiTheme.C_PANEL, 0.92), col, 2, 0.21,
+			18, 6))
+		_status_panel.visible = text != ""
+		_status_panel.modulate.a = 1.0
+	if _heal_banner != null:
+		_heal_banner.visible = false            # one banner at a time
+	if _status_tween != null and _status_tween.is_valid():
+		_status_tween.kill()
+	if is_inside_tree() and _status_panel != null:
+		_status_tween = create_tween()
+		_status_tween.tween_interval(4.0)
+		_status_tween.tween_property(_status_panel, "modulate:a", 0.0, 0.5)
 
 
 func _refresh_menu_labels() -> void:
@@ -398,19 +463,33 @@ func _refresh_menu_labels() -> void:
 	_set_button_text("lootbox", "Lootboxen (%d)" % n)
 	(menu_buttons["lootbox"] as Button).disabled = n <= 0
 	_set_button_text("mopsula", "Mopsula")
+	var lead_l: Label = (menu_buttons["hero"] as Button).find_child("Lead", true, false) as Label
+	if lead_l != null:
+		lead_l.text = "%s führt" % ("Graf" if Game.hero() == "mopsula" else UiUtil.player_name())
 	var badge: Control = (menu_buttons["mopsula"] as Button).find_child("Badge", true, false) as Control
 	if badge != null:
 		badge.visible = pending_scene != null
-	_set_button_text("save", "Speichern" if Game.mode != &"event_offline" else "Speichern (Event: aus)")
+	_set_button_text("save", "Speichern")
 	_header_sub.text = "Credits %s  ·  Countdown angehalten%s" % [UiUtil.fmt_int(UiUtil.credits()),
 		(": " + UiUtil.fmt_time(floori(Game.time_left()))) if Game.state != null and Game.state.floor_run != null and
 		Game.state.floor_run.timer_started else ""]
 	var list: Array[Control] = []
-	for c: Node in _menu.get_children():
-		if c is Button:
-			list.append(c as Control)
-			_style_enabled(c as Button)
+	for b: Button in _menu_buttons_in_order():
+		_style_enabled(b)
+		if b != menu_buttons.get("leave"):
+			list.append(b)
 	UiUtil.wire_vertical(list)
+	# bottom row: Speichern ⇄ Weiter; up from Weiter → the entry above, down wraps to the top like the list
+	var save_b: Button = menu_buttons.get("save") as Button
+	var leave_b: Button = menu_buttons.get("leave") as Button
+	if save_b != null and leave_b != null and list.size() >= 2:
+		var pair: Array[Control] = [save_b, leave_b]
+		UiUtil.wire_horizontal(pair)
+		leave_b.focus_neighbor_top = leave_b.get_path_to(list[list.size() - 2])
+		leave_b.focus_neighbor_bottom = leave_b.get_path_to(list[0])
+		if Game.mode == &"event_offline":                 # no saving in event runs: dimmed, the press explains why
+			(save_b.find_child("Text", true, false) as Label).add_theme_color_override("font_color",
+				UiTheme.C_TEXT_DIM)
 
 
 ## Label + icon are children of the button, so the theme's font_disabled_color never reaches them: dim them here.
@@ -471,31 +550,40 @@ func _build_ui() -> void:
 	col.position = Vector2(8, 60)
 	col.custom_minimum_size = Vector2(380, 0)
 	frame.add_child(col)
+	# 06 package A: tag and room name share one line (7 menu entries must fit above the chat ticker)
+	var head: HBoxContainer = UiUtil.hbox(12)
+	col.add_child(head)
 	var tag: PanelContainer = PanelContainer.new()
 	tag.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	tag.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	tag.add_theme_stylebox_override("panel", UiUtil.box_style(UiUtil.C_EXIT, Color(0, 0, 0, 0), 0, 0.21, 14, 2))
-	col.add_child(tag)
+	head.add_child(tag)
 	var tl: Label = UiUtil.label("SAFE ROOM", &"", 15, UiUtil.C_INK)
 	tl.add_theme_font_override("font", UiTheme.font_bold())
 	tl.add_theme_constant_override("outline_size", 0)
 	tag.add_child(tl)
-	var title: Label = UiUtil.label(str(_info.get("name", "Safe Room")).to_upper(), &"LabelTitle", 38)
-	col.add_child(title)
+	var title: Label = UiUtil.label(str(_info.get("name", "Safe Room")).to_upper(), &"LabelTitle", TITLE_SIZE)
+	title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head.add_child(title)
 	_header_sub = UiUtil.label("", &"LabelSmall", 16)
 	col.add_child(_header_sub)
-	col.add_child(UiUtil.spacer(4))
-	_menu = UiUtil.vbox(12)                  # 12 px between hit areas (02_TECH §10.2 rule 5)
+	col.add_child(UiUtil.spacer(2))
+	_menu = UiUtil.vbox(MENU_GAP)            # 12 px between hit areas (02_TECH §10.2 rule 5)
 	_menu.name = "Menu"
 	col.add_child(_menu)
-	for e: Array in [["save", "Speichern", &"floppy"], ["lootbox", "Lootboxen", &"box"], ["vending", "Automat", &"vending"],
-			["equipment", "Ausrüstung", &"sword"], ["mopsula", "Mopsula", &"paw"], ["leave", "Weiter", &"door"]]:
+	var bottom: HBoxContainer = UiUtil.hbox(MENU_GAP)
+	bottom.name = "BottomRow"
+	for e: Array in [["lootbox", "Lootboxen", &"box"], ["vending", "Automat", &"vending"],
+			["equipment", "Ausrüstung", &"sword"], ["hero", "Figur wechseln", &"swap"], ["mopsula", "Mopsula", &"paw"],
+			["save", "Speichern", &"floppy"], ["leave", "Weiter", &"door"]]:
+		var half: bool = str(e[0]) == "save" or str(e[0]) == "leave"
 		var b: Button = UiUtil.button("", &"ButtonBig")
 		b.name = "Menu_" + str(e[0])
 		b.set_meta("menu_id", str(e[0]))
-		b.custom_minimum_size = Vector2(380, 64)
-		var row: HBoxContainer = UiUtil.hbox(14)
+		b.custom_minimum_size = Vector2((380.0 - MENU_GAP) * 0.5 if half else 380.0, 64)
+		var row: HBoxContainer = UiUtil.hbox(10 if half else 14)
 		UiUtil.full_rect(row)
-		row.offset_left = 20
+		row.offset_left = 14 if half else 20
 		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		b.add_child(row)
 		var icon_col: Color = UiUtil.C_EXIT if str(e[0]) == "leave" else (UiTheme.C_GOLD if str(e[0]) == "mopsula"
@@ -504,7 +592,7 @@ func _build_ui() -> void:
 		ic.name = "Icon"
 		ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(ic)
-		var l: Label = UiUtil.label(str(e[1]), &"", 24)
+		var l: Label = UiUtil.label(str(e[1]), &"", 22 if half else 24)
 		l.name = "Text"
 		l.add_theme_font_override("font", UiTheme.font_bold())
 		l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -512,15 +600,37 @@ func _build_ui() -> void:
 		row.add_child(l)
 		if str(e[0]) == "mopsula":
 			row.add_child(_new_badge())
-		row.add_child(UiUtil.spacer(0, 16))
+		if str(e[0]) == "hero":
+			var lead: Label = UiUtil.label("", &"", 16, UiTheme.C_TEXT_DIM)
+			lead.name = "Lead"
+			lead.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			row.add_child(lead)
+		row.add_child(UiUtil.spacer(0, 8 if half else 16))
 		var id: String = str(e[0])
 		b.pressed.connect(func() -> void: activate(id))
-		_menu.add_child(b)
+		if half:
+			bottom.add_child(b)
+		else:
+			_menu.add_child(b)
 		menu_buttons[id] = b
-	_status = UiUtil.label("", &"", 17, UiTheme.C_OK)
+	_menu.add_child(bottom)
+	# 06 package A: the status (saved, switched, …) is a top-centre banner like the heal banner — the menu column has
+	# no room left below its 7 entries
+	_status_panel = PanelContainer.new()
+	_status_panel.name = "StatusBanner"
+	_status_panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_status_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_status_panel.offset_top = 70
+	_status_panel.offset_left = -40
+	_status_panel.offset_right = 120
+	_status_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_status_panel.visible = false
+	frame.add_child(_status_panel)
+	_status = UiUtil.label("", &"", 18, UiTheme.C_OK)
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_status.custom_minimum_size = Vector2(380, 0)
-	col.add_child(_status)
+	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_status_panel.add_child(_status)
 	var hints: HBoxContainer = UiUtil.hbox(14)
 	_hints = hints
 	hints.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)

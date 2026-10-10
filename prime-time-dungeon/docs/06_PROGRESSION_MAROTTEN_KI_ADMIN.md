@@ -1237,6 +1237,21 @@ Held:innen-Befehle manuell; Hero-Select-Szene: Default-Fokus, Touch-Trefferfläc
 `tools/perf.sh` ohne Budget-Überschreitung; Screenshots `hero_select`, Erkundung als Mopsula, Kulissenwand vor/nach dem Öffnen;
 GDD §1 (E1-Geheimnisse), §2.1/§14.2 und 03_ART (Bellen-VFX, Riss-Wand) nachgezogen.
 
+**Stand Paket A (2026-10-10, Branch `ptd/feat-hero`):** Kap. 1 **umgesetzt** — Figurenwahl (Slot → Figur → Name → Modus → Intro mit
+`hero_pick:<id>`), Held:in-Steuerung in der Erkundung (Rig + Kapsel je Figur, Partner folgt), Bellen/`DAZED` mit Vorteilsregel,
+„Partner automatisch“, „Figur wechseln“ im Safe Room, M.O.D.-/Chat-Block A, `hero`-Command inkl. `RunSim`/Replay, Save ohne
+Versionssprung, Bot `--hero=mopsula` (in `--strategy=all`). Verträge: 02_TECH CR-16 (§0.5), GDD §2.1/§2.4/§10.1/§11.3/§14.2/§14.4/
+§14.5/§14.7/§14.8, 03_ART Kap. 7 + A16. Abweichungen (bewusst): Party-Panel markiert die Held:in mit einer Pille **„DU“** (und den
+automatischen Partner mit **„AUTO“**) statt eines Sterns — lesbarer auf Touch; die Startwahl wird **immer** aufgezeichnet (auch
+`kai`), damit jeder Lauf-Log die Wahl explizit trägt; die Event-Lobby bietet noch keine Wahl (`start_event_run(…, hero_id)` ist
+vorbereitet, Default `kai`); Bosse/Fahrscheinfresser „zucken nur“ mit „…“-Blase; die Safe-Room-Liste wurde für sieben Einträge
+umgebaut (einzeiliger Kopf, „Speichern | Weiter“ nebeneinander, Status als Banner oben). Ohne Schritt 0 umgesetzt: die geteilten
+Dateien tragen kleine, markierte Blöcke (`# 06 package A`). **Offen in Paket A:** E1-Geheimnisse (Kulissenwände, Regie-Notizen,
+`secret`-Command, `tests/test_06a_secrets.gd`).
+Ansichten: `docs/screenshots/19_hero_select.png`, `20_explore_mopsula_bark.png`, `21_safe_room_hero_switch.png`,
+`22_battle_partner_auto.png` (Recipes `hero_mopsula_<zone>`, `bark_<zone>`, `safe_hero_switch`, `battle_partner_auto` in
+`tests/capture_recipes.gd`).
+
 ### 8.3 Paket B — Talent-Show + Spezies/Spezialisierung (Datenmodell)
 
 **Ziel:** Talent-Show spielbar (Kap. 2.2: ungerade Level ab L3, gesammelt im Safe Room); Spezies/Casting als geprüftes Datenmodell

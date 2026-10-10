@@ -65,8 +65,8 @@ func test_enter_records_and_heals() -> void:
 	# The heal itself is Progression.full_heal (M2); only checked once that module is real.
 	if kai != null and not UiUtil.is_stub("res://core/progression/progression.gd"):
 		assert_gt(kai.hp, 1, "full heal on entering")
-	assert_eq(r.call("menu_ids"), PackedStringArray(["save", "lootbox", "vending", "equipment", "mopsula", "leave"]),
-		"menu order (GDD §14.7)")
+	assert_eq(r.call("menu_ids"), PackedStringArray(["lootbox", "vending", "equipment", "hero", "mopsula", "save",
+		"leave"]), "menu order (GDD §14.7; \"Figur wechseln\" 06 §1.6, bottom row Speichern | Weiter)")
 
 
 func test_vending_modal_returns_focus() -> void:

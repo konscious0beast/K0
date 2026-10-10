@@ -1,7 +1,8 @@
 class_name TitleScreen extends Control
 ## Title screen (02_TECH §9.5, GDD §14.1, 05 CR-10): 3D TV studio with the M.O.D. drone, logo and the menu
 ## Fortsetzen (Save.newest_slot() > 0 only) · Neues Spiel · Laden · Event-Lauf · Optionen · Credits ·
-## Beenden (not on mobile). New game: slot select → name entry → intro; every path ends in request_new_game().
+## Beenden (not on mobile). New game: slot select → hero choice (06 §1.1) → name entry → intro; every path ends in
+## request_new_game().
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const InputGlyph := preload("res://scenes/ui/input_glyph.gd")
@@ -30,8 +31,8 @@ var _on_air_dot: Control
 ## Same code path as the menu: Game.new_game(...) → goto(SCENE_INTRO) or, if skip_intro,
 ## goto(SCENE_EXPLORATION, {"spawn": &"start"}).
 func request_new_game(slot: int, player_name: String, skip_intro: bool, seed: int = -1,
-		difficulty: StringName = &"prime") -> void:
-	if TitleFlow.start_new_game(slot, player_name, skip_intro, seed, difficulty):
+		difficulty: StringName = &"prime", hero_id: String = "kai") -> void:
+	if TitleFlow.start_new_game(slot, player_name, skip_intro, seed, difficulty, hero_id):
 		_busy = true
 
 

@@ -23,6 +23,10 @@ const DEFAULT_INTRO: PackedStringArray = [
 	"Guten Abend, Galaxis! Willkommen bei DUNGEON PRIME TIME – der Show, die Ihren Planeten gekostet hat!",
 	"Kandidat:in {name}, Sie sind live. Bitte nicht in die Kamera weinen, das spiegelt."]
 
+const DEFAULT_HERO_PICK: Dictionary = {
+	"kai": "Kandidat:in {name} übernimmt. Der Graf assistiert. Unter Protest, aber in HD.",
+	"mopsula": "Der Graf hat die Fernbedienung an sich genommen. {name} darf folgen. Die Quote jubelt."}
+
 ## Script: [{"shot", "caption", "lines": [[voice, text], …], "min": seconds}]
 var shots: Array[Dictionary] = []
 var shot_index: int = -1
@@ -144,8 +148,19 @@ func _make_script() -> void:
 		{"shot": "fall", "caption": "", "min": 2.5, "lines": [["kai", "Graf! Komm her!"]]},
 		{"shot": "studio", "caption": "LIVE · DUNGEON PRIME TIME", "min": 3.0,
 			"lines": [["mod", _intro_line(0)], ["mod", _intro_line(1)], ["mopsula", "Endlich. Man versteht Uns."],
-				["kai", "… Graf?"], ["mopsula", "GRAF MOPSULA. Wir bitten um korrekte Anrede, %s." % kai]]},
+				["kai", "… Graf?"], ["mopsula", "GRAF MOPSULA. Wir bitten um korrekte Anrede, %s." % kai],
+				["mod", hero_pick_line()]]},
 	]
+
+
+## 06 §1.5 (package A): M.O.D. on the hero choice (`hero_pick:<id>` in mod_lines.json) as the studio's last line.
+func hero_pick_line() -> String:
+	var hero: String = Game.hero()
+	var lines: Array[ModLineDef] = DB.mod_lines("hero_pick:" + hero)
+	var raw: String = str(DEFAULT_HERO_PICK.get(hero, DEFAULT_HERO_PICK["kai"]))
+	if not lines.is_empty():
+		raw = lines[0].text
+	return UiUtil.format_line(raw)
 
 
 func _intro_line(i: int) -> String:

@@ -7,6 +7,10 @@ class_name ExplorationScene extends Node3D
 ## (Events.encounter_triggered → Game.make_battle_setup → Router.start_battle), Events.stray_spawn_requested, and the
 ## stack protocol of the Router (setup / on_suspend / on_resume). The floor timer runs through Game (timer_running).
 ## Serializable ExploreEvents of what happened are kept in a short log (recent_events(); Brief §6b.2 "events out").
+## 06 §1 (package A): the player body is the controlled character (Game.hero(): Kai or Graf Mopsula), the partner
+## follows; `action` without a prompt uses the hero's field ability — Kai's field strike or Mopsula's bark (dazes the
+## groups in the cone with line of sight, never starts a battle; contact with a dazed group = PREEMPTIVE). A switch in
+## the safe room is applied on_resume (refresh_hero).
 
 const Rules := preload("res://scenes/exploration/encounter_rules.gd")
 const FB := preload("res://scenes/exploration/fallback_art.gd")
@@ -82,6 +86,7 @@ var _hud_yaw: float = INF
 var _visible_cells: Dictionary = {}     # Vector2i → true: rooms drawn right now (current + door-linked)
 var _prop_blockers: StaticBody3D = null # "PropBlockers": the permanent blocker boxes of chests and events (one body)
 var _room_lights_set: bool = false      # quality low: first room application sets the lights without fading
+var _strike_open: bool = false          # 06 package A: a strike is running and not yet reported (field_ability_used)
 
 
 ## Stores params only: {"spawn": &"start" | &"<safe room id>", "capture": bool}
@@ -148,6 +153,7 @@ func on_resume(payload: Dictionary) -> void:
 		_after_battle(payload["battle_result"] as BattleResult)
 	elif payload.has("from_safe_room"):
 		_after_safe_room(str(payload["from_safe_room"]))
+	refresh_hero()                          # 06 package A: a switch in the safe room
 	_sync_groups()
 	_companion.snap_behind()
 	for it: Interactable in _interactables:
@@ -272,6 +278,29 @@ func perform_action() -> void:
 	_on_player_action()
 
 
+## 06 package A: the bodies follow Game.hero() — the player becomes the hero, the follower the partner (spawn and after
+## a switch in the safe room). No-op when they already match.
+func refresh_hero() -> void:
+	if _player == null or _companion == null:
+		return
+	var hero: String = Game.hero()
+	var partner: String = Game.partner()
+	if _player.hero_id == hero and _companion.member_id == partner:
+		return
+	_player.name = "Hero"                   # free the node names before the follower takes "Kai" / "Mopsula"
+	_companion.set_member(partner)
+	_player.set_hero(hero)
+	_player.name = _node_name(hero)
+	_companion.snap_behind()
+	if _hud != null and _hud.has_method("refresh_hero"):
+		_hud.call("refresh_hero")
+	_last_prompt = "<refresh>"
+
+
+static func _node_name(member_id: String) -> String:
+	return "Mopsula" if member_id == "mopsula" else "Kai"
+
+
 # ======================================================================================================================
 # Building
 # ======================================================================================================================
@@ -384,10 +413,12 @@ func _add_interactable(it: Interactable) -> void:
 
 func _build_actors() -> void:
 	_player = PLAYER_SCENE.instantiate() as PlayerBody
-	_player.name = "Kai"
+	_player.set_hero(Game.hero())           # 06 package A: Kai or Graf Mopsula leads
+	_player.name = _node_name(_player.hero_id)
 	_actors_root.add_child(_player)
 	_player.action_requested.connect(_on_player_action)
 	_companion = Companion.new()
+	_companion.member_id = Game.partner()
 	_companion.leader = _player
 	_actors_root.add_child(_companion)
 	_camera = CameraRig.new()
@@ -619,6 +650,8 @@ func _physics_process(delta: float) -> void:
 	_update_focus()
 	_place_marker()
 	_check_strike()
+	if _strike_open and not _player.is_striking():
+		_report_field_ability(&"strike", 0)
 	if _hud != null:
 		var yaw: float = _player.rotation.y
 		if _cur_cell != _hud_cell or absf(wrapf(yaw - _hud_yaw, -PI, PI)) > 0.02:
@@ -797,8 +830,56 @@ func _on_player_action() -> void:
 	if _focused != null and is_instance_valid(_focused) and _focused.is_available():
 		_focused.interact()
 		return
+	if _player.field_ability() == &"bark":     # 06 package A: Graf Mopsula leads
+		if _player.start_bark():
+			_camera.kick_strike()
+			bark_now()
+		return
 	if _player.start_strike():
 		_camera.kick_strike()
+		_strike_open = true
+
+
+## 06 §1.3: dazes every group in the bark cone (Rules.bark_hits with the hero's reach) that the bark can reach (line of
+## sight on layer `world`); bosses and groups that perceive nothing only twitch. Never starts a battle. Returns the
+## number of dazed groups (Events.field_ability_used, chat line on a hit).
+func bark_now() -> int:
+	var pos: Vector3 = _player.global_position
+	var fwd: Vector3 = _player.flat_forward()
+	var hits: int = 0
+	for gid: Variant in _enemies.keys():
+		var a: EnemyActor = _actor_at(gid)
+		if a == null or not is_instance_valid(a):
+			continue
+		if not Rules.bark_hits(pos, fwd, a.global_position, _player.field_range_pm):
+			continue
+		if not _bark_reaches(pos, a.global_position):
+			continue
+		if a.daze():
+			hits += 1
+	_report_field_ability(&"bark", hits)
+	if hits > 0:
+		Show.chat("chat_bark")
+	return hits
+
+
+## The bark is blocked by walls (ray on layer `world` at knee height, like the enemies' line of sight).
+func _bark_reaches(from: Vector3, to: Vector3) -> bool:
+	if not is_inside_tree():
+		return true
+	var q: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(from + Vector3(0.0, 0.5, 0.0),
+		to + Vector3(0.0, 0.5, 0.0), Interactable.LAYER_WORLD)
+	if _prop_blockers != null:
+		q.exclude = [_prop_blockers.get_rid()]
+	return get_world_3d().direct_space_state.intersect_ray(q).is_empty()
+
+
+func _report_field_ability(ability: StringName, hits: int) -> void:
+	if ability == &"strike":
+		if not _strike_open:
+			return
+		_strike_open = false
+	Events.field_ability_used.emit(_player.hero_id, ability, hits)
 
 
 ## Field strike: the first group inside the 100° / 1.8 m arc during the hitting part of the swing starts the battle.
@@ -822,6 +903,7 @@ func _check_strike() -> void:
 	if hit != null:
 		var adv: int = Rules.strike_advantage(hit.state, hit.global_position, hit.flat_forward(), pos, hit.is_boss(),
 			Balance.BACK_DOT)
+		_report_field_ability(&"strike", 1)
 		_strike_hit(hit, adv)
 
 

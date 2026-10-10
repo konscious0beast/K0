@@ -1,10 +1,13 @@
 extends CharacterBody3D
-## Kai in the exploration (02_TECH §7.3, GDD §2.1): capsule r 0.4 / h 1.7 (layer 2 `player`, mask 1 `world`),
+## The controlled character in the exploration (02_TECH §7.3, GDD §2.1; 06 §1.2): Kai (capsule r 0.4 / h 1.7) or —
+## when GameState.hero is "mopsula" — Graf Mopsula (capsule r 0.35 / h 0.9); layer 2 `player`, mask 1 `world`,
 ## run 5.5 m/s, sneak 2.5 m/s (action `sneak` held; touch: stick deflection ≤ 0.6 holds sneak), accel 30 m/s²,
-## decel 40 m/s², turn 12 rad/s towards the move direction, gravity 20 m/s², no jump. Movement is camera relative
-## (Input.get_vector of the move_* actions: keyboard, gamepad and touch alike; the deflection only sets the direction).
+## decel 40 m/s², turn 12 rad/s towards the move direction, gravity 20 m/s², no jump — identical for both heroes.
+## Movement is camera relative (Input.get_vector of the move_* actions: keyboard, gamepad and touch alike; the
+## deflection only sets the direction).
 ## `action` (one key) → signal action_requested; the ExplorationScene decides between interact (focused interactable)
-## and the field strike (start_strike: arc 100°, reach 1.8 m, 0.45 s, cooldown 0.6 s).
+## and the hero's field ability (start_field_ability): Kai's field strike (start_strike: arc 100°, reach 1.8 m, 0.45 s,
+## cooldown 0.6 s) or Mopsula's bark (start_bark: cone 120°, 4 m, 0.4 s, cooldown 3 s; 06 §1.3).
 ## Standalone (scene root, e.g. capture of player.tscn) it builds a small preview stage around itself.
 
 signal action_requested
@@ -25,13 +28,24 @@ const ARC_HEIGHT: float = 0.9
 const STEP_INTERVAL_SNEAK: float = 0.62
 const MOVE_ACTIONS: Array[StringName] = [&"move_forward", &"move_back", &"move_left", &"move_right", &"sneak",
 	&"action"]
+# --- 06 package A: hero bodies and the bark FX ---------------------------------------------------------------------
+const MOPSULA_RADIUS: float = 0.35
+const MOPSULA_HEIGHT: float = 0.9
+const BARK_COLOR: Color = Color("#c79bff")    # Mopsula violet (03_ART: bark FX)
+const BARK_CONE_SEC: float = 0.18             # the violet cone flashes this long, the sound rings run BARK_DURATION
+const BARK_HEIGHT: float = 0.45
 
 var input_enabled: bool = true
 var camera_yaw: float = 0.0          # set by the scene from the camera rig every frame
 var grace_left: float = 0.0          # > 0: unhittable + invisible for enemies (after a battle / flight)
 var rig: Node3D = null
+var hero_id: String = "kai"          # 06 package A: whose body / field ability this is (set_hero)
+var field_range_pm: int = 1000       # field ability reach factor (06 §2.2 talents, package B) — 1000 = neutral
+var field_cd_pm: int = 1000          # field ability cooldown factor (06 §2.2 talents, package B)
 
 var _strike_t: float = -1.0          # time since the strike started (−1 = not striking)
+var _bark_t: float = -1.0            # time since the bark started (−1 = not barking)
+var _bark_fx: Node3D = null          # violet cone + 2 sound-wave rings (06 §1.3)
 var _cooldown: float = 0.0
 var _step_t: float = 0.0
 var _anim_t: float = 0.0
@@ -47,12 +61,8 @@ func _ready() -> void:
 	if get_node_or_null("Collision") == null:
 		var cs: CollisionShape3D = CollisionShape3D.new()
 		cs.name = "Collision"
-		var cap: CapsuleShape3D = CapsuleShape3D.new()
-		cap.radius = CAPSULE_RADIUS
-		cap.height = CAPSULE_HEIGHT
-		cs.shape = cap
-		cs.position = Vector3(0.0, CAPSULE_HEIGHT * 0.5, 0.0)
 		add_child(cs)
+	_apply_capsule()
 	if rig == null:
 		_build_rig()
 	if _arc == null:
@@ -69,17 +79,71 @@ func _ready() -> void:
 		_build_preview_stage()
 
 
-## Marker used by interactable areas to recognise Kai.
+## Marker used by interactable areas to recognise the controlled character.
 func is_player_body() -> bool:
 	return true
+
+
+## 06 package A: becomes `id`'s body ("kai" | "mopsula"): rig, capsule and field ability. Safe before and after
+## _ready (the scene calls it on spawn and after a switch in the safe room).
+func set_hero(id: String) -> void:
+	var clean: String = HeroRules.sanitize(id)
+	if clean == hero_id and rig != null:
+		return
+	hero_id = clean
+	_strike_t = -1.0
+	_bark_t = -1.0
+	_cooldown = 0.0
+	if not is_inside_tree():
+		return
+	_apply_capsule()
+	if rig != null and is_instance_valid(rig):
+		rig.get_parent().remove_child(rig)
+		rig.queue_free()
+		rig = null
+	_build_rig()
+
+
+## &"strike" (Kai) | &"bark" (Graf Mopsula).
+func field_ability() -> StringName:
+	return HeroRules.field_ability(hero_id)
+
+
+## Starts the hero's field ability (false while cooling down / already running).
+func start_field_ability() -> bool:
+	return start_bark() if field_ability() == &"bark" else start_strike()
+
+
+func field_ready() -> bool:
+	return bark_ready() if field_ability() == &"bark" else strike_ready()
+
+
+func _capsule_size() -> Vector2:
+	return Vector2(MOPSULA_RADIUS, MOPSULA_HEIGHT) if hero_id == "mopsula" else Vector2(CAPSULE_RADIUS, CAPSULE_HEIGHT)
+
+
+## A fresh shape per body (player.tscn's sub-resource is shared between instances).
+func _apply_capsule() -> void:
+	var cs: CollisionShape3D = get_node_or_null("Collision") as CollisionShape3D
+	if cs == null:
+		return
+	var size: Vector2 = _capsule_size()
+	var cap: CapsuleShape3D = CapsuleShape3D.new()
+	cap.radius = size.x
+	cap.height = size.y
+	cs.shape = cap
+	cs.position = Vector3(0.0, size.y * 0.5, 0.0)
 
 
 func _build_rig() -> void:
 	var model: Dictionary = {"base": "humanoid", "scale": 1.0, "colors": {"primary": "#3aa9a0", "secondary": "#2e3a57",
 		"accent": "#3b2a22", "skin": "#e8b48f", "eyes": "#1a1420"}}
-	if DB.has_id("party", "kai"):
-		model = DB.party_member("kai").model
-	var r: CharacterRig = CharacterBuilder.build(model, 1)
+	if hero_id == "mopsula":
+		model = {"base": "pug", "scale": 1.0, "colors": {"primary": "#d8b98a", "secondary": "#2a2024",
+			"accent": "#7b2cbf", "eyes": "#1a1420"}}
+	if DB.has_id("party", hero_id):
+		model = DB.party_member(hero_id).model
+	var r: CharacterRig = CharacterBuilder.build(model, 2 if hero_id == "mopsula" else 1)
 	if r == null:
 		r = CharacterRig.new()
 	if FB.is_empty(r):
@@ -102,6 +166,7 @@ func _physics_process(delta: float) -> void:
 			_strike_t = -1.0
 	if _arc != null:
 		_arc.visible = _strike_t >= Rules.STRIKE_HIT_FROM and _strike_t <= Rules.STRIKE_HIT_FROM + ARC_FLASH_SEC
+	_update_bark(delta)
 	if grace_left > 0.0:
 		grace_left = maxf(0.0, grace_left - delta)
 		if rig != null:
@@ -158,7 +223,7 @@ func start_strike() -> bool:
 	if _cooldown > 0.0 or _strike_t >= 0.0:
 		return false
 	_strike_t = 0.0
-	_cooldown = Rules.STRIKE_COOLDOWN
+	_cooldown = Rules.STRIKE_COOLDOWN * float(field_cd_pm) / 1000.0
 	Sfx.play(&"swing")
 	if rig != null and rig.has_method("play"):
 		rig.call("play", &"attack", 1.0)
@@ -178,6 +243,89 @@ func _swing_fallback_body() -> void:
 	tw.tween_property(body, "rotation:x", -0.25, 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tw.chain().tween_property(body, "rotation:y", 0.0, 0.3).set_trans(Tween.TRANS_SINE)
 	tw.parallel().tween_property(body, "rotation:x", 0.0, 0.3).set_trans(Tween.TRANS_SINE)
+
+
+# --- 06 package A: bark ---------------------------------------------------------------------------------------------
+
+## Starts Graf Mopsula's bark (false while cooling down / already barking). The scene dazes the groups in the cone
+## right away (bark_reach(), Rules.bark_hits + line of sight); the FX run for BARK_DURATION.
+func start_bark() -> bool:
+	if _cooldown > 0.0 or _bark_t >= 0.0:
+		return false
+	_bark_t = 0.0
+	_cooldown = Rules.BARK_COOLDOWN * float(field_cd_pm) / 1000.0
+	Sfx.play(&"bark")
+	if rig != null and rig.has_method("play"):
+		rig.call("play", &"attack", 1.0)
+	_ensure_bark_fx()
+	_update_bark(0.0)
+	return true
+
+
+func is_barking() -> bool:
+	return _bark_t >= 0.0
+
+
+func bark_ready() -> bool:
+	return _cooldown <= 0.0 and _bark_t < 0.0
+
+
+## Bark reach in m (Rules.BARK_RANGE × field_range_pm).
+func bark_reach() -> float:
+	return Rules.BARK_RANGE * float(field_range_pm) / 1000.0
+
+
+## Seconds until the field ability is ready again.
+func cooldown_left() -> float:
+	return _cooldown
+
+
+func _ensure_bark_fx() -> void:
+	if _bark_fx != null and is_instance_valid(_bark_fx):
+		return
+	_bark_fx = Node3D.new()
+	_bark_fx.name = "BarkFx"
+	_bark_fx.position = Vector3(0.0, BARK_HEIGHT, 0.0)
+	add_child(_bark_fx)
+	var cone: MeshInstance3D = MeshInstance3D.new()
+	cone.name = "Cone"
+	cone.mesh = FB.arc_mesh(Rules.BARK_RANGE, 0.4, Rules.BARK_ARC_DEG, 18)
+	cone.material_override = FB.beam(BARK_COLOR, 0.35)
+	cone.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_bark_fx.add_child(cone)
+	for i in 2:
+		var ring: MeshInstance3D = MeshInstance3D.new()
+		ring.name = "Ring%d" % i
+		ring.mesh = FB.arc_mesh(1.0, 0.86, Rules.BARK_ARC_DEG - 20.0, 18)
+		ring.material_override = FB.beam(BARK_COLOR.lightened(0.35), 0.85)
+		ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		ring.position.y = 0.12 + 0.1 * i
+		_bark_fx.add_child(ring)
+	_bark_fx.visible = false
+
+
+## Cone flash + two sound-wave rings travelling out to the bark reach.
+func _update_bark(delta: float) -> void:
+	if _bark_t < 0.0:
+		return
+	_bark_t += delta
+	if _bark_t > Rules.BARK_DURATION:
+		_bark_t = -1.0
+		if _bark_fx != null:
+			_bark_fx.visible = false
+		return
+	if _bark_fx == null:
+		return
+	_bark_fx.visible = true
+	var reach: float = bark_reach()
+	_bark_fx.get_node("Cone").set("visible", _bark_t <= BARK_CONE_SEC)
+	(_bark_fx.get_node("Cone") as Node3D).scale = Vector3.ONE * (reach / Rules.BARK_RANGE)
+	var t: float = clampf(_bark_t / Rules.BARK_DURATION, 0.0, 1.0)
+	for i in 2:
+		var ring: Node3D = _bark_fx.get_node("Ring%d" % i) as Node3D
+		var k: float = clampf(t * 1.25 - 0.25 * i, 0.0, 1.0)
+		ring.visible = k > 0.0 and k < 1.0
+		ring.scale = Vector3.ONE * maxf(0.05, lerpf(0.6, reach, k))
 
 
 ## True during the hitting part of the swing.
@@ -230,6 +378,9 @@ func release_inputs() -> void:
 	_strike_t = -1.0
 	if _arc != null:
 		_arc.visible = false
+	_bark_t = -1.0
+	if _bark_fx != null:
+		_bark_fx.visible = false
 
 
 ## Preview stage for standalone instancing (capture of player.tscn): floor, light, camera.

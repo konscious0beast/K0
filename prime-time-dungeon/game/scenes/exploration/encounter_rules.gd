@@ -15,6 +15,15 @@ const INTERACT_CONE_DEG: float = 120.0     # … and in the 120° cone in front 
 const GRACE_SEC: float = 2.0               # after a battle / flight: Kai unhittable + invisible
 const GRACE_RETURN_RADIUS: float = 6.0     # enemies within 6 m go RETURN after a battle
 
+# --- 06 package A: Graf Mopsula's field ability "Bellen" (06 §1.3) ------------------------------------------------------
+const BARK_RANGE: float = 4.0              # cone reach (m)
+const BARK_ARC_DEG: float = 120.0          # cone opening
+const BARK_DURATION: float = 0.4           # the bark (FX, sound) lasts this long; groups are dazed at its start
+const BARK_COOLDOWN: float = 3.0
+const DAZE_SEC: float = 2.5                # a barked-at group stands still, sees and hears nothing
+const DAZE_IMMUNE_SEC: float = 15.0        # a group can be dazed at most once per 15 s
+const DAZED: StringName = &"DAZED"         # EnemyActor state while dazed
+
 ## BattleSetup.Advantage values (mirrored; BattleSetup is M1's class, the ints are the contract of encounter_triggered).
 const NORMAL: int = 0
 const PREEMPTIVE: int = 1
@@ -68,7 +77,7 @@ static func strike_advantage(state: StringName, enemy_pos: Vector3, fwd_e: Vecto
 		back_dot: float) -> int:
 	if is_boss:
 		return NORMAL
-	if state == &"IDLE" or state == &"PATROL":
+	if state == &"IDLE" or state == &"PATROL" or state == DAZED:
 		return PREEMPTIVE
 	if is_behind(enemy_pos, fwd_e, kai_pos, back_dot):
 		return PREEMPTIVE
@@ -81,6 +90,8 @@ static func contact_advantage(state: StringName, enemy_pos: Vector3, fwd_e: Vect
 		is_boss: bool, can_ambush: bool, back_dot: float) -> int:
 	if is_boss:
 		return NORMAL
+	if state == DAZED:
+		return PREEMPTIVE                      # 06 §1.3: a dazed group is caught first from every side
 	if state != &"CHASE" and is_behind(enemy_pos, fwd_e, kai_pos, back_dot):
 		return PREEMPTIVE
 	if state == &"CHASE" and can_ambush and is_behind(kai_pos, fwd_k, enemy_pos, back_dot):
@@ -122,3 +133,30 @@ static func should_give_up(no_sight_sec: float, dist_from_leash: float, chase_se
 	return no_sight_sec >= float(explore.get("giveup_no_sight", 4.0)) \
 		or dist_from_leash > float(explore.get("leash", 20.0)) \
 		or chase_sec >= float(explore.get("max_chase", 8.0))
+
+
+# --- 06 package A: bark ---------------------------------------------------------------------------------------------
+
+## Is `target` inside the bark cone (BARK_ARC_DEG around `forward`, BARK_RANGE × range_pm / 1000)? Geometry only;
+## the scene adds the line of sight (walls block the bark like they block an enemy's sight).
+static func bark_hits(origin: Vector3, forward: Vector3, target: Vector3, range_pm: int = 1000) -> bool:
+	return in_arc(origin, forward, target, BARK_RANGE * float(range_pm) / 1000.0, BARK_ARC_DEG)
+
+
+## Contact advantage in one line (06 §8.2 API): a DAZED group is PREEMPTIVE from every direction; otherwise the
+## regular "touching the back" rule (`dot_back` = dot(fwd_e, d_ek) < BACK_DOT) — bosses are handled by the caller.
+static func advantage_for_contact(state_name: StringName, dot_back: float, back_dot: float = Balance.BACK_DOT) -> int:
+	if state_name == DAZED:
+		return PREEMPTIVE
+	if state_name != &"CHASE" and dot_back < back_dot:
+		return PREEMPTIVE
+	return NORMAL
+
+
+## Can a bark daze this group? Not bosses (06 §1.3) and not groups that perceive nothing anyway (Fahrscheinfresser:
+## sight 0, hearing 0 — "zuckt nur").
+static func can_be_dazed(is_boss: bool, explore: Dictionary) -> bool:
+	if is_boss:
+		return false
+	return float(explore.get("sight_range", 0.0)) > 0.0 or float(explore.get("hear_run", 0.0)) > 0.0 \
+		or float(explore.get("hear_sneak", 0.0)) > 0.0

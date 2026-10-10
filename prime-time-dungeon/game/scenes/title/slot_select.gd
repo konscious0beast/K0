@@ -1,6 +1,7 @@
 extends Control
 ## Slot select (02_TECH §1.6, GDD §14.2/§10.1): three slots with name, floor, level, play time, followers, location.
-## Modes: "new" (→ name entry; occupied slot asks "Überschreiben?"), "load" (→ Save.load_slot + routing §6.4),
+## Modes: "new" (→ hero choice → name entry, 06 §1.1; occupied slot asks "Überschreiben?"), "load" (→ Save.load_slot +
+## routing §6.4),
 ## "save" (safe room; emits slot_chosen after the overwrite question). As Router screen it routes itself; with
 ## {"embedded": true} it only emits `slot_chosen(slot)` / `cancelled` (host closes it).
 
@@ -13,6 +14,7 @@ const UiIcon := preload("res://scenes/ui/ui_icon.gd")
 const Backdrop := preload("res://scenes/ui/broadcast_bg.gd")
 const TitleFlow := preload("res://scenes/title/title_flow.gd")
 const NAME_ENTRY: String = "res://scenes/title/name_entry.tscn"
+const HERO_SELECT: String = "res://scenes/title/hero_select.tscn"      # 06 package A: Kai or Graf Mopsula
 const CONFIRM: String = "res://scenes/ui/confirm_dialog.tscn"
 const TITLES: Dictionary = {"new": "NEUES SPIEL", "load": "SPIEL LADEN", "save": "SPIELSTAND SICHERN"}
 const HINTS: Dictionary = {"new": "Wähle einen Slot für deine Sendung.", "load": "Welche Sendung soll weiterlaufen?",
@@ -110,7 +112,7 @@ func back() -> void:
 func _confirmed(slot: int) -> void:
 	if mode == "new" and not _embedded:
 		_busy = true
-		Router.goto(NAME_ENTRY, {"slot": slot})
+		Router.goto(HERO_SELECT, {"slot": slot})
 		return
 	slot_chosen.emit(slot)
 

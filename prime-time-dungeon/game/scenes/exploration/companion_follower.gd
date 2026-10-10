@@ -1,9 +1,11 @@
 extends CharacterBody3D
-## Graf Mopsula follows Kai's trail (02_TECH §7.3) without the NavigationServer: a ring buffer of Kai's positions
-## (one point every 0.25 m, 64 points); Mopsula walks along it 1.8 m of arc length behind Kai via move_and_slide()
-## at Kai's speed: his current speed, at least MIN_SPEED to close a gap while he stands, never faster than his run speed
-## (5.5 m/s). Distance > 10 m, spawn and on_resume → teleport onto the trail point or 1.8 m behind Kai.
-## Collision layer 0 (never blocks Kai, never triggers anything), mask `world`. No battle trigger.
+## The partner follows the hero's trail (02_TECH §7.3; 06 §1.2 "Partner folgt Held:in"): Graf Mopsula behind Kai, or
+## Kai behind the Count when GameState.hero is "mopsula" (set_member). No NavigationServer: a ring buffer of the
+## leader's positions (one point every 0.25 m, 64 points); the partner walks along it 1.8 m of arc length behind the
+## leader via move_and_slide() at the leader's speed: its current speed, at least MIN_SPEED to close a gap while it
+## stands, never faster than the run speed (5.5 m/s). Distance > 10 m, spawn and on_resume → teleport onto the trail
+## point or 1.8 m behind the leader.
+## Collision layer 0 (never blocks the hero, never triggers anything), mask `world`. No battle trigger.
 
 const FB := preload("res://scenes/exploration/fallback_art.gd")
 const Rules := preload("res://scenes/exploration/encounter_rules.gd")
@@ -19,13 +21,14 @@ const TURN_RATE: float = 10.0
 var leader: Node3D = null
 var rig: Node3D = null
 var frozen: bool = false
+var member_id: String = "mopsula"    # 06 package A: who follows ("mopsula" | "kai"); set_member()
 
 var _trail: Array[Vector3] = []      # oldest first, newest last
 var _anim_t: float = 0.0
 
 
 func _ready() -> void:
-	name = "Mopsula"
+	name = "Kai" if member_id == "kai" else "Mopsula"
 	collision_layer = 0
 	collision_mask = 1
 	if get_node_or_null("Collision") == null:
@@ -38,18 +41,41 @@ func _ready() -> void:
 		cs.position = Vector3(0.0, 0.3, 0.0)
 		add_child(cs)
 	if rig == null:
-		var model: Dictionary = {"base": "pug", "scale": 1.0, "colors": {"primary": "#c9a57a", "secondary": "#3b2a22",
-			"accent": "#7a1f3a", "eyes": "#1a1420"}}
-		if DB.has_id("party", "mopsula"):
-			model = DB.party_member("mopsula").model
-		var r: CharacterRig = CharacterBuilder.build(model, 2)
-		if r == null:
-			r = CharacterRig.new()
-		if FB.is_empty(r):
-			FB.build_character(model, r)
-		r.name = "Rig"
-		add_child(r)
-		rig = r
+		_build_rig()
+
+
+## 06 package A: the follower becomes `id` ("mopsula" | "kai"): new rig and node name; trail and position stay.
+func set_member(id: String) -> void:
+	var clean: String = HeroRules.sanitize(id)
+	if clean == member_id and rig != null:
+		return
+	member_id = clean
+	if not is_inside_tree():
+		return
+	name = "Kai" if member_id == "kai" else "Mopsula"
+	if rig != null and is_instance_valid(rig):
+		remove_child(rig)
+		rig.queue_free()
+		rig = null
+	_build_rig()
+
+
+func _build_rig() -> void:
+	var model: Dictionary = {"base": "pug", "scale": 1.0, "colors": {"primary": "#c9a57a", "secondary": "#3b2a22",
+		"accent": "#7a1f3a", "eyes": "#1a1420"}}
+	if member_id == "kai":
+		model = {"base": "humanoid", "scale": 1.0, "colors": {"primary": "#3aa9a0", "secondary": "#2e3a57",
+			"accent": "#3b2a22", "skin": "#e8b48f", "eyes": "#1a1420"}}
+	if DB.has_id("party", member_id):
+		model = DB.party_member(member_id).model
+	var r: CharacterRig = CharacterBuilder.build(model, 1 if member_id == "kai" else 2)
+	if r == null:
+		r = CharacterRig.new()
+	if FB.is_empty(r):
+		FB.build_character(model, r)
+	r.name = "Rig"
+	add_child(r)
+	rig = r
 
 
 ## Clears the trail and places Mopsula 1.8 m behind the leader (spawn, on_resume, too far away).

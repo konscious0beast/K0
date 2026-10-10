@@ -23,6 +23,83 @@
 			"weight": 1
 		},
 		{
+			"id": "mod_hero_pick_kai_01",
+			"tag": "hero_pick:kai",
+			"voice": "mod",
+			"text": "Kandidat:in {name} übernimmt. Der Graf assistiert. Unter Protest, aber in HD.",
+			"weight": 1
+		},
+		{
+			"id": "mod_hero_pick_mopsula_01",
+			"tag": "hero_pick:mopsula",
+			"voice": "mod",
+			"text": "Der Graf hat die Fernbedienung an sich genommen. {name} darf folgen. Die Quote jubelt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_hero_switch_kai_01",
+			"tag": "hero_switch:kai",
+			"voice": "mod",
+			"text": "Rollentausch! {name} führt wieder. Der Graf nennt es ‚wohlverdiente Siesta‘.",
+			"weight": 1
+		},
+		{
+			"id": "mod_hero_switch_kai_02",
+			"tag": "hero_switch:kai",
+			"voice": "mod",
+			"text": "{name} übernimmt die Führung, der Graf das Sofa. Gerechte Arbeitsteilung.",
+			"weight": 1
+		},
+		{
+			"id": "mod_hero_switch_mopsula_01",
+			"tag": "hero_switch:mopsula",
+			"voice": "mod",
+			"text": "Rollentausch! Der Graf führt. Bitte Abstand halten, er bellt in Stereo.",
+			"weight": 1
+		},
+		{
+			"id": "mod_hero_switch_mopsula_02",
+			"tag": "hero_switch:mopsula",
+			"voice": "mod",
+			"text": "Der Graf übernimmt. {name} darf sich ausruhen. Unter Beobachtung, versteht sich.",
+			"weight": 1
+		},
+		{
+			"id": "mod_tutorial_explore_mopsula_01",
+			"tag": "tutorial_explore:mopsula",
+			"voice": "mod",
+			"text": "Willkommen in der Unterstadt, Graf! Laufen Sie los – {name} kommt hinterher. Die Kamera auch.",
+			"weight": 1
+		},
+		{
+			"id": "mod_tutorial_sneak_mopsula_01",
+			"tag": "tutorial_sneak:mopsula",
+			"voice": "mod",
+			"text": "Da vorn schlafen zwei Ratten. Bellen Sie, Graf – verdutzte Monster erwischt man von jeder Seite zuerst.",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_bark_01",
+			"tag": "chat_bark",
+			"voice": "chat",
+			"text": "WUFF IN HD",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_bark_02",
+			"tag": "chat_bark",
+			"voice": "chat",
+			"text": "der graf hat gesprochen",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_bark_03",
+			"tag": "chat_bark",
+			"voice": "chat",
+			"text": "ich hab mich auch erschrocken",
+			"weight": 1
+		},
+		{
 			"id": "mod_floor_start_01",
 			"tag": "floor_start",
 			"voice": "mod",

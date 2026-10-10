@@ -191,6 +191,9 @@ func _build() -> void:
 	_cycler("battle_speed", "Kampftempo", ["× 1", "× 2"], 1 if s.battle_speed >= 1.5 else 0)
 	_cycler("text_speed", "Textgeschwindigkeit", ["Langsam", "Normal", "Sofort"], s.text_speed)
 	_cycler("auto_battle_default", "Auto-Kampf (Standard)", ["Aus", "An"], 1 if s.auto_battle_default else 0)
+	# 06 §1.4 (package A): options only, no tutorial line — one help line under the label
+	_cycler("partner_auto", "Partner automatisch", ["Aus", "An"], 1 if s.partner_auto else 0,
+		"Dein:e Partner:in kämpft von selbst.")
 	_mode_row()
 	_section("Kamera & Steuerung")
 	_camera_slider(s.camera_sensitivity)
@@ -227,8 +230,9 @@ func _section(title: String) -> void:
 	_list.add_child(l)
 
 
-## Row = PanelContainer frame (focus frame for sliders) around: pulsing focus arrow · label · control.
-func _row(label_text: String) -> HBoxContainer:
+## Row = PanelContainer frame (focus frame for sliders) around: pulsing focus arrow · label (+ optional dim help
+## line) · control.
+func _row(label_text: String, hint: String = "") -> HBoxContainer:
 	var frame: PanelContainer = PanelContainer.new()
 	frame.name = "Row"
 	frame.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
@@ -245,7 +249,17 @@ func _row(label_text: String) -> HBoxContainer:
 	var l: Label = UiUtil.label(label_text, &"", 20)
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	row.add_child(l)
+	if hint == "":
+		row.add_child(l)
+		return row
+	var col: VBoxContainer = UiUtil.vbox(0)
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(col)
+	col.add_child(l)
+	var h: Label = UiUtil.label(hint, &"LabelSmall", 16, UiTheme.C_TEXT_DIM)
+	h.name = "Hint"
+	col.add_child(h)
 	return row
 
 
@@ -366,8 +380,8 @@ static func _grabber_texture() -> Texture2D:
 	return _grabber
 
 
-func _cycler(key: String, label_text: String, options: Array, idx: int) -> Cycler:
-	var row: HBoxContainer = _row(label_text)
+func _cycler(key: String, label_text: String, options: Array, idx: int, hint: String = "") -> Cycler:
+	var row: HBoxContainer = _row(label_text, hint)
 	var c: Cycler = Cycler.new()
 	var opts: PackedStringArray = []
 	for o: Variant in options:
@@ -446,6 +460,8 @@ func _set_choice(key: String, i: int) -> void:
 		"auto_battle_default":
 			s.auto_battle_default = i == 1
 			Game.auto_battle = s.auto_battle_default
+		"partner_auto":
+			s.partner_auto = i == 1
 		"camera_invert_x":
 			s.camera_invert_x = i == 1
 		"camera_invert_y":

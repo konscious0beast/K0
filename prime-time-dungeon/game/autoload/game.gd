@@ -172,8 +172,10 @@ func has_state() -> bool:
 	return state != null
 
 
-## seed -1 → time based. Creates GameState, RunLog, RunSim, starts floor 1, emits new_game_started(slot).
-func new_game(slot: int, player_name: String = "Kai", seed: int = -1, difficulty: StringName = &"prime") -> void:
+## seed -1 → time based. Creates GameState, RunLog, RunSim, starts floor 1, records the controlled character
+## (`hero_id`, 06 §1: "kai" | "mopsula", right after "floor"), emits new_game_started(slot).
+func new_game(slot: int, player_name: String = "Kai", seed: int = -1, difficulty: StringName = &"prime",
+		hero_id: String = HeroRules.DEFAULT_HERO) -> void:
 	var run_seed: int = seed
 	if run_seed == -1:
 		run_seed = int(Time.get_unix_time_from_system() * 1000.0) & 0x7FFFFFFF
@@ -186,11 +188,13 @@ func new_game(slot: int, player_name: String = "Kai", seed: int = -1, difficulty
 	run_log = _make_run_log(run_seed, slot, player_name, difficulty, "")
 	sim = _make_sim(state, {})
 	start_floor(1)
+	_choose_initial_hero(hero_id)
 	Events.new_game_started.emit(slot)
 
 
 ## M8: EventCatalog → EventDef.run_seed(); mode = &"event_offline"; slot 0 (never saved into campaign slots).
-func start_event_run(event_id: String) -> void:
+## `hero_id` (06 §1.7): the controlled character, recorded right after "floor" like in new_game.
+func start_event_run(event_id: String, hero_id: String = HeroRules.DEFAULT_HERO) -> void:
 	var def: EventDef = _load_event_def(event_id)
 	if def == null:
 		push_warning("[Game] unknown event '%s'" % event_id)
@@ -208,6 +212,7 @@ func start_event_run(event_id: String) -> void:
 	run_log = _make_run_log(run_seed, 0, "Kai", &"prime", event_id)
 	sim = _make_sim(state, def.rules)
 	start_floor(maxi(1, def.floor_index))
+	_choose_initial_hero(hero_id)
 	var leagues: Array = def.rules.get("leagues", ["pur"])
 	Events.run_started.emit(event_id, str(leagues[0]) if not leagues.is_empty() else "pur")
 
@@ -651,6 +656,40 @@ func set_difficulty(d: StringName) -> bool:
 	if state.floor_run != null:
 		state.floor_run.time_left_ticks = roundi(state.floor_run.time_left_ticks * Balance.EASY_TIMER_MULT)
 	return true
+
+
+# --- 06 package A: hero choice (HeroRules) ------------------------------------------------------------------------------
+
+## The controlled character (06 §1): "kai" | "mopsula" ("kai" without a run).
+func hero() -> String:
+	return state.hero if state != null else HeroRules.DEFAULT_HERO
+
+
+## The character that follows / may fight on its own ("Partner automatisch").
+func partner() -> String:
+	return HeroRules.partner_of(state)
+
+
+## Records {"t": "hero", "id"} and makes `hero_id` the controlled character. Before the run started (new game, event
+## run) HeroRules.check_initial applies, afterwards check_set (only in a safe room, only a real change). false (nothing
+## recorded, nothing changes) when the check refuses. Emits hero_changed when the hero actually changed.
+func set_hero(hero_id: String) -> bool:
+	if state == null or HeroRules.check(state, hero_id) != "":
+		return false
+	record({"t": "hero", "id": hero_id})
+	var changed: bool = state.hero != hero_id
+	HeroRules.set_hero(state, hero_id)
+	if changed:
+		Events.hero_changed.emit(hero_id)
+	return true
+
+
+func _choose_initial_hero(hero_id: String) -> void:
+	var id: String = HeroRules.sanitize(hero_id)
+	if id != hero_id:
+		push_warning("[Game] unknown hero '%s' → %s" % [hero_id, id])
+	if not set_hero(id):
+		push_warning("[Game] hero choice '%s' refused (%s)" % [id, HeroRules.check(state, id)])
 
 
 ## run_log.add_cmd(sim.tick(), cmd, cmd_id); no-op if run_log == null or while replaying.
@@ -1212,5 +1251,7 @@ func _replay_apply(c: Dictionary) -> void:
 			Show.receive_gift(c.get("gift", {}))
 		"sponsor_window":
 			open_dev_sponsor_window(int(c.get("sec", 0)), int(c.get("slots", 0)))
+		"hero":                                    # 06 package A
+			set_hero(str(c.get("id", "")))
 		_:
 			push_warning("[Game] replay: unknown command '%s'" % str(c.get("t", "")))

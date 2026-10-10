@@ -66,7 +66,8 @@ var run_log: RunLog = null             # optional: records applied commands + ch
 var battle: BattleState = null         # battle started by apply({"t": "encounter"}) (RunSim-driven runs only)
 var quest: QuestTracker = null         # optional: fed by apply() with the core quest events (see _quest_feed)
 var last_action_events: Array[ActionEvent] = []   # ActionEvents of the last apply() (battle start/commands/gifts)
-## Commands refused by the core rules (gift policy): {"k", "t", "gift_id", "reason"} in order.
+## Commands refused by the core rules (gift policy, HeroRules.check for "hero" — 06 §1.7): {"k", "t", "gift_id" (the
+## gift id, or the hero id of a refused "hero"), "reason"} in order.
 var rejected_cmds: Array[Dictionary] = []
 
 var _tick: int = 0
@@ -128,6 +129,11 @@ func apply(cmd: Dictionary) -> Array[ExploreEvent]:
 		push_warning("[RunSim] sponsor_window refused (rules.sponsor_windows.dev_open / not tracked)")
 		rejected_cmds.append({"k": _tick, "t": "sponsor_window", "gift_id": "", "reason": "not_allowed"})
 		return out
+	var hero_refusal: String = HeroRules.check(state, str(c["id"])) if str(c["t"]) == "hero" else ""  # 06 package A
+	if hero_refusal != "":
+		push_warning("[RunSim] hero '%s' refused: %s" % [str(c["id"]), hero_refusal])
+		rejected_cmds.append({"k": _tick, "t": "hero", "gift_id": str(c["id"]), "reason": hero_refusal})
+		return out
 	if run_log != null:
 		var cmd_id: int = 0
 		if not Command.is_external(c):
@@ -185,6 +191,8 @@ func apply(cmd: Dictionary) -> Array[ExploreEvent]:
 			state.flags[str(c["key"])] = c["value"]
 		"difficulty":
 			_apply_difficulty(StringName(str(c["to"])))
+		"hero":                                    # 06 package A: HeroRules.check passed above
+			HeroRules.set_hero(state, str(c["id"]))
 		"descend":
 			if state.floor_run != null:
 				_floor_done = true

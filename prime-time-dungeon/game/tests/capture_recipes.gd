@@ -10,6 +10,9 @@ extends Node
 ## Battle (battle.tscn, optional --params={"encounter": "<enc id>"}): battle_menu, battle_skills, battle_target,
 ##   battle_damage, battle_enemy_turn, boss_intro, boss_phase, battle_gift, battle_victory, battle_results.
 ## Safe room (safe_room.tscn): safe_vending, safe_lootbox, safe_lootbox_open, safe_mopsula, safe_equipment.
+## 06 package A: bark_platform | bark_sewer | bark_cellar (Graf Mopsula leads and barks at a group: cone + rings,
+##   "?!"), hero_mopsula_<zone> (exploration as Mopsula, Kai follows), safe_hero_switch ("Figur wechseln" pressed:
+##   the Count in front), battle_partner_auto ("Partner automatisch": DU / AUTO pills at the hero's menu).
 
 const ZONES: Dictionary = {"platform": "zone_platform", "sewer": "zone_sewer", "cellar": "zone_cellar"}
 
@@ -105,6 +108,42 @@ func _r_prompt(scene: Node, zone_key: String) -> bool:
 	var target: Vector3 = it.global_position if it != null else layout.local_to_world(chest.cell, chest.offset)
 	_place_facing(scene, layout, chest.cell, target, 1.6)
 	await frames(30)
+	return true
+
+
+## 06 package A: Graf Mopsula leads (bodies swapped), stands 3.4 m in front of a group of `zone` and barks: the violet
+## cone and sound rings, the group dazed ("?!"), Kai behind the Count.
+func _r_bark(scene: Node, zone_key: String) -> bool:
+	if not await _r_hero_mopsula(scene, zone_key, 3.4):
+		return false
+	scene.call("perform_action")
+	await seconds(0.12)
+	freeze()
+	return true
+
+
+## 06 package A: exploration with Graf Mopsula as the player body, `dist` m in front of a group of `zone`.
+func _r_hero_mopsula(scene: Node, zone_key: String, dist: float = 5.0) -> bool:
+	if not await _explore_ready(scene):
+		return false
+	Game.state.hero = "mopsula"
+	scene.call("refresh_hero")
+	var layout: FloorLayout = scene.call("get_layout")
+	var zone: String = str(ZONES.get(zone_key, zone_key))
+	var spawn: EnemySpawn = null
+	for e: EnemySpawn in layout.enemies:
+		var rc: RoomCell = layout.cell_at(e.cell)
+		if rc != null and rc.zone == zone and not e.is_boss and scene.call("get_enemy", e.id) != null:
+			spawn = e
+			break
+	if spawn == null:
+		push_warning("[CaptureRecipes] no enemy group in %s" % zone)
+		return false
+	_freeze_enemies(scene)
+	var actor: Node3D = scene.call("get_enemy", spawn.id) as Node3D
+	_reveal_zone(scene, layout, zone)
+	_place_facing(scene, layout, spawn.cell, actor.global_position, dist)
+	await frames(20)
 	return true
 
 
@@ -283,6 +322,21 @@ func _skill_turn(scene: Node) -> bool:
 
 func _r_battle_menu(scene: Node) -> bool:
 	return await _wait_menu(scene)
+
+
+## 06 package A: "Partner automatisch" on — the menu waits for the hero, the panels read DU / AUTO.
+func _r_battle_partner_auto(scene: Node) -> bool:
+	Game.settings.partner_auto = true
+	var ctrl: Node = scene.get("controller") as Node
+	if ctrl == null:
+		return false
+	ctrl.set("force_manual", false)
+	ctrl.set("auto_turns", 0)
+	if not await _wait_menu(scene):
+		return false
+	ctrl.call("mark_roles")
+	await frames(10)
+	return true
 
 
 func _r_battle_skills(scene: Node) -> bool:
@@ -464,6 +518,17 @@ func _r_safe_lootbox_open(scene: Node) -> bool:
 	if lb.get("state") == &"reveal":
 		lb.call("reveal_all")
 	await frames(60)
+	return true
+
+
+## 06 package A: "Figur wechseln" pressed — the Count stands in front, M.O.D. comments, the status banner names him.
+func _r_safe_hero_switch(scene: Node) -> bool:
+	if not await _safe_ready(scene):
+		return false
+	await frames(10)
+	scene.call("activate", "hero")
+	await seconds(1.2)
+	freeze()
 	return true
 
 

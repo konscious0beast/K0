@@ -17,6 +17,10 @@ extends Node
 ## "FULLRUN: OK floor_time=<s> battles=<n> level=<kai>/<mopsula> deaths=<n> frames=<n>" + quit(0);
 ## failure: "Assertion failed: FULLRUN failed in <phase>: <reason>" + quit(1).
 ## Saves go to SAVE_DIR (cleared before and after the run); settings stay ephemeral.
+## 06 package A: --hero=kai|mopsula (default kai) picks the controlled character of the new game. As Graf Mopsula the
+## bot engages groups with the bark (dazed group → walk into it → PREEMPTIVE) instead of the field strike, and on the
+## first safe-room visit it switches to Kai and back ("Figur wechseln", two recorded hero commands the replay checks
+## cover).
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const Rules := preload("res://scenes/exploration/encounter_rules.gd")
@@ -39,6 +43,8 @@ const ENGAGE_BUDGET: int = 600
 const SAFE_BUDGET: int = 1500
 const CREDITS_BUDGET: int = 2400
 const STRIKE_RANGE: float = 1.4
+const BARK_ENGAGE: float = 3.0             # 06 package A: Mopsula barks at a group within 3 m (cone reach 4 m)
+const HEROES: PackedStringArray = ["kai", "mopsula"]
 const TIMER_SLACK_TICKS: int = 15          # timer ticks a pause may lose to its transitions (fade-in 0.25 s + a frame)
 const STAIRS_HUB: float = 1.6              # room middle of the stairs room: in front of the well's entry fence
 const STAND_OFF: float = 1.0               # stand this far in front of an interactable (+ its extent)
@@ -96,6 +102,11 @@ var phase: String = "boot"
 var strategy: String = "thorough"
 ## "fast" (default): no waits — the lower bound of the floor time. "human" (--pace=human): HUMAN_* waits (see above).
 var pace: String = "fast"
+## 06 package A: "kai" (default) | "mopsula" (--hero=mopsula): the controlled character of the run.
+var hero: String = "kai"
+var barks: int = 0                         # barks the bot used (Mopsula) …
+var dazed: int = 0                         # … and groups they dazed
+var hero_switches: int = 0                 # "Figur wechseln" in a safe room
 var timer_warnings: PackedInt32Array = []
 var timer_expired: int = 0
 var attempt_floor_boss: bool = true
@@ -156,6 +167,7 @@ func _ready() -> void:
 		prepare_saves()
 		strategy = strategy_from_args(OS.get_cmdline_user_args())
 		pace = pace_from_args(OS.get_cmdline_user_args())
+		hero = hero_from_args(OS.get_cmdline_user_args())
 	# Counters ignore Game.replay_log() (the replay check re-emits the same signals).
 	Events.battle_started.connect(_on_battle_started)
 	Events.credits_changed.connect(_on_credits_changed)
@@ -199,6 +211,10 @@ func _ready() -> void:
 	Events.item_bought.connect(func(p: Dictionary) -> void:
 		if not Game.replaying:
 			purchases.append("%s×%d" % [str(p.get("item_id", "")), int(p.get("qty", 1))]))
+	Events.field_ability_used.connect(func(_h: String, ability: StringName, hits: int) -> void:
+		if ability == &"bark" and not Game.replaying:
+			barks += 1
+			dazed += hits)
 	if not dry_run:
 		_main.call_deferred()
 
@@ -222,6 +238,14 @@ static func strategy_from_args(args: PackedStringArray) -> String:
 ## --pace=human → "human"; anything else → "fast".
 static func pace_from_args(args: PackedStringArray) -> String:
 	return "human" if args.has("--pace=human") else "fast"
+
+
+## 06 package A: --hero=mopsula → "mopsula"; anything else → "kai".
+static func hero_from_args(args: PackedStringArray) -> String:
+	for h: String in HEROES:
+		if args.has("--hero=" + h):
+			return h
+	return "kai"
 
 
 ## Real saves into a private directory (Boot: --autoplay=full), emptied first.
@@ -250,10 +274,12 @@ func _main() -> void:
 	phase = "new_game"
 	Game.auto_battle = true
 	var run_seed: int = TitleFlow.boot_seed if TitleFlow.boot_seed >= 0 else RUN_SEED
-	_note("new game, seed %d, strategy %s" % [run_seed, strategy])
-	(Router.current as TitleScreen).request_new_game(SAVE_SLOT, "Kai", false, run_seed)
+	_note("new game, seed %d, strategy %s, hero %s" % [run_seed, strategy, hero])
+	(Router.current as TitleScreen).request_new_game(SAVE_SLOT, "Kai", false, run_seed, &"prime", hero)
 	if not await _wait(func() -> bool: return Router.current is ExplorationScene and not Router.busy, INTRO_BUDGET,
 			"exploration after the intro"):
+		return
+	if not check_hero(_ex(), hero):
 		return
 	_note("floor 1 entered (intro played)")
 	while not finished and not _floor_done:
@@ -668,8 +694,18 @@ func _idle_until_collapse() -> bool:
 	return true
 
 
+## 06 package A: the controlled character is `want` in the state and in the exploration (player body, follower).
+func check_hero(ex: ExplorationScene, want: String) -> bool:
+	if Game.hero() != want:
+		return fail("hero is %s in the state, expected %s" % [Game.hero(), want])
+	if ex == null or ex.get_player().hero_id != want or ex.get_companion().member_id != Game.partner():
+		return fail("exploration bodies do not follow the hero %s" % want)
+	return true
+
+
 ## Group fight: walk up to the symbol and hit it with a field strike (preemptive for IDLE/PATROL), else contact; the
-## bot falls back to ExplorationScene.force_encounter(group) after ENGAGE_BUDGET frames.
+## bot falls back to ExplorationScene.force_encounter(group) after ENGAGE_BUDGET frames. As Graf Mopsula (06 §1.3)
+## it barks at the group first and walks into the dazed symbol (contact with a dazed group = PREEMPTIVE).
 func _engage(ex: ExplorationScene, group_id: String) -> bool:
 	var n: int = 0
 	while not finished:
@@ -680,7 +716,9 @@ func _engage(ex: ExplorationScene, group_id: String) -> bool:
 		if a == null:
 			return true
 		var p: Vector3 = ex.get_player_position()
-		if Rules.flat_dist(p, a.global_position) <= STRIKE_RANGE:
+		if Game.hero() == "mopsula":
+			await _engage_bark(ex, a)
+		elif Rules.flat_dist(p, a.global_position) <= STRIKE_RANGE:
 			UiUtil.release_move_actions()
 			var body: CharacterBody3D = ex.get_player()
 			_face(body, a.global_position)
@@ -704,6 +742,27 @@ func _engage(ex: ExplorationScene, group_id: String) -> bool:
 			ex.force_encounter(group_id)
 			return true
 	return false
+
+
+## One engage step as Graf Mopsula: in range and ready → face the group and bark (perform_action, like the key);
+## otherwise steer into it — a dazed (or any) symbol starts the battle on contact.
+func _engage_bark(ex: ExplorationScene, a: Node3D) -> void:
+	var body: CharacterBody3D = ex.get_player()
+	var d: float = Rules.flat_dist(ex.get_player_position(), a.global_position)
+	var can_daze: bool = a.has_method("daze") and not bool(a.call("is_boss")) and not bool(a.call("is_dazed")) \
+		and float(a.call("daze_cooldown")) <= 0.0
+	if can_daze and d <= BARK_ENGAGE and bool(body.call("bark_ready")):
+		UiUtil.release_move_actions()
+		_face(body, a.global_position)
+		await get_tree().physics_frame
+		if not _interrupted(ex) and ex.focused_interactable() == null:
+			ex.perform_action()
+		await get_tree().physics_frame
+		return
+	var sneak: bool = pace == "human" and d <= HUMAN_SNEAK_DIST
+	_press(&"sneak", 1.0 if sneak else 0.0)
+	_steer(ex, a.global_position)
+	await get_tree().physics_frame
 
 
 ## Walks to the stand point in front of `it`, faces it and presses `action` while it is focused (fallback: interact()
@@ -1114,6 +1173,9 @@ func _safe_room(scene: SafeRoomScene) -> bool:
 				"Mopsula scene %s" % scene_id):
 			return false
 		_note("Mopsula scene %s" % scene_id)
+	if hero == "mopsula" and hero_switches == 0:
+		if not await _switch_hero_twice(scene):
+			return false
 	if not Game.state.pending_lootboxes.is_empty():
 		if not await _open_lootboxes(scene):
 			return false
@@ -1136,6 +1198,21 @@ func _safe_room(scene: SafeRoomScene) -> bool:
 	if _verify_scene:
 		_verify_scene = false
 		return check_scene_state(_ex())
+	return true
+
+
+## 06 §1.6: "Figur wechseln" twice (Mopsula → Kai → Mopsula) through the menu; each switch is a recorded hero command
+## (the next replay check covers them) and leaves the run as it was.
+func _switch_hero_twice(scene: SafeRoomScene) -> bool:
+	for want: String in [Game.partner(), Game.hero()]:
+		scene.activate("hero")
+		await get_tree().process_frame
+		if Game.hero() != want:
+			return fail("Figur wechseln did not make %s the hero (is %s)" % [want, Game.hero()])
+		hero_switches += 1
+		_note("Figur wechseln → %s führt" % want)
+		for _i in HOLD_FRAMES:
+			await get_tree().process_frame
 	return true
 
 
@@ -1555,6 +1632,7 @@ func stats() -> Dictionary:
 				ach_followers += def.followers if def.followers >= 0 else int(Show.ACH_FOLLOWERS.get(def.box, 0))
 	return {
 		"pace": pace, "strategy": strategy, "human_wait_sec": roundi(human_wait_sec),
+		"hero": hero, "barks": barks, "dazed": dazed, "hero_switches": hero_switches,
 		"sponsor_gifts": gifts.size(), "gifts_regular": gifts_regular, "gifts_boss": gifts_boss, "gift_ids": gifts,
 		"boss_outcomes": boss_outcomes, "boss_exp": boss_exp, "boss_kit": boss_kit,
 		"credits_before_floor_boss": credits_before_floor_boss,

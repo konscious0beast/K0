@@ -1,6 +1,7 @@
 extends CanvasLayer
 ## Touch layer (02_TECH §10.3, §9.4 layer 20; 03_ART §9.4): floating joystick in the left 40 %, one round `action`
-## button (96 px at (1147, 587); hand icon with a prompt, fist otherwise), `map` (64 px at (1227, 140)) and `pause`
+## button (96 px at (1147, 587); hand icon with a prompt, otherwise the hero's field ability: fist for Kai's strike,
+## sound waves for Graf Mopsula's bark — 06 §1.3), `map` (64 px at (1227, 140)) and `pause`
 ## (64 px at (1227, 40)); every hit area ≥ 88 px (UiTheme.ensure_hit_area). Buttons send InputEventAction press/release.
 ## Drag on the free right side → Events.camera_drag(relative); two fingers there pinch → Events.camera_zoom(m) (GDD
 ## pinch zoom; > 0 = fingers closer = zoom out, PINCH_M_PER_PX). Visible when settings.touch_controls == &"on" or
@@ -138,12 +139,22 @@ func is_shown() -> bool:
 	return _root != null and _root.visible
 
 
-## Hand icon while an interaction prompt is active, fist (field strike) otherwise.
+## Hand icon while an interaction prompt is active, the hero's field ability otherwise (fist / bark).
 func set_prompt_active(active: bool) -> void:
 	_prompt = active
 	var b: Button = buttons.get(&"action") as Button
 	if b != null and b.has_node("Icon"):
-		b.get_node("Icon").set("kind", &"hand" if active else &"fist")
+		b.get_node("Icon").set("kind", &"hand" if active else field_icon())
+
+
+## 06 package A: &"fist" (Kai strikes) | &"bark" (Graf Mopsula barks).
+static func field_icon() -> StringName:
+	return &"bark" if Game.hero() == "mopsula" else &"fist"
+
+
+## After a hero switch: the idle action icon follows the new hero.
+func refresh_hero() -> void:
+	set_prompt_active(_prompt)
 
 
 func _make_button(spec: Dictionary) -> void:
@@ -164,7 +175,8 @@ func _make_button(spec: Dictionary) -> void:
 		sb.set_border_width_all(2)
 		sb.set_corner_radius_all(int(vis))
 		visual.add_theme_stylebox_override("panel", sb)
-	var icon: Control = UiIcon.make(spec["icon"] as StringName, Color("#f5f0e6"), vis * 0.5)
+	var kind: StringName = field_icon() if spec["action"] == &"action" else spec["icon"] as StringName
+	var icon: Control = UiIcon.make(kind, Color("#f5f0e6"), vis * 0.5)
 	icon.name = "Icon"
 	icon.anchor_left = 0.5
 	icon.anchor_right = 0.5

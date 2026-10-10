@@ -14,6 +14,7 @@ const FOCUS_FRAMES: int = 900
 const SCENE_TITLE: String = "res://scenes/title/title.tscn"
 const SCENE_SLOTS: String = "res://scenes/title/slot_select.tscn"
 const SCENE_NAME: String = "res://scenes/title/name_entry.tscn"
+const SCENE_HERO: String = "res://scenes/title/hero_select.tscn"      # 06 package A
 const SCENE_INTRO: String = "res://scenes/title/intro.tscn"
 const SCENE_GAME_OVER: String = "res://scenes/title/game_over.tscn"
 const SCENE_CREDITS: String = "res://scenes/title/credits.tscn"
@@ -35,7 +36,7 @@ const DAMAGE_STYLES: Array[StringName] = [&"damage", &"crit", &"heal", &"mp", &"
 const PAUSE_PAGES: Array[String] = ["party", "inventory", "equipment", "skills", "achievements", "bestiary", "settings"]
 const MENU_SCENES: Array[String] = [SCENE_TITLE, SCENE_SLOTS, SCENE_NAME, SCENE_INTRO, SCENE_GAME_OVER, SCENE_CREDITS,
 	SCENE_SAFE_ROOM, SCENE_VENDING, SCENE_LOOTBOX, SCENE_SETTINGS, SCENE_CONFIRM, SCENE_LOBBY, SCENE_RESULT,
-	SCENE_SUMMARY]
+	SCENE_SUMMARY, SCENE_HERO]
 const MIN_FONT: int = 15
 
 
@@ -75,6 +76,10 @@ func test_name_entry() -> void:
 		if b.text.length() == 1:
 			assert_true(b.size.x >= UiTheme.MIN_TOUCH and b.size.y >= UiTheme.MIN_TOUCH,
 				"on-screen key '%s' is %s, needs >= %d px" % [b.text, str(b.size), UiTheme.MIN_TOUCH])
+
+
+func test_hero_select() -> void:
+	await _check_menu(SCENE_HERO)
 
 
 func test_intro() -> void:

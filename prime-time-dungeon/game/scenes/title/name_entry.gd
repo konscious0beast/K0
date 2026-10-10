@@ -1,7 +1,9 @@
 extends Control
 ## Name entry (02_TECH §1.6, GDD §14.2): LineEdit (max_length 12, default "Kai"), on-screen keyboard for gamepad /
 ## touch (QWERTZ incl. Ä Ö Ü ß, shift, space, delete) and the mode choice Prime Time / Vorabendprogramm. "Sendung
-## starten" → the single new-game path (TitleFlow.start_new_game → intro). Params {"slot": int}.
+## starten" → the single new-game path (TitleFlow.start_new_game → intro). Params {"slot": int, "hero": String}.
+## 06 §1.1 (package A): the name is always Kai's (the player's) name; with Graf Mopsula as hero the Count asks
+## („Wie heißt Unser:e Begleiter:in?“, Pluralis Majestatis). `ui_cancel` goes back to the hero choice.
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const InputGlyph := preload("res://scenes/ui/input_glyph.gd")
@@ -9,6 +11,7 @@ const UiIcon := preload("res://scenes/ui/ui_icon.gd")
 const Backdrop := preload("res://scenes/ui/broadcast_bg.gd")
 const TitleFlow := preload("res://scenes/title/title_flow.gd")
 const SLOT_SELECT: String = "res://scenes/title/slot_select.tscn"
+const HERO_SELECT: String = "res://scenes/title/hero_select.tscn"      # 06 package A
 const MAX_LEN: int = 12
 # 10 keys per row: 64 px keys with 12 px gaps fit next to the mode column (02_TECH §10.2 rule 5).
 const ROWS: Array[String] = ["QWERTZUIOP", "ASDFGHJKLÖ", "YXCVBNMÄÜß"]
@@ -21,6 +24,7 @@ const MODES: Array[Dictionary] = [
 ]
 
 var slot: int = 1
+var hero: String = "kai"                   # 06 package A: chosen on the hero select screen
 var difficulty: StringName = &"prime"
 var name_edit: LineEdit
 
@@ -35,6 +39,7 @@ var _busy: bool = false
 func setup(params: Dictionary) -> void:
 	_params = params
 	slot = int(params.get("slot", 1))
+	hero = HeroRules.sanitize(str(params.get("hero", HeroRules.DEFAULT_HERO)))
 
 
 func _ready() -> void:
@@ -88,7 +93,7 @@ func start() -> void:
 		return
 	_busy = true
 	Sfx.play_ui(&"stunt_success")
-	if not TitleFlow.start_new_game(slot, entered_name(), false, -1, difficulty):
+	if not TitleFlow.start_new_game(slot, entered_name(), false, -1, difficulty, hero):
 		_busy = false
 		Events.toast_requested.emit("Neues Spiel konnte nicht gestartet werden.", &"warning")
 
@@ -98,7 +103,18 @@ func back() -> void:
 		return
 	_busy = true
 	Sfx.play_ui(&"ui_cancel")
-	Router.goto(SLOT_SELECT, {"mode": "new"})
+	Router.goto(HERO_SELECT, {"slot": slot, "hero": hero})
+
+
+## 06 §1.1: "KANDIDAT:IN" — with Graf Mopsula as hero "BEGLEITER:IN" (the Count names his companion).
+func heading() -> String:
+	return "BEGLEITER:IN" if hero == "mopsula" else "KANDIDAT:IN"
+
+
+func question() -> String:
+	if hero == "mopsula":
+		return "Graf Mopsula: „Wie heißt Unser:e Begleiter:in?“"
+	return "Wie sollen die Zuschauer:innen dich nennen?"
 
 
 func _char_key(c: String) -> Button:
@@ -128,8 +144,9 @@ func _build() -> void:
 	safe.add_child(col)
 	var head: HBoxContainer = UiUtil.hbox(14)
 	col.add_child(head)
-	head.add_child(UiUtil.label("KANDIDAT:IN", &"LabelTitle", 48))
-	var slot_l: Label = UiUtil.label("Slot %d" % slot, &"", 18, UiTheme.C_ACCENT_2)
+	head.add_child(UiUtil.label(heading(), &"LabelTitle", 48))
+	var slot_l: Label = UiUtil.label("Slot %d  ·  %s führt" % [slot, "Graf Mopsula" if hero == "mopsula" else "Kai"], &"",
+		18, UiTheme.C_ACCENT_2)
 	slot_l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	head.add_child(slot_l)
 	head.add_child(UiUtil.spacer(0, 0, true))
@@ -139,7 +156,7 @@ func _build() -> void:
 	col.add_child(body)
 	var left: VBoxContainer = UiUtil.vbox(10)
 	body.add_child(left)
-	left.add_child(UiUtil.label("Wie sollen die Zuschauer:innen dich nennen?", &"", 20, UiTheme.C_TEXT_DIM))
+	left.add_child(UiUtil.label(question(), &"", 20, UiTheme.C_TEXT_DIM))
 	name_edit = LineEdit.new()
 	name_edit.name = "NameEdit"
 	name_edit.max_length = MAX_LEN

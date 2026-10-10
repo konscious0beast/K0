@@ -17,6 +17,7 @@ var show_fps: bool = false                  # display/show_fps
 var camera_invert_x: bool = false           # input/camera_invert_x
 var camera_invert_y: bool = false           # input/camera_invert_y
 var camera_sensitivity: float = 1.0         # input/camera_sensitivity, 0.25..3.0
+var partner_auto: bool = false              # game/partner_auto (06 §1.4, package A): AutoPolicy plays the partner
 var ephemeral: bool = false                 # true: save_to_disk() is a no-op returning OK, load_from_disk() keeps defaults
 
 
@@ -39,6 +40,7 @@ func reset_defaults() -> void:
 	camera_invert_x = false
 	camera_invert_y = false
 	camera_sensitivity = 1.0
+	partner_auto = false
 
 
 ## Reads user://settings.cfg (missing file → defaults). No-op when ephemeral.
@@ -66,6 +68,7 @@ func load_from_disk() -> void:
 	camera_invert_x = bool(cfg.get_value("input", "camera_invert_x", camera_invert_x))
 	camera_invert_y = bool(cfg.get_value("input", "camera_invert_y", camera_invert_y))
 	camera_sensitivity = clampf(float(cfg.get_value("input", "camera_sensitivity", camera_sensitivity)), 0.25, 3.0)
+	partner_auto = bool(cfg.get_value("game", "partner_auto", partner_auto))
 
 
 ## Writes user://settings.cfg. Ephemeral: returns OK without writing.
@@ -86,6 +89,7 @@ func save_to_disk() -> Error:
 	cfg.set_value("input", "camera_invert_x", camera_invert_x)
 	cfg.set_value("input", "camera_invert_y", camera_invert_y)
 	cfg.set_value("input", "camera_sensitivity", camera_sensitivity)
+	cfg.set_value("game", "partner_auto", partner_auto)
 	return cfg.save(PATH)
 
 
@@ -104,4 +108,5 @@ func to_dict() -> Dictionary:
 		"camera_invert_x": camera_invert_x,
 		"camera_invert_y": camera_invert_y,
 		"camera_sensitivity": camera_sensitivity,
+		"partner_auto": partner_auto,
 	}

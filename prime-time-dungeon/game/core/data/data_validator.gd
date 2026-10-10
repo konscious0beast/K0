@@ -64,7 +64,8 @@ const REQUIRED_MOD_TAGS: PackedStringArray = ["intro", "floor_start", "first_fig
 ## sponsor_window_full) and the story beats of GDD §1.4 (tutorial_* hints B1/B2, story_battle:<encounter_id> banners B4).
 const OPTIONAL_MOD_TAG_PREFIXES: PackedStringArray = ["achievement:", "boss_intro:", "boss_phase:", "event_", "gift_received",
 	"mopsula_idle", "chat_", "gift_", "fan_pack_", "live_", "vote_", "twist_applied_", "tutorial_", "story_",
-	"sponsor_window_"]
+	"sponsor_window_",
+	"hero_"]                                # 06 package A: hero_pick:<id>, hero_switch:<id>
 
 ## Copy of StatIds.ALL (§6.3); test_m2_achievements asserts equality.
 const STAT_IDS: PackedStringArray = ["kills_total", "kills_skill", "battles_won", "battles_fled", "preemptives",
@@ -145,7 +146,8 @@ const VFX_KINDS: PackedStringArray = ["hit", "crit", "slash", "bite", "magic", "
 const SFX_IDS: PackedStringArray = ["ui_move", "ui_confirm", "ui_cancel", "ui_error", "step", "swing", "hit", "hit_crit",
 	"hit_weak", "miss", "magic", "fire", "ice", "shock", "toxic", "light", "dark", "heal", "buff", "debuff", "ko", "defend",
 	"flee", "stunt_success", "stunt_fail", "level_up", "chest_open", "coin", "lootbox_shake", "lootbox_open", "lootbox_rare",
-	"sponsor", "achievement", "timer_warn", "stairs", "swirl", "door", "mod_blip", "chat_pop", "vending"]
+	"sponsor", "achievement", "timer_warn", "stairs", "swirl", "door", "mod_blip", "chat_pop", "vending",
+	"bark"]                                 # 06 package A: Graf Mopsula's field ability
 const MUSIC_IDS: PackedStringArray = ["title", "explore", "battle", "boss", "safe_room", "victory", "game_over", "credits"]
 ## Exact `params` keys of floor events (§7.4).
 const FLOOR_EVENT_PARAMS: Dictionary = {

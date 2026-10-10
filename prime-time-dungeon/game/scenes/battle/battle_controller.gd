@@ -5,6 +5,9 @@ extends Node
 ## at the turn boundary (Show.take_pending_gift → BattleState.apply_gift → Show.note_battle_gift), then battle_ended →
 ## Game.apply_battle_result
 ## → Show.end_battle / unlocked_this_battle → results → Router.end_battle. Private M5 helper (no class_name).
+## 06 §1.4 (package A): with GameSettings.partner_auto the partner's turns (the character the player does not control,
+## Game.partner()) come from AutoPolicy like an auto battle (recorded "auto": true → replays unchanged); the hero's
+## turns stay manual. The full auto battle (toggle_auto) wins. The hero's party panel shows "DU", the partner's "AUTO".
 
 signal finished(result: BattleResult)
 
@@ -35,6 +38,9 @@ var gifts: Array[Dictionary] = []
 func _ready() -> void:
 	if player != null and not player.event_played.is_connected(_on_event_played):
 		player.event_played.connect(_on_event_played)
+	Events.settings_changed.connect(func() -> void:     # "Partner automatisch" switched in the pause menu
+		if is_inside_tree() and running:
+			mark_roles())
 
 
 ## Wires the player (event_played → Show) — call before run().
@@ -52,6 +58,7 @@ func run(setup: BattleSetup) -> void:
 	state = BattleState.new(setup, DB.data)
 	Show.begin_battle(setup)
 	Events.battle_started.emit(setup.encounter_id, setup.is_boss)
+	mark_roles()
 	await _play(state.start())
 	while not state.is_finished():
 		var actor: Combatant = state.current_actor()
@@ -59,7 +66,8 @@ func run(setup: BattleSetup) -> void:
 			push_error("[BattleController] no current actor in AWAIT_COMMAND")
 			break
 		Events.battle_turn_started.emit(actor.id, actor.is_party())
-		var chosen: bool = actor.is_party() and (force_manual or not Game.auto_battle) and auto_turns <= 0
+		var chosen: bool = actor.is_party() and (force_manual or not Game.auto_battle) and auto_turns <= 0 \
+			and (force_manual or not is_partner_auto(actor.def_id))
 		var cmd: BattleCommand = null
 		if chosen:
 			cmd = await hud.request_command(state, actor)
@@ -94,6 +102,27 @@ func run(setup: BattleSetup) -> void:
 	finished.emit(result)
 	if exit_on_end:
 		Router.end_battle(result)
+
+
+## 06 §1.4: does AutoPolicy play this party member? Only the partner (not the controlled hero) and only with
+## "Partner automatisch" switched on.
+static func is_partner_auto(member_def_id: String) -> bool:
+	return Game.settings != null and Game.settings.partner_auto and member_def_id == Game.partner()
+
+
+## Party panels: "DU" on the controlled character, "AUTO" on the partner while "Partner automatisch" is on.
+func mark_roles() -> void:
+	if hud == null or state == null:
+		return
+	var panels: Dictionary = hud.get("panels") as Dictionary
+	if panels == null:
+		return
+	for c: Combatant in state.setup.party:          # BattleState builds its combatants only in start()
+		if c == null or not panels.has(c.id):
+			continue
+		var p: Object = panels[c.id] as Object
+		if p != null and p.has_method("set_role"):
+			p.call("set_role", c.def_id == Game.hero(), not force_manual and is_partner_auto(c.def_id))
 
 
 ## The loop stopped without a BattleResult (a BattleState bug: no current actor, or no events for a validated

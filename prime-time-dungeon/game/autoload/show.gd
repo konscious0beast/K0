@@ -1038,8 +1038,10 @@ func _on_floor_entered(floor_index: int) -> void:
 	var def: FloorDef = DB.data.floor_def(floor_index) if DB.data != null else null
 	if def == null or def.timer_start_after == "" or st == null or st.floor_run == null or st.floor_run.timer_started:
 		return
-	say("tutorial_explore")
-	say("tutorial_sneak")
+	# 06 package A: with Graf Mopsula as hero the B1 hints explain the bark (`<tag>:mopsula`, fallback the base tag)
+	var hero_suffix: String = ":mopsula" if st.hero == "mopsula" else ""
+	say("tutorial_explore" + hero_suffix)
+	say("tutorial_sneak" + hero_suffix)
 
 
 func _on_sponsor_gift_triggered(sponsor_id: String) -> void:

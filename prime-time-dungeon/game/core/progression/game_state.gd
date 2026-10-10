@@ -18,6 +18,8 @@ var floor_run: FloorRun = null
 var show: ShowState = null
 var flags: Dictionary = {}
 var rng_counter: int = 0
+# --- 06 package A: controlled character (HeroRules) -------------------------------------------------------------------
+var hero: String = "kai"               # "kai" | "mopsula" — leads the exploration, the other one follows (06 §1)
 
 
 ## Party from party.json (level 1, full hp/mp, learnset level ≤ 1, start equipment); inventory + credits from
@@ -112,6 +114,7 @@ func to_dict() -> Dictionary:
 		"floor_run": floor_run.to_dict() if floor_run != null else null,
 		"show": (show if show != null else ShowState.new()).to_dict(),
 		"flags": _normalize(flags),
+		"hero": hero,                          # 06 package A
 	}
 
 
@@ -157,6 +160,7 @@ static func from_dict(d: Dictionary) -> GameState:
 	var raw_flags: Variant = d.get("flags", {})
 	if raw_flags is Dictionary:
 		st.flags = _normalize(raw_flags)
+	st.hero = HeroRules.sanitize(str(d.get("hero", HeroRules.DEFAULT_HERO)))   # 06 package A: old saves → "kai"
 	return st
 
 

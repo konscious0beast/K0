@@ -37,11 +37,12 @@ func prompt_text() -> String:
 		return ""
 	if is_locked() and not _has_item(KEY_ITEM):
 		return tr("Verschlossen. Ein Generalschlüssel wäre praktisch.")
+	var snout: bool = Game.hero() == "mopsula"     # 06 §1.2: the Count opens chests with his snout (same rules)
 	if is_locked():
-		return tr("Spind aufschließen")
+		return tr("Spind aufschließen – mit der Schnauze") if snout else tr("Spind aufschließen")
 	if chest.type == "metal":
-		return tr("Spind öffnen")
-	return tr("Kiste öffnen")
+		return tr("Spind mit der Schnauze öffnen") if snout else tr("Spind öffnen")
+	return tr("Kiste mit der Schnauze öffnen") if snout else tr("Kiste öffnen")
 
 
 func interact() -> void:

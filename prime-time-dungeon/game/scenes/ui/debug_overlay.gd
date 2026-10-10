@@ -1,7 +1,10 @@
 extends CanvasLayer
 ## DebugOverlay (02_TECH §1.6, layer 90; 05 §11.3): F3 (action debug_overlay, debug builds only) toggles FPS, draw calls,
-## primitives, seed, floor/room, timer, show values, input scheme, router stack. "Test-Geschenk" (button / F4) sends
-## Show.receive_gift(Gift.make_dev("chest", "bronze", 0)). settings.show_fps shows a compact FPS line when closed.
+## primitives, seed, floor/room, timer, show values, Sponsor-Fenster, input scheme, router stack. "Test-Geschenk"
+## (button / F4) simulates a viewer gift: Show.receive_gift(Gift.make_dev("chest", "bronze", 0, <new test viewer>)) —
+## it respects the Sponsor-Fenster like every viewer gift (05 §6.13; refusal toast names the reason and the next
+## window). "Fenster öffnen" (button / F5) opens a QA window (Game.open_dev_sponsor_window, recorded; only where
+## rules.sponsor_windows.dev_open allows it). settings.show_fps shows a compact FPS line when closed.
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const REFRESH_SEC: float = 0.25
@@ -13,7 +16,14 @@ var _panel: PanelContainer
 var _text: Label
 var _fps_line: Label
 var _gift_btn: Button
+var _window_btn: Button
 var _acc: float = 0.0
+var _viewer_n: int = 0
+## German texts of the gift refusals the dev tool shows (05 §6.5 / §6.13 reason codes).
+const REASON_TEXT: Dictionary = {"window_closed": "Sponsor-Fenster zu", "window_full": "Sponsor-Fenster voll",
+	"window_sender_limit": "Zuschauer-Limit im Fenster erreicht", "league_pur": "Pur-Liga – keine Geschenke",
+	"cap_reached": "Geschenk-Kontingent erreicht", "not_accepting": "Geschenke abgelehnt",
+	"chest_blocked": "Kisten gesperrt (Wirkung)", "run_not_active": "kein Lauf aktiv"}
 
 
 func _init() -> void:
@@ -45,6 +55,10 @@ func _ready() -> void:
 	_gift_btn.add_theme_font_size_override("font_size", 15)
 	_gift_btn.pressed.connect(send_test_gift)
 	col.add_child(_gift_btn)
+	_window_btn = UiUtil.button("Fenster öffnen (F5)", &"", 0)
+	_window_btn.add_theme_font_size_override("font_size", 15)
+	_window_btn.pressed.connect(open_test_window)
+	col.add_child(_window_btn)
 	_fps_line = UiUtil.label("", &"", 15, UiTheme.C_OK)
 	_fps_line.add_theme_font_override("font", UiTheme.font_mono())
 	_fps_line.set_anchors_preset(Control.PRESET_TOP_RIGHT)
@@ -63,6 +77,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif open and event is InputEventKey and (event as InputEventKey).pressed and not (event as InputEventKey).echo \
 			and (event as InputEventKey).physical_keycode == KEY_F4:
 		send_test_gift()
+		get_viewport().set_input_as_handled()
+	elif open and event is InputEventKey and (event as InputEventKey).pressed and not (event as InputEventKey).echo \
+			and (event as InputEventKey).physical_keycode == KEY_F5:
+		open_test_window()
 		get_viewport().set_input_as_handled()
 
 
@@ -111,14 +129,40 @@ func info_text() -> String:
 		var cell: Vector2i = cur.call("get_player_cell")
 		lines.append("Raum       (%d, %d)" % [cell.x, cell.y])
 	lines.append("Hype       %.1f   Zuschauer %s" % [Show.hype(), UiUtil.fmt_int(Show.viewers())])
+	lines.append("Sponsor    %s" % window_text(Show.sponsor_window_view()))
 	lines.append("Eingabe    %s" % ["Tastatur/Maus", "Gamepad", "Touch"][clampi(Game.input_scheme, 0, 2)])
 	lines.append("Screen     %s  (Stapel %d)" % [cur.name if cur != null else "-", Router.stack_size()])
 	lines.append("Modus      %s%s" % [String(Game.mode), "  AUTOPLAY" if Game.autoplay else ""])
 	return "\n".join(lines)
 
 
+## One line about the Sponsor-Fenster: "offen 0:45 · 2/3 Plätze (boss)" / "zu · nächstes in 3:12" / "aus".
+static func window_text(v: Dictionary) -> String:
+	if not bool(v.get("tracked", false)):
+		return "aus"
+	if bool(v.get("open", false)):
+		return "%s %s · %d/%d Plätze (%s)" % ["voll" if bool(v.get("full", false)) else "offen",
+			_mmss(int(v.get("left_sec", 0))), int(v.get("slots", 0)) - int(v.get("free", 0)), int(v.get("slots", 0)),
+			str(v.get("kind", ""))]
+	var next: int = int(v.get("next_in_sec", -1))
+	return "zu · nächstes in %s" % _mmss(next) if next >= 0 else "zu"
+
+
+static func _mmss(sec: int) -> String:
+	var s: int = maxi(0, sec)
+	return "%d:%02d" % [s / 60, s % 60]
+
+
+## QA window (Game.open_dev_sponsor_window: 60 s, 3 slots); toast with the result.
+func open_test_window() -> bool:
+	var ok: bool = Game.open_dev_sponsor_window(60, 3)
+	Events.toast_requested.emit("Sponsor-Fenster (Test): %s" % ("geöffnet" if ok else "nicht erlaubt"), &"gift")
+	return ok
+
+
 func send_test_gift() -> Dictionary:
-	var gift: Dictionary = Gift.make_dev("chest", "bronze", 0)
+	_viewer_n += 1
+	var gift: Dictionary = Gift.make_dev("chest", "bronze", 0, "dev_viewer_%d" % _viewer_n)
 	if gift.is_empty():
 		gift = {"schema": 1, "gift_id": "g_dev_ui_%d" % Time.get_ticks_msec(), "source": "dev", "kind": "chest",
 			"tier": "bronze", "amount": 0, "sponsor_id": "", "sender": {"display_name": "", "anon": true,
@@ -127,8 +171,16 @@ func send_test_gift() -> Dictionary:
 			"deliver_by_tick": 0, "issued_at": ""}
 	var res: Dictionary = Show.receive_gift(gift)
 	Events.toast_requested.emit("Test-Geschenk: %s" % ("angenommen" if bool(res.get("accepted", res.get("ok", false)))
-		else "abgelehnt (%s)" % str(res.get("reason", "?"))), &"gift")
+		else "abgelehnt – " + refusal_text(str(res.get("reason", "?")), Show.sponsor_window_view())), &"gift")
 	return res
+
+
+## German refusal text; window refusals name the next window ("Sponsor-Fenster zu – nächstes in 3:12").
+static func refusal_text(reason: String, v: Dictionary) -> String:
+	var text: String = str(REASON_TEXT.get(reason, reason))
+	if reason.begins_with("window_") and int(v.get("next_in_sec", -1)) >= 0:
+		text += " – nächstes in " + _mmss(int(v["next_in_sec"]))
+	return text
 
 
 func _apply() -> void:

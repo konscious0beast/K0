@@ -1008,7 +1008,8 @@ func _replay_check() -> bool:
 	if Game.run_log == null or bool(Game.run_log.header.get("from_save", false)):
 		return true
 	var live: String = StateHash.of(Game.state)
-	var out: Dictionary = Game.replay_log(Game.run_log)
+	# the run clock keeps ticking in the safe room (idle ticks, Sponsor-Fenster 05 §6.13): replay up to the live tick
+	var out: Dictionary = Game.replay_log(Game.run_log, Game.sim.tick() if Game.sim != null else -1)
 	replay_checks += 1
 	if str(out.get("final_hash", "")) != live:
 		return fail("replay of the run log (%d commands) does not reproduce the live state (mismatch at checkpoint %d)"

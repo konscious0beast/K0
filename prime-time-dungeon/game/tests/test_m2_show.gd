@@ -679,6 +679,7 @@ func test_show_sponsor_choice_is_deterministic_per_seed() -> void:
 
 func test_show_external_gifts_queue_record_and_duplicates() -> void:
 	_world()
+	assert_true(Game.open_dev_sponsor_window(60, 4), "viewer gifts need an open Sponsor-Fenster (05 §6.13)")
 	var spy: _SpyLog = _SpyLog.new()
 	Game.run_log = spy
 	var received: Array = []
@@ -838,6 +839,7 @@ func test_show_top_threshold_peak_and_followers_do_not_depend_on_gift_slots() ->
 ## 80 right away instead of staying at 100 for another turn.
 func test_show_external_gift_taking_the_reserved_top_slot_resets_hype_at_once() -> void:
 	_world()
+	assert_true(Game.open_dev_sponsor_window())
 	Game.in_battle = true
 	Show.begin_battle(_setup(true))                       # boss: 3 gifts
 	Show.add_hype(25.0)                                   # 30 → 55: 50 (+8 achievement)
@@ -966,6 +968,7 @@ func test_show_sync_from_state_reemits() -> void:
 ## no queue, no follower conversion; waiting external gifts are refused, never applied later.
 func test_show_abort_battle_drops_the_battle_context() -> void:
 	_world()
+	assert_true(Game.open_dev_sponsor_window())
 	var rejected: Array = []
 	var cb_x: Callable = func(id: String, reason: String) -> void: rejected.append([id, reason])
 	Events.gift_rejected.connect(cb_x)

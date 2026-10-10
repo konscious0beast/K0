@@ -17,6 +17,8 @@ const SIGNALS: Dictionary = {
 	"member_leveled": 3, "inventory_changed": 0, "credits_changed": 2, "lootbox_earned": 1, "lootbox_opened": 2,
 	"run_started": 2, "run_finished": 1, "quest_progress": 1, "quest_completed": 0, "gift_received": 1,
 	"gift_rejected": 2, "toast_requested": 2, "dialog_reserve_requested": 3,
+	"sponsor_window_opened": 1, "sponsor_window_closed": 2,
+	"sponsor_window_updated": 1,
 }
 const ACTIONS: PackedStringArray = ["move_forward", "move_back", "move_left", "move_right", "cam_left", "cam_right",
 	"cam_up", "cam_down", "sneak", "action", "pause", "map", "tab_prev", "tab_next", "toggle_auto", "toggle_speed",

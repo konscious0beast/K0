@@ -1295,6 +1295,55 @@
 			"weight": 1
 		},
 		{
+			"id": "mod_sponsor_window_open_01",
+			"tag": "sponsor_window_open",
+			"voice": "mod",
+			"text": "Sponsor-Fenster offen: {seconds} Sekunden, {count} Plätze. NOVA SYNDIKAT nennt das Bürgerbeteiligung.",
+			"weight": 1
+		},
+		{
+			"id": "mod_sponsor_window_open_02",
+			"tag": "sponsor_window_open",
+			"voice": "mod",
+			"text": "Das Sponsor-Fenster steht offen. Helfen ist freiwillig, Zuschauen zählt genauso. Nur Zugluft ist Pflicht.",
+			"weight": 1
+		},
+		{
+			"id": "mod_sponsor_window_open_safe_room_01",
+			"tag": "sponsor_window_open:safe_room",
+			"voice": "mod",
+			"text": "Werbepause mit Sponsor-Fenster, {seconds} Sekunden lang. Wer nur zuschaut, macht auch alles richtig.",
+			"weight": 1
+		},
+		{
+			"id": "mod_sponsor_window_open_boss_01",
+			"tag": "sponsor_window_open:boss",
+			"voice": "mod",
+			"text": "Boss-Countdown! Das Sponsor-Fenster ist {seconds} Sekunden offen. Danach zählt nur noch Können. Und Glück.",
+			"weight": 1
+		},
+		{
+			"id": "mod_sponsor_window_closed_01",
+			"tag": "sponsor_window_closed",
+			"voice": "mod",
+			"text": "Sponsor-Fenster zu. Die Regie nennt das Programmstruktur. Ich nenne es: Durchzug verhindern.",
+			"weight": 1
+		},
+		{
+			"id": "mod_sponsor_window_closed_02",
+			"tag": "sponsor_window_closed",
+			"voice": "mod",
+			"text": "Fenster geschlossen. Mitfiebern bleibt erlaubt – das hat die Rechtsabteilung noch nicht entdeckt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_sponsor_window_full_01",
+			"tag": "sponsor_window_full",
+			"voice": "mod",
+			"text": "Alle {count} Plätze im Sponsor-Fenster belegt. Danke – auch dem stillen Publikum. Das zählt hier am meisten.",
+			"weight": 1
+		},
+		{
 			"id": "mod_tutorial_explore_01",
 			"tag": "tutorial_explore",
 			"voice": "mod",

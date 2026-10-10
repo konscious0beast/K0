@@ -14,6 +14,12 @@ class_name RunSim extends RefCounted
 ##     "f<i>_s<stray_counter>", encounter = pool[SeedUtil.make_rng(SeedUtil.derive(floor_run.seed, "stray",
 ##     stray_counter)).randi_range(0, size − 1)], floor_run.strays[group] = {"zone", "enc"}, stray_counter +1,
 ##     ticks reset → STRAY_DUE {"zone", "group_id", "encounter_id"}
+##   5 Sponsor-Fenster (SponsorWindows.tick, 05 §6.13): the open window counts down, the periodic countdown runs
+##     → SPONSOR_WINDOW_OPENED {"window"} / SPONSOR_WINDOW_CLOSED {"id", "kind", "reason"}
+## Idle ticks: while floor_run.location is a safe room (not &"start") a tick only runs step 5 with explore = false —
+## the run clock keeps ticking in safe rooms (Sponsor-Fenster max_sec), the floor timer, hype decay, pacifist
+## counter, strays and the periodic countdown do not (explore_only: the floor timer runs in the exploration only).
+## Game steps idle ticks only while the safe room scene is shown and windows are tracked (Game.is_idle_ticking).
 ## The clock only runs while the floor timer runs: floor_run.timer_started, time left > 0, no battle started by
 ## apply(), no floor finished by "descend" — otherwise step() does nothing and tick() does not advance (Game calls it
 ## only in that situation anyway, so live run and replay tick identically).
@@ -41,7 +47,12 @@ class_name RunSim extends RefCounted
 ## External gifts are checked again when they are applied — the core check is authoritative (05 §6.10, L4/L5):
 ## gift_refusal() (duplicate id, GiftPolicy.check incl. league/caps/effect factor/deliver_by_tick, max_per_battle).
 ## A refused gift changes nothing, is not recorded and is listed in `rejected_cmds`; RunSim.replay reports every
-## refusal in "errors", so a verifier fails a log that smuggles in gifts.
+## refusal in "errors", so a verifier fails a log that smuggles in gifts. An accepted external gift is stamped with
+## the id of its Sponsor-Fenster ("sponsor_window") before it is recorded.
+## Sponsor-Fenster triggers (SponsorWindows): "floor" (closes, countdown restarts), first "room" of a boss cell
+## (Boss-Countdown), "safe_room" / "safe_room_exit", "sponsor_window" {"op": "dev_open", "sec", "slots"} (QA, only with
+## rules.sponsor_windows.dev_open — refused like a gift otherwise). Game calls the same sponsor_*() functions from its
+## recording methods, so live run, Game.replay_log and RunSim.replay open and close the same windows at the same ticks.
 
 const TICKS_PER_SEC: int = 30          # == Game.TICKS_PER_SEC == FloorRun.TICKS_PER_SEC
 const CHECKPOINT_TICKS: int = 300      # 05 §3.3 Nr. 8: checkpoint every 300 ticks
@@ -111,6 +122,12 @@ func apply(cmd: Dictionary) -> Array[ExploreEvent]:
 			push_warning("[RunSim] gift '%s' refused: %s" % [gid, refusal])
 			rejected_cmds.append({"k": _tick, "t": "gift", "gift_id": gid, "reason": refusal})
 			return out
+		_stamp_window(c["gift"])
+	if str(c["t"]) == "sponsor_window" and not SponsorWindows.dev_allowed(state, rules, int(c["sec"]),
+			int(c["slots"])):
+		push_warning("[RunSim] sponsor_window refused (rules.sponsor_windows.dev_open / not tracked)")
+		rejected_cmds.append({"k": _tick, "t": "sponsor_window", "gift_id": "", "reason": "not_allowed"})
+		return out
 	if run_log != null:
 		var cmd_id: int = 0
 		if not Command.is_external(c):
@@ -120,6 +137,7 @@ func apply(cmd: Dictionary) -> Array[ExploreEvent]:
 	match str(c["t"]):
 		"floor":
 			_apply_floor(int(c["floor"]))
+			out.append_array(sponsor_floor())
 		"encounter":
 			_apply_encounter(str(c["enc"]), int(c["adv"]), str(c["group"]), out)
 		"battle":
@@ -150,9 +168,13 @@ func apply(cmd: Dictionary) -> Array[ExploreEvent]:
 			_apply_event(str(c["id"]), str(c["choice"]), out)
 		"safe_room":
 			_apply_safe_room(str(c["id"]))
+			out.append_array(sponsor_safe_room(str(c["id"])))
 		"safe_room_exit":
 			if state.floor_run != null:
 				state.floor_run.location = &"start"
+			out.append_array(sponsor_safe_room_exit())
+		"sponsor_window":
+			out.append_array(sponsor_dev_open(int(c["sec"]), int(c["slots"])))
 		"scene":
 			if data != null and data.has_id("scenes", str(c["id"])):
 				var sc: SceneDef = data.scene_def(str(c["id"]))
@@ -236,6 +258,42 @@ func gift_refusal(g: Dictionary) -> String:
 ## battles and floor ends, because a Game-driven sim never sees those commands in apply().
 func request_checkpoint() -> void:
 	_checkpoint_due = true
+
+
+# --- Sponsor-Fenster (05 §6.13) -------------------------------------------------------------------------------------
+# Game calls these from its recording methods (start_floor, visit_room, enter/leave_safe_room,
+# open_dev_sponsor_window) and dispatches the events; apply() calls them for the same commands.
+
+## Floor start: closes the open window, restarts the periodic countdown and the safe rooms of the floor.
+func sponsor_floor() -> Array[ExploreEvent]:
+	return _sponsor_events(SponsorWindows.on_floor(state, rules))
+
+
+## First entry of `cell` (a boss cell opens the Boss-Countdown).
+func sponsor_room(cell: Vector2i) -> Array[ExploreEvent]:
+	var layout: FloorLayout = _current_layout()
+	var rc: RoomCell = layout.cell_at(cell) if layout != null else null
+	if rc == null:
+		return []
+	return _sponsor_events(SponsorWindows.on_room(state, rules, int(rc.kind)))
+
+
+func sponsor_safe_room(room_id: String) -> Array[ExploreEvent]:
+	return _sponsor_events(SponsorWindows.on_safe_room_enter(state, rules, room_id))
+
+
+func sponsor_safe_room_exit() -> Array[ExploreEvent]:
+	return _sponsor_events(SponsorWindows.on_safe_room_exit(state, rules))
+
+
+## QA window (rules.sponsor_windows.dev_open); [] when not allowed.
+func sponsor_dev_open(sec: int, slots: int) -> Array[ExploreEvent]:
+	return _sponsor_events(SponsorWindows.dev_open(state, rules, sec, slots))
+
+
+## SponsorWindows.view of the run (UI, debug, protocol).
+func sponsor_window() -> Dictionary:
+	return SponsorWindows.view(state, rules)
 
 
 ## Quest detail event {"type": "zones", "explored", "total"} of a floor: distinct zones of the visited cells of a
@@ -341,6 +399,10 @@ func _checkpoint_at_tick_end() -> void:
 ## One tick (02_TECH §7.1 order). true = the clock stopped (timer expired).
 func _tick_once(out: Array[ExploreEvent]) -> bool:
 	var fr: FloorRun = state.floor_run
+	if fr.location != &"start":
+		# idle tick in a safe room: only the Sponsor-Fenster clock (5)
+		out.append_array(_sponsor_events(SponsorWindows.tick(state, rules, false)))
+		return false
 	var def: FloorDef = data.floor_def(fr.index) if data != null else null
 	var warnings: PackedInt32Array = def.timer_warnings if def != null else PackedInt32Array()
 	# 1 timer
@@ -372,6 +434,8 @@ func _tick_once(out: Array[ExploreEvent]) -> bool:
 					"delta": roundi(now - old)}))
 	# 4 stray spawners
 	_tick_spawners(fr, out)
+	# 5 Sponsor-Fenster
+	out.append_array(_sponsor_events(SponsorWindows.tick(state, rules, true)))
 	return false
 
 
@@ -522,6 +586,8 @@ func _apply_room(cell: Vector2i, out: Array[ExploreEvent]) -> void:
 		_quest_feed_zones(fr, layout)
 	out.append(ExploreEvent.make(ExploreEvent.Type.ROOM_ENTERED, _tick, {"cell": [cell.x, cell.y], "kind": kind,
 		"first_visit": first}))
+	if first:
+		out.append_array(sponsor_room(cell))
 
 
 ## Like Game.open_chest (02_TECH §3.4): unknown / opened / locked without itm_key_master → nothing; else
@@ -676,6 +742,28 @@ func _quest_feed_zones(fr: FloorRun, layout: FloorLayout) -> void:
 	var ev: Dictionary = zones_event(fr, layout)
 	if not ev.is_empty():
 		quest.on_event(ev)
+
+
+## SponsorWindows event dictionaries → ExploreEvents at the current tick.
+func _sponsor_events(events: Array[Dictionary]) -> Array[ExploreEvent]:
+	var out: Array[ExploreEvent] = []
+	for e: Dictionary in events:
+		if str(e.get("type", "")) == "opened":
+			out.append(ExploreEvent.make(ExploreEvent.Type.SPONSOR_WINDOW_OPENED, _tick, {"window": e["window"]}))
+		else:
+			out.append(ExploreEvent.make(ExploreEvent.Type.SPONSOR_WINDOW_CLOSED, _tick, {"id": str(e.get("id", "")),
+				"kind": str(e.get("kind", "")), "reason": str(e.get("reason", ""))}))
+	return out
+
+
+## An accepted external gift without stamp gets the id of its Sponsor-Fenster (recorded with it).
+func _stamp_window(g: Dictionary) -> void:
+	if str(g.get("sponsor_window", "")) != "":
+		return
+	var live: Variant = state.flags.get("live", {})
+	var wid: String = SponsorWindows.window_for(live if live is Dictionary else {}, g)
+	if wid != "":
+		g["sponsor_window"] = wid
 
 
 func _compare_checkpoint(cps: Array[Dictionary], cp: int, out: Dictionary) -> int:

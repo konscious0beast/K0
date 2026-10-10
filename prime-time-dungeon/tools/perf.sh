@@ -36,7 +36,11 @@ if ! command -v "$GODOT" >/dev/null 2>&1; then
 fi
 
 WORK="$(mktemp -d -t ptd-perf-XXXXXX)"
-trap 'rm -rf "$WORK"' EXIT
+# Isolated user:// (XDG data/config) per run: parallel runs (worktrees, CI shards) never share saves/settings.
+UDIR="$(mktemp -d -t ptd-user-XXXXXX)"
+export XDG_DATA_HOME="$UDIR/data" XDG_CONFIG_HOME="$UDIR/config" XDG_CACHE_HOME="$UDIR/cache"
+mkdir -p "$XDG_DATA_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME"
+trap 'rm -rf "$WORK" "$UDIR"' EXIT
 cp -r "$SRC/." "$WORK/"
 rm -rf "$WORK/.godot"
 

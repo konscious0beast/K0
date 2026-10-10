@@ -25,6 +25,7 @@ const VALID: Array[Dictionary] = [
 	{"t": "flag", "key": "count", "value": 3},
 	{"t": "flag", "key": "name", "value": "Kai"},
 	{"t": "difficulty", "to": "vorabend"},
+	{"t": "sponsor_window", "op": "dev_open", "sec": 60, "slots": 3},
 	{"t": "descend"},
 ]
 
@@ -32,7 +33,7 @@ const VALID: Array[Dictionary] = [
 func test_types_are_the_recorded_list() -> void:
 	assert_eq(Command.TYPES, ["floor", "encounter", "battle", "lootbox", "buy", "sell", "equip", "use_item", "rest",
 		"event", "chest", "gate", "room", "safe_room", "safe_room_exit", "scene", "flag", "difficulty", "descend",
-		"gift"], "02_TECH §3.4")
+		"gift", "sponsor_window"], "02_TECH §3.4")
 	var covered: Dictionary = {"gift": true}
 	for c: Dictionary in VALID:
 		covered[c["t"]] = true
@@ -96,6 +97,10 @@ func test_invalid_commands() -> void:
 		[{"t": "difficulty", "to": "hard"}, "difficulty: to"],
 		[{"t": "gift"}, "gift: gift must be"],
 		[{"t": "gift", "gift": {"schema": 1}}, "gift: invalid_schema"],
+		[{"t": "sponsor_window", "op": "close", "sec": 60, "slots": 3}, "sponsor_window: op"],
+		[{"t": "sponsor_window", "op": "dev_open", "sec": 0, "slots": 3}, "sponsor_window: sec"],
+		[{"t": "sponsor_window", "op": "dev_open", "sec": 601, "slots": 3}, "sponsor_window: sec must be <= 600"],
+		[{"t": "sponsor_window", "op": "dev_open", "sec": 60, "slots": 17}, "slots <= 16"],
 	]
 	for c: Array in cases:
 		var err: String = Command.validate(c[0])
@@ -147,6 +152,7 @@ func test_commands_recorded_by_game_are_valid() -> void:
 	var cmd: BattleCommand = battle.choose_ai_command()
 	Game.record({"t": "battle", "cmd": cmd.to_dict(), "auto": true})
 	Game.in_battle = false
+	assert_true(Game.open_dev_sponsor_window(), "QA Sponsor-Fenster (recorded)")
 	assert_eq(Show.receive_gift(Gift.make_dev("gold", "", 100))["apply"], "now", "dev gift recorded on application")
 	var errs: PackedStringArray = Game.run_log.validate()
 	assert_eq(errs, PackedStringArray(), "Game.record shapes == Command schema")

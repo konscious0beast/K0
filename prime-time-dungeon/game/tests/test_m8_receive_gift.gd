@@ -88,6 +88,7 @@ func _boundary(battle: BattleState) -> void:
 ## (battle start) + 25 → crosses 50 → system gift. Everything that changes the state is in the log.
 func test_system_gift_runs_through_receive_gift_and_is_not_logged() -> void:
 	Game.new_game(0, "Kai", 4711)
+	assert_true(Game.open_dev_sponsor_window(), "viewer gifts need an open Sponsor-Fenster (05 §6.13, recorded)")
 	var sr: String = str((DB.floor_def(1).layout.get("safe_rooms", []) as Array)[0]["id"])
 	assert_eq(Show.receive_gift(Gift.make_dev("gold", "", 100))["apply"], "now")
 	Game.enter_safe_room(sr)
@@ -117,6 +118,7 @@ func test_system_gift_runs_through_receive_gift_and_is_not_logged() -> void:
 
 func test_dev_gift_outside_battle_is_logged_and_replays() -> void:
 	Game.new_game(0, "Kai", 815)
+	assert_true(Game.open_dev_sponsor_window(), "viewer gifts need an open Sponsor-Fenster (05 §6.13, recorded)")
 	var credits: int = Game.state.inventory.credits
 	var dev: Dictionary = Gift.make_dev("gold", "", 100)
 	var res: Dictionary = Show.receive_gift(dev)
@@ -138,6 +140,7 @@ func test_dev_gift_outside_battle_is_logged_and_replays() -> void:
 
 func test_dev_gift_in_battle_is_logged_at_delivery_and_replays() -> void:
 	Game.new_game(0, "Kai", 2323)
+	assert_true(Game.open_dev_sponsor_window(), "viewer gifts need an open Sponsor-Fenster (05 §6.13, recorded)")
 	var dev: Dictionary = Gift.make_dev("chest", "bronze", 0)
 	_battle(DB.floor_def(1).timer_start_after, func(_battle_state: BattleState) -> void:
 		assert_eq(Show.receive_gift(dev)["apply"], "queued", "in battle: queued")
@@ -145,7 +148,8 @@ func test_dev_gift_in_battle_is_logged_at_delivery_and_replays() -> void:
 	var kinds: Array = []
 	for c: Dictionary in Game.run_log.cmds():
 		kinds.append(c["c"]["t"])
-	assert_eq(kinds.slice(0, 3), ["floor", "encounter", "gift"], "recorded at the turn boundary where it was delivered")
+	assert_eq(kinds.slice(0, 4), ["floor", "sponsor_window", "encounter", "gift"],
+		"recorded at the turn boundary where it was delivered")
 	assert_has(_received, dev["gift_id"])
 	var live_hash: String = StateHash.of(Game.state)
 	var rep: Dictionary = Game.replay_log(Game.run_log)
@@ -170,6 +174,7 @@ func _fan_pack(n: int, load_half: int) -> Dictionary:
 ## live run ≡ Game.replay_log.
 func test_queued_gifts_are_rechecked_and_booked_at_application() -> void:
 	Game.new_game(0, "Kai", 5150)
+	assert_true(Game.open_dev_sponsor_window(), "viewer gifts need an open Sponsor-Fenster (05 §6.13, recorded)")
 	var g1: Dictionary = _fan_pack(1, 0)
 	var g2: Dictionary = _fan_pack(2, 0)
 	assert_eq(Gift.validate(g1), "", Gift.last_detail)
@@ -196,6 +201,7 @@ func test_queued_gifts_are_rechecked_and_booked_at_application() -> void:
 ## The deadline (deliver_by_tick, client sim) is checked against the run clock at application.
 func test_queued_gift_past_its_deadline_is_refused_at_application() -> void:
 	Game.new_game(0, "Kai", 5151)
+	assert_true(Game.open_dev_sponsor_window(), "viewer gifts need an open Sponsor-Fenster (05 §6.13, recorded)")
 	var late: Dictionary = Gift.make_dev("gold", "", 100)
 	late["deliver_by_tick"] = 1
 	Game.sim._tick = 5                        # the run clock is past the deadline
@@ -215,6 +221,7 @@ func test_queued_gift_past_its_deadline_is_refused_at_application() -> void:
 ## gift_diminished {pct} below full effect, gift_capped / gift_declined on those refusals.
 func test_gift_lines_name_sender_amount_and_refusals() -> void:
 	Game.new_game(0, "Kai", 5152)
+	assert_true(Game.open_dev_sponsor_window(), "viewer gifts need an open Sponsor-Fenster (05 §6.13, recorded)")
 	var lines: Array = []
 	var cb: Callable = func(text: String, _v: StringName, tag: String, _b: bool) -> void: lines.append([tag, text])
 	Events.mod_said.connect(cb)

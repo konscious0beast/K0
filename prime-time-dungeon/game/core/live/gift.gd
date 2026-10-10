@@ -36,9 +36,13 @@ const SIG_PREFIX: String = "hmac-sha256:"
 const REQUIRED: PackedStringArray = ["schema", "gift_id", "source", "kind", "tier", "amount", "sponsor_id", "sender",
 	"message_key", "target", "event_id", "window_id", "league", "effect_pm", "load_half", "run_bound",
 	"deliver_by_tick", "issued_at"]
-## Reason codes of Show.receive_gift (05 §6.5).
+## Reason codes of Show.receive_gift (05 §6.5); window_* = Sponsor-Fenster (SponsorWindows, 05 §6.13).
 const REASONS: PackedStringArray = ["", "invalid_schema", "duplicate", "league_pur", "not_accepting", "cap_reached",
-	"run_not_active", "effect_mismatch", "bad_signature", "chest_blocked", "deadline_missed"]
+	"run_not_active", "effect_mismatch", "bad_signature", "chest_blocked", "deadline_missed", "window_closed",
+	"window_full", "window_sender_limit"]
+## Optional field "sponsor_window": "" or the id of the Sponsor-Fenster the gift was accepted into ("sw_<n>", stamped by
+## Show at acceptance / by the gift service at its reservation, 05 §6.4).
+const SPONSOR_WINDOW_PREFIX: String = "sw_"
 
 static var last_detail: String = ""
 static var _dev_counter: int = 0          # roll nonce of dev chests / fan packs (independent of the gift id)
@@ -98,6 +102,13 @@ static func validate(g: Dictionary) -> String:
 		return _bad("deliver_by_tick must be an int >= 0")
 	if g.has("payload") and not (g["payload"] is Dictionary):
 		return _bad("payload must be a Dictionary")
+	if g.has("sponsor_window"):
+		var sw: Variant = g["sponsor_window"]
+		if not (sw is String) or ((sw as String) != "" and (not (sw as String).begins_with(SPONSOR_WINDOW_PREFIX)
+				or not (sw as String).trim_prefix(SPONSOR_WINDOW_PREFIX).is_valid_int())):
+			return _bad("sponsor_window must be '' or 'sw_<n>'")
+		if source == "system" and (sw as String) != "":
+			return _bad("system gifts need no Sponsor-Fenster")
 	if g.has("sig"):
 		var sig: Variant = g["sig"]
 		if not (sig is String) or not (sig as String).begins_with(SIG_PREFIX) \
@@ -128,10 +139,14 @@ static func make_system(sponsor_id: String, battle_n: int, k: int) -> Dictionary
 ## kind "gold": `amount` credits (≤ 0 → 100); "chest": `tier` bronze|silver|gold (else bronze), contents empty →
 ## the core rolls from the "gift" seed stream; "fan_pack": one common roll + hype; "sponsor_buff": `tier` carries the
 ## sponsor id (e.g. make_dev("sponsor_buff", "spn_gluckwasser", 0)); "cheer": cosmetic.
-static func make_dev(kind: String, tier: String, amount: int) -> Dictionary:
+## `sender_ref` (optional): a pseudonymous test viewer — the Sponsor-Fenster allow rules.sponsor_windows.per_viewer
+## gifts per viewer and window ("" = unknown sender, no per-viewer limit).
+static func make_dev(kind: String, tier: String, amount: int, sender_ref: String = "") -> Dictionary:
 	_dev_counter += 1
 	var g: Dictionary = _base("g_dev_" + _random_hex(8), "dev", kind)
 	g["league"] = "show"
+	if sender_ref != "":
+		(g["sender"] as Dictionary)["sender_ref"] = sender_ref
 	match kind:
 		"gold":
 			g["amount"] = amount if amount > 0 else 100

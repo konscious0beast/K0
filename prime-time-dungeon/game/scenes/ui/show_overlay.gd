@@ -1,7 +1,9 @@
 extends CanvasLayer
 ## ShowOverlay (02_TECH §1.6, §9.4 layer 40; 03_ART §9.2): the show IS the UI. LIVE badge, viewer counter, followers,
 ## hype meter (markers 50/75/100), sponsor lower third, chat ticker, gift drop announcement, REC corners and the TV
-## scanline/vignette layer. Mode via Events.overlay_mode_requested: &"explore", &"battle", &"safe_room", &"menu"
+## scanline/vignette layer, Sponsor-Fenster badge (05 §6.13) on the right end of the ticker: "SPONSOR-FENSTER OFFEN ·
+## 0:45 · 2/3 Plätze" / "Nächstes Fenster in 3:12" in event/live runs (Show.sponsor_presentation &"live"), the same as a
+## dim one-liner in the campaign (&"subtle"), hidden without windows (Pur-Liga). Mode via Events.overlay_mode_requested: &"explore", &"battle", &"safe_room", &"menu"
 ## (scanlines only), &"hidden", &"game_over" (scanlines only, M6-internal). Reads Show for numbers (never writes state).
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
@@ -27,6 +29,7 @@ const IDENTS: PackedStringArray = ["NOVA SYNDIKAT präsentiert: DUNGEON PRIME TI
 const KIND_NAMES: Dictionary = {"chest": "Sponsorkiste", "gold": "Credits-Geschenk", "fan_pack": "Applaus-Paket",
 	"sponsor_buff": "Sponsor-Paket", "cheer": "Applaus"}
 const TIER_NAMES: Dictionary = {"bronze": "Bronze", "silver": "Silber", "gold": "Gold"}
+const SPONSOR_REFRESH_SEC: float = 0.2     # badge countdown refresh (and at once on the sponsor_window_* signals)
 
 
 ## Hype meter 320×14: gradient magenta → gold, diamond markers at 50/75/100, gloss sweep on increase.
@@ -212,6 +215,12 @@ var _target_followers: int = 0
 var _demo_values: Dictionary = {}
 var _lower_lift: float = 0.0
 var _touch_shift: bool = false
+var _sw_panel: PanelContainer
+var _sw_label: Label
+var _sw_dot: Control
+var _sw_t: float = 0.0
+var _sw_demo: Dictionary = {}
+var _sw_style: String = ""
 
 
 ## Stores params only (screen contract); {"capture": true} → demo still with sample numbers.
@@ -234,6 +243,9 @@ func _ready() -> void:
 	Events.mod_said.connect(_on_mod_said)
 	Events.followers_changed.connect(_on_followers_changed)
 	Events.hype_changed.connect(_on_hype_changed)
+	Events.sponsor_window_opened.connect(_on_sponsor_window_signal)
+	Events.sponsor_window_updated.connect(_on_sponsor_window_signal)
+	Events.sponsor_window_closed.connect(_on_sponsor_window_closed)
 	get_viewport().size_changed.connect(_layout_hype)      # display insets move the touch pause/map buttons
 	_apply_quality()
 	_target_viewers = Show.display_viewers()
@@ -275,6 +287,11 @@ func _process(delta: float) -> void:
 			_hype.set_value(h, h > _hype.value)
 	_hype_value.text = str(roundi(_hype.shown))
 	_update_lower_lift(delta)
+	_sw_t -= delta
+	if _sw_t <= 0.0:
+		refresh_sponsor_badge()
+	if _sw_dot != null and _sw_dot.visible:
+		_sw_dot.modulate.a = 0.35 + 0.65 * (0.5 + 0.5 * cos(_time * TAU))
 	var touch_on: bool = TouchScript.active != null and is_instance_valid(TouchScript.active)
 	if touch_on != _touch_shift:
 		_touch_shift = touch_on
@@ -423,6 +440,86 @@ func badge_text() -> String:
 	return _badge_label.text
 
 
+## Text of the Sponsor-Fenster badge while it is shown, else "".
+func sponsor_badge_text() -> String:
+	return _sw_label.text if _sw_panel != null and _sw_panel.visible else ""
+
+
+## Badge style shown: "live_open" | "live_full" | "live_closed" | "subtle" | "" (hidden).
+func sponsor_badge_style() -> String:
+	return _sw_style if _sw_panel != null and _sw_panel.visible else ""
+
+
+## Re-reads Show.sponsor_window_view() (demo values in a capture still) and redraws the badge.
+func refresh_sponsor_badge() -> void:
+	_sw_t = SPONSOR_REFRESH_SEC
+	if _sw_panel == null:
+		return
+	show_sponsor_window(_sw_demo if _demo else Show.sponsor_window_view())
+
+
+## Badge for a Show.sponsor_window_view() dictionary (05 §6.13). Live: gold TV bug "SPONSOR-FENSTER OFFEN · 0:45 ·
+## 2/3 Plätze" (taken incl. reservations / slots), "… VOLL …" when no slot is free, "Nächstes Fenster in 3:12" while
+## closed; campaign (subtle): the same information as a dim line without plate; off / nothing scheduled: hidden.
+func show_sponsor_window(v: Dictionary) -> void:
+	var text: String = sponsor_text(v)
+	var mode_s: String = str(v.get("mode", "off"))
+	_sw_panel.visible = text != ""
+	if text == "":
+		_sw_style = ""
+		return
+	_sw_label.text = UiUtil.glyph_safe(text)
+	var open: bool = bool(v.get("open", false))
+	var full: bool = bool(v.get("full", false))
+	var style: String = "subtle"
+	if mode_s == "live":
+		style = "live_closed" if not open else ("live_full" if full else "live_open")
+	if style == _sw_style:
+		return
+	_sw_style = style
+	var bg: Color = Color(0, 0, 0, 0)
+	var border: Color = Color(0, 0, 0, 0)
+	var fg: Color = Color(UiTheme.C_TEXT_DIM, 0.8)
+	match style:
+		"live_open":
+			bg = UiTheme.C_GOLD
+			fg = UiUtil.C_INK
+		"live_full":
+			bg = Color(UiTheme.C_PANEL, 0.95)
+			border = UiTheme.C_GOLD
+			fg = UiTheme.C_GOLD
+		"live_closed":
+			bg = Color(UiTheme.C_PANEL, 0.85)
+			fg = UiTheme.C_TEXT_DIM
+	_sw_panel.add_theme_stylebox_override("panel", UiUtil.box_style(bg, border, 1 if border.a > 0.0 else 0, 0.21,
+		12, 0))
+	_sw_label.add_theme_color_override("font_color", fg)
+	_sw_dot.visible = style == "live_open"
+	_sw_dot.set("color", UiUtil.C_INK)
+
+
+## "SPONSOR-FENSTER OFFEN · 0:45 · 2/3 Plätze" / "… VOLL …" / "Nächstes Fenster in 3:12" (live);
+## "Sponsor-Fenster offen · 0:45 · 2/3 Plätze" / "Nächstes Fenster in 3:12" (subtle); "" = no badge.
+static func sponsor_text(v: Dictionary) -> String:
+	var mode_s: String = str(v.get("mode", "off"))
+	if mode_s == "off" or not bool(v.get("tracked", false)):
+		return ""
+	if bool(v.get("open", false)):
+		var slots: int = int(v.get("slots", 0))
+		var taken: int = slots - int(v.get("free", 0))
+		var full: bool = bool(v.get("full", false))
+		var head: String = ("SPONSOR-FENSTER VOLL" if full else "SPONSOR-FENSTER OFFEN") if mode_s == "live" \
+			else ("Sponsor-Fenster voll" if full else "Sponsor-Fenster offen")
+		return "%s · %s · %d/%d Plätze" % [head, _mmss(int(v.get("left_sec", 0))), taken, slots]
+	var next: int = int(v.get("next_in_sec", -1))
+	return "Nächstes Fenster in %s" % _mmss(next) if next >= 0 else ""
+
+
+static func _mmss(sec: int) -> String:
+	var s: int = maxi(0, sec)
+	return "%d:%02d" % [s / 60, s % 60]
+
+
 func viewers_text() -> String:
 	return _viewers_label.text
 
@@ -563,6 +660,24 @@ func _build_ticker() -> void:
 	_ticker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_ticker.custom_minimum_size = Vector2(0, 22)
 	row.add_child(_ticker)
+	_sw_panel = PanelContainer.new()
+	_sw_panel.name = "SponsorWindowBadge"
+	_sw_panel.custom_minimum_size = Vector2(0, 22)
+	_sw_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_sw_panel.visible = false
+	row.add_child(_sw_panel)
+	var swr: HBoxContainer = UiUtil.hbox(6)
+	swr.alignment = BoxContainer.ALIGNMENT_CENTER
+	_sw_panel.add_child(swr)
+	_sw_dot = UiIcon.make(&"dot", UiUtil.C_INK, 8)
+	_sw_dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	swr.add_child(_sw_dot)
+	_sw_label = UiUtil.label("", &"", 15, UiTheme.C_TEXT_DIM)
+	_sw_label.name = "SponsorWindowText"
+	_sw_label.add_theme_font_override("font", UiTheme.font_bold())
+	_sw_label.add_theme_constant_override("outline_size", 0)
+	_sw_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	swr.add_child(_sw_label)
 
 
 func _build_lower_third() -> void:
@@ -726,6 +841,14 @@ func _on_gift_received(gift: Dictionary) -> void:
 		announce_gift(gift)
 
 
+func _on_sponsor_window_signal(_window: Dictionary) -> void:
+	refresh_sponsor_badge()
+
+
+func _on_sponsor_window_closed(_window_id: String, _reason: String) -> void:
+	refresh_sponsor_badge()
+
+
 func _on_chat_posted(user: String, text: String, mood: StringName) -> void:
 	post_chat(user, text, mood)
 
@@ -774,6 +897,9 @@ func _start_demo() -> void:
 		_lower_name_panel.add_theme_stylebox_override("panel", UiUtil.box_style(
 			UiUtil.hex(DB.sponsor(sponsors[0]).color, UiTheme.C_ACCENT), Color(0, 0, 0, 0), 0, 0.21, 16, 4))
 		_lower.visible = true
+	_sw_demo = {"tracked": true, "mode": "live", "open": true, "kind": "periodic", "left_sec": 45, "slots": 3,
+		"free": 1, "full": false, "next_in_sec": -1}
+	refresh_sponsor_badge()
 	announce_gift({"kind": "chest", "tier": "bronze", "source": "dev", "sender": {"anon": true}})
 	if _gift_tween != null and _gift_tween.is_valid():
 		_gift_tween.kill()

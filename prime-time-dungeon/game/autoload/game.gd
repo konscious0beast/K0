@@ -5,6 +5,9 @@ extends Node
 ## Recording rule (§3.4): every state change requested from outside core/ (scenes, UI) goes through a recording Game
 ## method (RunLog command); reactions (Show on Events signals, BattleBridge, RunSim) are deterministic and not recorded.
 ## replay_log() drives exactly these methods again, so live run and replay share one code path.
+## Sponsor-Fenster (05 §6.13): start_floor, visit_room, enter/leave_safe_room and open_dev_sponsor_window call the
+## matching RunSim.sponsor_*() trigger and dispatch its events (sponsor_window_opened / _closed); the clock also runs
+## "idle ticks" while the safe room scene is shown (safe_room_clock, is_idle_ticking) — the floor timer does not.
 
 enum InputScheme { KEYBOARD_MOUSE, GAMEPAD, TOUCH }
 const TICKS_PER_SEC: int = 30        # simulation clock (05 CR-3): 1 tick = 1/30 s explore time
@@ -37,6 +40,7 @@ var quest: QuestTracker = null       # only mode &"event_offline"
 var sim: RunSim = null               # deterministic explore clock (thin variant, 05 CR-6)
 var in_battle: bool = false          # make_battle_setup → apply_battle_result; Show routes external gifts by it (§3.5)
 var replaying: bool = false          # true while replay_log runs: record() is a no-op, no Router/Save side effects
+var safe_room_clock: bool = false    # SafeRoomScene shown: the run clock keeps ticking (idle ticks, Sponsor-Fenster)
 
 var _acc: float = 0.0
 var _blocking_dialogs: int = 0
@@ -110,15 +114,16 @@ func _process(delta: float) -> void:
 	if state == null:
 		return
 	state.play_time_sec += delta
-	if not is_timer_ticking() or sim == null:
+	if sim == null or not (is_timer_ticking() or is_idle_ticking()):
 		return
 	_acc += delta
 	var n: int = floori(_acc * TICKS_PER_SEC)
 	_acc -= n / float(TICKS_PER_SEC)
 	# One tick at a time: reactions to a tick's events (Show hype at warnings, achievements on explore_tick) apply
-	# before the next tick, independent of the frame rate — replay_log() steps identically.
+	# before the next tick, independent of the frame rate — replay_log() steps identically. In a safe room RunSim
+	# makes them idle ticks (Sponsor-Fenster only), decided by floor_run.location — the replay does the same.
 	for _i in n:
-		if not is_timer_ticking():
+		if not (is_timer_ticking() or is_idle_ticking()):
 			_acc = 0.0
 			break
 		_dispatch(sim.step(1))
@@ -261,12 +266,23 @@ func start_floor(floor_index: int) -> void:
 	clear_blocking_dialogs()
 	Show.start_floor(floor_index)
 	record({"t": "floor", "floor": floor_index})
+	if sim != null:
+		_dispatch(sim.sponsor_floor())
 
 
 ## timer_running and state.floor_run.timer_started and no blocking dialog.
 func is_timer_ticking() -> bool:
 	return timer_running and state != null and state.floor_run != null and state.floor_run.timer_started \
 		and _blocking_dialogs == 0
+
+
+## Idle ticks of the run clock in a safe room (Sponsor-Fenster max_sec, 05 §6.13): safe room scene shown
+## (safe_room_clock), location = a safe room, countdown started, no blocking dialog, no battle, windows tracked.
+## RunSim.step makes them idle ticks (no floor timer, no hype decay, no strays).
+func is_idle_ticking() -> bool:
+	return safe_room_clock and not replaying and not in_battle and _blocking_dialogs == 0 and state != null \
+		and state.floor_run != null and state.floor_run.timer_started and state.floor_run.location != &"start" \
+		and SponsorWindows.tracked(state)
 
 
 func complete_floor() -> void:
@@ -508,6 +524,8 @@ func visit_room(cell: Vector2i) -> bool:
 		if rc != null and rc.kind == RoomCell.Kind.STAIRS:
 			fr.stairs_found = true
 	_quest_feed(RunSim.zones_event(fr, layout))   # reach_stairs progress before the stairs (05 §1.3, same as RunSim)
+	if sim != null:
+		_dispatch(sim.sponsor_room(cell))         # boss room → Boss-Countdown (05 §6.13)
 	return true
 
 
@@ -565,6 +583,8 @@ func enter_safe_room(safe_room_id: String) -> Dictionary:
 	if first_visit:
 		fr.visited_safe_rooms.append(safe_room_id)
 	_full_heal()
+	if sim != null:
+		_dispatch(sim.sponsor_safe_room(safe_room_id))
 	var kai: PartyMember = state.member("kai")
 	return {"safe_room_id": safe_room_id, "first_visit": first_visit, "safe_room_visits": fr.safe_room_visits,
 		"kai_level": kai.level if kai != null else 1}
@@ -576,6 +596,27 @@ func leave_safe_room() -> void:
 		return
 	record({"t": "safe_room_exit"})
 	state.floor_run.location = &"start"
+	if sim != null:
+		_dispatch(sim.sponsor_safe_room_exit())
+
+
+## QA/debug (05 §6.13): opens a Sponsor-Fenster of `sec` seconds with `slots` slots — recorded
+## ({"t": "sponsor_window", "op": "dev_open", "sec", "slots"}), only where rules.sponsor_windows.dev_open allows it
+## (campaign/offline defaults; live events switch it off). false = not allowed / no run.
+func open_dev_sponsor_window(sec: int = 60, slots: int = 3) -> bool:
+	if state == null or sim == null or not SponsorWindows.dev_allowed(state, sim.rules, sec, slots):
+		return false
+	record({"t": "sponsor_window", "op": "dev_open", "sec": sec, "slots": slots})
+	_dispatch(sim.sponsor_dev_open(sec, slots))
+	return true
+
+
+## SponsorWindows.view of the run ({"tracked": false, …} without a run): open window, slots, seconds left, next
+## periodic window.
+func sponsor_window() -> Dictionary:
+	if sim == null or state == null:
+		return SponsorWindows.view(null, {})
+	return sim.sponsor_window()
 
 
 ## First SceneDef (priority order) whose condition holds and that was not seen; null.
@@ -746,7 +787,9 @@ func finish_run(cause: StringName) -> Dictionary:
 ## take_pending_gift/end_battle). The live context (state, log, sim, quest, …) is restored afterwards.
 ## Not during a battle (Show's battle state would be overwritten). Checkpoint k = state after all commands with k' <= k.
 ## Returns {"final_hash": String, "result": Dictionary, "mismatch_at": int (first failing checkpoint index, -1 = none)}.
-func replay_log(p_log: RunLog) -> Dictionary:
+## until_tick >= 0: the clock steps on to that tick after the last command (the live sim.tick() — idle ticks in a safe
+## room move the clock without a command).
+func replay_log(p_log: RunLog, until_tick: int = -1) -> Dictionary:
 	var out: Dictionary = {"final_hash": "", "result": {}, "mismatch_at": -1}
 	if p_log == null:
 		return out
@@ -778,6 +821,8 @@ func replay_log(p_log: RunLog) -> Dictionary:
 	if state != null:
 		sim = RunSim.new(DB.data, state, rules)
 		_replay_commands(p_log, out)
+		if until_tick >= 0:
+			_replay_advance(until_tick)
 		out["final_hash"] = StateHash.of(state)
 		out["result"] = {"ticks": sim.tick(), "cmds": p_log.cmds().size(), "floor": _replay_floor(state),
 			"quest_complete": quest.is_complete() if quest != null else false,
@@ -797,6 +842,7 @@ func replay_log(p_log: RunLog) -> Dictionary:
 
 func _reset_run() -> void:
 	timer_running = false
+	safe_room_clock = false
 	in_battle = false
 	_acc = 0.0
 	_blocking_dialogs = 0
@@ -908,6 +954,10 @@ func _dispatch(events: Array[ExploreEvent]) -> void:
 			ExploreEvent.Type.STRAY_DUE:
 				Events.stray_spawn_requested.emit(str(ev.data.get("zone", "")), str(ev.data.get("group_id", "")),
 					str(ev.data.get("encounter_id", "")))
+			ExploreEvent.Type.SPONSOR_WINDOW_OPENED:
+				Events.sponsor_window_opened.emit((ev.data.get("window", {}) as Dictionary).duplicate(true))
+			ExploreEvent.Type.SPONSOR_WINDOW_CLOSED:
+				Events.sponsor_window_closed.emit(str(ev.data.get("id", "")), str(ev.data.get("reason", "")))
 
 
 func _on_mod_said(_text: String, _voice: StringName, _tag: String, blocking: bool) -> void:
@@ -986,6 +1036,7 @@ func _capture_context() -> Dictionary:
 	return {"state": state, "run_log": run_log, "sim": sim, "quest": quest, "mode": mode, "event_def": _event_def,
 		"run_finished": _run_finished, "quest_done": _quest_done, "layout": _layout, "layout_key": _layout_key,
 		"acc": _acc, "blocking": _blocking_dialogs, "timer_running": timer_running, "in_battle": in_battle,
+		"safe_room_clock": safe_room_clock,
 		"cmd_id": _cmd_id, "cmd_log": _cmd_log, "metric_fed": _metric_fed}
 
 
@@ -1003,6 +1054,7 @@ func _restore_context(saved: Dictionary) -> void:
 	_acc = float(saved["acc"])
 	_blocking_dialogs = int(saved["blocking"])
 	timer_running = bool(saved["timer_running"])
+	safe_room_clock = bool(saved["safe_room_clock"])
 	in_battle = bool(saved["in_battle"])
 	_cmd_id = int(saved["cmd_id"])
 	_cmd_log = saved["cmd_log"] as RunLog
@@ -1158,5 +1210,7 @@ func _replay_apply(c: Dictionary) -> void:
 				Events.floor_completed.emit(state.floor_run.index)
 		"gift":
 			Show.receive_gift(c.get("gift", {}))
+		"sponsor_window":
+			open_dev_sponsor_window(int(c.get("sec", 0)), int(c.get("slots", 0)))
 		_:
 			push_warning("[Game] replay: unknown command '%s'" % str(c.get("t", "")))

@@ -13,6 +13,8 @@ class_name GiftPolicy extends RefCounted
 ##                                               — applied external gifts (note_applied, idempotent per gift id)
 ##   "gift_items": {item_id: int}                — items received from gifts (GiftApplier, statistics, L3)
 ##   optional "gift_accept": "all" | "free_only" | "ask" | "none" (05 §6.11), "tick": int (client-sim deadline)
+##   "sponsor": Dictionary                       — Sponsor-Fenster state (SponsorWindows, 05 §6.13); plus, only in the
+##                                                 copy Show passes to check(), "sw_pending": [[window_id, sender_ref]]
 
 ## Show-league standard (05 §6.10 / §10.1 rules.gifts).
 const DEFAULT_GIFT_RULES: Dictionary = {
@@ -71,7 +73,9 @@ static func chest_allowed(load_half: int, rules: Dictionary) -> bool:
 ## L5) → league_pur · gifts disabled / source not offered / gift_accept → not_accepting · client-sim deadline →
 ## deadline_missed · effect factor (effect_pm == effect_pm(load_half); service gifts: load_half >= applied load) →
 ## effect_mismatch · caps (load, external count, chests, gold chests, per sender) → cap_reached · chest threshold →
-## chest_blocked. The per-battle cap is no rejection (Show queues, see can_deliver_in_battle).
+## chest_blocked · Sponsor-Fenster (SponsorWindows.check: only while the run tracks windows) → window_closed |
+## window_full | window_sender_limit — last, so a window refusal always means "everything else is fine, wait for the
+## next window". The per-battle cap is no rejection (Show queues, see can_deliver_in_battle).
 static func check(run: Dictionary, g: Dictionary, rules: Dictionary) -> String:
 	if not Gift.is_external(g):
 		return ""
@@ -120,7 +124,7 @@ static func check(run: Dictionary, g: Dictionary, rules: Dictionary) -> String:
 			return "cap_reached"
 		if not chest_allowed(maxi(basis, applied), gr):
 			return "chest_blocked"
-	return ""
+	return SponsorWindows.check(run, g)
 
 
 # --- additions (M8 helpers) ----------------------------------------------------------------------------------------
@@ -155,7 +159,8 @@ static func can_deliver_in_battle(external_in_battle: int, rules: Dictionary) ->
 	return external_in_battle < _int(gift_rules(rules)["max_per_battle"])
 
 
-## Books an applied external gift into the run counters (idempotent per gift id; system gifts are ignored).
+## Books an applied external gift into the run counters (idempotent per gift id; system gifts are ignored) and into
+## its Sponsor-Fenster (SponsorWindows.book: one slot, one gift of its sender).
 static func note_applied(run: Dictionary, g: Dictionary, rules: Dictionary) -> void:
 	if not Gift.is_external(g):
 		return
@@ -183,6 +188,7 @@ static func note_applied(run: Dictionary, g: Dictionary, rules: Dictionary) -> v
 		run["chests"] = _int(run.get("chests", 0)) + 1
 		if str(g.get("tier", "")) == "gold":
 			run["gold_chests"] = _int(run.get("gold_chests", 0)) + 1
+	SponsorWindows.book(run, g)
 
 
 static func _run_rules(run: Dictionary) -> Dictionary:

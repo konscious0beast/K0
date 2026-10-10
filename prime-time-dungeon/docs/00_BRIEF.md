@@ -8,6 +8,10 @@
 Dieses Dokument ist die **verbindliche Grundlage**. Alle anderen Dokumente und der Code richten sich danach.
 Änderungen hier nur bewusst und mit Begründung.
 
+**Vorrang bei Widersprüchen:** dieses Dokument > `07_ECHTZEITKAMPF.md` (alles Kampfrelevante) >
+`06_PROGRESSION_MAROTTEN_KI_ADMIN.md` (Progression, Marotten, KI-Admin, Twists) > `01_GDD` / `02_TECH` / `03_ART` /
+`05_LIVE_MODUS` (je nach Thema).
+
 ---
 
 ## 1. Prämisse (eigene Welt)
@@ -26,8 +30,11 @@ Dieses Dokument ist die **verbindliche Grundlage**. Alle anderen Dokumente und d
 ## 2. Design-Säulen
 
 1. **Überleben UND unterhalten** — Jede Entscheidung bezahlt man in Sicherheit oder in Show.
-2. **FF10-Kampf, FF12-Welt** — Erkundung in Echtzeit-3D mit sichtbaren Gegnern (FF12),
-   Kämpfe als rundenbasiertes **CTB** (Conditional Turn-Based, FF10) mit sichtbarer Zugreihenfolge.
+2. **FF12-Welt, Kampf „WoW-light“ direkt in der Welt** — Erkundung in Echtzeit-3D mit sichtbaren Gegnern (FF12); gekämpft
+   wird **in Echtzeit im selben Raum**, ohne Szenenwechsel: Ziel wählen, Auto-Angriff, kleine Aktionsleiste mit Abklingzeiten,
+   Zauberleisten, Boden-Telegraphen (Entscheidung 2026-10-10, Kap. 5; Vertrag `07_ECHTZEITKAMPF.md`). Der bisherige
+   rundenbasierte **CTB**-Kampf (Conditional Turn-Based, FF10) bleibt **bis R5** hinter einem Schalter lauffähig und wird dann
+   entfernt.
 3. **Kurze Sessions, lange Motivation** — Eine Etage = ein Lauf (15–25 min). Speichern im Safe Room.
 4. **Die Show ist das UI** — HUD wie eine TV-Übertragung: Live-Zuschauerzahl, Chat-Ticker, Sponsor-Banner.
 5. **Lesbarer Stil** — stilisiertes Low-Poly mit Toon-Shading (Option B), klare Silhouetten, starke Farben.
@@ -36,7 +43,7 @@ Dieses Dokument ist die **verbindliche Grundlage**. Alle anderen Dokumente und d
 
 ```
 Etage betreten → Erkunden (Gegner sichtbar, Truhen, Events, Safe Room)
-   → Kampf (CTB) → Zuschauer ↑ → Follower/EXP/Loot
+   → Kampf (Echtzeit in der Welt; CTB bis R5) → Zuschauer ↑ → Follower/EXP/Loot
    → Safe Room (Heilen, Speichern, Lootboxen öffnen, Automat-Shop)
    → Treppe finden (Countdown!) → optional Etagenboss → nächste Etage
 ```
@@ -45,8 +52,8 @@ Etage betreten → Erkunden (Gegner sichtbar, Truhen, Events, Safe Room)
 
 | System | Kurzbeschreibung |
 |---|---|
-| Erkundung | Third-Person, Kamera hinter der Figur (orbit). Etage 1 ist handgebaut (Layout-Daten in `floors.json`), ab Etage 2 prozedural aus Raum-Modulen auf Raster (`DungeonGenerator`). Gegner patrouillieren sichtbar; Berührung = Kampf. Vorteil/Nachteil je nach Anlauf (Rücken = Präventivschlag). |
-| Kampf (CTB) | Party (Kai + Mopsula) vs. 1–4 Gegner. Zugreihenfolge aus SPD + Aktionsgewicht („Tick“-System wie FF10). Befehle: Angriff, Fähigkeit, Item, **Stunt**, Verteidigen, Flucht. Zugreihenfolge-Leiste rechts. |
+| Erkundung | Third-Person, Kamera hinter der Figur (orbit). Etage 1 ist handgebaut (Layout-Daten in `floors.json`), ab Etage 2 prozedural aus Raum-Modulen auf Raster (`DungeonGenerator`). Gegner patrouillieren sichtbar; ein Kampf beginnt per Pull (Schlag, Fähigkeit oder Gegenstand auf einen Gegner), wenn ein verfolgender Gegner zuschlagen kann oder nach 4 s Verfolgung (07 §2.2; im CTB-Modus bis R5: Berührung = Kampf). Vorteil/Nachteil je nach Anlauf (Rücken = Präventivschlag). |
+| Kampf | **Echtzeit in der Welt** („WoW-light“, `07_ECHTZEITKAMPF.md`): Party (Kai + Graf Mopsula; gesteuert wird die gewählte Figur, die andere spielt die KI) vs. 1–6 Gegner im Raum, markiert durch einen Studio-Lichtring. Auto-Angriff, 4 Fähigkeiten + **SHOW** (Stunt) + Trank, eine Taste für den Partner, Unterbrechen, Ausweichen, Bossphasen. **Bis R5** zusätzlich der bisherige CTB-Kampf (Zugreihenfolge aus SPD + Aktionsgewicht wie FF10; Befehle Angriff, Fähigkeit, Item, Stunt, Verteidigen, Flucht) hinter dem Schalter `combat_mode`. |
 | Show-System | **Zuschauer** (live, pro Kampf/Erkundung schwankend) und **Follower** (dauerhaft). Abwechslungsreiche Aktionen, knappe Siege, Stunts, Combos, Kills mit Fähigkeiten erhöhen den Hype. Schwellenwerte → **Sponsor-Geschenk** (Heilung/Buff/Item) mitten im Kampf. |
 | Lootboxen | Bronze/Silber/Gold/Fan-Box aus Achievements und Bossen. Nur im Spiel verdient, **niemals Echtgeld**. Öffnen nur im Safe Room, mit M.O.D.-Kommentar. |
 | Achievements | Vom Spiel live vergeben („Erster Kill“, „Mit 1 HP gewonnen“, „Pazifist (5 min ohne Kampf)“ …) → Lootbox + M.O.D.-Spruch. |
@@ -100,6 +107,20 @@ Etage betreten → Erkunden (Gegner sichtbar, Truhen, Events, Safe Room)
     kommt) und 1 Geschenk je Zuschauer:in, zusätzlich die Lauf-Caps. Außerhalb: Ablehnung mit `E_WINDOW_CLOSED` bzw.
     `E_WINDOW_FULL`; die Oberfläche zeigt, wann das nächste Fenster öffnet. Im Kampf öffnet kein Fenster (die Uhr steht).
 
+- **Entscheidung (Nutzer, 2026-10-10), verbindlich — Kampf** — Wortlaut:
+  > „Variante 3 bitte“
+
+  Gewählt aus drei vorgelegten Kampf-Varianten; Variante 3 = **„WoW-light direkt in der Welt“**. Die Detailentscheidungen hat
+  der Nutzer an das Team delegiert (Maßstab: gute UX, Spaß, Witz, ein einfaches, sofort verständliches Konzept); sie stehen in
+  `07_ECHTZEITKAMPF.md` §0.1. Folgen:
+  - Gekämpft wird in Echtzeit in dem Raum, in dem man sich trifft (Studio-Lichtring als Kampffläche, keine Kampfszene, kein
+    Szenenwechsel). Die Etagen-Uhr steht im Kampf wie bisher; im Kampf öffnet kein Sponsor-Fenster.
+  - Der Kern bleibt deterministisch (Kap. 6b): eigene Simulation mit 30 Ticks/s, nur Ganzzahlen, jeder Kampf-Befehl trägt
+    seinen Kampf-Tick; Replays und Verifier rechnen bitgenau nach.
+  - Der CTB-Kampf (FF10) bleibt **bis R5** hinter dem Schalter `combat_mode` lauffähig und wird danach entfernt; alle
+    CTB-Nennungen in diesem Brief gelten nur bis dahin. Umsetzung in den Phasen R1–R5 (07 §12), nach dem Merge der
+    06-Pakete; Voraussetzung für R1a ist diese Brief-Änderung.
+
 ## 6. Verbindliche Architektur-Verträge (Kurzform — Details in 02_TECH.md)
 
 Autoloads (Reihenfolge):
@@ -111,7 +132,7 @@ Autoloads (Reihenfolge):
 | `Game` | `res://autoload/game.gd` | Laufzeit-Spielstand (Party, Inventar, Etage, Timer, Show-Stats, Flags) |
 | `Show` | `res://autoload/show.gd` | Zuschauer/Follower/Hype, Achievements, Sponsor-Trigger, M.O.D.-Ansagen |
 | `Save` | `res://autoload/save.gd` | Serialisierung `Game` ↔ JSON in `user://saves/slot_N.json` |
-| `Router` | `res://autoload/router.gd` | Szenenwechsel mit Übergängen (Fade/„Kampf-Swirl“), Kampf starten/beenden |
+| `Router` | `res://autoload/router.gd` | Szenenwechsel mit Übergängen (Fade); bis R5 auch CTB-Kampf starten/beenden („Kampf-Swirl“) — der Echtzeitkampf läuft ohne Szenenwechsel in der Erkundung (07 §2.8) |
 | `Sfx` | `res://autoload/sfx.gd` | Prozedurale Sounds (Platzhalter), Lautstärke-Busse |
 
 Ordner unter `res://`:
@@ -122,14 +143,16 @@ core/          reine Logik (RefCounted): data/, stats/, battle/, show/, loot/, p
 data/          JSON: die 13 GameData-Tabellen (statuses, skills, items, classes, party, enemies, floors, lootboxes,
                achievements, sponsors, milestones, mod_lines, scenes) + events.json (SHOWRUN, geladen von EventCatalog)
 art/           shaders/, materials/, kit/ (prozedurale Mesh-Bauer: Figuren, Umgebung, Props, VFX)
-scenes/        boot/, title/, exploration/, battle/, safe_room/, ui/ (wiederverwendbare UI)
+scenes/        boot/, title/, exploration/, combat/ (Echtzeitkampf, 07), battle/ (CTB, bis R5), safe_room/, ui/
+               (wiederverwendbare UI)
 tests/         run_tests.gd + test_*.gd
 ```
 
 Außerhalb von `res://`: `prime-time-dungeon/docs/` (Dokumente), `prime-time-dungeon/tools/` (check.sh, fullrun.sh, perf.sh,
 make_icons.sh), `prime-time-dungeon/README.md` (Einstieg).
 
-Szenenfluss: `Boot → Title → (Neues Spiel | Laden) → Exploration(Etage N) ⇄ Battle ⇄ SafeRoom → … → Credits/GameOver`.
+Szenenfluss: `Boot → Title → (Neues Spiel | Laden) → Exploration(Etage N) ⇄ SafeRoom → … → Credits/GameOver`; gekämpft wird
+in der Exploration (bis R5 im CTB-Modus zusätzlich `Exploration ⇄ Battle`).
 
 ## 6b. Live-Modus „SHOWRUN“ (geplant, Architektur muss ihn jetzt schon ermöglichen)
 
@@ -160,6 +183,7 @@ Pflichten für den Code **schon im Vertical Slice** (damit der Modus später ohn
 ## 7. Ziel dieses Repos (jetzt)
 
 Ein **spielbarer Vertical Slice** von Etage 1 in Godot 4.7 mit Option-B-Optik:
-Titel → Intro (M.O.D.) → Etage 1 erkunden → mehrere CTB-Kämpfe → Show-System + Achievements →
-Safe Room mit Lootboxen + Speichern → Quartier-Boss → Treppe/Etagenboss → „Etage 2 folgt“-Abspann.
+Titel → Intro (M.O.D.) → Etage 1 erkunden → mehrere Kämpfe (Echtzeit in der Welt, 07; CTB bis R5) →
+Show-System + Achievements → Safe Room mit Lootboxen + Speichern → Quartier-Boss → Treppe/Etagenboss →
+„Etage 2 folgt“-Abspann.
 Läuft auf PC (Tastatur/Gamepad) und ist für Touch vorbereitet (On-Screen-Steuerung).

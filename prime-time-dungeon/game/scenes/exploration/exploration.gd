@@ -34,6 +34,7 @@ const NO_CELL: Vector2i = Vector2i(-999, -999)
 const CAPTURE_STEP: float = 4.0         # capture mode: Kai starts 4 m towards the first door of the start room
 const BOSS_EXTRA_ARM: float = 1.5       # boss rooms: longer arm so the large boss figure stays in the frame
 const HITSTOP_SEC: float = 0.07         # field strike hit: 70 ms freeze + flash before the battle transition
+const HITSTOP_RETRY_SEC: float = 0.05   # hitstop over while a Router transition runs: decide again after this
 const REVEAL_BEAT_SEC: float = 0.25     # pause after an event prop animation before its result is shown
 const MARKER_LIFT: float = 0.3          # focus marker above the focused object's visual top
 const PROMPT_LIFT: float = 0.35         # HUD prompt anchor above the marker
@@ -697,10 +698,6 @@ func _set_room_light(room: Node3D, on: bool) -> void:
 	light.set_meta(&"fade_tween", tw)
 
 
-func is_cell_shown(cell: Vector2i) -> bool:
-	return _visible_cells.has(cell)
-
-
 func _update_actor_visibility() -> void:
 	for gid: Variant in _enemies.keys():
 		var a: EnemyActor = _actor_at(gid)
@@ -791,7 +788,9 @@ func _place_marker() -> void:
 
 
 func _on_player_action() -> void:
-	if not _built or _suspended or is_modal() or _encounter_pending:
+	# Router.busy: the fade back in after a battle / safe room (or out to the next screen) is still running — a mashed
+	# confirm key (results screen, safe-room menu) must not strike or interact through it.
+	if not _built or _suspended or is_modal() or _encounter_pending or Router.busy:
 		return
 	_update_focus()
 	if _focused != null and is_instance_valid(_focused) and _focused.is_available():
@@ -832,6 +831,9 @@ func _strike_hit(hit: EnemyActor, adv: int) -> void:
 		return
 	_encounter_pending = true
 	_freeze(true)
+	# The run clock stops with the hit (not only when the Router pushes the battle): an expiring floor timer inside the
+	# hitstop would otherwise queue the game over first and the battle on top of the Sendeschluss screen.
+	Game.timer_running = false
 	_set_focus(null)
 	FB.flash_rig(hit.rig, hitstop_sec + 0.05)
 	Sfx.play(&"hit")
@@ -841,11 +843,26 @@ func _strike_hit(hit: EnemyActor, adv: int) -> void:
 
 
 func _after_hitstop(group_id: String, encounter_id: String, advantage: int) -> void:
+	if is_inside_tree() and not _suspended and Router.busy:
+		# A Router transition is still running (e.g. "Zum Titel" from a pause opened during the hitstop): decide when
+		# it is over. A goto frees this screen meanwhile (the timer callback dies with it) — no battle is pushed on top
+		# of the next screen.
+		get_tree().create_timer(HITSTOP_RETRY_SEC, false).timeout.connect(
+			_after_hitstop.bind(group_id, encounter_id, advantage))
+		return
 	_encounter_pending = false
-	if not is_inside_tree() or _suspended:
+	if not _can_start_encounter():
+		# Covered (on_resume restores freeze + timer) or detached: no battle from here.
 		_freeze(_suspended or is_modal())
 		return
 	_trigger_encounter(group_id, encounter_id, advantage)
+
+
+## Battles start only from the settled, active screen: in the tree, not covered by a pushed screen, the Router's
+## current screen and no transition running (a running/queued goto — game over, title, floor summary — would get the
+## battle pushed on top of the NEXT screen; a fade-in finishes first, contacts simply retry the next frame).
+func _can_start_encounter() -> bool:
+	return is_inside_tree() and not _suspended and not Router.busy and Router.current == self
 
 
 ## Contact ≤ 1.1 m (EnemyActor) or a boss trigger radius.
@@ -859,10 +876,11 @@ func on_enemy_contact(actor: EnemyActor) -> void:
 
 ## Events.encounter_triggered → Router.start_battle(Game.make_battle_setup(encounter_id, advantage, group_id)).
 func _trigger_encounter(group_id: String, encounter_id: String, advantage: int) -> void:
-	if _encounter_pending or not is_inside_tree() or encounter_id == "":
+	if _encounter_pending or not _can_start_encounter() or encounter_id == "":
 		return
 	_encounter_pending = true
 	_freeze(true)
+	Game.timer_running = false          # at once, not one frame later in Router._do_push
 	_set_focus(null)
 	Events.encounter_triggered.emit(group_id, encounter_id, advantage)
 	_log_event(ExploreEvent.Type.ENCOUNTER, {"group_id": group_id, "encounter_id": encounter_id,
@@ -882,6 +900,7 @@ func _trigger_encounter(group_id: String, encounter_id: String, advantage: int) 
 func _cancel_encounter() -> void:
 	_encounter_pending = false
 	_freeze(false)
+	Game.timer_running = not _suspended and not is_modal()
 	_player.set_grace(Rules.GRACE_SEC)
 	_return_nearby()
 

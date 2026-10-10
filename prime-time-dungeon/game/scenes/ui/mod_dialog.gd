@@ -5,7 +5,9 @@ extends CanvasLayer
 ## voice &"chat" goes to the ticker (ShowOverlay), not here.
 ## Blocking lines wait for ui_accept/action/tap and end with Events.dialog_finished(tag). A blocking line that is never
 ## shown (empty text, voice &"chat") is balanced with a deferred dialog_finished(tag), so Game's counter never sticks.
-## Non-blocking lines advance on their own after a reading time and never consume input.
+## Non-blocking lines advance on their own after a reading time and never consume input. While a blocking line waits in
+## the queue, every non-blocking line ahead of it (the current one included, even mid-typewriter) is shown in full at
+## once and held only CUT_HOLD_SEC, so a scene / boss line never waits seconds behind chatter.
 ##
 ## DEVIATION from 02_TECH §9.4 ("jede Zeile endet … mit Events.dialog_finished(tag)"), API change requested for
 ## §9.4/§3.4: ONLY BLOCKING lines emit dialog_finished. Game._on_mod_said counts only blocking lines and
@@ -34,6 +36,7 @@ const CPS: Array[float] = [25.0, 45.0, 0.0]        # text_speed 0 slow / 1 norma
 const READ_BASE: float = 1.4
 const READ_PER_CHAR: float = 0.045
 const MAX_PENDING_SOFT: int = 3                     # queued non-blocking lines kept (older ones are dropped)
+const CUT_HOLD_SEC: float = 0.25                    # non-blocking line on screen while a blocking line waits behind it
 const AUTOPLAY_HOLD: float = 0.4
 const BOX_SIZE: Vector2 = Vector2(740, 108)
 ## Narrowest box between reserved bottom corners (Events.dialog_reserve_requested); a narrower box grows upwards.
@@ -113,8 +116,8 @@ func enqueue(text: String, voice: StringName, tag: String, blocking: bool) -> bo
 	var line: Dictionary = {"text": UiUtil.glyph_safe(text), "voice": voice, "tag": tag, "blocking": blocking}
 	_queue.append(line)
 	_trim_soft_queue()
-	if blocking and not _cur.is_empty() and not bool(_cur["blocking"]):
-		_hold = minf(_hold, 0.25)   # a waiting blocking line cuts the current non-blocking chatter short
+	if blocking:
+		_cut_for_blocking()         # a waiting blocking line cuts the current non-blocking chatter short
 	if _cur.is_empty():
 		_next()
 	return true
@@ -286,6 +289,28 @@ func _read_time(chars: int) -> float:
 	return t
 
 
+func _blocking_waiting() -> bool:
+	for l: Dictionary in _queue:
+		if bool(l["blocking"]):
+			return true
+	return false
+
+
+## The current line is non-blocking and a blocking line waits behind it: show it in full at once (also mid-typewriter —
+## the typewriter would otherwise set the full reading time when it completes and undo the cut) and hold it at most
+## CUT_HOLD_SEC. Non-blocking lines take no input, so this is the only way they get out of the way.
+func _cut_for_blocking() -> void:
+	if _cur.is_empty() or bool(_cur["blocking"]) or not _blocking_waiting():
+		return
+	var total: int = str(_cur["text"]).length()
+	if _shown_chars < total:
+		_shown_chars = float(total)
+		_text.visible_characters = -1
+		_hold = CUT_HOLD_SEC
+	else:
+		_hold = minf(_hold, CUT_HOLD_SEC)
+
+
 func _trim_soft_queue() -> void:
 	var soft: int = 0
 	for l: Dictionary in _queue:
@@ -314,6 +339,7 @@ func _next() -> void:
 		_shown_chars = float(_text.text.length())
 		_text.visible_characters = -1
 		_hold = _read_time(_text.text.length())
+	_cut_for_blocking()
 	_next_hint.visible = false
 	_apply_speaker(_cur["voice"] as StringName, str(_cur["tag"]))
 	_show_box()

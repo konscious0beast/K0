@@ -57,7 +57,8 @@
   unabhängig von M2 grün werden können.
 - Shader-Stubs (`art/shaders/*.gdshader`) sind gültige Minimal-Shader mit **allen** in §8.3 genannten Uniforms.
 - Szenen-Stubs (`.tscn`) enthalten Root-Node + Skript. `scenes/boot/boot.gd`-Stub geht direkt zu `Router.SCENE_TITLE`
-  und gibt bei `--autoplay` nur `AUTOPLAY: SKIPPED (stub)` aus.
+  und gab in Phase A bei `--autoplay` nur `AUTOPLAY: SKIPPED (stub)` aus (Phase A ist abgeschlossen: Autoplay hat keinen
+  Stub-/Skip-Pfad mehr, `check.sh` verlangt `AUTOPLAY: OK`, §11.4).
 - `data/*.json`-Stubs: je Tabelle minimal gültige Einträge (Party `kai` + `mopsula`, 1 Etage, alle Pflicht-Tags in `mod_lines`).
 - Ab Phase B gehört jede Datei **ausschließlich** dem in §1 genannten Modul. Andere Module ändern sie nicht.
   Braucht ein Modul eine API-Änderung an fremden Dateien → Änderung an **diesem Dokument** beantragen, nicht selbst editieren.
@@ -935,8 +936,10 @@ Laufzeitverhalten:
   in der Pause), der Watcher funktioniert auch im Pausemenü.
 - `toggle_fullscreen` behandelt `Game._unhandled_input` (nur PC); `debug_overlay` behandelt `DebugOverlay` (M6, Teil von `GlobalUi`) selbst.
 - `timer_running` setzt **nur** die `ExplorationScene` auf `true` (`_ready()`, `on_resume()`); `Router` setzt es bei **jedem**
-  `goto`/`push` auf `false`. Der Countdown einer Etage beginnt erst mit `FloorRun.timer_started` (Etage 1: nach dem Sieg über
-  `FloorDef.timer_start_after` = `enc_f1_a1_tutorial`, GDD B2).
+  `goto`/`push` auf `false`. Die `ExplorationScene` setzt es selbst auf `false`, sobald ein Encounter ansteht (Feldschlag-Treffer
+  mit Hitstop, Kontakt, Event-Folgekampf) — die Uhr läuft also nicht bis zum `push` des Kampfes weiter (ein im Hitstop ablaufender
+  Timer stapelte sonst den Kampf auf den Game-Over-Screen). Der Countdown einer Etage beginnt erst mit
+  `FloorRun.timer_started` (Etage 1: nach dem Sieg über `FloorDef.timer_start_after` = `enc_f1_a1_tutorial`, GDD B2).
 - **Gemeinsame Regeln (`RunRules`, §7.1):** Die aufzeichnenden Methoden `start_floor`, `visit_room`, `open_chest`, `open_gate`,
   `open_lootbox`, `apply_floor_event`, `enter_safe_room`/`leave_safe_room`, `mark_scene_seen` und `set_difficulty` ändern den
   Zustand ausschließlich über die gleichnamigen statischen `RunRules`-Funktionen, die auch `RunSim.apply` aufruft; `Game` ergänzt
@@ -3460,6 +3463,11 @@ Events (abgeschlossene ohne Prompt), Spieler, Begleiter, Kamera, `ExplorationHud
 Betreten der Etage `Events.floor_entered`; `Events.overlay_mode_requested(&"explore")`; `Sfx.music(&"explore")`;
 `Game.timer_running = true` (der Countdown tickt erst, wenn `floor_run.timer_started`). Hört auf `Events.stray_spawn_requested`.
 Encounter: `Events.encounter_triggered` → `Router.start_battle(Game.make_battle_setup(encounter_id, advantage, group_id))`.
+Ein Encounter startet nur aus dem eingeschwungenen aktiven Screen (im Baum, nicht suspendiert, `Router.current == self`,
+`not Router.busy`): läuft ein Übergang (z. B. das Ausblenden zu Game Over / Titel / Etagenbilanz), wird kein Kampf auf den
+nächsten Screen gestapelt — Kontakte versuchen es im nächsten Frame erneut, ein Feldschlag-Hitstop entscheidet nach dem Übergang
+(ein `goto` gibt die Szene vorher frei). `action` (Interagieren/Feldschlag) wird ignoriert, solange `Router.busy` (Einblenden nach
+Kampf/Safe Room: weggeklickte Ergebnisse schlagen nicht durch).
 
 Weitere Abläufe in der Erkundung (M3, verbindlich):
 
@@ -3801,14 +3809,20 @@ Headless (`DisplayServer.get_name() == "headless"`) → **kein Snapshot** (liefe
 `Game.set_dialog_presenter(false)` in `_exit_tree()`; **nur blockierende** Zeilen enden (fertig oder weggeklickt) mit
 `Events.dialog_finished(tag)` (§3.4 Dialog-Pause zählt nur blockierende; eine nie gezeigte blockierende Zeile — leerer Text,
 Stimme `chat` — wird mit einem verzögerten `dialog_finished` ausgeglichen). Nicht-blockierende Zeilen laufen nach Lesezeit von
-selbst weiter und melden nur das M6-Signal `ModDialog.line_finished(tag, blocking)`. Wer auf das Ende einer Zeile wartet
-(Boss-Intros, Szenen), spricht sie blockierend (`Show.say(tag, ctx, true)`).
+selbst weiter und melden nur das M6-Signal `ModDialog.line_finished(tag, blocking)`. Wartet eine blockierende Zeile in der Queue,
+wird jede nicht-blockierende davor (auch die laufende, mitten in der Schreibmaschine) sofort ganz gezeigt und nur
+`ModDialog.CUT_HOLD_SEC` (0,25 s) gehalten — Szenen/Boss-Zeilen warten nie sekundenlang hinter Geplauder. Wer auf das Ende
+einer Zeile wartet (Boss-Intros, Szenen), spricht sie blockierend (`Show.say(tag, ctx, true)`).
 Lage der Box: unten mittig über dem Chat-Ticker (Safe Room: rechtsbündig); Screens mit eigenen Panels in den
 unteren Ecken melden diese per `Events.dialog_reserve_requested(mode, left, right)` (gilt nur im genannten Overlay-Modus), die Box
 zentriert sich dann in der freien Spanne (Breite 420–740 px) und wächst bei langen Zeilen nach oben (Sprecher-Reiter folgt).
 Pause: `ExplorationHud` (`PROCESS_MODE_PAUSABLE`) öffnet `PauseMenu` auf `pause` und setzt `get_tree().paused = true`
-(`Events.pause_menu_toggled(true)`). **Prozessmodi (gemessen 4.7.2: ein PAUSABLE-Node erhält während der Pause 0
-`_unhandled_input`-Events, ein WHEN_PAUSED-Node 1):** `PauseMenu` und alle aus ihm geöffneten Menüs (`party_menu`, `inventory_menu`,
+(`Events.pause_menu_toggled(true)`) — ebenso die große Karte auf `map` —, aber nicht, solange der Wahl-Dialog der Erkundung offen
+ist (er hält den Fokus; `ExplorationScene.active_dialog()`) oder ein Encounter ansteht (`is_encounter_pending()`); während einer
+Event-Enthüllung bleibt Pause möglich. Die „Zum Titel“-Bestätigung des `PauseMenu` ist modal: solange sie offen ist, wertet das
+`PauseMenu` keine Eingabe aus (`tab_*` usw.), ein zweiter Aufruf öffnet keine zweite. Eine Pausenseite ohne fokussierbares
+Control (z. B. leeres Bestiarium) lässt den Fokus auf ihrem Reiter.
+**Prozessmodi (gemessen 4.7.2: ein PAUSABLE-Node erhält während der Pause 0 `_unhandled_input`-Events, ein WHEN_PAUSED-Node 1):** `PauseMenu` und alle aus ihm geöffneten Menüs (`party_menu`, `inventory_menu`,
 `equipment_menu`, `skills_menu`, `achievements_menu`, `bestiary_menu`, `settings_menu`, `confirm_dialog`) haben
 `process_mode = PROCESS_MODE_WHEN_PAUSED`. Das Schließen (`pause`/`ui_cancel`) und Entpausieren (`get_tree().paused = false`,
 `pause_menu_toggled(false)`) übernimmt das `PauseMenu` selbst. `Game` bleibt PAUSABLE (Timer steht), die Schema-Erkennung läuft im
@@ -3906,7 +3920,8 @@ func occupied_rects() -> Array[Rect2]    # what the persistent UI covers now (hy
 - Erkundung: `action` = Interagieren, wenn `ExplorationHud` einen Prompt zeigt (Interactable im Radius 1.5 m / 120°), sonst Feldschlag;
   `sneak` gehalten = Schleichen. Kampf: `toggle_speed` schaltet `battle_speed` 1.0 ↔ 2.0 (auch Speed-Button „»“ im HUD), `toggle_auto`.
 - Esc ist `pause` **und** `ui_cancel`: Ein offenes Menü schließt bei `ui_cancel` oder `pause` und ruft
-  `get_viewport().set_input_as_handled()`; die Erkundung reagiert auf `pause` nur, wenn kein Menü offen ist.
+  `get_viewport().set_input_as_handled()`; die Erkundung reagiert auf `pause`/`map` nur, wenn kein Menü und kein Wahl-Dialog
+  offen ist, auf `action` außerdem nicht während eines Router-Übergangs (`Router.busy`).
 
 ### 10.2 UI-Fokus-Regeln (alle Menüs)
 
@@ -4124,8 +4139,8 @@ Beispiel (Handy-Format, Touch an): `tools/check.sh --shot res://scenes/battle/ba
 
 `check.sh` startet `godot --headless --path <tmp> --quit-after 900 -- --autoplay` (900 Frames = reines Sicherheitsnetz; normal beendet
 Autoplay selbst mit `quit(0)`/`quit(1)`). `run_smoke` in `check.sh` **muss** den Exit-Code prüfen (`code=${PIPESTATUS[0]}`, ≠ 0 → Fehler)
-und verlangt die Zeile `AUTOPLAY: OK`; fehlt sie → Fehler. (Den Phase-A-Pfad `AUTOPLAY: SKIPPED (stub)` gibt es nicht mehr —
-Autoplay hat keinen Überspringen-Zweig, §0.2.)
+und verlangt die Zeile `AUTOPLAY: OK` (Regex `AUTOPLAY: OK`; der Phase-A-Skip `AUTOPLAY: SKIPPED (stub)` ist entfernt — ein
+fehlendes/umbenanntes Modul lässt seinen Schritt scheitern, statt den Lauf still zu überspringen); fehlt sie → Fehler.
 Gemessen: headless ohne FPS-Limit ≈ 144 Frames/s;
 mit `Engine.max_fps = 60` exakt 16,7 ms/Frame; `Engine.time_scale` skaliert `_process`-/Physik-Delta, Tweens und Timer (geprüft).
 

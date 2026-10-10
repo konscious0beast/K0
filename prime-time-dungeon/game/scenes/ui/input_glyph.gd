@@ -32,7 +32,6 @@ const KEY_NAMES: Dictionary = {"Escape": "Esc", "Space": "Leertaste", "Enter": "
 var _cap: PanelContainer
 var _cap_label: Label
 var _caption_label: Label
-var _scheme_override: int = -1
 
 
 static func make(p_action: StringName, p_caption: String = "", p_font_size: int = 16) -> HBoxContainer:
@@ -106,14 +105,8 @@ func _ready() -> void:
 	_refresh()
 
 
-## Tests/captures: force a scheme (-1 = follow Game.input_scheme).
-func set_scheme_override(scheme: int) -> void:
-	_scheme_override = scheme
-	_refresh()
-
-
 func current_scheme() -> int:
-	return _scheme_override if _scheme_override >= 0 else Game.input_scheme
+	return Game.input_scheme
 
 
 func _refresh() -> void:

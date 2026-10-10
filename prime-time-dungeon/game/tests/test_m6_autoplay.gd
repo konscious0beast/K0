@@ -1,6 +1,7 @@
 extends TestCase
-## Autoplay driver (02_TECH §11.4): the step table budgets, the dry run (no quit, no print) past boot_to_title (there
-## is no skip path: check.sh requires "AUTOPLAY: OK"), the watchdog, the safe room choice and the boot arguments.
+## Autoplay driver (02_TECH §11.4): the step table budgets, no skip path (boot_to_title always continues with
+## new_game; check.sh accepts only "AUTOPLAY: OK") in dry-run mode (no quit, no print), the watchdog failure line, the
+## safe room choice, and the boot arguments.
 
 const AutoplayScript := preload("res://scenes/boot/autoplay.gd")
 const TitleFlow := preload("res://scenes/title/title_flow.gd")
@@ -31,7 +32,19 @@ func test_step_table_matches_spec() -> void:
 	assert_eq(AutoplayScript.AUTOPLAY_SEED, 4242)
 
 
-func test_dry_run_reaches_title_and_continues() -> void:
+## quality-3: the Phase-A stub skip ("AUTOPLAY: SKIPPED (stub)") is gone — a renamed / missing module can no longer
+## turn the smoke run into a green no-op.
+func test_no_stub_skip_path() -> void:
+	var ap: Node = AutoplayScript.new()
+	assert_false(ap.has_method("stub_dependencies"), "no stub detection")
+	assert_false("stubs" in ap, "no stub list")
+	ap.free()
+	var src: String = (AutoplayScript as GDScript).source_code
+	if src != "":
+		assert_false(src.contains("SKIPPED"), "no skip line in the driver")
+
+
+func test_dry_run_reaches_title_then_continues() -> void:
 	var title: Node = (load(SCENE_TITLE) as PackedScene).instantiate()
 	title.call("setup", {})
 	add_to_tree(title)
@@ -42,7 +55,8 @@ func test_dry_run_reaches_title_and_continues() -> void:
 	add_to_tree(ap)
 	var ok: bool = await wait_until(func() -> bool: return bool(ap.get("finished")) or int(ap.get("step")) >= 1, 120)
 	assert_true(ok, "boot_to_title is reached within its budget")
-	assert_eq(int(ap.get("step")), 1, "continues with new_game (no skip after boot_to_title)")
+	assert_false(bool(ap.get("finished")), "the run never ends after boot_to_title (no skip)")
+	assert_eq(int(ap.get("step")), 1, "continues with new_game")
 	ap.set("finished", true)              # stop before it starts a real game inside the test run
 	assert_eq(ap.process_mode, Node.PROCESS_MODE_ALWAYS)
 

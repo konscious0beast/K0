@@ -2,8 +2,8 @@ extends Node
 ## Autoplay driver (02_TECH §11.4), added under root by Boot with --autoplay (PROCESS_MODE_ALWAYS). Runs the step table
 ## boot_to_title → new_game → explore → force_battle → battle → safe_room with frame budgets (sum 600, watchdog 640),
 ## prints "AUTOPLAY: <step> ok @frame <n>" per step and finally "AUTOPLAY: OK frames=<n>" + quit(0); a failure prints
-## "Assertion failed: AUTOPLAY step '<name>' failed: <reason>" + quit(1). There is no skip path: check.sh requires the
-## "AUTOPLAY: OK" line (the Phase-A stub branch is gone, every module is real).
+## "Assertion failed: AUTOPLAY step '<name>' failed: <reason>" + quit(1). There is no skip path: a module that is
+## missing or broken fails its step (tools/check.sh accepts only "AUTOPLAY: OK").
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const WATCHDOG_FRAMES: int = 640

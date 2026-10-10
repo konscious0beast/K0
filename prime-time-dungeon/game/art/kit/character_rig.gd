@@ -365,10 +365,6 @@ func set_danger_rim(on: bool, amount: float = DANGER_RIM_AMOUNT) -> void:
 	_apply_rim()
 
 
-func has_danger_rim() -> bool:
-	return _danger_rim
-
-
 func _apply_rim() -> void:
 	for mi: MeshInstance3D in _meshes:
 		var opts: Dictionary = (_mesh_opts.get(mi, {}) as Dictionary).duplicate()

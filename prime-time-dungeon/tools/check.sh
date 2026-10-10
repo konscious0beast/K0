@@ -69,6 +69,7 @@ run_smoke() {
   if [ "$code" -ne 0 ] || echo "$out" | grep -qE "$ERR_RE"; then
     echo "check.sh: SMOKE FAILED (exit $code)"; return 1
   fi
+  # Only a real run passes: the driver has no skip path any more (a missing / broken module fails its step).
   if ! echo "$out" | grep -qE 'AUTOPLAY: OK'; then
     echo "check.sh: SMOKE FAILED (no 'AUTOPLAY: OK' line)"; return 1
   fi

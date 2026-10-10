@@ -29,7 +29,7 @@ static func _with(base: Dictionary, changes: Dictionary) -> Dictionary:
 
 func test_stat_ids_equal_validator_copy() -> void:
 	assert_eq(StatIds.ALL, DataValidator.STAT_IDS, "StatIds.ALL == DataValidator.STAT_IDS (§6.3)")
-	assert_len(StatIds.ALL, 23)                     # 21 + bets_won, liga_battles (06-C)
+	assert_len(StatIds.ALL, 24)                     # 21 + bets_won, liga_battles (06-C) + bark_openers (round 4)
 
 
 ## [id, trigger, flags, stats_bad, payload_bad, stats_ok, payload_ok]

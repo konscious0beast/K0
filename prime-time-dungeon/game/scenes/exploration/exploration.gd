@@ -957,7 +957,7 @@ func _check_strike() -> void:
 		var adv: int = Rules.strike_advantage(hit.state, hit.global_position, hit.flat_forward(), pos, hit.is_boss(),
 			Balance.BACK_DOT)
 		_report_field_ability(&"strike", 1)
-		_strike_hit(hit, adv)
+		_strike_hit(hit, adv, _opener(hit, adv))
 		return
 	for sid: Variant in _walls.keys():                 # 06 §2.7: no group in reach → a Kulissenwand?
 		var w: SceneryWall = _walls[sid] as SceneryWall
@@ -967,9 +967,9 @@ func _check_strike() -> void:
 
 
 ## Hit confirm: everything freezes for hitstop_sec while the struck group flashes white, then the battle starts.
-func _strike_hit(hit: EnemyActor, adv: int) -> void:
+func _strike_hit(hit: EnemyActor, adv: int, opener: String = "") -> void:
 	if hitstop_sec <= 0.0 or not is_inside_tree():
-		_trigger_encounter(hit.group_id(), hit.encounter_id(), adv)
+		_trigger_encounter(hit.group_id(), hit.encounter_id(), adv, opener)
 		return
 	_encounter_pending = true
 	_freeze(true)
@@ -981,23 +981,23 @@ func _strike_hit(hit: EnemyActor, adv: int) -> void:
 	Sfx.play(&"hit")
 	# process_always = false: the hitstop pauses with the tree (PauseMenu, §9.4) instead of starting the battle under it
 	get_tree().create_timer(hitstop_sec, false).timeout.connect(
-		_after_hitstop.bind(hit.group_id(), hit.encounter_id(), adv))
+		_after_hitstop.bind(hit.group_id(), hit.encounter_id(), adv, opener))
 
 
-func _after_hitstop(group_id: String, encounter_id: String, advantage: int) -> void:
+func _after_hitstop(group_id: String, encounter_id: String, advantage: int, opener: String = "") -> void:
 	if is_inside_tree() and not _suspended and Router.busy:
 		# A Router transition is still running (e.g. "Zum Titel" from a pause opened during the hitstop): decide when
 		# it is over. A goto frees this screen meanwhile (the timer callback dies with it) — no battle is pushed on top
 		# of the next screen.
 		get_tree().create_timer(HITSTOP_RETRY_SEC, false).timeout.connect(
-			_after_hitstop.bind(group_id, encounter_id, advantage))
+			_after_hitstop.bind(group_id, encounter_id, advantage, opener))
 		return
 	_encounter_pending = false
 	if not _can_start_encounter():
 		# Covered (on_resume restores freeze + timer) or detached: no battle from here.
 		_freeze(_suspended or is_modal())
 		return
-	_trigger_encounter(group_id, encounter_id, advantage)
+	_trigger_encounter(group_id, encounter_id, advantage, opener)
 
 
 ## Battles start only from the settled, active screen: in the tree, not covered by a pushed screen, the Router's
@@ -1013,11 +1013,17 @@ func on_enemy_contact(actor: EnemyActor) -> void:
 		return
 	var adv: int = Rules.contact_advantage(actor.state, actor.global_position, actor.flat_forward(),
 		_player.global_position, _player.flat_forward(), actor.is_boss(), actor.can_ambush(), Balance.BACK_DOT)
-	_trigger_encounter(actor.group_id(), actor.encounter_id(), adv)
+	_trigger_encounter(actor.group_id(), actor.encounter_id(), adv, _opener(actor, adv))
 
 
-## Events.encounter_triggered → Router.start_battle(Game.make_battle_setup(encounter_id, advantage, group_id)).
-func _trigger_encounter(group_id: String, encounter_id: String, advantage: int) -> void:
+## 06 integration (A × C, round 4): "bark" when the group's PREEMPTIVE comes from Graf Mopsula's bark (DAZED: caught
+## from every side) — no sneaking; sneak-themed bets and the "preemptives" stat do not count it (BattleSetup.opener).
+static func _opener(actor: EnemyActor, adv: int) -> String:
+	return "bark" if adv == Rules.PREEMPTIVE and actor != null and actor.state == Rules.DAZED else ""
+
+
+## Events.encounter_triggered → Router.start_battle(Game.make_battle_setup(encounter_id, advantage, group_id, opener)).
+func _trigger_encounter(group_id: String, encounter_id: String, advantage: int, opener: String = "") -> void:
 	if _encounter_pending or not _can_start_encounter() or encounter_id == "":
 		return
 	_encounter_pending = true
@@ -1030,7 +1036,7 @@ func _trigger_encounter(group_id: String, encounter_id: String, advantage: int) 
 	if not auto_start_battle:
 		_cancel_encounter()
 		return
-	var setup: BattleSetup = Game.make_battle_setup(encounter_id, advantage, group_id)
+	var setup: BattleSetup = Game.make_battle_setup(encounter_id, advantage, group_id, opener)
 	if setup == null:
 		push_warning("[Exploration] no BattleSetup for '%s' (BattleBridge not ready?) — battle skipped" % encounter_id)
 		_cancel_encounter()

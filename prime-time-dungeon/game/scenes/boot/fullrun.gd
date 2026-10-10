@@ -156,6 +156,7 @@ var credits_lootbox: int = 0               # credits out of lootboxes (incl. dup
 var human_wait_sec: float = 0.0            # --pace=human: countdown seconds spent in HUMAN_* waits
 var grind_fights: int = 0                  # stray fights still to grind before a boss retry (GRIND_AFTER_DEFEAT)
 var credits_before_floor_boss: int = -1    # credits earned when the floor boss battle starts (GDD §13 "bei Königin")
+var liga_bonus_followers: int = -1         # 06 §4.3 (round 4): the floor's capped Liga follower bonus at the summary
 var _retry_boss: bool = false             # the running battle is a boss the bot will fight again after a defeat
 var _gifts_battle: int = 0
 var _hype_peak_battle: int = 0
@@ -1668,6 +1669,8 @@ func _after_stairs() -> bool:
 	var fs: FloorSummary = Router.current as FloorSummary
 	summary = fs.summary.duplicate()
 	_note("floor summary %s" % JSON.stringify(summary))
+	var liga_rec: Variant = Game.state.show.marotten.get("liga", {})
+	liga_bonus_followers = int((liga_rec as Dictionary).get("followers", 0)) if liga_rec is Dictionary else 0
 	if strategy == "thorough" and not _all_secrets_found():
 		return fail("thorough run left E1 secrets behind: %s of %s" % [str(Secrets.opened(Game.state)),
 			str(Secrets.list(Game.floor_def()).map(func(x: Dictionary) -> String: return str(x["id"])))])
@@ -1851,11 +1854,15 @@ func stats() -> Dictionary:
 	return {
 		"pace": pace, "strategy": strategy, "human_wait_sec": roundi(human_wait_sec),
 		"hero": hero, "barks": barks, "dazed": dazed, "hero_switches": hero_switches,
+		"preemptives": int(show.stats.get("preemptives", 0)) if show != null else 0,         # sneaked up first
+		"bark_openers": int(show.stats.get("bark_openers", 0)) if show != null else 0,       # opened from a bark
 		"secrets": Secrets.opened(Game.state) if Game.state != null else PackedStringArray(),
 		"walls_knocked": walls_knocked, "notes_read": notes_read, "wall_fallbacks": wall_fallbacks,
 		"shortcut_trips": shortcut_trips, "shortcut_cells": shortcut_cells,
 		"sec_per_cell": snappedf(sec_per_cell(), 0.01), "shortcut_gain_sec": roundi(shortcut_cells * sec_per_cell()),
-		"sponsor_gifts": gifts.size(), "gifts_regular": gifts_regular, "gifts_boss": gifts_boss, "gift_ids": gifts,
+		# gifts of the surviving timeline (state stat, round 4) vs every gift signal incl. segments lost to a Game Over
+		"sponsor_gifts": int(show.stats.get("sponsor_gifts", 0)) if show != null else gifts.size(),
+		"sponsor_gifts_events": gifts.size(), "gifts_regular": gifts_regular, "gifts_boss": gifts_boss, "gift_ids": gifts,
 		"boss_outcomes": boss_outcomes, "boss_exp": boss_exp, "boss_kit": boss_kit,
 		"credits_before_floor_boss": credits_before_floor_boss,
 		"hype_start_median": median(hype_start), "hype_end_median": median(hype_end),
@@ -1871,7 +1878,11 @@ func stats() -> Dictionary:
 		"boss_levels": boss_levels, "boss_party_turns": boss_turns, "level_end": _levels(),
 		"credits_earned": credits_earned, "credits_by_source": credits_by_source, "credits_spent": credits_spent,
 		"strays_spawned": strays_spawned, "followers_battles": _sum_key("followers"),
-		"boxes_earned": boxes_earned, "boxes_opened": boxes_opened,
+		# boxes of the surviving timeline (06 integration round 4): opened + still pending in the final state — a box
+		# earned again after a Game-Over reload counts once; boxes_earned_events counts every lootbox_earned signal
+		"boxes_earned": (int(show.stats.get("lootboxes_opened", 0)) + Game.state.pending_lootboxes.size())
+			if show != null and Game.state != null else boxes_earned,
+		"boxes_earned_events": boxes_earned, "boxes_opened": boxes_opened,
 		"achievements": show.achievements.size() if show != null else 0,
 		"followers": show.followers if show != null else 0,
 		"viewers_peak": int(summary.get("viewers_peak", 0)), "kills": int(summary.get("kills", 0)),
@@ -1882,6 +1893,7 @@ func stats() -> Dictionary:
 		"liga": liga, "marotten": show.marotten.duplicate(true) if show != null else {},
 		"bets_won": int(show.stats.get("bets_won", 0)) if show != null else 0,
 		"liga_battles": int(show.stats.get("liga_battles", 0)) if show != null else 0,
+		"liga_bonus_followers": liga_bonus_followers,
 	}
 
 

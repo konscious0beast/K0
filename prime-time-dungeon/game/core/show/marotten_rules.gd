@@ -12,8 +12,10 @@ class_name MarottenRules extends RefCounted
 ##   preference and battle); `goal` hearts win the bet: Fanpost-Paket (won_box), followers, hype, bets_won +1.
 ## - Unterhosen-Liga (always on, kind liga): tier 1 = the controlled hero (GameState.hero, package A) wears no armor and
 ##   no accessory, tier 2 = both; frozen at battle start; multiplies the battle's hype gains and followers
-##   (reward.tiers, per mille). The tier is also the single source of truth for package B's liga_stat_pct talents
-##   (in_liga: the hero from tier 1, the partner only in tier 2; BattleBridge / Progression.total_stats).
+##   (reward.tiers, per mille); the followers the factor adds are capped per floor (floor_follower_cap, ShowState
+##   marotten.liga.followers; integration round 4). The tier is also the single source of truth for package B's
+##   liga_stat_pct talents (in_liga: the hero from tier 1, the partner only in tier 2; BattleBridge /
+##   Progression.total_stats).
 ## - Talent "Kamera 3 kennt mich" (package B, marotte_heart): the first heart of a floor fills one more
 ##   (Talents.marotte_bonus_hearts of the party, once per floor, ShowState.marotten["bonus"]).
 ## - Never mandatory, never a penalty: unmet preferences simply expire with the floor.
@@ -202,6 +204,41 @@ static func liga_pm(data: GameData, tier: int, what: StringName) -> int:
 	return maxi(1000, JsonUtil.to_int(t.get("hype_pm" if what == &"hype" else "follower_pm", 1000), 1000))
 
 
+## Per-floor bound of the Liga follower bonus (06 §4.3, integration round 4): on one floor the follower factor adds at
+## most `floor_follower_cap` followers (reward.tiers[] of the battle's tier, both tiers share the floor's sum);
+## -1 = unbounded (no tier, no key).
+static func liga_floor_cap(data: GameData, tier: int) -> int:
+	var def: MarotteDef = liga_def(data)
+	if def == null or tier <= 0:
+		return -1
+	var t: Dictionary = def.liga_tier_reward(tier)
+	return maxi(0, JsonUtil.to_int(t["floor_follower_cap"], 0)) if t.has("floor_follower_cap") else -1
+
+
+## The part of a won Liga battle's follower bonus (`want` = its followers with the Liga factor − without) that still
+## fits under the floor cap of `tier`; booked in ShowState.marotten.liga.followers (saved + hashed, on_floor starts
+## over), so Game.replay_log repeats it. No floor record yet (tests) → `want`, nothing booked.
+static func take_liga_followers(state: GameState, data: GameData, tier: int, want: int) -> int:
+	if want <= 0 or state == null or state.show == null or state.show.marotten.is_empty():
+		return maxi(0, want)
+	var liga: Dictionary = _liga_record(state)
+	var taken: int = JsonUtil.to_int(liga.get("followers", 0))
+	var cap: int = liga_floor_cap(data, tier)
+	var give: int = want if cap < 0 else clampi(cap - taken, 0, want)
+	liga["followers"] = taken + give
+	return give
+
+
+## Liga follower bonus still open on this floor at `tier` (UI: "noch +N"); -1 = unbounded.
+static func liga_followers_left(state: GameState, data: GameData, tier: int) -> int:
+	var cap: int = liga_floor_cap(data, tier)
+	if cap < 0:
+		return -1
+	var m: Dictionary = state.show.marotten if state != null and state.show != null else {}
+	var liga: Dictionary = m.get("liga", {}) if m.get("liga", {}) is Dictionary else {}
+	return maxi(0, cap - JsonUtil.to_int(liga.get("followers", 0)))
+
+
 # --- battles --------------------------------------------------------------------------------------------------------
 
 ## A battle starts: the pacifist counter (new rooms since the last battle) resets.
@@ -244,7 +281,7 @@ static func battle_context(state: GameState, data: GameData, result: BattleResul
 		"min_party_hp_pct": result.min_party_hp_pct if result != null else 1.0,
 		"party_kos": result.party_kos if result != null else 0,
 		"last_kill_member": str(tally.get("last_kill_member", "")),
-		"encounter_type": _encounter_type(result.advantage if result != null else 0),
+		"encounter_type": _encounter_type(result.advantage if result != null else 0, result.opener if result != null else ""),
 		"is_boss": result != null and result.is_boss,
 		"is_floor_boss": result != null and floor_def != null and result.encounter_id == floor_def.floor_boss,
 		"boss_id": result.boss_id if result != null else "",
@@ -341,7 +378,7 @@ static func on_floor_end(state: GameState, data: GameData, floor_index: int, rul
 # --- views (HUD chip, pause tab "Show", results) ---------------------------------------------------------------------
 
 ## {"floor", "items": [{"id", "name", "desc", "hits", "goal", "won"}], "liga_tier", "liga_hype_pm",
-## "liga_follower_pm", "rewards": bool} — read-only.
+## "liga_follower_pm", "liga_follower_cap" (per floor, -1 = none), "liga_followers_left", "rewards": bool} — read-only.
 static func view(state: GameState, data: GameData, rules: Dictionary) -> Dictionary:
 	var items: Array = []
 	var m: Dictionary = state.show.marotten if state != null and state.show != null else {}
@@ -356,6 +393,7 @@ static func view(state: GameState, data: GameData, rules: Dictionary) -> Diction
 	var tier: int = liga_tier(state, rules)
 	return {"floor": JsonUtil.to_int(m.get("floor", 0)), "items": items, "liga_tier": tier,
 		"liga_hype_pm": liga_pm(data, tier, &"hype"), "liga_follower_pm": liga_pm(data, tier, &"follower"),
+		"liga_follower_cap": liga_floor_cap(data, tier), "liga_followers_left": liga_followers_left(state, data, tier),
 		"rewards": rewards_on(rules)}
 
 
@@ -454,10 +492,10 @@ static func _rule_on(rules: Dictionary, key: String) -> bool:
 	return true
 
 
-static func _encounter_type(advantage: int) -> String:
+static func _encounter_type(advantage: int, opener: String = "") -> String:
 	match advantage:
 		BattleSetup.Advantage.PREEMPTIVE:
-			return "preemptive"
+			return "bark" if opener == "bark" else "preemptive"   # a bark-daze first strike is no sneaking
 		BattleSetup.Advantage.AMBUSH:
 			return "ambush"
 	return "normal"

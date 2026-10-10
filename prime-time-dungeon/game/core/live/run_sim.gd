@@ -158,7 +158,7 @@ func apply(cmd: Dictionary) -> Array[ExploreEvent]:
 			_apply_floor(int(c["floor"]))
 			out.append_array(sponsor_floor())
 		"encounter":
-			_apply_encounter(str(c["enc"]), int(c["adv"]), str(c["group"]), out)
+			_apply_encounter(str(c["enc"]), int(c["adv"]), str(c["group"]), out, str(c.get("opener", "")))
 		"battle":
 			_apply_battle(c["cmd"], out)
 		"gift":
@@ -659,13 +659,15 @@ func _apply_floor(index: int) -> void:
 
 ## §5.7 without presentation: setup ("battle" stream), BattleState, the "show" stream draw of Show.begin_battle,
 ## pacifist counter reset, start().
-func _apply_encounter(enc: String, adv: int, group: String, out: Array[ExploreEvent]) -> void:
+func _apply_encounter(enc: String, adv: int, group: String, out: Array[ExploreEvent], opener: String = "") -> void:
 	if battle != null:
 		push_warning("[RunSim] encounter '%s' while a battle is running" % enc)
 		return
 	var setup: BattleSetup = BattleBridge.make_setup(state, data, enc, adv, group, next_seed("battle"), rules)
 	if setup == null:
 		return
+	if adv == BattleSetup.Advantage.PREEMPTIVE and BattleSetup.OPENERS.has(opener):
+		setup.opener = opener                          # 06 integration: "bark" (Mopsula's daze) — like Game
 	battle = BattleState.new(setup, data)
 	_battle_external = 0
 	next_seed("show")

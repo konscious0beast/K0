@@ -16,7 +16,7 @@ var _preview: GridContainer
 var _slot_buttons: Array[Control] = []
 var _cand_buttons: Array[Control] = []
 var liga_line: Label                   # 06-C: "Liga blockiert durch: Tierheim-Hoodie" / "Liga-bereit: …"
-var liga_tier_line: Label              # 06-C: "Aktuell: Unterhosen-Liga (Hype ×1,2)" / "Aktuell: keine Liga"
+var liga_tier_line: Label              # 06-C: "Aktuell: Unterhosen-Liga (Hype ×1,05)" / "Aktuell: keine Liga"
 
 
 func _ready() -> void:

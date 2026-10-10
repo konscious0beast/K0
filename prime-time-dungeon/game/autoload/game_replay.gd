@@ -177,7 +177,7 @@ func _twist(tw: Variant) -> String:
 ## Events.battle_started.
 func _begin_battle(c: Dictionary) -> BattleState:
 	var setup: BattleSetup = game.make_battle_setup(str(c.get("enc", "")), int(c.get("adv", 0)),
-		str(c.get("group", "")))
+		str(c.get("group", "")), str(c.get("opener", "")))
 	if setup == null:
 		return null
 	var battle: BattleState = BattleState.new(setup, DB.data)

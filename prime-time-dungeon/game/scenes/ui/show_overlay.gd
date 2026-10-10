@@ -6,7 +6,7 @@ extends CanvasLayer
 ## (filled = taken), "SPONSOR-FENSTER VOLL – danke!", closed "Nächstes Fenster in ~3 Min." ("in Kürze" under a minute)
 ## in event/live runs (Show.sponsor_presentation &"live"), the same as a dim one-liner in the campaign (&"subtle"),
 ## hidden without windows (Pur-Liga). 06-C show chip (06 §4.7): "M.O.D. mag heute: <preference>" + hearts, and the
-## Liga tier ("LIGA ×1,2" / "DUO-LIGA ×1,4") — one compact line under the right column (exploration: below the
+## Liga tier ("LIGA ×1,05" / "DUO-LIGA ×1,2") — one compact line under the right column (exploration: below the
 ## minimap, battle: under the hype meter), hidden before the countdown runs (Floor 1: tutorial) and when switched off
 ## (Optionen → "Show-Wetten anzeigen", GameSettings.show_bets_hud).
 ## Mode via Events.overlay_mode_requested: &"explore", &"battle", &"safe_room", &"menu" (scanlines only),
@@ -1020,7 +1020,7 @@ func show_chip_hearts() -> String:
 	return out
 
 
-## "LIGA ×1,2" / "DUO-LIGA ×1,4" / "LIGA" (event runs) while the chip shows the Liga, else "".
+## "LIGA ×1,05" / "DUO-LIGA ×1,2" / "LIGA" (event runs) while the chip shows the Liga, else "".
 func show_chip_liga() -> String:
 	return _chip_liga.text if _chip != null and _chip.visible and _chip_liga.visible else ""
 

@@ -341,9 +341,9 @@ func begin_battle(setup: BattleSetup) -> void:
 	_peak_battle = viewers()
 	set_stat("explore_seconds_since_battle", 0)
 	if setup.advantage == BattleSetup.Advantage.PREEMPTIVE:
-		bump_stat("preemptives")
-	trigger("battle_started", {"encounter_id": setup.encounter_id, "encounter_type": _encounter_type(setup.advantage),
-		"is_boss": setup.is_boss})
+		bump_stat("bark_openers" if setup.opener == "bark" else "preemptives")   # a bark is no sneaking (round 4)
+	trigger("battle_started", {"encounter_id": setup.encounter_id,
+		"encounter_type": _encounter_type(setup.advantage, setup.opener), "is_boss": setup.is_boss})
 	if not _first_fight_said and st.show.stats.get("battles_won", 0) == 0 and st.show.stats.get("battles_fled", 0) == 0:
 		_first_fight_said = true
 		say("first_fight")
@@ -473,7 +473,7 @@ func end_battle(result: BattleResult) -> int:
 		_reset_battle()
 		return 0
 	var gained: int = 0
-	var enc_type: String = _encounter_type(result.advantage)
+	var enc_type: String = _encounter_type(result.advantage, result.opener)
 	if result.outcome == BattleResult.Outcome.VICTORY and _rules != null:
 		_apply_delta(_rules.end_delta(result))
 	# Thresholds still open can no longer be served (no turn boundary left); an open top threshold resets hype to 80
@@ -490,7 +490,12 @@ func end_battle(result: BattleResult) -> int:
 				bump_stat("ambushes_won")
 			var mres: Dictionary = _marotten_battle_end(result)   # 06-C: hearts → hit hype before the conversion
 			var peak: int = maxi(_peak_battle, viewers())
-			gained = ShowModel.followers_for_battle_pm(peak, hype(), result.is_boss, _battle_follower_pm(st, mres))
+			gained = ShowModel.followers_for_battle_pm(peak, hype(), result.is_boss, _battle_follower_pm(st, mres, 1000))
+			if _liga_follower_pm != 1000:                         # the Liga part, capped per floor (06 §4.3)
+				var full: int = ShowModel.followers_for_battle_pm(peak, hype(), result.is_boss,
+					_battle_follower_pm(st, mres, _liga_follower_pm))
+				gained += MarottenRules.take_liga_followers(st, DB.data, _marotten.liga_tier if _marotten != null else 0,
+					full - gained)
 			add_followers(gained, &"battle")
 			var payload: Dictionary = {"party_turns": result.party_turns, "min_party_hp": result.min_party_hp,
 				"min_party_hp_pct": result.min_party_hp_pct, "crits": result.crits, "weakness_hits": result.weakness_hits,
@@ -1207,10 +1212,12 @@ func _chest_type(chest_id: String) -> String:
 	return "wood"
 
 
-static func _encounter_type(advantage: int) -> String:
+## "preemptive" | "ambush" | "normal"; a PREEMPTIVE opened from Mopsula's bark is "bark" (integration round 4: the
+## sneak-themed achievement "Leise Sohle" and the bet "Schleichwerbung" ask for "preemptive").
+static func _encounter_type(advantage: int, opener: String = "") -> String:
 	match advantage:
 		BattleSetup.Advantage.PREEMPTIVE:
-			return "preemptive"
+			return "bark" if opener == "bark" else "preemptive"
 		BattleSetup.Advantage.AMBUSH:
 			return "ambush"
 	return "normal"
@@ -1320,11 +1327,12 @@ func _marotten_battle_end(result: BattleResult) -> Dictionary:
 	return res
 
 
-## GameState.follower_pm (equipment × talents) × the Liga factor of this battle × the hearts' follower factor, integer
-## per mille with each step rounded half up (06 §8.0 Nr. 4) — without talents bit-identical to package C's float path.
-func _battle_follower_pm(st: GameState, mres: Dictionary) -> int:
+## GameState.follower_pm (equipment × talents) × the Liga factor `liga_pm` (this battle's, or 1000 for the part without
+## it) × the hearts' follower factor, integer per mille with each step rounded half up (06 §8.0 Nr. 4) — without
+## talents bit-identical to package C's float path.
+func _battle_follower_pm(st: GameState, mres: Dictionary, liga_pm: int) -> int:
 	var pm: int = st.follower_pm(DB.data)
-	var extra: int = (_liga_follower_pm * int(mres.get("follower_pm", 1000)) + 500) / 1000
+	var extra: int = (liga_pm * int(mres.get("follower_pm", 1000)) + 500) / 1000
 	return pm if extra == 1000 else (pm * extra + 500) / 1000
 
 

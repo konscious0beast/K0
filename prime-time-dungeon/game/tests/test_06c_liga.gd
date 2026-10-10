@@ -76,11 +76,13 @@ func test_tier_follows_the_controlled_hero() -> void:
 func test_factors_and_text() -> void:
 	var d: GameData = real_data()
 	assert_eq(MarottenRules.liga_pm(d, 0, &"hype"), 1000)
-	# 06 §4.10 balancing (test_06c_balance): tier 1 hype ×1.2 / followers ×1.15, tier 2 ×1.4 / ×1.35
-	assert_eq(MarottenRules.liga_pm(d, 1, &"hype"), 1200)
-	assert_eq(MarottenRules.liga_pm(d, 1, &"follower"), 1150)
-	assert_eq(MarottenRules.liga_pm(d, 2, &"hype"), 1400)
+	# 06 §4.3 / §4.10 (integration round 4, 06 §8.8 I-8): tier 1 hype ×1.05 / followers ×1.1 (at most +60 per floor),
+	# tier 2 ×1.2 / ×1.35 (at most +180 per floor) — package C had ×1.2 / ×1.15 and ×1.4 / ×1.35 without a cap
+	assert_eq(MarottenRules.liga_pm(d, 1, &"hype"), 1050)
+	assert_eq(MarottenRules.liga_pm(d, 1, &"follower"), 1100)
+	assert_eq(MarottenRules.liga_pm(d, 2, &"hype"), 1200)
 	assert_eq(MarottenRules.liga_pm(d, 2, &"follower"), 1350)
+	assert_eq([MarottenRules.liga_floor_cap(d, 1), MarottenRules.liga_floor_cap(d, 2)], [60, 180])
 	assert_eq(Show.pm_text(1250), "1,25")
 	assert_eq(Show.pm_text(1500), "1,5")
 	assert_eq(Show.pm_text(1000), "1")
@@ -89,13 +91,14 @@ func test_factors_and_text() -> void:
 
 # --- Show: factors of a battle ----------------------------------------------------------------------------------------
 
-## The same synthetic battle at tier 0 and tier 2: hype gains ×1.4 (start hype 3 → 4.2 → 4) and the follower
-## conversion ×1.35; the tier is frozen at battle start (putting the hoodie on mid-battle changes nothing).
+## The same synthetic battle at tier 0 and tier 2: hype gains ×1.2 (start hype 3 → 3.6 → 4) and the follower
+## conversion ×1.35 (its bonus capped per floor, test_06c_liga_cap); the tier is frozen at battle start (putting the
+## hoodie on mid-battle changes nothing).
 func test_show_scales_hype_and_followers_by_tier() -> void:
 	var plain: Dictionary = _battle(false)
 	var liga: Dictionary = _battle(true)
 	assert_eq(plain["start_hype"], 3, "normal battle start +3")
-	assert_eq(liga["start_hype"], 4, "Duo-Liga: 3 × 1.4 = 4.2 → 4 (per mille, half up)")
+	assert_eq(liga["start_hype"], 4, "Duo-Liga: 3 × 1.2 = 3.6 → 4 (per mille, half up)")
 	assert_gt(int(liga["followers"]), int(plain["followers"]), "more followers in the Duo-Liga")
 	assert_eq(liga["liga_tier"], 2)
 	assert_eq(Show.last_marotten()["liga_tier"], 2, "results screen: the battle's tier")
@@ -140,7 +143,7 @@ func test_event_runs_have_no_factors() -> void:
 	var rules: Dictionary = {"leagues": ["pur"], "mode": "solo"}
 	assert_false(MarottenRules.rewards_on(rules))
 	Show.begin_battle(setup)
-	assert_eq(Show.get("_liga_hype_pm"), 1400, "campaign: the Duo-Liga factor is set")
+	assert_eq(Show.get("_liga_hype_pm"), 1200, "campaign: the Duo-Liga factor is set")
 	Show.end_battle(null)
 	Game.mode = &"event_offline"
 	Game.set("_event_def", _event())
@@ -305,7 +308,7 @@ func test_equipment_menu_names_the_blockers() -> void:
 	page.call("equip", "armor", "")
 	await wait_frames(1)
 	assert_eq(line.text, "Liga-bereit: ohne Rüstung & ohne Accessoire")
-	assert_eq((page.get("liga_tier_line") as Label).text, "Aktuell: Unterhosen-Liga (Hype ×1,2)")
+	assert_eq((page.get("liga_tier_line") as Label).text, "Aktuell: Unterhosen-Liga (Hype ×1,05)")
 	page.queue_free()
 
 
@@ -367,7 +370,7 @@ func test_show_chip_in_the_overlay() -> void:
 	_strip(Game.state, "kai")
 	o.call("refresh_show_chip")
 	assert_eq(o.call("show_chip_hearts"), "♥♥♡")
-	assert_eq(o.call("show_chip_liga"), "LIGA ×1,2")
+	assert_eq(o.call("show_chip_liga"), "LIGA ×1,05")
 	Game.state.show.marotten["won"] = [id]
 	o.call("refresh_show_chip")
 	assert_eq(o.call("show_chip_hearts"), "✓", "a won bet: golden check")

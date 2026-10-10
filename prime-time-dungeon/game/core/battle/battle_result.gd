@@ -12,6 +12,7 @@ var group_id: String = ""
 var is_boss: bool = false
 var boss_id: String = ""               # EnemyDef id of the boss ("" otherwise)
 var advantage: int = 0                 # BattleSetup.Advantage
+var opener: String = ""                # BattleSetup.opener of a PREEMPTIVE battle ("bark" = Mopsula's bark), else ""
 var turns: int = 0                     # number of TURN_START events (all units)
 var party_turns: int = 0               # TURN_START of party members
 var exp: int = 0                       # sum of exp_reward of defeated non-summoned enemies × exp_mult (VICTORY only)
@@ -63,7 +64,7 @@ func to_dict() -> Dictionary:
 		"weak_found": wf, "escaped": Array(escaped), "damage_taken": damage_taken, "min_party_hp": min_party_hp,
 		"min_party_hp_pct": min_party_hp_pct, "crits": crits, "weakness_hits": weakness_hits,
 		"items_used": items_used, "party_kos": party_kos,
-	}
+	}.merged({"opener": opener} if opener != "" else {})
 
 
 ## Inverse of to_dict (also accepts "min_party_hp_pct_ppm" from BattleState snapshots and JSON floats for ints).
@@ -75,6 +76,7 @@ static func from_dict(d: Dictionary) -> BattleResult:
 	r.is_boss = bool(d.get("is_boss", false))
 	r.boss_id = str(d.get("boss_id", ""))
 	r.advantage = JsonUtil.to_int(d.get("advantage", 0))
+	r.opener = str(d.get("opener", ""))
 	r.turns = JsonUtil.to_int(d.get("turns", 0))
 	r.party_turns = JsonUtil.to_int(d.get("party_turns", 0))
 	r.exp = JsonUtil.to_int(d.get("exp", 0))

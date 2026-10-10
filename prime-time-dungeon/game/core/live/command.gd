@@ -57,6 +57,9 @@ static func _validate_fields(t: String, d: Dictionary) -> String:
 				return e
 			if int(d["adv"]) > ADVANTAGE_MAX:
 				return "adv must be 0..%d" % ADVANTAGE_MAX
+			if d.has("opener") and (not (d["opener"] is String) or str(d["opener"]) != "bark" \
+					or int(d["adv"]) != BattleSetup.Advantage.PREEMPTIVE):
+				return "opener must be \"bark\" (only with adv 1)"      # 06 integration: BattleSetup.opener
 			return _str(d, "group")
 		"battle":
 			if not (d.get("auto", null) is bool):

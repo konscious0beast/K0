@@ -15,7 +15,9 @@ var sponsor_uses: Dictionary = {}            # sponsor id → total gifts given
 ## 06-C: M.O.D.'s preferences of the floor and the Liga counters (06 §4; MarottenRules owns every write):
 ## {"floor": int, "active": [mar ids], "hits": {id: int}, "won": [ids won this floor], "prev": [ids of the previous
 ## floor], "zones": int (mar_pacifist: new rooms since the last battle / hit), "liga": {"battles", "t1", "t2"} (won
-## battles of the floor, of them at Liga tier >= 1 / tier 2)}. {} = none yet (old saves, before the first floor).
+## battles of the floor, of them at Liga tier >= 1 / tier 2) + "followers" (the floor's Liga follower bonus so far,
+## capped per floor; after the first won Liga battle), optional "bonus" (06 B × C: the preference that got the talent's
+## extra heart this floor)}. {} = none yet (old saves, before the first floor).
 var marotten: Dictionary = {}
 
 
@@ -51,14 +53,15 @@ static func from_dict(d: Dictionary) -> ShowState:
 
 
 ## 06-C: the marotten record with JSON-stable types (ints, String arrays, sorted int dictionaries); {} for anything
-## that is not a Dictionary or an empty one.
+## that is not a Dictionary or an empty one. Keeps "bonus" (06 B × C, "Kamera 3 kennt mich" spent on this floor —
+## integration round 4: before, a save → load on the same floor dropped it and the extra heart came again).
 static func marotten_dict(raw: Variant) -> Dictionary:
 	if not (raw is Dictionary) or (raw as Dictionary).is_empty():
 		return {}
 	var d: Dictionary = raw
 	var hits: Variant = d.get("hits", {})
 	var liga: Variant = d.get("liga", {})
-	return {
+	var out: Dictionary = {
 		"floor": maxi(0, JsonUtil.to_int(d.get("floor", 0))),
 		"active": Array(_unique(JsonUtil.to_str_array(d.get("active", [])))),
 		"hits": _int_dict(hits if hits is Dictionary else {}),
@@ -67,6 +70,9 @@ static func marotten_dict(raw: Variant) -> Dictionary:
 		"zones": maxi(0, JsonUtil.to_int(d.get("zones", 0))),
 		"liga": _int_dict(liga if liga is Dictionary else {}),
 	}
+	if d.get("bonus", null) is String and str(d["bonus"]) != "":
+		out["bonus"] = str(d["bonus"])
+	return out
 
 
 ## Sorted String keys, int values.

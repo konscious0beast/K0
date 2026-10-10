@@ -562,14 +562,25 @@ nennt deshalb nie Schuhe oder Füße. Die **Waffe ist erlaubt**.
 **Lesbarkeit:** Das Ausrüstungsmenü zeigt bei jeder Figur eine Zeile „Liga: aktiv“ bzw. „Liga blockiert durch: Gasmaske“
 (`MarottenRules.liga_blockers(state, member_id) -> PackedStringArray`, Item-Namen aus den belegten Slots).
 
-| Stufe | Bedingung (zu Kampfbeginn geprüft, gilt den ganzen Kampf) | Hype-Gewinne | Follower | Show-Chip-Zusatz |
+| Stufe | Bedingung (zu Kampfbeginn geprüft, gilt den ganzen Kampf) | Hype-Gewinne | Follower (Bonus je Etage gedeckelt) | Show-Chip-Zusatz |
 |---|---|---|---|---|
 | 0 | sonst | ×1.0 | ×1.0 | — |
-| **1 „Unterhosen-Liga“** | **gesteuerte Figur** (`GameState.hero`): `armor == ""` **und** `accessory == ""` | **×1.20** (Plan ×1.25) | **×1.15** (Plan ×1.20) | „LIGA ×1,2“ |
-| **2 „Duo-Liga“** (ultimativ) | **beide** Figuren: `armor == ""` und `accessory == ""` | **×1.40** (Plan ×1.50) | **×1.35** (Plan ×1.40) | „DUO-LIGA ×1,4“ |
+| **1 „Unterhosen-Liga“** | **gesteuerte Figur** (`GameState.hero`): `armor == ""` **und** `accessory == ""` | **×1.05** (Plan ×1.25, Paket C ×1.20) | **×1.10, höchstens +60 je Etage** (Plan ×1.20, Paket C ×1.15 ohne Deckel) | „LIGA ×1,05“ |
+| **2 „Duo-Liga“** (ultimativ) | **beide** Figuren: `armor == ""` und `accessory == ""` | **×1.20** (Plan ×1.50, Paket C ×1.40) | **×1.35, höchstens +180 je Etage** (Plan ×1.40, Paket C ohne Deckel) | „DUO-LIGA ×1,2“ |
 
 *Paket C (gemessen):* Mit den Planwerten lag die Duo-Liga-Staffel bei 2 096 Followern am Ende von E1 (Band 4.10: ≤ 2 000) —
-die Faktoren sind deshalb auf 1,2/1,15 bzw. 1,4/1,35 gesenkt (Daten `marotten.json`, Band als Test `test_06c_balance`).
+die Faktoren wurden deshalb auf 1,2/1,15 bzw. 1,4/1,35 gesenkt (Daten `marotten.json`, Band als Test `test_06c_balance`).
+
+*Integration Runde 4 (Kap. 8.8 I-8, Messung Kap. 8.4 „Stand Runde 4“):* **Deckel auf den Liga-Follower-Bonus je Etage**
+(`reward.tiers[].floor_follower_cap`, optional, 0..2 000): Nach jedem gewonnenen Liga-Kampf bucht
+`MarottenRules.take_liga_followers`, was der Follower-Faktor hinzufügt (Follower mit − ohne Faktor), und zahlt es nur bis zum
+Deckel der Stufe dieses Kampfes aus; beide Stufen füllen dieselbe Etagensumme `ShowState.marotten.liga.followers` (gespeichert,
+im Hash, `Game.replay_log`-gleich), die nächste Etage beginnt bei 0. Hype-Faktor, Liga-Achievements und Mut-Paket bleiben
+ungedeckelt. Der Pausemenü-Tab „Show“ nennt Faktoren, Deckel und den Rest der Etage („noch +N Follower“). Kleinere
+Hype-Faktoren, weil Hype-Gewinne ganzzahlig gerundet werden (Kap. 8.0 Nr. 4): ab ×1,25 wird jedes +2 (Abwechslung,
+Schwachstelle, Combo, Skill-Kill) zu +3 — die Duo-Liga lag damit im Bot bei Hype-Ende ~79 und bis zu 11 Geschenken; ×1,2 hebt
+erst Gewinne ab +3 an, ×1,05 erst ab +10 (Stufe 1 ist beim Hype fast neutral, ihr Lohn sind Follower-Bonus, Kette und
+Mut-Paket).
 
 Die Multiplikatoren wirken auf die **Kampagnen-Show-Währung**; in gewerteten Event-Läufen zählen sie nicht in die Punkte (4.8 Nr. 4).
 
@@ -668,8 +679,8 @@ floor_tier, battles, is_boss, is_floor_boss, boss_id, party_kos, floor`. Neue `S
 
 - **Ein Show-Chip** (TV-Overlay, Erkundung + Kampf, unter der Hype-Leiste, 18 px): Vorlieben und Liga in **einem** kompakten
   Element, z. B. **„♥ Nur der Mopp ●●○“** — auf E1 genau eine Vorliebe; ab E2 wechseln zwei Vorlieben alle 4 s im selben Chip
-  (oder Kurzform „♥ 2/3 · 0/3“ auf schmalen Bildschirmen). Ist die Liga aktiv, hängt der Chip „· LIGA ×1,25“ bzw. „· DUO-LIGA ×1,5“
-  an (Magenta/Gelb). Gewonnene Wette: Eintrag golden mit Haken. Abschaltbar: Optionen → „Show-Wetten anzeigen“. **Keine** zweite
+  (oder Kurzform „♥ 2/3 · 0/3“ auf schmalen Bildschirmen). Ist die Liga aktiv, hängt der Chip „· LIGA ×1,05“ bzw. „· DUO-LIGA ×1,2“
+  an (Hype-Faktor aus den Daten, Kap. 4.3; Magenta/Gelb). Gewonnene Wette: Eintrag golden mit Haken. Abschaltbar: Optionen → „Show-Wetten anzeigen“. **Keine** zweite
   HUD-Zeile, **kein** separates Liga-Badge.
 - **Kampfende:** Herz fliegt aus dem Ergebnis-Panel in den Show-Chip; Toast „♥ M.O.D. gefällt das (+6 Hype)“.
 - **Pausemenü-Tab „Show“:** aktive Vorlieben mit Bedingung im Klartext, Fortschritt, Liga-Stufe mit Regeltext („ohne Rüstung &
@@ -1466,7 +1477,8 @@ Pausemenü-Tab „Show“ (`bets_menu.gd`), Liga-Zeile im Ausrüstungsmenü, Zei
    Faktoren an, zahlen keine Boxen/Follower/Hype und feuern keinen `show_bet` — `show_pts`/`ach_pts` sind dadurch unabhängig von
    Liga und Wetten; `score_calc.gd` bleibt unverändert. Anzeige und Zählung laufen weiter (Spaß und Kommentar);
    `rules.marotten.enabled`/`rules.liga.enabled` (`{"enabled": bool}`) im `rules_hash`.
-3. **Liga-Faktoren gesenkt** (Kap. 4.3): ×1,2/×1,15 und ×1,4/×1,35.
+3. **Liga-Faktoren gesenkt** (Kap. 4.3): ×1,2/×1,15 und ×1,4/×1,35 (Integration Runde 4: ×1,05/×1,1 und ×1,2/×1,35 mit
+   Deckel des Follower-Bonus je Etage +60/+180, Kap. 8.8 I-8).
 4. **Namen:** `mar_sneaky` „Schleichwerbung“, `mar_gourmet` „Schwachstellen-Gourmet“, `ach_ul_first` „Einmal ohne alles“,
    `ach_duo_flawless` „Ohne Kratzer, ohne Rüstung“; die Kette heißt „Ohne alles“. Regeltext der Liga überall „ohne Rüstung & ohne
    Accessoire“; der Validator lehnt Fuß-/Schuh-Wörter in Marotten-Texten und `liga_*`/`marotte_*`-Zeilen ab.
@@ -1523,6 +1535,45 @@ und machte Liga 1 unattraktiv (1 447, unter der Referenz). **Entscheidung:** Fak
 Duo-Liga-Durchlauf erreicht den Meilenstein 2 000 (Gold-Box, GDD §7.7 „nur mit Top-Spiel“) — gewollt als Belohnung der
 ultimativen Spielweise. Playtest-Punkt: die Rückkopplung auf E2 (Zuschauer +0,5 je Follower) beobachten; falls nötig einen Deckel
 auf den Liga-Follower-Bonus je Etage statt kleinerer Faktoren.
+
+**Stand Runde 4** (Integration, Kap. 8.8 I-7/I-8: Bellen ≠ Anschleichen; Faktoren ×1,05/×1,1 und ×1,2/×1,35, Deckel des
+Liga-Follower-Bonus +60/+180 je Etage). Der Bot zählt Lootboxen und Geschenke jetzt eindeutig aus dem Zustand
+(`lootboxes_opened` + offene Boxen, `sponsor_gifts`) — die alte Signal-Zählung übersah Boss-/Event-Boxen und zählte nach einem
+Game-Over-Neuladen doppelt.
+
+| Simulation (`test_06c_balance`) | Ziel | Paket C | Runde 4 |
+|---|---|---|---|
+| Boss-Niederlage 1. Versuch Liga 1 (Hausmeister / Königin, 100 Seeds) | ≤ 40 % / ≤ 55 % | 26 % / 42 % | 27 % / 47 % (Graf Mopsula gesteuert 28 % / 35 %; ohne Liga 17 % / 29 %) |
+| dto. Liga 2 | ≤ 55 % / ≤ 70 % | 37 % / 57 % | 40 % / 56 % |
+| Follower Ende E1 (Staffel, Median 8 Seeds): ohne / Liga 1 / Liga 2 | ≤ 2 000; Duo > Liga 1 > ohne | 1 357 / 1 630 / 1 855 | 1 357 / 1 449 / 1 512 |
+| Lootboxen E1: ohne / Liga 1 / Liga 2 | 15–22 (Liga ≤ 28) | 20 / 23 / 21,5 | 20 / 21,5 / 21 |
+
+| Full-Run-Bot `human`, *thorough*, Median Seeds 1–3 (Seeds 1–8) | Ziel Runde 4 | Kai: ohne / Liga 1 / Duo | Graf Mopsula: ohne / Liga 1 / Duo |
+|---|---|---|---|
+| Follower Ende E1 | ohne 1 200–1 500; Liga 1 ≤ 1 800; Duo ≤ 2 000 und ≥ +25 % | 1 495 (1 456) / 1 759 (1 822) / **2 336** (2 064) | **1 582** (1 579) / 1 525 (1 588) / **2 304** (2 222) |
+| … Runde 3 (vorher) | | 1 495 / 1 905 / 2 689 | 1 751 / 2 061 / 2 942 |
+| Zuschauer-Peak | ≤ 6 500 | 4 710 / 5 451 / 6 171 | 5 136 / 4 836 / 5 920 |
+| Hype Kampfende (Median regulär) | ≤ 75 | 59 / 64,5 / 65 | 61 / 62 / 67 |
+| Sponsor-Geschenke | ≤ 9 | 5 / 6 / 7 | 4 / 5 / 7 |
+| Lootboxen (eindeutig) | ≤ 28 | 20 / 25 / 28 | 22 / 22 / **29** |
+| Achievements | ohne 12–16 | 16 / 19 / 21 | **18** / 16 / 21 |
+| Liga-Follower-Bonus (gedeckelt) | +60 / +180 | — / 60 / 180 | — / 60 / 180 |
+
+Takt `fast` (Seeds 1–3, alle `FULLRUN: OK`): Follower ohne / Liga 1 / Duo — Kai 2 017 / 2 227 / 2 569, Graf Mopsula
+2 191 / 1 951 / 2 637 (Runde 3: 2 017 / 2 189 / 3 517 und 2 154 / 2 527 / 3 058).
+
+**Bewertung Runde 4:** Liga 1, Hype, Geschenke und Zuschauer liegen im Ziel; Lootboxen am Rand (die 29. Box der Mopsula-Duo-
+Läufe ist die Gold-Box des Meilensteins 2 000). **Offen:** (1) Duo-Liga-Follower über 2 000. Den Abstand zu „ohne Liga“ machen
+vor allem die Kette (mit „Ohne Kratzer, ohne Rüstung“ +260) und die Königin: der Bot kämpft nach einem Game Over weiter, bis er
+sie besiegt, die Staffel-Simulation spielt ohne Wiederholung und verliert sie in 6 von 8 Duo-Staffeln — dort hält erst der
+gedeckelte Follower-Bonus die Duo-Liga über Liga 1 („zahlt am meisten“, Kap. 4.10), und der Bot bekommt dieselben +180. Kleinere
+Deckel bringen den Bot näher an 2 000, lassen die Simulation aber unter oder knapp über Liga 1 fallen (Duo-Deckel 120 / 130 /
+150: 1 405 / 1 419 / 1 449 gegen Liga 1 1 414 / 1 428 / 1 428). Ein Hype-Faktor ab ×1,25 rundet jedes +2 zu +3 (Bot:
+Hype-Ende ~79, bis 11 Geschenke) — daher ×1,2. (2) Graf
+Mopsula ohne Liga über dem Band (Seeds 1–8: 1 579 Follower / 17 Achievements): die Wette kommt nicht mehr aus dem Bellen
+(I-7, Runde 3: 1 751), der Rest ist das Bellen selbst — 4–5 Bell-Eröffnungen je Lauf (Party zuerst) → weniger HP-Verlust, mehr
+Hype bei den Bossen, `ach_viewers_5000` in 5 von 8 Läufen (Kai 2 von 8). Die Duo-Mediane der Seeds 1–3 schwanken um ±300 (eine
+Königin-Chance, Bot-Jitter bei `time_scale` 5); Seeds 1–8 sind belastbarer.
 
 ### 8.5 Paket D — KI-Admin: Schnittstelle, Twists, Referenz-Dienst
 
@@ -1666,16 +1717,21 @@ aufzeichnende `Game`-Methode. Alle bisherigen ~806 Tests bleiben grün; jedes Pa
 | 1 / 1b | Paket B mit den Review-Fixes von `main`; Talent-Legalität in `RunRules.command_refusal`; IP-Umbenennungen; Show-Faktoren als Ganzzahl-Promille; Replay-Prüfung nach dem Laden (Anker) | gemergt |
 | 2 | Paket A; Feld-Talente → Feldfähigkeiten (`HeroRules.field_mods`); Safe-Room-Menü in 5 Zeilen mit 88-px-Trefferflächen, TALENT-SHOW oben rechts; Held:in × Talente (`test_06ab_hero_talents`) | gemergt |
 | 3 | `main` (07_ECHTZEITKAMPF, Brief-Vorrang); Paket C; Liga-Talente ← Liga-Stufe; „Kamera 3 kennt mich“ → Herzen; Screenshots von C als 27/28 | gemergt |
-| 4 | Paket D (KI-Admin, Twists) | offen |
+| 4 | `main` (07-Konsistenz); `regie_`-Präfix gehört Paket D (A's Regie-Notiz-Zeilen → `secret_note:<n>`, Spieltext bleibt „Regie-Notiz“); Paket D (KI-Admin, Twists, Regie offline, M.O.D. live) mit Hype-Kette in Ganzzahl-Promille, Twist-Ablehnung über `RunRules` in beiden Prüfern, Replay-Puffer im Zustand (I-10) und RemoteModVoice-Fixes (I-11); Bellen ≠ Anschleichen (I-7); Liga-Ökonomie mit Deckel je Etage (I-8); CTB-Grenze + R4-Ziel (I-9) | gemergt |
 
 | # | Entscheidung (Orchestrator, 2026-10-10) | Umsetzung / Folge |
 |---|---|---|
 | I-1 | **Kein E1-Show-Boss im CTB.** Der von Paket C zurückgestellte Show-Boss (Kap. 2.6) wird direkt im Echtzeitkampf gebaut (`07_ECHTZEITKAMPF.md`, Phase R4, Entscheidung E26). | keine Wegwerf-CTB-Inhalte; GDD §1 vermerkt es; E1 bringt bis dahin höchstens 2 Show-Boxen (Wette + Mut-Paket) |
 | I-2 | **Bekannte CTB-Grenze bis R5:** ein automatischer Partner („Partner automatisch“, Kap. 1.4) stuntet nie (AutoPolicy) — „Taktgefühl“ hilft im CTB nur, wenn Graf Mopsula gesteuert wird. Im Echtzeitkampf nutzt auch die KI SHOW, dort wirkt es (07 E27: `tal_mop_taktgefuehl` über `RtUnit.stunt_pm`). | nur hier vermerkt, **kein UI-Text** |
 | I-3 | **Liga-Stufe = einzige Quelle** für die Liga-Talente (`tal_kai_liga_routine`, `tal_mop_liga_gelassen`): `MarottenRules.in_liga` — die gesteuerte Figur ab Stufe 1, die andere nur in der Duo-Liga (Stufe 2); nie im Tutorial-Kampf, nie bei `rules.liga.enabled = false`. | `BattleBridge.make_setup` (Kampfwerte, Regeln des Laufs), `UiUtil.member_stats`, Talent-Show-Vorschau; `Talents.liga_dressed` entfällt; `liga_stat_pct` nur für Kampfwerte (nie HP/MP, Validator); Ganzzahl-Promille; Tests `test_06abc_liga_talents` |
-| I-4 | **„Kamera 3 kennt mich“** (`marotte_heart`) wirkt in C's Herz-Logik: das erste Herz einer Etage zählt doppelt (Party-Summe, einmal je Etage, bis zum Ziel), für beide Held:innen, auch in Event-Läufen (zählen ja, zahlen nicht); Toast „Talent: Extra-Herz …“. | `MarottenRules._bonus_hearts`, `ShowState.marotten["bonus"]` (Save + Hash, `Game.replay_log`-gleich) |
+| I-4 | **„Kamera 3 kennt mich“** (`marotte_heart`) wirkt in C's Herz-Logik: das erste Herz einer Etage zählt doppelt (Party-Summe, einmal je Etage, bis zum Ziel), für beide Held:innen, auch in Event-Läufen (zählen ja, zahlen nicht); Toast „Talent: Extra-Herz …“. | `MarottenRules._bonus_hearts`, `ShowState.marotten["bonus"]` (Save + Hash, `Game.replay_log`-gleich; Runde 4: `ShowState.marotten_dict` behält den Marker — vorher fiel er beim Speichern weg, nach dem Laden kam das Extra-Herz auf derselben Etage erneut; Test `test_06abc_liga_talents`) |
 | I-5 | **Gesteuerte Figur:** die Liga-Stufe liest `GameState.hero` (Paket A) direkt. | `MarottenRules.hero_of`; Tests für Kai und Graf Mopsula |
 | I-6 | **IP:** Kai und Graf Mopsula; keine Kronen-/Majestäts-/Königsmotive für Mopsula; ohne Rüstung zu spielen ist ein Spielstil, nie ein Charakterzug; der allgemeine „Wir/Uns“-Stil des Grafen bekommt einen eigenen Stimm-Durchgang nach allen vier Paketen. | Liste der Stellen im Integrationsbericht |
+| I-7 | **Bellen ist kein Anschleichen.** Ein Präventivschlag aus Graf Mopsulas Bellen (die Gruppe ist benommen und wird von jeder Seite erwischt) zählt nicht für „Schleichwerbung“ (`mar_sneaky`) oder andere Schleich-Vorlieben und nicht für „Leise Sohle“ (`ach_preemptive_3`), sondern als eigener Zähler `bark_openers`; im Kampf bleibt er ein Präventivschlag (Party zuerst, Hype +3, „Erster Eindruck“). | `BattleSetup.opener` / `BattleResult.opener` = `"bark"` (im `encounter`-Command als `opener`, nur bei `adv` 1 — Logs ohne Bellen bleiben bytegleich), `encounter_type` `"bark"` in `Show` und `MarottenRules`, `exploration.gd._opener`; Test `test_06ac_bark_opener` |
+| I-8 | **Liga-Ökonomie: sichtbar belohnt, aber begrenzt.** Faktoren Stufe 1 Hype ×1,05 / Follower ×1,1, Stufe 2 ×1,2 / ×1,35; **Deckel auf den Liga-Follower-Bonus je Etage** +60 / +180 (Kap. 4.3). Die Duo-Liga zahlt am meisten auch in der Simulation ohne Wiederholungen (Kap. 4.10), Messung und verbleibende Abweichungen Kap. 8.4 „Stand Runde 4“. | `floor_follower_cap` in `marotten.json` (Validator optional 0..2 000), `MarottenRules.liga_floor_cap` / `take_liga_followers` / `liga_followers_left`, `ShowState.marotten.liga.followers`, Tab „Show“ nennt Deckel und Rest; Tests `test_06c_liga_cap`, `test_06c_liga`, `test_06c_balance` |
+| I-9 | **CTB-Grenze bis R5:** Ist Graf Mopsula gesteuert, legt in Liga 1 nur der Graf Rüstung und Accessoire ab, Kai kämpft voll ausgerüstet. Mit Hype ×1,2 war Liga 1 dann im CTB kaum schwerer als ohne Liga (Boss-Niederlage 1. Versuch Hausmeister/Königin 19 %/35 % gegen 17 %/29 %); mit ×1,05 (I-8) 28 %/35 % (+11/+6 Punkte; Kai gesteuert 27 %/47 %). Für den CTB akzeptiert (vorläufig bis R5). **R4-Ziel (07, Echtzeitkampf):** „Liga 1 muss für beide Held:innen messbar schwerer sein als Liga 0 (≥ +5 Punkte Boss-Niederlage im 1. Versuch).“ | Messung im Harness von `test_06c_balance` (100 Seeds, Geschenke) mit Liga-Stufe 1 auf der gesteuerten Figur; 07 übernimmt das Ziel in den R4-Harness |
+| I-10 | **Twists × Speichern/Replay (Paket D):** Der Replay-Puffer (ein Twist-Command vor seinem Tick einsortiert) liegt im Zustand (`GameState.flags.twist_buffer`, gespeichert, nicht gehasht, `RunSim.step` macht ihn fällig); Ablehnung zentral in `RunRules.twist_refusal` (Live-Eingang und beide Prüfer), abgelehnte Commands nennen ihre ID (`RunRules.refused_id`); Hype-Kette Ganzzahl-Promille: Ausrüstung × Talente → Liga → Partyhüte-Twist, je Schritt halb aufgerundet; der Twist-Validator ist privat (`validators/twists.gd`, Kap. 8.0 Nr. 7). | Tests `test_06d_twist_save`, `test_06d_twists` |
+| I-11 | **RemoteModVoice:** Ein neuer Lauf oder ein Laden (`run_ref` ändert sich) verwirft das Sitzungs-Token und eine laufende Anfrage; gesund ist nur eine 2xx-Antwort mit JSON-Objekt ohne `error`/`detail` — 429/413/5xx und Fehler-JSON zählen als Fehler, damit greifen die 3-Fehler-Pause und die Rückgabe an die Regie. | `RemoteModVoice.healthy_body`; Tests in `test_06d_mod_voice` |
 
 ---
 

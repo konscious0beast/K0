@@ -375,14 +375,21 @@ func next_seed(purpose: String) -> int:
 
 
 ## Records the encounter, builds the setup (next_seed("battle")) and sets in_battle (until apply_battle_result).
-func make_battle_setup(encounter_id: String, advantage: int, group_id: String) -> BattleSetup:
-	record({"t": "encounter", "enc": encounter_id, "adv": advantage, "group": group_id})
+## `opener` (06 integration A × C): "bark" when Graf Mopsula's bark dazed the group that a PREEMPTIVE battle starts
+## from — recorded only then ({"opener": "bark"}), so sneak-themed bets / stats can tell it from sneaking up.
+func make_battle_setup(encounter_id: String, advantage: int, group_id: String, opener: String = "") -> BattleSetup:
+	var o: String = opener if advantage == BattleSetup.Advantage.PREEMPTIVE and BattleSetup.OPENERS.has(opener) else ""
+	var cmd: Dictionary = {"t": "encounter", "enc": encounter_id, "adv": advantage, "group": group_id}
+	if o != "":
+		cmd["opener"] = o
+	record(cmd)
 	if state == null:
 		push_warning("[Game] make_battle_setup without state")
 		return null
 	var setup: BattleSetup = BattleBridge.make_setup(state, DB.data, encounter_id, advantage, group_id,
 		next_seed("battle"), event_rules())
 	if setup != null:
+		setup.opener = o
 		setup.auto_battle = auto_battle
 		in_battle = true
 	return setup

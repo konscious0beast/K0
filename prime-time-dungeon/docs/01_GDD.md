@@ -1282,22 +1282,29 @@ in der Unterhosen-Liga und bekommt dauerhaft mehr Hype und Follower.** Alles fre
 | `mar_brave` | Kein Schritt zurück | Gewinne, ohne zu verteidigen und ohne Fluchtversuch. | — | 2 |
 | `mar_gourmet` | Schwachstellen-Gourmet | Triff in einem Kampf dreimal eine Schwachstelle. | — | 2 |
 
+Ein Präventivschlag aus dem **Bellen** (die Gruppe ist benommen und wird von jeder Seite erwischt) ist **kein Anschleichen**:
+er zählt nicht für „Schleichwerbung“ und nicht für „Leise Sohle“ (`ach_preemptive_3`), sondern als `bark_openers`; im Kampf
+bleibt er ein Präventivschlag (Party zuerst, Hype +3, „Erster Eindruck“). Orchestrator-Entscheidung Integration Runde 4
+(06 §8.8 I-7).
+
 - **Herzen & Wette:** Ein gewonnener Kampf (bzw. bei `mar_pacifist` der dritte neue Raum ohne Kampf), der eine Vorliebe erfüllt,
   füllt **ein Herz** (je Vorliebe und Kampf höchstens eins): Hype **+6**, Follower dieses Kampfes **×1,15**. **Drei Herzen** =
   Wette gewonnen: **Fanpost-Paket** (`box_fan`), **+30 Follower**, +5 Hype, Zähler `bets_won`. Nicht gewonnene Wetten verfallen mit
   der Etage ohne Abzug (M.O.D. schmollt höchstens einmal, `marotte_missed`). Tutorial, Niederlage und Flucht zählen nie.
 - **Unterhosen-Liga** (immer verfügbar, Regeltext überall „**ohne Rüstung & ohne Accessoire**“, die Waffe bleibt): Stufe beim
   Kampfstart eingefroren — **Stufe 1** = die **gesteuerte** Figur trägt weder Rüstung noch Accessoire: Hype-Gewinne im Kampf
-  **×1,2**, Follower **×1,15**; **Stufe 2 „Duo-Liga“** (ultimativ) = beide: **×1,4 / ×1,35**. Etagen-Bonus: alle (≥ 3) Siege
+  **×1,05**, Follower **×1,1** (der Follower-Bonus höchstens **+60 je Etage**); **Stufe 2 „Duo-Liga“** (ultimativ) = beide:
+  **×1,2 / ×1,35** (höchstens **+180 je Etage**; beide Stufen füllen dieselbe Etagensumme). Etagen-Bonus: alle (≥ 3) Siege
   einer Etage in Stufe ≥ 1 → 1 Fanpost-Paket („Mut-Paket“) in der Etagen-Bilanz. Wieder anziehen kostet nichts (Zeile
   `liga_leave`). M.O.D. verrät die Liga einmalig in der Etagen-Bilanz von E1 (`liga_hint`), bis dahin steht sie im Pausemenü-Tab
   „Show“. Startwerte aus 06 §4.3 (×1,25/×1,20 bzw. ×1,5/×1,4) wurden auf das Band „Follower ≤ 2 000 am Ende von E1“ gesenkt
-  (Kap. 13).
+  (Kap. 13); Integration Runde 4: kleinere Hype-Faktoren und der Deckel des Follower-Bonus je Etage (06 §4.3, §8.8 I-8).
 - **Anzeige:** **ein** Show-Chip „**M.O.D. mag heute: Nur der Mopp ♥♥♡**“ (gewonnen: goldener Haken), bei aktiver Liga
-  dahinter „LIGA ×1,2“ bzw. „DUO-LIGA ×1,4“ (Event-Läufe: nur „LIGA“) — in der Erkundung unter der Minimap-Spalte, im Kampf unter der Hype-Leiste (während des Ergebnis-Panels ausgeblendet —
+  dahinter „LIGA ×1,05“ bzw. „DUO-LIGA ×1,2“ (Event-Läufe: nur „LIGA“) — in der Erkundung unter der Minimap-Spalte, im Kampf unter der Hype-Leiste (während des Ergebnis-Panels ausgeblendet —
   das Panel zeigt die Herzen selbst); ab E2 wechseln
   zwei Vorlieben alle 4 s; erst sichtbar, wenn der Countdown läuft. Abschaltbar: Optionen → „Show-Wetten anzeigen“. Pausemenü-Tab
-  **„Show“**: Vorlieben mit Regel, Herzen, Status; Liga mit Regeltext, Stufe, Faktoren und „Liga blockiert durch: …“ je Figur
+  **„Show“**: Vorlieben mit Regel, Herzen, Status; Liga mit Regeltext, Stufe, Faktoren, Deckel und Rest der Etage („noch +N
+  Follower“) und „Liga blockiert durch: …“ je Figur
   (Sprung ins Ausrüstungsmenü, das dieselbe Zeile zeigt). Ergebnisbildschirm: Zeile „Show“ mit den Herzen des Kampfes und der
   Liga-Stufe; Toasts „M.O.D. mag das: … (2/3)“ / „Wette gewonnen: …!“.
 - **Event-Läufe** (06 §4.8 Nr. 4, Option a): Vorlieben und Liga werden angezeigt und gezählt, zahlen aber **nichts** (keine
@@ -1347,7 +1354,7 @@ advantage, boss_id, overkill_credits`. Alle Trigger sind `Events`-Signale mit `(
 **Zähler `s.` (`StatIds.ALL`):** `kills_total, kills_skill, battles_won, battles_fled, preemptives, ambushes_won, crits_total,
 stunts_success, stunts_fail, chests_opened, sponsor_gifts, credits_spent_vendor, lootboxes_opened, events_completed,
 game_overs, ko_mopsula, explore_seconds_since_battle, viewers_max` (+ Quest-Metriken 05 CR-13) und `bets_won`, `liga_battles`
-(Kap. 7.8).
+(Kap. 7.8), `bark_openers` (Kampf aus Graf Mopsulas Bellen eröffnet — zählt **nicht** als `preemptives`, s. u.).
 (`explore_seconds_since_battle` wird bei jedem Kampfstart 0; `viewers_max` = Maximum; `credits_spent_vendor` nur Automatenkäufe.)
 
 | ID | Name | Beschreibung (`desc`) | Trigger | Bedingung | Box | Hidden | M.O.D.-Spruch (`achievement:<id>`) |
@@ -1816,8 +1823,8 @@ Kein Kronen-Motiv an Mopsula, auch nicht über eine Spezies-Optik (Validator: `c
 | Achievements pro Etage (Erstdurchlauf) | 12–16 von 35 (29 ohne die Liga-Kette) | — |
 | Lootboxen pro Etage | 15–22 (06 §4.5; vor den Show-Wetten 15–20) | Achievements + Bosse + Meilensteine 250/1 000 (+ Glücksrad) + Show-Wette/Mut-Paket (Kap. 7.8) |
 | Show-Wetten je Etage (06 §4.10) | ohne gezieltes Spielen 0–1, gezielt alle | Staffel-Simulation E1 (Auto-Kampf, 8 Seeds): höchstens 1 gewonnen |
-| Unterhosen-Liga: Boss-Niederlage 1. Versuch | Stufe 1 ≤ 40 % / ≤ 55 %, Stufe 2 ≤ 55 % / ≤ 70 % (Hausmeister / Königin) | `test_06c_balance` (100 Seeds, Geschenke wie im Spiel): Stufe 1 26 % / 42 %, Stufe 2 37 % / 57 % |
-| Follower Ende E1 im Liga-Durchlauf | ≤ 2 000 in der Simulation (Rückkopplung gedämpft, Kap. 7.2); Duo-Liga darf den Meilenstein 2 000 erreichen | Staffel-Simulation (Median 8 Seeds): ohne Liga 1 357, Stufe 1 1 630, Stufe 2 1 855; Lootboxen 20 / 23 / 21,5. Full-Run-Bot `human`, *thorough*, Seeds 1–3: 1 562 / 1 928 / 2 299, Boxen 20 / 23 / 24, Königin-Niederlage 1. Versuch 0/3 / 1/3 / 2/3 (Bewertung 06 Kap. 8.4 „Stand Paket C“) |
+| Unterhosen-Liga: Boss-Niederlage 1. Versuch | Stufe 1 ≤ 40 % / ≤ 55 %, Stufe 2 ≤ 55 % / ≤ 70 % (Hausmeister / Königin) | `test_06c_balance` (100 Seeds, Geschenke wie im Spiel): Stufe 1 27 % / 47 % (Graf Mopsula gesteuert 28 % / 35 %), Stufe 2 40 % / 56 % — Integration Runde 4 (Paket C: 26 % / 42 %, 37 % / 57 %); ohne Liga 17 % / 29 % |
+| Follower Ende E1 im Liga-Durchlauf | ≤ 2 000 in der Simulation (Rückkopplung gedämpft, Kap. 7.2), die Duo-Liga zahlt am meisten; Bot-Ziel seit Integration Runde 4: Liga 1 ≤ 1 800, Duo-Liga ≤ 2 000 und ≥ +25 % gegenüber ohne Liga | Staffel-Simulation (Median 8 Seeds): ohne Liga 1 357, Stufe 1 1 449, Stufe 2 1 512; Lootboxen 20 / 21,5 / 21. Full-Run-Bot `human`, *thorough*, Seeds 1–3, Kai / Graf Mopsula: ohne Liga 1 495 / 1 582, Stufe 1 1 759 / 1 525, Stufe 2 2 336 / 2 304 (Seeds 1–8: 2 064 / 2 222 — über dem Ziel), Boxen Stufe 2 28 / 29 (Bewertung 06 Kap. 8.4 „Stand Runde 4“; Paket C: 1 562 / 1 928 / 2 299) |
 | Follower am Ende E1 | 1 200–1 500 | Kap. 7.6 |
 | Max. Zuschauer E1 | 3 000–5 500 | Kap. 7.2 |
 | Hype am Kampfanfang / -ende (Median regulär) | 25–45 / 45–65 | Kap. 7.3 Dramaturgie: Abkühlen auf 25, Routinekampf +15–25, Sponsoren erst ab 70 |

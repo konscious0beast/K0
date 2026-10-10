@@ -15,6 +15,11 @@ var credits_available: int = 0               # party credits (limit for steal_cr
 var owned_equipment: PackedStringArray = []
                                              # one of them becomes credits (ItemDef.duplicate_credits, GDD §9.3)
 var advantage: BattleSetup.Advantage = Advantage.NORMAL
+## 06 integration (A × C, round 4): what opened a PREEMPTIVE battle — "" (sneaked up / struck first) or "bark" (Graf
+## Mopsula's bark dazed the group: caught from every side). Battle rules ignore it; sneak-themed bets / stats do not
+## count a "bark" opener (Show, MarottenRules: encounter_type "bark"). Recorded with the encounter ("opener").
+const OPENERS: PackedStringArray = ["", "bark"]
+var opener: String = ""
 var seed: int = 1
 var is_boss: bool = false
 var can_flee: bool = true
@@ -50,7 +55,7 @@ func to_dict() -> Dictionary:
 		"enemy_dmg_mult_ppm": FixedMath.ppm(enemy_dmg_mult), "exp_mult_ppm": FixedMath.ppm(exp_mult),
 		"show_mods_ppm": mods, "theme_id": theme_id, "palette": pal, "floor_index": floor_index,
 		"auto_battle": auto_battle,
-	}
+	}.merged({"opener": opener} if opener != "" else {})
 
 
 static func from_dict(d: Dictionary, data: GameData) -> BattleSetup:
@@ -86,4 +91,5 @@ static func from_dict(d: Dictionary, data: GameData) -> BattleSetup:
 		s.palette = (pal as Dictionary).duplicate(true)
 	s.floor_index = JsonUtil.to_int(d.get("floor_index", 1), 1)
 	s.auto_battle = bool(d.get("auto_battle", false))
+	s.opener = str(d.get("opener", "")) if OPENERS.has(str(d.get("opener", ""))) else ""
 	return s

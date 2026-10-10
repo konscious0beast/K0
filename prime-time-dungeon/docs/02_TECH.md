@@ -485,6 +485,9 @@ Jede Datei unter `tests/` gehört dem genannten Modul; `test_<modul>_*.gd` ist d
 | `tests/test_06c_liga.gd` | 06-C | Unterhosen-Liga: Stufen 0/1/2 je gesteuerter Figur, Blocker, Promille-Faktoren (beim Kampfstart eingefroren, nur Kampagne), Etagen-Bonus, Kette „Ohne alles“ erreichbar, Regel-Schalter im `rules_hash`, UI (Ausrüstung, Tab „Show“, Chip, Ergebniszeile), Replay |
 | `tests/test_06c_sponsor_display.gd` | 06-C | Die fünf Sponsor-Fenster-Entscheidungen (06 §6): Badge ohne Sekunden/Druckwörter + Platz-Punkte, Fan-Pakete nur im Fenster/Cheers immer, Comeback-Fenster (Regeln, Save-Übertrag, genau einmal, Live-Zeile), Koop-Plätze je Spieler, Bits nie Geschenkquelle |
 | `tests/test_06c_balance.gd` | 06-C | Balance-Bänder 06 §4.10 mit dem echten `Show`: Boss-Niederlagequote Liga 1/2 (100 Seeds), Staffel Etage 1 (Follower ≤ 2 000, Lootboxen, Liga-Kämpfe, Referenz ≤ 1 Wette) |
+| `tests/test_06c_liga_cap.gd` | 06-C, Integration Runde 4 | Deckel des Liga-Follower-Bonus je Etage (06 §4.3, §8.8 I-8): `MarottenRules.take_liga_followers` (Stufen-Deckel, gemeinsame Etagensumme, neue Etage, ohne Schlüssel ungedeckelt), `Show.end_battle` zahlt Basis + höchstens den Deckel, Live-Lauf über Speichern → Laden und `Game.replay_log`, Validator, Tab „Show“ |
+| `tests/test_06abc_liga_talents.gd` | Integration A × B × C | Liga-Stufe der gesteuerten Figur für beide Held:innen, Liga-Talente folgen ihr (`MarottenRules.in_liga`), „Kamera 3 kennt mich“ füllt ein Extra-Herz je Etage, Replay ab Speicher-Anker |
+| `tests/test_06ac_bark_opener.gd` | Integration A × C, Runde 4 | Bellen ist kein Anschleichen (06 §8.8 I-7): `opener` `"bark"` in `BattleSetup`/`BattleResult`/`encounter`-Command (nur `adv` 1), kein Herz für „Schleichwerbung“, `bark_openers` statt `preemptives`, Replay, `exploration.gd._opener` |
 | `tests/test_perf_router_cycles.gd` | Phase C | Router-Zyklen Erkundung → Kampf → Safe Room ohne Wachstum der Node-/Objekt-Minima, `Sfx.stop_all`, Etagen-Aufbauzeit, Physik-/Licht-Layer der Etage (§12.1, §12.5) |
 | `tests/test_perf_platform.gd` | Phase C | Mobil-Projekteinstellungen, Export-Presets + Launcher-Icons, Boot kompiliert keine Screens vorab (§2.1, §12.3) |
 | `tests/perf/perf_probe.gd` + `perf_runner.gd`, `tests/perf/boot_timer.gd` | Phase C | Mess-Werkzeug für `tools/perf.sh` (§12.5); keine Tests (kein `test_`-Präfix) |
@@ -1074,7 +1077,8 @@ Laufzeitverhalten:
   aufzeichnende `Game`-Methode; Szenen/UI schreiben **nie** direkt in `Game.state` (auch nicht `floor_run.visited`, `location`,
   `opened_chests`, `flags`). Reaktionen (Show auf `Events`-Signale, `BattleBridge`, `RunSim`) sind deterministisch und werden nicht
   aufgezeichnet. Ausnahme: `Save.load_slot` ersetzt den Zustand und startet einen neuen `RunLog`.
-- Aufgezeichnete Commands (`record`, Brief §6b.2/3) mit Feldern: `floor {floor}`, `encounter {enc, adv, group}`,
+- Aufgezeichnete Commands (`record`, Brief §6b.2/3) mit Feldern: `floor {floor}`, `encounter {enc, adv, group, opener?}`
+  (`opener: "bark"` nur bei `adv` 1 aus Graf Mopsulas Bellen → `BattleSetup.opener`, Integration Runde 4),
   `battle {cmd, auto}` (M5, jeder `BattleCommand.to_dict()`), `lootbox {box}`, `buy {item, qty, safe_room}`, `sell {item, qty}`,
   `equip {member, slot, item}`, `use_item {item, member}`, `rest {}`, `event {id, choice}` (FloorEvent-Wahl), `chest {id}`,
   `gate {key}`, `room {cell: [x, y]}` (Erstbesuch; 06-C: auch der Wiederbesuch einer Boss-Zelle, für die ein Comeback-Fenster fällig ist), `safe_room {id}`, `safe_room_exit {}`, `scene {id}`, `flag {key, value}`,
@@ -1227,7 +1231,8 @@ func start_floor(floor_index: int) -> void                          # hype := Ba
 func sync_from_state() -> void                                      # re-emit hype/viewers/followers after load or RunSim tick
 func begin_battle(setup: BattleSetup) -> void
 	# _rules = ShowRules.new(DB.data, setup); _rng seeded Game.next_seed("show"); thresholds/gifts reset; stat
-	# explore_seconds_since_battle := 0; preemptives +1 on PREEMPTIVE; trigger("battle_started", payload); say("first_fight") once
+	# explore_seconds_since_battle := 0; preemptives +1 on PREEMPTIVE (bark_openers +1 instead when setup.opener ==
+	# "bark"); trigger("battle_started", payload: encounter_type "bark" then); say("first_fight") once
 func on_battle_event(e: ActionEvent) -> void
 	# ShowRules.feed(e) → ShowDelta → add_hype, stats, triggers (enemy_killed/stunt_resolved/combo/party_ko signals + trigger());
 	# M.O.D. lines for delta.reasons; viewers_peak_battle = max(viewers()); sponsor threshold check (§6.2)
@@ -1247,8 +1252,8 @@ func sponsor_window_view() -> Dictionary    # Game.sponsor_window() + "mode" + "
 	# "free"/"full" count the pending reservations — for the overlay badge, the debug tool and a shop UI ("next_in_sec")
 # --- 06-C: M.O.D.-Marotten (show bets) + Unterhosen-Liga (06 §4) ---
 func marotten_view() -> Dictionary          # MarottenRules.view(Game.state, DB.data, Game.event_rules()): {"floor",
-	# "items": [{"id", "name", "desc", "hits", "goal", "won"}], "liga_tier", "liga_hype_pm", "liga_follower_pm", "rewards"}
-	# — HUD chip, pause tab "Show", equipment menu
+	# "items": [{"id", "name", "desc", "hits", "goal", "won"}], "liga_tier", "liga_hype_pm", "liga_follower_pm",
+	# "liga_follower_cap" (per floor, -1 = none), "liga_followers_left", "rewards"} — HUD chip, pause tab "Show", equipment menu
 func last_marotten() -> Dictionary          # the last won battle's hearts + Liga tier (results screen); {} = nothing to show
 func on_room_visited(room_kind: int, zone: String) -> void   # Game.visit_room (first visit): pacifist counter — only
 	# while the countdown runs, never safe room cells
@@ -1309,7 +1314,9 @@ Paket A, Standard `"kai"` — bzw. beide ohne Rüstung **und** ohne Accessoire; 
 `follower_pm` aus `marotten.json` (`add_hype` im Kampf: `(mult_pm × hype_pm + 500) / 1000`), `liga_changed` + `liga_enter:<n>`/
 `liga_leave` (je Etage einmal). `on_battle_event` füttert die Strichliste. `end_battle` (nur Sieg, nicht Tutorial):
 `MarottenRules.on_battle_end` → Herzen (je Vorliebe höchstens 1 je Kampf; Treffer-Hype **vor** der Follower-Umrechnung,
-Follower-Faktor = Ausrüstung × Liga × Treffer-Promille) → nach `battle_won`: gewonnene Wetten (`box_fan` →
+Follower-Faktor = Ausrüstung × Liga × Treffer-Promille; der Liga-Anteil — Follower mit minus ohne Liga-Faktor — wird über
+`MarottenRules.take_liga_followers` nur bis zum Deckel `floor_follower_cap` der Stufe je Etage ausgezahlt, Summe in
+`ShowState.marotten.liga.followers`, Integration Runde 4) → nach `battle_won`: gewonnene Wetten (`box_fan` →
 `pending_lootboxes`, Follower, Hype, `bets_won` +1), Liga-Kampf (`liga_battles` +1), `trigger("show_bet", payload)` je Ereignis,
 Zeilen/Toasts. `floor_completed` → `MarottenRules.on_floor_end`: Liga-Etagenbonus (alle ≥ 3 Siege der Etage in Stufe ≥ 1 →
 `box_fan`; alle ≥ 5 in Stufe 2 → `show_bet` `floor`), eine Schmoll-Zeile `marotte_missed`, `liga_hint` am Ende von E1 für alle,
@@ -2289,7 +2296,7 @@ M.O.D.s Vorlieben (Show-Wetten) und die Unterhosen-Liga. Regeln im privaten Helf
 | `starter` | bool | false | auch auf Etage 1 wählbar (mindestens eine rotierende Starter-Vorliebe); `liga`: false |
 | `min_floor` | int | 1 | 1..99 |
 | `weight` | int | 1 | 1..10, Gewicht der Auswahl |
-| `reward` | Dictionary | `{}` | rotierend: `hit_hype` 0..50, `hit_follower_pm` 1000..2000, `won_box` (Lootbox-ID oder `""`), `won_followers` 0..500, `won_hype` 0..50; `liga`: `tiers` (1–2 × `{tier` 1..2, `hype_pm` 1000..2000, `follower_pm` 1000..2000`}`, Stufe eindeutig), `floor_box` (Lootbox-ID) |
+| `reward` | Dictionary | `{}` | rotierend: `hit_hype` 0..50, `hit_follower_pm` 1000..2000, `won_box` (Lootbox-ID oder `""`), `won_followers` 0..500, `won_hype` 0..50; `liga`: `tiers` (1–2 × `{tier` 1..2, `hype_pm` 1000..2000, `follower_pm` 1000..2000, optional `floor_follower_cap` 0..2000`}` — Follower, die der Faktor je Etage höchstens hinzufügt, beide Stufen füllen dieselbe Etagensumme, ohne Schlüssel ungedeckelt; Stufe eindeutig), `floor_box` (Lootbox-ID) |
 | `mod_tag` | String | `""` | Tag-Stamm der Zeilen (Information für Autor:innen) |
 
 Kontext `marotte_battle` (`MarottenRules.battle_context`): `won, hero, party_turns, items_used, gifts, defends, flee_attempts,
@@ -2305,7 +2312,8 @@ Distanz-Regel 06 §0.3: `name`/`desc` aller Einträge und alle `liga_*`/`marotte
 {"id": "mar_unterhose", "name": "Unterhosen-Liga", "desc": "Ohne Rüstung & ohne Accessoire kämpfen: mehr Hype, mehr Follower.",
  "kind": "liga", "trigger": "marotte_battle", "condition": "e.liga_tier >= 1", "goal": 0, "rotation": false,
  "starter": false, "min_floor": 1, "weight": 1,
- "reward": {"tiers": [{"tier": 1, "hype_pm": 1200, "follower_pm": 1150}, {"tier": 2, "hype_pm": 1400, "follower_pm": 1350}],
+ "reward": {"tiers": [{"tier": 1, "hype_pm": 1050, "follower_pm": 1100, "floor_follower_cap": 60},
+                      {"tier": 2, "hype_pm": 1200, "follower_pm": 1350, "floor_follower_cap": 180}],
             "floor_box": "box_fan"}, "mod_tag": "liga"}
 ```
 #### 4.4.18 `twists.json` → `TwistDef` (06-D, KI-Admin; 06 §5.6)
@@ -3132,7 +3140,9 @@ var milestones: PackedStringArray = []       # reached ms ids
 var sponsor_uses: Dictionary = {}            # sponsor id → total gifts given
 var marotten: Dictionary = {}                # 06-C (only MarottenRules writes): {"floor", "active": [mar ids], "hits": {id: int},
 	# "won": [ids won this floor], "prev": [ids of the previous floor], "zones": int (mar_pacifist: new rooms since the last
-	# battle / heart), "liga": {"battles", "t1", "t2"} (won battles of the floor, of them at tier >= 1 / tier 2)}; {} = none yet
+	# battle / heart), "liga": {"battles", "t1", "t2"} (won battles of the floor, of them at tier >= 1 / tier 2) + "followers"
+	# (the floor's paid Liga follower bonus, capped per floor; from the first won Liga battle), optional "bonus" (06 B × C:
+	# the preference that got the "Kamera 3 kennt mich" extra heart this floor; saved and hashed)}; {} = none yet
 func to_dict() -> Dictionary
 static func from_dict(d: Dictionary) -> ShowState
 static func marotten_dict(raw: Variant) -> Dictionary   # 06-C: JSON-stable types (ints, sorted String arrays); {} otherwise
@@ -3151,6 +3161,12 @@ static func in_liga(state: GameState, member_id: String, tier: int) -> bool  # 0
 static func liga_member(state: GameState, member_id: String, rules: Dictionary = {}) -> bool   # in_liga at the current tier
 static func liga_blockers(state: GameState, member_id: String) -> PackedStringArray   # item ids in armor / accessory
 static func liga_pm(data: GameData, tier: int, what: StringName) -> int      # &"hype" | &"follower"; 1000 = neutral
+static func liga_floor_cap(data: GameData, tier: int) -> int  # floor_follower_cap of the tier; -1 = unbounded (round 4)
+static func take_liga_followers(state, data, tier: int, want: int) -> int
+	# integration round 4 (06 §4.3): the part of a won Liga battle's follower bonus (with − without the Liga factor)
+	# that still fits under the floor cap of `tier`; books it in ShowState.marotten.liga.followers (both tiers share the
+	# floor sum, on_floor starts over); no floor record (tests) → `want`
+static func liga_followers_left(state, data, tier: int) -> int               # rest of the floor cap; -1 = unbounded
 static func on_battle_start(state: GameState) -> void       # pacifist counter := 0
 static func battle_context(state, data, result: BattleResult, tally: Dictionary) -> Dictionary   # marotte_battle (§4.4.17)
 static func on_battle_end(state, data, result, tally, rules) -> Dictionary
@@ -3542,7 +3558,8 @@ Top-Kampf am Etagenende; Ziel-Peak der Etage 3 000–5 500.
 | `kills_skill` | Zähler | Show | Gegner-KO durch Skill |
 | `battles_won` | Zähler | `Show.end_battle` | Sieg |
 | `battles_fled` | Zähler | `Show.end_battle` | Flucht |
-| `preemptives` | Zähler | `Show.begin_battle` | Kampfstart PREEMPTIVE |
+| `preemptives` | Zähler | `Show.begin_battle` | Kampfstart PREEMPTIVE (angeschlichen; nicht aus dem Bellen) |
+| `bark_openers` | Zähler | `Show.begin_battle` | Kampfstart PREEMPTIVE mit `BattleSetup.opener == "bark"` (Graf Mopsulas Bellen; Integration Runde 4) |
 | `ambushes_won` | Zähler | `Show.end_battle` | Sieg nach AMBUSH |
 | `crits_total` | Zähler | Show | Party-Krit |
 | `stunts_success` / `stunts_fail` | Zähler | Show | Stunt-Ergebnis |
@@ -4915,7 +4932,7 @@ Kampfstart/-ende/-peak, Teleports, Fallbacks, Replay-Prüfungen, M.O.D.-Tags, `h
 | M8 | 05_LIVE_MODUS §11.4; zusätzlich `RunSim.step(1) × n ≡ step(n)` und Timer/Hype-Zerfall in Ticks; Verifier gegen gefälschte Logs (`test_m8_integrity`); jeder `Command.TYPES`-Eintrag hat einen Zweig in `RunSim.apply` und im Replay-Motor (`test_m8_command`) |
 | 06-A | 06 §8.2 (`tests/test_06a_*.gd`): Startwahl/Safe-Room-Wechsel inkl. Ablehnungsgründe und `RunSim`-Gleichheit, Replay-Hash auch für einen Lauf als Mopsula, Altstand ohne `hero` → `kai`; Bellen-Geometrie/Sichtlinie/Immunität/Bosse, `DAZED` → PREEMPTIVE aus jeder Richtung; Partner automatisch (`auto: true` nur für den Partner); Figurenwahl-Szene (Fokus, Touch-Flächen), Safe-Room-Menü passt über den Chat-Ticker; Full-Run-Bot `--hero=mopsula`; E1-Geheimnisse (`test_06a_secrets`: Regeln, Command + Replay + `RunSim`, Save, Datenregeln, Wand fällt mit Feldschlag und Bellen, nie mit Interagieren, Notizen genau einmal) |
 | 06 A × B | `tests/test_06ab_hero_talents.gd`: Feld-Talente nur der führenden Figur (Ganzzahl-Promille, Szene für Kai und Graf Mopsula, Wechsel im Safe Room), je Held:in Talent-Show + Replay-Hash + „Partner automatisch“ mit Talenten, Safe-Room-Layout Desktop und Handy (Trefferflächen ≥ 88) |
-| 06-C | Marotten (`test_06c_marotten`): Auswahl deterministisch je Seed/Etage (E1 nur Starter, möglichst ohne Wiederholung), jede Bedingung trifft/trifft nicht, ≤ 1 Herz je Vorliebe und Kampf, Wette → Box/Follower/Hype/`bets_won`/`show_bet`, Tutorial/Niederlage/Event-Lauf zahlen nichts, Pazifist (Erstbesuch, Countdown, kein Safe Room, Latch, Save/Load), Replay-Gleichheit; Liga (`test_06c_liga`): Stufen je gesteuerter Figur, Blocker, Faktoren beim Kampfstart eingefroren, Etagen-Bonus, Kette „Ohne alles“, Regel-Schalter im `rules_hash`, UI; Sponsor-Fenster-Entscheidungen (`test_06c_sponsor_display`); Balance-Bänder 06 §4.10 (`test_06c_balance`) |
+| 06-C | Marotten (`test_06c_marotten`): Auswahl deterministisch je Seed/Etage (E1 nur Starter, möglichst ohne Wiederholung), jede Bedingung trifft/trifft nicht, ≤ 1 Herz je Vorliebe und Kampf, Wette → Box/Follower/Hype/`bets_won`/`show_bet`, Tutorial/Niederlage/Event-Lauf zahlen nichts, Pazifist (Erstbesuch, Countdown, kein Safe Room, Latch, Save/Load), Replay-Gleichheit; Liga (`test_06c_liga`): Stufen je gesteuerter Figur, Blocker, Faktoren beim Kampfstart eingefroren, Etagen-Bonus, Kette „Ohne alles“, Regel-Schalter im `rules_hash`, UI; Sponsor-Fenster-Entscheidungen (`test_06c_sponsor_display`); Balance-Bänder 06 §4.10 (`test_06c_balance`); Integration Runde 4: Deckel des Liga-Follower-Bonus je Etage (`test_06c_liga_cap`), Bellen ≠ Anschleichen (`test_06ac_bark_opener`) |
 
 ---
 

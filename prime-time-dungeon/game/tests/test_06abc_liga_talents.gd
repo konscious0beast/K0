@@ -255,6 +255,29 @@ func test_bonus_heart_once_per_floor_for_either_hero() -> void:
 		assert_eq(st.show.marotten["hits"], {"mar_sneaky": 2}, "a new floor, a new extra heart")
 
 
+## Integration round 4: the spent bonus survives save → load (ShowState.marotten_dict keeps "bonus"; before, a load on
+## the same floor dropped it and the talent's extra heart came a second time) and is part of the StateHash.
+func test_spent_bonus_heart_survives_save_and_load() -> void:
+	var d: GameData = real_data()
+	var st: GameState = _state("kai", 5, ["mar_mop_only", "mar_sneaky"])
+	st.member("kai").talents = {"tal_kai_kamera3": 1}
+	MarottenRules.on_battle_end(st, d, _won(), _tally(), {})
+	assert_eq(str(st.show.marotten.get("bonus", "")), "mar_mop_only")
+	var h_spent: String = StateHash.of(st)
+	var loaded: GameState = SaveCodec.decode(JSON.parse_string(JSON.stringify(SaveCodec.encode(st, "t"))), d)
+	assert_not_null(loaded, "; ".join(SaveCodec.last_errors()))
+	if loaded == null:
+		return
+	assert_eq(str(loaded.show.marotten.get("bonus", "")), "mar_mop_only", "the spent bonus is saved")
+	assert_eq(StateHash.of(loaded), h_spent, "save → load keeps the hash")
+	var won: BattleResult = _won()
+	won.advantage = BattleSetup.Advantage.PREEMPTIVE
+	MarottenRules.on_battle_end(loaded, d, won, _tally(), {})
+	assert_eq(loaded.show.marotten["hits"], {"mar_mop_only": 3, "mar_sneaky": 1}, "no second extra heart after the load")
+	st.show.marotten.erase("bonus")
+	assert_ne(StateHash.of(st), h_spent, "the marker is part of the StateHash")
+
+
 func test_bonus_heart_is_capped_and_counts_in_event_runs() -> void:
 	var d: GameData = real_data()
 	var st: GameState = _state("kai", 5, ["mar_mop_only"])

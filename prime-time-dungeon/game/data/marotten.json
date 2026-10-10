@@ -178,8 +178,8 @@
 			"starter": false,
 			"min_floor": 1,
 			"weight": 1,
-			"reward": {"tiers": [{"tier": 1, "hype_pm": 1200, "follower_pm": 1150},
-				{"tier": 2, "hype_pm": 1400, "follower_pm": 1350}], "floor_box": "box_fan"},
+			"reward": {"tiers": [{"tier": 1, "hype_pm": 1050, "follower_pm": 1100, "floor_follower_cap": 60},
+				{"tier": 2, "hype_pm": 1200, "follower_pm": 1350, "floor_follower_cap": 180}], "floor_box": "box_fan"},
 			"mod_tag": "liga"
 		}
 	]

@@ -716,6 +716,7 @@ func _build_result(outcome: BattleResult.Outcome) -> BattleResult:
 	r.group_id = setup.group_id
 	r.is_boss = setup.is_boss
 	r.advantage = advantage
+	r.opener = setup.opener if advantage == BattleSetup.Advantage.PREEMPTIVE else ""
 	r.turns = turn_count
 	r.party_turns = int(tally["party_turns"])
 	for c: Combatant in enemies():

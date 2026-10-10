@@ -18,6 +18,8 @@ const ZONE_KEYS: PackedStringArray = ["zones_since_battle", "zone", "floor"]
 const BET_REWARD_RANGES: Dictionary = {"hit_hype": [0, 50], "hit_follower_pm": [1000, 2000], "won_followers": [0, 500],
 	"won_hype": [0, 50]}
 const TIER_RANGES: Dictionary = {"tier": [1, 2], "hype_pm": [1000, 2000], "follower_pm": [1000, 2000]}
+## Optional per tier: followers the follower factor may add per floor (06 §4.3, integration round 4; absent = no cap).
+const TIER_OPTIONAL_RANGES: Dictionary = {"floor_follower_cap": [0, 2000]}
 const MAX_NAME: int = 28                    # HUD chip "M.O.D. mag heute: <name>"
 const MAX_DESC: int = 80
 ## 06 §0.3 (distance to Dungeon Crawler Carl): the Liga is "ohne Rüstung & ohne Accessoire" — never feet or shoes.
@@ -157,7 +159,7 @@ static func _check_liga_reward(v: DataValidator, ctx: String, raw: Dictionary) -
 		v._err(ctx + ".floor_box", "expected a lootbox id string")
 	var tiers: Variant = raw.get("tiers", [])
 	if not (tiers is Array) or (tiers as Array).is_empty() or (tiers as Array).size() > 2:
-		v._err(ctx + ".tiers", "needs 1..2 tier entries {tier, hype_pm, follower_pm}")
+		v._err(ctx + ".tiers", "needs 1..2 tier entries {tier, hype_pm, follower_pm[, floor_follower_cap]}")
 		return
 	var seen: Dictionary = {}
 	for j in (tiers as Array).size():
@@ -173,8 +175,17 @@ static func _check_liga_reward(v: DataValidator, ctx: String, raw: Dictionary) -
 				continue
 			var r: Array = TIER_RANGES[key]
 			v._range_i(tctx + "." + key, int(val), int(r[0]), int(r[1]))
+		for key: String in TIER_OPTIONAL_RANGES:
+			if not (t as Dictionary).has(key):
+				continue
+			var oval: Variant = (t as Dictionary)[key]
+			if not JsonUtil.is_integral(oval):
+				v._err(tctx + "." + key, "expected integer")
+				continue
+			var orange: Array = TIER_OPTIONAL_RANGES[key]
+			v._range_i(tctx + "." + key, int(oval), int(orange[0]), int(orange[1]))
 		for k2: Variant in (t as Dictionary).keys():
-			if not TIER_RANGES.has(str(k2)):
+			if not TIER_RANGES.has(str(k2)) and not TIER_OPTIONAL_RANGES.has(str(k2)):
 				v._err(tctx + "." + str(k2), "unknown key")
 		var tier: int = JsonUtil.to_int((t as Dictionary).get("tier", 0))
 		if seen.has(tier):

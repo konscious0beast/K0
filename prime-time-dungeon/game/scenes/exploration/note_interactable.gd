@@ -1,7 +1,7 @@
 extends "res://scenes/exploration/interactable.gd"
 ## Regie-Notiz (06 §2.7, package A): a little director's stand with a glowing yellow post-it — M.O.D.'s backstage
 ## jokes. "Regie-Notiz lesen" → ExplorationScene.read_note → Game.open_secret (+15 followers once, M.O.D.
-## regie_note:<n>); the post-it flies off, the stand stays. A note "behind" a Kulissenwand stays hidden (no visuals, no
+## secret_note:<n>); the post-it flies off, the stand stays. A note "behind" a Kulissenwand stays hidden (no visuals, no
 ## prompt) until that wall is down (reveal()).
 
 const POSTIT: Color = Color("#ffe14d")

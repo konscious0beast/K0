@@ -1122,7 +1122,7 @@ func knock_wall(secret_id: String) -> bool:
 	return true
 
 
-## "Regie-Notiz lesen": Game.open_secret (+15 followers, M.O.D. regie_note:<n>) → the post-it flies off.
+## "Regie-Notiz lesen": Game.open_secret (+15 followers, M.O.D. secret_note:<n>) → the post-it flies off.
 func read_note(note: NoteInteractable) -> void:
 	if note == null or note.collected or note.hidden_behind:
 		return

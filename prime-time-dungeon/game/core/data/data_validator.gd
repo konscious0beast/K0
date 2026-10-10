@@ -73,12 +73,12 @@ const REQUIRED_MOD_TAGS: PackedStringArray = ["intro", "floor_start", "first_fig
 ## Optional tags: live tags of 05 CR-9 / §6.12 (event_*, gift_*, fan_pack_*, live_*, vote_*, twist_applied_*), the
 ## Sponsor-Fenster lines of 05 §6.13 (sponsor_window_open[:periodic|safe_room|boss|dev], sponsor_window_closed,
 ## sponsor_window_full), the story beats of GDD §1.4 (tutorial_* hints B1/B2, story_battle:<encounter_id> banners
-## B4) and the lines of the 06 packages (A: hero_pick/hero_switch:<id>, regie_note:<n>, secret_wall; B: talent_*,
+## B4) and the lines of the 06 packages (A: hero_pick/hero_switch:<id>, secret_note:<n>, secret_wall; B: talent_*,
 ## casting_*; C: marotte_*, liga_*).
 const OPTIONAL_MOD_TAG_PREFIXES: PackedStringArray = ["achievement:", "boss_intro:", "boss_phase:", "event_",
 	"gift_received", "mopsula_idle", "chat_", "gift_", "fan_pack_", "live_", "vote_", "twist_applied_", "tutorial_",
 	"story_", "sponsor_window_",
-	"hero_", "regie_", "secret_",               # 06 package A
+	"hero_", "secret_",                          # 06 package A
 	"talent_", "casting_",                      # 06 package B: Talent-Show / Casting lines
 	"marotte_", "liga_"]                        # 06 package C: M.O.D. preferences + Liga (06 §4)
 

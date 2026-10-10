@@ -970,7 +970,7 @@ func set_hero(hero_id: String) -> bool   # HeroRules.check(state, id) != "" → 
 	# applies the same HeroRules.check in both verifiers
 func open_secret(secret_id: String) -> bool   # 06 §2.7: Secrets.check_open != "" → false (nothing recorded); else
 	# record({"t": "secret", "id"}); Secrets.open (wall: its gate key → opened_gates; flags["secrets"] += id); note →
-	# Show.add_followers(15, &"secret"); Show.say(secret_wall | regie_note:<n>); emits secret_opened(id). Visuals:
+	# Show.add_followers(15, &"secret"); Show.say(secret_wall | secret_note:<n>); emits secret_opened(id). Visuals:
 	# ExplorationScene.knock_wall / read_note → open_secret_visual (wall falls, gate_opened, hidden note appears)
 func secret_notes() -> Vector2i       # Regie-Notizen of the floor (found, total); complete_floor puts regie_notes /
 	# regie_notes_total into the summary when total > 0
@@ -1587,14 +1587,14 @@ const REQUIRED_MOD_TAGS: PackedStringArray = ["intro", "floor_start", "first_fig
 ## Optional tags: live tags of 05 CR-9 / §6.12 (event_*, gift_*, fan_pack_*, live_*, vote_*, twist_applied_*), the
 ## Sponsor-Fenster lines of 05 §6.13 (sponsor_window_open[:periodic|safe_room|boss|dev], sponsor_window_closed,
 ## sponsor_window_full) and the story beats of GDD §1.4 (tutorial_* hints B1/B2, story_battle:<encounter_id> banners B4).
-## 06 package A (CR-16): hero_pick:<id> (intro), hero_switch:<id> (safe room), regie_note:<n>, secret_wall (E1 secrets);
+## 06 package A (CR-16): hero_pick:<id> (intro), hero_switch:<id> (safe room), secret_note:<n>, secret_wall (E1 secrets);
 ## tutorial_*:mopsula, chat_bark, chat_secret, chat_secret_hint are covered by the existing prefixes. 06-B: talent_*,
 ## casting_*. 06-C: M.O.D.'s preferences and the Liga (marotte_announce|hit|won[:<mar id>], marotte_missed, liga_*;
 ## §4.4.17).
 const OPTIONAL_MOD_TAG_PREFIXES: PackedStringArray = ["achievement:", "boss_intro:", "boss_phase:", "event_", "gift_received",
 	"mopsula_idle", "chat_", "gift_", "fan_pack_", "live_", "vote_", "twist_applied_", "tutorial_", "story_",
 	"sponsor_window_",
-	"hero_", "regie_", "secret_",               # 06 package A
+	"hero_", "secret_",                          # 06 package A
 	"talent_", "casting_",                      # 06 package B
 	"marotte_", "liga_"]                        # 06 package C
 ```
@@ -3281,7 +3281,7 @@ static func check_open(state: GameState, def: FloorDef, secret_id: String) -> St
 	# "" | "no_floor" | "unknown_secret" | "already_open" | "locked" (note behind a standing wall)
 static func open(state: GameState, def: FloorDef, secret_id: String) -> Dictionary
 	# check_open == "" → flags["secrets"] += id; wall → its gate key into floor_run.opened_gates. Returns {"id", "kind", "n",
-	# "gate_key", "followers" (note 15), "mod_tag" ("secret_wall" | "regie_note:<n>")} — the show part is the caller's
+	# "gate_key", "followers" (note 15), "mod_tag" ("secret_wall" | "secret_note:<n>")} — the show part is the caller's
 static func gate_key_of(secret: Dictionary) -> String      # wall → "x,y,D"
 static func id_of_requirement(requires: String) -> String  # "secret:<id>" → "<id>"
 static func is_secret_requirement(requires: String) -> bool
@@ -3916,7 +3916,7 @@ Weitere Abläufe in der Erkundung (M3, verbindlich):
 | `stray_spawn_requested(zone, group, enc)` | Spawn in der Zelle der Zone mit größter BFS-Distanz zu Kais Zelle (Gleichstand: kleinstes y, dann x), Zustand PATROL |
 | Gegnergruppe besiegt (`on_resume` mit `VICTORY`) | Gruppen-Node `queue_free()` (`defeated_groups`/`strays` hat `BattleBridge` bereits gepflegt) |
 | Kulissenwand (06 §2.7; Tor mit `requires: "secret:<id>"`) | statt des Tor-Props eine `scenery_wall.gd` (kein Prompt, nie fokussiert). Trifft der Feldschlag (Bogen, `STRIKE_RANGE` + 0.3 m bis zur Wandlinie; nur wenn keine Gruppe getroffen wird) oder das Bellen (Kegel + Sichtlinie ohne den eigenen Blocker) die stehende Wand → `knock_wall(id)` → `Game.open_secret(id)` → `open_secret_visual`: Blocker weg, Wand kippt von der Figur weg (0.45 s) und versinkt, `Events.gate_opened`, versteckte Notiz dahinter erscheint, Chat `chat_secret`, Toast „Kulissenwand! Der Weg ist frei.“. Erster Raum neben einer stehenden Wand: Chat-Hinweis `chat_secret_hint` (1× je Aufbau). Minimap: stehende Wand = Wand (kein Türstummel), gefallene = normale Tür |
-| Regie-Notiz `interact` (`note_interactable.gd`) | Prompt „Regie-Notiz lesen“ (Mopsula: „… beschnuppern“) → `read_note` → `Game.open_secret(id)` (+15 Follower, M.O.D. `regie_note:<n>`) → Post-it fliegt weg, Toast „Regie-Notiz n/total · +15 Follower“; mit `behind` bis zum Fall der Wand ohne Optik und Prompt; geöffnete Geheimnisse werden beim Aufbau nicht mehr gebaut |
+| Regie-Notiz `interact` (`note_interactable.gd`) | Prompt „Regie-Notiz lesen“ (Mopsula: „… beschnuppern“) → `read_note` → `Game.open_secret(id)` (+15 Follower, M.O.D. `secret_note:<n>`) → Post-it fliegt weg, Toast „Regie-Notiz n/total · +15 Follower“; mit `behind` bis zum Fall der Wand ohne Optik und Prompt; geöffnete Geheimnisse werden beim Aufbau nicht mehr gebaut |
 
 Aufbau für die Budgets (§12.1, Phase C, gemessen mit `tools/perf.sh`):
 - **Physik:** `FloorBuilder.build_rooms(rooms_root, world)` zieht die Boxen jedes Raum-„Collision“-Körpers (EnvKit-Vertrag §8.5

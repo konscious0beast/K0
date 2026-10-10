@@ -14,7 +14,7 @@ const FLAG: String = "secrets"
 const REQUIRES_PREFIX: String = "secret:"
 const NOTE_FOLLOWERS: int = 15
 const WALL_TAG: String = "secret_wall"     # M.O.D. line when a wall falls
-const NOTE_TAG: String = "regie_note:"     # + n
+const NOTE_TAG: String = "secret_note:"     # + n
 
 
 ## The secret entries of a floor (copies); [] for floors without layout.secrets.

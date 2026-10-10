@@ -1,6 +1,6 @@
 extends TestCase
 ## 06 §2.7 / §8.2 (package A): E1 secrets — one Kulissenwand (sewer (5,3) ↔ cellar (5,2), a closed door until the field
-## strike or the bark knocks it over) and three Regie-Notizen (+15 followers once each, M.O.D. regie_note:<n>; note 2
+## strike or the bark knocks it over) and three Regie-Notizen (+15 followers once each, M.O.D. secret_note:<n>; note 2
 ## hangs behind the wall). Rules (Secrets), the recorded command "secret" (Game.open_secret, RunSim, both replays,
 ## save), the data rules (validators/secrets.gd), the scene (strike and bark open the wall, "Interagieren" never does,
 ## notes, loading), the minimap (a standing wall is drawn as wall), the floor summary row and the bot's planner.
@@ -127,7 +127,7 @@ func test_rules_check_open_and_open() -> void:
 	assert_eq(Secrets.check_open(st, def, "sec_e1_note_2"), "", "note 2 can be read now")
 	var fx2: Dictionary = Secrets.open(st, def, "sec_e1_note_2")
 	assert_eq(fx2["followers"], Secrets.NOTE_FOLLOWERS)
-	assert_eq(fx2["mod_tag"], "regie_note:2")
+	assert_eq(fx2["mod_tag"], "secret_note:2")
 	assert_eq(Secrets.notes_found(st, def), Vector2i(1, 3))
 	assert_true(StateHash.hash_input(st)["flags"].has("secrets"), "secrets are part of the state hash")
 
@@ -162,7 +162,7 @@ func test_open_secret_records_and_pays_once() -> void:
 	assert_eq(Game.run_log.cmds().size(), n, "refusals are not recorded")
 	assert_true(Game.open_secret("sec_e1_note_1"))
 	assert_eq(Game.state.show.followers, f0 + 15, "+15 followers (06 §2.7)")
-	assert_has(_said, "regie_note:1", "M.O.D. reads the note")
+	assert_has(_said, "secret_note:1", "M.O.D. reads the note")
 	assert_eq(_opened, ["sec_e1_note_1"] as Array[String], "secret_opened")
 	assert_eq((_cmds("secret").back()["c"] as Dictionary), {"t": "secret", "id": "sec_e1_note_1"}, "recorded")
 	assert_false(Game.open_secret("sec_e1_note_1"), "only once")

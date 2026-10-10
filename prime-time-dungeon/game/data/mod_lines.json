@@ -114,22 +114,22 @@
 			"weight": 1
 		},
 		{
-			"id": "mod_regie_note_1_01",
-			"tag": "regie_note:1",
+			"id": "mod_secret_note_1_01",
+			"tag": "secret_note:1",
 			"voice": "mod",
 			"text": "Regie-Notiz am Kiosk: ‚Sandwiches sind Requisite. NICHT ESSEN.‘ Das erklärt einiges.",
 			"weight": 1
 		},
 		{
-			"id": "mod_regie_note_2_01",
-			"tag": "regie_note:2",
+			"id": "mod_secret_note_2_01",
+			"tag": "secret_note:2",
 			"voice": "mod",
 			"text": "Hinter der Kulisse klebt ein Zettel: ‚Wand ist aus Pappe. Merkt eh keiner.‘ Tja.",
 			"weight": 1
 		},
 		{
-			"id": "mod_regie_note_3_01",
-			"tag": "regie_note:3",
+			"id": "mod_secret_note_3_01",
+			"tag": "secret_note:3",
 			"voice": "mod",
 			"text": "Regie-Notiz im Keller: ‚Ratten nach der Show zurück in Kiste 3.‘ Kiste 3 ist leer. Hm.",
 			"weight": 1

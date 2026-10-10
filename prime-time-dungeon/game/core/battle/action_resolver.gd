@@ -72,6 +72,7 @@ static func apply_skill(state: BattleState, actor: Combatant, skill: SkillDef, t
 					hit = DamageCalc.fixed(t, skill.power, element, mult)
 				else:
 					hit = DamageCalc.compute(actor, t, skill, element, state.rng, t.id == state.combo_target_id, mult)
+				_talent_first_strike(state, actor, hit)
 				var ev: ActionEvent = _ev_target(ActionEvent.Type.DAMAGE, t)
 				ev.actor_id = actor.id
 				ev.skill_id = skill.id
@@ -379,6 +380,16 @@ static func _skill_action(state: BattleState, actor: Combatant, sk: SkillDef, cm
 	if cmd.kind == BattleCommand.Kind.SKILL and sk.mp_cost > 0:
 		change_mp(actor, -sk.mp_cost, 0, out)
 	apply_skill(state, actor, sk, targets, out)
+
+
+## 06 package B "Erster Eindruck": a party member's damage in its first own turn after a preemptive strike ×
+## talent_mods.preemptive_dmg_pm (round half up, never below 1; immunity stays 0).
+static func _talent_first_strike(state: BattleState, actor: Combatant, hit: HitResult) -> void:
+	var f: int = int(actor.talent_mods.get("preemptive_dmg_pm", FixedMath.PM))
+	if f == FixedMath.PM or not actor.is_party() or actor.own_turns != 0 or hit.amount <= 0 \
+			or state.advantage != BattleSetup.Advantage.PREEMPTIVE:
+		return
+	hit.amount = maxi(1, FixedMath.div_round(hit.amount * f, FixedMath.PM))
 
 
 static func _stunt_action(state: BattleState, actor: Combatant, cmd: BattleCommand, out: Array[ActionEvent]) -> void:

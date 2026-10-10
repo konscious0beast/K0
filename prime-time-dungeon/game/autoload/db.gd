@@ -78,6 +78,14 @@ func scene_def(id: String) -> SceneDef:
 	return data.scene_def(id)
 
 
+func talent(id: String) -> TalentDef:           # 06 package B
+	return data.talent(id)
+
+
+func species_def(id: String) -> SpeciesDef:     # 06 package B
+	return data.species_def(id)
+
+
 func floor_def(index: int) -> FloorDef:
 	return data.floor_def(index)
 

@@ -268,36 +268,41 @@ Room wählt man je offener Wahl **eines von zwei** Talenten.
 
 | ID | Name | Wirkung | `max_rank` |
 |---|---|---|---|
-| `tal_kai_wischtechnik` | Wischtechnik | STR +2 | 2 |
-| `tal_kai_dicke_haut` | Dicke Haut (tierheimgeprüft) | DEF +5 % | 2 |
+| `tal_kai_wischtechnik` | Wischtechnik | STR +1 | 2 |
+| `tal_kai_dicke_haut` | Dicke Haut (tierheimgeprüft) | DEF +1 | 2 |
 | `tal_kai_nachtschicht` | Nachtschicht-Kondition | HP +5 % | 2 |
-| `tal_kai_hausverstand` | Hausverstand | RES +5 % | 2 |
-| `tal_kai_glueckspfote` | Glückspfote | LCK +3 | 2 |
+| `tal_kai_hausverstand` | Hausverstand | RES +1 | 1 |
+| `tal_kai_glueckspfote` | Glückspfote | LCK +1 und Krit +2 % | 1 |
 | `tal_kai_fester_griff` | Fester Griff | Krit +3 % | 2 |
 | `tal_kai_bissfest` | Bissfest | Gift-Schaden ×0.75 | 1 |
 | `tal_kai_kaffee` | Automatenkaffee | +5 % MaxMP nach jedem Kampf | 2 |
 | `tal_kai_weit_ausholen` | Weit ausholen | Feldschlag-Reichweite +25 % (öffnet Kulissenwände aus sicherer Distanz) | 1 |
 | `tal_kai_erster_eindruck` | Erster Eindruck | Präventivschlag: Schaden der ersten Runde +15 % | 1 |
 | `tal_kai_kamera3` | Kamera 3 kennt mich | 1× je Etage: +1 Herz für die erste getroffene Vorliebe | 1 |
-| `tal_kai_abgehaertet` | Abgehärtet | in der Liga: DEF +5 % | 1 |
+| `tal_kai_abgehaertet` | Abgehärtet | in der Liga: DEF +5 % („Kai braucht keine Rüstung. Sagt jedenfalls Kai.“) | 1 |
 
 **Pool Mopsula (12)** — `tal_mop_*` (8 Werte, 4 Verhalten; Motive aus **unserem** Kanon: Tierheim, Pluralis Majestatis,
 Grafen-/Vampir-Manieren, Fehde mit der Rattenkönigin):
 
 | ID | Name | Wirkung | `max_rank` |
 |---|---|---|---|
-| `tal_mop_pluralis` | Pluralis Majestatis („Wir zaubern.“) | MAG +2 | 2 |
+| `tal_mop_pluralis` | Pluralis Majestatis („Wir zaubern.“) | MAG +1 | 2 |
 | `tal_mop_schnarchen` | Majestätisches Schnarchen | +5 % MaxMP nach jedem Kampf | 2 |
-| `tal_mop_hoher_kragen` | Hoher Kragen | RES +5 % | 2 |
+| `tal_mop_hoher_kragen` | Hoher Kragen | RES +1 | 2 |
 | `tal_mop_leberwurst` | Leberwurst-Diät | HP +5 % | 2 |
-| `tal_mop_monokel` | Monokel-Fokus | Krit +3 % | 2 |
-| `tal_mop_zwinger7` | Zwinger 7 überlebt | LCK +3 | 2 |
+| `tal_mop_monokel` | Monokel-Fokus | SPD +1 (selten: `weight` 1) | 1 |
+| `tal_mop_zwinger7` | Zwinger 7 überlebt | LCK +2 | 1 |
 | `tal_mop_nachtaktiv` | Nachtaktiv | MP +5 % | 2 |
 | `tal_mop_unterpelz` | Doppelter Unterpelz | Eis-Schaden ×0.75 | 1 |
 | `tal_mop_stereo` | Bellen in Stereo | Bellen-Reichweite +25 % | 1 |
 | `tal_mop_schwer_vermittelbar` | Schwer vermittelbar | Bellen-Cooldown −30 % („lässt sich nicht abwimmeln“) | 1 |
-| `tal_mop_dramatische_pause` | Dramatische Pause | Stunt-Zeitfenster +20 % | 1 |
-| `tal_mop_wuerde` | Würde genügt | in der Liga: RES +5 % | 1 |
+| `tal_mop_dramatische_pause` | Dramatische Pause | Stunt-Erfolgschance ×1.2 (vor der Obergrenze) | 1 |
+| `tal_mop_wuerde` | Würde genügt | in der Liga: RES +5 % („Der Graf braucht keinen Pulli. Würde wärmt.“) | 1 |
+
+> **Stand Paket B (umgesetzt, `data/talents.json`):** Die Tabellen oben sind die gebauten Werte. Gegenüber dem Entwurf kleiner
+> (STR/MAG +1 statt +2, DEF/RES/LCK als flache Punkte, Mopsulas Tempo-Talent selten und `max_rank` 1), damit das Band „≤ +15 %
+> je Kampfwert bei L10“ für **jede** Wahlfolge hält und die Boss-Quoten im ±5-Punkte-Band bleiben (Messung Kap. 8.3).
+> Alle Talente haben `weight` 2, nur Monokel-Fokus 1.
 
 **UI „Talent-Show“** (`scenes/ui/talent_show.tscn`, aufgerufen aus dem Safe-Room-Menü): je offene Wahl zwei Karten (Name, ein
 Satz, Zahl grün bzw. Verhaltens-Icon, Icon nach `kind`) + „Später“; nach der letzten Wahl zurück ins Safe-Room-Menü.
@@ -512,6 +517,11 @@ Alle drei sind aufgezeichnete Commands (`casting`, später `respec`, `talent_res
 
 `species.json` mit 8 Einträgen, `SpeciesDef`, Validator-Regeln, `PartyMember.species_id`, Werte-Anwendung in `Progression`,
 `Casting.check/choose` + Command + Tests. **Kein** Casting-UI, keine Spezies-Optik, Passiva nur validiert.
+
+**Stand: umgesetzt** (Paket B, 2026-10-10; Details Kap. 8.3 „Stand“). Die Re-Spec-Regeln für Spezies und Spezialisierung
+(Tabelle 3.6) stehen in `Casting.check`; Buchführung in `PartyMember.casting {floor, visit, class_floor, class_visit}`. Die erste
+Casting-Wahl einer Figur geht in **jedem** Safe Room einer Etage ≥ 3 (wer den ersten auslässt, verpasst nichts). Talent-Reset
+(Zeile 3 der Tabelle) folgt mit der Casting-UI.
 
 ---
 
@@ -1286,6 +1296,30 @@ Angebotsfolgen der 4 Wahlen je Figur geprüft); Anteil Verhaltens-Talente je Poo
 
 **DoD:** Gate 8.6; `fullrun --strategy=all` mit Talentwahl im Bot grün; GDD §4 (Talente, Talent-Show), §12 (Spezies, Re-Spec) und
 02_TECH §4.4 (Schemas) nachgezogen; Screenshot `talent_show`.
+
+**Stand Paket B: umgesetzt (2026-10-10).** Gebaut wie oben; Verträge in 02_TECH §1.3/§1.6/§3.2–3.4/§4.2/§4.4.15–16/§4.5/§6.1/
+§6.4/§6.5/§9.5/§11.4.1, Spielregeln in GDD §4.1/§4.7/§12.1/§12.4/§13/§14.5/§14.7/§16.2. Tests: `test_06b_talents.gd`, `test_06b_species.gd`,
+`test_06b_balance.gd`, `test_06b_talent_show.gd`. Screenshots `docs/screenshots/talent_show.png`, `safe_talents_menu.png`,
+`talents_party.png`. Entscheidungen und Abweichungen vom Entwurf:
+
+| # | Entwurf | Gebaut | Grund |
+|---|---|---|---|
+| B-1 | `PartyMember.talent_pending` (gespeicherte Level-Liste) | offene Wahlen **abgeleitet**: ungerade Level ≥ 3 bis zum Level minus Σ Ränge (`Talents.pending_levels`) | kein zweiter Zustand, der auseinanderlaufen kann; alte Spielstände und `StateHash` bleiben byte-gleich (neue Felder nur, wenn gesetzt) |
+| B-2 | Menüeintrag „Talent-Show“ mit „!“-Badge in der Safe-Room-Spalte | **goldener Knopf „TALENT-SHOW“ + „n Talentwahlen offen“** unten rechts, nur solange eine Wahl offen ist; die Menüspalte bleibt bei 6 Einträgen; Pausemenü → Party zeigt „n Wahl(en) offen“ | ein 7. Eintrag schob „Weiter“ aus dem Bild (720p); der Knopf ist auffälliger, verschwindet von selbst und kollidiert nicht mit Paket A („Figur wechseln“) |
+| B-3 | Liga-Talente wirken bei `MarottenRules.liga_tier(state) ≥ 1` | wirken, solange **diese Figur** weder Rüstung noch Accessoire trägt (`Talents.liga_dressed`) | Paket C (`MarottenRules`) existiert noch nicht; die Regel „ohne Rüstung & ohne Accessoire“ ist je Figur sofort verständlich. Paket C darf auf `liga_tier` umstellen (eine Funktion) |
+| B-4 | Werte-Talente +3–5 % je Rang | STR/MAG/DEF/RES/LCK/SPD als **flache Punkte** (+1/+2), HP/MP/Liga als +5 % | bei L10 sind DEF/RES/LCK ~10–30 Punkte; +5 % wäre 0–1 Punkt (unlesbar) oder durch Rundung sprunghaft. Erschöpfender Test (L10, ohne Ausrüstung): Kai höchstens +15 HP auf 145, +3 DEF auf 22; Mopsula +10 HP auf 96, +3 RES auf 25,
++2 LCK auf 18 — alle ≤ +15 % |
+| B-5 | `stunt_window_pm` = Stunt-Zeitfenster | Faktor auf die **Stunt-Erfolgschance** vor der Obergrenze (`BattleState.stunt_chance`) | die Stunts haben im Slice kein Zeitfenster (Erfolg ist eine Chance); Kartentext „Stunts gelingen 20 % öfter“ |
+| B-6 | Krit/Element/Präventiv in `BattleBridge.make_setup` | Krit/Element in `Progression.to_combatant` (wie die Ausrüstung), Präventiv als `Combatant.talent_mods` → `ActionResolver` (nur erster eigener Zug nach Präventivschlag) | ein Ort für alle Combatant-Werte; Replays und M7-Simulation nutzen denselben Weg |
+| B-7 | — | eine Wahl hebt MaxHP/MaxMP-Zuwachs sofort auf HP/MP (wie ein Level-up, `Progression.follow_max_vitals`) | sonst wirkt „HP +5 %“ erst nach der nächsten Heilung |
+| B-8 | `field_range_pm`, `field_cd_pm`, `marotte_heart` | Werte und APIs da (`Talents.field_range_pm/field_cd_pm/marotte_bonus_hearts`), **Auswertung** folgt mit Paket A (Feldfähigkeit) bzw. C (`MarottenRules`) | Besitzgrenzen 8.1; die Karte sagt „Wirkt, wenn … die Gruppe anführt.“ |
+| B-9 | `hype_gain_pm`/`follower_pm` | im Kern verdrahtet (`GameState.hype_gain_mult/follower_mult` × Talente), im Pool **nicht** verwendet | Kap. 4.8 Nr. 4: Event-Wertung ohne Talent-Multiplikatoren bleibt trivial erfüllt |
+| B-10 | Talent-Reset beim Casting | noch nicht gebaut | kommt mit der Casting-UI (Etage 3) |
+
+**Balance-Messung (Paket B):** Bot-Wahl „erstes Angebot“, gepaarte Kämpfe (gleiche Seeds, mit/ohne Talente, Geschenke wie im Spiel):
+Hausmeister +0,3 Punkte, Königin +3,7 Punkte Siegquote auf 300 Kämpfen (Band ±5). Ein erster Pool (STR/MAG +2, Tempo-Talent
+`max_rank` 2) lag bei der Königin bei +5,3 Punkten (600 Kämpfe) und wurde deshalb gesenkt. Full-Run-Bot: 6 Wahlen je Lauf
+(L3/L5/L7 beider Figuren), alle drei Strategien grün.
 
 ### 8.4 Paket C — Marotten, Show-Wetten, Unterhosen-Liga, E1-Show-Boss, Sponsor-Fenster-Entscheidungen
 

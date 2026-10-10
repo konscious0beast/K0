@@ -219,6 +219,7 @@ static func _sanitize(st: GameState, data: GameData) -> void:
 		if m.class_id != "" and not data.has_id("classes", m.class_id):
 			_warn("class '%s' of %s dropped (unknown)" % [m.class_id, m.id])
 			m.class_id = ""
+		_sanitize_b(m, data)                       # 06 package B: talents, species
 		var sb: StatBlock = Progression.total_stats(m, data)
 		m.hp = clampi(m.hp, 0, sb.values[StatBlock.Stat.HP])
 		m.mp = clampi(m.mp, 0, sb.values[StatBlock.Stat.MP])
@@ -271,3 +272,19 @@ static func _sanitize(st: GameState, data: GameData) -> void:
 
 static func _warn(msg: String) -> void:
 	_errors.append("warning: " + msg)
+
+
+## 06 package B: talents unknown / not for the member are dropped (their choices become open again), ranks clamped to
+## 1..max_rank; an unknown species or one not for the member falls back to "" (not cast).
+static func _sanitize_b(m: PartyMember, data: GameData) -> void:
+	for tid: Variant in m.talents.keys():
+		var id: String = str(tid)
+		if not data.has_id("talents", id) or not data.talent(id).is_for(m.id):
+			_warn("talent '%s' of %s dropped (unknown)" % [id, m.id])
+			m.talents.erase(tid)
+		else:
+			m.talents[tid] = clampi(int(m.talents[tid]), 1, data.talent(id).max_rank)
+	if m.species_id != "" and (not data.has_id("species", m.species_id)
+			or not data.species_def(m.species_id).is_for(m.id)):
+		_warn("species '%s' of %s dropped (unknown)" % [m.species_id, m.id])
+		m.species_id = ""

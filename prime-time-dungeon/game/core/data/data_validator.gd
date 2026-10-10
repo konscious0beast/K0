@@ -64,7 +64,8 @@ const REQUIRED_MOD_TAGS: PackedStringArray = ["intro", "floor_start", "first_fig
 ## sponsor_window_full) and the story beats of GDD §1.4 (tutorial_* hints B1/B2, story_battle:<encounter_id> banners B4).
 const OPTIONAL_MOD_TAG_PREFIXES: PackedStringArray = ["achievement:", "boss_intro:", "boss_phase:", "event_", "gift_received",
 	"mopsula_idle", "chat_", "gift_", "fan_pack_", "live_", "vote_", "twist_applied_", "tutorial_", "story_",
-	"sponsor_window_"]
+	"sponsor_window_",
+	"talent_", "casting_"]                      # 06 package B: Talent-Show / Casting lines
 
 ## Copy of StatIds.ALL (§6.3); test_m2_achievements asserts equality.
 const STAT_IDS: PackedStringArray = ["kills_total", "kills_skill", "battles_won", "battles_fled", "preemptives",
@@ -119,10 +120,14 @@ const ID_PATTERNS: Dictionary = {
 	"scenes": "^scn_[a-z0-9_]+$",
 	"passives": "^pas_[a-z0-9_]+$",
 	"events": "^evt_[a-z0-9_]+$",
+	# --- 06 package B: talents + species -------------------------------------------------------------------------
+	"talents": "^tal_[a-z0-9_]+$",
+	"species": "^spc_[a-z0-9_]+$",
 }
 
 const TABLES: PackedStringArray = ["statuses", "skills", "items", "classes", "party", "enemies", "floors",
-	"lootboxes", "achievements", "sponsors", "milestones", "mod_lines", "scenes"]
+	"lootboxes", "achievements", "sponsors", "milestones", "mod_lines", "scenes",
+	"talents", "species"]                       # 06 package B
 ## Allowed extra top-level keys per file (§4.1); everything else is an error.
 const TABLE_EXTRA_KEYS: Dictionary = {"party": ["start"], "enemies": ["pseudo_units"], "lootboxes": ["pools", "pity"]}
 const REQUIRED_BOXES: PackedStringArray = ["box_bronze", "box_silver", "box_gold", "box_fan"]
@@ -160,6 +165,10 @@ const DIR_OFFSETS: Dictionary = {"N": Vector2i(0, -1), "E": Vector2i(1, 0), "S":
 const DIR_OPPOSITE: Dictionary = {"N": "S", "E": "W", "S": "N", "W": "E"}
 
 const REQ: String = "<required>"   # spec marker: field has no default
+
+# --- 06 package B: per-table rule files (06 §8.0 Nr. 7) ------------------------------------------------------------
+const TalentsRules := preload("res://core/data/validators/talents.gd")
+const SpeciesRules := preload("res://core/data/validators/species.gd")
 
 # --- Field specs: [name, type(, default)] — no default = required. Types: s i f b d a sa ia c2 v2 ---------------------
 const SPEC_STATUS: Array = [["id", "s"], ["name", "s"], ["kind", "s"], ["default_turns", "i", 3], ["stat_mult", "d", {}],
@@ -545,6 +554,10 @@ func _normalize_entry(t: String, i: int, raw: Variant) -> Dictionary:
 			return _n_mod_line(ctx, raw)
 		"scenes":
 			return _n_scene(ctx, raw)
+		"talents":
+			return TalentsRules.normalize(self, ctx, raw)
+		"species":
+			return SpeciesRules.normalize(self, ctx, raw)
 	return {}
 
 
@@ -1492,6 +1505,8 @@ func _check_references() -> void:
 	_refs_floors()
 	_refs_lootboxes()
 	_refs_misc()
+	TalentsRules.check_refs(self)              # 06 package B
+	SpeciesRules.check_refs(self)
 
 
 func _ref(ctx: String, id: String, table: Dictionary, what: String) -> bool:
@@ -1886,6 +1901,7 @@ func _check_content_rules() -> void:
 				_err("lootboxes.pools.%s.%s" % [str(key), rarity], "must not be empty")
 		if needs_fan and (pool["fan"] as Array).is_empty():
 			_err("lootboxes.pools.%s.fan" % str(key), "must not be empty (a lootbox uses fixed_pool fan)")
+	SpeciesRules.check_content(self)           # 06 package B: spc_original
 
 
 # ======================================================================================================================

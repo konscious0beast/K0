@@ -7,13 +7,15 @@ class_name Command extends RefCounted
 ## use_item {"item", "member"}, rest {}, event {"id", "choice"}, chest {"id"}, gate {"key"}, room {"cell": [x, y]},
 ## safe_room {"id"}, safe_room_exit {}, scene {"id"}, flag {"key", "value"}, difficulty {"to"}, descend {},
 ## gift {"gift"} (external input, cmd id 0), sponsor_window {"op": "dev_open", "sec", "slots"} (QA Sponsor-Fenster,
-## SponsorWindows.dev_open, 05 §6.13).
+## SponsorWindows.dev_open, 05 §6.13), talent {"member", "id"} (Talent-Show pick, 06 §2.2), casting {"member",
+## "species", "class"} (06 §3.4).
 ## battle.cmd = BattleCommand.to_dict(): {"kind": attack|skill|stunt|item|defend|flee, "actor", "skill", "item",
 ## "targets": [String]}. Additional unknown fields are allowed (additive protocol versions, 05 §4.3).
 
 const TYPES: PackedStringArray = ["floor", "encounter", "battle", "lootbox", "buy", "sell", "equip", "use_item", "rest",
 	"event", "chest", "gate", "room", "safe_room", "safe_room_exit", "scene", "flag", "difficulty", "descend", "gift",
-	"sponsor_window"]
+	"sponsor_window",
+	"talent", "casting"]                     # 06 package B
 const SPONSOR_WINDOW_OPS: PackedStringArray = ["dev_open"]
 ## Inputs from outside the player (cmd id 0, 05 §10.6; == Game.EXTERNAL_CMDS). "twist" is a hook (S2, not in TYPES).
 const EXTERNAL: PackedStringArray = ["gift", "twist"]
@@ -109,6 +111,10 @@ static func _validate_fields(t: String, d: Dictionary) -> String:
 			if int(d["sec"]) > SponsorWindows.DEV_MAX_SEC or int(d["slots"]) > SponsorWindows.DEV_MAX_SLOTS:
 				return "sec must be <= %d, slots <= %d" % [SponsorWindows.DEV_MAX_SEC, SponsorWindows.DEV_MAX_SLOTS]
 			return ""
+		"talent":                            # 06 package B
+			return _first([_id(d, "member"), _id(d, "id")])
+		"casting":
+			return _first([_id(d, "member"), _id(d, "species"), _id(d, "class")])
 		"gift":
 			if not (d.get("gift", null) is Dictionary):
 				return "gift must be a Dictionary"

@@ -370,6 +370,8 @@ func apply_battle_result(result: BattleResult) -> BattleRewards:
 		Events.member_leveled.emit(info.member_id, info.new_level, info.learned)
 		for lv in range(info.old_level + 1, info.new_level + 1):
 			Events.level_up.emit({"member": info.member_id, "level": lv})
+			if Talents.is_talent_level(lv):                # 06 package B: a choice waits in the Talent-Show
+				Events.talent_pending.emit(info.member_id, lv)
 	if not timer_was_started and state.floor_run != null and state.floor_run.timer_started:
 		Events.floor_timer_started.emit()
 	return rewards
@@ -640,6 +642,31 @@ func mark_scene_seen(scene: SceneDef) -> void:
 	state.flags["scene_" + scene.id] = true
 	if scene.set_flag != "":
 		state.flags[scene.set_flag] = true
+
+
+# --- 06 package B: Talent-Show + Casting ----------------------------------------------------------------------------
+
+## Talent-Show pick (06 §2.2): only a valid pick (Talents.check_pick: in a safe room, from the offer of the member's
+## oldest open level) is recorded ({"t": "talent", "member", "id"}) and applied; emits talent_picked, party_changed.
+func pick_talent(member_id: String, talent_id: String) -> bool:
+	if state == null or Talents.check_pick(state, DB.data, member_id, talent_id) != "":
+		return false
+	record({"t": "talent", "member": member_id, "id": talent_id})
+	Talents.pick(state, DB.data, member_id, talent_id)
+	Events.talent_picked.emit(member_id, talent_id)
+	Events.party_changed.emit()
+	return true
+
+
+## Casting (06 §3.4; UI with floor 3): only an allowed choice (Casting.check) is recorded
+## ({"t": "casting", "member", "species", "class"}) and applied; emits party_changed.
+func choose_casting(member_id: String, species_id: String, class_id: String) -> bool:
+	if state == null or Casting.check(state, DB.data, member_id, species_id, class_id) != "":
+		return false
+	record({"t": "casting", "member": member_id, "species": species_id, "class": class_id})
+	Casting.choose(state, DB.data, member_id, species_id, class_id)
+	Events.party_changed.emit()
+	return true
 
 
 ## Only &"prime" → &"vorabend" (never up); remaining timer ticks × 1.5; record({"t": "difficulty", "to"}).
@@ -1212,5 +1239,9 @@ func _replay_apply(c: Dictionary) -> void:
 			Show.receive_gift(c.get("gift", {}))
 		"sponsor_window":
 			open_dev_sponsor_window(int(c.get("sec", 0)), int(c.get("slots", 0)))
+		"talent":                                        # 06 package B
+			pick_talent(str(c.get("member", "")), str(c.get("id", "")))
+		"casting":
+			choose_casting(str(c.get("member", "")), str(c.get("species", "")), str(c.get("class", "")))
 		_:
 			push_warning("[Game] replay: unknown command '%s'" % str(c.get("t", "")))

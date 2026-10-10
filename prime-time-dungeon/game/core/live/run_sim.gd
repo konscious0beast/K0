@@ -175,6 +175,10 @@ func apply(cmd: Dictionary) -> Array[ExploreEvent]:
 			out.append_array(sponsor_safe_room_exit())
 		"sponsor_window":
 			out.append_array(sponsor_dev_open(int(c["sec"]), int(c["slots"])))
+		"talent":                                # 06 package B (Talents.pick re-checks the rules)
+			Talents.pick(state, data, str(c["member"]), str(c["id"]))
+		"casting":
+			Casting.choose(state, data, str(c["member"]), str(c["species"]), str(c["class"]))
 		"scene":
 			if data != null and data.has_id("scenes", str(c["id"])):
 				var sc: SceneDef = data.scene_def(str(c["id"]))

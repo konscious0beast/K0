@@ -556,6 +556,41 @@
 			"weight": 1
 		},
 		{
+			"id": "mod_talent_show_open_01",
+			"tag": "talent_show_open",
+			"voice": "mod",
+			"text": "Talent-Show! Wählen Sie je Figur eines von zwei Talenten. Das andere bekommt jemand anderes. Nie.",
+			"weight": 1
+		},
+		{
+			"id": "mod_talent_pick_01",
+			"tag": "talent_pick",
+			"voice": "mod",
+			"text": "Neues Talent! Die Regie nennt es Entwicklung. Ich nenne es: mehr Material.",
+			"weight": 1
+		},
+		{
+			"id": "mod_talent_pick_02",
+			"tag": "talent_pick",
+			"voice": "mod",
+			"text": "Notiert. Das Publikum liebt Figuren mit Entwicklung. Und mit Wischmopp.",
+			"weight": 1
+		},
+		{
+			"id": "mod_talent_pick_mopsula_01",
+			"tag": "talent_pick:mopsula",
+			"voice": "mod",
+			"text": "Der Graf lernt dazu. Er bestreitet, dass es etwas zu lernen gab.",
+			"weight": 1
+		},
+		{
+			"id": "mod_talent_pick_mopsula_02",
+			"tag": "talent_pick:mopsula",
+			"voice": "mod",
+			"text": "Der Graf sagt: „Wir hatten dieses Talent schon immer.“ Ich sage: Applaus.",
+			"weight": 1
+		},
+		{
 			"id": "mod_follower_milestone_01",
 			"tag": "follower_milestone",
 			"voice": "mod",

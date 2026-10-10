@@ -4,7 +4,8 @@ class_name GameData extends RefCounted
 ## Getters for unknown ids return null and push_error (data bug). Defs are immutable after loading.
 
 const TABLES: PackedStringArray = ["statuses", "skills", "items", "classes", "party", "enemies", "floors",
-	"lootboxes", "achievements", "sponsors", "milestones", "mod_lines", "scenes"]
+	"lootboxes", "achievements", "sponsors", "milestones", "mod_lines", "scenes",
+	"talents", "species"]                       # 06 package B
 
 var source: String = ""                    # dir or "dicts"
 var errors: PackedStringArray = []
@@ -43,6 +44,11 @@ var _all_achievements: Array[AchievementDef] = []
 var _all_sponsors: Array[SponsorDef] = []
 var _all_milestones: Array[MilestoneDef] = []
 var _all_scenes: Array[SceneDef] = []
+# --- 06 package B: talents + species ---------------------------------------------------------------------------------
+var _talents: Dictionary = {}              # id → TalentDef
+var _species: Dictionary = {}              # id → SpeciesDef
+var _all_talents: Array[TalentDef] = []    # sorted by id
+var _all_species: Array[SpeciesDef] = []   # file order
 
 
 ## Loads all TABLES from `dir` (<table>.json). Full validation (rules 1–10). True if no errors.
@@ -136,6 +142,35 @@ func class_def(id: String) -> ClassDef:
 
 func scene_def(id: String) -> SceneDef:
 	return _get_def(_scenes, "scenes", id) as SceneDef
+
+
+# --- 06 package B: talents (talents.json) + species (species.json) ----------------------------------------------------
+
+func talent(id: String) -> TalentDef:
+	return _get_def(_talents, "talents", id) as TalentDef
+
+
+func species_def(id: String) -> SpeciesDef:
+	return _get_def(_species, "species", id) as SpeciesDef
+
+
+## Sorted by id (Talents.offer draws in this order).
+func all_talents() -> Array[TalentDef]:
+	return _all_talents.duplicate()
+
+
+## Talents whose `for` includes `member_id` (or is empty), sorted by id.
+func talents_for(member_id: String) -> Array[TalentDef]:
+	var out: Array[TalentDef] = []
+	for t: TalentDef in _all_talents:
+		if t.is_for(member_id):
+			out.append(t)
+	return out
+
+
+## File order (spc_original first in the real data).
+func all_species() -> Array[SpeciesDef]:
+	return _all_species.duplicate()
 
 
 ## null (no error) if `index` has no floor → end of content.
@@ -286,7 +321,8 @@ func _clear() -> void:
 	errors = PackedStringArray()
 	warnings = PackedStringArray()
 	for d: Dictionary in [_statuses, _skills, _items, _classes, _party, _enemies, _pseudo, _floors, _floors_by_id,
-			_encounters, _lootboxes, _achievements, _sponsors, _milestones, _mod_lines, _mod_lines_by_tag, _scenes]:
+			_encounters, _lootboxes, _achievements, _sponsors, _milestones, _mod_lines, _mod_lines_by_tag, _scenes,
+			_talents, _species]:
 		d.clear()
 	_party_start = {"inventory": {}, "credits": 0}
 	_pools = {}
@@ -303,6 +339,8 @@ func _clear() -> void:
 	_all_sponsors.clear()
 	_all_milestones.clear()
 	_all_scenes.clear()
+	_all_talents.clear()
+	_all_species.clear()
 
 
 func _build(norm: Dictionary) -> void:
@@ -391,6 +429,17 @@ func _build(norm: Dictionary) -> void:
 			_all_scenes.append(s)
 	_all_scenes.sort_custom(func(a: SceneDef, b: SceneDef) -> bool:
 		return a.priority < b.priority if a.priority != b.priority else a.id < b.id)
+	for d: Dictionary in norm.get("talents", []):
+		var s: TalentDef = TalentDef.from_dict(d)
+		if not _talents.has(s.id):
+			_talents[s.id] = s
+			_all_talents.append(s)
+	_all_talents.sort_custom(func(a: TalentDef, b: TalentDef) -> bool: return a.id < b.id)
+	for d: Dictionary in norm.get("species", []):
+		var s: SpeciesDef = SpeciesDef.from_dict(d)
+		if not _species.has(s.id):
+			_species[s.id] = s
+			_all_species.append(s)
 	_party_start = (norm.get("party_start", {"inventory": {}, "credits": 0}) as Dictionary).duplicate(true)
 	_pools = (norm.get("lootbox_pools", {}) as Dictionary).duplicate(true)
 	_pity = (norm.get("lootbox_pity", {"rare": 4, "epic": 8}) as Dictionary).duplicate(true)
@@ -403,7 +452,7 @@ func _build(norm: Dictionary) -> void:
 ## Packed*Array fields cannot be locked by Godot (they are shared references too): never mutate them.
 func _freeze_defs() -> void:
 	for table: Dictionary in [_statuses, _skills, _items, _classes, _party, _enemies, _pseudo, _floors_by_id,
-			_encounters, _lootboxes, _achievements, _sponsors, _milestones, _mod_lines, _scenes]:
+			_encounters, _lootboxes, _achievements, _sponsors, _milestones, _mod_lines, _scenes, _talents, _species]:
 		for def: Variant in table.values():
 			_freeze_object(def as Object)
 	for list: Variant in _mod_lines_by_tag.values():
@@ -467,6 +516,10 @@ func _table_dict(table: String) -> Dictionary:
 			return _mod_lines
 		"scenes":
 			return _scenes
+		"talents":
+			return _talents
+		"species":
+			return _species
 	return {}
 
 

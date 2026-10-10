@@ -435,11 +435,14 @@ func flee_chance() -> float:
 	return clampf(c, Balance.FLEE_MIN, Balance.FLEE_MAX)
 
 
-## clampf(minf(success_base + LCK × success_lck, success_cap) + (living boss enemy ? success_boss_mod : 0), 0.05, 1.0).
+## clampf(minf((success_base + LCK × success_lck) × talent stunt factor, success_cap) + (living boss enemy ?
+## success_boss_mod : 0), 0.05, 1.0). Talent factor: Combatant.talent_mods.stunt_pm (06 §2.2 "Dramatische Pause").
 func stunt_chance(actor: Combatant, skill: SkillDef) -> float:
 	if actor == null or skill == null:
 		return 0.0
-	var c: float = minf(skill.success_base + float(actor.stat(StatBlock.Stat.LCK)) * skill.success_lck, skill.success_cap)
+	var raw: float = skill.success_base + float(actor.stat(StatBlock.Stat.LCK)) * skill.success_lck
+	raw *= float(int(actor.talent_mods.get("stunt_pm", 1000))) / 1000.0
+	var c: float = minf(raw, skill.success_cap)
 	var other: Combatant.Side = Combatant.Side.ENEMY if actor.is_party() else Combatant.Side.PARTY
 	for e: Combatant in living(other):
 		if e.is_boss:

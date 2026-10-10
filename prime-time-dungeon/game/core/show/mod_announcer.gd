@@ -12,7 +12,8 @@ const NO_COOLDOWN_TAGS: PackedStringArray = ["death", "intro"]
 ## GDD §1.4 B3/B6/B8, §11.1): never dropped by Show's priority window — they queue behind the running line (ModDialog)
 ## and leave the window as it is. (Measured with the full-run bot: a purchase right after the lootbox lines and the
 ## descent right after an achievement line — ach_speedrun / ach_last_minute fire on floor_completed — were swallowed.)
-const ALWAYS_SAID_TAGS: PackedStringArray = ["vendor_buy", "safe_room_enter", "stairs_found", "floor_end"]
+const ALWAYS_SAID_TAGS: PackedStringArray = ["vendor_buy", "safe_room_enter", "stairs_found", "floor_end",
+	"talent_show_open"]                         # 06 package B: the one-sentence rule of the first Talent-Show
 
 var _data: GameData = null
 var _rng: RandomNumberGenerator = null

@@ -73,14 +73,14 @@ func member(id: String) -> PartyMember:
 	return null
 
 
-## Product of equipped show_mods.hype_gain_mult.
+## Product of equipped show_mods.hype_gain_mult (× talent hype_gain_pm, 06 package B; 1.0 without such talents).
 func hype_gain_mult(data: GameData) -> float:
-	return _show_mod_product(data, "hype_gain_mult")
+	return _show_mod_product(data, "hype_gain_mult") * float(Talents.hype_pm(self, data)) / 1000.0
 
 
-## Product of equipped show_mods.follower_mult.
+## Product of equipped show_mods.follower_mult (× talent follower_pm, 06 package B).
 func follower_mult(data: GameData) -> float:
-	return _show_mod_product(data, "follower_mult")
+	return _show_mod_product(data, "follower_mult") * float(Talents.follower_pm(self, data)) / 1000.0
 
 
 func to_dict() -> Dictionary:

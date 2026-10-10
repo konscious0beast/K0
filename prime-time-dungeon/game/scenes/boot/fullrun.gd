@@ -119,6 +119,7 @@ var summary: Dictionary = {}
 var floor_boss_attempts: int = 0
 var strays_spawned: int = 0
 var hype_reasons: Dictionary = {}          # reason → summed hype delta of the running battle (diagnostics)
+var talents_picked: PackedStringArray = []  # 06 package B: "<member>@L<level>:<talent id>" in pick order
 var credits_by_source: Dictionary = {}     # "battle" | "safe_room" | "explore" → credits earned
 var replay_checks: int = 0
 var paused_checked: bool = false
@@ -1117,6 +1118,8 @@ func _safe_room(scene: SafeRoomScene) -> bool:
 	if not Game.state.pending_lootboxes.is_empty():
 		if not await _open_lootboxes(scene):
 			return false
+	if not await _pick_pending_talents(scene):
+		return false
 	equip_best()
 	if not await _shop(scene):
 		return false
@@ -1140,6 +1143,33 @@ func _safe_room(scene: SafeRoomScene) -> bool:
 
 
 ## Number of safe rooms of the current floor (from the floor's layout).
+## 06 package B: every open talent choice through the Talent-Show (the safe-room menu's path) — the bot always takes
+## the first card of the offer (deterministic: the offer depends only on seed, member, level and ranks).
+func _pick_pending_talents(scene: SafeRoomScene) -> bool:
+	if not scene.talent_show_available():
+		return true
+	var layer: Node = scene.open_talent_show()
+	var n: int = 0
+	while is_instance_valid(layer) and not layer.is_queued_for_deletion():
+		var mid: String = str(layer.get("member_id"))
+		var offer: PackedStringArray = layer.get("offer")
+		if mid == "" or offer.is_empty():
+			layer.call("close")
+			break
+		var lv: int = Talents.pending_levels(Game.state.member(mid))[0]
+		if not bool(await layer.call("pick", 0)):
+			return fail("Talent-Show: picking %s for %s failed" % [offer[0], mid])
+		talents_picked.append("%s@L%d:%s" % [mid, lv, offer[0]])
+		_note("talent: %s (L%d) picks %s" % [mid, lv, offer[0]])
+		n += 1
+		if n > SAFE_BUDGET:
+			return fail("the Talent-Show did not finish")
+		await get_tree().process_frame
+	if Talents.open_choices(Game.state, DB.data) > 0:
+		return fail("%d talent choices still open after the Talent-Show" % Talents.open_choices(Game.state, DB.data))
+	return true
+
+
 func _layout_safe_rooms() -> int:
 	var def: FloorDef = Game.floor_def()
 	if def == null or Game.state.floor_run == null:
@@ -1577,7 +1607,7 @@ func stats() -> Dictionary:
 		"viewers_peak": int(summary.get("viewers_peak", 0)), "kills": int(summary.get("kills", 0)),
 		"purchases": purchases, "saves": saves, "teleports": teleports, "direct_interactions": direct_interactions,
 		"forced_encounters": forced_encounters, "replay_checks": replay_checks, "frames": frames,
-		"mod_tags": mod_tags,
+		"mod_tags": mod_tags, "talents_picked": talents_picked,
 	}
 
 

@@ -59,7 +59,8 @@ static func make_setup(state: GameState, data: GameData, encounter_id: String, a
 
 ## hp/mp writeback; KO → 1 HP unless DEFEAT; item_delta → inventory; credits_delta; VICTORY: EXP per member
 ## (alive full, KO'd floori(50 %)), credits (+overkill), drops, boss_rewards (items → inventory, boxes →
-## pending_lootboxes), Werbepause +ceili(max_mp × 0.15) MP for living members, stolen credits refunded;
+## pending_lootboxes), Werbepause +ceili(max_mp × (0.15 + Talents.post_battle_mp_pm ‰)) MP for living members, stolen
+## credits refunded;
 ## FLED/DEFEAT: stolen credits lost; VICTORY: defeated_groups += group_id, strays.erase(group_id), flags defeated_<boss_id> + quarter/floor boss flags;
 ## bestiary (defeated += 1 per defeated_ids entry, weak_known ∪= weak_found); floor_run.stats.kills += kills,
 ## floor_run.stats.party_kos += party_kos (only once > 0);
@@ -134,13 +135,14 @@ static func apply_result(state: GameState, data: GameData, result: BattleResult)
 				_add_item(state, data, rid, amount)
 				for _i in amount:
 					rw.items.append(rid)
-		# 5. "Werbepause": living members (not KO at battle end) +ceili(max_mp × 0.15) MP
-		var regen_pct: int = roundi(Balance.POST_BATTLE_MP_REGEN * 100.0)
+		# 5. "Werbepause": living members (not KO at battle end) +ceili(max_mp × (0.15 + talent bonus)) MP
+		var regen_pm: int = roundi(Balance.POST_BATTLE_MP_REGEN * 1000.0)
 		for m: PartyMember in state.party:
 			if m == null or was_ko.has(m.id):
 				continue
 			var max_mp: int = Progression.total_stats(m, data).values[StatBlock.Stat.MP]
-			var regen: int = (max_mp * regen_pct + 99) / 100
+			var pm: int = regen_pm + Talents.post_battle_mp_pm(m, data)     # 06 package B: "Automatenkaffee"
+			var regen: int = (max_mp * pm + 999) / 1000
 			var before: int = m.mp
 			m.mp = mini(max_mp, m.mp + regen)
 			rw.mp_regen[m.id] = m.mp - before

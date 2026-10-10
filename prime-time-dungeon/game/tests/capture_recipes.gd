@@ -9,7 +9,9 @@ extends Node
 ##   pause_party | pause_inventory | pause_equipment | pause_skills | pause_settings.
 ## Battle (battle.tscn, optional --params={"encounter": "<enc id>"}): battle_menu, battle_skills, battle_target,
 ##   battle_damage, battle_enemy_turn, boss_intro, boss_phase, battle_gift, battle_victory, battle_results.
-## Safe room (safe_room.tscn): safe_vending, safe_lootbox, safe_lootbox_open, safe_mopsula, safe_equipment.
+## Safe room (safe_room.tscn): safe_vending, safe_lootbox, safe_lootbox_open, safe_mopsula, safe_equipment,
+##   safe_talents_menu (menu + the gold TALENT-SHOW button), safe_talent_show (the Talent-Show, 06 package B).
+## Exploration + pause: talents_party (party page with talents and an open choice, 06 package B).
 
 const ZONES: Dictionary = {"platform": "zone_platform", "sewer": "zone_sewer", "cellar": "zone_cellar"}
 
@@ -474,3 +476,42 @@ func _r_safe_mopsula(scene: Node) -> bool:
 	scene.call("talk_to_mopsula")
 	await frames(90)
 	return true
+
+
+# --- 06 package B: Talent-Show ----------------------------------------------------------------------------------------
+
+## Party at L5 (two open choices each), Kai already picked one talent at L3 (so the card shows "Bisher: …").
+func _talent_party() -> void:
+	if Game.state == null:
+		return
+	for m: PartyMember in Game.state.party:
+		m.level = 5
+	Game.state.member("kai").talents = {"tal_kai_wischtechnik": 1}
+	Progression.full_heal(Game.state, DB.data)
+	Events.party_changed.emit()
+
+
+func _r_safe_talents_menu(scene: Node) -> bool:
+	if not await _safe_ready(scene):
+		return false
+	_talent_party()
+	scene.call("_refresh_menu_labels")
+	scene.call("_focus_first")
+	await seconds(3.4)                           # the heal banner fades
+	return true
+
+
+func _r_safe_talent_show(scene: Node) -> bool:
+	if not await _safe_ready(scene):
+		return false
+	_talent_party()
+	await frames(5)
+	scene.call("open_talent_show")
+	await frames(30)
+	return true
+
+
+func _r_talents_party(scene: Node) -> bool:
+	_talent_party()
+	return await _r_pause(scene, "party")
+

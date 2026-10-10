@@ -6,6 +6,9 @@ class_name SafeRoomScene extends Node3D
 ## qualifying scene of the same visit becomes pending right away (several scenes per visit, e.g. scn_mop_2 +
 ## scn_mop_4, "NEU" badge + "!" stay); without a scene a `mopsula_idle` line. Shop via vending_menu (Game.buy), lootboxes via lootbox_opening (Game.open_lootbox).
 ## ModDialog sits right-aligned here (overlay mode &"safe_room"), so the menu column stays readable while M.O.D. talks.
+## 06 package B: while a talent choice is open (L3, L5 …) a gold "TALENT-SHOW · n offen" call-to-action button sits at
+## the bottom right of the room (outside the menu column, which keeps its six entries); it opens
+## scenes/ui/talent_show.tscn (activate("talents")). Focus: first focus after pending lootboxes, ui_right from the menu.
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const InputGlyph := preload("res://scenes/ui/input_glyph.gd")
@@ -17,6 +20,7 @@ const VENDING: String = "res://scenes/safe_room/vending_menu.tscn"
 const LOOTBOX: String = "res://scenes/safe_room/lootbox_opening.tscn"
 const SLOT_SELECT: String = "res://scenes/title/slot_select.tscn"
 const PAUSE_MENU: String = "res://scenes/ui/pause_menu.tscn"
+const TALENT_SHOW: String = "res://scenes/ui/talent_show.tscn"     # 06 package B
 const DEFAULT_IDLE: PackedStringArray = ["Wir ruhen. Störe Uns nur bei Weltuntergang. Erneut.",
 	"Ein Sofa. Endlich ein Möbel, das Unseren Stand begreift."]
 const SCENE_TIMEOUT_SEC: float = 600.0
@@ -48,6 +52,7 @@ var _busy: bool = false
 var _t: float = 0.0
 var _idle_i: int = 0
 var _leaving: bool = false
+var _talent_cta: Button = null             # 06 package B: "TALENT-SHOW · n offen" (menu_buttons["talents"])
 
 
 ## Stores params only: {"safe_room_id": String}; missing → first safe room of the floor.
@@ -113,6 +118,8 @@ func activate(id: String) -> void:
 			open_pause("equipment")
 		"mopsula":
 			talk_to_mopsula()
+		"talents":
+			open_talent_show()
 		"leave":
 			leave()
 
@@ -155,6 +162,22 @@ func open_vending() -> Node:
 	_set_menu_shown(false)
 	layer.connect("closed", func() -> void: _after_modal("vending"))
 	return layer
+
+
+## 06 package B: Talent-Show modal (all open talent choices of both members, one after another).
+func open_talent_show() -> Node:
+	var layer: CanvasLayer = (load(TALENT_SHOW) as PackedScene).instantiate() as CanvasLayer
+	layer.call("setup", {"safe_room_id": safe_room_id})
+	add_child(layer)
+	_modal = layer
+	_set_menu_shown(false)
+	layer.connect("closed", func() -> void: _after_modal("talents"))
+	return layer
+
+
+## 06 package B: true while the Talent-Show button is offered (an open talent choice exists).
+func talent_show_available() -> bool:
+	return _talent_cta != null and _talent_cta.visible
 
 
 func open_pause(tab: String) -> Node:
@@ -330,6 +353,8 @@ func _focus_first() -> void:
 	if menu_buttons.has("lootbox") and not (menu_buttons["lootbox"] as Button).disabled and \
 			Game.state != null and not Game.state.pending_lootboxes.is_empty():
 		UiUtil.focus_later((menu_buttons["lootbox"] as Control))
+	elif talent_show_available():
+		UiUtil.focus_later(_talent_cta)
 	elif pending_scene != null:
 		UiUtil.focus_later((menu_buttons["mopsula"] as Control))
 	else:
@@ -411,6 +436,70 @@ func _refresh_menu_labels() -> void:
 			list.append(c as Control)
 			_style_enabled(c as Button)
 	UiUtil.wire_vertical(list)
+	_refresh_talent_cta(list)
+
+
+## 06 package B: the call-to-action shows the open talent choices; ui_right from every menu entry reaches it,
+## ui_left leads back to the first menu entry.
+func _refresh_talent_cta(list: Array[Control]) -> void:
+	if _talent_cta == null:
+		return
+	var n: int = Talents.open_choices(Game.state, DB.data) if Game.state != null else 0
+	_talent_cta.visible = n > 0
+	var sub: Label = _talent_cta.find_child("Sub", true, false) as Label
+	if sub != null:
+		sub.text = "1 Talentwahl offen" if n == 1 else "%d Talentwahlen offen" % n
+	for c: Control in list:
+		c.focus_neighbor_right = c.get_path_to(_talent_cta) if n > 0 else NodePath("")
+	if not list.is_empty():
+		_talent_cta.focus_neighbor_left = _talent_cta.get_path_to(list[0])
+	_talent_cta.focus_neighbor_top = _talent_cta.get_path_to(_talent_cta)
+	_talent_cta.focus_neighbor_bottom = _talent_cta.get_path_to(_talent_cta)
+	_talent_cta.focus_neighbor_right = _talent_cta.get_path_to(_talent_cta)
+
+
+func _build_talent_cta(frame: Control) -> void:
+	var b: Button = UiUtil.button("", &"ButtonBig")
+	b.name = "TalentShowButton"
+	b.set_meta("menu_id", "talents")
+	b.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	b.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	b.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	b.offset_left = -380
+	b.offset_right = -8
+	b.offset_top = -78 - 80
+	b.offset_bottom = -78
+	var normal: StyleBoxFlat = UiUtil.box_style(Color(UiTheme.C_PANEL, 0.95), UiTheme.C_GOLD, 3, 0.0, 16, 8)
+	normal.set_corner_radius_all(8)
+	var hover: StyleBoxFlat = normal.duplicate() as StyleBoxFlat
+	hover.bg_color = Color(0.25, 0.17, 0.08, 0.95)
+	b.add_theme_stylebox_override("normal", normal)
+	b.add_theme_stylebox_override("hover", hover)
+	b.add_theme_stylebox_override("pressed", hover)
+	var row: HBoxContainer = UiUtil.hbox(14)
+	UiUtil.full_rect(row)
+	row.offset_left = 18
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(row)
+	var ic: Control = UiIcon.make(&"star", UiTheme.C_GOLD, 36)
+	ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(ic)
+	var col: VBoxContainer = UiUtil.vbox(-2)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(col)
+	var t: Label = UiUtil.label("TALENT-SHOW", &"", 26, UiTheme.C_GOLD)
+	t.name = "Text"
+	t.add_theme_font_override("font", UiTheme.font_bold())
+	col.add_child(t)
+	var sub: Label = UiUtil.label("", &"", 17, UiTheme.C_TEXT)
+	sub.name = "Sub"
+	col.add_child(sub)
+	b.pressed.connect(func() -> void: activate("talents"))
+	b.visible = false
+	frame.add_child(b)
+	_talent_cta = b
+	menu_buttons["talents"] = b
 
 
 ## Label + icon are children of the button, so the theme's font_disabled_color never reaches them: dim them here.
@@ -532,6 +621,7 @@ func _build_ui() -> void:
 	frame.add_child(hints)
 	hints.add_child(InputGlyph.make(&"ui_accept", "Wählen", 16))
 	hints.add_child(InputGlyph.make(&"pause", "Party-Menü", 16))
+	_build_talent_cta(frame)                    # 06 package B
 	_heal_banner = PanelContainer.new()
 	_heal_banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	_heal_banner.offset_left = -150

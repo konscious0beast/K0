@@ -102,17 +102,21 @@ func test_hype_decay_in_ticks() -> void:
 	var sim: RunSim = _started()
 	var show: ShowState = sim.state.show
 	assert_eq(show.hype, 30.0, "floor start")
-	assert_eq(_of(sim.step(149), ExploreEvent.Type.HYPE), [])
+	var step_ticks: int = ShowModel.HYPE_DECAY_TICKS
+	assert_eq(_of(sim.step(step_ticks - 1), ExploreEvent.Type.HYPE), [])
 	var h: Array[ExploreEvent] = _of(sim.step(1), ExploreEvent.Type.HYPE)
-	assert_eq(h.size(), 1, "−1 per 150 ticks (5 s)")
-	assert_eq(h[0].data, {"hype": 29, "delta": -1})
+	assert_eq(h.size(), 1, "one cooling step per HYPE_DECAY_TICKS (2 s)")
+	assert_eq(h[0].data, {"hype": 29, "delta": -1}, "5 over the floor → at least −1")
 	assert_eq(show.hype, 29.0)
 	assert_eq(sim.state.floor_run.decay_ticks, 0)
-	show.hype = 16.0
-	assert_eq(_of(sim.step(150), ExploreEvent.Type.HYPE).size(), 1)
-	assert_eq(show.hype, 15.0)
-	assert_eq(_of(sim.step(300), ExploreEvent.Type.HYPE), [], "never below 15 in exploration")
-	assert_eq(show.hype, 15.0)
+	show.hype = 85.0
+	h = _of(sim.step(step_ticks), ExploreEvent.Type.HYPE)
+	assert_eq(h[0].data, {"hype": 79, "delta": -6}, "10 % of the excess over 25: hot shows cool faster")
+	show.hype = 26.0
+	assert_eq(_of(sim.step(step_ticks), ExploreEvent.Type.HYPE).size(), 1)
+	assert_eq(show.hype, 25.0)
+	assert_eq(_of(sim.step(2 * step_ticks), ExploreEvent.Type.HYPE), [], "never below 25 in exploration")
+	assert_eq(show.hype, 25.0)
 
 
 func test_pacifist_counter() -> void:

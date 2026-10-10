@@ -230,8 +230,8 @@ gleich für alle Regeln. Die Regel gilt identisch in 02_TECH §7.3.
 
 | Ergebnis (`BattleSetup.Advantage`) | Bedingung (in dieser Reihenfolge geprüft) | Effekt im Kampf |
 |---|---|---|
-| **Präventivschlag** (`PREEMPTIVE`) | (a) Feldschlag trifft Symbol UND (`state` ∈ {`IDLE`,`PATROL`} ODER `dot(fwd_e, d_ek) < BACK_DOT`) — ODER — (b) Kontakt, Symbol **nicht** in `CHASE` UND `dot(fwd_e, d_ek) < BACK_DOT` (Kai berührt den Rücken) | Party startet mit `ctr = 0`, Gegner mit `ctr = base_delay` (voller Zug). Hype +5. Flucht +25 %. |
-| **Hinterhalt** (`AMBUSH`) | Kontakt, Symbol in `CHASE` UND `dot(fwd_k, d_ke) < BACK_DOT` (Gegner kommt von hinten) | Gegner starten mit `ctr = 0`, Party mit `ctr = base_delay`. Hype +8 (Drama). |
+| **Präventivschlag** (`PREEMPTIVE`) | (a) Feldschlag trifft Symbol UND (`state` ∈ {`IDLE`,`PATROL`} ODER `dot(fwd_e, d_ek) < BACK_DOT`) — ODER — (b) Kontakt, Symbol **nicht** in `CHASE` UND `dot(fwd_e, d_ek) < BACK_DOT` (Kai berührt den Rücken) | Party startet mit `ctr = 0`, Gegner mit `ctr = base_delay` (voller Zug). Hype +3. Flucht +25 %. |
+| **Hinterhalt** (`AMBUSH`) | Kontakt, Symbol in `CHASE` UND `dot(fwd_k, d_ke) < BACK_DOT` (Gegner kommt von hinten) | Gegner starten mit `ctr = 0`, Party mit `ctr = base_delay`. Hype +5 (Drama). |
 | **Normal** (`NORMAL`) | alles andere (auch Feldschlag auf `ALERT`/`CHASE` von vorn) | Alle `ctr = roundi(base_delay × rng.randf_range(0.5, 1.0))` |
 
 Bosse und Event-Kämpfe: immer **Normal**. Fahrscheinfresser: kann nie Hinterhalt auslösen (steht still).
@@ -240,7 +240,7 @@ Bosse und Event-Kämpfe: immer **Normal**. Fahrscheinfresser: kann nie Hinterhal
 
 | Typ | `type` | Anzahl E1 | Inhalt (`contents` in `layout.chests[]`) | Öffnen |
 |---|---|---|---|---|
-| Holzkiste | `wood` | 10 | 20–40 Credits (gleichverteilt) + 1 Wurf aus Pool `f1.common` (Kap. 9.3); `contents: []` | 0.6 s Animation |
+| Holzkiste | `wood` | 10 | 10–25 Credits (gleichverteilt, `LootRoller.WOOD_CREDITS_MIN/MAX`) + 1 Wurf aus Pool `f1.common` (Kap. 9.3); `contents: []` | 0.6 s Animation |
 | Metallspind | `metal` | 4 | 1 fester Inhalt: `contents: [{"kind": "item", "id": "<item_id>", "amount": n}]` | 0.8 s |
 | Verschlossener Spind | `locked` | 2 | benötigt `itm_key_master` im Inventar; fester Inhalt | 1.0 s |
 
@@ -248,7 +248,7 @@ Positionen und feste Inhalte: Karte Kap. 1.3 (Metall: `itm_arm_safety_vest` A, `
 `itm_acc_gas_mask` C; verschlossen: `itm_wpn_fire_axe` C, `itm_wpn_collar_signet` D). Ohne Schlüssel zeigt der Prompt
 „Verschlossen. Ein Generalschlüssel wäre praktisch.“. Zufall: `SeedUtil.derive(floor_seed, "chest", k)`, k = Index aus der ID `f1_c<k>`.
 
-Jede geöffnete Truhe: Hype +3, Zähler `s.chests_opened` +1. Geöffnete Truhen stehen in `FloorRun.opened_chests` (bleiben offen).
+Jede geöffnete Truhe: Hype +2, Zähler `s.chests_opened` +1. Geöffnete Truhen stehen in `FloorRun.opened_chests` (bleiben offen).
 
 ### 2.6 Events (Interactables mit Wahl, je 1× pro Etage)
 
@@ -676,21 +676,24 @@ Ergebniswerte (ohne Ausrüstung):
 ### 4.3 EXP-Kurve
 
 ```text
-exp_to_next(L) = floori(15.0 * pow(L, 1.7) + 15.0)  # Progression.exp_to_next(level); L = aktuelles Level, gilt für L1..L9
+exp_to_next(L) = floori(18.0 * pow(L, 1.7) + 15.0)  # Progression.exp_to_next(level); L = aktuelles Level, gilt für L1..L9
 ```
 
 | Level | EXP bis nächstes | EXP gesamt (Beginn des Levels) |
 |---|---|---|
-| 1 | 30 | 0 |
-| 2 | 63 | 30 |
-| 3 | 112 | 93 |
-| 4 | 173 | 205 |
-| 5 | 246 | 378 |
-| 6 | 330 | 624 |
-| 7 | 424 | 954 |
-| 8 | 529 | 1378 |
-| 9 | 643 | 1907 |
-| 10 | — (Cap) | 2550 |
+| 1 | 33 | 0 |
+| 2 | 73 | 33 |
+| 3 | 131 | 106 |
+| 4 | 205 | 237 |
+| 5 | 292 | 442 |
+| 6 | 393 | 734 |
+| 7 | 506 | 1127 |
+| 8 | 632 | 1633 |
+| 9 | 769 | 2265 |
+| 10 | — (Cap) | 3034 |
+
+Balancing 2026-10 (Kap. 13): Faktor 15 → 18. Mit 15 lag die L6-Schwelle (624) genau auf der Summe aller Gruppen der Zonen
+A–C; jeder Event-Kampf oder Streuner hob die Party eine Stufe über den Plan (Bot: Hausmeister L6, Zone B/C je +1).
 
 EXP-Überschuss am Cap verfällt. Beide Mitglieder haben **getrennte** EXP-Konten (wegen KO-Regel), starten gleich.
 
@@ -784,7 +787,7 @@ Kill-Hype nach Kap. 7.3 (kein `hype_value`).
 | `spruehgeist` | Sprühgeist | 4 | 44 | 40 | 8 | 23 | 18 | 10 | 15 | 8 | 36 | 18 | 5.0 | C |
 | `rolltreppenkrabbe` | Rolltreppenkrabbe | 5 | 72 | 0 | 25 | 4 | 24 | 8 | 10 | 4 | 60 | 20 | 3.8 | D |
 | `rattengardist` | Rattengardist | 6 | 78 | 10 | 27 | 6 | 17 | 10 | 14 | 8 | 66 | 22 | 5.0 | D |
-| `fahrscheinfresser` | Fahrscheinfresser (Rarität) | 4 | 60 | 0 | 18 | 18 | 20 | 20 | 16 | 20 | 60 | 150 | 0 (steht) | A |
+| `fahrscheinfresser` | Fahrscheinfresser (Rarität) | 4 | 60 | 0 | 18 | 18 | 20 | 20 | 16 | 20 | 60 | 100 | 0 (steht) | A |
 
 **Affinitäten & Drops:**
 
@@ -870,11 +873,11 @@ Kill-Hype nach Kap. 7.3 (kein `hype_value`).
 
 | Feld | Wert |
 |---|---|
-| Lv / HP / MP | 6 / **380** / 60 |
-| STR / MAG / DEF / RES / SPD / LCK | 23 / 14 / 14 / 10 / 12 / 6 |
+| Lv / HP / MP | 6 / **330** / 60 |
+| STR / MAG / DEF / RES / SPD / LCK | **40 / 26** / 14 / 10 / 12 / 6 (Balancing Kap. 13: vorher 380 HP, STR 23, MAG 14 — auch ohne Sponsoren 100 % Auto-Sieg eine Stufe unter Ziel) |
 | Affinitäten | weak `shock`, resist `poison` → `element_mods {"shock": 1.5, "poison": 0.5}` |
 | Status-Resistenz | `status_resist {"sts_stun": 0.5, "sts_slow": 0.5}` |
-| EXP / Credits | **180 / 200** |
+| EXP / Credits | **180 / 150** |
 | Drops (100 %) | `key_master` (Schlüsselitem), `acc_key_ring`, Lootbox `silver` → `boss_drops: [{"kind": "item", "id": "itm_key_master", "amount": 1}, {"kind": "item", "id": "itm_acc_key_ring", "amount": 1}, {"kind": "box", "id": "box_silver", "amount": 1}]` |
 | Ziel-Party-Level | **5** (L4 schaffbar mit Items) |
 
@@ -897,11 +900,11 @@ Sinus), Besen = langer Zylinder + Box-Bürste. Phase 3: Augen emissive Rot #FF3B
 
 | Feld | Wert |
 |---|---|
-| Lv / HP / MP | 8 / **720** / 120 |
-| STR / MAG / DEF / RES / SPD / LCK | 26 / 20 / 18 / 16 / 15 / 10 |
+| Lv / HP / MP | 8 / **550** / 120 |
+| STR / MAG / DEF / RES / SPD / LCK | **52 / 44** / 18 / 16 / 15 / 10 (Balancing Kap. 13: vorher 720 HP, STR 26, MAG 20) |
 | Affinitäten | weak `ice`, resist `fire`, immune `poison` → `element_mods {"ice": 1.5, "fire": 0.5, "poison": 0.0}`, `status_immune ["sts_poison"]` |
 | Status-Resistenz | `status_resist {"sts_stun": 0.5, "sts_slow": 0.5}` |
-| EXP / Credits | **420 / 500** |
+| EXP / Credits | **420 / 300** |
 | Drops (100 %) | `acc_queen_crown`, Lootbox `gold` → `boss_drops: [{"kind": "item", "id": "itm_acc_queen_crown", "amount": 1}, {"kind": "box", "id": "box_gold", "amount": 1}]`; Achievement `ach_queen` (+ Gold-Box) |
 | Modell | `model.pose: "quadruped"` (liegt, Kapsel 3.5 m; überschreibt die ART-Regel „rodent scale ≥ 1.0 = aufrecht“) |
 | Ziel-Party-Level | **7** (L6 schaffbar mit guter Ausrüstung + Items) |
@@ -945,7 +948,7 @@ Bosse: `boss: true`, `can_flee: false`. Tutorial: `tutorial: true` (Gegnerschade
 | `grp_a2` | A | kanalratte, taubenschwarm, kanalratte | 38 | 17 |
 | `grp_a3` | A | pendler, taubenschwarm | 36 | 19 |
 | `grp_a4` | A | taubenschwarm ×2, kanalratte | 40 | 16 |
-| `grp_a_rare` | A | fahrscheinfresser | 60 | 150 |
+| `grp_a_rare` | A | fahrscheinfresser | 60 | 100 |
 | `grp_b1` | B | kanalschleim, kanalratte ×2 | 44 | 20 |
 | `grp_b2` | B | rattenschamane, kanalratte ×2 | 50 | 24 |
 | `grp_b3` | B | kabelsalat, kanalschleim | 50 | 23 |
@@ -953,15 +956,18 @@ Bosse: `boss: true`, `can_flee: false`. Tutorial: `tutorial: true` (Gegnerschade
 | `grp_c1` | C | kellerspinne ×2 | 68 | 24 |
 | `grp_c2` | C | spruehgeist, kabelsalat | 66 | 33 |
 | `grp_c3` | C | kellerspinne, spruehgeist, kanalratte | 82 | 36 |
-| `grp_boss_hausmeister` | C | boss_hausmeister | 180 | 200 |
+| `grp_boss_hausmeister` | C | boss_hausmeister | 180 | 150 |
 | `grp_d1` | D | rolltreppenkrabbe, rattenschamane | 86 | 32 |
 | `grp_d2` | D | rattengardist ×2, rattenschamane | 158 | 56 |
 | `grp_d3` | D | rolltreppenkrabbe, rattengardist | 126 | 42 |
-| `grp_boss_rattenkoenigin` | D | boss_rattenkoenigin | 420 | 500 |
+| `grp_boss_rattenkoenigin` | D | boss_rattenkoenigin | 420 | 300 |
 | `grp_evt_pigeons` | Event `fev_wheel` | taubenschwarm ×2 | 28 | 10 |
 | `grp_evt_slime` | Event `fev_lever` | kanalschleim ×2 | 40 | 16 |
 
-Summe EXP regulär (15 Gruppen inkl. Tutorial und Rarität, ohne Streuner): **994**. Bei ~80 % bekämpft: ~500 EXP = **L5 vor dem Hausmeister**, ~680 = L6 danach, ~975 = **L7 vor der Königin**.
+Summe EXP regulär (15 Gruppen inkl. Tutorial und Rarität, ohne Streuner): **994**; Zonen A–C 624, D 370. Wer alles bekämpft
+(Streifen jagen einen ohnehin, Messung Kap. 13: auch „typische“ Läufe kämpfen 14–15 Gruppen) und dazu 1 Event-Kampf und
+0–2 Streuner: ~650–750 EXP = **L5 vor dem Hausmeister** (L6 ab 734), +180 = L6 danach, ~1 200–1 300 = **L7 vor der
+Königin** (L8 ab 1 633). Bei ~80 % bekämpft: ~500 = L5, ~975 = L6 vor der Königin („L6 schaffbar“, Kap. 5.3).
 
 ---
 
@@ -1067,8 +1073,10 @@ Konstanten Kap. 16.3). Die Show-Logik ist deterministisch (Show-`rng`); nur die 
 
 ```text
 ShowModel.viewers_for(floor_mult: float, hype: float, followers: int) -> int
-  = roundi((1000.0 * floor_mult + followers * 1.0) * (0.4 + hype / 40.0))    # Hype 0 → 0.4×, 50 → 1.65×, 100 → 2.9×
+  = roundi((1000.0 * floor_mult + followers * 0.5) * (0.4 + hype / 40.0))    # Hype 0 → 0.4×, 50 → 1.65×, 100 → 2.9×
 # floor_mult = FloorDef.floor_mult (ersetzt viewer_base): E1 1.0, E2 1.5
+# Balancing 2026-10 (Kap. 13): je Follower schaut 0.5 Zuschauer zu (VIEWER_PER_FOLLOWER, vorher 1.0) — dämpft die
+# Rückkopplung Follower → Zuschauer → Follower und hält den Etagen-Peak bei 3 000–5 500.
 ```
 
 - **Logikwert** `viewers` = `viewers_for(...)`, neu berechnet bei jeder Hype-/Follower-Änderung und jede 1.0 s. Er speist
@@ -1080,37 +1088,46 @@ ShowModel.viewers_for(floor_mult: float, hype: float, followers: int) -> int
 
 | Ereignis | ΔHype | Regel |
 |---|---|---|
-| Kampfstart normal / Präventiv / Hinterhalt / Boss | +5 / +5 / +8 / +10 | Boss ersetzt die anderen |
-| **Abwechslung** | +3 | `action_key` der Party-Aktion kommt in den letzten 4 Party-`action_key`s nicht vor (`attack`, Skill-ID, Item-ID, `stunt`, `defend`, `flee`) |
+| Kampfstart normal / Präventiv / Hinterhalt / Boss | +3 / +3 / +5 / +8 | Boss ersetzt die anderen |
+| **Abwechslung** | +2 | `action_key` der Party-Aktion kommt in den letzten 4 Party-`action_key`s nicht vor (`attack`, Skill-ID, Item-ID, `stunt`, `defend`, `flee`) |
 | **Wiederholung** | −5 | gleicher `action_key` zum 3. Mal in Folge (Party, egal welcher Charakter); jede weitere −5 |
-| Kritischer Treffer | +5 | je Krit |
-| Schwachstelle getroffen | +4 | max. 1× pro Aktion |
-| Kill mit Angriff / mit Skill / mit Stunt | +3 / +6 / +10 | Item-Kill zählt wie Angriff (+3); zusätzlich `SkillDef.kill_hype` (Prime-Time-Finisher +10) |
-| **Overkill** | +8 | `damage >= hp_before + target.max_hp * 0.5`; Credits dieses Gegners ×1.25 (`BattleResult.overkill_credits`) |
-| **Combo** | +5 | Kai und Mopsula handeln direkt nacheinander (kein anderer Zug dazwischen, auch keine Pseudo-Einheit), beide mit einer Schadensaktion, die **dasselbe** Gegner-Ziel trifft; 2. Treffer Schaden ×1.1 (im Kern: `DamageCalc.compute(..., combo_second_hit)`, Erkennung über `BattleState.last_party_target` / `last_actor_side`), Banner „COMBO!“, Event `ActionEvent.Type.COMBO`, Trigger `combo` |
-| Kill-Serie | +6 | 3 Kills innerhalb von 3 aufeinanderfolgenden Party-Aktionen |
-| Stunt Erfolg / Fehlschlag | +20 / +8 | — |
+| Kritischer Treffer | +3 | je Krit |
+| Schwachstelle getroffen | +2 | max. 1× pro Aktion |
+| Kill mit Angriff / mit Skill / mit Stunt | +1 / +2 / +4 | Item-Kill zählt wie Angriff (+1); zusätzlich `SkillDef.kill_hype` (Prime-Time-Finisher +10) |
+| **Overkill** | +3 | `damage >= hp_before + target.max_hp * 1.0` (`Balance.OVERKILL_MAXHP_FRAC`); Credits dieses Gegners ×1.25 (`BattleResult.overkill_credits`) |
+| **Combo** | +2 | Kai und Mopsula handeln direkt nacheinander (kein anderer Zug dazwischen, auch keine Pseudo-Einheit), beide mit einer Schadensaktion, die **dasselbe** Gegner-Ziel trifft; 2. Treffer Schaden ×1.1 (im Kern: `DamageCalc.compute(..., combo_second_hit)`, Erkennung über `BattleState.last_party_target` / `last_actor_side`), Banner „COMBO!“, Event `ActionEvent.Type.COMBO`, Trigger `combo` |
+| Kill-Serie | +5 | 3 Kills innerhalb von 3 aufeinanderfolgenden Party-Aktionen |
+| Stunt Erfolg / Fehlschlag | +12 / +4 | — |
 | Party-Mitglied fällt unter 25 % HP | +6 | 1× pro Mitglied pro Kampf („Drama“) |
 | Party-Mitglied KO | +10 | — |
 | Wiederbelebung | +8 | — |
 | Sponsor-Item verwendet (`item_hype_megaphone`) | +25 | über `SkillDef.hype` |
 | Sieg knapp (ein lebendes Mitglied ≤ 10 % HP) | +15 | bei Kampfende |
-| Sieg ohne Schaden | +5 | bei Kampfende |
-| Langweilig | −2 | jede Party-Aktion ohne positives Hype-Ereignis |
+| Sieg ohne Schaden | +3 | bei Kampfende |
+| Langweilig | −3 | jede Party-Aktion ohne positives Hype-Ereignis |
 | Kampf zieht sich | −3 | jeder Party-Zug nach dem 10. (Boss: nach dem 25.) |
 | Verteidigen 2× in Folge (gleicher Charakter) | −4 | — |
 | Flucht Erfolg / Fehlschlag | −30 / −5 | — |
-| **Erkundung:** Truhe / Event / Achievement | +3 / +5 / +8 | Achievement-Bonus gilt auch im Kampf |
-| **Erkundung:** Zerfall | −1 pro 5 s laufendem Timer | nicht unter 15 (`HYPE_EXPLORE_FLOOR`) |
+| **Erkundung:** Truhe / Event / Achievement | +2 / +5 / +5 | Achievement-Bonus gilt auch im Kampf |
+| **Erkundung:** Abkühlen | alle 2 s laufenden Timers −10 % des Hype über 25, mind. −1 | nicht unter 25 (`HYPE_EXPLORE_FLOOR`); `ShowModel.decay_step` |
 | Timer-Warnung 5:00 / 1:00 | +10 / +15 | einmalig |
 
 Positive Ereignisse werden mit `hype_gain_mult` multipliziert (Produkt aller `show_mods`, z. B. `acc_fan_scarf` 1.2). Danach `clamp(0, 100)`.
-Kein Hype-Drift Richtung 20 und kein `hype_value`-Kill-Faktor (die Werte oben ersetzen 02_TECH §6.2 vollständig).
+Kein Hype-Drift im Kampf und kein `hype_value`-Kill-Faktor (die Werte oben ersetzen 02_TECH §6.2 vollständig).
+
+**Dramaturgie (Balancing 2026-10, Kap. 13):** Jeder Kampf ist ein Show-Segment. Ein Routinekampf hebt die Quote um ~15–25
+Punkte (Median Kampfende ~55–60), Stunts, Overkills, knappe Siege und KOs um 30–45; Sponsoren melden sich erst, wenn ein
+Kampf die Quote über 70 treibt (Kap. 7.4). In der Erkundung kühlt das Publikum ab — je heißer, desto schneller (−10 % des
+Abstands zu 25 alle 2 s): ein 85er-Kampfende liegt nach 30 s Erkundung bei ~41, nach einer Minute bei ~26; nur wer zügig
+weiterspielt, nimmt die Quote in den nächsten Kampf mit. Vorher (konstant −1 / 5 s bis 15 und die doppelt so großen Werte
+oben) endete fast jeder Kampf bei 96–100: Zuschauerfaktor dauerhaft 2.9, Sponsor-Geschenk in jedem Kampf.
 
 ### 7.4 Sponsor-Geschenke
 
-- **Auslöser:** Hype überschreitet im **Kampf** aufwärts **50**, **75** oder **100** (`SponsorSystem.THRESHOLDS`). Jede Schwelle 1× pro Kampf.
-  Max. **2 Geschenke pro regulärem Kampf**, **3 pro Bosskampf** (`MAX_GIFTS_PER_BATTLE` / `MAX_GIFTS_PER_BOSS_BATTLE`).
+- **Auslöser:** Hype überschreitet im **Kampf** aufwärts **70**, **85** oder **100** (`SponsorSystem.THRESHOLDS`, HUD-Marker an
+  denselben Werten). Jede Schwelle 1× pro Kampf. Max. **1 Geschenk pro regulärem Kampf**, **2 pro Bosskampf**
+  (`MAX_GIFTS_PER_BATTLE` / `MAX_GIFTS_PER_BOSS_BATTLE`; vorher 50/75/100 und 2/3 → ~15–19 Geschenke pro Etage, Bosse mit
+  drei Heilungen trivial).
   Werden mehrere Schwellen auf einmal überschritten, kommen die Geschenke nacheinander (im Rahmen des Limits).
   **Keine Hype-Kosten** (`HYPE_COST = 0`). Nach dem Geschenk zu Schwelle 100: Hype auf **80** setzen.
 - **Ablauf:** Vor dem nächsten Zug fliegt eine Sponsor-Drohne ein (1.5 s, überspringbar), Banner oben rechts,
@@ -1119,10 +1136,10 @@ Kein Hype-Drift Richtung 20 und kein `hype_value`-Kill-Faktor (die Werte oben er
 
 | ID | Sponsor (fiktiv, satirisch) | Slogan | Geschenk | Basis-Gewicht | Multiplikator |
 |---|---|---|---|---|---|
-| `sp_gluckwasser` | **Glückwasser** | „Trink dich glücklich. Wörtlich.“ | alle Verbündeten +35 % MaxHP | 3 | ×3 wenn ein Verbündeter < 50 % HP |
+| `sp_gluckwasser` | **Glückwasser** | „Trink dich glücklich. Wörtlich.“ | alle Verbündeten +25 % MaxHP | 3 | ×3 wenn ein Verbündeter < 50 % HP |
 | `sp_krawumm` | **KRAWUMM Energy** | „Schlaf ist was für Verlierer.“ | `haste` 3 auf alle Verbündeten | 2 | — |
 | `sp_panzerkeks` | **Panzerkeks** | „Der Keks, der zurückbeißt.“ | `guard` 3 auf alle Verbündeten | 2 | ×2 wenn ein Verbündeter < 35 % HP |
-| `sp_sorgenfrei` | **Sorgenfrei Versicherungen AG** | „Wir zahlen. Meistens.“ | belebt KO-Verbündeten mit 50 %; sonst niedrigster +50 % MaxHP | 1 | ×6 wenn ein Verbündeter KO |
+| `sp_sorgenfrei` | **Sorgenfrei Versicherungen AG** | „Wir zahlen. Meistens.“ | belebt KO-Verbündeten mit 40 %; sonst niedrigster +40 % MaxHP | 1 | ×6 wenn ein Verbündeter KO |
 | `sp_novanet` | **NovaNet Mobilfunk** (Konzernmarke) | „Empfang bis in die tiefste Etage.“ | alle Verbündeten +40 % MaxMP | 2 | ×2 wenn ein Verbündeter < 30 % MP |
 | `sp_brutzel` | **Brutzel-Burger** | „Mit echtem Fleisch-Aroma.“ | 1× `item_brutzel_burger` ins Inventar + alle +20 HP | 2 | — |
 | `sp_doomscroll` | **DoomScroll+** | „Nur noch eine Folge.“ | `slow` 3 auf alle Gegner (ignoriert Status-Resistenz, nicht Immunität) | 2 | ×2 im Bosskampf |
@@ -1134,10 +1151,10 @@ status_party, status_enemies, item, revive_or_heal_lowest`; `weight_mods: [{cond
 
 | ID | `gift` | `weight` | `weight_mods` |
 |---|---|---|---|
-| `spn_gluckwasser` | `[{"kind": "heal_party_pct", "value": 35}]` | 3 | `[{"cond": "ally_hp_below", "value": 0.5, "mult": 3}]` |
+| `spn_gluckwasser` | `[{"kind": "heal_party_pct", "value": 25}]` | 3 | `[{"cond": "ally_hp_below", "value": 0.5, "mult": 3}]` |
 | `spn_krawumm` | `[{"kind": "status_party", "status": "sts_haste", "turns": 3}]` | 2 | `[]` |
 | `spn_panzerkeks` | `[{"kind": "status_party", "status": "sts_guard", "turns": 3}]` | 2 | `[{"cond": "ally_hp_below", "value": 0.35, "mult": 2}]` |
-| `spn_sorgenfrei` | `[{"kind": "revive_or_heal_lowest", "value": 50}]` | 1 | `[{"cond": "ally_ko", "value": 0, "mult": 6}]` |
+| `spn_sorgenfrei` | `[{"kind": "revive_or_heal_lowest", "value": 40}]` | 1 | `[{"cond": "ally_ko", "value": 0, "mult": 6}]` |
 | `spn_novanet` | `[{"kind": "mp_party_pct", "value": 40}]` | 2 | `[{"cond": "ally_mp_below", "value": 0.3, "mult": 2}]` |
 | `spn_brutzel` | `[{"kind": "item", "item": "itm_brutzel_burger", "value": 1}, {"kind": "heal_party_flat", "value": 20}]` | 2 | `[]` |
 | `spn_doomscroll` | `[{"kind": "status_enemies", "status": "sts_slow", "turns": 3, "target": "enemies", "ignore_resist": true}]` | 2 | `[{"cond": "is_boss", "value": 0, "mult": 2}]` |
@@ -1155,29 +1172,31 @@ eine Zeile nach Hype-Band (`chat_hype_high` ≥ 70, `chat_hype_mid` 30–70, `ch
 
 ```text
 # bei Kampfsieg (ShowModel.followers_for_battle)
-follower_gain = floori(viewers_peak_battle * (0.01 + 0.02 * hype_end / 100.0) * mult)
+follower_gain = floori(viewers_peak_battle * (0.007 + 0.014 * hype_end / 100.0) * mult)
 mult = 2.0 (Boss) | 1.0 sonst;  × follower_mult (acc_clip_mic 1.15)
 # bei Flucht
 followers -= floori(followers * 0.01)
 # Niederlage: 0
-# Achievements (fest je Tier, Feld followers): Bronze +25, Silber +50, Gold +100
+# Achievements (fest je Tier, Feld followers): Bronze +20, Silber +40, Gold +80
 # Events: laut Kap. 2.6
 ```
 
-Erwartung E1: ~40 pro regulärem Kampf, ~110 Hausmeister, ~250 Königin → **~1 200–1 500 Follower am Etagenende**.
+Erwartung E1: ~40 pro regulärem Kampf, ~110 Hausmeister, ~200 Königin, ~500 aus Achievements → **~1 200–1 500 Follower am
+Etagenende** (gemessen Kap. 13).
 
 ### 7.7 Follower-Meilensteine (`milestones.json`)
 
 | Follower | ID | Belohnung | M.O.D.-Tag |
 |---|---|---|---|
-| 100 | `ms_100` | Bronze-Box | `follower_milestone` |
+| 100 | `ms_100` | 1× `item_brutzel_burger` | `follower_milestone` |
 | 250 | `ms_250` | Fan-Box | `follower_milestone` |
-| 500 | `ms_500` | 300 Credits + Silber-Box | `follower_milestone` |
+| 500 | `ms_500` | 150 Credits | `follower_milestone` |
 | 1 000 | `ms_1000` | Fan-Box + `acc_fan_scarf` | `follower_milestone` |
 | 2 000 | `ms_2000` | Gold-Box | `follower_milestone` (E1 nur mit Top-Spiel erreichbar) |
 | 5 000 | `ms_5000` | Gold-Box + Titel „Quotenkönig:in“ | `follower_milestone` (ab Etage 2) |
 
-Schema (`MilestoneDef`): `{"id": "ms_500", "followers": 500, "reward_box": "box_silver", "credits": 300, "item": "", "title": "", "min_floor": 1, "mod_tag": "follower_milestone"}`;
+Schema (`MilestoneDef`): `{"id": "ms_500", "followers": 500, "reward_box": "", "credits": 150, "item": "", "title": "", "min_floor": 1, "mod_tag": "follower_milestone"}`;
+(`ms_100`/`ms_500` ohne Box seit dem Balancing Kap. 13 — Lootboxen pro Etage 15–20);
 `ms_5000`: `"title": "Quotenkönig:in"`, `"min_floor": 2` (Titel setzt Flag `title_ms_5000`). Jeder Meilenstein wird genau 1× vergeben
 (gespeichert in `ShowState.milestones`), sobald `followers ≥ followers`-Wert und die Etage ≥ `min_floor` ist.
 
@@ -1191,8 +1210,8 @@ Auswertung: `AchievementTracker.evaluate(trigger: String, payload: Dictionary) -
 vom Autoload `Show` bei jedem Trigger. `condition` ist ein String-Ausdruck über `e.` (Payload), `s.` (Zähler in `ShowState.stats`) und
 `f.` (Flags in `GameState.flags`); Operatoren `== != >= <= > <`, Verknüpfung nur `&&`, Literale: Zahlen, `true`/`false`, Strings in `"…"`.
 Zähler werden **vor** der Auswertung desselben Triggers erhöht. Jedes Achievement wird genau 1× vergeben.
-**Belohnung** (fest je Tier): `box` (`box_bronze`/`box_silver`/`box_gold` in `pending_lootboxes`) + Follower bronze 25 / silver 50 /
-gold 100 + Hype +8 + M.O.D.-Spruch (Tag `achievement:<id>`, Fallback `achievement_generic`) + Toast.
+**Belohnung** (fest je Tier): `box` (`box_bronze`/`box_silver`/`box_gold` in `pending_lootboxes`) + Follower bronze 20 / silver 40 /
+gold 80 + Hype +5 + M.O.D.-Spruch (Tag `achievement:<id>`, Fallback `achievement_generic`) + Toast.
 `hidden: true` → im Menü „???“ bis zur Freischaltung.
 
 **Trigger und Payload (`e.`):**
@@ -1254,10 +1273,12 @@ game_overs, ko_mopsula, explore_seconds_since_battle, viewers_max`.
 | `ach_hausmeister_no_items` | Ohne Hilfsmittel | Besiege den Hausmeister ohne Items. | `battle_won` | `e.boss_id == "enm_boss_hausmeister" && e.items_used == 0` | silver | — | „Ohne ein einziges Item. Die Sponsoren sind beleidigt. Ich bin beeindruckt.“ |
 | `ach_queen` | Gleis 9 geräumt | Besiege die Rattenkönigin von Gleis 9. | `boss_defeated` | `e.boss_id == "enm_boss_rattenkoenigin"` | gold | — | „Die Königin ist tot, lang lebe — ach, egal, ZUSCHAUERREKORD!“ |
 | `ach_queen_flawless` | Königlicher Auftritt | Besiege die Rattenkönigin ohne KO. | `battle_won` | `e.boss_id == "enm_boss_rattenkoenigin" && e.party_kos == 0` | gold | — | „Kein einziger KO. Graf Mopsula verlangt einen Thron. Abgelehnt.“ |
-| `ach_speedrun` | Expresszug | Verlasse Etage 1 mit mindestens 8:00 Restzeit. | `floor_completed` | `e.floor == 1 && e.timer_left >= 480` | gold | — | „Mit acht Minuten Rest. Sie sind entweder genial oder haben nichts gesehen.“ |
+| `ach_speedrun` | Expresszug | Verlasse Etage 1 mit mindestens 10:00 Restzeit. | `floor_completed` | `e.floor == 1 && e.timer_left >= 600` | gold | — | „Mit zehn Minuten Rest. Sie sind entweder genial oder haben nichts gesehen.“ |
 | `ach_last_minute` | Auf den letzten Drücker | Verlasse Etage 1 mit weniger als 1:00 Restzeit. | `floor_completed` | `e.floor == 1 && e.timer_left < 60` | silver | ✓ | „Unter einer Minute! Mein Regieraum hat geschrien. Vor Freude.“ |
 
-(29 Einträge — alle im Slice erreichbar; `ach_viewers_5000` braucht ≈ 900 Follower und Hype ≥ 90, z. B. im Königinnen-Kampf.)
+(29 Einträge — alle im Slice erreichbar; `ach_viewers_5000` braucht ≈ 1 450 Follower und Hype 100 (`(1000 + 0.5 × 1450) × 2.9`),
+also einen Top-Kampf gegen Ende der Etage; `ach_speedrun` (≥ 10:00 Rest) nur, wer deutlich unter der Ziel-Etagenzeit von
+11–15 min bleibt — vorher 8:00, was auch der gemessene Erstspieler-Takt erreichte.)
 `items_used` zählt nur Items, die die Party im Kampf einsetzt (keine Sponsor-Geschenke). `ach_` IDs bleiben unverändert (kein Präfix-Zusatz).
 
 ---
@@ -1274,8 +1295,8 @@ dieses Kapitels nicht.
 
 | Tier | ID | Würfe (`rolls`) | Garantie (`guarantee`) | Quellen |
 |---|---|---|---|---|
-| Bronze | `box_bronze` | 2 | — | Achievements (bronze), Meilenstein 100, Glücksrad |
-| Silber | `box_silver` | 3 | `rare` (≥ 1× rare oder besser) | Achievements (silver), Hausmeister, Meilenstein 500 |
+| Bronze | `box_bronze` | 2 | — | Achievements (bronze), Glücksrad |
+| Silber | `box_silver` | 3 | `rare` (≥ 1× rare oder besser) | Achievements (silver), Hausmeister |
 | Gold | `box_gold` | 4 | `epic` (≥ 1× epic) | Achievements (gold), Rattenkönigin, Meilenstein 2 000 |
 | Fan-Box | `box_fan` | 1 Fan-Item fix (`fixed_pool: "fan"`) + 2 Würfe | — | Meilensteine 250 / 1 000 |
 
@@ -1296,9 +1317,9 @@ Pro Wurf: zuerst Rarität nach diesen Gewichten, dann Eintrag aus `pools.f<etage
 
 | Rarität | Eintrag (Gewicht) |
 |---|---|
-| `common` | `credits:25` (30) · `item_bandage ×2` (25) · `item_antidote ×2` (15) · `item_energy_krawumm` (15) · `item_ice_spray` (10) · `item_molotov` (10) |
-| `rare` | `item_brutzel_burger ×2` (20) · `item_smelling_salts` (20) · `credits:120` (15) · `item_hype_megaphone` (10) · `item_smoke` (10) · `acc_lucky_ticket` (8) · `acc_rubber_boots` (8) · `arm_safety_vest` (5) · `wpn_collar_studded` (5) |
-| `epic` | `item_elixir` (25) · `wpn_fire_axe` (15) · `wpn_collar_signet` (15) · `acc_sneakers` (15) · `arm_ermine` (10) · `wpn_rail_crowbar` (10) · `credits:400` (10) |
+| `common` | `credits:15` (30) · `item_bandage ×2` (25) · `item_antidote ×2` (15) · `item_energy_krawumm` (15) · `item_ice_spray` (10) · `item_molotov` (10) |
+| `rare` | `item_brutzel_burger ×2` (20) · `item_smelling_salts` (20) · `credits:40` (15) · `item_hype_megaphone` (10) · `item_smoke` (10) · `acc_lucky_ticket` (8) · `acc_rubber_boots` (8) · `arm_safety_vest` (5) · `wpn_collar_studded` (5) |
+| `epic` | `item_elixir` (25) · `wpn_fire_axe` (15) · `wpn_collar_signet` (15) · `acc_sneakers` (15) · `arm_ermine` (10) · `wpn_rail_crowbar` (10) · `credits:100` (10) |
 | `fan` (Fan-Item) | `acc_clip_mic` (40) · `item_elixir` (30) · `item_hype_megaphone ×2` (30) |
 
 `wpn_collar_royal` ist ab Etage 2 im Pool (`pools.f2.epic`); in Etage 1 nicht erhältlich.
@@ -1312,7 +1333,7 @@ Pro Wurf: zuerst Rarität nach diesen Gewichten, dann Eintrag aus `pools.f<etage
     {"id": "box_fan", "name": "Fan-Box", "color": "#FF5FA2", "rolls": 2,
      "rarity_weights": {"common": 50, "rare": 40, "epic": 10}, "guarantee": "", "fixed_pool": "fan", "mod_tag": "lootbox_open_fan"}
   ],
-  "pools": {"f1": {"common": [{"kind": "credits", "id": "", "amount": 25, "weight": 30},
+  "pools": {"f1": {"common": [{"kind": "credits", "id": "", "amount": 15, "weight": 30},
                               {"kind": "item", "id": "itm_bandage", "amount": 2, "weight": 25}],
                    "rare": [], "epic": [], "fan": []}},
   "pity": {"rare": 4, "epic": 8}
@@ -1320,7 +1341,7 @@ Pro Wurf: zuerst Rarität nach diesen Gewichten, dann Eintrag aus `pools.f<etage
 ```
 
 - **Duplikat-Ausrüstung:** Wird ein Ausrüstungsteil gezogen, das schon besessen wird (Inventar oder angelegt), wird es zu Credits
-  (`floori(sell × 1.5)`), Anzeige „DUPLIKAT → +X Cr“ (`LootReward.converted_from = <item_id>`). Verbrauchsitems über der Stapelgrenze 9
+  (`roundi(sell × 0.5)`, `LootRoller.DUPLICATE_CREDIT_MULT`; vorher × 1.5 — doppelte Epics brachten ~350 Cr), Anzeige „DUPLIKAT → +X Cr“ (`LootReward.converted_from = <item_id>`). Verbrauchsitems über der Stapelgrenze 9
   werden zu Credits zum Verkaufswert („LAGER VOLL“).
 - **Pity:** `GameState.pity_rare` zählt geöffnete Boxen ohne `rare`+; ist er beim Öffnen ≥ **4**, ist der erste Wurf `rare`.
   `GameState.pity_epic` zählt Boxen ohne `epic`; bei ≥ **8** ist der erste Wurf `epic` (epic hat Vorrang). Ein Treffer der jeweiligen
@@ -1454,7 +1475,11 @@ und löscht das Flag.
 `{followers}`, `{sponsor}`, `{count}`, `{member}`, `{seconds}`. Es gibt kein `{player}`.
 **Auswahl** (`ModAnnouncer`): zufällig (Show-`rng`) aus den Zeilen des Tags, nie zweimal hintereinander dieselbe Zeile;
 Tag-Cooldown 20 s (außer `boss_*`, `death`, `timer_*`, `intro`). Tag `a:b` fällt auf `a` zurück, wenn es keine Zeile gibt.
-**Priorität:** `death` > `boss_*` > `timer_*` > `achievement*` > `lootbox_*` > Rest. Niedrigere werden verworfen, wenn eine höhere läuft.
+**Priorität:** `death` > `boss_*` > `timer_*` > `achievement*` > `lootbox_*` > Rest. Niedrigere werden verworfen, wenn eine höhere läuft —
+außer `vendor_buy`, `safe_room_enter`, `stairs_found` und `floor_end` (`ModAnnouncer.ALWAYS_SAID_TAGS`): Antworten auf eine Aktion
+des Spielers bzw. einmalige Etagen-Beats (B3/B6/B8) werden nie verworfen, sondern hinter die laufende Zeile gereiht und
+verschieben das Prioritätsfenster nicht (gemessen: der Kauf direkt nach den Lootbox-Sprüchen und der Abstieg direkt nach
+`ach_speedrun` gingen sonst immer verloren).
 **Daten** (`mod_lines.json`, 02_TECH §4.4.11): ein Eintrag je Zeile `{id: "mod_<tag>_<nn>", tag, voice, text, weight}`; die Tags sind die
 Keys aus 11.2/11.3 (`REQUIRED_MOD_TAGS` = alle Keys aus 11.2 ohne die `boss_intro:`/`boss_phase:`-Varianten und ohne `boss_train_warning`, plus
 `chat_hype_high/mid/low`, `chat_crit`, `chat_boring`, `chat_mopsula`, `chat_handle`; `achievement:`, `boss_*:`, `event_*`,
@@ -1564,7 +1589,7 @@ ausgewertet, nur validiert (`id` beginnt mit `pas_`, `params` ist ein Dictionary
   "growth_add":  { "hp": 3.0, "def": 0.5 },
   "passives":    [ { "id": "pas_thick_skin", "params": { "taunt_turns_add": 1, "dmg_taken_mult_while_taunt": 0.9 } } ],
   "learnset":    [ { "level": 11, "skill": "skl_kai_wrecking_ball" }, { "level": 13, "skill": "skl_kai_concrete_boots" } ],
-  "show_mods":   { "hype_gain_mult": 1.0, "stunt_success_add": 0.0, "stunt_cooldown": 3, "sponsor_thresholds": [50, 75, 100] }
+  "show_mods":   { "hype_gain_mult": 1.0, "stunt_success_add": 0.0, "stunt_cooldown": 3, "sponsor_thresholds": [70, 85, 100] }
 }
 ```
 
@@ -1579,7 +1604,7 @@ ausgewertet, nur validiert (`id` beginnt mit `pas_`, `params` ist ein Dictionary
 | `cls_mop_archmage` | mopsula | **Hofmagier** | Elementar-DD | MAG 1.20, MP 1.10 | `pas_exploit`: Schwachstellen-Faktor 1.75 statt 1.5 |
 | `cls_mop_physician` | mopsula | **Leibarzt Seiner Hoheit** | Heiler | RES 1.15, HP 1.10 | `pas_bedside`: Heilung ×1.3; Zugbeginn heilt eigenes `poison` |
 | `cls_mop_hexer` | mopsula | **Fluchgraf** | Debuffs | MAG 1.10, SPD 1.05 | `pas_curse`: Status-Chancen +0.25, Status-Dauer +1 |
-| `cls_mop_diva` | mopsula | **Diva** | Buffs/Show | LCK 1.20, RES 1.10 | `pas_spotlight`: Buff-Dauer +1, Sponsor-Schwellen 45/70/95 |
+| `cls_mop_diva` | mopsula | **Diva** | Buffs/Show | LCK 1.20, RES 1.10 | `pas_spotlight`: Buff-Dauer +1, Sponsor-Schwellen 65/80/95 |
 
 4 Klassen je Figur (8 Einträge). Die Skill-Listen der Klassen (je 4 Skills L11–L17) werden mit Etage 3 spezifiziert; IDs folgen dem Muster `skl_<kai|mop>_<name>`.
 Skill-Freischaltung künftig wie bei der Party: `learnset[{level, skill}]`. Abweichende `show_mods` (Stunt-Cooldown, Sponsor-Schwellen) überschreiben die Konstanten aus Kap. 16.3 für die jeweilige Figur bzw. Show.
@@ -1595,43 +1620,96 @@ Skill-Freischaltung künftig wie bei der Party: `learnset[{level, skill}]`. Abwe
 | Regulärer Kampf: Dauer (×1) | 40–70 s | ~4 s je Party-Zug, ~2.5 s je Gegnerzug |
 | HP-Verlust pro regulärem Kampf | 20–35 % der Party-HP | Simulation 16–32 % ohne Heilung zwischen Kämpfen |
 | Kämpfe zwischen Safe Rooms ohne Items | 2–3 | — |
-| Hausmeister: Party-Züge / Dauer | 16–22 / 2.5–4 min | Sim: L5 18 Züge, 100 % Sieg (einfache KI) |
-| Rattenkönigin: Party-Züge / Dauer | 20–26 / 3.5–5 min | Sim: L7 23 Züge |
-| Level bei Hausmeister / Königin | **5 / 7** | EXP-Kurve Kap. 4.3, 80 % der Gruppen bekämpft |
-| Erwartete Game Overs Etage 1 (Erstspieler) | **0–1** gesamt; Hausmeister ~20 % Niederlage-Rate beim 1. Versuch, Königin ~35 % | — |
-| Timer-Verbrauch Etage 1 | 11–15 min von 20:00 (Rest 5–9 min) | 31 Zellen à 16 m (Hauptpfad ≈ 75 s Laufzeit) + Erkundung, Schleichen, Events, Streuner |
+| Hausmeister: Party-Züge / Dauer | 16–22 / 2.5–4 min | Sim (`test_m7_show_balance`, 100 Seeds, L5, Bot-Ausrüstung): 21 Züge |
+| Rattenkönigin: Party-Züge / Dauer | 20–26 / 3.5–5 min | Sim (dto., L7): 24 Züge |
+| Level bei Hausmeister / Königin | **5 / 7** | EXP-Kurve Kap. 4.3 (Faktor 18): auch bei allen Gruppen + Event-Kampf |
+| Erwartete Game Overs Etage 1 (Erstspieler) | **0–1** gesamt; Hausmeister ~20 % Niederlage-Rate beim 1. Versuch, Königin ~35 % | Sim mit Sponsor-Geschenken, Hype-Start 25: Hausmeister 17 % (ohne Geschenke 34 %), Königin 29 % (41 %); Test-Band 10–30 % / 25–45 % |
+| Timer-Verbrauch Etage 1 | 11–15 min von 20:00 (Rest 5–9 min) | 31 Zellen à 16 m (Hauptpfad ≈ 75 s Laufzeit) + Erkundung, Schleichen, Events, Streuner; Bot `--pace=human` (Messung unten) |
 | Gesamtspielzeit Etage 1 (Erstdurchlauf) | **22–28 min** (Median 25) inkl. Tutorial; Wiederholer 15–20 min | Brief: 15–25 min |
 | Bekämpfte Gruppen | 11–13 von 15 regulären | — |
 | Credits bei Königin | ~1 100 erwirtschaftet, ~800 ausgegeben | — |
-| Sponsor-Geschenke pro Etage | 4–7 | Hype-Tabelle |
+| Sponsor-Geschenke pro Etage | 4–7 | Schwellen 70/85/100, max. 1 (Boss 2) je Kampf (Kap. 7.4) |
 | Achievements pro Etage (Erstdurchlauf) | 12–16 von 29 | — |
-| Lootboxen pro Etage | 15–20 | Achievements + Bosse + Meilensteine |
+| Lootboxen pro Etage | 15–20 | Achievements + Bosse + Meilensteine 250/1 000 (+ Glücksrad) |
 | Follower am Ende E1 | 1 200–1 500 | Kap. 7.6 |
 | Max. Zuschauer E1 | 3 000–5 500 | Kap. 7.2 |
+| Hype am Kampfanfang / -ende (Median regulär) | 25–45 / 45–65 | Kap. 7.3 Dramaturgie: Abkühlen auf 25, Routinekampf +15–25, Sponsoren erst ab 70 |
 
-**Messung Full-Run-Bot** (`tools/fullrun.sh`, 02_TECH §11.4.1; Stand 2026-10-08, thorough Seeds 1–10, rush Seeds 1–12 + 4242, Median [Min–Max]; Auto-Kampf =
-`AutoPolicy`, Bot kauft/rüstet Upgrades, heilt mit Items/Safe Rooms). *thorough* bekämpft alle Gruppen, *rush* nur, was auf dem
-Weg zu Safe Rooms, Toren und Bossen angreift. Nur Messwerte — die Ziele oben gelten weiter.
+**Messung Full-Run-Bot** (`tools/fullrun.sh`, 02_TECH §11.4.1; Stand 2026-10-10; je Zeile Seeds 1–10, `fast` zusätzlich 4242;
+Median [Min–Max]). Auto-Kampf = `AutoPolicy` (keine Stunts), der Bot kauft/rüstet Upgrades und heilt mit Items/Safe Rooms.
+*typical* = Erstspieler-Modell (ohne die Nebengruppen a4/b3/c2 und ohne Streuner-Jagd), *thorough* = alles, *rush* = nur Safe
+Rooms, Tore, Bosse (nach dem ersten Game Over weiter wie *thorough*). `--pace=human` modelliert Umsehen, Entscheiden, Schleichen
+und Lesen bei laufendem Countdown (02_TECH §11.4.1) und braucht ≈ 2,5× so lange wie `fast` (ohne Wartezeiten, Untergrenze).
+**vorher** = derselbe Bot auf Daten/Konstanten vor dem Balancing (nur die M.O.D.-Korrektur aus Kap. 11.1, sonst brachen Läufe
+ab), **nachher** = Stand dieses Dokuments. Bot-Läufe sind nicht bitgenau reproduzierbar (wenige Frames Jitter bei
+`time_scale` 5): einzelne Seeds gehen zwischen identischen Ständen anders aus, Boss-Quoten aus 10 Läufen schwanken um ±15
+Punkte.
 
-| Kennzahl | Ziel | thorough | rush | Befund |
+| Kennzahl (Takt `human`) | Ziel | typical vorher → nachher | thorough vorher → nachher | rush vorher → nachher |
 |---|---|---|---|---|
-| Party-Züge / Gesamtzüge regulär (Median) | 4–6 / 7–11 | 4,0 [4–4,5] / 7 [6–7,5] | 5,5 [4,5–6,5] / 8,5 [7–11,5] | im Ziel |
-| HP-Verlust pro regulärem Kampf | 20–35 % | 13 % [9–16] | 24 % [16–34] | thorough unter Ziel (überlevelt, Ausrüstung) |
-| Level bei Hausmeister / Königin | 5 / 7 | 6 / 7 | 4 / 6 | 100 % der Gruppen + 1–2 Event-Kämpfe → +1 Level |
-| Hausmeister Party-Züge | 16–22 | 13,5 [11–18] (L6) | 28 [18–40] (L4) | — |
-| Königin Party-Züge | 20–26 | 23 [19–27] (L7) | 33 [23–46] (L6) | im Ziel (thorough) |
-| Game Overs / Boss-Niederlagen | 0–1; Hausmeister ~20 %, Königin ~35 % | 0 | 0 | 0 von 23 Läufen verloren — Bosse mit Auto-Kampf zu leicht |
-| Timer-Verbrauch Etage 1 | 11–15 min | 4:30 [4:03–4:46] | 2:15 | Bot läuft ohne Zögern/Lesen/Schleichen die kürzesten Wege: Untergrenze; 20:00 bindet nicht |
-| Bekämpfte Gruppen | 11–13 von 15 | 15 (+1 Streuner) | 8–9 | — |
-| Credits erwirtschaftet / ausgegeben | ~1 100 / ~800 | 3 878 / 1 540 | 2 225 / 1 600 | ~3,5× (Kämpfe inkl. Meilensteine ~45 %, Lootboxen ~40 %, Truhen/Events ~13 %) |
-| Achievements / Lootboxen | 12–16 / 15–20 | 19 / 25 | 16 / 21 | über Ziel |
-| Follower Ende / max. Zuschauer | 1 200–1 500 / 3 000–5 500 | 6 780 / 22 561 | 2 890 / 11 281 | 4–5× — Hype endet fast jeden Kampf bei 96–100 |
+| Timer-Verbrauch | 11–15 min | 10:46 → **11:02** [10:32–11:49] | 11:13 → **11:11** [10:47–14:53] | 6:41 → **11:55** |
+| Kämpfe / bekämpfte Gruppen | 11–13 von 15 | 18,5 / 15 → 19 / 15 | 19,5 / 15 → 20 / 15 | 14 / 12 → 22 / 15 |
+| Party-Züge regulär / HP-Verlust | 4–6 / 20–35 % | 4 / 14 % → 4,2 / 17 % | 4 / 13 % → 4 / 14 % | 4,5 / 18 % → 4 / 17 % |
+| Level bei Hausmeister / Königin | 5 / 7 | 6 / 7 → **5 / 7** | 6 / 7 → 6 / 7 | 4 / 7 → 6 [4–6] / 7 |
+| Hausmeister: Party-Züge, Niederlage 1. Versuch | 16–22, ~20 % | 13, 0/10 → **19, 2/10** | 12,5, 0/10 → 18,5, 2/10 | 20,5, 0/10 → 17, 4/10 |
+| Königin: Party-Züge, Niederlage 1. Versuch | 20–26, ~35 % | 26, 0/10 → **23, 3/10** | 22,5, 0/10 → 22, 5/10 | 24, 1/10 → 21,5, 6/10 |
+| Hype Kampfstart / -ende (Median regulär) | 25–45 / 45–65 | 96 / 100 → **37 / 57** | 96,5 / 100 → 37 / 60 | 95 / 100 → 37,5 / 61 |
+| Sponsor-Geschenke (davon Boss) | 4–7 | 17,5 (2) → **5 (3)** | 19 (2) → 4 (3) | 14 (2) → 5 (3,5) |
+| Achievements / Lootboxen | 12–16 / 15–20 | 19 / 25 → **17 / 19** | 19,5 / 25,5 → 15 / 18 | 16 / 21 → 15,5 / 18,5 |
+| Follower Ende | 1 200–1 500 | 6 561 → **1 453** [1 072–1 629] | 7 163 → 1 394 | 4 009 → 1 352 |
+| Max. Zuschauer | 3 000–5 500 | 21 926 → **4 978** [3 070–5 262] | 23 671 → 4 761 | 14 526 → 4 555 |
+| Credits gesamt / bis Königin / ausgegeben | — / ~1 100 / ~800 | 4 135 / 3 630 / 1 714 → 1 863 / **1 715** / 1 270 | 4 325 / 3 825 / 1 714 → 1 889 / 1 712 / 1 380 | 2 269 / 1 769 / 1 350 → 1 762 / 1 698 / 1 100 |
 
-Ursache der Show-Abweichungen: Kampf-Hype (+5 Start, Abwechslung, Kills, Overkill, Schwachstellen, Combos) plus Truhen/Events/
-Achievements in der Erkundung halten Hype dauerhaft nahe 100; der Zerfall (−1/5 s) gleicht das zwischen Kämpfen nicht aus. Bei
-Hype 100 ist der Zuschauerfaktor 2,9 statt ~1,65 und die Follower-Rate 3 % statt ~2 %; Follower erhöhen die Zuschauer der nächsten
-Kämpfe (Rückkopplung). Dauer-Hype ≥ 50/75/100 löst zudem in fast jedem Kampf Sponsor-Geschenke aus (Heilung), was die Bosse
-entschärft. Offene Balancing-Aufgabe (M7), hier nicht geändert.
+Takt `fast` (Untergrenze, Spieler ohne Pausen) vorher → nachher: *thorough* 4:11 → 4:31, Hype 99 / 100 → 59 / 80, Geschenke
+15 → 14, Follower 6 757 → 1 950, Zuschauer 22 495 → 5 472, Niederlagen Hausmeister/Königin 0/11 · 0/11 → 5/11 · 3/11;
+*rush* 2:15 → 5:52 (Niederlage → *thorough*), Follower 2 890 → 1 889, Zuschauer 11 281 → 5 179, Niederlagen 0/11 · 0/11 →
+9/11 · 6/11 (L4 am Hausmeister); *dawdle* (+1 Game Over „timer“) Follower 6 654 → 1 897, Zuschauer 22 197 → 5 140. Wer ohne
+Pausen spielt, nimmt mehr Hype in den nächsten Kampf (Start ~58) und bekommt ~14 Geschenke — Quote und Follower bleiben durch
+die gedämpfte Rückkopplung trotzdem am oberen Rand der Ziele.
+
+**Ursachen (vorher):**
+
+- **Hype ohne Rückstellkraft:** Ein Routinekampf brachte +40–50 (Start +5, Abwechslung +3 je neuer Aktion, Kills +3/+6,
+  Overkill +8 bei fast jedem zweiten Kill wegen `OVERKILL_MAXHP_FRAC` 0.5, Combos +5, Schwachstelle +4), Truhen +3 und
+  Achievements +8 kamen dazu; der konstante Zerfall −1 / 5 s bis 15 nahm zwischen zwei Kämpfen nur ~5–15 ab → Hype sättigte
+  bei 96–100 (Kampfstart 96–99, Ende 100 in jedem Kampf).
+- **Rückkopplung Zuschauer ↔ Follower:** Bei Hype 100 Zuschauerfaktor 2,9 und Follower-Rate 3 %; jeder Follower brachte 1 Zuschauer
+  (`VIEWER_PER_FOLLOWER` 1.0) → Follower und Peak wuchsen pro Kampf exponentiell (6–7 k / 22 k).
+- **Sponsoren in jedem Kampf:** Dauer-Hype über den Schwellen 50/75/100 mit 2 (Boss 3) Geschenken → 15–19 Heilungen pro Etage;
+  dazu Hausmeister/Königin zu schwach (auch ohne Geschenke 100 % Auto-Sieg eine Stufe unter Ziel) → 0 Niederlagen in 63 Läufen.
+- **EXP-Kurve:** Die L6-Schwelle (624) lag genau auf der EXP-Summe der Zonen A–C → wer alles bekämpft (Streifen erzwingen das
+  praktisch), stand eine Stufe über Plan vor dem Hausmeister.
+- **Credits/Boxen:** Lootbox-Duplikate × 1.5 (Epic ≈ 350 Cr), Credit-Einträge 25/120/400, Meilenstein 500 (300 Cr + Silber-Box),
+  Boss-Credits 200/500, Holzkisten 20–40; Boxen aus ms_100/ms_500 zusätzlich zu ~19 Achievements.
+- **Achievements:** `ach_speedrun` (≥ 8:00 Rest) schaffte auch der gemessene Erstspieler-Takt; Achievement-Follower 25/50/100.
+- **M.O.D.:** `vendor_buy` und `floor_end` fielen dem Prioritätsfenster zum Opfer (Kauf direkt nach Lootbox-Sprüchen, Abstieg
+  direkt nach `ach_speedrun`) → Bot-Läufe brachen an den Story-Beats ab.
+
+**Änderungen:** Hype-Tabelle Kap. 7.3 (etwa halbiert, Overkill erst ab 100 % MaxHP Überschuss), proportionales Abkühlen auf 25
+(Kap. 7.3), `VIEWER_PER_FOLLOWER` 0.5 (Kap. 7.2), Follower-Rate 0.7 % + 1.4 % × Hype (Kap. 7.6), Achievements +5 Hype und
+20/40/80 Follower (Kap. 8), Sponsor-Schwellen 70/85/100 mit 1 (Boss 2) Geschenk und schwächeren Heilungen (Kap. 7.4),
+Hausmeister/Königin härter und mit weniger Credits (Kap. 5.2/5.3), EXP-Faktor 18 (Kap. 4.3), Credits aus Kisten, Lootboxen,
+Duplikaten, Meilensteinen und Fahrscheinfresser gesenkt (Kap. 2.5/5.1/7.7/9.3), `ach_speedrun` ≥ 10:00 (Kap. 8),
+`ALWAYS_SAID_TAGS` (Kap. 11.1). Abgesichert durch `test_m7_show_balance.gd` (echtes `Show` im Kampf-Loop, Etage 1 als
+Staffel: Follower, Zuschauer, Geschenke, Achievements, Boxen und Hype-Dramaturgie in den Bändern oben; Boss-Niederlagequoten mit
+Geschenken: Hausmeister 17 %, Königin 29 % bei 100 Seeds, Band 10–30 % / 25–45 %) und `test_m7_balance.gd` (Bosse ohne
+Geschenke ≥ 50 % Sieg, Party-Züge in den Bändern).
+
+**Restabweichungen:**
+
+- **Credits bis zur Königin ~1,55× Ziel** (1 700 statt ~1 100; vorher 3,3×): Je Quelle liegt die Etage jetzt im Plan — 12 von
+  15 Gruppen (~385) + Hausmeister 150 + 10 Holzkisten (~175) + Spind-/Rad-/Event-Credits (≈ 100) + Lootboxen (~250) + Meilenstein
+  500 (150) ≈ 1 200. Der Bot bekämpft aber alle 15 Gruppen plus Event-Kämpfe und Streuner (Streifen erwischen auch *typical*),
+  öffnet alle 16 Kisten und dreht das Rad 3×. Ausgegeben werden ~1 270 statt ~800, weil der Bot jede Ausrüstungs-Stufe kauft
+  (Samtcape, Rohrzange, Glücks-Fahrschein, Warnweste, Kanalarbeiter-Kombi, Siegel-Halsband = 1 650 Cr). Weitere Kürzungen
+  nur zusammen mit den Automatenpreisen: die gemessenen Boss-Quoten setzen diese Käufe voraus.
+- **Bekämpfte Gruppen 15 statt 11–13:** Patrouillen jagen Kai auch auf dem *typical*-Weg; das Ziel gilt für Spieler, die Streifen
+  ausweichen. Folge: Level am Hausmeister 5–6 statt 5.
+- **Achievements 15–17** (Median je Strategie, Einzelläufe bis 19): am oberen Rand bzw. eins darüber, weil der Bot alle Kisten,
+  Events und Gruppen mitnimmt; Erstspieler, die nicht alles finden, liegen im Band (Staffel-Simulation 16).
+- **Bot vs. Simulation bei den Bossen:** Die Simulation (feste Bot-Ausrüstung, Hype-Start 25, Geschenke wie im Spiel) verliert die
+  Königin in 29 %, der Bot im echten Spiel bei typical/thorough in 8 von 20 Läufen (40 %), *rush* (unterlevelt) 6/10; Hausmeister
+  Simulation 17 %, Bot typical/thorough 11 von 60 Läufen über drei Messreihen mit identischem Hausmeister (18 %).
 
 ---
 
@@ -1660,7 +1738,7 @@ Menü (`TitleScreen`): **Fortsetzen** (Slot mit dem neuesten `saved_at_unix`, nu
 ### 14.3 Erkundungs-HUD
 
 Oben links: „● LIVE“-Badge (80×30, rot pulsierend) + Zuschauer (animierter Zähler) + Follower. Oben Mitte: **Timer** (mm:ss, 38 px).
-Oben rechts: Hype-Leiste (horizontal, 320×14 px) mit Markern bei 50/75/100. Unten: Chat-Ticker (22 px hoch).
+Oben rechts: Hype-Leiste (horizontal, 320×14 px) mit Markern bei 70/85/100 (`SponsorSystem.THRESHOLDS`). Unten: Chat-Ticker (22 px hoch).
 Minimap oben rechts unter Hype (nur besuchte Zellen, 136×136 px; Zonenfarbe, Safe Rooms grün, Tore als Balken).
 Interaktionsprompt über Objekt.
 
@@ -1836,7 +1914,7 @@ Kampf/Progression in `Balance` (`core/battle/balance.gd`), Show in `ShowModel`/`
 | `DEFEND_MULT` / `GUARD_DEF_MULT` | 0.5 / 1.5 |
 | `DEFEND_MP_PCT` / `DEFEND_MP_MIN` | 0.05 / 2 |
 | `COMBO_MULT` | 1.1 |
-| `OVERKILL_HP_FRAC` / `OVERKILL_CREDIT_MULT` | 0.5 / 1.25 |
+| `OVERKILL_MAXHP_FRAC` / `OVERKILL_CREDIT_MULT` | 1.0 / 1.25 |
 | `POISON_PCT` / `POISON_MIN` | 0.08 / 1 |
 | `STUN_BOSS_MULT` | 0.5 |
 | `TAUNT_CHANCE` | 0.80 |
@@ -1844,18 +1922,18 @@ Kampf/Progression in `Balance` (`core/battle/balance.gd`), Show in `ShowModel`/`
 | `POST_BATTLE_MP_REGEN` / `KO_REVIVE_HP` / `KO_EXP_MULT` | 0.15 / 1 / 0.5 |
 | `DROP_LCK_DIV` | 100 |
 | `STUNT_COOLDOWN` / `STUNT_BOSS_MOD` / `STUNT_MIN` | 3 / −0.15 / 0.05 |
-| `LEVEL_CAP` / EXP-Kurve `a`·L^`b`+`c` | 10 / 15, 1.7, 15 |
+| `LEVEL_CAP` / EXP-Kurve `a`·L^`b`+`c` | 10 / 18, 1.7, 15 |
 | `TURN_PREVIEW` desktop / touch | 12 / 10 |
 | `BACK_DOT` / `CONTACT_RADIUS` / `GRACE_SEC` / `GRACE_RETURN_RADIUS` | −0.34 / 1.1 m / 2.0 s / 6.0 m |
 | `WALK_SPEED` / `SNEAK_SPEED` / `SNEAK_STICK_MAX` | 5.5 / 2.5 m/s / 0.6 |
-| `HYPE_START` / `HYPE_EXPLORE_FLOOR` / `HYPE_DECAY_INTERVAL` | 30 / 15 / 5.0 s |
-| `SPONSOR_THRESHOLDS` / `MAX_GIFTS` normal / boss / `HYPE_COST` / `HYPE_AFTER_100` | [50, 75, 100] / 2 / 3 / 0 / 80 |
-| `VIEWER_BASE` / `VIEWER_PER_FOLLOWER` / `VIEWER_HYPE_BASE` / `VIEWER_HYPE_DIV` | 1000 / 1.0 / 0.4 / 40.0 |
-| `FOLLOWER_CONV_BASE` / `FOLLOWER_CONV_HYPE` / `FOLLOWER_BOSS_MULT` / `FLEE_FOLLOWER_LOSS` | 0.01 / 0.02 / 2.0 / 0.01 |
-| `ACH_FOLLOWERS` bronze / silver / gold / `ACH_HYPE` | 25 / 50 / 100 / 8 |
+| `HYPE_START` / `HYPE_EXPLORE_FLOOR` / `HYPE_DECAY_TICKS` / `HYPE_DECAY_PM` | 30 / 25 / 60 (= 2 s) / 100 (10 % des Abstands, mind. 1) |
+| `SPONSOR_THRESHOLDS` / `MAX_GIFTS` normal / boss / `HYPE_COST` / `HYPE_AFTER_100` | [70, 85, 100] / 1 / 2 / 0 / 80 |
+| `VIEWER_BASE` / `VIEWER_PER_FOLLOWER` / `VIEWER_HYPE_BASE` / `VIEWER_HYPE_DIV` | 1000 / 0.5 / 0.4 / 40.0 |
+| `FOLLOWER_CONV_BASE` / `FOLLOWER_CONV_HYPE` / `FOLLOWER_BOSS_MULT` / `FLEE_FOLLOWER_LOSS` | 0.007 / 0.014 / 2.0 / 0.01 |
+| `ACH_FOLLOWERS` bronze / silver / gold / `ACH_HYPE` / Truhe / Event | 20 / 40 / 80 / 5 / 2 / 5 |
 | `TIMER_F1` / `TIMER_GRACE_ON_LOAD` / `TIMER_WARNINGS` | 1200 s / 180 s / [600, 300, 60] |
 | `EASY_TIMER_MULT` / `EASY_ENEMY_DMG` / `EASY_EXP` | 1.5 / 0.75 / 1.2 |
-| `PITY_RARE` / `PITY_EPIC` / `DUPLICATE_CREDIT_MULT` / `MAX_STACK` | 4 / 8 / 1.5 / 9 |
+| `PITY_RARE` / `PITY_EPIC` / `DUPLICATE_CREDIT_MULT` / `MAX_STACK` / `WOOD_CREDITS` | 4 / 8 / 0.5 / 9 / 10–25 |
 | `STRAY_INTERVAL` | 90 s |
 | `MOD_TAG_COOLDOWN` / `MOD_MAX_CHARS` / `CHAT_MIN_INTERVAL` | 20 s / 110 / 2.5 s |
 

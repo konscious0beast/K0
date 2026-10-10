@@ -4,9 +4,9 @@
 		{
 			"id": "ms_100",
 			"followers": 100,
-			"reward_box": "box_bronze",
+			"reward_box": "",
 			"credits": 0,
-			"item": "",
+			"item": "itm_brutzel_burger",
 			"title": "",
 			"min_floor": 1,
 			"mod_tag": "follower_milestone"
@@ -24,8 +24,8 @@
 		{
 			"id": "ms_500",
 			"followers": 500,
-			"reward_box": "box_silver",
-			"credits": 300,
+			"reward_box": "",
+			"credits": 150,
 			"item": "",
 			"title": "",
 			"min_floor": 1,

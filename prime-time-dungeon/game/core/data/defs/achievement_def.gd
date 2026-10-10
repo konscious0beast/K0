@@ -7,7 +7,7 @@ var desc: String = ""
 var trigger: String = ""
 var condition: String = "true"
 var box: String = ""
-var followers: int = -1                     # -1 = by box tier (bronze 25 / silver 50 / gold 100, else 0)
+var followers: int = -1                     # -1 = by box tier (bronze 20 / silver 40 / gold 80, else 0)
 var hidden: bool = false
 var mod_tag: String = ""                    # "" → "achievement:<id>" with fallback "achievement_generic"
 var expr: ConditionExpr = null              # parsed `condition`

@@ -1,13 +1,13 @@
 class_name SponsorSystem extends RefCounted
 ## Sponsor selection and hype thresholds (02_TECH §6.1/§6.2, GDD §7.4).
 ##
-## In battle, hype rising across 50 / 75 / 100 (each once per battle) makes a system gift due while fewer than
-## 2 (boss: 3) gifts were given; after the gift of threshold 100 hype is set to 80. Gifts cost no hype and no ticks.
+## In battle, hype rising across 70 / 85 / 100 (each once per battle) makes a system gift due while fewer than
+## 1 (boss: 2) gifts were given; after the gift of threshold 100 hype is set to 80. Gifts cost no hype and no ticks.
 ## Selection is a weighted draw with the Show game rng (integer weights in per-mille, deterministic).
 
-const THRESHOLDS: PackedInt32Array = [50, 75, 100]
-const MAX_GIFTS_PER_BATTLE: int = 2
-const MAX_GIFTS_PER_BOSS_BATTLE: int = 3
+const THRESHOLDS: PackedInt32Array = [70, 85, 100]
+const MAX_GIFTS_PER_BATTLE: int = 1
+const MAX_GIFTS_PER_BOSS_BATTLE: int = 2
 const HYPE_COST: float = 0.0
 const HYPE_AFTER_TOP: float = 80.0                     # crossing 100 sets hype to 80
 

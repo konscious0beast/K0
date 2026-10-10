@@ -53,7 +53,7 @@ func _rich_state() -> GameState:
 	var d: GameData = Fx.data()
 	var st: GameState = GameState.create_new(d, 1, "Kai", 123456)
 	st.floor_run = FloorRun.create(d.floor_def(1), st.seed, st.difficulty)
-	Progression.add_exp(st.member("kai"), 100, d)
+	Progression.add_exp(st.member("kai"), 110, d)
 	st.inventory.add("itm_wpn_axe")
 	Progression.equip(st.member("kai"), st.inventory, d, "weapon", "itm_wpn_axe")
 	st.inventory.credits = 140

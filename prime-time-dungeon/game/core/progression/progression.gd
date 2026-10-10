@@ -4,13 +4,13 @@ class_name Progression extends RefCounted
 ## Integer arithmetic only (05 §3.3 Nr. 5, CR-12): the EXP curve is a precomputed table, growth values are applied in
 ## per-mille, class multipliers round half up. StatBlocks are built by setting `values` directly.
 
-## exp_to_next(level) for level 1..9 = floori(15 × level^1.7 + 15) (GDD §4.3; table instead of pow, CR-12).
-const EXP_TABLE: PackedInt32Array = [30, 63, 112, 173, 246, 330, 424, 529, 643]
+## exp_to_next(level) for level 1..9 = floori(18 × level^1.7 + 15) (GDD §4.3; table instead of pow, CR-12).
+const EXP_TABLE: PackedInt32Array = [33, 73, 131, 205, 292, 393, 506, 632, 769]
 const _EQUIP_SLOTS: PackedStringArray = ["weapon", "armor", "accessory"]
 const _PM: int = 1000
 
 
-## level >= Balance.LEVEL_CAP → 0; else floori(15.0 × level^1.7 + 15.0) (EXP_TABLE; beyond it the last entry).
+## level >= Balance.LEVEL_CAP → 0; else floori(18.0 × level^1.7 + 15.0) (EXP_TABLE; beyond it the last entry).
 static func exp_to_next(level: int) -> int:
 	if level >= Balance.LEVEL_CAP:
 		return 0

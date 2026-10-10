@@ -566,7 +566,7 @@
 			"id": "mod_follower_milestone_02",
 			"tag": "follower_milestone",
 			"voice": "mod",
-			"text": "Meilenstein! Ihre Fans schicken eine Box. Und Liebesbriefe an den Hund.",
+			"text": "Meilenstein! Ihre Fans schicken Geschenke. Und Liebesbriefe an den Hund.",
 			"weight": 1
 		},
 		{
@@ -1158,7 +1158,7 @@
 			"id": "mod_achievement_ach_speedrun_01",
 			"tag": "achievement:ach_speedrun",
 			"voice": "mod",
-			"text": "Mit acht Minuten Rest. Sie sind entweder genial oder haben nichts gesehen.",
+			"text": "Mit zehn Minuten Rest. Sie sind entweder genial oder haben nichts gesehen.",
 			"weight": 1
 		},
 		{

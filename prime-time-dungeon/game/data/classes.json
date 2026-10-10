@@ -34,8 +34,8 @@
 				"stunt_success_add": 0.0,
 				"stunt_cooldown": 3,
 				"sponsor_thresholds": [
-					50,
-					75,
+					70,
+					85,
 					100
 				]
 			}
@@ -72,8 +72,8 @@
 				"stunt_success_add": 0.0,
 				"stunt_cooldown": 3,
 				"sponsor_thresholds": [
-					50,
-					75,
+					70,
+					85,
 					100
 				]
 			}
@@ -109,8 +109,8 @@
 				"stunt_success_add": 0.0,
 				"stunt_cooldown": 3,
 				"sponsor_thresholds": [
-					50,
-					75,
+					70,
+					85,
 					100
 				]
 			}
@@ -145,8 +145,8 @@
 				"stunt_success_add": 0.15,
 				"stunt_cooldown": 2,
 				"sponsor_thresholds": [
-					50,
-					75,
+					70,
+					85,
 					100
 				]
 			}
@@ -181,8 +181,8 @@
 				"stunt_success_add": 0.0,
 				"stunt_cooldown": 3,
 				"sponsor_thresholds": [
-					50,
-					75,
+					70,
+					85,
 					100
 				]
 			}
@@ -218,8 +218,8 @@
 				"stunt_success_add": 0.0,
 				"stunt_cooldown": 3,
 				"sponsor_thresholds": [
-					50,
-					75,
+					70,
+					85,
 					100
 				]
 			}
@@ -255,8 +255,8 @@
 				"stunt_success_add": 0.0,
 				"stunt_cooldown": 3,
 				"sponsor_thresholds": [
-					50,
-					75,
+					70,
+					85,
 					100
 				]
 			}
@@ -283,8 +283,8 @@
 					"params": {
 						"buff_turns_add": 1,
 						"sponsor_thresholds": [
-							45,
-							70,
+							65,
+							80,
 							95
 						]
 					}
@@ -296,8 +296,8 @@
 				"stunt_success_add": 0.0,
 				"stunt_cooldown": 3,
 				"sponsor_thresholds": [
-					45,
-					70,
+					65,
+					80,
 					95
 				]
 			}

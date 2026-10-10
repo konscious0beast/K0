@@ -1467,7 +1467,7 @@ Ein Theme für alles: `UiTheme.get_theme()` (`scenes/ui/theme/ui_theme.gd`, M0);
 | Zuschauer | rechts daneben | Augen-Icon (`Polygon2D`) + Zahl 22 px Monospace, Tausenderpunkt; Anstieg kurz `HEAL`, Abfall `DANGER` (0.4 s) |
 | Follower | darunter | Herz-Icon (`Polygon2D`, 14 px, `NOVA_MAGENTA`) + „1.234“ 16 px `C_TEXT_DIM` |
 | Timer | oben Mitte | 38 px Monospace in Schrägbox; < 5:00 `SODIUM`, < 1:00 `LIVE_RED` + Puls 2 Hz (1.0↔1.08) |
-| Hype-Leiste | oben rechts, 320×14 | Verlauf `NOVA_MAGENTA`→`HYPE_GOLD`, Rauten-Marker 50/75/100, Glanzlicht läuft 0.3 s bei Anstieg |
+| Hype-Leiste | oben rechts, 320×14 | Verlauf `NOVA_MAGENTA`→`HYPE_GOLD`, Rauten-Marker 70/85/100 (Sponsor-Schwellen), Glanzlicht läuft 0.3 s bei Anstieg |
 | Chat-Ticker | unten, Höhe 22 | `C_PANEL` 70 %, Text 15 px, 80 px/s, Nutzernamen in Akzentfarben |
 | Sponsor-Bauchbinde | links unten über Ticker, 480×64 | Zeile 1 Sponsorname 24 px auf Sponsorfarbe, Zeile 2 Slogan 15 px auf `C_PANEL`; rein 0.25 s, steht 2.5 s, raus 0.2 s |
 | M.O.D.-Textbox | unten Mitte, 740×108 (Kampf: mittig zwischen Befehlsmenü und Party-Panels, 420–740 breit, wächst nach oben) | Rahmen `NOVA_CYAN`, Ikosaeder-Icon (SubViewport 64×64), Text 19 px, 45 Zeichen/s |

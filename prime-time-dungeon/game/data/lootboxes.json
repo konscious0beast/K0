@@ -68,7 +68,7 @@
 				{
 					"kind": "credits",
 					"id": "",
-					"amount": 25,
+					"amount": 15,
 					"weight": 30
 				},
 				{
@@ -118,7 +118,7 @@
 				{
 					"kind": "credits",
 					"id": "",
-					"amount": 120,
+					"amount": 40,
 					"weight": 15
 				},
 				{
@@ -198,7 +198,7 @@
 				{
 					"kind": "credits",
 					"id": "",
-					"amount": 400,
+					"amount": 100,
 					"weight": 10
 				}
 			],

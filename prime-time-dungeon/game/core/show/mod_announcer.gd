@@ -8,6 +8,11 @@ class_name ModAnnouncer extends RefCounted
 const KEY_COOLDOWN_SEC: float = 20.0
 const NO_COOLDOWN_PREFIXES: PackedStringArray = ["boss_", "timer_", "chat_"]
 const NO_COOLDOWN_TAGS: PackedStringArray = ["death", "intro"]
+## Lines that answer the player's own action or mark a one-off floor beat (purchase, safe room, stairs found, descent;
+## GDD §1.4 B3/B6/B8, §11.1): never dropped by Show's priority window — they queue behind the running line (ModDialog)
+## and leave the window as it is. (Measured with the full-run bot: a purchase right after the lootbox lines and the
+## descent right after an achievement line — ach_speedrun / ach_last_minute fire on floor_completed — were swallowed.)
+const ALWAYS_SAID_TAGS: PackedStringArray = ["vendor_buy", "safe_room_enter", "stairs_found", "floor_end"]
 
 var _data: GameData = null
 var _rng: RandomNumberGenerator = null
@@ -68,6 +73,11 @@ static func priority(tag: String) -> int:
 	if tag.begins_with("lootbox_"):
 		return 1
 	return 0
+
+
+## ALWAYS_SAID_TAGS: exempt from Show's priority window (and they never suppress anything themselves).
+static func always_said(tag: String) -> bool:
+	return ALWAYS_SAID_TAGS.has(tag)
 
 
 ## text.format(ctx); missing keys stay visible. Show always adds ctx name, floor, level, viewers, followers.

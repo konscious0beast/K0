@@ -161,7 +161,7 @@ mit `all_of` / `sequence` kombiniert. Ausgewertet von `QuestTracker` (Kern, Kap.
 | `reach_stairs` | S0 | `{ "floor": 1 }` | Event `floor_completed` mit `floor == params.floor` | Anteil erkundeter Zonen (A–D) × 0.9 |
 | `defeat_boss` | S0 | `{ "boss_id": "boss_hausmeister" }` | Event `boss_defeated` mit passender `boss_id` | 1 − Boss-HP-Anteil beim besten Versuch (0 wenn nie begegnet) |
 | `bounty` | S0 | `{ "enemy_id": "kanalratte", "count": 12 }` | Zähler `enemy_killed` mit `enemy_id` ≥ `count` | Zähler / `count` |
-| `hype_peak` | S0 | `{ "metric": "viewers_target_peak", "target": 6000 }` | Metrik erreicht Zielwert (`viewers_target_peak`, `followers_gained_run`, `hype_100_count` — neue `StatIds`, CR-13) | Metrik / Ziel |
+| `hype_peak` | S0 | `{ "metric": "viewers_target_peak", "target": 5000 }` (E1-Peak 3 000–5 500, GDD 13) | Metrik erreicht Zielwert (`viewers_target_peak`, `followers_gained_run`, `hype_100_count` — neue `StatIds`, CR-13) | Metrik / Ziel |
 | `pacifist` | S0 | `{ "max_battles": 3, "then": { "type": "reach_stairs", "params": { "floor": 1 } } }` | Unterquest erfüllt UND Kämpfe ≤ `max_battles` (Bosse zählen mit) | Fortschritt der Unterquest; 0 sobald Limit überschritten |
 | `achievement_hunt` | S0 | `{ "ids": ["ach_overkill", "ach_combo_first", "ach_close_call", "ach_stunt_first"], "min": 3 }` | ≥ `min` der gelisteten Achievements im Lauf erhalten | erhalten / `min` |
 | `collect` | S1 | `{ "item_id": "item_golden_ticket", "count": 7, "spawn": { "chests": 5, "drops": 4 } }` | Quest-Items im Inventar ≥ `count` (Platzierung aus Seed-Stream `quest`) | Anzahl / `count` |

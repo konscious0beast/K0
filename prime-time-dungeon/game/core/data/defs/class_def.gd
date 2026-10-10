@@ -11,7 +11,7 @@ var growth_add: Dictionary = {}             # stat key → float
 var passives: Array[Dictionary] = []        # [{"id": "pas_…", "params": Dictionary}]
 var learnset: Array[Dictionary] = []        # [{"level": int, "skill": String}]
 var show_mods: Dictionary = {"hype_gain_mult": 1.0, "stunt_success_add": 0.0, "stunt_cooldown": 3,
-	"sponsor_thresholds": PackedInt32Array([50, 75, 100])}
+	"sponsor_thresholds": PackedInt32Array([70, 85, 100])}
 
 
 static func from_dict(d: Dictionary) -> ClassDef:

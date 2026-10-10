@@ -20,8 +20,8 @@ class_name GiftApplier extends RefCounted
 ## Randomness only from `rng` (integer draws), so a replay with the same seed stream ("gift") yields the same result.
 
 const RARITY_ORDER: PackedStringArray = ["common", "rare", "epic"]
-## LootRoller.DUPLICATE_CREDIT_MULT (1.5) in per mille (test_m8_gift_applier keeps both in sync).
-const DUPLICATE_CREDIT_PM: int = 1500
+## LootRoller.DUPLICATE_CREDIT_MULT (0.5) in per mille (test_m8_gift_applier keeps both in sync).
+const DUPLICATE_CREDIT_PM: int = 500
 
 
 static func apply(state: GameState, data: GameData, g: Dictionary, rng: RandomNumberGenerator) -> Array[LootReward]:

@@ -185,7 +185,7 @@ const SPEC_ITEM_SHOW_MODS: Array = [["hype_gain_mult", "f", 1.0], ["follower_mul
 const SPEC_CLASS: Array = [["id", "s"], ["name", "s"], ["desc", "s", ""], ["for", "sa", []], ["min_floor", "i", 3],
 	["stat_mult", "d", {}], ["growth_add", "d", {}], ["passives", "a", []], ["learnset", "a", []], ["show_mods", "d", {}]]
 const SPEC_CLASS_SHOW_MODS: Array = [["hype_gain_mult", "f", 1.0], ["stunt_success_add", "f", 0.0], ["stunt_cooldown", "i", 3],
-	["sponsor_thresholds", "ia", [50, 75, 100]]]
+	["sponsor_thresholds", "ia", [70, 85, 100]]]
 const SPEC_PASSIVE: Array = [["id", "s"], ["params", "d", {}]]
 const SPEC_LEARN: Array = [["level", "i"], ["skill", "s"]]
 const SPEC_PARTY: Array = [["id", "s"], ["name", "s"], ["title", "s", ""], ["base_stats", "d"], ["growth", "d"],
@@ -704,7 +704,7 @@ func _n_class(ctx: String, raw: Variant) -> Dictionary:
 	var sm: Dictionary = _norm(ctx + ".show_mods", d["show_mods"], SPEC_CLASS_SHOW_MODS)
 	if sm.is_empty():
 		sm = {"hype_gain_mult": 1.0, "stunt_success_add": 0.0, "stunt_cooldown": 3,
-			"sponsor_thresholds": PackedInt32Array([50, 75, 100])}
+			"sponsor_thresholds": PackedInt32Array([70, 85, 100])}
 	_range_f(ctx + ".show_mods.hype_gain_mult", float(sm["hype_gain_mult"]), 0.5, 3.0)
 	_range_f(ctx + ".show_mods.stunt_success_add", float(sm["stunt_success_add"]), -1.0, 1.0)
 	_range_i(ctx + ".show_mods.stunt_cooldown", int(sm["stunt_cooldown"]), 0, 9)

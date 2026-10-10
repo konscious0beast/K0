@@ -1,9 +1,9 @@
 extends TestCase
 ## Loads every .gd / .tscn / .gdshader under res:// → catches parse errors early (02_TECH §1.7).
-## Also checks the M0 conventions that are cheap to verify statically (§13.4 tscn format, §0.2 stub header).
+## Also checks the conventions that are cheap to verify statically (§13.4 tscn format, §13.1 line length).
 
 const SKIP_DIRS: PackedStringArray = ["res://.godot", "res://build"]
-const STUB_HEADER: String = "STUB(M0) — owned by M"
+const MAX_LINE: int = 120              # 02_TECH §13.1 (tab = 1 character)
 
 
 func _walk(dir_path: String, exts: PackedStringArray, out: PackedStringArray) -> void:
@@ -63,7 +63,8 @@ func test_all_shaders_load() -> void:
 
 func test_shader_uniforms_match_contract() -> void:
 	var expected: Dictionary = {
-		"toon": ["albedo", "use_vertex_color", "shade_color", "bands", "rim_color", "rim_amount", "emission_color", "emission_energy"],
+		"toon": ["albedo", "use_vertex_color", "shade_color", "bands", "rim_color", "rim_amount", "emission_color",
+			"emission_energy"],
 		"toon_outline": ["outline_color", "outline_width"],
 		"env_tiles": ["tile_size", "grout_color", "grout_width", "dirt_amount", "shade_color", "bands", "use_vertex_color"],
 		"glow": ["color", "energy", "pulse_speed"],
@@ -103,17 +104,16 @@ func test_tscn_files_are_handwritten_format() -> void:
 		assert_true(head.contains("format=3"), "format=3 in " + path)
 
 
-func test_stub_headers() -> void:
-	# Every file that still is a Phase-A stub starts with the exact STUB header line.
+## 02_TECH §13.1: lines ≤ 120 characters (a tab counts as one character) in every script — enforced here so the
+## limit cannot erode silently again (quality-18).
+func test_line_length() -> void:
 	var files: PackedStringArray = []
-	_walk("res://", [".gd", ".gdshader"], files)
+	_walk("res://", [".gd"], files)
+	var long: PackedStringArray = []
 	for path: String in files:
-		if path.begins_with("res://tests/"):
-			continue
-		var text: String = FileAccess.get_file_as_string(path)
-		if not text.contains(STUB_HEADER):
-			continue
-		var first: String = text.get_slice("\n", 0)
-		assert_true(first.begins_with("# STUB(M0) — owned by M") or first.begins_with("// STUB(M0) — owned by M"),
-			"stub header must be the first line: " + path)
-		assert_true(first.ends_with("Replace completely, keep the public API."), "stub header text: " + path)
+		var lines: PackedStringArray = FileAccess.get_file_as_string(path).split("\n")
+		for i in lines.size():
+			if lines[i].length() > MAX_LINE:
+				long.append("%s:%d (%d)" % [path, i + 1, lines[i].length()])
+	assert_gt(files.size(), 100, "scripts found")
+	assert_eq(long, PackedStringArray(), "lines over %d characters" % MAX_LINE)

@@ -69,7 +69,7 @@ run_smoke() {
   if [ "$code" -ne 0 ] || echo "$out" | grep -qE "$ERR_RE"; then
     echo "check.sh: SMOKE FAILED (exit $code)"; return 1
   fi
-  if ! echo "$out" | grep -qE 'AUTOPLAY: (OK|SKIPPED \(stub\))'; then
+  if ! echo "$out" | grep -qE 'AUTOPLAY: OK'; then
     echo "check.sh: SMOKE FAILED (no 'AUTOPLAY: OK' line)"; return 1
   fi
 }

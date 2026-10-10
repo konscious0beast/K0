@@ -1,6 +1,6 @@
 class_name FloorEvent extends RefCounted
 ## Rules of the floor events (02_TECH §7.4, GDD §2.6). Pure core logic: no autoloads, randomness only via the rng
-## passed in (Game.apply_floor_event: SeedUtil.derive(floor_run.seed, "event", k × 16 + event_uses[id])).
+## passed in (RunRules.apply_floor_event: SeedUtil.derive(floor_run.seed, "event", k × 16 + event_uses[id])).
 ##
 ## Choices per type: photo_drone pose|smash · lost_candidate give:<item_id>|leave · wheel spin|ignore ·
 ## lever pull|leave · broken_vending kick|leave. Every choice except leave/ignore completes the event (once per floor);
@@ -148,7 +148,7 @@ static func resolve(ev: EventSpawn, choice: String, state: GameState, data: Game
 
 
 ## Mutates GameState only (credits, items, hp (never below 1), opened_gates, completed_events, event_uses);
-## hype/followers via Show, boxes → pending_lootboxes by Game.apply_floor_event.
+## hype/followers via Show, boxes → pending_lootboxes by RunRules.add_event_boxes (Game and RunSim).
 static func apply(outcome: Dictionary, ev: EventSpawn, choice: String, state: GameState, data: GameData) -> void:
 	if outcome.is_empty() or not bool(outcome.get("valid", false)) or ev == null or state == null \
 			or state.floor_run == null:
@@ -166,7 +166,7 @@ static func apply(outcome: Dictionary, ev: EventSpawn, choice: String, state: Ga
 			inv.remove(str(item_id), int(rem[item_id]))
 		var add: Dictionary = outcome.get("items_add", {})
 		for item_id: Variant in add.keys():
-			_add_item(inv, data, str(item_id), int(add[item_id]))
+			inv.add_item_or_credits(data, str(item_id), int(add[item_id]))
 	var dmg: Dictionary = outcome.get("party_damage_pct", {})
 	for member_id: Variant in dmg.keys():
 		var m: PartyMember = state.member(str(member_id))
@@ -221,27 +221,10 @@ static func _credits(state: GameState) -> int:
 
 
 ## Item ids carrying `tag` via Inventory.ids_with_tag (§6.1, M2), sorted (deterministic choice list).
-## While Inventory is still the M0 stub (its API ignores its own `counts`) the counts are scanned directly instead.
 static func _items_with_tag(state: GameState, data: GameData, tag: String) -> PackedStringArray:
-	var inv: Inventory = state.inventory
-	if inv == null or data == null:
+	if state.inventory == null or data == null:
 		return PackedStringArray()
-	var out: PackedStringArray = inv.ids_with_tag(data, tag)
-	if out.is_empty() and _inventory_api_is_stub(inv):
-		for k: Variant in inv.counts.keys():
-			var item_id: String = str(k)
-			if int(inv.counts[k]) > 0 and data.has_id("items", item_id) and data.item(item_id).tags.has(tag):
-				out.append(item_id)
-	out.sort()
-	return out
-
-
-## True for the M0 stub: an item listed in `counts` that count() does not report.
-static func _inventory_api_is_stub(inv: Inventory) -> bool:
-	for k: Variant in inv.counts.keys():
-		if int(inv.counts[k]) > 0 and inv.count(str(k)) <= 0:
-			return true
-	return false
+	return state.inventory.ids_with_tag(data, tag)     # sorted
 
 
 static func _kai(state: GameState) -> PartyMember:
@@ -265,15 +248,3 @@ static func _wheel_pick(table: Array, rng: RandomNumberGenerator) -> Dictionary:
 			return e as Dictionary
 	return {}
 
-
-## Adds items like Game.add_rewards: overflow above max_stack is paid out at the sell value.
-static func _add_item(inv: Inventory, data: GameData, item_id: String, n: int) -> void:
-	if n <= 0 or item_id == "":
-		return
-	var max_stack: int = 9
-	if data != null and data.has_id("items", item_id):
-		max_stack = data.item(item_id).max_stack
-	var added: int = inv.add(item_id, n, max_stack)
-	var overflow: int = n - maxi(0, added)
-	if overflow > 0 and data != null and data.has_id("items", item_id):
-		inv.add_credits(overflow * Shop.sell_value(data, item_id))

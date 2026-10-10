@@ -196,7 +196,8 @@ func test_pause_menu_tab_from_params_focuses_page() -> void:
 	assert_true(page != null and owner != null and page.is_ancestor_of(owner), "focus starts inside the inventory page")
 
 
-# --- touch / safe area -------------------------------------------------------------------------------------------------
+# --- touch / safe area
+# -------------------------------------------------------------------------------------------------
 
 func test_touch_hit_areas_at_least_88() -> void:
 	var t: Node = _instance(SCENE_TOUCH, {"force_visible": true})
@@ -561,7 +562,8 @@ func _assert_touch_clearance(touch: Node, h: Node, o: Node, what: String) -> voi
 				str(a)])
 
 
-# --- glyphs of 3D labels ------------------------------------------------------------------------------------------------
+# --- glyphs of 3D labels
+# ------------------------------------------------------------------------------------------------
 
 func test_label3d_texts_of_propkit_and_vfx_use_available_glyphs() -> void:
 	var holder: Node3D = Node3D.new()
@@ -587,7 +589,8 @@ func test_glyph_helpers() -> void:
 	assert_eq(UiUtil.missing_glyphs(UiUtil.glyph_safe(unsafe)), "", "glyph_safe replaces every missing glyph")
 
 
-# --- helpers -------------------------------------------------------------------------------------------------------------
+# --- helpers
+# -------------------------------------------------------------------------------------------------------------
 
 ## Visible BaseButtons and Sliders smaller than MIN_TOUCH (visible part) or with a touch_pad hit area below TOUCH_HIT.
 func _small_controls(root: Node) -> PackedStringArray:

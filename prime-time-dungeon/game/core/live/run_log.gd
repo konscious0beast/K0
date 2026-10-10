@@ -27,6 +27,12 @@ var _checkpoints: Array[Dictionary] = []
 var _last_id: int = 0
 
 
+## A run id unique per attempt (05 §10.4/§10.6): "run_local_<seed>_<8 hex>" — the hex part is CSPRNG metadata, never
+## game logic (two attempts of the same fixed-seed event no longer share one replay file or board run_id).
+static func local_run_id(run_seed: int) -> String:
+	return "run_local_%d_%s" % [run_seed, Crypto.new().generate_random_bytes(4).hex_encode()]
+
+
 func add_cmd(tick: int, cmd: Dictionary, cmd_id: int = 0) -> void:
 	if tick < 0 or (not _cmds.is_empty() and tick < int(_cmds.back()["k"])):
 		_reject("command '%s' at tick %d is out of tick order" % [str(cmd.get("t", "")), tick])
@@ -121,6 +127,27 @@ func digest() -> String:
 
 
 # --- additions ----------------------------------------------------------------------------------------------------
+
+## THE replay iteration of both verifiers (Game.replay_log, RunSim.replay): the commands in k order; before a command
+## with tick k every checkpoint with a smaller tick goes to on_checkpoint.call(index, k_cp, hash) (the caller steps its
+## clock to k_cp and compares its state hash), then advance.call(k) and apply.call(i, cmd) → the index of the next
+## command to apply (i + 1, or further when a battle replay consumed follow-up commands); the remaining checkpoints at
+## the end.
+func walk(advance: Callable, apply: Callable, on_checkpoint: Callable) -> void:
+	var cps: Array[Dictionary] = checkpoints()
+	var cp: int = 0
+	var i: int = 0
+	while i < _cmds.size():
+		var k: int = int(_cmds[i]["k"])
+		while cp < cps.size() and int(cps[cp]["k"]) < k:
+			on_checkpoint.call(cp, int(cps[cp]["k"]), str(cps[cp]["h"]))
+			cp += 1
+		advance.call(k)
+		i = maxi(i + 1, int(apply.call(i, (_cmds[i]["c"] as Dictionary).duplicate(true))))
+	while cp < cps.size():
+		on_checkpoint.call(cp, int(cps[cp]["k"]), str(cps[cp]["h"]))
+		cp += 1
+
 
 func checkpoints() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []

@@ -185,7 +185,8 @@ func test_lootbox_screen_shows_odds_pity_and_purchase_note() -> void:
 	assert_has(_all_text(lb), "erste Ziehung garantiert Selten", "pity forces the next first roll")
 
 
-# --- confirm dialog ----------------------------------------------------------------------------------------------------
+# --- confirm dialog
+# ----------------------------------------------------------------------------------------------------
 
 func test_confirm_dialog_yes_no_and_cancel() -> void:
 	for answer_yes: bool in [true, false]:
@@ -218,7 +219,8 @@ func test_confirm_dialog_yes_no_and_cancel() -> void:
 	assert_eq(res, [false] as Array[bool], "ui_cancel answers no")
 
 
-# --- settings -----------------------------------------------------------------------------------------------------------
+# --- settings
+# -----------------------------------------------------------------------------------------------------------
 
 func test_settings_rows_write_game_settings() -> void:
 	Game.settings.text_speed = 1
@@ -295,7 +297,26 @@ func test_settings_mode_can_only_be_lowered() -> void:
 	assert_true(b.disabled, "Vorabendprogramm cannot be raised again")
 
 
-# --- title flow ---------------------------------------------------------------------------------------------------------
+## live-integrity-1: an event run plays the event's difficulty (05 §10.1 rules.difficulty) — the mode row is locked,
+## Game.set_difficulty refuses and nothing is recorded.
+func test_settings_mode_is_locked_in_an_event_run() -> void:
+	Game.start_event_run("evt_offline_gleis9")
+	Game.run_log = _spy
+	assert_eq(Game.mode, &"event_offline")
+	var sm: Node = _scene(SCENE_SETTINGS, {"framed": true})
+	add_to_tree(sm)
+	await wait_frames(2)
+	var b: Button = (sm.get("rows") as Dictionary)["difficulty"] as Button
+	assert_true(b.disabled, "no lowering of the mode in an event run")
+	assert_false(Game.can_lower_difficulty())
+	assert_false(Game.set_difficulty(&"vorabend"), "Game refuses it too")
+	assert_eq(Game.state.difficulty, &"prime")
+	assert_eq(_spy.of_type("difficulty").size(), 0, "nothing recorded")
+	Game.new_game(0, "Kai", 7)
+
+
+# --- title flow
+# ---------------------------------------------------------------------------------------------------------
 
 func test_title_menu_and_options_modal() -> void:
 	var t: Node = _scene(SCENE_TITLE, {})
@@ -386,7 +407,8 @@ func test_slot_summary_of_missing_slot_is_empty() -> void:
 	assert_true(info.is_empty() or bool(info.get("corrupt", false)), "empty slot → {}")
 
 
-# --- results / summaries / lobby / game over -----------------------------------------------------------------------------
+# --- results / summaries / lobby / game over
+# -----------------------------------------------------------------------------
 
 func test_run_result_shows_breakdown_and_total() -> void:
 	var summary: Dictionary = {"event_id": "evt_probe", "cause": "timer", "quest_complete": false, "score": 12345,
@@ -467,7 +489,8 @@ func test_game_over_buttons_wait_before_accepting_input() -> void:
 	assert_true(focused, "first button focused once active")
 
 
-# --- helpers -------------------------------------------------------------------------------------------------------------
+# --- helpers
+# -------------------------------------------------------------------------------------------------------------
 
 func _scene(path: String, params: Dictionary) -> Node:
 	var n: Node = (load(path) as PackedScene).instantiate()

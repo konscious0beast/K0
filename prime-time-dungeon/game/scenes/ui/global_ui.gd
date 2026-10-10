@@ -1,7 +1,8 @@
 extends Node
 ## Persistent UI (02_TECH §9.4): ShowOverlay (layer 40), ModDialog + Toasts (45), DebugOverlay (90). Added once under
 ## root by Boot (and by capture.gd), PROCESS_MODE_ALWAYS, outside the Router stack. Display mode follows
-## Events.overlay_mode_requested; the initial mode is derived from the active screen (scenes that requested a mode before
+## Events.overlay_mode_requested; the initial mode is derived from the active screen (scenes that requested a mode
+## before
 ## GlobalUi existed, e.g. in captures). Also caches the last event-run summary (Events.run_finished) for RunResult.
 
 const SHOW_OVERLAY: String = "res://scenes/ui/show_overlay.tscn"

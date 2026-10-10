@@ -1,7 +1,9 @@
 extends Control
-## Minimap + big map (02_TECH §1.6, GDD §14.3): visited cells only, zone colour, safe rooms green, stairs gold, boss rooms
+## Minimap + big map (02_TECH §1.6, GDD §14.3): visited cells only, zone colour, safe rooms green, stairs gold, boss
+## rooms
 ## red, closed gates as bars, player arrow (yaw). Same drawing for the 136×136 HUD map and the full-screen map.
-## Data: FloorLayout (M3) — while the generator is a stub, `layout_from_def()` builds a display copy from FloorDef.layout.
+## Data: FloorLayout (M3) — while the generator is a stub, `layout_from_def()` builds a display copy from
+## FloorDef.layout.
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const IconMesh := preload("res://scenes/ui/icon_mesh.gd")

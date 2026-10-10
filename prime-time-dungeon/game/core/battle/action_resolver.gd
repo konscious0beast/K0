@@ -386,7 +386,7 @@ static func _stunt_action(state: BattleState, actor: Combatant, cmd: BattleComma
 	if sk == null:
 		return
 	var targets: PackedStringArray = _resolve_targets(state, actor, sk, cmd.target_ids)
-	var success: bool = FixedMath.roll(state.rng, state.stunt_chance(actor, sk))
+	var success: bool = FixedMath.roll(state.rng, state.stunt_chance(actor, sk, targets))
 	_action_start(actor, cmd, sk.id, "", targets, sk.name, out)
 	if success:
 		_combo(state, actor, sk, targets, out)
@@ -732,15 +732,22 @@ static func _gift_sponsor(state: BattleState, sponsor_id: String, effect_pm: int
 						heal(state, low, FixedMath.div_round(low.max_hp() * scaled, 100), "", "", "", 0, out)
 
 
-static func _gain_credits(state: BattleState, amount: int, out: Array[ActionEvent]) -> void:
+## Gift credits; `converted_from` = the duplicate equipment they replace (ActionEvent.item_id, like
+## LootReward.converted_from outside battles), else "".
+static func _gain_credits(state: BattleState, amount: int, out: Array[ActionEvent],
+	converted_from: String = "") -> void:
 	if amount <= 0:
 		return
 	state.tally["credits_delta"] = int(state.tally["credits_delta"]) + amount
 	var ev: ActionEvent = ActionEvent.make(ActionEvent.Type.CREDITS_GAINED)
 	ev.value = amount
+	ev.item_id = converted_from
 	out.append(ev)
 
 
+## A gift item (contents, rolled entry, sponsor item). Equipment the party already owns (setup.owned_equipment or an
+## earlier gift of this battle) becomes ItemDef.duplicate_credits() per piece, a stack of a new piece keeps one —
+## the same rule as GiftApplier outside battles (05 §6.9: the result must not depend on where the gift arrived).
 static func _gain_item(state: BattleState, item_id: String, count: int, out: Array[ActionEvent]) -> void:
 	if count <= 0:
 		return
@@ -748,6 +755,20 @@ static func _gain_item(state: BattleState, item_id: String, count: int, out: Arr
 	if it == null:
 		push_warning("BattleState.apply_gift: unknown item '%s'" % item_id)
 		return
+	var dup: int = 0
+	if it.is_equipment():
+		var owned: bool = state.setup.owned_equipment.has(item_id) \
+			or JsonUtil.to_int((state.tally["item_delta"] as Dictionary).get(item_id, 0)) > 0
+		dup = count if owned else count - 1
+		count -= dup
+	if count > 0:
+		_add_gift_item(state, it, count, out)
+	if dup > 0:
+		_gain_credits(state, it.duplicate_credits() * dup, out, it.id)
+
+
+static func _add_gift_item(state: BattleState, it: ItemDef, count: int, out: Array[ActionEvent]) -> void:
+	var item_id: String = it.id
 	if it.type == "consumable":
 		state.items[item_id] = JsonUtil.to_int(state.items.get(item_id, 0)) + count
 	var delta: Dictionary = state.tally["item_delta"]

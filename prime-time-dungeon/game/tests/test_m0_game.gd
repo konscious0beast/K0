@@ -1,14 +1,8 @@
 extends TestCase
 ## Game (02_TECH §3.4): command ids, dialog pause reset, quest metric adapter (05 CR-4/CR-13), replay context restore.
-## Plus one integration test (live run ≡ replay_log) that is skipped while M1/M2/M8 parts are still M0 stubs.
+## Plus one integration test (live run ≡ replay_log).
 ## Spies subclass RunLog / QuestTracker, so the unit parts do not depend on the M8 implementations.
 
-const STUB_HEADER: String = "# STUB(M0)"
-## Files the replay integration test needs as real implementations.
-const REPLAY_DEPS: PackedStringArray = ["res://core/live/run_log.gd", "res://core/live/state_hash.gd",
-	"res://core/live/canonical_json.gd", "res://core/live/run_sim.gd", "res://core/progression/game_state.gd",
-	"res://core/progression/floor_run.gd", "res://core/progression/battle_bridge.gd",
-	"res://core/battle/battle_state.gd", "res://core/loot/loot_roller.gd", "res://autoload/show.gd"]
 
 
 class _SpyLog extends RunLog:
@@ -36,15 +30,6 @@ func after_each() -> void:
 	Game.in_battle = false
 	Game.set_dialog_presenter(false)
 	Game.clear_blocking_dialogs()
-
-
-func _stubs(paths: PackedStringArray) -> PackedStringArray:
-	var out: PackedStringArray = []
-	for p: String in paths:
-		var f: FileAccess = FileAccess.open(p, FileAccess.READ)
-		if f == null or f.get_line().begins_with(STUB_HEADER):
-			out.append(p.get_file())
-	return out
 
 
 func test_cmd_ids_strictly_increase_and_external_inputs_get_zero() -> void:
@@ -151,10 +136,6 @@ func test_replay_restores_the_live_context() -> void:
 
 
 func test_replay_matches_live_run_integration() -> void:
-	var stubs: PackedStringArray = _stubs(REPLAY_DEPS)
-	if not stubs.is_empty():
-		skip("integration: needs real M1/M2/M8 (still stubs: %s)" % ", ".join(stubs))
-		return
 	Game.auto_battle = true
 	Game.new_game(0, "Kai", 4242)
 	assert_true(Game.has_state())

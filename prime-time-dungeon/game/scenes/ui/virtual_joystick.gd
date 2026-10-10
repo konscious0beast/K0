@@ -1,7 +1,8 @@
 extends Control
 ## Floating virtual joystick (02_TECH §10.3, 03_ART §9.4): lives in the left 40 % of the screen, appears at the touch
 ## point, radius 90 px, knob 40 px, dead zone 0.15. Writes Input.action_press(&"move_*", strength) / action_release;
-## deflection ≤ 0.6 additionally holds `sneak`. Rest display at (147, 573) of the 1280×720 reference (bottom-left anchored).
+## deflection ≤ 0.6 additionally holds `sneak`. Rest display at (147, 573) of the 1280×720 reference (bottom-left
+## anchored).
 
 const RADIUS: float = 90.0
 const KNOB: float = 40.0                    # knob diameter

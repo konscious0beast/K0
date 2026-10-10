@@ -1,5 +1,6 @@
 extends CanvasLayer
-## Pause menu (02_TECH §1.6, §9.4 layer 60, GDD §14.4): tabs Party · Inventar · Ausrüstung · Fähigkeiten · Achievements ·
+## Pause menu (02_TECH §1.6, §9.4 layer 60, GDD §14.4): tabs Party · Inventar · Ausrüstung · Fähigkeiten · Achievements
+## ·
 ## Bestiarium · Optionen · Zum Titel. Opening pauses the tree (Game timer stops) and emits pause_menu_toggled(true);
 ## the menu itself closes on pause / ui_cancel (from the tab bar) or the visible "Schließen" button (touch has no
 ## Esc/Back: the touch pause button sits under the paused HUD), unpauses and emits pause_menu_toggled(false).

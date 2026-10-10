@@ -5,7 +5,7 @@ extends TestCase
 ## 05 §4.8: the delivered silver chest of the test vector (Kap. 7.4), with a well-formed signature.
 func _paid_chest() -> Dictionary:
 	return {"schema": 1, "gift_id": "g_01JB7Q3M0F5W8V2TQK4N6H8R9S", "source": "shop", "kind": "chest", "tier": "silver",
-		"amount": 0, "sponsor_id": "", "sender": {"display_name": "", "anon": true, "sender_ref": "b_7f3a9c"},
+		"amount": 0, "sponsor_id": "", "sender": {"display_name": "", "anon": true, "sender_ref": "b_7f3a9c0d1e2f"},
 		"message_key": "gift_msg_go_team", "target": {"player_id": "p_A", "run_id": "run_2Kx"},
 		"event_id": "evt_2026w45_sat", "window_id": "eu", "league": "show", "load_half": 4, "effect_pm": 769,
 		"roll": {"commit": "3613e6c5f82810dc73d6629a2864df33cdfdbd3e96f980122126bcfd821fd64a",
@@ -31,12 +31,13 @@ func test_make_system_is_valid() -> void:
 
 
 ## 05 §6.3: which source may send which kind; gold carries 100 or 250 credits (dev gifts: any positive amount).
+## live-integrity-9 (decision 2026-10-08, L11): "bits" is reserved — a bits gift may only be the cosmetic cheer.
 func test_kinds_per_source() -> void:
 	var cases: Array = [
-		["gold", "shop", true], ["gold", "bits", true], ["gold", "fan", false], ["gold", "system", false],
-		["chest", "shop", true], ["chest", "bits", true], ["chest", "fan", false],
+		["gold", "shop", true], ["gold", "bits", false], ["gold", "fan", false], ["gold", "system", false],
+		["chest", "shop", true], ["chest", "bits", false], ["chest", "fan", false],
 		["fan_pack", "fan", true], ["fan_pack", "bits", false], ["fan_pack", "shop", false],
-		["sponsor_buff", "bits", true], ["sponsor_buff", "shop", true], ["sponsor_buff", "fan", false],
+		["sponsor_buff", "bits", false], ["sponsor_buff", "shop", true], ["sponsor_buff", "fan", false],
 		["cheer", "fan", true], ["cheer", "bits", true], ["cheer", "shop", true], ["cheer", "system", false],
 	]
 	for c: Array in cases:
@@ -45,14 +46,18 @@ func test_kinds_per_source() -> void:
 		g["source"] = c[1]
 		if c[1] == "system":
 			g["league"] = "pur"
+		elif Gift.BUYER_SOURCES.has(c[1]):
+			(g["sender"] as Dictionary)["sender_ref"] = "b_0123456789ab"
 		assert_eq(Gift.validate(g) == "", c[2], "%s from %s: %s" % [c[0], c[1], Gift.last_detail])
 	for amount: int in [100, 250]:
 		var ok: Dictionary = Gift.make_dev("gold", "", amount)
-		ok["source"] = "bits"
-		assert_eq(Gift.validate(ok), "", "bits gold %d" % amount)
+		ok["source"] = "shop"
+		(ok["sender"] as Dictionary)["sender_ref"] = "b_0123456789ab"
+		assert_eq(Gift.validate(ok), "", "shop gold %d" % amount)
 	var odd: Dictionary = Gift.make_dev("gold", "", 150)
 	assert_eq(Gift.validate(odd), "", "dev gifts may carry any amount (QA)")
 	odd["source"] = "shop"
+	(odd["sender"] as Dictionary)["sender_ref"] = "b_0123456789ab"
 	assert_eq(Gift.validate(odd), "invalid_schema", "shop gold must be 100 or 250")
 
 
@@ -203,6 +208,41 @@ func test_kind_specific_fields() -> void:
 	assert_eq(Gift.validate(unknown), "invalid_schema")
 
 
+## live-integrity-8 (05 §7.5): gifts of buyers (fan/shop/bits) carry the pseudonym sender_ref "b_" + 12 hex characters —
+## the per-buyer caps depend on it; system and dev gifts may have none.
+func test_buyer_gifts_need_a_sender_ref() -> void:
+	var g: Dictionary = _paid_chest()
+	assert_eq(Gift.validate(g), "", Gift.last_detail)
+	for bad: String in ["", "b_7f3a9c", "b_0123456789AB", "x_0123456789ab", "b_0123456789abc"]:
+		g["sender"]["sender_ref"] = bad
+		assert_eq(Gift.validate(g), "invalid_schema", "sender_ref '%s'" % bad)
+		assert_has(Gift.last_detail, "sender_ref")
+	assert_eq(Gift.validate(Gift.make_dev("gold", "", 100)), "", "dev gifts: unknown sender allowed (QA)")
+	assert_eq(Gift.validate(Gift.make_system("spn_krawumm", 1, 0)), "", "system: empty sender")
+
+
+## live-integrity-10 (05 §6.3/§6.5): a fan_pack carries no contents or exactly one common entry; every content entry is
+## bounded (qty 1..9, credits 1..1000), so forged contents cannot carry a fortune.
+func test_contents_are_bounded() -> void:
+	var fp: Dictionary = Gift.make_dev("fan_pack", "", 0)
+	fp["contents"] = [{"rarity": "common", "item_id": "itm_bandage", "qty": 1}]
+	assert_eq(Gift.validate(fp), "", Gift.last_detail)
+	fp["contents"] = [{"rarity": "epic", "credits": 100000}, {"rarity": "epic", "item_id": "itm_acc_queen_crown",
+		"qty": 9}]
+	assert_eq(Gift.validate(fp), "invalid_schema", "forged fan_pack (reviewer probe)")
+	fp["contents"] = [{"rarity": "rare", "item_id": "itm_bandage", "qty": 1}]
+	assert_eq(Gift.validate(fp), "invalid_schema", "fan packs roll the common pool only")
+	fp["contents"] = [{"rarity": "common", "item_id": "itm_bandage", "qty": 1}, {"rarity": "common", "credits": 5}]
+	assert_eq(Gift.validate(fp), "invalid_schema", "one roll")
+	var chest: Dictionary = Gift.make_dev("chest", "gold", 0)
+	chest["contents"] = [{"rarity": "rare", "item_id": "itm_bandage", "qty": Gift.MAX_CONTENT_QTY + 1}]
+	assert_eq(Gift.validate(chest), "invalid_schema", "qty above the stack size")
+	chest["contents"] = [{"rarity": "rare", "credits": Gift.MAX_CONTENT_CREDITS + 1}]
+	assert_eq(Gift.validate(chest), "invalid_schema", "credits above the largest pool entry")
+	chest["contents"] = [{"rarity": "rare", "credits": Gift.MAX_CONTENT_CREDITS}]
+	assert_eq(Gift.validate(chest), "", Gift.last_detail)
+
+
 func test_signature_format() -> void:
 	var g: Dictionary = _paid_chest()
 	g["sig"] = "hmac-sha256:5b1e…"
@@ -216,7 +256,7 @@ func test_signature_format() -> void:
 func test_reason_codes() -> void:
 	assert_eq(Gift.REASONS, ["", "invalid_schema", "duplicate", "league_pur", "not_accepting", "cap_reached",
 		"run_not_active", "effect_mismatch", "bad_signature", "chest_blocked", "deadline_missed", "window_closed",
-		"window_full", "window_sender_limit"], "05 §6.5, §6.13")
+		"window_full", "window_sender_limit", "wrong_target", "too_soon"], "05 §6.5, §6.9, §6.10, §6.13")
 	for r: String in SponsorWindows.REASONS:
 		assert_has(Gift.REASONS, r, "Sponsor-Fenster reason " + r)
 	assert_eq([SponsorWindows.protocol_code("window_closed"), SponsorWindows.protocol_code("window_full"),

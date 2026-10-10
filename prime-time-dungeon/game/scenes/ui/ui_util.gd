@@ -47,7 +47,8 @@ const GLYPH_FALLBACKS: Dictionary = {"→": "-", "←": "-", "↑": "+", "↓": 
 	"▼": "v", "▲": "^", "☰": "=", "✓": "OK", "✔": "OK", "✗": "x", "✘": "x", "⌫": "<"}
 
 
-# --- formatting --------------------------------------------------------------------------------------------------------
+# --- formatting
+# --------------------------------------------------------------------------------------------------------
 
 ## 12345 → "12.345" (German thousands separator).
 static func fmt_int(n: int) -> String:
@@ -112,7 +113,8 @@ static func chat_color(user: String) -> Color:
 	return CHAT_NAME_COLORS[h % CHAT_NAME_COLORS.size()]
 
 
-# --- glyphs (03_ART F8) ------------------------------------------------------------------------------------------------
+# --- glyphs (03_ART F8)
+# ------------------------------------------------------------------------------------------------
 
 ## Characters of `text` the default font cannot render (empty = all fine).
 static func missing_glyphs(text: String) -> String:
@@ -142,14 +144,16 @@ static func glyph_safe(text: String) -> String:
 	return res
 
 
-# --- widgets -----------------------------------------------------------------------------------------------------------
+# --- widgets
+# -----------------------------------------------------------------------------------------------------------
 
 ## Stylebox states of a Button that touch_pad() insets (LTR layouts; the *_mirrored states are only drawn for RTL).
 const BUTTON_STATES: PackedStringArray = ["normal", "hover", "pressed", "hover_pressed", "disabled", "focus"]
 const TOUCH_META: StringName = &"touch_visible_h"
 const MIN_FONT: int = 15                    # 03_ART §9.3: no UI text below 15 px
 
-static func label(text: String, variation: StringName = &"", font_size: int = 0, color: Color = Color(0, 0, 0, 0)) -> Label:
+static func label(text: String, variation: StringName = &"", font_size: int = 0,
+	color: Color = Color(0, 0, 0, 0)) -> Label:
 	var l: Label = Label.new()
 	l.text = text
 	if variation != &"":
@@ -405,7 +409,8 @@ static func fade_in(c: CanvasItem, dur: float = 0.18) -> void:
 	c.create_tween().tween_property(c, "modulate:a", 1.0, dur)
 
 
-# --- game data views (display only) ------------------------------------------------------------------------------------
+# --- game data views (display only)
+# ------------------------------------------------------------------------------------
 
 static func has_state() -> bool:
 	return Game.state != null
@@ -645,9 +650,11 @@ static func format_line(text: String, ctx: Dictionary = {}) -> String:
 	return glyph_safe(tr_text(text).format(full))
 
 
-# --- misc --------------------------------------------------------------------------------------------------------------
+# --- misc
+# --------------------------------------------------------------------------------------------------------------
 
-## True if the script source at `path` is still a Phase-A stub (first line "# STUB(M0)"). Missing source (export) → false.
+## True if the script source at `path` is still a Phase-A stub (first line "# STUB(M0)"). Missing source (export) →
+## false.
 ## Deferred grab_focus that tolerates the control being removed/freed before the deferred call runs (lists rebuilt in
 ## the same frame, dialogs closing) — a plain grab_focus.call_deferred() would log "!is_inside_tree()".
 static func focus_later(c: Control) -> void:

@@ -28,7 +28,9 @@ jobs:
           curl -fsSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
           unzip -q godot.zip && mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" godot && chmod +x godot
       - name: Import + tests + autoplay smoke
-        run: GODOT=~/godot/godot prime-time-dungeon/tools/check.sh
+        # one test process on a dedicated runner: the wall-clock budgets of the unit tests are asserted here only
+        # (TestCase.assert_time_budget); local parallel check.sh runs print them
+        run: PTD_PERF_ASSERTS=1 GODOT=~/godot/godot prime-time-dungeon/tools/check.sh
       - name: Full run Floor 1 (bot, thorough + rush + dawdle, ~1.5 min)
         run: GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --strategy=all --log-dir=fullrun-logs
       - uses: actions/upload-artifact@v4

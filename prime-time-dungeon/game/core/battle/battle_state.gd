@@ -435,17 +435,38 @@ func flee_chance() -> float:
 	return clampf(c, Balance.FLEE_MIN, Balance.FLEE_MAX)
 
 
-## clampf(minf(success_base + LCK × success_lck, success_cap) + (living boss enemy ? success_boss_mod : 0), 0.05, 1.0).
-func stunt_chance(actor: Combatant, skill: SkillDef) -> float:
+## GDD §3.6: clampf(success_base + LCK × success_lck + (target_is_boss ? success_boss_mod : 0), 0.05, success_cap).
+## target_is_boss: one of `target_ids` (the resolved targets; all-enemy stunts: any of them) is a living boss — a
+## single-target stunt on a summoned add in a boss fight gets no penalty. Without targets (HUD preview before the
+## target is chosen) every valid target counts, i.e. the boss value whenever a boss could be hit.
+func stunt_chance(actor: Combatant, skill: SkillDef, target_ids: PackedStringArray = PackedStringArray()) -> float:
 	if actor == null or skill == null:
 		return 0.0
-	var c: float = minf(skill.success_base + float(actor.stat(StatBlock.Stat.LCK)) * skill.success_lck, skill.success_cap)
-	var other: Combatant.Side = Combatant.Side.ENEMY if actor.is_party() else Combatant.Side.PARTY
-	for e: Combatant in living(other):
-		if e.is_boss:
+	var c: float = skill.success_base + float(actor.stat(StatBlock.Stat.LCK)) * skill.success_lck
+	var ids: PackedStringArray = target_ids if not target_ids.is_empty() else valid_targets(actor, skill.id)
+	for id: String in ids:
+		var t: Combatant = get_combatant(id)
+		if t != null and t.is_boss and t.is_alive() and t.side != actor.side:
 			c += skill.success_boss_mod
 			break
-	return clampf(c, Balance.STUNT_CHANCE_MIN, 1.0)
+	return clampf(c, Balance.STUNT_CHANCE_MIN, maxf(Balance.STUNT_CHANCE_MIN, skill.success_cap))
+
+
+## THE victory drop rule (GDD §3.12, the only implementation): each {item, chance} of a defeated enemy hits with
+## chance × (1 + Ø LCK / 100), Ø over `members` party members with LCK sum `lck_sum` — in basis points with integer
+## division: bp = bp(chance) × (100·n + ΣLCK) / (100·n); FixedMath.roll_bp draws once per entry (no draw at 0 % or
+## ≥ 100 %). Item ids in drop order.
+static func roll_drops(drops: Array, lck_sum: int, members: int, rng: RandomNumberGenerator) -> PackedStringArray:
+	var out: PackedStringArray = []
+	var den: int = FixedMath.pm(Balance.DROP_LCK_DIV) * maxi(1, members)
+	for v: Variant in drops:
+		if not (v is Dictionary):
+			continue
+		var drop: Dictionary = v
+		var bp: int = FixedMath.bp(float(drop.get("chance", 0.0))) * (den + maxi(0, lck_sum) * FixedMath.PM) / den
+		if FixedMath.roll_bp(rng, bp):
+			out.append(str(drop.get("item", "")))
+	return out
 
 
 ## A free enemy slot exists (max. 4 living enemies, slots 0..3).
@@ -710,11 +731,9 @@ func _build_result(outcome: BattleResult.Outcome) -> BattleResult:
 	if outcome == BattleResult.Outcome.VICTORY:
 		var exp_sum: int = 0
 		var lck_sum: int = 0
-		var alive: Array[Combatant] = living(Combatant.Side.PARTY)
-		for m: Combatant in alive:
+		var members: Array[Combatant] = party()      # GDD §3.12: Ø LCK over ALL members (KO'd ones too)
+		for m: Combatant in members:
 			lck_sum += m.stat(StatBlock.Stat.LCK)
-		# chance × (1 + Ø LCK / 100) = chance × (100·n + ΣLCK) / (100·n), in basis points with integer division.
-		var lck_den: int = FixedMath.pm(Balance.DROP_LCK_DIV) * maxi(1, alive.size())
 		for v: Variant in killed:
 			var c: Combatant = get_combatant(str(v))
 			if c == null or c.is_summon:
@@ -726,11 +745,7 @@ func _build_result(outcome: BattleResult.Outcome) -> BattleResult:
 				r.overkill_credits += bonus - cr
 				cr = bonus
 			r.credits += cr
-			for drop: Dictionary in c.drops:
-				var base_bp: int = FixedMath.bp(float(drop.get("chance", 0.0)))
-				var bp: int = base_bp * (lck_den + lck_sum * FixedMath.PM) / lck_den
-				if FixedMath.roll_bp(rng, bp):
-					r.drops.append(str(drop.get("item", "")))
+			r.drops.append_array(roll_drops(c.drops, lck_sum, members.size(), rng))
 			if c.is_boss:
 				for bd: Dictionary in c.boss_drops:
 					r.boss_rewards.append({"kind": str(bd.get("kind", "")), "id": str(bd.get("id", "")),
@@ -740,7 +755,9 @@ func _build_result(outcome: BattleResult.Outcome) -> BattleResult:
 	for k: Variant in thieves.keys():
 		var t: Dictionary = thieves[k]
 		var refunded: bool = outcome == BattleResult.Outcome.VICTORY and bool(t.get("refund", false)) and killed.has(str(k))
-		if not refunded:
+		if refunded:
+			r.credits_refunded += JsonUtil.to_int(t.get("amount", 0))
+		else:
 			r.credits_stolen += JsonUtil.to_int(t.get("amount", 0))
 	r.credits_delta = int(tally["credits_delta"])
 	r.item_delta = (tally["item_delta"] as Dictionary).duplicate(true)

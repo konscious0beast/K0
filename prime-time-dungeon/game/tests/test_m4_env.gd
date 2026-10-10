@@ -173,7 +173,7 @@ func test_build_room_all_masks_kinds_and_zones() -> void:
 							% [ctx, boxes[i], side])
 				room.free()
 	var avg_ms: float = float(Time.get_ticks_usec() - t0) / 1000.0 / float(built)
-	assert_lt(avg_ms, 30.0, "average room build time %.1f ms (floor budget 500 ms)" % avg_ms)
+	assert_time_budget(avg_ms, 30.0, "average room build time (floor budget 500 ms)")
 
 
 func test_floor_box_and_light_params() -> void:
@@ -328,7 +328,7 @@ func test_battle_arena() -> void:
 		var t0: int = Time.get_ticks_usec()
 		var arena: Node3D = EnvKit.build_battle_arena("metro", {}, is_boss, 3)
 		var ms: float = float(Time.get_ticks_usec() - t0) / 1000.0
-		assert_lt(ms, 300.0, "arena build time %.1f ms" % ms)
+		assert_time_budget(ms, 300.0, "arena build time")
 		add_to_tree(arena)
 		var tris: int = MeshUtil.tri_count_tree(arena)
 		assert_true(tris <= 8000, "arena %d tris > 8000" % tris)
@@ -358,7 +358,7 @@ func test_safe_room_all_themes() -> void:
 		var t0: int = Time.get_ticks_usec()
 		var room: Node3D = EnvKit.build_safe_room(4, &"high", theme)
 		var ms: float = float(Time.get_ticks_usec() - t0) / 1000.0
-		assert_lt(ms, 300.0, "%s build time %.1f ms" % [theme, ms])
+		assert_time_budget(ms, 300.0, "%s build time" % theme)
 		add_to_tree(room)
 		for pair: Array in [["vending_machine", &"vending"], ["save_terminal", &"terminal"], ["couch", &"couch"],
 				["safe_door", &"door"]]:

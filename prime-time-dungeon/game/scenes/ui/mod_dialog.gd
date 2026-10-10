@@ -43,7 +43,8 @@ const BOX_BOTTOM: float = 36.0
 const TAB_SIZE: Vector2 = Vector2(220, 28)
 const TAB_INSET: Vector2 = Vector2(18, 24)
 const SPEAKERS: Dictionary = {&"mod": "M.O.D.", &"mopsula": "Graf Mopsula", &"kai": ""}
-const MOOD_HYPE: PackedStringArray = ["achievement", "stunt_success", "kill_streak", "crit", "overkill", "boss_defeated",
+const MOOD_HYPE: PackedStringArray = ["achievement", "stunt_success", "kill_streak", "crit", "overkill",
+	"boss_defeated",
 	"level_up", "follower_milestone", "lootbox", "intro", "sponsor_gift"]
 const MOOD_DANGER: PackedStringArray = ["death", "low_hp", "timer", "kai_ko", "mopsula_ko", "boss_intro", "boss_phase",
 	"flee", "boring_fight", "stunt_fail"]

@@ -1,5 +1,6 @@
 extends CanvasLayer
-## DebugOverlay (02_TECH §1.6, layer 90; 05 §11.3): F3 (action debug_overlay, debug builds only) toggles FPS, draw calls,
+## DebugOverlay (02_TECH §1.6, layer 90; 05 §11.3): F3 (action debug_overlay, debug builds only) toggles FPS, draw
+## calls,
 ## primitives, seed, floor/room, timer, show values, Sponsor-Fenster, input scheme, router stack. "Test-Geschenk"
 ## (button / F4) simulates a viewer gift: Show.receive_gift(Gift.make_dev("chest", "bronze", 0, <new test viewer>)) —
 ## it respects the Sponsor-Fenster like every viewer gift (05 §6.13; refusal toast names the reason and the next
@@ -23,7 +24,8 @@ var _viewer_n: int = 0
 const REASON_TEXT: Dictionary = {"window_closed": "Sponsor-Fenster zu", "window_full": "Sponsor-Fenster voll",
 	"window_sender_limit": "Zuschauer-Limit im Fenster erreicht", "league_pur": "Pur-Liga – keine Geschenke",
 	"cap_reached": "Geschenk-Kontingent erreicht", "not_accepting": "Geschenke abgelehnt",
-	"chest_blocked": "Kisten gesperrt (Wirkung)", "run_not_active": "kein Lauf aktiv"}
+	"chest_blocked": "Kisten gesperrt (Wirkung)", "run_not_active": "kein Lauf aktiv",
+	"wrong_target": "falscher Lauf/Empfänger", "too_soon": "Mindestabstand (45 s) noch nicht um"}
 
 
 func _init() -> void:
@@ -114,7 +116,8 @@ func info_text() -> String:
 		RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME)
 	lines.append("Draw Calls %d  (3D %d · UI %d)" % [int(Performance.get_monitor(
 		Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)), d3, d2])
-	lines.append("Primitives %s" % UiUtil.fmt_int(int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME))))
+	var prims: int = int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME))
+	lines.append("Primitives %s" % UiUtil.fmt_int(prims))
 	lines.append("Objekte    %d" % int(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)))
 	lines.append("RAM        %.0f MB" % (Performance.get_monitor(Performance.MEMORY_STATIC) / 1048576.0))
 	if Game.state != null:

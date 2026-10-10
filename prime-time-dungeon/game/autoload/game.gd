@@ -10,11 +10,8 @@ extends Node
 ## "idle ticks" while the safe room scene is shown (safe_room_clock, is_idle_ticking) — the floor timer does not.
 
 enum InputScheme { KEYBOARD_MOUSE, GAMEPAD, TOUCH }
-const TICKS_PER_SEC: int = 30        # simulation clock (05 CR-3): 1 tick = 1/30 s explore time
-const EVENTS_PATH: String = "res://data/events.json"
-const KEY_MASTER: String = "itm_key_master"        # opens locked chests (§7.3)
-## External inputs carry cmd id 0; every other command gets a strictly increasing id from 1 (05 §10.6).
-const EXTERNAL_CMDS: PackedStringArray = ["gift", "twist"]
+const TICKS_PER_SEC: int = RunSim.TICKS_PER_SEC   # simulation clock (05 CR-3): 1 tick = 1/30 s explore time
+const EVENTS_PATH: String = RunSim.EVENTS_PATH
 ## Deterministic quest metrics (05 CR-13), read from ShowState.stats (Show updates them before the signal).
 const METRIC_VIEWERS: String = "viewers_target_peak"
 const METRIC_FOLLOWERS: String = "followers_gained_run"
@@ -23,7 +20,8 @@ const METRIC_HYPE_100: String = "hype_100_count"
 var state: GameState = null          # null until new_game()/Save.load_slot()
 var settings: GameSettings           # created in _init(); loaded from user://settings.cfg unless ephemeral
 var input_scheme: InputScheme = InputScheme.KEYBOARD_MOUSE
-var timer_running: bool = false      # "explore view active": true only via ExplorationScene; Router resets to false on goto/push
+# "explore view active": true only via ExplorationScene; Router resets to false on goto/push
+var timer_running: bool = false
 var autoplay: bool = false           # set by Boot from --autoplay
 var auto_battle: bool = false        # party uses AutoPolicy (toggle_auto / Settings / Autoplay)
 var fast_text: bool = false          # dialogs show instantly (Autoplay, text_speed=2)
@@ -47,6 +45,10 @@ var _blocking_dialogs: int = 0
 var _dialog_presenter: bool = false  # ModDialog registered (set_dialog_presenter); without it lines never block
 var _event_def: EventDef = null
 var _run_finished: bool = false
+var _floor_done: bool = false        # complete_floor ("descend") until the next start_floor: no external gifts
+# scene context of the current safe room visit (RunRules.command_refusal in replays)
+var _scene_ctx: Dictionary = {}
+var _replay_battle: BattleState = null
 var _quest_done: bool = false
 var _layout: FloorLayout = null      # cached layout of the current floor (floor events, chests, rooms)
 var _layout_key: String = ""
@@ -190,7 +192,8 @@ func new_game(slot: int, player_name: String = "Kai", seed: int = -1, difficulty
 
 
 ## M8: EventCatalog → EventDef.run_seed(); mode = &"event_offline"; slot 0 (never saved into campaign slots).
-func start_event_run(event_id: String) -> void:
+## p_league: the league the player plays in a multi-league event (05 §10.1); "" → the single league / "pur".
+func start_event_run(event_id: String, p_league: String = "") -> void:
 	var def: EventDef = _load_event_def(event_id)
 	if def == null:
 		push_warning("[Game] unknown event '%s'" % event_id)
@@ -205,11 +208,11 @@ func start_event_run(event_id: String) -> void:
 		mode = &"campaign"
 		return
 	quest = QuestTracker.from_def(def.quest)
-	run_log = _make_run_log(run_seed, 0, "Kai", &"prime", event_id)
+	var league: String = _run_league(def.rules, p_league)
+	run_log = _make_run_log(run_seed, 0, "Kai", &"prime", event_id, league)
 	sim = _make_sim(state, def.rules)
 	start_floor(maxi(1, def.floor_index))
-	var leagues: Array = def.rules.get("leagues", ["pur"])
-	Events.run_started.emit(event_id, str(leagues[0]) if not leagues.is_empty() else "pur")
+	Events.run_started.emit(event_id, league)
 
 
 ## Save.load_slot: the decoded save becomes the running campaign. The private run context (event def, finished flag,
@@ -223,6 +226,20 @@ func adopt_loaded_state(st: GameState, p_log: RunLog) -> void:
 		return
 	run_log = p_log
 	sim = _make_sim(state, {})
+
+
+## Show.receive_gift: a run is active and still takes external gifts — not after its floor was completed ("descend")
+## or the event run finished (05 §6.4 Fehlerpfad: the gift service refunds). Replays feed the recorded gifts anyway.
+func accepts_gifts() -> bool:
+	return state != null and not _run_finished and not _floor_done
+
+
+## The `extra` of GiftPolicy.refusal for Show: the run clock and the run identity (RunSim.gift_context of the live sim
+## — the same values RunSim.replay derives from the log header).
+func gift_context() -> Dictionary:
+	if sim == null:
+		return {}
+	return sim.gift_context()
 
 
 ## Rules of the running event run (EventDef.rules, 05 §10.1); {} in the campaign. Show passes them to GiftPolicy (§3.5).
@@ -255,11 +272,11 @@ func start_floor(floor_index: int) -> void:
 	if state == null:
 		push_warning("[Game] start_floor without state")
 		return
-	var def: FloorDef = DB.floor_def(floor_index)
-	if def == null:
+	if not RunRules.start_floor(state, DB.data, floor_index):
 		push_warning("[Game] start_floor: no floor %d" % floor_index)
 		return
-	state.floor_run = FloorRun.create(def, state.seed, state.difficulty)
+	_floor_done = false
+	_scene_ctx = {}
 	_acc = 0.0
 	_layout = null
 	_layout_key = ""
@@ -290,6 +307,7 @@ func complete_floor() -> void:
 		return
 	timer_running = false
 	record({"t": "descend"})
+	_floor_done = true
 	if sim != null:
 		sim.request_checkpoint()
 	Events.floor_completed.emit(state.floor_run.index)
@@ -333,8 +351,7 @@ func next_seed(purpose: String) -> int:
 	if state == null:
 		push_warning("[Game] next_seed('%s') without state" % purpose)
 		return SeedUtil.derive(1, purpose, 0)
-	state.rng_counter += 1
-	return SeedUtil.derive(state.seed, purpose, state.rng_counter)
+	return RunRules.next_seed(state, purpose)
 
 
 ## Records the encounter, builds the setup (next_seed("battle")) and sets in_battle (until apply_battle_result).
@@ -343,7 +360,8 @@ func make_battle_setup(encounter_id: String, advantage: int, group_id: String) -
 	if state == null:
 		push_warning("[Game] make_battle_setup without state")
 		return null
-	var setup: BattleSetup = BattleBridge.make_setup(state, DB.data, encounter_id, advantage, group_id, next_seed("battle"))
+	var setup: BattleSetup = BattleBridge.make_setup(state, DB.data, encounter_id, advantage, group_id,
+		next_seed("battle"))
 	if setup != null:
 		setup.auto_battle = auto_battle
 		in_battle = true
@@ -379,16 +397,13 @@ func open_lootbox(box_id: String) -> Array[LootReward]:
 	var rewards: Array[LootReward] = []
 	if state == null:
 		return rewards
-	var idx: int = state.pending_lootboxes.find(box_id)
-	if idx < 0 or not DB.has_id("lootboxes", box_id):
+	if not RunRules.lootbox_pending(state, DB.data, box_id):
 		push_warning("[Game] lootbox '%s' is not pending" % box_id)
 		return rewards
 	record({"t": "lootbox", "box": box_id})
-	state.pending_lootboxes.remove_at(idx)
-	var rng: RandomNumberGenerator = SeedUtil.make_rng(next_seed("lootbox"))
-	var floor_index: int = state.floor_run.index if state.floor_run != null else 1
-	rewards = LootRoller.roll_lootbox(DB.lootbox(box_id), DB.data, floor_index, state, rng)
-	add_rewards(rewards)
+	var credits_before: int = _credits()
+	rewards = RunRules.open_lootbox(state, DB.data, box_id)
+	_emit_inventory(credits_before)
 	Events.lootbox_opened.emit(box_id, rewards)
 	return rewards
 
@@ -398,9 +413,8 @@ func add_rewards(rewards: Array[LootReward]) -> void:
 	if state == null or state.inventory == null:
 		return
 	var credits_before: int = _credits()
-	_add_rewards_to(state, rewards)
-	Events.inventory_changed.emit()
-	Events.credits_changed.emit(_credits(), _credits() - credits_before)
+	state.inventory.add_rewards(DB.data, rewards)
+	_emit_inventory(credits_before)
 
 
 func buy(item_id: String, qty: int, safe_room_id: String) -> bool:
@@ -473,29 +487,18 @@ func apply_floor_event(event_id: String, choice: String) -> Dictionary:
 	if layout == null:
 		push_warning("[Game] apply_floor_event: no layout")
 		return {}
-	var k: int = -1
-	var ev: EventSpawn = null
-	for i in layout.events.size():
-		if layout.events[i] != null and layout.events[i].id == event_id:
-			k = i
-			ev = layout.events[i]
-			break
-	if ev == null:
+	if layout.event_by_id(event_id) == null:
 		push_warning("[Game] apply_floor_event: unknown event '%s'" % event_id)
 		return {}
 	var credits_before: int = _credits()
-	var uses: int = int(state.floor_run.event_uses.get(event_id, 0))
-	var rng: RandomNumberGenerator = SeedUtil.make_rng(SeedUtil.derive(state.floor_run.seed, "event", k * 16 + uses))
-	var outcome: Dictionary = FloorEvent.resolve(ev, choice, state, DB.data, rng)
-	FloorEvent.apply(outcome, ev, choice, state, DB.data)
+	var outcome: Dictionary = RunRules.apply_floor_event(state, DB.data, layout, event_id, choice)
 	var hype: float = float(outcome.get("hype", 0.0))
 	if hype != 0.0:
 		Show.add_hype(hype, &"event")
 	var followers: int = int(outcome.get("followers", 0))
 	if followers != 0:
 		Show.add_followers(followers, &"event")
-	for box: Variant in outcome.get("boxes", PackedStringArray()):
-		state.pending_lootboxes.append(str(box))
+	RunRules.add_event_boxes(state, outcome)
 	var mod_tag: String = str(outcome.get("mod_tag", ""))
 	if mod_tag != "":
 		Show.say(mod_tag)
@@ -517,12 +520,8 @@ func visit_room(cell: Vector2i) -> bool:
 	if fr.visited.has(cell):
 		return false
 	record({"t": "room", "cell": JsonUtil.vec2i_to_arr(cell)})
-	fr.visited.append(cell)
 	var layout: FloorLayout = _current_layout()
-	if layout != null:
-		var rc: RoomCell = layout.cell_at(cell)
-		if rc != null and rc.kind == RoomCell.Kind.STAIRS:
-			fr.stairs_found = true
+	RunRules.visit_room(state, layout, cell)
 	_quest_feed(RunSim.zones_event(fr, layout))   # reach_stairs progress before the stairs (05 §1.3, same as RunSim)
 	if sim != null:
 		_dispatch(sim.sponsor_room(cell))         # boss room → Boss-Countdown (05 §6.13)
@@ -530,34 +529,19 @@ func visit_room(cell: Vector2i) -> bool:
 
 
 ## §7.3 chest flow without visuals: locked without itm_key_master / unknown / already open → [] (nothing changes);
-## else record, LootRoller.roll_chest (rng derive(floor_run.loot_seed, "chest", k) — 05 CR-11: the layout seed is
-## public, the loot seed is not), add_rewards, opened_chests, Events.chest_opened(id, rewards).
+## else record, RunRules.open_chest (rng derive(floor_run.loot_seed, "chest", k) — 05 CR-11: the layout seed is
+## public, the loot seed is not; rewards → inventory; opened_chests), Events.chest_opened(id, rewards).
 func open_chest(chest_id: String) -> Array[LootReward]:
 	var rewards: Array[LootReward] = []
 	if state == null or state.floor_run == null:
 		return rewards
-	var fr: FloorRun = state.floor_run
-	if fr.opened_chests.has(chest_id):
-		return rewards
-	var layout: FloorLayout = _current_layout()
-	var chest: ChestSpawn = null
-	if layout != null:
-		for ch: ChestSpawn in layout.chests:
-			if ch != null and ch.id == chest_id:
-				chest = ch
-				break
+	var chest: ChestSpawn = RunRules.openable_chest(state, _current_layout(), chest_id)
 	if chest == null:
-		push_warning("[Game] open_chest: unknown chest '%s'" % chest_id)
-		return rewards
-	if chest.type == "locked" and (state.inventory == null or not state.inventory.has(KEY_MASTER)):
 		return rewards
 	record({"t": "chest", "id": chest_id})
-	var k: int = chest_id.get_slice("_c", 1).to_int()
-	var rng: RandomNumberGenerator = SeedUtil.make_rng(SeedUtil.derive(fr.loot_seed, "chest", k))
-	var spec: Dictionary = {"id": chest.id, "type": chest.type, "contents": chest.contents}
-	rewards = LootRoller.roll_chest(spec, DB.data, fr.index, state, rng)
-	add_rewards(rewards)
-	fr.opened_chests.append(chest_id)
+	var credits_before: int = _credits()
+	rewards = RunRules.open_chest(state, DB.data, chest)
+	_emit_inventory(credits_before)
 	Events.chest_opened.emit(chest_id, rewards)
 	return rewards
 
@@ -567,7 +551,7 @@ func open_gate(key: String) -> void:
 	if state == null or state.floor_run == null or state.floor_run.opened_gates.has(key):
 		return
 	record({"t": "gate", "key": key})
-	state.floor_run.opened_gates.append(key)
+	RunRules.open_gate(state, key)
 
 
 ## record({"t": "safe_room", "id"}); location = id; safe_room_visits += 1; first visit bookkeeping; full heal
@@ -576,18 +560,12 @@ func enter_safe_room(safe_room_id: String) -> Dictionary:
 	if state == null or state.floor_run == null:
 		return {"safe_room_id": safe_room_id, "first_visit": false, "safe_room_visits": 0, "kai_level": 1}
 	record({"t": "safe_room", "id": safe_room_id})
-	var fr: FloorRun = state.floor_run
-	fr.location = StringName(safe_room_id)
-	fr.safe_room_visits += 1
-	var first_visit: bool = not fr.visited_safe_rooms.has(safe_room_id)
-	if first_visit:
-		fr.visited_safe_rooms.append(safe_room_id)
-	_full_heal()
+	var ctx: Dictionary = RunRules.enter_safe_room(state, DB.data, safe_room_id)
+	_scene_ctx = ctx.duplicate()
+	Events.party_changed.emit()
 	if sim != null:
 		_dispatch(sim.sponsor_safe_room(safe_room_id))
-	var kai: PartyMember = state.member("kai")
-	return {"safe_room_id": safe_room_id, "first_visit": first_visit, "safe_room_visits": fr.safe_room_visits,
-		"kai_level": kai.level if kai != null else 1}
+	return ctx
 
 
 ## Back in the exploration (M3 on_resume from a safe room): location = &"start"; record({"t": "safe_room_exit"}).
@@ -595,7 +573,8 @@ func leave_safe_room() -> void:
 	if state == null or state.floor_run == null:
 		return
 	record({"t": "safe_room_exit"})
-	state.floor_run.location = &"start"
+	RunRules.leave_safe_room(state)
+	_scene_ctx = {}
 	if sim != null:
 		_dispatch(sim.sponsor_safe_room_exit())
 
@@ -623,11 +602,8 @@ func sponsor_window() -> Dictionary:
 func next_scene(ctx: Dictionary) -> SceneDef:
 	if state == null:
 		return null
-	var stats: Dictionary = state.show.stats if state.show != null else {}
 	for sc: SceneDef in DB.data.all_scenes():
-		if sc.once and bool(get_flag("scene_" + sc.id, false)):
-			continue
-		if sc.expr != null and sc.expr.eval(ctx, stats, state.flags):
+		if RunRules.scene_allowed(state, sc, ctx):
 			return sc
 	return null
 
@@ -637,24 +613,27 @@ func mark_scene_seen(scene: SceneDef) -> void:
 	if scene == null or state == null:
 		return
 	record({"t": "scene", "id": scene.id})
-	state.flags["scene_" + scene.id] = true
-	if scene.set_flag != "":
-		state.flags[scene.set_flag] = true
+	RunRules.mark_scene_seen(state, scene)
 
 
-## Only &"prime" → &"vorabend" (never up); remaining timer ticks × 1.5; record({"t": "difficulty", "to"}).
+## Only &"prime" → &"vorabend" (never up), campaign only (event runs play the event's difficulty, 05 §10.1 —
+## RunSim refuses the command there too); record({"t": "difficulty", "to"}). Damage/EXP apply from the next battle,
+## the timer factor ×1.5 from the next floor start (FloorRun.create, GDD §2.9) — the running floor timer is unchanged.
 func set_difficulty(d: StringName) -> bool:
-	if state == null or state.difficulty != &"prime" or d != &"vorabend":
+	if not can_lower_difficulty() or d != &"vorabend":
 		return false
 	record({"t": "difficulty", "to": String(d)})
-	state.difficulty = d
-	if state.floor_run != null:
-		state.floor_run.time_left_ticks = roundi(state.floor_run.time_left_ticks * Balance.EASY_TIMER_MULT)
+	RunRules.lower_difficulty(state, d)
 	return true
 
 
+## The settings menu offers lowering the mode only where set_difficulty would accept it.
+func can_lower_difficulty() -> bool:
+	return state != null and mode == &"campaign" and state.difficulty == &"prime"
+
+
 ## run_log.add_cmd(sim.tick(), cmd, cmd_id); no-op if run_log == null or while replaying.
-## cmd_id: 0 for external inputs (EXTERNAL_CMDS), else strictly increasing from 1 per run log (05 §10.6).
+## cmd_id: 0 for external inputs (Command.EXTERNAL), else strictly increasing from 1 per run log (05 §10.6).
 func record(cmd: Dictionary) -> void:
 	if run_log == null or replaying:
 		return
@@ -662,15 +641,19 @@ func record(cmd: Dictionary) -> void:
 		_cmd_log = run_log
 		_cmd_id = 0
 	var cmd_id: int = 0
-	if not EXTERNAL_CMDS.has(str(cmd.get("t", ""))):
+	if not Command.is_external(cmd):
 		_cmd_id += 1
 		cmd_id = _cmd_id
 	run_log.add_cmd(sim.tick() if sim != null else 0, cmd, cmd_id)
 
 
-## Recorded ({"t": "flag", "key", "value"}); value bool/int/String (JSON-safe).
+## Recorded ({"t": "flag", "key", "value"}); value bool/int/String (JSON-safe). Only player flags (Command.FLAG_KEYS:
+## the intro) — every other flag is a core reaction and never a recorded write.
 func set_flag(key: String, value: Variant) -> void:
 	if state == null:
+		return
+	if not Command.FLAG_KEYS.has(key):
+		push_warning("[Game] set_flag: '%s' is not a player flag" % key)
 		return
 	record({"t": "flag", "key": key, "value": value})
 	state.flags[key] = value
@@ -722,7 +705,8 @@ func apply_settings() -> void:
 			root.msaa_3d = Viewport.MSAA_2X
 		if not mobile and DisplayServer.get_name() != "headless":
 			var cur: DisplayServer.WindowMode = DisplayServer.window_get_mode()
-			var is_fs: bool = cur == DisplayServer.WINDOW_MODE_FULLSCREEN or cur == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN
+			var is_fs: bool = cur == DisplayServer.WINDOW_MODE_FULLSCREEN \
+				or cur == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN
 			if is_fs != settings.fullscreen:
 				DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if settings.fullscreen \
 					else DisplayServer.WINDOW_MODE_WINDOWED)
@@ -761,72 +745,99 @@ func finish_run(cause: StringName) -> Dictionary:
 	var board: Leaderboard = Leaderboard.from_dict(Save.load_leaderboard(event_id))
 	if board == null:
 		board = Leaderboard.new()
-	var entry: Dictionary = {
-		"schema": 1, "event_id": event_id, "window_id": "", "league": "pur", "mode": "solo",
-		"run_id": str(run_log.header.get("run_id", "")) if run_log != null else "",
-		"players": [{"player_id": "local", "display_name": state.player_name, "role": "kai"}],
-		"score": summary["score"], "breakdown": summary["breakdown"], "quest_complete": summary["quest_complete"],
-		"floor_timer_left_sec": int(time_left()), "run_wall_ms": 0, "flags": [], "verified": "local",
-		"finished_at": Time.get_datetime_string_from_system(true) + "Z",
-	}
-	summary["rank"] = board.add(entry)
-	Save.save_leaderboard(event_id, board.to_dict())
 	if sim != null:
 		# final checkpoint + run_log.result {"cause", "final_hash", "ticks", "score"} (05 §10.6)
 		summary["final_hash"] = sim.close(String(cause), {"score": summary["score"]})
+	var header: Dictionary = run_log.header if run_log != null else {}
+	# 05 §10.4 schema (S0 local: league "pur", verified "local"); replay_id + run_log_hash tie the entry to its replay
+	# file (user://replays/<run_id>.json) so a later uploader/verifier can check it. Local boards and replays are plain,
+	# editable JSON — never uploaded, never trusted (05 §10.4).
+	var entry: Dictionary = {
+		"schema": 1, "event_id": event_id, "window_id": str(header.get("window_id", "")),
+		"league": str(header.get("league", "pur")), "mode": "solo", "run_id": str(header.get("run_id", "")),
+		"players": [{"player_id": "local", "display_name": state.player_name, "role": "kai"}],
+		"score": summary["score"], "breakdown": summary["breakdown"], "quest_complete": summary["quest_complete"],
+		"floor_timer_left_sec": int(time_left()), "run_wall_ms": 0, "flags": [],
+		"difficulty": String(state.difficulty), "replay_id": str(header.get("run_id", "")),
+		"run_log_hash": run_log.digest() if run_log != null else "", "data_hash": DB.data_hash(),
+		"sim_version": RunSim.SIM_VERSION, "client_version": str(header.get("game_version", "")),
+		"verified": "local", "finished_at": Time.get_datetime_string_from_system(true) + "Z",
+	}
+	summary["rank"] = board.add(entry)
+	summary["entry"] = entry.duplicate(true)
+	Save.save_leaderboard(event_id, board.to_dict())
 	if run_log != null:
 		Save.save_replay(run_log)
 	Events.run_finished.emit(summary)
 	return summary
 
 
-## M8: replays a RunLog against a fresh GameState by driving the SAME Game/Show methods as the live run (record() is a
-## no-op meanwhile, no Router/Save calls): RNG consumption (next_seed "battle"/"show"/"lootbox"/"gift"), Show reactions
-## (hype, followers, milestones, achievements), safe-room bookkeeping and event rules (header.event_id → EventDef.rules)
-## are identical by construction. Battles follow §5.7 (BattleState + Show.begin_battle/on_battle_event/
-## take_pending_gift/end_battle). The live context (state, log, sim, quest, …) is restored afterwards.
-## Not during a battle (Show's battle state would be overwritten). Checkpoint k = state after all commands with k' <= k.
-## Returns {"final_hash": String, "result": Dictionary, "mismatch_at": int (first failing checkpoint index, -1 = none)}.
-## until_tick >= 0: the clock steps on to that tick after the last command (the live sim.tick() — idle ticks in a safe
-## room move the clock without a command).
+## M8 — THE verifier of complete live runs (05 §11.4): replays a RunLog against a fresh GameState by driving the SAME
+## Game/Show methods as the live run (record() is a no-op meanwhile, no Router/Save calls): RNG consumption (next_seed
+## "battle"/"show"/"lootbox"/"gift"), Show reactions (hype, followers, milestones, achievements, sponsor gifts),
+## safe-room bookkeeping and event rules (header.event_id → EventDef.rules) are identical by construction. Battles
+## follow §5.7 (BattleState + Show.begin_battle/on_battle_event/take_pending_gift/end_battle). The live context
+## (state, log, sim, quest, …) is restored afterwards. Not during a battle (Show's battle state would be overwritten).
+## Checkpoint k = state after all commands with k' <= k; the walk is RunLog.walk (shared with RunSim.replay).
+## Same "errors" contract as RunSim.replay — a verifier needs errors == []: log schema / id problems (RunLog.validate),
+## entries the RunLog rejected, a log from a save, an unknown event (abort: no replay without its rules), header ≠ event
+## (RunSim.header_errors: fixed seed, difficulty, league), commands the rules refuse (RunRules.command_refusal, QA
+## windows not allowed, battle commands without a battle) — they are skipped — and every gift Show refuses
+## (gift_rejected: duplicates, caps, wrong target, run over …).
+## Returns {"final_hash": String, "result": Dictionary, "mismatch_at": int (first failing checkpoint index, -1 = none),
+## "errors": PackedStringArray}. until_tick >= 0: the clock steps on to that tick after the last command (the live
+## sim.tick() — idle ticks in a safe room move the clock without a command).
 func replay_log(p_log: RunLog, until_tick: int = -1) -> Dictionary:
-	var out: Dictionary = {"final_hash": "", "result": {}, "mismatch_at": -1}
+	var out: Dictionary = {"final_hash": "", "result": {}, "mismatch_at": -1, "errors": PackedStringArray()}
 	if p_log == null:
 		return out
+	var errors: PackedStringArray = p_log.validate()
+	out["errors"] = errors
 	if replaying or in_battle:
-		push_warning("[Game] replay_log is not possible during a replay or a battle")
+		errors.append("replay_log is not possible during a replay or a battle")
 		return out
+	if p_log.rejected > 0:
+		errors.append("log: %d entries rejected (out of tick order, duplicate / invalid cmd ids, malformed)"
+			% p_log.rejected)
 	var header: Dictionary = p_log.header
 	if bool(header.get("from_save", false)):
-		push_warning("[Game] replay_log: log starts at a loaded save (not replayable from create_new)")
+		errors.append("header: log starts at a loaded save (not replayable from create_new)")
 		return out
+	var event_id: String = str(header.get("event_id", ""))
+	var def: EventDef = null
+	if event_id != "":
+		def = _load_event_def(event_id)
+		if def == null:
+			errors.append("header: event '%s' not found in %s (no replay without its rules)" % [event_id, EVENTS_PATH])
+			return out
+		errors.append_array(RunSim.header_errors(header, def, def.rules))
 	var run_seed: int = int(header.get("seed", header.get("run_seed", 1)))
 	var difficulty: StringName = StringName(str(header.get("difficulty", "prime")))
-	var event_id: String = str(header.get("event_id", ""))
 	var saved: Dictionary = _capture_context()
 	replaying = true
 	_reset_run()
 	var rules: Dictionary = {}
 	mode = &"campaign"
-	if event_id != "":
+	if def != null:
 		mode = &"event_offline"
-		_event_def = _load_event_def(event_id)
-		if _event_def != null:
-			rules = _event_def.rules
-			quest = QuestTracker.from_def(_event_def.quest)
-		else:
-			push_warning("[Game] replay_log: unknown event '%s' (rules missing)" % event_id)
+		_event_def = def
+		rules = def.rules
+		quest = QuestTracker.from_def(def.quest)
+	var on_rejected: Callable = func(gift_id: String, reason: String) -> void:
+		errors.append("gift '%s' refused (%s)" % [gift_id, reason])
+	Events.gift_rejected.connect(on_rejected)
 	state = GameState.create_new(DB.data, int(header.get("slot", 0)), str(header.get("player_name", "Kai")), run_seed,
 		difficulty)
 	if state != null:
-		sim = RunSim.new(DB.data, state, rules)
-		_replay_commands(p_log, out)
+		sim = RunSim.new(DB.data, state, rules, RunSim.identity_of(header))
+		_replay_commands(p_log, out, errors)
 		if until_tick >= 0:
 			_replay_advance(until_tick)
 		out["final_hash"] = StateHash.of(state)
-		out["result"] = {"ticks": sim.tick(), "cmds": p_log.cmds().size(), "floor": _replay_floor(state),
+		out["result"] = {"ticks": sim.tick(), "cmds": p_log.size(), "floor": _replay_floor(state),
 			"quest_complete": quest.is_complete() if quest != null else false,
 			"quest_progress": quest.progress() if quest != null else 0.0}
+	Events.gift_rejected.disconnect(on_rejected)
 	_restore_context(saved)
 	replaying = false
 	if state != null:
@@ -848,6 +859,9 @@ func _reset_run() -> void:
 	_blocking_dialogs = 0
 	_event_def = null
 	_run_finished = false
+	_floor_done = false
+	_scene_ctx = {}
+	_replay_battle = null
 	_quest_done = false
 	_layout = null
 	_layout_key = ""
@@ -859,7 +873,10 @@ func _reset_run() -> void:
 	sim = null
 
 
-func _make_run_log(run_seed: int, slot: int, player_name: String, difficulty: StringName, event_id: String) -> RunLog:
+## Header of a new run log (05 §10.6): run identity (run_id unique per attempt, player_id "local", event_id,
+## window_id "" offline, league) + seed, slot, name, mode, difficulty, versions.
+func _make_run_log(run_seed: int, slot: int, player_name: String, difficulty: StringName, event_id: String,
+		league: String = "") -> RunLog:
 	var rl: RunLog = RunLog.new()
 	rl.header = {
 		"schema": 1,
@@ -870,17 +887,32 @@ func _make_run_log(run_seed: int, slot: int, player_name: String, difficulty: St
 		"difficulty": String(difficulty),
 		"game_version": str(ProjectSettings.get_setting("application/config/version", "")),
 		"sim_hz": TICKS_PER_SEC,
+		"sim_version": RunSim.SIM_VERSION,
 		"event_id": event_id,
-		"run_id": "run_local_%d" % run_seed,
+		"run_id": RunLog.local_run_id(run_seed),
+		"player_id": "local",
+		"window_id": "",
+		"league": league,
 	}
 	return rl
 
 
-## The live clock: RunSim over `st` that writes its checkpoints into the current run_log (every 300 ticks, after
-## battles / floor ends via request_checkpoint, close() at finish_run; 05 §3.3 Nr. 8). Replays build their own sim
-## without a log.
+## The run's league (05 §10.1): `wanted` if it is one of rules.leagues, else the single league, else "pur" (S0 local
+## runs are Pur-Liga, 05 §10.4).
+static func _run_league(rules: Dictionary, wanted: String) -> String:
+	var leagues: Variant = rules.get("leagues", ["pur"])
+	if leagues is Array and (leagues as Array).has(wanted):
+		return wanted
+	if leagues is Array and (leagues as Array).has("pur"):
+		return "pur"
+	return str((leagues as Array)[0]) if leagues is Array and not (leagues as Array).is_empty() else "pur"
+
+
+## The live clock: RunSim over `st` with the run identity of the run log header that writes its checkpoints into the
+## current run_log (every 300 ticks, after battles / floor ends via request_checkpoint, close() at finish_run; 05 §3.3
+## Nr. 8). Replays build their own sim without a log.
 func _make_sim(st: GameState, rules: Dictionary) -> RunSim:
-	var s: RunSim = RunSim.new(DB.data, st, rules)
+	var s: RunSim = RunSim.new(DB.data, st, rules, RunSim.identity_of(run_log.header if run_log != null else {}))
 	s.run_log = run_log
 	return s
 
@@ -903,20 +935,10 @@ func _full_heal() -> void:
 	Events.party_changed.emit()
 
 
-func _add_rewards_to(st: GameState, rewards: Array[LootReward]) -> void:
-	if st == null or st.inventory == null:
-		return
-	for r: LootReward in rewards:
-		if r == null:
-			continue
-		if r.kind == "credits":
-			st.inventory.add_credits(r.amount)
-		elif r.kind == "item" and DB.has_id("items", r.id):
-			var def: ItemDef = DB.item(r.id)
-			var added: int = st.inventory.add(r.id, r.amount, def.max_stack)
-			var overflow: int = r.amount - added
-			if overflow > 0:
-				st.inventory.add_credits(overflow * Shop.sell_value(DB.data, r.id))
+## inventory_changed + credits_changed(credits, delta since `credits_before`).
+func _emit_inventory(credits_before: int) -> void:
+	Events.inventory_changed.emit()
+	Events.credits_changed.emit(_credits(), _credits() - credits_before)
 
 
 func _current_layout() -> FloorLayout:
@@ -1030,11 +1052,14 @@ func _quest_metric(metric: String) -> void:
 	_quest_feed({"type": "metric", "name": metric, "value": value})
 
 
-# --- replay helpers ----------------------------------------------------------------------------------------------------
+# --- replay helpers
+# ----------------------------------------------------------------------------------------------------
 
 func _capture_context() -> Dictionary:
 	return {"state": state, "run_log": run_log, "sim": sim, "quest": quest, "mode": mode, "event_def": _event_def,
-		"run_finished": _run_finished, "quest_done": _quest_done, "layout": _layout, "layout_key": _layout_key,
+		"run_finished": _run_finished, "floor_done": _floor_done, "scene_ctx": _scene_ctx, "quest_done": _quest_done,
+		"layout": _layout,
+		"layout_key": _layout_key,
 		"acc": _acc, "blocking": _blocking_dialogs, "timer_running": timer_running, "in_battle": in_battle,
 		"safe_room_clock": safe_room_clock,
 		"cmd_id": _cmd_id, "cmd_log": _cmd_log, "metric_fed": _metric_fed}
@@ -1048,6 +1073,8 @@ func _restore_context(saved: Dictionary) -> void:
 	mode = saved["mode"]
 	_event_def = saved["event_def"] as EventDef
 	_run_finished = bool(saved["run_finished"])
+	_floor_done = bool(saved["floor_done"])
+	_scene_ctx = saved["scene_ctx"]
 	_quest_done = bool(saved["quest_done"])
 	_layout = saved["layout"] as FloorLayout
 	_layout_key = str(saved["layout_key"])
@@ -1065,42 +1092,53 @@ func _replay_floor(st: GameState) -> int:
 	return st.floor_run.index if st != null and st.floor_run != null else 1
 
 
-func _replay_commands(p_log: RunLog, out: Dictionary) -> void:
-	var checkpoints: Array = p_log.to_dict().get("checkpoints", [])
+func _replay_commands(p_log: RunLog, out: Dictionary, errors: PackedStringArray) -> void:
 	var cmds: Array[Dictionary] = p_log.cmds()
-	var cp: int = 0
-	var battle: BattleState = null
-	var i: int = 0
-	while i < cmds.size():
-		var entry: Dictionary = cmds[i]
-		var k: int = int(entry.get("k", 0))
-		var c: Dictionary = entry.get("c", {})
-		while cp < checkpoints.size() and int((checkpoints[cp] as Dictionary).get("k", 0)) < k:
-			cp = _replay_checkpoint(checkpoints, cp, out)
+	_replay_battle = null
+	var advance: Callable = func(k: int) -> void:
 		_replay_advance(k)
-		i += 1
-		match str(c.get("t", "")):
-			"encounter":
-				battle = _replay_begin_battle(c)
-				if battle != null:
-					i = _replay_play(battle, battle.start(), cmds, i)
-					if battle.is_finished():
-						_replay_end_battle(battle)
-						battle = null
-			"battle":
-				if battle == null or battle.is_finished():
-					push_warning("[Game] replay: battle command without an active battle (cmd %d)" % (i - 1))
+	var apply_cmd: Callable = func(i: int, c: Dictionary) -> int:
+		return _replay_cmd(cmds, i, c, errors)
+	var on_checkpoint: Callable = func(cp: int, k: int, want: String) -> void:
+		_replay_advance(k)
+		if int(out["mismatch_at"]) < 0 and want != "" and StateHash.of(state) != want:
+			out["mismatch_at"] = cp
+	p_log.walk(advance, apply_cmd, on_checkpoint)
+	_replay_battle = null
+
+
+## One command of the walk (index i) → the index of the next one (a battle replay consumes the gift commands recorded
+## at its turn boundaries).
+func _replay_cmd(cmds: Array[Dictionary], i: int, c: Dictionary, errors: PackedStringArray) -> int:
+	var next: int = i + 1
+	match str(c.get("t", "")):
+		"encounter":
+			_replay_battle = _replay_begin_battle(c)
+			if _replay_battle != null:
+				next = _replay_play(_replay_battle, _replay_battle.start(), cmds, next)
+				if _replay_battle.is_finished():
+					_replay_end_battle(_replay_battle)
+					_replay_battle = null
+		"battle":
+			if _replay_battle == null or _replay_battle.is_finished():
+				errors.append("cmd %d: battle command without an active battle" % i)
+			else:
+				var bc: BattleCommand = BattleCommand.from_dict(c.get("cmd", {}))
+				var why: String = _replay_battle.validate(bc) if bc != null else "malformed battle command"
+				if why != "":
+					errors.append("cmd %d: battle command refused (%s)" % [i, why])
 				else:
-					var bc: BattleCommand = BattleCommand.from_dict(c.get("cmd", {}))
-					if bc != null:
-						i = _replay_play(battle, battle.submit(bc), cmds, i)
-					if battle.is_finished():
-						_replay_end_battle(battle)
-						battle = null
-			_:
-				_replay_apply(c)
-	while cp < checkpoints.size():
-		cp = _replay_checkpoint(checkpoints, cp, out)
+					next = _replay_play(_replay_battle, _replay_battle.submit(bc), cmds, next)
+				if _replay_battle.is_finished():
+					_replay_end_battle(_replay_battle)
+					_replay_battle = null
+		_:
+			var refusal: String = RunRules.command_refusal(state, DB.data, sim.rules, c, _floor_done, _scene_ctx)
+			if refusal != "":
+				errors.append("cmd %d (%s): refused by the rules (%s)" % [i, str(c.get("t", "")), refusal])
+			elif not _replay_apply(c):
+				errors.append("cmd %d (%s): not applicable" % [i, str(c.get("t", ""))])
+	return next
 
 
 ## Steps the clock tick by tick to `k` with the live dispatch (stops if the clock stops: expired timer / stub).
@@ -1110,14 +1148,6 @@ func _replay_advance(k: int) -> void:
 		_dispatch(sim.step(1))
 		if sim.tick() == before:
 			break
-
-
-func _replay_checkpoint(checkpoints: Array, cp: int, out: Dictionary) -> int:
-	var want: String = str((checkpoints[cp] as Dictionary).get("h", ""))
-	_replay_advance(int((checkpoints[cp] as Dictionary).get("k", 0)))
-	if int(out["mismatch_at"]) < 0 and want != "" and StateHash.of(state) != want:
-		out["mismatch_at"] = cp
-	return cp + 1
 
 
 ## §5.7 BattleController.run: setup (next_seed "battle"), BattleState, Show.begin_battle (next_seed "show"),
@@ -1167,8 +1197,9 @@ func _replay_end_battle(battle: BattleState) -> void:
 		on_game_over(&"defeat")
 
 
-## Non-battle commands → the same Game/Show method the live run used.
-func _replay_apply(c: Dictionary) -> void:
+## Non-battle commands → the same Game/Show method the live run used. false = not applicable (a QA Sponsor-Fenster the
+## rules do not allow, an unknown type); gifts Show refuses are reported through gift_rejected.
+func _replay_apply(c: Dictionary) -> bool:
 	match str(c.get("t", "")):
 		"floor":
 			start_floor(int(c.get("floor", 1)))
@@ -1197,20 +1228,21 @@ func _replay_apply(c: Dictionary) -> void:
 		"safe_room_exit":
 			leave_safe_room()
 		"scene":
-			var scene_id: String = str(c.get("id", ""))
-			if DB.has_id("scenes", scene_id):
-				mark_scene_seen(DB.scene_def(scene_id))
+			mark_scene_seen(DB.scene_def(str(c.get("id", ""))))
 		"flag":
 			set_flag(str(c.get("key", "")), c.get("value", null))
 		"difficulty":
 			set_difficulty(StringName(str(c.get("to", ""))))
 		"descend":
 			timer_running = false
+			_floor_done = true
 			if state.floor_run != null:
 				Events.floor_completed.emit(state.floor_run.index)
 		"gift":
 			Show.receive_gift(c.get("gift", {}))
 		"sponsor_window":
-			open_dev_sponsor_window(int(c.get("sec", 0)), int(c.get("slots", 0)))
+			return open_dev_sponsor_window(int(c.get("sec", 0)), int(c.get("slots", 0)))
 		_:
 			push_warning("[Game] replay: unknown command '%s'" % str(c.get("t", "")))
+			return false
+	return true

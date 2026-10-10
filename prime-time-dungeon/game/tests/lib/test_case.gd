@@ -104,6 +104,16 @@ func assert_len(container: Variant, n: int, msg: String = "") -> void:
 		_fail_with("expected length %d, got %d" % [n, size], msg)
 
 
+## Wall-clock budget (quality-14): asserts `ms < budget_ms` only with PTD_PERF_ASSERTS=1 (the CI check job, one process
+## on a dedicated runner); otherwise the timing is printed, never asserted — check.sh runs in parallel copies and must
+## not fail on host load. Real performance budgets live in tools/perf.sh / docs/PERFORMANCE.md.
+func assert_time_budget(ms: float, budget_ms: float, msg: String = "") -> void:
+	if OS.get_environment("PTD_PERF_ASSERTS") == "1":
+		assert_lt(ms, budget_ms, msg)
+	else:
+		print("[TIMING] %s: %.1f ms (budget %.1f ms, asserted only with PTD_PERF_ASSERTS=1)" % [msg, ms, budget_ms])
+
+
 func fail(msg: String) -> void:
 	if _skipped != "":
 		return

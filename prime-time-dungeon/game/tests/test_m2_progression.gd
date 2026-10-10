@@ -362,6 +362,7 @@ func test_bridge_apply_victory() -> void:
 	r.credits = 25
 	r.overkill_credits = 5
 	r.credits_stolen = 10
+	r.credits_refunded = 6
 	r.credits_delta = 7
 	r.drops = PackedStringArray(["itm_bandage"])
 	r.boss_rewards = [{"kind": "item", "id": "itm_key_master", "amount": 1}, {"kind": "box", "id": "box_silver",
@@ -379,8 +380,9 @@ func test_bridge_apply_victory() -> void:
 	assert_eq(kai.hp, 39, "30 + level-up delta 9")
 	assert_eq(rw.mp_regen, {"kai": 3}, "Werbepause: ceili(14 × 0.15) for the living only")
 	assert_eq([kai.mp, mop.mp], [10, 10], "5 + 2 (level) + 3 (regen); KO'd member gets no regen")
-	assert_eq([rw.exp, rw.credits, rw.overkill_credits, rw.credits_refunded, rw.credits_lost], [40, 25, 5, 10, 0])
-	assert_eq(st.inventory.credits, 50 + 7 + 25, "gift credits + battle credits; stolen credits refunded")
+	assert_eq([rw.exp, rw.credits, rw.overkill_credits, rw.credits_refunded, rw.credits_lost], [40, 25, 5, 6, 10])
+	assert_eq(st.inventory.credits, 50 + 7 - 10 + 25,
+		"gift credits − credits a thief kept (GDD §3.11: also on a victory) + battle credits; refunds never left")
 	assert_eq([st.inventory.count("itm_bandage"), st.inventory.count("itm_salts"), st.inventory.count("itm_key_master")],
 		[3, 2, 1])
 	assert_eq(rw.items, ["itm_bandage", "itm_key_master"])
@@ -433,3 +435,53 @@ func test_bridge_apply_boss_flee_and_defeat() -> void:
 	assert_eq([st.member("kai").hp, st.member("mopsula").hp], [0, 0], "defeat: no revive")
 	assert_eq(rd.revived, [])
 	assert_not_null(BattleBridge.apply_result(null, d, lost))
+
+
+## core-logic-1 (GDD §3.11 "flieht er, sind sie weg"): the rare Fahrscheinfresser fines the party, escapes and the
+## battle
+## ends in VICTORY — the 40 credits are gone, and nothing is reported as refunded.
+func test_bridge_escaped_thief_victory_keeps_the_credits() -> void:
+	var d: GameData = real_data()
+	var st: GameState = GameState.create_new(d, 1, "Kai", 4242)
+	st.floor_run = FloorRun.create(d.floor_def(1), st.seed, st.difficulty)
+	st.inventory.credits = 200
+	var setup: BattleSetup = BattleBridge.make_setup(st, d, "enc_f1_a_rare", 0, "f1_g9", 7)
+	var s: BattleState = BattleState.new(setup, d)
+	s.start()
+	var thief: Combatant = s.get_combatant("e0")
+	assert_eq(thief.def_id, "enm_fahrscheinfresser")
+	_until_turn(s, thief)
+	s.submit(BattleCommand.skill("e0", "skl_e_fine", PackedStringArray(["p0"])))
+	_until_turn(s, thief)
+	s.submit(BattleCommand.skill("e0", "skl_e_escape", PackedStringArray()))
+	assert_true(s.is_finished())
+	assert_eq(s.result.outcome, BattleResult.Outcome.VICTORY, "all remaining enemies fled → victory")
+	assert_eq([s.result.credits_stolen, s.result.credits_refunded], [40, 0])
+	var rw: BattleRewards = BattleBridge.apply_result(st, d, s.result)
+	assert_eq(st.inventory.credits, 160, "the escaped thief keeps the 40 credits")
+	assert_eq([rw.credits_lost, rw.credits_refunded], [40, 0], "results screen: −40 Cr, no false refund")
+
+
+## core-logic-2 (GDD §3.12 "EXP … Danach stehen KO-Mitglieder mit 1 HP auf"): a KO'd member that levels up from the
+## half EXP of a victory stands up with exactly 1 HP (no level-up HP delta).
+func test_bridge_ko_member_level_up_stands_up_with_1_hp() -> void:
+	var d: GameData = real_data()
+	var st: GameState = GameState.create_new(d, 1, "Kai", 4242)
+	st.floor_run = FloorRun.create(d.floor_def(1), st.seed, st.difficulty)
+	var r: BattleResult = BattleResult.new()
+	r.outcome = BattleResult.Outcome.VICTORY
+	r.party_hp = {"kai": 30, "mopsula": 0}
+	r.party_mp = {"kai": 5, "mopsula": 10}
+	r.exp = 80
+	var rw: BattleRewards = BattleBridge.apply_result(st, d, r)
+	var mop: PartyMember = st.member("mopsula")
+	assert_eq(mop.level, 2, "40 EXP (half) reach level 2")
+	assert_eq(mop.hp, Balance.KO_REVIVE_HP, "KO'd member stands up with 1 HP after the EXP")
+	assert_eq(rw.revived, PackedStringArray(["mopsula"]))
+
+
+func _until_turn(s: BattleState, c: Combatant) -> void:
+	for _i in 40:
+		if s.is_finished() or s.current_actor() == c:
+			return
+		s.submit(s.choose_ai_command())

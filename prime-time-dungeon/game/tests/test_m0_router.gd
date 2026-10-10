@@ -2,13 +2,13 @@ extends TestCase
 ## Router (02_TECH §3.7, §9.2): empty stack / adopt, push/pop with suspend/resume, queueing, goto freeing, failure
 ## handling, battle / safe room / game over helpers.
 ## Generic operations push the fixture screen tests/fixtures/router/router_screen.tscn, so this test never depends on
-## what other modules put into their screens. The helpers have fixed targets (M5/M6 scenes): those cases only run while
-## the target's root script is still the M0 stub and skip afterwards (then covered by autoplay/integration tests).
+## what other modules put into their screens. The helpers have fixed targets: those cases run against the real scenes
+## (title, battle, safe room, game over) and check the routing — Router.current.scene_file_path == Router.SCENE_*, the
+## params the screen received and the payloads handed back — never screen internals.
 ## Uses Transition.NONE where possible to stay fast.
 
 const MAX_FRAMES: int = 240
 const FIXTURE: String = "res://tests/fixtures/router/router_screen.tscn"
-const STUB_HEADER: String = "# STUB(M0)"
 ## Missing scene outside res:// on purpose: the Router's push_error line then does not match check.sh's ERR_RE.
 const MISSING: String = "user://router_test_missing_scene.tscn"
 
@@ -42,6 +42,9 @@ func after_each() -> void:
 		cur.free()
 	Router.adopt(null)
 	Game.timer_running = false
+	Game.in_battle = false
+	Game.safe_room_clock = false
+	Sfx.stop_all()                         # the real title / battle / game over screens start their music
 
 
 func _idle() -> bool:
@@ -57,29 +60,6 @@ func _screen() -> _Screen:
 
 func _is_fixture(n: Node) -> bool:
 	return n != null and n.scene_file_path == FIXTURE
-
-
-## True while the root script of `scene_path` is still the M0 stub; otherwise marks the test skipped.
-func _require_stub(scene_path: String) -> bool:
-	var script_path: String = _root_script_path(scene_path)
-	if script_path != "":
-		var f: FileAccess = FileAccess.open(script_path, FileAccess.READ)
-		if f != null and f.get_line().begins_with(STUB_HEADER):
-			return true
-	skip("%s is no longer the M0 stub (real screen: covered by autoplay/integration)" % scene_path.get_file())
-	return false
-
-
-static func _root_script_path(scene_path: String) -> String:
-	var packed: PackedScene = load(scene_path) as PackedScene
-	if packed == null:
-		return ""
-	var st: SceneState = packed.get_state()
-	for i in st.get_node_property_count(0):
-		if st.get_node_property_name(0, i) == &"script":
-			var scr: Script = st.get_node_property_value(0, i) as Script
-			return scr.resource_path if scr != null else ""
-	return ""
 
 
 func test_adopt_sets_stack_and_current() -> void:
@@ -175,68 +155,78 @@ func test_push_failure_keeps_old_screen() -> void:
 
 
 func test_goto_failure_falls_back_to_title() -> void:
-	if not _require_stub(Router.SCENE_TITLE):
-		return
 	# Prints one expected "ERROR: [Router] scene not found: user://…" line (+ a warning).
-	_screen()
+	var s: _Screen = _screen()
 	Router.goto(MISSING, {}, Router.Transition.NONE)
 	assert_true(await _idle())
-	assert_true(Router.current is TitleScreen, "title instead of an empty tree")
+	assert_not_null(Router.current)
+	if Router.current == null:
+		return
+	assert_eq(Router.current.scene_file_path, Router.SCENE_TITLE, "title instead of an empty tree")
+	assert_true(Router.current is TitleScreen)
 	assert_eq(Router.stack_size(), 1)
+	await wait_frames(1)
+	assert_false(is_instance_valid(s), "the old stack is freed by the goto")
 
 
 func test_pop_with_empty_stack_goes_to_title() -> void:
-	if not _require_stub(Router.SCENE_TITLE):
-		return
 	Router.adopt(null)
 	Router.pop({}, Router.Transition.NONE)
 	assert_true(await _idle())
-	assert_true(Router.current is TitleScreen)
+	assert_not_null(Router.current)
+	if Router.current == null:
+		return
+	assert_eq(Router.current.scene_file_path, Router.SCENE_TITLE, "never an empty tree")
 	assert_eq(Router.stack_size(), 1)
 
 
 func test_battle_helpers() -> void:
-	if not _require_stub(Router.SCENE_BATTLE):
-		return
+	Game.new_game(0, "Kai", 3)
 	var s: _Screen = _screen()
-	var setup: BattleSetup = BattleSetup.new()
+	var setup: BattleSetup = Game.make_battle_setup(DB.floor_def(1).timer_start_after, 0, "")
+	assert_not_null(setup)
 	Router.start_battle(setup)
 	assert_true(await _idle())
-	assert_true(Router.current is BattleScene, "start_battle pushes the battle scene (SWIRL → FADE headless)")
-	assert_eq(Router.current.get("_params"), {"setup": setup})
+	assert_eq(Router.current.scene_file_path, Router.SCENE_BATTLE, "start_battle pushes the battle scene")
+	assert_eq(Router.current.get("battle_setup"), setup, "the setup reaches the battle scene ({\"setup\": setup})")
+	assert_eq(Router.stack_size(), 2)
+	assert_eq(s.calls, ["suspend"], "the exploration screen is suspended, not freed")
 	var result: BattleResult = BattleResult.new()
 	result.outcome = BattleResult.Outcome.VICTORY
 	Router.end_battle(result)
 	assert_true(await _idle())
-	assert_eq(Router.current, s)
+	assert_eq(Router.current, s, "end_battle pops back to the suspended screen")
 	assert_eq(s.payloads, [{"battle_result": result}])
+	assert_eq(Router.stack_size(), 1)
 
 
 func test_safe_room_helpers() -> void:
-	if not _require_stub(Router.SCENE_SAFE_ROOM):
-		return
+	Game.new_game(0, "Kai", 3)
+	var sr_id: String = str(Game._current_layout().safe_room_ids.values()[0])
 	var s: _Screen = _screen()
-	Router.enter_safe_room("sr_kiosk")
+	Router.enter_safe_room(sr_id)
 	assert_true(await _idle())
-	assert_true(Router.current is SafeRoomScene)
-	assert_eq(Router.current.get("_params"), {"safe_room_id": "sr_kiosk"})
+	assert_eq(Router.current.scene_file_path, Router.SCENE_SAFE_ROOM)
+	assert_eq(Router.current.get("safe_room_id"), sr_id, "the id reaches the safe room ({\"safe_room_id\": id})")
+	assert_eq(Router.stack_size(), 2)
 	Router.exit_safe_room()
 	assert_true(await _idle())
 	assert_eq(Router.current, s)
-	assert_eq(s.payloads, [{"from_safe_room": "sr_kiosk"}])
+	assert_eq(s.payloads, [{"from_safe_room": sr_id}])
 
 
 func test_defeat_goes_to_game_over() -> void:
-	if not _require_stub(Router.SCENE_GAME_OVER):
-		return
+	Game.new_game(0, "Kai", 3)
 	_screen()
+	var stat_before: int = int(Game.state.show.stats.get("game_overs", 0))
 	var result: BattleResult = BattleResult.new()
 	result.outcome = BattleResult.Outcome.DEFEAT
 	Router.end_battle(result)
 	assert_true(await _idle())
-	assert_eq(Router.current.scene_file_path, Router.SCENE_GAME_OVER)
-	assert_eq(Router.current.get("_params"), {"reason": &"defeat"})
-	assert_eq(Router.stack_size(), 1)
+	assert_eq(Router.current.scene_file_path, Router.SCENE_GAME_OVER, "DEFEAT → game over instead of a pop")
+	assert_eq(Router.current.get("reason"), &"defeat", "params {\"reason\": &\"defeat\"}")
+	assert_eq(Router.stack_size(), 1, "goto: the whole stack is replaced")
+	assert_eq(int(Game.state.show.stats.get("game_overs", 0)), stat_before + 1, "Game.on_game_over ran first")
 
 
 func test_theme_and_process_mode() -> void:

@@ -72,7 +72,8 @@ func _open(sim: RunSim, sec: int = 60, slots: int = 3) -> void:
 		ExploreEvent.Type.SPONSOR_WINDOW_OPENED).size(), 1, "dev window opened")
 
 
-# --- schedule -----------------------------------------------------------------------------------------------------------
+# --- schedule
+# -----------------------------------------------------------------------------------------------------------
 
 func test_defaults_are_the_decided_values() -> void:
 	var r: Dictionary = SponsorWindows.rules_of({})
@@ -151,7 +152,8 @@ func test_no_window_opens_during_a_battle() -> void:
 	assert_eq(_of(sim.step(1), ExploreEvent.Type.SPONSOR_WINDOW_OPENED).size(), 1, "opens on the next tick")
 
 
-# --- slots, viewers, codes ----------------------------------------------------------------------------------------------
+# --- slots, viewers, codes
+# ----------------------------------------------------------------------------------------------
 
 func test_slots_first_come_first_served_and_reason_codes() -> void:
 	var sim: RunSim = _sim()
@@ -227,7 +229,8 @@ func test_stamped_gift_has_grace_after_the_window_closed() -> void:
 	assert_eq(Gift.validate(bad), "invalid_schema")
 
 
-# --- safe room, boss, floor ---------------------------------------------------------------------------------------------
+# --- safe room, boss, floor
+# ---------------------------------------------------------------------------------------------
 
 func test_safe_room_window_with_idle_ticks() -> void:
 	var sim: RunSim = _sim()
@@ -282,12 +285,17 @@ func test_floor_change_closes_the_window_and_restarts_the_countdown() -> void:
 	var sim: RunSim = _sim(FAST)
 	sim.step(12 * TPS)
 	assert_true(sim.sponsor_window()["open"])
-	var ev: Array[ExploreEvent] = _of(sim.apply({"t": "floor", "floor": 1}), ExploreEvent.Type.SPONSOR_WINDOW_CLOSED)
+	sim.apply({"t": "descend"})                       # the next floor follows a descend (RunRules.command_refusal)
+	var ev: Array[ExploreEvent] = _of(sim.apply({"t": "floor", "floor": 2}), ExploreEvent.Type.SPONSOR_WINDOW_CLOSED)
+	assert_eq(ev.size(), 1)
+	if ev.is_empty():
+		return
 	assert_eq(ev[0].data["reason"], "floor")
 	assert_eq(sim.sponsor_window()["next_in_sec"], 10, "first_sec again")
 
 
-# --- rules ----------------------------------------------------------------------------------------------------------------
+# --- rules
+# ----------------------------------------------------------------------------------------------------------------
 
 func test_pur_league_and_disabled_gifts_have_no_windows() -> void:
 	var pur: RunSim = _sim({"leagues": ["pur"], "gifts": {"enabled": false}, "timer_mode": "explore_only"})
@@ -331,7 +339,8 @@ func test_rules_validation() -> void:
 	assert_eq(EventDef.from_dict(live).validate(), PackedStringArray())
 
 
-# --- replay ---------------------------------------------------------------------------------------------------------------
+# --- replay
+# ---------------------------------------------------------------------------------------------------------------
 
 ## Recorded RunSim run with windows (periodic, safe room, boss, dev) and gifts inside them: RunSim.replay gives the
 ## same hash and checkpoints, without errors; a gift smuggled in outside any window is refused and reported.

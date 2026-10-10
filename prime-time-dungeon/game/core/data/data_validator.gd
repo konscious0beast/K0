@@ -13,8 +13,10 @@ const STATS: PackedStringArray = ["hp", "mp", "str", "mag", "def", "res", "spd",
 const ELEMENTS: PackedStringArray = ["none", "physical", "fire", "ice", "shock", "poison"]
 const DAMAGE_TYPES: PackedStringArray = ["physical", "magical", "fixed", "heal", "none"]
 const HEAL_MODES: PackedStringArray = ["", "mag", "pct", "fixed"]
-const SKILL_CATEGORIES: PackedStringArray = ["attack", "magic", "heal", "buff", "debuff", "stunt", "item", "summon", "special"]
-const TARGETS: PackedStringArray = ["single_enemy", "all_enemies", "random_enemy", "single_ally", "all_allies", "self", "single_ally_ko", "none"]
+const SKILL_CATEGORIES: PackedStringArray = ["attack", "magic", "heal", "buff", "debuff", "stunt", "item", "summon",
+	"special"]
+const TARGETS: PackedStringArray = ["single_enemy", "all_enemies", "random_enemy", "single_ally", "all_allies", "self",
+	"single_ally_ko", "none"]
 const SKILL_USERS: PackedStringArray = ["party", "enemy", "item", "any"]
 const SKILL_SPECIALS: PackedStringArray = ["steal_credits", "escape"]
 const ANIMS: PackedStringArray = ["attack", "cast", "stunt", "item"]
@@ -28,12 +30,16 @@ const STATUS_KINDS: PackedStringArray = ["buff", "debuff"]
 const STATUS_FLAGS: PackedStringArray = ["delay_on_apply", "guard", "taunt", "no_magic", "no_stunt"]
 const TICK_TIMINGS: PackedStringArray = ["turn_start", "turn_end"]
 const AI_TYPES: PackedStringArray = ["weighted", "phased"]
-const AI_CONDITIONS: PackedStringArray = ["self_hp_below", "self_hp_above", "ally_hp_below", "turn_mod", "allies_alive_below", "once"]
-const AI_TARGETS: PackedStringArray = ["random", "lowest_hp_pct", "highest_hp", "not_status", "self", "all_enemies", "all_allies", "ally_lowest_hp_pct"]
-const PHASE_OPS: PackedStringArray = ["say", "status_self", "summon", "fixed_damage_self", "add_pseudo", "remove_pseudo"]
-const MODEL_BASES: PackedStringArray = ["humanoid", "pug", "rodent", "blob", "insect", "robot", "brute", "specter", "swarm"]
-const MODEL_PROPS: PackedStringArray = ["cape", "crown", "monocle", "top_hat", "cap", "bandana", "apron", "mop", "broom",
-	"knife", "staff", "key_ring", "glasses", "lamp_helmet", "backpack", "mask", "wings", "antennae",
+const AI_CONDITIONS: PackedStringArray = ["self_hp_below", "self_hp_above", "ally_hp_below", "turn_mod",
+	"allies_alive_below", "once"]
+const AI_TARGETS: PackedStringArray = ["random", "lowest_hp_pct", "highest_hp", "not_status", "self", "all_enemies",
+	"all_allies", "ally_lowest_hp_pct"]
+const PHASE_OPS: PackedStringArray = ["say", "status_self", "summon", "fixed_damage_self", "add_pseudo",
+	"remove_pseudo"]
+const MODEL_BASES: PackedStringArray = ["humanoid", "pug", "rodent", "blob", "insect", "robot", "brute", "specter",
+	"swarm"]
+const MODEL_PROPS: PackedStringArray = ["cape", "crown", "monocle", "top_hat", "cap", "bandana", "apron", "mop",
+	"broom", "knife", "staff", "key_ring", "glasses", "lamp_helmet", "backpack", "mask", "wings", "antennae",
 	"newspaper_head", "briefcase", "bottlecap_chain", "cable_tangle", "spray_cap", "escalator_back", "claws", "helmet",
 	"shield", "halberd", "rat_king_tail", "ticket_crown", "wrench", "axe", "crowbar", "cart", "discount_tag"]
 const MODEL_POSES: PackedStringArray = ["auto", "quadruped", "upright"]
@@ -43,16 +49,20 @@ const CELL_KINDS: PackedStringArray = ["start", "normal", "safe", "quarter_boss"
 const CHEST_TYPES: PackedStringArray = ["wood", "metal", "locked"]
 const FLOOR_EVENT_TYPES: PackedStringArray = ["photo_drone", "lost_candidate", "wheel", "lever", "broken_vending"]
 const ENEMY_START_STATES: PackedStringArray = ["IDLE", "PATROL"]
-const QUEST_TYPES: PackedStringArray = ["reach_stairs", "defeat_boss", "bounty", "hype_peak", "pacifist", "achievement_hunt", "all_of"]
-const LOOT_KINDS: PackedStringArray = ["item", "credits", "box", "nothing", "encounter"]   # box/nothing/encounter only in fev_wheel tables
-const GIFT_KINDS: PackedStringArray = ["heal_party_pct", "heal_party_flat", "mp_party_pct", "status_party", "status_enemies", "item", "revive_or_heal_lowest"]
+const QUEST_TYPES: PackedStringArray = ["reach_stairs", "defeat_boss", "bounty", "hype_peak", "pacifist",
+	"achievement_hunt", "all_of"]
+# box/nothing/encounter only in fev_wheel tables
+const LOOT_KINDS: PackedStringArray = ["item", "credits", "box", "nothing", "encounter"]
+const GIFT_KINDS: PackedStringArray = ["heal_party_pct", "heal_party_flat", "mp_party_pct", "status_party",
+	"status_enemies", "item", "revive_or_heal_lowest"]
 const SPONSOR_WEIGHT_CONDS: PackedStringArray = ["ally_hp_below", "ally_mp_below", "ally_ko", "is_boss"]
-const ACH_TRIGGERS: PackedStringArray = ["enemy_killed", "battle_won", "battle_fled", "battle_started", "stunt_resolved", "combo",
-	"party_ko", "boss_defeated", "sponsor_gift", "viewers_changed", "chest_opened", "item_bought", "lootbox_opened",
-	"level_up", "event_completed", "explore_tick", "floor_completed"]
+const ACH_TRIGGERS: PackedStringArray = ["enemy_killed", "battle_won", "battle_fled", "battle_started",
+	"stunt_resolved", "combo", "party_ko", "boss_defeated", "sponsor_gift", "viewers_changed", "chest_opened",
+	"item_bought", "lootbox_opened", "level_up", "event_completed", "explore_tick", "floor_completed"]
 const VOICES: PackedStringArray = ["mod", "mopsula", "kai", "chat"]
-const TEXT_PLACEHOLDERS: PackedStringArray = ["name", "floor", "level", "enemy", "item", "achievement", "viewers", "followers",
-	"sponsor", "count", "member", "seconds", "sender", "amount", "pct", "min"]   # sender/amount/pct/min: 05 §6.12
+# sender/amount/pct/min: 05 §6.12
+const TEXT_PLACEHOLDERS: PackedStringArray = ["name", "floor", "level", "enemy", "item", "achievement", "viewers",
+	"followers", "sponsor", "count", "member", "seconds", "sender", "amount", "pct", "min"]
 const REQUIRED_MOD_TAGS: PackedStringArray = ["intro", "floor_start", "first_fight", "achievement_generic", "low_hp",
 	"kill_streak", "crit", "weakness", "overkill", "stunt_success", "stunt_fail", "boring_fight", "flee", "flee_fail",
 	"sponsor_gift", "timer_warn_300", "timer_warn_60", "timer_expired", "lootbox_open_bronze", "lootbox_open_silver",
@@ -61,10 +71,11 @@ const REQUIRED_MOD_TAGS: PackedStringArray = ["intro", "floor_start", "first_fig
 	"chat_hype_high", "chat_hype_mid", "chat_hype_low", "chat_crit", "chat_boring", "chat_mopsula", "chat_handle"]
 ## Optional tags: live tags of 05 CR-9 / §6.12 (event_*, gift_*, fan_pack_*, live_*, vote_*, twist_applied_*), the
 ## Sponsor-Fenster lines of 05 §6.13 (sponsor_window_open[:periodic|safe_room|boss|dev], sponsor_window_closed,
-## sponsor_window_full) and the story beats of GDD §1.4 (tutorial_* hints B1/B2, story_battle:<encounter_id> banners B4).
-const OPTIONAL_MOD_TAG_PREFIXES: PackedStringArray = ["achievement:", "boss_intro:", "boss_phase:", "event_", "gift_received",
-	"mopsula_idle", "chat_", "gift_", "fan_pack_", "live_", "vote_", "twist_applied_", "tutorial_", "story_",
-	"sponsor_window_"]
+## sponsor_window_full) and the story beats of GDD §1.4 (tutorial_* hints B1/B2, story_battle:<encounter_id> banners
+## B4).
+const OPTIONAL_MOD_TAG_PREFIXES: PackedStringArray = ["achievement:", "boss_intro:", "boss_phase:", "event_",
+	"gift_received", "mopsula_idle", "chat_", "gift_", "fan_pack_", "live_", "vote_", "twist_applied_", "tutorial_",
+	"story_", "sponsor_window_"]
 
 ## Copy of StatIds.ALL (§6.3); test_m2_achievements asserts equality.
 const STAT_IDS: PackedStringArray = ["kills_total", "kills_skill", "battles_won", "battles_fled", "preemptives",
@@ -134,19 +145,24 @@ const PALETTE_KEYS: PackedStringArray = ["floor", "wall", "accent", "light", "fo
 const PALETTE_ART_KEYS: PackedStringArray = ["shade", "rim", "grout", "key", "neon2"]
 ## Theme default palettes (03_ART §2.2/§2.3); FloorDef.palette is filled with these.
 const THEME_PALETTES: Dictionary = {
-	"metro": {"floor": "#3a3f4b", "wall": "#1f5f66", "accent": "#ff2e88", "light": "#ffd59e", "fog": "#1a1430", "ambient": "#2a2440"},
-	"mall": {"floor": "#9a9080", "wall": "#2a3a44", "accent": "#ff4fa0", "light": "#fff0f5", "fog": "#2a1a2a", "ambient": "#3a2a3a"},
+	"metro": {"floor": "#3a3f4b", "wall": "#1f5f66", "accent": "#ff2e88", "light": "#ffd59e", "fog": "#1a1430",
+		"ambient": "#2a2440"},
+	"mall": {"floor": "#9a9080", "wall": "#2a3a44", "accent": "#ff4fa0", "light": "#fff0f5", "fog": "#2a1a2a",
+		"ambient": "#3a2a3a"},
 }
 const MODEL_COLOR_KEYS: PackedStringArray = ["primary", "secondary", "accent", "skin", "eyes"]
-## Copies of the fixed presentation vocabularies (Vfx.KINDS §8.6, Sfx ids §3.8) — core/data must not depend on art/autoload.
+## Copies of the fixed presentation vocabularies (Vfx.KINDS §8.6, Sfx ids §3.8) — core/data must not depend on
+## art/autoload.
 const VFX_KINDS: PackedStringArray = ["hit", "crit", "slash", "bite", "magic", "fire", "ice", "shock", "toxic",
 	"light", "dark", "heal", "buff", "debuff", "ko", "levelup", "sponsor", "confetti", "smoke", "sparkle",
 	"stairs_glow", "chest_open"]
-const SFX_IDS: PackedStringArray = ["ui_move", "ui_confirm", "ui_cancel", "ui_error", "step", "swing", "hit", "hit_crit",
-	"hit_weak", "miss", "magic", "fire", "ice", "shock", "toxic", "light", "dark", "heal", "buff", "debuff", "ko", "defend",
-	"flee", "stunt_success", "stunt_fail", "level_up", "chest_open", "coin", "lootbox_shake", "lootbox_open", "lootbox_rare",
-	"sponsor", "achievement", "timer_warn", "stairs", "swirl", "door", "mod_blip", "chat_pop", "vending"]
-const MUSIC_IDS: PackedStringArray = ["title", "explore", "battle", "boss", "safe_room", "victory", "game_over", "credits"]
+const SFX_IDS: PackedStringArray = ["ui_move", "ui_confirm", "ui_cancel", "ui_error", "step", "swing", "hit",
+	"hit_crit", "hit_weak", "miss", "magic", "fire", "ice", "shock", "toxic", "light", "dark", "heal", "buff", "debuff",
+	"ko", "defend", "flee", "stunt_success", "stunt_fail", "level_up", "chest_open", "coin", "lootbox_shake",
+	"lootbox_open", "lootbox_rare", "sponsor", "achievement", "timer_warn", "stairs", "swirl", "door", "mod_blip",
+	"chat_pop", "vending"]
+const MUSIC_IDS: PackedStringArray = ["title", "explore", "battle", "boss", "safe_room", "victory", "game_over",
+	"credits"]
 ## Exact `params` keys of floor events (§7.4).
 const FLOOR_EVENT_PARAMS: Dictionary = {
 	"photo_drone": [["pose_hype", "i"], ["pose_followers", "i"], ["smash_credits", "i"], ["smash_hype", "i"]],
@@ -162,7 +178,8 @@ const DIR_OPPOSITE: Dictionary = {"N": "S", "E": "W", "S": "N", "W": "E"}
 const REQ: String = "<required>"   # spec marker: field has no default
 
 # --- Field specs: [name, type(, default)] — no default = required. Types: s i f b d a sa ia c2 v2 ---------------------
-const SPEC_STATUS: Array = [["id", "s"], ["name", "s"], ["kind", "s"], ["default_turns", "i", 3], ["stat_mult", "d", {}],
+const SPEC_STATUS: Array = [["id", "s"], ["name", "s"], ["kind", "s"], ["default_turns", "i", 3],
+	["stat_mult", "d", {}],
 	["tick_timing", "s", "turn_end"], ["tick_pct", "i", 0], ["tick_min", "i", 0], ["tick_speed_mult", "f", 1.0],
 	["flags", "sa", []], ["excludes", "sa", []], ["element", "s", "none"], ["color", "s", "#ffffff"], ["icon", "s", ""]]
 const SPEC_SKILL: Array = [["id", "s"], ["name", "s"], ["desc", "s", ""], ["user", "s", "any"], ["category", "s"],
@@ -174,7 +191,8 @@ const SPEC_SKILL: Array = [["id", "s"], ["name", "s"], ["desc", "s", ""], ["user
 	["anim", "s", "attack"], ["vfx", "s", ""], ["sfx", "s", ""], ["hype", "i", 0], ["kill_hype", "i", 0],
 	["show_tags", "sa", []]]
 const SPEC_SKILL_STATUS: Array = [["id", "s"], ["chance", "f", 1.0], ["turns", "i", 0]]
-const SPEC_SKILL_FAIL: Array = [["self_dmg_pct", "i", 0], ["delay_pct", "i", 0], ["status", "s", ""], ["status_turns", "i", 0]]
+const SPEC_SKILL_FAIL: Array = [["self_dmg_pct", "i", 0], ["delay_pct", "i", 0], ["status", "s", ""],
+	["status_turns", "i", 0]]
 const SPEC_SKILL_SPECIAL: Array = [["kind", "s"], ["max", "i", 0], ["refund_on_win", "b", false]]
 const SPEC_ITEM: Array = [["id", "s"], ["name", "s"], ["desc", "s", ""], ["type", "s"], ["rarity", "s", "common"],
 	["price", "i", 0], ["sell", "i", -1], ["max_stack", "i", 9], ["tags", "sa", []], ["use_skill", "s", ""],
@@ -184,7 +202,8 @@ const SPEC_ITEM: Array = [["id", "s"], ["name", "s"], ["desc", "s", ""], ["type"
 const SPEC_ITEM_SHOW_MODS: Array = [["hype_gain_mult", "f", 1.0], ["follower_mult", "f", 1.0]]
 const SPEC_CLASS: Array = [["id", "s"], ["name", "s"], ["desc", "s", ""], ["for", "sa", []], ["min_floor", "i", 3],
 	["stat_mult", "d", {}], ["growth_add", "d", {}], ["passives", "a", []], ["learnset", "a", []], ["show_mods", "d", {}]]
-const SPEC_CLASS_SHOW_MODS: Array = [["hype_gain_mult", "f", 1.0], ["stunt_success_add", "f", 0.0], ["stunt_cooldown", "i", 3],
+const SPEC_CLASS_SHOW_MODS: Array = [["hype_gain_mult", "f", 1.0], ["stunt_success_add", "f", 0.0],
+	["stunt_cooldown", "i", 3],
 	["sponsor_thresholds", "ia", [70, 85, 100]]]
 const SPEC_PASSIVE: Array = [["id", "s"], ["params", "d", {}]]
 const SPEC_LEARN: Array = [["level", "i"], ["skill", "s"]]
@@ -193,11 +212,15 @@ const SPEC_PARTY: Array = [["id", "s"], ["name", "s"], ["title", "s", ""], ["bas
 	["status_immune", "sa", []], ["status_resist", "d", {}], ["battle_slot", "i"], ["model", "d"],
 	["portrait_color", "s", "#ffffff"]]
 const SPEC_EQUIPMENT: Array = [["weapon", "s", ""], ["armor", "s", ""], ["accessory", "s", ""]]
-const SPEC_MODEL: Array = [["base", "s"], ["scale", "f", 1.0], ["pose", "s", "auto"], ["colors", "d"], ["props", "sa", []],
+const SPEC_MODEL: Array = [["base", "s"], ["scale", "f", 1.0], ["pose", "s", "auto"], ["colors", "d"],
+	["props", "sa", []],
 	["seed", "i", 0], ["gltf", "s", ""]]
-const SPEC_ENEMY: Array = [["id", "s"], ["name", "s"], ["level", "i", 1], ["stats", "d"], ["exp", "i", 0], ["credits", "i", 0],
-	["attack_skill", "s"], ["ai", "d", {"type": "weighted", "actions": []}], ["phases", "a", []], ["element_mods", "d", {}],
-	["status_immune", "sa", []], ["status_resist", "d", {}], ["drops", "a", []], ["boss_drops", "a", []], ["tags", "sa", []],
+const SPEC_ENEMY: Array = [["id", "s"], ["name", "s"], ["level", "i", 1], ["stats", "d"], ["exp", "i", 0],
+	["credits", "i", 0],
+	["attack_skill", "s"], ["ai", "d", {"type": "weighted", "actions": []}], ["phases", "a", []], ["element_mods", "d",
+		{}],
+	["status_immune", "sa", []], ["status_resist", "d", {}], ["drops", "a", []], ["boss_drops", "a", []], ["tags", "sa",
+		[]],
 	["boss", "b", false], ["model", "d"], ["explore", "d"]]
 const SPEC_AI: Array = [["type", "s", "weighted"], ["actions", "a", []]]
 const SPEC_AI_ACTION: Array = [["skill", "s"], ["weight", "i"], ["target", "s", "random"], ["cond", "d", {}]]
@@ -220,7 +243,8 @@ const SPEC_PSEUDO: Array = [["id", "s"], ["name", "s"], ["icon", "s"], ["action"
 const SPEC_PSEUDO_ACTION: Array = [["fixed_pct_maxhp", "i"], ["element", "s"], ["ignores_guard", "b", false],
 	["target", "s", "all_party"]]
 const SPEC_FLOOR: Array = [["id", "s"], ["index", "i"], ["name", "s"], ["playable", "b", true], ["theme", "s"],
-	["timer_seconds", "i"], ["timer_warnings", "ia", [600, 300, 60]], ["timer_start_after", "s", ""], ["floor_mult", "f", 1.0],
+	["timer_seconds", "i"], ["timer_warnings", "ia", [600, 300, 60]], ["timer_start_after", "s", ""], ["floor_mult", "f",
+		1.0],
 	["grid", "d"], ["layout", "d", {}], ["rooms", "d", {}], ["safe_rooms", "i", 1], ["chests", "d", {}],
 	["enemy_groups", "d", {}], ["chest_table", "a", []], ["shop", "sa", []], ["quarter_boss", "s", ""],
 	["floor_boss", "s", ""], ["encounters", "a"], ["palette", "d", {}], ["music", "s", "explore"], ["quest", "d", {}],
@@ -239,9 +263,11 @@ const SPEC_ZONE: Array = [["id", "s"], ["name", "s"], ["palette", "d", {}]]
 const SPEC_GATE: Array = [["cell", "c2"], ["dir", "s"], ["requires", "s"]]
 const SPEC_PLACED: Array = [["group_id", "s"], ["enc_id", "s"], ["cell", "c2"], ["offset", "v2", [0.0, 0.0]],
 	["state", "s", "PATROL"], ["turn", "b", true], ["waypoints", "a", []]]
-const SPEC_CHEST: Array = [["id", "s"], ["cell", "c2"], ["offset", "v2", [0.0, 0.0]], ["type", "s"], ["contents", "a", []]]
+const SPEC_CHEST: Array = [["id", "s"], ["cell", "c2"], ["offset", "v2", [0.0, 0.0]], ["type", "s"],
+	["contents", "a", []]]
 const SPEC_CONTENT: Array = [["kind", "s"], ["id", "s", ""], ["amount", "i"]]
-const SPEC_EVENT: Array = [["id", "s"], ["type", "s"], ["cell", "c2"], ["offset", "v2", [0.0, 0.0]], ["params", "d", {}]]
+const SPEC_EVENT: Array = [["id", "s"], ["type", "s"], ["cell", "c2"], ["offset", "v2", [0.0, 0.0]],
+	["params", "d", {}]]
 const SPEC_WHEEL_ENTRY: Array = [["weight", "i"], ["kind", "s"], ["id", "s", ""], ["amount", "i", 1]]
 const SPEC_SPAWNER: Array = [["zone", "s"], ["pool", "sa"], ["interval_sec", "i", 90]]
 const SPEC_SAFE_ROOM: Array = [["id", "s"], ["cell", "c2"], ["name", "s"], ["theme", "s"], ["shop", "sa", []]]
@@ -256,10 +282,12 @@ const SPEC_ACHIEVEMENT: Array = [["id", "s"], ["name", "s"], ["desc", "s"], ["tr
 const SPEC_SPONSOR: Array = [["id", "s"], ["name", "s"], ["slogan", "s", ""], ["color", "s"], ["gift", "a"],
 	["weight", "i", 1], ["weight_mods", "a", []], ["min_floor", "i", 1], ["max_floor", "i", 0],
 	["mod_tag", "s", "sponsor_gift"]]
-const SPEC_GIFT_EFFECT: Array = [["kind", "s"], ["value", "i", 0], ["status", "s", ""], ["turns", "i", 0], ["item", "s", ""],
+const SPEC_GIFT_EFFECT: Array = [["kind", "s"], ["value", "i", 0], ["status", "s", ""], ["turns", "i", 0],
+	["item", "s", ""],
 	["target", "s", ""], ["ignore_resist", "b", false]]
 const SPEC_WEIGHT_MOD: Array = [["cond", "s"], ["value", "f", 0.0], ["mult", "f"]]
-const SPEC_MILESTONE: Array = [["id", "s"], ["followers", "i"], ["reward_box", "s", ""], ["credits", "i", 0], ["item", "s", ""],
+const SPEC_MILESTONE: Array = [["id", "s"], ["followers", "i"], ["reward_box", "s", ""], ["credits", "i", 0],
+	["item", "s", ""],
 	["title", "s", ""], ["min_floor", "i", 1], ["mod_tag", "s", "follower_milestone"]]
 const SPEC_MOD_LINE: Array = [["id", "s"], ["tag", "s"], ["voice", "s", "mod"], ["text", "s"], ["user", "s", ""],
 	["weight", "i", 1], ["min_floor", "i", 1], ["max_floor", "i", 0], ["min_hype", "i", 0], ["max_hype", "i", 100]]
@@ -2384,7 +2412,8 @@ func _text_len(ctx: String, text: String) -> void:
 		_err(ctx, "text longer than %d characters (%d)" % [MAX_TEXT_LEN, text.length()])
 
 
-## Dict<key, number>: keys ⊂ `keys` (empty = any key), values in lo..hi (ints if as_int). require_all: every key present.
+## Dict<key, number>: keys ⊂ `keys` (empty = any key), values in lo..hi (ints if as_int). require_all: every key
+## present.
 func _num_dict(ctx: String, raw: Dictionary, keys: PackedStringArray, as_int: bool, lo: float, hi: float,
 		require_all: bool = false) -> Dictionary:
 	var out: Dictionary = {}

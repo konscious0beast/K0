@@ -808,8 +808,10 @@ func leave_safe_room() -> void        # ExplorationScene.on_resume({"from_safe_r
 	# _dispatch(sim.sponsor_safe_room_exit())
 func next_scene(ctx: Dictionary) -> SceneDef      # first SceneDef (priority order) whose condition holds and that was not seen; null
 func mark_scene_seen(scene: SceneDef) -> void     # record({"t": "scene", "id"}); flags scene_<id> = true, set_flag (e.g. mop_pep_talk)
-func set_difficulty(d: StringName) -> bool   # only &"prime" → &"vorabend" (never up); record({"t": "difficulty", "to"});
-	# remaining timer ticks × 1.5
+func set_difficulty(d: StringName) -> bool   # only &"prime" → &"vorabend" (never up), campaign only (event runs: false);
+	# record({"t": "difficulty", "to"}); damage/EXP from the next battle, timer ×1.5 from the next floor start
+	# (FloorRun.create, GDD §2.9) — the running floor timer is NOT changed
+func can_lower_difficulty() -> bool   # state, mode campaign, difficulty prime (settings menu enables its mode row by it)
 func record(cmd: Dictionary) -> void  # run_log.add_cmd(sim.tick(), cmd, cmd_id); no-op if run_log == null or replaying;
 	# cmd_id: "gift"/"twist" (external inputs) → 0, every other command strictly increasing from 1 per run log (05 §10.6;
 	# a new run log — new_game, start_event_run, Save.load_slot — starts at 1 again)
@@ -2098,7 +2100,8 @@ enum Type {
 	PSEUDO_REMOVED,  # target_id (pseudo unit leaves the CTB order)
 	ESCAPED,         # actor_id (enemy leaves the battle, no rewards for it)
 	CREDITS_STOLEN,  # actor_id, value = amount (refunded on VICTORY if refund_on_win)
-	CREDITS_GAINED,  # value = amount (gift; applied after battle via BattleResult.credits_delta)
+	CREDITS_GAINED,  # value = amount (gift; applied after battle via BattleResult.credits_delta); item_id = the
+	                 # duplicate equipment the credits replace (GDD §9.3, ItemDef.duplicate_credits), else ""
 	STUNT_RESULT,    # actor_id, skill_id, success
 	FLEE_RESULT,     # actor_id, success
 	ITEM_GAINED,     # item_id, value = count (gift)
@@ -2272,7 +2275,9 @@ var party_turns: int = 0               # TURN_START of party members
 var exp: int                           # sum of exp_reward of defeated non-summoned enemies × exp_mult (VICTORY only)
 var credits: int                       # sum of credit_reward (incl. overkill bonus)
 var overkill_credits: int = 0          # part of `credits` that came from overkill × 1.25
-var credits_stolen: int = 0            # steal_credits total (VICTORY + refund_on_win → refunded)
+var credits_stolen: int = 0            # stolen credits the enemies KEEP (escaped/surviving thief; every thief unless
+                                       # VICTORY) — BattleBridge always deducts them (GDD §3.11)
+var credits_refunded: int = 0          # stolen credits given back (VICTORY + refund_on_win + thief KO'd)
 var credits_delta: int = 0             # gift credits (05 CR-2)
 var drops: PackedStringArray = []      # item ids rolled with battle rng at victory
 var boss_rewards: Array[Dictionary] = []   # EnemyDef.boss_drops of defeated bosses ({kind, id, amount})
@@ -2380,7 +2385,10 @@ static func from_dict(d: Dictionary, p_data: GameData) -> BattleState   # CR-14:
 func ghost_overrides(actor: Combatant, skill_id: String, target_ids: PackedStringArray) -> Dictionary
 	# {combatant_id: ctr} for preview_order (stun ghost preview; haste/slow only change FUTURE delays → not shown)
 func flee_chance() -> float                                  # formula below (HUD); flee_allowed() -> bool
-func stunt_chance(actor: Combatant, skill: SkillDef) -> float
+func stunt_chance(actor: Combatant, skill: SkillDef, target_ids: PackedStringArray = []) -> float   # formula below;
+	# [] = HUD preview before the target is chosen: every valid target counts
+static func roll_drops(drops: Array, lck_sum: int, members: int, rng: RandomNumberGenerator) -> PackedStringArray
+	# THE victory drop rule (formula below); used by _build_result, tested by test_m2_loot
 func skill_def(id: String) -> SkillDef                       # also item_def(id), status_def(id) (data lookups for HUD)
 func free_enemy_slot() -> int                                # -1 if 4 living enemies
 func pseudo_units() -> Array[Combatant]
@@ -2413,7 +2421,9 @@ Regeln (GDD §3):
   bei aktivem Stun `STATUS_BLOCKED`.
 - **Flucht**: `clampf(0.40 + (Ø SPD Party − Ø SPD Gegner) × 0.03 + 0.15 × failed_flee_attempts + (PREEMPTIVE ? 0.25 : 0.0), 0.10, 0.95)`;
   `flee_guaranteed`-Item (`itm_smoke`) → 1.0; Boss/`can_flee == false`/Tutorial → Befehl ungültig. Fehlschlag: Rang 2, `failed_flee_attempts += 1`.
-- **Stunt**: Chance `clampf(minf(success_base + LCK × success_lck, success_cap) + (lebender Boss-Gegner ? success_boss_mod : 0.0), 0.05, 1.0)`;
+- **Stunt** (GDD §3.6): Chance `clampf(success_base + LCK × success_lck + (target_is_boss ? success_boss_mod : 0.0), 0.05, success_cap)`,
+  `target_is_boss` = eines der aufgelösten Ziele ist ein lebender Boss (Alle-Gegner-Stunts: irgendeines; ein Einzelziel-Stunt
+  auf einen beschworenen Begleiter im Bosskampf bekommt **keinen** Abzug; Kappung **nach** dem Boss-Modifikator);
   Erfolg → Skill-Effekt; Fehlschlag → `fail_effect` (Selbstschaden `roundi(max_hp × self_dmg_pct / 100)` als `DAMAGE` ohne Tod
   (min 1 HP), nach `on_acted` `add_delay(roundi(base_delay × delay_pct / 100))`, `status` auf sich). Danach `stunt_cooldown = cooldown`.
 - **Combo** (GDD §7.3): Party-Aktion mit genau einem gegnerischen Ziel und Schaden, wenn die direkt vorherige Aktion
@@ -2433,8 +2443,9 @@ Regeln (GDD §3):
   `escape` → `ESCAPED`, Einheit verlässt Kampf und Zugreihenfolge (keine EXP/Credits/Drops; Gruppe gilt danach als erledigt).
 - **Wiederbelebung**: `REVIVE`, Zähler `base_delay`. **Tutorial**: Party-HP fällt durch Schaden nie unter 1.
 - **Sieg**, wenn kein echter Gegner mehr lebt (getötet oder geflohen): Drops je getötetem, nicht beschworenem Gegner
-  `rng.randi_range(0, 999999) < roundi(clampf(chance × (1 + Ø LCK der lebenden Party / 100), 0, 1) × 10^6)` (`LootRoller.roll_drops`,
-  Ganzzahl-ppm, 05 CR-12); `boss_drops` immer; EXP/Credits summiert (Overkill: Credits
+  `chance × (1 + Ø LCK / 100)` mit Ø über **alle** Party-Mitglieder (auch KO, GDD §3.12) in Basispunkten:
+  `bp = bp(chance) × (100·n + ΣLCK) // (100·n)`, `FixedMath.roll_bp` (ein `randi_range(0, 9999)` je Eintrag, kein Zug bei 0 % / ≥ 100 %;
+  `BattleState.roll_drops` — die einzige Implementierung, 05 CR-12); `boss_drops` immer; EXP/Credits summiert (Overkill: Credits
   dieses Gegners × 1.25, Differenz in `overkill_credits`), `exp × exp_mult`.
 - `apply_gift(g)`: `kind: "sponsor_buff"` → `SPONSOR_GIFT` + Effekte aus `SponsorDef.gift` (§4.4.10, RNG `"gift"`); `gold` →
   `CREDITS_GAINED`; `chest`/`fan_pack` → `ITEM_GAINED`/`CREDITS_GAINED` je Inhalt. Ändert sich die Reihenfolge (Status), folgt `CTB_ORDER`.
@@ -2727,7 +2738,6 @@ static func roll_chest(chest: Dictionary, data: GameData, floor_index: int, stat
 	# non-empty contents → exactly those (metal/locked, and procedural wood chests whose contents DungeonGenerator rolled
 	# from chest_table, §7.2 step 9); wood without contents → randi_range(20, 40) credits + 1 entry from pools.f<i>.common
 static func roll_chest_table(def: FloorDef, rng: RandomNumberGenerator) -> Array[LootReward]   # procedural floors: 1 roll (+1 at 20 %)
-static func roll_drops(drops: Array[Dictionary], avg_party_lck: float, rng: RandomNumberGenerator) -> PackedStringArray
 static func best_rarity(rewards: Array[LootReward]) -> String
 ```
 
@@ -2853,8 +2863,8 @@ class_name BattleRewards extends RefCounted
 var exp: int = 0
 var credits: int = 0                   # incl. overkill bonus
 var overkill_credits: int = 0
-var credits_refunded: int = 0          # stolen credits returned on victory
-var credits_lost: int = 0              # stolen credits kept by the enemy (fled/defeat)
+var credits_refunded: int = 0          # = result.credits_refunded on VICTORY (never left the inventory; shown as +Cr)
+var credits_lost: int = 0              # = min(result.credits_stolen, credits): kept by the enemy, every outcome
 var items: PackedStringArray = []
 var boxes: PackedStringArray = []      # boss boxes → pending_lootboxes
 var level_ups: Array[LevelUpInfo] = []
@@ -2870,13 +2880,16 @@ static func make_setup(state: GameState, data: GameData, encounter_id: String, a
 	# exp_mult (vorabend 1.2); show_mods = state.hype_gain_mult/follower_mult; floor palette/theme;
 	# is_boss and flags["mop_pep_talk"] → both party combatants start with sts_guard 2, flag erased (GDD §10.2)
 static func apply_result(state: GameState, data: GameData, result: BattleResult) -> BattleRewards
-	# hp/mp writeback; KO → 1 HP unless DEFEAT; item_delta → inventory; credits_delta; VICTORY: EXP per member (alive full,
-	# KO'd floori(50 %)), credits (+overkill), drops, boss_rewards (items → inventory, boxes → pending_lootboxes),
-	# Werbepause +ceili(max_mp × 0.15) MP for living members, stolen credits refunded; FLED/DEFEAT: stolen credits lost;
-	# VICTORY: defeated_groups += group_id, strays.erase(group_id), flags defeated_<boss_id> + quarter/floor boss flags;
-	# bestiary (defeated += 1 per defeated_ids entry, weak_known ∪= weak_found); floor_run.stats.kills += kills,
-	# floor_run.stats.party_kos += party_kos (key appears with the first KO; event score KO penalty, 05 §1.5);
-	# VICTORY over FloorDef.timer_start_after → floor_run.timer_started = true
+	# in this order (private steps _writeback … _bestiary_and_kills): (1) hp/mp writeback, KO'd members stay at 0 HP;
+	# (2) item_delta → inventory, credits_delta; (3) result.credits_stolen (what the thieves kept — also on a VICTORY when
+	# the thief escaped, GDD §3.11) is deducted → credits_lost; VICTORY: credits_refunded = result.credits_refunded;
+	# (4) VICTORY: EXP per member (alive full, KO'd floori(50 %) — while still at 0 HP, so a level-up never heals a KO'd
+	# member), credits (+overkill), drops, boss_rewards (items → inventory, boxes → pending_lootboxes), Werbepause
+	# +ceili(max_mp × 0.15) MP for living members; (5) KO → 1 HP unless DEFEAT (GDD §3.12 "Danach"); (6) VICTORY:
+	# defeated_groups += group_id, strays.erase(group_id), flags defeated_<boss_id> + quarter/floor boss flags, VICTORY over
+	# FloorDef.timer_start_after → floor_run.timer_started = true; (7) bestiary (defeated += 1 per defeated_ids entry,
+	# weak_known ∪= weak_found); floor_run.stats.kills += kills, floor_run.stats.party_kos += party_kos (key appears with
+	# the first KO; event score KO penalty, 05 §1.5)
 
 class_name Shop extends RefCounted
 static func stock(def: FloorDef, safe_room_id: String) -> PackedStringArray    # layout safe room shop, else def.shop

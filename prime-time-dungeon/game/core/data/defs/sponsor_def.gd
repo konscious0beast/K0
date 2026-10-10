@@ -5,7 +5,8 @@ var id: String = ""
 var name: String = ""
 var slogan: String = ""
 var color: String = "#ffffff"
-var gift: Array[Dictionary] = []            # GiftEffect: {"kind", "value", "status", "turns", "item", "target", "ignore_resist"}
+# GiftEffect: {"kind", "value", "status", "turns", "item", "target", "ignore_resist"}
+var gift: Array[Dictionary] = []
 var weight: int = 1
 var weight_mods: Array[Dictionary] = []     # [{"cond": String, "value": float, "mult": float}]
 var min_floor: int = 1

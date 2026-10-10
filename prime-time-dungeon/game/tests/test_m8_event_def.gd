@@ -23,7 +23,7 @@ func _live() -> Dictionary:
 		"rules": {"mode": "coop", "team_size": [1, 4], "leagues": ["show", "pur"], "timer_mode": "realtime",
 			"floor_timer_sec": 2100, "turn_timeout_sec": 20, "coop_join_radius_m": 15, "max_run_wall_sec": 2700,
 			"party_preset": "preset_f1_l3", "attempts": {"ranked": 1, "practice": false}, "spectate": {"delay_sec": 30},
-			"gifts": {"enabled": true, "sources": ["fan", "bits", "shop"], "load_cap_half": 48, "max_external": 16,
+			"gifts": {"enabled": true, "sources": ["fan", "shop"], "load_cap_half": 48, "max_external": 16,
 				"max_chests": 8, "max_gold_chests": 2, "min_interval_sec": 45, "sale_close_buffer_sec": 120,
 				"max_per_battle": 1, "per_buyer_per_target": 5, "load_weights_half": {"cheer": 0, "gold_per_100": 1,
 				"fan_pack": 2, "sponsor_buff": 2, "bronze": 2, "silver": 4, "gold": 8}, "effect_k_pm": 75,
@@ -149,6 +149,12 @@ func test_validation_errors() -> void:
 		["late entry", func(d: Dictionary) -> void: d["late_entry"] = "always", "late_entry"],
 		["unknown key", func(d: Dictionary) -> void: d["prize_money"] = 100, "unknown key 'prize_money'"],
 		["floor type", func(d: Dictionary) -> void: d["floor"] = "eins", "floor must be"],
+		# live-integrity-9 / -4 (05 §10.1): sources ⊆ fan, shop, dev — bits is not offered, dev only offline
+		["bits source", func(d: Dictionary) -> void: d["rules"]["gifts"]["sources"] = ["fan", "bits", "shop"],
+			"'bits' is not offered"],
+		["dev source live", func(d: Dictionary) -> void: d["rules"]["gifts"]["sources"] = ["shop", "dev"],
+			"'dev' (QA) only in offline events"],
+		["sources type", func(d: Dictionary) -> void: d["rules"]["gifts"]["sources"] = "shop", "must be an Array"],
 	]
 	for c: Array in cases:
 		var d: Dictionary = _live()

@@ -4,7 +4,6 @@ extends TestCase
 ## game data it references, and — once EventCatalog is no longer the M0 stub — that the catalog accepts the file.
 
 const PATH: String = "res://data/events.json"
-const STUB_HEADER: String = "# STUB(M0)"
 const EVENT_KEYS: PackedStringArray = ["id", "kind", "name_key", "floor", "windows", "late_entry", "seed_policy",
 	"quest", "rules", "votes", "scoring", "rewards"]
 const SCORING_KEYS: PackedStringArray = ["complete", "progress_max", "per_sec_left", "per_follower", "follower_cap",
@@ -70,10 +69,6 @@ func test_gleis9_quest_targets_the_queen() -> void:
 
 
 func test_event_catalog_accepts_the_file() -> void:
-	var f: FileAccess = FileAccess.open("res://core/live/event_catalog.gd", FileAccess.READ)
-	if f == null or f.get_line().begins_with(STUB_HEADER):
-		skip("EventCatalog is still the M0 stub (M8)")
-		return
 	var cat: EventCatalog = EventCatalog.new()
 	assert_true(cat.load_file(PATH), "EventCatalog errors: " + "; ".join(cat.errors))
 	for e: Dictionary in _events():

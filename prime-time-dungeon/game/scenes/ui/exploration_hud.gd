@@ -238,7 +238,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		open_big_map()
 
 
-# --- public API (02_TECH §9.5) ------------------------------------------------------------------------------------------
+# --- public API (02_TECH §9.5)
+# ------------------------------------------------------------------------------------------
 
 func bind_layout(layout: FloorLayout, visited: Array[Vector2i]) -> void:
 	minimap.call("bind", layout, visited)
@@ -311,7 +312,8 @@ func set_quest(text: String, progress: float) -> void:
 	_quest_bar.value = clampf(progress, 0.0, 1.0) * 100.0
 
 
-# --- M6-internal helpers (tests, touch) ---------------------------------------------------------------------------------
+# --- M6-internal helpers (tests, touch)
+# ---------------------------------------------------------------------------------
 
 func prompt_text() -> String:
 	return _prompt_text

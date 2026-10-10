@@ -131,9 +131,11 @@ func test_game_settings_dict_and_defaults() -> void:
 
 
 func test_game_without_state_is_safe() -> void:
-	if Game.has_state():
-		skip("a game state exists (Phase B+): covered by integration tests")
-		return
+	var saved: Array = [Game.state, Game.sim, Game.run_log]
+	Game.state = null                         # the precondition is set here, not hoped for (no conditional skip)
+	Game.sim = null
+	Game.run_log = null
+	assert_false(Game.has_state())
 	assert_null(Game.floor_def())
 	assert_false(Game.is_timer_ticking())
 	assert_eq(Game.time_left(), 0.0)
@@ -145,6 +147,9 @@ func test_game_without_state_is_safe() -> void:
 	assert_false(Game.set_difficulty(&"vorabend"))
 	assert_len(Game.open_lootbox("box_bronze"), 0)
 	assert_eq(Game.replay_log(null)["mismatch_at"], -1)
+	Game.state = saved[0]
+	Game.sim = saved[1]
+	Game.run_log = saved[2]
 
 
 func test_input_scheme_detection() -> void:

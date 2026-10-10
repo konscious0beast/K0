@@ -15,10 +15,10 @@ class_name GiftApplier extends RefCounted
 ## - cheer: cosmetic, nothing.
 ## Equipment the party already owns (LootRoller.owned_equipment, earlier in this gift) becomes credits:
 ## ItemDef.duplicate_credits() per piece (GDD §9.3, integers only — the same rule in battle, ActionResolver). External
-## gifts
-## book their items into state.flags["live"]["gift_items"] (L3 statistics) and their load/caps into the run counters
-## (GiftPolicy.note_applied). In battle (BattleState.apply_gift) the caller books the same via note_battle_gift().
-## Randomness only from `rng` (integer draws), so a replay with the same seed stream ("gift") yields the same result.
+## gifts book their items into state.flags["live"]["gift_items"] (L3 statistics) and their load/caps into the run
+## counters (GiftPolicy.note_applied). In battle (BattleState.apply_gift) the caller books the same via
+## note_battle_gift(). Randomness only from `rng` (integer draws), so a replay with the same seed stream ("gift") yields
+## the same result.
 
 const FixedMath := preload("res://core/stats/fixed_math.gd")
 const RARITY_ORDER: PackedStringArray = LootRoller.RARITY_ORDER

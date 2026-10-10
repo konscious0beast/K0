@@ -194,8 +194,7 @@ func test_note_battle_gift_books_items_and_load() -> void:
 
 
 ## live-integrity-15 (05 §6.9: "Statistiken dürfen nicht davon abhängen, ob das Geschenk im Kampf ankam"): one chest
-## with
-## the same contents leaves the same inventory, credits and gift_items whether it arrives outside a battle
+## with the same contents leaves the same inventory, credits and gift_items whether it arrives outside a battle
 ## (GiftApplier.apply + add_rewards) or in one (BattleState.apply_gift → note_battle_gift → BattleBridge.apply_result) —
 ## an owned weapon and the second piece of a new one become credits in both places.
 func test_chest_in_and_out_of_battle_gives_the_same_result() -> void:

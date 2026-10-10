@@ -81,12 +81,12 @@ static func chest_allowed(load_half: int, rules: Dictionary) -> bool:
 ## run binding (target run_id / player_id, event_id, window_id against the run's, where both are known, 05 §6.9) →
 ## wrong_target · gifts disabled / source not offered (rules.gifts.sources; without the key: every source, except that
 ## "dev" needs an explicit listing in event rules — rules with "leagues"; the campaign accepts it) / gift_accept →
-## not_accepting · client-sim
-## deadline → deadline_missed · effect factor (effect_pm == effect_pm(load_half); service gifts: load_half >= applied
-## load) → effect_mismatch · minimum interval of service gifts (min_interval_sec since last_delivery_tick) → too_soon ·
-## caps (load, external count, chests, gold chests, per sender) → cap_reached · chest threshold → chest_blocked ·
-## Sponsor-Fenster (SponsorWindows.check: only while the run tracks windows) → window_closed | window_full |
-## window_sender_limit — last, so a window refusal always means "everything else is fine, wait for the next window".
+## not_accepting · client-sim deadline → deadline_missed · effect factor (effect_pm == effect_pm(load_half); service
+## gifts: load_half >= applied load) → effect_mismatch · minimum interval of service gifts (min_interval_sec since
+## last_delivery_tick) → too_soon · caps (load, external count, chests, gold chests, per sender) → cap_reached · chest
+## threshold → chest_blocked · Sponsor-Fenster (SponsorWindows.check: only while the run tracks windows) →
+## window_closed | window_full | window_sender_limit — last, so a window refusal always means "everything else is fine,
+## wait for the next window".
 ## The per-battle cap is no rejection (Show queues, see can_deliver_in_battle).
 static func check(run: Dictionary, g: Dictionary, rules: Dictionary) -> String:
 	if not Gift.is_external(g):

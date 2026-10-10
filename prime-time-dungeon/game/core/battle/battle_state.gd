@@ -9,8 +9,8 @@ class_name BattleState extends RefCounted
 ## inside and appear completely in the returned list.
 ## Determinism (Brief §6b.1, 05 CR-2): every TURN_START sets action_n += 1, rng.seed = derive(seed, "action", action_n),
 ## ai_rng.seed = derive(seed, "ai", action_n); start counters use derive(seed, "ctb", 0), gift k uses
-## derive(seed, "gift", k).
-## choose_ai_command() never mutates the battle, so replaying recorded commands gives identical events.
+## derive(seed, "gift", k). choose_ai_command() never mutates the battle, so replaying recorded commands gives identical
+## events.
 
 const FixedMath := preload("res://core/stats/fixed_math.gd")
 
@@ -273,8 +273,7 @@ func preview_order(count: int, hover_rank: int = -1, overrides: Dictionary = {})
 ## Ghost preview for the HUD (GDD §3.4): counters the targets would have if `skill_id` (skill or item use_skill)
 ## applied its stun (`delay_on_apply`) statuses — chance ignored; already stunned or immune targets stay unchanged.
 ## For the actor itself the value is its follow-up counter (delay + stun). Pass the result as `overrides` to
-## preview_order().
-## Haste/slow only change future delays, not current counters, so they are not part of the ghost.
+## preview_order(). Haste/slow only change future delays, not current counters, so they are not part of the ghost.
 func ghost_overrides(actor: Combatant, skill_id: String, target_ids: PackedStringArray) -> Dictionary:
 	var out: Dictionary = {}
 	var sk: SkillDef = skill_def(skill_id)

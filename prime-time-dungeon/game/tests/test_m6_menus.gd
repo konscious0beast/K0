@@ -185,8 +185,7 @@ func test_lootbox_screen_shows_odds_pity_and_purchase_note() -> void:
 	assert_has(_all_text(lb), "erste Ziehung garantiert Selten", "pity forces the next first roll")
 
 
-# --- confirm dialog
-# ----------------------------------------------------------------------------------------------------
+# --- confirm dialog ---------------------------------------------------------------------------------------------------
 
 func test_confirm_dialog_yes_no_and_cancel() -> void:
 	for answer_yes: bool in [true, false]:
@@ -219,8 +218,7 @@ func test_confirm_dialog_yes_no_and_cancel() -> void:
 	assert_eq(res, [false] as Array[bool], "ui_cancel answers no")
 
 
-# --- settings
-# -----------------------------------------------------------------------------------------------------------
+# --- settings ---------------------------------------------------------------------------------------------------------
 
 func test_settings_rows_write_game_settings() -> void:
 	Game.settings.text_speed = 1
@@ -315,8 +313,7 @@ func test_settings_mode_is_locked_in_an_event_run() -> void:
 	Game.new_game(0, "Kai", 7)
 
 
-# --- title flow
-# ---------------------------------------------------------------------------------------------------------
+# --- title flow -------------------------------------------------------------------------------------------------------
 
 func test_title_menu_and_options_modal() -> void:
 	var t: Node = _scene(SCENE_TITLE, {})
@@ -489,8 +486,7 @@ func test_game_over_buttons_wait_before_accepting_input() -> void:
 	assert_true(focused, "first button focused once active")
 
 
-# --- helpers
-# -------------------------------------------------------------------------------------------------------------
+# --- helpers ----------------------------------------------------------------------------------------------------------
 
 func _scene(path: String, params: Dictionary) -> Node:
 	var n: Node = (load(path) as PackedScene).instantiate()

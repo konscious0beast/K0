@@ -45,7 +45,7 @@ Etage betreten → Erkunden (Gegner sichtbar, Truhen, Events, Safe Room)
 
 | System | Kurzbeschreibung |
 |---|---|
-| Erkundung | Third-Person, Kamera hinter der Figur (orbit), prozedural zusammengesetzte Etage aus Raum-Modulen auf Raster. Gegner patrouillieren sichtbar; Berührung = Kampf. Vorteil/Nachteil je nach Anlauf (Rücken = Präventivschlag). |
+| Erkundung | Third-Person, Kamera hinter der Figur (orbit). Etage 1 ist handgebaut (Layout-Daten in `floors.json`), ab Etage 2 prozedural aus Raum-Modulen auf Raster (`DungeonGenerator`). Gegner patrouillieren sichtbar; Berührung = Kampf. Vorteil/Nachteil je nach Anlauf (Rücken = Präventivschlag). |
 | Kampf (CTB) | Party (Kai + Mopsula) vs. 1–4 Gegner. Zugreihenfolge aus SPD + Aktionsgewicht („Tick“-System wie FF10). Befehle: Angriff, Fähigkeit, Item, **Stunt**, Verteidigen, Flucht. Zugreihenfolge-Leiste rechts. |
 | Show-System | **Zuschauer** (live, pro Kampf/Erkundung schwankend) und **Follower** (dauerhaft). Abwechslungsreiche Aktionen, knappe Siege, Stunts, Combos, Kills mit Fähigkeiten erhöhen den Hype. Schwellenwerte → **Sponsor-Geschenk** (Heilung/Buff/Item) mitten im Kampf. |
 | Lootboxen | Bronze/Silber/Gold/Fan-Box aus Achievements und Bossen. Nur im Spiel verdient, **niemals Echtgeld**. Öffnen nur im Safe Room, mit M.O.D.-Kommentar. |
@@ -118,12 +118,16 @@ Ordner unter `res://`:
 
 ```
 autoload/      Singletons (oben)
-core/          reine Logik (RefCounted): battle/, stats/, loot/, show/, dungeon/
-data/          JSON: enemies, skills, items, achievements, lootboxes, mod_lines, floors, party
+core/          reine Logik (RefCounted): data/, stats/, battle/, show/, loot/, progression/, dungeon/, live/ (SHOWRUN)
+data/          JSON: die 13 GameData-Tabellen (statuses, skills, items, classes, party, enemies, floors, lootboxes,
+               achievements, sponsors, milestones, mod_lines, scenes) + events.json (SHOWRUN, geladen von EventCatalog)
 art/           shaders/, materials/, kit/ (prozedurale Mesh-Bauer: Figuren, Umgebung, Props, VFX)
 scenes/        boot/, title/, exploration/, battle/, safe_room/, ui/ (wiederverwendbare UI)
 tests/         run_tests.gd + test_*.gd
 ```
+
+Außerhalb von `res://`: `prime-time-dungeon/docs/` (Dokumente), `prime-time-dungeon/tools/` (check.sh, fullrun.sh, perf.sh,
+make_icons.sh), `prime-time-dungeon/README.md` (Einstieg).
 
 Szenenfluss: `Boot → Title → (Neues Spiel | Laden) → Exploration(Etage N) ⇄ Battle ⇄ SafeRoom → … → Credits/GameOver`.
 

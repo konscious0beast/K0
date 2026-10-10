@@ -1,14 +1,11 @@
 extends TestCase
-## Autoplay driver (02_TECH §11.4): stub detection (missing or "# STUB(M0)" first line), the step table budgets, the
-## dry run (no quit, no print) past boot_to_title — every module is real, so the smoke run never takes the skip path
-## (check.sh requires "AUTOPLAY: OK") — the safe room choice, and the boot arguments.
+## Autoplay driver (02_TECH §11.4): the step table budgets, the dry run (no quit, no print) past boot_to_title (there
+## is no skip path: check.sh requires "AUTOPLAY: OK"), the watchdog, the safe room choice and the boot arguments.
 
 const AutoplayScript := preload("res://scenes/boot/autoplay.gd")
 const TitleFlow := preload("res://scenes/title/title_flow.gd")
 const ROUTER_FIXTURE: String = "res://tests/fixtures/router/router_screen.tscn"
 const SCENE_TITLE: String = "res://scenes/title/title.tscn"
-const STUB_PROBE: String = "user://m6_autoplay_stub_probe.gd"
-const REAL_PROBE: String = "user://m6_autoplay_real_probe.gd"
 
 
 func before_each() -> void:
@@ -18,9 +15,6 @@ func before_each() -> void:
 
 func after_each() -> void:
 	Engine.time_scale = 1.0
-	for p: String in [STUB_PROBE, REAL_PROBE]:
-		if FileAccess.file_exists(p):
-			DirAccess.remove_absolute(ProjectSettings.globalize_path(p))
 	Router.adopt(null)
 
 
@@ -37,22 +31,6 @@ func test_step_table_matches_spec() -> void:
 	assert_eq(AutoplayScript.AUTOPLAY_SEED, 4242)
 
 
-func test_stub_detection() -> void:
-	var f: FileAccess = FileAccess.open(STUB_PROBE, FileAccess.WRITE)
-	f.store_string("# STUB(M0) — probe\nextends RefCounted\n")
-	f.close()
-	var g: FileAccess = FileAccess.open(REAL_PROBE, FileAccess.WRITE)
-	g.store_string("extends RefCounted\n## real implementation\n")
-	g.close()
-	var missing: String = "res://scenes/does_not_exist_m6_probe.gd"
-	var out: PackedStringArray = AutoplayScript.stub_dependencies(PackedStringArray([STUB_PROBE, REAL_PROBE, missing]))
-	assert_eq(out, PackedStringArray([STUB_PROBE, missing]), "stub header and missing files count, real files not")
-	assert_false(AutoplayScript.stub_dependencies(PackedStringArray(["res://scenes/title/title.gd"])).has(
-		"res://scenes/title/title.gd"), "the M6 title screen is a real implementation")
-	for p: String in AutoplayScript.REQUIRED:
-		assert_true(p.begins_with("res://") and p.ends_with(".gd"), "required script path %s" % p)
-
-
 func test_dry_run_reaches_title_and_continues() -> void:
 	var title: Node = (load(SCENE_TITLE) as PackedScene).instantiate()
 	title.call("setup", {})
@@ -62,10 +40,9 @@ func test_dry_run_reaches_title_and_continues() -> void:
 	var ap: Node = AutoplayScript.new()
 	ap.set("dry_run", true)
 	add_to_tree(ap)
-	assert_eq(AutoplayScript.stub_dependencies(), PackedStringArray(), "no module is a stub any more")
 	var ok: bool = await wait_until(func() -> bool: return bool(ap.get("finished")) or int(ap.get("step")) >= 1, 120)
 	assert_true(ok, "boot_to_title is reached within its budget")
-	assert_eq(int(ap.get("step")), 1, "all modules real: continues with new_game")
+	assert_eq(int(ap.get("step")), 1, "continues with new_game (no skip after boot_to_title)")
 	ap.set("finished", true)              # stop before it starts a real game inside the test run
 	assert_eq(ap.process_mode, Node.PROCESS_MODE_ALWAYS)
 

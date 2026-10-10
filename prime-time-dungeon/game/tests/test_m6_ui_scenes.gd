@@ -589,8 +589,7 @@ func test_glyph_helpers() -> void:
 	assert_eq(UiUtil.missing_glyphs(UiUtil.glyph_safe(unsafe)), "", "glyph_safe replaces every missing glyph")
 
 
-# --- helpers
-# -------------------------------------------------------------------------------------------------------------
+# --- helpers ----------------------------------------------------------------------------------------------------------
 
 ## Visible BaseButtons and Sliders smaller than MIN_TOUCH (visible part) or with a touch_pad hit area below TOUCH_HIT.
 func _small_controls(root: Node) -> PackedStringArray:

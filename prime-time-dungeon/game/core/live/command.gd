@@ -1,12 +1,11 @@
 class_name Command extends RefCounted
 ## Schema check of recorded commands (02_TECH §3.4 "t" types, 05 §10.6). Commands are the "Befehle rein" half of the
 ## live contract (Brief §6b.2): plain JSON dictionaries; after a JSON round trip every number is a float, so integer
-## fields accept integral floats.
-## Shapes recorded by Game: floor {"floor"}, encounter {"enc", "adv", "group"}, battle {"cmd", "auto"},
-## lootbox {"box"}, buy {"item", "qty", "safe_room"}, sell {"item", "qty"}, equip {"member", "slot", "item"},
-## use_item {"item", "member"}, rest {}, event {"id", "choice"}, chest {"id"}, gate {"key"}, room {"cell": [x, y]},
-## safe_room {"id"}, safe_room_exit {}, scene {"id"}, flag {"key" ∈ FLAG_KEYS, "value"}, difficulty {"to"}, descend {},
-## gift {"gift"} (external input, cmd id 0), sponsor_window {"op": "dev_open", "sec", "slots"} (QA Sponsor-Fenster,
+## fields accept integral floats. Shapes recorded by Game: floor {"floor"}, encounter {"enc", "adv", "group"}, battle
+## {"cmd", "auto"}, lootbox {"box"}, buy {"item", "qty", "safe_room"}, sell {"item", "qty"}, equip {"member", "slot",
+## "item"}, use_item {"item", "member"}, rest {}, event {"id", "choice"}, chest {"id"}, gate {"key"}, room {"cell": [x,
+## y]}, safe_room {"id"}, safe_room_exit {}, scene {"id"}, flag {"key" ∈ FLAG_KEYS, "value"}, difficulty {"to"}, descend
+## {}, gift {"gift"} (external input, cmd id 0), sponsor_window {"op": "dev_open", "sec", "slots"} (QA Sponsor-Fenster,
 ## SponsorWindows.dev_open, 05 §6.13).
 ## battle.cmd = BattleCommand.to_dict(): {"kind": attack|skill|stunt|item|defend|flee, "actor", "skill", "item",
 ## "targets": [String]}. Additional unknown fields are allowed (additive protocol versions, 05 §4.3).

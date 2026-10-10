@@ -438,8 +438,7 @@ func test_bridge_apply_boss_flee_and_defeat() -> void:
 
 
 ## core-logic-1 (GDD §3.11 "flieht er, sind sie weg"): the rare Fahrscheinfresser fines the party, escapes and the
-## battle
-## ends in VICTORY — the 40 credits are gone, and nothing is reported as refunded.
+## battle ends in VICTORY — the 40 credits are gone, and nothing is reported as refunded.
 func test_bridge_escaped_thief_victory_keeps_the_credits() -> void:
 	var d: GameData = real_data()
 	var st: GameState = GameState.create_new(d, 1, "Kai", 4242)

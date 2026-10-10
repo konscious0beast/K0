@@ -13,9 +13,9 @@ extends CanvasLayer
 ## pending blocking line early (the floor countdown would run while a blocking line is still on screen). M3/M5 code
 ## must therefore wait for dialog_finished only after emitting a line with blocking = true (e.g. boss intros:
 ## say(tag, ctx, true)); for non-blocking lines use the private M6 signal `line_finished(tag, blocking)` of
-## ModDialog.current instead.
-## Input: the box only takes ui_accept/action/tap while no menu above it (CanvasLayer > 45, e.g. PauseMenu) owns the
-## focus and the tree is not paused, so menus opened over a waiting line keep their own confirm input.
+## ModDialog.current instead. Input: the box only takes ui_accept/action/tap while no menu above it (CanvasLayer > 45,
+## e.g. PauseMenu) owns the focus and the tree is not paused, so menus opened over a waiting line keep their own confirm
+## input.
 
 signal line_started(text: String, voice: StringName, tag: String)
 ## Every shown line, blocking or not (M6-internal; Events.dialog_finished stays blocking-only, see header).

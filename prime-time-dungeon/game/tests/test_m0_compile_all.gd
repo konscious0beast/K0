@@ -108,7 +108,7 @@ func test_tscn_files_are_handwritten_format() -> void:
 ## limit cannot erode silently again (quality-18).
 func test_line_length() -> void:
 	var files: PackedStringArray = []
-	_walk("res://", [".gd"], files)
+	_walk("res://", [".gd", ".gdshader", ".gdshaderinc"], files)
 	var long: PackedStringArray = []
 	for path: String in files:
 		var lines: PackedStringArray = FileAccess.get_file_as_string(path).split("\n")

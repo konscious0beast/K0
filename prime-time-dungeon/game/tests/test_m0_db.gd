@@ -49,8 +49,7 @@ func _expect_error(raw: Dictionary, needle: String, what: String) -> void:
 	fail("%s: expected an error containing '%s', got [%s]" % [what, needle, "; ".join(errs)])
 
 
-# --- positive
-# ----------------------------------------------------------------------------------------------------------
+# --- positive ---------------------------------------------------------------------------------------------------------
 
 func test_fixture_loads_without_errors() -> void:
 	var d: GameData = GameData.new()
@@ -395,8 +394,7 @@ func test_rule6_type_consistency() -> void:
 	_expect_error(raw, "mopsula].attack_skill: skill 'skl_e_strike' has user \"enemy\"", "party attack skill user")
 
 
-# --- rule 7: party
-# -----------------------------------------------------------------------------------------------------
+# --- rule 7: party ----------------------------------------------------------------------------------------------------
 
 func test_rule7_party() -> void:
 	var raw: Dictionary = _raw()

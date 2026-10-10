@@ -2,28 +2,14 @@ extends Node
 ## Autoplay driver (02_TECH §11.4), added under root by Boot with --autoplay (PROCESS_MODE_ALWAYS). Runs the step table
 ## boot_to_title → new_game → explore → force_battle → battle → safe_room with frame budgets (sum 600, watchdog 640),
 ## prints "AUTOPLAY: <step> ok @frame <n>" per step and finally "AUTOPLAY: OK frames=<n>" + quit(0); a failure prints
-## "Assertion failed: AUTOPLAY step '<name>' failed: <reason>" + quit(1).
-## While modules this run depends on are still Phase-A stubs (first line "# STUB(M0)", or the file is missing), only
-## boot_to_title is verified and the driver prints exactly "AUTOPLAY: SKIPPED (stub)" + quit(0).
+## "Assertion failed: AUTOPLAY step '<name>' failed: <reason>" + quit(1). There is no skip path: check.sh requires the
+## "AUTOPLAY: OK" line (the Phase-A stub branch is gone, every module is real).
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const WATCHDOG_FRAMES: int = 640
 const MOVE_FRAMES: int = 24
 const MIN_MOVE_M: float = 1.0
 const AUTOPLAY_SEED: int = 4242
-## Scripts the full run needs as real implementations (scene + core + autoload + art kit with collision floors).
-const REQUIRED: PackedStringArray = [
-	"res://scenes/exploration/exploration.gd", "res://scenes/battle/battle_scene.gd",
-	"res://scenes/battle/battle_controller.gd", "res://scenes/safe_room/safe_room.gd", "res://scenes/title/title.gd",
-	"res://core/battle/battle_state.gd", "res://core/battle/auto_policy.gd", "res://core/battle/ctb_queue.gd",
-	"res://core/battle/action_resolver.gd", "res://core/battle/damage_calc.gd", "res://core/battle/enemy_ai.gd",
-	"res://core/battle/combatant.gd", "res://core/stats/stat_block.gd",
-	"res://core/progression/game_state.gd", "res://core/progression/floor_run.gd",
-	"res://core/progression/battle_bridge.gd", "res://core/progression/progression.gd",
-	"res://core/progression/party_member.gd", "res://core/progression/inventory.gd",
-	"res://core/dungeon/dungeon_generator.gd", "res://core/dungeon/floor_layout.gd", "res://core/live/run_sim.gd",
-	"res://autoload/show.gd", "res://art/kit/env_kit.gd",
-]
 const STEPS: Array[Dictionary] = [
 	{"name": "boot_to_title", "budget": 60},
 	{"name": "new_game", "budget": 90},
@@ -36,7 +22,6 @@ const STEPS: Array[Dictionary] = [
 var frames: int = 0
 var step: int = 0
 var step_frames: int = 0
-var stubs: PackedStringArray = []
 var finished: bool = false
 ## Test hook: when set, quit(code) is not called (the result is kept in `result_code` / `result_line`).
 var dry_run: bool = false
@@ -52,27 +37,11 @@ var _safe_room_reached: bool = false
 var _exit_requested: bool = false
 
 
-## Missing or still-stub dependencies of the full run (missing = no resource at that path).
-static func stub_dependencies(paths: PackedStringArray = REQUIRED) -> PackedStringArray:
-	var out: PackedStringArray = []
-	for p: String in paths:
-		if not ResourceLoader.exists(p) or UiUtil.is_stub(p):
-			out.append(p)
-	return out
-
-
 func _init() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
 
 func _ready() -> void:
-	stubs = stub_dependencies()
-	if not stubs.is_empty():
-		var names: PackedStringArray = []
-		for p: String in stubs:
-			names.append(p.get_file())
-		if not dry_run:
-			print("AUTOPLAY: waiting for stub modules (%d): %s" % [names.size(), ", ".join(names)])
 	Events.floor_entered.connect(func(_i: int) -> void: _floor_entered = true)
 	Events.battle_ended.connect(func(outcome: int, _enc: String) -> void: _battle_outcome = outcome)
 
@@ -101,9 +70,6 @@ func _process(_delta: float) -> void:
 	if _check(step_name):
 		if not dry_run:
 			print("AUTOPLAY: %s ok @frame %d" % [step_name, frames])
-		if step_name == "boot_to_title" and not stubs.is_empty():
-			_finish(0, "AUTOPLAY: SKIPPED (stub)")
-			return
 		step += 1
 		step_frames = 0
 		_entered = false

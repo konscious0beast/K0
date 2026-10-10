@@ -72,8 +72,7 @@ func _open(sim: RunSim, sec: int = 60, slots: int = 3) -> void:
 		ExploreEvent.Type.SPONSOR_WINDOW_OPENED).size(), 1, "dev window opened")
 
 
-# --- schedule
-# -----------------------------------------------------------------------------------------------------------
+# --- schedule ---------------------------------------------------------------------------------------------------------
 
 func test_defaults_are_the_decided_values() -> void:
 	var r: Dictionary = SponsorWindows.rules_of({})
@@ -294,8 +293,7 @@ func test_floor_change_closes_the_window_and_restarts_the_countdown() -> void:
 	assert_eq(sim.sponsor_window()["next_in_sec"], 10, "first_sec again")
 
 
-# --- rules
-# ----------------------------------------------------------------------------------------------------------------
+# --- rules ------------------------------------------------------------------------------------------------------------
 
 func test_pur_league_and_disabled_gifts_have_no_windows() -> void:
 	var pur: RunSim = _sim({"leagues": ["pur"], "gifts": {"enabled": false}, "timer_mode": "explore_only"})
@@ -339,8 +337,7 @@ func test_rules_validation() -> void:
 	assert_eq(EventDef.from_dict(live).validate(), PackedStringArray())
 
 
-# --- replay
-# ---------------------------------------------------------------------------------------------------------------
+# --- replay -----------------------------------------------------------------------------------------------------------
 
 ## Recorded RunSim run with windows (periodic, safe room, boss, dev) and gifts inside them: RunSim.replay gives the
 ## same hash and checkpoints, without errors; a gift smuggled in outside any window is refused and reported.

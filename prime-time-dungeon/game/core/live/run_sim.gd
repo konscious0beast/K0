@@ -354,8 +354,7 @@ func close(cause: String, extra: Dictionary = {}) -> String:
 ## → the event of header.event_id from EVENTS_PATH (EventCatalog, validated against p_data) — never from the log
 ## itself; no event_id → none (campaign). An unknown event is an error (no replay without its rules). For a catalog
 ## event the header must match the event: seed == EventDef.run_seed() (seed_policy fixed), difficulty "prime", league
-## one
-## of rules.leagues (required when there are several) — else an error (the state is built from the header).
+## one of rules.leagues (required when there are several) — else an error (the state is built from the header).
 ## p_ledger: the gift service's authoritative list of gifts delivered to this run ([{"gift_id", "deliver_by_tick"?}];
 ## [] = no ledger check): an applied external gift not in it → "injected", a ledger gift the log never applies →
 ## "missing", applied after its ledger deliver_by_tick (> 0) → "late" (05 §6.5).

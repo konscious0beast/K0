@@ -12,9 +12,9 @@ extends TestCase
 ## Boss turn counts hinge on how the AutoPolicy spends MP: formulas (GDD §3/§4), party growth, gear and boss data match
 ## the GDD; the former 02_TECH §5.8 rule "MP >= 50 % → strongest skill, else ATTACK" gave 34.5 / 42.0 turns (Mopsula
 ## hits for 2–3 below 50 % MP), the MP-efficient rule of §5.8 as amended by CR M7-B1 gives ≈ 19.5 / 24
-## (GDD sim 18 / 23).
-## Levels/gear per zone follow the GDD §5.4/§13 progression (C L4 + mid gear, D L6 + late gear); 02_TECH §11.5 was
-## amended accordingly in the integration phase (it used to say "Startparty (Lv 1–3)" for every encounter).
+## (GDD sim 18 / 23). Levels/gear per zone follow the GDD §5.4/§13 progression (C L4 + mid gear, D L6 + late gear);
+## 02_TECH §11.5 was amended accordingly in the integration phase (it used to say "Startparty (Lv 1–3)" for every
+## encounter).
 
 const SEEDS: int = 50
 const MIN_WIN_RATE: float = 0.80

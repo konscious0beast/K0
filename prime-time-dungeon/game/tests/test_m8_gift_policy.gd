@@ -185,8 +185,7 @@ func test_gifts_are_bound_to_their_run() -> void:
 
 
 ## quality-6 / live-integrity-10: GiftPolicy.refusal is THE application check of Show and RunSim — duplicate ids,
-## content
-## items the game data does not know, then check() with the run counters and the extra run context.
+## content items the game data does not know, then check() with the run counters and the extra run context.
 func test_refusal_is_the_shared_application_check() -> void:
 	var data: GameData = real_data()
 	var st: GameState = GameState.create_new(data, 0, "Kai", 3, &"prime")

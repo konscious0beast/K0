@@ -138,15 +138,18 @@ Basis sind die Konstanten von `UiTheme` (02_TECH §3.9); Art ergänzt nur LIVE/P
 
 ## 3. Shader — verifizierter Code
 
+> Die Listings dieses Kapitels sind wortgleich mit den Dateien in `game/art/shaders/` (abgeglichen 2026-10-10). Bei
+> Abweichungen gilt die Datei; wer einen Shader ändert, zieht das Listing hier nach.
+
 ### 3.1 Übersicht (Dateien aus 02_TECH §1.5, Uniforms ⊇ 02_TECH §8.3)
 
 | Datei | Typ | Zweck |
 |---|---|---|
 | `art/shaders/toon.gdshader` | spatial | Figuren & interaktive Props: 2/3-Band-Cel-Ramp, farbiger Schatten, Rim, Glanzpunkt, Emission (Vertex-Maske), Metall-Maske, Streifen, Wobble, Flash, Highlight, Dissolve |
 | `art/shaders/toon_outline.gdshader` | spatial | Inverted Hull als `next_pass` von `toon` |
-| `art/shaders/env_tiles.gdshader` | spatial | Umgebung: Welt-Fliesen, Fugen, Schmutz, 3 Bänder, Schraffur im Schatten, kein Outline, kein `discard` |
+| `art/shaders/env_tiles.gdshader` | spatial | Umgebung: Welt-Fliesen, Fugen, Schmutz, 3 Bänder, Schraffur im Schatten, kein Outline, kein `discard`; Zusatz-Uniforms `vertex_emission_energy` (2.5, × `UV2.x`), `metal_sheen` (0.6, × `UV2.y`), `center_clean` (0.5: weniger Bodenschmutz nahe dem Mesh-Ursprung), `omni_step_soft` (0.12: Rampenbreite der 3 Omni-Lichtstufen) |
 | `art/shaders/glow.gdshader` | spatial | Unshaded-Emissiv: Neonröhren, Treppen-Licht, Signallampen |
-| `art/shaders/vfx_additive.gdshader` | spatial | Additive Billboard-Partikel ohne Textur (Punkt/Stern/Ring/Funke) |
+| `art/shaders/vfx_additive.gdshader` | spatial | Additive Billboard-Partikel ohne Textur (Punkt/Stern/Ring/Funke); `billboard` (Standard `true`; `false` behält die Mesh-Ausrichtung, z. B. für Schlag-Bögen) |
 | `art/shaders/hologram.gdshader` | spatial | M.O.D., Bildschirme, Sponsor-Logos, Schilde |
 | `art/shaders/ui_swirl.gdshader` | canvas_item | Kampf-Swirl (Router) |
 | `art/shaders/ui_tv_overlay.gdshader` | canvas_item | Quality `low`: Scanlines + Vignette als Abdunkelung, Testbild „Sendeschluss“; **liest den Bildschirm nicht** (F7) |
@@ -154,7 +157,7 @@ Basis sind die Konstanten von `UiTheme` (02_TECH §3.9); Art ergänzt nur LIVE/P
 | `art/shaders/ptd_color.gdshaderinc` | Include | `ptd_vertex_albedo()` — sRGB-Weiche für `COLOR` (F1); per `#include` in `toon`, `env_tiles`, `vfx_additive` (Antrag A10 an 02_TECH §1.5) |
 
 **Vertex-Daten-Konvention** (geschrieben von `MeshUtil.merge()`, gelesen von `toon`/`env_tiles`/`toon_outline`):
-`COLOR` = **sRGB**-Albedo (F1), `UV2.x` = Emissionsmaske (× `vertex_emission_energy` 3.0), `UV2.y` = Metallmaske
+`COLOR` = **sRGB**-Albedo (F1), `UV2.x` = Emissionsmaske (× `vertex_emission_energy`: `toon` 3.0, `env_tiles` 2.5), `UV2.y` = Metallmaske
 (+0.9 Glanz, doppelte Glanzpunktgröße), `CUSTOM0.xyz` = geglättete Normalen für den Hull.
 Damit reicht **ein** Material pro Figur für Haut, Stoff, Metall und Leuchtteile. Dieselbe sRGB-Regel gilt für Partikelfarben
 (`CPUParticles3D.color`/`color_ramp`) und MultiMesh-Instanzfarben.
@@ -162,7 +165,7 @@ Damit reicht **ein** Material pro Figur für Haut, Stoff, Metall und Leuchtteile
 `art/shaders/ptd_color.gdshaderinc` (einzige Stelle der Farbraum-Weiche; Include-Dateien haben kein `shader_type`):
 
 ```glsl
-// PRIME TIME DUNGEON - shared color helpers (#include in toon, env_tiles, vfx_additive).
+// PRIME TIME DUNGEON - shared color helpers (#include in toon, env_tiles, vfx_additive). 03_ART F1.
 // Vertex/particle/MultiMesh colors are stored sRGB. Compatibility hands COLOR to the shader already
 // linearized, Mobile/Forward+ hand it over raw (tested 4.7.2) -> convert only there.
 vec3 ptd_vertex_albedo(vec3 c) {
@@ -200,7 +203,7 @@ nicht auf nach unten zeigenden Flächen. Glanzpunkt wird wegen `specular_disable
 `ALBEDO` geteilt, damit er weiß bleibt.
 
 ```glsl
-// PRIME TIME DUNGEON - Toon shader for actors and interactive props. Mobile + Compatibility.
+// PRIME TIME DUNGEON - Toon shader for actors and interactive props. Mobile + Compatibility (03_ART 3.2).
 // Contract uniforms (02_TECH 8.3) first, art extras below. Vertex data of kit meshes:
 // COLOR = sRGB albedo, UV2.x = emission mask, UV2.y = metal mask, CUSTOM0.xyz = outline normals.
 shader_type spatial;
@@ -228,7 +231,8 @@ group_uniforms cel;
 uniform float band_shadow : hint_range(0.0, 1.0) = 0.30;
 uniform float band_mid : hint_range(0.0, 1.0) = 0.65;
 uniform float threshold_mid : hint_range(-1.0, 1.0) = 0.02;   // N.L shadow -> mid (bands = 3)
-uniform float threshold_lit : hint_range(-1.0, 1.0) = 0.42;   // N.L mid -> lit (bands = 3), shadow -> lit (bands = 2: 0.15)
+// N.L mid -> lit (bands = 3), shadow -> lit (bands = 2: 0.15)
+uniform float threshold_lit : hint_range(-1.0, 1.0) = 0.42;
 uniform float band_softness : hint_range(0.001, 0.2) = 0.025;
 uniform float rim_width : hint_range(0.0, 1.0) = 0.22;
 group_uniforms specular;
@@ -353,7 +357,7 @@ weiter weg wird sie bis 35 % dünner. Kamera-Zoom (FOV) skaliert die Linie mit. 
 (beide Renderer); `highlight` und `flash` am Hull wirken über `next_pass`.
 
 ```glsl
-// PRIME TIME DUNGEON - Inverted-hull outline (next_pass of toon). Mobile + Compatibility.
+// PRIME TIME DUNGEON - Inverted-hull outline (next_pass of toon). Mobile + Compatibility (03_ART 3.3).
 // outline_width = world width (m) the line has at ref_distance (6 m); constant on screen up to
 // that distance (no fat lines in close-ups), thinner beyond it. Grows in clip space.
 shader_type spatial;
@@ -386,7 +390,8 @@ void vertex() {
 	float len = length(dir_px);
 	dir_px = len > 0.0001 ? dir_px / len : vec2(0.0);
 	float w = outline_width * (1.0 + 0.6 * highlight);
-	float ndc_h = w * abs(PROJECTION_MATRIX[1][1]) / ref_distance;             // NDC height at ref distance; [1][1] < 0 in Godot (Y flip)
+	// NDC height at ref distance; [1][1] < 0 in Godot (Y flip)
+	float ndc_h = w * abs(PROJECTION_MATRIX[1][1]) / ref_distance;
 	float dist_factor = clamp(ref_distance / max(clip.w, 0.001), min_width_factor, 1.0);
 	clip.xy += dir_px * vec2(VIEWPORT_SIZE.y / VIEWPORT_SIZE.x, 1.0) * ndc_h * dist_factor * clip.w;
 	POSITION = clip;
@@ -408,7 +413,9 @@ Schmutzflecken (Value-Noise) + Schmutzkante 0.6 m an Wänden, diagonale Bildschi
 
 ```glsl
 // PRIME TIME DUNGEON - Environment: world-space tiles/grout/dirt, vertex color, 3 toon bands,
-// screen-space hatching in shadow. No outline, no discard (early-Z on tile GPUs). Mobile + Compatibility.
+// screen-space hatching in shadow. No outline, no discard (early-Z on tile GPUs). Mobile + Compatibility (03_ART 3.4).
+// Art extras: UV2.x = emission mask (posters, neon strips, lamp faces, water shimmer), UV2.y = metal mask
+// (rails, hoops, fittings: no grout/dirt, cool sheen). Both masks are written by MeshUtil.merge().
 shader_type spatial;
 render_mode blend_mix, depth_draw_opaque, cull_back, specular_disabled;
 
@@ -431,9 +438,14 @@ uniform float hatch_strength : hint_range(0.0, 1.0) = 0.5;
 uniform float hatch_spacing_px : hint_range(2.0, 24.0) = 6.0;
 uniform float band_shadow : hint_range(0.0, 1.0) = 0.22;
 uniform float band_mid : hint_range(0.0, 1.0) = 0.6;
+uniform float vertex_emission_energy : hint_range(0.0, 16.0) = 2.5;   // x UV2.x
+uniform float metal_sheen : hint_range(0.0, 2.0) = 0.6;               // x UV2.y
+uniform float center_clean : hint_range(0.0, 1.0) = 0.5;              // less floor dirt within ~5 m of the mesh origin
+uniform float omni_step_soft : hint_range(0.0, 0.3) = 0.12;           // ramp width of the 3 omni light steps
 
 varying vec3 v_world;
 varying vec3 v_wnormal;
+varying vec2 v_local_xz;
 
 float ptd_hash2(vec2 p) {
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -449,31 +461,39 @@ float ptd_vnoise(vec2 p) {
 
 void vertex() {
 	v_world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	v_local_xz = VERTEX.xz;
 	v_wnormal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 }
 
 void fragment() {
-	vec3 col = albedo.rgb;
+	vec3 base = albedo.rgb;
 	if (use_vertex_color) {
-		col *= ptd_vertex_albedo(COLOR.rgb);
+		base *= ptd_vertex_albedo(COLOR.rgb);
 	}
+	float special = clamp(UV2.x + UV2.y, 0.0, 1.0);    // emissive / metal parts: no tiles, no grime
+	vec3 col = base;
 	// Planar projection by dominant world normal axis.
 	vec3 an = abs(v_wnormal);
 	vec2 p = an.y > 0.5 ? v_world.xz : (an.x > an.z ? v_world.zy : v_world.xy);
 	vec2 t = fract(p / tile_size) * tile_size;
 	vec2 d = min(t, vec2(tile_size) - t);
-	float grout = 1.0 - step(grout_width * 0.5, min(d.x, d.y));
+	float grout = (1.0 - step(grout_width * 0.5, min(d.x, d.y))) * (1.0 - special);
 	// per-tile brightness jitter (+-6 %)
-	col *= 0.94 + 0.12 * ptd_hash2(floor(p / tile_size));
+	col *= mix(0.94 + 0.12 * ptd_hash2(floor(p / tile_size)), 1.0, special);
 	col = mix(col, grout_color.rgb, grout);
 	// dirt: noise blotches + grime near the floor on walls
 	float n = ptd_vnoise(p * 1.3) * 0.6 + ptd_vnoise(p * 5.0) * 0.4;
 	float grime = an.y > 0.5 ? 0.0 : 1.0 - smoothstep(0.0, dirt_height, v_world.y);
-	float dirt = clamp(smoothstep(0.45, 0.85, n) + grime * 0.7, 0.0, 1.0) * dirt_amount;
+	float dirt = clamp(smoothstep(0.45, 0.85, n) + grime * 0.7, 0.0, 1.0) * dirt_amount * (1.0 - special);
+	// cleaner floor in the room's clear zone (rooms/arena are built around their origin): enemies read better
+	if (an.y > 0.5) {
+		dirt *= mix(1.0 - center_clean, 1.0, smoothstep(2.5, 6.0, length(v_local_xz)));
+	}
 	col = mix(col, dirt_color.rgb, dirt);
 	ALBEDO = col;
 	METALLIC = 0.0;
 	ROUGHNESS = 1.0;
+	EMISSION = base * UV2.x * vertex_emission_energy;
 }
 
 float ptd_band(float x) {
@@ -491,7 +511,11 @@ void light() {
 	if (LIGHT_IS_DIRECTIONAL) {
 		x = min(ndl, mix(-0.08, 1.0, ATTENUATION));
 	} else {
-		intensity = min(1.0, ceil(ATTENUATION * 3.0) / 3.0) * step(0.02, ATTENUATION);
+		// 3 toon steps like ceil(ATTENUATION * 3) / 3, but with short ramps and a soft final cutoff, so omni pools read
+		// as light, not as hard-edged decals on walls and corners (03_ART §3.4, review M4)
+		float a3 = ATTENUATION * 3.0;
+		float stepped = (floor(a3) + smoothstep(0.0, max(omni_step_soft, 0.001), fract(a3))) / 3.0;
+		intensity = min(1.0, stepped) * smoothstep(0.0, 0.08, ATTENUATION);
 	}
 	float b = ptd_band(x);
 	float shadow_w = 1.0 - smoothstep(-0.005, 0.045, x);
@@ -499,13 +523,19 @@ void light() {
 	b -= hatch * hatch_strength * shadow_w * band_shadow;
 	vec3 tint = mix(shade_color.rgb, vec3(1.0), smoothstep(-0.005, 0.445, x));
 	DIFFUSE_LIGHT += LIGHT_COLOR / PI * b * tint * intensity;
+	if (UV2.y > 0.0) {
+		// cool hard sheen on metal fittings (rails, hoops)
+		vec3 h = normalize(LIGHT + VIEW);
+		float s = smoothstep(0.86, 0.88, dot(NORMAL, h) * 0.5 + 0.5);
+		DIFFUSE_LIGHT += LIGHT_COLOR / PI * s * metal_sheen * UV2.y * intensity / max(ALBEDO, vec3(0.08));
+	}
 }
 ```
 
 ### 3.5 `glow.gdshader`
 
 ```glsl
-// PRIME TIME DUNGEON - Unshaded emissive (neon tubes, stair glow, signal lamps). Mobile + Compatibility.
+// PRIME TIME DUNGEON - Unshaded emissive (neon tubes, stair glow, signal lamps). Mobile + Compatibility (03_ART 3.5).
 shader_type spatial;
 render_mode unshaded, cull_back, fog_disabled;
 
@@ -532,7 +562,7 @@ Als `material` eines `QuadMesh` (Größe 1×1, Skalierung über Partikel), Mesh 
 statt `#808080`).
 
 ```glsl
-// PRIME TIME DUNGEON - Additive billboard particle sprite, texture-free. Mobile + Compatibility.
+// PRIME TIME DUNGEON - Additive billboard particle sprite, texture-free. Mobile + Compatibility (03_ART 3.6).
 // Use as material of the QuadMesh of a CPUParticles3D. Final color = color * particle COLOR (sRGB, F1).
 shader_type spatial;
 render_mode unshaded, blend_add, cull_disabled, depth_draw_never, fog_disabled, shadows_disabled;
@@ -543,13 +573,16 @@ uniform vec4 color : source_color = vec4(1.0);
 uniform float softness : hint_range(0.0, 1.0) = 0.5;
 uniform int shape : hint_range(0, 3) = 0;                     // extra: 0 dot, 1 star, 2 ring, 3 spark
 uniform float energy : hint_range(0.0, 8.0) = 2.0;            // extra
+uniform bool billboard = true;                                // extra: false = keep mesh orientation (slash arcs)
 
 void vertex() {
-	// Billboard keeping particle scale (like BaseMaterial3D BILLBOARD_PARTICLES).
-	MODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0], INV_VIEW_MATRIX[1], INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);
-	MODELVIEW_MATRIX = MODELVIEW_MATRIX * mat4(vec4(length(MODEL_MATRIX[0].xyz), 0.0, 0.0, 0.0),
-		vec4(0.0, length(MODEL_MATRIX[1].xyz), 0.0, 0.0), vec4(0.0, 0.0, length(MODEL_MATRIX[2].xyz), 0.0),
-		vec4(0.0, 0.0, 0.0, 1.0));
+	if (billboard) {
+		// Billboard keeping particle scale (like BaseMaterial3D BILLBOARD_PARTICLES).
+		MODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0], INV_VIEW_MATRIX[1], INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);
+		MODELVIEW_MATRIX = MODELVIEW_MATRIX * mat4(vec4(length(MODEL_MATRIX[0].xyz), 0.0, 0.0, 0.0),
+			vec4(0.0, length(MODEL_MATRIX[1].xyz), 0.0, 0.0), vec4(0.0, 0.0, length(MODEL_MATRIX[2].xyz), 0.0),
+			vec4(0.0, 0.0, 0.0, 1.0));
+	}
 }
 
 void fragment() {
@@ -573,7 +606,7 @@ void fragment() {
 ### 3.7 `hologram.gdshader`
 
 ```glsl
-// PRIME TIME DUNGEON - Hologram (M.O.D., screens, sponsor logos, shields). Mobile + Compatibility.
+// PRIME TIME DUNGEON - Hologram (M.O.D., screens, sponsor logos, shields). Mobile + Compatibility (03_ART 3.7).
 shader_type spatial;
 render_mode unshaded, blend_add, depth_draw_never, cull_disabled, fog_disabled, shadows_disabled;
 
@@ -611,7 +644,7 @@ Router (02_TECH §9.3): Snapshot → `TextureRect` auf `CanvasLayer 100` mit die
 `aspect = size.x / size.y`, `progress` 0→1 in **0.7 s** (`TRANS_CUBIC`, `EASE_IN`), danach 0.3 s Fade.
 
 ```glsl
-// PRIME TIME DUNGEON - Battle swirl (Router, CanvasLayer 100, TextureRect showing the snapshot).
+// PRIME TIME DUNGEON - Battle swirl (Router, CanvasLayer 100, TextureRect showing the snapshot). 03_ART 3.8.
 // progress 0 -> 1 in 0.7 s. Mobile + Compatibility.
 shader_type canvas_item;
 
@@ -658,13 +691,15 @@ Game Over: `test_card` 0→1 in 0.2 s (in beiden Varianten). Beim Tausch werden 
 
 ```glsl
 // PRIME TIME DUNGEON - TV overlay, quality LOW: scanlines + vignette as alpha darkening, "Sendeschluss" test card.
-// No screen read (no hint_screen_texture -> no full-screen backbuffer copy). Fullscreen ColorRect in ShowOverlay (layer 40).
+// No screen read (no hint_screen_texture -> no full-screen backbuffer copy, 03_ART F7). Fullscreen ColorRect in
+// ShowOverlay (layer 40). The HIGH variant is ui_tv_overlay_aberration.gdshader (same uniforms).
 shader_type canvas_item;
 
 // --- contract (02_TECH 8.3) ---
 uniform float scanline_alpha : hint_range(0.0, 1.0) = 0.08;
 uniform float vignette : hint_range(0.0, 1.0) = 0.35;
-uniform float aberration : hint_range(0.0, 4.0) = 0.0;               // contract only; ignored here (see _aberration variant)
+// contract default (02_TECH 8.3); unused in LOW (see _aberration)
+uniform float aberration : hint_range(0.0, 4.0) = 0.6;
 
 // --- art extras ---
 uniform float test_card : hint_range(0.0, 1.0) = 0.0;                // 1 = Game Over test card
@@ -699,7 +734,9 @@ void fragment() {
 
 ```glsl
 // PRIME TIME DUNGEON - TV overlay, quality HIGH: reads the screen for chromatic aberration, plus scanlines,
-// vignette and "Sendeschluss" test card. Same uniforms as ui_tv_overlay.gdshader (+ screen_tex). Mobile + Compatibility.
+// vignette and "Sendeschluss" test card. Same uniforms as ui_tv_overlay.gdshader (+ screen_tex). Mobile +
+// Compatibility.
+// 03_ART 3.9 / F7 (request A10): the only canvas shader that declares a screen sampler.
 shader_type canvas_item;
 
 // --- contract (02_TECH 8.3) ---
@@ -1492,7 +1529,7 @@ die Viewports hängen unter ihm und werden mit ihm freigegeben (max. 6 je Kampf:
 Fehlend (geprüft): `● ♥ ★ ↓ ↑ → ▼ ▲ ☰`. Vorhanden: Umlaute, `ß „ “ – … · € × % !`. Symbole sind Icons: LIVE-Punkt und Herz
 (`Polygon2D`), Pause-Menü-Taste = 3 Balken (`Polygon2D`, 3 × 24×4 px), Rang-Uhr-Symbole = `Polygon2D`-Kreis + Zeiger, Treppe = Prism-Pfeil (6.3).
 `test_m6_ui_scenes` prüft jeden statischen `Label`/`Button`/`RichTextLabel`-Text aller UI-Szenen und alle `Label3D`-Texte aus `PropKit`/`Vfx`
-Zeichen für Zeichen gegen `ThemeDB.fallback_font.has_char()` (Antrag A13).
+Zeichen für Zeichen gegen `ThemeDB.fallback_font.has_char()` (A13, übernommen in 02_TECH §11.5).
 
 ### 9.3 Schriften
 
@@ -1593,6 +1630,6 @@ Rangfolge bei Widersprüchen: 00_BRIEF > 02_TECH (APIs, Schemas, Pfade) > 01_GDD
 | A10 | Neue Shader-Dateien | **erledigt** (02_TECH §1.5, Integration) | `art/shaders/ptd_color.gdshaderinc` (Include, F1) und `art/shaders/ui_tv_overlay_aberration.gdshader` (Quality `high`, F7) in den Dateibaum (M4); ShowOverlay (M6) tauscht das Overlay-Material bei `Events.settings_changed`. |
 | A11 | Render-Regressionsprobe | **erledigt** (02_TECH §1.5/§12.4: CI-Schritt prüft `RENDER_PROBE: OK`) | `art/gallery/render_probe.tscn` + `.gd` (Kap. 11) in die Szenenliste von `check.sh --shot`/CI; prüft Outline-Breite (F6) und Partikel-Farbraum (F1) in Compatibility. |
 | A12 | `Vfx`-Pool | **übernommen** (02_TECH §8.6: 4 je Kind je Parent, Aufrufer geben nie frei) | Umsetzung ohne statischen Zustand: Pool als Meta am Parent, Gültigkeitsprüfung vor Wiederverwendung (Kap. 7). Das „reparents to parent“ in §8.6 entfällt damit (Nodes sind immer Kinder ihres Parents). |
-| A13 | Glyphen-Test | **Antrag an 02_TECH §11.5 (M6)** | `test_m6_ui_scenes`: alle statischen UI- und `Label3D`-Texte bestehen `ThemeDB.fallback_font.has_char()` Zeichen für Zeichen (F8). |
+| A13 | Glyphen-Test | **übernommen** in 02_TECH §11.5 (M6 + M4); umgesetzt in `test_m6_ui_scenes`, `test_m4_env`, `test_m4_vfx` | `test_m6_ui_scenes`: alle statischen UI- und `Label3D`-Texte bestehen `ThemeDB.fallback_font.has_char()` Zeichen für Zeichen (F8). |
 | A14 | Porträts / M.O.D.-Icon | Art-Regel (9.2, 5.6) | `ViewportTexture` lebender SubViewports statt `get_image()`-Cache (F9). |
 | A15 | DCC-Abstand (04_STRATEGIE §2.3) | **umgesetzt** | Mopsula ohne Kronen-Motiv: Signatur = goldene Siegel-Plakette (`itm_wpn_collar_signet` „Siegel-Halsband“), kein `crown` am Mopsula-Rig; `itm_acc_queen_crown` nur Kai. Anzeigenamen wie „Fan-Box“, „NOVA SYNDIKAT“, „Quartier-Boss“ stehen im Brief und bleiben; Art referenziert nur neutrale IDs (`fan`, `NOVA_*`-Farbkonstanten, `boss_hausmeister`), Umbenennungen nach Roadmap E2 sind reine Textänderungen. |

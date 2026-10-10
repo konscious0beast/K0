@@ -1,7 +1,6 @@
 extends CanvasLayer
 ## DebugOverlay (02_TECH §1.6, layer 90; 05 §11.3): F3 (action debug_overlay, debug builds only) toggles FPS, draw
-## calls,
-## primitives, seed, floor/room, timer, show values, Sponsor-Fenster, input scheme, router stack. "Test-Geschenk"
+## calls, primitives, seed, floor/room, timer, show values, Sponsor-Fenster, input scheme, router stack. "Test-Geschenk"
 ## (button / F4) simulates a viewer gift: Show.receive_gift(Gift.make_dev("chest", "bronze", 0, <new test viewer>)) —
 ## it respects the Sponsor-Fenster like every viewer gift (05 §6.13; refusal toast names the reason and the next
 ## window). "Fenster öffnen" (button / F5) opens a QA window (Game.open_dev_sponsor_window, recorded; only where

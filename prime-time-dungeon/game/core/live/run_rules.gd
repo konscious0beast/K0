@@ -16,8 +16,7 @@ static func next_seed(state: GameState, purpose: String) -> int:
 
 
 ## New FloorRun of floor `index` (FloorRun.create with the run seed and the CURRENT difficulty — the Vorabend timer
-## factor
-## applies from here, GDD §2.9). false = unknown floor (nothing changes).
+## factor applies from here, GDD §2.9). false = unknown floor (nothing changes).
 static func start_floor(state: GameState, data: GameData, index: int) -> bool:
 	var def: FloorDef = data.floor_def(index) if data != null else null
 	if state == null or def == null:

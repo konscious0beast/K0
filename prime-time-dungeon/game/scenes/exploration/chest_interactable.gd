@@ -1,7 +1,8 @@
 extends "res://scenes/exploration/interactable.gd"
 ## Chest (02_TECH §7.3, GDD §2.5): wood / metal / locked. Opening goes through Game.open_chest (rolls with
-## SeedUtil.derive(floor_run.seed, "chest", k), records, add_rewards, opened_chests, Events.chest_opened), then the prop
-## animates (ChestProp.open) and Sfx chest_open plays. Locked chests need itm_key_master in the inventory.
+## SeedUtil.derive(floor_run.loot_seed, "chest", k) — 05 CR-11, never the public layout seed — records, add_rewards,
+## opened_chests, Events.chest_opened), then the prop animates (ChestProp.open) and Sfx chest_open plays. Locked chests
+## need itm_key_master in the inventory.
 
 var chest: ChestSpawn = null
 var prop: Node3D = null

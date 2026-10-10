@@ -194,7 +194,8 @@ Ordner stehen in `.gitignore`.
 
 ## 8. Dokumente
 
-Bei Widersprüchen gilt die Rangfolge **00_BRIEF > 02_TECH > 06 (neue Systeme) > 01_GDD > 03_ART > 04 / 05**.
+Bei Widersprüchen gilt die Rangfolge aus 00_BRIEF: **00_BRIEF > 07_ECHTZEITKAMPF (alles Kampfrelevante) > 06 (neue
+Systeme) > 01_GDD / 02_TECH / 03_ART / 05 (je nach Thema) > 04**.
 
 | Dokument | Inhalt |
 |---|---|
@@ -205,6 +206,7 @@ Bei Widersprüchen gilt die Rangfolge **00_BRIEF > 02_TECH > 06 (neue Systeme) >
 | [`docs/04_STRATEGIE_ROADMAP.md`](docs/04_STRATEGIE_ROADMAP.md) | Strategie: Positionierung, IP und Recht, Phasenplan 0–7, Team, Finanzierung, Monetarisierung |
 | [`docs/05_LIVE_MODUS.md`](docs/05_LIVE_MODUS.md) | Live-Modus SHOWRUN: Stufen S0–S5, Determinismus, Protokoll, Geschenke, Sponsor-Fenster, Wirtschaft, Recht |
 | [`docs/06_PROGRESSION_MAROTTEN_KI_ADMIN.md`](docs/06_PROGRESSION_MAROTTEN_KI_ADMIN.md) | Neue Systeme in Paketen A–D: Figurenwahl (Paket A, umgesetzt), Talent-Show und Spezies (Paket B, umgesetzt), M.O.D.-Marotten, KI-Admin |
+| [`docs/07_ECHTZEITKAMPF.md`](docs/07_ECHTZEITKAMPF.md) | Echtzeitkampf „WoW-light“ direkt in der Welt (ersetzt den CTB-Kampf ab R5): Vertrag, Phasen R1–R5 |
 | [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) | Messergebnisse der Performance-Probe gegen die Budgets aus 02_TECH §12.1 |
 
 ## 9. Screenshots

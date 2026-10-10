@@ -512,6 +512,14 @@ neu zu prüfende Stufe. ~~Später Creator-Beteiligung~~ — **gestrichen per Ent
      laufen als C++ mit möglicher FMA-Kontraktion und libm-Trigonometrie). Die Szene konvertiert nur für die Darstellung nach
      `Vector3`. **Pflicht-Golden-Tests:** z. B. 10 000 Ticks feste Bot-Eingaben → fester Positions-Hash, auf der
      Plattform-Matrix (Kap. 2, S0). Entscheidung, ab wann Grad B kommt: offene Frage 12.2-#2.
+   - **Echtzeitkampf (`07_ECHTZEITKAMPF.md`, Entscheidung 2026-10-10):** Die Kampfbewegung ist **Grad A mit festen
+     Plausibilitätsgrenzen**. Die gesteuerte Figur bewegt sich in der Szene; ins Run-Log gehen Positionsproben `move_sample`
+     mit Kampf-Tick `ct` (Schwellen und Koppelnavigation, 07 §3.5.1). `RtSim` prüft jede Probe: Verschiebung höchstens
+     Lauftempo × Δ plus ein kleines, langsam nachfüllendes Toleranzbudget (600 mm, 3 mm je Tick), sonst `POS_CORRECTED`
+     (07 §3.5.2). Gegner, KI-Partner, Status und Schaden rechnet nur `RtSim` (Ganzzahlen, 30 Ticks/s). **Grad B im Kampf:**
+     Der Befehl `move_input` (Richtung als `int8` je Achse + Laufen) ist reserviert; damit bewegt der Server später auch die
+     Spielerfiguren im requisitenfreien Kampf-Set (Kreis, Türgassen, Sperrflächen — ohne Physik, 07 §10.8). Bis dahin sind
+     Echtzeit-Bestenlisten „plausibilitätsgeprüft“ (07 §10.7).
 4. **Eingaben quantisiert:** Bewegungsvektor als `int8` (−127…127) je Achse, Kamera-Yaw als `uint8` (256 Stufen) — Yaw ist
    spielrelevant (GDD 15: Schaufensterpuppe bewegt sich nur, wenn Kai wegschaut), Buttons als Bitmaske.
 5. **Zahlen-Regeln (normativ):** Spielrelevante Pfade in `core/` nutzen **nur Ganzzahl-Arithmetik und Ganzzahl-Zufall**.
@@ -553,6 +561,10 @@ neu zu prüfende Stufe. ~~Später Creator-Beteiligung~~ — **gestrichen per Ent
    identischem SHA-256 sind Pflicht.
 
 ### 3.4 CTB im Netz: Befehls-Lockstep mit Pro-Aktion-Seed
+
+> **Hinweis (07):** Dieses Kapitel gilt für den CTB-Kampf, der bis R5 hinter dem Schalter `combat_mode` bleibt. Der
+> Echtzeitkampf ersetzt den Zug-Lockstep durch Befehle mit Kampf-Tick `ct`, Tick-Grenzen für Geschenke und Kampf-Prüfpunkte
+> (`07_ECHTZEITKAMPF.md` §9.2, §10); dieses Kapitel wird mit R5b umgestellt.
 
 Kämpfe sind rundenbasiert → es werden **nur Befehle** übertragen, nie Ergebnisse:
 
@@ -610,8 +622,12 @@ act{n:7, cmd, action_seed, hash}          ───────────►  
 1. **Server validiert jeden Befehl:** Ist der Absender Besitzer der Einheit? Ist sie am Zug? Kennt sie den Skill
    (`unlock_level`), reicht MP, ist Stunt-Cooldown 0, ist Ziel gültig (`target`-Typ, lebt), ist Item im (Team-)Inventar,
    ist Flucht erlaubt (nicht gegen Bosse)? Ungültig → `err{E_INVALID_CMD}`, Befehl verworfen, Zähler für Auffälligkeiten.
+   Im Echtzeitkampf prüft `RtSim.submit` Schema und statische Bedingungen, der Kampf-Tick die dynamischen (GCD, MP,
+   Reichweite, Abklingzeit, Trinkpause; 07 §3.4).
 2. **Bewegung:** Server simuliert aus Eingaben, nicht aus gemeldeten Positionen. Eingabe-Frames mit Tick in der Zukunft
    (> 6 Ticks) oder zu viele Frames pro Sekunde → verworfen.
+   Im Echtzeitkampf gilt bis Grad B: Positionsproben mit festen Plausibilitätsgrenzen in `RtSim`, `POS_CORRECTED` zählt der
+   Verifier, Ausreißer-Statistik ohne Ablehnung (07 §3.5.2, §10.7); mit Grad B sendet der Client `move_input` statt Proben.
 3. **Clients senden nie Ergebnisse** (keinen Schaden, keine Beute, keine Punkte). Punkte berechnet der Server/Verifier.
 4. **Async (S1–S2 ohne Server-Instanz; Echtgeld nie ohne Server-Instanz, L14):** Run-Log wird serverseitig neu simuliert; nur der Verifier schreibt Bestenlisten.
    Plausibilitätsregeln zusätzlich (z. B. Eingabe-Entropie bei Bot-Verdacht, Mindestzeit pro Kampf).

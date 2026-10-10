@@ -73,14 +73,33 @@ func member(id: String) -> PartyMember:
 	return null
 
 
-## Product of equipped show_mods.hype_gain_mult (× talent hype_gain_pm, 06 package B; 1.0 without such talents).
+## Product of equipped show_mods.hype_gain_mult (equipment only: display, BattleSetup.show_mods). The factor the Show
+## applies — incl. talents — is hype_gain_pm.
 func hype_gain_mult(data: GameData) -> float:
-	return _show_mod_product(data, "hype_gain_mult") * float(Talents.hype_pm(self, data)) / 1000.0
+	return _show_mod_product(data, "hype_gain_mult")
 
 
-## Product of equipped show_mods.follower_mult (× talent follower_pm, 06 package B).
+## Product of equipped show_mods.follower_mult (equipment only; the Show applies follower_pm).
 func follower_mult(data: GameData) -> float:
-	return _show_mod_product(data, "follower_mult") * float(Talents.follower_pm(self, data)) / 1000.0
+	return _show_mod_product(data, "follower_mult")
+
+
+## Hype gain factor in integer per mille (06 §8.0 Nr. 4; 1000 = neutral): the equipment product converted once,
+## roundi(hype_gain_mult × 1000) (the conversion the Show has always applied), × Talents.hype_pm, round half up. Pure
+## (reads only this state and GameData); Show._add_hype_parts scales positive hype with it.
+func hype_gain_pm(data: GameData) -> int:
+	return _mul_pm(roundi(hype_gain_mult(data) * 1000.0), Talents.hype_pm(self, data))
+
+
+## Follower factor in integer per mille (06 §8.0 Nr. 4): maxi(0, roundi(follower_mult × 1000)) × Talents.follower_pm,
+## round half up; Show.end_battle passes it to ShowModel.followers_for_battle_pm.
+func follower_pm(data: GameData) -> int:
+	return _mul_pm(maxi(0, roundi(follower_mult(data) * 1000.0)), Talents.follower_pm(self, data))
+
+
+## a × b / 1000 for per-mille factors >= 0, round half up (06 §8.0 Nr. 4: (a × b + 500) / 1000); b == 1000 → a.
+static func _mul_pm(a: int, b: int) -> int:
+	return (maxi(0, a) * maxi(0, b) + 500) / 1000
 
 
 func to_dict() -> Dictionary:

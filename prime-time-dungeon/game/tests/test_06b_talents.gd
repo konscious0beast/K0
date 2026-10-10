@@ -69,11 +69,14 @@ func test_pool_has_12_talents_per_member_with_a_third_behaviour() -> void:
 
 func test_texts_are_short_render_and_have_no_foot_words() -> void:
 	for t: TalentDef in real_data().all_talents():
-		assert_between(t.desc.length(), 1, TalentsRules.DESC_MAX, t.id + " desc fits one card line")
+		assert_between(t.desc.length(), 1, TalentsRules.DESC_MAX, t.id + " desc fits the card (two lines)")
 		assert_between(t.name.length(), 1, TalentsRules.NAME_MAX, t.id + " name")
 		assert_eq(UiUtil.missing_glyphs(t.name + t.desc), "", t.id + ": every glyph renders")
 		for w: String in TalentsRules.FORBIDDEN_WORDS:
 			assert_false((t.name + " " + t.desc).to_lower().contains(w), "%s: no '%s' (06 §0.3)" % [t.id, w])
+		if t.for_members.is_empty() or t.for_members.has("mopsula"):
+			for w: String in TalentsRules.MOPSULA_FORBIDDEN_WORDS:
+				assert_false((t.name + " " + t.desc).to_lower().contains(w), "%s: no majesty motif" % t.id)
 
 
 func test_kind_vocabulary_matches_the_validator() -> void:
@@ -95,6 +98,10 @@ func test_validator_accepts_a_valid_talent() -> void:
 	assert_true(d.has_id("talents", "tal_test"))
 	assert_eq(d.talent("tal_test").effects.size(), 2)
 	assert_eq(d.talent("tal_test").max_rank, 2)
+	# the majesty rule is about Graf Mopsula only: a Kai talent may name the Rattenkönigin's title
+	var kai_only: GameData = _data_with([_talent([{"kind": "crit_add_pm", "pm": 10}],
+		{"desc": "Kennt Ihre Majestät von Gleis 9."})])
+	assert_eq(kai_only.errors, PackedStringArray(), "Kai's texts are not checked for majesty words")
 
 
 func test_validator_rejects_bad_talents() -> void:
@@ -124,7 +131,10 @@ func test_validator_rejects_bad_talents() -> void:
 		[_talent([{"kind": "crit_add_pm", "pm": 10}], {"for": ["nobody"]}), "unknown party member 'nobody'"],
 		[_talent([{"kind": "crit_add_pm", "pm": 10}], {"id": "talent_x"}), "invalid id 'talent_x'"],
 		[_talent([{"kind": "crit_add_pm", "pm": 10}], {"desc": "Barfuß durch die Kanalisation."}), "no foot words"],
-		[_talent([{"kind": "crit_add_pm", "pm": 10}], {"desc": "x".repeat(61)}), "longer than 60"],
+		[_talent([{"kind": "crit_add_pm", "pm": 10}], {"desc": "x".repeat(91)}), "longer than 90"],
+		[_talent([{"kind": "crit_add_pm", "pm": 10}], {"for": ["mopsula"], "name": "Majestätischer Blick"}),
+			"no majesty motif"],
+		[_talent([{"kind": "crit_add_pm", "pm": 10}], {"for": [], "desc": "Pluralis Majestatis."}), "no majesty motif"],
 		[_talent([{"kind": "crit_add_pm", "pm": 10}], {"rank": 1}), "rank: unknown key"],
 	]
 	for c: Array in cases:
@@ -344,11 +354,11 @@ func test_stat_talents_flat_then_per_mille_round_half_up() -> void:
 
 func test_liga_talent_needs_no_armor_and_no_accessory() -> void:
 	var d: GameData = real_data()
-	var dressed: PartyMember = _member("kai", 9, {"tal_kai_abgehaertet": 1}, {"weapon": "itm_wpn_mop",
+	var dressed: PartyMember = _member("kai", 9, {"tal_kai_liga_routine": 1}, {"weapon": "itm_wpn_mop",
 		"armor": "itm_arm_hoodie"})
 	assert_false(Talents.liga_dressed(dressed))
 	assert_eq(Talents.stat_bonus(dressed, d, StatBlock.Stat.DEF, 30), 0, "with armor: no Liga bonus")
-	var liga: PartyMember = _member("kai", 9, {"tal_kai_abgehaertet": 1}, {"weapon": "itm_wpn_mop"})
+	var liga: PartyMember = _member("kai", 9, {"tal_kai_liga_routine": 1}, {"weapon": "itm_wpn_mop"})
 	assert_true(Talents.liga_dressed(liga), "the weapon is allowed")
 	assert_eq(Talents.stat_bonus(liga, d, StatBlock.Stat.DEF, 30), 2, "30 × 1.05 = 31.5 → 32")
 	liga.equipment["accessory"] = "itm_acc_lucky_ticket"
@@ -366,7 +376,7 @@ func test_combat_talents_reach_the_combatant() -> void:
 	assert_almost(float(c.element_mods.get("poison", 1.0)), float(c0.element_mods.get("poison", 1.0)) * 0.75)
 	assert_eq(c.talent_mods, {"preemptive_dmg_pm": 1150})
 	assert_eq(c0.talent_mods, {}, "no talents → no talent_mods")
-	var mop: PartyMember = _member("mopsula", 5, {"tal_mop_dramatische_pause": 1})
+	var mop: PartyMember = _member("mopsula", 5, {"tal_mop_taktgefuehl": 1})
 	assert_eq(Progression.to_combatant(mop, d, "p1", 1).talent_mods, {"stunt_pm": 1200})
 	# snapshot: talent_mods survive to_dict/from_dict; without them the snapshot has no key (old hashes stay)
 	var back: Combatant = Combatant.from_dict(c.to_dict(), d)
@@ -392,7 +402,7 @@ func test_stunt_talent_raises_the_chance_before_the_cap() -> void:
 	var lck: int = mop.stat(StatBlock.Stat.LCK)
 	var want: float = minf((sk.success_base + lck * sk.success_lck) * 1.2, sk.success_cap)
 	assert_almost(st.stunt_chance(mop, sk), want, 0.0001)
-	assert_gt(st.stunt_chance(mop, sk), base, "Dramatische Pause: stunts land more often")
+	assert_gt(st.stunt_chance(mop, sk), base, "Taktgefühl: stunts land more often")
 	mop.talent_mods = {"stunt_pm": 1250}
 	assert_true(st.stunt_chance(mop, sk) <= sk.success_cap + 0.0001, "the skill cap still holds")
 
@@ -441,7 +451,7 @@ func test_post_battle_mp_talent_adds_to_the_werbepause() -> void:
 	r.party_mp = {"mopsula": 0}
 	var rw: BattleRewards = BattleBridge.apply_result(st, d, r)
 	assert_eq(int(rw.mp_regen["mopsula"]), (max_mp * 150 + 999) / 1000, "Werbepause 15 % (ceil)")
-	mop.talents["tal_mop_schnarchen"] = 2
+	mop.talents["tal_mop_koerbchen"] = 2
 	max_mp = Progression.total_stats(mop, d).values[StatBlock.Stat.MP]
 	mop.mp = 0
 	rw = BattleBridge.apply_result(st, d, r)
@@ -474,12 +484,54 @@ func test_reserved_hype_and_follower_kinds_multiply_the_show() -> void:
 	var st: GameState = GameState.create_new(fd, 0, "Kai", 5)
 	var h0: float = st.hype_gain_mult(fd)
 	var f0: float = st.follower_mult(fd)
+	assert_eq([st.hype_gain_pm(fd), st.follower_pm(fd)], [1000, 1000], "neutral without such talents")
 	st.member("kai").talents["tal_h"] = 1
 	st.member("mopsula").talents["tal_f"] = 1
 	assert_eq(Talents.hype_pm(st, fd), 1100)
 	assert_eq(Talents.follower_pm(st, fd), 1200)
-	assert_almost(st.hype_gain_mult(fd), h0 * 1.1, 0.000001)
-	assert_almost(st.follower_mult(fd), f0 * 1.2, 0.000001)
+	# the Show's factors are integer per mille (06 §8.0 Nr. 4); the float views stay equipment-only
+	assert_eq(st.hype_gain_pm(fd), 1100)
+	assert_eq(st.follower_pm(fd), 1200)
+	assert_eq([st.hype_gain_mult(fd), st.follower_mult(fd)], [h0, f0])
+
+
+## 06 §8.0 Nr. 4 (integration round 1b): talent hype / follower factors are integer per mille — GameState.hype_gain_pm /
+## follower_pm = equipment product (converted once) × Talents party product, each step (a × b + 500) / 1000, and the
+## Show applies them. Same inputs → the same integers in two independent runs, equal to the hand-computed values.
+func test_hype_and_follower_talents_are_integer_per_mille_in_the_show() -> void:
+	var runs: Array = [_show_factor_run(), _show_factor_run()]
+	assert_eq(runs[0], runs[1], "two runs → identical integers")
+	# Talents: 1000 × 1100 → 1100; × 1075 = 1182.5 → 1183 (half up). Equipment: scarf 1.2 → 1200, mic 1.15 → 1150.
+	# hype: 1200 × 1183 = 1419.6 → 1420; follower: 1150 × 1200 = 1380. Show.add_hype(7): 7 × 1.420 = 9.94 → +10 (30 →
+	# 40). Followers of a won battle (4000 viewers, hype 50): 4000 × 0.014 × 1.380 = 77.28 → 77.
+	assert_eq(runs[0], {"talent_hype": 1183, "talent_follower": 1200, "hype_pm": 1420, "follower_pm": 1380,
+		"hype": 40, "followers": 77})
+
+
+func _show_factor_run() -> Dictionary:
+	var t: Dictionary = Fx.tables()
+	t["talents"] = [_talent([{"kind": "hype_gain_pm", "pm": 1100}], {"id": "tal_h"}),
+		_talent([{"kind": "hype_gain_pm", "pm": 1075}], {"id": "tal_h2", "for": ["mopsula"]}),
+		_talent([{"kind": "follower_pm", "pm": 1200}], {"id": "tal_f", "for": ["mopsula"]})]
+	var fd: GameData = GameData.new()
+	assert_true(fd.load_from_dicts(t), "; ".join(fd.errors))
+	var prev: GameData = DB.data
+	DB.data = fd
+	Game.new_game(0, "Kai", 5)
+	var st: GameState = Game.state
+	st.inventory.add("itm_acc_scarf")
+	st.inventory.add("itm_acc_mic")
+	assert_true(Progression.equip(st.member("kai"), st.inventory, fd, "accessory", "itm_acc_scarf"))
+	assert_true(Progression.equip(st.member("mopsula"), st.inventory, fd, "accessory", "itm_acc_mic"))
+	st.member("kai").talents["tal_h"] = 1
+	st.member("mopsula").talents["tal_h2"] = 1
+	st.member("mopsula").talents["tal_f"] = 1
+	Show.add_hype(7.0, &"crit")
+	var out: Dictionary = {"talent_hype": Talents.hype_pm(st, fd), "talent_follower": Talents.follower_pm(st, fd),
+		"hype_pm": st.hype_gain_pm(fd), "follower_pm": st.follower_pm(fd), "hype": roundi(Show.hype()),
+		"followers": ShowModel.followers_for_battle_pm(4000, 50.0, false, st.follower_pm(fd))}
+	Fx.end_world(prev)
+	return out
 
 
 # --- command, replay, save --------------------------------------------------------------------------------------------
@@ -644,7 +696,7 @@ func test_save_round_trip_and_hash_compatibility() -> void:
 	assert_eq(om.talents, {})
 	assert_eq(Array(Talents.pending_levels(om)), [3, 5], "old L5 save: two choices wait in the Talent-Show")
 	# SaveCodec drops unknown / foreign talents and clamps ranks
-	st.member("kai").talents = {"tal_kai_wischtechnik": 5, "tal_gone": 1, "tal_mop_pluralis": 1}
+	st.member("kai").talents = {"tal_kai_wischtechnik": 5, "tal_gone": 1, "tal_mop_mitternachtsformel": 1}
 	var gs: GameState = SaveCodec.decode(JSON.parse_string(JSON.stringify(SaveCodec.encode(st, "test"))), d)
 	assert_not_null(gs, "decoded")
 	if gs != null:

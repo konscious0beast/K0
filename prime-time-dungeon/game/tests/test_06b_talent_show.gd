@@ -179,7 +179,7 @@ func test_value_card_previews_the_real_numbers() -> void:
 	var preview: String = str(ts.call("_preview", kai, DB.talent("tal_kai_wischtechnik")))
 	var str_now: int = int(UiUtil.member_stats(kai)["str"])
 	assert_eq(preview, "Jetzt: Stärke %d -> %d" % [str_now, str_now + 1])
-	assert_eq(str(ts.call("_preview", kai, DB.talent("tal_kai_abgehaertet"))),
+	assert_eq(str(ts.call("_preview", kai, DB.talent("tal_kai_liga_routine"))),
 		"Ruht gerade: Kai trägt Rüstung oder Accessoire.", "a Liga talent says when it rests")
 	assert_eq(Talents.rank(kai, "tal_kai_wischtechnik"), 0, "the preview never changes the member")
 

@@ -799,19 +799,20 @@ func finish_run(cause: StringName) -> Dictionary:
 	return summary
 
 
-## M8 — THE verifier of complete live runs (05 §11.4): replays a RunLog against a fresh GameState by driving the SAME
-## Game/Show methods as the live run (record() is a no-op meanwhile, no Router/Save calls): RNG consumption (next_seed
-## "battle"/"show"/"lootbox"/"gift"), Show reactions (hype, followers, milestones, achievements, sponsor gifts),
-## safe-room bookkeeping and event rules (header.event_id → EventDef.rules) are identical by construction. Battles
-## follow §5.7 (BattleState + Show.begin_battle/on_battle_event/take_pending_gift/end_battle). The live context
-## (state, log, sim, quest, …) is restored afterwards. Not during a battle (Show's battle state would be overwritten).
-## Checkpoint k = state after all commands with k' <= k; the walk is RunLog.walk (shared with RunSim.replay).
-## Same "errors" contract as RunSim.replay — a verifier needs errors == []: log schema / id problems (RunLog.validate),
-## entries the RunLog rejected, a log from a save, an unknown event (abort: no replay without its rules), header ≠ event
-## (RunSim.header_errors: fixed seed, difficulty, league), commands the rules refuse (RunRules.command_refusal, QA
-## windows not allowed, battle commands without a battle) — they are skipped — and every gift Show refuses
-## (gift_rejected: duplicates, caps, wrong target, run over …).
-## Returns {"final_hash": String, "result": Dictionary, "mismatch_at": int (first failing checkpoint index, -1 = none),
+## M8 — THE verifier of complete live runs (05 §11.4): replays a RunLog against a fresh GameState (a log that starts at
+## a loaded save: against its anchor, the loaded state Save.load_slot stored in the header — RunSim.anchor_state) by
+## driving the SAME Game/Show methods as the live run (record() is a no-op meanwhile, no Router/Save calls): RNG
+## consumption (next_seed "battle"/"show"/"lootbox"/"gift"), Show reactions (hype, followers, milestones, achievements,
+## sponsor gifts), safe-room bookkeeping and event rules (header.event_id → EventDef.rules) are identical by
+## construction. Battles follow §5.7 (BattleState + Show.begin_battle/on_battle_event/take_pending_gift/end_battle). The
+## live context (state, log, sim, quest, …) is restored afterwards. Not during a battle (Show's battle state would be
+## overwritten). Checkpoint k = state after all commands with k' <= k; the walk is RunLog.walk (shared with
+## RunSim.replay). Same "errors" contract as RunSim.replay — a verifier needs errors == []: log schema / id problems
+## (RunLog.validate), entries the RunLog rejected, a log from a save without a valid anchor and an unknown event (abort:
+## no replay without its start state / rules), header ≠ event (RunSim.header_errors: fixed seed, difficulty, league),
+## commands the rules refuse (RunRules.command_refusal, QA windows not allowed, battle commands without a battle) — they
+## are skipped — and every gift Show refuses (gift_rejected: duplicates, caps, wrong target, run over …). Returns
+## {"final_hash": String, "result": Dictionary, "mismatch_at": int (first failing checkpoint index, -1 = none),
 ## "errors": PackedStringArray}. until_tick >= 0: the clock steps on to that tick after the last command (the live
 ## sim.tick() — idle ticks in a safe room move the clock without a command).
 func replay_log(p_log: RunLog, until_tick: int = -1) -> Dictionary:

@@ -2,13 +2,14 @@ extends RefCounted
 ## Private helper of the Game autoload (02_TECH §0.3: no class_name, preloaded by game.gd): THE replay engine behind
 ## Game.replay_log — the verifier of complete live runs (05 §11.4). One instance per replay.
 ##
-## It replays a RunLog against a fresh GameState by driving the SAME Game/Show methods as the live run (Game.record()
-## is a no-op meanwhile, no Router/Save calls): RNG consumption (next_seed "battle"/"show"/"lootbox"/"gift"), Show
-## reactions (hype, followers, milestones, achievements, sponsor gifts), safe-room bookkeeping and event rules
-## (header.event_id → EventDef.rules) are identical by construction. Battles follow §5.7 (BattleState +
-## Show.begin_battle/on_battle_event/take_pending_gift/end_battle). The walk is RunLog.walk (shared with
-## RunSim.replay); checkpoint k = state after all commands with k' <= k. The live context (state, log, sim, quest, …)
-## is restored afterwards (Game._capture_context/_restore_context).
+## It replays a RunLog against a fresh GameState — or, for a log that starts at a loaded save ("from_save"), against a
+## copy of its anchor (RunSim.anchor_state: header start_state, checked against start_hash) — by driving the SAME
+## Game/Show methods as the live run (Game.record() is a no-op meanwhile, no Router/Save calls): RNG consumption
+## (next_seed "battle"/"show"/"lootbox"/"gift"), Show reactions (hype, followers, milestones, achievements, sponsor
+## gifts), safe-room bookkeeping and event rules (header.event_id → EventDef.rules) are identical by construction.
+## Battles follow §5.7 (BattleState + Show.begin_battle/on_battle_event/take_pending_gift/end_battle). The walk is
+## RunLog.walk (shared with RunSim.replay); checkpoint k = state after all commands with k' <= k. The live context
+## (state, log, sim, quest, …) is restored afterwards (Game._capture_context/_restore_context).
 
 var game: Node                        # the Game autoload
 var _battle: BattleState = null       # the battle the walk is in (encounter → its battle / gift commands)
@@ -32,9 +33,11 @@ func run(p_log: RunLog, until_tick: int) -> Dictionary:
 		errors.append("log: %d entries rejected (out of tick order, duplicate / invalid cmd ids, malformed)"
 			% p_log.rejected)
 	var header: Dictionary = p_log.header
+	var anchor: GameState = null
 	if bool(header.get("from_save", false)):
-		errors.append("header: log starts at a loaded save (not replayable from create_new)")
-		return out
+		anchor = RunSim.anchor_state(header, errors)    # the loaded state the log starts at (Save.load_slot)
+		if anchor == null:
+			return out
 	var event_id: String = str(header.get("event_id", ""))
 	var def: EventDef = null
 	if event_id != "":
@@ -59,9 +62,11 @@ func run(p_log: RunLog, until_tick: int) -> Dictionary:
 	var on_rejected: Callable = func(gift_id: String, reason: String) -> void:
 		errors.append("gift '%s' refused (%s)" % [gift_id, reason])
 	Events.gift_rejected.connect(on_rejected)
-	var st: GameState = GameState.create_new(DB.data, int(header.get("slot", 0)), str(header.get("player_name", "Kai")),
-		run_seed, difficulty)
+	var st: GameState = anchor if anchor != null else GameState.create_new(DB.data, int(header.get("slot", 0)),
+		str(header.get("player_name", "Kai")), run_seed, difficulty)
 	game.state = st
+	if anchor != null:
+		Show.sync_from_state()                         # like Save.load_slot after adopting the loaded state
 	if st != null:
 		game.sim = RunSim.new(DB.data, st, rules, RunSim.identity_of(header))
 		_walk(p_log, out, errors)

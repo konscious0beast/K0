@@ -244,6 +244,39 @@ func test_save_and_load_slot_with_grace_time() -> void:
 	Events.game_loaded.disconnect(cb_l)
 
 
+## The log after a load (header "from_save") carries its anchor — Save.load_slot stores the loaded state as
+## "start_state" + "start_hash": Game.replay_log and RunSim.replay replay the post-load segment from it (the full-run
+## bot verifies every segment); a tampered or missing anchor is an error, never a silent replay from create_new.
+func test_loaded_run_log_replays_from_its_anchor() -> void:
+	_prev_data = DB.data
+	Game.new_game(1, "Kai", 4242)
+	var sr: String = str((DB.floor_def(1).layout.get("safe_rooms", [{}]) as Array)[0].get("id", ""))
+	Game.enter_safe_room(sr)
+	assert_eq(Save.save_slot(1), OK, Save.last_error())
+	assert_eq(Save.load_slot(1), OK, Save.last_error())
+	var h: Dictionary = Game.run_log.header
+	assert_true(bool(h.get("from_save", false)))
+	assert_eq(str(h.get("start_hash", "")), StateHash.of(Game.state), "anchor = the loaded state")
+	Game.enter_safe_room(sr)                      # what the exploration does after "Fortsetzen"
+	assert_true(Game.buy("itm_bandage", 1, sr))
+	Game.rest_full_heal()
+	Game.leave_safe_room()
+	var live: String = StateHash.of(Game.state)
+	var a: Dictionary = Game.replay_log(Game.run_log)
+	assert_eq(a["errors"], PackedStringArray(), "the post-load segment verifies")
+	assert_eq(a["final_hash"], live, "Game.replay_log from the anchor ≡ live")
+	var json: Variant = JSON.parse_string(JSON.stringify(Game.run_log.to_dict()))
+	assert_eq(Game.replay_log(RunLog.from_dict(json))["final_hash"], live, "also after a JSON round trip of the log")
+	assert_eq(StateHash.of(Game.state), live, "the replays leave the live state alone")
+	assert_eq(RunSim.replay(DB.data, Game.run_log)["errors"], PackedStringArray(), "RunSim.replay starts there too")
+	var forged: Dictionary = Game.run_log.to_dict().duplicate(true)
+	((forged["header"] as Dictionary)["start_state"]["inventory"] as Dictionary)["credits"] = 99999
+	assert_has("; ".join(Game.replay_log(RunLog.from_dict(forged))["errors"]), "does not match start_hash")
+	(forged["header"] as Dictionary).erase("start_state")
+	assert_has("; ".join(Game.replay_log(RunLog.from_dict(forged))["errors"]), "without its start_state")
+	assert_has("; ".join(RunSim.replay(DB.data, RunLog.from_dict(forged))["errors"]), "without its start_state")
+
+
 func test_broken_slot_file_falls_back_to_bak() -> void:
 	_prev_data = Fx.begin_world(1, 1)
 	Game.state.inventory.credits = 1

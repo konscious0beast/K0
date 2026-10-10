@@ -210,9 +210,9 @@
 			]
 		},
 		{
-			"id": "tal_kai_abgehaertet",
-			"name": "Abgehärtet",
-			"desc": "Kai braucht keine Rüstung. Sagt jedenfalls Kai.",
+			"id": "tal_kai_liga_routine",
+			"name": "Liga-Routine",
+			"desc": "Ohne Rüstung & ohne Accessoire? Routine. In der Liga etwas mehr Verteidigung.",
 			"for": [
 				"kai"
 			],
@@ -229,9 +229,9 @@
 			]
 		},
 		{
-			"id": "tal_mop_pluralis",
-			"name": "Pluralis Majestatis",
-			"desc": "„Wir zaubern.“ Und zwar mit Nachdruck.",
+			"id": "tal_mop_mitternachtsformel",
+			"name": "Mitternachtsformel",
+			"desc": "Um Mitternacht gelernt, nie vergessen. Zauber sitzen fester.",
 			"for": [
 				"mopsula"
 			],
@@ -248,9 +248,9 @@
 			]
 		},
 		{
-			"id": "tal_mop_schnarchen",
-			"name": "Majestätisches Schnarchen",
-			"desc": "Ein Nickerchen nach jedem Kampf. Bringt MP zurück.",
+			"id": "tal_mop_koerbchen",
+			"name": "Körbchen-Nickerchen",
+			"desc": "Nach jedem Kampf ein Nickerchen im Körbchen. Bringt MP zurück.",
 			"for": [
 				"mopsula"
 			],
@@ -416,9 +416,9 @@
 			]
 		},
 		{
-			"id": "tal_mop_dramatische_pause",
-			"name": "Dramatische Pause",
-			"desc": "Erst Stille, dann Applaus: Stunts gelingen öfter.",
+			"id": "tal_mop_taktgefuehl",
+			"name": "Taktgefühl",
+			"desc": "Der Graf wartet den richtigen Moment ab: Stunts gelingen öfter.",
 			"for": [
 				"mopsula"
 			],
@@ -434,9 +434,9 @@
 			]
 		},
 		{
-			"id": "tal_mop_wuerde",
-			"name": "Würde genügt",
-			"desc": "Der Graf braucht keinen Pulli. Würde wärmt.",
+			"id": "tal_mop_liga_gelassen",
+			"name": "Liga-Gelassenheit",
+			"desc": "Ohne Rüstung & ohne Accessoire bleibt der Graf gelassen: in der Liga etwas mehr Resistenz.",
 			"for": [
 				"mopsula"
 			],

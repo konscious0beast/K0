@@ -18,8 +18,8 @@ static func normalize(v: DataValidator, ctx: String, raw: Variant) -> Dictionary
 	var d: Dictionary = v._norm(ctx, raw, SPEC)
 	if d.is_empty():
 		return d
-	TalentsRules.check_text(v, ctx + ".name", str(d["name"]), NAME_MAX)
-	TalentsRules.check_text(v, ctx + ".desc", str(d["desc"]), DESC_MAX)
+	TalentsRules.check_text(v, ctx + ".name", str(d["name"]), NAME_MAX, TalentsRules.is_for_mopsula(d))
+	TalentsRules.check_text(v, ctx + ".desc", str(d["desc"]), DESC_MAX, TalentsRules.is_for_mopsula(d))
 	v._range_i(ctx + ".min_floor", int(d["min_floor"]), 1, 99)
 	d["stat_mult"] = v._num_dict(ctx + ".stat_mult", d["stat_mult"], DataValidator.STATS, false, 0.5, 2.0)
 	d["growth_add"] = v._num_dict(ctx + ".growth_add", d["growth_add"], DataValidator.STATS, false, 0.0, 20.0)
@@ -31,7 +31,7 @@ static func normalize(v: DataValidator, ctx: String, raw: Variant) -> Dictionary
 	if mh.is_empty():
 		mh = {"props_add": PackedStringArray(), "colors": {}}
 	v._subset(ctx + ".model_hint.props_add", mh["props_add"], DataValidator.MODEL_PROPS)
-	var for_mopsula: bool = (d["for"] as PackedStringArray).is_empty() or (d["for"] as PackedStringArray).has("mopsula")
+	var for_mopsula: bool = TalentsRules.is_for_mopsula(d)
 	for prop: String in mh["props_add"]:
 		if for_mopsula and MOPSULA_FORBIDDEN_PROPS.has(prop):
 			v._err(ctx + ".model_hint.props_add", "'%s': no crown motif on Graf Mopsula (04 §2.3)" % prop)

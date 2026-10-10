@@ -435,7 +435,7 @@ func flee_chance() -> float:
 
 
 ## GDD §3.6: clampf((success_base + LCK × success_lck) × talent factor + (target_is_boss ? success_boss_mod : 0), 0.05,
-## success_cap). Talent factor: Combatant.talent_mods.stunt_pm in per-mille (06 §2.2 "Dramatische Pause"; 1000 =
+## success_cap). Talent factor: Combatant.talent_mods.stunt_pm in per-mille (06 §2.2 "Taktgefühl"; 1000 =
 ## neutral) — it scales the chance before the boss modifier and the cap.
 ## target_is_boss: one of `target_ids` (the resolved targets; all-enemy stunts: any of them) is a living boss — a
 ## single-target stunt on a summoned add in a boss fight gets no penalty. Without targets (HUD preview before the

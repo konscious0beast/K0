@@ -12,9 +12,9 @@ extends Node
 ## ("sponsor_window") and books its slot when it is applied (GiftPolicy.note_applied). M.O.D. announces windows only
 ## in event/live runs (sponsor_presentation() == &"live"); the campaign keeps them to the subtle overlay badge.
 ##
-## Hype is kept in whole points: positive gains are scaled by hype_gain_mult in integer per-mille and rounded half
-## up (deterministic, integral state hash, 05 §3.3 Nr. 5/9). A battle delta applies its positive parts scaled and its
-## negative parts unscaled as one change (ShowDelta.hype_gain / hype_loss, GDD §7.3).
+## Hype is kept in whole points: positive gains are scaled by GameState.hype_gain_pm (equipment × talents, integer
+## per mille) and rounded half up (deterministic, integral state hash, 05 §3.3 Nr. 5/9). A battle delta applies its
+## positive parts scaled and its negative parts unscaled as one change (ShowDelta.hype_gain / hype_loss, GDD §7.3).
 
 const CHAT_MIN_INTERVAL: float = 2.5         # GDD §7.5: max. 1 chat line per 2.5 s
 const CHAT_INTERVAL: float = 6.0             # exploration chat every 6 ± 2 s by hype band
@@ -145,7 +145,7 @@ func hype() -> float:
 	return st.show.hype if st != null and st.show != null else 0.0
 
 
-## amount > 0 → × hype_gain_mult (equipment); clamp 0..100; emits hype_changed.
+## amount > 0 → × GameState.hype_gain_pm (equipment × talents); clamp 0..100; emits hype_changed.
 func add_hype(amount: float, reason: StringName = &"") -> void:
 	if amount > 0.0:
 		_add_hype_parts(amount, 0.0, reason)
@@ -440,7 +440,7 @@ func end_battle(result: BattleResult) -> int:
 			if result.advantage == BattleSetup.Advantage.AMBUSH:
 				bump_stat("ambushes_won")
 			var peak: int = maxi(_peak_battle, viewers())
-			gained = ShowModel.followers_for_battle(peak, hype(), result.is_boss, st.follower_mult(DB.data))
+			gained = ShowModel.followers_for_battle_pm(peak, hype(), result.is_boss, st.follower_pm(DB.data))
 			add_followers(gained, &"battle")
 			var payload: Dictionary = {"party_turns": result.party_turns, "min_party_hp": result.min_party_hp,
 				"min_party_hp_pct": result.min_party_hp_pct, "crits": result.crits, "weakness_hits": result.weakness_hits,
@@ -565,7 +565,8 @@ func _set_hype(value: float, reason: StringName) -> void:
 		_check_thresholds(prev, now)
 
 
-## Whole hype points from raw parts: gain × hype_gain_mult (per mille, half up), loss unscaled; one clamped change.
+## Whole hype points from raw parts: gain × GameState.hype_gain_pm (equipment × talents, integer per mille, half up),
+## loss unscaled; one clamped change.
 func _add_hype_parts(gain: float, loss: float, reason: StringName) -> void:
 	var st: GameState = Game.state
 	if st == null or st.show == null:
@@ -573,7 +574,7 @@ func _add_hype_parts(gain: float, loss: float, reason: StringName) -> void:
 	var points: int = roundi(loss)
 	var gain_points: int = roundi(gain)
 	if gain_points > 0:
-		var mult_pm: int = roundi(st.hype_gain_mult(DB.data) * 1000.0)
+		var mult_pm: int = st.hype_gain_pm(DB.data)
 		points += (gain_points * mult_pm + 500) / 1000
 	if points == 0:
 		return

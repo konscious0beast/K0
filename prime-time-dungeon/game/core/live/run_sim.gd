@@ -354,9 +354,10 @@ func close(cause: String, extra: Dictionary = {}) -> String:
 	return h
 
 
-## Replays a log with a fresh GameState from its header (seed/run_seed, slot, player_name, difficulty, league) through
-## RunSim alone (no autoloads — the core verifier of 05 §11.4) along RunLog.walk: before each command the clock steps
-## to its tick, checkpoints with a smaller tick are compared on the way. p_rules / p_quest: the event rules / quest; {}
+## Replays a log with a fresh GameState from its header (seed/run_seed, slot, player_name, difficulty, league; a log
+## that starts at a loaded save: its anchor, anchor_state) through RunSim alone (no autoloads — the core verifier of 05
+## §11.4) along RunLog.walk: before each command the clock steps to its tick, checkpoints with a smaller tick are
+## compared on the way. p_rules / p_quest: the event rules / quest; {}
 ## → the event of header.event_id from EVENTS_PATH (EventCatalog, validated against p_data) — never from the log
 ## itself; no event_id → none (campaign). An unknown event is an error (no replay without its rules). For a catalog
 ## event the header must match the event: seed == EventDef.run_seed() (seed_policy fixed), difficulty "prime", league
@@ -366,8 +367,8 @@ func close(cause: String, extra: Dictionary = {}) -> String:
 ## "missing", applied after its ledger deliver_by_tick (> 0) → "late" (05 §6.5).
 ## → {"final_hash": String, "result": {"ticks", "cmds", "over", "floor", "quest_complete", "quest_progress_ppm"},
 ##    "mismatch_at": int (first failing checkpoint index, -1 = none), "errors": PackedStringArray (log schema / id
-##    problems, entries the RunLog rejected, commands the core refused, header / ledger problems, unknown event) — a
-##    verifier needs errors == []}
+##    problems, entries the RunLog rejected, commands the core refused, header / ledger problems, unknown event, a
+##    from_save log without a valid anchor) — a verifier needs errors == []}
 ## A Game-recorded run also needs the Show reactions (hype, followers, achievements, sponsor gifts): its verifier is
 ## Game.replay_log (same "errors" contract); a RunSim replay of such a log reports the first diverging checkpoint.
 static func replay(p_data: GameData, p_log: RunLog, p_rules: Dictionary = {}, p_quest: Dictionary = {},
@@ -398,10 +399,17 @@ static func replay(p_data: GameData, p_log: RunLog, p_rules: Dictionary = {}, p_
 			if q.is_empty():
 				q = def.quest
 			errors.append_array(header_errors(h, def, r))
-	var seed_v: Variant = h.get("seed", h.get("run_seed", 1))
-	var st: GameState = GameState.create_new(p_data, int(h.get("slot", 0)), str(h.get("player_name", "Kai")),
-		int(seed_v) if typeof(seed_v) == TYPE_INT or typeof(seed_v) == TYPE_FLOAT else 1,
-		StringName(str(h.get("difficulty", "prime"))))
+	var st: GameState = null
+	if bool(h.get("from_save", false)):
+		st = anchor_state(h, errors)
+		if st == null:
+			out["errors"] = errors
+			return out
+	else:
+		var seed_v: Variant = h.get("seed", h.get("run_seed", 1))
+		st = GameState.create_new(p_data, int(h.get("slot", 0)), str(h.get("player_name", "Kai")),
+			int(seed_v) if typeof(seed_v) == TYPE_INT or typeof(seed_v) == TYPE_FLOAT else 1,
+			StringName(str(h.get("difficulty", "prime"))))
 	var sim: RunSim = RunSim.new(p_data, st, r, identity_of(h))
 	if not q.is_empty():
 		sim.quest = QuestTracker.from_def(q)
@@ -432,6 +440,21 @@ static func replay(p_data: GameData, p_log: RunLog, p_rules: Dictionary = {}, p_
 		"quest_complete": sim.quest.is_complete() if sim.quest != null else false,
 		"quest_progress_ppm": sim.quest.progress_ppm() if sim.quest != null else 0}
 	return out
+
+
+## The state a log that starts at a loaded save begins with (header "from_save", written by Save.load_slot): a deep
+## copy of header "start_state" whose StateHash must equal header "start_hash". null and an error in `errors` without
+## a usable anchor. RunSim.replay and Game.replay_log start such a log there instead of at GameState.create_new.
+static func anchor_state(h: Dictionary, errors: PackedStringArray) -> GameState:
+	var raw: Variant = h.get("start_state", null)
+	if not (raw is Dictionary):
+		errors.append("header: log starts at a loaded save without its start_state (not replayable)")
+		return null
+	var st: GameState = GameState.from_dict((raw as Dictionary).duplicate(true))
+	if st == null or StateHash.of(st) != str(h.get("start_hash", "")):
+		errors.append("header: start_state does not match start_hash")
+		return null
+	return st
 
 
 ## Run identity of a RunLog header (RunSim.identity, GiftPolicy wrong_target): run_id, event_id, player_id ("local" in

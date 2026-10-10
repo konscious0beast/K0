@@ -101,6 +101,7 @@ func test_validator_accepts_a_species_and_rejects_bad_ones() -> void:
 		[_species({"model_hint": {"colors": {"primary": "red"}}}), "hex color"],
 		[_species({"model_hint": {"colors": {"glow": "#ffffff"}}}), "unknown color key"],
 		[_species({"desc": "Schuhgröße 46."}), "no foot words"],
+		[_species({"for": ["mopsula"], "name": "Majestätsmops"}), "no majesty motif"],
 		[_species({"skin": "tiles"}), "skin: unknown key"],
 	]
 	for c: Array in cases:

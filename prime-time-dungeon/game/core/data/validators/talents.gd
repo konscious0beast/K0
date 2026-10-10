@@ -6,7 +6,7 @@ extends RefCounted
 const SPEC: Array = [["id", "s"], ["name", "s"], ["desc", "s", ""], ["for", "sa", []], ["max_rank", "i", 1],
 	["weight", "i", 1], ["min_level", "i", 3], ["icon", "s"], ["effects", "a"]]
 const NAME_MAX: int = 32                    # card title
-const DESC_MAX: int = 60                    # one card line (06 §2.2)
+const DESC_MAX: int = 90                    # at most two card lines (06 §2.2; the Liga talents name their rule)
 const MAX_EFFECTS: int = 3
 ## Fields per effect kind (besides "kind") and the allowed range of its number (06 §2.2 table; all integers).
 ## [field, type, lo, hi] — type "stat" (DataValidator.STATS), "element" (ELEMENTS without none) or "i".
@@ -27,6 +27,9 @@ const KIND_FIELDS: Dictionary = {
 }
 ## IP distance (06 §0.3 Nr. 2): no foot / barefoot words in any talent text (lower-case substrings).
 const FORBIDDEN_WORDS: PackedStringArray = ["barfuß", "barfuss", "schuh", "füße", "fuß", "socke"]
+## IP distance (orchestrator decision 2026-10-10): no royalty / majesty motif for Graf Mopsula — checked in the texts of
+## every entry that is for Mopsula (`for` empty or containing "mopsula"); lower-case substrings.
+const MOPSULA_FORBIDDEN_WORDS: PackedStringArray = ["majestät", "majestaet", "majestat"]
 
 
 ## Normalized talent entry ({} if not an object). Errors go to v.errors.
@@ -34,8 +37,8 @@ static func normalize(v: DataValidator, ctx: String, raw: Variant) -> Dictionary
 	var d: Dictionary = v._norm(ctx, raw, SPEC)
 	if d.is_empty():
 		return d
-	check_text(v, ctx + ".name", str(d["name"]), NAME_MAX)
-	check_text(v, ctx + ".desc", str(d["desc"]), DESC_MAX)
+	check_text(v, ctx + ".name", str(d["name"]), NAME_MAX, is_for_mopsula(d))
+	check_text(v, ctx + ".desc", str(d["desc"]), DESC_MAX, is_for_mopsula(d))
 	v._range_i(ctx + ".max_rank", int(d["max_rank"]), 1, 2)
 	v._range_i(ctx + ".weight", int(d["weight"]), 1, 10)
 	v._range_i(ctx + ".min_level", int(d["min_level"]), 3, 99)
@@ -91,10 +94,21 @@ static func check_refs(v: DataValidator) -> void:
 			v._ref(ctx + ".for", m, v._party, "party member")
 
 
-static func check_text(v: DataValidator, ctx: String, text: String, max_len: int) -> void:
+## Length, foot words (everyone) and — `for_mopsula` — the majesty words (Graf Mopsula's texts).
+static func check_text(v: DataValidator, ctx: String, text: String, max_len: int, for_mopsula: bool = false) -> void:
 	if text.length() > max_len:
 		v._err(ctx, "longer than %d characters (%d)" % [max_len, text.length()])
 	var low: String = text.to_lower()
 	for w: String in FORBIDDEN_WORDS:
 		if low.contains(w):
 			v._err(ctx, "contains '%s' (06 §0.3: no foot words)" % w)
+	if for_mopsula:
+		for w: String in MOPSULA_FORBIDDEN_WORDS:
+			if low.contains(w):
+				v._err(ctx, "contains '%s' (no majesty motif for Graf Mopsula)" % w)
+
+
+## The entry (talent or species) is for Graf Mopsula: `for` is empty (everyone) or contains "mopsula".
+static func is_for_mopsula(d: Dictionary) -> bool:
+	var members: PackedStringArray = d.get("for", PackedStringArray())
+	return members.is_empty() or members.has("mopsula")

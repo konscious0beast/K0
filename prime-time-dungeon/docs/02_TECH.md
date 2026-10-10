@@ -384,7 +384,7 @@ Jede Datei unter `tests/` gehört dem genannten Modul; `test_<modul>_*.gd` ist d
 | `tests/test_m2_achievements.gd` | M2 | Zähler, Schwellen, Belohnungen |
 | `tests/test_m2_loot.gd` | M2 | Lootbox/Truhe deterministisch, Ausrüstungs-Duplikate → Credits, Drop-Regel `BattleState.roll_drops` |
 | `tests/test_m2_progression.gd` | M2 | EXP-Kurve, Level-Up, Equip, BattleBridge (Diebstahl bei geflohenem Dieb, KO-Rückkehr mit 1 HP nach der EXP) |
-| `tests/test_m2_save.gd` | M2 | Roundtrip, Migration, kaputte Dateien, Slots |
+| `tests/test_m2_save.gd` | M2 | Roundtrip, Migration, kaputte Dateien, Slots; Anker des Logs nach dem Laden (`Game.replay_log`/`RunSim.replay` ab `start_state`) |
 | `tests/test_m2_shop.gd` | M2 | Kaufen/Verkaufen |
 | `tests/test_m3_dungeon_gen.gd` | M3 | `floor_1`-Layout valide/deterministisch; 200 Seeds prozedural: Invarianten, Determinismus, Laufzeit |
 | `tests/test_m3_floor_event.gd` | M3 | `FloorEvent.choices/resolve/apply` für alle 5 Typen mit festen Seeds |
@@ -431,7 +431,7 @@ Jede Datei unter `tests/` gehört dem genannten Modul; `test_<modul>_*.gd` ist d
 | `tests/test_m8_score_calc.gd` | M8 | `ScoreCalc`: Beispiel 05 §10.4, Caps, Tie-Break |
 | `tests/test_m8_sponsor_windows.gd` | M8 | Sponsor-Fenster (05 §6.13): Fahrplan in Ticks, Kampf friert ein, Plätze/Zuschauer-Limit, Codes, Safe Room (Leerlauf-Ticks), Boss-Countdown, Replay-Gleichheit; Integration `Show.receive_gift`, Overlay-Badge, Debug-Werkzeug |
 | `tests/test_m8_state_hash.gd` | M8 | `StateHash.of`/`of_battle` ohne Anzeigefelder |
-| `tests/test_06b_talents.gd` | 06-B | `talents.json` + Validator, offene Wahlen (ungerade Level ab L3), geseedetes Angebot, Wahlregeln, jede Wirkungsart an ihrem Ort, Command + Replay (`RunSim`, `Game`-Fassade), Save/Hash-Kompatibilität |
+| `tests/test_06b_talents.gd` | 06-B | `talents.json` + Validator, offene Wahlen (ungerade Level ab L3), geseedetes Angebot, Wahlregeln, jede Wirkungsart an ihrem Ort, Hype-/Follower-Faktoren als Ganzzahl-Promille (`GameState.hype_gain_pm/follower_pm`, Show), Command + Replay (`RunSim`, `Game`-Fassade), Save/Hash-Kompatibilität |
 | `tests/test_06b_species.gd` | 06-B | `species.json` + Validator (kein Kronen-Motiv an Mopsula, `spc_original`), `Casting` (Optionen, Gründe, Re-Spec-Regeln, Werte Klasse × Spezies), Command + Replay, Save |
 | `tests/test_06b_talent_show.gd` | 06-B | Talent-Show-Szene (Karten, „Später“, Erst-Erklärung, Vorschau), TALENT-SHOW-Knopf im Safe Room, Chip „TALENT BEREIT“, Party-Seite |
 | `tests/test_06b_balance.gd` | 06-B | Talentboni bei L10 ≤ +15 % je Kampfwert für jede Wahlfolge (erschöpfend); Boss-Quoten mit Bot-Wahl ±5 Punkte (gepaart, 300 Seeds) |
@@ -1030,8 +1030,10 @@ Laufzeitverhalten:
   **Vertrag (05 §11.4):** `errors` (PackedStringArray) sammelt `RunLog.validate()` und abgelehnte Log-Einträge, Header-Fehler
   von Katalog-Events (`RunSim.header_errors`: fester Seed, Schwierigkeit `prime`, Liga), jedes Command, das `command_refusal`
   oder `BattleState.validate` ablehnt oder das nicht anwendbar ist, und jedes Geschenk, das Show ablehnt (`gift_rejected`).
-  Bestätigt ist ein Log nur bei `mismatch_at == -1` **und** leerem `errors`. Nicht während eines Replays oder Kampfes und nicht
-  für Logs mit `header.from_save` (nach `Save.load_slot`) — dann leeres Ergebnis mit Fehlertext in `errors`.
+  Bestätigt ist ein Log nur bei `mismatch_at == -1` **und** leerem `errors`. Nicht während eines Replays oder Kampfes (dann
+  leeres Ergebnis mit Fehlertext in `errors`). Logs mit `header.from_save` (nach `Save.load_slot`) starten am **Anker**
+  `header.start_state` (der geladene Zustand, geprüft gegen `header.start_hash`; `RunSim.anchor_state`) statt bei
+  `create_new` — auch der Abschnitt nach einem Laden ist so verifizierbar; ohne gültigen Anker leeres Ergebnis mit Fehler.
 
 `GameSettings` (M0, `autoload/game_settings.gd`):
 
@@ -1206,8 +1208,9 @@ func save_slot(slot: int) -> Error           # Game.state → SaveCodec.encode �
                                              # event runs (Game.mode ≠ campaign) are never written → ERR_UNAVAILABLE
 func load_slot(slot: int) -> Error           # read → SaveCodec.decode (+ grace time_left ≥ 180 s, §6.4) →
                                              # Game.adopt_loaded_state(state, run_log) (privater Lauf-Kontext zurückgesetzt;
-                                             # Header wie new_game + "from_save": true; nur für Bug-Reports — replay_log
-                                             # startet immer bei create_new); emits game_loaded
+                                             # Header wie new_game + "from_save": true + Anker "start_state" (der geladene
+                                             # Zustand) und "start_hash" — replay_log / RunSim.replay starten dort);
+                                             # emits game_loaded
 func delete_slot(slot: int) -> Error
 func autosave() -> Error                     # save_slot(Game.state.slot); slot 0 → OK, no write
 func newest_slot() -> int                    # slot with the latest saved_at_unix, 0 if none (Title "Fortsetzen")
@@ -1386,7 +1389,7 @@ Fokus-Stil aller Buttons: 3 px `C_ACCENT_2`-Rahmen (StyleBox `focus`).
 | scenes | `scn_` | `^scn_[a-z0-9_]+$` | `scn_mop_4` |
 | Passiva (in classes.json) | `pas_` | `^pas_[a-z0-9_]+$` | `pas_thick_skin` |
 | Live-Events (`events.json`, M8) | `evt_` | `^evt_[a-z0-9_]+$` | `evt_offline_gleis9` |
-| talents (06-B) | `tal_` | `^tal_[a-z0-9_]+$` | `tal_kai_wischtechnik`, `tal_mop_pluralis` |
+| talents (06-B) | `tal_` | `^tal_[a-z0-9_]+$` | `tal_kai_wischtechnik`, `tal_mop_mitternachtsformel` |
 | species (06-B) | `spc_` | `^spc_[a-z0-9_]+$` | `spc_original`, `spc_kai_kachelgolem` |
 
 IDs sind **global eindeutig** über alle Tabellen (inkl. Encounter-, Etagen-Event-, Zonen- und Safe-Room-IDs).
@@ -2046,9 +2049,11 @@ Schaufensterpuppe: Übergangsregel `colors.eyes == colors.skin` → gesichtslose
  "effects": [{"kind": "stat_flat", "stat": "str", "value": 1}]}
 ```
 
-`name` ✓ ≤ 32 Zeichen, `desc` ≤ 60 (eine Kartenzeile), `for` ⊂ Party-IDs (`[]` = alle), `max_rank` 1..2 (1), `weight` 1..10
-(1; Ziehgewicht im Angebot), `min_level` 3..99 (3), `icon` ✓ ∈ `TalentDef.ICONS` (`hp mp atk mag def res spd lck crit element
-show field stunt liga`), `effects` ✓ 1..3 Wirkungen. Texte ohne Fuß-/Schuh-Wörter (06 §0.3 Nr. 2; `FORBIDDEN_WORDS`).
+`name` ✓ ≤ 32 Zeichen, `desc` ≤ 90 (höchstens zwei Kartenzeilen), `for` ⊂ Party-IDs (`[]` = alle), `max_rank` 1..2 (1),
+`weight` 1..10 (1; Ziehgewicht im Angebot), `min_level` 3..99 (3), `icon` ✓ ∈ `TalentDef.ICONS` (`hp mp atk mag def res spd lck
+crit element show field stunt liga`), `effects` ✓ 1..3 Wirkungen. Texte ohne Fuß-/Schuh-Wörter (06 §0.3 Nr. 2;
+`FORBIDDEN_WORDS`); Texte von Einträgen für Graf Mopsula (`for` leer oder mit `mopsula`, auch Spezies) ohne Majestäts-Motiv
+(`MOPSULA_FORBIDDEN_WORDS`: „majestät“, „majestaet“, „majestat“; Orchestrator-Entscheidung 2026-10-10).
 Wirkungsarten (`TalentDef.KINDS`, alle Zahlen int, je Rang einmal angewandt; Bereich = Validator):
 
 | `kind` | Felder (Bereich) | Wirkung (Auswertung in `Talents`) |
@@ -2064,8 +2069,8 @@ Wirkungsarten (`TalentDef.KINDS`, alle Zahlen int, je Rang einmal angewandt; Ber
 | `stunt_window_pm` | `pm` 1000..1250 | Stunt-Erfolgschance × pm ‰ vor der Obergrenze (`BattleState.stunt_chance`) |
 | `marotte_heart` | `per_floor` 1 | 1× je Etage +1 Herz für die aktive Marotte — Auswertung mit Paket C |
 | `liga_stat_pct` | `stat`, `pm` 30..50 | wie `stat_pct`, nur solange **dieses** Mitglied weder Rüstung noch Accessoire trägt („Unterhosen-Liga“) |
-| `hype_gain_pm` | `pm` 1000..1200 | Hype-Gewinn × pm ‰ (`GameState.hype_gain_mult`) |
-| `follower_pm` | `pm` 1000..1200 | Follower-Gewinn × pm ‰ (`GameState.follower_mult`) |
+| `hype_gain_pm` | `pm` 1000..1200 | Hype-Gewinn × pm ‰ (`GameState.hype_gain_pm`, Ganzzahl-Promille) |
+| `follower_pm` | `pm` 1000..1200 | Follower-Gewinn × pm ‰ (`GameState.follower_pm`, Ganzzahl-Promille) |
 
 `TalentDef.BEHAVIOUR_KINDS` (Karte „VERHALTEN“, cyan): `field_range_pm`, `field_cd_pm`, `preemptive_dmg_pm`, `stunt_window_pm`,
 `marotte_heart`, `liga_stat_pct`; alle übrigen sind „WERT“ (grün).
@@ -2618,7 +2623,7 @@ Regeln (GDD §3):
 - **Flucht**: `clampf(0.40 + (Ø SPD Party − Ø SPD Gegner) × 0.03 + 0.15 × failed_flee_attempts + (PREEMPTIVE ? 0.25 : 0.0), 0.10, 0.95)`;
   `flee_guaranteed`-Item (`itm_smoke`) → 1.0; Boss/`can_flee == false`/Tutorial → Befehl ungültig. Fehlschlag: Rang 2, `failed_flee_attempts += 1`.
 - **Stunt** (GDD §3.6): Chance `clampf((success_base + LCK × success_lck) × stunt_pm / 1000 + (target_is_boss ? success_boss_mod :
-  0.0), 0.05, success_cap)` (`stunt_pm` = `Combatant.talent_mods.stunt_pm`, Talent „Dramatische Pause“, 06-B; ohne Talent 1000),
+  0.0), 0.05, success_cap)` (`stunt_pm` = `Combatant.talent_mods.stunt_pm`, Talent „Taktgefühl“, 06-B; ohne Talent 1000),
   `target_is_boss` = eines der aufgelösten Ziele ist ein lebender Boss (Alle-Gegner-Stunts: irgendeines; ein Einzelziel-Stunt
   auf einen beschworenen Begleiter im Bosskampf bekommt **keinen** Abzug; Kappung **nach** dem Boss-Modifikator);
   Erfolg → Skill-Effekt; Fehlschlag → `fail_effect` (Selbstschaden `roundi(max_hp × self_dmg_pct / 100)` als `DAMAGE` ohne Tod
@@ -2872,6 +2877,9 @@ static func decay_step(hype: float) -> float
 	# hype > 25 → maxf(25.0, hype − maxi(1, roundi(hype − 25) × HYPE_DECAY_PM / 1000)); else unchanged (integer per mille)
 static func followers_for_battle(viewers_peak_battle: int, hype_end: float, is_boss: bool, follower_mult: float) -> int
 	# floori(viewers_peak_battle × (0.007 + 0.014 × hype_end / 100.0) × (is_boss ? 2.0 : 1.0) × follower_mult)
+	# = followers_for_battle_pm(…, maxi(0, roundi(follower_mult × 1000)))
+static func followers_for_battle_pm(viewers_peak_battle: int, hype_end: float, is_boss: bool, follower_pm: int) -> int
+	# the same with the factor in integer per mille (GameState.follower_pm: equipment × talents) — what Show calls
 static func followers_lost_on_flee(followers: int) -> int       # floori(followers × 0.01)
 
 class_name ShowDelta extends RefCounted
@@ -3036,8 +3044,12 @@ static func create_new(data: GameData, slot: int, player_name: String, seed: int
 	# party from party.json (level 1, full hp/mp, learnset level ≤ 1, start equipment); inventory + credits from
 	# data.party_start() (3× itm_bandage, 1× itm_antidote, 50 Cr); show: hype 30, followers 0; floor_run = null (Game.start_floor)
 func member(id: String) -> PartyMember
-func hype_gain_mult(data: GameData) -> float     # product of equipped show_mods.hype_gain_mult × Talents.hype_pm / 1000
-func follower_mult(data: GameData) -> float      # product of equipped show_mods.follower_mult × Talents.follower_pm / 1000
+func hype_gain_mult(data: GameData) -> float     # product of equipped show_mods.hype_gain_mult (equipment only)
+func follower_mult(data: GameData) -> float      # product of equipped show_mods.follower_mult (equipment only)
+func hype_gain_pm(data: GameData) -> int         # 06 §8.0 Nr. 4: roundi(hype_gain_mult × 1000) × Talents.hype_pm,
+	# (a × b + 500) / 1000 — the integer factor Show applies to positive hype (1000 = neutral)
+func follower_pm(data: GameData) -> int          # maxi(0, roundi(follower_mult × 1000)) × Talents.follower_pm, round
+	# half up — the integer factor of the battle followers (ShowModel.followers_for_battle_pm)
 func to_dict() -> Dictionary
 static func from_dict(d: Dictionary) -> GameState
 
@@ -3168,7 +3180,7 @@ Geschenke kosten **keinen** Hype und keine Ticks. Auswahl `SponsorSystem.pick` m
 
 Zuschauer: `ShowModel.viewers_for(floor.floor_mult, hype, followers)` (rauschfrei, deterministisch); Anzeige glättet und rauscht (§3.5).
 `viewers_peak_battle` = Maximum des rauschfreien Werts während des Kampfes.
-Follower nach Sieg: `ShowModel.followers_for_battle(viewers_peak_battle, hype_end, is_boss, follower_mult)`;
+Follower nach Sieg: `ShowModel.followers_for_battle_pm(viewers_peak_battle, hype_end, is_boss, state.follower_pm(data))`;
 Flucht: `−followers_lost_on_flee(followers)`; Niederlage: 0. Achievements: bronze 20 / silver 40 / gold 80; Events laut §7.4.
 Kontrolle (GDD §13): Hype 100, 1 500 Follower → `(1000 + 0.5 × 1500) × 2.9 = 5 075` Zuschauer → `ach_viewers_5000` nur mit
 Top-Kampf am Etagenende; Ziel-Peak der Etage 3 000–5 500.
@@ -3465,6 +3477,8 @@ func gift_refusal(g: Dictionary) -> String            # floor done / run over �
 	# g, rules, gift_context()) (duplicate, unknown contents, league, wrong_target, too_soon, caps, windows …); battle cap
 func gift_context() -> Dictionary                     # {"tick"} + run identity (run_id, event_id, player_id, window_id)
 static func identity_of(header: Dictionary) -> Dictionary
+static func anchor_state(h: Dictionary, errors: PackedStringArray) -> GameState   # "from_save" logs: deep copy of
+	# header.start_state, StateHash must equal header.start_hash; else null + error (replay / replay_log start there)
 static func header_errors(h: Dictionary, def: EventDef, rules: Dictionary) -> PackedStringArray   # catalog events: fixed
 	# seed, difficulty "prime", league ∈ rules.leagues
 static func replay(p_data: GameData, p_log: RunLog, p_rules: Dictionary = {}, p_quest: Dictionary = {},
@@ -4376,7 +4390,8 @@ Safe Rooms (Erstbesuch), unbesuchte Räume, Streuner ≤ 2 Räume entfernt (max.
   Rundlauf Speichern → `Router.goto(SCENE_TITLE)` → „Fortsetzen“ — der geladene `StateHash` muss dem gespeicherten gleichen, danach
   muss die neu gebaute Karte zum Zustand passen (Truhen, Gruppen inkl. Streuner, Tore, Events).
 - **Prüfungen unterwegs** (Fehler = `Assertion failed: FULLRUN failed in <phase>: <grund>`, `quit(1)`): bei jedem Safe-Room-Besuch
-  `Game.replay_log(run_log)` ≡ Live-`StateHash` (solange das Log bei `new_game` beginnt); nach jedem Kampf `Game.in_battle == false`,
+  `Game.replay_log(run_log)` ≡ Live-`StateHash` ohne `errors` (ein Log nach einem Laden — Rundlauf, Game Over — ab seinem Anker
+  `start_state`), zuletzt noch einmal bei der Etagen-Bilanz (letzter Safe-Room-Besuch, Endboss, Abstieg); nach jedem Kampf `Game.in_battle == false`,
   Symbol weg, alle ≥ 1 HP, Timer lief höchstens 15 Ticks (Überblendungen), Countdown nach dem Tutorial gestartet und tickt; Timer
   steht in Event-/Treppen-Dialog, Pausemenü (`pause` → Baum pausiert, `ui_cancel` schließt) und Safe Room; Sieg ⇒ Gruppe in
   `defeated_groups`; Kein-Fortschritt-Wächter (4× gleiches Ziel bei unverändertem Zustand); Watchdog 90 000 Frames.

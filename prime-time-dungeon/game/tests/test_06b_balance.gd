@@ -12,7 +12,8 @@ extends TestCase
 ##      first 100 seeds, +3.7 on 300 and +1.3 on 600; the Hausmeister at -0.2 on 600).
 ## Tuning record (600 fights each, 06 package B): without talents 84.3 % / 70.2 % wins; with STR/MAG +2 and SPD +1 at
 ## max_rank 2: 84.8 % / 75.5 % (Königin +5.3 — Mopsula's speed talent alone ~+3); final pool (STR/MAG +1, speed talent
-## rare and max_rank 1): 84.2 % / 71.5 %.
+## rare and max_rank 1): 84.2 % / 71.5 %. After the IP renames of integration round 1b (new ids → new id order of the
+## pools → other seeded offers, same values) the 300 paired fights measure -1.0 (Hausmeister) / +4.3 (Königin).
 
 const M7 := preload("res://tests/test_m7_balance.gd")
 const M7S := preload("res://tests/test_m7_show_balance.gd")

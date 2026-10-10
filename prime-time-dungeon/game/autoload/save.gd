@@ -78,7 +78,8 @@ func save_slot(slot: int) -> Error:
 
 
 ## read → SaveCodec.decode → Game.adopt_loaded_state(state, run log) (+ grace time_left ≥ 180 s, §6.4; Game resets its
-## private run context, new sim/run_log with header like new_game + "from_save": true); emits game_loaded.
+## private run context, new sim/run_log with header like new_game + "from_save": true); emits game_loaded; the log
+## header gets its anchor "start_state" (the loaded state) + "start_hash" (replayable, RunSim.anchor_state).
 func load_slot(slot: int) -> Error:
 	_last_error = ""
 	if not _valid_slot(slot):
@@ -101,6 +102,11 @@ func load_slot(slot: int) -> Error:
 	Game.adopt_loaded_state(st, _make_run_log(st))
 	Events.game_loaded.emit(slot)
 	Show.sync_from_state()
+	# The anchor of the new log (05 §11.4): Game.replay_log / RunSim.replay replay a "from_save" log from this state
+	# (RunSim.anchor_state checks it against start_hash) — the segment after a load is verifiable like a new game.
+	if Game.run_log != null:
+		Game.run_log.header["start_state"] = st.to_dict()
+		Game.run_log.header["start_hash"] = StateHash.of(st)
 	return OK
 
 

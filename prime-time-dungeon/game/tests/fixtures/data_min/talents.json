@@ -21,9 +21,9 @@
 			]
 		},
 		{
-			"id": "tal_mop_pluralis",
-			"name": "Pluralis Majestatis",
-			"desc": "„Wir zaubern.“ Und zwar mit Nachdruck.",
+			"id": "tal_mop_mitternachtsformel",
+			"name": "Mitternachtsformel",
+			"desc": "Um Mitternacht gelernt, nie vergessen. Zauber sitzen fester.",
 			"for": [
 				"mopsula"
 			],

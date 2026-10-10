@@ -1177,22 +1177,26 @@ func _layout_safe_rooms() -> int:
 	return layout.safe_rooms.size() if layout != null else 0
 
 
-## Game.replay_log(run log) must reproduce the live StateHash with zero verifier errors (Brief §6b, 05 §11.4; only
-## while the log starts at new_game).
+## Game.replay_log(run log) must reproduce the live StateHash with zero verifier errors (Brief §6b, 05 §11.4). A log
+## that starts at a loaded save (save/load round trip, load after a game over) is replayed from its anchor (header
+## start_state, Save.load_slot) — every segment of the run is verified, also the one after the last load.
 func _replay_check() -> bool:
-	if Game.run_log == null or bool(Game.run_log.header.get("from_save", false)):
+	if Game.run_log == null:
 		return true
+	var from_save: bool = bool(Game.run_log.header.get("from_save", false))
 	var live: String = StateHash.of(Game.state)
 	# the run clock keeps ticking in the safe room (idle ticks, Sponsor-Fenster 05 §6.13): replay up to the live tick
 	var out: Dictionary = Game.replay_log(Game.run_log, Game.sim.tick() if Game.sim != null else -1)
 	replay_checks += 1
-	if str(out.get("final_hash", "")) != live:
-		return fail("replay of the run log (%d commands) does not reproduce the live state (mismatch at checkpoint %d)"
-			% [Game.run_log.cmds().size(), int(out.get("mismatch_at", -1))])
 	var errors: PackedStringArray = out.get("errors", PackedStringArray())
+	if str(out.get("final_hash", "")) != live:
+		return fail("replay of the run log (%d commands) does not reproduce the live state (mismatch at checkpoint %d)%s"
+			% [Game.run_log.cmds().size(), int(out.get("mismatch_at", -1)), (": " + "; ".join(errors)) if not
+			errors.is_empty() else ""])
 	if not errors.is_empty():
 		return fail("the verifier (Game.replay_log) reports %d error(s): %s" % [errors.size(), "; ".join(errors)])
-	_note("replay check: %d commands reproduce the live StateHash" % Game.run_log.cmds().size())
+	_note("replay check: %d commands%s reproduce the live StateHash" % [Game.run_log.cmds().size(),
+		" since the load" if from_save else ""])
 	return true
 
 
@@ -1428,6 +1432,9 @@ func _after_stairs() -> bool:
 	var fs: FloorSummary = Router.current as FloorSummary
 	summary = fs.summary.duplicate()
 	_note("floor summary %s" % JSON.stringify(summary))
+	# the last segment (last safe room visit incl. its talent picks, floor boss, descent) is replay-verified as well
+	if not _replay_check():
+		return false
 	fs.continue_pressed()
 	phase = "credits"
 	if not await _wait(func() -> bool: return Router.current != null and not Router.busy \

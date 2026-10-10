@@ -48,8 +48,15 @@ static func decay_step(hype: float) -> float:
 
 
 ## floori(viewers_peak_battle × (FOLLOWER_CONV_BASE + FOLLOWER_CONV_HYPE × hype_end / 100.0) × (is_boss ? 2.0 : 1.0)
-## × follower_mult) — 0.007 + 0.014 × hype_end / 100 since the balancing (GDD §7.6/§13)
+## × follower_mult) — 0.007 + 0.014 × hype_end / 100 since the balancing (GDD §7.6/§13). Float view of
+## followers_for_battle_pm (follower_mult converted once: maxi(0, roundi(follower_mult × 1000))).
 static func followers_for_battle(viewers_peak_battle: int, hype_end: float, is_boss: bool, follower_mult: float) -> int:
+	return followers_for_battle_pm(viewers_peak_battle, hype_end, is_boss, maxi(0, roundi(follower_mult * _PM)))
+
+
+## followers_for_battle with the follower factor in integer per mille (GameState.follower_pm: equipment × talents,
+## 06 §8.0 Nr. 4) — the form the Show uses; integer math throughout.
+static func followers_for_battle_pm(viewers_peak_battle: int, hype_end: float, is_boss: bool, follower_pm: int) -> int:
 	if viewers_peak_battle <= 0:
 		return 0
 	var h_pm: int = roundi(clamp_hype(hype_end) * _PM)
@@ -57,7 +64,7 @@ static func followers_for_battle(viewers_peak_battle: int, hype_end: float, is_b
 	var base_e7: int = roundi(FOLLOWER_CONV_BASE * 10_000_000.0)
 	var hype_e7: int = roundi(FOLLOWER_CONV_HYPE * 100_000.0) * h_pm / _PM
 	var boss_pm: int = roundi((FOLLOWER_BOSS_MULT if is_boss else 1.0) * _PM)
-	var fmult_pm: int = maxi(0, roundi(follower_mult * _PM))
+	var fmult_pm: int = maxi(0, follower_pm)
 	var num: int = viewers_peak_battle * (base_e7 + hype_e7) * boss_pm / _PM * fmult_pm
 	return maxi(0, num / (10_000_000 * _PM))
 

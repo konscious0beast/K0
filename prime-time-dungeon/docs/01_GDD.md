@@ -424,7 +424,7 @@ Riskante Show-Aktion: Erfolg = viel Schaden + viel Hype; Fehlschlag = Peinlichke
 success_chance = clamp((success_base + LCK_eff * success_lck) * talent + (target_is_boss ? success_boss_mod : 0.0), 0.05, success_cap)
 ```
 
-`talent` = 1.0; mit dem Talent „Dramatische Pause“ (Kap. 4.7) 1.2 — es wirkt vor Boss-Abzug und Obergrenze.
+`talent` = 1.0; mit dem Talent „Taktgefühl“ (Kap. 4.7) 1.2 — es wirkt vor Boss-Abzug und Obergrenze.
 Gegen Bosse: `success_boss_mod = −0.15` (Kai L5 mit LCK 10: 0.70, gegen Bosse 0.55). Hype: Erfolg +20, Fehlschlag +8 (Kap. 7).
 Cooldown: Nach dem Stunt-Zug gilt `Combatant.stunt_cooldown = 3`; jedes folgende eigene `turn_end` −1; Stunt wählbar bei 0
 (→ gesperrt in den 3 folgenden eigenen Zügen). Kampfstart: 0. Datenfelder (Kap. 4.4):
@@ -778,8 +778,8 @@ Die Skill-Tabellen (Kap. 3.6, 4.5, 4.6, 5.1–5.3, 6.1) nutzen Kurzspalten. Verb
 
 | Kai (`tal_kai_*`) | Wirkung | Rang | Graf Mopsula (`tal_mop_*`) | Wirkung | Rang |
 |---|---|---|---|---|---|
-| Wischtechnik | STR +1 | 2 | Pluralis Majestatis | MAG +1 | 2 |
-| Dicke Haut (tierheimgeprüft) | DEF +1 | 2 | Majestätisches Schnarchen | +5 % MaxMP nach jedem Sieg | 2 |
+| Wischtechnik | STR +1 | 2 | Mitternachtsformel | MAG +1 | 2 |
+| Dicke Haut (tierheimgeprüft) | DEF +1 | 2 | Körbchen-Nickerchen | +5 % MaxMP nach jedem Sieg | 2 |
 | Nachtschicht-Kondition | HP +5 % | 2 | Hoher Kragen | RES +1 | 2 |
 | Hausverstand | RES +1 | 1 | Leberwurst-Diät | HP +5 % | 2 |
 | Glückspfote | LCK +1, Krit +2 % | 1 | Monokel-Fokus (selten) | SPD +1 | 1 |
@@ -788,8 +788,8 @@ Die Skill-Tabellen (Kap. 3.6, 4.5, 4.6, 5.1–5.3, 6.1) nutzen Kurzspalten. Verb
 | Automatenkaffee | +5 % MaxMP nach jedem Sieg | 2 | Doppelter Unterpelz | Eis-Schaden −25 % | 1 |
 | *Weit ausholen* | Feldschlag reicht 25 % weiter ¹ | 1 | *Bellen in Stereo* | Bellen reicht 25 % weiter ¹ | 1 |
 | *Erster Eindruck* | nach Präventivschlag: 1. Zug +15 % Schaden | 1 | *Schwer vermittelbar* | Bellen 30 % schneller bereit ¹ | 1 |
-| *Kamera 3 kennt mich* | 1× je Etage +1 Herz für M.O.D.s Vorliebe ² | 1 | *Dramatische Pause* | Stunts gelingen 20 % öfter | 1 |
-| *Abgehärtet* | ohne Rüstung & ohne Accessoire: DEF +5 % | 1 | *Würde genügt* | ohne Rüstung & ohne Accessoire: RES +5 % | 1 |
+| *Kamera 3 kennt mich* | 1× je Etage +1 Herz für M.O.D.s Vorliebe ² | 1 | *Taktgefühl* | Stunts gelingen 20 % öfter | 1 |
+| *Liga-Routine* | ohne Rüstung & ohne Accessoire: DEF +5 % | 1 | *Liga-Gelassenheit* | ohne Rüstung & ohne Accessoire: RES +5 % | 1 |
 
 *Kursiv* = Verhaltens-Talent. ¹ wirkt mit der Feldfähigkeit der Held:in (06 Paket A), ² mit den Marotten (06 Paket C) — bis dahin
 sind die Werte gespeichert und die Karte sagt, wann sie wirken. Die beiden Liga-Talente gelten je Figur, solange **diese** Figur
@@ -1757,8 +1757,9 @@ Geschenke ≥ 50 % Sieg, Party-Züge in den Bändern).
 **Talente (Kap. 4.7, `test_06b_balance.gd`):** Summe aller Talentboni je Kampfwert bei L10 ≤ +15 % für **jede** mögliche
 Wahlfolge (erschöpfend, gemessen gegen die Level-Werte ohne Ausrüstung; Krit höchstens +8 Punkte, Werbepause höchstens +10 %
 MaxMP). Boss-Quoten mit der Bot-Wahl „erstes Angebot“ gegen dieselben Kämpfe ohne Talente (gepaart, 300 Seeds, Geschenke wie im
-Spiel): Hausmeister +0,3, Königin +3,7 Punkte Siegquote — Band ±5 Punkte. Auf 100 Seeds ist der Stichprobenfehler (~4 Punkte)
-so groß wie das Band; deshalb misst der Test gepaart auf 300.
+Spiel): Hausmeister −1,0, Königin +4,3 Punkte Siegquote — Band ±5 Punkte (vor den IP-Umbenennungen der Integrationsrunde 1b
++0,3/+3,7: neue IDs ändern die ID-Reihenfolge des Pools und damit die gezogenen Angebote, Werte unverändert). Auf 100 Seeds ist
+der Stichprobenfehler (~4 Punkte) so groß wie das Band; deshalb misst der Test gepaart auf 300.
 
 **Restabweichungen:**
 
@@ -1913,7 +1914,7 @@ Tabellen in diesem Dokument nennen Kurz-IDs. Die Daten-IDs (Regexe aus 02_TECH �
 | M.O.D.-Zeilen | Tag `intro`, `boss_intro:enm_boss_hausmeister` | `mod_intro_01`, `mod_boss_intro_enm_boss_hausmeister_01` | `mod_` + Tag (`:` → `_`) + `_<nn>` |
 | Etagen-Events | `evt_photo_drone` (alt) | `fev_photo_drone` | `fev_` (`evt_` = Live-Events, 05) |
 | Mopsula-Szenen | `mop_scene_1` (alt) | `scn_mop_1` | `scn_mop_<n>` |
-| Talente, Spezies (06 Paket B) | — | `tal_kai_wischtechnik`, `tal_mop_pluralis`, `spc_original`, `spc_kai_kachelgolem` | `tal_<kai\|mop>_` / `spc_` |
+| Talente, Spezies (06 Paket B) | — | `tal_kai_wischtechnik`, `tal_mop_mitternachtsformel`, `spc_original`, `spc_kai_kachelgolem` | `tal_<kai\|mop>_` / `spc_` |
 | Unverändert | `ach_*`, `cls_*`, `pas_*`, `ms_*`, `zone_*`, `sr_*`, `kai`, `mopsula`, `floor_<n>` | gleich | — |
 | Laufzeit-/Layout-IDs | Truhen `f1_c<k>`, Gruppen `f1_g<k>`/`f1_qb`/`f1_fb`/Streuner `f1_s<n>`, Pseudo-Einheiten im Kampf `u0..` | gleich | `gate_*` sind nur Namen in diesem Dokument |
 

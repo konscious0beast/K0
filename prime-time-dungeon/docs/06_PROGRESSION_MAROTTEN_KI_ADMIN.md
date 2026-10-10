@@ -279,15 +279,16 @@ Room wählt man je offener Wahl **eines von zwei** Talenten.
 | `tal_kai_weit_ausholen` | Weit ausholen | Feldschlag-Reichweite +25 % (öffnet Kulissenwände aus sicherer Distanz) | 1 |
 | `tal_kai_erster_eindruck` | Erster Eindruck | Präventivschlag: Schaden der ersten Runde +15 % | 1 |
 | `tal_kai_kamera3` | Kamera 3 kennt mich | 1× je Etage: +1 Herz für die erste getroffene Vorliebe | 1 |
-| `tal_kai_abgehaertet` | Abgehärtet | in der Liga: DEF +5 % („Kai braucht keine Rüstung. Sagt jedenfalls Kai.“) | 1 |
+| `tal_kai_liga_routine` | Liga-Routine | in der Liga: DEF +5 % („Ohne Rüstung & ohne Accessoire? Routine. …“) | 1 |
 
-**Pool Mopsula (12)** — `tal_mop_*` (8 Werte, 4 Verhalten; Motive aus **unserem** Kanon: Tierheim, Pluralis Majestatis,
-Grafen-/Vampir-Manieren, Fehde mit der Rattenkönigin):
+**Pool Mopsula (12)** — `tal_mop_*` (8 Werte, 4 Verhalten; Motive aus **unserem** Kanon: Tierheim, Mops-Alltag,
+Grafen-/Vampir-Manieren, Fehde mit der Rattenkönigin — **keine** Majestäts-/Königs-Motive, Orchestrator-Entscheidung
+2026-10-10, Validator `MOPSULA_FORBIDDEN_WORDS`):
 
 | ID | Name | Wirkung | `max_rank` |
 |---|---|---|---|
-| `tal_mop_pluralis` | Pluralis Majestatis („Wir zaubern.“) | MAG +1 | 2 |
-| `tal_mop_schnarchen` | Majestätisches Schnarchen | +5 % MaxMP nach jedem Kampf | 2 |
+| `tal_mop_mitternachtsformel` | Mitternachtsformel („Um Mitternacht gelernt, nie vergessen.“) | MAG +1 | 2 |
+| `tal_mop_koerbchen` | Körbchen-Nickerchen | +5 % MaxMP nach jedem Kampf | 2 |
 | `tal_mop_hoher_kragen` | Hoher Kragen | RES +1 | 2 |
 | `tal_mop_leberwurst` | Leberwurst-Diät | HP +5 % | 2 |
 | `tal_mop_monokel` | Monokel-Fokus | SPD +1 (selten: `weight` 1) | 1 |
@@ -296,13 +297,17 @@ Grafen-/Vampir-Manieren, Fehde mit der Rattenkönigin):
 | `tal_mop_unterpelz` | Doppelter Unterpelz | Eis-Schaden ×0.75 | 1 |
 | `tal_mop_stereo` | Bellen in Stereo | Bellen-Reichweite +25 % | 1 |
 | `tal_mop_schwer_vermittelbar` | Schwer vermittelbar | Bellen-Cooldown −30 % („lässt sich nicht abwimmeln“) | 1 |
-| `tal_mop_dramatische_pause` | Dramatische Pause | Stunt-Erfolgschance ×1.2 (vor der Obergrenze) | 1 |
-| `tal_mop_wuerde` | Würde genügt | in der Liga: RES +5 % („Der Graf braucht keinen Pulli. Würde wärmt.“) | 1 |
+| `tal_mop_taktgefuehl` | Taktgefühl | Stunt-Erfolgschance ×1.2 (vor Boss-Abzug und Obergrenze) | 1 |
+| `tal_mop_liga_gelassen` | Liga-Gelassenheit | in der Liga: RES +5 % („Ohne Rüstung & ohne Accessoire bleibt der Graf gelassen …“) | 1 |
 
 > **Stand Paket B (umgesetzt, `data/talents.json`):** Die Tabellen oben sind die gebauten Werte. Gegenüber dem Entwurf kleiner
 > (STR/MAG +1 statt +2, DEF/RES/LCK als flache Punkte, Mopsulas Tempo-Talent selten und `max_rank` 1), damit das Band „≤ +15 %
 > je Kampfwert bei L10“ für **jede** Wahlfolge hält und die Boss-Quoten im ±5-Punkte-Band bleiben (Messung Kap. 8.3).
-> Alle Talente haben `weight` 2, nur Monokel-Fokus 1.
+> Alle Talente haben `weight` 2, nur Monokel-Fokus 1. **IP-Distanz (Orchestrator-Entscheidung 2026-10-10, verbindlich):**
+> Spielen ohne Rüstung ist eine **Spielweise**, nie ein Wesenszug; keine Majestäts-Motive für Mopsula. Deshalb umbenannt
+> (Wirkungen unverändert): `tal_kai_abgehaertet` → `tal_kai_liga_routine`, `tal_mop_wuerde` → `tal_mop_liga_gelassen`,
+> `tal_mop_pluralis` → `tal_mop_mitternachtsformel`, `tal_mop_schnarchen` → `tal_mop_koerbchen`,
+> `tal_mop_dramatische_pause` → `tal_mop_taktgefuehl`; Kartentexte bis 90 Zeichen (zwei Zeilen).
 
 **UI „Talent-Show“** (`scenes/ui/talent_show.tscn`, aufgerufen aus dem Safe-Room-Menü): je offene Wahl zwei Karten (Name, ein
 Satz, Zahl grün bzw. Verhaltens-Icon, Icon nach `kind`) + „Später“; nach der letzten Wahl zurück ins Safe-Room-Menü.
@@ -1130,6 +1135,10 @@ Inhalt von Schritt 0:
    — kein Zugriff auf Autoload-Instanzen, daher identisch in `RunSim`/Verifier. Die bisherigen `hype_gain_mult/follower_mult`
    (`game_state.gd`, `float`) bleiben als dünne Hülle `float(…_pm(data)) / 1000.0` für vorhandene Aufrufer; Schritt 0 stellt die
    Kern-Aufrufer auf die Promille-Variante um. Test: mit heutigen Daten identische Hype-/Follower-Werte wie vorher.
+   **Umgesetzt (Paket B + Integration, Stand B-9):** `hype_gain_pm`/`follower_pm` mit Talenten; das Ausrüstungsprodukt wird
+   wie bisher einmal am Ende gerundet (`roundi(Produkt × 1000)`, bit-gleich zu vorher), `hype_gain_mult/follower_mult` bleiben
+   reine Ausrüstungs-Floats (Anzeige, `BattleSetup.show_mods`); Show nutzt nur die Promille-Werte. C/D hängen
+   `liga_pm`/`effect_pm` als weitere `(a × b + 500) / 1000`-Schritte an.
 5. **`autoload/game_settings.gd`** — `partner_auto: bool = false` (`game/partner_auto`), `show_bets_hud: bool = true`
    (`game/show_bets_hud`), `regie_twists: bool = true` (`game/regie_twists`), `mod_live: StringName = &"off"` (`live/mod_live`:
    `off | lines | lines_twists`), `mod_live_url: String = ""` (`live/mod_live_url`, nur Debug-Builds/Kommandozeile `--mod-live-url=`).
@@ -1312,12 +1321,13 @@ Angebotsfolgen der 4 Wahlen je Figur geprüft); Anteil Verhaltens-Talente je Poo
 | B-6 | Krit/Element/Präventiv in `BattleBridge.make_setup` | Krit/Element in `Progression.to_combatant` (wie die Ausrüstung), Präventiv als `Combatant.talent_mods` → `ActionResolver` (nur erster eigener Zug nach Präventivschlag) | ein Ort für alle Combatant-Werte; Replays und M7-Simulation nutzen denselben Weg |
 | B-7 | — | eine Wahl hebt MaxHP/MaxMP-Zuwachs sofort auf HP/MP (wie ein Level-up, `Progression.follow_max_vitals`) | sonst wirkt „HP +5 %“ erst nach der nächsten Heilung |
 | B-8 | `field_range_pm`, `field_cd_pm`, `marotte_heart` | Werte und APIs da (`Talents.field_range_pm/field_cd_pm/marotte_bonus_hearts`), **Auswertung** folgt mit Paket A (Feldfähigkeit) bzw. C (`MarottenRules`) | Besitzgrenzen 8.1; die Karte sagt „Wirkt, wenn … die Gruppe anführt.“ |
-| B-9 | `hype_gain_pm`/`follower_pm` | im Kern verdrahtet (`GameState.hype_gain_mult/follower_mult` × Talente), im Pool **nicht** verwendet | Kap. 4.8 Nr. 4: Event-Wertung ohne Talent-Multiplikatoren bleibt trivial erfüllt |
+| B-9 | `hype_gain_pm`/`follower_pm` | im Kern verdrahtet als **Ganzzahl-Promille** (`GameState.hype_gain_pm/follower_pm` = Ausrüstung, einmal `roundi(x × 1000)`, × `Talents.hype_pm/follower_pm`, je Schritt `(a × b + 500) / 1000`; Show nutzt nur diese; `hype_gain_mult/follower_mult` bleiben reine Ausrüstungs-Floats), im Pool **nicht** verwendet | Kap. 4.8 Nr. 4: Event-Wertung ohne Talent-Multiplikatoren bleibt trivial erfüllt |
 | B-10 | Talent-Reset beim Casting | noch nicht gebaut | kommt mit der Casting-UI (Etage 3) |
 | B-11 | Verifier: `Talents.pick`/`Casting.choose` prüfen selbst (ein gefälschtes Command ändert nichts, der Hash weicht ab) | Integration (Merge mit dem Final-Review): die Legalität steht zusätzlich in `RunRules.command_refusal` — ein gefälschtes `talent`/`casting` ist für `RunSim.replay` **und** `Game.replay_log` ein Fehler in `errors` | gleicher Vertrag wie alle übrigen Commands (05 §11.4, `test_m8_integrity`) |
 
 **Balance-Messung (Paket B):** Bot-Wahl „erstes Angebot“, gepaarte Kämpfe (gleiche Seeds, mit/ohne Talente, Geschenke wie im Spiel):
-Hausmeister +0,3 Punkte, Königin +3,7 Punkte Siegquote auf 300 Kämpfen (Band ±5). Ein erster Pool (STR/MAG +2, Tempo-Talent
+Hausmeister +0,3 Punkte, Königin +3,7 Punkte Siegquote auf 300 Kämpfen (Band ±5); nach den IP-Umbenennungen (Integration 1b,
+neue ID-Reihenfolge → andere Angebote, Werte gleich) −1,0 / +4,3 Punkte. Ein erster Pool (STR/MAG +2, Tempo-Talent
 `max_rank` 2) lag bei der Königin bei +5,3 Punkten (600 Kämpfe) und wurde deshalb gesenkt. Full-Run-Bot: 6 Wahlen je Lauf
 (L3/L5/L7 beider Figuren), alle drei Strategien grün.
 

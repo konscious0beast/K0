@@ -3,6 +3,7 @@ class_name GameSettings extends RefCounted
 ## keep the defaults and never touch the disk.
 
 const PATH: String = "user://settings.cfg"
+const MOD_LIVE_MODES: Array[StringName] = [&"off", &"lines", &"lines_twists"]   # 06-D
 
 var master_volume: float = 0.8              # audio/master, 0..1
 var music_volume: float = 0.6               # audio/music
@@ -19,6 +20,10 @@ var camera_invert_x: bool = false           # input/camera_invert_x
 var camera_invert_y: bool = false           # input/camera_invert_y
 var camera_sensitivity: float = 1.0         # input/camera_sensitivity, 0.25..3.0
 var partner_auto: bool = false              # game/partner_auto (06 §1.4, package A): AutoPolicy plays the partner
+# --- 06-D (KI-Admin) ---
+var regie_twists: bool = true               # game/regie_twists: offline Regie twists from floor 2 (06 §5.7a)
+var mod_live: StringName = &"off"           # live/mod_live: &"off" | &"lines" | &"lines_twists" (06 §5.3, opt-in)
+var mod_live_url: String = ""               # live/mod_live_url: mod-brain base URL (debug builds / --mod-live-url=)
 # true: save_to_disk() is a no-op returning OK, load_from_disk() keeps defaults
 var ephemeral: bool = false
 
@@ -44,6 +49,9 @@ func reset_defaults() -> void:
 	camera_invert_y = false
 	camera_sensitivity = 1.0
 	partner_auto = false
+	regie_twists = true
+	mod_live = &"off"
+	mod_live_url = ""
 
 
 ## Reads user://settings.cfg (missing file → defaults). No-op when ephemeral.
@@ -73,6 +81,10 @@ func load_from_disk() -> void:
 	camera_invert_y = bool(cfg.get_value("input", "camera_invert_y", camera_invert_y))
 	camera_sensitivity = clampf(float(cfg.get_value("input", "camera_sensitivity", camera_sensitivity)), 0.25, 3.0)
 	partner_auto = bool(cfg.get_value("game", "partner_auto", partner_auto))
+	regie_twists = bool(cfg.get_value("game", "regie_twists", regie_twists))
+	var ml: StringName = StringName(str(cfg.get_value("live", "mod_live", mod_live)))
+	mod_live = ml if MOD_LIVE_MODES.has(ml) else &"off"
+	mod_live_url = str(cfg.get_value("live", "mod_live_url", mod_live_url)) if OS.is_debug_build() else ""
 
 
 ## Writes user://settings.cfg. Ephemeral: returns OK without writing.
@@ -95,6 +107,9 @@ func save_to_disk() -> Error:
 	cfg.set_value("input", "camera_invert_y", camera_invert_y)
 	cfg.set_value("input", "camera_sensitivity", camera_sensitivity)
 	cfg.set_value("game", "partner_auto", partner_auto)
+	cfg.set_value("game", "regie_twists", regie_twists)
+	cfg.set_value("live", "mod_live", String(mod_live))
+	cfg.set_value("live", "mod_live_url", mod_live_url)
 	return cfg.save(PATH)
 
 
@@ -115,4 +130,7 @@ func to_dict() -> Dictionary:
 		"camera_invert_y": camera_invert_y,
 		"camera_sensitivity": camera_sensitivity,
 		"partner_auto": partner_auto,
+		"regie_twists": regie_twists,
+		"mod_live": mod_live,
+		"mod_live_url": mod_live_url,
 	}

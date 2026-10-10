@@ -195,6 +195,11 @@ func _build() -> void:
 	_cycler("partner_auto", "Partner automatisch", ["Aus", "An"], 1 if s.partner_auto else 0,
 		"Dein:e Partner:in kämpft von selbst.")
 	_mode_row()
+	# 06-D (KI-Admin): offline Regie twists; "M.O.D. live" only where an endpoint is configured (debug builds)
+	_cycler("regie_twists", "Regie-Eingriffe (ab Etage 2)", ["Aus", "An"], 1 if s.regie_twists else 0)
+	if OS.is_debug_build() and s.mod_live_url != "":
+		_cycler("mod_live", "M.O.D. live (Beta)", ["Aus", "Kommentar", "Kommentar + Regie"],
+			maxi(0, GameSettings.MOD_LIVE_MODES.find(s.mod_live)))
 	_section("Kamera & Steuerung")
 	_camera_slider(s.camera_sensitivity)
 	_cycler("camera_invert_x", "Kamera horizontal invertieren", ["Aus", "An"], 1 if s.camera_invert_x else 0)
@@ -483,6 +488,10 @@ func _set_choice(key: String, i: int) -> void:
 			s.show_fps = i == 1
 		"show_bets_hud":                                   # 06-C
 			s.show_bets_hud = i == 1
+		"regie_twists":                                  # 06-D
+			s.regie_twists = i == 1
+		"mod_live":                                      # 06-D
+			s.mod_live = GameSettings.MOD_LIVE_MODES[clampi(i, 0, GameSettings.MOD_LIVE_MODES.size() - 1)]
 	_commit()
 
 

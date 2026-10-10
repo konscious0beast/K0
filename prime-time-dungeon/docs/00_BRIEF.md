@@ -140,9 +140,9 @@ Ordner unter `res://`:
 ```
 autoload/      Singletons (oben)
 core/          reine Logik (RefCounted): data/, stats/, battle/, show/, loot/, progression/, dungeon/, live/ (SHOWRUN)
-data/          JSON: die 16 GameData-Tabellen (statuses, skills, items, classes, party, enemies, floors, lootboxes,
-               achievements, sponsors, milestones, mod_lines, scenes, talents, species, marotten) + events.json
-               (SHOWRUN, geladen von EventCatalog)
+data/          JSON: die 17 GameData-Tabellen (statuses, skills, items, classes, party, enemies, floors, lootboxes,
+               achievements, sponsors, milestones, mod_lines, scenes, talents, species, marotten, twists) + events.json
+               (SHOWRUN, geladen von EventCatalog) + mod_filter.json (Wortfilter für „M.O.D. live“, ModLineFilter)
 art/           shaders/, materials/, kit/ (prozedurale Mesh-Bauer: Figuren, Umgebung, Props, VFX)
 scenes/        boot/, title/, exploration/, combat/ (Echtzeitkampf, 07), battle/ (CTB, bis R5), safe_room/, ui/
                (wiederverwendbare UI)

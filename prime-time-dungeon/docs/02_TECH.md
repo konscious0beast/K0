@@ -130,6 +130,10 @@ Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört gen
 | `autoload/db.gd` | M0 | Autoload `DB`: lädt `GameData` in `_init()`, Getter-Fassade (§3.3) |
 | `autoload/game.gd` | M0 | Autoload `Game`: hält `GameState`, Etagen-Timer, Settings, Input-Schema, Flow-Helfer (§3.4) |
 | `autoload/game_replay.gd` | M0 | Privater Helfer von `Game` (kein class_name, per `preload`): Replay-Motor hinter `Game.replay_log` (§3.4, 05 §11.4) |
+| `autoload/mod_voice/mod_voice_provider.gd` | 06-D | `class_name ModVoiceProvider` (RefCounted): Schnittstelle der M.O.D.-Stimme — `turn_ready(req_id, lines, twist)`, `status_changed`, `kind()`, `is_available()`, `request_turn(batch)`, `cancel(req_id)` (06 §8.5) |
+| `autoload/mod_voice/scripted_mod_voice.gd` | 06-D | `ScriptedModVoice` (Standard): antwortet sofort mit nichts — die skriptierten Zeilen spricht weiter `Show`/`ModAnnouncer` |
+| `autoload/mod_voice/remote_mod_voice.gd` | 06-D | `RemoteModVoice`: `HTTPRequest` an mod-brain (`/v1/auth/token`, `/v1/mod/turn`), Timeout 6 s, Antwort ≤ 8 KB, **ohne URL aus** (`is_available() == false`), hält keine Secrets; das Sitzungs-Token gilt je `run_ref` (neues `run_ref` bei neuem Spiel / Laden → Token verworfen); gesund ist nur eine 2xx-Antwort mit gültigem JSON-Objekt (`healthy_body`), 429/413/5xx, Fehler-JSON, Timeout → `degraded` (3 in Folge: Pause, Twists zurück an die Offline-Regie) |
+| `autoload/mod_voice/mod_live_link.gd` | 06-D | Kind-Node von `Game` (kein class_name): Runden alle 40 s (Highlight frühestens nach 20 s), veraltete Antworten (> 12 s) und späte Twists (> 20 s) verwerfen, 3 Fehler → 300 s Pause + Regie übernimmt; Zeilen → `Show.say_external`, Twists → `Game.apply_twist` (nur Modus `lines_twists`) |
 | `autoload/game_settings.gd` | M0 | `class_name GameSettings`: Einstellungen, persistiert in `user://settings.cfg` |
 | `autoload/show.gd` | M2 (S) | Autoload `Show`: Hype/Zuschauer/Follower, Achievements, Sponsoren, M.O.D. (§3.5) |
 | `autoload/save.gd` | M2 (S) | Autoload `Save`: Slots, Datei-I/O, Autosave (§3.6) |
@@ -166,6 +170,8 @@ Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört gen
 | `core/data/defs/species_def.gd` | 06-B | `SpeciesDef` (`species.json`, §4.4.16) |
 | `core/data/validators/talents.gd`, `species.gd` | 06-B | Regeln der Tabellen `talents`/`species`, von `DataValidator` per `preload` aufgerufen (06 §8.0 Nr. 7: je neuer Tabelle eine Datei; ohne `class_name`) |
 | `core/data/defs/marotte_def.gd` | 06-C | `MarotteDef` (`marotten.json`, §4.4.17) |
+| `core/data/defs/twist_def.gd` | 06-D | `TwistDef` (`twists.json`, §4.4.18) |
+| `core/data/validators/twists.gd` | 06-D | Regeln von `twists.json` (Schema, Grenzen, `mod_tag`), von `DataValidator` per `preload` als `TwistCheck` aufgerufen (06 §8.0 Nr. 7; ohne `class_name`) |
 | `core/stats/stat_block.gd` | M1 (S) | `StatBlock` + `enum Stat` (§5.2) |
 | `core/stats/elements.gd` | M1 (S) | `Elements`: Element-Konstanten, Multiplikator-Helfer |
 | `core/stats/balance.gd` | M1 (S) | `Balance`: alle Formelkonstanten (§5.9) |
@@ -192,6 +198,8 @@ Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört gen
 | `core/show/mod_announcer.gd` | M2 (S) | `ModAnnouncer`: M.O.D.-/Chat-Zeilen wählen + formatieren |
 | `core/show/marotten_rules.gd` | 06-C | `MarottenRules`: M.O.D.-Marotten (Show-Wetten) + Unterhosen-Liga, statisch und rein — Auswahl je Etage aus dem Seed, Liga-Stufe/-Faktoren, Kampf-/Raum-Kontext, Herzen, gewonnene Wetten, Etagen-Bonus, `show_bet`-Payloads; einziger Schreiber von `ShowState.marotten` (§3.5 „Marotten“, 06 §4) |
 | `core/show/marotten_tracker.gd` | 06-C | `MarottenTracker`: Strichliste eines Kampfes aus dem `ActionEvent`-Strom (Verteidigen, Fluchtversuche, verschiedene Aktionen, Stunts, letzter Treffer) — flüchtig wie `ShowRules` |
+| `core/show/mod_line_filter.gd` | 06-D | `ModLineFilter`: Nachfilter für Live-Zeilen (`data/mod_filter.json`, §4.4.18), rein/statisch, gleiche Fälle wie mod-brain |
+| `core/show/mod_live_summary.gd` | 06-D | `ModLiveSummary`: die Anfrage an mod-brain (Schema 1) — nur Zahlen in Grenzen und Katalog-IDs, nie Spielername oder Freitext |
 | `core/loot/loot_reward.gd` | M2 (S) | `LootReward` |
 | `core/loot/loot_roller.gd` | M2 (S) | `LootRoller`: Lootbox/Truhe würfeln, Pools, Besitz-Menge für die Duplikat-Regel (Kampf-Drops: `BattleState.roll_drops`) |
 | `core/progression/game_state.gd` | M2 (S) | `GameState`: kompletter Laufzeit-Spielstand |
@@ -227,7 +235,7 @@ Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört gen
 | `core/live/run_log.gd` | M8 (S) | `RunLog`: Seed + Commands + Ticks (Brief §6b.3); `to_dict`/`from_dict`/`digest` |
 | `core/live/command.gd` | M8 (S) | `Command`: Schema-Prüfung der aufgezeichneten Commands (`t`-Typen aus §3.4) |
 | `core/live/canonical_json.gd` | M8 (S) | `CanonicalJson`: kanonische Serialisierung für Hashes; `static var last_error: String` (von den statischen Funktionen gesetzt, gelesen als `CanonicalJson.last_error`) |
-| `core/live/state_hash.gd` | M8 (S) | `StateHash`: SHA-256 über `GameState`/`BattleState` (ohne Anzeigefelder) |
+| `core/live/state_hash.gd` | M8 (S) | `StateHash`: SHA-256 über `GameState`/`BattleState` (ohne Anzeigefelder und ohne den Twist-Replay-Puffer `flags.twist_buffer`, 06-D) |
 | `core/live/event_def.gd` | M8 (S) | `EventDef`: Live-/Offline-Event inkl. `quest`, `window` (Brief §6b.5) |
 | `core/live/event_catalog.gd` | M8 (S) | `EventCatalog`: lädt/validiert `data/events.json` |
 | `core/live/quest_tracker.gd` | M8 (S) | `QuestTracker`: Quest-Fortschritt aus normalisierten Events |
@@ -238,6 +246,8 @@ Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört gen
 | `core/live/sponsor_windows.gd` | M8 | `SponsorWindows`: Sponsor-Fenster (Nutzerentscheidung 2026-10-08, 05 §6.13) — Fahrplan in Ticks (periodisch / Safe Room / Boss-Countdown / QA), Plätze, Pro-Zuschauer-Limit, Gnadenfrist gestempelter Geschenke, Regeln `rules.sponsor_windows` + Standard für Kampagne/Offline; Zustand in `GameState.flags["live"]["sponsor"]`; 06-C: Comeback-Fenster nach verlorenem Boss-Versuch (`on_battle_result`, `comeback_due`, `merge_comeback`), Koop-Plätze je Spieler (`team_slots`) |
 | `core/live/gift_applier.gd` | M8 (S) | `GiftApplier`: Geschenk außerhalb des Kampfes anwenden; Buchung im Kampf angewandter Geschenke (`note_battle_gift`) |
 | `core/live/fair_roll.gd` | M8 (S) | `FairRoll`: Commit-Reveal-Würfel (nur Tests im Slice) |
+| `core/live/twist_applier.gd` | 06-D | `TwistApplier`: Twist-Regeln (`rules_of`, `refusal_for` = DIE Legalitätsprüfung, gemeinsam mit mod-brain), `complete`/`validate`/`apply`/`tick`, Ende über Kämpfe/Besuche/Etage, Wirkungen `effect_pm`; Zustand in `GameState.flags["live"]["twist"]` (§7.1 „Twists“) |
+| `core/live/regie_director.gd` | 06-D | `RegieDirector`: Offline-Regie ab Etage 2 — alle 120 s Erkundungszeit eine Entscheidung (35 %), Faustregeln, Seed `derive(seed, "regie", etage × 1000 + k)` (06 §5.7a) |
 
 Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (dort normativ; Namen/Typen dieses Dokuments haben Vorrang).
 
@@ -261,6 +271,8 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `data/scenes.json` | Mopsula-Szenen (Safe Room) |
 | `data/talents.json` | Talente der Talent-Show (06-B, Inhalt + Schema §4.4.15) |
 | `data/species.json` | Spezies ab Etage 3 (06-B, Inhalt + Schema §4.4.16) |
+| `data/twists.json` | 06-D: Twist-Katalog des KI-Admins (20 Einträge, 11 im Slice wirksam, §4.4.18) |
+| `data/mod_filter.json` | 06-D: Wortlisten/Schwellen des Live-Zeilen-Filters (`ModLineFilter`, mod-brain `safety.py`); **nicht** in `GameData.TABLES` |
 | `data/events.json` | Live-/Offline-Events (M7 Inhalt, M8 Schema); **nicht** in `GameData.TABLES`, geladen von `EventCatalog` (§4.5); eigenes Format `{schema, events}` (Ausnahme von §4.1, 05 §10.1) |
 
 ### 1.5 `art/` (alle M4)
@@ -368,7 +380,8 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `scenes/ui/confirm_dialog.tscn` + `.gd` | M6 | Ja/Nein-Dialog |
 | `scenes/ui/safe_area_container.gd` | M6 | MarginContainer mit Safe-Area-Rändern |
 | `scenes/ui/input_glyph.gd` | M6 | Tasten-/Button-Symbol je Input-Schema |
-| `scenes/ui/debug_overlay.gd` | M6 | Nur Debug-Build: F3 FPS, Draw Calls, Primitives, Seed, Raum, Show-Werte, Sponsor-Fenster; bei offenem Overlay F4 Test-Geschenk, F5 QA-Sponsor-Fenster (05 §11.3) |
+| `scenes/ui/debug_overlay.gd` | M6 | Nur Debug-Build: F3 FPS, Draw Calls, Primitives, Seed, Raum, Show-Werte, Sponsor-Fenster, Twists, M.O.D.-live-Status; bei offenem Overlay F4 Test-Geschenk, F5 QA-Sponsor-Fenster (05 §11.3), F6 Test-Twist (`Game.dev_random_twist`, aufgezeichnet), F7 Test-Live-Zeile (`Show.say_external`) |
+| `scenes/ui/twist_fx.gd` | 06-D | CanvasLayer 41 (Kind von GlobalUi): Twist-Chip unter dem Timer (Quelle REGIE / M.O.D. LIVE / PUBLIKUM / SENDEPLAN / TEST, Name, Restzeit oder „noch 2 Kämpfe“, Fortschrittsbalken), Stromausfall-Vignette, aufsteigendes Konfetti; liest `TwistApplier.view` |
 | `scenes/ui/icon_mesh.gd` | M6 | Privat: sammelt die Primitive eines Vektor-Icons/Widgets und gibt sie als **ein** Dreiecks-Array aus (ein Canvas-Draw-Call; genutzt von `ui_icon.gd`, `minimap.gd`, Hype-Leiste und `HudStyle.Icon`, §12.1) |
 
 ### 1.7 `tests/`
@@ -382,7 +395,7 @@ Jede Datei unter `tests/` gehört dem genannten Modul; `test_<modul>_*.gd` ist d
 | `tests/capture.gd` | M0 | Screenshot-Werkzeug (§11.3) |
 | `tests/capture_recipes.gd` | M0 | Benannte Capture-Zustände für `--recipe=` (§11.3; per `load()` nach den Autoloads, kein class_name) |
 | `tests/lib/test_case.gd` | M0 | `TestCase`: Basis mit Asserts (§11.2) inkl. `assert_time_budget` (nur mit `PTD_PERF_ASSERTS=1`); liegt in `lib/`, damit der Runner sie nicht als Testdatei lädt |
-| `tests/fixtures/data_min/*.json` | M0 | Minimaler gültiger Datensatz (alle 16 Tabellen aus `GameData.TABLES`) für M0-Tests |
+| `tests/fixtures/data_min/*.json` | M0 | Minimaler gültiger Datensatz (alle 17 Tabellen aus `GameData.TABLES`) für M0-Tests |
 | `tests/fixtures/router/router_screen.tscn` + `.gd` | M0 | Fixture-Screen (nur Screen-Vertrag §9.2) für die generischen Operationen in `test_m0_router` |
 | `tests/fixtures/runner_selftest/test_selftest_cases.gd` | M0 | Absichtlich fehlschlagende, abstürzende und überspringende Fälle; nur im Kindprozess des Runner-Selbsttests (`--root=…`) ausgeführt |
 | `tests/fixtures/live/canonical_vectors.json`, `gift_tables.json` | M8 | Testvektoren `CanonicalJson` (identisch mit Python/JS/Go) und Gift-Tabellen für `FairRoll` (05 §10.2) |
@@ -439,6 +452,9 @@ Jede Datei unter `tests/` gehört dem genannten Modul; `test_<modul>_*.gd` ist d
 | `tests/test_m7_text_content.gd` | M7 | M.O.D.-/Chat-/Mopsula-Zeilen (Mindestzahlen, Längen, Platzhalter, IDs), Szenen, deutsche Anzeigetexte |
 | `tests/test_m8_canonical_json.gd` | M8 | `CanonicalJson` gegen die gemeinsamen Testvektoren |
 | `tests/test_m8_command.gd` | M8 | `Command.validate` je Typ; jeder Typ hat einen Zweig in `RunSim.apply` und im Replay-Motor von `Game.replay_log` |
+| `tests/test_06d_twists.gd` | 06-D | Twist-Katalog + Validator, jeder Ablehnungsgrund (gemeinsame Fälle `fixtures/live/twist_cases.json`, auch pytest), Wirkung je Slice-Twist, Aufzeichnung/Replay inkl. Puffer, Event-Fahrplan, Pur-Liga, Offline-Regie, QA-Twist, Automat zeigt Happy Hour |
+| `tests/test_06d_twist_save.gd` | Integration D × Laden | Replay-Puffer im Zustand über Speichern → Laden → Replay ab dem Laden (Kern `RunSim` + `SaveCodec`, `Game.replay_log`), aktiver Twist über das Laden, Twist-ID abgelehnter Twists in beiden Verifiern (`RunRules.refused_id`), `run_not_active` nach `descend` |
+| `tests/test_06d_mod_voice.gd` | 06-D | Provider (skriptiert/remote/Mock `fixtures/live/mock_mod_voice.gd`), Zeilenfilter (gemeinsame Fälle `fixtures/live/line_filter_cases.json`, Fehlalarm < 1 % der skriptierten Zeilen), `say_external`, ModLiveLink (Runden, Twists, veraltet, Fehler → Regie, aus), Anfrage ohne Freitext/Spielername |
 | `tests/test_m8_event_def.gd` | M8 | `EventDef`/`EventCatalog`: Fenster, ISO-Zeiten, Validierung (u. a. `rules.gifts.sources`) |
 | `tests/test_m8_fair_roll.gd` | M8 | `FairRoll`: Testvektor 05 §7.4 bitgenau, Verteilung |
 | `tests/test_m8_gift.gd` | M8 | Gift-Schema: Pflichtfelder, Art je Quelle, `sender_ref`, Inhaltsgrenzen, Signaturformat |
@@ -779,6 +795,12 @@ signal marotte_progress(marotte_id: String, hits: int, goal: int)   # Show: a he
 signal marotte_won(marotte_id: String)                   # Show: `goal` hearts — the bet is won
 signal liga_changed(tier: int)                           # Show.begin_battle: the battle's Liga tier differs (0/1/2)
 
+# --- KI-Admin (06 §5, package D) -------------------------------------------------
+# twist = TwistApplier view entry {"id", "name", "n", "src", "unit", "gameplay", "left", "left_pm", "params"}
+signal twist_applied(twist: Dictionary)                  # Game (Game.apply_twist / RunSim TWIST_APPLIED)
+signal twist_ended(twist_id: String)                     # Game (time, battles, visit, floor change)
+signal mod_live_status(status: StringName)               # ModLiveLink: &"off" | &"ok" | &"degraded"
+
 # --- UI -----------------------------------------------------------------
 signal toast_requested(text: String, icon: StringName)
 ## Bottom corners (canvas px inside the safe frame) a screen keeps for its own panels while overlay `mode` is active;
@@ -791,7 +813,8 @@ Wer emittiert was (verbindlich):
 | Signal | Emitter |
 |---|---|
 | `scene_changed` | Router |
-| `new_game_started`, `floor_timer_*`, `floor_completed`, `stray_spawn_requested`, `party_changed`, `member_leveled`, `level_up`, `inventory_changed`, `credits_changed`, `lootbox_opened`, `chest_opened` (`open_chest`), `event_completed` (`apply_floor_event`), `input_scheme_changed`, `settings_changed`, `item_bought`, `explore_tick`, `run_started`, `run_finished`, `quest_progress`, `quest_completed`, `sponsor_window_opened`, `sponsor_window_closed` (`_dispatch` der RunSim-Events), `talent_pending` (`apply_battle_result`), `talent_picked` (`pick_talent`), `hero_changed` (`set_hero`, nur bei echtem Wechsel), `secret_opened` (`open_secret`) | Game |
+| `new_game_started`, `floor_timer_*`, `floor_completed`, `stray_spawn_requested`, `party_changed`, `member_leveled`, `level_up`, `inventory_changed`, `credits_changed`, `lootbox_opened`, `chest_opened` (`open_chest`), `event_completed` (`apply_floor_event`), `input_scheme_changed`, `settings_changed`, `item_bought`, `explore_tick`, `run_started`, `run_finished`, `quest_progress`, `quest_completed`, `sponsor_window_opened`, `sponsor_window_closed` (`_dispatch` der RunSim-Events), `talent_pending` (`apply_battle_result`), `talent_picked` (`pick_talent`), `hero_changed` (`set_hero`, nur bei echtem Wechsel), `secret_opened` (`open_secret`), `twist_applied`, `twist_ended` (06-D: `_dispatch` von `TWIST_APPLIED`/`TWIST_ENDED`, Ende durch Kämpfe/Besuch/Etage über `_sync_twist_ends`) | Game |
+| `mod_live_status` | ModLiveLink (06-D, Kind von Game) |
 | `game_loaded`, `game_saved` | Save |
 | `floor_entered`, `room_entered`, `enemy_alerted`, `encounter_triggered`, `gate_opened`, `overlay_mode_requested(&"explore")`, `field_ability_used` (Feldschlag: `hits` 0/1 je Schlag; Bellen: Zahl der verdutzten Gruppen), `gate_opened` auch für eine gefallene Kulissenwand | ExplorationScene (M3) |
 | `battle_started`, `battle_turn_started`, `battle_ended`, `overlay_mode_requested(&"battle")` | BattleScene/BattleController (M5) |
@@ -987,6 +1010,16 @@ func time_left() -> float             # state.floor_run.time_left_ticks / float(
 func clear_blocking_dialogs() -> void # _blocking_dialogs = 0 — Router at every goto (old screens freed), start_floor
 func set_dialog_presenter(active: bool) -> void   # ModDialog (M6) true in _ready, false in _exit_tree (false also clears)
 func apply_settings() -> void         # audio volumes (Sfx), fullscreen, quality (scaling_3d_scale etc.), emits settings_changed
+# --- KI-Admin (06 §5, Paket D) ---
+var mod_live: Node                    # ModLiveLink (autoload/mod_voice/mod_live_link.gd, Kind-Node, kein class_name); null ephemer
+func apply_twist(twist: Dictionary) -> String   # DER Eingang jedes M.O.D.-Eingriffs (Regie, M.O.D. live, Votes, QA):
+	# {"id", "src", "params"?, "duration"?, "req"?, "vote_id"?} → TwistApplier.complete (n, tick = sim.tick(), Default-Parameter)
+	# → TwistApplier.validate (im Kampf / nach descend → wrong_phase) → record({"t": "twist", "twist": t}) (extern, cmd_id 0)
+	# → TwistApplier.apply → _dispatch; "" = angewendet, sonst Ablehnungsgrund (TwistApplier.REASONS, "run_not_active").
+	# Wartet nie auf etwas: Vorschläge aus dem Netz kommen hier bereits entschieden an.
+func twist_effect_pm(key: String, default_pm: int) -> int   # TwistApplier.effect_pm (Szenen: "enemy_sight_pm", "enemy_hear_pm")
+func dev_random_twist() -> Dictionary # QA (Debug-Overlay F6): zufälliger erlaubter Twist der Quelle "dev", gezogen mit
+	# SeedUtil.derive(seed, "dev_twist", n) und wie jeder Twist aufgezeichnet; {"id", "reason"}
 ```
 
 Laufzeitverhalten:
@@ -1008,7 +1041,10 @@ Laufzeitverhalten:
   `TIMER_SECOND` → `floor_timer_changed`; `TIMER_WARNING` → `floor_timer_warning`; `TIMER_EXPIRED` → `timer_running = false`,
   `floor_timer_expired`, `Router.game_over(&"timer")` (beim Replay nur `on_game_over(&"timer")`); `EXPLORE_TICK` → `explore_tick(payload)`; `HYPE` → `Show.sync_from_state()`;
   `STRAY_DUE` → `stray_spawn_requested` (ExplorationScene platziert die Gruppe); `SPONSOR_WINDOW_OPENED` →
-  `sponsor_window_opened(window)`, `SPONSOR_WINDOW_CLOSED` → `sponsor_window_closed(id, reason)`.
+  `sponsor_window_opened(window)`, `SPONSOR_WINDOW_CLOSED` → `sponsor_window_closed(id, reason)`; `TWIST_APPLIED` →
+  `twist_applied(view)` (06-D), `TWIST_ENDED` → `twist_ended(id)`. Nach jedem Einzeltick prüft `_regie_tick()` die Offline-Regie
+  (06 §5.7a: nur live, nicht im Kampf/Replay, Einstellung `regie_twists`, nicht solange M.O.D. live im Modus `lines_twists`
+  gesund ist): `RegieDirector.is_due` → `RegieDirector.decide` → `apply_twist` (Quelle `"regie"`, aufgezeichnet).
 - Dialog-Pause: `_ready()` verbindet `Events.mod_said` (`blocking == true` **und** ein Presenter ist angemeldet →
   `_blocking_dialogs += 1`) und `Events.dialog_finished` (`maxi(0, _blocking_dialogs - 1)`). Presenter = `ModDialog` (M6), meldet sich
   per `Game.set_dialog_presenter(true)` in `_ready()` und `(false)` in `_exit_tree()` an/ab; ohne Presenter (Tests, Standalone-Szenen,
@@ -1047,12 +1083,18 @@ Laufzeitverhalten:
   `hero {id}` (06-A, `"kai" | "mopsula"`, 06 §1.7: Startwahl direkt hinter `floor`, später Wechsel im Safe Room),
   `talent {member, id}` (06-B, `pick_talent`), `casting {member, species, class}` (06-B, `choose_casting`),
   `secret {id}` (06-A, `sec_…`, 06 §2.7: Kulissenwand umgeworfen / Regie-Notiz gelesen; `RunSim` wendet `Secrets.open`
-  ohne den Show-Teil an — wie bei den Etagen-Events).
+  ohne den Show-Teil an — wie bei den Etagen-Events),
+  `twist {twist: {schema: 1, id, n, src, params, duration, tick, req?, vote_id?}}` (06-D, `cmd_id` 0, `src` ∈
+  `vote|mod_brain|regie|schedule|dev`; `tick` = Anwendungstick, Replay-Puffer siehe „Replay“).
   `Command.TYPES` (M8) = genau diese Liste. Ein `hero`/`talent`/`casting`/`secret`-Command, das die Regeln nicht erlauben,
   lehnt `RunRules.command_refusal` ab (`HeroRules.check` / `Talents.check_pick` / `Casting.check` /
   `Secrets.check_open`, deren Grund; `RunSim.apply` verwirft es **vor** der Aufzeichnung mit `rejected_cmds {"k", "t",
-  "gift_id": <hero-/secret-id oder "">, "reason"}`) — beide Verifier (`RunSim.replay`, `Game.replay_log`) melden es in
-  `errors`, der Zustand bleibt unverändert.
+  "gift_id": <RunRules.refused_id: gift-, hero-, secret- oder twist-id, sonst "">, "reason"}`) — beide Verifier
+  (`RunSim.replay`, `Game.replay_log`) melden es in `errors`, der Zustand bleibt unverändert. Ein `twist` prüft
+  `RunRules.twist_refusal` (06-D) — dieselbe Prüfung im Live-Einstieg `Game.apply_twist` und in beiden Verifiern:
+  Lauf vorbei / nach `descend` → `run_not_active`; in den Verifiern `tick` vorbei → `twist_tick_passed`, `tick` voraus →
+  Replay-Puffer; sonst `TwistApplier.validate` (live wartet nie: ein `tick` ≠ jetzt → `tick_mismatch`). Beide Verifier
+  nennen die Twist-ID (`Game.replay_log`: `cmd <i> (twist '<id>'): refused (<grund>)`).
 - **Sponsor-Fenster** (Nutzerentscheidung 2026-10-08, 05 §6.13): Externe Geschenke nur in offenen Fenstern. Die Auslöser sind die
   aufzeichnenden Methoden selbst — `start_floor` (schließt, Countdown neu), `visit_room` (Erstbesuch einer Boss-Zelle →
   Boss-Countdown 45 s), `enter_safe_room` / `leave_safe_room` (Safe-Room-Fenster ≤ 90 s, je Safe Room und Etage einmal),
@@ -1094,7 +1136,14 @@ Laufzeitverhalten:
   Methode wie live (`start_floor`, `open_lootbox`, `buy`, `sell`, `equip`, `use_item`, `rest_full_heal`, `apply_floor_event`,
   `open_chest`, `open_gate`, `visit_room`, `enter_safe_room`, `leave_safe_room`, `mark_scene_seen`, `set_flag`, `set_difficulty`,
   `open_dev_sponsor_window`, `set_hero`, `open_secret` (06-A), `pick_talent`, `choose_casting` (06-B), `descend` →
-  `floor_completed` senden, `gift` außerhalb des Kampfes → `Show.receive_gift`). Kämpfe
+  `floor_completed` senden, `gift` außerhalb des Kampfes → `Show.receive_gift`, `twist` → **Replay-Puffer** (06-D):
+  `twist.tick` > aktueller Tick → in den Puffer des Zustands (`TwistApplier.buffer`: `GameState.flags["twist_buffer"]`
+  = `[{wait, twist}]`, gespeichert, aber **nicht** im `StateHash`) und nach der Auswertung genau dieses Ticks angewendet
+  (`RunSim.step` → `_apply_due_twists`, auch für `Game.replay_log`; gleicher Hash wie live); weil der Puffer im Zustand
+  liegt, übersteht ein wartender Twist Speichern → Laden: das nächste Log-Segment (`from_save`, Uhr ab 0) zählt den Rest
+  von `wait` herunter und wendet ihn am selben Lauf-Tick an; `twist.tick` < aktueller Tick → Fehler `twist_tick_passed`;
+  am Ende noch wartende Twists stehen in `result.twists_waiting` (kein Fehler: sie bleiben im Zustand); sonst
+  `RunRules.twist_refusal` → `TwistApplier.validate` + `apply` wie live). Kämpfe
   exakt nach §5.7 ohne Szene: `encounter` → `make_battle_setup` (next_seed "battle") → `BattleState.new` → `Show.begin_battle`
   (next_seed "show") → `battle_started` → `_play(start())`; `battle` → `BattleState.validate`, dann
   `_play(submit(BattleCommand.from_dict(cmd)))`; `_play` = Events → `Show.on_battle_event`, dann (Kampf läuft) ein direkt
@@ -1129,6 +1178,9 @@ Laufzeitverhalten:
 | `camera_invert_x` / `camera_invert_y` | bool | false | `input/…` |
 | `camera_sensitivity` | float 0.25..3.0 | 1.0 | `input/camera_sensitivity` |
 | `partner_auto` | bool | false | `game/partner_auto` — „Partner automatisch“: die Züge der nicht gesteuerten Figur wählt `AutoPolicy` (§5.7, 06 §1.4) |
+| `regie_twists` (06-D) | bool | true | `game/regie_twists` — „Regie-Eingriffe (ab Etage 2)“, Offline-Regie 06 §5.7a |
+| `mod_live` (06-D) | StringName &"off"/&"lines"/&"lines_twists" | &"off" | `live/mod_live` — „M.O.D. live (Beta)“, Zeile nur in Debug-Builds mit URL |
+| `mod_live_url` (06-D) | String | "" | `live/mod_live_url` — nur in Debug-Builds gelesen (sonst ""); `--mod-live-url=` / `--mod-live=` überschreiben ebenfalls nur dort |
 
 Methoden: `func load_from_disk() -> void`, `func save_to_disk() -> Error` (ephemer: `OK` ohne Schreiben), `func to_dict() -> Dictionary`.
 Der Spielmodus (Prime Time / Vorabendprogramm) ist **keine** Einstellung, sondern `GameState.difficulty` (pro Spielstand).
@@ -1163,6 +1215,10 @@ func say(tag: String, ctx: Dictionary = {}, blocking: bool = false) -> String
 	# ModAnnouncer.pick(tag, floor_index, hype, now_sec) → format(line, ctx + name/floor/level/viewers/followers)
 	# → emits mod_said(text, voice, tag, blocking); returns text ("" if no line or suppressed by priority/cooldown)
 func chat(tag: String, ctx: Dictionary = {}) -> void                # voice &"chat" line → emits chat_posted
+func say_external(text: String, voice: StringName, tag: String) -> bool   # 06-D: Live-Zeile eines ModVoiceProvider (M.O.D. live)
+	# reine Präsentation, nie aufgezeichnet: ModLineFilter.check (Gründe in external_refused), Stimme mod|mopsula|chat, kein
+	# Replay, kein Bosskampf, EXTERNAL_GAP_SEC = 8 s seit der letzten M.O.D.-Zeile (niedrigste Priorität), {name} wird erst
+	# hier eingesetzt → mod_said(text, voice, "live:" + tag, false); ModDialog zeigt „M.O.D. · KI live“. true = gezeigt
 func start_floor(floor_index: int) -> void                          # hype := Balance.HYPE_START (30); viewers, milestones
 	# "floor_start" kommt NICHT hier (Etage 1 steht dann noch vor Intro/Tutorial, eine nicht spielbare Etage vor dem Abspann),
 	# sondern sobald der Countdown in der Erkundung läuft (GDD §1.4 B2): nach Events.floor_timer_started (Tutorial-Sieg)
@@ -1262,6 +1318,12 @@ Liga werden angezeigt und gezählt, aber **ohne** Faktoren, Boxen, Follower, Hyp
 hängt nie daran; `rules.marotten.enabled` / `rules.liga.enabled` (`{"enabled": bool}`, Standard an, `MarottenRules.
 validate_rules` in `EventDef.validate`) schalten Anzeige und Zählung ab und gehen in den `rules_hash` ein. `RunSim` rechnet
 keine Show-Reaktionen (wie Achievements); die Strichliste ist flüchtig (gespeichert wird nie im Kampf).
+
+Twists (06-D): `twist_applied` → `say(def.mod_tag)` (`twist_applied_<id>`; erster Regie-Eingriff einer Etage zusätzlich
+`regie_cut_in`, `tw_mopsula_monologue` → `regie_monologue_1..n` in Mopsulas Stimme); solange `tw_mopsula_moderates` läuft, spricht
+Mopsula die `mod`-Zeilen. `tw_party_hats`: `begin_battle` liest `TwistApplier.effect_pm("hype_gain_pm")` einmal, Kampf-Hype × 1,2 — in der
+Kette `GameState.hype_gain_pm` (Ausrüstung × Talente) → Liga-Faktor (06-C) → Partyhüte, jeder Schritt Ganzzahl-Promille,
+halb auf (06 §8.0 Nr. 4; kein Float-Pfad).
 **Aufzeichnung bei Anwendung, nicht bei Empfang:** Nur so ist die Reihenfolge im Log eindeutig (ein `gift`-Command im Kampf steht
 direkt hinter dem `battle`- bzw. `encounter`-Command, an dessen `_play`-Grenze es ausgeliefert wurde) und `Game.replay_log` kann
 es an derselben Stelle wieder einspeisen (§3.4 „Replay“).
@@ -1500,6 +1562,7 @@ Fokus-Stil aller Buttons: 3 px `C_ACCENT_2`-Rahmen (StyleBox `focus`).
 | Live-Events (`events.json`, M8) | `evt_` | `^evt_[a-z0-9_]+$` | `evt_offline_gleis9` |
 | talents (06-B) | `tal_` | `^tal_[a-z0-9_]+$` | `tal_kai_wischtechnik`, `tal_mop_mitternachtsformel` |
 | species (06-B) | `spc_` | `^spc_[a-z0-9_]+$` | `spc_original`, `spc_kai_kachelgolem` |
+| twists (06-D, `twists.json`) | `tw_` | `^tw_[a-z0-9_]+$` | `tw_lights_out`, `tw_happy_hour` |
 
 IDs sind **global eindeutig** über alle Tabellen (inkl. Encounter-, Etagen-Event-, Zonen- und Safe-Room-IDs).
 Laufzeit-IDs (nicht in Daten): Kampfteilnehmer `p0..p3`, `e0..eN`, Pseudo-Einheiten `u0..`; Gegnergruppen `f<etage>_g<i>`,
@@ -2245,7 +2308,47 @@ Distanz-Regel 06 §0.3: `name`/`desc` aller Einträge und alle `liga_*`/`marotte
  "reward": {"tiers": [{"tier": 1, "hype_pm": 1200, "follower_pm": 1150}, {"tier": 2, "hype_pm": 1400, "follower_pm": 1350}],
             "floor_box": "box_fan"}, "mod_tag": "liga"}
 ```
+#### 4.4.18 `twists.json` → `TwistDef` (06-D, KI-Admin; 06 §5.6)
 
+Whitelist aller M.O.D.-Eingriffe („Twists“). Wer auch immer vorschlägt (Offline-Regie, M.O.D. live, Votes, Event-Fahrplan, QA) —
+angewendet wird nur, was hier steht, mit Parametern innerhalb der Grenzen; entscheiden tut `TwistApplier` (§7.1, Kern).
+
+| F | T | P / Default | Regel |
+|---|---|---|---|
+| `id` | String | ✓ | `tw_` |
+| `name` | String | ✓ | ≤ 28 Zeichen (HUD-Chip unter dem Timer) |
+| `desc` | String | `""` | ≤ 80 Zeichen |
+| `gameplay` | bool | true | `false` genau bei `scope: presentation` (reine Präsentation: Pur-Liga erlaubt, kein Budget) |
+| `scope` | String | ✓ | `explore`, `instant`, `battle`, `safe_room`, `presentation`, `room`, `boss` (`TwistApplier.SCOPES`) |
+| `spice` | String | ✓ | `helpful`, `neutral`, `spicy`, `none` (`TwistApplier.SPICES`; `spicy` zählt gegen das Schärfe-Budget) |
+| `slice` | bool | false | `true` nur für Twists mit Wirkung in diesem Build (`TwistApplier.IMPLEMENTED`, 11 Stück) |
+| `once_per_floor` | bool | false | |
+| `weight` | int | 1 | 1..10 (Gewicht der Offline-Regie) |
+| `duration` | {unit, default, min, max} | ✓ | `unit` ∈ `sec`/`battles`/`visits`/`run`/`none`; `min ≤ default ≤ max` innerhalb `TwistApplier.DURATION_BOUNDS` (sec 1..300, battles 1..3, visits 1..2) |
+| `params` | {key: {default, min, max}} | `{}` | Schlüssel aus `TwistApplier.PARAM_BOUNDS`; `min ≤ default ≤ max` innerhalb der harten Grenzen (Daten dürfen einengen, nie erweitern) |
+| `sources` | Array[String] | ✓ | nicht leer, ⊆ `regie`, `mod_brain`, `vote`, `schedule`, `dev` |
+| `mod_tag` | String | `""` | gültiger M.O.D.-Tag, gilt als referenziert (Regel 9: Zeile Pflicht); Konvention `twist_applied_<id>` |
+
+```json
+{"id": "tw_lights_out", "name": "Stromausfall", "desc": "Gegner sehen schlechter. Sie auch.", "gameplay": true,
+ "scope": "explore", "spice": "neutral", "slice": true, "once_per_floor": false, "weight": 3,
+ "duration": {"unit": "sec", "default": 60, "min": 30, "max": 90},
+ "params": {"enemy_sight_pm": {"default": 500, "min": 400, "max": 700}},
+ "sources": ["regie", "mod_brain", "vote", "schedule", "dev"], "mod_tag": "twist_applied_tw_lights_out"}
+```
+
+20 Einträge, 11 mit `slice: true` (Wirkungen §7.1 „Twists“); die übrigen 9 sind validiert, aber nicht anwendbar
+(`not_in_slice`). Validierung im privaten Helfer `core/data/validators/twists.gd` (`DataValidator` lädt ihn per
+`preload` als `TwistCheck` und ruft `normalize`/`check` auf; ohne `class_name`, 06 §8.0 Nr. 7; Datei gehört Paket D). `TwistDef` (`core/data/defs/twist_def.gd`): Felder wie oben + `unit()`, `default_params()`,
+`to_dict()` (Form für `TwistApplier.refusal_for`, identisch zu `services/mod-brain/mod_brain/catalog.py`).
+
+`data/mod_filter.json` (06-D, **nicht** in `TABLES`): Wortlisten und Schwellen des Nachfilters für Live-Zeilen
+(`ModLineFilter`, `core/show/mod_line_filter.gd`, rein/statisch; dieselbe Datei liest `services/mod-brain/mod_brain/safety.py`):
+`max_len` 110, `blocked.{politics, sexual, slurs, violence, real_brands}` (`*` am Ende = Präfix), `money`, `purchase` +
+`urgency` (Kaufdruck nur bei Ko-Vorkommen), Sprachprüfung (`en_stop`/`de_stop`, `lang_min_words` 4, `lang_de_min_words` 6,
+`de_min_pm` 100, `en_max_pm` 150). Reihenfolge der Gründe: `empty`, `too_long`, `placeholder` (nur `{name}`), `url`, `digits`
+(≥ 6 Ziffern in Folge), `blocked_<liste>`, `money`, `purchase_pressure`, `language`. Gemeinsame Fälle:
+`tests/fixtures/live/line_filter_cases.json` (GDScript und pytest).
 ### 4.5 Validierung (`DataValidator`) und `GameData`-API
 
 Ablauf `GameData.load_dir(dir)`: (1) alle Dateien aus `TABLES` parsen; (2) je Eintrag Schema prüfen + normalisieren; (3) zweiter
@@ -2284,13 +2387,15 @@ Regeln (jede Verletzung = ein Eintrag in `errors`, Format `"<table>[<index>|<id>
     `check_content` an markierten Stellen auf. Die Präfixe `talent_` und `casting_` sind optionale `mod_lines`-Tags.
 12. (06-C) `marotten.json` nach §4.4.17 (Schema, Bereiche, Lootbox-Referenzen, Pflicht-Zeilen, Bedingungs-Kontexte,
     Fuß-Wörter-Sperre); `mod_lines`-Tags `marotte_announce|hit|won:<id>` verweisen auf eine existierende Marotte.
+13. (06-D) `twists`: Regeln von §4.4.18 (privater Helfer `validators/twists.gd`); `mod_tag` wie Regel 9 referenziert.
 
 ```gdscript
 class_name GameData extends RefCounted
 const TABLES: PackedStringArray = ["statuses", "skills", "items", "classes", "party", "enemies", "floors",
 	"lootboxes", "achievements", "sponsors", "milestones", "mod_lines", "scenes",
 	"talents", "species",                       # 06-B (§4.4.15/16)
-	"marotten"]                                 # 06-C (§4.4.17)
+	"marotten",                                 # 06-C (§4.4.17)
+	"twists"]                                   # 06-D (§4.4.18)
 var source: String = ""                    # dir or "dicts"
 var errors: PackedStringArray = []
 var warnings: PackedStringArray = []
@@ -2313,6 +2418,7 @@ func milestone(id: String) -> MilestoneDef
 func status(id: String) -> StatusDef
 func class_def(id: String) -> ClassDef
 func scene_def(id: String) -> SceneDef
+func twist(id: String) -> TwistDef          # 06-D
 func floor_def(index: int) -> FloorDef      # null (no error) if index has no floor → end of content
 func floor_by_id(id: String) -> FloorDef
 func encounter(id: String) -> EncounterDef
@@ -2342,6 +2448,7 @@ func all_milestones() -> Array[MilestoneDef]       # sorted by followers
 func all_scenes() -> Array[SceneDef]               # sorted by priority, then id
 func marotte(id: String) -> MarotteDef             # 06-C
 func all_marotten() -> Array[MarotteDef]           # 06-C: file order (the rotation order of MarottenRules.announce)
+func all_twists() -> Array[TwistDef]               # 06-D, sorted by id
 ```
 
 Def-Klassen (`core/data/defs/*.gd`): `class_name XxxDef extends RefCounted`, ein typisiertes Feld pro JSON-Feld
@@ -2373,7 +2480,9 @@ static func make_rng(seed: int) -> RandomNumberGenerator   # rng.seed = seed; re
 ```
 
 Verwendete Zwecke: `"floor"` (index = Etage), `"battle"`, `"lootbox"`, `"chest"`, `"show"`, `"shop"`, `"event"` (Etagen-Events,
-§7.4), `"stray"` (Streuner), `"retry"` (Generator), im Kampf `"ctb"`, `"action"`, `"ai"`, `"gift"` (§5.1).
+§7.4), `"stray"` (Streuner), `"retry"` (Generator), im Kampf `"ctb"`, `"action"`, `"ai"`, `"gift"` (§5.1); 06-D: `"twist"`
+(Basis `floor_run.loot_seed`, Index = Twist-Nummer `n`: Rattenregen-Zone), `"regie"` (Basis `state.seed`, Index
+`etage × 1000 + k`: Offline-Regie), `"dev_twist"` (QA-Zufallstwist).
 Golden Values (gemessen mit 4.7.2, Pflicht in `test_m0_seed_util.gd`): `mix(1, 2) == 696197768`,
 `derive(4242, "floor", 1) == 1557687279`, `derive(1, "battle", 1) == 582315397`.
 
@@ -3711,6 +3820,12 @@ func step(n: int) -> Array[ExploreEvent]        # n ticks; per tick in this orde
 	#   floor_run.strays[group] = {"zone", "enc"}, stray_counter +1, ticks reset → STRAY_DUE
 	# 5 Sponsor-Fenster (SponsorWindows.tick, 05 §6.13): open window counts down, periodic countdown (exploration only)
 	#   → SPONSOR_WINDOW_OPENED {"window"} / SPONSOR_WINDOW_CLOSED {"id", "kind", "reason"}
+	# 6 Twists (06-D): TwistApplier.tick ("sec"-Twists zählen Erkundungsticks herunter → TWIST_ENDED {"id", "n",
+	#   "reason": "time"}), dann der feste Event-Fahrplan rules.twists.schedule (Einträge {tick, id, params?}, Quelle
+	#   "schedule", angewendet wenn TwistApplier.validate "" liefert — ohne Command, in Live, Replay und Verifier gleich)
+	#   — Schritt 3 entfällt, solange tw_fog_of_fame / tw_confetti_gravity laufen (effect_pm("hype_decay_pause"))
+	# Nach den Schritten eines Ticks: fällige Twists aus dem Replay-Puffer des Zustands anwenden (TwistApplier.take_due:
+	#   wait − 1, bei 0 fällig; tick auf die aktuelle Uhr gesetzt; RunRules.twist_refusal; abgelehnt → rejected_cmds)
 	# Idle tick: floor_run.location is a safe room (not &"start") → only step 5 (explore = false): the run clock keeps
 	#   ticking in safe rooms (safe room window ≤ 90 s), the floor timer / hype decay / pacifist counter / strays do not
 func apply(cmd: Dictionary) -> Array[ExploreEvent]   # M8 replay of recorded commands: command_refusal first (refused →
@@ -3718,7 +3833,11 @@ func apply(cmd: Dictionary) -> Array[ExploreEvent]   # M8 replay of recorded com
 	# triggers the windows ("floor", first "room" of a boss cell, "safe_room", "safe_room_exit", "sponsor_window" dev_open);
 	# accepted external gifts are stamped with their window before they are recorded
 func command_refusal(c: Dictionary) -> String         # "" or why the command is illegal here: gifts → gift_refusal;
-	# others → RunRules.command_refusal; "sponsor_window" only where rules allow dev_open
+	# twists → twist_refusal; others → RunRules.command_refusal; "sponsor_window" only where rules allow dev_open
+func twist_refusal(tw: Dictionary) -> String          # 06-D: RunRules.twist_refusal mit Puffer: Etage fertig / Lauf
+	# vorbei → run_not_active; tw.tick < tick() → twist_tick_passed; tw.tick > tick() → "" (TwistApplier.buffer, geprüft
+	# und angewendet, wenn die Wartezeit abläuft — noch wartende stehen in replay().result.twists_waiting); sonst
+	# TwistApplier.validate
 func gift_refusal(g: Dictionary) -> String            # floor done / run over → run_not_active; GiftPolicy.refusal(state, data,
 	# g, rules, gift_context()) (duplicate, unknown contents, league, wrong_target, too_soon, caps, windows …); battle cap
 func gift_context() -> Dictionary                     # {"tick"} + run identity (run_id, event_id, player_id, window_id)
@@ -3737,6 +3856,60 @@ func sponsor_safe_room(room_id: String) -> Array[ExploreEvent]  # Game.enter_saf
 func sponsor_safe_room_exit() -> Array[ExploreEvent]            # Game.leave_safe_room / "safe_room_exit"
 func sponsor_dev_open(sec: int, slots: int) -> Array[ExploreEvent]   # Game.open_dev_sponsor_window / "sponsor_window"
 func sponsor_window() -> Dictionary                   # SponsorWindows.view(state, rules)
+
+class_name TwistApplier extends RefCounted            # core/live/twist_applier.gd (06-D, 06 §5.6/§5.7): rein, statisch,
+	# Ganzzahlen; Zustand GameState.flags["live"]["twist"] = {"n", "floor", "floor_count", "floor_spicy", "floor_regie",
+	# "once", "end_at", "active": [{"id", "n", "src", "params", "unit", "left", …}]} — erst beim ersten Twist bzw. der
+	# ersten Regie-Entscheidung angelegt (Läufe ohne Twists behalten ihren Hash)
+const SOURCES: PackedStringArray = ["regie", "mod_brain", "vote", "schedule", "dev"]
+const REASONS: PackedStringArray = ["unknown_twist", "not_in_slice", "source_not_allowed", "league_pur",
+	"floor_too_low", "params_out_of_range", "sequence_mismatch", "tick_mismatch", "wrong_phase", "busy",
+	"once_per_floor", "cooldown", "floor_cap", "spice_budget", "party_weak", "timer_low", "no_target"]
+const DEFAULT_RULES: Dictionary   # Kampagne: enabled, min_floor 2 (alle Quellen; "dev" mit dev_any_floor ausgenommen),
+	# max_per_floor 4, max_spicy_per_floor 1, gap_sec 90 (Erkundung nach dem Ende des letzten Spiel-Twists),
+	# spicy_min_party_hp_pct 50, spicy_min_timer_sec 180, regie {enabled, every_sec 120, chance_pm 350, max_per_floor 3,
+	# low_timer_sec 180, weak_party_hp_pct 50}, schedule []
+const EVENT_OVERRIDES: Dictionary # Event-Läufe: sources [schedule, dev], regie aus — fester Fahrplan für alle
+static func rules_of(rules: Dictionary) -> Dictionary  # DEFAULT_RULES (+ EVENT_OVERRIDES bei Event-Regeln) ← rules.twists
+static func validate_rules(cfg: Variant) -> PackedStringArray   # EventDef.validate: rules.twists
+static func refusal_for(def_d: Dictionary, twist: Dictionary, ctx: Dictionary, trules: Dictionary) -> String
+	# DIE Regeln (Reihenfolge = REASONS) über einfache Dictionaries; mod-brain (catalog.py) ist eine 1:1-Portierung,
+	# gemeinsame Fälle tests/fixtures/live/twist_cases.json
+static func context(state, data, rules, now_tick, in_battle, layout = null) -> Dictionary   # Kontext von refusal_for
+static func validate(state: GameState, data: GameData, twist: Dictionary, rules: Dictionary, now_tick: int,
+	in_battle: bool, layout: FloorLayout = null) -> String   # "" oder Grund; lesend
+static func complete(state, data, twist, now_tick) -> Dictionary   # Aufzeichnungsform {schema, id, n, src, params, duration, tick, req?, vote_id?}
+static func apply(state, data, twist, layout = null) -> Array[ExploreEvent]   # TWIST_APPLIED (+ STRAY_DUE beim
+	# Rattenregen: Zone aus SeedUtil.derive(loot_seed, "twist", n); + TWIST_ENDED bei Sofort-Twists)
+static func tick(state, data, explore: bool, now_tick: int) -> Array[ExploreEvent]   # RunSim Schritt 6
+static func on_battle_end(state, data) -> void        # BattleBridge.apply_result: "battles"-Twists −1
+static func on_safe_room_enter(state) -> void / on_safe_room_exit(state, data) -> void   # RunRules: "visits"-Twists
+static func on_floor(state, floor_index) -> void      # RunRules.start_floor: alles außer "run" endet, Zähler neu
+static func effect_pm(state, key: String, default_pm: int) -> int   # enemy_sight_pm, enemy_hear_pm (Szene),
+	# credits_pm (+ Deckel credits_cap, take_bonus_credits: BattleBridge/Truhen), hype_gain_pm (Show.begin_battle),
+	# hype_decay_pause (RunSim), mod_voice_mopsula (Show.say), price_pm (Shop.price_for, nur während des Besuchs)
+static func allowed_now(state, data, rules, now_tick, in_battle, src := "regie", layout = null) -> PackedStringArray
+static func spice_left(state, rules) -> int
+static func view(state, data) -> Array[Dictionary]    # HUD-Chip (TwistFx), Events.twist_applied
+const BUFFER_KEY: String = "twist_buffer"              # Integration Runde 4: Replay-Puffer im Zustand
+static func buffer(state, twist, wait: int) -> void    # GameState.flags["twist_buffer"] += {wait, twist}: ein vor seinem
+	# tick einsortiertes Twist-Command (RunSim.apply / Game.replay_log, nie live) — gespeichert, NICHT gehasht (StateHash)
+static func buffered(state) -> Array[Dictionary]       # die wartenden Twists (Aufzeichnungsform)
+static func take_due(state) -> Array[Dictionary]       # ein Lauf-Tick: wait − 1, die fälligen kommen zurück (RunSim.step);
+	# als Countdown statt absolutem Tick, weil ein Log-Segment nach dem Laden seine Uhr bei 0 beginnt
+# Wirkungen der 11 Slice-Twists (Defaults aus twists.json): tw_lights_out Sichtweite der Gegner × 0,5 (60 s);
+# tw_quiet_please Gehör × 0,5 (60 s); tw_fog_of_fame (90 s) / tw_confetti_gravity (45 s, Konfetti-Effekt) Hype-Zerfall
+# pausiert; tw_double_credits Kampf-/Truhen-Credits × 2 bis +200 (60 s); tw_overtime Timer +60 s (sofort, 1× je Etage);
+# tw_happy_hour Automatenpreise −20 % beim nächsten Safe-Room-Besuch (Shop.price_for; der Automat zeigt „HAPPY HOUR −20 %“);
+# tw_rat_rain ein Streuner aus einer freien Zone (scharf, sofort); tw_party_hats Kampf-Hype × 1,2 für 2 Kämpfe;
+# tw_mopsula_moderates Mopsula spricht 180 s lang M.O.D.s Zeilen; tw_mopsula_monologue 2–3 Mopsula-Zeilen (beide reine
+# Präsentation, auch in der Pur-Liga erlaubt).
+
+class_name RegieDirector extends RefCounted           # core/live/regie_director.gd (06-D, 06 §5.7a): Offline-Regie ab E2
+static func is_due(state: GameState, rules: Dictionary) -> bool   # nach jedem vollen regie.every_sec (120 s) Erkundungszeit
+static func decide(state, data, rules, now_tick, layout = null) -> Dictionary   # {} | {"id", "src": "regie"}: 35 %, dann
+	# Kandidaten = allowed_now("regie"); Timer < 180 s → nur tw_overtime; Party-HP < 50 % → nur helpful/Präsentation;
+	# gewichteter Zug (TwistDef.weight) mit SeedUtil.derive(state.seed, "regie", etage × 1000 + k); Game.apply_twist zeichnet auf
 
 class_name RunRules extends RefCounted                # core/live/run_rules.gd (M8): the rule of every recorded
 	# non-battle command, called by Game (live, + record/signals/Show) AND RunSim.apply (verifier) — one implementation
@@ -3763,6 +3936,12 @@ static func command_refusal(state: GameState, data: GameData, rules: Dictionary,
 	# the first floor or index + 1 after descend; "difficulty" refused in event runs (rules not empty); "scene" only in a
 	# safe room, not yet seen, with its context and a holding condition → else "not_allowed"; 06-B: "talent" →
 	# Talents.check_pick, "casting" → Casting.check (their reason, e.g. "not_offered", "floor_too_low")
+static func twist_refusal(state, data, rules, tw: Dictionary, now_tick: int, in_battle: bool, run_active: bool,
+	buffer_ahead: bool, layout = null) -> String   # 06-D (Integration Runde 4): DIE Prüfung eines Twists — live
+	# (Game.apply_twist, buffer_ahead false) und in beiden Verifiern (true): run_active false → run_not_active; mit
+	# Puffer tick vorbei → twist_tick_passed, tick voraus → "" (puffern); sonst TwistApplier.validate
+static func refused_id(c: Dictionary) -> String       # die ID eines abgelehnten Commands in beiden Verifiern
+	# (rejected_cmds["gift_id"], Game.replay_log errors): gift_id, hero-/secret-id, twist-id; sonst ""
 ```
 
 ### 7.2 Algorithmus
@@ -4233,6 +4412,7 @@ Headless (`DisplayServer.get_name() == "headless"`) → **kein Snapshot** (liefe
 | 5 | ExplorationHud / BattleHud | M6 / M5 |
 | 20 | TouchControls | M6 |
 | 40 | GlobalUi: ShowOverlay | M6 |
+| 41 | GlobalUi: TwistFx (Twist-Chip unter dem Timer in den Modi `MODES_CHIP`; Stromausfall-Vignette und Konfetti nur in `explore`) | 06-D |
 | 45 | GlobalUi: ModDialog, Toasts | M6 |
 | 60 | Modale Menüs (Pause, Inventar, Automat, Lootbox, Bestätigung) | M6 |
 | 90 | DebugOverlay | M6 |
@@ -4583,9 +4763,9 @@ offene M.O.D.-Zeilen, damit die Box nicht über Kai, Prompt und Marker liegt.
 
 | Szene | Rezepte |
 |---|---|
-| `exploration.tscn` | `explore_platform` / `explore_sewer` / `explore_cellar` (Gruppe der Zone 6 m vor Kai), `prompt_<zone>` (Kai vor einer Truhe: Prompt + Marker), `bigmap`, `pause_party` / `pause_inventory` / `pause_equipment` / `pause_skills` / `pause_show` (06-C) / `pause_settings`, `talents_party` (06-B: Party-Seite mit Talenten und offener Wahl); 06-A: `hero_mopsula_<zone>` (Graf Mopsula führt, Kai folgt), `bark_<zone>` (Graf bellt die Gruppe der Zone an: Kegel, Ringe, „?!“) |
+| `exploration.tscn` | `explore_platform` / `explore_sewer` / `explore_cellar` (Gruppe der Zone 6 m vor Kai), `prompt_<zone>` (Kai vor einer Truhe: Prompt + Marker), `bigmap`, `pause_party` / `pause_inventory` / `pause_equipment` / `pause_skills` / `pause_show` (06-C) / `pause_settings`, `talents_party` (06-B: Party-Seite mit Talenten und offener Wahl); 06-A: `hero_mopsula_<zone>` (Graf Mopsula führt, Kai folgt), `bark_<zone>` (Graf bellt die Gruppe der Zone an: Kegel, Ringe, „?!“), `twist_lights` / `twist_confetti` / `twist_live` (06-D: QA-Twist + Chip, Vignette/Konfetti bzw. Live-Zeile „KI live“; wenige `frames`, z. B. 3) |
 | `battle.tscn` | `battle_menu`, `battle_skills`, `battle_target`, `battle_damage`, `battle_enemy_turn`, `boss_intro` (mit `--params={"encounter": "<boss enc>", "capture": false, "speed": 1.0}`), `boss_phase`, `battle_gift`, `battle_victory` / `battle_results` / `battle_results_show` (06-C: gewonnene Show-Wette im Ergebnis; mit `--params={"capture_turns": 99}`), `battle_partner_auto` (06-A: „Partner automatisch“ an, Pillen „DU“/„AUTO“) |
-| `safe_room.tscn` | `safe_vending`, `safe_equipment`, `safe_lootbox`, `safe_lootbox_open`, `safe_mopsula`, `safe_talents_menu` / `safe_talent_show` (06-B: TALENT-SHOW-Knopf / Talent-Show), `safe_hero_switch` (06-A: nach „Figur wechseln“), `safe_hero_talents` (06 A × B: offene Talentwahl + „Figur wechseln“ — TALENT-SHOW oben rechts neben dem M.O.D.-Kasten unten rechts) |
+| `safe_room.tscn` | `safe_vending`, `safe_equipment`, `safe_lootbox`, `safe_lootbox_open`, `safe_mopsula`, `safe_talents_menu` / `safe_talent_show` (06-B: TALENT-SHOW-Knopf / Talent-Show), `safe_hero_switch` (06-A: nach „Figur wechseln“), `safe_hero_talents` (06 A × B: offene Talentwahl + „Figur wechseln“ — TALENT-SHOW oben rechts neben dem M.O.D.-Kasten unten rechts), `safe_happy` (06-D: Automat mit Happy Hour) |
 | `exploration.tscn` (06-A, E1-Geheimnisse) | `secret_wall` (Kai vor der Kulissenwand), `secret_open` (der Graf bellt sie um, mitten im Fall), `secret_note` (Kai vor Regie-Notiz 1: Prompt + Marker) |
 
 Beispiel (Handy-Format, Touch an): `tools/check.sh --shot res://scenes/battle/battle.tscn /tmp/b.png 5 2400x1080 --touch --recipe=battle_skills`.
@@ -4822,9 +5002,9 @@ Repo-`.gitignore` ausgeschlossen. Plattformnamen wurden gegen 4.7.2 geprüft (`L
 name: ptd-check
 on:
   push:
-    paths: ["prime-time-dungeon/**", ".github/workflows/ptd-check.yml"]
+    paths: ["prime-time-dungeon/**", "services/**", ".github/workflows/ptd-check.yml"]
   pull_request:
-    paths: ["prime-time-dungeon/**", ".github/workflows/ptd-check.yml"]
+    paths: ["prime-time-dungeon/**", "services/**", ".github/workflows/ptd-check.yml"]
   workflow_dispatch: {}
 env:
   GODOT_VERSION: "4.7.2"
@@ -4878,6 +5058,20 @@ jobs:
         with:
           name: screenshots
           path: shots/
+  # 06-D: the M.O.D. live reference service (Python). Mocked Anthropic client only — no API key, no network calls.
+  mod-brain-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: pip install -e "services/mod-brain[dev]"
+      - name: pytest
+        working-directory: services/mod-brain
+        run: python -m pytest -q
   export:
     needs: check
     if: startsWith(github.ref, 'refs/tags/v')
@@ -4908,7 +5102,9 @@ jobs:
 
 Android/iOS werden lokal exportiert (Android: JDK 17 + SDK + Debug-Keystore in Editor-Einstellungen; iOS: Xcode auf macOS).
 `check.sh` bleibt die Prüf-Quelle für Import, Tests und Smoke; zusätzlich ruft die CI `tools/fullrun.sh --strategy=all`
-(Full-Run-Bot, §11.4.1, ≈ 1,5 min) als eigenen Schritt auf.
+(Full-Run-Bot, §11.4.1, ≈ 1,5 min) als eigenen Schritt auf. Der Job `mod-brain-tests` (06-D) prüft den Referenz-Dienst
+`services/mod-brain/` mit gemocktem Anthropic-Client (kein Schlüssel, kein Netz); die gemeinsamen Fälle
+`tests/fixtures/live/twist_cases.json` und `line_filter_cases.json` laufen dort und in `check.sh`.
 
 ### 12.5 Messung (`tools/perf.sh`, Phase C)
 

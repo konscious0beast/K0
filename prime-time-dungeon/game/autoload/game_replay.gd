@@ -72,12 +72,18 @@ func run(p_log: RunLog, until_tick: int) -> Dictionary:
 		_walk(p_log, out, errors)
 		if until_tick >= 0:
 			_advance(until_tick)
+		# 06-D: buffered twists refused when due (the state's replay buffer, applied by RunSim.step) — reported with
+		# their id like RunSim.replay does (RunRules.refused_id / rejected_cmds)
+		for rc: Dictionary in (game.sim as RunSim).rejected_cmds:
+			errors.append("k %d: %s '%s' refused by the core (%s)" % [int(rc["k"]), str(rc["t"]), str(rc["gift_id"]),
+				str(rc["reason"])])
 		var quest: QuestTracker = game.quest
 		out["final_hash"] = StateHash.of(st)
 		out["result"] = {"ticks": (game.sim as RunSim).tick(), "cmds": p_log.size(),
 			"floor": st.floor_run.index if st.floor_run != null else 1,
 			"quest_complete": quest.is_complete() if quest != null else false,
-			"quest_progress": quest.progress() if quest != null else 0.0}
+			"quest_progress": quest.progress() if quest != null else 0.0,
+			"twists_waiting": TwistApplier.buffered(st).size()}     # 06-D: still buffered (kept in the state)
 	Events.gift_rejected.disconnect(on_rejected)
 	game._restore_context(saved)
 	game.replaying = false
@@ -114,6 +120,10 @@ func _cmd(cmds: Array[Dictionary], i: int, c: Dictionary, errors: PackedStringAr
 			if _battle != null:
 				next = _play(_battle.start(), cmds, next)
 				_end_if_finished()
+		"twist":                                   # 06-D: applied at its tick (buffered when ahead)
+			var why: String = _twist(c.get("twist", {}))
+			if why != "":
+				errors.append("cmd %d (twist '%s'): refused (%s)" % [i, RunRules.refused_id(c), why])
 		"battle":
 			if _battle == null or _battle.is_finished():
 				errors.append("cmd %d: battle command without an active battle" % i)
@@ -140,9 +150,27 @@ func _advance(k: int) -> void:
 	var sim: RunSim = game.sim
 	while sim.tick() < k:
 		var before: int = sim.tick()
-		game._dispatch(sim.step(1))
+		game._dispatch(sim.step(1))           # incl. the buffered twists due at this tick (RunSim._apply_due_twists)
 		if sim.tick() == before:
 			break
+
+
+## 06-D: a twist command now (tick == clock → Game.apply_twist, the live path), later (tick ahead → the state's replay
+## buffer, TwistApplier.buffer; RunSim.step applies it when due — like RunSim.replay) or never (RunRules.twist_refusal:
+## run not active, tick passed). "" or the refusal.
+func _twist(tw: Variant) -> String:
+	if not (tw is Dictionary):
+		return "malformed"
+	var sim: RunSim = game.sim
+	var why: String = RunRules.twist_refusal(game.state, DB.data, sim.rules, tw, sim.tick(), game.in_battle,
+		not (game._run_finished or game._floor_done), true, game._current_layout())
+	if why != "":
+		return why
+	var at: int = JsonUtil.to_int((tw as Dictionary).get("tick", sim.tick()))
+	if at > sim.tick():
+		TwistApplier.buffer(game.state, tw, at - sim.tick())
+		return ""
+	return game.apply_twist(tw)
 
 
 ## §5.7 BattleController.run: setup (next_seed "battle"), BattleState, Show.begin_battle (next_seed "show"),

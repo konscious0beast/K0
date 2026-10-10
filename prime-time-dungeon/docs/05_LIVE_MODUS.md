@@ -797,7 +797,7 @@ Die `cmd_id` steht auch im Run-Log (Kap. 10.6); der Verifier prüft strikte Mono
 | `gift` | `{ "gift": Gift }` (Kap. 6.5) — wird vom Client-Kern an demselben Tick angewendet wie vom Server |
 | `sponsor_window` | `{ "phase": "opened" \| "updated" \| "closed", "window": SponsorWindows.window_view, "reason"?, "next_in_sec" }` (Kap. 6.13) — derselbe Zustand, den Instanz-Kern und Verifier aus den Ticks ableiten; der Client-Kern rechnet ihn selbst nach |
 | `vote` | `{ "vote_id", "phase": "open" \| "result", "options", "result"? , "apply_tick"? }` |
-| `twist` | `{ "id", "vote_id", "apply_tick" }` — Anwendung des Vote-Ergebnisses (externer Eingang, Run-Log `{"t":"twist"}`) |
+| `twist` | `{ "id", "src", "params", "tick", "vote_id"? }` — Anwendung eines Twists (Vote-Ergebnis, Sendeplan; 06 §5.4/§8.5: `apply_tick` heißt jetzt `tick`). Der Client-Kern prüft ihn mit `TwistApplier.validate` und zeichnet ihn als externen Eingang `{"t": "twist", "twist": {…}}` auf (Kap. 10.6) |
 | `timer` | `{ "floor_timer_left_ticks", "window_close_at", "phase" }` (alle 5 s + bei Änderungen; Anzeige rechnet in mm:ss um) |
 | `quest` | `{ "progress": float, "complete": bool, "detail" }` (`progress` nur Anzeige; Wertung rechnet ganzzahlig, Kap. 1.5) |
 | `run_end` | `{ "cause", "summary", "score", "breakdown", "replay_id", "verified": "pending" \| "ok" }` |
@@ -1013,7 +1013,9 @@ Wert deutlich niedriger. Lasttest mit einem großen Einzellauf (5 000 Zuschauer,
 
 ### 6.2 Votes (Twists)
 
-**Was abgestimmt wird** (Daten `res://data/twists.json`, je Event Auswahl in `events.json → votes.pool`):
+**Was abgestimmt wird** (Daten `res://data/twists.json` — Katalog und Schema seit 06-D in 02_TECH §4.4.18 bzw. 06 §5.6, 20
+Einträge, 11 im Slice wirksam; je Event Auswahl in `events.json → votes.pool`). Die Tabelle unten ist der ursprüngliche
+Vote-Entwurf; verbindlich sind Werte und Grenzen in `twists.json`, die Regeln in `TwistApplier` (02_TECH §7.1, 06 §5.7):
 
 | ID | Name | Wirkung | Spielrelevant | Dauer |
 |---|---|---|---|---|
@@ -1035,7 +1037,11 @@ Wert deutlich niedriger. Lasttest mit einem großen Einzellauf (5 000 Zuschauer,
 - **Eine Stimme pro Konto**, ungewichtet. **Keine bezahlten Stimmen**, keine Stimm-Booster.
 - Pur-Liga: nur Twists mit `gameplay: false`. Spieler:in kann spielrelevante Votes nicht ablehnen (Teil der Show-Liga-Regeln),
   aber Show-Liga ist Opt-in.
-- Twist-Anwendung ist ein externer Eingang im Run-Log (`{"t":"twist","id":…,"vote_id":…}`) → Replay-identisch.
+- Twist-Anwendung ist ein externer Eingang im Run-Log (`{"t": "twist", "twist": {"schema": 1, "id", "n", "src": "vote",
+  "params", "duration", "tick", "vote_id"}}`, `cmd_id` 0) → Replay-identisch. Seit 06-D gelten für alle Quellen (Vote, Regie,
+  M.O.D. live, Sendeplan, QA) dieselben Regeln (`TwistApplier.refusal_for`): 1 spielrelevanter Twist gleichzeitig, **90 s**
+  Abstand (statt 60 s), ≤ 4 je Etage, ≤ 1 scharfer je Etage, Pur-Liga nur `gameplay: false`; in Event-Läufen nur Quellen
+  `schedule`/`dev` (fester Sendeplan `rules.twists.schedule`, ohne Command identisch für alle).
 
 ### 6.3 Geschenk-Arten
 
@@ -2047,10 +2053,20 @@ Event-Läufe werden nie in einen Spielstand-Slot gespeichert (02_TECH §3.6).
 
 ### 10.5 Twist-Definition (`res://data/twists.json`)
 
+Seit Paket 06-D im Slice, Schema verbindlich in 02_TECH §4.4.18 (`TwistDef`, Tabelle 17 von `GameData.TABLES`):
+
 ```json
-[ { "id": "tw_lights_out", "name_key": "tw_lights_out_name", "gameplay": true, "scope": "explore", "duration_sec": 60,
-    "effect": { "enemy_sight_mult": 0.5, "player_vignette": 0.6 }, "mod_line": "twist_applied_tw_lights_out" } ]
+{"schema": 1, "entries": [
+ {"id": "tw_lights_out", "name": "Stromausfall", "desc": "Gegner sehen schlechter. Sie auch.", "gameplay": true,
+  "scope": "explore", "spice": "neutral", "slice": true, "once_per_floor": false, "weight": 3,
+  "duration": {"unit": "sec", "default": 60, "min": 30, "max": 90},
+  "params": {"enemy_sight_pm": {"default": 500, "min": 400, "max": 700}},
+  "sources": ["regie", "mod_brain", "vote", "schedule", "dev"], "mod_tag": "twist_applied_tw_lights_out"} ]}
 ```
+
+Event-Regeln (`events.json → rules.twists`, geprüft von `EventDef.validate` über `TwistApplier.validate_rules`): optionale
+Schlüssel wie `TwistApplier.DEFAULT_RULES` (`enabled`, `min_floor`, `sources`, `max_per_floor`, `max_spicy_per_floor`, `gap_sec`,
+`spicy_min_party_hp_pct`, `spicy_min_timer_sec`, `regie`, `schedule: [{tick ≥ 1, id, params?}]`).
 
 ### 10.6 Run-Log und Command
 
@@ -2070,7 +2086,8 @@ Event-Läufe werden nie in einen Spielstand-Slot gespeichert (02_TECH §3.6).
     { "k": 980,  "id": 4, "c": { "t": "encounter", "encounter_id": "enc_f1_rats", "group_id": "f1_g2", "advantage": 1 } },
     { "k": 980,  "id": 5, "c": { "t": "battle", "n": 0, "kind": "attack", "actor_id": "p0", "skill_id": "", "item_id": "", "target_ids": ["e1"] } },
     { "k": 980,  "id": 0, "c": { "t": "gift", "gift": { "schema": 1, "gift_id": "g_dev_0001", "source": "dev", "sponsor_window": "sw_2", "…": "…" } } },
-    { "k": 1200, "id": 6, "c": { "t": "sponsor_window", "op": "dev_open", "sec": 60, "slots": 3 } }
+    { "k": 1200, "id": 6, "c": { "t": "sponsor_window", "op": "dev_open", "sec": 60, "slots": 3 } },
+    { "k": 4200, "id": 0, "c": { "t": "twist", "twist": { "schema": 1, "id": "tw_lights_out", "n": 1, "src": "regie", "params": { "enemy_sight_pm": 500 }, "duration": 60, "tick": 4200 } } }
   ],
   "checkpoints": [ { "k": 300, "h": "9b1e…" }, { "k": 1300, "h": "0c7a…" } ],
   "result": { "cause": "floor_completed", "score": 14210, "final_hash": "77d2…" }
@@ -2102,6 +2119,13 @@ Event-Läufe werden nie in einen Spielstand-Slot gespeichert (02_TECH §3.6).
   stehen **nicht** im Log — sie folgen deterministisch aus Ticks und Commands (`floor`, `room` einer Boss-Zelle, `safe_room`,
   `safe_room_exit`); externe Geschenke tragen den Stempel `sponsor_window`, den Replay und Verifier gegen den nachgerechneten
   Zustand prüfen.
+- **Twists** (06-D) tragen ihren Anwendungstick `twist.tick` (= `k`) und die laufende Nummer `n`. Replay (`Game.replay_log`) und
+  Verifier (`RunSim.replay`): ein Twist, der vor seinem Tick einsortiert ist (`k` < `tick`), wird **gepuffert** und nach der
+  Auswertung genau dieses Ticks angewendet (gleicher Hash wie live); ein Twist mit bereits überschrittenem Tick wird mit
+  `twist_tick_passed` abgelehnt; ein noch wartender Twist bleibt im Zustand (`flags.twist_buffer`, gespeichert, nicht
+  gehasht — er übersteht Speichern/Laden, 06-Integration Runde 4); jede Abweichung von `n`/`tick`/Parametern lehnt
+  `TwistApplier.validate` ab (`sequence_mismatch`, `tick_mismatch`, `params_out_of_range`). Regie-Entscheidungen stehen wie
+  jeder Twist im Log (Quelle `regie`); feste Sendeplan-Twists nicht (sie folgen aus den Regeln).
 - System-Geschenke (Hype-Schwellen) stehen **nicht** im Log — sie entstehen deterministisch aus dem Show-RNG
   (`Game.next_seed("show")`), laufen aber ebenfalls durch `Show.receive_gift()` (Kap. 11.3). Externe Geschenke werden bei ihrer
   **Anwendung** aufgezeichnet (im Kampf in `take_pending_gift`, sonst sofort), nicht beim Empfang — nur so kann das Replay sie an
@@ -2123,12 +2147,13 @@ Event-Läufe werden nie in einen Spielstand-Slot gespeichert (02_TECH §3.6).
 
 | Datei | Besitzer | Inhalt im Slice |
 |---|---|---|
-| `data/events.json` | M7 (Inhalt), M8 (Schema/Loader) | 1–2 Offline-Events (`evt_offline_gleis9` wie Kap. 10.1, optional `evt_offline_pacifist`). Geladen von `EventCatalog` (M8), **nicht** von `GameData` — die 13 Tabellen aus `GameData.TABLES` (02_TECH §1.4) bleiben unverändert (CR-9). |
+| `data/events.json` | M7 (Inhalt), M8 (Schema/Loader) | 1–2 Offline-Events (`evt_offline_gleis9` wie Kap. 10.1, optional `evt_offline_pacifist`). Geladen von `EventCatalog` (M8), **nicht** von `GameData` — die Tabellen aus `GameData.TABLES` (02_TECH §1.4; seit 06-D 14 mit `twists`) bleiben davon unberührt (CR-9). |
 | `data/mod_lines.json` | M7 | neue, **optionale** Tags `event_run_start`, `event_quest_progress`, `event_quest_complete`, `event_result`, `gift_received`, `gift_received:credits`, `gift_received:anon` (Fallback-Mechanik `a:b → a` aus 02_TECH §6.1; **keine** Varianten je Kistenstufe, L13) — CR-9; dazu die Zeilen aus Kap. 6.12 (`gift_diminished`, `gift_capped`, `gift_declined`, `fan_pack_received`, `live_closing`, `vote_open`) mit den Platzhaltern `{sender}`, `{amount}`, `{pct}`, `{min}` (`DataValidator.TEXT_PLACEHOLDERS`, optionale Präfixe `gift_`/`fan_pack_`/`live_`/`vote_`/`twist_applied_`) |
 | `Progression.EXP_TABLE` (`core/progression/progression.gd`) | M2 | EXP-Tabelle als Ganzzahl-Konstante je Level (GDD §4.3; ersetzt `pow`, CR-12) — keine Datei in `data/` |
 | `tests/fixtures/live/gift_tables.json` | M8 | **Hook:** Schema Kap. 10.2; im Slice nur von `FairRoll`-Tests gelesen (kein Eintrag in `data/`) |
 | Party-Preset | — | S0 unterstützt nur `rules.party_preset: "new_game"` (= `GameState.create_new`, 02_TECH §6.1); `party_presets.json` kommt mit S2 |
-| `twists.json`, `party_presets.json` | — | **nicht** im Slice |
+| `twists.json` | 06-D | **im Slice** (02_TECH §4.4.18): 20 Einträge, 11 wirksam; Offline-Regie ab Etage 2, Votes ab S2 |
+| `party_presets.json` | — | **nicht** im Slice |
 
 ### 11.2 Kern (`res://core/live/`, Modul M8)
 

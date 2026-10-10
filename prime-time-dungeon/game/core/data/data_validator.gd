@@ -74,13 +74,14 @@ const REQUIRED_MOD_TAGS: PackedStringArray = ["intro", "floor_start", "first_fig
 ## Sponsor-Fenster lines of 05 §6.13 (sponsor_window_open[:periodic|safe_room|boss|dev], sponsor_window_closed,
 ## sponsor_window_full), the story beats of GDD §1.4 (tutorial_* hints B1/B2, story_battle:<encounter_id> banners
 ## B4) and the lines of the 06 packages (A: hero_pick/hero_switch:<id>, secret_note:<n>, secret_wall; B: talent_*,
-## casting_*; C: marotte_*, liga_*).
+## casting_*; C: marotte_*, liga_*; D: regie_cut_in, regie_monologue_<n>, mod_live_*).
 const OPTIONAL_MOD_TAG_PREFIXES: PackedStringArray = ["achievement:", "boss_intro:", "boss_phase:", "event_",
 	"gift_received", "mopsula_idle", "chat_", "gift_", "fan_pack_", "live_", "vote_", "twist_applied_", "tutorial_",
 	"story_", "sponsor_window_",
 	"hero_", "secret_",                          # 06 package A
 	"talent_", "casting_",                      # 06 package B: Talent-Show / Casting lines
-	"marotte_", "liga_"]                        # 06 package C: M.O.D. preferences + Liga (06 §4)
+	"marotte_", "liga_",                        # 06 package C: M.O.D. preferences + Liga (06 §4)
+	"regie_", "mod_live_"]                      # 06-D: Regie lines (regie_cut_in, regie_monologue_<n>), M.O.D. live
 
 ## Copy of StatIds.ALL (§6.3); test_m2_achievements asserts equality.
 const STAT_IDS: PackedStringArray = ["kills_total", "kills_skill", "battles_won", "battles_fled", "preemptives",
@@ -143,12 +144,14 @@ const ID_PATTERNS: Dictionary = {
 	"talents": "^tal_[a-z0-9_]+$",
 	"species": "^spc_[a-z0-9_]+$",
 	"marotten": "^mar_[a-z0-9_]+$",                                # 06-C
+	"twists": "^tw_[a-z0-9_]+$",                                   # 06-D
 }
 
 const TABLES: PackedStringArray = ["statuses", "skills", "items", "classes", "party", "enemies", "floors",
 	"lootboxes", "achievements", "sponsors", "milestones", "mod_lines", "scenes",
 	"talents", "species",                       # 06 package B
-	"marotten"]                                 # 06-C
+	"marotten",                                 # 06-C
+	"twists"]                                   # 06-D: validated by validators/twists.gd (TwistCheck)
 ## Allowed extra top-level keys per file (§4.1); everything else is an error.
 const TABLE_EXTRA_KEYS: Dictionary = {"party": ["start"], "enemies": ["pseudo_units"], "lootboxes": ["pools", "pity"]}
 const REQUIRED_BOXES: PackedStringArray = ["box_bronze", "box_silver", "box_gold", "box_fan"]
@@ -198,6 +201,8 @@ const MarottenCheck := preload("res://core/data/validators/marotten.gd")
 # --- 06 package B: per-table rule files (06 §8.0 Nr. 7) ------------------------------------------------------------
 const TalentsRules := preload("res://core/data/validators/talents.gd")
 const SpeciesRules := preload("res://core/data/validators/species.gd")
+## 06-D: rules of twists.json (06 §5.6) — private helper like the others (06 §8.0 Nr. 7).
+const TwistCheck := preload("res://core/data/validators/twists.gd")
 
 # --- Field specs: [name, type(, default)] — no default = required. Types: s i f b d a sa ia c2 v2 ---------------------
 const SPEC_STATUS: Array = [["id", "s"], ["name", "s"], ["kind", "s"], ["default_turns", "i", 3],
@@ -604,6 +609,8 @@ func _normalize_entry(t: String, i: int, raw: Variant) -> Dictionary:
 			return SpeciesRules.normalize(self, ctx, raw)
 		"marotten":
 			return MarottenCheck.normalize(self, ctx, raw)          # 06-C
+		"twists":
+			return TwistCheck.normalize(self, ctx, raw)             # 06-D
 	return {}
 
 
@@ -1558,6 +1565,7 @@ func _check_references() -> void:
 	_refs_enemies()
 	_refs_floors()
 	_refs_lootboxes()
+	TwistCheck.check(self, _out["twists"])                  # 06-D (before _refs_misc: referenced twist tags)
 	_refs_misc()
 	TalentsRules.check_refs(self)              # 06 package B
 	SpeciesRules.check_refs(self)

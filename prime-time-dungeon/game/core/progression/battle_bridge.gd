@@ -92,6 +92,7 @@ static func apply_result(state: GameState, data: GameData, result: BattleResult)
 	if victory:
 		_floor_bookkeeping(state, data, result)
 	_bestiary_and_kills(state, result)
+	TwistApplier.on_battle_end(state, data)             # 06-D: "battles" twists count down (every outcome)
 	return rw
 
 
@@ -166,6 +167,7 @@ static func _apply_victory_rewards(state: GameState, data: GameData, result: Bat
 		var gain: int = rw.exp * KO_EXP_PCT / 100 if was_ko.has(m.id) else rw.exp
 		rw.level_ups.append_array(Progression.add_exp(m, gain, data))
 	rw.credits = maxi(0, result.credits)
+	rw.credits += TwistApplier.take_bonus_credits(state, rw.credits)   # 06-D: tw_double_credits
 	rw.overkill_credits = maxi(0, result.overkill_credits)
 	state.inventory.add_credits(rw.credits)
 	for item_id: String in result.drops:

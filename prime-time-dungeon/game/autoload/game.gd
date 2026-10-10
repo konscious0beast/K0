@@ -14,6 +14,8 @@ const TICKS_PER_SEC: int = RunSim.TICKS_PER_SEC   # simulation clock (05 CR-3): 
 const EVENTS_PATH: String = RunSim.EVENTS_PATH
 ## Private helper (02_TECH §0.3): the replay engine behind replay_log (one instance per replay).
 const GameReplay := preload("res://autoload/game_replay.gd")
+## 06-D: the M.O.D. live link (child node, no class_name; idles while settings.mod_live == &"off").
+const ModLiveLinkScript := preload("res://autoload/mod_voice/mod_live_link.gd")
 ## Deterministic quest metrics (05 CR-13), read from ShowState.stats (Show updates them before the signal).
 const METRIC_VIEWERS: String = "viewers_target_peak"
 const METRIC_FOLLOWERS: String = "followers_gained_run"
@@ -55,6 +57,8 @@ var _layout_key: String = ""
 var _cmd_id: int = 0                 # last command id given out for _cmd_log
 var _cmd_log: RunLog = null          # the log _cmd_id belongs to (Save.load_slot replaces run_log → ids restart at 1)
 var _metric_fed: Dictionary = {}     # quest metric → last value fed to the tracker
+var _twist_ids: PackedStringArray = []   # 06-D: active twist ids last seen (twist_ended for battle/visit/floor ends)
+var mod_live: Node = null            # 06-D: ModLiveLink (created in _ready unless ephemeral; tests add their own)
 
 
 ## Private child node: detects the input scheme also while the tree is paused (02_TECH §3.4).
@@ -110,6 +114,10 @@ func _ready() -> void:
 	Events.hype_changed.connect(_on_quest_hype_changed)
 	auto_battle = settings.auto_battle_default
 	apply_settings()
+	if not ephemeral:                    # 06-D: M.O.D. live link (off by default, never blocks gameplay)
+		mod_live = ModLiveLinkScript.new()
+		mod_live.name = "ModLiveLink"
+		add_child(mod_live)
 
 
 func _process(delta: float) -> void:
@@ -129,6 +137,7 @@ func _process(delta: float) -> void:
 			_acc = 0.0
 			break
 		_dispatch(sim.step(1))
+		_regie_tick()                        # 06-D: offline Regie decision points (from floor 2)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -290,6 +299,7 @@ func start_floor(floor_index: int) -> void:
 	record({"t": "floor", "floor": floor_index})
 	if sim != null:
 		_dispatch(sim.sponsor_floor())
+	_sync_twist_ends()                       # 06-D: twists end with their floor
 
 
 ## timer_running and state.floor_run.timer_started and no blocking dialog.
@@ -391,6 +401,7 @@ func apply_battle_result(result: BattleResult) -> BattleRewards:
 		SponsorWindows.on_battle_result(state, sim.rules, DB.data, result)   # 06-C: comeback mark (06 §6 decision 3)
 	if sim != null:
 		sim.request_checkpoint()   # 05 §3.3 Nr. 8: a checkpoint after every battle (written when the clock moves on)
+	_sync_twist_ends()             # 06-D: "battles" twists counted down in BattleBridge.apply_result
 	Events.party_changed.emit()
 	Events.inventory_changed.emit()
 	Events.credits_changed.emit(_credits(), _credits() - credits_before)
@@ -603,6 +614,7 @@ func leave_safe_room() -> void:
 		return
 	record({"t": "safe_room_exit"})
 	RunRules.leave_safe_room(state)
+	_sync_twist_ends()                       # 06-D: a visit twist (happy hour) ends with its visit
 	_scene_ctx = {}
 	if sim != null:
 		_dispatch(sim.sponsor_safe_room_exit())
@@ -830,6 +842,76 @@ func apply_settings() -> void:
 
 
 # ======================================================================================================================
+# KI-Admin: twists (06 §5, package D)
+# ======================================================================================================================
+
+## THE entry of every M.O.D. intervention (Regie, M.O.D. live, votes, QA): `twist` = {"id", "src", "params"?,
+## "duration"?, "req"?, "vote_id"?} → TwistApplier.complete (n, tick = sim.tick(), default params) →
+## RunRules.twist_refusal (the check both verifiers run: run over / after "descend" → run_not_active, in a battle →
+## wrong_phase, a tick that is not now → tick_mismatch, …) → record({"t": "twist", "twist": …}) (external, cmd id 0)
+## → apply → Events.twist_applied. Returns "" (applied) or the refusal reason (TwistApplier.REASONS,
+## "run_not_active"). Never waits for anything: proposals from the network arrive here already decided.
+func apply_twist(twist: Dictionary) -> String:
+	if state == null or sim == null:
+		return "run_not_active"
+	var t: Dictionary = TwistApplier.complete(state, DB.data, twist, sim.tick())
+	var why: String = RunRules.twist_refusal(state, DB.data, sim.rules, t, sim.tick(), in_battle,
+		not (_run_finished or _floor_done), false, _current_layout())
+	if why != "":
+		return why
+	record({"t": "twist", "twist": t})
+	_dispatch(TwistApplier.apply(state, DB.data, t, _current_layout()))
+	_twist_ids = TwistApplier.active_ids(state)
+	return ""
+
+
+## Effect of the active twists on `key` (TwistApplier.effect_pm; scenes: "enemy_sight_pm", "enemy_hear_pm").
+func twist_effect_pm(key: String, default_pm: int) -> int:
+	return TwistApplier.effect_pm(state, key, default_pm) if state != null else default_pm
+
+
+## QA (debug overlay F6): a random twist the "dev" source may apply now, picked with
+## SeedUtil.derive(seed, "dev_twist", next n) — recorded like every twist. {"id", "reason"} ("" = applied; with no
+## candidate the reason of tw_lights_out tells why).
+func dev_random_twist() -> Dictionary:
+	if state == null or sim == null:
+		return {"id": "", "reason": "run_not_active"}
+	var layout: FloorLayout = _current_layout()
+	var ids: PackedStringArray = TwistApplier.allowed_now(state, DB.data, sim.rules, sim.tick(),
+		in_battle or _floor_done, "dev", layout)
+	if ids.is_empty():
+		return {"id": "", "reason": TwistApplier.validate(state, DB.data, {"id": "tw_lights_out", "src": "dev"},
+			sim.rules, sim.tick(), in_battle or _floor_done, layout)}
+	var n: int = int(TwistApplier.state_of(state).get("n", 0)) + 1
+	var rng: RandomNumberGenerator = SeedUtil.make_rng(SeedUtil.derive(state.seed, "dev_twist", n))
+	var id: String = ids[rng.randi_range(0, ids.size() - 1)]
+	return {"id": id, "reason": apply_twist({"id": id, "src": "dev"})}
+
+
+## Offline Regie (06 §5.7a): at every RegieDirector decision point of the exploration (live only, setting
+## "Regie-Eingriffe"), unless M.O.D. live chooses the twists itself.
+func _regie_tick() -> void:
+	if replaying or state == null or sim == null or not settings.regie_twists or in_battle or _floor_done:
+		return
+	if mod_live != null and bool(mod_live.call("replaces_regie")):
+		return
+	if not RegieDirector.is_due(state, sim.rules):
+		return
+	var tw: Dictionary = RegieDirector.decide(state, DB.data, sim.rules, sim.tick(), _current_layout())
+	if not tw.is_empty():
+		apply_twist(tw)
+
+
+## twist_ended for twists that ended outside the clock (battle count, safe-room visit, floor change).
+func _sync_twist_ends() -> void:
+	var now: PackedStringArray = TwistApplier.active_ids(state)
+	for id: String in _twist_ids:
+		if not now.has(id):
+			Events.twist_ended.emit(id)
+	_twist_ids = now
+
+
+# ======================================================================================================================
 # Live hooks (M8, 05 §11.3)
 # ======================================================================================================================
 
@@ -928,6 +1010,7 @@ func _reset_run() -> void:
 	_cmd_id = 0
 	_cmd_log = null
 	_metric_fed = {}
+	_twist_ids = PackedStringArray()
 	quest = null
 	run_log = null
 	sim = null
@@ -1040,6 +1123,15 @@ func _dispatch(events: Array[ExploreEvent]) -> void:
 				Events.sponsor_window_opened.emit((ev.data.get("window", {}) as Dictionary).duplicate(true))
 			ExploreEvent.Type.SPONSOR_WINDOW_CLOSED:
 				Events.sponsor_window_closed.emit(str(ev.data.get("id", "")), str(ev.data.get("reason", "")))
+			ExploreEvent.Type.TWIST_APPLIED:                 # 06-D
+				var tv: Dictionary = (ev.data.get("twist", {}) as Dictionary).duplicate(true)
+				tv["src"] = str(ev.data.get("src", ""))
+				tv["n"] = int(ev.data.get("n", 0))
+				_twist_ids = TwistApplier.active_ids(state)
+				Events.twist_applied.emit(tv)
+			ExploreEvent.Type.TWIST_ENDED:
+				_twist_ids = TwistApplier.active_ids(state)
+				Events.twist_ended.emit(str(ev.data.get("id", "")))
 
 
 func _on_mod_said(_text: String, _voice: StringName, _tag: String, blocking: bool) -> void:
@@ -1121,7 +1213,7 @@ func _capture_context() -> Dictionary:
 		"layout_key": _layout_key,
 		"acc": _acc, "blocking": _blocking_dialogs, "timer_running": timer_running, "in_battle": in_battle,
 		"safe_room_clock": safe_room_clock,
-		"cmd_id": _cmd_id, "cmd_log": _cmd_log, "metric_fed": _metric_fed}
+		"cmd_id": _cmd_id, "cmd_log": _cmd_log, "metric_fed": _metric_fed, "twist_ids": _twist_ids}
 
 
 func _restore_context(saved: Dictionary) -> void:
@@ -1145,3 +1237,4 @@ func _restore_context(saved: Dictionary) -> void:
 	_cmd_id = int(saved["cmd_id"])
 	_cmd_log = saved["cmd_log"] as RunLog
 	_metric_fed = saved["metric_fed"]
+	_twist_ids = saved["twist_ids"]

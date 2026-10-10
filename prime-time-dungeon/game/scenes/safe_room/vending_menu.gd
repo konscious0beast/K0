@@ -281,6 +281,18 @@ func _say(text: String, col: Color) -> void:
 	_status.add_theme_color_override("font_color", col)
 
 
+## 06-D: gold "HAPPY HOUR −25 %" pill next to the title while a Happy Hour discount runs (prices already reduced).
+func _happy_hour_tag(pm: int) -> Control:
+	var tag: PanelContainer = PanelContainer.new()
+	tag.name = "HappyHour"
+	tag.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	tag.add_theme_stylebox_override("panel", UiUtil.box_style(UiTheme.C_GOLD, Color(0, 0, 0, 0), 0, 0.21, 12, 4))
+	var l: Label = UiUtil.label("HAPPY HOUR  −%d %%" % ((1000 - pm) / 10), &"LabelHeader", 20, UiUtil.C_INK)
+	l.add_theme_constant_override("outline_size", 0)
+	tag.add_child(l)
+	return tag
+
+
 func _build() -> void:
 	_root = Control.new()
 	UiUtil.full_rect(_root)
@@ -315,6 +327,9 @@ func _build() -> void:
 	pill.add_child(pl)
 	var info: Dictionary = UiUtil.safe_room_info(safe_room_id)
 	hc.add_child(UiUtil.label(str(info.get("name", "Safe Room")) + " · Snacks, Pflaster, Fragwürdiges", &"LabelSmall", 15))
+	var pm: int = TwistApplier.effect_pm(Game.state, "price_pm", 1000)     # 06-D: running tw_happy_hour
+	if pm < 1000:
+		head.add_child(_happy_hour_tag(pm))
 	head.add_child(UiUtil.spacer(0, 0, true))
 	var coin: Control = UiIcon.make(&"coin", UiTheme.C_GOLD, 26)
 	coin.size_flags_vertical = Control.SIZE_SHRINK_CENTER

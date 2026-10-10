@@ -1,9 +1,9 @@
 name: ptd-check
 on:
   push:
-    paths: ["prime-time-dungeon/**", ".github/workflows/ptd-check.yml"]
+    paths: ["prime-time-dungeon/**", "services/**", ".github/workflows/ptd-check.yml"]
   pull_request:
-    paths: ["prime-time-dungeon/**", ".github/workflows/ptd-check.yml"]
+    paths: ["prime-time-dungeon/**", "services/**", ".github/workflows/ptd-check.yml"]
   workflow_dispatch: {}
 env:
   GODOT_VERSION: "4.7.2"
@@ -57,6 +57,20 @@ jobs:
         with:
           name: screenshots
           path: shots/
+  # 06-D: the M.O.D. live reference service (Python). Mocked Anthropic client only — no API key, no network calls.
+  mod-brain-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: pip install -e "services/mod-brain[dev]"
+      - name: pytest
+        working-directory: services/mod-brain
+        run: python -m pytest -q
   export:
     needs: check
     if: startsWith(github.ref, 'refs/tags/v')

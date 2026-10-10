@@ -3,14 +3,17 @@ class_name StateHash extends RefCounted
 ##
 ## of(state): CanonicalJson over GameState.to_dict() without the display/bookkeeping fields `play_time_sec`,
 ## `show.viewers` (05 §11.2) and `slot` (active save slot, Save.save_slot moves it; GameState / Save document it as
-## not game-relevant). Everything else — party, inventory, floor run incl. timer ticks, show values and counters,
-## flags (incl. flags["live"]), rng_counter, pity — is hashed.
+## not game-relevant), and without the twist replay buffer flags["twist_buffer"] (06-D, TwistApplier.buffer: input that
+## is not applied yet — a twist sorted in early must not change a checkpoint; it is hashed once applied). Everything
+## else — party, inventory, floor run incl. timer ticks, show values and counters, flags (incl. flags["live"]),
+## rng_counter, pity — is hashed.
 ## of_battle(battle): CanonicalJson over BattleState.to_dict() (CTB counters, statuses, items, action_n, RNG state).
 ## A state that cannot be serialized canonically (e.g. a non-integral float in flags) yields "" plus a warning; ""
 ## is never a valid hash.
 
 const EXCLUDED_KEYS: PackedStringArray = ["play_time_sec", "slot"]
 const EXCLUDED_SHOW_KEYS: PackedStringArray = ["viewers"]
+const EXCLUDED_FLAG_KEYS: PackedStringArray = ["twist_buffer"]        # == TwistApplier.BUFFER_KEY
 
 
 static func of(state: GameState) -> String:
@@ -38,6 +41,12 @@ static func hash_input(state: GameState) -> Dictionary:
 		for k: String in EXCLUDED_SHOW_KEYS:
 			s.erase(k)
 		d["show"] = s
+	var flags: Variant = d.get("flags", null)
+	if flags is Dictionary:
+		var f: Dictionary = (flags as Dictionary).duplicate()
+		for k: String in EXCLUDED_FLAG_KEYS:
+			f.erase(k)
+		d["flags"] = f
 	return d
 
 

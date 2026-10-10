@@ -184,15 +184,18 @@ prime-time-dungeon/
     │   ├── loot/        LootRoller (Lootboxen, Truhen, Pools)
     │   ├── progression/ GameState, FloorRun, Party, Inventar, EXP, Shop, BattleBridge, SaveCodec, Talents, Casting, HeroRules
     │   ├── dungeon/     FloorLayout, DungeonGenerator, Spawns, Etagen-Events, ExploreEvent
-    │   └── live/        SHOWRUN: RunLog, RunSim, RunRules, StateHash, Gift, GiftPolicy, Sponsor-Fenster, Quest, Bestenliste
-    ├── data/            17 JSON-Dateien: 16 GameData-Tabellen + events.json (SHOWRUN-Events)
+    │   └── live/        SHOWRUN: RunLog, RunSim, RunRules, StateHash, Gift, GiftPolicy, Sponsor-Fenster, Quest, Bestenliste,
+    │                    KI-Admin: TwistApplier (Twists), RegieDirector (Offline-Regie ab Etage 2)
+    ├── data/            19 JSON-Dateien: 17 GameData-Tabellen + events.json (SHOWRUN-Events) + mod_filter.json (Filter
+    │                    für „M.O.D. live“)
     ├── art/             shaders/, materials/, kit/ (prozedurale Figuren, Räume, Props, VFX), gallery/, icons/
     ├── scenes/          boot/, title/, exploration/, battle/, safe_room/, ui/
     └── tests/           run_tests.gd, test_*.gd, lib/, fixtures/, perf/, tools/, capture.gd, capture_recipes.gd
 ```
 
 Außerhalb dieses Verzeichnisses: der CI-Workflow `.github/workflows/ptd-check.yml` im Repo-Wurzelverzeichnis (Import,
-Tests, Smoke-Test, Full-Run-Bot, Screenshots, Desktop-Exports). Export-Ausgaben landen in `build/` bzw. `export/`; beide
+Tests, Smoke-Test, Full-Run-Bot, Screenshots, Desktop-Exports, pytest des KI-Admin-Dienstes) und der optionale
+Referenz-Dienst `services/mod-brain/` für „M.O.D. live“ (Python/FastAPI + Claude; Standard aus, eigenes README). Export-Ausgaben landen in `build/` bzw. `export/`; beide
 Ordner stehen in `.gitignore`.
 
 ## 8. Dokumente

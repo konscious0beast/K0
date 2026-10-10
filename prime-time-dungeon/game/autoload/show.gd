@@ -84,6 +84,10 @@ var _last_marotten: Dictionary = {}         # the last battle's hearts / won bet
 var _announce_queue: PackedStringArray = [] # preferences M.O.D. still announces (after the "floor_start" line)
 var _liga_said: Dictionary = {}             # "<floor>:<tag>" → true: Liga lines once per floor
 var _last_liga_tier: int = -1
+# --- 06-D (KI-Admin) ---
+const EXTERNAL_GAP_SEC: float = 8.0          # live (AI) lines only in pauses: 8 s after the last M.O.D. line
+var _twist_hype_pm: int = 1000               # tw_party_hats factor of the running battle (taken at begin_battle)
+var external_refused: Dictionary = {}        # ModLineFilter reason → count (live lines dropped by the client filter)
 
 
 func _ready() -> void:
@@ -105,6 +109,7 @@ func _ready() -> void:
 	Events.floor_timer_started.connect(_on_floor_timer_started)
 	Events.sponsor_window_opened.connect(_on_sponsor_window_opened)
 	Events.sponsor_window_closed.connect(_on_sponsor_window_closed)
+	Events.twist_applied.connect(_on_twist_applied)        # 06-D
 
 
 ## Display only: smoothing, noise, exploration chat. No game-relevant state changes here.
@@ -241,8 +246,34 @@ func say(tag: String, ctx: Dictionary = {}, blocking: bool = false) -> String:
 	if not outranked:
 		_last_line_prio = prio
 		_last_line_at = _now
-	Events.mod_said.emit(text, StringName(line.voice), tag, blocking)
+	var voice: StringName = StringName(line.voice)
+	if voice == &"mod" and Game.twist_effect_pm("mod_voice_mopsula", 0) > 0:
+		voice = &"mopsula"                         # 06-D tw_mopsula_moderates: the Graf reads M.O.D.'s lines
+	Events.mod_said.emit(text, voice, tag, blocking)
 	return text
+
+
+## 06-D: a live line from a ModVoiceProvider (M.O.D. live, 06 §5.8) — presentation only, never recorded. Shown only
+## when it passes ModLineFilter.check (reasons counted in external_refused), the voice is mod | mopsula | chat, no
+## replay / boss battle runs and EXTERNAL_GAP_SEC passed since the last M.O.D. line (lowest priority: it never
+## pushes a scripted line aside). {name} is filled in here — the service never knows the player name.
+## Emits mod_said(text, voice, "live:" + tag, false). true = shown.
+func say_external(text: String, voice: StringName, tag: String) -> bool:
+	var st: GameState = Game.state
+	if Game.replaying or st == null:
+		return false
+	var reason: String = ModLineFilter.check(text)
+	if reason == "" and not ModLineFilter.VOICES.has(String(voice)):
+		reason = "voice"
+	if reason != "":
+		external_refused[reason] = int(external_refused.get(reason, 0)) + 1
+		return false
+	if _now - _last_line_at < EXTERNAL_GAP_SEC or (_setup != null and _setup.is_boss):
+		return false
+	_last_line_at = _now
+	_last_line_prio = 0
+	Events.mod_said.emit(text.strip_edges().format({"name": st.player_name}), voice, "live:" + tag, false)
+	return true
 
 
 ## voice &"chat" line → emits chat_posted (max. one chat line per CHAT_MIN_INTERVAL).
@@ -298,6 +329,7 @@ func begin_battle(setup: BattleSetup) -> void:
 	_rules = ShowRules.new(DB.data, setup)
 	_rng.seed = Game.next_seed("show")
 	_battle_n = st.rng_counter
+	_twist_hype_pm = Game.twist_effect_pm("hype_gain_pm", 1000)   # 06-D tw_party_hats, fixed for this battle
 	_gift_k = 0
 	_fired = PackedInt32Array()
 	_open_thresholds = PackedInt32Array()
@@ -584,8 +616,9 @@ func _set_hype(value: float, reason: StringName) -> void:
 		_check_thresholds(prev, now)
 
 
-## Whole hype points from raw parts: gain × GameState.hype_gain_pm (equipment × talents, integer per mille, half up),
-## loss unscaled; one clamped change.
+## Whole hype points from raw parts: gain × GameState.hype_gain_pm (equipment × talents), then in battle × the Liga
+## factor (06-C) and × the tw_party_hats factor (06-D), both frozen at begin_battle — every step integer per mille,
+## half up (06 §8.0 Nr. 4; no float path); loss unscaled; one clamped change.
 func _add_hype_parts(gain: float, loss: float, reason: StringName) -> void:
 	var st: GameState = Game.state
 	if st == null or st.show == null:
@@ -596,6 +629,8 @@ func _add_hype_parts(gain: float, loss: float, reason: StringName) -> void:
 		var mult_pm: int = st.hype_gain_pm(DB.data)          # equipment × talents (06 §8.0 Nr. 4)
 		if _battle_active and _liga_hype_pm != 1000:           # 06-C: Liga tier of the running battle
 			mult_pm = (mult_pm * _liga_hype_pm + 500) / 1000
+		if _battle_active and _twist_hype_pm != 1000:          # 06-D: tw_party_hats of the running battle
+			mult_pm = (mult_pm * _twist_hype_pm + 500) / 1000
 		points += (gain_points * mult_pm + 500) / 1000
 	if points == 0:
 		return
@@ -943,6 +978,7 @@ func _reset_battle() -> void:
 	_marotten = null                               # 06-C
 	_liga_hype_pm = 1000
 	_liga_follower_pm = 1000
+	_twist_hype_pm = 1000
 	_battle_active = false
 	_battle_closing = false
 	_open_thresholds = PackedInt32Array()
@@ -1066,6 +1102,25 @@ func _on_floor_entered(floor_index: int) -> void:
 	var hero_suffix: String = ":mopsula" if st.hero == "mopsula" else ""
 	say("tutorial_explore" + hero_suffix)
 	say("tutorial_sneak" + hero_suffix)
+
+
+## 06-D: a twist started → its M.O.D. line (the first Regie twist of a floor is announced with "regie_cut_in", the
+## one-sentence explanation of 06 §0.5); tw_mopsula_monologue → params.lines Mopsula lines.
+func _on_twist_applied(tv: Dictionary) -> void:
+	if Game.replaying:
+		return
+	var id: String = str(tv.get("id", ""))
+	if not DB.data.has_id("twists", id):
+		return
+	if str(tv.get("src", "")) == "regie" and int(TwistApplier.state_of(Game.state).get("floor_regie", 0)) == 1:
+		say("regie_cut_in")
+	var def: TwistDef = DB.data.twist(id)
+	if def.mod_tag != "":
+		say(def.mod_tag)
+	if id == "tw_mopsula_monologue":
+		var n: int = clampi(int((tv.get("params", {}) as Dictionary).get("lines", 3)), 1, 3)
+		for i in n:
+			say("regie_monologue_%d" % (i + 1))
 
 
 func _on_sponsor_gift_triggered(sponsor_id: String) -> void:

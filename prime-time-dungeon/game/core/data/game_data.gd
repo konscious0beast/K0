@@ -6,7 +6,8 @@ class_name GameData extends RefCounted
 const TABLES: PackedStringArray = ["statuses", "skills", "items", "classes", "party", "enemies", "floors",
 	"lootboxes", "achievements", "sponsors", "milestones", "mod_lines", "scenes",
 	"talents", "species",                       # 06 package B
-	"marotten"]                                 # 06-C
+	"marotten",                                 # 06-C
+	"twists"]                                   # 06-D (KI-Admin): twists.json
 
 var source: String = ""                    # dir or "dicts"
 var errors: PackedStringArray = []
@@ -30,6 +31,7 @@ var _mod_lines: Dictionary = {}            # id → ModLineDef
 var _mod_lines_by_tag: Dictionary = {}     # tag → Array[ModLineDef]
 var _scenes: Dictionary = {}
 var _marotten: Dictionary = {}             # 06-C: id → MarotteDef
+var _twists: Dictionary = {}               # 06-D: id → TwistDef
 var _party_start: Dictionary = {"inventory": {}, "credits": 0}
 var _pools: Dictionary = {}
 var _pity: Dictionary = {"rare": 4, "epic": 8}
@@ -52,6 +54,7 @@ var _species: Dictionary = {}              # id → SpeciesDef
 var _all_talents: Array[TalentDef] = []    # sorted by id
 var _all_species: Array[SpeciesDef] = []   # file order
 var _all_marotten: Array[MarotteDef] = []  # 06-C: file order
+var _all_twists: Array[TwistDef] = []      # 06-D: sorted by id
 
 
 ## Loads all TABLES from `dir` (<table>.json). Full validation (rules 1–10). True if no errors.
@@ -179,6 +182,9 @@ func all_species() -> Array[SpeciesDef]:
 ## 06-C: M.O.D. preference / Unterhosen-Liga (marotten.json, 06 §4.9).
 func marotte(id: String) -> MarotteDef:
 	return _get_def(_marotten, "marotten", id) as MarotteDef
+## 06-D: twist catalog entry (06 §5.6).
+func twist(id: String) -> TwistDef:
+	return _get_def(_twists, "twists", id) as TwistDef
 
 
 ## null (no error) if `index` has no floor → end of content.
@@ -307,6 +313,9 @@ func all_scenes() -> Array[SceneDef]:
 ## 06-C: all marotten (file order).
 func all_marotten() -> Array[MarotteDef]:
 	return _all_marotten.duplicate()
+## 06-D: the twist catalog, sorted by id.
+func all_twists() -> Array[TwistDef]:
+	return _all_twists.duplicate()
 
 
 ## All pseudo units (enemies.json → pseudo_units), file order.
@@ -335,7 +344,7 @@ func _clear() -> void:
 	warnings = PackedStringArray()
 	for d: Dictionary in [_statuses, _skills, _items, _classes, _party, _enemies, _pseudo, _floors, _floors_by_id,
 			_encounters, _lootboxes, _achievements, _sponsors, _milestones, _mod_lines, _mod_lines_by_tag, _scenes,
-			_talents, _species, _marotten]:
+			_talents, _species, _marotten, _twists]:
 		d.clear()
 	_party_start = {"inventory": {}, "credits": 0}
 	_pools = {}
@@ -355,6 +364,7 @@ func _clear() -> void:
 	_all_talents.clear()
 	_all_species.clear()
 	_all_marotten.clear()
+	_all_twists.clear()
 
 
 func _build(norm: Dictionary) -> void:
@@ -459,6 +469,13 @@ func _build(norm: Dictionary) -> void:
 		if not _marotten.has(s.id):
 			_marotten[s.id] = s
 			_all_marotten.append(s)
+	# 06-D: twists
+	for d: Dictionary in norm.get("twists", []):
+		var s: TwistDef = TwistDef.from_dict(d)
+		if not _twists.has(s.id):
+			_twists[s.id] = s
+			_all_twists.append(s)
+	_all_twists.sort_custom(func(a: TwistDef, b: TwistDef) -> bool: return a.id < b.id)
 	_party_start = (norm.get("party_start", {"inventory": {}, "credits": 0}) as Dictionary).duplicate(true)
 	_pools = (norm.get("lootbox_pools", {}) as Dictionary).duplicate(true)
 	_pity = (norm.get("lootbox_pity", {"rare": 4, "epic": 8}) as Dictionary).duplicate(true)
@@ -472,7 +489,7 @@ func _build(norm: Dictionary) -> void:
 func _freeze_defs() -> void:
 	for table: Dictionary in [_statuses, _skills, _items, _classes, _party, _enemies, _pseudo, _floors_by_id,
 			_encounters, _lootboxes, _achievements, _sponsors, _milestones, _mod_lines, _scenes, _talents, _species,
-			_marotten]:
+			_marotten, _twists]:
 		for def: Variant in table.values():
 			_freeze_object(def as Object)
 	for list: Variant in _mod_lines_by_tag.values():
@@ -542,6 +559,8 @@ func _table_dict(table: String) -> Dictionary:
 			return _species
 		"marotten":
 			return _marotten
+		"twists":
+			return _twists
 	return {}
 
 

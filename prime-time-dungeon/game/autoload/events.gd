@@ -96,6 +96,12 @@ signal marotte_progress(marotte_id: String, hits: int, goal: int)   # Show: a he
 signal marotte_won(marotte_id: String)                   # Show: `goal` hearts — the bet is won
 signal liga_changed(tier: int)                           # Show.begin_battle: the battle's Liga tier differs (0/1/2)
 
+# --- KI-Admin (06 §5, package D) -------------------------------------------------
+# twist = TwistApplier view entry {"id", "name", "n", "src", "unit", "gameplay", "left", "left_pm", "params"}
+signal twist_applied(twist: Dictionary)                  # Game (Game.apply_twist / RunSim TWIST_APPLIED)
+signal twist_ended(twist_id: String)                     # Game (time, battles, visit, floor change)
+signal mod_live_status(status: StringName)               # ModLiveLink: &"off" | &"ok" | &"degraded"
+
 # --- UI -----------------------------------------------------------------
 signal toast_requested(text: String, icon: StringName)
 ## Bottom corners (canvas px inside the safe frame) a screen keeps for its own panels while overlay `mode` is active;

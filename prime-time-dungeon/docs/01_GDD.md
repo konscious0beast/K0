@@ -1693,6 +1693,36 @@ Validator: max. **110 Zeichen** je Zeile, nur obige Platzhalter.
 
 (Gesamt: 90 + 46 + 35 = **171 Zeilen**; dazu Block A aus 06 §1.5/§2.7: 21 Zeilen und 37 Marotten-/Liga-Zeilen aus Paket 06-C.)
 
+### 11.4 Regie-Eingriffe & M.O.D. live (06 Kap. 5, Paket D)
+
+**Für Spieler:innen in einem Satz:** „Ab Etage 2 greift M.O.D.s Regie ein paar Mal pro Etage ein — kurz, angesagt, meist
+hilfreich.“ Jeder Eingriff („Twist“) erscheint als Chip unter dem Timer (Quelle · Name · Restzeit bzw. „noch 2 Kämpfe“ /
+„nächster Safe Room“, goldener Fortschrittsbalken) und wird von M.O.D. angesagt. Die Regie würfelt alle 120 s Erkundungszeit
+(35 %), nie auf Etage 1, höchstens 3 Eingriffe je Etage, immer nur ein spielrelevanter gleichzeitig, 90 s Pause dazwischen,
+höchstens ein „scharfer“ je Etage; Timer < 3 min → nur „Nachspielzeit“, Party angeschlagen (< 50 % HP) → nur hilfreiche.
+In der Pur-Liga und in Live-Events (fester Sendeplan statt Regie) gibt es keine Regie; Optionen → „Regie-Eingriffe (ab Etage 2)“
+schaltet sie ab. Alles ist aufgezeichnet und replaybar (02_TECH §3.4).
+
+Die 11 Twists dieses Builds (Katalog `twists.json`, 02_TECH §4.4.18): **Stromausfall** (Gegner sehen schlechter), **Ruhe im
+Studio** (Gegner hören schlechter), **Ruhmesnebel** und **Konfetti-Gravitation** (Hype sinkt eine Weile nicht; Konfetti steigt
+nach oben), **Doppel-Credits**, **Nachspielzeit** (+60 s), **Happy Hour** (Automat −20 % beim nächsten Safe Room), **Rattenregen**
+(ein zusätzlicher Streuner — der eine „scharfe“), **Partyhüte** (Kampf-Hype × 1,2 für 2 Kämpfe), **Der Graf moderiert** (Mopsula
+spricht M.O.D.s Zeilen), **Grafen-Monolog**.
+
+**M.O.D. live (Beta, opt-in):** Optional schreibt eine KI M.O.D.s Zwischenrufe live (Referenz-Dienst `services/mod-brain/`,
+06 §5). Sie sieht nur Zahlen und Katalog-IDs (nie den Namen der Spieler:innen), jede Zeile läuft durch denselben Filter wie im
+Dienst, und die Box zeigt „M.O.D. · KI live“. Im Modus „Kommentar + Regie“ darf sie statt der Offline-Regie Twists vorschlagen — das Spiel
+prüft sie mit denselben Regeln. Ohne Verbindung spricht M.O.D. wie gewohnt seine geschriebenen Zeilen (kein Unterschied im Spiel).
+
+Neue Tags (Block D in `mod_lines.json`, 39 Zeilen):
+
+| Tag | Stimme | Beispiel |
+|---|---|---|
+| `twist_applied_<id>` (20, je 2 Zeilen für die Slice-Twists) | mod | „Stromausfall! Sparmaßnahme der Regie. Die Monster sehen auch nichts. Fair, oder?“ · „Nachspielzeit! Eine Minute extra. Ich bin heute großzügig. Notieren Sie das.“ |
+| `regie_cut_in` (erster Regie-Eingriff einer Etage) | mod | „Achtung, Regie-Eingriff! Keine Sorge, ich habe die Kontrolle. Meistens.“ |
+| `regie_monologue_1` … `_3` (Grafen-Monolog) | mopsula | „Meine Damen und Herren, Ratten und Restposten: Der Graf hat das Wort.“ · „Applaus ist erlaubt. Leberwurst ebenfalls. Danke, das war alles.“ |
+| `mod_live_on` (erste gelungene Live-Runde) | mod | „M.O.D. live ist auf Sendung. Ab jetzt improvisiere ich. Die Rechtsabteilung schwitzt.“ |
+
 ---
 
 ## 12. Klassensystem & Spezies (ab Etage 3) — Datenvorbereitung
@@ -1909,6 +1939,7 @@ Menü (`TitleScreen`): **Fortsetzen** (Slot mit dem neuesten `saved_at_unix`, nu
 Oben links: „● LIVE“-Badge (80×30, rot pulsierend) + Zuschauer (animierter Zähler) + Follower. Oben Mitte: **Timer** (mm:ss, 38 px).
 Oben rechts: Hype-Leiste (horizontal, 320×14 px) mit Markern bei 70/85/100 (`SponsorSystem.THRESHOLDS`). Unten: Chat-Ticker (22 px hoch).
 Minimap oben rechts unter Hype (nur besuchte Zellen, 136×136 px; Zonenfarbe, Safe Rooms grün, Tore als Balken).
+Unter dem Timer: Twist-Chip, solange ein M.O.D.-Eingriff läuft (§11.4).
 Interaktionsprompt über Objekt.
 
 ### 14.4 Pausemenü (Esc / Start / Touch ☰; Timer pausiert)
@@ -1917,7 +1948,9 @@ Tabs: **Party** (Werte, EXP) · **Inventar** (benutzen außerhalb des Kampfes) �
 `scenes/ui/skills_menu.gd`) · **Achievements** (erhalten / verborgen „???“, `scenes/ui/achievements_menu.gd`) · **Bestiarium**
 (`scenes/ui/bestiary_menu.gd`) · **Optionen** (Lautstärke Master/Musik/SFX, Kampfgeschwindigkeit, Kamera-Empfindlichkeit, Kamera
 invertieren, Modus, Sprache, **Partner automatisch** — Aus/An, Hilfezeile „Dein:e Partner:in kämpft von selbst.“: die nicht gesteuerte
-Figur kämpft per `AutoPolicy`, nie Stunt/Flucht; ohne Tutorial, 06 §1.4) · **Zum Titel** (Warnung: „Fortschritt seit dem letzten Safe Room geht verloren.“).
+Figur kämpft per `AutoPolicy`, nie Stunt/Flucht; ohne Tutorial, 06 §1.4; Regie-Eingriffe ab Etage 2 an/aus; in Debug-Builds mit
+Dienst-URL zusätzlich „M.O.D. live (Beta)“: Aus / Kommentar / Kommentar + Regie) · **Zum Titel** (Warnung: „Fortschritt seit dem
+letzten Safe Room geht verloren.“).
 
 **Bestiarium:** Zustand `GameState.bestiary: Dictionary` = `enemy_id → {defeated: int, weak_known: PackedStringArray}`; `defeated` pflegt
 `BattleBridge.apply_result` (Sieg), `weak_known` ergänzt `ShowRules` bei jedem Schwachstellen-Treffer (Element). Einträge erscheinen ab

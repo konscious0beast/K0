@@ -439,7 +439,7 @@ static func tr_text(s: String) -> String:
 
 ## Price of an item in the vending machine (Shop, else ItemDef.price).
 static func price_of(item_id: String) -> int:
-	var p: int = Shop.price_of(DB.data, item_id)
+	var p: int = Shop.price_for(Game.state, DB.data, item_id)   # 06-D: incl. a running tw_happy_hour discount
 	if p <= 0:
 		var def: ItemDef = item_def(item_id)
 		p = def.price if def != null else 0

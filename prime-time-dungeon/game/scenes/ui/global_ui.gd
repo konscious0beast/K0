@@ -1,8 +1,8 @@
 extends Node
-## Persistent UI (02_TECH §9.4): ShowOverlay (layer 40), ModDialog + Toasts (45), DebugOverlay (90). Added once under
-## root by Boot (and by capture.gd), PROCESS_MODE_ALWAYS, outside the Router stack. Display mode follows
-## Events.overlay_mode_requested; the initial mode is derived from the active screen (scenes that requested a mode
-## before GlobalUi existed, e.g. in captures). Also caches the last event-run summary (Events.run_finished) for
+## Persistent UI (02_TECH §9.4): ShowOverlay (layer 40), TwistFx (41, 06-D), ModDialog + Toasts (45), DebugOverlay (90).
+## Added once under root by Boot (and by capture.gd), PROCESS_MODE_ALWAYS, outside the Router stack. Display mode
+## follows Events.overlay_mode_requested; the initial mode is derived from the active screen (scenes that requested a
+## mode before GlobalUi existed, e.g. in captures). Also caches the last event-run summary (Events.run_finished) for
 ## RunResult.
 
 const SHOW_OVERLAY: String = "res://scenes/ui/show_overlay.tscn"
@@ -10,11 +10,13 @@ const MOD_DIALOG: String = "res://scenes/ui/mod_dialog.tscn"
 const ToastStack := preload("res://scenes/ui/toast_stack.gd")
 const DebugOverlay := preload("res://scenes/ui/debug_overlay.gd")
 const RunResultScript := preload("res://scenes/ui/run_result.gd")
+const TwistFx := preload("res://scenes/ui/twist_fx.gd")          # 06-D: twist chip, vignette, confetti
 
 var show_overlay: CanvasLayer
 var mod_dialog: CanvasLayer
 var toasts: CanvasLayer
 var debug_overlay: CanvasLayer
+var twist_fx: CanvasLayer                                          # 06-D
 
 var _params: Dictionary = {}
 
@@ -50,6 +52,9 @@ func _ready() -> void:
 	debug_overlay = DebugOverlay.new()
 	debug_overlay.name = "DebugOverlay"
 	add_child(debug_overlay)
+	twist_fx = TwistFx.new()
+	twist_fx.name = "TwistFx"
+	add_child(twist_fx)
 	Events.run_finished.connect(_on_run_finished)
 	if capture:
 		toasts.call("push_toast", "Erster Kill", &"achievement")
@@ -57,6 +62,7 @@ func _ready() -> void:
 		var mode: StringName = initial_mode()
 		show_overlay.call("set_mode", mode)
 		mod_dialog.call("set_overlay_mode", mode)
+		twist_fx.call("set_mode", mode)
 
 
 ## Screen rects (canvas coordinates) the persistent UI currently covers — hype meter, sponsor lower third, viewer-gift
@@ -72,6 +78,8 @@ func occupied_rects() -> Array[Rect2]:
 		cands.append(toasts.call("stack_rect") as Rect2)
 	if mod_dialog != null:
 		cands.append(mod_dialog.call("box_rect") as Rect2)
+	if twist_fx != null:
+		cands.append(twist_fx.call("chip_rect") as Rect2)      # 06-D
 	for r: Rect2 in cands:
 		if r.size.x > 0.0 and r.size.y > 0.0:
 			out.append(r)

@@ -24,6 +24,7 @@ static func start_floor(state: GameState, data: GameData, index: int) -> bool:
 	if state == null or def == null:
 		return false
 	state.floor_run = FloorRun.create(def, state.seed, state.difficulty)
+	TwistApplier.on_floor(state, index)                 # 06-D: twists end with their floor
 	return true
 
 
@@ -63,6 +64,9 @@ static func open_chest(state: GameState, data: GameData, chest: ChestSpawn) -> A
 	var rng: RandomNumberGenerator = SeedUtil.make_rng(SeedUtil.derive(fr.loot_seed, "chest", k))
 	var spec: Dictionary = {"id": chest.id, "type": chest.type, "contents": chest.contents}
 	var rewards: Array[LootReward] = LootRoller.roll_chest(spec, data, fr.index, state, rng)
+	for r: LootReward in rewards:                       # 06-D: tw_double_credits (capped bonus, booked in the twist)
+		if r.kind == "credits":
+			r.amount += TwistApplier.take_bonus_credits(state, r.amount)
 	state.inventory.add_rewards(data, rewards)
 	fr.opened_chests.append(chest.id)
 	return rewards
@@ -128,6 +132,7 @@ static func enter_safe_room(state: GameState, data: GameData, safe_room_id: Stri
 	if first_visit:
 		fr.visited_safe_rooms.append(safe_room_id)
 	Progression.full_heal(state, data)
+	TwistApplier.on_safe_room_enter(state)              # 06-D: tw_happy_hour prices apply during this visit
 	var kai: PartyMember = state.member("kai")
 	return {"safe_room_id": safe_room_id, "first_visit": first_visit, "safe_room_visits": fr.safe_room_visits,
 		"kai_level": kai.level if kai != null else 1}
@@ -137,6 +142,7 @@ static func enter_safe_room(state: GameState, data: GameData, safe_room_id: Stri
 static func leave_safe_room(state: GameState) -> void:
 	if state != null and state.floor_run != null:
 		state.floor_run.location = LOCATION_START
+		TwistApplier.on_safe_room_exit(state)           # 06-D: a visit twist that ran ends
 
 
 ## True while the party is in a safe room (FloorRun.location is a safe room id).
@@ -186,7 +192,8 @@ static func lower_difficulty(state: GameState, d: StringName) -> bool:
 ##   its reason
 ## - secret (06 §2.7): Secrets.check_open on the current floor — unknown, already open, note behind a standing wall →
 ##   its reason
-## (flag keys are whitelisted by Command.validate; QA Sponsor-Fenster by SponsorWindows.dev_allowed.)
+## (flag keys are whitelisted by Command.validate; QA Sponsor-Fenster by SponsorWindows.dev_allowed; twists by
+## twist_refusal below.)
 static func command_refusal(state: GameState, data: GameData, rules: Dictionary, c: Dictionary, floor_done: bool,
 		scene_ctx: Dictionary) -> String:
 	var t: String = str(c.get("t", ""))
@@ -217,4 +224,37 @@ static func command_refusal(state: GameState, data: GameData, rules: Dictionary,
 			var def: FloorDef = data.floor_def(state.floor_run.index) if data != null and state.floor_run != null \
 				else null
 			return Secrets.check_open(state, def, str(c.get("id", "")))
+	return ""
+
+
+## 06-D: THE check of a twist command `tw` (TwistApplier.complete form) at `now_tick` — the live entry
+## (Game.apply_twist), the core verifier (RunSim.command_refusal and its buffer) and the full verifier (Game.replay_log)
+## all ask here: the run is over / the floor is done → run_not_active; with `buffer_ahead` (the verifiers) a tick that
+## has passed → twist_tick_passed and a tick ahead → "" (the caller buffers it: TwistApplier.buffer, checked again when
+## due); else TwistApplier.validate (the live entry never waits: a tick that is not now → tick_mismatch).
+static func twist_refusal(state: GameState, data: GameData, rules: Dictionary, tw: Dictionary, now_tick: int,
+		in_battle: bool, run_active: bool, buffer_ahead: bool, layout: FloorLayout = null) -> String:
+	if state == null or not run_active:
+		return "run_not_active"
+	if buffer_ahead:
+		var at: int = JsonUtil.to_int(tw.get("tick", now_tick))
+		if at < now_tick:
+			return "twist_tick_passed"
+		if at > now_tick:
+			return ""
+	return TwistApplier.validate(state, data, tw, rules, now_tick, in_battle, layout)
+
+
+## The id a refused command names in both verifiers (RunSim.rejected_cmds["gift_id"], Game.replay_log errors): the
+## gift_id of a gift, the hero / secret id (06-A), the twist id (06-D); else "".
+static func refused_id(c: Dictionary) -> String:
+	match str(c.get("t", "")):
+		"gift":
+			var g: Variant = c.get("gift", null)
+			return str((g as Dictionary).get("gift_id", "")) if g is Dictionary else ""
+		"hero", "secret":
+			return str(c.get("id", ""))
+		"twist":
+			var tw: Variant = c.get("twist", null)
+			return str((tw as Dictionary).get("id", "")) if tw is Dictionary else ""
 	return ""

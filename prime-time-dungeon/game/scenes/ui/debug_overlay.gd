@@ -5,6 +5,9 @@ extends CanvasLayer
 ## it respects the Sponsor-Fenster like every viewer gift (05 §6.13; refusal toast names the reason and the next
 ## window). "Fenster öffnen" (button / F5) opens a QA window (Game.open_dev_sponsor_window, recorded; only where
 ## rules.sponsor_windows.dev_open allows it). settings.show_fps shows a compact FPS line when closed.
+## 06-D: "Test-Twist" (button / F6) applies a random allowed twist (Game.dev_random_twist, seeded, recorded; src "dev"
+## may run on floor 1 where rules.twists.dev_any_floor allows it); "Test-Zeile" (button / F7) sends a canned live line
+## through Show.say_external (the M.O.D. live path incl. the line filter).
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const REFRESH_SEC: float = 0.25
@@ -17,6 +20,17 @@ var _text: Label
 var _fps_line: Label
 var _gift_btn: Button
 var _window_btn: Button
+var _twist_btn: Button                   # 06-D
+var _line_btn: Button                    # 06-D
+var _line_n: int = 0
+## 06-D: German texts of the twist refusals (TwistApplier.REASONS).
+const TWIST_REASON_TEXT: Dictionary = {"wrong_phase": "nur in der Erkundung", "busy": "ein Twist läuft schon",
+	"cooldown": "Pause zwischen Twists (90 s)", "floor_cap": "Etagen-Limit erreicht", "league_pur": "Pur-Liga",
+	"floor_too_low": "erst ab Etage 2", "source_not_allowed": "Quelle nicht erlaubt", "run_not_active": "kein Lauf"}
+## 06-D: canned live lines for F7 (what an AI line looks like after the filter).
+const TEST_LINES: PackedStringArray = ["Ein Stunt mit Wischmopp. Ich lasse das als Kunst durchgehen.",
+	"Kandidat:in {name} läuft, als hätte der Fahrstuhl Verspätung. Ich mag das.",
+	"Die Ratten haben eine Gewerkschaft gegründet. Ich habe sie nicht eingeladen."]
 var _acc: float = 0.0
 var _viewer_n: int = 0
 ## German texts of the gift refusals the dev tool shows (05 §6.5 / §6.13 reason codes).
@@ -60,6 +74,14 @@ func _ready() -> void:
 	_window_btn.add_theme_font_size_override("font_size", 15)
 	_window_btn.pressed.connect(open_test_window)
 	col.add_child(_window_btn)
+	_twist_btn = UiUtil.button("Test-Twist (F6)", &"", 0)
+	_twist_btn.add_theme_font_size_override("font_size", 15)
+	_twist_btn.pressed.connect(apply_test_twist)
+	col.add_child(_twist_btn)
+	_line_btn = UiUtil.button("Test-Zeile M.O.D. live (F7)", &"", 0)
+	_line_btn.add_theme_font_size_override("font_size", 15)
+	_line_btn.pressed.connect(send_test_line)
+	col.add_child(_line_btn)
 	_fps_line = UiUtil.label("", &"", 15, UiTheme.C_OK)
 	_fps_line.add_theme_font_override("font", UiTheme.font_mono())
 	_fps_line.set_anchors_preset(Control.PRESET_TOP_RIGHT)
@@ -82,6 +104,14 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif open and event is InputEventKey and (event as InputEventKey).pressed and not (event as InputEventKey).echo \
 			and (event as InputEventKey).physical_keycode == KEY_F5:
 		open_test_window()
+		get_viewport().set_input_as_handled()
+	elif open and event is InputEventKey and (event as InputEventKey).pressed and not (event as InputEventKey).echo \
+			and (event as InputEventKey).physical_keycode == KEY_F6:
+		apply_test_twist()
+		get_viewport().set_input_as_handled()
+	elif open and event is InputEventKey and (event as InputEventKey).pressed and not (event as InputEventKey).echo \
+			and (event as InputEventKey).physical_keycode == KEY_F7:
+		send_test_line()
 		get_viewport().set_input_as_handled()
 
 
@@ -132,6 +162,10 @@ func info_text() -> String:
 		lines.append("Raum       (%d, %d)" % [cell.x, cell.y])
 	lines.append("Hype       %.1f   Zuschauer %s" % [Show.hype(), UiUtil.fmt_int(Show.viewers())])
 	lines.append("Sponsor    %s" % window_text(Show.sponsor_window_view()))
+	lines.append("Twists     %s" % twist_text())
+	var link: Node = Game.mod_live
+	lines.append("M.O.D.live %s" % ("%s · %s · %d Runden" % [String(Game.settings.mod_live), String(link.get("status")),
+		int(link.get("rounds_started"))] if link != null else String(Game.settings.mod_live)))
 	lines.append("Eingabe    %s" % ["Tastatur/Maus", "Gamepad", "Touch"][clampi(Game.input_scheme, 0, 2)])
 	lines.append("Screen     %s  (Stapel %d)" % [cur.name if cur != null else "-", Router.stack_size()])
 	lines.append("Modus      %s%s" % [String(Game.mode), "  AUTOPLAY" if Game.autoplay else ""])
@@ -153,6 +187,33 @@ static func window_text(v: Dictionary) -> String:
 static func _mmss(sec: int) -> String:
 	var s: int = maxi(0, sec)
 	return "%d:%02d" % [s / 60, s % 60]
+
+
+## 06-D: active twists "Stromausfall 0:42 (regie)" or "–".
+static func twist_text() -> String:
+	if Game.state == null:
+		return "–"
+	var parts: PackedStringArray = []
+	for v: Dictionary in TwistApplier.view(Game.state, DB.data):
+		parts.append("%s %s (%s)" % [str(v.get("name", "")), str(v.get("left", "")), str(v.get("src", ""))])
+	return " · ".join(parts) if not parts.is_empty() else "–"
+
+
+## 06-D QA: a random allowed twist (Game.dev_random_twist); toast with the result.
+func apply_test_twist() -> Dictionary:
+	var res: Dictionary = Game.dev_random_twist()
+	var id: String = str(res.get("id", ""))
+	var reason: String = str(res.get("reason", ""))
+	var name: String = DB.data.twist(id).name if id != "" and DB.data.has_id("twists", id) else id
+	Events.toast_requested.emit("Test-Twist: %s" % (name if reason == "" else "nicht möglich – "
+		+ str(TWIST_REASON_TEXT.get(reason, reason))), &"gift")
+	return res
+
+
+## 06-D QA: one canned live line through Show.say_external (filter, pacing). true = shown.
+func send_test_line() -> bool:
+	_line_n += 1
+	return Show.say_external(TEST_LINES[_line_n % TEST_LINES.size()], &"mod", "test")
 
 
 ## QA window (Game.open_dev_sponsor_window: 60 s, 3 slots); toast with the result.

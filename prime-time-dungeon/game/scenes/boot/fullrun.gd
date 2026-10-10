@@ -53,7 +53,25 @@ const NO_PROGRESS_LIMIT: int = 4
 const EQUIP_SLOTS: PackedStringArray = ["weapon", "armor", "accessory"]
 const HEAL_ITEMS: PackedStringArray = ["itm_brutzel_burger", "itm_bandage"]
 
-const STRATEGIES: PackedStringArray = ["thorough", "rush", "dawdle"]
+const STRATEGIES: PackedStringArray = ["thorough", "rush", "dawdle", "typical"]
+## typical: thorough, but leaves the side groups a4, b3 and c2 alone (12 of 15 groups = GDD §13 "Bekämpfte Gruppen
+## 11–13", the 80 % of the GDD §5.4 EXP plan) and does not hunt strays — the first-time player of the GDD targets.
+const TYPICAL_SKIP: PackedStringArray = ["f1_g3", "f1_g7", "f1_g10"]
+## After losing a boss battle (game over → last save) the bot grinds this many stray fights before the retry: the same
+## save and the same commands would replay the same defeat (deterministic seeds, GDD §9.2 no save scumming).
+const GRIND_AFTER_DEFEAT: int = 2
+const GRIND_WAIT_SEC: float = 100.0        # countdown seconds to wait for a stray (spawner interval 90 s, GDD §2.7)
+const PACES: PackedStringArray = ["fast", "human"]
+## --pace=human (GDD §13 floor time; game seconds with the countdown running, i.e. never in dialogs/menus/safe rooms):
+## looks around / walks the room on entering it for the first time, decides before every objective, lines up at every
+## doorway, sneaks the last metres to a group (preemptive strike), reads every M.O.D. line said in the exploration — a
+## model of an attentive first-time player who still walks the bot's door-to-door paths (no dead ends, no map browsing).
+const HUMAN_LOOK_SEC: float = 8.0          # look around + walk the room (chests, exits, enemies)
+const HUMAN_DECIDE_SEC: float = 3.0
+const HUMAN_DOOR_SEC: float = 1.0
+const HUMAN_SNEAK_DIST: float = 7.0
+const HUMAN_READ_SEC: float = 1.0          # + characters / HUMAN_READ_CPS, per M.O.D. line in the exploration
+const HUMAN_READ_CPS: float = 18.0
 const TRY_LOCKED: String = "try without key"  # objective "why" of a negative try (locked chest / gate without key)
 const REQUIRED_BEATS: PackedStringArray = ["first_fight", "safe_room_enter", "scene:scn_mop_1",
 	"boss_intro:enm_boss_hausmeister", "stairs_found", "floor_end"]
@@ -76,6 +94,8 @@ var phase: String = "boot"
 ## exploration until the floor collapses (timer warnings 600/300/60 → expiry → Sendeschluss "timer"). After the first
 ## game over the bot always loads the last save ("Letzten Spielstand laden") and continues "thorough".
 var strategy: String = "thorough"
+## "fast" (default): no waits — the lower bound of the floor time. "human" (--pace=human): HUMAN_* waits (see above).
+var pace: String = "fast"
 var timer_warnings: PackedInt32Array = []
 var timer_expired: int = 0
 var attempt_floor_boss: bool = true
@@ -86,6 +106,8 @@ var teleports: int = 0
 var direct_interactions: int = 0
 var forced_encounters: int = 0
 var boss_levels: Dictionary = {}           # encounter id → [kai level, mopsula level] at battle start
+var boss_exp: Dictionary = {}              # encounter id → [kai, mopsula] total EXP (GDD §4.3) at battle start
+var boss_kit: Dictionary = {}              # encounter id → {"equipment", "items", "hp", "mp"} at the first battle start
 var credits_earned: int = 0
 var credits_spent: int = 0
 var boxes_earned: int = 0
@@ -102,6 +124,16 @@ var replay_checks: int = 0
 var paused_checked: bool = false
 var tried: Dictionary = {}                 # negative paths tried once (locked chest / gate, ignore, "Noch nicht")
 var mod_tags: PackedStringArray = []       # "<tag>@before|countdown" of every M.O.D./Mopsula line (story beats)
+var gifts: Array[String] = []              # sponsor ids of all gifts (Events.sponsor_gift_triggered)
+var boxes_by_id: Dictionary = {}           # lootbox id → earned
+var credits_lootbox: int = 0               # credits out of lootboxes (incl. duplicates converted to credits)
+var human_wait_sec: float = 0.0            # --pace=human: countdown seconds spent in HUMAN_* waits
+var grind_fights: int = 0                  # stray fights still to grind before a boss retry (GRIND_AFTER_DEFEAT)
+var credits_before_floor_boss: int = -1    # credits earned when the floor boss battle starts (GDD §13 "bei Königin")
+var _retry_boss: bool = false             # the running battle is a boss the bot will fight again after a defeat
+var _gifts_battle: int = 0
+var _hype_peak_battle: int = 0
+var _read_backlog: float = 0.0             # --pace=human: reading time of M.O.D. lines not yet waited for
 
 var _hype_start: int = 0
 var _idle_from_ticks: int = -1             # dawdle: countdown when the idling started
@@ -123,25 +155,38 @@ func _ready() -> void:
 	if not dry_run:
 		prepare_saves()
 		strategy = strategy_from_args(OS.get_cmdline_user_args())
+		pace = pace_from_args(OS.get_cmdline_user_args())
 	# Counters ignore Game.replay_log() (the replay check re-emits the same signals).
 	Events.battle_started.connect(_on_battle_started)
 	Events.credits_changed.connect(_on_credits_changed)
-	Events.lootbox_earned.connect(func(_id: String) -> void:
+	Events.lootbox_earned.connect(func(id: String) -> void:
 		if not Game.replaying:
-			boxes_earned += 1)
-	Events.lootbox_opened.connect(func(_id: String, _r: Array) -> void:
+			boxes_earned += 1
+			boxes_by_id[id] = int(boxes_by_id.get(id, 0)) + 1)
+	Events.lootbox_opened.connect(func(_id: String, r: Array) -> void:
 		if not Game.replaying:
-			boxes_opened += 1)
+			boxes_opened += 1
+			for lr: Variant in r:
+				if lr is LootReward and (lr as LootReward).kind == "credits":
+					credits_lootbox += (lr as LootReward).amount)
+	Events.sponsor_gift_triggered.connect(func(sid: String) -> void:
+		if not Game.replaying:
+			gifts.append(sid)
+			if Game.in_battle:
+				_gifts_battle += 1)
 	Events.game_saved.connect(func(_slot: int, ok: bool) -> void:
 		if ok:
 			_saved_events += 1)
-	Events.hype_changed.connect(func(_h: float, delta: float, reason: StringName) -> void:
+	Events.hype_changed.connect(func(h: float, delta: float, reason: StringName) -> void:
 		if Game.in_battle and not Game.replaying:
-			hype_reasons[String(reason)] = float(hype_reasons.get(String(reason), 0.0)) + delta)
-	Events.mod_said.connect(func(_text: String, _voice: StringName, tag: String, _b: bool) -> void:
+			hype_reasons[String(reason)] = float(hype_reasons.get(String(reason), 0.0)) + delta
+			_hype_peak_battle = maxi(_hype_peak_battle, roundi(h)))
+	Events.mod_said.connect(func(text: String, _voice: StringName, tag: String, blocking: bool) -> void:
 		if not Game.replaying:
 			mod_tags.append("%s@%s" % [tag, "countdown" if Game.state != null and Game.state.floor_run != null
-				and Game.state.floor_run.timer_started else "before"]))
+				and Game.state.floor_run.timer_started else "before"])
+			if pace == "human" and not blocking and not Game.in_battle and Game.is_timer_ticking():
+				_read_backlog += HUMAN_READ_SEC + float(text.length()) / HUMAN_READ_CPS)
 	Events.floor_timer_warning.connect(func(sec: int) -> void:
 		if not Game.replaying:
 			timer_warnings.append(sec))
@@ -172,6 +217,11 @@ static func strategy_from_args(args: PackedStringArray) -> String:
 		if args.has("--strategy=" + st):
 			return st
 	return "thorough"
+
+
+## --pace=human → "human"; anything else → "fast".
+static func pace_from_args(args: PackedStringArray) -> String:
+	return "human" if args.has("--pace=human") else "fast"
 
 
 ## Real saves into a private directory (Boot: --autoplay=full), emptied first.
@@ -217,6 +267,11 @@ func _main() -> void:
 		phase = objective_text(obj)
 		if not _check_progress(obj):
 			return
+		if pace == "human" and str(obj["kind"]) != "idle":
+			if not await human_wait(HUMAN_DECIDE_SEC):
+				return
+			if _interrupted(_ex()):
+				continue
 		if not await _do(obj):
 			return
 	if finished:
@@ -284,6 +339,11 @@ func next_objective() -> Dictionary:
 		return {"kind": "group", "id": "f1_g0", "cell": layout.enemy_by_id("f1_g0").cell, "why": "tutorial"}
 	if strategy == "dawdle" and saves > 0:
 		return {"kind": "idle", "id": "", "cell": here, "why": "until the floor collapses"}
+	if grind_fights > 0:
+		var stray: Dictionary = _nearest_stray(layout, dist)
+		if not stray.is_empty():
+			return stray
+		return {"kind": "wait", "id": "", "cell": here, "why": "for a stray to grind (%d left)" % grind_fights}
 	if party_ratio("hp") < SAFE_ROOM_BELOW and _heal_trips < 2:
 		var sr: Dictionary = _nearest_safe(layout, dist)
 		if not sr.is_empty() and int(dist.get(sr["cell"], 99)) <= SAFE_ROOM_MAX_DIST:
@@ -317,12 +377,15 @@ func next_objective() -> Dictionary:
 func candidates(layout: FloorLayout, fr: FloorRun, dist: Dictionary = {}) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var rush: bool = strategy == "rush"
+	var typical: bool = strategy == "typical"
 	for e: EnemySpawn in layout.enemies:
+		if typical and TYPICAL_SKIP.has(e.id):
+			continue
 		if not rush and not e.is_boss and not e.is_stray() and not fr.defeated_groups.has(e.id):
 			out.append({"kind": "group", "id": e.id, "cell": e.cell, "why": e.encounter_id})
 	# Living strays (GDD §2.7) close by (≤ STRAY_HUNT_DIST rooms), while the budget lasts (they come back every 90 s).
 	var ex: ExplorationScene = _ex()
-	if not rush and ex != null and strays_fought() < MAX_STRAY_FIGHTS:
+	if not rush and not typical and ex != null and strays_fought() < MAX_STRAY_FIGHTS:
 		var sids: Array = fr.strays.keys()
 		sids.sort()
 		for gid: Variant in sids:
@@ -421,6 +484,46 @@ func _nearest_safe(layout: FloorLayout, dist: Dictionary) -> Dictionary:
 	return best
 
 
+## Nearest living stray group (any distance) as a "group" objective; {} if none.
+func _nearest_stray(layout: FloorLayout, dist: Dictionary) -> Dictionary:
+	var ex: ExplorationScene = _ex()
+	var fr: FloorRun = Game.state.floor_run
+	var best: Dictionary = {}
+	var best_d: int = 1 << 20
+	var sids: Array = fr.strays.keys()
+	sids.sort()
+	for gid: Variant in sids:
+		var a: Node3D = ex.get_enemy(str(gid)) if ex != null else null
+		if a == null:
+			continue
+		var sc: Vector2i = layout.world_to_cell(a.global_position)
+		var d: int = int(dist.get(sc, -1))
+		if d >= 0 and d < best_d:
+			best_d = d
+			best = {"kind": "group", "id": str(gid), "cell": sc,
+				"why": "grind " + str((fr.strays[gid] as Dictionary).get("enc", ""))}
+	return best
+
+
+## Grinding after a boss defeat: stands still until a stray exists (or GRIND_WAIT_SEC of countdown passed).
+func _wait_for_stray() -> bool:
+	var ex: ExplorationScene = _ex()
+	var fr: FloorRun = Game.state.floor_run
+	var tl0: int = fr.time_left_ticks
+	var want: int = roundi(GRIND_WAIT_SEC * Game.TICKS_PER_SEC)
+	var budget: int = roundi(GRIND_WAIT_SEC * 60.0 / TIME_SCALE) + 240
+	UiUtil.release_move_actions()
+	var n: int = 0
+	while not finished and not _interrupted(ex) and fr.strays.is_empty() and tl0 - fr.time_left_ticks < want:
+		n += 1
+		if n > budget:
+			return fail("waited %d frames for a stray (%s)" % [budget, state_text()])
+		await get_tree().process_frame
+	if fr.strays.is_empty() and tl0 - fr.time_left_ticks >= want:
+		grind_fights = 0                       # no stray came: retry without grinding
+	return not finished
+
+
 static func objective_text(obj: Dictionary) -> String:
 	var c: Vector2i = obj.get("cell", Vector2i.ZERO)
 	var why: String = str(obj.get("why", ""))
@@ -457,6 +560,8 @@ func _do(obj: Dictionary) -> bool:
 	var cell: Vector2i = obj["cell"]
 	if kind == "idle":
 		return await _idle_until_collapse()
+	if kind == "wait":
+		return await _wait_for_stray()
 	if kind != "safe" and kind != "boss":
 		_heal_trips = 0
 	var w: int = await travel(cell)
@@ -587,6 +692,8 @@ func _engage(ex: ExplorationScene, group_id: String) -> bool:
 				if _interrupted(ex):
 					return true
 		else:
+			var sneak: bool = pace == "human" and Rules.flat_dist(p, a.global_position) <= HUMAN_SNEAK_DIST
+			_press(&"sneak", 1.0 if sneak else 0.0)
 			_steer(ex, a.global_position)
 			await get_tree().physics_frame
 		n += 1
@@ -727,14 +834,44 @@ func travel(cell: Vector2i) -> Walk:
 		var b: Vector3 = hub(ex, path[i])
 		if await walk_to(ex, (a + layout.cell_to_world(path[i])) * 0.5, 0.8) == Walk.INTERRUPTED:
 			return Walk.INTERRUPTED
+		if pace == "human":
+			if not await human_wait(HUMAN_DOOR_SEC) or _interrupted(ex):
+				return Walk.INTERRUPTED
 		var last: bool = i == path.size() - 1
 		var rc: RoomCell = layout.cell_at(path[i])
 		var boss_room: bool = rc.kind == RoomCell.Kind.QUARTER_BOSS or rc.kind == RoomCell.Kind.FLOOR_BOSS
 		if last and boss_room:
 			return Walk.ARRIVED                    # the boss objective walks in itself
+		var new_room: bool = not fr.visited.has(path[i])
 		if await walk_to(ex, b, 1.2 if not last else 0.8) == Walk.INTERRUPTED:
 			return Walk.INTERRUPTED
+		if new_room and pace == "human":
+			if not await human_wait(HUMAN_LOOK_SEC) or _interrupted(ex):
+				return Walk.INTERRUPTED
 	return Walk.ARRIVED
+
+
+## --pace=human: lets `sec` seconds of countdown (+ the reading time of M.O.D. lines said meanwhile) pass while Kai
+## stands still; ends early when the exploration is interrupted (stray, dialog) or the countdown does not run.
+## No-op with --pace=fast. false = the run failed.
+func human_wait(sec: float) -> bool:
+	var ex: ExplorationScene = _ex()
+	if pace != "human" or ex == null or Game.state.floor_run == null or not Game.state.floor_run.timer_started:
+		return not finished
+	var fr: FloorRun = Game.state.floor_run
+	var want: int = roundi((sec + _read_backlog) * Game.TICKS_PER_SEC)
+	_read_backlog = 0.0
+	var start: int = fr.time_left_ticks
+	var budget: int = roundi(float(want) / Game.TICKS_PER_SEC * 60.0 / TIME_SCALE) + 120
+	UiUtil.release_move_actions()
+	var n: int = 0
+	while not finished and start - fr.time_left_ticks < want and n < budget:
+		if _interrupted(ex) or not Game.is_timer_ticking():
+			break
+		n += 1
+		await get_tree().process_frame
+	human_wait_sec += float(start - fr.time_left_ticks) / Game.TICKS_PER_SEC
+	return not finished
 
 
 ## Walkable middle of a room: its centre, in the stairs room 1.6 m in front of the fenced well (the well sits on the
@@ -886,12 +1023,17 @@ func _battle(bs: BattleScene) -> bool:
 		"hp_loss_pct": roundi(100.0 * res.damage_taken / maxf(1.0, float(max_hp))), "frames": n,
 		"level": _levels(), "followers": rw.followers if rw != null else 0,
 		"hype_end": roundi(Game.state.show.hype) if Game.state.show != null else 0, "hype_start": _hype_start,
-		"hype_reasons": _reasons_text()}
+		"hype_peak": _hype_peak_battle, "gifts": _gifts_battle, "hype_reasons": _reasons_text()}
 	battles.append(rec)
+	var stray_win: bool = res.outcome == BattleResult.Outcome.VICTORY \
+		and res.group_id.get_slice("_", 1).begins_with("s")
+	if grind_fights > 0 and stray_win:
+		grind_fights -= 1
 	_note("battle %d %s %s: %s, adv %d, party turns %d, turns %d, HP loss %d%%, level %s, +%d followers, hype %d" % [
 		battles.size(), res.encounter_id, res.group_id, res.outcome_name(), res.advantage, res.party_turns, res.turns,
 		int(rec["hp_loss_pct"]), str(rec["level"]), int(rec["followers"]), int(rec["hype_end"])])
-	_note("  hype %d → %d: %s" % [_hype_start, int(rec["hype_end"]), str(rec["hype_reasons"])])
+	_note("  hype %d → %d (peak %d, %d gifts): %s" % [_hype_start, int(rec["hype_end"]), _hype_peak_battle,
+		_gifts_battle, str(rec["hype_reasons"])])
 	if res.outcome == BattleResult.Outcome.VICTORY and not (Router.current is ExplorationScene):
 		return fail("victory but the screen after the battle is %s" % _screen_name(Router.current))
 	if res.outcome == BattleResult.Outcome.VICTORY and res.group_id != "" \
@@ -935,8 +1077,11 @@ func _game_over(screen: Node) -> bool:
 		return false
 	if not bool(screen.call("can_load")):
 		return fail("game over without a save to load")
+	if _retry_boss and StringName(str(screen.get("reason"))) == &"defeat":
+		grind_fights = GRIND_AFTER_DEFEAT
+		_note("boss defeat → grind %d stray fights before the retry" % grind_fights)
 	screen.call("load_last")
-	if strategy != "thorough":
+	if strategy != "thorough" and strategy != "typical":
 		_note("strategy %s → thorough after the game over" % strategy)
 		strategy = "thorough"
 	if Game.state.floor_run.time_left_ticks < Save.GRACE_SECONDS * Game.TICKS_PER_SEC:
@@ -1309,6 +1454,26 @@ static func party_ratio(what: String) -> float:
 	return float(cur) / float(maxi(1, mx))
 
 
+## Equipment per member, battle items and party HP/MP ratio (what the party brings into a boss fight).
+func _kit() -> Dictionary:
+	var eq: Dictionary = {}
+	for m: PartyMember in Game.state.party:
+		eq[m.id] = m.equipment.duplicate()
+	return {"equipment": eq, "items": Game.state.inventory.battle_items(DB.data),
+		"hp": snappedf(party_ratio("hp"), 0.01), "mp": snappedf(party_ratio("mp"), 0.01)}
+
+
+## Total EXP per member (EXP of the levels reached + current EXP, GDD §4.3 table).
+func _exps() -> Array[int]:
+	var out: Array[int] = []
+	for m: PartyMember in Game.state.party:
+		var total: int = m.exp
+		for l in range(1, m.level):
+			total += Progression.exp_to_next(l)
+		out.append(total)
+	return out
+
+
 func _levels() -> Array[int]:
 	var out: Array[int] = []
 	for m: PartyMember in Game.state.party:
@@ -1362,11 +1527,41 @@ func stats() -> Dictionary:
 		tt.append(int(b["turns"]))
 		hp.append(int(b["hp_loss_pct"]))
 	var boss_turns: Dictionary = {}
+	var boss_outcomes: Dictionary = {}
+	var hype_start: Array[int] = []
+	var hype_end: Array[int] = []
+	var hype_peak: Array[int] = []
+	var gifts_regular: int = 0
+	var gifts_boss: int = 0
 	for b: Dictionary in battles:
 		if bool(b["boss"]):
 			boss_turns[str(b["enc"])] = int(b["party_turns"])
+			var outs: Array = boss_outcomes.get(str(b["enc"]), [])
+			outs.append(str(b["outcome"]))
+			boss_outcomes[str(b["enc"])] = outs
+			gifts_boss += int(b.get("gifts", 0))
+		elif str(b["group"]) != "f1_g0":
+			hype_start.append(int(b.get("hype_start", 0)))
+			hype_end.append(int(b.get("hype_end", 0)))
+			hype_peak.append(int(b.get("hype_peak", 0)))
+			gifts_regular += int(b.get("gifts", 0))
 	var show: ShowState = Game.state.show if Game.state != null else null
+	var ach_followers: int = 0
+	if show != null:
+		for id: String in show.achievements:
+			if DB.has_id("achievements", id):
+				var def: AchievementDef = DB.data.achievement(id)
+				ach_followers += def.followers if def.followers >= 0 else int(Show.ACH_FOLLOWERS.get(def.box, 0))
 	return {
+		"pace": pace, "strategy": strategy, "human_wait_sec": roundi(human_wait_sec),
+		"sponsor_gifts": gifts.size(), "gifts_regular": gifts_regular, "gifts_boss": gifts_boss, "gift_ids": gifts,
+		"boss_outcomes": boss_outcomes, "boss_exp": boss_exp, "boss_kit": boss_kit,
+		"credits_before_floor_boss": credits_before_floor_boss,
+		"hype_start_median": median(hype_start), "hype_end_median": median(hype_end),
+		"hype_peak_median": median(hype_peak), "followers_achievements": ach_followers,
+		"achievement_ids": show.achievements if show != null else PackedStringArray(),
+		"boxes_by_id": boxes_by_id, "credits_lootbox": credits_lootbox,
+		"milestones": show.milestones if show != null else PackedStringArray(),
 		"floor_time_used_sec": int(summary.get("time_used_sec", 0)),
 		"floor_time_left_sec": int(summary.get("time_left_sec", 0)),
 		"battles": battles.size(), "regular_battles": regular.size(), "strays": strays,
@@ -1508,11 +1703,21 @@ func _on_battle_started(encounter_id: String, is_boss: bool) -> void:
 		return
 	hype_reasons = {}
 	_hype_start = roundi(Game.state.show.hype) if Game.state != null and Game.state.show != null else 0
+	_hype_peak_battle = _hype_start
+	_gifts_battle = 0
+	_retry_boss = false
 	if is_boss and Game.state != null:
 		boss_levels[encounter_id] = _levels()
-		if Game.state.floor_run != null and DB.floor_def(Game.state.floor_run.index) != null \
-				and DB.floor_def(Game.state.floor_run.index).floor_boss == encounter_id:
+		boss_exp[encounter_id] = _exps()
+		if not boss_kit.has(encounter_id):
+			boss_kit[encounter_id] = _kit()
+		var floor_boss: bool = Game.state.floor_run != null and DB.floor_def(Game.state.floor_run.index) != null \
+			and DB.floor_def(Game.state.floor_run.index).floor_boss == encounter_id
+		if floor_boss:
 			floor_boss_attempts += 1
+			if credits_before_floor_boss < 0:
+				credits_before_floor_boss = credits_earned
+		_retry_boss = not floor_boss or floor_boss_attempts < FLOOR_BOSS_ATTEMPTS
 
 
 func _on_credits_changed(_credits: int, delta: int) -> void:

@@ -301,9 +301,9 @@
 		{
 			"id": "ach_speedrun",
 			"name": "Expresszug",
-			"desc": "Verlasse Etage 1 mit mindestens 8:00 Restzeit.",
+			"desc": "Verlasse Etage 1 mit mindestens 10:00 Restzeit.",
 			"trigger": "floor_completed",
-			"condition": "e.floor == 1 && e.timer_left >= 480",
+			"condition": "e.floor == 1 && e.timer_left >= 600",
 			"box": "box_gold",
 			"followers": -1,
 			"hidden": false,

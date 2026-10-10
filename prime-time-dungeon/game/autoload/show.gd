@@ -20,12 +20,12 @@ const DISPLAY_SMOOTH_SEC: float = 1.5        # display viewers: 1 - exp(-delta /
 const NOISE_INTERVAL: float = 2.0            # display noise ±1.5 % every 2 s
 const NOISE_PCT: float = 0.015
 const PRIORITY_WINDOW_SEC: float = 3.0       # a line of lower priority is dropped while a higher one is this fresh
-const HYPE_ACHIEVEMENT: float = 8.0
-const HYPE_CHEST: float = 3.0
+const HYPE_ACHIEVEMENT: float = 5.0
+const HYPE_CHEST: float = 2.0
 const HYPE_EVENT: float = 5.0
 const HYPE_TIMER_300: float = 10.0
 const HYPE_TIMER_60: float = 15.0
-const ACH_FOLLOWERS: Dictionary = {"box_bronze": 25, "box_silver": 50, "box_gold": 100}
+const ACH_FOLLOWERS: Dictionary = {"box_bronze": 20, "box_silver": 40, "box_gold": 80}
 const FAN_PACK_HYPE: int = 5                 # 05 §6.10: (5 × effect_pm + 500) // 1000
 ## Battle reasons in announcement order (one M.O.D. line per event, GDD §11).
 const ANNOUNCE_ORDER: Array[StringName] = [&"mopsula_ko", &"kai_ko", &"kill_streak", &"overkill", &"stunt_success",
@@ -204,19 +204,22 @@ func is_unlocked(achievement_id: String) -> bool:
 
 
 ## ModAnnouncer.pick → format → emits mod_said(text, voice, tag, blocking); returns text ("" if none/suppressed).
-## Lines of lower priority are dropped while a higher-priority line is fresh (PRIORITY_WINDOW_SEC).
+## Lines of lower priority are dropped while a higher-priority line is fresh (PRIORITY_WINDOW_SEC) — except the
+## ModAnnouncer.always_said tags (player actions / floor beats): they queue behind it and leave the window unchanged.
 func say(tag: String, ctx: Dictionary = {}, blocking: bool = false) -> String:
 	if Game.replaying or tag == "":
 		return ""
 	var prio: int = ModAnnouncer.priority(tag)
-	if _now - _last_line_at < PRIORITY_WINDOW_SEC and prio < _last_line_prio:
+	var outranked: bool = _now - _last_line_at < PRIORITY_WINDOW_SEC and prio < _last_line_prio
+	if outranked and not ModAnnouncer.always_said(tag):
 		return ""
 	var line: ModLineDef = _get_announcer().pick(tag, _floor_index(), hype(), _now)
 	if line == null:
 		return ""
 	var text: String = _get_announcer().format(line, _full_ctx(ctx))
-	_last_line_prio = prio
-	_last_line_at = _now
+	if not outranked:
+		_last_line_prio = prio
+		_last_line_at = _now
 	Events.mod_said.emit(text, StringName(line.voice), tag, blocking)
 	return text
 

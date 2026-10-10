@@ -403,7 +403,7 @@ func test_ghost_preview_moves_a_slowed_target_without_mutating_the_battle() -> v
 
 func test_threshold_gift_is_delivered_at_the_turn_boundary() -> void:
 	Game.auto_battle = true
-	Show.add_hype(46.0 - Show.hype())
+	Show.add_hype(66.0 - Show.hype())
 	var scene: BattleScene = _scene(_setup("enc_f1_a2"))
 	var gifts: Array[ActionEvent] = []
 	scene.player.event_played.connect(func(e: ActionEvent) -> void:

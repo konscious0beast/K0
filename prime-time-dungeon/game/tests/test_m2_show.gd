@@ -1,7 +1,7 @@
 extends TestCase
 ## M2 show system (02_TECH §6.1/§6.2, §3.5, GDD §7): ShowModel formulas, ShowRules hype table row by row,
 ## SponsorSystem thresholds / weights / pick, ModAnnouncer, and the Show autoload (hype, viewers, followers,
-## sponsor gift flow 50/75/100 with limits 2/3 and reset to 80, external gift queue, end of battle).
+## sponsor gift flow 70/85/100 with limits 1/2 and reset to 80, external gift queue, end of battle).
 
 const Fx := preload("res://tests/test_m2_fixtures.gd")
 const K := BattleCommand.Kind
@@ -99,18 +99,18 @@ func test_viewer_formula() -> void:
 	assert_eq(ShowModel.viewers_for(1.0, 30.0, 0), 1150, "(1000) × (0.4 + 0.75)")
 	assert_eq(ShowModel.viewers_for(1.0, 0.0, 0), 400, "hype 0 → 0.4×")
 	assert_eq(ShowModel.viewers_for(1.0, 50.0, 0), 1650, "hype 50 → 1.65×")
-	assert_eq(ShowModel.viewers_for(1.0, 100.0, 1500), 7250, "GDD §13 check value: (1000 + 1500) × 2.9")
-	assert_eq(ShowModel.viewers_for(1.5, 50.0, 100), 2640, "floor_mult 1.5: (1500 + 100) × 1.65")
-	assert_eq(ShowModel.viewers_for(1.0, 37.0, 3), 1329, "1003 × 1.325 = 1328.975 → 1329")
+	assert_eq(ShowModel.viewers_for(1.0, 100.0, 1500), 5075, "GDD §13 check value: (1000 + 0.5 × 1500) × 2.9")
+	assert_eq(ShowModel.viewers_for(1.5, 50.0, 100), 2558, "floor_mult 1.5: (1500 + 50) × 1.65 = 2557.5 → 2558")
+	assert_eq(ShowModel.viewers_for(1.0, 37.0, 6), 1329, "1003 × 1.325 = 1328.975 → 1329")
 	assert_eq(ShowModel.viewers_for(1.0, 150.0, -5), 2900, "hype clamped, negative followers ignored")
 
 
 func test_follower_formulas() -> void:
-	assert_eq(ShowModel.followers_for_battle(4000, 50.0, false, 1.0), 80, "4000 × (0.01 + 0.01)")
-	assert_eq(ShowModel.followers_for_battle(4000, 50.0, true, 1.0), 160, "boss × 2")
-	assert_eq(ShowModel.followers_for_battle(4000, 50.0, false, 1.15), 92, "clip mic × 1.15")
-	assert_eq(ShowModel.followers_for_battle(4000, 0.0, false, 1.0), 40, "hype 0 → 1 %")
-	assert_eq(ShowModel.followers_for_battle(1275, 35.0, false, 1.0), 21, "floori(1275 × 0.017 = 21.675)")
+	assert_eq(ShowModel.followers_for_battle(4000, 50.0, false, 1.0), 56, "4000 × (0.007 + 0.007)")
+	assert_eq(ShowModel.followers_for_battle(4000, 50.0, true, 1.0), 112, "boss × 2")
+	assert_eq(ShowModel.followers_for_battle(4000, 50.0, false, 1.15), 64, "clip mic × 1.15: 64.4 → 64")
+	assert_eq(ShowModel.followers_for_battle(4000, 0.0, false, 1.0), 28, "hype 0 → 0.7 %")
+	assert_eq(ShowModel.followers_for_battle(1275, 35.0, false, 1.0), 15, "floori(1275 × 0.0119 = 15.17)")
 	assert_eq(ShowModel.followers_for_battle(0, 100.0, true, 1.0), 0)
 	assert_eq(ShowModel.followers_lost_on_flee(1234), 12, "floori(1 %)")
 	assert_eq(ShowModel.followers_lost_on_flee(99), 0)
@@ -118,21 +118,32 @@ func test_follower_formulas() -> void:
 
 
 func test_hype_decay_and_clamp() -> void:
-	assert_eq(ShowModel.decay_step(30.0), 29.0)
-	assert_eq(ShowModel.decay_step(15.5), 15.0, "never below 15")
-	assert_eq(ShowModel.decay_step(15.0), 15.0)
+	assert_eq(ShowModel.decay_step(30.0), 29.0, "5 over the floor: 10 % rounds down to 0 → at least −1")
+	assert_eq(ShowModel.decay_step(45.0), 43.0, "20 over the floor → −2")
+	assert_eq(ShowModel.decay_step(85.0), 79.0, "60 over the floor → −6: hot shows cool faster")
+	assert_eq(ShowModel.decay_step(100.0), 93.0, "75 × 10 % = 7.5 → −7 (integer per mille)")
+	assert_eq(ShowModel.decay_step(25.5), 25.0, "never below 25")
+	assert_eq(ShowModel.decay_step(25.0), 25.0)
 	assert_eq(ShowModel.decay_step(10.0), 10.0, "below the floor: unchanged")
 	assert_eq(ShowModel.clamp_hype(120.0), 100.0)
 	assert_eq(ShowModel.clamp_hype(-5.0), 0.0)
-	assert_eq(ShowModel.HYPE_DECAY_TICKS, 150, "−1 per 5 s at 30 ticks/s")
+	assert_eq(ShowModel.HYPE_DECAY_TICKS, 60, "one cooling step per 2 s at 30 ticks/s")
+	assert_eq(ShowModel.HYPE_EXPLORE_FLOOR, 25.0)
+	var h: float = 85.0
+	for i in 15:                                          # 30 s of exploration
+		h = ShowModel.decay_step(h)
+	assert_between(h, 38.0, 45.0, "a hot fight end (85) loses most of its excess within 30 s of exploration")
+	for i in 15:                                          # another 30 s
+		h = ShowModel.decay_step(h)
+	assert_between(h, 25.0, 30.0, "and is back near the floor after a minute")
 
 
 # --- ShowRules: hype table §6.2 row by row ----------------------------------------------------------------------------
 
 func test_rules_battle_start_hype() -> void:
-	var cases: Array = [[false, BattleSetup.Advantage.NORMAL, 5.0], [false, BattleSetup.Advantage.PREEMPTIVE, 5.0],
-		[false, BattleSetup.Advantage.AMBUSH, 8.0], [true, BattleSetup.Advantage.PREEMPTIVE, 10.0],
-		[true, BattleSetup.Advantage.NORMAL, 10.0]]
+	var cases: Array = [[false, BattleSetup.Advantage.NORMAL, 3.0], [false, BattleSetup.Advantage.PREEMPTIVE, 3.0],
+		[false, BattleSetup.Advantage.AMBUSH, 5.0], [true, BattleSetup.Advantage.PREEMPTIVE, 8.0],
+		[true, BattleSetup.Advantage.NORMAL, 8.0]]
 	for c: Array in cases:
 		var r: ShowRules = ShowRules.new(Fx.data(), _setup(c[0], c[1]))
 		assert_eq(r.feed(_ev(ActionEvent.Type.BATTLE_START)).hype, c[2], "start hype %s" % str(c))
@@ -142,43 +153,43 @@ func test_rules_battle_start_hype() -> void:
 
 func test_rules_variety_repetition_and_boring() -> void:
 	var r: ShowRules = _rules()
-	assert_eq(r.feed(_act("p0", K.ATTACK)).hype, 3.0, "first party action: variety +3")
+	assert_eq(r.feed(_act("p0", K.ATTACK)).hype, 2.0, "first party action: variety +2")
 	assert_eq(r.feed(_end("p0")).hype, 0.0, "positive event in this turn → not boring")
 	assert_eq(r.feed(_act("p1", K.ATTACK)).hype, 0.0, "same key: no variety, 2nd in a row")
-	assert_eq(r.feed(_end("p1")).hype, -2.0, "turn without positive event → boring −2")
+	assert_eq(r.feed(_end("p1")).hype, -3.0, "turn without positive event → boring −3")
 	var third: ShowDelta = r.feed(_act("p0", K.ATTACK))
 	assert_eq(third.hype, -5.0, "3rd identical key in a row (whoever) → −5")
 	assert_has(third.reasons, &"boring_fight")
 	r.feed(_end("p0"))
 	assert_eq(r.feed(_act("p1", K.ATTACK)).hype, -5.0, "and every further time")
 	r.feed(_end("p1"))
-	assert_eq(r.feed(_act("p0", K.SKILL, "skl_kai_heavy_swing")).hype, 3.0, "new key → variety")
+	assert_eq(r.feed(_act("p0", K.SKILL, "skl_kai_heavy_swing")).hype, 2.0, "new key → variety")
 	r.feed(_end("p0"))
 	# window of the last 4 party keys: B C D E then A again → variety
 	var r2: ShowRules = _rules()
 	var keys: Array = [[K.ATTACK, ""], [K.SKILL, "skl_kai_heavy_swing"], [K.STUNT, "skl_stunt_kai_suplex"],
 		[K.FLEE, ""], [K.SKILL, "skl_mop_flame"]]
 	for k: Array in keys:
-		assert_eq(r2.feed(_act("p0", k[0], k[1])).hype, 3.0, "distinct key %s" % str(k))
+		assert_eq(r2.feed(_act("p0", k[0], k[1])).hype, 2.0, "distinct key %s" % str(k))
 		r2.feed(_end("p0"))
-	assert_eq(r2.feed(_act("p0", K.ATTACK)).hype, 3.0, "attack no longer among the last 4 keys")
+	assert_eq(r2.feed(_act("p0", K.ATTACK)).hype, 2.0, "attack no longer among the last 4 keys")
 	r2.feed(_end("p0"))
 	assert_eq(r2.feed(_act("p1", K.STUNT, "skl_stunt_kai_suplex")).hype, 0.0, "stunt among the last 4")
 
 
 func test_rules_skill_hype_defend_twice_and_drag() -> void:
 	var r: ShowRules = _rules()
-	assert_eq(r.feed(_act("p0", K.ITEM, "skl_item_megaphone", "itm_megaphone")).hype, 28.0, "variety +3, item hype +25")
+	assert_eq(r.feed(_act("p0", K.ITEM, "skl_item_megaphone", "itm_megaphone")).hype, 27.0, "variety +2, item hype +25")
 	r.feed(_end("p0"))
-	assert_eq(r.feed(_act("p0", K.DEFEND)).hype, 3.0)
+	assert_eq(r.feed(_act("p0", K.DEFEND)).hype, 2.0)
 	r.feed(_end("p0"))
-	assert_eq(r.feed(_act("p1", K.ATTACK)).hype, 3.0)
+	assert_eq(r.feed(_act("p1", K.ATTACK)).hype, 2.0)
 	r.feed(_end("p1"))
 	assert_eq(r.feed(_act("p0", K.DEFEND)).hype, -4.0, "defend twice in a row by the same character")
 	r.feed(_end("p0"))
 	assert_eq(r.feed(_act("p1", K.DEFEND)).hype, 0.0, "other character: no −4 (defend among last keys, run of 2)")
 	r.feed(_end("p1"))
-	# drag: every party turn after the 10th (boss: 25th) −3; keys cycle over 5 so variety +3 always applies
+	# drag: every party turn after the 10th (boss: 25th) −3; keys cycle over 5 so variety +2 always applies
 	var cycle: Array = [[K.ATTACK, "", ""], [K.STUNT, "skl_stunt_kai_suplex", ""], [K.FLEE, "", ""],
 		[K.SKILL, "skl_kai_heavy_swing", ""], [K.ITEM, "skl_item_bandage", "itm_bandage"]]
 	for boss: bool in [false, true]:
@@ -188,7 +199,7 @@ func test_rules_skill_hype_defend_twice_and_drag() -> void:
 			var c: Array = cycle[i % cycle.size()]
 			var d: ShowDelta = rr.feed(_act("p0", c[0], c[1], c[2]))
 			rr.feed(_end("p0"))
-			assert_eq(d.hype, 3.0 if i < limit else 0.0, "party action %d (boss %s)" % [i + 1, str(boss)])
+			assert_eq(d.hype, 2.0 if i < limit else -1.0, "party action %d (boss %s)" % [i + 1, str(boss)])
 
 
 func test_rules_crit_and_weakness() -> void:
@@ -196,52 +207,52 @@ func test_rules_crit_and_weakness() -> void:
 	r.feed(_act("p0", K.SKILL, "skl_mop_thunder"))
 	var d1: ShowDelta = r.feed(_ev(ActionEvent.Type.DAMAGE, {"actor_id": "p0", "target_id": "e0", "amount": 9,
 		"hp_after": 5, "max_hp": 24, "crit": true, "weak": true}))
-	assert_eq(d1.hype, 9.0, "crit +5, weak +4")
+	assert_eq(d1.hype, 5.0, "crit +3, weak +2")
 	assert_eq(d1.stats.get("crits_total", 0), 1)
 	assert_has(d1.reasons, &"crit")
 	assert_has(d1.reasons, &"weakness")
 	var d2: ShowDelta = r.feed(_ev(ActionEvent.Type.DAMAGE, {"actor_id": "p0", "target_id": "e1", "amount": 9,
 		"hp_after": 5, "max_hp": 24, "crit": true, "weak": true, "beat": 0}))
-	assert_eq(d2.hype, 5.0, "weakness at most once per action, crit per crit")
+	assert_eq(d2.hype, 3.0, "weakness at most once per action, crit per crit")
 	var d3: ShowDelta = r.feed(_ev(ActionEvent.Type.DAMAGE, {"actor_id": "e0", "target_id": "p0", "amount": 9,
 		"hp_after": 61, "max_hp": 70, "crit": true}))
 	assert_eq(d3.hype, 0.0, "enemy crits do not count")
 	r.feed(_end("p0"))
 	r.feed(_act("p1", K.ATTACK))
 	assert_eq(r.feed(_ev(ActionEvent.Type.DAMAGE, {"actor_id": "p1", "target_id": "e0", "amount": 3, "hp_after": 2,
-		"max_hp": 24, "weak": true})).hype, 4.0, "next action: weakness again")
+		"max_hp": 24, "weak": true})).hype, 2.0, "next action: weakness again")
 
 
 func test_rules_kills_overkill_streak() -> void:
 	var r: ShowRules = _rules()
 	r.feed(_act("p0", K.ATTACK))
 	var k1: ShowDelta = r.feed(_ko("e0", "enm_rat", "p0", "skl_attack_kai"))
-	assert_eq(k1.hype, 3.0, "attack kill +3")
+	assert_eq(k1.hype, 1.0, "attack kill +1")
 	assert_eq(k1.stats, {"kills_total": 1})
 	assert_eq(k1.triggers, [{"trigger": "enemy_killed",
 		"payload": {"enemy_id": "enm_rat", "overkill": false, "by": "attack", "member": "kai"}}])
 	r.feed(_end("p0"))
 	r.feed(_act("p1", K.SKILL, "skl_mop_flame"))
 	var k2: ShowDelta = r.feed(_ko("e1", "enm_rat", "p1", "skl_mop_flame"))
-	assert_eq(k2.hype, 6.0, "skill kill +6")
+	assert_eq(k2.hype, 2.0, "skill kill +2")
 	assert_eq(k2.stats, {"kills_total": 1, "kills_skill": 1})
 	assert_eq(k2.triggers[0]["payload"]["member"], "mopsula")
 	r.feed(_end("p1"))
 	r.feed(_act("p0", K.SKILL, "skl_kai_finisher"))
 	var k3: ShowDelta = r.feed(_ko("e2", "enm_boss", "p0", "skl_kai_finisher", true))
-	assert_eq(k3.hype, 30.0, "skill +6, kill_hype +10, overkill +8, kill streak +6 (3 kills in 3 party actions)")
+	assert_eq(k3.hype, 20.0, "skill +2, kill_hype +10, overkill +3, kill streak +5 (3 kills in 3 party actions)")
 	assert_has(k3.reasons, &"overkill")
 	assert_has(k3.reasons, &"kill_streak")
 	assert_eq(k3.triggers[0]["payload"]["overkill"], true)
 	r.feed(_end("p0"))
 	r.feed(_act("p1", K.ITEM, "skl_item_molotov", "itm_molotov"))
 	var k4: ShowDelta = r.feed(_ko("e3", "enm_rat", "p1", "skl_item_molotov"))
-	assert_eq(k4.hype, 3.0, "item kill counts like attack; streak window restarted")
+	assert_eq(k4.hype, 1.0, "item kill counts like attack; streak window restarted")
 	assert_eq(k4.triggers[0]["payload"]["by"], "item")
 	r.feed(_end("p1"))
 	r.feed(_act("p0", K.STUNT, "skl_stunt_kai_suplex"))
 	var k5: ShowDelta = r.feed(_ko("e4", "enm_rat", "p0", "skl_stunt_kai_suplex"))
-	assert_eq(k5.hype, 10.0, "stunt kill +10")
+	assert_eq(k5.hype, 4.0, "stunt kill +4")
 	assert_eq(k5.triggers[0]["payload"]["by"], "stunt")
 	r.feed(_end("p0"))
 	var k6: ShowDelta = r.feed(_ko("e5", "enm_rat", ""))
@@ -322,20 +333,20 @@ func test_rules_combo_and_stunts() -> void:
 	var r: ShowRules = _rules()
 	r.feed(_act("p1", K.SKILL, "skl_mop_flame"))
 	var c: ShowDelta = r.feed(_ev(ActionEvent.Type.COMBO, {"actor_id": "p1", "target_id": "e0", "def_id": "enm_rat"}))
-	assert_eq(c.hype, 5.0)
+	assert_eq(c.hype, 2.0)
 	assert_eq(c.triggers, [{"trigger": "combo", "payload": {"member": "mopsula", "enemy_id": "enm_rat"}}])
 	r.feed(_end("p1"))
 	r.feed(_act("p0", K.STUNT, "skl_stunt_kai_suplex"))
 	var ok: ShowDelta = r.feed(_ev(ActionEvent.Type.STUNT_RESULT, {"actor_id": "p0", "skill_id": "skl_stunt_kai_suplex",
 		"success": true}))
-	assert_eq(ok.hype, 20.0)
+	assert_eq(ok.hype, 12.0)
 	assert_eq(ok.stats, {"stunts_success": 1})
 	assert_eq(ok.triggers, [{"trigger": "stunt_resolved",
 		"payload": {"success": true, "member": "kai", "skill_id": "skl_stunt_kai_suplex"}}])
 	assert_has(ok.reasons, &"stunt_success")
 	var fail: ShowDelta = r.feed(_ev(ActionEvent.Type.STUNT_RESULT, {"actor_id": "p0",
 		"skill_id": "skl_stunt_kai_suplex", "success": false}))
-	assert_eq(fail.hype, 8.0, "even a failed stunt is good TV")
+	assert_eq(fail.hype, 4.0, "even a failed stunt is good TV")
 	assert_eq(fail.stats, {"stunts_fail": 1})
 	assert_eq(r.stunts_succeeded(), 1)
 
@@ -381,9 +392,9 @@ func test_rules_delta_keeps_positive_and_negative_parts() -> void:
 		var c: Array = cycle[i % cycle.size()]
 		d = r.feed(_act("p0", c[0], c[1], c[2]))
 		r.feed(_end("p0"))
-	assert_eq([d.hype, d.hype_gain, d.hype_loss], [0.0, 3.0, -3.0], "11th action: variety +3 and drag −3 kept apart")
+	assert_eq([d.hype, d.hype_gain, d.hype_loss], [-1.0, 2.0, -3.0], "11th action: variety +2 and drag −3 kept apart")
 	var start: ShowDelta = r.start_delta()
-	assert_eq([start.hype, start.hype_gain, start.hype_loss], [5.0, 5.0, 0.0], "battle start: gain only")
+	assert_eq([start.hype, start.hype_gain, start.hype_loss], [3.0, 3.0, 0.0], "battle start: gain only")
 	var k: ShowDelta = _rules().feed(_ev(ActionEvent.Type.FLEE_RESULT, {"actor_id": "p0", "success": true}))
 	assert_eq([k.hype, k.hype_gain, k.hype_loss], [-30.0, 0.0, -30.0])
 
@@ -396,7 +407,7 @@ func test_rules_end_delta() -> void:
 	res.min_party_hp_pct = 0.11
 	assert_eq(r.end_delta(res).hype, 0.0)
 	res.damage_taken = 0
-	assert_eq(r.end_delta(res).hype, 5.0, "flawless")
+	assert_eq(r.end_delta(res).hype, 3.0, "flawless")
 	res.outcome = BattleResult.Outcome.DEFEAT
 	assert_eq(r.end_delta(res).hype, 0.0, "only victories")
 	assert_eq(r.end_delta(null).hype, 0.0)
@@ -406,14 +417,15 @@ func test_rules_end_delta() -> void:
 # --- SponsorSystem ----------------------------------------------------------------------------------------------------
 
 func test_sponsor_thresholds_crossed() -> void:
-	assert_eq(SponsorSystem.crossed(45.0, 55.0, []), [50])
-	assert_eq(SponsorSystem.crossed(45.0, 100.0, []), [50, 75, 100], "several at once, ascending")
-	assert_eq(SponsorSystem.crossed(45.0, 100.0, [50]), [75, 100], "each threshold once per battle")
-	assert_eq(SponsorSystem.crossed(49.0, 50.0, []), [50], "reaching the value counts")
-	assert_eq(SponsorSystem.crossed(50.0, 60.0, []), [], "not from below")
-	assert_eq(SponsorSystem.crossed(80.0, 40.0, []), [], "downwards never")
-	assert_eq(SponsorSystem.THRESHOLDS, [50, 75, 100])
-	assert_eq([SponsorSystem.MAX_GIFTS_PER_BATTLE, SponsorSystem.MAX_GIFTS_PER_BOSS_BATTLE], [2, 3])
+	assert_eq(SponsorSystem.crossed(65.0, 75.0, []), [70])
+	assert_eq(SponsorSystem.crossed(65.0, 100.0, []), [70, 85, 100], "several at once, ascending")
+	assert_eq(SponsorSystem.crossed(65.0, 100.0, [70]), [85, 100], "each threshold once per battle")
+	assert_eq(SponsorSystem.crossed(69.0, 70.0, []), [70], "reaching the value counts")
+	assert_eq(SponsorSystem.crossed(70.0, 80.0, []), [], "not from below")
+	assert_eq(SponsorSystem.crossed(90.0, 40.0, []), [], "downwards never")
+	assert_eq(SponsorSystem.crossed(30.0, 69.0, []), [], "a routine fight (30 → 69) brings no sponsor")
+	assert_eq(SponsorSystem.THRESHOLDS, [70, 85, 100])
+	assert_eq([SponsorSystem.MAX_GIFTS_PER_BATTLE, SponsorSystem.MAX_GIFTS_PER_BOSS_BATTLE], [1, 2])
 	assert_eq([SponsorSystem.HYPE_COST, SponsorSystem.HYPE_AFTER_TOP], [0.0, 80.0])
 
 
@@ -542,7 +554,7 @@ func test_show_hype_gain_mult_scales_only_the_positive_parts_of_an_action() -> v
 		Show.on_battle_event(_end("p0"))
 	st.show.hype = 20.0
 	Show.on_battle_event(_act("p0", K.ATTACK))
-	assert_eq(Show.hype(), 21.0, "11th action: variety +3 × 1.2 = 3.6 → 4, drag −3 unscaled → +1 (not 0)")
+	assert_eq(Show.hype(), 19.0, "11th action: variety +2 × 1.2 = 2.4 → 2, drag −3 unscaled → −1")
 	Show.end_battle(_result(BattleResult.Outcome.FLED))
 	Show.begin_battle(_setup())
 	for i in 2:
@@ -613,43 +625,46 @@ func test_show_sponsor_gifts_thresholds_limit_and_reset() -> void:
 	Events.sponsor_gift_triggered.connect(cb)
 	Show.begin_battle(_setup())
 	assert_eq(Show.take_pending_gift(null), {}, "nothing due")
-	Show.add_hype(25.0)                                   # 30 → 55: crosses 50
+	Show.add_hype(30.0)                                   # 30 → 60: a routine fight crosses no threshold
+	assert_eq(Show.take_pending_gift(null), {}, "below 70: no sponsor")
+	Show.add_hype(15.0)                                   # 60 → 75: crosses 70
 	var g1: Dictionary = Show.take_pending_gift(null)
 	assert_eq(g1.get("kind", ""), "sponsor_buff")
 	assert_eq(g1.get("source", ""), "system")
 	assert_has(["spn_heal", "spn_mana", "spn_revive", "spn_slow"], str(g1.get("sponsor_id", "")), "floor-1 sponsor")
-	assert_eq(Show.take_pending_gift(null), {}, "threshold 50 only once")
+	assert_eq(Show.take_pending_gift(null), {}, "threshold 70 only once")
 	assert_eq(Game.state.show.stats.get("sponsor_gifts", 0), 1)
 	assert_true(Show.is_unlocked("ach_sponsor_first"), "trigger sponsor_gift")
 	assert_eq(Game.state.show.sponsor_uses.get(str(g1["sponsor_id"]), 0), 1)
-	Show.add_hype(20.0)                                   # 63 (+8 achievement) → 83: crosses 75
-	var g2: Dictionary = Show.take_pending_gift(null)
-	assert_false(g2.is_empty(), "second gift at 75")
-	Show.add_hype(30.0)                                   # → 100: limit 2 reached
+	assert_eq(Show.hype(), 80.0, "75 + 5 for ach_sponsor_first")
+	Show.add_hype(8.0)                                    # 80 → 88: crosses 85
+	assert_eq(Show.take_pending_gift(null), {}, "max. 1 gift per regular battle")
+	Show.add_hype(30.0)                                   # → 100: limit reached
 	assert_eq(Show.hype(), 80.0, "crossing 100 sets hype to 80 even without gift")
-	assert_eq(Show.take_pending_gift(null), {}, "max. 2 gifts per regular battle")
-	assert_eq(triggered.size(), 2)
+	assert_eq(Show.take_pending_gift(null), {})
+	assert_eq(triggered.size(), 1)
 	Events.sponsor_gift_triggered.disconnect(cb)
 	Show.end_battle(_result(BattleResult.Outcome.VICTORY))
 
 
-func test_show_boss_battle_three_gifts_and_multi_crossing() -> void:
+func test_show_boss_battle_two_gifts_and_multi_crossing() -> void:
 	_world(5)
 	Game.in_battle = true
 	Show.begin_battle(_setup(true))
-	Show.add_hype(70.0)                                   # 30 → 100: 50, 75, 100 at once
+	Show.add_hype(70.0)                                   # 30 → 100: 70, 85, 100 at once
+	assert_eq(Show.hype(), 80.0, "both boss slots go to 70 and 85: no slot for 100 → reset to 80 at once")
 	var ids: PackedStringArray = []
 	for i in 4:
 		var g: Dictionary = Show.take_pending_gift(null)
 		if g.is_empty():
 			break
 		ids.append(str(g["gift_id"]))
-	assert_eq(ids.size(), 3, "boss: max. 3 gifts, one per take")
-	assert_eq(Show.hype(), 80.0, "after the threshold-100 gift hype is 80")
+	assert_eq(ids.size(), 2, "boss: max. 2 gifts, one per take")
+	assert_eq(Show.hype(), 85.0, "80 + 5 for ach_sponsor_first (70 and 85 already fired this battle)")
 	assert_eq(ids.size(), Array(ids).filter(func(x: String) -> bool: return x.begins_with("g_sys_")).size(),
 		"system gift ids g_sys_<battle_n>_<k>")
 	Show.end_battle(_result(BattleResult.Outcome.VICTORY))
-	# regular battle crossing all three at once: 2 gifts, hype reset right away
+	# regular battle crossing all three at once: 1 gift, hype reset right away
 	Show.begin_battle(_setup(false))
 	Game.state.show.hype = 30.0
 	Show.add_hype(70.0)
@@ -657,7 +672,7 @@ func test_show_boss_battle_three_gifts_and_multi_crossing() -> void:
 	var n: int = 0
 	while not Show.take_pending_gift(null).is_empty() and n < 5:
 		n += 1
-	assert_eq(n, 2)
+	assert_eq(n, 1)
 	Show.end_battle(_result(BattleResult.Outcome.FLED))
 
 
@@ -669,7 +684,7 @@ func test_show_sponsor_choice_is_deterministic_per_seed() -> void:
 		Show.begin_battle(_setup(true))
 		Show.add_hype(70.0)
 		var picks: PackedStringArray = []
-		for i in 3:
+		for i in 2:
 			picks.append(str(Show.take_pending_gift(null).get("sponsor_id", "")))
 		runs.append(picks)
 		Fx.end_world(_prev_data)
@@ -725,7 +740,7 @@ func test_show_system_gift_is_not_recorded() -> void:
 	Game.run_log = spy
 	Game.in_battle = true
 	Show.begin_battle(_setup())
-	Show.add_hype(25.0)
+	Show.add_hype(45.0)                                   # 30 → 75: threshold 70
 	assert_false(Show.take_pending_gift(null).is_empty())
 	for e: Dictionary in spy.entries:
 		assert_ne(e["c"].get("t", ""), "gift", "system gifts are reproducible from the show rng")
@@ -739,17 +754,17 @@ func test_show_end_battle_followers_triggers_and_unlocks() -> void:
 	Events.battle_won.connect(cb)
 	Show.begin_battle(_setup())
 	Show.on_battle_event(_ev(ActionEvent.Type.BATTLE_START))
-	assert_eq(Show.hype(), 35.0, "battle start +5 through feed")
-	assert_eq(Show.viewers(), 1275)
+	assert_eq(Show.hype(), 33.0, "battle start +3 through feed")
+	assert_eq(Show.viewers(), 1225)
 	var gained: int = Show.end_battle(_result(BattleResult.Outcome.VICTORY))
-	assert_eq(gained, 21, "floori(1275 × (0.01 + 0.02 × 35 / 100))")
+	assert_eq(gained, 14, "floori(1225 × (0.007 + 0.014 × 33 / 100) = 14.23)")
 	assert_eq(Game.state.show.stats["battles_won"], 1)
 	assert_eq(won.size(), 1)
 	for key: String in DataValidator.TRIGGER_PAYLOAD_KEYS["battle_won"]:
 		assert_true(won[0].has(key), "battle_won payload key " + key)
 	assert_eq(won[0]["encounter_type"], "normal")
 	assert_has(Show.unlocked_this_battle(), "ach_first_win")
-	assert_eq(Show.followers(), 21 + 25, "battle followers + bronze achievement")
+	assert_eq(Show.followers(), 14 + 20, "battle followers + bronze achievement")
 	Events.battle_won.disconnect(cb)
 	# boss victory
 	var bosses: Array = []
@@ -792,7 +807,7 @@ func test_show_end_battle_resets_unserved_top_threshold() -> void:
 	assert_eq(at_won, [80.0], "crossing 100 still resets hype to 80 — before the follower conversion")
 	assert_eq(gained, ShowModel.followers_for_battle(ShowModel.viewers_for(1.0, 100.0, 0), 80.0, false, 1.0),
 		"peak at hype 100, hype_end 80")
-	assert_eq(Show.hype(), 88.0, "then +8 for ach_first_win")
+	assert_eq(Show.hype(), 85.0, "then +5 for ach_first_win")
 	assert_eq(Game.state.show.stats["hype_100_count"], 1)
 
 
@@ -804,15 +819,13 @@ func test_show_top_threshold_peak_and_followers_do_not_depend_on_gift_slots() ->
 	var expected: int = ShowModel.followers_for_battle(peak_100, 80.0, false, 1.0)
 	for at_end: bool in [false, true]:
 		for gifts_before: bool in [false, true]:
-			var label: String = "at_end %s, 2 gifts before %s" % [str(at_end), str(gifts_before)]
+			var label: String = "at_end %s, gift slot used before %s" % [str(at_end), str(gifts_before)]
 			_world()
 			Game.in_battle = true
 			Show.begin_battle(_setup())
 			if gifts_before:
-				Show.add_hype(25.0)                       # 30 → 55: gift at 50 (+8 hype / +25 followers achievement)
-				assert_false(Show.take_pending_gift(null).is_empty(), label)
-				Show.add_hype(20.0)                       # → 83: gift at 75 — both slots used
-				assert_false(Show.take_pending_gift(null).is_empty(), label)
+				Show.add_hype(45.0)                       # 30 → 75: gift at 70 (+5 hype / +20 followers achievement)
+				assert_false(Show.take_pending_gift(null).is_empty(), label)    # the only regular slot is used
 			Game.state.show.followers = 0
 			Game.state.show.hype = 90.0 if at_end else 95.0
 			var seen: Array = []
@@ -830,6 +843,7 @@ func test_show_top_threshold_peak_and_followers_do_not_depend_on_gift_slots() ->
 			assert_eq(Game.state.floor_run.stats["viewers_peak"], peak_100, label)
 			assert_eq(Game.state.show.stats["hype_100_count"], 1, label)
 			assert_eq(gained, expected, label + ": peak 2900, hype_end 80")
+			assert_eq(expected, 52, "floori(2900 × (0.007 + 0.014 × 0.8) = 52.78)")
 			Fx.end_world(_prev_data)
 			_prev_data = null
 
@@ -839,18 +853,17 @@ func test_show_top_threshold_peak_and_followers_do_not_depend_on_gift_slots() ->
 func test_show_external_gift_taking_the_reserved_top_slot_resets_hype_at_once() -> void:
 	_world()
 	Game.in_battle = true
-	Show.begin_battle(_setup(true))                       # boss: 3 gifts
-	Show.add_hype(25.0)                                   # 30 → 55: 50 (+8 achievement)
-	assert_false(Show.take_pending_gift(null).is_empty())
-	Show.add_hype(20.0)                                   # 63 → 83: 75
+	Show.begin_battle(_setup(true))                       # boss: 2 gifts
+	Show.add_hype(45.0)                                   # 30 → 75: 70 (+5 achievement)
 	assert_false(Show.take_pending_gift(null).is_empty())
 	var ext: Dictionary = _dev_gift(7)
 	assert_eq(Show.receive_gift(ext)["apply"], "queued")
-	Show.add_hype(30.0)                                   # → 100: the third slot is reserved for threshold 100
+	Game.state.show.hype = 95.0                           # above 85 without crossing it
+	Show.add_hype(5.0)                                    # → 100: the second slot is reserved for threshold 100
 	assert_eq(Show.hype(), 100.0, "reserved: hype stays at 100 until the gift")
 	assert_eq(Show.take_pending_gift(null).get("gift_id", ""), ext["gift_id"], "waiting external gift first")
 	assert_eq(Show.hype(), 80.0, "no slot left for threshold 100: reservation dropped, reset to 80 at once")
-	assert_eq(Show.take_pending_gift(null), {}, "max. 3 gifts")
+	assert_eq(Show.take_pending_gift(null), {}, "max. 2 gifts")
 	Show.end_battle(_result(BattleResult.Outcome.VICTORY))
 
 
@@ -905,11 +918,35 @@ func test_show_say_chat_priority_and_replay_silence() -> void:
 	Events.chat_posted.disconnect(cb_c)
 
 
+## Balancing regression (full-run bot): the purchase acknowledgement right after the lootbox lines and the descent line
+## right after an achievement line (ach_speedrun fires on floor_completed) were dropped by the priority window. The
+## ModAnnouncer.always_said tags still come — queued behind the fresh line — and do not refresh the window themselves.
+func test_show_always_said_lines_survive_the_priority_window() -> void:
+	_world()
+	var tags: Array = []
+	var cb: Callable = func(_text: String, _voice: StringName, tag: String, _blocking: bool) -> void:
+		tags.append(tag)
+	Events.mod_said.connect(cb)
+	for tag: String in ["vendor_buy", "safe_room_enter", "stairs_found", "floor_end"]:
+		assert_true(ModAnnouncer.always_said(tag), tag)
+	assert_false(ModAnnouncer.always_said("crit"))
+	assert_false(ModAnnouncer.always_said("achievement_generic"))
+	assert_ne(Show.say("achievement:ach_first_blood"), "", "priority 2 line")
+	assert_eq(Show.say("crit"), "", "a normal priority-0 line is still dropped")
+	assert_ne(Show.say("vendor_buy", {"item": "Bandage"}), "", "purchase acknowledgement despite the fresh line")
+	assert_ne(Show.say("floor_end"), "", "descent line despite the fresh line")
+	assert_eq(Show.say("level_up", {"level": 3}), "", "the always-said lines did not lower the window's priority")
+	assert_eq(tags, ["achievement:ach_first_blood", "vendor_buy", "floor_end"])
+	Show.set("_now", float(Show.get("_now")) + Show.PRIORITY_WINDOW_SEC + 1.0)
+	assert_ne(Show.say("crit"), "", "window over")
+	Events.mod_said.disconnect(cb)
+
+
 func test_show_explore_signal_reactions() -> void:
 	_world()
 	var st: GameState = Game.state
 	Events.chest_opened.emit("f1_c0", [])
-	assert_eq(Show.hype(), 33.0, "chest +3")
+	assert_eq(Show.hype(), 32.0, "chest +2")
 	assert_eq(st.show.stats["chests_opened"], 1)
 	assert_false(Show.is_unlocked("ach_chest_metal"), "f1_c0 is a wood chest")
 	Events.chest_opened.emit("f1_c1", [])
@@ -973,7 +1010,7 @@ func test_show_abort_battle_drops_the_battle_context() -> void:
 	Show.begin_battle(_setup())
 	var g: Dictionary = _dev_gift(7)
 	assert_eq(Show.receive_gift(g)["apply"], "queued")
-	Show.add_hype(30.0)                       # 30 → 60: threshold 50 open
+	Show.add_hype(45.0)                       # 30 → 75: threshold 70 open
 	Game.in_battle = false
 	var credits: int = Game.state.inventory.credits
 	var followers: int = Show.followers()

@@ -573,7 +573,7 @@ static func max_mp(m: PartyMember) -> int:
 static func exp_to_next(level: int) -> int:
 	var v: int = Progression.exp_to_next(level)
 	if v <= 0 and level < Balance.LEVEL_CAP:
-		v = floori(Balance.EXP_A * pow(float(level), Balance.EXP_B) + Balance.EXP_A)
+		v = floori(Balance.EXP_A * pow(float(level), Balance.EXP_B) + Balance.EXP_C)
 	return v
 
 

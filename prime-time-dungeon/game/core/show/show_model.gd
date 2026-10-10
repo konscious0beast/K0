@@ -6,12 +6,13 @@ class_name ShowModel extends RefCounted
 ## result is identical on every platform and never depends on the last ulp of a float product.
 
 const VIEWER_BASE: int = 1000
-const VIEWER_PER_FOLLOWER: float = 1.0
+const VIEWER_PER_FOLLOWER: float = 0.5
 const HYPE_START: float = 30.0
-const HYPE_EXPLORE_FLOOR: float = 15.0
-const HYPE_DECAY_TICKS: int = 150            # −1 hype per 5 s explore time (30 ticks/s)
-const FOLLOWER_CONV_BASE: float = 0.01
-const FOLLOWER_CONV_HYPE: float = 0.02
+const HYPE_EXPLORE_FLOOR: float = 25.0
+const HYPE_DECAY_TICKS: int = 60             # one cooling step per 2 s explore time (30 ticks/s)
+const HYPE_DECAY_PM: int = 100               # a step takes 10 % of the hype above the floor (per mille), at least 1
+const FOLLOWER_CONV_BASE: float = 0.007
+const FOLLOWER_CONV_HYPE: float = 0.014
 const FOLLOWER_BOSS_MULT: float = 2.0
 const FLEE_FOLLOWER_LOSS: float = 0.01
 
@@ -36,19 +37,23 @@ static func clamp_hype(h: float) -> float:
 	return clampf(h, 0.0, 100.0)
 
 
-## hype > 15 → maxf(15.0, hype − 1.0); else unchanged
+## Cooling toward the floor: hype > HYPE_EXPLORE_FLOOR → hype − maxi(1, (hype − floor) × HYPE_DECAY_PM / 1000)
+## (integer per mille on whole points, never below the floor); else unchanged.
 static func decay_step(hype: float) -> float:
 	if hype > HYPE_EXPLORE_FLOOR:
-		return maxf(HYPE_EXPLORE_FLOOR, hype - 1.0)
+		var excess: int = roundi(hype - HYPE_EXPLORE_FLOOR)
+		var drop: int = maxi(1, excess * HYPE_DECAY_PM / _PM)
+		return maxf(HYPE_EXPLORE_FLOOR, hype - float(drop))
 	return hype
 
 
-## floori(viewers_peak_battle × (0.01 + 0.02 × hype_end / 100.0) × (is_boss ? 2.0 : 1.0) × follower_mult)
+## floori(viewers_peak_battle × (FOLLOWER_CONV_BASE + FOLLOWER_CONV_HYPE × hype_end / 100.0) × (is_boss ? 2.0 : 1.0)
+## × follower_mult) — 0.007 + 0.014 × hype_end / 100 since the balancing (GDD §7.6/§13)
 static func followers_for_battle(viewers_peak_battle: int, hype_end: float, is_boss: bool, follower_mult: float) -> int:
 	if viewers_peak_battle <= 0:
 		return 0
 	var h_pm: int = roundi(clamp_hype(hype_end) * _PM)
-	# conversion rate in units of 1e-7: 0.01 → 100 000, 0.02 × h / 100 = 0.0002 × h → 2 × h_pm
+	# conversion rate in units of 1e-7: 0.007 → 70 000, 0.014 × h / 100 = 0.00014 × h → 1.4 × h_pm
 	var base_e7: int = roundi(FOLLOWER_CONV_BASE * 10_000_000.0)
 	var hype_e7: int = roundi(FOLLOWER_CONV_HYPE * 100_000.0) * h_pm / _PM
 	var boss_pm: int = roundi((FOLLOWER_BOSS_MULT if is_boss else 1.0) * _PM)

@@ -809,7 +809,7 @@
 				"lck": 20
 			},
 			"exp": 60,
-			"credits": 150,
+			"credits": 100,
 			"attack_skill": "skl_e_strike",
 			"ai": {
 				"type": "weighted",
@@ -887,17 +887,17 @@
 			"level": 6,
 			"boss": true,
 			"stats": {
-				"hp": 380,
+				"hp": 330,
 				"mp": 60,
-				"str": 23,
-				"mag": 14,
+				"str": 40,
+				"mag": 26,
 				"def": 14,
 				"res": 10,
 				"spd": 12,
 				"lck": 6
 			},
 			"exp": 180,
-			"credits": 200,
+			"credits": 150,
 			"attack_skill": "skl_e_strike",
 			"element_mods": {
 				"shock": 1.5,
@@ -1065,17 +1065,17 @@
 			"level": 8,
 			"boss": true,
 			"stats": {
-				"hp": 720,
+				"hp": 550,
 				"mp": 120,
-				"str": 26,
-				"mag": 20,
+				"str": 52,
+				"mag": 44,
 				"def": 18,
 				"res": 16,
 				"spd": 15,
 				"lck": 10
 			},
 			"exp": 420,
-			"credits": 500,
+			"credits": 300,
 			"attack_skill": "skl_e_strike",
 			"element_mods": {
 				"ice": 1.5,

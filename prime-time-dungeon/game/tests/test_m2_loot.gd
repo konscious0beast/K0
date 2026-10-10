@@ -112,8 +112,8 @@ func test_duplicate_equipment_becomes_credits() -> void:
 	var first: Array[LootReward] = LootRoller.roll_lootbox(d.lootbox("box_common2"), d, 3, st, make_rng(4))
 	assert_eq(first[0].to_dict(), {"kind": "item", "id": "itm_wpn_axe", "amount": 1, "rarity": "common",
 		"converted_from": "", "pity": false})
-	assert_eq(first[1].to_dict(), {"kind": "credits", "id": "", "amount": 360, "rarity": "common",
-		"converted_from": "itm_wpn_axe", "pity": false}, "earlier in this box → roundi(240 × 1.5)")
+	assert_eq(first[1].to_dict(), {"kind": "credits", "id": "", "amount": 120, "rarity": "common",
+		"converted_from": "itm_wpn_axe", "pity": false}, "earlier in this box → roundi(240 × 0.5)")
 	st.inventory.add("itm_wpn_axe")
 	var owned: Array[LootReward] = LootRoller.roll_lootbox(d.lootbox("box_common1"), d, 3, st, make_rng(4))
 	assert_eq(owned[0].converted_from, "itm_wpn_axe", "in the inventory")
@@ -149,7 +149,7 @@ func test_layout_chests() -> void:
 		var r: Array[LootReward] = LootRoller.roll_chest(wood, d, 1, _state(), make_rng(s))
 		assert_len(r, 2, "credits + 1 common roll")
 		assert_eq(r[0].kind, "credits")
-		assert_between(r[0].amount, 20, 40, "20–40 credits")
+		assert_between(r[0].amount, 10, 25, "10–25 credits")
 		assert_eq(r[1].rarity, "common")
 		assert_eq(_dicts(LootRoller.roll_chest(wood, d, 1, _state(), make_rng(s))), _dicts(r), "deterministic")
 	var metal: Dictionary = {"id": "f1_c1", "type": "metal", "contents": [{"kind": "item", "id": "itm_arm_vest",

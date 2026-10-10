@@ -1,8 +1,9 @@
 extends CanvasLayer
 ## ShowOverlay (02_TECH §1.6, §9.4 layer 40; 03_ART §9.2): the show IS the UI. LIVE badge, viewer counter, followers,
-## hype meter (markers 50/75/100), sponsor lower third, chat ticker, gift drop announcement, REC corners and the TV
-## scanline/vignette layer. Mode via Events.overlay_mode_requested: &"explore", &"battle", &"safe_room", &"menu"
-## (scanlines only), &"hidden", &"game_over" (scanlines only, M6-internal). Reads Show for numbers (never writes state).
+## hype meter (markers at SponsorSystem.THRESHOLDS), sponsor lower third, chat ticker, gift drop announcement, REC
+## corners and the TV scanline/vignette layer. Mode via Events.overlay_mode_requested: &"explore", &"battle",
+## &"safe_room", &"menu" (scanlines only), &"hidden", &"game_over" (scanlines only, M6-internal). Reads Show for numbers
+## (never writes state).
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const UiIcon := preload("res://scenes/ui/ui_icon.gd")
@@ -29,7 +30,7 @@ const KIND_NAMES: Dictionary = {"chest": "Sponsorkiste", "gold": "Credits-Gesche
 const TIER_NAMES: Dictionary = {"bronze": "Bronze", "silver": "Silber", "gold": "Gold"}
 
 
-## Hype meter 320×14: gradient magenta → gold, diamond markers at 50/75/100, gloss sweep on increase.
+## Hype meter 320×14: gradient magenta → gold, diamond markers at SponsorSystem.THRESHOLDS, gloss sweep on increase.
 class HypeBar extends Control:
 	const IconMeshB := preload("res://scenes/ui/icon_mesh.gd")
 	var value: float = 0.0
@@ -73,7 +74,8 @@ class HypeBar extends Control:
 				m.rect(Rect2(maxf(gx - 18.0, 0.0), 0, minf(36.0, w - maxf(gx - 18.0, 0.0)), size.y),
 					Color(1, 1, 1, 0.35 * (1.0 - gloss)))
 		m.rect_outline(r, Color(1, 1, 1, 0.25), 1.0)
-		for t: float in [50.0, 75.0, 100.0]:
+		for threshold: int in SponsorSystem.THRESHOLDS:
+			var t: float = float(threshold)
 			var x: float = size.x * t / 100.0
 			var reached: bool = shown >= t
 			var col: Color = Color("#ffc93c") if reached else Color("#f5f0e6", 0.7)

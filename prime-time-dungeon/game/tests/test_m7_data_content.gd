@@ -32,9 +32,9 @@ const ENEMY_TABLE: Dictionary = {
 	"enm_spruehgeist": [4, 44, 40, 8, 23, 18, 10, 15, 8, 36, 18, 5.0],
 	"enm_rolltreppenkrabbe": [5, 72, 0, 25, 4, 24, 8, 10, 4, 60, 20, 3.8],
 	"enm_rattengardist": [6, 78, 10, 27, 6, 17, 10, 14, 8, 66, 22, 5.0],
-	"enm_fahrscheinfresser": [4, 60, 0, 18, 18, 20, 20, 16, 20, 60, 150, 0.0],
-	"enm_boss_hausmeister": [6, 380, 60, 23, 14, 14, 10, 12, 6, 180, 200, 0.0],
-	"enm_boss_rattenkoenigin": [8, 720, 120, 26, 20, 18, 16, 15, 10, 420, 500, 0.0],
+	"enm_fahrscheinfresser": [4, 60, 0, 18, 18, 20, 20, 16, 20, 60, 100, 0.0],
+	"enm_boss_hausmeister": [6, 330, 60, 40, 26, 14, 10, 12, 6, 180, 150, 0.0],
+	"enm_boss_rattenkoenigin": [8, 550, 120, 52, 44, 18, 16, 15, 10, 420, 300, 0.0],
 }
 
 ## GDD §5.1 affinities: id → element_mods.
@@ -57,10 +57,10 @@ const AFFINITIES: Dictionary = {
 ## GDD §5.4: encounter → [EXP total, credits total].
 const ENCOUNTER_REWARDS: Dictionary = {
 	"enc_f1_a1_tutorial": [24, 12], "enc_f1_a2": [38, 17], "enc_f1_a3": [36, 19], "enc_f1_a4": [40, 16],
-	"enc_f1_a_rare": [60, 150], "enc_f1_b1": [44, 20], "enc_f1_b2": [50, 24], "enc_f1_b3": [50, 23],
+	"enc_f1_a_rare": [60, 100], "enc_f1_b1": [44, 20], "enc_f1_b2": [50, 24], "enc_f1_b3": [50, 23],
 	"enc_f1_b4": [66, 28], "enc_f1_c1": [68, 24], "enc_f1_c2": [66, 33], "enc_f1_c3": [82, 36],
-	"enc_f1_boss_hausmeister": [180, 200], "enc_f1_d1": [86, 32], "enc_f1_d2": [158, 56], "enc_f1_d3": [126, 42],
-	"enc_f1_boss_rattenkoenigin": [420, 500], "enc_f1_evt_pigeons": [28, 10], "enc_f1_evt_slime": [40, 16],
+	"enc_f1_boss_hausmeister": [180, 150], "enc_f1_d1": [86, 32], "enc_f1_d2": [158, 56], "enc_f1_d3": [126, 42],
+	"enc_f1_boss_rattenkoenigin": [420, 300], "enc_f1_evt_pigeons": [28, 10], "enc_f1_evt_slime": [40, 16],
 }
 
 ## GDD §6.1: consumable → [price, sell value, rarity, usable].
@@ -675,15 +675,15 @@ func test_lootboxes_match_gdd() -> void:
 		assert_eq(b.effective_mod_tag(), "lootbox_open_" + id.trim_prefix("box_"))
 	assert_eq(d.pity_limits(), {"rare": 4, "epic": 8})
 	var common: Dictionary = _pool_map(d.loot_pool(1, "common"))
-	assert_eq(common, {"credits:25": 30, "itm_bandage:2": 25, "itm_antidote:2": 15, "itm_energy_krawumm:1": 15,
+	assert_eq(common, {"credits:15": 30, "itm_bandage:2": 25, "itm_antidote:2": 15, "itm_energy_krawumm:1": 15,
 		"itm_ice_spray:1": 10, "itm_molotov:1": 10})
 	var rare: Dictionary = _pool_map(d.loot_pool(1, "rare"))
-	assert_eq(rare, {"itm_brutzel_burger:2": 20, "itm_smelling_salts:1": 20, "credits:120": 15,
+	assert_eq(rare, {"itm_brutzel_burger:2": 20, "itm_smelling_salts:1": 20, "credits:40": 15,
 		"itm_hype_megaphone:1": 10, "itm_smoke:1": 10, "itm_acc_lucky_ticket:1": 8, "itm_acc_rubber_boots:1": 8,
 		"itm_arm_safety_vest:1": 5, "itm_wpn_collar_studded:1": 5})
 	var epic: Dictionary = _pool_map(d.loot_pool(1, "epic"))
 	assert_eq(epic, {"itm_elixir:1": 25, "itm_wpn_fire_axe:1": 15, "itm_wpn_collar_signet:1": 15,
-		"itm_acc_sneakers:1": 15, "itm_arm_ermine:1": 10, "itm_wpn_rail_crowbar:1": 10, "credits:400": 10})
+		"itm_acc_sneakers:1": 15, "itm_arm_ermine:1": 10, "itm_wpn_rail_crowbar:1": 10, "credits:100": 10})
 	var fan: Dictionary = _pool_map(d.loot_pool(1, "fan"))
 	assert_eq(fan, {"itm_acc_clip_mic:1": 40, "itm_elixir:1": 30, "itm_hype_megaphone:2": 30})
 	# Lootboxes never contain key items (GDD §9: item/credits only, key items are not sellable/convertible).
@@ -722,8 +722,9 @@ func test_achievements_match_gdd() -> void:
 		"items_used": 0}, {}, {}))
 	assert_false(d.achievement("ach_hausmeister_no_items").expr.eval({"boss_id": "enm_boss_hausmeister",
 		"items_used": 1}, {}, {}))
-	assert_true(d.achievement("ach_speedrun").expr.eval({"floor": 1, "timer_left": 480}, {}, {}))
-	assert_false(d.achievement("ach_speedrun").expr.eval({"floor": 1, "timer_left": 479}, {}, {}))
+	assert_true(d.achievement("ach_speedrun").expr.eval({"floor": 1, "timer_left": 600}, {}, {}),
+		"10:00 left (GDD §13: a first run uses 11–15 min of the 20:00)")
+	assert_false(d.achievement("ach_speedrun").expr.eval({"floor": 1, "timer_left": 599}, {}, {}))
 	assert_true(d.achievement("ach_last_minute").expr.eval({"floor": 1, "timer_left": 59}, {}, {}))
 	assert_true(d.achievement("ach_level_5").expr.eval({"member": "kai", "level": 5}, {}, {}))
 	assert_false(d.achievement("ach_level_5").expr.eval({"member": "mopsula", "level": 5}, {}, {}))
@@ -750,11 +751,11 @@ func test_sponsors_match_gdd() -> void:
 		assert_ne(s.slogan, "", id)
 		assert_eq(s.mod_tag, "sponsor_gift")
 	assert_eq(d.sponsor("spn_gluckwasser").gift[0]["kind"], "heal_party_pct")
-	assert_eq(d.sponsor("spn_gluckwasser").gift[0]["value"], 35)
+	assert_eq(d.sponsor("spn_gluckwasser").gift[0]["value"], 25)
 	assert_eq([d.sponsor("spn_krawumm").gift[0]["status"], d.sponsor("spn_krawumm").gift[0]["turns"]], ["sts_haste", 3])
 	assert_eq(d.sponsor("spn_panzerkeks").gift[0]["status"], "sts_guard")
 	assert_eq([d.sponsor("spn_sorgenfrei").gift[0]["kind"], d.sponsor("spn_sorgenfrei").gift[0]["value"]],
-		["revive_or_heal_lowest", 50])
+		["revive_or_heal_lowest", 40])
 	assert_eq(d.sponsor("spn_novanet").gift[0]["value"], 40)
 	assert_len(d.sponsor("spn_brutzel").gift, 2)
 	assert_eq(d.sponsor("spn_brutzel").gift[0]["item"], "itm_brutzel_burger")
@@ -769,9 +770,9 @@ func test_milestones_match_gdd() -> void:
 	for m: MilestoneDef in d.all_milestones():
 		got.append([m.id, m.followers, m.reward_box, m.credits, m.item, m.title, m.min_floor])
 	assert_eq(got, [
-		["ms_100", 100, "box_bronze", 0, "", "", 1],
+		["ms_100", 100, "", 0, "itm_brutzel_burger", "", 1],
 		["ms_250", 250, "box_fan", 0, "", "", 1],
-		["ms_500", 500, "box_silver", 300, "", "", 1],
+		["ms_500", 500, "", 150, "", "", 1],
 		["ms_1000", 1000, "box_fan", 0, "itm_acc_fan_scarf", "", 1],
 		["ms_2000", 2000, "box_gold", 0, "", "", 1],
 		["ms_5000", 5000, "box_gold", 0, "", "Quotenkönig:in", 2],
@@ -795,7 +796,7 @@ func test_classes_prepared_for_floor_3() -> void:
 	var showrunner: ClassDef = d.class_def("cls_kai_showrunner")
 	assert_almost(float(showrunner.show_mods["stunt_success_add"]), 0.15)
 	assert_eq(int(showrunner.show_mods["stunt_cooldown"]), 2)
-	assert_eq(d.class_def("cls_mop_diva").show_mods["sponsor_thresholds"], [45, 70, 95])
+	assert_eq(d.class_def("cls_mop_diva").show_mods["sponsor_thresholds"], [65, 80, 95])
 
 
 func test_floor_2_stub() -> void:

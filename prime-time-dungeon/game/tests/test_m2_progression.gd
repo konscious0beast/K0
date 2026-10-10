@@ -22,17 +22,17 @@ func _stats_of(member: PartyMember) -> PackedInt32Array:
 # --- EXP / stats ------------------------------------------------------------------------------------------------------
 
 func test_exp_table_matches_formula_and_gdd() -> void:
-	var gdd: Array = [30, 63, 112, 173, 246, 330, 424, 529, 643]
+	var gdd: Array = [33, 73, 131, 205, 292, 393, 506, 632, 769]
 	for lv in range(1, 10):
 		assert_eq(Progression.exp_to_next(lv), gdd[lv - 1], "GDD §4.3 level %d" % lv)
 		assert_eq(Progression.exp_to_next(lv), floori(Balance.EXP_A * pow(lv, Balance.EXP_B) + Balance.EXP_C),
-			"table == floori(15 × L^1.7 + 15)")
+			"table == floori(18 × L^1.7 + 15)")
 	assert_eq(Progression.exp_to_next(Balance.LEVEL_CAP), 0, "cap")
 	assert_eq(Progression.exp_to_next(12), 0)
 	var total: int = 0
 	for lv in range(1, 10):
 		total += Progression.exp_to_next(lv)
-	assert_eq(total, 2550, "EXP total at level 10")
+	assert_eq(total, 3034, "EXP total at level 10")
 
 
 func test_base_stats_match_gdd_table() -> void:
@@ -71,20 +71,20 @@ func test_add_exp_levels_learning_and_cap() -> void:
 	var st: GameState = _state()
 	var kai: PartyMember = st.member("kai")
 	kai.hp = 10
-	var ups: Array[LevelUpInfo] = Progression.add_exp(kai, 30, d)
+	var ups: Array[LevelUpInfo] = Progression.add_exp(kai, 33, d)
 	assert_len(ups, 1)
 	assert_eq([kai.level, kai.exp], [2, 0])
 	assert_eq([ups[0].member_id, ups[0].old_level, ups[0].new_level], ["kai", 1, 2])
 	assert_eq(ups[0].stat_gains, {"hp": 9, "mp": 2, "str": 2, "mag": 0, "def": 1, "res": 0, "spd": 0, "lck": 0})
 	assert_eq(kai.hp, 19, "hp raised by the max delta, no full heal")
 	assert_eq(kai.mp, 14)
-	assert_eq(Progression.add_exp(kai, 62, d), [], "1 EXP short of level 3")
-	assert_eq([kai.level, kai.exp], [2, 62])
+	assert_eq(Progression.add_exp(kai, 72, d), [], "1 EXP short of level 3")
+	assert_eq([kai.level, kai.exp], [2, 72])
 	var up3: Array[LevelUpInfo] = Progression.add_exp(kai, 1, d)
 	assert_eq(up3[0].learned, ["skl_kai_finisher"], "learnset level 3")
 	assert_has(kai.skills, "skl_kai_finisher")
 	var mop: PartyMember = st.member("mopsula")
-	var multi: Array[LevelUpInfo] = Progression.add_exp(mop, 93 + 5, d)
+	var multi: Array[LevelUpInfo] = Progression.add_exp(mop, 106 + 5, d)
 	assert_len(multi, 1, "one info spanning several levels")
 	assert_eq([multi[0].old_level, multi[0].new_level, mop.exp], [1, 3, 5])
 	assert_eq(multi[0].learned, ["skl_mop_frost", "skl_mop_thunder"])
@@ -95,13 +95,13 @@ func test_add_exp_levels_learning_and_cap() -> void:
 	assert_eq(mop.exp, 0)
 	var ko: PartyMember = st.member("kai")
 	ko.hp = 0
-	Progression.add_exp(ko, 112, d)
+	Progression.add_exp(ko, 131, d)
 	assert_eq(ko.hp, 0, "a KO'd member stays KO")
 	kai.class_id = "cls_kai_test"
 	var fresh: GameState = _state()
 	fresh.member("kai").class_id = "cls_kai_test"
 	fresh.member("kai").skills = PackedStringArray()
-	assert_eq(Progression.add_exp(fresh.member("kai"), 30, d)[0].learned, ["skl_kai_finisher"], "class learnset")
+	assert_eq(Progression.add_exp(fresh.member("kai"), 33, d)[0].learned, ["skl_kai_finisher"], "class learnset")
 
 
 # --- equipment, healing, items ----------------------------------------------------------------------------------------
@@ -375,7 +375,7 @@ func test_bridge_apply_victory() -> void:
 	var mop: PartyMember = st.member("mopsula")
 	assert_eq(rw.revived, ["mopsula"], "KO → 1 HP after a victory")
 	assert_eq(mop.hp, 1)
-	assert_eq([kai.level, kai.exp, mop.level, mop.exp], [2, 10, 1, 20], "alive full EXP, KO'd floori(50 %)")
+	assert_eq([kai.level, kai.exp, mop.level, mop.exp], [2, 7, 1, 20], "alive full EXP, KO'd floori(50 %)")
 	assert_eq(kai.hp, 39, "30 + level-up delta 9")
 	assert_eq(rw.mp_regen, {"kai": 3}, "Werbepause: ceili(14 × 0.15) for the living only")
 	assert_eq([kai.mp, mop.mp], [10, 10], "5 + 2 (level) + 3 (regen); KO'd member gets no regen")

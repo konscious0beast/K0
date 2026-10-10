@@ -125,12 +125,12 @@ func test_sponsor_buffs_scaled() -> void:
 	kai.hp = 1
 	var g: Dictionary = Gift.make_dev("sponsor_buff", "spn_gluckwasser", 0)
 	assert_eq(GiftApplier.apply(st, data, g, _rng(1)).size(), 0, "heals are no rewards")
-	assert_eq(kai.hp, mini(max_hp, 1 + (max_hp * 35 + 50) / 100), "+35 % max HP")
+	assert_eq(kai.hp, mini(max_hp, 1 + (max_hp * 25 + 50) / 100), "+25 % max HP")
 	kai.hp = 1
 	g["load_half"] = 16
 	g["effect_pm"] = 454
 	GiftApplier.apply(st, data, g, _rng(1))
-	assert_eq(kai.hp, 1 + (max_hp * (35 * 454 / 1000) + 50) / 100, "value × effect_pm / 1000 = 15 %")
+	assert_eq(kai.hp, 1 + (max_hp * (25 * 454 / 1000) + 50) / 100, "value × effect_pm / 1000 = 11 %")
 	var st2: GameState = _state()
 	st2.party[0].hp = 1
 	var rewards: Array[LootReward] = GiftApplier.apply(st2, data, Gift.make_dev("sponsor_buff", "spn_brutzel", 0),
@@ -142,7 +142,7 @@ func test_sponsor_buffs_scaled() -> void:
 	st3.party[1].hp = 0
 	GiftApplier.apply(st3, data, Gift.make_dev("sponsor_buff", "spn_sorgenfrei", 0), _rng(1))
 	var mop_max: int = Progression.total_stats(st3.party[1], data).values[StatBlock.Stat.HP]
-	assert_eq(st3.party[1].hp, (mop_max * 50 + 50) / 100, "KO'd member revived with 50 %")
+	assert_eq(st3.party[1].hp, (mop_max * 40 + 50) / 100, "KO'd member revived with 40 %")
 	var st4: GameState = _state()
 	st4.party[0].mp = 0
 	GiftApplier.apply(st4, data, Gift.make_dev("sponsor_buff", "spn_novanet", 0), _rng(1))

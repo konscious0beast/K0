@@ -1015,8 +1015,8 @@ Hört auf `Events`: `chest_opened` (Hype +3, `chests_opened` +1, Trigger), `loot
 `explore_tick` (Trigger), `sponsor_gift_triggered` (`sponsor_gifts` +1, Trigger `sponsor_gift`).
 
 Achievement-Freischaltung (in `Show`): `Events.achievement_unlocked(id)`; `def.box` → `state.pending_lootboxes.append()` +
-`Events.lootbox_earned`; Follower = `def.followers` oder (−1) fest nach Box-Tier: bronze 25 / silver 50 / gold 100 (`add_followers`);
-Hype +8; `say("achievement:<id>")` mit Fallback `"achievement_generic"` und `ctx {"achievement": def.name}`;
+`Events.lootbox_earned`; Follower = `def.followers` oder (−1) fest nach Box-Tier: bronze 20 / silver 40 / gold 80 (`add_followers`);
+Hype +5; `say("achievement:<id>")` mit Fallback `"achievement_generic"` und `ctx {"achievement": def.name}`;
 `Events.toast_requested(def.name, &"achievement")`. Meilensteine (`add_followers` überschreitet `MilestoneDef.followers`):
 Box/Credits/Item/Titel gutschreiben (Titel-Flag `title_<id>` direkt in `Game.state.flags` — Reaktion, **nicht** über das
 aufzeichnende `Game.set_flag`), `state.show.milestones.append(id)`, `Events.milestone_reached`, `say("follower_milestone")`.
@@ -1468,14 +1468,14 @@ Pflicht-Skills: jeder Party-Member und jeder Gegner braucht `attack_skill` (Kate
 | `growth_add` | Dict<stat,float> | `{}` | 0..20 |
 | `passives` | Array[{id, params}] | `[]` | id `pas_`; `params` freies Dictionary (wird im Slice nicht ausgewertet) |
 | `learnset` | Array[{level, skill}] | `[]` | level 1..99; Skill-Referenz darf fehlen, wenn `min_floor > 1` (Warnung, kein Fehler) |
-| `show_mods` | {hype_gain_mult, stunt_success_add, stunt_cooldown, sponsor_thresholds} | `{1.0, 0.0, 3, [50, 75, 100]}` | |
+| `show_mods` | {hype_gain_mult, stunt_success_add, stunt_cooldown, sponsor_thresholds} | `{1.0, 0.0, 3, [70, 85, 100]}` | |
 
 ```json
 {"id": "cls_kai_wrecker", "name": "Abrissbirne", "for": ["kai"], "min_floor": 3,
  "stat_mult": {"hp": 1.10, "str": 1.15, "def": 1.10, "spd": 0.95}, "growth_add": {"hp": 3.0, "def": 0.5},
  "passives": [{"id": "pas_thick_skin", "params": {"taunt_turns_add": 1, "dmg_taken_mult_while_taunt": 0.9}}],
  "learnset": [{"level": 11, "skill": "skl_kai_wrecking_ball"}, {"level": 13, "skill": "skl_kai_concrete_boots"}],
- "show_mods": {"hype_gain_mult": 1.0, "stunt_success_add": 0.0, "stunt_cooldown": 3, "sponsor_thresholds": [50, 75, 100]}}
+ "show_mods": {"hype_gain_mult": 1.0, "stunt_success_add": 0.0, "stunt_cooldown": 3, "sponsor_thresholds": [70, 85, 100]}}
 ```
 
 #### 4.4.5 `party.json` → `PartyMemberDef` (+ Top-Level `start`)
@@ -1705,7 +1705,7 @@ gilt der höchste vorhandene ≤ Etage. `pity: {"rare": 4, "epic": 8}` (Boxen oh
    {"id": "box_silver", "name": "Silber-Box", "tier": 2, "color": "#c0c8d2", "rolls": 3, "rarity_weights": {"common": 55, "rare": 38, "epic": 7}, "guarantee": "rare"},
    {"id": "box_fan", "name": "Fan-Box", "tier": 4, "color": "#ff5fa2", "rolls": 2, "rarity_weights": {"common": 50, "rare": 40, "epic": 10}, "fixed_pool": "fan"}
  ],
- "pools": {"f1": {"common": [{"kind": "credits", "id": "", "amount": 25, "weight": 30}, {"kind": "item", "id": "itm_bandage", "amount": 2, "weight": 25}],
+ "pools": {"f1": {"common": [{"kind": "credits", "id": "", "amount": 15, "weight": 30}, {"kind": "item", "id": "itm_bandage", "amount": 2, "weight": 25}],
                   "rare": [{"kind": "item", "id": "itm_smelling_salts", "amount": 1, "weight": 20}],
                   "epic": [{"kind": "item", "id": "itm_wpn_rail_crowbar", "amount": 1, "weight": 10}],
                   "fan":  [{"kind": "item", "id": "itm_acc_clip_mic", "amount": 1, "weight": 40}]}},
@@ -1722,7 +1722,7 @@ gilt der höchste vorhandene ≤ Etage. `pity: {"rare": 4, "epic": 8}` (Boxen oh
 | `trigger` | String | ✓ | ∈ `ACH_TRIGGERS` |
 | `condition` | String | ✓ | Ausdruck (Grammatik unten), beim Laden geparst |
 | `box` | String | `""` | box id |
-| `followers` | int | −1 | −1 = nach Box-Tier (bronze 25 / silver 50 / gold 100, sonst 0) |
+| `followers` | int | −1 | −1 = nach Box-Tier (bronze 20 / silver 40 / gold 80, sonst 0) |
 | `hidden` | bool | false | |
 | `mod_tag` | String | `""` | `""` → `achievement:<id>` mit Fallback `achievement_generic` |
 
@@ -2543,7 +2543,7 @@ const POST_BATTLE_MP_REGEN: float = 0.15
 const TAUNT_CHANCE: float = 0.80
 const STUN_BOSS_MULT: float = 0.5
 const SUMMON_CTR_FRAC: float = 0.5
-const OVERKILL_MAXHP_FRAC: float = 0.5
+const OVERKILL_MAXHP_FRAC: float = 1.0      # Balancing 2026-10 (GDD §13): was 0.5 — overkill on ~every 2nd kill
 const OVERKILL_CREDIT_MULT: float = 1.25
 const DROP_LCK_DIV: float = 100.0
 const FLEE_BASE: float = 0.40
@@ -2555,7 +2555,7 @@ const FLEE_MAX: float = 0.95
 const STUNT_COOLDOWN: int = 3
 const STUNT_CHANCE_MIN: float = 0.05
 const LEVEL_CAP: int = 10
-const EXP_A: float = 15.0
+const EXP_A: float = 18.0                 # Balancing 2026-10 (GDD §4.3/§13): was 15 — full clears one level above plan
 const EXP_B: float = 1.7
 const EXP_C: float = 15.0
 const KO_REVIVE_HP: int = 1             # after VICTORY, KO'd members return with 1 HP
@@ -2605,20 +2605,22 @@ static func from_dict(d: Dictionary) -> ShowState
 
 class_name ShowModel extends RefCounted
 const VIEWER_BASE: int = 1000
-const VIEWER_PER_FOLLOWER: float = 1.0
+const VIEWER_PER_FOLLOWER: float = 0.5
 const HYPE_START: float = 30.0
-const HYPE_EXPLORE_FLOOR: float = 15.0
-const HYPE_DECAY_TICKS: int = 150            # −1 hype per 5 s explore time (30 ticks/s)
-const FOLLOWER_CONV_BASE: float = 0.01
-const FOLLOWER_CONV_HYPE: float = 0.02
+const HYPE_EXPLORE_FLOOR: float = 25.0
+const HYPE_DECAY_TICKS: int = 60             # one cooling step per 2 s explore time (30 ticks/s)
+const HYPE_DECAY_PM: int = 100               # a step takes 10 % of the hype above the floor (per mille), at least 1
+const FOLLOWER_CONV_BASE: float = 0.007
+const FOLLOWER_CONV_HYPE: float = 0.014
 const FOLLOWER_BOSS_MULT: float = 2.0
 const FLEE_FOLLOWER_LOSS: float = 0.01
 static func viewers_for(floor_mult: float, hype: float, followers: int) -> int
 	# roundi((VIEWER_BASE × floor_mult + followers × VIEWER_PER_FOLLOWER) × (0.4 + hype / 40.0))
 static func clamp_hype(h: float) -> float                       # 0..100
-static func decay_step(hype: float) -> float                    # hype > 15 → maxf(15.0, hype − 1.0); else unchanged
+static func decay_step(hype: float) -> float
+	# hype > 25 → maxf(25.0, hype − maxi(1, roundi(hype − 25) × HYPE_DECAY_PM / 1000)); else unchanged (integer per mille)
 static func followers_for_battle(viewers_peak_battle: int, hype_end: float, is_boss: bool, follower_mult: float) -> int
-	# floori(viewers_peak_battle × (0.01 + 0.02 × hype_end / 100.0) × (is_boss ? 2.0 : 1.0) × follower_mult)
+	# floori(viewers_peak_battle × (0.007 + 0.014 × hype_end / 100.0) × (is_boss ? 2.0 : 1.0) × follower_mult)
 static func followers_lost_on_flee(followers: int) -> int       # floori(followers × 0.01)
 
 class_name ShowDelta extends RefCounted
@@ -2639,9 +2641,9 @@ func _init(p_data: GameData, p_show: ShowState, p_flags: Dictionary) -> void
 func evaluate(trigger_id: String, payload: Dictionary) -> PackedStringArray   # newly unlocked ids (each id at most once ever)
 
 class_name SponsorSystem extends RefCounted
-const THRESHOLDS: PackedInt32Array = [50, 75, 100]
-const MAX_GIFTS_PER_BATTLE: int = 2
-const MAX_GIFTS_PER_BOSS_BATTLE: int = 3
+const THRESHOLDS: PackedInt32Array = [70, 85, 100]     # also the HUD hype-meter markers (show_overlay HypeBar)
+const MAX_GIFTS_PER_BATTLE: int = 1
+const MAX_GIFTS_PER_BOSS_BATTLE: int = 2
 const HYPE_COST: float = 0.0
 const HYPE_AFTER_TOP: float = 80.0                     # crossing 100 sets hype to 80
 static func crossed(prev_hype: float, new_hype: float, fired: PackedInt32Array) -> PackedInt32Array   # upward crossings not yet fired
@@ -2656,6 +2658,8 @@ func pick(tag: String, floor_index: int, hype: float, now_sec: float) -> ModLine
 	# fallback "a:b:c" → "a:b" → "a"; filters floor/hype range; never the same line twice in a row per tag;
 	# key cooldown 20 s per base tag except boss_*, death, timer_*, intro (null while cooling down)
 static func priority(tag: String) -> int        # death 5 > boss_* 4 > timer_* 3 > achievement* 2 > lootbox_* 1 > rest 0
+const ALWAYS_SAID_TAGS: PackedStringArray = ["vendor_buy", "safe_room_enter", "stairs_found", "floor_end"]
+static func always_said(tag: String) -> bool    # exempt from Show.say's priority window (queued, window unchanged; GDD §11.1)
 func format(line: ModLineDef, ctx: Dictionary) -> String   # text.format(ctx); missing keys stay visible
 	# Show always adds ctx name (player_name), floor, level (Kai), viewers, followers before format()
 
@@ -2690,7 +2694,7 @@ Lootbox-Ablauf `roll_lootbox` (GDD §9, deterministisch bei gleichem RNG + Zusta
    `i == 0` und `state.pity_rare ≥ pity.rare` → `rare` (`pity = true`); sonst bei `i == rolls − 1` und unerfüllter `guarantee` →
    Garantie-Rarität; sonst gewichtet aus `rarity_weights`. Dann gewichteter Eintrag aus `loot_pool(floor, rarity)`.
 3. Ausrüstung (`weapon`/`armor`/`accessory`), die schon besessen wird (Inventar, ausgerüstet oder früher in dieser Box) →
-   `kind = "credits"`, `amount = roundi(Verkaufswert × 1.5)`, `converted_from = item_id`.
+   `kind = "credits"`, `amount = roundi(Verkaufswert × 0.5)` (`DUPLICATE_CREDIT_MULT`), `converted_from = item_id`.
 4. Pity: Box enthielt `rare` oder besser → `pity_rare = 0`, sonst `+1`; enthielt `epic` → `pity_epic = 0`, sonst `+1`.
 
 ```gdscript
@@ -2788,7 +2792,7 @@ var stat_gains: Dictionary             # stat key → int
 var learned: PackedStringArray
 
 class_name Progression extends RefCounted
-static func exp_to_next(level: int) -> int                       # level >= Balance.LEVEL_CAP → 0; else floori(15.0 × pow(level, 1.7) + 15.0)
+static func exp_to_next(level: int) -> int                       # level >= Balance.LEVEL_CAP → 0; else floori(18.0 × pow(level, 1.7) + 15.0)
 static func base_stats_at(def: PartyMemberDef, level: int, class_def: ClassDef = null) -> StatBlock
 	# floori(base + (growth + growth_add) × (level − 1)) per stat (GDD §4.1)
 static func total_stats(member: PartyMember, data: GameData) -> StatBlock # + equipment stats, × class stat_mult
@@ -2851,36 +2855,40 @@ static func last_errors() -> PackedStringArray
 
 ### 6.2 Show-Zahlen (verbindlich, GDD §7; Konstanten in `show_model.gd` / `show_rules.gd` / `sponsor_system.gd`)
 
+Stand Balancing 2026-10 (GDD §13: Ursachen, Messung vorher/nachher, Bänder in `tests/test_m7_show_balance.gd`).
+
 Hype-Ereignisse im Kampf (`ShowRules`, nur Party-Aktionen außer markiert; positive Werte × `hype_gain_mult` in `Show.add_hype`):
 
 | Ereignis (ActionEvent) | Δ Hype | Stats / Trigger |
 |---|---|---|
-| `BATTLE_START`: normal / präventiv / Hinterhalt / Boss | +5 / +5 / +8 / +10 | (Show: `preemptives` +1) |
-| `ACTION_START`: `action_key` nicht unter den letzten 4 Party-Keys („Abwechslung“) | +3 | |
+| `BATTLE_START`: normal / präventiv / Hinterhalt / Boss | +3 / +3 / +5 / +8 | (Show: `preemptives` +1) |
+| `ACTION_START`: `action_key` nicht unter den letzten 4 Party-Keys („Abwechslung“) | +2 | |
 | `ACTION_START`: gleicher `action_key` zum 3. (und jedem weiteren) Mal in Folge, egal wer | −5 | Grund `boring_fight` |
 | `ACTION_START`: Skill/Item mit `hype` (z. B. `itm_hype_megaphone` +25) | `+skill.hype` | |
 | `ACTION_START`: Verteidigen 2× in Folge durch denselben Charakter | −4 | |
 | `ACTION_START`: jeder Party-Zug nach dem 10. (Boss: 25.) | −3 | |
-| `DAMAGE` durch Party: `crit` / `weak` (max. 1× pro Aktion) | +5 / +4 | `crits_total` +1; Grund `crit`/`weakness` |
-| `KO` Gegner durch Angriff oder Item / Skill / Stunt | +3 / +6 / +10 (+`kill_hype`) | `kills_total` +1; Skill: `kills_skill` +1; Trigger `enemy_killed` |
-| … Overkill (`value == 1`) | +8 | Grund `overkill` |
-| … Kill-Serie (3 Kills in 3 aufeinanderfolgenden Party-Aktionen) | +6 | Grund `kill_streak` |
-| `COMBO` | +5 | Trigger `combo` |
-| `STUNT_RESULT` Erfolg / Fehlschlag | +20 / +8 | `stunts_success` / `stunts_fail` +1; Trigger `stunt_resolved` |
+| `DAMAGE` durch Party: `crit` / `weak` (max. 1× pro Aktion) | +3 / +2 | `crits_total` +1; Grund `crit`/`weakness` |
+| `KO` Gegner durch Angriff oder Item / Skill / Stunt | +1 / +2 / +4 (+`kill_hype`) | `kills_total` +1; Skill: `kills_skill` +1; Trigger `enemy_killed` |
+| … Overkill (`value == 1`, `Balance.OVERKILL_MAXHP_FRAC` 1.0) | +3 | Grund `overkill` |
+| … Kill-Serie (3 Kills in 3 aufeinanderfolgenden Party-Aktionen) | +5 | Grund `kill_streak` |
+| `COMBO` | +2 | Trigger `combo` |
+| `STUNT_RESULT` Erfolg / Fehlschlag | +12 / +4 | `stunts_success` / `stunts_fail` +1; Trigger `stunt_resolved` |
 | `DAMAGE` auf Party: Mitglied fällt erstmals im Kampf unter 25 % HP | +6 | Grund `low_hp` |
 | `KO` Party-Mitglied | +10 | Mopsula: `ko_mopsula` +1; Trigger `party_ko`; Grund `mopsula_ko`/`kai_ko` |
 | `REVIVE` | +8 | Grund `revive` |
 | `FLEE_RESULT` Erfolg / Fehlschlag | −30 / −5 | Grund `flee`/`flee_fail` |
-| `TURN_END` Party ohne positives Ereignis seit `ACTION_START` („Langweilig“) | −2 | |
-| Kampfende (`end_delta`): knapp (`min_party_hp_pct ≤ 0.10`) / ohne Schaden (`damage_taken == 0`) | +15 / +5 | |
+| `TURN_END` Party ohne positives Ereignis seit `ACTION_START` („Langweilig“) | −3 | |
+| Kampfende (`end_delta`): knapp (`min_party_hp_pct ≤ 0.10`) / ohne Schaden (`damage_taken == 0`) | +15 / +3 | |
 
 `action_key`: `attack`, Skill-ID, Item-ID, `stunt`, `defend`.
 
-Erkundung (Show/RunSim): Truhe +3, Etagen-Event +5, Achievement +8, Timer-Warnung 5:00 / 1:00 +10 / +15 (einmalig);
-Zerfall −1 je 150 Ticks (5 s) Erkundungszeit, nie unter 15 (`ShowModel.decay_step`). Start jeder Etage: Hype = 30.
+Erkundung (Show/RunSim): Truhe +2, Etagen-Event +5, Achievement +5, Timer-Warnung 5:00 / 1:00 +10 / +15 (einmalig);
+Abkühlen je 60 Ticks (2 s) Erkundungszeit um 10 % des Abstands zu 25, mindestens 1, nie unter 25 (`ShowModel.decay_step`,
+Ganzzahl-Promille; RunSim ruft es wie bisher auf). Start jeder Etage: Hype = 30. Der proportionale Zerfall ist die
+Rückstellkraft, die der konstante (−1 / 5 s bis 15) nicht hatte: dort lag jede Kampfbilanz über dem Zerfall, Hype blieb bei 96–100.
 
-Sponsor-Schwellen (nur im Kampf): Steigt Hype aufwärts über 50, 75 oder 100 (jede Schwelle 1× pro Kampf) und sind weniger als
-2 (Boss 3) Geschenke vergeben, wird ein System-Geschenk fällig (`take_pending_gift`); nach Schwelle 100 wird Hype auf 80 gesetzt.
+Sponsor-Schwellen (nur im Kampf): Steigt Hype aufwärts über 70, 85 oder 100 (jede Schwelle 1× pro Kampf) und sind weniger als
+1 (Boss 2) Geschenke vergeben, wird ein System-Geschenk fällig (`take_pending_gift`); nach Schwelle 100 wird Hype auf 80 gesetzt.
 Ausgeliefert wird an der nächsten Zuggrenze; eine Schwelle, die erst der letzte Treffer des Kampfes überschreitet, bleibt ohne
 Geschenk (keine Zuggrenze mehr, §5.7 fragt nur bei laufendem Kampf) — `end_battle` verwirft offene Schwellen und setzt eine offene
 100er-Schwelle **vor** der Follower-Umrechnung auf 80 (Peak/Follower unabhängig von freien Geschenk-Slots). Hype wird in ganzen
@@ -2892,8 +2900,9 @@ Geschenke kosten **keinen** Hype und keine Ticks. Auswahl `SponsorSystem.pick` m
 Zuschauer: `ShowModel.viewers_for(floor.floor_mult, hype, followers)` (rauschfrei, deterministisch); Anzeige glättet und rauscht (§3.5).
 `viewers_peak_battle` = Maximum des rauschfreien Werts während des Kampfes.
 Follower nach Sieg: `ShowModel.followers_for_battle(viewers_peak_battle, hype_end, is_boss, follower_mult)`;
-Flucht: `−followers_lost_on_flee(followers)`; Niederlage: 0. Achievements: bronze 25 / silver 50 / gold 100; Events laut §7.4.
-Kontrolle (GDD §13): Hype 100, 1 500 Follower → `(1000 + 1500) × 2.9 = 7 250` Zuschauer → `ach_viewers_5000` ist erreichbar.
+Flucht: `−followers_lost_on_flee(followers)`; Niederlage: 0. Achievements: bronze 20 / silver 40 / gold 80; Events laut §7.4.
+Kontrolle (GDD §13): Hype 100, 1 500 Follower → `(1000 + 0.5 × 1500) × 2.9 = 5 075` Zuschauer → `ach_viewers_5000` nur mit
+Top-Kampf am Etagenende; Ziel-Peak der Etage 3 000–5 500.
 
 ### 6.3 `StatIds` (Achievement-Zähler) und Trigger-Payloads
 
@@ -3921,12 +3930,13 @@ Interaktionen. `TitleFlow.parse_args` liefert zusätzlich `"autoplay_mode": "" |
 Modi = `smoke`, der Lauf oben bleibt unverändert). Boot bei `--autoplay=full`: wie oben, aber `Engine.time_scale =
 FullRun.TIME_SCALE` (5.0) und **echte** Spielstände in `user://fullrun_saves` (`Save.save_dir`, `read_only = false`, vor und
 nach dem Lauf geleert); Knoten `FullRun` statt `Autoplay`. Weitere User-Argumente: `--seed=<int>` (Default 4242),
-`--strategy=thorough|rush|dawdle`.
+`--strategy=thorough|rush|dawdle|typical`, `--pace=fast|human` (Default `fast`).
 
-`tools/fullrun.sh [--strategy=…|all] [--seed=…] [--log-dir=…]`: isolierte Kopie, Import, dann
+`tools/fullrun.sh [--strategy=…|all] [--seed=…] [--pace=…] [--log-dir=…]`: isolierte Kopie, Import, dann
 `godot --headless --fixed-fps 60 --quit-after 95000 -- --autoplay=full --strategy=<s>` (feste 60 Frames/s Spielzeit-Takt, nicht an
-die Wanduhr gebunden → deterministisch und so schnell, wie die CPU kann; gemessen thorough ≈ 18 s, rush ≈ 14 s, dawdle ≈ 48 s
-Wanduhr). Bestanden = Exit 0, Zeile `FULLRUN: OK …`, keine `ERR_RE`-Zeile (wie `check.sh`). CI: eigener Schritt `--strategy=all`
+die Wanduhr gebunden → reproduzierbar bis auf wenige Frames Jitter zwischen zwei Läufen, der selten einen Kampf anders
+ausgehen lässt (GDD §13), und so schnell, wie die CPU kann; gemessen thorough ≈ 18 s, rush ≈ 21 s (verliert seit dem
+Balancing einen Boss und spielt dann `thorough` weiter), dawdle ≈ 46 s Wanduhr). Bestanden = Exit 0, Zeile `FULLRUN: OK …`, keine `ERR_RE`-Zeile (wie `check.sh`). CI: eigener Schritt `--strategy=all`
 (§12.4).
 
 Ablauf (Planer statt Schritt-Tabelle): Titel → `request_new_game(1, "Kai", false, seed)` (Intro läuft) → Tutorial `f1_g0` →
@@ -3959,14 +3969,25 @@ Safe Rooms (Erstbesuch), unbesuchte Räume, Streuner ≤ 2 Räume entfernt (max.
   `boss_intro:enm_boss_hausmeister`, `stairs_found`, `floor_end`.
 - **Strategien:** `thorough` (Default, alles); `rush` (nur Safe Rooms, Tore, Bosse — unterlevelt); `dawdle` (nach dem ersten
   Speichern stehen bleiben bis zum Etagenkollaps: Warnungen 600/300/60 genau 1× in dieser Reihenfolge, `floor_timer_expired` 1×,
-  Sendeschluss mit Grund `timer`). Nach jedem Game Over: „Letzten Spielstand laden“ (Restzeit ≥ 180 s geprüft) und weiter mit
-  `thorough`; mehr als 3 Game Over = Fehler. Eine verlorene Schlacht erreicht der Bot nie (Auto-Kampf gewinnt jede, auch
-  unterlevelt); diesen Weg (Niederlage → Sendeschluss „defeat“ → `game_overs` +1 im Slot → „Letzten Spielstand laden“ →
-  Erkundung) prüft `test_m6_fullrun.test_lost_battle_game_over_and_load_last` mit den echten Screens.
+  Sendeschluss mit Grund `timer`); `typical` (wie `thorough`, aber ohne die Nebengruppen a4/b3/c2 und ohne Streuner-Jagd —
+  der Erstspieler der GDD-§13-Ziele; Streifen erwischen ihn trotzdem). Nach jedem Game Over: „Letzten Spielstand laden“
+  (Restzeit ≥ 180 s geprüft) und weiter mit `thorough` (`typical` bleibt `typical`); mehr als 3 Game Over = Fehler. Seit dem
+  Balancing (GDD §13) verliert der Auto-Kampf Bosse auf Ziel-Level gewollt (~20 % / ~35 %): nach einer Boss-Niederlage, die
+  wiederholt wird (Hausmeister; die Königin hat 1 Versuch), grindet der Bot erst 2 Streuner-Kämpfe (wartet bis 100 s
+  Countdown auf einen Spawn) — gleicher Spielstand und gleiche Befehle ergäben sonst dieselbe Niederlage (deterministische
+  Seeds). Den Weg Niederlage → Sendeschluss „defeat“ → `game_overs` +1 im Slot → „Letzten Spielstand laden“ → Erkundung prüft
+  zusätzlich `test_m6_fullrun.test_lost_battle_game_over_and_load_last` mit den echten Screens.
+- **Takt (`--pace`):** `fast` (Default) wartet nie — Untergrenze der Etagenzeit. `human` ist ein Modell eines aufmerksamen
+  Erstspielers, der die Tür-zu-Tür-Wege des Bots läuft (keine Sackgassen, kein Kartenblättern): beim ersten Betreten eines
+  Raums 8 s Umsehen/Ablaufen, vor jedem Ziel 3 s Entscheiden, an jeder Tür 1 s Ausrichten, die letzten 7 m zu einer Gruppe
+  schleichen (Präventivschlag), jede nicht blockierende M.O.D.-Zeile in der Erkundung lesen (1 s + Zeichen / 18 je s) — alles
+  mit laufendem Countdown (`HUMAN_*`-Konstanten in `fullrun.gd`). Gemessen (GDD §13): `human` ≈ 2,5× `fast` (thorough 11:11 statt 4:31).
 
-Ausgabe: je Ereignis `FULLRUN: [<frame>] …`, am Ende `FULLRUN: stats {json}` (GDD-§13-Kennzahlen: Etagenzeit, Kämpfe, Party-Züge,
-HP-Verlust, Level an den Bossen, Credits, Boxen, Achievements, Follower, Zuschauer-Peak, Teleports, Fallbacks, Replay-Prüfungen,
-M.O.D.-Tags) und `FULLRUN: OK floor_time=<s> battles=<n> level=<kai>/<mopsula> deaths=<n> frames=<n>`, `quit(0)`.
+Ausgabe: je Ereignis `FULLRUN: [<frame>] …` (Kämpfe mit Hype Start → Ende, Peak und Geschenken), am Ende `FULLRUN: stats {json}`
+(GDD-§13-Kennzahlen: Etagenzeit, Takt + Wartezeit, Kämpfe, Party-Züge, HP-Verlust, Level/EXP/Ausrüstung/Items an den Bossen,
+Boss-Ausgänge je Versuch, Credits gesamt / bis zur Königin / nach Quelle / aus Lootboxen, Boxen je Typ, Achievements (IDs),
+Meilensteine, Follower gesamt / aus Kämpfen / aus Achievements, Zuschauer-Peak, Sponsor-Geschenke regulär/Boss, Hype-Mediane
+Kampfstart/-ende/-peak, Teleports, Fallbacks, Replay-Prüfungen, M.O.D.-Tags) und `FULLRUN: OK floor_time=<s> battles=<n> level=<kai>/<mopsula> deaths=<n> frames=<n>`, `quit(0)`.
 
 ### 11.5 Was jedes Modul testen muss (Minimum)
 
@@ -3974,12 +3995,12 @@ M.O.D.-Tags) und `FULLRUN: OK floor_time=<s> battles=<n> level=<kai>/<mopsula> d
 |---|---|
 | M0 | Harness-Selbsttest (inkl. `_deep_eq`-Fälle, `await_signal`-Timeout, Methoden-Deduplizierung, Runner wertet SCRIPT ERROR als FAIL); `GameData` lädt `tests/fixtures/data_min` fehlerfrei; ≥ 1 Negativtest je Validierungsregel 1–10; Defs read-only; compile-all; SeedUtil-Golden-Values; Musik-Loop (§3.8); `ConditionExpr`; Router mit leerem Stack/`adopt` über den Fixture-Screen (echte Ziel-Screens von M5/M6 nur, solange deren Skript noch der M0-Stub ist — danach `skip`, Abdeckung durch Autoplay/Integration; Screens müssen beliebige `setup(params)` also nicht für M0-Tests vertragen); Game: Command-IDs, Dialog-Pause, Quest-Metriken, Replay ≡ Live (Integration, ab Phase C) |
 | M1 | `base_delay`-Tabelle §5.5; Startwerte NORMAL/PREEMPTIVE/AMBUSH; Preview 12 inkl. `pending_rank`, Overrides, Pseudo-Einheit; Haste 0.6/Slow 1.5; jede Formel aus §5.9 mit festen Zahlen (inkl. Combo, Fixschaden, Heilmodi, Krit-Cap); Status (Gift am Zugbeginn, Stun-Verzögerung + Boss × 0.5, Resist, Reapply setzt Dauer); Flucht-/Stunt-Chancen; Cooldown 3; AI-Bedingungen/Zielregeln/Taunt 80 %; Phasen-Ops; `steal_credits`/`escape`; `BattleCommand`/`ActionEvent` `to_dict`↔`from_dict`; gleicher Seed + gleiche Befehle → identische `to_dict()`-Liste; 100 Seeds Auto-vs-Auto terminiert < 200 Züge; Event-Reihenfolge (§5.3) |
-| M2 | Hype-Tabelle §6.2 Zeile für Zeile; Sponsor-Schwellen 50/75/100, Limits 2/3, Hype → 80, `weight_mods`; Achievement-Bedingungen mit allen Triggern (Payloads §6.3) + Tier-Belohnung; Meilensteine; Lootbox: Rarität→Pool, Garantie letzter Wurf, Pity 4/8 persistent, Duplikat → Credits × 1.5; EXP-Tabelle GDD §4.3 (30/63/112/173/246/330/424/529/643, Cap 10); Equip/Unequip; BattleBridge (MP-Regen 15 %, KO → 1 HP, Pep-Talk, Timer-Start nach Tutorial); Save-Roundtrip (encode→decode→encode identisch), Gnadenfrist 180 s, v0-Migration-Stub, kaputte Datei → `.bak` |
+| M2 | Hype-Tabelle §6.2 Zeile für Zeile; Abkühlen (proportional, Boden 25); Sponsor-Schwellen 70/85/100, Limits 1/2, Hype → 80, `weight_mods`; Prioritätsfenster inkl. `ALWAYS_SAID_TAGS`; Achievement-Bedingungen mit allen Triggern (Payloads §6.3) + Tier-Belohnung; Meilensteine; Lootbox: Rarität→Pool, Garantie letzter Wurf, Pity 4/8 persistent, Duplikat → Credits × 0.5; EXP-Tabelle GDD §4.3 (33/73/131/205/292/393/506/632/769, Cap 10); Equip/Unequip; BattleBridge (MP-Regen 15 %, KO → 1 HP, Pep-Talk, Timer-Start nach Tutorial); Save-Roundtrip (encode→decode→encode identisch), Gnadenfrist 180 s, v0-Migration-Stub, kaputte Datei → `.bak` |
 | M3 | `floor_1`-Layout valide + deterministisch; prozedural 200 Seeds §7.2; `FloorEvent` alle Typen; Szene: Spawn ≠ in Wand, `force_encounter` → `Events.encounter_triggered` per Signal-Spion (startet keinen echten Kampf) **oder** mit `Router.adopt(scene)` → danach `Router.current is BattleScene` (per `wait_until`) |
 | M4 | Jede Base × Prop baut; Tri-Budgets §12.1; Rigs nur über `add_to_tree()`; `play_and_wait` jeder One-Shot-Anim endet, `impact` feuert genau 1× bei attack/cast/stunt/item; außerhalb des Baums sofortiges Ende; `build_room` für alle 16 Türmasken; `build_safe_room` alle 3 Themes; Log ohne „different indices“ |
 | M5 | Battle-Szene headless mit `auto_battle` bis `BATTLE_END` (time_scale 8, speed 4); HUD-Werte = letzte `hp_after`; CTB-Leiste 12/10 Einträge |
 | M6 | Jede UI-Szene instanziierbar + Default-Fokus; `PauseMenu.process_mode == PROCESS_MODE_WHEN_PAUSED` (und alle Untermenüs); Touch-Trefferflächen ≥ 88; SafeAreaContainer-Ränder ≥ 24; `name_entry` `max_length == 12`; Full-Run-Bot: Helfer/Planer/Story-Beats (`test_m6_fullrun`) + ganzer Lauf über `tools/fullrun.sh` (CI, §11.4.1) |
-| M7 | `real_data()` valide; Mindestmengen laut GDD; jede Etage-1-Encounter per Auto-Kampf (50 Seeds) ≥ 80 % Siegquote mit dem Level/der Ausrüstung, die der GDD-Fortschritt dort erwartet (§5.4/§13): Zone A Lv 2 (Tutorial Lv 1), Zone B Lv 3 (Startausrüstung), Zone C Lv 4 + mittlere Ausrüstung, Hausmeister Lv 5, Zone D Lv 6 + späte Ausrüstung, Königin Lv 7; Party-Züge je Sieg: Median aller regulären Encounter 4–6, je Encounter 3–7, Hausmeister 16–22, Königin 20–26 (GDD §13) |
+| M7 | `real_data()` valide; Mindestmengen laut GDD; jede reguläre Etage-1-Encounter per Auto-Kampf (50 Seeds) ≥ 80 % Siegquote mit dem Level/der Ausrüstung, die der GDD-Fortschritt dort erwartet (§5.4/§13): Zone A Lv 2 (Tutorial Lv 1), Zone B Lv 3 (Startausrüstung), Zone C Lv 4 + mittlere Ausrüstung, Hausmeister Lv 5, Zone D Lv 6 + späte Ausrüstung, Königin Lv 7; Bosse ohne Geschenke ≥ 50 %; Party-Züge je Sieg: Median aller regulären Encounter 4–6, je Encounter 3–7, Hausmeister 16–22, Königin 20–26 (GDD §13). **Show-Bilanz** (`test_m7_show_balance.gd`, echtes `Show` im Kampf-Loop, Geschenke wie im `BattleController`): Etage 1 als Staffel (Kämpfe in Kartenreihenfolge auf Plan-Level, Abkühlen im Bot-Takt `--pace=human`, Truhen/Events/Level-ups/Lootboxen über `Events`) → Follower, Zuschauer-Peak, Sponsor-Geschenke, Achievements, Lootboxen, Hype am Kampfanfang/-ende in den GDD-§13-Bändern; Boss-Niederlagequote auf Ziel-Level mit Geschenken (100 Seeds; Hype beim Kampfstart = Abkühl-Boden 25, Ausrüstung/Items wie vom Bot vor den Bossen gemessen): Hausmeister 10–30 %, Königin 25–45 % (GDD ~20 / ~35 %) |
 | M8 | 05_LIVE_MODUS §11.4; zusätzlich `RunSim.step(1) × n ≡ step(n)` und Timer/Hype-Zerfall in Ticks |
 
 ---

@@ -56,6 +56,10 @@ func test_arguments_select_the_full_run_and_keep_settings_ephemeral() -> void:
 	assert_eq(FullRun.strategy_from_args(PackedStringArray(["--strategy=rush"])), "rush")
 	assert_eq(FullRun.strategy_from_args(PackedStringArray(["--strategy=dawdle"])), "dawdle")
 	assert_eq(FullRun.strategy_from_args(PackedStringArray(["--strategy=nope"])), "thorough")
+	assert_eq(FullRun.strategy_from_args(PackedStringArray(["--strategy=typical"])), "typical")
+	assert_eq(FullRun.pace_from_args(PackedStringArray()), "fast")
+	assert_eq(FullRun.pace_from_args(PackedStringArray(["--strategy=rush", "--pace=human"])), "human")
+	assert_eq(FullRun.pace_from_args(PackedStringArray(["--pace=slow"])), "fast", "unknown pace → fast")
 
 
 func test_find_path_follows_open_doors_gates_and_blocks() -> void:
@@ -157,6 +161,18 @@ func test_planner_on_floor_1() -> void:
 	var rush: Array[Dictionary] = bot.call("candidates", ex.get_layout(), Game.state.floor_run, {})
 	for c: Dictionary in rush:
 		assert_true(str(c["kind"]) == "safe" or str(c["kind"]) == "gate", "rush: only safe rooms and gates")
+	bot.set("strategy", "typical")
+	var groups: PackedStringArray = []
+	var typical: Array[Dictionary] = bot.call("candidates", ex.get_layout(), Game.state.floor_run, {})
+	for c: Dictionary in typical:
+		if str(c["kind"]) == "group":
+			groups.append(str(c["id"]))
+	assert_len(groups, 11, "typical: 12 of the 15 regular groups (the tutorial is already defeated)")
+	for gid: String in FullRun.TYPICAL_SKIP:
+		assert_false(groups.has(gid), "typical leaves %s alone" % gid)
+	bot.set("grind_fights", 2)
+	var wait: Dictionary = bot.call("next_objective")
+	assert_eq(str(wait["kind"]), "wait", "grinding after a boss defeat without a living stray: wait for one")
 
 
 func test_story_beats_check() -> void:
@@ -192,13 +208,18 @@ func test_report_lines() -> void:
 			"hp_loss_pct": 40},
 		{"enc": "enc_f1_b1", "group": "f1_s0", "outcome": "victory", "boss": false, "party_turns": 4, "turns": 6,
 			"hp_loss_pct": 10},
+		{"enc": "enc_f1_boss_hausmeister", "group": "f1_qb", "outcome": "defeat", "boss": true, "party_turns": 9,
+			"turns": 14, "hp_loss_pct": 100, "gifts": 1},
 		{"enc": "enc_f1_boss_hausmeister", "group": "f1_qb", "outcome": "victory", "boss": true, "party_turns": 18,
-			"turns": 28, "hp_loss_pct": 90},
+			"turns": 28, "hp_loss_pct": 90, "gifts": 2},
 	]
+	b[1]["hype_start"] = 30
+	b[1]["hype_end"] = 52
+	b[1]["gifts"] = 1
 	bot.set("battles", b)
 	bot.set("deaths", 1)
 	var line: String = bot.call("ok_line")
-	assert_true(line.begins_with("FULLRUN: OK floor_time=240 battles=4 level=1/1 deaths=1 frames="), line)
+	assert_true(line.begins_with("FULLRUN: OK floor_time=240 battles=5 level=1/1 deaths=1 frames="), line)
 	var st: Dictionary = bot.call("stats")
 	assert_eq(int(st["regular_battles"]), 2, "tutorial and bosses are no regular battles")
 	assert_eq(int(st["strays"]), 1)
@@ -206,6 +227,11 @@ func test_report_lines() -> void:
 	assert_eq(float(st["party_turns_median"]), 5.0)
 	assert_eq(int((st["boss_party_turns"] as Dictionary)["enc_f1_boss_hausmeister"]), 18)
 	assert_eq(int(st["floor_time_used_sec"]), 240)
+	assert_eq(st["boss_outcomes"], {"enc_f1_boss_hausmeister": ["defeat", "victory"]}, "every boss attempt, in order")
+	assert_eq(int(st["gifts_regular"]), 1)
+	assert_eq(int(st["gifts_boss"]), 3)
+	assert_eq(float(st["hype_end_median"]), 26.0, "regular battles only (missing values count as 0)")
+	assert_eq(str(st["pace"]), "fast")
 
 
 func test_clear_saves_only_touches_the_bot_directory() -> void:
@@ -220,7 +246,8 @@ func test_clear_saves_only_touches_the_bot_directory() -> void:
 	DirAccess.remove_absolute(dir)
 
 
-## The one Floor-1 path the bot never meets on its own (it wins every fight, 23/23 runs): a lost battle. Real screens:
+## A lost battle, deterministic and independent of the seed (the bot loses bosses only now and then since the GDD §13
+## balancing, ~20 % / ~35 % on the first try). Real screens:
 ## exploration (saved in slot 1) → boss battle at 1 HP with auto battle → DEFEAT → Sendeschluss (reason defeat,
 ## game_overs +1 in the slot) → "Letzten Spielstand laden" → exploration with the saved party and the countdown grace.
 func test_lost_battle_game_over_and_load_last() -> void:

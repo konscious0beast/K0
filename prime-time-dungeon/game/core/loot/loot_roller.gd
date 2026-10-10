@@ -7,9 +7,9 @@ class_name LootRoller extends RefCounted
 ## drop entry.
 
 const RARITY_ORDER: PackedStringArray = ["common", "rare", "epic"]
-const WOOD_CREDITS_MIN: int = 20
-const WOOD_CREDITS_MAX: int = 40
-const DUPLICATE_CREDIT_MULT: float = 1.5      # duplicate equipment → roundi(sell value × 1.5) credits
+const WOOD_CREDITS_MIN: int = 10
+const WOOD_CREDITS_MAX: int = 25
+const DUPLICATE_CREDIT_MULT: float = 0.5      # duplicate equipment → roundi(sell value × 0.5) credits
 const EXTRA_CHEST_ROLL_PCT: int = 20          # procedural chests: second roll chance
 const _PPM: int = 1_000_000
 

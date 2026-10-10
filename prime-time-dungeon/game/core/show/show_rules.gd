@@ -11,11 +11,11 @@ class_name ShowRules extends RefCounted
 ## party action → its `by` / `member`, `kills_skill` for a skill), otherwise `by: "attack"`, `member: ""` — `by` stays
 ## within the documented attack/skill/stunt/item (§6.3); "falls under 25 %" needs the previous HP at ≥ 25 %.
 
-const HYPE_START_NORMAL: float = 5.0
-const HYPE_START_PREEMPTIVE: float = 5.0
-const HYPE_START_AMBUSH: float = 8.0
-const HYPE_START_BOSS: float = 10.0          # replaces the others
-const HYPE_VARIETY: float = 3.0              # action_key not among the last VARIETY_WINDOW party keys
+const HYPE_START_NORMAL: float = 3.0
+const HYPE_START_PREEMPTIVE: float = 3.0
+const HYPE_START_AMBUSH: float = 5.0
+const HYPE_START_BOSS: float = 8.0           # replaces the others
+const HYPE_VARIETY: float = 2.0              # action_key not among the last VARIETY_WINDOW party keys
 const VARIETY_WINDOW: int = 4
 const HYPE_REPEAT: float = -5.0              # same key the REPEAT_COUNT-th time in a row (and every further time)
 const REPEAT_COUNT: int = 3
@@ -23,28 +23,28 @@ const HYPE_DEFEND_TWICE: float = -4.0        # defend twice in a row by the same
 const HYPE_DRAG: float = -3.0                # every party turn after the DRAG_AFTER-th (boss: DRAG_AFTER_BOSS)
 const DRAG_AFTER: int = 10
 const DRAG_AFTER_BOSS: int = 25
-const HYPE_CRIT: float = 5.0
-const HYPE_WEAK: float = 4.0
-const HYPE_KILL_ATTACK: float = 3.0          # also item kills
-const HYPE_KILL_SKILL: float = 6.0
-const HYPE_KILL_STUNT: float = 10.0
-const HYPE_OVERKILL: float = 8.0
-const HYPE_KILL_STREAK: float = 6.0          # STREAK_KILLS kills within STREAK_ACTIONS consecutive party actions
+const HYPE_CRIT: float = 3.0
+const HYPE_WEAK: float = 2.0
+const HYPE_KILL_ATTACK: float = 1.0          # also item kills
+const HYPE_KILL_SKILL: float = 2.0
+const HYPE_KILL_STUNT: float = 4.0
+const HYPE_OVERKILL: float = 3.0
+const HYPE_KILL_STREAK: float = 5.0          # STREAK_KILLS kills within STREAK_ACTIONS consecutive party actions
 const STREAK_KILLS: int = 3
 const STREAK_ACTIONS: int = 3
-const HYPE_COMBO: float = 5.0
-const HYPE_STUNT_SUCCESS: float = 20.0
-const HYPE_STUNT_FAIL: float = 8.0
+const HYPE_COMBO: float = 2.0
+const HYPE_STUNT_SUCCESS: float = 12.0
+const HYPE_STUNT_FAIL: float = 4.0
 const HYPE_LOW_HP: float = 6.0               # party member falls under LOW_HP_PCT % (once per member and battle)
 const LOW_HP_PCT: int = 25
 const HYPE_PARTY_KO: float = 10.0
 const HYPE_REVIVE: float = 8.0
 const HYPE_FLEE_OK: float = -30.0
 const HYPE_FLEE_FAIL: float = -5.0
-const HYPE_BORING: float = -2.0              # party turn without a positive hype event since its ACTION_START
+const HYPE_BORING: float = -3.0              # party turn without a positive hype event since its ACTION_START
 const HYPE_CLOSE_WIN: float = 15.0           # victory with min_party_hp_pct <= CLOSE_WIN_PCT
 const CLOSE_WIN_PCT: float = 0.10
-const HYPE_FLAWLESS: float = 5.0             # victory with damage_taken == 0
+const HYPE_FLAWLESS: float = 3.0             # victory with damage_taken == 0
 
 var _data: GameData = null
 var _setup: BattleSetup = null

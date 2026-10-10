@@ -22,6 +22,7 @@ static func start_floor(state: GameState, data: GameData, index: int) -> bool:
 	if state == null or def == null:
 		return false
 	state.floor_run = FloorRun.create(def, state.seed, state.difficulty)
+	TwistApplier.on_floor(state, index)                 # 06-D: twists end with their floor
 	return true
 
 
@@ -61,6 +62,9 @@ static func open_chest(state: GameState, data: GameData, chest: ChestSpawn) -> A
 	var rng: RandomNumberGenerator = SeedUtil.make_rng(SeedUtil.derive(fr.loot_seed, "chest", k))
 	var spec: Dictionary = {"id": chest.id, "type": chest.type, "contents": chest.contents}
 	var rewards: Array[LootReward] = LootRoller.roll_chest(spec, data, fr.index, state, rng)
+	for r: LootReward in rewards:                       # 06-D: tw_double_credits (capped bonus, booked in the twist)
+		if r.kind == "credits":
+			r.amount += TwistApplier.take_bonus_credits(state, r.amount)
 	state.inventory.add_rewards(data, rewards)
 	fr.opened_chests.append(chest.id)
 	return rewards
@@ -126,6 +130,7 @@ static func enter_safe_room(state: GameState, data: GameData, safe_room_id: Stri
 	if first_visit:
 		fr.visited_safe_rooms.append(safe_room_id)
 	Progression.full_heal(state, data)
+	TwistApplier.on_safe_room_enter(state)              # 06-D: tw_happy_hour prices apply during this visit
 	var kai: PartyMember = state.member("kai")
 	return {"safe_room_id": safe_room_id, "first_visit": first_visit, "safe_room_visits": fr.safe_room_visits,
 		"kai_level": kai.level if kai != null else 1}
@@ -135,6 +140,7 @@ static func enter_safe_room(state: GameState, data: GameData, safe_room_id: Stri
 static func leave_safe_room(state: GameState) -> void:
 	if state != null and state.floor_run != null:
 		state.floor_run.location = LOCATION_START
+		TwistApplier.on_safe_room_exit(state)           # 06-D: a visit twist that ran ends
 
 
 ## True while the party is in a safe room (FloorRun.location is a safe room id).

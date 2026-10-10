@@ -369,6 +369,8 @@ func _apply_speaker(voice: StringName, tag: String) -> void:
 		&"kai":
 			col = UiUtil.member_color("kai")
 			who = UiUtil.player_name()
+	if tag.begins_with("live:"):
+		who += " · KI live"          # 06-D: AI-generated (M.O.D. live) lines are labelled (disclosure, 06 §5.9 Nr. 6)
 	_speaker.text = who
 	_speaker_panel.add_theme_stylebox_override("panel", UiUtil.box_style(col, Color(0, 0, 0, 0), 0, 0.21, 14, 2))
 	_speaker.add_theme_color_override("font_color", UiUtil.C_INK if col.get_luminance() > 0.45 else UiUtil.C_PAPER)

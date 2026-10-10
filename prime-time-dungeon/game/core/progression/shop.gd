@@ -23,6 +23,16 @@ static func price_of(data: GameData, item_id: String) -> int:
 	return maxi(0, data.item(item_id).price)
 
 
+## 06-D: the price to pay now — price_of × the active tw_happy_hour discount (TwistApplier.effect_pm "price_pm",
+## round half up, at least 1); without a twist exactly price_of.
+static func price_for(state: GameState, data: GameData, item_id: String) -> int:
+	var price: int = price_of(data, item_id)
+	var pm: int = TwistApplier.effect_pm(state, "price_pm", 1000)
+	if price <= 0 or pm == 1000:
+		return price
+	return maxi(1, (price * pm + 500) / 1000)
+
+
 ## ItemDef.sell (−1 → floori(price / 2)); 0 = not sellable / unknown item.
 static func sell_value(data: GameData, item_id: String) -> int:
 	if data == null or not data.has_id("items", item_id):
@@ -34,7 +44,7 @@ static func sell_value(data: GameData, item_id: String) -> int:
 static func buy(state: GameState, data: GameData, item_id: String, qty: int) -> bool:
 	if state == null or state.inventory == null or qty < 1 or qty > MAX_QTY:
 		return false
-	var price: int = price_of(data, item_id)
+	var price: int = price_for(state, data, item_id)    # 06-D: happy hour
 	if price <= 0:
 		return false
 	var def: ItemDef = data.item(item_id)

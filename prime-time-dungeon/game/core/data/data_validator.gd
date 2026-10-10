@@ -75,7 +75,8 @@ const REQUIRED_MOD_TAGS: PackedStringArray = ["intro", "floor_start", "first_fig
 ## B4).
 const OPTIONAL_MOD_TAG_PREFIXES: PackedStringArray = ["achievement:", "boss_intro:", "boss_phase:", "event_",
 	"gift_received", "mopsula_idle", "chat_", "gift_", "fan_pack_", "live_", "vote_", "twist_applied_", "tutorial_",
-	"story_", "sponsor_window_"]
+	"story_", "sponsor_window_",
+	"regie_", "mod_live_"]                     # 06-D: Regie lines (regie_cut_in, regie_monologue), M.O.D. live
 
 ## Copy of StatIds.ALL (§6.3); test_m2_achievements asserts equality.
 const STAT_IDS: PackedStringArray = ["kills_total", "kills_skill", "battles_won", "battles_fled", "preemptives",
@@ -130,10 +131,12 @@ const ID_PATTERNS: Dictionary = {
 	"scenes": "^scn_[a-z0-9_]+$",
 	"passives": "^pas_[a-z0-9_]+$",
 	"events": "^evt_[a-z0-9_]+$",
+	"twists": "^tw_[a-z0-9_]+$",                # 06-D
 }
 
 const TABLES: PackedStringArray = ["statuses", "skills", "items", "classes", "party", "enemies", "floors",
-	"lootboxes", "achievements", "sponsors", "milestones", "mod_lines", "scenes"]
+	"lootboxes", "achievements", "sponsors", "milestones", "mod_lines", "scenes",
+	"twists"]                                  # 06-D: validated by validators/twists.gd (TwistValidator)
 ## Allowed extra top-level keys per file (§4.1); everything else is an error.
 const TABLE_EXTRA_KEYS: Dictionary = {"party": ["start"], "enemies": ["pseudo_units"], "lootboxes": ["pools", "pity"]}
 const REQUIRED_BOXES: PackedStringArray = ["box_bronze", "box_silver", "box_gold", "box_fan"]
@@ -573,6 +576,8 @@ func _normalize_entry(t: String, i: int, raw: Variant) -> Dictionary:
 			return _n_mod_line(ctx, raw)
 		"scenes":
 			return _n_scene(ctx, raw)
+		"twists":
+			return TwistValidator.normalize(self, ctx, raw)     # 06-D
 	return {}
 
 
@@ -1519,6 +1524,7 @@ func _check_references() -> void:
 	_refs_enemies()
 	_refs_floors()
 	_refs_lootboxes()
+	TwistValidator.check(self, _out["twists"])              # 06-D (before _refs_misc: referenced twist tags)
 	_refs_misc()
 
 

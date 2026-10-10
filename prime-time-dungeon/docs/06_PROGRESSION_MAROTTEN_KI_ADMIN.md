@@ -1411,6 +1411,52 @@ Konfiguration (`ANTHROPIC_API_KEY` aus dem Secret-Store, `MOD_BRAIN_MODEL` je Ro
 Sicherheitsregeln und die Verbindung aus dem Spiel (`--mod-live-url=http://127.0.0.1:8787`, nur Debug-Builds); **keine Secrets im
 Repo**; 05 Kap. 4.5 (Nachricht `twist`), 6.2, 10.5, 10.6 (Run-Log), 11.1 und 02_TECH §3.4 (Command `twist` mit `tick`) nachgezogen.
 
+#### 8.5a Stand Paket D (umgesetzt 2026-10-10, Branch `ptd/feat-modai`)
+
+**Erledigt:** Stufe S0 vollständig. Spiel: `data/twists.json` (20 Einträge, 11 wirksam) + `TwistDef` + `TwistValidator`,
+`TwistApplier` (Regeln, Wirkungen, Ablauf), `RegieDirector` (Offline-Regie ab E2), Command `twist` mit `tick` und Replay-Puffer
+in `Game.replay_log` und `RunSim`, `Game.apply_twist` / `twist_effect_pm` / `dev_random_twist`, Wirkungs-Hooks (Gegner-Sicht/-Gehör
+in `enemy_actor.gd`, Credits in `BattleBridge`/Truhen, Hype-Zerfall in `RunSim`, Kampf-Hype in `Show`, Preise in
+`Shop.price_for`), `ModVoiceProvider` + `ScriptedModVoice` (Standard) + `RemoteModVoice` (aus ohne URL) + `ModLiveLink`,
+`ModLiveSummary`, `ModLineFilter` + `data/mod_filter.json`, `Show.say_external`, `TwistFx` (Chip/Vignette/Konfetti), Automat
+mit „HAPPY HOUR −x %“, Optionen „Regie-Eingriffe (ab Etage 2)“ und (nur Debug + URL) „M.O.D. live (Beta)“, Debug F6/F7, Block D
+in `mod_lines.json` (39 Zeilen). Dienst: `services/mod-brain/` (FastAPI, offizielles `anthropic`-SDK, Structured Outputs über
+`messages.parse`, adaptives Denken mit `effort: "low"`, gecachter System-Prompt, serverseitige Twist-Prüfung mit denselben
+Regeln, Sicherheitsfilter, Rate-Limit, Budget-Not-Aus, HMAC-Token, Demo-Modus `MOD_BRAIN_DEMO=1` ohne Schlüssel). Tests:
+`test_06d_twists.gd` (30), `test_06d_mod_voice.gd` (13), pytest (70, gemockter Client, nie die echte API); CI-Job
+`mod-brain-tests`. Doku: 02_TECH §1, §3.2/§3.4/§3.5, §4.2/§4.4.15/§4.5, §7.1, §9.4, §12.4; 01_GDD §11.4/§14.3/§14.4; 05 Kap. 4.5,
+6.2, 10.5, 10.6, 11.1.
+
+Ansichten (`check.sh --shot … --recipe=twist_lights|twist_confetti|twist_live` auf `exploration.tscn`, `--recipe=safe_happy` auf
+`safe_room.tscn`, Quelle jeweils `dev` = Chip „TEST“): `docs/screenshots/twist_lights_out.png`, `twist_confetti.png`,
+`twist_mod_live_line.png` (Sprecher „M.O.D. · KI live“), `twist_happy_hour_vending.png`.
+
+**Entscheidungen / Abweichungen vom Plan oben** (Code ist maßgeblich, 02_TECH nachgezogen):
+
+1. **API-Feinschliff:** `TwistApplier.apply(state, data, twist, layout)` liefert `Array[ExploreEvent]` (kein `rng`-Parameter: der
+   Rattenregen würfelt mit `SeedUtil.derive(loot_seed, "twist", n)`), `tick(…, explore, now_tick)`, `on_safe_room` ist in
+   `on_safe_room_enter`/`_exit` geteilt (Happy Hour gilt **während** des nächsten Besuchs und endet beim Verlassen),
+   `validate`/`allowed_now`/`decide` nehmen optional das Layout (freie Streuner-Zone), `allowed_now` die Quelle.
+2. **Zwei zusätzliche Ablehnungsgründe:** `sequence_mismatch` (`n` ≠ nächste Nummer — manipulierte/duplizierte Twists im Log) und
+   `no_target` (Rattenregen ohne freie Zone). Replay-Ebene: `twist_tick_passed`, `run_not_active`.
+3. **Puffer-Zeitpunkt:** ein gepufferter Twist wird nach der Auswertung von Tick `tick` angewendet (vor `tick + 1`) — genau wie
+   live, wo `apply_twist` zwischen zwei Ticks mit `tick = sim.tick()` läuft.
+4. **Zustand** `flags.live.twist` = `{n, floor, floor_count, floor_spicy, floor_regie, once, end_at, active: [{id, n, src, params,
+   unit, left, …}]}` — eine Restgröße `left` je Einheit statt `until_tick`/`battles_left`/`visits_left`; erst beim ersten Twist
+   angelegt (Läufe ohne Twists behalten ihren Hash, alle bisherigen Replays bleiben gültig).
+5. **Regie-Seed:** `SeedUtil.derive(state.seed, "regie", etage × 1000 + k)` (`derive` hat einen Index).
+6. **`min_floor` 2 gilt für alle Quellen;** `dev` nur mit `dev_any_floor` (Kampagne an, Events aus) auch auf E1 — damit QA auf E1
+   testen kann. Event-Läufe: Quellen nur `schedule`/`dev`, Regie aus (`EVENT_OVERRIDES`).
+7. **„Nicht neben einem Boss-Raum“** (scharfe Twists) prüft der Kern noch **nicht**: er kennt den aktuellen Raum nicht (aufgezeichnet
+   wird nur der Erstbesuch). Der einzige scharfe Slice-Twist (Rattenregen) erscheint außer Sicht in einer Streuner-Zone, nie im
+   Boss-Raum; die Regel bekommt einen eigenen Kontext-Schlüssel, sobald Raumwechsel aufgezeichnet werden (S1).
+8. **Live-Zeilen:** `say_external` nutzt den vollen Filter (`ModLineFilter`, identisch zu `safety.py`, gemeinsame Fälle), zeigt
+   „M.O.D. · KI live“ im Sprecher-Reiter, nie in Bosskämpfen. Die Sprachprüfung ist bewusst grob (Stoppwort-Anteile) und lässt
+   alle geschriebenen Zeilen bis auf < 1 % durch (Test); Wortlisten sind Saatlisten **[zu prüfen: Moderation]**.
+9. **Dienst:** `max_retries=0`, `timeout=4.0` auf der Route `lines` (Spieler wartet nie, nächste Runde kommt), serverseitige
+   Fallbacks (Beta-Header) außer bei Haiku; eine verweigerte, abgelaufene oder ungültige Antwort ist eine leere Runde (HTTP 200),
+   nie ein Fehler im Spiel. Kostenrechnung in `budget.py` und README **[zu prüfen]** gegen die aktuelle Preisliste.
+
 ### 8.6 Gemeinsames Gate (nach Schritt 0 und nach jedem Merge)
 
 ```bash

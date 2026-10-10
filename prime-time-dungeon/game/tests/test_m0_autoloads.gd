@@ -19,6 +19,7 @@ const SIGNALS: Dictionary = {
 	"gift_rejected": 2, "toast_requested": 2, "dialog_reserve_requested": 3,
 	"sponsor_window_opened": 1, "sponsor_window_closed": 2,
 	"sponsor_window_updated": 1,
+	"twist_applied": 1, "twist_ended": 1, "mod_live_status": 1,          # 06-D
 }
 const ACTIONS: PackedStringArray = ["move_forward", "move_back", "move_left", "move_right", "cam_left", "cam_right",
 	"cam_up", "cam_down", "sneak", "action", "pause", "map", "tab_prev", "tab_next", "toggle_auto", "toggle_speed",
@@ -122,12 +123,15 @@ func test_game_settings_dict_and_defaults() -> void:
 	var d: Dictionary = s.to_dict()
 	for key: String in ["master_volume", "music_volume", "sfx_volume", "battle_speed", "text_speed",
 			"auto_battle_default", "fullscreen", "quality", "touch_controls", "show_fps", "camera_invert_x",
-			"camera_invert_y", "camera_sensitivity"]:
+			"camera_invert_y", "camera_sensitivity", "regie_twists", "mod_live", "mod_live_url"]:
 		assert_true(d.has(key), "settings key " + key)
 	assert_eq(d["music_volume"], 0.6)
 	assert_eq(d["battle_speed"], 1.0)
 	assert_eq(d["text_speed"], 1)
 	assert_eq(d["touch_controls"], &"auto")
+	assert_eq(d["regie_twists"], true, "06-D: Regie on by default")
+	assert_eq(d["mod_live"], &"off", "06-D: M.O.D. live is opt-in")
+	assert_eq(d["mod_live_url"], "", "06-D: no endpoint by default")
 
 
 func test_game_without_state_is_safe() -> void:

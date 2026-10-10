@@ -82,6 +82,12 @@ signal sponsor_window_opened(window: Dictionary)         # Game (RunSim SPONSOR_
 signal sponsor_window_closed(window_id: String, reason: String)   # Game (RunSim): reason time|left|superseded|floor
 signal sponsor_window_updated(window: Dictionary)        # Show: a gift took a slot of the open window
 
+# --- KI-Admin (06 §5, package D) -------------------------------------------------
+# twist = TwistApplier view entry {"id", "name", "n", "src", "unit", "gameplay", "left", "left_pm", "params"}
+signal twist_applied(twist: Dictionary)                  # Game (Game.apply_twist / RunSim TWIST_APPLIED)
+signal twist_ended(twist_id: String)                     # Game (time, battles, visit, floor change)
+signal mod_live_status(status: StringName)               # ModLiveLink: &"off" | &"ok" | &"degraded"
+
 # --- UI -----------------------------------------------------------------
 signal toast_requested(text: String, icon: StringName)
 ## Bottom corners (canvas px inside the safe frame) a screen keeps for its own panels while overlay `mode` is active;

@@ -1,0 +1,18 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "tw_overtime",
+			"name": "Nachspielzeit",
+			"desc": "Der Etagen-Timer bekommt Sekunden dazu.",
+			"gameplay": true,
+			"scope": "instant",
+			"spice": "helpful",
+			"slice": true,
+			"once_per_floor": true,
+			"duration": {"unit": "none"},
+			"params": {"seconds": {"default": 60, "min": 30, "max": 60}},
+			"sources": ["regie", "dev"]
+		}
+	]
+}

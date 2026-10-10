@@ -1,0 +1,492 @@
+{
+	"schema": 1,
+	"doc": "06 §5.7: TwistApplier.refusal_for — shared by tests/test_06d_twists.gd and services/mod-brain (pytest). ctx overrides the base context; rules overrides rules.twists ('_event': true = event-run defaults). The def is the twist's entry of data/twists.json.",
+	"base_ctx": {
+		"floor": 2,
+		"league": "",
+		"phase": "explore",
+		"timer_sec": 600,
+		"party_hp_pct": 100,
+		"active": [],
+		"next_n": 1,
+		"now_tick": 100,
+		"floor_count": 0,
+		"floor_spicy": 0,
+		"floor_regie": 0,
+		"since_end_sec": -1,
+		"once": [],
+		"stray_zone_free": true
+	},
+	"cases": [
+		{
+			"name": "ok_regie_lights_out",
+			"twist": {
+				"id": "tw_lights_out",
+				"src": "regie"
+			},
+			"ctx": {},
+			"expect": ""
+		},
+		{
+			"name": "ok_defaults_explicit",
+			"twist": {
+				"id": "tw_lights_out",
+				"src": "regie",
+				"params": {
+					"enemy_sight_pm": 400
+				},
+				"duration": 90
+			},
+			"ctx": {},
+			"expect": ""
+		},
+		{
+			"name": "unknown_twist",
+			"twist": {
+				"id": "tw_teleport",
+				"src": "regie"
+			},
+			"ctx": {},
+			"expect": "unknown_twist"
+		},
+		{
+			"name": "not_in_slice",
+			"twist": {
+				"id": "tw_elite_guest",
+				"src": "regie"
+			},
+			"ctx": {},
+			"expect": "not_in_slice"
+		},
+		{
+			"name": "source_not_in_def",
+			"twist": {
+				"id": "tw_lights_out",
+				"src": "hacker"
+			},
+			"ctx": {},
+			"expect": "source_not_allowed"
+		},
+		{
+			"name": "source_not_in_rules_event",
+			"twist": {
+				"id": "tw_lights_out",
+				"src": "mod_brain"
+			},
+			"ctx": {},
+			"expect": "source_not_allowed",
+			"rules": {
+				"_event": true
+			}
+		},
+		{
+			"name": "schedule_ok_in_event",
+			"twist": {
+				"id": "tw_quiet_please",
+				"src": "schedule"
+			},
+			"ctx": {},
+			"expect": "",
+			"rules": {
+				"_event": true
+			}
+		},
+		{
+			"name": "regie_disabled",
+			"twist": {
+				"id": "tw_lights_out",
+				"src": "regie"
+			},
+			"ctx": {},
+			"expect": "source_not_allowed",
+			"rules": {
+				"regie": {
+					"enabled": false
+				}
+			}
+		},
+		{
+			"name": "twists_disabled",
+			"twist": {
+				"id": "tw_lights_out",
+				"src": "regie"
+			},
+			"ctx": {},
+			"expect": "source_not_allowed",
+			"rules": {
+				"enabled": false
+			}
+		},
+		{
+			"name": "league_pur_gameplay",
+			"twist": {
+				"id": "tw_overtime",
+				"src": "regie"
+			},
+			"ctx": {
+				"league": "pur"
+			},
+			"expect": "league_pur"
+		},
+		{
+			"name": "league_pur_presentation_ok",
+			"twist": {
+				"id": "tw_mopsula_moderates",
+				"src": "regie"
+			},
+			"ctx": {
+				"league": "pur"
+			},
+			"expect": ""
+		},
+		{
+			"name": "floor_too_low_e1",
+			"twist": {
+				"id": "tw_lights_out",
+				"src": "regie"
+			},
+			"ctx": {
+				"floor": 1
+			},
+			"expect": "floor_too_low"
+		},
+		{
+			"name": "floor_too_low_mod_brain_e1",
+			"twist": {
+				"id": "tw_lights_out",
+				"src": "mod_brain"
+			},
+			"ctx": {
+				"floor": 1
+			},
+			"expect": "floor_too_low"
+		},
+		{
+			"name": "dev_bypass_e1",
+			"twist": {
+				"id": "tw_lights_out",
+				"src": "dev"
+			},
+			"ctx": {
+				"floor": 1
+			},
+			"expect": ""
+		},
+		{
+			"name": "dev_no_bypass_when_off",
+			"twist": {
+				"id": "tw_lights_out",
+				"src": "dev"
+			},
+			"ctx": {
+				"floor": 1
+			},
+			"expect": "floor_too_low",
+			"rules": {
+				"dev_any_floor": false
+			}
+		},
+		{
+			"name": "param_too_high",
+			"twist": {
+				"id": "tw_lights_out",
+				"src": "regie",
+				"params": {
+					"enemy_sight_pm": 800
+				}
+			},
+			"ctx": {},
+			"expect": "params_out_of_range"
+		},
+		{
+			"name": "param_unknown_key",
+			"twist": {
+				"id": "tw_lights_out",
+				"src": "regie",
+				"params": {
+					"credits_pm": 2000
+				}
+			},
+			"ctx": {},
+			"expect": "params_out_of_range"
+		},
+		{
+			"name": "param_not_int",
+			"twist": {
+				"id": "tw_overtime",
+				"src": "regie",
+				"params": {
+					"seconds": 45.5
+				}
+			},
+			"ctx": {},
+			"expect": "params_out_of_range"
+		},
+		{
+			"name": "duration_too_long",
+			"twist": {
+				"id": "tw_fog_of_fame",
+				"src": "regie",
+				"duration": 120
+			},
+			"ctx": {},
+			"expect": "params_out_of_range"
+		},
+		{
+			"name": "sequence_mismatch",
+			"twist": {
+				"id": "tw_lights_out",
+				"src": "regie",
+				"n": 5
+			},
+			"ctx": {
+				"next_n": 3
+			},
+			"expect": "sequence_mismatch"
+		},
+		{
+			"name": "sequence_ok",
+			"twist": {
+				"id": "tw_lights_out",
+				"src": "regie",
+				"n": 3
+			},
+			"ctx": {
+				"next_n": 3
+			},
+			"expect": ""
+		},
+		{
+			"name": "tick_mismatch",
+			"twist": {
+				"id": "tw_lights_out",
+				"src": "regie",
+				"tick": 99
+			},
+			"ctx": {},
+			"expect": "tick_mismatch"
+		},
+		{
+			"name": "wrong_phase_battle",
+			"twist": {
+				"id": "tw_lights_out",
+				"src": "regie"
+			},
+			"ctx": {
+				"phase": "battle"
+			},
+			"expect": "wrong_phase"
+		},
+		{
+			"name": "wrong_phase_safe_room",
+			"twist": {
+				"id": "tw_happy_hour",
+				"src": "regie"
+			},
+			"ctx": {
+				"phase": "safe_room"
+			},
+			"expect": "wrong_phase"
+		},
+		{
+			"name": "busy_gameplay",
+			"twist": {
+				"id": "tw_quiet_please",
+				"src": "regie"
+			},
+			"ctx": {
+				"active": [
+					{
+						"id": "tw_lights_out",
+						"gameplay": true
+					}
+				]
+			},
+			"expect": "busy"
+		},
+		{
+			"name": "busy_same_presentation",
+			"twist": {
+				"id": "tw_mopsula_moderates",
+				"src": "regie"
+			},
+			"ctx": {
+				"active": [
+					{
+						"id": "tw_mopsula_moderates",
+						"gameplay": false
+					}
+				]
+			},
+			"expect": "busy"
+		},
+		{
+			"name": "presentation_parallel_ok",
+			"twist": {
+				"id": "tw_mopsula_monologue",
+				"src": "regie"
+			},
+			"ctx": {
+				"active": [
+					{
+						"id": "tw_lights_out",
+						"gameplay": true
+					}
+				]
+			},
+			"expect": ""
+		},
+		{
+			"name": "gameplay_with_presentation_ok",
+			"twist": {
+				"id": "tw_lights_out",
+				"src": "regie"
+			},
+			"ctx": {
+				"active": [
+					{
+						"id": "tw_mopsula_moderates",
+						"gameplay": false
+					}
+				]
+			},
+			"expect": ""
+		},
+		{
+			"name": "once_per_floor",
+			"twist": {
+				"id": "tw_overtime",
+				"src": "regie"
+			},
+			"ctx": {
+				"once": [
+					"tw_overtime"
+				],
+				"since_end_sec": 200
+			},
+			"expect": "once_per_floor"
+		},
+		{
+			"name": "cooldown",
+			"twist": {
+				"id": "tw_lights_out",
+				"src": "regie"
+			},
+			"ctx": {
+				"since_end_sec": 89
+			},
+			"expect": "cooldown"
+		},
+		{
+			"name": "cooldown_over",
+			"twist": {
+				"id": "tw_lights_out",
+				"src": "regie"
+			},
+			"ctx": {
+				"since_end_sec": 90
+			},
+			"expect": ""
+		},
+		{
+			"name": "floor_cap",
+			"twist": {
+				"id": "tw_lights_out",
+				"src": "mod_brain"
+			},
+			"ctx": {
+				"floor_count": 4
+			},
+			"expect": "floor_cap"
+		},
+		{
+			"name": "regie_cap",
+			"twist": {
+				"id": "tw_lights_out",
+				"src": "regie"
+			},
+			"ctx": {
+				"floor_count": 3,
+				"floor_regie": 3
+			},
+			"expect": "floor_cap"
+		},
+		{
+			"name": "mod_brain_after_regie_cap_ok",
+			"twist": {
+				"id": "tw_lights_out",
+				"src": "mod_brain"
+			},
+			"ctx": {
+				"floor_count": 3,
+				"floor_regie": 3
+			},
+			"expect": ""
+		},
+		{
+			"name": "spice_budget",
+			"twist": {
+				"id": "tw_rat_rain",
+				"src": "regie"
+			},
+			"ctx": {
+				"floor_spicy": 1
+			},
+			"expect": "spice_budget"
+		},
+		{
+			"name": "party_weak",
+			"twist": {
+				"id": "tw_rat_rain",
+				"src": "regie"
+			},
+			"ctx": {
+				"party_hp_pct": 49
+			},
+			"expect": "party_weak"
+		},
+		{
+			"name": "timer_low",
+			"twist": {
+				"id": "tw_rat_rain",
+				"src": "regie"
+			},
+			"ctx": {
+				"timer_sec": 179
+			},
+			"expect": "timer_low"
+		},
+		{
+			"name": "helpful_ignores_timer",
+			"twist": {
+				"id": "tw_overtime",
+				"src": "regie"
+			},
+			"ctx": {
+				"timer_sec": 20,
+				"party_hp_pct": 10
+			},
+			"expect": ""
+		},
+		{
+			"name": "no_target",
+			"twist": {
+				"id": "tw_rat_rain",
+				"src": "regie"
+			},
+			"ctx": {
+				"stray_zone_free": false
+			},
+			"expect": "no_target"
+		},
+		{
+			"name": "rat_rain_ok",
+			"twist": {
+				"id": "tw_rat_rain",
+				"src": "regie"
+			},
+			"ctx": {},
+			"expect": ""
+		}
+	]
+}

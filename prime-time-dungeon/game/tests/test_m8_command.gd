@@ -27,13 +27,15 @@ const VALID: Array[Dictionary] = [
 	{"t": "difficulty", "to": "vorabend"},
 	{"t": "sponsor_window", "op": "dev_open", "sec": 60, "slots": 3},
 	{"t": "descend"},
+	{"t": "twist", "twist": {"schema": 1, "id": "tw_overtime", "n": 1, "src": "regie", "params": {"seconds": 60},
+		"duration": 0, "tick": 120}},
 ]
 
 
 func test_types_are_the_recorded_list() -> void:
 	assert_eq(Command.TYPES, ["floor", "encounter", "battle", "lootbox", "buy", "sell", "equip", "use_item", "rest",
 		"event", "chest", "gate", "room", "safe_room", "safe_room_exit", "scene", "flag", "difficulty", "descend",
-		"gift", "sponsor_window"], "02_TECH §3.4")
+		"gift", "sponsor_window", "twist"], "02_TECH §3.4")
 	var covered: Dictionary = {"gift": true}
 	for c: Dictionary in VALID:
 		covered[c["t"]] = true
@@ -103,6 +105,18 @@ func test_invalid_commands() -> void:
 		[{"t": "sponsor_window", "op": "dev_open", "sec": 0, "slots": 3}, "sponsor_window: sec"],
 		[{"t": "sponsor_window", "op": "dev_open", "sec": 601, "slots": 3}, "sponsor_window: sec must be <= 600"],
 		[{"t": "sponsor_window", "op": "dev_open", "sec": 60, "slots": 17}, "slots <= 16"],
+		[{"t": "twist"}, "twist: twist must be"],
+		[{"t": "twist", "twist": {"schema": 2}}, "twist: twist.schema"],
+		[{"t": "twist", "twist": {"schema": 1, "id": "", "n": 1, "src": "dev", "params": {}, "duration": 0, "tick": 0}},
+			"twist: twist.id"],
+		[{"t": "twist", "twist": {"schema": 1, "id": "tw_x", "n": 0, "src": "dev", "params": {}, "duration": 0,
+			"tick": 0}}, "twist: twist.n"],
+		[{"t": "twist", "twist": {"schema": 1, "id": "tw_x", "n": 1, "src": "hacker", "params": {}, "duration": 0,
+			"tick": 0}}, "twist: twist.src"],
+		[{"t": "twist", "twist": {"schema": 1, "id": "tw_x", "n": 1, "src": "dev", "params": {"seconds": 1.5},
+			"duration": 0, "tick": 0}}, "twist: twist.params.seconds"],
+		[{"t": "twist", "twist": {"schema": 1, "id": "tw_x", "n": 1, "src": "dev", "params": {}, "duration": 0,
+			"tick": -1}}, "twist: twist.tick"],
 	]
 	for c: Array in cases:
 		var err: String = Command.validate(c[0])

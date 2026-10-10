@@ -16,6 +16,13 @@ class_name RunSim extends RefCounted
 ##     ticks reset → STRAY_DUE {"zone", "group_id", "encounter_id"}
 ##   5 Sponsor-Fenster (SponsorWindows.tick, 05 §6.13): the open window counts down, the periodic countdown runs
 ##     → SPONSOR_WINDOW_OPENED {"window"} / SPONSOR_WINDOW_CLOSED {"id", "kind", "reason"}
+##   6 Twists (06-D, TwistApplier.tick): "sec" twists count down → TWIST_ENDED {"id", "n", "reason"}; a fixed event
+##     schedule (rules.twists.schedule [{tick, id, params}]) applies its twist at that run tick when TwistApplier
+##     allows it (src "schedule", never recorded: it follows from the rules). Step 3 pauses while a twist pauses the
+##     hype decay (tw_fog_of_fame, tw_confetti_gravity).
+## Twist commands (06 §5.7): apply({"t": "twist"}) applies the twist at its `tick` — one whose tick lies ahead waits
+## in a buffer and is applied when the clock reaches it (after that tick's evaluation, like live); one whose tick has
+## passed is refused (twist_tick_passed). TwistApplier.validate decides at application → refusals in rejected_cmds.
 ## Idle ticks: while floor_run.location is a safe room (not &"start") a tick only runs step 5 with explore = false —
 ## the run clock keeps ticking in safe rooms (Sponsor-Fenster max_sec), the floor timer, hype decay, pacifist
 ## counter, strays and the periodic countdown do not (explore_only: the floor timer runs in the exploration only).
@@ -87,6 +94,7 @@ var _layout: FloorLayout = null
 var _layout_key: String = ""
 # scene condition context of the current safe room visit (RunRules.enter_safe_room)
 var _scene_ctx: Dictionary = {}
+var _pending_twists: Array[Dictionary] = []   # 06-D: twist commands waiting for their tick
 
 
 func _init(p_data: GameData, p_state: GameState, p_rules: Dictionary, p_identity: Dictionary = {}) -> void:
@@ -109,6 +117,7 @@ func step(n: int) -> Array[ExploreEvent]:
 		_tick += 1
 		if _tick_once(out):
 			break
+		_apply_due_twists(out)                     # 06-D: buffered twist commands of this tick
 	return out
 
 
@@ -150,6 +159,8 @@ func apply(cmd: Dictionary) -> Array[ExploreEvent]:
 			_apply_battle(c["cmd"], out)
 		"gift":
 			_apply_gift(c["gift"], out)
+		"twist":
+			_apply_twist(c["twist"], out)
 		"room":
 			_apply_room(Vector2i(int(c["cell"][0]), int(c["cell"][1])), out)
 		"chest":
@@ -242,6 +253,8 @@ func command_refusal(c: Dictionary) -> String:
 	var t: String = str(c.get("t", ""))
 	if t == "gift":
 		return gift_refusal(c["gift"])
+	if t == "twist":
+		return twist_refusal(c["twist"])
 	var reason: String = RunRules.command_refusal(state, data, rules, c, _floor_done, _scene_ctx)
 	if reason == "" and t == "sponsor_window" and not SponsorWindows.dev_allowed(state, rules, int(c["sec"]),
 			int(c["slots"])):
@@ -270,6 +283,20 @@ func gift_refusal(g: Dictionary) -> String:
 		if not GiftPolicy.can_deliver_in_battle(_battle_external, eff):
 			return "cap_reached"
 	return ""
+
+
+## 06-D: "" or why the twist command `tw` is refused now: the run is over / the floor done → run_not_active; its tick
+## has passed → twist_tick_passed; its tick lies ahead → "" (buffered, checked when it is due); else
+## TwistApplier.validate. Read-only.
+func twist_refusal(tw: Dictionary) -> String:
+	if _floor_done or _over:
+		return "run_not_active"
+	var at: int = int(tw.get("tick", _tick))
+	if at < _tick:
+		return "twist_tick_passed"
+	if at > _tick:
+		return ""
+	return TwistApplier.validate(state, data, tw, rules, _tick, battle != null, _current_layout())
 
 
 ## The `extra` of GiftPolicy.refusal: {"tick"} + the run identity (run_id, event_id, player_id, window_id).
@@ -414,6 +441,9 @@ static func replay(p_data: GameData, p_log: RunLog, p_rules: Dictionary = {}, p_
 		if int(out["mismatch_at"]) < 0 and StateHash.of(st) != want:
 			out["mismatch_at"] = cp
 	p_log.walk(advance, apply_cmd, on_checkpoint)
+	for tw: Dictionary in sim._pending_twists:           # 06-D: a buffered twist whose tick was never reached
+		errors.append("twist '%s' (tick %d): never applied (the clock stopped at %d)" % [str(tw.get("id", "")),
+			int(tw.get("tick", 0)), sim.tick()])
 	for rc: Dictionary in sim.rejected_cmds:
 		errors.append("k %d: %s '%s' refused by the core (%s)" % [int(rc["k"]), str(rc["t"]), str(rc["gift_id"]),
 			str(rc["reason"])])
@@ -512,8 +542,9 @@ func _tick_once(out: Array[ExploreEvent]) -> bool:
 		var secs: int = int(state.show.stats.get("explore_seconds_since_battle", 0)) + 1
 		state.show.stats["explore_seconds_since_battle"] = secs
 		out.append(ExploreEvent.make(ExploreEvent.Type.EXPLORE_TICK, _tick, {"seconds_since_battle": secs}))
-	# 3 hype decay
-	fr.decay_ticks += 1
+	# 3 hype decay (paused by tw_fog_of_fame / tw_confetti_gravity, 06-D)
+	if TwistApplier.effect_pm(state, "hype_decay_pause", 0) == 0:
+		fr.decay_ticks += 1
 	if fr.decay_ticks >= ShowModel.HYPE_DECAY_TICKS:
 		fr.decay_ticks = 0
 		if state.show != null:
@@ -527,6 +558,9 @@ func _tick_once(out: Array[ExploreEvent]) -> bool:
 	_tick_spawners(fr, out)
 	# 5 Sponsor-Fenster
 	out.append_array(_sponsor_events(SponsorWindows.tick(state, rules, true)))
+	# 6 Twists (06-D)
+	out.append_array(TwistApplier.tick(state, data, true, _tick))
+	_apply_schedule(out)
 	return false
 
 
@@ -748,6 +782,48 @@ func _quest_feed_zones(fr: FloorRun, layout: FloorLayout) -> void:
 	var ev: Dictionary = zones_event(fr, layout)
 	if not ev.is_empty():
 		quest.on_event(ev)
+
+
+## 06-D: a twist command that passed command_refusal: due now → applied, ahead → buffered (_apply_due_twists).
+func _apply_twist(tw: Dictionary, out: Array[ExploreEvent]) -> void:
+	if int(tw.get("tick", _tick)) > _tick:
+		_pending_twists.append(tw.duplicate(true))
+		return
+	out.append_array(TwistApplier.apply(state, data, tw, _current_layout()))
+
+
+## Buffered twist commands whose tick is reached: checked again (TwistApplier.validate) and applied, or refused
+## (rejected_cmds); a tick the clock jumped over → twist_tick_passed.
+func _apply_due_twists(out: Array[ExploreEvent]) -> void:
+	if _pending_twists.is_empty():
+		return
+	var keep: Array[Dictionary] = []
+	for tw: Dictionary in _pending_twists:
+		var at: int = int(tw.get("tick", 0))
+		if at > _tick:
+			keep.append(tw)
+			continue
+		var reason: String = "twist_tick_passed" if at < _tick else TwistApplier.validate(state, data, tw, rules, _tick,
+			battle != null, _current_layout())
+		if reason != "":
+			rejected_cmds.append({"k": _tick, "t": "twist", "gift_id": str(tw.get("id", "")), "reason": reason})
+		else:
+			out.append_array(TwistApplier.apply(state, data, tw, _current_layout()))
+	_pending_twists = keep
+
+
+## Fixed event schedule (rules.twists.schedule): the entries of this run tick, applied when TwistApplier allows them.
+func _apply_schedule(out: Array[ExploreEvent]) -> void:
+	var sch: Variant = TwistApplier.rules_of(rules).get("schedule", [])
+	if not (sch is Array) or (sch as Array).is_empty():
+		return
+	for e: Variant in (sch as Array):
+		if not (e is Dictionary) or int((e as Dictionary).get("tick", -1)) != _tick:
+			continue
+		var tw: Dictionary = TwistApplier.complete(state, data, {"id": str((e as Dictionary).get("id", "")),
+			"src": "schedule", "params": (e as Dictionary).get("params", {})}, _tick)
+		if TwistApplier.validate(state, data, tw, rules, _tick, battle != null, _current_layout()) == "":
+			out.append_array(TwistApplier.apply(state, data, tw, _current_layout()))
 
 
 ## SponsorWindows event dictionaries → ExploreEvents at the current tick.

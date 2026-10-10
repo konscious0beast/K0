@@ -214,7 +214,8 @@ func _perceives(kai: Vector3) -> bool:
 	var dist: float = Rules.flat_dist(global_position, kai)
 	var moving: bool = player.has_method("is_moving") and bool(player.call("is_moving"))
 	var sneaking: bool = player.has_method("is_sneaking") and bool(player.call("is_sneaking"))
-	var hear: float = Rules.hearing_radius(explore, moving, sneaking)
+	var hear: float = Rules.hearing_radius(explore, moving, sneaking) \
+		* Game.twist_effect_pm("enemy_hear_pm", 1000) / 1000.0     # 06-D tw_quiet_please
 	if hear > 0.0 and dist <= hear:
 		return true
 	return _sees(kai)
@@ -222,7 +223,7 @@ func _perceives(kai: Vector3) -> bool:
 
 ## Sight only: inside the cone (sight_range / sight_angle_deg) and an unblocked ray (layer `world`).
 func _sees(kai: Vector3) -> bool:
-	var rng: float = float(explore["sight_range"])
+	var rng: float = float(explore["sight_range"]) * Game.twist_effect_pm("enemy_sight_pm", 1000) / 1000.0  # 06-D
 	if not Rules.in_sight_cone(global_position, flat_forward(), kai, rng, float(explore["sight_angle_deg"])):
 		return false
 	return _has_line_of_sight(kai, rng)

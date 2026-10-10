@@ -474,3 +474,52 @@ func _r_safe_mopsula(scene: Node) -> bool:
 	scene.call("talk_to_mopsula")
 	await frames(90)
 	return true
+
+
+# --- 06-D (KI-Admin): twists and M.O.D. live ----------------------------------------------------------------------
+
+## Exploration (sewer group in view) with a running twist (src "dev", recorded like any twist): twist_lights (chip +
+## vignette + M.O.D.'s announcement), twist_confetti (chip + rising confetti), twist_live (chip + an M.O.D. live line
+## through Show.say_external, labelled "KI live"). Shoot with few --frames (e.g. 3): lines expire while software GL
+## renders slowly.
+func _r_twist(scene: Node, which: String) -> bool:
+	if not await _r_explore(scene, "sewer"):
+		return false
+	var ids: Dictionary = {"lights": "tw_lights_out", "confetti": "tw_confetti_gravity", "live": "tw_quiet_please"}
+	var why: String = Game.apply_twist({"id": str(ids.get(which, "tw_lights_out")), "src": "dev"})
+	if why != "":
+		push_warning("[CaptureRecipes] twist refused: " + why)
+		return false
+	if which == "lights":
+		await seconds(2.5)                      # the announcement types out
+		return true
+	await _quiet_mod_dialog()
+	if which == "live":
+		Show.set("_last_line_at", -INF)
+		Show.say_external("Kandidat:in {name} schleicht wie ein Profi. Die Ratten haben jetzt Ohrstöpsel.", &"mod",
+			"stunt")
+		await seconds(2.5)
+	else:
+		await seconds(2.0)                      # confetti on its way up
+	return true
+
+
+## Safe room vending machine during a Happy Hour (tw_happy_hour armed in the exploration, visit running): discounted
+## prices + the twist chip in the safe-room overlay.
+func _r_safe_happy(scene: Node) -> bool:
+	if not await _safe_ready(scene):
+		return false
+	var fr: FloorRun = Game.state.floor_run
+	var loc: StringName = fr.location
+	fr.location = &"start"                       # armed in the exploration (test tool), then the visit runs
+	fr.timer_started = true
+	var why: String = Game.apply_twist({"id": "tw_happy_hour", "src": "dev", "params": {"pct": 25}})
+	fr.location = loc
+	TwistApplier.on_safe_room_enter(Game.state)
+	if why != "":
+		push_warning("[CaptureRecipes] twist refused: " + why)
+		return false
+	await frames(5)
+	scene.call("open_vending")
+	await frames(20)
+	return true

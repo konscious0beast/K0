@@ -4,7 +4,8 @@ class_name GameData extends RefCounted
 ## Getters for unknown ids return null and push_error (data bug). Defs are immutable after loading.
 
 const TABLES: PackedStringArray = ["statuses", "skills", "items", "classes", "party", "enemies", "floors",
-	"lootboxes", "achievements", "sponsors", "milestones", "mod_lines", "scenes"]
+	"lootboxes", "achievements", "sponsors", "milestones", "mod_lines", "scenes",
+	"twists"]                                  # 06-D (KI-Admin): twists.json
 
 var source: String = ""                    # dir or "dicts"
 var errors: PackedStringArray = []
@@ -27,6 +28,7 @@ var _milestones: Dictionary = {}
 var _mod_lines: Dictionary = {}            # id → ModLineDef
 var _mod_lines_by_tag: Dictionary = {}     # tag → Array[ModLineDef]
 var _scenes: Dictionary = {}
+var _twists: Dictionary = {}               # 06-D: id → TwistDef
 var _party_start: Dictionary = {"inventory": {}, "credits": 0}
 var _pools: Dictionary = {}
 var _pity: Dictionary = {"rare": 4, "epic": 8}
@@ -43,6 +45,7 @@ var _all_achievements: Array[AchievementDef] = []
 var _all_sponsors: Array[SponsorDef] = []
 var _all_milestones: Array[MilestoneDef] = []
 var _all_scenes: Array[SceneDef] = []
+var _all_twists: Array[TwistDef] = []      # 06-D: sorted by id
 
 
 ## Loads all TABLES from `dir` (<table>.json). Full validation (rules 1–10). True if no errors.
@@ -136,6 +139,11 @@ func class_def(id: String) -> ClassDef:
 
 func scene_def(id: String) -> SceneDef:
 	return _get_def(_scenes, "scenes", id) as SceneDef
+
+
+## 06-D: twist catalog entry (06 §5.6).
+func twist(id: String) -> TwistDef:
+	return _get_def(_twists, "twists", id) as TwistDef
 
 
 ## null (no error) if `index` has no floor → end of content.
@@ -261,6 +269,11 @@ func all_scenes() -> Array[SceneDef]:
 	return _all_scenes.duplicate()
 
 
+## 06-D: the twist catalog, sorted by id.
+func all_twists() -> Array[TwistDef]:
+	return _all_twists.duplicate()
+
+
 ## All pseudo units (enemies.json → pseudo_units), file order.
 func all_pseudo_units() -> Array[PseudoUnitDef]:
 	var out: Array[PseudoUnitDef] = []
@@ -286,7 +299,8 @@ func _clear() -> void:
 	errors = PackedStringArray()
 	warnings = PackedStringArray()
 	for d: Dictionary in [_statuses, _skills, _items, _classes, _party, _enemies, _pseudo, _floors, _floors_by_id,
-			_encounters, _lootboxes, _achievements, _sponsors, _milestones, _mod_lines, _mod_lines_by_tag, _scenes]:
+			_encounters, _lootboxes, _achievements, _sponsors, _milestones, _mod_lines, _mod_lines_by_tag, _scenes,
+			_twists]:
 		d.clear()
 	_party_start = {"inventory": {}, "credits": 0}
 	_pools = {}
@@ -303,6 +317,7 @@ func _clear() -> void:
 	_all_sponsors.clear()
 	_all_milestones.clear()
 	_all_scenes.clear()
+	_all_twists.clear()
 
 
 func _build(norm: Dictionary) -> void:
@@ -391,6 +406,13 @@ func _build(norm: Dictionary) -> void:
 			_all_scenes.append(s)
 	_all_scenes.sort_custom(func(a: SceneDef, b: SceneDef) -> bool:
 		return a.priority < b.priority if a.priority != b.priority else a.id < b.id)
+	# 06-D: twists
+	for d: Dictionary in norm.get("twists", []):
+		var s: TwistDef = TwistDef.from_dict(d)
+		if not _twists.has(s.id):
+			_twists[s.id] = s
+			_all_twists.append(s)
+	_all_twists.sort_custom(func(a: TwistDef, b: TwistDef) -> bool: return a.id < b.id)
 	_party_start = (norm.get("party_start", {"inventory": {}, "credits": 0}) as Dictionary).duplicate(true)
 	_pools = (norm.get("lootbox_pools", {}) as Dictionary).duplicate(true)
 	_pity = (norm.get("lootbox_pity", {"rare": 4, "epic": 8}) as Dictionary).duplicate(true)
@@ -403,7 +425,7 @@ func _build(norm: Dictionary) -> void:
 ## Packed*Array fields cannot be locked by Godot (they are shared references too): never mutate them.
 func _freeze_defs() -> void:
 	for table: Dictionary in [_statuses, _skills, _items, _classes, _party, _enemies, _pseudo, _floors_by_id,
-			_encounters, _lootboxes, _achievements, _sponsors, _milestones, _mod_lines, _scenes]:
+			_encounters, _lootboxes, _achievements, _sponsors, _milestones, _mod_lines, _scenes, _twists]:
 		for def: Variant in table.values():
 			_freeze_object(def as Object)
 	for list: Variant in _mod_lines_by_tag.values():
@@ -467,6 +489,8 @@ func _table_dict(table: String) -> Dictionary:
 			return _mod_lines
 		"scenes":
 			return _scenes
+		"twists":
+			return _twists
 	return {}
 
 

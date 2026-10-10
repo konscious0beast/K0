@@ -6,15 +6,16 @@ class_name Command extends RefCounted
 ## "item"}, use_item {"item", "member"}, rest {}, event {"id", "choice"}, chest {"id"}, gate {"key"}, room {"cell": [x,
 ## y]}, safe_room {"id"}, safe_room_exit {}, scene {"id"}, flag {"key" ∈ FLAG_KEYS, "value"}, difficulty {"to"}, descend
 ## {}, gift {"gift"} (external input, cmd id 0), sponsor_window {"op": "dev_open", "sec", "slots"} (QA Sponsor-Fenster,
-## SponsorWindows.dev_open, 05 §6.13).
+## SponsorWindows.dev_open, 05 §6.13), twist {"twist": {"schema": 1, "id", "n", "src", "params", "duration", "tick",
+## "req"?, "vote_id"?}} (06 §5.7, external input, cmd id 0; TwistApplier decides whether it applies).
 ## battle.cmd = BattleCommand.to_dict(): {"kind": attack|skill|stunt|item|defend|flee, "actor", "skill", "item",
 ## "targets": [String]}. Additional unknown fields are allowed (additive protocol versions, 05 §4.3).
 
 const TYPES: PackedStringArray = ["floor", "encounter", "battle", "lootbox", "buy", "sell", "equip", "use_item", "rest",
 	"event", "chest", "gate", "room", "safe_room", "safe_room_exit", "scene", "flag", "difficulty", "descend", "gift",
-	"sponsor_window"]
+	"sponsor_window", "twist"]
 const SPONSOR_WINDOW_OPS: PackedStringArray = ["dev_open"]
-## Inputs from outside the player (cmd id 0, 05 §10.6; == Game.EXTERNAL_CMDS). "twist" is a hook (S2, not in TYPES).
+## Inputs from outside the player (cmd id 0, 05 §10.6; == Game.EXTERNAL_CMDS): viewer gifts and M.O.D. twists (06-D).
 const EXTERNAL: PackedStringArray = ["gift", "twist"]
 const EQUIP_SLOTS: PackedStringArray = ["weapon", "armor", "accessory"]
 const DIFFICULTIES: PackedStringArray = ["prime", "vorabend"]
@@ -113,6 +114,8 @@ static func _validate_fields(t: String, d: Dictionary) -> String:
 			if int(d["sec"]) > SponsorWindows.DEV_MAX_SEC or int(d["slots"]) > SponsorWindows.DEV_MAX_SLOTS:
 				return "sec must be <= %d, slots <= %d" % [SponsorWindows.DEV_MAX_SEC, SponsorWindows.DEV_MAX_SLOTS]
 			return ""
+		"twist":
+			return _twist(d.get("twist", null))
 		"gift":
 			if not (d.get("gift", null) is Dictionary):
 				return "gift must be a Dictionary"
@@ -137,6 +140,29 @@ static func _battle_cmd(v: Variant) -> String:
 	for tid: Variant in Array(targets):
 		if not (tid is String or tid is StringName):
 			return "cmd.targets must be an Array of Strings"
+	return ""
+
+
+## 06-D: the shape of a recorded twist (the rules are TwistApplier.validate's).
+static func _twist(v: Variant) -> String:
+	if not (v is Dictionary):
+		return "twist must be a Dictionary"
+	var tw: Dictionary = v
+	if not _is_int(tw.get("schema", null)) or int(tw["schema"]) != 1:
+		return "twist.schema must be 1"
+	var e: String = _first([_id(tw, "id"), _int_min(tw, "n", 1), _int_min(tw, "duration", 0), _int_min(tw, "tick", 0)])
+	if e != "":
+		return "twist." + e
+	if not TwistApplier.SOURCES.has(str(tw.get("src", ""))):
+		return "twist.src must be one of %s" % ", ".join(TwistApplier.SOURCES)
+	if not (tw.get("params", null) is Dictionary):
+		return "twist.params must be a Dictionary"
+	for k: Variant in (tw["params"] as Dictionary).keys():
+		if not _is_int((tw["params"] as Dictionary)[k]):
+			return "twist.params.%s must be an integer" % str(k)
+	for k: String in ["req", "vote_id"]:
+		if tw.has(k) and not (tw[k] is String):
+			return "twist.%s must be a String" % k
 	return ""
 
 

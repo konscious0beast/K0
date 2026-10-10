@@ -306,6 +306,7 @@ func _validate_rules(out: PackedStringArray) -> void:
 	# Sponsor-Fenster (05 §6.13): schema; QA dev windows only offline (a live event must switch them off explicitly)
 	var sw: Variant = rules.get("sponsor_windows", null)
 	out.append_array(SponsorWindows.validate_rules(sw))
+	out.append_array(TwistApplier.validate_rules(rules.get("twists", null)))      # 06-D
 	if kind != "offline" and not (sw is Dictionary and (sw as Dictionary).get("dev_open", true) is bool
 			and not bool((sw as Dictionary)["dev_open"])):
 		out.append("rules.sponsor_windows.dev_open must be false for %s events (QA windows are offline only)" % kind)

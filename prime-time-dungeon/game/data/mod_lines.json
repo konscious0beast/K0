@@ -1377,6 +1377,279 @@
 			"voice": "mod",
 			"text": "Die Königin hört von euch.",
 			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_lights_out_01",
+			"tag": "twist_applied_tw_lights_out",
+			"voice": "mod",
+			"text": "Stromausfall! Sparmaßnahme der Regie. Die Monster sehen auch nichts. Fair, oder?",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_lights_out_02",
+			"tag": "twist_applied_tw_lights_out",
+			"voice": "mod",
+			"text": "Licht aus, Spannung an. Die Gegner tappen im Dunkeln. Sie bitte nicht zu laut.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_quiet_please_01",
+			"tag": "twist_applied_tw_quiet_please",
+			"voice": "mod",
+			"text": "Ruhe im Studio! Die Monster hören jetzt schlechter. Flüstern Sie trotzdem, es ist höflich.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_quiet_please_02",
+			"tag": "twist_applied_tw_quiet_please",
+			"voice": "mod",
+			"text": "Die Tonabteilung dreht alles leiser. Ideale Bedingungen zum Anschleichen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_fog_of_fame_01",
+			"tag": "twist_applied_tw_fog_of_fame",
+			"voice": "mod",
+			"text": "Ruhmesnebel! Das Publikum vergisst gerade nichts. Nutzen Sie das.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_fog_of_fame_02",
+			"tag": "twist_applied_tw_fog_of_fame",
+			"voice": "mod",
+			"text": "Die Regie hält die Quote fest. Ihr Hype sinkt eine Weile nicht. Gern geschehen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_confetti_gravity_01",
+			"tag": "twist_applied_tw_confetti_gravity",
+			"voice": "mod",
+			"text": "Konfetti-Gravitation! Es schneit nach oben. Die Physikabteilung ist im Urlaub.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_confetti_gravity_02",
+			"tag": "twist_applied_tw_confetti_gravity",
+			"voice": "mod",
+			"text": "Konfetti fällt heute nach oben. Der Hype übrigens auch nicht nach unten.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_double_credits_01",
+			"tag": "twist_applied_tw_double_credits",
+			"voice": "mod",
+			"text": "Doppel-Credits für eine Minute! Danach ist die Inflation wieder normal.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_double_credits_02",
+			"tag": "twist_applied_tw_double_credits",
+			"voice": "mod",
+			"text": "Die Buchhaltung hat sich verrechnet. Zu Ihren Gunsten. Bitte nicht weitersagen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_overtime_01",
+			"tag": "twist_applied_tw_overtime",
+			"voice": "mod",
+			"text": "Nachspielzeit! Eine Minute extra. Ich bin heute großzügig. Notieren Sie das.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_overtime_02",
+			"tag": "twist_applied_tw_overtime",
+			"voice": "mod",
+			"text": "Die Uhr bekommt eine Verlängerung. Werbekunden zahlen ja nach Minuten.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_happy_hour_01",
+			"tag": "twist_applied_tw_happy_hour",
+			"voice": "mod",
+			"text": "Happy Hour am Automaten! Rabatt beim nächsten Safe Room. Der Automat weint leise.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_happy_hour_02",
+			"tag": "twist_applied_tw_happy_hour",
+			"voice": "mod",
+			"text": "Der nächste Automat hat Happy Hour. Er weiß es nur noch nicht.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_rat_rain_01",
+			"tag": "twist_applied_tw_rat_rain",
+			"voice": "mod",
+			"text": "Rattenregen! Ein Lieferant hatte zu viel Lagerbestand. Ich konnte nicht Nein sagen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_rat_rain_02",
+			"tag": "twist_applied_tw_rat_rain",
+			"voice": "mod",
+			"text": "Neue Kandidaten im Gebäude. Pelzig, hungrig, nicht eingeladen. Viel Spaß.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_party_hats_01",
+			"tag": "twist_applied_tw_party_hats",
+			"voice": "mod",
+			"text": "Partyhüte für alle Monster! Die nächsten zwei Kämpfe sind offiziell eine Feier.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_party_hats_02",
+			"tag": "twist_applied_tw_party_hats",
+			"voice": "mod",
+			"text": "Die Gegner tragen jetzt Partyhüte. Das Publikum flippt aus. Ich auch, innerlich.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_mopsula_moderates_01",
+			"tag": "twist_applied_tw_mopsula_moderates",
+			"voice": "mod",
+			"text": "Ich mache Pause. Der Graf moderiert. Möge die Sendung das überleben.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_mopsula_moderates_02",
+			"tag": "twist_applied_tw_mopsula_moderates",
+			"voice": "mod",
+			"text": "Kurze Moderationspause. Der Graf hat das Mikro. Gott steh der Technik bei.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_mopsula_monologue_01",
+			"tag": "twist_applied_tw_mopsula_monologue",
+			"voice": "mod",
+			"text": "Der Graf hat um das Wort gebeten. Ich habe es ihm gegeben. Ich bereue es schon.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_mod_mood_01",
+			"tag": "twist_applied_tw_mod_mood",
+			"voice": "mod",
+			"text": "Ich wechsle die Stimmung. Bitte schnallen Sie sich an.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_costume_01",
+			"tag": "twist_applied_tw_costume",
+			"voice": "mod",
+			"text": "Kostümwechsel beim Grafen! Die Garderobe hat Überstunden gemacht.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_trap_or_treasure_01",
+			"tag": "twist_applied_tw_trap_or_treasure",
+			"voice": "mod",
+			"text": "Im nächsten Raum steht eine Kiste. Falle oder Schatz? Ich verrate nichts.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_mirror_room_01",
+			"tag": "twist_applied_tw_mirror_room",
+			"voice": "mod",
+			"text": "Spiegel-Raum! Was eben noch wehtat, kitzelt jetzt. Und umgekehrt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_elite_guest_01",
+			"tag": "twist_applied_tw_elite_guest",
+			"voice": "mod",
+			"text": "Wir haben einen Stargast! Er ist stärker, eitler und gibt mehr Beute.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_double_trouble_01",
+			"tag": "twist_applied_tw_double_trouble",
+			"voice": "mod",
+			"text": "Doppelte Quote! Ein Gegner mehr, mehr Beute. Mathe kann so schön sein.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_sponsor_rush_01",
+			"tag": "twist_applied_tw_sponsor_rush",
+			"voice": "mod",
+			"text": "Werbeblock! Unsere Sponsoren sind heute besonders spendabel.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_boss_mood_01",
+			"tag": "twist_applied_tw_boss_mood",
+			"voice": "mod",
+			"text": "Das Publikum hat die Laune des Bosses gewählt. Ich wasche meine Hände in Unschuld.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_marotte_flash_01",
+			"tag": "twist_applied_tw_marotte_flash",
+			"voice": "mod",
+			"text": "Laune der Regie! Meine Vorlieben zählen gerade doppelt. Erfreuen Sie mich.",
+			"weight": 1
+		},
+		{
+			"id": "mod_regie_cut_in_01",
+			"tag": "regie_cut_in",
+			"voice": "mod",
+			"text": "Die Regie greift ein. Kurz, begrenzt, meistens zu Ihren Gunsten.",
+			"weight": 1
+		},
+		{
+			"id": "mod_regie_cut_in_02",
+			"tag": "regie_cut_in",
+			"voice": "mod",
+			"text": "Achtung, Regie-Eingriff! Keine Sorge, ich habe die Kontrolle. Meistens.",
+			"weight": 1
+		},
+		{
+			"id": "mod_regie_monologue_1_01",
+			"tag": "regie_monologue_1",
+			"voice": "mopsula",
+			"text": "Meine Damen und Herren, Ratten und Restposten: Der Graf hat das Wort.",
+			"weight": 1
+		},
+		{
+			"id": "mod_regie_monologue_1_02",
+			"tag": "regie_monologue_1",
+			"voice": "mopsula",
+			"text": "Ruhe bitte. Ein Graf spricht nur einmal pro Folge. Höchstens zweimal.",
+			"weight": 1
+		},
+		{
+			"id": "mod_regie_monologue_2_01",
+			"tag": "regie_monologue_2",
+			"voice": "mopsula",
+			"text": "Ich habe Zwinger 7 überlebt. Diese Sendung ist dagegen ein Spaziergang.",
+			"weight": 1
+		},
+		{
+			"id": "mod_regie_monologue_2_02",
+			"tag": "regie_monologue_2",
+			"voice": "mopsula",
+			"text": "Die Rattenkönigin hört zu? Gut. Sie soll wissen, dass ich sie nicht vergessen habe.",
+			"weight": 1
+		},
+		{
+			"id": "mod_regie_monologue_3_01",
+			"tag": "regie_monologue_3",
+			"voice": "mopsula",
+			"text": "Und nun zurück zu meiner Assistentin. Sie ist ein Fernseher. Ich respektiere das.",
+			"weight": 1
+		},
+		{
+			"id": "mod_regie_monologue_3_02",
+			"tag": "regie_monologue_3",
+			"voice": "mopsula",
+			"text": "Applaus ist erlaubt. Leberwurst ebenfalls. Danke, das war alles.",
+			"weight": 1
+		},
+		{
+			"id": "mod_mod_live_on_01",
+			"tag": "mod_live_on",
+			"voice": "mod",
+			"text": "M.O.D. live ist auf Sendung. Ab jetzt improvisiere ich. Die Rechtsabteilung schwitzt.",
+			"weight": 1
 		}
 	]
 }

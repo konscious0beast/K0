@@ -12,6 +12,9 @@ extends RefCounted
 
 var game: Node                        # the Game autoload
 var _battle: BattleState = null       # the battle the walk is in (encounter → its battle / gift commands)
+## 06-D: twist commands whose tick lies ahead (applied when the clock reaches it, 06 §5.7) and the errors list.
+var _pending_twists: Array[Dictionary] = []
+var _errors: PackedStringArray = PackedStringArray()
 
 
 func _init(p_game: Node) -> void:
@@ -67,6 +70,10 @@ func run(p_log: RunLog, until_tick: int) -> Dictionary:
 		_walk(p_log, out, errors)
 		if until_tick >= 0:
 			_advance(until_tick)
+		for tw: Dictionary in _pending_twists:          # 06-D: a buffered twist whose tick the clock never reached
+			errors.append("twist '%s' (tick %d): never applied (the clock stopped at %d)" % [str(tw.get("id", "")),
+				int(tw.get("tick", 0)), (game.sim as RunSim).tick()])
+		_pending_twists = []
 		var quest: QuestTracker = game.quest
 		out["final_hash"] = StateHash.of(st)
 		out["result"] = {"ticks": (game.sim as RunSim).tick(), "cmds": p_log.size(),
@@ -86,6 +93,8 @@ func run(p_log: RunLog, until_tick: int) -> Dictionary:
 func _walk(p_log: RunLog, out: Dictionary, errors: PackedStringArray) -> void:
 	var cmds: Array[Dictionary] = p_log.cmds()
 	_battle = null
+	_errors = errors
+	_pending_twists = []
 	var advance: Callable = func(k: int) -> void:
 		_advance(k)
 	var apply_cmd: Callable = func(i: int, c: Dictionary) -> int:
@@ -109,6 +118,10 @@ func _cmd(cmds: Array[Dictionary], i: int, c: Dictionary, errors: PackedStringAr
 			if _battle != null:
 				next = _play(_battle.start(), cmds, next)
 				_end_if_finished()
+		"twist":                                   # 06-D: applied at its tick (buffered when ahead)
+			var why: String = _twist(c.get("twist", {}))
+			if why != "":
+				errors.append("cmd %d (twist): refused (%s)" % [i, why])
 		"battle":
 			if _battle == null or _battle.is_finished():
 				errors.append("cmd %d: battle command without an active battle" % i)
@@ -138,6 +151,40 @@ func _advance(k: int) -> void:
 		game._dispatch(sim.step(1))
 		if sim.tick() == before:
 			break
+		_apply_due_twists()
+
+
+## 06-D: a twist command now (tick == clock → Game.apply_twist, the live path), later (tick ahead → buffered) or
+## never (tick passed → twist_tick_passed). "" or the refusal.
+func _twist(tw: Variant) -> String:
+	if not (tw is Dictionary):
+		return "malformed"
+	var sim: RunSim = game.sim
+	var at: int = int((tw as Dictionary).get("tick", sim.tick()))
+	if at < sim.tick():
+		return "twist_tick_passed"
+	if at > sim.tick():
+		_pending_twists.append((tw as Dictionary).duplicate(true))
+		return ""
+	return game.apply_twist(tw)
+
+
+## Buffered twists whose tick the clock reached (after that tick's evaluation, like live).
+func _apply_due_twists() -> void:
+	if _pending_twists.is_empty():
+		return
+	var keep: Array[Dictionary] = []
+	var due: Array[Dictionary] = []
+	for tw: Dictionary in _pending_twists:
+		if int(tw.get("tick", 0)) > (game.sim as RunSim).tick():
+			keep.append(tw)
+		else:
+			due.append(tw)
+	_pending_twists = keep
+	for tw: Dictionary in due:
+		var why: String = _twist(tw)
+		if why != "":
+			_errors.append("twist '%s' (tick %d): refused (%s)" % [str(tw.get("id", "")), int(tw.get("tick", 0)), why])
 
 
 ## §5.7 BattleController.run: setup (next_seed "battle"), BattleState, Show.begin_battle (next_seed "show"),

@@ -134,12 +134,6 @@ func is_full(id: String) -> bool:
 	return p != null and p.visible
 
 
-## True while the slim playback HP bar of `id` is drawn.
-func is_slim(id: String) -> bool:
-	var p: Plate = _plates.get(id, null)
-	return p != null and p.slim.visible
-
-
 func set_display_name(id: String, display_name: String) -> void:
 	var p: Plate = _plates.get(id, null)
 	if p != null:

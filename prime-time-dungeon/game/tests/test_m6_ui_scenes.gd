@@ -196,6 +196,90 @@ func test_pause_menu_tab_from_params_focuses_page() -> void:
 	assert_true(page != null and owner != null and page.is_ancestor_of(owner), "focus starts inside the inventory page")
 
 
+## scenes-flow-4: the "Zum Titel" confirm is modal — tab_next / tab_prev behind it neither switch tabs nor pull the focus
+## out of the dialog, and a second ask_to_title() stacks no second dialog.
+func test_pause_title_confirm_is_modal() -> void:
+	var pm: Node = _instance(SCENE_PAUSE, {})
+	if pm == null:
+		return
+	add_to_tree(pm)
+	await wait_frames(3)
+	var tab_before: String = str(pm.get("current_tab"))
+	var dlg: Node = pm.call("ask_to_title") as Node
+	assert_not_null(dlg, "confirm opened")
+	if dlg == null:
+		return
+	assert_true(await _wait_focus_in(dlg), "focus inside the confirm")
+	for a: StringName in [&"tab_next", &"tab_prev", &"tab_next"]:
+		_push_action(a)
+		await wait_frames(2)
+		var f: Control = tree.root.gui_get_focus_owner()
+		assert_true(f != null and dlg.is_ancestor_of(f), "%s keeps the focus in the confirm" % a)
+	assert_eq(str(pm.get("current_tab")), tab_before, "no tab switch behind the dialog")
+	assert_eq(pm.call("ask_to_title"), dlg, "a second ask_to_title() returns the open confirm")
+	assert_eq(_confirms_in(pm), 1, "no second confirm stacked")
+	_push_action(&"ui_cancel")
+	await wait_frames(2)
+	assert_true(is_instance_valid(pm) and pm.is_inside_tree(), "ui_cancel answers only the confirm")
+	assert_false(bool(pm.call("is_confirm_open")), "confirm closed")
+	_push_action(&"tab_next")
+	await wait_frames(2)
+	assert_ne(str(pm.get("current_tab")), tab_before, "tabs switch again once the confirm is gone")
+	pm.call("close")
+	await wait_frames(2)
+
+
+## scenes-flow-5: a page without a focusable control (the Bestiarium of a new run) keeps the focus on its tab — also
+## when it is reached with tab_next from inside another page — so arrows / accept / cancel keep working.
+func test_pause_page_without_focusables_keeps_the_focus_on_its_tab() -> void:
+	Game.new_game(0, "Kai", 4242)
+	assert_true(Game.state.bestiary.is_empty(), "precondition: empty Bestiarium")
+	var pm: Node = _instance(SCENE_PAUSE, {"tab": "achievements", "context": "explore"})
+	if pm == null:
+		return
+	add_to_tree(pm)
+	var in_page: bool = await wait_until(func() -> bool:
+		var ach: Control = pm.call("page", "achievements") as Control
+		var f0: Control = tree.root.gui_get_focus_owner()
+		return ach != null and f0 != null and ach.is_ancestor_of(f0), 120)
+	assert_true(in_page, "focus starts inside the achievements page")
+	_push_action(&"tab_next")
+	await wait_frames(3)
+	assert_eq(str(pm.get("current_tab")), "bestiary")
+	var tabs: Dictionary = pm.get("_tab_buttons")
+	assert_eq(tree.root.gui_get_focus_owner(), tabs["bestiary"], "focus on the Bestiarium tab, not on nothing")
+	_push_action(&"ui_right")
+	await wait_frames(2)
+	var f: Control = tree.root.gui_get_focus_owner()
+	assert_true(f != null and pm.is_ancestor_of(f) and f != tabs["bestiary"], "arrows move along the tab bar")
+	pm.call("close")
+	await wait_frames(2)
+	var pm2: Node = _instance(SCENE_PAUSE, {"tab": "bestiary", "context": "explore"})
+	add_to_tree(pm2)
+	await wait_frames(3)
+	var tabs2: Dictionary = pm2.get("_tab_buttons")
+	assert_eq(tree.root.gui_get_focus_owner(), tabs2["bestiary"], "opened on the empty page: focus on its tab")
+	pm2.call("close")
+	await wait_frames(2)
+
+
+func _confirms_in(n: Node) -> int:
+	var k: int = 0
+	for c: Node in n.get_children():
+		if c.has_method("no_button") and is_instance_valid(c) and not c.is_queued_for_deletion():
+			k += 1
+	return k
+
+
+## Delivers a press + release of `action` synchronously (Viewport.push_input).
+func _push_action(action: StringName) -> void:
+	for pressed: bool in [true, false]:
+		var ev: InputEventAction = InputEventAction.new()
+		ev.action = action
+		ev.pressed = pressed
+		tree.root.push_input(ev)
+
+
 # --- touch / safe area -------------------------------------------------------------------------------------------------
 
 func test_touch_hit_areas_at_least_88() -> void:

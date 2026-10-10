@@ -84,10 +84,6 @@ func trail_target() -> Vector3:
 	return prev
 
 
-func trail_size() -> int:
-	return _trail.size()
-
-
 func _physics_process(delta: float) -> void:
 	_anim_t += delta
 	if leader == null or not is_instance_valid(leader):

@@ -131,11 +131,6 @@ func options() -> Array[Dictionary]:
 	return out
 
 
-## Choice that only closes the dialog (ui_cancel).
-func cancel_choice() -> String:
-	return ""
-
-
 ## Option focused first in the dialog: the safe one (leave / ignore), so a mashed confirm key risks nothing.
 func default_choice() -> String:
 	match ev.type if ev != null else "":

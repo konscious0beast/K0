@@ -146,7 +146,9 @@ func _physics_process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not input_enabled or _standalone:
+	# Router.busy: the screen is still fading in (back from a battle / safe room) or out — `action` shares Enter/Space
+	# with ui_accept, so presses that skipped the results must not reach Kai (02_TECH §10: no exploration input then).
+	if not input_enabled or _standalone or Router.busy:
 		return
 	if event.is_action_pressed(&"action") and not event.is_echo():
 		get_viewport().set_input_as_handled()
@@ -183,14 +185,6 @@ func _swing_fallback_body() -> void:
 ## True during the hitting part of the swing.
 func is_strike_hitting() -> bool:
 	return _strike_t >= Rules.STRIKE_HIT_FROM and _strike_t <= Rules.STRIKE_DURATION
-
-
-func is_striking() -> bool:
-	return _strike_t >= 0.0
-
-
-func strike_ready() -> bool:
-	return _cooldown <= 0.0 and _strike_t < 0.0
 
 
 func flat_forward() -> Vector3:

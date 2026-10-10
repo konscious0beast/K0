@@ -3,7 +3,6 @@ extends RefCounted
 ## Formatting, colors (03_ART §2), widget factories, focus wiring (§10.2), display-only fallbacks for party stats,
 ## inventory and safe rooms (they read Game/DB, never write Game.state).
 
-const STUB_HEADER: String = "# STUB(M0)"
 const UiIconU := preload("res://scenes/ui/ui_icon.gd")
 
 # --- Art palette extras (03_ART §2.1 / §2.4) -------------------------------------------------------------------------
@@ -647,7 +646,6 @@ static func format_line(text: String, ctx: Dictionary = {}) -> String:
 
 # --- misc --------------------------------------------------------------------------------------------------------------
 
-## True if the script source at `path` is still a Phase-A stub (first line "# STUB(M0)"). Missing source (export) → false.
 ## Deferred grab_focus that tolerates the control being removed/freed before the deferred call runs (lists rebuilt in
 ## the same frame, dialogs closing) — a plain grab_focus.call_deferred() would log "!is_inside_tree()".
 static func focus_later(c: Control) -> void:
@@ -658,21 +656,6 @@ static func focus_later(c: Control) -> void:
 		var target: Control = ref.get_ref() as Control
 		if target != null and target.is_inside_tree() and target.focus_mode != Control.FOCUS_NONE:
 			target.grab_focus()).call_deferred()
-
-
-static func is_stub(path: String) -> bool:
-	var f: FileAccess = FileAccess.open(path, FileAccess.READ)
-	if f == null:
-		return false
-	return f.get_line().begins_with(STUB_HEADER)
-
-
-static func stubs_of(paths: PackedStringArray) -> PackedStringArray:
-	var out: PackedStringArray = []
-	for p: String in paths:
-		if is_stub(p):
-			out.append(p)
-	return out
 
 
 static func is_mobile() -> bool:

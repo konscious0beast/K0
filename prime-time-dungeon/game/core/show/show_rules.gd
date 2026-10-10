@@ -65,7 +65,8 @@ var _kill_window: Array[int] = []            # kills of the last STREAK_ACTIONS 
 var _low_hp_done: Dictionary = {}
 var _stunts_ok: int = 0
 var _started: bool = false
-var _status_src: Dictionary = {}             # "<enemy id>|<status id>" → {"actor", "command"} of the applying party action
+# "<enemy id>|<status id>" → {"actor", "command"} of the applying party action
+var _status_src: Dictionary = {}
 var _tick_status: Dictionary = {}            # enemy id → status id while its last DAMAGE was a status tick
 
 

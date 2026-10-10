@@ -143,10 +143,6 @@ func skill_text() -> String:
 	return _skill_label.text if _skill.visible else ""
 
 
-func big_text() -> String:
-	return _big_label.text if _big.visible else ""
-
-
 ## Skill / action strip; party actions edge cyan, enemy actions red. hold < 0 → stays until hide_skill().
 func show_skill(text: String, party: bool, hold: float = 1.1) -> void:
 	if text == "":

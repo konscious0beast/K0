@@ -53,10 +53,10 @@ func test_music_keeps_playing_after_stream_end() -> void:
 	p.volume_db = -80.0
 	add_to_tree(p)
 	p.play()
-	var wait_ms: int = int(wav.get_length() / p.pitch_scale * 1.5 * 1000.0)
-	var deadline: int = Time.get_ticks_msec() + wait_ms
-	var reached: bool = await wait_until(func() -> bool: return Time.get_ticks_msec() >= deadline, 5000)
-	assert_true(reached)
+	var wait_sec: float = wav.get_length() / p.pitch_scale * 1.5
+	# audio plays in real time: a real-time timer (ignore_time_scale), not a frame count that uncapped headless frames
+	# can exhaust before the deadline
+	await tree.create_timer(wait_sec, true, false, true).timeout
 	assert_true(p.playing, "looping music still playing after 1.5 × length")
 	p.stop()
 	await wait_frames(3)
@@ -74,6 +74,7 @@ func test_non_looping_stream_stops_control() -> void:
 
 
 func test_unknown_ids_do_not_crash() -> void:
+	Sfx.stop_all()                         # precondition: no music requested (earlier tests may have started some)
 	assert_null(SfxSynth.make(&"does_not_exist"))
 	assert_null(SfxSynth.make_music(&"does_not_exist"))
 	Sfx.play(&"does_not_exist")

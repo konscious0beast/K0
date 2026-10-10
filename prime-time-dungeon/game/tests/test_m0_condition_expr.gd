@@ -75,7 +75,8 @@ func test_conjunction() -> void:
 
 func test_operands() -> void:
 	var ce: ConditionExpr = _ok("e.a == 1 && s.kills_total > 2 && f.x == true && true")
-	assert_eq(ce.operands(), [{"scope": "e", "key": "a"}, {"scope": "s", "key": "kills_total"}, {"scope": "f", "key": "x"}])
+	assert_eq(ce.operands(),
+		[{"scope": "e", "key": "a"}, {"scope": "s", "key": "kills_total"}, {"scope": "f", "key": "x"}])
 
 
 func test_syntax_errors() -> void:

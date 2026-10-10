@@ -19,7 +19,6 @@ extends Node
 ## Saves go to SAVE_DIR (cleared before and after the run); settings stay ephemeral.
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
-const Rules := preload("res://scenes/exploration/encounter_rules.gd")
 const TitleFlow := preload("res://scenes/title/title_flow.gd")
 const RUN_SEED: int = 4242                 # --seed=<int> overrides it (TitleFlow.boot_seed)
 const SAVE_SLOT: int = 1
@@ -394,7 +393,7 @@ func candidates(layout: FloorLayout, fr: FloorRun, dist: Dictionary = {}) -> Arr
 			if a != null and int(dist.get(sc, 99)) <= STRAY_HUNT_DIST:
 				out.append({"kind": "group", "id": str(gid), "cell": sc,
 					"why": "stray " + str((fr.strays[gid] as Dictionary).get("enc", ""))})
-	var has_key: bool = Game.state.inventory.has(Game.KEY_MASTER)
+	var has_key: bool = Game.state.inventory.has(RunRules.KEY_MASTER)
 	for ch: ChestSpawn in layout.chests:
 		if not rush and not fr.opened_chests.has(ch.id) and (ch.type != "locked" or has_key):
 			out.append({"kind": "chest", "id": ch.id, "cell": ch.cell, "why": ch.type})
@@ -680,7 +679,7 @@ func _engage(ex: ExplorationScene, group_id: String) -> bool:
 		if a == null:
 			return true
 		var p: Vector3 = ex.get_player_position()
-		if Rules.flat_dist(p, a.global_position) <= STRIKE_RANGE:
+		if _flat_dist(p, a.global_position) <= STRIKE_RANGE:
 			UiUtil.release_move_actions()
 			var body: CharacterBody3D = ex.get_player()
 			_face(body, a.global_position)
@@ -692,7 +691,7 @@ func _engage(ex: ExplorationScene, group_id: String) -> bool:
 				if _interrupted(ex):
 					return true
 		else:
-			var sneak: bool = pace == "human" and Rules.flat_dist(p, a.global_position) <= HUMAN_SNEAK_DIST
+			var sneak: bool = pace == "human" and _flat_dist(p, a.global_position) <= HUMAN_SNEAK_DIST
 			_press(&"sneak", 1.0 if sneak else 0.0)
 			_steer(ex, a.global_position)
 			await get_tree().physics_frame
@@ -714,9 +713,9 @@ func _use_interactable(ex: ExplorationScene, it: Node, obj: Dictionary) -> bool:
 	var layout: FloorLayout = ex.get_layout()
 	var center: Vector3 = layout.cell_to_world(cell)
 	var rp: Vector3 = it.call("reach_point", center)
-	var away: Vector3 = Rules.flat_dir(rp, center)
+	var away: Vector3 = _flat_dir(rp, center)
 	if away == Vector3.ZERO:
-		away = Rules.flat_forward((it as Node3D).global_transform.basis) * -1.0
+		away = _flat_forward((it as Node3D).global_transform.basis) * -1.0
 	var extent: float = float(it.get("extent"))
 	for attempt in 2:
 		var stand: Vector3 = rp + away * (extent + (STAND_OFF if attempt == 0 else 0.55))
@@ -826,7 +825,7 @@ func travel(cell: Vector2i) -> Walk:
 		return Walk.INTERRUPTED
 	var p: Vector3 = ex.get_player_position()
 	var here: Vector3 = hub(ex, path[0])
-	if path.size() > 1 and Rules.flat_dist(p, here) > 3.0:
+	if path.size() > 1 and _flat_dist(p, here) > 3.0:
 		if await walk_to(ex, here, 1.0) == Walk.INTERRUPTED:
 			return Walk.INTERRUPTED
 	for i in range(1, path.size()):
@@ -926,7 +925,7 @@ func walk_to(ex: ExplorationScene, target: Vector3, tolerance: float = 0.5) -> W
 			UiUtil.release_move_actions()
 			return Walk.INTERRUPTED
 		var p: Vector3 = ex.get_player_position()
-		var d: float = Rules.flat_dist(p, target)
+		var d: float = _flat_dist(p, target)
 		if d <= tolerance:
 			UiUtil.release_move_actions()
 			return Walk.ARRIVED
@@ -956,7 +955,7 @@ func walk_to(ex: ExplorationScene, target: Vector3, tolerance: float = 0.5) -> W
 ## Move actions for the world direction to `target`, relative to the camera yaw like a stick (PlayerController moves
 ## camera relative: dir = Vector3(input.x, 0, input.y).rotated(UP, camera_yaw)).
 func _steer(ex: ExplorationScene, target: Vector3) -> void:
-	var dir: Vector3 = Rules.flat_dir(ex.get_player_position(), target)
+	var dir: Vector3 = _flat_dir(ex.get_player_position(), target)
 	var yaw: float = ex.get_camera_rig().yaw if ex.get_camera_rig() != null else 0.0
 	var v: Vector2 = steer_input(dir, yaw)
 	_press(&"move_right", v.x)
@@ -980,9 +979,9 @@ static func _press(action: StringName, strength: float) -> void:
 
 
 func _face(body: CharacterBody3D, target: Vector3) -> void:
-	var d: Vector3 = Rules.flat_dir(body.global_position, target)
+	var d: Vector3 = _flat_dir(body.global_position, target)
 	if d != Vector3.ZERO:
-		body.call("teleport", body.global_position, Rules.yaw_of(d))
+		body.call("teleport", body.global_position, _yaw_of(d))
 
 
 func _interrupted(ex: ExplorationScene) -> bool:
@@ -1148,7 +1147,8 @@ func _layout_safe_rooms() -> int:
 	return layout.safe_rooms.size() if layout != null else 0
 
 
-## Game.replay_log(run log) must reproduce the live StateHash (Brief §6b; only while the log starts at new_game).
+## Game.replay_log(run log) must reproduce the live StateHash with zero verifier errors (Brief §6b, 05 §11.4; only
+## while the log starts at new_game).
 func _replay_check() -> bool:
 	if Game.run_log == null or bool(Game.run_log.header.get("from_save", false)):
 		return true
@@ -1159,6 +1159,9 @@ func _replay_check() -> bool:
 	if str(out.get("final_hash", "")) != live:
 		return fail("replay of the run log (%d commands) does not reproduce the live state (mismatch at checkpoint %d)"
 			% [Game.run_log.cmds().size(), int(out.get("mismatch_at", -1))])
+	var errors: PackedStringArray = out.get("errors", PackedStringArray())
+	if not errors.is_empty():
+		return fail("the verifier (Game.replay_log) reports %d error(s): %s" % [errors.size(), "; ".join(errors)])
 	_note("replay check: %d commands reproduce the live StateHash" % Game.run_log.cmds().size())
 	return true
 
@@ -1682,6 +1685,29 @@ func _reasons_text() -> String:
 
 static func _v(p: Vector3) -> String:
 	return "(%.1f, %.1f)" % [p.x, p.z]
+
+
+# --- XZ geometry (the bot's own: M3's encounter_rules.gd is private to the exploration module, 02_TECH §0.3) ----------
+
+static func _flat_dist(a: Vector3, b: Vector3) -> float:
+	return Vector2(a.x - b.x, a.z - b.z).length()
+
+
+## Normalized XZ direction from `from` to `to`; Vector3.ZERO if they coincide.
+static func _flat_dir(from: Vector3, to: Vector3) -> Vector3:
+	var d: Vector3 = Vector3(to.x - from.x, 0.0, to.z - from.z)
+	return d.normalized() if d.length_squared() > 0.000001 else Vector3.ZERO
+
+
+## Forward (−Z of the basis) flattened to XZ.
+static func _flat_forward(basis: Basis) -> Vector3:
+	var f: Vector3 = Vector3(-basis.z.x, 0.0, -basis.z.z)
+	return f.normalized() if f.length_squared() > 0.000001 else Vector3.FORWARD
+
+
+## rotation.y that makes −Z point along `dir`.
+static func _yaw_of(dir: Vector3) -> float:
+	return atan2(-dir.x, -dir.z)
 
 
 func _ex() -> ExplorationScene:

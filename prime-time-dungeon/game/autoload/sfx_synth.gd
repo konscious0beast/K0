@@ -4,11 +4,13 @@ class_name SfxSynth extends RefCounted
 ## Deterministic: noise uses a fixed-seed RNG.
 
 const MIX_RATE: int = 22050
-const SFX_IDS: PackedStringArray = ["ui_move", "ui_confirm", "ui_cancel", "ui_error", "step", "swing", "hit", "hit_crit",
-	"hit_weak", "miss", "magic", "fire", "ice", "shock", "toxic", "light", "dark", "heal", "buff", "debuff", "ko", "defend",
-	"flee", "stunt_success", "stunt_fail", "level_up", "chest_open", "coin", "lootbox_shake", "lootbox_open", "lootbox_rare",
-	"sponsor", "achievement", "timer_warn", "stairs", "swirl", "door", "mod_blip", "chat_pop", "vending"]
-const MUSIC_IDS: PackedStringArray = ["title", "explore", "battle", "boss", "safe_room", "victory", "game_over", "credits"]
+const SFX_IDS: PackedStringArray = ["ui_move", "ui_confirm", "ui_cancel", "ui_error", "step", "swing", "hit",
+	"hit_crit", "hit_weak", "miss", "magic", "fire", "ice", "shock", "toxic", "light", "dark", "heal", "buff", "debuff",
+	"ko", "defend", "flee", "stunt_success", "stunt_fail", "level_up", "chest_open", "coin", "lootbox_shake",
+	"lootbox_open", "lootbox_rare", "sponsor", "achievement", "timer_warn", "stairs", "swirl", "door", "mod_blip",
+	"chat_pop", "vending"]
+const MUSIC_IDS: PackedStringArray = ["title", "explore", "battle", "boss", "safe_room", "victory", "game_over",
+	"credits"]
 
 ## Tone: [wave, f0, f1, duration s, volume, start s (-1 = after previous)]. Waves: sin sq saw tri noise.
 const SFX: Dictionary = {
@@ -30,7 +32,8 @@ const SFX: Dictionary = {
 	"toxic": [["sin", 220.0, 140.0, 0.32, 0.4, -1.0], ["noise", 500.0, 300.0, 0.2, 0.15, 0.08]],
 	"light": [["sin", 880.0, 1760.0, 0.3, 0.3, -1.0], ["tri", 1320.0, 2640.0, 0.25, 0.12, 0.04]],
 	"dark": [["saw", 110.0, 55.0, 0.36, 0.35, -1.0], ["noise", 300.0, 200.0, 0.3, 0.12, 0.0]],
-	"heal": [["sin", 523.0, 523.0, 0.1, 0.3, -1.0], ["sin", 659.0, 659.0, 0.1, 0.3, -1.0], ["sin", 784.0, 784.0, 0.16, 0.3, -1.0]],
+	"heal": [["sin", 523.0, 523.0, 0.1, 0.3, -1.0], ["sin", 659.0, 659.0, 0.1, 0.3, -1.0],
+		["sin", 784.0, 784.0, 0.16, 0.3, -1.0]],
 	"buff": [["tri", 440.0, 880.0, 0.26, 0.35, -1.0]],
 	"debuff": [["tri", 880.0, 420.0, 0.26, 0.35, -1.0]],
 	"ko": [["sq", 320.0, 55.0, 0.42, 0.3, -1.0], ["noise", 800.0, 200.0, 0.2, 0.2, 0.0]],
@@ -40,7 +43,8 @@ const SFX: Dictionary = {
 		["sq", 784.0, 784.0, 0.08, 0.25, -1.0], ["sq", 1046.0, 1046.0, 0.2, 0.25, -1.0]],
 	"stunt_fail": [["saw", 300.0, 90.0, 0.42, 0.3, -1.0]],
 	"level_up": [["sq", 523.0, 523.0, 0.07, 0.22, -1.0], ["sq", 659.0, 659.0, 0.07, 0.22, -1.0],
-		["sq", 784.0, 784.0, 0.07, 0.22, -1.0], ["sq", 1046.0, 1046.0, 0.07, 0.22, -1.0], ["sq", 1318.0, 1318.0, 0.24, 0.22, -1.0]],
+		["sq", 784.0, 784.0, 0.07, 0.22, -1.0], ["sq", 1046.0, 1046.0, 0.07, 0.22, -1.0], ["sq", 1318.0, 1318.0, 0.24, 0.22,
+			-1.0]],
 	"chest_open": [["tri", 300.0, 620.0, 0.16, 0.35, -1.0], ["sin", 1200.0, 1200.0, 0.22, 0.2, -1.0]],
 	"coin": [["sq", 988.0, 988.0, 0.05, 0.2, -1.0], ["sq", 1318.0, 1318.0, 0.16, 0.2, -1.0]],
 	"lootbox_shake": [["noise", 1200.0, 800.0, 0.05, 0.3, -1.0], ["noise", 1200.0, 800.0, 0.05, 0.3, 0.09],
@@ -75,7 +79,8 @@ const MUSIC: Dictionary = {
 		"lw": "sq", "drums": true},
 	"boss": {"bpm": 160, "bars": 4, "root": 38, "minor": true,
 		"bass": [0, 0, 1, 0, 0, 0, 1, 0, 5, 5, 6, 5, 3, 3, 4, 6],
-		"lead": [7, 8, 7, 6, 7, -99, 10, 8, 7, 8, 7, 6, 7, -99, 12, 11, 12, 13, 12, 10, 8, 7, 8, 10, 11, 10, 8, 7, 6, 4, 6, -99],
+		"lead": [7, 8, 7, 6, 7, -99, 10, 8, 7, 8, 7, 6, 7, -99, 12, 11, 12, 13, 12, 10, 8, 7, 8, 10, 11, 10, 8, 7, 6, 4, 6,
+			-99],
 		"lw": "saw", "drums": true},
 	"safe_room": {"bpm": 80, "bars": 2, "root": 48, "minor": false, "bass": [0, -99, 4, -99, 5, -99, 3, 4],
 		"lead": [4, -99, 7, 9, 7, -99, 4, -99, 5, -99, 4, 2, 4, -99, -99, -99], "lw": "sin", "drums": false},

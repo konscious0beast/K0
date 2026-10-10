@@ -246,7 +246,7 @@ Bosse und Event-Kämpfe: immer **Normal**. Fahrscheinfresser: kann nie Hinterhal
 
 Positionen und feste Inhalte: Karte Kap. 1.3 (Metall: `itm_arm_safety_vest` A, `itm_wpn_collar_studded` B, `itm_smelling_salts` ×2 B,
 `itm_acc_gas_mask` C; verschlossen: `itm_wpn_fire_axe` C, `itm_wpn_collar_signet` D). Ohne Schlüssel zeigt der Prompt
-„Verschlossen. Ein Generalschlüssel wäre praktisch.“. Zufall: `SeedUtil.derive(floor_seed, "chest", k)`, k = Index aus der ID `f1_c<k>`.
+„Verschlossen. Ein Generalschlüssel wäre praktisch.“. Zufall: `SeedUtil.derive(floor_run.loot_seed, "chest", k)`, k = Index aus der ID `f1_c<k>` — der geheime Beute-Seed der Etage, nie der öffentliche Layout-Seed (05 CR-11).
 
 Jede geöffnete Truhe: Hype +2, Zähler `s.chests_opened` +1. Geöffnete Truhen stehen in `FloorRun.opened_chests` (bleiben offen).
 
@@ -1099,7 +1099,7 @@ ShowModel.viewers_for(floor_mult: float, hype: float, followers: int) -> int
 | Schwachstelle getroffen | +2 | max. 1× pro Aktion |
 | Kill mit Angriff / mit Skill / mit Stunt | +1 / +2 / +4 | Item-Kill zählt wie Angriff (+1); zusätzlich `SkillDef.kill_hype` (Prime-Time-Finisher +10) |
 | **Overkill** | +3 | `damage >= hp_before + target.max_hp * 1.0` (`Balance.OVERKILL_MAXHP_FRAC`); Credits dieses Gegners ×1.25 (`BattleResult.overkill_credits`) |
-| **Combo** | +2 | Kai und Mopsula handeln direkt nacheinander (kein anderer Zug dazwischen, auch keine Pseudo-Einheit), beide mit einer Schadensaktion, die **dasselbe** Gegner-Ziel trifft; 2. Treffer Schaden ×1.1 (im Kern: `DamageCalc.compute(..., combo_second_hit)`, Erkennung über `BattleState.last_party_target` / `last_actor_side`), Banner „COMBO!“, Event `ActionEvent.Type.COMBO`, Trigger `combo` |
+| **Combo** | +2 | Kai und Mopsula handeln direkt nacheinander (kein anderer Zug dazwischen, auch keine Pseudo-Einheit), beide mit einer Schadensaktion, die **dasselbe** Gegner-Ziel trifft; 2. Treffer Schaden ×1.1 (im Kern: `DamageCalc.compute(..., combo_second_hit)`, Erkennung über `BattleState.last_party_actor_id` / `last_party_target_id` / `last_actor_side`), Banner „COMBO!“, Event `ActionEvent.Type.COMBO`, Trigger `combo` |
 | Kill-Serie | +5 | 3 Kills innerhalb von 3 aufeinanderfolgenden Party-Aktionen |
 | Stunt Erfolg / Fehlschlag | +12 / +4 | — |
 | Party-Mitglied fällt unter 25 % HP | +6 | 1× pro Mitglied pro Kampf („Drama“) |
@@ -1858,7 +1858,8 @@ neutral (`box_fan`, `enm_boss_hausmeister`, keine Marken-IDs) — eine Umbenennu
 
 ### 16.2 Dateien in `res://data/`
 
-Jede Datei ist `{"schema": 1, "entries": [...]}` (02_TECH §4.1), ggf. mit den genannten Zusatzblöcken auf oberster Ebene.
+Jede Datei der `GameData`-Tabellen ist `{"schema": 1, "entries": [...]}` (02_TECH §4.1), ggf. mit den genannten Zusatzblöcken
+auf oberster Ebene. Ausnahme: `data/events.json` hat `{"schema": 1, "events": [...]}` (05 §10.1, geladen von `EventCatalog`).
 
 | Kapitel | Datei | Inhalt / Zusatzblöcke |
 |---|---|---|
@@ -1905,7 +1906,7 @@ nutzen die Boss-Paletten dort; Bosse stehen in den Zellen `quarter_boss`/`floor_
 
 ### 16.3 Globale Konstanten
 
-Kampf/Progression in `Balance` (`core/battle/balance.gd`), Show in `ShowModel`/`ShowRules`/`SponsorSystem`, Erkundung in den M3-Skripten.
+Kampf/Progression in `Balance` (`core/stats/balance.gd`; CTB-Konstanten `TICK_*` in `CTBQueue`, Laufgeschwindigkeit `RUN_SPEED` in `player_controller.gd`, `CONTACT_RADIUS`/`GRACE_*` in `encounter_rules.gd`), Show in `ShowModel`/`ShowRules`/`SponsorSystem`, Erkundung in den M3-Skripten.
 
 | Konstante | Wert |
 |---|---|
@@ -1955,6 +1956,6 @@ Kampf/Progression in `Balance` (`core/battle/balance.gd`), Show in `ShowModel`/`
 | `GameState` | `difficulty`, `pity_rare`, `pity_epic`, `bestiary`; `create_new` liest `party.json → start` |
 | `FloorRun` | `timer_started`, `completed_events`, `visited_safe_rooms`, `location` (`&"start"` oder Safe-Room-ID), `stats {time_used, kills, viewers_peak, followers_gained, achievements}` |
 | `ShowState` | `hype` Start 30, `milestones` |
-| Kampf-Kern | `Combatant.stunt_cooldown`, `is_pseudo`, `status_resist`; `BattleState.failed_flee_attempts`, `last_party_target`, `last_actor_side`; `BattleResult` Felder Kap. 8; `ActionEvent.Type` + `COMBO`, `CREDITS_STOLEN`, `ESCAPED`; `CTB_ORDER` 12 Einträge |
+| Kampf-Kern | `Combatant.stunt_cooldown`, `is_pseudo`, `status_resist`; `BattleState.failed_flee_attempts`, `last_party_actor_id`, `last_party_target_id`, `last_actor_side`; `BattleResult` Felder Kap. 8; `ActionEvent.Type` + `COMBO`, `CREDITS_STOLEN`, `ESCAPED`; `CTB_ORDER` 12 Einträge |
 | Eingabe | Actions `action` (F/Space/Enter, Button 0) und `sneak` (Shift, Button 7, Achse 4 LT); `attack`, `interact`, `sprint` entfallen; `toggle_speed` = R / Button 8; `battle_speed` ∈ {1.0, 2.0} |
 | UI / Save | `UiTheme.TOUCH_HIT = 88`; `Save.load_slot` Gnadenfrist 180 s; `Save.record_game_over(slot)` schreibt beim Game Over nur `game_overs` +1 in den Slot |

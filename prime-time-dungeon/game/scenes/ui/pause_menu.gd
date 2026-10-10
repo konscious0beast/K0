@@ -1,6 +1,6 @@
 extends CanvasLayer
-## Pause menu (02_TECH §1.6, §9.4 layer 60, GDD §14.4): tabs Party · Inventar · Ausrüstung · Fähigkeiten · Achievements ·
-## Bestiarium · Optionen · Zum Titel. Opening pauses the tree (Game timer stops) and emits pause_menu_toggled(true);
+## Pause menu (02_TECH §1.6, §9.4 layer 60, GDD §14.4): tabs Party · Inventar · Ausrüstung · Fähigkeiten · Achievements
+## · Bestiarium · Optionen · Zum Titel. Opening pauses the tree (Game timer stops) and emits pause_menu_toggled(true);
 ## the menu itself closes on pause / ui_cancel (from the tab bar) or the visible "Schließen" button (touch has no
 ## Esc/Back: the touch pause button sits under the paused HUD), unpauses and emits pause_menu_toggled(false).
 ## process_mode WHEN_PAUSED — also every page and dialog opened from here (§9.4). tab_prev / tab_next switch tabs.
@@ -14,6 +14,7 @@ signal closed()
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const InputGlyph := preload("res://scenes/ui/input_glyph.gd")
 const UiIcon := preload("res://scenes/ui/ui_icon.gd")
+const MenuBase := preload("res://scenes/ui/menu_base.gd")
 const CONFIRM: String = "res://scenes/ui/confirm_dialog.tscn"
 const SETTINGS: String = "res://scenes/ui/settings_menu.tscn"
 const TABS: Array[Dictionary] = [
@@ -43,6 +44,7 @@ var _page_title: Label
 var _status: Label
 var _info: Label
 var _status_tween: Tween = null
+var _confirm: Node = null                  # open "Zum Titel" confirm: modal over the menu (input goes to it only)
 
 
 func setup(params: Dictionary) -> void:
@@ -84,7 +86,8 @@ func _process(_delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _closing:
+	# The confirm dialog is modal: tab switching behind it would pull the focus onto the tab bar under the dialog.
+	if _closing or is_confirm_open():
 		return
 	if event.is_action_pressed(&"tab_next") or event.is_action_pressed(&"tab_prev"):
 		get_viewport().set_input_as_handled()
@@ -152,10 +155,14 @@ func page(tab: String) -> Control:
 	return pages.get(tab) as Control
 
 
+## Opens the "Zum Titel" confirm (modal); while one is open, the open one is returned and no second one stacks.
 func ask_to_title() -> Node:
+	if is_confirm_open():
+		return _confirm
 	if not ResourceLoader.exists(CONFIRM):
 		return null
 	var d: Node = (load(CONFIRM) as PackedScene).instantiate()
+	_confirm = d
 	d.call("setup", {"title": "Zum Titel", "text": "Fortschritt seit dem letzten Safe Room geht verloren.",
 		"yes": "Zum Titel", "no": "Weiterspielen", "default_no": true, "danger": true})
 	d.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
@@ -169,6 +176,10 @@ func ask_to_title() -> Node:
 			(_tab_buttons["title"] as Control).grab_focus())
 	add_child(d)
 	return d
+
+
+func is_confirm_open() -> bool:
+	return is_instance_valid(_confirm) and not bool(_confirm.get("answered"))
 
 
 # --- internals --------------------------------------------------------------------------------------------------------
@@ -214,26 +225,19 @@ func _make_page(tab: String) -> Control:
 
 func _focus_page() -> void:
 	var p: Control = pages.get(current_tab) as Control
-	if p == null:
-		return
-	if p.has_method("focus_default"):
+	if p != null and p.has_method("focus_default") and MenuBase.first_focusable(p) != null:
 		p.call("focus_default")
+		return
+	# Nothing focusable on the page (e.g. the Bestiarium of a new run): the focus stays on the tab bar, otherwise
+	# keyboard / gamepad would have no focus owner at all (the old page dropped it when it was hidden).
+	if _tab_buttons.has(current_tab):
+		(_tab_buttons[current_tab] as Control).grab_focus()
 
 
 func _focus_in_page() -> bool:
 	var f: Control = get_viewport().gui_get_focus_owner()
 	var p: Control = pages.get(current_tab) as Control
 	return f != null and p != null and p.is_ancestor_of(f)
-
-
-func _tab_has_focus() -> bool:
-	var f: Control = get_viewport().gui_get_focus_owner()
-	if f != null and f == close_button:
-		return true
-	for b: Control in _tab_list:
-		if b == f:
-			return true
-	return false
 
 
 func _show_status(text: String) -> void:

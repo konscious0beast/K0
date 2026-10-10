@@ -317,6 +317,40 @@ func test_soft_queue_is_capped_and_blocking_lines_survive() -> void:
 	assert_true(has_blocking, "the blocking line is never dropped")
 
 
+## scenes-flow-6: a blocking line queued while a non-blocking line is still TYPING cuts it short too. Before, the
+## typewriter overwrote the cut with the full reading time when it completed (the safe-room Mopsula scene waited
+## seconds). Every soft line ahead of the blocking one is shown in full at once for CUT_HOLD_SEC; nothing is dropped,
+## order is kept.
+func test_blocking_line_cuts_soft_lines_that_are_still_typing() -> void:
+	var d: CanvasLayer = _dialog()
+	await wait_frames(1)
+	Engine.time_scale = 1.0
+	Game.settings.text_speed = 0                         # slow typewriter (25 chars/s)
+	var started: Array[String] = []
+	var on_start: Callable = func(_text: String, _voice: StringName, tag: String) -> void: started.append(tag)
+	d.connect("line_started", on_start)
+	var long_line: String = "Willkommen im Safe Room! Hier gibt es Snacks, Ruhe und garantiert keine Kameras. " \
+		+ "Fast keine. Na gut, drei. Lächeln Sie bitte trotzdem."
+	d.call("enqueue", long_line, &"mod", "safe_room_enter", false)
+	d.call("enqueue", "Noch ein Hinweis zum Schleichen.", &"mod", "tutorial_sneak", false)
+	await wait_frames(2)
+	var text: Label = d.get("_text") as Label
+	assert_ne(text.visible_characters, -1, "precondition: the first soft line is still typing")
+	d.call("enqueue", "Mopsula räuspert sich.", &"mopsula", "scene:test", true)
+	assert_eq(text.visible_characters, -1, "the typing soft line is shown in full at once")
+	assert_true(float(d.get("_hold")) <= ModDialogScript.CUT_HOLD_SEC + 0.0001, "and held at most CUT_HOLD_SEC")
+	var t: float = 0.0
+	while str((d.call("current_line") as Dictionary).get("tag", "")) != "scene:test" and t < 5.0:
+		await wait_frames(1)
+		t += d.get_process_delta_time()
+	d.disconnect("line_started", on_start)
+	assert_eq(str((d.call("current_line") as Dictionary).get("tag", "")), "scene:test", "the blocking line is shown")
+	assert_lt(t, 1.0, "within two cut holds, not after typewriter + reading time (%.2f s)" % t)
+	assert_eq(started, ["safe_room_enter", "tutorial_sneak", "scene:test"] as Array[String], "order kept, none dropped")
+	d.call("advance")
+	d.call("advance")
+
+
 func test_chat_voice_never_opens_the_box_and_text_is_glyph_safe() -> void:
 	var d: CanvasLayer = _dialog()
 	await wait_frames(1)
@@ -397,7 +431,7 @@ func test_text_speed_instant_shows_everything_at_once() -> void:
 	d.call("advance")
 
 
-# --- toasts ------------------------------------------------------------------------------------------------------------
+# --- toasts -----------------------------------------------------------------------------------------------------------
 
 func test_toasts_stack_max_three_and_expire() -> void:
 	var t: CanvasLayer = ToastStackScript.new()
@@ -428,7 +462,7 @@ func test_toasts_are_silent_while_replaying() -> void:
 	assert_eq(int(t.call("count")), 0, "presentation is skipped during replay")
 
 
-# --- GlobalUi ----------------------------------------------------------------------------------------------------------
+# --- GlobalUi ---------------------------------------------------------------------------------------------------------
 
 func test_global_ui_composition_and_single_instance() -> void:
 	var g: Node = _global({})
@@ -488,7 +522,7 @@ func test_debug_overlay_info() -> void:
 	await wait_frames(1)
 
 
-# --- helpers -------------------------------------------------------------------------------------------------------------
+# --- helpers ----------------------------------------------------------------------------------------------------------
 
 func _overlay(params: Dictionary) -> CanvasLayer:
 	var o: CanvasLayer = (load(SCENE_OVERLAY) as PackedScene).instantiate() as CanvasLayer

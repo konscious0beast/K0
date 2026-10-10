@@ -812,6 +812,28 @@ func test_show_end_battle_resets_unserved_top_threshold() -> void:
 	assert_eq(Game.state.show.stats["hype_100_count"], 1)
 
 
+## core-logic-3: achievement hype unlocked by end_battle itself (ach_first_win +5) crosses 100 after the last turn
+## boundary — no gift is possible any more, so the top threshold resets hype to 80 at once (GDD §7.4) instead of being
+## reserved and silently discarded with the battle state (hype stuck at 100).
+func test_show_achievement_hype_after_the_last_boundary_resets_the_top_threshold() -> void:
+	_world()
+	Game.in_battle = true
+	Show.begin_battle(_setup())
+	Game.state.show.hype = 97.0
+	var resets: Array = []
+	var cb: Callable = func(h: float, _d: float, reason: StringName) -> void:
+		if reason == &"sponsor":
+			resets.append(h)
+	Events.hype_changed.connect(cb)
+	Show.end_battle(_result(BattleResult.Outcome.VICTORY))
+	Events.hype_changed.disconnect(cb)
+	Game.in_battle = false
+	assert_has(Show.unlocked_this_battle(), "ach_first_win")
+	assert_eq(resets, [80.0], "crossing 100 without a possible gift resets hype to 80")
+	assert_lt(Show.hype(), 100.0, "hype does not stay at 100 after the battle")
+	assert_eq(Game.state.show.stats["hype_100_count"], 1)
+
+
 ## Crossing 100 records the viewer value at hype 100 and converts the same followers whether gift slots were free
 ## (reservation, reset to 80 later) or used up (reset to 80 at once) — mid-battle and through the end-of-battle bonus.
 func test_show_top_threshold_peak_and_followers_do_not_depend_on_gift_slots() -> void:

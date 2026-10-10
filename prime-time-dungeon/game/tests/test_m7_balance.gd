@@ -12,15 +12,10 @@ extends TestCase
 ## Boss turn counts hinge on how the AutoPolicy spends MP: formulas (GDD §3/§4), party growth, gear and boss data match
 ## the GDD; the former 02_TECH §5.8 rule "MP >= 50 % → strongest skill, else ATTACK" gave 34.5 / 42.0 turns (Mopsula
 ## hits for 2–3 below 50 % MP), the MP-efficient rule of §5.8 as amended by CR M7-B1 gives ≈ 19.5 / 24
-## (GDD sim 18 / 23).
-## Levels/gear per zone follow the GDD §5.4/§13 progression (C L4 + mid gear, D L6 + late gear); 02_TECH §11.5 was
-## amended accordingly in the integration phase (it used to say "Startparty (Lv 1–3)" for every encounter).
-## Needs the real M1 battle core: skipped while core/battle/*.gd are still M0 stubs (runs since integration, §0.1 C).
+## (GDD sim 18 / 23). Levels/gear per zone follow the GDD §5.4/§13 progression (C L4 + mid gear, D L6 + late gear);
+## 02_TECH §11.5 was amended accordingly in the integration phase (it used to say "Startparty (Lv 1–3)" for every
+## encounter).
 
-const STUB_HEADER: String = "# STUB(M0)"
-const M1_FILES: PackedStringArray = ["res://core/battle/battle_state.gd", "res://core/battle/combatant.gd",
-	"res://core/battle/ctb_queue.gd", "res://core/battle/action_resolver.gd", "res://core/battle/damage_calc.gd",
-	"res://core/battle/enemy_ai.gd", "res://core/battle/auto_policy.gd", "res://core/stats/stat_block.gd"]
 const SEEDS: int = 50
 const MIN_WIN_RATE: float = 0.80
 const BOSS_MIN_WIN_NO_GIFTS: float = 0.50
@@ -63,16 +58,6 @@ const PLAN: Dictionary = {
 }
 
 
-func _m1_stub_reason() -> String:
-	for path: String in M1_FILES:
-		var f: FileAccess = FileAccess.open(path, FileAccess.READ)
-		if f == null:
-			return "missing " + path
-		if f.get_line().begins_with(STUB_HEADER):
-			return "M1 battle core is still a stub (%s)" % path.get_file()
-	return ""
-
-
 func test_plan_covers_every_floor_1_encounter() -> void:
 	# Runs always (pure data): the balance plan must not silently miss an encounter.
 	var f1: FloorDef = real_data().floor_def(1)
@@ -93,10 +78,6 @@ func test_plan_covers_every_floor_1_encounter() -> void:
 
 
 func test_regular_encounters_win_rate() -> void:
-	var reason: String = _m1_stub_reason()
-	if reason != "":
-		skip(reason)
-		return
 	var turns: Array = []
 	for id: String in PLAN:
 		var enc: EncounterDef = real_data().encounter(id)
@@ -113,39 +94,23 @@ func test_regular_encounters_win_rate() -> void:
 
 
 func test_hausmeister_at_level_5() -> void:
-	var reason: String = _m1_stub_reason()
-	if reason != "":
-		skip(reason)
-		return
 	var avg: float = _assert_win_rate("enc_f1_boss_hausmeister", BOSS_MIN_WIN_NO_GIFTS)
 	var band: Vector2 = BOSS_TURNS["enc_f1_boss_hausmeister"]
 	assert_between(avg, band.x, band.y, "enc_f1_boss_hausmeister: avg party turns (GDD §13)")
 
 
 func test_rattenkoenigin_at_level_7() -> void:
-	var reason: String = _m1_stub_reason()
-	if reason != "":
-		skip(reason)
-		return
 	var avg: float = _assert_win_rate("enc_f1_boss_rattenkoenigin", BOSS_MIN_WIN_NO_GIFTS)
 	var band: Vector2 = BOSS_TURNS["enc_f1_boss_rattenkoenigin"]
 	assert_between(avg, band.x, band.y, "enc_f1_boss_rattenkoenigin: avg party turns (GDD §13)")
 
 
 func test_tutorial_cannot_be_lost() -> void:
-	var reason: String = _m1_stub_reason()
-	if reason != "":
-		skip(reason)
-		return
 	var stats: Dictionary = _run_series("enc_f1_a1_tutorial", 1, "start", "start", 20)
 	assert_eq(int(stats["wins"]), 20, "tutorial (enemy damage × 0.5, HP never below 1) is always won")
 
 
 func test_battles_are_deterministic() -> void:
-	var reason: String = _m1_stub_reason()
-	if reason != "":
-		skip(reason)
-		return
 	var a: Dictionary = _run_battle("enc_f1_b4", 3, "start", "start", 4242)
 	var b: Dictionary = _run_battle("enc_f1_b4", 3, "start", "start", 4242)
 	assert_eq(a, b, "same seed + same data = same battle")

@@ -213,10 +213,6 @@ func best_rarity() -> String:
 	return UiUtil.RARITY_ORDER[maxi(best, 0)]
 
 
-func card_count() -> int:
-	return _cards.get_child_count()
-
-
 # --- internals --------------------------------------------------------------------------------------------------------
 
 func _explode() -> void:

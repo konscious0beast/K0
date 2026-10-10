@@ -23,7 +23,16 @@ const BATTLE_OPENING_SKIP: int = 20
 const BATTLE_OPENING_SAMPLES: int = 10
 const BATTLE_MAX_FRAMES: int = 2400
 const SAFE_ROOM_SAMPLES: int = 30
-const BOSS_LEVEL: int = 7                     # GDD §13: Königin with Lv 7, Hausmeister with Lv 5
+## Boss runs measure the WHOLE fight (phase changes, the Königin's train, haste) — only a victory gets there, so the
+## party gets the full-run bot's pre-boss kit (scenes/boot/fullrun.gd boss_kit) and a level above the GDD §13 band (an
+## auto-played Königin at Lv 7 is lost about half the time since the balance pass); a boss run that does not end in
+## VICTORY fails the probe (PERF: OVER BUDGET … "kein Sieg").
+const BOSS_LEVEL: int = 10
+const BOSS_KIT: Dictionary = {
+	"kai": {"weapon": "itm_wpn_fire_axe", "armor": "itm_arm_safety_vest", "accessory": "itm_acc_lucky_ticket"},
+	"mopsula": {"weapon": "itm_wpn_collar_signet", "armor": "itm_arm_velvet_cape", "accessory": "itm_acc_lucky_ticket"},
+}
+const BOSS_ITEMS: Dictionary = {"itm_bandage": 9, "itm_smelling_salts": 5, "itm_energy_krawumm": 7, "itm_elixir": 2}
 const FULL_LEVEL: int = 4                     # full non-boss battle: d-zone level, so the fight lasts a few turns
 const LEAK_ENCOUNTER: String = "enc_f1_a1_tutorial"
 const LEAK_WARMUP: int = 2                    # cycles before the baseline (caches, pools, lazy streams)
@@ -738,8 +747,11 @@ func _section_battle() -> void:
 func _battle(enc_id: String, full: bool) -> Dictionary:
 	var root: Window = get_tree().root
 	var enc: EncounterDef = _encounter(enc_id)
+	var boss: bool = full and enc != null and enc.boss
 	if full:
-		_level_party(BOSS_LEVEL if enc != null and enc.boss else FULL_LEVEL)
+		_level_party(BOSS_LEVEL if boss else FULL_LEVEL)
+	if boss:
+		_boss_kit()
 	Progression.full_heal(Game.state, DB.data)
 	Game.auto_battle = true
 	var setup: BattleSetup = Game.make_battle_setup(enc_id, 0, "")
@@ -767,6 +779,8 @@ func _battle(enc_id: String, full: bool) -> Dictionary:
 			outcome = BattleResult.Outcome.keys()[battle.controller.result.outcome]
 		else:
 			outcome = "Abbruch nach %d Frames" % frames
+		if boss and outcome != "VICTORY":
+			_over.append("Boss-Kampf %s: %s, kein Sieg — die späten Phasen sind nicht gemessen" % [enc_id, outcome])
 	else:
 		for i in BATTLE_OPENING_SKIP:
 			await get_tree().process_frame
@@ -787,6 +801,18 @@ func _encounter(enc_id: String) -> EncounterDef:
 		if enc.id == enc_id:
 			return enc
 	return null
+
+
+## The bot's pre-boss equipment (set directly, not from the inventory) and battle items.
+func _boss_kit() -> void:
+	for m: PartyMember in Game.state.party:
+		var kit: Dictionary = BOSS_KIT.get(m.id, {})
+		for slot: String in kit:
+			if DB.has_id("items", str(kit[slot])):
+				m.equipment[slot] = str(kit[slot])
+	for item_id: String in BOSS_ITEMS:
+		var have: int = Game.state.inventory.count(item_id)
+		Game.state.inventory.add(item_id, maxi(0, int(BOSS_ITEMS[item_id]) - have), 9)
 
 
 func _level_party(level: int) -> void:

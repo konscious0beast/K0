@@ -228,7 +228,7 @@ func _process(delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if _modal != null and is_instance_valid(_modal):
 		return
-	if Router.busy:
+	if Router.busy or _world_blocks_menus():
 		return
 	if event.is_action_pressed(&"pause"):
 		get_viewport().set_input_as_handled()
@@ -238,7 +238,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		open_big_map()
 
 
-# --- public API (02_TECH §9.5) ------------------------------------------------------------------------------------------
+# --- public API (02_TECH §9.5)
+# ------------------------------------------------------------------------------------------
 
 func bind_layout(layout: FloorLayout, visited: Array[Vector2i]) -> void:
 	minimap.call("bind", layout, visited)
@@ -311,7 +312,8 @@ func set_quest(text: String, progress: float) -> void:
 	_quest_bar.value = clampf(progress, 0.0, 1.0) * 100.0
 
 
-# --- M6-internal helpers (tests, touch) ---------------------------------------------------------------------------------
+# --- M6-internal helpers (tests, touch)
+# ---------------------------------------------------------------------------------
 
 func prompt_text() -> String:
 	return _prompt_text
@@ -337,8 +339,20 @@ func is_modal_open() -> bool:
 	return _modal != null and is_instance_valid(_modal)
 
 
+## The exploration this HUD belongs to (its parent, duck-typed) blocks pause / map while its choice dialog is open
+## (the dialog owns the focus — a BigMap / PauseMenu over it would leave it without one after closing; 02_TECH §10:
+## exploration input only without an open menu) or while a battle is about to start. Event reveals stay pausable.
+func _world_blocks_menus() -> bool:
+	var ex: Node = get_parent()
+	if ex == null:
+		return false
+	if ex.has_method("active_dialog") and ex.call("active_dialog") != null:
+		return true
+	return ex.has_method("is_encounter_pending") and bool(ex.call("is_encounter_pending"))
+
+
 func open_pause_menu(tab: String = "party") -> Node:
-	if is_modal_open() or not ResourceLoader.exists(PAUSE_MENU):
+	if is_modal_open() or _world_blocks_menus() or not ResourceLoader.exists(PAUSE_MENU):
 		return null
 	var pm: Node = (load(PAUSE_MENU) as PackedScene).instantiate()
 	pm.call("setup", {"tab": tab, "context": "explore"})
@@ -348,7 +362,7 @@ func open_pause_menu(tab: String = "party") -> Node:
 
 
 func open_big_map() -> Node:
-	if is_modal_open():
+	if is_modal_open() or _world_blocks_menus():
 		return null
 	var bm: BigMap = BigMap.new()
 	var def: FloorDef = Game.floor_def()

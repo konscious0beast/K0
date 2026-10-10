@@ -83,15 +83,6 @@ func add_trauma(amount: float) -> void:
 	trauma = clampf(trauma + amount, 0.0, 1.0)
 
 
-## Current (unshaken) camera position and look-at point.
-func shot_position() -> Vector3:
-	return _pos
-
-
-func shot_look() -> Vector3:
-	return _look
-
-
 ## Switches to a programmed shot. ctx keys by shot: "actor"/"target"/"targets" (combatant ids), "area" (bool).
 func shot(p_name: StringName, ctx: Dictionary = {}) -> void:
 	var actor: String = str(ctx.get("actor", ""))
@@ -299,14 +290,6 @@ func shot(p_name: StringName, ctx: Dictionary = {}) -> void:
 	_blend = blend
 	_set_faded(fade_ids)
 	_evaluate()
-
-
-## Ids of rigs currently culled for the shot (tests).
-func faded_ids() -> PackedStringArray:
-	var out: PackedStringArray = []
-	for k: Variant in _faded.keys():
-		out.append(str(k))
-	return out
 
 
 func _exit_tree() -> void:

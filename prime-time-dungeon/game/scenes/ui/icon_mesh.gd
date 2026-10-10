@@ -19,10 +19,6 @@ func is_empty() -> bool:
 	return indices.is_empty()
 
 
-func triangle_count() -> int:
-	return indices.size() / 3
-
-
 ## Filled polygon without antialiasing (draw_colored_polygon). Invalid / degenerate polygons draw nothing.
 func poly(pts: PackedVector2Array, col: Color) -> void:
 	if pts.size() < 3 or col.a <= 0.0:

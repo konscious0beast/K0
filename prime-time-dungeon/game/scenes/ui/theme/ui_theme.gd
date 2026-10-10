@@ -104,7 +104,8 @@ static func _centered_panel(node_name: String, size: Vector2, box: StyleBox) -> 
 	return p
 
 
-# --- theme construction ------------------------------------------------------------------------------------------------
+# --- theme construction
+# ------------------------------------------------------------------------------------------------
 
 static func _box(bg: Color, border: Color = Color(0, 0, 0, 0), border_width: int = 0, margin_h: float = 12.0,
 		margin_v: float = 8.0) -> StyleBoxFlat:
@@ -152,7 +153,8 @@ static func _build() -> Theme:
 	t.set_stylebox("hover_pressed", "Button", _box(Color(C_ACCENT, 0.65), C_ACCENT, 2, 16.0, 10.0))
 	t.set_stylebox("disabled", "Button", _box(Color(C_DISABLED, 0.35), Color(C_DISABLED, 0.6), 2, 16.0, 10.0))
 	t.set_stylebox("focus", "Button", _focus_box())
-	for c: String in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color"]:
+	for c: String in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color",
+		"font_focus_color"]:
 		t.set_color(c, "Button", C_TEXT)
 	t.set_color("font_disabled_color", "Button", C_TEXT_DIM)
 	t.set_color("font_outline_color", "Button", C_BG)

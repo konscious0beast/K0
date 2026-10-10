@@ -9,7 +9,8 @@ const UiIcon := preload("res://scenes/ui/ui_icon.gd")
 const Backdrop := preload("res://scenes/ui/broadcast_bg.gd")
 const EventInfo := preload("res://scenes/ui/event_info.gd")
 const DEMO_BOARD: Array[Dictionary] = [
-	{"score": 17340, "players": [{"display_name": "Kai_der_Pfleger"}], "quest_complete": true, "floor_timer_left_sec": 828},
+	{"score": 17340, "players": [{"display_name": "Kai_der_Pfleger"}], "quest_complete": true,
+		"floor_timer_left_sec": 828},
 	{"score": 15210, "players": [{"display_name": "MopsMagie"}], "quest_complete": true, "floor_timer_left_sec": 512},
 	{"score": 9875, "players": [{"display_name": "Pendlerin_42"}], "quest_complete": false, "floor_timer_left_sec": 0},
 ]

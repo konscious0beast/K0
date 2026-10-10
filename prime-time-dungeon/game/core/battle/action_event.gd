@@ -25,7 +25,8 @@ enum Type {
 	PSEUDO_REMOVED,  # target_id (pseudo unit leaves the CTB order)
 	ESCAPED,         # actor_id (enemy leaves the battle, no rewards for it)
 	CREDITS_STOLEN,  # actor_id, value = amount (refunded on VICTORY if refund_on_win)
-	CREDITS_GAINED,  # value = amount (gift; applied after battle via BattleResult.credits_delta)
+	CREDITS_GAINED,  # value = amount (gift; applied after battle via BattleResult.credits_delta); item_id = the
+	                 # duplicate equipment the credits replace (GDD §9.3, ItemDef.duplicate_credits), else ""
 	STUNT_RESULT,    # actor_id, skill_id, success
 	FLEE_RESULT,     # actor_id, success
 	ITEM_GAINED,     # item_id, value = count (gift)

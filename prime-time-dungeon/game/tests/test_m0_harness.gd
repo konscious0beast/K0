@@ -253,4 +253,10 @@ func test_runner_fails_tests_with_script_errors() -> void:
 	assert_has(out, "[FAIL] " + file + "test_b_crash_before_await — SCRIPT ERROR", "crash before an await")
 	assert_has(out, "[FAIL] " + file + "test_c_crash_after_await — SCRIPT ERROR", "crash after an await")
 	assert_has(out, "[FAIL] " + file + "test_d_skip_does_not_hide_a_crash — SCRIPT ERROR", "skip() does not hide it")
-	assert_has(out, "RESULT: 1 passed, 3 failed, 0 skipped, 0 errors")
+	assert_has(out, "[FAIL] " + file + "test_e_failure_before_skip_wins — ",
+		"a failure recorded before skip() is not hidden by it")
+	assert_has(out, "recorded before the skip")
+	assert_has(out, "[FAIL] " + file + "test_f_unlisted_skip_fails — skipped (not on the allowlist) but not in",
+		"a skip needs a deliberate decision (ALLOWED_SKIPS)")
+	assert_has(out, "[SKIP] " + file + "test_g_allowlisted_skip — allowlisted")
+	assert_has(out, "RESULT: 1 passed, 5 failed, 1 skipped, 0 errors")

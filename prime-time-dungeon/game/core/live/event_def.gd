@@ -10,6 +10,7 @@ const SEED_TYPES: PackedStringArray = ["fixed", "daily_derived", "commit_reveal"
 const MODES: PackedStringArray = ["solo", "coop"]
 const LEAGUES: PackedStringArray = ["show", "pur"]
 const TIMER_MODES: PackedStringArray = ["explore_only", "realtime"]
+const EVENT_GIFT_SOURCES: PackedStringArray = ["fan", "shop", "dev"]   # 05 §10.1 rules.gifts.sources
 const KEYS: PackedStringArray = ["id", "kind", "name_key", "floor", "windows", "late_entry", "seed_policy", "quest",
 	"rules", "votes", "scoring", "rewards"]
 const WINDOW_KEYS: PackedStringArray = ["id", "open_at", "close_at", "region"]
@@ -292,6 +293,16 @@ func _validate_rules(out: PackedStringArray) -> void:
 			if GiftPolicy.DEFAULT_GIFT_RULES.has(str(k)) and _is_int(GiftPolicy.DEFAULT_GIFT_RULES[str(k)]) \
 					and not _is_int(g[k]):
 				out.append("rules.gifts.%s must be an integer" % str(k))
+		# 05 §10.1: sources ⊆ fan, shop, dev — "bits" is not offered (decision 2026-10-08, L11), "dev" (QA) only offline
+		if g.has("sources"):
+			if not (g["sources"] is Array):
+				out.append("rules.gifts.sources must be an Array")
+			else:
+				for src: Variant in (g["sources"] as Array):
+					if not EVENT_GIFT_SOURCES.has(str(src)):
+						out.append("rules.gifts.sources: '%s' is not offered (fan, shop, dev)" % str(src))
+					elif str(src) == "dev" and kind != "offline":
+						out.append("rules.gifts.sources: 'dev' (QA) only in offline events")
 	# Sponsor-Fenster (05 §6.13): schema; QA dev windows only offline (a live event must switch them off explicitly)
 	var sw: Variant = rules.get("sponsor_windows", null)
 	out.append_array(SponsorWindows.validate_rules(sw))

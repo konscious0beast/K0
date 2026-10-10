@@ -11,6 +11,9 @@ var enemy_ids: PackedStringArray = []        # 1..4 EnemyDef ids, slot order
 var party: Array[Combatant] = []             # built by BattleBridge, ids p0.., current hp/mp, start statuses applied
 var items: Dictionary = {}                   # item_id -> count (battle-usable consumables)
 var credits_available: int = 0               # party credits (limit for steal_credits)
+# equipment ids the party owns (inventory/equipped, sorted): a gift piece of
+var owned_equipment: PackedStringArray = []
+                                             # one of them becomes credits (ItemDef.duplicate_credits, GDD §9.3)
 var advantage: BattleSetup.Advantage = Advantage.NORMAL
 var seed: int = 1
 var is_boss: bool = false
@@ -41,7 +44,8 @@ func to_dict() -> Dictionary:
 		its[str(k)] = JsonUtil.to_int(items[k])
 	return {
 		"encounter_id": encounter_id, "group_id": group_id, "enemy_ids": Array(enemy_ids), "party": members,
-		"items": its, "credits_available": credits_available, "advantage": int(advantage), "seed": seed,
+		"items": its, "credits_available": credits_available, "owned_equipment": Array(owned_equipment),
+		"advantage": int(advantage), "seed": seed,
 		"is_boss": is_boss, "can_flee": can_flee, "tutorial": tutorial,
 		"enemy_dmg_mult_ppm": FixedMath.ppm(enemy_dmg_mult), "exp_mult_ppm": FixedMath.ppm(exp_mult),
 		"show_mods_ppm": mods, "theme_id": theme_id, "palette": pal, "floor_index": floor_index,
@@ -64,6 +68,7 @@ static func from_dict(d: Dictionary, data: GameData) -> BattleSetup:
 		for k: Variant in (its as Dictionary).keys():
 			s.items[str(k)] = JsonUtil.to_int((its as Dictionary)[k])
 	s.credits_available = JsonUtil.to_int(d.get("credits_available", 0))
+	s.owned_equipment = JsonUtil.to_str_array(d.get("owned_equipment", []))
 	s.advantage = clampi(JsonUtil.to_int(d.get("advantage", 0)), 0, 2) as BattleSetup.Advantage
 	s.seed = JsonUtil.to_int(d.get("seed", 1), 1)
 	s.is_boss = bool(d.get("is_boss", false))

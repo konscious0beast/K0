@@ -1,10 +1,8 @@
 extends TestCase
 ## FloorEvent (02_TECH §7.4, GDD §2.6): choices / resolve / apply for all 5 types with fixed seeds, plus the
 ## Game.apply_floor_event integration (seed k × 16 + uses, completion signal) on the exploration fixture floor. Uses its
-## own fixture data (independent of the M7 content); inventory side effects are asserted once Inventory (M2) is no
-## longer the M0 stub.
+## own fixture data (independent of the M7 content), including the inventory side effects.
 
-const STUB_HEADER: String = "# STUB(M0)"
 const ExplorationTests := preload("res://tests/test_m3_exploration_scene.gd")
 
 var _saved_db: GameData = null
@@ -97,15 +95,6 @@ func _vending(base: float, per_lck: float) -> EventSpawn:
 		"fail_pct": 10, "fail_hype": 4})
 
 
-## True once Inventory is implemented (M2): add() reports what it added.
-static func _inventory_ready() -> bool:
-	var f: FileAccess = FileAccess.open("res://core/progression/inventory.gd", FileAccess.READ)
-	if f == null or f.get_line().begins_with(STUB_HEADER):
-		return false
-	var inv: Inventory = Inventory.new()
-	return inv.add("itm_t_bandage", 1, 9) == 1
-
-
 # --- photo_drone ------------------------------------------------------------------------------------------------------
 
 func test_photo_drone() -> void:
@@ -137,10 +126,7 @@ func test_photo_drone() -> void:
 	assert_eq(st.floor_run.completed_events.size(), 1, "invalid outcome changes nothing")
 
 
-func test_photo_drone_credits_when_inventory_ready() -> void:
-	if not _inventory_ready():
-		skip("Inventory (M2) is still the M0 stub")
-		return
+func test_photo_drone_credits() -> void:
 	var data: GameData = _data()
 	var st: GameState = _state(data)
 	var before: int = st.inventory.credits
@@ -181,10 +167,7 @@ func test_lost_candidate() -> void:
 	assert_eq(FloorEvent.choices(ev, st2, data), PackedStringArray(["leave"]))
 
 
-func test_lost_candidate_items_when_inventory_ready() -> void:
-	if not _inventory_ready():
-		skip("Inventory (M2) is still the M0 stub")
-		return
+func test_lost_candidate_items() -> void:
 	var data: GameData = _data()
 	var st: GameState = _state(data)
 	var ev: EventSpawn = _candidate()

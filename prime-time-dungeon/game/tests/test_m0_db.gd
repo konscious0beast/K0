@@ -49,7 +49,7 @@ func _expect_error(raw: Dictionary, needle: String, what: String) -> void:
 	fail("%s: expected an error containing '%s', got [%s]" % [what, needle, "; ".join(errs)])
 
 
-# --- positive ----------------------------------------------------------------------------------------------------------
+# --- positive ---------------------------------------------------------------------------------------------------------
 
 func test_fixture_loads_without_errors() -> void:
 	var d: GameData = GameData.new()
@@ -141,7 +141,8 @@ func test_normalization_defaults() -> void:
 	assert_eq(d.status("sts_slow").excludes, ["sts_haste"])
 	assert_eq(d.skill("skl_item_bandage").rank, 2, "item rank default")
 	assert_eq(d.skill("skl_stunt_kai_suplex").cooldown, 3)
-	assert_eq(d.skill("skl_stunt_kai_suplex").fail_effect, {"self_dmg_pct": 10, "delay_pct": 50, "status": "", "status_turns": 0})
+	assert_eq(d.skill("skl_stunt_kai_suplex").fail_effect,
+		{"self_dmg_pct": 10, "delay_pct": 50, "status": "", "status_turns": 0})
 	assert_eq(d.skill("skl_attack_kai").accuracy, -1)
 	assert_eq(d.skill("skl_item_antidote").cleanse, ["sts_poison"])
 	assert_eq(d.item("itm_bandage").sell, -1)
@@ -271,7 +272,8 @@ func test_rule2_types_required_unknown() -> void:
 	assert_true(JsonUtil.is_integral(-12.0))
 
 
-# --- rule 3: id regex + global uniqueness ------------------------------------------------------------------------------
+# --- rule 3: id regex + global uniqueness
+# ------------------------------------------------------------------------------
 
 func test_rule3_ids() -> void:
 	var raw: Dictionary = _raw()
@@ -318,7 +320,8 @@ func test_rule4_enums_ranges_texts() -> void:
 	_expect_error(raw, "color: must be a hex color", "hex color")
 
 
-# --- rule 5: references -------------------------------------------------------------------------------------------------
+# --- rule 5: references
+# -------------------------------------------------------------------------------------------------
 
 func test_rule5_references() -> void:
 	var raw: Dictionary = _raw()
@@ -354,7 +357,8 @@ func test_rule5_class_learnset_missing_skill_is_warning_from_floor_3() -> void:
 	_expect_error(raw, "unknown skill 'skl_kai_wrecking_ball'", "min_floor 1 → error")
 
 
-# --- rule 6: type consistency ---------------------------------------------------------------------------------------------
+# --- rule 6: type consistency
+# ---------------------------------------------------------------------------------------------
 
 func test_rule6_type_consistency() -> void:
 	var raw: Dictionary = _raw()
@@ -390,7 +394,7 @@ func test_rule6_type_consistency() -> void:
 	_expect_error(raw, "mopsula].attack_skill: skill 'skl_e_strike' has user \"enemy\"", "party attack skill user")
 
 
-# --- rule 7: party -----------------------------------------------------------------------------------------------------
+# --- rule 7: party ----------------------------------------------------------------------------------------------------
 
 func test_rule7_party() -> void:
 	var raw: Dictionary = _raw()
@@ -542,7 +546,8 @@ func test_rule9_referenced_tags_are_valid_tags() -> void:
 	assert_eq(d.pseudo_unit("pu_train_gleis9").ctr_after, 160)
 
 
-# --- rule 10: conditions ------------------------------------------------------------------------------------------------
+# --- rule 10: conditions
+# ------------------------------------------------------------------------------------------------
 
 func test_rule10_conditions() -> void:
 	var raw: Dictionary = _raw()

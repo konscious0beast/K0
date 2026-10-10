@@ -293,7 +293,8 @@ func test_core_effects_of_commands() -> void:
 	assert_eq((st.flags["live"]["gift_ids"] as Array).size(), 1)
 	var left: int = st.floor_run.time_left_ticks
 	sim.apply({"t": "difficulty", "to": "vorabend"})
-	assert_eq(st.floor_run.time_left_ticks, roundi(left * 1.5), "Vorabendprogramm: × 1.5")
+	assert_eq(st.difficulty, &"vorabend")
+	assert_eq(st.floor_run.time_left_ticks, left, "Vorabendprogramm: the running floor timer is unchanged (GDD §2.9)")
 	st.floor_run.timer_started = true
 	var done: Array[ExploreEvent] = sim.apply({"t": "descend"})
 	assert_eq(done[0].data, {"floor": 1})
@@ -361,13 +362,20 @@ func test_gifts_in_battle() -> void:
 	assert_eq(sim.gift_refusal(second), "", "after the battle")
 
 
-## 05 §3.3 Nr. 5: integer arithmetic in the core — the per-mille constants mirror the balance floats.
-func test_vorabend_timer_in_integers() -> void:
-	assert_eq(RunSim.EASY_TIMER_PM, roundi(Balance.EASY_TIMER_MULT * 1000.0), "Balance.EASY_TIMER_MULT in per mille")
+## core-logic-4 (GDD §2.9 "Schaden/EXP wirken sofort, der Timer-Faktor ab dem nächsten Etagenstart"): lowering the mode
+## mid-floor keeps the remaining ticks; the next floor starts with timer_seconds × 1.5 (FloorRun.create).
+func test_vorabend_timer_factor_from_the_next_floor_start() -> void:
+	assert_eq(FloorRun.EASY_TIMER_MULT, Balance.EASY_TIMER_MULT, "FloorRun mirrors the balance constant")
 	var sim: RunSim = _sim(44)
 	sim.state.floor_run.time_left_ticks = 1001
 	sim.apply({"t": "difficulty", "to": "vorabend"})
-	assert_eq(sim.state.floor_run.time_left_ticks, 1502, "1501.5 → 1502 (half up, like roundi)")
+	assert_eq(sim.state.floor_run.time_left_ticks, 1001, "no immediate boost of the running floor")
+	sim.apply({"t": "descend"})
+	sim.apply({"t": "floor", "floor": 2})
+	assert_eq(sim.state.floor_run.index, 2)
+	var secs: int = sim.data.floor_def(2).timer_seconds
+	assert_eq(sim.state.floor_run.time_left_ticks, roundi(secs * 1.5 * RunSim.TICKS_PER_SEC),
+		"the next floor start applies ×1.5")
 
 
 func test_quest_detail_events_from_the_core() -> void:

@@ -15,7 +15,6 @@ const FB := preload("res://scenes/exploration/fallback_art.gd")
 const CameraRig := preload("res://scenes/exploration/camera_rig.gd")
 const SCENE: String = "res://scenes/exploration/exploration.tscn"
 const ROUTER_FIXTURE: String = "res://tests/fixtures/router/router_screen.tscn"
-const STUB_HEADER: String = "# STUB(M0)"
 const MAX_FRAMES: int = 240
 
 var _spy: Array[Array] = []
@@ -224,11 +223,6 @@ static func _start_neighbor(layout: FloorLayout) -> Vector2i:
 	return ns[0] if not ns.is_empty() else layout.start
 
 
-func _is_stub(path: String) -> bool:
-	var f: FileAccess = FileAccess.open(path, FileAccess.READ)
-	return f == null or f.get_line().begins_with(STUB_HEADER)
-
-
 # --- building ---------------------------------------------------------------------------------------------------------
 
 ## M3 CR 3: touch pinch (Events.camera_zoom from TouchControls) zooms like the wheel, clamped to 5–9 m.
@@ -312,7 +306,8 @@ func test_player_moves_with_input() -> void:
 	var scene: ExplorationScene = await _make_scene()
 	var p0: Vector3 = scene.get_player_position()
 	Input.action_press(&"move_forward")
-	await wait_frames(12)
+	# an observable condition with a generous cap instead of a fixed frame count (headless frames are uncapped)
+	await wait_until(func() -> bool: return Rules.flat_dist(p0, scene.get_player_position()) > 1.0, 600)
 	Input.action_release(&"move_forward")
 	await wait_frames(2)
 	var moved: float = Rules.flat_dist(p0, scene.get_player_position())
@@ -401,9 +396,6 @@ func test_force_encounter_specific_and_fallback() -> void:
 
 
 func test_force_encounter_starts_battle_via_router() -> void:
-	if _is_stub("res://core/progression/battle_bridge.gd"):
-		skip("BattleBridge (M2) is still the M0 stub: no BattleSetup")
-		return
 	var scene: ExplorationScene = await _make_scene()
 	assert_eq(Router.current, scene, "add_to_tree adopted the screen")
 	scene.force_encounter("")
@@ -717,7 +709,7 @@ func test_open_gate_visual_emits_gate_opened() -> void:
 		assert_eq(_spy[0][1], int(g["dir"]))
 	assert_true(bool(gate.get("opened")))
 	assert_true(layout.neighbors(cell, Game.state.floor_run.opened_gates).has(other), "open gate passes")
-	await wait_frames(30)
+	await wait_until(func() -> bool: return gate.get_node_or_null("Blocker") == null, 600)
 	assert_null(gate.get_node_or_null("Blocker"), "blocking body removed")
 
 
@@ -856,10 +848,18 @@ func test_companion_follows_trail() -> void:
 	var scene: ExplorationScene = await _make_scene()
 	var kai: Node3D = scene.get_player()
 	var mop: Node3D = scene.get_companion()
+	var start: Vector3 = kai.global_position
 	Input.action_press(&"move_forward")
-	await wait_frames(10)
+	await wait_until(func() -> bool: return Rules.flat_dist(start, kai.global_position) > 1.5, 600)
 	Input.action_release(&"move_forward")
-	await wait_frames(20)
+	# Mopsula catches up along the trail: settled = within 4 m and no longer moving
+	var last: Array[Vector3] = [mop.global_position]
+	var settled: Callable = func() -> bool:
+		var ok: bool = Rules.flat_dist(kai.global_position, mop.global_position) <= 4.0 \
+			and mop.global_position.distance_to(last[0]) < 0.01
+		last[0] = mop.global_position
+		return ok
+	await wait_until(settled, 600)
 	var d: float = Rules.flat_dist(kai.global_position, mop.global_position)
 	assert_between(d, 0.5, 4.0, "Mopsula keeps about 1.8 m behind Kai")
 	# Too far → teleport.
@@ -1245,3 +1245,173 @@ func test_focus_highlight_and_marker() -> void:
 	assert_null(mesh.material_overlay, "highlight removed on focus loss")
 	if marker != null:
 		assert_false(marker.visible)
+
+
+# --- encounters vs. Router transitions and modal input (review scenes-flow-1/2/3) -------------------------------------
+
+## Kai 1.5 m behind the first regular group (frozen), facing it; null when the floor has none.
+func _behind_first_group(scene: ExplorationScene) -> EnemyActor:
+	for gid: String in scene.living_groups():
+		var a: EnemyActor = scene.get_enemy(gid)
+		if a.is_boss():
+			continue
+		a.frozen = true
+		var fwd: Vector3 = a.flat_forward()
+		scene.get_player().teleport(a.global_position - fwd * 1.5, Rules.yaw_of(fwd))
+		return a
+	return null
+
+
+func _hud_of(scene: ExplorationScene) -> ExplorationHud:
+	for c: Node in scene.get_children():
+		if c is ExplorationHud:
+			return c as ExplorationHud
+	return null
+
+
+## Delivers a press + release of `action` synchronously (Viewport.push_input, no frame in between).
+func _push_action(action: StringName) -> void:
+	for pressed: bool in [true, false]:
+		var ev: InputEventAction = InputEventAction.new()
+		ev.action = action
+		ev.pressed = pressed
+		tree.root.push_input(ev)
+
+
+## scenes-flow-1: the run clock stops with the field-strike hit. A countdown at its last tick can no longer expire
+## inside the hitstop (that queued the game over and then pushed the battle on top of the Sendeschluss screen); the
+## pause / map keys wait for the battle as well.
+func test_strike_hit_stops_the_run_clock_during_the_hitstop() -> void:
+	var scene: ExplorationScene = await _make_scene()
+	scene.auto_start_battle = false
+	scene.hitstop_sec = 30.0                    # stays in the hitstop for the whole test
+	var target: EnemyActor = _behind_first_group(scene)
+	if target == null:
+		skip("floor has no regular group")
+		return
+	await wait_frames(2)
+	Game.state.floor_run.timer_started = true
+	assert_true(Game.is_timer_ticking(), "precondition: the countdown runs while exploring")
+	scene.perform_action()
+	var pending: bool = await wait_until(func() -> bool: return scene.is_encounter_pending(), 120)
+	assert_true(pending, "the swing hit the group (hitstop running)")
+	assert_false(Game.timer_running, "the hit stops the run clock at once")
+	assert_false(Game.is_timer_ticking())
+	var hud: ExplorationHud = _hud_of(scene)
+	if hud != null:
+		assert_null(hud.open_pause_menu(), "no pause menu while the battle is about to start")
+	Game.state.floor_run.time_left_ticks = 1
+	var t0: int = Time.get_ticks_msec()
+	while float(Time.get_ticks_msec() - t0) * Engine.time_scale < 500.0:   # 0.5 s game time ≫ 1 tick
+		await wait_frames(1)
+	assert_eq(Game.state.floor_run.time_left_ticks, 1, "no tick inside the hitstop")
+	assert_eq(Router.current, scene, "no game over queued under the pending battle")
+	assert_false(Router.busy)
+
+
+## scenes-flow-1 (safety net): a hitstop that ends while a goto is running (game over, "Zum Titel") starts no battle —
+## nothing is pushed on top of the next screen, no encounter is emitted.
+func test_hitstop_ending_during_a_goto_starts_no_battle() -> void:
+	var scene: ExplorationScene = await _make_scene()
+	scene.hitstop_sec = 30.0                    # the real hitstop never ends inside this test
+	var target: EnemyActor = _behind_first_group(scene)
+	if target == null:
+		skip("floor has no regular group")
+		return
+	await wait_frames(2)
+	scene.perform_action()
+	var pending: bool = await wait_until(func() -> bool: return scene.is_encounter_pending(), 120)
+	assert_true(pending, "the swing hit the group")
+	Events.encounter_triggered.connect(_record)
+	Router.goto(ROUTER_FIXTURE, {}, Router.Transition.FADE)       # like Router.game_over(&"timer")
+	assert_true(Router.busy, "goto queued")
+	scene.call("_after_hitstop", target.group_id(), target.encounter_id(), Rules.PREEMPTIVE)   # hitstop ends mid-fade
+	var done: bool = await wait_until(func() -> bool: return not Router.busy, MAX_FRAMES)
+	await wait_frames(10)
+	Events.encounter_triggered.disconnect(_record)
+	assert_true(done, "goto finished")
+	assert_eq(_spy.size(), 0, "no encounter while the screen is being replaced")
+	var cur: Node = Router.current
+	assert_true(cur != null and cur.scene_file_path == ROUTER_FIXTURE, "the goto's screen is on top")
+	assert_eq(Router.stack_size(), 1, "no battle pushed on top of it")
+
+
+## scenes-flow-1: contacts (and force_encounter) never start a battle while a Router transition runs — no side effects
+## (pending flag, run clock); a contact simply tries again the next frame once the screen is settled.
+func test_no_encounter_while_the_router_is_busy() -> void:
+	var scene: ExplorationScene = await _make_scene()
+	scene.auto_start_battle = false
+	Events.encounter_triggered.connect(_record)
+	Router.busy = true                          # a transition of another screen op (restored below)
+	scene.force_encounter("")
+	var pending_busy: bool = scene.is_encounter_pending()
+	var timer_busy: bool = Game.timer_running
+	Router.busy = false
+	scene.force_encounter("")
+	Events.encounter_triggered.disconnect(_record)
+	assert_false(pending_busy, "no encounter during a transition")
+	assert_true(timer_busy, "and the run clock untouched")
+	assert_len(_spy, 1, "settled: the encounter starts")
+
+
+## scenes-flow-2: `action` during the fade back in (results / safe-room menu skipped with Enter) neither reaches Kai nor
+## strikes / interacts; once the transition is over it works again.
+func test_action_is_ignored_while_the_router_fades_back_in() -> void:
+	var scene: ExplorationScene = await _make_scene()
+	scene.auto_start_battle = false
+	await wait_frames(2)
+	assert_null(scene.focused_interactable(), "precondition: nothing to interact with at the start")
+	var kai: PlayerBody = scene.get_player()
+	var requested: Array[int] = [0]
+	var cb: Callable = func() -> void: requested[0] += 1
+	kai.action_requested.connect(cb)
+	Engine.time_scale = 1.0                     # a 0.25 s fade-in window at real speed
+	Router.push(ROUTER_FIXTURE, {}, Router.Transition.NONE)
+	var covered: bool = await wait_until(func() -> bool: return not Router.busy and not scene.is_inside_tree(),
+		MAX_FRAMES)
+	assert_true(covered, "a screen was pushed over the exploration")
+	Router.pop({}, Router.Transition.FADE)
+	var fading_in: bool = await wait_until(func() -> bool: return scene.is_inside_tree() and Router.busy, MAX_FRAMES)
+	assert_true(fading_in, "back in the tree while the fade-in still runs")
+	_push_action(&"action")
+	scene.perform_action()
+	assert_eq(requested[0], 0, "Kai ignores `action` during the transition")
+	assert_lt(float(kai.get("_strike_t")), 0.0, "no field strike during the transition")
+	var settled: bool = await wait_until(func() -> bool: return not Router.busy, MAX_FRAMES)
+	assert_true(settled, "fade-in over")
+	_push_action(&"action")
+	kai.action_requested.disconnect(cb)
+	assert_eq(requested[0], 1, "afterwards `action` reaches Kai again")
+	assert_true(float(kai.get("_strike_t")) >= 0.0, "… and swings")
+
+
+## scenes-flow-3: `map` / pause behind an open choice dialog do nothing — the dialog keeps the focus (a BigMap over it
+## left it without one after closing).
+func test_map_and_pause_are_blocked_while_a_choice_dialog_is_open() -> void:
+	var scene: ExplorationScene = await _make_scene()
+	var hud: ExplorationHud = _hud_of(scene)
+	assert_not_null(hud, "exploration HUD")
+	if hud == null:
+		return
+	scene.open_stairs_dialog()
+	var dlg: Node = scene.active_dialog()
+	var focused: bool = await wait_until(func() -> bool:
+		var f0: Control = tree.root.gui_get_focus_owner()
+		return f0 != null and dlg.is_ancestor_of(f0), 60)
+	assert_true(focused, "the dialog owns the focus")
+	_push_action(&"map")
+	await wait_frames(2)
+	assert_false(hud.is_modal_open(), "no big map over the dialog")
+	assert_false(tree.paused, "tree not paused")
+	assert_null(hud.open_big_map(), "open_big_map refuses as well")
+	assert_null(hud.open_pause_menu(), "open_pause_menu refuses as well")
+	var f: Control = tree.root.gui_get_focus_owner()
+	assert_true(f != null and dlg.is_ancestor_of(f), "the focus stays on the dialog")
+	dlg.call("cancel")
+	await wait_frames(2)
+	var bm: Node = hud.open_big_map()
+	assert_not_null(bm, "without the dialog the map opens")
+	if bm != null:
+		bm.call("close")
+	await wait_frames(2)
+	tree.paused = false

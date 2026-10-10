@@ -273,7 +273,8 @@ func _make_run_log(st: GameState) -> RunLog:
 		"game_version": _game_version(),
 		"sim_hz": Game.TICKS_PER_SEC,
 		"event_id": "",
-		"run_id": "run_local_%d" % st.seed,
+		"run_id": RunLog.local_run_id(st.seed),
+		"player_id": "local",
 		"from_save": true,
 	}
 	return rl

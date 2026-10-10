@@ -262,6 +262,7 @@ func test_steal_credits_escape_and_refund() -> void:
 	assert_eq(s.result.outcome, BattleResult.Outcome.VICTORY)
 	assert_eq(s.result.escaped, PackedStringArray(["enm_mimic"]))
 	assert_eq(s.result.credits_stolen, 50, "escaped thief keeps the credits")
+	assert_eq(s.result.credits_refunded, 0, "nothing comes back from an escaped thief (GDD §3.11)")
 	assert_eq(s.result.credits, 0, "no rewards for escaped enemies")
 	assert_eq(s.result.exp, 0)
 	assert_eq(s.result.kills, 0)
@@ -277,6 +278,7 @@ func test_steal_credits_escape_and_refund() -> void:
 	r.submit(BattleCommand.attack("p0", "e0"))
 	assert_true(r.is_finished())
 	assert_eq(r.result.credits_stolen, 0, "refund_on_win: KO'd thief returns the credits")
+	assert_eq(r.result.credits_refunded, 40, "the refunded amount is reported separately")
 	assert_eq(r.result.credits, 150)
 
 

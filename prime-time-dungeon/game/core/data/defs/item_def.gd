@@ -1,6 +1,10 @@
 class_name ItemDef extends RefCounted
 ## items.json entry (02_TECH §4.4.3). Immutable after loading.
 
+## GDD §9.3: equipment the party already owns becomes credits — sell value × 0.5 per piece, in per mille (integers,
+## 05 §3.3 Nr. 5). THE duplicate rule of lootboxes, chests and gifts (in and out of battle): duplicate_credits().
+const DUPLICATE_CREDIT_PM: int = 500
+
 var id: String = ""
 var name: String = ""
 var desc: String = ""
@@ -57,3 +61,8 @@ func sell_value() -> int:
 	if sell < 0:
 		return floori(price / 2.0)
 	return sell
+
+
+## Credits for one duplicate piece of this equipment: (sell_value × DUPLICATE_CREDIT_PM + 500) // 1000 (half up).
+func duplicate_credits() -> int:
+	return (maxi(0, sell_value()) * DUPLICATE_CREDIT_PM + 500) / 1000

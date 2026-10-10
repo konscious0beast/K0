@@ -396,16 +396,22 @@ func _mode_row() -> void:
 
 func _update_mode_button(b: Button) -> void:
 	var easy: bool = Game.state != null and Game.state.difficulty == &"vorabend"
-	b.text = "Vorabendprogramm" if easy else "Prime Time · senken …"
-	b.disabled = easy or Game.state == null
+	var event_run: bool = Game.state != null and Game.mode != &"campaign"
+	if easy:
+		b.text = "Vorabendprogramm"
+	elif event_run:
+		b.text = "Prime Time · Event-Regel"       # event runs play the event's difficulty (05 §10.1)
+	else:
+		b.text = "Prime Time · senken …"
+	b.disabled = not Game.can_lower_difficulty()
 
 
 func _ask_lower_mode(b: Button) -> void:
 	if not ResourceLoader.exists(CONFIRM):
 		return
 	var d: Node = (load(CONFIRM) as PackedScene).instantiate()
-	d.call("setup", {"title": "Modus senken", "text": "Auf „Vorabendprogramm“ wechseln? Mehr Zeit (×1,5), weniger " +
-		"Schaden, mehr EXP. Das lässt sich nicht rückgängig machen.", "yes": "Senken", "no": "Abbrechen",
+	d.call("setup", {"title": "Modus senken", "text": "Auf „Vorabendprogramm“ wechseln? Weniger Schaden, mehr EXP, " +
+		"ab der nächsten Etage mehr Zeit (×1,5). Das lässt sich nicht rückgängig machen.", "yes": "Senken", "no": "Abbrechen",
 		"default_no": true})
 	d.process_mode = process_mode if process_mode != Node.PROCESS_MODE_INHERIT else Node.PROCESS_MODE_ALWAYS
 	if get_tree().paused:

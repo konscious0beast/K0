@@ -8,6 +8,7 @@ const FullRun := preload("res://scenes/boot/fullrun.gd")
 const TitleFlow := preload("res://scenes/title/title_flow.gd")
 const SCENE_EXPLORATION: String = "res://scenes/exploration/exploration.tscn"
 const ROUTER_FIXTURE: String = "res://tests/fixtures/router/router_screen.tscn"
+const Rules := preload("res://scenes/exploration/encounter_rules.gd")     # reference values only (test)
 
 
 func before_each() -> void:
@@ -22,6 +23,23 @@ func after_each() -> void:
 	Router.adopt(null)
 	Game.timer_running = false
 	Sfx.music(&"", 0.0)
+
+
+## quality-16 (02_TECH §0.3): the bot (M6) no longer preloads M3's private encounter_rules.gd; its own XZ helpers give
+## the same results.
+func test_bot_geometry_is_its_own_and_matches_the_exploration_rules() -> void:
+	var src: String = (FullRun as GDScript).source_code
+	if src != "":
+		assert_false(src.contains("preload(\"res://scenes/exploration/"), "no cross-module preload of a private M3 helper")
+	var pts: Array[Vector3] = [Vector3(1.0, 0.5, 2.0), Vector3(-2.0, 3.0, 6.0), Vector3(0.3, -1.0, -4.5)]
+	for a: Vector3 in pts:
+		for b: Vector3 in pts:
+			assert_almost(FullRun._flat_dist(a, b), Rules.flat_dist(a, b), 0.00001, "flat_dist")
+			assert_true(FullRun._flat_dir(a, b).is_equal_approx(Rules.flat_dir(a, b)), "flat_dir")
+		var dir: Vector3 = Rules.flat_dir(Vector3.ZERO, a)
+		assert_almost(FullRun._yaw_of(dir), Rules.yaw_of(dir), 0.00001, "yaw_of")
+		var basis: Basis = Basis(Vector3.UP, Rules.yaw_of(dir)).rotated(Vector3.RIGHT, 0.2)
+		assert_true(FullRun._flat_forward(basis).is_equal_approx(Rules.flat_forward(basis)), "flat_forward")
 
 
 func _bot() -> Node:

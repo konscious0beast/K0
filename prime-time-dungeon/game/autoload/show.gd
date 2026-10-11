@@ -220,7 +220,9 @@ func trigger(trigger_id: String, payload: Dictionary) -> void:
 	var st: GameState = Game.state
 	if st == null or st.show == null:
 		return
-	var unlocked: PackedStringArray = AchievementTracker.new(DB.data, st.show, st.flags).evaluate(trigger_id, payload)
+	var tracker: AchievementTracker = AchievementTracker.new(DB.data, st.show, st.flags)
+	tracker.realtime = st.combat_mode == &"realtime"           # R5b: condition_rt (07 §9.4)
+	var unlocked: PackedStringArray = tracker.evaluate(trigger_id, payload)
 	for id: String in unlocked:
 		_unlock(id)
 

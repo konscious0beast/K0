@@ -68,7 +68,7 @@ func refresh() -> void:
 		t.add_theme_font_override("font", UiTheme.font_bold())
 		texts.add_child(t)
 		var d: Label = UiUtil.label("Verborgenes Achievement" if hidden_locked else UiUtil.glyph_safe(UiUtil.tr_text(
-			a.desc)), &"LabelSmall", 15)
+			a.desc_for(Game.is_realtime()))), &"LabelSmall", 15)
 		d.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		texts.add_child(d)
 		if a.box != "" and not hidden_locked:

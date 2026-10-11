@@ -76,7 +76,9 @@
 			"box": "box_bronze",
 			"followers": -1,
 			"hidden": false,
-			"mod_tag": ""
+			"mod_tag": "",
+			"condition_rt": "e.crits >= 15",
+			"desc_rt": "Lande 15 kritische Treffer in einem Kampf."
 		},
 		{
 			"id": "ach_weakness_5",
@@ -87,7 +89,9 @@
 			"box": "box_bronze",
 			"followers": -1,
 			"hidden": false,
-			"mod_tag": ""
+			"mod_tag": "",
+			"condition_rt": "e.weakness_hits >= 10",
+			"desc_rt": "Triff 10× eine Schwachstelle in einem Kampf."
 		},
 		{
 			"id": "ach_stunt_first",

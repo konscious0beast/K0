@@ -349,7 +349,8 @@ const SPEC_RARITY_WEIGHTS: Array = [["common", "i"], ["rare", "i"], ["epic", "i"
 const SPEC_POOL_ENTRY: Array = [["kind", "s"], ["id", "s", ""], ["amount", "i"], ["weight", "i"]]
 const SPEC_PITY: Array = [["rare", "i"], ["epic", "i"]]
 const SPEC_ACHIEVEMENT: Array = [["id", "s"], ["name", "s"], ["desc", "s"], ["trigger", "s"], ["condition", "s"],
-	["box", "s", ""], ["followers", "i", -1], ["hidden", "b", false], ["mod_tag", "s", ""]]
+	["box", "s", ""], ["followers", "i", -1], ["hidden", "b", false], ["mod_tag", "s", ""],
+	["condition_rt", "s", ""], ["desc_rt", "s", ""]]                 # R5b: real-time thresholds (07 §9.4)
 const SPEC_SPONSOR: Array = [["id", "s"], ["name", "s"], ["slogan", "s", ""], ["color", "s"], ["gift", "a"],
 	["weight", "i", 1], ["weight_mods", "a", []], ["min_floor", "i", 1], ["max_floor", "i", 0],
 	["mod_tag", "s", "sponsor_gift"]]
@@ -2339,6 +2340,11 @@ func _check_conditions() -> void:
 		var a: Dictionary = achs[i]
 		var allowed: PackedStringArray = payload_keys(str(a["trigger"]))
 		_check_condition(_ctx("achievements", i, a) + ".condition", str(a["condition"]), allowed, str(a["trigger"]))
+		if str(a.get("condition_rt", "")) != "":
+			_check_condition(_ctx("achievements", i, a) + ".condition_rt", str(a["condition_rt"]), allowed,
+				str(a["trigger"]))
+		if (str(a.get("condition_rt", "")) == "") != (str(a.get("desc_rt", "")) == ""):
+			_err(_ctx("achievements", i, a) + ".desc_rt", "condition_rt and desc_rt come together (R5b)")
 	var scs: Array = _out["scenes"]
 	for i in scs.size():
 		_check_condition(_ctx("scenes", i, scs[i]) + ".condition", str(scs[i]["condition"]), SCENE_CONTEXT_KEYS,

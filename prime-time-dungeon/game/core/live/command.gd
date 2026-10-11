@@ -16,8 +16,10 @@ class_name Command extends RefCounted
 ## "targets": [String]}. Additional unknown fields are allowed (additive protocol versions, 05 §4.3).
 ## Echtzeitkampf (07 §10.1, R1a): the real-time combat types (RtCommand.TYPES: ability_use, target_change, move_sample,
 ## combat_item, partner_preset, partner_special, auto_attack, autopilot, combat_hint, move_input, combat_speed,
-## move_batch) and the optional "rt" block of "encounter" are checked by RtCommand.validate. Until R5a builds the
-## real-time combat path both verifiers refuse them (RunRules.rt_refusal → "rt_unavailable").
+## move_batch) and the optional "rt" block of "encounter" are checked by RtCommand.validate; R5a replays them (RunSim
+## combat branch, Game.replay_log combat loop). loadout {"member", "bar": {"2" | "3" | "4": skill id}, "preset": "" |
+## RtVocab.RT_PRESETS, "tog": {switch: bool}} (R5a: action bar variants and partner tactic chosen outside a combat;
+## the rules are RunRules.loadout_refusal's).
 ## Casting (08 §2.3, K0): persona {"v": 1, "talent", "bias": [≤ 3 Strings]} (start, once per run) or {"v": 1,
 ## "talent", "swap": true} (first Talent-Show) — ids only; the rules are PersonaRules.check's. K1 (CR-33): "talent"
 ## may be "" — the only value K1 records (no start talents; any other talent is refused by PersonaRules.check).
@@ -30,6 +32,7 @@ const TYPES: PackedStringArray = ["floor", "encounter", "battle", "lootbox", "bu
 	# Echtzeitkampf (07, R1a, §10.1): == RtCommand.TYPES — schema in RtCommand.validate
 	"ability_use", "target_change", "move_sample", "combat_item", "partner_preset", "partner_special", "auto_attack",
 	"autopilot", "combat_hint", "move_input", "combat_speed", "move_batch",
+	"loadout",                               # Echtzeitkampf (07 §4.1, §5.2; R5a): variants + partner tactic
 	"persona"]                               # Casting (08, K0): start talent + bias / swap (PersonaRules)
 const SPONSOR_WINDOW_OPS: PackedStringArray = ["dev_open"]
 ## Inputs from outside the player (cmd id 0, 05 §10.6; == Game.EXTERNAL_CMDS): viewer gifts and M.O.D. twists (06-D).
@@ -158,6 +161,8 @@ static func _validate_fields(t: String, d: Dictionary) -> String:
 			return _twist(d.get("twist", null))
 		"persona":                                 # Casting (08, K0)
 			return _persona(d)
+		"loadout":                                 # Echtzeitkampf (07 §4.1, §5.2; R5a)
+			return _loadout(d)
 		"ability_use", "target_change", "move_sample", "combat_item", "partner_preset", "partner_special", \
 				"auto_attack", "autopilot", "combat_hint", "move_input", "combat_speed", "move_batch":
 			return RtCommand.validate(d)                     # Echtzeitkampf (07, R1a): delegated (07 §10.1)
@@ -230,6 +235,33 @@ static func _persona(d: Dictionary) -> String:
 	for b: Variant in (bias as Array):
 		if not (b is String) or str(b) == "":
 			return "bias must contain non-empty Strings"
+	return ""
+
+
+## Echtzeitkampf (07 §4.1, §5.2; R5a): the shape of a loadout command (the rules are RunRules.loadout_refusal's).
+static func _loadout(d: Dictionary) -> String:
+	var e: String = _id(d, "member")
+	if e != "":
+		return e
+	var bar: Variant = d.get("bar", null)
+	if not (bar is Dictionary):
+		return "bar must be a Dictionary (slot \"2\" | \"3\" | \"4\" → skill id)"
+	for k: Variant in (bar as Dictionary).keys():
+		if not (k is String) or not RunRules.LOADOUT_SLOTS.has(str(k)):
+			return "bar keys must be \"2\", \"3\" or \"4\""
+		if not ((bar as Dictionary)[k] is String) or str((bar as Dictionary)[k]) == "":
+			return "bar.%s must be a non-empty skill id" % str(k)
+	var preset: Variant = d.get("preset", null)
+	if not (preset is String) or (str(preset) != "" and not RtVocab.RT_PRESETS.has(str(preset))):
+		return "preset must be \"\" or one of %s" % ", ".join(RtVocab.RT_PRESETS)
+	var tog: Variant = d.get("tog", null)
+	if not (tog is Dictionary):
+		return "tog must be a Dictionary"
+	for k: Variant in (tog as Dictionary).keys():
+		if not RtVocab.RT_TOGGLES.has(str(k)):
+			return "tog.%s is not a switch (%s)" % [str(k), ", ".join(RtVocab.RT_TOGGLES)]
+		if not ((tog as Dictionary)[k] is bool):
+			return "tog.%s must be a bool" % str(k)
 	return ""
 
 

@@ -13,7 +13,11 @@ class_name RunLog extends RefCounted
 ## - Echtzeitkampf (07 §10.2, R1a): a combat checkpoint {"k", "ct", "h"} (h = StateHash.of_rt) carries the combat tick
 ##   of the encounter at k; several share that k (every CHECKPOINT_TICKS combat ticks and the end), in ct order; a
 ##   state checkpoint after the combat keeps the same k. validate() also checks that the combat commands between an
-##   encounter with "rt" and the next other command have non-decreasing "ct".
+##   encounter with "rt" and the next other command have non-decreasing "ct" and the k of their encounter (R5a: the
+##   clock stands). walk() leaves the combat checkpoints to the combat replays of the verifiers (combat_checkpoints(),
+##   RunSim.check_combat).
+## - Echtzeitkampf (07 §10.3, R5a): compact() merges runs of move samples of one unit into move_batch entries for
+##   storage; expand() / expanded() restore them bit for bit — the verifiers replay the expanded form.
 ## - Everything is stored normalized (integral floats → int, StringName → String), so to_dict()/from_dict() and a JSON
 ##   round trip keep digest() stable.
 
@@ -50,7 +54,7 @@ func add_cmd(tick: int, cmd: Dictionary, cmd_id: int = 0) -> void:
 		return
 	_cmds.append({"k": tick, "id": cmd_id, "c": CanonicalJson.normalize(cmd)})
 	if cmd_id > 0:
-		_last_id = cmd_id
+		_last_id = cmd_id + _id_span(cmd) - 1           # a move_batch holds the ids id0 … id0 + n − 1 (07 §10.3)
 
 
 ## 2 Hz position samples (grade A, display/replay view only): [tick, x, y, z] in decimeters; samples closer than
@@ -141,10 +145,11 @@ func digest() -> String:
 # --- additions ----------------------------------------------------------------------------------------------------
 
 ## THE replay iteration of both verifiers (Game.replay_log, RunSim.replay): the commands in k order; before a command
-## with tick k every checkpoint with a smaller tick goes to on_checkpoint.call(index, k_cp, hash) (the caller steps its
-## clock to k_cp and compares its state hash), then advance.call(k) and apply.call(i, cmd) → the index of the next
-## command to apply (i + 1, or further when a battle replay consumed follow-up commands); the remaining checkpoints at
-## the end.
+## with tick k every state checkpoint with a smaller tick goes to on_checkpoint.call(index, k_cp, hash) (the caller
+## steps its clock to k_cp and compares its state hash), then advance.call(k) and apply.call(i, cmd) → the index of the
+## next command to apply (i + 1, or further when a battle replay consumed follow-up commands); the remaining state
+## checkpoints at the end. Combat checkpoints (07 §10.2, "ct") are skipped here — the combat replays compare them
+## (combat_checkpoints(), RunSim.check_combat); `index` stays the position in checkpoints().
 func walk(advance: Callable, apply: Callable, on_checkpoint: Callable) -> void:
 	var cps: Array[Dictionary] = checkpoints()
 	var cp: int = 0
@@ -152,12 +157,14 @@ func walk(advance: Callable, apply: Callable, on_checkpoint: Callable) -> void:
 	while i < _cmds.size():
 		var k: int = int(_cmds[i]["k"])
 		while cp < cps.size() and int(cps[cp]["k"]) < k:
-			on_checkpoint.call(cp, int(cps[cp]["k"]), str(cps[cp]["h"]))
+			if not cps[cp].has("ct"):
+				on_checkpoint.call(cp, int(cps[cp]["k"]), str(cps[cp]["h"]))
 			cp += 1
 		advance.call(k)
 		i = maxi(i + 1, int(apply.call(i, (_cmds[i]["c"] as Dictionary).duplicate(true))))
 	while cp < cps.size():
-		on_checkpoint.call(cp, int(cps[cp]["k"]), str(cps[cp]["h"]))
+		if not cps[cp].has("ct"):
+			on_checkpoint.call(cp, int(cps[cp]["k"]), str(cps[cp]["h"]))
 		cp += 1
 
 
@@ -177,12 +184,15 @@ func last_cmd_id() -> int:
 
 
 ## Problems of the recorded commands, "cmd <index> (k <tick>): <problem>"; [] = valid: schema (Command.validate) and
-## the id rule (id 0 exactly for external inputs, player ids strictly increasing, 05 §10.6).
+## the id rule (id 0 exactly for external inputs, player ids strictly increasing, 05 §10.6); Echtzeitkampf (07 §10.2):
+## combat commands only inside a real-time combat, at the k of its encounter, with non-decreasing ct (a gift's ct an
+## integer >= 0; a move_batch with its sample cts and the id0 of its entry).
 func validate() -> PackedStringArray:
 	var out: PackedStringArray = []
 	var last: int = 0
 	var in_rt: bool = false                     # Echtzeitkampf (07 §10.2, R1a): inside a real-time combat
 	var last_ct: int = -1
+	var rt_k: int = -1                          # R5a: the k of the running combat's encounter (the clock stands)
 	for i in _cmds.size():
 		var c: Dictionary = _cmds[i]["c"]
 		var id: int = int(_cmds[i]["id"])
@@ -192,18 +202,26 @@ func validate() -> PackedStringArray:
 		if err == "" and id > 0 and id <= last:
 			err = "cmd_id %d is not strictly increasing (last %d)" % [id, last]
 		if id > 0:
-			last = id
+			last = id + _id_span(c) - 1
 		var t: String = str(c.get("t", ""))
 		if t == "encounter":
 			in_rt = c.has("rt")
 			last_ct = -1
+			rt_k = int(_cmds[i]["k"])
 		elif RtCommand.is_combat_cmd(c):
-			var ct: int = JsonUtil.to_int(c.get("ct", -1), -1)
+			var cts: Array[int] = _cts_of(c)
 			if err == "" and not in_rt:
 				err = "real-time combat command outside a real-time combat"
-			elif err == "" and c.has("ct") and ct < last_ct:
-				err = "ct %d is out of order (last %d)" % [ct, last_ct]
-			last_ct = maxi(last_ct, ct)
+			elif err == "" and int(_cmds[i]["k"]) != rt_k:
+				err = "combat command at k %d — its combat runs at k %d (the clock stands)" % [int(_cmds[i]["k"]), rt_k]
+			elif err == "" and cts.is_empty():
+				err = "ct must be an integer >= 0"
+			elif err == "" and t == "move_batch" and int(c["id0"]) != id:
+				err = "move_batch id0 %d must be the entry's id %d" % [int(c["id0"]), id]
+			elif err == "" and cts[0] < last_ct:
+				err = "ct %d is out of order (last %d)" % [cts[0], last_ct]
+			for ct: int in cts:
+				last_ct = maxi(last_ct, ct)
 		elif t != "combat_speed":
 			in_rt = false
 		if err != "":
@@ -211,17 +229,134 @@ func validate() -> PackedStringArray:
 	return out
 
 
-# --- Echtzeitkampf (07 §10.3, R1a → R5a) --------------------------------------------------------------------------
-# STUB(R1a) — owned by R5a. Replace completely, keep the public API.
+# --- Echtzeitkampf (07 §10.3, R5a) ------------------------------------------------------------------------------------
 
-## Merges consecutive move_sample entries of one unit into move_batch (ids from id0, ct as differences). Stub: no-op.
+## Merges every run of at least two consecutive move_sample entries of one unit — nothing else in between, the same k,
+## the ids id, id + 1, …, ct not falling, exactly the recorded shape {t, ct, u, p} (RtCommand.move) — into one entry
+## with the id id0 of its first sample: {"t": "move_batch", "u", "id0", "s": [[ct, x, z, vx, vz, yaw], [dct, …], …]}
+## (the first row carries the ct of the first sample, every further row the difference to the previous one). For
+## stored logs only (07 §10.3: ≈ 60–70 % of the combat entries are samples); live streams and the verifiers use the
+## expanded form. digest() differs, the hashes of the run do not.
 func compact() -> void:
-	pass
+	var out: Array[Dictionary] = []
+	var i: int = 0
+	while i < _cmds.size():
+		var j: int = i + 1
+		if _batchable(_cmds[i]):
+			while j < _cmds.size() and _continues(_cmds[j - 1], _cmds[j]):
+				j += 1
+		if j - i >= 2:
+			out.append(_batch(i, j))
+		else:
+			out.append(_cmds[i])
+		i = j
+	_cmds = out
 
 
-## Restores every move_batch to its move_sample entries bit for bit. Stub: no-op.
+## Restores every well-formed move_batch (schema, id0 = the entry's id) to its move_sample entries bit for bit
+## (ids id0, id0 + 1, …; ct summed up); a malformed one stays and validate() reports it.
 func expand() -> void:
-	pass
+	var out: Array[Dictionary] = []
+	for e: Dictionary in _cmds:
+		var c: Dictionary = e["c"]
+		if str(c.get("t", "")) != "move_batch" or RtCommand.validate(c) != "" or int(c["id0"]) != int(e["id"]):
+			out.append(e)
+			continue
+		var ct: int = 0
+		var id: int = int(e["id"])
+		for row: Variant in (c["s"] as Array):
+			var r: Array = row
+			ct += int(r[0])
+			out.append({"k": int(e["k"]), "id": id, "c": {"t": "move_sample", "ct": ct, "u": str(c["u"]),
+				"p": [int(r[1]), int(r[2]), int(r[3]), int(r[4]), int(r[5])]}})
+			id += 1
+	_cmds = out
+
+
+## A copy with every move_batch expanded (the verifiers replay this form; the stored log stays as it is). `rejected`
+## carries over.
+func expanded() -> RunLog:
+	var rl: RunLog = RunLog.from_dict(to_dict())
+	rl.rejected += rejected
+	rl.expand()
+	return rl
+
+
+## True when the log holds move_batch entries (compact() was applied).
+func has_batches() -> bool:
+	for e: Dictionary in _cmds:
+		if str((e["c"] as Dictionary).get("t", "")) == "move_batch":
+			return true
+	return false
+
+
+## The combat checkpoints {"i" (index in checkpoints()), "k", "ct", "h"} in log order (07 §10.2) — compared by the
+## combat replays of both verifiers (RunSim.expect_combat_checkpoints / check_combat), never by walk().
+func combat_checkpoints() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for i in _checkpoints.size():
+		var cp: Dictionary = _checkpoints[i]
+		if cp.has("ct"):
+			out.append({"i": i, "k": int(cp["k"]), "ct": int(cp["ct"]), "h": str(cp["h"])})
+	return out
+
+
+## Ids an entry holds: n for a move_batch of n samples, else 1.
+static func _id_span(c: Dictionary) -> int:
+	if str(c.get("t", "")) == "move_batch" and c.get("s", null) is Array:
+		return maxi(1, (c["s"] as Array).size())
+	return 1
+
+
+## The combat ticks of a combat entry: [ct] (types with ct, a gift with an integral ct >= 0), the sample cts of a
+## well-formed move_batch; [] when it has none.
+static func _cts_of(c: Dictionary) -> Array[int]:
+	var out: Array[int] = []
+	if str(c.get("t", "")) == "move_batch":
+		if RtCommand.validate(c) == "":
+			var ct: int = 0
+			for row: Variant in (c["s"] as Array):
+				ct += int((row as Array)[0])
+				out.append(ct)
+		return out
+	var v: Variant = c.get("ct", null)
+	if JsonUtil.is_integral(v) and int(v) >= 0:
+		out.append(int(v))
+	return out
+
+
+## A move_sample entry of exactly the recorded shape (RtCommand.move) with a player id.
+static func _batchable(e: Dictionary) -> bool:
+	var c: Dictionary = e["c"]
+	if int(e["id"]) <= 0 or str(c.get("t", "")) != "move_sample" or c.size() != 4:
+		return false
+	for key: String in ["t", "ct", "u", "p"]:
+		if not c.has(key):
+			return false
+	return RtCommand.validate(c) == ""
+
+
+## `b` continues the sample run ending with `a`: same k and unit, the next id, ct not falling.
+static func _continues(a: Dictionary, b: Dictionary) -> bool:
+	if not _batchable(b) or int(b["k"]) != int(a["k"]) or int(b["id"]) != int(a["id"]) + 1:
+		return false
+	var ca: Dictionary = a["c"]
+	var cb: Dictionary = b["c"]
+	return str(cb["u"]) == str(ca["u"]) and int(cb["ct"]) >= int(ca["ct"])
+
+
+## The move_batch entry of the samples [i, j).
+func _batch(i: int, j: int) -> Dictionary:
+	var first: Dictionary = _cmds[i]
+	var rows: Array = []
+	var prev: int = 0
+	for n in range(i, j):
+		var c: Dictionary = _cmds[n]["c"]
+		var p: Array = c["p"]
+		rows.append([int(c["ct"]) - prev, int(p[0]), int(p[1]), int(p[2]), int(p[3]), int(p[4])])
+		prev = int(c["ct"])
+	return {"k": int(first["k"]), "id": int(first["id"]), "c": {"t": "move_batch",
+		"u": str((first["c"] as Dictionary)["u"]), "id0": int(first["id"]), "s": rows}}
 
 
 ## "" or the violation of "id 0 ⇔ external input" (05 §10.6).

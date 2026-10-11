@@ -142,34 +142,37 @@ func apply(cmd: Dictionary) -> Array[ExploreEvent]:
 	if err != "":
 		push_warning("[RunSim] rejected command: " + err)
 		return out
+	var c: Dictionary = CanonicalJson.normalize(cmd)
+	var rt_entry: bool = RtCommand.is_combat_cmd(c)   # Echtzeitkampf (07 §10.5): an entry of the running combat
+	if combat != null and not rt_entry:
+		_finish_combat()                               # any other command: the combat ends first (the sim decides)
 	if _over:
 		push_warning("[RunSim] run is over, command '%s' ignored" % str(cmd.get("t", "")))
 		return out
-	var c: Dictionary = CanonicalJson.normalize(cmd)
 	var refusal: String = command_refusal(c)
 	if refusal != "":
-		var gid: String = RunRules.refused_id(c)
-		push_warning("[RunSim] %s %s refused: %s" % [str(c["t"]), gid, refusal])
-		rejected_cmds.append({"k": _tick, "t": str(c["t"]), "gift_id": gid, "reason": refusal})
+		_refuse(c, refusal)
 		return out
-	if str(c["t"]) == "gift":
-		_stamp_window(c["gift"])
-	if run_log != null:
-		var cmd_id: int = 0
-		if not Command.is_external(c):
-			_cmd_id += 1
-			cmd_id = _cmd_id
-		run_log.add_cmd(_tick, c, cmd_id)
+	if not rt_entry:                                   # combat entries are recorded once the combat took them
+		if str(c["t"]) == "gift":
+			_stamp_window(c["gift"])
+		_record(c)
 	match str(c["t"]):
 		"floor":
 			_apply_floor(int(c["floor"]))
 			out.append_array(sponsor_floor())
 		"encounter":
-			_apply_encounter(str(c["enc"]), int(c["adv"]), str(c["group"]), out, str(c.get("opener", "")))
+			if c.has("rt"):                            # Echtzeitkampf (07 §10.5, R5a)
+				_apply_encounter_rt(c, out)
+			else:
+				_apply_encounter(str(c["enc"]), int(c["adv"]), str(c["group"]), out, str(c.get("opener", "")))
 		"battle":
 			_apply_battle(c["cmd"], out)
 		"gift":
-			_apply_gift(c["gift"], out)
+			if rt_entry:                               # a gift at a combat tick boundary (07 §9.2)
+				_apply_combat(c, out)
+			else:
+				_apply_gift(c["gift"], out)
 		"twist":
 			_apply_twist(c["twist"], out)
 		"room":
@@ -222,6 +225,8 @@ func apply(cmd: Dictionary) -> Array[ExploreEvent]:
 			Secrets.open(state, _floor_def(), str(c["id"]))   # (followers, M.O.D. line: Game.open_secret)
 		"persona":                                 # Casting (08 §2.3, K0; legality: RunRules.command_refusal)
 			PersonaRules.apply(state, data, c)
+		"loadout":                                 # Echtzeitkampf (07 §4.1, §5.2; R5a; RunRules.loadout_refusal)
+			RunRules.apply_loadout(state, c)
 		"descend":
 			if state.floor_run != null:
 				_floor_done = true
@@ -229,7 +234,8 @@ func apply(cmd: Dictionary) -> Array[ExploreEvent]:
 				var fi: int = state.floor_run.index
 				out.append(ExploreEvent.make(ExploreEvent.Type.FLOOR_COMPLETED, _tick, {"floor": fi}))
 				_quest_feed({"type": "floor_completed", "floor": state.floor_run.index})
-		# Echtzeitkampf (07 §10.5): unreachable before R5a — command_refusal refuses them (RunRules.rt_refusal)
+		# Echtzeitkampf (07 §10.5, R5a): the entries of the running combat (move_batch: command_refusal → not_expanded,
+		# the verifiers replay RunLog.expanded)
 		"ability_use": _apply_combat(c, out)
 		"target_change": _apply_combat(c, out)
 		"move_sample": _apply_combat(c, out)
@@ -240,8 +246,9 @@ func apply(cmd: Dictionary) -> Array[ExploreEvent]:
 		"autopilot": _apply_combat(c, out)
 		"combat_hint": _apply_combat(c, out)
 		"move_input": _apply_combat(c, out)
-		"combat_speed": _apply_combat(c, out)
 		"move_batch": _apply_combat(c, out)
+		"combat_speed":                            # no sim effect (07 §10.7: the "Zeitlupe" mark of the run)
+			pass
 	return out
 
 
@@ -252,10 +259,10 @@ func tick() -> int:
 
 # --- additions ----------------------------------------------------------------------------------------------------
 
-## True while step() advances the clock (see class doc).
+## True while step() advances the clock (see class doc). Echtzeitkampf (07 §12.9 Nr. 3): never with a running combat.
 func is_clock_running() -> bool:
 	return state != null and state.floor_run != null and state.floor_run.timer_started \
-		and state.floor_run.time_left_ticks > 0 and not _over and not _floor_done and battle == null
+		and state.floor_run.time_left_ticks > 0 and not _over and not _floor_done and battle == null and combat == null
 
 
 ## The run ended (timer expired or battle lost).
@@ -263,9 +270,12 @@ func is_over() -> bool:
 	return _over
 
 
-## Steps tick by tick up to `k` (stops early if the clock stops). Returns all events.
+## Steps tick by tick up to `k` (stops early if the clock stops). Returns all events. A running real-time combat ends
+## first when time has to pass (k > tick(): the clock stands while it runs, 07 §10.5).
 func advance_to(k: int) -> Array[ExploreEvent]:
 	var out: Array[ExploreEvent] = []
+	if k > _tick and combat != null:
+		_finish_combat()
 	while _tick < k:
 		var before: int = _tick
 		out.append_array(step(1))
@@ -283,12 +293,19 @@ func next_seed(purpose: String) -> int:
 ## against forged logs (05 §11.4). Read-only. gift: gift_refusal(); sponsor_window: SponsorWindows.dev_allowed →
 ## not_allowed; every other command: RunRules.command_refusal (after "descend" only the next floor, floor order,
 ## no difficulty change in event runs, scenes only as their safe room visit allows, talent picks / castings only as
-## Talents.check_pick / Casting.check allow).
+## Talents.check_pick / Casting.check allow). Echtzeitkampf (07 §10.5, R5a): real-time entries need a real-time run
+## (RunRules.rt_refusal); the entries of the running combat RunRules.combat_refusal (a gift then gift_refusal), the
+## sim's own submit check follows in the combat branch.
 func command_refusal(c: Dictionary) -> String:
 	var t: String = str(c.get("t", ""))
-	var rt: String = RunRules.rt_refusal(c)        # Echtzeitkampf (07, R1a → R5a): no combat path yet
+	var rt: String = RunRules.rt_refusal(c, state)
 	if rt != "":
 		return rt
+	if RtCommand.is_combat_cmd(c):
+		var why: String = RunRules.combat_refusal(c, combat, _combat_gift_ct, _combat_input_ct)
+		if why == "" and t == "gift":
+			why = gift_refusal(c["gift"])
+		return why
 	if t == "gift":
 		return gift_refusal(c["gift"])
 	if t == "twist":
@@ -314,7 +331,7 @@ func gift_refusal(g: Dictionary) -> String:
 	var reason: String = GiftPolicy.refusal(state, data, g, rules, gift_context())
 	if reason != "":
 		return reason
-	if battle != null and not battle.is_finished():
+	if (battle != null and not battle.is_finished()) or (combat != null and not combat.is_finished()):
 		var live: Variant = state.flags.get("live", {})
 		var gr: Variant = (live as Dictionary).get("gift_rules", {}) if live is Dictionary else {}
 		var eff: Dictionary = rules if not rules.is_empty() else {"gifts": gr}
@@ -327,8 +344,8 @@ func gift_refusal(g: Dictionary) -> String:
 ## is over / the floor done → run_not_active; its tick has passed → twist_tick_passed; its tick lies ahead → ""
 ## (buffered, checked when it is due); else TwistApplier.validate. Read-only.
 func twist_refusal(tw: Dictionary) -> String:
-	return RunRules.twist_refusal(state, data, rules, tw, _tick, battle != null, not (_floor_done or _over), true,
-		_current_layout())
+	return RunRules.twist_refusal(state, data, rules, tw, _tick, battle != null or combat != null,
+		not (_floor_done or _over), true, _current_layout())
 
 
 ## The `extra` of GiftPolicy.refusal: {"tick"} + the run identity (run_id, event_id, player_id, window_id).
@@ -397,8 +414,9 @@ static func zones_event(fr: FloorRun, layout: FloorLayout) -> Dictionary:
 
 
 ## Ends a recorded run: final checkpoint + run_log.result {"cause", "final_hash", "ticks"} (+ extra, e.g. "score").
-## Returns the final state hash.
+## Returns the final state hash. A running real-time combat ends first (settle).
 func close(cause: String, extra: Dictionary = {}) -> String:
+	settle()
 	var h: String = StateHash.of(state)
 	if run_log != null:
 		run_log.add_checkpoint(_tick, h)
@@ -424,19 +442,27 @@ func close(cause: String, extra: Dictionary = {}) -> String:
 ##    problems, entries the RunLog rejected, commands the core refused, header / ledger problems, unknown event, a
 ##    from_save log without a valid anchor) — a verifier needs errors == [],
 ##    "version": version_status(header) — "" or OLD_VERSION / NEW_VERSION: a log of another sim_version is not
-##    replayed (one error line, mismatch_at stays -1; the UI tags it "ältere Version", 08 §10.2 Nr. 7)}
+##    replayed (one error line, mismatch_at stays -1; the UI tags it "ältere Version", 08 §10.2 Nr. 7),
+##    "combat_mismatch_at": int — Echtzeitkampf (07 §10.2, R5a): the first failing combat checkpoint alone (also part
+##    of mismatch_at)}
 ## A Game-recorded run also needs the Show reactions (hype, followers, achievements, sponsor gifts): its verifier is
 ## Game.replay_log (same "errors" contract); a RunSim replay of such a log reports the first diverging checkpoint.
+## Echtzeitkampf (07 §10.3–§10.5, R5a): a compacted log is replayed in its expanded form (RunLog.expanded); a header
+## that names a real-time run starts from RunRules.rt_start (rt_version checked, RunRules.rt_header_errors); combat
+## entries run the combat branch (apply), its combat checkpoints are compared tick by tick (check_combat); a state
+## checkpoint ends a combat that is still running first (settle).
 static func replay(p_data: GameData, p_log: RunLog, p_rules: Dictionary = {}, p_quest: Dictionary = {},
 		p_ledger: Array = []) -> Dictionary:
-	var out: Dictionary = {"final_hash": "", "result": {}, "mismatch_at": -1, "errors": PackedStringArray()}
+	var out: Dictionary = {"final_hash": "", "result": {}, "mismatch_at": -1, "errors": PackedStringArray(),
+		"combat_mismatch_at": -1}
 	if p_log == null:
 		return out
-	var errors: PackedStringArray = p_log.validate()
-	if p_log.rejected > 0:
+	var src: RunLog = p_log.expanded() if p_log.has_batches() else p_log
+	var errors: PackedStringArray = src.validate()
+	if src.rejected > 0:
 		errors.append("log: %d entries rejected (out of tick order, duplicate / invalid cmd ids, malformed)"
-			% p_log.rejected)
-	var h: Dictionary = p_log.header
+			% src.rejected)
+	var h: Dictionary = src.header
 	var ver: String = version_status(h)       # 08 §10.2 Nr. 7 / 07 §10.2: an older kernel's log is not replayed here
 	out["version"] = ver
 	if ver != "":
@@ -461,6 +487,7 @@ static func replay(p_data: GameData, p_log: RunLog, p_rules: Dictionary = {}, p_
 			if q.is_empty():
 				q = def.quest
 			errors.append_array(header_errors(h, def, r))
+	errors.append_array(RunRules.rt_header_errors(h))
 	var st: GameState = null
 	if bool(h.get("from_save", false)):
 		st = anchor_state(h, errors)
@@ -473,9 +500,12 @@ static func replay(p_data: GameData, p_log: RunLog, p_rules: Dictionary = {}, p_
 		st = GameState.create_new(p_data, int(h.get("slot", 0)), GameState.DEFAULT_NAME,
 			int(seed_v) if typeof(seed_v) == TYPE_INT or typeof(seed_v) == TYPE_FLOAT else 1,
 			StringName(str(h.get("difficulty", "prime"))))
+		if RunRules.header_realtime(h):
+			RunRules.rt_start(st, p_data)          # Echtzeitkampf (07 §12.1, R5a): like Game.new_game
 	var sim: RunSim = RunSim.new(p_data, st, r, identity_of(h))
 	if not q.is_empty():
 		sim.quest = QuestTracker.from_def(q)
+	sim.expect_combat_checkpoints(src.combat_checkpoints())
 	var applied: Dictionary = {}           # external gift id → tick it was applied at
 	var advance: Callable = func(k: int) -> void:
 		sim.advance_to(k)
@@ -487,10 +517,15 @@ static func replay(p_data: GameData, p_log: RunLog, p_rules: Dictionary = {}, p_
 			applied[str((c["gift"] as Dictionary).get("gift_id", ""))] = sim.tick()
 		return i + 1
 	var on_checkpoint: Callable = func(cp: int, k: int, want: String) -> void:
+		sim.settle()                           # a state checkpoint follows the combat of its tick (07 §10.2)
 		sim.advance_to(k)
 		if int(out["mismatch_at"]) < 0 and StateHash.of(st) != want:
 			out["mismatch_at"] = cp
-	p_log.walk(advance, apply_cmd, on_checkpoint)
+	src.walk(advance, apply_cmd, on_checkpoint)
+	sim.settle()
+	sim.finish_combat_checks()
+	out["combat_mismatch_at"] = sim.combat_mismatch_at
+	out["mismatch_at"] = first_mismatch(int(out["mismatch_at"]), sim.combat_mismatch_at)
 	for rc: Dictionary in sim.rejected_cmds:
 		errors.append("k %d: %s '%s' refused by the core (%s)" % [int(rc["k"]), str(rc["t"]), str(rc["gift_id"]),
 			str(rc["reason"])])
@@ -498,7 +533,7 @@ static func replay(p_data: GameData, p_log: RunLog, p_rules: Dictionary = {}, p_
 		errors.append_array(ledger_errors(p_ledger, applied))
 	out["errors"] = errors
 	out["final_hash"] = StateHash.of(st)
-	out["result"] = {"ticks": sim.tick(), "cmds": p_log.size(), "over": sim.is_over(),
+	out["result"] = {"ticks": sim.tick(), "cmds": src.size(), "over": sim.is_over(),
 		"floor": st.floor_run.index if st.floor_run != null else 0,
 		"quest_complete": sim.quest.is_complete() if sim.quest != null else false,
 		"quest_progress_ppm": sim.quest.progress_ppm() if sim.quest != null else 0,
@@ -744,6 +779,12 @@ func _apply_battle(cmd_dict: Dictionary, _out: Array[ExploreEvent]) -> void:
 func _end_battle() -> void:
 	var result: BattleResult = battle.result
 	battle = null
+	_book_result(result)
+
+
+## The end of a battle / real-time combat (both branches): checkpoint due, BattleBridge.apply_result, the comeback mark,
+## boss_defeated, DEFEAT → the run is over.
+func _book_result(result: BattleResult) -> void:
 	_checkpoint_due = true
 	if result == null:
 		return
@@ -757,7 +798,8 @@ func _end_battle() -> void:
 
 ## Applies a gift that passed gift_refusal(): external ids → flags.live.gift_ids (GiftPolicy.remember); in battle
 ## BattleState.apply_gift + GiftApplier.note_battle_gift (gift items + the one booking into the run counters), outside
-## GiftApplier.apply ("gift" seed stream; books once) + Inventory.add_rewards — both at run tick `_tick`.
+## GiftApplier.apply ("gift" seed stream; books once) + Inventory.add_rewards — both at run tick `_tick`. Echtzeitkampf
+## (07 §9.2, R5a): in a running combat RtSim.apply_gift at the boundary of its tick, booked like a battle gift.
 func _apply_gift(g: Dictionary, out: Array[ExploreEvent]) -> void:
 	if Gift.is_external(g):
 		GiftPolicy.remember(state, str(g.get("gift_id", "")))
@@ -765,6 +807,13 @@ func _apply_gift(g: Dictionary, out: Array[ExploreEvent]) -> void:
 		last_action_events = battle.apply_gift(g)
 		_quest_feed_battle(last_action_events)
 		GiftApplier.note_battle_gift(state, g, last_action_events, _tick)
+		if Gift.is_external(g):
+			_battle_external += 1
+	elif combat != null and not combat.is_finished():
+		var ev: Array[ActionEvent] = combat.apply_gift(g)
+		last_action_events.append_array(ev)
+		_quest_feed_battle(ev)
+		GiftApplier.note_battle_gift(state, g, ev, _tick)
 		if Gift.is_external(g):
 			_battle_external += 1
 	else:
@@ -883,7 +932,7 @@ func _apply_twist(tw: Dictionary, out: Array[ExploreEvent]) -> void:
 func _apply_due_twists(out: Array[ExploreEvent]) -> void:
 	for tw: Dictionary in TwistApplier.take_due(state):
 		tw["tick"] = _tick
-		var reason: String = RunRules.twist_refusal(state, data, rules, tw, _tick, battle != null,
+		var reason: String = RunRules.twist_refusal(state, data, rules, tw, _tick, battle != null or combat != null,
 			not (_floor_done or _over), true, _current_layout())
 		if reason != "":
 			rejected_cmds.append({"k": _tick, "t": "twist", "gift_id": str(tw.get("id", "")), "reason": reason})
@@ -901,7 +950,8 @@ func _apply_schedule(out: Array[ExploreEvent]) -> void:
 			continue
 		var tw: Dictionary = TwistApplier.complete(state, data, {"id": str((e as Dictionary).get("id", "")),
 			"src": "schedule", "params": (e as Dictionary).get("params", {})}, _tick)
-		if TwistApplier.validate(state, data, tw, rules, _tick, battle != null, _current_layout()) == "":
+		if TwistApplier.validate(state, data, tw, rules, _tick, battle != null or combat != null,
+				_current_layout()) == "":
 			out.append_array(TwistApplier.apply(state, data, tw, _current_layout()))
 
 
@@ -927,13 +977,185 @@ func _stamp_window(g: Dictionary) -> void:
 		g["sponsor_window"] = wid
 
 
-# --- Echtzeitkampf (07 §10.5, R1a → R5a) -------------------------------------------------------------------------
-# STUB(R1a) — owned by R5a. Replace completely, keep the public API.
+# --- Echtzeitkampf (07 §10.5, R5a) ------------------------------------------------------------------------------------
+# The real-time combat of RunSim-driven runs (bots, RunSim.replay): apply({"t": "encounter", …, "rt"}) builds it with
+# BattleBridge.make_rt_setup_rules ("battle" stream, then "show" like Show.begin_battle), the combat entries advance it
+# lazily to their ct (the clock stands: they all carry the encounter's k), any other command / time passing / close /
+# the replay end let the sim finish it (run_to_end) and book its result like a CTB battle. RunSim has no Show: no
+# system gifts, no Show reactions (05 §11.4) — complete live runs replay through Game.replay_log, which drives
+# Game.combat_* with the same RunSim checkpoint cursor (check_combat).
 
-## A real-time combat command of the log (07 §10.5: advance the running combat to its ct, gift / hint / submit).
-## Stub: never reached — RunRules.rt_refusal refuses every real-time command until R5a builds the combat path.
-func _apply_combat(_c: Dictionary, _out: Array[ExploreEvent]) -> void:
-	pass
+var combat: RtSim = null               # the running real-time combat (RunSim-driven runs only; Game holds its own)
+## Replays: the first combat checkpoint that did not match (index in RunLog.checkpoints(), -1 = none).
+var combat_mismatch_at: int = -1
+var _combat_k: int = -1                # run tick of the running combat (the clock stands)
+var _combat_gift_ct: int = -1          # ct of the last gift of the running combat (one per tick boundary)
+var _combat_input_ct: int = -1         # ct of the last submitted input (a gift of that tick comes too late)
+var _rt_cp_ct: int = -1                # ct of the last combat checkpoint written
+var _combat_checks: Array[Dictionary] = []   # replays: the log's combat checkpoints {"i", "k", "ct", "h"}
+var _cc: int = 0                       # cursor into _combat_checks
+
+
+## Finishes a running real-time combat (the sim plays it to its end with its own AI — the controlled unit without
+## inputs stands and auto-attacks) and books its result; nothing without one. apply() does this before any command
+## that is not a combat entry, advance_to before time passes, close() and the replays at their checkpoints and end.
+func settle() -> void:
+	if combat != null:
+		_finish_combat()
+
+
+## Replays (RunSim.replay, Game.replay_log): the log's combat checkpoints (RunLog.combat_checkpoints) to compare.
+func expect_combat_checkpoints(list: Array[Dictionary]) -> void:
+	_combat_checks = list.duplicate(true)
+	_cc = 0
+	combat_mismatch_at = -1
+
+
+## After every step of the combat `sim` that runs at run tick `k` (here and in Game.replay_log): compares each expected
+## combat checkpoint of that combat whose ct is reached with StateHash.of_rt(sim); one of an earlier k or one the combat
+## passed (a ct no step stopped at) counts as a mismatch. The checkpoint of the end tick closes the combat's run: the
+## following ones belong to the next combat (several combats may share a k — the clock stands).
+func check_combat(k: int, sim: RtSim) -> void:
+	while _cc < _combat_checks.size():
+		var cp: Dictionary = _combat_checks[_cc]
+		var ck: int = int(cp["k"])
+		var ct: int = int(cp["ct"])
+		if ck > k or (ck == k and ct > sim.tick()):
+			return
+		if ck == k and ct == sim.tick():
+			if StateHash.of_rt(sim) != str(cp["h"]):
+				_combat_mismatch(int(cp["i"]))
+			_cc += 1
+			if sim.is_finished():
+				return
+			continue
+		_combat_mismatch(int(cp["i"]))
+		_cc += 1
+
+
+## The end of a replay: expected combat checkpoints no combat reached are mismatches.
+func finish_combat_checks() -> void:
+	while _cc < _combat_checks.size():
+		_combat_mismatch(int(_combat_checks[_cc]["i"]))
+		_cc += 1
+
+
+## The smaller of two checkpoint indices (-1 = none).
+static func first_mismatch(a: int, b: int) -> int:
+	if a < 0:
+		return b
+	if b < 0:
+		return a
+	return mini(a, b)
+
+
+func _combat_mismatch(i: int) -> void:
+	combat_mismatch_at = first_mismatch(combat_mismatch_at, i)
+
+
+## The encounter of a real-time combat (07 §10.5; like Game.make_rt_setup): the "battle" seed, the setup
+## (BattleBridge.make_rt_setup_rules with the run's rules; none for a cell without a set — then only the seed is drawn,
+## like live), the "show" seed of Show.begin_battle, the pacifist counter, ENCOUNTER, the ct-0 prelude.
+func _apply_encounter_rt(c: Dictionary, out: Array[ExploreEvent]) -> void:
+	if battle != null:
+		push_warning("[RunSim] real-time encounter '%s' while a battle is running" % str(c["enc"]))
+		return
+	var setup: RtSetup = BattleBridge.make_rt_setup_rules(state, data, c, next_seed("battle"), rules)
+	if setup == null:
+		return
+	next_seed("show")
+	combat = RtSim.new(setup, data)
+	_combat_k = _tick
+	_combat_gift_ct = -1
+	_combat_input_ct = -1
+	_rt_cp_ct = -1
+	_battle_external = 0
+	if state.show != null:
+		state.show.stats["explore_seconds_since_battle"] = 0
+	out.append(ExploreEvent.make(ExploreEvent.Type.ENCOUNTER, _tick, {"group_id": str(c["group"]),
+		"encounter_id": str(c["enc"]), "advantage": int(c["adv"])}))
+	_quest_feed({"type": "battle_started"})
+	last_action_events = combat.start()
+	_quest_feed_battle(last_action_events)
+
+
+## A combat entry that passed command_refusal (07 §10.5, §10.6): the combat advances to its ct (the ticks before it
+## have no further entries), then — refused, unrecorded, in rejected_cmds: an entry after the end (only the
+## combat_hint of the last tick passes) and an input RtSim.submit refuses — a gift is applied at the boundary of ct
+## (before the inputs of that tick), a combat_hint marks its card (the sim ignores it), any other entry is submitted.
+## Accepted entries are recorded (cmd id 0 for the gift) at the encounter's k.
+func _apply_combat(c: Dictionary, out: Array[ExploreEvent]) -> void:
+	var t: String = str(c["t"])
+	if combat == null or t == "move_batch":
+		return                                     # refused by command_refusal (no_combat / not_expanded)
+	var ct: int = int(c["ct"])
+	while not combat.is_finished() and combat.tick() < ct:
+		_combat_step()
+	var why: String = RunRules.combat_after_end(c, combat)
+	if why == "" and t != "gift" and t != "combat_hint":
+		why = combat.submit(c)
+	if why != "":
+		_refuse(c, why)
+		return
+	if t == "gift":
+		_stamp_window(c["gift"])
+	_record(c)
+	match t:
+		"gift":
+			_combat_gift_ct = ct
+			_apply_gift(c["gift"], out)
+		"combat_hint":
+			RunRules.mark_hint(state, str(c["id"]))
+		_:
+			_combat_input_ct = ct
+
+
+## One combat tick: step, quest feed, the combat checkpoint (recorded every CHECKPOINT_TICKS and at the end like
+## Game.combat_step), the replay comparison.
+func _combat_step() -> void:
+	var ev: Array[ActionEvent] = combat.step()
+	last_action_events.append_array(ev)
+	_quest_feed_battle(ev)
+	var ct: int = combat.tick()
+	var every: int = combat.setup.balance.i("CHECKPOINT_TICKS") if combat.setup.balance != null else CHECKPOINT_TICKS
+	if run_log != null and ct != _rt_cp_ct and (combat.is_finished() or (every > 0 and ct > 0 and ct % every == 0)):
+		_rt_cp_ct = ct
+		run_log.add_checkpoint(_combat_k, StateHash.of_rt(combat), ct)
+	if not _combat_checks.is_empty():
+		check_combat(_combat_k, combat)
+
+
+## The sim plays the running combat to its end (at the latest MAX_COMBAT_TICKS: FLED), then its result is booked.
+func _finish_combat() -> void:
+	var guard: int = combat.bal.i("MAX_COMBAT_TICKS") + 1
+	while not combat.is_finished() and guard > 0:
+		_combat_step()
+		guard -= 1
+	var result: BattleResult = combat.result
+	combat = null
+	_combat_k = -1
+	_combat_gift_ct = -1
+	_combat_input_ct = -1
+	_rt_cp_ct = -1
+	_book_result(result)
+
+
+## Records an accepted command (k = tick(), cmd id 0 for external inputs, else the next id).
+func _record(c: Dictionary) -> void:
+	if run_log == null:
+		return
+	var cmd_id: int = 0
+	if not Command.is_external(c):
+		_cmd_id += 1
+		cmd_id = _cmd_id
+	run_log.add_cmd(_tick, c, cmd_id)
+
+
+## A refused command: warning + rejected_cmds {"k", "t", "gift_id" (RunRules.refused_id), "reason"}.
+func _refuse(c: Dictionary, reason: String) -> void:
+	var gid: String = RunRules.refused_id(c)
+	push_warning("[RunSim] %s %s refused: %s" % [str(c["t"]), gid, reason])
+	rejected_cmds.append({"k": _tick, "t": str(c["t"]), "gift_id": gid, "reason": reason})
 
 
 # --- Echtzeitkampf (07 §2.7, R1b): regeneration out of combat -------------------------------------------------------

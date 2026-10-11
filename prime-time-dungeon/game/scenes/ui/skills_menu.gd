@@ -2,7 +2,8 @@ extends "res://scenes/ui/menu_base.gd"
 ## Pause tab "Fähigkeiten" (02_TECH §1.6, GDD §14.4): per member the attack skill, the learnset with unlock levels
 ## (learned = bright, upcoming = "ab Lv X", dimmed) and stunts (success chance, cooldown). Details on focus.
 ## Echtzeitkampf (07 §4.1, R3): a real-time run shows the combat bar instead (slots 1–5 + variants + FINALE, the
-## Partner-Spezial, the auto attack and the partner tactic) — see the section at the end.
+## Partner-Spezial, the auto attack and the partner tactic) — see the section at the end; R5b: variants and the
+## tactic are chosen there (the recorded loadout command).
 
 var member_id: String = "kai"
 
@@ -179,6 +180,11 @@ const RT_SLOT_NAMES: Dictionary = {1: "SLOT 1 · HAUPTFÄHIGKEIT", 2: "SLOT 2", 
 	5: "SLOT 5 · SHOW"}
 const RT_KIND_TEXT: Dictionary = {"variant": "Variante: ", "context": "Auf K.O.-Ziel: ", "finale": "FINALE: "}
 const RT_PRESET_NAMES: Dictionary = {"attack": "Angriff", "support": "Unterstützen", "careful": "Vorsichtig"}
+const RT_PRESET_HINTS: Dictionary = {"attack": "Drauf und dran: greift dein Ziel an, nutzt Fähigkeiten offensiv.",
+	"support": "Heilt, hilft, hält Abstand.", "careful": "Weicht früh aus und nutzt Tränke."}
+const RT_TOGGLE_NAMES: Dictionary = {"interrupt": "Unterbrechen", "show": "Show-Einlagen", "potions": "Tränke"}
+const RT_TOGGLE_HINTS: Dictionary = {"interrupt": "Unterbricht Zauber mit goldenem Rand, wenn es geht.",
+	"show": "Nutzt SHOW-Fähigkeiten für die Show.", "potions": "Trinkt Tränke aus dem Inventar, wenn es knapp wird."}
 
 
 ## The bar rows of `def_id`: party.json rt.bar (+ rt.context), else RT_BARS — [{slot, skill, level, kind}] by slot.
@@ -221,8 +227,9 @@ static func rt_special(def_id: String) -> Array:
 
 
 ## Real-time runs list the combat bar instead of the CTB learnset (07 §4.1: "das Fähigkeiten-Menü liest rt.bar").
-## Read-only: choosing a variant (PartyMember.rt_loadout) and the partner tactic outside combat need a recorded
-## command that the contract does not have yet — the page names the base skill as equipped (the default, 07 §4.1).
+## R5b: the page is the loadout outside a combat — a learned variant of slot 2–4 (or the base ability back) and the
+## partner tactic with its three switches. Every choice is ONE recorded loadout command with the member's complete
+## choice (RunRules.loadout_cmd → Game.apply_loadout; refused during a combat or for a variant above the level).
 func _rt_refresh() -> bool:
 	if Game.state == null or Game.state.combat_mode != &"realtime":
 		return false
@@ -232,16 +239,21 @@ func _rt_refresh() -> bool:
 	_buttons.clear()
 	var m: PartyMember = Game.state.member(member_id)
 	var level: int = m.level if m != null else 1
+	var rows: Array[Dictionary] = rt_bar_rows(member_id)
+	var choosable: Dictionary = rt_variant_slots(rows)
 	var last_slot: int = -1
 	var first: Dictionary = {}
-	for r: Dictionary in rt_bar_rows(member_id):
+	for r: Dictionary in rows:
 		var slot: int = int(r["slot"])
 		if slot != last_slot:
 			last_slot = slot
 			_rt_header(str(RT_SLOT_NAMES.get(slot, "SLOT %d" % slot)))
+		var kind: String = str(r["kind"])
 		var e: Dictionary = {"skill": str(r["skill"]), "level": int(r["level"]), "learned": int(r["level"]) <= level,
-			"kind": str(r["kind"]), "slot": slot}
-		_rt_button(e, str(RT_KIND_TEXT.get(str(r["kind"]), "")))
+			"kind": kind, "slot": slot, "choice": choosable.has(slot) and (kind == "" or kind == "variant")}
+		if bool(e["choice"]):
+			e["equipped"] = rt_equipped(m, slot, str(r["skill"]), kind)
+		_rt_button(e, str(RT_KIND_TEXT.get(kind, "")))
 		if first.is_empty():
 			first = e
 	var sp: Array = rt_special(member_id)
@@ -254,20 +266,141 @@ func _rt_refresh() -> bool:
 		var auto_id: String = str(def.rt.get("auto_skill", "")) if not def.rt.is_empty() else ""
 		_rt_button({"skill": auto_id if auto_id != "" else def.attack_skill, "level": 1, "learned": true,
 			"kind": "attack"}, "")
-		_rt_header("TAKTIK ALS PARTNER")
-		var preset: String = m.rt_preset if m != null else ""
-		if preset == "" and not def.rt.is_empty():
-			preset = str(def.rt.get("default_preset", ""))
-		if preset == "":
-			preset = "support" if member_id == "mopsula" else "attack"
-		var note: Label = UiUtil.label("%s · im Kampf am Taktik-Chip änderbar (ab Stufe 3)" %
-			str(RT_PRESET_NAMES.get(preset, preset)), &"LabelSmall", 16, UiTheme.C_TEXT_DIM)
-		note.name = "RtTactic"
-		_list.add_child(note)
+		_rt_tactic(m, def)
 	UiUtil.wire_vertical(_buttons)
 	if not first.is_empty():
 		_rt_show(first)
 	return true
+
+
+## Slots of `rows` with a variant (07 §4.1: slots 2–4) → true: their base row and variants are a choice.
+static func rt_variant_slots(rows: Array[Dictionary]) -> Dictionary:
+	var out: Dictionary = {}
+	for r: Dictionary in rows:
+		if str(r["kind"]) == "variant" and RunRules.LOADOUT_SLOTS.has(str(int(r["slot"]))):
+			out[int(r["slot"])] = true
+	return out
+
+
+## Whether the bar row (slot, skill, kind "" | "variant") is what the member's slot holds (PartyMember.rt_loadout;
+## no entry = the base ability).
+static func rt_equipped(m: PartyMember, slot: int, skill: String, kind: String) -> bool:
+	var chosen: String = str(m.rt_loadout.get(str(slot), "")) if m != null else ""
+	return chosen == skill if kind == "variant" else chosen == ""
+
+
+## The partner tactic of the member: the current one, the three tactics and switches as buttons (R5b: chosen here,
+## in a combat at the Taktik-Chip — that choice is kept as well, BattleBridge.write_presets).
+func _rt_tactic(m: PartyMember, def: PartyMemberDef) -> void:
+	_rt_header("TAKTIK ALS PARTNER")
+	var preset: String = rt_preset_of(m, def)
+	var note: Label = UiUtil.label("Gilt, wenn die KI %s spielt · im Kampf am Taktik-Chip änderbar"
+		% UiUtil.tr_text(def.name), &"LabelSmall", 16, UiTheme.C_TEXT_DIM)
+	note.name = "RtTactic"
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_list.add_child(note)
+	for p: String in RtVocab.RT_PRESETS:
+		var on: bool = p == preset
+		var b: Button = list_button(str(RT_PRESET_NAMES.get(p, p)), &"dot", UiTheme.C_ACCENT if on else
+			UiTheme.C_TEXT_DIM, "aktiv" if on else "", Color(0, 0, 0, 0))
+		b.name = "RtPreset_" + p
+		var pick: String = p
+		b.pressed.connect(func() -> void: _rt_set_tactic(pick, ""))
+		b.focus_entered.connect(func() -> void: _rt_show_tactic(pick, ""))
+		_list.add_child(b)
+		_buttons.append(b)
+	var tog: Dictionary = rt_toggles_of(m)
+	for k: String in RtVocab.RT_TOGGLES:
+		var on_t: bool = bool(tog[k])
+		var b: Button = list_button("%s: %s" % [str(RT_TOGGLE_NAMES.get(k, k)), "an" if on_t else "aus"], &"dot",
+			UiTheme.C_ACCENT if on_t else UiTheme.C_TEXT_DIM, "", Color(0, 0, 0, 0))
+		b.name = "RtToggle_" + k
+		var key: String = k
+		b.pressed.connect(func() -> void: _rt_set_tactic("", key))
+		b.focus_entered.connect(func() -> void: _rt_show_tactic("", key))
+		_list.add_child(b)
+		_buttons.append(b)
+
+
+## The member's tactic: PartyMember.rt_preset, else party.json rt.default_preset, else attack / support.
+static func rt_preset_of(m: PartyMember, def: PartyMemberDef) -> String:
+	var preset: String = m.rt_preset if m != null else ""
+	if preset == "" and def != null and not def.rt.is_empty():
+		preset = str(def.rt.get("default_preset", ""))
+	if not RtVocab.RT_PRESETS.has(preset):
+		preset = "support" if def != null and def.id == "mopsula" else "attack"
+	return preset
+
+
+## The member's switches: RtVocab defaults overlaid with PartyMember.rt_toggles.
+static func rt_toggles_of(m: PartyMember) -> Dictionary:
+	var tog: Dictionary = RtVocab.RT_TOGGLE_DEFAULTS.duplicate()
+	if m != null:
+		for k: Variant in m.rt_toggles.keys():
+			if RtVocab.RT_TOGGLES.has(str(k)):
+				tog[str(k)] = bool(m.rt_toggles[k])
+	return tog
+
+
+## A bar row pressed: a learned variant (or the base ability back) of a slot with variants → loadout command.
+func _rt_choose(e: Dictionary) -> void:
+	if not bool(e.get("choice", false)) or bool(e.get("equipped", false)):
+		return
+	if not bool(e["learned"]):
+		say("Wird mit Level %d gelernt." % int(e["level"]))
+		return
+	var m: PartyMember = Game.state.member(member_id) if Game.state != null else null
+	if m == null:
+		return
+	var bar: Dictionary = m.rt_loadout.duplicate()
+	if str(e["kind"]) == "variant":
+		bar[str(int(e["slot"]))] = str(e["skill"])
+	else:
+		bar.erase(str(int(e["slot"])))
+	var sd: SkillDef = UiUtil.skill_def(str(e["skill"]))
+	if _rt_apply(bar, m.rt_preset, m.rt_toggles, "RtSkill_" + str(e["skill"])):
+		say("Slot %d: %s" % [int(e["slot"]), UiUtil.tr_text(sd.name) if sd != null else str(e["skill"])])
+
+
+## A tactic (`preset`) or a switch (`toggle`) pressed → loadout command with the member's complete choice.
+func _rt_set_tactic(preset: String, toggle: String) -> void:
+	var m: PartyMember = Game.state.member(member_id) if Game.state != null else null
+	if m == null:
+		return
+	var def: PartyMemberDef = UiUtil.member_def(member_id)
+	var tog: Dictionary = rt_toggles_of(m)
+	var p: String = rt_preset_of(m, def)
+	if preset != "":
+		if preset == p:
+			return
+		p = preset
+	if toggle != "":
+		tog[toggle] = not bool(tog[toggle])
+	var focus: String = "RtPreset_" + preset if preset != "" else "RtToggle_" + toggle
+	if _rt_apply(m.rt_loadout, p, tog, focus):
+		say("Taktik: %s" % str(RT_PRESET_NAMES.get(p, p)) if preset != "" else "%s: %s" % [
+			str(RT_TOGGLE_NAMES.get(toggle, toggle)), "an" if bool(tog[toggle]) else "aus"])
+
+
+## Game.apply_loadout of the complete choice; on success the page shows it with the focus on `focus_name`.
+func _rt_apply(bar: Dictionary, preset: String, tog: Dictionary, focus_name: String) -> bool:
+	if not Game.apply_loadout(RunRules.loadout_cmd(member_id, bar, preset, tog)):
+		say("Während eines Kampfes nicht änderbar." if Game.rt_party_lock() != "" else "Nicht möglich.")
+		return false
+	refresh()
+	var b: Control = _list.get_node_or_null(focus_name) as Control
+	if b != null:
+		UiUtil.focus_later(b)
+	return true
+
+
+## Detail of a tactic / switch button.
+func _rt_show_tactic(preset: String, toggle: String) -> void:
+	(_detail["title"] as Label).text = str(RT_PRESET_NAMES.get(preset, preset)) if preset != "" else \
+		str(RT_TOGGLE_NAMES.get(toggle, toggle))
+	(_detail["sub"] as Label).text = "Taktik als Partner" if preset != "" else "Schalter der Taktik"
+	(_detail["body"] as Label).text = UiUtil.glyph_safe(str(RT_PRESET_HINTS.get(preset, "")) if preset != "" else
+		str(RT_TOGGLE_HINTS.get(toggle, "")))
 
 
 func _rt_header(text: String) -> void:
@@ -283,6 +416,8 @@ func _rt_button(e: Dictionary, prefix: String) -> void:
 	var mp: int = int(sd.rt.get("mp", sd.mp_cost)) if sd != null and not sd.rt.is_empty() else (sd.mp_cost if sd != null
 		else 0)
 	var right: String = ("%d MP" % mp if mp > 0 else "") if learned else "ab Lv %d" % int(e["level"])
+	if bool(e.get("equipped", false)):
+		right = "belegt"
 	var col: Color = UiUtil.ELEMENT_COLORS.get(sd.element if sd != null else "none", UiTheme.C_TEXT) as Color
 	var icon: StringName = &"star" if str(e["kind"]) == "finale" or (sd != null and sd.is_stunt()) else _element_icon(sd)
 	var b: Button = list_button(name_text, icon, col if learned else UiUtil.C_DISABLED, right,
@@ -290,6 +425,7 @@ func _rt_button(e: Dictionary, prefix: String) -> void:
 	b.name = "RtSkill_" + str(e["skill"])
 	var entry: Dictionary = e
 	b.focus_entered.connect(func() -> void: _rt_show(entry))
+	b.pressed.connect(func() -> void: _rt_choose(entry))
 	_list.add_child(b)
 	_buttons.append(b)
 
@@ -301,8 +437,12 @@ func _rt_show(e: Dictionary) -> void:
 	var extra: String = ""
 	match str(e.get("kind", "")):
 		"variant":
-			extra = "Variante für diesen Slot (ab Lv %d). Die Wahl im Safe Room folgt — bis dahin bleibt die " % int(
-				e["level"]) + "Grundfähigkeit belegt."
+			extra = ("Belegt Slot %d statt der Grundfähigkeit." % int(e["slot"]) if bool(e.get("equipped", false)) else
+				"Variante für Slot %d (ab Lv %d): auswählen, um sie statt der Grundfähigkeit zu belegen." % [int(
+				e["slot"]), int(e["level"])])
+		"":
+			if bool(e.get("choice", false)) and not bool(e.get("equipped", false)):
+				extra = "Auswählen, um wieder die Grundfähigkeit in Slot %d zu belegen." % int(e["slot"])
 		"context":
 			extra = "Ersetzt den Slot automatisch, wenn das Ziel K.O. ist (ab Lv %d)." % int(e["level"])
 		"finale":

@@ -53,6 +53,9 @@ const RESERVE_FROM_PM: int = 700
 const RESERVE_CD_TICKS: int = 90
 
 var sim: RtSim = null
+## Where the bot's commands go: invalid (default) → RtSim.submit; the live game passes Game.combat_submit (same answer,
+## and the accepted command is recorded into the run log — the full-run bot, R5b).
+var submitter: Callable = Callable()
 var prof: Dictionary = {}
 var profile_name: String = "typical"
 ## Counters of the person's play (harness output): GCD windows seen / used, interrupts tried / landed, telegraphs seen
@@ -106,6 +109,11 @@ func act() -> void:
 	_move(u, c, pos, goal)
 
 
+## RtSim.submit or the submitter: "" = accepted.
+func _submit(cmd: Dictionary) -> String:
+	return str(submitter.call(cmd)) if submitter.is_valid() else sim.submit(cmd)
+
+
 ## The events of the tick just stepped: the bot notices interrupt-worthy casts (its interrupt plan) here.
 func observe(events: Array[ActionEvent]) -> void:
 	for e: ActionEvent in events:
@@ -156,7 +164,7 @@ func _pick_target(u: RtUnit, c: int) -> void:
 			bd = d2
 	if best != null and best != t:
 		_chase_since = -1
-		sim.submit(RtCommand.target(c, u.id, best.id))
+		_submit(RtCommand.target(c, u.id, best.id))
 
 
 ## Potion below the profile's threshold (the potion key picks the item, 07 §3.11) for the party member lowest in HP
@@ -176,7 +184,7 @@ func _items(u: RtUnit, c: int) -> void:
 	if low != null:
 		var pick: String = Ability.potion_pick(sim, _aiming_at(u, low))   # the key's pick for that friendly target
 		if pick != "" and sim.can_use_item(u.id, pick, low.id) == "":
-			if sim.submit(RtCommand.item(c, u.id, pick, low.id)) == "":
+			if _submit(RtCommand.item(c, u.id, pick, low.id)) == "":
 				stats["potions"] = int(stats["potions"]) + 1
 			return
 	if profile_name == "sloppy":
@@ -187,7 +195,7 @@ func _items(u: RtUnit, c: int) -> void:
 				var it: ItemDef = sim.item_def(str(iid))
 				if it != null and it.tags.has("revive") and int(sim.items[iid]) > 0 \
 						and sim.can_use_item(u.id, str(iid), v.id) == "":
-					if sim.submit(RtCommand.item(c, u.id, str(iid), v.id)) == "":
+					if _submit(RtCommand.item(c, u.id, str(iid), v.id)) == "":
 						stats["revives"] = int(stats["revives"]) + 1
 					return
 
@@ -213,7 +221,7 @@ func _partner(u: RtUnit, c: int) -> void:
 				if e.side != u.side and sim.targetable(e) and e.target_id == u.id:
 					on_me = true
 			want = on_me and u.hp * 1000 < u.max_hp() * PARTNER_TAUNT_BELOW_PM
-		if want and sim.submit(RtCommand.partner_special(c, p.id)) == "":
+		if want and _submit(RtCommand.partner_special(c, p.id)) == "":
 			stats["partner_orders"] = int(stats["partner_orders"]) + 1
 			_next_partner = c + PARTNER_EVERY
 
@@ -234,7 +242,7 @@ func _actions(u: RtUnit, c: int, pos: Vector2i) -> void:
 				continue
 			var why: String = sim.can_use(u.id, intr, caster.id)
 			if why == "":
-				sim.submit(RtCommand.ability(c, u.id, intr, caster.id))
+				_submit(RtCommand.ability(c, u.id, intr, caster.id))
 				stats["interrupt_tries"] = int(stats["interrupt_tries"]) + 1
 				_intr.erase(cid)
 				return
@@ -243,7 +251,7 @@ func _actions(u: RtUnit, c: int, pos: Vector2i) -> void:
 				_intr.erase(cid)
 	var fin: String = sim.finale_of(u) if bool(prof["show"]) else ""
 	if fin != "" and _finale_shown(u, fin) and sim.can_use(u.id, fin, u.target_id) == "":
-		sim.submit(RtCommand.ability(c, u.id, fin, u.target_id))
+		_submit(RtCommand.ability(c, u.id, fin, u.target_id))
 		return
 	if not u.cast.is_empty() or c < _next_gcd or c < _next_ask:
 		return
@@ -271,7 +279,7 @@ func _actions(u: RtUnit, c: int, pos: Vector2i) -> void:
 			return
 		stats["gcd_used"] = int(stats["gcd_used"]) + 1
 	var tid: String = u.target_id if sk.target == "single_enemy" or sk.target == "all_enemies" else ""
-	sim.submit(RtCommand.ability(c, u.id, s, tid))
+	_submit(RtCommand.ability(c, u.id, s, tid))
 
 
 ## The movement goal: escape > interrupt approach > combat position; [] = stand.
@@ -374,7 +382,7 @@ func _move(u: RtUnit, c: int, pos: Vector2i, goal: Array) -> void:
 	if Vector2i(vx, vz) == last_v and not due:
 		return
 	var yaw: int = DetMath.yaw_of(vx, vz) if (vx != 0 or vz != 0) else u.yaw
-	sim.submit(RtCommand.move(c, u.id, pos.x, pos.y, vx, vz, yaw))
+	_submit(RtCommand.move(c, u.id, pos.x, pos.y, vx, vz, yaw))
 
 
 ## The sim's own position of `u` at tick c before step 1a (dead reckoning from its last sample, clamped like

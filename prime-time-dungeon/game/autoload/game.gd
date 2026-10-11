@@ -970,7 +970,8 @@ func finish_run(cause: StringName) -> Dictionary:
 		summary["final_hash"] = sim.close(String(cause), {"score": summary["score"]})
 	var header: Dictionary = run_log.header if run_log != null else {}
 	# 05 §10.4 schema (S0 local: league "pur", verified "local"); replay_id + run_log_hash tie the entry to its replay
-	# file (user://replays/<run_id>.json) so a later uploader/verifier can check it. Local boards and replays are plain,
+	# file (user://replays/<run_id>.json, stored compacted; run_log_hash covers the expanded form, R5b) so a later
+	# uploader/verifier can check it. Local boards and replays are plain,
 	# editable JSON — never uploaded, never trusted (05 §10.4). Casting (08 §2.7 Nr. 4): the entry carries no name —
 	# display_name "" (EventInfo.entry_name shows the local player as "Sie").
 	var entry: Dictionary = {
@@ -980,7 +981,7 @@ func finish_run(cause: StringName) -> Dictionary:
 		"score": summary["score"], "breakdown": summary["breakdown"], "quest_complete": summary["quest_complete"],
 		"floor_timer_left_sec": int(time_left()), "run_wall_ms": 0, "flags": [],
 		"difficulty": String(state.difficulty), "replay_id": str(header.get("run_id", "")),
-		"run_log_hash": run_log.digest() if run_log != null else "", "data_hash": DB.data_hash(),
+		"run_log_hash": run_log.canonical_digest() if run_log != null else "", "data_hash": DB.data_hash(),
 		"sim_version": RunSim.SIM_VERSION, "client_version": str(header.get("game_version", "")),
 		"verified": "local", "finished_at": Time.get_datetime_string_from_system(true) + "Z",
 	}

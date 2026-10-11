@@ -139,9 +139,16 @@ static func from_dict(d: Dictionary) -> RunLog:
 	return rl
 
 
-## SHA-256 over the canonical JSON of to_dict() (run_log_hash, 05 §3.3 Nr. 9); "" if not serializable.
+## SHA-256 over the canonical JSON of to_dict() (05 §3.3 Nr. 9); "" if not serializable. Differs between the
+## compacted and the expanded form of the same log (07 §10.3) — leaderboards bind canonical_digest().
 func digest() -> String:
 	return CanonicalJson.sha256_hex(to_dict())
+
+
+## run_log_hash of a leaderboard entry (R5b, 07 §10.3): digest() of the EXPANDED form — the same for the live log, the
+## compacted replay file (Save.save_replay) and its expansion, so the entry names the run, not its storage form.
+func canonical_digest() -> String:
+	return expanded().digest() if has_batches() else digest()
 
 
 # --- additions ----------------------------------------------------------------------------------------------------

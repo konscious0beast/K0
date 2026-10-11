@@ -213,7 +213,9 @@ func save_leaderboard(event_id: String, d: Dictionary) -> Error:
 	return _atomic_write(_leaderboard_path(event_id), d)
 
 
-## <data root>/replays/<run_id>.json, max. 20 files (the oldest are removed).
+## <data root>/replays/<run_id>.json, max. 20 files (the oldest are removed). R5b (07 §10.3): the file holds the
+## compacted form (RunLog.compact: runs of move samples as move_batch; a CTB log stays as it is) — the verifiers replay
+## it expanded, the leaderboard's run_log_hash is RunLog.canonical_digest() (the expanded form). `p_log` is not changed.
 func save_replay(p_log: RunLog) -> Error:
 	_last_error = ""
 	if read_only:
@@ -223,7 +225,9 @@ func save_replay(p_log: RunLog) -> Error:
 	var run_id: String = _sanitize_name(str(p_log.header.get("run_id", "")))
 	var dir: String = _data_root().path_join(REPLAY_DIR)
 	var path: String = dir.path_join(run_id + ".json")
-	var err: Error = _atomic_write(path, p_log.to_dict())
+	var stored: RunLog = RunLog.from_dict(p_log.to_dict())
+	stored.compact()
+	var err: Error = _atomic_write(path, stored.to_dict())
 	if err == OK:
 		_prune_replays(dir, path)
 	return err

@@ -52,51 +52,9 @@ func _overlay() -> CanvasLayer:
 	return o
 
 
-## Every element rect of the HUD (+ overlay) on screen now: name → Rect2 (canvas).
+## Every element rect of the HUD (+ overlay) on screen now (HudRig.rects).
 func _rects(hud: Node, overlay: CanvasLayer) -> Dictionary:
-	var out: Dictionary = {}
-	var frames: Control = hud.get("frames") as Control
-	var fo: Vector2 = frames.get_global_rect().position
-	for n: String in ["ctl_frame", "partner_frame", "special", "chip"]:
-		var r: Rect2 = frames.call("hit_rect", n) as Rect2
-		if r.size.x > 0.0:
-			out[n] = r
-	if out.has("special"):                                       # visible rects (hit areas: test_r3_touch_layout)
-		out["special"] = Rect2(fo + (frames.call("special_rect") as Rect2).position,
-			(frames.call("special_rect") as Rect2).size)
-	if out.has("chip"):
-		out["chip"] = Rect2(fo + (frames.call("chip_rect") as Rect2).position, (frames.call("chip_rect") as Rect2).size)
-	var model: Dictionary = frames.call("model")
-	for spec: Array in [["ctl", UnitFrames.CTL_STATUS], ["partner", UnitFrames.PARTNER_STATUS]]:
-		var u: RtUnit = model.get(str(spec[0]), null) as RtUnit
-		var sim: RtSim = hud.get("sim")
-		var n: int = mini(CombatView.statuses(sim, u).size(), UnitFrames.STATUS_MAX) if u != null else 0
-		if n > 0:
-			out["status_" + str(spec[0])] = Rect2(fo + (spec[1] as Vector2),
-				Vector2(UnitFrames.STATUS_STEP * n, UnitFrames.STATUS_SIZE + 2.5))      # icon + buff / debuff line
-	var top: float = float(frames.call("top_block_bottom"))
-	if top > 0.0:
-		var bw: float = UnitFrames.BOSS_W if model.get("boss", null) != null else UnitFrames.TARGET_W
-		out["top_block"] = Rect2(fo + Vector2((frames.size.x - bw) * 0.5, 0.0), Vector2(bw, top))
-	var bar: Control = hud.get("bar") as Control
-	if bar.is_visible_in_tree():
-		out["bar"] = bar.get_global_rect()
-	var cast: Control = (hud.get("_frame") as Control).get_node("PlayerCast") as Control
-	if cast.visible:
-		out["player_cast"] = cast.get_global_rect()
-	var fr: Rect2 = (hud.get("_frame") as Control).get_global_rect()
-	var sub: Dictionary = CombatHudScript.SUBTITLE_PC
-	out["subtitle"] = Rect2(fr.position.x + (fr.size.x - float(sub["width"])) * 0.5,
-		fr.end.y - float(sub["bottom"]) - 56.0, float(sub["width"]), 56.0)
-	if overlay != null:
-		out["show_top_left"] = (overlay.get("_top_left") as Control).get_global_rect()
-		out["hype"] = overlay.call("hype_rect") as Rect2
-		for n2: String in ["clock_chip_rect", "show_chip_rect"]:
-			var r2: Rect2 = overlay.call(n2) as Rect2
-			if r2.size.x > 0.0:
-				out[n2] = r2
-		out["ticker"] = (overlay.get("_ticker_panel") as Control).get_global_rect()
-	return out
+	return HudRig.rects(hud, overlay)
 
 
 func _assert_no_overlap(rects: Dictionary, what: String) -> void:
@@ -302,6 +260,24 @@ func test_plates_project_pick_and_threat() -> void:
 	assert_eq(CombatView.threat_color(sim, sim.unit("e1")), CombatStyle.member_color("mopsula"),
 		"threat dot in the attacked member's colour (e1 attacks the Count)")
 	assert_eq(CombatView.threat_color(sim, sim.unit("e0")).a, 0.0, "no target: no dot")
+
+
+func test_close_plates_stack() -> void:
+	var plates_gd: GDScript = load("res://scenes/combat/ui/nameplates.gd") as GDScript
+	var shown: Array[Dictionary] = [{"id": "e1", "head": Vector2(610, 396), "named": false},
+		{"id": "e0", "head": Vector2(600, 400), "named": true}, {"id": "e2", "head": Vector2(620, 392), "named": false},
+		{"id": "e3", "head": Vector2(900, 300), "named": false}]
+	plates_gd.call("stack", shown)
+	var boxes: Dictionary = {}
+	for p: Dictionary in shown:
+		boxes[str(p["id"])] = plates_gd.call("plate_box", p["head"], bool(p["named"])) as Rect2
+	_assert_no_overlap(boxes, "a melee pile of plates")
+	var by_id: Dictionary = {}
+	for p2: Dictionary in shown:
+		by_id[str(p2["id"])] = p2["head"]
+	assert_eq(by_id["e0"], Vector2(600, 400), "the lowest plate (the target) keeps its place")
+	assert_eq(by_id["e3"], Vector2(900, 300), "a plate apart keeps its place")
+	assert_lt((by_id["e2"] as Vector2).y, (by_id["e1"] as Vector2).y, "the pile stacks upwards")
 
 
 func test_combat_text_styles_and_cap() -> void:

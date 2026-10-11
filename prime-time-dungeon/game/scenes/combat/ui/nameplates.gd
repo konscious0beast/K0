@@ -4,6 +4,7 @@ extends Control
 ## to 3 status dots in status colour and — after the player's first own taunt — a target dot on the left in the colour
 ## of the attacked party member (party.json portrait_color). The name only for the current target, elites and bosses;
 ## the current target gets a cyan frame and a marker. Hidden behind the camera, outside the picture and beyond 20 m.
+## Plates of a melee pile stack upwards instead of covering each other (stack()).
 ## Draw calls (07 §8.5, measured: 8 plates = 2): every bar / dot = ONE triangle array + at most 8 outline-free labels.
 ## World positions come from the CombatDirector (unit_position, interpolated). Private R3 script.
 
@@ -73,6 +74,7 @@ func refresh() -> void:
 	var target: String = ctl.target_id if ctl != null else ""
 	var vp: Rect2 = get_viewport_rect()
 	var cam_pos: Vector3 = camera.global_position
+	var shown: Array[Dictionary] = []
 	for e: RtUnit in CombatView.enemies(sim):
 		var foot: Vector3 = world_position(e.id)
 		var head: Vector3 = foot + Vector3(0.0, head_height(e) + HEAD_LIFT, 0.0)
@@ -81,12 +83,17 @@ func refresh() -> void:
 		var sp: Vector2 = camera.unproject_position(head)
 		if not vp.grow(40.0).has_point(sp):
 			continue
+		var fp: Vector2 = camera.unproject_position(foot) if not camera.is_position_behind(foot) else sp
+		shown.append({"id": e.id, "head": sp, "foot": fp, "target": e.id == target,
+			"named": (e.id == target and not e.is_boss) or _elite(e)})
+	stack(shown)
+	for p: Dictionary in shown:
+		var sp: Vector2 = p["head"]
 		var reach: Rect2 = Rect2(sp - Vector2(90.0, 30.0), Vector2(180.0, 42.0))   # plate + name above it
 		if blocked.size.x > 0.0 and reach.intersects(blocked):
 			sp.y = blocked.end.y + 30.0
-		var fp: Vector2 = camera.unproject_position(foot) if not camera.is_position_behind(foot) else sp
 		var rect: Rect2 = Rect2(sp - Vector2(BAR.x * 0.5, BAR.y * 0.5), BAR).grow(6.0)
-		plates[e.id] = {"head": sp, "foot": fp, "rect": rect, "target": e.id == target}
+		plates[p["id"]] = {"head": sp, "foot": p["foot"], "rect": rect, "target": p["target"]}
 	var li: int = 0
 	for id: Variant in plates.keys():
 		var u: RtUnit = sim.unit(str(id))
@@ -103,6 +110,35 @@ func refresh() -> void:
 		l.position = (info["head"] as Vector2) + Vector2(-90.0, -24.0)
 		l.visible = true
 	queue_redraw()
+
+
+## Screen box of a plate at head point `sp`: threat dot left, status dots right, cast bar below, name + marker above a
+## named plate.
+static func plate_box(sp: Vector2, named: bool) -> Rect2:
+	var top: float = sp.y - (32.0 if named else 5.0)
+	return Rect2(sp.x - BAR.x * 0.5 - 14.0, top, BAR.x + 40.0, sp.y + 11.0 - top)
+
+
+## Stacks close plates (enemies in a melee pile): from the bottom of the screen up, a plate that would overlap one
+## placed before moves up just above it. `shown`: [{"head": Vector2, "named": bool, …}], head changed in place.
+static func stack(shown: Array[Dictionary]) -> void:
+	shown.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return (a["head"] as Vector2).y > (b["head"] as Vector2).y)
+	var placed: Array[Rect2] = []
+	for p: Dictionary in shown:
+		var sp: Vector2 = p["head"]
+		for _i in 8:
+			var box: Rect2 = plate_box(sp, bool(p["named"]))
+			var hit: bool = false
+			for q: Rect2 in placed:
+				if box.intersects(q):
+					sp.y -= box.end.y - q.position.y + 2.0
+					hit = true
+					break
+			if not hit:
+				break
+		p["head"] = sp
+		placed.append(plate_box(sp, bool(p["named"])))
 
 
 static func _elite(u: RtUnit) -> bool:

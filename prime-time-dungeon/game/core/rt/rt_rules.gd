@@ -88,8 +88,8 @@ static func suggest(sim: RtSim, u: RtUnit, rules: Array) -> String:
 ## May the unit pick an action now (07 §5.3): alive, not stunned or dazed (no_act), no cast / channel / drink of its
 ## own, popped in, entered.
 static func may_act(sim: RtSim, u: RtUnit) -> bool:
-	return u != null and sim.is_alive(u) and u.cast.is_empty() and u.entry.is_empty() and sim.tick() >= u.pop_in_until \
-		and not StatusFx.has_flag(u, "no_act")
+	return u != null and u.hp > 0 and not u.left_battle and u.cast.is_empty() and u.entry.is_empty() \
+		and sim.tick() >= u.pop_in_until and (u.statuses.is_empty() or not StatusFx.has_flag(u, "no_act"))
 
 
 ## Does every condition of `cond` hold for `u` and the rule target `target_id` (07 §5.3 "Bedingungen")? Unknown keys
@@ -219,17 +219,19 @@ static func _pick(sim: RtSim, u: RtUnit, rules: Array, ai: bool) -> Dictionary:
 	var c: int = sim.tick()
 	var goal: Array = []
 	var party: bool = u.side == Combatant.Side.PARTY
-	var tail: bool = ai and u.gcd_until - c > 0 and u.gcd_until - c <= sim.bal.i("AI_INTERRUPT_GCD_TAIL_TICKS")
-	var grace: bool = ai and party and c < sim.show_ready_at() + sim.bal.i("AI_SHOW_GRACE_TICKS")
-	var escaping: bool = ai and party and sim.escaping(u)
+	var gcd_left: int = u.gcd_until - c
+	var tail: bool = ai and gcd_left > 0 and gcd_left <= sim.gcd_tail_ticks
+	var grace: bool = ai and party and c < sim.show_ready_at() + sim.show_grace_ticks
+	var escaping: int = -1                   # ai and party: sim.escaping(u) (pure), asked once when a rule needs it
 	var offset: int = u.slot * sim.slot_offset() if ai and not party else 0
 	var known: Dictionary = sim.known_skills(u) if party else NO_SKILLS
 	var fin: String = sim.finale_of(u) if party else ""
+	var ready: Dictionary = u.rule_ready
 	for pos in rules.size():
 		var r: Dictionary = rules[pos]
 		if ai:
-			var key: String = r["key"]
-			if (int(u.rule_ready[key]) if u.rule_ready.has(key) else int(r["first"]) + offset) > c:
+			var rr: Variant = ready.get(r["key"])
+			if (int(rr) if rr != null else int(r["first"]) + offset) > c:
 				continue
 		var cond: Dictionary = r["cond"]
 		if tail and (r["target"] == "caster" or _cast_cond(cond)):
@@ -251,8 +253,11 @@ static func _pick(sim: RtSim, u: RtUnit, rules: Array, ai: bool) -> Dictionary:
 		if ai:
 			if not _ai_free(sim, u, skill_id, m, c, grace and party and m[M_STUNT] == 1):
 				continue
-			if escaping and m[M_CAST] == 1 and m[M_MOVE] == 1:
-				continue
+			if party and m[M_CAST] == 1 and m[M_MOVE] == 1:
+				if escaping < 0:
+					escaping = 1 if sim.escaping(u) else 0
+				if escaping == 1:
+					continue
 		else:
 			var pre: String = Ability.precheck(sim, u, sim.skill_def(skill_id))
 			if pre != "" and pre != "queue":
@@ -260,12 +265,12 @@ static func _pick(sim: RtSim, u: RtUnit, rules: Array, ai: bool) -> Dictionary:
 		if not cond.is_empty() and not _conds(sim, u, cond, null, SELF_CONDS):
 			continue
 		var sk: SkillDef = sim.skill_def(skill_id)
+		if ai and bool(r["filler"]) and not reserve_ok(sim, u, sk):
+			continue                             # (target independent: before the target is resolved)
 		var tg: Dictionary = rule_target(sim, u, r["target"], sk)
 		if not bool(tg["ok"]):
 			continue
 		if not cond.is_empty() and not _conds(sim, u, cond, sim.unit(tg["id"]), TARGET_CONDS):
-			continue
-		if ai and bool(r["filler"]) and not reserve_ok(sim, u, sk):
 			continue
 		var tr: Dictionary = Ability.targets(sim, u, sk, tg["id"], false)
 		var reason: String = tr["reason"]
@@ -284,16 +289,17 @@ static func _pick(sim: RtSim, u: RtUnit, rules: Array, ai: bool) -> Dictionary:
 ## static facts `m` of the skill (the unit knows it and it is no FINALE): the party SHOW cooldown (and the AI grace,
 ## `show_wait`) or the own cooldown, the lockout of casts, the GCD (the AI starts now only — no queue), the MP, RtMods.
 static func _ai_free(sim: RtSim, u: RtUnit, skill_id: String, m: PackedInt32Array, c: int, show_wait: bool) -> bool:
+	# Pure conjunction: the cheapest and most frequent refusal (the GCD) first.
+	if m[M_GCD] == 1 and u.gcd_until > c:
+		return false
 	if u.side == Combatant.Side.PARTY and m[M_STUNT] == 1:
 		if show_wait or sim.show_cd_left() > 0 or sim.show_cast_running(u):
 			return false
-	else:
+	elif not u.cooldowns.is_empty():
 		var cd: Variant = u.cooldowns.get(skill_id)
 		if cd is Array and int(cd[0]) > c:
 			return false
-	if m[M_CAST] == 1 and (u.lockout_until > c or StatusFx.has_flag(u, "no_cast")):
-		return false
-	if m[M_GCD] == 1 and u.gcd_until > c:
+	if m[M_CAST] == 1 and (u.lockout_until > c or (not u.statuses.is_empty() and StatusFx.has_flag(u, "no_cast"))):
 		return false
 	return u.mp >= sim.mp_of(u, skill_id, m[M_MP]) and not sim.forbidden_skill(u, skill_id)
 
@@ -335,7 +341,7 @@ static func _range_goal(sim: RtSim, u: RtUnit, range_cm: int, target_id: String)
 	var t: RtUnit = sim.unit(target_id)
 	if t == null:
 		return []
-	var want: int = maxi(0, (range_cm if range_cm > 0 else u.reach) + t.radius - sim.bal.i("MELEE_STOP_CM"))
+	var want: int = maxi(0, (range_cm if range_cm > 0 else u.reach) + t.radius - sim.melee_stop_cm)
 	var p: Vector2i = DetMath.toward(t.x, t.z, u.x, u.z, want)
 	return [p.x, p.y]
 
@@ -455,29 +461,37 @@ static func _ally_ko(sim: RtSim, u: RtUnit) -> bool:
 	return false
 
 
-## Living enemies on stage (entered) within r (+ their radius) around the unit.
+## Living enemies on stage (entered) within r (+ their radius) around the unit (RtSim.targetable inlined: the gate).
 static func _enemies_within(sim: RtSim, u: RtUnit, r: int) -> int:
 	var n: int = 0
+	var gate: int = sim.on_stage_gate()
+	var ux: int = u.x
+	var uz: int = u.z
+	var side: int = u.side
 	for v: RtUnit in sim.units_ref():
-		if v.side == u.side or v.hp <= 0 or not v.entry.is_empty():
+		if v.side == side or v.hp <= 0 or v.left_battle or not v.entry.is_empty():
 			continue
 		var reach: int = r + v.radius
-		var dx: int = v.x - u.x
-		var dz: int = v.z - u.z
-		if dx * dx + dz * dz <= reach * reach and sim.targetable(v):
+		var dx: int = v.x - ux
+		var dz: int = v.z - uz
+		if dx * dx + dz * dz <= reach * reach and (v.side != Combatant.Side.ENEMY or v.pop_in_until <= gate):
 			n += 1
 	return n
 
 
 ## An enemy not fixed on the unit attacks another living ally.
 static func _enemy_on_ally(sim: RtSim, u: RtUnit) -> bool:
+	var gate: int = sim.on_stage_gate()
+	var c: int = sim.tick()
 	for e: RtUnit in sim.units_ref():
-		if e.side == u.side or not sim.targetable(e) or e.target_id == "" or e.target_id == u.id:
+		if e.side == u.side or e.hp <= 0 or e.left_battle or e.target_id == "" or e.target_id == u.id:
 			continue
-		if e.fixate_id == u.id and e.fixate_until > sim.tick():
+		if e.side == Combatant.Side.ENEMY and e.pop_in_until > gate:
+			continue
+		if e.fixate_id == u.id and e.fixate_until > c:
 			continue
 		var t: RtUnit = sim.unit(e.target_id)
-		if t != null and t.side == u.side and sim.is_alive(t):
+		if t != null and t.side == u.side and t.hp > 0 and not t.left_battle:
 			return true
 	return false
 
@@ -495,6 +509,7 @@ static func _caster_within(sim: RtSim, u: RtUnit, r: int) -> RtUnit:
 ## The lowest HP share among the living allies (the unit included); ties: the controlled figure, then unit order.
 static func _lowest_ally(sim: RtSim, u: RtUnit) -> String:
 	var best: RtUnit = null
+	var ctl: String = sim.controlled_id()
 	for v: RtUnit in sim.units_ref():
 		if v.side != u.side or v.hp <= 0 or v.left_battle:
 			continue
@@ -503,7 +518,7 @@ static func _lowest_ally(sim: RtSim, u: RtUnit) -> String:
 			continue
 		var lhs: int = v.hp * best.max_hp()
 		var rhs: int = best.hp * v.max_hp()
-		if lhs < rhs or (lhs == rhs and v.id == sim.controlled_id()):
+		if lhs < rhs or (lhs == rhs and v.id == ctl):
 			best = v
 	return best.id if best != null else ""
 
@@ -512,10 +527,12 @@ static func _lowest_ally(sim: RtSim, u: RtUnit) -> String:
 static func _enemy_by(sim: RtSim, u: RtUnit, how: String) -> String:
 	var best: RtUnit = null
 	var best_d: int = 0
+	var gate: int = sim.on_stage_gate()
 	for v: RtUnit in sim.units_ref():
-		if v.side == u.side or not sim.targetable(v):
+		if v.side == u.side or v.hp <= 0 or v.left_battle \
+				or (v.side == Combatant.Side.ENEMY and v.pop_in_until > gate):
 			continue
-		var d2: int = DetMath.dist2(u.x, u.z, v.x, v.z)
+		var d2: int = (v.x - u.x) * (v.x - u.x) + (v.z - u.z) * (v.z - u.z)
 		var better: bool = best == null
 		if not better:
 			match how:

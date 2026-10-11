@@ -23,12 +23,14 @@ static func player_positions(sim: RtSim, c: int, samples: Array[Dictionary]) -> 
 			continue
 		apply_sample(sim, u, c, int(p[0]), int(p[1]), int(p[2]), int(p[3]), int(p[4]))
 		sampled[u.id] = true
-	for u: RtUnit in sim.units_ref():
-		if u.driver != RtUnit.Driver.PLAYER or u.side != Combatant.Side.PARTY or not sim.is_alive(u):
+	for u: RtUnit in sim.party_ref():
+		if u.driver != RtUnit.Driver.PLAYER or u.hp <= 0 or u.left_battle:
 			continue
-		if not sampled.has(u.id):
+		var has: bool = not samples.is_empty() and sampled.has(u.id)
+		if not has:
 			dead_reckon(sim, u, c)
-		cast_cancel_check(sim, u, sampled.has(u.id))
+		if not u.cast.is_empty():
+			cast_cancel_check(sim, u, has)
 
 
 ## One sample s of unit u at tick c (07 §3.5.2): with the last accepted sample p and Δ = c − p.ct,
@@ -93,14 +95,17 @@ static func dead_reckon(sim: RtSim, u: RtUnit, c: int) -> void:
 		if u.sample[3] != 0 or u.sample[4] != 0:
 			u.sample = [c, u.x, u.z, 0, 0, u.yaw]
 		return
-	var n: int = mini(c - u.sample[0], sim.bal.i("DR_MAX_TICKS"))
+	var s: Array[int] = u.sample
+	var n: int = mini(c - s[0], sim.dr_max_ticks)
 	if n <= 0:
 		return
-	var nx: int = u.sample[1] + FixedMath.div_round(u.sample[3] * n, 10)
-	var nz: int = u.sample[2] + FixedMath.div_round(u.sample[4] * n, 10)
-	var geo: Dictionary = sim.setup.geo
-	if in_cell(geo, nx, nz) and not RtGeo.walkable(geo, nx, nz, u.radius, true):
-		var q: Vector2i = RtGeo.project_walkable(geo, nx, nz, u.radius, true)
+	var vx: int = s[3]
+	var vz: int = s[4]
+	var nx: int = s[1] + (FixedMath.div_round(vx * n, 10) if vx != 0 else 0)
+	var nz: int = s[2] + (FixedMath.div_round(vz * n, 10) if vz != 0 else 0)
+	var half: int = sim.geo_cell_half                        # in_cell with the cached cell half
+	if absi(nx) <= half and absi(nz) <= half and not sim.walkable_party(nx, nz, u.radius):
+		var q: Vector2i = RtGeo.project_walkable(sim.setup.geo, nx, nz, u.radius, true)
 		nx = q.x
 		nz = q.y
 	u.x = nx
@@ -129,7 +134,8 @@ static func cast_cancel_check(sim: RtSim, u: RtUnit, sampled: bool) -> void:
 
 ## A unit that may not move (stun, drink pause).
 static func holds(u: RtUnit) -> bool:
-	return StatusFx.has_flag(u, "no_move") or str(u.cast.get("kind", "")) == "item"
+	return (not u.statuses.is_empty() and StatusFx.has_flag(u, "no_move")) \
+		or (not u.cast.is_empty() and str(u.cast.get("kind", "")) == "item")
 
 
 static func in_cell(geo: Dictionary, x: int, z: int) -> bool:
@@ -154,7 +160,7 @@ static func goal_for(sim: RtSim, u: RtUnit, t: RtUnit) -> Array[int]:
 		var ctl: RtUnit = sim.unit(sim.controlled_id())
 		if u.side == Combatant.Side.PARTY and ctl != null and ctl != u and sim.is_alive(ctl) and u.follow_cm > 0:
 			if DetMath.dist2(u.x, u.z, ctl.x, ctl.z) > u.follow_cm * u.follow_cm:
-				var p: Vector2i = DetMath.toward(ctl.x, ctl.z, u.x, u.z, maxi(0, u.follow_cm - sim.bal.i("MELEE_STOP_CM")))
+				var p: Vector2i = DetMath.toward(ctl.x, ctl.z, u.x, u.z, maxi(0, u.follow_cm - sim.melee_stop_cm))
 				out.assign([p.x, p.y])
 		return out
 	var dx: int = u.x - t.x
@@ -169,12 +175,11 @@ static func goal_for(sim: RtSim, u: RtUnit, t: RtUnit) -> Array[int]:
 				return out
 			want = u.keep_cm
 	else:
-		var stop: int = maxi(0, u.reach + t.radius - sim.bal.i("MELEE_STOP_CM"))
+		var stop: int = maxi(0, u.reach + t.radius - sim.melee_stop_cm)
 		if d > stop:
 			want = stop
 	if want >= 0:
-		out.append(t.x + FixedMath.div_round(dx * want, d))
-		out.append(t.z + FixedMath.div_round(dz * want, d))
+		out = [t.x + FixedMath.div_round(dx * want, d), t.z + FixedMath.div_round(dz * want, d)]
 	return out
 
 
@@ -187,9 +192,9 @@ static func move_units(sim: RtSim, c: int) -> void:
 	var geo: Dictionary = sim.setup.geo
 	var bal: RtBalance = sim.bal
 	var ctl: RtUnit = sim.unit(sim.controlled_id())
-	var ctl_out: bool = ctl != null and sim.is_alive(ctl) and not RtGeo.in_circle(geo, ctl.x, ctl.z, ctl.radius)
-	var r: int = int(geo.get("r", 0))
-	var plain: bool = r > 0 and (geo.get("blockers", []) as Array).is_empty()   # walkable = inside the circle
+	var ctl_out: bool = ctl != null and ctl.hp > 0 and not ctl.left_battle and not sim.in_ring(ctl.x, ctl.z, ctl.radius)
+	var r: int = sim.geo_r
+	var plain: bool = sim.geo_plain                                            # walkable = inside the circle
 	for u: RtUnit in sim.units_ref():
 		if u.hp <= 0 or u.left_battle:
 			continue
@@ -206,7 +211,8 @@ static func move_units(sim: RtSim, c: int) -> void:
 				u.pop_in_until = mini(u.pop_in_until, c + bal.i("POP_IN_TICKS"))
 				sim.leader_arrived(u, c)
 			continue
-		if u.stationary or u.goal.size() != 2 or not u.cast.is_empty() or StatusFx.has_flag(u, "no_move"):
+		if u.stationary or u.goal.size() != 2 or not u.cast.is_empty() \
+				or (not u.statuses.is_empty() and StatusFx.has_flag(u, "no_move")):
 			continue
 		var party: bool = u.side == Combatant.Side.PARTY and ctl_out
 		var big: int = r - u.radius
@@ -227,6 +233,8 @@ static func move_units(sim: RtSim, c: int) -> void:
 
 ## Walking speed in cm per tick (07 §3.5.3): move_cm_tick × move_pm of the statuses.
 static func speed(u: RtUnit) -> int:
+	if u.statuses.is_empty():
+		return u.move_cm_tick                    # (factor 1000: mul_pm(v, 1000) == v)
 	return FixedMath.mul_pm(u.move_cm_tick, StatusFx.factor(u, "move_pm"))
 
 
@@ -251,14 +259,19 @@ static func _walk(u: RtUnit, gx: int, gz: int, step_cm: int) -> void:
 static func _repulse(sim: RtSim) -> void:
 	var geo: Dictionary = sim.setup.geo
 	var list: Array[RtUnit] = []
-	var on_stage: int = sim.tick() + sim.bal.i("POP_IN_TICKS")            # targetable: tick ≥ pop_in_until − POP_IN
+	var on_stage: int = sim.on_stage_gate()            # targetable: tick ≥ pop_in_until − POP_IN
 	for u: RtUnit in sim.units_ref():
 		if u.side == Combatant.Side.ENEMY and u.hp > 0 and not u.left_battle and u.entry.is_empty() \
 				and on_stage >= u.pop_in_until:
 			list.append(u)
-	for i in list.size():
-		for j in range(i + 1, list.size()):
-			var a: RtUnit = list[i]
+	# R5b perf, same answer: on a plain set (no blockers) a point inside the circle |p| ≤ r − radius is walkable, and
+	# project_walkable returns a walkable point unchanged.
+	var plain: bool = sim.geo_plain
+	var r_set: int = sim.geo_r
+	var n: int = list.size()
+	for i in n:
+		var a: RtUnit = list[i]
+		for j in range(i + 1, n):
 			var b: RtUnit = list[j]
 			var minimum: int = a.radius + b.radius
 			var dx: int = b.x - a.x
@@ -274,21 +287,33 @@ static func _repulse(sim: RtSim) -> void:
 				px = -FixedMath.div_round(dx * push, d)
 				pz = -FixedMath.div_round(dz * push, d)
 			if not a.stationary:
-				var qa: Vector2i = RtGeo.project_walkable(geo, a.x + px, a.z + pz, a.radius, false)
-				a.x = qa.x
-				a.z = qa.y
+				var ax: int = a.x + px
+				var az: int = a.z + pz
+				var ba: int = r_set - a.radius
+				if not (plain and ba >= 0 and ax * ax + az * az <= ba * ba):
+					var qa: Vector2i = RtGeo.project_walkable(geo, ax, az, a.radius, false)
+					ax = qa.x
+					az = qa.y
+				a.x = ax
+				a.z = az
 			if not b.stationary:
-				var qb: Vector2i = RtGeo.project_walkable(geo, b.x - px, b.z - pz, b.radius, false)
-				b.x = qb.x
-				b.z = qb.y
+				var bx: int = b.x - px
+				var bz: int = b.z - pz
+				var bb: int = r_set - b.radius
+				if not (plain and bb >= 0 and bx * bx + bz * bz <= bb * bb):
+					var qb: Vector2i = RtGeo.project_walkable(geo, bx, bz, b.radius, false)
+					bx = qb.x
+					bz = qb.y
+				b.x = bx
+				b.z = bz
 
 
 ## Flight (07 §2.5): the controlled unit outside the ring (door lane or beyond) FLEE_TICKS consecutive ticks flees;
 ## at FLEE_WARN_TICKS a FLEE_WARNING (value = ticks left) and a flight attempt are counted.
 static func _flight(sim: RtSim, c: int, ctl: RtUnit) -> void:
-	if ctl == null or not sim.is_alive(ctl):
+	if ctl == null or ctl.hp <= 0 or ctl.left_battle:
 		return
-	if RtGeo.in_circle(sim.setup.geo, ctl.x, ctl.z, ctl.radius):
+	if sim.in_ring(ctl.x, ctl.z, ctl.radius):
 		ctl.outside_since = -1
 		return
 	if ctl.outside_since < 0:

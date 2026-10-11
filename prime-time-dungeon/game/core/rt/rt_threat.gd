@@ -83,7 +83,7 @@ static func top_target(sim: RtSim, e: RtUnit) -> String:
 		return ""
 	var cur: RtUnit = sim.unit(e.target_id)
 	if cur != null and cur.side == Combatant.Side.PARTY and cur.hp > 0 and not cur.left_battle:
-		if best != cur and best_t * 1000 > int(th.get(cur.id, 0)) * sim.bal.i("THREAT_SWITCH_PM"):
+		if best != cur and best_t * 1000 > int(th.get(cur.id, 0)) * sim.threat_switch_pm:
 			return best.id
 		return cur.id
 	return best.id

@@ -209,14 +209,40 @@ static func escape_point(sim: RtSim, u: RtUnit) -> Vector2i:
 	for k in 16:
 		order.append((_yaw_gap(k * 16, pref) if pref >= 0 else 0) * 16 + k)
 	order.sort()
-	for d: int in ESCAPE_DISTS:
+	# R5b perf, same answer: the candidate offsets come from a table (_escape_offsets: the div_round of the dir × d
+	# above, once), walkable is the circle test on a plain set (no blockers; party false — no lanes), and the shapes
+	# that can make a point unsafe are collected once (RtSim.danger_shapes / safe_among == safe_point).
+	var off: PackedInt32Array = _escape_offsets()
+	var shapes: Array[RtTelegraph] = sim.danger_shapes(u)
+	var plain: bool = sim.geo_plain
+	var big: int = sim.geo_r - u.radius
+	var big2: int = big * big
+	for di in ESCAPE_DISTS.size():
 		for e: int in order:
-			var f: Vector2i = DetMath.dir((e % 16) * 16)
-			var x: int = u.x + FixedMath.div_round(f.x * d, DetMath.ONE)
-			var z: int = u.z + FixedMath.div_round(f.y * d, DetMath.ONE)
-			if walkable(geo, x, z, u.radius, false) and sim.safe_point(u, x, z):
+			var at: int = (di * 16 + e % 16) * 2
+			var x: int = u.x + off[at]
+			var z: int = u.z + off[at + 1]
+			var ok: bool = (big >= 0 and x * x + z * z <= big2) if plain else walkable(geo, x, z, u.radius, false)
+			if ok and sim.safe_among(shapes, x, z):
 				return Vector2i(x, z)
 	return Vector2i(u.x, u.z)
+
+
+static var _esc_off: PackedInt32Array = []
+
+
+## [dx, dz] of every escape candidate (07 §5.5): ESCAPE_DISTS × the 16 directions yaw = k × 16 (distance major), each
+## div_round(dir × d, 1024) — a constant table of DetMath, filled once.
+static func _escape_offsets() -> PackedInt32Array:
+	if _esc_off.is_empty():
+		var t: PackedInt32Array = []
+		for d: int in ESCAPE_DISTS:
+			for k in 16:
+				var f: Vector2i = DetMath.dir(k * 16)
+				t.append(FixedMath.div_round(f.x * d, DetMath.ONE))
+				t.append(FixedMath.div_round(f.y * d, DetMath.ONE))
+		_esc_off = t
+	return _esc_off
 
 
 # --- private --------------------------------------------------------------------------------------------------------

@@ -21,7 +21,7 @@ static func check_end(sim: RtSim, c: int) -> int:
 		return BattleResult.Outcome.VICTORY
 	if not party_left:
 		return BattleResult.Outcome.DEFEAT
-	if sim.fled or c + 1 >= sim.bal.i("MAX_COMBAT_TICKS"):
+	if sim.fled or c + 1 >= sim.max_combat_ticks:
 		return BattleResult.Outcome.FLED
 	return -1
 

@@ -10,6 +10,18 @@ const StatusFx := preload("res://core/rt/rt_status_fx.gd")
 const Threat := preload("res://core/rt/rt_threat.gd")
 
 const K := BattleCommand.Kind
+## Indices of RtSim.skill_area: rt.range_cm, aoe radius, cone, centre "self", max targets.
+const A_RANGE: int = 0
+const A_RADIUS: int = 1
+const A_CONE: int = 2
+const A_SELF: int = 3
+const A_MAX: int = 4
+## Indices of RtSim.skill_meta (= RtRules.M_*): known to the data, GCD, MP cost, cast or channel, SHOW category.
+const M_OK: int = 0
+const M_GCD: int = 1
+const M_MP: int = 2
+const M_CAST: int = 3
+const M_STUNT: int = 5
 ## Busy reasons a partner order waits out (it walks into range on its own).
 const WAIT_REASONS: PackedStringArray = ["queue", "gcd", "casting", "drinking", "stunned", "range"]
 
@@ -134,37 +146,44 @@ static func check(sim: RtSim, u: RtUnit, skill_id: String, target_id: String, op
 ## cast ends within QUEUE_TICKS) or the refusal reason (dead, not_learned, forbidden, stunned, drinking, cooldown,
 ## locked, casting, gcd, mp).
 static func precheck(sim: RtSim, u: RtUnit, sk: SkillDef) -> String:
-	if not sim.is_alive(u):
+	if u == null or u.hp <= 0 or u.left_battle:              # not RtSim.is_alive
 		return "dead"
 	if not sim.knows(u, sk.id):
 		return "not_learned"
 	if sim.forbidden_skill(u, sk.id):
 		return "forbidden"
-	if StatusFx.has_flag(u, "no_act"):
+	var calm: bool = u.statuses.is_empty()                   # no status: no no_act / no_cast flag
+	if not calm and StatusFx.has_flag(u, "no_act"):
 		return "stunned"
 	var c: int = sim.tick()
-	var is_cast: bool = cast_ticks(sim, u, sk) > 0 or channel_ticks(sk) > 0
-	if str(u.cast.get("kind", "")) == "item":
+	# The static facts of the data skill (RtSim.skill_meta; `sk` is that def or a view sharing its rt block): cast or
+	# channel (cast_ticks > 0 ⇔ cast_ms × 3 / 100 > 0, since CAST_MIN_TICKS ≥ 1), GCD, MP cost, SHOW category.
+	var m: PackedInt32Array = sim.skill_meta(sk.id)
+	var meta: bool = m[M_OK] == 1
+	var is_cast: bool = m[M_CAST] == 1 if meta else (cast_ticks(sim, u, sk) > 0 or channel_ticks(sk) > 0)
+	if not u.cast.is_empty() and str(u.cast.get("kind", "")) == "item":
 		return "drinking"
-	if sim.is_show_skill(u, sk.id):
+	var show: bool = (u.side == Combatant.Side.PARTY and (m[M_STUNT] == 1 or sim.is_finale(u, sk.id))) if meta \
+		else sim.is_show_skill(u, sk.id)
+	if show:
 		if sim.show_cd_left() > 0 or sim.show_cast_running(u):
 			return "cooldown"
-	elif cooldown_left(sim, u, sk.id) > 0:
+	elif not u.cooldowns.is_empty() and cooldown_left(sim, u, sk.id) > 0:
 		return "cooldown"
-	if is_cast and (u.lockout_until > c or StatusFx.has_flag(u, "no_cast")):
+	if is_cast and (u.lockout_until > c or (not calm and StatusFx.has_flag(u, "no_cast"))):
 		return "locked"
 	var busy: String = ""
 	var busy_left: int = 0
-	var gcd: bool = bool(sk.rt.get("gcd", true))
+	var gcd: bool = m[M_GCD] == 1 if meta else bool(sk.rt.get("gcd", true))
 	if not u.cast.is_empty() and (is_cast or gcd):
 		busy = "casting"
 		busy_left = int(u.cast.get("end", c)) - c
 	if gcd and u.gcd_until > c and busy == "":
 		busy = "gcd"
 		busy_left = u.gcd_until - c
-	if busy != "" and busy_left > sim.bal.i("QUEUE_TICKS"):
+	if busy != "" and busy_left > sim.queue_ticks:
 		return busy
-	if u.mp < cost(sim, u, sk):
+	if u.mp < (sim.mp_of(u, sk.id, m[M_MP]) if meta else cost(sim, u, sk)):
 		return "mp"
 	return "queue" if busy != "" else ""
 
@@ -172,14 +191,13 @@ static func precheck(sim: RtSim, u: RtUnit, sk: SkillDef) -> String:
 ## Pure target resolution of `sk` for `u` (07 §4.4): {"reason", "ids", "primary", "pick"}; opener: no range check.
 static func targets(sim: RtSim, u: RtUnit, sk: SkillDef, target_id: String, opener: bool) -> Dictionary:
 	var out: Dictionary = {"reason": "", "ids": PackedStringArray(), "primary": "", "pick": false}
-	var rt: Dictionary = sk.rt
-	var aoe: Dictionary = rt.get("aoe", {})
-	var range_cm: int = int(rt.get("range_cm", 0))
+	var fa: PackedInt32Array = sim.skill_area(sk)         # range, aoe radius, cone, centre self, max targets
+	var range_cm: int = fa[A_RANGE]
 	match sk.target:
 		"single_enemy", "all_enemies":
-			var radius: int = int(aoe.get("radius_cm", 0))
-			var cone: int = int(aoe.get("cone_deg", 0))
-			var around_self: bool = sk.target == "all_enemies" and str(aoe.get("center", "self")) == "self"
+			var radius: int = fa[A_RADIUS]
+			var cone: int = fa[A_CONE]
+			var around_self: bool = sk.target == "all_enemies" and fa[A_SELF] == 1
 			var needs_target: bool = sk.target == "single_enemy" or not around_self
 			var t: RtUnit = _hostile(sim, u, target_id)
 			var pick: bool = false
@@ -191,23 +209,23 @@ static func targets(sim: RtSim, u: RtUnit, sk: SkillDef, target_id: String, open
 			if t != null:
 				out["primary"] = t.id
 				out["pick"] = pick
-				if sim.is_finale(u, sk.id) and t.hp * 1000 >= t.max_hp() * sim.bal.i("FINALE_TARGET_BELOW_PM"):
+				if sim.is_finale(u, sk.id) and t.hp * 1000 >= t.max_hp() * sim.finale_below_pm:
 					out["reason"] = "target_hp"
 					return out
 				if needs_target and not opener:
 					if not in_range(u, t, range_cm if range_cm > 0 else u.reach):
 						out["reason"] = "range"
 						return out
-					if not RtGeo.los(sim.setup.geo, u.x, u.z, t.x, t.z):
+					if not _los(sim, u.x, u.z, t.x, t.z):
 						out["reason"] = "los"
 						return out
 			if sk.target == "single_enemy" and radius <= 0:
 				out["ids"] = PackedStringArray([t.id])
 			elif around_self:
 				var yaw: int = DetMath.yaw_of(t.x - u.x, t.z - u.z) if t != null else u.yaw
-				out["ids"] = area(sim, u, u.x, u.z, radius, cone, yaw, int(aoe.get("max_targets", 0)))
+				out["ids"] = area(sim, u, u.x, u.z, radius, cone, yaw, fa[A_MAX])
 			else:
-				out["ids"] = area(sim, u, t.x, t.z, radius, 0, 0, int(aoe.get("max_targets", 0)))
+				out["ids"] = area(sim, u, t.x, t.z, radius, 0, 0, fa[A_MAX])
 		"random_enemy":
 			if random_candidates(sim, u, sk).is_empty():
 				return _no("target")
@@ -228,7 +246,7 @@ static func targets(sim: RtSim, u: RtUnit, sk: SkillDef, target_id: String, open
 			if range_cm > 0 and not opener and not in_range(u, k, range_cm):
 				out["reason"] = "range"
 		"all_allies":
-			var radius_a: int = int(aoe.get("radius_cm", 0))
+			var radius_a: int = fa[A_RADIUS]
 			var ids: PackedStringArray = []
 			for v: RtUnit in sim.units_ref():
 				if v.side == u.side and sim.is_alive(v) and (radius_a <= 0 \
@@ -247,10 +265,13 @@ static func targets(sim: RtSim, u: RtUnit, sk: SkillDef, target_id: String, open
 static func area(sim: RtSim, u: RtUnit, cx: int, cz: int, radius: int, cone_deg: int, yaw: int,
 		max_targets: int) -> PackedStringArray:
 	var hits: Array = []
+	var direct: PackedStringArray = []          # max_targets ≤ 0: the ids in unit order, without the sort records
+	var gate: int = sim.on_stage_gate()         # RtSim.targetable inlined
 	for v: RtUnit in sim.units_ref():
-		if v.side == u.side or not sim.targetable(v) or not v.entry.is_empty():
+		if v.side == u.side or v.hp <= 0 or v.left_battle or not v.entry.is_empty() \
+				or (v.side == Combatant.Side.ENEMY and v.pop_in_until > gate):
 			continue
-		var d2: int = DetMath.dist2(cx, cz, v.x, v.z)
+		var d2: int = (v.x - cx) * (v.x - cx) + (v.z - cz) * (v.z - cz)
 		if radius > 0:
 			var reach: int = radius + v.radius
 			if cone_deg > 0:
@@ -258,8 +279,13 @@ static func area(sim: RtSim, u: RtUnit, cx: int, cz: int, radius: int, cone_deg:
 					continue
 			elif d2 > reach * reach:
 				continue
-		hits.append([d2, hits.size(), v.id])
-	if max_targets > 0 and hits.size() > max_targets:
+		if max_targets > 0:
+			hits.append([d2, hits.size(), v.id])
+		else:
+			direct.append(v.id)
+	if max_targets <= 0:
+		return direct
+	if hits.size() > max_targets:
 		hits.sort_custom(func(a: Array, b: Array) -> bool:
 			return int(a[0]) < int(b[0]) or (int(a[0]) == int(b[0]) and int(a[1]) < int(b[1])))
 		hits.resize(max_targets)
@@ -295,6 +321,15 @@ static func auto_pick_enemy(sim: RtSim, u: RtUnit, range_cm: int) -> RtUnit:
 				best_front = v
 				best_front_d = d2
 	return best_front if best_front != null else best
+
+
+## RtGeo.los with the common case first: two points inside the set ring see each other (RtGeo.los is
+## _visible(a) and _visible(b), and _visible starts with in_set).
+static func _los(sim: RtSim, ax: int, az: int, bx: int, bz: int) -> bool:
+	var r2: int = sim.geo_r * sim.geo_r
+	if sim.geo_r > 0 and ax * ax + az * az <= r2 and bx * bx + bz * bz <= r2:
+		return true
+	return RtGeo.los(sim.setup.geo, ax, az, bx, bz)
 
 
 ## Distance centre to centre ≤ range + target radius (07 §3.6.9).
@@ -540,9 +575,13 @@ static func resolve_hits(sim: RtSim, c: int) -> void:
 ## (the item effect), channel ticks due at c.
 static func end_casts(sim: RtSim, c: int) -> void:
 	for u: RtUnit in sim.units_ref():
-		if u.cast.is_empty() or not sim.is_alive(u):
+		if u.cast.is_empty() or u.hp <= 0 or u.left_battle:
 			continue
 		var cast: Dictionary = u.cast
+		# Nothing is due before the end of a cast / drink, or for a channel before its next tick or its end (a started
+		# cast always has a known skill: start / use_item resolve it first).
+		if int(cast["end"]) > c and not (bool(cast.get("channel", false)) and int(cast.get("next_tick", -1)) == c):
+			continue
 		var sk: SkillDef = sim.skill_def(str(cast.get("skill", "")))
 		if sk == null:
 			sim.cast_over(u)
@@ -794,14 +833,17 @@ static func auto_attacks(sim: RtSim, c: int) -> void:
 			continue
 		if not u.cast.is_empty() or c < u.pop_in_until or not u.entry.is_empty():
 			continue
-		if StatusFx.has_flag(u, "no_act"):
+		if not u.statuses.is_empty() and StatusFx.has_flag(u, "no_act"):
 			continue
 		var t: RtUnit = sim.unit(u.target_id)
-		if t == null or t.side == u.side or not sim.targetable(t):
+		if t == null or t.side == u.side or t.hp <= 0 or t.left_battle \
+				or (t.side == Combatant.Side.ENEMY and t.pop_in_until > sim.on_stage_gate()):     # not targetable
 			continue
 		var skill_id: String = u.auto_skill
 		var forced: bool = c == 0 and sim.opener_strike(u, t)
 		if not forced and not in_range(u, t, u.reach):
+			if u.auto_ranged_skill == "":
+				continue                                  # (skill_def("") is null)
 			var ranged: SkillDef = sim.skill_def(u.auto_ranged_skill)
 			if ranged == null or not in_range(u, t, int(ranged.rt.get("range_cm", 0))):
 				continue

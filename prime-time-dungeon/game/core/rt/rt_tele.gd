@@ -99,7 +99,9 @@ static func zones(sim: RtSim, c: int) -> void:
 		return
 	var zs: Array[RtTelegraph] = []
 	for t: RtTelegraph in list:
-		if t.is_zone:
+		# only the zones with something due (a period or the end; a zone's own timers change only here — the same
+		# zones act as with the whole list)
+		if t.is_zone and ((t.period > 0 and t.next_tick_at == c) or (t.ends_at >= 0 and t.ends_at <= c)):
 			zs.append(t)
 	for z: RtTelegraph in zs:
 		if z.period > 0 and z.next_tick_at == c:
@@ -132,16 +134,20 @@ static func track(sim: RtSim, c: int) -> void:
 	if list.is_empty():
 		return
 	var side_units: Array[RtUnit] = []
-	for v: RtUnit in sim.units_ref():
-		if v.side == Combatant.Side.PARTY and v.hp > 0 and not v.left_battle:
+	for v: RtUnit in sim.party_ref():
+		if v.hp > 0 and not v.left_battle:
 			side_units.append(v)
 	for t: RtTelegraph in list:
 		if t.is_zone or t.impact_at <= c:
 			continue
 		if t.side == Combatant.Side.PARTY:
+			var tx: int = t.x
+			var tz: int = t.z
+			var far2: int = t.far2
 			for v: RtUnit in side_units:
-				if (t.far2 < 0 or (v.x - t.x) * (v.x - t.x) + (v.z - t.z) * (v.z - t.z) <= t.far2) \
-						and t.contains(v.x, v.z):
+				var vx: int = v.x
+				var vz: int = v.z
+				if (far2 < 0 or (vx - tx) * (vx - tx) + (vz - tz) * (vz - tz) <= far2) and t.contains(vx, vz):
 					t.inside_last[v.id] = c
 			continue
 		for v: RtUnit in sim.units_ref():
@@ -191,8 +197,10 @@ static func _impact(sim: RtSim, t: RtTelegraph, c: int) -> void:
 	var kill_adds: bool = sk != null and bool(sk.rt.get("kill_adds", false))
 	var hits: PackedStringArray = []
 	var own: Array[RtUnit] = []
+	var gate: int = sim.on_stage_gate()
 	for v: RtUnit in sim.units_ref():
-		if v.hp <= 0 or v.left_battle or not sim.targetable(v) or not t.contains(v.x, v.z):
+		if v.hp <= 0 or v.left_battle or (v.side == Combatant.Side.ENEMY and v.pop_in_until > gate) \
+				or not t.contains(v.x, v.z):             # (RtSim.targetable inlined)
 			continue
 		if v.side == t.side:
 			hits.append(v.id)

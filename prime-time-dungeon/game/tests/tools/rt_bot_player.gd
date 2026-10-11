@@ -143,7 +143,7 @@ func _pick_target(u: RtUnit, c: int) -> void:
 		return
 	var best: RtUnit = null
 	var bd: int = -1
-	for v: RtUnit in sim.units():
+	for v: RtUnit in sim.units_ref():
 		if v.side == u.side or not sim.targetable(v) or not v.entry.is_empty():
 			continue
 		if adds_only and not (v.is_summon and c >= v.pop_in_until + int(prof["react"])):
@@ -166,8 +166,11 @@ func _items(u: RtUnit, c: int) -> void:
 	if sim.items_left() <= 0 or sim.item_cd_left() > 0 or not u.cast.is_empty():
 		return
 	var low: RtUnit = null
-	for v: RtUnit in [u] + sim.party_ref():
-		if v.side == u.side and sim.is_alive(v) and v.hp * 1000 < v.max_hp() * int(prof["potion_pm"]) \
+	var below: int = int(prof["potion_pm"])
+	if sim.is_alive(u) and u.hp * 1000 < u.max_hp() * below:     # the person's own figure first (it wins a tie)
+		low = u
+	for v: RtUnit in sim.party_ref():
+		if v != u and v.side == u.side and sim.is_alive(v) and v.hp * 1000 < v.max_hp() * below \
 				and (low == null or v.hp * 1000 / maxi(1, v.max_hp()) < low.hp * 1000 / maxi(1, low.max_hp())):
 			low = v
 	if low != null:
@@ -178,7 +181,7 @@ func _items(u: RtUnit, c: int) -> void:
 			return
 	if profile_name == "sloppy":
 		return
-	for v: RtUnit in sim.units():
+	for v: RtUnit in sim.units_ref():
 		if v.side == u.side and v != u and v.is_ko() and not v.left_battle:
 			for iid: Variant in sim.items.keys():
 				var it: ItemDef = sim.item_def(str(iid))
@@ -194,7 +197,7 @@ func _items(u: RtUnit, c: int) -> void:
 func _partner(u: RtUnit, c: int) -> void:
 	if profile_name == "sloppy" or c < _next_partner or c % THINK_TICKS != 0:
 		return
-	for p: RtUnit in sim.units():
+	for p: RtUnit in sim.party_ref():
 		if p.side != u.side or p == u or not sim.is_alive(p):
 			continue
 		var skill: String = sim.partner_special_skill(p.id)
@@ -206,7 +209,7 @@ func _partner(u: RtUnit, c: int) -> void:
 			want = u.hp * 1000 < u.max_hp() * PARTNER_HEAL_BELOW_PM
 		else:
 			var on_me: bool = false
-			for e: RtUnit in sim.units():
+			for e: RtUnit in sim.units_ref():
 				if e.side != u.side and sim.targetable(e) and e.target_id == u.id:
 					on_me = true
 			want = on_me and u.hp * 1000 < u.max_hp() * PARTNER_TAUNT_BELOW_PM
@@ -297,7 +300,7 @@ func _goal(u: RtUnit, c: int, pos: Vector2i) -> Array:
 ## Is the bot standing in a pending hostile shape it has noticed (reaction time passed, not missed) that strikes within
 ## RtSim.ESCAPE_LOOKAHEAD_TICKS (the window the AI and RtGeo.escape_point judge safety in, 07 §5.5), or in a zone?
 func _threatened(u: RtUnit, c: int, pos: Vector2i) -> bool:
-	for t: RtTelegraph in sim.telegraphs():
+	for t: RtTelegraph in sim.telegraphs_ref():
 		if t.side != u.side:
 			continue
 		if t.is_zone:
@@ -355,11 +358,10 @@ func _move(u: RtUnit, c: int, pos: Vector2i, goal: Array) -> void:
 			var step: int = mini(speed, d)
 			var sx: int = FixedMath.div_round((gx - pos.x) * step, d)
 			var sz: int = FixedMath.div_round((gz - pos.y) * step, d)
-			var geo: Dictionary = sim.setup.geo
-			if not RtGeo.walkable(geo, pos.x + sx, pos.y + sz, u.radius, false):
-				if sx != 0 and RtGeo.walkable(geo, pos.x + sx, pos.y, u.radius, false):
+			if not sim.walkable_ring(pos.x + sx, pos.y + sz, u.radius):
+				if sx != 0 and sim.walkable_ring(pos.x + sx, pos.y, u.radius):
 					sz = 0
-				elif sz != 0 and RtGeo.walkable(geo, pos.x, pos.y + sz, u.radius, false):
+				elif sz != 0 and sim.walkable_ring(pos.x, pos.y + sz, u.radius):
 					sx = 0
 				else:
 					sx = 0
@@ -386,9 +388,9 @@ func _predict(u: RtUnit, c: int) -> Vector2i:
 		return Vector2i(u.x, u.z)
 	var x: int = s[1] + FixedMath.div_round(s[3] * n, 10)
 	var z: int = s[2] + FixedMath.div_round(s[4] * n, 10)
-	var geo: Dictionary = sim.setup.geo
-	if Movement.in_cell(geo, x, z) and not RtGeo.walkable(geo, x, z, u.radius, true):
-		var q: Vector2i = RtGeo.project_walkable(geo, x, z, u.radius, true)
+	var half: int = sim.geo_cell_half
+	if absi(x) <= half and absi(z) <= half and not sim.walkable_party(x, z, u.radius):
+		var q: Vector2i = RtGeo.project_walkable(sim.setup.geo, x, z, u.radius, true)
 		x = q.x
 		z = q.y
 	return Vector2i(x, z)
@@ -460,7 +462,7 @@ func _finale_shown(u: RtUnit, fin: String) -> bool:
 		and t.hp * 1000 < t.max_hp() * sim.bal.i("FINALE_TARGET_BELOW_PM")
 	if not low and not u.bar.values().has(fin):
 		return false
-	return str(sim.bar(u.id).get(SLOT_SHOW, "")) == fin
+	return sim.bar_slot(u.id, SLOT_SHOW) == fin
 
 
 ## The expert's priority (profile "heal_first", perfect): when the assist suggests a heal now and the MP do not cover

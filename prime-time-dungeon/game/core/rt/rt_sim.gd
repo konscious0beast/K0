@@ -42,6 +42,8 @@ const TALLY_INTS: PackedStringArray = ["damage_taken", "crits", "weakness_hits",
 	"interrupts", "dodges", "telegraph_hits", "train_kills", "perfect_phases", "flee_attempts", "potions_used",
 	"credits_delta"]
 const _NO_PMS: Array[int] = []              # the empty factor list of a unit without mods
+const _NO_CMDS: Array[Dictionary] = []      # the commands of a tick without any (read-only)
+const _NO_GOAL: Array = []                  # no rule goal (read-only)
 
 var setup: RtSetup = null
 var result: BattleResult = null             # set when finished
@@ -71,6 +73,7 @@ var _next_tele: int = 1
 var _cmds: Array[Dictionary] = []           # accepted commands not applied yet: {"ct", "n", "cmd"} in submit order
 var _cmd_n: int = 0
 var _hits: Array[Dictionary] = []           # pending hits (instants, auto-attacks), creation order
+var _hits_next: int = 0                     # derived: the smallest "at" of _hits (no hit is due before it)
 var _show_cd: Array[int] = [0, 0]           # party SHOW / FINALE cooldown [ready ct, length]
 var _item_cd: Array[int] = [0, 0]           # party consumable cooldown [ready ct, length]
 var _items_used: int = 0
@@ -89,6 +92,19 @@ var _followers: Dictionary = {}             # group leader id → [komparse ids]
 var _pop_in: int = 15                       # bal POP_IN_TICKS (read on every targetable())
 var _margin: int = 60                       # bal ESCAPE_MARGIN_CM (read on every shape test of the AI's dodging)
 var _slot_offset: int = 9                   # bal AI_SLOT_OFFSET_TICKS (enemy rule timers, 07 §5.3)
+## Hot balance values and set facts, read once per combat (R5b perf; the balance and the geometry never change during a
+## combat): the rule walk (RtRules), the checks (Ability), the goals (Movement) and the escape search (RtGeo).
+var gcd_tail_ticks: int = 5                 # bal AI_INTERRUPT_GCD_TAIL_TICKS
+var show_grace_ticks: int = 150             # bal AI_SHOW_GRACE_TICKS
+var queue_ticks: int = 9                    # bal QUEUE_TICKS
+var melee_stop_cm: int = 30                 # bal MELEE_STOP_CM
+var finale_below_pm: int = 300              # bal FINALE_TARGET_BELOW_PM
+var geo_r: int = 0                          # setup.geo "r": the set radius (0 = no set)
+var geo_plain: bool = false                 # geo_r > 0 and no blockers: walkable(p, r, false) ⇔ |p| ≤ geo_r − r
+var geo_cell_half: int = 800                # setup.geo "cell_half" (Movement.in_cell)
+var threat_switch_pm: int = 1100            # bal THREAT_SWITCH_PM (Threat.top_target)
+var max_combat_ticks: int = 18000           # bal MAX_COMBAT_TICKS (Result.check_end)
+var dr_max_ticks: int = 30                  # bal DR_MAX_TICKS (Movement.dead_reckon)
 var _bar_known: Dictionary = {}             # party unit id → {skill id: true} of its bar (static per combat)
 var _known_all: Dictionary = {}             # party unit id → {skill id: true}: bar + FINALE + context variants
 var _assist: Dictionary = {}                # party unit id → compiled rules of its assist_preset (§5.6)
@@ -96,6 +112,8 @@ var _intr_mp: Dictionary = {}               # party unit id → MP of its interr
 var _skill_defs: Dictionary = {}            # skill id → SkillDef | null (memo of skill_def)
 var _skill_meta: Dictionary = {}            # skill id → PackedInt32Array (memo of skill_meta)
 var _enemy_rts: Dictionary = {}             # enemy def id → EnemyDef.rt (memo of enemy_rt)
+var _skill_area: Dictionary = {}            # skill id → PackedInt32Array (memo of skill_area)
+var _skill_area_rt: Dictionary = {}         # skill id → the rt block the memo was made from (identity check)
 var _foes: Array[RtUnit] = []               # enemies with rt.phases or an enrage block (Boss.step), unit order
 var _mods_any: bool = false                 # RtSetup.mods is not empty
 var _on_any: bool = false                   # some mod has op "on"
@@ -115,6 +133,18 @@ func _init(p_setup: RtSetup, p_data: GameData) -> void:
 	_pop_in = bal.i("POP_IN_TICKS")
 	_margin = bal.i("ESCAPE_MARGIN_CM")
 	_slot_offset = bal.i("AI_SLOT_OFFSET_TICKS")
+	gcd_tail_ticks = bal.i("AI_INTERRUPT_GCD_TAIL_TICKS")
+	show_grace_ticks = bal.i("AI_SHOW_GRACE_TICKS")
+	queue_ticks = bal.i("QUEUE_TICKS")
+	melee_stop_cm = bal.i("MELEE_STOP_CM")
+	finale_below_pm = bal.i("FINALE_TARGET_BELOW_PM")
+	threat_switch_pm = bal.i("THREAT_SWITCH_PM")
+	max_combat_ticks = bal.i("MAX_COMBAT_TICKS")
+	dr_max_ticks = bal.i("DR_MAX_TICKS")
+	if setup != null:
+		geo_r = int(setup.geo.get("r", 0))
+		geo_plain = geo_r > 0 and (setup.geo.get("blockers", []) as Array).is_empty()
+		geo_cell_half = int(setup.geo.get("cell_half", RtGeo.DEFAULT_CELL_HALF))
 	tally = {"killed": [], "overkill": [], "weak_found": {}, "item_delta": {}, "escaped": [], "thieves": {}}
 	for k: String in TALLY_INTS:
 		tally[k] = 0
@@ -224,13 +254,16 @@ func step() -> Array[ActionEvent]:
 		out.append_array(start())
 	_out = out
 	var c: int = _tick
-	var samples: Array[Dictionary] = []
-	var rest: Array[Dictionary] = []
-	for e: Dictionary in _take_cmds(c):
-		if str((e["cmd"] as Dictionary).get("t", "")) == "move_sample":
-			samples.append(e)
-		else:
-			rest.append(e)
+	var samples: Array[Dictionary] = _NO_CMDS
+	var rest: Array[Dictionary] = _NO_CMDS
+	if not _cmds.is_empty():
+		samples = []
+		rest = []
+		for e: Dictionary in _take_cmds(c):
+			if str((e["cmd"] as Dictionary).get("t", "")) == "move_sample":
+				samples.append(e)
+			else:
+				rest.append(e)
 	var mark: int = out.size()
 	Movement.player_positions(self, c, samples)          # 1a
 	Ability.apply_commands(self, rest)                   # 1b
@@ -407,6 +440,36 @@ func bar(unit_id: String) -> Dictionary:
 	return out
 
 
+## bar(unit_id).get(slot, "") without building the whole bar (the FINALE check of the bot, the HUD): the same rules —
+## tutorial slots 1 and 5 only, a context variant on a KO'd friendly target, slot 5 as FINALE, slot 6 the potion pick.
+## Pure.
+func bar_slot(unit_id: String, slot: int) -> String:
+	var u: RtUnit = unit(unit_id)
+	if u == null or u.side != Combatant.Side.PARTY:
+		return ""
+	var v: String = ""
+	for k: Variant in u.bar:
+		if int(k) == slot:
+			v = str(u.bar[k])
+	if setup.tutorial and u.id == _ctl:
+		return v if slot == 1 or slot == 5 else ""
+	var t: RtUnit = unit(u.target_id)
+	for cx: Dictionary in _context.get(u.id, []):
+		if int(cx["slot"]) == slot and str(cx.get("when", "")) == "target_ko" and t != null and t.side == u.side \
+				and t.is_ko():
+			v = str(cx["skill"])
+	if slot == 5:
+		var fin: String = str(_finale.get(u.id, ""))
+		if fin != "" and t != null and t.side != u.side and targetable(t) \
+				and t.hp * 1000 < t.max_hp() * bal.i("FINALE_TARGET_BELOW_PM"):
+			v = fin
+	elif slot == 6:
+		var potion: String = Ability.potion_pick(self, u)
+		if potion != "":
+			v = potion
+	return v
+
+
 ## Skill the Partner-Spezial would order now ("" = none: no AI partner, not learned, tutorial, KO).
 func partner_special_skill(unit_id: String) -> String:
 	var u: RtUnit = unit(unit_id)
@@ -494,6 +557,31 @@ func is_alive(u: RtUnit) -> bool:
 func targetable(u: RtUnit) -> bool:
 	return u != null and u.hp > 0 and not u.left_battle \
 		and (u.side != Combatant.Side.ENEMY or _tick >= u.pop_in_until - _pop_in)
+
+
+## targetable() for a loop without a call per unit: an enemy is on stage when pop_in_until ≤ this (tick + POP_IN).
+func on_stage_gate() -> int:
+	return _tick + _pop_in
+
+
+## RtGeo.in_circle(setup.geo, x, z, r) without the dictionary: inside the ring part |p| ≤ geo.r − r.
+func in_ring(x: int, z: int, r: int) -> bool:
+	var big: int = geo_r - r
+	return geo_r > 0 and big >= 0 and x * x + z * z <= big * big
+
+
+## RtGeo.walkable(setup.geo, x, z, r, true) (party: ring or open door lane) with the plain-set case first.
+func walkable_party(x: int, z: int, r: int) -> bool:
+	if geo_plain:
+		return in_ring(x, z, r) or RtGeo.in_gap(setup.geo, x, z, r)
+	return RtGeo.walkable(setup.geo, x, z, r, true)
+
+
+## RtGeo.walkable(setup.geo, x, z, r, false) (ring only, no door lanes) with the plain-set case first.
+func walkable_ring(x: int, z: int, r: int) -> bool:
+	if geo_plain:
+		return in_ring(x, z, r)
+	return RtGeo.walkable(setup.geo, x, z, r, false)
 
 
 ## Sim-driven units choose by AI: enemies, the AI partner, the autopilot (by_ai, 07 §3.13).
@@ -592,6 +680,21 @@ func skill_meta(id: String) -> PackedInt32Array:
 	return m
 
 
+## Static area facts of a skill (memoized, not state; Ability.targets / Ability.A_*): [rt.range_cm, rt.aoe.radius_cm,
+## rt.aoe.cone_deg, aoe.center == "self" (the default) as 1/0, rt.aoe.max_targets].
+func skill_area(sk: SkillDef) -> PackedInt32Array:
+	var a: Variant = _skill_area.get(sk.id)
+	if a == null or not is_same(sk.rt, _skill_area_rt.get(sk.id)):    # (views share their skill's rt block)
+		var rt: Dictionary = sk.rt
+		var aoe: Dictionary = rt.get("aoe", {})
+		var pa: PackedInt32Array = [int(rt.get("range_cm", 0)), int(aoe.get("radius_cm", 0)), int(aoe.get("cone_deg", 0)),
+			1 if str(aoe.get("center", "self")) == "self" else 0, int(aoe.get("max_targets", 0))]
+		_skill_area[sk.id] = pa
+		_skill_area_rt[sk.id] = rt
+		a = pa
+	return a
+
+
 ## RtMods forbid_skill (07 §9.5): the skill is forbidden for the unit.
 func forbidden_skill(u: RtUnit, skill_id: String) -> bool:
 	if _forbid.is_empty() or u == null:
@@ -665,21 +768,26 @@ func note_action(_u: RtUnit, ai: bool) -> void:
 
 
 func add_hit(h: Dictionary) -> void:
+	_hits_next = mini(_hits_next, int(h["at"])) if not _hits.is_empty() else int(h["at"])
 	_hits.append(h)
 
 
 ## The pending hits due at c (removed from the list), creation order.
 func take_due_hits(c: int) -> Array[Dictionary]:
 	var due: Array[Dictionary] = []
-	if _hits.is_empty():
+	if _hits.is_empty() or c < _hits_next:              # (nothing due: the list stays as it is)
 		return due
 	var keep: Array[Dictionary] = []
+	var next: int = 0
 	for h: Dictionary in _hits:
-		if int(h["at"]) <= c:
+		var at: int = int(h["at"])
+		if at <= c:
 			due.append(h)
 		else:
+			next = mini(next, at) if not keep.is_empty() else at
 			keep.append(h)
 	_hits = keep
+	_hits_next = next
 	return due
 
 
@@ -857,6 +965,32 @@ func safe_point(u: RtUnit, x: int, z: int) -> bool:
 	return true
 
 
+## The shapes safe_point tests for `u` (creation order): its side's zones and the pending telegraphs that strike within
+## ESCAPE_LOOKAHEAD_TICKS — safe_among(danger_shapes(u), x, z) == safe_point(u, x, z) for many points (the escape
+## search). Pure.
+func danger_shapes(u: RtUnit) -> Array[RtTelegraph]:
+	var out: Array[RtTelegraph] = []
+	for t: RtTelegraph in _telegraphs:
+		if t.side == u.side and (t.is_zone or (t.impact_at > _tick and t.impact_at - _tick <= ESCAPE_LOOKAHEAD_TICKS)):
+			out.append(t)
+	return out
+
+
+## safe_point over a danger_shapes list. Pure.
+func safe_among(shapes: Array[RtTelegraph], x: int, z: int) -> bool:
+	for t: RtTelegraph in shapes:
+		var dx: int = x - t.x
+		var dz: int = z - t.z
+		if t.far2 >= 0 and dx * dx + dz * dz > t.far2:
+			continue
+		if t.is_zone:
+			if t.contains(x, z):
+				return false
+		elif t.contains_inflated(x, z, _margin):
+			return false
+	return true
+
+
 ## Does the sim-driven party unit escape right now (07 §5.5): it reacts (react_at reached) and stands in a hostile
 ## shape that strikes within ESCAPE_LOOKAHEAD_TICKS (grown by ESCAPE_MARGIN_CM), or it stands in a hostile zone. Pure.
 func escaping(u: RtUnit) -> bool:
@@ -982,7 +1116,8 @@ func assist_target(u: RtUnit) -> String:
 ## reacts to becomes "stand", one into a zone the escape point. Stationary units never get one. In between it keeps
 ## its target and goal; only a party unit's reaction (escape point) and its flight following run every tick.
 func ai_step(u: RtUnit, ordered: bool, think: bool = true) -> void:
-	if not u.entry.is_empty() or not targetable(u):
+	if not u.entry.is_empty() or u.hp <= 0 or u.left_battle \
+			or (u.side == Combatant.Side.ENEMY and _tick < u.pop_in_until - _pop_in):     # not targetable(u)
 		return
 	var party: bool = u.side == Combatant.Side.PARTY
 	if not think:
@@ -993,22 +1128,25 @@ func ai_step(u: RtUnit, ordered: bool, think: bool = true) -> void:
 	if tid != u.target_id:
 		Ability.target_change(self, u, tid)
 	var escape: bool = party and _react(u)
-	var rule_goal: Array = []
+	var rule_goal: Array = _NO_GOAL
 	if u.partner_order.is_empty() and _tick >= u.pop_in_until:
-		_follow_up(u)
+		if not u.follow_up.is_empty():
+			_follow_up(u)
 		if not u.rules.is_empty():
 			var pick: Dictionary = RtRules.choose(self, u)
-			if pick.has("skill") or pick.has("item"):
-				_apply_pick(u, pick)
-			rule_goal = pick.get("goal", [])
+			if not pick.is_empty():
+				if pick.has("skill") or pick.has("item"):
+					_apply_pick(u, pick)
+				rule_goal = pick.get("goal", _NO_GOAL)
 	if escape or u.stationary or (party and _follow_flight(u)) or ordered:
 		return
 	if _tick < u.pop_in_until:
 		if not u.goal.is_empty():
 			u.goal = []
 		return
-	var g: Array[int] = []
+	var g: Array[int]
 	if rule_goal.size() == 2:
+		g = []
 		g.assign(rule_goal)
 	else:
 		g = Movement.goal_for(self, u, _by_id.get(tid, null))
@@ -1498,16 +1636,22 @@ func _react(u: RtUnit) -> bool:
 	var zone: bool = false
 	var impact: int = -1
 	var reacting: bool = u.react_at >= 0 and _tick >= u.react_at
+	var watch: bool = u.react_at >= 0             # pending shapes matter only for a set react_at (reset / reaction)
+	var ux: int = u.x
+	var uz: int = u.z
+	var side: int = u.side
 	for t: RtTelegraph in _telegraphs:
-		if t.side != u.side:
+		if t.side != side or (not t.is_zone and not watch):
 			continue
-		var near: bool = t.far2 < 0 or (u.x - t.x) * (u.x - t.x) + (u.z - t.z) * (u.z - t.z) <= t.far2
+		var dx: int = ux - t.x
+		var dz: int = uz - t.z
+		var near: bool = t.far2 < 0 or dx * dx + dz * dz <= t.far2
 		if t.is_zone:
-			zone = zone or (near and t.contains(u.x, u.z))
+			zone = zone or (near and t.contains(ux, uz))
 		elif t.impact_at > _tick:
 			pending = true
 			if near and reacting and t.impact_at - _tick <= ESCAPE_LOOKAHEAD_TICKS \
-					and (impact < 0 or t.impact_at < impact) and t.contains_inflated(u.x, u.z, _margin):
+					and (impact < 0 or t.impact_at < impact) and t.contains_inflated(ux, uz, _margin):
 				impact = t.impact_at
 	if u.react_at >= 0 and not pending:
 		u.react_at = -1
@@ -1548,7 +1692,7 @@ func _escape_point(u: RtUnit) -> Vector2i:
 ## it (the door lane is open to the party while the controlled unit is outside). Returns true when it does.
 func _follow_flight(u: RtUnit) -> bool:
 	var ctl: RtUnit = _by_id.get(_ctl, null)
-	if ctl == null or ctl == u or not is_alive(ctl) or RtGeo.in_circle(setup.geo, ctl.x, ctl.z, ctl.radius):
+	if ctl == null or ctl == u or ctl.hp <= 0 or ctl.left_battle or in_ring(ctl.x, ctl.z, ctl.radius):
 		return false
 	var p: Vector2i = DetMath.toward(ctl.x, ctl.z, u.x, u.z, u.radius + ctl.radius)
 	u.goal = [p.x, p.y]

@@ -212,6 +212,8 @@ func _apply_scheme() -> void:
 	bar.set("key_texts", keys)
 	frames.set("special_key", "" if _touch else _key_text(&"partner_special", pad))
 	frames.set("chip_key", "" if _touch else _key_text(&"partner_preset", pad))
+	if _autopilot != null:                       # R5b: the key of the scheme, none on touch (was a fixed "T")
+		_autopilot.text = "AUTOPILOT" if _touch else "AUTOPILOT · " + _key_text(&"toggle_auto", pad)
 	if hints != null:
 		hints.set("ctx", _hint_ctx())
 	if sim != null and _modes_applied:

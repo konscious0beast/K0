@@ -1,10 +1,15 @@
 extends TestCase
 ## R5b part 1 (07 §8.3, §8.4; 08 §6): the real-time HUD — Kai's frame symbol is drawn from the running persona's look
 ## (skin, hair colour and style, beard, glasses; the canon look without a persona), and in the touch layout the boss
-## frame keeps clear of the ShowOverlay's hype meter (its "HYPE" ran over the boss's percentage).
+## frame keeps clear of the ShowOverlay's hype meter (its "HYPE" ran over the boss's percentage). The autopilot label
+## names the key of the input scheme (none on touch; it showed a fixed "T" everywhere).
 
 const UnitFrames := preload("res://scenes/combat/ui/unit_frames.gd")
 const IconMesh := preload("res://scenes/ui/icon_mesh.gd")
+const HudRig := preload("res://tests/fixtures/rt_hud/hud_rig.gd")
+const HudScenarios := preload("res://tests/fixtures/rt_hud/hud_scenarios.gd")
+const FakeSim := preload("res://tests/fixtures/rt_min/fake_rt_sim.gd")
+const InputGlyph := preload("res://scenes/ui/input_glyph.gd")
 
 
 func after_each() -> void:
@@ -49,3 +54,15 @@ func test_the_touch_boss_frame_keeps_clear_of_the_hype_meter() -> void:
 	f.set("reserve_right", 1200.0)
 	assert_eq(f.call("boss_rect"), free, "a meter far right changes nothing")
 	f.free()
+
+
+func test_the_autopilot_label_names_the_key_of_the_scheme() -> void:
+	Game.new_game(0, "Kai", 11)
+	var data: GameData = FakeSim.load_data()
+	for touch: bool in [false, true]:
+		var rig: Dictionary = HudRig.make(self, HudScenarios.build(data, {"level": 4}), data, {"force_touch": touch})
+		var label: Label = (rig["hud"] as Node).get("_autopilot") as Label
+		var key: String = InputGlyph.binding_text(&"toggle_auto", Game.InputScheme.KEYBOARD_MOUSE)
+		assert_eq(label.text, "AUTOPILOT" if touch else "AUTOPILOT · " + key, "touch %s" % str(touch))
+		assert_ne(key, "", "the keyboard binding of toggle_auto")
+		(rig["hud"] as Node).get_parent().queue_free()

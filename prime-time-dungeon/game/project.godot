@@ -3,7 +3,7 @@ config_version=5
 [application]
 
 config/name="Prime Time Dungeon"
-config/version="0.1.0"
+config/version="0.3.0"
 config/description="Galaktische Reality-Show-Dungeon-Crawler."
 run/main_scene="res://scenes/boot/boot.tscn"
 run/max_fps.mobile=60

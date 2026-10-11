@@ -4,12 +4,18 @@ extends SceneTree
 ## godot --headless --path game -s res://tests/tools/make_icons.gd -- --out=<abs dir>
 ## Writes: icon_1024.png (iOS App Store, opaque: iOS rejects alpha and masks the corners itself), icon_192.png
 ## (Android legacy launcher), icon_fg_432.png (Android adaptive foreground: artwork inside the 66 dp safe circle,
-## transparent around it), icon_bg_432.png (Android adaptive background: ink).
+## transparent around it), icon_bg_432.png (Android adaptive background: ink), icon_macos_1024.png (macOS: the badge
+## on Apple's 1024 grid, 824 px body with a transparent margin like every Dock icon; the export would otherwise upscale
+## the 128 px SVG import), launch_384.png / launch_576.png (iOS launch screen @2x / @3x: the badge at 192 pt, centred
+## on the boot-splash colour).
 
 const SVG: String = "res://icon.svg"
 const SVG_SIZE: float = 128.0
+const SVG_BODY: float = 120.0       # the badge (rounded rect 4..124) inside the 128 canvas
 const INK: Color = Color("#140d1c")
 const FG_ART_PX: int = 256          # 432 px canvas, safe circle Ø 264 px → artwork 256 px centred
+const MACOS_BODY_PX: float = 824.0  # Apple macOS icon grid: 824 × 824 body on the 1024 canvas
+const LAUNCH_PT: int = 192          # launch-screen badge size in points (UIImageView content mode "center")
 
 
 func _initialize() -> void:
@@ -38,6 +44,14 @@ func _initialize() -> void:
 	var bg: Image = Image.create(432, 432, false, Image.FORMAT_RGB8)
 	bg.fill(INK)
 	ok = _save(bg, out_dir.path_join("icon_bg_432.png")) and ok
+	var mac: Image = Image.create(1024, 1024, false, Image.FORMAT_RGBA8)
+	mac.fill(Color(0, 0, 0, 0))
+	var mac_art: Image = _render(svg, roundi(MACOS_BODY_PX * SVG_SIZE / SVG_BODY))
+	mac.blend_rect(mac_art, Rect2i(Vector2i.ZERO, mac_art.get_size()), (Vector2i(1024, 1024) - mac_art.get_size()) / 2)
+	ok = _save(mac, out_dir.path_join("icon_macos_1024.png")) and ok
+	for scale: int in [2, 3]:
+		var px: int = LAUNCH_PT * scale
+		ok = _save(_render(svg, px), out_dir.path_join("launch_%d.png" % px)) and ok
 	quit(0 if ok else 1)
 
 

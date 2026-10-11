@@ -3267,6 +3267,7 @@ Danach (R5b), in dieser Reihenfolge, je ein Commit:
    `test_m1_ai`, `test_m1_battle_snapshot`, `test_m5_*`, CTB-Teile von `test_m6_*`, `test_m8_replay`, `test_m8_run_sim`,
    CTB-Teile von `test_06b_balance`/`test_06c_balance`/`test_06c_show_boss`) durch Echtzeit-Varianten ersetzt;
    `StateHash.of_battle`; `ShowRules`-Profil `ctb`.
+   **→ 10_MINISPIEL_STEMPELDUELL.md Kap. 6.2 (CR-34):** Engine umziehen statt löschen; `battle_command.gd` bleibt geteilt.
 4. **Doku:** §12.8.
 
 ### 12.7 Unverändert wiederverwendet

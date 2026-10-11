@@ -9,8 +9,9 @@ extends Node3D
 ## Geometry (room-local, metres; +x east, +z south): ring radius r = geo.r / 100, a door d has its lane where
 ## |quer_d| ≤ DOOR_HALF (2 m) and längs_d > 0. The collision faces sit COLLIDER_INSET inside the walkable border of
 ## 07 §3.5.4 (|p| ≤ r − r_u, |quer_d| ≤ DOOR_HALF − r_u for a body of radius r_u), so an honest body never stands on
-## a point the sim has to correct (07 §3.5.2: < 5 cm). The ring lights up in 0.3 s ("Studio-Licht an") and fades out
-## in 0.5 s (victory / flight).
+## a point the sim has to correct (07 §3.5.2: < 5 cm); `body_slack` (≤ 0) moves them further in when a body's capsule
+## is thinner than its sim radius (capsule − r_u). The ring lights up in 0.3 s ("Studio-Licht an") and fades out in
+## 0.5 s (victory / flight).
 
 const C_RING: Color = Color("#22d3ee")          # 07 §2.4: C_ACCENT_2
 const C_CORE: Color = Color("#e8fdff")          # the bright LED core line of the tape
@@ -37,6 +38,7 @@ var radius_m: float = 4.8
 var gap_doors: int = 0                          # doors with a lane (open set)
 var shutter_doors: int = 0                      # doors with a roll shutter (closed set)
 var closed: bool = false
+var body_slack: float = 0.0                     # m, ≤ 0: capsule radius − sim radius of the thinnest body
 var ring: MeshInstance3D = null
 var body: StaticBody3D = null
 var shutters: Node3D = null                     # pivot at the lintel; its scale.y rolls the shutters down
@@ -48,10 +50,12 @@ var _down: bool = false
 
 
 ## Builds the set around the room centre `center` (world). `geo` = RtGeo geometry of the cell; `room_doors` = the
-## door openings of the cell that are passable in the exploration (shutters close exactly these in a closed set).
-func build(center: Vector3, geo: Dictionary, room_doors: int) -> void:
+## door openings of the cell that are passable in the exploration (shutters close exactly these in a closed set);
+## `slack` = min(0, capsule radius − sim radius) over the bodies the player may control (m).
+func build(center: Vector3, geo: Dictionary, room_doors: int, slack: float = 0.0) -> void:
 	name = "SetRing"
 	position = center
+	body_slack = minf(0.0, slack)
 	radius_m = float(int(geo.get("r", 480))) / 100.0
 	closed = bool(geo.get("closed", false))
 	gap_doors = 0 if closed else int(geo.get("doors", 0)) & 15
@@ -237,7 +241,7 @@ func _build_body() -> void:
 	body.collision_layer = 1                    # world
 	body.collision_mask = 0
 	add_child(body)
-	var face: float = radius_m - COLLIDER_INSET
+	var face: float = radius_m - COLLIDER_INSET + body_slack
 	for arc: Vector2 in ring_arcs(radius_m, gap_doors):
 		var n: int = maxi(1, ceili((arc.y - arc.x) / (TAU / COLLIDER_SEGMENTS)))
 		for k in n:
@@ -252,7 +256,7 @@ func _build_body() -> void:
 		if gap_doors & bit:
 			var d: Vector2 = door_dir(bit)
 			var q: Vector2 = Vector2(-d.y, d.x)
-			var wall: float = DOOR_HALF - COLLIDER_INSET + COLLIDER_THICK * 0.5
+			var wall: float = DOOR_HALF - COLLIDER_INSET + body_slack + COLLIDER_THICK * 0.5
 			var l0: float = sqrt(maxf(0.0, face * face - wall * wall)) - 0.1
 			var l1: float = WALL_INNER + 0.1
 			for s: float in [-1.0, 1.0]:

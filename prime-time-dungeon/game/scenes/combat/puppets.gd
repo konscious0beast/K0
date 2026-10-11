@@ -16,11 +16,17 @@ const MAX_SPARKS: int = 3                      # … and at most 3 emitters at t
 const SPARK_SEC: float = 0.3
 const LOCO_SMOOTH: float = 12.0
 const ENTRY_SMOKE: StringName = &"smoke"
+const JUMP_M: float = 1.5                      # a sim move above this per tick is a jump (snap + smoke, no slide)
+const LUNGE_SEC: float = 0.55                  # melee swing: the rig lunges at its target and back (peak ≈ impact)
+const LUNGE_MAX_M: float = 1.1
+const LUNGE_RANGE_M: float = 3.6               # only targets this close lunge (melee); ranged swings stay in place
+const LUNGE_CONTACT_M: float = 1.0             # the lunge ends this far from the target's centre
+const GLIDE_MAX_M: float = 3.0                 # start glides up to this distance, farther ones snap with smoke
 
 ## unit id → {"node": Node3D, "rig": CharacterRig, "kind": &"actor"|&"companion"|&"extra"|&"player"|&"autopilot"
 ## (&"player" is never moved: the controlled body shows its physics position),
 ## "prev": Vector3, "cur": Vector3, "prev_yaw": float, "cur_yaw": float, "speed": float, "ko": bool,
-## "shown": bool, "spark_t": float, "def_id": String}
+## "spark_t": float, "def_id": String; optional "at" (shown pose without a lunge), "lunge", "glide_*", "stage_at"}
 var entries: Dictionary = {}
 var origin: Vector3 = Vector3.ZERO
 
@@ -124,21 +130,32 @@ static func _reset_rig(r: CharacterRig) -> void:
 func bind(u: RtUnit, node: Node3D, rig: Node3D, kind: StringName) -> void:
 	var p: Vector3 = world_of(u)
 	entries[u.id] = {"node": node, "rig": rig, "kind": kind, "prev": p, "cur": p, "prev_yaw": yaw_of(u),
-		"cur_yaw": yaw_of(u), "speed": 0.0, "ko": u.hp <= 0, "shown": true, "spark_t": 0.0, "def_id": u.def_id}
+		"cur_yaw": yaw_of(u), "speed": 0.0, "ko": u.hp <= 0, "spark_t": 0.0, "def_id": u.def_id}
 
 
 ## An extra / summon: a pooled rig at the unit's position; `pop` = appears with a smoke puff (Komparsen, summons).
-func bind_extra(u: RtUnit, pop: bool) -> CharacterRig:
+## `on_stage_at` > the current tick: a komparse waiting for its leader's entry (07 §2.3, RtSim.targetable) stays
+## invisible until sync() reaches that tick, then pops in with the smoke.
+func bind_extra(u: RtUnit, pop: bool, on_stage_at: int = 0, tick: int = 0) -> CharacterRig:
 	var r: CharacterRig = _acquire(u.def_id, u.model)
 	if r == null:
 		return null
 	bind(u, r, r, &"extra")
 	r.global_position = world_of(u)
 	r.rotation.y = yaw_of(u)
+	if on_stage_at > tick:
+		(entries[u.id] as Dictionary)["stage_at"] = on_stage_at
+		(entries[u.id] as Dictionary)["pop"] = pop
+		r.visible = false
+		return r
 	r.visible = true
 	if pop:
-		Vfx.spawn(ENTRY_SMOKE, _fx_root, r.global_position + Vector3(0.0, 0.4, 0.0))
+		_smoke(r.global_position)
 	return r
+
+
+func _smoke(at: Vector3) -> void:
+	Vfx.spawn(ENTRY_SMOKE, _fx_root, at + Vector3(0.0, 0.4, 0.0))
 
 
 func unbind(unit_id: String) -> void:
@@ -185,8 +202,10 @@ static func yaw_of(u: RtUnit) -> float:
 	return float(u.yaw) * TAU / 256.0
 
 
-## After a tick: prev ← cur, cur ← the sim pose (bound units only); new KOs are flagged (the events animate them).
-func sync(units: Array[RtUnit]) -> void:
+## After tick `tick`: prev ← cur, cur ← the sim pose (bound units only). A komparse whose leader arrived pops in; a
+## move of more than JUMP_M in one tick (a stationary unit placed at its ring point after its entry time, 07 §2.3) is
+## shown as a jump with a smoke puff instead of a slide.
+func sync(units: Array[RtUnit], tick: int = 0) -> void:
 	for u: RtUnit in units:
 		if not entries.has(u.id):
 			continue
@@ -195,6 +214,19 @@ func sync(units: Array[RtUnit]) -> void:
 		e["prev_yaw"] = e["cur_yaw"]
 		e["cur"] = world_of(u)
 		e["cur_yaw"] = yaw_of(u)
+		if e.has("stage_at") and tick >= int(e["stage_at"]):
+			e.erase("stage_at")
+			e["prev"] = e["cur"]
+			var n: Node3D = e["node"] as Node3D
+			if n != null and is_instance_valid(n):
+				n.visible = true
+				if bool(e.get("pop", true)):
+					_smoke(e["cur"] as Vector3)
+		elif e["kind"] != &"player" and Vector2((e["cur"] as Vector3).x - (e["prev"] as Vector3).x,
+				(e["cur"] as Vector3).z - (e["prev"] as Vector3).z).length() > JUMP_M:
+			e["prev"] = e["cur"]
+			e.erase("glide_left")
+			_smoke(e["cur"] as Vector3)
 
 
 ## The puppet of `unit_id` glides from `from` (its world position before the combat) to its sim pose within `sec`
@@ -204,7 +236,11 @@ func glide_in(unit_id: String, from: Vector3, sec: float) -> void:
 	if e.is_empty() or sec <= 0.0 or e["kind"] == &"player":
 		return
 	var to: Vector3 = e["cur"]
-	if Vector2(from.x - to.x, from.z - to.z).length() < 0.05:
+	var d: float = Vector2(from.x - to.x, from.z - to.z).length()
+	if d < 0.05:
+		return
+	if d > GLIDE_MAX_M:
+		_smoke(to)                              # too far for a glide (e.g. the partner was stuck elsewhere): appear
 		return
 	e["glide_from"] = from
 	e["glide_left"] = sec
@@ -231,18 +267,22 @@ func apply(alpha: float, delta: float) -> void:
 		if node == null or not is_instance_valid(node):
 			continue
 		if e["kind"] == &"player":
+			_lunge(e, node, delta)
 			continue                           # the controlled figure shows its physics position (07 §3.5.6)
 		var p: Vector3 = (e["prev"] as Vector3).lerp(e["cur"] as Vector3, a)
 		if float(e.get("glide_left", 0.0)) > 0.0:
 			var k: float = 1.0 - float(e["glide_left"]) / float(e["glide_sec"])
 			p = (e["glide_from"] as Vector3).lerp(p, k * k * (3.0 - 2.0 * k))
 			e["glide_left"] = float(e["glide_left"]) - delta
-		var before: Vector3 = node.global_position if node.is_inside_tree() else node.position
-		p.y = before.y if e["kind"] != &"extra" else origin.y
+		var now: Vector3 = node.global_position if node.is_inside_tree() else node.position
+		var before: Vector3 = e.get("at", now)        # the last shown pose (without a lunge)
+		p.y = now.y if e["kind"] != &"extra" else origin.y
+		e["at"] = p
+		var shown: Vector3 = p + _lunge(e, node, delta)
 		if node.is_inside_tree():
-			node.global_position = p
+			node.global_position = shown
 		else:
-			node.position = p
+			node.position = shown
 		node.rotation.y = lerp_angle(float(e["prev_yaw"]), float(e["cur_yaw"]), a)
 		if delta > 0.0:
 			var v: float = Vector2(p.x - before.x, p.z - before.z).length() / delta
@@ -261,12 +301,56 @@ func apply(alpha: float, delta: float) -> void:
 		i -= 1
 
 
-## World position of a bound unit (interpolated as shown); Vector3.INF if unknown.
+## Melee swing of `unit_id` at the world point `target`: the attack animation, and — the sim stops melee units 30 cm
+## inside their reach, often two metres off (07 §3.5.3) — the rig lunges in for the hit and back while the body stays
+## on its sim position. Ranged swings (target farther than LUNGE_RANGE_M) only animate.
+func play_attack(unit_id: String, target: Vector3) -> void:
+	play(unit_id, &"attack")
+	var e: Dictionary = entries.get(unit_id, {})
+	if e.is_empty() or bool(e.get("ko", false)) or target == Vector3.INF:
+		return
+	var from: Vector3 = position_of(unit_id)
+	var d: Vector2 = Vector2(target.x - from.x, target.z - from.z)
+	var dist: float = clampf(d.length() - LUNGE_CONTACT_M, 0.0, LUNGE_MAX_M)
+	if d.length() > LUNGE_RANGE_M or dist < 0.05:
+		return
+	e["lunge"] = {"t": 0.0, "dir": Vector3(d.x, 0.0, d.y).normalized(), "dist": dist}
+
+
+## Advances a running lunge; returns its world offset for a node that is its own rig (extras), else moves the rig
+## child itself (actors, companion, the player body) and returns zero.
+func _lunge(e: Dictionary, node: Node3D, delta: float) -> Vector3:
+	if not e.has("lunge"):
+		return Vector3.ZERO
+	var l: Dictionary = e["lunge"]
+	l["t"] = float(l["t"]) + delta
+	var k: float = clampf(float(l["t"]) / LUNGE_SEC, 0.0, 1.0)
+	var off: Vector3 = (l["dir"] as Vector3) * float(l["dist"]) * sin(PI * k)
+	var rig: Node3D = e["rig"] as Node3D
+	var done: bool = k >= 1.0 or bool(e.get("ko", false))
+	if done:
+		e.erase("lunge")
+		off = Vector3.ZERO
+	if rig == null or not is_instance_valid(rig) or rig == node:
+		return off
+	if not l.has("base"):
+		l["base"] = rig.position
+	rig.position = (l["base"] as Vector3) + node.global_transform.basis.inverse() * off if node.is_inside_tree() \
+		else (l["base"] as Vector3)
+	if done:
+		rig.position = l["base"]
+	return Vector3.ZERO
+
+
+## World position of a bound unit (interpolated as shown, without an attack lunge — name plates and texts follow the
+## body); Vector3.INF if unknown.
 func position_of(unit_id: String) -> Vector3:
 	var e: Dictionary = entries.get(unit_id, {})
 	var node: Node3D = e.get("node", null) as Node3D
 	if node == null or not is_instance_valid(node):
 		return Vector3.INF
+	if e["kind"] != &"player" and e.has("at"):
+		return e["at"]
 	return node.global_position if node.is_inside_tree() else node.position
 
 

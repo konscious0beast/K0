@@ -19,6 +19,7 @@ const TelegraphLayerScript := preload("res://scenes/combat/telegraph_layer.gd")
 const MoveSamplerScript := preload("res://scenes/combat/move_sampler.gd")
 const PuppetsScript := preload("res://scenes/combat/puppets.gd")
 const Rules := preload("res://scenes/exploration/encounter_rules.gd")
+const PlayerBodyScript := preload("res://scenes/exploration/player_controller.gd")
 const RESULTS_SCRIPT: String = "res://scenes/combat/ui/combat_results.gd"
 const HUD_SCENE: String = "res://scenes/combat/ui/combat_hud.tscn"    # R3 (loaded by path: optional until merged)
 const TICK_SEC: float = 1.0 / 30.0
@@ -331,7 +332,7 @@ func _build_set(geo: Dictionary) -> void:
 		_drop_ring_now()
 	ring = SetRingScript.new()
 	add_child(ring)
-	ring.call("build", ctx.get("origin", Vector3.ZERO), geo, int(ctx.get("room_doors", 0)))
+	ring.call("build", ctx.get("origin", Vector3.ZERO), geo, int(ctx.get("room_doors", 0)), body_slack())
 	var cam: Node3D = scene.get_camera_rig() if scene != null else null
 	if cam != null:
 		(cam.get("exclude") as Array).append(ring.call("body_rid"))
@@ -356,18 +357,35 @@ func _bind_units(sim: RtSim) -> void:
 			scene.rt_puppet_actor(actor, true)
 			puppets.call("bind", u, actor, actor.get("rig"), &"actor")
 		else:
-			puppets.call("bind_extra", u, true)
+			puppets.call("bind_extra", u, true, _on_stage_at(u, sim), sim.tick())
 	_update_player_drive()
 
 
-## Unit id → EnemyActor of the group it leads (the units are the party, then the enemies in group order; the first
-## unit of every group is its lead, 07 §3.4 / §3.5.5).
+## The tick from which a komparse is on stage (RtSim.targetable: pop_in_until − POP_IN_TICKS; waiting for its
+## leader's entry it is not yet in the picture, 07 §2.3).
+static func _on_stage_at(u: RtUnit, sim: RtSim) -> int:
+	var pop: int = sim.setup.balance.i("POP_IN_TICKS") if sim.setup != null and sim.setup.balance != null else 15
+	return u.pop_in_until - pop if u.side == Combatant.Side.ENEMY else 0
+
+
+## Unit id → EnemyActor of the group it leads: the first id of every group's "units" (R1b setups), else counted
+## from the enemy units in group order (the first unit of every group is its lead, 07 §3.4 / §3.5.5).
 func _lead_units(sim: RtSim) -> Dictionary:
 	var out: Dictionary = {}
 	var enemies: Array[RtUnit] = []
 	for u: RtUnit in sim.units():
 		if u.side == Combatant.Side.ENEMY and not u.is_summon:
 			enemies.append(u)
+	var by_units: bool = false
+	for g: Dictionary in sim.setup.groups:
+		var us: Variant = g.get("units", [])
+		if us is Array and not (us as Array).is_empty() and scene != null:
+			by_units = true
+			var lead_actor: Node3D = scene.get_enemy(str(g.get("group_id", "")))
+			if lead_actor != null:
+				out[str((us as Array)[0])] = lead_actor
+	if by_units:
+		return out
 	var i: int = 0
 	for g: Dictionary in sim.setup.groups:
 		var ids: Variant = g.get("enemy_ids", [])
@@ -400,6 +418,18 @@ func _present_start(sim: RtSim) -> void:
 		cam.call("enter_combat", BOSS_ZOOM if sim.setup.is_boss else ZOOM, false)
 	if sim.setup.is_boss:
 		_start_music(sim)
+
+
+## min(0, capsule radius − sim radius) in m over the party bodies the player may control (Kai 0.40 / 40 cm, Graf
+## Mopsula 0.35 / party.json rt.radius_cm, default 40): the set collision moves in by it, so no honest body stands
+## outside the walkable border of its sim unit (07 §3.5.2: never a correction in an honest run).
+static func body_slack() -> float:
+	var out: float = 0.0
+	for m: String in ["kai", "mopsula"]:
+		var cap: float = PlayerBodyScript.MOPSULA_RADIUS if m == "mopsula" else PlayerBodyScript.CAPSULE_RADIUS
+		var r_cm: int = int(DB.party_member(m).rt.get("radius_cm", 40)) if DB.has_id("party", m) else 40
+		out = minf(out, cap - float(r_cm) / 100.0)
+	return out
 
 
 ## R3's combat HUD (07 §8; integration note in combat_hud.gd): one per combat, setup({"director", "camera_rig"}),
@@ -561,12 +591,14 @@ func _physics_process(delta: float) -> void:
 
 ## Steps the combat `n` ticks right now (tests, captures, perf scenarios): the same per-tick order as the loop.
 func advance(n: int) -> void:
+	var done: int = 0
 	for _i in n:
 		if phase != Phase.RUNNING or Game.combat == null or _finished or _hint_id != "":
 			break
 		_tick(Game.combat)
+		done += 1
 	_alpha = 1.0
-	_present_frame(0.0)
+	_present_frame(float(done) * TICK_SEC)       # that much game time passed (glides, flashes, spark timers)
 	if _finished and phase == Phase.RUNNING:
 		_finish()
 
@@ -590,7 +622,7 @@ func _tick(sim: RtSim) -> void:
 	ticks_run += 1
 	if Game.combat == null:
 		return
-	puppets.call("sync", sim.units())
+	puppets.call("sync", sim.units(), sim.tick())
 	_update_player_drive()
 	if not _music_on and sim.tick() >= MUSIC_DELAY_TICKS:
 		_start_music(sim)
@@ -673,7 +705,7 @@ func _on_combat_event(ev: RefCounted) -> void:
 	telegraphs.call("on_event", e)
 	match e.type:
 		ActionEvent.Type.SWING:
-			puppets.call("play", e.actor_id, &"attack")
+			puppets.call("play_attack", e.actor_id, _target_point(e.target_id))
 		ActionEvent.Type.ACTION_START:
 			puppets.call("play", e.actor_id, _action_anim(e))
 		ActionEvent.Type.CAST_START:
@@ -691,7 +723,7 @@ func _on_combat_event(ev: RefCounted) -> void:
 		ActionEvent.Type.SUMMON:
 			var su: RtUnit = Game.combat.unit(e.target_id) if Game.combat != null else null
 			if su != null and not bool(puppets.call("has", su.id)):
-				puppets.call("bind_extra", su, true)
+				puppets.call("bind_extra", su, true, _on_stage_at(su, Game.combat), Game.combat.tick())
 		ActionEvent.Type.ESCAPED:
 			puppets.call("knock_out", e.target_id, true)
 		ActionEvent.Type.TELEGRAPH_START:
@@ -713,6 +745,14 @@ func _on_combat_event(ev: RefCounted) -> void:
 				rig.call("set_boss_phase", e.value)
 		ActionEvent.Type.BATTLE_END:
 			_finished = true
+
+
+## World position of a swing's target (Vector3.INF when it has no body).
+func _target_point(unit_id: String) -> Vector3:
+	if unit_id == "" or puppets == null:
+		return Vector3.INF
+	var p: Vector3 = puppets.call("position_of", unit_id)
+	return p
 
 
 static func _action_anim(e: ActionEvent) -> StringName:

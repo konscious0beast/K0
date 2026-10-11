@@ -1640,6 +1640,15 @@ func rt_encounter_cmd(group_id: String, encounter_id: String, advantage: int, op
 		var a: EnemyActor = _actor_at(gid)
 		if a != null:
 			gs.append({"group": gid, "enc": a.encounter_id(), "lead": _rt_pose(a, origin), "state": String(a.state)})
+	if group_id == "" and not gs.is_empty():
+		# a group-less combat (floor event) that pulls groups of the cell in: the event's own enemies come first, from
+		# the anchor of 07 §2.3 (BattleBridge takes it itself only when no group is recorded)
+		var enc: EncounterDef = _encounter_def(encounter_id)
+		var closed: bool = enc != null and (enc.boss or enc.tutorial or not enc.can_flee)
+		var ctl_pose: Array = _rt_pose(_player, origin) if _player != null else [0, 0, 0]
+		var anchor: Vector2i = RtGeo.group_anchor(rt_geo(cell, closed), int(ctl_pose[0]), int(ctl_pose[1]))
+		gs.push_front({"group": "", "enc": encounter_id,
+			"lead": [anchor.x, anchor.y, DetMath.yaw_of(-anchor.x, -anchor.y)], "state": "IDLE"})
 	var presets: Dictionary = {}
 	if DB.has_id("party", partner):
 		presets[_rt_unit_of(partner)] = _rt_preset_of(partner)

@@ -1317,7 +1317,9 @@ schreibt jedes ST1-Paket nur eigene Dateien. Neue Stub-Dateien beginnen mit
    `floor_run.gd` (Fundstellen, Nachschub-Uhren, Programmpunkte) — additiv mit Standardwerten. Der ruhende Starttalent-Pfad aus
    K0 geht in einem Zug (CR-33): `origin_talent` und seine Leser in `talents.gd`, `hero_rules.gd`, `persona_rules.gd`,
    `save_codec.gd`, `command.gd`, `game_data.gd`, `validators/origins.gd` und `data_validator.gd`; Fixtures ohne
-   `tal_org_`-Einträge; `test_08_k0_contract` wird angepasst. Hash-neutral, weil `talent` seit K1 leer ist.
+   `tal_org_`-Einträge; dazu `PersonaRules.offer/swap_command/can_swap`, `PersonaText.plain_line`,
+   `PersonaProfile.talent/offer` und das Flag `flags.persona.swapped`; `test_08_k0_contract` wird angepasst. Hash-neutral,
+   weil `talent` seit K1 leer ist.
 3. `core/data/game_data.gd`, `autoload/db.gd`: Tabellen `seasons`, `professions`, `cast`, `themes`, Getter.
 4. `core/data/data_validator.gd` (eingefroren): **dritter Vertrags-Durchgang** — Tabellen, Präfixe `ssn_`/`prf_`/`rcp_`/
    `mat_`/`nod_`/`thm_`, Hook-Zeilen für die vier neuen Validatoren, Tag-Präfixe `cast_`, `season_`, `prof_`, `sleep_`,

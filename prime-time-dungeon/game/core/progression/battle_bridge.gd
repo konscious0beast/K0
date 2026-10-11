@@ -93,6 +93,7 @@ static func apply_result(state: GameState, data: GameData, result: BattleResult)
 		_floor_bookkeeping(state, data, result)
 	_bestiary_and_kills(state, result)
 	TwistApplier.on_battle_end(state, data)             # 06-D: "battles" twists count down (every outcome)
+	_rt_after_combat(state)                             # Echtzeitkampf (07 §2.7, R1b): regeneration counter
 	return rw
 
 
@@ -601,3 +602,10 @@ static func _battle_twists(state: GameState) -> Array:
 					and JsonUtil.to_int((e as Dictionary).get("left", 0)) > 0:
 				out.append((e as Dictionary).duplicate(true))
 	return out
+
+
+## After every combat (apply_result, live and replay alike): the out-of-combat regeneration counts from 0 again
+## (07 §2.7; CTB runs never count, the field stays 0 there).
+static func _rt_after_combat(state: GameState) -> void:
+	if state.floor_run != null:
+		state.floor_run.regen_ticks = 0

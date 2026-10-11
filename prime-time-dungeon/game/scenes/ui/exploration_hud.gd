@@ -173,6 +173,7 @@ func _ready() -> void:
 	_auto_quest()
 	if bool(_params.get("capture", false)):
 		_start_demo()
+	_rt_ready()                                   # Echtzeitkampf (07, R3)
 
 
 ## Detached stack screen (ExplorationScene during battles / safe room, §9.2): handlers only mark work as dirty; it is
@@ -811,3 +812,24 @@ func _start_demo() -> void:
 	_update_timer_visibility()
 	set_prompt("Truhe öffnen")
 	set_quest("Erreiche die Treppe von Etage 1.", 0.35)
+
+
+# --- Echtzeitkampf (07, R3): the exploration HUD during a real-time combat (07 §8.1, §7.7) ----------------------------
+
+## Overlay mode &"combat" hides the whole frame (minimap + "Karte" hint, exploration hints, mini party, prompt, floor
+## name / timer / quest at the top centre: the top centre belongs to the combat, the stopped clock is ShowOverlay's
+## chip); the touch layer stays (its combat mode). Every exploration applies the input map of its run's combat mode
+## (07 §7.7: real-time runs target with Tab and toggle the autopilot with the D-pad, CTB runs keep their map).
+func _rt_ready() -> void:
+	Events.overlay_mode_requested.connect(_on_rt_overlay_mode)
+	CombatInput.apply_for_game()
+
+
+func _on_rt_overlay_mode(p_mode: StringName) -> void:
+	if _frame != null:
+		_frame.visible = p_mode != &"combat"
+
+
+## True while the real-time combat hides this HUD (tests).
+func is_combat_hidden() -> bool:
+	return _frame != null and not _frame.visible

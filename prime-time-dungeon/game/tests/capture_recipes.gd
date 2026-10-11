@@ -739,3 +739,546 @@ func _r_safe_happy(scene: Node) -> bool:
 	scene.call("open_vending")
 	await frames(20)
 	return true
+
+
+# --- Echtzeitkampf (07, R3): combat HUD stills over the exploration ---------------------------------------------------
+# exploration.tscn + --recipe=rt_tutorial | rt_regular | rt_boss | rt_hint | rt_results | rt_credits | rt_real, each
+# also as rt_<name>_notch (simulated display cutout: left / right 48, bottom 20). The real CombatHud (combat_hud.tscn)
+# with all screen modes (ShowOverlay &"combat", M.O.D. subtitles, input map, TouchControls combat mode with --touch)
+# is bound to the HudSim double (tests/fixtures/rt_hud: exact fight states, set rather than simulated) — rt_real to
+# the real RtSim (R1b-I1) of RtKit's canned combat. Enemy figures are art-kit rigs standing in for R2's puppets; the
+# boss still's red floor circle stands in for R2's TelegraphLayer.
+
+const RtScenarios := preload("res://tests/fixtures/rt_hud/hud_scenarios.gd")
+const RtDirector := preload("res://tests/fixtures/rt_hud/hud_director.gd")
+const RtView := preload("res://scenes/combat/ui/combat_view.gd")
+const RT_HUD: String = "res://scenes/combat/ui/combat_hud.tscn"
+const RT_RESULTS: String = "res://scenes/combat/ui/combat_results.gd"
+const RT_NOTCH: Dictionary = {"left": 48, "top": 0, "right": 48, "bottom": 20}
+
+
+## The first tutorial fight (E28): slot 1 + SHOW, frames, the first card ("Wähle ein Ziel"), banner "KAMPF!".
+func _r_rt_tutorial(scene: Node, variant: String = "") -> bool:
+	var st: Dictionary = await _rt_stage(scene, "platform", ["enm_kanalratte", "enm_kanalratte"],
+		{"level": 1, "tutorial": true}, variant)
+	if st.is_empty():
+		return false
+	await seconds(0.5)
+	freeze()
+	return true
+
+
+## A regular fight at level 4: every slot (cooldowns, GCD, a queued press, the potion 2/3), plates with threat dots
+## and a casting shaman, statuses, Partner-Spezial, tactic chip, combat text.
+func _r_rt_regular(scene: Node, variant: String = "") -> bool:
+	var st: Dictionary = await _rt_stage(scene, "sewer", ["enm_rattenschamane", "enm_kanalratte", "enm_kanalratte"],
+		{"level": 4, "threat": true}, variant)
+	if st.is_empty():
+		return false
+	var sim: RtSim = st["sim"]
+	var hud: Node = st["hud"]
+	_rt_regular_state(sim)
+	await seconds(1.7)                           # the "KAMPF!" banner is gone
+	_rt_hits(hud, sim)
+	await seconds(0.25)
+	freeze()
+	return true
+
+
+## Boss fight (Der Hausmeister, phase 2 of 3): boss frame with phase diamonds and "Feierabend in 0:42", a worthy cast
+## (gold), a red floor warning under the party, an add as target (frame at y 84), the Count casting (player cast bar).
+func _r_rt_boss(scene: Node, variant: String = "") -> bool:
+	_rt_boss_data()
+	var st: Dictionary = await _rt_stage(scene, "cellar", ["enm_boss_hausmeister", "enm_kanalratte",
+		"enm_kanalratte"], {"level": 6, "hero": "mopsula", "boss": true, "encounter": "enc_f1_boss_hausmeister",
+		"dist": 4.0}, variant)                           # the Count's camera is steeper (polish pass): closer
+	if st.is_empty():
+		return false
+	var sim: RtSim = st["sim"]
+	var hud: Node = st["hud"]
+	var boss: RtUnit = sim.unit("e0")
+	boss.phase = 1
+	boss.hp = boss.max_hp() * 58 / 100
+	sim.call("set_tick", 30 * 60 * 3 - 42 * 30)         # enrage at 3:00 → 0:42 left
+	sim.call("set_cast", "e0", "skl_b_rules", 50, 90, true, true)
+	sim.unit("e1").hp = sim.unit("e1").max_hp() * 40 / 100
+	var ctl: RtUnit = RtView.controlled(sim)
+	ctl.target_id = "e1"
+	ctl.mp = ctl.max_mp() * 55 / 100
+	sim.call("set_cast", ctl.id, "skl_mop_noble_flame", 20, 45)
+	var kai: RtUnit = RtView.partner(sim)
+	kai.hp = kai.max_hp() * 62 / 100
+	kai.target_id = "e0"
+	boss.target_id = kai.id
+	sim.unit("e1").target_id = ctl.id
+	sim.unit("e2").target_id = kai.id
+	sim.call("set_cd", ctl.id, "skl_mop_frost_sneeze", 70, 180)
+	sim.set("gcds", {ctl.id: Vector2i(25, 45)})
+	_rt_telegraph(scene, st["positions"]["p0"] as Vector3, 2.6)
+	var banner: Node = hud.get("banner")
+	await until(func() -> bool: return not bool(banner.call("is_showing")), 600)   # "KAMPF!" is over
+	var e: ActionEvent = ActionEvent.make(ActionEvent.Type.PHASE_CHANGE)
+	e.actor_id = "e0"
+	e.value = 2
+	hud.call("on_event", e)                      # the HUD's own phase banner
+	await seconds(0.45)
+	freeze()
+	return bool(banner.call("is_showing"))
+
+
+## The first-time hint "interrupt" (07 §2.13): the shaman starts a worthy cast, the card (where the subtitles sit)
+## names the key; the sim holds while it shows.
+func _r_rt_hint(scene: Node, variant: String = "") -> bool:
+	var st: Dictionary = await _rt_stage(scene, "sewer", ["enm_rattenschamane", "enm_kanalratte", "enm_kanalratte"],
+		{"level": 4, "unseen": ["interrupt"], "threat": true}, variant)
+	if st.is_empty():
+		return false
+	var sim: RtSim = st["sim"]
+	var hud: Node = st["hud"]
+	_rt_regular_state(sim)
+	sim.call("set_cd", "p0", "skl_kai_leash_trip", 0, 0)    # the interrupter is ready (the card asks for it)
+	await seconds(1.7)
+	sim.call("set_cast", "e0", "skl_e_zap", 6, 60, true, true)
+	var e: ActionEvent = ActionEvent.make(ActionEvent.Type.CAST_START)
+	e.actor_id = "e0"
+	e.skill_id = "skl_e_zap"
+	e.target_id = "p0"
+	e.rt = {"end": sim.tick() + 54, "worthy": 1}
+	hud.call("on_event", e)
+	await seconds(0.4)
+	freeze()
+	return (hud.get("hints") as Node).call("current") == "interrupt"
+
+
+## A regular victory: the HUD fades out, the "Applaus!" lower third with EXP / credits / loot and the level-up lower
+## third with the talent chip (07 §8.9).
+func _r_rt_results(scene: Node, variant: String = "") -> bool:
+	var st: Dictionary = await _rt_stage(scene, "sewer", ["enm_rattenschamane", "enm_kanalratte", "enm_kanalratte"],
+		{"level": 2}, variant)
+	if st.is_empty():
+		return false
+	await seconds(1.0)
+	var hud: Node = st["hud"]
+	hud.call("finish", null)
+	(st["sim"] as RtSim).call("finish", BattleResult.Outcome.VICTORY)
+	for r: Node3D in st["rigs"] as Array:
+		r.visible = false
+	var res: CanvasLayer = (load(RT_RESULTS) as GDScript).new() as CanvasLayer
+	get_tree().root.add_child(res)
+	var result: BattleResult = BattleResult.new()
+	result.outcome = BattleResult.Outcome.VICTORY
+	result.exp = 54
+	result.credits = 21
+	var rw: BattleRewards = BattleRewards.new()
+	rw.exp = 54
+	rw.credits = 21
+	rw.items = PackedStringArray(["itm_bandage", "itm_bandage"])
+	var info: LevelUpInfo = LevelUpInfo.new()
+	info.member_id = "kai"
+	info.old_level = 2
+	info.new_level = 3
+	info.stat_gains = {"hp": 9, "mp": 2, "str": 2}
+	rw.level_ups = [info]
+	_rt_apply_level(info)
+	res.call("present", result, rw)
+	await seconds(0.9)
+	res.process_mode = Node.PROCESS_MODE_PAUSABLE     # the still keeps the lower thirds (their tweens pause too)
+	freeze()
+	return true
+
+
+## A boss victory: the credits panel ("Abspann", layer 60) over the boss room.
+func _r_rt_credits(scene: Node, variant: String = "") -> bool:
+	_rt_boss_data()
+	var st: Dictionary = await _rt_stage(scene, "cellar", ["enm_boss_hausmeister"],
+		{"level": 6, "boss": true, "encounter": "enc_f1_boss_hausmeister"}, variant)
+	if st.is_empty():
+		return false
+	await seconds(0.8)
+	(st["hud"] as Node).call("finish", null)
+	(st["rigs"] as Array)[0].visible = false
+	var res: CanvasLayer = (load(RT_RESULTS) as GDScript).new() as CanvasLayer
+	get_tree().root.add_child(res)
+	var result: BattleResult = BattleResult.new()
+	result.outcome = BattleResult.Outcome.VICTORY
+	result.is_boss = true
+	result.boss_id = "enm_boss_hausmeister"
+	var rw: BattleRewards = BattleRewards.new()
+	rw.exp = 740
+	rw.credits = 120
+	rw.followers = 380
+	if DB.has_id("lootboxes", "box_gold"):
+		rw.boxes = PackedStringArray(["box_gold"])
+	var info: LevelUpInfo = LevelUpInfo.new()
+	info.member_id = "kai"
+	info.old_level = 6
+	info.new_level = 7
+	info.stat_gains = {"hp": 9, "mp": 2, "str": 2, "def": 1}
+	rw.level_ups = [info]
+	_rt_apply_level(info)
+	res.call("present", result, rw)
+	await seconds(0.6)
+	freeze()
+	return true
+
+
+## The run applies the rewards before the results show them (like the CTB flow): the party frame agrees.
+func _rt_apply_level(info: LevelUpInfo) -> void:
+	for m: PartyMember in Game.state.party:
+		if m.id == info.member_id:
+			m.level = info.new_level
+	Events.party_changed.emit()
+
+
+## Canvas draw calls with the combat HUD (07 §8.10 budget "UI-Draw-Calls ≤ 180"): the regular still (or "boss"), the
+## maximum over 30 frames of the whole canvas (ShowOverlay, M.O.D. box, HUD, touch layer, combat text) with the combat
+## HUD and with its layers hidden. Prints "R3 DRAW CALLS …" (tools: check.sh --shot …, --touch for the phone layout).
+func _r_rt_drawcalls(scene: Node, variant: String = "") -> bool:
+	var boss: bool = variant == "boss"
+	if boss:
+		_rt_boss_data()
+	var st: Dictionary = await _rt_stage(scene, "cellar" if boss else "sewer", ["enm_boss_hausmeister",
+		"enm_kanalratte", "enm_kanalratte"] if boss else ["enm_rattenschamane", "enm_kanalratte", "enm_kanalratte"],
+		{"level": 6 if boss else 4, "boss": boss, "threat": true}, "")
+	if st.is_empty():
+		return false
+	var sim: RtSim = st["sim"]
+	var hud: Node = st["hud"]
+	_rt_regular_state(sim)
+	if boss:
+		sim.call("set_cast", "e0", "skl_b_rules", 50, 90, true, true)
+		sim.unit("p0").target_id = "e1"
+	await seconds(1.7)
+	_rt_hits(hud, sim)
+	await frames(3)
+	var with_hud: int = await _rt_canvas_dc(30)
+	(hud as CanvasLayer).visible = false
+	for c: Node in hud.get_children():
+		if c is CanvasLayer:
+			(c as CanvasLayer).visible = false
+	var without: int = await _rt_canvas_dc(30)
+	print("R3 DRAW CALLS %s%s: canvas %d with the combat HUD, %d without it (HUD %d)" % ["boss" if boss else "regular",
+		" touch" if bool(hud.call("is_touch")) else "", with_hud, without, with_hud - without])
+	(hud as CanvasLayer).visible = true
+	for c2: Node in hud.get_children():
+		if c2 is CanvasLayer:
+			(c2 as CanvasLayer).visible = true
+	await frames(2)
+	freeze()
+	return true
+
+
+## The HUD on the REAL sim (R1b-I1): RtKit's canned combat (rt_min data: Kai level 6 and Graf Mopsula, two groups —
+## two rats, a rat and the test shaman — and the scripted commands of the golden test) played through the director
+## double to REAL_TICK, the last second one tick per frame (combat text as it comes): Kai guarding, taunted enemies,
+## the Count casting, slot cooldowns and the GCD from the sim. Rigs stand at the sim's positions around a sewer room.
+const REAL_TICK: int = 180
+
+
+func _r_rt_real(scene: Node, variant: String = "") -> bool:
+	if not await _explore_ready(scene):
+		return false
+	if variant == "notch":
+		SafeAreaContainer.simulated_insets = RT_NOTCH
+		get_tree().root.size_changed.emit()
+	var layout: FloorLayout = scene.call("get_layout")
+	var spawn: EnemySpawn = null
+	for e: EnemySpawn in layout.enemies:
+		var rc: RoomCell = layout.cell_at(e.cell)
+		if rc != null and rc.zone == "zone_sewer" and not e.is_boss and scene.call("get_enemy", e.id) != null:
+			spawn = e
+			break
+	if spawn == null:
+		return false
+	_freeze_enemies(scene)
+	var actor: Node3D = scene.call("get_enemy", spawn.id) as Node3D
+	actor.process_mode = Node.PROCESS_MODE_DISABLED
+	actor.global_position += Vector3(0, -60, 0)
+	_reveal_zone(scene, layout, "zone_sewer")
+	var seen: Dictionary = {}
+	for id: String in RtVocab.HINT_IDS:
+		seen[id] = true
+	Game.state.flags["rt_hints"] = seen
+	Game.state.show.stats["taunts_total"] = 1
+	var center: Vector3 = layout.cell_to_world(spawn.cell)
+	center.y = 0.0
+	var sim: RtSim = RtSim.new(RtKit.setup(RtKit.canned_state(), RtKit.canned_encounter()), RtKit.data())
+	var dir: Node = RtDirector.new()
+	dir.name = "RtDirector"
+	dir.set("sim", sim)
+	dir.set("origin", center)
+	dir.set("heights", {"p0": 1.7, "p1": 1.0})
+	get_tree().root.add_child(dir)
+	var cam_rig: Node3D = scene.call("get_camera_rig") as Node3D
+	cam_rig.set("arm_length", 8.0)
+	cam_rig.set("_look", 1.0)
+	var hud: CanvasLayer = (load(RT_HUD) as PackedScene).instantiate() as CanvasLayer
+	hud.call("setup", {"director": dir, "sim": sim, "data": RtKit.data(), "auto_events": false, "modes": true,
+		"camera_rig": cam_rig})
+	get_tree().root.add_child(hud)
+	dir.set("hud", hud)
+	for e: ActionEvent in sim.start():
+		hud.call("on_event", e)
+	var rigs: Dictionary = {}
+	_rt_real_place(scene, sim, center, rigs)
+	await seconds(1.4)                                         # "KAMPF!" is over
+	var cmds: Array[Dictionary] = RtKit.canned_commands()
+	var i: int = 0
+	while sim.tick() < REAL_TICK and not sim.is_finished():
+		while i < cmds.size() and int(cmds[i]["ct"]) <= sim.tick():
+			dir.call("submit", cmds[i])
+			i += 1
+		dir.call("advance", 1)
+		if sim.tick() == REAL_TICK - 30:
+			_rt_real_place(scene, sim, center, rigs)
+			await seconds(1.3)                                 # the burst of the fast-forward fades
+		elif sim.tick() > REAL_TICK - 30:
+			_rt_real_place(scene, sim, center, rigs)
+			await frames(1)
+	await frames(3)
+	freeze()
+	return true
+
+
+## Player body, companion and one rig per living enemy at the sim's positions (origin + cm / 100); the camera behind
+## the controlled unit, looking at the enemies' centre.
+func _rt_real_place(scene: Node, sim: RtSim, origin: Vector3, rigs: Dictionary) -> void:
+	var player: Node3D = scene.call("get_player") as Node3D
+	var comp: Node3D = scene.call("get_companion") as Node3D
+	var ctl: RtUnit = sim.unit(sim.controlled_id())
+	if ctl == null:
+		return
+	var me: Vector3 = origin + Vector3(float(ctl.x) / 100.0, 0.0, float(ctl.z) / 100.0)
+	var foes: Vector3 = Vector3.ZERO
+	var n: int = 0
+	for u: RtUnit in sim.units():
+		var pos: Vector3 = origin + Vector3(float(u.x) / 100.0, 0.0, float(u.z) / 100.0)
+		if u.side == Combatant.Side.ENEMY:
+			var alive: bool = u.hp > 0 and not u.left_battle
+			if alive:
+				foes += pos
+				n += 1
+			if not rigs.has(u.id):
+				var rig: Node3D = CharacterBuilder.build(RtKit.data().enemy(u.def_id).model, rigs.size())
+				scene.add_child(rig)
+				rigs[u.id] = rig
+			var r: Node3D = rigs[u.id]
+			r.visible = alive
+			r.global_position = pos
+			if pos.distance_to(me) > 0.05:
+				r.look_at(Vector3(me.x, pos.y, me.z), Vector3.UP, true)
+		elif u.id != ctl.id and comp != null:
+			comp.process_mode = Node.PROCESS_MODE_DISABLED
+			comp.global_position = Vector3(pos.x, comp.global_position.y, pos.z)
+	var to: Vector3 = (foes / float(maxi(1, n))) - me if n > 0 else Vector3(0, 0, -1)
+	var yaw: float = atan2(-to.x, -to.z)
+	player.call("teleport", Vector3(me.x, 0.05, me.z), yaw)
+	if comp != null:
+		comp.rotation.y = yaw
+	scene.call("get_camera_rig").call("snap", yaw)
+
+
+## Maximum canvas draw calls of the root viewport over `n` frames.
+func _rt_canvas_dc(n: int) -> int:
+	var best: int = 0
+	var vp: RID = get_tree().root.get_viewport_rid()
+	for i in n:
+		await RenderingServer.frame_post_draw
+		best = maxi(best, RenderingServer.viewport_get_render_info(vp,
+			RenderingServer.VIEWPORT_RENDER_INFO_TYPE_CANVAS, RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME))
+	return best
+
+
+## Exploration + a bound CombatHud: Kai (or the Count) 5.5 m (opts "dist") in front of a group of `zone_key`, the
+## group's actor replaced by one rig per enemy unit in a fan, the director double with their positions. {} on failure,
+## else {"sim", "hud", "director", "rigs", "positions"}.
+func _rt_stage(scene: Node, zone_key: String, enemy_ids: Array, opts: Dictionary, variant: String) -> Dictionary:
+	if not await _explore_ready(scene):
+		return {}
+	if variant == "notch":
+		SafeAreaContainer.simulated_insets = RT_NOTCH
+		get_tree().root.size_changed.emit()
+	var layout: FloorLayout = scene.call("get_layout")
+	var zone: String = str(ZONES.get(zone_key, zone_key))
+	var spawn: EnemySpawn = null
+	for e: EnemySpawn in layout.enemies:
+		var rc: RoomCell = layout.cell_at(e.cell)
+		if rc != null and rc.zone == zone and not e.is_boss and scene.call("get_enemy", e.id) != null:
+			spawn = e
+			break
+	if spawn == null:
+		push_warning("[CaptureRecipes] no enemy group in %s" % zone)
+		return {}
+	_freeze_enemies(scene)
+	var actor: Node3D = scene.call("get_enemy", spawn.id) as Node3D
+	var center: Vector3 = actor.global_position
+	actor.process_mode = Node.PROCESS_MODE_DISABLED           # the rigs below stand in for its group
+	actor.global_position = center + Vector3(0, -60, 0)
+	_reveal_zone(scene, layout, zone)
+	var seen: Dictionary = {}
+	for id: String in RtVocab.HINT_IDS:
+		if not (opts.get("unseen", []) as Array).has(id):
+			seen[id] = true                       # first-time cards already seen (the tutorial steps stay)
+	Game.state.flags["rt_hints"] = seen
+	if bool(opts.get("threat", false)):
+		Game.state.show.stats["taunts_total"] = 1    # threat dots + aggro counters unlocked (07 §8.1)
+	if str(opts.get("hero", "kai")) == "mopsula":
+		Game.state.hero = "mopsula"
+		scene.call("refresh_hero")
+	_place_facing(scene, layout, spawn.cell, center, float(opts.get("dist", 5.5)))
+	var cam_rig: Node3D = scene.call("get_camera_rig") as Node3D
+	cam_rig.set("arm_length", 9.0 if bool(opts.get("boss", false)) else 8.0)   # 07 §7.5 combat zoom
+	cam_rig.set("_look", 1.0)                                                   # LOOK_AHEAD 2.5 → 1.0
+	await frames(10)
+	var data: GameData = DB.data
+	var sim: RtSim = RtScenarios.build(data, {"level": int(opts.get("level", 1)), "enemies": enemy_ids,
+		"tutorial": bool(opts.get("tutorial", false)), "boss": bool(opts.get("boss", false)),
+		"hero": str(opts.get("hero", "kai")), "encounter": str(opts.get("encounter", "enc_rt_capture"))})
+	for m: PartyMember in Game.state.party:
+		m.level = int(opts.get("level", 1))
+		m.exp = Progression.exp_to_next(m.level) * 2 / 5
+		var c: Combatant = Progression.to_combatant(m, data, "x", 0)
+		m.hp = c.max_hp() if c != null else m.hp
+		m.mp = c.max_mp() if c != null else m.mp
+	Events.party_changed.emit()
+	var player: Node3D = scene.call("get_player") as Node3D
+	var comp: Node3D = scene.call("get_companion") as Node3D
+	var ppos: Vector3 = player.global_position
+	var fwd: Vector3 = (center - ppos)
+	fwd.y = 0.0
+	fwd = fwd.normalized()
+	var side: Vector3 = fwd.cross(Vector3.UP).normalized()
+	comp.process_mode = Node.PROCESS_MODE_DISABLED       # side by side for the still (R2 places the real puppets)
+	comp.global_position = ppos - side * 1.6 + fwd * 0.5
+	comp.rotation.y = player.rotation.y
+	var positions: Dictionary = {}
+	var heights: Dictionary = {}
+	var ctl_id: String = sim.controlled_id()
+	for u: RtUnit in sim.units():
+		if u.side == Combatant.Side.PARTY:
+			positions[u.id] = ppos if u.id == ctl_id else comp.global_position
+			heights[u.id] = 1.7 if u.def_id == "kai" else 1.0
+	var rigs: Array = []
+	var n: int = enemy_ids.size()
+	for i in n:
+		var def: EnemyDef = data.enemy(str(enemy_ids[i]))
+		var rig: Node3D = CharacterBuilder.build(def.model, i)
+		scene.add_child(rig)
+		var lateral: float = (float(i) - float(n - 1) * 0.5) * 1.9
+		var depth: float = 0.0 if i == 0 else 0.7
+		var pos: Vector3 = center + side * lateral + fwd * depth
+		pos.y = 0.0
+		rig.global_position = pos
+		rig.look_at(Vector3(ppos.x, pos.y, ppos.z), Vector3.UP, true)
+		positions["e%d" % i] = pos
+		heights["e%d" % i] = float(rig.get("height")) * rig.scale.y if "height" in rig else 1.0
+		rigs.append(rig)
+	var dir: Node = RtDirector.new()
+	dir.name = "RtDirector"
+	dir.set("sim", sim)
+	dir.set("positions", positions)
+	dir.set("heights", heights)
+	get_tree().root.add_child(dir)
+	var hud: CanvasLayer = (load(RT_HUD) as PackedScene).instantiate() as CanvasLayer
+	hud.call("setup", {"director": dir, "sim": sim, "data": data, "auto_events": false, "modes": true,
+		"camera_rig": scene.call("get_camera_rig")})
+	get_tree().root.add_child(hud)
+	dir.set("hud", hud)
+	var ctl: RtUnit = sim.unit(ctl_id)
+	if not bool(opts.get("tutorial", false)):
+		ctl.target_id = "e0"
+	await frames(4)
+	return {"sim": sim, "hud": hud, "director": dir, "rigs": rigs, "positions": {"p0": ppos}}
+
+
+## Mid-fight state of the regular still (level 4).
+func _rt_regular_state(sim: RtSim) -> void:
+	var p0: RtUnit = sim.unit("p0")
+	var p1: RtUnit = sim.unit("p1")
+	p0.hp = p0.max_hp() * 72 / 100
+	p0.mp = 7
+	p1.hp = p1.max_hp() * 46 / 100
+	p1.mp = p1.max_mp() * 60 / 100
+	sim.unit("e0").hp = sim.unit("e0").max_hp() * 64 / 100
+	sim.unit("e1").hp = sim.unit("e1").max_hp() * 35 / 100
+	sim.unit("e0").target_id = "p1"
+	sim.unit("e1").target_id = "p0"
+	sim.unit("e2").target_id = "p0"
+	sim.call("set_tick", 900)
+	sim.call("set_cd", "p0", "skl_kai_leash_trip", 150, 360)
+	sim.call("set_cd", "p0", "skl_kai_sweep", 70, 240)
+	sim.call("set_cd", "p0", "skl_kai_taunt", 0, 0)
+	sim.set("gcds", {"p0": Vector2i(20, 45)})
+	sim.set("items_count", 2)
+	p0.queued = {"skill": "skl_kai_heavy_swing", "target": "e0", "at": 899}
+	sim.call("set_reason", "p0", "skl_kai_sweep", "mp")
+	sim.call("set_cast", "e0", "skl_e_zap", 25, 60, false, true)
+	var data: GameData = DB.data
+	RtScenarios.add_status(sim, data, p0, "sts_guard", 110, 180)
+	RtScenarios.add_status(sim, data, p1, "sts_poison", 140, 180, 2)
+	RtScenarios.add_status(sim, data, sim.unit("e1"), "sts_slow", 60, 120)
+
+
+## Combat text of the regular still: a crit on the target, a hit on Kai, a heal.
+func _rt_hits(hud: Node, sim: RtSim) -> void:
+	var d: ActionEvent = ActionEvent.make(ActionEvent.Type.DAMAGE)
+	d.actor_id = "p0"
+	d.target_id = "e0"
+	d.amount = 96
+	d.crit = true
+	d.command = BattleCommand.Kind.SKILL
+	hud.call("on_event", d)
+	var t: ActionEvent = ActionEvent.make(ActionEvent.Type.DAMAGE)
+	t.actor_id = "e1"
+	t.target_id = "p0"
+	t.amount = 14
+	hud.call("on_event", t)
+	var h: ActionEvent = ActionEvent.make(ActionEvent.Type.HEAL)
+	h.actor_id = "p1"
+	h.target_id = "p1"
+	h.amount = 38
+	hud.call("on_event", h)
+
+
+## rt blocks the boss stills need until R4 writes them (phases, enrage at 3:00) — capture process only.
+func _rt_boss_data() -> void:
+	if not DB.has_id("enemies", "enm_boss_hausmeister"):
+		return
+	var def: EnemyDef = DB.enemy("enm_boss_hausmeister")
+	if def.rt.is_empty():
+		def.rt = {"phases": [{"hp_above_pm": 650}, {"hp_above_pm": 300}, {"hp_above_pm": 0}],
+			"enrage": {"at_ms": 180000, "every_ms": 10000, "status": "sts_enrage"}}
+	if DB.has_id("skills", "skl_b_rules"):
+		var sk: SkillDef = DB.skill("skl_b_rules")
+		if sk.rt.is_empty():
+			sk.rt = {"icon": "whistle", "cast_ms": 3000, "interruptible": true, "interrupt_worthy": true}
+
+
+## Stand-in for R2's TelegraphLayer: a flat red circle (07 §8.7 colours) at `at` with radius `r`.
+func _rt_telegraph(scene: Node, at: Vector3, r: float) -> void:
+	var mi: MeshInstance3D = MeshInstance3D.new()
+	var cyl: CylinderMesh = CylinderMesh.new()
+	cyl.top_radius = r
+	cyl.bottom_radius = r
+	cyl.height = 0.02
+	cyl.radial_segments = 48
+	mi.mesh = cyl
+	var mat: StandardMaterial3D = StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.albedo_color = Color(1.0, 0.3, 0.3, 0.42)
+	mi.material_override = mat
+	scene.add_child(mi)
+	mi.global_position = Vector3(at.x, 0.05, at.z)
+	var ring: MeshInstance3D = MeshInstance3D.new()
+	var tor: TorusMesh = TorusMesh.new()
+	tor.inner_radius = r - 0.08
+	tor.outer_radius = r
+	ring.mesh = tor
+	var rmat: StandardMaterial3D = StandardMaterial3D.new()
+	rmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	rmat.albedo_color = Color(1.0, 0.85, 0.85, 1.0)
+	ring.material_override = rmat
+	scene.add_child(ring)
+	ring.global_position = Vector3(at.x, 0.06, at.z)
+	ring.scale = Vector3(1.0, 0.2, 1.0)

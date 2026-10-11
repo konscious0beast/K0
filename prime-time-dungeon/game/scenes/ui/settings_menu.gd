@@ -200,6 +200,7 @@ func _build() -> void:
 	if OS.is_debug_build() and s.mod_live_url != "":
 		_cycler("mod_live", "M.O.D. live (Beta)", ["Aus", "Kommentar", "Kommentar + Regie"],
 			maxi(0, GameSettings.MOD_LIVE_MODES.find(s.mod_live)))
+	_combat_section()                       # Echtzeitkampf (07, R3): section "Kampf"
 	_section("Kamera & Steuerung")
 	_camera_slider(s.camera_sensitivity)
 	_cycler("camera_invert_x", "Kamera horizontal invertieren", ["Aus", "An"], 1 if s.camera_invert_x else 0)
@@ -510,3 +511,111 @@ func _commit(save_now: bool = true) -> void:
 ## KI-Casting switch and the withdrawal of the consent. Stub: no section (nothing visible before K1).
 func _persona_section() -> void:
 	pass
+
+
+# --- Echtzeitkampf (07, R3): section "Kampf" (07 §7.6, §7.8, §12.1, §12.4) --------------------------------------------
+
+const RT_SPEEDS: Array[int] = [1000, 850, 700]            # combat_speed_pm "Spieltempo" (O1: "Zeitlupe" under 1000)
+const RT_TRI: Array[int] = [-1, 1, 0]                     # combat_assist / combat_camera_assist: auto / on / off
+const RT_TEXT_SCALES: Array[int] = [100, 125, 150]        # floating_text_scale (07 §8.6)
+## CTB rows without a meaning in the real-time combat (07 §7.8; §12.4: "Partner automatisch" has no successor — the
+## partner is always the AI plus Partner-Spezial). Built as before, hidden while the real-time mode applies.
+const RT_HIDDEN_ROWS: PackedStringArray = ["battle_speed", "auto_battle_default", "partner_auto"]
+
+
+## The real-time combat applies here: in a running game (pause menu) the run's GameState.combat_mode (loaded saves keep
+## their mode, 07 §12.1), on the title screen the setting new games take.
+func rt_mode() -> bool:
+	if not _framed and Game.state != null:
+		return Game.state.combat_mode == &"realtime"
+	return Game.settings != null and Game.settings.combat_mode == &"realtime"
+
+
+## Rows of 07 §7.6 (only with the real-time mode) and the debug-only switch "Kampfmodus" (07 §12.1).
+func _combat_section() -> void:
+	var s: GameSettings = Game.settings
+	var rt: bool = rt_mode()
+	if rt or OS.is_debug_build():
+		_section("Kampf")
+	if rt:
+		_rt_cycler("combat_speed_pm", "Spieltempo", ["100 %", "85 % · Zeitlupe", "70 % · Zeitlupe"],
+			RT_SPEEDS.find(s.combat_speed_pm), "Mehr Zeit zum Reagieren. Bestenlisten zeigen dann „Zeitlupe“.")
+		_rt_cycler("combat_hints", "Kampf-Hinweise", ["Aus", "An"], 1 if s.combat_hints else 0,
+			"Erklärkarten beim ersten Mal. Die Show wartet so lange.")
+		_rt_cycler("combat_assist", "Assist", ["Automatisch", "An", "Aus"], RT_TRI.find(s.combat_assist),
+			"Goldener Ring um die nächste gute Aktion (automatisch: mit Touch).")
+		_rt_cycler("combat_camera_assist", "Kamera folgt dem Ziel", ["Automatisch", "An", "Aus"],
+			RT_TRI.find(s.combat_camera_assist), "Dreht sanft zum Ziel, wenn du die Kamera in Ruhe lässt.")
+		_rt_cycler("auto_attack_default", "Auto-Angriff zu Kampfbeginn", ["Aus", "An"],
+			1 if s.auto_attack_default else 0)
+		_rt_cycler("auto_retarget", "Neues Ziel automatisch", ["Aus", "An"], 1 if s.auto_retarget else 0,
+			"Nach einem K.O. geht es direkt beim nächsten Gegner weiter.")
+		_rt_cycler("telegraph_contrast", "Kontrast-Telegraphen", ["Normal", "Hoch"],
+			1 if s.telegraph_contrast == &"high" else 0, "Bodenwarnungen mit Streifen und dickem Rand.")
+		_rt_cycler("floating_text_scale", "Kampftext-Größe", ["100 %", "125 %", "150 %"],
+			RT_TEXT_SCALES.find(s.floating_text_scale))
+		_rt_cycler("camera_shake", "Kamerawackeln", ["Aus", "An"], 1 if s.camera_shake else 0)
+		for key: String in RT_HIDDEN_ROWS:
+			_rt_hide_row(key)
+	if OS.is_debug_build():
+		_rt_cycler("combat_mode", "Kampfmodus (Debug)", ["Rundenkampf", "Echtzeit"],
+			1 if s.combat_mode == &"realtime" else 0, "Gilt für neue Spielstände.")
+
+
+## Like _cycler, but the value goes to _set_combat_choice (the CTB match stays untouched).
+func _rt_cycler(key: String, label_text: String, options: Array, idx: int, hint: String = "") -> Cycler:
+	var row: HBoxContainer = _row(label_text, hint)
+	var c: Cycler = Cycler.new()
+	var opts: PackedStringArray = []
+	for o: Variant in options:
+		opts.append(str(o))
+	c.set_options(opts, maxi(idx, 0))
+	row.add_child(c)
+	c.changed.connect(func(i: int) -> void: _set_combat_choice(key, i))
+	_register(key, c)
+	return c
+
+
+## A built row stays in `rows` but leaves the screen and the focus chain.
+func _rt_hide_row(key: String) -> void:
+	var c: Control = rows.get(key) as Control
+	if c == null:
+		return
+	var frame: Control = c.get_parent().get_parent() as Control
+	if frame != null:
+		frame.visible = false
+	_controls.erase(c)
+	if _first == c:
+		_first = null
+
+
+## Shown rows (tests): a hidden CTB row is in `rows` but not visible.
+func row_visible(key: String) -> bool:
+	var c: Control = rows.get(key) as Control
+	return c != null and c.get_parent().get_parent() is Control and (c.get_parent().get_parent() as Control).visible
+
+
+func _set_combat_choice(key: String, i: int) -> void:
+	var s: GameSettings = Game.settings
+	match key:
+		"combat_speed_pm":                   # Game records combat_speed on settings_changed (07 §10.1, R2)
+			s.combat_speed_pm = RT_SPEEDS[clampi(i, 0, RT_SPEEDS.size() - 1)]
+		"combat_hints":
+			s.combat_hints = i == 1
+		"combat_assist":
+			s.combat_assist = RT_TRI[clampi(i, 0, RT_TRI.size() - 1)]
+		"combat_camera_assist":
+			s.combat_camera_assist = RT_TRI[clampi(i, 0, RT_TRI.size() - 1)]
+		"auto_attack_default":
+			s.auto_attack_default = i == 1
+		"auto_retarget":
+			s.auto_retarget = i == 1
+		"telegraph_contrast":
+			s.telegraph_contrast = &"high" if i == 1 else &"normal"
+		"floating_text_scale":
+			s.floating_text_scale = RT_TEXT_SCALES[clampi(i, 0, RT_TEXT_SCALES.size() - 1)]
+		"camera_shake":
+			s.camera_shake = i == 1
+		"combat_mode":
+			s.combat_mode = &"realtime" if i == 1 else &"ctb"
+	_commit()

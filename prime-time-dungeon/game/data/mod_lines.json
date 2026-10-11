@@ -1652,6 +1652,34 @@
 			"weight": 1
 		},
 		{
+			"id": "mod_achievement_ach_interrupt_10_01",
+			"tag": "achievement:ach_interrupt_10",
+			"voice": "mod",
+			"text": "Zehnmal mitten im Satz unterbrochen. Sie hätten Talkshow-Moderation werden sollen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_dodge_25_01",
+			"tag": "achievement:ach_dodge_25",
+			"voice": "mod",
+			"text": "Fünfundzwanzig Ausweichschritte. Unsere Choreografin legt Ihnen einen Vertrag hin.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_train_adds_01",
+			"tag": "achievement:ach_train_adds",
+			"voice": "mod",
+			"text": "Drei Gegner, ein Zug, null Mitleid. Wir hatten gesagt: Bitte zurückbleiben.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_perfect_phase_01",
+			"tag": "achievement:ach_perfect_phase",
+			"voice": "mod",
+			"text": "Eine ganze Bossphase ohne einen einzigen Treffer. Die Regie hat nichts zu schneiden.",
+			"weight": 1
+		},
+		{
 			"id": "mod_event_run_start_01",
 			"tag": "event_run_start",
 			"voice": "mod",

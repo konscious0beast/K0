@@ -1,22 +1,33 @@
 extends Control
 ## The candidate card (08 §1.4, §1.7, K1): the casting's page 3 builds the card panel with card_panel(); the pause menu
 ## (Party → "Kandidatenkarte") opens this modal: the card, the story beats (Rival:in, Sponsor) and — from K3 — the AI
-## lines. The Vorsprung line (09 §8.6) appears only from 09 ST1-E; name and look change in the safe room with K2.
-## Params {"capture": bool}. Esc / B / "Schließen" close it (signal closed).
+## lines. The Vorsprung line (09 §8.6) appears only from 09 ST1-E. K2 (08 §1.7): the figure wears the card's look, and
+## "Name & Aussehen ändern" opens the casting's 1/3 in edit mode — only in a safe room ("Bitte in die Maske — nur im
+## Safe Room." elsewhere); after "Übernehmen" the card shows the new name and look.
+## Params {"capture": bool, "edit_open": bool (stills: the editor at once)}. Esc / B / "Schließen" close it (signal
+## closed).
 
 signal closed()
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const InputGlyph := preload("res://scenes/ui/input_glyph.gd")
 const Figure := preload("res://scenes/ui/persona_figure.gd")
+const CASTING: String = "res://scenes/title/persona_casting.tscn"
 const CARD_W: float = 720.0
 const FIGURE_SIZE: Vector2 = Vector2(200, 236)
+const MASK_NOTE: String = "Bitte in die Maske — nur im Safe Room."
+## A look for the demo persona (stills, tests): Jana the midwife.
+const DEMO_LOOK: Dictionary = {"hair": "lk_hair_bun", "hair_color": "lk_hc_chestnut", "skin": "lk_skin_4",
+	"beard": "lk_beard_none", "glasses": "lk_glasses_round", "outfit": "lk_outfit_white"}
 
 var persona: PersonaProfile = null
+var edit_button: Button = null              # K2: "Name & Aussehen ändern"
+var editor: Control = null                  # K2: the open casting 1/3 in edit mode
 
 var _params: Dictionary = {}
 var _close: Button
 var _done: bool = false
+var _note: Label = null
 
 
 func setup(params: Dictionary) -> void:
@@ -34,10 +45,49 @@ func _ready() -> void:
 		persona = PersonaProfile.canon(DB.data)
 	_build()
 	UiUtil.focus_later(_close)
+	if bool(_params.get("edit_open", false)):
+		open_editor.call_deferred()
+
+
+## K2 (08 §1.7): name and look change only in a safe room (RunRules.in_safe_room) and only for the running persona.
+func can_edit() -> bool:
+	return Game.persona != null and Game.state != null and RunRules.in_safe_room(Game.state)
+
+
+## K2: "Name & Aussehen ändern" — the casting's 1/3 in edit mode above the card (same canvas layer, input goes to it
+## first), or outside a safe room the note "Bitte in die Maske — nur im Safe Room.". Returns the editor (or null).
+func open_editor() -> Control:
+	if editor != null and is_instance_valid(editor):
+		return editor
+	if not can_edit():
+		Sfx.play_ui(&"ui_error")
+		if _note != null:
+			_note.text = MASK_NOTE
+			_note.add_theme_color_override("font_color", UiTheme.C_GOLD)
+		return null
+	var e: Control = (load(CASTING) as PackedScene).instantiate() as Control
+	e.call("setup", {"edit": true, "slot": Game.state.slot, "hero": Game.hero()})
+	e.process_mode = Node.PROCESS_MODE_ALWAYS     # the pause menu pauses the tree
+	e.connect("edit_finished", _on_editor_finished)
+	add_child(e)
+	editor = e
+	return e
+
+
+func _on_editor_finished(applied: bool) -> void:
+	editor = null
+	if applied:
+		persona = Game.persona
+		for c: Node in get_children():
+			c.queue_free()
+		_build.call_deferred()
+		UiUtil.focus_later.call_deferred(_close)
+	elif edit_button != null and is_instance_valid(edit_button):
+		UiUtil.focus_later(edit_button)
 
 
 func _input(event: InputEvent) -> void:
-	if _done or not is_visible_in_tree():
+	if _done or not is_visible_in_tree() or (editor != null and is_instance_valid(editor)):
 		return
 	var esc: bool = event is InputEventKey and (event as InputEventKey).pressed \
 		and (event as InputEventKey).keycode == KEY_ESCAPE
@@ -86,7 +136,7 @@ static func card_panel(p: PersonaProfile, data: GameData, text_scale: float = 1.
 	stamp_row.add_child(stamp_panel)
 	var body: HBoxContainer = UiUtil.hbox(20)
 	col.add_child(body)
-	var fig: SubViewportContainer = Figure.new("kai", UiUtil.member_color("kai"))
+	var fig: SubViewportContainer = Figure.new("kai", UiUtil.member_color("kai"), p.look)   # K2: the card's look
 	fig.custom_minimum_size = FIGURE_SIZE
 	fig.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	body.add_child(fig)
@@ -119,6 +169,7 @@ static func demo(data: GameData) -> PersonaProfile:
 	p.occupation = "occ_care_midwife"
 	p.hobby = "hob_cooking"
 	p.traits = PackedStringArray(["trt_chaotic", "trt_caring"])
+	p.look = PersonaProfile.clean_look(DEMO_LOOK, data)
 	p.source = "offline"
 	p.make_beats(data, null)
 	return p
@@ -155,16 +206,38 @@ func _build() -> void:
 		row.add_child(k)
 		row.add_child(UiUtil.label(UiUtil.glyph_safe(str(pair[1])), &"", 22))
 		beats.add_child(row)
-	var note: Label = UiUtil.label("Vorleben, Hobby und Eigenschaften gelten für die ganze Sendung. Vertrag ist Vertrag.",
+	_note = UiUtil.label("Vorleben, Hobby und Eigenschaften gelten für die ganze Sendung. Vertrag ist Vertrag.",
 		&"LabelSmall", 16, UiTheme.C_TEXT_DIM)
-	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	note.custom_minimum_size = Vector2(CARD_W, 0)
-	col.add_child(note)
+	_note.name = "Note"
+	_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_note.custom_minimum_size = Vector2(CARD_W, 0)
+	col.add_child(_note)
+	var foot: HBoxContainer = UiUtil.hbox(16)
+	col.add_child(foot)
+	edit_button = null
+	if Game.persona != null:                     # K2 (08 §1.7): name and look — in the safe room
+		edit_button = UiUtil.button("Name & Aussehen ändern", &"")
+		edit_button.name = "EditLook"
+		edit_button.custom_minimum_size = Vector2(320, 0)
+		edit_button.add_theme_font_size_override("font_size", 22)
+		UiUtil.touch_pad(edit_button)
+		edit_button.pressed.connect(open_editor)
+		foot.add_child(edit_button)
+	foot.add_child(UiUtil.spacer(0.0, 0.0, true))
 	_close = UiUtil.close_button("Schließen")
 	_close.size_flags_horizontal = Control.SIZE_SHRINK_END
 	_close.pressed.connect(close)
-	col.add_child(_close)
-	for side: Side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:   # modal: the focus never leaves the card
-		_close.set_focus_neighbor(side, _close.get_path_to(_close))
-	_close.focus_next = _close.get_path_to(_close)
-	_close.focus_previous = _close.get_path_to(_close)
+	foot.add_child(_close)
+	var stops: Array[Control] = []
+	if edit_button != null:
+		stops.append(edit_button)
+	stops.append(_close)
+	for i in stops.size():                       # modal: the focus never leaves the card
+		var c: Control = stops[i]
+		var other: Control = stops[(i + 1) % stops.size()]
+		for side: Side in [SIDE_LEFT, SIDE_RIGHT]:
+			c.set_focus_neighbor(side, c.get_path_to(other))
+		for side: Side in [SIDE_TOP, SIDE_BOTTOM]:
+			c.set_focus_neighbor(side, c.get_path_to(c))
+		c.focus_next = c.get_path_to(other)
+		c.focus_previous = c.get_path_to(other)

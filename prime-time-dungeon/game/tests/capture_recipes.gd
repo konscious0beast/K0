@@ -30,6 +30,9 @@ extends Node
 ## 08 K1 (Casting): pause_card (exploration + pause menu, party page, the candidate card of the sample persona open),
 ##   intro_card (intro.tscn with {"capture": true}: the studio with the candidate's lower third and persona_intro line),
 ##   casting_accents (persona_casting.tscn with {"open": "keyboard"}: the on-screen keyboard's accent layer).
+## 08 K2 (Casting, with capture.gd --look=…): safe_mask (safe room → pause → party → candidate card → "Name & Aussehen
+##   ändern": the casting's 1/3 in edit mode over the room), safe_look (the candidate in the room, menu open),
+##   rt_world_look (rt_world_regular, the camera behind Kai's puppet).
 
 const ZONES: Dictionary = {"platform": "zone_platform", "sewer": "zone_sewer", "cellar": "zone_cellar"}
 
@@ -1371,4 +1374,86 @@ func _r_casting_accents(scene: Node) -> bool:
 		return false
 	k.call("toggle_accents")
 	await frames(3)
+	return true
+
+
+# --- 08 K2: the persona look (capture.gd --look=…) -------------------------------------------------------------------
+
+const CharacterGallery := preload("res://art/gallery/character_gallery.gd")
+
+
+## capture.gd --look=<n | json>: a new game (seed 1, as Game.ensure_state) whose candidate persona wears LOOKS[n] of
+## the look gallery or the look object; false for anything else.
+func persona_look(arg: String) -> bool:
+	var look: Dictionary = {}
+	if arg.is_valid_int():
+		var i: int = arg.to_int()
+		if i < 0 or i >= CharacterGallery.LOOKS.size():
+			return false
+		look = CharacterGallery.look_ids(i)
+	else:
+		var parsed: Variant = JSON.parse_string(arg)
+		if not (parsed is Dictionary):
+			return false
+		look = parsed as Dictionary
+	var p: PersonaProfile = PersonaProfile.canon(DB.data)
+	p.look = PersonaProfile.clean_look(look, DB.data)
+	Game.new_game(0, "Kai", 1, &"prime", HeroRules.DEFAULT_HERO, p)
+	return Game.persona != null
+
+
+## capture.gd --look with battle.tscn: `encounter_id` (or the floor's first regular one) through Game.make_battle_setup
+## — the CTB stage and portraits show the persona look (08 §6.3).
+func persona_battle_setup(encounter_id: String) -> BattleSetup:
+	var enc_id: String = encounter_id
+	if enc_id == "" and Game.floor_def() != null:
+		for enc: EncounterDef in Game.floor_def().encounters:
+			if not enc.boss:
+				enc_id = enc.id
+				break
+	return Game.make_battle_setup(enc_id, BattleSetup.Advantage.NORMAL, "")
+
+
+## The candidate in the safe room in the persona look, the menu open (the M.O.D. box quiet).
+func _r_safe_look(scene: Node) -> bool:
+	if not await _safe_ready(scene):
+		return false
+	await _quiet_mod_dialog()
+	await frames(10)
+	return true
+
+
+## The mask: safe room → pause → party → candidate card → "Name & Aussehen ändern" (casting 1/3 in edit mode).
+func _r_safe_mask(scene: Node) -> bool:
+	if not await _safe_ready(scene):
+		return false
+	await _quiet_mod_dialog()
+	var pm: Node = scene.call("open_pause", "party")
+	if pm == null:
+		return false
+	await frames(10)
+	var party: Node = pm.call("page", "party")
+	party.call("refresh")
+	await frames(2)
+	var card: Node = party.call("open_card")
+	if card == null:
+		return false
+	await frames(5)
+	var editor: Node = card.call("open_editor")
+	if editor == null:
+		return false
+	await frames(30)
+	return true
+
+
+## rt_world_regular with the camera turned to look at Kai's puppet from the front-left (the look in the fight).
+func _r_rt_world_look(scene: Node) -> bool:
+	if not await _rt(scene, "regular"):
+		return false
+	var player: Node3D = scene.call("get_player") as Node3D
+	var cam: Node = scene.call("get_camera_rig")
+	if player == null or cam == null:
+		return false
+	cam.call("snap", player.rotation.y + PI * 0.8)
+	await frames(4)
 	return true

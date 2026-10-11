@@ -20,7 +20,8 @@ extends Node
 ## Casting (08 §1.1, §10.3, K1): --persona=canon (default) plays the casting with "Rest automatisch" (Esc, then Enter on
 ## "Sendung starten"); --persona=random|<org_id> fills it in through the casting's controls (on-screen keyboard,
 ## Vorleben / hobby / traits overlays); --persona=none starts without the casting (no persona). With a persona the run
-## also checks the persona lines: said at least once, never during a battle.
+## also checks the persona lines: said at least once, never during a battle. K2 (08 §6): "random" also rolls a look and
+## sets it with the look editor's ◀ ▶ buttons; every run checks that Kai's exploration figure wears DB.party_model.
 ## 06 package A: --hero=kai|mopsula (default kai) picks the controlled character of the new game. As Graf Mopsula the
 ## bot engages groups with the bark (dazed group → walk into it → PREEMPTIVE) instead of the field strike, and on the
 ## first safe-room visit it switches to Kai and back ("Figur wechseln", two recorded hero commands the replay checks
@@ -293,7 +294,8 @@ static func persona_from_args(args: PackedStringArray) -> String:
 
 
 ## The profile the bot enters for `persona` (canon: PersonaProfile.canon; random: a valid persona seeded by the run
-## seed — name, word form, Vorleben (+ job), hobby, 0–3 traits; org_*: that tile with the canon rest); null = none.
+## seed — name, word form, Vorleben (+ job), hobby, 0–3 traits, a look (K2); org_*: that tile with the canon rest);
+## null = none.
 func persona_profile() -> PersonaProfile:
 	if persona == "none" or DB.data == null:
 		return null
@@ -328,6 +330,12 @@ func persona_profile() -> PersonaProfile:
 		var t: String = str(traits[rng.randi_range(0, traits.size() - 1)]["id"])
 		if not p.traits.has(t):
 			p.traits.append(t)
+	var look: Dictionary = {}                     # K2 (08 §6.1): one option per kind (drawn last: K1's fields stay)
+	for kind: String in PersonaProfile.LOOK_KINDS:
+		var opts: Array[Dictionary] = DB.data.looks_of(kind)
+		if not opts.is_empty():
+			look[kind] = str(opts[rng.randi_range(0, opts.size() - 1)]["id"])
+	p.look = PersonaProfile.clean_look(look, DB.data)
 	p.source = "offline"
 	p.make_beats(DB.data, null)
 	return p
@@ -388,7 +396,7 @@ func _main() -> void:
 	if not await _wait(func() -> bool: return Router.current is ExplorationScene and not Router.busy, INTRO_BUDGET,
 			"exploration after the intro"):
 		return
-	if not check_hero(_ex(), hero):
+	if not check_hero(_ex(), hero) or not check_look(_ex()):
 		return
 	_note("floor 1 entered (intro played)")
 	while not finished and not _floor_done:
@@ -452,6 +460,8 @@ func _casting(run_seed: int, cast: PersonaProfile) -> bool:
 			osk.call("insert", ch)
 		osk.call("submit")
 		scene.call("set_form", cast.form)
+		if not _casting_look(scene, cast.look):
+			return false
 		scene.call("next")
 		if int(scene.get("page")) != 2:
 			return fail("the name '%s' was not accepted: %s" % [cast.name, str(scene.get("profile").get("name"))])
@@ -478,6 +488,8 @@ func _casting(run_seed: int, cast: PersonaProfile) -> bool:
 				return fail("casting card %s = '%s', expected '%s'" % [f, str(final2.get(f)), str(cast.get(f))])
 		if final2.traits != cast.traits:
 			return fail("casting card traits %s, expected %s" % [str(final2.traits), str(cast.traits)])
+		if final2.look != cast.look:
+			return fail("casting card look %s, expected %s" % [str(final2.look), str(cast.look)])
 		scene.call("start_show")
 	if not await _wait(func() -> bool: return Game.run_log != null and Game.run_log != log_before, CASTING_BUDGET,
 			"the new game after the casting"):
@@ -492,8 +504,29 @@ func _casting(run_seed: int, cast: PersonaProfile) -> bool:
 		return fail("the persona command is %s (expected talent \"\" and bias %s)" % [str(cmd), str(want_bias)])
 	if Game.persona == null or Game.state.player_name != cast.name:
 		return fail("the new game has no persona / name '%s'" % Game.state.player_name)
+	if Game.persona.look != cast.look:
+		return fail("the new game's look is %s, expected %s" % [str(Game.persona.look), str(cast.look)])
 	_note("casting: %s · %s%s · %s · %s" % [cast.name, cast.origin, (" / " + cast.occupation) if cast.occupation != ""
 		else "", cast.hobby, ", ".join(cast.traits) if not cast.traits.is_empty() else "ohne Eigenschaften"])
+	_note("casting look: %s" % " · ".join(PackedStringArray(PersonaLook.ids(cast.look, DB.data).values())))
+	return true
+
+
+## Casting 1/3 (K2, 08 §6.1): presses the look editor's ▶ (or ◀ when that way is shorter) until every kind shows
+## `look`, like a player.
+func _casting_look(scene: Node, look: Dictionary) -> bool:
+	var rows: Dictionary = scene.get("look_rows")
+	for kind: String in PersonaProfile.LOOK_KINDS:
+		var ids: PackedStringArray = []
+		for e: Dictionary in DB.data.looks_of(kind):
+			ids.append(str(e["id"]))
+		var want: String = str(look.get(kind, ""))
+		var steps: int = posmod(ids.find(want) - ids.find(str(scene.call("look_id", kind))), maxi(1, ids.size()))
+		var forward: bool = steps * 2 <= ids.size()
+		for i in (steps if forward else ids.size() - steps):
+			((rows[kind] as Dictionary)["next" if forward else "prev"] as Button).pressed.emit()
+		if str(scene.call("look_id", kind)) != want:
+			return fail("the look editor shows %s '%s', expected '%s'" % [kind, str(scene.call("look_id", kind)), want])
 	return true
 
 
@@ -928,6 +961,15 @@ func check_hero(ex: ExplorationScene, want: String) -> bool:
 		return fail("hero is %s in the state, expected %s" % [Game.hero(), want])
 	if ex == null or ex.get_player().hero_id != want or ex.get_companion().member_id != Game.partner():
 		return fail("exploration bodies do not follow the hero %s" % want)
+	return true
+
+
+## Casting (08 §6.3, K2): Kai's exploration figure (the player or the companion) wears DB.party_model("kai") — the
+## persona's look, or today's Kai without a persona.
+func check_look(ex: ExplorationScene) -> bool:
+	var rig: Node = ex.get_player().rig if ex.get_player().hero_id == "kai" else ex.get_companion().rig
+	if rig == null or rig.get("model") != DB.party_model("kai"):
+		return fail("Kai's figure does not wear the persona look")
 	return true
 
 

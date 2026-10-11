@@ -7,6 +7,8 @@ extends Node
 ##   battle     every floor-1 encounter (opening shots) → the largest one and both bosses as full auto battles
 ##   safe_room  the three safe rooms of floor 1
 ##   leak       N cycles explore (rebuild) → battle → safe room through the Router, object/memory counts per cycle
+## Casting (08 §6.2, K2): --look=worst plays every section with a candidate persona in the heaviest look (curls,
+## stubble, glasses: 2 940 tris in Kai's 7 MeshInstances) — Kai in exploration, battle, safe room and real-time combat.
 ## Render metrics need a display (Xvfb); headless runs print "–" for them. Prints Markdown tables and a final
 ## "PERF: OK" / "PERF: OVER BUDGET (<n>)" line (+ "LEAK: OK" / "LEAK: GROWTH …"); exit code 1 on budget/leak failures.
 
@@ -38,6 +40,9 @@ const LEAK_ENCOUNTER: String = "enc_f1_a1_tutorial"
 const LEAK_WARMUP: int = 2                    # cycles before the baseline (caches, pools, lazy streams)
 const LEAK_WINDOW: int = 5                    # baseline = min over cycles WARMUP..WARMUP+4, end = min over the last 5
 const LEAK_OBJECT_SLACK: int = 16             # tolerated object drift of the minima (transient tweens/timers)
+## Casting (08 §6.2, K2): the persona look with the most triangles (test_08_avatar_kit: every combination ≤ 3 000).
+const WORST_LOOK: Dictionary = {"hair": "lk_hair_curls", "hair_color": "lk_hc_black", "skin": "lk_skin_7",
+	"beard": "lk_beard_stubble", "glasses": "lk_glasses_round", "outfit": "lk_outfit_blue"}
 
 ## 02_TECH §12.1 (keys: explore / battle / safe_room).
 const BUDGET_DC3D: Dictionary = {"explore": 150, "battle": 150, "safe_room": 120}
@@ -78,6 +83,7 @@ var _mat_dump: bool = false                   # --mat-dump: print the unique mat
 var _mat_owners: Dictionary = {}              # material instance id → "shader/class @ first owner" (last _audit)
 var _mat_keys: Dictionary = {}                # material instance id → Materials cache key (--mat-dump)
 var _full_only: PackedStringArray = []        # --full=<enc ids>: battle section runs only these full auto battles
+var _look: Dictionary = {}                    # --look=worst: the candidate persona's look (K2), {} = no persona
 var _rendered: bool = false
 var _lines: PackedStringArray = []
 var _over: PackedStringArray = []
@@ -108,6 +114,8 @@ func _ready() -> void:
 			_full_only = a.trim_prefix("--full=").split(",", false)
 		elif a.begins_with("--boot="):
 			_boot_line = a.trim_prefix("--boot=")
+		elif a == "--look=worst":
+			_look = WORST_LOOK
 	_rendered = DisplayServer.get_name() != "headless"
 	_run.call_deferred()
 
@@ -123,6 +131,15 @@ func _wants(section: String) -> bool:
 	return _only.is_empty() or _only.has(section)
 
 
+## The probe's new game (floor 1, FLOOR_SEED); with --look=worst a candidate persona in that look (K2).
+func _new_game() -> void:
+	var p: PersonaProfile = null
+	if not _look.is_empty():
+		p = PersonaProfile.canon(DB.data)
+		p.look = PersonaProfile.clean_look(_look, DB.data)
+	Game.new_game(0, "Kai", FLOOR_SEED, &"prime", HeroRules.DEFAULT_HERO, p)
+
+
 func _run() -> void:
 	Game.ephemeral = true
 	Save.read_only = true
@@ -136,6 +153,8 @@ func _run() -> void:
 			if _rendered else "headless",
 		Engine.get_version_info().get("string", "?")])
 	_emit("GPU: %s" % RenderingServer.get_video_adapter_name() if _rendered else "GPU: – (headless)")
+	if not _look.is_empty():
+		_emit("Kandidat:in im Persona-Look (K2): %s" % " · ".join(PackedStringArray(_look.values())))
 	await _section_startup()
 	if _wants("explore"):
 		await _section_explore()
@@ -269,7 +288,7 @@ func _build_exploration() -> float:
 func _ensure_exploration() -> void:
 	if _explore != null and is_instance_valid(_explore) and _explore.is_inside_tree():
 		return
-	Game.new_game(0, "Kai", FLOOR_SEED)
+	_new_game()
 	var cold: float = await _build_exploration()
 	var warm: float = await _build_exploration()
 	var t_gen: int = Time.get_ticks_usec()
@@ -867,7 +886,7 @@ func _section_safe_room() -> void:
 
 func _section_leak() -> void:
 	if _explore == null or not is_instance_valid(_explore):
-		Game.new_game(0, "Kai", FLOOR_SEED)
+		_new_game()
 	var root: Window = get_tree().root
 	if _explore != null and is_instance_valid(_explore) and not _explore.is_inside_tree():
 		root.add_child(_explore)
@@ -1161,7 +1180,7 @@ func _rt_explore_audit(scene: ExplorationScene) -> Dictionary:
 ## One scenario: {"name", "label", "acc", "time", "units", "extras", "quads"}.
 func _rt_scenario(sc: String) -> Dictionary:
 	Game.combat_mode_override = &"realtime"    # a new real-time game (07 §12.1, §3.9.4: run log header, HP scale)
-	Game.new_game(0, "Kai", FLOOR_SEED)
+	_new_game()
 	Game.combat_mode_override = &""
 	_rt_hints_before = Game.settings.combat_hints
 	Game.settings.combat_hints = false         # a first-time card would hold the ticks (07 §2.13): fixed load

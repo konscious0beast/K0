@@ -2,11 +2,14 @@ extends SceneTree
 ## Screenshot tool (02_TECH §11.3), used by `check.sh --shot`. No class_name / autoload identifiers.
 ## godot --path <game> --rendering-driver opengl3 --resolution WxH -s res://tests/capture.gd -- \
 ##     --scene=<res://…tscn> --out=<abs.png> [--frames=<n>] [--no-global-ui] [--params=<json>] [--touch] \
-##     [--recipe=<name>]
+##     [--recipe=<name>] [--look=<n | json>]
 ## --params: JSON object merged over {"capture": true} for the scene's setup(params).
 ## --touch:  touch controls on + input scheme TOUCH before the scene is built (phone layout stills).
 ## --recipe: named scripted state from res://tests/capture_recipes.gd, run after the scene is in the tree; the
 ##           --frames wait follows it.
+## --look:   Casting (08 §6, K2): before the scene is built, a new game (seed 1, as Game.ensure_state) whose candidate
+##           persona wears this look — an index into the look gallery's LOOKS (0–8) or a JSON object {kind: lk id};
+##           battle.tscn then gets its setup from Game.make_battle_setup (the look on the stage and in the portraits).
 
 const GLOBAL_UI: String = "res://scenes/ui/global_ui.tscn"
 const RECIPES: String = "res://tests/capture_recipes.gd"
@@ -21,6 +24,7 @@ func _initialize() -> void:
 	var params: Dictionary = {"capture": true}
 	var touch: bool = false
 	var recipe: String = ""
+	var look: String = ""
 	for a: String in OS.get_cmdline_user_args():
 		if a.begins_with("--scene="):
 			scene_path = a.trim_prefix("--scene=")
@@ -34,6 +38,8 @@ func _initialize() -> void:
 			touch = true
 		elif a.begins_with("--recipe="):
 			recipe = a.trim_prefix("--recipe=")
+		elif a.begins_with("--look="):
+			look = a.trim_prefix("--look=")
 		elif a.begins_with("--params="):
 			var parsed: Variant = JSON.parse_string(a.trim_prefix("--params="))
 			if not (parsed is Dictionary):
@@ -64,6 +70,16 @@ func _initialize() -> void:
 		printerr("Assertion failed: capture: scene not found %s" % scene_path)
 		quit(1)
 		return
+	if look != "":
+		var helper: Node = (load(RECIPES) as GDScript).new() as Node
+		var dressed: bool = bool(helper.call("persona_look", look))
+		if dressed and scene_path.ends_with("/battle.tscn") and not params.has("setup"):
+			params["setup"] = helper.call("persona_battle_setup", str(params.get("encounter", "")))
+		helper.free()
+		if not dressed:
+			printerr("Assertion failed: capture: --look=%s is no gallery index or look object" % look)
+			quit(1)
+			return
 	var packed: PackedScene = load(scene_path) as PackedScene
 	if packed == null:
 		printerr("Assertion failed: capture: not a scene %s" % scene_path)

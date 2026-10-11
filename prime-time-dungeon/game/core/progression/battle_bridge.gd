@@ -83,6 +83,7 @@ static func apply_result(state: GameState, data: GameData, result: BattleResult)
 		state.inventory = Inventory.new()
 	var victory: bool = result.outcome == BattleResult.Outcome.VICTORY
 	var was_ko: Dictionary = _writeback(state, data, result)
+	write_presets(state, result)
 	_apply_inventory_delta(state, data, result)
 	_apply_stolen(state, result, rw, victory)
 	if victory:
@@ -668,3 +669,24 @@ static func _rt_species_unit(u: RtUnit, m: PartyMember, state: GameState, data: 
 static func _rt_after_combat(state: GameState) -> void:
 	if state.floor_run != null:
 		state.floor_run.regen_ticks = 0
+
+
+## R5b (07 §5.2, §12.2 "Stand R5a" Nr. 9): a partner tactic changed during a real-time combat is kept — the member's
+## rt_preset / rt_toggles become the tactic of BattleResult.rt_presets (its known switches, as RunRules.apply_loadout
+## stores them). Deterministic from the result, so the live game and both verifiers write the same; no log entry.
+static func write_presets(state: GameState, result: BattleResult) -> void:
+	var ids: Array = result.rt_presets.keys()
+	ids.sort()
+	for id: Variant in ids:
+		var m: PartyMember = state.member(str(id))
+		var e: Dictionary = result.rt_presets[id]
+		if m == null:
+			continue
+		var preset: String = str(e.get("preset", ""))
+		m.rt_preset = preset if RtVocab.RT_PRESETS.has(preset) else m.rt_preset
+		var tog: Dictionary = {}
+		var src: Dictionary = e.get("tog", {}) as Dictionary
+		for k: String in RtVocab.RT_TOGGLES:
+			if src.has(k):
+				tog[k] = bool(src[k])
+		m.rt_toggles = tog

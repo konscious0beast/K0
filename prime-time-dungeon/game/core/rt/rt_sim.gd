@@ -1800,11 +1800,13 @@ func _first_party_id() -> String:
 	return ""
 
 
-## BattleResult.to_dict without floats (min_party_hp_pct as ppm), {} while running.
+## BattleResult.to_dict without floats (min_party_hp_pct as ppm), {} while running. Without rt_presets (R5b): derived
+## from the units' preset / toggles, which the snapshot holds already — so the hashes of R1b–R5a stay.
 func _result_dict() -> Dictionary:
 	if result == null:
 		return {}
 	var d: Dictionary = result.to_dict()
+	d.erase("rt_presets")
 	d.erase("min_party_hp_pct")
 	d["min_party_hp_pct_ppm"] = FixedMath.ppm(result.min_party_hp_pct)
 	return RtUnit._canon(d)

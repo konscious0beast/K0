@@ -51,6 +51,10 @@ var train_kills: int = 0               # adds killed by an enemy telegraph (trai
 var perfect_phases: int = 0            # boss phases without a telegraph hit on the party
 var potions_used: int = 0              # consumables used in combat (party, ≤ 3)
 var flee_attempts: int = 0             # every start of a flee warning and every smoke (§3.12)
+## R5b: member def id → {"preset", "tog": {switch: bool}} — the partner tactic as the combat ended, for every party
+## member whose tactic or switches changed during the combat (partner_preset); BattleBridge.apply_result writes it to
+## PartyMember.rt_preset / rt_toggles (07 §5.2: the choice is kept — no extra log entry, both verifiers do the same).
+var rt_presets: Dictionary = {}
 
 
 func outcome_name() -> String:
@@ -85,6 +89,15 @@ func _rt_dict() -> Dictionary:
 	var out: Dictionary = {}
 	if not group_ids.is_empty():
 		out["group_ids"] = Array(group_ids)
+	if not rt_presets.is_empty():
+		var rp: Dictionary = {}
+		for k: String in _sorted_keys(rt_presets):
+			var e: Dictionary = rt_presets[k]
+			var tog: Dictionary = {}
+			for t: String in _sorted_keys(e.get("tog", {}) as Dictionary):
+				tog[t] = bool((e["tog"] as Dictionary)[t])
+			rp[k] = {"preset": str(e.get("preset", "")), "tog": tog}
+		out["rt_presets"] = rp
 	for k: String in RT_INT_FIELDS:
 		if int(get(k)) != 0:
 			out[k] = int(get(k))
@@ -136,6 +149,17 @@ static func from_dict(d: Dictionary) -> BattleResult:
 	r.items_used = JsonUtil.to_int(d.get("items_used", 0))
 	r.party_kos = JsonUtil.to_int(d.get("party_kos", 0))
 	r.group_ids = JsonUtil.to_str_array(d.get("group_ids", []))          # Echtzeitkampf (07, R1a)
+	var rp: Variant = d.get("rt_presets", {})                            # R5b
+	if rp is Dictionary:
+		for k: Variant in (rp as Dictionary).keys():
+			var e: Variant = (rp as Dictionary)[k]
+			if e is Dictionary:
+				var tog: Dictionary = {}
+				var tv: Variant = (e as Dictionary).get("tog", {})
+				if tv is Dictionary:
+					for t: Variant in (tv as Dictionary).keys():
+						tog[str(t)] = bool((tv as Dictionary)[t])
+				r.rt_presets[str(k)] = {"preset": str((e as Dictionary).get("preset", "")), "tog": tog}
 	for k: String in RT_INT_FIELDS:
 		r.set(k, JsonUtil.to_int(d.get(k, 0)))
 	return r

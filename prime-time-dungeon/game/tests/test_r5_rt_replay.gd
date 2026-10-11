@@ -44,7 +44,11 @@ func _core_run() -> Array:
 	var refused: Array = RtLive.core_play(sim, _canned_with_gift())
 	for r: Variant in refused:
 		assert_true(RtCommand.REASONS.has(str(r)) or str(r) == "combat_cmd_after_end", "a sim refusal: " + str(r))
-	sim.apply(RtKit.encounter("enc_rt_test_boss", [["g_boss", "enc_rt_test_boss", [0, -200, 128]]]))
+	# R5b: the canned combat's partner tactic is kept (BattleResult.rt_presets) — the boss fight records the default
+	# tactic like the exploration records the partner's (07 §10.1), so it stays the lost fight of this run
+	var preset: String = str(RtKit.data().party_member("mopsula").rt.get("default_preset", "support"))
+	sim.apply(RtKit.encounter("enc_rt_test_boss", [["g_boss", "enc_rt_test_boss", [0, -200, 128]]],
+		{"presets": {"p1": {"preset": preset, "tog": RtVocab.RT_TOGGLE_DEFAULTS.duplicate()}}}))
 	RtLive.core_play(sim, [RtCommand.ability(2, "p0", "skl_kai_heavy_swing", "e0")])
 	var h: String = sim.close("test")
 	assert_null(sim.combat, "close() let the sim finish the boss combat")

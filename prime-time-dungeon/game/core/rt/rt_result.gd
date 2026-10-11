@@ -127,7 +127,27 @@ static func build(sim: RtSim, outcome: int, c: int) -> BattleResult:
 	for k: String in ["interrupts", "dodges", "telegraph_hits", "train_kills", "perfect_phases", "potions_used",
 			"flee_attempts"]:
 		r.set(k, int(tally[k]))
+	r.rt_presets = changed_presets(sim)
 	return r
+
+
+## R5b: the party tactics that changed during the combat — member def id → {"preset", "tog"} of every party unit whose
+## preset or switches differ from its start values (RtSetup.units, the setup's own copies); {} without a change, so the
+## result (and every hash over it) stays the same for the combats that never touch the tactic.
+static func changed_presets(sim: RtSim) -> Dictionary:
+	var out: Dictionary = {}
+	var start: Dictionary = {}
+	for su: RtUnit in sim.setup.units:
+		start[su.id] = su
+	for u: RtUnit in sim.party_ref():
+		var su: RtUnit = start.get(u.id, null)
+		if su == null or (u.preset == su.preset and u.toggles == su.toggles):
+			continue
+		var tog: Dictionary = {}
+		for k: String in RtVocab.RT_TOGGLES:
+			tog[k] = bool(u.toggles.get(k, RtVocab.RT_TOGGLE_DEFAULTS.get(k, false)))
+		out[u.def_id] = {"preset": u.preset, "tog": tog}
+	return out
 
 
 ## The rewards of the show bosses of the combat (07 §9.6, E26): show_boss.reward of every encounter named by a

@@ -790,8 +790,8 @@ func _r_rt_regular(scene: Node, variant: String = "") -> bool:
 func _r_rt_boss(scene: Node, variant: String = "") -> bool:
 	_rt_boss_data()
 	var st: Dictionary = await _rt_stage(scene, "cellar", ["enm_boss_hausmeister", "enm_kanalratte",
-		"enm_kanalratte"], {"level": 6, "hero": "mopsula", "boss": true, "encounter": "enc_f1_boss_hausmeister"},
-		variant)
+		"enm_kanalratte"], {"level": 6, "hero": "mopsula", "boss": true, "encounter": "enc_f1_boss_hausmeister",
+		"dist": 4.0}, variant)                           # the Count's camera is steeper (polish pass): closer
 	if st.is_empty():
 		return false
 	var sim: RtSim = st["sim"]
@@ -1089,9 +1089,9 @@ func _rt_canvas_dc(n: int) -> int:
 	return best
 
 
-## Exploration + a bound CombatHud: Kai (or the Count) 5.5 m in front of a group of `zone_key`, the group's actor
-## replaced by one rig per enemy unit in a fan, the director double with their positions. {} on failure, else
-## {"sim", "hud", "director", "rigs", "positions"}.
+## Exploration + a bound CombatHud: Kai (or the Count) 5.5 m (opts "dist") in front of a group of `zone_key`, the
+## group's actor replaced by one rig per enemy unit in a fan, the director double with their positions. {} on failure,
+## else {"sim", "hud", "director", "rigs", "positions"}.
 func _rt_stage(scene: Node, zone_key: String, enemy_ids: Array, opts: Dictionary, variant: String) -> Dictionary:
 	if not await _explore_ready(scene):
 		return {}
@@ -1125,7 +1125,7 @@ func _rt_stage(scene: Node, zone_key: String, enemy_ids: Array, opts: Dictionary
 	if str(opts.get("hero", "kai")) == "mopsula":
 		Game.state.hero = "mopsula"
 		scene.call("refresh_hero")
-	_place_facing(scene, layout, spawn.cell, center, 5.5)
+	_place_facing(scene, layout, spawn.cell, center, float(opts.get("dist", 5.5)))
 	var cam_rig: Node3D = scene.call("get_camera_rig") as Node3D
 	cam_rig.set("arm_length", 9.0 if bool(opts.get("boss", false)) else 8.0)   # 07 §7.5 combat zoom
 	cam_rig.set("_look", 1.0)                                                   # LOOK_AHEAD 2.5 → 1.0

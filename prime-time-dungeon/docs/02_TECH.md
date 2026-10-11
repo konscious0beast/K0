@@ -240,6 +240,7 @@ Szenen unten eingetragen (`persona_casting`, `persona_card`); Kern und Daten der
 | `../tools/fullrun.sh` | M6 | Full-Run-Bot Etage 1 headless (§11.4.1; CI-Schritt §12.4) |
 | `../tools/perf.sh` | M0 (Phase C) | Performance-Probe unter Xvfb + Leak-Schleife (§12.5, `docs/PERFORMANCE.md`) |
 | `../tools/make_icons.sh` | M0 (Phase C) | Export-Icons und iOS-Startbilder aus `icon.svg` neu erzeugen (§12.3) |
+| `../tools/apple/release.sh`, `../tools/apple/PrimeTimeDungeon.entitlements` | M0 (Release) | Apple-Release-Schritte der CI-Jobs `apple-macos`/`apple-ios-testflight` (nur macOS-Runner mit Secrets) und die Entitlements der Mac-App (§12.4) |
 | `../README.md` | M0 | Einstieg: Öffnen/Starten, spielbare Builds, Steuerung, Dev-Argumente, Werkzeuge, Ordner, Doku-Index, Screenshots |
 
 ### 1.2 `autoload/`
@@ -613,9 +614,10 @@ Jede Datei unter `tests/` gehört dem genannten Modul; `test_<modul>_*.gd` ist d
 | `tests/test_06abc_liga_talents.gd` | Integration A × B × C | Liga-Stufe der gesteuerten Figur für beide Held:innen, Liga-Talente folgen ihr (`MarottenRules.in_liga`), „Kamera 3 kennt mich“ füllt ein Extra-Herz je Etage, Replay ab Speicher-Anker |
 | `tests/test_06ac_bark_opener.gd` | Integration A × C, Runde 4 | Bellen ist kein Anschleichen (06 §8.8 I-7): `opener` `"bark"` in `BattleSetup`/`BattleResult`/`encounter`-Command (nur `adv` 1), kein Herz für „Schleichwerbung“, `bark_openers` statt `preemptives`, Replay, `exploration.gd._opener` |
 | `tests/test_perf_router_cycles.gd` | Phase C | Router-Zyklen Erkundung → Kampf → Safe Room ohne Wachstum der Node-/Objekt-Minima, `Sfx.stop_all`, Etagen-Aufbauzeit, Physik-/Licht-Layer der Etage (§12.1, §12.5) |
-| `tests/test_perf_platform.gd` | Phase C | Mobil-Projekteinstellungen, Export-Presets + Icons, Apple-Exportmodi, eine angezeigte Version für alle Presets, Boot kompiliert keine Screens vorab (§2.1, §12.3) |
+| `tests/test_perf_platform.gd` | Phase C | Mobil-Projekteinstellungen, Export-Presets + Icons, Apple-Exportmodi, iOS-Zweckangaben, eine angezeigte Version für alle Presets, Apple-Release-Werte nur in der Export-Kopie (`apple_preset.gd`: Patch, Platzhalter, Ablehnungen), Boot kompiliert keine Screens vorab (§2.1, §12.3, §12.4) |
 | `tests/perf/perf_probe.gd` + `perf_runner.gd`, `tests/perf/boot_timer.gd` | Phase C | Mess-Werkzeug für `tools/perf.sh` (§12.5); keine Tests (kein `test_`-Präfix) |
 | `tests/tools/make_icons.gd` | Phase C | Icon-Generator für `tools/make_icons.sh` (§12.3) |
+| `tests/tools/apple_preset.gd` | Release | schreibt Team-ID, Bundle-ID, Build-Nummer und Signatur in eine Temp-Kopie der Presets (`tools/apple/release.sh export`, §12.3/§12.4) |
 
 ### 1.8 Private Helfer, auf die andere Abschnitte verweisen (§0.3)
 
@@ -5182,7 +5184,7 @@ darf **nie** `.gd`-Dateien per `DirAccess` suchen (DB lädt feste Dateiliste).
 | `Linux` | `Linux` | `../build/linux/PrimeTimeDungeon.x86_64` | `binary_format/embed_pck=true`, `binary_format/architecture="x86_64"` |
 | `macOS` | `macOS` | `../build/macos/PrimeTimeDungeon.zip` | `binary_format/architecture="universal"`, `application/icon="res://art/icons/icon_macos_1024.png"`, `application/bundle_identifier="org.primetimedungeon.game"`, `display/high_res=true`, `codesign/codesign=1` (eingebaute Ad-hoc-Signatur, auch unter Linux), `notarization/notarization=0` |
 | `Android` | `Android` | `../build/android/PrimeTimeDungeon.apk` | `package/unique_name="org.primetimedungeon.game"`, `version/code=1`, `version/name="0.3.0"`, `architectures/arm64-v8a=true`, `architectures/armeabi-v7a=false`, `screen/immersive_mode=true`, `gradle_build/use_gradle_build=false` |
-| `iOS` | `iOS` | `../build/ios/PrimeTimeDungeon.xcodeproj` | `application/export_project_only=true` (nur das Xcode-Projekt, kein `xcodebuild`), `application/app_store_team_id="XXXXXXXXXX"` (Platzhalter: 4.7.2 verweigert auch den Projekt-Export ohne Team-ID; das echte Team wählt man in Xcode), `application/code_sign_identity_debug`/`_release="Apple Development"` (Xcodes Run nutzt die exportierte Release-Konfiguration; eine kostenlose Apple-ID hat kein Distributionszertifikat), `application/bundle_identifier="org.primetimedungeon.game"`, `application/targeted_device_family=2`, `storyboard/image_scale_mode=1` (Center) mit `storyboard/custom_image@2x`/`@3x` |
+| `iOS` | `iOS` | `../build/ios/PrimeTimeDungeon.xcodeproj` | `application/export_project_only=true` (nur das Xcode-Projekt, kein `xcodebuild`), `application/app_store_team_id="XXXXXXXXXX"` (Platzhalter: 4.7.2 verweigert auch den Projekt-Export ohne Team-ID; das echte Team wählt man in Xcode bzw. setzt die CI, §12.4), `application/code_sign_identity_debug`/`_release="Apple Development"` (Xcodes Run nutzt die exportierte Release-Konfiguration; eine kostenlose Apple-ID hat kein Distributionszertifikat), `application/bundle_identifier="org.primetimedungeon.game"`, `application/targeted_device_family=2`, `storyboard/image_scale_mode=1` (Center) mit `storyboard/custom_image@2x`/`@3x`, `privacy/camera_usage_description`, `…/microphone_…`, `…/photolibrary_usage_description` nicht leer (die Engine referenziert diese APIs; App Store Connect weist Builds ohne Zweckangabe ab, ITMS-90683; das Spiel fragt sie nie an) |
 
 Versionen: `application/config/version` (Titelbild, Spielstände) ist die Quelle; die angezeigte Version jedes Presets
 (`application/product_version`, `application/short_version`, `version/name`) ist leer oder gleich (`test_perf_platform.gd`),
@@ -5202,8 +5204,15 @@ Auf Linux endet der iOS-Export immer mit dem Xcode-Projekt (Warnung „.ipa can 
 sorgt dafür, dass ein Export auf dem Mac genauso endet. `test_perf_platform.gd` prüft Presets, Filter, Icon-Größen, die
 Apple-Exportmodi und die Versionen.
 Nicht gelistete Optionen setzt der Editor beim ersten Öffnen auf Defaults; die Datei wird danach so committet.
-Bundle-ID ist ein Platzhalter-Namensraum und wird vor Store-Veröffentlichung auf die eigene Domain umgestellt. `build/` ist per
-Repo-`.gitignore` ausgeschlossen. Plattformnamen und Optionsnamen wurden gegen 4.7.2 geprüft (Quelltext des Tags `4.7.2-stable`
+Bundle-ID und Team-ID sind Platzhalter und bleiben es im Repository. Für den Release mit Apple-Entwicklerkonto schreibt
+`tests/tools/apple_preset.gd` (CI-Jobs `apple-macos`/`apple-ios-testflight`, §12.4) in einer **Temp-Kopie** des Projekts kurz vor
+dem Export: beide Presets `application/bundle_identifier` = Variable `APPLE_BUNDLE_ID`, `application/short_version` =
+`application/config/version`, `application/version` = Build-Nummer; macOS zusätzlich `codesign/codesign=0` und
+`notarization/notarization=0` (signiert und notarisiert wird danach), iOS `application/app_store_team_id` = `APPLE_TEAM_ID`,
+`application/export_method_release=0` (App Store), `application/code_sign_identity_release` = Name des Apple-Distribution-Zertifikats,
+`application/provisioning_profile_uuid_release` und `…_specifier_release` = UUID des App-Store-Profils (→ `CODE_SIGN_STYLE = Manual`).
+Falsche Werte lehnt das Skript ab, bevor es etwas schreibt. `test_perf_platform.gd` prüft Platzhalter, Patch und Ablehnungen. `build/`
+ist per Repo-`.gitignore` ausgeschlossen. Plattformnamen und Optionsnamen wurden gegen 4.7.2 geprüft (Quelltext des Tags `4.7.2-stable`
 und Export mit Templates).
 
 ### 12.4 CI (`K0/.github/workflows/ptd-check.yml`, M0)
@@ -5305,15 +5314,94 @@ jobs:
           # danach: jede Ausgabe muss existieren
       # je ein Artefakt PrimeTimeDungeon-<tag>-macOS | -iOS-Xcode | -Windows | -Linux (macOS mit compression-level 0:
       # das ZIP stammt von Godot und erhält das Ausführrecht), zuletzt eine Schritt-Zusammenfassung mit Links und Größen
+  # Apple-Release mit bezahltem Developer-Account (README Abschnitt 4 „Mit Apple-Entwicklerkonto“); gekürzt
+  apple-gate:                       # Linux: welche Apple-Jobs laufen können; nur NAMEN fehlender Secrets/Variablen
+    needs: check                    # in die Zusammenfassung, falsch geformte IDs → Fehler
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    outputs: {macos: …, ios: …}     # "true" | "false"
+  apple-macos:
+    needs: [check, apple-gate]
+    if: startsWith(github.ref, 'refs/tags/v') && needs.apple-gate.outputs.macos == 'true'
+    runs-on: macos-26
+    env: {APPLE_TEAM_ID: vars, APPLE_BUNDLE_ID: vars, PTD_BUILD_NUMBER: "<run_number>.<run_attempt>"}
+    steps:                          # je Schritt ein Aufruf von prime-time-dungeon/tools/apple/release.sh
+      # godot macos → keychain devid (MAC_DEVID_P12_*) → asc-key (ASC_KEY_ID, ASC_KEY_P8_BASE64) → export macos <app>
+      # → sign-macos <app> → notarize <app> <zip> (ASC_KEY_ID, ASC_ISSUER_ID) → Artefakt -macOS-notarized
+      # → Zusammenfassung → cleanup (if: always())
+  apple-ios-testflight:
+    needs: [check, apple-gate]
+    if: startsWith(github.ref, 'refs/tags/v') && needs.apple-gate.outputs.ios == 'true'
+    runs-on: macos-26               # Xcode ≥ 26.1 (Standard im Image: 26.6)
+    steps:
+      # xcode → godot ios → keychain dist (IOS_DIST_P12_*) → profile (IOS_PROFILE_BASE64) → asc-key → export ios <xcodeproj>
+      # → ipa → Artefakt -iOS-TestFlight → upload (altool) → Zusammenfassung → cleanup (if: always())
 ```
 
 Android wird lokal exportiert (JDK 17 + SDK + Debug-Keystore in den Editor-Einstellungen). iOS: Die CI erzeugt das Xcode-Projekt
-(der Projekt-Export läuft unter Linux); Team, Signatur und Build passieren in Xcode auf dem Mac (README Abschnitt 4). Kein Job
-enthält Secrets oder Signier-Identitäten.
+(der Projekt-Export läuft unter Linux); Team, Signatur und Build passieren in Xcode auf dem Mac (README Abschnitt 4) oder, mit
+Apple-Entwicklerkonto, in `apple-ios-testflight`. Die Jobs `check`, `export`, `mod-brain-tests` und `nightly-balance` sehen keine
+Secrets.
+
 `check.sh` bleibt die Prüf-Quelle für Import, Tests und Smoke; zusätzlich ruft die CI `tools/fullrun.sh --strategy=all`
 (Full-Run-Bot, §11.4.1, ≈ 1,5 min) als eigenen Schritt auf. Der Job `mod-brain-tests` (06-D) prüft den Referenz-Dienst
 `services/mod-brain/` mit gemocktem Anthropic-Client (kein Schlüssel, kein Netz); die gemeinsamen Fälle
 `tests/fixtures/live/twist_cases.json` und `line_filter_cases.json` laufen dort und in `check.sh`.
+
+**Apple-Release (`apple-gate`, `apple-macos`, `apple-ios-testflight`).** Variablen `APPLE_TEAM_ID`, `APPLE_BUNDLE_ID`; Secrets
+`MAC_DEVID_P12_BASE64`, `MAC_DEVID_P12_PASSWORD` (Developer ID Application), `IOS_DIST_P12_BASE64`, `IOS_DIST_P12_PASSWORD` (Apple
+Distribution), `IOS_PROFILE_BASE64` (Profil „App Store Connect“), `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8_BASE64`
+(App-Store-Connect-API-Schlüssel, Rolle App-Manager; für Notarisierung und Upload). Regeln und Entscheidungen:
+
+- **Gating:** `apple-gate` prüft nach `check` auf Linux, ob alles für einen Job da ist; sonst bleibt der Job übersprungen (kostet
+  keine macOS-Minuten), die Zusammenfassung nennt die fehlenden Namen und dass das unsignierte Artefakt aus `export` bleibt. Beide
+  Jobs hängen wie `export` an `check` und laufen nur für `v*`-Tags, unabhängig voneinander.
+- **Secrets:** jedes nur in der `env` des Schritts, der es braucht; dekodiert nur nach `$RUNNER_TEMP/ptd-apple` (0700), Keychain
+  `signing.keychain-db` mit Zufallspasswort (maskiert), `set-key-partition-list` gegen Rückfragen, Apples Zwischenzertifikate
+  (WWDR G3–G6, Developer ID G2) mit importiert. Nichts wird ausgegeben; Key-ID und Issuer-ID werden nach dem Entfernen von
+  Leerraum zusätzlich maskiert. `release.sh cleanup` löscht Keychain, installierte Profile und Schlüssel (`if: always()`). Befehle,
+  die nach einer Passphrase fragen könnten, bekommen `</dev/null` bzw. `-passin pass:`.
+- **Build-Nummer** `CFBundleVersion` = `<run_number>.<run_attempt>` (z. B. `57.1`, erneuter Versuch `57.2`): steigt mit jedem Lauf, ein
+  „Re-run“ kollidiert nicht mit einem schon hochgeladenen Build; `CFBundleShortVersionString` = `application/config/version`.
+- **macOS:** Export mit `codesign/codesign=0`, nicht mit Godots „Xcode codesign“: Godot meldet Signierfehler nur als Warnung (der
+  Export „gelingt“ unsigniert), und sein notarytool-Schritt wartet nicht und heftet kein Ticket. `release.sh sign-macos` signiert
+  von innen nach außen (verschachtelter Mach-O-Code, `*.framework`, dann die App; kein `--deep`) mit `--options runtime
+  --timestamp` und `tools/apple/PrimeTimeDungeon.entitlements` = **keine** Ausnahmen: nur GDScript, keine GDExtension, kein
+  Mikrofon/keine Kamera, keine Sandbox; JIT/unsigned memory braucht Godot laut Doku nur für C#, das 4.7.2-RegEx ruft kein
+  PCRE2-JIT auf; `get-task-allow` darf für die Notarisierung nicht drin sein. Danach `codesign --verify --deep --strict` und
+  `codesign -dvv` (Flag `runtime`, `Timestamp`, Authority „Developer ID Application“, `TeamIdentifier` = `APPLE_TEAM_ID`).
+  `notarize`: `ditto -c -k --keepParent` → `xcrun notarytool submit --key … --key-id … --issuer … --wait --timeout 45m
+  --output-format json`, Status muss `Accepted` sein, das Log wird immer geholt und ausgegeben; `xcrun stapler staple` (bis zu sechs
+  Versuche, das Ticket ist nicht sofort abrufbar) + `validate`; `spctl --assess` verlangt „source=Notarized Developer ID“, wenn
+  Gatekeeper auf dem Runner an ist. Verpackt wird die geheftete App als ZIP (`ditto`), nicht als DMG: eine Notarisierungsrunde, das
+  Ticket hängt an der App selbst und wirkt auch offline (ein ZIP lässt sich nicht heften, ein DMG bräuchte eine zweite Runde).
+- **iOS:** `release.sh xcode` verlangt Xcode ≥ 26.1 (die iOS-Bibliotheken von 4.7.2 sind mit dem iOS-26.1-SDK gebaut; App Store
+  Connect nimmt seit 2026-04-28 nur noch Builds mit Xcode 26 / iOS-26-SDK). `profile` prüft das Profil vor dem Build: Team,
+  App-ID = `TEAM.BUNDLE`, Typ App Store (keine Geräteliste, kein `get-task-allow`, kein Enterprise), nicht abgelaufen, enthält das
+  Zertifikat aus der `.p12`; installiert wird es in `~/Library/Developer/Xcode/UserData/Provisioning Profiles` (Xcode 16+) und
+  `~/Library/MobileDevice/Provisioning Profiles`. `ipa`: `xcodebuild archive` (Release, `generic/platform=iOS`, für das einzige
+  Target zusätzlich `CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM CODE_SIGN_IDENTITY PROVISIONING_PROFILE_SPECIFIER
+  OTHER_CODE_SIGN_FLAGS=--keychain`), dann `-exportArchive` mit ExportOptions `method=app-store-connect`, `destination=export`,
+  `signingStyle=manual`, `signingCertificate` = SHA-1 der Identität, `provisioningProfiles`, `manageAppVersionAndBuildNumber=false`
+  (sonst ändert Xcode die Build-Nummer), `uploadSymbols=true`; geprüft werden Bundle-ID, Build-Nummer und eingebettetes Profil der
+  IPA. Upload: `xcrun altool --upload-app -f … -t ios --apiKey … --apiIssuer …` mit dem Schlüssel als PEM unter
+  `$API_PRIVATE_KEYS_DIR/AuthKey_<id>.p8` (`asc-key` wandelt DER in PEM, sonst „Failed to generate JWT token … (259)“). altool ist bei
+  Xcode dabei und von Apple für Uploads mit API-Schlüssel beschrieben; der iTMSTransporter bräuchte eine eigene Installation, die
+  REST-Upload-API (`POST /v1/buildUploads`) eigenen JWT- und Chunk-Code. Das IPA-Artefakt entsteht vor dem Upload, damit ein
+  gescheiterter Upload mit Transporter nachgeholt werden kann. `ITSAppUsesNonExemptEncryption=false` setzt Godots Vorlage (keine
+  Export-Compliance-Frage je Build).
+- **Geprüft** (2026-10-11): actionlint 1.7.12 mit shellcheck 0.11.0; `release.sh` in einem Trockenlauf unter bash 3.2.57 (das
+  `/bin/bash` des Runners) gegen Attrappen von `security`, `codesign`, `xcrun`, `xcodebuild`, `ditto`, `plutil` und `spctl` mit
+  Wegwerf-Zertifikaten, CMS-signierten Profilen und EC-Schlüsseln: beide Jobs vollständig, inklusive echter 4.7.2-Exporte der
+  gepatchten Presets unter Linux, und die Fehlerfälle (falsches Passwort, falscher Zertifikatstyp/Team, Ad-hoc-/Development-/
+  abgelaufenes/fremdes Profil, DER- und PEM-Schlüssel, Notarisierung „Invalid“, Heften erst im dritten Versuch, Gatekeeper aus,
+  altool-Fehler). Ein echter Lauf mit Apples Diensten steht aus.
+- **Quellen** (abgerufen 2026-10-11): runner-images-README (`macos-26` = arm64, Image 20260907, Xcode 26.0.1–26.6, Standard 26.6;
+  `macos-latest` → macOS 26), GitHub Docs „Installing an Apple certificate on macOS runners“, Godot-Doku „Exporting for macOS“ (4.7)
+  und Quelltext `4.7.2-stable` (macOS-/iOS-Exporter, `modules/regex`), Apple „Customizing the notarization workflow“ und „Resolving
+  common notarization issues“, Manpages `notarytool`/`altool`/`xcodebuild` (Xcode 26), App Store Connect Hilfe „Upload builds“ und
+  „Upcoming requirements“, Apple-Developer-Forum zu `method=app-store-connect` und `manageAppVersionAndBuildNumber`, Flutter-Doku
+  „Build and release an iOS app“ (Stand 2026-07-31, `altool --upload-app` mit `--apiKey`).
 
 ### 12.5 Messung (`tools/perf.sh`, Phase C)
 

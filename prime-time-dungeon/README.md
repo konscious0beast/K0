@@ -99,12 +99,15 @@ falls sie fehlt, oben „Erweiterte Einstellungen“ einschalten).
 ## 4. Spielbare Builds
 
 Fertige Builds baut die CI: Für jeden gepushten Tag `v*` (z. B. `v0.3.0`) läuft im Workflow `ptd-check` nach dem Prüf-Job der
-Job `export` und legt vier Artefakte ab. Godot braucht man dafür nicht.
+Job `export` und legt vier Artefakte ab. Godot braucht man dafür nicht. Mit einem bezahlten Apple-Developer-Account kommen zwei
+Jobs dazu (Abschnitt „Mit Apple-Entwicklerkonto“ unten): eine notarisierte Mac-App und ein iPhone/iPad-Build in TestFlight.
 
 | Artefakt | Inhalt | läuft auf |
 |---|---|---|
 | `PrimeTimeDungeon-<tag>-macOS` | `PrimeTimeDungeon.zip` mit `Prime Time Dungeon.app` (Universal-Binary, ad-hoc signiert) | macOS 13+ (Apple Silicon), macOS 11+ (Intel) |
+| `PrimeTimeDungeon-<tag>-macOS-notarized` | wie oben, aber mit Developer ID signiert und notarisiert (nur mit Apple-Entwicklerkonto) | wie oben, startet ohne Gatekeeper-Warnung |
 | `PrimeTimeDungeon-<tag>-iOS-Xcode` | Xcode-Projekt `PrimeTimeDungeon.xcodeproj` mit Engine und Spieldaten, noch unsigniert | iPhone XS/XR und neuer, iPad mit A12-Chip und neuer, iOS/iPadOS 15+ |
+| `PrimeTimeDungeon-<tag>-iOS-TestFlight` | `PrimeTimeDungeon.ipa`, für den App Store signiert, derselbe Build wie in TestFlight (nur mit Apple-Entwicklerkonto) | wie oben, Installation nur über TestFlight |
 | `PrimeTimeDungeon-<tag>-Windows` | `PrimeTimeDungeon.exe` | Windows 10/11, 64 Bit |
 | `PrimeTimeDungeon-<tag>-Linux` | `PrimeTimeDungeon.x86_64` | Linux x86_64 |
 
@@ -119,7 +122,8 @@ nicht.
 1. `PrimeTimeDungeon-<tag>-macOS.zip` entpacken. Darin liegt `PrimeTimeDungeon.zip`: Godot packt die App selbst, damit die
    Programmdatei ausführbar bleibt. Auch diese Datei per Doppelklick entpacken und `Prime Time Dungeon.app` in **Programme** ziehen.
 2. Erster Start: Die App ist nur ad-hoc signiert (keine Developer-ID, nicht notarisiert), deshalb blockiert Gatekeeper den ersten
-   Start. Einmal freigeben, danach startet sie normal per Doppelklick:
+   Start. Einmal freigeben, danach startet sie normal per Doppelklick (die notarisierte App aus
+   `PrimeTimeDungeon-<tag>-macOS-notarized` braucht keine Freigabe):
    - **macOS 14 und älter:** Rechtsklick (Ctrl-Klick) auf die App → **Öffnen** → im Dialog noch einmal **Öffnen**.
    - **macOS 15 und neuer:** App per Doppelklick starten, die Meldung mit **Fertig** schließen, dann **Systemeinstellungen →
      Datenschutz & Sicherheit** → unten bei „Sicherheit“ **Dennoch öffnen** → mit dem Passwort bestätigen.
@@ -152,21 +156,6 @@ und in Xcode erneut **Run**, die Spielstände bleiben erhalten. Gespielt wird im
 runder Aktions-Button rechts, Pause oben rechts (Abschnitt 5). Ein Bluetooth-Gamepad sollte ebenfalls gehen, getestet ist das
 nicht.
 
-**TestFlight (später, mit bezahltem Apple-Developer-Account)**
-
-Mit einem Account im Apple Developer Program (99 USD im Jahr) lässt sich derselbe Build über TestFlight an Tester:innen verteilen,
-ohne Kabel und ohne 7-Tage-Grenze (ein TestFlight-Build läuft 90 Tage):
-
-1. Die Bundle-ID auf eine eigene Domain umstellen (`application/bundle_identifier` der Presets iOS und macOS, 02_TECH §12.3) und
-   in App Store Connect eine App mit dieser ID anlegen.
-2. In Xcode bei **Team** das bezahlte Team wählen, **Product → Archive**, dann im Organizer **Distribute App → App Store
-   Connect**. Xcode legt Distributionszertifikat und Profil selbst an. Jeder Upload braucht eine höhere Build-Nummer
-   (`application/version` im iOS-Preset oder in Xcode das Feld „Build“).
-3. In App Store Connect unter **TestFlight** Tester:innen einladen; sie installieren das Spiel mit der App „TestFlight“.
-
-Soll die CI später selbst hochladen (macOS-Runner, `xcodebuild archive` und Upload), gehören Zertifikat (`.p12`) samt Passwort,
-Provisioning-Profil und App-Store-Connect-API-Schlüssel ausschließlich in **GitHub Secrets**, nie ins Repository.
-
 **Windows und Linux:** Unter Windows `PrimeTimeDungeon.exe` starten. SmartScreen warnt bei unsignierten Programmen: **Weitere
 Informationen → Trotzdem ausführen**. Unter Linux `chmod +x PrimeTimeDungeon.x86_64 && ./PrimeTimeDungeon.x86_64`, denn
 GitHub-Artefakte verlieren das Ausführrecht.
@@ -182,6 +171,79 @@ godot --headless --path . --import
 godot --headless --path . --export-release "macOS" ../build/macos/PrimeTimeDungeon.zip
 godot --headless --path . --export-release "iOS" ../build/ios/PrimeTimeDungeon.xcodeproj
 ```
+
+### Mit Apple-Entwicklerkonto
+
+Mit einem Account im Apple Developer Program (99 USD im Jahr) signiert die CI selbst: Job `apple-macos` signiert die Mac-App mit
+der Developer ID und lässt sie von Apple notarisieren, Job `apple-ios-testflight` baut das Spiel für iPhone/iPad und lädt es nach
+**TestFlight** hoch (ohne Kabel, ohne 7-Tage-Grenze; ein TestFlight-Build läuft 90 Tage). Zertifikate, Profil und API-Schlüssel
+gibt es nur als GitHub-Secrets, nie im Repository. Die eingecheckten Presets behalten ihre Platzhalter; Team-ID, Bundle-ID und
+Build-Nummer setzt die CI erst beim Export in eine Kopie ein (02_TECH §12.4).
+
+Einmal anlegen, auf [developer.apple.com/account](https://developer.apple.com/account) bzw.
+[appstoreconnect.apple.com](https://appstoreconnect.apple.com):
+
+1. **Team-ID** ablesen: Account → Mitgliedschaftsdetails (10 Zeichen, z. B. `AB12CD34EF`).
+2. **Bundle-ID** registrieren: Certificates, Identifiers & Profiles → Identifiers → **+** → App IDs → App, „Explicit“, z. B.
+   `de.deinname.primetimedungeon`. Capabilities braucht das Spiel keine.
+3. **App anlegen** in App Store Connect: Apps → **+** → Neue App, Plattform iOS, dieselbe Bundle-ID, SKU beliebig.
+4. **Zwei Zertifikate** unter Certificates → **+**: „Apple Distribution“ und „Developer ID Application“ (Sub-CA „G2“; anlegen
+   darf es nur der Account Holder). Die verlangte Zertifikatsanfrage erzeugt die Schlüsselbundverwaltung: *Zertifikatsassistent →
+   Zertifikat einer Zertifizierungsinstanz anfordern*, „auf der Festplatte sichern“. Das geladene `.cer` per Doppelklick
+   importieren, dann unter *Meine Zertifikate* mit Rechtsklick **exportieren** als `.p12` mit Passwort (Zertifikat samt privatem
+   Schlüssel).
+5. **Provisioning-Profil**: Profiles → **+** → Distribution → **App Store Connect**, App-ID aus 2, Zertifikat „Apple
+   Distribution“ aus 4, `.mobileprovision` laden.
+6. **API-Schlüssel**: App Store Connect → Benutzer und Zugriff → Integrationen → App Store Connect API → Team-Schlüssel → **+**,
+   Zugriff **App-Manager**. `AuthKey_<Key-ID>.p8` lässt sich nur einmal laden; die Key-ID steht in der Liste, die Issuer-ID darüber.
+7. Der Account Holder muss die aktuellen Vereinbarungen akzeptiert haben (App Store Connect → Geschäftlich), sonst lehnt Apple
+   Uploads ab.
+
+Dann auf GitHub im Repository unter **Settings → Secrets and variables → Actions** eintragen. Dateien als Base64, auf dem Mac mit
+`base64 -i <Datei> | pbcopy` in die Zwischenablage:
+
+| Name | Reiter | Inhalt |
+|---|---|---|
+| `APPLE_TEAM_ID` | Variables | Team-ID aus 1 |
+| `APPLE_BUNDLE_ID` | Variables | Bundle-ID aus 2 (gilt für iOS und macOS) |
+| `IOS_DIST_P12_BASE64`, `IOS_DIST_P12_PASSWORD` | Secrets | `.p12` „Apple Distribution“ aus 4 (Base64) und ihr Passwort |
+| `IOS_PROFILE_BASE64` | Secrets | `.mobileprovision` aus 5 (Base64) |
+| `MAC_DEVID_P12_BASE64`, `MAC_DEVID_P12_PASSWORD` | Secrets | `.p12` „Developer ID Application“ aus 4 (Base64) und ihr Passwort |
+| `ASC_KEY_ID`, `ASC_ISSUER_ID` | Secrets | Key-ID und Issuer-ID aus 6 |
+| `ASC_KEY_P8_BASE64` | Secrets | `AuthKey_<Key-ID>.p8` aus 6 (Base64) |
+
+**Auslösen** wie jeden Build mit einem Tag (oben, „Neuen Build auslösen“). Nach `check` laufen beide Jobs neben `export`. Fehlt
+etwas, überspringt die CI den Job und nennt in der Zusammenfassung des Laufs die fehlenden Namen (nie Werte); ohne die Mac-Secrets
+läuft der iOS-Job trotzdem und umgekehrt. Die Build-Nummer ist `<Laufnummer>.<Versuch>` (TestFlight zeigt z. B. `0.3.0 (57.1)`),
+jeder Upload hat damit eine höhere Nummer, ein „Re-run“ ergibt `57.2`.
+
+**Wo die Builds landen:** Die Mac-App ist das Artefakt `PrimeTimeDungeon-<tag>-macOS-notarized` (zweimal entpacken, nach
+**Programme** ziehen, Doppelklick). Der iOS-Build erscheint nach Apples Verarbeitung (meist 5 bis 30 Minuten) in App Store Connect
+→ Apps → Prime Time Dungeon → **TestFlight**. Dort interne Tester:innen (Mitglieder des App-Store-Connect-Teams) einer internen
+Gruppe hinzufügen; sie bekommen eine Einladung und installieren das Spiel mit der App **TestFlight**. Externe Tester:innen
+brauchen vorher eine Beta-Prüfung durch Apple. Die IPA im Artefakt `…-iOS-TestFlight` lässt sich nicht direkt installieren, aber
+mit der Mac-App Transporter von Hand hochladen. Ohne CI geht der Upload auch in Xcode: bezahltes Team wählen, **Product →
+Archive**, im Organizer **Distribute App → App Store Connect** (jeder Upload braucht eine höhere Build-Nummer).
+
+**Typische Fehler** (stehen rot im jeweiligen Schritt des Jobs):
+
+| Meldung | Abhilfe |
+|---|---|
+| Zusammenfassung „übersprungen, es fehlen …“ | genannte Secrets/Variablen anlegen, Namen exakt wie oben |
+| „Import der .p12 gescheitert“ | Passwort falsch oder `.p12` ohne privaten Schlüssel: in der Schlüsselbundverwaltung unter *Meine Zertifikate* exportieren; eine mit OpenSSL 3 erzeugte `.p12` braucht `-legacy` |
+| „keine gültige … Identität“ | falscher Zertifikatstyp (z. B. „Apple Development“ statt „Apple Distribution“) oder Zertifikat eines anderen Teams als `APPLE_TEAM_ID` |
+| „… Development-, Ad-hoc- oder Enterprise-Profil“, „Profil gilt für …“, „enthält das Distributionszertifikat … nicht“ | Profil vom Typ „App Store Connect“ für genau diese Bundle-ID und dieses Zertifikat neu erzeugen (auch nach jeder Zertifikatserneuerung) |
+| „Failed to generate JWT token … (259)“, „NOT_AUTHORIZED“, 401 | `ASC_KEY_P8_BASE64` muss die geladene `.p8` sein, Key-ID und Issuer-ID nicht vertauscht, Schlüssel nicht widerrufen, Rolle mindestens App-Manager |
+| „No suitable application records were found“ | App fehlt in App Store Connect oder hat eine andere Bundle-ID als `APPLE_BUNDLE_ID` |
+| „Redundant Binary Upload“, „bundle version must be higher“ | Build-Nummer schon vergeben (etwa durch einen Upload von Hand): neuen Tag pushen |
+| „required agreement is missing or has expired“ | Vereinbarungen in App Store Connect akzeptieren (Account Holder) |
+| Notarisierung „Invalid“ | Apples Log steht direkt darunter im Schritt (Liste „issues“); „Team is not yet configured for notarization“ betrifft neue Konten, dann den Apple-Support fragen |
+| E-Mail von Apple „ITMS-…“ nach dem Upload | der Build ist in TestFlight als ungültig markiert: Ursache beheben, neuen Tag pushen |
+
+Zertifikate und Profil laufen ab (Apple Distribution und Profil nach einem Jahr, Developer ID nach fünf Jahren): erneuern und als
+Secrets neu eintragen. Bereits notarisierte Mac-Apps bleiben gültig, ihre Signatur trägt einen Zeitstempel. Geprüft sind die
+beiden Jobs gegen Apples aktuelle Dokumentation und unter Linux mit Attrappen der Apple-Werkzeuge (02_TECH §12.4); der erste
+echte Lauf mit den Secrets steht noch aus.
 
 ## 5. Steuerung
 
@@ -247,6 +309,7 @@ einer Temp-Kopie, schreibt die Icons aber nach `game/art/icons/` zurück. `--sho
 | `tools/fullrun.sh [--strategy=thorough\|rush\|dawdle\|typical\|all] [--seed=<int>] [--pace=fast\|human] [--log-dir=<dir>]` | Full-Run-Bot headless mit festem 60-fps-Takt; `all` = thorough, rush und dawdle nach einem Import (wie in CI) | `fullrun.sh: OK` |
 | `tools/perf.sh [--driver=opengl3\|vulkan] [--quality=high\|low] [--only=startup,explore,battle,safe_room,leak] [--cycles=20] [--out=<datei.md>] [--shots=<dir>] [--cells] [--headless]` | Performance-Probe unter Xvfb: Budget-Tabelle aus 02_TECH §12.1 (Draw Calls, Primitive, Lichter, Speicher, Ladezeiten) und Leak-Schleife über Szenenwechsel; Ergebnisse in `docs/PERFORMANCE.md` | `PERF: OK`, `perf.sh: exit 0` |
 | `tools/make_icons.sh` | erzeugt die App-Icons (Android, iOS, macOS) und die iOS-Startbilder in `game/art/icons/` aus `game/icon.svg` neu | Zeilen `ICON: …`, Exit 0 |
+| `tools/apple/release.sh <schritt>` | nur CI (macOS-Runner, Secrets): Schritte der Jobs `apple-macos` und `apple-ios-testflight`, Abschnitt 4 „Mit Apple-Entwicklerkonto“, 02_TECH §12.4 | Exit 0 |
 
 **Exit-Codes:** `0` = bestanden. `1` = Fehler: Import, Test, Smoke-Test, Screenshot, Bot-Lauf, Budget-Überschreitung oder
 Speicherwachstum. Jede Zeile mit `SCRIPT ERROR`, `Assertion failed`, `ERROR:` usw. zählt als Fehler, auch bei Exit 0 des
@@ -265,7 +328,7 @@ GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --strategy=all
 prime-time-dungeon/
 ├── README.md            diese Datei
 ├── docs/                Design- und Technik-Dokumente (Abschnitt 9), docs/screenshots/
-├── tools/               check.sh, fullrun.sh, perf.sh, make_icons.sh
+├── tools/               check.sh, fullrun.sh, perf.sh, make_icons.sh, apple/ (release.sh + Entitlements, nur CI)
 └── game/                Godot-Projekt (= res://), project.godot, export_presets.cfg, icon.svg
     ├── autoload/        Events, DB, Game, Show, Save, Router, Sfx (+ private Helfer wie game_replay.gd)
     ├── core/            reine Logik (RefCounted, headless testbar, ohne Autoloads)
@@ -286,7 +349,8 @@ prime-time-dungeon/
 ```
 
 Außerhalb dieses Verzeichnisses: der CI-Workflow `.github/workflows/ptd-check.yml` im Repo-Wurzelverzeichnis (Import,
-Tests, Smoke-Test, Full-Run-Bot, Screenshots, spielbare Builds bei `v*`-Tags, pytest des KI-Admin-Dienstes) und der optionale
+Tests, Smoke-Test, Full-Run-Bot, Screenshots, spielbare Builds bei `v*`-Tags, mit Apple-Entwicklerkonto auch notarisierte Mac-App
+und TestFlight, pytest des KI-Admin-Dienstes) und der optionale
 Referenz-Dienst `services/mod-brain/` für „M.O.D. live“ (Python/FastAPI + Claude; Standard aus, eigenes README). Export-Ausgaben landen in `build/` bzw. `export/`; beide
 Ordner stehen in `.gitignore`.
 

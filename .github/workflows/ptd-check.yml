@@ -10,6 +10,9 @@ on:
     - cron: "17 2 * * *"
 env:
   GODOT_VERSION: "4.7.2"
+  # Name of a playable build in artifact names and summaries: the tag (v0.3.0), or build-<run number> for a push whose
+  # head commit message contains "[build]" (the second build trigger, README 4 "Neuen Build auslösen")
+  PTD_BUILD_LABEL: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('build-{0}', github.run_number) }}
 jobs:
   check:
     if: github.event_name != 'schedule'
@@ -110,12 +113,15 @@ jobs:
         with:
           name: rt-balance
           path: rt-balance/
-  # Playable builds for a pushed tag v* (README „Spielbare Builds“, 02_TECH §12.3): Linux, Windows, macOS (universal .app,
-  # built-in ad-hoc signature, zipped by Godot so the executable bit survives) and the iOS Xcode project (project-only
-  # export, works on Linux; team and signing are chosen in Xcode on the Mac). No secrets, no signing identities.
+  # Playable builds for a pushed tag v* or a push whose head commit message contains "[build]" (README „Spielbare Builds“,
+  # 02_TECH §12.3): Linux, Windows, macOS (universal .app, built-in ad-hoc signature, zipped by Godot so the executable bit
+  # survives) and the iOS Xcode project (project-only export, works on Linux; team and signing are chosen in Xcode on the
+  # Mac). No secrets, no signing identities.
   export:
     needs: check
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: >-
+      startsWith(github.ref, 'refs/tags/v') ||
+      (github.event_name == 'push' && contains(github.event.head_commit.message, '[build]'))
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -151,26 +157,26 @@ jobs:
       - uses: actions/upload-artifact@v4
         id: up-macos
         with:
-          name: PrimeTimeDungeon-${{ github.ref_name }}-macOS
+          name: PrimeTimeDungeon-${{ env.PTD_BUILD_LABEL }}-macOS
           path: prime-time-dungeon/build/macos/PrimeTimeDungeon.zip
           compression-level: 0  # already a zip; Godot's zip keeps the executable bit of the .app
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         id: up-ios
         with:
-          name: PrimeTimeDungeon-${{ github.ref_name }}-iOS-Xcode
+          name: PrimeTimeDungeon-${{ env.PTD_BUILD_LABEL }}-iOS-Xcode
           path: prime-time-dungeon/build/ios/
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         id: up-windows
         with:
-          name: PrimeTimeDungeon-${{ github.ref_name }}-Windows
+          name: PrimeTimeDungeon-${{ env.PTD_BUILD_LABEL }}-Windows
           path: prime-time-dungeon/build/windows/PrimeTimeDungeon.exe
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         id: up-linux
         with:
-          name: PrimeTimeDungeon-${{ github.ref_name }}-Linux
+          name: PrimeTimeDungeon-${{ env.PTD_BUILD_LABEL }}-Linux
           path: prime-time-dungeon/build/linux/PrimeTimeDungeon.x86_64
           if-no-files-found: error
       - name: Step summary
@@ -182,9 +188,9 @@ jobs:
           URL_LINUX: ${{ steps.up-linux.outputs.artifact-url }}
         run: |
           size() { du -sh "$1" | cut -f1; }
-          n="PrimeTimeDungeon-${GITHUB_REF_NAME}"
+          n="PrimeTimeDungeon-${PTD_BUILD_LABEL}"
           {
-            echo "### Spielbare Builds ${GITHUB_REF_NAME}"
+            echo "### Spielbare Builds ${PTD_BUILD_LABEL}"
             echo
             echo "| Artefakt | Inhalt | Größe |"
             echo "|---|---|---|"
@@ -193,7 +199,7 @@ jobs:
             echo "| [$n-Windows]($URL_WINDOWS) | \`PrimeTimeDungeon.exe\` (x86_64) | $(size windows/PrimeTimeDungeon.exe) |"
             echo "| [$n-Linux]($URL_LINUX) | \`PrimeTimeDungeon.x86_64\` (vor dem Start \`chmod +x\`) | $(size linux/PrimeTimeDungeon.x86_64) |"
             echo
-            readme="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/prime-time-dungeon/README.md"
+            readme="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/${GITHUB_SHA}/prime-time-dungeon/README.md"
             echo "Erster Start auf dem Mac, iPhone/iPad über Xcode: [README, Abschnitt 4 Spielbare Builds]($readme#4-spielbare-builds)"
           } >> "$GITHUB_STEP_SUMMARY"
   # Apple release with a paid developer account (README 4 "Mit Apple-Entwicklerkonto", 02_TECH §12.4). Which of the two
@@ -201,7 +207,9 @@ jobs:
   # secrets/variables reach the summary; a malformed value fails here, before a macOS runner starts.
   apple-gate:
     needs: check
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: >-
+      startsWith(github.ref, 'refs/tags/v') ||
+      (github.event_name == 'push' && contains(github.event.head_commit.message, '[build]'))
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
@@ -253,7 +261,7 @@ jobs:
               echo "- iPhone/iPad über TestFlight: **übersprungen**, es fehlen $ios. Für iOS gibt es weiter das Xcode-Projekt aus \`export\`."
             fi
             if [ -n "$mac$ios" ]; then
-              readme="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/prime-time-dungeon/README.md"
+              readme="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/${GITHUB_SHA}/prime-time-dungeon/README.md"
               echo
               echo "Einrichtung: [README, Abschnitt 4, *Mit Apple-Entwicklerkonto*]($readme#mit-apple-entwicklerkonto)"
             fi
@@ -262,10 +270,11 @@ jobs:
   # macOS app with the Developer ID certificate: Godot exports it without a signature (codesign/codesign=0 in a temp copy
   # of the preset), then release.sh signs inside out (hardened runtime, secure timestamp, tools/apple/
   # PrimeTimeDungeon.entitlements = no exceptions), notarizes with notarytool (API key, waits), staples the ticket and
-  # zips the stapled app with ditto. Only after `check`, only for v* tags, only with the secrets (apple-gate).
+  # zips the stapled app with ditto. Only after `check`, only for v* tags or "[build]" pushes, only with the secrets
+  # (apple-gate).
   apple-macos:
     needs: [check, apple-gate]
-    if: startsWith(github.ref, 'refs/tags/v') && needs.apple-gate.outputs.macos == 'true'
+    if: needs.apple-gate.outputs.macos == 'true'  # apple-gate runs only for a tag v* or a "[build]" push
     runs-on: macos-26
     timeout-minutes: 60
     env:
@@ -300,7 +309,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         id: up
         with:
-          name: PrimeTimeDungeon-${{ github.ref_name }}-macOS-notarized
+          name: PrimeTimeDungeon-${{ env.PTD_BUILD_LABEL }}-macOS-notarized
           path: prime-time-dungeon/build/macos-notarized/PrimeTimeDungeon.zip
           compression-level: 0  # ditto zip of the stapled app: keeps the executable bit and the signature intact
           if-no-files-found: error
@@ -312,7 +321,7 @@ jobs:
           {
             echo "### macOS, signiert und notarisiert"
             echo
-            echo "[PrimeTimeDungeon-${GITHUB_REF_NAME}-macOS-notarized]($URL): \`PrimeTimeDungeon.zip\` → \`Prime Time Dungeon.app\`" \
+            echo "[PrimeTimeDungeon-${PTD_BUILD_LABEL}-macOS-notarized]($URL): \`PrimeTimeDungeon.zip\` → \`Prime Time Dungeon.app\`" \
               "(Universal, Developer ID \`${PTD_SIGN_IDENTITY}\`, Ticket geheftet, Build ${PTD_BUILD_NUMBER}), $size." \
               "Startet per Doppelklick ohne Gatekeeper-Warnung."
           } >> "$GITHUB_STEP_SUMMARY"
@@ -326,7 +335,7 @@ jobs:
   # Store Connect only accepts builds made with Xcode 26 / the iOS 26 SDK (since 2026-04-28).
   apple-ios-testflight:
     needs: [check, apple-gate]
-    if: startsWith(github.ref, 'refs/tags/v') && needs.apple-gate.outputs.ios == 'true'
+    if: needs.apple-gate.outputs.ios == 'true'  # apple-gate runs only for a tag v* or a "[build]" push
     runs-on: macos-26
     timeout-minutes: 75
     env:
@@ -363,7 +372,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         id: up
         with:
-          name: PrimeTimeDungeon-${{ github.ref_name }}-iOS-TestFlight
+          name: PrimeTimeDungeon-${{ env.PTD_BUILD_LABEL }}-iOS-TestFlight
           path: prime-time-dungeon/build/ios-testflight/PrimeTimeDungeon.ipa
           compression-level: 0  # an IPA is a zip already
           if-no-files-found: error
@@ -392,7 +401,7 @@ jobs:
                 "Die signierte IPA liegt trotzdem bereit und lässt sich mit der Mac-App Transporter hochladen."
             fi
             echo
-            echo "IPA (App-Store-signiert, Profil \`${PTD_PROFILE_NAME}\`): [PrimeTimeDungeon-${GITHUB_REF_NAME}-iOS-TestFlight]($URL)"
+            echo "IPA (App-Store-signiert, Profil \`${PTD_PROFILE_NAME}\`): [PrimeTimeDungeon-${PTD_BUILD_LABEL}-iOS-TestFlight]($URL)"
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Remove keychain, profile and keys
         if: always()

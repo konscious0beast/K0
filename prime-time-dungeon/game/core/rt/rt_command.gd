@@ -1,10 +1,10 @@
-# STUB(R1a) — owned by R1b. Replace completely, keep the public API.
 class_name RtCommand extends RefCounted
 ## Schema check and builders of the real-time combat commands (07 §10.1). Command.validate delegates every type in
 ## TYPES and the "rt" block of "encounter" here. All values are integers / Strings; positions room-local in cm; `u` is
 ## a unit id ("p0".."p3" party, "e<n>" enemy); `target` a unit id or "". The builders return exactly the recorded
-## shapes. validate() is the static schema only (R1a ships it complete so that no malformed real-time command can be
-## recorded); everything dynamic (GCD, MP, range, …) is RtSim.submit / step (07 §3.4 "Zwei Prüfstufen").
+## shapes. validate() is the static schema only (no malformed real-time command can be recorded); the static rules of
+## a running combat (unit, bar, tutorial, run rules) are RtSim.submit, everything dynamic (GCD, MP, range, …) its step
+## (07 §3.4 "Zwei Prüfstufen"). Numbers may be JSON floats with an integral value (parsed logs).
 
 ## Refusal reasons of RtSim.submit and ACTION_REFUSED.text (07 §3.4), fixed list.
 const REASONS: PackedStringArray = ["schema", "past_tick", "finished", "unknown_unit", "not_controlled", "dead",
@@ -21,6 +21,8 @@ const VEL_MAX_MM: int = 400
 const DIR_MAX: int = 127
 const RT_BLOCK_VERSION: int = 1
 const DIFFICULTIES: PackedStringArray = ["prime", "vorabend"]
+## Kinds of the opening action of a pull (rt.open, 07 §2.2 → RtSetup.rt_opener).
+const OPEN_KINDS: PackedStringArray = ["strike", "skill", "item"]
 
 static var _unit_re: RegEx = null
 
@@ -66,7 +68,7 @@ static func speed(pm: int) -> Dictionary:
 
 
 ## "" = valid, else a message (Command.validate prefixes "<t>: "). For "encounter" only the "rt" block is checked here
-## (v = 1, cell, controlled unit, party poses, groups, presets, switches, opening action, difficulty).
+## (v = 1, cell, controlled unit, party poses, groups, presets, switches, opening action (_open), difficulty).
 static func validate(d: Dictionary) -> String:
 	var t: String = str(d.get("t", ""))
 	if t == "encounter":
@@ -194,11 +196,31 @@ static func _rt_block(v: Variant) -> String:
 	for flag: String in ["auto", "retarget"]:
 		if not (rt.get(flag, null) is bool):
 			return "rt.%s must be a bool" % flag
-	if not (rt.get("open", null) is Dictionary):
-		return "rt.open must be a Dictionary ({} = no opening action)"
+	var eo: String = _open(rt.get("open", null))
+	if eo != "":
+		return eo
 	if not DIFFICULTIES.has(str(rt.get("diff", ""))):
 		return "rt.diff must be one of %s" % ", ".join(DIFFICULTIES)
 	return ""
+
+
+## The opening action (07 §2.2, §3.4 rt_opener): {} | {"kind": "strike", "target": enemy} | {"kind": "skill",
+## "skill", "target"} | {"kind": "item", "item", "target"}; "u" (optional, default the controlled unit) is a party unit.
+static func _open(v: Variant) -> String:
+	if not (v is Dictionary):
+		return "rt.open must be a Dictionary ({} = no opening action)"
+	var o: Dictionary = v
+	if o.is_empty():
+		return ""
+	var kind: String = str(o.get("kind", ""))
+	if not OPEN_KINDS.has(kind):
+		return "rt.open.kind must be one of %s" % ", ".join(OPEN_KINDS)
+	if o.has("u") and not _is_unit(o["u"], true):
+		return "rt.open.u must be a party unit id"
+	var e: String = _unit(o, "target") if kind == "strike" else _target(o, "target")
+	if e == "" and kind != "strike":
+		e = _id(o, kind)
+	return "" if e == "" else "rt.open." + e
 
 
 static func _pose(v: Variant, what: String) -> String:
@@ -274,6 +296,4 @@ static func _first(errors: Array) -> String:
 
 
 static func _is_int(v: Variant) -> bool:
-	if typeof(v) == TYPE_INT:
-		return true
-	return typeof(v) == TYPE_FLOAT and is_finite(float(v)) and float(v) == floorf(float(v))
+	return JsonUtil.is_integral(v)

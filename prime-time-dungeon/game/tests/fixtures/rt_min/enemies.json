@@ -246,6 +246,64 @@
 				}
 			},
 			"boss": true
+		},
+		{
+			"id": "enm_rt_dummy",
+			"name": "Trainingspuppe",
+			"level": 1,
+			"stats": {
+				"hp": 100,
+				"mp": 0,
+				"str": 6,
+				"mag": 3,
+				"def": 5,
+				"res": 3,
+				"spd": 5,
+				"lck": 0
+			},
+			"exp": 10,
+			"credits": 5,
+			"attack_skill": "skl_e_dummy_poke",
+			"ai": {
+				"type": "weighted",
+				"actions": [
+					{
+						"skill": "skl_e_dummy_poke",
+						"weight": 1,
+						"target": "random"
+					}
+				]
+			},
+			"element_mods": {
+				"fire": 1.5
+			},
+			"drops": [
+				{
+					"item": "itm_bandage",
+					"chance": 0.5
+				}
+			],
+			"model": {
+				"base": "brute",
+				"scale": 1.0,
+				"colors": {
+					"primary": "#c8a26b",
+					"secondary": "#5a4632",
+					"eyes": "#1a1420"
+				}
+			},
+			"explore": {
+				"field_speed": 0.0
+			},
+			"rt": {
+				"hp": 2000,
+				"radius_cm": 40,
+				"move_cm_s": 0,
+				"stationary": true,
+				"auto_skill": "skl_e_dummy_poke",
+				"swing_ms": 3000,
+				"reach_cm": 220
+			}
 		}
 	]
 }

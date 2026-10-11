@@ -77,7 +77,7 @@ static func tables() -> Dictionary:
 			{"damage_type": "magical", "element": "fire", "power": 110, "mp_cost": 4, "anim": "cast"}),
 		_skill("skl_mop_holy_lick", "party", "heal", "single_ally",
 			{"damage_type": "heal", "heal_mode": "mag", "power": 100, "mp_cost": 4, "rank": 2, "anim": "cast"}),
-		_skill("skl_mop_royal_decree", "party", "buff", "single_ally",
+		_skill("skl_mop_expert_opinion", "party", "buff", "single_ally",
 			{"power": 0, "mp_cost": 6, "rank": 2, "statuses": [{"id": "sts_haste", "turns": 3}], "anim": "cast"}),
 		_skill("skl_mop_frost_sneeze", "party", "magic", "single_enemy",
 			{"damage_type": "magical", "element": "ice", "power": 105, "mp_cost": 5,

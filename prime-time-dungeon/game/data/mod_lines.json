@@ -425,14 +425,14 @@
 			"id": "mod_liga_hint_01",
 			"tag": "liga_hint",
 			"voice": "mod",
-			"text": "Übrigens: Wer ohne Rüstung und ohne Accessoire kämpft, kriegt bei mir Bonuspunkte. Ich sage das nur.",
+			"text": "Übrigens: Wer ohne Rüstung & ohne Accessoire kämpft, kriegt bei mir Bonuspunkte. Ich sage das nur.",
 			"weight": 1
 		},
 		{
 			"id": "mod_liga_enter_1_01",
 			"tag": "liga_enter:1",
 			"voice": "mod",
-			"text": "Kandidat:in ohne Rüstung, ohne Accessoire. § 3 Kleiderordnung sagt nein, die Quote sagt JA.",
+			"text": "Kandidat:in ohne Rüstung & ohne Accessoire. § 3 Kleiderordnung sagt nein, die Quote sagt JA.",
 			"weight": 1
 		},
 		{
@@ -453,35 +453,35 @@
 			"id": "mod_liga_enter_2_01",
 			"tag": "liga_enter:2",
 			"voice": "mod",
-			"text": "Einmal Doppel-Feinripp, bitte. Mit scharf? Nein, mit Wischmopp.",
+			"text": "Zweimal ohne Rüstung & ohne Accessoire, bitte. Mit scharf? Nein, mit Wischmopp.",
 			"weight": 1
 		},
 		{
 			"id": "mod_liga_enter_2_02",
 			"tag": "liga_enter:2",
 			"voice": "mod",
-			"text": "Beide ohne Rüstung. Die Kostümabteilung hat heute frei. Die Quote nicht.",
+			"text": "Beide ohne Rüstung & ohne Accessoire. Die Kostümabteilung hat heute frei. Die Quote nicht.",
 			"weight": 1
 		},
 		{
 			"id": "mod_liga_win_01",
 			"tag": "liga_win",
 			"voice": "mod",
-			"text": "Gewonnen. Im Feinripp. Ich reiche die Szene beim Preis für Zivilcourage ein.",
+			"text": "Gewonnen. Ohne Rüstung & ohne Accessoire. Ich reiche die Szene beim Preis für Zivilcourage ein.",
 			"weight": 1
 		},
 		{
 			"id": "mod_liga_floor_01",
 			"tag": "liga_floor",
 			"voice": "mod",
-			"text": "Eine ganze Etage im Doppel-Feinripp. Die Rechtsabteilung prüft, ob das legal ist. Es ist legendär.",
+			"text": "Eine ganze Etage in der Duo-Liga. Die Rechtsabteilung prüft, ob das legal ist. Es ist legendär.",
 			"weight": 1
 		},
 		{
 			"id": "mod_liga_leave_01",
 			"tag": "liga_leave",
 			"voice": "mod",
-			"text": "Rüstung wieder an? Verständlich. Die Zuschauer:innen seufzen leise.",
+			"text": "Rüstung oder Accessoire wieder an? Verständlich. Die Zuschauer:innen seufzen leise.",
 			"weight": 1
 		},
 		{
@@ -495,7 +495,7 @@
 			"id": "mod_achievement_ach_duo_first_01",
 			"tag": "achievement:ach_duo_first",
 			"voice": "mod",
-			"text": "Doppel-Feinripp! Der Graf nennt es ‚Sommerkollektion‘. Ich nenne es Quote.",
+			"text": "Leichtes Gepäck im Doppelpack! Der Graf nennt es ‚Sommerkollektion‘. Ich nenne es Quote.",
 			"weight": 1
 		},
 		{
@@ -509,21 +509,21 @@
 			"id": "mod_achievement_ach_ul_boss_01",
 			"tag": "achievement:ach_ul_boss",
 			"voice": "mod",
-			"text": "Ein Boss, besiegt ohne Rüstung. Die Kantine benennt ein Gericht nach Ihnen. Es ist leicht bekömmlich.",
+			"text": "Ein Boss, besiegt ohne Rüstung & ohne Accessoire. Die Kantine benennt ein Gericht nach Ihnen.",
 			"weight": 1
 		},
 		{
 			"id": "mod_achievement_ach_duo_floor_01",
 			"tag": "achievement:ach_duo_floor",
 			"voice": "mod",
-			"text": "Eine ganze Etage im Doppel-Feinripp! Ich habe das Archiv angewiesen, es nie zu löschen.",
+			"text": "Eine ganze Etage mit leichtem Gepäck! Ich habe das Archiv angewiesen, es nie zu löschen.",
 			"weight": 1
 		},
 		{
 			"id": "mod_achievement_ach_duo_flawless_01",
 			"tag": "achievement:ach_duo_flawless",
 			"voice": "mod",
-			"text": "Der Etagenboss, kein K.O., keine Rüstung. Ich muss mich setzen. Ich habe keinen Stuhl.",
+			"text": "Der Etagenboss, kein K.O., keine Rüstung, kein Accessoire. Ich muss mich setzen. Ich habe keinen Stuhl.",
 			"weight": 1
 		},
 		{
@@ -839,7 +839,7 @@
 			"id": "mod_lootbox_open_fan_01",
 			"tag": "lootbox_open_fan",
 			"voice": "mod",
-			"text": "Eine Fan-Box! Ihre Fans haben zusammengelegt. Ein paar haben Glitzer reingetan. Sorry.",
+			"text": "Ein Fanpost-Paket! Ihre Fans haben zusammengelegt. Ein paar haben Glitzer reingetan. Sorry.",
 			"weight": 1
 		},
 		{
@@ -944,7 +944,7 @@
 			"id": "mod_boss_intro_enm_boss_rattenkoenigin_01",
 			"tag": "boss_intro:enm_boss_rattenkoenigin",
 			"voice": "mod",
-			"text": "Ihre Majestät, die Rattenkönigin von Gleis 9! Bitte nicht auf den Schwanz treten. Die Schwänze.",
+			"text": "Ihre Majestät, die Rattenkönigin von Gleis 9! Sieben Ratten, ein Knoten, null Humor.",
 			"weight": 1
 		},
 		{
@@ -1035,7 +1035,7 @@
 			"id": "mod_talent_pick_mopsula_02",
 			"tag": "talent_pick:mopsula",
 			"voice": "mod",
-			"text": "Der Graf sagt: „Wir hatten dieses Talent schon immer.“ Ich sage: Applaus.",
+			"text": "Der Graf sagt: „Fußnote 5: Dieses Talent hatte ich schon immer.“ Ich sage: Applaus.",
 			"weight": 1
 		},
 		{
@@ -1193,7 +1193,7 @@
 			"id": "mod_chat_handle_08",
 			"tag": "chat_handle",
 			"voice": "chat",
-			"text": "LeiseSohle",
+			"text": "PssstRegie",
 			"weight": 1
 		},
 		{
@@ -1207,7 +1207,7 @@
 			"id": "mod_chat_hype_high_02",
 			"tag": "chat_hype_high",
 			"voice": "chat",
-			"text": "mops for president!!!",
+			"text": "mops for prime time!!!",
 			"weight": 1
 		},
 		{
@@ -1347,35 +1347,35 @@
 			"id": "mod_mopsula_idle_01",
 			"tag": "mopsula_idle",
 			"voice": "mopsula",
-			"text": "Wir ruhen. Störe Uns nur bei Weltuntergang. Erneut.",
+			"text": "Ich ruhe. Fußnote 4: Weltuntergänge bitte schriftlich einreichen. Und nicht vor Mitternacht.",
 			"weight": 1
 		},
 		{
 			"id": "mod_mopsula_idle_02",
 			"tag": "mopsula_idle",
 			"voice": "mopsula",
-			"text": "Dieser Automat führt keine Leberwurst. Ein Skandal.",
+			"text": "Dieser Automat führt keine Leberwurst. Scandalum maximum.",
 			"weight": 1
 		},
 		{
 			"id": "mod_mopsula_idle_03",
 			"tag": "mopsula_idle",
 			"voice": "mopsula",
-			"text": "Kammerdiener:in, das linke Ohr. Du weißt, welches.",
+			"text": "Kolleg:in, das linke Ohr. Fußnote 2: Das rechte ist für Notfälle.",
 			"weight": 1
 		},
 		{
 			"id": "mod_mopsula_idle_04",
 			"tag": "mopsula_idle",
 			"voice": "mopsula",
-			"text": "Der Fernseher redet zu viel. Wir respektieren das. Fast.",
+			"text": "Der Fernseher redet zu viel. Ich auch. Aber mit Quellenangaben.",
 			"weight": 1
 		},
 		{
 			"id": "mod_mopsula_idle_05",
 			"tag": "mopsula_idle",
 			"voice": "mopsula",
-			"text": "Ein Sofa. Endlich ein Möbel, das Unseren Stand begreift.",
+			"text": "Ein Sofa. In Zwinger 7 gab es nur Beton. Ich nehme es in meine Memoiren auf.",
 			"weight": 1
 		},
 		{
@@ -1529,7 +1529,7 @@
 			"id": "mod_achievement_ach_preemptive_3_01",
 			"tag": "achievement:ach_preemptive_3",
 			"voice": "mod",
-			"text": "Von hinten. Dreimal. Die Ethikkommission ist im Urlaub.",
+			"text": "Dreimal zuerst zugeschlagen. Die Monster verlangen jetzt eine Vorwarnung. Schriftlich.",
 			"weight": 1
 		},
 		{
@@ -1634,7 +1634,7 @@
 			"id": "mod_achievement_ach_queen_flawless_01",
 			"tag": "achievement:ach_queen_flawless",
 			"voice": "mod",
-			"text": "Kein einziger KO. Graf Mopsula verlangt einen Thron. Abgelehnt.",
+			"text": "Kein einziger KO. Graf Mopsula verlangt dafür eine eigene Fußnote im Geschichtsbuch. Genehmigt.",
 			"weight": 1
 		},
 		{

@@ -30,8 +30,9 @@ const LOOTBOX: String = "res://scenes/safe_room/lootbox_opening.tscn"
 const SLOT_SELECT: String = "res://scenes/title/slot_select.tscn"
 const PAUSE_MENU: String = "res://scenes/ui/pause_menu.tscn"
 const TALENT_SHOW: String = "res://scenes/ui/talent_show.tscn"     # 06 package B
-const DEFAULT_IDLE: PackedStringArray = ["Wir ruhen. Störe Uns nur bei Weltuntergang. Erneut.",
-	"Ein Sofa. Endlich ein Möbel, das Unseren Stand begreift."]
+const DEFAULT_IDLE: PackedStringArray = [
+	"Ich ruhe. Fußnote 4: Weltuntergänge bitte schriftlich einreichen. Und nicht vor Mitternacht.",
+	"Ein Sofa. In Zwinger 7 gab es nur Beton. Ich nehme es in meine Memoiren auf."]
 const SCENE_TIMEOUT_SEC: float = 600.0
 const MENU_SCRIM_W: float = 640.0          # width of the dark gradient behind the menu column
 const MENU_GAP: int = 12                   # 02_TECH §10.2 rule 5: 12 px between the hit areas

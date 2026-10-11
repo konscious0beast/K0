@@ -204,6 +204,7 @@ const TalentsRules := preload("res://core/data/validators/talents.gd")
 const SpeciesRules := preload("res://core/data/validators/species.gd")
 ## 06-D: rules of twists.json (06 §5.6) — private helper like the others (06 §8.0 Nr. 7).
 const TwistCheck := preload("res://core/data/validators/twists.gd")
+const IpWords := preload("res://core/data/validators/ip_words.gd")   # polish pass: IP-distance / tone word lists
 
 # --- Field specs: [name, type(, default)] — no default = required. Types: s i f b d a sa ia c2 v2 ---------------------
 const SPEC_STATUS: Array = [["id", "s"], ["name", "s"], ["kind", "s"], ["default_turns", "i", 3],
@@ -381,6 +382,7 @@ func validate(raw: Dictionary, p_strict: bool = true, read_errors: Dictionary = 
 		_check_floor_rules()                       # rule 8
 		_check_mod_line_rules()                    # rule 9
 	_check_conditions()                            # rule 10
+	IpWords.check(self)                            # polish pass: IP-distance / tone words in every text (always)
 	return _out
 
 

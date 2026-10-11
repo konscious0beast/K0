@@ -15,6 +15,9 @@ const FORMAT: String = "ptd_save"
 const VERSION: int = 1
 const TICKS_PER_SEC: int = 30
 const MSG_NEWER: String = "Spielstand stammt aus neuerer Version"
+## Renamed ids (no version bump): an older save keeps the skill under its new id instead of dropping it. Polish pass
+## 2026-10-10 (IP distance, no royalty motif for Graf Mopsula): "Königlicher Erlass" → "Gräfliches Gutachten".
+const RENAMED_SKILLS: Dictionary = {"skl_mop_royal_decree": "skl_mop_expert_opinion"}
 
 static var _errors: PackedStringArray = []
 
@@ -206,8 +209,10 @@ static func _sanitize(st: GameState, data: GameData) -> void:
 			m.exp = 0
 		var skills: PackedStringArray = []
 		for s: String in m.skills:
-			if data.has_id("skills", s):
-				skills.append(s)
+			var sid: String = str(RENAMED_SKILLS.get(s, s))
+			if data.has_id("skills", sid):
+				if not skills.has(sid):
+					skills.append(sid)
 			else:
 				_warn("skill '%s' of %s dropped (unknown)" % [s, m.id])
 		m.skills = skills

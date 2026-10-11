@@ -2,8 +2,9 @@ extends Control
 ## Name entry (02_TECH §1.6, GDD §14.2): LineEdit (max_length 12, default "Kai"), on-screen keyboard for gamepad /
 ## touch (QWERTZ incl. Ä Ö Ü ß, shift, space, delete) and the mode choice Prime Time / Vorabendprogramm. "Sendung
 ## starten" → the single new-game path (TitleFlow.start_new_game → intro). Params {"slot": int, "hero": String}.
-## 06 §1.1 (package A): the name is always Kai's (the player's) name; with Graf Mopsula as hero the Count asks
-## („Wie heißt Unser:e Begleiter:in?“, Pluralis Majestatis). `ui_cancel` goes back to the hero choice.
+## 06 §1.1 (package A): the name is always Kai's (the player's) name; with Graf Mopsula as hero the Count asks in his
+## own voice (the lecturing count-scholar: „Fürs Protokoll: Wie heißt mein:e Begleiter:in?“). `ui_cancel` goes back to
+## the hero choice.
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const InputGlyph := preload("res://scenes/ui/input_glyph.gd")
@@ -113,7 +114,7 @@ func heading() -> String:
 
 func question() -> String:
 	if hero == "mopsula":
-		return "Graf Mopsula: „Wie heißt Unser:e Begleiter:in?“"
+		return "Graf Mopsula: „Fürs Protokoll: Wie heißt mein:e Begleiter:in?“"
 	return "Wie sollen die Zuschauer:innen dich nennen?"
 
 

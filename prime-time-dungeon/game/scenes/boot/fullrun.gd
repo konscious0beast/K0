@@ -26,6 +26,12 @@ extends Node
 ## bot engages groups with the bark (dazed group → walk into it → PREEMPTIVE) instead of the field strike, and on the
 ## first safe-room visit it switches to Kai and back ("Figur wechseln", two recorded hero commands the replay checks
 ## cover).
+## Echtzeitkampf (07 §12.5, R5b): with --combat=realtime the run fights in the world — the director plays each combat
+## with the RtBotPlayer (tests/tools/rt_bot_player.gd, loaded at run time; profile --rt-profile=typical|perfect|sloppy,
+## the hero's variant) as the person: its inputs go through Game.combat_submit and are recorded like a player's. A
+## hint card is read for HOLD_FRAMES and closed (recorded combat_hint, the ticks stand meanwhile); the results panel
+## continues by itself (autoplay). A lost boss is fought again after the game over (the Hausmeister until MAX_DEATHS,
+## the optional Königin RT_FLOOR_BOSS_ATTEMPTS times).
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const TitleFlow := preload("res://scenes/title/title_flow.gd")
@@ -40,6 +46,9 @@ const TIME_SCALE: float = 5.0
 const WATCHDOG_FRAMES: int = 90000
 const MAX_DEATHS: int = 3
 const FLOOR_BOSS_ATTEMPTS: int = 1
+const RT_FLOOR_BOSS_ATTEMPTS: int = 2       # R5b: real time — the optional floor boss once more after a defeat
+const RT_BOT_PATH: String = "res://tests/tools/rt_bot_player.gd"
+const RT_PROFILES: PackedStringArray = ["typical", "perfect", "sloppy"]
 ## Frame budgets (60 frames = 1 s × TIME_SCALE of game time).
 const BOOT_BUDGET: int = 600
 const INTRO_BUDGET: int = 4000
@@ -138,6 +147,15 @@ var liga: int = 0
 var timer_warnings: PackedInt32Array = []
 var timer_expired: int = 0
 var attempt_floor_boss: bool = true
+## R5b: the run fights in real time (Game.is_realtime() of the new game, --combat=realtime) with this bot profile.
+var rt: bool = false
+var rt_profile: String = "typical"
+var rt_combats: int = 0                    # combats the bot played (its stream: SeedUtil.derive(seed, "rt_bot", n))
+var hints_read: int = 0                    # hint cards the bot read and closed (07 §2.13)
+var _rt_result: BattleResult = null        # Events.combat_finished of the running real-time combat (null: recorded)
+var _rt_tl0: int = 0                       # the countdown at Events.combat_started …
+var _rt_tl_end: int = 0                    # … and at Events.combat_finished (the clock must stand in between)
+var _rt_seed: int = 0
 ## Measured numbers (see stats()).
 var battles: Array[Dictionary] = []
 var deaths: int = 0
@@ -200,6 +218,17 @@ func _ready() -> void:
 		hero = hero_from_args(OS.get_cmdline_user_args())
 		liga = liga_from_args(OS.get_cmdline_user_args())
 		persona = persona_from_args(OS.get_cmdline_user_args())
+		rt_profile = rt_profile_from_args(OS.get_cmdline_user_args())
+	Events.combat_started.connect(func(_sim: RefCounted) -> void:
+		if not Game.replaying:
+			_rt_result = null
+			_rt_tl0 = Game.state.floor_run.time_left_ticks if Game.state != null and Game.state.floor_run != null \
+				else 0)
+	Events.combat_finished.connect(func(r: RefCounted) -> void:
+		if not Game.replaying:
+			_rt_result = r as BattleResult
+			_rt_tl_end = Game.state.floor_run.time_left_ticks if Game.state != null and Game.state.floor_run != null \
+				else 0)
 	# Counters ignore Game.replay_log() (the replay check re-emits the same signals).
 	Events.battle_started.connect(_on_battle_started)
 	Events.credits_changed.connect(_on_credits_changed)
@@ -398,6 +427,13 @@ func _main() -> void:
 		return
 	if not check_hero(_ex(), hero) or not check_look(_ex()):
 		return
+	rt = Game.is_realtime()
+	if rt:
+		_rt_seed = run_seed
+		if load(RT_BOT_PATH) == null:
+			fail("real-time run without %s (the bot is part of the test tools)" % RT_BOT_PATH)
+			return
+		_note("real-time combat, bot profile %s" % rt_profile)
 	_note("floor 1 entered (intro played)")
 	while not finished and not _floor_done:
 		if not await settle():
@@ -568,6 +604,11 @@ func settle() -> bool:
 				continue
 			if cur is ExplorationScene:
 				var ex: ExplorationScene = cur as ExplorationScene
+				if rt and _rt_arm(ex):
+					if not await _rt_combat(ex):
+						return false
+					n = 0
+					continue
 				if ex.active_dialog() != null and not ex.is_revealing():
 					ex.active_dialog().cancel()             # a dialog the bot did not open: close it
 				elif not ex.is_encounter_pending() and not ex.is_modal():
@@ -751,7 +792,7 @@ func _boss_objective(layout: FloorLayout, fr: FloorRun) -> Dictionary:
 	if layout.quarter_boss != Vector2i(-1, -1) and not fr.quarter_boss_defeated:
 		return {"kind": "boss", "id": "f%d_qb" % fr.index, "cell": layout.quarter_boss, "why": "quarter boss"}
 	if attempt_floor_boss and layout.floor_boss != Vector2i(-1, -1) and not fr.floor_boss_defeated \
-			and floor_boss_attempts < FLOOR_BOSS_ATTEMPTS:
+			and floor_boss_attempts < floor_boss_attempts_max():
 		return {"kind": "boss", "id": "f%d_fb" % fr.index, "cell": layout.floor_boss, "why": "floor boss"}
 	return {}
 
@@ -1405,7 +1446,7 @@ func _face(body: CharacterBody3D, target: Vector3) -> void:
 
 func _interrupted(ex: ExplorationScene) -> bool:
 	return finished or not is_instance_valid(ex) or Router.current != ex or Router.busy or not ex.is_inside_tree() \
-		or ex.is_encounter_pending() or ex.is_modal()
+		or ex.is_encounter_pending() or ex.is_modal() or _rt_running(ex)
 
 
 # ======================================================================================================================
@@ -1507,6 +1548,118 @@ func _game_over(screen: Node) -> bool:
 			Save.GRACE_SECONDS])
 	return await _wait(func() -> bool: return (Router.current is ExplorationScene or Router.current is SafeRoomScene) \
 		and not Router.busy, 600, "exploration after loading the last save")
+
+
+# ======================================================================================================================
+# Echtzeitkampf (07 §12.5, R5b): combats in the world, played by the RtBotPlayer
+# ======================================================================================================================
+
+## --rt-profile=perfect|sloppy → that bot profile; anything else → "typical".
+static func rt_profile_from_args(args: PackedStringArray) -> String:
+	for a: String in args:
+		if a.begins_with("--rt-profile=") and RT_PROFILES.has(a.trim_prefix("--rt-profile=")):
+			return a.trim_prefix("--rt-profile=")
+	return "typical"
+
+
+## Attempts at the optional floor boss: CTB once (as before), real time RT_FLOOR_BOSS_ATTEMPTS.
+func floor_boss_attempts_max() -> int:
+	return RT_FLOOR_BOSS_ATTEMPTS if rt else FLOOR_BOSS_ATTEMPTS
+
+
+## Gives the exploration's director the bot (once per scene instance); true while a combat is being started or runs,
+## or one ended that is not recorded yet.
+func _rt_arm(ex: ExplorationScene) -> bool:
+	var dir: CombatDirector = ex.get_director()
+	if dir == null:
+		return false
+	if not dir.bot_factory.is_valid():
+		dir.bot_factory = _rt_make_bot
+	return _rt_running(ex) or _rt_result != null
+
+
+## A real-time combat is being started (boss intro) or runs in `ex` (the bot's walking loops stop for it).
+func _rt_running(ex: ExplorationScene) -> bool:
+	return rt and (Game.combat != null or (ex.get_director() != null and ex.get_director().is_busy()))
+
+
+## The person of the next combat: an RtBotPlayer with the run's profile on its own stream (07 §5.7), submitting through
+## Game.combat_submit (recorded).
+func _rt_make_bot(sim: RtSim) -> RefCounted:
+	var script: GDScript = load(RT_BOT_PATH) as GDScript
+	if script == null:
+		return null
+	var b: RefCounted = script.new(sim, rt_profile, SeedUtil.derive(_rt_seed, "rt_bot", rt_combats)) as RefCounted
+	rt_combats += 1
+	b.set("submitter", Game.combat_submit)
+	return b
+
+
+static func _rt_results_done(dir: CombatDirector) -> bool:
+	var panel: Node = dir.get_node_or_null("CombatResults")
+	return panel == null or not panel.has_method("is_done") or bool(panel.call("is_done"))
+
+
+## A real-time combat from its start (intro included) to the exploration after its results panel — or the game over
+## screen after a defeat. Recorded like _battle (party_turns / turns as the result counts them, plus seconds).
+func _rt_combat(ex: ExplorationScene) -> bool:
+	var dir: CombatDirector = ex.get_director()
+	var max_hp: int = 0
+	for m: PartyMember in Game.state.party:
+		max_hp += Progression.total_stats(m, DB.data).values[StatBlock.Stat.HP]
+	var n: int = 0
+	var hold: int = 0
+	while not finished:
+		if Game.combat != null and Game.combat.setup != null:
+			phase = "combat %s" % Game.combat.setup.encounter_id
+		var gone: bool = Router.current != ex or not is_instance_valid(ex)
+		if _rt_result != null and not Router.busy and (gone or (not dir.is_busy() and _rt_results_done(dir)
+				and not ex.is_encounter_pending())):
+			break
+		if _rt_result == null and not _rt_running(ex) and not ex.is_encounter_pending():
+			return true                                # an encounter that started no combat (e.g. no set)
+		if dir.is_paused_for_hint():
+			hold += 1
+			if hold >= HOLD_FRAMES:                    # read: close the card like the player (its key / any input)
+				hold = 0
+				hints_read += 1
+				var hc: Node = dir.hud.get_node_or_null("HintCards") if dir.hud != null else null
+				if hc != null and str(hc.call("current")) != "":
+					hc.call("_close")
+				else:
+					dir.resume()
+		n += 1
+		if n > BATTLE_BUDGET:
+			return fail("real-time combat did not end within %d frames (%s)" % [BATTLE_BUDGET, state_text()])
+		await get_tree().process_frame
+	if finished:
+		return false
+	var res: BattleResult = _rt_result
+	_rt_result = null
+	var rw: BattleRewards = dir.last_rewards if is_instance_valid(dir) else null
+	var rec: Dictionary = {"enc": res.encounter_id, "group": res.group_id, "outcome": res.outcome_name(),
+		"boss": res.is_boss, "adv": res.advantage, "party_turns": res.party_turns, "turns": res.turns,
+		"hp_loss_pct": roundi(100.0 * res.damage_taken / maxf(1.0, float(max_hp))), "frames": n,
+		"sec": snappedf(float(res.duration_ticks) / float(RtSim.TICKS_PER_SEC), 0.1), "level": _levels(),
+		"followers": rw.followers if rw != null else 0,
+		"hype_end": roundi(Game.state.show.hype) if Game.state.show != null else 0, "hype_start": _hype_start,
+		"hype_peak": _hype_peak_battle, "gifts": _gifts_battle, "hype_reasons": _reasons_text()}
+	battles.append(rec)
+	if grind_fights > 0 and res.outcome == BattleResult.Outcome.VICTORY \
+			and res.group_id.get_slice("_", 1).begins_with("s"):
+		grind_fights -= 1
+	_note("combat %d %s %s: %s, adv %d, %.1f s, HP loss %d%%, level %s, +%d followers, hype %d" % [battles.size(),
+		res.encounter_id, res.group_id, res.outcome_name(), res.advantage, float(rec["sec"]), int(rec["hp_loss_pct"]),
+		str(rec["level"]), int(rec["followers"]), int(rec["hype_end"])])
+	if res.outcome == BattleResult.Outcome.DEFEAT:
+		return true                                    # settle() takes the game over screen
+	if not (Router.current is ExplorationScene):
+		return fail("after the combat the screen is %s" % _screen_name(Router.current))
+	if res.outcome == BattleResult.Outcome.VICTORY and res.group_id != "" \
+			and not Game.state.floor_run.defeated_groups.has(res.group_id):
+		return fail("victory over %s but the group is not marked defeated" % res.group_id)
+	# the clock stands from the start to the end of the combat (07 §2.2); the "Applaus!" lower third does not hold it
+	return _check_after_battle(res, _rt_tl0 + Game.state.floor_run.time_left_ticks - _rt_tl_end)
 
 
 # ======================================================================================================================
@@ -2087,6 +2240,7 @@ func stats() -> Dictionary:
 	return {
 		"pace": pace, "strategy": strategy, "human_wait_sec": roundi(human_wait_sec),
 		"hero": hero, "barks": barks, "dazed": dazed, "hero_switches": hero_switches,
+		"combat_mode": "realtime" if rt else "ctb", "rt_profile": rt_profile if rt else "", "hints_read": hints_read,
 		"preemptives": int(show.stats.get("preemptives", 0)) if show != null else 0,         # sneaked up first
 		"bark_openers": int(show.stats.get("bark_openers", 0)) if show != null else 0,       # opened from a bark
 		"secrets": Secrets.opened(Game.state) if Game.state != null else PackedStringArray(),
@@ -2200,6 +2354,17 @@ func state_text() -> String:
 			str(ex.is_encounter_pending())]
 	if Game.state != null and Game.state.floor_run != null:
 		s += " time_left=%d" % int(Game.time_left())
+	if rt and cur is ExplorationScene and (cur as ExplorationScene).get_director() != null:
+		var dir: CombatDirector = (cur as ExplorationScene).get_director()
+		var hc: Node = dir.hud.get_node_or_null("HintCards") if dir.hud != null and is_instance_valid(dir.hud) else null
+		s += " director=%d ticks=%d combat=%s paused=%s hint=%s card=%s" % [int(dir.phase), dir.ticks_run, ("ct %d%s"
+			% [Game.combat.tick(), " finished" if Game.combat.is_finished() else ""]) if Game.combat != null else
+			"none", str(get_tree().paused), str(dir.is_paused_for_hint()), str(hc.call("current")) if hc != null
+			else "-"]
+		var md: Node = (load("res://scenes/ui/mod_dialog.gd") as GDScript).get("current") as Node
+		if md != null:
+			s += " dialog=%s queue=%d hold=%.2f intro=%s" % [str((md.get("_cur") as Dictionary).get("tag", "")),
+				(md.get("_queue") as Array).size(), float(md.get("_hold")), dir.intro_line.left(20)]
 	return s
 
 
@@ -2290,7 +2455,7 @@ func _on_battle_started(encounter_id: String, is_boss: bool) -> void:
 			floor_boss_attempts += 1
 			if credits_before_floor_boss < 0:
 				credits_before_floor_boss = credits_earned
-		_retry_boss = not floor_boss or floor_boss_attempts < FLOOR_BOSS_ATTEMPTS
+		_retry_boss = not floor_boss or floor_boss_attempts < floor_boss_attempts_max()
 
 
 func _on_credits_changed(_credits: int, delta: int) -> void:
@@ -2298,8 +2463,8 @@ func _on_credits_changed(_credits: int, delta: int) -> void:
 		return
 	if delta > 0:
 		credits_earned += delta
-		var src: String = "battle" if Router.current is BattleScene else ("safe_room" if Router.current is SafeRoomScene
-			else "explore")
+		var src: String = "battle" if Router.current is BattleScene or Game.combat != null else ("safe_room" if \
+			Router.current is SafeRoomScene else "explore")
 		credits_by_source[src] = int(credits_by_source.get(src, 0)) + delta
 	elif delta < 0:
 		credits_spent -= delta

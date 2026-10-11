@@ -73,6 +73,11 @@ var use_hud: bool = true
 var auto_tick: bool = true
 ## R3's combat HUD of the running combat (it gives the screen back and frees itself at Events.combat_finished).
 var hud: CanvasLayer = null
+## R5b — a scripted person for bots (fullrun.gd --combat=realtime, tests): sim → an object with act() (the inputs of
+## the tick, submitted through Game.combat_submit before the step) and observe(events) (after it), e.g.
+## tests/tools/rt_bot_player.gd. While one plays, the body follows the sim like the autopilot's (no body samples).
+var bot_factory: Callable = Callable()
+var bot: RefCounted = null
 
 var _armed: bool = false
 var _acc: float = 0.0
@@ -197,6 +202,7 @@ func abort() -> void:
 		cancel()
 		return
 	phase = Phase.ENDING
+	bot = null
 	if Game.combat != null:
 		Game.end_combat()
 	if telegraphs != null:
@@ -314,6 +320,7 @@ func _on_combat_started(sim_ref: RefCounted) -> void:
 	last_result = null
 	last_rewards = null
 	_controlled = sim.controlled_id()
+	bot = bot_factory.call(sim) as RefCounted if bot_factory.is_valid() else null
 	var geo: Dictionary = sim.setup.geo if not sim.setup.geo.is_empty() else ctx.get("geo", {})
 	if ring == null or not is_instance_valid(ring):
 		_build_set(geo)
@@ -615,18 +622,23 @@ static func _speed() -> float:
 	return float(Game.settings.combat_speed_pm if Game.settings != null else 1000) / 1000.0
 
 
-## One combat tick c (07 §9.2): boundary → sample + inputs with ct == c → step.
+## One combat tick c (07 §9.2): boundary → sample + inputs with ct == c (a bot: its act()) → step (→ observe).
 func _tick(sim: RtSim) -> void:
 	var c: int = sim.tick()
 	Game.combat_boundary()
-	_submit_sample(sim, c)
+	if bot != null:
+		bot.call("act")
+	else:
+		_submit_sample(sim, c)
 	var cmds: Array[Dictionary] = _pending.duplicate()
 	_pending.clear()
 	for cmd: Dictionary in cmds:
 		if RtCommand.CT_TYPES.has(str(cmd.get("t", ""))):
 			cmd["ct"] = c
 		Game.combat_submit(cmd)
-	Game.combat_step()
+	var ev: Array[ActionEvent] = Game.combat_step()
+	if bot != null:
+		bot.call("observe", ev)
 	ticks_run += 1
 	if Game.combat == null:
 		return
@@ -665,7 +677,7 @@ func _update_player_drive() -> void:
 	var u: RtUnit = sim.unit(_controlled)
 	if u == null:
 		return
-	var auto: bool = u.driver == RtUnit.Driver.AUTOPILOT
+	var auto: bool = u.driver == RtUnit.Driver.AUTOPILOT or bot != null
 	var e: Dictionary = (puppets.get("entries") as Dictionary).get(_controlled, {})
 	if not e.is_empty():
 		e["kind"] = &"autopilot" if auto else &"player"
@@ -839,6 +851,7 @@ static func _rig_height(n: Node3D) -> float:
 ## the credits panel (CombatResults, pauses) and opens the shutters afterwards; a defeat is the existing sign-off.
 func _finish() -> void:
 	phase = Phase.ENDING
+	bot = null
 	var result: BattleResult = Game.combat.result if Game.combat != null else null
 	var boss: bool = Game.combat != null and Game.combat.setup != null and Game.combat.setup.is_boss
 	last_rewards = Game.end_combat()

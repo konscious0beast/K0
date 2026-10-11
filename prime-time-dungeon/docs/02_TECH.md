@@ -100,6 +100,71 @@ Die Pakete A–D aus 06 Kap. 8 ändern diesen Vertrag; Module `06-A` … `06-D` 
 | CR-18 | 06-C | Marotten, Show-Wetten, Unterhosen-Liga, E1-Show-Boss | offen |
 | CR-19 | 06-D | KI-Admin: Twist-Command, `mod_live`, Referenz-Dienst | offen |
 
+### 0.6 Vertrags-Durchgang 07 R1a + 08 K0 (CR-20 … CR-24, Stand 2026-10-11)
+
+Ein Durchgang des Integrators (07 §12.2, 08 §10.2, R17/E30), Branch `ptd/contract`. Stub-Dateien beginnen mit
+`# STUB(R1a) — owned by <Phase>.` bzw. `# STUB(K0) — owned by 08-K<n>.` und behalten ihre öffentliche API; additive Abschnitte
+in Bestandsdateien heißen `# --- Echtzeitkampf (07, R<n>) ---` bzw. `# --- Casting (08, K0) ---`. Signaturen prüfen
+`test_r1a_contract` und `test_08_k0_contract` per Reflexion — wer eine davon ändern muss, stellt einen Änderungsantrag (§0.2).
+
+**Version:** `RunSim.SIM_VERSION` **1 → 2**, genau einmal für beide Pakete. Hash-Eingaben ohne Anzeigenamen
+(`StateHash.hash_input`: kein `player_name`, kein `display_name` der Party; `battle_hash_input`: kein `display_name` der
+Party-Combatants; `of_rt`: kein `display_name`). Ein Log oder Bestenlisten-Eintrag einer anderen Version ist **keine
+Abweichung**: `RunSim.version_status` → `old_version`/`new_version`, beide Verifier spielen ihn nicht ab (eine Fehlerzeile,
+`mismatch_at` −1, `"version"`), die UI zeigt „ältere Version“. Vorher und nachher lief die Plattform-Matrix
+(`tools/platform_matrix.sh`, 05 Kap. 2: Linux x86-64 headless = OpenGL 3; andere Beine ausstehend). Gespeicherte Golden-Hashes
+von Zuständen gab es in den Tests nicht; neu ist nur die Fixture `tests/fixtures/live/run_log_sim_v1.json` (Kern vor dem Sprung).
+
+**Fertig in R1a/K0 (keine Stubs):**
+
+| Datei | API / Felder |
+|---|---|
+| `core/live/command.gd` | `TYPES` += 12 Echtzeit-Typen (Schema `RtCommand.validate`) und `"persona"` (`{v: 1, talent: "tal_org_…", bias: [≤ 3]}` bzw. `{v: 1, talent, swap: true}`), `PERSONA_VERSION`, `PERSONA_MAX_BIAS` |
+| `core/live/run_rules.gd` | `static func rt_refusal(c) -> String` (`rt_unavailable` bis R5a); `command_refusal(state, data, rules, c, floor_done, scene_ctx, event_run: bool = false)` mit Zweig `persona` → `PersonaRules.check`; `refused_id` nennt das Talent |
+| `core/live/run_sim.gd` | `SIM_VERSION` 2, `OLD_VERSION`, `NEW_VERSION`, `OLD_VERSION_TAG`, `static version_status(h)`, `static version_error(h)`, `func is_event_run() -> bool`; `apply`-Zweige `persona` (→ `PersonaRules.apply`) und die Echtzeit-Typen (`_apply_combat`, R5a); `replay` ohne Namen im Kopf |
+| `core/live/run_log.gd` | `add_checkpoint(tick, h, ct = -1)` (Kampf-Prüfpunkte `{"k", "ct", "h"}`), `validate` prüft Kampfbefehle außerhalb eines Echtzeitkampfs und die `ct`-Ordnung |
+| `core/live/state_hash.gd` | `EXCLUDED_KEYS` += `player_name`, `EXCLUDED_MEMBER_KEYS`, `static battle_hash_input(state: BattleState) -> Dictionary`, `static of_rt(sim: RtSim) -> String` (vollständig, sobald `snapshot` es ist, R1b) |
+| `core/live/leaderboard.gd`, `event_def.gd` | `static Leaderboard.version_status(entry) -> String`; `static EventDef.persona_rule_errors(v) -> PackedStringArray` (`rules.persona` fehlt oder `{"talent": false, "bias": false}`) |
+| `core/progression/game_state.gd`, `party_member.gd`, `floor_run.gd` | `GameState.DEFAULT_NAME`, `combat_mode`; `PartyMember.origin_talent`, `hp_scale_pm`, `rt_preset`, `rt_toggles`, `rt_loadout`; `FloorRun.regen_ticks` (jeweils nur serialisiert, wenn ≠ Standard) |
+| `core/progression/talents.gd`, `progression.gd`, `hero_rules.gd`, `save_codec.gd` | `static Talents.has_any(member, data = null) -> bool`, `static Talents.origin_field_range_pm(state, data) -> int`, Starttalent in `_effects` (Rang 1), die vier Wächter (CR-21); HP-Skala als letzter Schritt von `total_stats`; `HeroRules.field_mods` × Feld-Starttalent, wenn der Graf führt; `SaveCodec._sanitize_persona` |
+| `core/progression/persona_rules.gd` (`PersonaRules`) | `check(state, data, cmd, event_run) -> String`, `apply(state, data, cmd) -> bool` (inkl. `follow_max_vitals`), `command_for`, `swap_command`, `can_swap`, `bias`; Konstanten `MAX_BIAS` 3, `BIAS_WEIGHT_ADD` 1, `BIAS_MIN_FLOOR` 2, `REASONS` |
+| `core/progression/persona_privacy.gd` (`PersonaPrivacy`) | `scrub_state_dict(d) -> Dictionary`, `restore_display(state, p) -> void` |
+| `core/data/game_data.gd`, `autoload/db.gd` | `TABLES` += `origins`, `looks`; `origin()`, `all_origins()`, `origin_talent() -> TalentDef`, `has_origin_talent()`, `hobby()`, `trait_def()`, `persona_entry(list, id)`, `persona_canon()`, `persona_plans()`, `look()`, `looks_of(kind)`; `rt_balance_values()`, `RT_BALANCE_FILE` |
+| `core/data/data_validator.gd` (eingefroren außer diesem Durchgang) | R1a: Präfixe `rt_`, `showboss_`, `STAT_IDS`/`TRIGGER_PAYLOAD_KEYS` (§9.4 von 07), Felder `rt`/`show_boss` in den Spezifikationen, Haken `validators/rt.gd`; K0: Tabellen `origins`/`looks` (`TABLE_EXTRA_KEYS`, ID-Präfixe `org_ occ_ tal_org_ hob_ trt_ rv_ br_ gag_ gr_ plan_ lk_`), Haken `validators/origins.gd`/`looks.gd`, Präfix `persona_`, Platzhalter `cand job hobby club trait rival brand job_text` mit den Regeln aus 08 §4.4, `MODEL_HAIR_STYLES`, `MODEL_BEARDS`, optionales `ModelSpec.style` |
+| `core/data/validators/rt_vocab.gd`, `data/rt_balance.json`, `core/rt/rt_balance.gd` | Vokabular 07 §4.10; Startwerte 07 §3.16; `RtBalance.from_data/from_values/i/sub/to_dict/validate` |
+| `core/battle/action_event.gd`, `battle_result.gd` | 19 `Type`-Werte hinter `BATTLE_END`, Felder `tick`, `rt`, `by_ai`; Ergebnisfelder `group_ids`, `duration_ticks`, `interrupts`, `dodges`, `telegraph_hits`, `train_kills`, `perfect_phases`, `potions_used`, `flee_attempts` |
+| `core/data/defs/*_def.gd` | Feld `rt` (normalisiert, `rt_norm.gd`) an Status/Skill/Item/Party/Gegner/Begegnung, `EncounterDef.show_boss` |
+| `core/show/mod_announcer.gd` | `ALWAYS_SAID_PREFIXES = ["persona_"]`, `NO_COOLDOWN_PREFIXES` += `"persona_"`, `EXTRA_WEIGHT` 2, `func set_extra_lines(provider: Callable) -> void` (Zeilen-Pool-Haken, R15) |
+| `core/show/marotten_rules.gd` | `static _draw_weight(state, def, floor_index)` = Datengewicht + `PersonaRules.weight_add` an beiden Stellen von `announce` |
+| `autoload/events.gd`, `game_settings.gd` | Signale `combat_started(sim: RefCounted)`, `combat_event(e: RefCounted)`, `combat_finished(result: RefCounted)`, `dialog_layout_requested(mode, layout)`, `show_boss_spotted(encounter_id)`; Einstellungen 07 §7.8 im Abschnitt `[combat]` |
+| `autoload/game.gd` | `var persona: PersonaProfile`, `new_game(…, p_persona = null)`, `func apply_persona(cmd) -> bool` (der aufzeichnende Eingang), Bestenlisten-Eintrag mit `display_name: ""`, Run-Log-Kopf ohne `player_name`; `enter_safe_room` → `Show.on_safe_room_entered` |
+| `autoload/save.gd`, `game_replay.gd`, `show.gd` | Kopf ohne Namen + `sim_version`, Anker durch `scrub_state_dict`, `persona_path(slot)`; `GameReplay`: Versionsprüfung, `DEFAULT_NAME`, Zweig `persona` → `Game.apply_persona`, Echtzeit-Typen → `rt_unavailable`; `Show`: `say_external` lehnt in jedem Kampf ab, `battle_won` mit den Echtzeit-Schlüsseln (0 im CTB), `PersonaText.ctx` in `_full_ctx`, `on_safe_room_entered(id, first_visit)`, Persona-Haken, Verfall bei `battle_started` |
+| `scenes/ui/ui_util.gd`, `event_info.gd`, `event_lobby.gd`, `title_flow.gd`, `hero_select.gd` | `format_line` mit `PersonaText.ctx`; `EventInfo.entry_name` („Sie“ für den namenlosen lokalen Eintrag), `EventInfo.version_tag`; Lobby-Zusatz „ältere Version“; `TitleFlow.start_new_game(…, persona = null)`; `HeroSelect.CASTING_SCENE` |
+| Daten, Werkzeuge | `data/origins.json`, `data/looks.json` (minimal, + Fixtures), Anker `mod_rt_set_quiet_01` → `mod_persona_intro_01` am Ende von `mod_lines.json`; `tests/fixtures/rt_min/**` (`FakeRtSim`, fünf Ströme); `tools/fullrun.sh --persona=…`; `tools/platform_matrix.sh` |
+
+**Stubs nach Eigentümer-Phase** (Rumpf neutral, Signatur verbindlich):
+
+| Eigentümer | Datei | API |
+|---|---|---|
+| R1b (07) | `core/rt/rt_sim.gd`, `rt_setup.gd`, `rt_unit.gd`, `rt_status.gd`, `rt_telegraph.gd`, `rt_command.gd`, `rt_geo.gd`, `rt_rules.gd`, `rt_mods.gd` | 07 §3.4 vollständig (`RtSim._init/start/submit/step/tick/is_finished/controlled_id/unit/units/telegraphs/apply_gift/run_to_end/snapshot` + reine Abfragen, `RtCommand`-Bauhelfer + `validate` (Schema schon fertig), `RtGeo.*`, `RtRules.compile/choose/eval_cond`, `RtMods.validate/apply_static/on_event/from_twists/from_show_boss`); **Abweichung:** `RtSetup.rt_opener` statt `opener` (`BattleSetup.opener` existiert) |
+| R1b (07) | `core/progression/battle_bridge.gd` | `static make_rt_setup(state, data, cmd, seed) -> RtSetup` (Stub `null`); `RtUnit.display_name` = Def-Name |
+| R2 (07) | `autoload/game.gd`, `scenes/combat/combat_director.gd`, `scenes/exploration/exploration.gd` | `var combat: RtSim`, `make_rt_setup(cmd) -> RtSetup`, `combat_boundary()`, `combat_submit(cmd) -> String`, `combat_hint(id)`, `combat_step() -> Array[ActionEvent]`, `end_combat() -> BattleRewards`; `CombatDirector.submit/pause_for_hint/resume/unit_position`; `ExplorationScene.control_temporarily(member_id)` |
+| R3 (07) | `scenes/combat/ui/combat_results.gd` | `signal results_shown(result: BattleResult)`, `var show_slot: Control`, `present(result, rewards)` |
+| R4 (07) | `core/data/validators/rt.gd` | `static check(v: DataValidator, raw: Dictionary) -> void` (**Abweichung** von `check(data, errors)`: privater Helfer wie die 06-Validatoren); R4 legt `validators/show_boss.gd` neu an und ruft ihn von hier |
+| R5a (07) | `autoload/show.gd`, `core/live/run_log.gd`, `run_sim.gd`, `game_replay.gd` | `Show.take_pending_gift_rt(sim) -> Dictionary`; `RunLog.compact()/expand()`; Kampfzweig in `RunSim.apply`/`GameReplay` (ersetzt `rt_unavailable`) |
+| K1 (08) | `persona_rules.gd`, `persona_profile.gd`, `core/show/persona_text.gd`, `persona_beats.gd`, `autoload/show_persona_hooks.gd`, `validators/origins.gd`, `autoload/save.gd`, `autoload/game.gd`, `scenes/ui/settings_menu.gd`, `scenes/boot/fullrun.gd` | `PersonaRules.offer/bias_for/weight_add/map_text`; `PersonaProfile.canon/from_dict/to_dict/fill_unset/validate`; `PersonaText.ctx/plain_line/check_name/check_free_text/nearest_tile/filter_ai_lines`; `PersonaBeats.plan_for/tag_for`; Haken-Helfer `on_chest/on_boss_won/on_safe_room/on_floor_end/on_floor_start/drop_pending`; Inhaltsregeln 08 §3.9; `Save.save_persona/load_persona/delete_persona/_slot_state_dict` (dann Slot ohne Namen); `Game._choose_initial_persona`; `_persona_section()`; `FullRun.persona_profile()` (Standard `canon`) |
+| K2 (08) | `art/kit/persona_look.gd`, `validators/looks.gd`, `autoload/db.gd`, `autoload/game.gd` | `PersonaLook.apply(model, look, data) -> Dictionary`; Wertregeln je `kind`; `DB.party_model(member_id)` mit Look; `Game._persona_battle_look(setup)` |
+| K3 (08) | `core/show/mod_announcer.gd` (Provider), Dienst | ein Provider für `ModAnnouncer.set_extra_lines`; `/v1/casting` (08 Kap. 5) |
+
+| CR | Quelle | Inhalt | Stand |
+|---|---|---|---|
+| R1a | 07 §12.2, §12.3, §12.8 | Echtzeit-Vertrag (Tabellen oben) | **umgesetzt** (2026-10-11); 02_TECH §3–§7 folgen mit R5b (07 §12.8) |
+| CR-20 | 08 §10.9 | Command `persona`, Tabellen `origins`/`looks`, Präfixe und Platzhalter, `origin_talent`, `DEFAULT_NAME`, Anzeigefelder aus den Hashes, Kopf/Anker/Bestenliste ohne Namen, Persona-Datei je Slot, `SIM_VERSION`-Sprung | **umgesetzt** (K0; Spielstand-Datei ohne Namen + Persona-Datei: Aufrufstellen jetzt, Rümpfe K1) |
+| CR-21 | 08 §10.9 | `Talents.has_any`, Starttalent ab L1, `field_mods`, Gewichtungs-Haken, Persona-Präfixe/Zeilen-Haken, Persona-Kontext, Casting im Neues-Spiel-Fluss | K0-Teil **umgesetzt**; Texte und UI K1 |
+| CR-22 | 08 §10.9 | `ModelSpec.style` mit Teil-Deckeln, Persona-Budget, `DB.party_model` | Vokabular + Stub K0; Rest K2 |
+| CR-23 | 08 §10.9 | Ausnahme `/v1/casting` in 06 §5.9/§5.10 | Wortlaut in 06 eingearbeitet; Code K1/K3 |
+| CR-24 | 08 §10.9 | E30, gemeinsamer Durchgang, Persona im Echtzeitkampf | R1a-Teil **umgesetzt**; R2–R4 offen (07 §12.9 Nr. 16/17) |
+
 ---
 
 ## 1. Dateibaum und Modulzuordnung
@@ -107,6 +172,10 @@ Die Pakete A–D aus 06 Kap. 8 ändern diesen Vertrag; Module `06-A` … `06-D` 
 Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört genau **einem** Modul.
 `(S)` = von M0 in Phase A als Stub angelegt (historisch; alle Stubs sind ersetzt, §0.2). Private Helfer ohne `class_name`
 (§0.3) dürfen ungelistet bleiben; die, auf die andere Abschnitte verweisen, stehen in §1.8.
+Die Dateien des Vertrags-Durchgangs 07 R1a + 08 K0 (`core/rt/**`, `scenes/combat/**`, `core/data/validators/{rt,rt_vocab,
+origins,looks}.gd`, `core/progression/persona_*.gd`, `core/show/persona_*.gd`, `autoload/show_persona_hooks.gd`,
+`art/kit/persona_look.gd`, `data/{rt_balance,origins,looks}.json`, `tests/fixtures/rt_min/**`, `tests/tools/platform_matrix*.gd`,
+`tools/platform_matrix.sh`) stehen mit Eigentümer-Phase in §0.6 (Stand R1a/K0; R5b bzw. K1 tragen sie hier nach).
 
 ### 1.1 Projektwurzel
 
@@ -891,15 +960,17 @@ var safe_room_clock: bool = false    # SafeRoomScene shown (true in _ready, fals
                                      # ticking there ("idle ticks", Sponsor-Fenster 05 §6.13) — the floor timer does not
 
 func has_state() -> bool
-func new_game(slot: int, player_name: String = "Kai", seed: int = -1, difficulty: StringName = &"prime",
-		hero_id: String = HeroRules.DEFAULT_HERO) -> void
+func new_game(slot: int, player_name: String = GameState.DEFAULT_NAME, seed: int = -1,
+		difficulty: StringName = &"prime", hero_id: String = HeroRules.DEFAULT_HERO,
+		p_persona: PersonaProfile = null) -> void
 	# seed -1 → int(Time.get_unix_time_from_system() * 1000.0) & 0x7FFFFFFF
 	# state = GameState.create_new(DB.data, slot, player_name, seed, difficulty); run_log = RunLog.new() (header: schema, seed,
-	# slot, player_name, mode, difficulty, game_version, sim_hz, sim_version, run identity event_id / run_id
+	# slot, mode, difficulty, game_version, sim_hz, sim_version — no player_name (08 §2.7) —, run identity event_id / run_id
 	# (RunLog.local_run_id(seed), unique per attempt) / player_id "local" / window_id "" / league — 05 §10.6);
 	# sim = RunSim.new(DB.data, state, {}, RunSim.identity_of(header)) with sim.run_log = run_log (checkpoints, see below);
 	# start_floor(1); set_hero(HeroRules.sanitize(hero_id)) — always recorded as {"t": "hero", "id"} right after "floor"
-	# (also for "kai"; 06 §1.7, CR-16); emits new_game_started(slot)
+	# (also for "kai"; 06 §1.7, CR-16); Game.persona = p_persona; _choose_initial_persona(p_persona) (08 §2.3: floor → hero →
+	# persona; stub until K1 — K0 records no persona command, §0.6); emits new_game_started(slot)
 func start_event_run(event_id: String, p_league: String = "", hero_id: String = HeroRules.DEFAULT_HERO) -> void
 	# M8: EventCatalog → EventDef.run_seed(); mode = &"event_offline"; slot 0 — an event run is never saved to a save slot
 	# (§3.6); league = p_league if it is one of rules.leagues, else the only / "pur" league (header "league");
@@ -1003,9 +1074,10 @@ func secret_notes() -> Vector2i       # Regie-Notizen of the floor (found, total
 func record(cmd: Dictionary) -> void  # run_log.add_cmd(sim.tick(), cmd, cmd_id); no-op if run_log == null or replaying;
 	# cmd_id: "gift"/"twist" (external inputs) → 0, every other command strictly increasing from 1 per run log (05 §10.6;
 	# a new run log — new_game, start_event_run, Save.load_slot — starts at 1 again)
-func replay_log(p_log: RunLog, until_tick: int = -1) -> Dictionary   # M8: {"final_hash", "result", "mismatch_at", "errors"} — see
-	# "Replay" below; until_tick >= 0: afterwards the clock steps on to that tick (the live sim.tick(): idle ticks in a safe
-	# room move the clock without a command — the full-run bot's replay check in the safe room passes it)
+func replay_log(p_log: RunLog, until_tick: int = -1) -> Dictionary   # M8: {"final_hash", "result", "mismatch_at", "errors",
+	# "version"} — see "Replay" below; until_tick >= 0: afterwards the clock steps on to that tick (the live sim.tick(): idle
+	# ticks in a safe room move the clock without a command — the full-run bot's replay check in the safe room passes it);
+	# a log of another sim_version is not replayed: "version" = RunSim.version_status(header), one error, mismatch_at -1
 func set_flag(key: String, value: Variant) -> void   # only player flags (Command.FLAG_KEYS, e.g. "intro_seen"; other keys →
 	# warning, no change): record({"t": "flag", "key", "value"}) (value bool/int/String); flags[key] = value
 func get_flag(key: String, default: Variant = null) -> Variant
@@ -1132,7 +1204,8 @@ Laufzeitverhalten:
   `create_new` → = Anzahl), `score`, `breakdown`, `rank`, `final_hash`.
 - **Replay** (`replay_log(p_log, until_tick)`, Motor im privaten Helfer `autoload/game_replay.gd`): sichert den Live-Kontext
   (`state`, `run_log`, `sim`, `quest`, `mode`, Zähler …), setzt `replaying = true`, baut `state = GameState.create_new(DB.data,
-  header.slot, header.player_name, header.seed, header.difficulty)`, bei `header.event_id != ""` `mode = &"event_offline"`,
+  header.slot, GameState.DEFAULT_NAME, header.seed, header.difficulty)` (der Kopf trägt keinen Namen, 08 §2.7; ein Log einer
+  anderen `sim_version` bricht vorher mit `old_version`/`new_version` ab), bei `header.event_id != ""` `mode = &"event_offline"`,
   `EventCatalog` → `EventDef` → `RunSim.new(…, def.rules, RunSim.identity_of(header))` und `quest = QuestTracker.from_def(def.quest)`,
   sonst Regeln `{}`. Die Reihenfolge liefert `RunLog.walk` (gemeinsam mit `RunSim.replay`): Checkpoints mit `k` kleiner als der
   Command-Tick prüfen, Uhr **tickweise** wie live bis `k` (`_dispatch(sim.step(1))`), dann das Command: Nicht-Kampf-Commands
@@ -1385,7 +1458,8 @@ func save_slot(slot: int) -> Error           # Game.state → SaveCodec.encode �
 func load_slot(slot: int) -> Error           # read → SaveCodec.decode (+ grace time_left ≥ 180 s, §6.4) →
                                              # Game.adopt_loaded_state(state, run_log) (privater Lauf-Kontext zurückgesetzt;
                                              # Header wie new_game + "from_save": true + Anker "start_state" (der geladene
-                                             # Zustand) und "start_hash" — replay_log / RunSim.replay starten dort);
+                                             # Zustand ohne Anzeigenamen, PersonaPrivacy.scrub_state_dict) und
+                                             # "start_hash" — replay_log / RunSim.replay starten dort);
                                              # emits game_loaded
 func delete_slot(slot: int) -> Error
 func autosave() -> Error                     # save_slot(Game.state.slot); slot 0 → OK, no write
@@ -3823,7 +3897,11 @@ Erkundungs-Uhr `RunSim` (`core/live/run_sim.gd`, M8, dünne Variante 05 CR-6) un
 class_name RunSim extends RefCounted
 const TICKS_PER_SEC: int = 30
 const CHECKPOINT_TICKS: int = 300
-const SIM_VERSION: int = 1                            # in the run-log header; bump on any rule change (05 §10.6)
+const SIM_VERSION: int = 2                            # in the run-log header; bump on any rule change (05 §10.6);
+	# 2 = the one joint bump of 07 R1a + 08 K0 (display names out of every hash, persona command, real-time contract)
+const OLD_VERSION: String = "old_version"             # version_status of an older log / board entry (no mismatch)
+const NEW_VERSION: String = "new_version"
+const OLD_VERSION_TAG: String = "ältere Version"      # UI tag of such replays and board entries
 var identity: Dictionary                              # run_id / event_id / player_id / window_id / league (log header)
 var rejected_cmds: Array[Dictionary]                  # {"k", "t", "gift_id", "reason"} of refused commands
 func _init(p_data: GameData, p_state: GameState, p_rules: Dictionary, p_identity: Dictionary = {}) -> void
@@ -3862,10 +3940,14 @@ static func identity_of(header: Dictionary) -> Dictionary
 static func anchor_state(h: Dictionary, errors: PackedStringArray) -> GameState   # "from_save" logs: deep copy of
 	# header.start_state, StateHash must equal header.start_hash; else null + error (replay / replay_log start there)
 static func header_errors(h: Dictionary, def: EventDef, rules: Dictionary) -> PackedStringArray   # catalog events: fixed
-	# seed, difficulty "prime", league ∈ rules.leagues
+	# seed, difficulty "prime", league ∈ rules.leagues; another sim_version → version_error(h) ("old_version", 08 §10.2 Nr. 7)
+static func version_status(h: Dictionary) -> String   # "" (this kernel, or no "sim_version") | OLD_VERSION | NEW_VERSION
+static func version_error(h: Dictionary) -> String    # "header: old_version — sim_version 1, this kernel is 2 (ältere Version: …)"
+func is_event_run() -> bool                           # identity.event_id != "" or rules non-empty (persona → event_run)
 static func replay(p_data: GameData, p_log: RunLog, p_rules: Dictionary = {}, p_quest: Dictionary = {},
 	p_ledger: Array = []) -> Dictionary   # core verifier along RunLog.walk → {"final_hash", "result", "mismatch_at",
-	# "errors"}; errors: log problems, header_errors, rejected_cmds, ledger (injected / missing / late) — 05 §11.4
+	# "errors", "version"}; errors: log problems, header_errors, rejected_cmds, ledger (injected / missing / late) — 05
+	# §11.4; a log of another sim_version is not replayed (one error, mismatch_at -1)
 func tick() -> int                                    # ticks since run start (exploration + idle ticks, never in battle)
 func sponsor_floor() -> Array[ExploreEvent]           # Game.start_floor / "floor"
 func sponsor_room(cell: Vector2i) -> Array[ExploreEvent]        # Game.visit_room (first visit) / "room"

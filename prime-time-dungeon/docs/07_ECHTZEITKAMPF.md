@@ -186,7 +186,7 @@ Wirkung des Vorteils:
 - `AMBUSH`: alle Party-Einheiten erhalten `sts_dazed` für 1,5 s. Hype +5 (Drama, `HYPE_START_AMBUSH`).
 
 Ein Pull mit Fähigkeit/Gegenstand startet den Kampf und führt die Fähigkeit als **Eröffnung** bei `ct = 0` aus
-(`RtSetup.opener`, §3.4). Der Feldschlag als Eröffnung wird bei `ct = 0` zum ersten Auto-Angriff-Schwung auf den getroffenen
+(`RtSetup.rt_opener`, §3.4). Der Feldschlag als Eröffnung wird bei `ct = 0` zum ersten Auto-Angriff-Schwung auf den getroffenen
 Gegner (Treffer bei `ct = 9`). Außerhalb des Kampfes sind Fähigkeiten nur als Pull nutzbar; Heilen außerhalb des Kampfes geht
 über Gegenstände, Regeneration (§2.7) und Safe Rooms.
 
@@ -472,7 +472,7 @@ var controlled_id: String = "p0"            # unit id of GameState.hero (§5.1)
 var presets: Dictionary = {}                # unit id → {"preset": "attack"|"support"|"careful", "tog": {"interrupt": bool, "show": bool, "potions": bool}}
 var auto_attack: bool = true                # initial auto-attack switch of the controlled unit (GameSettings.auto_attack_default)
 var auto_retarget: bool = true              # pick the next target when the current one falls (GameSettings.auto_retarget)
-var opener: Dictionary = {}                 # {} | {"kind": "strike", "target": "e0"} | {"kind": "skill", "u": "p0", "skill": id, "target": "e0"} | {"kind": "item", "u", "item", "target"}
+var rt_opener: Dictionary = {}              # {} | {"kind": "strike", "target": "e0"} | {"kind": "skill", "u": "p0", "skill": id, "target": "e0"} | {"kind": "item", "u", "item", "target"} — R1a: named rt_opener, because RtSetup extends BattleSetup and BattleSetup.opener (String, "bark", 06 A × C) exists
 var mods: Array[Dictionary] = []            # RtMods entries (§9.5), canonical, static for the whole combat
 var rules: Dictionary = {}                  # combat-relevant run rules (§10.7), canonical
 var difficulty: StringName = &"prime"       # &"vorabend": telegraph warn times × EASY_WARN_PM (§3.16)
@@ -2497,8 +2497,8 @@ Spielweise zählen nur Aktionen der Person** (`by_ai == false`); Zustände und E
 **Show-Boss (06 §2.6; E26 — 06 C hat ihn zurückgestellt, er wird nicht im CTB, sondern nur im Echtzeitkampf gebaut, R4):**
 `enc_e1_showboss` „Kanalratten-Gala“ steht in Zone B abseits des Pflichtwegs (Startwert: die Gruppe von `enc_f1_b2` —
 Rattenschamane + 2 Kanalratten — als Elite) und wird nur im Echtzeitmodus gespawnt (R2 lässt Gruppen, deren Begegnung einen nicht
-leeren `show_boss`-Block hat, im CTB-Modus weg). Datenblock (R4 in `floors.json`; Prüfung in `validators/show_boss.gd`, den R4 vom
-06-C-Stub übernimmt):
+leeren `show_boss`-Block hat, im CTB-Modus weg). Datenblock (R4 in `floors.json`; Prüfung in `validators/show_boss.gd`, den R4
+neu anlegt und aus `validators/rt.gd` aufruft — einen 06-C-Stub gibt es nicht):
 
 ```json
 "show_boss": {"elite_pm": 1200, "banner_tag": "showboss_rule", "reward": {"kind": "box", "id": "box_fan"},
@@ -2867,6 +2867,16 @@ er enthält alles, was mehr als eine Phase braucht:
   weil beide `StateHash` und die eingefrorene `data_validator.gd` berühren. `SIM_VERSION` steigt dabei **genau einmal**; vorher
   läuft die Plattform-Matrix (05 Kap. 2). Ältere Replays und Bestenlisten-Einträge behalten ihre Version und erscheinen als
   „ältere Version“. Zusätzliches Gate: `test_08_k0_contract`.
+- **Stand (2026-10-11, Branch `ptd/contract`, umgesetzt):** R1a und 08 K0 als ein Durchgang, `SIM_VERSION` 1 → 2 (einmal).
+  Alle Stubs dieser Liste stehen mit exakten Signaturen (`test_r1a_contract`, `test_08_k0_contract`); bis R5a lehnen beide
+  Verifier Echtzeit-Befehle als `rt_unavailable` ab (`RunRules.rt_refusal`), `RunLog.validate` meldet Kampfbefehle außerhalb eines
+  Echtzeitkampfs. Abweichungen vom Text dieses Abschnitts (alle per Änderungsantrag eingearbeitet): `RtSetup.rt_opener` statt
+  `opener` (§3.4); `validators/rt.gd` mit `check(v, raw)`; die Show-Boss-Artefakte aus 06 C (`validators/show_boss.gd`,
+  `ShowBossRules`, der `BattleBridge`-Haken, der Platzhalter in `floors.json`, `Events.show_boss_spotted`, Präfix `showboss_`)
+  gab es nicht — R1a legt `EncounterDef.show_boss`, das Feld in der `encounters`-Spezifikation, das Signal und das Präfix an, R4
+  legt `validators/show_boss.gd` neu an und ruft ihn aus `validators/rt.gd` (§12.3, §12.4); `battle_results.gd` hat weder
+  `results_shown` noch `show_slot`, `bets_results_fx.gd` gibt es nicht — `CombatResults` trägt die API aus §8.9 trotzdem;
+  `Show.say_external` lehnt im CTB-Kampf ebenso ab (§9.3 gilt für beide Kampfmodi).
 
 **Phasenübergreifende Signaturen — vollständige Stub-Liste von R1a** (alles, was eine Phase von einer anderen aufruft oder
 liest; `test_r1a_contract` prüft jede Zeile per Reflexion):
@@ -2877,13 +2887,13 @@ liest; `test_r1a_contract` prüft jede Zeile per Reflexion):
 | `core/rt/rt_command.gd` (R1a → R1b) | Bauhelfer `ability`, `target`, `move`, `item`, `preset`, `auto_attack`, `autopilot`, `partner_special`, `hint`, `speed` (§3.4); `validate(d: Dictionary) -> String`; `REASONS` | R2, R3, R4, R5a |
 | `core/rt/rt_geo.gd`, `rt_rules.gd`, `rt_mods.gd`, `rt_balance.gd` (R1a → R1b; Schlüssel und Bereiche von `RtBalance` nur R1) | §3.4 und §9.5 (`RtGeo.*`, `RtRules.compile/choose/eval_cond`, `RtMods.validate/apply_static/on_event/from_twists/from_show_boss`, `RtBalance.from_data`) | R2 (Geo, Balance), R4 (Rules, Mods, Balance) |
 | `core/data/validators/rt_vocab.gd` (R1a, vollständig) | Konstanten §4.10 | alle |
-| `core/data/validators/rt.gd` (R1a Stub → R4) | statisch `check(data, errors)` wie die 06-Validatoren | `DataValidator` |
+| `core/data/validators/rt.gd` (R1a Stub → R4) | `static func check(v: DataValidator, raw: Dictionary) -> void` — wie die 06-Validatoren ein privater Helfer mit dem Validator als Kontext (`v._err`, `v._out`); `DataValidator.validate` ruft ihn nach den Referenzprüfungen (R1a, statt des früher genannten `check(data, errors)`) | `DataValidator` |
 | `core/progression/battle_bridge.gd`, eigener Abschnitt (R1a → R1b) | `static func make_rt_setup(state: GameState, data: GameData, cmd: Dictionary, seed: int) -> RtSetup`; `apply_result` liest `group_ids` | R2 (`Game`), R4 (Harness), R5a (`RunSim`) |
 | `core/live/state_hash.gd`, Abschnitt (R1a → R1b) | `static func of_rt(sim: RtSim) -> String` | R2, R5a |
 | `core/live/run_log.gd`, Abschnitt (R1a → R5a) | `add_checkpoint(k, h, ct = -1)` (R1a fertig), `compact() -> void`, `expand() -> void` | R2, R5a |
 | `autoload/game.gd`, Abschnitt (R1a → R2 Live, R5a Replay-Zweig) | `var combat: RtSim`, `make_rt_setup(cmd: Dictionary) -> RtSetup`, `combat_boundary() -> void`, `combat_submit(cmd: Dictionary) -> String`, `combat_hint(id: String) -> void`, `combat_step() -> Array[ActionEvent]`, `end_combat() -> BattleRewards` (§10.6) | R2 (Director), R3, R5a (`GameReplay`) |
 | `autoload/show.gd`, Abschnitt (R1a → R5a) | `take_pending_gift_rt(sim: RtSim) -> Dictionary`; Wächter in `say_external` (R1a fertig) | R2 (`Game.combat_boundary`) |
-| `autoload/events.gd` (R1a, fertig) | `combat_started(sim)`, `combat_event(e)`, `combat_finished(result)` — ungetypt wie der ganze Bus (02_TECH §3.2), die Typen `RtSim`/`ActionEvent`/`BattleResult` stehen im Kommentar —, `dialog_layout_requested(mode: StringName, layout: Dictionary)` | R2 sendet; R3, R5a hören |
+| `autoload/events.gd` (R1a, fertig) | `combat_started(sim: RefCounted)`, `combat_event(e: RefCounted)`, `combat_finished(result: RefCounted)` — der Bus kennt keine Kern-Klassen (02_TECH §3.2), daher `RefCounted` (ungetypte Parameter sind mit `untyped_declaration = 2` ein Fehler); die Typen `RtSim`/`ActionEvent`/`BattleResult` stehen im Kommentar —, `dialog_layout_requested(mode: StringName, layout: Dictionary)`, `show_boss_spotted(encounter_id: String)` | R2 sendet; R3, R5a hören |
 | `autoload/game_settings.gd`, `core/progression/{party_member,game_state,floor_run}.gd`, `core/battle/{action_event,battle_result}.gd`, `core/data/defs/*_def.gd`, `core/show/stat_ids.gd`, `core/live/command.gd` (R1a, fertig) | Felder und Enum-Werte §3.12, §3.13, §4.6–4.9, §7.8, §9.4, §10.4; `Command.TYPES` + Delegation | alle |
 | `scenes/combat/combat_director.gd` (R1a → R2) | `class_name CombatDirector extends Node`; `submit(cmd: Dictionary) -> void` (Eingabe mit `ct` = `Game.combat.tick()`, der Director reicht sie in Schritt (2) dieses Ticks an `Game.combat_submit`), `pause_for_hint(id: String) -> void` (zeichnet über `Game.combat_hint` auf und hält die Ticks an), `resume() -> void`, `unit_position(unit_id: String) -> Vector3` (Welt-Position von Körper oder Puppe, interpoliert); keine eigenen Signale — Beginn, Ereignisse und Ende laufen über `Events.combat_*` | R3 (Eingabe, Hinweiskarten, Plaketten, Kampftext) |
 | `scenes/combat/ui/combat_results.gd` (R1a → R3) | `signal results_shown(result: BattleResult)`, `var show_slot: Control`, `func present(result: BattleResult, rewards: BattleRewards) -> void` (§8.9) | R2, 06 C (`bets_results_fx.gd`) |
@@ -2918,12 +2928,12 @@ Durchgang (08 §10.2, Dateieigentum 08 §10.7); die 08-Pakete schreiben nie in `
 |---|---|---|---|
 | `core/rt/*.gd` (öffentlich + privat) | — | R1a Stubs der öffentlichen Klassen → R1b alles | neu |
 | `core/data/validators/rt_vocab.gd` / `rt.gd` | — | R1a vollständig / R1a Stub → R4 Regeln (§4.10) | neu |
-| `core/data/validators/show_boss.gd` | C (Stub aus 06 Schritt 0; C hat den Show-Boss zurückgestellt) | R4: Regeln des `show_boss`-Blocks (E26, §9.6) | R4 übernimmt die Datei |
-| `core/data/data_validator.gd` | Schritt 0, danach eingefroren | **nur R1a**: Hook-Zeile, `OPTIONAL_MOD_TAG_PREFIXES` += `rt_`, `TRIGGER_PAYLOAD_KEYS`, `STAT_IDS` (§9.4); im selben Durchgang die K0-Zeilen aus 08 §10.2 Nr. 6 (CR-24) | Vertrags-Commit (gemeinsam mit 08 K0) |
+| `core/data/validators/show_boss.gd` | — (existiert nicht: weder 06 Schritt 0 noch C haben Stub oder Hook-Zeile angelegt) | R4: **neu**, Regeln des `show_boss`-Blocks (E26, §9.6), aufgerufen aus `validators/rt.gd` (die eingefrorene `data_validator.gd` bekommt keine weitere Zeile) | neu (R4) |
+| `core/data/data_validator.gd` | Schritt 0, danach eingefroren | **nur R1a**: Hook-Zeile, `OPTIONAL_MOD_TAG_PREFIXES` += `rt_`, `showboss_`, `TRIGGER_PAYLOAD_KEYS`, `STAT_IDS` (§9.4), die optionalen Felder `rt` (Status, Skills, Items, Party, Gegner, Begegnungen) und `show_boss` (Begegnungen) in den Feld-Spezifikationen (sonst wären sie „unbekannte Schlüssel“); im selben Durchgang die K0-Zeilen aus 08 §10.2 Nr. 6 (CR-24) | Vertrags-Commit (gemeinsam mit 08 K0) |
 | `data/rt_balance.json` | — | R1a Startwerte → **R4 besitzt die Werte**; Schlüssel und Bereiche ändert nur R1 (`rt_balance.gd`) | neu |
 | `tests/fixtures/rt_min/**` | — | R1a; R1b ergänzt; andere lesen | neu |
 | `core/battle/action_event.gd`, `battle_result.gd` | — | R1a: `Type`-Werte am Enum-Ende (§3.13), Felder `tick`, `rt`, `by_ai`; Ergebnisfelder §3.12 | additiv |
-| `core/data/defs/{skill,status,enemy,item,party_member,encounter}_def.gd` | C: `show_boss` an Begegnungen | R1a: Feld `rt` + Normalisierung (§4.6–4.9) | additiv |
+| `core/data/defs/{skill,status,enemy,item,party_member,encounter}_def.gd` | — (C hat `show_boss` nicht angelegt) | R1a: Feld `rt` + Normalisierung (§4.6–4.9), `EncounterDef.show_boss` | additiv |
 | `core/progression/battle_bridge.gd` | Schritt 0 (Twist-Zeile, Show-Boss-Hook), B (Talente) | R1a Stub `make_rt_setup` → R1b Implementierung (inkl. `RtMods.from_show_boss`/`from_twists`), `apply_result` mit `group_ids` | eigener Abschnitt |
 | `core/progression/party_member.gd`, `game_state.gd`, `floor_run.gd` | Schritt 0 (Felder) | R1a: `hp_scale_pm`, `rt_preset`, `rt_toggles`, `rt_loadout`, `combat_mode`, `regen_ticks` | additiv |
 | `core/progression/progression.gd` | B (Talente/Spezies in `total_stats`) | R1a: HP-Skala als letzter Schritt von `total_stats` (nach Klasse/Spezies) | eine Zeile, eigener Abschnitt |
@@ -2938,7 +2948,7 @@ Durchgang (08 §10.2, Dateieigentum 08 §10.7); die 08-Pakete schreiben nie in `
 | `core/show/show_rules.gd`, `sponsor_system.gd`, `achievement_tracker.gd` | — | R5a | Abschnitte |
 | `core/show/stat_ids.gd` | Schritt 0 | R1a: neue Ids (§9.4) | additiv |
 | `core/show/marotten_tracker.gd`, `marotten_rules.gd` | C | R5a: `by_ai`, `flee_attempts` aus dem Ergebnis, Schlüssel `duration_sec` (§9.6) | eigener Abschnitt |
-| `core/battle/show_boss_rules.gd` | C (Stub; im CTB nie gebaut, E26) | — (Nachfolger `RtMods.from_show_boss`, §12.4) | R5b löscht |
+| `core/battle/show_boss_rules.gd` | — (existiert nicht; 06 C hat den Show-Boss ohne Stub zurückgestellt, E26) | — (die Regeln entstehen direkt als `RtMods.from_show_boss`, §12.4) | entfällt |
 | `data/mod_lines.json` | Anker A–D | R1a: Anker `mod_rt_set_quiet_01` hinter Block D → R4: Block direkt dahinter (alle `rt_*`-Zeilen und die `showboss_*`-Zeilen, die 06 C nicht angelegt hat, E26) | Blöcke |
 | `data/floors.json` | A (`layout.secrets`), C (Platzhalter `enc_e1_showboss`) | R4: `encounters[].rt`, Boss-Spot der Königin, Show-Boss `enc_e1_showboss` (Gruppe, `show_boss`-Block, `rt`, Platzierung in Zone B; E26) | eigene Schlüssel |
 | `data/skills.json`, `statuses.json`, `enemies.json`, `items.json`, `party.json` | — | R4: `rt`-Blöcke, neue Einträge (§4.11) | additiv |
@@ -2972,13 +2982,13 @@ Echtzeit-Nachfolger mit Test:
 
 | CTB-Andockpunkt (Eigentum) | Echtzeit-Nachfolger | Phase | Test |
 |---|---|---|---|
-| `battle_results.gd`: `results_shown`, `show_slot`, Chip „Talent bereit“ (B; C hängt `bets_results_fx.gd` an) | `scenes/combat/ui/combat_results.gd` mit derselben API (§8.9); `bets_results_fx.gd` hängt sich unverändert an | R1a Stub, R3 | `test_r3_combat_results` |
+| `battle_results.gd`: Chip „Talent bereit“ (B); `results_shown`/`show_slot` und `bets_results_fx.gd` waren für C geplant, gibt es aber nicht (C zeigt die Wetten direkt im Ergebnis) | `scenes/combat/ui/combat_results.gd` mit der API aus §8.9 (`results_shown`, `show_slot`, `present`); die Wetten-Darstellung von C hängt sich dort an | R1a Stub, R3 | `test_r3_combat_results` |
 | `party_panel.gd` Stern-Marker der Held:in (A) | Pille „DU“ in `unit_frames.gd` (§8.4) | R3 | `test_r3_hud_layout` |
 | `battle_controller.gd` „Partner automatisch“ (A) | keiner: Partner immer KI + Partner-Spezial (§5.1); Option im Echtzeitmodus ausgeblendet | R3, R5b | `test_r3_settings` |
 | `BattleBridge.make_setup`: Talent-Krit, -Element (B; `Talents.crit_add_pm`, `element_pm`) | `BattleBridge.make_rt_setup` füllt dieselben `Combatant`-Felder (§9.6) | R1b-I1 | `test_r1_rt_talents` |
 | `BattleBridge.make_setup`: Präventiv-Talent „Erster Eindruck“ (B; `Talents.preemptive_dmg_pm`) | `make_rt_setup` setzt `RtUnit.opener_pm`, gefaltet in `rt_damage.gd` (§3.9.1, §9.6) | R1b-I1 | `test_r1_rt_talents` |
 | `ActionResolver`: Stunt-Fenster „Taktgefühl“ (B; `Talents.stunt_window_pm`) | `make_rt_setup` setzt `RtUnit.stunt_pm`, SHOW-Erfolgschance in `rt_ability.gd` — auch für die KI-SHOW (§9.6, E27) | R1b-I1 | `test_r1_rt_talents` |
-| `ShowBossRules.apply` + Hook in `BattleBridge.make_setup` (C; Stub aus Schritt 0, der Show-Boss ist zurückgestellt und wird im CTB nie gebaut, E26) | `RtMods.from_show_boss` + Belohnung über `boss_rewards` in `make_rt_setup`/`rt_result.gd` (R1b-I3); Daten, Validator, Zeilen, Band (R4, §9.6) | R1b-I3, R4 | `test_r1_rt_mods`, `test_r4_rt_showboss` |
+| Show-Boss (C hat ihn zurückgestellt — `ShowBossRules` und der Haken in `BattleBridge.make_setup` existieren nicht; R1a legt `EncounterDef.show_boss`, `Events.show_boss_spotted` und das Präfix `showboss_` an, E26) | `RtMods.from_show_boss` + Belohnung über `boss_rewards` in `make_rt_setup`/`rt_result.gd` (R1b-I3); Daten, Validator (`validators/show_boss.gd`, neu), Zeilen, Band (R4, §9.6) | R1b-I3, R4 | `test_r1_rt_mods`, `test_r4_rt_showboss` |
 | `MarottenTracker` über `Show.on_battle_event` (C) | derselbe Weg; `by_ai`, Flucht, `duration_sec` (§9.6) | R5a | `test_r5_marotten_rt` |
 | `Show.take_pending_gift(battle)` (Bestand) | `Show.take_pending_gift_rt(sim)` + `Game.combat_boundary()` (§9.2) | R5a | `test_r5_gifts_in_combat` |
 | `GameReplay._begin_battle`/`_play`/`_end_if_finished` (Bestand) | Schleife §10.6 | R5a | `test_r5_rt_live_equivalence` |
@@ -2986,6 +2996,7 @@ Echtzeit-Nachfolger mit Test:
 | `Router.start_battle`/`end_battle`, Swirl (Bestand) | `CombatDirector` in der Welt (§2.8) | R2 | `test_r2_combat_world` |
 | `Events.battle_turn_started` (Bestand) | keiner (Echtzeit hat keine Züge) | R5b löscht | — |
 | `test_06b_balance`, `test_06c_balance` (CTB-Bossbänder mit Talenten bzw. Liga) | Harness `--hero`, `--liga` (§11.4) | R4 | `test_r4_rt_balance` + nächtlich |
+| CTB-Teil von `test_08_origin_balance` (08 K1: Starttalente im Königin-Kampf) | Harness `--persona` mit dem nächtlichen Persona-Gate (08 Kap. 3.4 Nr. 5; 08 CR-24/F-8) | R4 | `test_r4_rt_balance` + nächtlich |
 | Full-Run-Hooks `_apply_hero_choice`, `_pick_pending_talents`, `_apply_liga_strategy` (A/B/C) | unverändert; der Echtzeit-Full-Run spielt Kämpfe mit Autopilot | R5b | `test_m6_fullrun` |
 | `TwistApplier.on_battle_end` über `Game.apply_battle_result` (D) | unverändert (das Kampfende läuft über `apply_battle_result`) | — | `test_r5_rt_live_equivalence` |
 | `ModLiveLink` (D) | pausiert mit der Lauf-Uhr; `say_external` lehnt im Kampf ab (§9.3) | R1a | `test_r5_show_rt` |
@@ -3060,7 +3071,7 @@ Danach (R5b), in dieser Reihenfolge, je ein Commit:
    `rt.power`/`rt.mp`/`rt.statuses` → Hauptfelder; Skala-Code (`hp_scale_pm`, `FIXED_SCALE_PM`, `ENEMY_HP_PM`) entfernt;
    `SaveCodec.VERSION = 2` mit Migration (v1: HP × 4).
 3. **Löschen:** `core/battle/ctb_queue.gd`, `battle_state.gd`, `action_resolver.gd`, `enemy_ai.gd`, `auto_policy.gd`,
-   `battle_command.gd`, `show_boss_rules.gd`; `scenes/battle/` vollständig (`battle.tscn`, `battle_scene.gd`,
+   `battle_command.gd`; `scenes/battle/` vollständig (`battle.tscn`, `battle_scene.gd`,
    `battle_controller.gd`, `battle_player.gd`, `battle_stage.gd`, `battle_camera.gd`, `status_fx.gd`, `portrait_gallery.*`, `ui/*`
    einschließlich `battle_results.gd` und `party_panel.gd`; `train_fx.gd` vorher nach `scenes/combat/` übernehmen, falls die
    Zug-Darstellung ihn nutzt); `Router.start_battle`/`end_battle` + Swirl-Kampfübergang; `Events.battle_turn_started`;
@@ -3118,6 +3129,8 @@ Datentabellen (um `rt` erweitert).
 | 13 | Einstellungen | `battle_speed`, `auto_battle_default`, `partner_auto` im Echtzeitmodus ausgeblendet, mit R5b entfernt | R3, R5b |
 | 14 | Seltene Begegnung `enc_f1_a_rare` | Fahrscheinfresser stationär, Flucht mit Beute als unterbrechenswerter Zauber (§6.5) | R4 |
 | 15 | README, Screenshots, PERFORMANCE.md | Neuaufnahme mit Echtzeitkampf | R5b |
+| 16 | Persona im Kampf (08 CR-24, Exportgrenze 08 §2.7 Nr. 5) | `RtUnit.display_name` ist der Def-Name, nie der Persona-Name (Regel für `make_rt_setup`, R1b); `StateHash.of_rt` lässt jeden `display_name` aus (**R1a umgesetzt**); Puppen bauen ihre Figur über `DB.party_model` (R2), Einheitenrahmen lösen Namen über `UiUtil.member_name` (R3) | R1b, R2, R3 |
+| 17 | Persona-Zeilen im Kampf | nie: `show_persona_hooks.gd` feuert nicht, solange `Game.in_battle`; eine wartende Persona-Zeile verfällt bei `Events.battle_started` (08 §4.3, K0-Haken) | R2 (Kampfbeginn sendet `battle_started`) |
 
 ---
 

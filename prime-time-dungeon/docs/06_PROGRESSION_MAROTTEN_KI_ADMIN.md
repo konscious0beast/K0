@@ -122,7 +122,8 @@ Spielergilden, Bosse werden zu Raids („Großproduktionen“) mehrerer Teams, E
 | Unterhosen-Liga | „Ohne Rüstung & ohne Accessoire: schwerer, aber das Publikum liebt Mut.“ | Etagen-Bilanz E1 (Hinweis, einmalig) |
 | Fanclubs | „Treten Sie einem Fanclub bei. Fans geben Aufgaben, Fans geben Boni.“ | E2, 1. Safe Room |
 | Regie-Twists | „Die Regie greift ein. Kurz, begrenzt, meistens zu Ihren Gunsten.“ | E2 (Regie, skriptiert); KI nur bei „M.O.D. live“ |
-| Casting | „Wer wollen Sie sein? Und was wollen Sie können? Die Jury bin ich.“ | E3, 1. Safe Room |
+| Recall (bis 08: „Casting“; Code-Namen `Casting`/`casting` bleiben) | „Wer wollen Sie sein? Und was wollen Sie können? Die Jury bin ich.“ | E3, 1. Safe Room |
+| Casting der Kandidat:in (08 §0.4) | „Wer sind Sie? Zwei Fragen, eine Karte. Oder: Rest automatisch, und Sie spielen Kai.“ | Neues Spiel (08 Kap. 1, ab K1) |
 
 ### 0.6 Einführungsfahrplan (eine neue Regel pro Etage)
 
@@ -130,7 +131,7 @@ Spielergilden, Bosse werden zu Raids („Großproduktionen“) mehrerer Teams, E
 |---|---|---|---|---|
 | 1 | Figurenwahl, Bellen, **1** Vorliebe | 1–2 Kulissenwände, 3 Regie-Notizen, 1 goldgerahmter Show-Boss (optional) | Talent-Show (ab SR2, sobald L3 erreicht), Liga-Hinweis in der Etagen-Bilanz | Gilden, Spezies, Twists, Partner-Tutorial |
 | 2 | **2** Vorlieben, Fanclubs, **Regie-Twists** (skriptiert) | 3. Begleitfigur (rekrutierbar), mehr Kulissenwände, Sammelkarten | — | Spezies |
-| 3 | **Casting**: Spezies + Spezialisierung; Level-Cap steigt | — | — | — |
+| 3 | **Recall** (vormals „Casting“, 08 F-7): Spezies + Spezialisierung; Level-Cap steigt | — | — | — |
 | 4+ | Show-Bosse mit eigenen Regeln, Fanclub-Ränge 3–5 | Sammelkarten-Album | — | — |
 
 **HUD-Budget E1:** Zu Hype, Followern, Timer, Sponsor-Badge kommt genau **ein** neuer kompakter **Show-Chip** (Vorliebe + Herzen,
@@ -147,9 +148,11 @@ bei aktiver Liga mit Liga-Stufe; Kap. 4.7). Keine weiteren neuen HUD-Zeilen auf 
    - **Kai** — „Tierpfleger:in. Wischmopp. Haut zu.“ · Feld: *Feldschlag* · Rolle: Nahkampf/Tank
    - **Graf Mopsula** — „Mops. Magier. Schwer vermittelbar.“ · Feld: *Bellen* · Rolle: Magie/Heilung
    Unter jeder Karte eine animierte Vorschau (Rig im Idle) und eine Zeile „Du kannst im Safe Room jederzeit wechseln.“
-3. Name eingeben — es ist **immer Kais Name** (Spielername, `{name}`). Hat man Mopsula gewählt, lautet die Überschrift
-   „Wie heißt Unser:e Begleiter:in?“ (Mopsula-Stimme, Pluralis Majestatis) statt „Wie heißt du?“ — bewusst **keine**
-   Haustier-befiehlt-Diener:in-Dynamik (04 Kap. 2.3).
+3. **Casting der Kandidat:in** (08 Kap. 1, ab K1; bis dahin die Namenseingabe): Name/Wortform, Beruf, Hobby, Starttalent — die
+   Persona ist immer die menschliche Kandidat:in (`{name}`, Kais Platz in der Show), auch wenn der Graf geführt wird. Die
+   Überschriften sind neutral (08 §1.8: keine Mopsula-Stimme, kein Majestätsplural) — bewusst **keine**
+   Haustier-befiehlt-Diener:in-Dynamik (04 Kap. 2.3). Andockpunkte seit 08 K0: `hero_select.gd` `CASTING_SCENE` (zeigt bis K1
+   auf die Namenseingabe), `TitleFlow.start_new_game(…, persona)`, `Game.new_game(…, persona)`.
 4. Modus (Prime Time / Vorabendprogramm, unverändert) → Intro (B0) mit Zusatzzeile `hero_pick:<id>`.
 
 ### 1.2 Erkundung
@@ -247,6 +250,15 @@ Room wählt man je offener Wahl **eines von zwei** Talenten.
 | Stapeln | Talente mit `max_rank` 2 können erneut angeboten werden (Rang +1) |
 | Autoplay/Bot | wählt deterministisch das erste Angebot beim nächsten Safe-Room-Besuch (Full-Run-Bot, Kap. 8) |
 | Umfang (Band) | Werte-Talente **+3–5 % je Rang** auf **eine** Größe (`max_rank` ≤ 2); Summe aller Talentboni je Kampfwert bis L10 **≤ +15 %** (Test in Paket B). Verhaltens-Talente ändern Feldfähigkeit, Stunt, Präventivschlag, Marotten oder Liga — keine reinen Zahlenbumps |
+
+**Starttalent der Kandidat:in (08 Kap. 3, CR-21, seit K0 im Kern):** `kai.origin_talent` (Command `persona`, 08 §2.3) ist eine
+**zusätzliche Quelle** neben den Pool-Talenten — Rang 1, wirkt **ab Level 1** und unter denselben Deckeln (Umfang-Band oben, 08
+§3.4). Dafür prüfen die vier Wächter (`Talents.stat_bonus`, `Talents._effects`, `Progression.total_stats`,
+`Progression.to_combatant`) `Talents.has_any(member)` (Pool-Talente **oder** gültiges Starttalent) statt „`talents` nicht leer“;
+`Talents._effects` hängt die Effekte des Starttalents an. Ein Feld-Starttalent (`field_range_pm`) trägt auch der führende Graf:
+`HeroRules.field_mods` multipliziert dann `Talents.origin_field_range_pm(state, data)`. `Talents.picks`, `pending_levels` und das
+Angebot der Talent-Show bleiben unverändert; der **einmalige Tausch** des Starttalents liegt in der ersten Talent-Show (08 §1.7,
+K1), solange die Persona kein Pool-Talent hat.
 
 **Wirkungsarten** (`TALENT_KINDS`, alles Ganzzahl/Promille; im Slice nur diese, alle an **bestehenden** Stellen angewendet):
 
@@ -546,7 +558,7 @@ Casting-Wahl einer Figur geht in **jedem** Safe Room einer Etage ≥ 3 (wer den 
 
 | Schritt | Regel |
 |---|---|
-| Auswahl | `Marotten.announce(state, data, floor_index)`: Pool = Einträge mit `rotation: true` und `min_floor ≤ Etage`; Etage 1 nur `starter: true`; Anzahl 1 (E1) bzw. 2 (ab E2); möglichst keine Wiederholung der Vorliebe(n) der Vor-Etage; Zufall `SeedUtil.derive(state.seed, "marotte", floor_index)`. Ergebnis in `ShowState.marotten.active`. **Nicht aufgezeichnet** — folgt aus Seed + `floor`-Command |
+| Auswahl | `Marotten.announce(state, data, floor_index)`: Pool = Einträge mit `rotation: true` und `min_floor ≤ Etage`; Etage 1 nur `starter: true`; Anzahl 1 (E1) bzw. 2 (ab E2); möglichst keine Wiederholung der Vorliebe(n) der Vor-Etage; Zufall `SeedUtil.derive(state.seed, "marotte", floor_index)`. Ergebnis in `ShowState.marotten.active`. **Nicht aufgezeichnet** — folgt aus Seed + `floor`-Command. **Gewichtung der Kandidatenkarte (08 §4.8, CR-21):** ab E2 zählt jede Vorliebe aus `flags.persona.bias` mit Gewicht +1 (`PersonaRules.weight_add`, Haken `MarottenRules._draw_weight` an beiden Stellen des Zugs seit K0; Wirkung ab K1, E1 unverändert) |
 | Ansage | M.O.D. `marotte_announce:<id>` nach dem Start des Countdowns (E1: nach dem Tutorial-Kampf, GDD B2), sonst bei `floor_start` |
 | Treffer | Auswertung beim Kampfende (Sieg) bzw. beim passenden Trigger, Bedingung über `ConditionExpr` (Kap. 4.6); je Kampf zählt jede Vorliebe höchstens 1× |
 | Wette gewonnen | bei `goal` Treffern (Standard 3): Belohnung (4.5), M.O.D. `marotte_won:<id>`, Zähler `s.bets_won` +1, Trigger `show_bet` |
@@ -989,6 +1001,9 @@ GDScript-Test und von pytest** gelesen → beide Seiten entscheiden nachweislich
    Freitext von Spieler:innen oder Zuschauer:innen (keine Namen, kein Chat), keine vom Client zurückgeschickten Zeilen. Ein
    manipulierter Client kann so weder Anweisungen einschleusen noch „die KI des Spiels“ zu Ausfällen provozieren. Zuschauer-Einfluss
    später nur als aggregierte Zahlen (Stimmen, Applaus).
+   **Ausnahme (08 CR-23):** Die Route `/v1/casting` (08 Kap. 5) erhält vom Client gefilterte Freitexte der Spieler:in (≤ 24 bzw.
+   ≤ 200 Zeichen) — nur mit Einwilligung ab 16, als Datenfelder, unter den Grenzen K-1 … K-8 aus 08 §5.5. Für `/v1/mod/turn` und
+   `/v1/mod/director` gilt Nr. 2 unverändert.
 3. **Post-Filter** (Dienst **und** Client `Show.say_external`): Länge ≤ 110, nur `{name}` als Platzhalter, keine URLs/Ziffernfolgen
    wie Telefonnummern. **Harte Sperrliste nur** für Slurs, sexuelle Begriffe und Politik-Begriffe/Namen (Einzelwort-Treffer).
    **Kaufdruck als Phrasen-/Ko-Vorkommens-Regel:** verworfen wird eine Zeile nur, wenn ein Dringlichkeitswort („schnell“,
@@ -1007,7 +1022,9 @@ GDScript-Test und von pytest** gelesen → beide Seiten entscheiden nachweislich
 ### 5.10 Datenschutz & Sicherheit
 
 - **Keine personenbezogenen Daten im Prompt:** kein Spielername (nur `{name}`), keine Account-, Geräte- oder IP-Daten;
-  `run_ref` ist ein zufälliges Pseudonym je Lauf.
+  `run_ref` ist ein zufälliges Pseudonym je Lauf. Ausnahme `/v1/casting` (08 CR-23): Beruf, Hobby, Eigenschaften und ein
+  gefilterter Freitext — nie Name, Aussehen, Konto- oder Geräte-ID; Ratenlimit über ein eigenes Casting-Pseudonym, Protokolle ohne
+  Inhalte und ohne Konto-Pseudonym (08 K-6).
 - **Schlüssel nur serverseitig** (`ANTHROPIC_API_KEY` aus dem Secret-Store).
 - **Wer stellt das Sitzungs-Token aus?** Ein Token-Endpunkt von mod-brain, **nur gegen Plattform-Authentifizierung**: Steam
   (Session-Ticket, serverseitig über die Steam-Web-API geprüft **[zu prüfen]**), Konsolen-/Mobile-Äquivalent bzw. Konto-Login des
@@ -1707,6 +1724,7 @@ aufzeichnende `Game`-Methode. Alle bisherigen ~806 Tests bleiben grün; jedes Pa
 | `02_TECH` | §3.2 Signale, §3.4 Commands `hero/talent/casting/secret/twist` (Twist mit `tick`, Replay-Puffer), §4.2 Präfixe `tal_/spc_/mar_/tw_/sec_` (+ reservierte `gld_/job_/ssn_/raid_`), §4.3 Vokabulare, §4.4 Schemas, §4.5 Tabellen 17 + `validators/`-Aufteilung, §6.3 Trigger `show_bet` + StatIds, Promille-API `hype_gain_pm/follower_pm`; CR-16…CR-19 | 0/A–D |
 | `03_ART` | Bellen-VFX, Mopsula als Spielerkörper, Riss-Wand/Regie-Notiz, Show-Boss-Goldrahmen, Liga-Optik (später; **kein** Fuß-/Barfuß-Rig, nie in Key Art), Spezies-Optik (später), Partyhut-Prop (später) | A/C (+ später) |
 | `04_STRATEGIE` | Kap. 2.3 Distanz-Review + „Unterhosen-Liga“ (**Nähe hoch**, Maßnahmen 0.3 Nr. 1–6) + Mopsula-Talentnamen (Kap. 2.2); Marketing-Regel „keine Liga-Optik von Kai in Key Art/Trailer/Store“; Kap. 3 Roadmap-Ergänzungen (Kap. 7); Kap. 11 erledigte Entscheidungen | Integrator |
+| `08_CASTING` (CR-21, CR-23, F-7) | §0.5 „Casting“ (E3) → „Recall“; §1.1 Casting statt Namenseingabe, neutrale Überschriften; §2.2 Starttalent als Zusatzquelle ab L1 unter den bestehenden Deckeln, `field_mods` mit dem Feld-Starttalent, Tausch in der ersten Talent-Show; §4.2 Gewichtung ab E2; §5.9 Nr. 2 / §5.10 Ausnahme `/v1/casting` — **eingearbeitet mit 08 K0 (2026-10-11)**; offen für K1: der neutrale `desc`-Text von `mar_mop_only` („… während Kai den Wischmopp trägt“ → ohne Namen, Text-CR in `marotten.json`) | K0 (Doku), K1 (Texte) |
 | `05_LIVE_MODUS` | **Kap. 1.5** Wertung: `show_pts` aus `followers_gained_base`, `show_bet`-Achievements ohne `ach_pts`, `rules.marotten`/`rules.liga` in `rules_hash` (4.8 Nr. 4, Option a); **Kap. 4.5** Nachricht `twist` → `{id, src, params, tick, vote_id?}` (`apply_tick` heißt jetzt `tick`); Kap. 6.2 Twist-Katalog → `twists.json` dieses Dokuments, Twist-Command-Schema; Kap. 6.13 Darstellung ohne Sekunden, Comeback-Fenster; Kap. 10.5 Schema; **Kap. 10.6** Run-Log: `twist` mit `tick`, Puffer-/Abweichungsregel; Kap. 11.1 `twists.json` jetzt im Slice; Kap. 12.2 Nr. 4/13/17/18 geschlossen | C/D |
 
 

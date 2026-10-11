@@ -1394,6 +1394,37 @@ Stub-Dateien beginnen mit `# STUB(K0) — owned by 08-K<n>. Replace completely, 
 17. Gate: Plattform-Matrix vor dem `SIM_VERSION`-Sprung; `tools/check.sh` und `tools/fullrun.sh --strategy=all` grün, Verhalten
     unverändert; `test_08_k0_contract` und `test_r1a_contract` prüfen die Signaturen per Reflexion.
 
+**Stand K0 (2026-10-11, Branch `ptd/contract`, mit 07 R1a umgesetzt):** Nr. 1–14, 16 und 17 wie oben; `SIM_VERSION` 1 → 2 (einmal,
+gemeinsam mit R1a; Plattform-Matrix vorher und nachher: Linux x86-64 headless und OpenGL 3 gleich, die übrigen Beine
+**[ausstehend]**, 05 Kap. 2). Abweichungen und Präzisierungen gegenüber dem Text oben:
+
+- **Spielstand-Datei (Kap. 2.7 Nr. 1):** In K0 behält der Slot den Namen. Die Persona-Datei ist laut Nr. 8 ein Stub — schriebe der
+  Slot schon „Kai“, verlöre ein geladener Spielstand den Namen („Spielverhalten unverändert“ ginge verloren). Die Aufrufstellen
+  stehen (`Save.save_slot` → `_slot_state_dict`, `save_persona`; `load_slot` → `load_persona`, `PersonaPrivacy.restore_display`;
+  `delete_slot` → `delete_persona`; `slot_summary` → Name aus der Persona-Datei); K1 schaltet `_slot_state_dict` zusammen mit der
+  Datei auf `PersonaPrivacy.scrub_state_dict` um. Anker, Run-Log-Kopf, Hashes und Bestenliste sind schon in K0 namenlos.
+- **`EventInfo.entry_name`** zeigt den namenlosen lokalen Eintrag schon in K0 als „Sie“ (sonst stünde in der Lobby ein leerer Name);
+  `EventInfo.version_tag` + eine Zeile in `event_lobby.gd` hängen „ältere Version“ an Einträge einer älteren `sim_version`. Der
+  Ergebnis-Bildschirm und Replay-Listen folgen in K1.
+- **`PersonaRules.check` und `apply` sind vollständig** (keine Stubs): beide Verifier brauchen die Legalität sofort; `event_run` =
+  `RunSim.is_event_run()` (Kopf-`event_id` oder Event-Regeln), übergeben als neuer optionaler Parameter von
+  `RunRules.command_refusal(…, event_run)`; `RunRules.refused_id` nennt das Talent. `Command.validate` prüft zusätzlich das Präfix
+  `tal_org_`.
+- **`Game.apply_persona(cmd) -> bool`** (neu, nicht in der API-Liste): der eine aufzeichnende Eingang (Prüfung → `record` → `apply`,
+  `party_changed`); `GameReplay` spielt `persona` darüber ab, K1 ruft ihn aus `_choose_initial_persona` und aus dem Tausch.
+- **Old-Version-Pfad:** `RunSim.version_status`/`version_error`, `OLD_VERSION`, `NEW_VERSION`, `OLD_VERSION_TAG` („ältere
+  Version“); `RunSim.replay` und `Game.replay_log` spielen ein Log einer anderen Version nicht ab (eine Fehlerzeile,
+  `mismatch_at` −1, Rückgabe `"version"`); `Leaderboard.version_status(entry)`. Auch `Save._make_run_log` schreibt jetzt
+  `sim_version`. Fixture: `tests/fixtures/live/run_log_sim_v1.json` (vom Kern vor dem Sprung aufgezeichnet).
+- **Nr. 15 (UI-Andockpunkte):** umgesetzt sind `hero_select.gd` `CASTING_SCENE` (zeigt weiter auf `name_entry.tscn`),
+  `TitleFlow.start_new_game(…, persona)` und in `settings_menu.gd` der unsichtbare Haken `_persona_section()`. Der Knopf
+  „Kandidatenkarte“ in `party_menu.gd` (mit dem Stub `persona_card.tscn`) und der Platz für den Tausch in `talent_show.gd` kommen
+  mit K1 — beide Dateien ändert gleichzeitig der Polish-/IP-Durchgang, und K1 besitzt sie ohnehin (Kap. 10.3).
+- **Daten:** `origins.json` minimal = die Kanon-Kachel `org_animals` mit allen Listen (je ein Eintrag) und als „ein Eintrag“ das
+  zweite Starttalent `tal_org_nature` (Element-Abwehr); `looks.json` = der Kanon-Look (6 IDs). Getter zusätzlich
+  `GameData.persona_entry(list, id)`; `DB.party_model` liefert die Def. `ModAnnouncer.set_extra_lines` ist als Haken schon
+  wirksam (ohne Provider unverändert).
+
 ### 10.3 K1 — Offline-Casting, Starttalente, Erzählstrang
 
 | Art | Dateien |
@@ -1557,11 +1588,11 @@ handgeschriebene `.tscn`; alle bisherigen Tests bleiben grün, jedes Paket bring
 
 | CR | Betrifft | Änderung | Paket |
 |---|---|---|---|
-| CR-20 | 02_TECH §3.4, §4, §6.4 (`command.gd`, `game_data.gd`, `data_validator.gd`, `party_member.gd`, `game_state.gd`, `state_hash.gd`, `save_codec.gd`, `game.gd`, `save.gd`, `run_sim.gd`, `run_rules.gd`, `game_replay.gd`, `event_def.gd`) | Command `persona` (mit Tausch); Tabellen `origins`/`looks`; Persona-Präfix und Platzhalter; `origin_talent`; `DEFAULT_NAME`; Anzeigefelder aus `of`/`of_battle`; Run-Log-Kopf, Anker und Spielstand-Datei ohne Namen; Persona-Datei je Slot; ein `SIM_VERSION`-Sprung mit R1a, `old_version` statt Abweichung | K0 |
-| CR-21 | 06 A/B/C und Bestand (`talents.gd`, `progression.gd`, `hero_rules.gd`, `marotten_rules.gd`, `talent_show.gd`, `party_menu.gd`, `mod_announcer.gd`, `show.gd`, `ui_util.gd`, `title_flow.gd`, `hero_select.gd`, `intro.gd`, `settings_menu.gd`, `game_over.gd`, `floor_summary.gd`, `event_info.gd`, `event_lobby.gd`, `run_result.gd`); Texte in `talents.json`, `skills.json`, `items.json`, `marotten.json`, `scenes.json` | `Talents.has_any` + Quelle in `_effects` (Starttalent ab L1); Feld-Starttalent für die Anführer:in; Gewichtung ab E2; Tausch in der ersten Talent-Show; `persona_*` immer gesagt, nie im Kampf, Zeilen-Pool-Haken; Persona-Kontext; neutrale Texte; Casting im Neues-Spiel-Fluss | K0/K1 |
+| CR-20 | 02_TECH §3.4, §4, §6.4 (`command.gd`, `game_data.gd`, `data_validator.gd`, `party_member.gd`, `game_state.gd`, `state_hash.gd`, `save_codec.gd`, `game.gd`, `save.gd`, `run_sim.gd`, `run_rules.gd`, `game_replay.gd`, `event_def.gd`) | Command `persona` (mit Tausch); Tabellen `origins`/`looks`; Persona-Präfix und Platzhalter; `origin_talent`; `DEFAULT_NAME`; Anzeigefelder aus `of`/`of_battle`; Run-Log-Kopf, Anker und Spielstand-Datei ohne Namen; Persona-Datei je Slot; ein `SIM_VERSION`-Sprung mit R1a, `old_version` statt Abweichung | K0 — **umgesetzt 2026-10-11** (Spielstand-Datei ohne Namen und Persona-Datei: Aufrufstellen in K0, Rümpfe K1; 02_TECH §0.6) |
+| CR-21 | 06 A/B/C und Bestand (`talents.gd`, `progression.gd`, `hero_rules.gd`, `marotten_rules.gd`, `talent_show.gd`, `party_menu.gd`, `mod_announcer.gd`, `show.gd`, `ui_util.gd`, `title_flow.gd`, `hero_select.gd`, `intro.gd`, `settings_menu.gd`, `game_over.gd`, `floor_summary.gd`, `event_info.gd`, `event_lobby.gd`, `run_result.gd`); Texte in `talents.json`, `skills.json`, `items.json`, `marotten.json`, `scenes.json` | `Talents.has_any` + Quelle in `_effects` (Starttalent ab L1); Feld-Starttalent für die Anführer:in; Gewichtung ab E2; Tausch in der ersten Talent-Show; `persona_*` immer gesagt, nie im Kampf, Zeilen-Pool-Haken; Persona-Kontext; neutrale Texte; Casting im Neues-Spiel-Fluss | K0/K1 — **K0-Teil umgesetzt 2026-10-11:** `Talents.has_any` + Quelle in `_effects` + die vier Wächter, `field_mods`, Gewichtungs-Haken in `MarottenRules`, `ModAnnouncer`-Präfixregeln + Zeilen-Pool-Haken, Persona-Kontext in `Show._full_ctx`/`UiUtil.format_line`, `TitleFlow`/`hero_select`-Andockpunkte; 06 §0.5/§1.1/§2.2/§4.2 nachgezogen |
 | CR-22 | 02_TECH §4.4.14 und §12.1, 03_ART §5.3/§5.5, `DB.party_model` und Aufrufer inkl. `Game.make_battle_setup` | `ModelSpec.style` mit Teil-Deckeln; Budget „Held mit Persona-Look ≤ 3 000 Tris, ≤ 8 MeshInstances“ (Kanon-Kai bleibt ≤ 2 500); gemessene Basis 2 492 / 7; ein Figurenbau-Einstieg (auch für A8) | K2 |
-| CR-23 | 06 D (`services/mod-brain`, `mod_filter.json`, `mod_line_filter.gd`), 06 §5.9 Nr. 2 und §5.10, `GameSettings` | K1: Live-Prompt beschreibt die Kandidat:in neutral, Client-Filter gegen „Kai“/„Tierpfleger“ bei Nicht-Kanon-Persona. K3: Route `/v1/casting` (zwei Stufen), Konfiguration, `cast_acc`, Kosten-Log ohne Pseudonym, Listen `special`, Einwilligung; **ausdrückliche Ergänzung von 06 §5.9 Nr. 2 und §5.10 im Wortlaut von Kap. 5.5** | K1/K3 |
-| CR-24 | 07 | **Angenommen und mit diesem Stand eingearbeitet:** E30 (§0.1, §3.9.1, §6.3, §9.6, §12.5), der gemeinsame Vertrags-Durchgang K0 + R1a (§10.2, §12.2, §12.3) und `08` in der Vorrangzeile. **Offen für die R-Phasen:** R1a `RtUnit.display_name` = Def-Name, `StateHash.of_rt` ohne Anzeigenamen; R2 Puppen über `DB.party_model`; R3 Rahmen über `UiUtil.member_name`; R4 Harness `--persona` mit dem nächtlichen Persona-Gate (Kap. 3.4 Nr. 5) | R1a–R5b |
+| CR-23 | 06 D (`services/mod-brain`, `mod_filter.json`, `mod_line_filter.gd`), 06 §5.9 Nr. 2 und §5.10, `GameSettings` | K1: Live-Prompt beschreibt die Kandidat:in neutral, Client-Filter gegen „Kai“/„Tierpfleger“ bei Nicht-Kanon-Persona. K3: Route `/v1/casting` (zwei Stufen), Konfiguration, `cast_acc`, Kosten-Log ohne Pseudonym, Listen `special`, Einwilligung; **ausdrückliche Ergänzung von 06 §5.9 Nr. 2 und §5.10 im Wortlaut von Kap. 5.5** | K1/K3 — Wortlaut in 06 §5.9 Nr. 2 und §5.10 **eingearbeitet (K0, 2026-10-11)**; Code K1/K3 |
+| CR-24 | 07 | **Angenommen und mit diesem Stand eingearbeitet:** E30 (§0.1, §3.9.1, §6.3, §9.6, §12.5), der gemeinsame Vertrags-Durchgang K0 + R1a (§10.2, §12.2, §12.3) und `08` in der Vorrangzeile. **R1a erledigt (2026-10-11):** `StateHash.of_rt` ohne Anzeigenamen; `RtUnit.display_name` = Def-Name als Regel im Stub (Umsetzung `make_rt_setup`, R1b). **Offen für die R-Phasen (07 §12.4, §12.9 Nr. 16/17):** R2 Puppen über `DB.party_model`; R3 Rahmen über `UiUtil.member_name`; R4 Harness `--persona` mit dem nächtlichen Persona-Gate (Kap. 3.4 Nr. 5) | R1a–R5b |
 
 | Nr. | Dokument | Folgeänderung |
 |---|---|---|
@@ -1570,9 +1601,9 @@ handgeschriebene `.tscn`; alle bisherigen Tests bleiben grün, jedes Paket bring
 | F-3 | `02_TECH` | CR-20 … CR-22; Dateibaum; §10 Casting-Eingaben (Esc/Start = „Rest automatisch“); §12.1 Persona-Budget |
 | F-4 | `03_ART` | §5.3 gemessene Kai-Werte (2 492 Tris / 7 Meshes), Frisuren/Bärte mit Teil-Deckeln; §5.5 Kanon-Look und Look-Palette (Kap. 6.1) |
 | F-5 | `04_STRATEGIE_ROADMAP` | Kap. 2.3 Distanz-Review: Zeile „Casting/Kandidatenkarte — Nähe niedrig“ mit den Regeln aus C-17; Kap. 2.7 Datenschutz (KI-Casting, Foto, Persona ohne Cloud); Kap. 3 Roadmap K0–K4; Kap. 3.7 Cloud-Saves ohne `user://persona/` |
-| F-6 | `05_LIVE_MODUS` | §1.5/§10.1 `rules.persona` (reserviert, aus); §4.3 `old_version` statt Abweichung; §10.4 Eintrag ohne Namen; §10.6 Kopf ohne `player_name`, Command `persona`, Anker ohne Namen |
-| F-7 | `06` | §0.5 „Casting“ (E3) → „Recall“; §1.1 Fluss Figur → Casting, Überschriften neutral; §1.3/§2.2 Starttalent als Zusatzquelle ab L1 unter den bestehenden Deckeln, `field_mods` mit Feld-Starttalent, Tausch in der ersten Talent-Show; §4 Gewichtung, `mar_mop_only` neutral; §5 CR-23 |
-| F-8 | `07` | die offenen Punkte aus CR-24 in R1a/R2/R3/R4 (E30 und der gemeinsame Vertrags-Durchgang stehen schon); §12.4 Nachfolger des CTB-Teils von `test_08_origin_balance` = Harness `--persona` |
+| F-6 | `05_LIVE_MODUS` | §1.5/§10.1 `rules.persona` (reserviert, aus); §4.3 `old_version` statt Abweichung; §10.4 Eintrag ohne Namen; §10.6 Kopf ohne `player_name`, Command `persona`, Anker ohne Namen — **erledigt mit K0** (dazu Kap. 2 S0: Plattform-Matrix vor dem Sprung) |
+| F-7 | `06` | §0.5 „Casting“ (E3) → „Recall“; §1.1 Fluss Figur → Casting, Überschriften neutral; §1.3/§2.2 Starttalent als Zusatzquelle ab L1 unter den bestehenden Deckeln, `field_mods` mit Feld-Starttalent, Tausch in der ersten Talent-Show; §4 Gewichtung, `mar_mop_only` neutral; §5 CR-23 — **erledigt mit K0** bis auf den `mar_mop_only`-Text (Text-CR in `marotten.json`, K1) |
+| F-8 | `07` | die offenen Punkte aus CR-24 in R1a/R2/R3/R4 (E30 und der gemeinsame Vertrags-Durchgang stehen schon); §12.4 Nachfolger des CTB-Teils von `test_08_origin_balance` = Harness `--persona` — **erledigt mit R1a/K0** (07 §12.4, §12.9 Nr. 16/17) |
 | F-9 | `README.md` | Casting in „Was es ist“ und in der Dokumentliste |
 | F-10 | `scenes.json` (`scn_mop_2`) | Die Zeile „Deine Mutter war aus einem Kofferraum in Polen.“ (ethnisches Klischee) wird im anstehenden IP-Durchgang aus dem Bestand von `claude/prime-time-dungeon` entfernt; die Persona übernimmt sie nicht |
 

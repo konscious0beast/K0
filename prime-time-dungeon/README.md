@@ -92,11 +92,98 @@ godot --path prime-time-dungeon/game                         # Spiel starten
 godot --path prime-time-dungeon/game -- --goto=battle:enc_f1_boss_hausmeister   # mit Entwickler-Argumenten
 ```
 
-Alles nach `--` sind Argumente für das Spiel (Abschnitt 5). Im Editor trägt man sie unter
+Alles nach `--` sind Argumente für das Spiel (Abschnitt 6). Im Editor trägt man sie unter
 **Projekt → Projekteinstellungen → Editor → Run → Main Run Args** ein (Einstellung `editor/run/main_run_args`;
 falls sie fehlt, oben „Erweiterte Einstellungen“ einschalten).
 
-## 4. Steuerung
+## 4. Spielbare Builds
+
+Fertige Builds baut die CI: Für jeden gepushten Tag `v*` (z. B. `v0.3.0`) läuft im Workflow `ptd-check` nach dem Prüf-Job der
+Job `export` und legt vier Artefakte ab. Godot braucht man dafür nicht.
+
+| Artefakt | Inhalt | läuft auf |
+|---|---|---|
+| `PrimeTimeDungeon-<tag>-macOS` | `PrimeTimeDungeon.zip` mit `Prime Time Dungeon.app` (Universal-Binary, ad-hoc signiert) | macOS 13+ (Apple Silicon), macOS 11+ (Intel) |
+| `PrimeTimeDungeon-<tag>-iOS-Xcode` | Xcode-Projekt `PrimeTimeDungeon.xcodeproj` mit Engine und Spieldaten, noch unsigniert | iPhone XS/XR und neuer, iPad mit A12-Chip und neuer, iOS/iPadOS 15+ |
+| `PrimeTimeDungeon-<tag>-Windows` | `PrimeTimeDungeon.exe` | Windows 10/11, 64 Bit |
+| `PrimeTimeDungeon-<tag>-Linux` | `PrimeTimeDungeon.x86_64` | Linux x86_64 |
+
+**Herunterladen:** auf GitHub im Repository **Actions** → Workflow **ptd-check** → den Lauf des Tags öffnen. Die Zusammenfassung
+des Laufs verlinkt die Artefakte, sonst stehen sie unten unter **Artifacts**. Herunterladen geht nur angemeldet; jedes Artefakt
+kommt als ZIP. GitHub löscht Artefakte nach der Aufbewahrungsfrist des Repos (Standard 90 Tage). Geprüft ist der Export unter
+Linux (Bundle-Aufbau, beide Architekturen, Signatur, vollständiges Xcode-Projekt); auf echter Apple-Hardware lief der Build noch
+nicht.
+
+**Mac**
+
+1. `PrimeTimeDungeon-<tag>-macOS.zip` entpacken. Darin liegt `PrimeTimeDungeon.zip`: Godot packt die App selbst, damit die
+   Programmdatei ausführbar bleibt. Auch diese Datei per Doppelklick entpacken und `Prime Time Dungeon.app` in **Programme** ziehen.
+2. Erster Start: Die App ist nur ad-hoc signiert (keine Developer-ID, nicht notarisiert), deshalb blockiert Gatekeeper den ersten
+   Start. Einmal freigeben, danach startet sie normal per Doppelklick:
+   - **macOS 14 und älter:** Rechtsklick (Ctrl-Klick) auf die App → **Öffnen** → im Dialog noch einmal **Öffnen**.
+   - **macOS 15 und neuer:** App per Doppelklick starten, die Meldung mit **Fertig** schließen, dann **Systemeinstellungen →
+     Datenschutz & Sicherheit** → unten bei „Sicherheit“ **Dennoch öffnen** → mit dem Passwort bestätigen.
+   - **Terminal (jede Version):** `xattr -dr com.apple.quarantine "/Applications/Prime Time Dungeon.app"` (Pfad anpassen, falls
+     die App woanders liegt) entfernt die Download-Markierung. Das hilft auch, wenn macOS die App als „beschädigt“ meldet.
+3. Gespielt wird mit Tastatur und Maus oder mit einem Gamepad (Abschnitt 5), Vollbild mit F11. Spielstände liegen in
+   `~/Library/Application Support/PrimeTimeDungeon/`.
+
+**iPhone und iPad (über Xcode, eine kostenlose Apple-ID reicht)**
+
+Nötig sind ein Mac mit **Xcode 26.1 oder neuer** (kostenlos im App Store; die iOS-Engine von Godot 4.7.2 ist mit dem
+iOS-26.1-SDK gebaut), eine Apple-ID und ein Kabel zum Gerät.
+
+1. Apple-ID in Xcode eintragen: **Xcode → Settings → Accounts → +**. Dabei entsteht das „Personal Team“.
+2. iPhone oder iPad per Kabel anschließen, entsperren und „Diesem Computer vertrauen“ bestätigen. Einmalig den
+   **Entwicklermodus** einschalten: **Einstellungen → Datenschutz & Sicherheit → Entwicklermodus** → an → Neustart → bestätigen.
+   Der Schalter erscheint erst, nachdem das Gerät einmal mit dem Mac und Xcode verbunden war.
+3. `PrimeTimeDungeon-<tag>-iOS-Xcode.zip` entpacken und `PrimeTimeDungeon.xcodeproj` öffnen.
+4. Links das Projekt **PrimeTimeDungeon** wählen → Target **PrimeTimeDungeon** → Reiter **Signing & Capabilities**:
+   **Automatically manage signing** bleibt an, bei **Team** das eigene „… (Personal Team)“ wählen. Der Export trägt dort nur den
+   Platzhalter `XXXXXXXXXX` ein, weil Godot eine Team-ID verlangt. Meldet Xcode, die Bundle-ID `org.primetimedungeon.game` sei
+   nicht verfügbar, im selben Reiter eine eigene eintragen, z. B. `org.primetimedungeon.game.deinname`.
+5. Oben in Xcode das Gerät als Ziel wählen und **Run** (▶ bzw. ⌘R). Der erste Build dauert ein paar Minuten, weil die Engine
+   groß ist. Danach startet das Spiel auf dem Gerät.
+6. Verweigert iOS den Start („nicht vertrauenswürdiger Entwickler“): **Einstellungen → Allgemein → VPN & Geräteverwaltung →**
+   den Eintrag „Apple Development: …“ mit der eigenen Apple-ID → **Vertrauen**, dann das Spiel erneut starten.
+
+Mit einer kostenlosen Apple-ID ist die Signatur **7 Tage** gültig. Danach startet die App nicht mehr: Gerät wieder anschließen
+und in Xcode erneut **Run**, die Spielstände bleiben erhalten. Gespielt wird im Querformat mit **Touch**: schwebender Stick links,
+runder Aktions-Button rechts, Pause oben rechts (Abschnitt 5). Ein Bluetooth-Gamepad sollte ebenfalls gehen, getestet ist das
+nicht.
+
+**TestFlight (später, mit bezahltem Apple-Developer-Account)**
+
+Mit einem Account im Apple Developer Program (99 USD im Jahr) lässt sich derselbe Build über TestFlight an Tester:innen verteilen,
+ohne Kabel und ohne 7-Tage-Grenze (ein TestFlight-Build läuft 90 Tage):
+
+1. Die Bundle-ID auf eine eigene Domain umstellen (`application/bundle_identifier` der Presets iOS und macOS, 02_TECH §12.3) und
+   in App Store Connect eine App mit dieser ID anlegen.
+2. In Xcode bei **Team** das bezahlte Team wählen, **Product → Archive**, dann im Organizer **Distribute App → App Store
+   Connect**. Xcode legt Distributionszertifikat und Profil selbst an. Jeder Upload braucht eine höhere Build-Nummer
+   (`application/version` im iOS-Preset oder in Xcode das Feld „Build“).
+3. In App Store Connect unter **TestFlight** Tester:innen einladen; sie installieren das Spiel mit der App „TestFlight“.
+
+Soll die CI später selbst hochladen (macOS-Runner, `xcodebuild archive` und Upload), gehören Zertifikat (`.p12`) samt Passwort,
+Provisioning-Profil und App-Store-Connect-API-Schlüssel ausschließlich in **GitHub Secrets**, nie ins Repository.
+
+**Windows und Linux:** Unter Windows `PrimeTimeDungeon.exe` starten. SmartScreen warnt bei unsignierten Programmen: **Weitere
+Informationen → Trotzdem ausführen**. Unter Linux `chmod +x PrimeTimeDungeon.x86_64 && ./PrimeTimeDungeon.x86_64`, denn
+GitHub-Artefakte verlieren das Ausführrecht.
+
+**Neuen Build auslösen:** Version in `game/project.godot` (`application/config/version`) und in den Presets anheben
+(`test_perf_platform.gd` prüft, dass die angezeigten Versionen übereinstimmen), committen und den Tag pushen, z. B.
+`git tag v0.3.0 && git push origin v0.3.0`. Lokal geht derselbe Export mit Godot 4.7.2 und installierten Exportvorlagen
+(Editor: **Editor → Exportvorlagen verwalten**). Das iOS-Xcode-Projekt lässt sich auch unter Linux erzeugen:
+
+```bash
+cd prime-time-dungeon/game && mkdir -p ../build/macos ../build/ios
+godot --headless --path . --import
+godot --headless --path . --export-release "macOS" ../build/macos/PrimeTimeDungeon.zip
+godot --headless --path . --export-release "iOS" ../build/ios/PrimeTimeDungeon.xcodeproj
+```
+
+## 5. Steuerung
 
 Tasten sind als physische Tasten belegt und funktionieren daher auch mit QWERTZ. Alle Menüs lassen sich mit Tastatur,
 Gamepad und Touch bedienen (02_TECH §2.2, §10).
@@ -123,7 +210,7 @@ Interagieren hat Vorrang: Zeigt die Erkundung einen Prompt (Truhe, Tür, Event i
 die Interaktion aus, sonst einen Feldschlag. Trifft der Feldschlag eine Gruppe, die noch nicht jagt (oder ihren Rücken),
 beginnt der Kampf mit Präventivschlag; dasselbe gilt, wenn Kai eine Gruppe von hinten berührt (01_GDD Kap. 2.4).
 
-## 5. Entwickler-Argumente
+## 6. Entwickler-Argumente
 
 Argumente stehen nach `--` (CLI) bzw. in den Main Run Args (Editor). Quelle: `scenes/boot/boot.gd`, 02_TECH §11.4.
 
@@ -144,7 +231,7 @@ Argumente stehen nach `--` (CLI) bzw. in den Main Run Args (Editor). Quelle: `sc
 
 Beispiel: `godot --path prime-time-dungeon/game -- --autoplay=full --strategy=typical --pace=human`
 
-## 6. Werkzeuge
+## 7. Werkzeuge
 
 Alle Skripte liegen in `tools/` und brauchen die Umgebungsvariable `GODOT=<Pfad zur Godot-4.7-Binary>` (Standard: `godot`
 im `PATH`). `check.sh`, `fullrun.sh` und `perf.sh` arbeiten in einer **isolierten Temp-Kopie** des Projekts mit eigenem
@@ -159,7 +246,7 @@ einer Temp-Kopie, schreibt die Icons aber nach `game/art/icons/` zurück. `--sho
 | `tools/check.sh --shot <res://szene.tscn> <out.png> [frames] [BxH] [--touch] [--recipe=<name>] [--params=<json>] [--no-global-ui]` | rendert eine Szene unter Xvfb (`xvfb-run` nötig) im Compatibility-Renderer und speichert ein PNG | `saved <pfad>` |
 | `tools/fullrun.sh [--strategy=thorough\|rush\|dawdle\|typical\|all] [--seed=<int>] [--pace=fast\|human] [--log-dir=<dir>]` | Full-Run-Bot headless mit festem 60-fps-Takt; `all` = thorough, rush und dawdle nach einem Import (wie in CI) | `fullrun.sh: OK` |
 | `tools/perf.sh [--driver=opengl3\|vulkan] [--quality=high\|low] [--only=startup,explore,battle,safe_room,leak] [--cycles=20] [--out=<datei.md>] [--shots=<dir>] [--cells] [--headless]` | Performance-Probe unter Xvfb: Budget-Tabelle aus 02_TECH §12.1 (Draw Calls, Primitive, Lichter, Speicher, Ladezeiten) und Leak-Schleife über Szenenwechsel; Ergebnisse in `docs/PERFORMANCE.md` | `PERF: OK`, `perf.sh: exit 0` |
-| `tools/make_icons.sh` | erzeugt die Launcher-Icons in `game/art/icons/` aus `game/icon.svg` neu | Zeilen `ICON: …`, Exit 0 |
+| `tools/make_icons.sh` | erzeugt die App-Icons (Android, iOS, macOS) und die iOS-Startbilder in `game/art/icons/` aus `game/icon.svg` neu | Zeilen `ICON: …`, Exit 0 |
 
 **Exit-Codes:** `0` = bestanden. `1` = Fehler: Import, Test, Smoke-Test, Screenshot, Bot-Lauf, Budget-Überschreitung oder
 Speicherwachstum. Jede Zeile mit `SCRIPT ERROR`, `Assertion failed`, `ERROR:` usw. zählt als Fehler, auch bei Exit 0 des
@@ -172,12 +259,12 @@ GODOT=~/godot/godot prime-time-dungeon/tools/check.sh
 GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --strategy=all
 ```
 
-## 7. Ordner
+## 8. Ordner
 
 ```
 prime-time-dungeon/
 ├── README.md            diese Datei
-├── docs/                Design- und Technik-Dokumente (Abschnitt 8), docs/screenshots/
+├── docs/                Design- und Technik-Dokumente (Abschnitt 9), docs/screenshots/
 ├── tools/               check.sh, fullrun.sh, perf.sh, make_icons.sh
 └── game/                Godot-Projekt (= res://), project.godot, export_presets.cfg, icon.svg
     ├── autoload/        Events, DB, Game, Show, Save, Router, Sfx (+ private Helfer wie game_replay.gd)
@@ -199,11 +286,11 @@ prime-time-dungeon/
 ```
 
 Außerhalb dieses Verzeichnisses: der CI-Workflow `.github/workflows/ptd-check.yml` im Repo-Wurzelverzeichnis (Import,
-Tests, Smoke-Test, Full-Run-Bot, Screenshots, Desktop-Exports, pytest des KI-Admin-Dienstes) und der optionale
+Tests, Smoke-Test, Full-Run-Bot, Screenshots, spielbare Builds bei `v*`-Tags, pytest des KI-Admin-Dienstes) und der optionale
 Referenz-Dienst `services/mod-brain/` für „M.O.D. live“ (Python/FastAPI + Claude; Standard aus, eigenes README). Export-Ausgaben landen in `build/` bzw. `export/`; beide
 Ordner stehen in `.gitignore`.
 
-## 8. Dokumente
+## 9. Dokumente
 
 Bei Widersprüchen gilt die Rangfolge aus 00_BRIEF: **00_BRIEF > 07_ECHTZEITKAMPF (alles Kampfrelevante) > 06 (neue
 Systeme) > 01_GDD / 02_TECH / 03_ART / 05 (je nach Thema) > 04**.
@@ -220,7 +307,7 @@ Systeme) > 01_GDD / 02_TECH / 03_ART / 05 (je nach Thema) > 04**.
 | [`docs/07_ECHTZEITKAMPF.md`](docs/07_ECHTZEITKAMPF.md) | Echtzeitkampf „WoW-light“ direkt in der Welt (ersetzt den CTB-Kampf ab R5): Vertrag, Phasen R1–R5 |
 | [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) | Messergebnisse der Performance-Probe gegen die Budgets aus 02_TECH §12.1 |
 
-## 9. Screenshots
+## 10. Screenshots
 
 Alle Bilder stammen aus dem Spiel selbst (Compatibility-Renderer unter Xvfb, 1280 × 720; Bild 18 im Handy-Format
 2400 × 1080 und Bild 26 im Handy-Format 1600 × 720, beide mit Touch-Steuerung).
@@ -292,7 +379,7 @@ GODOT=… $T --shot res://scenes/exploration/exploration.tscn shot.png 30 1280x7
 GODOT=… $T --shot res://scenes/title/intro.tscn shot.png 20 1280x720 --recipe=intro_card                 # 42
 ```
 
-## 10. Nächste Schritte
+## 11. Nächste Schritte
 
 Nach dem Phasenplan in 04 Kap. 3.4 fehlen für den Abschluss von Phase 2 (Meilenstein M-P2, Go/No-Go):
 

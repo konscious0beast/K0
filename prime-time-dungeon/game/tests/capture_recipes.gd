@@ -23,6 +23,9 @@ extends Node
 ##   confetti, an M.O.D. live line labelled "KI live"), safe_happy (vending machine during a Happy Hour).
 ## Polish pass: doorway_approach | doorway_through | doorway_mopapproach | doorway_mopthrough (camera in front of /
 ##   just past an open door, Kai or Graf Mopsula leading).
+## Echtzeitkampf (07, R2; tests/fixtures/rt_world/capture_rt.gd): rt_regular (a fight in a room with the LED ring),
+##   rt_two_groups (two groups on one set), rt_boss (Gleis 9 with the train lane telegraph), rt_boss_intro (the crane),
+##   rt_flee (Kai in a door lane).
 
 const ZONES: Dictionary = {"platform": "zone_platform", "sewer": "zone_sewer", "cellar": "zone_cellar"}
 
@@ -739,3 +742,31 @@ func _r_safe_happy(scene: Node) -> bool:
 	scene.call("open_vending")
 	await frames(20)
 	return true
+
+
+# --- Echtzeitkampf (07, R2) -------------------------------------------------------------------------------------------
+
+func _rt(scene: Node, which: String) -> bool:
+	var r: RefCounted = (load("res://tests/fixtures/rt_world/capture_rt.gd") as GDScript).new()
+	r.set("rec", self)
+	return bool(await r.call("run", which, scene))
+
+
+func _r_rt_regular(scene: Node) -> bool:
+	return await _rt(scene, "regular")
+
+
+func _r_rt_two_groups(scene: Node) -> bool:
+	return await _rt(scene, "two_groups")
+
+
+func _r_rt_boss(scene: Node) -> bool:
+	return await _rt(scene, "boss")
+
+
+func _r_rt_boss_intro(scene: Node) -> bool:
+	return await _rt(scene, "boss_intro")
+
+
+func _r_rt_flee(scene: Node) -> bool:
+	return await _rt(scene, "flee")

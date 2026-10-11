@@ -196,3 +196,204 @@ jobs:
             readme="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/prime-time-dungeon/README.md"
             echo "Erster Start auf dem Mac, iPhone/iPad über Xcode: [README, Abschnitt 4 Spielbare Builds]($readme#4-spielbare-builds)"
           } >> "$GITHUB_STEP_SUMMARY"
+  # Apple release with a paid developer account (README 4 "Mit Apple-Entwicklerkonto", 02_TECH §12.4). Which of the two
+  # signing jobs can run: checked on Linux, so a missing setup costs no macOS minutes. Only the NAMES of missing
+  # secrets/variables reach the summary; a malformed value fails here, before a macOS runner starts.
+  apple-gate:
+    needs: check
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      macos: ${{ steps.gate.outputs.macos }}
+      ios: ${{ steps.gate.outputs.ios }}
+    steps:
+      - name: Signing material present?
+        id: gate
+        env:
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+          APPLE_BUNDLE_ID: ${{ vars.APPLE_BUNDLE_ID }}
+          MAC_DEVID_P12_BASE64: ${{ secrets.MAC_DEVID_P12_BASE64 }}
+          MAC_DEVID_P12_PASSWORD: ${{ secrets.MAC_DEVID_P12_PASSWORD }}
+          IOS_DIST_P12_BASE64: ${{ secrets.IOS_DIST_P12_BASE64 }}
+          IOS_DIST_P12_PASSWORD: ${{ secrets.IOS_DIST_P12_PASSWORD }}
+          IOS_PROFILE_BASE64: ${{ secrets.IOS_PROFILE_BASE64 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+        run: |
+          missing() { local n out=""; for n in "$@"; do [ -n "${!n}" ] || out="$out, \`$n\`"; done; echo "${out#, }"; }
+          shared=(APPLE_TEAM_ID APPLE_BUNDLE_ID ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8_BASE64)
+          mac="$(missing MAC_DEVID_P12_BASE64 MAC_DEVID_P12_PASSWORD "${shared[@]}")"
+          ios="$(missing IOS_DIST_P12_BASE64 IOS_DIST_P12_PASSWORD IOS_PROFILE_BASE64 "${shared[@]}")"
+          bad=()
+          [ -z "$APPLE_TEAM_ID" ] || [[ "$APPLE_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]] || bad+=("APPLE_TEAM_ID: 10 Zeichen A-Z/0-9 (Account → Mitgliedschaftsdetails)")
+          [ -z "$APPLE_BUNDLE_ID" ] || [[ "$APPLE_BUNDLE_ID" =~ ^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$ ]] ||
+            bad+=("APPLE_BUNDLE_ID: umgekehrte Domain aus A-Z, a-z, 0-9, '-' und '.', z. B. de.beispiel.primetimedungeon")
+          key_id="$(printf '%s' "$ASC_KEY_ID" | tr -d '[:space:]')"
+          issuer="$(printf '%s' "$ASC_ISSUER_ID" | tr -d '[:space:]')"
+          [ -z "$key_id" ] || [[ "$key_id" =~ ^[A-Za-z0-9]{6,20}$ ]] || bad+=("ASC_KEY_ID: die Schlüssel-ID des API-Schlüssels")
+          [ -z "$issuer" ] || [[ "$issuer" =~ ^[0-9A-Fa-f]{8}-([0-9A-Fa-f]{4}-){3}[0-9A-Fa-f]{12}$ ]] ||
+            bad+=("ASC_ISSUER_ID: die Issuer-ID (UUID) von App Store Connect → Integrationen")
+          if [ ${#bad[@]} -gt 0 ]; then
+            for b in "${bad[@]}"; do echo "::error::$b"; done
+            exit 1
+          fi
+          {
+            echo "### Apple-Builds (bezahlter Developer-Account)"
+            echo
+            if [ -z "$mac" ]; then
+              echo "- macOS mit Developer ID signiert und notarisiert: Job \`apple-macos\` läuft"
+            else
+              echo "- macOS signiert + notarisiert: **übersprungen**, es fehlen $mac. Für den Mac gibt es weiter das ad-hoc-signierte Artefakt aus \`export\`."
+            fi
+            if [ -z "$ios" ]; then
+              echo "- iPhone/iPad über TestFlight: Job \`apple-ios-testflight\` läuft"
+            else
+              echo "- iPhone/iPad über TestFlight: **übersprungen**, es fehlen $ios. Für iOS gibt es weiter das Xcode-Projekt aus \`export\`."
+            fi
+            if [ -n "$mac$ios" ]; then
+              readme="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/prime-time-dungeon/README.md"
+              echo
+              echo "Einrichtung: [README, Abschnitt 4, *Mit Apple-Entwicklerkonto*]($readme#mit-apple-entwicklerkonto)"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          { echo "macos=$([ -z "$mac" ] && echo true || echo false)"; echo "ios=$([ -z "$ios" ] && echo true || echo false)"; } >> "$GITHUB_OUTPUT"
+  # macOS app with the Developer ID certificate: Godot exports it without a signature (codesign/codesign=0 in a temp copy
+  # of the preset), then release.sh signs inside out (hardened runtime, secure timestamp, tools/apple/
+  # PrimeTimeDungeon.entitlements = no exceptions), notarizes with notarytool (API key, waits), staples the ticket and
+  # zips the stapled app with ditto. Only after `check`, only for v* tags, only with the secrets (apple-gate).
+  apple-macos:
+    needs: [check, apple-gate]
+    if: startsWith(github.ref, 'refs/tags/v') && needs.apple-gate.outputs.macos == 'true'
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+      APPLE_BUNDLE_ID: ${{ vars.APPLE_BUNDLE_ID }}
+      PTD_BUILD_NUMBER: ${{ github.run_number }}.${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Godot + macOS template (verified against SHA512-SUMS.txt)
+        run: prime-time-dungeon/tools/apple/release.sh godot macos
+      - name: Signing keychain (Developer ID Application)
+        env:
+          P12_BASE64: ${{ secrets.MAC_DEVID_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.MAC_DEVID_P12_PASSWORD }}
+        run: prime-time-dungeon/tools/apple/release.sh keychain devid
+      - name: App Store Connect API key
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+        run: prime-time-dungeon/tools/apple/release.sh asc-key
+      - name: Export macOS app (bundle id + build number into a temp copy of the preset, no signature)
+        run: prime-time-dungeon/tools/apple/release.sh export macos "$RUNNER_TEMP/macos/Prime Time Dungeon.app"
+      - name: Sign (Developer ID, hardened runtime, secure timestamp)
+        run: prime-time-dungeon/tools/apple/release.sh sign-macos "$RUNNER_TEMP/macos/Prime Time Dungeon.app"
+      - name: Notarize + staple + Gatekeeper check + zip
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          prime-time-dungeon/tools/apple/release.sh notarize "$RUNNER_TEMP/macos/Prime Time Dungeon.app" \
+            prime-time-dungeon/build/macos-notarized/PrimeTimeDungeon.zip
+      - uses: actions/upload-artifact@v4
+        id: up
+        with:
+          name: PrimeTimeDungeon-${{ github.ref_name }}-macOS-notarized
+          path: prime-time-dungeon/build/macos-notarized/PrimeTimeDungeon.zip
+          compression-level: 0  # ditto zip of the stapled app: keeps the executable bit and the signature intact
+          if-no-files-found: error
+      - name: Step summary
+        env:
+          URL: ${{ steps.up.outputs.artifact-url }}
+        run: |
+          size="$(du -sh prime-time-dungeon/build/macos-notarized/PrimeTimeDungeon.zip | cut -f1)"
+          {
+            echo "### macOS, signiert und notarisiert"
+            echo
+            echo "[PrimeTimeDungeon-${GITHUB_REF_NAME}-macOS-notarized]($URL): \`PrimeTimeDungeon.zip\` → \`Prime Time Dungeon.app\`" \
+              "(Universal, Developer ID \`${PTD_SIGN_IDENTITY}\`, Ticket geheftet, Build ${PTD_BUILD_NUMBER}), $size." \
+              "Startet per Doppelklick ohne Gatekeeper-Warnung."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove keychain and keys
+        if: always()
+        run: prime-time-dungeon/tools/apple/release.sh cleanup
+  # iPhone/iPad via TestFlight: Godot exports the Xcode project with APPLE_TEAM_ID / APPLE_BUNDLE_ID, the build number,
+  # the distribution identity and the App Store profile (temp copy of the preset, manual signing); release.sh archives
+  # with xcodebuild, exports the IPA (method app-store-connect), keeps it as an artifact and uploads it with altool and
+  # the App Store Connect API key. Xcode >= 26.1: Godot 4.7.2's iOS libraries are built with the iOS 26.1 SDK, and App
+  # Store Connect only accepts builds made with Xcode 26 / the iOS 26 SDK (since 2026-04-28).
+  apple-ios-testflight:
+    needs: [check, apple-gate]
+    if: startsWith(github.ref, 'refs/tags/v') && needs.apple-gate.outputs.ios == 'true'
+    runs-on: macos-26
+    timeout-minutes: 75
+    env:
+      APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+      APPLE_BUNDLE_ID: ${{ vars.APPLE_BUNDLE_ID }}
+      PTD_BUILD_NUMBER: ${{ github.run_number }}.${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Xcode >= 26.1
+        run: prime-time-dungeon/tools/apple/release.sh xcode
+      - name: Godot + iOS template (verified against SHA512-SUMS.txt)
+        run: prime-time-dungeon/tools/apple/release.sh godot ios
+      - name: Signing keychain (Apple Distribution)
+        env:
+          P12_BASE64: ${{ secrets.IOS_DIST_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.IOS_DIST_P12_PASSWORD }}
+        run: prime-time-dungeon/tools/apple/release.sh keychain dist
+      - name: Provisioning profile (App Store Connect)
+        env:
+          IOS_PROFILE_BASE64: ${{ secrets.IOS_PROFILE_BASE64 }}
+        run: prime-time-dungeon/tools/apple/release.sh profile
+      - name: App Store Connect API key
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+        run: prime-time-dungeon/tools/apple/release.sh asc-key
+      - name: Export iOS Xcode project (team, bundle id, build number, signing into a temp copy of the preset)
+        run: prime-time-dungeon/tools/apple/release.sh export ios "$RUNNER_TEMP/ios/PrimeTimeDungeon.xcodeproj"
+      - name: Archive + export IPA (xcodebuild, app-store-connect, manual signing)
+        id: ipa
+        run: |
+          prime-time-dungeon/tools/apple/release.sh ipa "$RUNNER_TEMP/ios/PrimeTimeDungeon.xcodeproj" \
+            prime-time-dungeon/build/ios-testflight/PrimeTimeDungeon.ipa
+      - uses: actions/upload-artifact@v4
+        id: up
+        with:
+          name: PrimeTimeDungeon-${{ github.ref_name }}-iOS-TestFlight
+          path: prime-time-dungeon/build/ios-testflight/PrimeTimeDungeon.ipa
+          compression-level: 0  # an IPA is a zip already
+          if-no-files-found: error
+      - name: Upload to App Store Connect (TestFlight)
+        id: upload
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: prime-time-dungeon/tools/apple/release.sh upload prime-time-dungeon/build/ios-testflight/PrimeTimeDungeon.ipa
+      - name: Step summary
+        if: always() && steps.ipa.outcome == 'success'
+        env:
+          URL: ${{ steps.up.outputs.artifact-url }}
+          UPLOAD: ${{ steps.upload.outcome }}
+        run: |
+          version="$(grep -m1 '^config/version=' prime-time-dungeon/game/project.godot | cut -d'"' -f2)"
+          {
+            echo "### iPhone/iPad über TestFlight"
+            echo
+            if [ "$UPLOAD" = success ]; then
+              echo "Build **${version} (${PTD_BUILD_NUMBER})** von \`${APPLE_BUNDLE_ID}\` ist an App Store Connect übergeben." \
+                "Nach der Verarbeitung (meist 5 bis 30 Minuten, Apple schickt bei Problemen eine E-Mail) steht er in" \
+                "App Store Connect → Apps → *Prime Time Dungeon* → TestFlight; Tester:innen installieren ihn mit der App TestFlight."
+            else
+              echo "Der Upload zu App Store Connect ist **gescheitert** (Meldung im Schritt *Upload to App Store Connect*)." \
+                "Die signierte IPA liegt trotzdem bereit und lässt sich mit der Mac-App Transporter hochladen."
+            fi
+            echo
+            echo "IPA (App-Store-signiert, Profil \`${PTD_PROFILE_NAME}\`): [PrimeTimeDungeon-${GITHUB_REF_NAME}-iOS-TestFlight]($URL)"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove keychain, profile and keys
+        if: always()
+        run: prime-time-dungeon/tools/apple/release.sh cleanup

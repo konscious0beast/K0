@@ -458,10 +458,24 @@ func _after_modal(focus_id: String) -> void:
 	_modal = null
 	_set_menu_shown(true)
 	_refresh_menu_labels()
+	_refresh_candidate()                       # Casting (08 §1.7, K2): the mask may have changed the look
 	if is_inside_tree() and menu_buttons.has(focus_id):
 		UiUtil.focus_later((menu_buttons[focus_id] as Control))
 	elif is_inside_tree():
 		_focus_first()
+
+
+## Casting (08 §1.7, K2): after the pause menu (Kandidatenkarte → "Name & Aussehen ändern") the candidate stands
+## here in the persona's current look (DB.party_model); unchanged → nothing is rebuilt.
+func _refresh_candidate() -> void:
+	if _kai == null or not is_instance_valid(_kai) or _kai.get("model") == DB.party_model("kai"):
+		return
+	remove_child(_kai)
+	_kai.queue_free()
+	_kai = SceneKit.party_figure("kai")
+	_kai.name = "Kai"
+	add_child(_kai)
+	_place_figures()
 
 
 func _idle_line() -> void:

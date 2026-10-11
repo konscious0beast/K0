@@ -149,7 +149,7 @@ func _build_rig() -> void:
 		model = {"base": "pug", "scale": 1.0, "colors": {"primary": "#d8b98a", "secondary": "#2a2024",
 			"accent": "#7b2cbf", "eyes": "#1a1420"}}
 	if DB.has_id("party", hero_id):
-		model = DB.party_member(hero_id).model
+		model = DB.party_model(hero_id)            # Casting (08 §6.3, K2): kai in the persona's look
 	var r: CharacterRig = CharacterBuilder.build(model, 2 if hero_id == "mopsula" else 1)
 	if r == null:
 		r = CharacterRig.new()

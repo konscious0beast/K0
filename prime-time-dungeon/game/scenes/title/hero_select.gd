@@ -176,7 +176,7 @@ func _preview(member_id: String, accent: Color) -> Control:
 	world.add_child(we)
 	world.add_child(SceneKit.sun(Color("#fff2e0"), 1.3, Vector3(-40, -30, 0)))
 	world.add_child(SceneKit.omni(accent, 2.2, 6.0, Vector3(-1.4, 1.6, 1.2)))
-	var fig: Node3D = SceneKit.party_figure(member_id)
+	var fig: Node3D = SceneKit.canon_figure(member_id)   # 08 §1.1 / K2: canon preview, never a previous game's look
 	fig.name = "Figure"
 	fig.rotation.y = PI                          # face the camera (rigs look along −Z)
 	world.add_child(fig)

@@ -69,7 +69,7 @@ func _build_rig() -> void:
 		model = {"base": "humanoid", "scale": 1.0, "colors": {"primary": "#3aa9a0", "secondary": "#2e3a57",
 			"accent": "#3b2a22", "skin": "#e8b48f", "eyes": "#1a1420"}}
 	if DB.has_id("party", member_id):
-		model = DB.party_member(member_id).model
+		model = DB.party_model(member_id)          # Casting (08 §6.3, K2): kai in the persona's look
 	var r: CharacterRig = CharacterBuilder.build(model, 1 if member_id == "kai" else 2)
 	if r == null:
 		r = CharacterRig.new()

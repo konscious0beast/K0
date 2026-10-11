@@ -370,11 +370,22 @@ static func figure(model: Dictionary, seed_value: int = 0) -> Node3D:
 	return rig
 
 
+## A party member as the game shows it (08 §6.3: DB.party_model — kai in the running persona's look): safe room, intro.
 static func party_figure(member_id: String) -> Node3D:
-	var model: Dictionary = {}
-	if DB.has_id("party", member_id):
-		model = DB.party_member(member_id).model
-	return figure(model, 0)
+	return figure(DB.party_model(member_id), 0)
+
+
+## Casting (08 §6.1, K2): the candidate (kai) in `look` ({kind: lk id}; {} = the canon look) — the casting preview and
+## the candidate card show the look being edited, not the running persona's.
+static func look_figure(look: Dictionary) -> Node3D:
+	var model: Dictionary = DB.party_member(DB.LOOK_MEMBER).model if DB.has_id("party", DB.LOOK_MEMBER) else {}
+	return figure(PersonaLook.apply(model, look, DB.data), 0)
+
+
+## A party member's def figure without a persona look: the hero select of a new game shows the canon candidate
+## (08 §1.1; the previous game's persona must not leak into it).
+static func canon_figure(member_id: String) -> Node3D:
+	return figure(DB.party_member(member_id).model if DB.has_id("party", member_id) else {}, 0)
 
 
 static func _add_stand_in(root: Node3D, model: Dictionary) -> void:

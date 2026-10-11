@@ -204,7 +204,7 @@ func test_codec_drops_unknown_ids_with_warnings() -> void:
 
 
 ## Polish pass (IP distance): a save from before the rename keeps Graf Mopsula's haste skill under its new id.
-func test_codec_maps_renamed_skill_ids() -> void:
+func test_codec_maps_renamed_skill_and_class_ids() -> void:
 	var data: GameData = real_data()
 	var st: GameState = GameState.create_new(data, 1, "Kai", 123456)
 	st.floor_run = FloorRun.create(data.floor_def(1), st.seed, st.difficulty)
@@ -215,10 +215,12 @@ func test_codec_maps_renamed_skill_ids() -> void:
 			mop = m
 	assert_false(mop.is_empty(), "the save has Graf Mopsula")
 	mop["skills"] = ["skl_mop_noble_flame", "skl_mop_royal_decree"]
+	mop["class_id"] = "cls_mop_diva"
 	var gs: GameState = SaveCodec.decode(d, data)
 	assert_not_null(gs)
 	assert_eq(gs.member("mopsula").skills, PackedStringArray(["skl_mop_noble_flame", "skl_mop_expert_opinion"]))
-	assert_eq(SaveCodec.last_errors(), PackedStringArray(), "no 'dropped' warning for a renamed skill")
+	assert_eq(gs.member("mopsula").class_id, "cls_mop_zeremonienmeister", "the renamed class keeps its new id")
+	assert_eq(SaveCodec.last_errors(), PackedStringArray(), "no 'dropped' warning for a renamed skill or class")
 
 
 # --- Save slots -------------------------------------------------------------------------------------------------------

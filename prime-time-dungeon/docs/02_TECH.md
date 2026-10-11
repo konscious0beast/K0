@@ -2355,11 +2355,15 @@ angewendet wird nur, was hier steht, mit Parametern innerhalb der Grenzen; entsc
 
 `data/mod_filter.json` (06-D, **nicht** in `TABLES`): Wortlisten und Schwellen des Nachfilters für Live-Zeilen
 (`ModLineFilter`, `core/show/mod_line_filter.gd`, rein/statisch; dieselbe Datei liest `services/mod-brain/mod_brain/safety.py`):
-`max_len` 110, `blocked.{politics, sexual, slurs, violence, real_brands}` (`*` am Ende = Präfix), `money`, `purchase` +
-`urgency` (Kaufdruck nur bei Ko-Vorkommen), Sprachprüfung (`en_stop`/`de_stop`, `lang_min_words` 4, `lang_de_min_words` 6,
-`de_min_pm` 100, `en_max_pm` 150). Reihenfolge der Gründe: `empty`, `too_long`, `placeholder` (nur `{name}`), `url`, `digits`
-(≥ 6 Ziffern in Folge), `blocked_<liste>`, `money`, `purchase_pressure`, `language`. Gemeinsame Fälle:
-`tests/fixtures/live/line_filter_cases.json` (GDScript und pytest).
+`max_len` 110, `blocked.{politics, sexual, slurs, violence, real_brands, ip_distance, origin}` (`*` am Ende = Präfix, am
+Anfang = Suffix, an beiden Enden = Wortteil; Eintrag mit Leerzeichen = Phrase ganzer Wörter), `mopsula_names` +
+`mopsula_royalty` (Polish-Pass: dieselben Listen wie `validators/ip_words.gd`), `money`, `purchase` + `urgency` (Kaufdruck nur
+bei Ko-Vorkommen), Sprachprüfung (`en_stop`/`de_stop`, `lang_min_words` 4, `lang_de_min_words` 6, `de_min_pm` 100,
+`en_max_pm` 150). `ModLineFilter.check(text, lists, voice)` / `check_line(text, words, voice)`; Reihenfolge der Gründe:
+`empty`, `too_long`, `placeholder` (nur `{name}`), `url`, `digits` (≥ 6 Ziffern in Folge), `blocked_<liste>`,
+`blocked_mopsula_royalty` (Zeile in Graf Mopsulas Stimme oder mit seinem Namen und einem Königs-Wort), `money`,
+`purchase_pressure`, `language`. Gemeinsame Fälle: `tests/fixtures/live/line_filter_cases.json` (GDScript und pytest; optional
+`voice`).
 ### 4.5 Validierung (`DataValidator`) und `GameData`-API
 
 Ablauf `GameData.load_dir(dir)`: (1) alle Dateien aus `TABLES` parsen; (2) je Eintrag Schema prüfen + normalisieren; (3) zweiter
@@ -2402,7 +2406,9 @@ Regeln (jede Verletzung = ein Eintrag in `errors`, Format `"<table>[<index>|<id>
 14. (Polish-Pass, IP-Abstand + Ton; privater Helfer `validators/ip_words.gd`, immer am Ende von `validate`) Jeder Text (`name`,
     `desc`, `text`, `title`, `slogan` in jeder Tiefe, auch Szenenzeilen, Zonen- und Safe-Room-Namen): kein „Fan-Box“
     („Fanpost-Paket“, 04 §2.3 E2), kein „Feinripp“, keine Barfuß-/Schuh-Wörter (`ALL_WORDS`, Teilstrings) und keine reale
-    Nationalität/Volksgruppe als Pointe (`ORIGIN_WORDS`, kuratierte Liste, ganze Wörter). Texte von, für oder über Graf
+    Nationalität/Volksgruppe als Pointe (`ORIGIN_WORDS`, kuratierte Liste, ganze Wörter; ohne mehrdeutige Alltagswörter wie
+    „Amerikaner“ = Gebäck, „Franzose“ = Schraubenschlüssel). Dieselben Listen sperrt der Live-Filter (`mod_filter.json`,
+    `blocked.ip_distance` / `blocked.origin` / `mopsula_royalty`; `test_06_ip_words` prüft die Abdeckung). Texte von, für oder über Graf
     Mopsula — seine Stimme (`voice` `mopsula`), jede Szene, seine Skills (Angriff, `learnset`, `stunts`), Ausrüstung, die er
     tragen kann, Klassen/Talente/Spezies für ihn, sein Party-Eintrag und jeder Text, der „Graf“, „Grafen“, „Mopsula“ oder
     „Mops“ nennt — ohne Königs-Motiv (`MOPSULA_WORDS`: Majestät, Durchlaucht, Hoheit, Thron, Krone). Die Rattenkönigin behält

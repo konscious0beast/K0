@@ -140,7 +140,7 @@ func current_shot() -> String:
 func _make_script() -> void:
 	var kai: String = UiUtil.player_name()
 	shots = [
-		{"shot": "night", "caption": "TIERHEIM LINDENHOF · KELLER · NACHTSCHICHT · 23:47", "min": 5.0,
+		{"shot": "night", "caption": "TIERHEIM PFOTENGLÜCK · KELLER · NACHTSCHICHT · 23:47", "min": 5.0,
 			"lines": [["kai", "Na, Graf? Ein Leckerli noch, dann ist Licht aus."], ["mopsula", "*schnauf*"]]},
 		{"shot": "sky", "caption": "AM SELBEN ABEND · ÜBER DER STADT", "min": 6.5,
 			"lines": [["mod", "Liebe Erdbevölkerung: Ihr Planet wurde für eine Sendung umgewidmet. Bitte bleiben Sie sitzen."],

@@ -809,7 +809,7 @@ func test_classes_prepared_for_floor_3() -> void:
 	var showrunner: ClassDef = d.class_def("cls_kai_showrunner")
 	assert_almost(float(showrunner.show_mods["stunt_success_add"]), 0.15)
 	assert_eq(int(showrunner.show_mods["stunt_cooldown"]), 2)
-	assert_eq(d.class_def("cls_mop_diva").show_mods["sponsor_thresholds"], [65, 80, 95])
+	assert_eq(d.class_def("cls_mop_zeremonienmeister").show_mods["sponsor_thresholds"], [65, 80, 95])
 
 
 func test_floor_2_stub() -> void:

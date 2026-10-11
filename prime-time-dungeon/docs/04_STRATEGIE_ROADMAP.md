@@ -624,7 +624,7 @@ Folge: Szenario B ist nur mit Förderung/Publisher tragfähig; die EA-Umsätze f
 |---|---|---|---|
 | **„M.O.D. kommentiert“** | 10–20 s vertikal (TikTok, Shorts, Reels) | Achievement „Mit 1 HP gewonnen“ + M.O.D.-Spruch + Zuschauerzahl springt | 2×/Woche ab Phase 3 |
 | **„Stunt der Woche“** | 15–30 s | Stunt-Kill → Hype 100 → Sponsor-Drop mitten im Kampf | 1×/Woche |
-| **Graf Mopsula** | Standbild/GIF + Zitat | „Wir sind not amused.“ | 1×/Woche |
+| **Graf Mopsula** | Standbild/GIF + Zitat | „Fußnote 1: Ich konnte immer sprechen. Ihr habt nur nie zugehört.“ (eigene Stimme, kein Pluralis Majestatis) | 1×/Woche |
 | **Devlog** | 3–8 min YouTube / Steam-Ankündigung | prozedurale Optik → Blender-Upgrade, Balancing-Simulation | 1×/Monat |
 | **SHOWRUN-Seeds** | Bestenlisten-Posts | „Tages-Seed: 3 % schafften den Hausmeister ohne KO“ | ab S1 |
 

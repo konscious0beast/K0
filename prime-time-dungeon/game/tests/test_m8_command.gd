@@ -31,7 +31,7 @@ const VALID: Array[Dictionary] = [
 	{"t": "hero", "id": "kai"},
 	{"t": "secret", "id": "sec_e1_wall_sewer"},
 	{"t": "talent", "member": "kai", "id": "tal_kai_wischtechnik"},                     # 06 package B
-	{"t": "casting", "member": "mopsula", "species": "spc_original", "class": "cls_mop_diva"},
+	{"t": "casting", "member": "mopsula", "species": "spc_original", "class": "cls_mop_zeremonienmeister"},
 	{"t": "twist", "twist": {"schema": 1, "id": "tw_overtime", "n": 1, "src": "regie", "params": {"seconds": 60},
 		"duration": 0, "tick": 120}},
 ]

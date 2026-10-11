@@ -4,20 +4,24 @@ class_name ModLineFilter extends RefCounted
 ## tests/fixtures/live/line_filter_cases.json is checked by both sides. Scripted lines (mod_lines.json) are reviewed by
 ## people and never pass through here. Pure and static; the word lists live in res://data/mod_filter.json.
 ##
-## check(text) → "" (ok) or the first failing rule, in this order:
+## check(text, lists, voice) → "" (ok) or the first failing rule, in this order:
 ##   empty · too_long (> max_len characters) · placeholder (any {…} other than {name}, stray braces) · url (http, www.,
 ##   ://, name.tld) · digits (6+ digits in a row, also with spaces / . / - / between them: phone numbers)
-##   · blocked_<category> (politics, sexual, slurs, violence, real_brands — single-word hits, "*" = prefix; hyphenated
-##   words are checked whole and per part) · money (€ or a money word: real money, donations, subscriptions are never
-##   mentioned, L13/L16) · purchase_pressure (an urgency word/phrase TOGETHER with a purchase word: "Schnell,
-##   Sponsor-Fenster!" fails, "Schnellschnitt!" and "nur noch zwei Räume" pass) · language (not German: English stop
-##   words that are no German ones > en_max_pm ‰ of the words in lines of lang_min_words+ words, or German stop words
-##   < de_min_pm ‰ in lines of lang_de_min_words+ words — tuned so that < 1 % of the written lines trip it).
+##   · blocked_<category> (politics, sexual, slurs, violence, real_brands, ip_distance, origin — word hits: "*" at the
+##   end = prefix, at the start = suffix, at both ends = part of a word; an entry with a space = a phrase of whole
+##   words; hyphenated words are checked whole and per part; ip_distance / origin = the data validator's IP and tone
+##   lists, polish pass) · blocked_mopsula_royalty (a line in Graf Mopsula's voice or naming him — mopsula_names — with
+##   a mopsula_royalty word: no crown, throne or royal title for him) · money (€ or a money word: real money, donations,
+##   subscriptions are never mentioned, L13/L16) · purchase_pressure (an urgency word/phrase TOGETHER with a purchase
+##   word: "Schnell, Sponsor-Fenster!" fails, "Schnellschnitt!" and "nur noch zwei Räume" pass) · language (not German:
+##   English stop words that are no German ones > en_max_pm ‰ of the words in lines of lang_min_words+ words, or German
+##   stop words < de_min_pm ‰ in lines of lang_de_min_words+ words — tuned so that < 1 % of the written lines trip it).
 ## Words: lower case, runs of [a-zäöüß] joined by single hyphens; {name} is not a word.
 
 const PATH: String = "res://data/mod_filter.json"
 const VOICES: PackedStringArray = ["mod", "mopsula", "chat"]
-const BLOCKED_ORDER: PackedStringArray = ["politics", "sexual", "slurs", "violence", "real_brands"]
+const BLOCKED_ORDER: PackedStringArray = ["politics", "sexual", "slurs", "violence", "real_brands", "ip_distance",
+	"origin"]
 
 static var _words: Dictionary = {}
 static var _re_word: RegEx = null
@@ -34,8 +38,9 @@ static func words() -> Dictionary:
 	return _words
 
 
-## "" = the line may be shown; else the rule it failed (see class doc). `lists` overrides words() (tests).
-static func check(text: String, lists: Dictionary = {}) -> String:
+## "" = the line may be shown; else the rule it failed (see class doc). `lists` overrides words() (tests); `voice` is
+## the line's voice (mod | mopsula | chat; "" = unknown) for the Graf Mopsula rule.
+static func check(text: String, lists: Dictionary = {}, voice: String = "") -> String:
 	var w: Dictionary = lists if not lists.is_empty() else words()
 	_compile()
 	var t: String = text.strip_edges()
@@ -60,8 +65,11 @@ static func check(text: String, lists: Dictionary = {}) -> String:
 			parts.append_array(tok.split("-", false))
 	var blocked: Dictionary = w.get("blocked", {}) if w.get("blocked", {}) is Dictionary else {}
 	for cat: String in BLOCKED_ORDER:
-		if _any_hit(parts, blocked.get(cat, [])):
+		if _any_hit(parts, blocked.get(cat, [])) or _has_phrase(tokens, blocked.get(cat, [])):
 			return "blocked_" + cat
+	if (voice == "mopsula" or _any_hit(parts, w.get("mopsula_names", []))) \
+			and _any_hit(parts, w.get("mopsula_royalty", [])):
+		return "blocked_mopsula_royalty"
 	if low.contains("€") or _any_hit(parts, w.get("money", [])):
 		return "money"
 	if _any_hit(parts, w.get("purchase", [])) and _has_phrase(tokens, w.get("urgency", [])):
@@ -98,6 +106,7 @@ static func _compile() -> void:
 	_re_digits = RegEx.create_from_string("[0-9](?:[ ./-]?[0-9]){5,}")
 
 
+## Single-word entries: exact, "stem*" prefix, "*end" suffix, "*part*" anywhere in the word (phrases: _has_phrase).
 static func _any_hit(tokens: PackedStringArray, list: Variant) -> bool:
 	if not (list is Array):
 		return false
@@ -105,13 +114,16 @@ static func _any_hit(tokens: PackedStringArray, list: Variant) -> bool:
 		var e: String = str(entry).to_lower()
 		if e == "" or e.contains(" "):
 			continue
-		if e.ends_with("*"):
-			var stem: String = e.trim_suffix("*")
-			for tok: String in tokens:
-				if tok.begins_with(stem):
-					return true
-		elif tokens.has(e):
-			return true
+		var pre: bool = e.begins_with("*")
+		var suf: bool = e.ends_with("*")
+		var core: String = e.substr(1) if pre else e
+		core = core.left(core.length() - 1) if suf and core != "" else core
+		if core == "":
+			continue
+		for tok: String in tokens:
+			if (pre and suf and tok.contains(core)) or (suf and not pre and tok.begins_with(core)) \
+					or (pre and not suf and tok.ends_with(core)) or (not pre and not suf and tok == core):
+				return true
 	return false
 
 

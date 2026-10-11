@@ -262,7 +262,7 @@ func say_external(text: String, voice: StringName, tag: String) -> bool:
 	var st: GameState = Game.state
 	if Game.replaying or st == null:
 		return false
-	var reason: String = ModLineFilter.check(text)
+	var reason: String = ModLineFilter.check(text, {}, String(voice))      # the voice: Graf Mopsula's royalty rule
 	if reason == "" and not ModLineFilter.VOICES.has(String(voice)):
 		reason = "voice"
 	if reason != "":

@@ -452,8 +452,8 @@ Reichweite ist Szenenlogik Grad A, aufgezeichnet wird das Ergebnis — wie `enco
 | ID | Name | `stat_mult` | Passiv | Optik-Haken | Empfohlen |
 |---|---|---|---|---|---|
 | `spc_mop_glutmops` | **Glutmops** | MAG 1.15, RES 0.95 | `pas_ember`: Feuer-Skills +15 % | Glut in den Falten, Rauchwölkchen beim Niesen | Erzmagister |
-| `spc_mop_spukmops` | **Spukmops** | SPD 1.10, LCK 1.10, HP 0.90 | `pas_see_through`: erster gegnerischer Treffer je Kampf −50 % | halbtransparent, schwebt 5 cm (Hologramm-Material) | Fluchgraf, Diva |
-| `spc_mop_flattermops` | **Flattermops** | SPD 1.15, DEF 0.95 | `pas_court_flight`: startet jeden Kampf mit `haste` (1 Zug); Bellen-Reichweite +50 % | winzige Flügel (`wings`, Maßstab 0.4), Monokel bleibt | Medicus, Diva |
+| `spc_mop_spukmops` | **Spukmops** | SPD 1.10, LCK 1.10, HP 0.90 | `pas_see_through`: erster gegnerischer Treffer je Kampf −50 % | halbtransparent, schwebt 5 cm (Hologramm-Material) | Fluchgraf, Zeremonienmeister |
+| `spc_mop_flattermops` | **Flattermops** | SPD 1.15, DEF 0.95 | `pas_court_flight`: startet jeden Kampf mit `haste` (1 Zug); Bellen-Reichweite +50 % | winzige Flügel (`wings`, Maßstab 0.4), Monokel bleibt | Medicus, Zeremonienmeister |
 
 Hinweis IP/Ton: Keine Spezies aus DCC; die Namen spielen mit **unserer** Welt (U-Bahn-Fliesen, Kiosk-Automat, Food-Court-Pilze,
 Neonreklame). **Kein Kronen-Motiv an Mopsula** (04 Kap. 2.3) gilt auch für alle Spezies-Optiken.
@@ -462,8 +462,10 @@ Neonreklame). **Kein Kronen-Motiv an Mopsula** (04 Kap. 2.3) gilt auch für alle
 
 `cls_kai_wrecker` Abrissbirne · `cls_kai_runner` Gleisläufer:in · `cls_kai_tinker` Schrott-Tüftler:in · `cls_kai_showrunner`
 Showrunner:in · `cls_mop_archmage` Erzmagister · `cls_mop_physician` Medicus honoris causa · `cls_mop_hexer` Fluchgraf ·
-`cls_mop_diva` Diva (GDD §12.3; Polish-Pass: „Hofmagier“ → „Erzmagister“, „Leibarzt Seiner Hoheit“ → „Medicus honoris causa“ —
-kein Hof-/Königsmotiv an Mopsula, IDs unverändert). Eine **zweite Spezialisierung** (Doppelklasse) ist als Staffelfinale-Belohnung (E6)
+`cls_mop_zeremonienmeister` Zeremonienmeister (GDD §12.3; Polish-Pass: „Hofmagier“ → „Erzmagister“, „Leibarzt Seiner Hoheit“ →
+„Medicus honoris causa“ — kein Hof-/Königsmotiv an Mopsula, IDs unverändert; „Diva“ → „Zeremonienmeister“ mit neuer ID
+`cls_mop_zeremonienmeister` statt `cls_mop_diva` — kein Publikumsliebling-/Diva-Haustier-Motiv, alte Spielstände über
+`SaveCodec.RENAMED_CLASSES`). Eine **zweite Spezialisierung** (Doppelklasse) ist als Staffelfinale-Belohnung (E6)
 vorgemerkt.
 
 ### 3.4 Datenmodell (Paket B, jetzt)
@@ -605,15 +607,16 @@ Die Multiplikatoren wirken auf die **Kampagnen-Show-Währung**; in gewerteten Ev
 | ID | Name | Bedingung | Box | Hidden |
 |---|---|---|---|---|
 | `ach_ul_first` | Einmal ohne alles | `e.kind == "liga" && e.event == "battle" && e.tier >= 1` | bronze | — |
-| `ach_ul_boss` | Frische Brise im Revier | `e.kind == "liga" && e.event == "battle" && e.tier >= 1 && e.is_boss == true` | silver | — |
+| `ach_ul_boss` | Ohne Netz und doppelten Boden | `e.kind == "liga" && e.event == "battle" && e.tier >= 1 && e.is_boss == true` | silver | — |
 | `ach_duo_first` | Leichtes Gepäck im Doppelpack | `e.kind == "liga" && e.event == "battle" && e.tier == 2` | silver | — |
 | `ach_duo_floor` | Eine Etage leichtes Gepäck | `e.kind == "liga" && e.event == "floor" && e.floor_tier == 2 && e.battles >= 5` | gold | — |
 | `ach_duo_flawless` | Ohne Kratzer, ohne Rüstung | `e.kind == "liga" && e.event == "battle" && e.tier == 2 && e.is_floor_boss == true && e.party_kos == 0` | gold | ✓ |
 | `ach_bets_5` | M.O.D.s Liebling | `e.kind == "marotte" && e.event == "won" && s.bets_won == 5` | silver | — |
 
 Achievement-Namen und -Beschreibungen (Polish-Pass 2026-10-10): neutral statt Wäsche-Wortspiel („Doppel-Feinripp“ →
-„Leichtes Gepäck im Doppelpack“, „Eine Etage Feinripp“ → „Eine Etage leichtes Gepäck“); jede Beschreibung nennt die Regel im
-vollen Wortlaut „ohne Rüstung & ohne Accessoire“. Der Name „Unterhosen-Liga“ bleibt (Entscheidung des Nutzers).
+„Leichtes Gepäck im Doppelpack“, „Eine Etage Feinripp“ → „Eine Etage leichtes Gepäck“) und ohne Entblößungs-Witz („Frische
+Brise im Revier“ → „Ohne Netz und doppelten Boden“); jede Beschreibung nennt die Regel im vollen Wortlaut „ohne Rüstung &
+ohne Accessoire“. Der Name „Unterhosen-Liga“ bleibt (Entscheidung des Nutzers).
 
 **M.O.D.-Zeilen Liga** (Präfix `liga_`, nicht sexuell, keine Nacktheits-Andeutung — **Unterwäsche bleibt immer an** —,
 kein Wäsche-Wortspiel („Feinripp“ ist im Validator gesperrt), keine Fuß-Bezüge; nennt eine Zeile die Regel, dann vollständig
@@ -1003,7 +1006,11 @@ GDScript-Test und von pytest** gelesen → beide Seiten entscheiden nachweislich
    manipulierter Client kann so weder Anweisungen einschleusen noch „die KI des Spiels“ zu Ausfällen provozieren. Zuschauer-Einfluss
    später nur als aggregierte Zahlen (Stimmen, Applaus).
 3. **Post-Filter** (Dienst **und** Client `Show.say_external`): Länge ≤ 110, nur `{name}` als Platzhalter, keine URLs/Ziffernfolgen
-   wie Telefonnummern. **Harte Sperrliste nur** für Slurs, sexuelle Begriffe und Politik-Begriffe/Namen (Einzelwort-Treffer).
+   wie Telefonnummern. **Harte Sperrliste nur** für Slurs, sexuelle Begriffe und Politik-Begriffe/Namen (Einzelwort-Treffer)
+   sowie — Polish-Pass, dieselben Listen wie der Daten-Validator (`validators/ip_words.gd`) — IP-Abstand („Fan-Box“,
+   „Feinripp“, Barfuß-/Schuh-Wörter; `blocked_ip_distance`), Nationalitäten/Volksgruppen als Pointe (`blocked_origin`; ohne
+   Alltagswörter wie „Amerikaner“ = Gebäck, „Franzose“ = Schraubenschlüssel) und Königs-Motive in Zeilen in Graf Mopsulas
+   Stimme oder über ihn (`blocked_mopsula_royalty`: Majestät, Durchlaucht, Hoheit, Thron, Krone; die Rattenkönigin behält ihre).
    **Kaufdruck als Phrasen-/Ko-Vorkommens-Regel:** verworfen wird eine Zeile nur, wenn ein Dringlichkeitswort („schnell“,
    „nur noch“, „letzte Chance“, „jetzt“) **zusammen** mit einem Kaufbezug („Sponsor“, „Geschenk“, „Kauf“/„kauf“, „Fenster“, „Spende“,
    „Bits“, „€“) vorkommt; Kaufbezugs-Wörter mit Geldbezug („€“, „Bits“, „spende“, „kauf“) sind auch allein gesperrt (L13/L16).

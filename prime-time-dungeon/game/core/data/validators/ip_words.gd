@@ -14,14 +14,19 @@ extends RefCounted
 ## list as whole words. The Rattenkönigin keeps her title and crown — only Mopsula's texts are checked for royalty.
 
 const TEXT_KEYS: PackedStringArray = ["name", "desc", "text", "title", "slogan"]
-## Every player-facing text (lower-case substrings).
+## Every player-facing text (lower-case substrings; the live line filter blocks them too: mod_filter.json →
+## blocked.ip_distance).
 const ALL_WORDS: PackedStringArray = ["fan-box", "fanbox", "fan box", "feinripp", "barfuß", "barfuss", "schuh"]
-## Real nationalities / ethnic groups as joke targets (lower-case whole words; curated, extend when needed).
+## Real nationalities / ethnic groups as joke targets (lower-case whole words; curated, extend when needed). Left out on
+## purpose because the everyday word means something else: "Amerikaner" (pastry), "Franzose" / "Franzosen" (adjustable
+## wrench) — no false alarm for the Kiosk's pastry or the Hausmeister's toolbox. The live line filter blocks the same
+## words (res://data/mod_filter.json → blocked.origin; test_06_ip_words checks that it covers this list).
 const ORIGIN_WORDS: PackedStringArray = ["polen", "polin", "polnisch", "polnische", "polnischen", "türke", "türkin",
 	"türken", "türkisch", "russe", "russin", "russen", "russisch", "rumäne", "rumänin", "rumänen", "italiener",
-	"italienerin", "franzose", "französin", "franzosen", "amerikaner", "chinese", "chinesin", "chinesen", "japaner",
-	"afrikaner", "asiate", "asiatin", "asiaten", "ossi", "ossis", "wessi", "wessis", "zigeuner", "eskimo", "indianer"]
-## Graf Mopsula's texts (lower-case substrings): no crown, throne or royal title.
+	"italienerin", "französin", "amerikanerin", "chinese", "chinesin", "chinesen", "japaner", "afrikaner", "asiate",
+	"asiatin", "asiaten", "ossi", "ossis", "wessi", "wessis", "zigeuner", "eskimo", "indianer"]
+## Graf Mopsula's texts (lower-case substrings): no crown, throne or royal title (live: mod_filter.json →
+## mopsula_royalty, for lines in his voice or naming him).
 const MOPSULA_WORDS: PackedStringArray = ["majestät", "majestaet", "majestat", "durchlaucht", "hoheit", "thron",
 	"krone"]
 const MOPSULA_NAME_RE: String = "(?i)\\b(graf|grafen|mopsula|mops)\\b"

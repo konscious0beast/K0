@@ -154,7 +154,7 @@ Laufwege: Hauptpfad Start → Büro → Treppe ≈ 25 Zellwechsel ≈ 75 s reine
 
 | # | Beat | Ort / Auslöser | Inhalt | Ergebnis |
 |---|---|---|---|---|
-| B0 | **Intro** (Cutscene, ~90 s, Halten 1 s = überspringen) | Spielstart | Nachtschicht im Tierheim-Keller. Kai füttert den Mops „Graf“. Der Himmel wird zum Bildschirm, NOVA-SYNDIKAT-Logo, Gebäude falten sich weg („Rückbau“). Boden bricht. M.O.D. moderiert an: „Willkommen bei DUNGEON PRIME TIME! Sie sind live.“ Der Mops öffnet das Maul: „Endlich. Man versteht Uns.“ | Party gebildet. Kai hält Wischmopp (`wpn_mop`). |
+| B0 | **Intro** (Cutscene, ~90 s, Halten 1 s = überspringen) | Spielstart | Nachtschicht im Tierheim-Keller. Kai füttert den Mops „Graf“. Der Himmel wird zum Bildschirm, NOVA-SYNDIKAT-Logo, Gebäude falten sich weg („Rückbau“). Boden bricht. M.O.D. moderiert an: „Willkommen bei DUNGEON PRIME TIME! Sie sind live.“ Der Mops öffnet das Maul: „Endlich. Man versteht mich. Fußnote 1: Ich konnte immer sprechen.“ | Party gebildet. Kai hält Wischmopp (`wpn_mop`). |
 | B1 | **Tutorial-Gang** | Zone A, Zellen (1,7)–(1,6) | Bewegung, Kamera, Feldschlag, Schleichen (M.O.D.-Textboxen, je max. 2 Zeilen). Zwei schlafende Kanalratten (Gruppe `grp_a1_tutorial`, Zustand `IDLE`, Blick nach Norden, drehen sich nie um). | Erzwingt den ersten Präventivschlag (Feldschlag oder Berührung von hinten, Kap. 2.4). |
 | B2 | **Erster Kampf** | `grp_a1_tutorial` | Geführte Hinweise: Zugreihenfolge-Leiste, Angriff, Fähigkeit (Adelsflamme), Stunt-Hinweis nach Zug 2. Kann nicht verloren werden (Gegner-Schaden ×0.5, Flucht gesperrt, Party-HP fällt nicht unter 1; `EncounterDef.tutorial: true`). | Achievements `ach_first_blood` + `ach_first_win` → 2 Bronze-Boxen. **Countdown startet** nach diesem Sieg (`FloorDef.timer_start_after = "enc_f1_a1_tutorial"` → `FloorRun.timer_started = true`, M.O.D. `floor_start`: „Die Uhr läuft …“). |
 | B3 | **Erster Safe Room** „Kiosk 24/7“ (`sr_kiosk`) | Zone A, (2,5) | Heilen, Speichern, Automat, Bronze-Boxen öffnen (Tutorial), Mopsula-Szene `scn_mop_1`. | Spieler versteht Loop. |
@@ -1402,7 +1402,7 @@ game_overs, ko_mopsula, explore_seconds_since_battle, viewers_max` (+ Quest-Metr
 | ID | Name | Beschreibung (`desc`) | Trigger | Bedingung | Box | Hidden | M.O.D.-Spruch (`achievement:<id>`) |
 |---|---|---|---|---|---|---|---|
 | `ach_ul_first` | Einmal ohne alles | Gewinne einen Kampf in der Unterhosen-Liga (ohne Rüstung & ohne Accessoire). | `show_bet` | `e.kind == "liga" && e.event == "battle" && e.tier >= 1` | bronze | — | „Einmal ohne alles! Die Imbissbude nebenan bietet Ihnen einen Werbevertrag an.“ |
-| `ach_ul_boss` | Frische Brise im Revier | Besiege einen Boss in der Unterhosen-Liga (ohne Rüstung & ohne Accessoire). | `show_bet` | `… && e.tier >= 1 && e.is_boss == true` | silver | — | „Ein Boss, besiegt ohne Rüstung & ohne Accessoire. Die Kantine benennt ein Gericht nach Ihnen.“ |
+| `ach_ul_boss` | Ohne Netz und doppelten Boden (bis zum Polish-Pass „Frische Brise im Revier“) | Besiege einen Boss in der Unterhosen-Liga (ohne Rüstung & ohne Accessoire). | `show_bet` | `… && e.tier >= 1 && e.is_boss == true` | silver | — | „Ein Boss, besiegt ohne Rüstung & ohne Accessoire. Die Kantine benennt ein Gericht nach Ihnen.“ |
 | `ach_duo_first` | Leichtes Gepäck im Doppelpack | Gewinne einen Kampf in der Duo-Liga: beide ohne Rüstung & ohne Accessoire. | `show_bet` | `… && e.tier == 2` | silver | — | „Leichtes Gepäck im Doppelpack! Der Graf nennt es ‚Sommerkollektion‘. Ich nenne es Quote.“ |
 | `ach_duo_floor` | Eine Etage leichtes Gepäck | Gewinne alle Kämpfe einer Etage (mindestens 5) in der Duo-Liga: beide ohne Rüstung & ohne Accessoire. | `show_bet` | `e.kind == "liga" && e.event == "floor" && e.floor_tier == 2 && e.battles >= 5` | gold | — | „Eine ganze Etage mit leichtem Gepäck! Ich habe das Archiv angewiesen, es nie zu löschen.“ |
 | `ach_duo_flawless` | Ohne Kratzer, ohne Rüstung | Besiege den Etagenboss in der Duo-Liga (beide ohne Rüstung & ohne Accessoire), ohne dass jemand K.O. geht. | `show_bet` | `… && e.tier == 2 && e.is_floor_boss == true && e.party_kos == 0` | gold | ✓ | „Der Etagenboss, kein K.O., keine Rüstung, kein Accessoire. Ich muss mich setzen. Ich habe keinen Stuhl.“ |
@@ -1796,7 +1796,7 @@ ausgewertet, nur validiert (`id` beginnt mit `pas_`, `params` ist ein Dictionary
 | `cls_mop_archmage` | mopsula | **Erzmagister** (früher „Hofmagier“) | Elementar-DD | MAG 1.20, MP 1.10 | `pas_exploit`: Schwachstellen-Faktor 1.75 statt 1.5 |
 | `cls_mop_physician` | mopsula | **Medicus honoris causa** (früher „Leibarzt Seiner Hoheit“) | Heiler | RES 1.15, HP 1.10 | `pas_bedside`: Heilung ×1.3; Zugbeginn heilt eigenes `poison` |
 | `cls_mop_hexer` | mopsula | **Fluchgraf** | Debuffs | MAG 1.10, SPD 1.05 | `pas_curse`: Status-Chancen +0.25, Status-Dauer +1 |
-| `cls_mop_diva` | mopsula | **Diva** | Buffs/Show | LCK 1.20, RES 1.10 | `pas_spotlight`: Buff-Dauer +1, Sponsor-Schwellen 65/80/95 |
+| `cls_mop_zeremonienmeister` | mopsula | **Zeremonienmeister** (bis zum Polish-Pass `cls_mop_diva` „Diva“; alte Spielstände: `SaveCodec.RENAMED_CLASSES`) | Buffs/Show | LCK 1.20, RES 1.10 | `pas_spotlight`: Buff-Dauer +1, Sponsor-Schwellen 65/80/95 |
 
 4 Klassen je Figur (8 Einträge). Die Skill-Listen der Klassen (je 4 Skills L11–L17) werden mit Etage 3 spezifiziert; IDs folgen dem Muster `skl_<kai|mop>_<name>`.
 Skill-Freischaltung künftig wie bei der Party: `learnset[{level, skill}]`. Abweichende `show_mods` (Stunt-Cooldown, Sponsor-Schwellen) überschreiben die Konstanten aus Kap. 16.3 für die jeweilige Figur bzw. Show.
@@ -1811,8 +1811,8 @@ Skill-Freischaltung künftig wie bei der Party: `learnset[{level, skill}]`. Abwe
 | `spc_kai_pilzling` | kai | **Pilzling** | HP 1.10, RES 1.10, SPD 0.95 | `pas_spores`: gift-immun, 3 % MaxHP je Zug | Abrissbirne, Showrunner:in |
 | `spc_kai_teilautomat` | kai | **Teilautomat** | MAG 1.10, DEF 1.05, LCK 0.95 | `pas_coin_slot`: Verbrauchsitems +25 % | Schrott-Tüftler:in |
 | `spc_mop_glutmops` | mopsula | **Glutmops** | MAG 1.15, RES 0.95 | `pas_ember`: Feuer-Skills +15 % | Erzmagister |
-| `spc_mop_spukmops` | mopsula | **Spukmops** | SPD 1.10, LCK 1.10, HP 0.90 | `pas_see_through`: erster gegnerischer Treffer −50 % | Fluchgraf, Diva |
-| `spc_mop_flattermops` | mopsula | **Flattermops** | SPD 1.15, DEF 0.95 | `pas_court_flight`: Kampfstart mit `haste`; Bellen +50 % | Medicus, Diva |
+| `spc_mop_spukmops` | mopsula | **Spukmops** | SPD 1.10, LCK 1.10, HP 0.90 | `pas_see_through`: erster gegnerischer Treffer −50 % | Fluchgraf, Zeremonienmeister |
+| `spc_mop_flattermops` | mopsula | **Flattermops** | SPD 1.15, DEF 0.95 | `pas_court_flight`: Kampfstart mit `haste`; Bellen +50 % | Medicus, Zeremonienmeister |
 
 Kein Kronen-Motiv an Mopsula, auch nicht über eine Spezies-Optik (Validator: `crown`/`ticket_crown` verboten).
 

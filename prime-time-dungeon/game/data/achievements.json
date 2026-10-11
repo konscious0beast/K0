@@ -333,7 +333,7 @@
 		},
 		{
 			"id": "ach_ul_boss",
-			"name": "Frische Brise im Revier",
+			"name": "Ohne Netz und doppelten Boden",
 			"desc": "Besiege einen Boss in der Unterhosen-Liga (ohne Rüstung & ohne Accessoire).",
 			"trigger": "show_bet",
 			"condition": "e.kind == \"liga\" && e.event == \"battle\" && e.tier >= 1 && e.is_boss == true",

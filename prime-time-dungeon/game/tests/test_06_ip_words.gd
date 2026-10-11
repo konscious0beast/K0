@@ -5,7 +5,9 @@ extends TestCase
 ## (Majestät, Durchlaucht, Hoheit, Thron, Krone) while the Rattenkönigin keeps her title and crown. Plus the shipped
 ## decisions: Fanpost-Paket, "Gräfliches Gutachten" (new id), neutral Liga achievement names, the Liga rule in full
 ## ("ohne Rüstung & ohne Accessoire"), and Graf Mopsula's own voice (no royal "Wir/Uns") in the data and in the
-## screens' code strings.
+## screens' code strings. Follow-up round: class "Zeremonienmeister" (new id), "Ohne Netz und doppelten Boden", no
+## false alarm for ambiguous everyday words ("Amerikaner" pastry, "Franzose" wrench), the live line filter
+## (mod_filter.json) covers the same lists, and the shelter is "Tierheim Pfotenglück" everywhere.
 
 const IpWords := preload("res://core/data/validators/ip_words.gd")
 const LIGA_RULE: String = "ohne Rüstung & ohne Accessoire"
@@ -90,6 +92,19 @@ func test_word_helpers_are_precise() -> void:
 	assert_eq(IpWords.mopsula_word("Kopfschmuck aus Fahrscheinen"), "")
 	assert_eq(IpWords.mopsula_word("Seine Durchlaucht"), "durchlaucht")
 	assert_eq(IpWords.mopsula_word("eine KRONE aus Fahrscheinen"), "krone")
+
+
+## Follow-up: the origin list leaves out words whose everyday meaning is something else (no false alarm), in the
+## validator and in the live filter alike.
+func test_ambiguous_everyday_words_are_no_origin_alarm() -> void:
+	for text: String in ["Ein Amerikaner vom Kiosk, mit Zuckerguss.", "Zwei Amerikaner, bitte. Mit Schokolade.",
+			"Mit dem Franzosen zieht der Hausmeister jede Schraube fest.", "Der Franzose liegt im Werkzeugkasten."]:
+		assert_eq(IpWords.general_word(text), "", text)
+		assert_ne(ModLineFilter.check(text), "blocked_origin", text)
+	assert_eq(IpWords.general_word("Eine Amerikanerin im Publikum"), "amerikanerin", "the people word still counts")
+	var raw: Dictionary = _raw_tables()
+	_entry(raw, "items", "itm_bandage")["desc"] = "Heilt 45 HP. Riecht nach einem Amerikaner vom Kiosk."
+	_expect_clean(raw, "a pastry in an item text")
 
 
 # --- validator: Graf Mopsula's texts ----------------------------------------------------------------------------------
@@ -200,6 +215,47 @@ func test_screens_speak_in_the_counts_voice() -> void:
 		assert_null(royal.search(m.get_string(1)), "intro: " + m.get_string(1))
 		assert_eq(IpWords.mopsula_word(m.get_string(1)), "", m.get_string(1))
 	assert_gt(n, 2, "the intro's Mopsula lines were found")
+
+
+## Follow-up: the live line filter (res://data/mod_filter.json, ModLineFilter / mod-brain safety.py) blocks every word
+## of the validator's lists — a live M.O.D. line cannot say what a written one must not.
+func test_live_filter_covers_the_validator_lists() -> void:
+	for w: String in IpWords.ALL_WORDS:
+		assert_eq(ModLineFilter.check("Heute gibt es %s im Studio." % w), "blocked_ip_distance", w)
+	for w: String in IpWords.ORIGIN_WORDS:
+		var why: String = ModLineFilter.check("Heute gibt es %s im Studio." % w)
+		assert_true(why == "blocked_origin" or why == "blocked_slurs", "%s: %s" % [w, why])
+	for w: String in IpWords.MOPSULA_WORDS:
+		assert_eq(ModLineFilter.check("Der Graf und die %s im Studio." % w), "blocked_mopsula_royalty", w)
+		assert_eq(ModLineFilter.check("Die %s im Studio, sehr hübsch." % w, {}, "mopsula"), "blocked_mopsula_royalty", w)
+		assert_eq(ModLineFilter.check("Die %s im Studio, sehr hübsch." % w, {}, "mod"), "", w + ": not about him")
+
+
+## Follow-up: Graf Mopsula's class and the Liga boss achievement, renamed (ids, names, references).
+func test_follow_up_names() -> void:
+	var d: GameData = real_data()
+	assert_false(d.has_id("classes", "cls_mop_diva"), "the diva id is gone")
+	assert_eq(d.class_def("cls_mop_zeremonienmeister").name, "Zeremonienmeister")
+	assert_eq(d.class_def("cls_mop_zeremonienmeister").desc,
+		"Buffs mit Protokoll. Sponsoren kommen früher, Applaus sowieso.")
+	assert_eq(d.class_def("cls_mop_zeremonienmeister").show_mods["sponsor_thresholds"], [65, 80, 95], "same values")
+	for sp: String in ["spc_mop_spukmops", "spc_mop_flattermops"]:
+		assert_has(d.species_def(sp).recommended_classes, "cls_mop_zeremonienmeister", sp)
+	assert_eq(d.achievement("ach_ul_boss").name, "Ohne Netz und doppelten Boden")
+	for l: ModLineDef in d.mod_lines("achievement:ach_ul_boss"):
+		assert_false(l.text.to_lower().contains("brise"), l.id)
+
+
+## Follow-up: the shelter is "Tierheim Pfotenglück" (GDD §1.2) — the intro caption included, nowhere "Lindenhof".
+func test_the_shelter_is_pfotenglueck() -> void:
+	var intro: String = FileAccess.get_file_as_string("res://scenes/title/intro.gd")
+	assert_true(intro.contains("TIERHEIM PFOTENGLÜCK"), "intro caption")
+	var files: PackedStringArray = _gd_files("res://scenes")
+	files.append_array(_gd_files("res://autoload"))
+	for t: String in GameData.TABLES:
+		files.append("res://data/%s.json" % t)
+	for f: String in files:
+		assert_false(FileAccess.get_file_as_string(f).to_lower().contains("lindenhof"), f)
 
 
 ## Code strings (screens, autoloads): no "Fan-Box", "Feinripp", barefoot or shoe word in any string literal.

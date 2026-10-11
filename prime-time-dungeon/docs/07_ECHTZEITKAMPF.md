@@ -1923,7 +1923,12 @@ Rahmen = Status mit Restsekunden (§8.4). Auto-Angriff ist immer automatisch.
   höchstens 90°/s, bis das Ziel innerhalb ±25° liegt. Kein Nicken, kein harter Ziel-Lock; jedes Ziehen hat Vorrang.
 - Steuerungswechsel (§2.6): Kamera-Pivot gleitet in 0,4 s zur neuen Figur.
 - Leichtes Kamerawackeln bei Einschlägen auf die Party (0,15 s, 0,08 m), abschaltbar.
-- Wände: bestehende Regeln (Pitch anheben, Arm kürzen, Durchblick-Ausblenden) gelten unverändert.
+- Wände: bestehende Regeln (Pitch anheben, Arm kürzen, Durchblick-Ausblenden) gelten unverändert. Seit dem Polish-Pass rahmt
+  die Kamera je führender Figur (`CameraRig.LEADER_FRAMING`, 02_TECH §7.3: Graf Mopsula tiefer und weiter hinten) und prüft
+  den Vorlauf in Sturzhöhe (keine Nahaufnahme vor offenen Türen).
+- **R2-Folgepunkt (Polish-Pass, offen):** Direkt nach dem Durchschreiten einer Tür (≈ 0,4 m dahinter) steht die Kamera einen
+  Moment steil hinter der Wand bzw. nah an der Figur (der Arm erholt sich mit 4 m/s); R2 baut die Kamera für den Kampf um
+  und nimmt diesen Übergang mit (Rezepte `doorway_through` / `doorway_mopthrough` zeigen ihn).
 
 ### 7.6 Barrierefreiheit
 

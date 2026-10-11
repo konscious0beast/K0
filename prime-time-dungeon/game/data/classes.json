@@ -262,9 +262,9 @@
 			}
 		},
 		{
-			"id": "cls_mop_diva",
-			"name": "Diva",
-			"desc": "Buffs und Bühne. Sponsoren kommen früher, Applaus sowieso.",
+			"id": "cls_mop_zeremonienmeister",
+			"name": "Zeremonienmeister",
+			"desc": "Buffs mit Protokoll. Sponsoren kommen früher, Applaus sowieso.",
 			"for": [
 				"mopsula"
 			],

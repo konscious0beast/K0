@@ -550,7 +550,9 @@ func _office() -> void:
 	var sides: Array[int] = _wall_sides_for_decor()
 	var back: int = sides[0]
 	var desk_c := Color("#6b4a2e")
-	var xf: Transform3D = edge_xf(back, 0.0 if not has_door(back) else 4.5, 0.0, 1.6)
+	# against the wall (R4, 07 §2.4: the room keeps CLEAR_RADIUS_BOSS free): the desk's front edge at 6.2 m, the chair
+	# pushed in beside it
+	var xf: Transform3D = edge_xf(back, 0.0 if not has_door(back) else 4.5, 0.0, 0.8)
 	var desk: Array = [
 		MeshUtil.part(MeshUtil.box(Vector3(2.4, 0.08, 1.0)), Vector3(0, 0.8, 0), desk_c),
 		MeshUtil.part(MeshUtil.box(Vector3(0.5, 0.76, 0.9)), Vector3(-0.9, 0.38, 0), Palette.mul(desk_c, 0.85)),
@@ -558,8 +560,8 @@ func _office() -> void:
 		MeshUtil.part(MeshUtil.box(Vector3(0.5, 0.06, 0.35)), Vector3(-0.5, 0.87, -0.1), Color("#f2eee6")),
 		MeshUtil.part(MeshUtil.box(Vector3(0.12, 0.18, 0.12)), Vector3(0.6, 0.93, 0), Palette.LIVE_RED),
 		MeshUtil.part(MeshUtil.cylinder(0.05, 0.05, 0.2), Vector3(0.6, 1.1, 0), desk_c),
-		MeshUtil.part(MeshUtil.box(Vector3(0.6, 0.08, 0.6)), Vector3(0, 0.5, 0.95), Color("#3a3a44")),
-		MeshUtil.part(MeshUtil.box(Vector3(0.6, 0.7, 0.08)), Vector3(0, 0.9, 1.25), Color("#3a3a44")),
+		MeshUtil.part(MeshUtil.box(Vector3(0.6, 0.08, 0.6)), Vector3(1.6, 0.5, 0.1), Color("#3a3a44")),
+		MeshUtil.part(MeshUtil.box(Vector3(0.6, 0.7, 0.08)), Vector3(1.6, 0.9, 0.4), Color("#3a3a44")),
 	]
 	_add_parts(props, desk, xf)
 	shapes.append({"size": Vector3(2.4, 0.9, 1.0), "xform": xf * Transform3D(Basis.IDENTITY, Vector3(0, 0.45, 0))})
@@ -592,30 +594,97 @@ func _office() -> void:
 	set_pieces.append(l)
 
 
-## Thronsaal: derailed wreck against the back wall, ticket litter, violet light (03_ART §6.3).
+## Thronsaal = Gleis 9 (07 §6.7, R4; 03_ART §6.3): two flush tracks along x (EnvKit.THRONE_TRACK_Z, 3 m wide —
+## ballast, sleepers and rails at floor level, so the train's telegraph lies flat on them), the platform strip between
+## them with yellow safety lines, the derailed waggon at the centre (EnvKit.THRONE_WAGGON: low rim, deck at floor level,
+## the queen stands in it; its collision is the combat set's), tunnel portals behind the track ends at the
+## W / E walls (decoration outside the 6 m ring), the "GLEIS 9" sign, ticket litter, violet light.
 func _throne() -> void:
-	var sides: Array[int] = _wall_sides_for_decor()
-	var back: int = sides[0]
-	var r: Dictionary = PropKit.recipe("wreck", spec.seed, spec.palette)
-	var sx: float = 0.75
-	var u: float = 0.0
-	if has_door(back):
-		sx = 0.32
-		u = 4.9
-	var xf: Transform3D = edge_xf(back, u, 0.0, 1.3) * Transform3D(Basis.from_scale(Vector3(sx, 0.75, 0.75)), Vector3.ZERO)
-	_add_recipe(props, r, xf)
-	for cv: Variant in (r["collision"] as Array):
-		var cd: Dictionary = cv
-		var cx: Transform3D = xf * (cd["xform"] as Transform3D)
-		var sc: Vector3 = cx.basis.get_scale()
-		shapes.append({"size": (cd["size"] as Vector3) * sc, "xform": Transform3D(cx.basis.orthonormalized(), cx.origin)})
+	var back: int = _wall_sides_for_decor()[0]
+	var bed := Color("#241f2b")
+	var sleeper := Color("#4a3a30")
+	for tz: float in EnvKit.THRONE_TRACK_Z:
+		props.append(MeshUtil.part(MeshUtil.box(Vector3(2.0 * IN, 0.012, EnvKit.THRONE_TRACK_W)), Vector3(0, 0.006, tz),
+			bed))
+		for k in 19:
+			props.append(MeshUtil.part(MeshUtil.box(Vector3(0.24, 0.02, 2.5)), Vector3(-6.75 + 0.75 * float(k), 0.014, tz),
+				sleeper))
+		for sz: float in [-0.72, 0.72]:
+			props.append(MeshUtil.part(MeshUtil.box(Vector3(2.0 * IN, 0.035, 0.07)), Vector3(0, 0.03, tz + sz),
+				Palette.RAIL, Vector3.ZERO, Vector3.ONE, 0.0, 1.0))
+	var edge: float = EnvKit.THRONE_TRACK_W * 0.5
+	for tz: float in EnvKit.THRONE_TRACK_Z:
+		for sz: float in [-1.0, 1.0]:
+			var lz: float = tz + sz * (edge + 0.12)
+			props.append(MeshUtil.part(MeshUtil.box(Vector3(2.0 * IN - 0.6, 0.012, 0.12)), Vector3(0, 0.008, lz),
+				Palette.WARN_YELLOW))
+	_waggon()
+	for side: int in [DOOR_W, DOOR_E]:
+		var x: float = (IN - 0.12) * (-1.0 if side == DOOR_W else 1.0)
+		var door: bool = has_door(side)
+		for tz: float in EnvKit.THRONE_TRACK_Z:
+			var w: float = 2.2 if door else 2.8                        # narrower beside a door frame (|z| ≥ 2.5)
+			var zc: float = tz + (signf(tz) * 0.45 if door else 0.0)
+			props.append(MeshUtil.part(MeshUtil.box(Vector3(0.06, 2.6, w - 0.3)), Vector3(x, 1.3, zc), Color("#0c0910")))
+			for sz: float in [-1.0, 1.0]:
+				props.append(MeshUtil.part(MeshUtil.box(Vector3(0.24, 2.9, 0.3)), Vector3(x, 1.45, zc + sz * w * 0.5),
+					Palette.mul(pal["wall"], 0.7)))
+			props.append(MeshUtil.part(MeshUtil.box(Vector3(0.26, 0.34, w + 0.3)), Vector3(x, 3.0, zc),
+				Palette.mul(pal["wall"], 0.6)))
+			props.append(MeshUtil.part(MeshUtil.box(Vector3(0.05, 0.08, w - 0.4)), Vector3(x * 0.995, 2.72, zc),
+				pal["accent"], Vector3.ZERO, Vector3.ONE, 0.8))
+	var sign := Label3D.new()
+	sign.name = "GleisLabel"
+	sign.text = "GLEIS 9"
+	sign.font_size = 64
+	sign.outline_size = 10
+	sign.pixel_size = 0.006
+	sign.modulate = Palette.sign_color(Palette.PAPER)
+	sign.outline_modulate = pal["accent"]
+	sign.transform = edge_xf(back, 0.0 if not has_door(back) else -4.6, 2.95, 0.08) \
+		* Transform3D(Basis(Vector3.UP, PI), Vector3.ZERO)
+	set_pieces.append(sign)
 	for k in 24:
 		var a: float = rng.randf_range(0.0, TAU)
 		var d: float = rng.randf_range(1.5, 6.5)
-		props.append(MeshUtil.part(MeshUtil.box(Vector3(0.12, 0.01, 0.06)), Vector3(cos(a) * d, 0.012, sin(a) * d),
+		props.append(MeshUtil.part(MeshUtil.box(Vector3(0.12, 0.01, 0.06)), Vector3(cos(a) * d, 0.02, sin(a) * d),
 			Color("#f2e8c9"), Vector3(0, rng.randf_range(0.0, 180.0), 0)))
 	extra_lights.insert(0,
 		{"pos": edge_xf(back, 0.0, 3.0, 3.0).origin, "color": pal["accent"], "energy": 2.0, "range": 8.0})
+
+
+## The derailed waggon (EnvKit.THRONE_WAGGON): sunk into the track bed, deck at floor level, a low rim (0.45 m — low
+## enough to see and swing over), two wheel sets knocked askew, bent corner posts, the queen's ticket throne at its west
+## end. No room collision: the exploration crosses the room centre (the way to the stairs room after the queen); in a
+## combat the set blocks it (the RtGeo blocker of the encounter, SetRing.add_blockers, 07 §3.5.4).
+func _waggon() -> void:
+	var r: Rect2 = EnvKit.THRONE_WAGGON
+	var c: Vector3 = Vector3(r.get_center().x, 0, r.get_center().y)
+	var body := Color("#5a2f3c")
+	var rim_h: float = 0.45
+	props.append(MeshUtil.part(MeshUtil.box(Vector3(r.size.x, 0.04, r.size.y)), c + Vector3(0, 0.02, 0),
+		Palette.mul(body, 0.55)))
+	for sz: float in [-1.0, 1.0]:
+		props.append(MeshUtil.part(MeshUtil.box(Vector3(r.size.x, rim_h, 0.12)),
+			c + Vector3(0, rim_h * 0.5, sz * (r.size.y * 0.5 - 0.06)), body, Vector3(sz * 3.0, 0, 0)))
+		props.append(MeshUtil.part(MeshUtil.box(Vector3(r.size.x + 0.04, 0.06, 0.16)),
+			c + Vector3(0, rim_h + 0.02, sz * (r.size.y * 0.5 - 0.06)), Palette.WARN_YELLOW))
+	for sx: float in [-1.0, 1.0]:
+		props.append(MeshUtil.part(MeshUtil.box(Vector3(0.12, rim_h, r.size.y - 0.24)),
+			c + Vector3(sx * (r.size.x * 0.5 - 0.06), rim_h * 0.5, 0), Palette.mul(body, 0.9)))
+		for sz: float in [-1.0, 1.0]:
+			props.append(MeshUtil.part(MeshUtil.box(Vector3(0.1, 0.9, 0.1)),
+				c + Vector3(sx * (r.size.x * 0.5 - 0.1), 0.45, sz * (r.size.y * 0.5 - 0.1)), Palette.DARK_METAL,
+				Vector3(sz * 8.0, 0, sx * -10.0), Vector3.ONE, 0.0, 1.0))
+			props.append(MeshUtil.part(MeshUtil.cylinder(0.3, 0.3, 0.12),
+				c + Vector3(sx * (r.size.x * 0.5 - 0.55), 0.16, sz * (r.size.y * 0.5 + 0.02)), Color("#2a2530"),
+				Vector3(90, sx * 12.0, 0)))
+	var throne := Color("#f2e8c9")
+	props.append(MeshUtil.part(MeshUtil.box(Vector3(0.3, 1.1, 0.9)), c + Vector3(-1.2, 0.55, 0), throne,
+		Vector3(0, 0, -6)))
+	for sz: float in [-1.0, 0.0, 1.0]:
+		props.append(MeshUtil.part(MeshUtil.box(Vector3(0.12, 0.26, 0.16)), c + Vector3(-1.24, 1.2 - absf(sz) * 0.1,
+			sz * 0.3), Palette.HYPE_GOLD, Vector3(0, 0, -6), Vector3.ONE, 0.4))
 
 
 # --- dressing ---------------------------------------------------------------------------------------------------------
@@ -716,7 +785,9 @@ static func _recipe_tris(r: Dictionary) -> int:
 
 
 func _slot_free(p: Vector2) -> bool:
-	if p.length() < EnvKit.CLEAR_RADIUS + 0.4:
+	# boss rooms: 6.2 m free plus the half extent of a turned crate (07 §2.4, R4) — their props stand in the corners
+	var boss: bool = spec.kind == RoomSpec.Kind.QUARTER_BOSS or spec.kind == RoomSpec.Kind.FLOOR_BOSS
+	if p.length() < (EnvKit.CLEAR_RADIUS_BOSS + 0.9 if boss else EnvKit.CLEAR_RADIUS + 0.4):
 		return false
 	for q: Vector2 in used:
 		if q.distance_to(p) < 1.6:

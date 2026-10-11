@@ -313,6 +313,8 @@ func _on_combat_started(sim_ref: RefCounted) -> void:
 	var geo: Dictionary = sim.setup.geo if not sim.setup.geo.is_empty() else ctx.get("geo", {})
 	if ring == null or not is_instance_valid(ring):
 		_build_set(geo)
+	else:
+		ring.call("add_blockers", geo.get("blockers", []))   # R4: the boss intro's ring knew no set pieces yet
 	var origin: Vector3 = ctx.get("origin", Vector3.ZERO)
 	telegraphs.call("setup", origin, float(int(geo.get("r", 480))) / 100.0,
 		Game.settings != null and Game.settings.telegraph_contrast == &"high")

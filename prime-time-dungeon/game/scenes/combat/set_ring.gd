@@ -4,7 +4,8 @@ extends Node3D
 ## invisible collision ring (ONE StaticBody3D on layer `world`: box segments along the ring, the two side walls of every
 ## door lane, the roll shutters of a closed set) and the roll shutters themselves (ONE mesh, closed sets only: bosses,
 ## tutorial, can_flee == false). Private helper of scenes/combat (no class_name), built by the CombatDirector from the
-## RtGeo geometry ({"r" cm, "doors" bits N 1 E 2 S 4 W 8, "closed"}).
+## RtGeo geometry ({"r" cm, "doors" bits N 1 E 2 S 4 W 8, "closed", "blockers"}); the set pieces of "blockers" (R4:
+## the waggon of Gleis 9) join the collision body as low boxes (add_blockers).
 ##
 ## Geometry (room-local, metres; +x east, +z south): ring radius r = geo.r / 100, a door d has its lane where
 ## |quer_d| ≤ DOOR_HALF (2 m) and längs_d > 0. The collision faces sit COLLIDER_INSET inside the walkable border of
@@ -23,6 +24,7 @@ const COLLIDER_SEGMENTS: int = 48
 const COLLIDER_INSET: float = 0.03              # faces 3 cm inside the walkable border
 const COLLIDER_THICK: float = 0.4
 const COLLIDER_HEIGHT: float = 1.6
+const BLOCKER_HEIGHT: float = 0.5               # set pieces are low (07 §3.5.4: no line of sight blocked)
 const DOOR_HALF: float = 2.0                    # DOOR_HALF_CM (07 §3.5.4) = EnvKit.DOOR_WIDTH / 2
 const WALL_INNER: float = 7.5                   # ROOM_INNER_CM (door in the wall)
 const SHUTTER_TOP: float = 3.0                  # door lintel height
@@ -47,6 +49,7 @@ var _material: StandardMaterial3D = null
 var _tween: Tween = null
 var _shutter_tween: Tween = null
 var _down: bool = false
+var _blockers: Dictionary = {}                  # str(blocker) → true: blockers already on the body
 
 
 ## Builds the set around the room centre `center` (world). `geo` = RtGeo geometry of the cell; `room_doors` = the
@@ -62,6 +65,7 @@ func build(center: Vector3, geo: Dictionary, room_doors: int, slack: float = 0.0
 	shutter_doors = room_doors & 15 if closed else 0
 	_build_ring_mesh()
 	_build_body()
+	add_blockers(geo.get("blockers", []) as Array)
 	if shutter_doors != 0:
 		_build_shutters()
 	set_brightness(0.0)
@@ -263,6 +267,27 @@ func _build_body() -> void:
 				var c: Vector2 = d * ((l0 + l1) * 0.5) + q * wall * s
 				_box(Vector3(COLLIDER_THICK, COLLIDER_HEIGHT, l1 - l0), Vector3(c.x, COLLIDER_HEIGHT * 0.5, c.y),
 					PI * 0.5 - door_angle(bit))
+
+
+## The fixed set pieces of the room as collision (07 §3.5.4, R4: the derailed waggon of Gleis 9): one box per RtGeo
+## blocker [x0, z0, x1, z1] (room-local cm) on the set's body, grown by COLLIDER_INSET − body_slack so a body stops
+## outside the blocker grown by its sim radius (the walkable border). Called by build() and — for a ring the boss
+## intro built before the combat's geometry was known — by the CombatDirector at the combat start; once per blocker.
+func add_blockers(blockers: Array) -> void:
+	if body == null:
+		return
+	var grow: float = COLLIDER_INSET - body_slack
+	for bv: Variant in blockers:
+		if not (bv is Array) or (bv as Array).size() != 4 or _blockers.has(str(bv)):
+			continue
+		_blockers[str(bv)] = true
+		var b: Array = bv
+		var x0: float = float(b[0]) / 100.0 - grow
+		var z0: float = float(b[1]) / 100.0 - grow
+		var x1: float = float(b[2]) / 100.0 + grow
+		var z1: float = float(b[3]) / 100.0 + grow
+		_box(Vector3(x1 - x0, BLOCKER_HEIGHT, z1 - z0), Vector3((x0 + x1) * 0.5, BLOCKER_HEIGHT * 0.5, (z0 + z1) * 0.5),
+			0.0)
 
 
 ## A box (size x = thickness across, z = length along) at `pos`, turned by `yaw` around Y.

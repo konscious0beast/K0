@@ -11,6 +11,18 @@ const WALL_HEIGHT: float = 3.5
 const DOOR_WIDTH: float = 4.0
 const WALL_THICKNESS: float = 0.5
 const CLEAR_RADIUS: float = 5.0
+## Boss rooms (QUARTER_BOSS, FLOOR_BOSS) keep 6.2 m free for the 6.0 m combat set (07 §2.4, R4): desk, cabinets and
+## props stand at the walls (the waggon of THRONE_WAGGON has no room collision).
+const CLEAR_RADIUS_BOSS: float = 6.2
+## The derailed waggon of Gleis 9 at the centre of the throne room (07 §3.5.4, §6.7, R4): its footprint in room-local
+## metres, the 3D twin of the RtGeo blocker [-160, -80, 160, 80] cm of enc_f1_boss_rattenkoenigin (floors.json
+## rt.blockers) — low, no line of sight blocked, the queen stands in it in P1 / P2; only the combat set collides
+## with it.
+const THRONE_WAGGON: Rect2 = Rect2(-1.6, -0.8, 3.2, 1.6)
+## The two flush tracks of Gleis 9 along x (07 §6.7): centre z of 9a / 9b in metres and their width (= the train's
+## lanes [-330, 330] and width 300 cm in skills.json skl_q_train).
+const THRONE_TRACK_Z: PackedFloat32Array = [-3.3, 3.3]
+const THRONE_TRACK_W: float = 3.0
 ## Inner wall face distance from the room center (ROOM_SIZE / 2 − WALL_THICKNESS).
 const WALL_INNER: float = 7.5
 ## Node name of the room-name sign (Label3D) in build_safe_room(); screens with their own name header may hide it.

@@ -250,20 +250,24 @@ func run_boss_intro(p_ctx: Dictionary, boss: Node3D, boss_enemy_id: String, boss
 		cam.call("crane", head, Rules.flat_forward(boss.global_transform.basis), INTRO_SEC)
 	_banner(tr("BOSS"), boss_name, C_BOSS)
 	var tag: String = "boss_intro:" + boss_enemy_id
+	# R5b: listen before the line can end — a line read (or auto-advanced) during the crane ended unheard and the
+	# intro then waited the whole safety net; the net counts game time (frames × delta), never the wall clock
+	var done: Array[bool] = [false]
+	var cb: Callable = func(t: String) -> void:
+		if t == tag:
+			done[0] = true
+	Events.dialog_finished.connect(cb)
 	intro_line = Show.say(tag, {}, true)
-	var t0: int = Time.get_ticks_msec()
+	var waited: float = 0.0
 	if is_inside_tree():
 		await get_tree().create_timer(INTRO_SEC, false).timeout
+		waited = INTRO_SEC
 	if intro_line != "" and Game.has_dialog_presenter() and is_inside_tree():
-		var done: Array[bool] = [false]
-		var cb: Callable = func(t: String) -> void:
-			if t == tag:
-				done[0] = true
-		Events.dialog_finished.connect(cb)
-		while is_inside_tree() and not done[0] and Time.get_ticks_msec() - t0 < int(INTRO_LINE_MAX_SEC * 1000.0):
+		while is_inside_tree() and not done[0] and waited < INTRO_LINE_MAX_SEC:
 			await get_tree().process_frame
-		if Events.dialog_finished.is_connected(cb):
-			Events.dialog_finished.disconnect(cb)
+			waited += get_process_delta_time()
+	if Events.dialog_finished.is_connected(cb):
+		Events.dialog_finished.disconnect(cb)
 	if is_instance_valid(cam):
 		cam.call("end_crane")
 	if phase == Phase.INTRO:

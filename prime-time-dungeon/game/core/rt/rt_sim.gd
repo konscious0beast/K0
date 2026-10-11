@@ -4,17 +4,24 @@ class_name RtSim extends RefCounted
 ## boundary → submit → step). Integer math only (07 §3.14); every random draw has its own generator
 ## SeedUtil.derive(setup.seed, "rt", rng_n).
 ##
-## R1b-I1 (this stage): move samples and their plausibility, the set geometry, the exact tick order, GCD / casts /
-## channels / queue / cancel thresholds, auto-attacks, party abilities with SHOW / FINALE and the Partner-Spezial
-## order, items, statuses, threat, the damage fold, the MP economy, results, snapshot and the pure queries. The sim-
-## driven units play the fallback of 07 §5.3 Nr. 6 (auto-attack the threat / assist target, move per §3.5.3); rule
-## AI (RtRules, I2/I3), telegraphs, zones, phases, enrage, summons and gifts follow in I2/I3.
+## R1b-I1: move samples and their plausibility, the set geometry, the exact tick order, GCD / casts / channels / queue
+## / cancel thresholds, auto-attacks, party abilities with SHOW / FINALE and the Partner-Spezial order, items,
+## statuses, threat, the damage fold, the MP economy, results, snapshot and the pure queries. R1b-I2: the rule AI of
+## the AI partner and the autopilot (RtRules with presets, switches and the fixed engine rules), the human reaction of
+## E25 (ai_seen from the own AI stream "rt_ai", the GCD tail), the telegraph reaction (react_at, RtGeo.escape_point;
+## the telegraphs themselves come with the enemy rules), the assist (suggest). Enemy rules, telegraph impacts, zones,
+## phases, enrage, summons and gifts follow in I3 (enemies keep the fallback of 07 §5.3 Nr. 6 until then).
 ## Steps of a tick and their helpers: 1a Movement.player_positions, 1b Ability.apply_commands, 2 StatusFx.tick_all,
-## 3/4 zones + telegraphs (I3), 5 Ability.resolve_hits, 6 Ability.end_casts, 7 Ability.queue_and_ai, 8
+## 3/4 zones + telegraphs (I3), 5 Ability.resolve_hits, 6 Ability.end_casts, 7 Ability.queue_and_ai → ai_step, 8
 ## Ability.auto_attacks, 9 Movement.move_units, 10 Result.check_end, 11 _clock.
 ## The methods after "--- helper interface" serve the private helpers of core/rt; nothing outside core/rt calls them.
 
 const TICKS_PER_SEC: int = 30
+## The AI escapes shapes that strike within this many ticks (07 §5.5).
+const ESCAPE_LOOKAHEAD_TICKS: int = 60
+## Reasons a rule's "then" follow-up waits out (anything else drops it).
+const FOLLOW_UP_WAIT: PackedStringArray = ["queue", "gcd", "casting", "drinking", "stunned", "locked"]
+const _NONE: Dictionary = {}                 # the empty, read-only skill set of known_skills
 const FixedMath := preload("res://core/stats/fixed_math.gd")
 const Ability := preload("res://core/rt/rt_ability.gd")
 const Damage := preload("res://core/rt/rt_damage.gd")
@@ -64,6 +71,12 @@ var _ps: Dictionary = {}                    # party unit id → Partner-Spezial 
 var _auto_target: Dictionary = {}           # enemy id → EnemyDef.rt.auto_target
 var _followers: Dictionary = {}             # group leader id → [komparse ids] (pop-in after the leader's entry)
 var _pop_in: int = 15                       # bal POP_IN_TICKS (read on every targetable())
+var _bar_known: Dictionary = {}             # party unit id → {skill id: true} of its bar (static per combat)
+var _known_all: Dictionary = {}             # party unit id → {skill id: true}: bar + FINALE + context variants
+var _assist: Dictionary = {}                # party unit id → compiled rules of its assist_preset (§5.6)
+var _intr_mp: Dictionary = {}               # party unit id → MP of its interrupter on the bar (filler reserve)
+var _skill_defs: Dictionary = {}            # skill id → SkillDef | null (memo of skill_def)
+var _skill_meta: Dictionary = {}            # skill id → PackedInt32Array (memo of skill_meta)
 
 
 func _init(p_setup: RtSetup, p_data: GameData) -> void:
@@ -287,9 +300,13 @@ func can_use_item(unit_id: String, item_id: String, target_id: String) -> String
 	return str(Ability.check_item(self, u, item_id, target_id)["reason"])
 
 
-## Assist (§5.6): skill id of the next suggested ability or "" (R1b-I2).
-func suggest(_unit_id: String) -> String:
-	return ""
+## Assist (§5.6): skill id of the ability the assist suggests for the party unit now ("" = none) — the first rule of its
+## assist_preset list (party.json rt) it could use now (usable or buffered; no items, no movement, no AI reserve).
+func suggest(unit_id: String) -> String:
+	var u: RtUnit = unit(unit_id)
+	if u == null or u.side != Combatant.Side.PARTY:
+		return ""
+	return RtRules.suggest(self, u, _assist.get(u.id, []))
 
 
 ## Slot (1..6) → skill / item id shown right now (07 §4.1): the bar (loadout, level), slot 2 as its context variant
@@ -414,6 +431,13 @@ func rng() -> RandomNumberGenerator:
 	return SeedUtil.make_rng(SeedUtil.derive(setup.seed, "rt", _rng_n))
 
 
+## A new generator for one draw of the AI reactions (E25, 07 §3.9.3): its own stream "rt_ai" and counter, so neither the
+## AI nor an autopilot switch shifts a damage, status or loot draw.
+func ai_rng() -> RandomNumberGenerator:
+	_ai_rng_n += 1
+	return SeedUtil.make_rng(SeedUtil.derive(setup.seed, "rt_ai", _ai_rng_n))
+
+
 ## A new event of the running tick, appended to the output.
 func ev(t: ActionEvent.Type) -> ActionEvent:
 	var e: ActionEvent = ActionEvent.make(t)
@@ -434,8 +458,13 @@ func def_of(unit_id: String) -> String:
 	return u.def_id if u != null else ""
 
 
+## The SkillDef of `id` (null if unknown); memoized (the data never changes during a combat — not state).
 func skill_def(id: String) -> SkillDef:
-	return _data.skill(id) if _data != null and id != "" and _data.has_id("skills", id) else null
+	var d: Variant = _skill_defs.get(id, false)
+	if d is bool:
+		d = _data.skill(id) if _data != null and id != "" and _data.has_id("skills", id) else null
+		_skill_defs[id] = d
+	return d as SkillDef
 
 
 func status_def(id: String) -> StatusDef:
@@ -456,19 +485,35 @@ func view(sk: SkillDef) -> SkillDef:
 
 ## Static: may unit u use skill_id at all (bar, FINALE, context variants; enemies: any)?
 func knows(u: RtUnit, skill_id: String) -> bool:
-	if u.side == Combatant.Side.ENEMY:
-		return true
-	for s: Variant in u.bar.values():
-		if str(s) == skill_id:
-			return true
-	if setup.tutorial and u.id == _ctl:
-		return false
-	if str(_finale.get(u.id, "")) == skill_id:
-		return true
-	for cx: Dictionary in _context.get(u.id, []):
-		if str(cx.get("skill", "")) == skill_id:
-			return true
-	return false
+	return u.side == Combatant.Side.ENEMY or known_skills(u).has(skill_id)
+
+
+## knows() of a party unit as a set {skill id: true} (read-only; the tutorial's controlled unit: its bar only); {} for
+## enemies (they may use any skill).
+func known_skills(u: RtUnit) -> Dictionary:
+	var d: Variant = (_bar_known if setup.tutorial and u.id == _ctl else _known_all).get(u.id)
+	return d if d != null else _NONE
+
+
+## The FINALE of a party unit ("" if none reached).
+func finale_of(u: RtUnit) -> String:
+	return _finale.get(u.id, "")
+
+
+## Static facts of a skill for the rule engine (memoized, not state; RtRules.M_*): [known to the data, GCD, MP cost,
+## cast or channel, moving_cancels, SHOW category] as 0/1 (MP as the cost).
+func skill_meta(id: String) -> PackedInt32Array:
+	var m: Variant = _skill_meta.get(id)
+	if m == null:
+		var sk: SkillDef = skill_def(id)
+		var pm: PackedInt32Array = [0, 0, 0, 0, 0, 0]
+		if sk != null:
+			var cast_like: bool = int(sk.rt.get("cast_ms", 0)) * 3 / 100 > 0 or Ability.channel_ticks(sk) > 0
+			pm = [1, 1 if bool(sk.rt.get("gcd", true)) else 0, Ability.mp_cost(sk), 1 if cast_like else 0,
+				1 if bool(sk.rt.get("moving_cancels", false)) else 0, 1 if sk.is_stunt() else 0]
+		_skill_meta[id] = pm
+		m = pm
+	return m
 
 
 ## RtMods forbid_skill (R1b-I3).
@@ -569,7 +614,7 @@ func fail_cast(u: RtUnit, why: String) -> void:
 	e.actor_id = u.id
 	e.skill_id = skill_id
 	e.text = why
-	u.cast = {}
+	cast_over(u)
 	end_action(u.id, skill_id, item_id)
 
 
@@ -591,9 +636,101 @@ func interrupt(src: RtUnit, tgt: RtUnit, ai: bool) -> bool:
 	if cd > 0:
 		tgt.cooldowns[skill_id] = [_tick + cd, cd]
 	tgt.lockout_until = _tick + bal.i("INTERRUPT_LOCKOUT_TICKS")
-	tgt.cast = {}
+	cast_over(tgt)
 	end_action(tgt.id, skill_id, "")
 	return true
+
+
+## A cast / channel / drink of `u` is over (end, failure, interruption, KO): an interrupt-worthy one is forgotten by
+## every unit (ai_seen, E25).
+func cast_over(u: RtUnit) -> void:
+	var worthy: bool = bool(u.cast.get("worthy", false))
+	u.cast = {}
+	if worthy:
+		for v: RtUnit in _list:
+			v.ai_seen.erase(u.id)
+
+
+## E25 (07 §5.3, §3.9.3): an interrupt-worthy cast of an enemy starts — every living party unit (slot order, whoever
+## steers it) draws from the AI stream its jitter (0 … AI_INTERRUPT_JITTER_TICKS), then "late" (AI_INTERRUPT_LATE_PM
+## ‰): ai_seen[caster] = start + AI_INTERRUPT_REACT_TICKS + jitter (+ AI_INTERRUPT_LATE_TICKS).
+func notice_cast(caster: RtUnit) -> void:
+	if caster.side == Combatant.Side.PARTY:
+		return
+	var start_ct: int = int(caster.cast.get("start", _tick))
+	var react: int = bal.i("AI_INTERRUPT_REACT_TICKS")
+	for v: RtUnit in _list:
+		if v.side != Combatant.Side.PARTY or not is_alive(v):
+			continue
+		var jitter: int = ai_rng().randi_range(0, maxi(0, bal.i("AI_INTERRUPT_JITTER_TICKS")))
+		var late: bool = FixedMath.roll_bp(ai_rng(), bal.i("AI_INTERRUPT_LATE_PM") * 10)
+		v.ai_seen[caster.id] = start_ct + react + jitter + (bal.i("AI_INTERRUPT_LATE_TICKS") if late else 0)
+
+
+## A new telegraph or zone of the running tick (07 §6.3; created by the enemy rules, R1b-I3): its id, the set radius
+## it is clipped to, TELEGRAPH_START (rt = {shape, x, z, yaw, r, r2, half, start, impact}) and the reaction draws of
+## the party (_notice_telegraph). Returns the id.
+func add_telegraph(t: RtTelegraph) -> int:
+	t.id = _next_tele
+	_next_tele += 1
+	if t.set_r <= 0:
+		t.set_r = int(setup.geo.get("r", 0))
+	_telegraphs.append(t)
+	if not t.is_zone:
+		var e: ActionEvent = ev(ActionEvent.Type.TELEGRAPH_START)
+		var src: RtUnit = unit(t.source_id)
+		e.actor_id = t.source_id
+		e.skill_id = t.skill_id
+		e.value = t.id
+		e.rt = {"shape": int(t.shape), "x": t.x, "z": t.z, "yaw": t.yaw, "r": t.r, "r2": t.r2, "half": t.half_deg,
+			"start": t.start, "impact": t.impact_at}
+		e.by_ai = src != null and is_ai_driven(src)
+		_notice_telegraph(t)
+	return t.id
+
+
+## Is (x, z) safe for `u` (07 §5.5): outside every hostile shape that strikes within ESCAPE_LOOKAHEAD_TICKS (grown by
+## ESCAPE_MARGIN_CM) and outside every hostile zone. Pure (RtGeo.escape_point).
+func safe_point(u: RtUnit, x: int, z: int) -> bool:
+	return _shape_impact(u, x, z) < 0 and not _in_zone(u, x, z)
+
+
+## Does the sim-driven party unit escape right now (07 §5.5): it reacts (react_at reached) and stands in a hostile
+## shape that strikes within ESCAPE_LOOKAHEAD_TICKS (grown by ESCAPE_MARGIN_CM), or it stands in a hostile zone. Pure.
+func escaping(u: RtUnit) -> bool:
+	if _telegraphs.is_empty() or u.side != Combatant.Side.PARTY or not is_ai_driven(u):
+		return false
+	if u.react_at >= 0 and _tick >= u.react_at and _shape_impact(u, u.x, u.z) >= 0:
+		return true
+	return _in_zone(u, u.x, u.z)
+
+
+## The ct from which the party SHOW is ready (the end of the last SHOW cooldown; 0 before the first SHOW) — the AI
+## fires its SHOW AI_SHOW_GRACE_TICKS later (07 §4.1, §5.3).
+func show_ready_at() -> int:
+	return _show_cd[0]
+
+
+## The MP of the unit's own interrupter (the dearest skill with rt.interrupt on its bar; 0 = none): the filler reserve
+## of 07 §3.10 / §5.3.
+func interrupter_mp(u: RtUnit) -> int:
+	return int(_intr_mp.get(u.id, 0))
+
+
+## party.json rt of a party unit ({} without data).
+func party_rt(u: RtUnit) -> Dictionary:
+	if u == null or u.side != Combatant.Side.PARTY or _data == null or not _data.has_id("party", u.def_id):
+		return {}
+	return _data.party_member(u.def_id).rt
+
+
+## A new tactic of a party unit (07 §5.2): its rules (party.json rt.presets, RtRules.preset_rules) and its distance
+## keep_cm[preset] (≤ 700, §5.5); rule timers stay (keys "<preset>:<index>").
+func change_preset(u: RtUnit, preset: String) -> void:
+	var prt: Dictionary = party_rt(u)
+	u.preset = preset
+	u.rules = RtRules.preset_rules(prt, preset)
+	u.keep_cm = clampi(int((prt.get("keep_cm", {}) as Dictionary).get(preset, 0)), 0, 700)
 
 
 ## The party flees (FLED at step 10). `by_item`: the smoke bomb (a flight attempt of its own, 07 §3.12).
@@ -674,21 +811,40 @@ func assist_target(u: RtUnit) -> String:
 	return best.id if best != null else ""
 
 
-## Step 7 choice of a sim-driven unit (07 §5.3 Nr. 6, R1b-I1 fallback without rules): target — enemies their
-## auto_target (threat_top, lowest_hp_pct_enemy, nearest_enemy), party AI / autopilot "assist" — and the movement goal
-## of §3.5.3 (a pending partner order keeps its own goal; stationary units never get one).
-func ai_choose(u: RtUnit, ordered: bool) -> void:
+## Step 7 of a sim-driven unit (07 §5.3, §5.5, §6.2): its target (enemies: auto_target — threat_top,
+## lowest_hp_pct_enemy, nearest_enemy; AI partner / autopilot: "assist"); a party unit's telegraph reaction (_react);
+## a due "then" follow-up and the rules (RtRules.choose — both held while a Partner-Spezial order waits); then the
+## movement goal: escape point > following the controlled unit out of the ring (flight, §2.5) > partner order
+## (`ordered`: it walks into range) > the range goal of a rule > §3.5.3 — a party goal into a shape it reacts to
+## becomes "stand", one into a zone the escape point. Stationary units never get one.
+func ai_step(u: RtUnit, ordered: bool) -> void:
 	if not u.entry.is_empty() or not targetable(u):
 		return
-	var tid: String = assist_target(u) if u.side == Combatant.Side.PARTY else _enemy_target(u)
+	var party: bool = u.side == Combatant.Side.PARTY
+	var tid: String = assist_target(u) if party else _enemy_target(u)
 	if tid != u.target_id:
 		Ability.target_change(self, u, tid)
-	if ordered or u.stationary:
+	var escape: bool = party and _react(u)
+	var rule_goal: Array = []
+	if u.partner_order.is_empty() and _tick >= u.pop_in_until:
+		_follow_up(u)
+		if not u.rules.is_empty():
+			var pick: Dictionary = RtRules.choose(self, u)
+			if pick.has("skill") or pick.has("item"):
+				_apply_pick(u, pick)
+			rule_goal = pick.get("goal", [])
+	if escape or u.stationary or (party and _follow_flight(u)) or ordered:
 		return
-	if _tick >= u.pop_in_until:
-		u.goal = Movement.goal_for(self, u, _by_id.get(tid, null))
-	elif not u.goal.is_empty():
-		u.goal = []
+	if _tick < u.pop_in_until:
+		if not u.goal.is_empty():
+			u.goal = []
+		return
+	var g: Array[int] = []
+	if rule_goal.size() == 2:
+		g.assign(rule_goal)
+	else:
+		g = Movement.goal_for(self, u, _by_id.get(tid, null))
+	u.goal = _safe_goal(u, g) if party else g
 
 
 ## The pull opener at ct 0 (07 §2.2): a skill or item of the opening unit, without a range check.
@@ -819,8 +975,18 @@ func _derive() -> void:
 	for u: RtUnit in _list:
 		skills.append(u.auto_skill)
 		skills.append(u.auto_ranged_skill)
+		var known: Dictionary = {}
+		var intr: int = 0
 		for s: Variant in u.bar.values():
 			skills.append(str(s))
+			known[str(s)] = true
+			var bsk: SkillDef = skill_def(str(s))
+			if bsk != null and bool(bsk.rt.get("interrupt", false)):
+				intr = maxi(intr, Ability.mp_cost(bsk))
+		if u.side == Combatant.Side.PARTY:
+			_bar_known[u.id] = known
+			_known_all[u.id] = known.duplicate()
+			_intr_mp[u.id] = intr
 		if u.side == Combatant.Side.PARTY and _data != null and _data.has_id("party", u.def_id):
 			var prt: Dictionary = _data.party_member(u.def_id).rt
 			for b: Variant in (prt.get("bar", []) as Array):
@@ -828,6 +994,9 @@ func _derive() -> void:
 				if bool(bd.get("finale", false)) and int(bd.get("level", 1)) <= u.level:
 					_finale[u.id] = str(bd.get("skill", ""))
 					skills.append(str(bd.get("skill", "")))
+			var extra: Dictionary = _known_all[u.id]
+			if _finale.has(u.id):
+				extra[str(_finale[u.id])] = true
 			var ctx: Array = []
 			for cv: Variant in (prt.get("context", []) as Array):
 				var cd: Dictionary = cv
@@ -835,10 +1004,12 @@ func _derive() -> void:
 					ctx.append({"slot": int(cd.get("slot", 0)), "skill": str(cd.get("skill", "")),
 						"when": str(cd.get("when", ""))})
 					skills.append(str(cd.get("skill", "")))
+					extra[str(cd.get("skill", ""))] = true
 			_context[u.id] = ctx
 			var ps: String = str(prt.get("partner_special", ""))
 			if ps != "" and u.bar.values().has(ps):
 				_ps[u.id] = ps
+			_assist[u.id] = RtRules.preset_rules(prt, str(prt.get("assist_preset", "attack")))
 		elif u.side == Combatant.Side.ENEMY and _data != null and _data.has_id("enemies", u.def_id):
 			_auto_target[u.id] = str(_data.enemy(u.def_id).rt.get("auto_target", "threat_top"))
 	for k: Variant in items.keys():
@@ -903,6 +1074,155 @@ func _start_threat(opener_unit: RtUnit) -> void:
 	for v: RtUnit in _list:
 		if v.side == Combatant.Side.ENEMY:
 			Threat.add(v, trigger.id, 1)
+
+
+## Applies the pick of RtRules.choose (07 §5.3 Nr. 5) with by_ai: a random_enemy target is drawn now (combat stream,
+## §3.9.3); the rule's timer (every; once: never again) and its "then" follow-up are set when the action starts.
+func _apply_pick(u: RtUnit, pick: Dictionary) -> void:
+	var rule: Dictionary = u.rules[int(pick["at"])]
+	var tid: String = str(pick.get("target", ""))
+	var reason: String = ""
+	if pick.has("item"):
+		reason = Ability.use_item(self, u, str(pick["item"]), tid, true)
+	else:
+		var skill_id: String = str(pick["skill"])
+		var cands: Array = pick.get("random", [])
+		if cands.size() > 1:
+			var alt: String = str(cands[rng().randi_range(0, cands.size() - 1)])
+			if str(Ability.check(self, u, skill_id, alt)["reason"]) == "":
+				tid = alt
+		reason = Ability.use_ability(self, u, skill_id, tid, true)
+	if reason != "":
+		return
+	var key: String = str(rule["key"])
+	if bool(rule["once"]):
+		u.rule_ready[key] = RtRules.NEVER
+	elif int(rule["every"]) > 0:
+		u.rule_ready[key] = _tick + int(rule["every"])
+	var th: Dictionary = rule["then"]
+	if not th.is_empty():
+		u.follow_up = {"skill": str(th["skill"]), "target": tid, "at": _tick + int(th["delay"])}
+
+
+## A rule's "then" (07 §5.3 Nr. 5): from follow_up.at on it starts as soon as it is usable (no conditions); the busy
+## reasons of FOLLOW_UP_WAIT wait, any other drops it.
+func _follow_up(u: RtUnit) -> void:
+	if u.follow_up.is_empty() or _tick < int(u.follow_up.get("at", 0)):
+		return
+	var skill_id: String = str(u.follow_up.get("skill", ""))
+	var r: Dictionary = Ability.check(self, u, skill_id, str(u.follow_up.get("target", "")))
+	var reason: String = str(r["reason"])
+	if reason == "":
+		u.follow_up = {}
+		Ability.start(self, u, skill_def(skill_id), r, true)
+	elif not FOLLOW_UP_WAIT.has(reason):
+		u.follow_up = {}
+
+
+## The telegraph reaction of a sim-driven party unit (07 §5.5) in step 7: react_at ends once no hostile telegraph is
+## pending; from react_at on, standing in a hostile shape that strikes within ESCAPE_LOOKAHEAD_TICKS (grown by
+## ESCAPE_MARGIN_CM) — or in a zone at any time — it walks to RtGeo.escape_point. An own cast that walking breaks is
+## aborted (CAST_FAILED moved) unless it ends in time (end ≤ impact − walking ticks); a drink, an unbreakable cast or
+## no escape point keep it standing. Returns true while it escapes (goal set).
+func _react(u: RtUnit) -> bool:
+	if _telegraphs.is_empty():
+		u.react_at = -1
+		return false
+	if u.react_at >= 0:
+		var pending: bool = false
+		for t: RtTelegraph in _telegraphs:
+			if not t.is_zone and t.side == u.side and t.impact_at > _tick:
+				pending = true
+				break
+		if not pending:
+			u.react_at = -1
+	var impact: int = _shape_impact(u, u.x, u.z) if u.react_at >= 0 and _tick >= u.react_at else -1
+	if impact < 0 and not _in_zone(u, u.x, u.z):
+		return false
+	var p: Vector2i = RtGeo.escape_point(self, u)
+	if p.x == u.x and p.y == u.z:
+		return false
+	if not u.cast.is_empty():
+		if impact < 0 or str(u.cast.get("kind", "")) == "item" or not bool(u.cast.get("moving_cancels", false)):
+			return false
+		var walk: int = FixedMath.div_ceil(DetMath.dist(u.x, u.z, p.x, p.y), maxi(1, Movement.speed(u)))
+		if int(u.cast.get("end", 0)) <= impact - walk:
+			return false
+		fail_cast(u, "moved")
+	u.goal = [p.x, p.y]
+	return true
+
+
+## The AI partner follows the controlled unit as soon as it leaves the ring (flight, 07 §2.5, §5.5): the goal next to
+## it (the door lane is open to the party while the controlled unit is outside). Returns true when it does.
+func _follow_flight(u: RtUnit) -> bool:
+	var ctl: RtUnit = _by_id.get(_ctl, null)
+	if ctl == null or ctl == u or not is_alive(ctl) or RtGeo.in_circle(setup.geo, ctl.x, ctl.z, ctl.radius):
+		return false
+	var p: Vector2i = DetMath.toward(ctl.x, ctl.z, u.x, u.z, u.radius + ctl.radius)
+	u.goal = [p.x, p.y]
+	return true
+
+
+## A party goal that leads into danger (07 §5.5): into a hostile zone → the escape point (or stand); into a shape the
+## unit reacts to → stand.
+func _safe_goal(u: RtUnit, g: Array[int]) -> Array[int]:
+	if g.size() != 2 or _telegraphs.is_empty():
+		return g
+	var out: Array[int] = []
+	if _in_zone(u, g[0], g[1]):
+		var p: Vector2i = RtGeo.escape_point(self, u)
+		if p.x != u.x or p.y != u.z:
+			out.assign([p.x, p.y])
+		return out
+	if u.react_at >= 0 and _tick >= u.react_at and _shape_impact(u, g[0], g[1]) >= 0:
+		return out
+	return g
+
+
+## TELEGRAPH_START (07 §5.5, E25): every living party unit (slot order, whoever steers it) draws "missed" from the AI
+## stream (AI_DODGE_MISS_PM of its tactic); a sim-driven unit that sees the shape and stands in it (grown by
+## ESCAPE_MARGIN_CM) reacts at start + REACT_TICKS[tactic] — the earlier reaction wins while another hostile
+## telegraph is pending.
+func _notice_telegraph(t: RtTelegraph) -> void:
+	if t.side != Combatant.Side.PARTY:
+		return
+	var others: bool = false
+	for o: RtTelegraph in _telegraphs:
+		if o != t and not o.is_zone and o.side == t.side and o.impact_at > _tick:
+			others = true
+			break
+	var m: int = bal.i("ESCAPE_MARGIN_CM")
+	for v: RtUnit in _list:
+		if v.side != Combatant.Side.PARTY or not is_alive(v):
+			continue
+		var preset: String = v.preset if RtVocab.RT_PRESETS.has(v.preset) else "attack"
+		var missed: bool = FixedMath.roll_bp(ai_rng(), bal.sub("AI_DODGE_MISS_PM", preset) * 10)
+		if missed or not is_ai_driven(v) or not t.contains_inflated(v.x, v.z, m):
+			continue
+		var at: int = t.start + bal.sub("REACT_TICKS", preset)
+		v.react_at = mini(v.react_at, at) if others and v.react_at >= 0 else at
+
+
+## The earliest impact of a pending hostile shape (no zone) that strikes within ESCAPE_LOOKAHEAD_TICKS and contains
+## (x, z) grown by ESCAPE_MARGIN_CM; −1 if none.
+func _shape_impact(u: RtUnit, x: int, z: int) -> int:
+	var best: int = -1
+	var m: int = bal.i("ESCAPE_MARGIN_CM")
+	for t: RtTelegraph in _telegraphs:
+		if t.is_zone or t.side != u.side or t.impact_at <= _tick or t.impact_at - _tick > ESCAPE_LOOKAHEAD_TICKS:
+			continue
+		if (best < 0 or t.impact_at < best) and t.contains_inflated(x, z, m):
+			best = t.impact_at
+	return best
+
+
+## Is (x, z) inside a hostile zone of `u`?
+func _in_zone(u: RtUnit, x: int, z: int) -> bool:
+	for t: RtTelegraph in _telegraphs:
+		if t.is_zone and t.side == u.side and t.contains(x, z):
+			return true
+	return false
 
 
 func _enemy_target(u: RtUnit) -> String:

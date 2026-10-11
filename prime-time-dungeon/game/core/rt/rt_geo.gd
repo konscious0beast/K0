@@ -21,6 +21,7 @@ const FORMATION: Array = [[0, 0], [-130, 90], [130, 90], [0, 180]]   # slot → 
 const DEFAULT_DOOR_HALF: int = 200
 const DEFAULT_CELL_HALF: int = 800
 const DEFAULT_ROOM_INNER: int = 750
+const ESCAPE_DISTS: PackedInt32Array = [100, 200, 300, 450, 600]   # escape point candidates (07 §5.5), cm
 
 
 ## Set radius of a room kind (RoomCell.Kind): SET_R_CM "regular" for NORMAL, START, GATE, SAFE; "boss" for
@@ -169,13 +170,61 @@ static func group_anchor(geo: Dictionary, cx: int, cz: int) -> Vector2i:
 	return DetMath.toward(0, 0, -cx, -cz, r)
 
 
-## Escape point of a unit leaving a telegraph (07 §5.5). R1b-I1: the unit's own position (dodging arrives with the
-## partner AI in I2 and the telegraphs in I3).
-static func escape_point(_sim: RtSim, u: RtUnit) -> Vector2i:
-	return Vector2i(u.x, u.z) if u != null else Vector2i.ZERO
+## Escape point of a unit leaving telegraphs and zones (07 §5.5): candidates in the 16 directions yaw = k × 16 at
+## ESCAPE_DISTS from the unit, ordered by distance, then by closeness to the preferred direction (melee: towards its
+## target, ranged — keep_cm > 0: away from the nearest enemy; none: no preference), then k; the first one that is
+## walkable in the ring (no door lane, no blocker) and safe (RtSim.safe_point: outside every hostile shape striking
+## within 60 ticks, grown by ESCAPE_MARGIN_CM, and outside every hostile zone). None → the unit's own position (it
+## stands). Pure.
+static func escape_point(sim: RtSim, u: RtUnit) -> Vector2i:
+	if u == null:
+		return Vector2i.ZERO
+	var geo: Dictionary = sim.setup.geo
+	var pref: int = _preferred_yaw(sim, u)
+	var order: Array = []
+	for k in 16:
+		order.append([_yaw_gap(k * 16, pref) if pref >= 0 else 0, k])
+	order.sort_custom(func(a: Array, b: Array) -> bool:
+		return int(a[0]) < int(b[0]) or (int(a[0]) == int(b[0]) and int(a[1]) < int(b[1])))
+	for d: int in ESCAPE_DISTS:
+		for e: Array in order:
+			var f: Vector2i = DetMath.dir(int(e[1]) * 16)
+			var x: int = u.x + FixedMath.div_round(f.x * d, DetMath.ONE)
+			var z: int = u.z + FixedMath.div_round(f.y * d, DetMath.ONE)
+			if walkable(geo, x, z, u.radius, false) and sim.safe_point(u, x, z):
+				return Vector2i(x, z)
+	return Vector2i(u.x, u.z)
 
 
 # --- private --------------------------------------------------------------------------------------------------------
+
+## The preferred escape direction (07 §5.5): melee — towards the unit's hostile target; ranged (keep_cm > 0) — away
+## from the nearest enemy on stage (ties: unit order); −1 without one (or on the same spot).
+static func _preferred_yaw(sim: RtSim, u: RtUnit) -> int:
+	if u.keep_cm <= 0:
+		var t: RtUnit = sim.unit(u.target_id)
+		if t == null or t.side == u.side or not sim.targetable(t) or (t.x == u.x and t.z == u.z):
+			return -1
+		return DetMath.yaw_of(t.x - u.x, t.z - u.z)
+	var near: RtUnit = null
+	var nd: int = -1
+	for v: RtUnit in sim.units_ref():
+		if v.side == u.side or not sim.targetable(v):
+			continue
+		var d2: int = DetMath.dist2(u.x, u.z, v.x, v.z)
+		if near == null or d2 < nd:
+			near = v
+			nd = d2
+	if near == null or nd == 0:
+		return -1
+	return DetMath.yaw_of(u.x - near.x, u.z - near.z)
+
+
+## Angular gap of two u8 yaws (0 … 128).
+static func _yaw_gap(a: int, b: int) -> int:
+	var d: int = posmod(a - b, 256)
+	return mini(d, 256 - d)
+
 
 ## (längs, quer) of a point relative to door d: längs from the centre towards the door, quer across.
 static func _along_across(d: int, x: int, z: int) -> Vector2i:

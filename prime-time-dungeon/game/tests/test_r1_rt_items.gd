@@ -18,7 +18,7 @@ func _sim(items: Dictionary = {}, cmd: Dictionary = {}, hero: String = "kai", ba
 		else "p1"}))
 	if not bal.is_empty():
 		s.balance = RtBalance.from_values(bal)
-	var sim: RtSim = RtSim.new(s, RtKit.data())
+	var sim: RtSim = RtKit.no_ai(RtSim.new(s, RtKit.data()))
 	sim.start()
 	for u: RtUnit in sim.units():
 		u.auto_on = false

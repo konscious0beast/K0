@@ -1,8 +1,9 @@
 extends TestCase
-## 07 §3.15 (R1b-I1) test_r1_rt_perf: the time budget of the sim — RtSim.step() with 2 party units and 6 enemies
-## ≤ 0.25 ms on a desktop (the 10 telegraphs of the budget come with R1b-I3), a regular fight of ≈ 600 ticks ≤ 0.3 s
-## headless. Wall-clock budgets are asserted only with PTD_PERF_ASSERTS=1 (TestCase.assert_time_budget, quality-14);
-## the numbers (incl. ticks per second) are always printed. Only step() is timed, not the setup.
+## 07 §3.15 (R1b-I1, I2) test_r1_rt_perf: the time budget of the sim — RtSim.step() with 2 party units (the person
+## and the AI partner playing its rules) and 6 enemies ≤ 0.25 ms on a desktop (the 10 telegraphs of the budget and the
+## enemy rules come with R1b-I3), a regular fight of ≈ 600 ticks ≤ 0.3 s headless. Wall-clock budgets are asserted
+## only with PTD_PERF_ASSERTS=1 (TestCase.assert_time_budget, quality-14); the numbers (incl. ticks per second) are
+## always printed. Only step() is timed, not the setup.
 
 const STEP_BUDGET_US: float = 250.0
 const FIGHT_BUDGET_MS: float = 300.0

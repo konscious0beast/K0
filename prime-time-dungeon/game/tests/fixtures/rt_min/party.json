@@ -139,15 +139,187 @@
 				"presets": {
 					"attack": [
 						{
+							"item": "heal",
+							"target": "self",
+							"cond": {
+								"toggle": "potions",
+								"self_hp_below_pm": 350
+							}
+						},
+						{
 							"skill": "skl_kai_leash_trip",
 							"target": "caster",
 							"cond": {
 								"toggle": "interrupt"
 							}
+						},
+						{
+							"skill": "skl_kai_cable_whip",
+							"target": "caster",
+							"cond": {
+								"toggle": "interrupt"
+							}
+						},
+						{
+							"skill": "skl_kai_taunt",
+							"target": "self",
+							"cond": {
+								"enemy_on_ally": true
+							}
+						},
+						{
+							"skill": "skl_stunt_kai_suplex",
+							"target": "assist",
+							"cond": {
+								"toggle": "show",
+								"target_hp_above_pm": 300
+							}
+						},
+						{
+							"skill": "skl_kai_sweep",
+							"target": "self",
+							"cond": {
+								"enemies_in_radius": {
+									"r_cm": 350,
+									"min": 2
+								}
+							}
+						},
+						{
+							"skill": "skl_kai_deo_torch",
+							"target": "assist",
+							"cond": {
+								"enemies_in_radius": {
+									"r_cm": 500,
+									"min": 2
+								}
+							}
+						},
+						{
+							"skill": "skl_kai_heavy_swing",
+							"target": "assist",
+							"filler": true
 						}
 					],
-					"support": [],
-					"careful": []
+					"support": [
+						{
+							"item": "heal",
+							"target": "self",
+							"cond": {
+								"toggle": "potions",
+								"self_hp_below_pm": 350
+							}
+						},
+						{
+							"item": "revive",
+							"target": "ko_ally",
+							"cond": {
+								"toggle": "potions",
+								"ally_ko": true
+							}
+						},
+						{
+							"skill": "skl_kai_leash_trip",
+							"target": "caster",
+							"cond": {
+								"toggle": "interrupt"
+							}
+						},
+						{
+							"skill": "skl_kai_cable_whip",
+							"target": "caster",
+							"cond": {
+								"toggle": "interrupt"
+							}
+						},
+						{
+							"skill": "skl_kai_taunt",
+							"target": "self",
+							"cond": {
+								"enemy_on_ally": true
+							}
+						},
+						{
+							"skill": "skl_kai_first_aid",
+							"target": "lowest_hp_pct_ally",
+							"cond": {
+								"ally_hp_below_pm": 500
+							}
+						},
+						{
+							"skill": "skl_kai_sweep",
+							"target": "self",
+							"cond": {
+								"enemies_in_radius": {
+									"r_cm": 350,
+									"min": 3
+								}
+							}
+						},
+						{
+							"skill": "skl_stunt_kai_suplex",
+							"target": "assist",
+							"cond": {
+								"toggle": "show",
+								"target_hp_above_pm": 500
+							}
+						},
+						{
+							"skill": "skl_kai_heavy_swing",
+							"target": "assist",
+							"filler": true
+						}
+					],
+					"careful": [
+						{
+							"item": "heal",
+							"target": "self",
+							"cond": {
+								"self_hp_below_pm": 500
+							}
+						},
+						{
+							"item": "revive",
+							"target": "ko_ally",
+							"cond": {
+								"ally_ko": true
+							}
+						},
+						{
+							"skill": "skl_kai_leash_trip",
+							"target": "caster",
+							"cond": {
+								"toggle": "interrupt"
+							}
+						},
+						{
+							"skill": "skl_kai_cable_whip",
+							"target": "caster",
+							"cond": {
+								"toggle": "interrupt"
+							}
+						},
+						{
+							"skill": "skl_kai_taunt",
+							"target": "self",
+							"cond": {
+								"enemy_on_ally": true,
+								"ally_hp_below_pm": 500
+							}
+						},
+						{
+							"skill": "skl_kai_first_aid",
+							"target": "lowest_hp_pct_ally",
+							"cond": {
+								"ally_hp_below_pm": 600
+							}
+						},
+						{
+							"skill": "skl_kai_heavy_swing",
+							"target": "assist",
+							"filler": true
+						}
+					]
 				},
 				"default_preset": "attack",
 				"assist_preset": "attack"
@@ -285,17 +457,187 @@
 					}
 				],
 				"presets": {
-					"attack": [],
 					"support": [
+						{
+							"skill": "skl_mop_revive",
+							"target": "ko_ally",
+							"cond": {
+								"ally_ko": true
+							}
+						},
+						{
+							"item": "revive",
+							"target": "ko_ally",
+							"cond": {
+								"toggle": "potions",
+								"ally_ko": true
+							}
+						},
 						{
 							"skill": "skl_mop_holy_lick",
 							"target": "lowest_hp_pct_ally",
 							"cond": {
 								"ally_hp_below_pm": 600
 							}
+						},
+						{
+							"skill": "skl_mop_mass_lick",
+							"target": "self",
+							"cond": {
+								"allies_below_pm": {
+									"pm": 700,
+									"min": 2
+								}
+							}
+						},
+						{
+							"item": "heal",
+							"target": "self",
+							"cond": {
+								"toggle": "potions",
+								"self_hp_below_pm": 350
+							}
+						},
+						{
+							"skill": "skl_mop_thunder_bark",
+							"target": "self",
+							"cond": {
+								"toggle": "interrupt",
+								"caster_within_cm": 600
+							}
+						},
+						{
+							"skill": "skl_mop_expert_opinion",
+							"target": "controlled",
+							"cond": {
+								"boss_fight": true,
+								"target_no_status": "sts_haste"
+							}
+						},
+						{
+							"skill": "skl_stunt_mop_entrance",
+							"target": "self",
+							"cond": {
+								"toggle": "show",
+								"enemies_in_radius": {
+									"r_cm": 800,
+									"min": 3
+								}
+							}
+						},
+						{
+							"skill": "skl_mop_frost_sneeze",
+							"target": "assist",
+							"filler": true
+						},
+						{
+							"skill": "skl_mop_noble_flame",
+							"target": "assist",
+							"cond": {
+								"self_mp_above_pm": 500
+							},
+							"filler": true
 						}
 					],
-					"careful": []
+					"attack": [
+						{
+							"skill": "skl_mop_revive",
+							"target": "ko_ally",
+							"cond": {
+								"ally_ko": true
+							}
+						},
+						{
+							"skill": "skl_mop_holy_lick",
+							"target": "lowest_hp_pct_ally",
+							"cond": {
+								"ally_hp_below_pm": 350
+							}
+						},
+						{
+							"item": "heal",
+							"target": "self",
+							"cond": {
+								"toggle": "potions",
+								"self_hp_below_pm": 350
+							}
+						},
+						{
+							"skill": "skl_mop_thunder_bark",
+							"target": "self",
+							"cond": {
+								"toggle": "interrupt",
+								"caster_within_cm": 600
+							}
+						},
+						{
+							"skill": "skl_stunt_mop_entrance",
+							"target": "self",
+							"cond": {
+								"toggle": "show",
+								"enemies_in_radius": {
+									"r_cm": 800,
+									"min": 2
+								}
+							}
+						},
+						{
+							"skill": "skl_mop_frost_sneeze",
+							"target": "assist",
+							"filler": true
+						},
+						{
+							"skill": "skl_mop_noble_flame",
+							"target": "assist",
+							"filler": true
+						}
+					],
+					"careful": [
+						{
+							"skill": "skl_mop_revive",
+							"target": "ko_ally",
+							"cond": {
+								"ally_ko": true
+							}
+						},
+						{
+							"item": "revive",
+							"target": "ko_ally",
+							"cond": {
+								"ally_ko": true
+							}
+						},
+						{
+							"skill": "skl_mop_holy_lick",
+							"target": "lowest_hp_pct_ally",
+							"cond": {
+								"ally_hp_below_pm": 750
+							}
+						},
+						{
+							"item": "heal",
+							"target": "self",
+							"cond": {
+								"self_hp_below_pm": 500
+							}
+						},
+						{
+							"skill": "skl_mop_thunder_bark",
+							"target": "self",
+							"cond": {
+								"toggle": "interrupt",
+								"caster_within_cm": 600
+							}
+						},
+						{
+							"skill": "skl_mop_noble_flame",
+							"target": "assist",
+							"cond": {
+								"self_mp_above_pm": 700
+							},
+							"filler": true
+						}
+					]
 				},
 				"default_preset": "support",
 				"assist_preset": "support"

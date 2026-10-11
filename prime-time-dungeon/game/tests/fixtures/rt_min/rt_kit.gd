@@ -75,6 +75,21 @@ static func sim(cmd: Dictionary, level: int = 1, hero: String = "kai", st: GameS
 	return r
 
 
+## sim() with the party's rules cleared (no_ai): the I1 mechanics tests watch one mechanic, the AI partner (and an
+## autopilot) only auto-attacks and moves (07 §5.3 Nr. 6).
+static func sim_no_ai(cmd: Dictionary, level: int = 1, hero: String = "kai", st: GameState = null) -> RtSim:
+	var s: RtSim = sim(cmd, level, hero, st)
+	return no_ai(s) if s != null else null
+
+
+## Clears the rules of every party unit of `s` (no rule AI; target, movement and auto-attacks stay). Returns `s`.
+static func no_ai(s: RtSim) -> RtSim:
+	for u: RtUnit in s.units_ref():
+		if u.side == Combatant.Side.PARTY:
+			u.rules = []
+	return s
+
+
 ## Steps n ticks; returns every event.
 static func steps(s: RtSim, n: int) -> Array[ActionEvent]:
 	var out: Array[ActionEvent] = []

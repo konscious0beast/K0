@@ -70,11 +70,14 @@ static func autopilot(sim: RtSim, u: RtUnit, on: bool) -> void:
 		u.goal = []
 
 
-## partner_preset: tactic + switches of an AI party unit (PRESET_CHANGED, rt.tog as 0/1).
+## partner_preset: tactic + switches of an AI party unit (PRESET_CHANGED, rt.tog as 0/1). A new tactic brings its rules
+## (party.json rt.presets, keys "<preset>:<index>": the timers of each tactic are kept) and its distance keep_cm
+## (≤ 700, 07 §5.5).
 static func set_preset(sim: RtSim, u: RtUnit, preset: String, tog: Variant) -> void:
 	if not RtVocab.RT_PRESETS.has(preset):
 		return
-	u.preset = preset
+	if u.preset != preset:
+		sim.change_preset(u, preset)
 	if tog is Dictionary:
 		for k: String in RtVocab.RT_TOGGLES:
 			if (tog as Dictionary).has(k):
@@ -116,25 +119,40 @@ static func check(sim: RtSim, u: RtUnit, skill_id: String, target_id: String, op
 	var sk: SkillDef = sim.skill_def(skill_id)
 	if sk == null or u == null:
 		return _no("not_learned")
+	var pre: String = precheck(sim, u, sk)
+	if pre != "" and pre != "queue":
+		return _no(pre)
+	var tr: Dictionary = targets(sim, u, sk, target_id, opener)
+	if str(tr["reason"]) != "":
+		return tr
+	if pre == "queue":
+		tr["reason"] = "queue"
+	return tr
+
+
+## The target-free part of check (the rule engine runs it before it resolves a rule target): "" (free), "queue" (GCD /
+## cast ends within QUEUE_TICKS) or the refusal reason (dead, not_learned, forbidden, stunned, drinking, cooldown,
+## locked, casting, gcd, mp).
+static func precheck(sim: RtSim, u: RtUnit, sk: SkillDef) -> String:
 	if not sim.is_alive(u):
-		return _no("dead")
-	if not sim.knows(u, skill_id):
-		return _no("not_learned")
-	if sim.forbidden_skill(u, skill_id):
-		return _no("forbidden")
+		return "dead"
+	if not sim.knows(u, sk.id):
+		return "not_learned"
+	if sim.forbidden_skill(u, sk.id):
+		return "forbidden"
 	if StatusFx.has_flag(u, "no_act"):
-		return _no("stunned")
+		return "stunned"
 	var c: int = sim.tick()
 	var is_cast: bool = cast_ticks(sim, u, sk) > 0 or channel_ticks(sk) > 0
 	if str(u.cast.get("kind", "")) == "item":
-		return _no("drinking")
-	if sim.is_show_skill(u, skill_id):
+		return "drinking"
+	if sim.is_show_skill(u, sk.id):
 		if sim.show_cd_left() > 0 or sim.show_cast_running(u):
-			return _no("cooldown")
-	elif cooldown_left(sim, u, skill_id) > 0:
-		return _no("cooldown")
+			return "cooldown"
+	elif cooldown_left(sim, u, sk.id) > 0:
+		return "cooldown"
 	if is_cast and (u.lockout_until > c or StatusFx.has_flag(u, "no_cast")):
-		return _no("locked")
+		return "locked"
 	var busy: String = ""
 	var busy_left: int = 0
 	var gcd: bool = bool(sk.rt.get("gcd", true))
@@ -145,15 +163,10 @@ static func check(sim: RtSim, u: RtUnit, skill_id: String, target_id: String, op
 		busy = "gcd"
 		busy_left = u.gcd_until - c
 	if busy != "" and busy_left > sim.bal.i("QUEUE_TICKS"):
-		return _no(busy)
+		return busy
 	if u.mp < mp_cost(sk):
-		return _no("mp")
-	var tr: Dictionary = targets(sim, u, sk, target_id, opener)
-	if str(tr["reason"]) != "":
-		return tr
-	if busy != "":
-		tr["reason"] = "queue"
-	return tr
+		return "mp"
+	return "queue" if busy != "" else ""
 
 
 ## Pure target resolution of `sk` for `u` (07 §4.4): {"reason", "ids", "primary", "pick"}; opener: no range check.
@@ -355,6 +368,8 @@ static func start(sim: RtSim, u: RtUnit, sk: SkillDef, r: Dictionary, ai: bool) 
 		cs.success = bool(u.cast["interruptible"])
 		cs.rt = {"end": int(u.cast["end"]), "worthy": 1 if bool(u.cast["worthy"]) else 0}
 		cs.by_ai = ai
+		if bool(u.cast["worthy"]) and bool(u.cast["interruptible"]):
+			sim.notice_cast(u)
 		return
 	_pay(sim, u, sk)
 	sim.add_hit({"at": c + impact_ticks(sim, sk), "src": u.id, "skill": sk.id, "item": "", "targets": Array(ids),
@@ -520,12 +535,12 @@ static func end_casts(sim: RtSim, c: int) -> void:
 		var cast: Dictionary = u.cast
 		var sk: SkillDef = sim.skill_def(str(cast.get("skill", "")))
 		if sk == null:
-			u.cast = {}
+			sim.cast_over(u)
 			continue
 		var ai: bool = bool(cast.get("ai", false))
 		if str(cast.get("kind", "")) == "item":
 			if int(cast["end"]) == c:
-				u.cast = {}
+				sim.cast_over(u)
 				var ids_i: PackedStringArray = _cast_targets(sim, u, sk, cast)
 				resolve_skill(sim, u, sk, ids_i, ai, K.ITEM, Damage.Kind.ITEM, str(cast.get("item", "")))
 				sim.end_action(u.id, sk.id, str(cast.get("item", "")))
@@ -537,7 +552,7 @@ static func end_casts(sim: RtSim, c: int) -> void:
 				if is_same(u.cast, cast):
 					cast["next_tick"] = c + int(cast.get("period", 1))
 			if is_same(u.cast, cast) and int(cast["end"]) <= c:
-				u.cast = {}
+				sim.cast_over(u)
 				sim.end_action(u.id, sk.id, "")
 			continue
 		if int(cast["end"]) != c:
@@ -550,7 +565,7 @@ static func end_casts(sim: RtSim, c: int) -> void:
 				or sk.target == "single_ally_ko"):
 			sim.fail_cast(u, "target")
 			continue
-		u.cast = {}
+		sim.cast_over(u)
 		_pay(sim, u, sk)
 		resolve_skill(sim, u, sk, ids, ai, int(cast.get("cmd", K.SKILL)), Damage.Kind.ABILITY, "")
 		sim.end_action(u.id, sk.id, "")
@@ -687,7 +702,7 @@ static func _stunt_fail(sim: RtSim, u: RtUnit, sk: SkillDef, ai: bool) -> void:
 # --- step 7: queue, partner order, AI -------------------------------------------------------------------------------
 
 ## Step 7 (07 §3.3): per unit the buffered ability once GCD / cast are free, then a buffered partner order, then the
-## sim-driven choice (enemies, AI partner, autopilot). The pull opener runs here at ct 0.
+## sim-driven choice (enemies, AI partner, autopilot: RtSim.ai_step). The pull opener runs here at ct 0.
 static func queue_and_ai(sim: RtSim, c: int) -> void:
 	if c == 0:
 		sim.run_opener()
@@ -707,7 +722,7 @@ static func queue_and_ai(sim: RtSim, c: int) -> void:
 		if not u.partner_order.is_empty():
 			ordered = _partner_order(sim, u, c)
 		if u.side == Combatant.Side.ENEMY or u.driver != RtUnit.Driver.PLAYER:
-			sim.ai_choose(u, ordered)
+			sim.ai_step(u, ordered)
 
 
 ## The Partner-Spezial (07 §3.6.13): starts as soon as the partner is free (no cast, GCD free if needed, in range —

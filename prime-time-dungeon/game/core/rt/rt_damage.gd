@@ -274,6 +274,7 @@ static func ko(sim: RtSim, tgt: RtUnit, src: RtUnit, skill_id: String, item_id: 
 	tgt.partner_order = {}
 	tgt.follow_up = {}
 	tgt.goal = []
+	tgt.react_at = -1
 	tgt.outside_since = -1
 	StatusFx.clear_all(tgt)
 	var tally: Dictionary = sim.tally

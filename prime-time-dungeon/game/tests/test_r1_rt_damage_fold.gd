@@ -14,7 +14,7 @@ const CAP: int = 8000
 
 
 func _sim(level: int = 6, hero: String = "kai") -> RtSim:
-	var sim: RtSim = RtKit.sim(RtKit.dummy_cmd({"ctl": "p0" if hero == "kai" else "p1"}), level, hero)
+	var sim: RtSim = RtKit.sim_no_ai(RtKit.dummy_cmd({"ctl": "p0" if hero == "kai" else "p1"}), level, hero)
 	for u: RtUnit in sim.units():
 		u.auto_on = false
 	return sim

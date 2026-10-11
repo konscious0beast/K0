@@ -286,7 +286,8 @@ static func make_rt_setup(state: GameState, data: GameData, cmd: Dictionary, see
 ##   name (never the persona, 08 §2.7 Nr. 5), the recorded poses, party.json rt (radius, speed, threat, auto-attack,
 ##   MP regeneration, keep / follow distances, the bar by level and loadout — tutorial: slots 1 + 5 of the controlled
 ##   unit), opener_pm = Talents.preemptive_dmg_pm, stunt_pm = Talents.stunt_window_pm (07 §9.6), tactic and switches
-##   (recorded presets, else PartyMember.rt_preset / rt_toggles, else the defaults);
+##   (recorded presets, else PartyMember.rt_preset / rt_toggles, else the defaults) with the compiled rules of the
+##   tactic (RtRules.preset_rules — the AI partner's, and the autopilot's of the controlled unit);
 ## - enemies of every recorded group (encounter rt.enemies or its CTB list) while ≤ MAX_ENEMIES (the first group
 ##   always), ids e0… in group order, enemies.json rt (HP scale, radius, speed, auto-attack, reach, dmg_pm,
 ##   immunities), the leader at its recorded position (outside the ring: entry to its ring point), the komparsen in
@@ -458,6 +459,7 @@ static func _rt_party_fields(u: RtUnit, m: PartyMember, def: PartyMemberDef, dat
 			tog[k] = bool(src[k])
 	u.toggles = tog
 	u.keep_cm = clampi(int((prt.get("keep_cm", {}) as Dictionary).get(u.preset, 0)), 0, 700)
+	u.rules = RtRules.preset_rules(prt, u.preset)
 	var mpr: Dictionary = prt.get("mp_regen", {})
 	u.mp_regen = {"mode": str(mpr.get("mode", "time")), "amount": int(mpr.get("amount", 0)),
 		"taken": int(mpr.get("taken", 0)), "taken_every_ticks": int(mpr.get("taken_every_ms", 0)) * 3 / 100,

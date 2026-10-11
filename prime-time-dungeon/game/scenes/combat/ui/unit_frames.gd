@@ -40,6 +40,9 @@ const TOUCH_HIT: float = 88.0
 const TARGET_W: float = 300.0
 const TARGET_H: float = 56.0
 const BOSS_W: float = 520.0
+const BOSS_MIN_W: float = 400.0                 # R5b: the touch layout's boss frame next to the hype meter …
+const BOSS_LEFT_MIN: float = 320.0              # … right of the LIVE / viewers block …
+const RESERVE_GAP: float = 38.0                 # … and this far from the meter (room for the target sword)
 const BOSS_H: float = 36.0
 const STATUS_SIZE: float = 20.0
 const STATUS_STEP: float = 22.0
@@ -73,6 +76,10 @@ var _press_t: Dictionary = {}               # hit name → seconds held (long pr
 var _hover_status: Dictionary = {}          # {"unit", "index"} under the mouse
 var _t: float = 0.0
 var _model: Dictionary = {}                 # last computed frame model (tests)
+## R5b: local x of the hype meter's left edge in the touch layout (combat HUD; ≤ 0 = none) — boss_rect avoids it.
+var reserve_right: float = -1.0
+var _looks: Dictionary = {}                 # def id → face of the frame symbol (look_of, per combat)
+var _looks_sim: RtSim = null
 
 
 func _init() -> void:
@@ -150,8 +157,17 @@ func target_rect() -> Rect2:
 	return Rect2(Vector2((size.x - TARGET_W) * 0.5, y), Vector2(TARGET_W, TARGET_H))
 
 
+## The boss frame: BOSS_W centred at the top — R5b: with `reserve_right` (the touch layout's hype meter, local x of
+## its left edge) it ends RESERVE_GAP before it, narrower down to BOSS_MIN_W and never left of BOSS_LEFT_MIN (the
+## LIVE / viewers block of the ShowOverlay).
 func boss_rect() -> Rect2:
-	return Rect2(Vector2((size.x - BOSS_W) * 0.5, 0.0), Vector2(BOSS_W, BOSS_H))
+	var x: float = (size.x - BOSS_W) * 0.5
+	var w: float = BOSS_W
+	if reserve_right > 0.0 and x + w > reserve_right - RESERVE_GAP:
+		var end: float = reserve_right - RESERVE_GAP
+		x = maxf(BOSS_LEFT_MIN, end - BOSS_W)
+		w = maxf(BOSS_MIN_W, end - x)
+	return Rect2(Vector2(x, 0.0), Vector2(w, BOSS_H))
 
 
 ## Local bottom of everything at the top centre (boss frame + cast bar + name row, target frame + cast name + status
@@ -357,12 +373,12 @@ func _target_labels(t: RtUnit) -> void:
 func _boss_labels(b: RtUnit) -> void:
 	var r: Rect2 = boss_rect()
 	_put("boss_name", CombatStyle.unit_name(b), r.position + Vector2(8.0, 0.0), 0.0, CombatStyle.C_TEXT)
-	_put("boss_pct", "%d %%" % _pct(b), r.position + Vector2(0.0, 1.0), BOSS_W - 8.0, CombatStyle.C_PAPER,
+	_put("boss_pct", "%d %%" % _pct(b), r.position + Vector2(0.0, 1.0), r.size.x - 8.0, CombatStyle.C_PAPER,
 		HORIZONTAL_ALIGNMENT_RIGHT)
 	var left: int = CombatView.enrage_left(sim, b)
 	if left > 0 and left <= 60 * 30:
 		_put("boss_enrage", "%s in %s" % [_enrage_word(b), CombatStyle.clock(left)],
-			r.position + Vector2(0.0, BOSS_H + 9.0), BOSS_W - 4.0, CombatStyle.C_DANGER, HORIZONTAL_ALIGNMENT_RIGHT)
+			r.position + Vector2(0.0, BOSS_H + 9.0), r.size.x - 4.0, CombatStyle.C_DANGER, HORIZONTAL_ALIGNMENT_RIGHT)
 	var c: Dictionary = CombatView.cast(sim, b)
 	if not c.is_empty():
 		_put("boss_cast", "%s  %s s" % [str(c["name"]), CombatStyle.secs(int(c["left"]))],
@@ -593,14 +609,17 @@ func _draw_party(m: IconMesh, u: RtUnit, r: Rect2, bar_w: float, hp_h: float, mp
 		m.rect(Rect2(Vector2(r.end.x - 30.0, r.position.y - 13.0), Vector2(24.0, 16.0)), CombatStyle.C_DANGER)
 
 
-## Static member symbols (no SubViewport portraits in the combat HUD, 07 §8.4): Kai's head with the spiky brown hair,
-## Graf Mopsula's pug face with monocle (no crown motif, 06 §3.2).
+## Static member symbols (no SubViewport portraits in the combat HUD, 07 §8.4): Kai's head drawn from the running
+## persona's look (R5b, 08 §6: skin, hair colour and style, beard, glasses — DB.party_model, the canon look without a
+## persona), Graf Mopsula's pug face with monocle (no crown motif, 06 §3.2).
 func _member_symbol(m: IconMesh, def_id: String, r: Rect2, ko: bool) -> void:
 	var c: Vector2 = r.get_center()
 	var s: float = r.size.x
 	var from: int = m.colors.size()
 	m.circle(c, s * 0.48, Color(CombatStyle.member_color(def_id), 0.35), true)
-	if def_id == "mopsula":
+	if def_id == DB.LOOK_MEMBER:
+		face_symbol(m, r, look_of(def_id))
+	elif def_id == "mopsula":
 		m.circle(c + Vector2(0, s * 0.04), s * 0.34, Color("#d9b48a"), true)
 		m.circle(c + Vector2(-s * 0.3, -s * 0.18), s * 0.12, Color("#3a2a20"), true)
 		m.circle(c + Vector2(s * 0.3, -s * 0.18), s * 0.12, Color("#3a2a20"), true)
@@ -622,6 +641,102 @@ func _member_symbol(m: IconMesh, def_id: String, r: Rect2, ko: bool) -> void:
 		m.circle(c + Vector2(s * 0.1, s * 0.06), s * 0.04, CombatStyle.C_INK, true)
 	if ko:
 		CombatIcons.recolor(m, from, 1.0, Color(0, 0, 0, 0), 0.55)
+
+
+## The face of `def_id`'s model for the frame symbol (R5b): {"skin", "hair", "style", "beard", "glasses"} from
+## DB.party_model (the persona's look on Kai; party.json without one). Cached per combat (the look never changes in
+## a combat).
+func look_of(def_id: String) -> Dictionary:
+	if _looks_sim != sim:
+		_looks.clear()
+		_looks_sim = sim
+	if _looks.has(def_id):
+		return _looks[def_id]
+	var model: Dictionary = DB.party_model(def_id)
+	var colors: Dictionary = model.get("colors", {}) if model.get("colors", {}) is Dictionary else {}
+	var style: Dictionary = model.get("style", {}) if model.get("style", {}) is Dictionary else {}
+	var props: Array = Array(model.get("props", []))
+	var out: Dictionary = {"skin": CombatStyle.hex(str(colors.get("skin", "")), Color("#f2c9a0")),
+		"hair": CombatStyle.hex(str(colors.get("accent", "")), Color("#6b3b22")),
+		"style": str(style.get("hair", PersonaLook.DEFAULT_HAIR)), "beard": str(style.get("beard",
+		PersonaLook.DEFAULT_BEARD)), "glasses": props.has(PersonaLook.GLASSES_PROP)}
+	_looks[def_id] = out
+	return out
+
+
+## A head of `look` in `r` (frame symbols): face in the skin tone, the hair style in the hair colour (short spiky,
+## buzz, long, bun, curls, ponytail, braids, headscarf), stubble / moustache / full beard, round glasses.
+static func face_symbol(m: IconMesh, r: Rect2, look: Dictionary) -> void:
+	var c: Vector2 = r.get_center()
+	var s: float = r.size.x
+	var skin: Color = look.get("skin", Color("#f2c9a0"))
+	var hair: Color = look.get("hair", Color("#6b3b22"))
+	var hs: String = str(look.get("style", "short"))
+	if hs == "long" or hs == "braids":                       # behind the face
+		m.rect(Rect2(c + Vector2(-s * 0.36, -s * 0.12), Vector2(s * 0.72, s * (0.44 if hs == "long" else 0.1))), hair)
+	if hs == "ponytail":
+		m.poly(PackedVector2Array([c + Vector2(s * 0.22, -s * 0.2), c + Vector2(s * 0.46, -s * 0.06),
+			c + Vector2(s * 0.42, s * 0.3), c + Vector2(s * 0.3, s * 0.08)]), hair)
+	if hs == "bun":
+		m.circle(c + Vector2(0, -s * 0.38), s * 0.13, hair, true)
+	m.circle(c + Vector2(0, s * 0.06), s * 0.3, skin, true)
+	match hs:
+		"buzz":
+			m.poly(_cap(c, s, 0.31, 0.0), Color(hair, 0.85))
+		"curls":
+			for i in 7:
+				var a: float = PI + PI * float(i) / 6.0
+				m.circle(c + Vector2(cos(a) * s * 0.3, sin(a) * s * 0.27 - s * 0.02), s * 0.1, hair, true)
+		"headscarf":
+			m.poly(_cap(c, s, 0.37, 0.1), hair)
+			m.circle(c + Vector2(s * 0.3, s * 0.12), s * 0.07, hair, true)
+		"braids":
+			m.poly(_cap(c, s, 0.33, 0.02), hair)
+			for side: float in [-1.0, 1.0]:
+				for k in 3:
+					m.circle(c + Vector2(side * s * 0.33, s * (0.0 + 0.12 * k)), s * 0.06, hair, true)
+		"short":
+			var spikes: PackedVector2Array = PackedVector2Array()
+			for i in 7:
+				var a2: float = PI + PI * float(i) / 6.0
+				var rr: float = s * (0.42 if i % 2 == 0 else 0.3)
+				spikes.append(c + Vector2(cos(a2) * rr, sin(a2) * rr * 0.9 - s * 0.02))
+			spikes.append(c + Vector2(s * 0.3, s * 0.0))
+			spikes.append(c + Vector2(-s * 0.3, s * 0.0))
+			m.poly(spikes, hair)
+		_:                                                  # long, bun, ponytail: a smooth cap
+			m.poly(_cap(c, s, 0.33, 0.02), hair)
+	match str(look.get("beard", "none")):
+		"stubble":
+			m.poly(_chin(c, s), Color(hair, 0.35))
+		"moustache":
+			m.rect(Rect2(c + Vector2(-s * 0.12, s * 0.16), Vector2(s * 0.24, s * 0.05)), hair)
+		"full":
+			m.poly(_chin(c, s), hair)
+	m.circle(c + Vector2(-s * 0.1, s * 0.06), s * 0.04, CombatStyle.C_INK, true)
+	m.circle(c + Vector2(s * 0.1, s * 0.06), s * 0.04, CombatStyle.C_INK, true)
+	if bool(look.get("glasses", false)):
+		m.ring(c + Vector2(-s * 0.1, s * 0.06), s * 0.08, CombatStyle.C_INK, maxf(1.2, s * 0.025), true)
+		m.ring(c + Vector2(s * 0.1, s * 0.06), s * 0.08, CombatStyle.C_INK, maxf(1.2, s * 0.025), true)
+		m.line(c + Vector2(-s * 0.02, s * 0.06), c + Vector2(s * 0.02, s * 0.06), CombatStyle.C_INK, maxf(1.2, s * 0.025))
+
+
+## The top half-ellipse of a hair cap: radius `rk` × size, its lower edge `drop` × size below the centre line.
+static func _cap(c: Vector2, s: float, rk: float, drop: float) -> PackedVector2Array:
+	var out: PackedVector2Array = PackedVector2Array()
+	for i in 9:
+		var a: float = PI + PI * float(i) / 8.0
+		out.append(c + Vector2(cos(a) * s * rk, sin(a) * s * rk * 0.95 + s * drop))
+	return out
+
+
+## The lower face (beard): from cheek to cheek under the mouth line.
+static func _chin(c: Vector2, s: float) -> PackedVector2Array:
+	var out: PackedVector2Array = PackedVector2Array()
+	for i in 9:
+		var a: float = PI * float(i) / 8.0
+		out.append(c + Vector2(cos(a) * s * 0.29, s * 0.12 + sin(a) * s * 0.24))
+	return out
 
 
 func _draw_status_row(m: IconMesh, u: RtUnit, row: Vector2) -> void:
@@ -761,7 +876,7 @@ func _draw_boss(m: IconMesh, b: RtUnit) -> void:
 	for i in ph.y:
 		_diamond(m, r.position + Vector2(name_w + 14.0 * i, 9.0), 5.0,
 			CombatStyle.C_GOLD if i < ph.x else Color(CombatStyle.C_GOLD, 0.25))
-	var hp_r: Rect2 = Rect2(r.position + Vector2(6.0, 18.0), Vector2(BOSS_W - 12.0, 14.0))
+	var hp_r: Rect2 = Rect2(r.position + Vector2(6.0, 18.0), Vector2(r.size.x - 12.0, 14.0))
 	m.rect(hp_r, Color(0, 0, 0, 0.55))
 	var ratio: float = clampf(float(b.hp) / float(maxi(1, b.max_hp())), 0.0, 1.0)
 	m.rect(Rect2(hp_r.position, Vector2(hp_r.size.x * ratio, hp_r.size.y)), CombatStyle.C_ENEMY)
@@ -777,7 +892,7 @@ func _draw_boss(m: IconMesh, b: RtUnit) -> void:
 						m.rect(Rect2(Vector2(x - 1.0, hp_r.position.y - 2.0), Vector2(2.0, hp_r.size.y + 4.0)),
 							CombatStyle.C_PAPER)
 	var c: Dictionary = CombatView.cast(sim, b)
-	_cast_bar(m, Rect2(r.position + Vector2(0.0, BOSS_H), Vector2(BOSS_W, 10.0)), c)
+	_cast_bar(m, Rect2(r.position + Vector2(0.0, BOSS_H), Vector2(r.size.x, 10.0)), c)
 	var tgt_is_boss: bool = (_model["ctl"] as RtUnit) != null and (_model["ctl"] as RtUnit).target_id == b.id
 	if tgt_is_boss:
 		m.rect_outline(r.grow(1.0), CombatStyle.C_CYAN, 2.0)

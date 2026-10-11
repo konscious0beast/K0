@@ -69,6 +69,7 @@ var events_seen: int = 0
 var _params: Dictionary = {}
 var _root: Control
 var _frame: Control
+var _show_overlay: Node = null              # R5b: GlobalUi's ShowOverlay (its hype meter, _hype_left)
 var _overlay_layer: CanvasLayer
 var _overlay_frame: Control
 var _touch_layer: CanvasLayer
@@ -258,12 +259,14 @@ func _refresh() -> void:
 		touch_ui.set("hype", hype)
 		touch_ui.set("focus_slot", focus)
 		touch_ui.call("set_states", states)
+	frames.set("reserve_right", _hype_left())
 	frames.call("refresh")
 	var block_bottom: float = float(frames.call("top_block_bottom"))
 	banner.set("top", maxf(CombatBanner.TOP, block_bottom + 10.0))
 	var fr: Rect2 = frames.get_global_rect()
-	var bw: float = UnitFrames.BOSS_W if CombatView.boss(sim) != null else UnitFrames.TARGET_W
-	plates.set("blocked", Rect2(fr.position.x + (fr.size.x - bw) * 0.5, fr.position.y, bw, block_bottom)
+	var br: Rect2 = frames.call("boss_rect") as Rect2 if CombatView.boss(sim) != null else Rect2(Vector2(
+		(fr.size.x - UnitFrames.TARGET_W) * 0.5, 0.0), Vector2(UnitFrames.TARGET_W, 0.0))
+	plates.set("blocked", Rect2(fr.position.x + br.position.x, fr.position.y, br.size.x, block_bottom)
 		if block_bottom > 0.0 else Rect2())
 	plates.set("camera", get_viewport().get_camera_3d() if is_inside_tree() else null)
 	plates.call("refresh")
@@ -272,6 +275,21 @@ func _refresh() -> void:
 	_update_cast_bar()
 	_update_flee()
 	_update_autopilot()
+
+
+## R5b: the touch layout's hype meter (ShowOverlay, top right next to the pause button) as a local x of the unit
+## frames — the boss frame keeps clear of it (the meter's "HYPE" ran over the boss's percentage). −1 without touch.
+func _hype_left() -> float:
+	if not _touch or not is_inside_tree():
+		return -1.0
+	if _show_overlay == null or not is_instance_valid(_show_overlay):
+		_show_overlay = get_tree().root.find_child("ShowOverlay", true, false)
+	if _show_overlay == null or not _show_overlay.has_method("hype_rect"):
+		return -1.0
+	var hr: Rect2 = _show_overlay.call("hype_rect") as Rect2
+	if hr.size.x <= 0.0:
+		return -1.0
+	return hr.position.x - frames.get_global_rect().position.x
 
 
 func _place_bar() -> void:

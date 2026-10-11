@@ -3,6 +3,8 @@ extends Control
 ## `timer_expired` line, statistics from FloorRun (time, kills, viewer peak); buttons after 1.5 s: "Letzten
 ## Spielstand laden" (grace time 3:00, only with a saved slot) · "Zum Titel"; event runs: "Auswertung" first.
 ## Params {"reason": &"defeat" | &"timer"}. Save.record_game_over already ran in Game.on_game_over (Router.game_over).
+## Casting (08 §4.3 H6, K1): with a candidate persona a second M.O.D. line under the quote — the broadcast plan's
+## game-over beat (persona_game_over[:<org>], every second time the rival's taunt).
 ## The buttons stay disabled (and unfocused) until BUTTONS_AFTER, so a confirm press carried over from the lost battle
 ## cannot fire them before the screen was seen; {"capture": true} skips the delay.
 
@@ -155,6 +157,12 @@ func _build() -> void:
 		var q: Label = UiUtil.label("M.O.D.: „%s“" % quote, &"", 20, UiTheme.C_ACCENT_2)
 		q.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		inner.add_child(q)
+	var pq: String = persona_line()                # Casting (08 §4.3 H6): the candidate's line below the quote
+	if pq != "":
+		var pl: Label = UiUtil.label("„%s“" % pq, &"", 20, UiTheme.C_TEXT)
+		pl.name = "PersonaLine"
+		pl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		inner.add_child(pl)
 	var summary: Dictionary = Game.state.floor_run.summary() if Game.state != null and Game.state.floor_run != null \
 		else {}
 	if bool(_params.get("capture", false)) and int(summary.get("time_used_sec", 0)) == 0:
@@ -198,6 +206,24 @@ func _build() -> void:
 			else "Kein gespeicherter Spielstand in diesem Slot.", &"LabelSmall", 15)
 		note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		inner.add_child(note)
+
+
+## Casting (08 §4.3 H6, K1): the plan's game-over line for the candidate ("" without a persona, in an event run or
+## a replay). The ordinal is this game over's number (the slot's count + 1).
+func persona_line() -> String:
+	if Game.persona == null or Game.state == null or Game.mode != &"campaign" or Game.replaying:
+		return ""
+	var n: int = 1
+	if Game.state.show != null:
+		n = JsonUtil.to_int(Game.state.show.stats.get("game_overs", 0)) + 1
+	var floor_index: int = Game.state.floor_run.index if Game.state.floor_run != null else 1
+	var tag: String = PersonaBeats.tag_for(DB.data, Game.persona, PersonaBeats.plan_for(DB.data, Game.state.seed),
+		floor_index, &"game_over", n)
+	if tag == "":
+		return ""
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.randomize()
+	return UiUtil.mod_line(tag, PersonaText.ctx(Game.persona, DB.data, rng), rng.randi_range(0, 99))
 
 
 func _button(id: String, text: String, cb: Callable) -> Button:

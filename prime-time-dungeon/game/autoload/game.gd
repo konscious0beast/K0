@@ -221,6 +221,7 @@ func start_event_run(event_id: String, p_league: String = "", hero_id: String = 
 		return
 	_reset_run()
 	mode = &"event_offline"
+	persona = null                         # Casting (08 §8): event runs have no persona (the canon Kai plays)
 	_event_def = def
 	var run_seed: int = def.run_seed()
 	state = GameState.create_new(DB.data, 0, GameState.DEFAULT_NAME, run_seed, &"prime")
@@ -1523,18 +1524,18 @@ func has_dialog_presenter() -> bool:
 # ======================================================================================================================
 # Casting (08, K0 → K1 persona command / K2 look) — the API of 08 §10.2 Nr. 8
 # ======================================================================================================================
-# STUB(K0) — owned by 08-K1 (_choose_initial_persona) and 08-K2 (_persona_battle_look). Replace completely, keep the
-# public API. K0 records no persona command: Title / FullRun pass no profile yet, so nothing changes.
+# K1: the persona command is recorded for every new game with a profile (the casting; the full-run bot). The look is
+# still a K2 stub: _persona_battle_look — STUB(K0) — owned by 08-K2. Replace completely, keep the public API.
 
 ## The candidate persona of the running slot (08 §2.2): local presentation data (name, form, job, look, …), never
-## part of GameState, the run log or a hash; the core only sees the ids of the "persona" command. null = canon / none.
+## part of GameState, the run log or a hash; the core only sees the ids of the "persona" command. null = no persona
+## (a game started without the casting: tests, autoplay, event runs) — no persona lines then.
 var persona: PersonaProfile = null
 
 
-## The one recording entry of the "persona" command (08 §2.3) — the start (_choose_initial_persona, K1) and the swap in
-## the first Talent-Show (K1): Command.validate (schema) + PersonaRules.check (event runs → event_run) → record →
-## PersonaRules.apply; emits party_changed. false = refused, nothing recorded. GameReplay replays "persona" through it
-## (same check, same apply as RunSim.apply).
+## The one recording entry of the "persona" command (08 §2.3): Command.validate (schema) + PersonaRules.check (event
+## runs → event_run) → record → PersonaRules.apply; emits party_changed. false = refused, nothing recorded.
+## GameReplay replays "persona" through it (same check, same apply as RunSim.apply).
 func apply_persona(cmd: Dictionary) -> bool:
 	if state == null or str(cmd.get("t", "")) != "persona" or Command.validate(cmd) != "":
 		return false
@@ -1546,10 +1547,17 @@ func apply_persona(cmd: Dictionary) -> bool:
 	return true
 
 
-## K1: with a profile, records the start command PersonaRules.command_for(DB.data, p.talent, p.traits) through
-## apply_persona right after the hero (floor → hero → persona); never in event runs. Stub: nothing.
-func _choose_initial_persona(_p: PersonaProfile) -> void:
-	pass
+## K1 (08 §2.3): with a profile, the display fields follow it (P-2: never in the hash or a file) and the start
+## command PersonaRules.command_for(DB.data, "", p.traits) — talent always "" (CR-33), bias from the traits — is
+## recorded through apply_persona right after the hero (floor → hero → persona). Never in event runs (they have no
+## persona, 08 §8); without a profile nothing happens.
+func _choose_initial_persona(p: PersonaProfile) -> void:
+	if p == null or state == null or mode != &"campaign":
+		return
+	if p.beats.is_empty():
+		p.make_beats(DB.data, null)
+	PersonaPrivacy.restore_display(state, p)
+	apply_persona(PersonaRules.command_for(DB.data, "", p.traits))
 
 
 ## K2 (08 §6.3): the kai combatant's presentation model from the persona look, `model = DB.party_model("kai")` right

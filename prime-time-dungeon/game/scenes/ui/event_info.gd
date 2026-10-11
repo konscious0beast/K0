@@ -136,7 +136,7 @@ static func rule_lines(info: Dictionary) -> PackedStringArray:
 		out.append("Pur-Liga – keine Zuschauer-Geschenke")
 	elif leagues.has("show"):
 		out.append("Show-Liga oder Pur-Liga (Wahl vor dem Lauf)")
-	out.append("Solo: Kai + Graf Mopsula, Startausrüstung" if str(rules.get("mode", "solo")) == "solo"
+	out.append("Solo: Kandidat:in + Graf Mopsula, Startausrüstung" if str(rules.get("mode", "solo")) == "solo"
 		else "Koop (2–4)")
 	if str(info.get("seed_type", "")) == "fixed":
 		out.append("Fester Seed #%d – alle spielen dieselbe Etage" % int(info.get("seed", 0)))

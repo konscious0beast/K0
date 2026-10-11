@@ -197,9 +197,25 @@ func test_story_beats_check() -> void:
 	var bot: Node = _bot()
 	var ok_tags: PackedStringArray = ["first_fight@before", "floor_start@countdown", "safe_room_enter@countdown",
 		"scene:scn_mop_1@countdown", "boss_intro:enm_boss_hausmeister@countdown", "stairs_found@countdown",
-		"floor_end@countdown", "marotte_announce:mar_mop_only@countdown"]
+		"floor_end@countdown", "persona_safe_room:hob_animals@countdown", "marotte_announce:mar_mop_only@countdown"]
 	bot.set("mod_tags", ok_tags)
 	assert_true(bool(bot.call("check_story_beats")), "all GDD beats, floor_start once with the countdown")
+	# 08 K1: with a persona (default "canon") at least one persona line, none during a battle (08 §4.3 R6)
+	var no_persona: PackedStringArray = ok_tags.duplicate()
+	no_persona.remove_at(no_persona.find("persona_safe_room:hob_animals@countdown"))
+	var bot5: Node = _bot()
+	bot5.set("mod_tags", no_persona)
+	assert_false(bool(bot5.call("check_story_beats")))
+	assert_has(str(bot5.get("result_line")), "no persona line was said")
+	var bot6: Node = _bot()
+	bot6.set("mod_tags", no_persona)
+	bot6.set("persona", "none")
+	assert_true(bool(bot6.call("check_story_beats")), "--persona=none: no persona line needed")
+	var bot7: Node = _bot()
+	bot7.set("mod_tags", ok_tags)
+	bot7.set("persona_in_battle", 1)
+	assert_false(bool(bot7.call("check_story_beats")))
+	assert_has(str(bot7.get("result_line")), "during a battle")
 	# 06-C: M.O.D.'s preference of the floor is announced once the countdown runs (06 §4.2)
 	var bet_early: PackedStringArray = ok_tags.duplicate()
 	bet_early[bet_early.size() - 1] = "marotte_announce:mar_mop_only@before"

@@ -1,7 +1,8 @@
 extends Control
-## Hero choice of a new game (06 §1.1, package A): "Wen steuerst du?" — two big cards side by side, Kai first
-## (default focus), each with a turning 3D preview of the figure, a one-line pitch, the field ability and the role. One
-## press chooses and goes on to the name entry ({"slot", "hero"}); `ui_cancel` goes back to the slot select. The duo
+## Hero choice of a new game (06 §1.1, package A): "Wen steuerst du?" — two big cards side by side, the candidate
+## first (default focus; 08 §1.1: "KANDIDAT:IN", the canon Kai preview — who exactly is settled in the casting), each
+## with a turning 3D preview of the figure, a one-line pitch, the field ability and the role. One press chooses and
+## goes on to the casting ({"slot", "hero"}); `ui_cancel` goes back to the slot select. The duo
 ## always starts together — the other one follows (and the choice can be changed in every safe room).
 ## Params {"slot": int, "hero": "kai" | "mopsula" (focused card, default kai), "capture": bool}.
 
@@ -11,13 +12,15 @@ const UiIcon := preload("res://scenes/ui/ui_icon.gd")
 const Backdrop := preload("res://scenes/ui/broadcast_bg.gd")
 const SceneKit := preload("res://scenes/ui/scene_kit.gd")
 const SLOT_SELECT: String = "res://scenes/title/slot_select.tscn"
-## Casting (08 §10.2 Nr. 15, K0): the next screen after the hero card — K1 points it at persona_casting.tscn.
-const CASTING_SCENE: String = "res://scenes/title/name_entry.tscn"
+## Casting (08 §1.1, K1): the next screen after the hero card — the casting (name, Vorleben, card) replaces the name
+## entry in the new-game flow.
+const CASTING_SCENE: String = "res://scenes/title/persona_casting.tscn"
 const CARD_SIZE: Vector2 = Vector2(540, 452)
 const PREVIEW_H: float = 236.0
 const TURN_DEG: float = 28.0               # the preview figure turns ±28° (slow turntable)
 const HEROES: Array[Dictionary] = [
-	{"id": "kai", "title": "KAI", "pitch": "Tierpfleger:in. Wischmopp. Haut zu.", "field_icon": &"fist",
+	{"id": "kai", "title": "KANDIDAT:IN", "pitch": "Mensch. Wischmopp. Haut zu. Wer genau, klären wir gleich im " +
+		"Casting.", "field_icon": &"fist",
 		"field": "Feldschlag: Monster zuerst treffen", "role": "Nahkampf · Tank", "color": "#3aa9a0"},
 	{"id": "mopsula", "title": "GRAF MOPSULA", "pitch": "Mops. Magier. Schwer vermittelbar.", "field_icon": &"bark",
 		"field": "Bellen: Monster verdutzen, vorbeischleichen", "role": "Magie · Heilung", "color": "#b05cff"},
@@ -141,6 +144,7 @@ func _card(h: Dictionary) -> Button:
 	name_l.add_theme_font_override("font", UiTheme.font_bold())
 	inner.add_child(name_l)
 	var pitch: Label = UiUtil.label(str(h["pitch"]), &"", 20, UiTheme.C_TEXT)
+	pitch.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART      # 08 §1.1: the candidate's pitch is two lines
 	inner.add_child(pitch)
 	var field: HBoxContainer = UiUtil.hbox(10)
 	field.mouse_filter = Control.MOUSE_FILTER_IGNORE

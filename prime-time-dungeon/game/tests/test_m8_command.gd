@@ -56,6 +56,7 @@ const VALID: Array[Dictionary] = [
 	{"t": "persona", "v": 1, "talent": "tal_org_animals", "bias": ["mar_graf_finale", "mar_variety"]},
 	{"t": "persona", "v": 1, "talent": "tal_org_nature", "bias": []},
 	{"t": "persona", "v": 1, "talent": "tal_org_nature", "swap": true},
+	{"t": "persona", "v": 1, "talent": "", "bias": ["mar_bio"]},      # K1 (CR-33): the command K1 records
 ]
 
 
@@ -160,7 +161,7 @@ func test_invalid_commands() -> void:
 		# Casting (08 §2.3, K0)
 		[{"t": "persona", "talent": "tal_org_animals", "bias": []}, "persona: v must be 1"],
 		[{"t": "persona", "v": 2, "talent": "tal_org_animals", "bias": []}, "persona: v must be 1"],
-		[{"t": "persona", "v": 1, "bias": []}, "persona: talent must be a non-empty String"],
+		[{"t": "persona", "v": 1, "bias": []}, "persona: talent must be a String"],   # 08 K1: "" is allowed
 		[{"t": "persona", "v": 1, "talent": "tal_kai_wischtechnik", "bias": []}, "talent must start with tal_org_"],
 		[{"t": "persona", "v": 1, "talent": "tal_org_animals"}, "persona: bias must be an array"],
 		[{"t": "persona", "v": 1, "talent": "tal_org_animals", "bias": ["a", "b", "c", "d"]}, "at most 3"],

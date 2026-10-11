@@ -51,7 +51,12 @@ Prüfwerkzeuge (`tools/`).
 - **Talent-Show** (06 Paket B): Ab Level 3 bringt jedes ungerade Level jeder Figur eine Talentwahl (1 aus 2, gewählt im
   Safe Room über den goldenen Knopf „TALENT-SHOW“). Feld-Talente wirken für die Figur, die gerade führt. Spezies und
   Spezialisierung ab Etage 3 sind als geprüftes Datenmodell angelegt (`species.json`, Command `casting`); die
-  Casting-Oberfläche folgt mit Etage 3.
+  Recall-Oberfläche folgt mit Etage 3.
+- **Casting** (08 K1): Nach der Figurenwahl drei Bildschirme — Name und Wortform, Vorleben / Hobby / Eigenschaften,
+  Kandidatenkarte — oder „Rest automatisch“ (Esc / Start: die Kanon-Kandidat:in Kai in zwei Eingaben). Die Karte prägt
+  M.O.D.s Zeilen (Intro-Bauchbinde, Rival:in, Sponsor, Running Gag, Grüße von zu Hause; nie im Kampf) und ab Etage 2 die
+  Marotten-Gewichtung; Kampfwerte ändert sie nicht. Der Name steht nur in der Persona-Datei je Slot (`user://persona/`),
+  nie im Spielstand, Replay oder in einer Bestenliste; „Kandidat:in löschen“ in den Optionen.
 - Etage 2 ist nur angelegt (`floors.json`: `playable = false`). Wer abgestiegen ist, landet nach „Fortsetzen“ im Abspann.
 - 3 Speicherslots (JSON in `user://saves/`), Einstellungen, Pausemenü, Touch-Steuerung.
 - **M.O.D.-Marotten & Unterhosen-Liga** (06 Kap. 4): M.O.D. verrät je Etage, was sie heute mag (Show-Wetten mit Herzen,
@@ -236,6 +241,11 @@ Alle Bilder stammen aus dem Spiel selbst (Compatibility-Renderer unter Xvfb, 128
 | ![Kulissenwand](docs/screenshots/23_secret_wall.png) **23** Kulissenwand (E1-Geheimnis) | ![Wand fällt](docs/screenshots/24_secret_wall_falls.png) **24** Der Graf bellt die Kulissenwand um |
 | ![Regie-Notiz](docs/screenshots/25_regie_notiz.png) **25** Regie-Notiz mit Prompt | ![Handy Safe Room](docs/screenshots/26_safe_room_hero_talents_phone.png) **26** Handy-Format: Safe Room mit TALENT-SHOW-Knopf und M.O.D.-Kasten |
 | ![Show](docs/screenshots/27_pause_show_unterhosen_liga.png) **27** Pausemenü, Reiter Show: M.O.D.s Vorliebe und Unterhosen-Liga (06 Paket C) | ![Show-Wette](docs/screenshots/28_battle_results_show_bet_won.png) **28** Kampfergebnis: dritter Herz-Treffer, Show-Wette gewonnen (Fanpost-Paket) |
+| ![Casting 1/3](docs/screenshots/29_casting_1_wer_sind_sie.png) **29** Casting 1/3 „Wer sind Sie?“: Name, Wortform, Figur (08 K1) | ![Casting 2/3](docs/screenshots/30_casting_2_steckbrief.png) **30** Casting 2/3 „Steckbrief“: Vorleben, Hobby / Talent, Eigenschaften |
+| ![Vorleben](docs/screenshots/31_casting_2_vorleben_overlay.png) **31** Overlay „Vorleben wählen“ mit „genauer“-Chips | ![Eigenschaften](docs/screenshots/32_casting_2_eigenschaften_overlay.png) **32** Overlay „Eigenschaften“ (0–3, leer erlaubt) |
+| ![Kandidatenkarte](docs/screenshots/33_casting_3_kandidatenkarte.png) **33** Casting 3/3: Kandidatenkarte und Sendeformat | ![Tastatur](docs/screenshots/34_casting_bildschirmtastatur_akzente.png) **34** Bildschirmtastatur, Akzent-Ebene |
+| ![Handy](docs/screenshots/35_phone_casting_1_touch.png) **35** Handy-Format mit Touch, Casting 1/3 (36, 37: 2/3 und 3/3) | ![130 %](docs/screenshots/38_casting_1_text130.png) **38** Casting mit 130 % Text (39, 40: Overlay und Karte) |
+| ![Karte im Pausemenü](docs/screenshots/41_pause_kandidatenkarte.png) **41** Pausemenü → Party → „Kandidatenkarte“ | ![Bauchbinde](docs/screenshots/42_intro_bauchbinde.png) **42** Intro: Bauchbinde der Kandidat:in und ihre `persona_intro`-Zeile |
 | ![Talent-Show](docs/screenshots/talent_show.png) **Talent-Show** (06 Paket B): zwei Karten je Wahl | ![TALENT-SHOW](docs/screenshots/safe_talents_menu.png) **Safe Room** mit offener Talentwahl |
 | ![Sponsor-Fenster](docs/screenshots/overlay_sponsor_window.png) **Overlay** Show-Overlay (Demo-Werte): Sponsor-Fenster offen mit Platz-Punkten, Show-Chip „M.O.D. mag heute“ mit Herzen und Liga-Stufe | ![Party](docs/screenshots/talents_party.png) **Party-Seite** mit Talenten und offener Wahl |
 
@@ -274,6 +284,12 @@ GODOT=… $T --shot res://scenes/exploration/exploration.tscn shot.png 5 1280x72
 GODOT=… $T --shot res://scenes/battle/battle.tscn shot.png 5 1280x720 --recipe=battle_results_show \
   '--params={"capture_turns": 99, "encounter": "enc_f1_a2"}'                                                # 28
 GODOT=… $T --shot res://scenes/safe_room/safe_room.tscn shot.png 5 1280x720 --recipe=safe_talent_show       # Talent-Show
+C=res://scenes/title/persona_casting.tscn                                  # 08 K1: Casting (Seite, Overlay, Beispiel-Persona)
+GODOT=… $T --shot $C shot.png 60 1280x720 --params='{"page":2,"open":"origin","demo":true}'               # 31
+GODOT=… $T --shot $C shot.png 60 2400x1080 --params='{"page":3,"demo":true}' --touch                      # 37
+GODOT=… $T --shot $C shot.png 60 1280x720 --params='{"page":1,"open":"keyboard","demo":true}' --recipe=casting_accents  # 34
+GODOT=… $T --shot res://scenes/exploration/exploration.tscn shot.png 30 1280x720 --recipe=pause_card      # 41
+GODOT=… $T --shot res://scenes/title/intro.tscn shot.png 20 1280x720 --recipe=intro_card                 # 42
 ```
 
 ## 10. Nächste Schritte

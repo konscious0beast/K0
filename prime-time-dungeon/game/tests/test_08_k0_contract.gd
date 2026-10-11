@@ -1,11 +1,12 @@
 extends TestCase
-## 08 §10.2 K0: the casting contract (one joint pass with 07 R1a). Every K0 signature by reflection (argument and
-## return types, static flag, defaults), the shared fields and constants, the start talent from level 1
-## (Talents.has_any with empty talents, the four guards of CR-21), PersonaRules.check / apply and the "persona"
-## command in both verifiers, the export boundary (canary "ZZKANARI": hash inputs, run-log header, anchor, board entry
-## and the files written next to the saves), the one SIM_VERSION bump (an older log or board entry is old_version —
-## "ältere Version" — never a mismatch) and the neutral K0 stubs. A package that has to change one of these signatures
-## files a change request first (08 §10.7).
+## 08 §10.2 K0: the casting contract (one joint pass with 07 R1a), followed by K1 (08 §10.3: catalog, casting scene,
+## recorded persona command). Every K0 signature by reflection (argument and return types, static flag, defaults), the
+## shared fields and constants, the dormant start talent from level 1 (CR-33: only the test fixtures carry start
+## talents until 09 ST0 — Talents.has_any with empty talents, the four guards of CR-21), PersonaRules.check / apply
+## and the "persona" command in both verifiers (K1: talent "" only), the export boundary (canary "ZZKANARI": hash
+## inputs, run-log header, anchor, board entry and the files written next to the saves), the one SIM_VERSION bump (an
+## older log or board entry is old_version — "ältere Version" — never a mismatch) and the remaining K2 stubs. A
+## package that has to change one of these signatures files a change request first (08 §10.7).
 
 const R1A := preload("res://tests/test_r1a_contract.gd")
 const EventInfo := preload("res://scenes/ui/event_info.gd")
@@ -14,6 +15,8 @@ const ROOT: String = "user://test_08_k0"
 const SAVES: String = "user://test_08_k0/saves"
 const OLD_LOG: String = "res://tests/fixtures/live/run_log_sim_v1.json"
 const EVENT_ID: String = "evt_offline_gleis9"
+## CR-33: the start talents live on only in the fixtures (09 ST0 removes the dormant path).
+const FIXTURE_ORIGINS: String = "res://tests/fixtures/data_min/origins.json"
 
 ## script path → expected method signatures ("name(arg types) -> return[ static]"; "=" marks a default argument).
 const METHODS: Dictionary = {
@@ -88,11 +91,13 @@ const PROPERTIES: Dictionary = {
 		"beats": "Dictionary", "ai": "Dictionary", "source": "String"},
 }
 
-const STUBS: PackedStringArray = ["res://core/progression/persona_rules.gd",
+## K1 replaced its stubs (persona_rules, persona_profile, persona_privacy, persona_text, persona_beats,
+## show_persona_hooks, validators/origins); the look stays K2's.
+const STUBS: PackedStringArray = ["res://art/kit/persona_look.gd", "res://core/data/validators/looks.gd"]
+const K1_FILES: PackedStringArray = ["res://core/progression/persona_rules.gd",
 	"res://core/progression/persona_profile.gd", "res://core/progression/persona_privacy.gd",
-	"res://core/show/persona_text.gd", "res://core/show/persona_beats.gd", "res://art/kit/persona_look.gd",
-	"res://autoload/show_persona_hooks.gd", "res://core/data/validators/origins.gd",
-	"res://core/data/validators/looks.gd"]
+	"res://core/show/persona_text.gd", "res://core/show/persona_beats.gd", "res://autoload/show_persona_hooks.gd",
+	"res://core/data/validators/origins.gd"]
 
 
 func before_each() -> void:
@@ -138,12 +143,14 @@ static func _all_text(path: String) -> String:
 	return out
 
 
-## res://data as file-shaped tables, with extra start talents in origins.json → talents.
+## res://data as file-shaped tables with the fixture's origins.json (the dormant start talents, CR-33) plus `extra`
+## start talents in origins.json → talents.
 func _data_with_talents(extra: Array) -> GameData:
 	var raw: Dictionary = {}
 	for t: String in GameData.TABLES:
 		raw[t] = JsonUtil.read_file("res://data/%s.json" % t)
 	raw["rt_balance"] = JsonUtil.read_file("res://data/" + GameData.RT_BALANCE_FILE)
+	raw["origins"] = JsonUtil.read_file(FIXTURE_ORIGINS)
 	((raw["origins"] as Dictionary)["talents"] as Array).append_array(extra.duplicate(true))
 	var data: GameData = GameData.new()
 	if not data.load_from_tables(raw, "test_08_k0"):
@@ -160,7 +167,7 @@ func _sim(data: GameData, rules: Dictionary = {}, event_id: String = "") -> RunS
 	return sim
 
 
-static func _start(talent: String, bias: Array = []) -> Dictionary:
+static func _start(talent: String = "", bias: Array = []) -> Dictionary:
 	return {"t": "persona", "v": 1, "talent": talent, "bias": bias}
 
 
@@ -212,6 +219,8 @@ func test_k0_fields_are_exact() -> void:
 func test_stub_headers_and_constants() -> void:
 	for path: String in STUBS:
 		assert_true(FileAccess.get_file_as_string(path).begins_with("# STUB(K0) — owned by 08-K"), "stub header " + path)
+	for path: String in K1_FILES:
+		assert_false(FileAccess.get_file_as_string(path).contains("STUB(K0)"), "K1 replaced the stub " + path)
 	assert_eq([PersonaRules.MAX_BIAS, PersonaRules.BIAS_WEIGHT_ADD, PersonaRules.BIAS_MIN_FLOOR], [3, 1, 2])
 	assert_eq(PersonaRules.REASONS, PackedStringArray(["bad_version", "unknown_talent", "bad_bias", "already_set",
 		"run_started", "event_run", "no_swap", "same"]), "08 §2.3")
@@ -235,7 +244,7 @@ func test_stub_headers_and_constants() -> void:
 	assert_eq(EventInfo.LOCAL_NAME, "Sie")
 	assert_eq(Save.PERSONA_DIR, "persona")
 	var hero_select: Dictionary = (load("res://scenes/title/hero_select.gd") as GDScript).get_script_constant_map()
-	assert_eq(hero_select.get("CASTING_SCENE", ""), "res://scenes/title/name_entry.tscn", "K1 points it at casting")
+	assert_eq(hero_select.get("CASTING_SCENE", ""), "res://scenes/title/persona_casting.tscn", "K1: the casting")
 	assert_false(hero_select.has("NAME_ENTRY"))
 
 
@@ -243,38 +252,51 @@ func test_stub_headers_and_constants() -> void:
 
 func test_origins_and_looks_data() -> void:
 	var data: GameData = real_data()
-	assert_eq(data.all_origins().size(), 1, "K0: the canon tile only (K1: the catalog)")
-	assert_eq(str(data.origin("org_animals").get("talent", "")), "tal_org_animals")
-	assert_true(data.has_origin_talent("tal_org_animals") and data.has_origin_talent("tal_org_nature"))
-	assert_false(data.has_id("talents", "tal_org_animals"), "start talents are never in the Talent-Show pool")
-	var t: TalentDef = data.origin_talent("tal_org_nature")
-	assert_eq([t.max_rank, Array(t.for_members)], [1, ["kai"]])
+	assert_eq(data.all_origins().size(), 24, "K1: 23 tiles + org_allround")
+	assert_eq(str(data.origin("org_animals").get("talent", "")), "", "CR-33: no start talent in the catalog")
+	assert_eq(str(data.origin("org_animals").get("prof", "")), "prf_first_aid", "09 §8.6: the Vorleben head start")
+	assert_false(data.has_origin_talent("tal_org_animals"), "CR-33: no start talents in res://data")
 	assert_eq(data.persona_canon(), {"name": "Kai", "form": "n", "origin": "org_animals",
-		"occupation": "occ_animals_keeper", "hobby": "hob_animals", "traits": [], "talent": "tal_org_animals"})
-	assert_eq(str(data.hobby("hob_animals").get("talent", "")), "tal_org_animals")
+		"occupation": "occ_animals_keeper", "hobby": "hob_animals", "traits": [], "talent": ""})
+	assert_eq(str(data.hobby("hob_animals").get("prof", "")), "prf_cooking", "the hobby recipe")
 	assert_eq(str(data.trait_def("trt_caring").get("bias", "")), "mar_graf_finale")
 	assert_eq(str(data.persona_entry("rivals", "rv_animals_1").get("name", "")), "Kira Katzenjammer")
 	assert_eq(data.origin("org_nope"), {}, "unknown ids: {} without an error (display falls back to canon)")
-	assert_eq(data.persona_plans().size(), 1)
+	assert_eq(data.persona_plans().size(), 3, "08 §4.7: three broadcast plans")
+	var with_talents: GameData = _data_with_talents([])
+	assert_true(with_talents.has_origin_talent("tal_org_animals") and with_talents.has_origin_talent("tal_org_nature"),
+		"the dormant start talents still load from the fixture (until 09 ST0)")
+	assert_false(with_talents.has_id("talents", "tal_org_animals"), "start talents are never in the Talent-Show pool")
+	var t: TalentDef = with_talents.origin_talent("tal_org_nature")
+	assert_eq([t.max_rank, Array(t.for_members)], [1, ["kai"]])
 	for kind: String in ["hair", "hair_color", "skin", "beard", "glasses", "outfit"]:
 		assert_eq(data.looks_of(kind).size(), 1, "one canon look per kind: " + kind)
 	assert_eq(str(data.look("lk_hair_short").get("style", "")), "short")
-	for e: Dictionary in (JsonUtil.read_file("res://data/origins.json") as Dictionary)["talents"]:
-		assert_false(Talents.offer(GameState.create_new(data, 0, "Kai", 1, &"prime"), data, "kai", 2).has(e["id"]))
+	assert_false((JsonUtil.read_file("res://data/origins.json") as Dictionary).has("talents"), "K1: no talents key")
+	for e: Dictionary in (JsonUtil.read_file(FIXTURE_ORIGINS) as Dictionary)["talents"]:
+		assert_false(Talents.offer(GameState.create_new(with_talents, 0, "Kai", 1, &"prime"), with_talents, "kai",
+			2).has(e["id"]))
 	var fixture: GameData = GameData.new()
 	assert_true(fixture.load_dir("res://tests/fixtures/data_min"), "; ".join(fixture.errors))
 	assert_true(fixture.has_origin_talent("tal_org_animals"), "fixtures carry origins.json / looks.json")
 	var again: GameData = GameData.new()
 	assert_true(again.load_dir("res://data"))
 	assert_true(again.load_dir("res://data"), "reloading clears the (frozen) persona tables")
-	assert_eq(again.all_origins().size(), 1)
+	assert_eq(again.all_origins().size(), 24)
 
 
 func test_mod_lines_anchor_order() -> void:
 	var lines: Array = (JsonUtil.read_file("res://data/mod_lines.json") as Dictionary)["entries"]
-	var ids: Array = [str((lines[lines.size() - 2] as Dictionary)["id"]), str((lines.back() as Dictionary)["id"])]
-	assert_eq(ids, ["mod_rt_set_quiet_01", "mod_persona_intro_01"], "08 §10.7: block K grows behind its anchor")
-	assert_eq(str((lines.back() as Dictionary)["tag"]), "persona_intro")
+	var at: int = -1
+	for i in lines.size():
+		if str((lines[i] as Dictionary)["id"]) == "mod_persona_intro_01":
+			at = i
+	assert_gt(at, 0, "the anchor of block K")
+	assert_eq(str((lines[at - 1] as Dictionary)["id"]), "mod_rt_set_quiet_01", "behind the R1a anchor")
+	assert_eq(str((lines[at] as Dictionary)["tag"]), "persona_intro")
+	for i in range(at, lines.size()):
+		assert_true(str((lines[i] as Dictionary)["tag"]).begins_with("persona_"),
+			"08 §10.7: block K grows only behind its anchor: " + str((lines[i] as Dictionary)["id"]))
 
 
 func test_validator_k0_rules() -> void:
@@ -374,83 +396,73 @@ func test_start_talent_works_from_level_1_with_empty_talents() -> void:
 func test_persona_rules_check_reasons() -> void:
 	var data: GameData = real_data()
 	var st: GameState = _sim(data).state
-	assert_eq(PersonaRules.check(st, data, {"t": "persona", "v": 2, "talent": "tal_org_animals", "bias": []}, false),
-		"bad_version")
-	assert_eq(PersonaRules.check(st, data, _start("tal_org_animals"), true), "event_run")
-	assert_eq(PersonaRules.check(st, data, _start("tal_org_nope"), false), "unknown_talent")
-	assert_eq(PersonaRules.check(st, data, _start("tal_kai_wischtechnik"), false), "unknown_talent", "pool talent")
+	assert_eq(PersonaRules.check(st, data, {"t": "persona", "v": 2, "talent": "", "bias": []}, false), "bad_version")
+	assert_eq(PersonaRules.check(st, data, _start(), true), "event_run")
+	for talent: String in ["tal_org_animals", "tal_org_nope", "tal_kai_wischtechnik"]:
+		assert_eq(PersonaRules.check(st, data, _start(talent), false), "unknown_talent", "CR-33: no start talent " +
+			talent)
 	for bias: Array in [["mar_variety", "mar_graf_finale"], ["mar_variety", "mar_variety"], ["mar_nope"], [3],
 			["mar_bio", "mar_brave", "mar_graf_finale", "mar_variety"]]:
-		assert_eq(PersonaRules.check(st, data, _start("tal_org_animals", bias), false), "bad_bias", str(bias))
+		assert_eq(PersonaRules.check(st, data, _start("", bias), false), "bad_bias", str(bias))
 	for def: MarotteDef in data.all_marotten():
 		if not def.rotation:
-			assert_eq(PersonaRules.check(st, data, _start("tal_org_animals", [def.id]), false), "bad_bias", def.id)
-	assert_eq(PersonaRules.check(st, data, PersonaRules.swap_command("tal_org_nature"), false), "no_swap",
-		"no swap before a start")
-	var cmd: Dictionary = _start("tal_org_animals", ["mar_graf_finale", "mar_variety"])
+			assert_eq(PersonaRules.check(st, data, _start("", [def.id]), false), "bad_bias", def.id)
+	assert_eq(PersonaRules.check(st, data, PersonaRules.swap_command(""), false), "no_swap", "CR-33: the swap is gone")
+	var cmd: Dictionary = _start("", ["mar_graf_finale", "mar_variety"])
+	assert_eq(Command.validate(cmd), "", "K1: Command.validate takes talent \"\" (the K1 change request)")
 	assert_eq(PersonaRules.check(st, data, cmd, false), "")
 	assert_true(PersonaRules.apply(st, data, cmd))
-	assert_eq(st.member("kai").origin_talent, "tal_org_animals")
+	assert_eq(st.member("kai").origin_talent, "", "dormant (CR-33)")
 	assert_eq(st.flags.get("persona"), {"v": 1, "bias": ["mar_graf_finale", "mar_variety"], "swapped": false})
 	assert_eq(PersonaRules.bias(st), PackedStringArray(["mar_graf_finale", "mar_variety"]))
 	assert_eq(PersonaRules.check(st, data, cmd, false), "already_set")
 	assert_false(PersonaRules.apply(st, data, cmd), "apply refuses like check")
-	assert_eq(PersonaRules.check(st, data, PersonaRules.swap_command("tal_org_nature"), false), "no_swap",
-		"swap only in a safe room")
-	assert_false(PersonaRules.can_swap(st))
 	RunRules.enter_safe_room(st, data, _safe_room(data))
-	assert_true(PersonaRules.can_swap(st))
-	assert_eq(PersonaRules.check(st, data, PersonaRules.swap_command("tal_org_animals"), false), "same")
-	assert_true(PersonaRules.apply(st, data, PersonaRules.swap_command("tal_org_nature")))
-	assert_eq(st.member("kai").origin_talent, "tal_org_nature")
-	assert_eq(bool((st.flags["persona"] as Dictionary)["swapped"]), true)
-	assert_eq(PersonaRules.check(st, data, PersonaRules.swap_command("tal_org_animals"), false), "no_swap", "once")
+	assert_false(PersonaRules.can_swap(st), "CR-33: never a swap")
+	assert_eq(PersonaRules.check(st, data, PersonaRules.swap_command("tal_org_nature"), false), "unknown_talent")
 	var late: GameState = _sim(data).state
 	late.rng_counter = 1
-	assert_eq(PersonaRules.check(late, data, _start("tal_org_animals"), false), "run_started")
-	var picked: GameState = _sim(data).state
-	PersonaRules.apply(picked, data, _start("tal_org_animals"))
-	RunRules.enter_safe_room(picked, data, _safe_room(data))
-	picked.member("kai").talents = {"tal_kai_wischtechnik": 1}
-	assert_eq(PersonaRules.check(picked, data, PersonaRules.swap_command("tal_org_nature"), false), "no_swap",
-		"not after the first pool talent")
+	assert_eq(PersonaRules.check(late, data, _start(), false), "run_started")
 
 
-func test_persona_apply_follows_max_vitals() -> void:
-	var data: GameData = _data_with_talents([{"id": "tal_org_test_hp", "name": "Test", "icon": "stat",
-		"effects": [{"kind": "stat_pct", "stat": "hp", "pm": 50}, {"kind": "stat_flat", "stat": "hp", "value": 3}]}])
+func test_persona_apply_changes_no_combat_value() -> void:
+	var data: GameData = real_data()
 	var st: GameState = _sim(data).state
-	var kai: PartyMember = st.member("kai")
-	var before: int = Progression.total_stats(kai, data).values[StatBlock.Stat.HP]
-	assert_eq(kai.hp, before, "starts at full HP")
-	assert_true(PersonaRules.apply(st, data, _start("tal_org_test_hp")))
-	var after: int = Progression.total_stats(kai, data).values[StatBlock.Stat.HP]
-	assert_gt(after, before)
-	assert_eq(kai.hp, after, "HP follow the raised maximum (Progression.follow_max_vitals, like Talents.pick)")
+	var before: Array = []
+	for m: PartyMember in st.party:
+		before.append([m.hp, m.mp, Progression.total_stats(m, data).values.duplicate()])
+	assert_true(PersonaRules.apply(st, data, _start("", ["mar_brave", "mar_stunt"])))
+	var after: Array = []
+	for m: PartyMember in st.party:
+		after.append([m.hp, m.mp, Progression.total_stats(m, data).values.duplicate()])
+	assert_eq(after, before, "CR-33: the casting never changes a combat value")
+	assert_false(Talents.has_any(st.member("kai"), data), "no start talent")
 
 
 func test_run_sim_applies_and_refuses_persona() -> void:
 	var data: GameData = real_data()
 	var sim: RunSim = _sim(data)
-	sim.apply(_start("tal_org_animals"))
+	sim.apply(_start("", ["mar_bio"]))
 	assert_eq(sim.rejected_cmds, [] as Array[Dictionary])
-	assert_eq(sim.state.member("kai").origin_talent, "tal_org_animals")
-	sim.apply(_start("tal_org_nature"))
+	assert_eq(PersonaRules.bias(sim.state), PackedStringArray(["mar_bio"]))
+	sim.apply(_start())
 	assert_eq(sim.rejected_cmds.size(), 1)
-	assert_eq([str(sim.rejected_cmds[0]["gift_id"]), str(sim.rejected_cmds[0]["reason"])],
-		["tal_org_nature", "already_set"], "RunRules.refused_id names the talent")
+	assert_eq(str(sim.rejected_cmds[0]["reason"]), "already_set")
+	var talent: RunSim = _sim(data)
+	talent.apply(_start("tal_org_animals"))
+	assert_eq(str(talent.rejected_cmds[0]["reason"]), "unknown_talent", "CR-33")
 	var ev: RunSim = _sim(data, {}, EVENT_ID)
 	assert_true(ev.is_event_run())
-	ev.apply(_start("tal_org_animals"))
+	ev.apply(_start())
 	assert_eq(str(ev.rejected_cmds[0]["reason"]), "event_run", "08 §8: event runs never take a persona")
-	assert_eq(ev.state.member("kai").origin_talent, "")
+	assert_false(ev.state.flags.has("persona"))
 
 
 func test_both_verifiers_replay_the_persona_command() -> void:
 	Game.new_game(0, "Kai", 4242)
-	assert_true(Game.apply_persona(PersonaRules.command_for(DB.data, "tal_org_nature", PackedStringArray())))
-	assert_eq(Game.state.member("kai").origin_talent, "tal_org_nature")
-	assert_false(Game.apply_persona(_start("tal_org_animals")), "already_set: refused, nothing recorded")
+	assert_true(Game.apply_persona(PersonaRules.command_for(DB.data, "", PackedStringArray(["trt_natural"]))))
+	assert_eq(PersonaRules.bias(Game.state), PackedStringArray(["mar_bio"]))
+	assert_false(Game.apply_persona(_start()), "already_set: refused, nothing recorded")
 	var types: Array = []
 	for c: Dictionary in Game.run_log.cmds():
 		types.append(str((c["c"] as Dictionary)["t"]))
@@ -460,23 +472,29 @@ func test_both_verifiers_replay_the_persona_command() -> void:
 	assert_eq(a["errors"], PackedStringArray(), "Game.replay_log")
 	assert_eq([a["final_hash"], a["version"]], [live, ""], "replay ≡ live")
 	assert_eq(RunSim.replay(DB.data, Game.run_log)["errors"], PackedStringArray(), "RunSim.replay")
-	var twice: RunLog = _with_cmds(Game.run_log, [_start("tal_org_animals")])
+	var twice: RunLog = _with_cmds(Game.run_log, [_start()])
 	assert_has("; ".join(Game.replay_log(twice)["errors"]), "already_set")
 	assert_has("; ".join(RunSim.replay(DB.data, twice)["errors"]), "already_set")
 	Game.start_event_run(EVENT_ID)
-	assert_false(Game.apply_persona(_start("tal_org_animals")), "event run: refused")
-	var ev: RunLog = _with_cmds(Game.run_log, [_start("tal_org_animals")])
+	assert_false(Game.apply_persona(_start()), "event run: refused")
+	var ev: RunLog = _with_cmds(Game.run_log, [_start()])
 	assert_has("; ".join(Game.replay_log(ev)["errors"]), "event_run")
 	assert_has("; ".join(RunSim.replay(DB.data, ev)["errors"]), "event_run")
 
 
-func test_k0_records_no_persona_command() -> void:
+func test_k1_records_the_persona_command() -> void:
 	var p: PersonaProfile = PersonaProfile.canon(DB.data)
-	Game.new_game(0, "Kai", 4242, &"prime", "kai", p)
+	p.name = "Jana"
+	p.traits = PackedStringArray(["trt_caring"])
+	Game.new_game(0, p.name, 4242, &"prime", "kai", p)
 	assert_eq(Game.persona, p, "Game.persona: the local profile")
-	for c: Dictionary in Game.run_log.cmds():
-		assert_ne(str((c["c"] as Dictionary)["t"]), "persona", "K0 records no persona command (08 §10.2)")
+	assert_eq(Game.run_log.cmds().back()["c"], {"t": "persona", "v": 1, "talent": "", "bias": ["mar_graf_finale"]},
+		"K1 records the persona command (ids only)")
 	assert_eq(Game.state.member("kai").origin_talent, "")
+	assert_eq([Game.state.player_name, Game.state.member("kai").display_name], ["Jana", "Jana"], "display fields")
+	Game.new_game(0, "Kai", 4242)
+	for c: Dictionary in Game.run_log.cmds():
+		assert_ne(str((c["c"] as Dictionary)["t"]), "persona", "without a profile never a command")
 	assert_false(Game.state.flags.has("persona"))
 
 
@@ -513,7 +531,9 @@ func test_privacy_canary_in_hashes_header_and_anchor() -> void:
 	assert_false(JSON.stringify(h).contains(CANARY), "anchor start_state + header (08 §2.7 Nr. 3)")
 	assert_eq(str(h.get("start_hash", "")), StateHash.of(Game.state), "start_hash stays valid")
 	assert_eq(int(h.get("sim_version", 0)), RunSim.SIM_VERSION, "Save's header names the kernel too")
-	assert_eq(Game.state.player_name, CANARY, "K0: the slot keeps the name until K1 writes the persona file")
+	assert_eq(Game.state.player_name, CANARY, "K1: the name comes back from the persona file")
+	assert_false(FileAccess.get_file_as_string(Save.slot_path(1)).contains(CANARY), "the slot file has no name (K1)")
+	assert_true(FileAccess.get_file_as_string(Save.persona_path(1)).contains(CANARY), "only the persona file has it")
 	Game.enter_safe_room(sr)
 	Game.leave_safe_room()
 	var live: String = StateHash.of(Game.state)
@@ -583,39 +603,48 @@ func test_board_entries_of_an_older_version() -> void:
 	assert_eq(EventInfo.version_tag({"score": 20, "sim_version": RunSim.SIM_VERSION}), "")
 
 
-# --- the neutral K0 stubs ---------------------------------------------------------------------------------------------
+# --- the remaining K2 stubs and the K1 bodies behind the K0 API ------------------------------------------------------
 
-func test_k0_stubs_are_neutral() -> void:
+func test_k2_stubs_and_k1_bodies() -> void:
 	var data: GameData = real_data()
 	var st: GameState = _sim(data).state
-	assert_eq(PersonaRules.offer(data, "org_animals", "hob_animals"), PackedStringArray())
-	assert_eq(PersonaRules.bias_for(data, PackedStringArray(["trt_caring"])), PackedStringArray())
-	assert_eq(PersonaRules.command_for(data, "tal_org_animals", PackedStringArray()), _start("tal_org_animals"))
+	assert_eq(PersonaRules.offer(data, "org_animals", "hob_animals"), PackedStringArray(), "dormant (CR-33)")
+	assert_eq(PersonaRules.bias_for(data, PackedStringArray(["trt_caring"])), PackedStringArray(["mar_graf_finale"]))
+	assert_eq(PersonaRules.command_for(data, "", PackedStringArray()), _start())
 	assert_eq(PersonaRules.swap_command("tal_org_nature"), {"t": "persona", "v": 1, "talent": "tal_org_nature",
 		"swap": true})
-	assert_eq(Command.validate(PersonaRules.swap_command("tal_org_nature")), "")
+	assert_eq(Command.validate(PersonaRules.swap_command("tal_org_nature")), "", "the K0 shape stays valid")
+	PersonaRules.apply(st, data, _start("", ["mar_brave"]))
 	for def: MarotteDef in data.all_marotten():
-		assert_eq(PersonaRules.weight_add(st, def.id, 3), 0)
-		assert_eq(MarottenRules._draw_weight(st, def, 3), maxi(1, def.weight), "announce draw unchanged: " + def.id)
-	assert_eq(PersonaRules.map_text(data, "Zoo", &"job"), "")
+		var add: int = 1 if def.id == "mar_brave" else 0
+		assert_eq(PersonaRules.weight_add(st, def.id, 3), add, def.id)
+		assert_eq(PersonaRules.weight_add(st, def.id, 1), 0, "never on floor 1: " + def.id)
+		assert_eq(MarottenRules._draw_weight(st, def, 3), maxi(1, def.weight) + add, "announce draw: " + def.id)
+	assert_eq(PersonaRules.map_text(data, "Zoo", &"job"), "org_animals")
 	var ctx: Dictionary = PersonaText.ctx(null, data, null)
-	assert_eq(ctx, {"cand": "Kandidat:in", "job": "Tierpfleger:in", "hobby": "Freizeit", "club": "Ihr Freundeskreis",
-		"trait": "undurchschaubar", "rival": "Kira Katzenjammer", "brand": "Wedelwurst"}, "08 §4.4 fallbacks")
-	assert_eq([PersonaText.check_name(CANARY), PersonaText.check_free_text("x", 24)], ["", ""])
-	assert_eq(PersonaBeats.plan_for(data, 4242), "plan_a")
-	assert_eq(PersonaBeats.tag_for(data, null, "plan_a", 1, &"intro", 0), "")
-	assert_eq(DB.party_model("kai"), DB.data.party_member("kai").model)
+	assert_eq(ctx, {"cand": "Kandidat:in", "job": "Tierpfleger:in", "hobby": "Tiere", "club": "Ihr Tierheim-Team",
+		"trait": "undurchschaubar", "rival": "Kira Katzenjammer", "brand": "Wedelwurst", "job_text": ""},
+		"08 §4.4: no profile = the canon persona")
+	assert_eq([PersonaText.check_name(CANARY), PersonaText.check_free_text("Astronautin", 24)], ["", ""])
+	assert_true(["plan_a", "plan_b", "plan_c"].has(PersonaBeats.plan_for(data, 4242)))
+	assert_eq(PersonaBeats.plan_for(data, 4242), PersonaBeats.plan_for(data, 4242), "deterministic")
+	assert_eq(PersonaBeats.tag_for(data, null, "plan_a", 1, &"intro", 1), "persona_intro:org_animals")
+	assert_eq(DB.party_model("kai"), DB.data.party_member("kai").model, "K2 stub")
 	assert_eq(DB.party_model("nobody"), {})
 	var model: Dictionary = DB.data.party_member("kai").model
-	assert_eq(PersonaLook.apply(model, {"hair": "lk_hair_short"}, data), model)
+	assert_eq(PersonaLook.apply(model, {"hair": "lk_hair_short"}, data), model, "K2 stub")
 	assert_true(Save.persona_path(1).ends_with("persona/slot_1.json"), Save.persona_path(1))
 	assert_null(Save.load_persona(1))
-	assert_eq([Save.save_persona(1, PersonaProfile.canon(data)), Save.delete_persona(1)], [OK, OK])
-	assert_false(DirAccess.dir_exists_absolute(ROOT.path_join("persona")), "K0 writes no persona file")
 	var p: PersonaProfile = PersonaProfile.canon(data)
+	p.name = "Jana"
+	assert_eq(Save.save_persona(1, p), OK)
+	assert_true(FileAccess.file_exists(Save.persona_path(1)), "K1 writes the persona file")
+	assert_eq(Save.load_persona(1).to_dict(), p.to_dict(), "persona file round trip")
+	assert_eq(Save.delete_persona(1), OK)
+	assert_false(FileAccess.file_exists(Save.persona_path(1)))
 	assert_eq(PersonaProfile.from_dict(p.to_dict(), data).to_dict(), p.to_dict(), "persona file round trip")
-	assert_eq(PersonaProfile.from_dict({"format": "ptd_persona", "v": 2}, data).to_dict(), p.to_dict(),
-		"a newer file version → canon")
+	assert_eq(PersonaProfile.from_dict({"format": "ptd_persona", "v": 2}, data).to_dict(),
+		PersonaProfile.canon(data).to_dict(), "a newer file version → canon")
 	assert_eq(EventDef.persona_rule_errors(null), PackedStringArray())
 	assert_eq(EventDef.persona_rule_errors({"talent": false, "bias": false}), PackedStringArray())
 	for bad: Variant in [{"talent": true, "bias": false}, {}, {"talent": false}, "off"]:
@@ -624,23 +653,30 @@ func test_k0_stubs_are_neutral() -> void:
 	assert_eq([fr.call("persona_from_args", PackedStringArray(["--persona=canon"])),
 		fr.call("persona_from_args", PackedStringArray(["--persona=org_media"])),
 		fr.call("persona_from_args", PackedStringArray(["--persona=xyz"])),
-		fr.call("persona_from_args", PackedStringArray())], ["canon", "org_media", "none", "none"])
+		fr.call("persona_from_args", PackedStringArray())], ["canon", "org_media", "canon", "canon"],
+		"K1: the default is the canon persona")
+	assert_eq(fr.call("persona_from_args", PackedStringArray(["--persona=none"])), "none")
 
 
 func test_mod_announcer_extra_lines_hook() -> void:
 	var data: GameData = real_data()
 	var ann: ModAnnouncer = ModAnnouncer.new(data, make_rng(5))
-	assert_eq(ann.pick("persona_intro", 1, 50.0, 0.0).id, "mod_persona_intro_01")
+	var ids: Dictionary = {}
+	for l: ModLineDef in data.mod_lines("persona_intro"):
+		ids[l.id] = true
+	assert_true(ids.has("mod_persona_intro_01"))
+	assert_true(ids.has(ann.pick("persona_intro", 1, 50.0, 0.0).id))
 	assert_not_null(ann.pick("persona_intro", 1, 50.0, 0.5), "persona_* have no key cooldown")
 	var extra: ModLineDef = ModLineDef.from_dict({"id": "mod_k0_extra_01", "tag": "persona_intro", "voice": "mod",
 		"text": "Extra."})
 	ann.set_extra_lines(func(tag: String) -> Array:
 		return [extra] if tag == "persona_intro" else [])
 	var seen: Dictionary = {}
-	for i in 12:
+	for i in 80:
 		seen[ann.pick("persona_intro", 1, 50.0, 100.0 + i).id] = true
-	assert_eq(seen.keys().size(), 2, "data line and provider line alternate (never twice in a row)")
-	assert_true(seen.has("mod_k0_extra_01"))
+	assert_true(seen.has("mod_k0_extra_01"), "the provider line joins the pool")
+	for id: Variant in seen.keys():
+		assert_true(ids.has(id) or str(id) == "mod_k0_extra_01", str(id))
 	ann.set_extra_lines(Callable())
-	for i in 4:
-		assert_eq(ann.pick("persona_intro", 1, 50.0, 200.0 + i).id, "mod_persona_intro_01", "provider removed")
+	for i in 40:
+		assert_ne(ann.pick("persona_intro", 1, 50.0, 200.0 + i).id, "mod_k0_extra_01", "provider removed")

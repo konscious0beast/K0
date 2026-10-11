@@ -2,20 +2,29 @@ extends "res://scenes/ui/menu_base.gd"
 ## Pause tab "Party" (02_TECH §1.6, GDD §14.4): per member level, HP/MP, EXP to the next level, all 8 stats (total with
 ## equipment and talents), equipment, talents (06 §2.2: picked talents + "Talentwahl offen" badge) and the Casting line
 ## (species · specialization, from floor 3). Cards are focusable; pressing one jumps to the equipment page
-## (`open_equipment`).
+## (`open_equipment`). Casting (08 §1.7, K1): below the cards the button "Kandidatenkarte" (only with a candidate
+## persona) opens the card (scenes/ui/persona_card.tscn) as a modal on its own canvas layer.
 
 signal open_equipment(member_id: String)
 
 const TalentText := preload("res://scenes/ui/talent_text.gd")
+const PERSONA_CARD: String = "res://scenes/ui/persona_card.tscn"   # Casting (08 §1.7, K1)
+const CARD_LAYER: int = 61                 # above the modal menus (60, 02_TECH §9.4)
 
 var _row: HBoxContainer
+var _col: VBoxContainer
+var card_button: Button = null             # Casting (08 §1.7, K1): "Kandidatenkarte"
+var _card_layer: CanvasLayer = null
 
 
 func _ready() -> void:
 	page_title = "Party"
+	_col = UiUtil.vbox(12)                     # Casting (08 §1.7, K1): the cards, then the Kandidatenkarte button
+	UiUtil.full_rect(_col)
+	add_child(_col)
 	_row = UiUtil.hbox(18)
-	UiUtil.full_rect(_row)
-	add_child(_row)
+	_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_col.add_child(_row)
 	refresh()
 
 
@@ -29,6 +38,7 @@ func refresh() -> void:
 	if cards.is_empty():
 		_row.add_child(empty_note("Keine Party – noch kein Spielstand."))
 	UiUtil.wire_horizontal(cards)
+	_persona_button(cards)                     # Casting (08 §1.7, K1)
 
 
 func _card(m: PartyMember) -> Button:
@@ -116,10 +126,11 @@ func _card(m: PartyMember) -> Button:
 	return b
 
 
-## "Casting ab Etage 3" before the Casting, else "Kachelgolem · Abrissbirne" (species · specialization).
+## "Recall auf Etage 3" before the Recall (08 C-16: the floor-3 round of 06 §3 is called "Recall"; the casting is
+## the new game's), else "Kachelgolem · Abrissbirne" (species · specialization).
 static func casting_text(m: PartyMember) -> String:
 	if m.species_id == "" and m.class_id == "":
-		return "Spezies & Klasse: Casting ab Etage 3"
+		return "Spezies & Klasse: Recall auf Etage 3"
 	var parts: PackedStringArray = []
 	if m.species_id != "":
 		parts.append(UiUtil.tr_text(DB.species_def(m.species_id).name) if DB.has_id("species", m.species_id)
@@ -186,3 +197,47 @@ func _bar_row(label_text: String, value: int, max_value: int, variation: StringN
 	v.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	r.add_child(v)
 	return r
+
+
+# --- Casting (08 §1.7, K1): the candidate card ---------------------------------------------------------------------
+
+## The button below the cards (only with a candidate persona): down from every card, up back to the first.
+func _persona_button(cards: Array[Control]) -> void:
+	if card_button != null and is_instance_valid(card_button):
+		card_button.get_parent().remove_child(card_button)
+		card_button.queue_free()
+		card_button = null
+	if Game.persona == null or Game.mode != &"campaign" or cards.is_empty():
+		return
+	card_button = UiUtil.button("Kandidatenkarte", &"")
+	card_button.name = "CandidateCard"
+	card_button.custom_minimum_size = Vector2(300, 0)
+	card_button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	UiUtil.touch_pad(card_button)
+	card_button.pressed.connect(open_card)
+	_col.add_child(card_button)
+	for c: Control in cards:
+		c.focus_neighbor_bottom = c.get_path_to(card_button)
+	card_button.focus_neighbor_top = card_button.get_path_to(cards[0])
+	card_button.focus_neighbor_bottom = card_button.get_path_to(cards[0])
+
+
+## Opens the candidate card above the pause menu (own canvas layer; it closes on Esc / B / Start / "Schließen").
+func open_card() -> Node:
+	if _card_layer != null and is_instance_valid(_card_layer):
+		return _card_layer.get_child(0) if _card_layer.get_child_count() > 0 else null
+	if not ResourceLoader.exists(PERSONA_CARD):
+		return null
+	_card_layer = CanvasLayer.new()
+	_card_layer.layer = CARD_LAYER
+	add_child(_card_layer)
+	var card: Node = (load(PERSONA_CARD) as PackedScene).instantiate()
+	card.call("setup", {})
+	card.connect("closed", func() -> void:
+		if is_instance_valid(_card_layer):
+			_card_layer.queue_free()
+		_card_layer = null
+		if is_instance_valid(card_button):
+			UiUtil.focus_later(card_button))
+	_card_layer.add_child(card)
+	return card

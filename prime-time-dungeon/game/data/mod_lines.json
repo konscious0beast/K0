@@ -2154,6 +2154,1560 @@
 			"voice": "mod",
 			"text": "{cand} {name} — {job}. Ab heute hauptberuflich: Quote.",
 			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_02",
+			"tag": "persona_intro",
+			"voice": "mod",
+			"text": "{name} ist da! {club} hat angeblich Plakate gemalt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_03",
+			"tag": "persona_intro",
+			"voice": "mod",
+			"text": "Applaus für {cand} {name}! Ab heute zählt nur noch eins: die Quote.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_04",
+			"tag": "persona_intro",
+			"voice": "mod",
+			"text": "Willkommen, {name}. Sie sind {job} — und ab sofort auch Fernsehgesicht.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_animals_01",
+			"tag": "persona_intro:org_animals",
+			"voice": "mod",
+			"text": "Aus der Tierpflege! Sie haben schon Bissigere gebändigt. Der Graf fühlt sich angesprochen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_animals_02",
+			"tag": "persona_intro:org_animals",
+			"voice": "mod",
+			"text": "{name} kennt Zwinger, Futterpläne und beleidigte Möpse. Bestens vorbereitet, würde ich sagen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_care_01",
+			"tag": "persona_intro:org_care",
+			"voice": "mod",
+			"text": "Aus der Pflege! Nachtdienst, Notfälle, kalter Kaffee. Willkommen in Ihrer Komfortzone.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_care_02",
+			"tag": "persona_intro:org_care",
+			"voice": "mod",
+			"text": "{cand} {name} ist Nachtschichten gewohnt. Dieser Keller ist nur eine besonders lange.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_craft_01",
+			"tag": "persona_intro:org_craft",
+			"voice": "mod",
+			"text": "Aus dem Handwerk! Was hier unten kaputtgeht, reparieren Sie vermutlich nebenbei.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_craft_02",
+			"tag": "persona_intro:org_craft",
+			"voice": "mod",
+			"text": "{name} bringt Werkzeugverstand mit. Die Monster bringen nur Zähne. Ungleicher Kampf.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_office_01",
+			"tag": "persona_intro:org_office",
+			"voice": "mod",
+			"text": "Aus dem Büro! Sie haben Formulare überlebt, die gefährlicher waren als jedes Monster.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_office_02",
+			"tag": "persona_intro:org_office",
+			"voice": "mod",
+			"text": "{name} kennt Fristen. Die Monster kennen keine. Das wird ein ungleicher Kampf.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_it_01",
+			"tag": "persona_intro:org_it",
+			"voice": "mod",
+			"text": "Aus der IT! Haben Sie den Dungeon schon aus- und wieder eingeschaltet?",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_it_02",
+			"tag": "persona_intro:org_it",
+			"voice": "mod",
+			"text": "{name} spricht fließend Fehlermeldung. Hier unten heißen die Fehler nur anders: Ratten.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_teach_01",
+			"tag": "persona_intro:org_teach",
+			"voice": "mod",
+			"text": "Aus der Bildung! Sie beruhigen sonst dreißig Kinder vor dem Mittagessen. Das hier? Wandertag.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_teach_02",
+			"tag": "persona_intro:org_teach",
+			"voice": "mod",
+			"text": "{cand} {name} — {job}. Die Monster bekommen heute Unterricht. Mit Hausaufgaben.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_kitchen_01",
+			"tag": "persona_intro:org_kitchen",
+			"voice": "mod",
+			"text": "Aus der Küche direkt ins Feuer. Bitte die Monster nicht abschmecken.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_kitchen_02",
+			"tag": "persona_intro:org_kitchen",
+			"voice": "mod",
+			"text": "{name} arbeitet sonst unter Hitze und Zeitdruck. Hier unten ist es also fast gemütlich.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_sales_01",
+			"tag": "persona_intro:org_sales",
+			"voice": "mod",
+			"text": "Aus dem Handel! Sie kennen Kundschaft, die um kurz vor acht noch reinwill. Monster sind harmloser.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_sales_02",
+			"tag": "persona_intro:org_sales",
+			"voice": "mod",
+			"text": "{name} überzeugt Menschen in Sekunden. Mal sehen, ob das bei Ratten auch klappt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_transport_01",
+			"tag": "persona_intro:org_transport",
+			"voice": "mod",
+			"text": "Aus Verkehr und Logistik! Sie kommen immer an — notfalls mit Umleitung.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_transport_02",
+			"tag": "persona_intro:org_transport",
+			"voice": "mod",
+			"text": "{cand} {name} kennt jeden Fahrplan. Dieser Dungeon hat keinen. Viel Glück, Profi.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_stage_01",
+			"tag": "persona_intro:org_stage",
+			"voice": "mod",
+			"text": "Von der Bühne in den Keller! Applaus gibt es hier auch. Meistens.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_stage_02",
+			"tag": "persona_intro:org_stage",
+			"voice": "mod",
+			"text": "{name} kennt Lampenfieber. Hier unten kommen echte Lampen dazu. Und Monster.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_media_01",
+			"tag": "persona_intro:org_media",
+			"voice": "mod",
+			"text": "Aus den Medien! Sie erzählen sonst Geschichten. Heute sind Sie die Schlagzeile.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_media_02",
+			"tag": "persona_intro:org_media",
+			"voice": "mod",
+			"text": "{name} weiß, wie man Reichweite macht. Die Galaxis schaut zu. Für den Anfang reicht das.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_science_01",
+			"tag": "persona_intro:org_science",
+			"voice": "mod",
+			"text": "Aus der Forschung! Sie stellen Hypothesen auf. Der Dungeon liefert die Versuchsreihe.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_science_02",
+			"tag": "persona_intro:org_science",
+			"voice": "mod",
+			"text": "{cand} {name} — {job}. Bitte nichts anfassen, was leuchtet. Oder alles notieren.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_rescue_01",
+			"tag": "persona_intro:org_rescue",
+			"voice": "mod",
+			"text": "Aus der Rettung! Sie laufen hin, wo andere weglaufen. Die Regie ist ehrlich beeindruckt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_rescue_02",
+			"tag": "persona_intro:org_rescue",
+			"voice": "mod",
+			"text": "{name} ist Einsätze gewohnt. Dieser hier hat nur mehr Kameras.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_nature_01",
+			"tag": "persona_intro:org_nature",
+			"voice": "mod",
+			"text": "Aus Natur und Landwirtschaft! Sie kennen jedes Gewächs. Auch die, die hier unten leuchten.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_nature_02",
+			"tag": "persona_intro:org_nature",
+			"voice": "mod",
+			"text": "{name} steht sonst früh auf und packt an. Der Dungeon ist im Grunde ein sehr dunkles Feld.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_law_01",
+			"tag": "persona_intro:org_law",
+			"voice": "mod",
+			"text": "Aus Recht und Justiz! Haben Sie Ihren Vertrag mit NOVA gelesen? Lieber nicht. Er ist lang.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_law_02",
+			"tag": "persona_intro:org_law",
+			"voice": "mod",
+			"text": "{cand} {name} kennt jeden Paragrafen. Die Monster kennen keinen. Einspruch zwecklos.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_school_01",
+			"tag": "persona_intro:org_school",
+			"voice": "mod",
+			"text": "Direkt aus Schule, Ausbildung oder Studium! Heute steht Überleben auf dem Stundenplan.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_school_02",
+			"tag": "persona_intro:org_school",
+			"voice": "mod",
+			"text": "{name} lernt jeden Tag Neues. Heute: Fallen erkennen. Die Prüfung folgt sofort.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_cleaning_01",
+			"tag": "persona_intro:org_cleaning",
+			"voice": "mod",
+			"text": "Aus der Reinigung! Der Hausmeister wartet schon. Fachgespräch unter Kolleg:innen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_cleaning_02",
+			"tag": "persona_intro:org_cleaning",
+			"voice": "mod",
+			"text": "{name} weiß, was in Kellern liegt. Und wie man es wieder rausbekommt. Bestens.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_beauty_01",
+			"tag": "persona_intro:org_beauty",
+			"voice": "mod",
+			"text": "Aus dem Salon! Sie bringen alles in Form. Die Monster haben heute einen Termin bei Ihnen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_beauty_02",
+			"tag": "persona_intro:org_beauty",
+			"voice": "mod",
+			"text": "{cand} {name} hat ein Auge für Details. Hier unten sind die Details meistens Zähne.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_industry_01",
+			"tag": "persona_intro:org_industry",
+			"voice": "mod",
+			"text": "Aus der Produktion! Sie halten Maschinen am Laufen. Dieser Dungeon ist eine sehr große.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_industry_02",
+			"tag": "persona_intro:org_industry",
+			"voice": "mod",
+			"text": "{name} kennt Schichtarbeit. Gut so: Diese Sendung läuft rund um die Uhr.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_selfemployed_01",
+			"tag": "persona_intro:org_selfemployed",
+			"voice": "mod",
+			"text": "Selbstständig! Sie sind Chefetage, Buchhaltung und Kaffeeküche. Ein Dungeon? Ein Projekt mehr.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_selfemployed_02",
+			"tag": "persona_intro:org_selfemployed",
+			"voice": "mod",
+			"text": "{name} hat eigentlich keine Zeit für so was. Ist trotzdem gekommen. Respekt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_retired_01",
+			"tag": "persona_intro:org_retired",
+			"voice": "mod",
+			"text": "Aus dem Ruhestand ins Abendprogramm. Die Monster haben Respekt vor Lebenserfahrung.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_retired_02",
+			"tag": "persona_intro:org_retired",
+			"voice": "mod",
+			"text": "{name} hat schon viel erlebt. Ein Dungeon ist nur eine neue Geschichte für später.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_family_01",
+			"tag": "persona_intro:org_family",
+			"voice": "mod",
+			"text": "Familie und Sorgearbeit: Sie managen täglich Chaos. Ein Dungeon ist da fast Urlaub.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_family_02",
+			"tag": "persona_intro:org_family",
+			"voice": "mod",
+			"text": "{name} jongliert sonst Termine, Wäsche und Pausenbrote. Monster? Machbar.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_reorient_01",
+			"tag": "persona_intro:org_reorient",
+			"voice": "mod",
+			"text": "Mitten im Neustart — und gleich in die Prime Time. Mutiger geht es kaum.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_reorient_02",
+			"tag": "persona_intro:org_reorient",
+			"voice": "mod",
+			"text": "{name} sortiert sich gerade neu. Die Show nennt das: Kurswechsel mit Publikum.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_allround_01",
+			"tag": "persona_intro:org_allround",
+			"voice": "mod",
+			"text": "{cand} {name} kann ein bisschen von allem. Genau das braucht man hier unten.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_org_allround_02",
+			"tag": "persona_intro:org_allround",
+			"voice": "mod",
+			"text": "Kein Etikett passt? Gut so, {name}. Hier unten gibt es eh keine Schubladen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_custom_01",
+			"tag": "persona_intro:custom",
+			"voice": "mod",
+			"text": "„{job_text}“? Steht nicht in unserer Kartei. Wir führen Sie als Allrounder:in.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_custom_02",
+			"tag": "persona_intro:custom",
+			"voice": "mod",
+			"text": "„{job_text}“? Klingt spannend. Die Kartei sagt: Allrounder:in. Die Kartei ist neidisch.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_card_01",
+			"tag": "persona_card",
+			"voice": "mod",
+			"text": "Das ist Ihre Karte. Ich habe sie gelesen. Leider.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_card_02",
+			"tag": "persona_card",
+			"voice": "mod",
+			"text": "Ihre Karte ist fertig. Die Regie hat geweint. Vor Rührung, behauptet sie.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_card_org_animals_01",
+			"tag": "persona_card:org_animals",
+			"voice": "mod",
+			"text": "Tierpflege. Der Graf hat Sie bereits bewertet: fünf Leckerli von fünf.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_card_org_care_01",
+			"tag": "persona_card:org_care",
+			"voice": "mod",
+			"text": "Aus der Pflege! Sie wissen, wo es wehtut. Die Monster ab jetzt auch.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_card_org_craft_01",
+			"tag": "persona_card:org_craft",
+			"voice": "mod",
+			"text": "Handwerk. Endlich jemand, der den Dungeon nicht nur kaputt macht.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_card_org_office_01",
+			"tag": "persona_card:org_office",
+			"voice": "mod",
+			"text": "Büro und Verwaltung. Ich habe Ihre Karte in dreifacher Ausfertigung abgelegt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_card_org_it_01",
+			"tag": "persona_card:org_it",
+			"voice": "mod",
+			"text": "IT und Digitales. Falls die Sendung abstürzt, wissen wir, wen wir anrufen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_card_org_teach_01",
+			"tag": "persona_card:org_teach",
+			"voice": "mod",
+			"text": "Bildung und Erziehung. Bitte erst melden, bevor Sie Monster zurechtweisen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_card_org_kitchen_01",
+			"tag": "persona_card:org_kitchen",
+			"voice": "mod",
+			"text": "Küche und Gastronomie. Die Jury im Studio hat jetzt schon Hunger.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_card_org_sales_01",
+			"tag": "persona_card:org_sales",
+			"voice": "mod",
+			"text": "Handel und Verkauf. Die Monster haben Fragen zum Umtausch. Viel Erfolg.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_card_org_transport_01",
+			"tag": "persona_card:org_transport",
+			"voice": "mod",
+			"text": "Verkehr und Logistik. Sie liefern pünktlich. Der Dungeon nicht. Spannend.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_card_org_stage_01",
+			"tag": "persona_card:org_stage",
+			"voice": "mod",
+			"text": "Kunst, Musik und Bühne. Endlich jemand, der das Rampenlicht nicht scheut.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_card_org_media_01",
+			"tag": "persona_card:org_media",
+			"voice": "mod",
+			"text": "Medien und Marketing. Bitte nicht die Konkurrenzsendung erwähnen. Danke.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_card_org_science_01",
+			"tag": "persona_card:org_science",
+			"voice": "mod",
+			"text": "Forschung und Labor. Der Dungeon ist ab sofort Ihr Versuchsaufbau.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_card_org_rescue_01",
+			"tag": "persona_card:org_rescue",
+			"voice": "mod",
+			"text": "Sicherheit und Rettung. Die Regie fühlt sich gleich sicherer. Ich auch.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_card_org_nature_01",
+			"tag": "persona_card:org_nature",
+			"voice": "mod",
+			"text": "Natur und Landwirtschaft. Hier unten wächst einiges. Leider auch Ärger.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_card_org_law_01",
+			"tag": "persona_card:org_law",
+			"voice": "mod",
+			"text": "Recht und Justiz. Ich habe Ihre Karte prüfen lassen. Sie hat Einspruch eingelegt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_card_org_school_01",
+			"tag": "persona_card:org_school",
+			"voice": "mod",
+			"text": "Schule, Ausbildung und Studium. Heute gibt es Praxisunterricht.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_card_org_cleaning_01",
+			"tag": "persona_card:org_cleaning",
+			"voice": "mod",
+			"text": "Reinigung und Hausmeisterei. Der Keller wird nie wieder so sauber sein.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_card_org_beauty_01",
+			"tag": "persona_card:org_beauty",
+			"voice": "mod",
+			"text": "Friseur und Kosmetik. Die Kamera liebt Sie jetzt schon. Die Monster eher nicht.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_card_org_industry_01",
+			"tag": "persona_card:org_industry",
+			"voice": "mod",
+			"text": "Produktion und Industrie. Sie kennen Takt und Tempo. Die Show auch.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_card_org_selfemployed_01",
+			"tag": "persona_card:org_selfemployed",
+			"voice": "mod",
+			"text": "Selbstständig. Sie haben die Karte vermutlich selbst gedruckt. Respekt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_card_org_retired_01",
+			"tag": "persona_card:org_retired",
+			"voice": "mod",
+			"text": "Ruhestand. Sie haben Zeit, Nerven und Geschichten. Perfekt fürs Abendprogramm.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_card_org_family_01",
+			"tag": "persona_card:org_family",
+			"voice": "mod",
+			"text": "Familie und Sorgearbeit. Die härteste Schicht der Welt. Das hier ist Freizeit.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_card_org_reorient_01",
+			"tag": "persona_card:org_reorient",
+			"voice": "mod",
+			"text": "Neuorientierung. Die Show ist ein guter Ort für Neues. Und für Explosionen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_card_org_allround_01",
+			"tag": "persona_card:org_allround",
+			"voice": "mod",
+			"text": "Allrounder:in. Die Kartei hat aufgegeben. Ich finde das sympathisch.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_first_chest_01",
+			"tag": "persona_first_chest",
+			"voice": "mod",
+			"text": "Ihre erste Truhe! M.O.D. hofft auf Beute, das Publikum auf eine Falle.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_first_chest_02",
+			"tag": "persona_first_chest",
+			"voice": "mod",
+			"text": "Die erste Truhe der Etage. {club} schaut zu und hält den Atem an.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_first_chest_03",
+			"tag": "persona_first_chest",
+			"voice": "mod",
+			"text": "Erste Truhe, {name}! Die Regie tippt auf Glitzer, das Publikum auf Ratten.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_first_chest_04",
+			"tag": "persona_first_chest",
+			"voice": "mod",
+			"text": "Eine Truhe! Laut Karte sind Sie {trait}. Mal sehen, ob die Truhe mitspielt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_first_chest_05",
+			"tag": "persona_first_chest",
+			"voice": "mod",
+			"text": "Erste Truhe der Etage. Ich notiere: {name} öffnet Dinge. Ein Talent für die Karte.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_boss_won_01",
+			"tag": "persona_boss_won",
+			"voice": "mod",
+			"text": "{name} gegen den Boss: gewonnen. Laut Karte {trait}. Laut Publikum: legendär.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_boss_won_02",
+			"tag": "persona_boss_won",
+			"voice": "mod",
+			"text": "Boss erledigt! {club} ruft an. Ich habe gesagt, Sie sind gerade beschäftigt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_boss_won_03",
+			"tag": "persona_boss_won",
+			"voice": "mod",
+			"text": "Das war ein Boss. War. Applaus für {cand} {name}!",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_boss_won_04",
+			"tag": "persona_boss_won",
+			"voice": "mod",
+			"text": "Sie sind {job} und haben gerade einen Boss besiegt. Der Lebenslauf wird lang.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_boss_won_05",
+			"tag": "persona_boss_won",
+			"voice": "mod",
+			"text": "Boss besiegt. Die Regie hat vor Staunen die Werbepause vergessen. Das ist ein Kompliment.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_boss_won_org_craft_01",
+			"tag": "persona_boss_won:org_craft",
+			"voice": "mod",
+			"text": "Handwerk schlägt Boss! Der Kostenvoranschlag kommt per Post.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_boss_won_org_kitchen_01",
+			"tag": "persona_boss_won:org_kitchen",
+			"voice": "mod",
+			"text": "Boss durchgegart! Die Küche meldet: Bitte nicht nachwürzen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_boss_won_org_office_01",
+			"tag": "persona_boss_won:org_office",
+			"voice": "mod",
+			"text": "Boss besiegt und ordnungsgemäß abgeheftet. Vorgang geschlossen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_boss_won_org_rescue_01",
+			"tag": "persona_boss_won:org_rescue",
+			"voice": "mod",
+			"text": "Boss gesichert, Lage unter Kontrolle. Die Regie atmet hörbar aus.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_boss_won_org_it_01",
+			"tag": "persona_boss_won:org_it",
+			"voice": "mod",
+			"text": "Boss erfolgreich deinstalliert. Ein Neustart ist nicht erforderlich.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_boss_won_org_law_01",
+			"tag": "persona_boss_won:org_law",
+			"voice": "mod",
+			"text": "Boss besiegt. Das Urteil ist rechtskräftig, Berufung ausgeschlossen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_safe_room_01",
+			"tag": "persona_safe_room",
+			"voice": "mod",
+			"text": "Safe Room. Zeit für {hobby}? Nein. Zeit zum Heilen. Ich bin keine Freizeitberatung.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_safe_room_02",
+			"tag": "persona_safe_room",
+			"voice": "mod",
+			"text": "Kurze Pause, {name}. {club} lässt ausrichten: durchhalten. Und Hände waschen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_safe_room_03",
+			"tag": "persona_safe_room",
+			"voice": "mod",
+			"text": "Safe Room! Hier sind Sie sicher. Behauptet jedenfalls die Versicherung von NOVA.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_safe_room_04",
+			"tag": "persona_safe_room",
+			"voice": "mod",
+			"text": "Atempause. Laut Karte sind Sie {trait}. Laut Erfahrung brauchen Sie trotzdem Schlaf.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_safe_room_05",
+			"tag": "persona_safe_room",
+			"voice": "mopsula",
+			"text": "{hobby}? Später. Erst Leberwurst. Der Graf hat Prioritäten.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_safe_room_06",
+			"tag": "persona_safe_room",
+			"voice": "mopsula",
+			"text": "Fußnote 4: Auch {cand} {name} braucht Ruhe. Ich bewache solange die Leberwurst.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_safe_room_hob_cooking_01",
+			"tag": "persona_safe_room:hob_cooking",
+			"voice": "mod",
+			"text": "Safe Room mit Kochnische. Bitte nichts kochen, was vorhin noch gefaucht hat.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_safe_room_hob_gaming_01",
+			"tag": "persona_safe_room:hob_gaming",
+			"voice": "mod",
+			"text": "Safe Room! Ja, das ist ein Speicherpunkt. Nein, neu laden ist keine Taktik.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_safe_room_hob_reading_01",
+			"tag": "persona_safe_room:hob_reading",
+			"voice": "mod",
+			"text": "Safe Room. Das Kapitel ist zu Ende: Lesezeichen rein, Pflaster drauf, weiter.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_safe_room_hob_sports_01",
+			"tag": "persona_safe_room:hob_sports",
+			"voice": "mod",
+			"text": "Safe Room. Dehnen, trinken und durchatmen. {club} wäre stolz auf Sie.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_floor_end_01",
+			"tag": "persona_floor_end",
+			"voice": "mod",
+			"text": "Etage geschafft! {club} schaut zu, sagt der Sender. Ich glaube dem Sender.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_floor_end_02",
+			"tag": "persona_floor_end",
+			"voice": "mod",
+			"text": "Etage geschafft, {name}. Die Quote steigt. Mein Respekt auch, aber leiser.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_floor_end_03",
+			"tag": "persona_floor_end",
+			"voice": "mod",
+			"text": "Geschafft! Sie sind {job} und ab heute auch noch Treppenprofi.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_floor_end_04",
+			"tag": "persona_floor_end",
+			"voice": "mod",
+			"text": "Eine Etage weniger zwischen Ihnen und dem Finale. Die Regie zählt mit.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_floor_end_org_transport_01",
+			"tag": "persona_floor_end:org_transport",
+			"voice": "mod",
+			"text": "Etage geschafft — pünktlich auf die Minute. Die Konkurrenz steht noch am Bahnsteig.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_floor_end_org_teach_01",
+			"tag": "persona_floor_end:org_teach",
+			"voice": "mod",
+			"text": "Etage geschafft. Note eins. Bitte das Klassenbuch nicht vergessen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_floor_end_org_science_01",
+			"tag": "persona_floor_end:org_science",
+			"voice": "mod",
+			"text": "Etage geschafft. Hypothese bestätigt: {name} ist schwer aufzuhalten.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_floor_end_org_nature_01",
+			"tag": "persona_floor_end:org_nature",
+			"voice": "mod",
+			"text": "Etage geschafft. Ernte eingefahren, Unkraut beseitigt, weiter nach unten.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_floor_end_org_retired_01",
+			"tag": "persona_floor_end:org_retired",
+			"voice": "mod",
+			"text": "Etage geschafft — gelassen wie immer. Die Regie nimmt Unterricht.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_floor_end_org_family_01",
+			"tag": "persona_floor_end:org_family",
+			"voice": "mod",
+			"text": "Etage geschafft. Verglichen mit einem Kindergeburtstag war das ruhig.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_game_over_01",
+			"tag": "persona_game_over",
+			"voice": "mod",
+			"text": "Sendeschluss für {name}. Die Karte geht ins Archiv, Fach: „{trait}, aber glücklos“.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_game_over_02",
+			"tag": "persona_game_over",
+			"voice": "mod",
+			"text": "Das war's für heute, {name}. {club} hält die Plakate für morgen bereit.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_game_over_03",
+			"tag": "persona_game_over",
+			"voice": "mod",
+			"text": "Sendeschluss. Sie sind {job}, Sie stehen wieder auf. Das weiß hier jede:r.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_game_over_04",
+			"tag": "persona_game_over",
+			"voice": "mod",
+			"text": "Aus. Vorbei. Die Regie senkt die Musik und hebt Ihre Karte auf. Für die Wiederholung.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_game_over_org_rescue_01",
+			"tag": "persona_game_over:org_rescue",
+			"voice": "mod",
+			"text": "Sie haben oft andere gerettet. Heute nicht sich selbst. Die Regie senkt kurz die Musik.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_game_over_org_care_01",
+			"tag": "persona_game_over:org_care",
+			"voice": "mod",
+			"text": "Sendeschluss. Sie wissen es am besten: erst versorgen, dann weitermachen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_game_over_org_it_01",
+			"tag": "persona_game_over:org_it",
+			"voice": "mod",
+			"text": "Sendeschluss. Kein Fehler im System — nur ein Boss mit schlechten Manieren.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_game_over_org_selfemployed_01",
+			"tag": "persona_game_over:org_selfemployed",
+			"voice": "mod",
+			"text": "Sendeschluss. Kein Problem: Sie haben schon schwierigere Quartale überstanden.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_game_over_org_stage_01",
+			"tag": "persona_game_over:org_stage",
+			"voice": "mod",
+			"text": "Vorhang. Aber jede gute Produktion hat eine zweite Vorstellung.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_rival_intro_01",
+			"tag": "persona_beat_rival:intro",
+			"voice": "mod",
+			"text": "Eilmeldung: {rival} ist auch im Dungeon. Und behauptet, Sie kennen sich.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_rival_intro_02",
+			"tag": "persona_beat_rival:intro",
+			"voice": "mod",
+			"text": "Eilmeldung: Ihre Konkurrenz ist auch im Dungeon. Name laut Kartei: {rival}.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_rival_intro_03",
+			"tag": "persona_beat_rival:intro",
+			"voice": "mod",
+			"text": "Eilmeldung! {rival} ist auch im Rennen. Und hat schon ein Interview gegeben. Über Sie.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_rival_result_01",
+			"tag": "persona_beat_rival:result",
+			"voice": "mod",
+			"text": "{rival} meldet: auch geschafft. Drei Sekunden später. Sagen wir nicht laut.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_rival_result_02",
+			"tag": "persona_beat_rival:result",
+			"voice": "mod",
+			"text": "Zwischenstand: {rival} liegt knapp hinter Ihnen. Sehr knapp. Die Regie liebt das.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_rival_result_03",
+			"tag": "persona_beat_rival:result",
+			"voice": "mod",
+			"text": "{rival} hat den Boss auch erledigt. Mit mehr Geschrei. Punkt für Sie.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_rival_taunt_01",
+			"tag": "persona_beat_rival:taunt",
+			"voice": "mod",
+			"text": "{rival} lässt grüßen. Und fragt, ob Ihr Spind noch frei ist.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_rival_taunt_02",
+			"tag": "persona_beat_rival:taunt",
+			"voice": "mod",
+			"text": "{rival} lässt ausrichten: „Wir sehen uns unten.“ Klingt nach Drohung. Ist eine.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_rival_taunt_03",
+			"tag": "persona_beat_rival:taunt",
+			"voice": "mod",
+			"text": "Nachricht von {rival}: „Ich war schneller.“ Die Regie prüft das noch.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_greeting_gr_hob_cooking_01",
+			"tag": "persona_beat_greeting:gr_hob_cooking",
+			"voice": "mod",
+			"text": "Grüße von zu Hause! {club} schickt ein Rezept: Rattenragout. Bitte nicht nachkochen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_greeting_gr_hob_gaming_01",
+			"tag": "persona_beat_greeting:gr_hob_gaming",
+			"voice": "mod",
+			"text": "Grüße von zu Hause! {club} hat Ihnen einen Glückstaler geschickt. Er ist aus Plastik.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_greeting_gr_hob_sports_01",
+			"tag": "persona_beat_greeting:gr_hob_sports",
+			"voice": "mod",
+			"text": "Grüße von zu Hause! {club} ist heute eine Extrarunde für Sie gelaufen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_greeting_gr_hob_music_01",
+			"tag": "persona_beat_greeting:gr_hob_music",
+			"voice": "mod",
+			"text": "Grüße von zu Hause! {club} hat Ihnen ein Lied geschrieben. Es reimt sich auf Dungeon.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_greeting_gr_hob_reading_01",
+			"tag": "persona_beat_greeting:gr_hob_reading",
+			"voice": "mod",
+			"text": "Grüße von zu Hause! {club} liest gerade über Sie. Kapitel drei, Spannung steigt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_greeting_gr_hob_garden_01",
+			"tag": "persona_beat_greeting:gr_hob_garden",
+			"voice": "mod",
+			"text": "Grüße von zu Hause! {club} gießt Ihre Pflanzen. Und redet ihnen gut zu.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_greeting_gr_hob_diy_01",
+			"tag": "persona_beat_greeting:gr_hob_diy",
+			"voice": "mod",
+			"text": "Grüße von zu Hause! {club} hat ein Regal für Ihre Trophäen gebaut. Es wackelt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_greeting_gr_hob_travel_01",
+			"tag": "persona_beat_greeting:gr_hob_travel",
+			"voice": "mod",
+			"text": "Grüße von zu Hause! {club} schickt eine Postkarte: „Schön hier. Sie fehlen.“",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_greeting_gr_hob_dance_01",
+			"tag": "persona_beat_greeting:gr_hob_dance",
+			"voice": "mod",
+			"text": "Grüße von zu Hause! {club} hat eine Choreo für Ihren Sieg einstudiert.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_greeting_gr_hob_photo_01",
+			"tag": "persona_beat_greeting:gr_hob_photo",
+			"voice": "mod",
+			"text": "Grüße von zu Hause! {club} hat Ihr Foto vergrößert. Es hängt jetzt überall.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_greeting_gr_hob_social_01",
+			"tag": "persona_beat_greeting:gr_hob_social",
+			"voice": "mod",
+			"text": "Grüße von zu Hause! {club} hat schon drei Fanseiten über Sie angelegt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_greeting_gr_hob_outdoor_01",
+			"tag": "persona_beat_greeting:gr_hob_outdoor",
+			"voice": "mod",
+			"text": "Grüße von zu Hause! {club} hat beim Wandern einen Glücksstein für Sie gefunden.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_greeting_gr_hob_volunteer_01",
+			"tag": "persona_beat_greeting:gr_hob_volunteer",
+			"voice": "mod",
+			"text": "Grüße von zu Hause! {club} hat Kuchen gebacken. Für Sie. Und für alle anderen auch.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_greeting_gr_hob_boardgames_01",
+			"tag": "persona_beat_greeting:gr_hob_boardgames",
+			"voice": "mod",
+			"text": "Grüße von zu Hause! {club} hält Ihren Platz am Spieltisch frei.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_greeting_gr_hob_crime_01",
+			"tag": "persona_beat_greeting:gr_hob_crime",
+			"voice": "mod",
+			"text": "Grüße von zu Hause! {club} ermittelt schon, wer Ihnen die Monster geschickt hat.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_greeting_gr_hob_tech_01",
+			"tag": "persona_beat_greeting:gr_hob_tech",
+			"voice": "mod",
+			"text": "Grüße von zu Hause! {club} hat Ihnen ein Gerät gebaut. Es blinkt. Mehr weiß niemand.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_greeting_gr_colleagues_01",
+			"tag": "persona_beat_greeting:gr_colleagues",
+			"voice": "mod",
+			"text": "Grüße von den Kolleg:innen! Die Kaffeemaschine vermisst Sie. Die Kolleg:innen auch.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_greeting_gr_home_01",
+			"tag": "persona_beat_greeting:gr_home",
+			"voice": "mod",
+			"text": "Grüße von zu Hause! Jemand hat Ihr Lieblingsessen gekocht. Es wartet. Kalt, aber treu.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_greeting_gr_tierheim_01",
+			"tag": "persona_beat_greeting:gr_tierheim",
+			"voice": "mod",
+			"text": "Grüße vom Tierheim-Team! Es gibt Leckerli. Der Graf hat sie schon gegessen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_greeting_gr_tierheim_02",
+			"tag": "persona_beat_greeting:gr_tierheim",
+			"voice": "mod",
+			"text": "Grüße aus dem Tierheim Pfotenglück! Zwinger 7 ist frisch geputzt. Für den Grafen, versteht sich.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_sponsor_intro_01",
+			"tag": "persona_beat_sponsor:intro",
+			"voice": "mod",
+			"text": "Ihr Auftritt wird präsentiert von {brand}. Passt zu Ihnen. Wir haben recherchiert.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_sponsor_intro_02",
+			"tag": "persona_beat_sponsor:intro",
+			"voice": "mod",
+			"text": "Diese Etage präsentiert {brand}. Ich wurde gebeten, begeistert zu klingen. Bitte sehr.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_sponsor_thanks_01",
+			"tag": "persona_beat_sponsor:thanks",
+			"voice": "mod",
+			"text": "{brand} dankt für die Etage. Die Marketingabteilung weint vor Glück. Oder wegen der Zahlen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_beat_sponsor_thanks_02",
+			"tag": "persona_beat_sponsor:thanks",
+			"voice": "mod",
+			"text": "Danke an {brand}! Ohne Sie wäre diese Etage genauso gewesen, nur ohne Logo.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_cooking_1_01",
+			"tag": "persona_gag:gag_cooking:1",
+			"voice": "mod",
+			"text": "Erster Gang serviert. Die Jury vergibt: medium-rare.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_cooking_2_01",
+			"tag": "persona_gag:gag_cooking:2",
+			"voice": "mod",
+			"text": "Hauptgang! Der Boss war zäh. Nächstes Mal länger im Ofen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_cooking_3_01",
+			"tag": "persona_gag:gag_cooking:3",
+			"voice": "mod",
+			"text": "Dessert: die Treppe. Die Jury vergibt drei Sterne. Von drei.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_gaming_1_01",
+			"tag": "persona_gag:gag_gaming:1",
+			"voice": "mod",
+			"text": "Erfolg freigeschaltet: Truhe geöffnet. Speichern geht leider nur im Safe Room.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_gaming_2_01",
+			"tag": "persona_gag:gag_gaming:2",
+			"voice": "mod",
+			"text": "Bosskampf geschafft. Kein Neuladen nötig. {club} ist beeindruckt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_gaming_3_01",
+			"tag": "persona_gag:gag_gaming:3",
+			"voice": "mod",
+			"text": "Etage geschafft! Speicherstand: legendär. Die nächste Welt lädt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_sports_1_01",
+			"tag": "persona_gag:gag_sports:1",
+			"voice": "mod",
+			"text": "Truhe gestemmt: erste Wiederholung. Noch zwei Sätze, dann ist Feierabend.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_sports_2_01",
+			"tag": "persona_gag:gag_sports:2",
+			"voice": "mod",
+			"text": "Boss besiegt: zweite Wiederholung. Bitte nach dem Training dehnen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_sports_3_01",
+			"tag": "persona_gag:gag_sports:3",
+			"voice": "mod",
+			"text": "Dritte Wiederholung: die Treppe. Satz beendet. {club} applaudiert.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_music_1_01",
+			"tag": "persona_gag:gag_music:1",
+			"voice": "mod",
+			"text": "Konzertkritik, erster Satz: Die Truhe quietscht in Moll.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_music_2_01",
+			"tag": "persona_gag:gag_music:2",
+			"voice": "mod",
+			"text": "Konzertkritik, zweiter Satz: Der Boss sang falsch, Sie trafen jeden Ton.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_music_3_01",
+			"tag": "persona_gag:gag_music:3",
+			"voice": "mod",
+			"text": "Konzertkritik, Finale: Standing Ovations im Treppenhaus. Zugabe nach unten.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_reading_1_01",
+			"tag": "persona_gag:gag_reading:1",
+			"voice": "mod",
+			"text": "Kapitel eins: Die Truhe. Spannender Einstieg, etwas hölzern.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_reading_2_01",
+			"tag": "persona_gag:gag_reading:2",
+			"voice": "mod",
+			"text": "Kapitel zwei: Der Boss. Überraschende Wendung! Er verliert.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_reading_3_01",
+			"tag": "persona_gag:gag_reading:3",
+			"voice": "mod",
+			"text": "Kapitel drei: Die Treppe. Fortsetzung folgt. {club} blättert schon um.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_garden_1_01",
+			"tag": "persona_gag:gag_garden:1",
+			"voice": "mod",
+			"text": "Unkraut-Bericht: In der Truhe wuchs nichts Böses. Gutes Zeichen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_garden_2_01",
+			"tag": "persona_gag:gag_garden:2",
+			"voice": "mod",
+			"text": "Unkraut-Bericht: Der Boss ist gejätet. Mit Wurzel.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_garden_3_01",
+			"tag": "persona_gag:gag_garden:3",
+			"voice": "mod",
+			"text": "Unkraut-Bericht: Etage sauber. {club} vergibt den Goldenen Rechen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_diy_1_01",
+			"tag": "persona_gag:gag_diy:1",
+			"voice": "mod",
+			"text": "Baumarkt-Gutachten: Truhe, Massivholz, Scharniere ausbaufähig.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_diy_2_01",
+			"tag": "persona_gag:gag_diy:2",
+			"voice": "mod",
+			"text": "Baumarkt-Gutachten: Boss zerlegt, Schrauben übrig. Das ist normal.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_diy_3_01",
+			"tag": "persona_gag:gag_diy:3",
+			"voice": "mod",
+			"text": "Baumarkt-Gutachten: Treppe trägt. Abnahme erteilt. Weiter nach unten.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_animals_1_01",
+			"tag": "persona_gag:gag_animals:1",
+			"voice": "mod",
+			"text": "Hundeschule, Lektion eins: Die Truhe ist apportiert. Brav.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_animals_2_01",
+			"tag": "persona_gag:gag_animals:2",
+			"voice": "mod",
+			"text": "Hundeschule, Lektion zwei: Boss abgeleint. Sehr brav.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_animals_3_01",
+			"tag": "persona_gag:gag_animals:3",
+			"voice": "mod",
+			"text": "Hundeschule, Lektion drei: Treppe. Zertifikat folgt. Der Graf protestiert.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_travel_1_01",
+			"tag": "persona_gag:gag_travel:1",
+			"voice": "mod",
+			"text": "Hotelbewertung: Truhe im Zimmer, Minibar fehlt. Drei Sterne.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_travel_2_01",
+			"tag": "persona_gag:gag_travel:2",
+			"voice": "mod",
+			"text": "Hotelbewertung: Der Boss war unfreundlich am Empfang. Ausgecheckt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_travel_3_01",
+			"tag": "persona_gag:gag_travel:3",
+			"voice": "mod",
+			"text": "Hotelbewertung: Die Etage ist sehenswert, der Service ruppig. Nächstes Ziel: unten.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_dance_1_01",
+			"tag": "persona_gag:gag_dance:1",
+			"voice": "mod",
+			"text": "Punktrichter, erste Wertung: Truhe mit Schwung geöffnet. Acht Komma fünf.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_dance_2_01",
+			"tag": "persona_gag:gag_dance:2",
+			"voice": "mod",
+			"text": "Punktrichter, zweite Wertung: Boss mit sauberer Drehung erledigt. Neun.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_dance_3_01",
+			"tag": "persona_gag:gag_dance:3",
+			"voice": "mod",
+			"text": "Punktrichter, Endwertung: Abgang über die Treppe. Höchstnote.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_photo_1_01",
+			"tag": "persona_gag:gag_photo:1",
+			"voice": "mod",
+			"text": "Kamera drei hat die Truhe verpasst. Wir wiederholen in Zeitlupe.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_photo_2_01",
+			"tag": "persona_gag:gag_photo:2",
+			"voice": "mod",
+			"text": "Kamera drei hatte diesmal den Boss im Bild. Endlich.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_photo_3_01",
+			"tag": "persona_gag:gag_photo:3",
+			"voice": "mod",
+			"text": "Kamera drei meldet: Treppe im Kasten. {club} ist stolz.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_social_1_01",
+			"tag": "persona_gag:gag_social:1",
+			"voice": "mod",
+			"text": "Schlagworte des Tages: Truhe, Glück, kein Filter nötig.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_social_2_01",
+			"tag": "persona_gag:gag_social:2",
+			"voice": "mod",
+			"text": "Schlagworte: Boss, besiegt, unfassbar. Der Chat übernimmt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_social_3_01",
+			"tag": "persona_gag:gag_social:3",
+			"voice": "mod",
+			"text": "Schlagworte zum Abschluss: Etage, geschafft, {name}. Trendet bereits.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_outdoor_1_01",
+			"tag": "persona_gag:gag_outdoor:1",
+			"voice": "mod",
+			"text": "Wetterbericht: In der Truhe vereinzelt Beute, sonst trocken.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_outdoor_2_01",
+			"tag": "persona_gag:gag_outdoor:2",
+			"voice": "mod",
+			"text": "Wetterbericht: Bossfront abgezogen, Aussichten heiter.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_outdoor_3_01",
+			"tag": "persona_gag:gag_outdoor:3",
+			"voice": "mod",
+			"text": "Wetterbericht: Etage geschafft. Weiter unten wird es ungemütlich. Jacke mitnehmen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_volunteer_1_01",
+			"tag": "persona_gag:gag_volunteer:1",
+			"voice": "mod",
+			"text": "Gute-Taten-Zähler: eins. Truhe befreit.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_volunteer_2_01",
+			"tag": "persona_gag:gag_volunteer:2",
+			"voice": "mod",
+			"text": "Gute-Taten-Zähler: zwei. Der Boss wurde von sich selbst befreit.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_volunteer_3_01",
+			"tag": "persona_gag:gag_volunteer:3",
+			"voice": "mod",
+			"text": "Gute-Taten-Zähler: drei. Etage aufgeräumt. {club} ist stolz.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_boardgames_1_01",
+			"tag": "persona_gag:gag_boardgames:1",
+			"voice": "mod",
+			"text": "Regelkunde: Wer eine Truhe öffnet, darf noch mal würfeln.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_boardgames_2_01",
+			"tag": "persona_gag:gag_boardgames:2",
+			"voice": "mod",
+			"text": "Regelkunde: Der Boss scheidet aus. Keine Hausregeln.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_boardgames_3_01",
+			"tag": "persona_gag:gag_boardgames:3",
+			"voice": "mod",
+			"text": "Regelkunde: Treppe erreicht, nächste Runde. {club} mischt schon.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_crime_1_01",
+			"tag": "persona_gag:gag_crime:1",
+			"voice": "mod",
+			"text": "Ermittlungsakte, Eintrag eins: Truhe geöffnet. Keine Spuren.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_crime_2_01",
+			"tag": "persona_gag:gag_crime:2",
+			"voice": "mod",
+			"text": "Ermittlungsakte, Eintrag zwei: Der Boss war es. Fall gelöst.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_crime_3_01",
+			"tag": "persona_gag:gag_crime:3",
+			"voice": "mod",
+			"text": "Ermittlungsakte, Eintrag drei: Die Spur führt nach unten. Fortsetzung folgt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_tech_1_01",
+			"tag": "persona_gag:gag_tech:1",
+			"voice": "mod",
+			"text": "Firmware-Update eins von drei: Truhe gepatcht.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_tech_2_01",
+			"tag": "persona_gag:gag_tech:2",
+			"voice": "mod",
+			"text": "Firmware-Update zwei von drei: Boss entfernt. Neustart nicht nötig.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_gag_gag_tech_3_01",
+			"tag": "persona_gag:gag_tech:3",
+			"voice": "mod",
+			"text": "Firmware-Update drei von drei: Etage installiert. Bitte nicht ausschalten.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_marotte_01",
+			"tag": "persona_marotte",
+			"voice": "mod",
+			"text": "Ich habe Ihre Karte gelesen: {trait}. Die heutige Vorliebe ist also ein Geschenk.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_marotte_02",
+			"tag": "persona_marotte",
+			"voice": "mod",
+			"text": "Laut Karte sind Sie {trait}. Rein zufällig passt meine Vorliebe heute dazu.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_marotte_03",
+			"tag": "persona_marotte",
+			"voice": "mod",
+			"text": "Ihre Karte sagt „{trait}“. Meine Vorliebe heute auch. Zufall? Ich bin eine KI.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_spec_hint_cls_kai_wrecker_01",
+			"tag": "persona_spec_hint:cls_kai_wrecker",
+			"voice": "mod",
+			"text": "Passt zu Ihrem Vorleben: Abrissbirne. Sie packen an, wo andere zögern.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_spec_hint_cls_kai_runner_01",
+			"tag": "persona_spec_hint:cls_kai_runner",
+			"voice": "mod",
+			"text": "Passt zu Ihrem Vorleben: Gleisläufer:in. Sie wissen immer, wo es langgeht.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_spec_hint_cls_kai_tinker_01",
+			"tag": "persona_spec_hint:cls_kai_tinker",
+			"voice": "mod",
+			"text": "Passt zu Ihrem Vorleben: Schrott-Tüftler:in. Aus Resten bauen Sie Wunder.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_spec_hint_cls_kai_showrunner_01",
+			"tag": "persona_spec_hint:cls_kai_showrunner",
+			"voice": "mod",
+			"text": "Passt zu Ihrem Vorleben: Showrunner:in. Sie wissen, wie man ein Publikum hält.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_casting_open_01",
+			"tag": "persona_casting_open",
+			"voice": "mod",
+			"text": "Wer sind Sie? Zwei Fragen, eine Karte. Oder: Rest automatisch, und Sie spielen Kai.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_casting_open_mopsula_01",
+			"tag": "persona_casting_open:mopsula",
+			"voice": "mod",
+			"text": "Der Graf führt heute das Casting. Gesucht: Begleitung mit Leberwurst-Erfahrung.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_casting_brief_01",
+			"tag": "persona_casting_brief",
+			"voice": "mod",
+			"text": "Vorleben und Hobby. Lügen ist erlaubt. Quote ist Pflicht.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_casting_dice_01",
+			"tag": "persona_casting_dice",
+			"voice": "mod",
+			"text": "Die Redaktion hat gewürfelt. Beschwerden bitte an den Würfel.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_casting_dice_02",
+			"tag": "persona_casting_dice",
+			"voice": "mod",
+			"text": "Gewürfelt! Falls es nicht passt: Das Schicksal hat keinen Kundendienst.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_casting_ai_wait_01",
+			"tag": "persona_casting_ai_wait",
+			"voice": "mod",
+			"text": "Die Redaktion liest Ihre Akte …",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_casting_ai_offline_01",
+			"tag": "persona_casting_ai_offline",
+			"voice": "mod",
+			"text": "Die Redaktion ist in der Kaffeepause. Wir casten klassisch.",
+			"weight": 1
 		}
 	]
 }

@@ -169,7 +169,7 @@
 				},
 				{
 					"voice": "mopsula",
-					"text": "Und du bist ein:e Tierpfleger:in mit einem Wischmopp. Und doch stehen wir hier."
+					"text": "Und du bist {job}. Mit einem Wischmopp. Und doch stehen wir hier."
 				},
 				{
 					"voice": "mopsula",

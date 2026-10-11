@@ -290,7 +290,7 @@ func test_party_page_casting_line() -> void:
 	var page: Script = load("res://scenes/ui/party_menu.gd") as Script
 	var m: PartyMember = PartyMember.new()
 	m.id = "kai"
-	assert_eq(page.call("casting_text", m), "Spezies & Klasse: Casting ab Etage 3")
+	assert_eq(page.call("casting_text", m), "Spezies & Klasse: Recall auf Etage 3")
 	m.species_id = "spc_kai_kachelgolem"
 	m.class_id = "cls_kai_wrecker"
 	assert_eq(page.call("casting_text", m), "Kachelgolem · Abrissbirne")

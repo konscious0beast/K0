@@ -23,6 +23,9 @@ extends Node
 ##   confetti, an M.O.D. live line labelled "KI live"), safe_happy (vending machine during a Happy Hour).
 ## Polish pass: doorway_approach | doorway_through | doorway_mopapproach | doorway_mopthrough (camera in front of /
 ##   just past an open door, Kai or Graf Mopsula leading).
+## 08 K1 (Casting): pause_card (exploration + pause menu, party page, the candidate card of the sample persona open),
+##   intro_card (intro.tscn with {"capture": true}: the studio with the candidate's lower third and persona_intro line),
+##   casting_accents (persona_casting.tscn with {"open": "keyboard"}: the on-screen keyboard's accent layer).
 
 const ZONES: Dictionary = {"platform": "zone_platform", "sewer": "zone_sewer", "cellar": "zone_cellar"}
 
@@ -738,4 +741,59 @@ func _r_safe_happy(scene: Node) -> bool:
 	await frames(5)
 	scene.call("open_vending")
 	await frames(20)
+	return true
+
+
+# --- 08 K1: the candidate persona ---------------------------------------------------------------------------------
+
+const PersonaCard := preload("res://scenes/ui/persona_card.gd")
+
+
+func _r_pause_card(scene: Node) -> bool:
+	if not await _explore_ready(scene):
+		return false
+	Game.persona = PersonaCard.demo(DB.data)
+	PersonaPrivacy.restore_display(Game.state, Game.persona)
+	_freeze_enemies(scene)
+	var hud: Node = scene.get("_hud")
+	await frames(5)
+	if hud == null:
+		return false
+	var pm: Node = hud.call("open_pause_menu", "party")
+	if pm == null:
+		return false
+	get_tree().paused = true
+	await frames(10)
+	var party: Node = pm.call("page", "party")
+	party.call("refresh")
+	await frames(2)
+	if party.call("open_card") == null:
+		return false
+	await frames(5)
+	return true
+
+
+func _r_intro_card(scene: Node) -> bool:
+	Game.persona = PersonaCard.demo(DB.data)
+	PersonaPrivacy.restore_display(Game.state, Game.persona)
+	var lines: Array = scene.call("persona_lines")
+	if lines.is_empty():
+		return false
+	await frames(30)                           # the studio's white flash is over
+	scene.call("_show_line", lines[0])
+	scene.set("_line_shown", 9999.0)
+	(scene.get("_text") as Label).visible_characters = -1
+	await frames(2)
+	(scene.get("_flash") as ColorRect).color = Color(1, 1, 1, 0)
+	freeze()                                   # the lower third stays (its fade-out tween pauses with the intro)
+	return true
+
+
+func _r_casting_accents(scene: Node) -> bool:
+	await frames(2)
+	var k: Node = scene.get("overlay") as Node
+	if k == null or not k.has_method("toggle_accents"):
+		return false
+	k.call("toggle_accents")
+	await frames(3)
 	return true

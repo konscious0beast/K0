@@ -3,6 +3,8 @@ extends Control
 ## SYNDIKAT "Rückbau", buildings fold away → the floor breaks → TV studio: M.O.D. goes on air, Graf Mopsula speaks.
 ## Letterboxed 3D shots in a SubViewport, own subtitle box (typewriter) in the lower letterbox bar (never over the
 ## picture centre), hold-to-skip (1 s, any input device) inside a SafeAreaContainer frame (notches, rounded corners).
+## Casting (08 §4.2 H1, K1): with a candidate persona the studio ends with the card as a lower third (name · Vorleben ·
+## hobby, 3.5 s) and M.O.D.'s persona_intro line plus the first beat of the broadcast plan.
 ## Ends with Game.set_flag("intro_seen", true) → Router.goto(SCENE_EXPLORATION, {"spawn": &"start"}).
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
@@ -19,6 +21,7 @@ const SKY_SCREEN_EMISSION: float = 0.5
 ## Studio shot: camera distance in front of the stage (push-in 0.12 m/s for 6 s); far enough that Kai's mop stays in
 ## the 16:9 frame (visual pass).
 const STUDIO_CAM_Z: float = 6.3
+const CARD_HOLD: float = 3.5               # 08 §4.2: the lower third with the candidate card
 const DEFAULT_INTRO: PackedStringArray = [
 	"Guten Abend, Galaxis! Willkommen bei DUNGEON PRIME TIME – der Show, die Ihren Planeten gekostet hat!",
 	"Kandidat:in {name}, Sie sind live. Bitte nicht in die Kamera weinen, das spiegelt."]
@@ -49,6 +52,7 @@ var _flash: ColorRect
 var _skip: Button
 var _skip_ring: Control
 var _nova_logo: Control
+var _card: PanelContainer                  # Casting (08 §4.2): the lower third of the candidate card
 var _line_queue: Array[Array] = []
 var _line_shown: float = 0.0
 var _line_hold: float = 0.0
@@ -152,6 +156,7 @@ func _make_script() -> void:
 				["kai", "… Graf?"], ["mopsula", "GRAF MOPSULA, bitte. Mit Titel, %s. Es ist gleich Mitternacht." % kai],
 				["mod", hero_pick_line()]]},
 	]
+	(shots[3]["lines"] as Array).append_array(persona_lines())     # Casting (08 §4.2 H1)
 
 
 ## 06 §1.5 (package A): M.O.D. on the hero choice (`hero_pick:<id>` in mod_lines.json) as the studio's last line.
@@ -162,6 +167,23 @@ func hero_pick_line() -> String:
 	if not lines.is_empty():
 		raw = lines[0].text
 	return UiUtil.format_line(raw)
+
+
+## Casting (08 §4.2, §4.7, K1): the candidate's intro — [["mod", persona_intro line, "card"], ["mod", beat line]]
+## from the run's broadcast plan (presentation RNG for the line choice); [] without a persona or in an event run.
+func persona_lines() -> Array[Array]:
+	var out: Array[Array] = []
+	if Game.persona == null or Game.state == null or Game.mode != &"campaign":
+		return out
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.randomize()
+	var ctx: Dictionary = PersonaText.ctx(Game.persona, DB.data, rng)
+	var plan: String = PersonaBeats.plan_for(DB.data, Game.state.seed)
+	for tag: String in PersonaBeats.tags_for(DB.data, Game.persona, plan, 1, &"intro", 1):
+		var text: String = UiUtil.mod_line(tag, ctx, rng.randi_range(0, 99))
+		if text != "":
+			out.append(["mod", text, "card"] if out.is_empty() else ["mod", text])
+	return out
 
 
 func _intro_line(i: int) -> String:
@@ -223,6 +245,8 @@ func _jump_to(i: int) -> void:
 
 func _show_line(line: Array) -> void:
 	var voice: String = str(line[0])
+	if line.size() > 2 and str(line[2]) == "card":
+		_show_card()
 	_text.text = UiUtil.glyph_safe(str(line[1]))
 	_text.visible_characters = 0
 	_line_shown = 0.0
@@ -241,6 +265,22 @@ func _show_line(line: Array) -> void:
 	_sub_panel.add_theme_stylebox_override("panel", sb)
 	if voice == "mod":
 		Sfx.play_ui(&"mod_blip")
+
+
+## Casting (08 §4.2): the lower third "JANA · Kandidatin / Hebamme · Hobby: Kochen & Backen" for CARD_HOLD seconds.
+func _show_card() -> void:
+	if _card == null or Game.persona == null:
+		return
+	var c: Dictionary = PersonaText.card(Game.persona, DB.data)
+	(_card.find_child("CardTitle", true, false) as Label).text = UiUtil.glyph_safe(str(c["title"]))
+	(_card.find_child("CardJob", true, false) as Label).text = UiUtil.glyph_safe(str(c["job"]))
+	_card.visible = true
+	_card.modulate.a = 1.0
+	if is_inside_tree():
+		var tw: Tween = create_tween()
+		tw.tween_interval(CARD_HOLD * (0.3 if Game.fast_text else 1.0))
+		tw.tween_property(_card, "modulate:a", 0.0, 0.3)
+		tw.tween_callback(func() -> void: _card.visible = false)
 
 
 func _animate_shot(delta: float) -> void:
@@ -460,6 +500,26 @@ func _build_ui() -> void:
 	_text = UiUtil.label("", &"", 20)
 	_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	col.add_child(_text)
+	_card = PanelContainer.new()                   # Casting (08 §4.2): above the subtitles, never over the centre
+	_card.name = "CandidateCard"
+	_card.visible = false
+	_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_card.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	_card.offset_left = 8
+	_card.offset_bottom = -96
+	_card.offset_top = -170
+	_card.add_theme_stylebox_override("panel", UiUtil.box_style(UiTheme.C_ACCENT.darkened(0.35), Color(0, 0, 0, 0), 0,
+		0.21, 22, 6))                              # paper on dark magenta: 6.3 : 1
+	frame.add_child(_card)
+	var card_col: VBoxContainer = UiUtil.vbox(0)
+	_card.add_child(card_col)
+	var ct: Label = UiUtil.label("", &"", 24, UiUtil.C_PAPER)
+	ct.name = "CardTitle"
+	ct.add_theme_font_override("font", UiTheme.font_bold())
+	card_col.add_child(ct)
+	var cj: Label = UiUtil.label("", &"", 18, UiUtil.C_PAPER)
+	cj.name = "CardJob"
+	card_col.add_child(cj)
 	_flash = ColorRect.new()
 	UiUtil.full_rect(_flash)
 	_flash.color = Color(1, 1, 1, 0)

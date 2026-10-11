@@ -503,10 +503,39 @@ func _commit(save_now: bool = true) -> void:
 		flush()
 
 
-# --- Casting (08, K0 → K1/K3) -----------------------------------------------------------------------------------------
-# STUB(K0) — owned by 08-K1 (K3: the KI-Casting rows). Replace completely, keep the hook.
+# --- Casting (08, K1; K3 adds the KI-Casting rows) --------------------------------------------------------------------
 
-## K1: the section "Kandidat:in" (delete the candidate: persona files, consent, leftovers — 08 §1.7, §2.5); K3: the
-## KI-Casting switch and the withdrawal of the consent. Stub: no section (nothing visible before K1).
+## The section "Kandidat:in" (08 §2.5, D-7): "Kandidat:in löschen" — every persona file on this device, the leftovers
+## with names (Save.delete_candidate); the running game goes on as the canon Kai, saves stay. Asks first. K3: the
+## KI-Casting switch and the withdrawal of the consent.
 func _persona_section() -> void:
-	pass
+	_section("Kandidat:in")
+	var row: HBoxContainer = _row("Kandidat:in löschen", "Name, Vorleben, Hobby — alle Karten auf diesem Gerät.")
+	var b: Button = UiUtil.button("Löschen …", &"")
+	b.name = "DeleteCandidate"
+	b.custom_minimum_size = Vector2(240, 0)
+	b.add_theme_font_size_override("font_size", 18)
+	UiUtil.touch_pad(b)
+	row.add_child(b)
+	b.pressed.connect(func() -> void: _ask_delete_candidate(b))
+	_register("delete_candidate", b)
+
+
+func _ask_delete_candidate(b: Button) -> void:
+	if not ResourceLoader.exists(CONFIRM):
+		return
+	var d: Node = (load(CONFIRM) as PackedScene).instantiate()
+	d.call("setup", {"title": "Kandidat:in löschen", "text": "Alle Kandidatenkarten auf diesem Gerät löschen? Die " +
+		"Spielstände bleiben, die Kandidat:in heißt danach wieder Kai.", "yes": "Löschen", "no": "Abbrechen",
+		"default_no": true, "danger": true})
+	d.process_mode = process_mode if process_mode != Node.PROCESS_MODE_INHERIT else Node.PROCESS_MODE_ALWAYS
+	if get_tree().paused:
+		d.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	d.connect("closed", func(yes: bool) -> void:
+		if yes:
+			var err: Error = Save.delete_candidate()
+			Events.toast_requested.emit("Kandidat:in gelöscht." if err == OK else
+				"Löschen nicht vollständig: " + Save.last_error(), &"check" if err == OK else &"warning")
+		if is_instance_valid(b):
+			UiUtil.focus_later(b))
+	add_child(d)

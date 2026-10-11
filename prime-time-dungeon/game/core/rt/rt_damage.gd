@@ -35,9 +35,10 @@ static func fold_factor(factors: Array[int], cap: int) -> int:
 
 
 ## A formula (physical / magical) or fixed hit of `sk` from `src` on `tgt` (07 §3.9.1): DamageCalc with the real-time
-## power, then the fold [dmg_dealt_pm of src, dmg_taken_pm of tgt (per status and stack), dmg_pm (enemy sources),
-## opener_pm (PREEMPTIVE: dazed targets and the first damaging hit), COMBO_PM]. Percent skills (rt.pct_maxhp) go to
-## pct_hit. Returns the damage dealt (all hits of the skill).
+## power (× the unit's RtMods power factor), then the fold [dmg_dealt_pm of src, dmg_taken_pm of tgt (per status and
+## stack), dmg_pm (enemy sources), opener_pm (PREEMPTIVE: dazed targets and the first damaging hit), COMBO_PM, the
+## RtMods factors (src dmg_dealt_pm, tgt dmg_taken_pm, its first_hit_taken_pm once)]. Percent skills (rt.pct_maxhp)
+## go to pct_hit. Returns the damage dealt (all hits of the skill).
 static func skill_hit(sim: RtSim, src: RtUnit, tgt: RtUnit, sk: SkillDef, kind: int, ai: bool, cmd: int,
 		item_id: String = "") -> int:
 	if sk == null or tgt == null or not sim.is_alive(tgt):
@@ -45,7 +46,7 @@ static func skill_hit(sim: RtSim, src: RtUnit, tgt: RtUnit, sk: SkillDef, kind: 
 	var pct: int = int(sk.rt.get("pct_maxhp", 0))
 	if pct > 0:
 		return pct_hit(sim, src, tgt, sk, pct, kind, ai, cmd)
-	var view: SkillDef = sim.view(sk)
+	var view: SkillDef = sim.view_for(src, sk)
 	var element: String = src.attack_element if src.side == Combatant.Side.PARTY and sk.id == src.attack_skill \
 		else sk.element
 	var combo: bool = kind == Kind.ABILITY and src.side == Combatant.Side.PARTY and _combo(sim, src, tgt)
@@ -72,6 +73,7 @@ static func skill_hit(sim: RtSim, src: RtUnit, tgt: RtUnit, sk: SkillDef, kind: 
 			factors.append(src.opener_pm)
 		if combo:
 			factors.append(sim.bal.i("COMBO_PM"))
+		sim.mod_factors(src, tgt, true, factors)
 		var amount: int = fold(r.amount, factors, sim.bal.i("DMG_FACTOR_MAX_PM"))
 		if src.side == Combatant.Side.PARTY and amount > 0:
 			src.opener_done = true
@@ -82,7 +84,9 @@ static func skill_hit(sim: RtSim, src: RtUnit, tgt: RtUnit, sk: SkillDef, kind: 
 
 ## Percent hit (07 §3.9.1, E30): base = max_hp(tgt) × pct / 100 without formula, crit, variance and dmg_pm; folded:
 ## first the target's element factor for the skill's element (500…1500 ‰, immunity counts as 500; no element → no
-## step), then its dmg_taken_pm factors, then sts_guard as PCT_GUARD_PM (unless rt.ignore_guard).
+## step), then enemy_dmg_mult of an enemy source (the difficulty: Vorabend, tutorial — decided after I1), then the
+## target's dmg_taken_pm factors (statuses, then RtMods incl. its first hit), then sts_guard as PCT_GUARD_PM (unless
+## rt.ignore_guard).
 static func pct_hit(sim: RtSim, src: RtUnit, tgt: RtUnit, sk: SkillDef, pct: int, kind: int, ai: bool,
 		cmd: int) -> int:
 	if tgt == null or not sim.is_alive(tgt):
@@ -94,7 +98,10 @@ static func pct_hit(sim: RtSim, src: RtUnit, tgt: RtUnit, sk: SkillDef, pct: int
 		factors.append(elem)
 		r.weak = elem > 1000
 		r.resist = elem < 1000
+	if src != null and src.side == Combatant.Side.ENEMY:
+		factors.append(FixedMath.pm(sim.setup.enemy_dmg_mult))
 	StatusFx.factor_list(tgt, "dmg_taken_pm", factors)
+	sim.mod_factors(src, tgt, false, factors)
 	if tgt.has_flag("guard") and not bool(sk.rt.get("ignore_guard", false)):
 		factors.append(sim.bal.i("PCT_GUARD_PM"))
 	var amount: int = fold(FixedMath.div_round(tgt.max_hp() * pct, 100), factors, sim.bal.i("DMG_FACTOR_MAX_PM"))
@@ -111,12 +118,14 @@ static func pct_element_pm(tgt: RtUnit, element: String) -> int:
 
 
 ## A periodic status hit (07 §3.8): `amount` already holds stacks, element and boss factor; the target's dmg_taken_pm
-## folds in. The DAMAGE event has no actor (status tick, like CTB), the KO names the status source with command −1.
+## (statuses, RtMods incl. its first hit) folds in. The DAMAGE event has no actor (status tick, like CTB), the KO
+## names the status source with command −1.
 static func status_damage(sim: RtSim, src_id: String, tgt: RtUnit, amount: int, def: StatusDef) -> void:
 	if tgt == null or not sim.is_alive(tgt):
 		return
 	var factors: Array[int] = []
 	StatusFx.factor_list(tgt, "dmg_taken_pm", factors)
+	sim.mod_factors(null, tgt, false, factors)
 	var amt: int = fold(amount, factors, sim.bal.i("DMG_FACTOR_MAX_PM"))
 	var r: HitResult = HitResult.new()
 	r.immune = amount <= 0
@@ -200,12 +209,12 @@ static func _hit_mp(sim: RtSim, u: RtUnit, taken: bool) -> void:
 		u.mp_hit_ready = c + (every if every > 0 else sim.bal.i("HIT_MP_EVERY_TICKS"))
 
 
-## Heals `tgt` by up to `amount` (capped at the missing HP): HEAL with the effective amount, heal threat of a party
-## source. 0 for a KO'd / full target (no event).
+## Heals `tgt` by up to `amount` × its RtMods heal_taken_pm (capped at the missing HP): HEAL with the effective
+## amount, heal threat of a party source. 0 for a KO'd / full target (no event).
 static func heal(sim: RtSim, src: RtUnit, tgt: RtUnit, amount: int, skill_id: String, status_id: String) -> int:
 	if tgt == null or not sim.is_alive(tgt) or amount <= 0:
 		return 0
-	var h: int = mini(amount, tgt.max_hp() - tgt.hp)
+	var h: int = mini(sim.heal_taken(tgt, amount), tgt.max_hp() - tgt.hp)
 	if h <= 0:
 		return 0
 	tgt.hp += h
@@ -252,8 +261,8 @@ static func change_mp(sim: RtSim, u: RtUnit, delta: int) -> int:
 
 
 ## KO (07 §2.6, §3.3): the unit loses every status, its cast fails, its queue and orders are dropped (its pending hits
-## lapse when they come due); party: threat reset, KO count, control follows life; enemies: kill bookkeeping and the
-## controlled unit's automatic retarget.
+## lapse when they come due), its pending telegraphs end (TELEGRAPH_CANCELLED; its zones stay); party: threat reset, KO
+## count, control follows life; enemies: kill bookkeeping and the controlled unit's automatic retarget.
 static func ko(sim: RtSim, tgt: RtUnit, src: RtUnit, skill_id: String, item_id: String, amount: int, overkill: bool,
 		cmd: int, ai: bool) -> void:
 	var c: int = sim.tick()
@@ -270,6 +279,7 @@ static func ko(sim: RtSim, tgt: RtUnit, src: RtUnit, skill_id: String, item_id: 
 	ev.by_ai = ai
 	if not tgt.cast.is_empty():
 		sim.fail_cast(tgt, "dead")
+	sim.drop_telegraphs(tgt)
 	tgt.queued = {}
 	tgt.partner_order = {}
 	tgt.follow_up = {}

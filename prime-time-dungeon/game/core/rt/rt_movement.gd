@@ -179,9 +179,10 @@ static func goal_for(sim: RtSim, u: RtUnit, t: RtUnit) -> Array[int]:
 
 
 ## Step 9 (07 §3.3): sim-driven units (enemies, AI partner, autopilot) walk — entries first (no repulsion, at most
-## ENTER_MAX_TICKS, then they stand there; stationary units too: they appear at the end), then goals (straight towards
-## project_walkable(goal), min(speed, distance)), then enemy repulsion and clamping; finally the flight counter of the
-## controlled unit.
+## ENTER_MAX_TICKS — a summon's entry from its summon tick on (its pop_in_until − POP_IN_TICKS) —, then they stand
+## there; stationary units too: they appear at the end; an arriving summon is on stage at once and acts POP_IN_TICKS
+## later), then goals (straight towards project_walkable(goal), min(speed, distance)), then enemy repulsion and
+## clamping; finally the flight counter of the controlled unit.
 static func move_units(sim: RtSim, c: int) -> void:
 	var geo: Dictionary = sim.setup.geo
 	var bal: RtBalance = sim.bal
@@ -197,10 +198,12 @@ static func move_units(sim: RtSim, c: int) -> void:
 		if not u.entry.is_empty():
 			if not u.stationary:
 				_walk(u, u.entry[0], u.entry[1], speed(u))
-			if (u.x == u.entry[0] and u.z == u.entry[1]) or c + 1 >= bal.i("ENTER_MAX_TICKS"):
+			if (u.x == u.entry[0] and u.z == u.entry[1]) \
+					or c + 1 >= maxi(bal.i("ENTER_MAX_TICKS"), u.pop_in_until - bal.i("POP_IN_TICKS")):
 				u.x = u.entry[0]
 				u.z = u.entry[1]
 				u.entry = []
+				u.pop_in_until = mini(u.pop_in_until, c + bal.i("POP_IN_TICKS"))
 				sim.leader_arrived(u, c)
 			continue
 		if u.stationary or u.goal.size() != 2 or not u.cast.is_empty() or StatusFx.has_flag(u, "no_move"):
@@ -248,8 +251,10 @@ static func _walk(u: RtUnit, gx: int, gz: int, step_cm: int) -> void:
 static func _repulse(sim: RtSim) -> void:
 	var geo: Dictionary = sim.setup.geo
 	var list: Array[RtUnit] = []
+	var on_stage: int = sim.tick() + sim.bal.i("POP_IN_TICKS")            # targetable: tick ≥ pop_in_until − POP_IN
 	for u: RtUnit in sim.units_ref():
-		if u.side == Combatant.Side.ENEMY and sim.is_alive(u) and u.entry.is_empty() and sim.targetable(u):
+		if u.side == Combatant.Side.ENEMY and u.hp > 0 and not u.left_battle and u.entry.is_empty() \
+				and on_stage >= u.pop_in_until:
 			list.append(u)
 	for i in list.size():
 		for j in range(i + 1, list.size()):

@@ -170,6 +170,30 @@ static func group_anchor(geo: Dictionary, cx: int, cz: int) -> Vector2i:
 	return DetMath.toward(0, 0, -cx, -cz, r)
 
 
+## Where a summon "at the door" appears (07 §3.12): the end of the door lane (at the door, ROOM_INNER from the centre)
+## of the door nearest to (cx, cz) — the party centre — (ties N, E, S, W); in a closed set the ring point in front of
+## that door (geo.r − r); without a door the ring point opposite (cx, cz) (north of the centre if it is the centre).
+static func door_spot(geo: Dictionary, cx: int, cz: int, r: int) -> Vector2i:
+	var ring: int = maxi(0, int(geo.get("r", 0)) - r)
+	var inner: int = int(geo.get("room_inner", DEFAULT_ROOM_INNER))
+	var doors: int = int(geo.get("doors", 0))
+	var best: int = 0
+	var best_d: int = -1
+	for d: int in DOOR_ORDER:
+		if (doors & d) == 0:
+			continue
+		var p: Vector2i = _from_along_across(d, inner, 0)
+		var d2: int = DetMath.dist2(cx, cz, p.x, p.y)
+		if best_d < 0 or d2 < best_d:
+			best = d
+			best_d = d2
+	if best_d < 0:
+		if cx == 0 and cz == 0:
+			return Vector2i(0, -ring)
+		return DetMath.toward(0, 0, -cx, -cz, ring)
+	return _from_along_across(best, ring if bool(geo.get("closed", false)) else inner, 0)
+
+
 ## Escape point of a unit leaving telegraphs and zones (07 §5.5): candidates in the 16 directions yaw = k × 16 at
 ## ESCAPE_DISTS from the unit, ordered by distance, then by closeness to the preferred direction (melee: towards its
 ## target, ranged — keep_cm > 0: away from the nearest enemy; none: no preference), then k; the first one that is
@@ -181,14 +205,13 @@ static func escape_point(sim: RtSim, u: RtUnit) -> Vector2i:
 		return Vector2i.ZERO
 	var geo: Dictionary = sim.setup.geo
 	var pref: int = _preferred_yaw(sim, u)
-	var order: Array = []
+	var order: PackedInt32Array = []                         # gap × 16 + k: sorted by gap, then k
 	for k in 16:
-		order.append([_yaw_gap(k * 16, pref) if pref >= 0 else 0, k])
-	order.sort_custom(func(a: Array, b: Array) -> bool:
-		return int(a[0]) < int(b[0]) or (int(a[0]) == int(b[0]) and int(a[1]) < int(b[1])))
+		order.append((_yaw_gap(k * 16, pref) if pref >= 0 else 0) * 16 + k)
+	order.sort()
 	for d: int in ESCAPE_DISTS:
-		for e: Array in order:
-			var f: Vector2i = DetMath.dir(int(e[1]) * 16)
+		for e: int in order:
+			var f: Vector2i = DetMath.dir((e % 16) * 16)
 			var x: int = u.x + FixedMath.div_round(f.x * d, DetMath.ONE)
 			var z: int = u.z + FixedMath.div_round(f.y * d, DetMath.ONE)
 			if walkable(geo, x, z, u.radius, false) and sim.safe_point(u, x, z):

@@ -1,9 +1,9 @@
 class_name RtTelegraph extends RefCounted
 ## Announced ground shape (telegraph) or lingering zone (07 §3.4, §6.3). Geometry in room-local cm; read by the
 ## TelegraphLayer (R2). contains() is the "Fußpunkt-Regel" shape test (centre point only, inside the set ring, DetMath);
-## contains_inflated() grows the shape by a margin for the AI's dodging (ESCAPE_MARGIN_CM, 07 §5.5). R1b-I2 brings the
-## geometry and the AI reaction to a new telegraph (RtSim.add_telegraph); impacts, zones and the enemy rules that
-## create telegraphs follow in R1b-I3.
+## contains_inflated() grows the shape by a margin for the AI's dodging (ESCAPE_MARGIN_CM, 07 §5.5). RtSim.add_telegraph
+## places every shape (ids, MAX_TELEGRAPHS, the AI reaction); Tele (rt_tele.gd) creates them from skills and phase ops
+## and plays impacts, dodges and zones (R1b-I3).
 
 enum Shape { CIRCLE, CONE, RING, LINE }
 
@@ -28,6 +28,9 @@ var status_id: String = ""                  # zones: status applied per period
 var tick_skill: String = ""                 # zones: skill applied per period
 var inside_last: Dictionary = {}            # unit id → last ct inside (dodge detection, §6.3)
 var set_r: int = 0                          # the set radius the shape is clipped to (in_set, §3.5.4); 0 = unclipped
+## Derived, not state (RtSim.add_telegraph): (bound_radius() + 2 × margin)² — a point (px, pz) with
+## (px − x)² + (pz − z)² > far2 lies outside the shape grown by up to `margin` (the AI's quick reject); −1 = unset.
+var far2: int = -1
 
 
 ## The shape test of the point (px, pz) (07 §6.3): circle — distance ≤ r; cone — distance ≤ r and inside ±half_deg of
@@ -36,13 +39,16 @@ var set_r: int = 0                          # the set radius the shape is clippe
 func contains(px: int, pz: int) -> bool:
 	if set_r > 0 and px * px + pz * pz > set_r * set_r:
 		return false
+	var dx: int = px - x
+	var dz: int = pz - z
 	match shape:
 		Shape.CIRCLE:
-			return DetMath.in_circle(px, pz, x, z, r)
+			return r >= 0 and dx * dx + dz * dz <= r * r
 		Shape.CONE:
 			return DetMath.in_cone(px, pz, x, z, yaw, r, half_deg)
 		Shape.RING:
-			return DetMath.in_ring(px, pz, x, z, r2, r)
+			var d2: int = dx * dx + dz * dz
+			return d2 >= r2 * r2 and d2 <= r * r
 		Shape.LINE:
 			return DetMath.in_line(px, pz, x, z, yaw, r, r2)
 	return false
@@ -79,6 +85,14 @@ func contains_inflated(px: int, pz: int, margin: int) -> bool:
 				return true
 			return _near_edge(vx, vz, m, 1) or _near_edge(vx, vz, m, -1)
 	return false
+
+
+## No point farther than this from (x, z) lies inside the shape (circle, ring, cone: r; a line: its length and width
+## plus the rounding of DetMath.dir); grown by a margin m, no point farther than bound_radius() + 2 m.
+func bound_radius() -> int:
+	if shape == Shape.LINE:
+		return r + r2 + r / 128 + 4
+	return r
 
 
 ## Canonical snapshot: every field, `shape` as int, inside_last with sorted keys.

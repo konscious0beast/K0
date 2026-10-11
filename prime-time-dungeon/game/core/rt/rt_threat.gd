@@ -72,8 +72,8 @@ static func top_target(sim: RtSim, e: RtUnit) -> String:
 	var th: Dictionary = e.threat
 	var best: RtUnit = null
 	var best_t: int = 0
-	for u: RtUnit in sim.units_ref():
-		if u.side != Combatant.Side.PARTY or u.hp <= 0 or u.left_battle:
+	for u: RtUnit in sim.party_ref():
+		if u.hp <= 0 or u.left_battle:
 			continue
 		var t: int = int(th.get(u.id, 0))
 		if best == null or t > best_t:

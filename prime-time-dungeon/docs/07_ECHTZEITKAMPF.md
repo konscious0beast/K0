@@ -1100,6 +1100,17 @@ Pro Tick ist die Ereignisreihenfolge die Verarbeitungsreihenfolge (§3.3); `beat
 | Harness: ein Bosskampf (≈ 6 000 Ticks) headless | ≤ 2,0 s |
 | Nachholen pro Frame (Hänger) | höchstens 4 Ticks; danach wird Zeit verworfen (Zeitlupe, kein Spiralen) |
 
+**Gestaffeltes KI-Denken (R1b-I3, Teil der Sim-Regeln):** Jede sim-gesteuerte Einheit (Gegner, KI-Partner, Autopilot) wertet
+ihre Regeln und ihr Ziel nur in jedem `AI_THINK_TICKS` = 3. Tick aus, versetzt um ihren Index in der Einheitenliste (§3.3):
+Einheit `i` denkt im Tick `c`, wenn `(c + i) % 3 == 0` (Party p0 = 0, p1 = 1, dann die Gegner in Listenreihenfolge;
+Beschwörungen hängen sich hinten an). Was dazwischen weiterläuft: Bewegung (Schritt 9) zum zuletzt gesetzten Ziel, Auto-Angriffe,
+Zauber, Status, Telegraphen — und bei Party-KI die Ausweichreaktion (§5.5) und das Folgen bei Flucht in **jedem** Tick (die
+Reaktionszeiten `REACT_TICKS` ≥ 6 werden damit nicht verlängert). Regel-Timer bleiben exakt (`first_ms`, `every_ms`); eine bereite
+Regel feuert im ersten Denk-Tick ab ihrer Bereitschaft (also bis zu 2 Ticks später). Der Fluchtpunkt einer laufenden Reaktion
+bleibt gespeichert (`RtSim.escape`, Teil des Schnappschusses), solange er sicher bleibt (§5.5) — eine Suche je Reaktion statt je
+Tick. Gemessen (R1b-I3, ruhige Maschine, Last 0,3–0,4, 4 Kerne): 2 Party + 6 Gegner (mit Regeln, Zonen, Telegraph-Zauber) + 10
+Formen ≈ 0,22–0,23 ms je `step()` (Median von 12 Läufen), der Zwei-Gruppen-Kampf ≈ 0,12 ms je Tick.
+
 ### 3.16 Stellwerte: `data/rt_balance.json` und `RtBalance`
 
 Alle Zahlen, die Balancing verändern darf, stehen in **`data/rt_balance.json`** (`{"schema": 1, "values": {…}}`, Eigentum R4,
@@ -1509,6 +1520,10 @@ Schritt 7 an (§3.3). Zufällige Ziele würfelt erst die Anwendung. Auswertung f
 
 Erste Bereitschaft: `first_ms` + (Gegner) Slot × `AI_SLOT_OFFSET_TICKS`, damit gleiche Gegner nicht gleichzeitig zaubern.
 
+**Denk-Takt (R1b-I3, §3.15):** Die Auswertung läuft je Einheit nur in ihren Denk-Ticks (`(c + Listenindex) % AI_THINK_TICKS
+== 0`); dazwischen bleibt ihr Bewegungsziel stehen. Party-KI prüft Ausweichen (§5.5) und Folgen bei Flucht trotzdem in jedem
+Tick. Ein Gegner, der nicht denkt, tut in Schritt 7 nichts (Auto-Angriff, Bewegung und Zauber laufen in ihren Schritten weiter).
+
 **Bedingungen** (`RT_CONDITIONS`, alle in einer Regel müssen gelten; „Verbündete“/„Gegner“ relativ zur Einheit):
 
 | Schlüssel | Wert | Wahr, wenn … |
@@ -1651,8 +1666,10 @@ dürfen die Unterbrecher-Reserve aufbrauchen.
   (`yaw = k × 16`) × Abstände 100/200/300/450/600 cm; der erste Kandidat (sortiert nach Abstand, dann nach Winkelnähe zur
   bevorzugten Richtung — Nahkampf: zum Ziel, Fernkampf: weg vom nächsten Gegner —, dann `k`), der begehbar ist (im Ring, nicht in
   einer Sperrfläche) und außerhalb aller aufgeblasenen gegnerischen Formen liegt, die in den nächsten 60 Ticks einschlagen, und
-  außerhalb aller Zonen. Kein Kandidat → stehen bleiben. Läuft ein eigener Zauber mit `moving_cancels` und endet er nicht vor dem
-  Einschlag minus Laufzeit, bricht die KI ihn ab (`CAST_FAILED moved`).
+  außerhalb aller Zonen. Kein Kandidat → stehen bleiben. Der gefundene Punkt bleibt für die laufende Reaktion gespeichert
+  (`RtSim.escape`, im Schnappschuss) und wird erst neu gesucht, wenn er unsicher wird oder die Einheit auf ihm steht (R1b-I3,
+  §3.15). Läuft ein eigener Zauber mit `moving_cancels` und endet er nicht vor dem Einschlag minus Laufzeit, bricht die KI ihn
+  ab (`CAST_FAILED moved`).
 - **Zonen** meidet die KI immer (Bewegungsziele in Zonen werden auf `escape_point` umgelenkt).
 - **Abstand:** Mopsula hält `keep_cm[preset]` (≤ 700) zum Ziel, so weit der Ring es zulässt, und bleibt ≤ `follow_cm` von der
   gesteuerten Figur, wenn kein Ziel besteht; Kai geht in Nahkampf. Verlässt die gesteuerte Figur den Ring, folgt der Partner

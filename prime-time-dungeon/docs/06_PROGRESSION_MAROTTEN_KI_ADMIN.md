@@ -620,7 +620,7 @@ Die Multiplikatoren wirken auf die **Kampagnen-Show-Währung**; in gewerteten Ev
 | ID | Name | Bedingung | Box | Hidden |
 |---|---|---|---|---|
 | `ach_ul_first` | Einmal ohne alles | `e.kind == "liga" && e.event == "battle" && e.tier >= 1` | bronze | — |
-| `ach_ul_boss` | Ohne Netz und doppelten Boden | `e.kind == "liga" && e.event == "battle" && e.tier >= 1 && e.is_boss == true` | silver | — |
+| `ach_ul_boss` | Leichtsinn mit Stil | `e.kind == "liga" && e.event == "battle" && e.tier >= 1 && e.is_boss == true` | silver | — |
 | `ach_duo_first` | Leichtes Gepäck im Doppelpack | `e.kind == "liga" && e.event == "battle" && e.tier == 2` | silver | — |
 | `ach_duo_floor` | Eine Etage leichtes Gepäck | `e.kind == "liga" && e.event == "floor" && e.floor_tier == 2 && e.battles >= 5` | gold | — |
 | `ach_duo_flawless` | Ohne Kratzer, ohne Rüstung | `e.kind == "liga" && e.event == "battle" && e.tier == 2 && e.is_floor_boss == true && e.party_kos == 0` | gold | ✓ |
@@ -628,7 +628,7 @@ Die Multiplikatoren wirken auf die **Kampagnen-Show-Währung**; in gewerteten Ev
 
 Achievement-Namen und -Beschreibungen (Polish-Pass 2026-10-10): neutral statt Wäsche-Wortspiel („Doppel-Feinripp“ →
 „Leichtes Gepäck im Doppelpack“, „Eine Etage Feinripp“ → „Eine Etage leichtes Gepäck“) und ohne Entblößungs-Witz („Frische
-Brise im Revier“ → „Ohne Netz und doppelten Boden“); jede Beschreibung nennt die Regel im vollen Wortlaut „ohne Rüstung &
+Brise im Revier“ → „Leichtsinn mit Stil“; „Ohne Netz“ ist seit 09 der Name des Staffel-Modus); jede Beschreibung nennt die Regel im vollen Wortlaut „ohne Rüstung &
 ohne Accessoire“. Der Name „Unterhosen-Liga“ bleibt (Entscheidung des Nutzers).
 
 **M.O.D.-Zeilen Liga** (Präfix `liga_`, nicht sexuell, keine Nacktheits-Andeutung — **Unterwäsche bleibt immer an** —,

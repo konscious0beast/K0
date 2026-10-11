@@ -7,8 +7,10 @@ extends TestCase
 ## in the last 5 GCD ticks (afterwards yes), 0/0/0 = without E25, ai_seen forgotten at cast end / interrupt / KO;
 ## dodging with REACT_TICKS 15/12/6 and "missed" 130/130/40 ‰, the attack AI leaves the Putzmittelnebel in time,
 ## RtGeo.escape_point, the cast abort, zones; the Partner-Spezial holds the rules, keep_cm with the tactic, the
-## autopilot, suggest(); the fast rule walk equals a plain reference of 07 §5.3 in whole combats. Enemy rules, phases,
-## the slot offset and enrage come with R1b-I3.
+## autopilot, suggest(); the fast rule walk equals a plain reference of 07 §5.3 in whole combats (party and enemies).
+## R1b-I3: the enemy rules (rt.rules, slot offset, timers), boss phases with every op (PHASE_CHANGE at the start,
+## perfect phases, several thresholds in one tick), enrage, summons (cap, door / near, SUMMON_HP_PM, pop-in, threat),
+## random targets (auto_target random_enemy, skill target random_enemy), the staggered thinking (07 §3.15).
 
 const Ability := preload("res://core/rt/rt_ability.gd")
 const FixedMath := preload("res://core/stats/fixed_math.gd")
@@ -52,6 +54,12 @@ static func _ai_starts(events: Array[ActionEvent], uid: String) -> Array:
 		if e.type == T.ACTION_START and e.actor_id == uid and e.by_ai:
 			out.append([e.tick, e.item_id if e.item_id != "" else e.skill_id])
 	return out
+
+
+## The first tick ≥ ct at which the unit with list index `i` thinks (staggered AI thinking, 07 §3.15: p0 = 0,
+## p1 = 1, e0 = 2 in the dummy combats).
+static func _think(i: int, ct: int) -> int:
+	return ct + posmod(-(ct + i), RtSim.AI_THINK_TICKS)
 
 
 ## The draw `n` of the AI stream of `seed` (07 §3.9.3).
@@ -114,8 +122,8 @@ func test_first_usable_rule_fires_in_list_order() -> void:
 		{"skill": "skl_kai_heavy_swing", "target": "assist"},
 		{"skill": "skl_kai_leash_trip", "target": "assist"}])
 	var ev: Array[ActionEvent] = _until(sim, 50)
-	assert_eq(_ai_starts(ev, "p0"), [[0, "skl_kai_heavy_swing"], [1, "skl_kai_leash_trip"], [45, "skl_kai_heavy_swing"]],
-		"conditions false → skipped; the first usable rule fires; the GCD-free lasso the tick after")
+	assert_eq(_ai_starts(ev, "p0"), [[0, "skl_kai_heavy_swing"], [3, "skl_kai_leash_trip"], [45, "skl_kai_heavy_swing"]],
+		"conditions false → skipped; the first usable rule fires; the GCD-free lasso at its next thinking tick")
 	var st: Array[ActionEvent] = RtKit.of(ev, T.ACTION_START)
 	assert_true(st.all(func(e: ActionEvent) -> bool: return e.by_ai and e.command == K.SKILL), "by_ai on every start")
 	assert_eq(int(sim.tally["party_turns"]), 0, "party_turns counts the person's actions only")
@@ -313,7 +321,7 @@ func test_preset_heal_thresholds() -> void:
 			var kai: RtUnit = sim.unit("p0")
 			kai.hp = kai.max_hp() * pm / 1000
 			sim.submit(RtCommand.preset(0, "p1", preset, {}))
-			var st: Array = _ai_starts(_until(sim, 1), "p1")
+			var st: Array = _ai_starts(_until(sim, 3), "p1")
 			got.append(st.size() == 1 and st[0][1] == "skl_mop_holy_lick")
 		assert_eq(got, want[preset], "Mopsula %s heals Kai at 30 / 50 / 70 %% (thresholds 600 / 350 / 750 ‰)" % preset)
 
@@ -327,7 +335,7 @@ func test_switches() -> void:
 		_hex(sim)
 		var ev: Array[ActionEvent] = _until(sim, 160)
 		var st: Array = _ai_starts(ev, "p0")
-		assert_eq(st.has([5, "skl_kai_leash_trip"]), tog, "interrupt %s: the lasso rule on the caster" % tog)
+		assert_eq(st.has([_think(0, 5), "skl_kai_leash_trip"]), tog, "interrupt %s: the lasso rule on the caster" % tog)
 		assert_eq(RtKit.of(ev, T.CAST_INTERRUPTED).size(), 1 if tog else 0, "… and the interruption")
 		assert_true(st.all(func(x: Array) -> bool: return x[1] != "skl_stunt_kai_suplex"), "show off: no SHOW")
 
@@ -350,7 +358,7 @@ func test_filler_keeps_the_interrupter_mp() -> void:
 	assert_eq(_sim("p0", 2).interrupter_mp(_sim("p0", 2).unit("p1")), 0, "level 2: no interrupter yet")
 	mop.mp = 5
 	heal.unit("p0").hp = heal.unit("p0").max_hp() / 2
-	assert_eq(_ai_starts(_until(heal, 1), "p1"), [[0, "skl_mop_holy_lick"]], "a heal is no filler: it may use the reserve")
+	assert_eq(_ai_starts(_until(heal, 3), "p1"), [[2, "skl_mop_holy_lick"]], "a heal is no filler: it may use the reserve")
 
 
 func test_potions_only_careful_or_switch_never_the_last() -> void:
@@ -397,17 +405,20 @@ func test_potions_only_careful_or_switch_never_the_last() -> void:
 func test_ai_show_after_grace_with_by_ai() -> void:
 	var sim: RtSim = _sim("p0", 6, [{"skill": "skl_stunt_mop_entrance", "target": "self"}])
 	var ev: Array[ActionEvent] = _until(sim, 200)
-	assert_eq(_ai_starts(ev, "p1"), [[150, "skl_stunt_mop_entrance"]], "SHOW ready since ct 0: the AI waits 150 ticks")
+	var first: int = _think(1, 150)
+	assert_eq(_ai_starts(ev, "p1"), [[first, "skl_stunt_mop_entrance"]],
+		"SHOW ready since ct 0: the AI waits 150 ticks (then its next thinking tick)")
 	var sr: Array[ActionEvent] = RtKit.of(ev, T.STUNT_RESULT)
-	assert_true(sr.size() == 1 and sr[0].by_ai and sr[0].actor_id == "p1" and sr[0].tick == 180,
+	assert_true(sr.size() == 1 and sr[0].by_ai and sr[0].actor_id == "p1" and sr[0].tick == first + 30,
 		"STUNT_RESULT by_ai at the cast end")
-	assert_eq(sim.show_ready_at(), 180 + 900, "the party SHOW cooldown starts at the cast end")
+	assert_eq(sim.show_ready_at(), first + 30 + 900, "the party SHOW cooldown starts at the cast end")
 	ev = _until(sim, 1300)
-	assert_eq(_ai_starts(ev, "p1"), [[1230, "skl_stunt_mop_entrance"]], "next: ready at 1080, + 150")
+	assert_eq(_ai_starts(ev, "p1"), [[_think(1, first + 30 + 900 + 150), "skl_stunt_mop_entrance"]],
+		"next: ready at the cooldown end, + 150")
 	var after: RtSim = _sim("p0", 6, [{"skill": "skl_stunt_mop_entrance", "target": "self"}])
 	after.submit(RtCommand.ability(0, "p0", "skl_stunt_kai_suplex", "e0"))
 	var ev2: Array[ActionEvent] = _until(after, 1100)
-	assert_eq(_ai_starts(ev2, "p1"), [[1050, "skl_stunt_mop_entrance"]], "after the person's SHOW: 900 + 150")
+	assert_eq(_ai_starts(ev2, "p1"), [[_think(1, 1050), "skl_stunt_mop_entrance"]], "after the person's SHOW: 900 + 150")
 
 
 func test_finale_never() -> void:
@@ -478,10 +489,12 @@ func test_interrupt_from_ai_seen_late_never() -> void:
 		var seen: int = int(sim.unit("p0").ai_seen["e0"])
 		var ev: Array[ActionEvent] = _until(sim, 80)
 		var cut: Array[ActionEvent] = RtKit.of(ev, T.CAST_INTERRUPTED)
-		if seen < 65:
+		var at: int = _think(0, seen)
+		if at < 65:
 			cases["on_time"] += 1
-			assert_eq(_ai_starts(ev, "p0"), [[seen, "skl_kai_leash_trip"]], "seed %d: the lasso at ai_seen" % seed)
-			assert_true(cut.size() == 1 and cut[0].tick == seen + 9 and cut[0].actor_id == "p0" and cut[0].by_ai,
+			assert_eq(_ai_starts(ev, "p0"), [[at, "skl_kai_leash_trip"]],
+				"seed %d: the lasso at ai_seen (its next thinking tick)" % seed)
+			assert_true(cut.size() == 1 and cut[0].tick == at + 9 and cut[0].actor_id == "p0" and cut[0].by_ai,
 				"… its hit interrupts 9 ticks later")
 		else:
 			cases["late"] += 1
@@ -501,7 +514,7 @@ func test_gcd_tail_waits_then_acts() -> void:
 		_until(sim, seen)
 		kai.gcd_until = seen + gap
 		kai.gcd_len = 45
-		var want: int = seen + gap if gap <= 5 else seen
+		var want: int = _think(0, seen + gap if gap <= 5 else seen)
 		assert_eq(_ai_starts(_until(sim, 70), "p0"), [[want, "skl_kai_leash_trip"]],
 			"GCD %d ticks left at ai_seen: %s" % [gap, "waits for its end" if gap <= 5 else "at once"])
 
@@ -511,14 +524,14 @@ func test_no_interrupt_during_an_own_cast() -> void:
 		"caster_within_cm": 600}}, {"skill": "skl_mop_noble_flame", "target": "assist"}],
 		{"AI_INTERRUPT_LATE_PM": 0, "AI_INTERRUPT_JITTER_TICKS": 0})
 	_until(sim, 5)
-	assert_eq(sim.unit("p1").cast.get("skill", ""), "skl_mop_noble_flame", "casting 0 … 45")
+	assert_eq(sim.unit("p1").cast.get("skill", ""), "skl_mop_noble_flame", "casting 2 … 47")
 	_hex(sim, "p0")
 	assert_eq(sim.unit("p1").ai_seen["e0"], 20)
 	var ev: Array[ActionEvent] = _until(sim, 70)
 	var barks: Array = _ai_starts(ev, "p1").filter(func(x: Array) -> bool: return x[1] == "skl_mop_thunder_bark")
-	assert_eq(barks, [[45, "skl_mop_thunder_bark"]], "seen at 20, free at 45 (the own cast is never broken off)")
+	assert_eq(barks, [[47, "skl_mop_thunder_bark"]], "seen at 20, free at 47 (the own cast is never broken off)")
 	var cut: Array[ActionEvent] = RtKit.of(ev, T.CAST_INTERRUPTED)
-	assert_true(cut.size() == 1 and cut[0].tick == 46 and cut[0].actor_id == "p1")
+	assert_true(cut.size() == 1 and cut[0].tick == 48 and cut[0].actor_id == "p1")
 
 
 func test_zero_reaction_is_without_e25() -> void:
@@ -527,7 +540,8 @@ func test_zero_reaction_is_without_e25() -> void:
 	_until(sim, 5)
 	_hex(sim)
 	assert_eq([sim.unit("p0").ai_seen["e0"], sim.unit("p1").ai_seen["e0"]], [5, 5])
-	assert_eq(_ai_starts(_until(sim, 30), "p0"), [[5, "skl_kai_leash_trip"]], "0/0/0: the first tick it can act")
+	assert_eq(_ai_starts(_until(sim, 30), "p0"), [[_think(0, 5), "skl_kai_leash_trip"]],
+		"0/0/0: the first (thinking) tick it can act")
 
 
 func test_ai_seen_is_forgotten() -> void:
@@ -542,7 +556,7 @@ func test_ai_seen_is_forgotten() -> void:
 		{"AI_INTERRUPT_REACT_TICKS": 0, "AI_INTERRUPT_JITTER_TICKS": 0, "AI_INTERRUPT_LATE_PM": 0})
 	_until(cut, 5)
 	_hex(cut)
-	assert_eq(RtKit.of(_until(cut, 15), T.CAST_INTERRUPTED).size(), 1)
+	assert_eq(RtKit.of(_until(cut, _think(0, 5) + 10), T.CAST_INTERRUPTED).size(), 1)
 	assert_eq(cut.unit("p0").ai_seen, {}, "at the interruption")
 	var ko: RtSim = _sim("p1", 6, [{"skill": "skl_kai_heavy_swing", "target": "assist"}])
 	_until(ko, 5)
@@ -588,10 +602,11 @@ func test_missed_telegraphs_by_tactic() -> void:
 		var missed: int = 0
 		for k in 300:
 			kai.react_at = -1
-			_tele(sim, kai.x, kai.z, 250, 30)
+			var t: RtTelegraph = _tele(sim, kai.x, kai.z, 250, 30)
 			var miss: bool = FixedMath.roll_bp(_ai_draw(21, n + 1 + 2 * k), sim.bal.sub("AI_DODGE_MISS_PM", preset) * 10)
 			assert_eq(kai.react_at == -1, miss, "%s #%d: the draw of the AI stream" % [preset, k])
 			missed += 1 if miss else 0
+			sim.remove_telegraph(t)
 		assert_between(missed, int(bounds[preset][0]), int(bounds[preset][1]), "%s: %d of 300 missed" % [preset,
 			missed])
 
@@ -635,18 +650,18 @@ func test_moving_cast_aborted_unless_it_ends_in_time() -> void:
 	for impact_in: int in [30, 72]:
 		var sim: RtSim = _sim("p0", 6, [{"skill": "skl_mop_noble_flame", "target": "assist"}], NO_MISS)
 		var mop: RtUnit = sim.unit("p1")
-		sim.step()
-		assert_eq(mop.cast.get("skill", ""), "skl_mop_noble_flame", "casting 0 … 45")
+		_until(sim, 3)
+		assert_eq(mop.cast.get("skill", ""), "skl_mop_noble_flame", "casting 2 … 47")
 		_tele(sim, mop.x, mop.z, 250, impact_in)
-		var ev: Array[ActionEvent] = _until(sim, 50)
+		var ev: Array[ActionEvent] = _until(sim, 52)
 		var failed: Array[ActionEvent] = RtKit.of(ev, T.CAST_FAILED)
 		if impact_in == 30:
-			assert_true(failed.size() == 1 and failed[0].tick == 13 and failed[0].text == "moved",
-				"impact at 31: from react_at 13 on it breaks the cast off and walks")
+			assert_true(failed.size() == 1 and failed[0].tick == 15 and failed[0].text == "moved",
+				"impact at 33: from react_at 15 on (every tick, not only when it thinks) it breaks the cast off")
 		else:
-			assert_eq(failed.size(), 0, "impact at 73: the cast ends at 45, then it walks (45 ≤ 73 − 25)")
+			assert_eq(failed.size(), 0, "impact at 75: the cast ends at 47, then it walks (47 ≤ 75 − 25)")
 			var ends: Array = RtKit.of(ev, T.ACTION_END).filter(func(e: ActionEvent) -> bool: return e.actor_id == "p1")
-			assert_eq(ends.map(func(e: ActionEvent) -> int: return e.tick), [45], "the cast ends")
+			assert_eq(ends.map(func(e: ActionEvent) -> int: return e.tick), [47], "the cast ends")
 
 
 func test_zones_are_avoided() -> void:
@@ -658,11 +673,17 @@ func test_zones_are_avoided() -> void:
 	sim.step()
 	assert_eq(Array(kai.goal), [0, 210], "the melee goal (reach 250 + 40 − 30 from the dummy)")
 	_tele(sim, 0, 210, 120, 300, true)
+	_until(sim, 3)
+	assert_eq(Array(kai.goal), [0, 210], "the goal stays until Kai thinks again (staggered AI, 07 §3.15)")
 	var ep: Vector2i = RtGeo.escape_point(sim, kai)
 	sim.step()
 	assert_eq(Array(kai.goal), [ep.x, ep.y], "a goal in a zone becomes the escape point")
+	assert_eq(sim.escape.get("p0"), [ep.x, ep.y], "the escape point is kept …")
+	sim.step()
+	assert_eq(Array(kai.goal), [ep.x, ep.y], "… while it stays safe (no new search every tick)")
 	kai.x = 0
 	kai.z = 210
+	sim.escape.clear()
 	ep = RtGeo.escape_point(sim, kai)
 	sim.step()
 	assert_eq(Array(kai.goal), [ep.x, ep.y], "standing in a zone: out")
@@ -704,7 +725,8 @@ func test_partner_special_holds_the_rules() -> void:
 		"the order waits for the GCD and holds the rules; after it they play on")
 	var free: RtSim = _sim("p0", 6, [{"skill": "skl_mop_thunder_bark", "target": "self"}])
 	free.unit("p1").gcd_until = 20
-	assert_eq(_ai_starts(_until(free, 2), "p1"), [[0, "skl_mop_thunder_bark"]], "without an order: at once")
+	assert_eq(_ai_starts(_until(free, 3), "p1"), [[2, "skl_mop_thunder_bark"]],
+		"without an order: at once (its first thinking tick)")
 
 
 func test_tactic_change_brings_rules_and_distance() -> void:
@@ -734,7 +756,7 @@ func test_autopilot_plays_the_controlled_unit() -> void:
 	assert_eq(kai.driver, RtUnit.Driver.AUTOPILOT)
 	assert_lt(kai.z, 450, "it walks into reach (the range goal of its attack rules)")
 	var st: Array = _ai_starts(ev, "p0")
-	assert_eq(st, [[1, "skl_kai_taunt"], [12, "skl_kai_heavy_swing"], [57, "skl_kai_heavy_swing"]],
+	assert_eq(st, [[3, "skl_kai_taunt"], [12, "skl_kai_heavy_swing"], [57, "skl_kai_heavy_swing"]],
 		"its tactic plays (by_ai): the dummy is on Mopsula (nearer at the start) → taunt, then the filler in reach")
 	sim.submit(RtCommand.autopilot(sim.tick(), "p0", false))
 	var z: int = kai.z
@@ -806,7 +828,8 @@ static func _ref_choose(sim: RtSim, u: RtUnit) -> Dictionary:
 	for pos in u.rules.size():
 		var r: Dictionary = u.rules[pos]
 		var key: String = str(r["key"])
-		if (int(u.rule_ready[key]) if u.rule_ready.has(key) else int(r["first"])) > c:
+		var offset: int = 0 if party else u.slot * sim.bal.i("AI_SLOT_OFFSET_TICKS")
+		if (int(u.rule_ready[key]) if u.rule_ready.has(key) else int(r["first"]) + offset) > c:
 			continue
 		var cond: Dictionary = r["cond"]
 		if tail and (str(r["target"]) == "caster" or cond.has("caster_within_cm") or cond.has("target_casting")):
@@ -892,7 +915,7 @@ func _same_as_reference(sim: RtSim, cmds: Array, max_ticks: int) -> int:
 					Ability.use_ability(sim, e, "skl_e_test_hex", "p0", true)
 					break
 		for u: RtUnit in sim.units():
-			if u.side == Combatant.Side.PARTY and sim.is_ai_driven(u):
+			if sim.is_ai_driven(u):
 				var got: Dictionary = RtRules.choose(sim, u)
 				var want: Dictionary = _ref_choose(sim, u)
 				if not _deep_eq(got, want):
@@ -914,3 +937,202 @@ func test_fast_rule_walk_equals_the_reference() -> void:
 	n += _same_as_reference(RtKit.sim(mop, 7, "mopsula", RtKit.canned_state()), [RtCommand.autopilot(0, "p1", true)],
 		1800)
 	assert_gt(n, 1500, "%d AI decisions compared" % n)
+
+
+
+# --- R1b-I3: enemies -------------------------------------------------------------------------------------------------
+
+## A started combat of `cmd` (Kai level 6 controlled) whose party plays no rules (only the enemies do).
+func _foes(cmd: Dictionary, st: GameState = null) -> RtSim:
+	var sim: RtSim = RtKit.sim(cmd, 6, "kai", st)
+	for u: RtUnit in sim.party_ref():
+		u.rules = []
+	return sim
+
+
+static func _starts_of(events: Array[ActionEvent], uid: String) -> Array:
+	return RtKit.of(events, T.ACTION_START).filter(func(e: ActionEvent) -> bool: return e.actor_id == uid).map(
+		func(e: ActionEvent) -> Array: return [e.tick, e.skill_id, e.by_ai])
+
+
+func test_enemy_rules_timers_and_slot_offset() -> void:
+	var sim: RtSim = _foes(RtKit.encounter("enc_f1_a2", [["g", "enc_f1_a2", [0, -300, 128]]]))
+	var rat: RtUnit = sim.unit("e0")
+	var caster: RtUnit = sim.unit("e1")
+	assert_eq([rat.rules.map(func(r: Dictionary) -> String: return r["key"]), caster.rules.map(
+		func(r: Dictionary) -> String: return r["key"])], [["0:0"], ["0:0", "0:1"]], "rt.rules, keys \"0:<index>\"")
+	assert_eq([rat.slot, caster.slot], [0, 1])
+	var ev: Array[ActionEvent] = _until(sim, 89)
+	assert_eq(RtRules.choose(sim, rat), {}, "the rat's bite (slot 0): not before first_ms 3000")
+	ev.append_array(sim.step())
+	assert_false(RtRules.choose(sim, rat).is_empty(), "ready at 90 (it walks to its threat target, then bites)")
+	ev.append_array(_until(sim, 140))
+	var cs: Array = RtKit.of(ev, T.CAST_START).filter(func(e: ActionEvent) -> bool: return e.actor_id == "e1")
+	assert_eq([cs[0].tick, cs[0].skill_id, cs[0].by_ai], [_think(3, 30 + 9), "skl_e_test_hex", true],
+		"first_ms 1000 + slot 1 × AI_SLOT_OFFSET_TICKS 9 = 39, at its thinking tick (index 3)")
+	assert_eq(int(caster.rule_ready["0:0"]), int(cs[0].tick) + 240, "every_ms 8000")
+	assert_eq([cs[1].tick, cs[1].skill_id], [_think(3, cs[0].tick + 60), "skl_e_test_slam"],
+		"the next rule once the hex cast is over (its own timer was ready at 69)")
+
+
+func test_boss_phases_and_ops() -> void:
+	var sim: RtSim = RtKit.sim_no_ai(RtKit.encounter("enc_rt_chief", [["g", "enc_rt_chief", [0, -300, 128]]]), 6)
+	var chief: RtUnit = sim.unit("e0")
+	chief.auto_on = false
+	assert_eq([chief.phase, chief.is_boss, chief.hp], [0, true, 3000], "the first phase is entered at the start")
+	var st: RtSim = RtSim.new(RtKit.setup(RtKit.state(6), RtKit.encounter("enc_rt_chief", [["g", "enc_rt_chief",
+		[0, -300, 128]]])), RtKit.data())
+	var start: Array[ActionEvent] = st.start()
+	var first: Array[ActionEvent] = RtKit.of(start, T.PHASE_CHANGE)
+	assert_true(first.size() == 1 and first[0].tick == 0 and first[0].value == 1 and not first[0].success
+		and first[0].actor_id == "e0", "PHASE_CHANGE 1 at the start (no phase before it was perfect)")
+	assert_eq(RtKit.of(start, T.MOD_LINE).map(func(e: ActionEvent) -> String: return e.text), ["rt_test_chief_1"],
+		"its on_enter ops after it")
+	assert_true(start.find(first[0]) > start.find(RtKit.of(start, T.BATTLE_START)[0]), "after BATTLE_START")
+	assert_eq(int(st.tally["perfect_phases"]), 0)
+	var c0: RtUnit = st.unit("e0")
+	assert_eq([c0.rules.map(func(r: Dictionary) -> String: return r["key"]), int(c0.rule_ready["0:0"]),
+		int(c0.rule_ready["0:1"])], [["0:0", "0:1"], 60, 120], "phase rules \"<phase>:<index>\", ready first_ms after "
+		+ "the phase start")
+	_until(sim, 10)
+	chief.hp = chief.max_hp() / 2
+	var ev: Array[ActionEvent] = sim.step()
+	var pc: Array[ActionEvent] = RtKit.of(ev, T.PHASE_CHANGE)
+	assert_true(pc.size() == 1 and pc[0].value == 2 and pc[0].success and pc[0].actor_id == "e0",
+		"60 % crossed: PHASE_CHANGE 2, success = the first phase was perfect")
+	assert_eq(int(sim.tally["perfect_phases"]), 1)
+	assert_eq(RtKit.of(ev, T.MOD_LINE).map(func(e: ActionEvent) -> String: return e.text), ["rt_test_chief_2"], "say")
+	var sm: Array[ActionEvent] = RtKit.of(ev, T.SUMMON)
+	assert_true(sm.size() == 1 and sm[0].actor_id == "e0" and sm[0].target_id == "e1" and sm[0].value == 1
+		and sm[0].def_id == "enm_kanalratte", "summon: SUMMON (value = its number)")
+	var add: RtUnit = sim.unit("e1")
+	assert_eq([add.x, add.z, add.is_summon, add.max_hp(), add.pop_in_until], [0, 450, true, 96, 10 + 15],
+		"at the ring point before the door nearest to the party (closed boss set), stats.hp × SUMMON_HP_PM, pop-in")
+	assert_eq(RtKit.of(ev, T.CAST_START).size(), 0, "the telegraph op: shapes without a cast")
+	assert_eq(RtKit.of(ev, T.TELEGRAPH_START).map(func(e: ActionEvent) -> String: return e.skill_id),
+		["skl_e_rt_puddles", "skl_e_rt_puddles", "skl_e_rt_puddles"])
+	var guard: Array = RtKit.of(ev, T.STATUS_ADDED).filter(func(e: ActionEvent) -> bool:
+		return e.target_id == "e0" and e.status_id == "sts_guard")
+	assert_eq(guard.map(func(e: ActionEvent) -> int: return e.value), [90], "status_self: 3000 ms")
+	assert_eq([chief.phase, chief.rules.map(func(r: Dictionary) -> String: return r["key"]),
+		int(chief.rule_ready["1:0"]), int(chief.rule_ready["1:1"])], [1, ["1:0", "1:1"], 10 + 90, 10 + 150],
+		"the phase's rules from its start (07 §6.6)")
+	_until(sim, 120)
+	var perfect: bool = chief.phase_perfect
+	chief.hp = chief.max_hp() * 2 / 10
+	var zones: int = sim.telegraphs().filter(func(t: RtTelegraph) -> bool: return t.is_zone).size()
+	ev = sim.step()
+	pc = RtKit.of(ev, T.PHASE_CHANGE)
+	assert_true(pc.size() == 1 and pc[0].value == 3 and pc[0].success == perfect, "30 %: PHASE_CHANGE 3")
+	var self_hit: Array = RtKit.of(ev, T.DAMAGE).filter(func(e: ActionEvent) -> bool: return e.target_id == "e0")
+	assert_eq(self_hit.map(func(e: ActionEvent) -> int: return e.amount), [150], "fixed_damage_self: 50 ‰ of 3000")
+	assert_eq([RtKit.of(ev, T.ZONE_END).size(), sim.telegraphs().filter(func(t: RtTelegraph) -> bool: return t.is_zone)
+		.size()], [zones, 0], "clear_zones ends its zones")
+	var haste: Array = RtKit.of(ev, T.STATUS_ADDED).filter(func(e: ActionEvent) -> bool: return e.status_id == "sts_haste")
+	assert_true(haste.size() == 1 and haste[0].value == -1 and not chief.stationary, "status until the end; set")
+
+
+func test_phase_thresholds_in_one_tick_and_self_damage_never_kills() -> void:
+	var sim: RtSim = RtKit.sim_no_ai(RtKit.encounter("enc_rt_chief", [["g", "enc_rt_chief", [0, -300, 128]]]), 6)
+	var chief: RtUnit = sim.unit("e0")
+	chief.auto_on = false
+	_until(sim, 5)
+	chief.hp = 2
+	var ev: Array[ActionEvent] = sim.step()
+	assert_eq(RtKit.of(ev, T.PHASE_CHANGE).map(func(e: ActionEvent) -> int: return e.value), [2, 3],
+		"two thresholds crossed: both phases in order, each with its ops")
+	assert_eq(RtKit.of(ev, T.SUMMON).size(), 1, "the ops of phase 2 ran")
+	assert_eq(chief.hp, 1, "fixed_damage_self never takes the last HP point")
+	assert_true(sim.is_alive(chief))
+
+
+func test_enrage() -> void:
+	var sim: RtSim = RtKit.sim_no_ai(RtKit.encounter("enc_rt_chief", [["g", "enc_rt_chief", [0, -300, 128]]]), 6)
+	for u: RtUnit in sim.units_ref():
+		u.auto_on = false
+	var ev: Array[ActionEvent] = _until(sim, 601)
+	var en: Array[ActionEvent] = RtKit.of(ev, T.ENRAGE)
+	assert_true(en.size() == 1 and en[0].tick == 600 and en[0].value == 1 and en[0].actor_id == "e0", "at at_ms 20000")
+	var ml: Array = RtKit.of(ev, T.MOD_LINE).filter(func(e: ActionEvent) -> bool: return e.tick == 600)
+	assert_eq(ml.map(func(e: ActionEvent) -> String: return e.text), ["rt_enrage:enm_rt_test_chief"])
+	var sa: Array = RtKit.of(ev, T.STATUS_ADDED).filter(func(e: ActionEvent) -> bool: return e.status_id == "sts_enrage")
+	assert_true(sa.size() == 1 and sa[0].value == -1 and int(sa[0].rt["stacks"]) == 1, "the status until the end")
+	ev = _until(sim, 901)
+	en = RtKit.of(ev, T.ENRAGE)
+	assert_true(en.size() == 1 and en[0].tick == 900 and en[0].value == 2, "every every_ms another stack")
+	assert_eq(RtKit.of(ev, T.MOD_LINE).size(), 0, "the M.O.D. line only once")
+	assert_eq(StatusFx.factor(sim.unit("e0"), "dmg_dealt_pm"), 2250, "× 1.5 per stack (07 §6.4)")
+
+
+func test_summons() -> void:
+	var sim: RtSim = RtKit.sim_no_ai(RtKit.encounter("enc_rt_dummies", [["g", "enc_rt_dummies", [0, -50, 128]]]), 6)
+	var dummy: RtUnit = sim.unit("e0")
+	_until(sim, 20)
+	var made: Array = []
+	for k in 4:
+		made.append(RtSim.Boss.summon(sim, dummy, "enm_kanalratte", "near", k))
+	assert_eq(made.map(func(u: Variant) -> bool: return u != null), [true, true, true, false],
+		"at most MAX_ENEMIES (6) living enemies")
+	var add: RtUnit = made[0]
+	var near: Vector2i = RtGeo.project_walkable(sim.setup.geo, RtGeo.formation(1, dummy.x, dummy.z, dummy.yaw).x,
+		RtGeo.formation(1, dummy.x, dummy.z, dummy.yaw).y, add.radius, false)
+	assert_eq([add.id, add.x, add.z, add.max_hp(), add.hp, add.is_summon, add.pop_in_until], ["e3", near.x, near.y, 96,
+		96, true, 35], "near: formation slot 1 + k around the summoner; 24 × SUMMON_HP_PM 4000; acts 15 ticks later")
+	assert_eq(add.threat, {"p0": 1}, "threat 1 on the nearest party unit")
+	assert_eq(int(add.rule_ready["0:0"]), 20 + 90 + 3 * 9, "its rules from the summon on (first_ms + slot offset)")
+	var open: RtSim = RtKit.sim_no_ai(RtKit.dummy_cmd(), 6)
+	_until(open, 5)
+	var walker: RtUnit = RtSim.Boss.summon(open, open.unit("e0"), "enm_kanalratte", "door", 0)
+	assert_eq([walker.x, walker.z, Array(walker.entry), walker.pop_in_until], [0, 750, [0, 450], 5 + 15 + 30],
+		"door in an open set: the end of the lane nearest to the party, then the walk in")
+	assert_false(open.targetable(walker), "not on stage while it walks in")
+	var steps: int = 0
+	while not walker.entry.is_empty() and steps < 40:
+		open.step()
+		steps += 1
+	assert_eq([walker.x, walker.z, walker.pop_in_until, open.targetable(walker)], [0, 450, open.tick() - 1 + 15, true],
+		"arrived: on stage at once, acting POP_IN_TICKS later")
+	var by_skill: RtSim = RtKit.sim_no_ai(RtKit.dummy_cmd(), 6)
+	by_skill.unit("e0").rules = RtRules.compile([{"skill": "skl_e_rt_call", "target": "self", "once": true}], "t")
+	var ev: Array[ActionEvent] = _until(by_skill, 70)
+	var sev: Array[ActionEvent] = RtKit.of(ev, T.SUMMON)
+	assert_true(sev.size() == 1 and sev[0].tick == _think(2, 0) + 60 and sev[0].def_id == "enm_kanalratte",
+		"a summon skill (skill.summon) at its cast end, at the door")
+
+
+func test_random_targets() -> void:
+	var sim: RtSim = _foes(RtKit.encounter("enc_rt_pigeons", [["g", "enc_rt_pigeons", [0, -300, 128]]]))
+	var pigeon: RtUnit = sim.unit("e0")
+	var n: int = int(sim.snapshot()["rng_n"])
+	sim.step()
+	assert_eq(pigeon.target_id, "", "it thinks at ct 1 (index 2)")
+	var ev: Array[ActionEvent] = sim.step()
+	var draw: int = SeedUtil.make_rng(SeedUtil.derive(RtKit.SEED, "rt", n + 1)).randi_range(0, 1)
+	var tc: Array = RtKit.of(ev, T.TARGET_CHANGED).filter(func(e: ActionEvent) -> bool: return e.actor_id == "e0")
+	assert_eq([pigeon.target_id, tc.size()], [["p0", "p1"][draw], 1], "auto_target random_enemy: drawn from the "
+		+ "combat stream")
+	var first: String = pigeon.target_id
+	_until(sim, 60)
+	assert_eq(pigeon.target_id, first, "kept while it lives (no draw every tick)")
+	var dummy: RtSim = RtKit.sim_no_ai(RtKit.dummy_cmd(), 6)
+	var d: RtUnit = dummy.unit("e0")
+	d.rules = RtRules.compile([{"skill": "skl_e_rt_scatter", "target": "none", "once": true}], "t")
+	var before: int = int(dummy.snapshot()["rng_n"])
+	ev = _until(dummy, 2)
+	var st: Array = RtKit.of(ev, T.ACTION_START).filter(func(e: ActionEvent) -> bool: return e.actor_id == "e0")
+	var pick: int = SeedUtil.make_rng(SeedUtil.derive(RtKit.SEED, "rt", before + 1)).randi_range(0, 1)
+	assert_eq(Array(st[0].target_ids), [["p0", "p1"][pick]], "skill target random_enemy: drawn when it starts")
+
+
+func test_staggered_thinking() -> void:
+	var sim: RtSim = _sim("p1", 6, [{"skill": "skl_kai_heavy_swing", "target": "assist"}])
+	var kai_ticks: Array = _ai_starts(_until(sim, 300), "p0").map(func(x: Array) -> int: return int(x[0]) % 3)
+	assert_true(kai_ticks.size() > 3 and kai_ticks.all(func(m: int) -> bool: return m == 0),
+		"the AI partner p0 (index 0) picks only at ct % 3 == 0")
+	var mop: RtSim = _sim("p0", 6, [{"skill": "skl_mop_frost_sneeze", "target": "assist"}])
+	var mop_ticks: Array = _ai_starts(_until(mop, 300), "p1").map(func(x: Array) -> int: return int(x[0]) % 3)
+	assert_true(mop_ticks.size() >= 2 and mop_ticks.all(func(m: int) -> bool: return m == 2),
+		"Mopsula (index 1) at ct % 3 == 2")
+	var foes: RtSim = _foes(RtKit.encounter("enc_f1_a2", [["g", "enc_f1_a2", [0, -300, 128]]]))
+	var e_ticks: Array = _starts_of(_until(foes, 600), "e1").map(func(x: Array) -> int: return int(x[0]) % 3)
+	assert_true(e_ticks.size() > 1 and e_ticks.all(func(m: int) -> bool: return m == 0), "the caster (index 3)")

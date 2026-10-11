@@ -38,7 +38,7 @@ static func _sig(e: ActionEvent) -> String:
 ## Mopsula is the hero (casts, regenerates MP over time), Kai the AI partner (without rules until the tactic change
 ## brings those of "careful"); at ct 149 every step has work.
 func test_one_tick_in_step_order() -> void:
-	var c: int = 149
+	var c: int = 150                                                 # the AI partner p0 (index 0) thinks at c
 	var sim: RtSim = RtKit.sim_no_ai(RtKit.dummy_cmd({"ctl": "p1"}), 6, "mopsula")
 	var kai: RtUnit = sim.unit("p0")
 	var mop: RtUnit = sim.unit("p1")
@@ -93,9 +93,11 @@ func test_one_tick_in_step_order() -> void:
 		"SWING actor_id=p0 target_id=e0 skill_id=skl_attack_kai",                       # 8
 		"FLEE_WARNING actor_id=p1 v=45",                                                # 9
 		"MP_CHANGE target_id=p1 v=1",                                                   # 11
-		"SECOND v=5",
 	])
 	assert_true(ev.all(func(x: ActionEvent) -> bool: return x.tick == c), "every event carries the tick")
+	_until(sim, 179)
+	var last: Array[ActionEvent] = sim.step()
+	assert_eq(_sig(last[last.size() - 1]), "SECOND v=6", "11: SECOND last, every 30 ticks")
 
 
 ## 07 §3.3: a KO in steps 2–6 is immediate — the unit's own pending hit lapses, its cast fails (CAST_FAILED dead).
@@ -122,9 +124,8 @@ func test_ko_is_immediate() -> void:
 		"KO actor_id=p0 target_id=e0",
 		"CAST_FAILED actor_id=e0 skill_id=skl_e_test_hex text=dead",
 		"ACTION_END actor_id=e0 skill_id=skl_e_test_hex",
-		"TARGET_CHANGED actor_id=p1",                                # step 7: the AI partner has no target left
 		"BATTLE_END",
-	], "no hit from the fallen dummy in step 5, no hex in step 6, then the end")
+	], "no hit from the fallen dummy in step 5, no hex in step 6 (the AI partner does not think at 60), then the end")
 	assert_eq(kai.hp, hp0)
 	assert_eq(sim.result.outcome, BattleResult.Outcome.VICTORY)
 

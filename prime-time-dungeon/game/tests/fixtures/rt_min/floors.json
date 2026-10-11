@@ -84,6 +84,60 @@
 						"enm_kanalratte"
 					],
 					"weight": 0
+				},
+				{
+					"id": "enc_rt_sprayers",
+					"enemies": [
+						"enm_rt_test_sprayer",
+						"enm_rt_test_sprayer"
+					],
+					"weight": 0
+				},
+				{
+					"id": "enc_rt_thief",
+					"enemies": [
+						"enm_rt_test_thief"
+					],
+					"weight": 0
+				},
+				{
+					"id": "enc_rt_pigeons",
+					"enemies": [
+						"enm_rt_test_pigeon",
+						"enm_rt_test_pigeon"
+					],
+					"weight": 0
+				},
+				{
+					"id": "enc_rt_chief",
+					"enemies": [
+						"enm_rt_test_chief"
+					],
+					"weight": 0,
+					"boss": true,
+					"can_flee": false
+				},
+				{
+					"id": "enc_rt_showboss",
+					"enemies": [
+						"enm_kanalratte",
+						"enm_kanalratte"
+					],
+					"weight": 0,
+					"show_boss": {
+						"elite_pm": 1200,
+						"banner_tag": "showboss_rule",
+						"reward": {
+							"kind": "box",
+							"id": "box_fan"
+						},
+						"rule": {
+							"skill": "skl_e_rt_slow",
+							"target": "threat_top",
+							"first_ms": 4000,
+							"every_ms": 8000
+						}
+					}
 				}
 			],
 			"layout": {

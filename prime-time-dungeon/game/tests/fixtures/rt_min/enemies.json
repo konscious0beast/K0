@@ -304,6 +304,365 @@
 				"swing_ms": 3000,
 				"reach_cm": 220
 			}
+		},
+		{
+			"id": "enm_rt_test_sprayer",
+			"name": "Sprühtester",
+			"level": 2,
+			"stats": {
+				"hp": 30,
+				"mp": 0,
+				"str": 10,
+				"mag": 8,
+				"def": 6,
+				"res": 6,
+				"spd": 10,
+				"lck": 5
+			},
+			"exp": 15,
+			"credits": 8,
+			"attack_skill": "skl_e_strike",
+			"ai": {
+				"type": "weighted",
+				"actions": [
+					{
+						"skill": "skl_e_strike",
+						"weight": 1,
+						"target": "random"
+					}
+				]
+			},
+			"element_mods": {
+				"fire": 1.5,
+				"ice": 0.5
+			},
+			"drops": [],
+			"model": {
+				"base": "rodent",
+				"scale": 1.0,
+				"colors": {
+					"primary": "#6a5a4a",
+					"secondary": "#2a2024",
+					"eyes": "#ffd59e"
+				}
+			},
+			"explore": {
+				"field_speed": 3.0
+			},
+			"rt": {
+				"hp_pm": 7000,
+				"radius_cm": 35,
+				"move_cm_s": 300,
+				"keep_cm": 600,
+				"auto_skill": "skl_e_strike",
+				"swing_ms": 2400,
+				"reach_cm": 220,
+				"rules": [
+					{
+						"skill": "skl_e_rt_fog",
+						"target": "none",
+						"first_ms": 2000,
+						"every_ms": 15000
+					},
+					{
+						"skill": "skl_e_rt_puddles",
+						"target": "none",
+						"first_ms": 6000,
+						"every_ms": 18000
+					}
+				]
+			}
+		},
+		{
+			"id": "enm_rt_test_thief",
+			"name": "Testkontrolleur",
+			"level": 3,
+			"stats": {
+				"hp": 60,
+				"mp": 0,
+				"str": 10,
+				"mag": 8,
+				"def": 6,
+				"res": 6,
+				"spd": 10,
+				"lck": 5
+			},
+			"exp": 15,
+			"credits": 12,
+			"attack_skill": "skl_e_strike",
+			"ai": {
+				"type": "weighted",
+				"actions": [
+					{
+						"skill": "skl_e_strike",
+						"weight": 1,
+						"target": "random"
+					}
+				]
+			},
+			"element_mods": {
+				"fire": 1.5,
+				"ice": 0.5
+			},
+			"drops": [],
+			"model": {
+				"base": "rodent",
+				"scale": 1.0,
+				"colors": {
+					"primary": "#6a5a4a",
+					"secondary": "#2a2024",
+					"eyes": "#ffd59e"
+				}
+			},
+			"explore": {
+				"field_speed": 3.0
+			},
+			"rt": {
+				"hp_pm": 7000,
+				"radius_cm": 50,
+				"move_cm_s": 0,
+				"stationary": true,
+				"auto_skill": "skl_e_strike",
+				"swing_ms": 2400,
+				"reach_cm": 250,
+				"rules": [
+					{
+						"skill": "skl_e_rt_fine",
+						"target": "threat_top",
+						"first_ms": 2000,
+						"every_ms": 0,
+						"once": true
+					},
+					{
+						"skill": "skl_e_rt_escape",
+						"target": "none",
+						"first_ms": 25000,
+						"every_ms": 10000
+					}
+				]
+			}
+		},
+		{
+			"id": "enm_rt_test_pigeon",
+			"name": "Testtaube",
+			"level": 1,
+			"stats": {
+				"hp": 20,
+				"mp": 0,
+				"str": 10,
+				"mag": 8,
+				"def": 6,
+				"res": 6,
+				"spd": 10,
+				"lck": 5
+			},
+			"exp": 15,
+			"credits": 8,
+			"attack_skill": "skl_e_strike",
+			"ai": {
+				"type": "weighted",
+				"actions": [
+					{
+						"skill": "skl_e_strike",
+						"weight": 1,
+						"target": "random"
+					}
+				]
+			},
+			"element_mods": {
+				"fire": 1.5,
+				"ice": 0.5
+			},
+			"drops": [],
+			"model": {
+				"base": "rodent",
+				"scale": 1.0,
+				"colors": {
+					"primary": "#6a5a4a",
+					"secondary": "#2a2024",
+					"eyes": "#ffd59e"
+				}
+			},
+			"explore": {
+				"field_speed": 3.0
+			},
+			"rt": {
+				"hp_pm": 7000,
+				"radius_cm": 40,
+				"move_cm_s": 450,
+				"auto_skill": "skl_e_strike",
+				"swing_ms": 1800,
+				"reach_cm": 220,
+				"auto_target": "random_enemy"
+			}
+		},
+		{
+			"id": "enm_rt_test_chief",
+			"name": "Testchefin",
+			"level": 5,
+			"stats": {
+				"hp": 300,
+				"mp": 0,
+				"str": 10,
+				"mag": 8,
+				"def": 6,
+				"res": 6,
+				"spd": 10,
+				"lck": 5
+			},
+			"exp": 15,
+			"credits": 60,
+			"attack_skill": "skl_e_strike",
+			"ai": {
+				"type": "weighted",
+				"actions": [
+					{
+						"skill": "skl_e_strike",
+						"weight": 1,
+						"target": "random"
+					}
+				]
+			},
+			"element_mods": {
+				"fire": 1.5,
+				"ice": 0.5
+			},
+			"drops": [],
+			"model": {
+				"base": "rodent",
+				"scale": 1.0,
+				"colors": {
+					"primary": "#6a5a4a",
+					"secondary": "#2a2024",
+					"eyes": "#ffd59e"
+				}
+			},
+			"explore": {
+				"field_speed": 3.0
+			},
+			"rt": {
+				"hp": 3000,
+				"radius_cm": 80,
+				"move_cm_s": 300,
+				"stationary": true,
+				"auto_skill": "skl_e_strike",
+				"swing_ms": 2800,
+				"reach_cm": 320,
+				"phases": [
+					{
+						"hp_above_pm": 600,
+						"on_enter": [
+							{
+								"op": "say",
+								"tag": "rt_test_chief_1"
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_e_rt_cone",
+								"target": "threat_top",
+								"first_ms": 2000,
+								"every_ms": 9000
+							},
+							{
+								"skill": "skl_e_rt_lunge",
+								"target": "lowest_hp_pct_enemy",
+								"first_ms": 4000,
+								"every_ms": 11000
+							}
+						]
+					},
+					{
+						"hp_above_pm": 300,
+						"on_enter": [
+							{
+								"op": "say",
+								"tag": "rt_test_chief_2"
+							},
+							{
+								"op": "summon",
+								"enemy": "enm_kanalratte",
+								"count": 1,
+								"at": "door"
+							},
+							{
+								"op": "telegraph",
+								"skill": "skl_e_rt_puddles"
+							},
+							{
+								"op": "status_self",
+								"status": "sts_guard",
+								"ms": 3000
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_e_rt_fog",
+								"target": "none",
+								"first_ms": 3000,
+								"every_ms": 15000
+							},
+							{
+								"skill": "skl_e_rt_call",
+								"target": "self",
+								"first_ms": 5000,
+								"every_ms": 20000,
+								"cond": {
+									"adds_below": 2
+								}
+							}
+						]
+					},
+					{
+						"hp_above_pm": 0,
+						"on_enter": [
+							{
+								"op": "fixed_damage_self",
+								"pct_pm": 50
+							},
+							{
+								"op": "clear_zones"
+							},
+							{
+								"op": "set",
+								"stationary": false
+							},
+							{
+								"op": "status_self",
+								"status": "sts_haste",
+								"ms": -1
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_e_rt_ring",
+								"target": "self",
+								"first_ms": 2000,
+								"every_ms": 18000
+							},
+							{
+								"skill": "skl_e_rt_whirl",
+								"target": "self",
+								"first_ms": 6000,
+								"every_ms": 14000
+							}
+						]
+					}
+				],
+				"enrage": {
+					"at_ms": 20000,
+					"every_ms": 10000,
+					"status": "sts_enrage"
+				}
+			},
+			"boss": true,
+			"boss_drops": [
+				{
+					"kind": "item",
+					"id": "itm_bandage",
+					"amount": 1
+				}
+			]
 		}
 	]
 }

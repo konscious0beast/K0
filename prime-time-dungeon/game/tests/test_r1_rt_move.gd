@@ -45,8 +45,9 @@ func test_melee_goal_and_reach() -> void:
 	for u: RtUnit in sim.units():
 		u.auto_on = u.id == "e0"
 	var rat: RtUnit = sim.unit("e0")
-	var ev: Array[ActionEvent] = _until(sim, 23)
-	assert_eq([rat.x, rat.z], [0, -30], "reach 220 + Kai's radius 40 − MELEE_STOP_CM 30 from Kai (0, 200)")
+	var ev: Array[ActionEvent] = _until(sim, 24)
+	assert_eq([rat.x, rat.z], [0, -30], "reach 220 + Kai's radius 40 − MELEE_STOP_CM 30 from Kai (0, 200) — it thinks "
+		+ "first at ct 1 (index 2, staggered AI) and walks 12 cm per tick")
 	ev.append_array(_until(sim, 31))
 	assert_eq([rat.x, rat.z], [0, -30], "and stays")
 	var sw: Array = RtKit.of(ev, T.SWING).filter(func(x: ActionEvent) -> bool: return x.actor_id == "e0")
@@ -63,14 +64,16 @@ func test_ranged_keep_distance() -> void:
 	RtSim.Damage.apply(sim, kai, rat, rat.hp, Elements.PHYSICAL, HitResult.new(), "skl_kai_heavy_swing", "", "",
 		RtSim.Damage.Kind.ABILITY, false, BattleCommand.Kind.SKILL, 1000)
 	var p0: Vector2i = Vector2i(caster.x, caster.z)
-	_until(sim, 16)
+	_until(sim, 18)
 	assert_eq(Vector2i(caster.x, caster.z), p0, "within keep_cm 600 ± 200 (604): it stays")
 	caster.x = 0
 	caster.z = 0
 	sim.step()
-	assert_eq([caster.x, caster.z], [0, -12], "nearer than 400: back towards 600 (12 cm per tick)")
+	assert_eq([caster.x, caster.z], [0, -12],
+		"nearer than 400 (it thinks at 18: index 3): back towards 600, 12 cm per tick")
 	_until(sim, 60)
-	assert_eq([caster.x, caster.z], [0, -204], "and back within the band (d = 404) it stands (07 §3.5.3)")
+	assert_eq([caster.x, caster.z], [0, -216],
+		"and back within the band it stands (07 §3.5.3) — at its first thinking tick there (d = 416)")
 	caster.x = 0
 	caster.z = -440
 	kai.z = 400

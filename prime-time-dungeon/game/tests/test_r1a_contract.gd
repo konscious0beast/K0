@@ -221,7 +221,7 @@ func test_class_hierarchy_constants_and_stub_headers() -> void:
 			"res://core/rt/rt_status.gd", "res://core/rt/rt_telegraph.gd", "res://core/rt/rt_command.gd",
 			"res://core/rt/rt_geo.gd", "res://core/rt/rt_rules.gd", "res://core/rt/rt_mods.gd",
 			"res://core/rt/rt_balance.gd", "res://core/data/validators/rt.gd",
-			"res://scenes/combat/combat_director.gd", "res://scenes/combat/ui/combat_results.gd"]:
+			"res://scenes/combat/ui/combat_results.gd"]:      # combat_director.gd: replaced by R2
 		assert_true(FileAccess.get_file_as_string(path).begins_with("# STUB(R1a) — owned by "), "stub header " + path)
 
 

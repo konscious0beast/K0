@@ -3,8 +3,8 @@ extends TestCase
 ## the bark (the group is DAZED and is caught from every side) is no sneaking. It still is a preemptive battle for the
 ## CTB (party first, preemptive hype, "Erster Eindruck"), but:
 ## - BattleSetup / BattleResult carry opener "bark" (recorded with the encounter: {"opener": "bark"}, replay-safe);
-## - the bet "Schleichwerbung" (mar_sneaky) and the achievement "Leise Sohle" (s.preemptives) ask for encounter_type
-##   "preemptive" — a bark opener is encounter_type "bark" and counts as the stat bark_openers instead;
+## - the bet "Schleichwerbung" (mar_sneaky) and the achievement "Überraschungsgast" (s.preemptives) ask for
+##   encounter_type "preemptive" — a bark opener is encounter_type "bark" and counts as the stat bark_openers instead;
 ## - a sneaked preemptive (field strike from behind / on an idle group, touching a back) counts as before.
 
 const ExplorationScript := preload("res://scenes/exploration/exploration.gd")

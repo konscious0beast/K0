@@ -168,12 +168,12 @@ func test_check_reasons() -> void:
 	assert_eq(Casting.check(_state(3, ""), d, "kai", "spc_kai_kachelgolem", "cls_kai_wrecker"), "not_in_safe_room")
 	var st: GameState = _state(3)
 	assert_eq(Casting.check(st, d, "kai", "spc_mop_glutmops", "cls_kai_wrecker"), "not_for_member")
-	assert_eq(Casting.check(st, d, "kai", "spc_kai_kachelgolem", "cls_mop_diva"), "not_for_member")
+	assert_eq(Casting.check(st, d, "kai", "spc_kai_kachelgolem", "cls_mop_zeremonienmeister"), "not_for_member")
 	assert_eq(Casting.check(st, d, "kai", "spc_nope", "cls_kai_wrecker"), "unknown_species")
 	assert_eq(Casting.check(st, d, "kai", "spc_original", "cls_nope"), "unknown_class")
 	assert_eq(Casting.check(st, d, "nobody", "spc_original", "cls_kai_wrecker"), "not_for_member")
 	assert_eq(Casting.check(st, d, "kai", "spc_original", "cls_kai_wrecker"), "", "Original bleiben is a full choice")
-	assert_eq(Casting.check(st, d, "mopsula", "spc_original", "cls_mop_diva"), "")
+	assert_eq(Casting.check(st, d, "mopsula", "spc_original", "cls_mop_zeremonienmeister"), "")
 
 
 func test_choose_applies_class_then_species_multipliers() -> void:
@@ -267,7 +267,7 @@ func test_game_choose_casting_records_and_runsim_replays() -> void:
 func test_save_round_trip_and_sanitize() -> void:
 	var d: GameData = real_data()
 	var st: GameState = _state(3)
-	assert_true(Casting.choose(st, d, "mopsula", "spc_mop_flattermops", "cls_mop_diva"))
+	assert_true(Casting.choose(st, d, "mopsula", "spc_mop_flattermops", "cls_mop_zeremonienmeister"))
 	var json: Variant = JSON.parse_string(JSON.stringify(SaveCodec.encode(st, "test")))
 	var back: GameState = SaveCodec.decode(json, d)
 	assert_not_null(back)
@@ -275,7 +275,7 @@ func test_save_round_trip_and_sanitize() -> void:
 		return
 	var m: PartyMember = back.member("mopsula")
 	assert_eq(m.species_id, "spc_mop_flattermops")
-	assert_eq(m.class_id, "cls_mop_diva")
+	assert_eq(m.class_id, "cls_mop_zeremonienmeister")
 	assert_eq(m.casting, {"floor": 3, "visit": 1, "class_floor": 3, "class_visit": 1})
 	for mid: String in ["kai", "mopsula"]:
 		assert_eq(back.member(mid).to_dict(), st.member(mid).to_dict(), mid + " round trip (fake floor index)")

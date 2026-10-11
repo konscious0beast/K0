@@ -291,7 +291,7 @@
 		{
 			"id": "itm_wpn_collar_signet",
 			"name": "Siegel-Halsband",
-			"desc": "MAG +11, MP +10. Goldene Plakette. Wir bestehen darauf.",
+			"desc": "MAG +11, MP +10. Goldene Siegel-Plakette. Fußnote des Grafen: „Echt. Vermutlich.“",
 			"type": "weapon",
 			"rarity": "epic",
 			"price": 460,
@@ -308,7 +308,7 @@
 		},
 		{
 			"id": "itm_wpn_collar_royal",
-			"name": "Hofjuwelier-Halsband",
+			"name": "Juwelen-Halsband",
 			"desc": "MAG +14, MP +15. Echte Steine. Behauptet der Juwelier.",
 			"type": "weapon",
 			"rarity": "epic",
@@ -453,7 +453,7 @@
 		{
 			"id": "itm_acc_rubber_boots",
 			"name": "Gummistiefel",
-			"desc": "Halbiert Blitzschaden. Und nasse Füße.",
+			"desc": "Halbiert Blitzschaden. Pfützen verlieren jeden Schrecken.",
 			"type": "accessory",
 			"rarity": "rare",
 			"price": 200,
@@ -466,8 +466,8 @@
 		},
 		{
 			"id": "itm_acc_sneakers",
-			"name": "Turnschuhe (gebraucht)",
-			"desc": "SPD +2. Jemand ist darin sehr schnell gelaufen. Wovor?",
+			"name": "Stoppuhr (gebraucht)",
+			"desc": "SPD +2. Jemand ist damit sehr schnell gelaufen. Wovor?",
 			"type": "accessory",
 			"rarity": "epic",
 			"price": 260,
@@ -475,7 +475,7 @@
 			"stats": {
 				"spd": 2
 			},
-			"icon": "shoes",
+			"icon": "stopwatch",
 			"color": "#ffffff"
 		},
 		{
@@ -513,7 +513,7 @@
 		{
 			"id": "itm_acc_queen_crown",
 			"name": "Rattenkrone",
-			"desc": "STR +3, MAG +3, SPD +1. Nur für Kai — der Graf trägt keine Kronen.",
+			"desc": "STR +3, MAG +3, SPD +1. Nur für Kai — der Graf hält Kopfschmuck für unwissenschaftlich.",
 			"type": "accessory",
 			"rarity": "epic",
 			"price": 0,

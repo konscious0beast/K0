@@ -41,7 +41,7 @@
 		},
 		{
 			"id": "box_fan",
-			"name": "Fan-Box",
+			"name": "Fanpost-Paket",
 			"tier": 4,
 			"color": "#ff5fa2",
 			"rolls": 2,

@@ -1,7 +1,6 @@
-# STUB(R1a) — owned by R1b. Replace completely, keep the public API.
 class_name RtStatus extends StatusEffect
 ## Real-time status (07 §3.4, §3.8): ends at a tick, optional period, stacks, frozen tick amount. The CTB fields
-## turns_left / fresh stay 0 / false.
+## turns_left / fresh stay 0 / false. The rules (apply, refresh, ticks, expiry) live in the sim (rt_status_fx.gd).
 
 var ends_at: int = -1                       # ct of expiry (-1 = until combat end)
 var period: int = 0                         # ticks between periodic effects (0 = none)

@@ -237,7 +237,7 @@
 		},
 		{
 			"id": "skl_stunt_mop_entrance",
-			"name": "Auftritt Seiner Durchlaucht",
+			"name": "Auftritt um Mitternacht",
 			"user": "party",
 			"category": "stunt",
 			"target": "all_enemies",
@@ -330,6 +330,464 @@
 						0
 					]
 				}
+			}
+		},
+		{
+			"user": "party",
+			"rank": 3,
+			"id": "skl_kai_taunt",
+			"name": "Hier spielt die Musik!",
+			"category": "buff",
+			"target": "all_enemies",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 2,
+			"anim": "attack",
+			"show_tags": [
+				"risky"
+			],
+			"rt": {
+				"icon": "megaphone_notes",
+				"cooldown_ms": 15000,
+				"gcd": false,
+				"impact_ms": 0,
+				"aoe": {
+					"center": "self",
+					"radius_cm": 1000
+				},
+				"statuses": [
+					{
+						"id": "sts_taunted",
+						"ms": 4000,
+						"to": "target"
+					},
+					{
+						"id": "sts_guard",
+						"ms": 6000,
+						"to": "self"
+					}
+				]
+			}
+		},
+		{
+			"user": "party",
+			"rank": 3,
+			"id": "skl_kai_first_aid",
+			"name": "Erste Hilfe (Tierarzt-Edition)",
+			"category": "heal",
+			"target": "single_ally",
+			"damage_type": "heal",
+			"heal_mode": "pct",
+			"element": "none",
+			"power": 30,
+			"mp_cost": 4,
+			"anim": "attack",
+			"cleanse": [
+				"sts_poison",
+				"sts_burn"
+			],
+			"show_tags": [
+				"cute"
+			],
+			"rt": {
+				"icon": "paw_plaster",
+				"cooldown_ms": 12000,
+				"range_cm": 800
+			}
+		},
+		{
+			"user": "party",
+			"rank": 3,
+			"id": "skl_kai_cable_whip",
+			"name": "Kabelpeitsche",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "shock",
+			"power": 120,
+			"mp_cost": 6,
+			"anim": "attack",
+			"show_tags": [
+				"flashy"
+			],
+			"rt": {
+				"icon": "cable_sparks",
+				"cooldown_ms": 18000,
+				"gcd": false,
+				"range_cm": 600,
+				"interrupt": true,
+				"statuses": [
+					{
+						"id": "sts_stun",
+						"chance_pm": 1000,
+						"ms": 1500,
+						"to": "target"
+					}
+				]
+			}
+		},
+		{
+			"user": "party",
+			"rank": 3,
+			"id": "skl_kai_sweep",
+			"name": "Rundumfeger",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 80,
+			"mp_cost": 5,
+			"anim": "attack",
+			"show_tags": [
+				"flashy"
+			],
+			"rt": {
+				"icon": "mop_circle",
+				"cooldown_ms": 8000,
+				"impact_ms": 400,
+				"threat_pm": 1500,
+				"aoe": {
+					"center": "self",
+					"radius_cm": 350
+				}
+			}
+		},
+		{
+			"user": "party",
+			"rank": 3,
+			"id": "skl_kai_deo_torch",
+			"name": "Deo-Flammenwerfer",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "fire",
+			"power": 40,
+			"mp_cost": 7,
+			"anim": "cast",
+			"show_tags": [
+				"flashy",
+				"risky"
+			],
+			"rt": {
+				"icon": "spray_flame",
+				"cooldown_ms": 14000,
+				"channel_ms": 2000,
+				"period_ms": 500,
+				"range_cm": 500,
+				"aoe": {
+					"center": "self",
+					"radius_cm": 500,
+					"cone_deg": 60
+				},
+				"statuses": [
+					{
+						"id": "sts_burn",
+						"ms": 6000,
+						"to": "target",
+						"tick_power": 20
+					}
+				]
+			}
+		},
+		{
+			"user": "party",
+			"rank": 3,
+			"id": "skl_kai_prime_finisher",
+			"name": "Prime-Time-Finisher",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 260,
+			"mp_cost": 8,
+			"crit_bonus": 0.2,
+			"kill_hype": 10,
+			"anim": "stunt",
+			"show_tags": [
+				"finisher",
+				"flashy"
+			],
+			"rt": {
+				"icon": "studio_camera",
+				"range_cm": 250
+			}
+		},
+		{
+			"user": "party",
+			"rank": 3,
+			"id": "skl_mop_frost_sneeze",
+			"name": "Frostniesen",
+			"category": "magic",
+			"target": "single_enemy",
+			"damage_type": "magical",
+			"element": "ice",
+			"power": 105,
+			"mp_cost": 5,
+			"anim": "cast",
+			"show_tags": [
+				"gross"
+			],
+			"rt": {
+				"icon": "pug_nose_ice",
+				"cooldown_ms": 6000,
+				"range_cm": 1500,
+				"statuses": [
+					{
+						"id": "sts_slow",
+						"chance_pm": 1000,
+						"ms": 4000,
+						"to": "target"
+					}
+				]
+			}
+		},
+		{
+			"user": "party",
+			"rank": 3,
+			"id": "skl_mop_expert_opinion",
+			"name": "Gräfliches Gutachten",
+			"category": "buff",
+			"target": "single_ally",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 6,
+			"anim": "cast",
+			"rt": {
+				"icon": "scroll_seal",
+				"cooldown_ms": 25000,
+				"range_cm": 2000,
+				"statuses": [
+					{
+						"id": "sts_haste",
+						"ms": 10000,
+						"to": "target"
+					}
+				]
+			}
+		},
+		{
+			"user": "party",
+			"rank": 3,
+			"id": "skl_mop_thunder_bark",
+			"name": "Donnerbellen",
+			"category": "magic",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "shock",
+			"power": 75,
+			"mp_cost": 5,
+			"anim": "cast",
+			"show_tags": [
+				"flashy"
+			],
+			"rt": {
+				"icon": "bark_bolt",
+				"cooldown_ms": 15000,
+				"gcd": false,
+				"interrupt": true,
+				"aoe": {
+					"center": "self",
+					"radius_cm": 600
+				}
+			}
+		},
+		{
+			"user": "party",
+			"rank": 3,
+			"id": "skl_mop_mass_lick",
+			"name": "Massen-Schlabbern",
+			"category": "heal",
+			"target": "all_allies",
+			"damage_type": "heal",
+			"heal_mode": "mag",
+			"element": "none",
+			"power": 60,
+			"mp_cost": 10,
+			"anim": "cast",
+			"cleanse": [
+				"sts_poison"
+			],
+			"show_tags": [
+				"cute",
+				"gross"
+			],
+			"rt": {
+				"icon": "two_tongues",
+				"cooldown_ms": 20000,
+				"cast_ms": 2000,
+				"statuses": [
+					{
+						"id": "sts_regen",
+						"ms": 10000,
+						"to": "target"
+					}
+				]
+			}
+		},
+		{
+			"user": "party",
+			"rank": 3,
+			"id": "skl_mop_revive",
+			"name": "Sabber der Wiederkehr",
+			"category": "heal",
+			"target": "single_ally_ko",
+			"damage_type": "heal",
+			"heal_mode": "pct",
+			"element": "none",
+			"power": 40,
+			"mp_cost": 14,
+			"anim": "cast",
+			"show_tags": [
+				"gross"
+			],
+			"rt": {
+				"icon": "drool_halo",
+				"cooldown_ms": 30000,
+				"cast_ms": 3000,
+				"range_cm": 2000
+			}
+		},
+		{
+			"user": "party",
+			"rank": 3,
+			"id": "skl_mop_inferno",
+			"name": "Gräfliches Inferno",
+			"category": "magic",
+			"target": "single_enemy",
+			"damage_type": "magical",
+			"element": "fire",
+			"power": 130,
+			"mp_cost": 12,
+			"anim": "cast",
+			"show_tags": [
+				"flashy",
+				"finisher"
+			],
+			"rt": {
+				"icon": "monocle_flames",
+				"cast_ms": 2000,
+				"range_cm": 2000,
+				"aoe": {
+					"center": "target",
+					"radius_cm": 600
+				},
+				"statuses": [
+					{
+						"id": "sts_burn",
+						"ms": 6000,
+						"to": "target",
+						"tick_power": 20
+					}
+				]
+			}
+		},
+		{
+			"id": "skl_item_burger",
+			"name": "Brutzel-Burger",
+			"user": "item",
+			"category": "item",
+			"target": "single_ally",
+			"damage_type": "heal",
+			"heal_mode": "fixed",
+			"power": 120,
+			"rank": 2,
+			"anim": "item",
+			"rt": {
+				"icon": "burger",
+				"gcd": false,
+				"range_cm": 800
+			}
+		},
+		{
+			"id": "skl_item_krawumm",
+			"name": "KRAWUMM-Dose",
+			"user": "item",
+			"category": "item",
+			"target": "single_ally",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_restore": 20,
+			"rank": 2,
+			"anim": "item",
+			"rt": {
+				"icon": "can",
+				"gcd": false,
+				"range_cm": 800
+			}
+		},
+		{
+			"id": "skl_item_salts",
+			"name": "Riechsalz",
+			"user": "item",
+			"category": "item",
+			"target": "single_ally_ko",
+			"damage_type": "heal",
+			"heal_mode": "pct",
+			"power": 30,
+			"rank": 2,
+			"anim": "item",
+			"rt": {
+				"icon": "salts",
+				"gcd": false,
+				"range_cm": 800
+			}
+		},
+		{
+			"id": "skl_item_molotov",
+			"name": "Grillanzünder-Cocktail",
+			"user": "item",
+			"category": "item",
+			"target": "all_enemies",
+			"damage_type": "fixed",
+			"element": "fire",
+			"power": 60,
+			"rank": 2,
+			"anim": "item",
+			"rt": {
+				"icon": "molotov",
+				"gcd": false,
+				"range_cm": 1500,
+				"aoe": {
+					"center": "target",
+					"radius_cm": 400
+				}
+			}
+		},
+		{
+			"id": "skl_item_smoke",
+			"name": "Taschen-Nebelmaschine",
+			"user": "item",
+			"category": "item",
+			"target": "none",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"flee_guaranteed": true,
+			"rank": 2,
+			"anim": "item",
+			"rt": {
+				"icon": "smoke",
+				"gcd": false
+			}
+		},
+		{
+			"id": "skl_e_dummy_poke",
+			"name": "Stupser",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 50,
+			"rank": 3,
+			"anim": "attack",
+			"rt": {
+				"icon": "claw",
+				"range_cm": 220,
+				"gcd": false
 			}
 		}
 	]

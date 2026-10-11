@@ -57,7 +57,7 @@
 			"rt": {
 				"default_ms": 4000,
 				"move_pm": 600,
-				"haste_pm": 800
+				"haste_pm": 1250
 			}
 		},
 		{
@@ -73,7 +73,8 @@
 			"icon": "haste",
 			"rt": {
 				"default_ms": 10000,
-				"haste_pm": 1300
+				"move_pm": 1200,
+				"haste_pm": 750
 			}
 		},
 		{
@@ -87,8 +88,7 @@
 			"color": "#9aa7b8",
 			"icon": "guard",
 			"rt": {
-				"default_ms": 6000,
-				"dmg_taken_pm": 700
+				"default_ms": 6000
 			}
 		},
 		{
@@ -119,6 +119,77 @@
 				"default_ms": -1,
 				"dmg_dealt_pm": 1500,
 				"max_stacks": 9,
+				"stack_mode": "refresh"
+			}
+		},
+		{
+			"id": "sts_dazed",
+			"name": "Überrumpelt",
+			"kind": "debuff",
+			"default_turns": 1,
+			"color": "#f5d90a",
+			"icon": "dazed",
+			"rt": {
+				"default_ms": 3000,
+				"move_pm": 500,
+				"stack_mode": "ignore",
+				"flags": [
+					"no_act"
+				]
+			}
+		},
+		{
+			"id": "sts_taunted",
+			"name": "Provoziert",
+			"kind": "debuff",
+			"default_turns": 2,
+			"color": "#e8455a",
+			"icon": "taunted",
+			"rt": {
+				"default_ms": 4000,
+				"flags": [
+					"fixate"
+				]
+			}
+		},
+		{
+			"id": "sts_burn",
+			"name": "Brennt",
+			"kind": "debuff",
+			"default_turns": 3,
+			"element": "fire",
+			"color": "#ff7a1a",
+			"icon": "burn",
+			"rt": {
+				"default_ms": 6000,
+				"period_ms": 1000,
+				"stack_mode": "refresh"
+			}
+		},
+		{
+			"id": "sts_regen",
+			"name": "Erholung",
+			"kind": "buff",
+			"default_turns": 3,
+			"color": "#7cc242",
+			"icon": "regen",
+			"rt": {
+				"default_ms": 10000,
+				"period_ms": 2000,
+				"tick_pct": 3
+			}
+		},
+		{
+			"id": "sts_rt_test_exposed",
+			"name": "Bloßgestellt",
+			"kind": "debuff",
+			"default_turns": 2,
+			"color": "#e8455a",
+			"icon": "exposed",
+			"rt": {
+				"default_ms": 6000,
+				"dmg_taken_pm": 2500,
+				"max_stacks": 3,
 				"stack_mode": "refresh"
 			}
 		}

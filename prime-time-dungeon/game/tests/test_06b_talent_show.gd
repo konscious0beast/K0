@@ -233,9 +233,86 @@ func test_party_page_lists_talents_and_the_open_choice() -> void:
 	var names: Label = kai_card.find_child("TalentNames", true, false) as Label
 	assert_eq(names.text, "Wischtechnik")
 	assert_eq((kai_card.find_child("TalentHint", true, false) as Label).text, "1 Wahl offen")
+	# polish pass: a member without talents but with open choices reads what to do, not "noch keine (ab Level 3)"
 	var mop_card: Node = page.find_child("Card_mopsula", true, false)
-	assert_eq((mop_card.find_child("TalentNames", true, false) as Label).text, "noch keine (ab Level 3)")
-	assert_eq((mop_card.find_child("TalentHint", true, false) as Label).text, "2 Wahlen offen")
+	assert_eq((mop_card.find_child("TalentNames", true, false) as Label).text, "2 Talente offen – im Safe Room wählen")
+	assert_null(mop_card.find_child("TalentHint", true, false), "no second pill for the same news")
+	page.queue_free()
+	await wait_frames(1)
+	_levels(2)
+	Game.state.member("kai").talents = {}
+	var page2: Control = (load("res://scenes/ui/party_menu.gd") as GDScript).new() as Control
+	add_to_tree(page2)
+	await wait_frames(2)
+	var kai2: Node = page2.find_child("Card_kai", true, false)
+	assert_eq((kai2.find_child("TalentNames", true, false) as Label).text, "noch keine (ab Level 3)", "below L3")
+
+
+## Polish pass (anti-mash): the cards fade in and ignore input for INPUT_LOCK_SEC after the show opens and after every
+## pick; an accept pressed during the fade picks nothing, a deliberate press afterwards does.
+func test_cards_ignore_mashed_input_while_they_fade_in() -> void:
+	_levels(5)
+	var r: Node = _room()
+	await wait_frames(3)
+	Engine.time_scale = 0.01                                # the fade-in is guaranteed to still run while we mash
+	r.call("activate", "talents")
+	await wait_frames(1)
+	var ts: Node = _modal(r)
+	assert_not_null(ts)
+	if ts == null:
+		return
+	var cards: Array = ts.get("card_buttons")
+	assert_true(bool(ts.call("input_locked")), "locked right after opening")
+	assert_true((cards[0] as Button).disabled, "a press on the fading card does nothing")
+	var holder: Control = (cards[0] as Node).get_parent() as Control
+	assert_lt(holder.modulate.a, 1.0, "the cards fade in (visible)")
+	var picks0: int = Talents.picks(Game.state.member("kai"))
+	for i in 3:                                             # mashing accept while the cards fade in
+		var ev: InputEventAction = InputEventAction.new()
+		ev.action = &"ui_accept"
+		ev.pressed = true
+		Input.parse_input_event(ev)
+		await wait_frames(1)
+		var up: InputEventAction = InputEventAction.new()
+		up.action = &"ui_accept"
+		up.pressed = false
+		Input.parse_input_event(up)
+		await wait_frames(1)
+	assert_eq(Talents.picks(Game.state.member("kai")), picks0, "no pick from mashing during the fade-in")
+	assert_true(bool(ts.call("input_locked")), "still fading")
+	Engine.time_scale = 8.0
+	assert_true(await wait_until(func() -> bool: return not bool(ts.call("input_locked")), 3000), "unlocked again")
+	assert_almost(holder.modulate.a, 1.0, 0.001, "fully visible once it accepts input")
+	var consts: Dictionary = (ts.get_script() as GDScript).get_script_constant_map()
+	assert_between(float(consts["INPUT_LOCK_SEC"]), 0.5, 1.0, "lock of at least 0.5 s")
+	assert_true(await wait_until(func() -> bool: return (cards[0] as Button).has_focus(), 30), "card 1 has focus")
+	var first_id: int = (cards[0] as Button).get_instance_id()
+	(cards[0] as Button).pressed.emit()                     # one deliberate press picks
+	assert_eq(Talents.picks(Game.state.member("kai")), picks0 + 1, "a deliberate press picks")
+	assert_true(await wait_until(func() -> bool:
+		var now: Array = ts.get("card_buttons")
+		return not now.is_empty() and (now[0] as Object).get_instance_id() != first_id, 3000), "the next choice appears")
+	assert_true(bool(ts.call("input_locked")), "…and is locked again after the pick")
+
+
+func test_rank_tag_says_rang() -> void:
+	var TalentShow: GDScript = load("res://scenes/ui/talent_show.gd") as GDScript
+	var kai: PartyMember = Game.state.member("kai")
+	var two: TalentDef = null
+	var one: TalentDef = null
+	for t: TalentDef in DB.data.all_talents():
+		if t.max_rank == 2 and two == null:
+			two = t
+		elif t.max_rank == 1 and one == null:
+			one = t
+	assert_not_null(two, "a two-rank talent in the data")
+	assert_not_null(one, "a one-rank talent in the data")
+	if two == null or one == null:
+		return
+	assert_eq(str(TalentShow.call("rank_text", kai, two)), "Rang 1/2", "new: rank 1 of 2 (was \"Neu · bis Stufe 2\")")
+	kai.talents = {two.id: 1}
+	assert_eq(str(TalentShow.call("rank_text", kai, two)), "Rang 2/2")
+	assert_eq(str(TalentShow.call("rank_text", kai, one)), "Neu")
 
 
 func test_effect_texts_for_every_kind() -> void:

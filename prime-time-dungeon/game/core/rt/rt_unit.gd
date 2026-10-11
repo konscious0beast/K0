@@ -1,10 +1,10 @@
-# STUB(R1a) — owned by R1b. Replace completely, keep the public API.
 class_name RtUnit extends Combatant
 ## A combatant with position, timers, cast, threat (07 §3.4). Ids, stats, hp/mp, statuses (RtStatus), element mods,
 ## crit bonus, rewards: inherited from Combatant (02_TECH §5.4); value talents arrive through these fields (06 B), the
 ## two behaviour talents as opener_pm / stunt_pm below (07 §9.6). max_hp() is already scaled (07 §3.9.4).
 ## display_name is the Def name (08 §2.7 Nr. 5: never the persona name; frames resolve names via UiUtil.member_name,
-## StateHash.of_rt leaves display names out).
+## StateHash.of_rt leaves display names out). RtSim works on its own copies (duplicate_unit) — an RtSetup's units stay
+## the start data.
 
 enum Driver { PLAYER, AI, AUTOPILOT }      # not "Control": would shadow the global Control class
 
@@ -87,7 +87,9 @@ func snapshot() -> Dictionary:
 ## Inverse of snapshot() (fake sim, R1b restore): Combatant fields like Combatant.from_dict, statuses as RtStatus,
 ## then every real-time field. null without an id.
 static func from_snapshot(d: Dictionary, data: GameData) -> RtUnit:
-	var base: Combatant = Combatant.from_dict(d, null)
+	var plain: Dictionary = d.duplicate()
+	plain.erase("statuses")                  # RtStatus dictionaries, read below (Combatant.from_dict expects CTB ones)
+	var base: Combatant = Combatant.from_dict(plain, null)
 	if base == null:
 		return null
 	var u: RtUnit = RtUnit.new()
@@ -139,6 +141,62 @@ static func from_snapshot(d: Dictionary, data: GameData) -> RtUnit:
 			bar_int[str(sk).to_int()] = str(u.bar[sk])
 		u.bar = bar_int
 	return u
+
+
+## A new RtUnit with every Combatant field of `c` (deep copies; statuses copied, the RT fields keep their defaults).
+static func from_combatant(c: Combatant) -> RtUnit:
+	var u: RtUnit = RtUnit.new()
+	if c != null:
+		_copy_fields(c, u, _combatant_fields())
+	return u
+
+
+## Deep copy with every field (Combatant + real time); statuses as copies, defs shared (immutable).
+func duplicate_unit() -> RtUnit:
+	var u: RtUnit = RtUnit.new()
+	_copy_fields(self, u, _all_fields())
+	return u
+
+
+static var _fields_combatant: PackedStringArray = []
+static var _fields_all: PackedStringArray = []
+
+
+static func _combatant_fields() -> PackedStringArray:
+	if _fields_combatant.is_empty():
+		var base: Combatant = Combatant.new()
+		for prop: Dictionary in base.get_property_list():
+			if (int(prop["usage"]) & PROPERTY_USAGE_SCRIPT_VARIABLE) != 0:
+				_fields_combatant.append(str(prop["name"]))
+	return _fields_combatant
+
+
+static func _all_fields() -> PackedStringArray:
+	if _fields_all.is_empty():
+		var u: RtUnit = RtUnit.new()
+		for prop: Dictionary in u.get_property_list():
+			if (int(prop["usage"]) & PROPERTY_USAGE_SCRIPT_VARIABLE) != 0:
+				_fields_all.append(str(prop["name"]))
+	return _fields_all
+
+
+static func _copy_fields(src: Combatant, dst: RtUnit, names: PackedStringArray) -> void:
+	for n: String in names:
+		var v: Variant = src.get(n)
+		match n:
+			"statuses":
+				var sts: Array[StatusEffect] = []
+				for st: StatusEffect in src.statuses:
+					sts.append(st.duplicate_effect())
+				dst.statuses = sts
+				continue
+			"stats":
+				dst.stats = src.stats.duplicate_block() if src.stats != null else StatBlock.new()
+				continue
+		if v is Array or v is Dictionary or v is PackedStringArray:
+			dst.set(n, v.duplicate(true) if not (v is PackedStringArray) else (v as PackedStringArray).duplicate())
+		else:
+			dst.set(n, v)
 
 
 static func _canon(v: Variant) -> Variant:

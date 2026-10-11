@@ -10,7 +10,7 @@ Dieses Dokument ist die **verbindliche Grundlage**. Alle anderen Dokumente und d
 
 **Vorrang bei Widersprüchen:** dieses Dokument > `07_ECHTZEITKAMPF.md` (alles Kampfrelevante) >
 `06_PROGRESSION_MAROTTEN_KI_ADMIN.md` (Progression, Marotten, KI-Admin, Twists) > `08_CASTING.md` (Casting, Persona,
-Starttalente, persönlicher Erzählstrang) > `01_GDD` / `02_TECH` / `03_ART` / `05_LIVE_MODUS` (je nach Thema).
+Vorleben, persönlicher Erzählstrang) > `01_GDD` / `02_TECH` / `03_ART` / `05_LIVE_MODUS` (je nach Thema).
 
 ---
 
@@ -26,7 +26,8 @@ Starttalente, persönlicher Erzählstrang) > `01_GDD` / `02_TECH` / `03_ART` / `
   vor dem ersten Lauf im **Casting** fest (Nutzeridee 2026-10-10, Kap. 5; Vertrag `08_CASTING.md`). Standard und Kanon ist
   **Kai**, Pfleger:in aus einem Tierheim, pragmatisch, trocken; jede Persona kennt Mopsula aus diesem Tierheim.
 - Begleiter: **Graf Mopsula**, ein Mops aus dem Tierheim, der durch den Dungeon sprechen kann, sich für
-  Adel hält und sich als Magier entpuppt. Arrogant, eitel, loyal. Publikumsliebling.
+  einen gelehrten Grafen hält und sich als Magier entpuppt. Belehrend (mit Fußnoten), pathetisch um Mitternacht,
+  loyal bis in die Knochen.
 - Ton: schwarzer Humor + echte Gefahr + Satire auf Streaming-/Werbe-/Gacha-Kultur. Nicht zynisch gegenüber den Menschen.
 
 ## 2. Design-Säulen
@@ -57,12 +58,12 @@ Etage betreten → Erkunden (Gegner sichtbar, Truhen, Events, Safe Room)
 | Erkundung | Third-Person, Kamera hinter der Figur (orbit). Etage 1 ist handgebaut (Layout-Daten in `floors.json`), ab Etage 2 prozedural aus Raum-Modulen auf Raster (`DungeonGenerator`). Gegner patrouillieren sichtbar; ein Kampf beginnt per Pull (Schlag, Fähigkeit oder Gegenstand auf einen Gegner), wenn ein verfolgender Gegner zuschlagen kann oder nach 4 s Verfolgung (07 §2.2; im CTB-Modus bis R5: Berührung = Kampf). Vorteil/Nachteil je nach Anlauf (Rücken = Präventivschlag). |
 | Kampf | **Echtzeit in der Welt** („WoW-light“, `07_ECHTZEITKAMPF.md`): Party (Kai + Graf Mopsula; gesteuert wird die gewählte Figur, die andere spielt die KI) vs. 1–6 Gegner im Raum, markiert durch einen Studio-Lichtring. Auto-Angriff, 4 Fähigkeiten + **SHOW** (Stunt) + Trank, eine Taste für den Partner, Unterbrechen, Ausweichen, Bossphasen. **Bis R5** zusätzlich der bisherige CTB-Kampf (Zugreihenfolge aus SPD + Aktionsgewicht wie FF10; Befehle Angriff, Fähigkeit, Item, Stunt, Verteidigen, Flucht) hinter dem Schalter `combat_mode`. |
 | Show-System | **Zuschauer** (live, pro Kampf/Erkundung schwankend) und **Follower** (dauerhaft). Abwechslungsreiche Aktionen, knappe Siege, Stunts, Combos, Kills mit Fähigkeiten erhöhen den Hype. Schwellenwerte → **Sponsor-Geschenk** (Heilung/Buff/Item) mitten im Kampf. |
-| Lootboxen | Bronze/Silber/Gold/Fan-Box aus Achievements und Bossen. Nur im Spiel verdient, **niemals Echtgeld**. Öffnen nur im Safe Room, mit M.O.D.-Kommentar. |
+| Lootboxen | Bronze/Silber/Gold/Fanpost-Paket aus Achievements und Bossen. Nur im Spiel verdient, **niemals Echtgeld**. Öffnen nur im Safe Room, mit M.O.D.-Kommentar. |
 | Achievements | Vom Spiel live vergeben („Erster Kill“, „Mit 1 HP gewonnen“, „Pazifist (5 min ohne Kampf)“ …) → Lootbox + M.O.D.-Spruch. |
 | Etagen-Timer | Läuft nur in der Erkundung. Etage 1: 20:00 min. Warnungen bei 5:00 / 1:00. |
 | Safe Room | Volle Heilung, Speichern, Lootboxen, Automat (Shop), Gespräch mit Mopsula (Charaktermomente). Keine Gegner. |
 | Progression | Level/EXP, Stats (HP, MP, STR, MAG, DEF, RES, SPD, LCK), Ausrüstung (Waffe, Rüstung, Accessoire), Fähigkeiten nach Level. **Klassenwahl ab Etage 3** (Datenmodell jetzt schon vorbereitet). |
-| Casting | Vor dem ersten Lauf in unter einer Minute: Name, Beruf, Hobby/Talent (oder „Rest automatisch“ = Kai). Daraus bietet M.O.D. **zwei kleine Starttalente** an (eins nehmen, einmal tauschbar); die Kandidatenkarte und ein persönlicher Erzählstrang (Rival:in, Grüße von zu Hause, Sponsor, Running Gag) kommen aus festen Katalogen — nie im Kampf. Angaben bleiben auf dem Gerät; **KI-Casting** nur als Opt-in ab 16; kein Foto in V1 (`08_CASTING.md`). |
+| Casting | Vor dem ersten Lauf in unter einer Minute: Name, Vorleben (der echte Beruf), Hobby/Talent (oder „Rest automatisch“ = Kai). Kampfwerte ändert das nicht: das Vorleben bringt in Staffeln einen **Vorsprung in einem Beruf** (+50), das Hobby ein Rezept (`09_STAFFELN.md` §8.6, 08 CR-33); die Kandidatenkarte und ein persönlicher Erzählstrang (Rival:in, Grüße von zu Hause, Sponsor, Running Gag) kommen aus festen Katalogen — nie im Kampf. Angaben bleiben auf dem Gerät; **KI-Casting** nur als Opt-in ab 16; kein Foto in V1 (`08_CASTING.md`). |
 | Bosse | Etage 1: **„Der Hausmeister“** (Quartier-Boss) + Etagenboss **„Die Rattenkönigin von Gleis 9“**. |
 | Speichern | Ein Spielstand pro Slot (3 Slots), JSON in `user://`. Nur im Safe Room + Autosave bei Etagenwechsel. |
 | Eingabe | Tastatur/Maus, Gamepad, Touch (virtueller Stick + Buttons). Alle Menüs fokus-navigierbar. |
@@ -132,7 +133,7 @@ Etage betreten → Erkunden (Gegner sichtbar, Truhen, Events, Safe Room)
   verständliches Konzept); sie stehen in `08_CASTING.md` §0.2 und §0.3. Rahmenentscheidungen (Orchestrator):
   - Die Spielfigur wird zur **Persona** der Spieler:in: eine menschliche Kandidat:in, ein Crawler wie bisher Kai. Graf
     Mopsula bleibt fest, die Figurenwahl aus 06 bleibt.
-  - Starttalente und Erzählstrang kommen **offline aus festen Katalogen und Vorlagen**; die KI ist ein **optionaler** Zusatz
+  - Vorleben-Vorsprung und Erzählstrang kommen **offline aus festen Katalogen und Vorlagen**; die KI ist ein **optionaler** Zusatz
     (KI-Casting: Opt-in ab 16 mit Einwilligung, nur Katalog-IDs und gefilterte Zeilen, jeder Fehler → offline).
   - **Kein Foto in V1**; ein „Avatar aus Foto“ kommt frühestens nach einer Rechtsprüfung (08 §6.4).
   - Der Kern bleibt deterministisch (Kap. 6b): Aufgezeichnet werden nur Katalog-IDs (Command `persona`); Name und

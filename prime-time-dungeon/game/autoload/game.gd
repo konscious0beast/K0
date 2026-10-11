@@ -1007,6 +1007,9 @@ func finish_run(cause: StringName) -> Dictionary:
 ## "errors": PackedStringArray, "version": String (RunSim.version_status: a log of another sim_version is not replayed
 ## — one error, mismatch_at -1, shown as "ältere Version", 08 §10.2 Nr. 7)}. until_tick >= 0: the clock steps on to
 ## that tick after the last command (the live sim.tick() — idle ticks in a safe room move the clock without a command).
+## Echtzeitkampf (07 §10.6, R5a): real-time combats replay through this section's API in the loop of
+## GameReplay._combat (combat checkpoints compared per tick; "combat_mismatch_at" in the result); a real-time header
+## starts from RunRules.rt_start; a compacted log replays expanded.
 func replay_log(p_log: RunLog, until_tick: int = -1) -> Dictionary:
 	return GameReplay.new(self).run(p_log, until_tick)
 
@@ -1351,10 +1354,13 @@ func combat_boundary() -> void:
 
 
 ## RtSim.submit + record (accepted commands only, 07 §10.2); "" or one of RtCommand.REASONS ("finished" without a
-## running combat).
+## running combat). R5a: a combat_hint is no input — hint cards go through combat_hint (it marks the card; recorded
+## as an input it would replay differently) → "schema".
 func combat_submit(cmd: Dictionary) -> String:
 	if combat == null:
 		return "finished"
+	if str(cmd.get("t", "")) == "combat_hint":
+		return "schema"
 	var why: String = combat.submit(cmd)
 	if why == "":
 		record(cmd)
@@ -1372,9 +1378,7 @@ func combat_hint(id: String) -> void:
 		push_warning("[Game] combat_hint: unknown hint id '%s'" % id)
 		return
 	record(cmd)
-	var hints: Dictionary = state.flags.get("rt_hints", {}) if state.flags.get("rt_hints", {}) is Dictionary else {}
-	hints[id] = true
-	state.flags["rt_hints"] = hints
+	RunRules.mark_hint(state, id)               # R5a: the rule RunSim applies too
 
 
 ## One combat tick: combat.step(), every event to Show.on_battle_event and Events.combat_event, combat checkpoints
@@ -1474,15 +1478,10 @@ func _rt_new_game() -> void:
 	_rt_speed_due = false
 	if state == null or new_game_combat_mode() != &"realtime":
 		return
-	state.combat_mode = &"realtime"
 	if run_log != null:
-		run_log.header["combat_mode"] = "realtime"
-		run_log.header["rt_version"] = 1
-	var scale_pm: int = RtBalance.from_data(DB.data).i("HP_SCALE_PM")
-	for m: PartyMember in state.party:
-		if m != null:
-			m.hp_scale_pm = scale_pm if scale_pm > 0 else 1000
-	Progression.full_heal(state, DB.data)
+		run_log.header["combat_mode"] = String(RunRules.REALTIME)
+		run_log.header["rt_version"] = RunRules.RT_VERSION
+	RunRules.rt_start(state, DB.data)           # R5a: the start both verifiers repeat from the header
 
 
 ## After the start commands of a new real-time run (floor, hero, persona): its combat speed when it is not 1000 ‰.
@@ -1519,6 +1518,25 @@ func is_realtime() -> bool:
 ## A ModDialog presents lines (blocking lines wait for the player): the boss intro waits for its line only then.
 func has_dialog_presenter() -> bool:
 	return _dialog_presenter
+
+
+# --- Echtzeitkampf (07, R5a) ---
+
+## The recording entry of the loadout command (R5a; 07 §4.1 action bar variants, §5.2 partner tactic — chosen outside
+## a combat in the skills menu): Command.validate (schema) + RunRules.loadout_refusal (a real-time run, a party member,
+## variants of their slot up to the member's level), never during a combat (rt_party_lock) → record →
+## RunRules.apply_loadout → party_changed. false = refused, nothing recorded. The command comes from
+## RunRules.loadout_cmd(member, bar, preset, tog); GameReplay replays "loadout" through here, RunSim.apply runs the same
+## check and rule. The next combat's setup reads the choice (BattleBridge.make_rt_setup).
+func apply_loadout(cmd: Dictionary) -> bool:
+	if state == null or str(cmd.get("t", "")) != "loadout" or Command.validate(cmd) != "" or rt_party_lock() != "":
+		return false
+	if RunRules.loadout_refusal(state, DB.data, cmd) != "":
+		return false
+	record(cmd)
+	RunRules.apply_loadout(state, cmd)
+	Events.party_changed.emit()
+	return true
 
 
 # ======================================================================================================================

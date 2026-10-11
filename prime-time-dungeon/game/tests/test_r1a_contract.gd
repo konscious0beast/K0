@@ -449,7 +449,9 @@ func test_rt_command_builders_and_schema() -> void:
 	assert_ne(Command.validate(enc_bad), "", "the controlled unit is a party unit")
 
 
-func test_no_real_time_combat_path_before_r5a() -> void:
+## R5a replaced R1a's "rt_unavailable": a CTB run refuses the real-time entries (not_realtime for an rt encounter and
+## combat_speed, no_combat for the entries of a combat that does not run) — nothing is recorded or started.
+func test_real_time_entries_outside_a_real_time_run() -> void:
 	var data: GameData = real_data()
 	var st: GameState = GameState.create_new(data, 0, "Kai", 21, &"prime")
 	var sim: RunSim = RunSim.new(data, st, {})
@@ -461,13 +463,16 @@ func test_no_real_time_combat_path_before_r5a() -> void:
 		"cell": [0, 0], "ctl": "p0", "party": [{"u": "p0", "p": [0, 0, 0]}], "groups": [], "presets": {},
 		"auto": true, "retarget": true, "open": {}, "diff": "prime"}},
 		{"t": "gift", "ct": 3, "gift": Gift.make_dev("chest", "bronze", 100)}]
+	var reasons: Array = []
 	for c: Dictionary in cmds:
 		var before: int = sim.rejected_cmds.size()
 		sim.apply(c)
 		assert_eq(sim.rejected_cmds.size(), before + 1, "refused: " + str(c.get("t")))
 		if sim.rejected_cmds.size() > before:
-			assert_eq(sim.rejected_cmds.back()["reason"], "rt_unavailable")
+			reasons.append(sim.rejected_cmds.back()["reason"])
+	assert_eq(reasons, ["no_combat", "not_realtime", "not_realtime", "no_combat"])
 	assert_null(sim.battle, "no battle started from an rt encounter")
+	assert_null(sim.combat, "no real-time combat in a CTB run")
 	assert_eq(rl.size(), 1, "nothing but the floor was recorded")
 	var forged: RunLog = RunLog.new()
 	forged.add_cmd(0, {"t": "floor", "floor": 1}, 1)
@@ -509,7 +514,7 @@ func test_run_log_combat_checkpoints_and_ct_order() -> void:
 		assert_true(errs[1].contains("outside a real-time combat"), errs[1])
 	rl.compact()
 	rl.expand()
-	assert_eq(rl.checkpoints().size(), 4, "compact / expand stubs change nothing (R5a)")
+	assert_eq(rl.checkpoints().size(), 4, "compact / expand never touch the checkpoints (R5a)")
 
 
 func test_say_external_refuses_during_a_battle() -> void:

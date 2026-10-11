@@ -103,9 +103,9 @@ const MAJOR: Array[int] = [0, 2, 4, 5, 7, 9, 11]
 ## SFX stream for `id`; null for unknown ids.
 static func make(id: StringName) -> AudioStreamWAV:
 	var key: String = String(id)
-	if not SFX.has(key):
+	if not SFX.has(key) and not RT_SFX.has(key):
 		return null
-	var tones: Array = SFX[key]
+	var tones: Array = SFX[key] if SFX.has(key) else RT_SFX[key]      # Echtzeitkampf (07, R2): RT_SFX
 	var total: float = 0.0
 	var cursor: float = 0.0
 	for t: Array in tones:
@@ -226,3 +226,25 @@ static func _to_wav(buf: PackedFloat32Array, loop: bool) -> AudioStreamWAV:
 		wav.loop_begin = 0
 		wav.loop_end = bytes.size() / 2   # 16 bit mono = frame count (without it the stream stops at once, §3.8)
 	return wav
+
+
+# --- Echtzeitkampf (07, R2) -------------------------------------------------------------------------------------------
+## Real-time combat sounds (not data-addressable: DataValidator.SFX_IDS stays as it is): the broadcast stinger at the
+## combat start (07 §2.8), "Studio-Licht an" of the LED ring, the roll shutter of a closed set (07 §2.9 "Rolltor") and
+## the warning tone of an enemy telegraph (07 §1 Nr. 2: shape + tone + cast bar), the "Ding" of an interrupt-worthy cast
+## and the record scratch ("Plattennadel-Kratzer") of an interrupted one (07 §8.3; R3's HUD plays both). Same tone
+## format as SFX.
+const RT_SFX_IDS: PackedStringArray = ["rt_stinger", "rt_light_on", "rt_shutter", "rt_telegraph", "rt_ding",
+	"rt_scratch"]
+const RT_SFX: Dictionary = {
+	"rt_stinger": [["sq", 392.0, 392.0, 0.07, 0.22, -1.0], ["sq", 523.0, 523.0, 0.07, 0.22, -1.0],
+		["noise", 3000.0, 600.0, 0.18, 0.3, -1.0], ["sin", 98.0, 60.0, 0.25, 0.45, 0.14]],
+	"rt_light_on": [["sin", 60.0, 60.0, 0.06, 0.35, -1.0], ["noise", 6000.0, 4000.0, 0.05, 0.12, 0.0],
+		["tri", 880.0, 1760.0, 0.18, 0.12, 0.05]],
+	"rt_shutter": [["noise", 900.0, 300.0, 0.28, 0.35, -1.0], ["saw", 70.0, 50.0, 0.28, 0.25, 0.0],
+		["sin", 120.0, 60.0, 0.1, 0.4, -1.0]],
+	"rt_telegraph": [["sq", 880.0, 880.0, 0.06, 0.18, -1.0], ["sq", 660.0, 660.0, 0.09, 0.18, -1.0]],
+	"rt_ding": [["sin", 1568.0, 1568.0, 0.32, 0.3, -1.0], ["sin", 3136.0, 3136.0, 0.2, 0.1, 0.0]],
+	"rt_scratch": [["noise", 2400.0, 300.0, 0.12, 0.4, -1.0], ["saw", 520.0, 140.0, 0.12, 0.25, 0.0],
+		["noise", 600.0, 2600.0, 0.1, 0.3, -1.0]],
+}

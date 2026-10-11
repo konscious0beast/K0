@@ -1,12 +1,14 @@
 extends TestCase
-## 06 §1.1/§1.5/§1.6 (package A): the new-game flow slot → hero choice → name entry (simple, keyboard / gamepad /
-## touch): two cards, Kai focused first, left/right between them, one press chooses, back returns; the name entry
-## keeps Kai's name and asks in the Count's voice when he leads; the intro ends with the M.O.D. line of the choice;
+## 06 §1.1/§1.5/§1.6 (package A): the new-game flow slot → hero choice → casting (08 §1.1, K1; simple, keyboard /
+## gamepad / touch): two cards, the candidate ("KANDIDAT:IN") focused first, left/right between them, one press
+## chooses, back returns; the casting asks in the Count's voice when he leads; the name entry (kept as a fallback)
+## keeps Kai's name; the intro ends with the M.O.D. line of the choice;
 ## the safe room's "Figur wechseln" switches (recorded), swaps the figures and says hero_switch:<id>; the M.O.D. lines
 ## of the block exist for both heroes; the B1 tutorial hints explain the bark when the Count leads.
 
 const SCENE_HERO: String = "res://scenes/title/hero_select.tscn"
 const SCENE_NAME: String = "res://scenes/title/name_entry.tscn"
+const SCENE_CASTING: String = "res://scenes/title/persona_casting.tscn"
 const SCENE_SLOTS: String = "res://scenes/title/slot_select.tscn"
 const SCENE_SAFE: String = "res://scenes/safe_room/safe_room.tscn"
 const SCENE_INTRO: String = "res://scenes/title/intro.tscn"
@@ -92,7 +94,8 @@ func test_hero_select_cards_focus_and_navigation() -> void:
 	var texts: String = ""
 	for l: Node in n.find_children("*", "Label", true, false):
 		texts += (l as Label).text + "\n"
-	for want: String in ["WEN STEUERST DU?", "KAI", "GRAF MOPSULA", "Feldschlag", "Bellen", "Safe Room"]:
+	for want: String in ["WEN STEUERST DU?", "KANDIDAT:IN", "Wer genau, klären wir gleich im Casting.", "GRAF MOPSULA",
+			"Feldschlag", "Bellen", "Safe Room"]:
 		assert_has(texts, want, "text '%s'" % want)
 	var n2: Node = _scene(SCENE_HERO, {"slot": 1, "hero": "mopsula"})
 	add_to_tree(n2)
@@ -100,21 +103,21 @@ func test_hero_select_cards_focus_and_navigation() -> void:
 	assert_eq(tree.root.gui_get_focus_owner(), (n2.get("cards") as Dictionary)["mopsula"], "coming back: the last pick")
 
 
-func test_hero_select_chooses_and_goes_to_the_name_entry() -> void:
+func test_hero_select_chooses_and_goes_to_the_casting() -> void:
 	Game.ensure_state()
 	var n: Node = _scene(SCENE_HERO, {"slot": 3})
 	add_to_tree(n)
 	await wait_frames(3)
 	((n.get("cards") as Dictionary)["mopsula"] as Button).pressed.emit()
 	assert_eq(str(n.get("chosen")), "mopsula")
-	assert_true(await _wait_screen(SCENE_NAME), "→ name entry")
+	assert_true(await _wait_screen(SCENE_CASTING), "→ the casting (08 §1.1)")
 	var ne: Node = Router.current
 	assert_eq(int(ne.get("slot")), 3)
 	assert_eq(str(ne.get("hero")), "mopsula")
-	assert_eq(str(ne.call("heading")), "BEGLEITER:IN", "the Count names his companion (06 §1.1)")
-	assert_has(str(ne.call("question")), "Wie heißt mein:e Begleiter:in?")
-	assert_false(str(ne.call("question")).contains("Unser"), "the Count speaks for himself (no royal \"Wir\")")
-	assert_eq((ne.get("name_edit") as LineEdit).text, "Kai", "the name is still Kai's")
+	assert_eq(str(ne.call("heading")), "CASTING 1/3 · WER BEGLEITET DEN GRAFEN?",
+		"the Count names his companion (06 §1.1, 08 §1.8)")
+	assert_false(str(ne.call("heading")).contains("UNSER"), "the Count speaks for himself (no royal \"Wir\")")
+	assert_eq((ne.get("name_edit") as LineEdit).text, "", "an empty name field: the canon Kai unless typed")
 	ne.call("back")
 	assert_true(await _wait_screen(SCENE_HERO), "back → hero choice")
 	assert_eq(tree.root.gui_get_focus_owner(), (Router.current.get("cards") as Dictionary)["mopsula"],

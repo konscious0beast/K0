@@ -1,8 +1,8 @@
 extends Control
 ## Floating virtual joystick (02_TECH §10.3, 03_ART §9.4): lives in the left 40 % of the screen, appears at the touch
 ## point, radius 90 px, knob 40 px, dead zone 0.15. Writes Input.action_press(&"move_*", strength) / action_release;
-## deflection ≤ 0.6 additionally holds `sneak`. Rest display at (147, 573) of the 1280×720 reference (bottom-left
-## anchored).
+## deflection ≤ 0.6 additionally holds `sneak` (not in the real-time combat: allow_sneak, 07 §7.3). Rest display at
+## (147, 573) of the 1280×720 reference (bottom-left anchored).
 
 const RADIUS: float = 90.0
 const KNOB: float = 40.0                    # knob diameter
@@ -18,6 +18,8 @@ var center: Vector2 = Vector2.ZERO          # in this control's local coordinate
 var knob_offset: Vector2 = Vector2.ZERO
 var vector: Vector2 = Vector2.ZERO          # -1..1, y < 0 = forward
 var sneaking: bool = false
+## Echtzeitkampf (07 §7.3, R3): false while TouchControls is in combat mode — the stick never holds `sneak` there.
+var allow_sneak: bool = true
 
 
 func _init() -> void:
@@ -88,7 +90,7 @@ func _apply(v: Vector2) -> void:
 	_set_action(&"move_left", maxf(-v.x, 0.0))
 	_set_action(&"move_back", maxf(v.y, 0.0))
 	_set_action(&"move_forward", maxf(-v.y, 0.0))
-	var want_sneak: bool = len_v > 0.0 and len_v <= SNEAK_MAX
+	var want_sneak: bool = allow_sneak and len_v > 0.0 and len_v <= SNEAK_MAX
 	if want_sneak != sneaking:
 		sneaking = want_sneak
 		if InputMap.has_action(&"sneak"):

@@ -58,8 +58,9 @@
 			],
 			"talent": "tal_org_animals",
 			"alt": "org_nature",
-			"spec_hint": "",
-			"flavor": "",
+			"prof": "prf_first_aid",
+			"spec_hint": "cls_kai_wrecker",
+			"flavor": "Sie verstehen Wesen, die beißen.",
 			"mod_tags": [],
 			"rivals": [
 				"rv_animals_1",
@@ -79,6 +80,7 @@
 				"katze"
 			],
 			"talent": "tal_org_animals",
+			"prof": "prf_cooking",
 			"title": "Tierisch beliebt",
 			"desc": "Herzen gewinnen Sie im Schlaf.",
 			"club": {
@@ -93,7 +95,7 @@
 		{
 			"id": "trt_caring",
 			"name": "fürsorglich",
-			"bias": "mar_graf_finale"
+			"bias": ""
 		}
 	],
 	"rivals": [

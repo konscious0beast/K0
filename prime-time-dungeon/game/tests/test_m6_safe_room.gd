@@ -257,6 +257,11 @@ func _data_with_scenes(scenes: Array) -> GameData:
 			"lootboxes":
 				tables["lootbox_pools"] = d.get("pools", {})
 				tables["lootbox_pity"] = d.get("pity", {"rare": 4, "epic": 8})
+			"origins":                                    # Casting (08, K1): the persona lists, plans and canon
+				var extras: Dictionary = d.duplicate(true)
+				extras.erase("schema")
+				extras.erase("entries")
+				tables["origin_extras"] = extras
 	tables["scenes"] = scenes
 	return fixture_data(tables)
 

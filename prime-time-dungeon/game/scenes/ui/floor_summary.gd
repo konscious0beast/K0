@@ -1,7 +1,9 @@
 class_name FloorSummary extends Control
 ## Floor summary "Etagen-Bilanz" (02_TECH §9.5, GDD §2.8 / B8): time used / left, kills, viewer peak, new followers,
 ## achievements — rows slide in and count up; M.O.D. `floor_end` quote; "Weiter" → Game.continue_after_summary()
-## (campaign) or the event run result (Game.mode == &"event_offline").
+## (campaign) or the event run result (Game.mode == &"event_offline"). Casting (08 §4.2, K1): with a candidate persona
+## a text line "Rival:in: … · Sponsor: …" under the show values and, when the broadcast plan says so, part 3 of the
+## running gag as the summary's subtitle.
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const UiIcon := preload("res://scenes/ui/ui_icon.gd")
@@ -131,6 +133,7 @@ func _build() -> void:
 				Sfx.play_ui(&"coin"))
 		i += 1
 	col.add_child(UiUtil.spacer(4))
+	_persona_rows(col, floor_index)                  # Casting (08 §4.2)
 	var quote: String = UiUtil.mod_line("floor_end", {"floor": floor_index})
 	if quote != "":
 		var q: Label = UiUtil.label("M.O.D.: „%s“" % quote, &"", 19, UiTheme.C_ACCENT_2)
@@ -157,6 +160,36 @@ func _build() -> void:
 	UiUtil.touch_pad(_continue, 72.0)
 	_continue.pressed.connect(continue_pressed)
 	brow.add_child(_continue)
+
+
+## Casting (08 §4.2, §4.7, K1): "Rival:in: … · Sponsor: …" (text, no number) and the plan's summary line (gag part 3) —
+## only with a persona in the campaign.
+func _persona_rows(col: VBoxContainer, floor_index: int) -> void:
+	var p: PersonaProfile = Game.persona
+	if p == null or Game.mode != &"campaign" or Game.state == null:
+		return
+	var ctx: Dictionary = PersonaText.ctx(p, DB.data, null)
+	var beats: Label = UiUtil.label(UiUtil.glyph_safe("Rival:in: %s · Sponsor: %s" % [str(ctx["rival"]),
+		str(ctx["brand"])]), &"", 18, UiTheme.C_TEXT_DIM)
+	beats.name = "PersonaBeats"
+	beats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	col.add_child(beats)
+	var tag: String = PersonaBeats.tag_for(DB.data, p, PersonaBeats.plan_for(DB.data, Game.state.seed), floor_index,
+		&"summary", 1)
+	if tag == "":
+		return
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.randomize()
+	var line: String = UiUtil.mod_line(tag, ctx, rng.randi_range(0, 99))
+	if line == "":
+		return
+	var gag: Label = UiUtil.label("„%s“" % line, &"", 18, UiTheme.C_GOLD)
+	gag.name = "PersonaGag"
+	gag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	gag.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	gag.custom_minimum_size = Vector2(880, 0)
+	gag.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	col.add_child(gag)
 
 
 ## The table rows of this summary (ROWS + the Regie-Notizen row on floors with notes).

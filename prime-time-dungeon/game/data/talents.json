@@ -23,7 +23,7 @@
 		{
 			"id": "tal_kai_dicke_haut",
 			"name": "Dicke Haut (tierheimgeprüft)",
-			"desc": "Bisse? Kratzer? Kennt Kai aus dem Tierheim.",
+			"desc": "Bisse? Kratzer? Kennen Sie aus dem Tierheim.",
 			"for": [
 				"kai"
 			],
@@ -61,7 +61,7 @@
 		{
 			"id": "tal_kai_hausverstand",
 			"name": "Hausverstand",
-			"desc": "Zaubertricks? Kai glaubt kein Wort davon.",
+			"desc": "Zaubertricks? Sie glauben kein Wort davon.",
 			"for": [
 				"kai"
 			],

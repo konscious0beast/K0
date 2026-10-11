@@ -11,13 +11,14 @@
 #     rush                safe rooms, gates and bosses only (under-levelled)
 #     dawdle              idles after the first save until the floor collapses → Sendeschluss → load → finishes
 #     typical             thorough without the side groups a4/b3/c2 and without stray hunting (GDD §13 player)
-#     all                 thorough, rush and dawdle as Kai plus thorough as Graf Mopsula after one import (CI)
+#     all                 thorough, rush and dawdle as Kai plus thorough as Graf Mopsula after one import (CI); the
+#                         rush run fills the casting in (--persona=random) unless --persona is given
 #   --hero=mopsula        the run controls Graf Mopsula (06 §1: bark instead of the field strike, safe-room switch)
 #   --pace=human          human-pace model (02_TECH §11.4.1: looks around, decides, reads) for the GDD §13 floor time
 #   --liga=1|2            06-C Unterhosen-Liga strategy: the controlled hero (1) / both (2) never wear armor or an
 #                         accessory (06 §4.3; the run must win at least one battle in the Liga)
-#   --persona=…           08 Casting: the candidate persona of the new game (K0: an empty hook — no persona; from K1
-#                         the default is "canon")
+#   --persona=…           08 Casting (K1): canon (default) = "Rest automatisch" in the casting; random | <org_id> =
+#                         the bot fills the casting in (keyboard, Vorleben / hobby / traits); none = no casting
 #
 # Env: GODOT=<path to godot 4.7 binary> (default: "godot" on PATH)
 set -uo pipefail
@@ -75,27 +76,33 @@ if echo "$out" | grep -qE "$ERR_RE"; then
   echo "fullrun.sh: IMPORT FAILED"; exit 1
 fi
 
-# Runs as "<strategy>:<hero>"; --strategy=all adds the Graf Mopsula run (06 package A) to the Kai runs.
+# Runs as "<strategy>:<hero>:<persona arg>"; --strategy=all adds the Graf Mopsula run (06 package A) to the Kai runs
+# and lets the rush run fill the casting in (08 K1: once "Rest automatisch", once a filled persona).
 RUNS=()
-for st in "${STRATEGIES[@]}"; do RUNS+=("$st:$HERO"); done
-if [ $ALL -eq 1 ] && [ "$HERO" = "kai" ]; then RUNS+=("thorough:mopsula"); fi
+for st in "${STRATEGIES[@]}"; do
+  p="${PERSONA_ARG[*]:-}"
+  if [ $ALL -eq 1 ] && [ "$st" = "rush" ] && [ ${#PERSONA_ARG[@]} -eq 0 ]; then p="--persona=random"; fi
+  RUNS+=("$st:$HERO:$p")
+done
+if [ $ALL -eq 1 ] && [ "$HERO" = "kai" ]; then RUNS+=("thorough:mopsula:${PERSONA_ARG[*]:-}"); fi
 
 status=0
 for run in "${RUNS[@]}"; do
-  st="${run%%:*}"
-  hero="${run##*:}"
-  echo "== full run: strategy $st hero $hero ${SEED_ARG[*]:-} ${PACE_ARG[*]:-} ${LIGA_ARG[*]:-} ${PERSONA_ARG[*]:-}" \
+  IFS=: read -r st hero pers <<< "$run"
+  PERS=()
+  [ -n "$pers" ] && PERS=("$pers")
+  echo "== full run: strategy $st hero $hero ${SEED_ARG[*]:-} ${PACE_ARG[*]:-} ${LIGA_ARG[*]:-} ${PERS[*]:-}" \
     "(Floor 1, headless, fixed 60 fps) =="
   start=$(date +%s)
   out="$(timeout 900 "$GODOT" --headless --path "$WORK" --fixed-fps 60 --quit-after "$QUIT_AFTER" \
         -- --autoplay=full "--strategy=$st" "--hero=$hero" "${SEED_ARG[@]}" "${PACE_ARG[@]}" "${LIGA_ARG[@]}" \
-        "${PERSONA_ARG[@]}" 2>&1 | filter_noise)"
+        "${PERS[@]}" 2>&1 | filter_noise)"
   code=${PIPESTATUS[0]}
   end=$(date +%s)
   log_name="fullrun_$st"
   [ "$hero" != "kai" ] && log_name="fullrun_${st}_$hero"
   [ ${#LIGA_ARG[@]} -gt 0 ] && log_name="${log_name}_liga${LIGA_ARG[0]#--liga=}"
-  [ ${#PERSONA_ARG[@]} -gt 0 ] && log_name="${log_name}_persona_${PERSONA_ARG[0]#--persona=}"
+  [ ${#PERS[@]} -gt 0 ] && log_name="${log_name}_persona_${PERS[0]#--persona=}"
   if [ -n "$LOG_DIR" ]; then mkdir -p "$LOG_DIR" && printf '%s\n' "$out" > "$LOG_DIR/$log_name.log"; fi
   echo "$out" | grep -E '^FULLRUN: (\[|stats|OK)|Assertion failed|SCRIPT ERROR|ERROR:' | grep -v '^FULLRUN: \[[0-9]*\]   hype' \
     | tail -n 120

@@ -4,7 +4,7 @@
 		{
 			"id": "mar_mop_only",
 			"name": "Nur der Mopp",
-			"desc": "Gewinne Kämpfe, während Kai den Wischmopp trägt.",
+			"desc": "Gewinne Kämpfe mit dem Wischmopp in der Hand.",
 			"kind": "battle",
 			"trigger": "marotte_battle",
 			"condition": "e.kai_weapon == \"itm_wpn_mop\"",

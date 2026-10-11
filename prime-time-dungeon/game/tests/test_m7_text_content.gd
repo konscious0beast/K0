@@ -75,13 +75,15 @@ func test_line_rules() -> void:
 		assert_eq(l.text, l.text.strip_edges(), l.id + " has no surrounding whitespace")
 		for ph: String in DataValidator.placeholders_in(l.text):
 			assert_has(DataValidator.TEXT_PLACEHOLDERS, ph, l.id)
-		# Voices: chat_* and the 10-minute warning are chat; mopsula_idle and the Regie monologue (06-D,
-		# tw_mopsula_monologue) are the count himself; the rest is M.O.D.
+		# Voices: chat_* and the 10-minute warning are chat; mopsula_idle, the Regie monologue (06-D,
+		# tw_mopsula_monologue) and some persona_* lines (08 K1) are the count himself; the rest is M.O.D.
 		var want_voice: String = "mod"
 		if l.tag.begins_with("chat_") or l.tag == "timer_warn_600":
 			want_voice = "chat"
 		elif l.tag == "mopsula_idle" or l.tag.begins_with("regie_monologue_"):
 			want_voice = "mopsula"
+		elif l.tag.begins_with("persona_") and l.voice == "mopsula":
+			want_voice = "mopsula"                     # 08 §4.5 (K1): the Count comments the candidate's safe room
 		assert_eq(l.voice, want_voice, l.id + " voice")
 		assert_eq(l.user, "", l.id + ": senders come from chat_handle")
 		assert_true(l.min_floor <= 1 or l.max_floor == 0 or l.min_floor <= l.max_floor, l.id)

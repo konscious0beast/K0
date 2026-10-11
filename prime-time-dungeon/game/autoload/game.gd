@@ -1280,12 +1280,12 @@ var _rt_checkpoint_ct: int = -1       # last combat tick a combat checkpoint was
 
 
 ## Records the encounter (with its "rt" block), draws the seeds "battle" (here) and "show" (Show.begin_battle), builds
-## the setup with BattleBridge.make_rt_setup, creates `combat`, sets in_battle, Show.begin_battle(setup), emits
-## Events.combat_started(combat) and Events.battle_started, then feeds the ct-0 prelude of combat.start() to
-## Show.on_battle_event / Events.combat_event (the order of the CTB controller: begin, battle_started, start events —
-## listeners know the combat before its first event). null (nothing started, in_battle stays false) without a run, for a
-## command without "rt" block or when no setup can be built (BattleBridge stub before R1b): then only the encounter is
-## recorded and the seed drawn, like a CTB encounter — the replay draws the same seed.
+## the setup with BattleBridge.make_rt_setup_rules (the run's rules: event_rules()), creates `combat`, sets in_battle,
+## Show.begin_battle(setup), emits Events.combat_started(combat) and Events.battle_started, then feeds the ct-0 prelude
+## of combat.start() to Show.on_battle_event / Events.combat_event (the order of the CTB controller: begin,
+## battle_started, start events — listeners know the combat before its first event). null (nothing started, in_battle
+## stays false) without a run, for a command without "rt" block or when no setup can be built (e.g. the stairs room):
+## then only the encounter is recorded and the seed drawn, like a CTB encounter — the replay draws the same seed.
 func make_rt_setup(cmd: Dictionary) -> RtSetup:
 	if state == null or cmd.is_empty() or str(cmd.get("t", "")) != "encounter" or not (cmd.get("rt", null) is Dictionary):
 		return null
@@ -1298,7 +1298,8 @@ func make_rt_setup(cmd: Dictionary) -> RtSetup:
 	if rt_sim_factory.is_valid():
 		sim_new = rt_sim_factory.call(cmd, seed_battle) as RtSim
 	else:
-		var built: RtSetup = BattleBridge.make_rt_setup(state, DB.data, cmd, seed_battle)
+		# the run's rules (event / league: liga talents, rules.combat) like make_battle_setup (R1b API)
+		var built: RtSetup = BattleBridge.make_rt_setup_rules(state, DB.data, cmd, seed_battle, event_rules())
 		if built != null:
 			sim_new = RtSim.new(built, DB.data)
 	if sim_new == null or sim_new.setup == null:
@@ -1450,7 +1451,9 @@ func new_game_combat_mode() -> StringName:
 
 
 ## New campaign games take the combat mode (07 §12.1); the run log header names a real-time run
-## (07 §10.2: "combat_mode": "realtime", "rt_version": 1 — CTB headers stay as they are).
+## (07 §10.2: "combat_mode": "realtime", "rt_version": 1 — CTB headers stay as they are). A real-time save scales the
+## party's max HP at its creation (07 §3.9.4: PartyMember.hp_scale_pm = HP_SCALE_PM, the last step of
+## Progression.total_stats) and starts with full HP / MP.
 func _rt_new_game() -> void:
 	_rt_speed_pm = 1000
 	_rt_speed_due = false
@@ -1460,6 +1463,11 @@ func _rt_new_game() -> void:
 	if run_log != null:
 		run_log.header["combat_mode"] = "realtime"
 		run_log.header["rt_version"] = 1
+	var scale_pm: int = RtBalance.from_data(DB.data).i("HP_SCALE_PM")
+	for m: PartyMember in state.party:
+		if m != null:
+			m.hp_scale_pm = scale_pm if scale_pm > 0 else 1000
+	Progression.full_heal(state, DB.data)
 
 
 ## After the start commands of a new real-time run (floor, hero, persona): its combat speed when it is not 1000 ‰.

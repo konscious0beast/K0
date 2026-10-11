@@ -15,10 +15,16 @@ extends Node3D
 ##   stay behind the wall (previous room, above the wall top) at the flattest pitch from which Kai's head AND feet
 ##   are in sight (rays against `world`).
 ## - Deviation (03_ART §8.1 / 02_TECH §7.3, recorded here): the pivot looks LOOK_AHEAD (2.5 m) ahead of Kai along the
-##   camera's flat forward (shortened in front of walls), so Kai sits in the lower third and the interact (1.5 m) and
-##   field-strike (1.8 m) zone in front of him is not hidden behind his own (chibi) head.
-## - Camera closer than 1.5 m to Kai's head → his rig fades out (GeometryInstance3D.transparency for art-kit rigs; the
-##   fallback toon shaders dither every fragment closer than 1.5 m to the camera), never a frame filled by his head.
+##   camera's flat forward (shortened in front of walls — and of door openings: the look-ahead is also probed at lintel
+##   height, so walking towards an open doorway never pushes the pivot through it and the arm under the lintel, which
+##   used to give a close-up), so Kai sits in the lower third and the interact (1.5 m) and field-strike (1.8 m) zone in
+##   front of him is not hidden behind his own (chibi) head.
+## - Framing per leader (06 §1.2, polish pass): look-at height, extra distance, look-ahead and head height follow the
+##   controlled figure (LEADER_FRAMING, set_leader): Graf Mopsula (0.9 m) is framed lower and from further back, so
+##   the following Kai is in the picture instead of under its bottom edge. The player's zoom (arm_length) is unchanged.
+## - Camera closer than 1.5 m to the leader's head → the rig fades out (GeometryInstance3D.transparency for art-kit
+##   rigs; the fallback toon shaders dither every fragment closer than 1.5 m to the camera), never a frame filled by
+##   a head; the follower (set by the scene) fades the same way.
 
 const ARM_LENGTH: float = 7.0
 const ZOOM_MIN: float = 5.0
@@ -35,6 +41,7 @@ const TOUCH_RAD_PER_PX: float = 0.006
 const PIVOT_HEIGHT: float = 1.4
 const LOOK_AHEAD: float = 2.5
 const PROBE_HEIGHT: float = 3.2         # free space behind the pivot is measured here (walls 3.5 m, lintels 3.0 m)
+const LINTEL_PROBE_BACK: float = 1.0    # the look-ahead's lintel probe starts this far behind the leader
 const MIN_BEHIND: float = 0.5           # inside-room solution only if the camera stays this far behind Kai
 const PITCH_STEP_DEG: float = 3.0
 const FOLLOW_LERP: float = 10.0
@@ -49,6 +56,15 @@ const PITCH_RELAX_SPEED: float = 1.0   # rad/s back towards the player's pitch
 const FADE_START: float = 1.5          # camera closer than this to Kai's head → his rig starts to fade
 const FADE_HIDDEN: float = 0.6         # … and is gone at this distance
 const HEAD_HEIGHT: float = 1.5
+const FEET_HEIGHT: float = 0.3
+## Framing per leader (06 §1.2): look-at height above the leader's feet, extra arm on top of the player's zoom,
+## look-ahead, the pitch a snap() starts from and the head height (sight rays, fade). Kai = the M3 values. Graf
+## Mopsula (0.9 m): lower, further back and a little steeper, so the following Kai (1.8 m behind) is in the picture
+## with his head below the Count's paws (not over him).
+const LEADER_FRAMING: Dictionary = {
+	"kai": {"pivot": PIVOT_HEIGHT, "extra_arm": 0.0, "look": LOOK_AHEAD, "pitch": PITCH_DEFAULT_DEG, "head": HEAD_HEIGHT},
+	"mopsula": {"pivot": 1.0, "extra_arm": 1.5, "look": 1.5, "pitch": -46.0, "head": 0.8},
+}
 
 var target: Node3D = null
 var yaw: float = 0.0
@@ -60,6 +76,15 @@ var frame_extra_arm: float = 0.0
 ## Bodies the camera ignores (blocking bodies of small props: chests, event props; set by the scene). Walls, door
 ## lintels and gates always count.
 var exclude: Array[RID] = []
+## The partner following the leader (set by the scene): fades like the leader when the camera comes too close.
+var follower: Node3D = null
+## Framing of the current leader (LEADER_FRAMING, set_leader).
+var leader_id: String = "kai"
+var pivot_height: float = PIVOT_HEIGHT
+var look_ahead: float = LOOK_AHEAD
+var leader_extra_arm: float = 0.0
+var leader_pitch_deg: float = PITCH_DEFAULT_DEG
+var head_height: float = HEAD_HEIGHT
 
 var _pitch_node: Node3D
 var _arm: SpringArm3D
@@ -70,8 +95,7 @@ var _look: float = LOOK_AHEAD
 var _since_input: float = 0.0
 var _arm_kick: float = 1.0
 var _cast_shape: SphereShape3D
-var _fade: float = 0.0
-var _fade_rig: Node = null
+var _fade: Dictionary = {}             # rig instance id → applied transparency (leader and follower)
 var _arm_limit: float = ARM_LENGTH
 
 
@@ -118,10 +142,24 @@ func current_arm() -> float:
 	return _len
 
 
-## Instantly behind `yaw_rad` (Kai's facing) at the target; arm and pitch resolved against the walls at once.
+## 06 §1.2: frames `member_id` (the controlled figure) — look-at height, extra distance, look-ahead, head height.
+## Unknown ids frame like Kai. Call snap() afterwards for an instant cut.
+func set_leader(member_id: String) -> void:
+	leader_id = member_id if LEADER_FRAMING.has(member_id) else "kai"
+	var f: Dictionary = LEADER_FRAMING[leader_id]
+	pivot_height = float(f["pivot"])
+	leader_extra_arm = float(f["extra_arm"])
+	look_ahead = float(f["look"])
+	leader_pitch_deg = float(f["pitch"])
+	head_height = float(f["head"])
+	_look = look_ahead
+
+
+## Instantly behind `yaw_rad` (the leader's facing) at the target, at the leader's default pitch; arm and pitch
+## resolved against the walls at once.
 func snap(yaw_rad: float) -> void:
 	yaw = yaw_rad
-	pitch = deg_to_rad(PITCH_DEFAULT_DEG)
+	pitch = deg_to_rad(leader_pitch_deg)
 	_since_input = 0.0
 	_apply()
 	if target != null and is_instance_valid(target):
@@ -210,15 +248,21 @@ func _physics_process(delta: float) -> void:
 
 
 func _full_arm() -> float:
-	return (arm_length + frame_extra_arm) * _arm_kick
+	return (arm_length + frame_extra_arm + leader_extra_arm) * _arm_kick
 
 
-## Pivot: Kai + 1.4 m, LOOK_AHEAD along the camera's flat forward (not through a wall in front of him).
+## Pivot: leader + look-at height (Kai 1.4 m), the look-ahead along the camera's flat forward — not through a wall in
+## front of the leader and not through an open doorway (probed at lintel height too: a pivot beyond the door would pull
+## the arm under the lintel, a close-up).
 func _pivot_target() -> Vector3:
-	var head: Vector3 = target.global_position + Vector3(0.0, PIVOT_HEIGHT, 0.0)
-	_look = LOOK_AHEAD
+	var head: Vector3 = target.global_position + Vector3(0.0, pivot_height, 0.0)
+	_look = look_ahead
 	if is_inside_tree():
-		_look = _cast_free(head, flat_forward(), LOOK_AHEAD)
+		var fwd: Vector3 = flat_forward()
+		# The lintel probe starts behind the leader: a cast that starts inside a lintel box ignores it.
+		var lintel: Vector3 = target.global_position + Vector3(0.0, PROBE_HEIGHT, 0.0) - fwd * LINTEL_PROBE_BACK
+		var to_lintel: float = _cast_free(lintel, fwd, look_ahead + LINTEL_PROBE_BACK) - LINTEL_PROBE_BACK
+		_look = clampf(minf(_cast_free(head, fwd, look_ahead), to_lintel), 0.0, look_ahead)
 	return head + flat_forward() * _look
 
 
@@ -246,15 +290,20 @@ func _solve(full: float) -> Vector2:
 		if p <= p_min + 0.0001:
 			break
 		p = maxf(p_min, p - step)
+	# 3. Neither (the leader right inside a door opening: the lintel box is too deep to look under it, the arm too short
+	# to clear it at the player's pitch): never a camera in front of the leader — the steepest pitch with its free arm.
+	var a_min: float = _free_arm(p_min, full)
+	if arm_room * cos(p_room) < _look and a_min * cos(p_min) >= _look:
+		return Vector2(p_min, a_min)
 	return Vector2(p_room, arm_room)
 
 
-## Rays from the camera position at pitch `p` / arm `a` to Kai's head and feet hit nothing of `world`.
+## Rays from the camera position at pitch `p` / arm `a` to the leader's head and feet hit nothing of `world`.
 func _sees_target(p: float, a: float) -> bool:
 	var dir: Vector3 = (Basis(Vector3.UP, yaw) * Basis(Vector3.RIGHT, p)) * Vector3(0.0, 0.0, 1.0)
 	var cam: Vector3 = global_position + dir * a
 	var space: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
-	for h: float in [HEAD_HEIGHT, 0.3]:
+	for h: float in [head_height, FEET_HEIGHT]:
 		var q: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(cam,
 			target.global_position + Vector3(0.0, h, 0.0), LAYER_WORLD, exclude)
 		if not space.intersect_ray(q).is_empty():
@@ -284,20 +333,32 @@ func _cast_free(from: Vector3, dir: Vector3, length: float) -> float:
 	return maxf(0.0, r[0] * length - COLLISION_MARGIN)
 
 
-## Fades Kai's rig when the camera comes closer than FADE_START to his head (corner, zoomed in).
+## Fades the leader's rig when the camera comes closer than FADE_START to its head (corner, zoomed in); the follower
+## (Kai behind the Count, the Count behind Kai) the same way with its own head height.
 func _update_fade() -> void:
-	if target == null or not is_instance_valid(target) or not _cam.is_inside_tree():
+	if not _cam.is_inside_tree():
 		return
-	var rig: Node = target.get("rig") as Node if "rig" in target else null
+	if target != null and is_instance_valid(target):
+		_fade_body(target, head_height)
+	if follower != null and is_instance_valid(follower):
+		var fid: String = str(follower.get("member_id")) if "member_id" in follower else ""
+		var fr: Dictionary = LEADER_FRAMING.get(fid, LEADER_FRAMING["kai"])
+		_fade_body(follower, float(fr["head"]))
+
+
+func _fade_body(body: Node3D, head_h: float) -> void:
+	var rig: Node = body.get("rig") as Node if "rig" in body else null
 	if rig == null or not is_instance_valid(rig):
 		return
-	var head: Vector3 = target.global_position + Vector3(0.0, HEAD_HEIGHT, 0.0)
+	var head: Vector3 = body.global_position + Vector3(0.0, head_h, 0.0)
 	var d: float = _cam.global_position.distance_to(head)
 	var f: float = clampf((FADE_START - d) / (FADE_START - FADE_HIDDEN), 0.0, 1.0)
-	if is_equal_approx(f, _fade) and rig == _fade_rig:
+	var key: int = rig.get_instance_id()
+	if _fade.has(key) and is_equal_approx(float(_fade[key]), f):
 		return
-	_fade = f
-	_fade_rig = rig
+	if _fade.size() > 8:
+		_fade.clear()                       # rigs are rebuilt on a hero switch; keep only live entries around
+	_fade[key] = f
 	_set_transparency(rig, f)
 
 

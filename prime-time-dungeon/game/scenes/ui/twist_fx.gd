@@ -3,12 +3,18 @@ extends CanvasLayer
 ## looks like. Kept deliberately simple (06 §0.2 L-1: one sentence per system, HUD budget):
 ##   · ONE chip under the floor timer: "REGIE" pill + twist name + what is left ("0:42", "noch 2 Kämpfe", "nächster
 ##     Safe Room") and a thin bar that empties — no urgency wording, no purchase context (06 §6 Nr. 1 style)
-##   · tw_lights_out: a dark vignette (exploration only) · tw_confetti_gravity: confetti rising from the bottom
+##   · tw_lights_out (exploration only): the 3D picture clearly darker — a dark veil, a vignette, a subtle flicker —
+##     on its own CanvasLayer 3, i.e. over the world but under the HUD (layer 5+), so every HUD text stays readable
+##   · tw_confetti_gravity: confetti rising from the bottom
 ## Reads TwistApplier.view(Game.state) a few times per second (robust against loads, replays and floor changes);
 ## Events.twist_applied pops the chip. Display only — nothing here changes game state.
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const REFRESH_SEC: float = 0.2
+const LIGHTS_OUT_LAYER: int = 3              # over the 3D world, under the HUD (02_TECH §9.4: HUD 5, touch 20)
+const LIGHTS_OUT_VEIL: float = 0.46          # darkness over the whole picture (measured: world luma −46 %)
+const LIGHTS_OUT_EDGE: float = 0.86          # … towards the screen edges (vignette)
+const LIGHTS_OUT_FLICKER: float = 0.08       # brief extra dips, a few per second
 const CHIP_TOP: float = 112.0
 const MODES_CHIP: Array[StringName] = [&"explore", &"battle", &"safe_room"]
 ## Source → pill text (who intervened).
@@ -23,7 +29,8 @@ var _pill: Label
 var _name: Label
 var _left: Label
 var _bar: ProgressBar
-var _vignette: ColorRect
+var _vignette: ColorRect                    # tw_lights_out veil + vignette + flicker (on _lights_out)
+var _lights_out: CanvasLayer
 var _confetti: CPUParticles2D
 var _acc: float = 0.0
 var _shown_id: String = ""
@@ -41,13 +48,17 @@ func _ready() -> void:
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	UiUtil.apply_theme(_root)
 	add_child(_root)
+	_lights_out = CanvasLayer.new()
+	_lights_out.name = "LightsOut"
+	_lights_out.layer = LIGHTS_OUT_LAYER
+	add_child(_lights_out)
 	_vignette = ColorRect.new()
 	_vignette.name = "Vignette"
 	UiUtil.full_rect(_vignette)
 	_vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_vignette.material = _vignette_material()
 	_vignette.visible = false
-	_root.add_child(_vignette)
+	_lights_out.add_child(_vignette)
 	_confetti = _make_confetti()
 	_root.add_child(_confetti)
 	_build_chip()
@@ -179,19 +190,31 @@ func _layout() -> void:
 	_chip.position = Vector2(roundf((vp.x - _chip.size.x) * 0.5), CHIP_TOP)
 
 
+## Stromausfall: a dark veil over the whole picture (`veil`), darker towards the edges (`edge`, vignette around the
+## lower middle where the leader walks) and a subtle flicker — a few brief dips per second, like a failing lamp.
 static func _vignette_material() -> ShaderMaterial:
 	var sh: Shader = Shader.new()
 	sh.code = """shader_type canvas_item;
-uniform float strength = 0.82;
+uniform float veil = 0.46;
+uniform float edge = 0.86;
+uniform vec2 focus = vec2(0.5, 0.6);
+uniform float flicker = 0.08;
+float hash(float n) {
+	return fract(sin(n * 12.9898) * 43758.5453);
+}
 void fragment() {
-	vec2 d = (UV - vec2(0.5)) * vec2(1.6, 1.0);
-	float r = length(d);
-	float a = smoothstep(0.32, 0.95, r) * strength;
-	COLOR = vec4(0.02, 0.01, 0.06, a);
+	vec2 d = (UV - focus) * vec2(1.6, 1.0);
+	float a = mix(veil, edge, smoothstep(0.16, 0.8, length(d)));
+	float t = floor(TIME * 11.0);
+	float dip = step(0.88, hash(t)) * flicker * (0.5 + 0.5 * hash(t + 7.0));
+	COLOR = vec4(0.01, 0.01, 0.04, clamp(a + dip, 0.0, 0.94));
 }
 """
 	var m: ShaderMaterial = ShaderMaterial.new()
 	m.shader = sh
+	m.set_shader_parameter("veil", LIGHTS_OUT_VEIL)
+	m.set_shader_parameter("edge", LIGHTS_OUT_EDGE)
+	m.set_shader_parameter("flicker", LIGHTS_OUT_FLICKER)
 	return m
 
 

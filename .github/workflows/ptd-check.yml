@@ -37,6 +37,8 @@ jobs:
         run: PTD_PERF_ASSERTS=1 GODOT=~/godot/godot prime-time-dungeon/tools/check.sh
       - name: Full run Floor 1 (bot, thorough + rush + dawdle, ~1.5 min)
         run: GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --strategy=all --log-dir=fullrun-logs
+      - name: Full run Floor 1 in real time (07 §12.5, thorough, bot profile typical, ~3 min)
+        run: GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --combat=realtime --log-dir=fullrun-logs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -17,16 +17,24 @@ var director: CombatDirector = null
 var triggered: Array[Array] = []           # Events.encounter_triggered (group, encounter, advantage)
 
 var _settings_mode: StringName = &"ctb"
+var _saved_data: GameData = null
 
 
 func before_each() -> void:
 	triggered.clear()
 	scene = null
 	director = null
+	_saved_data = null
 	_settings_mode = Game.settings.combat_mode
-	Game.new_game(0, "Kai", SEED)
-	Game.state.combat_mode = &"realtime"
+	_new_rt_game()
 	Events.encounter_triggered.connect(_on_triggered)
+
+
+## A new real-time campaign game (07 §12.1: the boot argument path — HP scale, run log header).
+func _new_rt_game() -> void:
+	Game.combat_mode_override = &"realtime"
+	Game.new_game(0, "Kai", SEED)
+	Game.combat_mode_override = &""
 
 
 func after_each() -> void:
@@ -36,6 +44,10 @@ func after_each() -> void:
 		Game.end_combat()
 	Game.rt_sim_factory = Callable()
 	Game.settings.combat_mode = _settings_mode
+	Game.combat_mode_override = &""
+	if _saved_data != null:
+		DB.data = _saved_data
+		_saved_data = null
 	for a: StringName in [&"move_forward", &"move_back", &"move_left", &"move_right", &"sneak", &"action"]:
 		Input.action_release(a)
 	var cur0: Node = Router.current
@@ -79,6 +91,26 @@ func make_world(plan: String = "win", length: int = 300, hero: String = "kai") -
 	director.auto_tick = false
 	Game.rt_sim_factory = WorldStream.factory(scene, plan, length)
 	return scene
+
+
+## The exploration of the RtKit fixture floor (tests/fixtures/rt_min: the rt_min tables WITH rt blocks; start (3,7),
+## (3,6) NORMAL doors N E S W with the sleeping tutorial group f1_g0, (4,6), stairs (3,5)) and the REAL sim (R1b-I1):
+## no world fixture — Game builds the setup with BattleBridge.make_rt_setup_rules.
+func make_kit_world(hero: String = "kai") -> ExplorationScene:
+	_saved_data = DB.data
+	DB.data = RtKit.data()
+	_new_rt_game()
+	await make_world("win", 300, hero)
+	Game.rt_sim_factory = Callable()
+	return scene
+
+
+## Waits `sec` seconds of game time (process frames; real physics runs meanwhile).
+func seconds(sec: float) -> void:
+	var t: float = 0.0
+	while t < sec:
+		await tree.process_frame
+		t += tree.root.get_process_delta_time()
 
 
 ## Teleports the controlled figure to room `cell` + `offset` (m) facing `yaw`; the room logic follows at once.

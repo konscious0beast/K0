@@ -112,7 +112,7 @@ func _make_setup(cmd: Dictionary, seed: int) -> RtSetup:
 		var c: Combatant = Progression.to_combatant(m, data, uid, int(uid.substr(1)))
 		var u: RtUnit = RtUnit.from_snapshot(c.to_dict(), data)
 		u.display_name = data.party_member(member).name
-		var hp: int = maxi(1, u.max_hp()) * 4
+		var hp: int = maxi(1, u.max_hp())        # a real-time game scales party HP itself (07 §3.9.4)
 		u.stats.values[StatBlock.Stat.HP] = hp
 		u.hp = hp
 		u.driver = RtUnit.Driver.PLAYER if uid == _ctl else RtUnit.Driver.AI
@@ -338,7 +338,7 @@ func _result_dict() -> Dictionary:
 	var killed: PackedStringArray = []
 	for u: RtUnit in _setup.units:
 		if u.side == Combatant.Side.PARTY:
-			r.party_hp[u.def_id] = maxi(1, int(_hp[u.id]) / 4)
+			r.party_hp[u.def_id] = maxi(1, int(_hp[u.id]))
 			r.party_mp[u.def_id] = u.mp
 		elif int(_hp[u.id]) == 0:
 			killed.append(u.def_id)

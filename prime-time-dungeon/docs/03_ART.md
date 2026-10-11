@@ -1572,6 +1572,29 @@ Begründung 88: 720p-Referenz ≙ 48 dp auf einem 6,1″-Phone im Querformat (72
 Stil: Stick-Ring `PAPER` @ 25 %, Knopf @ 60 %; Aktions-Buttons rund `NOVA_MAGENTA` @ 80 % mit `PAPER`-Icon (`Polygon2D`, F8);
 Kampf-Befehle 2 Spalten × 3 Zeilen, je 200×64 sichtbar / 88 hoch Treffer. `test_m6_ui_scenes` prüft Trefferflächen ≥ 88 (02_TECH §11.5).
 
+### 9.5 Echtzeitkampf-HUD (07 §8, R3)
+
+Umgesetzt in `scenes/combat/ui/` (Layer 6, Daumen-Gruppe 21, Hinweiskarte/Rad/Taktik 46), Maße und Inhalte nach 07 §8.1–8.9; Farben
+aus `combat_style.gd`: Party-HP `ui_party` #4AA8FF, Gegner-HP `ui_enemy` #E8455A, MP `MANA` #60A5FA, Schadensstück `DANGER`
+#FF4D4D (0,4 s), Heilblitz #4ADE80, SHOW-Rahmen `HYPE_GOLD`, FINALE `NOVA_MAGENTA` ↔ Gold, Ziel/Fokus `NOVA_CYAN`.
+
+- **Draw-Calls:** Rahmen, Leisten, Symbole und Tönungen je Element als **ein** Dreiecks-Array (`icon_mesh.gd`); Abklingzeit-Sweeps
+  als `ColorRect` mit **einem** gemeinsamen `ShaderMaterial` (`art/shaders/ui_cooldown_sweep.gdshader`, Instanz-Uniforms
+  `cd_left`/`gcd_left`); Beschriftungen als `Label` **ohne Outline** auf dunklem Grund. Keine `TextureProgressBar`-Radialanzeigen,
+  keine `PanelContainer`-Plaketten, keine `Label3D`-Plaketten, keine SubViewport-Porträts (die M.O.D.-Drohne entfällt in der
+  Untertitel-Form).
+- **Symbole:** jede Id aus `RtVocab.ICON_IDS` als gezeichnetes Symbol (`combat_icons.gd`, F8: nie Schrift-Glyphen) nach der
+  „Symbol-Idee“ von 07 §4.2/4.3; Graf Mopsula ohne Kronen-Motiv (A15). Party-Symbole statisch (Kai: Kopf mit Strubbelhaar,
+  Graf: Mopsgesicht mit Monokel).
+- **Aktionsleiste (PC/Pad):** Slots 64 px, Abstand 8, vor dem Trank 12; Tasten-Kappe `PAPER` oben links (über dem Sweep, damit eine
+  Abklingzeit sie nie abdunkelt); Restsekunden 20 px mittig; MP-Kosten/„2/3“ 12 px unten.
+- **Touch:** Daumen-Gruppe rund (Trefferfläche = Kreis mit 88–104 px Durchmesser; 07 prüft Mittelpunkt-Abstände), Slot 1 `NOVA_MAGENTA`
+  wie der Aktionsknopf der Erkundung, SHOW mit Goldrand; Trank-Scheibe 12 px über 07 (endet über dem Chat-Ticker), Anzahl in der
+  Scheibe. Spieler-Zauberleiste, M.O.D.-Untertitel und Hinweiskarte stehen in der Mittelspalte 50 px links der Bildmitte (bei 1280
+  genau x 590 bzw. 330–850 aus 07 §8.1; auf breiteren Phones wandert die Spalte mit der Mitte zwischen Stick und Daumen-Gruppe).
+- **Bauchbinden:** Kampf-Banner oben Mitte unter Ziel-/Bossrahmen (Schrägschnitt 0.21, 1,2 s), Ergebnis „Applaus!“/„Level up!“ unten
+  links 380 px über dem Ticker, Abspann-Panel (Layer 60) mit Goldrahmen 3 px.
+
 ---
 
 ## 10. Asset-Upgrade-Pfad Blender → glTF 2.0

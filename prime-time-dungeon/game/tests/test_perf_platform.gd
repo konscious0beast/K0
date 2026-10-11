@@ -1,8 +1,9 @@
 extends TestCase
-## Platform readiness (02_TECH §2.1, §10.3–10.5, §12.2, §12.3): mobile project settings, export presets (all five,
-## shared filters, launcher icons that exist and have the store sizes, the Apple export modes, one displayed version),
-## the startup chain not compiling screens early.
+## Platform readiness (02_TECH §2.1, §10.3–10.5, §12.2–12.4): mobile project settings, export presets (all five,
+## shared filters, launcher icons that exist and have the store sizes, the Apple export modes, one displayed version,
+## the Apple release values patched in only at export time), the startup chain not compiling screens early.
 
+const ApplePreset := preload("res://tests/tools/apple_preset.gd")
 const PRESETS: String = "res://export_presets.cfg"
 const PLATFORMS: Dictionary = {"Windows": "Windows Desktop", "Linux": "Linux", "macOS": "macOS", "Android": "Android",
 	"iOS": "iOS"}
@@ -104,6 +105,49 @@ func test_apple_presets_export_playable_builds() -> void:
 	assert_ne(str(cfg.get_value(ios + ".options", "application/app_store_team_id", "")), "", "Team ID placeholder")
 	# Xcode's Run uses the exported (Release) configuration; a free Apple ID has no distribution certificate.
 	assert_eq(str(cfg.get_value(ios + ".options", "application/code_sign_identity_release", "")), "Apple Development")
+	# App Store Connect rejects a build whose binary references camera / microphone / photo APIs (the engine does)
+	# without a purpose string (ITMS-90683); the game never asks for them, the strings say so.
+	for key: String in ["privacy/camera_usage_description", "privacy/microphone_usage_description",
+			"privacy/photolibrary_usage_description"]:
+		assert_ne(str(cfg.get_value(ios + ".options", key, "")), "", "iOS " + key)
+
+
+func test_apple_release_values_reach_the_presets_only_at_export_time() -> void:
+	# 02_TECH §12.4: the CI jobs apple-macos / apple-ios-testflight patch a temp copy (tests/tools/apple_preset.gd);
+	# the committed presets keep the placeholders, so local and unsigned builds stay as they are.
+	var cfg: ConfigFile = ConfigFile.new()
+	assert_eq(cfg.load(PRESETS), OK, "export_presets.cfg parses")
+	var mac: String = _preset_section(cfg, "macOS") + ".options"
+	var ios: String = _preset_section(cfg, "iOS") + ".options"
+	assert_eq(str(cfg.get_value(ios, "application/app_store_team_id", "")), "XXXXXXXXXX", "committed: placeholder")
+	var version: String = str(ProjectSettings.get_setting("application/config/version"))
+	var values: Dictionary = {"team_id": "AB12CD34EF", "bundle_id": "de.example.primetime", "build": "57.2",
+		"short_version": version, "sign_identity": "Apple Distribution: Example GmbH (AB12CD34EF)",
+		"profile_uuid": "0F1E2D3C-4B5A-6978-8796-A5B4C3D2E1F0"}
+	assert_eq(ApplePreset.patch(cfg, "ios", values), "", "iOS values accepted")
+	assert_eq(str(cfg.get_value(ios, "application/app_store_team_id")), "AB12CD34EF")
+	assert_eq(str(cfg.get_value(ios, "application/bundle_identifier")), "de.example.primetime")
+	assert_eq(str(cfg.get_value(ios, "application/short_version")), version, "CFBundleShortVersionString")
+	assert_eq(str(cfg.get_value(ios, "application/version")), "57.2", "build number = CFBundleVersion")
+	assert_eq(str(cfg.get_value(ios, "application/code_sign_identity_release")), str(values["sign_identity"]))
+	assert_eq(str(cfg.get_value(ios, "application/provisioning_profile_uuid_release")), str(values["profile_uuid"]))
+	assert_eq(int(cfg.get_value(ios, "application/export_method_release")), 0, "App Store")
+	assert_true(bool(cfg.get_value(ios, "application/export_project_only")), "xcodebuild runs in release.sh")
+	assert_eq(str(cfg.get_value(mac, "application/bundle_identifier")), "org.primetimedungeon.game", "macOS untouched")
+	assert_eq(ApplePreset.patch(cfg, "macos", values), "", "macOS values accepted")
+	assert_eq(str(cfg.get_value(mac, "application/bundle_identifier")), "de.example.primetime")
+	assert_eq(str(cfg.get_value(mac, "application/version")), "57.2")
+	assert_eq(int(cfg.get_value(mac, "codesign/codesign")), 0, "Developer ID signature after the export")
+	# Wrong values are refused before anything is written.
+	var fresh: ConfigFile = ConfigFile.new()
+	fresh.load(PRESETS)
+	for bad: Dictionary in [{"team_id": "AB12CD34E"}, {"bundle_id": "de.example.prime_time"}, {"build": "57b"},
+			{"sign_identity": "Apple Development: Example GmbH (AB12CD34EF)"},
+			{"sign_identity": "Apple Distribution: Example GmbH (ZZ12CD34EF)"}, {"profile_uuid": "Prime Time"}]:
+		assert_ne(ApplePreset.patch(fresh, "ios", values.merged(bad, true)), "", "refused: " + str(bad))
+	assert_ne(ApplePreset.patch(fresh, "tvos", values), "", "unknown platform")
+	assert_eq(str(fresh.get_value(ios, "application/app_store_team_id")), "XXXXXXXXXX", "nothing written")
+	assert_eq(str(fresh.get_value(ios, "application/bundle_identifier")), "org.primetimedungeon.game")
 
 
 func test_preset_versions_follow_the_project_version() -> void:

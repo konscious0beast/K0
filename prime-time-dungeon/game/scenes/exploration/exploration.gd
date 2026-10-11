@@ -119,6 +119,7 @@ func _ready() -> void:
 	_build_world()
 	_build_actors()
 	_build_hud()
+	_build_director()                       # Echtzeitkampf (07, R2)
 	var spawn_id: String = _spawn_param()
 	_place_at_spawn(spawn_id)
 	Events.stray_spawn_requested.connect(_on_stray_spawn_requested)
@@ -177,7 +178,7 @@ func on_resume(payload: Dictionary) -> void:
 ## no living group left → first non-boss encounter of the floor with group_id "".
 func force_encounter(group_id: String = "") -> void:
 	# Never behind a blocking dialog / during an outcome reveal or while suspended (GDD §2.6: dialogs block).
-	if not _built or is_modal() or _suspended:
+	if not _built or is_modal() or _suspended or _rt_busy():
 		return
 	if group_id != "":
 		var actor: EnemyActor = _actor_at(group_id)
@@ -473,7 +474,7 @@ func _build_actors() -> void:
 		_camera.exclude.append(_prop_blockers.get_rid())
 	add_child(_camera)
 	for e: EnemySpawn in _layout.enemies:
-		if not _is_defeated(e):
+		if not _is_defeated(e) and _rt_spawn_allowed(e):
 			_spawn_enemy(e)
 	_sync_groups()
 
@@ -599,6 +600,7 @@ func _spawn_enemy(e: EnemySpawn) -> EnemyActor:
 	_actors_root.add_child(actor)
 	actor.state_changed.connect(_on_enemy_state_changed)
 	_enemies[e.id] = actor
+	_rt_setup_actor(actor)                  # Echtzeitkampf (07, R2): stairs rule, show-boss frame
 	return actor
 
 
@@ -693,11 +695,14 @@ func _physics_process(delta: float) -> void:
 		_companion.snap_behind()
 	_update_room(false)
 	_update_actor_visibility()
+	if _rt_busy():                          # Echtzeitkampf (07 §2.4, R2): no interactions, no field ability
+		return
 	_update_focus()
 	_place_marker()
 	_check_strike()
 	if _strike_open and not _player.is_striking():
 		_report_field_ability(&"strike", 0)
+	_rt_triggers(delta)                     # Echtzeitkampf (07 §2.2, R2): weapon reach, 4 s chase
 	if _hud != null:
 		var yaw: float = _player.rotation.y
 		if _cur_cell != _hud_cell or absf(wrapf(yaw - _hud_yaw, -PI, PI)) > 0.02:
@@ -721,9 +726,10 @@ func _update_room(force: bool) -> void:
 	_hint_wall(cell)
 	_zone_environment(cell)
 	_apply_room_visibility(cell)
-	if _camera != null:
+	if _camera != null and not _camera.combat:
 		var boss_room: bool = rc.kind == RoomCell.Kind.QUARTER_BOSS or rc.kind == RoomCell.Kind.FLOOR_BOSS
 		_camera.frame_extra_arm = BOSS_EXTRA_ARM if boss_room else 0.0
+	_rt_on_room(cell)                       # Echtzeitkampf (07 §8.10, §9.6, R2): prewarm extras, show boss
 
 
 ## Only the current room and the rooms linked to it by a door are drawn: rooms have no ceiling, so the high camera
@@ -781,7 +787,8 @@ func _update_actor_visibility() -> void:
 	for gid: Variant in _enemies.keys():
 		var a: EnemyActor = _actor_at(gid)
 		if a != null:
-			a.visible = _visible_cells.has(_layout.world_to_cell(a.global_position))
+			a.visible = _visible_cells.has(_layout.world_to_cell(a.global_position)) if _rt_cell == NO_CELL \
+				else _rt_actor_shown(str(gid), a)
 
 
 ## Zone palettes override the floor palette (§4.4.7): fog/background and ambient blend to the zone of the room.
@@ -869,7 +876,7 @@ func _place_marker() -> void:
 func _on_player_action() -> void:
 	# Router.busy: the fade back in after a battle / safe room (or out to the next screen) is still running — a mashed
 	# confirm key (results screen, safe-room menu) must not strike or interact through it.
-	if not _built or _suspended or is_modal() or _encounter_pending or Router.busy:
+	if not _built or _suspended or is_modal() or _encounter_pending or Router.busy or _rt_busy():
 		return
 	_update_focus()
 	if _focused != null and is_instance_valid(_focused) and _focused.is_available():
@@ -962,6 +969,8 @@ func _check_strike() -> void:
 		var adv: int = Rules.strike_advantage(hit.state, hit.global_position, hit.flat_forward(), pos, hit.is_boss(),
 			Balance.BACK_DOT)
 		_report_field_ability(&"strike", 1)
+		if Game.is_realtime():
+			_rt_open = {"kind": "strike", "target": "e0"}   # 07 §2.2: the field strike opens the combat (pull)
 		_strike_hit(hit, adv, _opener(hit, adv))
 		return
 	for sid: Variant in _walls.keys():                 # 06 §2.7: no group in reach → a Kulissenwand?
@@ -1016,6 +1025,9 @@ func _can_start_encounter() -> bool:
 func on_enemy_contact(actor: EnemyActor) -> void:
 	if not _built or _suspended or is_modal() or _encounter_pending or _player.is_hidden():
 		return
+	if Game.is_realtime():
+		_rt_contact(actor)                  # 07 §2.2: contact starts nothing — only the sleeping tutorial group and bosses
+		return
 	var adv: int = Rules.contact_advantage(actor.state, actor.global_position, actor.flat_forward(),
 		_player.global_position, _player.flat_forward(), actor.is_boss(), actor.can_ambush(), Balance.BACK_DOT)
 	_trigger_encounter(actor.group_id(), actor.encounter_id(), adv, _opener(actor, adv))
@@ -1030,6 +1042,9 @@ static func _opener(actor: EnemyActor, adv: int) -> String:
 ## Events.encounter_triggered → Router.start_battle(Game.make_battle_setup(encounter_id, advantage, group_id, opener)).
 func _trigger_encounter(group_id: String, encounter_id: String, advantage: int, opener: String = "") -> void:
 	if _encounter_pending or not _can_start_encounter() or encounter_id == "":
+		return
+	if Game.is_realtime():
+		_rt_trigger(group_id, encounter_id, advantage, opener)   # Echtzeitkampf (07 §2, R2): in the world
 		return
 	_encounter_pending = true
 	_freeze(true)
@@ -1275,7 +1290,7 @@ func _on_stairs_choice(choice: String) -> void:
 
 
 func enter_safe_room(safe_room_id: String) -> void:
-	if is_modal() or _encounter_pending or _suspended:
+	if is_modal() or _encounter_pending or _suspended or _rt_busy():
 		return
 	_player.release_inputs()
 	Sfx.play(&"door")
@@ -1332,11 +1347,548 @@ func _log_event(t: ExploreEvent.Type, data: Dictionary) -> void:
 		_log.pop_front()
 
 
-# --- Echtzeitkampf (07, R1a → R2) ---------------------------------------------------------------------------------
-# STUB(R1a) — owned by R2. Replace completely, keep the public API.
 
-## Control follows life (07 §2.6): the player body temporarily becomes `member_id` (the partner) after
-## CONTROL_CHANGED; Game.state.hero stays. Stub: nothing (no real-time combat before R2). R2: the camera framing follows
-## the body (_camera.set_leader(member_id), polish pass — 02_TECH §7.3, 07 §7.5).
-func control_temporarily(_member_id: String) -> void:
-	pass
+
+# ======================================================================================================================
+# --- Echtzeitkampf (07, R2) ---
+# ======================================================================================================================
+# A run with GameState.combat_mode == &"realtime" fights in the world (07 §2): the triggers of 07 §2.2 (pull = field
+# strike / ability / item on a lead, the sleeping tutorial group also by touch; weapon reach of a chasing lead; 4 s of
+# chase in the same cell; bosses at 5 m with their intro), the encounter command with its "rt" block (07 §10.1),
+# Game.make_rt_setup and the CombatDirector (tick loop, set ring, puppets, telegraphs). CTB runs never enter this
+# section (every hook checks Game.is_realtime() or a running combat), so they stay bit-identical.
+
+var _director: CombatDirector = null
+var _rt_cell: Vector2i = NO_CELL          # set cell of the running combat (NO_CELL = none)
+var _rt_groups: PackedStringArray = []     # participating groups (unit order)
+var _rt_waiting: PackedStringArray = []    # groups that wait at the ring (more than MAX_ENEMIES units, 07 §2.3)
+var _rt_open: Dictionary = {}              # opening action of the next real-time trigger (07 §2.2, RtSetup.rt_opener)
+var _rt_chase: Dictionary = {}             # group id → seconds its lead chases in the player's cell
+var _rt_quiet_said: bool = false           # "Ruhe am Set!" at most once per floor (this floor view)
+var _rt_spotted: Dictionary = {}           # show-boss encounter id → true (Events.show_boss_spotted once)
+
+
+func get_director() -> CombatDirector:
+	return _director
+
+
+## Control follows life (07 §2.6): the player body temporarily becomes `member_id` (the living partner) — it takes
+## that member's rig, capsule and position, while the follower body takes the fallen member and the player's spot (it
+## lies there as a puppet). GameState.hero stays; the director calls it again with Game.hero() at the combat end (the
+## figures keep their places, only the roles swap back). The camera frames the new figure (LEADER_FRAMING) and its
+## pivot glides there (follow lerp, no cut).
+func control_temporarily(member_id: String) -> void:
+	if _player == null or _companion == null:
+		return
+	var clean: String = HeroRules.sanitize(member_id)
+	if _player.hero_id == clean:
+		return
+	var old_hero: String = _player.hero_id
+	var p_pos: Vector3 = _player.global_position
+	var p_yaw: float = _player.rotation.y
+	var c_pos: Vector3 = _companion.global_position
+	var c_yaw: float = _companion.rotation.y
+	_player.name = "Hero"                   # free the node names before the follower takes "Kai" / "Mopsula"
+	_companion.set_member(old_hero)
+	_player.set_hero(clean)
+	_player.name = _node_name(clean)
+	_player.teleport(Vector3(c_pos.x, p_pos.y, c_pos.z), c_yaw)
+	_companion.global_position = p_pos
+	_companion.rotation.y = p_yaw
+	if _camera != null:
+		_camera.set_leader(clean)
+	_last_prompt = "<refresh>"
+
+
+## Puppet mode of a group's lead (CombatDirector).
+func rt_puppet_actor(actor: Node3D, on: bool) -> void:
+	var a: EnemyActor = actor as EnemyActor
+	if a != null:
+		a.set_puppet(on)
+
+
+## Puppet mode of the AI partner's body (CombatDirector).
+func rt_puppet_companion(on: bool) -> void:
+	if _companion != null:
+		_companion.set_puppet(on)
+
+
+## The controlled body in a combat (CombatDirector): input on / off and the run-speed factor (move_pm × combat speed;
+## 0 holds it: no_move, drinking, KO, hint card).
+func rt_player_drive(input_on: bool, speed_scale: float) -> void:
+	if _player == null:
+		return
+	_player.rt_combat = true
+	_player.input_enabled = input_on and not _suspended
+	_player.speed_scale = maxf(0.0, speed_scale)
+	if not input_on:
+		_player.release_inputs()
+
+
+## The set geometry of `cell` (07 §3.5.4): RtGeo.make_geo with the doors that are passable now (closed gates and
+## standing Kulissenwände are walls); while RtGeo is the R1a stub (empty result) the same values from RtBalance.
+func rt_geo(cell: Vector2i, closed: bool) -> Dictionary:
+	var rc: RoomCell = _layout.cell_at(cell)
+	var kind: int = int(rc.kind) if rc != null else int(RoomCell.Kind.NORMAL)
+	var doors: int = rt_room_doors(cell)
+	var bal: RtBalance = RtBalance.from_data(DB.data)
+	var geo: Dictionary = RtGeo.make_geo(kind, doors, closed, bal)
+	if not geo.is_empty():
+		return geo
+	var r: int = RtGeo.set_radius(kind, bal)
+	if r <= 0:
+		var boss: bool = kind == RoomCell.Kind.QUARTER_BOSS or kind == RoomCell.Kind.FLOOR_BOSS
+		r = bal.sub("SET_R_CM", "boss" if boss else "regular")
+	return {"r": r, "doors": doors, "closed": closed, "blockers": []}
+
+
+## Door bits of `cell` that are passable right now (an unopened gate or Kulissenwand blocks its door).
+func rt_room_doors(cell: Vector2i) -> int:
+	var rc: RoomCell = _layout.cell_at(cell)
+	if rc == null:
+		return 0
+	var out: int = 0
+	var fr: FloorRun = Game.state.floor_run if Game.state != null else null
+	for bit: int in RoomCell.DIR_BITS:
+		if not rc.has_door(bit):
+			continue
+		var g: Dictionary = _layout.gate_at(cell, bit)
+		if not g.is_empty() and (fr == null or not fr.opened_gates.has(str(g["key"]))):
+			continue
+		out |= bit
+	return out
+
+
+## Pull with an ability or a consumable (07 §2.2; R3 calls it for `1`–`5` with a lead selected outside a combat):
+## `kind` = "skill" | "item", `id` = skill / item id. Only a non-boss lead in the player's own cell; the advantage
+## follows the pull table (PREEMPTIVE for IDLE / PATROL / DAZED or from behind, else NORMAL). false = no pull.
+func pull(group_id: String, kind: String, id: String) -> bool:
+	if not Game.is_realtime() or not _built or _rt_busy() or _encounter_pending or is_modal() or _suspended:
+		return false
+	if kind != "skill" and kind != "item":
+		return false
+	var a: EnemyActor = _actor_at(group_id)
+	if a == null or a.is_boss() or _layout.world_to_cell(a.global_position) != get_player_cell():
+		return false
+	var adv: int = Rules.strike_advantage(a.state, a.global_position, a.flat_forward(), _player.global_position, false,
+		Balance.BACK_DOT)
+	if a.is_asleep():
+		adv = Rules.PREEMPTIVE                 # 07 §2.2: the sleeping tutorial group is always caught first
+	var ctl: String = _rt_unit_of(Game.hero())
+	_rt_open = {"kind": kind, "u": ctl, kind: id, "target": "e0"}
+	_trigger_encounter(group_id, a.encounter_id(), adv, _opener(a, adv))
+	return _rt_busy() or _encounter_pending
+
+
+## Leads a pull can target right now (07 §7.4 outside a combat: leads in the player's room with line of sight up to
+## 25 m), nearest first — R3's Tab order outside a combat.
+func pull_candidates() -> PackedStringArray:
+	var out: Array[Dictionary] = []
+	if not Game.is_realtime() or _player == null or _rt_busy():
+		return PackedStringArray()
+	var cell: Vector2i = get_player_cell()
+	for gid: Variant in _enemies.keys():
+		var a: EnemyActor = _actor_at(gid)
+		if a == null or a.is_boss() or _layout.world_to_cell(a.global_position) != cell:
+			continue
+		var d: float = Rules.flat_dist(a.global_position, _player.global_position)
+		if d <= PULL_SIGHT_M and _bark_reaches(_player.global_position, a.global_position):
+			out.append({"id": str(gid), "d": d})
+	out.sort_custom(func(p: Dictionary, q: Dictionary) -> bool:
+		return float(p["d"]) < float(q["d"]) or (float(p["d"]) == float(q["d"]) and str(p["id"]) < str(q["id"])))
+	var ids: PackedStringArray = []
+	for e: Dictionary in out:
+		ids.append(str(e["id"]))
+	return ids
+
+
+const PULL_SIGHT_M: float = 25.0
+const RING_WAIT_GAP: float = 0.6           # a waiting lead stands this far outside the ring
+
+
+## A real-time combat is being started or runs (the director is not idle).
+func _rt_busy() -> bool:
+	return _director != null and _director.is_busy() or _rt_cell != NO_CELL
+
+
+func _build_director() -> void:
+	_director = CombatDirector.new()
+	_director.scene = self
+	add_child(_director)
+
+
+## Unit id of a party member (07 §5.1: p<battle_slot>).
+static func _rt_unit_of(member_id: String) -> String:
+	var slot: int = DB.party_member(member_id).battle_slot if DB.has_id("party", member_id) else 0
+	return "p%d" % slot
+
+
+## 07 §2.2: contact starts a combat only for the sleeping tutorial group (always PREEMPTIVE) and for bosses (the 5 m
+## trigger, NORMAL, with the intro).
+func _rt_contact(actor: EnemyActor) -> void:
+	if actor.is_boss():
+		_trigger_encounter(actor.group_id(), actor.encounter_id(), Rules.NORMAL)
+	elif actor.is_asleep():
+		_trigger_encounter(actor.group_id(), actor.encounter_id(), Rules.PREEMPTIVE)
+
+
+## 07 §2.2 per frame outside a combat: the lead of a chasing group within its weapon reach (reach_cm + both radii) →
+## AMBUSH when the figure turns its back to it, else NORMAL; a lead chasing for CHASE_COMBAT_SEC_X10 / 10 s in the
+## player's cell → NORMAL ("Die Kamera hat euch!"; a room change resets the count). Seen alone starts nothing.
+func _rt_triggers(delta: float) -> void:
+	if not Game.is_realtime() or _encounter_pending or is_modal() or _suspended or _player.is_hidden():
+		return
+	var pcell: Vector2i = get_player_cell()
+	var prc: RoomCell = _layout.cell_at(pcell)
+	if prc == null or prc.kind == RoomCell.Kind.STAIRS:
+		_rt_chase.clear()
+		return
+	var bal: RtBalance = RtBalance.from_data(DB.data)
+	var chase_sec: float = float(bal.i("CHASE_COMBAT_SEC_X10")) / 10.0
+	var pr: int = _rt_party_radius_cm(Game.hero())
+	var ppos: Vector3 = _player.global_position
+	for gid: Variant in _enemies.keys():
+		var a: EnemyActor = _actor_at(gid)
+		if a == null or a.is_boss() or a.puppet or a.frozen:
+			continue
+		if a.state != EnemyActor.CHASE:
+			_rt_chase.erase(gid)
+			continue
+		var reach: Dictionary = a.rt_reach()
+		var lim_m: float = float(int(reach["reach_cm"]) + int(reach["radius_cm"]) + pr) / 100.0
+		if Rules.flat_dist(a.global_position, ppos) <= lim_m:
+			var behind: bool = Rules.is_behind(ppos, _player.flat_forward(), a.global_position, Balance.BACK_DOT)
+			_rt_chase.clear()
+			_trigger_encounter(str(gid), a.encounter_id(), Rules.AMBUSH if behind and a.can_ambush() else Rules.NORMAL)
+			return
+		var t: float = float(_rt_chase.get(gid, 0.0)) + delta if _layout.world_to_cell(a.global_position) == pcell \
+			else 0.0
+		_rt_chase[gid] = t
+		if t >= chase_sec:
+			_rt_chase.clear()
+			_trigger_encounter(str(gid), a.encounter_id(), Rules.NORMAL)
+			return
+
+
+## Radius of a party member's body in cm (party.json → rt.radius_cm; 07 §9.6 defaults Kai 40, Graf Mopsula 35).
+static func _rt_party_radius_cm(member_id: String) -> int:
+	var dflt: int = 35 if member_id == "mopsula" else 40
+	if not DB.has_id("party", member_id):
+		return dflt
+	return int(DB.party_member(member_id).rt.get("radius_cm", dflt))
+
+
+## Units of an encounter in a real-time combat: encounters[].rt.enemies when set, else the CTB list (07 §4.9).
+static func _rt_unit_count(enc: EncounterDef) -> int:
+	if enc == null:
+		return 1
+	var ids: Variant = enc.rt.get("enemies", []) if not enc.rt.is_empty() else []
+	var n: int = (ids as Array).size() if ids is Array else 0
+	return n if n > 0 else maxi(1, enc.enemies.size())
+
+
+## 07 §2.3 "Mitziehen": the trigger group first, then every other lead standing in the set cell by its distance to the
+## room centre (tie: group id) while the sum stays ≤ MAX_ENEMIES; the others wait at the ring.
+func _rt_participants(trigger_gid: String, enc: EncounterDef, cell: Vector2i) -> Dictionary:
+	var groups: PackedStringArray = []
+	var waiting: PackedStringArray = []
+	var max_units: int = RtBalance.from_data(DB.data).i("MAX_ENEMIES")
+	var units: int = _rt_unit_count(enc)
+	if trigger_gid != "" and _actor_at(trigger_gid) != null:
+		groups.append(trigger_gid)
+	var center: Vector3 = _layout.cell_to_world(cell)
+	var cand: Array[Dictionary] = []
+	for gid: Variant in _enemies.keys():
+		var a: EnemyActor = _actor_at(gid)
+		if a == null or str(gid) == trigger_gid or a.is_boss() or _layout.world_to_cell(a.global_position) != cell:
+			continue
+		cand.append({"id": str(gid), "d": Rules.flat_dist(a.global_position, center)})
+	cand.sort_custom(func(p: Dictionary, q: Dictionary) -> bool:
+		return float(p["d"]) < float(q["d"]) or (float(p["d"]) == float(q["d"]) and str(p["id"]) < str(q["id"])))
+	for c: Dictionary in cand:
+		var a2: EnemyActor = _actor_at(c["id"])
+		var n: int = _rt_unit_count(_encounter_def(a2.encounter_id()))
+		if units + n <= max_units:
+			groups.append(str(c["id"]))
+			units += n
+		else:
+			waiting.append(str(c["id"]))
+	return {"groups": groups, "waiting": waiting, "units": units}
+
+
+## Room-local pose [x cm, z cm, yaw u8] of a body (07 §3.2).
+func _rt_pose(n: Node3D, origin: Vector3) -> Array:
+	return [clampi(roundi((n.global_position.x - origin.x) * 100.0), -RtCommand.POS_MAX_CM, RtCommand.POS_MAX_CM),
+		clampi(roundi((n.global_position.z - origin.z) * 100.0), -RtCommand.POS_MAX_CM, RtCommand.POS_MAX_CM),
+		posmod(roundi(n.rotation.y * 256.0 / TAU), 256)]
+
+
+## The recorded encounter command with its "rt" block (07 §10.1).
+func rt_encounter_cmd(group_id: String, encounter_id: String, advantage: int, opener: String, cell: Vector2i,
+		groups: PackedStringArray, open: Dictionary) -> Dictionary:
+	var origin: Vector3 = _layout.cell_to_world(cell)
+	var hero: String = Game.hero()
+	var partner: String = Game.partner()
+	var party: Array = []
+	for m: String in [hero, partner]:
+		var body: Node3D = _player if m == hero else _companion
+		if body != null and DB.has_id("party", m):
+			party.append({"u": _rt_unit_of(m), "p": _rt_pose(body, origin)})
+	party.sort_custom(func(p: Dictionary, q: Dictionary) -> bool: return str(p["u"]) < str(q["u"]))
+	var gs: Array = []
+	for gid: String in groups:
+		var a: EnemyActor = _actor_at(gid)
+		if a != null:
+			gs.append({"group": gid, "enc": a.encounter_id(), "lead": _rt_pose(a, origin), "state": String(a.state)})
+	var presets: Dictionary = {}
+	if DB.has_id("party", partner):
+		presets[_rt_unit_of(partner)] = _rt_preset_of(partner)
+	var rt: Dictionary = {"v": RtCommand.RT_BLOCK_VERSION, "cell": [cell.x, cell.y], "ctl": _rt_unit_of(hero),
+		"party": party, "groups": gs, "presets": presets,
+		"auto": Game.settings.auto_attack_default if Game.settings != null else true,
+		"retarget": Game.settings.auto_retarget if Game.settings != null else true,
+		"open": open.duplicate(true), "diff": String(Game.state.difficulty) if Game.state != null else "prime"}
+	var cmd: Dictionary = {"t": "encounter", "enc": encounter_id, "adv": advantage, "group": group_id, "rt": rt}
+	if opener == "bark" and advantage == Rules.PREEMPTIVE:
+		cmd["opener"] = "bark"
+	return cmd
+
+
+## {"preset", "tog"} of the AI partner (PartyMember.rt_preset / rt_toggles, else party.json rt.default_preset, else the
+## 07 §5.2 defaults: Kai "attack", Graf Mopsula "support"; switches over RtVocab.RT_TOGGLE_DEFAULTS).
+func _rt_preset_of(member_id: String) -> Dictionary:
+	var m: PartyMember = Game.state.member(member_id) if Game.state != null else null
+	var preset: String = m.rt_preset if m != null else ""
+	if preset == "" and DB.has_id("party", member_id):
+		preset = str(DB.party_member(member_id).rt.get("default_preset", ""))
+	if not RtVocab.RT_PRESETS.has(preset):
+		preset = "support" if member_id == "mopsula" else "attack"
+	var tog: Dictionary = RtVocab.RT_TOGGLE_DEFAULTS.duplicate()
+	if m != null:
+		for k: Variant in m.rt_toggles.keys():
+			if RtVocab.RT_TOGGLES.has(str(k)):
+				tog[str(k)] = bool(m.rt_toggles[k])
+	return {"preset": preset, "tog": tog}
+
+
+## Starts a real-time combat in the player's cell (07 §2.2–§2.4, §2.8, §2.9): no set in the stairs room; the
+## participants (≤ MAX_ENEMIES units, the rest waits at the ring); bosses play their intro first (the RtSim does not
+## exist meanwhile); then the encounter command → Game.make_rt_setup → the director runs it. A missing setup (the
+## BattleBridge stub before R1b) ends like a cancelled encounter.
+func _rt_trigger(group_id: String, encounter_id: String, advantage: int, opener: String) -> void:
+	var open: Dictionary = _rt_open
+	_rt_open = {}
+	if _rt_busy() or _director == null:
+		return
+	var cell: Vector2i = get_player_cell()
+	var rc: RoomCell = _layout.cell_at(cell)
+	var enc: EncounterDef = _encounter_def(encounter_id)
+	if rc == null or rc.kind == RoomCell.Kind.STAIRS or enc == null:
+		return                                # 07 §2.4: the stairs room has no set — no combat starts there
+	_encounter_pending = true
+	_set_focus(null)
+	Game.timer_running = false
+	Events.encounter_triggered.emit(group_id, encounter_id, advantage)
+	_log_event(ExploreEvent.Type.ENCOUNTER, {"group_id": group_id, "encounter_id": encounter_id,
+		"advantage": advantage})
+	if not auto_start_battle:
+		_freeze(true)
+		_cancel_encounter()
+		return
+	var parts: Dictionary = _rt_participants(group_id, enc, cell)
+	var closed: bool = enc.boss or enc.tutorial or not enc.can_flee
+	var ctx: Dictionary = {"cell": cell, "origin": _layout.cell_to_world(cell), "room_kind": int(rc.kind),
+		"room_doors": rt_room_doors(cell), "geo": rt_geo(cell, closed), "closed": closed, "boss": enc.boss,
+		"groups": parts["groups"], "waiting": parts["waiting"], "encounter_id": encounter_id}
+	_rt_enter(ctx)
+	if enc.boss:
+		var boss: EnemyActor = _actor_at(group_id)
+		if boss != null:
+			boss.set_puppet(true)                 # awake for its intro: no "Z z", no AI (the director binds it later)
+		var boss_id: String = enc.enemies[0] if not enc.enemies.is_empty() else ""
+		var boss_name: String = tr(DB.enemy(boss_id).name) if DB.has_id("enemies", boss_id) else ""
+		_rt_hold_world(true)
+		await _director.run_boss_intro(ctx, boss, boss_id, boss_name)
+		if not is_inside_tree() or not _built:
+			return
+		_rt_hold_world(false)
+	var cmd: Dictionary = rt_encounter_cmd(group_id, encounter_id, advantage, opener, cell, parts["groups"], open)
+	_director.arm(ctx)
+	var setup: RtSetup = Game.make_rt_setup(cmd)
+	if setup == null:
+		_director.cancel()
+		_rt_leave(null)
+		_cancel_encounter()
+		return
+	_encounter_pending = false
+
+
+## The world switches to the combat (07 §2.3, §2.4): the set cell; every other group freezes (the clock stands), the
+## waiting ones stand at the ring, visible; the participants become puppets when the director binds them; the minimap
+## hides (07 §2.8); the player keeps moving (combat movement, no sneak, no interactions).
+func _rt_enter(ctx: Dictionary) -> void:
+	_rt_cell = ctx["cell"]
+	_rt_groups = ctx["groups"]
+	_rt_waiting = ctx["waiting"]
+	_rt_chase.clear()
+	for gid: Variant in _enemies.keys():
+		var a: EnemyActor = _actor_at(gid)
+		if a != null:
+			a.frozen = true
+	if not _rt_waiting.is_empty():
+		_rt_place_waiting(ctx)
+		if not _rt_quiet_said:
+			_rt_quiet_said = true
+			Show.say("rt_set_quiet")              # 07 §2.3: "Ruhe am Set! Ihr seid später dran." once per floor
+	if _companion != null:
+		_companion.frozen = true
+	if _player != null:
+		_player.rt_combat = true
+		_player.release_inputs()
+		_player.input_enabled = true
+	if _camera != null:
+		_camera.input_enabled = true
+	if _hud != null and _hud.minimap != null:
+		_hud.minimap.visible = false
+	_update_actor_visibility()
+
+
+## Bosses: the exploration holds still during the intro (input locked, 07 §2.9 step 1).
+func _rt_hold_world(on: bool) -> void:
+	if _player != null:
+		_player.input_enabled = not on
+		if on:
+			_player.release_inputs()
+	if _camera != null:
+		_camera.input_enabled = not on
+
+
+## Waiting leads (07 §2.3) stand at the ring: one standing inside it is put just outside, facing the centre.
+func _rt_place_waiting(ctx: Dictionary) -> void:
+	var center: Vector3 = ctx["origin"]
+	var r: float = float(int((ctx["geo"] as Dictionary).get("r", 480))) / 100.0 + RING_WAIT_GAP
+	for gid: String in _rt_waiting:
+		var a: EnemyActor = _actor_at(gid)
+		if a == null:
+			continue
+		var d: Vector3 = Rules.flat_dir(center, a.global_position)
+		if d == Vector3.ZERO:
+			d = Vector3.BACK
+		if Rules.flat_dist(center, a.global_position) < r:
+			a.global_position = Vector3(center.x + d.x * r, a.global_position.y, center.z + d.z * r)
+		a.face(Rules.yaw_of(-d))
+
+
+## Called by the director after Game.end_combat (07 §2.5, §2.11): defeated groups vanish (VICTORY), fled-from groups
+## reset to their leash points (RETURN, ignoring the figure 2 s), waiting groups go RETURN, the roles of the bodies swap
+## back (refresh_hero), the figure gets its after-battle grace, the clock runs again.
+func rt_combat_ended(result: BattleResult, _ctx: Dictionary) -> void:
+	_rt_leave(result)
+	if result != null and result.outcome != BattleResult.Outcome.DEFEAT and _player != null:
+		_player.set_grace(Rules.GRACE_SEC)
+		_return_nearby()
+	_encounter_pending = false
+	Game.timer_running = not _suspended and not is_modal()
+
+
+func _rt_leave(result: BattleResult) -> void:
+	var outcome: int = int(result.outcome) if result != null else -1
+	if outcome == BattleResult.Outcome.VICTORY:
+		var gone: PackedStringArray = result.group_ids if not result.group_ids.is_empty() else _rt_groups
+		if result.group_id != "" and not gone.has(result.group_id):
+			gone.append(result.group_id)
+		for gid: String in gone:
+			var dead: EnemyActor = _actor_at(gid)
+			if dead != null:
+				dead.queue_free()
+			_enemies.erase(gid)
+	for gid: Variant in _enemies.keys():
+		var a: EnemyActor = _actor_at(gid)
+		if a == null:
+			continue
+		if a.puppet:
+			a.set_puppet(false)
+		a.frozen = false
+		if outcome == BattleResult.Outcome.FLED and _rt_groups.has(str(gid)) or _rt_waiting.has(str(gid)):
+			a.force_return()
+	if _companion != null:
+		_companion.set_puppet(false)
+		_companion.frozen = false
+	if _player != null:
+		if _player.hero_id != Game.hero():
+			control_temporarily(Game.hero())
+		_player.rt_combat = false
+		_player.speed_scale = 1.0
+		_player.input_enabled = not _suspended and not is_modal()
+	refresh_hero()
+	_rt_cell = NO_CELL
+	_rt_groups = PackedStringArray()
+	_rt_waiting = PackedStringArray()
+	_rt_chase.clear()
+	if _hud != null and _hud.minimap != null:
+		_hud.minimap.visible = true
+	if _camera != null:
+		_camera.input_enabled = true
+		_camera.exit_combat()
+	if is_inside_tree() and not _suspended:
+		Events.overlay_mode_requested.emit(&"explore")
+		Sfx.music(StringName(_def.music) if _def.music != "" else &"explore")
+	_update_actor_visibility()
+
+
+## In a combat only the set's actors are drawn: the participants (also while they still walk in), the groups waiting
+## at the ring, every group standing in the set cell (07 §2.3: actors of other rooms hidden — the draw-call budget).
+func _rt_actor_shown(gid: String, a: EnemyActor) -> bool:
+	return _rt_groups.has(gid) or _rt_waiting.has(gid) or _layout.world_to_cell(a.global_position) == _rt_cell
+
+
+## 07 §9.6 (E26): groups of an encounter with a show_boss block exist only in real-time runs.
+func _rt_spawn_allowed(e: EnemySpawn) -> bool:
+	if Game.is_realtime():
+		return true
+	var enc: EncounterDef = _encounter_def(e.encounter_id)
+	return enc == null or enc.show_boss.is_empty()
+
+
+func _rt_setup_actor(actor: EnemyActor) -> void:
+	if not Game.is_realtime():
+		return
+	actor.blocked_cell = _rt_cell_blocked
+	var enc: EncounterDef = _encounter_def(actor.encounter_id())
+	if enc != null and not enc.show_boss.is_empty():
+		actor.set_show_boss(true)
+
+
+## 07 §2.4: enemies never enter the stairs room (a chase ends at its door).
+func _rt_cell_blocked(pos: Vector3) -> bool:
+	var rc: RoomCell = _layout.cell_at(_layout.world_to_cell(pos))
+	return rc != null and rc.kind == RoomCell.Kind.STAIRS
+
+
+## Room entry in a real-time run: the extra rigs of the cell's groups are built invisibly (07 §8.10 rule 5); the first
+## entry into the show boss's zone sends Events.show_boss_spotted (06 §2.6, 07 §9.6).
+func _rt_on_room(cell: Vector2i) -> void:
+	if not Game.is_realtime() or _director == null:
+		return
+	var rc: RoomCell = _layout.cell_at(cell)
+	var extras: PackedStringArray = []
+	for gid: Variant in _enemies.keys():
+		var a: EnemyActor = _actor_at(gid)
+		if a == null:
+			continue
+		var enc: EncounterDef = _encounter_def(a.encounter_id())
+		var acell: Vector2i = _layout.world_to_cell(a.global_position)
+		if acell == cell and enc != null:
+			var ids: PackedStringArray = JsonUtil.to_str_array(enc.rt.get("enemies", [])) if not enc.rt.is_empty() \
+				else PackedStringArray()
+			if ids.is_empty():
+				ids = enc.enemies
+			for i in range(1, ids.size()):
+				extras.append(ids[i])
+		if enc != null and not enc.show_boss.is_empty() and not _rt_spotted.has(enc.id) and rc != null:
+			var arc: RoomCell = _layout.cell_at(acell)
+			if arc != null and arc.zone == rc.zone:
+				_rt_spotted[enc.id] = true
+				Events.show_boss_spotted.emit(enc.id)
+	if not extras.is_empty():
+		_director.prewarm(extras)

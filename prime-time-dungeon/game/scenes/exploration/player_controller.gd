@@ -53,6 +53,12 @@ var _anim_t: float = 0.0
 var _sneaking: bool = false
 var _standalone: bool = false
 var _arc: MeshInstance3D = null           # field-strike swoosh (100°, 1.8 m), visible ARC_FLASH_SEC
+# --- Echtzeitkampf (07, R2) ---
+## In a real-time combat (07 §7.1): always run speed (sneak has no effect), `action` belongs to the combat input (R3).
+var rt_combat: bool = false
+## Run-speed factor in a real-time combat: the controlled unit's move_pm × combat_speed_pm (07 §3.5.2: honest samples
+## never exceed the plausibility limits). 1.0 outside a combat.
+var speed_scale: float = 1.0
 
 
 func _ready() -> void:
@@ -175,8 +181,8 @@ func _physics_process(delta: float) -> void:
 	var input: Vector2 = Vector2.ZERO
 	if input_enabled:
 		input = Input.get_vector(&"move_left", &"move_right", &"move_forward", &"move_back")
-	_sneaking = input_enabled and Input.is_action_pressed(&"sneak")
-	var max_speed: float = SNEAK_SPEED if _sneaking else RUN_SPEED
+	_sneaking = input_enabled and not rt_combat and Input.is_action_pressed(&"sneak")
+	var max_speed: float = (SNEAK_SPEED if _sneaking else RUN_SPEED) * speed_scale
 	var dir: Vector3 = Vector3(input.x, 0.0, input.y).rotated(Vector3.UP, camera_yaw)
 	var strength: float = minf(1.0, input.length())
 	var horizontal: Vector3 = Vector3(velocity.x, 0.0, velocity.z)
@@ -214,7 +220,7 @@ func _physics_process(delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	# Router.busy: the screen is still fading in (back from a battle / safe room) or out — `action` shares Enter/Space
 	# with ui_accept, so presses that skipped the results must not reach Kai (02_TECH §10: no exploration input then).
-	if not input_enabled or _standalone or Router.busy:
+	if not input_enabled or _standalone or Router.busy or rt_combat:
 		return
 	if event.is_action_pressed(&"action") and not event.is_echo():
 		get_viewport().set_input_as_handled()

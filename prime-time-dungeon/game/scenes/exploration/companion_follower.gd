@@ -22,6 +22,8 @@ var leader: Node3D = null
 var rig: Node3D = null
 var frozen: bool = false
 var member_id: String = "mopsula"    # 06 package A: who follows ("mopsula" | "kai"); set_member()
+## Echtzeitkampf (07, R2): puppet of the AI partner — no following, no physics; the CombatDirector places it.
+var puppet: bool = false
 
 var _trail: Array[Vector3] = []      # oldest first, newest last
 var _anim_t: float = 0.0
@@ -112,7 +114,7 @@ func trail_target() -> Vector3:
 
 func _physics_process(delta: float) -> void:
 	_anim_t += delta
-	if leader == null or not is_instance_valid(leader):
+	if leader == null or not is_instance_valid(leader) or puppet:
 		return
 	_record_trail()
 	var lead_dist: float = Rules.flat_dist(global_position, leader.global_position)
@@ -167,3 +169,16 @@ func _safe_spot(from: Vector3, to: Vector3) -> Vector3:
 	var hp: Vector3 = hit["position"]
 	var back: Vector3 = Rules.flat_dir(hp, from)
 	return Vector3(hp.x, to.y, hp.z) + back * 0.5
+
+
+# --- Echtzeitkampf (07, R2) -------------------------------------------------------------------------------------------
+
+## Puppet on / off (07 §3.5.6): off restarts the trail from the current spot (the partner walks back behind the
+## leader instead of jumping).
+func set_puppet(on: bool) -> void:
+	puppet = on
+	velocity = Vector3.ZERO
+	if not on and leader != null and is_instance_valid(leader):
+		_trail.clear()
+		_trail.append(global_position)
+		_trail.append(leader.global_position)

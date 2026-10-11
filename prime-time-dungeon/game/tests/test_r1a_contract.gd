@@ -412,7 +412,7 @@ func test_def_rt_normalization_fills_defaults() -> void:
 	assert_eq(kai["bar"][0], {"slot": 1, "skill": "skl_kai_heavy_swing", "level": 1, "variant": false,
 		"finale": false})
 	assert_eq(kai["mp_regen"]["every_ms"], 0)
-	assert_eq(d.item("itm_bandage").rt, {"wheel": 1})
+	assert_eq(d.item("itm_bandage").rt, {"wheel": 1, "mods": []}, "R5b: equipment mods default to none")
 	assert_eq(d.encounter("enc_f1_a1_tutorial").rt["tutorial"], ["target", "bar1", "show", "dodge"])
 	assert_eq(d.encounter("enc_f1_a2").rt["music"], "")
 	assert_true(d.skill("skl_e_test_hex").rt.is_read_only(), "defs stay immutable (02_TECH §4.5)")

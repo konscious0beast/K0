@@ -1,7 +1,7 @@
 extends TestCase
-## Autoplay driver (02_TECH §11.4): the step table budgets (R5b: also the real-time table), no skip path (boot_to_title always continues with
-## new_game; check.sh accepts only "AUTOPLAY: OK") in dry-run mode (no quit, no print), the watchdog failure line, the
-## safe room choice, and the boot arguments.
+## Autoplay driver (02_TECH §11.4): the step table budgets (R5b: also the real-time table), no skip path
+## (boot_to_title always continues with new_game; check.sh accepts only "AUTOPLAY: OK") in dry-run mode (no quit, no
+## print), the watchdog failure line, the safe room choice, and the boot arguments.
 
 const AutoplayScript := preload("res://scenes/boot/autoplay.gd")
 const TitleFlow := preload("res://scenes/title/title_flow.gd")

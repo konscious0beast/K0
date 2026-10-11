@@ -17,6 +17,10 @@ extends Node
 ## "FULLRUN: OK floor_time=<s> battles=<n> level=<kai>/<mopsula> deaths=<n> frames=<n>" + quit(0);
 ## failure: "Assertion failed: FULLRUN failed in <phase>: <reason>" + quit(1).
 ## Saves go to SAVE_DIR (cleared before and after the run); settings stay ephemeral.
+## Casting (08 §1.1, §10.3, K1): --persona=canon (default) plays the casting with "Rest automatisch" (Esc, then Enter on
+## "Sendung starten"); --persona=random|<org_id> fills it in through the casting's controls (on-screen keyboard,
+## Vorleben / hobby / traits overlays); --persona=none starts without the casting (no persona). With a persona the run
+## also checks the persona lines: said at least once, never during a battle.
 ## 06 package A: --hero=kai|mopsula (default kai) picks the controlled character of the new game. As Graf Mopsula the
 ## bot engages groups with the bark (dazed group → walk into it → PREEMPTIVE) instead of the field strike, and on the
 ## first safe-room visit it switches to Kai and back ("Figur wechseln", two recorded hero commands the replay checks
@@ -24,6 +28,10 @@ extends Node
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const TitleFlow := preload("res://scenes/title/title_flow.gd")
+const CASTING: String = "res://scenes/title/persona_casting.tscn"     # Casting (08, K1)
+const CASTING_BUDGET: int = 900
+## Names the random persona types on the on-screen keyboard (presentation; one of them has an accent).
+const PERSONA_NAMES: PackedStringArray = ["Jana", "Mika", "Ole", "Zoé", "Ilka", "Arne", "Defne", "Lou"]
 const RUN_SEED: int = 4242                 # --seed=<int> overrides it (TitleFlow.boot_seed)
 const SAVE_SLOT: int = 1
 const SAVE_DIR: String = "user://fullrun_saves"
@@ -105,10 +113,10 @@ var strategy: String = "thorough"
 var pace: String = "fast"
 ## 06 package A: "kai" (default) | "mopsula" (--hero=mopsula): the controlled character of the run.
 var hero: String = "kai"
-## Casting (08 §10.2 Nr. 16): --persona=none|canon|random|<org_id> → the candidate persona of the new game. K0: an
-## empty hook (persona_profile() → null, nothing recorded); from K1 the default is "canon" (what players get with
-## "Rest automatisch"), so the bot measures that.
-var persona: String = "none"
+## Casting (08 §10.2 Nr. 16, K1): --persona=none|canon|random|<org_id> → the candidate persona of the new game; the
+## default "canon" is what players get with "Rest automatisch", so the bot measures that.
+var persona: String = "canon"
+var persona_in_battle: int = 0             # persona lines said during a battle (must stay 0, 08 §4.3 R6)
 var barks: int = 0                         # barks the bot used (Mopsula) …
 var dazed: int = 0                         # … and groups they dazed
 var hero_switches: int = 0                 # "Figur wechseln" in a safe room
@@ -220,6 +228,8 @@ func _ready() -> void:
 		if not Game.replaying:
 			mod_tags.append("%s@%s" % [tag, "countdown" if Game.state != null and Game.state.floor_run != null
 				and Game.state.floor_run.timer_started else "before"])
+			if tag.begins_with("persona_") and Game.in_battle:
+				persona_in_battle += 1
 			if pace == "human" and not blocking and not Game.in_battle and Game.is_timer_ticking():
 				_read_backlog += HUMAN_READ_SEC + float(text.length()) / HUMAN_READ_CPS)
 	Events.floor_timer_warning.connect(func(sec: int) -> void:
@@ -271,21 +281,56 @@ static func hero_from_args(args: PackedStringArray) -> String:
 	return "kai"
 
 
-## Casting (08 §10.2 Nr. 16): --persona=canon|random|<org_id> → that choice; anything else → "none".
+## Casting (08 §10.2 Nr. 16, K1): --persona=none|canon|random|<org_id> → that choice; anything else → "canon" (what
+## players get with "Rest automatisch", so the bot measures that).
 static func persona_from_args(args: PackedStringArray) -> String:
 	for a: String in args:
 		if a.begins_with("--persona="):
 			var v: String = a.trim_prefix("--persona=")
 			if PERSONAS.has(v) or v.begins_with("org_"):
 				return v
-	return "none"
+	return "canon"
 
 
-## STUB(K0) — owned by 08-K1. Replace completely, keep the public API. The profile of `persona` for the new game
-## (canon: PersonaProfile.canon; random: a seeded valid persona; org_*: that origin with canon rest) — K1 passes it to
-## the new game (TitleFlow.start_new_game persona). Stub: null (no persona).
+## The profile the bot enters for `persona` (canon: PersonaProfile.canon; random: a valid persona seeded by the run
+## seed — name, word form, Vorleben (+ job), hobby, 0–3 traits; org_*: that tile with the canon rest); null = none.
 func persona_profile() -> PersonaProfile:
-	return null
+	if persona == "none" or DB.data == null:
+		return null
+	var p: PersonaProfile = PersonaProfile.canon(DB.data)
+	if persona == "canon":
+		return p
+	if persona.begins_with("org_"):
+		if DB.data.origin(persona).is_empty():
+			return p
+		p.origin = persona
+		p.occupation = ""
+		p.source = "offline"
+		p.make_beats(DB.data, null)
+		return p
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = SeedUtil.derive(TitleFlow.boot_seed if TitleFlow.boot_seed >= 0 else RUN_SEED, "fullrun_persona", 0)
+	p.name = PERSONA_NAMES[rng.randi_range(0, PERSONA_NAMES.size() - 1)]
+	p.form = PersonaProfile.FORMS[rng.randi_range(0, PersonaProfile.FORMS.size() - 1)]
+	var tiles: Array[Dictionary] = []
+	for e: Dictionary in DB.data.all_origins():
+		if str(e["id"]) != PersonaProfile.ALLROUND:
+			tiles.append(e)
+	var o: Dictionary = tiles[rng.randi_range(0, tiles.size() - 1)]
+	p.origin = str(o["id"])
+	var jobs: Array = o.get("jobs", []) as Array
+	p.occupation = str((jobs[rng.randi_range(0, jobs.size() - 1)] as Dictionary)["id"]) if not jobs.is_empty() else ""
+	var hobbies: Array[Dictionary] = DB.data.persona_list("hobbies")
+	p.hobby = str(hobbies[rng.randi_range(0, hobbies.size() - 1)]["id"])
+	var traits: Array[Dictionary] = DB.data.persona_list("traits")
+	p.traits = PackedStringArray()
+	for i in rng.randi_range(0, 3):
+		var t: String = str(traits[rng.randi_range(0, traits.size() - 1)]["id"])
+		if not p.traits.has(t):
+			p.traits.append(t)
+	p.source = "offline"
+	p.make_beats(DB.data, null)
+	return p
 
 
 ## 06-C: --liga=1|2 → that Liga tier; anything else → 0.
@@ -333,10 +378,13 @@ func _main() -> void:
 	phase = "new_game"
 	Game.auto_battle = true
 	var run_seed: int = TitleFlow.boot_seed if TitleFlow.boot_seed >= 0 else RUN_SEED
-	var cast: PersonaProfile = persona_profile()     # Casting (08 §10.2 Nr. 16): empty hook until K1 (null)
+	var cast: PersonaProfile = persona_profile()     # Casting (08 §10.2 Nr. 16, K1)
 	_note("new game, seed %d, strategy %s, hero %s, persona %s" % [run_seed, strategy, hero,
 		persona if cast != null else "none"])
-	(Router.current as TitleScreen).request_new_game(SAVE_SLOT, "Kai", false, run_seed, &"prime", hero)
+	if cast == null:
+		(Router.current as TitleScreen).request_new_game(SAVE_SLOT, "Kai", false, run_seed, &"prime", hero)
+	elif not await _casting(run_seed, cast):
+		return
 	if not await _wait(func() -> bool: return Router.current is ExplorationScene and not Router.busy, INTRO_BUDGET,
 			"exploration after the intro"):
 		return
@@ -368,6 +416,99 @@ func _main() -> void:
 	if not check_story_beats():
 		return
 	_finish_ok()
+
+
+# ======================================================================================================================
+# Casting (08 §1, K1): the new game through the casting scene
+# ======================================================================================================================
+
+## Plays the casting like a player: the canon persona with "Rest automatisch" (Esc) and Enter on "Sendung starten";
+## any other profile through the controls — the name on the on-screen keyboard, the form, the Vorleben / hobby / traits
+## overlays, "Weiter" twice, "Sendung starten". Checks the card, the recorded command (talent "", the traits' bias) and
+## the local profile. false = the run failed.
+func _casting(run_seed: int, cast: PersonaProfile) -> bool:
+	phase = "casting"
+	var log_before: RunLog = Game.run_log
+	Router.goto(CASTING, {"slot": SAVE_SLOT, "hero": hero, "seed": run_seed})
+	if not await _wait(_scene_is.bind(CASTING), CASTING_BUDGET, "the casting"):
+		return false
+	var scene: Node = Router.current
+	await get_tree().process_frame
+	if persona == "canon":
+		_key(KEY_ESCAPE)                         # "Rest automatisch" (08 §1.5): nothing set → the canon Kai
+		if not await _wait(func() -> bool: return int(scene.get("page")) == 3, 120, "casting 3/3 after Esc"):
+			return false
+		var final: PersonaProfile = scene.get("final") as PersonaProfile
+		if final == null or final.name != GameState.DEFAULT_NAME or not final.is_canon(DB.data):
+			return fail("\"Rest automatisch\" without input must give the canon Kai")
+		await get_tree().process_frame
+		if get_viewport().gui_get_focus_owner() != scene.get("start_button"):
+			return fail("after \"Rest automatisch\" the focus is not on \"Sendung starten\"")
+		_key(KEY_ENTER)                          # the second input: the show starts
+	else:
+		scene.call("open_keyboard", "name")
+		var osk: Node = scene.get("overlay")
+		for ch: String in cast.name:
+			osk.call("insert", ch)
+		osk.call("submit")
+		scene.call("set_form", cast.form)
+		scene.call("next")
+		if int(scene.get("page")) != 2:
+			return fail("the name '%s' was not accepted: %s" % [cast.name, str(scene.get("profile").get("name"))])
+		scene.call("open_picker", "origin")
+		var picker: Node = scene.get("overlay")
+		picker.call("choose", cast.origin)
+		if cast.occupation != "":
+			picker.call("choose_job", cast.occupation)
+		elif is_instance_valid(picker) and scene.get("overlay") == picker:
+			picker.call("close")
+		scene.call("open_picker", "hobby")
+		(scene.get("overlay") as Node).call("choose", cast.hobby)
+		scene.call("open_picker", "traits")
+		var tp: Node = scene.get("overlay")
+		for t: String in cast.traits:
+			tp.call("choose", t)
+		tp.call("close")
+		scene.call("next")
+		var final2: PersonaProfile = scene.get("final") as PersonaProfile
+		if final2 == null:
+			return fail("no card on casting 3/3")
+		for f: String in ["name", "form", "origin", "occupation", "hobby"]:
+			if str(final2.get(f)) != str(cast.get(f)):
+				return fail("casting card %s = '%s', expected '%s'" % [f, str(final2.get(f)), str(cast.get(f))])
+		if final2.traits != cast.traits:
+			return fail("casting card traits %s, expected %s" % [str(final2.traits), str(cast.traits)])
+		scene.call("start_show")
+	if not await _wait(func() -> bool: return Game.run_log != null and Game.run_log != log_before, CASTING_BUDGET,
+			"the new game after the casting"):
+		return false
+	var cmd: Dictionary = {}
+	for e: Dictionary in Game.run_log.cmds() if Game.run_log != null else ([] as Array[Dictionary]):
+		if str((e["c"] as Dictionary).get("t", "")) == "persona":
+			cmd = e["c"]
+			break
+	var want_bias: Array = Array(PersonaRules.bias_for(DB.data, cast.traits))
+	if str(cmd.get("t", "")) != "persona" or str(cmd.get("talent", "x")) != "" or cmd.get("bias", []) != want_bias:
+		return fail("the persona command is %s (expected talent \"\" and bias %s)" % [str(cmd), str(want_bias)])
+	if Game.persona == null or Game.state.player_name != cast.name:
+		return fail("the new game has no persona / name '%s'" % Game.state.player_name)
+	_note("casting: %s · %s%s · %s · %s" % [cast.name, cast.origin, (" / " + cast.occupation) if cast.occupation != ""
+		else "", cast.hobby, ", ".join(cast.traits) if not cast.traits.is_empty() else "ohne Eigenschaften"])
+	return true
+
+
+func _scene_is(path: String) -> bool:
+	return Router.current != null and Router.current.scene_file_path == path and not Router.busy
+
+
+## One key press (pressed + released) through the input pipeline, like a player's keyboard.
+func _key(code: Key) -> void:
+	for pressed: bool in [true, false]:
+		var ev: InputEventKey = InputEventKey.new()
+		ev.keycode = code
+		ev.physical_keycode = code
+		ev.pressed = pressed
+		Input.parse_input_event(ev)
 
 
 ## Waits until the exploration is calm (no battle / dialog / transition): battles, safe rooms and game overs on the
@@ -1827,6 +1968,16 @@ func check_story_beats() -> bool:
 		return fail("M.O.D. never announced her preference of the floor")
 	if liga > 0 and (show == null or int(show.stats.get("liga_battles", 0)) == 0):
 		return fail("--liga=%d: no battle was won in the Liga" % liga)
+	if persona != "none":                       # Casting (08 §4.3): persona lines, never in a battle
+		var lines: int = 0
+		for t: String in mod_tags:
+			if t.begins_with("persona_"):
+				lines += 1
+		if lines == 0:
+			return fail("no persona line was said (--persona=%s)" % persona)
+		if persona_in_battle > 0:
+			return fail("%d persona line(s) during a battle (08 §4.3 R6)" % persona_in_battle)
+		_note("persona lines: %d, none in a battle" % lines)
 	return true
 
 

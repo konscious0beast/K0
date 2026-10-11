@@ -5,8 +5,9 @@ extends TestCase
 ## talents until 09 ST0 — Talents.has_any with empty talents, the four guards of CR-21), PersonaRules.check / apply
 ## and the "persona" command in both verifiers (K1: talent "" only), the export boundary (canary "ZZKANARI": hash
 ## inputs, run-log header, anchor, board entry and the files written next to the saves), the one SIM_VERSION bump (an
-## older log or board entry is old_version — "ältere Version" — never a mismatch) and the remaining K2 stubs. A
-## package that has to change one of these signatures files a change request first (08 §10.7).
+## older log or board entry is old_version — "ältere Version" — never a mismatch) and the K2 bodies behind the look API
+## (test_08_avatar_kit has the details). A package that has to change one of these signatures files a change request
+## first (08 §10.7).
 
 const R1A := preload("res://tests/test_r1a_contract.gd")
 const EventInfo := preload("res://scenes/ui/event_info.gd")
@@ -92,12 +93,12 @@ const PROPERTIES: Dictionary = {
 }
 
 ## K1 replaced its stubs (persona_rules, persona_profile, persona_privacy, persona_text, persona_beats,
-## show_persona_hooks, validators/origins); the look stays K2's.
-const STUBS: PackedStringArray = ["res://art/kit/persona_look.gd", "res://core/data/validators/looks.gd"]
+## show_persona_hooks, validators/origins), K2 the look (persona_look, validators/looks, DB.party_model): no stub left.
 const K1_FILES: PackedStringArray = ["res://core/progression/persona_rules.gd",
 	"res://core/progression/persona_profile.gd", "res://core/progression/persona_privacy.gd",
 	"res://core/show/persona_text.gd", "res://core/show/persona_beats.gd", "res://autoload/show_persona_hooks.gd",
-	"res://core/data/validators/origins.gd"]
+	"res://core/data/validators/origins.gd", "res://art/kit/persona_look.gd", "res://core/data/validators/looks.gd",
+	"res://autoload/db.gd", "res://autoload/game.gd"]
 
 
 func before_each() -> void:
@@ -217,10 +218,8 @@ func test_k0_fields_are_exact() -> void:
 
 
 func test_stub_headers_and_constants() -> void:
-	for path: String in STUBS:
-		assert_true(FileAccess.get_file_as_string(path).begins_with("# STUB(K0) — owned by 08-K"), "stub header " + path)
 	for path: String in K1_FILES:
-		assert_false(FileAccess.get_file_as_string(path).contains("STUB(K0)"), "K1 replaced the stub " + path)
+		assert_false(FileAccess.get_file_as_string(path).contains("STUB(K0)"), "K1 / K2 replaced the stub " + path)
 	assert_eq([PersonaRules.MAX_BIAS, PersonaRules.BIAS_WEIGHT_ADD, PersonaRules.BIAS_MIN_FLOOR], [3, 1, 2])
 	assert_eq(PersonaRules.REASONS, PackedStringArray(["bad_version", "unknown_talent", "bad_bias", "already_set",
 		"run_started", "event_run", "no_swap", "same"]), "08 §2.3")
@@ -239,7 +238,7 @@ func test_stub_headers_and_constants() -> void:
 		assert_true(DataValidator.TEXT_PLACEHOLDERS.has(ph), "placeholder {%s}" % ph)
 	assert_true(DataValidator.OPTIONAL_MOD_TAG_PREFIXES.has("persona_"))
 	assert_eq(DataValidator.MODEL_HAIR_STYLES, PackedStringArray(["short", "buzz", "long", "bun", "curls",
-		"ponytail", "bald"]))
+		"ponytail", "braids", "headscarf", "bald"]), "K2 change request: + braids, headscarf")
 	assert_eq(DataValidator.MODEL_BEARDS, PackedStringArray(["none", "stubble", "moustache", "full"]))
 	assert_eq(EventInfo.LOCAL_NAME, "Sie")
 	assert_eq(Save.PERSONA_DIR, "persona")
@@ -270,8 +269,11 @@ func test_origins_and_looks_data() -> void:
 	var t: TalentDef = with_talents.origin_talent("tal_org_nature")
 	assert_eq([t.max_rank, Array(t.for_members)], [1, ["kai"]])
 	for kind: String in ["hair", "hair_color", "skin", "beard", "glasses", "outfit"]:
-		assert_eq(data.looks_of(kind).size(), 1, "one canon look per kind: " + kind)
+		assert_true(data.looks_of(kind).size() >= 2, "K2: options per kind: " + kind)
+		assert_true(bool(data.look_canon(kind).get("canon", false)), "K2: one canon look per kind: " + kind)
 	assert_eq(str(data.look("lk_hair_short").get("style", "")), "short")
+	assert_eq(PersonaProfile.canon_look(data), {"hair": "lk_hair_short", "hair_color": "lk_hc_darkbrown",
+		"skin": "lk_skin_3", "beard": "lk_beard_none", "glasses": "lk_glasses_none", "outfit": "lk_outfit_petrol"})
 	assert_false((JsonUtil.read_file("res://data/origins.json") as Dictionary).has("talents"), "K1: no talents key")
 	for e: Dictionary in (JsonUtil.read_file(FIXTURE_ORIGINS) as Dictionary)["talents"]:
 		assert_false(Talents.offer(GameState.create_new(with_talents, 0, "Kai", 1, &"prime"), with_talents, "kai",
@@ -341,6 +343,12 @@ func test_validator_k0_rules() -> void:
 	assert_false(sd.load_from_tables(style))
 	assert_has("; ".join(sd.errors), "style.hair")
 	(kai["model"] as Dictionary)["style"] = {"hair": "bun", "beard": "full"}
+	assert_false(sd.load_from_tables(style), "K2: the canon look must stay Kai's model (looks.json canon flags)")
+	assert_has("; ".join(sd.errors), "is not Kai's 'bun'")
+	for e: Variant in ((style["looks"] as Dictionary)["entries"] as Array):
+		var le: Dictionary = e
+		if ["lk_hair_short", "lk_beard_none", "lk_hair_bun", "lk_beard_full"].has(str(le["id"])):
+			le["canon"] = str(le["id"]) in ["lk_hair_bun", "lk_beard_full"]
 	assert_true(sd.load_from_tables(style), "; ".join(sd.errors))
 	assert_eq(sd.party_member(str(kai["id"])).model.get("style", {}), {"hair": "bun", "beard": "full"})
 	assert_false(real_data().party_member("kai").model.has("style"), "no style = today's Kai (dropped when empty)")
@@ -603,9 +611,9 @@ func test_board_entries_of_an_older_version() -> void:
 	assert_eq(EventInfo.version_tag({"score": 20, "sim_version": RunSim.SIM_VERSION}), "")
 
 
-# --- the remaining K2 stubs and the K1 bodies behind the K0 API ------------------------------------------------------
+# --- the K1 and K2 bodies behind the K0 API --------------------------------------------------------------------------
 
-func test_k2_stubs_and_k1_bodies() -> void:
+func test_k1_and_k2_bodies() -> void:
 	var data: GameData = real_data()
 	var st: GameState = _sim(data).state
 	assert_eq(PersonaRules.offer(data, "org_animals", "hob_animals"), PackedStringArray(), "dormant (CR-33)")
@@ -629,10 +637,11 @@ func test_k2_stubs_and_k1_bodies() -> void:
 	assert_true(["plan_a", "plan_b", "plan_c"].has(PersonaBeats.plan_for(data, 4242)))
 	assert_eq(PersonaBeats.plan_for(data, 4242), PersonaBeats.plan_for(data, 4242), "deterministic")
 	assert_eq(PersonaBeats.tag_for(data, null, "plan_a", 1, &"intro", 1), "persona_intro:org_animals")
-	assert_eq(DB.party_model("kai"), DB.data.party_member("kai").model, "K2 stub")
+	assert_eq(DB.party_model("kai"), DB.data.party_member("kai").model, "K2: without a persona the def model")
 	assert_eq(DB.party_model("nobody"), {})
 	var model: Dictionary = DB.data.party_member("kai").model
-	assert_eq(PersonaLook.apply(model, {"hair": "lk_hair_short"}, data), model, "K2 stub")
+	assert_eq(PersonaLook.apply(model, {"hair": "lk_hair_short"}, data), model, "K2: the canon look changes nothing")
+	assert_eq(PersonaLook.apply(model, {"hair": "lk_hair_bun"}, data).get("style", {}), {"hair": "bun", "beard": "none"})
 	assert_true(Save.persona_path(1).ends_with("persona/slot_1.json"), Save.persona_path(1))
 	assert_null(Save.load_persona(1))
 	var p: PersonaProfile = PersonaProfile.canon(data)

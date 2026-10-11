@@ -14,7 +14,12 @@
 			"mp_cost": 0,
 			"rank": 3,
 			"anim": "attack",
-			"vfx": "hit"
+			"vfx": "hit",
+			"rt": {
+				"icon": "mop_swing",
+				"range_cm": 250,
+				"gcd": false
+			}
 		},
 		{
 			"id": "skl_attack_mopsula",
@@ -32,6 +37,27 @@
 			"vfx": "bite"
 		},
 		{
+			"id": "skl_rt_auto_mopsula",
+			"name": "Monokel-Funkeln",
+			"desc": "Ein Lichtstrahl aus dem Monokel. Der Graf nennt es Blickkontakt mit Folgen.",
+			"user": "party",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "magical",
+			"element": "physical",
+			"power": 60,
+			"mp_cost": 0,
+			"rank": 3,
+			"anim": "cast",
+			"vfx": "magic",
+			"rt": {
+				"icon": "monocle_beam",
+				"range_cm": 1000,
+				"gcd": false,
+				"impact_ms": 0
+			}
+		},
+		{
 			"id": "skl_e_strike",
 			"name": "Angriff",
 			"desc": "Ein schlichter Angriff. Monster haben selten Choreografen.",
@@ -44,7 +70,13 @@
 			"mp_cost": 0,
 			"rank": 3,
 			"anim": "attack",
-			"vfx": "hit"
+			"vfx": "hit",
+			"rt": {
+				"icon": "claw",
+				"range_cm": 220,
+				"gcd": false,
+				"mp": 0
+			}
 		},
 		{
 			"id": "skl_kai_heavy_swing",
@@ -62,7 +94,13 @@
 			"vfx": "slash",
 			"show_tags": [
 				"flashy"
-			]
+			],
+			"rt": {
+				"icon": "mop_swing",
+				"range_cm": 250,
+				"mp": 3,
+				"threat_pm": 2000
+			}
 		},
 		{
 			"id": "skl_kai_taunt",
@@ -92,7 +130,26 @@
 			"vfx": "buff",
 			"show_tags": [
 				"risky"
-			]
+			],
+			"rt": {
+				"icon": "megaphone_notes",
+				"cooldown_ms": 15000,
+				"gcd": false,
+				"mp": 2,
+				"impact_ms": 0,
+				"statuses": [
+					{
+						"id": "sts_taunted",
+						"ms": 4000,
+						"to": "all_enemies"
+					},
+					{
+						"id": "sts_guard",
+						"ms": 6000,
+						"to": "self"
+					}
+				]
+			}
 		},
 		{
 			"id": "skl_kai_sweep",
@@ -110,7 +167,18 @@
 			"vfx": "slash",
 			"show_tags": [
 				"flashy"
-			]
+			],
+			"rt": {
+				"icon": "mop_circle",
+				"cooldown_ms": 8000,
+				"impact_ms": 400,
+				"threat_pm": 1500,
+				"mp": 5,
+				"aoe": {
+					"center": "self",
+					"radius_cm": 350
+				}
+			}
 		},
 		{
 			"id": "skl_kai_first_aid",
@@ -132,7 +200,17 @@
 			"vfx": "heal",
 			"show_tags": [
 				"cute"
-			]
+			],
+			"rt": {
+				"icon": "paw_plaster",
+				"cooldown_ms": 12000,
+				"range_cm": 800,
+				"mp": 4,
+				"cleanse": [
+					"sts_poison",
+					"sts_burn"
+				]
+			}
 		},
 		{
 			"id": "skl_kai_leash_trip",
@@ -154,7 +232,22 @@
 				}
 			],
 			"anim": "attack",
-			"vfx": "debuff"
+			"vfx": "debuff",
+			"rt": {
+				"icon": "leash_lasso",
+				"cooldown_ms": 12000,
+				"gcd": false,
+				"range_cm": 800,
+				"mp": 3,
+				"interrupt": true,
+				"statuses": [
+					{
+						"id": "sts_slow",
+						"chance_pm": 900,
+						"ms": 4000
+					}
+				]
+			}
 		},
 		{
 			"id": "skl_kai_deo_torch",
@@ -173,7 +266,27 @@
 			"show_tags": [
 				"flashy",
 				"risky"
-			]
+			],
+			"rt": {
+				"icon": "spray_flame",
+				"cooldown_ms": 14000,
+				"channel_ms": 2000,
+				"period_ms": 500,
+				"range_cm": 500,
+				"power": 40,
+				"mp": 7,
+				"aoe": {
+					"center": "target",
+					"radius_cm": 200
+				},
+				"statuses": [
+					{
+						"id": "sts_burn",
+						"ms": 6000,
+						"tick_power": 20
+					}
+				]
+			}
 		},
 		{
 			"id": "skl_kai_cable_whip",
@@ -198,7 +311,21 @@
 			"vfx": "shock",
 			"show_tags": [
 				"flashy"
-			]
+			],
+			"rt": {
+				"icon": "cable_sparks",
+				"cooldown_ms": 18000,
+				"gcd": false,
+				"range_cm": 600,
+				"mp": 6,
+				"interrupt": true,
+				"statuses": [
+					{
+						"id": "sts_stun",
+						"ms": 1500
+					}
+				]
+			}
 		},
 		{
 			"id": "skl_kai_prime_finisher",
@@ -219,7 +346,13 @@
 			"show_tags": [
 				"finisher",
 				"flashy"
-			]
+			],
+			"rt": {
+				"icon": "studio_camera",
+				"range_cm": 250,
+				"mp": 8,
+				"impact_ms": 800
+			}
 		},
 		{
 			"id": "skl_mop_noble_flame",
@@ -237,7 +370,13 @@
 			"vfx": "fire",
 			"show_tags": [
 				"flashy"
-			]
+			],
+			"rt": {
+				"icon": "seal_flame",
+				"cast_ms": 1500,
+				"range_cm": 2000,
+				"mp": 4
+			}
 		},
 		{
 			"id": "skl_mop_holy_lick",
@@ -257,7 +396,13 @@
 			"show_tags": [
 				"cute",
 				"gross"
-			]
+			],
+			"rt": {
+				"icon": "tongue_glitter",
+				"cast_ms": 1500,
+				"range_cm": 2000,
+				"mp": 4
+			}
 		},
 		{
 			"id": "skl_mop_frost_sneeze",
@@ -282,7 +427,19 @@
 			"vfx": "ice",
 			"show_tags": [
 				"gross"
-			]
+			],
+			"rt": {
+				"icon": "pug_nose_ice",
+				"cooldown_ms": 6000,
+				"range_cm": 1500,
+				"mp": 5,
+				"statuses": [
+					{
+						"id": "sts_slow",
+						"ms": 4000
+					}
+				]
+			}
 		},
 		{
 			"id": "skl_mop_thunder_bark",
@@ -300,7 +457,18 @@
 			"vfx": "shock",
 			"show_tags": [
 				"flashy"
-			]
+			],
+			"rt": {
+				"icon": "bark_bolt",
+				"cooldown_ms": 15000,
+				"gcd": false,
+				"mp": 5,
+				"interrupt": true,
+				"aoe": {
+					"center": "self",
+					"radius_cm": 600
+				}
+			}
 		},
 		{
 			"id": "skl_mop_expert_opinion",
@@ -322,7 +490,19 @@
 				}
 			],
 			"anim": "cast",
-			"vfx": "buff"
+			"vfx": "buff",
+			"rt": {
+				"icon": "scroll_seal",
+				"cooldown_ms": 25000,
+				"range_cm": 2000,
+				"mp": 6,
+				"statuses": [
+					{
+						"id": "sts_haste",
+						"ms": 10000
+					}
+				]
+			}
 		},
 		{
 			"id": "skl_mop_mass_lick",
@@ -345,7 +525,22 @@
 			"show_tags": [
 				"cute",
 				"gross"
-			]
+			],
+			"rt": {
+				"icon": "two_tongues",
+				"cooldown_ms": 20000,
+				"cast_ms": 2000,
+				"mp": 10,
+				"statuses": [
+					{
+						"id": "sts_regen",
+						"ms": 10000
+					}
+				],
+				"cleanse": [
+					"sts_poison"
+				]
+			}
 		},
 		{
 			"id": "skl_mop_revive",
@@ -364,7 +559,14 @@
 			"vfx": "heal",
 			"show_tags": [
 				"gross"
-			]
+			],
+			"rt": {
+				"icon": "drool_halo",
+				"cooldown_ms": 30000,
+				"cast_ms": 3000,
+				"range_cm": 2000,
+				"mp": 14
+			}
 		},
 		{
 			"id": "skl_mop_inferno",
@@ -383,7 +585,24 @@
 			"show_tags": [
 				"flashy",
 				"finisher"
-			]
+			],
+			"rt": {
+				"icon": "monocle_flames",
+				"cast_ms": 2000,
+				"range_cm": 2000,
+				"mp": 12,
+				"aoe": {
+					"center": "target",
+					"radius_cm": 600
+				},
+				"statuses": [
+					{
+						"id": "sts_burn",
+						"ms": 6000,
+						"tick_power": 20
+					}
+				]
+			}
 		},
 		{
 			"id": "skl_stunt_kai_suplex",
@@ -412,7 +631,18 @@
 			"show_tags": [
 				"risky",
 				"flashy"
-			]
+			],
+			"rt": {
+				"icon": "wrestler_stars",
+				"range_cm": 250,
+				"fail_ms": 1500,
+				"statuses": [
+					{
+						"id": "sts_stun",
+						"ms": 2000
+					}
+				]
+			}
 		},
 		{
 			"id": "skl_stunt_mop_entrance",
@@ -442,7 +672,16 @@
 				"risky",
 				"flashy",
 				"cute"
-			]
+			],
+			"rt": {
+				"icon": "cape_spotlight",
+				"cast_ms": 1000,
+				"fail_ms": 2000,
+				"aoe": {
+					"center": "self",
+					"radius_cm": 800
+				}
+			}
 		},
 		{
 			"id": "skl_e_bite",
@@ -456,7 +695,13 @@
 			"power": 100,
 			"mp_cost": 0,
 			"rank": 3,
-			"vfx": "bite"
+			"vfx": "bite",
+			"rt": {
+				"icon": "bite",
+				"range_cm": 220,
+				"gcd": false,
+				"mp": 0
+			}
 		},
 		{
 			"id": "skl_e_gnaw_poison",
@@ -477,7 +722,45 @@
 					"turns": 0
 				}
 			],
-			"vfx": "toxic"
+			"vfx": "toxic",
+			"rt": {
+				"icon": "bite",
+				"range_cm": 220,
+				"mp": 0,
+				"statuses": [
+					{
+						"id": "sts_poison",
+						"chance_pm": 500,
+						"ms": 8000
+					}
+				]
+			}
+		},
+		{
+			"id": "skl_e_azubi_hop",
+			"name": "Azubi-Sprung",
+			"desc": "Ein Sprung mit Ansage. Der Lehrling übt noch die Landung.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 60,
+			"mp_cost": 0,
+			"rank": 4,
+			"vfx": "hit",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 2000,
+				"interruptible": false,
+				"pct_maxhp": 15,
+				"mp": 0,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "target_pos",
+					"radius_cm": 200
+				}
+			}
 		},
 		{
 			"id": "skl_e_peck",
@@ -491,7 +774,13 @@
 			"power": 90,
 			"mp_cost": 0,
 			"rank": 3,
-			"vfx": "hit"
+			"vfx": "hit",
+			"rt": {
+				"icon": "claw",
+				"range_cm": 220,
+				"gcd": false,
+				"mp": 0
+			}
 		},
 		{
 			"id": "skl_e_dive_bomb",
@@ -505,7 +794,19 @@
 			"power": 60,
 			"mp_cost": 0,
 			"rank": 4,
-			"vfx": "hit"
+			"vfx": "hit",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 1200,
+				"interruptible": false,
+				"pct_maxhp": 15,
+				"mp": 0,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "target_pos",
+					"radius_cm": 250
+				}
+			}
 		},
 		{
 			"id": "skl_e_briefcase",
@@ -519,7 +820,13 @@
 			"power": 100,
 			"mp_cost": 0,
 			"rank": 3,
-			"vfx": "hit"
+			"vfx": "hit",
+			"rt": {
+				"icon": "claw",
+				"range_cm": 220,
+				"gcd": false,
+				"mp": 0
+			}
 		},
 		{
 			"id": "skl_e_delay_rage",
@@ -533,7 +840,21 @@
 			"power": 150,
 			"mp_cost": 0,
 			"rank": 5,
-			"vfx": "crit"
+			"vfx": "crit",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 1800,
+				"interruptible": false,
+				"pct_maxhp": 20,
+				"range_cm": 400,
+				"mp": 0,
+				"telegraph": {
+					"shape": "cone",
+					"anchor": "self",
+					"radius_cm": 400,
+					"angle_deg": 90
+				}
+			}
 		},
 		{
 			"id": "skl_e_slam",
@@ -547,7 +868,13 @@
 			"power": 100,
 			"mp_cost": 0,
 			"rank": 3,
-			"vfx": "hit"
+			"vfx": "hit",
+			"rt": {
+				"icon": "claw",
+				"range_cm": 220,
+				"gcd": false,
+				"mp": 0
+			}
 		},
 		{
 			"id": "skl_e_toxic_splash",
@@ -569,7 +896,19 @@
 				}
 			],
 			"anim": "cast",
-			"vfx": "toxic"
+			"vfx": "toxic",
+			"rt": {
+				"icon": "toxic",
+				"cast_ms": 1500,
+				"range_cm": 1200,
+				"mp": 0,
+				"statuses": [
+					{
+						"id": "sts_poison",
+						"ms": 8000
+					}
+				]
+			}
 		},
 		{
 			"id": "skl_e_zap",
@@ -584,7 +923,14 @@
 			"mp_cost": 3,
 			"rank": 3,
 			"anim": "cast",
-			"vfx": "shock"
+			"vfx": "shock",
+			"rt": {
+				"icon": "bolt",
+				"cast_ms": 1500,
+				"range_cm": 1500,
+				"interruptible": false,
+				"mp": 0
+			}
 		},
 		{
 			"id": "skl_e_rat_heal",
@@ -600,7 +946,15 @@
 			"rank": 2,
 			"heal_mode": "pct",
 			"anim": "cast",
-			"vfx": "heal"
+			"vfx": "heal",
+			"rt": {
+				"icon": "whistle",
+				"cast_ms": 2000,
+				"range_cm": 2000,
+				"interrupt_worthy": true,
+				"mp": 0,
+				"power": 15
+			}
 		},
 		{
 			"id": "skl_e_lash",
@@ -614,7 +968,13 @@
 			"power": 100,
 			"mp_cost": 0,
 			"rank": 3,
-			"vfx": "slash"
+			"vfx": "slash",
+			"rt": {
+				"icon": "claw",
+				"range_cm": 250,
+				"gcd": false,
+				"mp": 0
+			}
 		},
 		{
 			"id": "skl_e_short_circuit",
@@ -629,7 +989,19 @@
 			"mp_cost": 6,
 			"rank": 4,
 			"anim": "cast",
-			"vfx": "shock"
+			"vfx": "shock",
+			"rt": {
+				"icon": "bolt",
+				"cast_ms": 2000,
+				"interruptible": false,
+				"pct_maxhp": 20,
+				"mp": 0,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "self",
+					"radius_cm": 500
+				}
+			}
 		},
 		{
 			"id": "skl_e_venom_bite",
@@ -650,7 +1022,20 @@
 					"turns": 0
 				}
 			],
-			"vfx": "toxic"
+			"vfx": "toxic",
+			"rt": {
+				"icon": "bite",
+				"range_cm": 220,
+				"gcd": false,
+				"mp": 0,
+				"statuses": [
+					{
+						"id": "sts_poison",
+						"chance_pm": 500,
+						"ms": 8000
+					}
+				]
+			}
 		},
 		{
 			"id": "skl_e_web",
@@ -672,7 +1057,18 @@
 				}
 			],
 			"anim": "cast",
-			"vfx": "debuff"
+			"vfx": "debuff",
+			"rt": {
+				"icon": "generic",
+				"range_cm": 1500,
+				"mp": 0,
+				"statuses": [
+					{
+						"id": "sts_slow",
+						"ms": 5000
+					}
+				]
+			}
 		},
 		{
 			"id": "skl_e_spray_flame",
@@ -687,7 +1083,14 @@
 			"mp_cost": 4,
 			"rank": 3,
 			"anim": "cast",
-			"vfx": "fire"
+			"vfx": "fire",
+			"rt": {
+				"icon": "fire",
+				"cast_ms": 1500,
+				"range_cm": 1500,
+				"interruptible": false,
+				"mp": 0
+			}
 		},
 		{
 			"id": "skl_e_fumes",
@@ -709,7 +1112,24 @@
 				}
 			],
 			"anim": "cast",
-			"vfx": "toxic"
+			"vfx": "toxic",
+			"rt": {
+				"icon": "toxic",
+				"cast_ms": 1200,
+				"interruptible": false,
+				"pct_maxhp": 15,
+				"mp": 0,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "target_pos",
+					"radius_cm": 300
+				},
+				"zone": {
+					"ms": 6000,
+					"period_ms": 2000,
+					"status": "sts_poison"
+				}
+			}
 		},
 		{
 			"id": "skl_e_pinch",
@@ -723,7 +1143,13 @@
 			"power": 100,
 			"mp_cost": 0,
 			"rank": 3,
-			"vfx": "hit"
+			"vfx": "hit",
+			"rt": {
+				"icon": "claw",
+				"range_cm": 250,
+				"gcd": false,
+				"mp": 0
+			}
 		},
 		{
 			"id": "skl_e_brace",
@@ -745,7 +1171,17 @@
 				}
 			],
 			"anim": "cast",
-			"vfx": "buff"
+			"vfx": "buff",
+			"rt": {
+				"icon": "guard",
+				"mp": 0,
+				"statuses": [
+					{
+						"id": "sts_guard",
+						"ms": 4000
+					}
+				]
+			}
 		},
 		{
 			"id": "skl_e_step_crush",
@@ -759,7 +1195,20 @@
 			"power": 170,
 			"mp_cost": 0,
 			"rank": 5,
-			"vfx": "crit"
+			"vfx": "crit",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 1500,
+				"interruptible": false,
+				"pct_maxhp": 25,
+				"range_cm": 1200,
+				"mp": 0,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "self",
+					"radius_cm": 300
+				}
+			}
 		},
 		{
 			"id": "skl_e_halberd",
@@ -773,7 +1222,13 @@
 			"power": 100,
 			"mp_cost": 0,
 			"rank": 3,
-			"vfx": "slash"
+			"vfx": "slash",
+			"rt": {
+				"icon": "claw",
+				"range_cm": 300,
+				"gcd": false,
+				"mp": 0
+			}
 		},
 		{
 			"id": "skl_e_shield_wall",
@@ -795,7 +1250,19 @@
 				}
 			],
 			"anim": "cast",
-			"vfx": "buff"
+			"vfx": "buff",
+			"rt": {
+				"icon": "guard",
+				"cast_ms": 2000,
+				"interrupt_worthy": true,
+				"mp": 0,
+				"statuses": [
+					{
+						"id": "sts_guard",
+						"ms": 8000
+					}
+				]
+			}
 		},
 		{
 			"id": "skl_e_lunge",
@@ -809,7 +1276,22 @@
 			"power": 140,
 			"mp_cost": 0,
 			"rank": 4,
-			"vfx": "slash"
+			"vfx": "slash",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 1000,
+				"interruptible": false,
+				"pct_maxhp": 20,
+				"range_cm": 900,
+				"mp": 0,
+				"dash": true,
+				"telegraph": {
+					"shape": "line",
+					"anchor": "self",
+					"length_cm": 800,
+					"width_cm": 150
+				}
+			}
 		},
 		{
 			"id": "skl_e_ticket_cut",
@@ -823,7 +1305,13 @@
 			"power": 120,
 			"mp_cost": 0,
 			"rank": 3,
-			"vfx": "bite"
+			"vfx": "bite",
+			"rt": {
+				"icon": "ticket",
+				"range_cm": 250,
+				"gcd": false,
+				"mp": 0
+			}
 		},
 		{
 			"id": "skl_e_fine",
@@ -843,7 +1331,14 @@
 				"refund_on_win": true
 			},
 			"anim": "cast",
-			"vfx": "debuff"
+			"vfx": "debuff",
+			"rt": {
+				"icon": "ticket",
+				"cast_ms": 2500,
+				"range_cm": 1500,
+				"interrupt_worthy": true,
+				"mp": 0
+			}
 		},
 		{
 			"id": "skl_e_escape",
@@ -861,7 +1356,41 @@
 				"kind": "escape"
 			},
 			"anim": "cast",
-			"vfx": "smoke"
+			"vfx": "smoke",
+			"rt": {
+				"icon": "whistle",
+				"cast_ms": 3000,
+				"cooldown_ms": 10000,
+				"interrupt_worthy": true,
+				"mp": 0
+			}
+		},
+		{
+			"id": "skl_e_showboss_slow",
+			"name": "Strafzettel",
+			"desc": "Hausordnung verschärft: Wer zu schnell läuft, wird ausgebremst.",
+			"user": "enemy",
+			"category": "debuff",
+			"target": "single_enemy",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 0,
+			"rank": 3,
+			"anim": "cast",
+			"vfx": "debuff",
+			"rt": {
+				"icon": "ticket",
+				"gcd": false,
+				"range_cm": 1500,
+				"mp": 0,
+				"statuses": [
+					{
+						"id": "sts_slow",
+						"ms": 3000
+					}
+				]
+			}
 		},
 		{
 			"id": "skl_b_broom",
@@ -875,7 +1404,13 @@
 			"power": 110,
 			"mp_cost": 0,
 			"rank": 3,
-			"vfx": "hit"
+			"vfx": "hit",
+			"rt": {
+				"icon": "claw",
+				"range_cm": 320,
+				"gcd": false,
+				"mp": 0
+			}
 		},
 		{
 			"id": "skl_b_keys",
@@ -889,7 +1424,20 @@
 			"power": 70,
 			"mp_cost": 0,
 			"rank": 4,
-			"vfx": "hit"
+			"vfx": "hit",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 1200,
+				"interruptible": false,
+				"pct_maxhp": 30,
+				"mp": 0,
+				"telegraph": {
+					"shape": "line",
+					"anchor": "self",
+					"length_cm": 1200,
+					"width_cm": 150
+				}
+			}
 		},
 		{
 			"id": "skl_b_rules",
@@ -911,7 +1459,25 @@
 				}
 			],
 			"anim": "cast",
-			"vfx": "buff"
+			"vfx": "buff",
+			"rt": {
+				"icon": "whistle",
+				"cast_ms": 3000,
+				"interrupt_worthy": true,
+				"mp": 0,
+				"statuses": [
+					{
+						"id": "sts_guard",
+						"ms": 12000,
+						"to": "self"
+					},
+					{
+						"id": "sts_admonished",
+						"ms": 12000,
+						"to": "all_enemies"
+					}
+				]
+			}
 		},
 		{
 			"id": "skl_b_cleaner_fog",
@@ -933,7 +1499,25 @@
 				}
 			],
 			"anim": "cast",
-			"vfx": "toxic"
+			"vfx": "toxic",
+			"rt": {
+				"icon": "toxic",
+				"cast_ms": 1000,
+				"interruptible": false,
+				"pct_maxhp": 25,
+				"mp": 0,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "each_enemy",
+					"radius_cm": 250,
+					"count": 2
+				},
+				"zone": {
+					"ms": 12000,
+					"period_ms": 2000,
+					"status": "sts_poison"
+				}
+			}
 		},
 		{
 			"id": "skl_b_call_tenant",
@@ -951,7 +1535,13 @@
 				"enm_kanalratte"
 			],
 			"anim": "cast",
-			"vfx": "smoke"
+			"vfx": "smoke",
+			"rt": {
+				"icon": "whistle",
+				"cast_ms": 2000,
+				"interrupt_worthy": true,
+				"mp": 0
+			}
 		},
 		{
 			"id": "skl_b_mop_whirl",
@@ -965,7 +1555,26 @@
 			"power": 90,
 			"mp_cost": 0,
 			"rank": 3,
-			"vfx": "slash"
+			"vfx": "slash",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 1800,
+				"interruptible": false,
+				"pct_maxhp": 30,
+				"mp": 0,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "self",
+					"radius_cm": 400
+				},
+				"statuses": [
+					{
+						"id": "sts_dizzy",
+						"ms": 3000,
+						"to": "self"
+					}
+				]
+			}
 		},
 		{
 			"id": "skl_q_scepter",
@@ -979,7 +1588,13 @@
 			"power": 120,
 			"mp_cost": 0,
 			"rank": 3,
-			"vfx": "hit"
+			"vfx": "hit",
+			"rt": {
+				"icon": "claw",
+				"range_cm": 350,
+				"gcd": false,
+				"mp": 0
+			}
 		},
 		{
 			"id": "skl_q_plague_bite",
@@ -1000,7 +1615,19 @@
 					"turns": 0
 				}
 			],
-			"vfx": "toxic"
+			"vfx": "toxic",
+			"rt": {
+				"icon": "bite",
+				"range_cm": 350,
+				"mp": 0,
+				"statuses": [
+					{
+						"id": "sts_poison",
+						"chance_pm": 500,
+						"ms": 8000
+					}
+				]
+			}
 		},
 		{
 			"id": "skl_q_screech",
@@ -1015,7 +1642,14 @@
 			"mp_cost": 8,
 			"rank": 4,
 			"anim": "cast",
-			"vfx": "shock"
+			"vfx": "shock",
+			"rt": {
+				"icon": "bolt",
+				"cast_ms": 2000,
+				"interrupt_worthy": true,
+				"pct_maxhp": 20,
+				"mp": 0
+			}
 		},
 		{
 			"id": "skl_q_summon",
@@ -1034,7 +1668,13 @@
 				"enm_kanalratte"
 			],
 			"anim": "cast",
-			"vfx": "smoke"
+			"vfx": "smoke",
+			"rt": {
+				"icon": "whistle",
+				"cast_ms": 2500,
+				"interrupt_worthy": true,
+				"mp": 0
+			}
 		},
 		{
 			"id": "skl_q_crown_nova",
@@ -1049,7 +1689,106 @@
 			"mp_cost": 16,
 			"rank": 5,
 			"anim": "cast",
-			"vfx": "shock"
+			"vfx": "shock",
+			"rt": {
+				"icon": "bolt",
+				"cast_ms": 3000,
+				"interruptible": false,
+				"pct_maxhp": 30,
+				"mp": 0,
+				"telegraph": {
+					"shape": "ring",
+					"anchor": "self",
+					"radius_cm": 1200,
+					"inner_cm": 400
+				}
+			}
+		},
+		{
+			"id": "skl_q_train",
+			"name": "Zug fährt ein",
+			"desc": "Auf Gleis 9 fährt ein: ein Zug. Bitte zurückbleiben.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 100,
+			"mp_cost": 0,
+			"rank": 5,
+			"vfx": "hit",
+			"rt": {
+				"icon": "train",
+				"cast_ms": 3000,
+				"interruptible": false,
+				"pct_maxhp": 35,
+				"mp": 0,
+				"ignore_guard": true,
+				"kill_adds": true,
+				"telegraph": {
+					"shape": "line",
+					"anchor": "lane",
+					"length_cm": 1200,
+					"width_cm": 300,
+					"lanes": [
+						-330,
+						330
+					]
+				}
+			}
+		},
+		{
+			"id": "skl_q_spit",
+			"name": "Pestspucke",
+			"desc": "Die Königin spuckt über den Bahnsteig. Die Reinigung streikt.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "poison",
+			"power": 80,
+			"mp_cost": 0,
+			"rank": 3,
+			"vfx": "toxic",
+			"rt": {
+				"icon": "toxic",
+				"range_cm": 1500,
+				"gcd": false,
+				"mp": 0
+			}
+		},
+		{
+			"id": "skl_q_puddles",
+			"name": "Pestpfützen",
+			"desc": "Drei Pfützen auf dem Bahnsteig. Wer drin steht, steht drin.",
+			"user": "enemy",
+			"category": "magic",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "poison",
+			"power": 50,
+			"mp_cost": 0,
+			"rank": 4,
+			"anim": "cast",
+			"vfx": "toxic",
+			"rt": {
+				"icon": "toxic",
+				"cast_ms": 1500,
+				"interruptible": false,
+				"pct_maxhp": 25,
+				"mp": 0,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "random",
+					"radius_cm": 200,
+					"count": 3
+				},
+				"zone": {
+					"ms": 10000,
+					"period_ms": 2000,
+					"status": "sts_poison"
+				}
+			}
 		},
 		{
 			"id": "skl_e_pose",
@@ -1120,7 +1859,12 @@
 			"rank": 2,
 			"heal_mode": "fixed",
 			"anim": "item",
-			"vfx": "heal"
+			"vfx": "heal",
+			"rt": {
+				"icon": "bandage",
+				"gcd": false,
+				"range_cm": 800
+			}
 		},
 		{
 			"id": "skl_item_antidote",
@@ -1138,7 +1882,16 @@
 				"sts_poison"
 			],
 			"anim": "item",
-			"vfx": "heal"
+			"vfx": "heal",
+			"rt": {
+				"icon": "antidote",
+				"gcd": false,
+				"range_cm": 800,
+				"cleanse": [
+					"sts_poison",
+					"sts_burn"
+				]
+			}
 		},
 		{
 			"id": "skl_item_energy_krawumm",
@@ -1154,7 +1907,12 @@
 			"rank": 2,
 			"mp_restore": 20,
 			"anim": "item",
-			"vfx": "buff"
+			"vfx": "buff",
+			"rt": {
+				"icon": "can",
+				"gcd": false,
+				"range_cm": 800
+			}
 		},
 		{
 			"id": "skl_item_brutzel_burger",
@@ -1170,7 +1928,12 @@
 			"rank": 2,
 			"heal_mode": "fixed",
 			"anim": "item",
-			"vfx": "heal"
+			"vfx": "heal",
+			"rt": {
+				"icon": "burger",
+				"gcd": false,
+				"range_cm": 800
+			}
 		},
 		{
 			"id": "skl_item_smelling_salts",
@@ -1186,7 +1949,12 @@
 			"rank": 2,
 			"heal_mode": "pct",
 			"anim": "item",
-			"vfx": "heal"
+			"vfx": "heal",
+			"rt": {
+				"icon": "salts",
+				"gcd": false,
+				"range_cm": 800
+			}
 		},
 		{
 			"id": "skl_item_molotov",
@@ -1204,7 +1972,16 @@
 			"vfx": "fire",
 			"show_tags": [
 				"flashy"
-			]
+			],
+			"rt": {
+				"icon": "molotov",
+				"gcd": false,
+				"range_cm": 1500,
+				"aoe": {
+					"center": "target",
+					"radius_cm": 400
+				}
+			}
 		},
 		{
 			"id": "skl_item_ice_spray",
@@ -1219,7 +1996,18 @@
 			"mp_cost": 0,
 			"rank": 2,
 			"anim": "item",
-			"vfx": "ice"
+			"vfx": "ice",
+			"rt": {
+				"icon": "ice_spray",
+				"gcd": false,
+				"range_cm": 1500,
+				"statuses": [
+					{
+						"id": "sts_slow",
+						"ms": 4000
+					}
+				]
+			}
 		},
 		{
 			"id": "skl_item_smoke",
@@ -1235,7 +2023,11 @@
 			"rank": 2,
 			"flee_guaranteed": true,
 			"anim": "item",
-			"vfx": "smoke"
+			"vfx": "smoke",
+			"rt": {
+				"icon": "smoke",
+				"gcd": false
+			}
 		},
 		{
 			"id": "skl_item_hype_megaphone",
@@ -1255,7 +2047,11 @@
 			"sfx": "sponsor",
 			"show_tags": [
 				"flashy"
-			]
+			],
+			"rt": {
+				"icon": "megaphone",
+				"gcd": false
+			}
 		},
 		{
 			"id": "skl_item_elixir",
@@ -1272,7 +2068,12 @@
 			"heal_mode": "pct",
 			"mp_restore_pct": 100,
 			"anim": "item",
-			"vfx": "heal"
+			"vfx": "heal",
+			"rt": {
+				"icon": "elixir",
+				"gcd": false,
+				"range_cm": 800
+			}
 		}
 	]
 }

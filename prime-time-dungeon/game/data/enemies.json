@@ -84,6 +84,92 @@
 			},
 			"explore": {
 				"field_speed": 4.8
+			},
+			"rt": {
+				"radius_cm": 30,
+				"move_cm_s": 360,
+				"auto_skill": "skl_e_bite",
+				"swing_ms": 2400,
+				"reach_cm": 220,
+				"rules": [
+					{
+						"skill": "skl_e_gnaw_poison",
+						"target": "threat_top",
+						"first_ms": 3000,
+						"every_ms": 10000
+					}
+				]
+			}
+		},
+		{
+			"id": "enm_kanalratte_azubi",
+			"name": "Kanalratte (Azubi)",
+			"level": 1,
+			"stats": {
+				"hp": 24,
+				"mp": 0,
+				"str": 13,
+				"mag": 3,
+				"def": 5,
+				"res": 3,
+				"spd": 13,
+				"lck": 5
+			},
+			"exp": 12,
+			"credits": 6,
+			"attack_skill": "skl_e_strike",
+			"ai": {
+				"type": "weighted",
+				"actions": [
+					{
+						"skill": "skl_e_bite",
+						"weight": 1,
+						"target": "random"
+					}
+				]
+			},
+			"element_mods": {
+				"fire": 1.5
+			},
+			"status_immune": [],
+			"status_resist": {},
+			"drops": [],
+			"tags": [
+				"floor_1",
+				"zone_a",
+				"tutorial"
+			],
+			"model": {
+				"base": "rodent",
+				"scale": 0.8,
+				"pose": "auto",
+				"colors": {
+					"primary": "#7a6a5c",
+					"secondary": "#e88a9a",
+					"eyes": "#ff3030"
+				},
+				"props": [],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 4.8
+			},
+			"rt": {
+				"hp": 280,
+				"radius_cm": 30,
+				"move_cm_s": 300,
+				"auto_skill": "skl_e_bite",
+				"swing_ms": 2800,
+				"reach_cm": 220,
+				"rules": [
+					{
+						"skill": "skl_e_azubi_hop",
+						"target": "threat_top",
+						"first_ms": 6000,
+						"every_ms": 12000
+					}
+				]
 			}
 		},
 		{
@@ -150,6 +236,23 @@
 			"explore": {
 				"field_speed": 6.2,
 				"sight_range": 14.0
+			},
+			"rt": {
+				"hp_pm": 10000,
+				"radius_cm": 40,
+				"move_cm_s": 450,
+				"auto_skill": "skl_e_peck",
+				"swing_ms": 1800,
+				"reach_cm": 220,
+				"auto_target": "lowest_hp_pct_enemy",
+				"rules": [
+					{
+						"skill": "skl_e_dive_bomb",
+						"target": "lowest_hp_pct_enemy",
+						"first_ms": 6000,
+						"every_ms": 12000
+					}
+				]
 			}
 		},
 		{
@@ -226,6 +329,21 @@
 			},
 			"explore": {
 				"field_speed": 3.5
+			},
+			"rt": {
+				"radius_cm": 40,
+				"move_cm_s": 240,
+				"auto_skill": "skl_e_briefcase",
+				"swing_ms": 2800,
+				"reach_cm": 220,
+				"rules": [
+					{
+						"skill": "skl_e_delay_rage",
+						"target": "threat_top",
+						"first_ms": 7000,
+						"every_ms": 10000
+					}
+				]
 			}
 		},
 		{
@@ -294,6 +412,25 @@
 			},
 			"explore": {
 				"field_speed": 3.0
+			},
+			"rt": {
+				"hp_pm": 4800,
+				"radius_cm": 45,
+				"move_cm_s": 180,
+				"auto_skill": "skl_e_slam",
+				"swing_ms": 3000,
+				"reach_cm": 220,
+				"rules": [
+					{
+						"skill": "skl_e_toxic_splash",
+						"target": "random_enemy",
+						"cond": {
+							"target_no_status": "sts_poison"
+						},
+						"first_ms": 4000,
+						"every_ms": 9000
+					}
+				]
 			}
 		},
 		{
@@ -378,6 +515,29 @@
 			},
 			"explore": {
 				"field_speed": 4.5
+			},
+			"rt": {
+				"radius_cm": 30,
+				"move_cm_s": 300,
+				"keep_cm": 600,
+				"rules": [
+					{
+						"skill": "skl_e_rat_heal",
+						"target": "lowest_hp_pct_ally",
+						"cond": {
+							"ally_hp_below_pm": 500
+						},
+						"first_ms": 5000,
+						"every_ms": 8000
+					},
+					{
+						"skill": "skl_e_zap",
+						"target": "threat_top",
+						"first_ms": 1000,
+						"every_ms": 3500,
+						"filler": true
+					}
+				]
 			}
 		},
 		{
@@ -458,6 +618,21 @@
 			},
 			"explore": {
 				"field_speed": 4.0
+			},
+			"rt": {
+				"radius_cm": 45,
+				"move_cm_s": 270,
+				"auto_skill": "skl_e_lash",
+				"swing_ms": 2600,
+				"reach_cm": 250,
+				"rules": [
+					{
+						"skill": "skl_e_short_circuit",
+						"target": "threat_top",
+						"first_ms": 8000,
+						"every_ms": 12000
+					}
+				]
 			}
 		},
 		{
@@ -538,6 +713,27 @@
 			},
 			"explore": {
 				"field_speed": 5.8
+			},
+			"rt": {
+				"radius_cm": 40,
+				"move_cm_s": 420,
+				"auto_skill": "skl_e_venom_bite",
+				"swing_ms": 2000,
+				"reach_cm": 220,
+				"rules": [
+					{
+						"skill": "skl_e_web",
+						"target": "farthest_enemy",
+						"first_ms": 4000,
+						"once": true
+					},
+					{
+						"skill": "skl_e_venom_bite",
+						"target": "threat_top",
+						"first_ms": 3000,
+						"every_ms": 8000
+					}
+				]
 			}
 		},
 		{
@@ -618,6 +814,27 @@
 			},
 			"explore": {
 				"field_speed": 5.0
+			},
+			"rt": {
+				"hp_pm": 7000,
+				"radius_cm": 35,
+				"move_cm_s": 300,
+				"keep_cm": 600,
+				"rules": [
+					{
+						"skill": "skl_e_fumes",
+						"target": "threat_top",
+						"first_ms": 6000,
+						"every_ms": 14000
+					},
+					{
+						"skill": "skl_e_spray_flame",
+						"target": "threat_top",
+						"first_ms": 1000,
+						"every_ms": 3500,
+						"filler": true
+					}
+				]
 			}
 		},
 		{
@@ -709,6 +926,26 @@
 			},
 			"explore": {
 				"field_speed": 3.8
+			},
+			"rt": {
+				"hp_pm": 7000,
+				"radius_cm": 60,
+				"move_cm_s": 240,
+				"auto_skill": "skl_e_pinch",
+				"swing_ms": 3000,
+				"reach_cm": 250,
+				"rules": [
+					{
+						"skill": "skl_e_brace",
+						"target": "threat_top",
+						"first_ms": 5000,
+						"every_ms": 15000,
+						"then": {
+							"skill": "skl_e_step_crush",
+							"delay_ms": 1500
+						}
+					}
+				]
 			}
 		},
 		{
@@ -792,6 +1029,36 @@
 			},
 			"explore": {
 				"field_speed": 5.0
+			},
+			"rt": {
+				"hp_pm": 7000,
+				"radius_cm": 45,
+				"move_cm_s": 300,
+				"auto_skill": "skl_e_halberd",
+				"swing_ms": 2600,
+				"reach_cm": 300,
+				"rules": [
+					{
+						"skill": "skl_e_shield_wall",
+						"target": "self",
+						"first_ms": 3000,
+						"once": true
+					},
+					{
+						"skill": "skl_e_shield_wall",
+						"target": "self",
+						"cond": {
+							"self_hp_below_pm": 500
+						},
+						"once": true
+					},
+					{
+						"skill": "skl_e_lunge",
+						"target": "lowest_hp_pct_enemy",
+						"first_ms": 6000,
+						"every_ms": 11000
+					}
+				]
 			}
 		},
 		{
@@ -879,6 +1146,28 @@
 				"sight_range": 0.0,
 				"hear_run": 0.0,
 				"hear_sneak": 0.0
+			},
+			"rt": {
+				"radius_cm": 50,
+				"move_cm_s": 0,
+				"stationary": true,
+				"auto_skill": "skl_e_ticket_cut",
+				"swing_ms": 2400,
+				"reach_cm": 250,
+				"rules": [
+					{
+						"skill": "skl_e_fine",
+						"target": "threat_top",
+						"first_ms": 2000,
+						"once": true
+					},
+					{
+						"skill": "skl_e_escape",
+						"target": "self",
+						"first_ms": 25000,
+						"every_ms": 10000
+					}
+				]
 			}
 		},
 		{
@@ -1057,6 +1346,109 @@
 			},
 			"explore": {
 				"field_speed": 0.0
+			},
+			"rt": {
+				"hp": 4400,
+				"radius_cm": 90,
+				"move_cm_s": 240,
+				"auto_skill": "skl_b_broom",
+				"swing_ms": 2800,
+				"reach_cm": 320,
+				"dmg_pm": 920,
+				"immune": [
+					"sts_dazed"
+				],
+				"phases": [
+					{
+						"hp_above_pm": 600,
+						"on_enter": [],
+						"rules": [
+							{
+								"skill": "skl_b_rules",
+								"target": "self",
+								"first_ms": 8000,
+								"every_ms": 25000
+							},
+							{
+								"skill": "skl_b_keys",
+								"target": "random_enemy",
+								"first_ms": 5000,
+								"every_ms": 8000
+							}
+						]
+					},
+					{
+						"hp_above_pm": 250,
+						"on_enter": [
+							{
+								"op": "say",
+								"tag": "boss_phase:enm_boss_hausmeister:2"
+							},
+							{
+								"op": "summon",
+								"enemy": "enm_kanalratte",
+								"count": 1,
+								"at": "door"
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_b_cleaner_fog",
+								"target": "threat_top",
+								"first_ms": 4000,
+								"every_ms": 15000
+							},
+							{
+								"skill": "skl_b_call_tenant",
+								"target": "self",
+								"cond": {
+									"adds_below": 2
+								},
+								"first_ms": 10000,
+								"every_ms": 20000
+							},
+							{
+								"skill": "skl_b_keys",
+								"target": "random_enemy",
+								"first_ms": 8000,
+								"every_ms": 8000
+							}
+						]
+					},
+					{
+						"hp_above_pm": 0,
+						"on_enter": [
+							{
+								"op": "say",
+								"tag": "boss_phase:enm_boss_hausmeister:3"
+							},
+							{
+								"op": "status_self",
+								"status": "sts_haste",
+								"ms": -1
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_b_mop_whirl",
+								"target": "threat_top",
+								"first_ms": 3000,
+								"every_ms": 14000
+							},
+							{
+								"skill": "skl_b_cleaner_fog",
+								"target": "threat_top",
+								"first_ms": 10000,
+								"every_ms": 20000
+							}
+						]
+					}
+				],
+				"enrage": {
+					"at_ms": 270000,
+					"every_ms": 30000,
+					"status": "sts_enrage"
+				}
 			}
 		},
 		{
@@ -1250,6 +1642,141 @@
 			},
 			"explore": {
 				"field_speed": 0.0
+			},
+			"rt": {
+				"hp": 7800,
+				"radius_cm": 110,
+				"move_cm_s": 300,
+				"stationary": true,
+				"auto_skill": "skl_q_scepter",
+				"auto_ranged_skill": "skl_q_spit",
+				"swing_ms": 3000,
+				"reach_cm": 350,
+				"dmg_pm": 740,
+				"immune": [
+					"sts_dazed"
+				],
+				"phases": [
+					{
+						"hp_above_pm": 650,
+						"on_enter": [
+							{
+								"op": "summon",
+								"enemy": "enm_kanalratte",
+								"count": 2,
+								"at": "door"
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_q_plague_bite",
+								"target": "threat_top",
+								"first_ms": 4000,
+								"every_ms": 8000
+							},
+							{
+								"skill": "skl_q_summon",
+								"target": "self",
+								"cond": {
+									"adds_below": 3
+								},
+								"first_ms": 12000,
+								"every_ms": 25000
+							}
+						]
+					},
+					{
+						"hp_above_pm": 300,
+						"on_enter": [
+							{
+								"op": "say",
+								"tag": "boss_phase:enm_boss_rattenkoenigin:2"
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_q_train",
+								"target": "self",
+								"first_ms": 6000,
+								"every_ms": 15000
+							},
+							{
+								"skill": "skl_q_screech",
+								"target": "self",
+								"first_ms": 10000,
+								"every_ms": 16000
+							},
+							{
+								"skill": "skl_q_puddles",
+								"target": "self",
+								"first_ms": 8000,
+								"every_ms": 12000
+							},
+							{
+								"skill": "skl_q_plague_bite",
+								"target": "threat_top",
+								"first_ms": 4000,
+								"every_ms": 8000
+							}
+						]
+					},
+					{
+						"hp_above_pm": 0,
+						"on_enter": [
+							{
+								"op": "say",
+								"tag": "boss_phase:enm_boss_rattenkoenigin:3"
+							},
+							{
+								"op": "fixed_damage_self",
+								"pct_pm": 50
+							},
+							{
+								"op": "clear_zones"
+							},
+							{
+								"op": "set",
+								"stationary": false
+							},
+							{
+								"op": "status_self",
+								"status": "sts_haste",
+								"ms": -1
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_q_crown_nova",
+								"target": "self",
+								"first_ms": 5000,
+								"every_ms": 18000
+							},
+							{
+								"skill": "skl_q_plague_bite",
+								"target": "threat_top",
+								"first_ms": 8000,
+								"every_ms": 8000
+							},
+							{
+								"skill": "skl_q_screech",
+								"target": "self",
+								"first_ms": 20000,
+								"every_ms": 20000
+							},
+							{
+								"skill": "skl_q_puddles",
+								"target": "self",
+								"first_ms": 20000,
+								"every_ms": 15000
+							}
+						]
+					}
+				],
+				"enrage": {
+					"at_ms": 300000,
+					"every_ms": 30000,
+					"status": "sts_enrage"
+				}
 			}
 		},
 		{

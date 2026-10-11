@@ -30,7 +30,19 @@
 					],
 					"weight": 0,
 					"tutorial": true,
-					"can_flee": false
+					"can_flee": false,
+					"rt": {
+						"enemies": [
+							"enm_kanalratte_azubi",
+							"enm_kanalratte_azubi"
+						],
+						"tutorial": [
+							"target",
+							"bar1",
+							"show",
+							"dodge"
+						]
+					}
 				},
 				{
 					"id": "enc_f1_a2",
@@ -166,7 +178,17 @@
 					],
 					"weight": 0,
 					"boss": true,
-					"can_flee": false
+					"can_flee": false,
+					"rt": {
+						"blockers": [
+							[
+								-160,
+								-80,
+								160,
+								80
+							]
+						]
+					}
 				},
 				{
 					"id": "enc_f1_evt_pigeons",
@@ -183,6 +205,29 @@
 						"enm_kanalschleim"
 					],
 					"weight": 0
+				},
+				{
+					"id": "enc_e1_showboss",
+					"enemies": [
+						"enm_rattenschamane",
+						"enm_kanalratte",
+						"enm_kanalratte"
+					],
+					"weight": 0,
+					"show_boss": {
+						"elite_pm": 1200,
+						"banner_tag": "showboss_rule",
+						"reward": {
+							"kind": "box",
+							"id": "box_fan"
+						},
+						"rule": {
+							"skill": "skl_e_showboss_slow",
+							"target": "threat_top",
+							"first_ms": 4000,
+							"every_ms": 8000
+						}
+					}
 				}
 			],
 			"layout": {
@@ -880,6 +925,21 @@
 						"cell": [
 							2,
 							0
+						],
+						"offset": [
+							0.0,
+							0.0
+						],
+						"state": "IDLE",
+						"turn": true,
+						"waypoints": []
+					},
+					{
+						"group_id": "f1_g15",
+						"enc_id": "enc_e1_showboss",
+						"cell": [
+							5,
+							4
 						],
 						"offset": [
 							0.0,

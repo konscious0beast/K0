@@ -346,6 +346,8 @@ static func make_rt_setup_rules(state: GameState, data: GameData, cmd: Dictionar
 	s.cell = cell
 	s.room_kind = int(info[0])
 	s.geo = RtGeo.make_geo(s.room_kind, int(info[1]), enc.boss or enc.tutorial or not enc.can_flee, bal)
+	if not (enc.rt.get("blockers", []) as Array).is_empty():     # R4: the set pieces of the stage (07 §3.5.4, §6.7)
+		s.geo["blockers"] = (enc.rt["blockers"] as Array).duplicate(true)
 	var mods: Array[Dictionary] = _rt_member_mods(state, data)
 	s.mods = mods
 	_rt_party(s, state, data, rt, rules, enc, bal)
@@ -429,6 +431,7 @@ static func _rt_party(s: RtSetup, state: GameState, data: GameData, rt: Dictiona
 		u.z = int(pose[1])
 		u.yaw = posmod(int(pose[2]), 256)
 		_rt_party_fields(u, m, def, data, bal, rt.get("presets", {}), s.mods)
+		_rt_species_unit(u, m, state, data)
 		party.append(u)
 		s.units.append(u)
 	s.party = party
@@ -610,9 +613,9 @@ static func _rt_member_mods(state: GameState, data: GameData) -> Array[Dictionar
 
 ## The species passive of a member as RtMods (07 §9.6 proposal): pas_grout / pas_see_through → first_hit_taken_pm
 ## (params.first_hit_taken_pm), pas_coin_slot → skill_pm "item:*" power (params.consumable_pm), pas_ember → skill_pm
-## "element:fire" power (params.fire_skill_pm), pas_court_flight → on combat_start sts_haste 3 s. pas_authentic (Show
-## only), pas_lightdrunk (a Combatant crit by the hype at the start) and pas_spores (immunity + a regeneration status
-## that does not exist yet) map to no mod.
+## "element:fire" power (params.fire_skill_pm), pas_court_flight → on combat_start sts_haste 3 s, pas_spores (R4) →
+## on combat_start sts_spores for the whole combat (+1 % max HP every 3 s; its poison immunity is a unit field, see
+## _rt_species_unit). pas_authentic (Show only) and pas_lightdrunk (a unit field) map to no mod.
 static func _rt_species_mods(m: PartyMember, uid: String, data: GameData) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if m.species_id == "" or not data.has_id("species", m.species_id):
@@ -633,7 +636,31 @@ static func _rt_species_mods(m: PartyMember, uid: String, data: GameData) -> Arr
 		"pas_court_flight":
 			out.append({"src": src, "op": "on", "unit": uid, "event": "combat_start",
 				"effect": {"status": "sts_haste", "ms": 3000}})
+		"pas_spores":
+			if data.has_id("statuses", "sts_spores"):
+				out.append({"src": src, "op": "on", "unit": uid, "event": "combat_start",
+					"effect": {"status": "sts_spores", "ms": -1}})
 	return out
+
+
+## The species passives that act on unit fields (07 §9.6, R4): pas_spores → its params.status_immune join the unit's
+## immunities (Pilzling: poison); pas_lightdrunk → + params.crit_add_pm ‰ crit while the show's hype stands at
+## params.min_hype or more at the start of the combat (Neonfalter: +10 % from hype 70; frozen for the combat like the
+## Liga tier). Pure function of the state at the start → the same setup live, in the replay and in the verifier.
+static func _rt_species_unit(u: RtUnit, m: PartyMember, state: GameState, data: GameData) -> void:
+	if m.species_id == "" or not data.has_id("species", m.species_id):
+		return
+	var sp: SpeciesDef = data.species_def(m.species_id)
+	var params: Dictionary = sp.passive.get("params", {}) if sp.passive.get("params", {}) is Dictionary else {}
+	match str(sp.passive.get("id", "")):
+		"pas_spores":
+			for sid: String in JsonUtil.to_str_array(params.get("status_immune", [])):
+				if not u.status_immune.has(sid):
+					u.status_immune.append(sid)
+		"pas_lightdrunk":
+			var hype: int = int(state.show.hype) if state.show != null else 0
+			if hype >= JsonUtil.to_int(params.get("min_hype", 101), 101):
+				u.crit_bonus += float(JsonUtil.to_int(params.get("crit_add_pm", 0))) / 1000.0
 
 
 ## After every combat (apply_result, live and replay alike): the out-of-combat regeneration counts from 0 again

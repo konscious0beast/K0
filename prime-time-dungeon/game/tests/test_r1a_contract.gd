@@ -6,6 +6,9 @@ extends TestCase
 ## tests/fixtures/rt_min. A phase that has to change one of these signatures files a change request first (07 §12.2).
 
 const BUILDER: String = "res://tests/fixtures/rt_min/stream_builder.gd"
+## The values R4 tuned in data/rt_balance.json (07 §11.2; Eigentum R4) — everything else keeps the 07 §3.16 start value.
+const R4_TUNED: Dictionary = {"ENEMY_HP_PM": 8600, "AI_DODGE_MISS_PM": {"attack": 200, "support": 200, "careful": 40},
+	"REACT_TICKS": {"attack": 15, "support": 15, "careful": 6}, "AI_INTERRUPT_LATE_PM": 450}
 const STATIC: String = " static"
 
 ## script path → expected method signatures ("name(arg types) -> return[ static]"; "=" marks a default argument).
@@ -344,8 +347,8 @@ func test_validator_constants_of_r1a() -> void:
 	assert_eq(DataValidator.STAT_IDS, StatIds.ALL)
 	for t: String in RtCommand.TYPES:
 		assert_has(Command.TYPES, t, "Command.TYPES delegates " + t)
-	assert_true(real_data().mod_lines("rt_set_quiet").size() == 1, "anchor mod_rt_set_quiet_01 (07 §9.3)")
-	assert_eq(real_data().mod_lines("rt_set_quiet")[0].id, "mod_rt_set_quiet_01")
+	assert_true(real_data().mod_lines("rt_set_quiet").size() >= 1, "anchor mod_rt_set_quiet_01 (07 §9.3)")
+	assert_eq(real_data().mod_lines("rt_set_quiet")[0].id, "mod_rt_set_quiet_01", "R4's block follows the anchor")
 	var types: Array = ActionEvent.Type.keys()
 	var end: int = types.find("BATTLE_END")
 	assert_eq(types.slice(end + 1), Array(NEW_EVENT_TYPES), "new event types appended after BATTLE_END")
@@ -355,10 +358,12 @@ func test_validator_constants_of_r1a() -> void:
 func test_rt_balance_file_and_defaults() -> void:
 	var raw: Variant = JsonUtil.read_file("res://data/rt_balance.json")
 	assert_eq(RtBalance.validate(raw), PackedStringArray(), "data/rt_balance.json valid (V1, V14)")
-	assert_eq((raw as Dictionary)["values"], RtBalance.DEFAULTS, "start values = 07 §3.16")
+	var tuned: Dictionary = RtBalance.DEFAULTS.duplicate(true)
+	tuned.merge(R4_TUNED, true)
+	assert_eq((raw as Dictionary)["values"], tuned, "start values = 07 §3.16, overlaid with R4's balance values")
 	assert_eq(RtBalance.DEFAULTS.keys().size(), RtBalance.RANGES.keys().size())
 	var bal: RtBalance = RtBalance.from_data(real_data())
-	assert_eq(bal.values, RtBalance.DEFAULTS)
+	assert_eq(bal.values, tuned)
 	assert_eq([bal.i("GCD_TICKS"), bal.sub("SET_R_CM", "boss"), bal.sub("REACT_TICKS", "careful")], [45, 600, 6])
 	assert_eq(RtBalance.from_data(null).values, RtBalance.DEFAULTS, "no data → defaults")
 	var bad: Dictionary = (raw as Dictionary).duplicate(true)
@@ -375,13 +380,14 @@ func test_rt_balance_file_and_defaults() -> void:
 
 # --- data: rt normalization ---------------------------------------------------------------------------------------
 
-func test_real_data_has_no_rt_blocks_yet() -> void:
+## Until R4 the real data had no rt block; R4 (07 §12.2) adds them for all of floor 1 and the show boss (E26) — the
+## content itself is checked by test_r4_rt_data; here only that the floor-2 stubs still have none (built with floor 2).
+func test_real_data_rt_blocks_arrive_with_r4() -> void:
 	var d: GameData = real_data()
-	for s: SkillDef in d.all_skills():
-		assert_eq(s.rt, {}, s.id + ": R4 adds the rt blocks")
 	for e: EnemyDef in d.all_enemies():
-		assert_eq(e.rt, {}, e.id)
-	assert_eq(d.encounter(d.floor_def(1).timer_start_after).show_boss, {}, "no show boss before R4 (E26)")
+		assert_eq(e.rt.is_empty(), not e.tags.has("floor_1"), e.id + ": rt block exactly on floor-1 enemies")
+	assert_false(d.encounter("enc_e1_showboss").show_boss.is_empty(), "the floor-1 show boss (E26)")
+	assert_eq(d.encounter(d.floor_def(1).timer_start_after).show_boss, {}, "never on the tutorial (E26)")
 
 
 func test_def_rt_normalization_fills_defaults() -> void:

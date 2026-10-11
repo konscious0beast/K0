@@ -906,7 +906,14 @@ func test_real_floor_1_builds() -> void:
 	assert_eq(layout.validate(), PackedStringArray())
 	assert_eq(scene.get_node("World/Rooms").get_child_count(), layout.cells.size(), "one room per cell")
 	assert_eq(scene.get_player_cell(), layout.start)
-	assert_eq(scene.living_groups().size(), layout.enemies.size())
+	# every group lives — except a show boss's (07 §9.6, E26: real-time runs only; this run is turn-based)
+	var groups: int = 0
+	for e: EnemySpawn in layout.enemies:
+		var enc: EncounterDef = DB.data.encounter(e.encounter_id)
+		if Game.is_realtime() or enc == null or enc.show_boss.is_empty():
+			groups += 1
+	assert_eq(scene.living_groups().size(), groups)
+	assert_eq(groups, layout.enemies.size() - (0 if Game.is_realtime() else 1), "the Kanalratten-Gala waits for RT")
 
 
 func test_player_speeds_ignore_stick_deflection() -> void:

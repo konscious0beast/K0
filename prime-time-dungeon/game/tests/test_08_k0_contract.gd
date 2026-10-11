@@ -292,7 +292,13 @@ func test_mod_lines_anchor_order() -> void:
 		if str((lines[i] as Dictionary)["id"]) == "mod_persona_intro_01":
 			at = i
 	assert_gt(at, 0, "the anchor of block K")
-	assert_eq(str((lines[at - 1] as Dictionary)["id"]), "mod_rt_set_quiet_01", "behind the R1a anchor")
+	# behind the R1a anchor and the real-time block R4 inserts directly behind it (07 §9.3: rt_* / showboss_* lines)
+	var j: int = at - 1
+	while j > 0 and str((lines[j] as Dictionary)["id"]) != "mod_rt_set_quiet_01" \
+			and (str((lines[j] as Dictionary)["tag"]).begins_with("rt_")
+			or str((lines[j] as Dictionary)["tag"]).begins_with("showboss_")):
+		j -= 1
+	assert_eq(str((lines[j] as Dictionary)["id"]), "mod_rt_set_quiet_01", "behind the R1a anchor (and its R4 block)")
 	assert_eq(str((lines[at] as Dictionary)["tag"]), "persona_intro")
 	for i in range(at, lines.size()):
 		assert_true(str((lines[i] as Dictionary)["tag"]).begins_with("persona_"),

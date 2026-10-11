@@ -11,7 +11,17 @@
 			"tick_min": 1,
 			"element": "poison",
 			"color": "#7cc242",
-			"icon": "poison"
+			"icon": "poison",
+			"rt": {
+				"default_ms": 8000,
+				"period_ms": 2000,
+				"tick_pct": -2,
+				"tick_min": 1,
+				"tick_max": 12,
+				"boss_tick_pm": 500,
+				"max_stacks": 3,
+				"stack_mode": "refresh"
+			}
 		},
 		{
 			"id": "sts_stun",
@@ -22,7 +32,17 @@
 				"delay_on_apply"
 			],
 			"color": "#f5d90a",
-			"icon": "stun"
+			"icon": "stun",
+			"rt": {
+				"default_ms": 2000,
+				"boss_ms_pm": 500,
+				"stack_mode": "ignore",
+				"flags": [
+					"no_act",
+					"no_move",
+					"interrupt_on_apply"
+				]
+			}
 		},
 		{
 			"id": "sts_slow",
@@ -34,7 +54,12 @@
 				"sts_haste"
 			],
 			"color": "#5b8def",
-			"icon": "slow"
+			"icon": "slow",
+			"rt": {
+				"default_ms": 4000,
+				"move_pm": 600,
+				"haste_pm": 1250
+			}
 		},
 		{
 			"id": "sts_haste",
@@ -46,7 +71,12 @@
 				"sts_slow"
 			],
 			"color": "#ff7a1a",
-			"icon": "haste"
+			"icon": "haste",
+			"rt": {
+				"default_ms": 10000,
+				"move_pm": 1200,
+				"haste_pm": 750
+			}
 		},
 		{
 			"id": "sts_guard",
@@ -57,7 +87,10 @@
 				"guard"
 			],
 			"color": "#9aa7b8",
-			"icon": "guard"
+			"icon": "guard",
+			"rt": {
+				"default_ms": 6000
+			}
 		},
 		{
 			"id": "sts_taunt",
@@ -68,7 +101,122 @@
 				"taunt"
 			],
 			"color": "#e8455a",
-			"icon": "taunt"
+			"icon": "taunt",
+			"rt": {
+				"default_ms": 4000
+			}
+		},
+		{
+			"id": "sts_taunted",
+			"name": "Provoziert",
+			"kind": "debuff",
+			"default_turns": 2,
+			"color": "#e8455a",
+			"icon": "taunted",
+			"rt": {
+				"default_ms": 4000,
+				"flags": [
+					"fixate"
+				]
+			}
+		},
+		{
+			"id": "sts_dazed",
+			"name": "Überrumpelt",
+			"kind": "debuff",
+			"default_turns": 1,
+			"color": "#ffd23f",
+			"icon": "dazed",
+			"rt": {
+				"default_ms": 3000,
+				"move_pm": 500,
+				"stack_mode": "ignore",
+				"flags": [
+					"no_act"
+				]
+			}
+		},
+		{
+			"id": "sts_regen",
+			"name": "Erholung",
+			"kind": "buff",
+			"default_turns": 3,
+			"color": "#5ed37a",
+			"icon": "regen",
+			"rt": {
+				"default_ms": 10000,
+				"period_ms": 2000,
+				"tick_pct": 3
+			}
+		},
+		{
+			"id": "sts_burn",
+			"name": "Brennt",
+			"kind": "debuff",
+			"default_turns": 3,
+			"element": "fire",
+			"color": "#ff7a1a",
+			"icon": "burn",
+			"rt": {
+				"default_ms": 6000,
+				"period_ms": 1000,
+				"stack_mode": "refresh"
+			}
+		},
+		{
+			"id": "sts_admonished",
+			"name": "Ermahnt",
+			"kind": "debuff",
+			"default_turns": 3,
+			"color": "#c9a227",
+			"icon": "admonished",
+			"rt": {
+				"default_ms": 12000,
+				"dmg_dealt_pm": 800
+			}
+		},
+		{
+			"id": "sts_dizzy",
+			"name": "Schwindelig",
+			"kind": "debuff",
+			"default_turns": 1,
+			"color": "#b48cff",
+			"icon": "dizzy",
+			"rt": {
+				"default_ms": 3000,
+				"dmg_taken_pm": 1250,
+				"flags": [
+					"no_act",
+					"no_move"
+				]
+			}
+		},
+		{
+			"id": "sts_enrage",
+			"name": "Feierabend!",
+			"kind": "buff",
+			"default_turns": 3,
+			"color": "#ff3b30",
+			"icon": "enrage",
+			"rt": {
+				"default_ms": -1,
+				"dmg_dealt_pm": 1500,
+				"max_stacks": 9,
+				"stack_mode": "refresh"
+			}
+		},
+		{
+			"id": "sts_spores",
+			"name": "Sporenkur",
+			"kind": "buff",
+			"default_turns": 3,
+			"color": "#a3c76d",
+			"icon": "regen",
+			"rt": {
+				"default_ms": -1,
+				"period_ms": 3000,
+				"tick_pct": 1
+			}
 		}
 	]
 }

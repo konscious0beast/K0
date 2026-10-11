@@ -74,6 +74,7 @@ func save_slot(slot: int) -> Error:
 	d["saved_at_unix"] = int(Time.get_unix_time_from_system())
 	(d["state"] as Dictionary)["slot"] = slot
 	d["state"] = _slot_state_dict(d["state"])       # Casting (08 §2.7 Nr. 1): the slot without the name (K1)
+	(d["summary"] as Dictionary)["player_name"] = GameState.DEFAULT_NAME    # (the name: the persona file's)
 	var err: Error = _atomic_write(slot_path(slot), d)
 	if err == OK:
 		Game.state.slot = slot
@@ -380,14 +381,17 @@ static func _older_first(a: Dictionary, b: Dictionary) -> bool:
 
 
 # ======================================================================================================================
-# Casting (08, K0 → K1): the persona file next to each slot (08 §2.2, §2.5, §2.7 Nr. 1)
+# Casting (08, K1): the persona file next to each slot (08 §2.2, §2.5, §2.7 Nr. 1)
 # ======================================================================================================================
-# STUB(K0) — owned by 08-K1. Replace completely, keep the public API.
-# K0 puts the call sites in place (save_slot, load_slot, delete_slot, slot_summary); the bodies are K1's. Until K1
-# writes the persona file the slot keeps the display name (a loaded game would lose it otherwise) — K1 switches
-# _slot_state_dict to PersonaPrivacy.scrub_state_dict together with the file I/O and the migration of old names.
+# The slot file never carries the name (PersonaPrivacy.scrub_state_dict: "Kai"); the persona file holds it, written
+# directly after the slot (atomic like the slot), read after it (load_slot → PersonaPrivacy.restore_display), removed
+# with the slot. A slot of a game without a casting but with another display name gets a persona file with that name
+# and canon values (the name never goes back into the slot); old slots that still carry a name (before K1) get theirs
+# when they are loaded (migration, 08 §2.5). "Kandidat:in löschen" (delete_candidate) removes every persona file and
+# cleans the leftovers with names (08 D-7). user://persona/ is never part of a cloud save or backup (R12).
 
 const PERSONA_DIR: String = "persona"
+const CANDIDATE_LOCAL: String = "local"       # the local leaderboard entry (05 §10.4)
 
 
 ## <parent of save_dir>/persona/slot_N.json (default user://persona/slot_N.json): next to the saves, never part of a
@@ -396,25 +400,179 @@ func persona_path(slot: int) -> String:
 	return _data_root().path_join(PERSONA_DIR).path_join("slot_%d.json" % slot)
 
 
-## K1: writes p.to_dict() atomically to persona_path(slot) (null → nothing to write). Slot 0 / read_only → OK.
-## Stub: OK without writing.
-func save_persona(_slot: int, _p: PersonaProfile) -> Error:
+## Writes p.to_dict() atomically to persona_path(slot). p == null: the game has no persona — a display name other than
+## "Kai" still gets a file (name + canon values), else the slot's old persona file is removed. Slot 0 / read_only → OK.
+func save_persona(slot: int, p: PersonaProfile) -> Error:
+	if slot == 0 or read_only:
+		return OK
+	if not _valid_slot(slot):
+		return _fail(ERR_INVALID_PARAMETER, "invalid slot %d" % slot)
+	var prof: PersonaProfile = p
+	if prof == null and Game.state != null and Game.state.player_name != GameState.DEFAULT_NAME:
+		prof = _name_only_persona(Game.state.player_name)
+	if prof == null:
+		return delete_persona(slot)
+	return _atomic_write(persona_path(slot), prof.to_dict())
+
+
+## The persona file of the slot (PersonaProfile.from_dict: catalog and filters checked again; another format or a newer
+## "v" → null with a warning). No file, but the slot still carries a display name other than "Kai" (a save from before
+## K1) → a persona file with that name and canon values is written (migration, 08 §2.5) and returned, and the slot
+## file and its backup lose the name. null = none.
+func load_persona(slot: int) -> PersonaProfile:
+	if not _valid_slot(slot):
+		return null
+	var path: String = persona_path(slot)
+	for f: String in [path, path + ".bak"]:
+		if not FileAccess.file_exists(f):
+			continue
+		var raw: Variant = JsonUtil.read_file(f)
+		if raw is Dictionary and str((raw as Dictionary).get("format", "")) == PersonaProfile.FORMAT:
+			if JsonUtil.to_int((raw as Dictionary).get("v", 0)) > PersonaProfile.VERSION:
+				push_warning("[Save] persona file of slot %d has a newer version — shown as canon" % slot)
+				return null
+			return PersonaProfile.from_dict(raw, DB.data)
+	var name: String = _slot_display_name(slot)
+	if name == "" or name == GameState.DEFAULT_NAME:
+		return null
+	var p: PersonaProfile = _name_only_persona(name)
+	if not read_only and _atomic_write(path, p.to_dict()) == OK:
+		for f: String in [slot_path(slot), slot_path(slot) + ".bak"]:   # the name moved: the slot files lose it
+			_scrub_slot_file(f)
+	return p
+
+
+## Removes the persona file of the slot (+ .bak, .tmp) — with Save.delete_slot and "Kandidat:in löschen".
+func delete_persona(slot: int) -> Error:
+	if read_only:
+		return OK
+	var path: String = persona_path(slot)
+	for f: String in [path, path + ".bak", path + ".tmp"]:
+		if FileAccess.file_exists(f):
+			var err: Error = DirAccess.remove_absolute(f)
+			if err != OK:
+				return _fail(err, "cannot delete %s" % f)
 	return OK
 
 
-## K1: the persona file of the slot (PersonaProfile.from_dict; a newer "v" → null with a warning; no file but a slot
-## name other than "Kai" → a file with that name and canon values, 08 §2.5). Stub: null (canon / none).
-func load_persona(_slot: int) -> PersonaProfile:
-	return null
+## "Kandidat:in löschen" (08 D-7, Optionen): every persona file goes; leftovers with names are cleaned — slot files
+## (and their backups) are rewritten with "Kai", replays whose header still names the player are deleted, local
+## leaderboard entries lose their name. The running game keeps playing as the canon candidate (its recorded ids stay:
+## they are game mechanics, not personal data). Returns the first error (everything else is still tried).
+func delete_candidate() -> Error:
+	_last_error = ""
+	if read_only:
+		return OK
+	var first: Error = OK
+	var dir: String = _data_root().path_join(PERSONA_DIR)
+	if DirAccess.dir_exists_absolute(dir):
+		for f: String in DirAccess.get_files_at(dir):
+			var err: Error = DirAccess.remove_absolute(dir.path_join(f))
+			if err != OK and first == OK:
+				first = _fail(err, "cannot delete %s" % f)
+	for slot in range(1, SLOT_COUNT + 1):
+		for f: String in [slot_path(slot), slot_path(slot) + ".bak"]:
+			var err: Error = _scrub_slot_file(f)
+			if err != OK and first == OK:
+				first = err
+	var rdir: String = _data_root().path_join(REPLAY_DIR)
+	if DirAccess.dir_exists_absolute(rdir):
+		for f: String in DirAccess.get_files_at(rdir):
+			var raw: Variant = JsonUtil.read_file(rdir.path_join(f))
+			if raw is Dictionary and _names_someone((raw as Dictionary).get("header", {})):
+				DirAccess.remove_absolute(rdir.path_join(f))
+	var ldir: String = _data_root().path_join(LEADERBOARD_DIR)
+	if DirAccess.dir_exists_absolute(ldir):
+		for f: String in DirAccess.get_files_at(ldir):       # boards and their .bak / .tmp copies
+			var err: Error = _scrub_board_file(ldir.path_join(f))
+			if err != OK and first == OK:
+				first = err
+	Game.persona = PersonaProfile.canon(DB.data) if Game.persona != null else null
+	if Game.state != null:
+		PersonaPrivacy.restore_display(Game.state, PersonaProfile.canon(DB.data))
+	return first
 
 
-## K1: removes the persona file of the slot (+ .bak, .tmp) — with Save.delete_slot and "Kandidat:in löschen".
-## Stub: OK.
-func delete_persona(_slot: int) -> Error:
-	return OK
-
-
-## The state dictionary as the slot file stores it. K1: PersonaPrivacy.scrub_state_dict (the name lives only in the
-## persona file). Stub: unchanged.
+## The state dictionary as the slot file stores it: without the display name (08 §2.7 Nr. 1).
 func _slot_state_dict(d: Dictionary) -> Dictionary:
-	return d
+	return PersonaPrivacy.scrub_state_dict(d)
+
+
+func _name_only_persona(name: String) -> PersonaProfile:
+	var p: PersonaProfile = PersonaProfile.canon(DB.data)
+	p.name = name
+	if p.validate(DB.data).size() > 0:
+		p.sanitize(DB.data)
+	return p
+
+
+## The display name a slot file still carries (saves from before K1); "" if none / unreadable.
+func _slot_display_name(slot: int) -> String:
+	for f: String in [slot_path(slot), slot_path(slot) + ".bak"]:
+		if not FileAccess.file_exists(f):
+			continue
+		var raw: Variant = JsonUtil.read_file(f)
+		if raw is Dictionary and (raw as Dictionary).get("state", null) is Dictionary:
+			return str(((raw as Dictionary)["state"] as Dictionary).get("player_name", ""))
+	return ""
+
+
+## Rewrites a slot file (or backup) whose state still names the player (in place, keeping its saved_at_unix).
+func _scrub_slot_file(path: String) -> Error:
+	if not FileAccess.file_exists(path):
+		return OK
+	var raw: Variant = JsonUtil.read_file(path)
+	if not (raw is Dictionary) or not ((raw as Dictionary).get("state", null) is Dictionary):
+		return OK
+	var st: Dictionary = (raw as Dictionary)["state"]
+	var clean: Dictionary = PersonaPrivacy.scrub_state_dict(st)
+	var summary: Variant = (raw as Dictionary).get("summary", null)
+	var named: bool = summary is Dictionary and (summary as Dictionary).has("player_name") \
+		and str((summary as Dictionary)["player_name"]) != GameState.DEFAULT_NAME
+	if clean == st and not named:
+		return OK
+	(raw as Dictionary)["state"] = clean
+	if named:
+		(summary as Dictionary)["player_name"] = GameState.DEFAULT_NAME
+	var f: FileAccess = FileAccess.open(path, FileAccess.WRITE)
+	if f == null:
+		return _fail(FileAccess.get_open_error(), "cannot write %s" % path)
+	f.store_string(JSON.stringify(raw, "\t"))
+	f.close()
+	return OK
+
+
+## A run-log header from before K0 that still names the player (player_name, or a start_state with a name).
+static func _names_someone(h: Variant) -> bool:
+	if not (h is Dictionary):
+		return false
+	var d: Dictionary = h
+	if str(d.get("player_name", GameState.DEFAULT_NAME)) != GameState.DEFAULT_NAME:
+		return true
+	var st: Variant = d.get("start_state", null)
+	return st is Dictionary and PersonaPrivacy.scrub_state_dict(st) != st
+
+
+## Local leaderboard entries (player_id "local") keep no display name (08 §2.7 Nr. 4). Rewritten in place — an atomic
+## write would keep the named version as its .bak.
+func _scrub_board_file(path: String) -> Error:
+	var raw: Variant = JsonUtil.read_file(path)
+	if not (raw is Dictionary):
+		return OK
+	var changed: bool = false
+	for e: Variant in ((raw as Dictionary).get("entries", []) as Array):
+		if not (e is Dictionary):
+			continue
+		for pl: Variant in ((e as Dictionary).get("players", []) as Array):
+			if pl is Dictionary and str((pl as Dictionary).get("player_id", "")) == CANDIDATE_LOCAL \
+					and str((pl as Dictionary).get("display_name", "")) != "":
+				(pl as Dictionary)["display_name"] = ""
+				changed = true
+	if not changed:
+		return OK
+	var f: FileAccess = FileAccess.open(path, FileAccess.WRITE)
+	if f == null:
+		return _fail(FileAccess.get_open_error(), "cannot write %s" % path)
+	f.store_string(JSON.stringify(raw, "\t"))
+	f.close()
+	return OK

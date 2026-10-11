@@ -39,8 +39,10 @@ static func words() -> Dictionary:
 
 
 ## "" = the line may be shown; else the rule it failed (see class doc). `lists` overrides words() (tests); `voice` is
-## the line's voice (mod | mopsula | chat; "" = unknown) for the Graf Mopsula rule.
-static func check(text: String, lists: Dictionary = {}, voice: String = "") -> String:
+## the line's voice (mod | mopsula | chat; "" = unknown) for the Graf Mopsula rule. Casting (08 CR-23, K1, client
+## only): `persona_canon` false — the candidate is not the canon Kai — fails a line naming "Kai" or "Tierpfleger…"
+## ("persona"; the live prompt describes the candidate neutrally, only as {name}).
+static func check(text: String, lists: Dictionary = {}, voice: String = "", persona_canon: bool = true) -> String:
 	var w: Dictionary = lists if not lists.is_empty() else words()
 	_compile()
 	var t: String = text.strip_edges()
@@ -85,6 +87,8 @@ static func check(text: String, lists: Dictionary = {}, voice: String = "") -> S
 		if en * 1000 / n > int(w.get("en_max_pm", 150)) \
 				or (n >= int(w.get("lang_de_min_words", 6)) and de * 1000 / n < int(w.get("de_min_pm", 100))):
 			return "language"
+	if not persona_canon and (parts.has("kai") or _any_hit(parts, ["tierpfleger*"])):
+		return "persona"                           # 08 CR-23: the canon wording would contradict the candidate's card
 	return ""
 
 

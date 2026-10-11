@@ -110,7 +110,7 @@ func _ready() -> void:
 	Events.sponsor_window_opened.connect(_on_sponsor_window_opened)
 	Events.sponsor_window_closed.connect(_on_sponsor_window_closed)
 	Events.twist_applied.connect(_on_twist_applied)        # 06-D
-	Events.battle_started.connect(_on_battle_started_persona)   # 08 K0: waiting persona lines are dropped
+	_connect_persona()                                     # 08 K0/K1: persona hooks (casting section below)
 
 
 ## Display only: smoothing, noise, exploration chat. No game-relevant state changes here.
@@ -251,6 +251,7 @@ func say(tag: String, ctx: Dictionary = {}, blocking: bool = false) -> String:
 	if voice == &"mod" and Game.twist_effect_pm("mod_voice_mopsula", 0) > 0:
 		voice = &"mopsula"                         # 06-D tw_mopsula_moderates: the Graf reads M.O.D.'s lines
 	Events.mod_said.emit(text, voice, tag, blocking)
+	_persona_hooks().on_said(tag)                  # 08 §4.3: waiting persona lines follow the line they wait for
 	return text
 
 
@@ -266,7 +267,8 @@ func say_external(text: String, voice: StringName, tag: String) -> bool:
 		return false
 	if Game.replaying or st == null:
 		return false
-	var reason: String = ModLineFilter.check(text, {}, String(voice))      # the voice: Graf Mopsula's royalty rule
+	# the voice: Graf Mopsula's royalty rule; 08 CR-23: no "Kai" / "Tierpfleger" for a candidate who is not the canon
+	var reason: String = ModLineFilter.check(text, {}, String(voice), PersonaText.is_canon(Game.persona, DB.data))
 	if reason == "" and not ModLineFilter.VOICES.has(String(voice)):
 		reason = "voice"
 	if reason != "":
@@ -1164,6 +1166,7 @@ func _get_announcer() -> ModAnnouncer:
 	if _announcer == null or _announcer_data != DB.data:
 		_announcer_data = DB.data
 		_announcer = ModAnnouncer.new(DB.data, _fx_rng)
+		_announcer.set_extra_lines(_persona_hooks().extra_lines)   # 08 K1: the candidate's AI lines (R15, K3)
 	return _announcer
 
 
@@ -1479,25 +1482,40 @@ static func _rt_battle_won_keys(result: BattleResult) -> Dictionary:
 
 
 # ======================================================================================================================
-# Casting (08, K0 → K1): the persona hooks (08 §4.3) — logic in the private helper show_persona_hooks.gd
+# Casting (08, K1): the persona hooks (08 §4.3) — logic in the private helper show_persona_hooks.gd
 # ======================================================================================================================
 
-## Private helper (02_TECH §0.3: no class_name): the persona hooks H2–H5, H7 (stubs until K1).
+## Private helper (02_TECH §0.3: no class_name): the persona hooks H2–H5, H7, the waiting lines and the line-pool
+## provider of ModAnnouncer (the candidate's AI lines, K3).
 const PersonaHooksScript := preload("res://autoload/show_persona_hooks.gd")
 
 var _persona: PersonaHooksScript = null
 
 
-## Game.enter_safe_room (after safe_room_enter): H4, the first visit of a safe room. Presentation only.
+## Game.enter_safe_room (before the safe room's safe_room_enter line): H4, the first visit of a safe room — the line
+## waits for safe_room_enter. Presentation only.
 func on_safe_room_entered(safe_room_id: String, first_visit: bool) -> void:
 	if first_visit:
 		_persona_hooks().on_safe_room(safe_room_id)
+
+
+## The persona hooks of this Show (tests read what they said).
+func persona_hooks() -> RefCounted:
+	return _persona_hooks()
 
 
 func _persona_hooks() -> PersonaHooksScript:
 	if _persona == null:
 		_persona = PersonaHooksScript.new(self)
 	return _persona
+
+
+## _ready: the signals the helper follows (RefCounted objects never connect to Events themselves, 02_TECH §13.3).
+func _connect_persona() -> void:
+	Events.battle_started.connect(_on_battle_started_persona)
+	Events.explore_tick.connect(func(_payload: Dictionary) -> void: _persona_hooks().on_explore_tick())
+	Events.new_game_started.connect(func(_slot: int) -> void: _persona_hooks().reset())
+	Events.game_loaded.connect(func(_slot: int) -> void: _persona_hooks().reset())
 
 
 ## 08 §4.3 R6: never a persona line in a battle (CTB and real-time) — a waiting one is dropped at its start.

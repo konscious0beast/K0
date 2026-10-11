@@ -48,7 +48,7 @@ Jede Etage hat einen Countdown; wer die Treppe nicht rechtzeitig findet, fliegt 
 | ID | Name | Rolle | Kern | Sprechweise |
 |---|---|---|---|---|
 | `kai` | **Kai** (frei benennbar, max. 12 Zeichen) | Spielfigur, Nahkampf/Tank | Tierpfleger:in im Tierheim „Pfotenglück“, Nachtschicht. Pragmatisch, trocken, kümmert sich zuerst um andere. Kämpft mit Improvisiertem (Wischmopp, Rohrzange). | Kurze Sätze, lakonisch. Flucht nie, Witze manchmal. |
-| `mopsula` | **Graf Mopsula** | Begleiter, Magier/Heiler | Mops, 9 Jahre, Zwinger 7, Zwingerschild: „Graf — schwer vermittelbar“. Kann im Dungeon sprechen, hält sich für einen Grafen und Gelehrten, entpuppt sich als Magier. Belehrend, eitel, loyal bis in die Knochen. Publikumsliebling. | Eigene Stimme, immer Ich-Form: doziert wie ein Grafen-Gelehrter, zitiert seine Fußnoten („Fußnote 7: …“), pseudolateinische Formeln („Tempus fugit!“), Mitternachts-Pathos, Tierheim-Biografie („In Zwinger 7 gab es nur Beton.“). Nennt Kai „Kolleg:in“. **Kein** Pluralis Majestatis, keine Königs-, Kronen- oder Thron-Motive (04_STRATEGIE §2.3; Validator `ip_words.gd`). |
+| `mopsula` | **Graf Mopsula** | Begleiter, Magier/Heiler | Mops, 9 Jahre, Zwinger 7, Zwingerschild: „Graf — schwer vermittelbar“. Kann im Dungeon sprechen, hält sich für einen Grafen und Gelehrten, entpuppt sich als Magier. Belehrend, pathetisch, loyal bis in die Knochen. | Eigene Stimme, immer Ich-Form: doziert wie ein Grafen-Gelehrter, zitiert seine Fußnoten („Fußnote 7: …“), pseudolateinische Formeln („Tempus fugit!“), Mitternachts-Pathos, Tierheim-Biografie („In Zwinger 7 gab es nur Beton.“). Nennt Kai „Kolleg:in“. **Kein** Pluralis Majestatis, keine Königs-, Kronen- oder Thron-Motive (04_STRATEGIE §2.3; Validator `ip_words.gd`). |
 | `mod` | **M.O.D.** (Mediale Omnipräsente Direktorin) | System-KI, Moderatorin | Quotengeil, regelversessen, sarkastisch, heimlich sentimental. Kommentiert alles. Nie direkt grausam zu Kai, aber gnadenlos ehrlich über die Quote. | Moderationston, Werbeunterbrechungen, Paragrafen. Siehe Kap. 11. |
 | — | **NOVA SYNDIKAT** | Konzern, unsichtbar | Tritt nur über Logos, Sponsor-Drohnen, Kleingedrucktes und Werbeplakate auf. Kein Gesicht im Slice. | Corporate-Sprech, Disclaimer. |
 | `boss_hausmeister` | **Der Hausmeister** | Quartier-Boss | Ehemaliger Hausmeister des U-Bahn-Komplexes, vom Dungeon „übernommen“: 3 m groß, grauer Kittel, Schlüsselbund, besessen von der Hausordnung. Hält Kandidat:innen für Mieter mit Rückständen. | „§ 7 Absatz 2: Kein Lärm nach 22 Uhr!“ |
@@ -1613,7 +1613,7 @@ Umzugskarton im Tierheim, nie ein Land. „Wir“ in Kleinschreibung meint Kai u
 | **Heimlich sentimental**: max. 1 von 10 Sprüchen zeigt Wärme, sofort relativiert | „Ich war nicht besorgt. Meine Server laufen nur heiß.“ |
 | **Nie grausam gegenüber Menschen als solchen** — Spott gilt Situation, Konzern, Kapitalismus, nicht Opfern | — |
 | Länge: max. **110 Zeichen** pro Spruch (2 Zeilen im HUD) | — |
-| Siezt Kai, nennt Mopsula „der Graf“ oder „unser Publikumsliebling“ | — |
+| Siezt Kai, nennt Mopsula „der Graf“ oder „unser Herr Graf“ | — |
 
 **Platzhalter** (`TEXT_PLACEHOLDERS`): `{name}` (Spielername), `{floor}`, `{level}`, `{enemy}`, `{item}`, `{achievement}`, `{viewers}`,
 `{followers}`, `{sponsor}`, `{count}`, `{member}`, `{seconds}`. Es gibt kein `{player}`.
@@ -1658,7 +1658,7 @@ Validator: max. **110 Zeichen** je Zeile, nur obige Platzhalter.
 | `lootbox_open_fan` | „Ein Fanpost-Paket! Ihre Fans haben zusammengelegt. Ein paar haben Glitzer reingetan. Sorry.“ · „Von Fans, für Fans, gegen Monster. Rührend.“ |
 | `lootbox_pity` | „Endlich Glück! Und nein, das ist kein Algorithmus. Doch, ist es. Egal!“ |
 | `death` | „Sendeschluss. {name} und der Graf sind gefallen. Wiederholung um 3 Uhr nachts.“ · „Game Over. Die Zuschauer schalten ab. Ich schalte … noch nicht ab.“ · „Das war’s. Ich lege Ihnen eine Blume aufs Inventar.“ |
-| `mopsula_ko` | „DER GRAF IST GEFALLEN! Die Quote stürzt ab! Helfen Sie ihm, sofort!“ · „Unser Publikumsliebling liegt am Boden. Ich verlange eine Wiederbelebung, aus rein geschäftlichen Gründen.“ |
+| `mopsula_ko` | „DER GRAF IST GEFALLEN! Die Quote stürzt ab! Helfen Sie ihm, sofort!“ · „Unser Graf liegt am Boden. Ich verlange eine Wiederbelebung, aus rein geschäftlichen Gründen.“ |
 | `kai_ko` | „{name} ist KO! Der Graf ist jetzt allein. Das wird … aristokratisch.“ · „Kandidat:in am Boden. Der Mops übernimmt. Endlich ein Profi.“ |
 | `revive` | „Wiederbelebt! Comebacks sind unser Lieblingsgenre.“ |
 | `boss_intro:enm_boss_hausmeister` | „Applaus für den Hausmeister! Seit 34 Jahren im Dienst, seit 34 Minuten ein Monster.“ · „Achtung: Er hat einen Schlüssel für alles. Außer für Gnade.“ |

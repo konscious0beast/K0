@@ -930,7 +930,7 @@ Rival:in-Nachricht, Safe Room 2 Grüße (jede zweite Etage, sonst allgemeine Zei
 | H-4 | Keine reale Politik, keine realen Personen, Parteien oder Marken (06 L-7); Polizei, Feuerwehr und Rettung nur respektvoll, keine Kriegs- oder Gewaltwitze. |
 | H-5 | Kein Kaufdruck, keine Echtgeld-Bezüge (05 L13); der Sponsor-Beat ist Satire auf Werbung, nie Werbung. |
 | H-6 | Das Publikum lacht **mit** der Kandidat:in: M.O.D. ist frech zur Situation und heimlich sentimental (GDD §11.1), nie grausam zum Menschen. |
-| H-7 | IP: keine Startnummern; keine Kronen- oder Majestätsmotive und kein Majestätsplural für Mopsula in Casting-Texten (seine Grafen-Eitelkeit bleibt Kanon); neutrale Überschriften; „Grüße von zu Hause“; Liga nur „ohne Rüstung & ohne Accessoire“ (C-17). |
+| H-7 | IP: keine Startnummern; keine Kronen- oder Majestätsmotive und kein Majestätsplural für Mopsula in Casting-Texten (seine Gelehrten-Allüren mit Fußnoten bleiben Kanon); neutrale Überschriften; „Grüße von zu Hause“; Liga nur „ohne Rüstung & ohne Accessoire“ (C-17). |
 
 ### 4.10 Was die KI im Erzählstrang darf
 

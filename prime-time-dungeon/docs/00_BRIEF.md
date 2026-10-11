@@ -26,7 +26,8 @@ Starttalente, persönlicher Erzählstrang) > `01_GDD` / `02_TECH` / `03_ART` / `
   vor dem ersten Lauf im **Casting** fest (Nutzeridee 2026-10-10, Kap. 5; Vertrag `08_CASTING.md`). Standard und Kanon ist
   **Kai**, Pfleger:in aus einem Tierheim, pragmatisch, trocken; jede Persona kennt Mopsula aus diesem Tierheim.
 - Begleiter: **Graf Mopsula**, ein Mops aus dem Tierheim, der durch den Dungeon sprechen kann, sich für
-  Adel hält und sich als Magier entpuppt. Arrogant, eitel, loyal. Publikumsliebling.
+  einen gelehrten Grafen hält und sich als Magier entpuppt. Belehrend (mit Fußnoten), pathetisch um Mitternacht,
+  loyal bis in die Knochen.
 - Ton: schwarzer Humor + echte Gefahr + Satire auf Streaming-/Werbe-/Gacha-Kultur. Nicht zynisch gegenüber den Menschen.
 
 ## 2. Design-Säulen

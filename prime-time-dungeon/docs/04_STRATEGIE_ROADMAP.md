@@ -104,7 +104,7 @@ statt amerikanischer Reality-Ästhetik — das ist zugleich Markenkern und recht
 | U2 | **Stunts** | riskante Spezialaktionen mit großem Hype — Clip-Material | GDD 3.6 |
 | U3 | **Die Show ist das UI** | sofort erkennbare Screenshots (LIVE-Badge, Zuschauerzahl, Chat-Ticker) | ShowOverlay, 03_ART Kap. 9 |
 | U4 | **M.O.D.** — sarkastische Moderations-KI | Stimme der Marke, kommentiert Achievements, Loot, Tode | `mod_lines.json` |
-| U5 | **Graf Mopsula** | Maskottchen, Publikumsliebling, Merch-fähig | GDD 1.2, Safe-Room-Szenen |
+| U5 | **Graf Mopsula** | Maskottchen, gelehrter Graf mit Fußnoten, Merch-fähig | GDD 1.2, Safe-Room-Szenen |
 | U6 | **Countdown-Etagen (20–25 min)** | Druck + kurze Sessions → ideal für Deck/Handy | Etagen-Timer GDD 2.9 |
 | U7 | **SHOWRUN** — gleiche Seeds, Live-Fenster, Bestenlisten, Zuschauer-Votes | Wiederspielwert + Streamer-Inhalte, eingebaut statt aufgesetzt | 05_LIVE_MODUS, S0 im Slice |
 | U8 | **Fair by design** | Satire auf Gacha-Kultur, die selbst kein Gacha ist: keine gekauften Zufallsinhalte für Spieler:innen | Brief Kap. 5 |

@@ -43,6 +43,9 @@ var _origin: Vector3 = Vector3.ZERO
 var _tilt: float = 0.0
 var _color: Color = Color.WHITE
 var _screen: Label = null
+# --- Echtzeitkampf (07, R3): combat text styles (07 §8.6) — CTB numbers keep LIFE and the world size ---
+var life: float = LIFE
+var screen_px: int = 0
 
 
 static func bold_font() -> FontVariation:
@@ -107,7 +110,10 @@ func show_caption(p_text: String, style: StringName, at: Vector3) -> void:
 	_start(p_text, CAPTION_SIZE, col, 0.0, at + Vector3(0, CAPTION_OFFSET, 0))
 
 
-func _start(shown: String, size: int, col: Color, tilt: float, at: Vector3) -> void:
+func _start(shown: String, size: int, col: Color, tilt: float, at: Vector3, p_life: float = LIFE,
+		p_screen_px: int = 0) -> void:
+	life = p_life                                  # Echtzeitkampf (07, R3): rt styles live 0.6 s …
+	screen_px = p_screen_px                        # … at a fixed screen size (0 = world size, CTB)
 	text = shown
 	font_size = size
 	outline_size = 10 if size <= CAPTION_SIZE else 12
@@ -144,7 +150,7 @@ func _process(delta: float) -> void:
 	if not active:
 		return
 	_t += delta
-	var u: float = clampf(_t / LIFE, 0.0, 1.0)
+	var u: float = clampf(_t / life, 0.0, 1.0)
 	var s: float = 1.0
 	if _t < 0.08:
 		s = lerpf(0.4, 1.25, _t / 0.08)
@@ -152,10 +158,10 @@ func _process(delta: float) -> void:
 		s = lerpf(1.25, 1.0, (_t - 0.08) / 0.10)
 	scale = Vector3.ONE * s
 	position = _origin + Vector3(0, 0.8 * (1.0 - pow(1.0 - u, 3.0)), 0)
-	var a: float = 1.0 - smoothstep(LIFE - 0.25, LIFE, _t)
+	var a: float = 1.0 - smoothstep(life - 0.25, life, _t)
 	modulate.a = a
 	outline_modulate.a = a
-	if _t >= LIFE:
+	if _t >= life:
 		active = false
 		visible = false
 		set_process(false)
@@ -226,6 +232,8 @@ func _update_screen() -> void:
 	var up: Vector3 = cam.global_transform.basis.y.normalized()
 	var px_per_m: float = (cam.unproject_position(gp + up) - center).length()
 	var eff: float = float(font_size) * PIXEL_SIZE * px_per_m * scale.y
+	if screen_px > 0:                              # Echtzeitkampf (07, R3): fixed screen size × pop scale
+		eff = float(screen_px) * scale.y
 	var fs: int = clampi(roundi(eff / 4.0) * 4, 8, 256)
 	var k: float = eff / float(fs)
 	lbl.text = text
@@ -239,3 +247,12 @@ func _update_screen() -> void:
 	lbl.scale = Vector2(k, k)
 	lbl.rotation = -deg_to_rad(_tilt)
 	lbl.position = center - lbl.size * 0.5
+
+
+# --- Echtzeitkampf (07, R3): combat text (07 §8.6) --------------------------------------------------------------------
+
+## A real-time combat text: `p_text` in `col` at a fixed screen size of `px` (× the pop scale), alive `p_life` seconds,
+## optional crit tilt. Vfx.combat_text picks size and colour per style.
+func show_rt(p_text: String, px: int, col: Color, p_life: float, tilt: float, at: Vector3) -> void:
+	is_caption = false
+	_start(p_text, px * 2, col, tilt, at, p_life, px)

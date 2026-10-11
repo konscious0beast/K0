@@ -5427,10 +5427,13 @@ jobs:
       - name: pytest
         working-directory: services/mod-brain
         run: python -m pytest -q
-  # spielbare Builds für Tags v* (README Abschnitt 4); gekürzt, vollständig in der Workflow-Datei
+  # spielbare Builds für Tags v* oder einen Push, dessen letzte Commit-Nachricht „[build]“ enthält (README Abschnitt 4);
+  # gekürzt, vollständig in der Workflow-Datei. Name in Artefakten: env PTD_BUILD_LABEL = Tag bzw. build-<run_number>
   export:
     needs: check
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: >-
+      startsWith(github.ref, 'refs/tags/v') ||
+      (github.event_name == 'push' && contains(github.event.head_commit.message, '[build]'))
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -5448,17 +5451,17 @@ jobs:
           godot --export-release "macOS" ../build/macos/PrimeTimeDungeon.zip
           godot --export-release "iOS" ../build/ios/PrimeTimeDungeon.xcodeproj
           # danach: jede Ausgabe muss existieren
-      # je ein Artefakt PrimeTimeDungeon-<tag>-macOS | -iOS-Xcode | -Windows | -Linux (macOS mit compression-level 0:
+      # je ein Artefakt PrimeTimeDungeon-<label>-macOS | -iOS-Xcode | -Windows | -Linux (macOS mit compression-level 0:
       # das ZIP stammt von Godot und erhält das Ausführrecht), zuletzt eine Schritt-Zusammenfassung mit Links und Größen
   # Apple-Release mit bezahltem Developer-Account (README Abschnitt 4 „Mit Apple-Entwicklerkonto“); gekürzt
   apple-gate:                       # Linux: welche Apple-Jobs laufen können; nur NAMEN fehlender Secrets/Variablen
     needs: check                    # in die Zusammenfassung, falsch geformte IDs → Fehler
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: …                           # wie export: Tag v* oder „[build]“-Push
     runs-on: ubuntu-24.04
     outputs: {macos: …, ios: …}     # "true" | "false"
   apple-macos:
     needs: [check, apple-gate]
-    if: startsWith(github.ref, 'refs/tags/v') && needs.apple-gate.outputs.macos == 'true'
+    if: needs.apple-gate.outputs.macos == 'true'  # übersprungen mit apple-gate
     runs-on: macos-26
     env: {APPLE_TEAM_ID: vars, APPLE_BUNDLE_ID: vars, PTD_BUILD_NUMBER: "<run_number>.<run_attempt>"}
     steps:                          # je Schritt ein Aufruf von prime-time-dungeon/tools/apple/release.sh
@@ -5467,7 +5470,7 @@ jobs:
       # → Zusammenfassung → cleanup (if: always())
   apple-ios-testflight:
     needs: [check, apple-gate]
-    if: startsWith(github.ref, 'refs/tags/v') && needs.apple-gate.outputs.ios == 'true'
+    if: needs.apple-gate.outputs.ios == 'true'    # übersprungen mit apple-gate
     runs-on: macos-26               # Xcode ≥ 26.1 (Standard im Image: 26.6)
     steps:
       # xcode → godot ios → keychain dist (IOS_DIST_P12_*) → profile (IOS_PROFILE_BASE64) → asc-key → export ios <xcodeproj>
@@ -5492,7 +5495,9 @@ Distribution), `IOS_PROFILE_BASE64` (Profil „App Store Connect“), `ASC_KEY_I
 
 - **Gating:** `apple-gate` prüft nach `check` auf Linux, ob alles für einen Job da ist; sonst bleibt der Job übersprungen (kostet
   keine macOS-Minuten), die Zusammenfassung nennt die fehlenden Namen und dass das unsignierte Artefakt aus `export` bleibt. Beide
-  Jobs hängen wie `export` an `check` und laufen nur für `v*`-Tags, unabhängig voneinander.
+  Jobs hängen wie `export` an `check` und laufen nur für `v*`-Tags oder einen `[build]`-Push, unabhängig voneinander. Der
+  `[build]`-Auslöser existiert, weil eine Arbeitssitzung nur auf ihren Branch pushen darf, keine Tags: so lässt sich ein Build
+  (auch die Apple-Jobs) ohne Tag starten und nach einem abgelehnten Apple-Lauf sofort wiederholen.
 - **Secrets:** jedes nur in der `env` des Schritts, der es braucht; dekodiert nur nach `$RUNNER_TEMP/ptd-apple` (0700), Keychain
   `signing.keychain-db` mit Zufallspasswort (maskiert), `set-key-partition-list` gegen Rückfragen, Apples Zwischenzertifikate
   (WWDR G3–G6, Developer ID G2) mit importiert. Nichts wird ausgegeben; Key-ID und Issuer-ID werden nach dem Entfernen von

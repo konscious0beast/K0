@@ -102,9 +102,10 @@ falls sie fehlt, oben „Erweiterte Einstellungen“ einschalten).
 
 ## 4. Spielbare Builds
 
-Fertige Builds baut die CI: Für jeden gepushten Tag `v*` (z. B. `v0.3.0`) läuft im Workflow `ptd-check` nach dem Prüf-Job der
-Job `export` und legt vier Artefakte ab. Godot braucht man dafür nicht. Mit einem bezahlten Apple-Developer-Account kommen zwei
-Jobs dazu (Abschnitt „Mit Apple-Entwicklerkonto“ unten): eine notarisierte Mac-App und ein iPhone/iPad-Build in TestFlight.
+Fertige Builds baut die CI: Für jeden gepushten Tag `v*` (z. B. `v0.3.0`) oder `[build]`-Commit (siehe „Neuen Build auslösen“)
+läuft im Workflow `ptd-check` nach dem Prüf-Job der Job `export` und legt vier Artefakte ab. Godot braucht man dafür nicht. Mit
+einem bezahlten Apple-Developer-Account kommen zwei Jobs dazu (Abschnitt „Mit Apple-Entwicklerkonto“ unten): eine notarisierte
+Mac-App und ein iPhone/iPad-Build in TestFlight.
 
 | Artefakt | Inhalt | läuft auf |
 |---|---|---|
@@ -166,7 +167,9 @@ GitHub-Artefakte verlieren das Ausführrecht.
 
 **Neuen Build auslösen:** Version in `game/project.godot` (`application/config/version`) und in den Presets anheben
 (`test_perf_platform.gd` prüft, dass die angezeigten Versionen übereinstimmen), committen und den Tag pushen, z. B.
-`git tag v0.3.0 && git push origin v0.3.0`. Lokal geht derselbe Export mit Godot 4.7.2 und installierten Exportvorlagen
+`git tag v0.3.0 && git push origin v0.3.0`. Zwischenstände ohne Tag: Steht `[build]` in der Nachricht des letzten Commits eines
+Pushs, baut die CI dieselben Artefakte (inklusive der Apple-Jobs) unter dem Namen `PrimeTimeDungeon-build-<Laufnummer>-…`; das
+braucht etwa, wer nur auf einen Branch pushen darf. Lokal geht derselbe Export mit Godot 4.7.2 und installierten Exportvorlagen
 (Editor: **Editor → Exportvorlagen verwalten**). Das iOS-Xcode-Projekt lässt sich auch unter Linux erzeugen:
 
 ```bash
@@ -216,12 +219,14 @@ Dann auf GitHub im Repository unter **Settings → Secrets and variables → Act
 | `ASC_KEY_ID`, `ASC_ISSUER_ID` | Secrets | Key-ID und Issuer-ID aus 6 |
 | `ASC_KEY_P8_BASE64` | Secrets | `AuthKey_<Key-ID>.p8` aus 6 (Base64) |
 
-**Auslösen** wie jeden Build mit einem Tag (oben, „Neuen Build auslösen“). Nach `check` laufen beide Jobs neben `export`. Fehlt
+**Auslösen** wie jeden Build mit einem Tag oder einem `[build]`-Commit (oben, „Neuen Build auslösen“). Nach `check` laufen beide
+Jobs neben `export`. Fehlt
 etwas, überspringt die CI den Job und nennt in der Zusammenfassung des Laufs die fehlenden Namen (nie Werte); ohne die Mac-Secrets
 läuft der iOS-Job trotzdem und umgekehrt. Die Build-Nummer ist `<Laufnummer>.<Versuch>` (TestFlight zeigt z. B. `0.3.0 (57.1)`),
 jeder Upload hat damit eine höhere Nummer, ein „Re-run“ ergibt `57.2`.
 
-**Wo die Builds landen:** Die Mac-App ist das Artefakt `PrimeTimeDungeon-<tag>-macOS-notarized` (zweimal entpacken, nach
+**Wo die Builds landen:** Die Mac-App ist das Artefakt `PrimeTimeDungeon-<tag>-macOS-notarized` (bei einem `[build]`-Commit
+`PrimeTimeDungeon-build-<Laufnummer>-macOS-notarized`; zweimal entpacken, nach
 **Programme** ziehen, Doppelklick). Der iOS-Build erscheint nach Apples Verarbeitung (meist 5 bis 30 Minuten) in App Store Connect
 → Apps → Prime Time Dungeon → **TestFlight**. Dort interne Tester:innen (Mitglieder des App-Store-Connect-Teams) einer internen
 Gruppe hinzufügen; sie bekommen eine Einladung und installieren das Spiel mit der App **TestFlight**. Externe Tester:innen

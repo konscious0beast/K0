@@ -23,9 +23,9 @@ extends Node
 ## also checks the persona lines: said at least once, never during a battle. K2 (08 §6): "random" also rolls a look and
 ## sets it with the look editor's ◀ ▶ buttons; every run checks that Kai's exploration figure wears DB.party_model.
 ## 06 package A: --hero=kai|mopsula (default kai) picks the controlled character of the new game. As Graf Mopsula the
-## bot engages groups with the bark (dazed group → walk into it → PREEMPTIVE) instead of the field strike, and on the
-## first safe-room visit it switches to Kai and back ("Figur wechseln", two recorded hero commands the replay checks
-## cover).
+## bot engages groups with the bark (dazed group → walk into it → PREEMPTIVE; real time: pull it with key 1) instead of
+## the field strike, and on the first safe-room visit it switches to Kai and back ("Figur wechseln", two recorded hero
+## commands the replay checks cover).
 ## Echtzeitkampf (07 §12.5, R5b): with --combat=realtime the run fights in the world — the director plays each combat
 ## with the RtBotPlayer (tests/tools/rt_bot_player.gd, loaded at run time; profile --rt-profile=typical|perfect|sloppy,
 ## the hero's variant) as the person: its inputs go through Game.combat_submit and are recorded like a player's. A
@@ -1067,10 +1067,16 @@ func _engage(ex: ExplorationScene, group_id: String) -> bool:
 
 
 ## One engage step as Graf Mopsula: in range and ready → face the group and bark (perform_action, like the key);
-## otherwise steer into it — a dazed (or any) symbol starts the battle on contact.
+## otherwise steer into it — a dazed (or any) symbol starts the battle on contact. In real time contact starts nothing
+## (07 §2.2, E7): the dazed group is pulled like a person does it — the lead selected, key 1 (the bar's slot-1 skill,
+## ExplorationScene.pull) — and the pull of a dazed group is the Erstschlag (PREEMPTIVE).
 func _engage_bark(ex: ExplorationScene, a: Node3D) -> void:
 	var body: CharacterBody3D = ex.get_player()
 	var d: float = _flat_dist(ex.get_player_position(), a.global_position)
+	if rt and bool(a.call("is_dazed")) and ex.pull(str(a.call("group_id")), "skill", _rt_slot1_skill()):
+		UiUtil.release_move_actions()
+		await get_tree().physics_frame
+		return
 	var can_daze: bool = a.has_method("daze") and not bool(a.call("is_boss")) and not bool(a.call("is_dazed")) \
 		and float(a.call("daze_cooldown")) <= 0.0
 	if can_daze and d <= BARK_ENGAGE and bool(body.call("bark_ready")):
@@ -1560,6 +1566,18 @@ static func rt_profile_from_args(args: PackedStringArray) -> String:
 		if a.begins_with("--rt-profile=") and RT_PROFILES.has(a.trim_prefix("--rt-profile=")):
 			return a.trim_prefix("--rt-profile=")
 	return "typical"
+
+
+## The controlled hero's bar slot 1 in real time (party.json rt.bar, the base skill of slot 1 — a person's key 1).
+static func _rt_slot1_skill() -> String:
+	var def: Variant = DB.party_member(Game.hero()) if DB.has_id("party", Game.hero()) else null
+	if def == null:
+		return ""
+	for e: Variant in ((def.get("rt") as Dictionary).get("bar", []) as Array):
+		var b: Dictionary = e
+		if int(b.get("slot", 0)) == 1 and not bool(b.get("variant", false)):
+			return str(b.get("skill", ""))
+	return ""
 
 
 ## Attempts at the optional floor boss: CTB once (as before), real time RT_FLOOR_BOSS_ATTEMPTS.

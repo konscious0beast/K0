@@ -153,7 +153,7 @@ von Zuständen gab es in den Tests nicht; neu ist nur die Fixture `tests/fixture
 | R4 (07) | `core/data/validators/rt.gd` | `static check(v: DataValidator, raw: Dictionary) -> void` (**Abweichung** von `check(data, errors)`: privater Helfer wie die 06-Validatoren); R4 legt `validators/show_boss.gd` neu an und ruft ihn von hier |
 | R5a (07) | `autoload/show.gd`, `core/live/run_log.gd`, `run_sim.gd`, `game_replay.gd` | `Show.take_pending_gift_rt(sim) -> Dictionary`; `RunLog.compact()/expand()`; Kampfzweig in `RunSim.apply`/`GameReplay` (ersetzt `rt_unavailable`) |
 | K1 (08) — **umgesetzt 2026-10-11** (s. u.) | `persona_rules.gd`, `persona_profile.gd`, `core/show/persona_text.gd`, `persona_beats.gd`, `autoload/show_persona_hooks.gd`, `validators/origins.gd`, `autoload/save.gd`, `autoload/game.gd`, `scenes/ui/settings_menu.gd`, `scenes/boot/fullrun.gd` | `PersonaRules.offer/bias_for/weight_add/map_text`; `PersonaProfile.canon/from_dict/to_dict/fill_unset/validate`; `PersonaText.ctx/plain_line/check_name/check_free_text/nearest_tile/filter_ai_lines`; `PersonaBeats.plan_for/tag_for`; Haken-Helfer `on_chest/on_boss_won/on_safe_room/on_floor_end/on_floor_start/drop_pending`; Inhaltsregeln 08 §3.9; `Save.save_persona/load_persona/delete_persona/_slot_state_dict` (dann Slot ohne Namen); `Game._choose_initial_persona`; `_persona_section()`; `FullRun.persona_profile()` (Standard `canon`) |
-| K2 (08) | `art/kit/persona_look.gd`, `validators/looks.gd`, `autoload/db.gd`, `autoload/game.gd` | `PersonaLook.apply(model, look, data) -> Dictionary`; Wertregeln je `kind`; `DB.party_model(member_id)` mit Look; `Game._persona_battle_look(setup)` |
+| K2 (08) — **umgesetzt 2026-10-11** (s. u.) | `art/kit/persona_look.gd`, `validators/looks.gd`, `autoload/db.gd`, `autoload/game.gd` | `PersonaLook.apply(model, look, data) -> Dictionary`; Wertregeln je `kind`; `DB.party_model(member_id)` mit Look; `Game._persona_battle_look(setup)` |
 | K3 (08) | `core/show/mod_announcer.gd` (Provider), Dienst | ein Provider für `ModAnnouncer.set_extra_lines`; `/v1/casting` (08 Kap. 5) |
 
 | CR | Quelle | Inhalt | Stand |
@@ -161,7 +161,7 @@ von Zuständen gab es in den Tests nicht; neu ist nur die Fixture `tests/fixture
 | R1a | 07 §12.2, §12.3, §12.8 | Echtzeit-Vertrag (Tabellen oben) | **umgesetzt** (2026-10-11); 02_TECH §3–§7 folgen mit R5b (07 §12.8) |
 | CR-20 | 08 §10.9 | Command `persona`, Tabellen `origins`/`looks`, Präfixe und Platzhalter, `origin_talent`, `DEFAULT_NAME`, Anzeigefelder aus den Hashes, Kopf/Anker/Bestenliste ohne Namen, Persona-Datei je Slot, `SIM_VERSION`-Sprung | **umgesetzt** (K0 + K1: Spielstand-Datei ohne Namen, Persona-Datei, Migration, „Kandidat:in löschen“) |
 | CR-21 | 08 §10.9 | `Talents.has_any`, Starttalent ab L1, `field_mods`, Gewichtungs-Haken, Persona-Präfixe/Zeilen-Haken, Persona-Kontext, Casting im Neues-Spiel-Fluss | **umgesetzt** (K0 + K1: Texte, Casting-Szene, Haken; Starttalent-Teile ruhen seit CR-33) |
-| CR-22 | 08 §10.9 | `ModelSpec.style` mit Teil-Deckeln, Persona-Budget, `DB.party_model` | Vokabular + Stub K0; Rest K2 |
+| CR-22 | 08 §10.9 | `ModelSpec.style` mit Teil-Deckeln, Persona-Budget, `DB.party_model` | **umgesetzt** (K0 Vokabular, K2 Rest): Budget „Held mit Persona-Look ≤ 3 000 Tris“ bei **unveränderten 7 MeshInstances** (Orchestrator-Entscheidung 2026-10-11 statt ≤ 8: Haare, Bart und Brille im `Head`-Mesh, kein zusätzlicher Draw Call); Vokabular + `braids`, `headscarf` |
 | CR-23 | 08 §10.9 | Ausnahme `/v1/casting` in 06 §5.9/§5.10 | Wortlaut in 06 eingearbeitet; K1-Teil **umgesetzt** (`mod_brain/persona.py` neutral, `ModLineFilter` „Kai“/„Tierpfleger“ bei Nicht-Kanon); `/v1/casting` K3 |
 | CR-24 | 08 §10.9 | E30, gemeinsamer Durchgang, Persona im Echtzeitkampf | R1a-Teil **umgesetzt**; R2–R4 offen (07 §12.9 Nr. 16/17) |
 
@@ -174,6 +174,19 @@ persona_replay,persona_privacy,persona_lines,marotten_bias}`. Änderungsantrag `
 `Show.persona_hooks()`, `ModLineFilter.check(…, persona_canon = true)`, `Save.delete_candidate()`; `Show.say` reicht jede gesagte
 Zeile an die wartenden Persona-Zeilen weiter (sie folgen ihr in der HUD-Warteschlange); Event-Läufe setzen `Game.persona = null`.
 Android-Export: `user_data_backup/allow=false` (ganze App, eine Ordner-Regel bietet Godot ohne Gradle-Build nicht).
+
+**Stand K2 (08 §10.4, 2026-10-11):** Alle Stubs sind ersetzt (kein `STUB(K0)`-Kopf mehr). `ModelSpec.style` {`hair`,
+`beard`} (nur `humanoid`, §4.4.14) baut Frisuren und Bärte in `archetypes.gd` (eigener Abschnitt, 03_ART §5.3) ins
+`Head`-Mesh; `CharacterBuilder.normalize` setzt den Kanon-Stil, `_cache_key` enthält ihn,
+`CharacterBuilder.supported_hair_styles()` / `supported_beards()` (= Validator-Vokabular). `data/looks.json`: 9
+Frisuren, 8 Haarfarben, 8 Hauttöne, 4 Bärte, 2 Brillen, 8 Outfits, je Art genau eine `canon`-Option (= Kai aus
+`party.json`, vom Validator geprüft). Neu: `GameData.look_canon(kind)`, `PersonaLook.entry/ids/swatch`,
+`PersonaProfile.canon_look/clean_look` (Feld `look` mit sechs IDs, auch in „Rest automatisch“),
+`SceneKit.look_figure(look)` / `canon_figure(member_id)`, `persona_figure.set_look()` (Vorschau tauscht nur das Rig),
+Bearbeitungsmodus der Casting-Szene (`{"edit": true}`, Signal `edit_finished(applied)`), `PersonaCard.open_editor()`,
+`SafeRoomScene._refresh_candidate()`, Galerien `art/gallery/look_gallery.tscn` / `hair_gallery.tscn`,
+`tools/perf.sh --look=worst`. Änderungsantrag (eine Zeile `data_validator.gd`): `MODEL_HAIR_STYLES` += `braids`,
+`headscarf` (vor `bald`). Tests `test_08_avatar_kit`, `test_08_avatar_ui`, `test_08_avatar_world`.
 
 ---
 
@@ -387,7 +400,7 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `art/gallery/vfx_gallery.tscn` + `.gd` | Alle Vfx-Arten im Loop |
 | `art/gallery/render_probe.tscn` + `.gd` | Render-Regressionsprobe (03_ART A11): Outline-Richtung, Partikel-Farbraum, Schadenszahl-Helligkeit, Log ohne „different indices“; druckt `RENDER_PROBE: OK` (Pflicht-Shot in §12.4) |
 | `art/gallery/log_spy.gd` | `Logger`, der Log-Nadeln (z. B. „different indices“) sammelt — von Probe und M4-Tests genutzt (privat) |
-| `art/gallery/*_gallery.tscn` (Varianten) | Seiten-Varianten der Galerien (`page`-Export: archetype/hero/enemy/boss/anim/prop, env room/kinds/props/arena/safe) |
+| `art/gallery/*_gallery.tscn` (Varianten) | Seiten-Varianten der Galerien (`page`-Export: archetype/hero/enemy/boss/anim/prop, env room/kinds/props/arena/safe; Casting K2: `look_gallery` = looks, `hair_gallery` = hair) |
 | `art/gallery/name_tags.gd` | Bildschirm-Namensschilder der Galerien (2D-Labels an 3D-Punkten, überlappungsfrei; privat) |
 | `art/icons/icon_1024.png`, `icon_192.png`, `icon_fg_432.png`, `icon_bg_432.png` | Export-Launcher-Icons (iOS 1024 deckend, Android Legacy + Adaptive Vorder-/Hintergrund), erzeugt aus `icon.svg` von `tools/make_icons.sh` (§12.3) |
 
@@ -401,7 +414,7 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `scenes/title/title.tscn` + `title.gd` | M6 (S) | `TitleScreen`: Fortsetzen / Neues Spiel / Laden / Event-Lauf / Optionen / Credits / Beenden (§9.5) |
 | `scenes/title/slot_select.tscn` + `.gd` | M6 | Slot-Auswahl (Neu/Laden); „Neu“ → Figurenwahl |
 | `scenes/title/hero_select.tscn` + `.gd` | 06-A | Figurenwahl „Wen steuerst du?“: zwei Karten Kandidat:in / Graf Mopsula mit 3D-Vorschau (06 §1.1, CR-16; Kartentext 08 §1.1) → Casting |
-| `scenes/title/persona_casting.tscn` + `.gd` | 08-K1 | Casting (08 §1): 1/3 „Wer sind Sie?“ (Name, Wortform), 2/3 „Steckbrief“ (Vorleben, Hobby / Talent, „+ Eigenschaften“, Würfeln), 3/3 Kandidatenkarte + Sendeformat; „Rest automatisch“ (Esc / Start) auf 1/3 und 2/3; private Helfer `scenes/ui/persona_picker.gd` (Auswahl-Overlays), `scenes/ui/osk_keyboard.gd` (Bildschirmtastatur mit Akzent-Ebene), `scenes/ui/persona_figure.gd` (3D-Figur) |
+| `scenes/title/persona_casting.tscn` + `.gd` | 08-K1, K2 | Casting (08 §1): 1/3 „Wer sind Sie?“ (Name, Wortform; K2: Aussehen — sechs ◀ ▶-Wähler mit Live-Vorschau, Würfeln), 2/3 „Steckbrief“ (Vorleben, Hobby / Talent, „+ Eigenschaften“, Würfeln), 3/3 Kandidatenkarte + Sendeformat; „Rest automatisch“ (Esc / Start) auf 1/3 und 2/3; K2-Bearbeitungsmodus `{"edit": true}` (Name & Aussehen im Safe Room); private Helfer `scenes/ui/persona_picker.gd` (Auswahl-Overlays), `scenes/ui/osk_keyboard.gd` (Bildschirmtastatur mit Akzent-Ebene), `scenes/ui/persona_figure.gd` (3D-Figur, `set_look`) |
 | `scenes/title/name_entry.tscn` + `.gd` | M6 | Namenseingabe (Default „Kai“, `LineEdit.max_length = 12`, Überschrift je Figur, 06 §1.1) + Modus Prime Time / Vorabendprogramm — seit 08 K1 nicht mehr im Neues-Spiel-Fluss (Rückfall, bis K1-Ende) |
 | `scenes/title/intro.tscn` + `.gd` | M6 | M.O.D.-Intro-Sequenz |
 | `scenes/title/game_over.tscn` + `.gd` | M6 | Game Over (Grund: `defeat`/`timer`) |
@@ -2326,6 +2339,11 @@ aufrecht, sonst Vierbeiner; `"quadruped"`/`"upright"` erzwingen — `enm_boss_ra
 `chest`-Sockel + `Label3D` „-50%“ (96 px Akzentfarbe, Outline 12 weiß; Blueprint-Schlüssel `labels`, blendet mit dem Dissolve aus).
 Schaufensterpuppe: Übergangsregel `colors.eyes == colors.skin` → gesichtslose Puppe (`humanoid`); ein expliziter Schalter
 (Prop/Variante) folgt mit Etage 2.
+Optional `style` (Casting 08 §6.2, CR-22; nur `base: "humanoid"`): `{"hair": …, "beard": …}` mit `hair` ∈
+`MODEL_HAIR_STYLES` (`short`, `buzz`, `long`, `bun`, `curls`, `ponytail`, `braids`, `headscarf`, `bald`) und `beard` ∈
+`MODEL_BEARDS` (`none`, `stubble`, `moustache`, `full`); fehlt = `short`/`none` = heutiger Kai. Teil-Deckel: Frisur
+≤ +150 Tris gegenüber `short`, Bart ≤ 100, alles im `Head`-Mesh (03_ART §5.3). In den Daten trägt keine Figur `style`;
+er entsteht nur über `DB.party_model` aus dem Persona-Look (`PersonaLook.apply`).
 
 #### 4.4.15 `talents.json` (06-B, Talent-Show; 06 §2.2)
 
@@ -4884,7 +4902,9 @@ _initialize():
   args: --scene (Pflicht), --out (Pflicht, absoluter Pfad), --frames (Default 90), optional --no-global-ui,
     --params=<JSON-Objekt> (über {"capture": true} gemergt; kein Objekt → "Assertion failed: capture: --params …", quit(1)),
     --touch (vor dem Szenenaufbau: Game.settings.touch_controls = &"on", Game.set_input_scheme(TOUCH) — Handy-Layout),
-    --recipe=<name> (benannter Zustand aus tests/capture_recipes.gd, s. u.)
+    --recipe=<name> (benannter Zustand aus tests/capture_recipes.gd, s. u.),
+    --look=<n | JSON> (Casting K2: vor dem Szenenaufbau ein neues Spiel, Seed 1, mit einer Persona im Look LOOKS[n] der
+    Look-Galerie bzw. {kind: lk-ID}; battle.tscn bekommt dann sein Setup aus Game.make_battle_setup)
   fehlend → printerr("Assertion failed: capture: missing --scene/--out"); quit(1)
   DisplayServer.get_name() == "headless" → printerr("Assertion failed: capture: needs a display (run via check.sh --shot / xvfb)");
     quit(2)   # der Dummy-Renderer sendet nie frame_post_draw → ohne diese Prüfung hängt der Prozess (gemessen)
@@ -5098,6 +5118,7 @@ Pro Asset (Tris über `MeshUtil.tri_count`, ohne Hull; `test_m4_art_kit` prüft 
 | Asset | Tris | MeshInstances |
 |---|---|---|
 | Held (Kai, Mopsula) | ≤ 2 500 | ≤ 8 |
+| Held mit Persona-Look (Kai, Casting 08 §6.2, CR-22) | ≤ 3 000 (schlimmster Fall gemessen 2 940) | 7 = Kanon-Kai (Haare, Bart, Brille im `Head`-Mesh; kein zusätzlicher Draw Call) |
 | Gegner (Schwarm gesamt) | ≤ 1 500 | ≤ 6 |
 | Boss | ≤ 4 000 (+ `wreck` ≤ 600) | ≤ 10 |
 | Raum | Geometrie ≤ 1 500 + Props ≤ 2 500 | 2 (Geometry, Props) + Interaktives |
@@ -5275,7 +5296,8 @@ Android/iOS werden lokal exportiert (Android: JDK 17 + SDK + Debug-Keystore in E
    Spielzustand, kein Leck). Letzte Zeilen `PERF: OK|OVER BUDGET (…)`, `LEAK: OK|GROWTH …`; Exit 1 bei Überschreitung.
 Diagnose-Schalter: `--full=<enc,…>` (nur diese kompletten Auto-Kämpfe), `--mat-dump` (je Zeile die eindeutigen Materialien des
 Spitzen-Frames mit Shader, erstem Besitzer und `Materials`-Cache-Schlüssel, Zeilen `MATDUMP …`), `--leak-diff` (je Router-Zyklus,
-welche Node-Arten — Pfad ohne Ziffern + Klasse — sich gegenüber dem Vorzyklus geändert haben, Zeilen `LEAKDIFF …`).
+welche Node-Arten — Pfad ohne Ziffern + Klasse — sich gegenüber dem Vorzyklus geändert haben, Zeilen `LEAKDIFF …`),
+`--look=worst` (Casting K2: jede Sektion mit einer Kandidat:in im schwersten Persona-Look, 08 §6.2).
 Materialüberschreitungen nennen die Zahl der betroffenen Frames („Mat 25 > 24 (2 von 270 Frames)“).
 
 Gemessen wird in CI-Umgebungen mit llvmpipe (Software): Draw Calls, Primitive, Lichter, Materialien und Körper sind GPU-unabhängig

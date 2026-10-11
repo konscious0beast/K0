@@ -1063,6 +1063,8 @@ var head_mesh: ArrayMesh = MeshUtil.merge(head_parts)
 #### `humanoid` — 1.75 m (Kai, Pendler)
 Slots: primary = Oberteil, secondary = Hose, accent = Haare, skin, eyes. Gemessen: **2 040 Tris** inkl. Mopp; **6 Meshes** (der `Hips`-Pivot
 hat kein eigenes Mesh, die Hüft-Box gehört zum `Torso`-Mesh — so bleibt auch der Gegner `pendler` bei ≤ 6 Meshes).
+**Stand 2026-10-11** (gemessen int-06 und K2, `test_08_avatar_kit`): Kai **2 492 Tris, 7 Meshes** (Torso, Head, ArmL, ArmR,
+LegL, LegR und das eigene Mesh der Mopp-Fransen) — u. a. Augenglanz, Wangen und die Fransen kamen nach der Tabelle unten dazu.
 
 | Pivot (Parent) | Pos | Teile |
 |---|---|---|
@@ -1072,6 +1074,38 @@ hat kein eigenes Mesh, die Hüft-Box gehört zum `Torso`-Mesh — so bleibt auch
 | `ArmL` / `ArmR` (Torso) | (∓0.32, 1.04, 0) | Capsule 0.085/0.48 · (0,−0.20,0) · primary; Hand Sphere 0.095 · (0,−0.46,0) · skin; Anker `hand_l`/`hand_r` (0,−0.46,0) |
 | `LegL` / `LegR` (Hips) | (∓0.13, 0.55, 0) | Capsule 0.11/0.50 · (0,−0.22,0) · secondary; Schuh Box 0.18×0.12×0.28 · (0,−0.49,−0.04) · `#1F1F24`; Sohle Box 0.19×0.03×0.29 · (0,−0.545,−0.04) · `PAPER` |
 | Anker | — | `head` (0,1.38,0), `center` (0,0.90,0), `overhead` (0,1.95,0) |
+
+#### Persona-Look (08 §6, K2; `ModelSpec.style`, nur `humanoid`)
+Die Frisur ersetzt die Kanon-Haarteile, ein Bart kommt dazu; alles wird ins **`Head`-Mesh** gemergt — kein neues
+`MeshInstance3D`, kein zusätzlicher Draw Call (CR-22 wie entschieden: ≤ 3 000 Tris, 7 MeshInstances). Haare, Kopftuch und
+Bart in Haarfarbe (`accent`), der Dreitagebart als Mischung Haut → Haar (40 %), Haargummis in Outfitfarbe (`primary`).
+Kugeln und Kapseln mit wenigen Segmenten (Kappen ≤ 10 × 6, Kleinteile 6 × 3). Kopf-lokal: Kopfkugel (0, 0.26, 0), r 0.28,
+Gesicht nach −Z. „Lang“ und „Kopftuch“ verdecken die Ohren (die Ohr-Kugeln entfallen). Δ Tris gegenüber `short`
+(= Kanon, 2 492) gemessen:
+
+| `style.hair` | Name | Teile | Δ Tris |
+|---|---|---|---:|
+| `short` | Kurz (Kanon) | Kappe Sphere 0.30 · (0,0.36,0.04) · Skal. (1,0.72,1); Pony Capsule 0.055/0.40; zwei Spitzen Cone | 0 |
+| `buzz` | Raspelkurz | Kappe Sphere 0.29 (10 × 6) · (0,0.30,0.035), gerade Haarlinie | −120 |
+| `long` | Lang | Kappe Sphere 0.30 · Skal. (1.02,0.74,1.02); Seitenpony Sphere 0.14 (6 × 3); Vorhang hinten Sphere 0.29 (8 × 5) · (0,0.10,0.20) · Skal. (1,1.25,0.55); 2 Strähnen Sphere 0.075 (6 × 3) · (±0.255,0.16,−0.05) · Skal. (0.9,2.6,1.1) | +24 |
+| `bun` | Dutt | Kappe Sphere 0.295 · Skal. (1,0.82,1); Dutt Sphere 0.12 (8 × 5) · (0,0.56,0.17); Gummi Cyl 0.075 × 0.04 · primary | +8 |
+| `curls` | Locken | Basis Sphere 0.31 (8 × 6) · Skal. (1.05,0.8,1.05); 6 Locken Sphere 0.10 (6 × 3) rundum | +140 |
+| `ponytail` | Pferdeschwanz | Kanon-Kappe und -Pony; Schwanz Capsule 0.07/0.42 (6 × 1) · (0,0.20,0.33); Gummi Cyl 0.06 · primary | +56 |
+| `braids` | Zöpfe | Kappe Sphere 0.30 (8 × 6); je Seite zwei Flechtglieder Sphere 0.065 / 0.06 (6 × 3), Gummi Cyl 0.04 · primary, Spitze Cone 0.045 | +128 |
+| `headscarf` | Kopftuch | Tuch Sphere 0.31 · (0,0.27,0.05) · Skal. (1,1.05,1) (Gesicht frei); Halsteil Cyl 0.235/0.33/0.15 · (0,−0.035,0.02) | −184 |
+| `bald` | Glatze | keine Haarteile | −260 |
+
+| `style.beard` | Name | Teile | Tris |
+|---|---|---|---:|
+| `none` | ohne (Kanon) | — | 0 |
+| `stubble` | Dreitagebart | Sphere 0.215 (8 × 5) · (0,0.135,−0.085) · Skal. (1.2,0.62,0.86) | 96 |
+| `moustache` | Schnurrbart | 2× Sphere 0.05 (6 × 3) · (±0.042,0.183,−0.262) · (0,0,∓14) | 96 |
+| `full` | Vollbart | Sphere 0.235 (8 × 4) · (0,0.115,−0.07) · Skal. (1.14,0.8,0.93) (Mund bleibt frei); Bartbalken Box 0.12×0.03×0.03 | 92 |
+
+Brille = das vorhandene Prop `glasses` (+212 Tris). Schlimmster Fall `curls` + `stubble` + Brille = **2 940 Tris** bei 7
+MeshInstances; `test_08_avatar_kit` prüft alle 9 × 4 × 2 Kombinationen (≤ 3 000, genau 7) und die Teil-Deckel (Frisur ≤ +150,
+Bart ≤ 100). Galerien: `art/gallery/look_gallery.tscn` (neun Looks), `hair_gallery.tscn` (alle Frisuren; Parameter `row: beard`,
+`view: front | back | side`, `hair_color`).
 
 #### `pug` — 0.6 m (Graf Mopsula)
 Slots: primary = Fell, secondary = Maske/Ohren, accent = Kleidung, eyes. Gemessen: **1 448 Tris** inkl. `cape` + `monocle`, 2 Meshes;
@@ -1242,6 +1276,18 @@ Quelle der `model`-Daten in `party.json`/`enemies.json` (01_GDD §5.1 verweist h
 Das Vokabular-Prop `crown` bleibt baubar, wird im Slice aber von **keiner** Figur getragen (Mopsula nie, 04_STRATEGIE §2.3); die
 Königin trägt `ticket_crown`. `itm_acc_queen_crown` ist nur für Kai ausrüstbar (`equip_by ["kai"]`, 01_GDD §6.4).
 Die Tris-Werte außer Kai sind gerechnet; `test_m4_art_kit` misst alle Einträge gegen 02_TECH §12.1 und ist maßgeblich.
+
+**Persona-Look-Palette** (Casting 08 §6.1, `data/looks.json`; `DB.party_model("kai")` mischt die sechs IDs der laufenden
+Persona in Kais Modell, Kanon = die Werte der Zeile `kai` oben). Jede Option für alle, jede Farbe mit Namen; Hauttöne heißen
+neutral „Ton 1–8“.
+
+| Art (Slot) | Optionen |
+|---|---|
+| Haarfarbe (`accent`) | Schwarz `#1F1A1A`, **Dunkelbraun `#3B2A22`**, Kastanie `#6B3A22`, Blond `#D9B66B`, Rot `#A8432A`, Grau `#9A9A9A`, Pink `#E85A9A`, Blau `#3A6FD9` |
+| Hautton (`skin`) | Ton 1 `#F6D7C3`, Ton 2 `#EBC1A0`, **Ton 3 `#E8B48F`**, Ton 4 `#D19A6E`, Ton 5 `#B07A50`, Ton 6 `#8D5A3A`, Ton 7 `#6B4128`, Ton 8 `#4A2C1C` |
+| Outfit (`primary` / `secondary`) | **Tierheim-Petrol `#3AA9A0`/`#2E3A57`**, Kittelweiß `#E8EEF0`/`#5A6B7A`, Blaumann `#2F4F8F`/`#23314F`, Warnorange `#F28C28`/`#3A3F4B`, Bürograu `#7A808A`/`#2A2E36`, Neonpink `#FF5FA2`/`#2A2440`, Waldgrün `#3F7A3A`/`#3B2A22`, Mitternacht `#2A2440`/`#1A1420` |
+| Frisur, Bart (`style`) | 9 Frisuren, 4 Bärte (Kap. 5.3, Persona-Look); das Kopftuch trägt die Haarfarbe (Editor: „TUCHFARBE“) |
+| Brille (`props`) | ohne, rund (`glasses`) |
 
 Boss-Sonderwerte: Rattenkönigin-Material `Materials.toon_vc({"bands": 3, "rim": 0.8, "rim_color": Color("#9A6BFF")})`; Thron =
 `PropKit.build("wreck")` (Kap. 6.3), Königin liegt auf dem Wagendach (Rig-Root y +3.0). P3: `Crown`-Mesh (`ticket_crown`)

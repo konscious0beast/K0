@@ -27,6 +27,7 @@ Maximum über alle gemessenen Ansichten bzw. Frames (Methode §2). „vorher“ 
 | Echtzeitkampf: Draw Calls UI (mit R3-HUD) | 180 | – | **42–62** | 41–59 | 42–59 |
 | Echtzeitkampf: Materialien · Physik-Körper (Kollisionsring +1) | 24 · 40 | – | **21 · 25** | 22 · 25 | 21 · 25 |
 | Safe Room: Draw Calls 3D / UI | 120 / 100 | 75 / 95 | **74 / 87** | 44 / 88 | 43 / 87 |
+| Persona-Look (Casting K2, §3.7): Kai im schwersten Look, Tris / MeshInstances | 3 000 / 7 | 2 492 / 7 (Kanon) | **2 940 / 7**, Draw Calls aller Szenen unverändert | – | – |
 | Safe Room: Physik-Körper | 0 | 3 ✗ | **0** | 0 | 0 |
 | RAM (Godot, Spitze im Kampf) | 400 MB | 255 MB | **218 MB** | 262 MB | 230 MB (VRAM 251 MB) |
 | Etage 1 bauen, warm | 500 ms | 181 ms | **242 ms** | – | – |
@@ -225,6 +226,34 @@ Leiste aus der Lernliste (Stufe 1: Slot 1 + SHOW), volle Leisten misst R3 (`rt_d
   Show, HUD, Sfx, Puppen, Telegraphen) kostet Ø 0,18–0,49 ms, p95 0,4–3,9 ms (Frames mit Treffern), Spitze ≤ 6,7 ms — im Mittel
   ≤ 3 % eines 16,7-ms-Frames (low und Mobile gleich, Spitzen unter mehr Last bis 12 ms). Die Sim-Zeit je Tick (07 §3.15,
   ≤ 0,25 ms Desktop) misst R1b an der echten Sim; hier spielt die Fixture.
+
+### 3.7 Persona-Look (Casting 08 §6.2, K2)
+
+Stand 2026-10-11, Branch `ptd/k2`, Compatibility high. `tools/perf.sh --only=explore,battle,safe_room,combat --look=worst`
+spielt jeden Abschnitt mit einer Kandidat:in im schwersten Look (Locken + Dreitagebart + Brille, Haarfarbe Schwarz, Ton 7,
+Blaumann): Kai **2 940 statt 2 492 Tris (+448, +18 %), weiterhin 7 MeshInstances** — Haare, Bart und Brille liegen im
+`Head`-Mesh (03_ART §5.3), es kommt kein Draw Call dazu. Vergleich mit der Basis `main` (`6a6d4da`, Kanon-Kai); die
+Kampf-Eröffnungen zusätzlich mit dem Kanon-Kai auf demselben Stand (`--only=battle`, ohne Look).
+
+| Abschnitt (Maximum) | DC 3D Basis → Look | DC UI Basis → Look | Primitive Basis → Look |
+|---|---:|---:|---:|
+| Erkundung, je Zone und Etage gesamt (6 Zonen × Zellen × 4 Richtungen) | 112 → **112** (jede Zone gleich: 89/77/112/88/72/101) | 88 → 88 | 48 804 → 50 596 (+1 792 je Ansicht) |
+| Kampf-Eröffnungen (17 Begegnungen) | 55–126 → **55–126** | 129–167 → 129–167 | 49 305 → 50 893 |
+| Komplette Kämpfe `enc_f1_d2` / Hausmeister / Königin | 130 / 105 / 133 → **130 / 105 / 133** | 153 / 150 / 161 → 153 / 150 / 163 | 57 034 / 52 864 / 67 335 → 59 716 / 55 554 / 69 369 |
+| Safe Rooms Kiosk / Pumpenhaus / Stellwerk | 73 / 73 / 74 → **73 / 73 / 74** | 103 / 84 / 84 → 101 / 84 / 84 | 29 396 / 29 394 / 31 240 → 31 114 / 31 090 / 33 108 |
+| Echtzeitkampf eine Gruppe / zwei Gruppen / Königin | 113 / 141 / 113 → **113 / 141 / 113** | 42 / 42 / 62 → 43 / 43 / 60 | 40 891 / 50 645 / 56 804 → 42 785 / 52 445 / 58 586 |
+| **Budget** (02_TECH §12.1) | 150 / 150 / 120 | 100 / 180 / 100 | 120 000 / 120 000 / 60 000 |
+
+- **Draw Calls 3D unverändert** in jeder deterministischen Zeile (Erkundung je Zone, komplette Kämpfe, Safe Rooms,
+  Echtzeitkampf). Die Kampf-Eröffnungen (Frames 20–30 der Eröffnungs-Kamera) schwanken je Begegnung um ±1 zwischen zwei Läufen
+  desselben Stands (Kanon-Kai: a3 95, c2 98; Look: 96, 97); `enc_f1_a_rare` 69 auf `main`, 73 auf K2 mit **und** ohne Look —
+  Stichprobe der Kamerafahrt, nicht die Figur.
+- **Primitive** +1 792 je Erkundungsansicht (die +448 Tris werden in mehreren Durchgängen gezählt: Farbe, Umriss-Hülle,
+  Schatten), im Kampf bis +2 682 (dazu das HUD-Porträt); weit unter 120 000 bzw. 60 000.
+- **UI-Draw-Calls** schwanken nur mit Text und Effekten (±2); der Safe Room Kiosk liegt schon auf `main` bei **103 > 100**
+  (vorbestehend; mit dem Look 101) — nicht durch K2, offen in §8.2.
+- **Materialien, Lichter, Körper, RAM** gleich (Haare, Kopftuch und Bart sind Vertex-Farben im Toon-Material der Figur;
+  RAM-Spitze 247 MB).
 
 ---
 
@@ -461,6 +490,8 @@ unter dem Budget. Auch der Mobil-Richtwert 1,5 s (Etage) ist mit Abstand eingeha
   prüfen.
 - **Export:** Nur `--export-pack "Linux"` vollständig geprüft; Android/iOS/Windows/macOS brauchen Templates, SDK/Keystore bzw. Xcode
   (02_TECH §12.3) und einen Lauf auf echter Hardware. Bundle-ID ist ein Platzhalter.
+- **Safe Room Kiosk, UI 101–103 Canvas-DC > 100** (Stand `main` `6a6d4da`, 2026-10-11; 2026-10-10 noch 87): kam mit den
+  Zusammenführungen nach `ptd/final-a` dazu (Ursache noch nicht untersucht); unabhängig vom Persona-Look (§3.7).
 - **Echtzeitkampf in der Welt (§3.6):** gemessen mit der Welt-Fixture (die echten Daten haben vor R4 keine `rt`-Blöcke).
   Nachmessen, sobald die Teile da sind: die echte Sim mit Gegner-KI, Telegraphen, Zonen und Beschwörungen (R1b-I3), die echten
   `rt`-Daten von Etage 1 samt voller Aktionsleisten und Gleis-9-Bühne (R4) und dann die Sim-Zeit je Tick im laufenden Spiel

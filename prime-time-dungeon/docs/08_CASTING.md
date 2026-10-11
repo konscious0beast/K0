@@ -178,7 +178,8 @@ Titel → Neues Spiel → Slot (unverändert) → Figurenwahl (06 §1, nur Karte
 | M.O.D. nennt Sie | Kandidatin · Kandidat · Kandidat:in — wählt nur die Wortformen von `{cand}` und `{job}`; M.O.D. siezt immer, es gibt keine Anrede „Frau/Herr“ | Kandidat:in | Feld `form` (`f`/`m`/`n`) |
 | Aussehen (ab K2) | 6 Reiter, je 2–8 Optionen (Kap. 6.1) | Kanon-Look | Vorschau sofort; jede Farbe hat einen Namen |
 
-Bis K2 fehlen die Aussehen-Zeile und „Würfeln“ auf 1/3 (Kanon-Look).
+Bis K2 fehlen die Aussehen-Zeile und „Würfeln“ auf 1/3 (Kanon-Look). **Stand K2** (Kap. 10.4): statt der Reiter ein Feld mit
+sechs ◀ ▶-Wählern (zwei Spalten) neben der Vorschau; Name und Wortform teilen sich eine Zeile; „Würfeln“ würfelt den Look.
 
 ### 1.3 Bildschirm 2 „Steckbrief“
 
@@ -1462,6 +1463,48 @@ Tests: Teil-Deckel je Frisur (≤ +150 gegenüber `short`) und Bart (≤ 100); a
 `StateHash.of_battle`; der Validator lehnt unbekannte Stile ab; die Vorschau aktualisiert ohne Neuaufbau der Szene;
 `tools/perf.sh` ohne Budget-Überschreitung. DoD: Galerie-Screenshot mit acht Looks, Erkundung und Kampf mit Persona-Look, 03_ART
 §5.3/§5.5 und 02_TECH §12.1 nachgezogen (CR-22).
+
+**Stand K2 (umgesetzt 2026-10-11, Branch `ptd/k2`).** `data/looks.json` mit 9 Frisuren, 8 Haarfarben, 8 Hauttönen („Ton 1–8“),
+4 Bärten, 2 Brillen und 8 Outfits (je Art genau eine `canon`-Option = Kai); Validator `validators/looks.gd` (Wertfelder je
+Art, Stil-Vokabular, Hex-Farben, Namen ≤ 16 und eindeutig je Art, Hauttöne nur „Ton N“, genau ein Kanon je Art, Kanon =
+Kai in `party.json`); `ModelSpec.style` im Kit (Frisuren und Bärte im `Head`-Mesh, Cache-Schlüssel); `PersonaLook.apply`,
+`DB.party_model`; Look-Feld auf Casting 1/3 mit Live-Vorschau (Nahaufnahme), „Würfeln“ auf 1/3; „Name & Aussehen ändern“ im
+Safe Room; der Look in Erkundung (Spieler- und Begleitfigur), Safe Room, Intro, CTB-Bühne und -Porträts und an den
+Echtzeit-Puppen; Galerien `art/gallery/look_gallery.tscn` / `hair_gallery.tscn`; Tests `test_08_avatar_kit` (11),
+`test_08_avatar_ui` (10), `test_08_avatar_world` (3). Gemessen: schlimmster Fall Locken + Dreitagebart + Brille **2 940 Tris
+bei 7 MeshInstances**, alle 72 Kombinationen ≤ 3 000 / genau 7; `tools/perf.sh --look=worst`: Draw Calls der Erkundung, der
+kompletten Kämpfe, der Safe Rooms und des Echtzeitkampfs unverändert (PERFORMANCE §3.7). Screenshots
+`docs/screenshots/43_…`–`53_…`. Abweichungen und Ergänzungen:
+
+- **Budget (CR-22, Orchestrator-Entscheidung):** Held mit Persona-Look ≤ 3 000 Tris bei **7** MeshInstances (statt ≤ 8):
+  Haare, Bart und Brille liegen im `Head`-Mesh, es gibt keinen zusätzlichen Draw Call.
+- **Frisuren:** 9 statt 7 — dazu **Zöpfe** (`braids`) und **Kopftuch** (`headscarf`) für ein inklusives Set; „Zopf“ heißt
+  **„Pferdeschwanz“** (neben „Zöpfe“ eindeutig). Änderungsantrag an den Integrator: `DataValidator.MODEL_HAIR_STYLES` +=
+  `braids`, `headscarf` (eine Zeile). Das Kopftuch trägt die Haarfarbe, die Zeile heißt dann „TUCHFARBE“; „Lang“ und
+  „Kopftuch“ verdecken die Ohren. Keine Vorlagen nach Geschlecht: jede Option für alle.
+- **Editor-Form (Kap. 1.2):** statt Reitern mit LB/RB ein Feld mit sechs ◀ ▶-Wählern in zwei Spalten neben der Vorschau —
+  bei 1280 × 720 passen Name, Wortform und alle sechs Wähler ohne Scrollen (88 + 12 + 3 × 88 + 2 × 12 = 388 px); jede Farbe
+  zeigt Namen und Farbfeld. Name und Wortform teilen sich eine Zeile (bei 130 % Text umbrochen; die Seite öffnet oben). Die
+  K1-Hinweise unter dem Namensfeld entfallen; ein abgelehnter Name zeigt seinen Grund an M.O.D.s Stelle.
+- **„Würfeln“ auf 1/3** würfelt nur den Look (Name und Wortform bleiben), auch mit Gamepad X.
+- **Bearbeitungsmodus (Kap. 1.7):** Kandidatenkarte (Pause → Party) → „Name & Aussehen ändern“ öffnet Casting 1/3 als
+  „IN DER MASKE · NAME & AUSSEHEN“ — nur im Safe Room, sonst „Bitte in die Maske — nur im Safe Room.“. „Übernehmen“ (Start)
+  schreibt Name, Wortform und Look in die laufende Persona und sofort in die Persona-Datei (Anzeige, nie aufgezeichnet,
+  kein Hash), „Abbrechen“ / Esc / B ändert nichts; statt einer M.O.D.-Zeile ein fester Hinweis („Vertrag ist Vertrag“).
+  Nach dem Menü baut der Safe Room die Figur neu, wenn sich der Look geändert hat (`_refresh_candidate`, eine Zeile im Hook).
+- **Figurenwahl** zeigt immer den Kanon-Kai (`SceneKit.canon_figure`, eine Zeile in `hero_select.gd`): sonst schiene der
+  Look des vorigen Spiels durch, bevor gecastet ist.
+- **Echtzeit:** Die Puppen sind die Erkundungsfiguren und tragen den Look; die Einheitenrahmen von R3 zeigen weiter ein
+  Symbol (`scenes/combat/**` bleibt bis R5b unberührt). **Grenze:** `Combatant.from_dict` (Wiederaufnahme eines CTB-Kampfs aus
+  einem Snapshot, `core/battle/**`) setzt das Def-Modell — ein so fortgesetzter Kampf zeigt den Kanon-Look bis zum nächsten.
+- **Bot und Werkzeuge:** `--persona=random` würfelt auch den Look und stellt ihn über die ◀ ▶-Knöpfe ein; jeder Lauf prüft,
+  dass Kais Erkundungsfigur `DB.party_model` trägt. `tools/perf.sh --look=worst`, `tests/capture.gd --look=<n|json>` (neues
+  Spiel mit Persona-Look; `battle.tscn` über `Game.make_battle_setup`), Rezepte `safe_look`, `safe_mask`, `rt_world_look`.
+- **Tests und Fixtures:** zusätzlich `test_08_avatar_world` (beide Helden, Echtzeit-Puppen); angepasst `test_08_casting_ui`
+  (Tastaturweg durch das Look-Feld) und `test_08_k0_contract` (keine Stubs mehr, Vokabular 9); `tests/fixtures/rt_min/looks.json`
+  = `data_min` (je Art die Kanon-Option).
+- **Vorbestehend:** `tools/perf.sh` meldet schon auf `main` (`6a6d4da`) `safe_room/sr_kiosk DC 2D 103 > 100` (UI); mit dem
+  Persona-Look 101 — nicht durch K2.
 
 ### 10.5 K3 — KI-Casting
 

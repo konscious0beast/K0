@@ -58,14 +58,15 @@ const CAPE_HEM: Color = Color("#6a46c0")
 
 # --- entry ---------------------------------------------------------------------------------------------------------
 
-## m: normalized ModelSpec ({"base", "scale", "pose" (StringName resolved), "colors" (slot → Color), "props"}).
+## m: normalized ModelSpec ({"base", "scale", "pose" (StringName resolved), "colors" (slot → Color), "props",
+## "style" (humanoid: {"hair", "beard"}, 08 §6.2)}).
 static func blueprint(m: Dictionary, seed: int) -> Dictionary:
 	var base: String = str(m.get("base", "humanoid"))
 	if not BASES.has(base):
 		base = "humanoid"
 	var bp: Dictionary = {
 		"base": base, "pose": m.get("pose", &"upright"), "colors": m.get("colors", {}),
-		"props": m.get("props", PackedStringArray()), "seed": seed,
+		"props": m.get("props", PackedStringArray()), "seed": seed, "style": m.get("style", {}),
 		"pivots": [], "pivot_parent": {}, "pivot_pos": {}, "pivot_rot": {}, "pivot_scale": {},
 		"meshes": {}, "mesh_order": [], "anchors": {}, "sockets": {}, "particles": [], "labels": [],
 		"mat": {"bands": 3, "rim": 0.45}, "flags": {},
@@ -280,20 +281,21 @@ static func _humanoid(bp: Dictionary) -> void:
 	elif faceless:
 		_add(bp, "Head", _p(MeshUtil.sphere(0.28), Vector3(0, 0.26, 0), skin, Vector3.ZERO, Vector3(0.94, 1.08, 1.0)))
 	else:
+		# Casting (08 §6.2, K2): the hair style and beard of ModelSpec.style; "short" = Kai's canon hair parts (exactly)
+		var style: Dictionary = bp.get("style", {})
+		var hair: String = str(style.get("hair", HAIR_STYLES[0]))
 		_add(bp, "Head", _p(MeshUtil.sphere(0.28), Vector3(0, 0.26, 0), skin))
-		_add(bp, "Head", _p(MeshUtil.sphere(0.30), Vector3(0, 0.36, 0.04), acc, Vector3.ZERO, Vector3(1, 0.72, 1)))
-		_add(bp, "Head",
-			_p(MeshUtil.capsule(0.055, 0.40), Vector3(0, 0.425, -0.19), acc, Vector3(-20, 0, 90), Vector3(1.35, 1.2, 1.1)))
-		_add(bp, "Head", _p(MeshUtil.cone(0.07, 0.16), Vector3(0.06, 0.60, 0.04), acc, Vector3(-25, 0, -20)))
-		_add(bp, "Head", _p(MeshUtil.cone(0.06, 0.13), Vector3(-0.07, 0.59, 0.08), acc, Vector3(-35, 0, 25)))
+		_humanoid_hair(bp, hair, acc, prim)
 		for sx: float in [-1.0, 1.0]:
-			_add(bp, "Head", _p(MeshUtil.sphere(0.05), Vector3(0.28 * sx, 0.25, 0), skin))
+			if not HAIR_HIDES_EARS.has(hair):
+				_add(bp, "Head", _p(MeshUtil.sphere(0.05), Vector3(0.28 * sx, 0.25, 0), skin))
 			_add(bp, "Head", _p(MeshUtil.capsule(0.035, 0.11), Vector3(0.10 * sx, 0.27, -0.255), eyes))
 			_add(bp, "Head", _p(MeshUtil.sphere(0.016), Vector3(0.10 * sx - 0.012, 0.30, -0.284), Palette.PAPER,
 				Vector3.ZERO, Vector3.ONE, 1.0))
 			_add(bp, "Head", _p(MeshUtil.sphere(0.045), Vector3(0.165 * sx, 0.17, -0.225), skin.lerp(Color("#ff6f7d"), 0.45),
 				Vector3.ZERO, Vector3(1, 0.6, 0.35)))
 		_add(bp, "Head", _p(MeshUtil.box(Vector3(0.08, 0.015, 0.01)), Vector3(0, 0.15, -0.275), MOUTH))
+		_humanoid_beard(bp, str(style.get("beard", BEARDS[0])), acc, skin)
 	# Arms
 	for arm: String in ["ArmL", "ArmR"]:
 		_add(bp, arm, _p(MeshUtil.capsule(0.085, 0.48), Vector3(0, -0.20, 0), prim))
@@ -315,6 +317,94 @@ static func _humanoid(bp: Dictionary) -> void:
 	_socket(bp, "body", "Torso", Vector3(0, 0.26, 0), 0.24)
 	_socket(bp, "hand_r", "ArmR", Vector3(0, -0.46, 0), 1.0)
 	_socket(bp, "hand_l", "ArmL", Vector3(0, -0.46, 0), 1.0)
+
+
+# --- Casting (08 §6.1/§6.2, K2): the persona's hair styles and beards (humanoid) -------------------------------------
+# All parts are merged into the Head mesh (no extra MeshInstance3D, CR-22: the persona look keeps Kai's 7 meshes and
+# draw calls). Part budgets (R18, test_08_avatar_kit): a hair style adds at most HAIR_TRIS_ADD over "short" (Kai's
+# canon hair: cap 140 + fringe 72 + two tufts 48 = 260 tris), a beard at most BEARD_TRIS; glasses are the unchanged
+# "glasses" prop (212 tris). Low-segment primitives (spheres ≤ 10 × 6, small parts 6 × 3). Head-local coordinates:
+# head sphere centre (0, 0.26, 0), r 0.28, face towards −Z. Hair, headscarf and beard use the hair colour (accent);
+# stubble is a skin/hair blend, hair ties use the outfit colour (primary).
+
+## ModelSpec.style.hair / .beard vocabularies (== DataValidator.MODEL_HAIR_STYLES / MODEL_BEARDS); the first entry of
+## each is Kai's canon look.
+const HAIR_STYLES: PackedStringArray = ["short", "buzz", "long", "bun", "curls", "ponytail", "braids", "headscarf",
+	"bald"]
+const BEARDS: PackedStringArray = ["none", "stubble", "moustache", "full"]
+const HAIR_TRIS_ADD: int = 150
+const BEARD_TRIS: int = 100
+## Hair styles that cover the ears (the ear spheres are left out instead of poking through).
+const HAIR_HIDES_EARS: PackedStringArray = ["long", "headscarf"]
+
+
+## The hair parts of `hair` (HAIR_STYLES) in the hair colour `acc`; ties in the outfit colour `prim`.
+static func _humanoid_hair(bp: Dictionary, hair: String, acc: Color, prim: Color) -> void:
+	var tie: Color = prim
+	match hair:
+		"short":                                 # Kai's canon parts, unchanged (cap, fringe, two tufts)
+			_add(bp, "Head", _p(MeshUtil.sphere(0.30), Vector3(0, 0.36, 0.04), acc, Vector3.ZERO, Vector3(1, 0.72, 1)))
+			_add(bp, "Head", _p(MeshUtil.capsule(0.055, 0.40), Vector3(0, 0.425, -0.19), acc, Vector3(-20, 0, 90),
+				Vector3(1.35, 1.2, 1.1)))
+			_add(bp, "Head", _p(MeshUtil.cone(0.07, 0.16), Vector3(0.06, 0.60, 0.04), acc, Vector3(-25, 0, -20)))
+			_add(bp, "Head", _p(MeshUtil.cone(0.06, 0.13), Vector3(-0.07, 0.59, 0.08), acc, Vector3(-35, 0, 25)))
+		"buzz":                                  # a close cap with a straight hairline
+			_add(bp, "Head", _p(_sphere_lo(0.29, 10, 6), Vector3(0, 0.30, 0.035), acc))
+		"long":                                  # cap, side-swept fringe, a curtain down the back, locks over the ears
+			_add(bp, "Head", _p(MeshUtil.sphere(0.30), Vector3(0, 0.36, 0.04), acc, Vector3.ZERO, Vector3(1.02, 0.74, 1.02)))
+			_add(bp, "Head", _p(_sphere_lo(0.14, 6, 3), Vector3(0.09, 0.45, -0.17), acc, Vector3(-25, 0, -22),
+				Vector3(1.35, 0.5, 0.8)))
+			_add(bp, "Head", _p(_sphere_lo(0.29, 8, 5), Vector3(0, 0.10, 0.20), acc, Vector3.ZERO, Vector3(1.0, 1.25, 0.55)))
+			for sx: float in [-1.0, 1.0]:
+				_add(bp, "Head", _p(_sphere_lo(0.075, 6, 3), Vector3(0.255 * sx, 0.16, -0.05), acc, Vector3.ZERO,
+					Vector3(0.9, 2.6, 1.1)))
+		"bun":                                   # hair pulled back, a bun on the back of the head, a tie
+			_add(bp, "Head", _p(MeshUtil.sphere(0.295), Vector3(0, 0.33, 0.035), acc, Vector3.ZERO, Vector3(1, 0.82, 1)))
+			_add(bp, "Head", _p(_sphere_lo(0.12, 8, 5), Vector3(0, 0.56, 0.17), acc))
+			_add(bp, "Head", _p(MeshUtil.cylinder(0.075, 0.075, 0.04), Vector3(0, 0.49, 0.15), tie, Vector3(-40, 0, 0)))
+		"curls":                                 # a round base and six bumps (low segments read as curls)
+			_add(bp, "Head", _p(_sphere_lo(0.31, 8, 6), Vector3(0, 0.38, 0.04), acc, Vector3.ZERO, Vector3(1.05, 0.80, 1.05)))
+			for c: Vector3 in [Vector3(0, 0.60, 0.04), Vector3(-0.21, 0.52, -0.03), Vector3(0.21, 0.52, -0.03),
+					Vector3(-0.17, 0.47, 0.22), Vector3(0.17, 0.47, 0.22), Vector3(0.0, 0.56, -0.15)]:
+				_add(bp, "Head", _p(_sphere_lo(0.10, 6, 3), c, acc))
+		"ponytail":                              # Kai's cap and fringe, a tail hanging behind, a tie
+			_add(bp, "Head", _p(MeshUtil.sphere(0.30), Vector3(0, 0.36, 0.04), acc, Vector3.ZERO, Vector3(1, 0.72, 1)))
+			_add(bp, "Head", _p(MeshUtil.capsule(0.055, 0.40), Vector3(0, 0.425, -0.19), acc, Vector3(-20, 0, 90),
+				Vector3(1.35, 1.2, 1.1)))
+			_add(bp, "Head", _p(_capsule_lo(0.07, 0.42, 6, 1), Vector3(0, 0.20, 0.33), acc, Vector3(-12, 0, 0)))
+			_add(bp, "Head", _p(MeshUtil.cylinder(0.06, 0.06, 0.05), Vector3(0, 0.40, 0.30), tie, Vector3(-12, 0, 0)))
+		"braids":                                # parted cap, two braids over the shoulders (two plaits, tie, tip)
+			_add(bp, "Head", _p(_sphere_lo(0.30, 8, 6), Vector3(0, 0.36, 0.04), acc, Vector3.ZERO, Vector3(1, 0.74, 1)))
+			for sx: float in [-1.0, 1.0]:
+				_add(bp, "Head", _p(_sphere_lo(0.065, 6, 3), Vector3(0.245 * sx, 0.10, 0.02), acc, Vector3.ZERO,
+					Vector3(1, 1.3, 1)))
+				_add(bp, "Head", _p(_sphere_lo(0.06, 6, 3), Vector3(0.255 * sx, -0.02, -0.02), acc, Vector3.ZERO,
+					Vector3(1, 1.3, 1)))
+				_add(bp, "Head", _p(MeshUtil.cylinder(0.04, 0.04, 0.03), Vector3(0.258 * sx, -0.09, -0.035), tie))
+				_add(bp, "Head", _p(MeshUtil.cone(0.045, 0.08), Vector3(0.26 * sx, -0.14, -0.04), acc, Vector3(180, 0, 0)))
+		"headscarf":                             # a scarf around head and ears (the face stays open), draped round the neck
+			_add(bp, "Head", _p(MeshUtil.sphere(0.31), Vector3(0, 0.27, 0.05), acc, Vector3.ZERO, Vector3(1.0, 1.05, 1.0)))
+			_add(bp, "Head", _p(MeshUtil.cylinder(0.235, 0.33, 0.15), Vector3(0, -0.035, 0.02), acc))
+		_:                                       # "bald": no hair parts
+			pass
+
+
+## The beard parts of `beard` (BEARDS) in the hair colour `acc` (stubble: a skin / hair blend).
+static func _humanoid_beard(bp: Dictionary, beard: String, acc: Color, skin: Color) -> void:
+	match beard:
+		"stubble":                               # a shadow over jaw and chin
+			_add(bp, "Head", _p(_sphere_lo(0.215, 8, 5), Vector3(0, 0.135, -0.085), skin.lerp(acc, 0.4), Vector3.ZERO,
+				Vector3(1.2, 0.62, 0.86)))
+		"moustache":                             # two puffs over the mouth
+			for sx: float in [-1.0, 1.0]:
+				_add(bp, "Head", _p(_sphere_lo(0.05, 6, 3), Vector3(0.042 * sx, 0.183, -0.262), acc, Vector3(0, 0, -14 * sx),
+					Vector3(1.45, 0.62, 0.75)))
+		"full":                                  # jaw, chin and cheeks, the mouth stays visible, a moustache bar
+			_add(bp, "Head", _p(_sphere_lo(0.235, 8, 4), Vector3(0, 0.115, -0.07), acc, Vector3.ZERO,
+				Vector3(1.14, 0.8, 0.93)))
+			_add(bp, "Head", _p(MeshUtil.box(Vector3(0.12, 0.03, 0.03)), Vector3(0, 0.185, -0.268), acc))
+		_:                                       # "none"
+			pass
 
 
 ## Pendler costume head: newspaper with clock (03_ART §5.4 newspaper_head). `c` = head center, k = scale.

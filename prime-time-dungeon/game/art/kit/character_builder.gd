@@ -1,7 +1,9 @@
 class_name CharacterBuilder extends RefCounted
 ## ModelSpec → CharacterRig (02_TECH §8.4, 03_ART §5). Procedural archetypes from primitives (art/kit/archetypes.gd);
 ## a ModelSpec with an existing `gltf` path is wrapped in a CharacterRig subclass that maps the AnimationPlayer clips
-## (art/kit/gltf_rig.gd, 03_ART §10). Merged part meshes are cached per ModelSpec (base + pose + colors + props + seed).
+## (art/kit/gltf_rig.gd, 03_ART §10). Merged part meshes are cached per ModelSpec (base + pose + colors + props + seed
+## + style). Casting (08 §6.2, K2): the optional ModelSpec.style {"hair", "beard"} of a humanoid picks its hair style
+## and beard (art/kit/archetypes.gd, merged into the Head mesh — no extra MeshInstance3D).
 
 const Archetypes := preload("res://art/kit/archetypes.gd")
 const GltfRig := preload("res://art/kit/gltf_rig.gd")
@@ -44,6 +46,16 @@ static func supported_props() -> PackedStringArray:
 	return Archetypes.PROPS.duplicate()
 
 
+## Casting (08 §6.2, K2): == DataValidator.MODEL_HAIR_STYLES (ModelSpec.style.hair; test asserts).
+static func supported_hair_styles() -> PackedStringArray:
+	return Archetypes.HAIR_STYLES.duplicate()
+
+
+## Casting (08 §6.2, K2): == DataValidator.MODEL_BEARDS (ModelSpec.style.beard; test asserts).
+static func supported_beards() -> PackedStringArray:
+	return Archetypes.BEARDS.duplicate()
+
+
 ## pose "auto": rodent with scale >= 1.0 → &"upright", else &"quadruped"; "quadruped"/"upright" force it.
 ## Other bases have a fixed natural pose (pug, insect → &"quadruped", all others → &"upright").
 static func resolve_pose(model: Dictionary) -> StringName:
@@ -61,7 +73,8 @@ static func resolve_pose(model: Dictionary) -> StringName:
 
 
 ## Normalized ModelSpec used by the archetypes: base (unknown → humanoid), scale (0.3..4.0), pose (resolved),
-## colors (slot → Color, archetype defaults for missing slots), props (known, unique, in order).
+## colors (slot → Color, archetype defaults for missing slots), props (known, unique, in order), style ({"hair",
+## "beard"} for a humanoid — missing or unknown → the canon "short" / "none"; {} for every other base).
 static func normalize(model: Dictionary) -> Dictionary:
 	var base: String = str(model.get("base", "humanoid"))
 	if not Archetypes.BASES.has(base):
@@ -92,7 +105,24 @@ static func normalize(model: Dictionary) -> Dictionary:
 				props.append(ps)
 	var spec: Dictionary = {"base": base, "scale": scale, "colors": colors, "props": props}
 	spec["pose"] = resolve_pose({"base": base, "pose": str(model.get("pose", "auto")), "scale": scale})
+	spec["style"] = _normalize_style(base, model.get("style", {}))
 	return spec
+
+
+## Casting (08 §6.2, K2): {"hair", "beard"} for a humanoid (defaults = Kai's canon look), {} otherwise.
+static func _normalize_style(base: String, raw: Variant) -> Dictionary:
+	if base != "humanoid":
+		return {}
+	var given: Dictionary = raw if raw is Dictionary else {}
+	var hair: String = str(given.get("hair", Archetypes.HAIR_STYLES[0]))
+	var beard: String = str(given.get("beard", Archetypes.BEARDS[0]))
+	if not Archetypes.HAIR_STYLES.has(hair):
+		push_warning("CharacterBuilder: unknown hair style '%s' → %s" % [hair, Archetypes.HAIR_STYLES[0]])
+		hair = Archetypes.HAIR_STYLES[0]
+	if not Archetypes.BEARDS.has(beard):
+		push_warning("CharacterBuilder: unknown beard '%s' → %s" % [beard, Archetypes.BEARDS[0]])
+		beard = Archetypes.BEARDS[0]
+	return {"hair": hair, "beard": beard}
 
 
 static func clear_cache() -> void:
@@ -219,7 +249,10 @@ static func _cache_key(m: Dictionary, seed: int) -> String:
 	var seed_part: String = str(seed) if props.has("cable_tangle") else "0"
 	# recipes are defined at scale 1 (the Model node scales), except the compact brute below scale 1.0
 	var variant: String = "compact" if str(m["base"]) == "brute" and float(m["scale"]) < 1.0 else ""
-	return "%s|%s|%s|%s|%s|%s" % [str(m["base"]), str(m["pose"]), ",".join(cs), ",".join(props), seed_part, variant]
+	var style: Dictionary = m.get("style", {})
+	var style_part: String = "%s,%s" % [str(style["hair"]), str(style["beard"])] if not style.is_empty() else ""
+	return "%s|%s|%s|%s|%s|%s|%s" % [str(m["base"]), str(m["pose"]), ",".join(cs), ",".join(props), seed_part, variant,
+		style_part]
 
 
 ## AABB of all meshes in rig space (rest pose, including the model scale).

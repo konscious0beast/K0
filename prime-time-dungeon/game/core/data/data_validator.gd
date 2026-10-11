@@ -44,7 +44,9 @@ const MODEL_PROPS: PackedStringArray = ["cape", "crown", "monocle", "top_hat", "
 	"shield", "halberd", "rat_king_tail", "ticket_crown", "wrench", "axe", "crowbar", "cart", "discount_tag"]
 const MODEL_POSES: PackedStringArray = ["auto", "quadruped", "upright"]
 ## Casting (08 §6.2, K0): optional ModelSpec.style {"hair", "beard"} — only for base "humanoid" (K2 builds them).
-const MODEL_HAIR_STYLES: PackedStringArray = ["short", "buzz", "long", "bun", "curls", "ponytail", "bald"]
+## K2 change request (integrator): + "braids", "headscarf" (inclusive hair options, before "bald").
+const MODEL_HAIR_STYLES: PackedStringArray = ["short", "buzz", "long", "bun", "curls", "ponytail", "braids",
+	"headscarf", "bald"]
 const MODEL_BEARDS: PackedStringArray = ["none", "stubble", "moustache", "full"]
 const THEMES: PackedStringArray = ["metro", "mall"]
 const SAFE_ROOM_THEMES: PackedStringArray = ["kiosk", "pumphouse", "signalbox"]

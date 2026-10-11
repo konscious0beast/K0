@@ -140,17 +140,17 @@ Umbenennungen kosten dank datengetriebenem Design (`res://data/*.json`, `mod_lin
 
 | Element (Brief/GDD) | Nähe | Vorschlag (Entscheidung durch dich) |
 |---|---|---|
-| **Fan-Box** (Lootbox-Stufe) | „Fan Box“ ist ein bekannter DCC-Begriff | → **„Fanpost-Paket“** (ID `box_fan` bleibt) |
+| **Fan-Box** (Lootbox-Stufe) | „Fan Box“ ist ein bekannter DCC-Begriff | → **„Fanpost-Paket“** (ID `box_fan` bleibt) — **umgesetzt im Polish-Pass (2026-10-10):** Daten, Toasts, M.O.D.-Zeilen, UI, Doku; der Validator (`validators/ip_words.gd`) sperrt „Fan-Box“ in jedem Text |
 | Bronze/Silber/Gold-**Box** | Medaillen-Stufen sind generisch, in Kombination mit „Box“ nah | → **„Requisitenkiste Bronze/Silber/Gold“** (IDs `box_bronze`/`box_silver`/`box_gold` bleiben) |
 | **Quartier-Boss** | Stadtviertel-Boss-Hierarchie ist DCC-typisch | → **„Revier-Boss“** (Entscheidung; passt zur Bürokratie-Satire). IDs bleiben: Boss `enm_boss_hausmeister`, Raum-Typ `RoomCell.Kind.QUARTER_BOSS`, Encounter `enc_f1_boss_hausmeister` |
 | **NOVA SYNDIKAT** | „Syndicate“ ist in DCC eine zentrale Instanz | → **„NOVA MEDIENGRUPPE“** / Kurzform **„NOVA“** (Palette-Token `NOVA_MAGENTA`/`NOVA_CYAN` bleiben) |
-| Graf Mopsula | eitles, adelsbewusstes Haustier, wird Magier, Publikumsliebling — als *Archetyp* frei, aber Kombination nah | **behalten**, aber konsequent eigen ausprägen: Hund statt Katze, Tierheim-Biografie („schwer vermittelbar“), Pluralis Majestatis, Adels-Fehde mit der Rattenkönigin; **keine** Show-/Wettbewerbs-Vergangenheit, **kein Kronen-Motiv an Mopsula** (siehe nächste Zeile) |
+| Graf Mopsula | eitles, adelsbewusstes Haustier, wird Magier, Publikumsliebling — als *Archetyp* frei, aber Kombination nah | **behalten**, aber konsequent eigen ausprägen: Hund statt Katze, Tierheim-Biografie („schwer vermittelbar“, Zwinger 7), **eigene Stimme statt Pluralis Majestatis** (Polish-Pass 2026-10-10): ein belehrender Grafen-Gelehrter in der Ich-Form mit Fußnoten („Fußnote 7: …“), pseudolateinischen Formeln und Mitternachts-/Grafen-Pathos; Fehde mit der Rattenkönigin („Hochstapelei“); **keine** Show-/Wettbewerbs-Vergangenheit, **keine Königs-, Kronen- oder Thron-Motive an Mopsula** (siehe nächste Zeile; Validator `ip_words.gd`) |
 | Kronen an Mopsula (Item + Optik) | „adliges Haustier mit Krone“ ist DCC-Archetyp-nah | **bereits im Slice umgesetzt, bindend:** Waffe heißt `itm_wpn_collar_signet` „Siegel-Halsband“ (Werte unverändert MAG +11, MP +10; ersetzt das frühere „Kronen-Halsband“). Optik-Signatur: **goldene Siegel-Plakette am Halsband (Torus + Box, Metall-Material M)**, **kein** `crown`-Prop am Mopsula-Rig. `itm_acc_queen_crown` „Rattenkrone“ hat `equip_by: ["kai"]` — Mopsula kann sie nicht tragen. Die Krone der Rattenkönigin (`ticket_crown`) bleibt: Sie ist die Gegenspielerin, deren Adelsanspruch Mopsula verspottet. |
 | Erdoberfläche wird „zurückgebaut“ | Prämissen-Idee, frei — aber prominent | **behalten**, in Marketing nicht als Haupt-Hook nutzen; Hook ist das Show-System |
 | Safe Room | Gattungsbegriff in Spielen | behalten (In-World-Name je Raum: „Kiosk 24/7“, „Pumpenhaus“, „Stellwerk“) |
 
-**Regel für den Slice:** Die Anzeigenamen „Fan-Box“, „NOVA SYNDIKAT“ und „Quartier-Boss“ bleiben in Brief, GDD und ART
-vorerst stehen (der Brief ist bindend). Alle IDs sind bewusst **neutral** (`box_fan`, `enm_boss_hausmeister`, `RoomCell.Kind.QUARTER_BOSS`,
+**Regel für den Slice:** Die Anzeigenamen „NOVA SYNDIKAT“ und „Quartier-Boss“ bleiben in Brief, GDD und ART
+vorerst stehen (der Brief ist bindend); „Fan-Box“ ist seit dem Polish-Pass überall „Fanpost-Paket“ (E2, erster Schritt). Alle IDs sind bewusst **neutral** (`box_fan`, `enm_boss_hausmeister`, `RoomCell.Kind.QUARTER_BOSS`,
 keine Marken-IDs, 01_GDD §16 ID-Anhang). Die Umbenennungen aus E2 sind damit **reine Textänderungen** in `name`/`text`
 (`res://data/*.json`, `mod_lines.json`) plus Brief-/GDD-Fließtext — keine Code-, Schema- oder Spielstand-Migration.
 Neue Inhalte ab Phase 2 verwenden in Dialogen und Store-Texten bereits die Ersatznamen, wenn E2 entschieden ist.
@@ -848,7 +848,7 @@ anderen — auch wenn deren Implementierung noch fehlt. Die Tests von M1/M2 nutz
 | # | Entscheidung | Mein Vorschlag | Bis wann |
 |---|---|---|---|
 | E1 | Szenario A/B/C | **B anstreben, A als Rückfall** (Kap. 4.4) | Start Phase 3 |
-| E2 | Distanz-Review: Umbenennungen (Fan-Box → „Fanpost-Paket“, Quartier-Boss → „Revier-Boss“, NOVA SYNDIKAT → „NOVA MEDIENGRUPPE“, Box → „Requisitenkiste“) | Vorschläge aus Kap. 2.3 übernehmen; reine Textänderung in `name`/`text`, IDs (`box_fan`, `enm_boss_hausmeister`) bleiben. Mopsula-Kronenverzicht (`itm_wpn_collar_signet`, `acc_queen_crown` nur Kai) ist bereits umgesetzt | Exit Phase 2 |
+| E2 | Distanz-Review: Umbenennungen (Fan-Box → „Fanpost-Paket“, Quartier-Boss → „Revier-Boss“, NOVA SYNDIKAT → „NOVA MEDIENGRUPPE“, Box → „Requisitenkiste“) | Vorschläge aus Kap. 2.3 übernehmen; reine Textänderung in `name`/`text`, IDs (`box_fan`, `enm_boss_hausmeister`) bleiben. Mopsula-Kronenverzicht (`itm_wpn_collar_signet`, `acc_queen_crown` nur Kai) ist bereits umgesetzt; **Polish-Pass (2026-10-10):** „Fanpost-Paket“ umgesetzt, Mopsula ohne Pluralis Majestatis und Königs-Motive (`skl_mop_expert_opinion` „Gräfliches Gutachten“ statt „Königlicher Erlass“), Liga-Achievements neutral („Leichtes Gepäck im Doppelpack“), Validator-Wortlisten `ip_words.gd` | Exit Phase 2 |
 | E3 | Finaler Titel | Markenrecherche „PRIME TIME DUNGEON“; Fallback „RATINGS DUNGEON“ | Exit Phase 2 |
 | E4 | Firmenform & Sitz | UG (haftungsbeschränkt) am Wohnort | Start Phase 3 |
 | E5 | Staffel-Schnitt | Staffel 1 = Etagen 1–6 (1.0), Staffel 2 = 7–9 (Erweiterung) | jetzt (Planungsgrundlage) |

@@ -48,7 +48,7 @@ Jede Etage hat einen Countdown; wer die Treppe nicht rechtzeitig findet, fliegt 
 | ID | Name | Rolle | Kern | Sprechweise |
 |---|---|---|---|---|
 | `kai` | **Kai** (frei benennbar, max. 12 Zeichen) | Spielfigur, Nahkampf/Tank | Tierpfleger:in im Tierheim „Pfotenglück“, Nachtschicht. Pragmatisch, trocken, kümmert sich zuerst um andere. Kämpft mit Improvisiertem (Wischmopp, Rohrzange). | Kurze Sätze, lakonisch. Flucht nie, Witze manchmal. |
-| `mopsula` | **Graf Mopsula** | Begleiter, Magier/Heiler | Mops, 9 Jahre, Zwingerschild: „Graf — schwer vermittelbar“. Kann im Dungeon sprechen, hält sich für Hochadel, entpuppt sich als Magier. Arrogant, eitel, loyal bis in die Knochen. Publikumsliebling. | Gestelzt, Pluralis Majestatis („Wir sind not amused“), nennt Kai „Kammerdiener:in“. |
+| `mopsula` | **Graf Mopsula** | Begleiter, Magier/Heiler | Mops, 9 Jahre, Zwinger 7, Zwingerschild: „Graf — schwer vermittelbar“. Kann im Dungeon sprechen, hält sich für einen Grafen und Gelehrten, entpuppt sich als Magier. Belehrend, eitel, loyal bis in die Knochen. Publikumsliebling. | Eigene Stimme, immer Ich-Form: doziert wie ein Grafen-Gelehrter, zitiert seine Fußnoten („Fußnote 7: …“), pseudolateinische Formeln („Tempus fugit!“), Mitternachts-Pathos, Tierheim-Biografie („In Zwinger 7 gab es nur Beton.“). Nennt Kai „Kolleg:in“. **Kein** Pluralis Majestatis, keine Königs-, Kronen- oder Thron-Motive (04_STRATEGIE §2.3; Validator `ip_words.gd`). |
 | `mod` | **M.O.D.** (Mediale Omnipräsente Direktorin) | System-KI, Moderatorin | Quotengeil, regelversessen, sarkastisch, heimlich sentimental. Kommentiert alles. Nie direkt grausam zu Kai, aber gnadenlos ehrlich über die Quote. | Moderationston, Werbeunterbrechungen, Paragrafen. Siehe Kap. 11. |
 | — | **NOVA SYNDIKAT** | Konzern, unsichtbar | Tritt nur über Logos, Sponsor-Drohnen, Kleingedrucktes und Werbeplakate auf. Kein Gesicht im Slice. | Corporate-Sprech, Disclaimer. |
 | `boss_hausmeister` | **Der Hausmeister** | Quartier-Boss | Ehemaliger Hausmeister des U-Bahn-Komplexes, vom Dungeon „übernommen“: 3 m groß, grauer Kittel, Schlüsselbund, besessen von der Hausordnung. Hält Kandidat:innen für Mieter mit Rückständen. | „§ 7 Absatz 2: Kein Lärm nach 22 Uhr!“ |
@@ -99,7 +99,8 @@ außer (5,0)↔(6,0). Zonenübergänge gibt es **nur** an: A(2,4)↔B(3,4), B(6,
 (`gate_track9`/`gate_lever` sind Namen in diesem Dokument; in den Daten ist ein Tor `{cell, dir, requires}`.)
 Dazu kommt **eine Kulissenwand** `sec_e1_wall_sewer` B(5,3)↔C(5,2) (06 §2.7, `layout.secrets`): eine rissige Pappwand in einer
 Türöffnung, die nur der Feldschlag oder das Bellen umwirft — dann ist sie eine Abkürzung (2 Zellwechsel je Richtung, solange
-`gate_lever` zu ist; im Bot gemessen ≈ 6 s je Durchquerung). Sie ist **optional**: jede Zelle bleibt ohne sie erreichbar.
+`gate_lever` zu ist; im Bot gemessen ≈ 6 s je Durchquerung, je Lauf Mittel 11,5 s: Seeds 1–10 → 8 × 6 s, 31 s, 36 s;
+Ziel ≥ 15 s je Lauf offen, 06 §8.2). Sie ist **optional**: jede Zelle bleibt ohne sie erreichbar.
 Alle anderen Nachbarschaften zwischen Zonen sind Wände.
 
 **Regie-Notizen** (06 §2.7, `layout.secrets`, je **+15 Follower** genau einmal, M.O.D. liest sie vor `regie_note:<n>`, Zähler
@@ -183,7 +184,7 @@ Schaufensterpuppen, Food-Court mit Pilzbewuchs, Dauer-Durchsagen „Nur heute!�
 | Schleichen | **2.5 m/s**, solange Action `sneak` gehalten wird (Shift / L3 / LT); Touch: Stick-Auslenkung ≤ 0.6 (Kap. 14.8). Hör-Radius der Gegner 4.0 → 1.5 m |
 | Beschleunigung / Abbremsen | 30 m/s² / 40 m/s² |
 | Drehgeschwindigkeit Modell | Slerp 12 rad/s zur Bewegungsrichtung |
-| Gesteuerte Figur (06 §1) | **Kai** (Standard) oder **Graf Mopsula** — Wahl bei „Neues Spiel“ (Kap. 14.2), Wechsel jederzeit im Safe Room („Figur wechseln“, Kap. 14.7). Die andere Figur folgt. Tempo, Beschleunigung und Kamera sind für beide gleich (Timer-Balancing unverändert) |
+| Gesteuerte Figur (06 §1) | **Kai** (Standard) oder **Graf Mopsula** — Wahl bei „Neues Spiel“ (Kap. 14.2), Wechsel jederzeit im Safe Room („Figur wechseln“, Kap. 14.7). Die andere Figur folgt. Tempo und Beschleunigung sind für beide gleich (Timer-Balancing unverändert); die Kamera rahmt je Figur (Kap. 2.2) |
 | Kollision | Kai `CapsuleShape3D` r = 0.4 m, h = 1.7 m; Graf Mopsula r = 0.35 m, h = 0.9 m |
 | Springen / Sprinten | keins |
 | **Aktion** (eine Action `action`: F / Space / Enter, Gamepad A (Button 0), Touch-Button „Aktion“ 96 px) | Liegt ein Interactable im Radius 1.5 m und im 120°-Kegel vor der Figur (Prompt sichtbar) → **Interagieren** (hat Vorrang; Mopsula öffnet Truhen „mit der Schnauze“). Sonst die **Feldfähigkeit**: Kai **Feldschlag** (Bogen 100°, Reichweite 1.8 m, Dauer 0.45 s, Cooldown 0.6 s); Graf Mopsula **Bellen** (Kegel 120°, 4.0 m, 0.4 s, Cooldown 3.0 s): Gruppen im Kegel mit Sichtlinie sind 2.5 s **verdutzt** (stehen still, violettes „?!“, sehen und hören nichts). Bellen startet **nie** einen Kampf; jede Gruppe ist höchstens 1× je 15 s verdutzbar; Bosse und der Fahrscheinfresser „zucken nur“ |
@@ -199,6 +200,8 @@ Spielweisen: Kai eröffnet Kämpfe sauber (Feldschlag), der Graf schleicht vorbe
 | Typ | `SpringArm3D` an Pivot (Kai + 1.4 m Höhe), Kollisionsmaske `world` |
 | Armlänge | Standard **7.0 m**, Zoom 5.0–9.0 m (Mausrad / Pinch) |
 | Pitch | Standard **−38°**, Grenzen −65° … −15° |
+| Rahmung je Figur (06 §1.2, `CameraRig.LEADER_FRAMING`) | Kai: Pivot 1.4 m, Vorlauf 2.5 m, Pitch −38°. **Graf Mopsula führt:** Pivot 1.0 m, Arm +1.5 m (zusätzlich zum Zoom), Vorlauf 1.5 m, Pitch −46° beim Start/Wechsel — die folgende Kai-Figur ist im Bild, ihr Kopf bleibt unter dem Grafen |
+| Türen | Der Vorlauf-Blickpunkt wird auch in Sturzhöhe (3.0 m) geprüft: Laufen auf eine offene Tür zu schiebt den Pivot nie durch die Öffnung (früher Nahaufnahme), die Kamera bleibt im Raum hinter der Figur |
 | Yaw | frei |
 | Empfindlichkeit | Maus (rechte Taste halten) 0.005 rad/px, Stick 2.6 rad/s, Touch-Drag 0.006 rad/px; jeweils × `camera_sensitivity` |
 | Auto-Recenter | nach 2.5 s ohne Kamera-Eingabe während Bewegung, Lerp 2.0/s hinter Kai |
@@ -437,7 +440,7 @@ Riskante Show-Aktion: Erfolg = viel Schaden + viel Hype; Fehlschlag = Peinlichke
 | ID | Charakter | Name | Ziel | Erfolg | Wirkung bei Erfolg | Fehlschlag |
 |---|---|---|---|---|---|---|
 | `stunt_kai_suplex` | Kai | **Bahnsteig-Suplex** | 1 Gegner | `0.60 + LCK × 0.01`, max 0.85 | `power 230`, `physical`, STR, kann kritisch treffen | Kai erleidet 10 % MaxHP, `ctr += roundi(base_delay × 0.5)` („liegt auf dem Rücken“) |
-| `stunt_mop_entrance` | Mopsula | **Auftritt Seiner Durchlaucht** | alle Gegner | `0.55 + LCK × 0.01`, max 0.85 | `power 140`, `fire`, MAG | Mopsula stolpert über den Umhang: Status `stun` auf sich selbst |
+| `stunt_mop_entrance` | Mopsula | **Auftritt um Mitternacht** | alle Gegner | `0.55 + LCK × 0.01`, max 0.85 | `power 140`, `fire`, MAG | Mopsula stolpert über den Umhang: Status `stun` auf sich selbst |
 
 ```text
 success_chance = clamp((success_base + LCK_eff * success_lck) * talent + (target_is_boss ? success_boss_mod : 0.0), 0.05, success_cap)
@@ -512,7 +515,7 @@ Absorption (negative Werte) gibt es im Slice nicht. Darstellung: Element `poison
 | `poison` | Vergiftet | 4 eigene Züge | Zugbeginn: −8 % MaxHP (min 1). Heilung durch `item_antidote`, `kai_first_aid`, `mop_mass_lick` | Gift-Skills | #7CC242 |
 | `stun` | Betäubt | bis zum nächsten eigenen Zug | Beim Anlegen sofort `ctr += base_delay` (Bosse: ×0.5). Solange aktiv: nicht erneut betäubbar. Wird zu Beginn des nächsten eigenen Zugs entfernt (der Zug findet statt). | `kai_cable_whip`, Stunt-Fehlschlag | #F5D90A |
 | `slow` | Verlangsamt | 3 eigene Züge | `delay × 1.5` | `kai_leash_trip`, `mop_frost_sneeze`, Spinnennetz | #5B8DEF |
-| `haste` | Turbo | 3 eigene Züge | `delay × 0.6` | `mop_royal_decree`, Sponsor KRAWUMM | #FF7A1A |
+| `haste` | Turbo | 3 eigene Züge | `delay × 0.6` | `mop_expert_opinion`, Sponsor KRAWUMM | #FF7A1A |
 | `guard` | Gepanzert | 3 eigene Züge | DEF und RES ×1.5 in der Schadensformel | `kai_taunt`, Sponsor Panzerkeks | #9AA7B8 |
 | `taunt` | Provoziert | 3 eigene Züge | Gegner-KI wählt mit 80 % den Träger als Ziel (nur Einzelziel-Aktionen) | `kai_taunt` | #E8455A |
 
@@ -682,7 +685,7 @@ Ergebniswerte (ohne Ausrüstung):
       "attack_skill": "skl_attack_mopsula",
       "learnset": [ { "level": 1, "skill": "skl_mop_noble_flame" }, { "level": 1, "skill": "skl_mop_holy_lick" },
                     { "level": 2, "skill": "skl_mop_frost_sneeze" }, { "level": 3, "skill": "skl_mop_thunder_bark" },
-                    { "level": 4, "skill": "skl_mop_royal_decree" }, { "level": 6, "skill": "skl_mop_mass_lick" },
+                    { "level": 4, "skill": "skl_mop_expert_opinion" }, { "level": 6, "skill": "skl_mop_mass_lick" },
                     { "level": 7, "skill": "skl_mop_revive" }, { "level": 9, "skill": "skl_mop_inferno" } ],
       "stunts": [ "skl_stunt_mop_entrance" ],
       "equipment": { "weapon": "itm_wpn_collar_leather", "armor": "itm_arm_pug_sweater", "accessory": "" },
@@ -770,13 +773,13 @@ Die Skill-Tabellen (Kap. 3.6, 4.5, 4.6, 5.1–5.3, 6.1) nutzen Kurzspalten. Verb
 
 | L | ID | Name | MP | Power | Rang | Ziel | Element | Skal. | Effekt / Beschreibung |
 |---|---|---|---|---|---|---|---|---|---|
-| 1 | `mop_noble_flame` | Adelsflamme | 4 | 110 | 3 | `enemy` | fire | mag | „Blaues Blut brennt heißer.“ |
+| 1 | `mop_noble_flame` | Adelsflamme | 4 | 110 | 3 | `enemy` | fire | mag | „„Flamma nobilis!“ Blaues Blut brennt heißer.“ |
 | 1 | `mop_holy_lick` | Heiliges Schlabbern | 4 | 100 | 2 | `ally` | none | mag (heal) | Heilung. „Eine Ehre, die keiner wollte.“ |
 | 2 | `mop_frost_sneeze` | Frostniesen | 5 | 105 | 3 | `enemy` | ice | mag | `slow` 3, Chance 0.25. |
 | 3 | `mop_thunder_bark` | Donnerbellen | 7 | 75 | 3 | `all_enemies` | shock | mag | „WUFF. Mit Hall.“ |
-| 4 | `mop_royal_decree` | Königlicher Erlass | 6 | 0 | 2 | `ally` | none | — | `haste` 3. „Wir befehlen: schneller!“ |
+| 4 | `mop_expert_opinion` | Gräfliches Gutachten | 6 | 0 | 2 | `ally` | none | — | `haste` 3. „„Tempus fugit!“ Laut Gutachten zu langsam.“ (bis zum Polish-Pass `mop_royal_decree` „Königlicher Erlass“; alte Spielstände werden beim Laden umgeschrieben, `SaveCodec.RENAMED_SKILLS`) |
 | 6 | `mop_mass_lick` | Massen-Schlabbern | 10 | 60 | 3 | `all_allies` | none | mag (heal) | Heilung + heilt `poison`. |
-| 7 | `mop_revive` | Sabber der Wiederkehr | 14 | 40 | 4 | `ko_ally` | none | revive | Belebt mit 40 % MaxHP (`heal_mode "pct"`, `power 40`, Ziel `single_ally_ko`). |
+| 7 | `mop_revive` | Sabber der Wiederkehr | 14 | 40 | 4 | `ko_ally` | none | revive | „Resurrectio sabberis!“ Belebt mit 40 % MaxHP (`heal_mode "pct"`, `power 40`, Ziel `single_ally_ko`). |
 | 9 | `mop_inferno` | Gräfliches Inferno | 14 | 130 | 4 | `all_enemies` | fire | mag | „Für die Ahnen. Alle 300 davon.“ |
 
 ### 4.7 Talent-Show (ab Level 3; 06 Kap. 2.2, `talents.json`)
@@ -788,8 +791,12 @@ Die Skill-Tabellen (Kap. 3.6, 4.5, 4.6, 5.1–5.3, 6.1) nutzen Kurzspalten. Verb
   Kampf oder Erkundung — die Kampfergebnisse zeigen nur einen Chip „TALENT BEREIT · im Safe Room wählen“ (Kap. 14.5).
 - **Angebot:** 2 verschiedene Talente aus dem Pool der Figur (12 je Figur, ⅓ Verhaltens-Talente), gewichtet gezogen; das Angebot
   hängt nur von Spielstand-Seed, Figur, Level und bisherigen Rängen ab — **Neuladen ändert es nicht**.
-- **Später:** „Später“ schließt die Show, die Wahl bleibt offen (Party-Seite im Pausemenü: „1 Wahl offen“).
-- **Stapeln:** Talente mit `max_rank` 2 können ein zweites Mal kommen („Wischtechnik II“).
+- **Später:** „Später“ schließt die Show, die Wahl bleibt offen (Party-Seite im Pausemenü: „2 Talente offen – im Safe Room
+  wählen“, solange die Figur noch keins hat; sonst hinter den Talenten der Chip „1 Wahl offen“).
+- **Stapeln:** Talente mit `max_rank` 2 können ein zweites Mal kommen („Wischtechnik II“); die Karte zeigt „Rang 1/2“ bzw.
+  „Rang 2/2“ (einrangige Talente: „Neu“).
+- **Kein Durchdrücken:** Die Karten blenden nach dem Öffnen und nach jeder Wahl 0.5 s ein und nehmen erst dann Eingaben an —
+  wer „Bestätigen“ gedrückt hält oder hämmert, wählt nie aus Versehen; jede Wahl ist ein bewusster Druck.
 - **Karten:** Icon, Name, Typ („WERT“ grün / „VERHALTEN“ cyan), ein Satz Witz, die Wirkung groß („Stärke +1“, „Gift-Schaden
   -25 %“) und eine Vorschau mit den echten Zahlen („Jetzt: Stärke 20 -> 21“).
 - **M.O.D.:** beim ersten Mal `talent_show_open` (Ein-Satz-Erklärung), nach jeder Wahl `talent_pick` bzw. `talent_pick:mopsula`.
@@ -1069,10 +1076,11 @@ nicht verkauf-/wegwerfbar. Nach Kampfende (Sieg **und** Flucht) gibt es keine KO
 | `wpn_collar_leather` | Lederhalsband | mopsula | MAG +4 → `mag 4` | 0 | 0 | common | Start |
 | `wpn_collar_studded` | Nietenhalsband | mopsula | MAG +7 → `mag 7` | 200 | 100 | rare | Automat SR1, Metallspind B, Lootbox rare |
 | `wpn_collar_signet` | Siegel-Halsband | mopsula | MAG +11, MP +10 → `mag 11`, `mp 10` | 460 | 230 | epic | Automat SR2/SR3, verschl. Spind D, Lootbox epic |
-| `wpn_collar_royal` | Hofjuwelier-Halsband | mopsula | MAG +14, MP +15 → `mag 14`, `mp 15` | 0 | 250 | epic | Lootbox epic (Pool ab Etage 2) |
+| `wpn_collar_royal` | Juwelen-Halsband | mopsula | MAG +14, MP +15 → `mag 14`, `mp 15` | 0 | 250 | epic | Lootbox epic (Pool ab Etage 2) |
 
 (`wpn_collar_signet` ersetzt das frühere „Kronen-Halsband“: kein Kronen-Motiv an Mopsula, 04_STRATEGIE §2.3. Optik: goldene
-Siegel-Plakette am Halsband.)
+Siegel-Plakette am Halsband. Polish-Pass: `wpn_collar_royal` heißt „Juwelen-Halsband“ statt „Hofjuwelier-Halsband“ — die ID
+bleibt, kein Hof-/Königsmotiv im Anzeigenamen.)
 
 ### 6.3 Rüstungen
 
@@ -1091,12 +1099,12 @@ Siegel-Plakette am Halsband.)
 |---|---|---|---|---|---|---|---|
 | `acc_lucky_ticket` | Glücks-Fahrschein | beide (`[]`) | LCK +5 | 150 | 75 | rare | Automat SR1, `fev_lost_candidate`, Fahrscheinfresser, Lootbox rare |
 | `acc_rubber_boots` | Gummistiefel | beide | `shock: resist` → `element_mods {"shock": 0.5}` | 200 | 100 | rare | Automat SR2/SR3, Kabelsalat, Lootbox rare |
-| `acc_sneakers` | Turnschuhe (gebraucht) | beide | SPD +2 | 260 | 130 | epic | Automat SR2/SR3, Lootbox epic |
+| `acc_sneakers` | Stoppuhr (gebraucht) (ID bleibt; Icon `stopwatch`, keine Schuh-/Fuß-Motive) | beide | SPD +2 | 260 | 130 | epic | Automat SR2/SR3, Lootbox epic |
 | `acc_gas_mask` | Gasmaske | beide | `poison: immune` → `element_mods {"poison": 0.0}` + `status_immune ["sts_poison"]` | 300 | 150 | common | Automat SR2/SR3, Metallspind C |
 | `acc_key_ring` | Schlüsselbund des Hausmeisters | beide | DEF +2, `crit_bonus 0.05` | 0 | 150 | rare | Hausmeister |
 | `acc_queen_crown` | Rattenkrone | **nur Kai** (`["kai"]`) | STR +3, MAG +3, SPD +1 | 0 | 250 | epic | Rattenkönigin |
 | `acc_fan_scarf` | Fan-Schal | beide | positive Hype-Gewinne ×1.2 → `show_mods {"hype_gain_mult": 1.2}` | 0 | 150 | rare | Follower-Meilenstein 1 000 |
-| `acc_clip_mic` | Ansteck-Mikro | beide | Follower-Gewinn ×1.15 → `show_mods {"follower_mult": 1.15}` | 0 | 150 | rare | Fan-Box |
+| `acc_clip_mic` | Ansteck-Mikro | beide | Follower-Gewinn ×1.15 → `show_mods {"follower_mult": 1.15}` | 0 | 150 | rare | Fanpost-Paket |
 
 `show_mods` wirken für die ganze Show, egal wer das Accessoire trägt; mehrere Quellen multiplizieren sich.
 
@@ -1247,9 +1255,9 @@ Etagenende** (gemessen Kap. 13).
 | Follower | ID | Belohnung | M.O.D.-Tag |
 |---|---|---|---|
 | 100 | `ms_100` | 1× `item_brutzel_burger` | `follower_milestone` |
-| 250 | `ms_250` | Fan-Box | `follower_milestone` |
+| 250 | `ms_250` | Fanpost-Paket | `follower_milestone` |
 | 500 | `ms_500` | 150 Credits | `follower_milestone` |
-| 1 000 | `ms_1000` | Fan-Box + `acc_fan_scarf` | `follower_milestone` |
+| 1 000 | `ms_1000` | Fanpost-Paket + `acc_fan_scarf` | `follower_milestone` |
 | 2 000 | `ms_2000` | Gold-Box | `follower_milestone` (E1 nur mit Top-Spiel erreichbar) |
 | 5 000 | `ms_5000` | Gold-Box + Titel „Quotenkönig:in“ | `follower_milestone` (ab Etage 2) |
 
@@ -1283,7 +1291,7 @@ in der Unterhosen-Liga und bekommt dauerhaft mehr Hype und Follower.** Alles fre
 | `mar_gourmet` | Schwachstellen-Gourmet | Triff in einem Kampf dreimal eine Schwachstelle. | — | 2 |
 
 Ein Präventivschlag aus dem **Bellen** (die Gruppe ist benommen und wird von jeder Seite erwischt) ist **kein Anschleichen**:
-er zählt nicht für „Schleichwerbung“ und nicht für „Leise Sohle“ (`ach_preemptive_3`), sondern als `bark_openers`; im Kampf
+er zählt nicht für „Schleichwerbung“ und nicht für „Überraschungsgast“ (`ach_preemptive_3`), sondern als `bark_openers`; im Kampf
 bleibt er ein Präventivschlag (Party zuerst, Hype +3, „Erster Eindruck“). Orchestrator-Entscheidung Integration Runde 4
 (06 §8.8 I-7).
 
@@ -1370,7 +1378,7 @@ game_overs, ko_mopsula, explore_seconds_since_battle, viewers_max` (+ Quest-Metr
 | `ach_stunt_first` | Showtalent | Schaffe deinen ersten Stunt. | `stunt_resolved` | `e.success == true && s.stunts_success == 1` | bronze | — | „DAS ist Fernsehen!“ |
 | `ach_stunt_fail_3` | Pannenshow | Verpatze 3 Stunts. | `stunt_resolved` | `e.success == false && s.stunts_fail == 3` | bronze | ✓ | „Drei Pannen. Wir machen eine eigene Sendung daraus.“ |
 | `ach_combo_first` | Eingespieltes Team | Lande deine erste Combo. | `combo` | `true` | bronze | — | „Mensch und Mops im Gleichschritt. Rührend. Und lukrativ.“ |
-| `ach_preemptive_3` | Leise Sohle | Starte 3 Kämpfe mit Präventivschlag. | `battle_started` | `e.encounter_type == "preemptive" && s.preemptives == 3` | bronze | — | „Von hinten. Dreimal. Die Ethikkommission ist im Urlaub.“ |
+| `ach_preemptive_3` | Überraschungsgast (bis zum Polish-Pass „Leise Sohle“, Fuß-Regel 06 §0.3) | Starte 3 Kämpfe mit Präventivschlag. | `battle_started` | `e.encounter_type == "preemptive" && s.preemptives == 3` | bronze | — | „Dreimal zuerst zugeschlagen. Die Monster verlangen jetzt eine Vorwarnung. Schriftlich.“ |
 | `ach_ambush_won` | Rückenwind | Gewinne einen Kampf nach einem Hinterhalt. | `battle_won` | `e.encounter_type == "ambush"` | bronze | — | „Überrascht und trotzdem gewonnen. Fast, als hätten Sie Talent.“ |
 | `ach_flee_first` | Taktischer Rückzug | Fliehe zum ersten Mal. | `battle_fled` | `s.battles_fled == 1` | bronze | — | „Feigheit, äh, Taktik! Auch dafür gibt es eine Box. Leider.“ |
 | `ach_sponsor_first` | Gesponsert | Erhalte dein erstes Sponsor-Geschenk. | `sponsor_gift` | `s.sponsor_gifts == 1` | bronze | — | „Ihr erster Sponsor! Bitte lächeln Sie in Kamera 3.“ |
@@ -1385,7 +1393,7 @@ game_overs, ko_mopsula, explore_seconds_since_battle, viewers_max` (+ Quest-Metr
 | `ach_hausmeister` | Feierabend | Besiege den Hausmeister. | `boss_defeated` | `e.boss_id == "enm_boss_hausmeister"` | silver | — | „Der Hausmeister ist in Rente. Unbefristet.“ |
 | `ach_hausmeister_no_items` | Ohne Hilfsmittel | Besiege den Hausmeister ohne Items. | `battle_won` | `e.boss_id == "enm_boss_hausmeister" && e.items_used == 0` | silver | — | „Ohne ein einziges Item. Die Sponsoren sind beleidigt. Ich bin beeindruckt.“ |
 | `ach_queen` | Gleis 9 geräumt | Besiege die Rattenkönigin von Gleis 9. | `boss_defeated` | `e.boss_id == "enm_boss_rattenkoenigin"` | gold | — | „Die Königin ist tot, lang lebe — ach, egal, ZUSCHAUERREKORD!“ |
-| `ach_queen_flawless` | Königlicher Auftritt | Besiege die Rattenkönigin ohne KO. | `battle_won` | `e.boss_id == "enm_boss_rattenkoenigin" && e.party_kos == 0` | gold | — | „Kein einziger KO. Graf Mopsula verlangt einen Thron. Abgelehnt.“ |
+| `ach_queen_flawless` | Königlicher Auftritt | Besiege die Rattenkönigin ohne KO. | `battle_won` | `e.boss_id == "enm_boss_rattenkoenigin" && e.party_kos == 0` | gold | — | „Kein einziger KO. Graf Mopsula verlangt dafür eine eigene Fußnote im Geschichtsbuch. Genehmigt.“ |
 | `ach_speedrun` | Expresszug | Verlasse Etage 1 mit mindestens 10:00 Restzeit. | `floor_completed` | `e.floor == 1 && e.timer_left >= 600` | gold | — | „Mit zehn Minuten Rest. Sie sind entweder genial oder haben nichts gesehen.“ |
 | `ach_last_minute` | Auf den letzten Drücker | Verlasse Etage 1 mit weniger als 1:00 Restzeit. | `floor_completed` | `e.floor == 1 && e.timer_left < 60` | silver | ✓ | „Unter einer Minute! Mein Regieraum hat geschrien. Vor Freude.“ |
 
@@ -1394,10 +1402,10 @@ game_overs, ko_mopsula, explore_seconds_since_battle, viewers_max` (+ Quest-Metr
 | ID | Name | Beschreibung (`desc`) | Trigger | Bedingung | Box | Hidden | M.O.D.-Spruch (`achievement:<id>`) |
 |---|---|---|---|---|---|---|---|
 | `ach_ul_first` | Einmal ohne alles | Gewinne einen Kampf in der Unterhosen-Liga (ohne Rüstung & ohne Accessoire). | `show_bet` | `e.kind == "liga" && e.event == "battle" && e.tier >= 1` | bronze | — | „Einmal ohne alles! Die Imbissbude nebenan bietet Ihnen einen Werbevertrag an.“ |
-| `ach_ul_boss` | Frische Brise im Revier | Besiege einen Boss in der Unterhosen-Liga. | `show_bet` | `… && e.tier >= 1 && e.is_boss == true` | silver | — | „Ein Boss, besiegt ohne Rüstung. Die Kantine benennt ein Gericht nach Ihnen. Es ist leicht bekömmlich.“ |
-| `ach_duo_first` | Doppel-Feinripp | Gewinne einen Kampf in der Duo-Liga: beide ohne Rüstung & ohne Accessoire. | `show_bet` | `… && e.tier == 2` | silver | — | „Doppel-Feinripp! Der Graf nennt es ‚Sommerkollektion‘. Ich nenne es Quote.“ |
-| `ach_duo_floor` | Eine Etage Feinripp | Gewinne alle Kämpfe einer Etage (mindestens 5) in der Duo-Liga. | `show_bet` | `e.kind == "liga" && e.event == "floor" && e.floor_tier == 2 && e.battles >= 5` | gold | — | „Eine ganze Etage im Doppel-Feinripp! Ich habe das Archiv angewiesen, es nie zu löschen.“ |
-| `ach_duo_flawless` | Ohne Kratzer, ohne Rüstung | Besiege den Etagenboss in der Duo-Liga, ohne dass jemand K.O. geht. | `show_bet` | `… && e.tier == 2 && e.is_floor_boss == true && e.party_kos == 0` | gold | ✓ | „Der Etagenboss, kein K.O., keine Rüstung. Ich muss mich setzen. Ich habe keinen Stuhl.“ |
+| `ach_ul_boss` | Frische Brise im Revier | Besiege einen Boss in der Unterhosen-Liga (ohne Rüstung & ohne Accessoire). | `show_bet` | `… && e.tier >= 1 && e.is_boss == true` | silver | — | „Ein Boss, besiegt ohne Rüstung & ohne Accessoire. Die Kantine benennt ein Gericht nach Ihnen.“ |
+| `ach_duo_first` | Leichtes Gepäck im Doppelpack | Gewinne einen Kampf in der Duo-Liga: beide ohne Rüstung & ohne Accessoire. | `show_bet` | `… && e.tier == 2` | silver | — | „Leichtes Gepäck im Doppelpack! Der Graf nennt es ‚Sommerkollektion‘. Ich nenne es Quote.“ |
+| `ach_duo_floor` | Eine Etage leichtes Gepäck | Gewinne alle Kämpfe einer Etage (mindestens 5) in der Duo-Liga: beide ohne Rüstung & ohne Accessoire. | `show_bet` | `e.kind == "liga" && e.event == "floor" && e.floor_tier == 2 && e.battles >= 5` | gold | — | „Eine ganze Etage mit leichtem Gepäck! Ich habe das Archiv angewiesen, es nie zu löschen.“ |
+| `ach_duo_flawless` | Ohne Kratzer, ohne Rüstung | Besiege den Etagenboss in der Duo-Liga (beide ohne Rüstung & ohne Accessoire), ohne dass jemand K.O. geht. | `show_bet` | `… && e.tier == 2 && e.is_floor_boss == true && e.party_kos == 0` | gold | ✓ | „Der Etagenboss, kein K.O., keine Rüstung, kein Accessoire. Ich muss mich setzen. Ich habe keinen Stuhl.“ |
 | `ach_bets_5` | M.O.D.s Liebling | Gewinne fünf Show-Wetten (M.O.D.s Vorlieben). | `show_bet` | `e.kind == "marotte" && e.event == "won" && s.bets_won == 5` | silver | — | „Fünf Wetten gewonnen. Sie kennen mich besser als meine Programmierer.“ |
 
 (`…` = `e.kind == "liga" && e.event == "battle"`.)
@@ -1425,7 +1433,7 @@ dieses Kapitels nicht.
 | Bronze | `box_bronze` | 2 | — | Achievements (bronze), Glücksrad |
 | Silber | `box_silver` | 3 | `rare` (≥ 1× rare oder besser) | Achievements (silver), Hausmeister |
 | Gold | `box_gold` | 4 | `epic` (≥ 1× epic) | Achievements (gold), Rattenkönigin, Meilenstein 2 000 |
-| Fan-Box | `box_fan` | 1 Fan-Item fix (`fixed_pool: "fan"`) + 2 Würfe | — | Meilensteine 250 / 1 000 |
+| Fanpost-Paket | `box_fan` | 1 Fan-Item fix (`fixed_pool: "fan"`) + 2 Würfe | — | Meilensteine 250 / 1 000 |
 
 ### 9.2 Seltenheits-Gewichte pro Wurf (`rarity_weights`)
 
@@ -1457,7 +1465,7 @@ Pro Wurf: zuerst Rarität nach diesen Gewichten, dann Eintrag aus `pools.f<etage
   "entries": [
     {"id": "box_bronze", "name": "Bronze-Box", "color": "#CD7F32", "rolls": 2,
      "rarity_weights": {"common": 80, "rare": 18, "epic": 2}, "guarantee": "", "fixed_pool": "", "mod_tag": "lootbox_open_bronze"},
-    {"id": "box_fan", "name": "Fan-Box", "color": "#FF5FA2", "rolls": 2,
+    {"id": "box_fan", "name": "Fanpost-Paket", "color": "#FF5FA2", "rolls": 2,
      "rarity_weights": {"common": 50, "rare": 40, "epic": 10}, "guarantee": "", "fixed_pool": "fan", "mod_tag": "lootbox_open_fan"}
   ],
   "pools": {"f1": {"common": [{"kind": "credits", "id": "", "amount": 15, "weight": 30},
@@ -1517,7 +1525,7 @@ gebaut mit `EnvKit.build_safe_room(seed, quality, theme)`.
 
 ### 10.2 Mopsula-Szenen (`scenes.json`, je 1×)
 
-Daten (`SceneDef`): `{"id": "scn_mop_1", "name": "Seine Durchlaucht", "condition": "<Ausdruck wie Kap. 8>", "lines": [{"voice":
+Daten (`SceneDef`): `{"id": "scn_mop_1", "name": "Fußnote 1", "condition": "<Ausdruck wie Kap. 8>", "lines": [{"voice":
 "mopsula" | "kai" | "mod", "text": "…"}], "set_flag": "", "once": true, "priority": 1}`. Prüfung beim Betreten eines Safe Rooms mit
 Payload `e = {safe_room_id, first_visit, safe_room_visits, kai_level}`; abgespielt über `ModDialog` in `scenes/safe_room/safe_room.gd`
 (M6), wenn der Spieler „Mopsula“ wählt. Pro Besuch höchstens **1** Szene (kleinste `priority` zuerst). Nach dem Abspielen setzt das
@@ -1537,50 +1545,58 @@ verloren geht, wenn der Spieler Mopsula beim ersten Mal nicht anspricht (abweich
 **Pep-Talk:** `BattleBridge.make_setup` gibt bei `is_boss` und gesetztem Flag `mop_pep_talk` beiden Party-Combatants `sts_guard` (2 Züge)
 und löscht das Flag.
 
-**Szene 1 — `scn_mop_1` „Seine Durchlaucht“** (Bedingung: erster Safe-Room-Besuch)
+**Szene 1 — `scn_mop_1` „Fußnote 1“** (Bedingung: erster Safe-Room-Besuch)
 
-> **Mopsula:** Kammerdiener:in. Setz dich. Wir müssen reden.
+> **Mopsula:** Kolleg:in. Setz dich. Es folgt ein kurzer Vortrag. Mit Fußnoten.
 > **Kai:** Du redest seit einer Stunde.
-> **Mopsula:** Mit dir. Nicht AN dich. Ein Unterschied, den das gemeine Volk selten begreift.
+> **Mopsula:** Mit dir. Nicht AN dich. Fußnote 1: ein Unterschied, den man im Grundstudium lernt.
 > **Kai:** Wieso kannst du überhaupt sprechen?
-> **Mopsula:** Wir konnten immer sprechen. Ihr habt nur nie zugehört. Neun Jahre „Na, du Dicker?“. Neun Jahre!
+> **Mopsula:** Ich konnte immer sprechen. Ihr habt nur nie zugehört.
+> **Mopsula:** Neun Jahre „Na, du Kleiner?“. Neun Jahre! Ich bin ein GRAF.
 > **Kai:** … Ich hab dir jeden Abend das Ohr gekrault.
 > **Mopsula:** *(Pause)* Das linke. Das linke war akzeptabel. Weitermachen.
 > **M.O.D. (Fernseher):** Zuschauer-Umfrage: 94 % wollen mehr vom Hund. Notiert.
 
 **Szene 2 — `scn_mop_2` „Ahnenreihe“** (Bedingung: Hausmeister besiegt; ab dem nächsten Safe-Room-Besuch)
 
-> **Mopsula:** Der Hausmeister. Er hatte einen Schlüssel für jede Tür und keine einzige, hinter der jemand auf ihn wartete.
+> **Mopsula:** Der Hausmeister. Er hatte einen Schlüssel für jede Tür.
+> **Mopsula:** Und keine einzige, hinter der jemand auf ihn wartete.
 > **Kai:** Das ist ungewohnt nachdenklich für dich.
-> **Mopsula:** Wir sind von hohem Geblüt. Nachdenklichkeit ist erblich. Unsere Ahnen waren Grafen, Herzöge —
-> **Kai:** Deine Mutter war aus einem Kofferraum in Polen.
-> **Mopsula:** EIN SEHR VORNEHMER KOFFERRAUM.
+> **Mopsula:** Nachdenklichkeit ist erblich. Fußnote 3: Meine Ahnen waren Grafen, Gelehrte, Nachtgestalten —
+> **Kai:** Laut deiner Akte wurdest du in einem Umzugskarton im Tierheim abgegeben.
+> **Mopsula:** EIN SEHR VORNEHMER UMZUGSKARTON. Mit Büchern darin.
 > **Kai:** *(lacht)*
 > **Mopsula:** … Wartet jemand auf dich? Da oben?
 > **Kai:** Da oben ist nichts mehr.
-> **Mopsula:** Dann warten Wir eben aufeinander. Das ist ein Befehl.
+> **Mopsula:** Dann warten wir eben aufeinander. Das ist keine Bitte. Das ist eine These.
 
 **Szene 3 — `scn_mop_3` „Das Tierheim“** (Bedingung: Kai-Level ≥ 4 und Szene 1 gesehen)
 
-> **Mopsula:** Weißt du, warum Wir „schwer vermittelbar“ waren?
+> **Mopsula:** Weißt du, warum ich in Zwinger 7 „schwer vermittelbar“ war?
 > **Kai:** Weil du jeden Besucher angeknurrt hast.
-> **Mopsula:** Weil sie die Falschen waren. Familien mit Kinderwagen. Pärchen mit Instagram. Niemand wollte einen alten Mops mit Atemgeräuschen.
+> **Mopsula:** Weil sie die Falschen waren. Familien mit Kinderwagen. Pärchen mit Selfie-Stab.
+> **Mopsula:** Niemand wollte einen alten Mops mit Atemgeräuschen.
 > **Kai:** Ich wollte dich adoptieren. Nächsten Monat. Die Papiere lagen schon in der Schublade.
 > **Mopsula:** *(lange Pause)* … Das sagst du nur wegen der Kameras.
 > **Kai:** Die Kameras sind mir egal.
-> **Mopsula:** Hmpf. Wir nehmen das zur Kenntnis. Unter Vorbehalt. *(dreht sich weg, Schwanz wedelt)*
+> **Mopsula:** Hmpf. Ich nehme das zu Protokoll. Unter Vorbehalt. *(dreht sich weg, Schwanz wedelt)*
 > **M.O.D.:** Diese Szene wird in 47 Galaxien gerade mit Taschentüchern beworben. Danke.
 
-**Szene 4 — `scn_mop_4` „Vor dem Thron“** (Bedingung: Besuch in `sr_signalbox`)
+**Szene 4 — `scn_mop_4` „Mitternacht auf Gleis 9“** (Bedingung: Besuch in `sr_signalbox`)
 **Belohnung:** Flag `mop_pep_talk` → im nächsten Bosskampf starten beide mit `guard` 2.
 
-> **Mopsula:** Sie nennt sich Königin. Eine RATTE. Mit einer Krone aus Fahrscheinen.
+> **Mopsula:** Sie nennt sich Königin. Eine RATTE. Mit Kopfschmuck aus gelochten Fahrscheinen.
 > **Kai:** Wir müssen nicht gegen sie kämpfen. Die Treppe ist gleich da.
-> **Mopsula:** Es gibt Dinge, die ein Adeliger nicht dulden kann. Hochstapelei ist eines davon.
+> **Mopsula:** Es gibt Dinge, die ein Graf nicht dulden kann. Fußnote 9: Hochstapelei.
 > **Kai:** Du bist ein Mops aus dem Tierheim.
-> **Mopsula:** Und du bist ein:e Tierpfleger:in mit einem Wischmopp. Und doch stehen wir hier. Lebend. Im Fernsehen.
+> **Mopsula:** Und du bist ein:e Tierpfleger:in mit einem Wischmopp. Und doch stehen wir hier.
+> **Mopsula:** Lebend. Im Fernsehen. Kurz vor Mitternacht.
 > **Kai:** … Okay. Zusammen.
-> **Mopsula:** Zusammen. Aber Wir gehen voraus. Wegen der Optik.
+> **Mopsula:** Zusammen. Aber ich gehe voraus. Wegen der Optik.
+
+Stimme (Polish-Pass, 04_STRATEGIE §2.3): Graf Mopsula spricht immer in der Ich-Form, doziert mit Fußnoten, Mitternachts-Pathos
+und Tierheim-Biografie (Zwinger 7) — kein Pluralis Majestatis, keine Königs-/Kronen-/Thron-Motive; seine Herkunft ist ein
+Umzugskarton im Tierheim, nie ein Land. „Wir“ in Kleinschreibung meint Kai und ihn zusammen.
 
 ---
 
@@ -1639,7 +1655,7 @@ Validator: max. **110 Zeichen** je Zeile, nur obige Platzhalter.
 | `lootbox_open_bronze` | „Bronze. Wie die Medaille für ‚Dabei sein ist alles‘.“ · „Eine Bronzebox! Was drin ist? Wahrscheinlich ein Pflaster. Mit Werbung.“ · „Bronze! Die Box, die sagt: ‚Wir haben an dich gedacht. Kurz.‘“ |
 | `lootbox_open_silver` | „Silber! Jetzt wird’s interessant. Ein bisschen.“ · „Silberbox! Garantiert mindestens selten. Steht so im Vertrag.“ |
 | `lootbox_open_gold` | „GOLD! Bitte Trommelwirbel. Den teuren!“ · „Eine Goldbox. Der Konzern hat dafür einen Mond verkauft.“ |
-| `lootbox_open_fan` | „Eine Fan-Box! Ihre Fans haben zusammengelegt. Ein paar haben Glitzer reingetan. Sorry.“ · „Von Fans, für Fans, gegen Monster. Rührend.“ |
+| `lootbox_open_fan` | „Ein Fanpost-Paket! Ihre Fans haben zusammengelegt. Ein paar haben Glitzer reingetan. Sorry.“ · „Von Fans, für Fans, gegen Monster. Rührend.“ |
 | `lootbox_pity` | „Endlich Glück! Und nein, das ist kein Algorithmus. Doch, ist es. Egal!“ |
 | `death` | „Sendeschluss. {name} und der Graf sind gefallen. Wiederholung um 3 Uhr nachts.“ · „Game Over. Die Zuschauer schalten ab. Ich schalte … noch nicht ab.“ · „Das war’s. Ich lege Ihnen eine Blume aufs Inventar.“ |
 | `mopsula_ko` | „DER GRAF IST GEFALLEN! Die Quote stürzt ab! Helfen Sie ihm, sofort!“ · „Unser Publikumsliebling liegt am Boden. Ich verlange eine Wiederbelebung, aus rein geschäftlichen Gründen.“ |
@@ -1648,7 +1664,7 @@ Validator: max. **110 Zeichen** je Zeile, nur obige Platzhalter.
 | `boss_intro:enm_boss_hausmeister` | „Applaus für den Hausmeister! Seit 34 Jahren im Dienst, seit 34 Minuten ein Monster.“ · „Achtung: Er hat einen Schlüssel für alles. Außer für Gnade.“ |
 | `boss_phase:enm_boss_hausmeister:2` | „Er verliest die Hausordnung! Paragraf sieben! Das wird hässlich.“ |
 | `boss_phase:enm_boss_hausmeister:3` | „Feierabend! Und ein Hausmeister im Feierabend kennt keine Regeln mehr!“ |
-| `boss_intro:enm_boss_rattenkoenigin` | „Ihre Majestät, die Rattenkönigin von Gleis 9! Bitte nicht auf den Schwanz treten. Die Schwänze.“ · „Zwei Adelige, ein Bahnsteig. Das ist das Duell, für das die Galaxis bezahlt hat!“ |
+| `boss_intro:enm_boss_rattenkoenigin` | „Ihre Majestät, die Rattenkönigin von Gleis 9! Sieben Ratten, ein Knoten, null Humor.“ · „Zwei Adelige, ein Bahnsteig. Das ist das Duell, für das die Galaxis bezahlt hat!“ |
 | `boss_phase:enm_boss_rattenkoenigin:2` | „Hören Sie das? Das ist der Zug auf Gleis 9. Er ist pünktlich. Zum ersten Mal überhaupt.“ |
 | `boss_train_warning` | „Zug fährt ein! Zurückbleiben, bitte — oder verteidigen Sie sich!“ |
 | `boss_phase:enm_boss_rattenkoenigin:3` | „Der Zug ist entgleist! Die Königin ist wütend! Ich bin begeistert!“ |
@@ -1667,15 +1683,15 @@ Validator: max. **110 Zeichen** je Zeile, nur obige Platzhalter.
 | Tag | Stimme | Zeilen |
 |---|---|---|
 | `timer_warn_600` | chat | „noch 10 min?? lauft!!“ · „zehn minuten. ich hol schnell popcorn nach“ |
-| `chat_handle` | chat | „xX_Gleisgeist_Xx“ · „OmaHilde1953“ · „mopsfan_88“ · „KeinZugMehr“ · „Pendlerin_42“ · „GrafFanclub“ · „u_bahn_ultra“ · „LeiseSohle“ |
-| `chat_hype_high` | chat | „DAS IST KINO“ · „mops for president!!!“ · „clip it clip it clip it“ |
+| `chat_handle` | chat | „xX_Gleisgeist_Xx“ · „OmaHilde1953“ · „mopsfan_88“ · „KeinZugMehr“ · „Pendlerin_42“ · „GrafFanclub“ · „u_bahn_ultra“ · „PssstRegie“ |
+| `chat_hype_high` | chat | „DAS IST KINO“ · „mops for prime time!!!“ · „clip it clip it clip it“ |
 | `chat_hype_mid` | chat | „solide runde bisher“ · „wer hat auch grad hunger“ · „der graf schaut heute so edel“ |
 | `chat_hype_low` | chat | „gähn“ · „kann mal wer was explodieren lassen“ · „ich schalt gleich um auf die kochshow“ |
 | `chat_crit` | chat | „KRIT!!“ · „das hat geknallt“ · „ZEITLUPE BITTE“ |
 | `chat_stunt_fail` | chat | „hahahaha neiiin“ · „F“ · „bester fail der staffel“ |
 | `chat_boring` | chat | „schon wieder dasselbe?“ · „copy-paste-kampf“ · „mach mal was anderes bitte“ |
 | `chat_mopsula` | chat | „GRAF MOPSULA <3“ · „der mops trägt diese show“ · „ich würde für den grafen sterben“ |
-| `mopsula_idle` | mopsula | „Wir ruhen. Störe Uns nur bei Weltuntergang. Erneut.“ · „Dieser Automat führt keine Leberwurst. Ein Skandal.“ · „Kammerdiener:in, das linke Ohr. Du weißt, welches.“ · „Der Fernseher redet zu viel. Wir respektieren das. Fast.“ · „Ein Sofa. Endlich ein Möbel, das Unseren Stand begreift.“ |
+| `mopsula_idle` | mopsula | „Ich ruhe. Fußnote 4: Weltuntergänge bitte schriftlich einreichen. Und nicht vor Mitternacht.“ · „Dieser Automat führt keine Leberwurst. Scandalum maximum.“ · „Kolleg:in, das linke Ohr. Fußnote 2: Das rechte ist für Notfälle.“ · „Der Fernseher redet zu viel. Ich auch. Aber mit Quellenangaben.“ · „Ein Sofa. In Zwinger 7 gab es nur Beton. Ich nehme es in meine Memoiren auf.“ |
 | `event_photo_drone_pose` | mod | „Lächeln! Das wird das Titelbild der Woche. Oder Ihr Nachruf. Beides verkauft sich.“ |
 | `event_photo_drone_smash` | mod | „Sie haben meine Kamera zertreten. Ich vergesse nichts. Ich bin buchstäblich ein Speicher.“ |
 | `event_lost_candidate_give` | mod | „Sie haben geteilt! Mit einem Fremden! Die Zuschauer sind verwirrt und gerührt.“ |
@@ -1696,7 +1712,7 @@ Validator: max. **110 Zeichen** je Zeile, nur obige Platzhalter.
 | `chat_secret` / `chat_secret_hint` | chat | Wand fällt: „PAPPWAND LOL“ · „wusste ichs, alles kulisse“ · „secret gefunden!!“ — erster Raum neben einer stehenden Kulissenwand: „die rissige wand da… ist die aus pappe??“ · „hau mal gegen die wand mit dem riss“ |
 | `marotte_announce:<id>` / `marotte_hit:<id>` | mod | je Vorliebe Ansage + Treffer (Kap. 7.8, Texte in `mod_lines.json`), z. B. „Ich habe heute eine Schwäche für Wischmopps. Fragen Sie nicht. Wischen Sie.“ / „Mit dem Mopp! Ich bekomme Gänsehaut. Ich habe keine Haut.“ |
 | `marotte_won[:<id>]` / `marotte_missed` | mod | „Wette gewonnen! Sie haben verstanden, was ich mag. Das ist mir fast unheimlich.“ · „Meine Vorliebe blieb unerfüllt. Ich trage es mit Fassung. Und Statistik.“ |
-| `liga_hint` / `liga_enter:1[:mopsula]` / `liga_enter:2` / `liga_win` / `liga_floor` / `liga_leave` | mod | „Kandidat:in ohne Rüstung, ohne Accessoire. § 3 Kleiderordnung sagt nein, die Quote sagt JA.“ · „Einmal Doppel-Feinripp, bitte. Mit scharf? Nein, mit Wischmopp.“ — nie sexuell, Unterwäsche bleibt an, keine Fuß-Bezüge (Validator-Sperre, 06 §0.3) |
+| `liga_hint` / `liga_enter:1[:mopsula]` / `liga_enter:2` / `liga_win` / `liga_floor` / `liga_leave` | mod | „Kandidat:in ohne Rüstung & ohne Accessoire. § 3 Kleiderordnung sagt nein, die Quote sagt JA.“ · „Zweimal ohne Rüstung & ohne Accessoire, bitte. Mit scharf? Nein, mit Wischmopp.“ — nennt eine Zeile die Regel, dann vollständig („ohne Rüstung & ohne Accessoire“); nie sexuell, kein Wäsche-Wortspiel („Feinripp“ ist gesperrt), keine Fuß-Bezüge (Validator-Sperren `marotten.gd`, `ip_words.gd`; 06 §0.3) |
 
 (Gesamt: 90 + 46 + 35 = **171 Zeilen**; dazu Block A aus 06 §1.5/§2.7: 21 Zeilen und 37 Marotten-/Liga-Zeilen aus Paket 06-C.)
 
@@ -1777,8 +1793,8 @@ ausgewertet, nur validiert (`id` beginnt mit `pas_`, `params` ist ein Dictionary
 | `cls_kai_runner` | kai | **Gleisläufer:in** | Tempo/Krit | SPD 1.20, LCK 1.20, DEF 0.90 | `pas_first_strike`: +25 % Krit auf erste Aktion je Kampf; Präventiv-Winkel 90° statt 110° |
 | `cls_kai_tinker` | kai | **Schrott-Tüftler:in** | Items/Elemente | MAG 1.30, STR 0.95 | `pas_tinkering`: Schadens-Items ×1.5, Items Rang 1 |
 | `cls_kai_showrunner` | kai | **Showrunner:in** | Hype/Stunts | LCK 1.25 | `pas_crowd_magnet`: Stunt-Erfolg +0.15, Stunt-Cooldown 2, Hype-Gewinne ×1.25 |
-| `cls_mop_archmage` | mopsula | **Hofmagier** | Elementar-DD | MAG 1.20, MP 1.10 | `pas_exploit`: Schwachstellen-Faktor 1.75 statt 1.5 |
-| `cls_mop_physician` | mopsula | **Leibarzt Seiner Hoheit** | Heiler | RES 1.15, HP 1.10 | `pas_bedside`: Heilung ×1.3; Zugbeginn heilt eigenes `poison` |
+| `cls_mop_archmage` | mopsula | **Erzmagister** (früher „Hofmagier“) | Elementar-DD | MAG 1.20, MP 1.10 | `pas_exploit`: Schwachstellen-Faktor 1.75 statt 1.5 |
+| `cls_mop_physician` | mopsula | **Medicus honoris causa** (früher „Leibarzt Seiner Hoheit“) | Heiler | RES 1.15, HP 1.10 | `pas_bedside`: Heilung ×1.3; Zugbeginn heilt eigenes `poison` |
 | `cls_mop_hexer` | mopsula | **Fluchgraf** | Debuffs | MAG 1.10, SPD 1.05 | `pas_curse`: Status-Chancen +0.25, Status-Dauer +1 |
 | `cls_mop_diva` | mopsula | **Diva** | Buffs/Show | LCK 1.20, RES 1.10 | `pas_spotlight`: Buff-Dauer +1, Sponsor-Schwellen 65/80/95 |
 
@@ -1794,9 +1810,9 @@ Skill-Freischaltung künftig wie bei der Party: `learnset[{level, skill}]`. Abwe
 | `spc_kai_neonfalter` | kai | **Neonfalter** | SPD 1.10, LCK 1.15, DEF 0.90 | `pas_lightdrunk`: Krit +10 % ab Hype 70 | Gleisläufer:in, Showrunner:in |
 | `spc_kai_pilzling` | kai | **Pilzling** | HP 1.10, RES 1.10, SPD 0.95 | `pas_spores`: gift-immun, 3 % MaxHP je Zug | Abrissbirne, Showrunner:in |
 | `spc_kai_teilautomat` | kai | **Teilautomat** | MAG 1.10, DEF 1.05, LCK 0.95 | `pas_coin_slot`: Verbrauchsitems +25 % | Schrott-Tüftler:in |
-| `spc_mop_glutmops` | mopsula | **Glutmops** | MAG 1.15, RES 0.95 | `pas_ember`: Feuer-Skills +15 % | Hofmagier |
+| `spc_mop_glutmops` | mopsula | **Glutmops** | MAG 1.15, RES 0.95 | `pas_ember`: Feuer-Skills +15 % | Erzmagister |
 | `spc_mop_spukmops` | mopsula | **Spukmops** | SPD 1.10, LCK 1.10, HP 0.90 | `pas_see_through`: erster gegnerischer Treffer −50 % | Fluchgraf, Diva |
-| `spc_mop_flattermops` | mopsula | **Flattermops** | SPD 1.15, DEF 0.95 | `pas_court_flight`: Kampfstart mit `haste`; Bellen +50 % | Leibarzt, Diva |
+| `spc_mop_flattermops` | mopsula | **Flattermops** | SPD 1.15, DEF 0.95 | `pas_court_flight`: Kampfstart mit `haste`; Bellen +50 % | Medicus, Diva |
 
 Kein Kronen-Motiv an Mopsula, auch nicht über eine Spezies-Optik (Validator: `crown`/`ticket_crown` verboten).
 
@@ -1824,8 +1840,8 @@ Kein Kronen-Motiv an Mopsula, auch nicht über eine Spezies-Optik (Validator: `c
 | Lootboxen pro Etage | 15–22 (06 §4.5; vor den Show-Wetten 15–20) | Achievements + Bosse + Meilensteine 250/1 000 (+ Glücksrad) + Show-Wette/Mut-Paket (Kap. 7.8) |
 | Show-Wetten je Etage (06 §4.10) | ohne gezieltes Spielen 0–1, gezielt alle | Staffel-Simulation E1 (Auto-Kampf, 8 Seeds): höchstens 1 gewonnen |
 | Unterhosen-Liga: Boss-Niederlage 1. Versuch | Stufe 1 ≤ 40 % / ≤ 55 %, Stufe 2 ≤ 55 % / ≤ 70 % (Hausmeister / Königin) | `test_06c_balance` (100 Seeds, Geschenke wie im Spiel): Stufe 1 27 % / 47 % (Graf Mopsula gesteuert 28 % / 35 %), Stufe 2 40 % / 56 % — Integration Runde 4 (Paket C: 26 % / 42 %, 37 % / 57 %); ohne Liga 17 % / 29 % |
-| Follower Ende E1 im Liga-Durchlauf | ≤ 2 000 in der Simulation (Rückkopplung gedämpft, Kap. 7.2), die Duo-Liga zahlt am meisten; Bot-Ziel seit Integration Runde 4: Liga 1 ≤ 1 800, Duo-Liga ≤ 2 000 und ≥ +25 % gegenüber ohne Liga | Staffel-Simulation (Median 8 Seeds): ohne Liga 1 357, Stufe 1 1 449, Stufe 2 1 512; Lootboxen 20 / 21,5 / 21. Full-Run-Bot `human`, *thorough*, Seeds 1–3, Kai / Graf Mopsula: ohne Liga 1 495 / 1 582, Stufe 1 1 759 / 1 525, Stufe 2 2 336 / 2 304 (Seeds 1–8: 2 064 / 2 222 — über dem Ziel), Boxen Stufe 2 28 / 29 (Bewertung 06 Kap. 8.4 „Stand Runde 4“; Paket C: 1 562 / 1 928 / 2 299) |
-| Follower am Ende E1 | 1 200–1 500 | Kap. 7.6 |
+| Follower Ende E1 im Liga-Durchlauf | ≤ 2 000 in der Simulation (Rückkopplung gedämpft, Kap. 7.2), die Duo-Liga zahlt am meisten; Bot-Band für den CTB bis R5 (Polish-Pass, 2026-10-10; vorher Liga 1 ≤ 1 800, Duo-Liga ≤ 2 000): **Liga 1 ≤ 1 900, Duo-Liga ≤ 2 400 Follower und ≤ 30 Lootboxen**, ≥ +25 % gegenüber ohne Liga | Staffel-Simulation (Median 8 Seeds): ohne Liga 1 357, Stufe 1 1 449, Stufe 2 1 512; Lootboxen 20 / 21,5 / 21. Full-Run-Bot `human`, *thorough*, Seeds 1–3, Kai / Graf Mopsula: ohne Liga 1 495 / 1 582, Stufe 1 1 759 / 1 525, Stufe 2 2 336 / 2 304 (Seeds 1–8: 2 064 / 2 222 — über dem alten Ziel 2 000, im CTB-Band ≤ 2 400), Boxen Stufe 2 28 / 29 (≤ 30) (Bewertung 06 Kap. 8.4 „Stand Runde 4“; Paket C: 1 562 / 1 928 / 2 299) |
+| Follower am Ende E1 | 1 200–1 500 | Kap. 7.6. Graf Mopsula gesteuert ohne Liga (L0): Bot *thorough* ~1 580 Follower / 17–18 Achievements — für den CTB akzeptiert (über 1 500 bzw. 12–16); **R4-Ziel:** Mopsula-Held L0 innerhalb der Basis-Bänder (06 Kap. 8.4) |
 | Max. Zuschauer E1 | 3 000–5 500 | Kap. 7.2 |
 | Hype am Kampfanfang / -ende (Median regulär) | 25–45 / 45–65 | Kap. 7.3 Dramaturgie: Abkühlen auf 25, Routinekampf +15–25, Sponsoren erst ab 70 |
 
@@ -1936,7 +1952,8 @@ Menü (`TitleScreen`): **Fortsetzen** (Slot mit dem neuesten `saved_at_unix`, nu
    Magie/Heilung), je mit drehender 3D-Vorschau; Kai hat den Fokus, Links/Rechts wechselt, ein Druck wählt, Zurück → Slots.
    Fußzeile: „Ihr startet immer zu zweit. Wechseln kannst du jederzeit im Safe Room.“
 3. Name eingeben — immer **Kais** Name (Standard „Kai“, `LineEdit.max_length = 12`; Bildschirmtastatur für Gamepad/Touch). Führt
-   der Graf, fragt er im Pluralis Majestatis: „Wie heißt Unser:e Begleiter:in?“ (Überschrift „BEGLEITER:IN“); Zurück → Figurenwahl
+   der Graf, fragt er in seiner eigenen Stimme: „Fürs Protokoll: Wie heißt mein:e Begleiter:in?“ (Überschrift „BEGLEITER:IN“;
+   kein Pluralis Majestatis); Zurück → Figurenwahl
 4. Modus: **Prime Time** (Normal) / **Vorabendprogramm** (Leicht: Timer 30:00, Gegnerschaden ×0.75, EXP ×1.2) — später im
    Optionsmenü nur absenkbar, nicht anhebbar (`GameState.difficulty`, Kap. 2.9)
 5. Intro-Cutscene (B0, letzte Studiozeile M.O.D. `hero_pick:<id>`) → Erkundung Etage 1
@@ -2068,8 +2085,10 @@ Tabellen in diesem Dokument nennen Kurz-IDs. Die Daten-IDs (Regexe aus 02_TECH �
 
 Flags (`GameState.flags`, `f.` in Ausdrücken): `mop_pep_talk`, `scene_<scene_id>`, `defeated_<enemy_id>`, `title_<ms_id>`.
 
-Anzeigenamen unter Distanz-Review (04_STRATEGIE §2.3, Aufgabe E2): „Fan-Box“, „Quartier-Boss“, „NOVA SYNDIKAT“. Die IDs sind
-neutral (`box_fan`, `enm_boss_hausmeister`, keine Marken-IDs) — eine Umbenennung ist eine reine Textänderung in `name`/`text`.
+Anzeigenamen unter Distanz-Review (04_STRATEGIE §2.3, Aufgabe E2): „Quartier-Boss“, „NOVA SYNDIKAT“; die frühere „Fan-Box“
+heißt seit dem Polish-Pass überall **„Fanpost-Paket“** (Daten, Zeilen, UI, Doku; ID `box_fan` bleibt, Validator
+`validators/ip_words.gd` verbietet „Fan-Box“ in jedem Text). Die IDs sind neutral (`box_fan`, `enm_boss_hausmeister`, keine
+Marken-IDs) — eine Umbenennung ist eine reine Textänderung in `name`/`text`.
 
 ### 16.2 Dateien in `res://data/`
 

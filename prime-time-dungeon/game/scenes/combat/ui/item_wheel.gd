@@ -35,8 +35,9 @@ func _init() -> void:
 	add_child(_name)
 
 
-## Entries of the wheel from the combat setup: battle items with a count left, sorted by rt.wheel then data order.
-static func entries_from(setup_items: Dictionary, used: Dictionary) -> Array[Dictionary]:
+## Entries of the wheel: battle items with a count left (RtSim.items, the live battle inventory; minus `used`), sorted
+## by rt.wheel then data order.
+static func entries_from(setup_items: Dictionary, used: Dictionary = {}) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var ids: Array = setup_items.keys()
 	ids.sort_custom(func(a: Variant, b: Variant) -> bool:

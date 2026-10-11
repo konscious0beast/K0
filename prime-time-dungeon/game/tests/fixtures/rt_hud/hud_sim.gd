@@ -15,12 +15,11 @@ var gcds: Dictionary = {}                  # unit id → Vector2i(left, total)
 var suggestions: Dictionary = {}           # unit id → skill id (assist)
 var specials: Dictionary = {}              # partner unit id → Partner-Spezial skill id
 var item_cd: Vector2i = Vector2i.ZERO
-var items: int = 3
+var items_count: int = 3                   # items_left() (the parent's `items` is the battle inventory)
 var commands: Array[Dictionary] = []       # every submit: {"tick", "cmd", "answer"}
 
 var _units: Array[RtUnit] = []
-var _ctl: String = "p0"
-var _now: int = 0
+var _now: int = 0                          # tick(); the controlled id is the parent's _ctl
 
 
 func _init(p_setup: RtSetup, p_data: GameData) -> void:
@@ -170,7 +169,7 @@ func item_cd_total() -> int:
 
 
 func items_left() -> int:
-	return items
+	return items_count
 
 
 func snapshot() -> Dictionary:

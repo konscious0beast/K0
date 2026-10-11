@@ -84,7 +84,6 @@ var _toast_t: float = 0.0
 var _flee_left: int = -1
 var _flee_at: int = -1
 var _threat: bool = false
-var _used_items: Dictionary = {}
 var _ending: bool = false
 var _modes_applied: bool = false
 var _fail_t: float = 0.0
@@ -135,7 +134,6 @@ func bind(p_sim: RtSim) -> void:
 	CombatStyle.data = _data
 	_ending = false
 	_threat = threat_unlocked()
-	_used_items.clear()
 	sent.clear()
 	_flee_left = -1
 	for c: Control in [frames, plates]:
@@ -381,8 +379,6 @@ func on_event(e: ActionEvent) -> void:
 				_threat = true
 				frames.set("threat_revealed", true)
 				plates.set("threat_revealed", true)
-			if e.item_id != "" and e.actor_id.begins_with("p"):
-				_used_items[e.item_id] = int(_used_items.get(e.item_id, 0)) + 1
 		ActionEvent.Type.CAST_START:
 			if e.actor_id.begins_with("e") and int(e.rt.get("worthy", 0)) == 1:
 				_play(SFX_DING)
@@ -643,7 +639,7 @@ func open_wheel(_from_pad: bool = false) -> void:
 		at = touch_ui.call("center_of", "slot6") as Vector2
 	elif bar.call("slot_rect", CombatView.SLOT_POTION) != Rect2():
 		at = bar.get_global_rect().position + (bar.call("slot_rect", CombatView.SLOT_POTION) as Rect2).get_center()
-	wheel.call("open", ItemWheel.entries_from(sim.setup.items, _used_items), at + Vector2(0, -150))
+	wheel.call("open", ItemWheel.entries_from(sim.items), at + Vector2(0, -150))
 
 
 func wheel_stick(v: Vector2) -> void:

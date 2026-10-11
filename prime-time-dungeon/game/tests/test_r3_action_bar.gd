@@ -41,7 +41,7 @@ func test_slot_states_come_from_the_sim() -> void:
 	sim.call("set_reason", "p0", "skl_kai_heavy_swing", "mp")
 	sim.call("set_reason", "p0", "skl_kai_leash_trip", "range")
 	sim.call("set_reason", "p0", "skl_kai_taunt", "target")
-	sim.set("items", 2)
+	sim.set("items_count", 2)
 	sim.set("item_cd", Vector2i(150, 450))
 	p0.queued = {"skill": "skl_kai_sweep", "target": "", "at": 0}
 	sim.set("suggestions", {"p0": "skl_stunt_kai_suplex"})

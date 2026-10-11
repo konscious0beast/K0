@@ -193,9 +193,10 @@ static func slots(sim: RtSim, ctx: Dictionary = {}) -> Array[Dictionary]:
 
 
 static func _item_max(sim: RtSim) -> int:
-	if sim != null and sim.setup != null and sim.setup.balance != null:
-		return sim.setup.balance.i("ITEM_MAX_PER_COMBAT")
-	return 3
+	var b: RtBalance = sim.bal if sim != null else null              # the sim's balance (setup.balance or the data)
+	if b == null and sim != null and sim.setup != null:
+		b = sim.setup.balance
+	return b.i("ITEM_MAX_PER_COMBAT") if b != null and b.i("ITEM_MAX_PER_COMBAT") > 0 else 3
 
 
 ## 0..1 remaining of a running cooldown / GCD (0 when none).

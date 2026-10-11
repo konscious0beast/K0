@@ -15,6 +15,8 @@ var origin: Vector3 = Vector3.ZERO
 var heights: Dictionary = {}               # unit id → head height in m (captures: the rig's height)
 ## The HUD (on_event) that advance() feeds with the events of every tick.
 var hud: Node = null
+## Every event advance() produced (the real sim's stream; the HudSim double produces none).
+var events: Array[ActionEvent] = []
 
 
 func submit(cmd: Dictionary) -> void:
@@ -55,6 +57,7 @@ func advance(n: int) -> int:
 			break
 		var evs: Array[ActionEvent] = sim.step()
 		done += 1
+		events.append_array(evs)
 		if hud != null:
 			for e: ActionEvent in evs:
 				hud.call("on_event", e)

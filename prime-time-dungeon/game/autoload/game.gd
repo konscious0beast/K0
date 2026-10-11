@@ -1524,8 +1524,8 @@ func has_dialog_presenter() -> bool:
 # ======================================================================================================================
 # Casting (08, K0 → K1 persona command / K2 look) — the API of 08 §10.2 Nr. 8
 # ======================================================================================================================
-# K1: the persona command is recorded for every new game with a profile (the casting; the full-run bot). The look is
-# still a K2 stub: _persona_battle_look — STUB(K0) — owned by 08-K2. Replace completely, keep the public API.
+# K1: the persona command is recorded for every new game with a profile (the casting; the full-run bot). K2: the look
+# reaches the CTB battle through _persona_battle_look (presentation only).
 
 ## The candidate persona of the running slot (08 §2.2): local presentation data (name, form, job, look, …), never
 ## part of GameState, the run log or a hash; the core only sees the ids of the "persona" command. null = no persona
@@ -1561,6 +1561,11 @@ func _choose_initial_persona(p: PersonaProfile) -> void:
 
 
 ## K2 (08 §6.3): the kai combatant's presentation model from the persona look, `model = DB.party_model("kai")` right
-## after BattleBridge.make_setup (Combatant.model is not in to_dict, the hash or the log). Stub: nothing.
-func _persona_battle_look(_setup: BattleSetup) -> void:
-	pass
+## after BattleBridge.make_setup — the battle stage and the HUD portraits build kai from it (scenes/battle/** stays
+## untouched). Combatant.model is not in to_dict, the hash or the log; without a persona it stays the def model.
+func _persona_battle_look(setup: BattleSetup) -> void:
+	if setup == null or persona == null:
+		return
+	for c: Combatant in setup.party:
+		if c.def_id == DB.LOOK_MEMBER:
+			c.model = DB.party_model(c.def_id)

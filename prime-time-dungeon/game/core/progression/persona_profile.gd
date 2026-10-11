@@ -1,17 +1,19 @@
 class_name PersonaProfile extends RefCounted
 ## The candidate's local presentation data (08 §2.2): name, word form, Vorleben (origin + optional job), hobby,
-## traits, look (K2), story beats, AI lines (K3). Never part of GameState, never recorded, never synced; stored per
-## slot in user://persona/slot_N.json (Save.persona_path). Loading checks everything against the catalog again:
-## unknown ids show the canon value (08 §2.5), rejected texts are dropped. The K0 fields `talent` and `offer` stay
-## empty until 09 ST0 (CR-33).
+## traits, look (K2: one looks.json id per kind — ids only, never colours or a model), story beats, AI lines (K3).
+## Never part of GameState, never recorded, never synced; stored per slot in user://persona/slot_N.json
+## (Save.persona_path). Loading checks everything against the catalog again: unknown ids show the canon value
+## (08 §2.5), rejected texts are dropped. The K0 fields `talent` and `offer` stay empty until 09 ST0 (CR-33).
 
 const FORMAT: String = "ptd_persona"
 const VERSION: int = 1
 const FORMS: PackedStringArray = ["f", "m", "n"]
 const SOURCES: PackedStringArray = ["canon", "offline", "ai"]
 ## The fields "Rest automatisch" fills when the player did not set them (fill_unset); "origin" covers occupation and
-## the free text, "hobby" its free text.
-const FIELDS: PackedStringArray = ["name", "form", "origin", "hobby", "traits"]
+## the free text, "hobby" its free text, "look" (K2) all six look kinds.
+const FIELDS: PackedStringArray = ["name", "form", "origin", "hobby", "traits", "look"]
+## The look kinds of data/looks.json (08 §6.1), the keys of `look`.
+const LOOK_KINDS: PackedStringArray = ["hair", "hair_color", "skin", "beard", "glasses", "outfit"]
 const MAX_TRAITS: int = 3
 const ALLROUND: String = "org_allround"
 const COLLEAGUES: String = "gr_colleagues"     # the greeting without a hobby (08 §4.6)
@@ -44,9 +46,30 @@ static func canon(data: GameData) -> PersonaProfile:
 	p.occupation = str(c.get("occupation", ""))
 	p.hobby = str(c.get("hobby", ""))
 	p.traits = JsonUtil.to_str_array(c.get("traits", []))
+	p.look = canon_look(data)
 	p.source = "canon"
 	p.make_beats(data, null)
 	return p
+
+
+## K2 (08 §6.1): the canon look ({kind: lk id} of the canon options — Kai's look; {} without looks data).
+static func canon_look(data: GameData) -> Dictionary:
+	return clean_look({}, data)
+
+
+## K2: `l` with one id per look kind — unknown, missing or foreign ids (an id of another kind) become the kind's canon
+## id, other keys are dropped ({} without looks data).
+static func clean_look(l: Dictionary, data: GameData) -> Dictionary:
+	var out: Dictionary = {}
+	if data == null:
+		return out
+	for kind: String in LOOK_KINDS:
+		var e: Dictionary = data.look(str(l.get(kind, "")))
+		if e.is_empty() or str(e.get("kind", "")) != kind:
+			e = data.look_canon(kind)
+		if not e.is_empty():
+			out[kind] = str(e["id"])
+	return out
 
 
 ## A persona file dictionary (08 §2.2); another format or a higher "v" → the canon persona (warning). Everything is
@@ -103,6 +126,7 @@ func fill_unset(data: GameData, set_fields: PackedStringArray) -> void:
 		hobby_text = ""
 	if not set_fields.has("traits"):
 		traits = c.traits.duplicate()
+	look = clean_look(look, data) if set_fields.has("look") else c.look.duplicate()   # K2: the look editor
 	var any: bool = false
 	for f: String in FIELDS:
 		any = any or set_fields.has(f)
@@ -142,6 +166,12 @@ func validate(data: GameData) -> PackedStringArray:
 		seen[t] = true
 	if talent != "":
 		out.append("talent: must be empty (CR-33)")
+	for kind: Variant in look.keys():               # K2 (08 §2.2): one look id per kind, known and of that kind
+		var e: Dictionary = data.look(str(look[kind]))
+		if not LOOK_KINDS.has(str(kind)):
+			out.append("look: unknown kind '%s'" % str(kind))
+		elif e.is_empty() or str(e.get("kind", "")) != str(kind):
+			out.append("look: '%s' is no %s option" % [str(look[kind]), str(kind)])
 	return out
 
 
@@ -179,6 +209,12 @@ func sanitize(data: GameData) -> PackedStringArray:
 	if clean != traits:
 		traits = clean
 		fixed.append("traits")
+	var full_look: Dictionary = clean_look(look, data)  # K2: missing kinds silently canon, unknown ids are corrections
+	for kind: Variant in look.keys():
+		if str(full_look.get(str(kind), "")) != str(look[kind]):
+			fixed.append("look")
+			break
+	look = full_look
 	if not _beats_valid(data):
 		make_beats(data, null, true)
 		fixed.append("beats")

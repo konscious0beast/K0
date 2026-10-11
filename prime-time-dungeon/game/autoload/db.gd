@@ -120,12 +120,22 @@ func data_hash() -> String:
 	return _data_hash
 
 
-# --- Casting (08 §6.3, K0) --------------------------------------------------------------------------------------------
-# STUB(K0) — owned by 08-K2. Replace completely, keep the public API.
+# --- Casting (08 §6.3, K0 → K2) ---------------------------------------------------------------------------------------
 
-## THE place where a party figure's ModelSpec comes from (08 §6.3): PartyMemberDef.model, for "kai" mixed with the
-## running persona's look (PersonaLook.apply, K2). Stub: a copy of the def model ({} for an unknown member).
+## The member whose figure wears the persona look (the candidate, 08 §2.4).
+const LOOK_MEMBER: String = "kai"
+
+
+## THE place where a party figure's ModelSpec comes from (08 §6.3, K2): a copy of PartyMemberDef.model; for "kai" mixed
+## with the running persona's look (Game.persona, PersonaLook.apply — presentation only, never in a hash or a log).
+## Without a persona (tests, autoplay, event runs: the canon Kai) and for every other member: the def model; {} for an
+## unknown member. The one figure entry for the exploration rigs (also the real-time puppets), the safe room, the
+## intro and the CTB battle (Game._persona_battle_look); later also the equipment look (03_ART A8).
 func party_model(member_id: String) -> Dictionary:
 	if not data.has_id("party", member_id):
 		return {}
-	return data.party_member(member_id).model.duplicate(true)
+	var model: Dictionary = data.party_member(member_id).model.duplicate(true)
+	var persona: PersonaProfile = Game.persona
+	if member_id != LOOK_MEMBER or persona == null:
+		return model
+	return PersonaLook.apply(model, persona.look, data)

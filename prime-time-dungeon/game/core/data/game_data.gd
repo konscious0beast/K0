@@ -408,6 +408,16 @@ func looks_of(kind: String) -> Array[Dictionary]:
 	return out
 
 
+## Casting (08 §6.1, K2): the canon option of a look category (Kai's look; "canon": true, else the first; {} if the
+## category has none).
+func look_canon(kind: String) -> Dictionary:
+	var list: Array = _looks_by_kind.get(kind, [])
+	for d: Dictionary in list:
+		if bool(d.get("canon", false)):
+			return d
+	return list[0] if not list.is_empty() else {}
+
+
 func _build_persona(norm: Dictionary) -> void:
 	for d: Dictionary in norm.get("origins", []):
 		if not _origins.has(str(d["id"])):

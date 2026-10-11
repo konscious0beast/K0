@@ -264,6 +264,8 @@ func run_boss_intro(p_ctx: Dictionary, boss: Node3D, boss_enemy_id: String, boss
 			await get_tree().process_frame
 		if Events.dialog_finished.is_connected(cb):
 			Events.dialog_finished.disconnect(cb)
+	if is_instance_valid(cam):
+		cam.call("end_crane")
 	if phase == Phase.INTRO:
 		phase = Phase.IDLE
 

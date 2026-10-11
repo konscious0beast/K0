@@ -504,6 +504,17 @@ func is_craning() -> bool:
 	return not _shot.is_empty()
 
 
+## Ends the boss crane at once in the orbit pose (the intro is over: the combat never starts mid-crane, whatever
+## the frame timing of the intro timer and the crane's own clock).
+func end_crane() -> void:
+	if _shot.is_empty():
+		return
+	_shot = {}
+	if _cam != null:
+		_cam.transform = Transform3D(Basis(), Vector3(0.0, 0.0, _len))
+		_cam.fov = FOV
+
+
 ## Light shake (07 §7.5: 0.15 s, 0.08 m on party hits); GameSettings.camera_shake is checked by the caller.
 func shake(sec: float, amp: float) -> void:
 	_shake_total = maxf(sec, 0.01)

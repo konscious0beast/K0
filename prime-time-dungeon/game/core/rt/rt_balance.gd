@@ -1,11 +1,11 @@
-# STUB(R1a) — owned by R1b. Replace completely, keep the public API.
 class_name RtBalance extends RefCounted
 ## Typed real-time tuning values (07 §3.16). Keys, types, allowed ranges and the start values are code (owned by R1:
 ## only R1 changes the structure); the VALUES live in data/rt_balance.json ({"schema": 1, "values": {…}}, owned by R4,
 ## part of DB.data_hash). from_data() reads them once per combat; a missing file or key falls back to DEFAULTS.
 ## validate() is V1 + V14 of 07 §4.10 (validators/rt.gd calls it from R4 on; test_r1a_contract checks the file).
 ## Values are integers or {sub key: integer} (IMPACT_TICKS, REACT_TICKS, AI_DODGE_MISS_PM, SET_R_CM).
-## R1a ships this class complete (it is the key/range table); R1b may extend the getters, never the keys alone.
+## R1a shipped this class complete (it is the key/range table); R1b took it over unchanged (from_data reads the file
+## once per combat in BattleBridge.make_rt_setup, RtSim falls back to it). Getters may grow, the keys never alone.
 
 const SCHEMA: int = 1
 ## Start values (07 §3.16, identical to data/rt_balance.json at R1a).

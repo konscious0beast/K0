@@ -102,7 +102,8 @@ static func _hash(d: Dictionary, what: String) -> String:
 # --- Echtzeitkampf (07, R1a → R1b) ------------------------------------------------------------------------------------
 
 ## SHA-256 over the canonical JSON of sim.snapshot() (07 §10.4) without display names (every "display_name" key: the
-## Def names are presentation, 08 §2.7 Nr. 5 / CR-24); "" for null. Complete once RtSim.snapshot() is (R1b).
+## Def names are presentation, 08 §2.7 Nr. 5 / CR-24); "" for null. RtSim.snapshot() is complete since R1b-I1 (every
+## unit, status and combat field moves the hash, test_r1_rt_pure).
 static func of_rt(sim: RtSim) -> String:
 	if sim == null:
 		return ""

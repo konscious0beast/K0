@@ -143,6 +143,8 @@ func _run() -> void:
 		await _section_battle()
 	if _wants("safe_room"):
 		await _section_safe_room()
+	if _wants_combat():
+		await _section_combat()                # Echtzeitkampf (07 §8.10, R2)
 	if _wants("startup"):
 		_print_build_table()
 	if _wants("leak"):
@@ -1067,3 +1069,317 @@ func _free_screens() -> void:
 	Sfx.music(&"", 0.0)
 	await get_tree().process_frame
 	await get_tree().process_frame
+
+
+# ======================================================================================================================
+# --- Echtzeitkampf (07, R2) ---
+# ======================================================================================================================
+# Scenarios combat_regular, combat_two_groups, combat_boss_queen (07 §8.10, §12.3; --only=combat or the names): a
+# real-time combat in the world of seed 4242 played by the world fixture (tests/fixtures/rt_world/world_stream.gd) WITH
+# effects — the telegraph pool filled to all 10 quads, zones, swings and hits (sparks), the extras (Komparsen) and the
+# boss's adds — the director ticking in real time; maximum over the 4 camera directions. Budgets 07 §8.10 / 02_TECH
+# §12.1 (combat): DC 3D ≤ 150, UI ≤ 180, primitives ≤ 120 000, materials ≤ 24, Label3D ≤ 12, particles ≤ 400 / 6
+# emitters, bodies ≤ 40 (exploration + the collision ring), lights as in the exploration. Frame time: the director's own
+# cost per frame (tick loop + puppets + telegraphs) and Godot's process / physics time per frame.
+
+const RT_SCENARIOS: PackedStringArray = ["combat_regular", "combat_two_groups", "combat_boss_queen"]
+const RT_SAMPLES: int = 16                    # drawn frames per camera direction
+const RT_TIMING_FRAMES: int = 60              # frames of the timing pass (no scene audit): exploration vs. combat
+const RT_WARMUP_SEC: float = 1.2              # entry, pop-in and first effects before the samples
+const RT_BOSS_COURT_TICK: int = 350           # world fixture "boss": 2 rats at tick 10, 3 more at 300 (+ their walk)
+const RT_FIXTURE: String = "res://tests/fixtures/rt_world/world_stream.gd"
+const BUDGET_COMBAT: Dictionary = {"dc3d": 150, "dc2d": 180, "prims": 120000, "mats": 24, "bodies": 40}
+
+
+func _wants_combat() -> bool:
+	if _only.is_empty() or _only.has("combat"):
+		return true
+	for s: String in RT_SCENARIOS:
+		if _only.has(s):
+			return true
+	return false
+
+
+func _section_combat() -> void:
+	var rows: Array[Dictionary] = []
+	for sc: String in RT_SCENARIOS:
+		if _only.is_empty() or _only.has("combat") or _only.has(sc):
+			rows.append(await _rt_scenario(sc))
+	_table_head("Echtzeitkampf in der Welt (07 §8.10) — mit Effekten (10 Telegraph-Quads, Zonen, Treffer-Funken, " +
+		"Komparsen / Adds), Maximum über 4 Kamerarichtungen")
+	for r: Dictionary in rows:
+		_rt_row(str(r["label"]), r["acc"] as Dictionary)
+	_emit("")
+	_emit("Erkundung → Kampf im selben Raum (Erkundung: dieselben 4 Kamerarichtungen vor dem Auslösen). " +
+		"Zeitmessung ohne Szenen-Audit (%d Frames, gleiche Stelle und Kamera); Director = Tick-Schleife + Puppen + "
+		% RT_TIMING_FRAMES + "Telegraphen je Frame (`CombatDirector.cost_us`).")
+	_emit("")
+	_emit("| Szenario | Einheiten (Komparsen) | Telegraph-Quads | DC 3D | DC UI | Materialien | Körper (ohne Areas) | " +
+		"Frame ms Ø (max) | Process / Physics ms max Kampf | Director µs/Frame Ø / p95 (max) |")
+	_emit("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
+	for r: Dictionary in rows:
+		var t: Dictionary = r["time"]
+		var b: Dictionary = r["base"]
+		var ex: Dictionary = r["explore"]
+		var ac: Dictionary = r["acc"]
+		var arrow: Callable = func(k: String) -> String:
+			return "%d → %d" % [_rt_val(ex, k), _rt_val(ac, k)]
+		_emit("| %s | %d (%d) | %d | %s | %s | %s | %s | %.1f (%.1f) → %.1f (%.1f) | %.1f / %.1f | %d / %d (%d) |" % [
+			str(r["name"]), int(r["units"]), int(r["extras"]), int(r["quads"]), arrow.call("dc3d"), arrow.call("dccv"),
+			arrow.call("mats"), arrow.call("bodies"), float(b.get("frame_avg", 0.0)), float(b.get("frame_max", 0.0)),
+			float(t["frame_avg"]), float(t["frame_max"]), float(t["proc_max"]), float(t["phys_max"]),
+			int(t["dir_avg"]), int(t.get("dir_p95", 0)), int(t["dir_max"])])
+
+
+## A value of an audit accumulator for the comparison table: "dc3d" = visible + shadow pass, "bodies" = static +
+## kinematic + rigid.
+static func _rt_val(acc: Dictionary, k: String) -> int:
+	if k == "dc3d":
+		return int(acc.get("dc3d", 0)) + int(acc.get("dcsh", 0))
+	if k == "bodies":
+		return int(acc.get("static", 0)) + int(acc.get("kinematic", 0)) + int(acc.get("rigid", 0))
+	return int(acc.get(k, 0))
+
+
+## The exploration at the scenario's spot before the trigger: the same 4 camera directions, ROOM_SAMPLES frames each.
+func _rt_explore_audit(scene: ExplorationScene) -> Dictionary:
+	var acc: Dictionary = _new_acc()
+	var cam: Node3D = scene.get_camera_rig()
+	var yaw0: float = float(cam.get("yaw"))
+	for yaw: float in YAWS:
+		cam.set("yaw", yaw0 + yaw)
+		for i in SETTLE_FRAMES:
+			await get_tree().physics_frame
+		await _sample(ROOM_SAMPLES, acc)
+	cam.set("yaw", yaw0)
+	await _wait_frames_rt(SETTLE_FRAMES)
+	return acc
+
+
+## One scenario: {"name", "label", "acc", "time", "units", "extras", "quads"}.
+func _rt_scenario(sc: String) -> Dictionary:
+	Game.combat_mode_override = &"realtime"    # a new real-time game (07 §12.1, §3.9.4: run log header, HP scale)
+	Game.new_game(0, "Kai", FLOOR_SEED)
+	Game.combat_mode_override = &""
+	await _build_exploration()
+	var scene: ExplorationScene = _explore
+	await _wait_frames_rt(4)
+	var d: CombatDirector = scene.get_director()
+	d.present_results = false
+	d.auto_tick = true
+	scene.auto_start_battle = true
+	var out: Dictionary = {"name": sc, "label": sc, "acc": _new_acc(), "time": {"frame_avg": 0.0, "frame_max": 0.0,
+		"proc_max": 0.0, "phys_max": 0.0, "dir_avg": 0, "dir_max": 0}, "base": {}, "explore": _new_acc(), "units": 0,
+		"extras": 0, "quads": 0}
+	var layout: FloorLayout = scene.get_layout()
+	var boss: bool = sc == "combat_boss_queen"
+	var cell: Vector2i = Vector2i(0, 0) if boss else Vector2i(1, 3)
+	var fixture: GDScript = load(RT_FIXTURE) as GDScript
+	Game.rt_sim_factory = fixture.call("factory", scene, "boss" if boss else "loop", 3000)
+	var center: Vector3 = layout.cell_to_world(cell)
+	if boss:
+		var q: Node3D = scene.get_enemy("f1_fb")
+		var home: Vector3 = q.get("home")
+		var spot: Vector3 = home + Vector3(5.6, 0.0, 0.5)              # outside the 5 m trigger: the baseline first
+		_rt_place(scene, spot, home)
+		out["base"] = await _rt_timing(null)
+		out["explore"] = await _rt_explore_audit(scene)
+		spot = home + Vector3(4.0, 0.0, 0.5)
+		_rt_place(scene, spot, home)
+		var waited: int = 0
+		while Game.combat == null and waited < 1200:
+			await get_tree().process_frame
+			waited += 1
+			if d.phase == CombatDirector.Phase.INTRO and waited % 30 == 0:
+				_rt_quiet_dialog()
+	else:
+		var lead: Node3D = scene.get_enemy("f1_g3")
+		_rt_lead(lead, center + Vector3(0.0, 0.0, -1.5))
+		if sc == "combat_two_groups":
+			_rt_lead(scene.get_enemy("f1_g1"), center + Vector3(1.8, 0.0, 0.4))
+		var spot2: Vector3 = center + Vector3(0.0, 0.0, 2.6)
+		_rt_place(scene, spot2, lead.global_position)
+		await _wait_frames_rt(2)
+		out["base"] = await _rt_timing(null)
+		out["explore"] = await _rt_explore_audit(scene)
+		scene.pull("f1_g3", "skill", "perf")
+	if Game.combat == null:
+		_over.append("%s: kein Kampf gestartet (Director-Phase %d, pending %s, versteckt %s, Router busy %s / aktuell %s)"
+			% [sc, int(d.phase), scene.is_encounter_pending(), scene.get_player().is_hidden(), Router.busy,
+			Router.current == scene])
+		await _rt_leave(scene, d)
+		return out
+	_rt_quiet_dialog()
+	var t_end: int = Time.get_ticks_msec() + int(RT_WARMUP_SEC * 1000.0)
+	while Time.get_ticks_msec() < t_end:
+		await get_tree().process_frame
+	while boss and d.is_running() and Game.combat.tick() < RT_BOSS_COURT_TICK:
+		d.advance(10)                          # the queen's whole court: 3 more rats come at tick 300 (07 §8.10)
+		await get_tree().process_frame
+	out["quads"] = _rt_fill_telegraphs(d)
+	var units: int = 0
+	for u: RtUnit in Game.combat.units():
+		units += 1 if u.side == Combatant.Side.ENEMY else 0
+	out["units"] = units
+	out["extras"] = (d.puppets.get("_used") as Array).size()
+	var acc: Dictionary = out["acc"]
+	var cam: Node3D = scene.get_camera_rig()
+	var yaw0: float = float(cam.get("yaw"))
+	for yaw: float in YAWS:
+		cam.set("yaw", yaw0 + yaw)
+		for i in SETTLE_FRAMES:
+			await get_tree().physics_frame
+		for i in RT_SAMPLES:
+			await _sample(1, acc)
+			if int(d.telegraphs.call("visible_quads")) < 10:
+				_rt_fill_telegraphs(d)
+	cam.set("yaw", yaw0)
+	await _wait_frames_rt(SETTLE_FRAMES)
+	out["time"] = await _rt_timing(d)
+	out["label"] = "%s — %s, %d Gegner (%d Komparsen/Adds), %d Telegraph-Quads" % [sc, _cell_txt(cell), units,
+		int(out["extras"]), int(out["quads"])]
+	await _rt_leave(scene, d)
+	return out
+
+
+## Ends the scenario: the combat dropped and the world freed at once (left exploring next to the frozen leads, a stray
+## contact would push a battle over the next scenario's world).
+func _rt_leave(scene: ExplorationScene, d: CombatDirector) -> void:
+	d.abort()
+	Game.rt_sim_factory = Callable()
+	Router.adopt(null)
+	_explore = null
+	scene.queue_free()
+	await _wait_frames_rt(2)
+	Game.state.combat_mode = &"ctb"
+
+
+## Frame intervals and Godot's process / physics time over RT_TIMING_FRAMES frames without the scene audit; with a
+## running combat (`d`) also the director's own cost per frame (its counters restart here: steady state only).
+func _rt_timing(d: CombatDirector) -> Dictionary:
+	var t: Dictionary = {"frame_avg": 0.0, "frame_max": 0.0, "proc_max": 0.0, "phys_max": 0.0, "dir_avg": 0,
+		"dir_p95": 0, "dir_max": 0}
+	if d != null:
+		d.cost_max_us = 0
+		d.cost_sum_us = 0
+		d.cost_frames = 0
+	var costs: Array[int] = []                  # the director's cost of the last physics frame of every drawn frame
+	var last: int = Time.get_ticks_usec()
+	var sum: int = 0
+	for i in RT_TIMING_FRAMES:
+		if _rendered:
+			await RenderingServer.frame_post_draw
+		else:
+			await get_tree().process_frame
+		var now: int = Time.get_ticks_usec()
+		sum += now - last
+		t["frame_max"] = maxf(float(t["frame_max"]), (now - last) / 1000.0)
+		last = now
+		t["proc_max"] = maxf(float(t["proc_max"]), Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0)
+		t["phys_max"] = maxf(float(t["phys_max"]), Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0)
+		if d != null:
+			costs.append(d.cost_us)
+		if d != null and d.telegraphs != null and int(d.telegraphs.call("visible_quads")) < 10:
+			_rt_fill_telegraphs(d)
+	t["frame_avg"] = sum / 1000.0 / float(RT_TIMING_FRAMES)
+	if d != null:
+		t["dir_avg"] = d.cost_sum_us / maxi(1, d.cost_frames)
+		t["dir_max"] = d.cost_max_us
+		costs.sort()
+		t["dir_p95"] = costs[mini(costs.size() - 1, int(costs.size() * 0.95))] if not costs.is_empty() else 0
+	return t
+
+
+func _wait_frames_rt(n: int) -> void:
+	for i in n:
+		await get_tree().process_frame
+
+
+func _rt_place(scene: ExplorationScene, at: Vector3, look: Vector3) -> void:
+	var yaw: float = atan2(-(look.x - at.x), -(look.z - at.z))
+	scene.get_player().teleport(Vector3(at.x, 0.05, at.z), yaw)
+	scene.get_camera_rig().snap(yaw)
+	scene.get_companion().snap_behind()
+	scene.call("_update_room", true)
+
+
+func _rt_lead(a: Node3D, at: Vector3) -> void:
+	if a == null:
+		return
+	a.global_position = Vector3(at.x, a.global_position.y, at.z)
+	a.set("frozen", true)
+
+
+## Fills the telegraph pool with long-running enemy telegraphs around the set (the worst case: every quad drawn).
+func _rt_fill_telegraphs(d: CombatDirector) -> int:
+	var tl: Node3D = d.telegraphs
+	var ct: int = Game.combat.tick() if Game.combat != null else 0
+	var shapes: Array[int] = [0, 1, 2, 3]
+	var i: int = 0
+	while int(tl.call("visible_quads")) < 10 and i < 10:
+		var e: ActionEvent = ActionEvent.make(ActionEvent.Type.TELEGRAPH_START)
+		e.value = 90000 + ct * 16 + i
+		e.tick = ct
+		var a: float = TAU * float(i) / 10.0
+		e.rt = {"shape": shapes[i % 4], "x": roundi(cos(a) * 250.0), "z": roundi(sin(a) * 250.0), "yaw": (i * 37) % 256,
+			"r": 180 if i % 4 != 3 else 400, "r2": 90 if i % 4 == 2 else 160, "half": 40, "start": ct,
+			"impact": ct + 9000}
+		tl.call("on_event", e)
+		i += 1
+	return int(tl.call("visible_quads"))
+
+
+## The boss intro line and whatever the M.O.D. box shows (GlobalUi): advanced, so the intro and the stills go on.
+func _rt_quiet_dialog() -> void:
+	var ui: Node = get_tree().root.get_node_or_null("GlobalUi")
+	var dlg: Node = ui.get("mod_dialog") as Node if ui != null else null
+	if dlg == null:
+		return
+	for i in 4:
+		if not bool(dlg.call("is_busy")):
+			return
+		dlg.call("advance")
+
+
+func _rt_row(view: String, acc: Dictionary) -> void:
+	var issues: PackedStringArray = []
+	if _rendered:
+		var d3: int = int(acc["dc3d"]) + int(acc["dcsh"])
+		if d3 > int(BUDGET_COMBAT["dc3d"]):
+			issues.append("DC 3D %d > %d" % [d3, int(BUDGET_COMBAT["dc3d"])])
+		if int(acc["dccv"]) > int(BUDGET_COMBAT["dc2d"]):
+			issues.append("DC 2D %d > %d" % [int(acc["dccv"]), int(BUDGET_COMBAT["dc2d"])])
+		if int(acc["prims"]) > int(BUDGET_COMBAT["prims"]):
+			issues.append("Prims %d > %d" % [int(acc["prims"]), int(BUDGET_COMBAT["prims"])])
+	var omni_budget: int = int(BUDGET_OMNI["explore"]) if _quality == &"high" else BUDGET_OMNI_LOW_EXPLORE
+	if int(acc["omni_room"]) > omni_budget or int(acc["neon"]) > (1 if _quality == &"high" else 0):
+		issues.append("Omni %d (+%d Akzent) > %d" % [int(acc["omni_room"]), int(acc["neon"]), omni_budget])
+	if int(acc["lpm"]) > BUDGET_LIGHTS_PER_MESH:
+		issues.append("Lichter/Mesh %d > %d" % [int(acc["lpm"]), BUDGET_LIGHTS_PER_MESH])
+	if int(acc["mats"]) > int(BUDGET_COMBAT["mats"]):
+		issues.append("Mat %d > %d" % [int(acc["mats"]), int(BUDGET_COMBAT["mats"])])
+	if int(acc["l3d"]) > BUDGET_LABEL3D:
+		issues.append("Label3D %d > %d" % [int(acc["l3d"]), BUDGET_LABEL3D])
+	if int(acc["parts"]) > BUDGET_PARTICLES or int(acc["emit"]) > BUDGET_EMITTERS:
+		issues.append("Partikel %d/%d" % [int(acc["parts"]), int(acc["emit"])])
+	var bodies: int = int(acc["static"]) + int(acc["kinematic"]) + int(acc["rigid"])
+	if bodies > int(BUDGET_COMBAT["bodies"]) or int(acc["rigid"]) > 0:
+		issues.append("Bodies %d > %d" % [bodies, int(BUDGET_COMBAT["bodies"])])
+	if float(acc["ram"]) > BUDGET_RAM_MB:
+		issues.append("RAM %.0f MB" % float(acc["ram"]))
+	if acc.get("shot") is Image:
+		DirAccess.make_dir_recursive_absolute(_shots_dir)
+		(acc["shot"] as Image).save_png(_shots_dir.path_join("combat_%s.png" % view.get_slice(" ", 0)))
+	var n: int = maxi(1, int(acc["n"]))
+	var dc_txt: String = "%d (%d)" % [int(acc["dc"]), roundi(float(acc["dc_sum"]) / float(n))] if _rendered else "–"
+	var d3_txt: String = "%d + %d" % [int(acc["dc3d"]), int(acc["dcsh"])] if _rendered else "–"
+	var d2_txt: String = str(int(acc["dccv"])) if _rendered else "–"
+	var prim_txt: String = _fmt_int(int(acc["prims"])) if _rendered else "–"
+	_emit("| %s | %s | %s | %s | %s | %d (%d) / %d | %d | %d | %d | %d (%d) | %d / %d (%d) | %d | %.0f | %.0f | %s |" % [
+		view, dc_txt, d3_txt, d2_txt, prim_txt, int(acc["omni"]), int(acc["omni_near"]), int(acc["spot"]), int(acc["lpm"]),
+		int(acc["mats"]), int(acc["l3d"]), int(acc["parts"]), int(acc["emit"]), int(acc["static"]),
+		int(acc["kinematic"]) + int(acc["rigid"]), int(acc["areas"]), int(acc["nodes"]), float(acc["ram"]),
+		float(acc["vram"]), "OK" if issues.is_empty() else "ÜBER: " + ", ".join(issues)])
+	for s2: String in issues:
+		_over.append("combat/%s: %s" % [view.get_slice(" ", 0), s2])
+

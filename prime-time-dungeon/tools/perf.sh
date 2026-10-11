@@ -5,6 +5,9 @@
 # Usage:
 #   tools/perf.sh [--driver=opengl3|vulkan] [--res=1280x720] [--quality=high|low] [--only=startup,explore,battle,safe_room,leak]
 #                 [--cycles=20] [--out=<file.md>] [--shots=<dir>] [--headless]
+#   --only=combat (or combat_regular,combat_two_groups,combat_boss_queen): the real-time combat in the world (07 §8.10,
+#   R2) with effects — telegraph pool full, zones, hits, extras, the queen's adds — plus a timing pass (exploration vs.
+#   combat at the same spot, the CombatDirector's own cost per frame).
 #   --driver=opengl3 (default) = gl_compatibility like CI screenshots; --driver=vulkan = Mobile renderer (needs a Vulkan
 #   ICD, e.g. Mesa lavapipe: apt install mesa-vulkan-drivers). --headless: timing + leak loop only (no render metrics).
 #   --shots=<dir>: saves the frame with the most draw calls of every table row as PNG.

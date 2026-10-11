@@ -2,7 +2,8 @@ extends RefCounted
 ## R4 capture recipes (07 §12.5): real-time combats of floor 1 with the REAL data and the real RtSim in the world —
 ## `check.sh --shot res://scenes/exploration/exploration.tscn <png> 30 1280x720 --combat=realtime --recipe=rt_r4_<name>`
 ## (add --touch for the phone layout). Private test helper (no class_name); tests/capture_recipes.gd forwards
-## rt_r4_regular | rt_r4_showboss | rt_r4_hausmeister | rt_r4_queen to run(). `rec` is the CaptureRecipes runner.
+## rt_r4_regular | rt_r4_showboss | rt_r4_hausmeister | rt_r4_queen | rt_r4_results (R5b) to run(). `rec` is the
+## CaptureRecipes runner.
 ## The party gets the level and gear the balance harness gives that point of the floor (tests/tools/rt_harness.gd
 ## PLAN / GEAR), Kai plays on autopilot (the sim's own AI), the director is stepped tick by tick until the moment of
 ## the still: a telegraph filling up (regular: the cable salad's short circuit or the sprayer's fumes), the first
@@ -32,6 +33,8 @@ func run(which: String, scene: Node) -> bool:
 			return await _boss(scene, "f1_qb", "skl_b_keys", 0)
 		"queen":
 			return await _boss(scene, "f1_fb", "skl_q_train", 1)
+		"results":
+			return await _results(scene)
 	push_warning("[CaptureR4] unknown recipe rt_r4_%s" % which)
 	return false
 
@@ -65,6 +68,30 @@ func _showboss(scene: Node) -> bool:
 			break
 	await rec.call("_quiet_mod_dialog")
 	await rec.call("frames", 6)
+	rec.call("freeze")
+	return true
+
+
+## R5b: zone A, room (1, 4): the first group after the tutorial (enc_f1_a2, level 2) fought to its end on autopilot —
+## the still of R3's results panel with the real rewards (EXP, credits, drops, level-ups) over the room.
+func _results(scene: Node) -> bool:
+	_party("enc_f1_a2")
+	if not await _start(scene, "f1_g1", 3.5, Rules.NORMAL):
+		return false
+	var d: Node = scene.call("get_director") as Node
+	for i in 3600:
+		if Game.combat == null or Game.combat.is_finished():
+			break
+		d.call("advance", 1)
+		if i % 300 == 299:
+			await rec.call("frames", 1)
+	if not await rec.call("until", func() -> bool: return d.get_node_or_null("CombatResults") != null, 600):
+		push_warning("[CaptureR4] no results panel")
+		return false
+	# after the 2 s grace blink (Kai visible again), within the lower third's 3 s hold; the still keeps the lower third
+	await rec.call("seconds", 2.2)
+	await rec.call("_quiet_mod_dialog")
+	(d.get_node("CombatResults") as Node).process_mode = Node.PROCESS_MODE_PAUSABLE
 	rec.call("freeze")
 	return true
 

@@ -29,7 +29,8 @@ extends Node
 ##   (rt_tutorial, rt_regular, rt_boss, …) follow in their own section below.
 ## Echtzeitkampf with the real data (07, R4; tests/tools/capture_r4.gd, run with --combat=realtime): rt_r4_regular (zone
 ##   C, a telegraph filling up), rt_r4_showboss (the Kanalratten-Gala, E26), rt_r4_hausmeister (key throw line),
-##   rt_r4_queen (Gleis 9, phase 2, the train on its track).
+##   rt_r4_queen (Gleis 9, phase 2, the train on its track), rt_r4_results (R5b: zone A fought to its end, the results
+##   panel with the real rewards).
 ## 08 K1 (Casting): pause_card (exploration + pause menu, party page, the candidate card of the sample persona open),
 ##   intro_card (intro.tscn with {"capture": true}: the studio with the candidate's lower third and persona_intro line),
 ##   casting_accents (persona_casting.tscn with {"open": "keyboard"}: the on-screen keyboard's accent layer).
@@ -783,7 +784,8 @@ func _r_rt_world_flee(scene: Node) -> bool:
 
 
 # --- Echtzeitkampf (07, R4): floor-1 combats with the real data (tests/tools/capture_r4.gd) -------------------------
-# exploration.tscn + --combat=realtime --recipe=rt_r4_regular | rt_r4_showboss | rt_r4_hausmeister | rt_r4_queen
+# exploration.tscn + --combat=realtime --recipe=rt_r4_regular | rt_r4_showboss | rt_r4_hausmeister | rt_r4_queen |
+# rt_r4_results
 
 func _r_rt_r4(scene: Node, which: String) -> bool:
 	var r: RefCounted = (load("res://tests/tools/capture_r4.gd") as GDScript).new()

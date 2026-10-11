@@ -221,8 +221,11 @@ func test_class_hierarchy_constants_and_stub_headers() -> void:
 			"res://core/rt/rt_status.gd", "res://core/rt/rt_telegraph.gd", "res://core/rt/rt_command.gd",
 			"res://core/rt/rt_geo.gd", "res://core/rt/rt_rules.gd", "res://core/rt/rt_mods.gd",
 			"res://core/rt/rt_balance.gd", "res://core/data/validators/rt.gd",
-			"res://scenes/combat/ui/combat_results.gd"]:      # combat_director.gd: replaced by R2
-		assert_true(FileAccess.get_file_as_string(path).begins_with("# STUB(R1a) — owned by "), "stub header " + path)
+			"res://scenes/combat/combat_director.gd", "res://scenes/combat/ui/combat_results.gd"]:
+		# R1b-I1: a stub is either still the R1a stub (its header) or replaced completely by its owner phase (no stub
+		# marker left anywhere) — never half of each.
+		var text: String = FileAccess.get_file_as_string(path)
+		assert_true(text.begins_with("# STUB(R1a) — owned by ") or not text.contains("STUB(R1a)"), "stub header " + path)
 
 
 func test_events_signals_and_settings() -> void:
@@ -529,29 +532,42 @@ func test_stubs_are_neutral() -> void:
 	assert_not_null(Game.end_combat())
 	assert_eq(Show.take_pending_gift_rt(null), {})
 	assert_eq(StateHash.of_rt(null), "")
+	assert_eq(RtMods.validate([]), PackedStringArray())
+
+
+## R1b-I1 replaced the inert sim stub: the real sim keeps the submit / tick / hash contract of the stub (07 §3.4).
+func test_sim_contract_basics() -> void:
+	var data: GameData = real_data()
 	var setup: RtSetup = RtSetup.new()
-	var u: RtUnit = RtUnit.new()
-	u.id = "p0"
-	u.display_name = "Persona"
-	setup.units.append(u)
+	setup.geo = RtGeo.make_geo(RoomCell.Kind.NORMAL, 0, false, null)
+	for spec: Array in [["p0", Combatant.Side.PARTY, 300], ["e0", Combatant.Side.ENEMY, -300]]:
+		var v: RtUnit = RtUnit.new()
+		v.id = str(spec[0])
+		v.side = spec[1] as Combatant.Side
+		v.stats = StatBlock.new()
+		v.stats.values[StatBlock.Stat.HP] = 50
+		v.hp = 50
+		v.z = int(spec[2])
+		v.display_name = "Persona"
+		setup.units.append(v)
 	var sim: RtSim = RtSim.new(setup, data)
-	assert_eq(sim.start(), [] as Array[ActionEvent])
-	assert_eq(sim.submit(RtCommand.ability(0, "p0", "skl_kai_heavy_swing", "")), "")
+	var pre: Array[ActionEvent] = sim.start()
+	assert_true(not pre.is_empty() and pre[0].type == ActionEvent.Type.BATTLE_START, "prelude")
+	assert_eq(sim.submit(RtCommand.target(0, "p0", "e0")), "")
 	assert_eq(sim.submit(RtCommand.ability(0, "p3", "skl_kai_heavy_swing", "")), "unknown_unit")
+	assert_eq(sim.submit(RtCommand.ability(0, "p0", "skl_kai_heavy_swing", "")), "not_learned", "not on the bar")
 	assert_eq(sim.submit({"t": "ability_use"}), "schema")
 	assert_eq(sim.submit({"t": "move_input", "ct": 0, "u": "p0", "dir": [0, 1], "run": false}), "grade_b")
 	sim.run_to_end(7)
 	assert_eq(sim.tick(), 7, "run_to_end stops at max_ticks")
-	assert_eq(sim.submit(RtCommand.ability(3, "p0", "skl_kai_heavy_swing", "")), "past_tick")
+	assert_eq(sim.submit(RtCommand.target(3, "p0", "")), "past_tick")
 	var h: String = StateHash.of_rt(sim)
 	assert_true(_hex.search(h) != null, h)
-	u.display_name = "Jemand anderes"
+	sim.unit("p0").display_name = "Jemand anderes"
 	assert_eq(StateHash.of_rt(sim), h, "display names are not hashed (08 §2.7 Nr. 5)")
-	u.hp = 3
+	sim.unit("p0").hp = 3
 	assert_ne(StateHash.of_rt(sim), h, "unit state is")
-	assert_eq(RtMods.validate([]), PackedStringArray())
-	assert_eq(RtRules.choose(sim, u), {})
-	assert_false(RtTelegraph.new().contains(0, 0))
+	assert_eq(setup.units[0].hp, 50, "the sim plays on copies: the setup stays the start data")
 
 
 # --- fake sim + streams -----------------------------------------------------------------------------------------

@@ -6,7 +6,7 @@
 > Entscheidungen dazu stehen gesammelt in §0.1 und sind in die Kapitel eingearbeitet.
 > **Vorrang:** `00_BRIEF` > **dieses Dokument** (alles Kampfrelevante: APIs, Schemas, Befehle, Pfade, Zahlenstruktur) >
 > `06_PROGRESSION_MAROTTEN_KI_ADMIN` (Progression, Marotten, KI-Admin, Twists — einschließlich ihres Verhältnisses zum Kampf:
-> Twists und KI-Zeilen gibt es im Kampf nicht) > `08_CASTING` (Persona, Starttalente) > `01_GDD` / `02_TECH` / `03_ART` /
+> Twists und KI-Zeilen gibt es im Kampf nicht) > `08_CASTING` (Persona, Vorleben) > `01_GDD` / `02_TECH` / `03_ART` /
 > `05_LIVE_MODUS` (je nach Thema; Bestands-APIs aus 02_TECH gelten, soweit 07 oder 06 sie nicht ändern). Bis zum Abschluss
 > von R5 bleibt der CTB-Kampf hinter dem Schalter `combat_mode` (§12.1) unverändert lauffähig; mit R5 ersetzen §2–§11 dieses
 > Dokuments 01_GDD §3 und 02_TECH §5.
@@ -105,7 +105,7 @@ der Konsistenzprüfung derselben Revision, E30 ist ein angenommener Änderungsan
 | E27 | KI-SHOW (Orchestrator) | Der KI-Partner darf die SHOW nutzen (Party-Abklingzeit 30 s, 5 s Vorrang der Person), damit Talente wie Mopsulas „Taktgefühl“ (`tal_mop_taktgefuehl`, `stunt_window_pm`; hieß bis zur 06-Integration „Dramatische Pause“ und wurde aus Abstandsgründen umbenannt) auch als KI-Partner wirken; Hype nach der bestehenden `by_ai`-Regel | §4.1, §9.1, §9.6 |
 | E28 | Erster Kampf (Konsistenzprüfung) | Der erste Kampf verlangt nur Bewegen, Ziel, Taste 1, SHOW und Ausweichen: Tutorial-Leiste nur Slot 1 + SHOW (Sim-Regel), Trank und Partner-Spezial ab dem zweiten Kampf, Taktik-Chip ab Stufe 3 (der erste Safe Room liegt direkt hinter dem Tutorial), Bedrohungsanzeige erst nach einem eigenen Spott; die schlafende Tutorial-Gruppe weckt auch eine Berührung (sonst bräuchte Held:in Mopsula Zielwahl und Taste 1 schon vor dem Kampf) | §2.2, §2.13, §4.1, §5.2, §8.1 |
 | E29 | Werte E25 abgenommen; Taktik-Hinweis (Orchestrator) | Die nachgestellten KI-Werte aus E25 (25 % „spät“ +45 Ticks, übersehene Telegraphen, Angriffs-Reaktion 15 Ticks) gelten als Startwerte für R4. Dass ein perfekter Mopsula-Spieler mit der Standard-Taktik noch 15–16 % Bossversuche verliert, ist gewollt: die Partner-Taktik ist Teil des Könnens. Damit das verständlich bleibt, zeigt ein einmaliger Kontext-Hinweis `partner_tactic` den Weg zu „Vorsichtig“ (§2.13) | §2.13, §5.2, §11.3 |
-| E30 | Element-Abwehr gegen Prozent-Treffer (08 CR-24, angenommen) | **Prozent-Treffer tragen das Element ihres Skills:** Nach dem Grundwert faltet `rt_damage.gd` zuerst den Element-Faktor des Ziels für dieses Element (`element_mods`, auf 500–1500 ‰ begrenzt, Immunität zählt als 500); ohne Element kein Schritt. ATK, DEF, RES, Krit und Varianz wirken auf Prozent-Treffer weiterhin nicht. So wirken Element-Talente (06 B, Starttalente aus 08) in beiden Kampfmodi; R4 misst die Bänder (§11) mit E30. Dazu ein **gemeinsamer Vertrags-Durchgang R1a + 08 K0** mit genau einem `SIM_VERSION`-Sprung, in dem auch die K0-Zeilen in `data_validator.gd` stehen | §3.9.1, §6.3, §9.6, §10.2, §12.2, §12.3, §12.5 |
+| E30 | Element-Abwehr gegen Prozent-Treffer (08 CR-24, angenommen) | **Prozent-Treffer tragen das Element ihres Skills:** Nach dem Grundwert faltet `rt_damage.gd` zuerst den Element-Faktor des Ziels für dieses Element (`element_mods`, auf 500–1500 ‰ begrenzt, Immunität zählt als 500); ohne Element kein Schritt. ATK, DEF, RES, Krit und Varianz wirken auf Prozent-Treffer weiterhin nicht. So wirken Element-Talente (06 B; die Starttalente aus 08 sind mit 08 CR-33 entfallen) in beiden Kampfmodi; R4 misst die Bänder (§11) mit E30. Dazu ein **gemeinsamer Vertrags-Durchgang R1a + 08 K0** mit genau einem `SIM_VERSION`-Sprung, in dem auch die K0-Zeilen in `data_validator.gd` stehen | §3.9.1, §6.3, §9.6, §10.2, §12.2, §12.3, §12.5 |
 
 ---
 
@@ -2468,7 +2468,7 @@ Twists im Kampf** (06 §5.7) und kein `RtSim.apply_twist`; ein Twist-Befehl trä
 Die Talentwahl findet nur in der Talent-Show im Safe Room statt; das Kampfergebnis zeigt höchstens den Chip „TALENT BEREIT“
 (§8.9). Talente brauchen keine `RtMods`-Einträge: Werte-Talente stecken in den `Combatant`-Werten, die zwei Verhaltens-Talente
 setzt `make_rt_setup` als `RtUnit.opener_pm`/`stunt_pm` (Quelle `Talents.*`, 06 §8.3; `core/rt` kennt `Talents` nicht).
-Das Starttalent der Persona (08 §3.3) nutzt nur diese Wirkungsarten und kommt über dieselben `Talents.*`-Abfragen an.
+Die Persona hat seit 08 CR-33 kein Kampf-Starttalent mehr: das Vorleben bringt nur einen Berufs-Vorsprung (09 §8.6) und ändert keine Kampfwerte.
 
 **Marotten (06 §4, Paket C):** Der `MarottenTracker` bekommt im Echtzeitkampf denselben Ereignisstrom (über
 `Show.on_battle_event`, live und im Replay identisch) und liest zusätzlich `by_ai` (R5a, additiv). Regel: **Zähler einer
@@ -3001,7 +3001,7 @@ Echtzeit-Nachfolger mit Test:
 | `Router.start_battle`/`end_battle`, Swirl (Bestand) | `CombatDirector` in der Welt (§2.8) | R2 | `test_r2_combat_world` |
 | `Events.battle_turn_started` (Bestand) | keiner (Echtzeit hat keine Züge) | R5b löscht | — |
 | `test_06b_balance`, `test_06c_balance` (CTB-Bossbänder mit Talenten bzw. Liga) | Harness `--hero`, `--liga` (§11.4) | R4 | `test_r4_rt_balance` + nächtlich |
-| CTB-Teil von `test_08_origin_balance` (08 K1: Starttalente im Königin-Kampf) | Harness `--persona` mit dem nächtlichen Persona-Gate (08 Kap. 3.4 Nr. 5; 08 CR-24/F-8) | R4 | `test_r4_rt_balance` + nächtlich |
+| ~~CTB-Teil von `test_08_origin_balance`~~ — entfällt mit 08 CR-33 (keine Kampf-Starttalente mehr; 09 CR-32 g) | — (kein Persona-Harness, kein Persona-Gate) | — | — |
 | Full-Run-Hooks `_apply_hero_choice`, `_pick_pending_talents`, `_apply_liga_strategy` (A/B/C) | unverändert; der Echtzeit-Full-Run spielt Kämpfe mit Autopilot | R5b | `test_m6_fullrun` |
 | `TwistApplier.on_battle_end` über `Game.apply_battle_result` (D) | unverändert (das Kampfende läuft über `apply_battle_result`) | — | `test_r5_rt_live_equivalence` |
 | `ModLiveLink` (D) | pausiert mit der Lauf-Uhr; `say_external` lehnt im Kampf ab (§9.3) | R1a | `test_r5_show_rt` |

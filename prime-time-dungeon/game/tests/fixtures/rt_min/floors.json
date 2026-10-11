@@ -60,6 +60,30 @@
 					"rt": {
 						"music": "boss"
 					}
+				},
+				{
+					"id": "enc_rt_dummy",
+					"enemies": [
+						"enm_rt_dummy"
+					],
+					"weight": 0
+				},
+				{
+					"id": "enc_rt_dummies",
+					"enemies": [
+						"enm_rt_dummy",
+						"enm_rt_dummy",
+						"enm_rt_dummy"
+					],
+					"weight": 0
+				},
+				{
+					"id": "enc_rt_rats",
+					"enemies": [
+						"enm_kanalratte",
+						"enm_kanalratte"
+					],
+					"weight": 0
 				}
 			],
 			"layout": {

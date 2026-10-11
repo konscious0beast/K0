@@ -44,6 +44,76 @@
 			"max_stack": 1,
 			"icon": "key",
 			"color": "#ffc93c"
+		},
+		{
+			"type": "consumable",
+			"usable": "both",
+			"color": "#ffffff",
+			"id": "itm_brutzel_burger",
+			"name": "Brutzel-Burger",
+			"desc": "Heilt 120 HP.",
+			"price": 60,
+			"tags": [
+				"heal"
+			],
+			"use_skill": "skl_item_burger",
+			"icon": "burger"
+		},
+		{
+			"type": "consumable",
+			"usable": "both",
+			"color": "#ffffff",
+			"id": "itm_energy_krawumm",
+			"name": "KRAWUMM-Dose",
+			"desc": "+20 MP.",
+			"price": 40,
+			"tags": [
+				"mp"
+			],
+			"use_skill": "skl_item_krawumm",
+			"icon": "can"
+		},
+		{
+			"type": "consumable",
+			"usable": "both",
+			"color": "#ffffff",
+			"id": "itm_smelling_salts",
+			"name": "Riechsalz",
+			"desc": "Weckt K.O.-Mitglieder.",
+			"price": 80,
+			"tags": [
+				"revive"
+			],
+			"use_skill": "skl_item_salts",
+			"icon": "salts"
+		},
+		{
+			"type": "consumable",
+			"usable": "battle",
+			"color": "#ffffff",
+			"id": "itm_molotov",
+			"name": "Grillanzünder-Cocktail",
+			"desc": "Feuer!",
+			"price": 50,
+			"tags": [
+				"damage"
+			],
+			"use_skill": "skl_item_molotov",
+			"icon": "molotov"
+		},
+		{
+			"type": "consumable",
+			"usable": "battle",
+			"color": "#ffffff",
+			"id": "itm_smoke",
+			"name": "Taschen-Nebelmaschine",
+			"desc": "Sofortige Flucht.",
+			"price": 30,
+			"tags": [
+				"escape"
+			],
+			"use_skill": "skl_item_smoke",
+			"icon": "smoke"
 		}
 	]
 }

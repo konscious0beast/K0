@@ -5,7 +5,7 @@ extends TestCase
 ## (Majestät, Durchlaucht, Hoheit, Thron, Krone) while the Rattenkönigin keeps her title and crown. Plus the shipped
 ## decisions: Fanpost-Paket, "Gräfliches Gutachten" (new id), neutral Liga achievement names, the Liga rule in full
 ## ("ohne Rüstung & ohne Accessoire"), and Graf Mopsula's own voice (no royal "Wir/Uns") in the data and in the
-## screens' code strings. Follow-up round: class "Zeremonienmeister" (new id), "Ohne Netz und doppelten Boden", no
+## screens' code strings. Follow-up round: class "Zeremonienmeister" (new id), "Leichtsinn mit Stil", no
 ## false alarm for ambiguous everyday words ("Amerikaner" pastry, "Franzose" wrench), the live line filter
 ## (mod_filter.json) covers the same lists, and the shelter is "Tierheim Pfotenglück" everywhere.
 
@@ -241,7 +241,7 @@ func test_follow_up_names() -> void:
 	assert_eq(d.class_def("cls_mop_zeremonienmeister").show_mods["sponsor_thresholds"], [65, 80, 95], "same values")
 	for sp: String in ["spc_mop_spukmops", "spc_mop_flattermops"]:
 		assert_has(d.species_def(sp).recommended_classes, "cls_mop_zeremonienmeister", sp)
-	assert_eq(d.achievement("ach_ul_boss").name, "Ohne Netz und doppelten Boden")
+	assert_eq(d.achievement("ach_ul_boss").name, "Leichtsinn mit Stil")
 	for l: ModLineDef in d.mod_lines("achievement:ach_ul_boss"):
 		assert_false(l.text.to_lower().contains("brise"), l.id)
 

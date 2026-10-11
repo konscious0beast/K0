@@ -66,8 +66,9 @@ func add_pos(tick: int, pos: Vector3) -> void:
 
 
 ## ct >= 0: a combat checkpoint (Echtzeitkampf, 07 §10.2, R1a): same k as its encounter, appended after the previous
-## checkpoint of that k (the same ct again replaces it); ct = -1: a state checkpoint (replaces a state checkpoint of the
-## same k, follows the combat checkpoints of that k).
+## checkpoint of that k — always (R5b: two combats at the same k may end at the same ct; the writers keep one per combat
+## and ct); ct = -1: a state checkpoint (replaces a state checkpoint of the same k, follows the combat checkpoints of
+## that k).
 func add_checkpoint(tick: int, p_hash: String, ct: int = -1) -> void:
 	if p_hash == "" or tick < 0:
 		_reject("invalid checkpoint at tick %d" % tick)
@@ -77,8 +78,9 @@ func add_checkpoint(tick: int, p_hash: String, ct: int = -1) -> void:
 		if tick < int(last["k"]):
 			_reject("checkpoint at tick %d is out of tick order" % tick)
 			return
-		var last_ct: int = int(last.get("ct", -1))
-		if tick == int(last["k"]) and ct == last_ct:
+		# a state checkpoint again at the same tick replaces the last one; a combat checkpoint never does — two combats
+		# at the same tick (the clock stands) may end at the same ct (R5b; the caller writes one per combat and ct)
+		if tick == int(last["k"]) and ct < 0 and not last.has("ct"):
 			last["h"] = p_hash
 			return
 	if ct >= 0:

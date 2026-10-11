@@ -498,8 +498,9 @@ func test_run_log_combat_checkpoints_and_ct_order() -> void:
 	rl.add_checkpoint(12, "e".repeat(64))
 	rl.add_checkpoint(12, "f".repeat(64))
 	assert_eq(rl.checkpoints(), [{"k": 10, "h": "a".repeat(64)}, {"k": 12, "ct": 0, "h": "b".repeat(64)},
-		{"k": 12, "ct": 300, "h": "d".repeat(64)}, {"k": 12, "h": "f".repeat(64)}],
-		"combat checkpoints share their k in ct order; the same ct / a state checkpoint again replaces")
+		{"k": 12, "ct": 300, "h": "c".repeat(64)}, {"k": 12, "ct": 300, "h": "d".repeat(64)},
+		{"k": 12, "h": "f".repeat(64)}], "combat checkpoints share their k; a state checkpoint again replaces — the "
+		+ "same ct does not (R5b: two combats at one k can end at the same ct)")
 	var back: RunLog = RunLog.from_dict(JSON.parse_string(JSON.stringify(rl.to_dict())))
 	assert_eq(back.checkpoints(), rl.checkpoints(), "ct survives a JSON round trip")
 	assert_eq(back.rejected, 0)
@@ -520,7 +521,7 @@ func test_run_log_combat_checkpoints_and_ct_order() -> void:
 		assert_true(errs[1].contains("outside a real-time combat"), errs[1])
 	rl.compact()
 	rl.expand()
-	assert_eq(rl.checkpoints().size(), 4, "compact / expand never touch the checkpoints (R5a)")
+	assert_eq(rl.checkpoints().size(), 5, "compact / expand never touch the checkpoints (R5a)")
 
 
 func test_say_external_refuses_during_a_battle() -> void:

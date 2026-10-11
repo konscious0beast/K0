@@ -215,6 +215,7 @@ func _build() -> void:
 	var lang: Cycler = _cycler("language", "Sprache", ["Deutsch"], 0)
 	lang.disabled = true
 	lang.text = "Deutsch"
+	_persona_section()                      # 08 K0 → K1/K3: section "Kandidat:in" (stub: nothing yet)
 	_list.add_child(UiUtil.spacer(8))
 	UiUtil.wire_vertical(_controls)
 	if _framed:
@@ -500,3 +501,12 @@ func _commit(save_now: bool = true) -> void:
 	Game.apply_settings()
 	if save_now:
 		flush()
+
+
+# --- Casting (08, K0 → K1/K3) -----------------------------------------------------------------------------------------
+# STUB(K0) — owned by 08-K1 (K3: the KI-Casting rows). Replace completely, keep the hook.
+
+## K1: the section "Kandidat:in" (delete the candidate: persona files, consent, leftovers — 08 §1.7, §2.5); K3: the
+## KI-Casting switch and the withdrawal of the consent. Stub: no section (nothing visible before K1).
+func _persona_section() -> void:
+	pass

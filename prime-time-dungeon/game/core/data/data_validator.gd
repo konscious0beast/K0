@@ -43,6 +43,9 @@ const MODEL_PROPS: PackedStringArray = ["cape", "crown", "monocle", "top_hat", "
 	"newspaper_head", "briefcase", "bottlecap_chain", "cable_tangle", "spray_cap", "escalator_back", "claws", "helmet",
 	"shield", "halberd", "rat_king_tail", "ticket_crown", "wrench", "axe", "crowbar", "cart", "discount_tag"]
 const MODEL_POSES: PackedStringArray = ["auto", "quadruped", "upright"]
+## Casting (08 §6.2, K0): optional ModelSpec.style {"hair", "beard"} — only for base "humanoid" (K2 builds them).
+const MODEL_HAIR_STYLES: PackedStringArray = ["short", "buzz", "long", "bun", "curls", "ponytail", "bald"]
+const MODEL_BEARDS: PackedStringArray = ["none", "stubble", "moustache", "full"]
 const THEMES: PackedStringArray = ["metro", "mall"]
 const SAFE_ROOM_THEMES: PackedStringArray = ["kiosk", "pumphouse", "signalbox"]
 const CELL_KINDS: PackedStringArray = ["start", "normal", "safe", "quarter_boss", "floor_boss", "stairs", "gate"]
@@ -63,7 +66,12 @@ const ACH_TRIGGERS: PackedStringArray = ["enemy_killed", "battle_won", "battle_f
 const VOICES: PackedStringArray = ["mod", "mopsula", "kai", "chat"]
 # sender/amount/pct/min: 05 §6.12
 const TEXT_PLACEHOLDERS: PackedStringArray = ["name", "floor", "level", "enemy", "item", "achievement", "viewers",
-	"followers", "sponsor", "count", "member", "seconds", "sender", "amount", "pct", "min"]
+	"followers", "sponsor", "count", "member", "seconds", "sender", "amount", "pct", "min",
+	"cand", "job", "hobby", "club", "trait", "rival", "brand", "job_text"]   # Casting (08 §4.4, K0)
+## Casting (08 §4.4, K0): persona placeholders only in persona_* lines and scenes.json ({cand} anywhere);
+## {job_text} only in persona_intro:custom (never in a scene).
+const PERSONA_PLACEHOLDERS: PackedStringArray = ["job", "hobby", "club", "trait", "rival", "brand", "job_text"]
+const JOB_TEXT_TAG: String = "persona_intro:custom"
 const REQUIRED_MOD_TAGS: PackedStringArray = ["intro", "floor_start", "first_fight", "achievement_generic", "low_hp",
 	"kill_streak", "crit", "weakness", "overkill", "stunt_success", "stunt_fail", "boring_fight", "flee", "flee_fail",
 	"sponsor_gift", "timer_warn_300", "timer_warn_60", "timer_expired", "lootbox_open_bronze", "lootbox_open_silver",
@@ -81,7 +89,9 @@ const OPTIONAL_MOD_TAG_PREFIXES: PackedStringArray = ["achievement:", "boss_intr
 	"hero_", "secret_",                          # 06 package A
 	"talent_", "casting_",                      # 06 package B: Talent-Show / Casting lines
 	"marotte_", "liga_",                        # 06 package C: M.O.D. preferences + Liga (06 §4)
-	"regie_", "mod_live_"]                      # 06-D: Regie lines (regie_cut_in, regie_monologue_<n>), M.O.D. live
+	"regie_", "mod_live_",                      # 06-D: Regie lines (regie_cut_in, regie_monologue_<n>), M.O.D. live
+	"rt_", "showboss_",                         # Echtzeitkampf (07, R1a): real-time lines (§9.3), show boss (§9.6)
+	"persona_"]                                 # Casting (08, K0): persona hooks, casting pages (08 §4.3)
 
 ## Copy of StatIds.ALL (§6.3); test_m2_achievements asserts equality.
 const STAT_IDS: PackedStringArray = ["kills_total", "kills_skill", "battles_won", "battles_fled", "preemptives",
@@ -89,13 +99,15 @@ const STAT_IDS: PackedStringArray = ["kills_total", "kills_skill", "battles_won"
 	"credits_spent_vendor", "lootboxes_opened", "events_completed", "game_overs", "ko_mopsula",
 	"explore_seconds_since_battle", "viewers_max", "viewers_target_peak", "followers_gained_run", "hype_100_count",
 	"bets_won", "liga_battles",                                     # 06-C (06 §4.6)
-	"bark_openers"]                                                 # 06 A × C (integration round 4)
+	"bark_openers",                                                 # 06 A × C (integration round 4)
+	"interrupts_total", "dodges_total", "train_kills", "taunts_total"]   # Echtzeitkampf (07, R1a, §9.4)
 
 ## Trigger payload keys (§6.3) — the `e.` vocabulary of achievement conditions.
 const TRIGGER_PAYLOAD_KEYS: Dictionary = {
 	"enemy_killed": ["enemy_id", "overkill", "by", "member"],
 	"battle_won": ["party_turns", "min_party_hp", "min_party_hp_pct", "crits", "weakness_hits", "items_used", "party_kos",
-		"damage_taken", "is_boss", "boss_id", "encounter_type", "group_id"],
+		"damage_taken", "is_boss", "boss_id", "encounter_type", "group_id",
+		"duration_sec", "interrupts", "dodges", "telegraph_hits", "train_kills", "perfect_phases"],   # 07 R1a (§9.4)
 	"battle_fled": ["encounter_id", "is_boss"],
 	"battle_started": ["encounter_id", "encounter_type", "is_boss"],
 	"stunt_resolved": ["success", "member", "skill_id"],
@@ -146,15 +158,29 @@ const ID_PATTERNS: Dictionary = {
 	"species": "^spc_[a-z0-9_]+$",
 	"marotten": "^mar_[a-z0-9_]+$",                                # 06-C
 	"twists": "^tw_[a-z0-9_]+$",                                   # 06-D
+	# --- Casting (08 §3.9, K0): origins.json / looks.json ----------------------------------------------------------
+	"origins": "^org_[a-z0-9_]+$",
+	"occupations": "^occ_[a-z0-9_]+$",
+	"origin_talents": "^tal_org_[a-z0-9_]+$",
+	"hobbies": "^hob_[a-z0-9_]+$",
+	"traits": "^trt_[a-z0-9_]+$",
+	"rivals": "^rv_[a-z0-9_]+$",
+	"brands": "^br_[a-z0-9_]+$",
+	"gags": "^gag_[a-z0-9_]+$",
+	"greetings": "^gr_[a-z0-9_]+$",
+	"plans": "^plan_[a-z0-9_]+$",
+	"looks": "^lk_[a-z0-9_]+$",
 }
 
 const TABLES: PackedStringArray = ["statuses", "skills", "items", "classes", "party", "enemies", "floors",
 	"lootboxes", "achievements", "sponsors", "milestones", "mod_lines", "scenes",
 	"talents", "species",                       # 06 package B
 	"marotten",                                 # 06-C
-	"twists"]                                   # 06-D: validated by validators/twists.gd (TwistCheck)
+	"twists",                                   # 06-D: validated by validators/twists.gd (TwistCheck)
+	"origins", "looks"]                         # Casting (08, K0): validators/origins.gd (K1), looks.gd (K2)
 ## Allowed extra top-level keys per file (§4.1); everything else is an error.
-const TABLE_EXTRA_KEYS: Dictionary = {"party": ["start"], "enemies": ["pseudo_units"], "lootboxes": ["pools", "pity"]}
+const TABLE_EXTRA_KEYS: Dictionary = {"party": ["start"], "enemies": ["pseudo_units"], "lootboxes": ["pools", "pity"],
+	"origins": ["talents", "hobbies", "traits", "rivals", "brands", "gags", "greetings", "plans", "canon"]}   # 08 K0
 const REQUIRED_BOXES: PackedStringArray = ["box_bronze", "box_silver", "box_gold", "box_fan"]
 const LEVEL_CAP: int = 10                    # copy of Balance.LEVEL_CAP (core/data must not depend on core/stats)
 const MAX_TEXT_LEN: int = 110
@@ -198,6 +224,11 @@ const DIR_OPPOSITE: Dictionary = {"N": "S", "E": "W", "S": "N", "W": "E"}
 const REQ: String = "<required>"   # spec marker: field has no default
 ## 06-C: rules of marotten.json live in their own private helper (06 §8.0 Nr. 7).
 const MarottenCheck := preload("res://core/data/validators/marotten.gd")
+## Echtzeitkampf (07, R1a): rules of the `rt` blocks and of data/rt_balance.json (07 §4.10) — R1a stub, R4 rules.
+const RtCheck := preload("res://core/data/validators/rt.gd")
+## Casting (08 §3.9, K0): rules of origins.json (K1) and looks.json (K2) — private helpers like the others.
+const OriginsCheck := preload("res://core/data/validators/origins.gd")
+const LooksCheck := preload("res://core/data/validators/looks.gd")
 
 # --- 06 package B: per-table rule files (06 §8.0 Nr. 7) ------------------------------------------------------------
 const TalentsRules := preload("res://core/data/validators/talents.gd")
@@ -210,7 +241,8 @@ const IpWords := preload("res://core/data/validators/ip_words.gd")   # polish pa
 const SPEC_STATUS: Array = [["id", "s"], ["name", "s"], ["kind", "s"], ["default_turns", "i", 3],
 	["stat_mult", "d", {}],
 	["tick_timing", "s", "turn_end"], ["tick_pct", "i", 0], ["tick_min", "i", 0], ["tick_speed_mult", "f", 1.0],
-	["flags", "sa", []], ["excludes", "sa", []], ["element", "s", "none"], ["color", "s", "#ffffff"], ["icon", "s", ""]]
+	["flags", "sa", []], ["excludes", "sa", []], ["element", "s", "none"], ["color", "s", "#ffffff"], ["icon", "s", ""],
+	["rt", "d", {}]]                            # Echtzeitkampf (07, R1a): optional rt block (§4.7, rules: RtCheck)
 const SPEC_SKILL: Array = [["id", "s"], ["name", "s"], ["desc", "s", ""], ["user", "s", "any"], ["category", "s"],
 	["target", "s"], ["damage_type", "s", "none"], ["element", "s", "none"], ["power", "i", 100], ["heal_mode", "s", ""],
 	["hits", "i", 1], ["mp_cost", "i", 0], ["rank", "i", 3], ["accuracy", "i", -1], ["crit_bonus", "f", 0.0],
@@ -218,7 +250,8 @@ const SPEC_SKILL: Array = [["id", "s"], ["name", "s"], ["desc", "s", ""], ["user
 	["flee_guaranteed", "b", false], ["special", "d", {}], ["success_base", "f", 0.0], ["success_lck", "f", 0.01],
 	["success_cap", "f", 0.85], ["success_boss_mod", "f", -0.15], ["fail_effect", "d", {}], ["cooldown", "i", 0],
 	["anim", "s", "attack"], ["vfx", "s", ""], ["sfx", "s", ""], ["hype", "i", 0], ["kill_hype", "i", 0],
-	["show_tags", "sa", []]]
+	["show_tags", "sa", []],
+	["rt", "d", {}]]                            # Echtzeitkampf (07, R1a): optional rt block (§4.6, rules: RtCheck)
 const SPEC_SKILL_STATUS: Array = [["id", "s"], ["chance", "f", 1.0], ["turns", "i", 0]]
 const SPEC_SKILL_FAIL: Array = [["self_dmg_pct", "i", 0], ["delay_pct", "i", 0], ["status", "s", ""],
 	["status_turns", "i", 0]]
@@ -227,7 +260,8 @@ const SPEC_ITEM: Array = [["id", "s"], ["name", "s"], ["desc", "s", ""], ["type"
 	["price", "i", 0], ["sell", "i", -1], ["max_stack", "i", 9], ["tags", "sa", []], ["use_skill", "s", ""],
 	["usable", "s", "none"], ["stats", "d", {}], ["crit_bonus", "f", 0.0], ["element_mods", "d", {}],
 	["status_immune", "sa", []], ["show_mods", "d", {}], ["equip_by", "sa", []], ["attack_element", "s", "physical"],
-	["icon", "s", ""], ["color", "s", "#ffffff"]]
+	["icon", "s", ""], ["color", "s", "#ffffff"],
+	["rt", "d", {}]]                            # Echtzeitkampf (07, R1a): optional rt block (§4.8, rules: RtCheck)
 const SPEC_ITEM_SHOW_MODS: Array = [["hype_gain_mult", "f", 1.0], ["follower_mult", "f", 1.0]]
 const SPEC_CLASS: Array = [["id", "s"], ["name", "s"], ["desc", "s", ""], ["for", "sa", []], ["min_floor", "i", 3],
 	["stat_mult", "d", {}], ["growth_add", "d", {}], ["passives", "a", []], ["learnset", "a", []], ["show_mods", "d", {}]]
@@ -239,18 +273,21 @@ const SPEC_LEARN: Array = [["level", "i"], ["skill", "s"]]
 const SPEC_PARTY: Array = [["id", "s"], ["name", "s"], ["title", "s", ""], ["base_stats", "d"], ["growth", "d"],
 	["attack_skill", "s"], ["learnset", "a", []], ["stunts", "sa", []], ["equipment", "d", {}], ["element_mods", "d", {}],
 	["status_immune", "sa", []], ["status_resist", "d", {}], ["battle_slot", "i"], ["model", "d"],
-	["portrait_color", "s", "#ffffff"]]
+	["portrait_color", "s", "#ffffff"],
+	["rt", "d", {}]]                            # Echtzeitkampf (07, R1a): optional rt block (§4.8, rules: RtCheck)
 const SPEC_EQUIPMENT: Array = [["weapon", "s", ""], ["armor", "s", ""], ["accessory", "s", ""]]
 const SPEC_MODEL: Array = [["base", "s"], ["scale", "f", 1.0], ["pose", "s", "auto"], ["colors", "d"],
 	["props", "sa", []],
-	["seed", "i", 0], ["gltf", "s", ""]]
+	["seed", "i", 0], ["gltf", "s", ""],
+	["style", "d", {}]]                         # Casting (08 §6.2, K0): optional, dropped when empty
 const SPEC_ENEMY: Array = [["id", "s"], ["name", "s"], ["level", "i", 1], ["stats", "d"], ["exp", "i", 0],
 	["credits", "i", 0],
 	["attack_skill", "s"], ["ai", "d", {"type": "weighted", "actions": []}], ["phases", "a", []], ["element_mods", "d",
 		{}],
 	["status_immune", "sa", []], ["status_resist", "d", {}], ["drops", "a", []], ["boss_drops", "a", []], ["tags", "sa",
 		[]],
-	["boss", "b", false], ["model", "d"], ["explore", "d"]]
+	["boss", "b", false], ["model", "d"], ["explore", "d"],
+	["rt", "d", {}]]                            # Echtzeitkampf (07, R1a): optional rt block (§4.9, rules: RtCheck)
 const SPEC_AI: Array = [["type", "s", "weighted"], ["actions", "a", []]]
 const SPEC_AI_ACTION: Array = [["skill", "s"], ["weight", "i"], ["target", "s", "random"], ["cond", "d", {}]]
 const SPEC_PHASE: Array = [["hp_above", "f"], ["on_enter", "a", []], ["actions", "a", []]]
@@ -284,7 +321,8 @@ const SPEC_CHEST_TABLE: Array = [["kind", "s"], ["id", "s", ""], ["weight", "i"]
 const SPEC_QUEST: Array = [["type", "s"], ["label", "s", ""], ["params", "d", {}]]
 const SPEC_WINDOW: Array = [["open_at", "s", ""], ["close_at", "s", ""], ["duration_sec", "i", 0]]
 const SPEC_ENCOUNTER: Array = [["id", "s"], ["enemies", "sa"], ["weight", "i", 10], ["min_depth", "f", 0.0],
-	["max_depth", "f", 1.0], ["boss", "b", false], ["can_flee", "b", true], ["tutorial", "b", false], ["music", "s", ""]]
+	["max_depth", "f", 1.0], ["boss", "b", false], ["can_flee", "b", true], ["tutorial", "b", false], ["music", "s", ""],
+	["rt", "d", {}], ["show_boss", "d", {}]]    # Echtzeitkampf (07, R1a): rt (§4.9) + show boss (§9.6, E26)
 const SPEC_LAYOUT: Array = [["cells", "a"], ["zones", "a"], ["gates", "a", []], ["encounters_placed", "a", []],
 	["chests", "a", []], ["events", "a", []], ["spawners", "a", []], ["safe_rooms", "a", []], ["stairs", "d"],
 	["secrets", "a", []]]                   # 06 package A: Kulissenwände / Regie-Notizen (validators/secrets.gd)
@@ -365,6 +403,7 @@ func validate(raw: Dictionary, p_strict: bool = true, read_errors: Dictionary = 
 		"pseudo_units": []}
 	for t: String in TABLES:
 		_out[t] = []
+	_out["origin_extras"] = {}                    # Casting (08, K0): talents, hobbies, …, canon of origins.json
 	# Rule 1 + rules 2/4 per entry.
 	for t: String in TABLES:
 		var entries: Array = _file_entries(t, raw, read_errors)
@@ -377,6 +416,7 @@ func validate(raw: Dictionary, p_strict: bool = true, read_errors: Dictionary = 
 	_build_lookups()
 	_check_ids()                                   # rule 3
 	_check_references()                            # rules 5, 6 (+ value rules needing other tables)
+	RtCheck.check(self, raw)                       # Echtzeitkampf (07, R1a hook; R4 fills validators/rt.gd)
 	if strict:
 		_check_content_rules()                     # rule 7 (+ required lootboxes / non-empty pools)
 		_check_floor_rules()                       # rule 8
@@ -456,6 +496,8 @@ func _file_entries(t: String, raw: Dictionary, read_errors: Dictionary) -> Array
 		_read_pseudo_units(f)
 	elif t == "lootboxes":
 		_read_lootbox_extras(f)
+	elif t == "origins":
+		OriginsCheck.read_extras(self, f)         # Casting (08, K0)
 	if not f.has("entries"):
 		_err(t + ".entries", "missing")
 		return []
@@ -614,6 +656,10 @@ func _normalize_entry(t: String, i: int, raw: Variant) -> Dictionary:
 			return MarottenCheck.normalize(self, ctx, raw)          # 06-C
 		"twists":
 			return TwistCheck.normalize(self, ctx, raw)             # 06-D
+		"origins":
+			return OriginsCheck.normalize(self, ctx, raw)           # Casting (08, K0)
+		"looks":
+			return LooksCheck.normalize(self, ctx, raw)             # Casting (08, K0)
 	return {}
 
 
@@ -839,6 +885,7 @@ func _n_model(ctx: String, raw: Variant) -> Dictionary:
 	var gltf: String = str(m["gltf"])
 	if gltf != "" and not gltf.begins_with("res://"):
 		_err(ctx + ".gltf", "must be a res:// path or \"\"")
+	_check_model_style(ctx, m)                    # Casting (08, K0)
 	return m
 
 
@@ -1573,6 +1620,8 @@ func _check_references() -> void:
 	TalentsRules.check_refs(self)              # 06 package B
 	SpeciesRules.check_refs(self)
 	MarottenCheck.check_refs(self, _out["marotten"], _boxes)   # 06-C
+	OriginsCheck.check(self)                   # Casting (08, K0 stub → K1 rules)
+	LooksCheck.check(self)                     # Casting (08, K0 stub → K2 rules)
 
 
 func _ref(ctx: String, id: String, table: Dictionary, what: String) -> bool:
@@ -2221,6 +2270,7 @@ func _check_mod_line_rules() -> void:
 	for i in mls.size():
 		var ctx: String = _ctx("mod_lines", i, mls[i])
 		_check_placeholders(ctx + ".text", str(mls[i]["text"]))
+		_check_persona_placeholders(ctx + ".text", str(mls[i]["text"]), str(mls[i]["tag"]))   # Casting (08, K0)
 		_check_tag_params(ctx + ".tag", str(mls[i]["tag"]))
 	MarottenCheck.check_lines(self, mls)                        # 06-C: no foot words in liga_/marotte_ lines
 	var scs: Array = _out["scenes"]
@@ -2228,6 +2278,8 @@ func _check_mod_line_rules() -> void:
 		var lines: Array = scs[i]["lines"]
 		for j in lines.size():
 			_check_placeholders("%s.lines[%d].text" % [_ctx("scenes", i, scs[i]), j], str(lines[j]["text"]))
+			_check_persona_placeholders("%s.lines[%d].text" % [_ctx("scenes", i, scs[i]), j], str(lines[j]["text"]),
+				"")                                     # Casting (08, K0): scenes may use the persona context
 
 
 func _check_placeholders(ctx: String, text: String) -> void:
@@ -2508,3 +2560,38 @@ func _num_dict(ctx: String, raw: Dictionary, keys: PackedStringArray, as_int: bo
 			if not out.has(key) and not raw.has(key):
 				_err(ctx + "." + key, "missing required field")
 	return out
+
+
+# ======================================================================================================================
+# Casting (08, K0)
+# ======================================================================================================================
+
+## 08 §4.4: {job}, {hobby}, {club}, {trait}, {rival}, {brand} only in persona_* lines and in scenes (tag ""),
+## {job_text} only in persona_intro:custom; {cand} anywhere.
+func _check_persona_placeholders(ctx: String, text: String, tag: String) -> void:
+	for ph: String in placeholders_in(text):
+		if not PERSONA_PLACEHOLDERS.has(ph):
+			continue
+		if ph == "job_text" and tag != JOB_TEXT_TAG:
+			_err(ctx, "{job_text} only in %s lines" % JOB_TEXT_TAG)
+		elif tag != "" and not tag.begins_with("persona_"):
+			_err(ctx, "{%s} only in persona_* lines and scenes" % ph)
+
+
+## 08 §6.2: ModelSpec.style is optional — {} is dropped (models without a style keep their exact normalized form);
+## otherwise only for base "humanoid", keys hair / beard from MODEL_HAIR_STYLES / MODEL_BEARDS.
+func _check_model_style(ctx: String, m: Dictionary) -> void:
+	var style: Dictionary = m.get("style", {})
+	if style.is_empty():
+		m.erase("style")
+		return
+	if str(m["base"]) != "humanoid":
+		_err(ctx + ".style", "only for base \"humanoid\"")
+	for k: Variant in style.keys():
+		match str(k):
+			"hair":
+				_enum(ctx + ".style.hair", str(style[k]), MODEL_HAIR_STYLES)
+			"beard":
+				_enum(ctx + ".style.beard", str(style[k]), MODEL_BEARDS)
+			_:
+				_err(ctx + ".style." + str(k), "unknown key (hair, beard)")

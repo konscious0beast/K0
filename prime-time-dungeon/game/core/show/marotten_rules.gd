@@ -102,11 +102,11 @@ static func announce(state: GameState, data: GameData, floor_index: int,
 	while out.size() < want and not pool.is_empty():
 		var total: int = 0
 		for def: MarotteDef in pool:
-			total += maxi(1, def.weight)
+			total += _draw_weight(state, def, floor_index)
 		var roll: int = rng.randi_range(0, total - 1)
 		var pick: int = 0
 		for i in pool.size():
-			roll -= maxi(1, pool[i].weight)
+			roll -= _draw_weight(state, pool[i], floor_index)
 			if roll < 0:
 				pick = i
 				break
@@ -499,3 +499,11 @@ static func _encounter_type(advantage: int, opener: String = "") -> String:
 		BattleSetup.Advantage.AMBUSH:
 			return "ambush"
 	return "normal"
+
+
+# --- Casting (08, K0): the persona's bias in the announcement draw (08 §4.8) ------------------------------------------
+
+## Draw weight of a preference in announce: its data weight (at least 1) + PersonaRules.weight_add (the bias of the
+## candidate card from floor BIAS_MIN_FLOOR on; 0 before K1, so the draw is unchanged).
+static func _draw_weight(state: GameState, def: MarotteDef, floor_index: int) -> int:
+	return maxi(1, def.weight) + PersonaRules.weight_add(state, def.id, floor_index)

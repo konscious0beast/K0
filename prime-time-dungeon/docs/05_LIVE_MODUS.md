@@ -236,6 +236,11 @@ werden angezeigt und gezählt (Herzen, Zeilen), wirken aber **nicht** auf die We
 `ach_pts` enthält nie ein `show_bet`-Achievement. `rules.marotten.enabled` / `rules.liga.enabled` (`{"enabled": bool}`,
 Standard an) schalten Anzeige und Zählung ab und gehen in den `rules_hash` ein (`test_06c_liga`).
 
+**Casting in Event-Läufen (08 Kap. 8, F-6):** Event-Läufe haben **keine Persona** im Kern — kein Starttalent, keine Gewichtung; ein
+`persona`-Command im Log ist ein Verifier-Fehler (`event_run`). `rules.persona` ist reserviert: fehlt, oder genau
+`{"talent": false, "bias": false}` (`EventDef.persona_rule_errors`); eine Board-Variante „mit Herkunft“ wäre ein eigener,
+angekündigter Regelsatz mit eigenem `rules_hash` (08 O-14). Der lokale Bestenlisten-Eintrag trägt keinen Namen (Kap. 10.4).
+
 Tie-Break: `score` absteigend → `run_wall_ms` aufsteigend → `finished_at` aufsteigend. Beide Werte sind **serverseitig**:
 `run_wall_ms` = Zeitraum zwischen vom Server ausgestelltem Run-Start-Ticket und Server-Eingang des Run-Logs (Async) bzw.
 Instanz-Start/-Ende (Server-Sim), gedeckelt auf `max_run_wall_sec`; `finished_at` = Server-Eingangszeitpunkt. Client-gemessene
@@ -320,7 +325,27 @@ das Gift-Format (Kap. 6.5).
   Server/Verifier) gegen Windows x64, Android arm64, iOS bzw. macOS arm64 (Apple Silicon) und Web (wasm) — je mindestens
   **20 Bot-Läufe** mit identischem `final_hash` und identischen Checkpoint-Hashes. CI headless mit mindestens einem
   **arm64-Runner** (z. B. Linux arm64); Mobile über Device-Farm oder dokumentiertes manuelles Gate.
-  **Offen:** bisher läuft nur Linux x86-64 (lokal und CI); es gibt weder arm64-Runner noch Geräte-Läufe.
+  **Werkzeug:** `tools/platform_matrix.sh [--runs=20]` (Kern-Bot `tests/tools/platform_matrix_bot.gd`: 20 Etage-1-Läufe über
+  `RunSim` mit wechselndem Seed, jeder Lauf mit `RunSim.replay` gegen seine Checkpoints geprüft; ein Digest je Bein über alle
+  End- und Checkpoint-Hashes). Andere Beine starten `godot --headless --path game -s res://tests/tools/platform_matrix.gd --
+  --runs=20` und vergleichen die Zeile `MATRIX: digest`.
+  **Lauf vor dem Sprung `sim_version` 1 → 2 (07 R1a + 08 K0, 2026-10-11, Godot 4.7.2):**
+
+  | Bein | `sim_version` 1 (vor dem Sprung) | `sim_version` 2 (danach) |
+  |---|---|---|
+  | Linux x86-64, headless (Referenz) | 20/20 Replays ok, Digest `b80cd4c2…af68c9` | 20/20 Replays ok, Digest `46082a62…aee9fc` |
+  | Linux x86-64, OpenGL 3 (Xvfb) | 20/20, Digest gleich der Referenz | 20/20, Digest gleich der Referenz |
+  | Linux arm64 (CI-Runner) | **[ausstehend]** | **[ausstehend]** |
+  | Windows x64 | **[ausstehend]** | **[ausstehend]** |
+  | macOS arm64 (Apple Silicon) / iOS | **[ausstehend]** | **[ausstehend]** |
+  | Android arm64 (Device-Farm oder manuell) | **[ausstehend]** | **[ausstehend]** |
+  | Web (wasm) | **[ausstehend]** | **[ausstehend]** |
+
+  Der R1a-Stand allein (Commit vor dem Sprung, noch `sim_version` 1) ergibt auf beiden Beinen denselben Digest wie der Stand
+  davor — die Echtzeit-Vertragsfelder ändern keinen Hash. Die Digests der beiden Versionen unterscheiden sich gewollt (K0: die
+  Hash-Eingabe hat keine Anzeigenamen mehr). **Offen:** die
+  ausstehenden Beine sind ein **offenes Release-Gate** — vor dem ersten Lauf außerhalb von Linux x86-64 und vor jedem weiteren
+  Sprung nachzuholen; bis dahin gibt es weder arm64-Runner noch Geräte-Läufe.
 - [x] `RunSim` (dünne Variante, CR-6) treibt den Bot-Lauf **ohne Autoloads**; `test_m8_replay` läuft headless gegen `RunSim` —
   `test_m8_replay.gd::test_bot_run_replays_bit_for_bit`, `test_m8_run_sim.gd`.
 - [x] Lokale Bestenliste übersteht Neustart; korrupte Datei → wird verworfen, Spiel läuft weiter —
@@ -759,6 +784,14 @@ Die `cmd_id` steht auch im Run-Log (Kap. 10.6); der Verifier prüft strikte Mono
   übereinstimmen — sonst `E_DATA_HASH`. Grund: Lockstep setzt identische Regeln voraus.
 - Run-Logs speichern `proto`, `sim_version`, `data_hash`, `game_version`. Der Verifier hält **alte Kern-Versionen** vor,
   solange deren Replays angezeigt werden sollen (Archiv-Builds pro `sim_version`).
+- **Ein Log oder Bestenlisten-Eintrag einer anderen `sim_version` ist keine Abweichung (08 F-6):** `RunSim.version_status`
+  meldet `old_version` (bzw. `new_version`); `RunSim.replay` und `Game.replay_log` spielen ihn nicht ab (eine Fehlerzeile
+  „header: old_version …“, `mismatch_at` bleibt −1, Rückgabe `"version"`), `RunSim.header_errors` meldet ihn ebenso, die UI zeigt
+  ihn als **„ältere Version“** (`RunSim.OLD_VERSION_TAG`; Lobby-Liste seit 08 K0, Ergebnis/Replays mit K1). Abspielen nur mit dem
+  Archiv-Build seiner Version. Logs ohne `sim_version` (handgemachte Test-Logs) gelten als aktuell.
+- **Versionssprünge:** `SIM_VERSION` **1 → 2** mit dem gemeinsamen Vertrags-Durchgang 07 R1a + 08 K0 (2026-10-11, genau einmal):
+  Anzeigenamen fallen aus jedem Zustands- und Kampf-Hash (`player_name`, `display_name`, 08 §2.7), dazu das Command `persona` und
+  die Echtzeit-Vertragsfelder. Vor dem Sprung lief die Plattform-Matrix (Kap. 2 S0, Ergebnis dort).
 
 ### 4.4 Client → Server
 
@@ -2044,7 +2077,9 @@ Siehe Kap. 6.5 (normativ; inkl. optionalem Stempel `sponsor_window`, Kap. 6.13).
 `verified` ∈ `pending` \| `plausible` (Grad A, ungewertet, Kap. 2 S1) \| `ok` \| `failed` \| `annulled`.
 `run_wall_ms` und `finished_at` sind serverseitig ermittelt (Kap. 1.5). Läufe mit `flags` ∋ `sponsored` erhalten nur die
 Teilnahme-Plakette (Kap. 1.6). Rang wird beim Lesen berechnet (Tie-Break Kap. 1.5).
-S0 lokal: gleiches Schema, `league: "pur"`, `verified: "local"`, `players[0].player_id: "local"`; `run_id`/`replay_id` =
+S0 lokal: gleiches Schema, `league: "pur"`, `verified: "local"`, `players[0].player_id: "local"`, `players[0].display_name: ""`
+(seit 08 K0 ohne Namen, Exportgrenze 08 §2.7 Nr. 4 — die Lobby zeigt den lokalen Eintrag als „Sie“, Einträge einer älteren
+`sim_version` mit dem Zusatz „ältere Version“, Kap. 4.3); `run_id`/`replay_id` =
 `run_id` des Log-Headers, `run_log_hash` = `RunLog.digest()`, `data_hash` = `DB.data_hash()` (SHA-256 über alle Dateien in
 `res://data/`), dazu `difficulty`, `sim_version`, `client_version`, `finished_at`; `Game.finish_run` gibt den Eintrag in
 `summary["entry"]` zurück. **Lokale Bestenlisten und Replays** (`user://leaderboards/`, `user://replays/`) sind normales,
@@ -2094,11 +2129,18 @@ Schlüssel wie `TwistApplier.DEFAULT_RULES` (`enabled`, `min_floor`, `sources`, 
 }
 ```
 
-- **Header im Slice** (`Game._make_run_log`): `schema`, `seed`, `slot`, `player_name`, `mode`, `difficulty`, `game_version`,
-  `sim_hz`, `sim_version` (`RunSim.SIM_VERSION`) und die **Lauf-Identität** `event_id`, `run_id` (je Versuch eindeutig,
+- **Header im Slice** (`Game._make_run_log`, beim Laden `Save._make_run_log` + `from_save`): `schema`, `seed`, `slot`, `mode`,
+  `difficulty`, `game_version`, `sim_hz`, `sim_version` (`RunSim.SIM_VERSION`) — **kein `player_name`** (seit 08 K0; die Replays
+  bauen den Zustand mit `GameState.DEFAULT_NAME`, der Anker `start_state` läuft durch `PersonaPrivacy.scrub_state_dict`, 08 §2.7)
+  — und die **Lauf-Identität** `event_id`, `run_id` (je Versuch eindeutig,
   `RunLog.local_run_id(seed)` = `run_local_<seed>_<8 hex>`), `player_id` (S0 `"local"`), `window_id` (`""` offline), `league`.
   Gegen die Identität prüft der Kern die Lauf-Bindung von Geschenken (Kap. 6.9); die Verifier prüfen bei Katalog-Events
   festen Seed, Schwierigkeit `prime` und Liga (Kap. 11.4). Das Beispiel oben zeigt das Ziel-Format ab S1.
+- **Command `persona`** (08 §2.3, seit 08 K0 im Schema, aufgezeichnet ab K1): `{"t": "persona", "v": 1, "talent": "tal_org_…",
+  "bias": [≤ 3 Marotten-IDs, aufsteigend]}` einmal je Lauf direkt nach `floor` → `hero`, oder der einmalige Tausch
+  `{"t": "persona", "v": 1, "talent", "swap": true}` im Safe Room. Nur IDs; beide Verifier prüfen `PersonaRules.check`. In einem
+  Log mit `event_id ≠ ""` (bzw. mit Event-Regeln) ist es ein Verifier-Fehler `event_run`; `rules.persona` ist reserviert und
+  darf nur fehlen oder `{"talent": false, "bias": false}` sein (08 §8, `EventDef`).
 - `k` = Sim-Tick (30 Hz, eine Simulationsuhr, Kap. 3.2), **normativ je Timer-Modus:**
   - `explore_only`: `k` zählt Erkundungs-Ticks und — seit den Sponsor-Fenstern (Kap. 6.13) — **Leerlauf-Ticks im Safe Room**
     (nur die Fenster-Uhr läuft, der Etagen-Timer nicht; welcher Tick welcher ist, folgt aus `floor_run.location`, also aus den

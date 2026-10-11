@@ -644,6 +644,7 @@ static func format_line(text: String, ctx: Dictionary = {}) -> String:
 	full["level"] = kai.level if kai != null else 1
 	full["viewers"] = fmt_int(Show.viewers())
 	full["followers"] = fmt_int(Show.followers())
+	full.merge(PersonaText.ctx(Game.persona, DB.data, null))   # 08 §4.4: {cand}, {job}, … (K0: the fallbacks)
 	for k: Variant in ctx.keys():
 		full[k] = ctx[k]
 	return glyph_safe(tr_text(text).format(full))

@@ -1,0 +1,49 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "itm_bandage",
+			"name": "Werbepflaster",
+			"desc": "Heilt 45 HP.",
+			"type": "consumable",
+			"price": 25,
+			"tags": [
+				"heal"
+			],
+			"use_skill": "skl_item_bandage",
+			"usable": "both",
+			"icon": "bandage",
+			"color": "#e8e0d0",
+			"rt": {
+				"wheel": 1
+			}
+		},
+		{
+			"id": "itm_antidote",
+			"name": "Gegengift",
+			"desc": "Heilt Vergiftung.",
+			"type": "consumable",
+			"price": 20,
+			"tags": [
+				"cure"
+			],
+			"use_skill": "skl_item_antidote",
+			"usable": "both",
+			"icon": "antidote",
+			"color": "#7cc242",
+			"rt": {
+				"wheel": 2
+			}
+		},
+		{
+			"id": "itm_key_master",
+			"name": "Generalschlüssel",
+			"desc": "Öffnet das Tor zu Gleis 9.",
+			"type": "key",
+			"sell": 0,
+			"max_stack": 1,
+			"icon": "key",
+			"color": "#ffc93c"
+		}
+	]
+}

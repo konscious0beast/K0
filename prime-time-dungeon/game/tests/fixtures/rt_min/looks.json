@@ -1,0 +1,43 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "lk_hair_short",
+			"kind": "hair",
+			"name": "Kurz",
+			"style": "short"
+		},
+		{
+			"id": "lk_hc_darkbrown",
+			"kind": "hair_color",
+			"name": "Dunkelbraun",
+			"color": "#3B2A22"
+		},
+		{
+			"id": "lk_skin_3",
+			"kind": "skin",
+			"name": "Ton 3",
+			"color": "#E8B48F"
+		},
+		{
+			"id": "lk_beard_none",
+			"kind": "beard",
+			"name": "ohne",
+			"style": "none"
+		},
+		{
+			"id": "lk_glasses_none",
+			"kind": "glasses",
+			"name": "ohne"
+		},
+		{
+			"id": "lk_outfit_petrol",
+			"kind": "outfit",
+			"name": "Tierheim-Petrol",
+			"colors": {
+				"primary": "#3AA9A0",
+				"secondary": "#2E3A57"
+			}
+		}
+	]
+}

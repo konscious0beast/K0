@@ -19,6 +19,11 @@ class_name Talents extends RefCounted
 ##   post_battle_mp_pm → BattleBridge.apply_result ("Werbepause" regeneration)
 ##   field_range_pm / field_cd_pm → field ability of the controlled hero (exploration, package A: EncounterRules)
 ##   marotte_heart → MarottenRules (package C) via marotte_bonus_hearts; hype_gain_pm / follower_pm → GameState
+## Casting (08 §3.3, K0, CR-21): the persona's start talent (PartyMember.origin_talent, origins.json) is a second
+## source of effects — rank 1, after the pool talents in _effects, from level 1 on. has_any() replaces the four
+## "no talents" guards (stat_bonus, _effects, Progression.total_stats, Progression.to_combatant); picks,
+## pending_levels and offer stay pool-only. origin_field_range_pm() is the start talent's field reach for the leading
+## Graf (HeroRules.field_mods).
 
 const OFFER_SIZE: int = 2
 const FIRST_LEVEL: int = 3
@@ -165,7 +170,7 @@ static func pick(state: GameState, data: GameData, member_id: String, talent_id:
 ## per-mille of stat_pct (+ liga_stat_pct when `liga`: the member fights in the Unterhosen-Liga — callers ask
 ## MarottenRules.in_liga / liga_member, package C's tier), round half up.
 static func stat_bonus(member: PartyMember, data: GameData, stat_index: int, base: int, liga: bool = false) -> int:
-	if member == null or member.talents.is_empty() or data == null:
+	if member == null or not has_any(member, data) or data == null:      # Casting (08, K0): has_any
 		return 0
 	var key: String = StatBlock.KEYS[stat_index]
 	var flat: int = 0
@@ -271,7 +276,7 @@ static func follower_pm(state: GameState, data: GameData) -> int:
 ## [[effect: Dictionary, rank: int], …] of the member's known talents (talent id order, effect order).
 static func _effects(member: PartyMember, data: GameData) -> Array:
 	var out: Array = []
-	if member == null or data == null or member.talents.is_empty():
+	if member == null or data == null or not has_any(member, data):     # Casting (08, K0): has_any
 		return out
 	var ids: Array = member.talents.keys()
 	ids.sort_custom(func(a: Variant, b: Variant) -> bool: return str(a) < str(b))
@@ -281,6 +286,9 @@ static func _effects(member: PartyMember, data: GameData) -> Array:
 			continue
 		for fx: Dictionary in data.talent(str(id)).effects:
 			out.append([fx, r])
+	if member.origin_talent != "" and data.has_origin_talent(member.origin_talent):   # Casting (08, K0): rank 1
+		for fx: Dictionary in data.origin_talent(member.origin_talent).effects:
+			out.append([fx, 1])
 	return out
 
 
@@ -311,4 +319,29 @@ static func _party_product(state: GameState, data: GameData, kind: String) -> in
 		var f: int = _product(m, data, kind)
 		if f != PM:
 			acc = (acc * f + PM / 2) / PM
+	return acc
+
+
+# --- Casting (08, K0) -------------------------------------------------------------------------------------------------
+
+## True if the member has a source of talent effects: pool talents or a valid start talent (08 §3.3 R1: the start
+## talent works from level 1). Without `data` a set origin_talent counts (SaveCodec already dropped unknown ones).
+static func has_any(member: PartyMember, data: GameData = null) -> bool:
+	if member == null:
+		return false
+	if not member.talents.is_empty():
+		return true
+	return member.origin_talent != "" and (data == null or data.has_origin_talent(member.origin_talent))
+
+
+## Field reach factor of the persona's start talent alone (kai's origin_talent; 1000 = none / neutral) — the Graf
+## carries it when he leads (HeroRules.field_mods, 08 §3.3, CR-21).
+static func origin_field_range_pm(state: GameState, data: GameData) -> int:
+	var acc: int = PM
+	var kai: PartyMember = state.member("kai") if state != null else null
+	if kai == null or data == null or kai.origin_talent == "" or not data.has_origin_talent(kai.origin_talent):
+		return acc
+	for fx: Dictionary in data.origin_talent(kai.origin_talent).effects:
+		if str(fx.get("kind", "")) == "field_range_pm":
+			acc = (acc * int(fx["pm"]) + PM / 2) / PM
 	return acc

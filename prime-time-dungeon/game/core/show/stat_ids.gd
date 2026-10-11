@@ -12,4 +12,7 @@ const ALL: PackedStringArray = ["kills_total", "kills_skill", "battles_won", "ba
 	"credits_spent_vendor", "lootboxes_opened", "events_completed", "game_overs", "ko_mopsula",
 	"explore_seconds_since_battle", "viewers_max", "viewers_target_peak", "followers_gained_run", "hype_100_count",
 	"bets_won", "liga_battles",                                     # 06-C: show bets won, battles won in the Liga
-	"bark_openers"]                                                 # 06 A × C: battles opened from Mopsula's bark
+	"bark_openers",                                                 # 06 A × C: battles opened from Mopsula's bark
+	# Echtzeitkampf (07, R1a, §9.4): interrupts / dodges of the controlled unit, adds killed by the train, taunts of the
+	# person (own key or Partner-Spezial, by_ai == false) — raised by the ShowRules profile rt (R5a)
+	"interrupts_total", "dodges_total", "train_kills", "taunts_total"]

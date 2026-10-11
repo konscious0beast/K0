@@ -1,0 +1,126 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "sts_poison",
+			"name": "Vergiftet",
+			"kind": "debuff",
+			"default_turns": 4,
+			"tick_timing": "turn_start",
+			"tick_pct": -8,
+			"tick_min": 1,
+			"element": "poison",
+			"color": "#7cc242",
+			"icon": "poison",
+			"rt": {
+				"default_ms": 6000,
+				"period_ms": 2000,
+				"tick_pct": -2,
+				"tick_min": 1,
+				"tick_max": 12,
+				"max_stacks": 3,
+				"stack_mode": "refresh",
+				"boss_tick_pm": 500
+			}
+		},
+		{
+			"id": "sts_stun",
+			"name": "Betäubt",
+			"kind": "debuff",
+			"default_turns": 1,
+			"flags": [
+				"delay_on_apply"
+			],
+			"color": "#f5d90a",
+			"icon": "stun",
+			"rt": {
+				"default_ms": 1500,
+				"flags": [
+					"no_act",
+					"no_move",
+					"interrupt_on_apply"
+				],
+				"boss_ms_pm": 500
+			}
+		},
+		{
+			"id": "sts_slow",
+			"name": "Verlangsamt",
+			"kind": "debuff",
+			"default_turns": 3,
+			"tick_speed_mult": 1.5,
+			"excludes": [
+				"sts_haste"
+			],
+			"color": "#5b8def",
+			"icon": "slow",
+			"rt": {
+				"default_ms": 4000,
+				"move_pm": 600,
+				"haste_pm": 800
+			}
+		},
+		{
+			"id": "sts_haste",
+			"name": "Turbo",
+			"kind": "buff",
+			"default_turns": 3,
+			"tick_speed_mult": 0.6,
+			"excludes": [
+				"sts_slow"
+			],
+			"color": "#ff7a1a",
+			"icon": "haste",
+			"rt": {
+				"default_ms": 10000,
+				"haste_pm": 1300
+			}
+		},
+		{
+			"id": "sts_guard",
+			"name": "Gepanzert",
+			"kind": "buff",
+			"default_turns": 3,
+			"flags": [
+				"guard"
+			],
+			"color": "#9aa7b8",
+			"icon": "guard",
+			"rt": {
+				"default_ms": 6000,
+				"dmg_taken_pm": 700
+			}
+		},
+		{
+			"id": "sts_taunt",
+			"name": "Provoziert",
+			"kind": "buff",
+			"default_turns": 3,
+			"flags": [
+				"taunt"
+			],
+			"color": "#e8455a",
+			"icon": "taunt",
+			"rt": {
+				"default_ms": 4000,
+				"flags": [
+					"fixate"
+				]
+			}
+		},
+		{
+			"id": "sts_enrage",
+			"name": "Überstunden",
+			"kind": "buff",
+			"default_turns": 99,
+			"color": "#e8455a",
+			"icon": "enrage",
+			"rt": {
+				"default_ms": -1,
+				"dmg_dealt_pm": 1500,
+				"max_stacks": 9,
+				"stack_mode": "refresh"
+			}
+		}
+	]
+}

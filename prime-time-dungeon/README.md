@@ -59,7 +59,7 @@ Prüfwerkzeuge (`tools/`).
   Follower. Show-Chip im Overlay, Pausemenü-Reiter „Show“, Achievement-Kette „Ohne alles“.
 - SHOWRUN S0: 2 Offline-Events (`evt_offline_gleis9`, `evt_offline_pacifist`), Event-Lobby, Ergebnis-Screen, lokale Bestenliste,
   Replay-Prüfung.
-- Qualitätssicherung: rund 1 075 automatische Tests, Autoplay-Smoke-Test (`AUTOPLAY: OK`), Full-Run-Bot, der Etage 1 mit
+- Qualitätssicherung: rund 1 115 automatische Tests, Autoplay-Smoke-Test (`AUTOPLAY: OK`), Full-Run-Bot, der Etage 1 mit
   drei Strategien und als Graf Mopsula durchspielt, Performance-Probe (`PERF: OK`) und der CI-Workflow `ptd-check`.
 
 **Bekannte Lücken:**

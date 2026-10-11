@@ -4,6 +4,10 @@ class_name GameSettings extends RefCounted
 
 const PATH: String = "user://settings.cfg"
 const MOD_LIVE_MODES: Array[StringName] = [&"off", &"lines", &"lines_twists"]   # 06-D
+# --- Echtzeitkampf (07, R1a): §7.8 vocabularies --------------------------------------------------------------------
+const COMBAT_MODES: Array[StringName] = [&"ctb", &"realtime"]
+const COMBAT_SPEEDS_PM: PackedInt32Array = [1000, 850, 700]               # == RtVocab.COMBAT_SPEEDS (§10.7 O1)
+const TELEGRAPH_CONTRASTS: Array[StringName] = [&"normal", &"high"]
 
 var master_volume: float = 0.8              # audio/master, 0..1
 var music_volume: float = 0.6               # audio/music
@@ -24,6 +28,17 @@ var partner_auto: bool = false              # game/partner_auto (06 §1.4, packa
 var regie_twists: bool = true               # game/regie_twists: offline Regie twists from floor 2 (06 §5.7a)
 var mod_live: StringName = &"off"           # live/mod_live: &"off" | &"lines" | &"lines_twists" (06 §5.3, opt-in)
 var mod_live_url: String = ""               # live/mod_live_url: mod-brain base URL (debug builds / --mod-live-url=)
+# --- Echtzeitkampf (07, R1a): fields of 07 §7.8, section [combat] (menu: R3) ---------------------------------------
+var combat_mode: StringName = &"ctb"        # combat/combat_mode: &"ctb" | &"realtime" — new games take it (§12.1)
+var combat_speed_pm: int = 1000             # combat/combat_speed_pm ∈ {1000, 850, 700} (recorded as combat_speed)
+var combat_assist: int = -1                 # combat/combat_assist: -1 auto (on with touch), 0 off, 1 on (§5.6)
+var combat_camera_assist: int = -1          # combat/combat_camera_assist: -1 auto, 0 off, 1 on (§7.5)
+var combat_hints: bool = true               # combat/combat_hints: first-time hint cards (§2.13)
+var telegraph_contrast: StringName = &"normal"   # combat/telegraph_contrast: &"normal" | &"high" (§7.6)
+var auto_attack_default: bool = true        # combat/auto_attack_default (RtSetup.auto_attack)
+var auto_retarget: bool = true              # combat/auto_retarget (RtSetup.auto_retarget)
+var floating_text_scale: int = 100          # combat/floating_text_scale in % (§8.6)
+var camera_shake: bool = true               # combat/camera_shake (§7.6)
 # true: save_to_disk() is a no-op returning OK, load_from_disk() keeps defaults
 var ephemeral: bool = false
 
@@ -52,6 +67,7 @@ func reset_defaults() -> void:
 	regie_twists = true
 	mod_live = &"off"
 	mod_live_url = ""
+	_reset_combat()                               # Echtzeitkampf (07, R1a)
 
 
 ## Reads user://settings.cfg (missing file → defaults). No-op when ephemeral.
@@ -85,6 +101,7 @@ func load_from_disk() -> void:
 	var ml: StringName = StringName(str(cfg.get_value("live", "mod_live", mod_live)))
 	mod_live = ml if MOD_LIVE_MODES.has(ml) else &"off"
 	mod_live_url = str(cfg.get_value("live", "mod_live_url", mod_live_url)) if OS.is_debug_build() else ""
+	_load_combat(cfg)                             # Echtzeitkampf (07, R1a)
 
 
 ## Writes user://settings.cfg. Ephemeral: returns OK without writing.
@@ -110,6 +127,7 @@ func save_to_disk() -> Error:
 	cfg.set_value("game", "regie_twists", regie_twists)
 	cfg.set_value("live", "mod_live", String(mod_live))
 	cfg.set_value("live", "mod_live_url", mod_live_url)
+	_save_combat(cfg)                             # Echtzeitkampf (07, R1a)
 	return cfg.save(PATH)
 
 
@@ -133,4 +151,55 @@ func to_dict() -> Dictionary:
 		"regie_twists": regie_twists,
 		"mod_live": mod_live,
 		"mod_live_url": mod_live_url,
-	}
+	}.merged(_combat_dict())                      # Echtzeitkampf (07, R1a)
+
+
+# --- Echtzeitkampf (07, R1a): §7.8 ------------------------------------------------------------------------------------
+
+func _reset_combat() -> void:
+	combat_mode = &"ctb"
+	combat_speed_pm = 1000
+	combat_assist = -1
+	combat_camera_assist = -1
+	combat_hints = true
+	telegraph_contrast = &"normal"
+	auto_attack_default = true
+	auto_retarget = true
+	floating_text_scale = 100
+	camera_shake = true
+
+
+func _load_combat(cfg: ConfigFile) -> void:
+	var cm: StringName = StringName(str(cfg.get_value("combat", "combat_mode", combat_mode)))
+	combat_mode = cm if COMBAT_MODES.has(cm) else &"ctb"
+	var sp: int = int(cfg.get_value("combat", "combat_speed_pm", combat_speed_pm))
+	combat_speed_pm = sp if COMBAT_SPEEDS_PM.has(sp) else 1000
+	combat_assist = clampi(int(cfg.get_value("combat", "combat_assist", combat_assist)), -1, 1)
+	combat_camera_assist = clampi(int(cfg.get_value("combat", "combat_camera_assist", combat_camera_assist)), -1, 1)
+	combat_hints = bool(cfg.get_value("combat", "combat_hints", combat_hints))
+	var tc: StringName = StringName(str(cfg.get_value("combat", "telegraph_contrast", telegraph_contrast)))
+	telegraph_contrast = tc if TELEGRAPH_CONTRASTS.has(tc) else &"normal"
+	auto_attack_default = bool(cfg.get_value("combat", "auto_attack_default", auto_attack_default))
+	auto_retarget = bool(cfg.get_value("combat", "auto_retarget", auto_retarget))
+	floating_text_scale = clampi(int(cfg.get_value("combat", "floating_text_scale", floating_text_scale)), 50, 200)
+	camera_shake = bool(cfg.get_value("combat", "camera_shake", camera_shake))
+
+
+func _save_combat(cfg: ConfigFile) -> void:
+	cfg.set_value("combat", "combat_mode", String(combat_mode))
+	cfg.set_value("combat", "combat_speed_pm", combat_speed_pm)
+	cfg.set_value("combat", "combat_assist", combat_assist)
+	cfg.set_value("combat", "combat_camera_assist", combat_camera_assist)
+	cfg.set_value("combat", "combat_hints", combat_hints)
+	cfg.set_value("combat", "telegraph_contrast", String(telegraph_contrast))
+	cfg.set_value("combat", "auto_attack_default", auto_attack_default)
+	cfg.set_value("combat", "auto_retarget", auto_retarget)
+	cfg.set_value("combat", "floating_text_scale", floating_text_scale)
+	cfg.set_value("combat", "camera_shake", camera_shake)
+
+
+func _combat_dict() -> Dictionary:
+	return {"combat_mode": combat_mode, "combat_speed_pm": combat_speed_pm, "combat_assist": combat_assist,
+		"combat_camera_assist": combat_camera_assist, "combat_hints": combat_hints,
+		"telegraph_contrast": telegraph_contrast, "auto_attack_default": auto_attack_default,
+		"auto_retarget": auto_retarget, "floating_text_scale": floating_text_scale, "camera_shake": camera_shake}

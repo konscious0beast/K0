@@ -7,12 +7,13 @@ static var boot_seed: int = -1
 
 
 ## Game.new_game(...) → goto(SCENE_INTRO) or, if skip_intro, goto(SCENE_EXPLORATION, {"spawn": &"start"}).
-## `hero_id` (06 §1.1): the controlled character, "kai" | "mopsula". Returns false when no game state could be created.
+## `hero_id` (06 §1.1): the controlled character, "kai" | "mopsula". `persona` (08 §1.4, K0 → K1): the candidate of the
+## casting (null = none; K1's casting scene passes it). Returns false when no game state could be created.
 static func start_new_game(slot: int, player_name: String, skip_intro: bool, seed: int = -1,
-		difficulty: StringName = &"prime", hero_id: String = "kai") -> bool:
+		difficulty: StringName = &"prime", hero_id: String = "kai", persona: PersonaProfile = null) -> bool:
 	var name_clean: String = clean_name(player_name)
 	var s: int = seed if seed != -1 else boot_seed
-	Game.new_game(slot, name_clean, s, difficulty, hero_id)
+	Game.new_game(slot, name_clean, s, difficulty, hero_id, persona)
 	if not Game.has_state():
 		push_warning("[Title] new game failed (no state)")
 		return false

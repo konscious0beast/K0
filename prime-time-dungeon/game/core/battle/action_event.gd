@@ -37,6 +37,26 @@ enum Type {
 	CTB_ORDER,       # order = next PREVIEW_LENGTH (12) combatant ids (index 0 = next actor)
 	TURN_END,        # actor_id
 	BATTLE_END,      # value = BattleResult.Outcome
+	# --- Echtzeitkampf (07, R1a): appended at the end, existing values stay stable (07 §3.13) ------------------------
+	SWING,                # actor_id, target_id, skill_id: auto-attack starts (animation); the hit follows as DAMAGE
+	ACTION_END,           # actor_id, skill_id / item_id: closes an action (ShowRules: replaces TURN_END brackets)
+	ACTION_REFUSED,       # actor_id, skill_id / item_id, text = RtCommand.REASONS entry
+	CAST_START,           # actor_id, skill_id, target_id, value = ticks, success = interruptible, rt.end, rt.worthy
+	CAST_INTERRUPTED,     # actor_id = interrupter, target_id = caster, skill_id
+	CAST_FAILED,          # actor_id, skill_id, text (moved, target, mp, stunned, dead)
+	TELEGRAPH_START,      # actor_id, skill_id, value = telegraph id, rt = {shape, x, z, yaw, r, r2, half, start, impact}
+	TELEGRAPH_IMPACT,     # actor_id, skill_id, value, target_ids = units hit
+	TELEGRAPH_DODGED,     # target_id, value, success = close (≤ 9 ticks before the impact still inside)
+	TELEGRAPH_CANCELLED,  # value
+	ZONE_START,           # actor_id, skill_id, status_id, value = zone id, rt = geometry + end
+	ZONE_END,             # value
+	TARGET_CHANGED,       # actor_id, target_id ("" = none)
+	CONTROL_CHANGED,      # actor_id = before, target_id = controlled now
+	POS_CORRECTED,        # target_id, rt.x, rt.z
+	FLEE_WARNING,         # actor_id, value = ticks left
+	ENRAGE,               # actor_id, value = stacks
+	PRESET_CHANGED,       # actor_id, text = preset, rt.tog
+	SECOND,               # value = whole combat seconds
 }
 
 var type: ActionEvent.Type = Type.BATTLE_START
@@ -63,6 +83,10 @@ var success: bool = false
 var value: int = 0
 var order: PackedStringArray = []
 var text: String = ""            # ANNOUNCE/ACTION_START: German display text; MOD_LINE: tag
+# --- Echtzeitkampf (07, R1a): serialized only when they differ from the default (07 §3.13) -------------------------
+var tick: int = -1               # combat tick ct of a real-time event (-1 = CTB)
+var rt: Dictionary = {}          # real-time extras (integers only)
+var by_ai: bool = false          # the triggering action was chosen by the AI (enemy, AI partner, autopilot)
 
 
 static func make(t: ActionEvent.Type) -> ActionEvent:
@@ -127,6 +151,12 @@ func to_dict() -> Dictionary:
 		d["order"] = Array(order)
 	if text != "":
 		d["text"] = text
+	if tick != -1:                   # Echtzeitkampf (07, R1a)
+		d["tick"] = tick
+	if not rt.is_empty():
+		d["rt"] = rt.duplicate(true)
+	if by_ai:
+		d["by_ai"] = true
 	return d
 
 
@@ -161,4 +191,26 @@ static func from_dict(d: Dictionary) -> ActionEvent:
 	e.value = JsonUtil.to_int(d.get("value", 0))
 	e.order = JsonUtil.to_str_array(d.get("order", []))
 	e.text = str(d.get("text", ""))
+	e.tick = JsonUtil.to_int(d.get("tick", -1), -1)          # Echtzeitkampf (07, R1a)
+	var rt_v: Variant = d.get("rt", {})
+	e.rt = _ints(rt_v) if rt_v is Dictionary else {}
+	e.by_ai = bool(d.get("by_ai", false))
 	return e
+
+
+## Deep copy with integral JSON floats back as int (rt extras are integers, 07 §3.13).
+static func _ints(v: Variant) -> Variant:
+	match typeof(v):
+		TYPE_DICTIONARY:
+			var out: Dictionary = {}
+			for k: Variant in (v as Dictionary).keys():
+				out[str(k)] = _ints((v as Dictionary)[k])
+			return out
+		TYPE_ARRAY:
+			var out_a: Array = []
+			for e: Variant in (v as Array):
+				out_a.append(_ints(e))
+			return out_a
+		TYPE_FLOAT:
+			return int(v) if JsonUtil.is_integral(v) else v
+	return v

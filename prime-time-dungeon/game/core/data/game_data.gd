@@ -3,11 +3,14 @@ class_name GameData extends RefCounted
 ## Loading never prints; problems are collected in `errors` / `warnings` (DB pushes them).
 ## Getters for unknown ids return null and push_error (data bug). Defs are immutable after loading.
 
+## Echtzeitkampf (07 §3.16, R1a): tuning values of the real-time combat — not a table (no "entries"), optional.
+const RT_BALANCE_FILE: String = "rt_balance.json"
 const TABLES: PackedStringArray = ["statuses", "skills", "items", "classes", "party", "enemies", "floors",
 	"lootboxes", "achievements", "sponsors", "milestones", "mod_lines", "scenes",
 	"talents", "species",                       # 06 package B
 	"marotten",                                 # 06-C
-	"twists"]                                   # 06-D (KI-Admin): twists.json
+	"twists",                                   # 06-D (KI-Admin): twists.json
+	"origins", "looks"]                         # Casting (08, K0): persona catalog + avatar looks (08 §3.8, §6.1)
 
 var source: String = ""                    # dir or "dicts"
 var errors: PackedStringArray = []
@@ -55,6 +58,17 @@ var _all_talents: Array[TalentDef] = []    # sorted by id
 var _all_species: Array[SpeciesDef] = []   # file order
 var _all_marotten: Array[MarotteDef] = []  # 06-C: file order
 var _all_twists: Array[TwistDef] = []      # 06-D: sorted by id
+# --- Echtzeitkampf (07, R1a): data/rt_balance.json → "values" (RtBalance.from_data; {} = RtBalance.DEFAULTS) ---------
+var _rt_balance: Dictionary = {}
+# --- Casting (08, K0): origins.json (+ its lists) and looks.json — plain read-only dictionaries ---------------------
+var _origins: Dictionary = {}              # org id → entry
+var _all_origins: Array[Dictionary] = []   # file order
+var _origin_talents: Dictionary = {}       # tal_org id → TalentDef (never in the Talent-Show pool)
+var _persona_lists: Dictionary = {}        # list (hobbies, traits, rivals, brands, gags, greetings) → {id → entry}
+var _persona_plans: Array = []             # origins.json → plans (file order)
+var _persona_canon: Dictionary = {}        # origins.json → canon
+var _looks: Dictionary = {}                # lk id → entry
+var _looks_by_kind: Dictionary = {}        # kind → Array[Dictionary] (file order)
 
 
 ## Loads all TABLES from `dir` (<table>.json). Full validation (rules 1–10). True if no errors.
@@ -68,6 +82,9 @@ func load_dir(dir: String = "res://data") -> bool:
 			read_errors[t] = "%s (%s)" % [JsonUtil.last_error(), path]
 		else:
 			raw[t] = parsed
+	var rt_path: String = dir.path_join(RT_BALANCE_FILE)         # Echtzeitkampf (07, R1a): optional, not a table
+	if FileAccess.file_exists(rt_path):
+		raw["rt_balance"] = JsonUtil.read_file(rt_path)
 	return _load(raw, dir, true, read_errors)
 
 
@@ -86,7 +103,13 @@ func load_from_dicts(tables: Dictionary) -> bool:
 			"lootboxes":
 				file["pools"] = (tables.get("lootbox_pools", {}) as Dictionary).duplicate(true)
 				file["pity"] = (tables.get("lootbox_pity", {"rare": 4, "epic": 8}) as Dictionary).duplicate(true)
+			"origins":                                    # Casting (08, K0): {talents, hobbies, …, canon}
+				file.merge((tables.get("origin_extras", {}) as Dictionary).duplicate(true))
 		raw[t] = file
+	if tables.has("rt_balance"):                              # Echtzeitkampf (07, R1a): file object or bare values
+		var rb: Variant = tables["rt_balance"]
+		raw["rt_balance"] = rb if (rb is Dictionary and (rb as Dictionary).has("values")) \
+			else {"schema": 1, "values": rb}
 	return _load(raw, "dicts", false, {})
 
 
@@ -318,6 +341,104 @@ func all_twists() -> Array[TwistDef]:
 	return _all_twists.duplicate()
 
 
+# --- Casting (08 §3.8, §6.1, K0): persona catalog getters — unknown ids give {} / null without an error (persona
+# files may name ids a data update removed: the caller shows the canon value, 08 §2.5) ---------------------------------
+
+## origins.json entry ({} if unknown).
+func origin(id: String) -> Dictionary:
+	return _origins.get(id, {})
+
+
+## All origins, file order (23 tiles + org_allround in the full catalog, K1).
+func all_origins() -> Array[Dictionary]:
+	return _all_origins.duplicate()
+
+
+## Start talent (origins.json → talents) as a TalentDef (for "kai", max rank 1); null + error if unknown.
+func origin_talent(id: String) -> TalentDef:
+	return _get_def(_origin_talents, "origins", id) as TalentDef
+
+
+func has_origin_talent(id: String) -> bool:
+	return _origin_talents.has(id)
+
+
+## origins.json → hobbies entry ({} if unknown).
+func hobby(id: String) -> Dictionary:
+	return persona_entry("hobbies", id)
+
+
+## origins.json → traits entry ({} if unknown).
+func trait_def(id: String) -> Dictionary:
+	return persona_entry("traits", id)
+
+
+## An entry of one of the persona lists of origins.json (hobbies, traits, rivals, brands, gags, greetings).
+func persona_entry(list: String, id: String) -> Dictionary:
+	return (_persona_lists.get(list, {}) as Dictionary).get(id, {})
+
+
+## origins.json → canon (the canon persona, 08 §3.6).
+func persona_canon() -> Dictionary:
+	return _persona_canon.duplicate(true)
+
+
+## origins.json → plans (broadcast plans, 08 §4.7), file order.
+func persona_plans() -> Array:
+	return _persona_plans.duplicate(true)
+
+
+## looks.json entry ({} if unknown).
+func look(id: String) -> Dictionary:
+	return _looks.get(id, {})
+
+
+## Looks of one category (hair, hair_color, skin, beard, glasses, outfit), file order.
+func looks_of(kind: String) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	out.assign(_looks_by_kind.get(kind, []))
+	return out
+
+
+func _build_persona(norm: Dictionary) -> void:
+	for d: Dictionary in norm.get("origins", []):
+		if not _origins.has(str(d["id"])):
+			_origins[str(d["id"])] = d
+			_all_origins.append(d)
+	var extras: Dictionary = norm.get("origin_extras", {})
+	for d: Dictionary in extras.get("talents", []):
+		var t: TalentDef = TalentDef.from_dict(d)
+		if t.id != "" and not _origin_talents.has(t.id):
+			_origin_talents[t.id] = t
+	for list: String in ["hobbies", "traits", "rivals", "brands", "gags", "greetings"]:
+		var by_id: Dictionary = {}
+		for d: Dictionary in extras.get(list, []):
+			if not by_id.has(str(d.get("id", ""))):
+				by_id[str(d.get("id", ""))] = d
+		_persona_lists[list] = by_id
+	_persona_plans = (extras.get("plans", []) as Array).duplicate(true)
+	_persona_canon = (extras.get("canon", {}) as Dictionary).duplicate(true)
+	for d: Dictionary in norm.get("looks", []):
+		if _looks.has(str(d["id"])):
+			continue
+		_looks[str(d["id"])] = d
+		var kind: String = str(d.get("kind", ""))
+		if not _looks_by_kind.has(kind):
+			_looks_by_kind[kind] = []
+		(_looks_by_kind[kind] as Array).append(d)
+	for v: Variant in [_origins, _persona_lists, _persona_canon, _looks, _looks_by_kind]:
+		_freeze(v)
+	_freeze(_persona_plans)
+	for t: Variant in _origin_talents.values():
+		_freeze_object(t as Object)
+
+
+## Echtzeitkampf (07 §3.16, R1a): the "values" of data/rt_balance.json (a copy; {} without the file). Read through
+## RtBalance.from_data(data), which falls back to RtBalance.DEFAULTS.
+func rt_balance_values() -> Dictionary:
+	return _rt_balance.duplicate(true)
+
+
 ## All pseudo units (enemies.json → pseudo_units), file order.
 func all_pseudo_units() -> Array[PseudoUnitDef]:
 	var out: Array[PseudoUnitDef] = []
@@ -336,6 +457,10 @@ func _load(raw: Dictionary, p_source: String, p_strict: bool, read_errors: Dicti
 	errors = v.errors.duplicate()
 	warnings = v.warnings.duplicate()
 	_build(norm)
+	var rb: Variant = raw.get("rt_balance", null)                 # Echtzeitkampf (07, R1a)
+	if rb is Dictionary and (rb as Dictionary).get("values", null) is Dictionary:
+		_rt_balance = ((rb as Dictionary)["values"] as Dictionary).duplicate(true)
+		_freeze(_rt_balance)
 	return errors.is_empty()
 
 
@@ -349,6 +474,16 @@ func _clear() -> void:
 	_party_start = {"inventory": {}, "credits": 0}
 	_pools = {}
 	_pity = {"rare": 4, "epic": 8}
+	_rt_balance = {}                                              # Echtzeitkampf (07, R1a)
+	# Casting (08, K0): fresh containers — the loaded ones are frozen (read-only) and cannot be cleared
+	_origins = {}
+	_origin_talents = {}
+	_persona_lists = {}
+	_persona_canon = {}
+	_looks = {}
+	_looks_by_kind = {}
+	_all_origins = []
+	_persona_plans = []
 	_all_statuses.clear()
 	_all_skills.clear()
 	_all_items.clear()
@@ -479,6 +614,7 @@ func _build(norm: Dictionary) -> void:
 	_party_start = (norm.get("party_start", {"inventory": {}, "credits": 0}) as Dictionary).duplicate(true)
 	_pools = (norm.get("lootbox_pools", {}) as Dictionary).duplicate(true)
 	_pity = (norm.get("lootbox_pity", {"rare": 4, "epic": 8}) as Dictionary).duplicate(true)
+	_build_persona(norm)                                          # Casting (08, K0)
 	_freeze_defs()
 
 
@@ -561,6 +697,10 @@ func _table_dict(table: String) -> Dictionary:
 			return _marotten
 		"twists":
 			return _twists
+		"origins":                                                # Casting (08, K0)
+			return _origins
+		"looks":
+			return _looks
 	return {}
 
 

@@ -74,9 +74,14 @@ static func field_ability(hero_id: String) -> StringName:
 ## (integer per-mille, 1000 = neutral). Always the LEADER's own talents — Kai's change the Feldschlag, Graf Mopsula's
 ## the Bellen; a follower's field talents rest until it leads ("Wirkt, wenn … die Gruppe anführt."). Derived from
 ## the state (talent ranks + hero), never recorded: what the ability causes (encounter, secret) is.
+## Casting (08 §3.3, K0, CR-21): when the Graf leads, the persona's start talent adds its field reach
+## (Talents.origin_field_range_pm) — a leading persona already has it in her own factors.
 static func field_mods(state: GameState, data: GameData) -> Dictionary:
 	var m: PartyMember = state.member(state.hero) if state != null else null
-	return {"range_pm": Talents.field_range_pm(m, data), "cd_pm": Talents.field_cd_pm(m, data)}
+	var range_pm: int = Talents.field_range_pm(m, data)
+	if state != null and state.hero != DEFAULT_HERO:                     # Casting (08, K0)
+		range_pm = (range_pm * Talents.origin_field_range_pm(state, data) + 500) / 1000
+	return {"range_pm": range_pm, "cd_pm": Talents.field_cd_pm(m, data)}
 
 
 ## "kai" for anything that is not a known hero id (old saves, hand-edited files).

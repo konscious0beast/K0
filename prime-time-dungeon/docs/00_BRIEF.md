@@ -9,8 +9,8 @@ Dieses Dokument ist die **verbindliche Grundlage**. Alle anderen Dokumente und d
 Änderungen hier nur bewusst und mit Begründung.
 
 **Vorrang bei Widersprüchen:** dieses Dokument > `07_ECHTZEITKAMPF.md` (alles Kampfrelevante) >
-`06_PROGRESSION_MAROTTEN_KI_ADMIN.md` (Progression, Marotten, KI-Admin, Twists) > `01_GDD` / `02_TECH` / `03_ART` /
-`05_LIVE_MODUS` (je nach Thema).
+`06_PROGRESSION_MAROTTEN_KI_ADMIN.md` (Progression, Marotten, KI-Admin, Twists) > `08_CASTING.md` (Casting, Persona,
+Starttalente, persönlicher Erzählstrang) > `01_GDD` / `02_TECH` / `03_ART` / `05_LIVE_MODUS` (je nach Thema).
 
 ---
 
@@ -22,7 +22,9 @@ Dieses Dokument ist die **verbindliche Grundlage**. Alle anderen Dokumente und d
   wer bis dahin keine **Treppe** gefunden hat, ist raus (Game Over).
 - Moderiert wird alles von **M.O.D.** (Mediale Omnipräsente Direktorin) — die System-KI. Sarkastisch,
   quotengeil, regelversessen, heimlich etwas sentimental. Sie kommentiert Achievements, Loot und Tode.
-- Spielfigur: **Kai** (Name frei wählbar, Standard „Kai“), Pfleger:in aus einem Tierheim, pragmatisch, trocken.
+- Spielfigur: die **Kandidat:in der Spieler:in** („Persona“), ein Mensch wie alle Crawler — Name, Beruf und Hobby legt man
+  vor dem ersten Lauf im **Casting** fest (Nutzeridee 2026-10-10, Kap. 5; Vertrag `08_CASTING.md`). Standard und Kanon ist
+  **Kai**, Pfleger:in aus einem Tierheim, pragmatisch, trocken; jede Persona kennt Mopsula aus diesem Tierheim.
 - Begleiter: **Graf Mopsula**, ein Mops aus dem Tierheim, der durch den Dungeon sprechen kann, sich für
   Adel hält und sich als Magier entpuppt. Arrogant, eitel, loyal. Publikumsliebling.
 - Ton: schwarzer Humor + echte Gefahr + Satire auf Streaming-/Werbe-/Gacha-Kultur. Nicht zynisch gegenüber den Menschen.
@@ -60,6 +62,7 @@ Etage betreten → Erkunden (Gegner sichtbar, Truhen, Events, Safe Room)
 | Etagen-Timer | Läuft nur in der Erkundung. Etage 1: 20:00 min. Warnungen bei 5:00 / 1:00. |
 | Safe Room | Volle Heilung, Speichern, Lootboxen, Automat (Shop), Gespräch mit Mopsula (Charaktermomente). Keine Gegner. |
 | Progression | Level/EXP, Stats (HP, MP, STR, MAG, DEF, RES, SPD, LCK), Ausrüstung (Waffe, Rüstung, Accessoire), Fähigkeiten nach Level. **Klassenwahl ab Etage 3** (Datenmodell jetzt schon vorbereitet). |
+| Casting | Vor dem ersten Lauf in unter einer Minute: Name, Beruf, Hobby/Talent (oder „Rest automatisch“ = Kai). Daraus bietet M.O.D. **zwei kleine Starttalente** an (eins nehmen, einmal tauschbar); die Kandidatenkarte und ein persönlicher Erzählstrang (Rival:in, Grüße von zu Hause, Sponsor, Running Gag) kommen aus festen Katalogen — nie im Kampf. Angaben bleiben auf dem Gerät; **KI-Casting** nur als Opt-in ab 16; kein Foto in V1 (`08_CASTING.md`). |
 | Bosse | Etage 1: **„Der Hausmeister“** (Quartier-Boss) + Etagenboss **„Die Rattenkönigin von Gleis 9“**. |
 | Speichern | Ein Spielstand pro Slot (3 Slots), JSON in `user://`. Nur im Safe Room + Autosave bei Etagenwechsel. |
 | Eingabe | Tastatur/Maus, Gamepad, Touch (virtueller Stick + Buttons). Alle Menüs fokus-navigierbar. |
@@ -120,6 +123,21 @@ Etage betreten → Erkunden (Gegner sichtbar, Truhen, Events, Safe Room)
   - Der CTB-Kampf (FF10) bleibt **bis R5** hinter dem Schalter `combat_mode` lauffähig und wird danach entfernt; alle
     CTB-Nennungen in diesem Brief gelten nur bis dahin. Umsetzung in den Phasen R1–R5 (07 §12), nach dem Merge der
     06-Pakete; Voraussetzung für R1a ist diese Brief-Änderung.
+
+- **Nutzeridee (2026-10-10), übernommen und verbindlich — Casting** — Wortlaut:
+  > „wie wäre es, wenn der spieler bei der charakter-auswahl seine eigenen daten angibt, beruf, talent, charakter
+  > eigentschaften…und ggfs ein foto. daraus erschliesst die KI Anfangs-talente und baut so den erzählstrang aug“
+
+  Die Details hat der Nutzer an das Team delegiert (Maßstab: gute UX, Spaß, Witz, Abwechslung, ein simples, sofort
+  verständliches Konzept); sie stehen in `08_CASTING.md` §0.2 und §0.3. Rahmenentscheidungen (Orchestrator):
+  - Die Spielfigur wird zur **Persona** der Spieler:in: eine menschliche Kandidat:in, ein Crawler wie bisher Kai. Graf
+    Mopsula bleibt fest, die Figurenwahl aus 06 bleibt.
+  - Starttalente und Erzählstrang kommen **offline aus festen Katalogen und Vorlagen**; die KI ist ein **optionaler** Zusatz
+    (KI-Casting: Opt-in ab 16 mit Einwilligung, nur Katalog-IDs und gefilterte Zeilen, jeder Fehler → offline).
+  - **Kein Foto in V1**; ein „Avatar aus Foto“ kommt frühestens nach einer Rechtsprüfung (08 §6.4).
+  - Der Kern bleibt deterministisch (Kap. 6b): Aufgezeichnet werden nur Katalog-IDs (Command `persona`); Name und
+    persönliche Angaben liegen in einer eigenen Datei je Slot, nie in Run-Log, Replay, Bestenliste oder Cloud-Spielstand.
+    Event-Läufe spielen ohne Persona (Kanon-Kai).
 
 ## 6. Verbindliche Architektur-Verträge (Kurzform — Details in 02_TECH.md)
 

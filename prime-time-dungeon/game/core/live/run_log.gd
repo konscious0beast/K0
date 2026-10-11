@@ -10,6 +10,10 @@ class_name RunLog extends RefCounted
 ##   from 1; a repeated or decreasing id (duplicate) or a player command with id 0 is rejected. Rejections are counted
 ##   in `rejected` and warned, never applied (RunSim.replay reports them as errors).
 ## - Checkpoint k = state hash after all commands with k' <= k (one per tick; a later hash for the same k replaces it).
+## - Echtzeitkampf (07 §10.2, R1a): a combat checkpoint {"k", "ct", "h"} (h = StateHash.of_rt) carries the combat tick
+##   of the encounter at k; several share that k (every CHECKPOINT_TICKS combat ticks and the end), in ct order; a
+##   state checkpoint after the combat keeps the same k. validate() also checks that the combat commands between an
+##   encounter with "rt" and the next other command have non-decreasing "ct".
 ## - Everything is stored normalized (integral floats → int, StringName → String), so to_dict()/from_dict() and a JSON
 ##   round trip keep digest() stable.
 
@@ -57,7 +61,10 @@ func add_pos(tick: int, pos: Vector3) -> void:
 	_pos.append([tick, roundi(pos.x * 10.0), roundi(pos.y * 10.0), roundi(pos.z * 10.0)])
 
 
-func add_checkpoint(tick: int, p_hash: String) -> void:
+## ct >= 0: a combat checkpoint (Echtzeitkampf, 07 §10.2, R1a): same k as its encounter, appended after the previous
+## checkpoint of that k (the same ct again replaces it); ct = -1: a state checkpoint (replaces a state checkpoint of the
+## same k, follows the combat checkpoints of that k).
+func add_checkpoint(tick: int, p_hash: String, ct: int = -1) -> void:
 	if p_hash == "" or tick < 0:
 		_reject("invalid checkpoint at tick %d" % tick)
 		return
@@ -66,10 +73,14 @@ func add_checkpoint(tick: int, p_hash: String) -> void:
 		if tick < int(last["k"]):
 			_reject("checkpoint at tick %d is out of tick order" % tick)
 			return
-		if tick == int(last["k"]):
+		var last_ct: int = int(last.get("ct", -1))
+		if tick == int(last["k"]) and ct == last_ct:
 			last["h"] = p_hash
 			return
-	_checkpoints.append({"k": tick, "h": p_hash})
+	if ct >= 0:
+		_checkpoints.append({"k": tick, "ct": ct, "h": p_hash})
+	else:
+		_checkpoints.append({"k": tick, "h": p_hash})
 
 
 func cmds() -> Array[Dictionary]:
@@ -117,7 +128,8 @@ static func from_dict(d: Dictionary) -> RunLog:
 			rl._pos.append([_int(pa[0]), _int(pa[1]), _int(pa[2]), _int(pa[3])])
 	for c: Variant in _array(d.get("checkpoints", [])):
 		if c is Dictionary:
-			rl.add_checkpoint(_int((c as Dictionary).get("k", -1)), str((c as Dictionary).get("h", "")))
+			rl.add_checkpoint(_int((c as Dictionary).get("k", -1)), str((c as Dictionary).get("h", "")),
+				_int((c as Dictionary).get("ct", -1)))
 	return rl
 
 
@@ -169,6 +181,8 @@ func last_cmd_id() -> int:
 func validate() -> PackedStringArray:
 	var out: PackedStringArray = []
 	var last: int = 0
+	var in_rt: bool = false                     # Echtzeitkampf (07 §10.2, R1a): inside a real-time combat
+	var last_ct: int = -1
 	for i in _cmds.size():
 		var c: Dictionary = _cmds[i]["c"]
 		var id: int = int(_cmds[i]["id"])
@@ -179,9 +193,35 @@ func validate() -> PackedStringArray:
 			err = "cmd_id %d is not strictly increasing (last %d)" % [id, last]
 		if id > 0:
 			last = id
+		var t: String = str(c.get("t", ""))
+		if t == "encounter":
+			in_rt = c.has("rt")
+			last_ct = -1
+		elif RtCommand.is_combat_cmd(c):
+			var ct: int = JsonUtil.to_int(c.get("ct", -1), -1)
+			if err == "" and not in_rt:
+				err = "real-time combat command outside a real-time combat"
+			elif err == "" and c.has("ct") and ct < last_ct:
+				err = "ct %d is out of order (last %d)" % [ct, last_ct]
+			last_ct = maxi(last_ct, ct)
+		elif t != "combat_speed":
+			in_rt = false
 		if err != "":
 			out.append("cmd %d (k %d): %s" % [i, int(_cmds[i]["k"]), err])
 	return out
+
+
+# --- Echtzeitkampf (07 §10.3, R1a → R5a) --------------------------------------------------------------------------
+# STUB(R1a) — owned by R5a. Replace completely, keep the public API.
+
+## Merges consecutive move_sample entries of one unit into move_batch (ids from id0, ct as differences). Stub: no-op.
+func compact() -> void:
+	pass
+
+
+## Restores every move_batch to its move_sample entries bit for bit. Stub: no-op.
+func expand() -> void:
+	pass
 
 
 ## "" or the violation of "id 0 ⇔ external input" (05 §10.6).

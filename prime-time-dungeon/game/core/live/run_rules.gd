@@ -192,11 +192,16 @@ static func lower_difficulty(state: GameState, d: StringName) -> bool:
 ##   its reason
 ## - secret (06 §2.7): Secrets.check_open on the current floor — unknown, already open, note behind a standing wall →
 ##   its reason
+## - persona (08 §2.3, K0): PersonaRules.check — `event_run` (RunSim.is_event_run: header event_id or event rules) →
+##   event_run; else version, catalog, bias, once per run before the run started, the one swap in a safe room
 ## (flag keys are whitelisted by Command.validate; QA Sponsor-Fenster by SponsorWindows.dev_allowed; twists by
 ## twist_refusal below.)
 static func command_refusal(state: GameState, data: GameData, rules: Dictionary, c: Dictionary, floor_done: bool,
-		scene_ctx: Dictionary) -> String:
+		scene_ctx: Dictionary, event_run: bool = false) -> String:
 	var t: String = str(c.get("t", ""))
+	var rt: String = rt_refusal(c)                 # Echtzeitkampf (07, R1a): no real-time combat path before R5a
+	if rt != "":
+		return rt
 	if t == "gift" or state == null:
 		return ""
 	if floor_done and t != "floor":
@@ -224,6 +229,8 @@ static func command_refusal(state: GameState, data: GameData, rules: Dictionary,
 			var def: FloorDef = data.floor_def(state.floor_run.index) if data != null and state.floor_run != null \
 				else null
 			return Secrets.check_open(state, def, str(c.get("id", "")))
+		"persona":                                 # Casting (08 §2.3, K0): event runs never take one (event_run)
+			return PersonaRules.check(state, data, c, event_run)
 	return ""
 
 
@@ -254,7 +261,22 @@ static func refused_id(c: Dictionary) -> String:
 			return str((g as Dictionary).get("gift_id", "")) if g is Dictionary else ""
 		"hero", "secret":
 			return str(c.get("id", ""))
+		"persona":                                 # Casting (08 §2.3, K0): the start talent
+			return str(c.get("talent", ""))
 		"twist":
 			var tw: Variant = c.get("twist", null)
 			return str((tw as Dictionary).get("id", "")) if tw is Dictionary else ""
+	return ""
+
+
+# --- Echtzeitkampf (07, R1a → R5a) ------------------------------------------------------------------------------------
+
+## R1a: the real-time combat path of the verifiers does not exist yet (R5a, 07 §10.5) — a real-time combat command
+## (RtCommand.is_combat_cmd: types with "ct", move_batch, a gift with "ct"), a combat_speed record and an encounter with
+## an "rt" block are refused as "rt_unavailable" by both verifiers (RunSim.command_refusal, Game.replay_log), so nothing
+## records or replays them before R5a. R5a replaces this check with the combat branch. "" = not a real-time command.
+static func rt_refusal(c: Dictionary) -> String:
+	var t: String = str(c.get("t", ""))
+	if RtCommand.is_combat_cmd(c) or t == "combat_speed" or (t == "encounter" and c.has("rt")):
+		return "rt_unavailable"
 	return ""

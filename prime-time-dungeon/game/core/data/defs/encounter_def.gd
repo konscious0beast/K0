@@ -11,6 +11,14 @@ var can_flee: bool = true                   # default: not boss
 var tutorial: bool = false
 var music: String = ""                      # "" → battle / boss
 var floor_index: int = 0                    # floor that declares this encounter (set by GameData)
+# --- Echtzeitkampf (07, R1a): optional blocks (07 §4.9, §9.6) --------------------------------------------------------
+const RtNorm := preload("res://core/data/defs/rt_norm.gd")
+## {"enemies": [ids] ([] = the CTB list), "music": String, "tutorial": [steps]}; {} = no real-time data.
+const RT_SPEC: Array = [["enemies", "sa", []], ["music", "s", ""], ["tutorial", "sa", []]]
+var rt: Dictionary = {}
+## Show boss (06 §2.6, 07 §9.6 E26): {} = none, else {"elite_pm", "banner_tag", "reward": {"kind", "id"}, "rule":
+## RtRule} as in the data (rules: validators/show_boss.gd, R4; mods: RtMods.from_show_boss, R1b).
+var show_boss: Dictionary = {}
 
 
 static func from_dict(d: Dictionary) -> EncounterDef:
@@ -25,4 +33,7 @@ static func from_dict(d: Dictionary) -> EncounterDef:
 	r.tutorial = bool(d.get("tutorial", false))
 	r.music = str(d.get("music", ""))
 	r.floor_index = int(d.get("floor_index", 0))
+	r.rt = RtNorm.fill(d.get("rt", {}), RT_SPEC)       # Echtzeitkampf (07, R1a)
+	var sb: Variant = d.get("show_boss", {})
+	r.show_boss = RtNorm.ints(sb) if sb is Dictionary else {}
 	return r

@@ -308,6 +308,7 @@ func _validate_rules(out: PackedStringArray) -> void:
 	out.append_array(SponsorWindows.validate_rules(sw))
 	out.append_array(MarottenRules.validate_rules(rules))   # 06-C: rules.marotten / rules.liga {"enabled": bool}
 	out.append_array(TwistApplier.validate_rules(rules.get("twists", null)))      # 06-D
+	out.append_array(persona_rule_errors(rules.get("persona", null)))            # 08 K0: reserved, off
 	if kind != "offline" and not (sw is Dictionary and (sw as Dictionary).get("dev_open", true) is bool
 			and not bool((sw as Dictionary)["dev_open"])):
 		out.append("rules.sponsor_windows.dev_open must be false for %s events (QA windows are offline only)" % kind)
@@ -363,3 +364,19 @@ static func _is_int(v: Variant) -> bool:
 	if typeof(v) == TYPE_INT:
 		return true
 	return typeof(v) == TYPE_FLOAT and is_finite(float(v)) and float(v) == floorf(float(v))
+
+
+# --- Casting (08, K0) -------------------------------------------------------------------------------------------------
+
+## rules.persona (08 §8, 05 F-6): reserved — absent, or exactly {"talent": false, "bias": false}. Event runs never take
+## a persona command (PersonaRules.check → event_run); a board variant "with origin" would be a new announced rules set
+## with its own rules_hash (08 O-14).
+static func persona_rule_errors(v: Variant) -> PackedStringArray:
+	var out: PackedStringArray = []
+	if v == null:
+		return out
+	var d: Dictionary = v if v is Dictionary else {}
+	if d.size() != 2 or not (d.get("talent", null) is bool) or not (d.get("bias", null) is bool) \
+			or bool(d["talent"]) or bool(d["bias"]):
+		out.append('rules.persona must be absent or {"talent": false, "bias": false} (08 §8: events without persona)')
+	return out

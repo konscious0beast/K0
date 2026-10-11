@@ -57,7 +57,7 @@ static func total_stats(member: PartyMember, data: GameData, liga: bool = false)
 			var i: int = StatBlock.KEYS.find(str(key))
 			if i >= 0:
 				vals[i] += JsonUtil.to_int(item.stats[key])
-	if not member.talents.is_empty():
+	if Talents.has_any(member, data):                # Casting (08, K0): pool or start talent (CR-21)
 		for i in vals.size():
 			vals[i] += Talents.stat_bonus(member, data, i, vals[i], liga)
 	for mults: Dictionary in [cls.stat_mult if cls != null else {}, spc.stat_mult if spc != null else {}]:
@@ -66,6 +66,8 @@ static func total_stats(member: PartyMember, data: GameData, liga: bool = false)
 			if i >= 0:
 				var mult_pm: int = roundi(float(mults[key]) * _PM)
 				vals[i] = (maxi(0, vals[i]) * mult_pm + _PM / 2) / _PM
+	if member.hp_scale_pm != _PM:                   # Echtzeitkampf (07 §3.9.4, R1a): HP scale as the last step
+		vals[StatBlock.Stat.HP] = (maxi(0, vals[StatBlock.Stat.HP]) * member.hp_scale_pm + _PM / 2) / _PM
 	for i in vals.size():
 		vals[i] = maxi(1 if i == StatBlock.Stat.HP else 0, vals[i])
 	return _block(vals)
@@ -212,7 +214,7 @@ static func to_combatant(member: PartyMember, data: GameData, id: String, slot: 
 				immune.append(s)
 		if item.type == "weapon" and item.attack_element != "":
 			attack_element = item.attack_element
-	if not member.talents.is_empty():
+	if Talents.has_any(member, data):                # Casting (08, K0): pool or start talent (CR-21)
 		crit += float(Talents.crit_add_pm(member, data)) / float(_PM)
 		for el: String in Talents.elements(member, data):
 			var f: float = float(Talents.element_pm(member, data, el)) / float(_PM)

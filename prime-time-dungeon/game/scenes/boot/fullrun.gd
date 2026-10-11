@@ -44,6 +44,7 @@ const CREDITS_BUDGET: int = 2400
 const STRIKE_RANGE: float = 1.4
 const BARK_ENGAGE: float = 3.0             # 06 package A: Mopsula barks at a group within 3 m (cone reach 4 m)
 const HEROES: PackedStringArray = ["kai", "mopsula"]
+const PERSONAS: PackedStringArray = ["none", "canon", "random"]   # + "org_*" (08 §10.2 Nr. 16)
 const TIMER_SLACK_TICKS: int = 15          # timer ticks a pause may lose to its transitions (fade-in 0.25 s + a frame)
 const STAIRS_HUB: float = 1.6              # room middle of the stairs room: in front of the well's entry fence
 const STAND_OFF: float = 1.0               # stand this far in front of an interactable (+ its extent)
@@ -104,6 +105,10 @@ var strategy: String = "thorough"
 var pace: String = "fast"
 ## 06 package A: "kai" (default) | "mopsula" (--hero=mopsula): the controlled character of the run.
 var hero: String = "kai"
+## Casting (08 §10.2 Nr. 16): --persona=none|canon|random|<org_id> → the candidate persona of the new game. K0: an
+## empty hook (persona_profile() → null, nothing recorded); from K1 the default is "canon" (what players get with
+## "Rest automatisch"), so the bot measures that.
+var persona: String = "none"
 var barks: int = 0                         # barks the bot used (Mopsula) …
 var dazed: int = 0                         # … and groups they dazed
 var hero_switches: int = 0                 # "Figur wechseln" in a safe room
@@ -185,6 +190,7 @@ func _ready() -> void:
 		pace = pace_from_args(OS.get_cmdline_user_args())
 		hero = hero_from_args(OS.get_cmdline_user_args())
 		liga = liga_from_args(OS.get_cmdline_user_args())
+		persona = persona_from_args(OS.get_cmdline_user_args())
 	# Counters ignore Game.replay_log() (the replay check re-emits the same signals).
 	Events.battle_started.connect(_on_battle_started)
 	Events.credits_changed.connect(_on_credits_changed)
@@ -265,6 +271,23 @@ static func hero_from_args(args: PackedStringArray) -> String:
 	return "kai"
 
 
+## Casting (08 §10.2 Nr. 16): --persona=canon|random|<org_id> → that choice; anything else → "none".
+static func persona_from_args(args: PackedStringArray) -> String:
+	for a: String in args:
+		if a.begins_with("--persona="):
+			var v: String = a.trim_prefix("--persona=")
+			if PERSONAS.has(v) or v.begins_with("org_"):
+				return v
+	return "none"
+
+
+## STUB(K0) — owned by 08-K1. Replace completely, keep the public API. The profile of `persona` for the new game
+## (canon: PersonaProfile.canon; random: a seeded valid persona; org_*: that origin with canon rest) — K1 passes it to
+## the new game (TitleFlow.start_new_game persona). Stub: null (no persona).
+func persona_profile() -> PersonaProfile:
+	return null
+
+
 ## 06-C: --liga=1|2 → that Liga tier; anything else → 0.
 static func liga_from_args(args: PackedStringArray) -> int:
 	for t: int in [1, 2]:
@@ -310,7 +333,9 @@ func _main() -> void:
 	phase = "new_game"
 	Game.auto_battle = true
 	var run_seed: int = TitleFlow.boot_seed if TitleFlow.boot_seed >= 0 else RUN_SEED
-	_note("new game, seed %d, strategy %s, hero %s" % [run_seed, strategy, hero])
+	var cast: PersonaProfile = persona_profile()     # Casting (08 §10.2 Nr. 16): empty hook until K1 (null)
+	_note("new game, seed %d, strategy %s, hero %s, persona %s" % [run_seed, strategy, hero,
+		persona if cast != null else "none"])
 	(Router.current as TitleScreen).request_new_game(SAVE_SLOT, "Kai", false, run_seed, &"prime", hero)
 	if not await _wait(func() -> bool: return Router.current is ExplorationScene and not Router.busy, INTRO_BUDGET,
 			"exploration after the intro"):

@@ -1,0 +1,140 @@
+{
+	"checkpoints": [
+		{
+			"h": "bfac534daf25de3d26d66e9ee3cd73c9ebfe18bb51483404ba5389f820829f9f",
+			"k": 0
+		},
+		{
+			"h": "3446ffc1a0cb5b8b5ff2890ce4c18e733a9483ac82e8a21099b386ad3eb20194",
+			"k": 300
+		},
+		{
+			"h": "1e17cc18df919d89cbea1274de4cb675f48aac1747aa2de7b07c5462cd7aa474",
+			"k": 600
+		},
+		{
+			"h": "c5dcd547a978307813dfdc4eb9c89630df127d9a585e24ea13418ca0ccb20100",
+			"k": 700
+		}
+	],
+	"cmds": [
+		{
+			"c": {
+				"floor": 1,
+				"t": "floor"
+			},
+			"id": 1,
+			"k": 0
+		},
+		{
+			"c": {
+				"cell": [
+					1,
+					7
+				],
+				"t": "room"
+			},
+			"id": 2,
+			"k": 0
+		},
+		{
+			"c": {
+				"adv": 1,
+				"enc": "enc_f1_a1_tutorial",
+				"group": "f1_g0",
+				"t": "encounter"
+			},
+			"id": 3,
+			"k": 0
+		},
+		{
+			"c": {
+				"auto": true,
+				"cmd": {
+					"actor": "p1",
+					"item": "",
+					"kind": "skill",
+					"skill": "skl_mop_noble_flame",
+					"targets": [
+						"e0"
+					]
+				},
+				"t": "battle"
+			},
+			"id": 4,
+			"k": 0
+		},
+		{
+			"c": {
+				"auto": true,
+				"cmd": {
+					"actor": "p0",
+					"item": "",
+					"kind": "skill",
+					"skill": "skl_kai_heavy_swing",
+					"targets": [
+						"e1"
+					]
+				},
+				"t": "battle"
+			},
+			"id": 5,
+			"k": 0
+		},
+		{
+			"c": {
+				"auto": true,
+				"cmd": {
+					"actor": "p1",
+					"item": "",
+					"kind": "skill",
+					"skill": "skl_mop_noble_flame",
+					"targets": [
+						"e1"
+					]
+				},
+				"t": "battle"
+			},
+			"id": 6,
+			"k": 0
+		},
+		{
+			"c": {
+				"id": "f1_c0",
+				"t": "chest"
+			},
+			"id": 7,
+			"k": 0
+		},
+		{
+			"c": {
+				"id": "f1_c1",
+				"t": "chest"
+			},
+			"id": 8,
+			"k": 0
+		}
+	],
+	"frames": [],
+	"header": {
+		"difficulty": "prime",
+		"event_id": "evt_offline_gleis9",
+		"league": "pur",
+		"mode": "event_offline",
+		"player_id": "local",
+		"player_name": "Robin",
+		"run_id": "run_pre_bump_sim_v1",
+		"schema": 1,
+		"seed": 424242,
+		"sim_hz": 30,
+		"sim_version": 1,
+		"slot": 0,
+		"window_id": ""
+	},
+	"pos": [],
+	"result": {
+		"cause": "aborted",
+		"final_hash": "c5dcd547a978307813dfdc4eb9c89630df127d9a585e24ea13418ca0ccb20100",
+		"ticks": 700
+	}
+}

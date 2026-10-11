@@ -29,7 +29,8 @@ const EXPLORE: String = "explore_zone"
 const BATTLE_KEYS: PackedStringArray = ["won", "hero", "party_turns", "items_used", "gifts", "defends",
 	"flee_attempts", "distinct_actions", "stunts_success", "weakness_hits", "min_party_hp_pct", "party_kos",
 	"last_kill_member", "encounter_type", "is_boss", "is_floor_boss", "boss_id", "kai_weapon", "equip_all_common",
-	"hero_armor_empty", "hero_acc_empty", "party_armor_empty", "party_acc_empty", "liga_tier"]
+	"hero_armor_empty", "hero_acc_empty", "party_armor_empty", "party_acc_empty", "liga_tier",
+	"duration_sec"]                          # Echtzeitkampf (07 §9.6, R5a): whole combat seconds (0 in CTB)
 const ZONE_KEYS: PackedStringArray = ["zones_since_battle", "zone", "floor"]
 const LIGA_SLOTS: PackedStringArray = ["armor", "accessory"]
 const DEFAULT_HERO: String = "kai"
@@ -274,7 +275,7 @@ static func battle_context(state: GameState, data: GameData, result: BattleResul
 		"items_used": result.items_used if result != null else 0,
 		"gifts": JsonUtil.to_int(tally.get("gifts", 0)),
 		"defends": JsonUtil.to_int(tally.get("defends", 0)),
-		"flee_attempts": JsonUtil.to_int(tally.get("flee_attempts", 0)),
+		"flee_attempts": _rt_flee_attempts(result, tally),     # Echtzeitkampf (07 §9.6, R5a): the result's
 		"distinct_actions": JsonUtil.to_int(tally.get("distinct_actions", 0)),
 		"stunts_success": JsonUtil.to_int(tally.get("stunts_success", 0)),
 		"weakness_hits": result.weakness_hits if result != null else 0,
@@ -292,6 +293,7 @@ static func battle_context(state: GameState, data: GameData, result: BattleResul
 		"party_armor_empty": party_armor,
 		"party_acc_empty": party_acc,
 		"liga_tier": JsonUtil.to_int(tally.get("liga_tier", 0)),
+		"duration_sec": _rt_duration_sec(result),               # Echtzeitkampf (07 §9.6, R5a)
 	}
 
 
@@ -507,3 +509,19 @@ static func _encounter_type(advantage: int, opener: String = "") -> String:
 ## candidate card from floor BIAS_MIN_FLOOR on; 0 before K1, so the draw is unchanged).
 static func _draw_weight(state: GameState, def: MarotteDef, floor_index: int) -> int:
 	return maxi(1, def.weight) + PersonaRules.weight_add(state, def.id, floor_index)
+
+
+# --- Echtzeitkampf (07 §9.6, R5a) ------------------------------------------------------------------------------------
+
+## e.flee_attempts: in a real-time combat (tally "rt", MarottenTracker) BattleResult.flee_attempts — every start of a
+## flight warning and every smoke (mar_brave); in CTB the tracker's FLEE_RESULT count as before.
+static func _rt_flee_attempts(result: BattleResult, tally: Dictionary) -> int:
+	if result != null and bool(tally.get("rt", false)):
+		return result.flee_attempts
+	return JsonUtil.to_int(tally.get("flee_attempts", 0))
+
+
+## e.duration_sec: BattleResult.duration_ticks / 30 — whole combat seconds of a real-time combat, 0 in CTB (the
+## real-time condition of mar_speed comes with floor 2, 07 §9.6).
+static func _rt_duration_sec(result: BattleResult) -> int:
+	return result.duration_ticks / RtSim.TICKS_PER_SEC if result != null else 0

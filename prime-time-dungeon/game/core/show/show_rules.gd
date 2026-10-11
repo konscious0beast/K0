@@ -10,6 +10,14 @@ class_name ShowRules extends RefCounted
 ## action): the kill is credited to the party action that applied the ticking status (STATUS_ADDED during an open
 ## party action → its `by` / `member`, `kills_skill` for a skill), otherwise `by: "attack"`, `member: ""` — `by` stays
 ## within the documented attack/skill/stunt/item (§6.3); "falls under 25 %" needs the previous HP at ≥ 25 %.
+##
+## Echtzeitkampf (07 §9.1, R5a): `profile` &"rt" for an RtSetup (Show.begin_battle passes the setup), &"ctb" else —
+## the CTB profile stays exactly as it was. The rt profile (constants RT_*) reads the real-time event stream: skill
+## moments (variety, repetition without slot 1, interrupts, dodges, taunts, own SHOW stats) count only the person's
+## actions (ActionEvent.by_ai == false; interrupts and dodges only of the controlled unit, RtSetup.controlled_id /
+## CONTROL_CHANGED), crits, weakness, kills, overkill, streaks (3 kills in 6 s), combos and SHOW results count for the
+## whole party; boredom and drag run on SECOND; train kills, perfect boss phases and the first ENRAGE have their own
+## hype. Presentation tags of the M.O.D. lines (rt_interrupt, rt_control_switch:<member>, …) come as reasons.
 
 const HYPE_START_NORMAL: float = 3.0
 const HYPE_START_PREEMPTIVE: float = 3.0
@@ -79,6 +87,8 @@ func _init(p_data: GameData, p_setup: BattleSetup) -> void:
 			if c != null and c.id != "":
 				_party_defs[c.id] = c.def_id
 				_hp[c.id] = c.hp
+	if _setup is RtSetup:                        # Echtzeitkampf (07 §9.1, R5a)
+		_rt_init(_setup as RtSetup)
 
 
 ## Battle start hype (§6.2): normal / preemptive / ambush / boss +5 / +5 / +8 / +10. Returned once per battle
@@ -104,6 +114,11 @@ func start_delta() -> ShowDelta:
 func feed(e: ActionEvent) -> ShowDelta:
 	var d: ShowDelta = ShowDelta.new()
 	if e == null:
+		return d
+	if profile == PROFILE_RT:                    # Echtzeitkampf (07 §9.1, R5a)
+		if e.type == ActionEvent.Type.BATTLE_START:
+			return start_delta()
+		_rt_feed(d, e)
 		return d
 	match e.type:
 		ActionEvent.Type.BATTLE_START:
@@ -398,3 +413,300 @@ static func _is_party(combatant_id: String) -> bool:
 
 static func _is_enemy(combatant_id: String) -> bool:
 	return combatant_id.begins_with("e")
+
+
+# --- Echtzeitkampf (07 §9.1, R5a): profile rt ------------------------------------------------------------------------
+
+const PROFILE_CTB: StringName = &"ctb"
+const PROFILE_RT: StringName = &"rt"
+const RT_VARIETY: float = 1.0                # the person's skill / item not among their last RT_VARIETY_WINDOW actions
+const RT_VARIETY_WINDOW: int = 4
+const RT_REPEAT: float = -3.0                # the same skill RT_REPEAT_COUNT times in a row (not the slot-1 skill)
+const RT_REPEAT_COUNT: int = 4
+const RT_CRIT: float = 2.0
+const RT_WEAK: float = 1.0                   # once per ability action (an auto-attack hit is its own)
+const RT_STREAK_KILLS: int = 3               # kills of the party within RT_STREAK_TICKS → HYPE_KILL_STREAK
+const RT_STREAK_TICKS: int = 180             # 6 s
+const RT_INTERRUPT: float = 3.0              # CAST_INTERRUPTED by the controlled unit (by_ai false)
+const RT_DODGE: float = 2.0                  # TELEGRAPH_DODGED of the controlled unit (by_ai false)
+const RT_DODGE_CLOSE: float = 4.0
+const RT_TRAIN_KILL: float = 4.0             # an add killed by an enemy telegraph (the train)
+const RT_PERFECT_PHASE: float = 8.0          # PHASE_CHANGE / BATTLE_END with success
+const RT_ENRAGE: float = 5.0                 # the first ENRAGE
+const RT_BORING: float = -2.0                # every RT_BORING_SEC combat seconds without a positive event
+const RT_BORING_SEC: int = 6
+const RT_DRAG: float = -3.0                  # every RT_DRAG_EVERY_SEC from RT_DRAG_AFTER_SEC (boss: _BOSS) on
+const RT_DRAG_AFTER_SEC: int = 45
+const RT_DRAG_AFTER_SEC_BOSS: int = 240
+const RT_DRAG_EVERY_SEC: int = 10
+
+## &"ctb" | &"rt" — chosen from the setup (an RtSetup plays the real-time profile).
+var profile: StringName = PROFILE_CTB
+var _controlled: String = ""                 # the controlled unit (RtSetup.controlled_id, CONTROL_CHANGED)
+var _slot1: Dictionary = {}                  # party unit id → its slot-1 skill (no repetition penalty)
+var _finale_skills: Dictionary = {}          # FINALE skill ids of the party (party.json rt.bar "finale")
+var _taunts: Dictionary = {}                 # skill id → bool: applies a "fixate" status (memo)
+var _rt_open: Dictionary = {}                # party unit id → {"command", "skill", "weak"} of its open action
+var _rt_keys: PackedStringArray = []         # the person's last action keys (skill / item ids), oldest first
+var _rt_repeat: int = 0
+var _rt_kill_cts: Array[int] = []            # cts of the party's kills inside the streak window
+var _rt_quiet: int = 0                       # combat seconds since the last positive event
+var _rt_enraged: bool = false
+var _rt_healer_said: bool = false
+
+
+## The controlled unit as the profile knows it (rt; "" for CTB).
+func controlled_id() -> String:
+	return _controlled
+
+
+func _rt_init(s: RtSetup) -> void:
+	profile = PROFILE_RT
+	_controlled = s.controlled_id
+	for u: RtUnit in s.units:
+		if u == null or u.side != Combatant.Side.PARTY:
+			continue
+		_slot1[u.id] = str(u.bar.get(1, u.bar.get("1", "")))
+		if _data != null and _data.has_id("party", u.def_id):
+			for row: Variant in (_data.party_member(u.def_id).rt.get("bar", []) as Array):
+				if row is Dictionary and bool((row as Dictionary).get("finale", false)):
+					_finale_skills[str((row as Dictionary).get("skill", ""))] = true
+
+
+func _rt_feed(d: ShowDelta, e: ActionEvent) -> void:
+	match e.type:
+		ActionEvent.Type.ACTION_START:
+			_rt_action_start(d, e)
+		ActionEvent.Type.ACTION_END:
+			if str((_rt_open.get(e.actor_id, {}) as Dictionary).get("skill", "")) == e.skill_id:
+				_rt_open.erase(e.actor_id)
+		ActionEvent.Type.DAMAGE:
+			_rt_damage(d, e)
+		ActionEvent.Type.HEAL:
+			if _is_party(e.target_id) and e.hp_after >= 0:
+				_hp[e.target_id] = e.hp_after
+		ActionEvent.Type.KO:
+			_rt_ko(d, e)
+		ActionEvent.Type.STATUS_ADDED:
+			_rt_status_added(e)
+		ActionEvent.Type.COMBO:
+			if _is_party(e.actor_id):
+				_add(d, HYPE_COMBO, &"combo")
+				_trigger(d, "combo", {"member": _member(e.actor_id), "enemy_id": e.def_id})
+		ActionEvent.Type.STUNT_RESULT:
+			if _is_party(e.actor_id):
+				_rt_stunt(d, e)
+		ActionEvent.Type.REVIVE:
+			if _is_party(e.target_id):
+				_add(d, HYPE_REVIVE, &"revive")
+				if e.hp_after >= 0:
+					_hp[e.target_id] = e.hp_after
+		ActionEvent.Type.FLEE_RESULT:
+			if _is_party(e.actor_id) and e.success:
+				_add(d, HYPE_FLEE_OK, &"flee")
+		ActionEvent.Type.CAST_INTERRUPTED:
+			if e.actor_id == _controlled and not e.by_ai:
+				_add(d, RT_INTERRUPT, &"rt_interrupt")
+				_stat(d, "interrupts_total")
+		ActionEvent.Type.TELEGRAPH_DODGED:
+			if e.target_id == _controlled and not e.by_ai:
+				_add(d, RT_DODGE_CLOSE if e.success else RT_DODGE, &"rt_dodge_close" if e.success else &"")
+				_stat(d, "dodges_total")
+		ActionEvent.Type.TELEGRAPH_IMPACT:
+			if _controlled != "" and e.target_ids.has(_controlled):
+				_reason(d, &"rt_telegraph_hit")
+		ActionEvent.Type.PHASE_CHANGE, ActionEvent.Type.BATTLE_END:
+			if e.success:
+				_add(d, RT_PERFECT_PHASE)
+		ActionEvent.Type.ENRAGE:
+			if not _rt_enraged:
+				_rt_enraged = true
+				_add(d, RT_ENRAGE)
+		ActionEvent.Type.CONTROL_CHANGED:
+			_controlled = e.target_id
+			_reason(d, StringName("rt_control_switch:" + _member(e.target_id)))
+		ActionEvent.Type.PRESET_CHANGED:
+			_reason(d, StringName("rt_partner_preset:" + e.text))
+		ActionEvent.Type.FLEE_WARNING:
+			if e.actor_id == _controlled:
+				_reason(d, &"rt_flee_warn")
+		ActionEvent.Type.CAST_START:
+			if not _rt_healer_said and _is_enemy(e.actor_id):
+				var sk: SkillDef = _skill_or_null(e.skill_id)
+				if sk != null and sk.damage_type == "heal":
+					_rt_healer_said = true
+					_reason(d, &"rt_healer_first")
+		ActionEvent.Type.SECOND:
+			_rt_second(d, e.value)
+
+
+## ACTION_START (07 §9.1): the action opens (weakness once per action, the source of its statuses); a skill's own hype
+## (an item's use_skill, e.g. the megaphone) for every party actor; the person's actions (by_ai false: the controlled
+## unit and the Partner-Spezial) count for variety, repetition (never the slot-1 skill), taunts and the FINALE line.
+func _rt_action_start(d: ShowDelta, e: ActionEvent) -> void:
+	if not _is_party(e.actor_id):
+		return
+	_rt_open[e.actor_id] = {"command": e.command, "skill": e.skill_id, "weak": false}
+	var sk: SkillDef = _action_skill(e)
+	if sk != null and sk.hype != 0:
+		_add(d, float(sk.hype))
+	if e.by_ai:
+		return
+	var key: String = e.item_id if e.command == BattleCommand.Kind.ITEM and e.item_id != "" else e.skill_id
+	if not _rt_keys.has(key):
+		_add(d, RT_VARIETY)
+	_rt_repeat = _rt_repeat + 1 if not _rt_keys.is_empty() and _rt_keys[_rt_keys.size() - 1] == key else 1
+	if _rt_repeat >= RT_REPEAT_COUNT and key != str(_slot1.get(e.actor_id, "")):
+		_add(d, RT_REPEAT, &"boring_fight")
+	_rt_keys.append(key)
+	while _rt_keys.size() > RT_VARIETY_WINDOW:
+		_rt_keys.remove_at(0)
+	if e.command != BattleCommand.Kind.ITEM and _is_taunt(e.skill_id):
+		_stat(d, "taunts_total")
+	if e.command == BattleCommand.Kind.STUNT and _finale_skills.has(e.skill_id):
+		_reason(d, &"rt_finale")
+
+
+func _rt_damage(d: ShowDelta, e: ActionEvent) -> void:
+	if e.actor_id == "" and e.status_id != "" and _is_enemy(e.target_id):
+		_tick_status[e.target_id] = e.status_id
+	else:
+		_tick_status.erase(e.target_id)
+	if _is_party(e.actor_id) and _is_enemy(e.target_id) and e.status_id == "":
+		if e.crit:
+			_add(d, RT_CRIT, &"crit")
+			_stat(d, "crits_total")
+		if e.weak:
+			var a: Dictionary = _rt_open.get(e.actor_id, {})
+			if a.is_empty() or str(a["skill"]) != e.skill_id:
+				_add(d, RT_WEAK, &"weakness")          # an auto-attack hit (or a hit outside an action)
+			elif not bool(a["weak"]):
+				a["weak"] = true
+				_add(d, RT_WEAK, &"weakness")
+	if _is_party(e.target_id):
+		_check_low_hp(d, e)
+		if e.hp_after >= 0:
+			_hp[e.target_id] = e.hp_after
+
+
+## KO (07 §9.1, §3.13): an enemy killed by a party hit (KO.command ATTACK / SKILL / STUNT / ITEM) → kill hype by kind
+## (+ kill_hype, overkill, streak); by a party status / zone (command −1) → credited to the action that applied the
+## status, no kill hype (like CTB status ticks); by an enemy telegraph → train kill. A party KO as in CTB.
+func _rt_ko(d: ShowDelta, e: ActionEvent) -> void:
+	if _is_enemy(e.target_id):
+		_stat(d, "kills_total")
+		var by: String = "attack"
+		var member: String = ""
+		var overkill: bool = e.value == 1
+		if _is_party(e.actor_id) and e.command >= 0:
+			member = _member(e.actor_id)
+			by = _by_for(e.command)
+			match by:
+				"skill":
+					_add(d, HYPE_KILL_SKILL)
+					_stat(d, "kills_skill")
+				"stunt":
+					_add(d, HYPE_KILL_STUNT)
+				_:
+					_add(d, HYPE_KILL_ATTACK)
+			var ks: SkillDef = _skill_or_null(e.skill_id)
+			if ks != null and ks.kill_hype > 0:
+				_add(d, float(ks.kill_hype))
+			if overkill:
+				_add(d, HYPE_OVERKILL, &"overkill")
+			_rt_streak_kill(d, e.tick)
+		elif _is_party(e.actor_id):
+			member = _member(e.actor_id)
+			var src: Dictionary = _status_src.get(e.target_id + "|" + str(_tick_status.get(e.target_id, "")), {})
+			by = _by_for(int(src.get("command", BattleCommand.Kind.ATTACK)))
+			if by == "skill":
+				_stat(d, "kills_skill")
+		elif _is_enemy(e.actor_id):
+			_add(d, RT_TRAIN_KILL, &"rt_train_kill")
+			_stat(d, "train_kills")
+		_tick_status.erase(e.target_id)
+		_trigger(d, "enemy_killed", {"enemy_id": e.def_id, "overkill": overkill, "by": by, "member": member})
+	elif _is_party(e.target_id):
+		var who: String = _member(e.target_id)
+		if who == "":
+			who = e.def_id
+		_add(d, HYPE_PARTY_KO, StringName(who + "_ko"))
+		if who == "mopsula":
+			_stat(d, "ko_mopsula")
+		_trigger(d, "party_ko", {"member": who})
+		_hp[e.target_id] = 0
+
+
+## The party action behind a status on an enemy (a later status kill is credited to it): the applying unit's open
+## action, else an auto-attack.
+func _rt_status_added(e: ActionEvent) -> void:
+	if not _is_enemy(e.target_id) or e.status_id == "":
+		return
+	var key: String = e.target_id + "|" + e.status_id
+	if _is_party(e.actor_id):
+		var a: Dictionary = _rt_open.get(e.actor_id, {})
+		_status_src[key] = {"actor": e.actor_id, "command": int(a.get("command", BattleCommand.Kind.ATTACK))}
+	else:
+		_status_src.erase(key)
+
+
+## SHOW / FINALE results count for the whole party's hype; the stats and the stunt_resolved trigger (achievements,
+## "own SHOW") only for the person's (E27: the AI partner's SHOW is no own SHOW).
+func _rt_stunt(d: ShowDelta, e: ActionEvent) -> void:
+	if e.success:
+		_add(d, HYPE_STUNT_SUCCESS, &"stunt_success")
+	else:
+		_add(d, HYPE_STUNT_FAIL, &"stunt_fail")
+	if e.by_ai:
+		return
+	if e.success:
+		_stat(d, "stunts_success")
+		_stunts_ok += 1
+	else:
+		_stat(d, "stunts_fail")
+	_trigger(d, "stunt_resolved", {"success": e.success, "member": _member(e.actor_id), "skill_id": e.skill_id})
+
+
+## 3 kills of the party within RT_STREAK_TICKS → the streak bonus, then the window starts over.
+func _rt_streak_kill(d: ShowDelta, ct: int) -> void:
+	_rt_kill_cts.append(ct)
+	while not _rt_kill_cts.is_empty() and ct - _rt_kill_cts[0] >= RT_STREAK_TICKS:
+		_rt_kill_cts.pop_front()
+	if _rt_kill_cts.size() >= RT_STREAK_KILLS:
+		_add(d, HYPE_KILL_STREAK, &"kill_streak")
+		_rt_kill_cts.clear()
+
+
+## SECOND (whole combat seconds): boredom (RT_BORING per RT_BORING_SEC seconds without a positive event) and drag
+## (RT_DRAG every RT_DRAG_EVERY_SEC seconds from RT_DRAG_AFTER_SEC, bosses RT_DRAG_AFTER_SEC_BOSS, on).
+func _rt_second(d: ShowDelta, sec: int) -> void:
+	_rt_quiet = 0 if _positive else _rt_quiet + 1
+	_positive = false
+	if _rt_quiet >= RT_BORING_SEC:
+		_rt_quiet = 0
+		_add(d, RT_BORING)
+	var after: int = RT_DRAG_AFTER_SEC_BOSS if _setup != null and _setup.is_boss else RT_DRAG_AFTER_SEC
+	if sec >= after and (sec - after) % RT_DRAG_EVERY_SEC == 0:
+		_add(d, RT_DRAG)
+
+
+## The skill applies a status with the rt flag "fixate" (a taunt, 07 §9.4 taunts_total). Memoized.
+func _is_taunt(skill_id: String) -> bool:
+	if _taunts.has(skill_id):
+		return bool(_taunts[skill_id])
+	var yes: bool = false
+	var sk: SkillDef = _skill_or_null(skill_id)
+	if sk != null:
+		for s: Variant in (sk.rt.get("statuses", []) as Array):
+			var sid: String = str((s as Dictionary).get("id", "")) if s is Dictionary else ""
+			if sid != "" and _data.has_id("statuses", sid) \
+					and (_data.status(sid).rt.get("flags", []) as Array).has("fixate"):
+				yes = true
+	_taunts[skill_id] = yes
+	return yes
+
+
+## A presentation reason without hype (a M.O.D. line tag, 07 §9.3).
+static func _reason(d: ShowDelta, reason: StringName) -> void:
+	if not d.reasons.has(reason):
+		d.reasons.append(reason)

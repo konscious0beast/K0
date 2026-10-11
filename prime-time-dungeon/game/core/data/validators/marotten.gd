@@ -12,7 +12,8 @@ const TRIGGERS: PackedStringArray = ["marotte_battle", "explore_zone"]
 const BATTLE_KEYS: PackedStringArray = ["won", "hero", "party_turns", "items_used", "gifts", "defends",
 	"flee_attempts", "distinct_actions", "stunts_success", "weakness_hits", "min_party_hp_pct", "party_kos",
 	"last_kill_member", "encounter_type", "is_boss", "is_floor_boss", "boss_id", "kai_weapon", "equip_all_common",
-	"hero_armor_empty", "hero_acc_empty", "party_armor_empty", "party_acc_empty", "liga_tier"]
+	"hero_armor_empty", "hero_acc_empty", "party_armor_empty", "party_acc_empty", "liga_tier",
+	"duration_sec"]                          # Echtzeitkampf (07 §9.6, R5a)
 const ZONE_KEYS: PackedStringArray = ["zones_since_battle", "zone", "floor"]
 ## Rotating preferences: reward key → [min, max] (integers; won_box is a lootbox id or "").
 const BET_REWARD_RANGES: Dictionary = {"hit_hype": [0, 50], "hit_follower_pm": [1000, 2000], "won_followers": [0, 500],

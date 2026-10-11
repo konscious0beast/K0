@@ -1090,6 +1090,8 @@ const RT_BOSS_COURT_TICK: int = 350           # world fixture "boss": 2 rats at 
 const RT_FIXTURE: String = "res://tests/fixtures/rt_world/world_stream.gd"
 const BUDGET_COMBAT: Dictionary = {"dc3d": 150, "dc2d": 180, "prims": 120000, "mats": 24, "bodies": 40}
 
+var _rt_hints_before: bool = true
+
 
 func _wants_combat() -> bool:
 	if _only.is_empty() or _only.has("combat"):
@@ -1161,6 +1163,8 @@ func _rt_scenario(sc: String) -> Dictionary:
 	Game.combat_mode_override = &"realtime"    # a new real-time game (07 §12.1, §3.9.4: run log header, HP scale)
 	Game.new_game(0, "Kai", FLOOR_SEED)
 	Game.combat_mode_override = &""
+	_rt_hints_before = Game.settings.combat_hints
+	Game.settings.combat_hints = false         # a first-time card would hold the ticks (07 §2.13): fixed load
 	await _build_exploration()
 	var scene: ExplorationScene = _explore
 	await _wait_frames_rt(4)
@@ -1213,8 +1217,10 @@ func _rt_scenario(sc: String) -> Dictionary:
 	var t_end: int = Time.get_ticks_msec() + int(RT_WARMUP_SEC * 1000.0)
 	while Time.get_ticks_msec() < t_end:
 		await get_tree().process_frame
-	while boss and d.is_running() and Game.combat.tick() < RT_BOSS_COURT_TICK:
+	var hops: int = 0
+	while boss and d.is_running() and Game.combat.tick() < RT_BOSS_COURT_TICK and hops < 60:
 		d.advance(10)                          # the queen's whole court: 3 more rats come at tick 300 (07 §8.10)
+		hops += 1
 		await get_tree().process_frame
 	out["quads"] = _rt_fill_telegraphs(d)
 	var units: int = 0
@@ -1252,6 +1258,7 @@ func _rt_leave(scene: ExplorationScene, d: CombatDirector) -> void:
 	scene.queue_free()
 	await _wait_frames_rt(2)
 	Game.state.combat_mode = &"ctb"
+	Game.settings.combat_hints = _rt_hints_before
 
 
 ## Frame intervals and Godot's process / physics time over RT_TIMING_FRAMES frames without the scene audit; with a

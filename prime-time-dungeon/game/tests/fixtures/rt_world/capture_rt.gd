@@ -18,6 +18,7 @@ func run(which: String, scene: Node) -> bool:
 	Game.combat_mode_override = &"realtime"
 	Game.call("_rt_new_game")
 	Game.combat_mode_override = &""
+	Game.settings.combat_hints = false              # R3's first-time cards would hold the fixture's ticks (07 §2.13)
 	match which:
 		"regular":
 			return await _regular(scene)

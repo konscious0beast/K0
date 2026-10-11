@@ -267,13 +267,337 @@ static func _bestiary_entry(state: GameState, enemy_id: String) -> Dictionary:
 	return entry
 
 
-# --- Echtzeitkampf (07, R1a) ------------------------------------------------------------------------------------------
-# STUB(R1a) — owned by R1b. Replace completely, keep the public API.
+# --- Echtzeitkampf (07, R1b) ------------------------------------------------------------------------------------------
 
-## The start data of a real-time combat from the recorded encounter command `cmd` ({"t": "encounter", "enc", "adv",
-## "group", "rt": {…}}, 07 §10.1) and the battle seed (next_seed "battle", 07 §10.5): party RtUnits from
-## Progression.to_combatant (talent crit / element as in make_setup; opener_pm = Talents.preemptive_dmg_pm, stunt_pm =
-## Talents.stunt_window_pm, 07 §9.6), enemies of every group, geometry, presets, RtMods (equipment → species → spec →
-## show boss → twists), RtBalance.from_data. R1b implements it; the stub returns null (no real-time combat before R1b).
-static func make_rt_setup(_state: GameState, _data: GameData, _cmd: Dictionary, _seed: int) -> RtSetup:
-	return null
+## The start data of a real-time combat (07 §3.4, §10.5) from the recorded encounter command `cmd` ({"t": "encounter",
+## "enc", "adv", "group", "opener"?, "rt": {…}}, 07 §10.1) and the battle seed (next_seed "battle"): campaign rules
+## ({}). null for an invalid command, an unknown encounter or a cell without a set (stairs). See make_rt_setup_rules.
+static func make_rt_setup(state: GameState, data: GameData, cmd: Dictionary, seed: int) -> RtSetup:
+	return make_rt_setup_rules(state, data, cmd, seed, {})
+
+
+## make_rt_setup with the run's rules (Game.event_rules / RunSim.rules; the contract signature has none): they decide
+## the Unterhosen-Liga tier of liga talents (as in make_setup) and give RtSetup.rules its combat part (rules.combat,
+## 07 §10.7). Built like make_setup — encounter flags, advantage (bosses NORMAL), damage / EXP factors of the recorded
+## difficulty, show mods, floor palette, battle items, credits, the pep talk guard of bosses — plus:
+## - the set of the recorded cell (kind and open doors from the floor layout; a gate counts as open once opened;
+##   closed for bosses, the tutorial and can_flee = false), RtGeo.make_geo;
+## - party RtUnits from Progression.to_combatant (talent crit / element), ids "p<battle_slot>", display_name = the Def
+##   name (never the persona, 08 §2.7 Nr. 5), the recorded poses, party.json rt (radius, speed, threat, auto-attack,
+##   MP regeneration, keep / follow distances, the bar by level and loadout — tutorial: slots 1 + 5 of the controlled
+##   unit), opener_pm = Talents.preemptive_dmg_pm, stunt_pm = Talents.stunt_window_pm (07 §9.6), tactic and switches
+##   (recorded presets, else PartyMember.rt_preset / rt_toggles, else the defaults) with the compiled rules of the
+##   tactic (RtRules.preset_rules — the AI partner's, and the autopilot's of the controlled unit);
+## - enemies of every recorded group (encounter rt.enemies or its CTB list) while ≤ MAX_ENEMIES (the first group
+##   always), ids e0… in group order, enemies.json rt (HP scale, radius, speed, auto-attack, reach, dmg_pm,
+##   immunities), the leader at its recorded position (outside the ring: entry to its ring point), the komparsen in
+##   formation around the entry point with pop_in_until (07 §2.3, §3.5.5); a group-less combat takes
+##   RtGeo.group_anchor;
+## - the opening action, auto-attack / retarget switches, tutorial steps, RtMods (show boss, battle twists) in their
+##   order, RtBalance.from_data.
+static func make_rt_setup_rules(state: GameState, data: GameData, cmd: Dictionary, seed: int,
+		rules: Dictionary) -> RtSetup:
+	if state == null or data == null or str(cmd.get("t", "")) != "encounter" or RtCommand.validate(cmd) != "":
+		push_warning("[BattleBridge] make_rt_setup: not a real-time encounter command")
+		return null
+	var enc_id: String = str(cmd.get("enc", ""))
+	if not data.has_id("encounters", enc_id):
+		push_warning("[BattleBridge] unknown encounter '%s'" % enc_id)
+		return null
+	var enc: EncounterDef = data.encounter(enc_id)
+	var rt: Dictionary = cmd["rt"]
+	var bal: RtBalance = RtBalance.from_data(data)
+	var s: RtSetup = RtSetup.new()
+	s.encounter_id = enc_id
+	s.group_id = str(cmd.get("group", ""))
+	s.seed = seed
+	s.is_boss = enc.boss
+	s.can_flee = enc.can_flee
+	s.tutorial = enc.tutorial
+	s.advantage = BattleSetup.Advantage.NORMAL if enc.boss else _advantage(JsonUtil.to_int(cmd.get("adv", 0)))
+	var op: String = str(cmd.get("opener", ""))
+	s.opener = op if s.advantage == BattleSetup.Advantage.PREEMPTIVE and BattleSetup.OPENERS.has(op) else ""
+	var vorabend: bool = str(rt.get("diff", "prime")) == "vorabend"
+	s.difficulty = &"vorabend" if vorabend else &"prime"
+	s.enemy_dmg_mult = (Balance.EASY_ENEMY_DMG if vorabend else 1.0) \
+		* (Balance.TUTORIAL_ENEMY_DMG if enc.tutorial else 1.0)
+	s.exp_mult = Balance.EASY_EXP if vorabend else 1.0
+	s.show_mods = {"hype_gain_mult": state.hype_gain_mult(data), "follower_mult": state.follower_mult(data)}
+	s.floor_index = state.floor_run.index if state.floor_run != null else maxi(1, enc.floor_index)
+	var fdef: FloorDef = data.floor_def(s.floor_index)
+	if fdef != null:
+		s.theme_id = fdef.theme
+		s.palette = fdef.palette.duplicate(true)
+	if state.inventory != null:
+		s.items = state.inventory.battle_items(data)
+		s.credits_available = state.inventory.credits
+	s.owned_equipment = _owned_equipment(state, data)
+	s.balance = bal
+	if rules.get("combat", null) is Dictionary:
+		s.rules = {"combat": (rules["combat"] as Dictionary).duplicate(true)}
+	var cell: Vector2i = Vector2i(int((rt["cell"] as Array)[0]), int((rt["cell"] as Array)[1]))
+	var info: Array = _rt_cell(state, data, cell, enc)
+	if int(info[0]) == RoomCell.Kind.STAIRS:
+		push_warning("[BattleBridge] make_rt_setup: the stairs room has no set (07 §2.4)")
+		return null
+	s.cell = cell
+	s.room_kind = int(info[0])
+	s.geo = RtGeo.make_geo(s.room_kind, int(info[1]), enc.boss or enc.tutorial or not enc.can_flee, bal)
+	_rt_party(s, state, data, rt, rules, enc, bal)
+	_rt_enemies(s, data, rt, rules, enc, bal)
+	s.presets = {}
+	for u: RtUnit in s.units:
+		if u.side == Combatant.Side.PARTY and u.id != s.controlled_id:
+			s.presets[u.id] = {"preset": u.preset, "tog": u.toggles.duplicate()}
+	s.rt_opener = (rt.get("open", {}) as Dictionary).duplicate(true)
+	s.auto_attack = bool(rt.get("auto", true))
+	s.auto_retarget = bool(rt.get("retarget", true))
+	s.tutorial_steps = PackedStringArray(enc.rt.get("tutorial", []))
+	var mods: Array[Dictionary] = []
+	mods.append_array(RtMods.from_show_boss(enc))
+	mods.append_array(RtMods.from_twists(_battle_twists(state), data))
+	s.mods = mods
+	RtMods.apply_static(s, data)
+	if enc.boss and bool(state.flags.get(PEP_TALK_FLAG, false)) and data.has_id("statuses", PEP_TALK_STATUS):
+		var guard: StatusDef = data.status(PEP_TALK_STATUS)
+		var ms: int = int(guard.rt.get("default_ms", 3000))
+		for u: RtUnit in s.units:
+			if u.side == Combatant.Side.PARTY:
+				u.statuses.append(RtStatus.new(guard, ms * 3 / 100 if ms > 0 else -1, u.id))
+		state.flags.erase(PEP_TALK_FLAG)
+	return s
+
+
+## [RoomCell.Kind, open door bits] of the set cell: from the current floor layout (a gate is a closed door until it is
+## opened); without a floor run / layout cell: FLOOR_BOSS for bosses, else NORMAL, no doors.
+static func _rt_cell(state: GameState, data: GameData, cell: Vector2i, enc: EncounterDef) -> Array:
+	var fr: FloorRun = state.floor_run
+	var fdef: FloorDef = data.floor_def(fr.index) if fr != null else null
+	if fdef != null:
+		var layout: FloorLayout = DungeonGenerator.generate(fdef, fr.seed)
+		var rc: RoomCell = layout.cell_at(cell) if layout != null else null
+		if rc != null:
+			var doors: int = 0
+			for d: int in RoomCell.DIR_BITS:
+				if (rc.doors & d) == 0:
+					continue
+				var g: Dictionary = layout.gate_at(cell, d)
+				if g.is_empty() or fr.opened_gates.has(str(g.get("key", ""))):
+					doors |= d
+			return [int(rc.kind), doors]
+	return [RoomCell.Kind.FLOOR_BOSS if enc.boss else RoomCell.Kind.NORMAL, 0]
+
+
+## Party RtUnits (07 §4.8, §5.1, §9.6) in battle_slot order.
+static func _rt_party(s: RtSetup, state: GameState, data: GameData, rt: Dictionary, rules: Dictionary,
+		enc: EncounterDef, bal: RtBalance) -> void:
+	var poses: Dictionary = {}
+	for p: Variant in (rt.get("party", []) as Array):
+		poses[str((p as Dictionary).get("u", ""))] = (p as Dictionary).get("p", [0, 0, 0])
+	var hero_id: String = ""
+	var liga_tier: int = 0 if enc.tutorial else MarottenRules.liga_tier(state, rules)
+	var members: Array[PartyMember] = []
+	for m: PartyMember in state.party:
+		if m != null and data.has_id("party", m.id):
+			members.append(m)
+	members.sort_custom(func(a: PartyMember, b: PartyMember) -> bool:
+		return data.party_member(a.id).battle_slot < data.party_member(b.id).battle_slot)
+	var ctl: String = str(rt.get("ctl", ""))
+	var party: Array[Combatant] = []
+	for m: PartyMember in members:
+		var def: PartyMemberDef = data.party_member(m.id)
+		var uid: String = "p%d" % def.battle_slot
+		if m.id == state.hero:
+			hero_id = uid
+		var c: Combatant = Progression.to_combatant(m, data, uid, def.battle_slot,
+			MarottenRules.in_liga(state, m.id, liga_tier))
+		if c == null:
+			continue
+		var u: RtUnit = RtUnit.from_combatant(c)
+		u.display_name = def.name
+		var pose: Array = poses.get(uid, [0, 0, 0])
+		u.x = int(pose[0])
+		u.z = int(pose[1])
+		u.yaw = posmod(int(pose[2]), 256)
+		_rt_party_fields(u, m, def, data, bal, rt.get("presets", {}))
+		party.append(u)
+		s.units.append(u)
+	s.party = party
+	s.controlled_id = ctl if poses.has(ctl) or _has_unit(s, ctl) else hero_id
+	if not _has_unit(s, s.controlled_id) and not s.units.is_empty():
+		s.controlled_id = s.units[0].id
+	for u: RtUnit in s.units:
+		var own: bool = u.id == s.controlled_id
+		u.driver = RtUnit.Driver.PLAYER if own else RtUnit.Driver.AI
+		if own:
+			u.auto_on = bool(rt.get("auto", true))
+			if enc.tutorial:
+				for slot: int in u.bar.keys():
+					if slot != 1 and slot != 5:
+						u.bar.erase(slot)
+
+
+static func _rt_party_fields(u: RtUnit, m: PartyMember, def: PartyMemberDef, data: GameData, bal: RtBalance,
+		presets: Variant) -> void:
+	var prt: Dictionary = def.rt
+	u.radius = int(prt.get("radius_cm", 40))
+	u.move_cm_tick = int(prt.get("move_cm_s", 540)) / 30
+	u.threat_pm = int(prt.get("threat_pm", 1000))
+	u.auto_skill = str(prt.get("auto_skill", ""))
+	u.swing_ticks = maxi(1, int(prt.get("swing_ms", 2000)) * 3 / 100)
+	u.reach = int(prt.get("reach_cm", 250))
+	u.follow_cm = int(prt.get("follow_cm", 600))
+	u.swing_ready = 0
+	var rec: Dictionary = (presets as Dictionary).get(u.id, {}) if presets is Dictionary else {}
+	var preset: String = str(rec.get("preset", m.rt_preset if m.rt_preset != "" else prt.get("default_preset",
+		"attack")))
+	u.preset = preset if RtVocab.RT_PRESETS.has(preset) else "attack"
+	var tog: Dictionary = RtVocab.RT_TOGGLE_DEFAULTS.duplicate()
+	var src: Dictionary = rec.get("tog", m.rt_toggles) if rec.get("tog", m.rt_toggles) is Dictionary else {}
+	for k: String in RtVocab.RT_TOGGLES:
+		if src.has(k):
+			tog[k] = bool(src[k])
+	u.toggles = tog
+	u.keep_cm = clampi(int((prt.get("keep_cm", {}) as Dictionary).get(u.preset, 0)), 0, 700)
+	u.rules = RtRules.preset_rules(prt, u.preset)
+	var mpr: Dictionary = prt.get("mp_regen", {})
+	u.mp_regen = {"mode": str(mpr.get("mode", "time")), "amount": int(mpr.get("amount", 0)),
+		"taken": int(mpr.get("taken", 0)), "taken_every_ticks": int(mpr.get("taken_every_ms", 0)) * 3 / 100,
+		"every_ticks": int(mpr.get("every_ms", 0)) * 3 / 100}
+	u.mp_regen_next = int(u.mp_regen["every_ticks"])
+	u.mp_hit_ready = 0
+	u.move_budget = bal.i("MOVE_BUDGET_MM")
+	u.bar = _rt_bar(prt, m)
+	u.opener_pm = Talents.preemptive_dmg_pm(m, data)
+	u.stunt_pm = Talents.stunt_window_pm(m, data)
+
+
+## party.json rt.bar (07 §4.1): the base ability of each slot reached by the level, a chosen variant
+## (PartyMember.rt_loadout "2".."4") once its level is reached; FINALE and context variants stay out (the sim shows
+## them in RtSim.bar).
+static func _rt_bar(prt: Dictionary, m: PartyMember) -> Dictionary:
+	var out: Dictionary = {}
+	var variants: Dictionary = {}
+	for b: Variant in (prt.get("bar", []) as Array):
+		var e: Dictionary = b
+		if int(e.get("level", 1)) > m.level or bool(e.get("finale", false)):
+			continue
+		if bool(e.get("variant", false)):
+			variants[str(e.get("skill", ""))] = int(e.get("slot", 0))
+		elif not out.has(int(e.get("slot", 0))):
+			out[int(e.get("slot", 0))] = str(e.get("skill", ""))
+	for k: Variant in m.rt_loadout.keys():
+		var sid: String = str(m.rt_loadout[k])
+		if variants.has(sid) and int(variants[sid]) == str(k).to_int():
+			out[str(k).to_int()] = sid
+	return out
+
+
+## Enemy RtUnits of every recorded group (07 §2.3, §3.5.5, §4.9).
+static func _rt_enemies(s: RtSetup, data: GameData, rt: Dictionary, rules: Dictionary, enc: EncounterDef,
+		bal: RtBalance) -> void:
+	var groups: Array = (rt.get("groups", []) as Array).duplicate(true)
+	if groups.is_empty():
+		var ctl_pose: Array = [0, 0, 0]
+		for p: Variant in (rt.get("party", []) as Array):
+			if str((p as Dictionary).get("u", "")) == s.controlled_id:
+				ctl_pose = (p as Dictionary).get("p", [0, 0, 0])
+		var anchor: Vector2i = RtGeo.group_anchor(s.geo, int(ctl_pose[0]), int(ctl_pose[1]))
+		var yaw: int = DetMath.yaw_of(-anchor.x, -anchor.y)
+		groups.append({"group": s.group_id, "enc": enc.id, "lead": [anchor.x, anchor.y, yaw], "state": "IDLE"})
+	var cap: int = int((rules.get("combat", {}) as Dictionary).get("max_enemies", bal.i("MAX_ENEMIES"))) \
+		if rules.get("combat", null) is Dictionary else bal.i("MAX_ENEMIES")
+	var n: int = 0
+	for gi in groups.size():
+		var g: Dictionary = groups[gi]
+		var genc_id: String = str(g.get("enc", ""))
+		if not data.has_id("encounters", genc_id):
+			continue
+		var genc: EncounterDef = data.encounter(genc_id)
+		var ids: PackedStringArray = PackedStringArray(genc.rt.get("enemies", [])) if not genc.rt.is_empty() \
+			and not (genc.rt.get("enemies", []) as Array).is_empty() else genc.enemies.duplicate()
+		if gi > 0 and n + ids.size() > cap:
+			continue
+		var lead: Array = g.get("lead", [0, 0, 0])
+		var yaw_l: int = posmod(int(lead[2]), 256)
+		var unit_ids: Array = []
+		var entry: Array[int] = []
+		var anchor_p: Vector2i = Vector2i(int(lead[0]), int(lead[1]))
+		for k in ids.size():
+			if not data.has_id("enemies", ids[k]):
+				continue
+			var edef: EnemyDef = data.enemy(ids[k])
+			var u: RtUnit = RtUnit.from_combatant(Combatant.create_enemy(edef, "e%d" % n, n))
+			u.display_name = edef.name
+			_rt_enemy_fields(u, edef, bal)
+			u.yaw = yaw_l
+			if unit_ids.is_empty():
+				u.x = int(lead[0])
+				u.z = int(lead[1])
+				if not RtGeo.walkable(s.geo, u.x, u.z, u.radius, false):
+					var q: Vector2i = RtGeo.project_walkable(s.geo, u.x, u.z, u.radius, false)
+					entry.assign([q.x, q.y])
+					anchor_p = q
+					u.entry = entry.duplicate()
+			else:
+				var f: Vector2i = RtGeo.formation(unit_ids.size(), anchor_p.x, anchor_p.y, yaw_l)
+				var p: Vector2i = RtGeo.project_walkable(s.geo, f.x, f.y, u.radius, false)
+				u.x = p.x
+				u.z = p.y
+				u.pop_in_until = bal.i("POP_IN_TICKS") + (bal.i("ENTER_MAX_TICKS") if not entry.is_empty() else 0)
+			unit_ids.append(u.id)
+			s.units.append(u)
+			n += 1
+		if unit_ids.is_empty():
+			continue
+		if s.enemy_ids.is_empty():
+			s.enemy_ids = ids
+		s.groups.append({"group_id": str(g.get("group", "")), "encounter_id": genc_id, "enemy_ids": Array(ids),
+			"lead": [int(lead[0]), int(lead[1]), yaw_l], "state": str(g.get("state", "")), "entry": Array(entry),
+			"units": unit_ids})
+
+
+static func _rt_enemy_fields(u: RtUnit, def: EnemyDef, bal: RtBalance) -> void:
+	var ert: Dictionary = def.rt
+	var hp: int = int(ert.get("hp", 0))
+	if hp <= 0:
+		var pm: int = int(ert.get("hp_pm", 0))
+		hp = maxi(1, int(def.stats.get("hp", 1)) * (pm if pm > 0 else bal.i("ENEMY_HP_PM")) / 1000)
+	u.stats.values[StatBlock.Stat.HP] = hp
+	u.hp = hp
+	u.driver = RtUnit.Driver.AI
+	u.radius = int(ert.get("radius_cm", 30))
+	u.move_cm_tick = int(ert.get("move_cm_s", 360)) / 30
+	u.stationary = bool(ert.get("stationary", false))
+	u.keep_cm = clampi(int(ert.get("keep_cm", 0)), 0, 700)
+	u.auto_skill = str(ert.get("auto_skill", def.attack_skill))
+	u.auto_ranged_skill = str(ert.get("auto_ranged_skill", ""))
+	u.swing_ticks = maxi(1, int(ert.get("swing_ms", 2400)) * 3 / 100)
+	u.reach = int(ert.get("reach_cm", 220))
+	u.dmg_pm = int(ert.get("dmg_pm", 1000))
+	u.swing_ready = bal.i("FIRST_SWING_TICKS")
+	for sid: Variant in (ert.get("immune", []) as Array):
+		if not u.status_immune.has(str(sid)):
+			u.status_immune.append(str(sid))
+
+
+static func _has_unit(s: RtSetup, id: String) -> bool:
+	for u: RtUnit in s.units:
+		if u.id == id:
+			return true
+	return false
+
+
+## The active battle twists (06 §5.6, 07 §9.5): GameState.flags.live.twist.active entries counting battles with
+## battles left, in stored order — RtMods.from_twists maps them.
+static func _battle_twists(state: GameState) -> Array:
+	var out: Array = []
+	var live: Variant = state.flags.get("live", {})
+	var tw: Variant = (live as Dictionary).get("twist", {}) if live is Dictionary else {}
+	var active: Variant = (tw as Dictionary).get("active", []) if tw is Dictionary else []
+	if active is Array:
+		for e: Variant in (active as Array):
+			if e is Dictionary and str((e as Dictionary).get("unit", "")) == "battles" \
+					and JsonUtil.to_int((e as Dictionary).get("left", 0)) > 0:
+				out.append((e as Dictionary).duplicate(true))
+	return out

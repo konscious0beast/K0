@@ -91,6 +91,11 @@ func handle_cancel() -> bool:
 
 ## Field use: Game.use_item (recorded); returns its result. HP/MP changes are reported via `status`.
 func use_on(item_id: String, member_id: String) -> bool:
+	var lock: String = Game.rt_party_lock()                 # Echtzeitkampf (07, R2): the item wheel in a fight
+	if lock != "":
+		Sfx.play_ui(&"ui_error")
+		say(lock)
+		return false
 	var m: PartyMember = Game.state.member(member_id) if Game.state != null else null
 	var hp0: int = m.hp if m != null else 0
 	var mp0: int = m.mp if m != null else 0
@@ -154,6 +159,10 @@ func _activate(id: String) -> void:
 		return
 	if def.type != "consumable":
 		say("Ausrüstung legst du im Reiter „Ausrüstung“ an." if def.is_equipment() else "Ein Schlüsselgegenstand.")
+		Sfx.play_ui(&"ui_error")
+		return
+	if Game.rt_party_lock() != "":                          # Echtzeitkampf (07, R2): no target choice in a fight
+		say(Game.rt_party_lock())
 		Sfx.play_ui(&"ui_error")
 		return
 	if def.usable != "field" and def.usable != "both":

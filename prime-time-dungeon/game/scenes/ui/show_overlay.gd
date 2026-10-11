@@ -10,7 +10,9 @@ extends CanvasLayer
 ## minimap, battle: under the hype meter), hidden before the countdown runs (Floor 1: tutorial) and when switched off
 ## (Optionen → "Show-Wetten anzeigen", GameSettings.show_bets_hud).
 ## Mode via Events.overlay_mode_requested: &"explore", &"battle", &"safe_room", &"menu" (scanlines only),
-## &"hidden", &"game_over" (scanlines only, M6-internal). Reads Show for numbers (never writes state).
+## &"hidden", &"game_over" (scanlines only, M6-internal), &"combat" (Echtzeitkampf, 07 §8.8, R3: like &"explore" plus
+## the stopped floor clock as a chip in the right column, sponsor lower third 380 px / 1.5 s). Reads Show for numbers
+## (never writes state).
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const UiIcon := preload("res://scenes/ui/ui_icon.gd")
@@ -19,7 +21,8 @@ const TouchScript := preload("res://scenes/ui/touch_controls.gd")
 const BADGE_H: float = 30.0                # LIVE pill 80×30, corner radius = half the height (03_ART §9.2)
 const SHADER_LOW: String = "res://art/shaders/ui_tv_overlay.gdshader"
 const SHADER_HIGH: String = "res://art/shaders/ui_tv_overlay_aberration.gdshader"
-const MODES: Array[StringName] = [&"explore", &"battle", &"safe_room", &"menu", &"hidden", &"game_over"]
+const MODES: Array[StringName] = [&"explore", &"battle", &"safe_room", &"menu", &"hidden", &"game_over",
+	&"combat"]                                   # Echtzeitkampf (07 §8.8, R3)
 const TICKER_SPEED: float = 80.0           # px/s (03_ART §9.2)
 const TICKER_GAP: float = 64.0
 const TICKER_IDLE_SEC: float = 9.0         # channel ident when the chat is quiet
@@ -342,10 +345,10 @@ func set_mode(p_mode: StringName) -> void:
 		_chip_results = false                      # 06-C: back from the results screen
 	if _root == null:
 		return
-	var show_bar: bool = mode == &"explore" or mode == &"battle" or mode == &"safe_room"
+	var show_bar: bool = mode == &"explore" or mode == &"battle" or mode == &"safe_room" or mode == &"combat"
 	_root.visible = mode != &"hidden"
 	_frame.visible = show_bar
-	_rec.visible = mode == &"explore"
+	_rec.visible = mode == &"explore" or mode == &"combat"          # Echtzeitkampf (07, R3)
 	_hype_box.visible = mode != &"safe_room"
 	_ticker_panel.visible = show_bar
 	refresh_show_chip()
@@ -360,6 +363,7 @@ func set_mode(p_mode: StringName) -> void:
 		_badge_label.add_theme_color_override("font_color", UiUtil.C_PAPER)
 		_badge_dot.set("color", UiUtil.C_PAPER)
 	_layout_hype()
+	_apply_combat_mode()                            # Echtzeitkampf (07, R3)
 
 
 ## LIVE / WERBEPAUSE badge: a pill (corner radius = half the height), 03_ART §9.2.
@@ -860,7 +864,7 @@ func _next_lower_third() -> void:
 	tw.set_parallel(true)
 	tw.tween_property(_lower, "position:x", x0, LOWER_IN).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tw.tween_property(_lower, "modulate:a", 1.0, LOWER_IN)
-	tw.chain().tween_interval(LOWER_HOLD)
+	tw.chain().tween_interval(_lower_hold())          # 1.5 s in the real-time combat (07 §8.8)
 	tw.chain().tween_property(_lower, "modulate:a", 0.0, LOWER_OUT)
 	tw.chain().tween_callback(func() -> void:
 		_lower.position.x = x0
@@ -878,7 +882,8 @@ func _update_lower_lift(delta: float) -> void:
 		if box.size.x > 0.0:
 			var r: Rect2 = _lower.get_global_rect()
 			r.position.y += _lower_lift
-			if r.position.x < box.end.x and box.position.x < r.end.x and r.end.y > box.position.y - 8.0:
+			if r.position.x < box.end.x and box.position.x < r.end.x and r.end.y > box.position.y - 8.0 \
+					and (mode != &"combat" or r.position.y < box.end.y + 8.0):     # 07 R3: subtitle above the bar
 				target = r.end.y - (box.position.y - 8.0)
 	_lower_lift = target if delta <= 0.0 else lerpf(_lower_lift, target, 1.0 - exp(-delta / 0.08))
 	if absf(_lower_lift - target) < 0.5:
@@ -1031,7 +1036,8 @@ func refresh_show_chip() -> void:
 	if _chip == null:
 		return
 	var v: Dictionary = _chip_demo if _demo else (Show.marotten_view() if Game.state != null else {})
-	var shown: bool = (mode == &"explore" or (mode == &"battle" and not _chip_results)) and _chip_allowed()
+	var shown: bool = (mode == &"explore" or mode == &"combat" or (mode == &"battle" and not _chip_results)) \
+		and _chip_allowed()
 	var items: Array = v.get("items", []) if v.get("items", []) is Array else []
 	var tier: int = int(v.get("liga_tier", 0))
 	shown = shown and (not items.is_empty() or tier > 0)
@@ -1145,4 +1151,103 @@ func _layout_chip() -> void:
 		_chip.offset_left = right - 120.0
 		_chip.offset_right = right
 		_chip.offset_top = CHIP_TOP_EXPLORE
+		if mode == &"combat":                      # Echtzeitkampf (07 §8.1, R3): no minimap; below the boss frame row
+			_chip.offset_top = COMBAT_CHIP_TOP
 	_chip.offset_bottom = _chip.offset_top + 24.0
+
+
+# --- Echtzeitkampf (07, R3): overlay mode &"combat" (07 §8.1, §8.8) --------------------------------------------------
+
+const COMBAT_LOWER_W: float = 380.0          # sponsor lower third in combat (never over the action bar)
+const COMBAT_LOWER_HOLD: float = 1.5
+const COMBAT_CLOCK_SIZE: Vector2 = Vector2(140, 22)
+## DEVIATION from 07 §8.1 ("Chip unter LIVE (24, 68)"): LIVE + viewers + followers are ~55 px tall, a chip at y 68
+## would cover the follower line and the party frame starts at y 96 — the chip goes to the right column instead (the
+## minimap is hidden in combat): right-aligned under the hype meter, below the 06-C show chip while that one shows.
+const COMBAT_CLOCK_GAP: float = 4.0
+## The 06-C show chip in combat: under the hype meter, but below the boss frame + cast row (abs y 24–84, 07 §8.1) —
+## the chip reaches left of x 900, where the boss frame ends.
+const COMBAT_CHIP_TOP: float = 64.0
+## The viewer-gift banner moves below the combat banners (y 150, 07 §8.1) while a combat runs.
+const COMBAT_GIFT_TOP: float = 190.0
+
+var _clock_chip: PanelContainer = null
+var _clock_label: Label = null
+
+
+func _lower_hold() -> float:
+	return COMBAT_LOWER_HOLD if mode == &"combat" else LOWER_HOLD
+
+
+## Combat: the floor clock as a grey chip "Uhr steht · 12:34" (the clock stands in combat, 07 §12.9 Nr. 1; hidden
+## before the countdown runs), the lower third 380 px wide, the gift banner below the combat banners.
+func _apply_combat_mode() -> void:
+	var combat: bool = mode == &"combat"
+	if _clock_chip == null and combat:
+		_build_clock_chip()
+	if _lower != null:
+		_lower.offset_right = COMBAT_LOWER_W if combat else 480.0
+	if _gift != null:
+		_gift.offset_top = COMBAT_GIFT_TOP if combat else 150.0
+		_gift.offset_bottom = _gift.offset_top + 68.0
+	refresh_clock_chip()
+
+
+## Re-reads the floor clock (Game.time_left) into the chip; hidden outside the combat mode or before the countdown.
+func refresh_clock_chip() -> void:
+	if _clock_chip == null:
+		return
+	var st: GameState = Game.state
+	var started: bool = _demo or (st != null and st.floor_run != null and st.floor_run.timer_started)
+	_clock_chip.visible = mode == &"combat" and started
+	if _clock_chip.visible:
+		var sec: int = int(_demo_values.get("clock", 754)) if _demo else maxi(0, floori(Game.time_left()))
+		_clock_label.text = "Uhr steht · " + UiUtil.fmt_time(sec)
+		var top: float = COMBAT_CHIP_TOP
+		if _chip != null and _chip.visible:
+			top = _chip.offset_bottom + COMBAT_CLOCK_GAP
+		var right: float = _hype_box.offset_right if _hype_box != null else 0.0
+		_clock_chip.offset_left = right - COMBAT_CLOCK_SIZE.x
+		_clock_chip.offset_right = right
+		_clock_chip.offset_top = top
+		_clock_chip.offset_bottom = top + COMBAT_CLOCK_SIZE.y
+
+
+## Text of the combat clock chip while shown, else "".
+func clock_chip_text() -> String:
+	return _clock_label.text if _clock_chip != null and _clock_chip.visible else ""
+
+
+func clock_chip_rect() -> Rect2:
+	return _clock_chip.get_global_rect() if _clock_chip != null and _clock_chip.visible else Rect2()
+
+
+func _build_clock_chip() -> void:
+	_clock_chip = PanelContainer.new()
+	_clock_chip.name = "CombatClock"
+	_clock_chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_clock_chip.add_theme_stylebox_override("panel", UiUtil.box_style(Color(UiTheme.C_PANEL, 0.82),
+		Color(UiTheme.C_TEXT_DIM, 0.45), 1, 0.0, 8, 1))
+	_clock_chip.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_clock_chip.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_clock_chip.custom_minimum_size = COMBAT_CLOCK_SIZE
+	_frame.add_child(_clock_chip)
+	var row: HBoxContainer = UiUtil.hbox(5)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_clock_chip.add_child(row)
+	var icon: Control = UiIcon.make(&"clock", UiTheme.C_TEXT_DIM, 12)
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(icon)
+	_clock_label = UiUtil.label("", &"", 13, UiTheme.C_TEXT_DIM)
+	_clock_label.name = "ClockText"
+	_clock_label.add_theme_constant_override("outline_size", 0)
+	_clock_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(_clock_label)
+	Events.floor_timer_changed.connect(func(_s: int) -> void: refresh_clock_chip())
+	Events.floor_timer_started.connect(refresh_clock_chip)
+	var t: Timer = Timer.new()                    # follows the show chip (shown / hidden every 0.25 s)
+	t.name = "CombatClockTimer"
+	t.wait_time = CHIP_REFRESH_SEC
+	t.autostart = true
+	t.timeout.connect(refresh_clock_chip)
+	_clock_chip.add_child(t)

@@ -1433,6 +1433,10 @@ je Slot mit Migration und „Kandidat:in löschen“, Haken H1–H7, Text-CRs, C
   1280 × 720 / 1680 × 720 / 1280 × 960 mit 100 % und 130 % passt alles (Test `test_08_casting_ui`).
 - **Wartende Persona-Zeilen** folgen ihrer Auslöser-Zeile über `Show.say` (nicht über `mod_said`): so steht die Persona-Zeile in
   der HUD-Warteschlange hinter `safe_room_enter` bzw. `floor_start`.
+- **Echtzeitkampf (07 §9.3):** `Game.make_rt_setup` setzt `in_battle` und sendet `battle_started`, also gilt „nie im Kampf“
+  ohne eigene Echtzeit-Weiche; `test_08_persona_lines` spielt einen Kampf über R2s `CombatDirector` (Welt-Fixture) und prüft,
+  dass weder Persona- noch KI-Zeilen kommen (die KI-Zeilen der Karte und M.O.D. live über `Show.say_external`) und eine
+  wartende Zeile verfällt.
 - **Event-Läufe** setzen `Game.persona = null` (Kap. 8: kein Persona-Command, keine Persona-Zeilen, keine Karte).
 - **Migration:** ein alter Stand mit Namen bekommt beim Laden die Persona-Datei, und Slot-Datei samt `.bak` verlieren den
   Namen sofort (nicht erst beim nächsten Speichern). „Kandidat:in löschen“ schreibt Bestenlisten in place (ein atomarer

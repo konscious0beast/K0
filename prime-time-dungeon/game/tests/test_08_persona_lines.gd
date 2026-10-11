@@ -3,11 +3,13 @@ extends TestCase
 ## persona_intro:custom), the length rule <= 110 with the longest values; >= 3 general lines per hook, >= 2 intro
 ## variants and a card line per Vorleben, 2 rivals per Vorleben; 3 broadcast plans chosen from the seed, at most one
 ## line per hook event (the intro two), every planned tag has lines; persona_* are always said and have no cooldown;
-## never during a battle (CTB and the real-time fixture) — no persona and no AI line, a waiting one expires; the word
-## lists, foot words, no royal plural and no crown motifs for Graf Mopsula; {club} with its possessive and a singular
-## verb, {job} never "von Beruf"; scn_mop_4 with every word form (fixture); the review matrix builds.
+## never during a battle (CTB and the real-time combat through R2's director) — no persona and no AI line, a waiting
+## one expires; the word lists, foot words, no royal plural and no crown motifs for Graf Mopsula; {club} with its
+## possessive and a singular verb, {job} never "von Beruf"; scn_mop_4 with every word form (fixture); the review
+## matrix builds.
 
 const Matrix := preload("res://tests/tools/persona_matrix_builder.gd")
+const WorldStream := preload("res://tests/fixtures/rt_world/world_stream.gd")
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const FORMS_FIXTURE: String = "res://tests/fixtures/persona/scn_mop_4_forms.json"
 const HOOK_TAGS: PackedStringArray = ["persona_intro", "persona_first_chest", "persona_boss_won", "persona_safe_room",
@@ -26,6 +28,12 @@ const CROWN: PackedStringArray = ["krone", "königlich", "majestät", "majestaet
 const CLUB_PLURAL: String = "\\{club\\} (haben|sind|waren|schauen|halten|rufen|schicken|lassen|grüßen|drücken|" + \
 	"winken|jubeln|fiebern|warten|gießen|lesen|laufen|bauen|kochen|backen)\\b"
 const SEED: int = 4711
+## The real-time combat of R2's tick-loop tests (enc_f1_a2 in a closed round room).
+const RT_GEO: Dictionary = {"r": 480, "doors": 0, "closed": false, "blockers": []}
+const RT_CMD: Dictionary = {"t": "encounter", "enc": "enc_f1_a2", "adv": 0, "group": "f1_g1", "rt": {"v": 1,
+	"cell": [1, 4], "ctl": "p0", "party": [{"u": "p0", "p": [0, 200, 0]}, {"u": "p1", "p": [0, 330, 0]}],
+	"groups": [{"group": "f1_g1", "enc": "enc_f1_a2", "lead": [0, -250, 128], "state": "PATROL"}],
+	"presets": {"p1": {"preset": "support", "tog": {}}}, "auto": true, "retarget": true, "open": {}, "diff": "prime"}}
 
 var _said: Array[String] = []
 
@@ -38,6 +46,9 @@ func before_each() -> void:
 func after_each() -> void:
 	if Events.mod_said.is_connected(_on_said):
 		Events.mod_said.disconnect(_on_said)
+	if Game.combat != null:
+		Game.end_combat()
+	Game.rt_sim_factory = Callable()
 	Game.state = null
 	Game.run_log = null
 	Game.sim = null
@@ -333,38 +344,56 @@ func test_no_persona_line_in_a_ctb_battle() -> void:
 	assert_eq((hooks.call("extra_lines", "persona_safe_room") as Array).size(), 0, "each AI line once per floor")
 
 
-func test_no_persona_line_in_a_realtime_battle() -> void:
-	Game.new_game(0, "Jana", SEED, &"prime", "kai", _jana())
+## 07 §9.3: the real-time path itself — Game.make_rt_setup (in_battle, battle_started), the CombatDirector's tick loop
+## over a world-fixture stream, Game.end_combat. The world keeps ticking around the fight: explore ticks, a
+## safe_room_enter line and the floor-end hook must not bring a persona or an AI line (the candidate's AI lines and
+## M.O.D. live, Show.say_external); a waiting one expires.
+func test_no_persona_line_in_the_realtime_combat_of_the_director() -> void:
+	var p: PersonaProfile = _jana()
+	p.ai = {"lines": [{"hook": "safe_room", "voice": "mod", "text": "Eine KI-Zeile für {name}."}]}
+	Game.new_game(0, p.name, SEED, &"prime", "kai", p)
+	Game.state.combat_mode = &"realtime"
 	var hooks: RefCounted = Show.persona_hooks()
 	Game.enter_safe_room(_safe_room())
 	Game.leave_safe_room()
-	assert_eq((hooks.call("pending_tags") as PackedStringArray).size(), 1)
+	assert_eq((hooks.call("pending_tags") as PackedStringArray).size(), 1, "H4 waits for safe_room_enter")
+	var d: CombatDirector = CombatDirector.new()
+	d.present_results = false
+	d.use_hud = false
+	d.auto_tick = false
+	add_to_tree(d)
+	d.arm({"cell": Vector2i(1, 4), "origin": Vector3.ZERO, "room_kind": 0, "room_doors": 0, "geo": RT_GEO,
+		"closed": false, "boss": false, "groups": PackedStringArray(["f1_g1"]), "waiting": PackedStringArray()})
+	Game.rt_sim_factory = func(cmd: Dictionary, seed: int) -> RtSim:
+		var b: RefCounted = WorldStream.new()
+		b.set("data", DB.data)
+		b.set("plan", "win")
+		b.set("geo", RT_GEO)
+		return FakeRtSim.new(b.call("build", cmd, seed, 600), DB.data)
 	_said.clear()
-	var rt_data: GameData = FakeRtSim.load_data()
-	var sim: FakeRtSim = FakeRtSim.load_stream("boss_phases", rt_data)
-	assert_not_null(sim, "the real-time fixture stream")
-	Game.combat = sim                                  # a real-time combat runs (07: in the exploration world)
-	Game.in_battle = true
-	Events.battle_started.emit("enc_rt_fixture", true)
-	assert_eq((hooks.call("pending_tags") as PackedStringArray).size(), 0, "the waiting line expired")
-	sim.start()
+	assert_not_null(Game.make_rt_setup(RT_CMD), "the real-time combat starts")
+	assert_true(Game.in_battle and d.is_running(), "a running real-time combat")
+	assert_eq((hooks.call("pending_tags") as PackedStringArray).size(), 0, "the waiting line expired at its start")
 	var guard: int = 0
-	while not sim.is_finished() and guard < 2000:
+	while d.is_running() and guard < 60:
 		guard += 1
-		sim.step()
-		if guard % 30 == 0:                            # the world keeps ticking during a real-time combat
-			Events.explore_tick.emit({})
-			Show.say("safe_room_enter")
-			hooks.call("on_floor_end", 1)
-	assert_true(sim.is_finished(), "the stream played to its end")
-	Game.state.floor_run.quarter_boss_defeated = true
-	hooks.call("on_boss_won", _quarter_boss())
-	Events.explore_tick.emit({})
+		assert_true(Game.in_battle)
+		Events.explore_tick.emit({})                 # the world keeps ticking around the fight
+		Show.say("safe_room_enter")
+		hooks.call("on_floor_end", 1)
+		assert_eq((hooks.call("extra_lines", "persona_safe_room") as Array).size(), 0, "no AI line in the fight")
+		Show._last_line_at = -INF                    # no line gap in the way: only the fight refuses
+		assert_false(Show.say_external("Eine Live-Zeile für {name}.", &"mod", "live"), "no M.O.D. live in the fight")
+		d.advance(20)
+	assert_false(d.is_running(), "the stream ended in a victory")
+	assert_false(Game.in_battle)
+	assert_null(Game.combat, "Game.end_combat ran")
 	assert_eq(_persona_said(), PackedStringArray(), "no persona line during the real-time combat")
-	Game.combat = null
-	Game.in_battle = false
 	Events.explore_tick.emit({})
-	assert_eq(_persona_said().size(), 1, "after the combat: the boss line")
+	assert_eq(_persona_said(), PackedStringArray(), "the expired line stays expired")
+	assert_eq((hooks.call("extra_lines", "persona_safe_room") as Array).size(), 1, "AI lines again after the fight")
+	Show._last_line_at = -INF
+	assert_true(Show.say_external("Eine Live-Zeile für {name}.", &"mod", "live"), "M.O.D. live again after the fight")
 
 
 func test_hooks_follow_the_plan() -> void:

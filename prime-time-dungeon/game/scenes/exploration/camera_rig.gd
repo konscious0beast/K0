@@ -150,6 +150,8 @@ func set_leader(member_id: String) -> void:
 	pivot_height = float(f["pivot"])
 	leader_extra_arm = float(f["extra_arm"])
 	look_ahead = float(f["look"])
+	if combat:
+		look_ahead = minf(look_ahead, COMBAT_LOOK_AHEAD)            # 07 §7.5: 2.5 → 1.0 m in a combat
 	leader_pitch_deg = float(f["pitch"])
 	head_height = float(f["head"])
 	_look = look_ahead
@@ -226,7 +228,7 @@ func _physics_process(delta: float) -> void:
 	else:
 		_since_input += delta
 	var moving: bool = target.has_method("is_moving") and bool(target.call("is_moving"))
-	if _since_input >= RECENTER_DELAY and moving:
+	if _since_input >= RECENTER_DELAY and moving and not combat:     # 07 §7.5: no auto recenter in a combat
 		yaw = lerp_angle(yaw, target.rotation.y, 1.0 - exp(-RECENTER_LERP * delta))
 	_apply()
 	# Pitch first: raised where walls need it (smoothly), relaxing back to the player's pitch.
@@ -237,13 +239,16 @@ func _physics_process(delta: float) -> void:
 	_eff_pitch = move_toward(_eff_pitch, sol.x, rate * delta)
 	_pitch_node.rotation = Vector3(_eff_pitch, 0.0, 0.0)
 	# Then the arm: within the solved limit, collisions shorten at once (no clipping frames), free space returns at
-	# 4 m/s.
+	# 4 m/s — Echtzeitkampf (07 §7.5, R2 follow-up of the polish pass): a far shorter arm returns exponentially
+	# (ARM_RETURN_LERP), so the close-up after a doorway (the arm cut by the lintel when the pivot enters the next
+	# room) lasts a few frames instead of up to 1.7 s.
 	var free_len: float = minf(_free_arm(_eff_pitch, full), _arm_limit)
 	if free_len < _len:
 		_len = free_len
 	else:
-		_len = move_toward(_len, free_len, ARM_RETURN_SPEED * delta)
+		_len = move_toward(_len, free_len, maxf(ARM_RETURN_SPEED, (free_len - _len) * ARM_RETURN_LERP) * delta)
 	_cam.position = Vector3(0.0, 0.0, _len)
+	_combat_camera_fx(delta)                                          # Echtzeitkampf (07 §2.9, §7.5, R2)
 	_update_fade()
 
 
@@ -390,9 +395,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventMouseButton:
 		var mb: InputEventMouseButton = event
 		if mb.pressed and mb.button_index == MOUSE_BUTTON_WHEEL_UP:
+			_user_zoom()
 			arm_length -= ZOOM_STEP
 			_since_input = 0.0
 		elif mb.pressed and mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			_user_zoom()
 			arm_length += ZOOM_STEP
 			_since_input = 0.0
 
@@ -408,6 +415,7 @@ func _on_camera_drag(relative: Vector2) -> void:
 func _on_camera_zoom(amount: float) -> void:
 	if not is_inside_tree() or not input_enabled:
 		return
+	_user_zoom()
 	arm_length = clampf(arm_length + amount, ZOOM_MIN, ZOOM_MAX)
 	_since_input = 0.0
 
@@ -422,3 +430,136 @@ func _rotate_by(relative: Vector2, rad_per_px: float) -> void:
 	_apply()
 	# Direct pitch input moves the effective pitch along (the wall clearance can only raise it further).
 	_eff_pitch = clampf(_eff_pitch + (pitch - before), deg_to_rad(PITCH_MIN_DEG), deg_to_rad(PITCH_MAX_DEG))
+
+
+# --- Echtzeitkampf (07, R2) -------------------------------------------------------------------------------------------
+# 07 §7.5: the same orbit camera in a combat — zoom to 8 m (bosses 9 m) in 0.5 s unless the player zoomed in this
+# combat, look-ahead 2.5 → 1.0 m, no auto recenter (the player keeps the camera) and a light shake on party hits;
+# 07 §2.9 the "Boss-Kran" of the boss intro. The framing per controlled figure (LEADER_FRAMING) stays. The soft target
+# framing (GameSettings.combat_camera_assist) is R3's CombatInput: it turns `yaw` (every drag wins); with the recenter
+# off nothing here turns against it.
+
+const COMBAT_LOOK_AHEAD: float = 1.0
+const COMBAT_ZOOM_SEC: float = 0.5
+const CRANE_FOV: float = 40.0
+const ARM_RETURN_LERP: float = 6.0         # 1/s: a much shorter arm returns exponentially (doorways, 07 §7.5)
+const CRANE_BACK: float = 3.0              # the crane starts this far behind the boss's head …
+const CRANE_UP: float = 1.2                # … this much above it …
+const CRANE_MIN_Y: float = 4.4             # … and above the wall tops (3.5 m)
+const CRANE_ARC: float = 1.5               # extra lift in the middle of the crane
+
+var combat: bool = false
+
+var _pre_combat_arm: float = -1.0
+var _pre_combat_extra: float = 0.0
+var _user_zoomed: bool = false
+var _zoom_tween: Tween = null
+var _shot: Dictionary = {}                 # crane: {"t", "sec", "head", "p0", "side"}
+var _shake_left: float = 0.0
+var _shake_total: float = 0.0
+var _shake_amp: float = 0.0
+
+
+## A combat starts: zoom to `zoom` m in 0.5 s (instant: at once), look-ahead 1.0 m, no recenter; the boss-room extra
+## arm gives way to the combat zoom (07 §7.5).
+func enter_combat(zoom: float, instant: bool = false) -> void:
+	if not combat:
+		_pre_combat_arm = arm_length
+		_pre_combat_extra = frame_extra_arm
+		_user_zoomed = false
+	combat = true
+	frame_extra_arm = 0.0
+	set_leader(leader_id)
+	_tween_arm(zoom, 0.0 if instant else COMBAT_ZOOM_SEC)
+
+
+## The combat is over: back to the exploration zoom (unless the player zoomed in the combat), look-ahead and recenter.
+func exit_combat() -> void:
+	if not combat:
+		return
+	combat = false
+	_shot = {}
+	frame_extra_arm = _pre_combat_extra
+	set_leader(leader_id)
+	if not _user_zoomed and _pre_combat_arm > 0.0:
+		_tween_arm(_pre_combat_arm, COMBAT_ZOOM_SEC)
+	_pre_combat_arm = -1.0
+
+
+## 07 §2.9 "Boss-Kran" (03_ART §8.3 `boss_intro`: from behind the boss, looking at its head, FOV 40, crane 2.5 s to
+## the overview): over `sec` the camera travels from behind and above the boss (`head`, the boss looks along
+## `boss_fwd`; at least CRANE_MIN_Y high — rooms have no ceiling, so a wall behind the boss never blocks the shot)
+## around its flank to the combat view, FOV 40 → 60; the orbit camera takes over seamlessly at the end.
+func crane(head: Vector3, boss_fwd: Vector3, sec: float) -> void:
+	var f: Vector3 = Vector3(boss_fwd.x, 0.0, boss_fwd.z).normalized() if boss_fwd.length() > 0.01 else Vector3.BACK
+	var p0: Vector3 = head - f * CRANE_BACK + Vector3(0.0, CRANE_UP, 0.0)
+	p0.y = maxf(p0.y, CRANE_MIN_Y)
+	# the flank the crane passes: the side of the boss the figure stands on (left of its forward → +1)
+	var to_p: Vector3 = (target.global_position - head) if target != null else f
+	var side: float = 1.0 if f.cross(Vector3(to_p.x, 0.0, to_p.z)).y >= 0.0 else -1.0
+	_shot = {"t": 0.0, "sec": maxf(sec, 0.1), "head": head, "p0": p0, "side": side}
+
+
+func is_craning() -> bool:
+	return not _shot.is_empty()
+
+
+## Light shake (07 §7.5: 0.15 s, 0.08 m on party hits); GameSettings.camera_shake is checked by the caller.
+func shake(sec: float, amp: float) -> void:
+	_shake_total = maxf(sec, 0.01)
+	_shake_left = _shake_total
+	_shake_amp = amp
+
+
+func _user_zoom() -> void:
+	if combat:
+		_user_zoomed = true
+		if _zoom_tween != null and _zoom_tween.is_valid():
+			_zoom_tween.kill()
+
+
+func _tween_arm(to: float, sec: float) -> void:
+	if _zoom_tween != null and _zoom_tween.is_valid():
+		_zoom_tween.kill()
+	var v: float = clampf(to, ZOOM_MIN, ZOOM_MAX)
+	if sec <= 0.0 or not is_inside_tree():
+		arm_length = v
+		return
+	_zoom_tween = create_tween()
+	_zoom_tween.tween_property(self, "arm_length", v, sec).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+
+## The boss crane and the shake on top of the solved orbit pose (the orbit keeps running underneath).
+func _combat_camera_fx(delta: float) -> void:
+	if not _shot.is_empty():
+		_shot["t"] = float(_shot["t"]) + delta
+		var u: float = clampf(float(_shot["t"]) / float(_shot["sec"]), 0.0, 1.0)
+		var e: float = u * u * (3.0 - 2.0 * u)
+		_cam.transform = Transform3D(Basis(), Vector3(0.0, 0.0, _len))     # the solved orbit pose of this frame
+		var orbit: Transform3D = _cam.global_transform
+		var head: Vector3 = _shot["head"]
+		var p0: Vector3 = _shot["p0"]
+		var p2: Vector3 = orbit.origin
+		# around the boss, not over it: angle, distance and height blend from behind the boss to the orbit camera
+		# (the far side is reached past the boss's flank, the arc lifts CRANE_ARC m in the middle)
+		var v0: Vector2 = Vector2(p0.x - head.x, p0.z - head.z)
+		var v2: Vector2 = Vector2(p2.x - head.x, p2.z - head.z)
+		var da: float = wrapf(v2.angle() - v0.angle(), -PI, PI)
+		if absf(da) > PI * 0.9:
+			da = absf(da) * float(_shot.get("side", 1.0))
+		var a: float = v0.angle() + da * e
+		var r: float = lerpf(v0.length(), v2.length(), e)
+		var pos: Vector3 = Vector3(head.x + cos(a) * r, lerpf(p0.y, p2.y, e) + sin(PI * u) * CRANE_ARC,
+			head.z + sin(a) * r)
+		var orbit_look: Vector3 = orbit.origin - orbit.basis.z * 8.0
+		var look: Vector3 = head.lerp(orbit_look, smoothstep(0.3, 1.0, u))
+		if pos.distance_to(look) > 0.01 and u < 1.0:
+			_cam.global_transform = Transform3D(Basis.looking_at(look - pos, Vector3.UP), pos)
+		_cam.fov = lerpf(CRANE_FOV, FOV, e)
+		if u >= 1.0:
+			_shot = {}
+			_cam.fov = FOV
+	if _shake_left > 0.0:
+		_shake_left = maxf(0.0, _shake_left - delta)
+		var k: float = _shake_amp * (_shake_left / _shake_total)
+		_cam.position += Vector3(randf_range(-k, k), randf_range(-k, k), 0.0)

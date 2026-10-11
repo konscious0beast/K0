@@ -1,9 +1,9 @@
-# STUB(R1a) — owned by R1b. Replace completely, keep the public API.
 class_name RtSetup extends BattleSetup
 ## Start data of one real-time combat (07 §3.4). Built by BattleBridge.make_rt_setup (R1b) from the recorded encounter
-## command. Inherited and still used: encounter_id, group_id (first group), enemy_ids (first group), party (Combatant
-## snapshots), items, credits_available, advantage, seed, is_boss, can_flee, tutorial, enemy_dmg_mult, exp_mult,
-## show_mods, theme_id, palette, floor_index. Not used: auto_battle (→ presets/autopilot).
+## command; RtSim never changes it (it plays on copies of the units). Inherited and still used: encounter_id,
+## group_id (first group), enemy_ids (first group), party (the party RtUnits), items, credits_available, advantage,
+## seed, is_boss, can_flee, tutorial, enemy_dmg_mult, exp_mult, show_mods, theme_id, palette, floor_index, opener.
+## Not used: auto_battle (→ presets/autopilot), owned_equipment (gift duplicates, R5a).
 ## Contract note (R1a): 07 §3.4 names the opening action `opener`, but BattleSetup already has `opener: String`
 ## ("" | "bark", 06 A × C, recorded with the encounter) and GDScript forbids redefining a parent member — the real-time
 ## opening action is therefore `rt_opener` (the encounter command's rt block calls it "open"). BattleSetup.opener keeps

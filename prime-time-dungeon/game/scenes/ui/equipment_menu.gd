@@ -141,6 +141,11 @@ func candidates(p_slot: String) -> PackedStringArray:
 
 
 func equip(p_slot: String, item_id: String) -> bool:
+	var lock: String = Game.rt_party_lock(&"equipment")     # Echtzeitkampf (07, R2): not during a fight
+	if lock != "":
+		Sfx.play_ui(&"ui_error")
+		say(lock)
+		return false
 	var ok: bool = Game.equip(member_id, p_slot, item_id)
 	if ok:
 		Sfx.play_ui(&"ui_confirm")

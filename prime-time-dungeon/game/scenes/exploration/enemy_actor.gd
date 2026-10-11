@@ -63,6 +63,13 @@ var _pre_daze: StringName = IDLE      # 06 package A: state before the daze
 var _daze_cool: float = 0.0           # > 0: immune to another daze (DAZE_IMMUNE_SEC from the last daze)
 var _twitch_t: float = 0.0            # > 0: "zuckt nur" bubble (boss / Fahrscheinfresser barked at)
 var _daze_sec: float = Rules.DAZE_SEC
+# --- Echtzeitkampf (07, R2) ---
+## Puppet of a real-time combat (07 §6.1): no AI, no physics, no group pips / bubbles — the CombatDirector places it.
+var puppet: bool = false
+## Real-time run (07 §2.2 / §2.4): a chase ends with RETURN at the door of a cell this callable blocks (the stairs
+## room); set by the ExplorationScene. Callable(world_pos: Vector3) -> bool.
+var blocked_cell: Callable = Callable()
+var show_boss: bool = false                # 07 §9.6 (E26): gold frame of the show boss's lead
 
 
 func _ready() -> void:
@@ -164,7 +171,7 @@ func force_return() -> void:
 
 func _physics_process(delta: float) -> void:
 	_anim_t += delta
-	if spawn == null or _preview:
+	if spawn == null or _preview or puppet:
 		return
 	if frozen:
 		velocity = Vector3.ZERO
@@ -216,6 +223,9 @@ func _physics_process(delta: float) -> void:
 				move = dir * float(explore["field_speed"])
 				if dir != Vector3.ZERO:
 					_turn_towards(Rules.yaw_of(dir), delta, 12.0)
+				if blocked_cell.is_valid() and bool(blocked_cell.call(global_position + move * maxf(delta, 0.05))):
+					move = Vector3.ZERO                      # 07 §2.4: a chase ends at the stairs room's door (RT runs)
+					_set_state(RETURN)
 		DAZED:
 			if _state_t >= _daze_sec:
 				_end_daze(kai, hidden)
@@ -407,7 +417,7 @@ func _animate(speed: float) -> void:
 func _update_zz() -> void:
 	if _zz == null:
 		return
-	_zz.visible = is_asleep()
+	_zz.visible = is_asleep() and not puppet     # R2: a puppet woke up (its trigger may come from this very frame)
 	if _zz.visible:
 		_zz.position.y = _zz_base_y + sin(_anim_t * 1.6) * 0.08
 
@@ -510,3 +520,43 @@ func _build_preview() -> void:
 func _aim_preview_camera(cam: Camera3D) -> void:
 	cam.look_at(global_position + Vector3(0.0, 0.5, 0.0), Vector3.UP)
 	cam.current = true
+
+
+# --- Echtzeitkampf (07, R2) -------------------------------------------------------------------------------------------
+
+## Puppet mode on / off (07 §6.1, §8.10 "Puppen ohne Körper"): AI and physics stop, the collision layer is cleared, the
+## group pips, alert bubble and "Z z" hide; off restores the exploration body (state unchanged, frozen as before).
+func set_puppet(on: bool) -> void:
+	puppet = on
+	collision_layer = 0 if on else 4
+	collision_mask = 0 if on else 1
+	velocity = Vector3.ZERO
+	var pips: Node3D = get_node_or_null("GroupPips") as Node3D
+	if pips != null:
+		pips.visible = not on
+	if on:
+		if _bubble != null:
+			_bubble.visible = false
+		if _zz != null:
+			_zz.visible = false
+		if rig != null:
+			rig.rotation.z = 0.0
+	else:
+		_update_bubble()
+		_update_zz()
+
+
+## 07 §9.6 (E26): the show boss's lead wears a gold frame (gold rim light on the figure).
+func set_show_boss(on: bool) -> void:
+	show_boss = on
+	if rig != null and rig.has_method("set_rim_color"):
+		rig.call("set_rim_color", Color("#ffc93c") if on else Color("#ffd9a8"))
+
+
+## Weapon reach of the lead (07 §2.2: reach_cm + both radii): {"reach_cm", "radius_cm"} from enemies.json → rt,
+## the defaults of 07 §4.9 (220 / 30) while the data has no rt block.
+func rt_reach() -> Dictionary:
+	var def: EnemyDef = DB.enemy(spawn.lead_enemy_id) if spawn != null and DB.has_id("enemies", spawn.lead_enemy_id) \
+		else null
+	var rt: Dictionary = def.rt if def != null else {}
+	return {"reach_cm": int(rt.get("reach_cm", 220)), "radius_cm": int(rt.get("radius_cm", 30))}

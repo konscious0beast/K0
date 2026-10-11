@@ -742,12 +742,12 @@ func _r_safe_happy(scene: Node) -> bool:
 
 
 # --- Echtzeitkampf (07, R3): combat HUD stills over the exploration ---------------------------------------------------
-# exploration.tscn + --recipe=rt_tutorial | rt_regular | rt_boss | rt_hint | rt_results | rt_credits, each also as
-# rt_<name>_notch (simulated display cutout: left / right 48, bottom 20). The real CombatHud (combat_hud.tscn) with
-# all screen modes (ShowOverlay &"combat", M.O.D. subtitles, input map, TouchControls combat mode with --touch) is
-# bound to the HudSim double (tests/fixtures/rt_hud) — fight states are set, not simulated (R1b/R2 not merged). Enemy
-# figures are art-kit rigs standing in for R2's puppets; the boss still's red floor circle stands in for R2's
-# TelegraphLayer.
+# exploration.tscn + --recipe=rt_tutorial | rt_regular | rt_boss | rt_hint | rt_results | rt_credits | rt_real, each
+# also as rt_<name>_notch (simulated display cutout: left / right 48, bottom 20). The real CombatHud (combat_hud.tscn)
+# with all screen modes (ShowOverlay &"combat", M.O.D. subtitles, input map, TouchControls combat mode with --touch)
+# is bound to the HudSim double (tests/fixtures/rt_hud: exact fight states, set rather than simulated) — rt_real to
+# the real RtSim (R1b-I1) of RtKit's canned combat. Enemy figures are art-kit rigs standing in for R2's puppets; the
+# boss still's red floor circle stands in for R2's TelegraphLayer.
 
 const RtScenarios := preload("res://tests/fixtures/rt_hud/hud_scenarios.gd")
 const RtDirector := preload("res://tests/fixtures/rt_hud/hud_director.gd")
@@ -968,6 +968,116 @@ func _r_rt_drawcalls(scene: Node, variant: String = "") -> bool:
 	return true
 
 
+## The HUD on the REAL sim (R1b-I1): RtKit's canned combat (rt_min data: Kai level 6 and Graf Mopsula, two groups —
+## two rats, a rat and the test shaman — and the scripted commands of the golden test) played through the director
+## double to REAL_TICK, the last second one tick per frame (combat text as it comes): Kai guarding, taunted enemies,
+## the Count casting, slot cooldowns and the GCD from the sim. Rigs stand at the sim's positions around a sewer room.
+const REAL_TICK: int = 180
+
+
+func _r_rt_real(scene: Node, variant: String = "") -> bool:
+	if not await _explore_ready(scene):
+		return false
+	if variant == "notch":
+		SafeAreaContainer.simulated_insets = RT_NOTCH
+		get_tree().root.size_changed.emit()
+	var layout: FloorLayout = scene.call("get_layout")
+	var spawn: EnemySpawn = null
+	for e: EnemySpawn in layout.enemies:
+		var rc: RoomCell = layout.cell_at(e.cell)
+		if rc != null and rc.zone == "zone_sewer" and not e.is_boss and scene.call("get_enemy", e.id) != null:
+			spawn = e
+			break
+	if spawn == null:
+		return false
+	_freeze_enemies(scene)
+	var actor: Node3D = scene.call("get_enemy", spawn.id) as Node3D
+	actor.process_mode = Node.PROCESS_MODE_DISABLED
+	actor.global_position += Vector3(0, -60, 0)
+	_reveal_zone(scene, layout, "zone_sewer")
+	var seen: Dictionary = {}
+	for id: String in RtVocab.HINT_IDS:
+		seen[id] = true
+	Game.state.flags["rt_hints"] = seen
+	Game.state.show.stats["taunts_total"] = 1
+	var center: Vector3 = layout.cell_to_world(spawn.cell)
+	center.y = 0.0
+	var sim: RtSim = RtSim.new(RtKit.setup(RtKit.canned_state(), RtKit.canned_encounter()), RtKit.data())
+	var dir: Node = RtDirector.new()
+	dir.name = "RtDirector"
+	dir.set("sim", sim)
+	dir.set("origin", center)
+	dir.set("heights", {"p0": 1.7, "p1": 1.0})
+	get_tree().root.add_child(dir)
+	var cam_rig: Node3D = scene.call("get_camera_rig") as Node3D
+	cam_rig.set("arm_length", 8.0)
+	cam_rig.set("_look", 1.0)
+	var hud: CanvasLayer = (load(RT_HUD) as PackedScene).instantiate() as CanvasLayer
+	hud.call("setup", {"director": dir, "sim": sim, "data": RtKit.data(), "auto_events": false, "modes": true,
+		"camera_rig": cam_rig})
+	get_tree().root.add_child(hud)
+	dir.set("hud", hud)
+	for e: ActionEvent in sim.start():
+		hud.call("on_event", e)
+	var rigs: Dictionary = {}
+	_rt_real_place(scene, sim, center, rigs)
+	await seconds(1.4)                                         # "KAMPF!" is over
+	var cmds: Array[Dictionary] = RtKit.canned_commands()
+	var i: int = 0
+	while sim.tick() < REAL_TICK and not sim.is_finished():
+		while i < cmds.size() and int(cmds[i]["ct"]) <= sim.tick():
+			dir.call("submit", cmds[i])
+			i += 1
+		dir.call("advance", 1)
+		if sim.tick() == REAL_TICK - 30:
+			_rt_real_place(scene, sim, center, rigs)
+			await seconds(1.3)                                 # the burst of the fast-forward fades
+		elif sim.tick() > REAL_TICK - 30:
+			_rt_real_place(scene, sim, center, rigs)
+			await frames(1)
+	await frames(3)
+	freeze()
+	return true
+
+
+## Player body, companion and one rig per living enemy at the sim's positions (origin + cm / 100); the camera behind
+## the controlled unit, looking at the enemies' centre.
+func _rt_real_place(scene: Node, sim: RtSim, origin: Vector3, rigs: Dictionary) -> void:
+	var player: Node3D = scene.call("get_player") as Node3D
+	var comp: Node3D = scene.call("get_companion") as Node3D
+	var ctl: RtUnit = sim.unit(sim.controlled_id())
+	if ctl == null:
+		return
+	var me: Vector3 = origin + Vector3(float(ctl.x) / 100.0, 0.0, float(ctl.z) / 100.0)
+	var foes: Vector3 = Vector3.ZERO
+	var n: int = 0
+	for u: RtUnit in sim.units():
+		var pos: Vector3 = origin + Vector3(float(u.x) / 100.0, 0.0, float(u.z) / 100.0)
+		if u.side == Combatant.Side.ENEMY:
+			var alive: bool = u.hp > 0 and not u.left_battle
+			if alive:
+				foes += pos
+				n += 1
+			if not rigs.has(u.id):
+				var rig: Node3D = CharacterBuilder.build(RtKit.data().enemy(u.def_id).model, rigs.size())
+				scene.add_child(rig)
+				rigs[u.id] = rig
+			var r: Node3D = rigs[u.id]
+			r.visible = alive
+			r.global_position = pos
+			if pos.distance_to(me) > 0.05:
+				r.look_at(Vector3(me.x, pos.y, me.z), Vector3.UP, true)
+		elif u.id != ctl.id and comp != null:
+			comp.process_mode = Node.PROCESS_MODE_DISABLED
+			comp.global_position = Vector3(pos.x, comp.global_position.y, pos.z)
+	var to: Vector3 = (foes / float(maxi(1, n))) - me if n > 0 else Vector3(0, 0, -1)
+	var yaw: float = atan2(-to.x, -to.z)
+	player.call("teleport", Vector3(me.x, 0.05, me.z), yaw)
+	if comp != null:
+		comp.rotation.y = yaw
+	scene.call("get_camera_rig").call("snap", yaw)
+
+
 ## Maximum canvas draw calls of the root viewport over `n` frames.
 func _rt_canvas_dc(n: int) -> int:
 	var best: int = 0
@@ -1099,7 +1209,7 @@ func _rt_regular_state(sim: RtSim) -> void:
 	sim.call("set_cd", "p0", "skl_kai_sweep", 70, 240)
 	sim.call("set_cd", "p0", "skl_kai_taunt", 0, 0)
 	sim.set("gcds", {"p0": Vector2i(20, 45)})
-	sim.set("items", 2)
+	sim.set("items_count", 2)
 	p0.queued = {"skill": "skl_kai_heavy_swing", "target": "e0", "at": 899}
 	sim.call("set_reason", "p0", "skl_kai_sweep", "mp")
 	sim.call("set_cast", "e0", "skl_e_zap", 25, 60, false, true)

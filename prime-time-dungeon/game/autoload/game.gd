@@ -486,7 +486,7 @@ func sell(item_id: String, qty: int) -> bool:
 
 
 func equip(member_id: String, slot: String, item_id: String) -> bool:
-	if state == null:
+	if state == null or rt_party_lock(&"equipment") != "":    # Echtzeitkampf (07, R2): not during a fight
 		return false
 	record({"t": "equip", "member": member_id, "slot": slot, "item": item_id})
 	var m: PartyMember = state.member(member_id)
@@ -502,7 +502,7 @@ func equip(member_id: String, slot: String, item_id: String) -> bool:
 ## Field use of a consumable (inventory menu, M6): record; Progression.use_item();
 ## emits party_changed, inventory_changed.
 func use_item(item_id: String, member_id: String) -> bool:
-	if state == null:
+	if state == null or rt_party_lock() != "":                 # Echtzeitkampf (07, R2): the item wheel in a fight
 		return false
 	record({"t": "use_item", "item": item_id, "member": member_id})
 	var used: bool = Progression.use_item(state, DB.data, item_id, member_id)
@@ -1277,6 +1277,20 @@ var combat: RtSim = null             # the running real-time combat; null outsid
 var rt_sim_factory: Callable = Callable()
 
 var _rt_checkpoint_ct: int = -1       # last combat tick a combat checkpoint was written for
+
+## Hints of the pause menu while a real-time fight runs (rt_party_lock).
+const RT_LOCK_ITEMS: String = "Im Kampf: Gegenstände über das Item-Rad"
+const RT_LOCK_EQUIP: String = "Im Kampf: Ausrüstung erst nach dem Kampf"
+
+
+## While a real-time fight runs, the party changes only through the recorded combat commands: the pause menu pauses
+## the sim (07 O2: offline, the tree is paused), field item use and equipment changes are refused (use_item / equip
+## return false and record nothing) and the menu pages show this hint (`what` = &"items" | &"equipment"); "" when
+## allowed. CTB runs never have a `combat`.
+func rt_party_lock(what: StringName = &"items") -> String:
+	if combat == null:
+		return ""
+	return RT_LOCK_EQUIP if what == &"equipment" else RT_LOCK_ITEMS
 
 
 ## Records the encounter (with its "rt" block), draws the seeds "battle" (here) and "show" (Show.begin_battle), builds

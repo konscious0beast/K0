@@ -11,7 +11,8 @@ on:
 env:
   GODOT_VERSION: "4.7.2"
   # Name of a playable build in artifact names and summaries: the tag (v0.3.0), or build-<run number> for a push whose
-  # head commit message contains "[build]" (the second build trigger, README 4 "Neuen Build auslösen")
+  # head commit message starts with "[build]" (the second build trigger, README 4 "Neuen Build auslösen"; a merge commit
+  # that merely quotes such a subject does not build)
   PTD_BUILD_LABEL: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('build-{0}', github.run_number) }}
 jobs:
   check:
@@ -115,7 +116,7 @@ jobs:
         with:
           name: rt-balance
           path: rt-balance/
-  # Playable builds for a pushed tag v* or a push whose head commit message contains "[build]" (README „Spielbare Builds“,
+  # Playable builds for a pushed tag v* or a push whose head commit message starts with "[build]" (README „Spielbare Builds“,
   # 02_TECH §12.3): Linux, Windows, macOS (universal .app, built-in ad-hoc signature, zipped by Godot so the executable bit
   # survives) and the iOS Xcode project (project-only export, works on Linux; team and signing are chosen in Xcode on the
   # Mac). No secrets, no signing identities.
@@ -123,7 +124,7 @@ jobs:
     needs: check
     if: >-
       startsWith(github.ref, 'refs/tags/v') ||
-      (github.event_name == 'push' && contains(github.event.head_commit.message, '[build]'))
+      (github.event_name == 'push' && startsWith(github.event.head_commit.message, '[build]'))
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -211,7 +212,7 @@ jobs:
     needs: check
     if: >-
       startsWith(github.ref, 'refs/tags/v') ||
-      (github.event_name == 'push' && contains(github.event.head_commit.message, '[build]'))
+      (github.event_name == 'push' && startsWith(github.event.head_commit.message, '[build]'))
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:

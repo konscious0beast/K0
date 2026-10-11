@@ -167,9 +167,9 @@ GitHub-Artefakte verlieren das Ausführrecht.
 
 **Neuen Build auslösen:** Version in `game/project.godot` (`application/config/version`) und in den Presets anheben
 (`test_perf_platform.gd` prüft, dass die angezeigten Versionen übereinstimmen), committen und den Tag pushen, z. B.
-`git tag v0.3.0 && git push origin v0.3.0`. Zwischenstände ohne Tag: Steht `[build]` in der Nachricht des letzten Commits eines
-Pushs, baut die CI dieselben Artefakte (inklusive der Apple-Jobs) unter dem Namen `PrimeTimeDungeon-build-<Laufnummer>-…`; das
-braucht etwa, wer nur auf einen Branch pushen darf. Lokal geht derselbe Export mit Godot 4.7.2 und installierten Exportvorlagen
+`git tag v0.3.0 && git push origin v0.3.0`. Zwischenstände ohne Tag: Beginnt die Nachricht des letzten Commits eines
+Pushs mit `[build]`, baut die CI dieselben Artefakte (inklusive der Apple-Jobs) unter dem Namen
+`PrimeTimeDungeon-build-<Laufnummer>-…`; das braucht etwa, wer nur auf einen Branch pushen darf. Lokal geht derselbe Export mit Godot 4.7.2 und installierten Exportvorlagen
 (Editor: **Editor → Exportvorlagen verwalten**). Das iOS-Xcode-Projekt lässt sich auch unter Linux erzeugen:
 
 ```bash

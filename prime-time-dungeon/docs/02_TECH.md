@@ -5427,13 +5427,13 @@ jobs:
       - name: pytest
         working-directory: services/mod-brain
         run: python -m pytest -q
-  # spielbare Builds für Tags v* oder einen Push, dessen letzte Commit-Nachricht „[build]“ enthält (README Abschnitt 4);
+  # spielbare Builds für Tags v* oder einen Push, dessen letzte Commit-Nachricht mit „[build]“ beginnt (README Abschnitt 4);
   # gekürzt, vollständig in der Workflow-Datei. Name in Artefakten: env PTD_BUILD_LABEL = Tag bzw. build-<run_number>
   export:
     needs: check
     if: >-
       startsWith(github.ref, 'refs/tags/v') ||
-      (github.event_name == 'push' && contains(github.event.head_commit.message, '[build]'))
+      (github.event_name == 'push' && startsWith(github.event.head_commit.message, '[build]'))
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -5496,7 +5496,8 @@ Distribution), `IOS_PROFILE_BASE64` (Profil „App Store Connect“), `ASC_KEY_I
 - **Gating:** `apple-gate` prüft nach `check` auf Linux, ob alles für einen Job da ist; sonst bleibt der Job übersprungen (kostet
   keine macOS-Minuten), die Zusammenfassung nennt die fehlenden Namen und dass das unsignierte Artefakt aus `export` bleibt. Beide
   Jobs hängen wie `export` an `check` und laufen nur für `v*`-Tags oder einen `[build]`-Push, unabhängig voneinander. Der
-  `[build]`-Auslöser existiert, weil eine Arbeitssitzung nur auf ihren Branch pushen darf, keine Tags: so lässt sich ein Build
+  `[build]`-Auslöser (Nachricht beginnt damit; ein Merge-Commit, der so einen Betreff nur zitiert, baut nicht) existiert, weil
+  eine Arbeitssitzung nur auf ihren Branch pushen darf, keine Tags: so lässt sich ein Build
   (auch die Apple-Jobs) ohne Tag starten und nach einem abgelehnten Apple-Lauf sofort wiederholen.
 - **Secrets:** jedes nur in der `env` des Schritts, der es braucht; dekodiert nur nach `$RUNNER_TEMP/ptd-apple` (0700), Keychain
   `signing.keychain-db` mit Zufallspasswort (maskiert), `set-key-partition-list` gegen Rückfragen, Apples Zwischenzertifikate

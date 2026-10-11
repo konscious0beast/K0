@@ -114,6 +114,7 @@ func _ready() -> void:
 	Events.hype_changed.connect(_on_quest_hype_changed)
 	auto_battle = settings.auto_battle_default
 	apply_settings()
+	_rt_ready()                               # Echtzeitkampf (07 §12.1, §10.1, R2): --combat, combat_speed
 	if not ephemeral:                    # 06-D: M.O.D. live link (off by default, never blocks gameplay)
 		mod_live = ModLiveLinkScript.new()
 		mod_live.name = "ModLiveLink"
@@ -200,11 +201,13 @@ func new_game(slot: int, player_name: String = GameState.DEFAULT_NAME, seed: int
 		push_warning("[Game] GameState.create_new returned null (no game state)")
 		return
 	run_log = _make_run_log(run_seed, slot, difficulty, "")
+	_rt_new_game()                            # Echtzeitkampf (07 §12.1, R2): the run's combat mode
 	sim = _make_sim(state, {})
 	persona = p_persona
 	start_floor(1)
 	_choose_initial_hero(hero_id)
 	_choose_initial_persona(p_persona)        # Casting (08 §2.3): floor → hero → persona
+	_rt_run_started()                         # Echtzeitkampf (07 §10.1, R2): combat_speed ≠ 1000 at the run start
 	Events.new_game_started.emit(slot)
 
 
@@ -307,10 +310,11 @@ func start_floor(floor_index: int) -> void:
 	_sync_twist_ends()                       # 06-D: twists end with their floor
 
 
-## timer_running and state.floor_run.timer_started and no blocking dialog.
+## timer_running and state.floor_run.timer_started and no blocking dialog — and never during a battle (07 §2.10,
+## §12.9 Nr. 1: the exploration scene stays active in a real-time combat, the clock stands).
 func is_timer_ticking() -> bool:
 	return timer_running and state != null and state.floor_run != null and state.floor_run.timer_started \
-		and _blocking_dialogs == 0
+		and _blocking_dialogs == 0 and not in_battle
 
 
 ## Idle ticks of the run clock in a safe room (Sponsor-Fenster max_sec, 05 §6.13): safe room scene shown
@@ -1014,6 +1018,7 @@ func _reset_run() -> void:
 	timer_running = false
 	safe_room_clock = false
 	in_battle = false
+	combat = null                             # Echtzeitkampf (07, R2): a new run never inherits a combat
 	_acc = 0.0
 	_blocking_dialogs = 0
 	_event_def = null
@@ -1259,52 +1264,238 @@ func _restore_context(saved: Dictionary) -> void:
 # ======================================================================================================================
 # Echtzeitkampf (07, R1a → R2 live part, R5a replay branch) — the API of 07 §10.6 / §9.2
 # ======================================================================================================================
-# STUB(R1a) — owned by R2 (live) and R5a (replay branch). Replace completely, keep the public API.
+# --- Echtzeitkampf (07, R2) ---
 # The live CombatDirector (R2) and GameReplay (R5a) use exactly these functions, per combat tick c:
-# combat_boundary() → combat_submit(cmd) for every input with ct == c → combat_step(). Until R2 nothing starts a
-# real-time combat (GameSettings.combat_mode stays &"ctb"), so `combat` stays null and nothing is recorded.
+# combat_boundary() → combat_submit(cmd) for every input with ct == c → combat_step(). A real-time combat only starts
+# in a run with GameState.combat_mode == &"realtime" (new games take GameSettings.combat_mode, 07 §12.1); CTB runs never
+# reach this section, so they stay bit-identical.
 
 var combat: RtSim = null             # the running real-time combat; null outside one (a save never contains it)
+## Test / capture seam (R2): when valid, make_rt_setup takes the combat from `rt_sim_factory.call(cmd, seed)` (an RtSim,
+## e.g. the FakeRtSim of tests/fixtures/rt_world) instead of BattleBridge.make_rt_setup + RtSim.new — everything else
+## (recording, seeds, Show, signals) is the live path. Never set by game code.
+var rt_sim_factory: Callable = Callable()
+
+var _rt_checkpoint_ct: int = -1       # last combat tick a combat checkpoint was written for
 
 
-## Records the encounter (with its "rt" block), draws the seeds "battle" and "show", builds the setup with
-## BattleBridge.make_rt_setup, creates `combat`, sets in_battle, Show.begin_battle(setup), feeds combat.start() to
-## Show.on_battle_event / Events.combat_event, emits Events.combat_started(combat) and Events.battle_started.
-## Stub: nothing recorded, returns null.
-func make_rt_setup(_cmd: Dictionary) -> RtSetup:
-	return null
+## Records the encounter (with its "rt" block), draws the seeds "battle" (here) and "show" (Show.begin_battle), builds
+## the setup with BattleBridge.make_rt_setup, creates `combat`, sets in_battle, Show.begin_battle(setup), emits
+## Events.combat_started(combat) and Events.battle_started, then feeds the ct-0 prelude of combat.start() to
+## Show.on_battle_event / Events.combat_event (the order of the CTB controller: begin, battle_started, start events —
+## listeners know the combat before its first event). null (nothing started, in_battle stays false) without a run, for a
+## command without "rt" block or when no setup can be built (BattleBridge stub before R1b): then only the encounter is
+## recorded and the seed drawn, like a CTB encounter — the replay draws the same seed.
+func make_rt_setup(cmd: Dictionary) -> RtSetup:
+	if state == null or cmd.is_empty() or str(cmd.get("t", "")) != "encounter" or not (cmd.get("rt", null) is Dictionary):
+		return null
+	if combat != null:
+		push_warning("[Game] make_rt_setup: a real-time combat is already running")
+		return null
+	record(cmd)
+	var seed_battle: int = next_seed("battle")
+	var sim_new: RtSim = null
+	if rt_sim_factory.is_valid():
+		sim_new = rt_sim_factory.call(cmd, seed_battle) as RtSim
+	else:
+		var built: RtSetup = BattleBridge.make_rt_setup(state, DB.data, cmd, seed_battle)
+		if built != null:
+			sim_new = RtSim.new(built, DB.data)
+	if sim_new == null or sim_new.setup == null:
+		push_warning("[Game] no RtSetup for '%s' (BattleBridge.make_rt_setup not ready?) — combat skipped"
+			% str(cmd.get("enc", "")))
+		return null
+	combat = sim_new
+	_rt_checkpoint_ct = -1
+	in_battle = true
+	var setup: RtSetup = combat.setup
+	Show.begin_battle(setup)
+	Events.combat_started.emit(combat)
+	Events.battle_started.emit(setup.encounter_id, setup.is_boss)
+	for e: ActionEvent in combat.start():
+		Show.on_battle_event(e)
+		Events.combat_event.emit(e)
+	return setup
 
 
 ## One tick boundary before combat tick c = combat.tick() (07 §9.2): at most one gift (external first, then system)
 ## via Show.take_pending_gift_rt → combat.apply_gift → Show.on_battle_event / Events.combat_event /
-## Show.note_battle_gift. Stub: nothing.
+## Show.note_battle_gift. Nothing without a running combat.
 func combat_boundary() -> void:
-	pass
+	if combat == null or combat.is_finished():
+		return
+	var g: Dictionary = Show.take_pending_gift_rt(combat)   # external first (records {"t": "gift", …, "ct"}), then system
+	if g.is_empty():
+		return
+	var ev: Array[ActionEvent] = combat.apply_gift(g)
+	for e: ActionEvent in ev:
+		Show.on_battle_event(e)
+		Events.combat_event.emit(e)
+	Show.note_battle_gift(g, ev)
 
 
-## RtSim.submit + record (accepted commands only, 07 §10.2); "" or one of RtCommand.REASONS. Stub: "finished" (there
-## is no running combat before R2).
-func combat_submit(_cmd: Dictionary) -> String:
-	return "finished"
+## RtSim.submit + record (accepted commands only, 07 §10.2); "" or one of RtCommand.REASONS ("finished" without a
+## running combat).
+func combat_submit(cmd: Dictionary) -> String:
+	if combat == null:
+		return "finished"
+	var why: String = combat.submit(cmd)
+	if why == "":
+		record(cmd)
+	return why
 
 
 ## A hint card was shown at the current combat tick: records {"t": "combat_hint", "ct", "id"} and sets
-## state.flags["rt_hints"][id] (the sim ignores it, 07 §2.13). Stub: nothing.
-func combat_hint(_id: String) -> void:
-	pass
+## state.flags["rt_hints"][id] = true (the sim ignores it, 07 §2.13). Nothing without a running combat or for an id
+## that is neither a tutorial step nor a hint id.
+func combat_hint(id: String) -> void:
+	if combat == null or state == null:
+		return
+	var cmd: Dictionary = RtCommand.hint(combat.tick(), id)
+	if RtCommand.validate(cmd) != "":
+		push_warning("[Game] combat_hint: unknown hint id '%s'" % id)
+		return
+	record(cmd)
+	var hints: Dictionary = state.flags.get("rt_hints", {}) if state.flags.get("rt_hints", {}) is Dictionary else {}
+	hints[id] = true
+	state.flags["rt_hints"] = hints
 
 
 ## One combat tick: combat.step(), every event to Show.on_battle_event and Events.combat_event, combat checkpoints
-## (RunLog.add_checkpoint(k, StateHash.of_rt(combat), ct)). Stub: [].
+## (07 §10.2: every CHECKPOINT_TICKS processed ticks and at the end, RunLog.add_checkpoint(k, StateHash.of_rt(combat),
+## ct) with ct = combat.tick() after the step = processed ticks). [] without a running combat.
 func combat_step() -> Array[ActionEvent]:
 	var out: Array[ActionEvent] = []
+	if combat == null or combat.is_finished():
+		return out
+	out = combat.step()
+	for e: ActionEvent in out:
+		Show.on_battle_event(e)
+		Events.combat_event.emit(e)
+	_combat_checkpoint()
 	return out
 
 
 ## apply_battle_result(combat.result), Show.end_battle, Events.combat_finished(result), Events.battle_ended, then
-## combat = null. Stub: empty rewards.
+## combat = null (07 §2.11, §10.6). Without a finished combat: an empty BattleRewards (an unfinished combat is dropped
+## like BattleController.abort_unfinished: no rewards, in_battle false, Show.abort_battle).
 func end_combat() -> BattleRewards:
-	return BattleRewards.new()
+	if combat == null:
+		return BattleRewards.new()
+	var result: BattleResult = combat.result
+	if result == null:
+		combat = null
+		in_battle = false
+		Show.abort_battle()
+		if _rt_speed_due:
+			_rt_record_speed()
+		return BattleRewards.new()
+	_combat_checkpoint(true)
+	var rewards: BattleRewards = apply_battle_result(result)
+	rewards.followers = Show.end_battle(result)
+	rewards.achievements = Show.unlocked_this_battle()
+	combat = null
+	Events.combat_finished.emit(result)
+	Events.battle_ended.emit(result.outcome, result.encounter_id)
+	if _rt_speed_due:
+		_rt_record_speed()
+	return rewards
+
+
+## Combat checkpoint at the explore tick of the encounter (the clock stands): every CHECKPOINT_TICKS processed ticks
+## and once at the end; live only (the replay compares its own).
+func _combat_checkpoint(force: bool = false) -> void:
+	if combat == null or run_log == null or replaying:
+		return
+	var ct: int = combat.tick()
+	var every: int = combat.setup.balance.i("CHECKPOINT_TICKS") if combat.setup.balance != null else 300
+	var due: bool = force or combat.is_finished() or (every > 0 and ct > 0 and ct % every == 0)
+	if not due or ct == _rt_checkpoint_ct:
+		return
+	var h: String = StateHash.of_rt(combat)
+	if h == "":
+		return
+	_rt_checkpoint_ct = ct
+	run_log.add_checkpoint(sim.tick() if sim != null else 0, h, ct)
+
+
+## Session override of GameSettings.combat_mode (07 §12.1: the boot argument --combat=realtime | ctb for development,
+## QA, check.sh --shot, autoplay and fullrun.sh); never written to the settings file. &"" = the setting decides.
+var combat_mode_override: StringName = &""
+var _rt_speed_pm: int = 1000          # the combat speed this run recorded last (07 §10.1 combat_speed)
+var _rt_speed_due: bool = false       # a change during a combat: recorded at its end
+
+
+## Game._ready: the --combat boot argument and the combat speed recording (07 §10.1).
+func _rt_ready() -> void:
+	combat_mode_override = combat_mode_from_args(OS.get_cmdline_user_args())
+	Events.settings_changed.connect(_rt_on_settings_changed)
+
+
+## &"realtime" | &"ctb" from "--combat=<mode>" in `args`; &"" without (or with an unknown mode).
+static func combat_mode_from_args(args: PackedStringArray) -> StringName:
+	for a: String in args:
+		if a.begins_with("--combat="):
+			var v: String = a.trim_prefix("--combat=")
+			if v == "realtime" or v == "ctb":
+				return StringName(v)
+	return &""
+
+
+## The combat mode a new game takes: the boot argument, else GameSettings.combat_mode.
+func new_game_combat_mode() -> StringName:
+	if combat_mode_override != &"":
+		return combat_mode_override
+	return settings.combat_mode if settings != null else &"ctb"
+
+
+## New campaign games take the combat mode (07 §12.1); the run log header names a real-time run
+## (07 §10.2: "combat_mode": "realtime", "rt_version": 1 — CTB headers stay as they are).
+func _rt_new_game() -> void:
+	_rt_speed_pm = 1000
+	_rt_speed_due = false
+	if state == null or new_game_combat_mode() != &"realtime":
+		return
+	state.combat_mode = &"realtime"
+	if run_log != null:
+		run_log.header["combat_mode"] = "realtime"
+		run_log.header["rt_version"] = 1
+
+
+## After the start commands of a new real-time run (floor, hero, persona): its combat speed when it is not 1000 ‰.
+func _rt_run_started() -> void:
+	_rt_record_speed()
+
+
+## 07 §10.1 / §7.6 (O1): a real-time run records every change of GameSettings.combat_speed_pm as {"t":
+## "combat_speed", "pm"} (no sim effect; leaderboards mark "Zeitlupe"). During a combat the change is recorded at its
+## end — a command without "ct" inside a combat would end it in the replay (07 §10.5).
+func _rt_on_settings_changed() -> void:
+	if combat != null:
+		_rt_speed_due = is_realtime() and settings != null and settings.combat_speed_pm != _rt_speed_pm
+		return
+	_rt_record_speed()
+
+
+func _rt_record_speed() -> void:
+	_rt_speed_due = false
+	if not is_realtime() or settings == null or run_log == null or replaying:
+		return
+	var pm: int = settings.combat_speed_pm
+	if pm == _rt_speed_pm or not RtVocab.COMBAT_SPEEDS.has(pm):
+		return
+	_rt_speed_pm = pm
+	record(RtCommand.speed(pm))
+
+
+## True when the running campaign plays real-time combats.
+func is_realtime() -> bool:
+	return state != null and state.combat_mode == &"realtime"
+
+
+## A ModDialog presents lines (blocking lines wait for the player): the boss intro waits for its line only then.
+func has_dialog_presenter() -> bool:
+	return _dialog_presenter
 
 
 # ======================================================================================================================

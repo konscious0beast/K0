@@ -2877,9 +2877,92 @@ Lesart und Folgen für R4:
 
 ### 11.5 Messwerte (füllt R4, aktualisiert R5b)
 
+**Stand R4** — `tools/rt_balance.sh` auf den echten Daten (`RtSim` + `RtBotPlayer`, Partner auf Standard-Taktik), Seeds
+`SeedUtil.derive(4242, "harness", n)` ab n = 0 (reproduzierbar). Niederlagen mit Wilson-95-%-Intervall, Dauer und HP-Verlust als
+Median [P10–P90] über Siege und Niederlagen; „Tränke“ je Kampf. Reguläre Kämpfe und Show-Boss ohne Tränke, Bosse mit dem Boss-Kit
+(3 Verbände, 2 Burger, 2 Riechsalz, 1 Gegengift; höchstens 3 je Kampf, §3.11). „unterbrochen“ = unterbrechenswerte Boss-Zauber,
+„Telegraph-Treffer“ = Anteil der Boss-Einschläge, die ein Mitglied trafen, das hätte ausweichen können (§11.1).
+
 | Begegnung | Held:in | Profil | Dauer Median | HP-Verlust | Tränke | Niederlagen | Stand |
 |---|---|---|---|---|---|---|---|
-| — | — | — | — | — | — | — | noch nicht gemessen (Überschlag §11.3) |
+| 13 reguläre (Median der Mediane [kürzeste–längste]) | Kai | typical | 22,9 s [20,5–34,5] | 22 % [17–35] | 0 | 0 / 390 | R4, 30 Seeds je Begegnung |
+| 13 reguläre (Median der Mediane [kürzeste–längste]) | Mopsula | typical | 21,2 s [18,1–32,7] | 22 % [13–34] | 0 | 0 / 390 | R4, 30 Seeds je Begegnung |
+| Tutorial `enc_f1_a1_tutorial` | Kai / Mopsula | typical | 22,6 s / 20,7 s | 8 % / 9 % | 0 | 0 % / 0 % | R4, 30 Seeds |
+| Show-Boss `enc_e1_showboss` | Kai | typical | 33,0 s [29,3–36,5] | 24 % | 0 | 0 % [0–6] | R4, 60 Seeds |
+| Show-Boss `enc_e1_showboss` | Mopsula | typical | 28,5 s [26,5–35,2] | 34 % | 0 | 0 % [0–6] | R4, 60 Seeds |
+| Hausmeister Liga 0 / 1 / 2 | Kai | typical | 3:01 [2:47–3:11] | 40 % | 2,6 | 15 % [9–23] / 28 % [20–37] / 29 % [21–39] | R4, 100 Seeds; unterbrochen 86 %, Telegraph-Treffer 22 % |
+| Hausmeister Liga 0 / 1 / 2 | Mopsula | typical | 2:56 [2:45–3:31] | 47 % | 2,9 | 15 % [9–23] / 19 % [13–28] / 34 % [25–44] | R4, 100 Seeds; unterbrochen 89 %, Telegraph-Treffer 23 % |
+| Königin Liga 0 / 1 / 2 | Kai | typical | 3:53 [3:40–4:21] | 59 % | 2,8 | 27 % [19–36] / 63 % [53–72] / 70 % [60–78] | R4, 100 Seeds; unterbrochen 77 %, Telegraph-Treffer 16 % |
+| Königin Liga 0 / 1 / 2 | Mopsula | typical | 3:44 [3:30–4:06] | 69 % | 2,9 | 34 % [25–44] / 41 % [32–51] / 87 % [79–92] | R4, 100 Seeds; unterbrochen 75 %, Telegraph-Treffer 15 % |
+| Hausmeister | Kai | perfect | 3:00 | 37 % | 1,2 | 0 % [0–9] | R4, 40 Seeds; unterbrochen 97 %, Telegraph-Treffer 14 % |
+| Hausmeister | Mopsula | perfect | 2:51 | 28 % | 2,7 | 2,5 % [0–13] | R4, 40 Seeds; unterbrochen 90 %, Telegraph-Treffer 16 % |
+| Königin | Kai | perfect | 3:49 | 32 % | 1,8 | 0 % [0–9] | R4, 40 Seeds; unterbrochen 98 %, Telegraph-Treffer 12 % |
+| Königin | Mopsula | perfect | 3:42 | 76 % | 3,0 | 37,5 % [24–53] | R4, 40 Seeds; unterbrochen 74 %, Telegraph-Treffer 7 % |
+| Hausmeister | Kai | sloppy | kein Sieg | 100 % | 2,9 | 100 % [91–100] | R4, 40 Seeds; unterbrochen 58 %, Telegraph-Treffer 38 % |
+| Hausmeister | Mopsula | sloppy | 2:12 | 100 % | 2,6 | 92,5 % [80–97] | R4, 40 Seeds; unterbrochen 71 %, Telegraph-Treffer 44 % |
+| Königin | Kai | sloppy | kein Sieg | 100 % | 3,0 | 100 % [91–100] | R4, 40 Seeds; unterbrochen 44 %, Telegraph-Treffer 34 % |
+| Königin | Mopsula | sloppy | 3:50 | 73 % | 2,7 | 40 % [26–55] | R4, 40 Seeds; unterbrochen 62 %, Telegraph-Treffer 31 % |
+| Hausmeister | Kai | Autopilot (KI spielt beide) | 2:34 | 100 % | 2,9 | 87,5 % [74–95] | R4, 40 Seeds; unterbrochen 74 %, Telegraph-Treffer 28 % |
+| Hausmeister | Mopsula | Autopilot (KI spielt beide) | 2:53 | 100 % | 3,0 | 70 % [55–82] | R4, 40 Seeds; unterbrochen 72 %, Telegraph-Treffer 29 % |
+| Königin | Kai | Autopilot (KI spielt beide) | 3:43 | 100 % | 2,9 | 62,5 % [47–76] | R4, 40 Seeds; unterbrochen 68 %, Telegraph-Treffer 23 % |
+| Königin | Mopsula | Autopilot (KI spielt beide) | 3:52 | 95 % | 3,0 | 50 % [35–65] | R4, 40 Seeds; unterbrochen 63 %, Telegraph-Treffer 19 % |
+| Etagenfolge (`--sequence`) | Kai | typical | — | — | 6 [5–7] je Etage (Bosse 6) | 0,43 Niederlagen je Lauf | R4, 30 Läufe; Kämpfe bis zum ersten Heilgegenstand 3 [1–10] |
+| Etagenfolge (`--sequence`) | Mopsula | typical | — | — | 7 [6–8] je Etage (Bosse 6) | 0,63 Niederlagen je Lauf | R4, 30 Läufe; Kämpfe bis zum ersten Heilgegenstand 3 [1–10] |
+
+Lesart:
+
+- **Reguläre Kämpfe** im Band für beide Held:innen: Median der Mediane 22,9 s (Kai) / 21,2 s (Mopsula), alle 13 Begegnungen
+  15–35 s, HP-Verlust im Mittel 22 %; einzelne Begegnungen liegen darunter (`a3`, `d1`, `d2` 13–19 %, wie im Überschlag
+  §11.3). Seltenheit und Ereigniskämpfe: Fahrscheinfresser 28 s, Tauben 10 s, Schleim 19 s, keine Niederlage.
+  Show-Boss im Band (28–33 s, 24 % / 34 %, keine Niederlage in 120 Kämpfen).
+- **Bosse, Liga 0**, beide Held:innen in den Harness-Bändern: Hausmeister 15 % / 15 % (Band 10–30 %, Ziel 15–25 %), Königin
+  27 % / 34 % (25–45 %, Ziel 30–40 %); Dauer 2:56–3:01 bzw. 3:44–3:53 (Bänder 2:30–3:30 / 3:00–4:00), Unterbrechungen 75–89 %
+  (≥ 60 %), Telegraph-Treffer 15–23 % (≤ 25 %). Die CI prüft 10 Seeds je Boss und Held:in (`test_r4_rt_balance`).
+- **Unterhosen-Liga:** Hausmeister in beiden Bändern (Liga 1 ≤ 40 %: 28 % / 19 %; Liga 2 ≤ 55 %: 29 % / 34 %). Die **Königin
+  verfehlt sie**: Held:in Kai Liga 1 63 % (≤ 55 %), Held:in Mopsula Liga 2 87 % (≤ 70 %). Grund: Die Königin bleibt ein
+  Heil-Rennen über 3:45 — Zepter und Pestbiss machen ≈ 80 % des Schadens am Tank, die KI-Heilerin regeneriert 1 MP je 1,5 s
+  bei 4 MP je Heilung, und ohne Warnweste + Schlüsselbund steigt der Schaden am Tank um ≈ 11 % (A²/(A+D), DEF ≈ 26 → 18); in Liga 2
+  fehlt Mopsula zusätzlich die Gasmaske (Pestpfützen und Gift voll). Mehr Telegraph-Druck statt Auto-Schaden (s. u.) senkte Liga 1
+  von 87 % auf 63 %; die Liga-Bänder zusammen mit Liga 0 ≥ 25 % zu treffen, verlangt eine Liga-Regel im Kampf (z. B. ein
+  Liga-Talent mit DEF, 06 §4.3) oder einen Bosskampf, der weniger vom Tank-Heilen lebt — Entscheidung R5b/Integrator.
+  **Liga-Schritt** (Liga 1 − Liga 0): Kai +13 / +36 Punkte; Mopsula +4 / +7 — beim Hausmeister zählt ihr Umhang kaum, sie nimmt
+  fast nur Prozent-Treffer; über beide Bosse +5,5.
+- **Können zählt:** `perfect` verliert als Kai keinen Bosskampf und als Mopsula 2,5 % beim Hausmeister, die KI (Autopilot, beide
+  Figuren, Trank-Schalter an) 70–88 % / 50–62 % — außer bei der Königin mit Mopsula: `perfect` 37,5 % gegen `typical` 34 %. Die
+  95 % genutzten GCDs und 100 % Unterbrechen (Donnerbellen 5 MP) kosten die Heilerin die Heil-MP; `perfect` heilt zwar vor einem
+  Unterbrechen, das die MP nicht mehr deckt, ein Profi hielte aber mehr zurück — R5b kalibriert die Profile je Held:in. `sloppy`
+  verliert fast immer (Kai 100 %, Mopsula 40–92 %).
+- **Etagenfolge:** 6–7 Heilgegenstände je Etage (Band 4–9, Bosse je 3), 3 Kämpfe bis zum ersten Heilgegenstand nach einem Safe
+  Room (Band 2–3) — die Regenerationswerte §2.7 tragen. 0,4 / 0,6 Niederlagen je Lauf (der Lauf geht danach weiter).
+- **Leistung** (§3.15, `--perf`: 2 Party, 6 Gegner der Zonen C/D mit ihren Regeln, 10 Formen, echte Daten): Median 198–337 µs je
+  `RtSim.step` auf der geteilten 4-Kern-Maschine (11 Läufe, 7 davon ≤ 250 µs); dieselbe Maschine misst R1s Fixture-Benchmark
+  (`test_r1_rt_perf`) mit 354 µs im Mittel — die echten Daten kosten nicht mehr als die Fixtures. Der CI-Balance-Test braucht
+  ≈ 72 s statt < 60 s (§11.4): 40 Bosskämpfe à ≈ 6 500 Ticks, `RtSim.step` ≈ 120–130 µs je Tick, der Bot ≈ 90–115 µs.
+
+**R4-Abstimmung gegenüber §11.3 / §6** (alle Werte in den Daten, §11.2; Gründe gemessen):
+
+- **Reguläre Kämpfe:** `ENEMY_HP_PM` 7000 → **8600**; eigene `rt.hp_pm` für Taubenschwarm (10000), Sprühgeist, Krabbe und
+  Gardist (7000) — mit 7000 lag der Median der Mediane im echten Sim bei ≈ 17 s. **Wuchtschlag** 2 → **3 MP**: der KI-Kai
+  (Held:in Mopsula) nutzte jeden GCD, reguläre Kämpfe waren mit Mopsula ≈ 4 s kürzer. **Rattensegen** heilt **15 %** (mit 30 %
+  zog sich `d1` über 40 s).
+- **Partner-KI** (§11.3: zuerst diese Werte): `AI_DODGE_MISS_PM` Angriff/Unterstützen 130 → **200**, `REACT_TICKS` Unterstützen
+  12 → **15**, `AI_INTERRUPT_LATE_PM` 250 → **450** (die Unterbrechungen der KI-Kai entschieden die Königin für Held:in Mopsula:
+  mit 250 lag sie ≈ 10 Punkte unter Held:in Kai; der Wert wirkt fast nur dort, weil sie häufiger als die KI-Mopsula unterbricht).
+  Frostniesen der Mopsula-KI auf „Unterstützen“ wie die Adelsflamme erst ab 50 % MP (`self_mp_above_pm` 500), sonst fehlten
+  der Heilerin im Bosskampf die MP (100 % Niederlage im ersten Hausmeister-Durchlauf).
+- **Bosse — weniger Dauerschaden, mehr Telegraph-Druck:** Mit den Startwerten (und R4s erster Abstimmung über `dmg_pm` allein)
+  war jeder Bosskampf ein reines Heil-Rennen — der Auto-Angriff machte ≈ 85 % des Schadens am Tank, die KI-Heilerin stand ein
+  Drittel des Kampfs ohne MP, und die Liga kippte ihn: Hausmeister Held:in Kai 15 % → 55 % (Liga 1), Königin 33 % → 87 % (Liga 1),
+  Held:in Mopsula Liga 2 58 % / 96 % (je 100 Seeds). Jetzt trägt Ausweichen mehr: **Hausmeister** `rt.hp` **4400** (§6.6: 5000;
+  Dauer-Mitte 3:00), `rt.dmg_pm` **920** (1000), Schlüsselbund-Wurf **30 %** alle **8 s** (20 %, 12 s), Putzmittelnebel **25 %**
+  (15 %), Wischmopp-Wirbel **30 %** (25 %); **Königin** `rt.hp` **7800** (§6.7: 7600), `rt.dmg_pm` **740** (500; mit 480–560
+  verlor im Harness niemand), Zug alle **15 s** (20 s), Kreischen **20 %** (15 %), Pestpfützen **25 %** alle **12 s** / **15 s**
+  (15 %, 18 s / 20 s), Kronen-Nova **30 %** mit sicherem Kreis **400 cm** (25 %, 300 cm: die KI-Heilerin erreichte die 3 m aus
+  ihrem Abstand nicht — Fluchtpunkte reichen 6 m, §5.5 — und wurde von 40 % der Novae getroffen).
+
+**Für R5b:** `typical` aus Probespiel-Replays kalibrieren (§11.4), danach `rt_balance.sh --nightly --strict-bands` (die
+`RT-BAND`-Urteile werden dann hart); die Liga-Bänder der Königin entscheiden; der Full-Run-Bot im Echtzeitkampf (Autopilot)
+verliert die Bosse im ersten Versuch zu 50–88 % — der R5-Full-Run braucht dort Wiederholungen oder den `RtBotPlayer`.
 
 ---
 

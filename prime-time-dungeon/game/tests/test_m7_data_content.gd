@@ -19,6 +19,11 @@ const REGULAR_F1: PackedStringArray = ["enm_kanalratte", "enm_taubenschwarm", "e
 	"enm_rattenschamane", "enm_kabelsalat", "enm_kellerspinne", "enm_spruehgeist", "enm_rolltreppenkrabbe",
 	"enm_rattengardist", "enm_fahrscheinfresser"]
 const BOSSES: PackedStringArray = ["enm_boss_hausmeister", "enm_boss_rattenkoenigin"]
+## The real-time combat adds to floor 1 (07 §4.11, R4): 8 statuses, the queen's train / spit / puddles, the tutorial
+## rat's hop, the show boss's ticket rule and Mopsula's monocle auto attack, the tutorial rat, the show-boss encounter.
+const RT_STATUSES: int = 8
+const RT_BOSS_SKILLS: PackedStringArray = ["skl_q_train", "skl_q_spit", "skl_q_puddles"]
+const RT_ENEMY_SKILLS: PackedStringArray = ["skl_e_azubi_hop", "skl_e_showboss_slow"]
 
 ## GDD §5.1: id → [lv, hp, mp, str, mag, def, res, spd, lck, exp, credits, field_speed].
 const ENEMY_TABLE: Dictionary = {
@@ -124,7 +129,7 @@ func test_real_data_is_valid_without_warnings() -> void:
 
 func test_quantities_match_gdd() -> void:
 	var d: GameData = _data()
-	assert_len(d.all_statuses(), 6, "GDD §3.9: exactly 6 statuses")
+	assert_len(d.all_statuses(), 6 + RT_STATUSES, "GDD §3.9: exactly 6 statuses + 8 of the real-time combat (R4)")
 	var party_skills: Dictionary = {}
 	for m: PartyMemberDef in d.all_party():
 		for l: Dictionary in m.learnset:
@@ -170,13 +175,14 @@ func test_quantities_match_gdd() -> void:
 		if sid.begins_with("skl_b_") or sid.begins_with("skl_q_"):
 			boss_list.append(sid)
 	boss_list.sort()
-	var expected_boss: Array = Array(BOSS_SKILLS)
+	var expected_boss: Array = Array(BOSS_SKILLS) + Array(RT_BOSS_SKILLS)
 	expected_boss.sort()
-	assert_eq(boss_list, expected_boss, "skl_b_*/skl_q_* skills = GDD boss skill list")
-	assert_len(boss_list, 11, "11 boss skills")
+	assert_eq(boss_list, expected_boss, "skl_b_*/skl_q_* skills = GDD boss skill list + the queen's R4 skills")
+	assert_len(boss_list, 11 + RT_BOSS_SKILLS.size(), "11 boss skills + 3 (07 §6.7)")
 	for sid: String in f2_ai:
 		assert_false(f1_ai.has(sid), sid + " is a floor-2 stub skill, not shared with floor 1")
-	assert_eq(enemy_skills, 25 + 11 + 1 + f2_ai.size(), "enemy skills = 25 + 11 boss + strike + floor-2 stubs")
+	assert_eq(enemy_skills, 25 + 11 + 1 + f2_ai.size() + RT_BOSS_SKILLS.size() + RT_ENEMY_SKILLS.size(),
+		"enemy skills = 25 + 11 boss + strike + floor-2 stubs + the R4 real-time enemy skills")
 	assert_eq(item_skills, 10, "one use_skill per consumable")
 	var regular: int = 0
 	var bosses: int = 0
@@ -187,7 +193,7 @@ func test_quantities_match_gdd() -> void:
 			bosses += 1
 		else:
 			regular += 1
-	assert_eq(regular, 11, "10 regular enemies + 1 rarity")
+	assert_eq(regular, 12, "10 regular enemies + 1 rarity + the tutorial rat of the real-time combat (07 §6.5)")
 	assert_eq(bosses, 2)
 	assert_len(d.all_achievements(), 39)            # 29 + the "Ohne alles" chain of 06-C (06 §4.3) + 4 real-time (07 §9.4)
 	assert_len(d.all_sponsors(), 7)
@@ -499,7 +505,7 @@ func test_enemy_models_follow_art_casting() -> void:
 func test_encounter_groups_match_gdd() -> void:
 	var d: GameData = _data()
 	var f1: FloorDef = d.floor_def(1)
-	assert_len(f1.encounters, 19)
+	assert_len(f1.encounters, 20, "19 + the show boss enc_e1_showboss (07 §9.6, E26)")
 	var regular_exp: int = 0
 	for enc_id: String in ENCOUNTER_REWARDS:
 		var enc: EncounterDef = f1.encounter(enc_id)

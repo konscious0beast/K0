@@ -16,7 +16,10 @@
 			"use_skill": "skl_item_bandage",
 			"usable": "both",
 			"icon": "bandage",
-			"color": "#e8e0d0"
+			"color": "#e8e0d0",
+			"rt": {
+				"wheel": 1
+			}
 		},
 		{
 			"id": "itm_antidote",
@@ -33,7 +36,10 @@
 			"use_skill": "skl_item_antidote",
 			"usable": "both",
 			"icon": "antidote",
-			"color": "#7cc242"
+			"color": "#7cc242",
+			"rt": {
+				"wheel": 4
+			}
 		},
 		{
 			"id": "itm_energy_krawumm",
@@ -50,7 +56,10 @@
 			"use_skill": "skl_item_energy_krawumm",
 			"usable": "both",
 			"icon": "can",
-			"color": "#60a5fa"
+			"color": "#60a5fa",
+			"rt": {
+				"wheel": 5
+			}
 		},
 		{
 			"id": "itm_brutzel_burger",
@@ -67,7 +76,10 @@
 			"use_skill": "skl_item_brutzel_burger",
 			"usable": "both",
 			"icon": "burger",
-			"color": "#ff8a3d"
+			"color": "#ff8a3d",
+			"rt": {
+				"wheel": 2
+			}
 		},
 		{
 			"id": "itm_smelling_salts",
@@ -84,7 +96,10 @@
 			"use_skill": "skl_item_smelling_salts",
 			"usable": "battle",
 			"icon": "salts",
-			"color": "#f5f0e6"
+			"color": "#f5f0e6",
+			"rt": {
+				"wheel": 3
+			}
 		},
 		{
 			"id": "itm_molotov",
@@ -101,7 +116,10 @@
 			"use_skill": "skl_item_molotov",
 			"usable": "battle",
 			"icon": "bottle",
-			"color": "#ff6a2b"
+			"color": "#ff6a2b",
+			"rt": {
+				"wheel": 7
+			}
 		},
 		{
 			"id": "itm_ice_spray",
@@ -118,7 +136,10 @@
 			"use_skill": "skl_item_ice_spray",
 			"usable": "battle",
 			"icon": "spray",
-			"color": "#7fd8ff"
+			"color": "#7fd8ff",
+			"rt": {
+				"wheel": 8
+			}
 		},
 		{
 			"id": "itm_smoke",
@@ -135,7 +156,10 @@
 			"use_skill": "skl_item_smoke",
 			"usable": "battle",
 			"icon": "smoke",
-			"color": "#9aa7b8"
+			"color": "#9aa7b8",
+			"rt": {
+				"wheel": 9
+			}
 		},
 		{
 			"id": "itm_hype_megaphone",
@@ -152,7 +176,10 @@
 			"use_skill": "skl_item_hype_megaphone",
 			"usable": "battle",
 			"icon": "megaphone",
-			"color": "#ff2e88"
+			"color": "#ff2e88",
+			"rt": {
+				"wheel": 10
+			}
 		},
 		{
 			"id": "itm_elixir",
@@ -170,7 +197,10 @@
 			"use_skill": "skl_item_elixir",
 			"usable": "both",
 			"icon": "elixir",
-			"color": "#b05cff"
+			"color": "#b05cff",
+			"rt": {
+				"wheel": 6
+			}
 		},
 		{
 			"id": "itm_key_master",

@@ -37,6 +37,7 @@ const GROUPS: Dictionary = {
 	"f1_g14": ["enc_f1_d3", Vector2i(2, 0), "IDLE"],
 	"f1_qb": ["enc_f1_boss_hausmeister", Vector2i(5, 0), "IDLE"],
 	"f1_fb": ["enc_f1_boss_rattenkoenigin", Vector2i(0, 0), "IDLE"],
+	"f1_g15": ["enc_e1_showboss", Vector2i(5, 4), "IDLE"],
 }
 
 ## GDD §1.3 / §2.5: chest → [cell, type, contents].
@@ -211,7 +212,7 @@ func test_routes_and_progression_locks() -> void:
 
 func test_groups_and_bosses() -> void:
 	var placed: Array = _layout()["encounters_placed"]
-	assert_len(placed, 17, "f1_g0..14 + f1_qb + f1_fb")
+	assert_len(placed, 18, "f1_g0..14 + f1_qb + f1_fb + the show boss f1_g15 (07 §9.6: real-time runs only)")
 	var seen: Dictionary = {}
 	for p: Dictionary in placed:
 		var gid: String = str(p["group_id"])

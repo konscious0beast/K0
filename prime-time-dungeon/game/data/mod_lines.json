@@ -2177,6 +2177,307 @@
 			"weight": 1
 		},
 		{
+			"id": "mod_rt_set_quiet_02",
+			"tag": "rt_set_quiet",
+			"voice": "mod",
+			"text": "Ruhe am Set! Ihr seid später dran.",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_flee_warn_01",
+			"tag": "rt_flee_warn",
+			"voice": "mod",
+			"text": "Wo willst du hin? Das Set ist HIER!",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_flee_warn_02",
+			"tag": "rt_flee_warn",
+			"voice": "mod",
+			"text": "Zurück ans Set! Im Flur filmt keine Kamera.",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_interrupt_01",
+			"tag": "rt_interrupt",
+			"voice": "mod",
+			"text": "Und da wird ihm das Wort abgeschnitten — live und in Farbe!",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_interrupt_02",
+			"tag": "rt_interrupt",
+			"voice": "mod",
+			"text": "Unterbrochen! Die Regie dankt für die Kürzung.",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_dodge_close_01",
+			"tag": "rt_dodge_close",
+			"voice": "mod",
+			"text": "Zentimeterarbeit! Unsere Versicherung atmet auf.",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_dodge_close_02",
+			"tag": "rt_dodge_close",
+			"voice": "mod",
+			"text": "Knapp! Die Stuntkoordination nimmt das ins Showreel.",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_telegraph_hit_01",
+			"tag": "rt_telegraph_hit",
+			"voice": "mod",
+			"text": "Rote Fläche, rote Zahlen. Die Warnung lief ja nur zwei Sekunden.",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_telegraph_hit_02",
+			"tag": "rt_telegraph_hit",
+			"voice": "mod",
+			"text": "Volltreffer — leider für die Gegenseite. Die Fläche war wirklich sehr rot.",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_train_kill_01",
+			"tag": "rt_train_kill",
+			"voice": "mod",
+			"text": "Bitte zurückbleiben! … Zu spät.",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_train_kill_02",
+			"tag": "rt_train_kill",
+			"voice": "mod",
+			"text": "Der Zug hält nicht für Ratten. Fahrplanmäßig.",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_healer_first_01",
+			"tag": "rt_healer_first",
+			"voice": "mod",
+			"text": "Heiler zuerst! Wer heilt, verlängert die Sendung — und nicht im guten Sinn.",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_healer_first_02",
+			"tag": "rt_healer_first",
+			"voice": "mod",
+			"text": "Der Schamane flickt seine Kollegen. Unterbrechen oder ewig zuschauen!",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_finale_01",
+			"tag": "rt_finale",
+			"voice": "mod",
+			"text": "Das FINALE! Kamera drei, ganz nah ran!",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_finale_02",
+			"tag": "rt_finale",
+			"voice": "mod",
+			"text": "FINALE! Ich lasse schon mal den Abspann vorwärmen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_finale_hype_01",
+			"tag": "rt_finale_hype",
+			"voice": "mod",
+			"text": "FINALE bei Höchstquote! Konfettikanone, JETZT!",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_finale_hype_02",
+			"tag": "rt_finale_hype",
+			"voice": "mod",
+			"text": "Das Publikum steht, die Regie weint, das FINALE läuft. Mehr Fernsehen geht nicht.",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_enrage_enm_boss_hausmeister_01",
+			"tag": "rt_enrage:enm_boss_hausmeister",
+			"voice": "mod",
+			"text": "Es ist 17 Uhr. Ab jetzt macht der Hausmeister Überstunden — an euch.",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_enrage_enm_boss_hausmeister_02",
+			"tag": "rt_enrage:enm_boss_hausmeister",
+			"voice": "mod",
+			"text": "Feierabend ist Feierabend! Und der Hausmeister nimmt ihn SEHR ernst.",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_enrage_enm_boss_rattenkoenigin_01",
+			"tag": "rt_enrage:enm_boss_rattenkoenigin",
+			"voice": "mod",
+			"text": "Betriebsschluss! Die Königin räumt den Bahnsteig — mit euch.",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_enrage_enm_boss_rattenkoenigin_02",
+			"tag": "rt_enrage:enm_boss_rattenkoenigin",
+			"voice": "mod",
+			"text": "Letzte Durchsage vor Betriebsschluss: Die Königin ist schlecht gelaunt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_control_switch_kai_01",
+			"tag": "rt_control_switch:kai",
+			"voice": "mod",
+			"text": "Der Graf liegt flach. {name} übernimmt — mit Mopp und Würde.",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_control_switch_kai_02",
+			"tag": "rt_control_switch:kai",
+			"voice": "mod",
+			"text": "Der Graf ruht. {name}, das Publikum gehört jetzt dir.",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_control_switch_mopsula_01",
+			"tag": "rt_control_switch:mopsula",
+			"voice": "mod",
+			"text": "Der Graf übernimmt. Möge die Etikette mit uns sein.",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_control_switch_mopsula_02",
+			"tag": "rt_control_switch:mopsula",
+			"voice": "mod",
+			"text": "{name} liegt flach. Der Graf übernimmt — mit Monokel und Methode.",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_partner_preset_attack_01",
+			"tag": "rt_partner_preset:attack",
+			"voice": "mod",
+			"text": "Taktik „Angriff“. Höflichkeit wird auf nach der Sendung verschoben.",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_partner_preset_support_01",
+			"tag": "rt_partner_preset:support",
+			"voice": "mod",
+			"text": "Taktik „Unterstützen“. Teamarbeit — das Lieblingswort jeder Personalabteilung.",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_partner_preset_careful_01",
+			"tag": "rt_partner_preset:careful",
+			"voice": "mod",
+			"text": "Taktik „Vorsichtig“. Mehr Abstand, schnellere Reaktion. Die Versicherung schickt Blumen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_tutorial_target_01",
+			"tag": "rt_tutorial_target",
+			"voice": "mod",
+			"text": "Wähle ein Ziel. Die Kamera liebt Entschlossenheit.",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_tutorial_bar1_01",
+			"tag": "rt_tutorial_bar1",
+			"voice": "mod",
+			"text": "Deine Hauptfähigkeit! Oft drücken ist ausdrücklich erwünscht.",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_tutorial_show_01",
+			"tag": "rt_tutorial_show",
+			"voice": "mod",
+			"text": "SHOW: riskant, aber das Publikum liebt es.",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_tutorial_dodge_01",
+			"tag": "rt_tutorial_dodge",
+			"voice": "mod",
+			"text": "Rote Fläche? Raus da! Wenn sie voll ist, knallt es.",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_hint_zone_01",
+			"tag": "rt_hint_zone",
+			"voice": "mod",
+			"text": "Pfützen bleiben liegen. Nicht drin stehen — die Reinigung kommt erst nach der Sendung.",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_hint_partner_special_01",
+			"tag": "rt_hint_partner_special",
+			"voice": "mod",
+			"text": "Partner-Spezial: Ein Knopf, und dein Partner legt sofort los — ohne Diskussion.",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_hint_finale_01",
+			"tag": "rt_hint_finale",
+			"voice": "mod",
+			"text": "Ziel unter 30 %? Zeit fürs FINALE. Kamera drei, ganz nah ran!",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_hint_flee_01",
+			"tag": "rt_hint_flee",
+			"voice": "mod",
+			"text": "Raus aus dem Ring heißt Flucht. Zurück ans Set, wenn du bleiben willst!",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_hint_enrage_01",
+			"tag": "rt_hint_enrage",
+			"voice": "mod",
+			"text": "Überstunden! Ab jetzt wird jeder Treffer härter — Tempo!",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_hint_partner_tactic_01",
+			"tag": "rt_hint_partner_tactic",
+			"voice": "mod",
+			"text": "Zu viele Treffer beim Partner? Taktik auf „Vorsichtig“ — mehr Abstand, schneller weg.",
+			"weight": 1
+		},
+		{
+			"id": "mod_showboss_spotted_01",
+			"tag": "showboss_spotted",
+			"voice": "mod",
+			"text": "Sonderausgabe! In der Kanalisation tagt die Kanalratten-Gala. Goldrahmen, Elite, Hausordnung.",
+			"weight": 1
+		},
+		{
+			"id": "mod_showboss_spotted_02",
+			"tag": "showboss_spotted",
+			"voice": "mod",
+			"text": "Achtung, Show-Boss! Die Kanalratten-Gala wartet. Optional — aber glamourös.",
+			"weight": 1
+		},
+		{
+			"id": "mod_showboss_rule_01",
+			"tag": "showboss_rule",
+			"voice": "mod",
+			"text": "Hausordnung verschärft: alle 8 Sekunden ein Strafzettel.",
+			"weight": 1
+		},
+		{
+			"id": "mod_showboss_won_01",
+			"tag": "showboss_won",
+			"voice": "mod",
+			"text": "Die Gala ist gesprengt! Ein Fanpost-Paket für Sie, für die Ratten nur Applaus.",
+			"weight": 1
+		},
+		{
+			"id": "mod_showboss_won_02",
+			"tag": "showboss_won",
+			"voice": "mod",
+			"text": "Kanalratten-Gala beendet. Die Elite ist geschlagen, das Fanpost-Paket unterwegs.",
+			"weight": 1
+		},
+		{
 			"id": "mod_persona_intro_01",
 			"tag": "persona_intro",
 			"voice": "mod",

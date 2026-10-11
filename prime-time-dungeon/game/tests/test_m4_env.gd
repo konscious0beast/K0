@@ -29,6 +29,14 @@ func _spec(mask: int, kind: RoomSpec.Kind, zone: String, variant: int = 0, seed:
 	return s
 
 
+## The integers of a JSON array (data values arrive as floats).
+static func _ints(v: Variant) -> PackedInt32Array:
+	var out: PackedInt32Array = []
+	for x: Variant in (v as Array if v is Array else []):
+		out.append(JsonUtil.to_int(x))
+	return out
+
+
 ## World-space AABBs of the room's collision boxes (room at the origin, outside the tree).
 func _boxes(room: Node3D) -> Array[AABB]:
 	var out: Array[AABB] = []
@@ -146,13 +154,17 @@ func test_build_room_all_masks_kinds_and_zones() -> void:
 					else:
 						assert_true(blocked, "%s: wall %d is closed" % [ctx, side])
 				if kind != RoomSpec.Kind.STAIRS:
+					# boss rooms keep 6.2 m free for the 6 m combat set (07 §2.4, R4; the waggon of Gleis 9 collides
+					# only with the combat set)
+					var boss: bool = kind == RoomSpec.Kind.QUARTER_BOSS or kind == RoomSpec.Kind.FLOOR_BOSS
+					var clear: float = EnvKit.CLEAR_RADIUS_BOSS if boss else EnvKit.CLEAR_RADIUS
 					for i in range(1, boxes.size()):
 						var b: AABB = boxes[i]
 						if b.end.y < 0.05 or b.position.y > 2.2:
 							continue
 						var closest := Vector2(clampf(0.0, b.position.x, b.end.x), clampf(0.0, b.position.z, b.end.z))
-						assert_true(closest.length() >= EnvKit.CLEAR_RADIUS - 0.001,
-							"%s: collision %s inside the clear radius" % [ctx, b])
+						assert_true(closest.length() >= clear - 0.001,
+							"%s: collision %s inside the clear radius %.1f m" % [ctx, b, clear])
 				var light: OmniLight3D = room.get_node_or_null("Light") as OmniLight3D
 				assert_not_null(light, ctx + ": Light")
 				var omni: int = _count(room, "OmniLight3D")
@@ -283,6 +295,29 @@ func test_kind_set_pieces() -> void:
 	var office: Node3D = EnvKit.build_room(_spec(0, RoomSpec.Kind.QUARTER_BOSS, "boss_office"))
 	assert_not_null(office.get_node_or_null("HausordnungLabel"), "QUARTER_BOSS → notice board")
 	office.free()
+	# Gleis 9 (07 §6.7, R4): the throne room with the queen's door (E) has the sign and no collision at the centre
+	# (the way to the stairs room crosses it; the combat set blocks the waggon), the waggon matches the RtGeo blocker of
+	# enc_f1_boss_rattenkoenigin (cm), the tracks match the train's lanes
+	var throne: Node3D = EnvKit.build_room(_spec(2, RoomSpec.Kind.FLOOR_BOSS, "throne"))
+	assert_not_null(throne.get_node_or_null("GleisLabel"), "FLOOR_BOSS → GLEIS 9 sign")
+	for b: AABB in _boxes(throne).slice(1):
+		assert_false(b.has_point(Vector3(0.0, 0.25, 0.0)), "no room collision at the centre: %s" % b)
+	throne.free()
+	var data: GameData = GameData.new()
+	assert_true(data.load_dir("res://data"), "data loads")
+	var enc: EncounterDef = data.encounter("enc_f1_boss_rattenkoenigin")
+	var w: Rect2 = EnvKit.THRONE_WAGGON
+	var blockers: Array = []
+	for bv: Variant in (enc.rt.get("blockers", []) as Array):
+		blockers.append(str(_ints(bv)))
+	assert_eq(blockers, [str(PackedInt32Array([roundi(w.position.x * 100.0), roundi(w.position.y * 100.0),
+		roundi(w.end.x * 100.0), roundi(w.end.y * 100.0)]))], "waggon = the encounter's RtGeo blocker")
+	var lane: Dictionary = (data.skill("skl_q_train").rt.get("telegraph", {}) as Dictionary)
+	var lanes: PackedInt32Array = []
+	for z: float in EnvKit.THRONE_TRACK_Z:
+		lanes.append(roundi(z * 100.0))
+	assert_eq(str(_ints(lane.get("lanes", []))), str(lanes), "tracks = the train's lanes")
+	assert_eq(int(lane.get("width_cm", 0)), roundi(EnvKit.THRONE_TRACK_W * 100.0), "track width = lane width")
 
 
 func test_anchor_for() -> void:

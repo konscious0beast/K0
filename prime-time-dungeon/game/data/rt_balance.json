@@ -26,17 +26,17 @@
 		"AI_SLOT_OFFSET_TICKS": 9,
 		"REACT_TICKS": {
 			"attack": 15,
-			"support": 12,
+			"support": 15,
 			"careful": 6
 		},
 		"AI_DODGE_MISS_PM": {
-			"attack": 130,
-			"support": 130,
+			"attack": 200,
+			"support": 200,
 			"careful": 40
 		},
 		"AI_INTERRUPT_REACT_TICKS": 15,
 		"AI_INTERRUPT_JITTER_TICKS": 10,
-		"AI_INTERRUPT_LATE_PM": 250,
+		"AI_INTERRUPT_LATE_PM": 450,
 		"AI_INTERRUPT_LATE_TICKS": 45,
 		"AI_INTERRUPT_GCD_TAIL_TICKS": 5,
 		"ESCAPE_MARGIN_CM": 60,
@@ -84,7 +84,7 @@
 		"CHECKPOINT_TICKS": 300,
 		"HP_SCALE_PM": 4000,
 		"FIXED_SCALE_PM": 4000,
-		"ENEMY_HP_PM": 7000,
+		"ENEMY_HP_PM": 8600,
 		"SUMMON_HP_PM": 4000,
 		"EASY_WARN_PM": 1250,
 		"REVIVE_GUARD_MS": 3000,

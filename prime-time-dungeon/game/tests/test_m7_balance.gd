@@ -63,6 +63,8 @@ func test_plan_covers_every_floor_1_encounter() -> void:
 	var f1: FloorDef = real_data().floor_def(1)
 	var ids: Array = []
 	for enc: EncounterDef in f1.encounters:
+		if not enc.show_boss.is_empty():
+			continue                      # real-time only (07 §9.6, E26): test_r4_rt_balance covers the show boss
 		ids.append(enc.id)
 		assert_true(PLAN.has(enc.id), "balance plan covers " + enc.id)
 	for id: String in PLAN:

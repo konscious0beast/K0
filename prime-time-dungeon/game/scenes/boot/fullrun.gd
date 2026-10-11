@@ -633,6 +633,15 @@ func next_objective() -> Dictionary:
 	return {"kind": "stairs", "id": "stairs", "cell": layout.stairs, "why": ""}
 
 
+## 07 §9.6 (E26, R4): the group of a show-boss encounter exists only in real-time runs (ExplorationScene spawns it
+## only then) — a turn-based run neither visits nor expects it.
+func group_on_map(e: EnemySpawn) -> bool:
+	if Game.is_realtime():
+		return true
+	var enc: EncounterDef = Game.floor_def().encounter(e.encounter_id) if Game.floor_def() != null else null
+	return enc == null or enc.show_boss.is_empty()
+
+
 ## Every open goal in a fixed order (groups, chests, events, gates, safe rooms, unvisited rooms); boss rooms and the
 ## stairs room are not visited for their own sake.
 func candidates(layout: FloorLayout, fr: FloorRun, dist: Dictionary = {}) -> Array[Dictionary]:
@@ -641,6 +650,8 @@ func candidates(layout: FloorLayout, fr: FloorRun, dist: Dictionary = {}) -> Arr
 	var typical: bool = strategy == "typical"
 	for e: EnemySpawn in layout.enemies:
 		if typical and TYPICAL_SKIP.has(e.id):
+			continue
+		if not group_on_map(e):
 			continue
 		if not rush and not e.is_boss and not e.is_stray() and not fr.defeated_groups.has(e.id):
 			out.append({"kind": "group", "id": e.id, "cell": e.cell, "why": e.encounter_id})
@@ -1648,6 +1659,10 @@ func check_scene_state(ex: ExplorationScene) -> bool:
 	for e: EnemySpawn in layout.enemies:
 		if fr.defeated_groups.has(e.id) and ex.get_enemy(e.id) != null:
 			return fail("defeated group %s is back on the map" % e.id)
+		if not group_on_map(e):
+			if ex.get_enemy(e.id) != null:
+				return fail("show-boss group %s is on the map in a turn-based run (07 §9.6)" % e.id)
+			continue
 		if not e.is_boss and not fr.defeated_groups.has(e.id) and ex.get_enemy(e.id) == null:
 			return fail("living group %s is missing on the map" % e.id)
 	for gid: Variant in fr.strays.keys():

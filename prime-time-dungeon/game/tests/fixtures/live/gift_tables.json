@@ -1,0 +1,35 @@
+{
+	"schema": 1,
+	"tiers": {
+		"bronze": { "rolls": 2, "guarantee": "", "weights": [80, 18, 2] },
+		"silver": { "rolls": 3, "guarantee": "rare", "weights": [55, 38, 7] },
+		"gold": { "rolls": 4, "guarantee": "epic", "weights": [25, 55, 20] }
+	},
+	"rarities": ["common", "rare", "epic"],
+	"pools": {
+		"gift_f1": {
+			"common": [
+				{ "credits": 40, "w": 30 },
+				{ "item_id": "item_bandage", "qty": 2, "w": 25 },
+				{ "item_id": "item_energy_krawumm", "qty": 1, "w": 20 },
+				{ "item_id": "item_ice_spray", "qty": 1, "w": 15 },
+				{ "item_id": "item_molotov", "qty": 1, "w": 10 }
+			],
+			"rare": [
+				{ "item_id": "item_brutzel_burger", "qty": 2, "w": 30 },
+				{ "item_id": "item_smelling_salts", "qty": 1, "w": 25 },
+				{ "item_id": "item_hype_megaphone", "qty": 1, "w": 20 },
+				{ "item_id": "item_smoke", "qty": 1, "w": 15 },
+				{ "credits": 150, "w": 10 }
+			],
+			"epic": [
+				{ "item_id": "item_elixir", "qty": 1, "w": 40 },
+				{ "item_id": "wpn_fire_axe", "qty": 1, "w": 20 },
+				{ "item_id": "acc_sneakers", "qty": 1, "w": 20 },
+				{ "credits": 400, "w": 20 }
+			]
+		}
+	},
+	"pity": { "buyer_rare": 3, "buyer_epic": 9, "period": "permanent" },
+	"fan_pack": { "pool": "gift_f1", "rarity": "common", "rolls": 1 }
+}

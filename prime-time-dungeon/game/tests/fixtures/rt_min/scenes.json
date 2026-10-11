@@ -1,0 +1,21 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "scn_mop_1",
+			"name": "Erste Rast",
+			"condition": "e.safe_room_visits == 1",
+			"priority": 0,
+			"lines": [
+				{
+					"voice": "mopsula",
+					"text": "Ein Kiosk. Wir hatten auf ein Schloss gehofft."
+				},
+				{
+					"voice": "kai",
+					"text": "Es gibt Kaffee. Das ist fast dasselbe."
+				}
+			]
+		}
+	]
+}

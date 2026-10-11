@@ -1,0 +1,25 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "spn_gluckwasser",
+			"name": "Glückwasser",
+			"slogan": "Trink dich glücklich. Wörtlich.",
+			"color": "#4ad9d9",
+			"gift": [
+				{
+					"kind": "heal_party_pct",
+					"value": 35
+				}
+			],
+			"weight": 3,
+			"weight_mods": [
+				{
+					"cond": "ally_hp_below",
+					"value": 0.5,
+					"mult": 3.0
+				}
+			]
+		}
+	]
+}

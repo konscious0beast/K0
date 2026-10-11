@@ -1,0 +1,131 @@
+extends Node
+## Autoload `DB`: loads GameData in _init() (02_TECH §3.3) and offers a getter facade.
+## Every load error is pushed as "DB: <msg> (res://data/<table>.json)" so that check.sh fails on data bugs.
+## data/events.json is NOT loaded here (EventCatalog, M8).
+
+const DATA_DIR: String = "res://data"
+
+var data: GameData            # created + loaded in _init()
+var ok: bool                  # data.is_valid()
+var _data_hash: String = ""
+
+
+func _init() -> void:
+	data = GameData.new()
+	ok = data.load_dir(DATA_DIR)
+	for msg: String in data.errors:
+		push_error("DB: %s (%s/%s.json)" % [msg, DATA_DIR, _table_of(msg)])
+	for msg: String in data.warnings:
+		push_warning("DB: %s (%s/%s.json)" % [msg, DATA_DIR, _table_of(msg)])
+
+
+## Table name at the start of an error message ("skills[3|skl_x].power: …" → "skills").
+static func _table_of(msg: String) -> String:
+	var end: int = msg.length()
+	for sep: String in ["[", ".", ":"]:
+		var p: int = msg.find(sep)
+		if p >= 0 and p < end:
+			end = p
+	return msg.substr(0, end)
+
+
+# --- Facade (identical semantics to GameData, §4.5) -------------------------------------------------------------------
+
+func enemy(id: String) -> EnemyDef:
+	return data.enemy(id)
+
+
+func pseudo_unit(id: String) -> PseudoUnitDef:
+	return data.pseudo_unit(id)
+
+
+func skill(id: String) -> SkillDef:
+	return data.skill(id)
+
+
+func item(id: String) -> ItemDef:
+	return data.item(id)
+
+
+func party_member(id: String) -> PartyMemberDef:
+	return data.party_member(id)
+
+
+func achievement(id: String) -> AchievementDef:
+	return data.achievement(id)
+
+
+func lootbox(id: String) -> LootboxDef:
+	return data.lootbox(id)
+
+
+func sponsor(id: String) -> SponsorDef:
+	return data.sponsor(id)
+
+
+func milestone(id: String) -> MilestoneDef:
+	return data.milestone(id)
+
+
+func status(id: String) -> StatusDef:
+	return data.status(id)
+
+
+func class_def(id: String) -> ClassDef:
+	return data.class_def(id)
+
+
+func scene_def(id: String) -> SceneDef:
+	return data.scene_def(id)
+
+
+func talent(id: String) -> TalentDef:           # 06 package B
+	return data.talent(id)
+
+
+func species_def(id: String) -> SpeciesDef:     # 06 package B
+	return data.species_def(id)
+
+
+func floor_def(index: int) -> FloorDef:
+	return data.floor_def(index)
+
+
+func encounter(id: String) -> EncounterDef:
+	return data.encounter(id)
+
+
+func mod_lines(tag: String) -> Array[ModLineDef]:
+	return data.mod_lines(tag)
+
+
+func has_id(table: String, id: String) -> bool:
+	return data.has_id(table, id)
+
+
+## SHA-256 (hex) over the game data files (res://data/*.json, sorted by name: name + per-file SHA-256) — the
+## data_hash of leaderboard entries and commits (05 §7.3/§10.4). Cached after the first call.
+func data_hash() -> String:
+	if _data_hash != "":
+		return _data_hash
+	var names: PackedStringArray = []
+	for f: String in DirAccess.get_files_at(DATA_DIR):
+		if f.get_extension() == "json":
+			names.append(f)
+	names.sort()
+	var parts: PackedStringArray = []
+	for f: String in names:
+		parts.append(f + ":" + FileAccess.get_sha256(DATA_DIR.path_join(f)))
+	_data_hash = "|".join(parts).sha256_text()
+	return _data_hash
+
+
+# --- Casting (08 §6.3, K0) --------------------------------------------------------------------------------------------
+# STUB(K0) — owned by 08-K2. Replace completely, keep the public API.
+
+## THE place where a party figure's ModelSpec comes from (08 §6.3): PartyMemberDef.model, for "kai" mixed with the
+## running persona's look (PersonaLook.apply, K2). Stub: a copy of the def model ({} for an unknown member).
+func party_model(member_id: String) -> Dictionary:
+	if not data.has_id("party", member_id):
+		return {}
+	return data.party_member(member_id).model.duplicate(true)

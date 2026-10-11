@@ -1,0 +1,53 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "spc_original",
+			"name": "Original-Verpackung",
+			"desc": "Bleibt, wie es ist. Das Publikum liebt Echtes.",
+			"for": [],
+			"min_floor": 3,
+			"stat_mult": {},
+			"growth_add": {},
+			"passive": {
+				"id": "pas_authentic",
+				"params": {
+					"follower_pm": 1100
+				}
+			},
+			"recommended_classes": [],
+			"model_hint": {}
+		},
+		{
+			"id": "spc_kai_kachelgolem",
+			"name": "Kachelgolem",
+			"desc": "Fliesen statt Haut. Steht, fällt selten.",
+			"for": [
+				"kai"
+			],
+			"min_floor": 3,
+			"stat_mult": {
+				"hp": 1.15,
+				"def": 1.15,
+				"spd": 0.9
+			},
+			"growth_add": {},
+			"passive": {
+				"id": "pas_grout",
+				"params": {
+					"first_hit_taken_pm": 700
+				}
+			},
+			"recommended_classes": [
+				"cls_kai_wrecker"
+			],
+			"model_hint": {
+				"props_add": [],
+				"colors": {
+					"primary": "#2f8f9a",
+					"secondary": "#e8eef0"
+				}
+			}
+		}
+	]
+}

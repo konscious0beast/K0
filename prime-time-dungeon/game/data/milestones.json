@@ -1,0 +1,65 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "ms_100",
+			"followers": 100,
+			"reward_box": "",
+			"credits": 0,
+			"item": "itm_brutzel_burger",
+			"title": "",
+			"min_floor": 1,
+			"mod_tag": "follower_milestone"
+		},
+		{
+			"id": "ms_250",
+			"followers": 250,
+			"reward_box": "box_fan",
+			"credits": 0,
+			"item": "",
+			"title": "",
+			"min_floor": 1,
+			"mod_tag": "follower_milestone"
+		},
+		{
+			"id": "ms_500",
+			"followers": 500,
+			"reward_box": "",
+			"credits": 150,
+			"item": "",
+			"title": "",
+			"min_floor": 1,
+			"mod_tag": "follower_milestone"
+		},
+		{
+			"id": "ms_1000",
+			"followers": 1000,
+			"reward_box": "box_fan",
+			"credits": 0,
+			"item": "itm_acc_fan_scarf",
+			"title": "",
+			"min_floor": 1,
+			"mod_tag": "follower_milestone"
+		},
+		{
+			"id": "ms_2000",
+			"followers": 2000,
+			"reward_box": "box_gold",
+			"credits": 0,
+			"item": "",
+			"title": "",
+			"min_floor": 1,
+			"mod_tag": "follower_milestone"
+		},
+		{
+			"id": "ms_5000",
+			"followers": 5000,
+			"reward_box": "box_gold",
+			"credits": 0,
+			"item": "",
+			"title": "Quotenkönig:in",
+			"min_floor": 2,
+			"mod_tag": "follower_milestone"
+		}
+	]
+}

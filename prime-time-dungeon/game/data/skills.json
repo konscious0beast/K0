@@ -1,0 +1,1278 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "skl_attack_kai",
+			"name": "Angriff",
+			"desc": "Ein ehrlicher Schlag mit dem, was gerade in der Hand liegt.",
+			"user": "party",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 100,
+			"mp_cost": 0,
+			"rank": 3,
+			"anim": "attack",
+			"vfx": "hit"
+		},
+		{
+			"id": "skl_attack_mopsula",
+			"name": "Angriff",
+			"desc": "Ein vornehmer Biss. Nur in die Wade, Wir sind ja keine Tiere.",
+			"user": "party",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 100,
+			"mp_cost": 0,
+			"rank": 3,
+			"anim": "attack",
+			"vfx": "bite"
+		},
+		{
+			"id": "skl_e_strike",
+			"name": "Angriff",
+			"desc": "Ein schlichter Angriff. Monster haben selten Choreografen.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 100,
+			"mp_cost": 0,
+			"rank": 3,
+			"anim": "attack",
+			"vfx": "hit"
+		},
+		{
+			"id": "skl_kai_heavy_swing",
+			"name": "Wuchtschlag",
+			"desc": "Mit voller Wucht. Und schlechter Haltung.",
+			"user": "party",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 160,
+			"mp_cost": 3,
+			"rank": 4,
+			"anim": "attack",
+			"vfx": "slash",
+			"show_tags": [
+				"flashy"
+			]
+		},
+		{
+			"id": "skl_kai_taunt",
+			"name": "Hier spielt die Musik!",
+			"desc": "Kai zieht alle Blicke auf sich: Provoziert und Gepanzert für 3 Züge.",
+			"user": "party",
+			"category": "buff",
+			"target": "self",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 2,
+			"rank": 2,
+			"statuses": [
+				{
+					"id": "sts_taunt",
+					"chance": 1.0,
+					"turns": 3
+				},
+				{
+					"id": "sts_guard",
+					"chance": 1.0,
+					"turns": 3
+				}
+			],
+			"anim": "cast",
+			"vfx": "buff",
+			"show_tags": [
+				"risky"
+			]
+		},
+		{
+			"id": "skl_kai_sweep",
+			"name": "Rundumfeger",
+			"desc": "Einmal durchwischen, bitte. Trifft alle Gegner.",
+			"user": "party",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 80,
+			"mp_cost": 5,
+			"rank": 3,
+			"anim": "attack",
+			"vfx": "slash",
+			"show_tags": [
+				"flashy"
+			]
+		},
+		{
+			"id": "skl_kai_first_aid",
+			"name": "Erste Hilfe (Tierarzt-Edition)",
+			"desc": "Heilt 30 % der max. HP und entfernt Gift. Wuff.",
+			"user": "party",
+			"category": "heal",
+			"target": "single_ally",
+			"damage_type": "heal",
+			"element": "none",
+			"power": 30,
+			"mp_cost": 4,
+			"rank": 2,
+			"heal_mode": "pct",
+			"cleanse": [
+				"sts_poison"
+			],
+			"anim": "cast",
+			"vfx": "heal",
+			"show_tags": [
+				"cute"
+			]
+		},
+		{
+			"id": "skl_kai_leash_trip",
+			"name": "Leinen-Fallstrick",
+			"desc": "Bremst einen Gegner aus. Meistens.",
+			"user": "party",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 70,
+			"mp_cost": 5,
+			"rank": 3,
+			"statuses": [
+				{
+					"id": "sts_slow",
+					"chance": 0.9,
+					"turns": 3
+				}
+			],
+			"anim": "attack",
+			"vfx": "debuff"
+		},
+		{
+			"id": "skl_kai_deo_torch",
+			"name": "Deo-Flammenwerfer",
+			"desc": "Gesponsert von niemandem. Bitte nicht nachmachen.",
+			"user": "party",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "fire",
+			"power": 130,
+			"mp_cost": 7,
+			"rank": 3,
+			"anim": "attack",
+			"vfx": "fire",
+			"show_tags": [
+				"flashy",
+				"risky"
+			]
+		},
+		{
+			"id": "skl_kai_cable_whip",
+			"name": "Kabelpeitsche",
+			"desc": "Ein Blitzhieb mit Starkstrom. Kann betäuben.",
+			"user": "party",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "shock",
+			"power": 120,
+			"mp_cost": 8,
+			"rank": 3,
+			"statuses": [
+				{
+					"id": "sts_stun",
+					"chance": 0.35,
+					"turns": 0
+				}
+			],
+			"anim": "attack",
+			"vfx": "shock",
+			"show_tags": [
+				"flashy"
+			]
+		},
+		{
+			"id": "skl_kai_prime_finisher",
+			"name": "Prime-Time-Finisher",
+			"desc": "Der Schlag für den Trailer. Hohe Krit-Chance.",
+			"user": "party",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 260,
+			"mp_cost": 12,
+			"rank": 5,
+			"crit_bonus": 0.2,
+			"kill_hype": 10,
+			"anim": "attack",
+			"vfx": "crit",
+			"show_tags": [
+				"finisher",
+				"flashy"
+			]
+		},
+		{
+			"id": "skl_mop_noble_flame",
+			"name": "Adelsflamme",
+			"desc": "Blaues Blut brennt heißer.",
+			"user": "party",
+			"category": "magic",
+			"target": "single_enemy",
+			"damage_type": "magical",
+			"element": "fire",
+			"power": 110,
+			"mp_cost": 4,
+			"rank": 3,
+			"anim": "cast",
+			"vfx": "fire",
+			"show_tags": [
+				"flashy"
+			]
+		},
+		{
+			"id": "skl_mop_holy_lick",
+			"name": "Heiliges Schlabbern",
+			"desc": "Heilung. Eine Ehre, die keiner wollte.",
+			"user": "party",
+			"category": "heal",
+			"target": "single_ally",
+			"damage_type": "heal",
+			"element": "none",
+			"power": 100,
+			"mp_cost": 4,
+			"rank": 2,
+			"heal_mode": "mag",
+			"anim": "cast",
+			"vfx": "heal",
+			"show_tags": [
+				"cute",
+				"gross"
+			]
+		},
+		{
+			"id": "skl_mop_frost_sneeze",
+			"name": "Frostniesen",
+			"desc": "Eiskalt und feucht. Kann verlangsamen.",
+			"user": "party",
+			"category": "magic",
+			"target": "single_enemy",
+			"damage_type": "magical",
+			"element": "ice",
+			"power": 105,
+			"mp_cost": 5,
+			"rank": 3,
+			"statuses": [
+				{
+					"id": "sts_slow",
+					"chance": 0.25,
+					"turns": 3
+				}
+			],
+			"anim": "cast",
+			"vfx": "ice",
+			"show_tags": [
+				"gross"
+			]
+		},
+		{
+			"id": "skl_mop_thunder_bark",
+			"name": "Donnerbellen",
+			"desc": "WUFF. Mit Hall. Trifft alle Gegner.",
+			"user": "party",
+			"category": "magic",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "shock",
+			"power": 75,
+			"mp_cost": 7,
+			"rank": 3,
+			"anim": "cast",
+			"vfx": "shock",
+			"show_tags": [
+				"flashy"
+			]
+		},
+		{
+			"id": "skl_mop_royal_decree",
+			"name": "Königlicher Erlass",
+			"desc": "Wir befehlen: schneller! Turbo für 3 Züge.",
+			"user": "party",
+			"category": "buff",
+			"target": "single_ally",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 6,
+			"rank": 2,
+			"statuses": [
+				{
+					"id": "sts_haste",
+					"chance": 1.0,
+					"turns": 3
+				}
+			],
+			"anim": "cast",
+			"vfx": "buff"
+		},
+		{
+			"id": "skl_mop_mass_lick",
+			"name": "Massen-Schlabbern",
+			"desc": "Heilt alle Verbündeten und entfernt Gift. Niemand wird verschont.",
+			"user": "party",
+			"category": "heal",
+			"target": "all_allies",
+			"damage_type": "heal",
+			"element": "none",
+			"power": 60,
+			"mp_cost": 10,
+			"rank": 3,
+			"heal_mode": "mag",
+			"cleanse": [
+				"sts_poison"
+			],
+			"anim": "cast",
+			"vfx": "heal",
+			"show_tags": [
+				"cute",
+				"gross"
+			]
+		},
+		{
+			"id": "skl_mop_revive",
+			"name": "Sabber der Wiederkehr",
+			"desc": "Belebt ein KO-Mitglied mit 40 % der max. HP.",
+			"user": "party",
+			"category": "heal",
+			"target": "single_ally_ko",
+			"damage_type": "heal",
+			"element": "none",
+			"power": 40,
+			"mp_cost": 14,
+			"rank": 4,
+			"heal_mode": "pct",
+			"anim": "cast",
+			"vfx": "heal",
+			"show_tags": [
+				"gross"
+			]
+		},
+		{
+			"id": "skl_mop_inferno",
+			"name": "Gräfliches Inferno",
+			"desc": "Für die Ahnen. Alle 300 davon. Trifft alle Gegner.",
+			"user": "party",
+			"category": "magic",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "fire",
+			"power": 130,
+			"mp_cost": 14,
+			"rank": 4,
+			"anim": "cast",
+			"vfx": "fire",
+			"show_tags": [
+				"flashy",
+				"finisher"
+			]
+		},
+		{
+			"id": "skl_stunt_kai_suplex",
+			"name": "Bahnsteig-Suplex",
+			"desc": "Riskant, laut, unvergesslich. Bei Erfolg enormer Schaden.",
+			"user": "party",
+			"category": "stunt",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 230,
+			"mp_cost": 0,
+			"rank": 4,
+			"cooldown": 3,
+			"success_base": 0.6,
+			"success_lck": 0.01,
+			"success_cap": 0.85,
+			"success_boss_mod": -0.15,
+			"fail_effect": {
+				"self_dmg_pct": 10,
+				"delay_pct": 50,
+				"status": ""
+			},
+			"anim": "stunt",
+			"vfx": "crit",
+			"show_tags": [
+				"risky",
+				"flashy"
+			]
+		},
+		{
+			"id": "skl_stunt_mop_entrance",
+			"name": "Auftritt Seiner Durchlaucht",
+			"desc": "Ein Feuerwerk an Würde. Trifft alle Gegner — wenn der Umhang mitspielt.",
+			"user": "party",
+			"category": "stunt",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "fire",
+			"power": 140,
+			"mp_cost": 0,
+			"rank": 4,
+			"cooldown": 3,
+			"success_base": 0.55,
+			"success_lck": 0.01,
+			"success_cap": 0.85,
+			"success_boss_mod": -0.15,
+			"fail_effect": {
+				"self_dmg_pct": 0,
+				"delay_pct": 0,
+				"status": "sts_stun"
+			},
+			"anim": "stunt",
+			"vfx": "fire",
+			"show_tags": [
+				"risky",
+				"flashy",
+				"cute"
+			]
+		},
+		{
+			"id": "skl_e_bite",
+			"name": "Biss",
+			"desc": "Zähne. Viele Zähne.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 100,
+			"mp_cost": 0,
+			"rank": 3,
+			"vfx": "bite"
+		},
+		{
+			"id": "skl_e_gnaw_poison",
+			"name": "Seuchennagen",
+			"desc": "Ein Biss mit Beilage. Kann vergiften.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "poison",
+			"power": 80,
+			"mp_cost": 0,
+			"rank": 3,
+			"statuses": [
+				{
+					"id": "sts_poison",
+					"chance": 0.35,
+					"turns": 0
+				}
+			],
+			"vfx": "toxic"
+		},
+		{
+			"id": "skl_e_peck",
+			"name": "Picken",
+			"desc": "Präzise, gemein, gurrend.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 90,
+			"mp_cost": 0,
+			"rank": 3,
+			"vfx": "hit"
+		},
+		{
+			"id": "skl_e_dive_bomb",
+			"name": "Sturzflug-Bombardement",
+			"desc": "Der ganze Schwarm stürzt herab. Auf alle.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 60,
+			"mp_cost": 0,
+			"rank": 4,
+			"vfx": "hit"
+		},
+		{
+			"id": "skl_e_briefcase",
+			"name": "Aktentaschen-Hieb",
+			"desc": "Voller Unterlagen. Und Groll.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 100,
+			"mp_cost": 0,
+			"rank": 3,
+			"vfx": "hit"
+		},
+		{
+			"id": "skl_e_delay_rage",
+			"name": "Verspätungswut",
+			"desc": "Seit 40 Jahren zu spät. Heute reicht es.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 150,
+			"mp_cost": 0,
+			"rank": 5,
+			"vfx": "crit"
+		},
+		{
+			"id": "skl_e_slam",
+			"name": "Klatscher",
+			"desc": "Feucht, schwer, unappetitlich.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 100,
+			"mp_cost": 0,
+			"rank": 3,
+			"vfx": "hit"
+		},
+		{
+			"id": "skl_e_toxic_splash",
+			"name": "Giftspritzer",
+			"desc": "Ein Schwall Kanalbrühe. Kann vergiften.",
+			"user": "enemy",
+			"category": "magic",
+			"target": "single_enemy",
+			"damage_type": "magical",
+			"element": "poison",
+			"power": 90,
+			"mp_cost": 2,
+			"rank": 3,
+			"statuses": [
+				{
+					"id": "sts_poison",
+					"chance": 0.5,
+					"turns": 0
+				}
+			],
+			"anim": "cast",
+			"vfx": "toxic"
+		},
+		{
+			"id": "skl_e_zap",
+			"name": "Funkenrute",
+			"desc": "Eine Glühbirne am Stock. Erstaunlich wirksam.",
+			"user": "enemy",
+			"category": "magic",
+			"target": "single_enemy",
+			"damage_type": "magical",
+			"element": "shock",
+			"power": 100,
+			"mp_cost": 3,
+			"rank": 3,
+			"anim": "cast",
+			"vfx": "shock"
+		},
+		{
+			"id": "skl_e_rat_heal",
+			"name": "Rattensegen",
+			"desc": "Heilt einen Verbündeten um 30 % der max. HP.",
+			"user": "enemy",
+			"category": "heal",
+			"target": "single_ally",
+			"damage_type": "heal",
+			"element": "none",
+			"power": 30,
+			"mp_cost": 5,
+			"rank": 2,
+			"heal_mode": "pct",
+			"anim": "cast",
+			"vfx": "heal"
+		},
+		{
+			"id": "skl_e_lash",
+			"name": "Kabelhieb",
+			"desc": "Ein Peitschenhieb aus Kupfer.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 100,
+			"mp_cost": 0,
+			"rank": 3,
+			"vfx": "slash"
+		},
+		{
+			"id": "skl_e_short_circuit",
+			"name": "Kurzschluss",
+			"desc": "Alles zuckt. Alle.",
+			"user": "enemy",
+			"category": "magic",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "shock",
+			"power": 80,
+			"mp_cost": 6,
+			"rank": 4,
+			"anim": "cast",
+			"vfx": "shock"
+		},
+		{
+			"id": "skl_e_venom_bite",
+			"name": "Giftbiss",
+			"desc": "Acht Beine, zwei Giftzähne. Kann vergiften.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "poison",
+			"power": 90,
+			"mp_cost": 0,
+			"rank": 3,
+			"statuses": [
+				{
+					"id": "sts_poison",
+					"chance": 0.5,
+					"turns": 0
+				}
+			],
+			"vfx": "toxic"
+		},
+		{
+			"id": "skl_e_web",
+			"name": "Netzschuss",
+			"desc": "Klebrige Fäden. Verlangsamt das Ziel.",
+			"user": "enemy",
+			"category": "debuff",
+			"target": "single_enemy",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 2,
+			"rank": 3,
+			"statuses": [
+				{
+					"id": "sts_slow",
+					"chance": 0.8,
+					"turns": 0
+				}
+			],
+			"anim": "cast",
+			"vfx": "debuff"
+		},
+		{
+			"id": "skl_e_spray_flame",
+			"name": "Farbflamme",
+			"desc": "Graffiti, aber brennend.",
+			"user": "enemy",
+			"category": "magic",
+			"target": "single_enemy",
+			"damage_type": "magical",
+			"element": "fire",
+			"power": 110,
+			"mp_cost": 4,
+			"rank": 3,
+			"anim": "cast",
+			"vfx": "fire"
+		},
+		{
+			"id": "skl_e_fumes",
+			"name": "Lackdämpfe",
+			"desc": "Ein Nebel, der nach Kopfschmerz riecht. Kann alle vergiften.",
+			"user": "enemy",
+			"category": "magic",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "poison",
+			"power": 60,
+			"mp_cost": 6,
+			"rank": 4,
+			"statuses": [
+				{
+					"id": "sts_poison",
+					"chance": 0.3,
+					"turns": 0
+				}
+			],
+			"anim": "cast",
+			"vfx": "toxic"
+		},
+		{
+			"id": "skl_e_pinch",
+			"name": "Zwicken",
+			"desc": "Eine Schere, die nie stillsteht.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 100,
+			"mp_cost": 0,
+			"rank": 3,
+			"vfx": "hit"
+		},
+		{
+			"id": "skl_e_brace",
+			"name": "Stufen fahren hoch",
+			"desc": "Die Stufen klappen hoch: Gepanzert für 2 Züge.",
+			"user": "enemy",
+			"category": "buff",
+			"target": "self",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 0,
+			"rank": 2,
+			"statuses": [
+				{
+					"id": "sts_guard",
+					"chance": 1.0,
+					"turns": 2
+				}
+			],
+			"anim": "cast",
+			"vfx": "buff"
+		},
+		{
+			"id": "skl_e_step_crush",
+			"name": "Stufen-Stampfer",
+			"desc": "Eine ganze Rolltreppe in die Magengrube.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 170,
+			"mp_cost": 0,
+			"rank": 5,
+			"vfx": "crit"
+		},
+		{
+			"id": "skl_e_halberd",
+			"name": "Hellebarde",
+			"desc": "Mittelalter trifft Kanalisation.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 100,
+			"mp_cost": 0,
+			"rank": 3,
+			"vfx": "slash"
+		},
+		{
+			"id": "skl_e_shield_wall",
+			"name": "Schildwall",
+			"desc": "Die Garde rückt zusammen: Gepanzert für 3 Züge.",
+			"user": "enemy",
+			"category": "buff",
+			"target": "all_allies",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 4,
+			"rank": 3,
+			"statuses": [
+				{
+					"id": "sts_guard",
+					"chance": 1.0,
+					"turns": 3
+				}
+			],
+			"anim": "cast",
+			"vfx": "buff"
+		},
+		{
+			"id": "skl_e_lunge",
+			"name": "Ausfall",
+			"desc": "Ein Stoß auf die schwächste Stelle der Gruppe.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 140,
+			"mp_cost": 0,
+			"rank": 4,
+			"vfx": "slash"
+		},
+		{
+			"id": "skl_e_ticket_cut",
+			"name": "Entwerter-Biss",
+			"desc": "Gelocht. Entwertet. Verletzt.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 120,
+			"mp_cost": 0,
+			"rank": 3,
+			"vfx": "bite"
+		},
+		{
+			"id": "skl_e_fine",
+			"name": "Erhöhtes Beförderungsentgelt",
+			"desc": "Ohne gültigen Fahrschein: bis zu 40 Credits weg.",
+			"user": "enemy",
+			"category": "special",
+			"target": "single_enemy",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 0,
+			"rank": 3,
+			"special": {
+				"kind": "steal_credits",
+				"max": 40,
+				"refund_on_win": true
+			},
+			"anim": "cast",
+			"vfx": "debuff"
+		},
+		{
+			"id": "skl_e_escape",
+			"name": "Abfahrt!",
+			"desc": "Der Automat verlässt den Kampf. Pünktlich, ausnahmsweise.",
+			"user": "enemy",
+			"category": "special",
+			"target": "self",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 0,
+			"rank": 2,
+			"special": {
+				"kind": "escape"
+			},
+			"anim": "cast",
+			"vfx": "smoke"
+		},
+		{
+			"id": "skl_b_broom",
+			"name": "Besenhieb",
+			"desc": "Gekehrt wird, wo der Hausmeister es sagt.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 110,
+			"mp_cost": 0,
+			"rank": 3,
+			"vfx": "hit"
+		},
+		{
+			"id": "skl_b_keys",
+			"name": "Schlüsselbund-Wurf",
+			"desc": "Zwölf Schlüssel, alle gleichzeitig. Trifft alle.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 70,
+			"mp_cost": 0,
+			"rank": 4,
+			"vfx": "hit"
+		},
+		{
+			"id": "skl_b_rules",
+			"name": "Hausordnung verlesen",
+			"desc": "Paragraf für Paragraf: Gepanzert für 2 Züge.",
+			"user": "enemy",
+			"category": "buff",
+			"target": "self",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 0,
+			"rank": 3,
+			"statuses": [
+				{
+					"id": "sts_guard",
+					"chance": 1.0,
+					"turns": 2
+				}
+			],
+			"anim": "cast",
+			"vfx": "buff"
+		},
+		{
+			"id": "skl_b_cleaner_fog",
+			"name": "Putzmittelnebel",
+			"desc": "Chemische Reinigung für alle. Kann vergiften.",
+			"user": "enemy",
+			"category": "magic",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "poison",
+			"power": 60,
+			"mp_cost": 8,
+			"rank": 4,
+			"statuses": [
+				{
+					"id": "sts_poison",
+					"chance": 0.4,
+					"turns": 0
+				}
+			],
+			"anim": "cast",
+			"vfx": "toxic"
+		},
+		{
+			"id": "skl_b_call_tenant",
+			"name": "„Untermieter!“",
+			"desc": "Ruft eine Kanalratte aus dem Keller.",
+			"user": "enemy",
+			"category": "summon",
+			"target": "self",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 6,
+			"rank": 3,
+			"summon": [
+				"enm_kanalratte"
+			],
+			"anim": "cast",
+			"vfx": "smoke"
+		},
+		{
+			"id": "skl_b_mop_whirl",
+			"name": "Wischmopp-Wirbel",
+			"desc": "Feierabend heißt: alles muss weg. Trifft alle.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 90,
+			"mp_cost": 0,
+			"rank": 3,
+			"vfx": "slash"
+		},
+		{
+			"id": "skl_q_scepter",
+			"name": "Zepterstoß",
+			"desc": "Die Signallampe auf Rot. Für dich.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 120,
+			"mp_cost": 0,
+			"rank": 3,
+			"vfx": "hit"
+		},
+		{
+			"id": "skl_q_plague_bite",
+			"name": "Pestbiss",
+			"desc": "Ein königlicher Biss. Kann vergiften.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "poison",
+			"power": 90,
+			"mp_cost": 0,
+			"rank": 3,
+			"statuses": [
+				{
+					"id": "sts_poison",
+					"chance": 0.5,
+					"turns": 0
+				}
+			],
+			"vfx": "toxic"
+		},
+		{
+			"id": "skl_q_screech",
+			"name": "Kreischen der Krone",
+			"desc": "Ein Kreischen wie eine Notbremse. Trifft alle.",
+			"user": "enemy",
+			"category": "magic",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "shock",
+			"power": 80,
+			"mp_cost": 8,
+			"rank": 4,
+			"anim": "cast",
+			"vfx": "shock"
+		},
+		{
+			"id": "skl_q_summon",
+			"name": "Schwanzknoten lösen",
+			"desc": "Zwei Kanalratten lösen sich vom königlichen Schwanz.",
+			"user": "enemy",
+			"category": "summon",
+			"target": "self",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 10,
+			"rank": 3,
+			"summon": [
+				"enm_kanalratte",
+				"enm_kanalratte"
+			],
+			"anim": "cast",
+			"vfx": "smoke"
+		},
+		{
+			"id": "skl_q_crown_nova",
+			"name": "Kronen-Nova",
+			"desc": "Jeder Fahrschein der Krone entlädt sich. Trifft alle.",
+			"user": "enemy",
+			"category": "magic",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "shock",
+			"power": 110,
+			"mp_cost": 16,
+			"rank": 5,
+			"anim": "cast",
+			"vfx": "shock"
+		},
+		{
+			"id": "skl_e_pose",
+			"name": "Schaufensterpose",
+			"desc": "Starr, schön, unangreifbar: Gepanzert und Provoziert für 2 Züge.",
+			"user": "enemy",
+			"category": "buff",
+			"target": "self",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 0,
+			"rank": 2,
+			"statuses": [
+				{
+					"id": "sts_guard",
+					"chance": 1.0,
+					"turns": 2
+				},
+				{
+					"id": "sts_taunt",
+					"chance": 1.0,
+					"turns": 2
+				}
+			],
+			"anim": "cast",
+			"vfx": "buff"
+		},
+		{
+			"id": "skl_e_ram",
+			"name": "Ramm-Kette",
+			"desc": "Drei Wagen, ein Ziel. Quietschend.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 90,
+			"mp_cost": 0,
+			"rank": 3,
+			"vfx": "hit"
+		},
+		{
+			"id": "skl_e_price_slam",
+			"name": "Preissturz",
+			"desc": "−70 % auf alles. Auch auf deine HP.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 170,
+			"mp_cost": 0,
+			"rank": 5,
+			"vfx": "crit"
+		},
+		{
+			"id": "skl_item_bandage",
+			"name": "Werbepflaster",
+			"desc": "Heilt 45 HP.",
+			"user": "item",
+			"category": "item",
+			"target": "single_ally",
+			"damage_type": "heal",
+			"element": "none",
+			"power": 45,
+			"mp_cost": 0,
+			"rank": 2,
+			"heal_mode": "fixed",
+			"anim": "item",
+			"vfx": "heal"
+		},
+		{
+			"id": "skl_item_antidote",
+			"name": "Gegengift-Gurgler",
+			"desc": "Heilt Vergiftung.",
+			"user": "item",
+			"category": "item",
+			"target": "single_ally",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 0,
+			"rank": 2,
+			"cleanse": [
+				"sts_poison"
+			],
+			"anim": "item",
+			"vfx": "heal"
+		},
+		{
+			"id": "skl_item_energy_krawumm",
+			"name": "KRAWUMM-Dose",
+			"desc": "Stellt 20 MP wieder her.",
+			"user": "item",
+			"category": "item",
+			"target": "single_ally",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 0,
+			"rank": 2,
+			"mp_restore": 20,
+			"anim": "item",
+			"vfx": "buff"
+		},
+		{
+			"id": "skl_item_brutzel_burger",
+			"name": "Brutzel-Burger",
+			"desc": "Heilt 120 HP.",
+			"user": "item",
+			"category": "item",
+			"target": "single_ally",
+			"damage_type": "heal",
+			"element": "none",
+			"power": 120,
+			"mp_cost": 0,
+			"rank": 2,
+			"heal_mode": "fixed",
+			"anim": "item",
+			"vfx": "heal"
+		},
+		{
+			"id": "skl_item_smelling_salts",
+			"name": "Riechsalz",
+			"desc": "Belebt ein KO-Mitglied mit 30 % der max. HP.",
+			"user": "item",
+			"category": "item",
+			"target": "single_ally_ko",
+			"damage_type": "heal",
+			"element": "none",
+			"power": 30,
+			"mp_cost": 0,
+			"rank": 2,
+			"heal_mode": "pct",
+			"anim": "item",
+			"vfx": "heal"
+		},
+		{
+			"id": "skl_item_molotov",
+			"name": "Grillanzünder-Cocktail",
+			"desc": "60 Feuerschaden an allen Gegnern.",
+			"user": "item",
+			"category": "item",
+			"target": "all_enemies",
+			"damage_type": "fixed",
+			"element": "fire",
+			"power": 60,
+			"mp_cost": 0,
+			"rank": 2,
+			"anim": "item",
+			"vfx": "fire",
+			"show_tags": [
+				"flashy"
+			]
+		},
+		{
+			"id": "skl_item_ice_spray",
+			"name": "Kältespray",
+			"desc": "90 Eisschaden an einem Gegner.",
+			"user": "item",
+			"category": "item",
+			"target": "single_enemy",
+			"damage_type": "fixed",
+			"element": "ice",
+			"power": 90,
+			"mp_cost": 0,
+			"rank": 2,
+			"anim": "item",
+			"vfx": "ice"
+		},
+		{
+			"id": "skl_item_smoke",
+			"name": "Taschen-Nebelmaschine",
+			"desc": "Garantierte Flucht (nicht gegen Bosse).",
+			"user": "item",
+			"category": "item",
+			"target": "self",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 0,
+			"rank": 2,
+			"flee_guaranteed": true,
+			"anim": "item",
+			"vfx": "smoke"
+		},
+		{
+			"id": "skl_item_hype_megaphone",
+			"name": "Hype-Megafon",
+			"desc": "Hype +25. Lautstärke ist auch eine Leistung.",
+			"user": "item",
+			"category": "item",
+			"target": "self",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 0,
+			"rank": 2,
+			"hype": 25,
+			"anim": "item",
+			"vfx": "confetti",
+			"sfx": "sponsor",
+			"show_tags": [
+				"flashy"
+			]
+		},
+		{
+			"id": "skl_item_elixir",
+			"name": "Premium-Abo-Elixier",
+			"desc": "Volle HP und MP.",
+			"user": "item",
+			"category": "item",
+			"target": "single_ally",
+			"damage_type": "heal",
+			"element": "none",
+			"power": 100,
+			"mp_cost": 0,
+			"rank": 2,
+			"heal_mode": "pct",
+			"mp_restore_pct": 100,
+			"anim": "item",
+			"vfx": "heal"
+		}
+	]
+}

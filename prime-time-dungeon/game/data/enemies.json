@@ -1,0 +1,1477 @@
+{
+	"schema": 1,
+	"pseudo_units": [
+		{
+			"id": "pu_train_gleis9",
+			"name": "Einfahrender Zug",
+			"icon": "train",
+			"action": {
+				"fixed_pct_maxhp": 35,
+				"element": "physical",
+				"ignores_guard": true,
+				"target": "all_party"
+			},
+			"ctr_after": 160,
+			"warn_tag": "boss_train_warning",
+			"warn_at": 2
+		}
+	],
+	"entries": [
+		{
+			"id": "enm_kanalratte",
+			"name": "Kanalratte",
+			"level": 1,
+			"stats": {
+				"hp": 24,
+				"mp": 0,
+				"str": 13,
+				"mag": 3,
+				"def": 5,
+				"res": 3,
+				"spd": 13,
+				"lck": 5
+			},
+			"exp": 12,
+			"credits": 6,
+			"attack_skill": "skl_e_strike",
+			"ai": {
+				"type": "weighted",
+				"actions": [
+					{
+						"skill": "skl_e_bite",
+						"weight": 3,
+						"target": "random"
+					},
+					{
+						"skill": "skl_e_gnaw_poison",
+						"weight": 1,
+						"target": "not_status:sts_poison"
+					}
+				]
+			},
+			"element_mods": {
+				"fire": 1.5
+			},
+			"status_immune": [],
+			"status_resist": {},
+			"drops": [
+				{
+					"item": "itm_bandage",
+					"chance": 0.25
+				},
+				{
+					"item": "itm_antidote",
+					"chance": 0.1
+				}
+			],
+			"tags": [
+				"floor_1",
+				"zone_a",
+				"zone_b"
+			],
+			"model": {
+				"base": "rodent",
+				"scale": 0.8,
+				"pose": "auto",
+				"colors": {
+					"primary": "#6b5b4e",
+					"secondary": "#e88a9a",
+					"eyes": "#ff3030"
+				},
+				"props": [],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 4.8
+			}
+		},
+		{
+			"id": "enm_taubenschwarm",
+			"name": "Taubenschwarm",
+			"level": 2,
+			"stats": {
+				"hp": 20,
+				"mp": 0,
+				"str": 12,
+				"mag": 4,
+				"def": 3,
+				"res": 6,
+				"spd": 19,
+				"lck": 8
+			},
+			"exp": 14,
+			"credits": 5,
+			"attack_skill": "skl_e_strike",
+			"ai": {
+				"type": "weighted",
+				"actions": [
+					{
+						"skill": "skl_e_peck",
+						"weight": 3,
+						"target": "lowest_hp_pct"
+					},
+					{
+						"skill": "skl_e_dive_bomb",
+						"weight": 1,
+						"target": "all_enemies"
+					}
+				]
+			},
+			"element_mods": {
+				"shock": 1.5
+			},
+			"status_immune": [],
+			"status_resist": {},
+			"drops": [
+				{
+					"item": "itm_bandage",
+					"chance": 0.2
+				}
+			],
+			"tags": [
+				"floor_1",
+				"zone_a"
+			],
+			"model": {
+				"base": "swarm",
+				"scale": 1.0,
+				"pose": "auto",
+				"colors": {
+					"primary": "#8c93a6",
+					"secondary": "#5fa38e",
+					"accent": "#e0a040",
+					"eyes": "#ff9a2e"
+				},
+				"props": [],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 6.2,
+				"sight_range": 14.0
+			}
+		},
+		{
+			"id": "enm_pendler",
+			"name": "Pendler (ewig verspätet)",
+			"level": 2,
+			"stats": {
+				"hp": 48,
+				"mp": 0,
+				"str": 17,
+				"mag": 2,
+				"def": 8,
+				"res": 4,
+				"spd": 7,
+				"lck": 3
+			},
+			"exp": 22,
+			"credits": 14,
+			"attack_skill": "skl_e_strike",
+			"ai": {
+				"type": "weighted",
+				"actions": [
+					{
+						"skill": "skl_e_briefcase",
+						"weight": 3,
+						"target": "random"
+					},
+					{
+						"skill": "skl_e_delay_rage",
+						"weight": 10,
+						"target": "random",
+						"cond": {
+							"turn_mod": [
+								3,
+								2
+							]
+						}
+					}
+				]
+			},
+			"element_mods": {
+				"fire": 1.5,
+				"poison": 0.5
+			},
+			"status_immune": [],
+			"status_resist": {},
+			"drops": [
+				{
+					"item": "itm_energy_krawumm",
+					"chance": 0.15
+				}
+			],
+			"tags": [
+				"floor_1",
+				"zone_a"
+			],
+			"model": {
+				"base": "humanoid",
+				"scale": 1.09,
+				"pose": "auto",
+				"colors": {
+					"primary": "#4a4f5a",
+					"secondary": "#4a4f5a",
+					"accent": "#b33a3a",
+					"skin": "#c9c2b8",
+					"eyes": "#1a1420"
+				},
+				"props": [
+					"newspaper_head",
+					"briefcase"
+				],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 3.5
+			}
+		},
+		{
+			"id": "enm_kanalschleim",
+			"name": "Kanalschleim",
+			"level": 2,
+			"stats": {
+				"hp": 40,
+				"mp": 10,
+				"str": 12,
+				"mag": 12,
+				"def": 10,
+				"res": 4,
+				"spd": 9,
+				"lck": 3
+			},
+			"exp": 20,
+			"credits": 8,
+			"attack_skill": "skl_e_strike",
+			"ai": {
+				"type": "weighted",
+				"actions": [
+					{
+						"skill": "skl_e_slam",
+						"weight": 2,
+						"target": "random"
+					},
+					{
+						"skill": "skl_e_toxic_splash",
+						"weight": 2,
+						"target": "not_status:sts_poison"
+					}
+				]
+			},
+			"element_mods": {
+				"fire": 1.5,
+				"physical": 0.5,
+				"poison": 0.0
+			},
+			"status_immune": [
+				"sts_poison"
+			],
+			"status_resist": {},
+			"drops": [
+				{
+					"item": "itm_antidote",
+					"chance": 0.3
+				}
+			],
+			"tags": [
+				"floor_1",
+				"zone_b"
+			],
+			"model": {
+				"base": "blob",
+				"scale": 1.0,
+				"pose": "auto",
+				"colors": {
+					"primary": "#6fbf4a",
+					"secondary": "#d93b3b",
+					"eyes": "#1a1420"
+				},
+				"props": [],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 3.0
+			}
+		},
+		{
+			"id": "enm_rattenschamane",
+			"name": "Rattenschamane",
+			"level": 3,
+			"stats": {
+				"hp": 34,
+				"mp": 30,
+				"str": 9,
+				"mag": 16,
+				"def": 6,
+				"res": 12,
+				"spd": 12,
+				"lck": 6
+			},
+			"exp": 26,
+			"credits": 12,
+			"attack_skill": "skl_e_strike",
+			"ai": {
+				"type": "weighted",
+				"actions": [
+					{
+						"skill": "skl_e_bite",
+						"weight": 1,
+						"target": "random"
+					},
+					{
+						"skill": "skl_e_zap",
+						"weight": 2,
+						"target": "random"
+					},
+					{
+						"skill": "skl_e_rat_heal",
+						"weight": 6,
+						"target": "ally_lowest_hp_pct",
+						"cond": {
+							"ally_hp_below": 0.5
+						}
+					}
+				]
+			},
+			"element_mods": {
+				"fire": 1.5,
+				"shock": 0.5
+			},
+			"status_immune": [],
+			"status_resist": {},
+			"drops": [
+				{
+					"item": "itm_energy_krawumm",
+					"chance": 0.25
+				},
+				{
+					"item": "itm_smelling_salts",
+					"chance": 0.05
+				}
+			],
+			"tags": [
+				"floor_1",
+				"zone_b",
+				"zone_d",
+				"healer"
+			],
+			"model": {
+				"base": "rodent",
+				"scale": 1.3,
+				"pose": "auto",
+				"colors": {
+					"primary": "#5a4a40",
+					"secondary": "#e88a9a",
+					"accent": "#3e2f5b",
+					"eyes": "#ffe66b"
+				},
+				"props": [
+					"staff",
+					"cape",
+					"bottlecap_chain"
+				],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 4.5
+			}
+		},
+		{
+			"id": "enm_kabelsalat",
+			"name": "Kabelsalat",
+			"level": 3,
+			"stats": {
+				"hp": 46,
+				"mp": 20,
+				"str": 14,
+				"mag": 17,
+				"def": 12,
+				"res": 10,
+				"spd": 14,
+				"lck": 5
+			},
+			"exp": 30,
+			"credits": 15,
+			"attack_skill": "skl_e_strike",
+			"ai": {
+				"type": "weighted",
+				"actions": [
+					{
+						"skill": "skl_e_lash",
+						"weight": 2,
+						"target": "random"
+					},
+					{
+						"skill": "skl_e_short_circuit",
+						"weight": 10,
+						"target": "all_enemies",
+						"cond": {
+							"turn_mod": [
+								3,
+								1
+							]
+						}
+					}
+				]
+			},
+			"element_mods": {
+				"ice": 1.5,
+				"fire": 0.5,
+				"shock": 0.0
+			},
+			"status_immune": [],
+			"status_resist": {},
+			"drops": [
+				{
+					"item": "itm_energy_krawumm",
+					"chance": 0.15
+				},
+				{
+					"item": "itm_acc_rubber_boots",
+					"chance": 0.05
+				}
+			],
+			"tags": [
+				"floor_1",
+				"zone_b",
+				"zone_c"
+			],
+			"model": {
+				"base": "blob",
+				"scale": 0.6,
+				"pose": "auto",
+				"colors": {
+					"primary": "#cfcfcf",
+					"secondary": "#1e1e1e",
+					"accent": "#9fe8ff",
+					"eyes": "#9fe8ff"
+				},
+				"props": [
+					"cable_tangle"
+				],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 4.0
+			}
+		},
+		{
+			"id": "enm_kellerspinne",
+			"name": "Kellerspinne",
+			"level": 4,
+			"stats": {
+				"hp": 50,
+				"mp": 10,
+				"str": 22,
+				"mag": 6,
+				"def": 10,
+				"res": 8,
+				"spd": 17,
+				"lck": 10
+			},
+			"exp": 34,
+			"credits": 12,
+			"attack_skill": "skl_e_strike",
+			"ai": {
+				"type": "weighted",
+				"actions": [
+					{
+						"skill": "skl_e_venom_bite",
+						"weight": 3,
+						"target": "not_status:sts_poison"
+					},
+					{
+						"skill": "skl_e_bite",
+						"weight": 1,
+						"target": "random"
+					},
+					{
+						"skill": "skl_e_web",
+						"weight": 2,
+						"target": "not_status:sts_slow",
+						"cond": {
+							"once": true
+						}
+					}
+				]
+			},
+			"element_mods": {
+				"fire": 1.5,
+				"poison": 0.0
+			},
+			"status_immune": [
+				"sts_poison"
+			],
+			"status_resist": {},
+			"drops": [
+				{
+					"item": "itm_antidote",
+					"chance": 0.3
+				},
+				{
+					"item": "itm_bandage",
+					"chance": 0.2
+				}
+			],
+			"tags": [
+				"floor_1",
+				"zone_c"
+			],
+			"model": {
+				"base": "insect",
+				"scale": 1.0,
+				"pose": "auto",
+				"colors": {
+					"primary": "#2b2b33",
+					"secondary": "#c2453a",
+					"accent": "#c2453a",
+					"eyes": "#ffb000"
+				},
+				"props": [],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 5.8
+			}
+		},
+		{
+			"id": "enm_spruehgeist",
+			"name": "Sprühgeist",
+			"level": 4,
+			"stats": {
+				"hp": 44,
+				"mp": 40,
+				"str": 8,
+				"mag": 23,
+				"def": 18,
+				"res": 10,
+				"spd": 15,
+				"lck": 8
+			},
+			"exp": 36,
+			"credits": 18,
+			"attack_skill": "skl_e_strike",
+			"ai": {
+				"type": "weighted",
+				"actions": [
+					{
+						"skill": "skl_e_spray_flame",
+						"weight": 3,
+						"target": "random"
+					},
+					{
+						"skill": "skl_e_fumes",
+						"weight": 1,
+						"target": "all_enemies"
+					},
+					{
+						"skill": "skl_e_slam",
+						"weight": 1,
+						"target": "random"
+					}
+				]
+			},
+			"element_mods": {
+				"ice": 1.5,
+				"physical": 0.5,
+				"poison": 0.0
+			},
+			"status_immune": [
+				"sts_poison"
+			],
+			"status_resist": {},
+			"drops": [
+				{
+					"item": "itm_ice_spray",
+					"chance": 0.2
+				},
+				{
+					"item": "itm_hype_megaphone",
+					"chance": 0.05
+				}
+			],
+			"tags": [
+				"floor_1",
+				"zone_c"
+			],
+			"model": {
+				"base": "specter",
+				"scale": 0.65,
+				"pose": "auto",
+				"colors": {
+					"primary": "#e23e9b",
+					"secondary": "#ffffff",
+					"accent": "#4ad9d9",
+					"eyes": "#1a1420"
+				},
+				"props": [
+					"spray_cap"
+				],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 5.0
+			}
+		},
+		{
+			"id": "enm_rolltreppenkrabbe",
+			"name": "Rolltreppenkrabbe",
+			"level": 5,
+			"stats": {
+				"hp": 72,
+				"mp": 0,
+				"str": 25,
+				"mag": 4,
+				"def": 24,
+				"res": 8,
+				"spd": 10,
+				"lck": 4
+			},
+			"exp": 60,
+			"credits": 20,
+			"attack_skill": "skl_e_strike",
+			"ai": {
+				"type": "weighted",
+				"actions": [
+					{
+						"skill": "skl_e_brace",
+						"weight": 10,
+						"target": "self",
+						"cond": {
+							"turn_mod": [
+								3,
+								0
+							]
+						}
+					},
+					{
+						"skill": "skl_e_step_crush",
+						"weight": 10,
+						"target": "highest_hp",
+						"cond": {
+							"turn_mod": [
+								3,
+								1
+							]
+						}
+					},
+					{
+						"skill": "skl_e_pinch",
+						"weight": 3,
+						"target": "random"
+					}
+				]
+			},
+			"element_mods": {
+				"shock": 1.5,
+				"physical": 0.5,
+				"ice": 0.5
+			},
+			"status_immune": [],
+			"status_resist": {},
+			"drops": [
+				{
+					"item": "itm_brutzel_burger",
+					"chance": 0.2
+				},
+				{
+					"item": "itm_arm_safety_vest",
+					"chance": 0.05
+				}
+			],
+			"tags": [
+				"floor_1",
+				"zone_d"
+			],
+			"model": {
+				"base": "insect",
+				"scale": 1.5,
+				"pose": "auto",
+				"colors": {
+					"primary": "#8a8f96",
+					"secondary": "#f2c230",
+					"accent": "#b84a2e",
+					"eyes": "#f5f0e6"
+				},
+				"props": [
+					"escalator_back",
+					"claws"
+				],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 3.8
+			}
+		},
+		{
+			"id": "enm_rattengardist",
+			"name": "Rattengardist",
+			"level": 6,
+			"stats": {
+				"hp": 78,
+				"mp": 10,
+				"str": 27,
+				"mag": 6,
+				"def": 17,
+				"res": 10,
+				"spd": 14,
+				"lck": 8
+			},
+			"exp": 66,
+			"credits": 22,
+			"attack_skill": "skl_e_strike",
+			"ai": {
+				"type": "weighted",
+				"actions": [
+					{
+						"skill": "skl_e_shield_wall",
+						"weight": 10,
+						"target": "all_allies",
+						"cond": {
+							"once": true
+						}
+					},
+					{
+						"skill": "skl_e_lunge",
+						"weight": 2,
+						"target": "lowest_hp_pct"
+					},
+					{
+						"skill": "skl_e_halberd",
+						"weight": 3,
+						"target": "random"
+					}
+				]
+			},
+			"element_mods": {
+				"fire": 1.5,
+				"ice": 1.5
+			},
+			"status_immune": [],
+			"status_resist": {},
+			"drops": [
+				{
+					"item": "itm_brutzel_burger",
+					"chance": 0.2
+				},
+				{
+					"item": "itm_smelling_salts",
+					"chance": 0.1
+				}
+			],
+			"tags": [
+				"floor_1",
+				"zone_d",
+				"elite"
+			],
+			"model": {
+				"base": "rodent",
+				"scale": 2.0,
+				"pose": "auto",
+				"colors": {
+					"primary": "#4d3f36",
+					"secondary": "#e88a9a",
+					"accent": "#7a1f9e",
+					"eyes": "#ff3030"
+				},
+				"props": [
+					"helmet",
+					"shield",
+					"halberd"
+				],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 5.0
+			}
+		},
+		{
+			"id": "enm_fahrscheinfresser",
+			"name": "Fahrscheinfresser",
+			"level": 4,
+			"stats": {
+				"hp": 60,
+				"mp": 0,
+				"str": 18,
+				"mag": 18,
+				"def": 20,
+				"res": 20,
+				"spd": 16,
+				"lck": 20
+			},
+			"exp": 60,
+			"credits": 100,
+			"attack_skill": "skl_e_strike",
+			"ai": {
+				"type": "weighted",
+				"actions": [
+					{
+						"skill": "skl_e_fine",
+						"weight": 10,
+						"target": "random",
+						"cond": {
+							"once": true
+						}
+					},
+					{
+						"skill": "skl_e_ticket_cut",
+						"weight": 3,
+						"target": "random"
+					},
+					{
+						"skill": "skl_e_escape",
+						"weight": 100,
+						"target": "self",
+						"cond": {
+							"turn_mod": [
+								4,
+								3
+							]
+						}
+					}
+				]
+			},
+			"element_mods": {
+				"shock": 1.5,
+				"physical": 0.5,
+				"poison": 0.0
+			},
+			"status_immune": [
+				"sts_poison"
+			],
+			"status_resist": {},
+			"drops": [
+				{
+					"item": "itm_acc_lucky_ticket",
+					"chance": 0.5
+				}
+			],
+			"tags": [
+				"floor_1",
+				"zone_a",
+				"rare"
+			],
+			"model": {
+				"base": "robot",
+				"scale": 1.2,
+				"pose": "auto",
+				"colors": {
+					"primary": "#2f6fb3",
+					"secondary": "#24578c",
+					"accent": "#9af2ff",
+					"eyes": "#f5f0e6"
+				},
+				"props": [],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 0.0,
+				"sight_range": 0.0,
+				"hear_run": 0.0,
+				"hear_sneak": 0.0
+			}
+		},
+		{
+			"id": "enm_boss_hausmeister",
+			"name": "Der Hausmeister",
+			"level": 6,
+			"boss": true,
+			"stats": {
+				"hp": 330,
+				"mp": 60,
+				"str": 40,
+				"mag": 26,
+				"def": 14,
+				"res": 10,
+				"spd": 12,
+				"lck": 6
+			},
+			"exp": 180,
+			"credits": 150,
+			"attack_skill": "skl_e_strike",
+			"element_mods": {
+				"shock": 1.5,
+				"poison": 0.5
+			},
+			"status_immune": [],
+			"status_resist": {
+				"sts_stun": 0.5,
+				"sts_slow": 0.5
+			},
+			"drops": [],
+			"boss_drops": [
+				{
+					"kind": "item",
+					"id": "itm_key_master",
+					"amount": 1
+				},
+				{
+					"kind": "item",
+					"id": "itm_acc_key_ring",
+					"amount": 1
+				},
+				{
+					"kind": "box",
+					"id": "box_silver",
+					"amount": 1
+				}
+			],
+			"ai": {
+				"type": "phased",
+				"actions": []
+			},
+			"phases": [
+				{
+					"hp_above": 0.6,
+					"on_enter": [
+						{
+							"op": "say",
+							"tag": "boss_intro:enm_boss_hausmeister"
+						}
+					],
+					"actions": [
+						{
+							"skill": "skl_b_rules",
+							"weight": 10,
+							"target": "self",
+							"cond": {
+								"once": true
+							}
+						},
+						{
+							"skill": "skl_b_broom",
+							"weight": 3,
+							"target": "random"
+						},
+						{
+							"skill": "skl_b_keys",
+							"weight": 1,
+							"target": "all_enemies"
+						}
+					]
+				},
+				{
+					"hp_above": 0.25,
+					"on_enter": [
+						{
+							"op": "summon",
+							"enemy": "enm_kanalratte",
+							"count": 1
+						},
+						{
+							"op": "say",
+							"tag": "boss_phase:enm_boss_hausmeister:2"
+						}
+					],
+					"actions": [
+						{
+							"skill": "skl_b_broom",
+							"weight": 2,
+							"target": "random"
+						},
+						{
+							"skill": "skl_b_cleaner_fog",
+							"weight": 2,
+							"target": "all_enemies"
+						},
+						{
+							"skill": "skl_b_keys",
+							"weight": 1,
+							"target": "all_enemies"
+						},
+						{
+							"skill": "skl_b_call_tenant",
+							"weight": 4,
+							"target": "self",
+							"cond": {
+								"allies_alive_below": 2,
+								"turn_mod": [
+									4,
+									0
+								]
+							}
+						}
+					]
+				},
+				{
+					"hp_above": 0.0,
+					"on_enter": [
+						{
+							"op": "status_self",
+							"status": "sts_haste",
+							"turns": 5
+						},
+						{
+							"op": "say",
+							"tag": "boss_phase:enm_boss_hausmeister:3"
+						}
+					],
+					"actions": [
+						{
+							"skill": "skl_b_mop_whirl",
+							"weight": 2,
+							"target": "all_enemies"
+						},
+						{
+							"skill": "skl_b_broom",
+							"weight": 2,
+							"target": "lowest_hp_pct"
+						}
+					]
+				}
+			],
+			"tags": [
+				"floor_1",
+				"zone_c",
+				"boss",
+				"quarter_boss"
+			],
+			"model": {
+				"base": "brute",
+				"scale": 1.36,
+				"pose": "auto",
+				"colors": {
+					"primary": "#7c8a94",
+					"secondary": "#3e4a55",
+					"accent": "#4a3a30",
+					"skin": "#d9a88a",
+					"eyes": "#1a1420"
+				},
+				"props": [
+					"cap",
+					"key_ring",
+					"broom"
+				],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 0.0
+			}
+		},
+		{
+			"id": "enm_boss_rattenkoenigin",
+			"name": "Die Rattenkönigin von Gleis 9",
+			"level": 8,
+			"boss": true,
+			"stats": {
+				"hp": 550,
+				"mp": 120,
+				"str": 52,
+				"mag": 44,
+				"def": 18,
+				"res": 16,
+				"spd": 15,
+				"lck": 10
+			},
+			"exp": 420,
+			"credits": 300,
+			"attack_skill": "skl_e_strike",
+			"element_mods": {
+				"ice": 1.5,
+				"fire": 0.5,
+				"poison": 0.0
+			},
+			"status_immune": [
+				"sts_poison"
+			],
+			"status_resist": {
+				"sts_stun": 0.5,
+				"sts_slow": 0.5
+			},
+			"drops": [],
+			"boss_drops": [
+				{
+					"kind": "item",
+					"id": "itm_acc_queen_crown",
+					"amount": 1
+				},
+				{
+					"kind": "box",
+					"id": "box_gold",
+					"amount": 1
+				}
+			],
+			"ai": {
+				"type": "phased",
+				"actions": []
+			},
+			"phases": [
+				{
+					"hp_above": 0.65,
+					"on_enter": [
+						{
+							"op": "summon",
+							"enemy": "enm_kanalratte",
+							"count": 2
+						},
+						{
+							"op": "say",
+							"tag": "boss_intro:enm_boss_rattenkoenigin"
+						}
+					],
+					"actions": [
+						{
+							"skill": "skl_q_scepter",
+							"weight": 3,
+							"target": "random"
+						},
+						{
+							"skill": "skl_q_plague_bite",
+							"weight": 1,
+							"target": "not_status:sts_poison"
+						},
+						{
+							"skill": "skl_q_summon",
+							"weight": 4,
+							"target": "self",
+							"cond": {
+								"allies_alive_below": 3,
+								"turn_mod": [
+									3,
+									2
+								]
+							}
+						}
+					]
+				},
+				{
+					"hp_above": 0.3,
+					"on_enter": [
+						{
+							"op": "add_pseudo",
+							"unit": "pu_train_gleis9",
+							"ctr": 120
+						},
+						{
+							"op": "say",
+							"tag": "boss_phase:enm_boss_rattenkoenigin:2"
+						}
+					],
+					"actions": [
+						{
+							"skill": "skl_q_scepter",
+							"weight": 3,
+							"target": "random"
+						},
+						{
+							"skill": "skl_q_screech",
+							"weight": 2,
+							"target": "all_enemies"
+						},
+						{
+							"skill": "skl_q_plague_bite",
+							"weight": 1,
+							"target": "random"
+						}
+					]
+				},
+				{
+					"hp_above": 0.0,
+					"on_enter": [
+						{
+							"op": "remove_pseudo",
+							"unit": "pu_train_gleis9"
+						},
+						{
+							"op": "fixed_damage_self",
+							"amount": 72,
+							"min_hp": 1
+						},
+						{
+							"op": "status_self",
+							"status": "sts_haste",
+							"turns": 99
+						},
+						{
+							"op": "say",
+							"tag": "boss_phase:enm_boss_rattenkoenigin:3"
+						}
+					],
+					"actions": [
+						{
+							"skill": "skl_q_scepter",
+							"weight": 3,
+							"target": "lowest_hp_pct"
+						},
+						{
+							"skill": "skl_q_plague_bite",
+							"weight": 2,
+							"target": "random"
+						},
+						{
+							"skill": "skl_q_crown_nova",
+							"weight": 10,
+							"target": "all_enemies",
+							"cond": {
+								"turn_mod": [
+									4,
+									1
+								]
+							}
+						}
+					]
+				}
+			],
+			"tags": [
+				"floor_1",
+				"zone_d",
+				"boss",
+				"floor_boss"
+			],
+			"model": {
+				"base": "rodent",
+				"scale": 4.0,
+				"pose": "quadruped",
+				"colors": {
+					"primary": "#3f3530",
+					"secondary": "#e88a9a",
+					"accent": "#f2eee6",
+					"eyes": "#ff3030"
+				},
+				"props": [
+					"ticket_crown",
+					"cape",
+					"staff",
+					"rat_king_tail"
+				],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 0.0
+			}
+		},
+		{
+			"id": "enm_schaufensterpuppe",
+			"name": "Schaufensterpuppe",
+			"level": 8,
+			"stats": {
+				"hp": 90,
+				"mp": 10,
+				"str": 28,
+				"mag": 8,
+				"def": 22,
+				"res": 12,
+				"spd": 12,
+				"lck": 6
+			},
+			"exp": 88,
+			"credits": 26,
+			"attack_skill": "skl_e_strike",
+			"ai": {
+				"type": "weighted",
+				"actions": [
+					{
+						"skill": "skl_e_strike",
+						"weight": 3,
+						"target": "random"
+					},
+					{
+						"skill": "skl_e_pose",
+						"weight": 4,
+						"target": "self",
+						"cond": {
+							"turn_mod": [
+								3,
+								0
+							]
+						}
+					}
+				]
+			},
+			"element_mods": {
+				"fire": 1.5,
+				"ice": 0.5
+			},
+			"status_immune": [],
+			"status_resist": {},
+			"drops": [
+				{
+					"item": "itm_brutzel_burger",
+					"chance": 0.15
+				}
+			],
+			"tags": [
+				"floor_2",
+				"mall"
+			],
+			"model": {
+				"base": "humanoid",
+				"scale": 1.0,
+				"pose": "auto",
+				"colors": {
+					"primary": "#e8dccb",
+					"secondary": "#e8dccb",
+					"accent": "#e8dccb",
+					"skin": "#e8dccb",
+					"eyes": "#e8dccb"
+				},
+				"props": [],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 4.2
+			}
+		},
+		{
+			"id": "enm_einkaufswagen_rudel",
+			"name": "Einkaufswagen-Rudel",
+			"level": 8,
+			"stats": {
+				"hp": 55,
+				"mp": 0,
+				"str": 24,
+				"mag": 4,
+				"def": 16,
+				"res": 8,
+				"spd": 20,
+				"lck": 8
+			},
+			"exp": 52,
+			"credits": 18,
+			"attack_skill": "skl_e_strike",
+			"ai": {
+				"type": "weighted",
+				"actions": [
+					{
+						"skill": "skl_e_ram",
+						"weight": 3,
+						"target": "lowest_hp_pct"
+					},
+					{
+						"skill": "skl_e_strike",
+						"weight": 1,
+						"target": "random"
+					}
+				]
+			},
+			"element_mods": {
+				"shock": 1.5,
+				"physical": 0.5
+			},
+			"status_immune": [],
+			"status_resist": {},
+			"drops": [
+				{
+					"item": "itm_energy_krawumm",
+					"chance": 0.15
+				}
+			],
+			"tags": [
+				"floor_2",
+				"mall",
+				"pack"
+			],
+			"model": {
+				"base": "robot",
+				"scale": 0.6,
+				"pose": "auto",
+				"colors": {
+					"primary": "#c0c6cc",
+					"secondary": "#8a8f96",
+					"accent": "#e8455a",
+					"eyes": "#fff2c8"
+				},
+				"props": [
+					"cart"
+				],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 7.0
+			}
+		},
+		{
+			"id": "enm_rabattschild",
+			"name": "Rabattschild-Golem",
+			"level": 9,
+			"stats": {
+				"hp": 120,
+				"mp": 20,
+				"str": 30,
+				"mag": 20,
+				"def": 26,
+				"res": 14,
+				"spd": 9,
+				"lck": 6
+			},
+			"exp": 110,
+			"credits": 34,
+			"attack_skill": "skl_e_strike",
+			"ai": {
+				"type": "weighted",
+				"actions": [
+					{
+						"skill": "skl_e_strike",
+						"weight": 3,
+						"target": "random"
+					},
+					{
+						"skill": "skl_e_price_slam",
+						"weight": 10,
+						"target": "random",
+						"cond": {
+							"turn_mod": [
+								3,
+								2
+							]
+						}
+					}
+				]
+			},
+			"element_mods": {
+				"ice": 1.5,
+				"fire": 0.5
+			},
+			"status_immune": [],
+			"status_resist": {},
+			"drops": [
+				{
+					"item": "itm_elixir",
+					"chance": 0.03
+				},
+				{
+					"item": "itm_brutzel_burger",
+					"chance": 0.2
+				}
+			],
+			"tags": [
+				"floor_2",
+				"mall"
+			],
+			"model": {
+				"base": "brute",
+				"scale": 0.8,
+				"pose": "auto",
+				"colors": {
+					"primary": "#ffffff",
+					"secondary": "#d9cbb0",
+					"accent": "#e8455a",
+					"skin": "#ffffff",
+					"eyes": "#1a1420"
+				},
+				"props": [
+					"discount_tag"
+				],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 3.2
+			}
+		}
+	]
+}

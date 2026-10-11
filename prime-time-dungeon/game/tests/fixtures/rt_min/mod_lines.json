@@ -1,0 +1,276 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "mod_intro_01",
+			"tag": "intro",
+			"voice": "mod",
+			"text": "Guten Abend, Galaxis! Willkommen bei DUNGEON PRIME TIME!"
+		},
+		{
+			"id": "mod_floor_start_01",
+			"tag": "floor_start",
+			"voice": "mod",
+			"text": "Etage {floor}! Neuer Countdown, neue Monster, gleiche Gage: keine."
+		},
+		{
+			"id": "mod_first_fight_01",
+			"tag": "first_fight",
+			"voice": "mod",
+			"text": "Ihr erster Kampf! Die Leiste rechts zeigt, wer dran ist."
+		},
+		{
+			"id": "mod_achievement_generic_01",
+			"tag": "achievement_generic",
+			"voice": "mod",
+			"text": "Achievement freigeschaltet: {achievement}! Applaus vom Band, bitte."
+		},
+		{
+			"id": "mod_low_hp_01",
+			"tag": "low_hp",
+			"voice": "mod",
+			"text": "Ihre HP sind niedrig! Die Quote ist hoch! Ein Dilemma!"
+		},
+		{
+			"id": "mod_kill_streak_01",
+			"tag": "kill_streak",
+			"voice": "mod",
+			"text": "Kill-Serie! Jemand bringe {name} einen Vertrag."
+		},
+		{
+			"id": "mod_crit_01",
+			"tag": "crit",
+			"voice": "mod",
+			"text": "KRITISCH! Das hat sogar mir wehgetan, und ich bin Software."
+		},
+		{
+			"id": "mod_weakness_01",
+			"tag": "weakness",
+			"voice": "mod",
+			"text": "Schwachstelle gefunden. Wie bei meinen Ex-Producern."
+		},
+		{
+			"id": "mod_overkill_01",
+			"tag": "overkill",
+			"voice": "mod",
+			"text": "Overkill! Die Jugendschutz-Abteilung hat gekündigt."
+		},
+		{
+			"id": "mod_stunt_success_01",
+			"tag": "stunt_success",
+			"voice": "mod",
+			"text": "WAS FÜR EIN STUNT! Das kommt in die Jahresrückschau!"
+		},
+		{
+			"id": "mod_stunt_fail_01",
+			"tag": "stunt_fail",
+			"voice": "mod",
+			"text": "Autsch. Aber Schadenfreude ist auch Quote."
+		},
+		{
+			"id": "mod_boring_fight_01",
+			"tag": "boring_fight",
+			"voice": "mod",
+			"text": "Zum dritten Mal dasselbe. Die Zuschauer wechseln zu einer Kochshow."
+		},
+		{
+			"id": "mod_flee_01",
+			"tag": "flee",
+			"voice": "mod",
+			"text": "Flucht! Mutig ist anders. Klug manchmal auch."
+		},
+		{
+			"id": "mod_flee_fail_01",
+			"tag": "flee_fail",
+			"voice": "mod",
+			"text": "Fluchtversuch gescheitert. Das Monster hat Sie freundlich zurückgebeten."
+		},
+		{
+			"id": "mod_sponsor_gift_01",
+			"tag": "sponsor_gift",
+			"voice": "mod",
+			"text": "Dieser Moment wird Ihnen präsentiert von {sponsor}!"
+		},
+		{
+			"id": "mod_timer_warn_600_01",
+			"tag": "timer_warn_600",
+			"voice": "chat",
+			"text": "noch 10 min?? lauft!!"
+		},
+		{
+			"id": "mod_timer_warn_300_01",
+			"tag": "timer_warn_300",
+			"voice": "mod",
+			"text": "Noch fünf Minuten! Die Etage bricht bald zusammen. Wir haben Popcorn."
+		},
+		{
+			"id": "mod_timer_warn_60_01",
+			"tag": "timer_warn_60",
+			"voice": "mod",
+			"text": "EINE MINUTE! Laufen Sie! LAUFEN SIE!"
+		},
+		{
+			"id": "mod_timer_expired_01",
+			"tag": "timer_expired",
+			"voice": "mod",
+			"text": "Und … Sendeschluss. Die Etage ist eingestürzt. Mit Ihnen darin. Schade."
+		},
+		{
+			"id": "mod_lootbox_open_bronze_01",
+			"tag": "lootbox_open_bronze",
+			"voice": "mod",
+			"text": "Bronze. Wie die Medaille für ‚Dabei sein ist alles‘."
+		},
+		{
+			"id": "mod_lootbox_open_silver_01",
+			"tag": "lootbox_open_silver",
+			"voice": "mod",
+			"text": "Silber! Jetzt wird’s interessant. Ein bisschen."
+		},
+		{
+			"id": "mod_lootbox_open_gold_01",
+			"tag": "lootbox_open_gold",
+			"voice": "mod",
+			"text": "GOLD! Bitte Trommelwirbel. Den teuren!"
+		},
+		{
+			"id": "mod_lootbox_open_fan_01",
+			"tag": "lootbox_open_fan",
+			"voice": "mod",
+			"text": "Eine Fan-Box! Ihre Fans haben zusammengelegt."
+		},
+		{
+			"id": "mod_lootbox_pity_01",
+			"tag": "lootbox_pity",
+			"voice": "mod",
+			"text": "Endlich Glück! Und nein, das ist kein Algorithmus. Doch, ist es. Egal!"
+		},
+		{
+			"id": "mod_death_01",
+			"tag": "death",
+			"voice": "mod",
+			"text": "Sendeschluss. {name} und der Graf sind gefallen. Wiederholung um 3 Uhr nachts."
+		},
+		{
+			"id": "mod_mopsula_ko_01",
+			"tag": "mopsula_ko",
+			"voice": "mod",
+			"text": "DER GRAF IST GEFALLEN! Die Quote stürzt ab! Helfen Sie ihm, sofort!"
+		},
+		{
+			"id": "mod_kai_ko_01",
+			"tag": "kai_ko",
+			"voice": "mod",
+			"text": "{name} ist KO! Der Graf ist jetzt allein. Das wird … aristokratisch."
+		},
+		{
+			"id": "mod_revive_01",
+			"tag": "revive",
+			"voice": "mod",
+			"text": "Wiederbelebt! Comebacks sind unser Lieblingsgenre."
+		},
+		{
+			"id": "mod_boss_defeated_01",
+			"tag": "boss_defeated",
+			"voice": "mod",
+			"text": "Boss besiegt! Die Einschaltquote macht gerade einen Handstand."
+		},
+		{
+			"id": "mod_level_up_01",
+			"tag": "level_up",
+			"voice": "mod",
+			"text": "Stufenaufstieg! Mehr HP, mehr MP, gleich wenig Gage."
+		},
+		{
+			"id": "mod_follower_milestone_01",
+			"tag": "follower_milestone",
+			"voice": "mod",
+			"text": "{followers} Follower! Ihre Fans schicken eine Box. Und Liebesbriefe an den Hund."
+		},
+		{
+			"id": "mod_safe_room_enter_01",
+			"tag": "safe_room_enter",
+			"voice": "mod",
+			"text": "Werbepause! Heilen Sie sich, wir verkaufen solange Ihre Highlights."
+		},
+		{
+			"id": "mod_vendor_buy_01",
+			"tag": "vendor_buy",
+			"voice": "mod",
+			"text": "{item}! Exzellente Wahl. Die anderen waren schlechter. Für uns."
+		},
+		{
+			"id": "mod_stairs_found_01",
+			"tag": "stairs_found",
+			"voice": "mod",
+			"text": "Da ist sie, die Treppe. Ich würde ja noch ein bisschen bleiben."
+		},
+		{
+			"id": "mod_floor_end_01",
+			"tag": "floor_end",
+			"voice": "mod",
+			"text": "Etage {floor} geschafft! Nach der Werbung: mehr. Bleiben Sie dran!"
+		},
+		{
+			"id": "mod_chat_hype_high_01",
+			"tag": "chat_hype_high",
+			"voice": "chat",
+			"text": "DAS IST KINO"
+		},
+		{
+			"id": "mod_chat_hype_mid_01",
+			"tag": "chat_hype_mid",
+			"voice": "chat",
+			"text": "solide runde bisher"
+		},
+		{
+			"id": "mod_chat_hype_low_01",
+			"tag": "chat_hype_low",
+			"voice": "chat",
+			"text": "gähn"
+		},
+		{
+			"id": "mod_chat_crit_01",
+			"tag": "chat_crit",
+			"voice": "chat",
+			"text": "KRIT!!"
+		},
+		{
+			"id": "mod_chat_boring_01",
+			"tag": "chat_boring",
+			"voice": "chat",
+			"text": "schon wieder dasselbe?"
+		},
+		{
+			"id": "mod_chat_mopsula_01",
+			"tag": "chat_mopsula",
+			"voice": "chat",
+			"text": "GRAF MOPSULA <3"
+		},
+		{
+			"id": "mod_chat_handle_01",
+			"tag": "chat_handle",
+			"voice": "chat",
+			"text": "OmaHilde1953"
+		},
+		{
+			"id": "mod_mopsula_idle_01",
+			"tag": "mopsula_idle",
+			"voice": "mopsula",
+			"text": "Ein Sofa. Endlich ein Möbel, das Unseren Stand begreift."
+		},
+		{
+			"id": "mod_achievement_ach_first_blood_01",
+			"tag": "achievement:ach_first_blood",
+			"voice": "mod",
+			"text": "Erster Kill! Die Galaxis hat Blut geleckt. Bildlich."
+		},
+		{
+			"id": "mod_rt_set_quiet_01",
+			"tag": "rt_set_quiet",
+			"voice": "mod",
+			"text": "Ruhe am Set! Kamera läuft, Monster auf Position, Sie auf eigene Gefahr.",
+			"weight": 1
+		}
+	]
+}

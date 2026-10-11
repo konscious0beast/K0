@@ -1,0 +1,2159 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "mod_intro_01",
+			"tag": "intro",
+			"voice": "mod",
+			"text": "Guten Abend, Galaxis! Willkommen bei DUNGEON PRIME TIME — der Show, die Ihren Planeten gekostet hat!",
+			"weight": 1
+		},
+		{
+			"id": "mod_intro_02",
+			"tag": "intro",
+			"voice": "mod",
+			"text": "Kandidat:in {name}, Sie sind live. Bitte nicht in die Kamera weinen, das spiegelt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_intro_03",
+			"tag": "intro",
+			"voice": "mod",
+			"text": "Ich bin M.O.D., Ihre Moderatorin, Ihre Regie, Ihr Schicksal. Lächeln!",
+			"weight": 1
+		},
+		{
+			"id": "mod_hero_pick_kai_01",
+			"tag": "hero_pick:kai",
+			"voice": "mod",
+			"text": "Kandidat:in {name} übernimmt. Der Graf assistiert. Unter Protest, aber in HD.",
+			"weight": 1
+		},
+		{
+			"id": "mod_hero_pick_mopsula_01",
+			"tag": "hero_pick:mopsula",
+			"voice": "mod",
+			"text": "Der Graf hat die Fernbedienung an sich genommen. {name} darf folgen. Die Quote jubelt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_hero_switch_kai_01",
+			"tag": "hero_switch:kai",
+			"voice": "mod",
+			"text": "Rollentausch! {name} führt wieder. Der Graf nennt es ‚wohlverdiente Siesta‘.",
+			"weight": 1
+		},
+		{
+			"id": "mod_hero_switch_kai_02",
+			"tag": "hero_switch:kai",
+			"voice": "mod",
+			"text": "{name} übernimmt die Führung, der Graf das Sofa. Gerechte Arbeitsteilung.",
+			"weight": 1
+		},
+		{
+			"id": "mod_hero_switch_mopsula_01",
+			"tag": "hero_switch:mopsula",
+			"voice": "mod",
+			"text": "Rollentausch! Der Graf führt. Bitte Abstand halten, er bellt in Stereo.",
+			"weight": 1
+		},
+		{
+			"id": "mod_hero_switch_mopsula_02",
+			"tag": "hero_switch:mopsula",
+			"voice": "mod",
+			"text": "Der Graf übernimmt. {name} darf sich ausruhen. Unter Beobachtung, versteht sich.",
+			"weight": 1
+		},
+		{
+			"id": "mod_tutorial_explore_mopsula_01",
+			"tag": "tutorial_explore:mopsula",
+			"voice": "mod",
+			"text": "Willkommen in der Unterstadt, Graf! Laufen Sie los – {name} kommt hinterher. Die Kamera auch.",
+			"weight": 1
+		},
+		{
+			"id": "mod_tutorial_sneak_mopsula_01",
+			"tag": "tutorial_sneak:mopsula",
+			"voice": "mod",
+			"text": "Da vorn schlafen zwei Ratten. Bellen Sie, Graf – verdutzte Monster erwischt man von jeder Seite zuerst.",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_bark_01",
+			"tag": "chat_bark",
+			"voice": "chat",
+			"text": "WUFF IN HD",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_bark_02",
+			"tag": "chat_bark",
+			"voice": "chat",
+			"text": "der graf hat gesprochen",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_bark_03",
+			"tag": "chat_bark",
+			"voice": "chat",
+			"text": "ich hab mich auch erschrocken",
+			"weight": 1
+		},
+		{
+			"id": "mod_secret_wall_01",
+			"tag": "secret_wall",
+			"voice": "mod",
+			"text": "Die Wand war aus Pappe. Wie unser Budget. Bitte schneiden Sie das raus.",
+			"weight": 1
+		},
+		{
+			"id": "mod_secret_wall_02",
+			"tag": "secret_wall",
+			"voice": "mod",
+			"text": "Sie haben hinter die Kulissen geschaut. Das kostet normalerweise extra.",
+			"weight": 1
+		},
+		{
+			"id": "mod_secret_note_1_01",
+			"tag": "secret_note:1",
+			"voice": "mod",
+			"text": "Regie-Notiz am Kiosk: ‚Sandwiches sind Requisite. NICHT ESSEN.‘ Das erklärt einiges.",
+			"weight": 1
+		},
+		{
+			"id": "mod_secret_note_2_01",
+			"tag": "secret_note:2",
+			"voice": "mod",
+			"text": "Hinter der Kulisse klebt ein Zettel: ‚Wand ist aus Pappe. Merkt eh keiner.‘ Tja.",
+			"weight": 1
+		},
+		{
+			"id": "mod_secret_note_3_01",
+			"tag": "secret_note:3",
+			"voice": "mod",
+			"text": "Regie-Notiz im Keller: ‚Ratten nach der Show zurück in Kiste 3.‘ Kiste 3 ist leer. Hm.",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_secret_01",
+			"tag": "chat_secret",
+			"voice": "chat",
+			"text": "PAPPWAND LOL",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_secret_02",
+			"tag": "chat_secret",
+			"voice": "chat",
+			"text": "wusste ichs, alles kulisse",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_secret_03",
+			"tag": "chat_secret",
+			"voice": "chat",
+			"text": "secret gefunden!!",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_secret_hint_01",
+			"tag": "chat_secret_hint",
+			"voice": "chat",
+			"text": "die rissige wand da… ist die aus pappe??",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_secret_hint_02",
+			"tag": "chat_secret_hint",
+			"voice": "chat",
+			"text": "hau mal gegen die wand mit dem riss",
+			"weight": 1
+		},
+		{
+			"id": "mod_floor_start_01",
+			"tag": "floor_start",
+			"voice": "mod",
+			"text": "Etage {floor}! Neuer Countdown, neue Monster, gleiche Gage: keine.",
+			"weight": 1
+		},
+		{
+			"id": "mod_floor_start_02",
+			"tag": "floor_start",
+			"voice": "mod",
+			"text": "Die Uhr läuft. Die Kameras laufen. Laufen Sie auch.",
+			"weight": 1
+		},
+		{
+			"id": "mod_first_fight_01",
+			"tag": "first_fight",
+			"voice": "mod",
+			"text": "Ihr erster Kampf! Die Leiste rechts zeigt, wer dran ist. Die Leiste links zeigt, wie sehr Sie verlieren.",
+			"weight": 1
+		},
+		{
+			"id": "mod_first_fight_02",
+			"tag": "first_fight",
+			"voice": "mod",
+			"text": "Tipp der Regie: Monster hassen es, wenn man sie trifft.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_generic_01",
+			"tag": "achievement_generic",
+			"voice": "mod",
+			"text": "Achievement freigeschaltet: {achievement}! Applaus vom Band, bitte.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_generic_02",
+			"tag": "achievement_generic",
+			"voice": "mod",
+			"text": "{achievement}! Ihre Mutter wäre stolz, wenn sie noch Empfang hätte.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_generic_03",
+			"tag": "achievement_generic",
+			"voice": "mod",
+			"text": "Eine Lootbox für Sie! Öffnen nur im Safe Room. Vorfreude ist Content.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_generic_04",
+			"tag": "achievement_generic",
+			"voice": "mod",
+			"text": "Neues Achievement. Die Juristen prüfen noch, ob es zählt. Es zählt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_announce_mar_mop_only_01",
+			"tag": "marotte_announce:mar_mop_only",
+			"voice": "mod",
+			"text": "Ich habe heute eine Schwäche für Wischmopps. Fragen Sie nicht. Wischen Sie.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_hit_mar_mop_only_01",
+			"tag": "marotte_hit:mar_mop_only",
+			"voice": "mod",
+			"text": "Mit dem Mopp! Ich bekomme Gänsehaut. Ich habe keine Haut.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_announce_mar_graf_finale_01",
+			"tag": "marotte_announce:mar_graf_finale",
+			"voice": "mod",
+			"text": "Heute will ich den Grafen glänzen sehen. Den letzten Treffer, bitte. Mit Etikette.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_hit_mar_graf_finale_01",
+			"tag": "marotte_hit:mar_graf_finale",
+			"voice": "mod",
+			"text": "Der Graf beendet es. Mit einem Niesen. Zeitlos.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_announce_mar_variety_01",
+			"tag": "marotte_announce:mar_variety",
+			"voice": "mod",
+			"text": "Heute zählt Stil: vier verschiedene Aktionen in einem Kampf, und ich vergebe Herzchen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_hit_mar_variety_01",
+			"tag": "marotte_hit:mar_variety",
+			"voice": "mod",
+			"text": "Abwechslung! Die Jury zückt die Zehn.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_announce_mar_sneaky_01",
+			"tag": "marotte_announce:mar_sneaky",
+			"voice": "mod",
+			"text": "Heute mag ich Schleichwerbung: anschleichen, zuerst zuschlagen. Überraschung ist Quote.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_hit_mar_sneaky_01",
+			"tag": "marotte_hit:mar_sneaky",
+			"voice": "mod",
+			"text": "Erwischt, bevor sie es merkten. Ich liebe Pünktlichkeit.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_announce_mar_pacifist_01",
+			"tag": "marotte_announce:mar_pacifist",
+			"voice": "mod",
+			"text": "Heute mag ich es ruhig. Drei neue Räume ohne Prügelei, und ich werde sentimental.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_hit_mar_pacifist_01",
+			"tag": "marotte_hit:mar_pacifist",
+			"voice": "mod",
+			"text": "Drei Räume Frieden. Die Werbekunden sind nervös. Ich bin gerührt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_announce_mar_secondhand_01",
+			"tag": "marotte_announce:mar_secondhand",
+			"voice": "mod",
+			"text": "Meine Laune heute: Flohmarkt. Nur gewöhnliche Ausrüstung, bitte. Vintage ist Quote.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_hit_mar_secondhand_01",
+			"tag": "marotte_hit:mar_secondhand",
+			"voice": "mod",
+			"text": "Gewonnen in Ramsch-Couture. Die Modeabteilung weint vor Glück.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_announce_mar_speed_01",
+			"tag": "marotte_announce:mar_speed",
+			"voice": "mod",
+			"text": "Ich habe heute wenig Sendezeit. Kämpfe in höchstens drei Zügen, und ich liebe Sie.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_hit_mar_speed_01",
+			"tag": "marotte_hit:mar_speed",
+			"voice": "mod",
+			"text": "Zack, fertig! So schnell schneidet nicht mal mein Praktikant.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_announce_mar_stunt_01",
+			"tag": "marotte_announce:mar_stunt",
+			"voice": "mod",
+			"text": "Heute Abend: Akrobatik! Ein gelungener Stunt pro Kampf, und ich bin Ihr Fan.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_hit_mar_stunt_01",
+			"tag": "marotte_hit:mar_stunt",
+			"voice": "mod",
+			"text": "Gelandet! Ich habe die Zeitlupe schon dreimal angesehen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_announce_mar_bio_01",
+			"tag": "marotte_announce:mar_bio",
+			"voice": "mod",
+			"text": "Heute bin ich auf Natur. Keine Items, keine Sponsoren. Ja, ich höre mich selbst.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_hit_mar_bio_01",
+			"tag": "marotte_hit:mar_bio",
+			"voice": "mod",
+			"text": "Ohne Zusatzstoffe gewonnen. Ich verleihe Ihnen das Siegel ‚garantiert ungesponsert‘.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_announce_mar_brave_01",
+			"tag": "marotte_announce:mar_brave",
+			"voice": "mod",
+			"text": "Heute mag ich Mut. Kein Verteidigen, kein Weglaufen. Nur nach vorn.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_hit_mar_brave_01",
+			"tag": "marotte_hit:mar_brave",
+			"voice": "mod",
+			"text": "Nicht einen Schritt zurück! Die Versicherung hat aufgelegt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_announce_mar_gourmet_01",
+			"tag": "marotte_announce:mar_gourmet",
+			"voice": "mod",
+			"text": "Ich habe Appetit auf Schwachstellen. Drei pro Kampf, serviert mit Stil.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_hit_mar_gourmet_01",
+			"tag": "marotte_hit:mar_gourmet",
+			"voice": "mod",
+			"text": "Genau da, wo es wehtut. Drei Gänge, null Mitleid.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_won_01",
+			"tag": "marotte_won",
+			"voice": "mod",
+			"text": "Wette gewonnen! Sie haben verstanden, was ich mag. Das ist mir fast unheimlich.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_won_02",
+			"tag": "marotte_won",
+			"voice": "mod",
+			"text": "Drei Herzen voll! Ein Fanpost-Paket ist unterwegs. Die Poststelle stöhnt schon.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_won_mar_mop_only_01",
+			"tag": "marotte_won:mar_mop_only",
+			"voice": "mod",
+			"text": "Drei Siege mit dem Mopp. Ich lasse ihn vergolden. Also den Mopp, nicht Sie.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_won_mar_graf_finale_01",
+			"tag": "marotte_won:mar_graf_finale",
+			"voice": "mod",
+			"text": "Dreimal das letzte Wort für den Grafen. Er hat es sich notiert. Auf Pergament.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_missed_01",
+			"tag": "marotte_missed",
+			"voice": "mod",
+			"text": "Meine Vorliebe blieb unerfüllt. Ich trage es mit Fassung. Und Statistik.",
+			"weight": 1
+		},
+		{
+			"id": "mod_marotte_missed_02",
+			"tag": "marotte_missed",
+			"voice": "mod",
+			"text": "Sie haben ignoriert, was ich mag. Mutig. Ich schreibe es in mein Tagebuch. In Großbuchstaben.",
+			"weight": 1
+		},
+		{
+			"id": "mod_liga_hint_01",
+			"tag": "liga_hint",
+			"voice": "mod",
+			"text": "Übrigens: Wer ohne Rüstung und ohne Accessoire kämpft, kriegt bei mir Bonuspunkte. Ich sage das nur.",
+			"weight": 1
+		},
+		{
+			"id": "mod_liga_enter_1_01",
+			"tag": "liga_enter:1",
+			"voice": "mod",
+			"text": "Kandidat:in ohne Rüstung, ohne Accessoire. § 3 Kleiderordnung sagt nein, die Quote sagt JA.",
+			"weight": 1
+		},
+		{
+			"id": "mod_liga_enter_1_02",
+			"tag": "liga_enter:1",
+			"voice": "mod",
+			"text": "Unterhosen-Liga! Die Versicherung hat gekündigt, das Publikum hat abonniert.",
+			"weight": 1
+		},
+		{
+			"id": "mod_liga_enter_1_mopsula_01",
+			"tag": "liga_enter:1:mopsula",
+			"voice": "mod",
+			"text": "Der Graf trägt heute: Würde. Und sein Fell. Das Publikum ist entzückt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_liga_enter_2_01",
+			"tag": "liga_enter:2",
+			"voice": "mod",
+			"text": "Einmal Doppel-Feinripp, bitte. Mit scharf? Nein, mit Wischmopp.",
+			"weight": 1
+		},
+		{
+			"id": "mod_liga_enter_2_02",
+			"tag": "liga_enter:2",
+			"voice": "mod",
+			"text": "Beide ohne Rüstung. Die Kostümabteilung hat heute frei. Die Quote nicht.",
+			"weight": 1
+		},
+		{
+			"id": "mod_liga_win_01",
+			"tag": "liga_win",
+			"voice": "mod",
+			"text": "Gewonnen. Im Feinripp. Ich reiche die Szene beim Preis für Zivilcourage ein.",
+			"weight": 1
+		},
+		{
+			"id": "mod_liga_floor_01",
+			"tag": "liga_floor",
+			"voice": "mod",
+			"text": "Eine ganze Etage im Doppel-Feinripp. Die Rechtsabteilung prüft, ob das legal ist. Es ist legendär.",
+			"weight": 1
+		},
+		{
+			"id": "mod_liga_leave_01",
+			"tag": "liga_leave",
+			"voice": "mod",
+			"text": "Rüstung wieder an? Verständlich. Die Zuschauer:innen seufzen leise.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_ul_first_01",
+			"tag": "achievement:ach_ul_first",
+			"voice": "mod",
+			"text": "Einmal ohne alles! Die Imbissbude nebenan bietet Ihnen einen Werbevertrag an.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_duo_first_01",
+			"tag": "achievement:ach_duo_first",
+			"voice": "mod",
+			"text": "Doppel-Feinripp! Der Graf nennt es ‚Sommerkollektion‘. Ich nenne es Quote.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_bets_5_01",
+			"tag": "achievement:ach_bets_5",
+			"voice": "mod",
+			"text": "Fünf Wetten gewonnen. Sie kennen mich besser als meine Programmierer.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_ul_boss_01",
+			"tag": "achievement:ach_ul_boss",
+			"voice": "mod",
+			"text": "Ein Boss, besiegt ohne Rüstung. Die Kantine benennt ein Gericht nach Ihnen. Es ist leicht bekömmlich.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_duo_floor_01",
+			"tag": "achievement:ach_duo_floor",
+			"voice": "mod",
+			"text": "Eine ganze Etage im Doppel-Feinripp! Ich habe das Archiv angewiesen, es nie zu löschen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_duo_flawless_01",
+			"tag": "achievement:ach_duo_flawless",
+			"voice": "mod",
+			"text": "Der Etagenboss, kein K.O., keine Rüstung. Ich muss mich setzen. Ich habe keinen Stuhl.",
+			"weight": 1
+		},
+		{
+			"id": "mod_low_hp_01",
+			"tag": "low_hp",
+			"voice": "mod",
+			"text": "Ihre HP sind niedrig! Die Quote ist hoch! Ein Dilemma!",
+			"weight": 1
+		},
+		{
+			"id": "mod_low_hp_02",
+			"tag": "low_hp",
+			"voice": "mod",
+			"text": "Kandidat:in in Lebensgefahr — Kamera 2, Nahaufnahme!",
+			"weight": 1
+		},
+		{
+			"id": "mod_low_hp_03",
+			"tag": "low_hp",
+			"voice": "mod",
+			"text": "Bitte jetzt nicht sterben, der Werbeblock ist noch nicht verkauft.",
+			"weight": 1
+		},
+		{
+			"id": "mod_kill_streak_01",
+			"tag": "kill_streak",
+			"voice": "mod",
+			"text": "Drei auf einen Streich! Das Studiopublikum tobt. Das Studiopublikum ist eine Tonspur, aber trotzdem!",
+			"weight": 1
+		},
+		{
+			"id": "mod_kill_streak_02",
+			"tag": "kill_streak",
+			"voice": "mod",
+			"text": "Kill-Serie! Jemand bringe {name} einen Vertrag.",
+			"weight": 1
+		},
+		{
+			"id": "mod_kill_streak_03",
+			"tag": "kill_streak",
+			"voice": "mod",
+			"text": "Das nennt man bei uns ‚Programmgestaltung‘.",
+			"weight": 1
+		},
+		{
+			"id": "mod_crit_01",
+			"tag": "crit",
+			"voice": "mod",
+			"text": "KRITISCH! Das hat sogar mir wehgetan, und ich bin Software.",
+			"weight": 1
+		},
+		{
+			"id": "mod_crit_02",
+			"tag": "crit",
+			"voice": "mod",
+			"text": "Volltreffer! Zeitlupe, bitte. Nochmal. Nochmal!",
+			"weight": 1
+		},
+		{
+			"id": "mod_weakness_01",
+			"tag": "weakness",
+			"voice": "mod",
+			"text": "Schwachstelle gefunden. Wie bei meinen Ex-Producern.",
+			"weight": 1
+		},
+		{
+			"id": "mod_weakness_02",
+			"tag": "weakness",
+			"voice": "mod",
+			"text": "Genau da! Sie haben das Handbuch gelesen. Es gibt kein Handbuch.",
+			"weight": 1
+		},
+		{
+			"id": "mod_overkill_01",
+			"tag": "overkill",
+			"voice": "mod",
+			"text": "Das war … mehr als nötig. Wunderbar!",
+			"weight": 1
+		},
+		{
+			"id": "mod_overkill_02",
+			"tag": "overkill",
+			"voice": "mod",
+			"text": "Overkill! Die Jugendschutz-Abteilung hat gekündigt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_stunt_success_01",
+			"tag": "stunt_success",
+			"voice": "mod",
+			"text": "WAS FÜR EIN STUNT! Das kommt in die Jahresrückschau!",
+			"weight": 1
+		},
+		{
+			"id": "mod_stunt_success_02",
+			"tag": "stunt_success",
+			"voice": "mod",
+			"text": "Ich hätte es nie für möglich gehalten. Ich habe dagegen gewettet. Egal!",
+			"weight": 1
+		},
+		{
+			"id": "mod_stunt_success_03",
+			"tag": "stunt_success",
+			"voice": "mod",
+			"text": "Das, liebe Galaxis, ist Prime Time!",
+			"weight": 1
+		},
+		{
+			"id": "mod_stunt_fail_01",
+			"tag": "stunt_fail",
+			"voice": "mod",
+			"text": "Autsch. Aber Schadenfreude ist auch Quote.",
+			"weight": 1
+		},
+		{
+			"id": "mod_stunt_fail_02",
+			"tag": "stunt_fail",
+			"voice": "mod",
+			"text": "Der Stunt ist misslungen. Die Wiederholung läuft in Dauerschleife.",
+			"weight": 1
+		},
+		{
+			"id": "mod_stunt_fail_03",
+			"tag": "stunt_fail",
+			"voice": "mod",
+			"text": "Gemäß § 4 der Showordnung: Lachen ist ausdrücklich erlaubt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boring_fight_01",
+			"tag": "boring_fight",
+			"voice": "mod",
+			"text": "Zum dritten Mal dasselbe. Die Zuschauer wechseln zu einer Kochshow.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boring_fight_02",
+			"tag": "boring_fight",
+			"voice": "mod",
+			"text": "Gähn. Haben Sie es mal mit … Abwechslung versucht?",
+			"weight": 1
+		},
+		{
+			"id": "mod_boring_fight_03",
+			"tag": "boring_fight",
+			"voice": "mod",
+			"text": "Ich bekomme gerade Beschwerden. Von meinen eigenen Untertiteln.",
+			"weight": 1
+		},
+		{
+			"id": "mod_flee_01",
+			"tag": "flee",
+			"voice": "mod",
+			"text": "Flucht! Mutig ist anders. Klug manchmal auch.",
+			"weight": 1
+		},
+		{
+			"id": "mod_flee_02",
+			"tag": "flee",
+			"voice": "mod",
+			"text": "Und weg sind sie. Die Kamera bleibt beim Monster. Es wirkt einsam.",
+			"weight": 1
+		},
+		{
+			"id": "mod_flee_03",
+			"tag": "flee",
+			"voice": "mod",
+			"text": "Rückzug notiert. Die Zuschauer auch. Sie entfolgen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_flee_fail_01",
+			"tag": "flee_fail",
+			"voice": "mod",
+			"text": "Fluchtversuch gescheitert. Das Monster hat Sie freundlich zurückgebeten.",
+			"weight": 1
+		},
+		{
+			"id": "mod_flee_fail_02",
+			"tag": "flee_fail",
+			"voice": "mod",
+			"text": "Nö. Die Tür ist dekorativ.",
+			"weight": 1
+		},
+		{
+			"id": "mod_sponsor_gift_01",
+			"tag": "sponsor_gift",
+			"voice": "mod",
+			"text": "Dieser Moment wird Ihnen präsentiert von {sponsor}!",
+			"weight": 1
+		},
+		{
+			"id": "mod_sponsor_gift_02",
+			"tag": "sponsor_gift",
+			"voice": "mod",
+			"text": "Ein Geschenk von {sponsor}! Bitte das Logo in die Kamera halten.",
+			"weight": 1
+		},
+		{
+			"id": "mod_sponsor_gift_03",
+			"tag": "sponsor_gift",
+			"voice": "mod",
+			"text": "Die Zuschauer lieben Sie, also liebt {sponsor} Sie. Vorläufig.",
+			"weight": 1
+		},
+		{
+			"id": "mod_timer_warn_300_01",
+			"tag": "timer_warn_300",
+			"voice": "mod",
+			"text": "Noch fünf Minuten! Die Etage bricht bald zusammen. Wir haben Popcorn.",
+			"weight": 1
+		},
+		{
+			"id": "mod_timer_warn_300_02",
+			"tag": "timer_warn_300",
+			"voice": "mod",
+			"text": "Fünf Minuten bis zum Einsturz. Treppe suchen wäre jetzt ein Trend.",
+			"weight": 1
+		},
+		{
+			"id": "mod_timer_warn_300_03",
+			"tag": "timer_warn_300",
+			"voice": "mod",
+			"text": "Achtung: Die Unterstadt schließt in fünf Minuten. Bitte zügig zum Ausgang. Oder nicht. Quote!",
+			"weight": 1,
+			"max_floor": 1
+		},
+		{
+			"id": "mod_timer_warn_60_01",
+			"tag": "timer_warn_60",
+			"voice": "mod",
+			"text": "EINE MINUTE! Laufen Sie! LAUFEN SIE!",
+			"weight": 1
+		},
+		{
+			"id": "mod_timer_warn_60_02",
+			"tag": "timer_warn_60",
+			"voice": "mod",
+			"text": "Sechzig Sekunden! Ich habe die Dramamusik extra laut gestellt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_timer_warn_60_03",
+			"tag": "timer_warn_60",
+			"voice": "mod",
+			"text": "Letzte Minute! Der Graf sollte jetzt nicht stehen bleiben, um zu posieren.",
+			"weight": 1
+		},
+		{
+			"id": "mod_timer_expired_01",
+			"tag": "timer_expired",
+			"voice": "mod",
+			"text": "Und … Sendeschluss. Die Etage ist eingestürzt. Mit Ihnen darin. Schade.",
+			"weight": 1
+		},
+		{
+			"id": "mod_timer_expired_02",
+			"tag": "timer_expired",
+			"voice": "mod",
+			"text": "Zeit abgelaufen. Ich hatte Sie wirklich gemocht. Bisschen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_lootbox_open_bronze_01",
+			"tag": "lootbox_open_bronze",
+			"voice": "mod",
+			"text": "Bronze. Wie die Medaille für ‚Dabei sein ist alles‘.",
+			"weight": 1
+		},
+		{
+			"id": "mod_lootbox_open_bronze_02",
+			"tag": "lootbox_open_bronze",
+			"voice": "mod",
+			"text": "Eine Bronzebox! Was drin ist? Wahrscheinlich ein Pflaster. Mit Werbung.",
+			"weight": 1
+		},
+		{
+			"id": "mod_lootbox_open_bronze_03",
+			"tag": "lootbox_open_bronze",
+			"voice": "mod",
+			"text": "Bronze! Die Box, die sagt: ‚Wir haben an dich gedacht. Kurz.‘",
+			"weight": 1
+		},
+		{
+			"id": "mod_lootbox_open_silver_01",
+			"tag": "lootbox_open_silver",
+			"voice": "mod",
+			"text": "Silber! Jetzt wird’s interessant. Ein bisschen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_lootbox_open_silver_02",
+			"tag": "lootbox_open_silver",
+			"voice": "mod",
+			"text": "Silberbox! Garantiert mindestens selten. Steht so im Vertrag.",
+			"weight": 1
+		},
+		{
+			"id": "mod_lootbox_open_gold_01",
+			"tag": "lootbox_open_gold",
+			"voice": "mod",
+			"text": "GOLD! Bitte Trommelwirbel. Den teuren!",
+			"weight": 1
+		},
+		{
+			"id": "mod_lootbox_open_gold_02",
+			"tag": "lootbox_open_gold",
+			"voice": "mod",
+			"text": "Eine Goldbox. Der Konzern hat dafür einen Mond verkauft.",
+			"weight": 1
+		},
+		{
+			"id": "mod_lootbox_open_fan_01",
+			"tag": "lootbox_open_fan",
+			"voice": "mod",
+			"text": "Eine Fan-Box! Ihre Fans haben zusammengelegt. Ein paar haben Glitzer reingetan. Sorry.",
+			"weight": 1
+		},
+		{
+			"id": "mod_lootbox_open_fan_02",
+			"tag": "lootbox_open_fan",
+			"voice": "mod",
+			"text": "Von Fans, für Fans, gegen Monster. Rührend.",
+			"weight": 1
+		},
+		{
+			"id": "mod_lootbox_pity_01",
+			"tag": "lootbox_pity",
+			"voice": "mod",
+			"text": "Endlich Glück! Und nein, das ist kein Algorithmus. Doch, ist es. Egal!",
+			"weight": 1
+		},
+		{
+			"id": "mod_death_01",
+			"tag": "death",
+			"voice": "mod",
+			"text": "Sendeschluss. {name} und der Graf sind gefallen. Wiederholung um 3 Uhr nachts.",
+			"weight": 1
+		},
+		{
+			"id": "mod_death_02",
+			"tag": "death",
+			"voice": "mod",
+			"text": "Game Over. Die Zuschauer schalten ab. Ich schalte … noch nicht ab.",
+			"weight": 1
+		},
+		{
+			"id": "mod_death_03",
+			"tag": "death",
+			"voice": "mod",
+			"text": "Das war’s. Ich lege Ihnen eine Blume aufs Inventar.",
+			"weight": 1
+		},
+		{
+			"id": "mod_mopsula_ko_01",
+			"tag": "mopsula_ko",
+			"voice": "mod",
+			"text": "DER GRAF IST GEFALLEN! Die Quote stürzt ab! Helfen Sie ihm, sofort!",
+			"weight": 1
+		},
+		{
+			"id": "mod_mopsula_ko_02",
+			"tag": "mopsula_ko",
+			"voice": "mod",
+			"text": "Unser Publikumsliebling liegt am Boden. Ich verlange eine Wiederbelebung, aus rein geschäftlichen Gründen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_kai_ko_01",
+			"tag": "kai_ko",
+			"voice": "mod",
+			"text": "{name} ist KO! Der Graf ist jetzt allein. Das wird … aristokratisch.",
+			"weight": 1
+		},
+		{
+			"id": "mod_kai_ko_02",
+			"tag": "kai_ko",
+			"voice": "mod",
+			"text": "Kandidat:in am Boden. Der Mops übernimmt. Endlich ein Profi.",
+			"weight": 1
+		},
+		{
+			"id": "mod_revive_01",
+			"tag": "revive",
+			"voice": "mod",
+			"text": "Wiederbelebt! Comebacks sind unser Lieblingsgenre.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_intro_enm_boss_hausmeister_01",
+			"tag": "boss_intro:enm_boss_hausmeister",
+			"voice": "mod",
+			"text": "Applaus für den Hausmeister! Seit 34 Jahren im Dienst, seit 34 Minuten ein Monster.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_intro_enm_boss_hausmeister_02",
+			"tag": "boss_intro:enm_boss_hausmeister",
+			"voice": "mod",
+			"text": "Achtung: Er hat einen Schlüssel für alles. Außer für Gnade.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_phase_enm_boss_hausmeister_2_01",
+			"tag": "boss_phase:enm_boss_hausmeister:2",
+			"voice": "mod",
+			"text": "Er verliest die Hausordnung! Paragraf sieben! Das wird hässlich.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_phase_enm_boss_hausmeister_3_01",
+			"tag": "boss_phase:enm_boss_hausmeister:3",
+			"voice": "mod",
+			"text": "Feierabend! Und ein Hausmeister im Feierabend kennt keine Regeln mehr!",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_intro_enm_boss_rattenkoenigin_01",
+			"tag": "boss_intro:enm_boss_rattenkoenigin",
+			"voice": "mod",
+			"text": "Ihre Majestät, die Rattenkönigin von Gleis 9! Bitte nicht auf den Schwanz treten. Die Schwänze.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_intro_enm_boss_rattenkoenigin_02",
+			"tag": "boss_intro:enm_boss_rattenkoenigin",
+			"voice": "mod",
+			"text": "Zwei Adelige, ein Bahnsteig. Das ist das Duell, für das die Galaxis bezahlt hat!",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_phase_enm_boss_rattenkoenigin_2_01",
+			"tag": "boss_phase:enm_boss_rattenkoenigin:2",
+			"voice": "mod",
+			"text": "Hören Sie das? Das ist der Zug auf Gleis 9. Er ist pünktlich. Zum ersten Mal überhaupt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_train_warning_01",
+			"tag": "boss_train_warning",
+			"voice": "mod",
+			"text": "Zug fährt ein! Zurückbleiben, bitte — oder verteidigen Sie sich!",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_phase_enm_boss_rattenkoenigin_3_01",
+			"tag": "boss_phase:enm_boss_rattenkoenigin:3",
+			"voice": "mod",
+			"text": "Der Zug ist entgleist! Die Königin ist wütend! Ich bin begeistert!",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_defeated_01",
+			"tag": "boss_defeated",
+			"voice": "mod",
+			"text": "Boss besiegt! Die Einschaltquote macht gerade einen Handstand.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_defeated_02",
+			"tag": "boss_defeated",
+			"voice": "mod",
+			"text": "Gefallen! Und das zur besten Sendezeit. Danke!",
+			"weight": 1
+		},
+		{
+			"id": "mod_level_up_01",
+			"tag": "level_up",
+			"voice": "mod",
+			"text": "Level up! Sie sind jetzt {level}% weniger verzichtbar.",
+			"weight": 1
+		},
+		{
+			"id": "mod_level_up_02",
+			"tag": "level_up",
+			"voice": "mod",
+			"text": "Stufenaufstieg! Mehr HP, mehr MP, gleich wenig Gage.",
+			"weight": 1
+		},
+		{
+			"id": "mod_talent_show_open_01",
+			"tag": "talent_show_open",
+			"voice": "mod",
+			"text": "Talent-Show! Wählen Sie je Figur eines von zwei Talenten. Das andere bekommt jemand anderes. Nie.",
+			"weight": 1
+		},
+		{
+			"id": "mod_talent_pick_01",
+			"tag": "talent_pick",
+			"voice": "mod",
+			"text": "Neues Talent! Die Regie nennt es Entwicklung. Ich nenne es: mehr Material.",
+			"weight": 1
+		},
+		{
+			"id": "mod_talent_pick_02",
+			"tag": "talent_pick",
+			"voice": "mod",
+			"text": "Notiert. Das Publikum liebt Figuren mit Entwicklung. Und mit Wischmopp.",
+			"weight": 1
+		},
+		{
+			"id": "mod_talent_pick_mopsula_01",
+			"tag": "talent_pick:mopsula",
+			"voice": "mod",
+			"text": "Der Graf lernt dazu. Er bestreitet, dass es etwas zu lernen gab.",
+			"weight": 1
+		},
+		{
+			"id": "mod_talent_pick_mopsula_02",
+			"tag": "talent_pick:mopsula",
+			"voice": "mod",
+			"text": "Der Graf sagt: „Wir hatten dieses Talent schon immer.“ Ich sage: Applaus.",
+			"weight": 1
+		},
+		{
+			"id": "mod_follower_milestone_01",
+			"tag": "follower_milestone",
+			"voice": "mod",
+			"text": "{followers} Follower! Sie haben jetzt mehr Fans als Ihre alte Stadt Einwohner. Hatte.",
+			"weight": 1
+		},
+		{
+			"id": "mod_follower_milestone_02",
+			"tag": "follower_milestone",
+			"voice": "mod",
+			"text": "Meilenstein! Ihre Fans schicken Geschenke. Und Liebesbriefe an den Hund.",
+			"weight": 1
+		},
+		{
+			"id": "mod_safe_room_enter_01",
+			"tag": "safe_room_enter",
+			"voice": "mod",
+			"text": "Safe Room. Keine Monster, keine Kameras. Doch, eine Kamera. Okay, sieben.",
+			"weight": 1
+		},
+		{
+			"id": "mod_safe_room_enter_02",
+			"tag": "safe_room_enter",
+			"voice": "mod",
+			"text": "Werbepause! Heilen Sie sich, wir verkaufen solange Ihre Highlights.",
+			"weight": 1
+		},
+		{
+			"id": "mod_safe_room_enter_03",
+			"tag": "safe_room_enter",
+			"voice": "mod",
+			"text": "Willkommen im Safe Room. Bitte den Automaten füttern, er hat Familie.",
+			"weight": 1
+		},
+		{
+			"id": "mod_vendor_buy_01",
+			"tag": "vendor_buy",
+			"voice": "mod",
+			"text": "Danke für Ihren Einkauf! Ein Teil des Erlöses geht an … uns.",
+			"weight": 1
+		},
+		{
+			"id": "mod_vendor_buy_02",
+			"tag": "vendor_buy",
+			"voice": "mod",
+			"text": "{item}! Exzellente Wahl. Die anderen waren schlechter. Für uns.",
+			"weight": 1
+		},
+		{
+			"id": "mod_stairs_found_01",
+			"tag": "stairs_found",
+			"voice": "mod",
+			"text": "Die Treppe! Abstieg oder Ruhm — die Uhr sagt Abstieg, das Publikum sagt Königin.",
+			"weight": 1,
+			"max_floor": 1
+		},
+		{
+			"id": "mod_stairs_found_02",
+			"tag": "stairs_found",
+			"voice": "mod",
+			"text": "Da ist sie, die Treppe. Ich würde ja noch ein bisschen bleiben. Rein quotentechnisch.",
+			"weight": 1
+		},
+		{
+			"id": "mod_floor_end_01",
+			"tag": "floor_end",
+			"voice": "mod",
+			"text": "Etage 1 geschafft! Nach der Werbung: Etage 2. Bleiben Sie dran!",
+			"weight": 1,
+			"max_floor": 1
+		},
+		{
+			"id": "mod_floor_end_02",
+			"tag": "floor_end",
+			"voice": "mod",
+			"text": "Sie haben die Unterstadt überlebt. Bitte unterschreiben Sie hier, hier und — hier, für die Fortsetzung.",
+			"weight": 1,
+			"max_floor": 1
+		},
+		{
+			"id": "mod_floor_end_03",
+			"tag": "floor_end",
+			"voice": "mod",
+			"text": "Etage {floor} geschafft! Nach der Werbung geht es tiefer. Bleiben Sie dran!",
+			"weight": 1,
+			"min_floor": 2
+		},
+		{
+			"id": "mod_timer_warn_600_01",
+			"tag": "timer_warn_600",
+			"voice": "chat",
+			"text": "noch 10 min?? lauft!!",
+			"weight": 1
+		},
+		{
+			"id": "mod_timer_warn_600_02",
+			"tag": "timer_warn_600",
+			"voice": "chat",
+			"text": "zehn minuten. ich hol schnell popcorn nach",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_handle_01",
+			"tag": "chat_handle",
+			"voice": "chat",
+			"text": "xX_Gleisgeist_Xx",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_handle_02",
+			"tag": "chat_handle",
+			"voice": "chat",
+			"text": "OmaHilde1953",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_handle_03",
+			"tag": "chat_handle",
+			"voice": "chat",
+			"text": "mopsfan_88",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_handle_04",
+			"tag": "chat_handle",
+			"voice": "chat",
+			"text": "KeinZugMehr",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_handle_05",
+			"tag": "chat_handle",
+			"voice": "chat",
+			"text": "Pendlerin_42",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_handle_06",
+			"tag": "chat_handle",
+			"voice": "chat",
+			"text": "GrafFanclub",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_handle_07",
+			"tag": "chat_handle",
+			"voice": "chat",
+			"text": "u_bahn_ultra",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_handle_08",
+			"tag": "chat_handle",
+			"voice": "chat",
+			"text": "LeiseSohle",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_hype_high_01",
+			"tag": "chat_hype_high",
+			"voice": "chat",
+			"text": "DAS IST KINO",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_hype_high_02",
+			"tag": "chat_hype_high",
+			"voice": "chat",
+			"text": "mops for president!!!",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_hype_high_03",
+			"tag": "chat_hype_high",
+			"voice": "chat",
+			"text": "clip it clip it clip it",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_hype_mid_01",
+			"tag": "chat_hype_mid",
+			"voice": "chat",
+			"text": "solide runde bisher",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_hype_mid_02",
+			"tag": "chat_hype_mid",
+			"voice": "chat",
+			"text": "wer hat auch grad hunger",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_hype_mid_03",
+			"tag": "chat_hype_mid",
+			"voice": "chat",
+			"text": "der graf schaut heute so edel",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_hype_low_01",
+			"tag": "chat_hype_low",
+			"voice": "chat",
+			"text": "gähn",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_hype_low_02",
+			"tag": "chat_hype_low",
+			"voice": "chat",
+			"text": "kann mal wer was explodieren lassen",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_hype_low_03",
+			"tag": "chat_hype_low",
+			"voice": "chat",
+			"text": "ich schalt gleich um auf die kochshow",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_crit_01",
+			"tag": "chat_crit",
+			"voice": "chat",
+			"text": "KRIT!!",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_crit_02",
+			"tag": "chat_crit",
+			"voice": "chat",
+			"text": "das hat geknallt",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_crit_03",
+			"tag": "chat_crit",
+			"voice": "chat",
+			"text": "ZEITLUPE BITTE",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_stunt_fail_01",
+			"tag": "chat_stunt_fail",
+			"voice": "chat",
+			"text": "hahahaha neiiin",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_stunt_fail_02",
+			"tag": "chat_stunt_fail",
+			"voice": "chat",
+			"text": "F",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_stunt_fail_03",
+			"tag": "chat_stunt_fail",
+			"voice": "chat",
+			"text": "bester fail der staffel",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_boring_01",
+			"tag": "chat_boring",
+			"voice": "chat",
+			"text": "schon wieder dasselbe?",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_boring_02",
+			"tag": "chat_boring",
+			"voice": "chat",
+			"text": "copy-paste-kampf",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_boring_03",
+			"tag": "chat_boring",
+			"voice": "chat",
+			"text": "mach mal was anderes bitte",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_mopsula_01",
+			"tag": "chat_mopsula",
+			"voice": "chat",
+			"text": "GRAF MOPSULA <3",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_mopsula_02",
+			"tag": "chat_mopsula",
+			"voice": "chat",
+			"text": "der mops trägt diese show",
+			"weight": 1
+		},
+		{
+			"id": "mod_chat_mopsula_03",
+			"tag": "chat_mopsula",
+			"voice": "chat",
+			"text": "ich würde für den grafen sterben",
+			"weight": 1
+		},
+		{
+			"id": "mod_mopsula_idle_01",
+			"tag": "mopsula_idle",
+			"voice": "mopsula",
+			"text": "Wir ruhen. Störe Uns nur bei Weltuntergang. Erneut.",
+			"weight": 1
+		},
+		{
+			"id": "mod_mopsula_idle_02",
+			"tag": "mopsula_idle",
+			"voice": "mopsula",
+			"text": "Dieser Automat führt keine Leberwurst. Ein Skandal.",
+			"weight": 1
+		},
+		{
+			"id": "mod_mopsula_idle_03",
+			"tag": "mopsula_idle",
+			"voice": "mopsula",
+			"text": "Kammerdiener:in, das linke Ohr. Du weißt, welches.",
+			"weight": 1
+		},
+		{
+			"id": "mod_mopsula_idle_04",
+			"tag": "mopsula_idle",
+			"voice": "mopsula",
+			"text": "Der Fernseher redet zu viel. Wir respektieren das. Fast.",
+			"weight": 1
+		},
+		{
+			"id": "mod_mopsula_idle_05",
+			"tag": "mopsula_idle",
+			"voice": "mopsula",
+			"text": "Ein Sofa. Endlich ein Möbel, das Unseren Stand begreift.",
+			"weight": 1
+		},
+		{
+			"id": "mod_event_photo_drone_pose_01",
+			"tag": "event_photo_drone_pose",
+			"voice": "mod",
+			"text": "Lächeln! Das wird das Titelbild der Woche. Oder Ihr Nachruf. Beides verkauft sich.",
+			"weight": 1
+		},
+		{
+			"id": "mod_event_photo_drone_smash_01",
+			"tag": "event_photo_drone_smash",
+			"voice": "mod",
+			"text": "Sie haben meine Kamera zertreten. Ich vergesse nichts. Ich bin buchstäblich ein Speicher.",
+			"weight": 1
+		},
+		{
+			"id": "mod_event_lost_candidate_give_01",
+			"tag": "event_lost_candidate_give",
+			"voice": "mod",
+			"text": "Sie haben geteilt! Mit einem Fremden! Die Zuschauer sind verwirrt und gerührt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_event_lost_candidate_leave_01",
+			"tag": "event_lost_candidate_leave",
+			"voice": "mod",
+			"text": "Weitergehen. Klug. Herr Brettschneider nimmt das sicher sportlich.",
+			"weight": 1
+		},
+		{
+			"id": "mod_event_wheel_spin_01",
+			"tag": "event_wheel_spin",
+			"voice": "mod",
+			"text": "Dreh das Rad! Die Gewinnchancen sind fair. Laut unserer Rechtsabteilung.",
+			"weight": 1
+		},
+		{
+			"id": "mod_event_wheel_spin_02",
+			"tag": "event_wheel_spin",
+			"voice": "mod",
+			"text": "Und das Rad sagt … Werbung! Nein, Moment. Doch nicht.",
+			"weight": 1
+		},
+		{
+			"id": "mod_event_lever_open_01",
+			"tag": "event_lever_open",
+			"voice": "mod",
+			"text": "Eine Abkürzung! Die Bauaufsicht hätte das nie genehmigt. Gibt es nicht mehr.",
+			"weight": 1
+		},
+		{
+			"id": "mod_event_lever_flood_01",
+			"tag": "event_lever_flood",
+			"voice": "mod",
+			"text": "Das war der Spülhebel. Für die ganze Kanalisation. Herzlichen Glückwunsch.",
+			"weight": 1
+		},
+		{
+			"id": "mod_event_broken_vending_ok_01",
+			"tag": "event_broken_vending_ok",
+			"voice": "mod",
+			"text": "Zwei Dosen KRAWUMM! Vandalismus lohnt sich. Das haben Sie nicht von mir.",
+			"weight": 1
+		},
+		{
+			"id": "mod_event_broken_vending_fail_01",
+			"tag": "event_broken_vending_fail",
+			"voice": "mod",
+			"text": "Der Automat hat zurückgetreten. Mit 230 Volt. Das Publikum klatscht.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_first_blood_01",
+			"tag": "achievement:ach_first_blood",
+			"voice": "mod",
+			"text": "Erster Kill! Die Werbekunden atmen auf.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_first_win_01",
+			"tag": "achievement:ach_first_win",
+			"voice": "mod",
+			"text": "Ein Sieg. Wir haben schon Merch bestellt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_close_call_01",
+			"tag": "achievement:ach_close_call",
+			"voice": "mod",
+			"text": "Mein Puls! Ich habe keinen Puls, aber trotzdem!",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_one_hp_01",
+			"tag": "achievement:ach_one_hp",
+			"voice": "mod",
+			"text": "Ein. Einziger. Lebenspunkt. Das schneiden wir in den Trailer.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_pacifist_01",
+			"tag": "achievement:ach_pacifist",
+			"voice": "mod",
+			"text": "Fünf Minuten ohne Gewalt. Die Zuschauer schlafen ein. Hier, nimm das.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_overkill_01",
+			"tag": "achievement:ach_overkill",
+			"voice": "mod",
+			"text": "Das war … gründlich. Die Reinigung stellt das in Rechnung.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_crit_3_01",
+			"tag": "achievement:ach_crit_3",
+			"voice": "mod",
+			"text": "Drei Kritische in einem Kampf. Statistiker:innen weinen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_weakness_5_01",
+			"tag": "achievement:ach_weakness_5",
+			"voice": "mod",
+			"text": "Fünfmal genau dahin, wo es wehtut. Empathie: null. Quote: hoch.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_stunt_first_01",
+			"tag": "achievement:ach_stunt_first",
+			"voice": "mod",
+			"text": "DAS ist Fernsehen!",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_stunt_fail_3_01",
+			"tag": "achievement:ach_stunt_fail_3",
+			"voice": "mod",
+			"text": "Drei Pannen. Wir machen eine eigene Sendung daraus.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_combo_first_01",
+			"tag": "achievement:ach_combo_first",
+			"voice": "mod",
+			"text": "Mensch und Mops im Gleichschritt. Rührend. Und lukrativ.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_preemptive_3_01",
+			"tag": "achievement:ach_preemptive_3",
+			"voice": "mod",
+			"text": "Von hinten. Dreimal. Die Ethikkommission ist im Urlaub.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_ambush_won_01",
+			"tag": "achievement:ach_ambush_won",
+			"voice": "mod",
+			"text": "Überrascht und trotzdem gewonnen. Fast, als hätten Sie Talent.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_flee_first_01",
+			"tag": "achievement:ach_flee_first",
+			"voice": "mod",
+			"text": "Feigheit, äh, Taktik! Auch dafür gibt es eine Box. Leider.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_sponsor_first_01",
+			"tag": "achievement:ach_sponsor_first",
+			"voice": "mod",
+			"text": "Ihr erster Sponsor! Bitte lächeln Sie in Kamera 3.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_viewers_5000_01",
+			"tag": "achievement:ach_viewers_5000",
+			"voice": "mod",
+			"text": "Fünftausend! Die Konkurrenz zeigt gerade Kochshows. Ha!",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_chests_10_01",
+			"tag": "achievement:ach_chests_10",
+			"voice": "mod",
+			"text": "Zehn Kisten. Das nennt man bei uns ‚Kundenbindung‘.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_vendor_500_01",
+			"tag": "achievement:ach_vendor_500",
+			"voice": "mod",
+			"text": "500 Credits im Automaten. Die Wirtschaft dankt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_lootbox_10_01",
+			"tag": "achievement:ach_lootbox_10",
+			"voice": "mod",
+			"text": "Zehn Boxen. Hier ist noch eine. Für die Gewohnheit.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_level_5_01",
+			"tag": "achievement:ach_level_5",
+			"voice": "mod",
+			"text": "Level fünf. Sie sind jetzt offiziell schwer zu ersetzen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_mopsula_ko_01",
+			"tag": "achievement:ach_mopsula_ko",
+			"voice": "mod",
+			"text": "Der Graf liegt! Die Quote liegt mit ihm! Tun Sie was!",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_mimic_01",
+			"tag": "achievement:ach_mimic",
+			"voice": "mod",
+			"text": "Schwarzfahren war gestern. Heute: Schwarzautomat.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_events_all_01",
+			"tag": "achievement:ach_events_all",
+			"voice": "mod",
+			"text": "Alle Events gesehen. Sie lesen auch das Kleingedruckte, oder?",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_hausmeister_01",
+			"tag": "achievement:ach_hausmeister",
+			"voice": "mod",
+			"text": "Der Hausmeister ist in Rente. Unbefristet.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_hausmeister_no_items_01",
+			"tag": "achievement:ach_hausmeister_no_items",
+			"voice": "mod",
+			"text": "Ohne ein einziges Item. Die Sponsoren sind beleidigt. Ich bin beeindruckt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_queen_01",
+			"tag": "achievement:ach_queen",
+			"voice": "mod",
+			"text": "Die Königin ist tot, lang lebe — ach, egal, ZUSCHAUERREKORD!",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_queen_flawless_01",
+			"tag": "achievement:ach_queen_flawless",
+			"voice": "mod",
+			"text": "Kein einziger KO. Graf Mopsula verlangt einen Thron. Abgelehnt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_speedrun_01",
+			"tag": "achievement:ach_speedrun",
+			"voice": "mod",
+			"text": "Mit zehn Minuten Rest. Sie sind entweder genial oder haben nichts gesehen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_achievement_ach_last_minute_01",
+			"tag": "achievement:ach_last_minute",
+			"voice": "mod",
+			"text": "Unter einer Minute! Mein Regieraum hat geschrien. Vor Freude.",
+			"weight": 1
+		},
+		{
+			"id": "mod_event_run_start_01",
+			"tag": "event_run_start",
+			"voice": "mod",
+			"text": "Event-Lauf! Gleicher Seed für alle, gleiche Monster, gleiche Ausreden. Viel Glück, {name}.",
+			"weight": 1
+		},
+		{
+			"id": "mod_event_run_start_02",
+			"tag": "event_run_start",
+			"voice": "mod",
+			"text": "Willkommen zur Sondersendung. Die Bestenliste ist offen, die Gnade geschlossen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_event_quest_progress_01",
+			"tag": "event_quest_progress",
+			"voice": "mod",
+			"text": "Quest-Fortschritt notiert. Die Bestenliste schaut zu. Ich auch.",
+			"weight": 1
+		},
+		{
+			"id": "mod_event_quest_progress_02",
+			"tag": "event_quest_progress",
+			"voice": "mod",
+			"text": "Ein Schritt näher am Quest-Ziel. Die Regie nickt. Fast anerkennend.",
+			"weight": 1
+		},
+		{
+			"id": "mod_event_quest_complete_01",
+			"tag": "event_quest_complete",
+			"voice": "mod",
+			"text": "Quest erfüllt! Ihr Name kommt auf die Bestenliste. Mit Bleistift, wir sind ja nicht verrückt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_event_quest_complete_02",
+			"tag": "event_quest_complete",
+			"voice": "mod",
+			"text": "Quest erledigt! Die Sponsoren wollen ein Interview. Ich habe abgelehnt. Für Sie. Gern geschehen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_event_result_01",
+			"tag": "event_result",
+			"voice": "mod",
+			"text": "Abgerechnet wird zum Schluss. Und der Schluss ist jetzt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_event_result_02",
+			"tag": "event_result",
+			"voice": "mod",
+			"text": "Die Punkte sind gezählt. Von einer Maschine. Von mir. Ich bin unbestechlich. Meistens.",
+			"weight": 1
+		},
+		{
+			"id": "mod_gift_received_01",
+			"tag": "gift_received",
+			"voice": "mod",
+			"text": "Ein Paket von {sender}. NOVA SYNDIKAT verbucht das als ‚organische Zuschauerbindung‘. Wir nennen es nett.",
+			"weight": 1
+		},
+		{
+			"id": "mod_gift_received_02",
+			"tag": "gift_received",
+			"voice": "mod",
+			"text": "Lieferung von {sender}! Die Rechtsabteilung prüft noch, ob Freundlichkeit lizenzpflichtig ist.",
+			"weight": 1
+		},
+		{
+			"id": "mod_gift_received_credits_01",
+			"tag": "gift_received:credits",
+			"voice": "mod",
+			"text": "{amount} Credits. NOVA SYNDIKAT behält sich vor, darauf irgendwann eine Gebühr zu erfinden.",
+			"weight": 1
+		},
+		{
+			"id": "mod_gift_received_anon_01",
+			"tag": "gift_received:anon",
+			"voice": "mod",
+			"text": "Ein anonymer Fan schickt Grüße. Die Marketingabteilung ist neidisch auf so viel Zurückhaltung.",
+			"weight": 1
+		},
+		{
+			"id": "mod_gift_diminished_01",
+			"tag": "gift_diminished",
+			"voice": "mod",
+			"text": "Wirkung dieses Geschenks: {pct} Prozent. Das Regelwerk will es so. Ich habe es nicht geschrieben. Leider.",
+			"weight": 1
+		},
+		{
+			"id": "mod_gift_capped_01",
+			"tag": "gift_capped",
+			"voice": "mod",
+			"text": "Geschenk-Kontingent für diesen Lauf erreicht. Das Publikum bleibt trotzdem das Beste an dieser Sendung.",
+			"weight": 1
+		},
+		{
+			"id": "mod_gift_declined_01",
+			"tag": "gift_declined",
+			"voice": "mod",
+			"text": "Abgelehnt. Kandidat:innen dürfen das. Steht auf Seite 412 der Teilnahmebedingungen, gleich neben ‚Überleben‘.",
+			"weight": 1
+		},
+		{
+			"id": "mod_fan_pack_received_01",
+			"tag": "fan_pack_received",
+			"voice": "mod",
+			"text": "Ein Applaus-Paket von {sender}. Echte Begeisterung — die Aktionäre wissen nicht, wie man die bilanziert.",
+			"weight": 1
+		},
+		{
+			"id": "mod_live_closing_01",
+			"tag": "live_closing",
+			"voice": "mod",
+			"text": "Noch {min} Minuten bis Sendeschluss. Danach geht hier das Licht aus. Und die Etage.",
+			"weight": 1
+		},
+		{
+			"id": "mod_vote_open_01",
+			"tag": "vote_open",
+			"voice": "mod",
+			"text": "Das Publikum entscheidet! Demokratie, aber mit Werbeunterbrechung.",
+			"weight": 1
+		},
+		{
+			"id": "mod_sponsor_window_open_01",
+			"tag": "sponsor_window_open",
+			"voice": "mod",
+			"text": "Das Sponsor-Fenster ist offen. Wer helfen mag, hilft. Wer zuschaut, zählt genauso.",
+			"weight": 1
+		},
+		{
+			"id": "mod_sponsor_window_open_02",
+			"tag": "sponsor_window_open",
+			"voice": "mod",
+			"text": "Das Sponsor-Fenster steht offen. Helfen ist freiwillig, Zuschauen zählt genauso. Nur Zugluft ist Pflicht.",
+			"weight": 1
+		},
+		{
+			"id": "mod_sponsor_window_open_safe_room_01",
+			"tag": "sponsor_window_open:safe_room",
+			"voice": "mod",
+			"text": "Werbepause mit Sponsor-Fenster. Wer nur zuschaut, macht auch alles richtig.",
+			"weight": 1
+		},
+		{
+			"id": "mod_sponsor_window_open_boss_01",
+			"tag": "sponsor_window_open:boss",
+			"voice": "mod",
+			"text": "Vor dem Boss öffnet das Sponsor-Fenster. Danach entscheiden Können und Glück. Vor allem Glück.",
+			"weight": 1
+		},
+		{
+			"id": "mod_sponsor_window_open_boss_comeback_01",
+			"tag": "sponsor_window_open:boss_comeback",
+			"voice": "mod",
+			"text": "Comeback-Runde! Das Sponsor-Fenster öffnet noch einmal. Das Publikum glaubt an Sie. Ich auch, fast.",
+			"weight": 1
+		},
+		{
+			"id": "mod_sponsor_window_closed_01",
+			"tag": "sponsor_window_closed",
+			"voice": "mod",
+			"text": "Sponsor-Fenster zu. Die Regie nennt das Programmstruktur. Ich nenne es: Durchzug verhindern.",
+			"weight": 1
+		},
+		{
+			"id": "mod_sponsor_window_closed_02",
+			"tag": "sponsor_window_closed",
+			"voice": "mod",
+			"text": "Fenster geschlossen. Mitfiebern bleibt erlaubt – das hat die Rechtsabteilung noch nicht entdeckt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_sponsor_window_full_01",
+			"tag": "sponsor_window_full",
+			"voice": "mod",
+			"text": "Alle Plätze im Sponsor-Fenster sind belegt. Danke – auch dem stillen Publikum. Das zählt hier am meisten.",
+			"weight": 1
+		},
+		{
+			"id": "mod_tutorial_explore_01",
+			"tag": "tutorial_explore",
+			"voice": "mod",
+			"text": "Willkommen in der Unterstadt, {name}! Laufen Sie los – die Kamera dreht sich, wenn Sie sie lassen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_tutorial_sneak_01",
+			"tag": "tutorial_sneak",
+			"voice": "mod",
+			"text": "Da vorn schlafen zwei Ratten. Schleichen Sie sich an und schlagen Sie zuerst zu – dann fangen Sie an.",
+			"weight": 1
+		},
+		{
+			"id": "mod_tutorial_battle_01",
+			"tag": "tutorial_battle",
+			"voice": "mod",
+			"text": "Angriff kostet nichts. Mopsulas Adelsflamme kostet MP – und Ratten hassen Feuer. Fast so sehr wie Steuern.",
+			"weight": 1
+		},
+		{
+			"id": "mod_tutorial_stunt_01",
+			"tag": "tutorial_stunt",
+			"voice": "mod",
+			"text": "Tipp der Regie: Stunts sind riskant, laut und teuer. Das Publikum liebt alle drei.",
+			"weight": 1
+		},
+		{
+			"id": "mod_story_battle_enc_f1_b2_01",
+			"tag": "story_battle:enc_f1_b2",
+			"voice": "mod",
+			"text": "Die Königin hört von euch.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_lights_out_01",
+			"tag": "twist_applied_tw_lights_out",
+			"voice": "mod",
+			"text": "Stromausfall! Sparmaßnahme der Regie. Die Monster sehen auch nichts. Fair, oder?",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_lights_out_02",
+			"tag": "twist_applied_tw_lights_out",
+			"voice": "mod",
+			"text": "Licht aus, Spannung an. Die Gegner tappen im Dunkeln. Sie bitte nicht zu laut.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_quiet_please_01",
+			"tag": "twist_applied_tw_quiet_please",
+			"voice": "mod",
+			"text": "Ruhe im Studio! Die Monster hören jetzt schlechter. Flüstern Sie trotzdem, es ist höflich.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_quiet_please_02",
+			"tag": "twist_applied_tw_quiet_please",
+			"voice": "mod",
+			"text": "Die Tonabteilung dreht alles leiser. Ideale Bedingungen zum Anschleichen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_fog_of_fame_01",
+			"tag": "twist_applied_tw_fog_of_fame",
+			"voice": "mod",
+			"text": "Ruhmesnebel! Das Publikum vergisst gerade nichts. Nutzen Sie das.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_fog_of_fame_02",
+			"tag": "twist_applied_tw_fog_of_fame",
+			"voice": "mod",
+			"text": "Die Regie hält die Quote fest. Ihr Hype sinkt eine Weile nicht. Gern geschehen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_confetti_gravity_01",
+			"tag": "twist_applied_tw_confetti_gravity",
+			"voice": "mod",
+			"text": "Konfetti-Gravitation! Es schneit nach oben. Die Physikabteilung ist im Urlaub.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_confetti_gravity_02",
+			"tag": "twist_applied_tw_confetti_gravity",
+			"voice": "mod",
+			"text": "Konfetti fällt heute nach oben. Der Hype übrigens auch nicht nach unten.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_double_credits_01",
+			"tag": "twist_applied_tw_double_credits",
+			"voice": "mod",
+			"text": "Doppel-Credits für eine Minute! Danach ist die Inflation wieder normal.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_double_credits_02",
+			"tag": "twist_applied_tw_double_credits",
+			"voice": "mod",
+			"text": "Die Buchhaltung hat sich verrechnet. Zu Ihren Gunsten. Bitte nicht weitersagen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_overtime_01",
+			"tag": "twist_applied_tw_overtime",
+			"voice": "mod",
+			"text": "Nachspielzeit! Eine Minute extra. Ich bin heute großzügig. Notieren Sie das.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_overtime_02",
+			"tag": "twist_applied_tw_overtime",
+			"voice": "mod",
+			"text": "Die Uhr bekommt eine Verlängerung. Werbekunden zahlen ja nach Minuten.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_happy_hour_01",
+			"tag": "twist_applied_tw_happy_hour",
+			"voice": "mod",
+			"text": "Happy Hour am Automaten! Rabatt beim nächsten Safe Room. Der Automat weint leise.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_happy_hour_02",
+			"tag": "twist_applied_tw_happy_hour",
+			"voice": "mod",
+			"text": "Der nächste Automat hat Happy Hour. Er weiß es nur noch nicht.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_rat_rain_01",
+			"tag": "twist_applied_tw_rat_rain",
+			"voice": "mod",
+			"text": "Rattenregen! Ein Lieferant hatte zu viel Lagerbestand. Ich konnte nicht Nein sagen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_rat_rain_02",
+			"tag": "twist_applied_tw_rat_rain",
+			"voice": "mod",
+			"text": "Neue Kandidaten im Gebäude. Pelzig, hungrig, nicht eingeladen. Viel Spaß.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_party_hats_01",
+			"tag": "twist_applied_tw_party_hats",
+			"voice": "mod",
+			"text": "Partyhüte für alle Monster! Die nächsten zwei Kämpfe sind offiziell eine Feier.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_party_hats_02",
+			"tag": "twist_applied_tw_party_hats",
+			"voice": "mod",
+			"text": "Die Gegner tragen jetzt Partyhüte. Das Publikum flippt aus. Ich auch, innerlich.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_mopsula_moderates_01",
+			"tag": "twist_applied_tw_mopsula_moderates",
+			"voice": "mod",
+			"text": "Ich mache Pause. Der Graf moderiert. Möge die Sendung das überleben.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_mopsula_moderates_02",
+			"tag": "twist_applied_tw_mopsula_moderates",
+			"voice": "mod",
+			"text": "Kurze Moderationspause. Der Graf hat das Mikro. Gott steh der Technik bei.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_mopsula_monologue_01",
+			"tag": "twist_applied_tw_mopsula_monologue",
+			"voice": "mod",
+			"text": "Der Graf hat um das Wort gebeten. Ich habe es ihm gegeben. Ich bereue es schon.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_mod_mood_01",
+			"tag": "twist_applied_tw_mod_mood",
+			"voice": "mod",
+			"text": "Ich wechsle die Stimmung. Bitte schnallen Sie sich an.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_costume_01",
+			"tag": "twist_applied_tw_costume",
+			"voice": "mod",
+			"text": "Kostümwechsel beim Grafen! Die Garderobe hat Überstunden gemacht.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_trap_or_treasure_01",
+			"tag": "twist_applied_tw_trap_or_treasure",
+			"voice": "mod",
+			"text": "Im nächsten Raum steht eine Kiste. Falle oder Schatz? Ich verrate nichts.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_mirror_room_01",
+			"tag": "twist_applied_tw_mirror_room",
+			"voice": "mod",
+			"text": "Spiegel-Raum! Was eben noch wehtat, kitzelt jetzt. Und umgekehrt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_elite_guest_01",
+			"tag": "twist_applied_tw_elite_guest",
+			"voice": "mod",
+			"text": "Wir haben einen Stargast! Er ist stärker, eitler und gibt mehr Beute.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_double_trouble_01",
+			"tag": "twist_applied_tw_double_trouble",
+			"voice": "mod",
+			"text": "Doppelte Quote! Ein Gegner mehr, mehr Beute. Mathe kann so schön sein.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_sponsor_rush_01",
+			"tag": "twist_applied_tw_sponsor_rush",
+			"voice": "mod",
+			"text": "Werbeblock! Unsere Sponsoren sind heute besonders spendabel.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_boss_mood_01",
+			"tag": "twist_applied_tw_boss_mood",
+			"voice": "mod",
+			"text": "Das Publikum hat die Laune des Bosses gewählt. Ich wasche meine Hände in Unschuld.",
+			"weight": 1
+		},
+		{
+			"id": "mod_twist_applied_tw_marotte_flash_01",
+			"tag": "twist_applied_tw_marotte_flash",
+			"voice": "mod",
+			"text": "Laune der Regie! Meine Vorlieben zählen gerade doppelt. Erfreuen Sie mich.",
+			"weight": 1
+		},
+		{
+			"id": "mod_regie_cut_in_01",
+			"tag": "regie_cut_in",
+			"voice": "mod",
+			"text": "Die Regie greift ein. Kurz, begrenzt, meistens zu Ihren Gunsten.",
+			"weight": 1
+		},
+		{
+			"id": "mod_regie_cut_in_02",
+			"tag": "regie_cut_in",
+			"voice": "mod",
+			"text": "Achtung, Regie-Eingriff! Keine Sorge, ich habe die Kontrolle. Meistens.",
+			"weight": 1
+		},
+		{
+			"id": "mod_regie_monologue_1_01",
+			"tag": "regie_monologue_1",
+			"voice": "mopsula",
+			"text": "Meine Damen und Herren, Ratten und Restposten: Der Graf hat das Wort.",
+			"weight": 1
+		},
+		{
+			"id": "mod_regie_monologue_1_02",
+			"tag": "regie_monologue_1",
+			"voice": "mopsula",
+			"text": "Ruhe bitte. Ein Graf spricht nur einmal pro Folge. Höchstens zweimal.",
+			"weight": 1
+		},
+		{
+			"id": "mod_regie_monologue_2_01",
+			"tag": "regie_monologue_2",
+			"voice": "mopsula",
+			"text": "Ich habe Zwinger 7 überlebt. Diese Sendung ist dagegen ein Spaziergang.",
+			"weight": 1
+		},
+		{
+			"id": "mod_regie_monologue_2_02",
+			"tag": "regie_monologue_2",
+			"voice": "mopsula",
+			"text": "Die Rattenkönigin hört zu? Gut. Sie soll wissen, dass ich sie nicht vergessen habe.",
+			"weight": 1
+		},
+		{
+			"id": "mod_regie_monologue_3_01",
+			"tag": "regie_monologue_3",
+			"voice": "mopsula",
+			"text": "Und nun zurück zu meiner Assistentin. Sie ist ein Fernseher. Ich respektiere das.",
+			"weight": 1
+		},
+		{
+			"id": "mod_regie_monologue_3_02",
+			"tag": "regie_monologue_3",
+			"voice": "mopsula",
+			"text": "Applaus ist erlaubt. Leberwurst ebenfalls. Danke, das war alles.",
+			"weight": 1
+		},
+		{
+			"id": "mod_mod_live_on_01",
+			"tag": "mod_live_on",
+			"voice": "mod",
+			"text": "M.O.D. live ist auf Sendung. Ab jetzt improvisiere ich. Die Rechtsabteilung schwitzt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_rt_set_quiet_01",
+			"tag": "rt_set_quiet",
+			"voice": "mod",
+			"text": "Ruhe am Set! Kamera läuft, Monster auf Position, Sie auf eigene Gefahr.",
+			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_01",
+			"tag": "persona_intro",
+			"voice": "mod",
+			"text": "{cand} {name} — {job}. Ab heute hauptberuflich: Quote.",
+			"weight": 1
+		}
+	]
+}

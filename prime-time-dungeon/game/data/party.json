@@ -1,0 +1,192 @@
+{
+	"schema": 1,
+	"start": {
+		"inventory": {
+			"itm_bandage": 3,
+			"itm_antidote": 1
+		},
+		"credits": 50
+	},
+	"entries": [
+		{
+			"id": "kai",
+			"name": "Kai",
+			"title": "",
+			"battle_slot": 0,
+			"base_stats": {
+				"hp": 64,
+				"mp": 12,
+				"str": 12,
+				"mag": 5,
+				"def": 9,
+				"res": 6,
+				"spd": 11,
+				"lck": 8
+			},
+			"growth": {
+				"hp": 9.0,
+				"mp": 2.0,
+				"str": 2.0,
+				"mag": 0.6,
+				"def": 1.5,
+				"res": 0.8,
+				"spd": 0.5,
+				"lck": 0.5
+			},
+			"attack_skill": "skl_attack_kai",
+			"learnset": [
+				{
+					"level": 1,
+					"skill": "skl_kai_heavy_swing"
+				},
+				{
+					"level": 2,
+					"skill": "skl_kai_taunt"
+				},
+				{
+					"level": 3,
+					"skill": "skl_kai_sweep"
+				},
+				{
+					"level": 4,
+					"skill": "skl_kai_first_aid"
+				},
+				{
+					"level": 5,
+					"skill": "skl_kai_leash_trip"
+				},
+				{
+					"level": 6,
+					"skill": "skl_kai_deo_torch"
+				},
+				{
+					"level": 7,
+					"skill": "skl_kai_cable_whip"
+				},
+				{
+					"level": 9,
+					"skill": "skl_kai_prime_finisher"
+				}
+			],
+			"stunts": [
+				"skl_stunt_kai_suplex"
+			],
+			"equipment": {
+				"weapon": "itm_wpn_mop",
+				"armor": "itm_arm_hoodie",
+				"accessory": ""
+			},
+			"element_mods": {},
+			"status_immune": [],
+			"status_resist": {},
+			"model": {
+				"base": "humanoid",
+				"scale": 1.0,
+				"pose": "auto",
+				"colors": {
+					"primary": "#3aa9a0",
+					"secondary": "#2e3a57",
+					"accent": "#3b2a22",
+					"skin": "#e8b48f",
+					"eyes": "#1a1420"
+				},
+				"props": [
+					"mop"
+				],
+				"seed": 0,
+				"gltf": ""
+			},
+			"portrait_color": "#3aa9a0"
+		},
+		{
+			"id": "mopsula",
+			"name": "Mopsula",
+			"title": "Graf",
+			"battle_slot": 1,
+			"base_stats": {
+				"hp": 42,
+				"mp": 30,
+				"str": 5,
+				"mag": 13,
+				"def": 6,
+				"res": 11,
+				"spd": 14,
+				"lck": 12
+			},
+			"growth": {
+				"hp": 6.0,
+				"mp": 4.0,
+				"str": 0.6,
+				"mag": 2.2,
+				"def": 0.8,
+				"res": 1.6,
+				"spd": 0.6,
+				"lck": 0.7
+			},
+			"attack_skill": "skl_attack_mopsula",
+			"learnset": [
+				{
+					"level": 1,
+					"skill": "skl_mop_noble_flame"
+				},
+				{
+					"level": 1,
+					"skill": "skl_mop_holy_lick"
+				},
+				{
+					"level": 2,
+					"skill": "skl_mop_frost_sneeze"
+				},
+				{
+					"level": 3,
+					"skill": "skl_mop_thunder_bark"
+				},
+				{
+					"level": 4,
+					"skill": "skl_mop_royal_decree"
+				},
+				{
+					"level": 6,
+					"skill": "skl_mop_mass_lick"
+				},
+				{
+					"level": 7,
+					"skill": "skl_mop_revive"
+				},
+				{
+					"level": 9,
+					"skill": "skl_mop_inferno"
+				}
+			],
+			"stunts": [
+				"skl_stunt_mop_entrance"
+			],
+			"equipment": {
+				"weapon": "itm_wpn_collar_leather",
+				"armor": "itm_arm_pug_sweater",
+				"accessory": ""
+			},
+			"element_mods": {},
+			"status_immune": [],
+			"status_resist": {},
+			"model": {
+				"base": "pug",
+				"scale": 1.0,
+				"pose": "auto",
+				"colors": {
+					"primary": "#d8b98a",
+					"secondary": "#2a2024",
+					"accent": "#7b2cbf",
+					"eyes": "#1a1420"
+				},
+				"props": [
+					"cape",
+					"monocle"
+				],
+				"seed": 0,
+				"gltf": ""
+			},
+			"portrait_color": "#7b2cbf"
+		}
+	]
+}

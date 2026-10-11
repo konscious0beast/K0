@@ -1,0 +1,563 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "itm_bandage",
+			"name": "Werbepflaster",
+			"desc": "Heilt 45 HP. Mit Rabattcode, abgelaufen seit dem Weltuntergang.",
+			"type": "consumable",
+			"rarity": "common",
+			"price": 25,
+			"sell": -1,
+			"max_stack": 9,
+			"tags": [
+				"heal"
+			],
+			"use_skill": "skl_item_bandage",
+			"usable": "both",
+			"icon": "bandage",
+			"color": "#e8e0d0"
+		},
+		{
+			"id": "itm_antidote",
+			"name": "Gegengift-Gurgler",
+			"desc": "Heilt Vergiftung. Schmeckt nach Minze und Reue.",
+			"type": "consumable",
+			"rarity": "common",
+			"price": 20,
+			"sell": -1,
+			"max_stack": 9,
+			"tags": [
+				"cure"
+			],
+			"use_skill": "skl_item_antidote",
+			"usable": "both",
+			"icon": "antidote",
+			"color": "#7cc242"
+		},
+		{
+			"id": "itm_energy_krawumm",
+			"name": "KRAWUMM-Dose",
+			"desc": "Stellt 20 MP wieder her. Schlaf ist was für Verlierer.",
+			"type": "consumable",
+			"rarity": "common",
+			"price": 60,
+			"sell": -1,
+			"max_stack": 9,
+			"tags": [
+				"mp"
+			],
+			"use_skill": "skl_item_energy_krawumm",
+			"usable": "both",
+			"icon": "can",
+			"color": "#60a5fa"
+		},
+		{
+			"id": "itm_brutzel_burger",
+			"name": "Brutzel-Burger",
+			"desc": "Heilt 120 HP. Mit echtem Fleisch-Aroma.",
+			"type": "consumable",
+			"rarity": "rare",
+			"price": 80,
+			"sell": -1,
+			"max_stack": 9,
+			"tags": [
+				"heal"
+			],
+			"use_skill": "skl_item_brutzel_burger",
+			"usable": "both",
+			"icon": "burger",
+			"color": "#ff8a3d"
+		},
+		{
+			"id": "itm_smelling_salts",
+			"name": "Riechsalz",
+			"desc": "Belebt ein KO-Mitglied mit 30 % der max. HP. Nur im Kampf.",
+			"type": "consumable",
+			"rarity": "rare",
+			"price": 150,
+			"sell": -1,
+			"max_stack": 9,
+			"tags": [
+				"revive"
+			],
+			"use_skill": "skl_item_smelling_salts",
+			"usable": "battle",
+			"icon": "salts",
+			"color": "#f5f0e6"
+		},
+		{
+			"id": "itm_molotov",
+			"name": "Grillanzünder-Cocktail",
+			"desc": "60 Feuerschaden an allen Gegnern. Grillsaison ist immer.",
+			"type": "consumable",
+			"rarity": "common",
+			"price": 70,
+			"sell": -1,
+			"max_stack": 9,
+			"tags": [
+				"damage"
+			],
+			"use_skill": "skl_item_molotov",
+			"usable": "battle",
+			"icon": "bottle",
+			"color": "#ff6a2b"
+		},
+		{
+			"id": "itm_ice_spray",
+			"name": "Kältespray",
+			"desc": "90 Eisschaden an einem Gegner. Eigentlich für Sportverletzungen.",
+			"type": "consumable",
+			"rarity": "common",
+			"price": 50,
+			"sell": -1,
+			"max_stack": 9,
+			"tags": [
+				"damage"
+			],
+			"use_skill": "skl_item_ice_spray",
+			"usable": "battle",
+			"icon": "spray",
+			"color": "#7fd8ff"
+		},
+		{
+			"id": "itm_smoke",
+			"name": "Taschen-Nebelmaschine",
+			"desc": "Garantierte Flucht. Nicht gegen Bosse — die Regie will Bilder.",
+			"type": "consumable",
+			"rarity": "rare",
+			"price": 100,
+			"sell": -1,
+			"max_stack": 9,
+			"tags": [
+				"escape"
+			],
+			"use_skill": "skl_item_smoke",
+			"usable": "battle",
+			"icon": "smoke",
+			"color": "#9aa7b8"
+		},
+		{
+			"id": "itm_hype_megaphone",
+			"name": "Hype-Megafon",
+			"desc": "Hype +25 im Kampf. Lautstärke ist auch eine Leistung.",
+			"type": "consumable",
+			"rarity": "rare",
+			"price": 120,
+			"sell": -1,
+			"max_stack": 9,
+			"tags": [
+				"show"
+			],
+			"use_skill": "skl_item_hype_megaphone",
+			"usable": "battle",
+			"icon": "megaphone",
+			"color": "#ff2e88"
+		},
+		{
+			"id": "itm_elixir",
+			"name": "Premium-Abo-Elixier",
+			"desc": "Volle HP und MP. Kündigung nur schriftlich und im Jenseits.",
+			"type": "consumable",
+			"rarity": "epic",
+			"price": 0,
+			"sell": 300,
+			"max_stack": 9,
+			"tags": [
+				"heal",
+				"mp"
+			],
+			"use_skill": "skl_item_elixir",
+			"usable": "both",
+			"icon": "elixir",
+			"color": "#b05cff"
+		},
+		{
+			"id": "itm_key_master",
+			"name": "Generalschlüssel",
+			"desc": "Öffnet das Tor zu Gleis 9 und verschlossene Spinde. Hausordnung inklusive.",
+			"type": "key",
+			"rarity": "rare",
+			"price": 0,
+			"sell": 0,
+			"max_stack": 1,
+			"icon": "key",
+			"color": "#c9a227"
+		},
+		{
+			"id": "itm_wpn_mop",
+			"name": "Wischmopp",
+			"desc": "ATK +4. Hat schon Schlimmeres gesehen.",
+			"type": "weapon",
+			"rarity": "common",
+			"price": 0,
+			"sell": 0,
+			"stats": {
+				"str": 4
+			},
+			"equip_by": [
+				"kai"
+			],
+			"icon": "weapon",
+			"color": "#d9d2b6"
+		},
+		{
+			"id": "itm_wpn_pipe_wrench",
+			"name": "Rohrzange",
+			"desc": "ATK +8. Für Rohre und Probleme aller Art.",
+			"type": "weapon",
+			"rarity": "common",
+			"price": 220,
+			"sell": -1,
+			"stats": {
+				"str": 8
+			},
+			"equip_by": [
+				"kai"
+			],
+			"icon": "weapon",
+			"color": "#c23b22"
+		},
+		{
+			"id": "itm_wpn_fire_axe",
+			"name": "Feuerwehraxt",
+			"desc": "ATK +12, Krit +5 %. Im Notfall Scheibe einschlagen. Notfall ist jetzt.",
+			"type": "weapon",
+			"rarity": "epic",
+			"price": 480,
+			"sell": -1,
+			"stats": {
+				"str": 12
+			},
+			"crit_bonus": 0.05,
+			"equip_by": [
+				"kai"
+			],
+			"icon": "weapon",
+			"color": "#d8dde2"
+		},
+		{
+			"id": "itm_wpn_rail_crowbar",
+			"name": "Gleis-Brechstange",
+			"desc": "ATK +15, Krit +5 %. Hebelwirkung, aber persönlich.",
+			"type": "weapon",
+			"rarity": "epic",
+			"price": 0,
+			"sell": 250,
+			"stats": {
+				"str": 15
+			},
+			"crit_bonus": 0.05,
+			"equip_by": [
+				"kai"
+			],
+			"icon": "weapon",
+			"color": "#3a3a44"
+		},
+		{
+			"id": "itm_wpn_collar_leather",
+			"name": "Lederhalsband",
+			"desc": "MAG +4. Mit Namensschild: „Graf“.",
+			"type": "weapon",
+			"rarity": "common",
+			"price": 0,
+			"sell": 0,
+			"stats": {
+				"mag": 4
+			},
+			"equip_by": [
+				"mopsula"
+			],
+			"icon": "collar",
+			"color": "#6b3f22"
+		},
+		{
+			"id": "itm_wpn_collar_studded",
+			"name": "Nietenhalsband",
+			"desc": "MAG +7. Punk ist nicht tot, er ist nur adelig.",
+			"type": "weapon",
+			"rarity": "rare",
+			"price": 200,
+			"sell": -1,
+			"stats": {
+				"mag": 7
+			},
+			"equip_by": [
+				"mopsula"
+			],
+			"icon": "collar",
+			"color": "#a8b0b8"
+		},
+		{
+			"id": "itm_wpn_collar_signet",
+			"name": "Siegel-Halsband",
+			"desc": "MAG +11, MP +10. Goldene Plakette. Wir bestehen darauf.",
+			"type": "weapon",
+			"rarity": "epic",
+			"price": 460,
+			"sell": -1,
+			"stats": {
+				"mag": 11,
+				"mp": 10
+			},
+			"equip_by": [
+				"mopsula"
+			],
+			"icon": "collar",
+			"color": "#ffc93c"
+		},
+		{
+			"id": "itm_wpn_collar_royal",
+			"name": "Hofjuwelier-Halsband",
+			"desc": "MAG +14, MP +15. Echte Steine. Behauptet der Juwelier.",
+			"type": "weapon",
+			"rarity": "epic",
+			"price": 0,
+			"sell": 250,
+			"stats": {
+				"mag": 14,
+				"mp": 15
+			},
+			"equip_by": [
+				"mopsula"
+			],
+			"icon": "collar",
+			"color": "#b05cff"
+		},
+		{
+			"id": "itm_arm_hoodie",
+			"name": "Tierheim-Hoodie",
+			"desc": "DEF +3, RES +1. Riecht nach Hund. Im besten Sinn.",
+			"type": "armor",
+			"rarity": "common",
+			"price": 0,
+			"sell": 0,
+			"stats": {
+				"def": 3,
+				"res": 1
+			},
+			"equip_by": [
+				"kai"
+			],
+			"icon": "armor",
+			"color": "#3aa9a0"
+		},
+		{
+			"id": "itm_arm_safety_vest",
+			"name": "Warnweste",
+			"desc": "DEF +6, RES +2. Gesehen werden ist die halbe Miete.",
+			"type": "armor",
+			"rarity": "rare",
+			"price": 180,
+			"sell": -1,
+			"stats": {
+				"def": 6,
+				"res": 2
+			},
+			"equip_by": [
+				"kai"
+			],
+			"icon": "armor",
+			"color": "#f2c230"
+		},
+		{
+			"id": "itm_arm_sewer_suit",
+			"name": "Kanalarbeiter-Kombi",
+			"desc": "DEF +9, RES +4, halbiert Giftschaden. Wasserdicht, meistens.",
+			"type": "armor",
+			"rarity": "common",
+			"price": 420,
+			"sell": -1,
+			"stats": {
+				"def": 9,
+				"res": 4
+			},
+			"element_mods": {
+				"poison": 0.5
+			},
+			"equip_by": [
+				"kai"
+			],
+			"icon": "armor",
+			"color": "#ff9a2e"
+		},
+		{
+			"id": "itm_arm_pug_sweater",
+			"name": "Hundepulli „Kleiner Lord“",
+			"desc": "DEF +2, RES +3. Gestrickt mit Liebe und Fusseln.",
+			"type": "armor",
+			"rarity": "common",
+			"price": 0,
+			"sell": 0,
+			"stats": {
+				"def": 2,
+				"res": 3
+			},
+			"equip_by": [
+				"mopsula"
+			],
+			"icon": "armor",
+			"color": "#7b2cbf"
+		},
+		{
+			"id": "itm_arm_velvet_cape",
+			"name": "Samtcape",
+			"desc": "DEF +4, RES +6. Rascheln mit Würde.",
+			"type": "armor",
+			"rarity": "common",
+			"price": 220,
+			"sell": -1,
+			"stats": {
+				"def": 4,
+				"res": 6
+			},
+			"equip_by": [
+				"mopsula"
+			],
+			"icon": "armor",
+			"color": "#5a2c8f"
+		},
+		{
+			"id": "itm_arm_ermine",
+			"name": "Hermelin-Umhang (Kunstpelz!)",
+			"desc": "DEF +6, RES +9, HP +15. Kein Tier kam zu Schaden.",
+			"type": "armor",
+			"rarity": "epic",
+			"price": 0,
+			"sell": 250,
+			"stats": {
+				"def": 6,
+				"res": 9,
+				"hp": 15
+			},
+			"equip_by": [
+				"mopsula"
+			],
+			"icon": "armor",
+			"color": "#f2eee6"
+		},
+		{
+			"id": "itm_acc_lucky_ticket",
+			"name": "Glücks-Fahrschein",
+			"desc": "LCK +5. Gültig für eine Fahrt ins Ungewisse.",
+			"type": "accessory",
+			"rarity": "rare",
+			"price": 150,
+			"sell": -1,
+			"stats": {
+				"lck": 5
+			},
+			"icon": "ticket",
+			"color": "#f2e8c9"
+		},
+		{
+			"id": "itm_acc_rubber_boots",
+			"name": "Gummistiefel",
+			"desc": "Halbiert Blitzschaden. Und nasse Füße.",
+			"type": "accessory",
+			"rarity": "rare",
+			"price": 200,
+			"sell": -1,
+			"element_mods": {
+				"shock": 0.5
+			},
+			"icon": "boots",
+			"color": "#f2c230"
+		},
+		{
+			"id": "itm_acc_sneakers",
+			"name": "Turnschuhe (gebraucht)",
+			"desc": "SPD +2. Jemand ist darin sehr schnell gelaufen. Wovor?",
+			"type": "accessory",
+			"rarity": "epic",
+			"price": 260,
+			"sell": -1,
+			"stats": {
+				"spd": 2
+			},
+			"icon": "shoes",
+			"color": "#ffffff"
+		},
+		{
+			"id": "itm_acc_gas_mask",
+			"name": "Gasmaske",
+			"desc": "Immun gegen Gift. Steht niemandem, schützt alle.",
+			"type": "accessory",
+			"rarity": "common",
+			"price": 300,
+			"sell": -1,
+			"element_mods": {
+				"poison": 0.0
+			},
+			"status_immune": [
+				"sts_poison"
+			],
+			"icon": "mask",
+			"color": "#3a3a44"
+		},
+		{
+			"id": "itm_acc_key_ring",
+			"name": "Schlüsselbund des Hausmeisters",
+			"desc": "DEF +2, Krit +5 %. Klimpert bedrohlich.",
+			"type": "accessory",
+			"rarity": "rare",
+			"price": 0,
+			"sell": 150,
+			"stats": {
+				"def": 2
+			},
+			"crit_bonus": 0.05,
+			"icon": "keys",
+			"color": "#c9a227"
+		},
+		{
+			"id": "itm_acc_queen_crown",
+			"name": "Rattenkrone",
+			"desc": "STR +3, MAG +3, SPD +1. Nur für Kai — der Graf trägt keine Kronen.",
+			"type": "accessory",
+			"rarity": "epic",
+			"price": 0,
+			"sell": 250,
+			"stats": {
+				"str": 3,
+				"mag": 3,
+				"spd": 1
+			},
+			"equip_by": [
+				"kai"
+			],
+			"icon": "crown",
+			"color": "#f2e8c9"
+		},
+		{
+			"id": "itm_acc_fan_scarf",
+			"name": "Fan-Schal",
+			"desc": "Positive Hype-Gewinne ×1,2. Gestrickt aus purer Begeisterung.",
+			"type": "accessory",
+			"rarity": "rare",
+			"price": 0,
+			"sell": 150,
+			"show_mods": {
+				"hype_gain_mult": 1.2,
+				"follower_mult": 1.0
+			},
+			"icon": "scarf",
+			"color": "#ff5fa2"
+		},
+		{
+			"id": "itm_acc_clip_mic",
+			"name": "Ansteck-Mikro",
+			"desc": "Follower-Gewinn ×1,15. Jedes Wort zählt. Und wird verkauft.",
+			"type": "accessory",
+			"rarity": "rare",
+			"price": 0,
+			"sell": 150,
+			"show_mods": {
+				"hype_gain_mult": 1.0,
+				"follower_mult": 1.15
+			},
+			"icon": "mic",
+			"color": "#22d3ee"
+		}
+	]
+}

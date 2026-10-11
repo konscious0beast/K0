@@ -1,0 +1,171 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "spn_gluckwasser",
+			"name": "Glückwasser",
+			"slogan": "Trink dich glücklich. Wörtlich.",
+			"color": "#4ad9d9",
+			"gift": [
+				{
+					"kind": "heal_party_pct",
+					"value": 25,
+					"target": "party"
+				}
+			],
+			"weight": 3,
+			"weight_mods": [
+				{
+					"cond": "ally_hp_below",
+					"value": 0.5,
+					"mult": 3.0
+				}
+			],
+			"min_floor": 1,
+			"max_floor": 0,
+			"mod_tag": "sponsor_gift"
+		},
+		{
+			"id": "spn_krawumm",
+			"name": "KRAWUMM Energy",
+			"slogan": "Schlaf ist was für Verlierer.",
+			"color": "#ff7a1a",
+			"gift": [
+				{
+					"kind": "status_party",
+					"status": "sts_haste",
+					"turns": 3,
+					"target": "party"
+				}
+			],
+			"weight": 2,
+			"weight_mods": [],
+			"min_floor": 1,
+			"max_floor": 0,
+			"mod_tag": "sponsor_gift"
+		},
+		{
+			"id": "spn_panzerkeks",
+			"name": "Panzerkeks",
+			"slogan": "Der Keks, der zurückbeißt.",
+			"color": "#c9a227",
+			"gift": [
+				{
+					"kind": "status_party",
+					"status": "sts_guard",
+					"turns": 3,
+					"target": "party"
+				}
+			],
+			"weight": 2,
+			"weight_mods": [
+				{
+					"cond": "ally_hp_below",
+					"value": 0.35,
+					"mult": 2.0
+				}
+			],
+			"min_floor": 1,
+			"max_floor": 0,
+			"mod_tag": "sponsor_gift"
+		},
+		{
+			"id": "spn_sorgenfrei",
+			"name": "Sorgenfrei Versicherungen AG",
+			"slogan": "Wir zahlen. Meistens.",
+			"color": "#2bd66b",
+			"gift": [
+				{
+					"kind": "revive_or_heal_lowest",
+					"value": 40,
+					"target": "party"
+				}
+			],
+			"weight": 1,
+			"weight_mods": [
+				{
+					"cond": "ally_ko",
+					"value": 0.0,
+					"mult": 6.0
+				}
+			],
+			"min_floor": 1,
+			"max_floor": 0,
+			"mod_tag": "sponsor_gift"
+		},
+		{
+			"id": "spn_novanet",
+			"name": "NovaNet Mobilfunk",
+			"slogan": "Empfang bis in die tiefste Etage.",
+			"color": "#22d3ee",
+			"gift": [
+				{
+					"kind": "mp_party_pct",
+					"value": 40,
+					"target": "party"
+				}
+			],
+			"weight": 2,
+			"weight_mods": [
+				{
+					"cond": "ally_mp_below",
+					"value": 0.3,
+					"mult": 2.0
+				}
+			],
+			"min_floor": 1,
+			"max_floor": 0,
+			"mod_tag": "sponsor_gift"
+		},
+		{
+			"id": "spn_brutzel",
+			"name": "Brutzel-Burger",
+			"slogan": "Mit echtem Fleisch-Aroma.",
+			"color": "#ff8a3d",
+			"gift": [
+				{
+					"kind": "item",
+					"item": "itm_brutzel_burger",
+					"value": 1,
+					"target": "party"
+				},
+				{
+					"kind": "heal_party_flat",
+					"value": 20,
+					"target": "party"
+				}
+			],
+			"weight": 2,
+			"weight_mods": [],
+			"min_floor": 1,
+			"max_floor": 0,
+			"mod_tag": "sponsor_gift"
+		},
+		{
+			"id": "spn_doomscroll",
+			"name": "DoomScroll+",
+			"slogan": "Nur noch eine Folge.",
+			"color": "#7a5cff",
+			"gift": [
+				{
+					"kind": "status_enemies",
+					"status": "sts_slow",
+					"turns": 3,
+					"target": "enemies",
+					"ignore_resist": true
+				}
+			],
+			"weight": 2,
+			"weight_mods": [
+				{
+					"cond": "is_boss",
+					"value": 0.0,
+					"mult": 2.0
+				}
+			],
+			"min_floor": 1,
+			"max_floor": 0,
+			"mod_tag": "sponsor_gift"
+		}
+	]
+}

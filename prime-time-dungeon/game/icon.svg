@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <!-- PRIME TIME DUNGEON app icon: "PTD" on a TV-screen badge, NOVA magenta / cyan on ink. -->
+  <rect x="4" y="4" width="120" height="120" rx="22" ry="22" fill="#140d1c"/>
+  <rect x="12" y="22" width="104" height="78" rx="12" ry="12" fill="none" stroke="#22d3ee" stroke-width="5"/>
+  <line x1="44" y1="8" x2="58" y2="22" stroke="#22d3ee" stroke-width="4" stroke-linecap="round"/>
+  <line x1="84" y1="8" x2="70" y2="22" stroke="#22d3ee" stroke-width="4" stroke-linecap="round"/>
+  <!-- P -->
+  <path d="M22 88 V36 H38 Q50 36 50 49 Q50 62 38 62 H31 V88 Z M31 44 V54 H37 Q41 54 41 49 Q41 44 37 44 Z" fill="#ff2e88"/>
+  <!-- T -->
+  <path d="M52 36 H80 V45 H70.5 V88 H61.5 V45 H52 Z" fill="#ff2e88"/>
+  <!-- D -->
+  <path d="M82 36 H93 Q108 36 108 62 Q108 88 93 88 H82 Z M91 45 V79 H93 Q99 79 99 62 Q99 45 93 45 Z" fill="#ff2e88"/>
+  <rect x="22" y="106" width="84" height="8" rx="4" ry="4" fill="#ffc93c"/>
+  <circle cx="106" cy="30" r="5" fill="#ff4d4d"/>
+</svg>

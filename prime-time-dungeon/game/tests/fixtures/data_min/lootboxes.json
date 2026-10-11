@@ -1,0 +1,108 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "box_bronze",
+			"name": "Bronze-Box",
+			"tier": 1,
+			"color": "#cd7f32",
+			"rolls": 2,
+			"rarity_weights": {
+				"common": 80,
+				"rare": 18,
+				"epic": 2
+			}
+		},
+		{
+			"id": "box_silver",
+			"name": "Silber-Box",
+			"tier": 2,
+			"color": "#c0c8d2",
+			"rolls": 3,
+			"rarity_weights": {
+				"common": 55,
+				"rare": 38,
+				"epic": 7
+			},
+			"guarantee": "rare"
+		},
+		{
+			"id": "box_gold",
+			"name": "Gold-Box",
+			"tier": 3,
+			"color": "#ffc83d",
+			"rolls": 4,
+			"rarity_weights": {
+				"common": 25,
+				"rare": 55,
+				"epic": 20
+			},
+			"guarantee": "epic"
+		},
+		{
+			"id": "box_fan",
+			"name": "Fan-Box",
+			"tier": 4,
+			"color": "#ff5fa2",
+			"rolls": 2,
+			"rarity_weights": {
+				"common": 50,
+				"rare": 40,
+				"epic": 10
+			},
+			"fixed_pool": "fan"
+		}
+	],
+	"pools": {
+		"f1": {
+			"common": [
+				{
+					"kind": "credits",
+					"id": "",
+					"amount": 25,
+					"weight": 30
+				},
+				{
+					"kind": "item",
+					"id": "itm_bandage",
+					"amount": 2,
+					"weight": 25
+				}
+			],
+			"rare": [
+				{
+					"kind": "item",
+					"id": "itm_antidote",
+					"amount": 2,
+					"weight": 20
+				},
+				{
+					"kind": "credits",
+					"id": "",
+					"amount": 120,
+					"weight": 10
+				}
+			],
+			"epic": [
+				{
+					"kind": "credits",
+					"id": "",
+					"amount": 300,
+					"weight": 10
+				}
+			],
+			"fan": [
+				{
+					"kind": "item",
+					"id": "itm_bandage",
+					"amount": 3,
+					"weight": 40
+				}
+			]
+		}
+	},
+	"pity": {
+		"rare": 4,
+		"epic": 8
+	}
+}

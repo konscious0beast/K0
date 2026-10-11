@@ -1,0 +1,456 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "tal_kai_wischtechnik",
+			"name": "Wischtechnik",
+			"desc": "Jahre am Bahnsteig gewischt. Jeder Hieb sitzt.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 2,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "atk",
+			"effects": [
+				{
+					"kind": "stat_flat",
+					"stat": "str",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "tal_kai_dicke_haut",
+			"name": "Dicke Haut (tierheimgeprüft)",
+			"desc": "Bisse? Kratzer? Kennt Kai aus dem Tierheim.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 2,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "def",
+			"effects": [
+				{
+					"kind": "stat_flat",
+					"stat": "def",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "tal_kai_nachtschicht",
+			"name": "Nachtschicht-Kondition",
+			"desc": "Wer Nachtschichten übersteht, übersteht auch das.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 2,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "hp",
+			"effects": [
+				{
+					"kind": "stat_pct",
+					"stat": "hp",
+					"pm": 50
+				}
+			]
+		},
+		{
+			"id": "tal_kai_hausverstand",
+			"name": "Hausverstand",
+			"desc": "Zaubertricks? Kai glaubt kein Wort davon.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "res",
+			"effects": [
+				{
+					"kind": "stat_flat",
+					"stat": "res",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "tal_kai_glueckspfote",
+			"name": "Glückspfote",
+			"desc": "Ein Talisman aus dem Tierheim. Riecht leicht nach Hund.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "lck",
+			"effects": [
+				{
+					"kind": "stat_flat",
+					"stat": "lck",
+					"value": 1
+				},
+				{
+					"kind": "crit_add_pm",
+					"pm": 20
+				}
+			]
+		},
+		{
+			"id": "tal_kai_fester_griff",
+			"name": "Fester Griff",
+			"desc": "Der Mopp rutscht nie. Kritische Treffer kommen öfter.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 2,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "crit",
+			"effects": [
+				{
+					"kind": "crit_add_pm",
+					"pm": 30
+				}
+			]
+		},
+		{
+			"id": "tal_kai_bissfest",
+			"name": "Bissfest",
+			"desc": "Gegen Gift abgehärtet. Danke, Kanalratten.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "element",
+			"effects": [
+				{
+					"kind": "element_pm",
+					"element": "poison",
+					"pm": 750
+				}
+			]
+		},
+		{
+			"id": "tal_kai_kaffee",
+			"name": "Automatenkaffee",
+			"desc": "Nach jedem Kampf ein Becher. Bringt MP zurück.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 2,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "mp",
+			"effects": [
+				{
+					"kind": "post_battle_mp_pm",
+					"pm": 50
+				}
+			]
+		},
+		{
+			"id": "tal_kai_weit_ausholen",
+			"name": "Weit ausholen",
+			"desc": "Der Feldschlag reicht ein Viertel weiter.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "field",
+			"effects": [
+				{
+					"kind": "field_range_pm",
+					"pm": 1250
+				}
+			]
+		},
+		{
+			"id": "tal_kai_erster_eindruck",
+			"name": "Erster Eindruck",
+			"desc": "Nach einem Präventivschlag trifft die erste Runde härter.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "field",
+			"effects": [
+				{
+					"kind": "preemptive_dmg_pm",
+					"pm": 1150
+				}
+			]
+		},
+		{
+			"id": "tal_kai_kamera3",
+			"name": "Kamera 3 kennt mich",
+			"desc": "Einmal je Etage ein Extra-Herz für M.O.D.s Vorliebe.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "show",
+			"effects": [
+				{
+					"kind": "marotte_heart",
+					"per_floor": 1
+				}
+			]
+		},
+		{
+			"id": "tal_kai_liga_routine",
+			"name": "Liga-Routine",
+			"desc": "Ohne Rüstung & ohne Accessoire? Routine. In der Liga etwas mehr Verteidigung.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "liga",
+			"effects": [
+				{
+					"kind": "liga_stat_pct",
+					"stat": "def",
+					"pm": 50
+				}
+			]
+		},
+		{
+			"id": "tal_mop_mitternachtsformel",
+			"name": "Mitternachtsformel",
+			"desc": "Um Mitternacht gelernt, nie vergessen. Zauber sitzen fester.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 2,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "mag",
+			"effects": [
+				{
+					"kind": "stat_flat",
+					"stat": "mag",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "tal_mop_koerbchen",
+			"name": "Körbchen-Nickerchen",
+			"desc": "Nach jedem Kampf ein Nickerchen im Körbchen. Bringt MP zurück.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 2,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "mp",
+			"effects": [
+				{
+					"kind": "post_battle_mp_pm",
+					"pm": 50
+				}
+			]
+		},
+		{
+			"id": "tal_mop_hoher_kragen",
+			"name": "Hoher Kragen",
+			"desc": "Flüche prallen am Kragen ab. Meistens.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 2,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "res",
+			"effects": [
+				{
+					"kind": "stat_flat",
+					"stat": "res",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "tal_mop_leberwurst",
+			"name": "Leberwurst-Diät",
+			"desc": "Streng nach Plan. Der Plan heißt Leberwurst.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 2,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "hp",
+			"effects": [
+				{
+					"kind": "stat_pct",
+					"stat": "hp",
+					"pm": 50
+				}
+			]
+		},
+		{
+			"id": "tal_mop_monokel",
+			"name": "Monokel-Fokus",
+			"desc": "Durchs Monokel sieht der Graf jeden Zug kommen.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 3,
+			"icon": "spd",
+			"effects": [
+				{
+					"kind": "stat_flat",
+					"stat": "spd",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "tal_mop_zwinger7",
+			"name": "Zwinger 7 überlebt",
+			"desc": "Wer das Tierheim übersteht, hat Glück im Blut.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "lck",
+			"effects": [
+				{
+					"kind": "stat_flat",
+					"stat": "lck",
+					"value": 2
+				}
+			]
+		},
+		{
+			"id": "tal_mop_nachtaktiv",
+			"name": "Nachtaktiv",
+			"desc": "Nachts ist der Graf in Bestform. Also immer.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 2,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "mp",
+			"effects": [
+				{
+					"kind": "stat_pct",
+					"stat": "mp",
+					"pm": 50
+				}
+			]
+		},
+		{
+			"id": "tal_mop_unterpelz",
+			"name": "Doppelter Unterpelz",
+			"desc": "Kälte? Der Graf trägt Fell in zwei Lagen.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "element",
+			"effects": [
+				{
+					"kind": "element_pm",
+					"element": "ice",
+					"pm": 750
+				}
+			]
+		},
+		{
+			"id": "tal_mop_stereo",
+			"name": "Bellen in Stereo",
+			"desc": "Das Bellen reicht ein Viertel weiter.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "field",
+			"effects": [
+				{
+					"kind": "field_range_pm",
+					"pm": 1250
+				}
+			]
+		},
+		{
+			"id": "tal_mop_schwer_vermittelbar",
+			"name": "Schwer vermittelbar",
+			"desc": "Lässt sich nicht abwimmeln: öfter bellbereit.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "field",
+			"effects": [
+				{
+					"kind": "field_cd_pm",
+					"pm": 700
+				}
+			]
+		},
+		{
+			"id": "tal_mop_taktgefuehl",
+			"name": "Taktgefühl",
+			"desc": "Der Graf wartet den richtigen Moment ab: Stunts gelingen öfter.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "stunt",
+			"effects": [
+				{
+					"kind": "stunt_window_pm",
+					"pm": 1200
+				}
+			]
+		},
+		{
+			"id": "tal_mop_liga_gelassen",
+			"name": "Liga-Gelassenheit",
+			"desc": "Ohne Rüstung & ohne Accessoire bleibt der Graf gelassen: in der Liga etwas mehr Resistenz.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "liga",
+			"effects": [
+				{
+					"kind": "liga_stat_pct",
+					"stat": "res",
+					"pm": 50
+				}
+			]
+		}
+	]
+}

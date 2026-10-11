@@ -93,6 +93,6 @@ func test_harness_is_deterministic() -> void:
 	assert_true(v.has("OUT enc_f1_boss_hausmeister kai L0: first-try losses % 50.0 [10–30]"), str(v))
 	assert_true(v.has("ok  enc_f1_boss_hausmeister kai L0: duration median s 180.0 [150–210]"), str(v))
 	assert_true(v.has("OUT enc_f1_boss_hausmeister kai L1: first-try losses % 50.0 [0–40]"), str(v))
-	assert_true(v.has("OUT enc_f1_boss_hausmeister kai: Liga 1 − Liga 0 losses (points) 0.0 [5–100]"), str(v))
+	assert_true(v.has("OUT enc_f1_boss_hausmeister kai: Liga 1 − Liga 0 losses (points) 0.0 [5–15]"), str(v))
 	s0["profile"] = "perfect"
 	assert_eq(Harness.band_report([s0], []).size(), 0, "yardstick profiles carry no band")

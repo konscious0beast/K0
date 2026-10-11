@@ -25,9 +25,11 @@ var equip_by: PackedStringArray = []
 var attack_element: String = "physical"
 var icon: String = ""
 var color: String = "#ffffff"
-# --- Echtzeitkampf (07, R1a): optional `rt` block (07 §4.8): {"wheel": 0..99} (-1 = data order) ------------------
+# --- Echtzeitkampf (07, R1a): optional `rt` block (07 §4.8): {"wheel": 0..99} (-1 = data order); R5b: "mods" — the
+# RtMods of an equipped piece in the real-time combat (07 §9.5 "equipment", without src / unit: BattleBridge adds
+# "equip:<id>" and the wearer's unit), e.g. [{"op": "dmg_taken_pm", "pm": 900}] ------------------------------------
 const RtNorm := preload("res://core/data/defs/rt_norm.gd")
-const RT_SPEC: Array = [["wheel", "i", -1]]
+const RT_SPEC: Array = [["wheel", "i", -1], ["mods", "a", []]]
 var rt: Dictionary = {}
 
 

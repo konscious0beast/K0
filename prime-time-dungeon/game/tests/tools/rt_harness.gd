@@ -68,14 +68,16 @@ const BANDS: Dictionary = {
 	"enc_e1_showboss": {"sec": [20.0, 40.0], "hp": [20.0, 40.0], "loss": [[0.0, 5.0]]},
 	"enc_f1_boss_hausmeister": {"sec": [150.0, 210.0], "loss": [[10.0, 30.0], [0.0, 40.0], [0.0, 55.0]], "intr": 60.0,
 		"tele": 25.0},
-	"enc_f1_boss_rattenkoenigin": {"sec": [180.0, 240.0], "loss": [[25.0, 45.0], [0.0, 55.0], [0.0, 70.0]],
+	"enc_f1_boss_rattenkoenigin": {"sec": [180.0, 240.0], "loss": [[25.0, 45.0], [0.0, 55.0], [0.0, 80.0]],
 		"intr": 60.0, "tele": 25.0},
 }
 ## Bands across series: the median of the 13 regular medians (s), the step of the first-try boss losses from Liga 0 to
-## Liga 1 (points ≥, "measurably harder"), and the floor sequence's medians — heal items per floor, fights a fresh
-## party wins before its first heal item (07 §11.1 "2–3 Kämpfe zwischen zwei Safe Rooms ohne Tränke").
+## Liga 1 (points; E31, R5b: 5–15 per hero and boss — measurably harder, not a cliff; the queen's Liga 2 ≤ 80 % above),
+## and the floor sequence's medians — heal items per floor, fights a fresh party wins before its first heal item
+## (07 §11.1 "2–3 Kämpfe zwischen zwei Safe Rooms ohne Tränke").
 const BAND_REGULAR_MEDIAN: Array = [20.0, 25.0]
 const BAND_LIGA_STEP: float = 5.0
+const BAND_LIGA_STEP_MAX: float = 15.0
 const BAND_SEQ_ITEMS: Array = [4.0, 9.0]
 const BAND_SEQ_STREAK: Array = [2.0, 3.0]
 ## Gear per point of the floor (test_m7_balance GEAR: start kit; safe room 1 + metal chests A / B; after the
@@ -269,6 +271,8 @@ static func _result(sim: RtSim, m: Dictionary, bot_stats: Dictionary) -> Diction
 	out["dodges"] = int(sim.tally.get("dodges", 0))
 	out["telegraph_hits"] = int(sim.tally.get("telegraph_hits", 0))
 	out["train_kills"] = int(sim.tally.get("train_kills", 0))
+	out["crits"] = int(sim.tally.get("crits", 0))                  # R5b: the battle_won payload (ach_crit_3, …)
+	out["weakness_hits"] = int(sim.tally.get("weakness_hits", 0))
 	out["gcd_windows"] = int(bot_stats.get("gcd_windows", 0))
 	out["gcd_used"] = int(bot_stats.get("gcd_used", 0))
 	out["party_hp"] = []
@@ -424,7 +428,7 @@ static func band_report(series_list: Array, seqs: Array) -> PackedStringArray:
 		var by: Dictionary = boss_loss[key]
 		if by.has(0) and by.has(1):
 			out.append(_verdict(key, "Liga 1 − Liga 0 losses (points)", float(by[1]) - float(by[0]),
-				[BAND_LIGA_STEP, 100.0]))
+				[BAND_LIGA_STEP, BAND_LIGA_STEP_MAX]))
 	for q: Dictionary in seqs:
 		if str(q.get("profile", "typical")) != "typical":
 			continue
@@ -448,7 +452,7 @@ static func tune(data: GameData, spec: String) -> String:
 	var eq: int = spec.find("=")
 	var colon: int = spec.find(":")
 	if eq < 0 or colon < 0 or colon > eq:
-		return "expected <enemy|skill|bal>:<id>.<path>=<value>"
+		return "expected <enemy|skill|skilldef|item|bal>:<id>.<path>=<value>"
 	var kind: String = spec.substr(0, colon)
 	var path: PackedStringArray = spec.substr(colon + 1, eq - colon - 1).split(".", false)
 	var value: Variant = JSON.parse_string(spec.substr(eq + 1))
@@ -465,9 +469,18 @@ static func tune(data: GameData, spec: String) -> String:
 		"skill":
 			holder = data.skill(path[0]) if data.has_id("skills", path[0]) else null
 			path = path.slice(1)
+		"item":
+			holder = data.item(path[0]) if data.has_id("items", path[0]) else null
+			path = path.slice(1)
 		"bal":
 			holder = data
 			prop = "_rt_balance"
+		"skilldef":                                     # a top-level field of the SkillDef (element, power, …)
+			var sd: SkillDef = data.skill(path[0]) if data.has_id("skills", path[0]) else null
+			if sd == null or path.size() != 2 or not (path[1] in sd):
+				return "unknown target in '%s'" % spec
+			sd.set(path[1], value)
+			return ""
 	if holder == null or path.is_empty():
 		return "unknown target in '%s'" % spec
 	var root: Dictionary = (holder.get(prop) as Dictionary).duplicate(true)

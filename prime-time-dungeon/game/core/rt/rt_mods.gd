@@ -10,7 +10,8 @@ class_name RtMods extends RefCounted
 ## - move_pm, swing_pm, threat_pm {pm}: speed, swing time and threat factor of the unit when the setup is built;
 ## - dmg_dealt_pm, dmg_taken_pm {pm}: factors of the damage fold (07 §3.9.1 "mods_pm"; percent hits and status ticks
 ##   fold the target's factors only), heal_taken_pm {pm}: healing on the unit, first_hit_taken_pm {pm}: its first
-##   damage in the combat;
+##   damage in the combat; dmg_taken_pm with "element" (R5b) folds only into skill hits (formula and percent) of that
+##   element, after the element-free factors (status ticks: never);
 ## - on {event: RtVocab.MOD_EVENTS, effect: {"heal_pct": int} | {"mp": int} | {"status": id, "ms": int}}: on_event;
 ## - add_rule {rule: RtRule, shared: bool}: the rule on every affected unit in every phase (key "m<list index>:0");
 ##   shared = one timer for all of them (the first free unit fires, then all wait every_ms; no slot offset);
@@ -29,12 +30,12 @@ const FixedMath := preload("res://core/stats/fixed_math.gd")
 const OP_FIELDS: Dictionary = {
 	"stat_pm": {"stat": "s", "pm": "i"}, "skill_pm": {"skill": "s", "field": "s", "pm": "i"},
 	"move_pm": {"pm": "i"}, "swing_pm": {"pm": "i"}, "threat_pm": {"pm": "i"}, "dmg_dealt_pm": {"pm": "i"},
-	"dmg_taken_pm": {"pm": "i"}, "heal_taken_pm": {"pm": "i"}, "first_hit_taken_pm": {"pm": "i"},
+	"dmg_taken_pm": {"pm": "i", "element": "s"}, "heal_taken_pm": {"pm": "i"}, "first_hit_taken_pm": {"pm": "i"},
 	"on": {"event": "s", "effect": "d"}, "add_rule": {"rule": "d", "shared": "b"}, "element_swap": {},
 	"extra_enemy": {"enemy": "s", "count": "i"}, "forbid_skill": {"skill": "s"}, "forbid_items": {"tag": "s"},
 	"unlock_variant": {"slot": "i", "skill": "s"},
 }
-const OPTIONAL_FIELDS: PackedStringArray = ["shared"]
+const OPTIONAL_FIELDS: PackedStringArray = ["shared", "element"]
 ## Factors are 0…PM_MAX (07 §3.9.1: the validator keeps every factor ≤ 5000).
 const PM_MAX: int = 5000
 ## RtSim.skill_pm: the index of each skill field.
@@ -138,6 +139,19 @@ static func on_event(sim: RtSim, e: ActionEvent) -> Array[ActionEvent]:
 	return out
 
 
+## The mods of equipment `item_id` (items.json rt.mods, R5b) for its wearer `uid`: every entry with src
+## "equip:<item_id>" and unit `uid` (the data validator checks them the same way with "p0").
+static func from_equipment(item_id: String, mods: Array, uid: String) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for e: Variant in mods:
+		if e is Dictionary:
+			var m: Dictionary = (e as Dictionary).duplicate(true)
+			m["src"] = "equip:" + item_id
+			m["unit"] = uid
+			out.append(m)
+	return out
+
+
 ## The mods of the active battle twists (07 §9.5 table; `twists` = GameState.flags.live.twist.active entries counting
 ## battles, stored order): tw_mirror_room → element_swap on enemies; tw_elite_guest → stat_pm max_hp and str ×
 ## elite_pm on enemies; tw_double_trouble → extra_enemy "first" × extra_enemies; tw_boss_mood → aggressive: swing_pm
@@ -219,8 +233,21 @@ static func applies(m: Dictionary, u: RtUnit) -> bool:
 static func pms(mods: Array, u: RtUnit, op: String) -> Array[int]:
 	var out: Array[int] = []
 	for m: Dictionary in mods:
-		if str(m.get("op", "")) == op and applies(m, u):
+		if str(m.get("op", "")) == op and applies(m, u) and not m.has("element"):
 			out.append(clampi(JsonUtil.to_int(m.get("pm", 1000), 1000), 0, PM_MAX))
+	return out
+
+
+## The element-bound dmg_taken_pm factors of `u` (R5b): {element: Array[int]} in list order; {} without such mods.
+static func element_pms(mods: Array, u: RtUnit) -> Dictionary:
+	var out: Dictionary = {}
+	for m: Dictionary in mods:
+		if str(m.get("op", "")) == "dmg_taken_pm" and m.has("element") and applies(m, u):
+			var el: String = str(m["element"])
+			var list: Array[int] = []
+			list.assign(out.get(el, []))
+			list.append(clampi(JsonUtil.to_int(m.get("pm", 1000), 1000), 0, PM_MAX))
+			out[el] = list
 	return out
 
 
@@ -314,6 +341,9 @@ static func _op_problems(ctx: String, op: String, m: Dictionary) -> PackedString
 	if m.has("pm") and (int(m["pm"]) < 0 or int(m["pm"]) > PM_MAX):
 		out.append(ctx + ".pm: %d outside 0..%d" % [int(m["pm"]), PM_MAX])
 	match op:
+		"dmg_taken_pm":
+			if m.has("element") and not Elements.ALL.has(str(m["element"])):
+				out.append(ctx + ".element: unknown element '%s'" % str(m["element"]))
 		"stat_pm":
 			if not RtVocab.MOD_STATS.has(str(m["stat"])):
 				out.append(ctx + ".stat: unknown stat '%s'" % str(m["stat"]))

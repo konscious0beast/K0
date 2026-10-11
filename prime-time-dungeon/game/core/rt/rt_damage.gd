@@ -73,7 +73,7 @@ static func skill_hit(sim: RtSim, src: RtUnit, tgt: RtUnit, sk: SkillDef, kind: 
 			factors.append(src.opener_pm)
 		if combo:
 			factors.append(sim.bal.i("COMBO_PM"))
-		sim.mod_factors(src, tgt, true, factors)
+		sim.mod_factors(src, tgt, true, factors, element)
 		var amount: int = fold(r.amount, factors, sim.bal.i("DMG_FACTOR_MAX_PM"))
 		if src.side == Combatant.Side.PARTY and amount > 0:
 			src.opener_done = true
@@ -101,7 +101,7 @@ static func pct_hit(sim: RtSim, src: RtUnit, tgt: RtUnit, sk: SkillDef, pct: int
 	if src != null and src.side == Combatant.Side.ENEMY:
 		factors.append(FixedMath.pm(sim.setup.enemy_dmg_mult))
 	StatusFx.factor_list(tgt, "dmg_taken_pm", factors)
-	sim.mod_factors(src, tgt, false, factors)
+	sim.mod_factors(src, tgt, false, factors, sk.element)
 	if tgt.has_flag("guard") and not bool(sk.rt.get("ignore_guard", false)):
 		factors.append(sim.bal.i("PCT_GUARD_PM"))
 	var amount: int = fold(FixedMath.div_round(tgt.max_hp() * pct, 100), factors, sim.bal.i("DMG_FACTOR_MAX_PM"))

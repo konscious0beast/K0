@@ -12,7 +12,7 @@ const FixedMath := preload("res://core/stats/fixed_math.gd")
 const NEW_STATUSES: PackedStringArray = ["sts_taunted", "sts_dazed", "sts_regen", "sts_burn", "sts_admonished",
 	"sts_dizzy", "sts_enrage", "sts_spores"]
 const NEW_SKILLS: PackedStringArray = ["skl_rt_auto_mopsula", "skl_e_azubi_hop", "skl_e_showboss_slow", "skl_q_train",
-	"skl_q_spit", "skl_q_puddles"]
+	"skl_q_scepter_flash", "skl_q_puddles"]
 const FLOOR1_ENEMIES: PackedStringArray = ["enm_kanalratte", "enm_kanalratte_azubi", "enm_taubenschwarm", "enm_pendler",
 	"enm_kanalschleim", "enm_rattenschamane", "enm_kabelsalat", "enm_kellerspinne", "enm_spruehgeist",
 	"enm_rolltreppenkrabbe", "enm_rattengardist", "enm_fahrscheinfresser", "enm_boss_hausmeister",
@@ -142,7 +142,12 @@ func test_bosses_follow_07() -> void:
 		p3_ops.append(str((op as Dictionary)["op"]))
 	for op: String in ["say", "fixed_damage_self", "clear_zones", "set", "status_self"]:
 		assert_has(p3_ops, op, "P3 „Endstation“: " + op)
-	assert_eq(int(q.get("auto_ranged_skill", "") != ""), 1, "out of reach: the plague spit")
+	# R5b (07 §6.7, §11.5 "Stand R5b-1"): the scepter flash in reach and out of reach (magical shock: the tank's
+	# armour counts by RES, so the Unterhosen-Liga step of the tank stays small), no plague spit any more
+	assert_eq([str(q.get("auto_skill", "")), str(q.get("auto_ranged_skill", ""))],
+		["skl_q_scepter_flash", "skl_q_scepter_flash"], "the queen's auto attack in and out of reach")
+	assert_eq([d.skill("skl_q_scepter_flash").damage_type, d.skill("skl_q_scepter_flash").element,
+		int(d.skill("skl_q_scepter_flash").rt["range_cm"])], ["magical", "shock", 1500])
 	var train: Dictionary = d.skill("skl_q_train").rt
 	assert_true(bool(train.get("kill_adds", false)) and bool(train.get("ignore_guard", false)), "train: kill adds")
 	assert_eq(int(train.get("pct_maxhp", 0)), 35, "train: 35 %")
@@ -202,13 +207,18 @@ func test_percent_hits_e30_and_difficulty() -> void:
 				queen = u
 		var mult: int = 1000 if diff == &"prime" else roundi(Balance.EASY_ENEMY_DMG * 1000.0)
 		assert_eq(roundi(sim.setup.enemy_dmg_mult * 1000.0), mult, "enemy_dmg_mult of %s" % diff)
-		for c: Array in [["p1", "skl_q_puddles", 500], ["p0", "skl_q_puddles", 500], ["p1", "skl_q_train", 1000]]:
+		# [unit, skill, E30 element factor, equipment mod]: R5b — Mopsula's Samtcape (items rt.mods) takes 10 % off
+		# physical hits only (the train, not the poison puddles), folded after the element-free factors
+		for c: Array in [["p1", "skl_q_puddles", 500, 0], ["p0", "skl_q_puddles", 500, 0],
+				["p1", "skl_q_train", 1000, 900]]:
 			var u: RtUnit = sim.unit(str(c[0]))
 			var sk: SkillDef = d.skill(str(c[1]))
 			var pct: int = int(sk.rt["pct_maxhp"])
 			assert_eq(Damage.pct_element_pm(u, sk.element), int(c[2]), "%s: E30 factor" % str(c))
 			var before: int = u.hp
 			var factors: Array[int] = [int(c[2]), mult]
+			if int(c[3]) > 0:
+				factors.append(int(c[3]))
 			var want: int = Damage.fold(FixedMath.div_round(u.max_hp() * pct, 100), factors,
 				sim.bal.i("DMG_FACTOR_MAX_PM"))
 			Damage.pct_hit(sim, queen, u, sk, pct, Damage.Kind.TELEGRAPH, true, -1)

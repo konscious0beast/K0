@@ -597,10 +597,11 @@ static func _battle_twists(state: GameState) -> Array:
 	return out
 
 
-## RtMods of the party members (07 §9.5) in the fixed order equipment → species → spec: equipment carries none yet
-## (items.json rt has only "wheel"; equipment acts through the Combatant values), species passives map as proposed in
-## 07 §9.6 (_rt_species_mods; built with floor 3), specialisations (classes) have no real-time mapping yet (their
-## passives are CTB rules; unlock_variant waits for data). Members in battle_slot order.
+## RtMods of the party members (07 §9.5) in the fixed order equipment → species → spec: equipment (R5b) the
+## items.json rt.mods of every equipped piece (weapon, armor, accessory; RtMods.from_equipment) — besides the Combatant
+## values every piece gives in both combat modes —, species passives map as proposed in 07 §9.6 (_rt_species_mods;
+## built with floor 3), specialisations (classes) have no real-time mapping yet (their passives are CTB rules;
+## unlock_variant waits for data). Members in battle_slot order.
 static func _rt_member_mods(state: GameState, data: GameData) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var members: Array[PartyMember] = []
@@ -609,6 +610,14 @@ static func _rt_member_mods(state: GameState, data: GameData) -> Array[Dictionar
 			members.append(m)
 	members.sort_custom(func(a: PartyMember, b: PartyMember) -> bool:
 		return data.party_member(a.id).battle_slot < data.party_member(b.id).battle_slot)
+	for m: PartyMember in members:
+		for slot: String in ["weapon", "armor", "accessory"]:
+			var iid: String = str(m.equipment.get(slot, ""))
+			if iid != "" and data.has_id("items", iid):
+				var raw: Variant = data.item(iid).rt.get("mods", [])
+				if raw is Array and not (raw as Array).is_empty():
+					var uid: String = "p%d" % data.party_member(m.id).battle_slot
+					out.append_array(RtMods.from_equipment(iid, raw as Array, uid))
 	for m: PartyMember in members:
 		out.append_array(_rt_species_mods(m, "p%d" % data.party_member(m.id).battle_slot, data))
 	return out

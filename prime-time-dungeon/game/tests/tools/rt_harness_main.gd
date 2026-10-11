@@ -9,7 +9,8 @@ extends SceneTree
 ##   yardstick "a perfect person beats the AI") --encounters=all|regular|bosses|showboss|<id,id,…> (all)
 ##   --partner-preset=attack|support|careful ("" = the default tactic) --out=<file.json>
 ##   --sequence (the floor in order, 07 §11.4 "Etagenfolge") --perf (µs per RtSim.step with real data, 07 §3.15)
-##   --set=<enemy|skill|bal>:<id>.<path>=<json> (repeatable tuning probe on the loaded data, rt_harness.tune)
+##   --set=<enemy|skill|skilldef|item|bal>:<id>.<path>=<json> (repeatable tuning probe on the loaded data,
+##   rt_harness.tune; skill = its rt block, skilldef = a top-level SkillDef field)
 ##   --strict-bands (exit 1 when a verdict is out of band; R5b turns it on for the nightly once `typical` is
 ##   calibrated, 07 §11.3)
 ## Output: one "RT: …" line per series (stdout), "RT-SEQ: …" lines in sequence mode, "RT-PERF: …" in perf mode,

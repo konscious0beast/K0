@@ -23,7 +23,7 @@ const BOSSES: PackedStringArray = ["enm_boss_hausmeister", "enm_boss_rattenkoeni
 ## train / spit / puddles, the tutorial rat's hop, the show boss's ticket rule and Mopsula's monocle auto attack, the
 ## tutorial rat, the show-boss encounter.
 const RT_STATUSES: int = 9
-const RT_BOSS_SKILLS: PackedStringArray = ["skl_q_train", "skl_q_spit", "skl_q_puddles"]
+const RT_BOSS_SKILLS: PackedStringArray = ["skl_q_train", "skl_q_scepter_flash", "skl_q_puddles"]   # R5b: the flash
 const RT_ENEMY_SKILLS: PackedStringArray = ["skl_e_azubi_hop", "skl_e_showboss_slow"]
 
 ## GDD §5.1: id → [lv, hp, mp, str, mag, def, res, spd, lck, exp, credits, field_speed].

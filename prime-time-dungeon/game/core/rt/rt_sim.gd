@@ -119,6 +119,7 @@ var _mods_any: bool = false                 # RtSetup.mods is not empty
 var _on_any: bool = false                   # some mod has op "on"
 var _mod_dealt: Dictionary = {}             # unit id → Array[int] dmg_dealt_pm factors (RtMods)
 var _mod_taken: Dictionary = {}             # unit id → Array[int] dmg_taken_pm factors
+var _mod_taken_el: Dictionary = {}          # unit id → {element: Array[int]} element-bound dmg_taken_pm (R5b)
 var _mod_heal: Dictionary = {}              # unit id → Array[int] heal_taken_pm factors
 var _forbid: Dictionary = {}                # unit id → {"skills": {id: true}, "tags": [tags]} (forbid ops)
 var _skill_mods: Array[Dictionary] = []     # the skill_pm mods
@@ -1335,12 +1336,14 @@ func mp_of(u: RtUnit, skill_id: String, base: int) -> int:
 
 ## Appends the mod factors of the damage fold (07 §3.9.1 "mods_pm"): `src`'s dmg_dealt_pm (when `dealt`), `tgt`'s
 ## dmg_taken_pm and, once, its first_hit_taken_pm.
-func mod_factors(src: RtUnit, tgt: RtUnit, dealt: bool, factors: Array[int]) -> void:
+func mod_factors(src: RtUnit, tgt: RtUnit, dealt: bool, factors: Array[int], element: String = "") -> void:
 	if not _mods_any:
 		return
 	if dealt and src != null:
 		factors.append_array(_mod_dealt.get(src.id, _NO_PMS))
 	factors.append_array(_mod_taken.get(tgt.id, _NO_PMS))
+	if element != "" and _mod_taken_el.has(tgt.id):
+		factors.append_array((_mod_taken_el[tgt.id] as Dictionary).get(element, _NO_PMS))
 	if first_hit.has(tgt.id):
 		var fh: Array[int] = []
 		fh.assign(first_hit[tgt.id])
@@ -1776,6 +1779,9 @@ func _derive_mods(u: RtUnit) -> void:
 		var pms: Array[int] = RtMods.pms(setup.mods, u, str(pair[1]))
 		if not pms.is_empty():
 			(pair[0] as Dictionary)[u.id] = pms
+	var el: Dictionary = RtMods.element_pms(setup.mods, u)
+	if not el.is_empty():
+		_mod_taken_el[u.id] = el
 	var fh: Array[int] = RtMods.pms(setup.mods, u, "first_hit_taken_pm")
 	if not fh.is_empty():
 		first_hit[u.id] = fh

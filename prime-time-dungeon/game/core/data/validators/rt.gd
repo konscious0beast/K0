@@ -239,6 +239,14 @@ static func _check_items(v: DataValidator, rt_set: bool) -> void:
 			_ints(v, ctx + ".rt", rt)
 			_keys(v, ctx + ".rt", rt, ItemDef.RT_SPEC)
 			_range(v, ctx + ".rt.wheel", rt.get("wheel", 0), 0, 99)
+			var mods: Variant = rt.get("mods", [])
+			if not (mods is Array):
+				v._err(ctx + ".rt.mods", "must be an array of RtMods (R5b)")
+			elif not (mods as Array).is_empty():
+				if str(d.get("type", "")) not in ["weapon", "armor", "accessory"]:
+					v._err(ctx + ".rt.mods", "only equipment carries real-time mods (R5b)")
+				for e: String in RtMods.validate(RtMods.from_equipment(str(d.get("id", "")), mods as Array, "p0")):
+					v._err(ctx + ".rt.mods", e)
 		var usable: String = str(d.get("usable", "none"))
 		if rt_set and str(d.get("type", "")) == "consumable" and (usable == "battle" or usable == "both"):
 			_skill_ref(v, ctx + ".use_skill", str(d.get("use_skill", "")))

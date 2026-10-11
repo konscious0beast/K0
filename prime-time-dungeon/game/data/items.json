@@ -432,7 +432,7 @@
 		{
 			"id": "itm_arm_velvet_cape",
 			"name": "Samtcape",
-			"desc": "DEF +4, RES +6. Rascheln mit Würde.",
+			"desc": "DEF +4, RES +6; im Echtzeitkampf −10 % physischer Schaden. Rascheln mit Würde.",
 			"type": "armor",
 			"rarity": "common",
 			"price": 220,
@@ -445,7 +445,16 @@
 				"mopsula"
 			],
 			"icon": "armor",
-			"color": "#5a2c8f"
+			"color": "#5a2c8f",
+			"rt": {
+				"mods": [
+					{
+						"op": "dmg_taken_pm",
+						"pm": 900,
+						"element": "physical"
+					}
+				]
+			}
 		},
 		{
 			"id": "itm_arm_ermine",

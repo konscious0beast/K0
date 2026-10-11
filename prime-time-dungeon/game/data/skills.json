@@ -1429,7 +1429,7 @@
 				"icon": "claw",
 				"cast_ms": 1200,
 				"interruptible": false,
-				"pct_maxhp": 30,
+				"pct_maxhp": 35,
 				"mp": 0,
 				"telegraph": {
 					"shape": "line",
@@ -1738,20 +1738,20 @@
 			}
 		},
 		{
-			"id": "skl_q_spit",
-			"name": "Pestspucke",
-			"desc": "Die Königin spuckt über den Bahnsteig. Die Reinigung streikt.",
+			"id": "skl_q_scepter_flash",
+			"name": "Zepterblitz",
+			"desc": "Die Signallampe am Zepter blitzt rot — nah oder über den ganzen Bahnsteig.",
 			"user": "enemy",
 			"category": "attack",
 			"target": "single_enemy",
-			"damage_type": "physical",
-			"element": "poison",
-			"power": 80,
+			"damage_type": "magical",
+			"element": "shock",
+			"power": 128,
 			"mp_cost": 0,
 			"rank": 3,
-			"vfx": "toxic",
+			"vfx": "shock",
 			"rt": {
-				"icon": "toxic",
+				"icon": "bolt",
 				"range_cm": 1500,
 				"gcd": false,
 				"mp": 0

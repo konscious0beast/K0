@@ -12,7 +12,7 @@ func _sim(level: int = 6, hero: String = "kai", bal: Dictionary = {}, items: Dic
 	var s: RtSetup = RtKit.setup(st, RtKit.dummy_cmd({"ctl": "p0" if hero == "kai" else "p1"}))
 	if not bal.is_empty():
 		s.balance = RtBalance.from_values(bal)
-	var sim: RtSim = RtSim.new(s, RtKit.data())
+	var sim: RtSim = RtKit.no_ai(RtSim.new(s, RtKit.data()))
 	sim.start()
 	sim.unit("e0").auto_on = false
 	return sim
@@ -279,7 +279,7 @@ func test_partner_special_buffer() -> void:
 func test_partner_special_walks_into_range() -> void:
 	var cmd: Dictionary = RtKit.encounter("enc_rt_dummy", [["g", "enc_rt_dummy", [0, -420, 128]]], {"ctl": "p1",
 		"party": [{"u": "p0", "p": [0, 440, 0]}, {"u": "p1", "p": [-150, 300, 0]}]})
-	var sim: RtSim = RtSim.new(RtKit.setup(RtKit.state(3, "mopsula"), cmd), RtKit.data())
+	var sim: RtSim = RtKit.no_ai(RtSim.new(RtKit.setup(RtKit.state(3, "mopsula"), cmd), RtKit.data()))
 	sim.start()
 	for u: RtUnit in sim.units():
 		u.auto_on = false

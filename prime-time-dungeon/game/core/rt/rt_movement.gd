@@ -196,7 +196,7 @@ static func move_units(sim: RtSim, c: int) -> void:
 			continue
 		if not u.entry.is_empty():
 			if not u.stationary:
-				_walk(u, u.entry[0], u.entry[1], _speed(u))
+				_walk(u, u.entry[0], u.entry[1], speed(u))
 			if (u.x == u.entry[0] and u.z == u.entry[1]) or c + 1 >= bal.i("ENTER_MAX_TICKS"):
 				u.x = u.entry[0]
 				u.z = u.entry[1]
@@ -213,7 +213,7 @@ static func move_units(sim: RtSim, c: int) -> void:
 			var g: Vector2i = RtGeo.project_walkable(geo, gx, gz, u.radius, party)
 			gx = g.x
 			gz = g.y
-		_walk(u, gx, gz, _speed(u))
+		_walk(u, gx, gz, speed(u))
 		if not plain or big < 0 or u.x * u.x + u.z * u.z > big * big:
 			var q: Vector2i = RtGeo.project_walkable(geo, u.x, u.z, u.radius, party)
 			u.x = q.x
@@ -222,24 +222,25 @@ static func move_units(sim: RtSim, c: int) -> void:
 	_flight(sim, c, ctl)
 
 
-static func _speed(u: RtUnit) -> int:
+## Walking speed in cm per tick (07 §3.5.3): move_cm_tick × move_pm of the statuses.
+static func speed(u: RtUnit) -> int:
 	return FixedMath.mul_pm(u.move_cm_tick, StatusFx.factor(u, "move_pm"))
 
 
-## One straight step of at most `speed` cm towards (gx, gz), facing the way.
-static func _walk(u: RtUnit, gx: int, gz: int, speed: int) -> void:
+## One straight step of at most `step_cm` cm towards (gx, gz), facing the way.
+static func _walk(u: RtUnit, gx: int, gz: int, step_cm: int) -> void:
 	var dx: int = gx - u.x
 	var dz: int = gz - u.z
 	var d: int = DetMath.isqrt(dx * dx + dz * dz)
-	if d == 0 or speed <= 0:
+	if d == 0 or step_cm <= 0:
 		return
 	u.yaw = DetMath.yaw_of(dx, dz)
-	if speed >= d:
+	if step_cm >= d:
 		u.x = gx
 		u.z = gz
 		return
-	u.x += FixedMath.div_round(dx * speed, d)
-	u.z += FixedMath.div_round(dz * speed, d)
+	u.x += FixedMath.div_round(dx * step_cm, d)
+	u.z += FixedMath.div_round(dz * step_cm, d)
 
 
 ## Enemies push each other apart (07 §3.5.3): every pair i < j closer than r_i + r_j moves by half the overlap along

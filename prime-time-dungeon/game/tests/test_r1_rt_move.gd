@@ -17,7 +17,7 @@ func _until(sim: RtSim, ct: int) -> Array[ActionEvent]:
 
 
 func test_entry_and_pop_in() -> void:
-	var sim: RtSim = RtKit.sim(RtKit.encounter("enc_rt_rats", [["g", "enc_rt_rats", [0, -760, 128]]]), 6)
+	var sim: RtSim = RtKit.sim_no_ai(RtKit.encounter("enc_rt_rats", [["g", "enc_rt_rats", [0, -760, 128]]]), 6)
 	var lead: RtUnit = sim.unit("e0")
 	var kom: RtUnit = sim.unit("e1")
 	assert_eq([Array(lead.entry), kom.pop_in_until], [[0, -450], 15 + 30])
@@ -32,7 +32,7 @@ func test_entry_and_pop_in() -> void:
 	assert_true(ev.all(func(x: ActionEvent) -> bool: return x.actor_id != "e0"), "no action, no target while entering")
 	ev = _until(sim, 40)
 	assert_true(ev.all(func(x: ActionEvent) -> bool: return x.type != T.SWING or x.actor_id != "e1"))
-	var stand: RtSim = RtKit.sim(RtKit.encounter("enc_rt_dummy", [["g", "enc_rt_dummy", [0, -760, 128]]]), 6)
+	var stand: RtSim = RtKit.sim_no_ai(RtKit.encounter("enc_rt_dummy", [["g", "enc_rt_dummy", [0, -760, 128]]]), 6)
 	var dummy: RtUnit = stand.unit("e0")
 	_until(stand, 29)
 	assert_eq([dummy.z, dummy.entry.size()], [-760, 2], "a stationary leader does not walk …")
@@ -41,7 +41,7 @@ func test_entry_and_pop_in() -> void:
 
 
 func test_melee_goal_and_reach() -> void:
-	var sim: RtSim = RtKit.sim(RtKit.encounter("enc_f1_a2", [["g", "enc_f1_a2", [0, -300, 128]]]), 6)
+	var sim: RtSim = RtKit.sim_no_ai(RtKit.encounter("enc_f1_a2", [["g", "enc_f1_a2", [0, -300, 128]]]), 6)
 	for u: RtUnit in sim.units():
 		u.auto_on = u.id == "e0"
 	var rat: RtUnit = sim.unit("e0")
@@ -54,7 +54,7 @@ func test_melee_goal_and_reach() -> void:
 
 
 func test_ranged_keep_distance() -> void:
-	var sim: RtSim = RtKit.sim(RtKit.encounter("enc_f1_a2", [["g", "enc_f1_a2", [0, -300, 128]]]), 6)
+	var sim: RtSim = RtKit.sim_no_ai(RtKit.encounter("enc_f1_a2", [["g", "enc_f1_a2", [0, -300, 128]]]), 6)
 	for u: RtUnit in sim.units():
 		u.auto_on = false
 	var caster: RtUnit = sim.unit("e1")
@@ -80,7 +80,7 @@ func test_ranged_keep_distance() -> void:
 
 
 func test_partner_follows_the_controlled_unit() -> void:
-	var sim: RtSim = RtKit.sim(RtKit.dummy_cmd(), 6)
+	var sim: RtSim = RtKit.sim_no_ai(RtKit.dummy_cmd(), 6)
 	var mop: RtUnit = sim.unit("p1")
 	var kai: RtUnit = sim.unit("p0")
 	mop.x = -400
@@ -94,7 +94,7 @@ func test_partner_follows_the_controlled_unit() -> void:
 
 
 func test_repulsion() -> void:
-	var sim: RtSim = RtKit.sim(RtKit.encounter("enc_rt_rats", [["g", "enc_rt_rats", [0, -300, 128]]]), 6)
+	var sim: RtSim = RtKit.sim_no_ai(RtKit.encounter("enc_rt_rats", [["g", "enc_rt_rats", [0, -300, 128]]]), 6)
 	var a: RtUnit = sim.unit("e0")
 	var b: RtUnit = sim.unit("e1")
 	_until(sim, 16)
@@ -110,7 +110,7 @@ func test_repulsion() -> void:
 	b.x = 40
 	RtSim.Movement.move_units(sim, sim.tick())
 	assert_eq([a.x, b.x], [-10, 50], "overlap 20: 10 each")
-	var d: RtSim = RtKit.sim(RtKit.encounter("enc_rt_dummies", [["g", "enc_rt_dummies", [0, -200, 128]]]), 6)
+	var d: RtSim = RtKit.sim_no_ai(RtKit.encounter("enc_rt_dummies", [["g", "enc_rt_dummies", [0, -200, 128]]]), 6)
 	var d0: RtUnit = d.unit("e0")
 	var d1: RtUnit = d.unit("e1")
 	d0.x = 0
@@ -122,7 +122,7 @@ func test_repulsion() -> void:
 
 
 func test_no_movement_while_casting_or_held_and_speed_factors() -> void:
-	var sim: RtSim = RtKit.sim(RtKit.encounter("enc_f1_a2", [["g", "enc_f1_a2", [0, -300, 128]]]), 6)
+	var sim: RtSim = RtKit.sim_no_ai(RtKit.encounter("enc_f1_a2", [["g", "enc_f1_a2", [0, -300, 128]]]), 6)
 	for u: RtUnit in sim.units():
 		u.auto_on = false
 	var rat: RtUnit = sim.unit("e0")
@@ -149,7 +149,7 @@ func test_no_movement_while_casting_or_held_and_speed_factors() -> void:
 
 
 func test_enemies_stay_in_the_ring() -> void:
-	var sim: RtSim = RtKit.sim(RtKit.encounter("enc_f1_a2", [["g", "enc_f1_a2", [0, 300, 0]]]), 6)
+	var sim: RtSim = RtKit.sim_no_ai(RtKit.encounter("enc_f1_a2", [["g", "enc_f1_a2", [0, 300, 0]]]), 6)
 	var rat: RtUnit = sim.unit("e0")
 	var kai: RtUnit = sim.unit("p0")
 	for u: RtUnit in sim.units():
@@ -167,7 +167,7 @@ func test_enemies_stay_in_the_ring() -> void:
 	mop.goal = [0, -700]
 	RtSim.Movement.move_units(sim, sim.tick())
 	assert_eq([mop.x, mop.z], [0, -618], "the partner follows the fleeing controlled unit into the lane")
-	var inside: RtSim = RtKit.sim(RtKit.encounter("enc_f1_a2", [["g", "enc_f1_a2", [0, -300, 0]]]), 6)
+	var inside: RtSim = RtKit.sim_no_ai(RtKit.encounter("enc_f1_a2", [["g", "enc_f1_a2", [0, -300, 0]]]), 6)
 	var m2: RtUnit = inside.unit("p1")
 	m2.x = 0
 	m2.z = -600

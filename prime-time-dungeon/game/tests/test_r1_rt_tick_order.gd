@@ -35,10 +35,11 @@ static func _sig(e: ActionEvent) -> String:
 	return " ".join(parts)
 
 
-## Mopsula is the hero (casts, regenerates MP over time), Kai the AI partner; at ct 149 every step has work.
+## Mopsula is the hero (casts, regenerates MP over time), Kai the AI partner (without rules until the tactic change
+## brings those of "careful"); at ct 149 every step has work.
 func test_one_tick_in_step_order() -> void:
 	var c: int = 149
-	var sim: RtSim = RtKit.sim(RtKit.dummy_cmd({"ctl": "p1"}), 6, "mopsula")
+	var sim: RtSim = RtKit.sim_no_ai(RtKit.dummy_cmd({"ctl": "p1"}), 6, "mopsula")
 	var kai: RtUnit = sim.unit("p0")
 	var mop: RtUnit = sim.unit("p1")
 	var e: RtUnit = sim.unit("e0")
@@ -84,9 +85,11 @@ func test_one_tick_in_step_order() -> void:
 		"DAMAGE actor_id=e0 target_id=p0 skill_id=skl_e_dummy_poke",                    # 5
 		"DAMAGE actor_id=e0 target_id=p0 skill_id=skl_e_test_hex",                      # 6
 		"ACTION_END actor_id=e0 skill_id=skl_e_test_hex",
-		"ACTION_START actor_id=p0 skill_id=skl_kai_leash_trip text=Leinen-Fallstrick",   # 7
+		"ACTION_START actor_id=p0 skill_id=skl_kai_leash_trip text=Leinen-Fallstrick",   # 7: the order, …
 		"MP_CHANGE target_id=p0 v=-3",
-		"TARGET_CHANGED actor_id=p0 target_id=e0",
+		"TARGET_CHANGED actor_id=p0 target_id=e0",                                      # … then the AI ("assist"
+		"ACTION_START actor_id=p0 skill_id=skl_kai_heavy_swing text=Wuchtschlag",        # target, the filler of the
+		"MP_CHANGE target_id=p0 v=-2",                                                  # new tactic "careful")
 		"SWING actor_id=p0 target_id=e0 skill_id=skl_attack_kai",                       # 8
 		"FLEE_WARNING actor_id=p1 v=45",                                                # 9
 		"MP_CHANGE target_id=p1 v=1",                                                   # 11
@@ -166,7 +169,7 @@ func test_commands_for_later_ticks_and_the_past() -> void:
 ## by_ai (07 §3.13): the person's actions false (own unit, buffered, Partner-Spezial), the sim's choices true (enemies,
 ## AI partner, autopilot) — on SWING hits, KOs and actions.
 func test_by_ai() -> void:
-	var sim: RtSim = RtKit.sim(RtKit.encounter("enc_rt_rats", [["g", "enc_rt_rats", [0, 100, 128]]]), 6)
+	var sim: RtSim = RtKit.sim_no_ai(RtKit.encounter("enc_rt_rats", [["g", "enc_rt_rats", [0, 100, 128]]]), 6)
 	var kai: RtUnit = sim.unit("p0")
 	var rat: RtUnit = sim.unit("e0")
 	for u: RtUnit in sim.units():
@@ -187,7 +190,7 @@ func test_by_ai() -> void:
 	ko = RtKit.of(ev, T.KO)
 	assert_true(ko.size() == 1 and ko[0].actor_id == "p0" and ko[0].by_ai, "under autopilot: by_ai true")
 	assert_true(sim.is_finished())
-	var p2: RtSim = RtKit.sim(RtKit.dummy_cmd(), 6)
+	var p2: RtSim = RtKit.sim_no_ai(RtKit.dummy_cmd(), 6)
 	p2.submit(RtCommand.partner_special(0, "p1"))
 	var st: Array = RtKit.of(_until(p2, 2), T.ACTION_START).filter(func(x: ActionEvent) -> bool:
 		return x.actor_id == "p1")

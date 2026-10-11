@@ -99,6 +99,40 @@
 						"slot": 5,
 						"skill": "skl_stunt_kai_suplex",
 						"level": 1
+					},
+					{
+						"slot": 2,
+						"skill": "skl_kai_taunt",
+						"level": 2
+					},
+					{
+						"slot": 2,
+						"skill": "skl_kai_first_aid",
+						"level": 4,
+						"variant": true
+					},
+					{
+						"slot": 3,
+						"skill": "skl_kai_cable_whip",
+						"level": 7,
+						"variant": true
+					},
+					{
+						"slot": 4,
+						"skill": "skl_kai_sweep",
+						"level": 4
+					},
+					{
+						"slot": 4,
+						"skill": "skl_kai_deo_torch",
+						"level": 6,
+						"variant": true
+					},
+					{
+						"slot": 5,
+						"skill": "skl_kai_prime_finisher",
+						"level": 6,
+						"finale": true
 					}
 				],
 				"context": [],
@@ -212,9 +246,44 @@
 						"slot": 5,
 						"skill": "skl_stunt_mop_entrance",
 						"level": 1
+					},
+					{
+						"slot": 2,
+						"skill": "skl_mop_mass_lick",
+						"level": 6,
+						"variant": true
+					},
+					{
+						"slot": 3,
+						"skill": "skl_mop_frost_sneeze",
+						"level": 2
+					},
+					{
+						"slot": 3,
+						"skill": "skl_mop_royal_decree",
+						"level": 4,
+						"variant": true
+					},
+					{
+						"slot": 4,
+						"skill": "skl_mop_thunder_bark",
+						"level": 3
+					},
+					{
+						"slot": 5,
+						"skill": "skl_mop_inferno",
+						"level": 6,
+						"finale": true
 					}
 				],
-				"context": [],
+				"context": [
+					{
+						"slot": 2,
+						"skill": "skl_mop_revive",
+						"when": "target_ko",
+						"level": 7
+					}
+				],
 				"presets": {
 					"attack": [],
 					"support": [

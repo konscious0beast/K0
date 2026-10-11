@@ -6,6 +6,20 @@ extends TestCase
 ## real-time thresholds (15 crits: ≈ every second Hausmeister fight, every Königin; 10 weakness hits: about one regular
 ## fight in twenty, mostly d2), AchievementDef.expr_for / desc_for pick them in a real-time run; CTB stays as it was.
 
+const RtLive := preload("res://tests/fixtures/rt_live/rt_live.gd")
+const Harness := preload("res://tests/tools/rt_harness.gd")
+const StatusFx := preload("res://core/rt/rt_status_fx.gd")
+
+
+func after_each() -> void:
+	if Game.combat != null:
+		Game.end_combat()
+	Show.abort_battle()
+	Game.state = null
+	Game.run_log = null
+	Game.sim = null
+	Game.in_battle = false
+
 
 func _payload(crits: int, weak: int) -> Dictionary:
 	return {"party_turns": 10, "min_party_hp": 50, "min_party_hp_pct": 0.5, "crits": crits, "weakness_hits": weak,
@@ -45,3 +59,50 @@ func test_the_real_time_thresholds() -> void:
 			assert_eq(a.desc_for(true), a.desc)
 		else:
 			assert_eq(a.expr_rt.error, "", a.id)
+
+
+## Fled (smoke), three sneaked first strikes, a knocked-out Graf Mopsula, a win with one member at 1 HP.
+func test_rare_combat_achievements_unlock_in_real_time() -> void:
+	var st: GameState = Harness.state_for(real_data(), "enc_f1_a2", "kai", 0, 1)
+	st.inventory.add("itm_smoke", 5, 9)
+	RtLive.adopt(st)
+	assert_true(Game.is_realtime())
+	var smoke: Array = [RtCommand.item(12, "p0", "itm_smoke", "")]
+	var r: Dictionary = RtLive.fight(Harness.command_for("enc_f1_a2", "kai", BattleSetup.Advantage.NORMAL), smoke)
+	assert_eq(int((r["result"] as BattleResult).outcome), BattleResult.Outcome.FLED)
+	assert_true(Show.is_unlocked("ach_flee_first"), "a flight")
+	for i in 3:
+		assert_false(Show.is_unlocked("ach_preemptive_3"), "not before the third first strike")
+		RtLive.fight(Harness.command_for("enc_f1_a2", "kai", BattleSetup.Advantage.PREEMPTIVE), smoke)
+	assert_true(Show.is_unlocked("ach_preemptive_3"), "three sneaked first strikes (no bark)")
+	# a KO inside a tick (events outside step() reach nobody): Mopsula at 1 HP without MP, poisoned — the next poison
+	# tick knocks her out
+	var ko: Callable = func(c: int) -> void:
+		var mop: RtUnit = Game.combat.unit("p1")
+		if c == 20 and Game.combat.is_alive(mop):
+			mop.hp = 1
+			mop.mp = 0
+			StatusFx.apply(Game.combat, "e0", mop, "sts_poison", 8000, 1000, 0, null, true)
+	r = RtLive.fight(Harness.command_for("enc_f1_a2", "kai", BattleSetup.Advantage.NORMAL),
+		[RtCommand.item(150, "p0", "itm_smoke", "")], 18000, ko)
+	assert_eq(int((r["result"] as BattleResult).party_kos), 1)
+	assert_true(Show.is_unlocked("ach_mopsula_ko"), "Graf Mopsula knocked out")
+	# the tutorial (the party never falls below 1 HP, E28): Kai at 1 HP, the rats at 1 HP, the healer out of MP —
+	# the next hits end it, Kai stays at 1 HP
+	var low: Callable = func(c: int) -> void:
+		if c != 40:
+			return
+		for u: RtUnit in Game.combat.units_ref():
+			if u.side == Combatant.Side.ENEMY:
+				u.hp = mini(u.hp, 1)
+			elif u.id == "p0":
+				u.hp = 1
+			else:
+				u.mp = 0
+	var tut: Dictionary = Harness.command_for("enc_f1_a1_tutorial", "kai", BattleSetup.Advantage.PREEMPTIVE)
+	r = RtLive.fight(tut, [RtCommand.autopilot(1, "p0", true)], 18000, low)
+	var res: BattleResult = r["result"]
+	assert_eq(int(res.outcome), BattleResult.Outcome.VICTORY)
+	assert_eq(res.min_party_hp, 1, "Kai ends it at 1 HP")
+	assert_true(Show.is_unlocked("ach_one_hp"), "1 HP left")
+	assert_true(Show.is_unlocked("ach_close_call"), "≤ 10 % left")

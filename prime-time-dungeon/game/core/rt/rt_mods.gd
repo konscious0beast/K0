@@ -1,7 +1,8 @@
 class_name RtMods extends RefCounted
 ## Static modifiers of a real-time combat (07 §9.5): one closed list in RtSetup.mods, collected by
-## BattleBridge.make_rt_setup in a fixed order (equipment → species → spec → show boss → twists), canonical, never
-## changed during the combat (no twists in combat). An entry is {"src": "<species|spec|equip|showboss|twist>:<id>",
+## BattleBridge.make_rt_setup in a fixed order (equipment → species → spec → show boss → twists → liga), canonical,
+## never changed during the combat (no twists in combat). An entry is {"src": "<species|spec|equip|showboss|twist|
+## liga>:<id>",
 ## "op": RtVocab.MOD_OPS, "unit": "p0".."p3" | "party" | "enemies" | "boss" | "all", …the fields of the op}:
 ## - stat_pm {stat, pm}: the stat × pm / 1000 when the setup is built (max_hp / max_mp: a full unit stays full);
 ## - skill_pm {skill: id | "*" | "tag:<show tag>" | "element:<element>" | "item:*", field: power | cooldown | cast | mp,
@@ -56,7 +57,7 @@ static func validate(mods: Array) -> PackedStringArray:
 		var cut: int = src.find(":")
 		if not (m.get("src", null) is String) or cut <= 0 or cut >= src.length() - 1 \
 				or not RtVocab.MOD_SOURCES.has(src.substr(0, cut)):
-			out.append(ctx + ".src: '%s' is not <species|spec|equip|showboss|twist>:<id>" % src)
+			out.append(ctx + ".src: '%s' is not <species|spec|equip|showboss|twist|liga>:<id>" % src)
 		var op: String = str(m.get("op", ""))
 		if not RtVocab.MOD_OPS.has(op):
 			out.append(ctx + ".op: unknown op '%s'" % op)

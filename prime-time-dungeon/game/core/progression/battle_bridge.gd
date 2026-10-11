@@ -4,6 +4,7 @@ class_name BattleBridge extends RefCounted
 const PEP_TALK_FLAG: String = "mop_pep_talk"
 const PEP_TALK_STATUS: String = "sts_guard"
 const PEP_TALK_TURNS: int = 2
+const LIGHT_FOOTED: String = "sts_light_footed"     # Unterhosen-Liga in the real-time combat (R5b, E31)
 const KO_EXP_PCT: int = 50                   # KO'd members get floori(50 %) of the battle EXP
 
 
@@ -298,7 +299,7 @@ static func make_rt_setup(state: GameState, data: GameData, cmd: Dictionary, see
 ## - the opening action, auto-attack / retarget switches, tutorial steps, RtBalance.from_data;
 ## - RtMods in their fixed order (07 §9.5): equipment → species → spec (_rt_member_mods; a unit's unlock_variant
 ##   mods widen its bar) → show boss (every encounter of the combat's groups, RtMods.from_show_boss) → battle twists
-##   (RtMods.from_twists), then RtMods.apply_static.
+##   (RtMods.from_twists) → Unterhosen-Liga (R5b, E31: _rt_liga_mods), then RtMods.apply_static.
 static func make_rt_setup_rules(state: GameState, data: GameData, cmd: Dictionary, seed: int,
 		rules: Dictionary) -> RtSetup:
 	if state == null or data == null or str(cmd.get("t", "")) != "encounter" or RtCommand.validate(cmd) != "":
@@ -368,6 +369,7 @@ static func make_rt_setup_rules(state: GameState, data: GameData, cmd: Dictionar
 			seen[gid] = true
 			mods.append_array(RtMods.from_show_boss(data.encounter(gid)))
 	mods.append_array(RtMods.from_twists(_battle_twists(state), data))
+	mods.append_array(_rt_liga_mods(state, data, 0 if enc.tutorial else MarottenRules.liga_tier(state, rules)))
 	s.mods = mods
 	RtMods.apply_static(s, data)
 	if enc.boss and bool(state.flags.get(PEP_TALK_FLAG, false)) and data.has_id("statuses", PEP_TALK_STATUS):
@@ -609,6 +611,26 @@ static func _rt_member_mods(state: GameState, data: GameData) -> Array[Dictionar
 		return data.party_member(a.id).battle_slot < data.party_member(b.id).battle_slot)
 	for m: PartyMember in members:
 		out.append_array(_rt_species_mods(m, "p%d" % data.party_member(m.id).battle_slot, data))
+	return out
+
+
+## Unterhosen-Liga in the real-time combat (R5b, E31, 06 §4.3): every Liga member at `tier` (MarottenRules.in_liga,
+## frozen at the combat start, never the tutorial) is "leichtfüßig" — on combat_start the status LIGHT_FOOTED for the
+## whole combat (move_pm 1080: 8 % faster; ai_miss_pm 750: as a sim-driven unit it overlooks a quarter fewer
+## telegraphs; flag "keep": it survives a KO). Nothing when the data have no such status (fixtures).
+static func _rt_liga_mods(state: GameState, data: GameData, tier: int) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if tier <= 0 or not data.has_id("statuses", LIGHT_FOOTED):
+		return out
+	var members: Array[PartyMember] = []
+	for m: PartyMember in state.party:
+		if m != null and data.has_id("party", m.id) and MarottenRules.in_liga(state, m.id, tier):
+			members.append(m)
+	members.sort_custom(func(a: PartyMember, b: PartyMember) -> bool:
+		return data.party_member(a.id).battle_slot < data.party_member(b.id).battle_slot)
+	for m: PartyMember in members:
+		out.append({"src": "liga:mar_unterhose", "op": "on", "unit": "p%d" % data.party_member(m.id).battle_slot,
+			"event": "combat_start", "effect": {"status": LIGHT_FOOTED, "ms": -1}})
 	return out
 
 

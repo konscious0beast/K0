@@ -19,9 +19,10 @@ const REGULAR_F1: PackedStringArray = ["enm_kanalratte", "enm_taubenschwarm", "e
 	"enm_rattenschamane", "enm_kabelsalat", "enm_kellerspinne", "enm_spruehgeist", "enm_rolltreppenkrabbe",
 	"enm_rattengardist", "enm_fahrscheinfresser"]
 const BOSSES: PackedStringArray = ["enm_boss_hausmeister", "enm_boss_rattenkoenigin"]
-## The real-time combat adds to floor 1 (07 §4.11, R4): 8 statuses, the queen's train / spit / puddles, the tutorial
-## rat's hop, the show boss's ticket rule and Mopsula's monocle auto attack, the tutorial rat, the show-boss encounter.
-const RT_STATUSES: int = 8
+## The real-time combat adds to floor 1 (07 §4.11, R4): 8 statuses (R5b: + Leichtfüßig of the Liga, E31), the queen's
+## train / spit / puddles, the tutorial rat's hop, the show boss's ticket rule and Mopsula's monocle auto attack, the
+## tutorial rat, the show-boss encounter.
+const RT_STATUSES: int = 9
 const RT_BOSS_SKILLS: PackedStringArray = ["skl_q_train", "skl_q_spit", "skl_q_puddles"]
 const RT_ENEMY_SKILLS: PackedStringArray = ["skl_e_azubi_hop", "skl_e_showboss_slow"]
 
@@ -129,7 +130,8 @@ func test_real_data_is_valid_without_warnings() -> void:
 
 func test_quantities_match_gdd() -> void:
 	var d: GameData = _data()
-	assert_len(d.all_statuses(), 6 + RT_STATUSES, "GDD §3.9: exactly 6 statuses + 8 of the real-time combat (R4)")
+	assert_len(d.all_statuses(), 6 + RT_STATUSES,
+		"GDD §3.9: exactly 6 statuses + 9 of the real-time combat (R4; R5b: Leichtfüßig)")
 	var party_skills: Dictionary = {}
 	for m: PartyMemberDef in d.all_party():
 		for l: Dictionary in m.learnset:

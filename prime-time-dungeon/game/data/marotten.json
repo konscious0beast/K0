@@ -169,7 +169,7 @@
 		{
 			"id": "mar_unterhose",
 			"name": "Unterhosen-Liga",
-			"desc": "Ohne Rüstung & ohne Accessoire kämpfen: mehr Hype, mehr Follower.",
+			"desc": "Ohne Rüstung & ohne Accessoire kämpfen: leichtfüßig, mehr Hype, mehr Follower.",
 			"kind": "liga",
 			"trigger": "marotte_battle",
 			"condition": "e.liga_tier >= 1",

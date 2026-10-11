@@ -322,6 +322,13 @@ static func draw(m: IconMesh, kind: String, r: Rect2, tint: Color = Color(0, 0, 
 			g.line(0.02, 0.5, 0.3, 0.5, 0.08, tint if t else C_RED)
 			g.line(0.7, 0.5, 0.98, 0.5, 0.08, tint if t else C_RED)
 			g.circle(0.5, 0.5, 0.08, tint if t else C_RED)
+		"light_feet":                      # R5b (E31): Leichtfüßig — a feather with two speed lines
+			var fc: Color = tint if t else Color("#7fe3d0")
+			g.poly([Vector2(0.86, 0.1), Vector2(0.62, 0.2), Vector2(0.4, 0.42), Vector2(0.3, 0.66), Vector2(0.38, 0.7),
+				Vector2(0.56, 0.6), Vector2(0.78, 0.38)], fc)
+			g.line(0.86, 0.1, 0.22, 0.86, 0.05, C_PAPER)
+			g.line(0.08, 0.6, 0.26, 0.6, 0.05, Color(fc, 0.8))
+			g.line(0.14, 0.76, 0.3, 0.76, 0.05, Color(fc, 0.8))
 		"dazed":
 			g.ring(0.5, 0.56, 0.3, 0.05, Color(tint if t else Color("#c9b8ff"), 0.6))
 			for i in 3:

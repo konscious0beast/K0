@@ -612,6 +612,10 @@ Die Multiplikatoren wirken auf die **Kampagnen-Show-Währung**; in gewerteten Ev
   der Etagen-Bilanz; alle (≥ 5) in Stufe 2 → zusätzlich Achievement `ach_duo_floor`.
 - **Keine Strafe beim Wiederanziehen:** Stufe sinkt einfach (Zeile `liga_leave`, einmal je Etage).
 - **Mopsula als gesteuerte Figur:** ohne Pulli/Umhang und ohne Accessoire → Stufe 1 (`liga_enter:1:mopsula`).
+- **Im Echtzeitkampf (07 E31, R5b): leichtfüßig.** Wer in der Liga kämpft (Stufe 1: die gesteuerte Figur, Stufe 2: beide), ist
+  den ganzen Kampf „leichtfüßig“ (Status `sts_light_footed`): 8 % schneller und — als von der KI gesteuerte Figur — ein Viertel
+  weniger übersehene Boden-Telegraphen. Regeltext überall: „Ohne Rüstung & ohne Accessoire: leichtfüßig …“ (Liga-Marotte, Tab
+  „Show“, Liga-Toast); im HUD ein eigenes Statussymbol. Nie im Tutorial; im CTB-Kampf ohne Wirkung (bis zu dessen Entfernung).
 - **Einführung:** Der Hinweis `liga_hint` kommt einmalig in der **Etagen-Bilanz von E1** (nicht im ersten Safe Room) — bis dahin
   ist die Liga nur im Pausemenü-Tab „Show“ beschrieben. Wer sie vorher selbst entdeckt, bekommt trotzdem `liga_enter:*`.
 

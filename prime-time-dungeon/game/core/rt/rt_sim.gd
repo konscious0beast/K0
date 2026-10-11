@@ -1716,9 +1716,9 @@ func _safe_goal(u: RtUnit, g: Array[int]) -> Array[int]:
 
 
 ## TELEGRAPH_START (07 §5.5, E25): every living party unit (slot order, whoever steers it) draws "missed" from the AI
-## stream (AI_DODGE_MISS_PM of its tactic); a sim-driven unit that sees the shape and stands in it (grown by
-## ESCAPE_MARGIN_CM) reacts at start + REACT_TICKS[tactic] — the earlier reaction wins while another hostile
-## telegraph is pending.
+## stream (ai_dodge_miss_pm: AI_DODGE_MISS_PM of its tactic, R5b × Leichtfüßig); a sim-driven unit that sees the
+## shape and stands in it (grown by ESCAPE_MARGIN_CM) reacts at start + REACT_TICKS[tactic] — the earlier reaction
+## wins while another hostile telegraph is pending.
 func _notice_telegraph(t: RtTelegraph) -> void:
 	if t.side != Combatant.Side.PARTY:
 		return
@@ -1732,11 +1732,18 @@ func _notice_telegraph(t: RtTelegraph) -> void:
 		if v.side != Combatant.Side.PARTY or not is_alive(v):
 			continue
 		var preset: String = v.preset if RtVocab.RT_PRESETS.has(v.preset) else "attack"
-		var missed: bool = FixedMath.roll_bp(ai_rng(), bal.sub("AI_DODGE_MISS_PM", preset) * 10)
+		var missed: bool = FixedMath.roll_bp(ai_rng(), ai_dodge_miss_pm(v, preset) * 10)
 		if missed or not is_ai_driven(v) or not t.contains_inflated(v.x, v.z, m):
 			continue
 		var at: int = t.start + bal.sub("REACT_TICKS", preset)
 		v.react_at = mini(v.react_at, at) if others and v.react_at >= 0 else at
+
+
+## The ‰ of telegraphs unit `v` overlooks with tactic `preset` (07 §5.5): AI_DODGE_MISS_PM × the statuses'
+## ai_miss_pm (R5b, E31: Leichtfüßig of the Unterhosen-Liga 750 — a quarter fewer). Pure.
+func ai_dodge_miss_pm(v: RtUnit, preset: String) -> int:
+	var miss: int = bal.sub("AI_DODGE_MISS_PM", preset)
+	return miss if v.statuses.is_empty() else FixedMath.mul_pm(miss, StatusFx.factor(v, "ai_miss_pm"))
 
 
 ## The earliest impact of a pending hostile shape (no zone) that strikes within ESCAPE_LOOKAHEAD_TICKS and contains

@@ -217,6 +217,23 @@
 				"period_ms": 3000,
 				"tick_pct": 1
 			}
+		},
+		{
+			"id": "sts_light_footed",
+			"name": "Leichtfüßig",
+			"kind": "buff",
+			"default_turns": 1,
+			"color": "#7fe3d0",
+			"icon": "light_feet",
+			"rt": {
+				"default_ms": -1,
+				"move_pm": 1080,
+				"ai_miss_pm": 750,
+				"stack_mode": "ignore",
+				"flags": [
+					"keep"
+				]
+			}
 		}
 	]
 }

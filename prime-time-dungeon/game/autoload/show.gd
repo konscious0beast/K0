@@ -1465,8 +1465,12 @@ func _liga_line(tag: String, tier: int) -> void:
 		return
 	var who: String = "Beide ohne" if tier == 2 else "Ohne"
 	var text: String = "%s Rüstung & ohne Accessoire" % who
+	var rt: bool = Game.is_realtime()
+	if rt:
+		text += ": leichtfüßig"                     # R5b (E31): the Liga rule of the real-time combat
 	if MarottenRules.rewards_on(_marotten_rules()):
-		text += ": Hype ×%s · Follower ×%s" % [pm_text(MarottenRules.liga_pm(DB.data, tier, &"hype")),
+		text += "%sHype ×%s · Follower ×%s" % [" · " if rt else ": ",
+			pm_text(MarottenRules.liga_pm(DB.data, tier, &"hype")),
 			pm_text(MarottenRules.liga_pm(DB.data, tier, &"follower"))]
 	Events.toast_requested.emit(text, &"liga_duo" if tier == 2 else &"liga")
 

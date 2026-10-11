@@ -8,6 +8,12 @@ extends "res://scenes/ui/menu_base.gd"
 
 signal open_equipment(member_id: String)
 
+const LIGA_RULE_CTB: String = "Ohne Rüstung & ohne Accessoire kämpfen: schwerer, aber das Publikum liebt Mut. " \
+	+ "Die Waffe bleibt erlaubt."
+## R5b (E31): in the real-time combat the Liga members are leichtfüßig (sts_light_footed).
+const LIGA_RULE_RT: String = "Ohne Rüstung & ohne Accessoire: leichtfüßig — 8 % schneller, und als KI-Figur " \
+	+ "übersehen sie ein Viertel weniger Angriffe. Schwerer, aber das Publikum liebt Mut. Die Waffe bleibt erlaubt."
+
 var _list: VBoxContainer
 var _buttons: Array[Control] = []
 
@@ -35,8 +41,7 @@ func refresh() -> void:
 		_list.add_child(_bet_row(item as Dictionary))
 	_list.add_child(_header("UNTERHOSEN-LIGA", UiTheme.C_GOLD))
 	var tier: int = int(v.get("liga_tier", 0))
-	var rule: Label = UiUtil.label("Ohne Rüstung & ohne Accessoire kämpfen: schwerer, aber das Publikum liebt Mut. "
-		+ "Die Waffe bleibt erlaubt.", &"", 17)
+	var rule: Label = UiUtil.label(LIGA_RULE_RT if Game.is_realtime() else LIGA_RULE_CTB, &"", 17)
 	rule.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_list.add_child(rule)
 	var tiers: Label = UiUtil.label(_tier_text(v), &"LabelSmall", 16)

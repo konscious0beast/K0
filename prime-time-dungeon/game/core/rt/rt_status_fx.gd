@@ -114,9 +114,16 @@ static func remove(sim: RtSim, u: RtUnit, status_id: String) -> bool:
 	return false
 
 
-## Removes every status (KO, end): no events — the KO / BATTLE_END event says it.
+## Removes every status (KO, end) but the "keep" ones (R5b, E31): no events — the KO / BATTLE_END event says it.
 static func clear_all(u: RtUnit) -> void:
-	u.statuses.clear()
+	if u.statuses.is_empty() or not has_flag(u, "keep"):
+		u.statuses.clear()
+	else:                                        # R5b (E31): a "keep" status (Leichtfüßig) survives the KO
+		var kept: Array[StatusEffect] = []
+		for s: StatusEffect in u.statuses:
+			if s.def != null and not s.def.rt.is_empty() and (s.def.rt.get("flags", []) as Array).has("keep"):
+				kept.append(s)
+		u.statuses.assign(kept)
 	u.fixate_id = ""
 	u.fixate_until = 0
 

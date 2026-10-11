@@ -33,7 +33,9 @@ const AOE_CENTERS: PackedStringArray = ["self", "target"]
 const STATUS_TO: PackedStringArray = ["target", "self", "all_enemies", "all_allies"]
 const STACK_MODES: PackedStringArray = ["replace", "refresh", "ignore"]
 ## Real-time status flags (07 §4.7); the CTB DataValidator.STATUS_FLAGS stay valid as well (guard).
-const RT_STATUS_FLAGS: PackedStringArray = ["no_act", "no_move", "no_cast", "fixate", "interrupt_on_apply", "hidden"]
+## "keep" (R5b, E31): the status survives a KO (Leichtfüßig of the Unterhosen-Liga holds the whole combat).
+const RT_STATUS_FLAGS: PackedStringArray = ["no_act", "no_move", "no_cast", "fixate", "interrupt_on_apply", "hidden",
+	"keep"]
 const RT_PRESETS: PackedStringArray = ["attack", "support", "careful"]
 const RT_TOGGLES: PackedStringArray = ["interrupt", "show", "potions"]
 ## Defaults of the partner switches (07 §5.2).
@@ -51,7 +53,7 @@ const MOD_OPS: PackedStringArray = ["stat_pm", "skill_pm", "move_pm", "swing_pm"
 	"dmg_taken_pm", "heal_taken_pm", "first_hit_taken_pm", "on", "add_rule", "element_swap", "extra_enemy",
 	"forbid_skill", "forbid_items", "unlock_variant"]
 const MOD_UNITS: PackedStringArray = ["p0", "party", "enemies", "boss", "all"]
-const MOD_SOURCES: PackedStringArray = ["species", "spec", "equip", "showboss", "twist"]
+const MOD_SOURCES: PackedStringArray = ["species", "spec", "equip", "showboss", "twist", "liga"]
 const MOD_STATS: PackedStringArray = ["str", "mag", "def", "res", "spd", "lck", "max_hp", "max_mp"]
 const MOD_SKILL_FIELDS: PackedStringArray = ["power", "cooldown", "cast", "mp"]
 const MOD_EVENTS: PackedStringArray = ["combat_start", "kill", "interrupt", "dodge", "crit", "ko_ally",
@@ -79,6 +81,7 @@ const ICON_IDS: PackedStringArray = [
 	"potion", "bandage", "burger", "antidote", "can", "salts", "molotov", "ice_spray", "smoke", "megaphone", "elixir",
 	# status symbols (07 §8.4)
 	"poison", "stun", "slow", "haste", "guard", "taunted", "dazed", "regen", "burn", "admonished", "dizzy", "enrage",
+	"light_feet",
 	# enemies / generic
 	"claw", "bite", "bolt", "fire", "ice", "toxic", "train", "whistle", "ticket", "generic",
 ]

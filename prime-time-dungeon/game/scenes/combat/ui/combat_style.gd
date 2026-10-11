@@ -27,7 +27,7 @@ const C_DISABLED: Color = Color("#5a5266")
 ## Status colours (03_ART palette for the CTB statuses, new real-time statuses in the same family).
 const STATUS_COLORS: Dictionary = {"poison": "#7cc242", "stun": "#f5d90a", "slow": "#5b8def", "haste": "#ff7a1a",
 	"guard": "#9aa7b8", "taunted": "#e8455a", "taunt": "#e8455a", "dazed": "#c9b8ff", "regen": "#4ade80",
-	"burn": "#ff7a1a", "admonished": "#ffc93c", "dizzy": "#c084fc", "enrage": "#ff4d4d"}
+	"burn": "#ff7a1a", "admonished": "#ffc93c", "dizzy": "#c084fc", "enrage": "#ff4d4d", "light_feet": "#7fe3d0"}
 const ELEMENT_COLORS: Dictionary = {"physical": "#f2ebdd", "fire": "#ff6a2b", "ice": "#7fd8ff", "shock": "#f5e642",
 	"poison": "#7cc242", "none": "#c9b8ff"}
 ## ACTION_REFUSED / can_use reasons (RtCommand.REASONS) → the short text above the bar (07 §8.2 "abgelehnt").

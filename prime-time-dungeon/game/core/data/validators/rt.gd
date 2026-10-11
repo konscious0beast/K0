@@ -22,7 +22,7 @@ const TELEGRAPH_MIN_CAST_MS: int = 600
 ## V7 ranges of status fields (07 §4.7).
 const STATUS_RANGES: Dictionary = {"tick_pct": [-100, 100], "tick_min": [0, 999], "tick_max": [0, 999],
 	"boss_tick_pm": [0, 1000], "max_stacks": [1, 9], "move_pm": [0, 5000], "haste_pm": [0, 5000],
-	"dmg_dealt_pm": [0, 5000], "dmg_taken_pm": [0, 5000], "boss_ms_pm": [0, 1000]}
+	"dmg_dealt_pm": [0, 5000], "dmg_taken_pm": [0, 5000], "boss_ms_pm": [0, 1000], "ai_miss_pm": [0, 1000]}
 ## Party context variants (07 §4.1).
 const CONTEXT_WHEN: PackedStringArray = ["target_ko"]
 ## Fields of the phase ops (07 §4.9, RtVocab.RT_PHASE_OPS) besides "op".

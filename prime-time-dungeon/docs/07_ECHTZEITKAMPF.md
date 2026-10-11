@@ -72,7 +72,8 @@
 Die Nutzerin/der Nutzer hat Detailentscheidungen delegiert (Maßstab: gute UX, Spaß, Witz, **einfaches, sofort verständliches**
 Konzept; Grundsatzentscheidung „Variante 3 — WoW-light direkt in der Welt“). Ein unabhängiges Review fand 33 Punkte; so sind sie
 entschieden (Nummern = Review-Punkte). E25–E27 und E29 sind Entscheidungen des Orchestrators nach dem Review, E28 kommt aus
-der Konsistenzprüfung derselben Revision, E30 ist ein angenommener Änderungsantrag aus `08_CASTING` (CR-24):
+der Konsistenzprüfung derselben Revision, E30 ist ein angenommener Änderungsantrag aus `08_CASTING` (CR-24), E31 eine
+Entscheidung des Orchestrators für R5b:
 
 | Nr. | Thema (Review) | Entscheidung | Wo |
 |---|---|---|---|
@@ -106,6 +107,7 @@ der Konsistenzprüfung derselben Revision, E30 ist ein angenommener Änderungsan
 | E28 | Erster Kampf (Konsistenzprüfung) | Der erste Kampf verlangt nur Bewegen, Ziel, Taste 1, SHOW und Ausweichen: Tutorial-Leiste nur Slot 1 + SHOW (Sim-Regel), Trank und Partner-Spezial ab dem zweiten Kampf, Taktik-Chip ab Stufe 3 (der erste Safe Room liegt direkt hinter dem Tutorial), Bedrohungsanzeige erst nach einem eigenen Spott; die schlafende Tutorial-Gruppe weckt auch eine Berührung (sonst bräuchte Held:in Mopsula Zielwahl und Taste 1 schon vor dem Kampf) | §2.2, §2.13, §4.1, §5.2, §8.1 |
 | E29 | Werte E25 abgenommen; Taktik-Hinweis (Orchestrator) | Die nachgestellten KI-Werte aus E25 (25 % „spät“ +45 Ticks, übersehene Telegraphen, Angriffs-Reaktion 15 Ticks) gelten als Startwerte für R4. Dass ein perfekter Mopsula-Spieler mit der Standard-Taktik noch 15–16 % Bossversuche verliert, ist gewollt: die Partner-Taktik ist Teil des Könnens. Damit das verständlich bleibt, zeigt ein einmaliger Kontext-Hinweis `partner_tactic` den Weg zu „Vorsichtig“ (§2.13) | §2.13, §5.2, §11.3 |
 | E30 | Element-Abwehr gegen Prozent-Treffer (08 CR-24, angenommen) | **Prozent-Treffer tragen das Element ihres Skills:** Nach dem Grundwert faltet `rt_damage.gd` zuerst den Element-Faktor des Ziels für dieses Element (`element_mods`, auf 500–1500 ‰ begrenzt, Immunität zählt als 500); ohne Element kein Schritt. ATK, DEF, RES, Krit und Varianz wirken auf Prozent-Treffer weiterhin nicht. So wirken Element-Talente (06 B; die Starttalente aus 08 sind mit 08 CR-33 entfallen) in beiden Kampfmodi; R4 misst die Bänder (§11) mit E30. Dazu ein **gemeinsamer Vertrags-Durchgang R1a + 08 K0** mit genau einem `SIM_VERSION`-Sprung, in dem auch die K0-Zeilen in `data_validator.gd` stehen | §3.9.1, §6.3, §9.6, §10.2, §12.2, §12.3, §12.5 |
+| E31 | Unterhosen-Liga im Echtzeitkampf (Orchestrator, R5b) | **Eine** Liga-Regel im Kampf: Wer in der Liga kämpft (`MarottenRules.in_liga` bei der zu Kampfbeginn eingefrorenen Stufe, nie im Tutorial), ist **„leichtfüßig“** — Status `sts_light_footed` für den ganzen Kampf (`BattleBridge` hängt den Mod `{"src": "liga:mar_unterhose", "op": "on", "event": "combat_start"}` als letzten Eintrag der festen Mod-Reihenfolge an): **8 % schneller** (`move_pm` 1080 — Sim, Körper der Person und Bot lesen den Status) und als sim-gesteuerte Einheit **ein Viertel weniger übersehene Telegraphen** (`ai_miss_pm` 750 auf `AI_DODGE_MISS_PM`; der KI-Strom zieht wie zuvor); Flag `keep`: übersteht ein K.O. Angekündigt im Regeltext („Ohne Rüstung & ohne Accessoire: leichtfüßig …“: Liga-Marotte, Pausetab „Show“, Liga-Toast) und als Statussymbol im HUD. Der Liga-Wortlaut bleibt „ohne Rüstung & ohne Accessoire“ (E8); „leichtfüßig“ beschreibt den Schritt, nicht die Ausrüstung. Ziel der Abstimmung: Liga 1 je Held:in und Boss 5–15 Punkte schwerer als Liga 0, Königin in Liga 2 ≤ 80 % Niederlagen (Messung §11.5 „Stand R5b-1“) | §9.5, §11.5, 06 §4.3 |
 
 ---
 
@@ -2435,8 +2437,9 @@ Twists im Kampf** (06 §5.7) und kein `RtSim.apply_twist`; ein Twist-Befehl trä
   Array[Dictionary]` (`twists` = die aktiven Twist-Einträge, die `make_rt_setup` aus dem Spielstand liest — `core/rt` kennt
   `GameState` nicht, §3.1), `from_show_boss(enc: EncounterDef) -> Array[Dictionary]`.
 - Show-Wirkungen (Hype-, Follower-, Liga-Faktoren, Marotten) bleiben im Show-System. Die Unterhosen-Liga ist eine Ausrüstungsregel
-  („ohne Rüstung & ohne Accessoire“, 06 §4.3) und wirkt nur über die Werte der Ausrüstung und über Show-Faktoren — nie über eine
-  eigene Kampfregel.
+  („ohne Rüstung & ohne Accessoire“, 06 §4.3) und wirkt über die Werte der Ausrüstung und über Show-Faktoren — **R5b (E31):** dazu
+  genau eine Kampfregel, „leichtfüßig“ (Status `sts_light_footed` je Liga-Mitglied, Mod-Quelle `liga`, letzter Eintrag der festen
+  Reihenfolge Ausrüstung → Spezies → Spezialisierung → Show-Boss → Twists → Liga).
 - **Kampf-Twists** (06 §5.6, Bereich `battle`/`boss`): `BattleBridge.make_rt_setup` übergibt `RtMods.from_twists` beim Aufbau
   die aktiven Einträge aus `GameState.flags["live"]["twist"]["active"]` mit `battles_left > 0` (in gespeicherter Reihenfolge);
   heruntergezählt wird unverändert in `TwistApplier.on_battle_end` (über `Game.apply_battle_result`).
@@ -2514,7 +2517,7 @@ Spielweise zählen nur Aktionen der Person** (`by_ai == false`); Zustände und E
 | `mar_brave` | keine Fluchtwarnung, kein Nebel |
 | `mar_gourmet` | 3 Schwächetreffer (Party, wie CTB) |
 | `mar_speed` | kein Starter, auf Etage 1 nie aktiv; mit Etage 2 bekommt `marotten.json` die Echtzeit-Bedingung `e.duration_sec <= 15 && e.is_boss == false` („Kämpfe unter 15 Sekunden“) |
-| Unterhosen-Liga (`mar_unterhose`) | Stufe zu Kampfbeginn wie bisher; wirkt über Hype-/Follower-Faktoren, im Kampf ohne eigene Regel |
+| Unterhosen-Liga (`mar_unterhose`) | Stufe zu Kampfbeginn wie bisher; wirkt über Hype-/Follower-Faktoren; R5b (E31): Liga-Mitglieder sind im Kampf „leichtfüßig“ (§9.5) |
 
 **Show-Boss (06 §2.6; E26 — 06 C hat ihn zurückgestellt, er wird nicht im CTB, sondern nur im Echtzeitkampf gebaut, R4):**
 `enc_e1_showboss` „Kanalratten-Gala“ steht in Zone B abseits des Pflichtwegs (Startwert: die Gruppe von `enc_f1_b2` —

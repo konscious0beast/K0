@@ -20,7 +20,7 @@ const RtNorm := preload("res://core/data/defs/rt_norm.gd")
 const RT_SPEC: Array = [["default_ms", "i", 3000], ["period_ms", "i", 0], ["tick_pct", "i", 0], ["tick_min", "i", 0],
 	["tick_max", "i", 0], ["boss_tick_pm", "i", 1000], ["max_stacks", "i", 1], ["stack_mode", "s", "replace"],
 	["move_pm", "i", 1000], ["haste_pm", "i", 1000], ["dmg_dealt_pm", "i", 1000], ["dmg_taken_pm", "i", 1000],
-	["boss_ms_pm", "i", 1000], ["flags", "sa", []]]
+	["boss_ms_pm", "i", 1000], ["ai_miss_pm", "i", 1000], ["flags", "sa", []]]
 var rt: Dictionary = {}
 
 

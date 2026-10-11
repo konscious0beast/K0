@@ -13,8 +13,10 @@ var music: String = ""                      # "" → battle / boss
 var floor_index: int = 0                    # floor that declares this encounter (set by GameData)
 # --- Echtzeitkampf (07, R1a): optional blocks (07 §4.9, §9.6) --------------------------------------------------------
 const RtNorm := preload("res://core/data/defs/rt_norm.gd")
-## {"enemies": [ids] ([] = the CTB list), "music": String, "tutorial": [steps]}; {} = no real-time data.
-const RT_SPEC: Array = [["enemies", "sa", []], ["music", "s", ""], ["tutorial", "sa", []]]
+## {"enemies": [ids] ([] = the CTB list), "music": String, "tutorial": [steps], "blockers": [[x0, z0, x1, z1], …]};
+## {} = no real-time data. blockers (R4): the fixed set pieces of the encounter's stage as RtGeo blockers in room-local
+## cm (07 §3.5.4: the derailed waggon of Gleis 9) — BattleBridge.make_rt_setup puts them into RtSetup.geo.
+const RT_SPEC: Array = [["enemies", "sa", []], ["music", "s", ""], ["tutorial", "sa", []], ["blockers", "a", []]]
 var rt: Dictionary = {}
 ## Show boss (06 §2.6, 07 §9.6 E26): {} = none, else {"elite_pm", "banner_tag", "reward": {"kind", "id"}, "rule":
 ## RtRule} as in the data (rules: validators/show_boss.gd, R4; mods: RtMods.from_show_boss, R1b).

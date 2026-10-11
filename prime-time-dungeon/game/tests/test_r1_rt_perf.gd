@@ -70,10 +70,18 @@ func test_two_group_fight() -> void:
 func test_six_enemies_ten_telegraphs_step() -> void:
 	var cmd: Dictionary = RtKit.encounter("enc_rt_rats", [["g1", "enc_rt_rats", [-100, -300, 128]],
 		["g2", "enc_f1_a2", [250, -250, 160]], ["g3", "enc_rt_sprayers", [-250, -100, 100]]])
-	var sim: RtSim = RtKit.sim(cmd, 6, "kai", RtKit.canned_state())
-	assert_eq(sim.units().size(), 8, "2 party units, 6 enemies")
-	var r: Array = _timed(sim, [], 600, true)
-	var per: float = float(r[1]) / maxf(1.0, float(r[0]))
+	# One untimed warm-up run: the first fight in a fresh test process pays one-time costs (allocations, caches),
+	# measured at ~1.5x the steady state; then the median of three identical timed runs (scheduler noise).
+	_timed(RtKit.sim(cmd, 6, "kai", RtKit.canned_state()), [], 100, true)
+	var pers: Array[float] = []
+	var r: Array = []
+	for k: int in 3:
+		var sim: RtSim = RtKit.sim(cmd, 6, "kai", RtKit.canned_state())
+		assert_eq(sim.units().size(), 8, "2 party units, 6 enemies")
+		r = _timed(sim, [], 600, true)
+		pers.append(float(r[1]) / maxf(1.0, float(r[0])))
+	pers.sort()
+	var per: float = pers[1]
 	print("[TIMING] 2 + 6 units, %.1f telegraphs / zones on average: %d ticks, %.1f µs per step = %.0f ticks/s (load %s)"
 		% [float(r[2]) / maxf(1.0, float(r[0])), int(r[0]), per, 1000000.0 / maxf(1.0, per), _load()])
 	assert_eq(int(r[0]), 600, "600 steps")

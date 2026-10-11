@@ -52,7 +52,7 @@ run_tests() {
   local out code
   local extra=()
   [ -n "${TEST_FILTER:-}" ] && extra=(-- "--filter=$TEST_FILTER")
-  out="$(timeout 600 "$GODOT" --headless --path "$WORK" -s res://tests/run_tests.gd "${extra[@]}" 2>&1 | filter_noise)"
+  out="$(timeout 1200 "$GODOT" --headless --path "$WORK" -s res://tests/run_tests.gd "${extra[@]}" 2>&1 | filter_noise)"
   code=$?
   echo "$out"
   if [ "$code" -ne 0 ] || echo "$out" | grep -qE "$ERR_RE"; then

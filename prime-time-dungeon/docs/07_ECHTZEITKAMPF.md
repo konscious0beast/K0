@@ -2576,7 +2576,8 @@ und Prüfung in `RtCommand` (§3.4).
 | `move_input` | `{"t": "move_input", "ct", "u", "dir": [dx, dz], "run": bool}` (`dx`, `dz` −127…127) | **reserviert für Grad B** (Server rechnet die Spielerbewegung, §10.8); bis dahin lehnt `submit` mit `grade_b` ab |
 | `gift` (im Kampf) | bestehend + `"ct"` | extern, Id 0, aufgezeichnet bei der Anwendung an der Tick-Grenze (§9.2) |
 | `combat_speed` | `{"t": "combat_speed", "pm": 850}` (`RtCommand.speed(pm)`) | Spieltempo geändert (oder ≠ 1000 beim Laufstart); keine Sim-Wirkung, Kennzeichnung „Zeitlupe“ (§10.7). `Game` zeichnet ihn selbst auf: beim Laufstart, wenn `GameSettings.combat_speed_pm` ≠ 1000, und nach jedem `Events.settings_changed`, das den Wert ändert (R2) |
-| `move_batch` | `{"t": "move_batch", "u", "id0", "s": [[dct, x, z, vx, vz, yaw], …]}` | nur in gespeicherten Logs (§10.3) |
+| `move_batch` | `{"t": "move_batch", "u", "id0", "s": [[dct, x, z, vx, vz, yaw], …]}` | nur in gespeicherten Logs (§10.3); das erste `dct` zählt ab 0 (= `ct` der ersten Probe), die Eintrags-Id ist `id0` (R5a) |
+| `loadout` (R5a) | `{"t": "loadout", "member", "bar": {"<slot>": skill}, "preset", "tog": {...}}` (`RunRules.loadout_cmd`) | **außerhalb** des Kampfes, ohne `ct`: die vollständige Wahl eines Mitglieds für die folgenden Kämpfe — Leisten-Varianten (§4.1; Slots `"2"`, `"3"`, `"4"`, `{}` = Grundfähigkeiten) und Partner-Taktik (§5.2; `preset` `""` = Standard oder `RT_PRESETS`, `tog` ⊆ `RT_TOGGLES`) → `PartyMember.rt_loadout`/`rt_preset`/`rt_toggles`. Nur im Echtzeitlauf; Prüfung `RunRules.loadout_refusal` (`not_realtime`, `unknown_member`, `not_a_variant`, `not_learned`) in `Game.apply_loadout` und beiden Verifiern; im Kampf gesperrt |
 
 Ein `twist`-Befehl kommt im Kampf nie vor (06 §5.7: Anwendung nur in der Erkundung); er trägt weiterhin nur `tick`, kein `ct`.
 
@@ -2601,6 +2602,13 @@ des `rt`-Blocks von `encounter`) an `RtCommand.validate` (R1a: Stub, R1b: Regeln
 - Das Kampfende ist **kein** Befehl: die Sim bestimmt es. Ein Kampf-Befehl mit `ct` nach dem Ende ist ein Replay-Fehler
   (`combat_cmd_after_end`). Der End-Prüfpunkt bestätigt Tick und Zustand.
 - `timer_mode: realtime` (05 S4, später): `k = k_encounter + ct`.
+- **Umsetzung (R5a):** Ein `combat_hint` steht vor dem Geschenk seines Ticks, wenn der vorige Tick die Karte auslöste (der
+  Director hält den Tick `c` an und zeichnet am angehaltenen `ct` auf, bevor die Grenze `c` läuft), und als einziger Eintrag
+  auch nach dem Kampfende im End-Tick (eine Karte, die die Ereignisse des letzten Ticks zeigten). `Game.combat_submit` nimmt
+  keinen `combat_hint` an (`schema`): aufgezeichnet wird er nur über `Game.combat_hint`. Ein `combat_speed` während eines
+  Kampfes wird erst an dessen Ende aufgezeichnet (R2): jeder Eintrag ohne `ct` beendet in den Verifiern den laufenden Kampf
+  (§10.5). `RunLog.validate` prüft zusätzlich `k` aller Kampfeinträge (= `k` des `encounter`, Grund `rt_k`) und das `ct`
+  der Kampf-Geschenke; mehrere Kämpfe dürfen dasselbe `k` tragen (die Uhr steht).
 
 ### 10.3 Kompaktierung
 
@@ -2609,6 +2617,14 @@ des `rt`-Blocks von `encounter`) an `RtCommand.validate` (R1a: Stub, R1b: Regeln
 `move_sample`-Einträge derselben Einheit ohne andere Einträge dazwischen zu `move_batch` zusammen (Ids fortlaufend ab `id0`,
 `ct` als Differenzen); `RunLog.expand()` stellt die Einträge bitgenau wieder her. Prüfung und Replay arbeiten auf der expandierten
 Form; Hashes sind unabhängig davon. Live-Streams übertragen unkompaktierte Einträge.
+
+**Umsetzung (R5a):** `compact()` fasst nur Läufe von mindestens zwei Proben genau der aufgezeichneten Form (`{t, ct, u, p}`,
+`RtCommand.move`) mit gleichem `k` und aufeinanderfolgenden Ids zusammen; Eintrags-Id = `id0`, die nächste freie Id liegt
+hinter `id0 + n − 1`. `expand()` stellt nur wohlgeformte Stapel wieder her (Schema, `id0` = Eintrags-Id); einen anderen meldet
+`validate`. `expanded() -> RunLog` liefert die expandierte Kopie, die beide Verifier abspielen (`RunSim.apply` selbst lehnt
+`move_batch` mit `not_expanded` ab); `digest()` unterscheidet die Formen, `final_hash` und alle Prüfpunkte nicht. Wann
+gespeicherte Logs kompaktiert werden, entscheidet R5b: `Save.save_replay` schreibt bis dahin die unkompaktierte Form (der
+Bestenlisten-Eintrag bindet sie über `run_log_hash` = `digest()`; Event-Läufe kämpfen bis R5b im CTB).
 
 ### 10.4 StateHash-Abdeckung
 
@@ -2646,6 +2662,18 @@ var combat: RtSim = null                    # running real-time combat (RunSim-d
 RunSim-Kernläufe enthalten wie bisher keine System-Geschenke und keine Show-Reaktionen (05 §11.4); vollständige Live-Läufe
 reproduziert `Game.replay_log`.
 
+**Umsetzung (R5a):** `settle()` (öffentlich) beendet einen laufenden Kampf — vor jedem Eintrag, der kein Kampfeintrag ist
+(auch `combat_speed`, `loadout`), bevor Zeit vergeht (`advance_to`), in `close()` und in den Replays an Prüfpunkten und am Ende;
+das Ergebnis bucht derselbe Weg wie im CTB (`_book_result`: Prüfpunkt fällig, `BattleBridge.apply_result` samt
+`regen_ticks = 0`, Comeback-Marke, `boss_defeated`, `DEFEAT` beendet den Lauf). Kampfeinträge prüft `RunRules.combat_refusal` vor
+der Aufzeichnung (`no_combat`, `not_expanded`, `past_tick`, `system_gift`, `gift_twice`, `gift_order`,
+`combat_cmd_after_end`), danach die Geschenk-Politik bzw. `RtSim.submit`; Abgelehntes landet in `rejected_cmds` (Zustand
+unverändert). Ein Kopf mit `combat_mode: realtime` startet den Lauf über `RunRules.rt_start` (Modus, `hp_scale_pm`, volle
+HP/MP, wie `Game.new_game`; ein Anker-Log bringt seinen Zustand mit), `RunRules.rt_header_errors` prüft `rt_version`.
+`replay` spielt `RunLog.expanded()`, vergleicht nach jedem Kampf-Tick die fälligen Kampf-Prüfpunkte (`check_combat`:
+`StateHash.of_rt`; der End-Prüfpunkt schließt die Reihe eines Kampfes, mehrere Kämpfe dürfen dasselbe `k` tragen) und meldet
+additiv `combat_mismatch_at` (Index in `checkpoints()`, −1 = alle gleich; `mismatch_at` nennt den kleineren Index).
+
 ### 10.6 `Game.replay_log`-Äquivalenz: die exakte Schleife
 
 `Game` (R2-Abschnitt) hält den laufenden Kampf in `var combat: RtSim` und bietet `make_rt_setup(cmd: Dictionary) -> RtSetup`
@@ -2677,6 +2705,15 @@ diesem `ct`, dann `combat_step` (§9.2). Während einer Hinweiskarte ruft er nic
 System-Geschenk im selben Tick, Hinweiskarten, Steuerungswechsel, Flucht und Niederlage) und sein `Game.replay_log` liefern
 identische GameState-Hashes, identische Kampf-Prüfpunkte und identische Show-Zahlen (Hype, Follower, Zuschauermodell,
 Achievements, Marotten-Strichliste). Die FINALE-Bedingung prüft die Sim selbst (§4.1), das Replay braucht dafür nichts.
+
+**Umsetzung (R5a, `GameReplay._combat`):** je Tick `c` zuerst die `combat_hint` am Anfang der Einträge von `c` (Karten des
+angehaltenen Ticks, §10.2), dann das Geschenk von `c` (`Show.receive_gift`; ein System-Geschenk im Log → `system_gift`),
+`Game.combat_boundary()` — ein aufgezeichnetes Geschenk, das danach noch in der Warteschlange liegt (`Show.is_gift_queued`),
+ist ein Fehler —, die übrigen Einträge von `c` (ein weiteres Geschenk → `gift_twice` bzw. nach Eingaben `gift_order`),
+`Game.combat_step()` und der Vergleich der Kampf-Prüfpunkte (`RunSim.check_combat`). Nach dem Ende ist nur der
+`combat_hint` des End-Ticks erlaubt; dann `Game.end_combat()` und bei `DEFEAT` `Game.on_game_over(&"defeat")` (wie
+`Router.game_over`). Kopfprüfung, Echtzeit-Start und `combat_mismatch_at` wie §10.5; `loadout` läuft über
+`Game.apply_loadout`.
 
 ### 10.7 Pur-Liga, Event-Regeln, Bestenlisten
 
@@ -2899,6 +2936,28 @@ er enthält alles, was mehr als eine Phase braucht:
   legt `validators/show_boss.gd` neu an und ruft ihn aus `validators/rt.gd` (§12.3, §12.4); `battle_results.gd` hat weder
   `results_shown` noch `show_slot`, `bets_results_fx.gd` gibt es nicht — `CombatResults` trägt die API aus §8.9 trotzdem;
   `Show.say_external` lehnt im CTB-Kampf ebenso ab (§9.3 gilt für beide Kampfmodi).
+- **Stand R5a (2026-10-11, Branch `ptd/r5a`, umgesetzt gegen die echte Sim R1b-I3):** ShowRules-Profil `rt` (§9.1),
+  `Show.take_pending_gift_rt` (§9.2), Zeilenrate und Echtzeit-Zeilen (§9.3), Payloads, StatIds und die vier Achievements
+  (§9.4), Marotten-Abbildung mit `duration_sec` (§9.6), `RunLog`/`RunSim`/`Game.replay_log` mit Kampf-Prüfpunkten
+  (§10.2–§10.6, je ein Absatz „Umsetzung (R5a)“), Kompaktierung (§10.3) und der zusätzliche Befehl `loadout` (§10.1) für das
+  Fähigkeiten-Menü von R3. CTB bleibt Standard und unverändert (`fullrun.sh --strategy=all` gleich dem Stand davor).
+  Abweichungen und Auslegungen: (1) `rt_unavailable` entfällt — Echtzeit-Einträge in einem CTB-Lauf → `not_realtime`,
+  Kampfeinträge ohne laufenden Kampf → `no_combat`; System-Geschenke im Log → `system_gift` (05 §10.6). (2) `combat_hint`
+  vor der Grenze und im End-Tick nach dem Ende (§10.2); `combat_speed` behält die R1a-Ausnahme in `RunLog.validate`, beendet
+  in den Verifiern aber wie jeder Eintrag ohne `ct` den Kampf (R2 zeichnet ihn erst am Kampfende auf). (3) Schwäche +1 je
+  Fähigkeits-Aktion einmal, jeder Auto-Angriff mit Schwäche ist eine eigene Aktion; Status-/Zonen-Kills (`command` −1) wie
+  CTB-Status-Kills: Zuordnung für `enemy_killed`/Marotten, kein Kill-Hype, keine Serie. (4) „Vorrang“ der Zeilenrate: eine
+  höherrangige Zeile darf innerhalb der 6 s sprechen und startet das Fenster neu, gleich- und niederrangige entfallen; je
+  Ereignis spricht höchstens die ranghöchste Zeile (`Show.rt_line_priority`, `RT_ANNOUNCE_ORDER`); die Zeilen-Tags des Profils
+  laufen als `ShowDelta`-Gründe (ohne Hype). (5) Ein externes Geschenk teilt sich wie im CTB die Geschenk-Plätze des Kampfes
+  mit den System-Geschenken: im regulären Kampf nimmt es den einen Platz, der fällige Schwellenwert verfällt; der Pflichtfall
+  „extern + System im selben Tick“ (extern `c`, System `c + 1`) gilt im Bosskampf (zwei Plätze). (6) `ach_crit_3`/
+  `ach_weakness_5` (§9.4) sind nicht gemessen: Etage-1-`rt`-Daten und Bot kommen mit R4 — Messung und ggf. höhere Schwellen
+  → R5b. (7) `validators/marotten.gd` bekommt `duration_sec` in `BATTLE_KEYS` (Spiegel von `MarottenRules`, Pflicht laut
+  `test_06c`). (8) Event-Läufe kämpfen weiter im CTB (dieses Dokument weist ihren Kampfmodus keiner Phase vor R5b zu).
+  (9) Ein im Kampf geänderter `partner_preset` gilt nur für diesen Kampf; ihn in `PartyMember.rt_preset` zu übernehmen
+  (z. B. per `loadout` nach dem Kampf) ist offen (R2/R3, spätestens R5b). Neu: `test_r5_loadout`; die Tests aus §12.5 nutzen
+  das Kit `tests/fixtures/rt_live/rt_live.gd` (Live-Läufe über die `Game`-API wie der `CombatDirector`, Anker-Zustände).
 
 **Phasenübergreifende Signaturen — vollständige Stub-Liste von R1a** (alles, was eine Phase von einer anderen aufruft oder
 liest; `test_r1a_contract` prüft jede Zeile per Reflexion):
@@ -3063,6 +3122,7 @@ Echtzeit-Nachfolger mit Test:
 | R5a | `test_r5_rt_replay` | `RunSim.replay` eines Echtzeit-Laufs bitgenau, Kampf-Prüfpunkte, Abbruch bei Abweichung, Befehl nach Kampfende = Fehler, `compact`/`expand` verlustfrei |
 | R5a | `test_r5_gifts_in_combat` | eingefrorenes Fenster nimmt an, Anwendung an der nächsten Grenze, Id 0 + `ct`, System-Geschenke ≤ 1/2, extern + System im selben Tick (§9.2), Pur-Liga lehnt ab |
 | R5a | `test_r5_rt_live_equivalence` | geskripteter Live-Lauf ≡ `Game.replay_log` (Hashes, Prüfpunkte, Show-Zahlen, Marotten-Strichliste) |
+| R5a | `test_r5_loadout` | Befehl `loadout` (§10.1): Schema, Regeln (`not_realtime`, `unknown_member`, `not_a_variant`, `not_learned`, Kampfsperre), Wirkung im nächsten Kampf, gleiche Prüfung in beiden Verifiern |
 | R5b | `test_m6_autoplay` (angepasst) | Schritte `force_battle` → `force_combat` (60 Frames), `battle` → `combat` (900 Frames, Autopilot, `Events.battle_ended` VICTORY) |
 | R5b | `test_m6_fullrun` + `tools/fullrun.sh --combat=realtime` | Etage 1 vollständig mit Autopilot (alle Strategien, beide Held:innen), Zeitbänder; der Show-Boss bleibt optional (der Bot erreicht die Treppe auch ohne ihn) |
 

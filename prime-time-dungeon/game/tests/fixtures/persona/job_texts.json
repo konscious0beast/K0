@@ -1,0 +1,484 @@
+{
+	"schema": 1,
+	"doc": "08 §3.7 Nr. 5: free texts of \"Anderes …\" with the expected offline mapping (\"\" = no match: Vorleben → org_allround, hobby → none). test_08_origins_data needs >= 90 % hits; the K3 AI casting is compared against the same cases.",
+	"jobs": [
+		{
+			"text": "Altenpflegerin",
+			"origin": "org_care"
+		},
+		{
+			"text": "Krankenschwester",
+			"origin": "org_care"
+		},
+		{
+			"text": "Notfallsanitäter",
+			"origin": "org_care"
+		},
+		{
+			"text": "Zahnärztin",
+			"origin": "org_care"
+		},
+		{
+			"text": "Psychotherapeut",
+			"origin": "org_care"
+		},
+		{
+			"text": "Physiotherapeutin in einer Praxis",
+			"origin": "org_care"
+		},
+		{
+			"text": "Tierarzthelferin",
+			"origin": "org_animals"
+		},
+		{
+			"text": "Zoowärter",
+			"origin": "org_animals"
+		},
+		{
+			"text": "Hundefriseurin",
+			"origin": "org_animals"
+		},
+		{
+			"text": "Pferdewirtin",
+			"origin": "org_animals"
+		},
+		{
+			"text": "Elektroinstallateur",
+			"origin": "org_craft"
+		},
+		{
+			"text": "Schreinerin",
+			"origin": "org_craft"
+		},
+		{
+			"text": "KFZ-Mechatroniker",
+			"origin": "org_craft"
+		},
+		{
+			"text": "Dachdecker",
+			"origin": "org_craft"
+		},
+		{
+			"text": "Azubi zur Mechatronikerin",
+			"origin": "org_craft"
+		},
+		{
+			"text": "Steuerfachangestellte",
+			"origin": "org_office"
+		},
+		{
+			"text": "Bankkauffrau",
+			"origin": "org_office"
+		},
+		{
+			"text": "Sachbearbeiterin im Amt",
+			"origin": "org_office"
+		},
+		{
+			"text": "Versicherungskaufmann",
+			"origin": "org_office"
+		},
+		{
+			"text": "Industriekauffrau",
+			"origin": "org_office"
+		},
+		{
+			"text": "Krankenkassen-Mitarbeiterin",
+			"origin": "org_office"
+		},
+		{
+			"text": "Softwareentwicklerin",
+			"origin": "org_it"
+		},
+		{
+			"text": "Systemadministrator",
+			"origin": "org_it"
+		},
+		{
+			"text": "Data Scientist",
+			"origin": "org_it"
+		},
+		{
+			"text": "IT-Consultant",
+			"origin": "org_it"
+		},
+		{
+			"text": "Grundschullehrerin",
+			"origin": "org_teach"
+		},
+		{
+			"text": "Erzieher in der Kita",
+			"origin": "org_teach"
+		},
+		{
+			"text": "Sozialpädagogin",
+			"origin": "org_teach"
+		},
+		{
+			"text": "Fahrlehrer",
+			"origin": "org_teach"
+		},
+		{
+			"text": "Erzieherin im Kindergarten",
+			"origin": "org_teach"
+		},
+		{
+			"text": "Koch",
+			"origin": "org_kitchen"
+		},
+		{
+			"text": "Konditorin",
+			"origin": "org_kitchen"
+		},
+		{
+			"text": "Kellnerin",
+			"origin": "org_kitchen"
+		},
+		{
+			"text": "Barkeeper",
+			"origin": "org_kitchen"
+		},
+		{
+			"text": "Einzelhandelskauffrau",
+			"origin": "org_sales"
+		},
+		{
+			"text": "Kassiererin im Supermarkt",
+			"origin": "org_sales"
+		},
+		{
+			"text": "Immobilienmakler",
+			"origin": "org_sales"
+		},
+		{
+			"text": "Bäckereifachverkäuferin",
+			"origin": "org_sales"
+		},
+		{
+			"text": "LKW-Fahrer",
+			"origin": "org_transport"
+		},
+		{
+			"text": "Pilotin",
+			"origin": "org_transport"
+		},
+		{
+			"text": "Lagerist",
+			"origin": "org_transport"
+		},
+		{
+			"text": "Fluglotse",
+			"origin": "org_transport"
+		},
+		{
+			"text": "Taxifahrerin",
+			"origin": "org_transport"
+		},
+		{
+			"text": "Opernsängerin",
+			"origin": "org_stage"
+		},
+		{
+			"text": "Grafikdesignerin",
+			"origin": "org_stage"
+		},
+		{
+			"text": "Schauspieler",
+			"origin": "org_stage"
+		},
+		{
+			"text": "Zauberkünstlerin",
+			"origin": "org_stage"
+		},
+		{
+			"text": "Journalistin",
+			"origin": "org_media"
+		},
+		{
+			"text": "Influencerin",
+			"origin": "org_media"
+		},
+		{
+			"text": "Fotografin",
+			"origin": "org_media"
+		},
+		{
+			"text": "Werbetexter",
+			"origin": "org_media"
+		},
+		{
+			"text": "Chemikerin",
+			"origin": "org_science"
+		},
+		{
+			"text": "Maschinenbauingenieur",
+			"origin": "org_science"
+		},
+		{
+			"text": "Biologin",
+			"origin": "org_science"
+		},
+		{
+			"text": "Doktorandin in Physik",
+			"origin": "org_science"
+		},
+		{
+			"text": "Polizistin",
+			"origin": "org_rescue"
+		},
+		{
+			"text": "Feuerwehrmann",
+			"origin": "org_rescue"
+		},
+		{
+			"text": "Bademeister",
+			"origin": "org_rescue"
+		},
+		{
+			"text": "Rettungsschwimmerin",
+			"origin": "org_rescue"
+		},
+		{
+			"text": "Gärtnerin",
+			"origin": "org_nature"
+		},
+		{
+			"text": "Landwirt",
+			"origin": "org_nature"
+		},
+		{
+			"text": "Winzerin",
+			"origin": "org_nature"
+		},
+		{
+			"text": "Förster",
+			"origin": "org_nature"
+		},
+		{
+			"text": "Rechtsanwältin",
+			"origin": "org_law"
+		},
+		{
+			"text": "Richter am Amtsgericht",
+			"origin": "org_law"
+		},
+		{
+			"text": "Justizvollzugsbeamter",
+			"origin": "org_law"
+		},
+		{
+			"text": "Studentin",
+			"origin": "org_school"
+		},
+		{
+			"text": "Schülerin",
+			"origin": "org_school"
+		},
+		{
+			"text": "Freiwilligendienst",
+			"origin": "org_school"
+		},
+		{
+			"text": "Reinigungskraft",
+			"origin": "org_cleaning"
+		},
+		{
+			"text": "Hausmeister",
+			"origin": "org_cleaning"
+		},
+		{
+			"text": "Gebäudereinigerin",
+			"origin": "org_cleaning"
+		},
+		{
+			"text": "Friseurmeisterin",
+			"origin": "org_beauty"
+		},
+		{
+			"text": "Kosmetikerin",
+			"origin": "org_beauty"
+		},
+		{
+			"text": "Tätowiererin im Tattoo-Studio",
+			"origin": "org_beauty"
+		},
+		{
+			"text": "Schichtarbeiter in der Fabrik",
+			"origin": "org_industry"
+		},
+		{
+			"text": "Staplerfahrer",
+			"origin": "org_industry"
+		},
+		{
+			"text": "Maschinenführerin",
+			"origin": "org_industry"
+		},
+		{
+			"text": "Freiberufliche Übersetzerin",
+			"origin": "org_selfemployed"
+		},
+		{
+			"text": "Inhaber eines Cafés",
+			"origin": "org_selfemployed"
+		},
+		{
+			"text": "Rentnerin",
+			"origin": "org_retired"
+		},
+		{
+			"text": "Pensionär",
+			"origin": "org_retired"
+		},
+		{
+			"text": "Hausfrau und Mutter",
+			"origin": "org_family"
+		},
+		{
+			"text": "Elternzeit",
+			"origin": "org_family"
+		},
+		{
+			"text": "Arbeitssuchend",
+			"origin": "org_reorient"
+		},
+		{
+			"text": "Umschulung",
+			"origin": "org_reorient"
+		},
+		{
+			"text": "Astronaut",
+			"origin": ""
+		},
+		{
+			"text": "Bestatter",
+			"origin": ""
+		},
+		{
+			"text": "Pfarrerin",
+			"origin": ""
+		},
+		{
+			"text": "Profi-Gamer",
+			"origin": ""
+		}
+	],
+	"hobbies": [
+		{
+			"text": "Backen",
+			"hobby": "hob_cooking"
+		},
+		{
+			"text": "Grillen",
+			"hobby": "hob_cooking"
+		},
+		{
+			"text": "Fußball",
+			"hobby": "hob_sports"
+		},
+		{
+			"text": "Joggen",
+			"hobby": "hob_sports"
+		},
+		{
+			"text": "Yoga",
+			"hobby": "hob_sports"
+		},
+		{
+			"text": "Reiten",
+			"hobby": "hob_sports"
+		},
+		{
+			"text": "Gitarre spielen",
+			"hobby": "hob_music"
+		},
+		{
+			"text": "Klavier",
+			"hobby": "hob_music"
+		},
+		{
+			"text": "Krimis",
+			"hobby": "hob_crime"
+		},
+		{
+			"text": "Kreuzworträtsel",
+			"hobby": "hob_crime"
+		},
+		{
+			"text": "Escape Rooms",
+			"hobby": "hob_crime"
+		},
+		{
+			"text": "Schach",
+			"hobby": "hob_boardgames"
+		},
+		{
+			"text": "Stricken",
+			"hobby": "hob_diy"
+		},
+		{
+			"text": "Origami",
+			"hobby": "hob_diy"
+		},
+		{
+			"text": "Modellbau",
+			"hobby": "hob_diy"
+		},
+		{
+			"text": "Gärtnern",
+			"hobby": "hob_garden"
+		},
+		{
+			"text": "Pilze sammeln",
+			"hobby": "hob_outdoor"
+		},
+		{
+			"text": "Wandern",
+			"hobby": "hob_outdoor"
+		},
+		{
+			"text": "Mit dem Hund spazieren",
+			"hobby": "hob_outdoor"
+		},
+		{
+			"text": "Videospiele",
+			"hobby": "hob_gaming"
+		},
+		{
+			"text": "Zocken",
+			"hobby": "hob_gaming"
+		},
+		{
+			"text": "Fotografie",
+			"hobby": "hob_photo"
+		},
+		{
+			"text": "Bloggen",
+			"hobby": "hob_social"
+		},
+		{
+			"text": "Ehrenamt bei der Tafel",
+			"hobby": "hob_volunteer"
+		},
+		{
+			"text": "Löten",
+			"hobby": "hob_tech"
+		},
+		{
+			"text": "Salsa tanzen",
+			"hobby": "hob_dance"
+		},
+		{
+			"text": "Reisen",
+			"hobby": "hob_travel"
+		},
+		{
+			"text": "Katzen",
+			"hobby": "hob_animals"
+		},
+		{
+			"text": "Briefmarken sammeln",
+			"hobby": ""
+		}
+	]
+}

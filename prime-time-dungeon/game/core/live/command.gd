@@ -19,7 +19,8 @@ class_name Command extends RefCounted
 ## move_batch) and the optional "rt" block of "encounter" are checked by RtCommand.validate. Until R5a builds the
 ## real-time combat path both verifiers refuse them (RunRules.rt_refusal → "rt_unavailable").
 ## Casting (08 §2.3, K0): persona {"v": 1, "talent", "bias": [≤ 3 Strings]} (start, once per run) or {"v": 1,
-## "talent", "swap": true} (first Talent-Show) — ids only; the rules are PersonaRules.check's.
+## "talent", "swap": true} (first Talent-Show) — ids only; the rules are PersonaRules.check's. K1 (CR-33): "talent"
+## may be "" — the only value K1 records (no start talents; any other talent is refused by PersonaRules.check).
 
 const TYPES: PackedStringArray = ["floor", "encounter", "battle", "lootbox", "buy", "sell", "equip", "use_item", "rest",
 	"event", "chest", "gate", "room", "safe_room", "safe_room_exit", "scene", "flag", "difficulty", "descend", "gift",
@@ -214,10 +215,10 @@ static func _twist(v: Variant) -> String:
 static func _persona(d: Dictionary) -> String:
 	if not _is_int(d.get("v", null)) or int(d["v"]) != PERSONA_VERSION:
 		return "v must be %d" % PERSONA_VERSION
-	var e: String = _id(d, "talent")
+	var e: String = _str(d, "talent")         # 08 K1 (CR-33): "" = no start talent (the K1 command)
 	if e != "":
 		return e
-	if not str(d["talent"]).begins_with("tal_org_"):
+	if str(d["talent"]) != "" and not str(d["talent"]).begins_with("tal_org_"):
 		return "talent must start with tal_org_"
 	if d.has("swap"):
 		if d.has("bias") or not (d["swap"] is bool) or not bool(d["swap"]):

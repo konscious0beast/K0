@@ -378,6 +378,14 @@ func persona_entry(list: String, id: String) -> Dictionary:
 	return (_persona_lists.get(list, {}) as Dictionary).get(id, {})
 
 
+## Casting (08, K1 — additive): every entry of one persona list (hobbies, traits, rivals, brands, gags, greetings),
+## file order — the casting's tiles and chips.
+func persona_list(list: String) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	out.assign((_persona_lists.get(list, {}) as Dictionary).values())
+	return out
+
+
 ## origins.json → canon (the canon persona, 08 §3.6).
 func persona_canon() -> Dictionary:
 	return _persona_canon.duplicate(true)

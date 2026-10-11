@@ -1,9 +1,8 @@
-# STUB(K0) — owned by 08-K1. Replace completely, keep the public API.
 class_name PersonaPrivacy extends RefCounted
 ## The export boundary of the persona (08 §2.7): display fields (GameState.player_name, the kai member's
-## display_name) never leave the device inside a state dictionary — run-log anchors (start_state), and from K1 the
-## save slot file, carry GameState.DEFAULT_NAME; the persona file restores them locally. StateHash leaves them out
-## anyway (P-2), so start_hash stays valid. K0 ships both functions complete.
+## display_name) never leave the device inside a state dictionary — run-log anchors (start_state) and the save slot
+## file carry GameState.DEFAULT_NAME; the persona file (Save.persona_path) restores them locally. StateHash leaves them
+## out anyway (P-2), so start_hash stays valid.
 
 const MEMBER: String = "kai"
 

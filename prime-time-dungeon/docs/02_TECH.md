@@ -747,6 +747,14 @@ Hinweis M0: Die Sektion am zuverlässigsten mit einem Wegwerf-Skript im Scratchp
 (`ProjectSettings.set_setting("input/<action>", {"deadzone": d, "events": [...]})` + `ProjectSettings.save_custom(path)`),
 dann `"device"` auf `-1` setzen und einfügen.
 
+**Echtzeitkampf (07 §7.7, R3):** neu `target_next` (Tab; Achse 5 RT +), `target_prev` (Shift+Tab; Achse 4 LT +), `bar_1` … `bar_6`
+(Tasten 1–6; Buttons 0 A, 2 X, 3 Y, 1 B, 10 RB, 9 LB), `partner_special` (R; Button 13 D-Pad links), `partner_preset` (G; Button 14
+D-Pad rechts), `auto_attack_toggle` (V; Button 12 D-Pad unten), alle Deadzone 0.5, `physical_keycode`, `device` −1. Die geänderten
+Bestandsaktionen (`map` ohne Tab, `toggle_auto` ohne Y und mit D-Pad oben, Button 11) setzt `CombatInput.apply_input_mode` zur
+Laufzeit nur für Echtzeit-Läufe (`GameState.combat_mode == &"realtime"`; jede Erkundung ruft `CombatInput.apply_for_game()`) —
+`project.godot` behält bis R5b die CTB-Belegung. `CombatInput` prüft mit `exact_match = true` (Shift+Tab erfüllt sonst auch
+`target_next`); im Kampf wertet es `action` nur von der Tastatur aus („Angriff!“), `map` ist gesperrt („Nicht während der Aufnahme!“).
+
 ### 2.3 Autoload-Reihenfolge und Initialisierungsregel
 
 Reihenfolge: `Events → DB → Game → Show → Save → Router → Sfx` (Brief §6).

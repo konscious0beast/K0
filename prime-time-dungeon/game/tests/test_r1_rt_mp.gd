@@ -11,7 +11,7 @@ const K := BattleCommand.Kind
 
 
 func _sim(hero: String = "kai", st: GameState = null) -> RtSim:
-	var sim: RtSim = RtKit.sim(RtKit.dummy_cmd({"ctl": "p0" if hero == "kai" else "p1"}), 6, hero, st)
+	var sim: RtSim = RtKit.sim_no_ai(RtKit.dummy_cmd({"ctl": "p0" if hero == "kai" else "p1"}), 6, hero, st)
 	for u: RtUnit in sim.units():
 		u.auto_on = false
 	return sim

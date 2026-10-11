@@ -1,21 +1,22 @@
 extends TestCase
-## 07 §3.14, §10.4, §12.5 (R1b-I1) test_r1_rt_golden: the canned combat (RtKit.canned_*: Kai level 6, two groups —
+## 07 §3.14, §10.4, §12.5 (R1b-I1, I2) test_r1_rt_golden: the canned combat (RtKit.canned_*: Kai level 6, two groups —
 ## two rats, a rat and the test caster — and ~200 scripted commands) ends with fixed golden values: StateHash.of_rt,
 ## the number of events, a digest of the event stream, the ticks played and the accepted commands. Two runs are
 ## identical; replaying only the accepted commands — also through a JSON round trip (every number a float, like a
 ## parsed log) — gives the same hash and the same events.
 ##
 ## Updating the golden values — deliberately, never to turn a red test green by accident: every change of the sim's
-## behaviour, of the rt_min fixture or of the canned commands moves them (R1b-I2 / I3 will: AI rules, telegraphs,
-## mods). Run `tools/check.sh --tests-only --filter=r1_rt_golden`; the failure prints the current values ("golden
-## now: {…}"). Check that the difference is the intended one (the other tests of the change must say why), paste the
-## values into GOLDEN and give the reason in the commit message (07 §12.5: "geänderte Golden-Werte nur mit Begründung
-## im Commit").
+## behaviour, of the rt_min fixture or of the canned commands moves them (R1b-I2 did: AI rules; I3 will: enemy rules,
+## telegraphs, mods). Run `tools/check.sh --tests-only --filter=r1_rt_golden`; the failure prints the current values
+## ("golden now: {…}"). Check that the difference is the intended one (the other tests of the change must say why),
+## paste the values into GOLDEN and give the reason in the commit message (07 §12.5: "geänderte Golden-Werte nur mit
+## Begründung im Commit").
 
+## R1b-I2: the AI partner Mopsula and Kai's autopilot phase (ticks 250–400) play the rule lists of 07 §5.4.
 const GOLDEN: Dictionary = {
-	"hash": "770f7b903c34ee492e89c04f908dfde76ebc439e86be98e40f73319e6162634e",
-	"events": 370,
-	"stream": "f4edbb4c63486880986fe08bee4933eb95c9e312311e1123df2a8e59702856f2",
+	"hash": "a1abd90a359b7da35b761a802bb840f479bff035058eea954ca49e4ee222525d",
+	"events": 372,
+	"stream": "ec237d2bad49656beac827a479f878849d816890d63e75069a0d0b297c4d32f7",
 	"ticks": 816,
 	"accepted": 183,
 }

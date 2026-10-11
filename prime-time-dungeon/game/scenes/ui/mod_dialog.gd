@@ -18,6 +18,9 @@ extends CanvasLayer
 ## ModDialog.current instead. Input: the box only takes ui_accept/action/tap while no menu above it (CanvasLayer > 45,
 ## e.g. PauseMenu) owns the focus and the tree is not paused, so menus opened over a waiting line keep their own confirm
 ## input.
+## Echtzeitkampf (07 §8.8, R3): Events.dialog_layout_requested(mode, layout) turns the box into a subtitle (width,
+## bottom edge, at most 2 lines of 18 px, no drone, never blocking except the boss intro — a blocking line is shown
+## like a non-blocking one and still ends with dialog_finished, so Game's counter balances); {} restores the box.
 
 signal line_started(text: String, voice: StringName, tag: String)
 ## Every shown line, blocking or not (M6-internal; Events.dialog_finished stays blocking-only, see header).
@@ -93,6 +96,7 @@ func _ready() -> void:
 	Events.mod_said.connect(_on_mod_said)
 	Events.overlay_mode_requested.connect(_on_overlay_mode)
 	Events.dialog_reserve_requested.connect(set_bottom_reserve)
+	Events.dialog_layout_requested.connect(set_subtitle_layout)      # Echtzeitkampf (07, R3)
 	_box.visible = false
 	_speaker_panel.visible = false
 	if bool(_params.get("capture", false)):
@@ -114,6 +118,7 @@ func enqueue(text: String, voice: StringName, tag: String, blocking: bool) -> bo
 	if voice == &"chat" or text.strip_edges() == "":
 		return false
 	var line: Dictionary = {"text": UiUtil.glyph_safe(text), "voice": voice, "tag": tag, "blocking": blocking}
+	_subtitle_line(line)                                             # Echtzeitkampf (07, R3)
 	_queue.append(line)
 	_trim_soft_queue()
 	if blocking:
@@ -353,8 +358,9 @@ func _finish_line() -> void:
 		return
 	var tag: String = str(_cur["tag"])
 	var blocking: bool = bool(_cur["blocking"])
+	var held: bool = bool(_cur.get("rt_finish", false))             # 07 R3: blocking line shown as a subtitle
 	_cur = {}
-	if blocking:
+	if blocking or held:
 		Events.dialog_finished.emit(tag)
 	line_finished.emit(tag, blocking)
 	_next()
@@ -385,6 +391,7 @@ func _apply_speaker(voice: StringName, tag: String) -> void:
 	var sb: StyleBoxFlat = UiTheme.get_theme().get_stylebox("panel", "PanelDialog").duplicate() as StyleBoxFlat
 	sb.border_color = UiTheme.C_ACCENT_2 if is_mod else col
 	_box.add_theme_stylebox_override("panel", sb)
+	_subtitle_style()                                                # Echtzeitkampf (07, R3)
 
 
 func _mood_color(tag: String) -> Color:
@@ -516,6 +523,8 @@ func _build() -> void:
 ## Bottom center (default; inside the free span between reserved corners, see set_bottom_reserve) or right-aligned in
 ## the safe room (set_align_right), always above the chat ticker. The box grows upwards when its text needs more lines.
 func _layout_box() -> void:
+	if _layout_subtitle():                                           # Echtzeitkampf (07, R3)
+		return
 	var frame: Control = _box.get_parent() as Control
 	var fw: float = frame.size.x if frame != null else 0.0
 	if fw <= 0.0:
@@ -542,3 +551,92 @@ func _place_tab() -> void:
 	_speaker_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	_speaker_panel.position = _box.position + Vector2(TAB_INSET.x, -TAB_INSET.y)
 	_speaker_panel.size = TAB_SIZE
+
+# --- Echtzeitkampf (07, R3): M.O.D. subtitles in combat (07 §8.8, §9.3) ----------------------------------------------
+
+const SUBTITLE_FONT: int = 18
+const SUBTITLE_H: float = 56.0
+## Lines that stay blocking under a non-blocking layout: the boss intro (07 §2.9, before the sim starts).
+const SUBTITLE_BLOCKING_TAGS: PackedStringArray = ["boss_intro"]
+
+var _subtitle: Dictionary = {}              # the layout of Events.dialog_layout_requested; {} = the normal box
+var _subtitle_mode: StringName = &""
+
+
+## {"bottom", "width", "max_lines", "blocking", "mouse_filter_ignore"[, "shift": x offset from the centre]}: the box
+## becomes a subtitle; {} switches back. Mode = the requester's context (&"combat").
+func set_subtitle_layout(mode: StringName, layout: Dictionary) -> void:
+	var was: bool = not _subtitle.is_empty()
+	_subtitle = layout.duplicate()
+	_subtitle_mode = mode if not layout.is_empty() else &""
+	if _box == null:
+		return
+	if was and _subtitle.is_empty():
+		_text.add_theme_font_size_override("font_size", 19)
+		_glyph.visible = true
+		if not _cur.is_empty():
+			_apply_speaker(_cur["voice"] as StringName, str(_cur["tag"]))
+	_layout_box()
+	_subtitle_style()
+
+
+func is_subtitle() -> bool:
+	return not _subtitle.is_empty()
+
+
+func subtitle_layout() -> Dictionary:
+	return _subtitle.duplicate()
+
+
+## A blocking line under a non-blocking layout reads like a non-blocking one (no input, reading time) and still ends
+## with dialog_finished (rt_finish) — except the tags of SUBTITLE_BLOCKING_TAGS.
+func _subtitle_line(line: Dictionary) -> void:
+	if _subtitle.is_empty() or bool(_subtitle.get("blocking", false)) or not bool(line["blocking"]):
+		return
+	for p: String in SUBTITLE_BLOCKING_TAGS:
+		if str(line["tag"]).begins_with(p):
+			return
+	line["blocking"] = false
+	line["rt_finish"] = true
+
+
+## Subtitle geometry: `width` wide, bottom edge `bottom` above the safe frame, centred (+ `shift`), grows upwards
+## when a line needs more room. False = no subtitle layout (the normal box).
+func _layout_subtitle() -> bool:
+	if _subtitle.is_empty():
+		return false
+	var frame: Control = _box.get_parent() as Control
+	var fw: float = frame.size.x if frame != null else 0.0
+	if fw <= 0.0:
+		fw = (get_viewport().get_visible_rect().size.x if is_inside_tree() else 1280.0) - 48.0
+	var w: float = minf(float(_subtitle.get("width", 600.0)), fw)
+	var left: float = clampf((fw - w) * 0.5 + float(_subtitle.get("shift", 0.0)), 0.0, maxf(0.0, fw - w))
+	var bottom: float = float(_subtitle.get("bottom", BOX_BOTTOM))
+	_box.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	_box.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_box.offset_left = left
+	_box.offset_right = left + w
+	_box.offset_bottom = -bottom
+	_box.offset_top = -bottom - SUBTITLE_H
+	_place_tab()
+	return true
+
+
+## Subtitle look: no drone / portrait (07 §8.10: no live SubViewport in combat), 18 px text, compact frame, no
+## continue hint (lines never wait for input there). No-op for the normal box.
+func _subtitle_style() -> void:
+	if _subtitle.is_empty():
+		return
+	_text.add_theme_font_size_override("font_size", SUBTITLE_FONT)
+	_glyph.visible = false
+	_drone_view.visible = false
+	_portrait.visible = false
+	var sb: StyleBoxFlat = _box.get_theme_stylebox("panel") as StyleBoxFlat
+	if sb != null:
+		sb = sb.duplicate() as StyleBoxFlat
+		sb.content_margin_top = 8.0
+		sb.content_margin_bottom = 8.0
+		sb.content_margin_left = 16.0
+		sb.content_margin_right = 16.0
+		sb.bg_color = Color(sb.bg_color, 0.86)
+		_box.add_theme_stylebox_override("panel", sb)

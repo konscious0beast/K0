@@ -1,6 +1,7 @@
 extends TestCase
-## 07 §3.4 "Reinheit", §3.14, §10.4 (R1b-I1) test_r1_rt_pure: the queries never change the sim — 1 000 calls of every
-## query in a running combat leave StateHash.of_rt unchanged (no draw, no write, no event), and a run with queries
+## 07 §3.4 "Reinheit", §3.14, §10.4 (R1b-I1, I2: suggest, RtRules.choose, RtGeo.escape_point) test_r1_rt_pure: the
+## queries never change the sim — 1 000 calls of every query in a running combat leave StateHash.of_rt unchanged (no
+## draw, no write, no event), and a run with queries
 ## after every tick has the same end hash and the same events as one without. Hash invariance: the snapshot is
 ## complete (every hashed Combatant field, every real-time unit and status field and the combat state move the hash),
 ## display names never do, and RtSetup.to_dict is canonical.
@@ -40,7 +41,9 @@ static func _query_all(sim: RtSim) -> int:
 		sim.gcd_left(u.id)
 		sim.gcd_total(u.id)
 		sim.cast_progress(u.id)
-		n += 6
+		RtRules.choose(sim, u)                                       # the rule engine is pure as well (R1b-I2)
+		RtGeo.escape_point(sim, u)
+		n += 8
 	for q: String in ["item_cd_left", "item_cd_total", "items_left", "tick", "is_finished", "controlled_id", "units",
 			"telegraphs", "snapshot"]:
 		sim.call(q)
@@ -62,6 +65,7 @@ static func _query_party(sim: RtSim) -> void:
 			sim.cooldown_left(id, str(bar[s]))
 		sim.can_use_item(id, "itm_bandage", "")
 		sim.partner_special_skill(id)
+		sim.suggest(id)
 		sim.cast_progress(id)
 		sim.gcd_left(id)
 	sim.items_left()

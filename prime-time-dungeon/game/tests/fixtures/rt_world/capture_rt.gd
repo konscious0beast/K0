@@ -1,9 +1,9 @@
 extends RefCounted
 ## R2 capture recipes (07 §12.9 Nr. 11; `check.sh --shot res://scenes/exploration/exploration.tscn <png> 30 1280x720
-## --recipe=rt_<name>`): real-time combats in the world played by the world fixture (world_stream.gd through
-## Game.rt_sim_factory) until R1b's sim exists. Private test helper (no class_name); tests/capture_recipes.gd forwards
-## rt_regular | rt_two_groups | rt_boss | rt_flee to run(). `rec` is the CaptureRecipes runner (frames, seconds, freeze,
-## until, _explore_ready).
+## --recipe=rt_world_<name>`): real-time combats in the world played by the world fixture (world_stream.gd through
+## Game.rt_sim_factory: the real data of floor 1 has no rt blocks before R4). Private test helper (no class_name);
+## tests/capture_recipes.gd forwards rt_world_regular | _two_groups | _boss | _boss_intro | _flee to run(). `rec` is
+## the CaptureRecipes runner (frames, seconds, freeze, until, _explore_ready).
 
 const WorldStream := preload("res://tests/fixtures/rt_world/world_stream.gd")
 

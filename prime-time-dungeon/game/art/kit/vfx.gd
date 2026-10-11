@@ -148,3 +148,78 @@ static func _acquire_number(parent: Node, valid: Array, keep: Label3D = null) ->
 	valid.erase(label)
 	valid.append(label)
 	return label
+
+
+# --- Echtzeitkampf (07, R3): combat text styles (07 §8.6) -------------------------------------------------------------
+# rt_dealt (white; a crit gold, 130 % with "!"), rt_taken (red), rt_heal (green), rt_partner (75 %: the partner's auto
+# attacks), rt_word (words in the caller's colour: "UNTERBROCHEN!" gold 26 px, "AUSGEWICHEN" cyan, "KNAPP!", "IMMUN",
+# "WIDERSTAND", "SCHWACH!"). Same pool and 2D screen twins (CanvasLayer 4) as damage_number, but a fixed screen size
+# (× GameSettings.floating_text_scale) and 0.6 s life; at most RT_MAX at once — the oldest makes room. Only ASCII and
+# German letters (03_ART F8).
+
+const RT_STYLES: Array[StringName] = [&"rt_dealt", &"rt_taken", &"rt_heal", &"rt_partner", &"rt_word"]
+const RT_MAX: int = 10
+const RT_LIFE: float = 0.6
+## style → [screen px, colour]
+const RT_LOOK: Dictionary = {&"rt_dealt": [20, "#ffffff"], &"rt_taken": [20, "#ff4d4d"], &"rt_heal": [20, "#6bff8a"],
+	&"rt_partner": [15, "#e6e0f0"], &"rt_word": [22, "#ffc93c"]}
+const RT_CRIT_COLOR: String = "#ffd23c"
+
+
+## Shows one real-time combat text at global `at` (a node in the 3D world; its viewport camera projects the twin).
+## `crit` (rt_dealt): gold, 130 %, "!" and a tilt; `color.a > 0` overrides the style colour (rt_word); `px` > 0
+## overrides the size (rt_word "UNTERBROCHEN!" 26); `scale_pct` = GameSettings.floating_text_scale (100/125/150).
+static func combat_text(parent: Node, at: Vector3, text: String, style: StringName, scale_pct: int = 100,
+		crit: bool = false, color: Color = Color(0, 0, 0, 0), px: int = 0) -> void:
+	if parent == null or not is_instance_valid(parent):
+		push_warning("Vfx.combat_text: no parent")
+		return
+	if not RT_STYLES.has(style):
+		style = &"rt_dealt"
+	var look: Array = RT_LOOK[style]
+	var size: float = float(px if px > 0 else int(look[0]))
+	var col: Color = color if color.a > 0.0 else Palette.hex(str(look[1]))
+	var shown: String = text
+	var tilt: float = 0.0
+	if crit and style == &"rt_dealt":
+		size *= 1.3
+		col = Palette.hex(RT_CRIT_COLOR)
+		shown += "!"
+		tilt = 6.0
+	size *= clampf(float(scale_pct) / 100.0, 0.5, 2.0)
+	var pool: Array = parent.get_meta(DMG_META, []) if parent.has_meta(DMG_META) else []
+	var valid: Array = []
+	for n: Variant in pool:
+		if is_instance_valid(n) and (n as Node).get_parent() == parent:
+			valid.append(n)
+	var active: Array = []
+	for n: Variant in valid:
+		if bool((n as Label3D).get("active")):
+			active.append(n)
+	if active.size() >= RT_MAX:                           # the oldest text gives way (07 §8.6)
+		(active[0] as Label3D).set("active", false)
+		(active[0] as Label3D).visible = false
+		(active[0] as Label3D).call("_update_screen")
+	var local: Vector3 = at
+	if parent is Node3D and (parent as Node3D).is_inside_tree():
+		local = (parent as Node3D).global_transform.affine_inverse() * at
+	var stacked: int = 0
+	for n: Variant in active:
+		var l: Label3D = n
+		if bool(l.get("active")) and Vector2(l.position.x - local.x, l.position.z - local.z).length() < 0.3 \
+				and float(l.get("_t")) < 0.3:
+			stacked += 1
+	var label: Label3D = _acquire_number(parent, valid)
+	label.call("show_rt", shown, roundi(size), col, RT_LIFE, tilt, local + Vector3(0, 0.22 * float(stacked), 0))
+	parent.set_meta(DMG_META, valid)
+
+
+## Active real-time texts under `parent` (tests).
+static func combat_text_count(parent: Node) -> int:
+	var n: int = 0
+	if parent == null or not parent.has_meta(DMG_META):
+		return 0
+	for e: Variant in (parent.get_meta(DMG_META) as Array):
+		if is_instance_valid(e) and bool((e as Label3D).get("active")):
+			n += 1
+	return n

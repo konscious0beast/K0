@@ -71,6 +71,6 @@ func test_party_never_below_one_hp() -> void:
 		ev.append_array(sim.step())
 	var hits: Array = RtKit.of(ev, T.DAMAGE).filter(func(x: ActionEvent) -> bool: return x.target_id.begins_with("p"))
 	assert_gt(hits.size(), 0, "the rats keep hitting")
-	assert_true(hits.all(func(x: ActionEvent) -> bool: return x.hp_after == 1), "and the party stays at 1 HP")
+	assert_true(hits.all(func(x: ActionEvent) -> bool: return x.hp_after >= 1), "and the party stays at ≥ 1 HP")
 	assert_eq(RtKit.of(ev, T.KO).size(), 0)
 	assert_false(sim.is_finished())

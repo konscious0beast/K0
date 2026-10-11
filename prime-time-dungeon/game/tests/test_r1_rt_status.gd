@@ -10,7 +10,7 @@ const T := ActionEvent.Type
 
 
 func _sim(level: int = 6, hero: String = "kai", st: GameState = null) -> RtSim:
-	var sim: RtSim = RtKit.sim(RtKit.dummy_cmd({"ctl": "p0" if hero == "kai" else "p1"}), level, hero, st)
+	var sim: RtSim = RtKit.sim_no_ai(RtKit.dummy_cmd({"ctl": "p0" if hero == "kai" else "p1"}), level, hero, st)
 	for u: RtUnit in sim.units():
 		u.auto_on = false
 	return sim
@@ -297,7 +297,7 @@ func test_blocked_event() -> void:
 
 
 func test_ko_clears_every_status() -> void:
-	var sim: RtSim = RtKit.sim(RtKit.encounter("enc_rt_rats", [["g", "enc_rt_rats", [0, -300, 128]]]), 6)
+	var sim: RtSim = RtKit.sim_no_ai(RtKit.encounter("enc_rt_rats", [["g", "enc_rt_rats", [0, -300, 128]]]), 6)
 	for u: RtUnit in sim.units():
 		u.auto_on = false
 	var rat: RtUnit = sim.unit("e0")

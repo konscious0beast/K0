@@ -33,7 +33,7 @@ static func _formula(sim: RtSim, src: RtUnit, tgt: RtUnit, sk: SkillDef) -> HitR
 
 
 func _started(st: GameState, cmd: Dictionary, seed: int = RtKit.SEED) -> RtSim:
-	var sim: RtSim = RtSim.new(RtKit.setup(st, cmd, seed), RtKit.data())
+	var sim: RtSim = RtKit.no_ai(RtSim.new(RtKit.setup(st, cmd, seed), RtKit.data()))
 	sim.start()
 	for u: RtUnit in sim.units():
 		u.auto_on = false

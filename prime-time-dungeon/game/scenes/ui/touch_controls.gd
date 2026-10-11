@@ -11,6 +11,9 @@ extends CanvasLayer
 ## NOTIFICATION_PAUSED it releases the joystick (move_*/sneak) and every held button action.
 ## While shown, `active` points at this instance: ExplorationHud and ShowOverlay move the minimap / hype meter out of
 ## the pause/map hit areas (top right).
+## Echtzeitkampf (07 §7.3, R3): set_combat_mode() hides the action and map buttons (the combat thumb group takes the
+## action spot), limits the stick to the bottom left (x 0–40 %, y ≥ 320 of the reference) without `sneak`, and splits
+## a touch elsewhere into a tap (≤ 0.25 s, < 12 px → target pick) or a camera drag (from the frame it passes 12 px).
 
 signal shown_changed(shown: bool)
 
@@ -103,6 +106,7 @@ func release_all() -> void:
 	_drag_index = -1
 	_cam_touches.clear()
 	_pinch_dist = -1.0
+	_taps.clear()                                # Echtzeitkampf (07, R3)
 	for a: Variant in _held.keys():
 		UiUtil.tap_action(a as StringName, false)
 	_held.clear()
@@ -272,6 +276,8 @@ func _over_button(global_pos: Vector2) -> bool:
 func _input(event: InputEvent) -> void:
 	if not is_shown():
 		return
+	if combat_mode and _combat_input(event):      # Echtzeitkampf (07, R3)
+		return
 	if event is InputEventScreenTouch:
 		var st: InputEventScreenTouch = event
 		if st.pressed:
@@ -317,3 +323,114 @@ func _pinch_distance() -> float:
 	var keys: Array = _cam_touches.keys()
 	keys.sort()
 	return (_cam_touches[keys[0]] as Vector2).distance_to(_cam_touches[keys[1]] as Vector2)
+
+
+# --- Echtzeitkampf (07, R3): combat mode (07 §7.3) -------------------------------------------------------------------
+
+const COMBAT_STICK_TOP: float = 320.0        # stick zone in combat: x 0–40 %, y 320–720 of the reference
+const TAP_MAX_MS: int = 250
+const TAP_MAX_PX: float = 12.0
+const COMBAT_HIDDEN: Array[StringName] = [&"action", &"map"]
+
+## Test seam: a fixed clock for the tap rule (ms); < 0 = Time.get_ticks_msec().
+static var test_now_ms: int = -1
+
+var combat_mode: bool = false
+var _combat_tap: Callable = Callable()
+var _combat_blocks: Callable = Callable()
+var _taps: Dictionary = {}                   # touch index → {"pos": Vector2, "t": ms, "drag": bool}
+
+
+## On: the combat HUD's `tap(canvas_pos)` receives the target taps, `blocks(canvas_pos) -> bool` names the points its
+## own controls own (thumb group, frames, chip, open card / wheel) — touches there are left to the GUI. Off restores
+## the exploration layout.
+func set_combat_mode(on: bool, tap: Callable, blocks: Callable) -> void:
+	release_all()
+	combat_mode = on
+	_combat_tap = tap if on else Callable()
+	_combat_blocks = blocks if on else Callable()
+	for a: StringName in COMBAT_HIDDEN:
+		var b: Button = buttons.get(a) as Button
+		if b != null:
+			b.visible = not on
+	if joystick != null:
+		joystick.set("allow_sneak", not on)
+		joystick.offset_top = COMBAT_STICK_TOP if on else 0.0
+
+
+## Canvas rect of the stick zone (tests).
+func stick_zone() -> Rect2:
+	return joystick.get_global_rect() if joystick != null else Rect2()
+
+
+static func _now_ms() -> int:
+	return test_now_ms if test_now_ms >= 0 else Time.get_ticks_msec()
+
+
+func _blocked(pos: Vector2) -> bool:
+	return _combat_blocks.is_valid() and bool(_combat_blocks.call(pos))
+
+
+## The touch handling of the combat mode; true = the event is dealt with (the exploration path is skipped).
+func _combat_input(event: InputEvent) -> bool:
+	if event is InputEventScreenTouch:
+		var st: InputEventScreenTouch = event
+		if st.pressed:
+			if _over_button(st.position) or _blocked(st.position):
+				return true                          # a button / combat control: the GUI takes it
+			var local: Vector2 = joystick.get_global_transform_with_canvas().affine_inverse() * st.position
+			if bool(joystick.call("touch_down", st.index, local)):
+				get_viewport().set_input_as_handled()
+				return true
+			_taps[st.index] = {"pos": st.position, "t": _now_ms(), "drag": false}
+			_cam_touches[st.index] = st.position
+			_pinch_dist = _pinch_distance()
+			if _cam_touches.size() >= 2:
+				for k: Variant in _taps.keys():
+					(_taps[k] as Dictionary)["drag"] = true      # two fingers: zoom, never a tap
+			get_viewport().set_input_as_handled()
+			return true
+		if bool(joystick.call("touch_up", st.index)):
+			get_viewport().set_input_as_handled()
+			return true
+		var t: Dictionary = _taps.get(st.index, {}) as Dictionary
+		_taps.erase(st.index)
+		if not _cam_touches.has(st.index):
+			return true
+		_cam_touches.erase(st.index)
+		if st.index == _drag_index:
+			_drag_index = int(_cam_touches.keys()[0]) if not _cam_touches.is_empty() else -1
+		_pinch_dist = _pinch_distance()
+		if not t.is_empty() and not bool(t["drag"]) and _now_ms() - int(t["t"]) <= TAP_MAX_MS \
+				and st.position.distance_to(t["pos"] as Vector2) < TAP_MAX_PX and _combat_tap.is_valid():
+			_combat_tap.call(st.position)
+		get_viewport().set_input_as_handled()
+		return true
+	if event is InputEventScreenDrag:
+		var sd: InputEventScreenDrag = event
+		var local_d: Vector2 = joystick.get_global_transform_with_canvas().affine_inverse() * sd.position
+		if bool(joystick.call("touch_move", sd.index, local_d)):
+			get_viewport().set_input_as_handled()
+			return true
+		if not _cam_touches.has(sd.index):
+			return true                              # began on a combat control
+		_cam_touches[sd.index] = sd.position
+		if _cam_touches.size() >= 2:
+			var d: float = _pinch_distance()
+			if _pinch_dist > 0.0 and d > 0.0:
+				Events.camera_zoom.emit((_pinch_dist - d) * PINCH_M_PER_PX)
+			_pinch_dist = d
+		else:
+			var t2: Dictionary = _taps.get(sd.index, {}) as Dictionary
+			if not t2.is_empty() and not bool(t2["drag"]):
+				if sd.position.distance_to(t2["pos"] as Vector2) < TAP_MAX_PX:
+					get_viewport().set_input_as_handled()
+					return true                      # still a tap candidate: the camera stays
+				t2["drag"] = true
+				_drag_index = sd.index
+			if sd.index == _drag_index or _drag_index < 0:
+				_drag_index = sd.index
+				Events.camera_drag.emit(sd.relative)
+		get_viewport().set_input_as_handled()
+		return true
+	return false

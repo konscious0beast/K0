@@ -1702,6 +1702,13 @@ Ausweichquote, Unterbrechungsquote, genutzte GCDs und Trank-Schwelle werden aus 
 eingetragen. Der Full-Run-Bot (`scenes/boot/fullrun.gd`) nutzt im Echtzeitkampf den **Autopilot** (schnell, robust); die
 Bossverlust-Quoten misst der Harness mit `typical` für **beide** Held:innen (`--hero=kai|mopsula`, §11.4).
 
+**Umsetzung (R5b-1):** Die Profile sind **je Held:in** getrennt: `RtBotPlayer.HERO_PROFILES[held:in][profil]` überschreibt die
+Schlüssel der Tabelle oben (die Held:in ist die gesteuerte Einheit beim Start des Bots, `profile_for`). `typical` ist für beide
+gleich, bis die Probespiel-Läufe ihn kalibrieren (Plan §11.4); `perfect` Mopsula nutzt 85 % statt 95 % der GCDs — ein Profi
+hält der Heilerin die MP für Heilungen zurück (R4 maß ihr `perfect` gegen die Königin schlechter als `typical`). Der Full-Run-Bot
+spielt im Echtzeitkampf nicht den Autopilot, sondern denselben `RtBotPlayer` als Person (`--rt-profile=typical|perfect|sloppy`,
+§12.5): seine Eingaben laufen über `Game.combat_submit` ins Run-Log wie die eines Menschen.
+
 ---
 
 ## 6. Gegner-KI und Bosse
@@ -2876,6 +2883,18 @@ Lesart und Folgen für R4:
 - **`typical` aus Replays kalibriert** (R5b): Aus aufgezeichneten Probespiel-Läufen echter Erstspieler:innen werden
   Ausweichquote, Unterbrechungsquote, genutzte GCDs und Trank-Schwelle gemessen und als Profilwerte eingetragen; danach läuft der
   nächtliche Harness erneut.
+- **Kalibrierplan (R5b-1; die Kalibrierung selbst wartet auf das Probespiel, R5b Teil 2):**
+  1. *Material:* die Replays des Probespiels (`user://replays/<run_id>.json`, kompaktiert; `RunLog.expanded()`), je Held:in
+     mindestens 5 Läufe bzw. 60 Kämpfe, darunter beide Bosse; Läufe mit Autopilot-Anteil > 20 % der Kampfzeit zählen nicht.
+  2. *Messung je Kampf* durch Nachspielen mit `RunSim.replay` (Kern) und den Ereignissen von `RtSim.step`: **Reaktion** = Ticks
+     von `TELEGRAPH_START` einer Form, in der die gesteuerte Figur steht (vergrößert um `ESCAPE_MARGIN_CM`), bis zur ersten
+     `move_sample`, die sie herausführt (Median → `react`); **verpasst** = Anteil solcher Formen, deren Einschlag die gesteuerte
+     Figur trifft (→ `miss_pm`); **unterbrochen** = `CAST_INTERRUPTED` durch die gesteuerte Figur / unterbrechenswerte Zauber in
+     ihrer Reichweite (→ `interrupt_pm`); **GCDs** = Fähigkeitseinsätze der Person / GCD-Fenster, in denen sie eine konnte
+     (→ `gcd_pm`); **Trank-Schwelle** = Median der HP ‰ beim `combat_item` mit Heilwirkung (→ `potion_pm`); SHOW genutzt ja/nein.
+  3. *Eintrag:* `PROFILES["typical"]` bzw. bei deutlichem Unterschied zwischen den Held:innen (> 20 % relativ)
+     `HERO_PROFILES[held:in]["typical"]`; danach `rt_balance.sh --nightly`, bei Abweichungen von §11.1 die Stellschrauben §11.2
+     in ihrer Reihenfolge; erst danach `--strict-bands` im nächtlichen Lauf (die `RT-BAND`-Urteile werden hart).
 - Determinismus der Messung: Harness-Seeds fest (`SeedUtil.derive(4242, "harness", n)`), Ergebnisse reproduzierbar.
 
 ### 11.5 Messwerte (füllt R4, aktualisiert R5b)

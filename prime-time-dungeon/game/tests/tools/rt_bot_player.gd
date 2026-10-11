@@ -33,6 +33,15 @@ const PROFILES: Dictionary = {
 	"sloppy": {"react": 18, "miss_pm": 400, "interrupt_pm": 300, "gcd_pm": 550, "potion_pm": 200, "show": false,
 		"adds": false, "heal_first": false},
 }
+## R5b (07 §5.7, R4 note "R5b kalibriert die Profile je Held:in"): per hero the keys that differ from PROFILES —
+## HERO_PROFILES[hero][profile] (the hero = the controlled unit's def at the bot's start; profile_for). `typical` is the
+## same for both until play-test replays calibrate it (07 §11.4 "Kalibrierplan"); `perfect` Mopsula
+## uses fewer damage GCDs and keeps the MP for her heals — R4 measured her `perfect` Königin worse than `typical`
+## (95 % of the GCDs and every interrupt cost the healer her heal MP), a pro holds back.
+const HERO_PROFILES: Dictionary = {
+	"kai": {},
+	"mopsula": {"perfect": {"gcd_pm": 850}},
+}
 ## Movement: a new sample at least every HEARTBEAT ticks while moving (07 §3.5.1), the bot stops within STOP_CM of its
 ## goal; MARGIN_CM grows the shapes it reacts to (= ESCAPE_MARGIN_CM of the AI).
 const HEARTBEAT: int = 15
@@ -58,6 +67,7 @@ var sim: RtSim = null
 var submitter: Callable = Callable()
 var prof: Dictionary = {}
 var profile_name: String = "typical"
+var hero: String = ""                       # the controlled unit's def at the start (HERO_PROFILES)
 ## Counters of the person's play (harness output): GCD windows seen / used, interrupts tried / landed, telegraphs seen
 ## / missed, potions, Partner-Spezial orders.
 var stats: Dictionary = {"gcd_windows": 0, "gcd_used": 0, "worthy_seen": 0, "interrupt_tries": 0, "shapes": 0,
@@ -83,10 +93,21 @@ var _casters: Dictionary = {}               # enemy ids that started an interrup
 func _init(p_sim: RtSim, profile: String = "typical", seed: int = 0) -> void:
 	sim = p_sim
 	profile_name = profile if PROFILES.has(profile) else "typical"
-	prof = PROFILES[profile_name]
+	var me: RtUnit = sim.unit(sim.controlled_id()) if sim != null else null
+	hero = me.def_id if me != null else ""
+	prof = profile_for(profile_name, hero)
 	_seed = seed
 	if sim != null:
 		_margin = sim.bal.i("ESCAPE_MARGIN_CM")
+
+
+## PROFILES[profile] with the hero's keys of HERO_PROFILES (unknown profile → typical).
+static func profile_for(profile: String, p_hero: String) -> Dictionary:
+	var out: Dictionary = (PROFILES.get(profile, PROFILES["typical"]) as Dictionary).duplicate()
+	var over: Dictionary = (HERO_PROFILES.get(p_hero, {}) as Dictionary).get(profile, {}) as Dictionary
+	for k: Variant in over.keys():
+		out[k] = over[k]
+	return out
 
 
 ## The commands of tick sim.tick() (submitted with ct = tick, before RtSim.step()).

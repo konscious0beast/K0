@@ -14,7 +14,10 @@ func run(which: String, scene: Node) -> bool:
 	if not await rec.call("_explore_ready", scene):
 		return false
 	scene.set("auto_start_battle", true)            # _explore_ready turns battles off for the exploration stills
-	Game.state.combat_mode = &"realtime"            # the run plays real-time combats (07 §12.1)
+	# the run plays real-time combats like a new real-time game (07 §12.1, §3.9.4: run log header, party HP scale)
+	Game.combat_mode_override = &"realtime"
+	Game.call("_rt_new_game")
+	Game.combat_mode_override = &""
 	match which:
 		"regular":
 			return await _regular(scene)

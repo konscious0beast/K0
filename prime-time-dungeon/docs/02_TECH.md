@@ -152,18 +152,28 @@ von Zuständen gab es in den Tests nicht; neu ist nur die Fixture `tests/fixture
 | R3 (07) | `scenes/combat/ui/combat_results.gd` | `signal results_shown(result: BattleResult)`, `var show_slot: Control`, `present(result, rewards)` |
 | R4 (07) | `core/data/validators/rt.gd` | `static check(v: DataValidator, raw: Dictionary) -> void` (**Abweichung** von `check(data, errors)`: privater Helfer wie die 06-Validatoren); R4 legt `validators/show_boss.gd` neu an und ruft ihn von hier |
 | R5a (07) | `autoload/show.gd`, `core/live/run_log.gd`, `run_sim.gd`, `game_replay.gd` | `Show.take_pending_gift_rt(sim) -> Dictionary`; `RunLog.compact()/expand()`; Kampfzweig in `RunSim.apply`/`GameReplay` (ersetzt `rt_unavailable`) |
-| K1 (08) | `persona_rules.gd`, `persona_profile.gd`, `core/show/persona_text.gd`, `persona_beats.gd`, `autoload/show_persona_hooks.gd`, `validators/origins.gd`, `autoload/save.gd`, `autoload/game.gd`, `scenes/ui/settings_menu.gd`, `scenes/boot/fullrun.gd` | `PersonaRules.offer/bias_for/weight_add/map_text`; `PersonaProfile.canon/from_dict/to_dict/fill_unset/validate`; `PersonaText.ctx/plain_line/check_name/check_free_text/nearest_tile/filter_ai_lines`; `PersonaBeats.plan_for/tag_for`; Haken-Helfer `on_chest/on_boss_won/on_safe_room/on_floor_end/on_floor_start/drop_pending`; Inhaltsregeln 08 §3.9; `Save.save_persona/load_persona/delete_persona/_slot_state_dict` (dann Slot ohne Namen); `Game._choose_initial_persona`; `_persona_section()`; `FullRun.persona_profile()` (Standard `canon`) |
+| K1 (08) — **umgesetzt 2026-10-11** (s. u.) | `persona_rules.gd`, `persona_profile.gd`, `core/show/persona_text.gd`, `persona_beats.gd`, `autoload/show_persona_hooks.gd`, `validators/origins.gd`, `autoload/save.gd`, `autoload/game.gd`, `scenes/ui/settings_menu.gd`, `scenes/boot/fullrun.gd` | `PersonaRules.offer/bias_for/weight_add/map_text`; `PersonaProfile.canon/from_dict/to_dict/fill_unset/validate`; `PersonaText.ctx/plain_line/check_name/check_free_text/nearest_tile/filter_ai_lines`; `PersonaBeats.plan_for/tag_for`; Haken-Helfer `on_chest/on_boss_won/on_safe_room/on_floor_end/on_floor_start/drop_pending`; Inhaltsregeln 08 §3.9; `Save.save_persona/load_persona/delete_persona/_slot_state_dict` (dann Slot ohne Namen); `Game._choose_initial_persona`; `_persona_section()`; `FullRun.persona_profile()` (Standard `canon`) |
 | K2 (08) | `art/kit/persona_look.gd`, `validators/looks.gd`, `autoload/db.gd`, `autoload/game.gd` | `PersonaLook.apply(model, look, data) -> Dictionary`; Wertregeln je `kind`; `DB.party_model(member_id)` mit Look; `Game._persona_battle_look(setup)` |
 | K3 (08) | `core/show/mod_announcer.gd` (Provider), Dienst | ein Provider für `ModAnnouncer.set_extra_lines`; `/v1/casting` (08 Kap. 5) |
 
 | CR | Quelle | Inhalt | Stand |
 |---|---|---|---|
 | R1a | 07 §12.2, §12.3, §12.8 | Echtzeit-Vertrag (Tabellen oben) | **umgesetzt** (2026-10-11); 02_TECH §3–§7 folgen mit R5b (07 §12.8) |
-| CR-20 | 08 §10.9 | Command `persona`, Tabellen `origins`/`looks`, Präfixe und Platzhalter, `origin_talent`, `DEFAULT_NAME`, Anzeigefelder aus den Hashes, Kopf/Anker/Bestenliste ohne Namen, Persona-Datei je Slot, `SIM_VERSION`-Sprung | **umgesetzt** (K0; Spielstand-Datei ohne Namen + Persona-Datei: Aufrufstellen jetzt, Rümpfe K1) |
-| CR-21 | 08 §10.9 | `Talents.has_any`, Starttalent ab L1, `field_mods`, Gewichtungs-Haken, Persona-Präfixe/Zeilen-Haken, Persona-Kontext, Casting im Neues-Spiel-Fluss | K0-Teil **umgesetzt**; Texte und UI K1 |
+| CR-20 | 08 §10.9 | Command `persona`, Tabellen `origins`/`looks`, Präfixe und Platzhalter, `origin_talent`, `DEFAULT_NAME`, Anzeigefelder aus den Hashes, Kopf/Anker/Bestenliste ohne Namen, Persona-Datei je Slot, `SIM_VERSION`-Sprung | **umgesetzt** (K0 + K1: Spielstand-Datei ohne Namen, Persona-Datei, Migration, „Kandidat:in löschen“) |
+| CR-21 | 08 §10.9 | `Talents.has_any`, Starttalent ab L1, `field_mods`, Gewichtungs-Haken, Persona-Präfixe/Zeilen-Haken, Persona-Kontext, Casting im Neues-Spiel-Fluss | **umgesetzt** (K0 + K1: Texte, Casting-Szene, Haken; Starttalent-Teile ruhen seit CR-33) |
 | CR-22 | 08 §10.9 | `ModelSpec.style` mit Teil-Deckeln, Persona-Budget, `DB.party_model` | Vokabular + Stub K0; Rest K2 |
-| CR-23 | 08 §10.9 | Ausnahme `/v1/casting` in 06 §5.9/§5.10 | Wortlaut in 06 eingearbeitet; Code K1/K3 |
+| CR-23 | 08 §10.9 | Ausnahme `/v1/casting` in 06 §5.9/§5.10 | Wortlaut in 06 eingearbeitet; K1-Teil **umgesetzt** (`mod_brain/persona.py` neutral, `ModLineFilter` „Kai“/„Tierpfleger“ bei Nicht-Kanon); `/v1/casting` K3 |
 | CR-24 | 08 §10.9 | E30, gemeinsamer Durchgang, Persona im Echtzeitkampf | R1a-Teil **umgesetzt**; R2–R4 offen (07 §12.9 Nr. 16/17) |
+
+**Stand K1 (08 §10.3, 2026-10-11):** Alle K1-Stubs sind ersetzt (Stub-Header nur noch in den K2-Dateien `persona_look.gd`,
+`validators/looks.gd`). Neu: `scenes/title/persona_casting.tscn`, `scenes/ui/persona_picker.gd`, `osk_keyboard.gd`,
+`persona_figure.gd`, `persona_card.tscn`, `tests/tools/persona_matrix.gd` (+ `persona_matrix_builder.gd`, Prüfmatrix
+`docs/review/persona_matrix.csv`), `tests/fixtures/persona/` und die Tests `test_08_{casting_ui,origins_data,persona_rules,
+persona_replay,persona_privacy,persona_lines,marotten_bias}`. Änderungsantrag `Command.validate`: `"talent": ""` ist gültig
+(das einzige, was K1 aufzeichnet; hash-neutral). Zusätzlich: `GameData.persona_list(list) -> Array[Dictionary]`,
+`Show.persona_hooks()`, `ModLineFilter.check(…, persona_canon = true)`, `Save.delete_candidate()`; `Show.say` reicht jede gesagte
+Zeile an die wartenden Persona-Zeilen weiter (sie folgen ihr in der HUD-Warteschlange); Event-Läufe setzen `Game.persona = null`.
+Android-Export: `user_data_backup/allow=false` (ganze App, eine Ordner-Regel bietet Godot ohne Gradle-Build nicht).
 
 ---
 
@@ -175,7 +185,8 @@ Pfade relativ zu `prime-time-dungeon/game/` (= `res://`). Jede Datei gehört gen
 Die Dateien des Vertrags-Durchgangs 07 R1a + 08 K0 (`core/rt/**`, `scenes/combat/**`, `core/data/validators/{rt,rt_vocab,
 origins,looks}.gd`, `core/progression/persona_*.gd`, `core/show/persona_*.gd`, `autoload/show_persona_hooks.gd`,
 `art/kit/persona_look.gd`, `data/{rt_balance,origins,looks}.json`, `tests/fixtures/rt_min/**`, `tests/tools/platform_matrix*.gd`,
-`tools/platform_matrix.sh`) stehen mit Eigentümer-Phase in §0.6 (Stand R1a/K0; R5b bzw. K1 tragen sie hier nach).
+`tools/platform_matrix.sh`) stehen mit Eigentümer-Phase in §0.6 (Stand R1a/K0; R5b trägt sie hier nach). K1 (08) hat seine
+Szenen unten eingetragen (`persona_casting`, `persona_card`); Kern und Daten der Persona stehen weiter in §0.6.
 
 ### 1.1 Projektwurzel
 
@@ -389,8 +400,9 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `scenes/boot/fullrun.gd` | M6 | Full-Run-Bot `--autoplay=full` (§11.4.1) |
 | `scenes/title/title.tscn` + `title.gd` | M6 (S) | `TitleScreen`: Fortsetzen / Neues Spiel / Laden / Event-Lauf / Optionen / Credits / Beenden (§9.5) |
 | `scenes/title/slot_select.tscn` + `.gd` | M6 | Slot-Auswahl (Neu/Laden); „Neu“ → Figurenwahl |
-| `scenes/title/hero_select.tscn` + `.gd` | 06-A | Figurenwahl „Wen steuerst du?“: zwei Karten Kai / Graf Mopsula mit 3D-Vorschau (06 §1.1, CR-16) |
-| `scenes/title/name_entry.tscn` + `.gd` | M6 | Namenseingabe (Default „Kai“, `LineEdit.max_length = 12`, Überschrift je Figur, 06 §1.1) + Modus Prime Time / Vorabendprogramm |
+| `scenes/title/hero_select.tscn` + `.gd` | 06-A | Figurenwahl „Wen steuerst du?“: zwei Karten Kandidat:in / Graf Mopsula mit 3D-Vorschau (06 §1.1, CR-16; Kartentext 08 §1.1) → Casting |
+| `scenes/title/persona_casting.tscn` + `.gd` | 08-K1 | Casting (08 §1): 1/3 „Wer sind Sie?“ (Name, Wortform), 2/3 „Steckbrief“ (Vorleben, Hobby / Talent, „+ Eigenschaften“, Würfeln), 3/3 Kandidatenkarte + Sendeformat; „Rest automatisch“ (Esc / Start) auf 1/3 und 2/3; private Helfer `scenes/ui/persona_picker.gd` (Auswahl-Overlays), `scenes/ui/osk_keyboard.gd` (Bildschirmtastatur mit Akzent-Ebene), `scenes/ui/persona_figure.gd` (3D-Figur) |
+| `scenes/title/name_entry.tscn` + `.gd` | M6 | Namenseingabe (Default „Kai“, `LineEdit.max_length = 12`, Überschrift je Figur, 06 §1.1) + Modus Prime Time / Vorabendprogramm — seit 08 K1 nicht mehr im Neues-Spiel-Fluss (Rückfall, bis K1-Ende) |
 | `scenes/title/intro.tscn` + `.gd` | M6 | M.O.D.-Intro-Sequenz |
 | `scenes/title/game_over.tscn` + `.gd` | M6 | Game Over (Grund: `defeat`/`timer`) |
 | `scenes/title/credits.tscn` + `.gd` | M6 | „Etage 2 folgt“-Abspann |
@@ -434,7 +446,8 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `scenes/ui/touch_controls.tscn` + `.gd` | M6 | Touch-Layer (virtueller Stick + Buttons + Kamera-Drag) |
 | `scenes/ui/virtual_joystick.gd` | M6 | Floating Joystick |
 | `scenes/ui/pause_menu.tscn` + `.gd` | M6 | Pause: Party, Inventar, Ausrüstung, Fähigkeiten, Show (06-C), Achievements, Bestiarium, Optionen, Zum Titel |
-| `scenes/ui/party_menu.gd` | M6 | Party-Status (+ 06-B: Talente-Zeile mit „n Wahl(en) offen“, Casting-Zeile) |
+| `scenes/ui/party_menu.gd` | M6 | Party-Status (+ 06-B: Talente-Zeile mit „n Wahl(en) offen“, Recall-Zeile; 08-K1: Knopf „Kandidatenkarte“) |
+| `scenes/ui/persona_card.tscn` + `.gd` | 08-K1 | Kandidatenkarte als Modal (Pause → Party; Stempel „STAFFEL 1 · FOLGE n“, Figur, Name · Wortform, Vorleben · Hobby, Eigenschaften, Freitexte, Rival:in, Sponsor); `card_panel()` baut die Karte auch für Casting 3/3 |
 | `scenes/ui/talent_show.tscn` + `.gd` | 06-B | Talent-Show (Modal, Ebene 60): je offene Wahl zwei Karten, `pick(i)` → `Game.pick_talent`; „Später“ |
 | `scenes/ui/talent_text.gd` | 06-B | Texte/Icons der Talente (Wirkungszeilen aus den Daten), privat |
 | `scenes/ui/inventory_menu.gd` | M6 | Inventar (Feld-Nutzung) |
@@ -971,8 +984,9 @@ func new_game(slot: int, player_name: String = GameState.DEFAULT_NAME, seed: int
 	# (RunLog.local_run_id(seed), unique per attempt) / player_id "local" / window_id "" / league — 05 §10.6);
 	# sim = RunSim.new(DB.data, state, {}, RunSim.identity_of(header)) with sim.run_log = run_log (checkpoints, see below);
 	# start_floor(1); set_hero(HeroRules.sanitize(hero_id)) — always recorded as {"t": "hero", "id"} right after "floor"
-	# (also for "kai"; 06 §1.7, CR-16); Game.persona = p_persona; _choose_initial_persona(p_persona) (08 §2.3: floor → hero →
-	# persona; stub until K1 — K0 records no persona command, §0.6); emits new_game_started(slot)
+	# (also for "kai"; 06 §1.7, CR-16); Game.persona = p_persona; _choose_initial_persona(p_persona) (08 §2.3, K1: with a
+	# profile the display fields follow it and {"t": "persona", "v": 1, "talent": "", "bias": [...]} is recorded right after
+	# "hero" — floor → hero → persona; without a profile nothing); emits new_game_started(slot)
 func start_event_run(event_id: String, p_league: String = "", hero_id: String = HeroRules.DEFAULT_HERO) -> void
 	# M8: EventCatalog → EventDef.run_seed(); mode = &"event_offline"; slot 0 — an event run is never saved to a save slot
 	# (§3.6); league = p_league if it is one of rules.leagues, else the only / "pur" league (header "league");
@@ -4580,10 +4594,10 @@ func request_new_game(slot: int, player_name: String, skip_intro: bool, seed: in
 	# {"spawn": &"start"})
 	# Menu (GDD §14.1): Fortsetzen (Save.newest_slot() > 0 only) · Neues Spiel · Laden · Event-Lauf (05 CR-10) · Optionen · Credits ·
 	# Beenden (not OS.has_feature("mobile")). Neues Spiel: slot_select {"mode": "new"} → hero_select {"slot", "hero"} (06 §1.1;
-	# two cards, Kai focused, ui_cancel → slot select) → name_entry {"slot", "hero"}: LineEdit.max_length = 12, default "Kai"
-	# (always Kai's name; with Mopsula the question reads „Fürs Protokoll: Wie heißt mein:e Begleiter:in?“ — his own voice,
-	# no pluralis majestatis), mode Prime Time / Vorabendprogramm;
-	# back → hero_select. The intro ends with the M.O.D. line hero_pick:<hero>.
+	# two cards, the candidate focused, ui_cancel → slot select) → persona_casting {"slot", "hero"} (08 §1, K1: name + word
+	# form, Vorleben / hobby / traits, the candidate card + mode Prime Time / Vorabendprogramm; "Rest automatisch" = the
+	# canon Kai; "Sendung starten" → TitleFlow.start_new_game(…, profile)); back → hero_select. name_entry stays as a
+	# fallback outside the flow. The intro ends with the M.O.D. line hero_pick:<hero>, then the candidate's lower third.
 
 class_name BattleScene extends Node3D             # M5
 func setup(params: Dictionary) -> void            # {"setup": BattleSetup}; missing → Game.ensure_state() + debug setup

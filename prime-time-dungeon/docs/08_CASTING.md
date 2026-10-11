@@ -1407,6 +1407,44 @@ Die K0-API des Starttalents (`PersonaRules.offer`, `swap_command`, `can_swap`, `
 `--persona=random` (Seeds 1–5) erreicht die Treppe; Prüfmatrix von der Humor-Redaktion abgezeichnet; Screenshots Casting 1/3–3/3
 (1280 × 720, Handy mit Touch, 130 % Text), Kandidatenkarte, Intro-Bauchbinde; Folgeänderungen F-2 … F-10 eingearbeitet.
 
+**Stand K1 (umgesetzt 2026-10-11, Branch `ptd/k1`).** Casting-Szene mit drei Seiten, Overlays, Bildschirmtastatur mit
+Akzent-Ebene, Kandidatenkarte (Casting 3/3 und Pause → Party), vollständiger Katalog (24 Vorleben mit `prof`, 17 Hobbys,
+12 Eigenschaften, 48 Rival:innen, 27 Sponsoren, 17 Gags, 19 Gruß-IDs, 3 Pläne), Block K (222 Zeilen hinter dem Anker, mit ihm 223), Persona-Datei
+je Slot mit Migration und „Kandidat:in löschen“, Haken H1–H7, Text-CRs, CR-23 (Teil K1), Bot `--persona` (Standard `canon`;
+`--strategy=all` füllt im Rush-Lauf das Casting mit `--persona=random`), Prüfmatrix `docs/review/persona_matrix.csv`
+(1 896 Zeilen, gleiche Wiedergaben je Zeile einmal; Abzeichnung durch die Humor-Redaktion steht aus), Screenshots
+`docs/screenshots/29_…`–`42_…` (1280 × 720, Handy mit Touch, 130 % Text, Overlays, Tastatur, Karte, Intro-Bauchbinde). Abweichungen und Ergänzungen:
+
+- **API-Ergänzungen:** `GameData.persona_list(list) -> Array[Dictionary]` (Overlays, Würfeln, Prüfmatrix);
+  `Show.persona_hooks()` (Tests, Bot); `ModLineFilter.check(…, persona_canon := true)` (CR-23 als Parameter, der Aufrufer kennt
+  die Persona); `Save.delete_candidate()`; Plan-Hook `summary` (Gag Teil 3 in der Etagen-Bilanz) im Validator; Tag
+  `persona_casting_brief` für M.O.D. auf 2/3.
+- **„+ Eigenschaften“** öffnet ein Overlay mit den 12 Chips (statt sie auf 2/3 aufzuklappen): auf 720p fehlt sonst die Höhe;
+  Bedienung und Regeln (≤ 3, vierter Tipp ersetzt den ältesten, leer erlaubt) wie in Kap. 1.3.
+- **Esc / Start / B / X / Strg+Enter** liest die Seite in `_input`, nicht in `_unhandled_input` (Kap. 1.6): ein fokussiertes
+  `LineEdit` ist in Godot 4.7 im Bearbeitungsmodus und verschluckt das erste Esc (gemessen); alles, was tippt, bleibt beim
+  Feld, die Rücktaste wirkt weiter nur außerhalb des Namensfelds.
+- **Kacheln:** gerahmt, sichtbare Fläche = Trefferfläche (≥ 88 px), sechs Spalten bei 1280 × 720; lange Wörter tragen zur
+  Anzeige weiche Trennstriche (Daten bleiben unverändert). „Büro, Finanzen & Verwaltung“ und drei weitere Namen brauchen in
+  sechs Spalten drei Zeilen (Kap. 1.3: bis zu zwei); bei 130 % Text werden es weniger Spalten, und das Raster scrollt.
+- **Bildschirmtastatur:** zusätzlich ein Knopf „Abbrechen“ (Touch hat kein Esc / B; sonst bliebe man bei einem abgelehnten
+  „Anderes …“-Text in der Tastatur).
+- **Seiten scrollen** statt zu überlappen, falls Inhalt (130 % Text, große Safe Area) höher als der Bildschirm ist; bei
+  1280 × 720 / 1680 × 720 / 1280 × 960 mit 100 % und 130 % passt alles (Test `test_08_casting_ui`).
+- **Wartende Persona-Zeilen** folgen ihrer Auslöser-Zeile über `Show.say` (nicht über `mod_said`): so steht die Persona-Zeile in
+  der HUD-Warteschlange hinter `safe_room_enter` bzw. `floor_start`.
+- **Event-Läufe** setzen `Game.persona = null` (Kap. 8: kein Persona-Command, keine Persona-Zeilen, keine Karte).
+- **Migration:** ein alter Stand mit Namen bekommt beim Laden die Persona-Datei, und Slot-Datei samt `.bak` verlieren den
+  Namen sofort (nicht erst beim nächsten Speichern). „Kandidat:in löschen“ schreibt Bestenlisten in place (ein atomarer
+  Schreibvorgang hätte den Namen in der `.bak` behalten); die Einwilligung zum Widerrufen gibt es erst mit K3.
+- **Android:** `user_data_backup/allow=false` schließt die **ganze** App vom System-Backup aus — eine Regel nur für `persona/`
+  bietet der Godot-Export ohne Gradle-Build nicht; iOS (iCloud-Backup von `user://`) **[zu prüfen]**.
+- **Daten:** „Dr. Waltraud Wiedervorlage“ heißt „Waltraud Wiedervorlage“ (Rival-Name ≤ 24); das Hobby Tiere grüßt über
+  `gr_tierheim` (zwei Zeilen) statt eines eigenen `gr_hob_animals` — 19 Gruß-IDs, 20 Gruß-Zeilen.
+- **Bestand:** `run_result.gd` bleibt unverändert (zeigt weder Namen noch fremde Einträge, nur den eigenen Lauf der aktuellen
+  Version); Party-Zeile „Spezies & Klasse: Recall auf Etage 3“ (C-16, Test `test_06b_species` angepasst); `name_entry.gd` bleibt
+  als Rückfall außerhalb des Flusses; `test_06a_hero_ui` folgt dem Casting statt der Namenseingabe.
+
 ### 10.4 K2 — Avatar-Editor
 
 | Art | Dateien |

@@ -4,6 +4,10 @@ extends Node
 ## prints "AUTOPLAY: <step> ok @frame <n>" per step and finally "AUTOPLAY: OK frames=<n>" + quit(0); a failure prints
 ## "Assertion failed: AUTOPLAY step '<name>' failed: <reason>" + quit(1). There is no skip path: a module that is
 ## missing or broken fails its step (tools/check.sh accepts only "AUTOPLAY: OK").
+## Echtzeitkampf (07 §12.5, R5b): with --combat=realtime the new game fights in the world — the steps force_battle →
+## force_combat (60 frames: the director runs the tutorial combat) and battle → combat (900 frames: the autopilot
+## plays it, hint cards are read and closed, Events.battle_ended VICTORY); RT_STEPS, watchdog RT_WATCHDOG_FRAMES
+## (check.sh runs this smoke with --quit-after 1300).
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const WATCHDOG_FRAMES: int = 640
@@ -18,6 +22,16 @@ const STEPS: Array[Dictionary] = [
 	{"name": "battle", "budget": 300},
 	{"name": "safe_room", "budget": 60},
 ]
+const RT_STEPS: Array[Dictionary] = [
+	{"name": "boot_to_title", "budget": 60},
+	{"name": "new_game", "budget": 90},
+	{"name": "explore", "budget": 30},
+	{"name": "force_combat", "budget": 60},
+	{"name": "combat", "budget": 900},
+	{"name": "safe_room", "budget": 60},
+]
+const RT_WATCHDOG_FRAMES: int = 1240
+const HINT_READ_FRAMES: int = 6
 
 var frames: int = 0
 var step: int = 0
@@ -35,6 +49,9 @@ var _start_pos: Vector3 = Vector3.ZERO
 var _move_released: bool = false
 var _safe_room_reached: bool = false
 var _exit_requested: bool = false
+var _rt: bool = false                     # R5b: the new game fights in real time (Game.new_game_combat_mode)
+var _autopilot_sent: bool = false
+var _hint_frames: int = 0
 
 
 func _init() -> void:
@@ -42,12 +59,18 @@ func _init() -> void:
 
 
 func _ready() -> void:
+	_rt = Game.new_game_combat_mode() == &"realtime"
 	Events.floor_entered.connect(func(_i: int) -> void: _floor_entered = true)
 	Events.battle_ended.connect(func(outcome: int, _enc: String) -> void: _battle_outcome = outcome)
 
 
+## The step table of the run: RT_STEPS in a real-time run, else STEPS.
+func steps() -> Array[Dictionary]:
+	return RT_STEPS if _rt else STEPS
+
+
 func current_step_name() -> String:
-	return str(STEPS[step]["name"]) if step < STEPS.size() else "done"
+	return str(steps()[step]["name"]) if step < steps().size() else "done"
 
 
 func _process(_delta: float) -> void:
@@ -55,10 +78,11 @@ func _process(_delta: float) -> void:
 		return
 	frames += 1
 	step_frames += 1
-	if frames > WATCHDOG_FRAMES:
-		_fail("watchdog (%d frames)" % WATCHDOG_FRAMES)
+	var watchdog: int = RT_WATCHDOG_FRAMES if _rt else WATCHDOG_FRAMES
+	if frames > watchdog:
+		_fail("watchdog (%d frames)" % watchdog)
 		return
-	if step >= STEPS.size():
+	if step >= steps().size():
 		_done()
 		return
 	var step_name: String = current_step_name()
@@ -73,11 +97,11 @@ func _process(_delta: float) -> void:
 		step += 1
 		step_frames = 0
 		_entered = false
-		if step >= STEPS.size():
+		if step >= steps().size():
 			_done()
 		return
-	if step_frames > int(STEPS[step]["budget"]):
-		_fail("budget of %d frames exceeded (%s)" % [int(STEPS[step]["budget"]), _state_text()])
+	if step_frames > int(steps()[step]["budget"]):
+		_fail("budget of %d frames exceeded (%s)" % [int(steps()[step]["budget"]), _state_text()])
 
 
 func _enter(step_name: String) -> void:
@@ -103,6 +127,14 @@ func _enter(step_name: String) -> void:
 			Game.auto_battle = true
 			_battle_outcome = -1
 			ex2.call("force_encounter", "")
+		"force_combat":
+			var ex4: Node = Router.current
+			if ex4 == null or not ex4.has_method("force_encounter") or not ex4.has_method("get_director"):
+				_fail("exploration not active")
+				return
+			_battle_outcome = -1
+			_autopilot_sent = false
+			ex4.call("force_encounter", "")
 		"safe_room":
 			var ex3: Node = Router.current
 			var layout: FloorLayout = ex3.call("get_layout") if ex3 != null and ex3.has_method("get_layout") else null
@@ -137,6 +169,11 @@ func _check(step_name: String) -> bool:
 			return false
 		"force_battle":
 			return cur is BattleScene and not Router.busy
+		"force_combat":
+			var dir: Node = cur.call("get_director") if cur != null and cur.has_method("get_director") else null
+			return Game.combat != null and dir != null and bool(dir.call("is_running")) and not Router.busy
+		"combat":
+			return _combat_step(cur)
 		"battle":
 			if _battle_outcome >= 0 and _battle_outcome != BattleResult.Outcome.VICTORY:
 				_fail("battle ended with outcome %d (expected VICTORY)" % _battle_outcome)
@@ -156,6 +193,32 @@ func _check(step_name: String) -> bool:
 				return false
 			return true
 	return false
+
+
+## The real-time combat step: the autopilot plays the controlled unit (submitted once through the director), a hint
+## card is read for HINT_READ_FRAMES and closed; done at VICTORY with the exploration back (director idle).
+func _combat_step(cur: Node) -> bool:
+	if _battle_outcome >= 0 and _battle_outcome != BattleResult.Outcome.VICTORY:
+		_fail("combat ended with outcome %d (expected VICTORY)" % _battle_outcome)
+		return false
+	var dir: Node = cur.call("get_director") if cur != null and cur.has_method("get_director") else null
+	if dir == null:
+		return false
+	if Game.combat != null and bool(dir.call("is_running")) and not _autopilot_sent:
+		_autopilot_sent = true
+		dir.call("submit", RtCommand.autopilot(Game.combat.tick(), Game.combat.controlled_id(), true))
+	if bool(dir.call("is_paused_for_hint")):
+		_hint_frames += 1
+		if _hint_frames >= HINT_READ_FRAMES:
+			_hint_frames = 0
+			var hud: Node = dir.get("hud") as Node
+			var hc: Node = hud.get_node_or_null("HintCards") if hud != null and is_instance_valid(hud) else null
+			if hc != null and str(hc.call("current")) != "":
+				hc.call("_close")
+			else:
+				dir.call("resume")
+	return _battle_outcome == BattleResult.Outcome.VICTORY and cur is ExplorationScene and not Router.busy \
+		and not bool(dir.call("is_busy"))
 
 
 ## Smallest safe room id of the layout ("" if none).

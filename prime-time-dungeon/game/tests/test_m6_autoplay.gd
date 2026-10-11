@@ -1,5 +1,5 @@
 extends TestCase
-## Autoplay driver (02_TECH §11.4): the step table budgets, no skip path (boot_to_title always continues with
+## Autoplay driver (02_TECH §11.4): the step table budgets (R5b: also the real-time table), no skip path (boot_to_title always continues with
 ## new_game; check.sh accepts only "AUTOPLAY: OK") in dry-run mode (no quit, no print), the watchdog failure line, the
 ## safe room choice, and the boot arguments.
 
@@ -30,6 +30,12 @@ func test_step_table_matches_spec() -> void:
 	assert_eq(total, 600, "budgets sum to 600 frames")
 	assert_eq(AutoplayScript.WATCHDOG_FRAMES, 640, "watchdog well before --quit-after 900")
 	assert_eq(AutoplayScript.AUTOPLAY_SEED, 4242)
+	# Echtzeitkampf (07 §12.5, R5b): force_battle → force_combat (60), battle → combat (900, autopilot)
+	var rt: Array = AutoplayScript.RT_STEPS.map(func(s: Dictionary) -> String: return str(s["name"]))
+	assert_eq(rt, ["boot_to_title", "new_game", "explore", "force_combat", "combat", "safe_room"])
+	assert_eq(AutoplayScript.RT_STEPS.map(func(s: Dictionary) -> int: return int(s["budget"])),
+		[60, 90, 30, 60, 900, 60])
+	assert_eq(AutoplayScript.RT_WATCHDOG_FRAMES, 1240, "before check.sh's --quit-after 1300")
 
 
 ## quality-3: the Phase-A stub skip ("AUTOPLAY: SKIPPED (stub)") is gone — a renamed / missing module can no longer

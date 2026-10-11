@@ -67,7 +67,7 @@
 		{
 			"id": "skl_kai_taunt",
 			"name": "Hier spielt die Musik!",
-			"desc": "Kai zieht alle Blicke auf sich: Provoziert und Gepanzert für 3 Züge.",
+			"desc": "Sie ziehen alle Blicke auf sich: Provoziert und Gepanzert für 3 Züge.",
 			"user": "party",
 			"category": "buff",
 			"target": "self",

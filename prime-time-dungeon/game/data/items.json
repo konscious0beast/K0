@@ -513,7 +513,7 @@
 		{
 			"id": "itm_acc_queen_crown",
 			"name": "Rattenkrone",
-			"desc": "STR +3, MAG +3, SPD +1. Nur für Kai — der Graf hält Kopfschmuck für unwissenschaftlich.",
+			"desc": "STR +3, MAG +3, SPD +1. Nur für Sie — der Graf hält Kopfschmuck für unwissenschaftlich.",
 			"type": "accessory",
 			"rarity": "epic",
 			"price": 0,

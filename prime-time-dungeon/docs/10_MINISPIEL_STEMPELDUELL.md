@@ -22,8 +22,8 @@
 > Schichten, §1 Dateibaum, §5 Kampf-Kern, §9 Router, §11 Tests, §12.1 Budgets), `03_ART.md` (§2.4, §9 TV-Look, F8 Glyphen),
 > `04_STRATEGIE_ROADMAP.md` (§2.2/2.3 IP, §6.2 Geld), `05_LIVE_MODUS.md` (Determinismus, `rules_hash`), `06` (L-1 … L-7, §2.7,
 > §4.5, §4.8), `07_ECHTZEITKAMPF.md` (§4.11, §12.3–12.8: R5b), `08_CASTING.md` (Persona, Privatsphäre) und `09_STAFFELN.md`
-> (Kap. 1.2 Sprachregel, 2.4, 2.8, 3.1, 4.3, 9.1, 11). Code-Stand: `claude/prime-time-dungeon` @ `88595ab` (R1–R4, R5a, K0–K2
-> gelandet; **R5b und 09 ST0 offen**).
+> (Kap. 1.2 Sprachregel, 2.4, 2.8, 3.1, 4.3, 9.1, 11). Code-Stand: `claude/prime-time-dungeon` @ `62a6a95` (R1–R4, R5a, K0–K2
+> gelandet; **R5b und 09 ST0 offen**); gegen diesen Stand ist das Review vom 2026-10-11 geprüft (Kasten unten).
 >
 > **Status:** Design-Vertrag für die Phasen **SD1–SD3** (Kap. 7). Für alles rund um das Mini-Spiel gilt dieses Dokument; die
 > Kampagne ändert es nur über die Änderungsanträge **CR-34 … CR-38** (Kap. 7.6). Die Vorrangklausel des Briefs bleibt
@@ -37,6 +37,38 @@
 > Methodennamen Englisch. Spielertexte folgen der Sprachregel aus 09 Kap. 1.2 („Etage“, „Stufe“, „Kandidat:in“). Alle Zahlen
 > sind **Startwerte** für Harness und Playtests (Kap. 6.9). **[zu prüfen]** = reale Fakten (Recht, Marken), **[zu messen]** =
 > Zielwert, den ein Gate misst.
+
+---
+
+## Review 2026-10-11 (unabhängige Prüfung, eingearbeitet)
+
+Geprüft gegen den Code und mit einem Wegwerf-Prototyp: Regelbuch als Engine-Daten über `GameData.load_from_dicts`, Hand als
+Fähigkeitenliste um den **unveränderten** `BattleState`, drei Spieler-Bots (Heuristik „gut“, `AutoPolicy`, Zufall), 200–300
+Seeds je Zelle. Ergebnis: Der Adapter trägt (die Gegner-KI wählte nie eine Karte außerhalb der Hand, kein ungültiger Befehl,
+der Probelauf der Vorschau ändert den Hash nicht, Schnappschüsse spielen identisch weiter, Dienstschluss in 0 % der
+Duelle). Die Funde und was dieses Dokument daraufhin ändert:
+
+| # | Schwere | Fund | Entscheidung (Kap.) |
+|---|---|---|---|
+| 1 | Blocker | `skl_sd_none` mit `damage_type none` scheitert an der Grundangriffs-Regel des Validators — kein Gegner lädt | formal gültiger physischer Grundangriff, wird nie ausgeführt (6.4, 6.5) |
+| 2 | Blocker | Der Echtzeitkampf braucht `BattleCommand.Kind` und `BattleState.roll_drops` — der Grenztest wäre ab Tag 1 rot (07 §12.6 Schritt 3 hat dieselbe Lücke) | **fünf** Engine-Klassen umziehen; `battle_command.gd` bleibt geteilt; `roll_drops` vorher nach `BattleResult` (6.2, CR-34, Hinweis in 07) |
+| 3 | Major | Grenztest: `state_hash.gd` und Kommentare schlagen an; grün erst, wenn R5b die CTB-Teile von heute 27 weiteren Testdateien ersetzt hat; `test_m1_stats` zählt die Dateien in `core/battle` | Positivliste + nur Code-Zeilen; Abhängigkeit und Aufwand genannt; `test_m1_stats` bekommt den neuen Ordner (6.2, 6.3, 7.2) |
+| 4 | Major | Endgegner unschlagbar: Geduld 72, Tempo 12, 2 × Großer Amtsstempel — im Prototyp 1 Sieg in 1 200 Duellen (passende Mappe 0,3 %, sonst 0 %) | Startwerte Geduld 50, Tempo 10, Deck mit 1 × Großem Amtsstempel; Prototyp: passende Mappe 50–66 % (3.4, 6.9) |
+| 5 | Major | Drei Sonderregeln für einen Gegner (Tempo 12, Wiedervorlage halb, Show-Karten −15); gegen ihn war die Wiedervorlage ein Minusgeschäft | gleiche Regeln für alle: Tempo 10, kein Engine-`boss` (SD-14) |
+| 6 | Major | Credits und Fanpost-Paket sind mittelbar Kampfkraft (Automat, Beute-Pool mit Ausrüstung) — widerspricht R-1 | Staffel-Belohnung nur Follower (5.3) |
+| 7 | Major | „Die Vorschau ist exakt“ stimmt nicht: Die Engine rechnet alle späteren Karten mit 3 Werktagen; Nummern auf künftigen Zetteln würden umspringen | Nummer nur auf „JETZT“, Prognose ehrlich benannt (1.2, 4.3) |
+| 8 | Major | Telefon: 15 px auf 720p ≈ 8 pt; keine Schriftgröße, kein Kontrastziel; „STEMPELMEISTER“ passt nicht auf einen 88-px-Zettel | ≥ 16 / Touch ≥ 20 px, Schriftgröße 100–150 %, WCAG AA, Kurznamen (2.2, 4.3, 4.8) |
+| 9 | Major | Kleingedrucktes (6 % der Geduld) 4–7 Ärger je Werktag, stärkste Karte gegen viel Geduld; Kältespray schlägt Stempel überall außer gegen den Grafen | Kleingedrucktes fest 2 je Zug; Kältespray 2 Ärger (1.6, 2.3) |
+| 10 | Minor | Dienstschluss mit Prozentvergleich belohnt Mauern (Heilung 4–5 je Werktag > Ärger 3) | Dienstschluss = vertagt (1.8) |
+| 11 | Minor | „Endgegner 5–7 min“ passt nicht zum eigenen Band (24–34 Nummern) | 2–4 min, Endgegner 3–5; 5–10 min = zwei, drei Duelle mit Revanche (0.2) |
+| 12 | Minor | Wiedervorlage stapelt nicht, die Karte sagt es nicht; „Kenn ich schon“ nutzt kein Gegner; Doppeltippen auf die Pfote schaltet heimlich Auto | Kartentext „Nicht doppelt“; Zeile gestrichen; Auto nur über Menü/Taste (1.5, 1.6, 4.6) |
+| 13 | Minor | Requisit „Nummernautomat“ heißt wie der Etagenboss von Etage 9 (09 Kap. 3.1); Gegnernamen landen im Duell-Hash; Stempelalbum fehlt in 09 S-20 | „Wartemarken-Spender“; Engine-Namen = IDs; CR-36 ergänzt (1.9, 6.4, 7.6) |
+
+Unverändert bestätigt: Regeln in fünf Sätzen genügen (Weiteres steht auf den Karten oder kommt mit dem nächsten Gegner);
+Zustands-Zeitpunkte, Gleichstand, Abheften (auch gegen die Durchsage), Lernduell-Untergrenze, Patzer nie tödlich, Elemente auf
+festem Ärger, RNG-Lint deckt `core/stempel/**`, `DB.data_hash()` sieht den Unterordner nicht, `Router.push` hängt die 3D-Szene
+aus, Export-Filter `data/*.json` erfasst `data/stempel/*.json`; IP und Ton (keine DCC-Begriffe, keine Signatur-Mechanik von
+Triple Triad, Gwent oder Hearthstone, Mopsula ohne Königsmotive — „Adelsflamme“ ist der bestehende Name).
 
 ---
 
@@ -81,8 +113,8 @@ Zeit.** Jede Karte ist sofort spielbar, nur ihre **Bearbeitungszeit** entscheide
 Das ist in einem Satz erklärt, auf einen Blick lesbar und trotzdem taktisch: lange Formulare für viel Ärger, kurze für
 Tempo, Wiedervorlagen gegen die Nummer des Gegenübers, Abheften gegen die Durchsage. Die Bürokratie-Satire liefert die
 Sprache gratis dazu („Bearbeitungszeit: 3 Werktage“, „Dafür ist sie nicht zuständig“, „Bei Gleichstand geht die Kundschaft
-vor“). Ein Duell dauert **2–4 Minuten** (Endgegner 5–7) **[zu messen]**, nichts geht verloren, und M.O.D. moderiert es als
-Spieleshow in ihrer eigenen Show.
+vor“). Ein Duell dauert **2–4 Minuten** (Endgegner 3–5) **[zu messen]** — zwei, drei Duelle mit „Revanche“ sind eine
+Runde von 5–10 Minuten —, nichts geht verloren, und M.O.D. moderiert es als Spieleshow in ihrer eigenen Show.
 
 ### 0.3 Entscheidungen
 
@@ -100,9 +132,10 @@ Herkunft: **R** = Rahmen des Orchestrators, **D** = Detailentscheidung dieses Do
 | SD-8 | Zufall | Nur beim **Mischen**, bei der **Startnummer**, bei **Show-Karten** (Prozentzahl steht auf der Karte) und in der gewichteten **Kartenwahl der Gegner**. Ärger, Heilung und alle Zeit-Effekte wirken **immer genau so**, wie es die Karte sagt | D | 1.2 |
 | SD-9 | Gegner | Lernduell + **Ferdi Durchschlag** (Sachbearbeiter:in), **Ulla Umlauf** (Abteilungsleiter:in), **Der Stempelmeister** (Endgegner), **Graf Mopsula** (Übungsduell); ab SD3 **KI-Kandidat:innen** aus 09 | R · D | 3 |
 | SD-10 | Präsentation | **2D-Kartentisch im TV-Look** (ShowOverlay, M.O.D. als Moderatorin); **keine** 3D-Kampfbühne — die günstigste Lösung, die gut aussieht (Begründung Kap. 4.1) | R · D | 4 |
-| SD-11 | Belohnungen | **Konto:** Karten, Stempelheft, Kosmetik, Titel, Dienstauszeichnungen. **Staffel (nur Etage 8):** je Gegner **einmal** kleine Credits bzw. **1 Fanpost-Paket + 15 Follower** (Endgegner). Nichts käuflich, eine Niederlage kostet nichts | R · D | 5 |
+| SD-11 | Belohnungen | **Konto:** Karten, Stempelheft, Kosmetik, Titel, Dienstauszeichnungen. **Staffel (nur Etage 8):** je Gegner **einmal** ein paar **Follower** (10/15/25) — Show-Währung wie eine Regie-Notiz, **keine Credits, keine Box** (Review). Nichts käuflich, eine Niederlage kostet nichts | R · D | 5 |
 | SD-12 | Technik | Eigene Regelbuch-Daten (`res://data/stempel/`), eigener **`rules_hash`**, aufgezeichnete Züge, bitgenaues Replay; die Kampagne berührt das Duell nur über den Command **`sd`** (`start`/`end`) | R · D | 6 |
 | SD-13 | Phasen | **SD1** Extraktion der Engine (statt Löschung, in 07 R5b) → **SD2** Mini-Spiel als Extras-Vorschau → **SD3** Etage 8 mit dem 09-Staffelinhalt | R | 7 |
+| SD-14 | Gleiche Regeln | **Alle haben Tempo 10** (ein Werktag ist überall gleich lang), und **kein Gegner ist für die Engine ein `boss`** — keine versteckten Endgegner-Ausnahmen. Der Stempelmeister ist schwer durch Phasen, Durchsage und Feierabend-Eilvermerk (Review) | D | 3.4 |
 
 ### 0.4 Ein-Satz-Erklärung (UX-Vertrag, 06 L-1)
 
@@ -123,7 +156,7 @@ Schild, eine M.O.D.-Zeile, keine Tutorial-Karte in der Erkundung.
    gespeicherten Decks). Vor dem Duell zeigt die **Akte des Gegenübers** dessen Geduld, Zuständigkeiten und Eigenheiten.
 2. **Beide mischen** ihr Deck aus 20 Karten und ziehen 5 Karten auf die Hand. Die Hand des Gegenübers liegt verdeckt; man
    sieht nur, wie viele Karten in Hand, Stapel und Ablage liegen.
-3. **Nummern ziehen:** Der Nummernautomat druckt die Startnummern (Kap. 1.9). Die Anzeige ruft die erste Nummer auf.
+3. **Nummern ziehen:** Der Wartemarken-Spender druckt die Startnummern (Kap. 1.9). Die Anzeige ruft die erste Nummer auf.
 4. **Wer aufgerufen wird, ist dran:** eine Karte spielen (Kap. 1.3) oder abheften (Kap. 1.4). Die Wirkung tritt sofort ein;
    dann wird nachgezogen, und die Anzeige ruft die nächste Nummer auf.
 5. Das geht so lange, bis eine Geduld auf 0 fällt, der **Dienstschluss** kommt oder jemand aufgibt (Kap. 1.8).
@@ -140,7 +173,8 @@ zweite Einheit — jede Karte trifft das Gegenüber oder Sie selbst.
 |---|---|---|
 | **Geduld** | 50 | Lebenspunkte. Fällt sie auf 0, ist das Duell verloren. |
 | **Ärger** | — | Schaden. „9 Ärger“ = 9 Geduld weniger. |
-| **Tempo** | 10 | Wie lang ein Werktag dauert (Kap. 1.2). Alle haben Tempo 10, nur der Stempelmeister 12. |
+
+Ein Werktag ist für alle gleich lang — es gibt keinen Tempo-Wert, den man kennen müsste (SD-14).
 
 ### 1.2 Wartenummern und Bearbeitungszeit
 
@@ -148,20 +182,21 @@ Jede Seite hat eine **Wartezeit** (in der Engine: `ctb_counter`, Ticks). Aufgeru
 abläuft. Wer gehandelt hat, bekommt eine neue Wartezeit:
 
 ```text
-Wartezeit nach einer Karte = Grundzeit(Tempo) × Werktage / 3 × Zustands-Faktor      (CTBQueue.delay_for, GDD §3.2)
-Grundzeit(Tempo)           = 1000 / (Tempo + 10), gerundet → Tempo 10: 50 Ticks, Tempo 12: 45 Ticks
+Wartezeit nach einer Karte = 50 Ticks × Werktage / 3 × Zustands-Faktor      (CTBQueue.delay_for, GDD §3.2; SPD 10 für alle)
 ```
 
 | Bearbeitungszeit (Werktage = Rang) | 1 | 2 | 3 | 4 | 5 | 6 |
 |---|---|---|---|---|---|---|
-| Wartezeit bei Tempo 10 (Ticks) | 17 | 33 | 50 | 67 | 83 | 100 |
+| Wartezeit (Ticks) | 17 | 33 | 50 | 67 | 83 | 100 |
 | … mit **Eilvermerk** (× 0,6) | 10 | 20 | 30 | 40 | 50 | 60 |
 | … mit **Dienst nach Vorschrift** (× 1,5) | 25 | 50 | 75 | 100 | 125 | 150 |
-| Tempo 12 (Stempelmeister) | 15 | 30 | 45 | 60 | 75 | 90 |
 
 **Ticks sieht niemand.** Die Spieler:in sieht nur die Reihenfolge der nächsten Nummern (Kap. 4.3) und, sobald eine Karte
-markiert ist, die **Vorschau**: Wo landet meine nächste Nummer, wenn ich diese Karte spiele? Die Vorschau ist exakt (ein
-Probelauf auf einer Kopie, Kap. 6.5) — außer bei Show-Karten, deren Würfel sie nicht verrät.
+markiert ist, die **Vorschau**: Wo landet meine nächste Nummer, wenn ich diese Karte spiele? Die Vorschau ist ein Probelauf
+auf einer Kopie (Kap. 6.5) und **sicher für alles, was feststeht**: wer als Nächstes dran ist, ob Ihre nächste Nummer vor
+der nächsten des Gegenübers kommt und wo die Durchsage steht. Weiter hinten ist sie eine **Prognose**: Für Karten, die noch
+niemand gespielt hat, rechnet sie wie die alte CTB-Leiste mit 3 Werktagen — die Anzeige kann sich nach dem nächsten Zug des
+Gegenübers also noch verschieben. Show-Karten bekommen keinen Probelauf (er würde ihren Würfel verraten).
 
 **Werktage sind relativ.** Hat das Gegenüber gerade eine Karte mit 3 Werktagen gespielt und Sie antworten mit einer
 1-Werktag-Karte, sind Sie oft zweimal dran, bevor es wieder an der Reihe ist. Das ist der ganze Trick des Spiels.
@@ -210,7 +245,6 @@ Gegner haben **Zuständigkeiten** (in der Engine `element_mods`), die auf ihrer 
 |---|---|---|---|
 | **Wunder Punkt** | × 1,5 | „WUNDER PUNKT!“ (gelb) | Diese Art trifft besonders. |
 | **Nicht zuständig** | × 0,5 | „NICHT ZUSTÄNDIG“ (grau) | Diese Art prallt halb ab. |
-| **Kenn ich schon** | × 0 | „KENN ICH SCHON“ (weiß) | reserviert für spätere Gegner; keiner der vier ersten nutzt es |
 
 Sie selbst haben keine Zuständigkeiten. Die Karte rechnet beim Markieren die echte Zahl aus („14 statt 9 · Wunder Punkt“) —
 niemand muss multiplizieren.
@@ -222,10 +256,10 @@ und „Provoziert“ entfallen: Gepanzert wirkt nicht gegen festen Ärger, Provo
 
 | Zustand | Engine | Wirkung (so steht es auf der Karte) | Farbe / Symbol |
 |---|---|---|---|
-| **Wiedervorlage** | `sts_sd_wiedervorlage` (wie `stun`, Flag `delay_on_apply`) | Die nächste Nummer des Gegenübers rutscht **3 Werktage** nach hinten (Endgegner: 1,5). Endet bei seiner nächsten Nummer; nicht doppelt möglich. | Gelb, Uhr mit Pfeil |
+| **Wiedervorlage** | `sts_sd_wiedervorlage` (wie `stun`, Flag `delay_on_apply`) | Die nächste Nummer des Gegenübers rutscht **3 Werktage** nach hinten. Endet bei seiner nächsten Nummer. **Nicht doppelt:** Liegt schon eine vor, zeigt die markierte Karte „keine Wirkung“. | Gelb, Uhr mit Pfeil |
 | **Dienst nach Vorschrift** | `sts_sd_vorschrift` (wie `slow`, × 1,5, 3 Züge) | Die **nächsten 2 Nummern** des Gegenübers dauern 50 % länger. | Blau, Schnecke |
 | **Eilvermerk** | `sts_sd_eilvermerk` (wie `haste`, × 0,6) | **Diese und Ihre nächste(n) Karte(n)** sind 40 % schneller bearbeitet (Anzahl steht auf der Karte). | Orange, rotes Ausrufezeichen-Siegel |
-| **Kleingedrucktes** | `sts_sd_kleingedrucktes` (wie `poison`, −6 % je Zugbeginn, mind. 1, 3 Züge) | Zu Beginn seiner **nächsten 3 Züge** verliert das Gegenüber je 6 % seiner Geduld. | Grün, Lupe |
+| **Kleingedrucktes** | `sts_sd_kleingedrucktes` (wie `poison`, `tick_timing turn_start`, `tick_pct −1` + `tick_min 2` = immer 2, 3 Züge) | Zu Beginn seiner **nächsten 3 Züge** verliert das Gegenüber je **2 Geduld** — eine feste Zahl statt Prozent, niemand muss rechnen. | Grün, Lupe |
 
 Eilvermerk und Dienst nach Vorschrift heben sich auf (`excludes`, wie Turbo/Verlangsamt). Ein neuer gleicher Zustand setzt
 die Dauer zurück und stapelt nicht. Die Texte nennen bewusst **Nummern** statt „Züge“: Ein Zustand, den man sich in der
@@ -237,8 +271,8 @@ nächsten — so stimmt der Kartentext mit der Engine exakt überein.
 Show-Karten (goldener Rahmen) sind die Stunts des alten Kampfs: **großer Ärger mit sichtbarer Erfolgschance**, bei einem
 **Patzer** eine gedruckte Peinlichkeit (Kap. 2.3, Karten 13 und 18). Regeln:
 
-- Die Prozentzahl steht auf der Karte und ist die echte Chance (`BattleState.stunt_chance`; gegen den Endgegner −15 Punkte,
-  GDD §3.6 — die Karte zeigt dann die kleinere Zahl).
+- Die Prozentzahl steht auf der Karte und ist die echte Chance (`BattleState.stunt_chance`; ohne Engine-`boss` gibt es keinen
+  Abzug, SD-14) — gegen jeden Gegner dieselbe Zahl.
 - Je Deck nur **ein** Exemplar jeder Show-Karte; keine Abklingzeit (`cooldown 0`).
 - **Nur Kandidat:innen spielen Show-Karten.** In der Engine gibt es `STUNT` nur für die Party (`available_commands`); im
   Spiel heißt das: „Das Amt hat keinen Sinn für Show.“ Gegnerdecks enthalten keine Show-Karten.
@@ -250,7 +284,7 @@ Show-Karten (goldener Rahmen) sind die Stunts des alten Kampfs: **großer Ärger
 |---|---|---|
 | **Bewilligt** (Sieg) | Geduld des Gegenübers 0 | Belohnungen nach Kap. 5 |
 | **Abgelehnt** (Niederlage) | Ihre Geduld 0 | nichts verloren; „Revanche“ steht schon im Fokus |
-| **Dienstschluss** | Nummer **80** ist aufgerufen (beide zusammen, auch die Durchsage zieht Nummern) | Wer mehr Geduld in Prozent übrig hat, gewinnt; gleich → **vertagt** (unentschieden, keine Belohnung). Ab Nummer 60 zeigt die Anzeige „Dienstschluss bei Nummer 80“. Sicherheitsnetz gegen Endlos-Duelle; im Harness < 1 % der Duelle **[zu messen]** |
+| **Dienstschluss** | Nummer **80** ist aufgerufen (beide zusammen, auch die Durchsage zieht Nummern) | **Vertagt** — unentschieden, keine Belohnung, nichts verloren. Ab Nummer 60 zeigt die Anzeige „Dienstschluss bei Nummer 80“. Sicherheitsnetz gegen Endlos-Duelle; kein Prozentvergleich, damit sich Mauern mit Heilkarten nie lohnt. Prototyp: 0 % der Duelle; Harness < 1 % **[zu messen]** |
 | **Aufgegeben** | Menü → „Antrag zurückziehen“ (mit Bestätigung) | zählt als Niederlage, kostet nichts |
 
 Beide Geduld-Werte können nicht gleichzeitig auf 0 fallen: Patzer kosten nie die letzte Geduld (Engine: Selbstschaden nie
@@ -260,13 +294,13 @@ tödlich), Kleingedrucktes tickt nur am Zugbeginn des Trägers, die Durchsage tr
 
 - **Gleichstand:** Laufen zwei Wartezeiten gleichzeitig ab, gilt die Reihenfolge der Engine (GDD §3.3): **Sie vor dem
   Gegenüber vor der Durchsage.** Im Spiel heißt die Regel **„Bei Gleichstand geht die Kundschaft vor“** — sie steht in der
-  Hilfe und als Fußnote des Grafen, und die Anzeige zeigt sie ohnehin richtig an. Weil alle außer dem Stempelmeister Tempo 10
-  haben, kommt das oft vor; das ist ein bewusster kleiner Vorteil für die Kandidat:in, den Geduld und Spielweise der Gegner
-  ausgleichen (Harness-Band Kap. 6.9).
+  Hilfe und als Fußnote des Grafen, und die Anzeige zeigt sie ohnehin richtig an. Weil alle Tempo 10 haben, kommt das oft
+  vor; das ist ein bewusster kleiner Vorteil für die Kandidat:in, den Geduld und Spielweise der Gegner ausgleichen
+  (Harness-Band Kap. 6.9; im Prototyp ≤ 4 Punkte Unterschied mit und ohne erste Nummer).
 - **Erste Nummer:** Beide Startwartezeiten würfelt die Engine zwischen 50 und 100 % von 3 Werktagen
   (`CTBQueue.setup`, Start „normal“, Strom `ctb`). Im **Lernduell** sind Sie zuerst dran (Start „Präventivschlag“: Sie 0,
-  Gegner 3 Werktage). Präsentiert wird das als **„Nummern ziehen“**: Der Automat druckt zwei Zettel, der kleinere wird
-  zuerst aufgerufen.
+  Gegner 3 Werktage). Präsentiert wird das als **„Nummern ziehen“**: Der Wartemarken-Spender druckt zwei Zettel, der
+  kleinere wird zuerst aufgerufen. (Nicht „Nummernautomat“ — so heißt der Etagenboss von Etage 9, 09 Kap. 3.1.)
 
 ### 1.10 Das Lernduell (erstes Duell = Tutorial)
 
@@ -310,9 +344,9 @@ schützen müsste.
 | Geduld | HP (`Combatant.hp`, `stats.hp`) | |
 | Ärger | Fixschaden (`damage_type "fixed"`, `power`, `hits`) | keine Varianz, kein Krit → jede Zahl ist exakt |
 | Heilung | `damage_type "heal"`, `heal_mode "fixed"` bzw. `"pct"` | |
-| Tempo | SPD → `CTBQueue.base_delay` | |
+| Werktag | SPD 10 für alle → `CTBQueue.base_delay` 50 Ticks = 3 Werktage | kein Tempo-Wert für Spieler:innen (SD-14) |
 | Bearbeitungszeit 1–6 Werktage | `SkillDef.rank` 1–6 | Rang 1 (× 0,33) ist im Slice ungenutzt, die Formel kann ihn |
-| Wartenummern-Anzeige | `BattleState.preview_order` / Event `CTB_ORDER` | 12 berechnet, 10 (Touch 8) gezeigt |
+| Wartenummern-Anzeige | `BattleState.preview_order` / Event `CTB_ORDER` | 12 berechnet, 10 (Touch 8) gezeigt; spätere Aktionen mit Rang 3 (Prognose) |
 | Karte spielen | `BattleCommand.skill` (Show-Karte: `stunt`) | die **Hand ist die Fähigkeitenliste** (`Combatant.skills`/`stunts`, Kap. 6.5) |
 | Abheften | `BattleCommand.defend` + Kartentausch | |
 | Formular-Art / Zuständigkeit | Element / `element_mods` | |
@@ -325,9 +359,11 @@ schützen müsste.
 | Lernduell | `BattleSetup.tutorial`, Start `PREEMPTIVE` | |
 | Gleichstand | Tie-Break Party → Gegner → Pseudo | „Kundschaft geht vor“ |
 
-**Nicht genutzt:** `ATTACK` (es gibt keinen Grundangriff — wählt die KI ihn als Notlösung, wird daraus Abheften), `ITEM`
+**Nicht genutzt:** `ATTACK` (spielbar gibt es keinen Grundangriff; die Engine-Daten tragen nur einen formalen, Kap. 6.4 —
+wählt die KI ihn als Notlösung, wird daraus Abheften), `ITEM`
 (Gegenstände sind Karten), `FLEE` (Aufgeben ist ein Menüpunkt), Sponsor-Geschenke (`apply_gift`), EXP, Credits und Beute
-der Engine, Kombos (nur eine Einheit je Seite), Beschwörungen.
+der Engine, Kombos (nur eine Einheit je Seite), Beschwörungen, das Engine-Flag `boss` (Wiedervorlage halb, Show-Abzug —
+SD-14).
 
 ---
 
@@ -356,7 +392,7 @@ Ein Deck, das die Regeln verletzt, kann man nicht wählen; der Aktenschrank sagt
  │                              │
  │            9 ÄRGER           │   Hauptwirkung groß (30 px); markiert: „14 statt 9 · WUNDER PUNKT“
  │                              │
- │ Bitte in dreifacher Ausfer-  │   Spruch (15 px, gedimmt)
+ │ Bitte in dreifacher Ausfer-  │   Spruch (16 px, gedimmt; auf Touch nur in der Großansicht)
  │ tigung. Die dritte schreddern│
  │ wir sofort.                  │
  │ [Amt]                        │   Herkunft: Amt · Kandidat:in · Graf · Gegenstand · Talent · Trophäe
@@ -365,7 +401,9 @@ Ein Deck, das die Regeln verletzt, kann man nicht wählen; der Aktenschrank sagt
 
 Alle Symbole sind gezeichnet (03_ART F8: keine Schrift-Glyphen wie Sanduhr-Emoji oder →; die Zeichen oben sind nur
 Skizze). Größe auf dem Tisch 150 × 210 px (720p), auf Touch 170 × 236 px; langes Drücken, Tab oder Select zeigt die Karte
-doppelt so groß.
+doppelt so groß. **Auf dem Telefon** sind 720 px Höhe nur gut 6 cm: 15 px wären dort ≈ 8 pt. Deshalb zeigt die Touch-Karte nur
+Name (20 px), Werktage und Hauptwirkung (34 px); Spruch, Formularnummer und Volltext stehen in der Großansicht. Die Option
+„Schriftgröße“ (Kap. 4.8) vergrößert alles weiter.
 
 ### 2.3 Kartenliste (24 Karten, Startwerte)
 
@@ -377,8 +415,8 @@ WT = Werktage (Rang). „Diese und n Karten“ = Eilvermerk für die gespielte K
 | 2 | `sdc_doppelstempel` | Doppelstempel | Amt | Stempel | 2 | 2 × 3 Ärger | „Doppelt hält besser. Dreifach wäre Verschwendung.“ |
 | 3 | `sdc_formular_27b` | Formular 27b | Amt | Stempel | 3 | 9 Ärger | „Bitte in dreifacher Ausfertigung. Die dritte schreddern wir sofort.“ |
 | 4 | `sdc_ablehnung` | Ablehnungsbescheid | Amt | Eiskalt | 3 | 9 Ärger | „Leider nein. Mit freundlichen Grüßen, ohne Freude.“ |
-| 5 | `sdc_wiedervorlage` | Wiedervorlage | Amt | Verwaltung | 2 | Wiedervorlage beim Gegenüber (+3 WT, Endgegner +1,5) | „Bitte noch einmal vorlegen. Persönlich. Mit Termin.“ |
-| 6 | `sdc_kleingedrucktes` | Kleingedrucktes | Amt | Papierkram | 2 | 2 Ärger + Kleingedrucktes (3 Züge je 6 %) | „Steht alles drin. Seite 214, hellgrau auf weiß.“ |
+| 5 | `sdc_wiedervorlage` | Wiedervorlage | Amt | Verwaltung | 2 | Wiedervorlage beim Gegenüber (+3 WT, nicht doppelt) | „Bitte noch einmal vorlegen. Persönlich. Mit Termin.“ |
+| 6 | `sdc_kleingedrucktes` | Kleingedrucktes | Amt | Papierkram | 2 | 2 Ärger + Kleingedrucktes (3 Züge je 2 Ärger) | „Steht alles drin. Seite 214, hellgrau auf weiß.“ |
 | 7 | `sdc_durchatmen` | Tief durchatmen | Amt | Verwaltung | 2 | +8 Geduld | „Ein. Aus. Nicht in die Wartemarke pusten.“ |
 | 8 | `sdc_umlaufmappe` | Umlaufmappe | Amt | Verwaltung | 1 | ganze Hand ablegen, 5 neue ziehen | „Alles einmal im Kreis. Vielleicht kommt was Besseres zurück.“ |
 | 9 | `sdc_wuchtschlag` | Wuchtschlag | Kandidat:in | Stempel | 4 | 13 Ärger | „Mit voller Wucht. Und schlechter Haltung.“ |
@@ -393,16 +431,27 @@ WT = Werktage (Rang). „Diese und n Karten“ = Eilvermerk für die gespielte K
 | 18 | `sdc_auftritt` | Auftritt um Mitternacht | Graf · **Show** | Eilt | 4 | **55 %:** 24 Ärger · **Patzer:** Wiedervorlage für Sie selbst | „Umhang, Nebel, Pathos — und ein Teppichrand, den keiner gesehen hat.“ |
 | 19 | `sdc_werbepflaster` | Werbepflaster | Gegenstand | Verwaltung | 1 | +5 Geduld | „Heilt 5 Geduld. Zeigt dabei drei Werbespots.“ |
 | 20 | `sdc_gegengift` | Gegengift-Gurgler | Gegenstand | Verwaltung | 1 | entfernt Kleingedrucktes, +3 Geduld | „Gurgeln, schlucken, unterschreiben.“ |
-| 21 | `sdc_kaeltespray` | Kältespray | Gegenstand | Eiskalt | 1 | 3 Ärger | „Kurz, kalt, quittiert.“ |
+| 21 | `sdc_kaeltespray` | Kältespray | Gegenstand | Eiskalt | 1 | 2 Ärger | „Kurz, kalt, quittiert.“ |
 | 22 | `sdc_kaffee` | Automatenkaffee | Talent (Kandidat:in) | Verwaltung | 1 | +3 Geduld, Eilvermerk: diese und 1 Karte | „Schmeckt nach Pappe. Wirkt nach Turbo.“ |
 | 23 | `sdc_stereo` | Bellen in Stereo | Talent (Graf) | Rohrpost | 2 | 2 × 3 Ärger | „WUFF links, WUFF rechts. Fußnote 8: zählt doppelt.“ |
 | 24 | `sdc_amtsstempel` | Großer Amtsstempel | Trophäe (Stempelmeister) | Stempel | 6 | 22 Ärger | „Wiegt drei Kilo. Die Verantwortung mehr.“ |
 
-**Wie die Zahlen gedacht sind:** Normaler Ärger liegt bei **≈ 3 je Werktag** (Stempel 2/WT als schnelle Füllkarte,
-Wuchtschlag 3,25, Großer Amtsstempel 3,7 als langsamer Abschluss). Längere Karten sind etwas effizienter, kurze geben Tempo
-und Reaktionsmöglichkeit. Zeit-Karten werden in Werktagen bewertet (Wiedervorlage: 2 WT Bearbeitung gegen 3 WT Verzug beim
-Gegenüber = +1 WT). Show-Karten haben einen etwas schlechteren Erwartungswert als normaler Ärger, aber die größte Wirkung —
-sie entscheiden Duelle, wenn man sie braucht. Der Harness stellt alles nach (Kap. 6.9).
+**Wie die Zahlen gedacht sind:** Normaler Ärger liegt bei **≈ 3 je Werktag** (Stempel und Kältespray 2/WT als schnelle
+Füllkarten — gleich stark, nur die Formular-Art entscheidet; Wuchtschlag 3,25, Großer Amtsstempel 3,7 als langsamer
+Abschluss). Längere Karten sind etwas effizienter, kurze geben Tempo und Reaktionsmöglichkeit. Zeit-Karten werden in Werktagen
+bewertet, 1 WT des Gegenübers ≈ 3 Ärger. Die Erwartungswerte (Review 2026-10-11, „netto“ = Gewinn gegenüber einer schlichten
+3-Ärger-je-WT-Karte gleicher Dauer):
+
+| Gruppe | Karten (netto je Einsatz) | Lesart |
+|---|---|---|
+| reiner Ärger | Stempel, Kältespray −1 · Doppelstempel, 27b, Ablehnung, Frostniesen, Bellen 0 · Wuchtschlag, Adelsflamme +1 · Großer Amtsstempel +4 | die Trophäe ist die beste Ärger-Karte, aber 6 WT lang (das Gegenüber ist dazwischen meist zweimal dran) |
+| Zeit | Wiedervorlage +3 (2 WT gegen 3 WT Verzug) · Leinen-Fallstrick +3 · Kabelpeitsche +3 (gegen Ulla −6: immun) · Gutachten +3,6 · Automatenkaffee +4,8 · Umlaufmappe −3 + bessere Hand | Eilvermerke gehören zu den stärksten Karten — sie stapeln nicht, und Dienst nach Vorschrift hebt sie auf |
+| Kleingedrucktes | +2 (2 + 3 × 2 Ärger, verzögert, heilbar) | fest statt 6 %: mit Prozent waren es gegen 72 Geduld +8 |
+| Heilung | Gegengift 0 (+ bis 6 durch das Gegenmittel) · Werbepflaster, Tief durchatmen +2 · Schlabbern +3 · Erste Hilfe +4 (+ Gegenmittel) | effizienter als Ärger, zählt aber nur, wenn Geduld fehlt; Mauern lohnt nicht (Dienstschluss = vertagt) |
+| Show | Suplex −0,8 (60 % × 26 = 15,6 roh) · Auftritt −2,8 (55 % × 24 = 13,2 roh; gegen Ferdi 36 = alles) | etwas schlechterer Erwartungswert, größter Ausschlag — wie gewollt |
+
+Erste Hilfe ist eine bewusste Verbesserung von Tief durchatmen; sonst ist keine Karte anderen strikt überlegen. Der Harness
+stellt alles nach (Kap. 6.9).
 
 **Herkunft und Abstand:** Die Karten 9–23 sind Parodien der Fähigkeiten, Gegenstände und Talente des Duos (IDs in Kap. 2.5);
 Namen und Sprüche sind eigene Texte. Spielertexte nennen die Kandidat:in nie „Kai“ oder „Tierpfleger:in“, damit jede Persona
@@ -424,7 +473,8 @@ und die ersten Fähigkeiten des Duos, **Wuchtschlag** (9) und **Adelsflamme** (1
 | Wuchtschlag | 1 | | Adelsflamme | 1 |
 
 Summe 20. Die Startmappe gewinnt gegen Ferdi und den Grafen sicher und gegen Ulla manchmal; wer Ulla regelmäßig schlagen
-will, baut um (sie ist für Stempel nicht zuständig) — das ist die erste Deckbau-Lektion, ganz ohne Tutorial.
+will, baut um (sie ist für Stempel nicht zuständig) — das ist die erste Deckbau-Lektion, ganz ohne Tutorial. Gegen den
+Stempelmeister gewinnt die Startmappe fast nie: Er ist die Deckbau-Prüfung (Bänder Kap. 6.9).
 
 ### 2.5 Woher Karten kommen
 
@@ -472,7 +522,7 @@ Spiel, nie zurück** (Kap. 5.1). Die Freischaltung über Fähigkeiten folgt den 
 
 ```json
 {"id": "sdc_wiedervorlage", "name": "Wiedervorlage", "art": "verwaltung", "origin": "amt", "max_copies": 2,
- "text": "Die nächste Nummer des Gegenübers rutscht 3 Werktage nach hinten (Endgegner: 1,5).",
+ "text": "Die nächste Nummer des Gegenübers rutscht 3 Werktage nach hinten. Nicht doppelt.",
  "quip": "Bitte noch einmal vorlegen. Persönlich. Mit Termin.", "unlock": {"kind": "grundakte"},
  "skill": {"category": "debuff", "target": "single_enemy", "damage_type": "none", "element": "none", "power": 0,
            "rank": 2, "statuses": [{"id": "sts_sd_wiedervorlage", "chance": 1.0}]}}
@@ -483,7 +533,7 @@ Spiel, nie zurück** (Kap. 5.1). Die Freischaltung über Fähigkeiten folgt den 
  "text": "60 %: 26 Ärger. Patzer: Sie verlieren 10 % Geduld, Ihre nächste Nummer kommt 2 Werktage später.",
  "quip": "Live, ungeprobt, ungepolstert.", "unlock": {"kind": "skill", "id": "skl_stunt_kai_suplex"},
  "skill": {"category": "stunt", "target": "single_enemy", "damage_type": "fixed", "element": "physical", "power": 26,
-           "rank": 4, "success_base": 0.60, "success_lck": 0.0, "success_cap": 0.85, "success_boss_mod": -0.15,
+           "rank": 4, "success_base": 0.60, "success_lck": 0.0, "success_cap": 0.85,
            "fail_effect": {"self_dmg_pct": 10, "delay_pct": 66}, "cooldown": 0}}
 ```
 
@@ -495,8 +545,8 @@ genau 2 Werktage (33 Ticks).
 Belohnungen:
 
 ```json
-{"id": "sdo_ferdi", "name": "Ferdi Durchschlag", "role": "Sachbearbeitung · Schalter 3", "geduld": 36, "tempo": 10,
- "element_mods": {"fire": 1.5}, "status_immune": [], "boss": false, "symbol": "golem_paper",
+{"id": "sdo_ferdi", "name": "Ferdi Durchschlag", "short": "FERDI", "role": "Sachbearbeitung · Schalter 3", "geduld": 36,
+ "element_mods": {"fire": 1.5}, "status_immune": [], "symbol": "golem_paper",
  "deck": {"sdc_stempel": 2, "sdc_doppelstempel": 2, "sdc_formular_27b": 2, "sdc_ablehnung": 2, "sdc_kaeltespray": 2,
           "sdc_wiedervorlage": 2, "sdc_durchatmen": 2, "sdc_werbepflaster": 2, "sdc_umlaufmappe": 2, "sdc_gegengift": 2},
  "ai": {"type": "weighted", "actions": [
@@ -504,7 +554,7 @@ Belohnungen:
    {"skill": "skl_sdc_wiedervorlage", "weight": 3, "target": "random"},
    {"skill": "skl_sdc_formular_27b", "weight": 2, "target": "random"}]},
  "first_win": {"cards": ["sdc_gegengift", "sdc_schlabbern"], "cosmetic": "sdk_ink_kopierblau"},
- "season_win": {"credits": 40}, "unlock_after": "", "lines": "ferdi"}
+ "season_win": {"followers": 10}, "unlock_after": "", "lines": "ferdi"}
 ```
 
 Das Beispiel kürzt `ai.actions` auf drei Einträge; im echten Datensatz hat **jede Karte des Gegnerdecks mindestens einen
@@ -524,12 +574,15 @@ Drehbuch des Lernduells), `lines.json` (M.O.D.-, Grafen- und Chat-Zeilen mit Tag
 Alle Gegner sind **Geschöpfe der Kulisse** „Amt für Etagenwesen“ (09 Kap. 3.1: Wartemarken, Formular-Golems, Stempel) —
 keine Karikaturen echter Menschen. Jede:r bringt **genau eine neue Regel** mit.
 
-| Gegner | Rolle | Geduld | Tempo | Wunder Punkt (× 1,5) | Nicht zuständig (× 0,5) | Neue Regel | Frei ab |
-|---|---|---|---|---|---|---|---|
-| **Ferdi Durchschlag** | Sachbearbeiter:in in Ausbildung | 36 | 10 | Eilt | — | Wunder Punkt | Lernduell |
-| **Graf Mopsula** (Übung) | Beistand, diesmal gegenüber | 40 | 10 | — | Eiskalt | Nicht zuständig | Lernduell |
-| **Ulla Umlauf** | Abteilungsleiter:in | 50 | 10 | Eiskalt | Stempel | Immunität (Wiedervorlage prallt ab) | Sieg gegen Ferdi |
-| **Der Stempelmeister** | Endgegner, Zimmer 8.08 | 72 | 12 | Rohrpost | Eilt | Phasen + Durchsage | Sieg gegen Ulla |
+| Gegner | Rolle | Geduld | Wunder Punkt (× 1,5) | Nicht zuständig (× 0,5) | Neue Regel | Frei ab |
+|---|---|---|---|---|---|---|
+| **Ferdi Durchschlag** | Sachbearbeiter:in in Ausbildung | 36 | Eilt | — | Wunder Punkt | Lernduell |
+| **Graf Mopsula** (Übung) | Beistand, diesmal gegenüber | 40 | — | Eiskalt | Nicht zuständig | Lernduell |
+| **Ulla Umlauf** | Abteilungsleiter:in | 50 | Eiskalt | Stempel | Immunität (Wiedervorlage prallt ab) | Sieg gegen Ferdi |
+| **Der Stempelmeister** | Endgegner, Zimmer 8.08 | 50 | Rohrpost | Eilt | Phasen + Durchsage | Sieg gegen Ulla |
+
+Alle haben Tempo 10 (SD-14). Auf den Wartenummern-Zetteln stehen Kurznamen mit höchstens 7 Zeichen (FERDI, GRAF, ULLA,
+MEISTER; Feld `short`, Kap. 4.3).
 
 ### 3.2 Ferdi Durchschlag — Sachbearbeiter:in in Ausbildung
 
@@ -562,13 +615,17 @@ Gründlich, nie gemein, liest wirklich alles.
 ### 3.4 Der Stempelmeister — Endgegner
 
 Eine hohe Gestalt im grauen Kittel, deren Kopf ein **Stempelkarussell** mit zwölf Stempeln ist; er spricht nur in
-Bescheid-Formeln („Bescheid. Bescheid. BESCHEID.“). Er empfängt in **Zimmer 8.08** und arbeitet im Schichtdienst: **Tempo
-12** — seine Werktage sind kürzer (Kap. 1.2).
+Bescheid-Formeln („Bescheid. Bescheid. BESCHEID.“). Er empfängt in **Zimmer 8.08**. Für ihn gelten **dieselben Regeln wie
+für alle** (SD-14: Tempo 10, keine Endgegner-Ausnahmen der Engine) — schwer machen ihn seine Phasen, die Durchsage, der
+Feierabend-Eilvermerk und der Große Amtsstempel.
 
 - **Zuständigkeiten:** Rohrpost ist sein wunder Punkt („Er hasst Unterbrechungen.“), für Eilt ist er nicht zuständig („Bei
-  mir eilt nichts. Nie.“). Endgegner-Regeln der Engine: Wiedervorlage wirkt nur halb (1,5 WT), Show-Karten −15 Punkte.
-- **Deck:** je 2 × Großer Amtsstempel, Formular 27b, Ablehnungsbescheid, Kabelpeitsche, Wiedervorlage, Leinen-Fallstrick,
-  Kleingedrucktes, Tief durchatmen, Doppelstempel, Wuchtschlag.
+  mir eilt nichts. Nie.“).
+- **Deck:** je 2 × Formular 27b, Ablehnungsbescheid, Doppelstempel, Wiedervorlage, Leinen-Fallstrick, Kleingedrucktes,
+  Tief durchatmen, Stempel; je 1 × Großer Amtsstempel, Wuchtschlag, Kältespray, Umlaufmappe.
+- **Startwerte aus dem Review:** Mit Geduld 72, Tempo 12 und je 2 × Großem Amtsstempel, Wuchtschlag und Kabelpeitsche gab es
+  im Prototyp einen Sieg in 1 200 Duellen (auch mit passender Mappe nur 0,3 %). Mit den Werten oben: Startmappe ≈ 4 %, Mappe
+  aus dem, was man beim ersten Besuch besitzt, ≈ 50 %, volle Sammlung ≈ 63 % (Kap. 6.9).
 - **Phasen** (`phases`, GDD §3.11; Phasenwechsel nach jedem Ärger, nie übersprungen):
 
 | Phase | Geduld | `on_enter` | Spielweise | M.O.D. |
@@ -577,8 +634,11 @@ Bescheid-Formeln („Bescheid. Bescheid. BESCHEID.“). Er empfängt in **Zimmer
 | 2 „Durchsagen“ | > 25 % | `add_pseudo` `pu_sd_durchsage` (Start 50 Ticks), `say` `sd_boss_phase:2` | Wiedervorlagen bevorzugt — er schiebt Sie hinter die Durchsage | „Achtung, eine Durchsage: Ab jetzt wird durchgesagt.“ |
 | 3 „Feierabend naht“ | ≤ 25 % | `status_self` `sts_sd_eilvermerk` (99 Züge), `say` `sd_boss_phase:3` | Großer Amtsstempel und Wuchtschlag bevorzugt | „Er will nach Hause. Er wird schneller. Und gefährlicher.“ |
 
+  In der Engine `ai.type "phased"` mit den Aktionen in `phases[].actions` (Validator-Regel 6). **Konter:** Der
+  Leinen-Fallstrick hebt den Feierabend-Eilvermerk auf (Dienst nach Vorschrift und Eilvermerk schließen sich aus) — danach
+  ist er wieder normal schnell. Der Graf sagt es beim ersten Mal in einer Fußnote.
 - **Die Durchsage** (`pu_sd_durchsage`, Pseudo-Einheit wie der Zug der Rattenkönigin): ein grauer Zettel mit Lautsprecher in
-  der Wartenummern-Anzeige. Wenn ihre Nummer kommt: **8 % Ihrer Geduld Ärger** (4), **mit Abheften die Hälfte**; danach
+  der Wartenummern-Anzeige. Wenn ihre Nummer kommt: **4 Ärger** (Engine: 8 % der vollen Geduld), **mit Abheften 2**; danach
   wieder **6 Werktage** (100 Ticks) Pause. Steht sie an **zweiter** Stelle der Anzeige, warnt M.O.D. („Achtung, gleich eine
   Durchsage! Wer abheftet, hört nur die Hälfte.“) und der Zettel blinkt (≤ 2 Hz). Die Durchsage kann man nicht treffen; sie
   verliert jeden Gleichstand.
@@ -610,7 +670,7 @@ Gegner sehen Ihre Hand nicht; sie schummeln nicht.
 
 | Ratgeber | Regel | Wofür |
 |---|---|---|
-| `AutoPolicy` (Engine, unverändert) | Durchsage vor dem eigenen nächsten Zug → Abheften; unter 35 % Geduld → Heilkarte; sonst die Karte mit dem meisten Ärger (der Grundangriff ist eine Nullkarte, jede Ärger-Karte schlägt ihn); sonst Abheften | Harness-Profil „einfach“, Rückfall |
+| `AutoPolicy` (Engine, unverändert) | Durchsage vor dem eigenen nächsten Zug → Abheften; unter 35 % Geduld → Heilkarte; sonst die Karte mit dem meisten Ärger, ohne auf Werktage zu achten (der Grundangriff rechnet mit Stärke 1 nur ½ Ärger, jede Ärger-Karte schlägt ihn); sonst Abheften | Harness-Profil „einfach“ (Untergrenze, Kap. 6.9), Rückfall |
 | `SdAi.suggest` (neu, rein) | wertet jede Handkarte als **Ärger bzw. Geduld je Werktag** plus Tempo-Wert (Vorschau: Wie viele Nummern bin ich vor dem Gegenüber?), Abheften vor einer Durchsage, Zuständigkeiten, Heilung erst bei Bedarf | Tipp des Grafen, „Der Graf übernimmt“, Harness-Profil „gut“ |
 
 Beide sind deterministisch und würfeln nicht.
@@ -706,7 +766,7 @@ dazu eine Nummernanzeige und eine Schalterkante) und gezeichnete **Symbole** fü
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ (o LIVE)  STEMPELDUELL · Etage 8 · Schalter 3                                     [Pfote] [Menü]   │ Overlay „duel“, Rand 24 px
 │ ┌ WARTENUMMERN ──────────────────────────────────────────────────────────────────────────────────┐ │
-│ │ JETZT 007 SIE ┃ 008 SIE ┃ 009 FERDI ┃ 010 SIE ┃ 011 FERDI ┃ 012 SIE ┃ 013 FERDI ┃ … 10 Zettel  │ │ 64 px hoch
+│ │ JETZT 007 SIE ┃ SIE ┃ FERDI ┃ SIE ┃ FERDI ┃ SIE ┃ FERDI ┃ SIE ┃ FERDI ┃ … 10 Zettel            │ │ 64 px hoch
 │ └────────────────────────────────────────────────────────────────────────────────────────────────┘ │
 │  ┌ [Golem] FERDI DURCHSCHLAG · Sachbearbeitung ─────────┐   Hand [5 Rücken]  Stapel 11             │
 │  │ Geduld ████████████████░░░░░░  27 / 36               │   WUNDER PUNKT: [Flamme] Eilt            │ 80 px
@@ -730,14 +790,15 @@ Höhenrechnung (720p): Rand 24 + Overlay 30 + Anzeige 64 + Gegner 80 + Schalter 
 ≈ 1 060 px.
 
 **Touch, Querformat 1600 × 720 (20:9) und breiter:** Karten 170 × 236 px als leichter Fächer am unteren Rand, Anzeige mit 8
-größeren Zetteln (88 px breit), „Ablage“ links und „STEMPELN“ rechts in Daumennähe (Linkshänder-Spiegelung in den Optionen),
+größeren Zetteln (104 px breit, Text ≥ 20 px), „Ablage“ links und „STEMPELN“ rechts in Daumennähe (Linkshänder-Spiegelung in
+den Optionen),
 M.O.D.-Box oben rechts unter der Anzeige. Alle Ziele ≥ 88 px Trefferfläche, Abstände ≥ 12 px (`UiTheme.ensure_hit_area`).
 Nur Querformat (GDD §14.8).
 
 ```text
 ┌──────────────────────────────────────────────────────────────────────────────────────┐
 │ (o LIVE) STEMPELDUELL                                               [Pfote]  [Menü]  │
-│ ┃JETZT 007 SIE┃ 008 SIE ┃ 009 FERDI ┃ 010 SIE ┃ 011 FERDI ┃ …  (8 Zettel)            │
+│ ┃JETZT 007 SIE┃ SIE ┃ FERDI ┃ SIE ┃ FERDI ┃ SIE ┃ …  (8 Zettel)                      │
 │ [Golem] FERDI  Geduld █████████░░░ 27/36  WP: Eilt                    [M.O.D.-Box]   │
 │                 [ SCHALTER: zuletzt „Formular 27b“  −9 ]                             │
 │ ROBIN & GRAF  Geduld ███████████░ 44/50  [Eilvermerk 2]                              │
@@ -754,15 +815,19 @@ die Staffel-Belohnung; Knöpfe **Revanche** (Fokus) · **Andere Mappe** · **Zur
 
 ### 4.3 Die Wartenummern-Anzeige
 
-- **Inhalt:** die nächsten Aufrufe aus `preview_order` (12 berechnet; Desktop zeigt 10, Touch 8). Jeder Zettel: Nummer
-  (3 Ziffern, Monospace, `UiTheme.font_mono()`), Besitzer:in als **Form + Wort** („SIE“ im blauen Kreis, Gegnername in der
-  roten Raute, „DURCHSAGE“ im grauen Rechteck mit Lautsprecher) — farbenblind-sicher, nie nur Farbe.
-- **Nummern:** Zettel n ist der n-te Aufruf des Duells (`BattleState.turn_count`, Pseudo-Züge zählen mit); das Duell beginnt
-  bei 001. Der aktuelle Zettel steht groß links mit „JETZT“; ein **Gong** und die Zeile „Nummer 007 — Sie sind dran.“ bzw.
-  „Nummer 008 — Ferdi stempelt.“ rufen ihn auf.
-- **Vorschau:** Ist eine Handkarte markiert, zeigt die Anzeige als **Geist-Zettel** (gestrichelt, 50 % Deckkraft), wo Ihre
-  nächste Nummer und die des Gegenübers nach dieser Karte landen — für Wiedervorlage, Eilvermerk und Dienst nach Vorschrift
-  genau so wie für normale Karten (Probelauf, Kap. 6.5). Beim Abheften-Knopf zeigt sie das Ergebnis des Abheftens.
+- **Inhalt:** die nächsten Aufrufe aus `preview_order` (12 berechnet; Desktop zeigt 10, Touch 8). Jeder Zettel zeigt die
+  Besitzer:in als **Form + Wort** („SIE“ im blauen Kreis, der Kurzname des Gegenübers in der roten Raute — höchstens 7
+  Zeichen —, „DURCHSAGE“ im grauen Rechteck mit Lautsprecher) — farbenblind-sicher, nie nur Farbe.
+- **Nummern:** Nur der aktuelle Zettel trägt eine Nummer: Er steht groß links mit „JETZT 007“ (3 Ziffern, Monospace,
+  `UiTheme.font_mono()`; n = n-ter Aufruf, `BattleState.turn_count`, Pseudo-Züge zählen mit, Beginn bei 001); ein **Gong** und
+  die Zeile „Nummer 007 — Sie sind dran.“ bzw. „Nummer 008 — Ferdi stempelt.“ rufen ihn auf. Künftige Zettel bleiben ohne
+  Nummer, weil sich die Prognose nach jeder Karte des Gegenübers verschieben kann (Kap. 1.2) — eine Wartenummer, die
+  umspringt, wäre keine.
+- **Vorschau:** Ist eine Handkarte markiert, zeigt die Anzeige als **Geist-Zettel** (gestrichelter Rand mit ≥ 3 : 1 Kontrast,
+  Füllung 50 %), wo Ihre nächste Nummer und die des Gegenübers nach dieser Karte landen — für Wiedervorlage, Eilvermerk und
+  Dienst nach Vorschrift genau so wie für normale Karten (Probelauf, Kap. 6.5). Sicher ist der vorderste Teil (wer als
+  Nächstes dran ist, Sie vor oder nach der nächsten Nummer des Gegenübers, die Durchsage); dahinter ist es eine Prognose.
+  Beim Abheften-Knopf zeigt sie das Ergebnis des Abheftens.
 - **Bewegung:** Zettel gleiten in 0,2 s an ihre neuen Plätze (wie die CTB-Leiste, 02_TECH §5.7); eine Wiedervorlage schubst
   den Zettel des Gegenübers sichtbar nach rechts, ein Eilvermerk zieht den eigenen nach links.
 - **Ketten:** Ist dieselbe Seite drei- oder mehrmals hintereinander dran, verbindet eine Klammer die Zettel („3 × SIE“) — der
@@ -802,7 +867,7 @@ Chat-Zeilen (erfundene Nutzernamen) kommentieren Show-Karten, Ketten und Siege. 
 | `sd_durchsage_warn` | mod | „Achtung, gleich eine Durchsage! Wer abheftet, hört nur die Hälfte.“ |
 | `sd_win` | mod | „Antrag bewilligt! Applaus vom Band — heute ausnahmsweise echt.“ |
 | `sd_loss` | mod | „Antrag abgelehnt. Widerspruch ist zwecklos, Revanche nicht.“ |
-| `sd_dienstschluss` | mod | „Dienstschluss! Es gewinnt, wer noch mehr Geduld hat. Also nicht ich.“ |
+| `sd_dienstschluss` | mod | „Dienstschluss! Ihr Antrag ist vertagt. Bitte ziehen Sie morgen eine neue Nummer.“ |
 | `sd_hint:file` | mopsula | „Kolleg:in, ich rate zum Abheften. Fußnote 9: Wer abheftet, hat mehr vom Leben.“ |
 | `sd_tie` | mopsula | „Fußnote 12: Bei Gleichstand geht die Kundschaft vor. Das Einzige, was ich an Ämtern mag.“ |
 | `sd_tut:2` | mopsula | „Fußnote 1: Kurze Formulare, kurze Wartezeit. Zwinger 7 wusste das. Mein Antrag auf Decke nicht.“ |
@@ -824,7 +889,7 @@ unberührt bleiben. Zufall bei der Zeilenwahl ist reine Darstellung (eigener Anz
 | „ABLAGE“ antippen | Abheften-Modus: „Welche Karte abheften?“ — Karte antippen, „Zurück“ bricht ab |
 | Karte lang drücken (0,4 s) | Großansicht mit vollem Text; antippen schließt |
 | Gegner-Plakette / Ablage-Zähler antippen | Akte des Gegenübers / gespielte Karten ansehen |
-| Pfote | Fußnote des Grafen zur empfohlenen Karte (2 × tippen: „Der Graf übernimmt“ an/aus) |
+| Pfote | Fußnote des Grafen zur empfohlenen Karte. „Der Graf übernimmt“ schaltet man im Menü (Hilfen) — keine versteckte Geste, die aus Versehen auslöst |
 
 **Tastatur und Maus:**
 
@@ -895,7 +960,11 @@ Alle Menüs sind fokus-navigierbar (02_TECH §10.2), erstes Element hat den Foku
 
 - **Keine Zeitlimits**, keine Reaktionsaufgaben; das Spiel wartet immer auf Sie.
 - **Farbe nie allein:** Formular-Arten mit Symbol und Wort, Seiten mit Form und Wort, Zahlen statt Farbbalken-Raten.
-- **Lesbarkeit:** Text ≥ 15 px, Kartentext 15–18 px, Großansicht 2 ×, Glyphen-Regel F8 (alle Symbole gezeichnet).
+- **Lesbarkeit:** Text ≥ 16 px (`UiTheme.FONT_SIZE_SMALL`), auf Touch ≥ 20 px (Kap. 2.2); Großansicht 2 ×; Option
+  **„Schriftgröße“ 100 / 125 / 150 %** (in der Sammlung gespeichert, Kap. 6.7) für Karten, Zettel, Plaketten und M.O.D.-Box —
+  die Tischkarte zeigt dann nur Name, Werktage und Hauptwirkung; Glyphen-Regel F8 (alle Symbole gezeichnet).
+- **Kontrast:** Text ≥ 4,5 : 1 gegen seinen Grund (WCAG AA), große Zahlen, Rahmen und der Geist-Zettel-Rand ≥ 3 : 1; die
+  Rahmenfarbe einer Formular-Art ist nie die Textfarbe auf diesem Rahmen.
 - **Bewegung:** „Animationen reduzieren“ (keine fliegenden Karten, kein Wackeln, Überblendungen), Tempo × 2; nichts blinkt
   schneller als 2 Hz.
 - **Motorik:** alle Ziele ≥ 88 px, Spielen geht mit Tippen-Tippen statt Ziehen, Linkshänder-Spiegelung, vollständige
@@ -920,12 +989,12 @@ vorhandenen Musik-Synthese; im Endgegner-Duell wird sie ab Phase 2 schneller.
 ### 5.1 Grundsätze
 
 1. **Einbahnstraße:** Die Kampagne schaltet Karten frei; das Stempelduell gibt der Kampagne **nie Kampfkraft** — keine Werte,
-   keine Ausrüstung, keine Verbrauchsgüter direkt, keine EP, kein Ausgeruht, keine Talente (R-1; 09 S-20).
+   keine Ausrüstung, keine Verbrauchsgüter, **keine Credits, keine Boxen** (beides wird am Automaten bzw. aus dem Beute-Pool
+   zu Ausrüstung und Tränken), keine EP, kein Ausgeruht, keine Talente (R-1; 09 S-20).
 2. **Nichts käuflich** — keine Karten, keine Kosmetik, keine Mappenplätze, kein „Duell-Pass“ (04 §6.2, 09 S-24). Auch keine
    kaufbaren Kartenrücken, obwohl 04 kosmetische Käufe erlauben würde (F-7).
-3. **Kein Zufall beim Belohnen:** keine Kartenpackungen, keine Seltenheiten; jede Belohnung des Mini-Spiels steht vorher in
-   der Akte bzw. im Stempelheft. Die einzige Box ist das **Fanpost-Paket** der Staffel (Kap. 5.3) — eine normale, verdiente
-   Kampagnen-Box nach 06 (veröffentlichte Chancen, Öffnen nur im Safe Room), kein eigenes Zufallssystem des Duells.
+3. **Kein Zufall beim Belohnen:** keine Kartenpackungen, keine Seltenheiten, keine Boxen; jede Belohnung des Mini-Spiels
+   steht vorher in der Akte bzw. im Stempelheft.
 4. **Kein Einsatz:** Man setzt nie Credits oder Gegenstände; eine Niederlage kostet nichts (keine Glücksspiel-Anmutung).
 5. **Einmal je Staffel:** Belohnungen, die einen Spielstand berühren, gibt es nur auf Etage 8 und je Gegner nur **einmal je
    Staffel** — kein Farmen.
@@ -965,24 +1034,24 @@ Lootboxen geben):
 
 | Gegner | Erster Sieg in dieser Staffel | Anzeige |
 |---|---|---|
-| Ferdi | **40 Credits** („Rückerstattung zu viel gezahlter Geduld“) | Ergebnis-Panel, Toast |
-| Ulla | **80 Credits** | dto. |
-| Stempelmeister | **1 Fanpost-Paket** (`box_fan` → `pending_lootboxes`) **+ 15 Follower** | dto., M.O.D. `sd_season_win` |
+| Ferdi | **+10 Follower** („Der Chat hat zugesehen. Zehn Leute fanden Papier spannend.“) | Ergebnis-Panel, Toast |
+| Ulla | **+15 Follower** | dto. |
+| Stempelmeister | **+25 Follower** | dto., M.O.D. `sd_season_win` |
 | Graf, KI-Kandidat:innen | — | — |
 
-- **Höchstens** 120 Credits, 1 Fanpost-Paket und 15 Follower je Staffel aus dem Stempelduell. Die Credit-Werte sind
-  Startwerte für Etage 8 **[mit ST1-C an die Etagen-Skalierung binden, 09 Kap. 3.4]**; das Fanpost-Paket folgt den
-  normalen Regeln (Show-Währung, Öffnen nur im Safe Room, 06 §4.5/§4.8) und zählt zu den optionalen Show-Belohnungen der
-  Etage; 15 Follower entsprechen einer Regie-Notiz (06 §2.7).
+- **Höchstens 50 Follower** je Staffel aus dem Stempelduell — reine Show-Währung wie eine Regie-Notiz (+15, 06 §2.7) und wie
+  die Wett-Follower (06 §4.8 Nr. 6); in Staffeln ohne Zuschauer-Geschenke (09 Kap. 10 Nr. 3) wirken Follower nur auf die
+  Staffel-Quote (≈ +5). Bewusst **keine Credits und kein Fanpost-Paket** (Kap. 5.1, Review 2026-10-11) — damit entfällt auch
+  jede Skalierung mit der Etage.
 - Die Belohnung ist ein aufgezeichneter Command (`sd`, Kap. 6.8) — Spiel, `RunSim` und `Game.replay_log` rechnen sie gleich.
 - Wer Etage 8 verpasst (Einsturz, Vorlauf), verliert nur diese kleine Belohnung; das Freie Spiel bleibt.
 - **Ohne Staffel** gibt es Etage 8 nicht (die Kampagne wird zur privaten Staffel, 09 S-14); Event-Läufe haben kein Duell.
 
 ### 5.4 Was es nie gibt
 
-Kampfwerte, Ausrüstung, Verbrauchsgüter oder EP aus dem Duell; Boni der NOVA-Sammelkarten (06 §2.7) — die **Stempelkarten
-sind eine eigene Sammlung** ohne Wirkung außerhalb des Mini-Spiels; Echtgeld, Zufallsinhalte, Einsätze; Ranglisten mit
-Druck; Tagesbelohnungen, Serien („Streaks“), ablaufende Angebote.
+Kampfwerte, Ausrüstung, Verbrauchsgüter, Credits, Boxen oder EP aus dem Duell; Boni der NOVA-Sammelkarten (06 §2.7) — die
+**Stempelkarten sind eine eigene Sammlung** ohne Wirkung außerhalb des Mini-Spiels; Echtgeld, Zufallsinhalte, Einsätze;
+Ranglisten mit Druck; Tagesbelohnungen, Serien („Streaks“), ablaufende Angebote.
 
 ### 5.5 Wohlbefinden
 
@@ -996,12 +1065,13 @@ Druck; Tagesbelohnungen, Serien („Streaks“), ablaufende Angebote.
 
 ## 6. Technik
 
-### 6.1 Was die Engine heute ist (Stand `88595ab`)
+### 6.1 Was die Engine heute ist (Stand `62a6a95`)
 
 | Teil | Dateien | Zeilen | Nach 07 R5b ohne dieses Dokument |
 |---|---|---|---|
-| CTB-Engine | `core/battle/{ctb_queue,battle_state,action_resolver,enemy_ai,auto_policy,battle_command}.gd` | ≈ 2 400 | gelöscht |
-| geteilte Basisklassen | `core/battle/{action_event,battle_setup,battle_result,combatant,status_effect,hit_result,damage_calc}.gd`, `core/stats/*` | ≈ 1 300 | bleiben (07 §12.7, auch der Echtzeitkampf nutzt sie) |
+| CTB-Engine | `core/battle/{ctb_queue,battle_state,action_resolver,enemy_ai,auto_policy}.gd` | ≈ 2 300 | gelöscht |
+| geteilte Basisklassen | `core/battle/{action_event,battle_setup,battle_result,battle_command,combatant,status_effect,hit_result,damage_calc}.gd`, `core/stats/*` | ≈ 1 350 | bleiben (07 §12.7, auch der Echtzeitkampf nutzt sie) — `battle_command.gd` steht in 07 §12.6 Schritt 3 zwar auf der Löschliste, aber `BattleCommand.Kind` ist das Vokabular von `ActionEvent.command` in `core/rt`, `core/show` und `scenes/combat` (CR-34) |
+| Beuteregel | `BattleState.roll_drops` (die einzige Siegbeute-Regel, GDD §3.12) | — | wird von `core/rt/rt_result.gd` mitbenutzt — darf mit der Engine weder gelöscht noch umgezogen werden (SD1 Schritt 0) |
 | Engine-Tests | `tests/test_m1_{fixture,stats,ctb,damage,status,ai,battle_flow,battle_snapshot}.gd` (≈ 86 Testfälle, eigener Mini-Datensatz, **unabhängig von `res://data`**) | ≈ 2 770 | ersetzt durch Echtzeit-Varianten |
 | Hash | `StateHash.of_battle` / `battle_hash_input` (`core/live/state_hash.gd`) | — | gelöscht |
 | Konstanten | `Balance.FLEE_*`, `DEFEND_MULT`, `STUNT_COOLDOWN` | — | gelöscht |
@@ -1016,32 +1086,33 @@ sie sind — die Kampagne wird vollständig echtzeitig, nur die Engine lebt als 
 
 | # | Schritt 3 neu (je ein Commit, in dieser Reihenfolge) | Prüfung |
 |---|---|---|
-| 1 | `git mv core/battle/{ctb_queue,battle_state,action_resolver,enemy_ai,auto_policy,battle_command}.gd core/stempel/ctb/` — **Klassennamen bleiben** (`BattleState`, `CTBQueue`, …), Inhalt bitgleich; nur `preload`-Pfade, die auf diese Dateien zeigen, werden angepasst | `test_m0_compile_all`, alle `test_m1_*` grün |
-| 2 | **Bleiben statt löschen:** `Balance.FLEE_*`, `DEFEND_MULT`, `STUNT_COOLDOWN` (Abschnitt „# --- Stempelduell-Engine (10, SD1) ---“), `StateHash.of_battle`/`battle_hash_input`, die CTB-Felder in den Defs (samt `PseudoUnitDef` und der Tabelle `pseudo_units` in `GameData`) und die optionalen Feld-Spezifikationen in `data_validator.gd` (dritter Vertrags-Durchgang, ohnehin mit R5b/ST0) | `test_m8_state_hash` (CTB-Teil), `test_m1_battle_snapshot` |
+| 0 | **Beuteregel herauslösen:** `BattleState.roll_drops` zieht unverändert nach `BattleResult.roll_drops` (geteilt und rein, `core/battle`; beide Kampfarten bauen ihr Ergebnis ohnehin mit `BattleResult` — `LootRoller` hinge am `GameState` und wäre eine Schicht zu hoch); `BattleState._build_result`, `core/rt/rt_result.gd`, `test_r1_rt_result` und `test_m2_loot` rufen sie dort auf. Nötig auch ohne dieses Dokument — 07s Löschliste bräche sonst den Echtzeitkampf | `test_m2_loot`, `test_r1_rt_result`, alle `test_m1_*` grün |
+| 1 | `git mv core/battle/{ctb_queue,battle_state,action_resolver,enemy_ai,auto_policy}.gd core/stempel/ctb/` — **fünf** Dateien, **Klassennamen bleiben** (`BattleState`, `CTBQueue`, …), Verhalten bitgleich (keine `preload`-Pfade und keine `.uid`-Dateien betroffen, Stand heute). `battle_command.gd` **bleibt** in `core/battle` (geteilt, Kap. 6.1). `test_m1_stats` prüft im Ganzzahl-Lint die Ordner `core/stats` und `core/battle` und erwartet mehr als 15 Dateien — er bekommt `res://core/stempel/ctb` als dritten Ordner (eine Zeile) | `test_m0_compile_all`, alle `test_m1_*` grün |
+| 2 | **Bleiben statt löschen:** `Balance.FLEE_*`, `DEFEND_MULT`, `STUNT_COOLDOWN` (Abschnitt „# --- Stempelduell-Engine (10, SD1) ---“), `StateHash.of_battle`/`battle_hash_input`, die CTB-Felder in den Defs (samt `PseudoUnitDef` und der Tabelle `pseudo_units` in `GameData`), die optionalen Feld-Spezifikationen in `data_validator.gd` (dritter Vertrags-Durchgang, ohnehin mit R5b/ST0) **und die CTB-Laufzeitfelder der geteilten Klassen** (`Combatant.ctb_counter`, `defending`, `stunt_cooldown`, `used_once`, `own_turns`, `warned`, `pseudo_def`; `StatusEffect.turns_left`/`fresh`; die CTB-Typen von `ActionEvent`) | `test_m8_state_hash` (CTB-Teil), `test_m1_battle_snapshot` |
 | 3 | **Kampagnendaten** verlieren die CTB-Felder wie geplant (gebacken, 07 §4.11 Spalte „Ab R5b“) — die Felder sind danach nur noch im **Regelbuch** des Stempelduells belegt | `test_r4_rt_data`, Validator grün |
-| 4 | **Wie in 07 §12.6 gelöscht bzw. mit R5b überflüssig:** `scenes/battle/**`, `Router.start_battle`/`end_battle` + Swirl, `Events.battle_turn_started`, CTB-Pfade der Kampagne (`BattleBridge.make_setup`, CTB-Zweige in `RunSim`/`GameReplay`), `ShowRules`-Profil `ctb`, `GameSettings.battle_speed`/`auto_battle_default`/`partner_auto`, CTB-Teile der Kampagnen-Tests (`test_m5_*`, `test_m8_replay`, `test_m8_run_sim`, `test_06b/06c_balance` …) | wie 07 §12.6 |
-| 5 | **Neu:** `tests/test_sd_engine_golden.gd` (fester Kampf aus dem `test_m1`-Mini-Datensatz mit geskripteten Befehlen → eingefrorener `StateHash.of_battle` und Ereigniszahl) und `tests/test_sd_boundaries.gd` (Kap. 6.3: außer dem Stempelduell und seinen Tests nutzt niemand mehr die sechs Engine-Klassen) | beide grün |
+| 4 | **Wie in 07 §12.6 gelöscht bzw. mit R5b überflüssig:** `scenes/battle/**`, `Router.start_battle`/`end_battle` + Swirl, `Events.battle_turn_started`, CTB-Pfade der Kampagne (`BattleBridge.make_setup`, CTB-Zweige in `RunSim`/`GameReplay`, `Show.take_pending_gift(battle)`/`_battle_party`), `ShowRules`-Profil `ctb`, `GameSettings.battle_speed`/`auto_battle_default`/`partner_auto`, CTB-Teile **aller** Kampagnen-Tests — 07 nennt `test_m5_*`, `test_m8_replay`, `test_m8_run_sim`, `test_06b/06c_balance`; heute nennen **27 weitere Dateien** unter `tests/` die Engine-Klassen im Code (u. a. `test_06a_hero`, `test_06b_talents`, `test_06c_*`, `test_08_*`, `test_m0_game`, `test_m2_*`, `test_m7_*`, `test_m8_command`/`gift_applier`/`integrity`/`receive_gift`/`sponsor_windows`, `capture_recipes.gd`; Liste per `grep -rlw` über die fünf Klassennamen). Nach dem Datenbacken prüfen sie ohnehin nichts Gültiges mehr | wie 07 §12.6 |
+| 5 | **Neu:** `tests/test_sd_engine_golden.gd` (fester Kampf aus dem `test_m1`-Mini-Datensatz mit geskripteten Befehlen → eingefrorener `StateHash.of_battle` und Ereigniszahl; übernimmt den CTB-Teil von `test_m8_state_hash`) und `tests/test_sd_boundaries.gd` (Kap. 6.3: außer dem Stempelduell und seinen Tests nennt kein Code mehr die fünf Engine-Klassen) | beide grün |
 | 6 | **Optional im selben Durchgang (ST0):** Command-Typ `sd` als Stub in `core/live/command.gd` mit Ablehnung `sd_unavailable` in `RunRules`/`RunSim`/`GameReplay` — spart SD3 einen eigenen Vertrags-Durchgang (Kap. 6.8, CR-36) | `test_m8_command` (jeder Typ hat einen Zweig) |
 
 **Ergebnis:** Die Kampagne ist echtzeitig und CTB-frei (der Grenztest erzwingt es), die Engine ist mit allen ihren Tests
 erhalten, und der Goldwert hält sie eingefroren: Eine spätere Änderung an geteilten Klassen (`Combatant`, `DamageCalc`,
 `ActionEvent` …), die das CTB-Verhalten verschiebt, lässt `test_sd_engine_golden` scheitern — dann braucht es einen
-Änderungsantrag und einen `SD_VERSION`-Sprung (Kap. 6.6). Aufwand ≈ 1–2 Personentage.
+Änderungsantrag und einen `SD_VERSION`-Sprung (Kap. 6.6). Aufwand ≈ 1–2 Personentage **zusätzlich** zu R5b Schritt 3 — das
+Ersetzen der CTB-Teile der Kampagnen-Tests (Zeile 4) schuldet R5b ohnehin, ob gelöscht oder umgezogen wird.
 
-**Warum die Testnamen bleiben:** `test_m1_*` behält Namen und Inhalt; der Eigentümer wechselt von „M1 (Kampf-Kern)“ zu
-„SD“. Nach R5b gibt es keinen anderen M1-Kern mehr (der Echtzeitkern testet als `test_r1_*`), die Namen sind also eindeutig,
-und Umbenennen brächte nur Unruhe in Verweise.
+**Warum die Testnamen bleiben:** `test_m1_*` behält Namen und Inhalt (einzige Ausnahme: die eine Ordner-Zeile in
+`test_m1_stats`); der Eigentümer wechselt von „M1 (Kampf-Kern)“ zu „SD“. Nach R5b gibt es keinen anderen M1-Kern mehr (der
+Echtzeitkern testet als `test_r1_*`), die Namen sind also eindeutig, und Umbenennen brächte nur Unruhe in Verweise.
 
 ### 6.3 Module und Schichten
 
 ```text
 core/stempel/                       Modul SD (rein, RefCounted, keine Autoloads, kein SceneTree, keine Uhr)
   ctb/ctb_queue.gd                  CTBQueue        ┐
-  ctb/battle_state.gd               BattleState     │ die CTB-Engine (SD1: umgezogen, bitgleich)
-  ctb/action_resolver.gd            ActionResolver  │
+  ctb/battle_state.gd               BattleState     │ die CTB-Engine (SD1: umgezogen, Verhalten bitgleich;
+  ctb/action_resolver.gd            ActionResolver  │ BattleCommand bleibt geteilt in core/battle)
   ctb/enemy_ai.gd                   EnemyAI         │
-  ctb/auto_policy.gd                AutoPolicy      │
-  ctb/battle_command.gd             BattleCommand   ┘
+  ctb/auto_policy.gd                AutoPolicy      ┘
   sd_rulebook.gd                    SdRulebook      Regelbuch laden/prüfen, Engine-GameData bauen, rules_hash
   sd_card_def.gd, sd_opponent_def.gd SdCardDef, SdOpponentDef
   sd_setup.gd, sd_duel.gd, sd_event.gd  SdSetup, SdDuel (Adapter um BattleState), SdEvent
@@ -1062,8 +1133,11 @@ tests/test_sd_*.gd                  Kap. 6.9
 **Schichtregel** (ergänzt 02_TECH §0.4): `core/data`, `core/stats`, `core/battle` (geteilt) ← `core/stempel/ctb` ←
 `core/stempel` ← `scenes/stempel`. `core/stempel` darf außerdem `SeedUtil`, `CanonicalJson`, `StateHash` und `FixedMath`
 nutzen; `core/live` (`RunRules`, `RunSim`) und `autoload/game.gd`/`game_replay.gd` dürfen **nur `SdRules`** aufrufen.
-`test_sd_boundaries` prüft per Textsuche, dass die sechs Engine-Klassen außerhalb von `core/stempel/**`,
-`scenes/stempel/**`, `tests/test_m1_*` und `tests/test_sd_*` nicht vorkommen.
+Einzige Ausnahme ist `core/live/state_hash.gd`, das `of_battle`/`battle_hash_input` behält (Kap. 6.2). `test_sd_boundaries`
+prüft per Textsuche über **Code-Zeilen ohne Kommentare** (heute erwähnen u. a. `gift.gd`, `gift_applier.gd`, `talents.gd`
+und `rt_gift.gd` die Engine in Kommentaren), dass die fünf Engine-Klassen außerhalb von `core/stempel/**`,
+`scenes/stempel/**`, `core/live/state_hash.gd`, `tests/test_m1_*` und `tests/test_sd_*` nicht vorkommen. Grün wird er erst nach
+SD1 Schritt 0 und 4 (Kap. 6.2).
 
 ### 6.4 Regelbuch: Daten → Engine
 
@@ -1073,10 +1147,10 @@ nutzen; `core/live` (`RunRules`, `RunSim`) und `autoload/game.gd`/`game_replay.g
 
 | Regelbuch | Engine-Tabelle | Umwandlung |
 |---|---|---|
-| Karte `sdc_x` | `skills` → `skl_sdc_x` | `skill`-Block + `name`; `user "any"` (beide Seiten), `mp_cost 0`; Heilkarten mit Ziel `single_ally` (1 gegen 1 = man selbst — so erkennt `AutoPolicy` sie als Heilung), Eilvermerke mit `self` |
-| Pseudofähigkeit | `skills` → `skl_sd_none` | `damage_type "none"`, `power 0` — `attack_skill` beider Seiten, nie gespielt |
-| Zustand `sts_sd_*` | `statuses` | wie GDD §3.9 (`delay_on_apply`, `tick_speed_mult`, `tick_pct −6`) |
-| Gegner `sdo_x` | `enemies` → `enm_sdo_x` | `stats {hp: geduld, spd: tempo, Rest 1/0}`, `element_mods`, `status_immune`, `ai`, `phases`, `boss`; Pflichtfelder (`model`, `explore`, `exp 0`, `credits 0`) füllt der Konverter |
+| Karte `sdc_x` | `skills` → `skl_sdc_x` | `skill`-Block; `name` = die ID (Anzeigenamen nur aus dem Regelbuch); `user "any"` (beide Seiten), `mp_cost 0`; Heilkarten mit Ziel `single_ally` (1 gegen 1 = man selbst — so erkennt `AutoPolicy` sie als Heilung), Eilvermerke und Umlaufmappe mit `self` |
+| Grundangriff | `skills` → `skl_sd_none` | **formal gültiger Grundangriff**: `category "attack"`, `damage_type`/`element "physical"`, `target "single_enemy"`, `power 100`, `rank 3` — sonst lehnt `DataValidator._check_attack_skill` (Regeln 5/6, laufen auch in `load_from_dicts`) jeden Gegner ab. `attack_skill` beider Seiten, **wird nie ausgeführt**: Das Duell macht aus `ATTACK` immer Abheften |
+| Zustand `sts_sd_*` | `statuses` | wie GDD §3.9 (`delay_on_apply`, `tick_speed_mult`; Kleingedrucktes `tick_pct −1` + `tick_min 2` = fest 2) |
+| Gegner `sdo_x` | `enemies` → `enm_sdo_x` | `name` = die ID; `stats {hp: geduld, spd: 10, str/mag/def/res: 1, mp/lck: 0}`, `element_mods`, `status_immune`, `ai` (Phasen-Gegner: `ai.type "phased"` + `phases[].actions`), `phases`; **`boss` immer `false`** (SD-14); Pflichtfelder (`model`, `explore`, `exp 0`, `credits 0`) füllt der Konverter |
 | Durchsage | `pseudo_units` → `pu_sd_durchsage` | `{"fixed_pct_maxhp": 8, "element": "none", "target": "all_party"}`, `ctr_after 100`, `warn_at 2`, `warn_tag "sd_durchsage_warn"` |
 
 - **Kein Kampagnen-`DB`:** Die Engine-Daten sind eine eigene `GameData`-Instanz; das Regelbuch liegt in einem
@@ -1087,7 +1161,11 @@ nutzen; `core/live` (`RunRules`, `RunSim`) und `autoload/game.gd`/`game_replay.g
   ≤ 110 Zeichen.
 - **`rules_hash`** = SHA-256 über `CanonicalJson` der **Mechanik** (`skill`-Blöcke, Gegnerwerte, Decks, `ai`, `phases`,
   Zustände, Pseudo-Einheit, Konstanten aus `rules.json`) plus `SdDuel.SD_VERSION` — **ohne** Namen, Sprüche, Zeilen und
-  Kosmetik, damit Textkorrekturen keine Replays ungültig machen.
+  Kosmetik, damit Textkorrekturen keine Replays ungültig machen. Aus demselben Grund trägt die Engine IDs statt Namen:
+  `StateHash.battle_hash_input` lässt nur die Namen der Party weg, der `display_name` des Gegenübers stünde sonst im
+  Duell-Hash.
+- **Prototyp (Review 2026-10-11):** So umgewandelt lädt das ganze Regelbuch (24 Karten, 4 Gegner, 4 Zustände, Durchsage)
+  über `load_from_dicts` ohne Fehler und ohne Warnung.
 
 ### 6.5 `SdDuel`: der Adapter um `BattleState`
 
@@ -1124,11 +1202,11 @@ func hash() -> String                               # SHA-256 over {"b": StateHa
 
 **So spricht das Duell mit der Engine** — ohne eine Zeile Engine-Code zu ändern:
 
-1. **Aufbau:** `BattleSetup` mit `party = [Combatant "p0"]` (Geduld 50, Tempo 10, `attack_skill "skl_sd_none"`, ohne
-   PartyMemberDef, ohne Anzeigenamen), `enemy_ids = ["enm_sdo_x"]`, `seed`, `advantage` `NORMAL` (Lernduell `PREEMPTIVE`;
-   Endgegner erzwingt die Engine ohnehin `NORMAL`), `tutorial`, `enemy_dmg_mult` (Lernduell 0,5), `can_flee false`,
-   `items {}`. Danach mischt das Duell beide Decks (Fisher-Yates mit `SeedUtil.derive(seed, "sd_deck", Seite × 1000 + k)`,
-   nur `randi_range`), zieht je 5 und ruft `battle.start()`.
+1. **Aufbau:** `BattleSetup` mit `party = [Combatant "p0"]` (Geduld 50, SPD 10, `attack_skill "skl_sd_none"`, ohne
+   PartyMemberDef, ohne Anzeigenamen), `enemy_ids = ["enm_sdo_x"]`, `seed`, `advantage` `NORMAL` (Lernduell `PREEMPTIVE`),
+   `tutorial`, `enemy_dmg_mult` (Lernduell 0,5), `can_flee false`, `items {}`. Danach mischt das Duell beide Decks
+   (Fisher-Yates mit `SeedUtil.derive(seed, "sd_deck", Seite × 1000 + k)`, nur `randi_range`), zieht je 5 und ruft
+   `battle.start()`.
 2. **Hand = Fähigkeitenliste:** Vor jeder Prüfung und jeder KI-Wahl setzt das Duell beim Akteur `skills` = die Nicht-Show-
    Karten seiner Hand (als `skl_sdc_*`, ohne Doppelte) und `stunts` = die Show-Karten. `available_commands`, `validate` und
    `EnemyAI` (das nur `usable_skills` zieht) sehen dadurch genau die Hand. Beide Listen sind Teil des Combatant-Snapshots.
@@ -1141,11 +1219,14 @@ func hash() -> String                               # SHA-256 over {"b": StateHa
 5. **Vorschau:** `preview` macht einen Probelauf auf `BattleState.from_dict(battle.to_dict(), data)` (CR-14-Schnappschuss, das
    Weiterspielen ist bitgleich) und liest `preview_order` und die Geduld-Änderungen; die Kopie wird verworfen. Weil Ärger,
    Heilung und Zeit-Effekte keinen Würfel brauchen, verrät der Probelauf nichts — Show-Karten bekommen keinen Probelauf.
+   `preview_order` setzt für jede noch nicht gespielte Karte Rang 3 an; die Anzeige behandelt alles hinter der nächsten
+   Nummer des Gegenübers als Prognose (Kap. 1.2, 4.3). Prototyp: In 40 Duellen änderte kein Probelauf (einer je Zug der
+   Spieler:in) `StateHash.of_battle`.
 6. **Ereignisse:** `SdEvent.kind` ∈ `ENGINE` (verpackt ein `ActionEvent`), `CARD_PLAYED`, `CARD_FILED`, `CARD_DRAWN` (beim
    Gegenüber ohne Karten-ID), `RESHUFFLED`, `HAND_REFRESHED`, `DUEL_END`. Die Darstellung spielt nur Ereignisse ab
    (Brief §6b.2) und liest den Zustand erst danach.
-7. **Ende:** `battle.is_finished()` (Geduld 0) → `WON`/`LOST`; Nummer 80 erreicht → Vergleich in Prozent (Ganzzahl-
-   Kreuzprodukt) → `WON`/`LOST`/`ADJOURNED`; `forfeit` → `FORFEIT`.
+7. **Ende:** `battle.is_finished()` (Geduld 0) → `WON`/`LOST`; Nummer 80 erreicht → `ADJOURNED` (Dienstschluss, Kap. 1.8);
+   `forfeit` → `FORFEIT`.
 
 Das Duell sendet **keine** Kampf-Signale (`battle_started`, `battle_ended`, `combat_*`) — Show, Achievements, Musik und
 Marotten der Kampagne merken vom Duell nichts.
@@ -1183,7 +1264,7 @@ Marotten der Kampagne merken vom Duell nichts.
 
 | Was | Wo | Inhalt | Wann |
 |---|---|---|---|
-| **Konto-Sammlung** | `user://stempel/collection.json` über einen neuen Abschnitt in `autoload/save.gd` (`load_sd_collection()`, `save_sd_collection(d)`, atomar über `_atomic_write`) | `{"v": 1, "seed", "n", "owned": [IDs], "decks": {"a": [20], "b": [], "c": []}, "active": "a", "beaten": {opp: Siege}, "heft": int, "cosmetics": {"back", "ink", "mat", "owned"}, "awards": [IDs], "options": {"speed", "reduce_motion", "hints", "open_hand", "left_handed"}, "tutorial": bool, "campaign_seen": [Quell-IDs]}` | vor jedem Duell (Seed-Zähler), nach jedem Duell, nach jeder Mappen- oder Kosmetik-Änderung |
+| **Konto-Sammlung** | `user://stempel/collection.json` über einen neuen Abschnitt in `autoload/save.gd` (`load_sd_collection()`, `save_sd_collection(d)`, atomar über `_atomic_write`) | `{"v": 1, "seed", "n", "owned": [IDs], "decks": {"a": [20], "b": [], "c": []}, "active": "a", "beaten": {opp: Siege}, "heft": int, "cosmetics": {"back", "ink", "mat", "owned"}, "awards": [IDs], "options": {"speed", "reduce_motion", "hints", "open_hand", "left_handed", "text_size"}, "tutorial": bool, "campaign_seen": [Quell-IDs]}` | vor jedem Duell (Seed-Zähler), nach jedem Duell, nach jeder Mappen- oder Kosmetik-Änderung |
 | **Staffel** (SD3) | `GameState.flags["sd"]` im Spielstand (Save v2, keine Formatänderung) | `{"open": {"opp", "seed", "deck"}, "won": [opp-IDs]}` | wie jeder aufgezeichnete Command (09 Kap. 9.1: Journal, Speichern nach Kampf/Safe Room) |
 | Duell-Logs | optional `user://stempel/replays/` (letzte 10) | `SdLog` | nur für Fehlerberichte und eine spätere „Wiederholung“ |
 
@@ -1228,11 +1309,11 @@ Operationen — das Muster von `encounter` (07 §10.5):
 
 | Test | Phase | Prüft |
 |---|---|---|
-| `test_m1_*` (8 Dateien) | SD1 (bleiben) | die Engine wie bisher: Tick-System, Vorschau, Formeln, Zustände, KI, Kampfablauf, Schnappschuss |
-| `test_sd_engine_golden` | SD1 | fester Engine-Kampf → eingefrorener `StateHash.of_battle` + Ereigniszahl; Änderung nur mit Begründung im Commit |
-| `test_sd_boundaries` | SD1 | die sechs Engine-Klassen kommen nur in `core/stempel/**`, `scenes/stempel/**` und den SD-/M1-Tests vor |
-| `test_sd_rulebook` | SD2 | Daten gültig (Validator positiv/negativ), Konverter → gültige `GameData`, `rules_hash` stabil und textunabhängig, Gegnerdecks regelkonform und jede ihrer Karten mit `ai`-Eintrag, Show-Karten mit `cooldown 0`, Freischaltquellen existieren, Texte (IP-Wörter, 110 Zeichen, Platzhalter, Glyphen F8) |
-| `test_sd_duel` | SD2 | Hand 5, Nachziehen, Mischen bei leerem Stapel, Umlaufmappe, Abheften (halber Ärger, Tausch, 2 WT), jede Karte des Regelbuchs gegen ihre gedruckte Wirkung, Zustände in **Nummern** (Kap. 1.6), Zuständigkeiten, Immunität, Show-Karten (Chance, Patzer, Endgegner −15), Durchsage (Warnung, Abheften halbiert), Phasen, Gleichstand „Kundschaft geht vor“, Dienstschluss, Aufgeben, Lernduell (Geduld ≥ 1, Drehbuch) |
+| `test_m1_*` (8 Dateien) | SD1 (bleiben) | die Engine wie bisher: Tick-System, Vorschau, Formeln, Zustände, KI, Kampfablauf, Schnappschuss (`test_m1_stats`: Lint-Ordner + `core/stempel/ctb`) |
+| `test_sd_engine_golden` | SD1 | fester Engine-Kampf → eingefrorener `StateHash.of_battle` + Ereigniszahl (dazu der CTB-Teil aus `test_m8_state_hash`); Änderung nur mit Begründung im Commit |
+| `test_sd_boundaries` | SD1 | die fünf Engine-Klassen kommen in Code-Zeilen (ohne Kommentare) nur in `core/stempel/**`, `scenes/stempel/**`, `core/live/state_hash.gd` und den SD-/M1-Tests vor; `BattleState.roll_drops` gibt es nicht mehr |
+| `test_sd_rulebook` | SD2 | Daten gültig (Validator positiv/negativ), Konverter → gültige `GameData` ohne Fehler und Warnung (Grundangriff formal gültig, Engine-Namen = IDs, kein `boss`), `rules_hash` stabil und textunabhängig, Gegnerdecks regelkonform und jede ihrer Karten mit `ai`-Eintrag, Show-Karten mit `cooldown 0`, Freischaltquellen existieren, Texte (IP-Wörter, 110 Zeichen, Platzhalter, Glyphen F8, Kurznamen ≤ 7 Zeichen) |
+| `test_sd_duel` | SD2 | Hand 5, Nachziehen, Mischen bei leerem Stapel, Umlaufmappe, Abheften (halber Ärger, Tausch, 2 WT), jede Karte des Regelbuchs gegen ihre gedruckte Wirkung, Zustände in **Nummern** (Kap. 1.6), Wiedervorlage nicht doppelt, Zuständigkeiten, Immunität, Show-Karten (Chance, Patzer), Durchsage (Warnung, Abheften halbiert), Phasen, Leinen-Fallstrick hebt den Feierabend-Eilvermerk auf, Gleichstand „Kundschaft geht vor“, Dienstschluss = vertagt, Aufgeben, Lernduell (Geduld ≥ 1, Drehbuch) |
 | `test_sd_ai` | SD2 | Gegner spielen nur aus der Hand, Notlösung → Abheften mit der richtigen Karte, Profile (Bedingungen, `turn_mod`), `SdAi.suggest` und `AutoPolicy` liefern nur legale Züge, beide würfelfrei |
 | `test_sd_replay` | SD2 | `SdLog.replay` bitgenau (Hash, Ergebnis), gefälschte Züge/Ergebnisse → Fehler, `version_status`, Schnappschuss → `from_dict` → identisches Weiterspielen, Vorschau ändert den Hash nicht (1 000 Aufrufe) |
 | `test_sd_golden` | SD2 | festes Duell mit ≈ 40 geskripteten Zügen → fester Hash und Ereigniszahl |
@@ -1243,15 +1324,23 @@ Operationen — das Muster von `encounter` (07 §10.5):
 | `test_sd_campaign` | SD3 | Command `sd` in `Game` ≡ `RunSim` ≡ `GameReplay` (Hashes), Belohnung genau einmal je Gegner und Staffel, jeder Ablehnungsgrund, offenes Duell schließt beim nächsten eigenen Command und bleibt bei `clock`/`gift`/`twist` offen, Einsturz wartet bis Duellende + 2 min, Journal-Abbruch mitten im Duell → aufgegeben, alte Läufe ohne `sd` bitgleich |
 | `test_sd_cast` | SD3 | KI-Gegner aus jedem Profil, deterministisch je Platz, keine Belohnung außer Kosmetik, Eilmeldung höchstens einmal je Tag |
 
-**Balance-Bänder (Startwerte, Harness-Profile „gut“ = `SdAi.suggest`, „einfach“ = `AutoPolicy`, „Zufall“ = zufällige legale
-Züge; je mit Startmappe bzw. „passender“ Mappe) [zu messen]:**
+**Balance-Bänder (Startwerte, Harness-Profile „gut“ = `SdAi.suggest`, „einfach“ = `AutoPolicy`, „Zufall“ = zufällige
+Handkarte, nie Abheften; je mit Startmappe bzw. „passender“ Mappe) [zu messen]:**
 
 | Gegner | „gut“, Startmappe | „gut“, passende Mappe | „einfach“, Startmappe | „Zufall“ | Nummern je Duell (Median) |
 |---|---|---|---|---|---|
-| Ferdi | 85–95 % | — | 70–85 % | ≥ 45 % | 14–20 |
-| Graf (Übung) | 70–85 % | — | 55–70 % | — | 14–22 |
-| Ulla | 45–60 % | 65–80 % | 30–45 % | — | 16–24 |
-| Stempelmeister | 30–45 % | 55–70 % | 15–30 % | — | 24–34 |
+| Ferdi | ≥ 95 % | — | ≥ 85 % | ≥ 70 % | 14–24 |
+| Graf (Übung) | 85–97 % | — | 15–40 % | 15–40 % | 24–34 |
+| Ulla | 30–50 % | ≥ 80 % | ≤ 15 % | — | 28–40 |
+| Stempelmeister | ≤ 10 % (Deckbau-Prüfung) | 50–65 % (Besitz beim ersten Besuch: 40–55 %) | ≤ 10 % | — | 20–30 |
+
+**Prototyp-Werte (Review 2026-10-11** — echte Engine, Heuristik statt `SdAi`, geschätzte KI-Gewichte, 200–300 Seeds je
+Zelle): Ferdi 100 / 99 / 99,5 % („gut“ / „einfach“ / „Zufall“, 16 Nummern); Graf 97 / 20 / 25 % (28); Ulla 32 % mit der
+Startmappe, 99 % passend, 2 % „einfach“ (36); Stempelmeister mit den Werten aus Kap. 3.4: 4 % Startmappe, 50 % beim ersten
+Besuch, 63 % mit voller Sammlung, 0 % „einfach“ (24). Dienstschluss 0 %, erste Nummer ≤ 4 Punkte, in 61–93 % der Duelle
+ist eine Seite mindestens dreimal hintereinander dran. `AutoPolicy` spielt stur die Karte mit dem meisten Ärger und übersieht
+Werktage — als Modell für Anfänger:innen zu schwach, „einfach“ ist deshalb nur eine Untergrenze; der Pfoten-Tipp (Standard an)
+soll auf „gut“-Niveau raten.
 
 Dazu: Dienstschluss in < 1 % der Duelle, Unterschied der Siegquote mit und ohne erste Nummer ≤ 10 Punkte, keine Karte in
 > 80 % der „gut“-Siegmappen (sonst ist sie zu stark), jede Karte in ≥ 5 % (sonst zu schwach).
@@ -1300,10 +1389,10 @@ kann deshalb früh Spaß beweisen (Extras-Vorschau); SD3 braucht eine Etage 8, d
 
 | | |
 |---|---|
-| **Inhalt** | Kap. 6.2: Umzug der sechs Engine-Dateien nach `core/stempel/ctb/`, Konstanten/Felder/Hash bleiben, Kampagnendaten gebacken, CTB-Darstellung und Kampagnen-CTB-Pfade gelöscht, `test_sd_engine_golden`, `test_sd_boundaries`, optional Stub `sd` |
-| **Dateien** | `core/stempel/ctb/*.gd` (verschoben), `core/stats/balance.gd` (Abschnitt bleibt), `core/live/state_hash.gd` (unverändert), `core/data/{game_data,data_validator}.gd` und `core/data/defs/*` (CTB-Felder, `PseudoUnitDef` und `pseudo_units` bleiben, im Validator optional), `tests/test_sd_engine_golden.gd`, `tests/test_sd_boundaries.gd`; mit Stub zusätzlich `core/live/command.gd`, `run_rules.gd`, `run_sim.gd`, `autoload/game_replay.gd` (je ein Zweig) |
+| **Inhalt** | Kap. 6.2: `roll_drops` nach `BattleResult`, Umzug der **fünf** Engine-Dateien nach `core/stempel/ctb/` (`battle_command.gd` bleibt geteilt), Konstanten/Felder/Hash bleiben, Kampagnendaten gebacken, CTB-Darstellung und Kampagnen-CTB-Pfade gelöscht, `test_sd_engine_golden`, `test_sd_boundaries`, optional Stub `sd` |
+| **Dateien** | `core/battle/{battle_state,battle_result}.gd`, `core/rt/rt_result.gd`, `tests/{test_m2_loot,test_r1_rt_result}.gd` (`roll_drops`), `core/stempel/ctb/*.gd` (verschoben), `tests/test_m1_stats.gd` (eine Zeile), `core/stats/balance.gd` (Abschnitt bleibt), `core/live/state_hash.gd` (unverändert), `core/data/{game_data,data_validator}.gd` und `core/data/defs/*` (CTB-Felder, `PseudoUnitDef` und `pseudo_units` bleiben, im Validator optional), `tests/test_sd_engine_golden.gd`, `tests/test_sd_boundaries.gd`; mit Stub zusätzlich `core/live/command.gd`, `run_rules.gd`, `run_sim.gd`, `autoload/game_replay.gd` (je ein Zweig) |
 | **Gate** | `check.sh` grün, `fullrun.sh --strategy=all` grün (07 §12.6), alle `test_m1_*` grün, Golden fest, Grenztest grün |
-| **Aufwand** | ≈ 1–2 Personentage mit KI |
+| **Aufwand** | ≈ 1–2 Personentage mit KI, **zusätzlich** zu R5b Schritt 3 (das Ersetzen der CTB-Teile von heute 27 weiteren Testdateien schuldet R5b in jedem Fall, Kap. 6.2 Zeile 4) |
 
 ### 7.3 SD2 — Mini-Spiel (eigener Agent „Stempelduell“)
 
@@ -1349,7 +1438,7 @@ Etage 8 ein Duell (optional).
 | `core/stempel/**`, `data/stempel/**`, `scenes/stempel/**`, `scenes/title/extras_menu.*`, `tests/test_sd_*` | **SD** (neu) | neu |
 | `core/stempel/ctb/*.gd` | SD (ab SD1; vorher M1) | **eingefroren**: Änderungen nur per Änderungsantrag + Golden-Begründung + `SD_VERSION` |
 | `tests/test_m1_*.gd` | SD (ab SD1) | Namen bleiben |
-| `core/battle/{action_event,battle_setup,battle_result,combatant,status_effect,hit_result,damage_calc}.gd`, `core/stats/*` | wie 07 §12.3 (R-Phasen) | geteilt; jede Änderung lässt `test_sd_engine_golden` laufen |
+| `core/battle/{action_event,battle_setup,battle_result,battle_command,combatant,status_effect,hit_result,damage_calc}.gd`, `core/stats/*` | wie 07 §12.3 (R-Phasen) | geteilt; jede Änderung lässt `test_sd_engine_golden` laufen; CTB-Felder und -Typen darin entfernt nur ein Änderungsantrag (Kap. 6.2 Zeile 2) |
 | `core/data/data_validator.gd` | Vertrags-Durchgänge | SD1 behält die CTB-Feld-Spezifikationen; keine neue Zeile für SD2 (das Regelbuch hat einen eigenen Validator) |
 | `core/live/command.gd`, `run_rules.gd`, `run_sim.gd` | ST0 / M8 | Stub `sd` in ST0, Umsetzung SD3 in eigenem Abschnitt |
 | `scenes/title/title.gd`, `scenes/ui/show_overlay.gd`, `autoload/save.gd`, `autoload/sfx_synth.gd`, `scenes/safe_room/safe_room.gd` | M6 / M2 / M0 (+ 06/07/09-Abschnitte) | je ein SD-Abschnitt, additiv |
@@ -1361,9 +1450,9 @@ Etage 8 ein Duell (optional).
 
 | CR | Betrifft | Änderung | Wann |
 |---|---|---|---|
-| **CR-34** | `07` §12.6 (Schritt 3), §12.3 (Zeile `scenes/battle/**, core/battle/{…}`), §4.11 (Spalte „Ab R5b“), §12.7, §12.8 | Die sechs CTB-Engine-Dateien ziehen nach `core/stempel/ctb/` um statt gelöscht zu werden; `Balance.FLEE_*`, `DEFEND_MULT`, `STUNT_COOLDOWN`, `StateHash.of_battle`/`battle_hash_input`, die CTB-Felder der Defs (inkl. `PseudoUnitDef`/`pseudo_units`) und ihre optionalen Validator-Spezifikationen bleiben (die Kampagnendaten verlieren sie wie geplant, auch den Zug); `test_m1_*` bleiben, neu `test_sd_engine_golden`, `test_sd_boundaries`; `scenes/battle/**` wird wie geplant gelöscht | vor R5b |
+| **CR-34** | `07` §12.6 (Schritt 3), §12.3 (Zeile `scenes/battle/**, core/battle/{…}`), §4.11 (Spalte „Ab R5b“), §12.7, §12.8 | Die **fünf** CTB-Engine-Dateien (`ctb_queue`, `battle_state`, `action_resolver`, `enemy_ai`, `auto_policy`) ziehen nach `core/stempel/ctb/` um statt gelöscht zu werden. **Korrektur an 07:** `battle_command.gd` bleibt geteilt (der Echtzeitkampf nutzt `BattleCommand.Kind`), `BattleState.roll_drops` zieht vorher nach `BattleResult` (`rt_result.gd` nutzt ihn) — beides bräche sonst auch 07s eigene Löschliste. `Balance.FLEE_*`, `DEFEND_MULT`, `STUNT_COOLDOWN`, `StateHash.of_battle`/`battle_hash_input`, die CTB-Felder der Defs (inkl. `PseudoUnitDef`/`pseudo_units`) samt optionaler Validator-Spezifikationen und die CTB-Laufzeitfelder der geteilten Klassen bleiben (die Kampagnendaten verlieren die Felder wie geplant, auch den Zug); R5b ersetzt die CTB-Teile **aller** Kampagnen-Tests (Kap. 6.2 Zeile 4); `test_m1_*` bleiben (`test_m1_stats`: ein Ordner mehr), neu `test_sd_engine_golden`, `test_sd_boundaries`; `scenes/battle/**` wird wie geplant gelöscht. Ein Hinweis in 07 §12.6 zeigt schon hierher | vor R5b |
 | **CR-35** | `02_TECH` §0.4, §1.3, §1.6, §1.7, §2.2, §4.6, §5 | Modul **SD** mit Pfaden und Schichtregel (Kap. 6.3); §5 „Kampf-Kern (M1)“ wird „Stempelduell-Engine (CTB, SD)“ mit Verweis auf dieses Dokument; Testliste; Input-Aktion `sd_file`; Seed-Zwecke `sd`, `sd_deck` | mit R5b-Doku bzw. SD2 |
-| **CR-36** | `09` §11.2 (ST0), §11.4, §2.5, §3.1/3.5 | Command-Typ `sd` als Stub im ST0-Durchgang (`sd_unavailable`), `flags.sd`; Einsturz wartet auch auf ein offenes Duell (+ 2 min, wie nach einem Kampf); Wartezimmer als Safe-Room-Thema der Kulisse Amt (ST1-C), Schalter 3 auf Etage 8 (SD3); KI-Gegner als Haken in ST1-F | ST0 bzw. ST1-B/C/F |
+| **CR-36** | `09` §11.2 (ST0), §11.4, §2.5, §2.8 + S-20, §3.1/3.5 | Command-Typ `sd` als Stub im ST0-Durchgang (`sd_unavailable`), `flags.sd`; Einsturz wartet auch auf ein offenes Duell (+ 2 min, wie nach einem Kampf); in der Liste dessen, was Staffeln überdauert, zusätzlich die **Stempel-Sammlung** (Mini-Spiel, ohne Wirkung auf Kampf und Staffel); Wartezimmer als Safe-Room-Thema der Kulisse Amt (ST1-C), Schalter 3 auf Etage 8 (SD3); KI-Gegner als Haken in ST1-F | ST0 bzw. ST1-B/C/F |
 | **CR-37** | `01_GDD` §14.1, §14.7; `06` §2.7 | Titelmenü-Zeile „Extras“; Safe-Room-Zeile „Mopsula \| Schalter 3“ nur auf Etage 8; Stempelkarten sind **keine** NOVA-Sammelkarten und tragen keine Boni | SD2 bzw. SD3 |
 | **CR-38** | `03_ART` §9 + 09 CR-28 | Karten-Look (Rahmenfarben je Formular-Art, Goldrahmen, Kartengrößen), gezeichnete Symbole (Stempel, Sanduhr, Wartemarke, Lupe, Schnecke, Lautsprecher, Kapsel), Gegner-Symbole, Requisiten `counter`/`ticket_dispenser`/`number_display` für die Kulisse Amt | SD2 / SD3 |
 
@@ -1376,12 +1465,13 @@ Folgeänderungen: `README.md` (Extras; Dokument-Index — dort fehlen auch 08 un
 | # | Risiko | W / A | Gegenmaßnahme | Frühindikator |
 |---|---|---|---|---|
 | S1 | Geteilte Klassen ändern sich mit dem Echtzeitkampf und verschieben das CTB-Verhalten | mittel / mittel | `test_sd_engine_golden` + `test_sd_golden` in CI, eingefrorene Engine-Dateien, `SD_VERSION` | Golden rot nach einem R-/ST-Merge |
-| S2 | Das Spiel ist nicht spannend genug (zu viel Würfel oder zu wenig Entscheidung) | mittel / hoch | Zeit als einzige Ressource, exakte Vorschau, Harness-Bänder, Playtest-Gate vor dem Merge | Playtest „Spaß“ < 4/5 |
+| S2 | Das Spiel ist nicht spannend genug (zu viel Würfel oder zu wenig Entscheidung) | mittel / hoch | Zeit als einzige Ressource, Vorschau (sicherer Teil + Prognose), Harness-Bänder, Playtest-Gate vor dem Merge; im Prototyp liegt die Heuristik gegen Ulla 31 und gegen den Grafen 72 Punkte über Zufallsspiel — Können zählt | Playtest „Spaß“ < 4/5 |
 | S3 | Kartentisch auf kleinen Telefonen überladen | mittel / mittel | 8 statt 10 Zettel, Fächer, Großansicht, Captures 1600 × 720 und 2400 × 1080 | Überlappung in `test_sd_ui` |
 | S4 | Verwechslung mit dem Echtzeitkampf | niedrig / mittel | eigene Wörter (Geduld, Ärger, Werktag — nie HP, Schaden, Zug), eigener Bildschirm, keine Kampf-Signale | Playtest-Fragen |
 | S5 | Sammel-Mühle | niedrig / mittel | feste Reihenfolge, ≈ 15–20 Siege für alles, keine Seltenheiten, Kampagne schaltet mit frei | Abbrüche vor Album 50 % |
 | S6 | Name oder Bürokratie-Witz trifft Falsches | niedrig / hoch | Leitplanken Kap. 3.9, Wortliste im Validator, Markenrecherche, Distanz-Review | Review-Funde |
 | S7 | Umfang wächst (mehr Karten, Modi, PvP) | mittel / mittel | SD2 fest auf 24 Karten + 4 Gegner; alles Weitere in Kap. 8 | neue Wünsche vor dem SD2-Gate |
+| S8 | Startwerte und KI-Gewichte verfehlen die Bänder (der erste Entwurf des Endgegners war im Prototyp unschlagbar) | mittel / hoch | Regelbuch + Harness zuerst (SD2-A/B vor dem Tisch), Gewichte und Werte sind reine Daten, Bänder Kap. 6.9 in CI | Band rot in `test_sd_balance` |
 
 ---
 

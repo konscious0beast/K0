@@ -241,6 +241,7 @@ origins,looks}.gd`, `core/progression/persona_*.gd`, `core/show/persona_*.gd`, `
 | `core/data/defs/marotte_def.gd` | 06-C | `MarotteDef` (`marotten.json`, §4.4.17) |
 | `core/data/defs/twist_def.gd` | 06-D | `TwistDef` (`twists.json`, §4.4.18) |
 | `core/data/validators/twists.gd` | 06-D | Regeln von `twists.json` (Schema, Grenzen, `mod_tag`), von `DataValidator` per `preload` als `TwistCheck` aufgerufen (06 §8.0 Nr. 7; ohne `class_name`) |
+| `core/data/validators/ip_words.gd` | Polish-Pass | Wortlisten IP-Abstand + Ton für jeden Text aller Tabellen (kein „Fan-Box“/„Feinripp“/Barfuß-/Schuh-Wort, keine Nationalität als Pointe; für Graf Mopsula kein Königs-Motiv), von `DataValidator` per `preload` als `IpWords` aufgerufen (Regel 14 in §4.5; ohne `class_name`) |
 | `core/stats/stat_block.gd` | M1 (S) | `StatBlock` + `enum Stat` (§5.2) |
 | `core/stats/elements.gd` | M1 (S) | `Elements`: Element-Konstanten, Multiplikator-Helfer |
 | `core/stats/balance.gd` | M1 (S) | `Balance`: alle Formelkonstanten (§5.9) |
@@ -331,7 +332,7 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `data/party.json` | Kai, Graf Mopsula + Startinventar/-Credits (`start`) |
 | `data/enemies.json` | Gegner inkl. Bosse (KI, Phasen) + Pseudo-Einheiten (`pseudo_units`) |
 | `data/floors.json` | Etagen inkl. Encounter, handgebautem Layout (Zonen, Tore, Truhen, Events, Spawner, Safe Rooms), Palette, `quest`/`window` |
-| `data/lootboxes.json` | Bronze/Silber/Gold/Fan-Box + Seltenheits-Pools (`pools`) + Pity (`pity`) |
+| `data/lootboxes.json` | Bronze/Silber/Gold/Fanpost-Paket (`box_fan`) + Seltenheits-Pools (`pools`) + Pity (`pity`) |
 | `data/achievements.json` | Achievements (Trigger + Bedingung) |
 | `data/sponsors.json` | Sponsoren + Geschenke + Gewichtungsregeln |
 | `data/milestones.json` | Follower-Meilensteine |
@@ -450,7 +451,7 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `scenes/ui/safe_area_container.gd` | M6 | MarginContainer mit Safe-Area-Rändern |
 | `scenes/ui/input_glyph.gd` | M6 | Tasten-/Button-Symbol je Input-Schema |
 | `scenes/ui/debug_overlay.gd` | M6 | Nur Debug-Build: F3 FPS, Draw Calls, Primitives, Seed, Raum, Show-Werte, Sponsor-Fenster, Twists, M.O.D.-live-Status; bei offenem Overlay F4 Test-Geschenk, F5 QA-Sponsor-Fenster (05 §11.3), F6 Test-Twist (`Game.dev_random_twist`, aufgezeichnet), F7 Test-Live-Zeile (`Show.say_external`) |
-| `scenes/ui/twist_fx.gd` | 06-D | CanvasLayer 41 (Kind von GlobalUi): Twist-Chip unter dem Timer (Quelle REGIE / M.O.D. LIVE / PUBLIKUM / SENDEPLAN / TEST, Name, Restzeit oder „noch 2 Kämpfe“, Fortschrittsbalken), Stromausfall-Vignette, aufsteigendes Konfetti; liest `TwistApplier.view` |
+| `scenes/ui/twist_fx.gd` | 06-D | CanvasLayer 41 (Kind von GlobalUi): Twist-Chip unter dem Timer (Quelle REGIE / M.O.D. LIVE / PUBLIKUM / SENDEPLAN / TEST, Name, Restzeit oder „noch 2 Kämpfe“, Fortschrittsbalken), Stromausfall-Schleier (eigene CanvasLayer 3 `LightsOut` über der Welt, unter dem HUD: Abdunkeln `LIGHTS_OUT_VEIL` 0.46, Vignette zum Rand 0.86, leichtes Flackern), aufsteigendes Konfetti; liest `TwistApplier.view` |
 | `scenes/ui/icon_mesh.gd` | M6 | Privat: sammelt die Primitive eines Vektor-Icons/Widgets und gibt sie als **ein** Dreiecks-Array aus (ein Canvas-Draw-Call; genutzt von `ui_icon.gd`, `minimap.gd`, Hype-Leiste und `HudStyle.Icon`, §12.1) |
 
 ### 1.7 `tests/`
@@ -490,11 +491,11 @@ Jede Datei unter `tests/` gehört dem genannten Modul; `test_<modul>_*.gd` ist d
 | `tests/test_m2_achievements.gd` | M2 | Zähler, Schwellen, Belohnungen |
 | `tests/test_m2_loot.gd` | M2 | Lootbox/Truhe deterministisch, Ausrüstungs-Duplikate → Credits, Drop-Regel `BattleState.roll_drops` |
 | `tests/test_m2_progression.gd` | M2 | EXP-Kurve, Level-Up, Equip, BattleBridge (Diebstahl bei geflohenem Dieb, KO-Rückkehr mit 1 HP nach der EXP) |
-| `tests/test_m2_save.gd` | M2 | Roundtrip, Migration, kaputte Dateien, Slots; Anker des Logs nach dem Laden (`Game.replay_log`/`RunSim.replay` ab `start_state`) |
+| `tests/test_m2_save.gd` | M2 | Roundtrip, Migration, kaputte Dateien, Slots; Anker des Logs nach dem Laden (`Game.replay_log`/`RunSim.replay` ab `start_state`); umbenannte Skill-IDs (`SaveCodec.RENAMED_SKILLS`, Polish-Pass) |
 | `tests/test_m2_shop.gd` | M2 | Kaufen/Verkaufen |
 | `tests/test_m3_dungeon_gen.gd` | M3 | `floor_1`-Layout valide/deterministisch; 200 Seeds prozedural: Invarianten, Determinismus, Laufzeit |
 | `tests/test_m3_floor_event.gd` | M3 | `FloorEvent.choices/resolve/apply` für alle 5 Typen mit festen Seeds |
-| `tests/test_m3_exploration_scene.gd` | M3 | Szene headless instanziieren, Spawn, Encounter auslösen (Signal-Spion) |
+| `tests/test_m3_exploration_scene.gd` | M3 | Szene headless instanziieren, Spawn, Encounter auslösen (Signal-Spion); Kamera hält vor einer offenen Tür Abstand (Polish-Pass) |
 | `tests/test_m4_art_kit.gd` | M4 | Alle Bases/Props/Räume bauen, Tri-Budgets, Anim-Interface |
 | `tests/test_m4_env.gd` | M4 | `build_room` für alle Türmasken × Arten × Zonenstile (Budgets, Türen, Wände, Determinismus, Aufbauzeit), Arena, Safe Rooms, Glyphen (`has_char`) |
 | `tests/test_m4_galleries.gd` | M4 | Jede Galerie-Szene instanziiert, baut und läuft einige Frames ohne Skriptfehler |
@@ -521,7 +522,8 @@ Jede Datei unter `tests/` gehört dem genannten Modul; `test_<modul>_*.gd` ist d
 | `tests/test_m7_text_content.gd` | M7 | M.O.D.-/Chat-/Mopsula-Zeilen (Mindestzahlen, Längen, Platzhalter, IDs), Szenen, deutsche Anzeigetexte |
 | `tests/test_m8_canonical_json.gd` | M8 | `CanonicalJson` gegen die gemeinsamen Testvektoren |
 | `tests/test_m8_command.gd` | M8 | `Command.validate` je Typ; jeder Typ hat einen Zweig in `RunSim.apply` und im Replay-Motor von `Game.replay_log` |
-| `tests/test_06d_twists.gd` | 06-D | Twist-Katalog + Validator, jeder Ablehnungsgrund (gemeinsame Fälle `fixtures/live/twist_cases.json`, auch pytest), Wirkung je Slice-Twist, Aufzeichnung/Replay inkl. Puffer, Event-Fahrplan, Pur-Liga, Offline-Regie, QA-Twist, Automat zeigt Happy Hour |
+| `tests/test_06d_twists.gd` | 06-D | Twist-Katalog + Validator, jeder Ablehnungsgrund (gemeinsame Fälle `fixtures/live/twist_cases.json`, auch pytest), Wirkung je Slice-Twist, Aufzeichnung/Replay inkl. Puffer, Event-Fahrplan, Pur-Liga, Offline-Regie, QA-Twist, Automat zeigt Happy Hour (Originalpreis durchgestrichen), Stromausfall-Schleier unter dem HUD |
+| `tests/test_06_ip_words.gd` | Polish-Pass | Wortlisten von `validators/ip_words.gd` (echte Daten sauber, jede Sperre greift, Rattenkönigin behält Titel/Krone), Fanpost-Paket, „Gräfliches Gutachten“ (neue ID), neutrale Liga-Achievements, Liga-Regel im vollen Wortlaut, Graf Mopsulas eigene Stimme in Daten und Code-Texten (kein Pluralis Majestatis), Code-Strings ohne IP-Wörter |
 | `tests/test_06d_twist_save.gd` | Integration D × Laden | Replay-Puffer im Zustand über Speichern → Laden → Replay ab dem Laden (Kern `RunSim` + `SaveCodec`, `Game.replay_log`), aktiver Twist über das Laden, Twist-ID abgelehnter Twists in beiden Verifiern (`RunRules.refused_id`), `run_not_active` nach `descend` |
 | `tests/test_06d_mod_voice.gd` | 06-D | Provider (skriptiert/remote/Mock `fixtures/live/mock_mod_voice.gd`), Zeilenfilter (gemeinsame Fälle `fixtures/live/line_filter_cases.json`, Fehlalarm < 1 % der skriptierten Zeilen), `say_external`, ModLiveLink (Runden, Twists, veraltet, Fehler → Regie, aus), Anfrage ohne Freitext/Spielername |
 | `tests/test_m8_event_def.gd` | M8 | `EventDef`/`EventCatalog`: Fenster, ISO-Zeiten, Validierung (u. a. `rules.gifts.sources`) |
@@ -542,16 +544,16 @@ Jede Datei unter `tests/` gehört dem genannten Modul; `test_<modul>_*.gd` ist d
 | `tests/test_m8_state_hash.gd` | M8 | `StateHash.of`/`of_battle` ohne Anzeigefelder |
 | `tests/test_06b_talents.gd` | 06-B | `talents.json` + Validator, offene Wahlen (ungerade Level ab L3), geseedetes Angebot, Wahlregeln, jede Wirkungsart an ihrem Ort, Hype-/Follower-Faktoren als Ganzzahl-Promille (`GameState.hype_gain_pm/follower_pm`, Show), Command + Replay (`RunSim`, `Game`-Fassade), Save/Hash-Kompatibilität |
 | `tests/test_06b_species.gd` | 06-B | `species.json` + Validator (kein Kronen-Motiv an Mopsula, `spc_original`), `Casting` (Optionen, Gründe, Re-Spec-Regeln, Werte Klasse × Spezies), Command + Replay, Save |
-| `tests/test_06b_talent_show.gd` | 06-B | Talent-Show-Szene (Karten, „Später“, Erst-Erklärung, Vorschau), TALENT-SHOW-Knopf im Safe Room, Chip „TALENT BEREIT“, Party-Seite |
+| `tests/test_06b_talent_show.gd` | 06-B | Talent-Show-Szene (Karten, „Später“, Erst-Erklärung, Vorschau), TALENT-SHOW-Knopf im Safe Room, Chip „TALENT BEREIT“, Party-Seite („n Talente offen – im Safe Room wählen“); Polish-Pass: Karten blenden 0.5 s ein und ignorieren gehämmerte Eingaben, Rang-Tag „Rang 1/2“ |
 | `tests/test_06b_balance.gd` | 06-B | Talentboni bei L10 ≤ +15 % je Kampfwert für jede Wahlfolge (erschöpfend); Boss-Quoten mit Bot-Wahl ±5 Punkte (gepaart, 300 Seeds) |
 | `tests/test_06a_hero.gd` | 06-A | `HeroRules`, `Game.new_game(…, hero)`/`set_hero`, `hero`-Command (Start- vs. Safe-Room-Prüfung, `RunSim`-Ablehnung), Save-Rundlauf/Altstand → `kai`, Replay-Hash (auch Lauf als Mopsula), Erkundung mit Mopsula als Spielerkörper |
-| `tests/test_06a_bark.gd` | 06-A | Bellen: Kegel/Reichweite/Sichtlinie, `DAZED` (Dauer, Immunität 15 s, Rückkehr), Vorteilsregel `DAZED` → `PREEMPTIVE` aus jeder Richtung, Bosse/Fahrscheinfresser unbeeinflusst, Cooldown, Szene (Signal `field_ability_used`, Chat) |
+| `tests/test_06a_bark.gd` | 06-A | Bellen: Kegel/Reichweite/Sichtlinie, `DAZED` (Dauer, Immunität 15 s, Rückkehr), Vorteilsregel `DAZED` → `PREEMPTIVE` aus jeder Richtung, Bosse/Fahrscheinfresser unbeeinflusst, Cooldown, Szene (Signal `field_ability_used`, Chat); Kamera-Rahmung je Figur (Polish-Pass) |
 | `tests/test_06a_partner_auto.gd` | 06-A | `GameSettings.partner_auto` (Default, Rundlauf, Optionszeile), Kampf: Partner-Züge `auto: true`, Menü nur für die Held:in, Rollen-Pillen |
 | `tests/test_06a_secrets.gd` | 06-A | `Secrets`-Regeln, `Game.open_secret` (Aufzeichnung, +15 Follower genau einmal, M.O.D.), `Game.replay_log`/`RunSim` (Ablehnungen), Save, Datenregeln, Szene (Feldschlag und Bellen öffnen die Wand, Interagieren nie; Notizen; Neuaufbau), Minimap, Etagen-Bilanz, Bot-Planer |
 | `tests/test_06a_hero_ui.gd` | 06-A | Ablauf Slot → Figur → Name → Intro (Fokus, Navigation, Zurück), Safe-Room-Wechsel (aufgezeichnet, Figuren tauschen, M.O.D.-Zeile), Menü passt über den Chat-Ticker, Zeilen-Block A |
 | `tests/test_06ab_hero_talents.gd` | 06 A × B | Integration Figurenwahl × Talente: Feld-Talente der führenden Figur (`HeroRules.field_mods`, `EncounterRules.scale_pm` Ganzzahl-Promille; Szene: Feldschlag 2.25 m, Bellen 5 m / 2.1 s, Wechsel im Safe Room), Talent-Show-Vorschau, je Held:in ein Integrationstest (aufgezeichneter Lauf → Talent-Show im Safe Room → „Figur wechseln“ → `Game.replay_log` ≡ live → Kampf mit „Partner automatisch“: AutoPolicy spielt den Partner mit seinen Talenten, Gegenprobe ohne), Safe-Room-Layout 1280×720 und 1600×720 (Trefferflächen ≥ 88, Abstände ≥ 12, nichts überlappt) |
 | `tests/test_06c_marotten.gd` | 06-C | Marotten: Daten + Validator, Auswahl je Seed/Etage, jede Bedingung trifft/trifft nicht, 1 Herz je Kampf, gewonnene Wette (Box, Follower, Hype, `bets_won`, `show_bet`), Tutorial/Niederlage/Event-Lauf, Pazifist-Zähler (Latch, Countdown, Save/Load), Strichliste, Ansage nach `floor_start`, Replay-Gleichheit |
-| `tests/test_06c_liga.gd` | 06-C | Unterhosen-Liga: Stufen 0/1/2 je gesteuerter Figur, Blocker, Promille-Faktoren (beim Kampfstart eingefroren, nur Kampagne), Etagen-Bonus, Kette „Ohne alles“ erreichbar, Regel-Schalter im `rules_hash`, UI (Ausrüstung, Tab „Show“, Chip, Ergebniszeile), Replay |
+| `tests/test_06c_liga.gd` | 06-C | Unterhosen-Liga: Stufen 0/1/2 je gesteuerter Figur, Blocker, Promille-Faktoren (beim Kampfstart eingefroren, nur Kampagne), Etagen-Bonus, Kette „Ohne alles“ erreichbar, Regel-Schalter im `rules_hash`, UI (Ausrüstung: Liga-Zeilen über den Slots; Tab „Show“: Figuren-Karten nebeneinander; Chip, Ergebniszeile), Replay |
 | `tests/test_06c_sponsor_display.gd` | 06-C | Die fünf Sponsor-Fenster-Entscheidungen (06 §6): Badge ohne Sekunden/Druckwörter + Platz-Punkte, Fan-Pakete nur im Fenster/Cheers immer, Comeback-Fenster (Regeln, Save-Übertrag, genau einmal, Live-Zeile), Koop-Plätze je Spieler, Bits nie Geschenkquelle |
 | `tests/test_06c_balance.gd` | 06-C | Balance-Bänder 06 §4.10 mit dem echten `Show`: Boss-Niederlagequote Liga 1/2 (100 Seeds), Staffel Etage 1 (Follower ≤ 2 000, Lootboxen, Liga-Kämpfe, Referenz ≤ 1 Wette) |
 | `tests/test_06c_liga_cap.gd` | 06-C, Integration Runde 4 | Deckel des Liga-Follower-Bonus je Etage (06 §4.3, §8.8 I-8): `MarottenRules.take_liga_followers` (Stufen-Deckel, gemeinsame Etagensumme, neue Etage, ohne Schlüssel ungedeckelt), `Show.end_battle` zahlt Basis + höchstens den Deckel, Live-Lauf über Speichern → Laden und `Game.replay_log`, Validator, Tab „Show“ |
@@ -2150,7 +2152,7 @@ gilt der höchste vorhandene ≤ Etage. `pity: {"rare": 4, "epic": 8}` (Boxen oh
  "entries": [
    {"id": "box_bronze", "name": "Bronze-Box", "tier": 1, "color": "#cd7f32", "rolls": 2, "rarity_weights": {"common": 80, "rare": 18, "epic": 2}},
    {"id": "box_silver", "name": "Silber-Box", "tier": 2, "color": "#c0c8d2", "rolls": 3, "rarity_weights": {"common": 55, "rare": 38, "epic": 7}, "guarantee": "rare"},
-   {"id": "box_fan", "name": "Fan-Box", "tier": 4, "color": "#ff5fa2", "rolls": 2, "rarity_weights": {"common": 50, "rare": 40, "epic": 10}, "fixed_pool": "fan"}
+   {"id": "box_fan", "name": "Fanpost-Paket", "tier": 4, "color": "#ff5fa2", "rolls": 2, "rarity_weights": {"common": 50, "rare": 40, "epic": 10}, "fixed_pool": "fan"}
  ],
  "pools": {"f1": {"common": [{"kind": "credits", "id": "", "amount": 15, "weight": 30}, {"kind": "item", "id": "itm_bandage", "amount": 2, "weight": 25}],
                   "rare": [{"kind": "item", "id": "itm_smelling_salts", "amount": 1, "weight": 20}],
@@ -2278,9 +2280,9 @@ S2), `vote_open` (S2).
 | `priority` | int | 0 | kleiner = zuerst, wenn mehrere verfügbar |
 
 ```json
-{"id": "scn_mop_4", "name": "Vor dem Thron", "condition": "e.safe_room_id == \"sr_signalbox\"",
+{"id": "scn_mop_4", "name": "Mitternacht auf Gleis 9", "condition": "e.safe_room_id == \"sr_signalbox\"",
  "set_flag": "mop_pep_talk", "priority": 0,
- "lines": [{"voice": "mopsula", "text": "Sie nennt sich Königin. Eine RATTE. Mit einer Krone aus Fahrscheinen."},
+ "lines": [{"voice": "mopsula", "text": "Sie nennt sich Königin. Eine RATTE. Mit Kopfschmuck aus gelochten Fahrscheinen."},
            {"voice": "kai", "text": "Wir müssen nicht gegen sie kämpfen. Die Treppe ist gleich da."}]}
 ```
 Bedingungen der vier Szenen (GDD §10.2: eine beim ersten Besuch verpasste Szene bleibt bei späteren Besuchen gültig —
@@ -2315,7 +2317,8 @@ Schaufensterpuppe: Übergangsregel `colors.eyes == colors.skin` → gesichtslose
 `weight` 1..10 (1; Ziehgewicht im Angebot), `min_level` 3..99 (3), `icon` ✓ ∈ `TalentDef.ICONS` (`hp mp atk mag def res spd lck
 crit element show field stunt liga`), `effects` ✓ 1..3 Wirkungen. Texte ohne Fuß-/Schuh-Wörter (06 §0.3 Nr. 2;
 `FORBIDDEN_WORDS`); Texte von Einträgen für Graf Mopsula (`for` leer oder mit `mopsula`, auch Spezies) ohne Majestäts-Motiv
-(`MOPSULA_FORBIDDEN_WORDS`: „majestät“, „majestaet“, „majestat“; Orchestrator-Entscheidung 2026-10-10).
+(`MOPSULA_FORBIDDEN_WORDS`: „majestät“, „majestaet“, „majestat“; Orchestrator-Entscheidung 2026-10-10). Für **alle** Tabellen
+gelten zusätzlich die Wortlisten von `validators/ip_words.gd` (Regel 14).
 Wirkungsarten (`TalentDef.KINDS`, alle Zahlen int, je Rang einmal angewandt; Bereich = Validator):
 
 | `kind` | Felder (Bereich) | Wirkung (Auswertung in `Talents`) |
@@ -2426,11 +2429,15 @@ angewendet wird nur, was hier steht, mit Parametern innerhalb der Grenzen; entsc
 
 `data/mod_filter.json` (06-D, **nicht** in `TABLES`): Wortlisten und Schwellen des Nachfilters für Live-Zeilen
 (`ModLineFilter`, `core/show/mod_line_filter.gd`, rein/statisch; dieselbe Datei liest `services/mod-brain/mod_brain/safety.py`):
-`max_len` 110, `blocked.{politics, sexual, slurs, violence, real_brands}` (`*` am Ende = Präfix), `money`, `purchase` +
-`urgency` (Kaufdruck nur bei Ko-Vorkommen), Sprachprüfung (`en_stop`/`de_stop`, `lang_min_words` 4, `lang_de_min_words` 6,
-`de_min_pm` 100, `en_max_pm` 150). Reihenfolge der Gründe: `empty`, `too_long`, `placeholder` (nur `{name}`), `url`, `digits`
-(≥ 6 Ziffern in Folge), `blocked_<liste>`, `money`, `purchase_pressure`, `language`. Gemeinsame Fälle:
-`tests/fixtures/live/line_filter_cases.json` (GDScript und pytest).
+`max_len` 110, `blocked.{politics, sexual, slurs, violence, real_brands, ip_distance, origin}` (`*` am Ende = Präfix, am
+Anfang = Suffix, an beiden Enden = Wortteil; Eintrag mit Leerzeichen = Phrase ganzer Wörter), `mopsula_names` +
+`mopsula_royalty` (Polish-Pass: dieselben Listen wie `validators/ip_words.gd`), `money`, `purchase` + `urgency` (Kaufdruck nur
+bei Ko-Vorkommen), Sprachprüfung (`en_stop`/`de_stop`, `lang_min_words` 4, `lang_de_min_words` 6, `de_min_pm` 100,
+`en_max_pm` 150). `ModLineFilter.check(text, lists, voice)` / `check_line(text, words, voice)`; Reihenfolge der Gründe:
+`empty`, `too_long`, `placeholder` (nur `{name}`), `url`, `digits` (≥ 6 Ziffern in Folge), `blocked_<liste>`,
+`blocked_mopsula_royalty` (Zeile in Graf Mopsulas Stimme oder mit seinem Namen und einem Königs-Wort), `money`,
+`purchase_pressure`, `language`. Gemeinsame Fälle: `tests/fixtures/live/line_filter_cases.json` (GDScript und pytest; optional
+`voice`).
 ### 4.5 Validierung (`DataValidator`) und `GameData`-API
 
 Ablauf `GameData.load_dir(dir)`: (1) alle Dateien aus `TABLES` parsen; (2) je Eintrag Schema prüfen + normalisieren; (3) zweiter
@@ -2470,6 +2477,16 @@ Regeln (jede Verletzung = ein Eintrag in `errors`, Format `"<table>[<index>|<id>
 12. (06-C) `marotten.json` nach §4.4.17 (Schema, Bereiche, Lootbox-Referenzen, Pflicht-Zeilen, Bedingungs-Kontexte,
     Fuß-Wörter-Sperre); `mod_lines`-Tags `marotte_announce|hit|won:<id>` verweisen auf eine existierende Marotte.
 13. (06-D) `twists`: Regeln von §4.4.18 (privater Helfer `validators/twists.gd`); `mod_tag` wie Regel 9 referenziert.
+14. (Polish-Pass, IP-Abstand + Ton; privater Helfer `validators/ip_words.gd`, immer am Ende von `validate`) Jeder Text (`name`,
+    `desc`, `text`, `title`, `slogan` in jeder Tiefe, auch Szenenzeilen, Zonen- und Safe-Room-Namen): kein „Fan-Box“
+    („Fanpost-Paket“, 04 §2.3 E2), kein „Feinripp“, keine Barfuß-/Schuh-Wörter (`ALL_WORDS`, Teilstrings) und keine reale
+    Nationalität/Volksgruppe als Pointe (`ORIGIN_WORDS`, kuratierte Liste, ganze Wörter; ohne mehrdeutige Alltagswörter wie
+    „Amerikaner“ = Gebäck, „Franzose“ = Schraubenschlüssel). Dieselben Listen sperrt der Live-Filter (`mod_filter.json`,
+    `blocked.ip_distance` / `blocked.origin` / `mopsula_royalty`; `test_06_ip_words` prüft die Abdeckung). Texte von, für oder über Graf
+    Mopsula — seine Stimme (`voice` `mopsula`), jede Szene, seine Skills (Angriff, `learnset`, `stunts`), Ausrüstung, die er
+    tragen kann, Klassen/Talente/Spezies für ihn, sein Party-Eintrag und jeder Text, der „Graf“, „Grafen“, „Mopsula“ oder
+    „Mops“ nennt — ohne Königs-Motiv (`MOPSULA_WORDS`: Majestät, Durchlaucht, Hoheit, Thron, Krone). Die Rattenkönigin behält
+    Titel, Thronsaal und Krone. Tests: `test_06_ip_words.gd`.
 
 ```gdscript
 class_name GameData extends RefCounted
@@ -3999,7 +4016,8 @@ static func take_due(state) -> Array[Dictionary]       # ein Lauf-Tick: wait −
 # Wirkungen der 11 Slice-Twists (Defaults aus twists.json): tw_lights_out Sichtweite der Gegner × 0,5 (60 s);
 # tw_quiet_please Gehör × 0,5 (60 s); tw_fog_of_fame (90 s) / tw_confetti_gravity (45 s, Konfetti-Effekt) Hype-Zerfall
 # pausiert; tw_double_credits Kampf-/Truhen-Credits × 2 bis +200 (60 s); tw_overtime Timer +60 s (sofort, 1× je Etage);
-# tw_happy_hour Automatenpreise −20 % beim nächsten Safe-Room-Besuch (Shop.price_for; der Automat zeigt „HAPPY HOUR −20 %“);
+# tw_happy_hour Automatenpreise −20 % beim nächsten Safe-Room-Besuch (Shop.price_for; der Automat zeigt „HAPPY HOUR −20 %“
+# und neben jedem reduzierten Preis den Originalpreis durchgestrichen, `VendingMenu.struck_price`);
 # tw_rat_rain ein Streuner aus einer freien Zone (scharf, sofort); tw_party_hats Kampf-Hype × 1,2 für 2 Kämpfe;
 # tw_mopsula_moderates Mopsula spricht 180 s lang M.O.D.s Zeilen; tw_mopsula_monologue 2–3 Mopsula-Zeilen (beide reine
 # Präsentation, auch in der Pur-Liga erlaubt).
@@ -4097,7 +4115,8 @@ Kollisionslayer: 1 `world` (Wände/Boden/große Props/geschlossene Tore), 2 `pla
 Spieler (GDD §2.1): Kapsel r 0.4 / h 1.7, **Laufen 5.5 m/s**, **Schleichen 2.5 m/s** (Action `sneak` halten; Touch: Stick-Auslenkung
 ≤ 0.6), Beschleunigung 30 m/s², Abbremsen 40 m/s², Drehrate 12 rad/s, Gravitation 20 m/s², kein Sprung.
 Gesteuerte Figur (06 §1.2, CR-16): der Spielerkörper ist `Game.hero()` — Kai (Kapsel wie oben) oder Graf Mopsula (Mops-Rig,
-Kapsel r 0.35 / h 0.9); Tempo, Beschleunigung und Kamera sind für beide identisch. `PlayerController.set_hero(id)` baut Rig und
+Kapsel r 0.35 / h 0.9); Tempo und Beschleunigung sind für beide identisch, die Kamera rahmt je Figur (unten, „Rahmung je
+Figur“). `PlayerController.set_hero(id)` baut Rig und
 Kapsel um (`ExplorationScene.refresh_hero()` nach einem Safe-Room-Wechsel, `on_resume`); `CompanionFollower.set_member(id)` macht
 die andere Figur zur Begleitung.
 Action `action` (eine Taste): liegt ein Interactable im Radius 1.5 m und im 120°-Kegel vor der Figur → `interact()` (Vorrang),
@@ -4122,6 +4141,14 @@ gekürzt; Kai im unteren Drittel, Interaktions-/Schlagzone frei); steht hinter K
 angehoben (bis −65°, gemessen in Sturzhöhe 3.2 m), erst danach der Arm gekürzt; Kai direkt an Wand/Tür → Kamera darf hinter der
 Wand bleiben (flachster Pitch, aus dem Kopf und Füße sichtbar); Türstürze haben Kollisionsboxen (Layer `world`); Boss-Räume
 +1.5 m Arm (`frame_extra_arm`); Kamera < 1.5 m an Kais Kopf → sein Rig blendet aus.
+Polish-Pass (2026-10-10, so verbindlich): **Türen** — der Vorlauf wird zusätzlich in Sturzhöhe geprüft (Strahl ab 1.0 m hinter
+der Figur, `LINTEL_PROBE_BACK`): Laufen auf eine offene Tür zu schiebt den Pivot nie durch die Öffnung und den Arm nie unter
+den 1 m tiefen Sturz (früher Nahaufnahme, Arm 0.94 m bei 0.8 m vor der Tür); passt die Lösung „im Raum“ nicht, ohne dass die
+Kamera vor die Figur rückt, gilt der steilste Pitch mit freiem Arm (Fall 3 in `_solve`). **Rahmung je Figur**
+(`CameraRig.LEADER_FRAMING`, `set_leader(member_id)` aus `ExplorationScene._build_actors` und nach jedem Wechsel, dann `snap`):
+Kai Pivot 1.4 m, Vorlauf 2.5 m, Pitch −38°, Kopfhöhe 1.5 m; **Graf Mopsula** Pivot 1.0 m, Arm +1.5 m zusätzlich zum Zoom des
+Spielers, Vorlauf 1.5 m, Start-Pitch −46°, Kopfhöhe 0.8 m — die folgende Kai-Figur (1.8 m dahinter) ist im Bild, ihr Kopf
+bleibt unter dem Grafen. Die Begleitung (`follower`) blendet wie die führende Figur aus, wenn die Kamera ihr zu nahe kommt.
 
 Begleiter `companion_follower.gd` (M3, **ohne** NavigationServer): Spur aus Spielerpositionen (alle 0.25 m ein Punkt, Ringpuffer 64);
 die Partner-Figur (`Game.partner()`, Standard Mopsula; `CharacterBody3D`, Layer 0, Maske `world`) folgt der Spur mit 1.8 m Bogenlänge Abstand per `move_and_slide()` mit
@@ -4507,11 +4534,12 @@ Headless (`DisplayServer.get_name() == "headless"`) → **kein Snapshot** (liefe
 
 | layer | Inhalt | Besitzer |
 |---|---|---|
+| 3 | GlobalUi: TwistFx-Kind `LightsOut` (Stromausfall-Schleier nur in `explore`: über der 3D-Welt, unter Schadenszahlen und HUD — jede HUD-Schrift bleibt lesbar) | 06-D, Polish-Pass |
 | 4 | Schadenszahl-Zwillinge (`DamageNumberLayer`, §8.6) | M4 |
 | 5 | ExplorationHud / BattleHud | M6 / M5 |
 | 20 | TouchControls | M6 |
 | 40 | GlobalUi: ShowOverlay | M6 |
-| 41 | GlobalUi: TwistFx (Twist-Chip unter dem Timer in den Modi `MODES_CHIP`; Stromausfall-Vignette und Konfetti nur in `explore`) | 06-D |
+| 41 | GlobalUi: TwistFx (Twist-Chip unter dem Timer in den Modi `MODES_CHIP`; Konfetti nur in `explore`; der Stromausfall-Schleier liegt auf Layer 3) | 06-D |
 | 45 | GlobalUi: ModDialog, Toasts | M6 |
 | 60 | Modale Menüs (Pause, Inventar, Automat, Lootbox, Bestätigung) | M6 |
 | 90 | DebugOverlay | M6 |
@@ -4553,7 +4581,8 @@ func request_new_game(slot: int, player_name: String, skip_intro: bool, seed: in
 	# Menu (GDD §14.1): Fortsetzen (Save.newest_slot() > 0 only) · Neues Spiel · Laden · Event-Lauf (05 CR-10) · Optionen · Credits ·
 	# Beenden (not OS.has_feature("mobile")). Neues Spiel: slot_select {"mode": "new"} → hero_select {"slot", "hero"} (06 §1.1;
 	# two cards, Kai focused, ui_cancel → slot select) → name_entry {"slot", "hero"}: LineEdit.max_length = 12, default "Kai"
-	# (always Kai's name; with Mopsula the heading reads „Wie heißt Unser:e Begleiter:in?“), mode Prime Time / Vorabendprogramm;
+	# (always Kai's name; with Mopsula the question reads „Fürs Protokoll: Wie heißt mein:e Begleiter:in?“ — his own voice,
+	# no pluralis majestatis), mode Prime Time / Vorabendprogramm;
 	# back → hero_select. The intro ends with the M.O.D. line hero_pick:<hero>.
 
 class_name BattleScene extends Node3D             # M5
@@ -4862,8 +4891,8 @@ offene M.O.D.-Zeilen, damit die Box nicht über Kai, Prompt und Marker liegt.
 
 | Szene | Rezepte |
 |---|---|
-| `exploration.tscn` | `explore_platform` / `explore_sewer` / `explore_cellar` (Gruppe der Zone 6 m vor Kai), `prompt_<zone>` (Kai vor einer Truhe: Prompt + Marker), `bigmap`, `pause_party` / `pause_inventory` / `pause_equipment` / `pause_skills` / `pause_show` (06-C) / `pause_settings`, `talents_party` (06-B: Party-Seite mit Talenten und offener Wahl); 06-A: `hero_mopsula_<zone>` (Graf Mopsula führt, Kai folgt), `bark_<zone>` (Graf bellt die Gruppe der Zone an: Kegel, Ringe, „?!“), `twist_lights` / `twist_confetti` / `twist_live` (06-D: QA-Twist + Chip, Vignette/Konfetti bzw. Live-Zeile „KI live“; wenige `frames`, z. B. 3) |
-| `battle.tscn` | `battle_menu`, `battle_skills`, `battle_target`, `battle_damage`, `battle_enemy_turn`, `boss_intro` (mit `--params={"encounter": "<boss enc>", "capture": false, "speed": 1.0}`), `boss_phase`, `battle_gift`, `battle_victory` / `battle_results` / `battle_results_show` (06-C: gewonnene Show-Wette im Ergebnis; mit `--params={"capture_turns": 99}`), `battle_partner_auto` (06-A: „Partner automatisch“ an, Pillen „DU“/„AUTO“) |
+| `exploration.tscn` | `explore_platform` / `explore_sewer` / `explore_cellar` (Gruppe der Zone 6 m vor Kai), `prompt_<zone>` (Kai vor einer Truhe: Prompt + Marker), `bigmap`, `pause_party` / `pause_inventory` / `pause_equipment` / `pause_skills` / `pause_show` (06-C) / `pause_settings`, `talents_party` (06-B: Party-Seite mit Talenten und offener Wahl); 06-A: `hero_mopsula_<zone>` (Graf Mopsula führt, Kai folgt), `bark_<zone>` (Graf bellt die Gruppe der Zone an: Kegel, Ringe, „?!“), `twist_lights` / `twist_confetti` / `twist_live` (06-D: QA-Twist + Chip, Stromausfall-Schleier/Konfetti bzw. Live-Zeile „KI live“; wenige `frames`, z. B. 3); Polish-Pass: `doorway_approach` / `doorway_through` / `doorway_mopapproach` / `doorway_mopthrough` (Kamera vor bzw. knapp hinter einer offenen Tür, Kai oder Graf Mopsula führt) |
+| `battle.tscn` | `battle_menu`, `battle_skills`, `battle_target`, `battle_damage`, `battle_enemy_turn`, `boss_intro` (mit `--params={"encounter": "<boss enc>", "capture": false, "speed": 1.0}`), `boss_phase`, `battle_gift`, `battle_victory` / `battle_results` / `battle_results_show` (06-C: gewonnene Show-Wette im Ergebnis; mit `--params={"capture_turns": 99, "encounter": "enc_f1_a2"}` — der Tutorial-Kampf, die erste Begegnung der Etage, zählt nie für M.O.D.s Vorlieben), `battle_partner_auto` (06-A: „Partner automatisch“ an, Pillen „DU“/„AUTO“) |
 | `safe_room.tscn` | `safe_vending`, `safe_equipment`, `safe_lootbox`, `safe_lootbox_open`, `safe_mopsula`, `safe_talents_menu` / `safe_talent_show` (06-B: TALENT-SHOW-Knopf / Talent-Show), `safe_hero_switch` (06-A: nach „Figur wechseln“), `safe_hero_talents` (06 A × B: offene Talentwahl + „Figur wechseln“ — TALENT-SHOW oben rechts neben dem M.O.D.-Kasten unten rechts), `safe_happy` (06-D: Automat mit Happy Hour) |
 | `exploration.tscn` (06-A, E1-Geheimnisse) | `secret_wall` (Kai vor der Kulissenwand), `secret_open` (der Graf bellt sie um, mitten im Fall), `secret_note` (Kai vor Regie-Notiz 1: Prompt + Marker) |
 

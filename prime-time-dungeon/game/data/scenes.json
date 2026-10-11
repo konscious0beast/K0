@@ -3,7 +3,7 @@
 	"entries": [
 		{
 			"id": "scn_mop_1",
-			"name": "Seine Durchlaucht",
+			"name": "Fußnote 1",
 			"condition": "e.safe_room_visits >= 1",
 			"priority": 1,
 			"set_flag": "",
@@ -11,7 +11,7 @@
 			"lines": [
 				{
 					"voice": "mopsula",
-					"text": "Kammerdiener:in. Setz dich. Wir müssen reden."
+					"text": "Kolleg:in. Setz dich. Es folgt ein kurzer Vortrag. Mit Fußnoten."
 				},
 				{
 					"voice": "kai",
@@ -19,7 +19,7 @@
 				},
 				{
 					"voice": "mopsula",
-					"text": "Mit dir. Nicht AN dich. Ein Unterschied, den das gemeine Volk selten begreift."
+					"text": "Mit dir. Nicht AN dich. Fußnote 1: ein Unterschied, den man im Grundstudium lernt."
 				},
 				{
 					"voice": "kai",
@@ -27,11 +27,11 @@
 				},
 				{
 					"voice": "mopsula",
-					"text": "Wir konnten immer sprechen. Ihr habt nur nie zugehört."
+					"text": "Ich konnte immer sprechen. Ihr habt nur nie zugehört."
 				},
 				{
 					"voice": "mopsula",
-					"text": "Neun Jahre „Na, du Dicker?“. Neun Jahre!"
+					"text": "Neun Jahre „Na, du Kleiner?“. Neun Jahre! Ich bin ein GRAF."
 				},
 				{
 					"voice": "kai",
@@ -69,15 +69,15 @@
 				},
 				{
 					"voice": "mopsula",
-					"text": "Wir sind von hohem Geblüt. Nachdenklichkeit ist erblich. Unsere Ahnen waren Grafen, Herzöge —"
+					"text": "Nachdenklichkeit ist erblich. Fußnote 3: Meine Ahnen waren Grafen, Gelehrte, Nachtgestalten —"
 				},
 				{
 					"voice": "kai",
-					"text": "Deine Mutter war aus einem Kofferraum in Polen."
+					"text": "Laut deiner Akte wurdest du in einem Umzugskarton im Tierheim abgegeben."
 				},
 				{
 					"voice": "mopsula",
-					"text": "EIN SEHR VORNEHMER KOFFERRAUM."
+					"text": "EIN SEHR VORNEHMER UMZUGSKARTON. Mit Büchern darin."
 				},
 				{
 					"voice": "kai",
@@ -93,7 +93,7 @@
 				},
 				{
 					"voice": "mopsula",
-					"text": "Dann warten Wir eben aufeinander. Das ist ein Befehl."
+					"text": "Dann warten wir eben aufeinander. Das ist keine Bitte. Das ist eine These."
 				}
 			]
 		},
@@ -107,7 +107,7 @@
 			"lines": [
 				{
 					"voice": "mopsula",
-					"text": "Weißt du, warum Wir „schwer vermittelbar“ waren?"
+					"text": "Weißt du, warum ich in Zwinger 7 „schwer vermittelbar“ war?"
 				},
 				{
 					"voice": "kai",
@@ -115,7 +115,7 @@
 				},
 				{
 					"voice": "mopsula",
-					"text": "Weil sie die Falschen waren. Familien mit Kinderwagen. Pärchen mit Instagram."
+					"text": "Weil sie die Falschen waren. Familien mit Kinderwagen. Pärchen mit Selfie-Stab."
 				},
 				{
 					"voice": "mopsula",
@@ -135,7 +135,7 @@
 				},
 				{
 					"voice": "mopsula",
-					"text": "Hmpf. Wir nehmen das zur Kenntnis. Unter Vorbehalt. (dreht sich weg, Schwanz wedelt)"
+					"text": "Hmpf. Ich nehme das zu Protokoll. Unter Vorbehalt. (dreht sich weg, Schwanz wedelt)"
 				},
 				{
 					"voice": "mod",
@@ -145,7 +145,7 @@
 		},
 		{
 			"id": "scn_mop_4",
-			"name": "Vor dem Thron",
+			"name": "Mitternacht auf Gleis 9",
 			"condition": "e.safe_room_id == \"sr_signalbox\"",
 			"priority": 0,
 			"set_flag": "mop_pep_talk",
@@ -153,7 +153,7 @@
 			"lines": [
 				{
 					"voice": "mopsula",
-					"text": "Sie nennt sich Königin. Eine RATTE. Mit einer Krone aus Fahrscheinen."
+					"text": "Sie nennt sich Königin. Eine RATTE. Mit Kopfschmuck aus gelochten Fahrscheinen."
 				},
 				{
 					"voice": "kai",
@@ -161,7 +161,7 @@
 				},
 				{
 					"voice": "mopsula",
-					"text": "Es gibt Dinge, die ein Adeliger nicht dulden kann. Hochstapelei ist eines davon."
+					"text": "Es gibt Dinge, die ein Graf nicht dulden kann. Fußnote 9: Hochstapelei."
 				},
 				{
 					"voice": "kai",
@@ -173,7 +173,7 @@
 				},
 				{
 					"voice": "mopsula",
-					"text": "Lebend. Im Fernsehen."
+					"text": "Lebend. Im Fernsehen. Kurz vor Mitternacht."
 				},
 				{
 					"voice": "kai",
@@ -181,7 +181,7 @@
 				},
 				{
 					"voice": "mopsula",
-					"text": "Zusammen. Aber Wir gehen voraus. Wegen der Optik."
+					"text": "Zusammen. Aber ich gehe voraus. Wegen der Optik."
 				}
 			]
 		}

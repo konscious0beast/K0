@@ -1209,9 +1209,9 @@ Monokel, Siegel-Plakette, Umhang und Zunge.
 | 2 K | Sabber der Wiederkehr (`skl_mop_revive`) | 7 (auf K.O.-Ziel) | 14 | 30 s | Zauber 3,0 s, Bewegung bricht | 2000 | K.O.-Verbündeter | Wiederbelebung 40 % + `sts_guard` 3 s | — | ja | gross | Sabbertropfen mit Heiligenschein |
 | 2 V | Massen-Schlabbern (`skl_mop_mass_lick`) | 6 | 10 | 20 s | Zauber 2,0 s, Bewegung bricht | ganzes Set | alle Verbündeten | Heilung `mag` 60 + `sts_regen` 10 s, entfernt Gift | Heil-Bedrohung | ja | cute, gross | Zwei Zungen |
 | 3 | Frostniesen (`skl_mop_frost_sneeze`) | 2 | 5 | 6 s | sofort | 1500 | Gegner | 105 magisch Eis, `sts_slow` 4 s (100 %) | × 1,0 | ja | gross | Mopsnase mit Eiskristall |
-| 3 V | Königlicher Erlass (`skl_mop_royal_decree`) | 4 | 6 | 25 s | sofort | 2000 | Verbündeter (Smart: gesteuerte Figur, sonst Kai) | `sts_haste` 10 s | — | ja | — | Schriftrolle mit Siegel |
+| 3 V | Gräfliches Gutachten (`skl_mop_expert_opinion`, bis zum Polish-Pass `skl_mop_royal_decree`) | 4 | 6 | 25 s | sofort | 2000 | Verbündeter (Smart: gesteuerte Figur, sonst Kai) | `sts_haste` 10 s | — | ja | — | Schriftrolle mit Siegel |
 | 4 | Donnerbellen (`skl_mop_thunder_bark`) | 3 | 5 | 15 s | sofort | Radius 600 um Mopsula (+ Zielradius) | alle Gegner im Radius | 75 magisch Schock, **unterbricht alle** unterbrechbaren Zauber im Radius | × 1,0 | nein | flashy | Bellender Mops mit Blitz |
-| 5 | **SHOW:** Auftritt Seiner Durchlaucht (`skl_stunt_mop_entrance`) | 1 | 0 | 30 s (Party) | Zauber 1,0 s, Bewegung bricht | Radius 800 um Mopsula (+ Zielradius) | alle Gegner im Radius | Erfolg (55 % + LCK × 1 %, max 85 %, Boss −15 %; Talent-Faktor §9.6): 140 magisch Feuer; Fehlschlag: Mopsula `sts_stun` 2 s | × 1,0 | ja | risky, flashy, cute | Mops mit Umhang im Scheinwerfer |
+| 5 | **SHOW:** Auftritt um Mitternacht (`skl_stunt_mop_entrance`) | 1 | 0 | 30 s (Party) | Zauber 1,0 s, Bewegung bricht | Radius 800 um Mopsula (+ Zielradius) | alle Gegner im Radius | Erfolg (55 % + LCK × 1 %, max 85 %, Boss −15 %; Talent-Faktor §9.6): 140 magisch Feuer; Fehlschlag: Mopsula `sts_stun` 2 s | × 1,0 | ja | risky, flashy, cute | Mops mit Umhang im Scheinwerfer |
 | 5 F | **FINALE:** Gräfliches Inferno (`skl_mop_inferno`) | 6, Ziel < 30 % HP | 12 | 30 s (Party, mit SHOW geteilt) | Zauber 2,0 s, Bewegung bricht | 2000, Radius 600 um das Ziel (+ Zielradius) | Gegner im Radius | 130 magisch Feuer + `sts_burn` 6 s (Kraft-Tick 20) | × 1,0 | ja | flashy, finisher | Monokel, in dem Flammen tanzen |
 | 6 | Trank | — | — | 15 s (Party), ≤ 3 je Kampf | Trinkpause 0,5 s | — | Smart | §3.11 | — | nein | — | Flasche mit Pflaster |
 
@@ -1612,7 +1612,7 @@ Graf Mopsula:
   {"skill": "skl_mop_mass_lick", "target": "self", "cond": {"allies_below_pm": {"pm": 700, "min": 2}}},
   {"item": "heal", "target": "self", "cond": {"toggle": "potions", "self_hp_below_pm": 350}},
   {"skill": "skl_mop_thunder_bark", "target": "self", "cond": {"toggle": "interrupt", "caster_within_cm": 600}},
-  {"skill": "skl_mop_royal_decree", "target": "controlled", "cond": {"boss_fight": true, "target_no_status": "sts_haste"}},
+  {"skill": "skl_mop_expert_opinion", "target": "controlled", "cond": {"boss_fight": true, "target_no_status": "sts_haste"}},
   {"skill": "skl_stunt_mop_entrance", "target": "self", "cond": {"toggle": "show", "enemies_in_radius": {"r_cm": 800, "min": 3}}},
   {"skill": "skl_mop_frost_sneeze", "target": "assist", "filler": true},
   {"skill": "skl_mop_noble_flame", "target": "assist", "filler": true, "cond": {"self_mp_above_pm": 500}}
@@ -1928,7 +1928,12 @@ Rahmen = Status mit Restsekunden (§8.4). Auto-Angriff ist immer automatisch.
   höchstens 90°/s, bis das Ziel innerhalb ±25° liegt. Kein Nicken, kein harter Ziel-Lock; jedes Ziehen hat Vorrang.
 - Steuerungswechsel (§2.6): Kamera-Pivot gleitet in 0,4 s zur neuen Figur.
 - Leichtes Kamerawackeln bei Einschlägen auf die Party (0,15 s, 0,08 m), abschaltbar.
-- Wände: bestehende Regeln (Pitch anheben, Arm kürzen, Durchblick-Ausblenden) gelten unverändert.
+- Wände: bestehende Regeln (Pitch anheben, Arm kürzen, Durchblick-Ausblenden) gelten unverändert. Seit dem Polish-Pass rahmt
+  die Kamera je führender Figur (`CameraRig.LEADER_FRAMING`, 02_TECH §7.3: Graf Mopsula tiefer und weiter hinten) und prüft
+  den Vorlauf in Sturzhöhe (keine Nahaufnahme vor offenen Türen).
+- **R2-Folgepunkt (Polish-Pass, offen):** Direkt nach dem Durchschreiten einer Tür (≈ 0,4 m dahinter) steht die Kamera einen
+  Moment steil hinter der Wand bzw. nah an der Figur (der Arm erholt sich mit 4 m/s); R2 baut die Kamera für den Kampf um
+  und nimmt diesen Übergang mit (Rezepte `doorway_through` / `doorway_mopthrough` zeigen ihn).
 
 ### 7.6 Barrierefreiheit
 

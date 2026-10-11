@@ -15,6 +15,11 @@ const FORMAT: String = "ptd_save"
 const VERSION: int = 1
 const TICKS_PER_SEC: int = 30
 const MSG_NEWER: String = "Spielstand stammt aus neuerer Version"
+## Renamed ids (no version bump): an older save keeps the skill / class under its new id instead of dropping it.
+## Polish pass 2026-10-10 (IP distance, no royalty or diva-pet motif for Graf Mopsula): "Königlicher Erlass" →
+## "Gräfliches Gutachten", class "Diva" → "Zeremonienmeister".
+const RENAMED_SKILLS: Dictionary = {"skl_mop_royal_decree": "skl_mop_expert_opinion"}
+const RENAMED_CLASSES: Dictionary = {"cls_mop_diva": "cls_mop_zeremonienmeister"}
 
 static var _errors: PackedStringArray = []
 
@@ -206,8 +211,10 @@ static func _sanitize(st: GameState, data: GameData) -> void:
 			m.exp = 0
 		var skills: PackedStringArray = []
 		for s: String in m.skills:
-			if data.has_id("skills", s):
-				skills.append(s)
+			var sid: String = str(RENAMED_SKILLS.get(s, s))
+			if data.has_id("skills", sid):
+				if not skills.has(sid):
+					skills.append(sid)
 			else:
 				_warn("skill '%s' of %s dropped (unknown)" % [s, m.id])
 		m.skills = skills
@@ -216,6 +223,7 @@ static func _sanitize(st: GameState, data: GameData) -> void:
 			if item_id != "" and (not data.has_id("items", item_id) or data.item(item_id).type != slot):
 				_warn("equipment '%s' of %s dropped (unknown or wrong slot)" % [item_id, m.id])
 				m.equipment[slot] = ""
+		m.class_id = str(RENAMED_CLASSES.get(m.class_id, m.class_id))
 		if m.class_id != "" and not data.has_id("classes", m.class_id):
 			_warn("class '%s' of %s dropped (unknown)" % [m.class_id, m.id])
 			m.class_id = ""

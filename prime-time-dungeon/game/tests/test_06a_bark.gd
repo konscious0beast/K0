@@ -210,6 +210,27 @@ func test_mopsula_leads_and_kai_follows() -> void:
 		assert_not_null(hint)
 		if hint != null:
 			assert_eq(str(hint.get("caption")), "Bellen", "control hint names the bark")
+	# Polish pass: the camera frames the Count (lower look-at point, further back, a little steeper) — Kai behind him is
+	# in the picture (was under the bottom edge) with his head below the Count's paws (never covering him).
+	var rig: Node3D = scene.get_camera_rig()
+	assert_eq(str(rig.get("leader_id")), "mopsula")
+	assert_almost(float(rig.get("pivot_height")), 1.0, 0.001, "look-at height by the leader's size")
+	assert_almost(float(rig.get("leader_extra_arm")), 1.5, 0.001, "distance by the leader")
+	assert_almost(float(rig.get("arm_length")), 7.0, 0.001, "the player's zoom is untouched")
+	var start: Vector3 = scene.get_layout().cell_to_world(scene.get_layout().start)
+	body.call("teleport", start + Vector3(0.0, 0.05, 0.0), 0.0)     # start room centre, looking north
+	rig.call("snap", 0.0)
+	comp.call("snap_behind")
+	await wait_frames(10)
+	assert_almost(rad_to_deg(float(rig.get("pitch"))), -46.0, 0.01, "the Count's default pitch")
+	var cam: Camera3D = rig.call("camera")
+	var h: float = cam.get_viewport().get_visible_rect().size.y
+	var mop_feet: float = cam.unproject_position(body.global_position).y / h
+	var kai_head: float = cam.unproject_position(comp.global_position + Vector3(0.0, 1.75, 0.0)).y / h
+	var kai_feet: float = cam.unproject_position(comp.global_position).y / h
+	assert_between(mop_feet, 0.2, 0.75, "the Count in the picture: %.2f" % mop_feet)
+	assert_gt(kai_head, mop_feet, "Kai's head below the Count's paws (he does not cover him)")
+	assert_lt(kai_feet, 0.95, "Kai fully in the picture: feet at %.2f" % kai_feet)
 
 
 func test_kai_keeps_the_strike() -> void:
@@ -318,6 +339,7 @@ func test_safe_room_switch_swaps_the_bodies_on_resume() -> void:
 	assert_eq(scene.get_player().name, "Mopsula")
 	assert_eq(scene.get_companion().get("member_id"), "kai")
 	assert_eq(scene.get_companion().name, "Kai")
+	assert_eq(str(scene.get_camera_rig().get("leader_id")), "mopsula", "the camera frames the new leader")
 	var hud: Node = scene.find_child("ExplorationHud", true, false)
 	if hud != null:
 		assert_eq(str(hud.find_child("FieldHint", true, false).get("caption")), "Bellen")

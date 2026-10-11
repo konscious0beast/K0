@@ -21,6 +21,8 @@ extends Node
 ##   front of a Regie-Notiz: prompt + marker).
 ## 06-D (KI-Admin): twist_lights | twist_confetti | twist_live (exploration with a running twist: chip, vignette /
 ##   confetti, an M.O.D. live line labelled "KI live"), safe_happy (vending machine during a Happy Hour).
+## Polish pass: doorway_approach | doorway_through | doorway_mopapproach | doorway_mopthrough (camera in front of /
+##   just past an open door, Kai or Graf Mopsula leading).
 
 const ZONES: Dictionary = {"platform": "zone_platform", "sewer": "zone_sewer", "cellar": "zone_cellar"}
 
@@ -196,6 +198,35 @@ func _r_secret(scene: Node, what: String) -> bool:
 		await until(func() -> bool: return Secrets.is_open(Game.state, "sec_e1_wall_sewer"), 240)
 		await seconds(0.3)
 		freeze()
+	return true
+
+
+## Polish pass (camera at open doorways): the start corridor's north door (1,7)↔(1,6). `what` = approach (Kai 1.5 m in
+## front of the open door, facing it), through (Kai 0.4 m past it, the door behind him), mopapproach / mopthrough (the
+## same with Graf Mopsula leading). The hero walks towards the spot first, so the camera is the settled one.
+func _r_doorway(scene: Node, what: String) -> bool:
+	if not await _explore_ready(scene):
+		return false
+	_freeze_enemies(scene)
+	if what.begins_with("mop"):
+		Game.state.hero = "mopsula"
+		scene.call("refresh_hero")
+	var layout: FloorLayout = scene.call("get_layout")
+	_reveal_zone(scene, layout, "zone_platform")
+	var door: Vector3 = layout.cell_to_world(Vector2i(1, 7)) + Vector3(0.0, 0.0, -FloorLayout.ROOM_SIZE * 0.5)
+	var through: bool = what.ends_with("through")
+	var spot: Vector3 = door + Vector3(0.0, 0.0, -0.4 if through else 1.5)
+	var start: Vector3 = spot + Vector3(0.0, 0.0, 3.3)     # ~0.6 s of walking before the spot
+	var player: Node3D = scene.call("get_player") as Node3D
+	player.call("teleport", Vector3(start.x, 0.05, start.z), 0.0)
+	scene.call("get_camera_rig").call("snap", 0.0)
+	scene.call("get_companion").call("snap_behind")
+	scene.call("_update_room", true)
+	Input.action_press(&"move_forward")
+	await until(func() -> bool: return player.global_position.z <= spot.z, 240)
+	Input.action_release(&"move_forward")
+	await frames(12)
+	freeze()
 	return true
 
 
@@ -508,7 +539,9 @@ func _r_battle_results(scene: Node) -> bool:
 
 
 ## 06-C: like battle_results, but M.O.D.'s preference of the floor is "Kein Schritt zurück" with two hearts already —
-## this battle fills the third: the results show the "Show" row and the bet is won (toast + line).
+## this battle fills the third: the results show the "Show" row and the bet is won (toast + line). Pass
+## --params={"capture_turns": 99, "encounter": "enc_f1_a2"}: the debug default is the tutorial battle, which never
+## counts for M.O.D.'s preferences.
 func _r_battle_results_show(scene: Node) -> bool:
 	if Game.state != null and Game.state.show != null:
 		Game.state.show.marotten["active"] = ["mar_brave"]

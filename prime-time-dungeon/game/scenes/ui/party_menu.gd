@@ -129,8 +129,9 @@ static func casting_text(m: PartyMember) -> String:
 	return " · ".join(parts)
 
 
-## Star + "Talente" + the picked talents ("Wischtechnik II, Bissfest") or "noch keine (ab Level 3)"; with an open
-## choice a gold pill "1 Wahl offen" (the Talent-Show waits in the safe room).
+## Star + "Talente" + the picked talents ("Wischtechnik II, Bissfest"); without any: "2 Talente offen – im Safe Room
+## wählen" while choices wait (polish pass: never "noch keine (ab Level 3)" for a member who can already choose), else
+## "noch keine (ab Level 3)". Picked talents and open choices: a gold pill "1 Wahl offen" next to the names.
 func _talent_row(m: PartyMember) -> HBoxContainer:
 	var r: HBoxContainer = UiUtil.hbox(8)
 	r.name = "Talents"
@@ -139,13 +140,16 @@ func _talent_row(m: PartyMember) -> HBoxContainer:
 	tl.custom_minimum_size = Vector2(96, 0)
 	r.add_child(tl)
 	var names: PackedStringArray = TalentText.member_talents(m)
-	var v: Label = UiUtil.label(", ".join(names) if not names.is_empty() else "noch keine (ab Level 3)", &"", 17)
+	var open: int = Talents.pending_levels(m).size() if Talents.has_choice(Game.state, DB.data, m.id) else 0
+	var text: String = ", ".join(names)
+	if names.is_empty():
+		text = open_text(open) if open > 0 else "noch keine (ab Level 3)"
+	var v: Label = UiUtil.label(text, &"", 17, UiTheme.C_GOLD if names.is_empty() and open > 0 else Color(0, 0, 0, 0))
 	v.name = "TalentNames"
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	r.add_child(v)
-	var open: int = Talents.pending_levels(m).size() if Talents.has_choice(Game.state, DB.data, m.id) else 0
-	if open > 0:
+	if open > 0 and not names.is_empty():
 		var pill: PanelContainer = PanelContainer.new()
 		pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		pill.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -159,6 +163,11 @@ func _talent_row(m: PartyMember) -> HBoxContainer:
 		pill.add_child(hint)
 		r.add_child(pill)
 	return r
+
+
+## "1 Talent offen – im Safe Room wählen" / "2 Talente offen – im Safe Room wählen".
+static func open_text(open: int) -> String:
+	return ("1 Talent offen" if open == 1 else "%d Talente offen" % open) + " – im Safe Room wählen"
 
 
 func _bar_row(label_text: String, value: int, max_value: int, variation: StringName) -> HBoxContainer:

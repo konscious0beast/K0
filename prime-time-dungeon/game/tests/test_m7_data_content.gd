@@ -6,7 +6,7 @@ extends TestCase
 const KAI_SKILLS: PackedStringArray = ["skl_kai_heavy_swing", "skl_kai_taunt", "skl_kai_sweep", "skl_kai_first_aid",
 	"skl_kai_leash_trip", "skl_kai_deo_torch", "skl_kai_cable_whip", "skl_kai_prime_finisher"]
 const MOP_SKILLS: PackedStringArray = ["skl_mop_noble_flame", "skl_mop_holy_lick", "skl_mop_frost_sneeze",
-	"skl_mop_thunder_bark", "skl_mop_royal_decree", "skl_mop_mass_lick", "skl_mop_revive", "skl_mop_inferno"]
+	"skl_mop_thunder_bark", "skl_mop_expert_opinion", "skl_mop_mass_lick", "skl_mop_revive", "skl_mop_inferno"]
 const ENEMY_SKILLS_F1: PackedStringArray = ["skl_e_bite", "skl_e_gnaw_poison", "skl_e_peck", "skl_e_dive_bomb",
 	"skl_e_briefcase", "skl_e_delay_rage", "skl_e_slam", "skl_e_toxic_splash", "skl_e_zap", "skl_e_rat_heal",
 	"skl_e_lash", "skl_e_short_circuit", "skl_e_venom_bite", "skl_e_web", "skl_e_spray_flame", "skl_e_fumes",
@@ -283,7 +283,7 @@ func test_party_skill_rows_match_gdd() -> void:
 		"skl_mop_holy_lick": [4, 100, 2, "single_ally", "none", "heal"],
 		"skl_mop_frost_sneeze": [5, 105, 3, "single_enemy", "ice", "magical"],
 		"skl_mop_thunder_bark": [7, 75, 3, "all_enemies", "shock", "magical"],
-		"skl_mop_royal_decree": [6, 0, 2, "single_ally", "none", "none"],
+		"skl_mop_expert_opinion": [6, 0, 2, "single_ally", "none", "none"],
 		"skl_mop_mass_lick": [10, 60, 3, "all_allies", "none", "heal"],
 		"skl_mop_revive": [14, 40, 4, "single_ally_ko", "none", "heal"],
 		"skl_mop_inferno": [14, 130, 4, "all_enemies", "fire", "magical"],
@@ -306,7 +306,7 @@ func test_party_skill_rows_match_gdd() -> void:
 	assert_eq(d.skill("skl_kai_leash_trip").statuses, [{"id": "sts_slow", "chance": 0.9, "turns": 3}])
 	assert_eq(d.skill("skl_kai_cable_whip").statuses, [{"id": "sts_stun", "chance": 0.35, "turns": 0}])
 	assert_eq(d.skill("skl_mop_frost_sneeze").statuses, [{"id": "sts_slow", "chance": 0.25, "turns": 3}])
-	assert_eq(d.skill("skl_mop_royal_decree").statuses, [{"id": "sts_haste", "chance": 1.0, "turns": 3}])
+	assert_eq(d.skill("skl_mop_expert_opinion").statuses, [{"id": "sts_haste", "chance": 1.0, "turns": 3}])
 	assert_almost(d.skill("skl_kai_prime_finisher").crit_bonus, 0.2)
 	assert_eq(d.skill("skl_kai_prime_finisher").kill_hype, 10)
 
@@ -650,7 +650,7 @@ func test_every_consumable_is_obtainable() -> void:
 		sources[ms.item] = true
 	for it: ItemDef in d.all_items():
 		if it.id == "itm_wpn_collar_royal":
-			assert_true(_in_pool(d, 2, it.id), "Hofjuwelier-Halsband enters the epic pool on floor 2")
+			assert_true(_in_pool(d, 2, it.id), "Juwelen-Halsband enters the epic pool on floor 2")
 			assert_false(_in_pool(d, 1, it.id), "…and is not available on floor 1")
 			continue
 		if it.id == "itm_wpn_mop" or it.id == "itm_wpn_collar_leather" or it.id == "itm_arm_hoodie" \
@@ -809,7 +809,7 @@ func test_classes_prepared_for_floor_3() -> void:
 	var showrunner: ClassDef = d.class_def("cls_kai_showrunner")
 	assert_almost(float(showrunner.show_mods["stunt_success_add"]), 0.15)
 	assert_eq(int(showrunner.show_mods["stunt_cooldown"]), 2)
-	assert_eq(d.class_def("cls_mop_diva").show_mods["sponsor_thresholds"], [65, 80, 95])
+	assert_eq(d.class_def("cls_mop_zeremonienmeister").show_mods["sponsor_thresholds"], [65, 80, 95])
 
 
 func test_floor_2_stub() -> void:

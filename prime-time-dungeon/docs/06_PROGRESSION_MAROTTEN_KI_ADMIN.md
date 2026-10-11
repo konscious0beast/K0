@@ -95,7 +95,9 @@ Belohnungs-Box liegt nah am Original. Die **Mechanik bleibt** (sie ist frei und 
 1. Spielerseitiger Regeltext überall **„ohne Rüstung & ohne Accessoire“** (HUD, Menüs, Zeilen, Store-Texte).
 2. **Keine Fuß-/Barfuß-Bezüge** in Namen, Zeilen, Rigs, Achievements (kein „barfuß-Rig“, kein „Kalte Füße“, kein „ohne Schuhe“).
 3. **Keine Liga-Optik von Kai** in Key Art, Trailer, Store-Seite oder Kapsel-Bildern; Marketing zeigt höchstens den HUD-Chip.
-4. Belohnungstexte in neuem Inhalt sagen **„Fanpost-Paket“** (04 Kap. 2.3/E2; ID `box_fan` bleibt), nie „Fan-Box“.
+4. Belohnungstexte sagen **„Fanpost-Paket“** (04 Kap. 2.3/E2; ID `box_fan` bleibt), nie „Fan-Box“ — seit dem Polish-Pass in
+   **allen** Texten umgesetzt (Daten, Toasts, M.O.D.-Zeilen, UI, Doku) und vom Validator gesperrt (`validators/ip_words.gd`,
+   zusammen mit „Feinripp“, Barfuß-/Schuh-Wörtern und Nationalitäten als Pointe; Königs-Motive für Mopsula).
 5. Kein Liga-Fanclub (der frühere „Club der Kurzen Hosen“ entfällt, Kap. 2.4).
 6. Name „Unterhosen-Liga“ ist **Arbeitstitel**; Entscheidung im Distanz-Review (Exit Phase 2). Ersatzname „Leichtgepäck-Liga“
    liegt bereit — Umbenennung ist reine Textänderung, die IDs `mar_unterhose`/`liga_*` sind neutral.
@@ -151,8 +153,10 @@ bei aktiver Liga mit Liga-Stufe; Kap. 4.7). Keine weiteren neuen HUD-Zeilen auf 
 3. **Casting der Kandidat:in** (08 Kap. 1, ab K1; bis dahin die Namenseingabe): Name/Wortform, Beruf, Hobby, Starttalent — die
    Persona ist immer die menschliche Kandidat:in (`{name}`, Kais Platz in der Show), auch wenn der Graf geführt wird. Die
    Überschriften sind neutral (08 §1.8: keine Mopsula-Stimme, kein Majestätsplural) — bewusst **keine**
-   Haustier-befiehlt-Diener:in-Dynamik (04 Kap. 2.3). Andockpunkte seit 08 K0: `hero_select.gd` `CASTING_SCENE` (zeigt bis K1
-   auf die Namenseingabe), `TitleFlow.start_new_game(…, persona)`, `Game.new_game(…, persona)`.
+   Haustier-befiehlt-Diener:in-Dynamik (04 Kap. 2.3). Bis K1 fragt die Namenseingabe bei gewähltem Grafen in seiner eigenen
+   Stimme „Fürs Protokoll: Wie heißt mein:e Begleiter:in?“ (Polish-Pass 2026-10-10: Ich-Form, Fußnoten, pseudolateinische
+   Formeln, Mitternachts-Pathos, Zwinger 7 — kein Pluralis Majestatis). Andockpunkte seit 08 K0: `hero_select.gd`
+   `CASTING_SCENE` (zeigt bis K1 auf die Namenseingabe), `TitleFlow.start_new_game(…, persona)`, `Game.new_game(…, persona)`.
 4. Modus (Prime Time / Vorabendprogramm, unverändert) → Intro (B0) mit Zusatzzeile `hero_pick:<id>`.
 
 ### 1.2 Erkundung
@@ -162,7 +166,7 @@ bei aktiver Liga mit Liga-Stufe; Kap. 4.7). Keine weiteren neuen HUD-Zeilen auf 
 | Gesteuerte Figur (`GameState.hero`) | `"kai"` (Standard) oder `"mopsula"` |
 | Laufen / Schleichen / Beschleunigung | **identisch** für beide (5.5 / 2.5 m/s, GDD §2.1) — Timer-Balancing bleibt unverändert |
 | Kollision | Kai `CapsuleShape3D` r 0.4 / h 1.7 m; Mopsula r 0.35 / h 0.9 m |
-| Kamera | unverändert (Pivot 1.4 m über der Figur, GDD §2.2); keine neue Kamera-Abstimmung |
+| Kamera | Rahmung je Figur (Polish-Pass, GDD §2.2, `CameraRig.LEADER_FRAMING`): Kai unverändert (Pivot 1.4 m, Vorlauf 2.5 m, −38°); führt **Graf Mopsula**: Pivot 1.0 m, Arm +1.5 m, Vorlauf 1.5 m, Start-Pitch −46° — die folgende Kai-Figur ist sichtbar im Bild (vorher fast nur der Mops im Rahmen, Kai unter dem Bildrand). Zoom/Pitch des Spielers bleiben frei |
 | Begleiter:in | die andere Figur folgt (heutiger `CompanionFollower`, verallgemeinert auf „Partner folgt Held:in“), Zielabstand 1.8 m, Teleport > 10 m |
 | Interagieren | beide können alles (Truhen, Tore, Events, Treppe). Mopsula öffnet Truhen „mit der Schnauze“ (eigene Prompt-Texte, gleiche Regeln) |
 
@@ -404,7 +408,7 @@ Damit Erkunden sich trotz Etagen-Timer lohnt, zahlt jedes Geheimnis **auch in Ze
 
 | ID | Art | Ort (GDD §1 Zonen) | Öffnet mit | Ergebnis |
 |---|---|---|---|---|
-| `sec_e1_wall_sewer` | Kulissenwand | Zone B, Wand zwischen zwei Kanalzellen | Feldschlag oder Bellen | Abkürzung B → C, spart ≈ 25–35 s Laufweg (im Bot gemessen) + 1 Regie-Notiz dahinter |
+| `sec_e1_wall_sewer` | Kulissenwand | Zone B, Wand zwischen zwei Kanalzellen | Feldschlag oder Bellen | Abkürzung B → C (geplant ≈ 25–35 s; im Bot gemessen je Lauf 6 s, wenn der Hebel gelingt, 31–36 s, wenn er scheitert — Kap. 8.2) + 1 Regie-Notiz dahinter |
 | `sec_e1_wall_track` | Kulissenwand (optional, wenn das Layout es erlaubt) | Zone D, Nische vor dem Stellwerk | Feldschlag oder Bellen | kleiner Raum mit Truhe (Bronze) |
 | `sec_e1_note_1..3` | Regie-Notiz | A (Kiosk-Rückseite), B (hinter `sec_e1_wall_sewer`), C (Kellergewölbe) | Interagieren | +15 Follower, M.O.D.-Zeile `secret_note:<n>` |
 
@@ -460,9 +464,9 @@ Reichweite ist Szenenlogik Grad A, aufgezeichnet wird das Ergebnis — wie `enco
 
 | ID | Name | `stat_mult` | Passiv | Optik-Haken | Empfohlen |
 |---|---|---|---|---|---|
-| `spc_mop_glutmops` | **Glutmops** | MAG 1.15, RES 0.95 | `pas_ember`: Feuer-Skills +15 % | Glut in den Falten, Rauchwölkchen beim Niesen | Hofmagier |
-| `spc_mop_spukmops` | **Spukmops** | SPD 1.10, LCK 1.10, HP 0.90 | `pas_see_through`: erster gegnerischer Treffer je Kampf −50 % | halbtransparent, schwebt 5 cm (Hologramm-Material) | Fluchgraf, Diva |
-| `spc_mop_flattermops` | **Flattermops** | SPD 1.15, DEF 0.95 | `pas_court_flight`: startet jeden Kampf mit `haste` (1 Zug); Bellen-Reichweite +50 % | winzige Flügel (`wings`, Maßstab 0.4), Monokel bleibt | Leibarzt, Diva |
+| `spc_mop_glutmops` | **Glutmops** | MAG 1.15, RES 0.95 | `pas_ember`: Feuer-Skills +15 % | Glut in den Falten, Rauchwölkchen beim Niesen | Erzmagister |
+| `spc_mop_spukmops` | **Spukmops** | SPD 1.10, LCK 1.10, HP 0.90 | `pas_see_through`: erster gegnerischer Treffer je Kampf −50 % | halbtransparent, schwebt 5 cm (Hologramm-Material) | Fluchgraf, Zeremonienmeister |
+| `spc_mop_flattermops` | **Flattermops** | SPD 1.15, DEF 0.95 | `pas_court_flight`: startet jeden Kampf mit `haste` (1 Zug); Bellen-Reichweite +50 % | winzige Flügel (`wings`, Maßstab 0.4), Monokel bleibt | Medicus, Zeremonienmeister |
 
 Hinweis IP/Ton: Keine Spezies aus DCC; die Namen spielen mit **unserer** Welt (U-Bahn-Fliesen, Kiosk-Automat, Food-Court-Pilze,
 Neonreklame). **Kein Kronen-Motiv an Mopsula** (04 Kap. 2.3) gilt auch für alle Spezies-Optiken.
@@ -470,8 +474,11 @@ Neonreklame). **Kein Kronen-Motiv an Mopsula** (04 Kap. 2.3) gilt auch für alle
 ### 3.3 Spezialisierung = vorhandene Klassen
 
 `cls_kai_wrecker` Abrissbirne · `cls_kai_runner` Gleisläufer:in · `cls_kai_tinker` Schrott-Tüftler:in · `cls_kai_showrunner`
-Showrunner:in · `cls_mop_archmage` Hofmagier · `cls_mop_physician` Leibarzt Seiner Hoheit · `cls_mop_hexer` Fluchgraf ·
-`cls_mop_diva` Diva (GDD §12.3, unverändert). Eine **zweite Spezialisierung** (Doppelklasse) ist als Staffelfinale-Belohnung (E6)
+Showrunner:in · `cls_mop_archmage` Erzmagister · `cls_mop_physician` Medicus honoris causa · `cls_mop_hexer` Fluchgraf ·
+`cls_mop_zeremonienmeister` Zeremonienmeister (GDD §12.3; Polish-Pass: „Hofmagier“ → „Erzmagister“, „Leibarzt Seiner Hoheit“ →
+„Medicus honoris causa“ — kein Hof-/Königsmotiv an Mopsula, IDs unverändert; „Diva“ → „Zeremonienmeister“ mit neuer ID
+`cls_mop_zeremonienmeister` statt `cls_mop_diva` — kein Publikumsliebling-/Diva-Haustier-Motiv, alte Spielstände über
+`SaveCodec.RENAMED_CLASSES`). Eine **zweite Spezialisierung** (Doppelklasse) ist als Staffelfinale-Belohnung (E6)
 vorgemerkt.
 
 ### 3.4 Datenmodell (Paket B, jetzt)
@@ -568,11 +575,13 @@ Casting-Wahl einer Figur geht in **jedem** Safe Room einer Etage ≥ 3 (wer den 
 
 **Regel (spielerseitig, überall gleich formuliert): „ohne Rüstung & ohne Accessoire“** — auf unsere drei Slots (GDD §6, keine
 neuen Slots, keine Save-Migration): **Rüstungs-Slot leer** und **Accessoire-Slot leer**. Das Accessoire ist bewusst der ganze
-Slot (Gasmaske, Fan-Schal, Glücks-Fahrschein, Ansteck-Mikro, Schlüsselbund, Rattenkrone, Gummistiefel, Turnschuhe) — die Regel
+Slot (Gasmaske, Fan-Schal, Glücks-Fahrschein, Ansteck-Mikro, Schlüsselbund, Rattenkrone, Gummistiefel, Stoppuhr) — die Regel
 nennt deshalb nie Schuhe oder Füße. Die **Waffe ist erlaubt**.
 
 **Lesbarkeit:** Das Ausrüstungsmenü zeigt bei jeder Figur eine Zeile „Liga: aktiv“ bzw. „Liga blockiert durch: Gasmaske“
-(`MarottenRules.liga_blockers(state, member_id) -> PackedStringArray`, Item-Namen aus den belegten Slots).
+(`MarottenRules.liga_blockers(state, member_id) -> PackedStringArray`, Item-Namen aus den belegten Slots). Polish-Pass: die
+Liga-Zeilen stehen oben neben den Figuren-Reitern (über den Slots) statt unten in der linken Spalte, mit Abstand zur
+Tastenleiste.
 
 | Stufe | Bedingung (zu Kampfbeginn geprüft, gilt den ganzen Kampf) | Hype-Gewinne | Follower (Bonus je Etage gedeckelt) | Show-Chip-Zusatz |
 |---|---|---|---|---|
@@ -610,25 +619,31 @@ Die Multiplikatoren wirken auf die **Kampagnen-Show-Währung**; in gewerteten Ev
 
 | ID | Name | Bedingung | Box | Hidden |
 |---|---|---|---|---|
-| `ach_ul_first` | Luftig | `e.kind == "liga" && e.event == "battle" && e.tier >= 1` | bronze | — |
-| `ach_ul_boss` | Frische Brise im Revier | `e.kind == "liga" && e.event == "battle" && e.tier >= 1 && e.is_boss == true` | silver | — |
-| `ach_duo_first` | Doppel-Feinripp | `e.kind == "liga" && e.event == "battle" && e.tier == 2` | silver | — |
-| `ach_duo_floor` | Eine Etage Feinripp | `e.kind == "liga" && e.event == "floor" && e.floor_tier == 2 && e.battles >= 5` | gold | — |
-| `ach_duo_flawless` | Ohne Kratzer, mit Wischmopp | `e.kind == "liga" && e.event == "battle" && e.tier == 2 && e.is_floor_boss == true && e.party_kos == 0` | gold | ✓ |
+| `ach_ul_first` | Einmal ohne alles | `e.kind == "liga" && e.event == "battle" && e.tier >= 1` | bronze | — |
+| `ach_ul_boss` | Leichtsinn mit Stil | `e.kind == "liga" && e.event == "battle" && e.tier >= 1 && e.is_boss == true` | silver | — |
+| `ach_duo_first` | Leichtes Gepäck im Doppelpack | `e.kind == "liga" && e.event == "battle" && e.tier == 2` | silver | — |
+| `ach_duo_floor` | Eine Etage leichtes Gepäck | `e.kind == "liga" && e.event == "floor" && e.floor_tier == 2 && e.battles >= 5` | gold | — |
+| `ach_duo_flawless` | Ohne Kratzer, ohne Rüstung | `e.kind == "liga" && e.event == "battle" && e.tier == 2 && e.is_floor_boss == true && e.party_kos == 0` | gold | ✓ |
 | `ach_bets_5` | M.O.D.s Liebling | `e.kind == "marotte" && e.event == "won" && s.bets_won == 5` | silver | — |
 
+Achievement-Namen und -Beschreibungen (Polish-Pass 2026-10-10): neutral statt Wäsche-Wortspiel („Doppel-Feinripp“ →
+„Leichtes Gepäck im Doppelpack“, „Eine Etage Feinripp“ → „Eine Etage leichtes Gepäck“) und ohne Entblößungs-Witz („Frische
+Brise im Revier“ → „Leichtsinn mit Stil“; „Ohne Netz“ ist seit 09 der Name des Staffel-Modus); jede Beschreibung nennt die Regel im vollen Wortlaut „ohne Rüstung &
+ohne Accessoire“. Der Name „Unterhosen-Liga“ bleibt (Entscheidung des Nutzers).
+
 **M.O.D.-Zeilen Liga** (Präfix `liga_`, nicht sexuell, keine Nacktheits-Andeutung — **Unterwäsche bleibt immer an** —,
-keine Fuß-Bezüge; Paragrafen-/Imbiss-Humor):
+kein Wäsche-Wortspiel („Feinripp“ ist im Validator gesperrt), keine Fuß-Bezüge; nennt eine Zeile die Regel, dann vollständig
+„ohne Rüstung & ohne Accessoire“; Paragrafen-/Imbiss-Humor; Stand = ausgelieferte Zeilen):
 
 | Tag | Zeile |
 |---|---|
-| `liga_hint` (Etagen-Bilanz E1, einmalig) | „Übrigens: Wer ohne Rüstung und ohne Accessoire kämpft, kriegt bei mir Bonuspunkte. Ich sage das nur.“ |
-| `liga_enter:1` | „Kandidat:in ohne Rüstung, ohne Accessoire. § 3 Kleiderordnung sagt nein, die Quote sagt JA.“ |
+| `liga_hint` (Etagen-Bilanz E1, einmalig) | „Übrigens: Wer ohne Rüstung & ohne Accessoire kämpft, kriegt bei mir Bonuspunkte. Ich sage das nur.“ |
+| `liga_enter:1` | „Kandidat:in ohne Rüstung & ohne Accessoire. § 3 Kleiderordnung sagt nein, die Quote sagt JA.“ · „Unterhosen-Liga! Die Versicherung hat gekündigt, das Publikum hat abonniert.“ |
 | `liga_enter:1:mopsula` | „Der Graf trägt heute: Würde. Und sein Fell. Das Publikum ist entzückt.“ |
-| `liga_enter:2` | „Einmal Doppel-Feinripp, bitte. Mit scharf? Nein, mit Wischmopp.“ |
-| `liga_win` | „Gewonnen. Im Feinripp. Ich reiche die Szene beim Preis für Zivilcourage ein.“ |
-| `liga_floor` | „Eine ganze Etage im Doppel-Feinripp. Die Rechtsabteilung prüft, ob das legal ist. Es ist legendär.“ |
-| `liga_leave` | „Rüstung wieder an? Verständlich. Die Zuschauer:innen seufzen leise.“ |
+| `liga_enter:2` | „Zweimal ohne Rüstung & ohne Accessoire, bitte. Mit scharf? Nein, mit Wischmopp.“ · „Beide ohne Rüstung & ohne Accessoire. Die Kostümabteilung hat heute frei. Die Quote nicht.“ |
+| `liga_win` | „Gewonnen. Ohne Rüstung & ohne Accessoire. Ich reiche die Szene beim Preis für Zivilcourage ein.“ |
+| `liga_floor` | „Eine ganze Etage in der Duo-Liga. Die Rechtsabteilung prüft, ob das legal ist. Es ist legendär.“ |
+| `liga_leave` | „Rüstung oder Accessoire wieder an? Verständlich. Die Zuschauer:innen seufzen leise.“ |
 
 ### 4.4 Die rotierenden Marotten (11)
 
@@ -640,7 +655,7 @@ ist bei Kampf-Marotten implizit (nur Siege werden ausgewertet).
 | `mar_mop_only` | **Nur der Mopp** | Kampf: `e.kai_weapon == "itm_wpn_mop"` | ✓ | „Ich habe heute eine Schwäche für Wischmopps. Fragen Sie nicht. Wischen Sie.“ | „Mit dem Mopp! Ich bekomme Gänsehaut. Ich habe keine Haut.“ |
 | `mar_graf_finale` | **Der Graf hat das letzte Wort** | Kampf: `e.last_kill_member == "mopsula"` | ✓ | „Heute will ich den Grafen glänzen sehen. Den letzten Treffer, bitte. Mit Etikette.“ | „Der Graf beendet es. Mit einem Niesen. Zeitlos.“ |
 | `mar_variety` | **Stilnote** | Kampf: `e.distinct_actions >= 4` | ✓ | „Heute zählt Stil. Vier verschiedene Aktionen in einem Kampf, und ich vergebe Herzchen.“ | „Abwechslung! Die Jury zückt die Zehn.“ |
-| `mar_sneaky` | **Schleichwerbung** (Paket C; „Leise Sohle“ ist schon `ach_preemptive_3` und streift die Fuß-Regel 0.3) | Kampf: `e.encounter_type == "preemptive"` | ✓ | „Ich mag heute Überraschungen. Von hinten. Oder mit Gebell. Hauptsache zuerst.“ | „Erwischt, bevor sie es merkten. Ich liebe Pünktlichkeit.“ |
+| `mar_sneaky` | **Schleichwerbung** (Paket C; `ach_preemptive_3` heißt seit dem Polish-Pass „Überraschungsgast“ statt „Leise Sohle“, Fuß-Regel 0.3) | Kampf: `e.encounter_type == "preemptive"` | ✓ | „Heute mag ich Schleichwerbung: anschleichen, zuerst zuschlagen. Überraschung ist Quote.“ | „Erwischt, bevor sie es merkten. Ich liebe Pünktlichkeit.“ |
 | `mar_pacifist` | **Friedliche Runde** | `explore_zone`: `e.zones_since_battle >= 3` (3 Räume/Zonen-Zellen erstmals betreten ohne Kampf dazwischen) | — | „Heute mag ich es ruhig. Drei neue Räume ohne Prügelei, und ich werde sentimental.“ | „Drei Räume Frieden. Die Werbekunden sind nervös. Ich bin gerührt.“ |
 | `mar_secondhand` | **Second-Hand-Schick** | Kampf: `e.equip_all_common == true` (alle belegten Slots beider Figuren `common`) | — | „Meine Laune heute: Flohmarkt. Nur gewöhnliche Ausrüstung, bitte. Vintage ist Quote.“ | „Gewonnen in Ramsch-Couture. Die Modeabteilung weint vor Glück.“ |
 | `mar_speed` | **Schnellschnitt** | Kampf: `e.party_turns <= 3 && e.is_boss == false` | — | „Ich habe heute wenig Sendezeit. Kämpfe in höchstens drei Zügen, und ich liebe Sie.“ | „Zack, fertig! So schnell schneidet nicht mal mein Praktikant.“ |
@@ -696,7 +711,9 @@ floor_tier, battles, is_boss, is_floor_boss, boss_id, party_kos, floor`. Neue `S
   HUD-Zeile, **kein** separates Liga-Badge.
 - **Kampfende:** Herz fliegt aus dem Ergebnis-Panel in den Show-Chip; Toast „♥ M.O.D. gefällt das (+6 Hype)“.
 - **Pausemenü-Tab „Show“:** aktive Vorlieben mit Bedingung im Klartext, Fortschritt, Liga-Stufe mit Regeltext („ohne Rüstung &
-  ohne Accessoire“) und Blockern je Figur, bisher gewonnene Wetten.
+  ohne Accessoire“) und Blockern je Figur, bisher gewonnene Wetten. Polish-Pass: die Blocker stehen als zwei Figuren-Karten
+  **nebeneinander in einer Zeile** (je 88 px Trefferfläche, Status „Liga-bereit“ / „blockiert durch …“, Links/Rechts wechselt) direkt
+  unter dem Regeltext — keine große Lücke, die Mopsula-Zeile klebt nicht mehr am unteren Rand.
 
 ### 4.8 Fairness-Regeln (verbindlich)
 
@@ -1005,7 +1022,11 @@ GDScript-Test und von pytest** gelesen → beide Seiten entscheiden nachweislich
    ≤ 200 Zeichen) — nur mit Einwilligung ab 16, als Datenfelder, unter den Grenzen K-1 … K-8 aus 08 §5.5. Für `/v1/mod/turn` und
    `/v1/mod/director` gilt Nr. 2 unverändert.
 3. **Post-Filter** (Dienst **und** Client `Show.say_external`): Länge ≤ 110, nur `{name}` als Platzhalter, keine URLs/Ziffernfolgen
-   wie Telefonnummern. **Harte Sperrliste nur** für Slurs, sexuelle Begriffe und Politik-Begriffe/Namen (Einzelwort-Treffer).
+   wie Telefonnummern. **Harte Sperrliste nur** für Slurs, sexuelle Begriffe und Politik-Begriffe/Namen (Einzelwort-Treffer)
+   sowie — Polish-Pass, dieselben Listen wie der Daten-Validator (`validators/ip_words.gd`) — IP-Abstand („Fan-Box“,
+   „Feinripp“, Barfuß-/Schuh-Wörter; `blocked_ip_distance`), Nationalitäten/Volksgruppen als Pointe (`blocked_origin`; ohne
+   Alltagswörter wie „Amerikaner“ = Gebäck, „Franzose“ = Schraubenschlüssel) und Königs-Motive in Zeilen in Graf Mopsulas
+   Stimme oder über ihn (`blocked_mopsula_royalty`: Majestät, Durchlaucht, Hoheit, Thron, Krone; die Rattenkönigin behält ihre).
    **Kaufdruck als Phrasen-/Ko-Vorkommens-Regel:** verworfen wird eine Zeile nur, wenn ein Dringlichkeitswort („schnell“,
    „nur noch“, „letzte Chance“, „jetzt“) **zusammen** mit einem Kaufbezug („Sponsor“, „Geschenk“, „Kauf“/„kauf“, „Fenster“, „Spende“,
    „Bits“, „€“) vorkommt; Kaufbezugs-Wörter mit Geldbezug („€“, „Bits“, „spende“, „kauf“) sind auch allein gesperrt (L13/L16).
@@ -1316,6 +1337,13 @@ erscheint erst, wenn sie fällt (der Fund gehört zur Wand); Regie-Notizen sind 
 (Offsets ≤ 4,5 m halten die Randstreifen frei). **Zeitgewinn im Bot gemessen: ≈ 6 s** (1 Durchquerung, 2 Zellwechsel à 3,1 s) statt
 der geschätzten 25–35 s: auf der kompakten E1-Karte spart eine Wand höchstens 2 Zellwechsel je Richtung, und nur solange
 `gate_lever` zu ist (der Hebel scheitert in 40 %). Das Ziel „≥ 20 s“ braucht eine Wand an einem längeren Umweg (neue Zelle/Karte, E2).
+**Polish-Pass (2026-10-10), Ziel „≥ 15 s je Lauf“ — offen:** gemessen mit dem Bot (*thorough*, Takt `fast`, Seeds 1–10):
+6 / 6 / 31 / 6 / 36 / 6 / 6 / 6 / 6 / 6 s (Mittel 11,5 s, Median 6 s). 31 / 36 s gibt es nur, wenn der Hebel scheitert (Seeds 3
+und 5: Tor bleibt zu, 5–6 Durchquerungen); gelingt er, nutzt der Bot die Wand einmal (2 Zellwechsel). Versetzen hilft nicht: über
+alle Türöffnungen der Karte gerechnet spart keine Position mehr als 2 Zellwechsel je Durchquerung entlang der Bot-Route, die
+Kanal-Wand ist schon die beste; eine zweite Wand (Hausmeister-Büro) verletzt die Türregel der E1-Karte (`test_m7_floor_layout`)
+und verkürzt keine Bot-Route — verworfen. ≥ 15 s je Lauf braucht eine Wand vor einem echten Umweg (neue Zelle/Karte, E2).
+Hinweis und Fairness unverändert: einmal je Wand der Chat-Hinweis im ersten Nachbarraum, jede Zelle bleibt ohne Wand erreichbar.
 Ansichten: `docs/screenshots/19_hero_select.png`, `20_explore_mopsula_bark.png`, `21_safe_room_hero_switch.png`,
 `22_battle_partner_auto.png`, `23_secret_wall.png`, `24_secret_wall_falls.png`, `25_regie_notiz.png` (Recipes
 `hero_mopsula_<zone>`, `bark_<zone>`, `safe_hero_switch`, `battle_partner_auto`, `secret_wall|open|note` in
@@ -1592,6 +1620,14 @@ Mopsula ohne Liga über dem Band (Seeds 1–8: 1 579 Follower / 17 Achievements)
 Hype bei den Bossen, `ach_viewers_5000` in 5 von 8 Läufen (Kai 2 von 8). Die Duo-Mediane der Seeds 1–3 schwanken um ±300 (eine
 Königin-Chance, Bot-Jitter bei `time_scale` 5); Seeds 1–8 sind belastbarer.
 
+**Stand Polish-Pass** (2026-10-10, Kap. 8.8 I-12; Branch `ptd/polish-ip`): Die Bänder für den CTB bis R5 sind neu gesetzt —
+Full-Run-Bot **Liga 1 ≤ 1 900 Follower, Duo-Liga ≤ 2 400 Follower und ≤ 30 Lootboxen** (GDD §13). Damit liegen die Messungen von
+Runde 4 im Band (Liga 1: Kai 1 759 / Graf 1 525; Duo: 2 336 / 2 304, Seeds 1–8 2 064 / 2 222; Boxen Duo 28 / 29). **Graf Mopsula
+gesteuert ohne Liga (L0)** mit ~1 580 Followern / 17–18 Achievements (Seeds 1–8: 1 579 / 17) ist **für den CTB akzeptiert**;
+**R4-Ziel:** „Mopsula-Held L0 innerhalb der Basis-Bänder“ (1 200–1 500 Follower, 12–16 Achievements), im Echtzeitkampf neu zu
+messen. Der Polish-Pass selbst ändert keine Balance-Werte (Texte, UI, Kamera, Validator); die Gates `fullrun.sh --strategy=all`
+und `--hero=mopsula --strategy=all` enden mit `FULLRUN: OK`.
+
 ### 8.5 Paket D — KI-Admin: Schnittstelle, Twists, Referenz-Dienst
 
 **Ziel:** Kap. 5 Stufe S0: Provider-Schnittstelle (Standard skriptiert, Remote deaktiviert), Twist-Katalog + deterministischer
@@ -1736,6 +1772,7 @@ aufzeichnende `Game`-Methode. Alle bisherigen ~806 Tests bleiben grün; jedes Pa
 | 2 | Paket A; Feld-Talente → Feldfähigkeiten (`HeroRules.field_mods`); Safe-Room-Menü in 5 Zeilen mit 88-px-Trefferflächen, TALENT-SHOW oben rechts; Held:in × Talente (`test_06ab_hero_talents`) | gemergt |
 | 3 | `main` (07_ECHTZEITKAMPF, Brief-Vorrang); Paket C; Liga-Talente ← Liga-Stufe; „Kamera 3 kennt mich“ → Herzen; Screenshots von C als 27/28 | gemergt |
 | 4 | `main` (07-Konsistenz); `regie_`-Präfix gehört Paket D (A's Regie-Notiz-Zeilen → `secret_note:<n>`, Spieltext bleibt „Regie-Notiz“); Paket D (KI-Admin, Twists, Regie offline, M.O.D. live) mit Hype-Kette in Ganzzahl-Promille, Twist-Ablehnung über `RunRules` in beiden Prüfern, Replay-Puffer im Zustand (I-10) und RemoteModVoice-Fixes (I-11); Bellen ≠ Anschleichen (I-7); Liga-Ökonomie mit Deckel je Etage (I-8); CTB-Grenze + R4-Ziel (I-9) | gemergt |
+| Polish | Polish-Pass + IP/Ton (Branch `ptd/polish-ip` auf Runde 4d): Talent-Show ohne Durchdrücken, Kamera je Figur + Türen, Tab „Show“ und Liga-Zeilen im Ausrüstungsmenü, Stromausfall sichtbar, Happy-Hour-Preise durchgestrichen; Mopsulas eigene Stimme, „Fanpost-Paket“, neutrale Liga-Achievements, Ton-Durchgang, Validator `ip_words.gd`; Bänder I-12 | im Branch |
 
 | # | Entscheidung (Orchestrator, 2026-10-10) | Umsetzung / Folge |
 |---|---|---|
@@ -1744,12 +1781,13 @@ aufzeichnende `Game`-Methode. Alle bisherigen ~806 Tests bleiben grün; jedes Pa
 | I-3 | **Liga-Stufe = einzige Quelle** für die Liga-Talente (`tal_kai_liga_routine`, `tal_mop_liga_gelassen`): `MarottenRules.in_liga` — die gesteuerte Figur ab Stufe 1, die andere nur in der Duo-Liga (Stufe 2); nie im Tutorial-Kampf, nie bei `rules.liga.enabled = false`. | `BattleBridge.make_setup` (Kampfwerte, Regeln des Laufs), `UiUtil.member_stats`, Talent-Show-Vorschau; `Talents.liga_dressed` entfällt; `liga_stat_pct` nur für Kampfwerte (nie HP/MP, Validator); Ganzzahl-Promille; Tests `test_06abc_liga_talents` |
 | I-4 | **„Kamera 3 kennt mich“** (`marotte_heart`) wirkt in C's Herz-Logik: das erste Herz einer Etage zählt doppelt (Party-Summe, einmal je Etage, bis zum Ziel), für beide Held:innen, auch in Event-Läufen (zählen ja, zahlen nicht); Toast „Talent: Extra-Herz …“. | `MarottenRules._bonus_hearts`, `ShowState.marotten["bonus"]` (Save + Hash, `Game.replay_log`-gleich; Runde 4: `ShowState.marotten_dict` behält den Marker — vorher fiel er beim Speichern weg, nach dem Laden kam das Extra-Herz auf derselben Etage erneut; Test `test_06abc_liga_talents`) |
 | I-5 | **Gesteuerte Figur:** die Liga-Stufe liest `GameState.hero` (Paket A) direkt. | `MarottenRules.hero_of`; Tests für Kai und Graf Mopsula |
-| I-6 | **IP:** Kai und Graf Mopsula; keine Kronen-/Majestäts-/Königsmotive für Mopsula; ohne Rüstung zu spielen ist ein Spielstil, nie ein Charakterzug; der allgemeine „Wir/Uns“-Stil des Grafen bekommt einen eigenen Stimm-Durchgang nach allen vier Paketen. | Liste der Stellen im Integrationsbericht |
-| I-7 | **Bellen ist kein Anschleichen.** Ein Präventivschlag aus Graf Mopsulas Bellen (die Gruppe ist benommen und wird von jeder Seite erwischt) zählt nicht für „Schleichwerbung“ (`mar_sneaky`) oder andere Schleich-Vorlieben und nicht für „Leise Sohle“ (`ach_preemptive_3`), sondern als eigener Zähler `bark_openers`; im Kampf bleibt er ein Präventivschlag (Party zuerst, Hype +3, „Erster Eindruck“). | `BattleSetup.opener` / `BattleResult.opener` = `"bark"` (im `encounter`-Command als `opener`, nur bei `adv` 1 — Logs ohne Bellen bleiben bytegleich), `encounter_type` `"bark"` in `Show` und `MarottenRules`, `exploration.gd._opener`; Test `test_06ac_bark_opener` |
+| I-6 | **IP:** Kai und Graf Mopsula; keine Kronen-/Majestäts-/Königsmotive für Mopsula; ohne Rüstung zu spielen ist ein Spielstil, nie ein Charakterzug; der allgemeine „Wir/Uns“-Stil des Grafen bekommt einen eigenen Stimm-Durchgang nach allen vier Paketen. | **Stimm-Durchgang erledigt (Polish-Pass):** eigene Stimme in der Ich-Form (belehrender Grafen-Gelehrter, Fußnoten, pseudolateinische Formeln, Mitternachts-Pathos, Tierheim-Biografie „Zwinger 7“) in Daten, Namenseingabe, Intro, Safe-Room-Leerlauf und KI-Persona; `skl_mop_royal_decree` → `skl_mop_expert_opinion` „Gräfliches Gutachten“ (Spielstände: `SaveCodec.RENAMED_SKILLS`); Klassen „Erzmagister“ / „Medicus honoris causa“; Validator `validators/ip_words.gd`; Tests `test_06_ip_words` |
+| I-7 | **Bellen ist kein Anschleichen.** Ein Präventivschlag aus Graf Mopsulas Bellen (die Gruppe ist benommen und wird von jeder Seite erwischt) zählt nicht für „Schleichwerbung“ (`mar_sneaky`) oder andere Schleich-Vorlieben und nicht für „Überraschungsgast“ (`ach_preemptive_3`, bis zum Polish-Pass „Leise Sohle“), sondern als eigener Zähler `bark_openers`; im Kampf bleibt er ein Präventivschlag (Party zuerst, Hype +3, „Erster Eindruck“). | `BattleSetup.opener` / `BattleResult.opener` = `"bark"` (im `encounter`-Command als `opener`, nur bei `adv` 1 — Logs ohne Bellen bleiben bytegleich), `encounter_type` `"bark"` in `Show` und `MarottenRules`, `exploration.gd._opener`; Test `test_06ac_bark_opener` |
 | I-8 | **Liga-Ökonomie: sichtbar belohnt, aber begrenzt.** Faktoren Stufe 1 Hype ×1,05 / Follower ×1,1, Stufe 2 ×1,2 / ×1,35; **Deckel auf den Liga-Follower-Bonus je Etage** +60 / +180 (Kap. 4.3). Die Duo-Liga zahlt am meisten auch in der Simulation ohne Wiederholungen (Kap. 4.10), Messung und verbleibende Abweichungen Kap. 8.4 „Stand Runde 4“. | `floor_follower_cap` in `marotten.json` (Validator optional 0..2 000), `MarottenRules.liga_floor_cap` / `take_liga_followers` / `liga_followers_left`, `ShowState.marotten.liga.followers`, Tab „Show“ nennt Deckel und Rest; Tests `test_06c_liga_cap`, `test_06c_liga`, `test_06c_balance` |
 | I-9 | **CTB-Grenze bis R5:** Ist Graf Mopsula gesteuert, legt in Liga 1 nur der Graf Rüstung und Accessoire ab, Kai kämpft voll ausgerüstet. Mit Hype ×1,2 war Liga 1 dann im CTB kaum schwerer als ohne Liga (Boss-Niederlage 1. Versuch Hausmeister/Königin 19 %/35 % gegen 17 %/29 %); mit ×1,05 (I-8) 28 %/35 % (+11/+6 Punkte; Kai gesteuert 27 %/47 %). Für den CTB akzeptiert (vorläufig bis R5). **R4-Ziel (07, Echtzeitkampf):** „Liga 1 muss für beide Held:innen messbar schwerer sein als Liga 0 (≥ +5 Punkte Boss-Niederlage im 1. Versuch).“ | Messung im Harness von `test_06c_balance` (100 Seeds, Geschenke) mit Liga-Stufe 1 auf der gesteuerten Figur; 07 übernimmt das Ziel in den R4-Harness |
 | I-10 | **Twists × Speichern/Replay (Paket D):** Der Replay-Puffer (ein Twist-Command vor seinem Tick einsortiert) liegt im Zustand (`GameState.flags.twist_buffer`, gespeichert, nicht gehasht, `RunSim.step` macht ihn fällig); Ablehnung zentral in `RunRules.twist_refusal` (Live-Eingang und beide Prüfer), abgelehnte Commands nennen ihre ID (`RunRules.refused_id`); Hype-Kette Ganzzahl-Promille: Ausrüstung × Talente → Liga → Partyhüte-Twist, je Schritt halb aufgerundet; der Twist-Validator ist privat (`validators/twists.gd`, Kap. 8.0 Nr. 7). | Tests `test_06d_twist_save`, `test_06d_twists` |
 | I-11 | **RemoteModVoice:** Ein neuer Lauf oder ein Laden (`run_ref` ändert sich) verwirft das Sitzungs-Token und eine laufende Anfrage; gesund ist nur eine 2xx-Antwort mit JSON-Objekt ohne `error`/`detail` — 429/413/5xx und Fehler-JSON zählen als Fehler, damit greifen die 3-Fehler-Pause und die Rückgabe an die Regie. | `RemoteModVoice.healthy_body`; Tests in `test_06d_mod_voice` |
+| I-12 | **Bänder für den CTB bis R5 (Polish-Pass):** Full-Run-Bot Liga 1 ≤ 1 900 Follower, Duo-Liga ≤ 2 400 Follower und ≤ 30 Lootboxen (vorher 1 800 / 2 000 / 28). Graf Mopsula gesteuert ohne Liga (L0) mit ~1 580 Followern / 17–18 Achievements ist für den CTB akzeptiert. **R4-Ziel:** „Mopsula-Held L0 innerhalb der Basis-Bänder“ (1 200–1 500 Follower, 12–16 Achievements). | GDD §13; Messung und Bewertung Kap. 8.4 „Stand Polish-Pass“ |
 
 ---
 

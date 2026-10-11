@@ -148,11 +148,11 @@ func test_replace_and_ignore() -> void:
 
 func test_excludes() -> void:
 	var st: GameState = RtKit.state(6, "mopsula")
-	st.member("mopsula").rt_loadout = {"3": "skl_mop_royal_decree"}
+	st.member("mopsula").rt_loadout = {"3": "skl_mop_expert_opinion"}
 	var sim: RtSim = _sim(6, "mopsula", st)
 	var kai: RtUnit = sim.unit("p0")
 	StatusFx.apply(sim, "e0", kai, "sts_slow", 0, 1000)
-	var r: Array = RtKit.act(sim, RtCommand.ability(0, "p1", "skl_mop_royal_decree", "p0"))
+	var r: Array = RtKit.act(sim, RtCommand.ability(0, "p1", "skl_mop_expert_opinion", "p0"))
 	assert_eq(r[0], "")
 	var ev: Array[ActionEvent] = sim.step()
 	var off: Array[ActionEvent] = _of(ev, T.STATUS_REMOVED, "sts_slow")

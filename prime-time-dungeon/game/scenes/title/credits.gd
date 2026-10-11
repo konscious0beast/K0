@@ -12,7 +12,7 @@ const ROLL: Array[Array] = [
 	["h", "PRIME TIME DUNGEON"], ["s", "Vertical Slice · Etage 1 „Die Unterstadt“"], ["gap", ""],
 	["r", "Moderation"], ["n", "M.O.D. – Mediale Omnipräsente Direktorin"], ["gap", ""],
 	["r", "Kandidat:in"], ["n", "{name}"], ["gap", ""],
-	["r", "Publikumsliebling"], ["n", "Graf Mopsula"], ["gap", ""],
+	["r", "Gelehrter Graf mit Fußnoten"], ["n", "Graf Mopsula"], ["gap", ""],
 	["r", "Bösewicht mit Schlüsselbund"], ["n", "Der Hausmeister"], ["gap", ""],
 	["r", "Majestät auf Gleis 9"], ["n", "Die Rattenkönigin"], ["gap", ""],
 	["r", "Präsentiert von"], ["n", "Glückwasser · KRAWUMM Energy · Panzerkeks"],

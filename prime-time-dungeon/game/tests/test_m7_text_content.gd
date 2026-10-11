@@ -135,7 +135,7 @@ func test_display_texts_are_german_and_complete() -> void:
 	# Spot checks: GDD names are used verbatim (gettext msgids).
 	assert_eq(d.skill("skl_kai_heavy_swing").name, "Wuchtschlag")
 	assert_eq(d.skill("skl_mop_holy_lick").name, "Heiliges Schlabbern")
-	assert_eq(d.skill("skl_stunt_mop_entrance").name, "Auftritt Seiner Durchlaucht")
+	assert_eq(d.skill("skl_stunt_mop_entrance").name, "Auftritt um Mitternacht")
 	assert_eq(d.item("itm_bandage").name, "Werbepflaster")
 	assert_eq(d.item("itm_key_master").name, "Generalschlüssel")
 	assert_eq(d.enemy("enm_boss_rattenkoenigin").name, "Die Rattenkönigin von Gleis 9")
@@ -162,9 +162,9 @@ func test_scenes_match_gdd() -> void:
 	assert_eq(d.scene_def("scn_mop_4").set_flag, "mop_pep_talk")
 	for id: String in ["scn_mop_1", "scn_mop_2", "scn_mop_3"]:
 		assert_eq(d.scene_def(id).set_flag, "", id)
-	assert_eq(d.scene_def("scn_mop_1").name, "Seine Durchlaucht")
-	assert_eq(d.scene_def("scn_mop_4").name, "Vor dem Thron")
-	assert_eq(str(d.scene_def("scn_mop_2").lines[5]["text"]), "EIN SEHR VORNEHMER KOFFERRAUM.")
+	assert_eq(d.scene_def("scn_mop_1").name, "Fußnote 1")
+	assert_eq(d.scene_def("scn_mop_4").name, "Mitternacht auf Gleis 9")
+	assert_eq(str(d.scene_def("scn_mop_2").lines[5]["text"]), "EIN SEHR VORNEHMER UMZUGSKARTON. Mit Büchern darin.")
 
 
 func test_scene_conditions() -> void:

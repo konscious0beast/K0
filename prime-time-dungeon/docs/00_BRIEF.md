@@ -26,7 +26,8 @@ Starttalente, persönlicher Erzählstrang) > `01_GDD` / `02_TECH` / `03_ART` / `
   vor dem ersten Lauf im **Casting** fest (Nutzeridee 2026-10-10, Kap. 5; Vertrag `08_CASTING.md`). Standard und Kanon ist
   **Kai**, Pfleger:in aus einem Tierheim, pragmatisch, trocken; jede Persona kennt Mopsula aus diesem Tierheim.
 - Begleiter: **Graf Mopsula**, ein Mops aus dem Tierheim, der durch den Dungeon sprechen kann, sich für
-  Adel hält und sich als Magier entpuppt. Arrogant, eitel, loyal. Publikumsliebling.
+  einen gelehrten Grafen hält und sich als Magier entpuppt. Belehrend (mit Fußnoten), pathetisch um Mitternacht,
+  loyal bis in die Knochen.
 - Ton: schwarzer Humor + echte Gefahr + Satire auf Streaming-/Werbe-/Gacha-Kultur. Nicht zynisch gegenüber den Menschen.
 
 ## 2. Design-Säulen
@@ -57,7 +58,7 @@ Etage betreten → Erkunden (Gegner sichtbar, Truhen, Events, Safe Room)
 | Erkundung | Third-Person, Kamera hinter der Figur (orbit). Etage 1 ist handgebaut (Layout-Daten in `floors.json`), ab Etage 2 prozedural aus Raum-Modulen auf Raster (`DungeonGenerator`). Gegner patrouillieren sichtbar; ein Kampf beginnt per Pull (Schlag, Fähigkeit oder Gegenstand auf einen Gegner), wenn ein verfolgender Gegner zuschlagen kann oder nach 4 s Verfolgung (07 §2.2; im CTB-Modus bis R5: Berührung = Kampf). Vorteil/Nachteil je nach Anlauf (Rücken = Präventivschlag). |
 | Kampf | **Echtzeit in der Welt** („WoW-light“, `07_ECHTZEITKAMPF.md`): Party (Kai + Graf Mopsula; gesteuert wird die gewählte Figur, die andere spielt die KI) vs. 1–6 Gegner im Raum, markiert durch einen Studio-Lichtring. Auto-Angriff, 4 Fähigkeiten + **SHOW** (Stunt) + Trank, eine Taste für den Partner, Unterbrechen, Ausweichen, Bossphasen. **Bis R5** zusätzlich der bisherige CTB-Kampf (Zugreihenfolge aus SPD + Aktionsgewicht wie FF10; Befehle Angriff, Fähigkeit, Item, Stunt, Verteidigen, Flucht) hinter dem Schalter `combat_mode`. |
 | Show-System | **Zuschauer** (live, pro Kampf/Erkundung schwankend) und **Follower** (dauerhaft). Abwechslungsreiche Aktionen, knappe Siege, Stunts, Combos, Kills mit Fähigkeiten erhöhen den Hype. Schwellenwerte → **Sponsor-Geschenk** (Heilung/Buff/Item) mitten im Kampf. |
-| Lootboxen | Bronze/Silber/Gold/Fan-Box aus Achievements und Bossen. Nur im Spiel verdient, **niemals Echtgeld**. Öffnen nur im Safe Room, mit M.O.D.-Kommentar. |
+| Lootboxen | Bronze/Silber/Gold/Fanpost-Paket aus Achievements und Bossen. Nur im Spiel verdient, **niemals Echtgeld**. Öffnen nur im Safe Room, mit M.O.D.-Kommentar. |
 | Achievements | Vom Spiel live vergeben („Erster Kill“, „Mit 1 HP gewonnen“, „Pazifist (5 min ohne Kampf)“ …) → Lootbox + M.O.D.-Spruch. |
 | Etagen-Timer | Läuft nur in der Erkundung. Etage 1: 20:00 min. Warnungen bei 5:00 / 1:00. |
 | Safe Room | Volle Heilung, Speichern, Lootboxen, Automat (Shop), Gespräch mit Mopsula (Charaktermomente). Keine Gegner. |

@@ -125,7 +125,7 @@ func test_forged_commands_are_refused_and_reported() -> void:
 ## verifiers — a forged pick or casting is an error and changes nothing, like every other refused command.
 func test_forged_talent_and_casting_commands_are_refused_by_both_verifiers() -> void:
 	var forged: Array = [{"t": "talent", "member": "kai", "id": "tal_kai_wischtechnik"},
-		{"t": "casting", "member": "mopsula", "species": "spc_original", "class": "cls_mop_diva"}]
+		{"t": "casting", "member": "mopsula", "species": "spc_original", "class": "cls_mop_zeremonienmeister"}]
 	var run: Dictionary = _bot(_event())
 	var res: Dictionary = RunSim.replay(real_data(), RunLog.from_dict(_with_cmds_before_descend(run, forged)))
 	var errs: String = "; ".join(res["errors"])

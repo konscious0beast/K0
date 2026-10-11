@@ -237,7 +237,7 @@
 		},
 		{
 			"id": "skl_stunt_mop_entrance",
-			"name": "Auftritt Seiner Durchlaucht",
+			"name": "Auftritt um Mitternacht",
 			"user": "party",
 			"category": "stunt",
 			"target": "all_enemies",
@@ -545,8 +545,8 @@
 		{
 			"user": "party",
 			"rank": 3,
-			"id": "skl_mop_royal_decree",
-			"name": "Königlicher Erlass",
+			"id": "skl_mop_expert_opinion",
+			"name": "Gräfliches Gutachten",
 			"category": "buff",
 			"target": "single_ally",
 			"damage_type": "none",

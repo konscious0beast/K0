@@ -2,7 +2,10 @@ extends Node3D
 ## Character gallery (02_TECH §1.5, CI screenshot target §12.4): the floor-1 cast (03_ART §5.5) plus every party
 ## member / enemy from DB that the cast sheet does not know, lined up on a show stage under battle light.
 ## `page` (set in the .tscn variants): "cast" (default) | "bases" (all 9 archetypes, floor-2 stubs) |
-## "anims" (Kai/Mopsula/rat/Hausmeister frozen in key poses) | "props" (every prop on a humanoid).
+## "anims" (Kai/Mopsula/rat/Hausmeister frozen in key poses) | "props" (every prop on a humanoid) | Casting (08 §6,
+## K2): "looks" (eight persona looks from data/looks.json on Kai's model, look_gallery.tscn) | "hair" (close-up of every
+## hair style, or with params {"row": "beard"} every beard with and without glasses; {"view": "front" | "back" |
+## "side"}, hair_gallery.tscn).
 
 const Cast := preload("res://art/gallery/cast.gd")
 const Stage := preload("res://art/gallery/gallery_stage.gd")
@@ -36,6 +39,10 @@ func _ready() -> void:
 			_build_anims()
 		"props":
 			_build_props()
+		"looks":
+			_build_looks()
+		"hair":
+			_build_hair()
 		"heroes":
 			_build_closeup(["kai", "mopsula"], [Vector3(-0.55, 0, 0), Vector3(0.6, 0, 0.1)], Vector3(0, 1.5, 3.6),
 				Vector3(0, 0.75, 0))
@@ -191,6 +198,70 @@ func _build_props() -> void:
 		_place("prop_" + p, m, Vector3(-6.4 + 1.6 * float(col), 0, -3.0 + 2.6 * float(row)), 20.0, p)
 		i += 1
 	Stage.add_camera(self, Vector3(0, 6.0, 12.5), Vector3(0, 0.6, 0.6), 44.0)
+
+
+# --- Casting (08 §6, K2): persona looks ------------------------------------------------------------------------------
+
+## Nine looks from data/looks.json on Kai's model — every hair style once, all skin tones, beards, glasses and outfits
+## mixed (the first is the canon Kai). Keys = look kinds, values = the option suffix after "lk_<kind>_".
+const LOOKS: Array[Dictionary] = [
+	{"hair": "short", "hair_color": "darkbrown", "skin": "3", "beard": "none", "glasses": "none", "outfit": "petrol"},
+	{"hair": "long", "hair_color": "blond", "skin": "2", "beard": "none", "glasses": "round", "outfit": "white"},
+	{"hair": "headscarf", "hair_color": "blue", "skin": "6", "beard": "none", "glasses": "none", "outfit": "orange"},
+	{"hair": "curls", "hair_color": "black", "skin": "7", "beard": "full", "glasses": "none", "outfit": "blue"},
+	{"hair": "bun", "hair_color": "grey", "skin": "4", "beard": "none", "glasses": "round", "outfit": "grey"},
+	{"hair": "braids", "hair_color": "red", "skin": "5", "beard": "none", "glasses": "none", "outfit": "green"},
+	{"hair": "buzz", "hair_color": "pink", "skin": "8", "beard": "stubble", "glasses": "round", "outfit": "midnight"},
+	{"hair": "ponytail", "hair_color": "chestnut", "skin": "1", "beard": "none", "glasses": "none", "outfit": "pink"},
+	{"hair": "bald", "hair_color": "darkbrown", "skin": "6", "beard": "moustache", "glasses": "none", "outfit": "petrol"},
+]
+const LOOK_PREFIX: Dictionary = {"hair": "lk_hair_", "hair_color": "lk_hc_", "skin": "lk_skin_", "beard": "lk_beard_",
+	"glasses": "lk_glasses_", "outfit": "lk_outfit_"}
+
+
+## LOOKS[i] as look ids ({kind: lk id}).
+static func look_ids(i: int) -> Dictionary:
+	var out: Dictionary = {}
+	for kind: String in LOOK_PREFIX:
+		out[kind] = str(LOOK_PREFIX[kind]) + str(LOOKS[i][kind])
+	return out
+
+
+func _build_looks() -> void:
+	Stage.add_floor(self, 9.0, {})
+	var kai: Dictionary = _db_model("kai")
+	for i in LOOKS.size():
+		var x: float = (float(i) - float(LOOKS.size() - 1) * 0.5) * 1.05
+		var z: float = 0.0 if i % 2 == 0 else -0.55
+		var look: Dictionary = look_ids(i)
+		var name: String = str(DB.data.look(str(look["hair"])).get("name", ""))
+		_place("look_%d" % i, PersonaLook.apply(kai, look, DB.data), Vector3(x, 0, z), -8.0 * (float(i) - 4.0), name)
+	Stage.add_camera(self, Vector3(0, 2.3, 7.4), Vector3(0, 0.85, -0.2), 40.0)
+
+
+## Close-up: every hair style (params {"row": "beard"}: every beard without / with glasses); {"view": "front" |
+## "back" | "side"} turns the figures; {"hair_color": "<suffix>"} the hair colour (default chestnut).
+func _build_hair() -> void:
+	Stage.add_floor(self, 9.0, {})
+	var kai: Dictionary = _db_model("kai")
+	var row: String = str(_params.get("row", "hair"))
+	var yaw: float = {"front": 0.0, "back": 180.0, "side": 90.0}.get(str(_params.get("view", "front")), 0.0)
+	var hc: String = "lk_hc_" + str(_params.get("hair_color", "chestnut"))
+	var looks: Array[Dictionary] = []
+	var names: PackedStringArray = []
+	if row == "beard":
+		for g: String in ["none", "round"]:
+			for e: Dictionary in DB.data.looks_of("beard"):
+				looks.append({"hair": "lk_hair_short", "hair_color": hc, "beard": str(e["id"]), "glasses": "lk_glasses_" + g})
+				names.append(str(e["name"]) + (" + Brille" if g == "round" else ""))
+	else:
+		for e: Dictionary in DB.data.looks_of("hair"):
+			looks.append({"hair": str(e["id"]), "hair_color": hc})
+			names.append(str(e["name"]))
+	for i in looks.size():
+		var x: float = (float(i) - float(looks.size() - 1) * 0.5) * 0.78
+		_place("hair_%d" % i, PersonaLook.apply(kai, looks[i], DB.data), Vector3(x, 0, 0), yaw, names[i])
+	Stage.add_camera(self, Vector3(0, 1.9, 6.4), Vector3(0, 1.05, 0), 40.0)
 
 
 func _build_closeup(ids: Array, positions: Array, cam: Vector3, target: Vector3) -> void:

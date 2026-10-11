@@ -2147,6 +2147,13 @@
 			"voice": "mod",
 			"text": "Ruhe am Set! Kamera läuft, Monster auf Position, Sie auf eigene Gefahr.",
 			"weight": 1
+		},
+		{
+			"id": "mod_persona_intro_01",
+			"tag": "persona_intro",
+			"voice": "mod",
+			"text": "{cand} {name} — {job}. Ab heute hauptberuflich: Quote.",
+			"weight": 1
 		}
 	]
 }

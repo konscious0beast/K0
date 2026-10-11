@@ -6,7 +6,7 @@ class_name ModAnnouncer extends RefCounted
 ## cooldown, like boss_*, death, timer_* and intro.
 
 const KEY_COOLDOWN_SEC: float = 20.0
-const NO_COOLDOWN_PREFIXES: PackedStringArray = ["boss_", "timer_", "chat_"]
+const NO_COOLDOWN_PREFIXES: PackedStringArray = ["boss_", "timer_", "chat_", "persona_"]   # 08 K0: persona_*
 const NO_COOLDOWN_TAGS: PackedStringArray = ["death", "intro"]
 ## Lines that answer the player's own action or mark a one-off floor beat (purchase, safe room, stairs found, descent;
 ## GDD §1.4 B3/B6/B8, §11.1): never dropped by Show's priority window — they queue behind the running line (ModDialog)
@@ -18,11 +18,19 @@ const NO_COOLDOWN_TAGS: PackedStringArray = ["death", "intro"]
 const ALWAYS_SAID_TAGS: PackedStringArray = ["vendor_buy", "safe_room_enter", "stairs_found", "floor_end",
 	"talent_show_open",                         # 06 package B
 	"marotte_announce", "marotte_won", "liga_hint"]   # 06 package C
+## 08 K0: every persona line (08 §4.3) queues behind the running line instead of being dropped; the broadcast plan
+## limits their number. They also skip the key cooldown (NO_COOLDOWN_PREFIXES).
+const ALWAYS_SAID_PREFIXES: PackedStringArray = ["persona_"]
+## 08 K0 (R15): a line returned by the set_extra_lines provider counts with this draw weight.
+const EXTRA_WEIGHT: int = 2
 
 var _data: GameData = null
 var _rng: RandomNumberGenerator = null
 var _last_line: Dictionary = {}              # resolved tag → id of the line picked last time
 var _cooldown_until: Dictionary = {}         # base tag → now_sec until which it is cooling down
+## Casting (08 K0 hook, K3 provider): extra lines per tag (the candidate's AI lines) and the ones it returned.
+var _extra: Callable = Callable()
+var _extra_ids: Dictionary = {}              # instance id of a provider line → true (drawn with EXTRA_WEIGHT)
 
 
 func _init(p_data: GameData, p_rng: RandomNumberGenerator) -> void:
@@ -80,9 +88,15 @@ static func priority(tag: String) -> int:
 	return 0
 
 
-## ALWAYS_SAID_TAGS: exempt from Show's priority window (and they never suppress anything themselves).
+## ALWAYS_SAID_TAGS / ALWAYS_SAID_PREFIXES: exempt from Show's priority window (and they never suppress anything
+## themselves).
 static func always_said(tag: String) -> bool:
-	return ALWAYS_SAID_TAGS.has(tag) or ALWAYS_SAID_TAGS.has(tag.get_slice(":", 0))
+	if ALWAYS_SAID_TAGS.has(tag) or ALWAYS_SAID_TAGS.has(tag.get_slice(":", 0)):
+		return true
+	for p: String in ALWAYS_SAID_PREFIXES:
+		if tag.begins_with(p):
+			return true
+	return false
 
 
 ## text.format(ctx); missing keys stay visible. Show always adds ctx name, floor, level, viewers, followers.
@@ -136,16 +150,44 @@ func _fitting(tag: String, floor_index: int, hype: float) -> Array[ModLineDef]:
 	for l: ModLineDef in _data.mod_lines(tag):
 		if l != null and l.fits(floor_index, hype):
 			out.append(l)
+	_append_extra(out, tag, floor_index, hype)     # 08 K0: the line-pool hook (no provider → nothing)
 	return out
 
 
 func _weighted(lines: Array[ModLineDef]) -> ModLineDef:
 	var total: int = 0
 	for l: ModLineDef in lines:
-		total += maxi(1, l.weight)
+		total += _line_weight(l)
 	var r: int = _rng.randi_range(0, total - 1)
 	for l: ModLineDef in lines:
-		r -= maxi(1, l.weight)
+		r -= _line_weight(l)
 		if r < 0:
 			return l
 	return lines[lines.size() - 1]
+
+
+# --- Casting (08, K0): the line-pool hook (08 §4.3, R15; K3 provides the candidate's AI lines) ---------------------
+
+## provider.call(tag) -> Array[ModLineDef]: extra lines for a resolved tag, drawn with EXTRA_WEIGHT next to the data
+## lines (same floor / hype filter, same "not twice in a row" rule). Callable() removes the provider. K0: nobody sets
+## one, so pick() is unchanged.
+func set_extra_lines(provider: Callable) -> void:
+	_extra = provider
+	_extra_ids.clear()
+
+
+func _append_extra(out: Array[ModLineDef], tag: String, floor_index: int, hype: float) -> void:
+	if not _extra.is_valid():
+		return
+	_extra_ids.clear()                         # only the lines of the current draw count (the provider may build new ones)
+	var more: Variant = _extra.call(tag)
+	if not (more is Array):
+		return
+	for l: Variant in (more as Array):
+		if l is ModLineDef and (l as ModLineDef).fits(floor_index, hype):
+			_extra_ids[(l as ModLineDef).get_instance_id()] = true
+			out.append(l as ModLineDef)
+
+
+func _line_weight(l: ModLineDef) -> int:
+	return EXTRA_WEIGHT if _extra_ids.has(l.get_instance_id()) else maxi(1, l.weight)

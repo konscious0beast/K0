@@ -52,6 +52,10 @@ const VALID: Array[Dictionary] = [
 	{"t": "move_input", "ct": 21, "u": "p0", "dir": [0, -127], "run": true},
 	{"t": "combat_speed", "pm": 850},
 	{"t": "move_batch", "u": "p0", "id0": 7, "s": [[0, 120, -45, 18, -3, 64], [4, 140, -50, 18, -3, 64]]},
+	# Casting (08 §2.3, K0): start (bias 0–3 ids) and swap
+	{"t": "persona", "v": 1, "talent": "tal_org_animals", "bias": ["mar_graf_finale", "mar_variety"]},
+	{"t": "persona", "v": 1, "talent": "tal_org_nature", "bias": []},
+	{"t": "persona", "v": 1, "talent": "tal_org_nature", "swap": true},
 ]
 
 
@@ -60,9 +64,9 @@ func test_types_are_the_recorded_list() -> void:
 		"event", "chest", "gate", "room", "safe_room", "safe_room_exit", "scene", "flag", "difficulty", "descend",
 		"gift", "sponsor_window", "hero", "talent", "casting", "secret", "twist",
 		"ability_use", "target_change", "move_sample", "combat_item", "partner_preset", "partner_special",
-		"auto_attack", "autopilot", "combat_hint", "move_input", "combat_speed", "move_batch"],
+		"auto_attack", "autopilot", "combat_hint", "move_input", "combat_speed", "move_batch", "persona"],
 		"02_TECH §3.4 (+ hero / secret 06 §1.7 / §2.7, talent / casting 06 §2.2 / §3.4, twist 06 §5.7, real-time "
-		+ "combat 07 §10.1)")
+		+ "combat 07 §10.1, persona 08 §2.3)")
 	var covered: Dictionary = {"gift": true}
 	for c: Dictionary in VALID:
 		covered[c["t"]] = true
@@ -153,6 +157,16 @@ func test_invalid_commands() -> void:
 			"duration": 0, "tick": 0}}, "twist: twist.params.seconds"],
 		[{"t": "twist", "twist": {"schema": 1, "id": "tw_x", "n": 1, "src": "dev", "params": {}, "duration": 0,
 			"tick": -1}}, "twist: twist.tick"],
+		# Casting (08 §2.3, K0)
+		[{"t": "persona", "talent": "tal_org_animals", "bias": []}, "persona: v must be 1"],
+		[{"t": "persona", "v": 2, "talent": "tal_org_animals", "bias": []}, "persona: v must be 1"],
+		[{"t": "persona", "v": 1, "bias": []}, "persona: talent must be a non-empty String"],
+		[{"t": "persona", "v": 1, "talent": "tal_kai_wischtechnik", "bias": []}, "talent must start with tal_org_"],
+		[{"t": "persona", "v": 1, "talent": "tal_org_animals"}, "persona: bias must be an array"],
+		[{"t": "persona", "v": 1, "talent": "tal_org_animals", "bias": ["a", "b", "c", "d"]}, "at most 3"],
+		[{"t": "persona", "v": 1, "talent": "tal_org_animals", "bias": [3]}, "bias must contain non-empty Strings"],
+		[{"t": "persona", "v": 1, "talent": "tal_org_animals", "swap": true, "bias": []}, "a swap is"],
+		[{"t": "persona", "v": 1, "talent": "tal_org_animals", "swap": false}, "a swap is"],
 	]
 	for c: Array in cases:
 		var err: String = Command.validate(c[0])

@@ -185,8 +185,11 @@ func has_state() -> bool:
 
 ## seed -1 → time based. Creates GameState, RunLog, RunSim, starts floor 1, records the controlled character
 ## (`hero_id`, 06 §1: "kai" | "mopsula", right after "floor"), emits new_game_started(slot).
-func new_game(slot: int, player_name: String = "Kai", seed: int = -1, difficulty: StringName = &"prime",
-		hero_id: String = HeroRules.DEFAULT_HERO) -> void:
+## `p_persona` (08 §2.3, K0): the local candidate persona (Game.persona); its start command follows the hero
+## (_choose_initial_persona) — without a profile never a command.
+func new_game(slot: int, player_name: String = GameState.DEFAULT_NAME, seed: int = -1,
+		difficulty: StringName = &"prime", hero_id: String = HeroRules.DEFAULT_HERO,
+		p_persona: PersonaProfile = null) -> void:
 	var run_seed: int = seed
 	if run_seed == -1:
 		run_seed = int(Time.get_unix_time_from_system() * 1000.0) & 0x7FFFFFFF
@@ -196,10 +199,12 @@ func new_game(slot: int, player_name: String = "Kai", seed: int = -1, difficulty
 	if state == null:
 		push_warning("[Game] GameState.create_new returned null (no game state)")
 		return
-	run_log = _make_run_log(run_seed, slot, player_name, difficulty, "")
+	run_log = _make_run_log(run_seed, slot, difficulty, "")
 	sim = _make_sim(state, {})
+	persona = p_persona
 	start_floor(1)
 	_choose_initial_hero(hero_id)
+	_choose_initial_persona(p_persona)        # Casting (08 §2.3): floor → hero → persona
 	Events.new_game_started.emit(slot)
 
 
@@ -215,14 +220,14 @@ func start_event_run(event_id: String, p_league: String = "", hero_id: String = 
 	mode = &"event_offline"
 	_event_def = def
 	var run_seed: int = def.run_seed()
-	state = GameState.create_new(DB.data, 0, "Kai", run_seed, &"prime")
+	state = GameState.create_new(DB.data, 0, GameState.DEFAULT_NAME, run_seed, &"prime")
 	if state == null:
 		push_warning("[Game] GameState.create_new returned null (no game state)")
 		mode = &"campaign"
 		return
 	quest = QuestTracker.from_def(def.quest)
 	var league: String = _run_league(def.rules, p_league)
-	run_log = _make_run_log(run_seed, 0, "Kai", &"prime", event_id, league)
+	run_log = _make_run_log(run_seed, 0, &"prime", event_id, league)
 	sim = _make_sim(state, def.rules)
 	start_floor(maxi(1, def.floor_index))
 	_choose_initial_hero(hero_id)
@@ -391,6 +396,7 @@ func make_battle_setup(encounter_id: String, advantage: int, group_id: String, o
 	if setup != null:
 		setup.opener = o
 		setup.auto_battle = auto_battle
+		_persona_battle_look(setup)            # Casting (08 §6.3, K2): kai's look — presentation only
 		in_battle = true
 	return setup
 
@@ -612,6 +618,7 @@ func enter_safe_room(safe_room_id: String) -> Dictionary:
 	Events.party_changed.emit()
 	if sim != null:
 		_dispatch(sim.sponsor_safe_room(safe_room_id))
+	Show.on_safe_room_entered(safe_room_id, bool(ctx.get("first_visit", false)))   # 08 §4.3 H4 (presentation)
 	return ctx
 
 
@@ -956,11 +963,12 @@ func finish_run(cause: StringName) -> Dictionary:
 	var header: Dictionary = run_log.header if run_log != null else {}
 	# 05 §10.4 schema (S0 local: league "pur", verified "local"); replay_id + run_log_hash tie the entry to its replay
 	# file (user://replays/<run_id>.json) so a later uploader/verifier can check it. Local boards and replays are plain,
-	# editable JSON — never uploaded, never trusted (05 §10.4).
+	# editable JSON — never uploaded, never trusted (05 §10.4). Casting (08 §2.7 Nr. 4): the entry carries no name —
+	# display_name "" (EventInfo.entry_name shows the local player as "Sie").
 	var entry: Dictionary = {
 		"schema": 1, "event_id": event_id, "window_id": str(header.get("window_id", "")),
 		"league": str(header.get("league", "pur")), "mode": "solo", "run_id": str(header.get("run_id", "")),
-		"players": [{"player_id": "local", "display_name": state.player_name, "role": "kai"}],
+		"players": [{"player_id": "local", "display_name": "", "role": "kai"}],
 		"score": summary["score"], "breakdown": summary["breakdown"], "quest_complete": summary["quest_complete"],
 		"floor_timer_left_sec": int(time_left()), "run_wall_ms": 0, "flags": [],
 		"difficulty": String(state.difficulty), "replay_id": str(header.get("run_id", "")),
@@ -991,8 +999,9 @@ func finish_run(cause: StringName) -> Dictionary:
 ## commands the rules refuse (RunRules.command_refusal, QA windows not allowed, battle commands without a battle) — they
 ## are skipped — and every gift Show refuses (gift_rejected: duplicates, caps, wrong target, run over …). Returns
 ## {"final_hash": String, "result": Dictionary, "mismatch_at": int (first failing checkpoint index, -1 = none),
-## "errors": PackedStringArray}. until_tick >= 0: the clock steps on to that tick after the last command (the live
-## sim.tick() — idle ticks in a safe room move the clock without a command).
+## "errors": PackedStringArray, "version": String (RunSim.version_status: a log of another sim_version is not replayed
+## — one error, mismatch_at -1, shown as "ältere Version", 08 §10.2 Nr. 7)}. until_tick >= 0: the clock steps on to
+## that tick after the last command (the live sim.tick() — idle ticks in a safe room move the clock without a command).
 func replay_log(p_log: RunLog, until_tick: int = -1) -> Dictionary:
 	return GameReplay.new(self).run(p_log, until_tick)
 
@@ -1024,15 +1033,15 @@ func _reset_run() -> void:
 
 
 ## Header of a new run log (05 §10.6): run identity (run_id unique per attempt, player_id "local", event_id,
-## window_id "" offline, league) + seed, slot, name, mode, difficulty, versions.
-func _make_run_log(run_seed: int, slot: int, player_name: String, difficulty: StringName, event_id: String,
+## window_id "" offline, league) + seed, slot, mode, difficulty, versions. No name (08 §2.7 Nr. 2: the replay builds
+## its state with GameState.DEFAULT_NAME).
+func _make_run_log(run_seed: int, slot: int, difficulty: StringName, event_id: String,
 		league: String = "") -> RunLog:
 	var rl: RunLog = RunLog.new()
 	rl.header = {
 		"schema": 1,
 		"seed": run_seed,
 		"slot": slot,
-		"player_name": player_name,
 		"mode": String(mode),
 		"difficulty": String(difficulty),
 		"game_version": str(ProjectSettings.get_setting("application/config/version", "")),
@@ -1296,3 +1305,41 @@ func combat_step() -> Array[ActionEvent]:
 ## combat = null. Stub: empty rewards.
 func end_combat() -> BattleRewards:
 	return BattleRewards.new()
+
+
+# ======================================================================================================================
+# Casting (08, K0 → K1 persona command / K2 look) — the API of 08 §10.2 Nr. 8
+# ======================================================================================================================
+# STUB(K0) — owned by 08-K1 (_choose_initial_persona) and 08-K2 (_persona_battle_look). Replace completely, keep the
+# public API. K0 records no persona command: Title / FullRun pass no profile yet, so nothing changes.
+
+## The candidate persona of the running slot (08 §2.2): local presentation data (name, form, job, look, …), never
+## part of GameState, the run log or a hash; the core only sees the ids of the "persona" command. null = canon / none.
+var persona: PersonaProfile = null
+
+
+## The one recording entry of the "persona" command (08 §2.3) — the start (_choose_initial_persona, K1) and the swap in
+## the first Talent-Show (K1): Command.validate (schema) + PersonaRules.check (event runs → event_run) → record →
+## PersonaRules.apply; emits party_changed. false = refused, nothing recorded. GameReplay replays "persona" through it
+## (same check, same apply as RunSim.apply).
+func apply_persona(cmd: Dictionary) -> bool:
+	if state == null or str(cmd.get("t", "")) != "persona" or Command.validate(cmd) != "":
+		return false
+	if PersonaRules.check(state, DB.data, cmd, sim != null and sim.is_event_run()) != "":
+		return false
+	record(cmd)
+	PersonaRules.apply(state, DB.data, cmd)
+	Events.party_changed.emit()
+	return true
+
+
+## K1: with a profile, records the start command PersonaRules.command_for(DB.data, p.talent, p.traits) through
+## apply_persona right after the hero (floor → hero → persona); never in event runs. Stub: nothing.
+func _choose_initial_persona(_p: PersonaProfile) -> void:
+	pass
+
+
+## K2 (08 §6.3): the kai combatant's presentation model from the persona look, `model = DB.party_model("kai")` right
+## after BattleBridge.make_setup (Combatant.model is not in to_dict, the hash or the log). Stub: nothing.
+func _persona_battle_look(_setup: BattleSetup) -> void:
+	pass

@@ -71,7 +71,14 @@ const TICKS_PER_SEC: int = 30          # == Game.TICKS_PER_SEC == FloorRun.TICKS
 const CHECKPOINT_TICKS: int = 300      # 05 §3.3 Nr. 8: checkpoint every 300 ticks
 ## Version of the simulation rules (RunLog header "sim_version", board entries, commits 05 §7.3): bump when a rule
 ## change makes old logs replay differently.
-const SIM_VERSION: int = 1
+## 2 — the ONE joint bump of the contract pass 07 R1a + 08 K0 (07 §12.2, 08 §10.2 Nr. 7, R17): display names left
+## every state / battle hash (08 §2.7), the persona command, the real-time contract fields. A log or board entry of an
+## older version is reported as OLD_VERSION ("ältere Version") — it needs the archive build of its kernel (05 §4.3);
+## this kernel never replays it, so it is never a mismatch.
+const SIM_VERSION: int = 2
+const OLD_VERSION: String = "old_version"
+const NEW_VERSION: String = "new_version"
+const OLD_VERSION_TAG: String = "ältere Version"   # display tag of old replays and board entries (08 §10.2 Nr. 7)
 const EVENTS_PATH: String = "res://data/events.json"
 
 var data: GameData = null
@@ -213,6 +220,8 @@ func apply(cmd: Dictionary) -> Array[ExploreEvent]:
 			HeroRules.set_hero(state, str(c["id"]))
 		"secret":                                  # 06 package A; like the floor events without the show part
 			Secrets.open(state, _floor_def(), str(c["id"]))   # (followers, M.O.D. line: Game.open_secret)
+		"persona":                                 # Casting (08 §2.3, K0; legality: RunRules.command_refusal)
+			PersonaRules.apply(state, data, c)
 		"descend":
 			if state.floor_run != null:
 				_floor_done = true
@@ -284,7 +293,7 @@ func command_refusal(c: Dictionary) -> String:
 		return gift_refusal(c["gift"])
 	if t == "twist":
 		return twist_refusal(c["twist"])
-	var reason: String = RunRules.command_refusal(state, data, rules, c, _floor_done, _scene_ctx)
+	var reason: String = RunRules.command_refusal(state, data, rules, c, _floor_done, _scene_ctx, is_event_run())
 	if reason == "" and t == "sponsor_window" and not SponsorWindows.dev_allowed(state, rules, int(c["sec"]),
 			int(c["slots"])):
 		reason = "not_allowed"
@@ -399,10 +408,10 @@ func close(cause: String, extra: Dictionary = {}) -> String:
 	return h
 
 
-## Replays a log with a fresh GameState from its header (seed/run_seed, slot, player_name, difficulty, league; a log
-## that starts at a loaded save: its anchor, anchor_state) through RunSim alone (no autoloads — the core verifier of 05
-## §11.4) along RunLog.walk: before each command the clock steps to its tick, checkpoints with a smaller tick are
-## compared on the way. p_rules / p_quest: the event rules / quest; {}
+## Replays a log with a fresh GameState from its header (seed/run_seed, slot, difficulty, league — the display name is
+## GameState.DEFAULT_NAME, 08 §2.7; a log that starts at a loaded save: its anchor, anchor_state) through RunSim
+## alone (no autoloads — the core verifier of 05 §11.4) along RunLog.walk: before each command the clock steps to its
+## tick, checkpoints with a smaller tick are compared on the way. p_rules / p_quest: the event rules / quest; {}
 ## → the event of header.event_id from EVENTS_PATH (EventCatalog, validated against p_data) — never from the log
 ## itself; no event_id → none (campaign). An unknown event is an error (no replay without its rules). For a catalog
 ## event the header must match the event: seed == EventDef.run_seed() (seed_policy fixed), difficulty "prime", league
@@ -413,7 +422,9 @@ func close(cause: String, extra: Dictionary = {}) -> String:
 ## → {"final_hash": String, "result": {"ticks", "cmds", "over", "floor", "quest_complete", "quest_progress_ppm"},
 ##    "mismatch_at": int (first failing checkpoint index, -1 = none), "errors": PackedStringArray (log schema / id
 ##    problems, entries the RunLog rejected, commands the core refused, header / ledger problems, unknown event, a
-##    from_save log without a valid anchor) — a verifier needs errors == []}
+##    from_save log without a valid anchor) — a verifier needs errors == [],
+##    "version": version_status(header) — "" or OLD_VERSION / NEW_VERSION: a log of another sim_version is not
+##    replayed (one error line, mismatch_at stays -1; the UI tags it "ältere Version", 08 §10.2 Nr. 7)}
 ## A Game-recorded run also needs the Show reactions (hype, followers, achievements, sponsor gifts): its verifier is
 ## Game.replay_log (same "errors" contract); a RunSim replay of such a log reports the first diverging checkpoint.
 static func replay(p_data: GameData, p_log: RunLog, p_rules: Dictionary = {}, p_quest: Dictionary = {},
@@ -426,6 +437,12 @@ static func replay(p_data: GameData, p_log: RunLog, p_rules: Dictionary = {}, p_
 		errors.append("log: %d entries rejected (out of tick order, duplicate / invalid cmd ids, malformed)"
 			% p_log.rejected)
 	var h: Dictionary = p_log.header
+	var ver: String = version_status(h)       # 08 §10.2 Nr. 7 / 07 §10.2: an older kernel's log is not replayed here
+	out["version"] = ver
+	if ver != "":
+		errors.append(version_error(h))
+		out["errors"] = errors
+		return out
 	var r: Dictionary = p_rules
 	var q: Dictionary = p_quest
 	var event_id: String = str(h.get("event_id", ""))
@@ -452,7 +469,8 @@ static func replay(p_data: GameData, p_log: RunLog, p_rules: Dictionary = {}, p_
 			return out
 	else:
 		var seed_v: Variant = h.get("seed", h.get("run_seed", 1))
-		st = GameState.create_new(p_data, int(h.get("slot", 0)), str(h.get("player_name", "Kai")),
+		# Casting (08 §2.7 Nr. 2, K0): the header carries no name — the replayed state uses the default display name
+		st = GameState.create_new(p_data, int(h.get("slot", 0)), GameState.DEFAULT_NAME,
 			int(seed_v) if typeof(seed_v) == TYPE_INT or typeof(seed_v) == TYPE_FLOAT else 1,
 			StringName(str(h.get("difficulty", "prime"))))
 	var sim: RunSim = RunSim.new(p_data, st, r, identity_of(h))
@@ -505,6 +523,11 @@ static func anchor_state(h: Dictionary, errors: PackedStringArray) -> GameState:
 
 ## Run identity of a RunLog header (RunSim.identity, GiftPolicy wrong_target): run_id, event_id, player_id ("local" in
 ## S0), window_id, league.
+## Casting (08 §2.3, K0): an event run (header event_id ≠ "" or event rules) never takes a persona command.
+func is_event_run() -> bool:
+	return str(identity.get("event_id", "")) != "" or not rules.is_empty()
+
+
 static func identity_of(header: Dictionary) -> Dictionary:
 	return {"run_id": str(header.get("run_id", "")), "event_id": str(header.get("event_id", "")),
 		"player_id": str(header.get("player_id", "local")), "window_id": str(header.get("window_id", "")),
@@ -513,8 +536,11 @@ static func identity_of(header: Dictionary) -> Dictionary:
 
 ## Header problems of a catalog event run: fixed seed (seed_policy fixed → EventDef.run_seed()), difficulty "prime"
 ## (event runs never lower it, 05 §10.1 rules.difficulty), league ∈ rules.leagues (required for several leagues).
+## An older sim_version is reported as old_version (no mismatch, 08 §10.2 Nr. 7).
 static func header_errors(h: Dictionary, def: EventDef, p_rules: Dictionary) -> PackedStringArray:
 	var out: PackedStringArray = []
+	if version_status(h) != "":
+		out.append(version_error(h))
 	var seed_v: Variant = h.get("seed", h.get("run_seed", null))
 	if str(def.seed_policy.get("type", "")) == "fixed" and not ((typeof(seed_v) == TYPE_INT
 			or typeof(seed_v) == TYPE_FLOAT) and int(seed_v) == def.run_seed()):
@@ -906,3 +932,28 @@ func _stamp_window(g: Dictionary) -> void:
 ## Stub: never reached — RunRules.rt_refusal refuses every real-time command until R5a builds the combat path.
 func _apply_combat(_c: Dictionary, _out: Array[ExploreEvent]) -> void:
 	pass
+
+
+# --- version (08 §10.2 Nr. 7, 07 §10.2: the one SIM_VERSION bump of R1a + K0) --------------------------------------
+
+## "" = replayable by this kernel (same version, or no "sim_version" key: hand-made logs, pre-header formats);
+## OLD_VERSION / NEW_VERSION for a log header or board entry of another kernel.
+static func version_status(h: Dictionary) -> String:
+	var v: Variant = h.get("sim_version", null)
+	if v == null or not JsonUtil.is_integral(v):
+		return ""
+	if int(v) < SIM_VERSION:
+		return OLD_VERSION
+	if int(v) > SIM_VERSION:
+		return NEW_VERSION
+	return ""
+
+
+## The error line of a header of another version ("header: old_version …").
+static func version_error(h: Dictionary) -> String:
+	var st: String = version_status(h)
+	if st == "":
+		return ""
+	var tag: String = OLD_VERSION_TAG if st == OLD_VERSION else "neuere Version"
+	return "header: %s — sim_version %d, this kernel is %d (%s: replay with the archive build of that version, 05 §4.3)" \
+		% [st, JsonUtil.to_int(h.get("sim_version", 0)), SIM_VERSION, tag]

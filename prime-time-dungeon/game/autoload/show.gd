@@ -110,6 +110,7 @@ func _ready() -> void:
 	Events.sponsor_window_opened.connect(_on_sponsor_window_opened)
 	Events.sponsor_window_closed.connect(_on_sponsor_window_closed)
 	Events.twist_applied.connect(_on_twist_applied)        # 06-D
+	Events.battle_started.connect(_on_battle_started_persona)   # 08 K0: waiting persona lines are dropped
 
 
 ## Display only: smoothing, noise, exploration chat. No game-relevant state changes here.
@@ -306,6 +307,7 @@ func start_floor(floor_index: int) -> void:
 	_update_viewers(true)
 	_check_milestones()
 	_marotten_floor_start(floor_index)                # 06-C: today's preferences (from the seed)
+	_persona_hooks().on_floor_start(floor_index)      # 08 K0 → K1: H7 (presentation)
 
 
 ## Re-emit hype/viewers/followers after load or RunSim tick (RunSim changes ShowState.hype directly).
@@ -513,6 +515,7 @@ func end_battle(result: BattleResult) -> int:
 				Events.boss_defeated.emit(boss_payload)
 				trigger("boss_defeated", boss_payload)
 				say("boss_defeated")
+				_persona_hooks().on_boss_won(result.boss_id)   # 08 K0 → K1: H3, after the battle (presentation)
 			_marotten_rewards(mres, result)             # 06-C: won bets, Liga, show_bet achievements
 		BattleResult.Outcome.FLED:
 			bump_stat("battles_fled")
@@ -1001,6 +1004,7 @@ func _on_chest_opened(chest_id: String, _rewards: Array) -> void:
 	add_hype(HYPE_CHEST, &"chest")
 	bump_stat("chests_opened")
 	trigger("chest_opened", {"chest_id": chest_id, "type": _chest_type(chest_id)})
+	_persona_hooks().on_chest(chest_id)            # 08 K0 → K1: H2 (presentation)
 
 
 func _on_lootbox_opened(box_id: String, rewards: Array) -> void:
@@ -1022,6 +1026,7 @@ func _on_floor_completed(floor_index: int) -> void:
 	var left: int = st.floor_run.time_left_ticks / FloorRun.TICKS_PER_SEC if st != null and st.floor_run != null else 0
 	trigger("floor_completed", {"floor": floor_index, "timer_left": left})
 	say("floor_end")
+	_persona_hooks().on_floor_end(floor_index)     # 08 K0 → K1: H5 (presentation)
 	_marotten_floor_end(floor_index)               # 06-C: Liga floor bonus, missed preferences, Liga hint
 
 
@@ -1172,12 +1177,13 @@ func _floor_mult() -> float:
 	return def.floor_mult if def != null else 1.0
 
 
-## Always adds name (player), floor, level (Kai), viewers, followers.
+## Always adds name (player), floor, level (Kai), viewers, followers and the persona placeholders (PersonaText.ctx).
 func _full_ctx(ctx: Dictionary) -> Dictionary:
 	var st: GameState = Game.state
 	var kai: PartyMember = st.member("kai") if st != null else null
 	var full: Dictionary = {"name": st.player_name if st != null else "Kai", "floor": _floor_index(),
 		"level": kai.level if kai != null else 1, "viewers": viewers(), "followers": followers()}
+	full.merge(PersonaText.ctx(Game.persona, DB.data, _fx_rng), true)   # 08 §4.4: {cand}, {job}, … (K0: fallbacks)
 	full.merge(ctx, true)
 	return full
 
@@ -1470,3 +1476,30 @@ static func _rt_battle_won_keys(result: BattleResult) -> Dictionary:
 	return {"duration_sec": result.duration_ticks / RtSim.TICKS_PER_SEC, "interrupts": result.interrupts,
 		"dodges": result.dodges, "telegraph_hits": result.telegraph_hits, "train_kills": result.train_kills,
 		"perfect_phases": result.perfect_phases}
+
+
+# ======================================================================================================================
+# Casting (08, K0 → K1): the persona hooks (08 §4.3) — logic in the private helper show_persona_hooks.gd
+# ======================================================================================================================
+
+## Private helper (02_TECH §0.3: no class_name): the persona hooks H2–H5, H7 (stubs until K1).
+const PersonaHooksScript := preload("res://autoload/show_persona_hooks.gd")
+
+var _persona: PersonaHooksScript = null
+
+
+## Game.enter_safe_room (after safe_room_enter): H4, the first visit of a safe room. Presentation only.
+func on_safe_room_entered(safe_room_id: String, first_visit: bool) -> void:
+	if first_visit:
+		_persona_hooks().on_safe_room(safe_room_id)
+
+
+func _persona_hooks() -> PersonaHooksScript:
+	if _persona == null:
+		_persona = PersonaHooksScript.new(self)
+	return _persona
+
+
+## 08 §4.3 R6: never a persona line in a battle (CTB and real-time) — a waiting one is dropped at its start.
+func _on_battle_started_persona(_encounter_id: String, _is_boss: bool) -> void:
+	_persona_hooks().drop_pending()

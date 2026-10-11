@@ -8,10 +8,15 @@ class_name StateHash extends RefCounted
 ## else — party, inventory, floor run incl. timer ticks, show values and counters, flags (incl. flags["live"]),
 ## rng_counter, pity — is hashed.
 ## of_battle(battle): CanonicalJson over BattleState.to_dict() (CTB counters, statuses, items, action_n, RNG state).
+## Casting (08 §2.1 P-2, §2.7, K0): display names are not game state — of() leaves out `player_name` and every party
+## member's `display_name`, of_battle() the `display_name` of the party combatants (setup.party and combatants), so
+## renaming the candidate changes no hash and no hash input carries the name (canary test, test_08_k0_contract).
 ## A state that cannot be serialized canonically (e.g. a non-integral float in flags) yields "" plus a warning; ""
 ## is never a valid hash.
 
-const EXCLUDED_KEYS: PackedStringArray = ["play_time_sec", "slot"]
+const EXCLUDED_KEYS: PackedStringArray = ["play_time_sec", "slot",
+	"player_name"]                                                    # Casting (08, K0): display field (P-2)
+const EXCLUDED_MEMBER_KEYS: PackedStringArray = ["display_name"]   # Casting (08, K0): party members, combatants
 const EXCLUDED_SHOW_KEYS: PackedStringArray = ["viewers"]
 const EXCLUDED_FLAG_KEYS: PackedStringArray = ["twist_buffer"]        # == TwistApplier.BUFFER_KEY
 
@@ -25,7 +30,22 @@ static func of(state: GameState) -> String:
 static func of_battle(state: BattleState) -> String:
 	if state == null:
 		return ""
-	return _hash(state.to_dict(), "BattleState")
+	return _hash(battle_hash_input(state), "BattleState")
+
+
+## The exact dictionary that of_battle() hashes: BattleState.to_dict() without the display names of the party
+## combatants (Casting, 08 §2.7 Nr. 5, K0).
+static func battle_hash_input(state: BattleState) -> Dictionary:
+	if state == null:
+		return {}
+	var d: Dictionary = state.to_dict()
+	d["combatants"] = _without_party_names(d.get("combatants", []))
+	var setup: Variant = d.get("setup", null)
+	if setup is Dictionary:
+		var s: Dictionary = (setup as Dictionary).duplicate()
+		s["party"] = _without_party_names(s.get("party", []))
+		d["setup"] = s
+	return d
 
 
 ## The exact dictionary that of() hashes (debugging desyncs: diff two of these).
@@ -47,7 +67,29 @@ static func hash_input(state: GameState) -> Dictionary:
 		for k: String in EXCLUDED_FLAG_KEYS:
 			f.erase(k)
 		d["flags"] = f
+	var party: Array = []                                             # Casting (08, K0): no display names
+	for m: Variant in (d.get("party", []) as Array):
+		var md: Dictionary = (m as Dictionary).duplicate() if m is Dictionary else {}
+		for k: String in EXCLUDED_MEMBER_KEYS:
+			md.erase(k)
+		party.append(md)
+	d["party"] = party
 	return d
+
+
+## Combatant dictionaries of the party (side 0) without their display names (Casting, 08 §2.7 Nr. 5).
+static func _without_party_names(list: Variant) -> Array:
+	var out: Array = []
+	var src: Array = list if list is Array else []
+	for c: Variant in src:
+		if c is Dictionary and int((c as Dictionary).get("side", 0)) == 0:
+			var cd: Dictionary = (c as Dictionary).duplicate()
+			for k: String in EXCLUDED_MEMBER_KEYS:
+				cd.erase(k)
+			out.append(cd)
+		else:
+			out.append(c)
+	return out
 
 
 static func _hash(d: Dictionary, what: String) -> String:

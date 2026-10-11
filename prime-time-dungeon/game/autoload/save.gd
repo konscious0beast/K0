@@ -44,6 +44,9 @@ func slot_summary(slot: int) -> Dictionary:
 	var out: Dictionary = SaveCodec.summary(loaded["state"])
 	out["saved_at_unix"] = int(loaded["saved_at_unix"])
 	out["slot"] = slot
+	var p: PersonaProfile = load_persona(slot)       # Casting (08 §2.5): the name comes from the persona file
+	if p != null:
+		out["player_name"] = p.name
 	return out
 
 
@@ -70,9 +73,11 @@ func save_slot(slot: int) -> Error:
 	var d: Dictionary = SaveCodec.encode(Game.state, _game_version())
 	d["saved_at_unix"] = int(Time.get_unix_time_from_system())
 	(d["state"] as Dictionary)["slot"] = slot
+	d["state"] = _slot_state_dict(d["state"])       # Casting (08 §2.7 Nr. 1): the slot without the name (K1)
 	var err: Error = _atomic_write(slot_path(slot), d)
 	if err == OK:
 		Game.state.slot = slot
+		err = save_persona(slot, Game.persona)       # Casting (08 §2.5): directly after the slot (K1)
 	Events.game_saved.emit(slot, err == OK)
 	return err
 
@@ -97,15 +102,21 @@ func load_slot(slot: int) -> Error:
 	st.slot = slot
 	if st.floor_run != null:
 		st.floor_run.time_left_ticks = maxi(st.floor_run.time_left_ticks, GRACE_SECONDS * FloorRun.TICKS_PER_SEC)
+	# Casting (08 §2.5): the persona file of the slot sets the display fields (K1; old saves with a name: migration)
+	var p: PersonaProfile = load_persona(slot)
+	if p != null:
+		PersonaPrivacy.restore_display(st, p)
 	# Game resets its private run context (event def, finished flag, layout cache, command ids, …) and takes over the
 	# state with a new run log; the live RunSim records its checkpoints into that log.
 	Game.adopt_loaded_state(st, _make_run_log(st))
+	Game.persona = p
 	Events.game_loaded.emit(slot)
 	Show.sync_from_state()
 	# The anchor of the new log (05 §11.4): Game.replay_log / RunSim.replay replay a "from_save" log from this state
 	# (RunSim.anchor_state checks it against start_hash) — the segment after a load is verifiable like a new game.
+	# Casting (08 §2.7 Nr. 3): without the display name (StateHash leaves it out, so start_hash stays valid).
 	if Game.run_log != null:
-		Game.run_log.header["start_state"] = st.to_dict()
+		Game.run_log.header["start_state"] = PersonaPrivacy.scrub_state_dict(st.to_dict())
 		Game.run_log.header["start_hash"] = StateHash.of(st)
 	return OK
 
@@ -122,7 +133,7 @@ func delete_slot(slot: int) -> Error:
 			var err: Error = DirAccess.remove_absolute(p)
 			if err != OK:
 				return _fail(err, "cannot delete %s" % p)
-	return OK
+	return delete_persona(slot)                      # Casting (08 §2.5): the persona file goes with the slot (K1)
 
 
 ## save_slot(Game.state.slot) — the active slot (last loaded or saved); slot 0 or an event run → OK, no write.
@@ -277,11 +288,11 @@ func _make_run_log(st: GameState) -> RunLog:
 		"schema": 1,
 		"seed": st.seed,
 		"slot": st.slot,
-		"player_name": st.player_name,
-		"mode": "campaign",
+		"mode": "campaign",                          # no name (08 §2.7 Nr. 2)
 		"difficulty": String(st.difficulty),
 		"game_version": _game_version(),
 		"sim_hz": Game.TICKS_PER_SEC,
+		"sim_version": RunSim.SIM_VERSION,             # like Game._make_run_log (05 §10.6; old_version check)
 		"event_id": "",
 		"run_id": RunLog.local_run_id(st.seed),
 		"player_id": "local",
@@ -366,3 +377,44 @@ static func _older_first(a: Dictionary, b: Dictionary) -> bool:
 	if int(a["t"]) != int(b["t"]):
 		return int(a["t"]) < int(b["t"])
 	return str(a["name"]) < str(b["name"])
+
+
+# ======================================================================================================================
+# Casting (08, K0 → K1): the persona file next to each slot (08 §2.2, §2.5, §2.7 Nr. 1)
+# ======================================================================================================================
+# STUB(K0) — owned by 08-K1. Replace completely, keep the public API.
+# K0 puts the call sites in place (save_slot, load_slot, delete_slot, slot_summary); the bodies are K1's. Until K1
+# writes the persona file the slot keeps the display name (a loaded game would lose it otherwise) — K1 switches
+# _slot_state_dict to PersonaPrivacy.scrub_state_dict together with the file I/O and the migration of old names.
+
+const PERSONA_DIR: String = "persona"
+
+
+## <parent of save_dir>/persona/slot_N.json (default user://persona/slot_N.json): next to the saves, never part of a
+## cloud save or backup (08 §2.5, R12).
+func persona_path(slot: int) -> String:
+	return _data_root().path_join(PERSONA_DIR).path_join("slot_%d.json" % slot)
+
+
+## K1: writes p.to_dict() atomically to persona_path(slot) (null → nothing to write). Slot 0 / read_only → OK.
+## Stub: OK without writing.
+func save_persona(_slot: int, _p: PersonaProfile) -> Error:
+	return OK
+
+
+## K1: the persona file of the slot (PersonaProfile.from_dict; a newer "v" → null with a warning; no file but a slot
+## name other than "Kai" → a file with that name and canon values, 08 §2.5). Stub: null (canon / none).
+func load_persona(_slot: int) -> PersonaProfile:
+	return null
+
+
+## K1: removes the persona file of the slot (+ .bak, .tmp) — with Save.delete_slot and "Kandidat:in löschen".
+## Stub: OK.
+func delete_persona(_slot: int) -> Error:
+	return OK
+
+
+## The state dictionary as the slot file stores it. K1: PersonaPrivacy.scrub_state_dict (the name lives only in the
+## persona file). Stub: unchanged.
+func _slot_state_dict(d: Dictionary) -> Dictionary:
+	return d

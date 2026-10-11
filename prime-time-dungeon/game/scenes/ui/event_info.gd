@@ -12,6 +12,8 @@ const NAME_KEYS: Dictionary = {"evt_offline_gleis9_name": "Gleis-9-Räumung",
 	"evt_offline_pacifist_name": "Pazifist:in der Unterstadt"}
 const METRIC_TEXT: Dictionary = {"viewers_target_peak": "Erreiche %s Zuschauer.",
 	"followers_gained_run": "Gewinne %s Follower.", "hype_100_count": "Bringe den Hype %s× auf 100."}
+## Casting (08 §2.7 Nr. 4): how the nameless local leaderboard entry is shown.
+const LOCAL_NAME: String = "Sie"
 
 
 ## [{id, name, kind, kind_name, floor, quest, rules, scoring, seed}] — catalog first, raw JSON as fallback.
@@ -160,9 +162,20 @@ static func leaderboard(event_id: String, n: int = 10) -> Array[Dictionary]:
 	return out
 
 
-## Entry → display name of the first player.
+## Entry → display name of the first player. Casting (08 §2.7 Nr. 4): the local entry carries no name
+## (display_name "") and is shown as "Sie".
 static func entry_name(e: Dictionary) -> String:
 	var players: Array = e.get("players", [])
 	if not players.is_empty() and typeof(players[0]) == TYPE_DICTIONARY:
-		return str((players[0] as Dictionary).get("display_name", "Kai"))
+		var p: Dictionary = players[0]
+		var n: String = str(p.get("display_name", "Kai"))
+		if n == "" and str(p.get("player_id", "")) == "local":
+			return LOCAL_NAME
+		return n
 	return "Kai"
+
+
+## 08 §10.2 Nr. 7 / 07 §10.2: an entry of an older kernel (sim_version below RunSim.SIM_VERSION) is shown with the tag
+## "ältere Version" (its replay needs the archive build of that version) — never as a mismatch; "" otherwise.
+static func version_tag(e: Dictionary) -> String:
+	return RunSim.OLD_VERSION_TAG if Leaderboard.version_status(e) == RunSim.OLD_VERSION else ""

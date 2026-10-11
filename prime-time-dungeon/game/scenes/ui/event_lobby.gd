@@ -221,6 +221,8 @@ func _show(e: Dictionary) -> void:
 		n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		n.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		r.add_child(n)
+		if EventInfo.version_tag(be) != "":            # 08 K0: an entry of the kernel before the version bump
+			r.add_child(UiUtil.label(EventInfo.version_tag(be), &"LabelSmall", 14, UiTheme.C_TEXT_DIM))
 		if bool(be.get("quest_complete", false)):
 			r.add_child(UiIcon.make(&"check", UiTheme.C_OK, 16))
 		var s: Label = UiUtil.label(UiUtil.fmt_int(int(be.get("score", 0))), &"", 18)

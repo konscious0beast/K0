@@ -3,9 +3,13 @@ class_name GameState extends RefCounted
 ## slot (active save slot; Save.save_slot moves it) is game-relevant and part of the state hash (05 §3.3 Nr. 8);
 ## to_dict() only contains integral numbers there.
 
+## Casting (08 §2.1 P-2, K0): the default display name — player_name and kai's display_name are display fields
+## (StateHash leaves them out; run logs, anchors and replays carry this default, the persona file the real name).
+const DEFAULT_NAME: String = "Kai"
+
 var slot: int = 0
 var seed: int = 0
-var player_name: String = "Kai"
+var player_name: String = DEFAULT_NAME
 var difficulty: StringName = &"prime"  # &"prime" | &"vorabend" (only lowerable)
 var play_time_sec: float = 0.0
 var party: Array[PartyMember] = []     # ordered by battle_slot
@@ -147,7 +151,7 @@ static func from_dict(d: Dictionary) -> GameState:
 	var st: GameState = GameState.new()
 	st.slot = JsonUtil.to_int(d.get("slot", 0))
 	st.seed = JsonUtil.to_int(d.get("seed", 0))
-	st.player_name = str(d.get("player_name", "Kai"))
+	st.player_name = str(d.get("player_name", DEFAULT_NAME))
 	var diff: String = str(d.get("difficulty", "prime"))
 	st.difficulty = &"vorabend" if diff == "vorabend" else &"prime"
 	st.play_time_sec = maxf(0.0, JsonUtil.to_float(d.get("play_time_sec", 0.0)))

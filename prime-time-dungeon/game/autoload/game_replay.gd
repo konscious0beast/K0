@@ -19,15 +19,21 @@ func _init(p_game: Node) -> void:
 	game = p_game
 
 
-## Game.replay_log: {"final_hash", "result", "mismatch_at", "errors"} — see there.
+## Game.replay_log: {"final_hash", "result", "mismatch_at", "errors", "version"} — see there. A log of another
+## sim_version is not replayed (RunSim.version_status / version_error, 08 §10.2 Nr. 7): one error, mismatch_at -1.
 func run(p_log: RunLog, until_tick: int) -> Dictionary:
-	var out: Dictionary = {"final_hash": "", "result": {}, "mismatch_at": -1, "errors": PackedStringArray()}
+	var out: Dictionary = {"final_hash": "", "result": {}, "mismatch_at": -1, "errors": PackedStringArray(),
+		"version": ""}
 	if p_log == null:
 		return out
 	var errors: PackedStringArray = p_log.validate()
 	out["errors"] = errors
 	if game.replaying or game.in_battle:
 		errors.append("replay_log is not possible during a replay or a battle")
+		return out
+	out["version"] = RunSim.version_status(p_log.header)
+	if str(out["version"]) != "":
+		errors.append(RunSim.version_error(p_log.header))
 		return out
 	if p_log.rejected > 0:
 		errors.append("log: %d entries rejected (out of tick order, duplicate / invalid cmd ids, malformed)"
@@ -62,8 +68,9 @@ func run(p_log: RunLog, until_tick: int) -> Dictionary:
 	var on_rejected: Callable = func(gift_id: String, reason: String) -> void:
 		errors.append("gift '%s' refused (%s)" % [gift_id, reason])
 	Events.gift_rejected.connect(on_rejected)
+	# Casting (08 §2.7 Nr. 2): the header carries no name — the replayed state uses the default display name
 	var st: GameState = anchor if anchor != null else GameState.create_new(DB.data, int(header.get("slot", 0)),
-		str(header.get("player_name", "Kai")), run_seed, difficulty)
+		GameState.DEFAULT_NAME, run_seed, difficulty)
 	game.state = st
 	if anchor != null:
 		Show.sync_from_state()                         # like Save.load_slot after adopting the loaded state
@@ -140,7 +147,7 @@ func _cmd(cmds: Array[Dictionary], i: int, c: Dictionary, errors: PackedStringAr
 				_end_if_finished()
 		_:
 			var refusal: String = RunRules.command_refusal(game.state, DB.data, (game.sim as RunSim).rules, c,
-				game._floor_done, game._scene_ctx)
+				game._floor_done, game._scene_ctx, (game.sim as RunSim).is_event_run())
 			if refusal != "":
 				errors.append("cmd %d (%s): refused by the rules (%s)" % [i, str(c.get("t", "")), refusal])
 			elif not _apply(c):
@@ -228,8 +235,8 @@ func _end_if_finished() -> void:
 
 
 ## Non-battle commands → the same Game/Show method the live run used. false = not applicable (a QA Sponsor-Fenster the
-## rules do not allow, a talent pick / casting / hero switch / secret the core refuses, an unknown type); gifts Show
-## refuses are reported through gift_rejected.
+## rules do not allow, a talent pick / casting / hero switch / secret / persona the core refuses, an unknown type);
+## gifts Show refuses are reported through gift_rejected.
 func _apply(c: Dictionary) -> bool:
 	match str(c.get("t", "")):
 		"floor":
@@ -282,6 +289,8 @@ func _apply(c: Dictionary) -> bool:
 			return game.set_hero(str(c.get("id", "")))
 		"secret":
 			return game.open_secret(str(c.get("id", "")))
+		"persona":                                       # Casting (08 §2.3, K0)
+			return game.apply_persona(c)
 		# Echtzeitkampf (07 §10.6): R5a replays them through Game.combat_*; before that RunRules.rt_refusal refuses
 		# them in _cmd, so these branches are never reached ("not applicable")
 		"ability_use": return false

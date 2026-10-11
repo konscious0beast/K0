@@ -11,7 +11,8 @@ const UiIcon := preload("res://scenes/ui/ui_icon.gd")
 const Backdrop := preload("res://scenes/ui/broadcast_bg.gd")
 const SceneKit := preload("res://scenes/ui/scene_kit.gd")
 const SLOT_SELECT: String = "res://scenes/title/slot_select.tscn"
-const NAME_ENTRY: String = "res://scenes/title/name_entry.tscn"
+## Casting (08 §10.2 Nr. 15, K0): the next screen after the hero card — K1 points it at persona_casting.tscn.
+const CASTING_SCENE: String = "res://scenes/title/name_entry.tscn"
 const CARD_SIZE: Vector2 = Vector2(540, 452)
 const PREVIEW_H: float = 236.0
 const TURN_DEG: float = 28.0               # the preview figure turns ±28° (slow turntable)
@@ -70,7 +71,7 @@ func choose(hero_id: String) -> void:
 	_busy = true
 	chosen = hero_id
 	Sfx.play_ui(&"ui_confirm")
-	Router.goto(NAME_ENTRY, {"slot": slot, "hero": hero_id})
+	Router.goto(CASTING_SCENE, {"slot": slot, "hero": hero_id})
 
 
 func back() -> void:

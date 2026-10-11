@@ -220,6 +220,7 @@ static func _sanitize(st: GameState, data: GameData) -> void:
 			_warn("class '%s' of %s dropped (unknown)" % [m.class_id, m.id])
 			m.class_id = ""
 		_sanitize_b(m, data)                       # 06 package B: talents, species
+		_sanitize_persona(m, data)                 # 08 K0: the start talent
 		var sb: StatBlock = Progression.total_stats(m, data)
 		m.hp = clampi(m.hp, 0, sb.values[StatBlock.Stat.HP])
 		m.mp = clampi(m.mp, 0, sb.values[StatBlock.Stat.MP])
@@ -288,3 +289,13 @@ static func _sanitize_b(m: PartyMember, data: GameData) -> void:
 			or not data.species_def(m.species_id).is_for(m.id)):
 		_warn("species '%s' of %s dropped (unknown)" % [m.species_id, m.id])
 		m.species_id = ""
+
+
+# --- Casting (08, K0) -------------------------------------------------------------------------------------------------
+
+## 08 §2.5: an unknown start talent (a data update removed it, or it is not an origin talent) is dropped like other
+## unknown ids (warning); Talents would skip it anyway.
+static func _sanitize_persona(m: PartyMember, data: GameData) -> void:
+	if m.origin_talent != "" and not data.has_origin_talent(m.origin_talent):
+		_warn("origin talent '%s' of %s dropped (unknown)" % [m.origin_talent, m.id])
+		m.origin_talent = ""

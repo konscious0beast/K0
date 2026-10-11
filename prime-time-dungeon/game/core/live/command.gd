@@ -18,6 +18,8 @@ class_name Command extends RefCounted
 ## combat_item, partner_preset, partner_special, auto_attack, autopilot, combat_hint, move_input, combat_speed,
 ## move_batch) and the optional "rt" block of "encounter" are checked by RtCommand.validate. Until R5a builds the
 ## real-time combat path both verifiers refuse them (RunRules.rt_refusal → "rt_unavailable").
+## Casting (08 §2.3, K0): persona {"v": 1, "talent", "bias": [≤ 3 Strings]} (start, once per run) or {"v": 1,
+## "talent", "swap": true} (first Talent-Show) — ids only; the rules are PersonaRules.check's.
 
 const TYPES: PackedStringArray = ["floor", "encounter", "battle", "lootbox", "buy", "sell", "equip", "use_item", "rest",
 	"event", "chest", "gate", "room", "safe_room", "safe_room_exit", "scene", "flag", "difficulty", "descend", "gift",
@@ -26,7 +28,8 @@ const TYPES: PackedStringArray = ["floor", "encounter", "battle", "lootbox", "bu
 	"twist",                                 # 06-D (external input like "gift")
 	# Echtzeitkampf (07, R1a, §10.1): == RtCommand.TYPES — schema in RtCommand.validate
 	"ability_use", "target_change", "move_sample", "combat_item", "partner_preset", "partner_special", "auto_attack",
-	"autopilot", "combat_hint", "move_input", "combat_speed", "move_batch"]
+	"autopilot", "combat_hint", "move_input", "combat_speed", "move_batch",
+	"persona"]                               # Casting (08, K0): start talent + bias / swap (PersonaRules)
 const SPONSOR_WINDOW_OPS: PackedStringArray = ["dev_open"]
 ## Inputs from outside the player (cmd id 0, 05 §10.6; == Game.EXTERNAL_CMDS): viewer gifts and M.O.D. twists (06-D).
 const EXTERNAL: PackedStringArray = ["gift", "twist"]
@@ -36,6 +39,8 @@ const DIFFICULTIES: PackedStringArray = ["prime", "vorabend"]
 ## (scene_*, defeated_*, title_*, mop_pep_talk, "live" — the gift counters) and never a recorded write (05 §11.4).
 const FLAG_KEYS: PackedStringArray = ["intro_seen"]
 const ADVANTAGE_MAX: int = 2           # BattleSetup.Advantage NORMAL 0 / PREEMPTIVE 1 / AMBUSH 2
+const PERSONA_VERSION: int = 1         # Casting (08 §2.3, K0) == PersonaRules.VERSION
+const PERSONA_MAX_BIAS: int = 3        # == PersonaRules.MAX_BIAS
 
 static var _gate_key: RegEx = null
 
@@ -150,6 +155,8 @@ static func _validate_fields(t: String, d: Dictionary) -> String:
 			return _first([_id(d, "member"), _id(d, "species"), _id(d, "class")])
 		"twist":
 			return _twist(d.get("twist", null))
+		"persona":                                 # Casting (08, K0)
+			return _persona(d)
 		"ability_use", "target_change", "move_sample", "combat_item", "partner_preset", "partner_special", \
 				"auto_attack", "autopilot", "combat_hint", "move_input", "combat_speed", "move_batch":
 			return RtCommand.validate(d)                     # Echtzeitkampf (07, R1a): delegated (07 §10.1)
@@ -200,6 +207,28 @@ static func _twist(v: Variant) -> String:
 	for k: String in ["req", "vote_id"]:
 		if tw.has(k) and not (tw[k] is String):
 			return "twist.%s must be a String" % k
+	return ""
+
+
+## Casting (08 §2.3, K0): the shape of a persona command (the rules are PersonaRules.check's).
+static func _persona(d: Dictionary) -> String:
+	if not _is_int(d.get("v", null)) or int(d["v"]) != PERSONA_VERSION:
+		return "v must be %d" % PERSONA_VERSION
+	var e: String = _id(d, "talent")
+	if e != "":
+		return e
+	if not str(d["talent"]).begins_with("tal_org_"):
+		return "talent must start with tal_org_"
+	if d.has("swap"):
+		if d.has("bias") or not (d["swap"] is bool) or not bool(d["swap"]):
+			return "a swap is {v, talent, swap: true} (no bias)"
+		return ""
+	var bias: Variant = d.get("bias", null)
+	if not (bias is Array) or (bias as Array).size() > PERSONA_MAX_BIAS:
+		return "bias must be an array of at most %d marotte ids" % PERSONA_MAX_BIAS
+	for b: Variant in (bias as Array):
+		if not (b is String) or str(b) == "":
+			return "bias must contain non-empty Strings"
 	return ""
 
 

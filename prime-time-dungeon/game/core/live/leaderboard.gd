@@ -95,3 +95,12 @@ static func _int(v: Variant) -> int:
 	if typeof(v) == TYPE_FLOAT and is_finite(float(v)):
 		return int(v)
 	return 0
+
+
+# --- Casting (08, K0) / Echtzeitkampf (07, R1a): the one SIM_VERSION bump --------------------------------------------
+
+## "" for an entry of this kernel (or one without "sim_version"), else RunSim.OLD_VERSION / NEW_VERSION — the UI tags
+## such entries "ältere Version" (RunSim.OLD_VERSION_TAG, 08 §10.2 Nr. 7: K1 shows it in the lobby and the results)
+## instead of treating them as a mismatch; they keep their rank.
+static func version_status(entry: Dictionary) -> String:
+	return RunSim.version_status(entry)

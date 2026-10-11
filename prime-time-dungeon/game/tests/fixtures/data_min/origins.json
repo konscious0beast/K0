@@ -1,0 +1,148 @@
+{
+	"schema": 1,
+	"talents": [
+		{
+			"id": "tal_org_animals",
+			"name": "Vermittlungsprofi",
+			"icon": "show",
+			"effects": [
+				{
+					"kind": "marotte_heart",
+					"per_floor": 1
+				}
+			]
+		},
+		{
+			"id": "tal_org_nature",
+			"name": "Wetterfest",
+			"icon": "element",
+			"effects": [
+				{
+					"kind": "element_pm",
+					"element": "poison",
+					"pm": 900
+				},
+				{
+					"kind": "element_pm",
+					"element": "shock",
+					"pm": 850
+				}
+			]
+		}
+	],
+	"entries": [
+		{
+			"id": "org_animals",
+			"name": "Tierpflege",
+			"icon": "paw",
+			"status": false,
+			"role": {
+				"n": "Tierpfleger:in",
+				"f": "Tierpflegerin",
+				"m": "Tierpfleger"
+			},
+			"jobs": [
+				{
+					"id": "occ_animals_keeper",
+					"n": "Tierpfleger:in",
+					"f": "Tierpflegerin",
+					"m": "Tierpfleger"
+				}
+			],
+			"keywords": [
+				"tierpfleg",
+				"tierarzt",
+				"tieraerzt",
+				"hundetrain",
+				"=zoo"
+			],
+			"talent": "tal_org_animals",
+			"alt": "org_nature",
+			"spec_hint": "",
+			"flavor": "",
+			"mod_tags": [],
+			"rivals": [
+				"rv_animals_1",
+				"rv_animals_2"
+			],
+			"brand": "br_org_animals"
+		}
+	],
+	"hobbies": [
+		{
+			"id": "hob_animals",
+			"name": "Tiere",
+			"icon": "paw",
+			"keywords": [
+				"tiere",
+				"hund",
+				"katze"
+			],
+			"talent": "tal_org_animals",
+			"title": "Tierisch beliebt",
+			"desc": "Herzen gewinnen Sie im Schlaf.",
+			"club": {
+				"text": "Tierheim-Team",
+				"g": "n"
+			},
+			"gag": "gag_animals",
+			"greeting": "gr_tierheim"
+		}
+	],
+	"traits": [
+		{
+			"id": "trt_caring",
+			"name": "fürsorglich",
+			"bias": "mar_graf_finale"
+		}
+	],
+	"rivals": [
+		{
+			"id": "rv_animals_1",
+			"name": "Kira Katzenjammer"
+		},
+		{
+			"id": "rv_animals_2",
+			"name": "Bodo Bürste"
+		}
+	],
+	"brands": [
+		{
+			"id": "br_org_animals",
+			"name": "Wedelwurst"
+		}
+	],
+	"gags": [
+		{
+			"id": "gag_animals",
+			"name": "Hundeschule"
+		}
+	],
+	"greetings": [
+		{
+			"id": "gr_tierheim"
+		}
+	],
+	"plans": [
+		{
+			"id": "plan_a",
+			"slots": [
+				{
+					"floor": 1,
+					"hook": "intro",
+					"n": 1,
+					"slot": "card"
+				}
+			]
+		}
+	],
+	"canon": {
+		"name": "Kai",
+		"form": "n",
+		"origin": "org_animals",
+		"occupation": "occ_animals_keeper",
+		"hobby": "hob_animals",
+		"traits": [],
+		"talent": "tal_org_animals"
+	}
+}

@@ -26,6 +26,7 @@ Maximum über alle gemessenen Ansichten bzw. Frames (Methode §2). „vorher“ 
 | Echtzeitkampf in der Welt (§3.6, mit Effekten): Draw Calls 3D, schlechtester Fall zwei Gruppen | 150 | – | **141** | 96 | 83 (59 + 24 Schatten) |
 | Echtzeitkampf: Draw Calls UI (mit R3-HUD) | 180 | – | **42–62** | 41–59 | 42–59 |
 | Echtzeitkampf: Materialien · Physik-Körper (Kollisionsring +1) | 24 · 40 | – | **21 · 25** | 22 · 25 | 21 · 25 |
+| Echtzeitkampf: `RtSim.step` mit echten Daten (07 §3.15; R5b-1, §3.8), Median | 250 µs Desktop (R5b-Ziel 180) | 206,5 µs | **177 µs** | – | – |
 | Safe Room: Draw Calls 3D / UI | 120 / 100 | 75 / 95 | **74 / 87** | 44 / 88 | 43 / 87 |
 | Persona-Look (Casting K2, §3.7): Kai im schwersten Look, Tris / MeshInstances | 3 000 / 7 | 2 492 / 7 (Kanon) | **2 940 / 7**, Draw Calls aller Szenen unverändert | – | – |
 | Safe Room: Physik-Körper | 0 | 3 ✗ | **0** | 0 | 0 |
@@ -212,6 +213,11 @@ Leiste aus der Lernliste (Stufe 1: Slot 1 + SHOW), volle Leisten misst R3 (`rt_d
 
 ³ Prototyp mit / ohne Echtzeitschatten der Komparsen (07 legt „ohne“ fest, so ist es gebaut). Alle drei Profile `PERF: OK`.
 
+**Nachmessung R5b-1** (2026-10-11, Branch `ptd/r5b`, `tools/perf.sh --only=combat`, gleiche Szenarien und Welt-Fixture, das
+heutige HUD mit Persona-Gesicht im Rahmen): DC 3D `combat_regular` / `combat_two_groups` / `combat_boss_queen` Compatibility
+high **113 / 141 / 112**, low 74 / 96 / 82, Mobile (Vulkan, lavapipe) high 68 / 82 / 69 (inkl. Schatten); DC UI 43–61;
+Materialien 19–22; Körper 26 (Kollisionsring +1); alle drei Profile `PERF: OK` — gleich zum Stand R2/R3 (Königin high 113 → 112).
+
 - **Schlechtester Fall `combat_two_groups`: DC 3D 141 von 150 mit Effekten** (Compatibility high; low 96, Mobile 83). Das
   Rig-LOD der Komparsen (Reserve aus 07 §8.10) ist nicht nötig; der Funken-Deckel (≤ 3 gleichzeitige Emitter) ist ohnehin
   umgesetzt (`scenes/combat/puppets.gd`). Komparsen und Beschwörungen werfen keine Echtzeitschatten, Akteure anderer Räume sind
@@ -254,6 +260,37 @@ Kampf-Eröffnungen zusätzlich mit dem Kanon-Kai auf demselben Stand (`--only=ba
   (vorbestehend; mit dem Look 101) — nicht durch K2, offen in §8.2.
 - **Materialien, Lichter, Körper, RAM** gleich (Haare, Kopftuch und Bart sind Vertex-Farben im Toon-Material der Figur;
   RAM-Spitze 247 MB).
+
+
+### 3.8 Sim-Zeit je Tick (07 §3.15, R5b-1)
+
+Stand 2026-10-11, Branch `ptd/r5b`. Gemessen wird nur `RtSim.step()` (headless, keine Darstellung), auf der geteilten
+4-Kern-Maschine in einer ruhigen Phase (Last < 1); vorher = `88595ab` (vor der Optimierung), nachher = R5b-1. Die Läufe sind
+kurz (600 Schritte ≈ 0,1 s) und streuen stark (einzelne Läufe +30–50 % durch Nachbarlast): je Variante 10 Läufe **abwechselnd**,
+bewertet wird der Median der Lauf-Mediane.
+
+| Messung | vorher | nachher |
+|---|---:|---:|
+| `rt_harness_main.gd --perf` (echte Daten: 2 Party + 6 Gegner der Zonen C/D mit ihren Regeln, 10 Formen), Median der 10 Lauf-Mediane (Spanne) | 206,5 µs (190–250) | **177 µs** (161–260) |
+| `test_r1_rt_perf` / Benchmark-Szenario (Fixtures: 6 Gegner, 10 Füllformen), Median von 15 Läufen | ≈ 277 µs | 204–250 µs (zwei Durchgänge) |
+| Zwei-Gruppen-Kampf mit Befehlen (`canned`) | – | 130 µs |
+| CI-Balance-Test `test_r4_rt_balance` (40 Bosskämpfe + Regulär + Show-Boss), Summe der vier Tests im `check.sh`-Lauf | 72–75 s | ≈ 57 s (zwei Gate-Läufe) |
+
+**Was sich geändert hat** (Commit `4a8a266`, ohne Verhaltensänderung — Benchmark-Hash `7de0245a…`, `canned`-Hash `e64961ae…` und
+die vier Boss-Endstände gleich): Balance-Werte, Set-Geometrie (Ringradius, „schlichtes Set“, Zellhälfte) und Skill-Flächen als
+Caches der Sim statt Dictionary-Zugriffe je Tick; ausstehende Treffer tragen ihren Fälligkeits-Tick; `targetable`/`may_act`
+eingebettet; die KI-Regelwahl prüft über eine Meta-Tabelle je Skill vor (GCD als häufigste Absage zuerst) und fragt den
+Fluchtzustand nur, wenn eine Regel ihn braucht; `escape_point` mit vorberechneter Versatz-Tabelle über nur die Gefahrenformen der
+eigenen Seite; Bewegung mit Schnellpfaden für schlichte Sets (ein Punkt im Kreis |p| ≤ r − Radius ist begehbar); der Bot liest
+die Sim über dieselben Helfer.
+
+**Wohin die Zeit geht** (Fixture-Szenario, Phasen-Zeitmesser in einer Profil-Kopie, Anteile): KI-Denken ≈ 44 % (Regelwahl und
+Aktionen der Gegner ≈ 11 %, ihre Zielwahl ≈ 5 %, Regelwahl der KI-Partnerin ≈ 7 %, ihre Reaktion auf Formen in jedem Tick
+≈ 9 %), Bewegung ≈ 18 % (Abstoßen der Gegner ≈ 8 %), Treffer/Zauber, Auto-Angriffe und Zonen/Einschläge je 6–8 %,
+Spielerpositionen, Status, Formen-Tracking je 3–4 %. Geprüft und verworfen: das Abstoßen über gepackte Arrays (gleich schnell —
+die Kosten liegen im Schleifen-Overhead von GDScript, nicht im Feldzugriff); `DetMath.yaw_of` und `isqrt` (1,3 bzw. 4,3 Aufrufe
+je Tick, zusammen < 3 µs). Nächster Hebel, falls nötig: die Formen als gepackte Arrays je Seite (Reaktion, Fluchtpunkt,
+Zonen-Test und `safe_point` laufen jeden Tick über dieselben Felder).
 
 ---
 
@@ -493,9 +530,8 @@ unter dem Budget. Auch der Mobil-Richtwert 1,5 s (Etage) ist mit Abstand eingeha
 - **Safe Room Kiosk, UI 101–103 Canvas-DC > 100** (Stand `main` `6a6d4da`, 2026-10-11; 2026-10-10 noch 87): kam mit den
   Zusammenführungen nach `ptd/final-a` dazu (Ursache noch nicht untersucht); unabhängig vom Persona-Look (§3.7).
 - **Echtzeitkampf in der Welt (§3.6):** gemessen mit der Welt-Fixture (die echten Daten haben vor R4 keine `rt`-Blöcke).
-  Nachmessen, sobald die Teile da sind: die echte Sim mit Gegner-KI, Telegraphen, Zonen und Beschwörungen (R1b-I3), die echten
-  `rt`-Daten von Etage 1 samt voller Aktionsleisten und Gleis-9-Bühne (R4) und dann die Sim-Zeit je Tick im laufenden Spiel
-  (07 §3.15).
+  Die Sim-Zeit je Tick mit den echten Daten steht in §3.8 (R5b-1); die Darstellungs-Szenarien spielen weiterhin die Fixture
+  (volle Last: 10 Formen, Komparsen, Adds) — R5b-1 hat sie mit dem heutigen HUD nachgemessen (§3.6, „Nachmessung R5b-1“).
 
 ---
 

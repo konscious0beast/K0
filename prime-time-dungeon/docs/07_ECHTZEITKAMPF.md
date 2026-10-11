@@ -1113,6 +1113,15 @@ bleibt gespeichert (`RtSim.escape`, Teil des Schnappschusses), solange er sicher
 Tick. Gemessen (R1b-I3, ruhige Maschine, Last 0,3–0,4, 4 Kerne): 2 Party + 6 Gegner (mit Regeln, Zonen, Telegraph-Zauber) + 10
 Formen ≈ 0,22–0,23 ms je `step()` (Median von 12 Läufen), der Zwei-Gruppen-Kampf ≈ 0,12 ms je Tick.
 
+**R5b-1 (ohne Verhaltensänderung, alle Golden-Hashes gleich):** Die heißen Pfade von `step()` lesen Balance-Werte, Set-Geometrie
+und Skill-Flächen aus Caches der Sim, ausstehende Treffer tragen ihren Fälligkeits-Tick, die KI-Regelwahl prüft über eine
+Meta-Tabelle je Skill vor (GCD zuerst), die Fluchtpunkt-Suche nutzt eine vorberechnete Versatz-Tabelle und nur die
+Gefahrenformen der eigenen Seite, die Bewegung auf schlichten Sets Schnellpfade. Echte Daten (Harness `--perf`, ruhige
+Maschine, Median über 10 Läufe): **177 µs** statt 206,5 µs; Fixture-Benchmark 204–250 µs statt ≈ 277 µs (§11.5,
+PERFORMANCE.md §3.8). Rest-Verteilung (Fixture, Phasen-Zeitmesser): KI-Denken ≈ 44 % (Regelwahl der Gegner, Reaktion der
+KI-Partnerin auf Formen in jedem Tick, Ziele), Bewegung ≈ 18 % (davon Abstoßen ≈ 8 %), Treffer/Zauber, Auto-Angriffe, Zonen je
+6–8 %; der nächste Hebel wäre eine Formen-Ablage als gepackte Arrays (Reaktion, Fluchtpunkt, Zonen-Test lesen dieselben Felder).
+
 ### 3.16 Stellwerte: `data/rt_balance.json` und `RtBalance`
 
 Alle Zahlen, die Balancing verändern darf, stehen in **`data/rt_balance.json`** (`{"schema": 1, "values": {…}}`, Eigentum R4,
@@ -1813,6 +1822,7 @@ HP = CTB-HP × 7 (`ENEMY_HP_PM` 7000; Kanalschleim `rt.hp_pm` 4800, weil er phys
 Stufe 6 (Zielstufe der Party 5), Echtzeit-HP **5 000** (Start), `dmg_pm` 1000, Set-Radius 600 (geschlossen), Radius 90 cm, Tempo
 240 cm/s, Auto Besenhieb (`skl_b_broom`, 110) alle 2,8 s, Reichweite 320. Schwäche Schock, Gift ×0,5, Betäubung/Verlangsamt
 50 % Widerstand (bestehend), immun gegen `sts_dazed`. Enrage „Feierabend ist Feierabend!“ bei 4:30, danach alle 30 s.
+Startwerte; R4 und **R5b-1** (Schlüsselbund-Wurf 35 %, E31) stimmen ab — Stand in §11.5.
 
 | Phase | HP | Beim Eintritt | Mechaniken (Zeiten ab Phasenbeginn: erste / Wiederholung) |
 |---|---|---|---|
@@ -1828,7 +1838,9 @@ Stufe 8 (Zielstufe 7), Echtzeit-HP **7 600** (Start), `dmg_pm` 500 (ihre Formel-
 Set-Radius 600 (geschlossen), Radius 110 cm; P1/P2 `stationary` auf dem entgleisten Waggon in der Raummitte (R4 setzt den
 Boss-Spot auf (0, 0)), Auto Zepterstoß (`skl_q_scepter`, 120) alle 3,0 s, Reichweite 350; außer Reichweite Pestspucke (**neu**
 `skl_q_spit`, 80 Gift, 1500 cm) als `auto_ranged_skill`. Schwäche Eis, Feuer ×0,5, immun gegen Gift und `sts_dazed`, 50 %
-Widerstand gegen Betäubung/Verlangsamt. Enrage „Betriebsschluss!“ bei 5:00, dann alle 30 s.
+Widerstand gegen Betäubung/Verlangsamt. Enrage „Betriebsschluss!“ bei 5:00, dann alle 30 s. **R5b-1:** Auto-Angriff in und außer
+Reichweite ist der **Zepterblitz** (`skl_q_scepter_flash`, magisch, Schock, Kraft 128, 1500 cm); Zepterstoß bleibt nur im
+CTB-Kampf, die Pestspucke entfällt (§11.5 „Stand R5b-1“).
 
 **Bühnenbau (R4, Art-Kit, Thronsaal):** zwei **ebenerdige** Gleisbänder entlang der x-Achse bei z = −330 („Gleis 9a“) und
 z = +330 („Gleis 9b“), je 3 m breit — Schienen und Schwellen auf Bodenhöhe eingelassen, **keine Grube**, damit Telegraphen flach
@@ -2447,6 +2459,11 @@ Twists im Kampf** (06 §5.7) und kein `RtSim.apply_twist`; ein Twist-Befehl trä
   („ohne Rüstung & ohne Accessoire“, 06 §4.3) und wirkt über die Werte der Ausrüstung und über Show-Faktoren — **R5b (E31):** dazu
   genau eine Kampfregel, „leichtfüßig“ (Status `sts_light_footed` je Liga-Mitglied, Mod-Quelle `liga`, letzter Eintrag der festen
   Reihenfolge Ausrüstung → Spezies → Spezialisierung → Show-Boss → Twists → Liga).
+- **Ausrüstung (R5b):** `items.json` `rt.mods` — RtMods eines angelegten Stücks ohne `src`/`unit` (`RtMods.from_equipment` setzt
+  `equip:<id>` und die Einheit des Trägers); nur Ausrüstung, im Validator wie jede Mod-Liste geprüft. `dmg_taken_pm` darf dafür
+  ein `element` tragen (R5b): Der Faktor faltet nur in Skill-Treffer (Formel und Prozent) dieses Elements, nach den
+  elementlosen Faktoren; Status-Ticks nie. Einziger Eintrag: Samtcape `{"op": "dmg_taken_pm", "pm": 900, "element":
+  "physical"}` (§11.5 „Stand R5b-1“), im Beschreibungstext genannt.
 - **Kampf-Twists** (06 §5.6, Bereich `battle`/`boss`): `BattleBridge.make_rt_setup` übergibt `RtMods.from_twists` beim Aufbau
   die aktiven Einträge aus `GameState.flags["live"]["twist"]["active"]` mit `battles_left > 0` (in gespeicherter Reihenfolge);
   heruntergezählt wird unverändert in `TwistApplier.on_battle_end` (über `Game.apply_battle_result`).
@@ -2636,6 +2653,13 @@ hinter `id0 + n − 1`. `expand()` stellt nur wohlgeformte Stapel wieder her (Sc
 gespeicherte Logs kompaktiert werden, entscheidet R5b: `Save.save_replay` schreibt bis dahin die unkompaktierte Form (der
 Bestenlisten-Eintrag bindet sie über `run_log_hash` = `digest()`; Event-Läufe kämpfen bis R5b im CTB).
 
+**Umsetzung (R5b-1):** `Save.save_replay` schreibt die **kompaktierte** Form (eine Kopie: `RunLog.compact`; ein CTB-Log bleibt, wie
+es ist); `run_log_hash` des Bestenlisten-Eintrags ist `RunLog.canonical_digest()` = `digest()` der **expandierten** Form — für das
+Live-Log, die Datei und deren Expansion gleich, der Eintrag benennt also den Lauf, nicht seine Speicherform. Zwei Kämpfe am
+selben `k` (die Uhr steht) dürfen am selben `ct` enden: `RunLog.add_checkpoint` hängt einen Kampf-Prüfpunkt immer an (vorher ersetzte
+derselbe `(k, ct)` den des ersten Kampfes, beide Verifier meldeten einen ehrlichen Lauf als Abweichung); ein Zustands-Prüfpunkt am
+selben `k` ersetzt wie bisher den vorigen Zustands-Prüfpunkt.
+
 ### 10.4 StateHash-Abdeckung
 
 `StateHash.of_rt(sim: RtSim) -> String` = Hash über `CanonicalJson` von `sim.snapshot()`:
@@ -2730,6 +2754,13 @@ ist ein Fehler —, die übrigen Einträge von `c` (ein weiteres Geschenk → `g
 - Pur-Liga: keine externen Geschenke (GiftPolicy unverändert), keine spielrelevanten Twists (06 §5.7).
 - Neue optionale Regeln `rules.combat` (Teil von `rules_hash`): `autopilot` (Standard `false` in Ligen → `submit` lehnt mit
   `forbidden` ab), `assist` (Standard `true`), `hints` (Standard `false` in Ligen, §2.13), `max_enemies` (Standard 6).
+- **Umsetzung (R5b-1): `rules.combat.mode`** (`"realtime"` | `"ctb"`, Teil von `rules_hash`) bindet den Kampfmodus eines Events —
+  nie die Einstellung der spielenden Person. `Game.start_event_run` startet ein Echtzeit-Event wie ein neues Echtzeit-Spiel
+  (Kopf `combat_mode`/`rt_version`, `RunRules.rt_start`), beide Verifier melden einen Kopf, dessen Modus nicht zur Regel passt
+  (`RunSim.header_errors`), `EventDef.validate` prüft `rules.combat` (Schlüssel, Typen, `max_enemies` ≥ 1). Ohne den Schlüssel
+  kämpft ein Event im CTB (Definitionen vor R5b; mit der Umstellung der Kampagne in Teil 2 entfällt dieser Fall, §12.6). Die
+  beiden ausgelieferten Events kämpfen in Echtzeit ohne Autopilot (`{"mode": "realtime", "autopilot": false}`); Hinweiskarten
+  zeigen Event-Läufe ohnehin nicht (§2.13).
 - **Spieltempo (Entscheidung O1):** überall erlaubt. Jeder Wechsel wird als `combat_speed` aufgezeichnet; ein Lauf mit einem Wert
   < 1000 trägt auf Bestenlisten das Abzeichen „Zeitlupe“ und lässt sich getrennt filtern. Die Sim ist bei jedem Tempo gleich.
 - Bestenlisten: Replay muss bitgenau sein. Die Spielerbewegung ist bis Grad B client-seitig mit Plausibilitätsgrenzen (§3.5.2):
@@ -2986,6 +3017,59 @@ Lesart:
 `RT-BAND`-Urteile werden dann hart); die Liga-Bänder der Königin entscheiden; der Full-Run-Bot im Echtzeitkampf (Autopilot)
 verliert die Bosse im ersten Versuch zu 50–88 % — der R5-Full-Run braucht dort Wiederholungen oder den `RtBotPlayer`.
 
+**Stand R5b-1** (2026-10-11, Branch `ptd/r5b`) — gleiche Methode, Seeds ab n = 0, Partner auf Standard-Taktik, mit der
+Liga-Regel „leichtfüßig“ (E31) und der Abstimmung unten. Bosse 200 Seeds je Held:in und Liga-Stufe, reguläre Kämpfe, Show-Boss
+und Tutorial 30 Seeds, Etagenfolge 20 Läufe:
+
+| Begegnung | Held:in | Liga 0 | Liga 1 | Liga 2 | **Liga-Schritt** (1 − 0) | Dauer · HP-Verlust (Liga 0) | unterbrochen · Telegraph-Treffer |
+|---|---|---|---|---|---|---|---|
+| Hausmeister | Kai | 12,0 % [8–17] | 25,5 % [20–32] | 23,0 % [18–29] | **+13,5** | 3:01 · 44 % | 85 % · 22 % |
+| Hausmeister | Mopsula | 23,0 % [18–29] | 31,0 % [25–38] | 33,0 % [27–40] | **+8,0** | 2:54 · 46 % | 87 % · 22 % |
+| Königin | Kai | 28,5 % [23–35] | 39,5 % [33–46] | 54,0 % [47–61] | **+11,0** | 3:55 · 67 % | 74 % · 19 % |
+| Königin | Mopsula | 36,0 % [30–43] | 49,0 % [42–56] | 72,5 % [66–78] | **+13,0** | 3:51 · 78 % | 70 % · 18 % |
+
+| Weitere Bänder | Kai | Mopsula |
+|---|---|---|
+| 13 reguläre: Median der Mediane · HP-Verlust · Niederlagen | 22,9 s · 21,7 % · 0 / 390 | 21,2 s · 22,5 % · 0 / 390 |
+| Show-Boss: Dauer · HP-Verlust · Niederlagen | 32,9 s · 23,5 % · 0 / 30 | 28,5 s · 33,1 % · 0 / 30 |
+| Tutorial: HP-Verlust · Niederlagen | 7,8 % · 0 / 30 | 8,7 % · 0 / 30 |
+| Etagenfolge: Heilgegenstände je Etage · Kämpfe bis zum ersten · Niederlagen je Lauf | 6 · 3 · 0,20 | 7 · 3 · 0,75 |
+
+Lesart: Alle vier **Liga-Schritte liegen im Ziel 5–15 Punkte** (E31), die Königin in Liga 2 unter 80 % (54 % / 72,5 %); Liga 0
+bleibt in den Harness-Bändern (Hausmeister 10–30 %, Königin 25–45 %), ebenso Dauer, Unterbrechungen und Telegraph-Treffer; alle
+Liga-1- und Liga-2-Werte erfüllen auch die alten Bänder aus 06 §4.10 (Hausmeister ≤ 40 / ≤ 55 %, Königin ≤ 55 %; Liga 2 der
+Königin jetzt ≤ 80 %, E31). Die Konfidenzintervalle (Wilson 95 %) sind breit: Ein Liga-Schritt ist auf 200 Seeds nur auf
+≈ ±9 Punkte genau — die Bänder der nächtlichen Prüfung (`BAND_LIGA_STEP` 5–15) bewerten den Mittelwert.
+
+**R5b-1-Abstimmung** (alle Werte in den Daten, §11.2; Gründe gemessen, je 80–150 Seeds):
+
+- **Liga-Regel „leichtfüßig“** (E31, §9.5) für jedes Liga-Mitglied.
+- **Königin — Auto-Angriff „Zepterblitz“** (`skl_q_scepter_flash`, magisch, Schock, Kraft 128, 1500 cm) in und außer
+  Reichweite statt Zepterstoß (physisch, 120, bleibt im CTB) und Pestspucke (entfällt). Mit dem physischen Zepter blieb die
+  Königin ein Heil-Rennen am Kipppunkt: ohne Warnweste + Schlüsselbund (8 DEF) nahm der Tank in Liga 1 ≈ 11 % mehr Formel-
+  Schaden, die Niederlagen stiegen um 34 Punkte (Kai); `dmg_pm` 740 → 680 senkte Liga 0 von 27 auf 7,5 %, der Schritt blieb
+  bei +24. Gegen RES verliert der Tank in der Liga nur 2 Punkte. Die Pestspucke traf Mopsula außerhalb der Reichweite und prallte
+  an der Gasmaske ganz ab (Gift-Immunität, Formel-Treffer → 0): ohne Maske stieg ihr Schritt mit dem Blitz auf +20–23.
+- **Samtcape** (`items.json` `rt.mods`, §9.5): −10 % physischer Schaden im Echtzeitkampf. Mopsula nimmt beim Hausmeister fast nur
+  Prozent-Treffer (Schlüsselbund, Wirbel, Nebel); DEF/RES des Capes wirkten dort nicht, „leichtfüßig“ glich den Verlust mehr als
+  aus (Schritt −1; Putzmittelnebel als magischer Formel-Treffer brachte nur 0–4). Nur physisch, weil ein Schutz gegen alles die
+  Königin (Schock, Gift) mitverschob (Mopsula-Schritt dort +20–25).
+- **Hausmeister — Schlüsselbund-Wurf 30 → 35 %**: gleicht das Cape für Liga 0 aus.
+- Geprüft und verworfen: Pestbiss als Prozent-Treffer (5 %: Kai-Schritt nicht kleiner), Pestpfützen ohne Element bzw. 18 %
+  (Mopsula-Schritt unverändert), Zepterblitz 130–155 (Kipppunkt: 130 → Kai-Schritt +24).
+
+**Profile je Held:in** (§5.7, `RtBotPlayer.HERO_PROFILES`, R5b-1), `perfect` auf 40 Seeds, Liga 0: Hausmeister Kai 2,5 % /
+Mopsula 5,0 %, Königin Kai 0 % / Mopsula 30,0 % (`typical` 36,0 %) — `perfect` schlägt `typical` jetzt für beide Held:innen
+(R4: Königin mit Mopsula 37,5 % gegen 34 %); die Königin bleibt mit Mopsula auch fehlerfrei gespielt schwer, weil dort die KI
+tankt (Kai als KI-Partner nimmt den Zepterblitz).
+
+**Leistung (§3.15, R5b-1):** `RtSim.step` mit den echten Daten (`--perf`: 2 Party, 6 Gegner der Zonen C/D mit ihren Regeln,
+10 Formen, 600 Schritte) auf der ruhigen 4-Kern-Maschine, 10 abwechselnde Läufe: **Median 177 µs** (Spanne der Läufe 161–260)
+gegen 206,5 µs (190–250) vor der Optimierung (`88595ab`); der Fixture-Benchmark von `test_r1_rt_perf` 204–250 µs (vorher ≈ 277).
+Gleiches Verhalten: alle Golden-Hashes unverändert (Benchmark, `canned`, die vier Boss-Endstände). Der CI-Balance-Test
+`test_r4_rt_balance` braucht in den Gate-Läufen ≈ 57 s (vorher 72–75 s; Ziel < 60 s). Messmethode und Hebel:
+`docs/PERFORMANCE.md` §3.8.
+
 ---
 
 ## 12. Migrations- und Umsetzungsplan
@@ -3063,6 +3147,29 @@ er enthält alles, was mehr als eine Phase braucht:
   (9) Ein im Kampf geänderter `partner_preset` gilt nur für diesen Kampf; ihn in `PartyMember.rt_preset` zu übernehmen
   (z. B. per `loadout` nach dem Kampf) ist offen (R2/R3, spätestens R5b). Neu: `test_r5_loadout`; die Tests aus §12.5 nutzen
   das Kit `tests/fixtures/rt_live/rt_live.gd` (Live-Läufe über die `Game`-API wie der `CombatDirector`, Anker-Zustände).
+- **Stand R5b-1 (2026-10-11, Branch `ptd/r5b`, Teil 1: Integration und Parität, CTB bleibt):** Das Fähigkeiten-Menü schreibt je
+  Wahl einen `loadout`-Befehl (Varianten, Partner-Taktik); eine im Kampf gewählte Partner-Taktik bleibt (`BattleResult.rt_presets`
+  → `PartyMember.rt_preset`/`rt_toggles` in `BattleBridge.apply_result`, kein Log-Eintrag — beide Verifier schreiben dasselbe;
+  erledigt R5a (9)); Event-Läufe kämpfen im Modus ihrer Regeln (`rules.combat.mode`, §10.7; erledigt R5a (8)); Replay-Dateien
+  kompaktiert, `run_log_hash` über die expandierte Form (§10.3); Autoplay-Smoke und Full-Run-Bot im Echtzeitkampf (§12.5,
+  02_TECH §11.4/§11.4.1, CI-Schritt); `ach_crit_3`/`ach_weakness_5` gemessen, Echtzeit-Schwellen 15 / 10 (`condition_rt`,
+  §9.4; erledigt R5a (6)); Kais Rahmen-Symbol trägt den Persona-Look, Touch-Boss-Rahmen frei von der Hype-Leiste (§8.4); die
+  Liga-Regel „leichtfüßig“ (E31) mit Boss-Abstimmung (§11.5 „Stand R5b-1“); Bot-Profile je Held:in und Kalibrierplan (§11.4);
+  `RtSim.step` schneller ohne Verhaltensänderung (§3.15, §11.5); 02_TECH §3–§7, §11, §12 nachgezogen; Paritätsbericht §12.6.
+  Fehlerbehebungen: zwei Kämpfe am selben `(k, ct)` behalten beide Prüfpunkte (§10.3); das Boss-Intro hört das Ende seiner
+  Zeile von Anfang an (endete sie vor dem Verbinden, wartete es 12 s Wanduhr) mit Sicherheitsnetz in Spielzeit; die
+  Autopilot-Beschriftung nennt die Taste des Eingabeschemas (Touch: keine); der Full-Run-Bot ruft nach einer Niederlage den
+  freigegebenen Director nicht mehr auf und zieht als Graf Mopsula die verdutzte Gruppe mit Taste 1 (§2.2: Berührung startet
+  den Kampf einer regulären Gruppe nicht). Abweichungen und Auslegungen: (1) `RunSim.replay` (Kernläufe, ohne Show)
+  reproduziert einen Live-Lauf nur ohne System-Geschenke im Kampf — die Geschenke entstehen aus Show-Schwellen, die RunSim
+  nicht rechnet; Live-Läufe prüft `Game.replay_log` (§12.6 Nr. 4). (2) Ausrüstung kann Echtzeit-Mods tragen (`items.json`
+  `rt.mods`, §9.5; neu: `dmg_taken_pm` mit `element`) — nötig, weil Rüstung im Echtzeitkampf nur Formel-Treffer dämpft.
+  (3) Die Königin greift mit dem Zepterblitz an (§6.7), die Pestspucke entfällt. (4) Der Full-Run-Bot hat im Echtzeitkampf
+  zwei Versuche an der optionalen Königin (`RT_FLOOR_BOSS_ATTEMPTS`; CTB eine). (5) `typical` bleibt unkalibriert, bis
+  Probespiel-Logs vorliegen (Plan §11.4). (6) Die Show-Zahlen des Echtzeitkampfs liegen über den GDD-§13-Bändern (§12.6
+  Nr. 3, rot) — Abstimmung in Teil 2. (7) Orchestrator-Entscheidung 2026-10-11: CTB wird in Teil 2 nicht gelöscht, sondern
+  als Minispiel „Stempelduell“ ausgelagert (`10_MINISPIEL_STEMPELDUELL.md`) — §12.6 „Stand R5b-1“ führt die Teil-2-Liste
+  und die Kopplungen.
 
 **Phasenübergreifende Signaturen — vollständige Stub-Liste von R1a** (alles, was eine Phase von einer anderen aufruft oder
 liest; `test_r1a_contract` prüft jede Zeile per Reflexion):
@@ -3230,8 +3337,21 @@ Echtzeit-Nachfolger mit Test:
 | R5a | `test_r5_loadout` | Befehl `loadout` (§10.1): Schema, Regeln (`not_realtime`, `unknown_member`, `not_a_variant`, `not_learned`, Kampfsperre), Wirkung im nächsten Kampf, gleiche Prüfung in beiden Verifiern |
 | R5b | `test_m6_autoplay` (angepasst) | Schritte `force_battle` → `force_combat` (60 Frames), `battle` → `combat` (900 Frames, Autopilot, `Events.battle_ended` VICTORY) |
 | R5b | `test_m6_fullrun` + `tools/fullrun.sh --combat=realtime` | Etage 1 vollständig mit Autopilot (alle Strategien, beide Held:innen), Zeitbänder; der Show-Boss bleibt optional (der Bot erreicht die Treppe auch ohne ihn) |
+| R5b-1 | `test_r5b_integration` | im Kampf gewählte Partner-Taktik bleibt (`BattleBridge.apply_result`, beide Verifier gleich, nur bekannte Werte), Fähigkeiten-Seite → je Wahl ein `loadout`, `rules.combat.mode` bindet den Kampfmodus eines Events (Kopf-Prüfung, Event-Lauf in Echtzeit durch beide Verifier, Autopilot abgelehnt), kompaktierte Replay-Datei + `run_log_hash` über die expandierte Form |
+| R5b-1 | `test_r5b_liga` | E31: Liga-Mod je Stufe (Stufe 1 gesteuerte Figur, Stufe 2 beide, nie im Tutorial; Fixtures ohne den Status unverändert), 8 % schneller (Sim, Körper), `ai_miss_pm` 750, übersteht ein K.O., deterministisch, angekündigt (Marotte, Status, HUD-Symbol, Regeltext) |
+| R5b-1 | `test_r5b_achievements` | Echtzeit-Schwellen `ach_crit_3` (15) und `ach_weakness_5` (10) über `condition_rt`/`desc_rt`; CTB unverändert; die seltenen Kampf-Achievements, die der Full-Run-Bot nicht trifft, schalten in Live-Echtzeitkämpfen frei (Flucht, drei Erstschläge, Mopsula K.O. durch einen Gift-Tick, Sieg mit 1 HP bzw. ≤ 10 %) |
+| R5b-1 | `test_r5b_hud` | Kais Rahmen-Symbol trägt den Persona-Look (Haut, Haarfarbe und -schnitt, Bart, Brille; ohne Persona der Kanon-Look), Touch: Boss-Rahmen endet vor der Hype-Leiste; die Autopilot-Beschriftung nennt die Taste des Schemas (Touch: keine) |
+| R5b-1 | `test_r5b_equipment_mods` | `items.json` `rt.mods`: das Samtcape gibt seinem Träger `equip:itm_arm_velvet_cape` (erste Stelle der festen Reihenfolge), `dmg_taken_pm` mit `element` faltet nur in Treffer dieses Elements (Formel und Prozent, nie Status-Ticks), nur Ausrüstung trägt gültige Mods (Validator) |
 
 ### 12.6 Parität und CTB-Entfernung
+
+> **Entscheidung 2026-10-11 (Orchestrator/Nutzer, nach R5b-1):** Der CTB-Kampf wird **nicht gelöscht**, sondern als eigenes,
+> optionales Minispiel **„Stempelduell“** (CTB-Kartenduell; später auf Etage 8 im „Amt für Etagenwesen“, bis dahin unter
+> „Extras → Stempelduell (Vorschau)“) ausgelagert — Vertrag `10_MINISPIEL_STEMPELDUELL.md` (SD1 = Schritt 3 unten, Kap. 6.2,
+> CR-34). Die Kampagne kämpft danach nur noch in Echtzeit (Daten-Backen HP × 4, `SaveCodec` v2); die CTB-Engine (fünf Dateien
+> nach `core/stempel/ctb/`, `StateHash.of_battle`, die CTB-Felder der Defs) lebt hinter dem Minispiel-Eingang weiter. Damit ist
+> die Nutzerfreigabe nach dem Probespiel **keine Vorbedingung** mehr für die Umstellung der Kampagne (es geht nichts verloren) —
+> die messbaren Kriterien unten sind es. Teil-2-Liste und gefundene Kopplungen: „Stand R5b-1“ am Ende dieses Abschnitts.
 
 CTB wird entfernt, wenn **alle** Kriterien erfüllt sind:
 
@@ -3269,6 +3389,62 @@ Danach (R5b), in dieser Reihenfolge, je ein Commit:
    `StateHash.of_battle`; `ShowRules`-Profil `ctb`.
    **→ 10_MINISPIEL_STEMPELDUELL.md Kap. 6.2 (CR-34):** Engine umziehen statt löschen; `battle_command.gd` bleibt geteilt.
 4. **Doku:** §12.8.
+
+**Stand R5b-1 (2026-10-11, Branch `ptd/r5b`) — Paritätsbericht.** Gemessen auf dem Stand dieses Teils (CTB weiter Standard
+und unverändert: `fullrun.sh --strategy=all` liefert vor (`88595ab`) und nach R5b-1 dieselben vier Läufe — alle Kennzahlen
+und Ereigniszeilen gleich bis auf den Frame; nur die Präsentations-Münze der Persona-Zeile im Safe Room (`mod_tags`, 50 : 50)
+fällt wie zwischen zwei Läufen desselben Stands mal so, mal so; die Kampagne im Echtzeitkampf über `--combat=realtime`):
+
+| Nr. | Kriterium | Messung R5b-1 | Stand |
+|---|---|---|---|
+| 1 | Full-Run Echtzeit, 50 Seeds ≥ 95 % | **108 / 108** Echtzeit-Full-Runs bestanden: Kai **50 / 50** und Graf Mopsula **50 / 50** Seeds (1–50; `rush` und `dawdle` je 13, `typical` und `thorough` je 12 — jede Strategie ohne Ausfall; Takt `fast`, Bot-Profil `typical`), dazu Liga 1 und 2 je Held:in (4 / 4) und `typical` im menschlichen Takt (4 / 4); Stand `b5cd042` (Kai-Seeds 1–33 auf `47ceb1e`, gleicher Kai-Pfad). Game Over je Lauf 0,48 (Kai) / 0,54 (Mopsula), höchstens eins, nur an Bossen: Hausmeister im ersten Versuch 40 / 50 je Held:in, Königin 49 / 50 bzw. 46 / 50, jeweils spätestens im zweiten Versuch besiegt. Als Mopsula zieht der Bot verdutzte Gruppen mit Taste 1: Erstschlag in 39 % ihrer Kämpfe, Hinterhalt 12 % (vor der Korrektur 5 % / 16 %; Kai 10 % / 9 %) | grün |
+| 2 | Harness-Bänder (200 Seeds, beide Held:innen, Liga 0/1/2); `typical` kalibriert | alle Bänder §11.1 und der E31-Liga-Schritt erfüllt (§11.5 „Stand R5b-1“); `typical` ist nicht aus Probespiel-Logs kalibriert — es gibt noch keine (Plan §11.4) | gelb |
+| 3 | Show-Zahlen in den GDD-§13-Bändern | `typical` im menschlichen Takt (Seeds 101/102, je Held:in, Mediane): Hype Start 39 (25–45 ✓) / Ende **70,5** (45–65 ✗), Geschenke je Etage **15** (4–7 ✗), Follower **2 190** (1 200–1 500 ✗), Zuschauer-Spitze **6 075** (3 000–5 500 ✗); dieselben Seeds im CTB: 34 / 57, 3,5, 1 410, 4 712 (im Band). Etagenzeit 13:11 Erkundung + 12:42 Kampf = 25:52 (11–15 / 22–28 ✓), Stufe 5–6 / 7 an den Bossen ✓. Im schnellen Takt (Median der 100 Seed-Läufe): Hype 63 / 78 (Spitze 99), Geschenke 20, Follower 2 796, Zuschauer 6 838; CTB im selben Takt (`--strategy=all`, 4 Läufe): Hype 51–70 / 75–85, Geschenke 13–15, Follower 1 874–2 303, Zuschauer 4 837–6 123 — schnell liegen beide Modi über den Bändern (sie gelten für den menschlichen Takt), Echtzeit mit ≈ 40 % mehr Geschenken und ≈ 30 % mehr Followern | **rot** |
+| 4 | 20 Echtzeit-Läufe bitgenau | Jeder Echtzeit-Full-Run spielt sein Run-Log bei jedem Safe-Room-Besuch und am Etagenende mit `Game.replay_log` nach (Live-`StateHash` gleich, 0 Verifier-Fehler, auch ab geladenen Spielständen und nach Game Over): **108 Läufe, 857 Prüfungen** (6–10 je Lauf), keine Abweichung; Flucht und externe Geschenke: `test_r5_rt_live_equivalence`; Kernläufe `RunSim.replay`: `test_r5_rt_replay`, Event-Lauf in beiden Verifiern: `test_r5b_integration` | grün |
+| 5 | Leistung §8.10 und Sim §3.15 | `combat_regular` / `combat_two_groups` / `combat_boss_queen` mit Compatibility high und low und Mobile (lavapipe) `PERF: OK` (PERFORMANCE.md §3.6 „Nachmessung R5b-1“); `RtSim.step` mit echten Daten Median 177 µs (§3.15) | grün (Geräte offen) |
+| 6 | Touch-Layout, Gamepad, Tastatur | Stills einer Etage-1-Folge (Start, regulärer Kampf, Show-Boss, Hausmeister, Königin, Ergebnis) mit 1280 × 720 als PC und Touch, Königin auch 1920 × 1080 Touch; R3: Notch-Insets, `test_r3_touch_layout`, `test_r3_combat_input`; behoben: Boss-Rahmen gegen HYPE (Touch), Autopilot-Taste auf Touch/Gamepad | grün |
+| 7 | Jedes Achievement erreichbar | Der Echtzeit-Bot erreicht **31 / 39** (der CTB-Bot 21 / 39 in 8 Läufen ohne Liga), alle fünf Liga-Achievements in den Liga-Läufen. Die übrigen acht: `ach_flee_first`, `ach_preemptive_3`, `ach_mopsula_ko` und `ach_one_hp` (wie das seltene `ach_close_call`) schalten in Live-Echtzeitkämpfen frei (`test_r5b_achievements`), `ach_train_adds` in `test_r5_achievements_rt`; `ach_pacifist`, `ach_last_minute` (Erkundung) und `ach_bets_5` (fünf gewonnene Wetten — der Bot gewinnt 0–1 je Etage, in beiden Modi) hängen nicht am Kampfmodus und erreicht der Bot in keinem Modus (`test_m2_achievements`, `test_m2_show`, `test_06c_liga`, `test_m7_data_content`) | grün |
+| 8 | Nachfolger §12.4 | alle vorhanden und getestet (Tabelle §12.4) | grün |
+| 9 | Spielstände | neue Echtzeit-Spielstände: jeder Echtzeit-Full-Run speichert, lädt (Rundlauf ≡ `StateHash`) und lädt nach Game Over; v1 → v2 entworfen (02_TECH §6.4), Umsetzung Teil 2 | gelb |
+| 10 | Keine offenen P1; Nutzerfreigabe | Gefundenes behoben (Full-Run-Bot nach einer Niederlage, Boss-Intro-Warten, Prüfpunkte am selben `(k, ct)`, Mopsula-Bot zieht verdutzte Gruppen); die Nutzerfreigabe ist keine Vorbedingung mehr (Entscheidung oben) | grün |
+
+**Für Teil 2** (Kampagne → Echtzeit, CTB → Stempelduell; Reihenfolge wie oben, Schritt 3 = SD1 aus 10 Kap. 6.2):
+
+1. **Show-Ökonomie** des Profils `rt` in die GDD-§13-Bänder (Nr. 3): Im Echtzeitkampf steht der Hype meist bei 70–100, fast
+   jeder Kampf bringt ein System-Geschenk. Hebel: Hype-Gewinne der Tabelle §9.1 (je Minute deutlich mehr Ereignisse als im CTB),
+   die Geschenk-Schwellen bzw. ein Geschenk höchstens alle n Kämpfe, der Follower-Faktor `RT_*` (§11.2 Nr. 8); Messung mit
+   `fullrun.sh --combat=realtime --strategy=typical --pace=human`.
+2. `typical` aus Probespiel-Logs kalibrieren, dann `rt_balance.sh --nightly --strict-bands` (Nr. 2).
+3. Standard `realtime`, Einstellungseintrag weg (Schritt 1).
+4. Daten backen (HP × 4, Echtzeit-Werte in die Hauptfelder) und `SaveCodec` v2 mit Migration (Schritt 2, Entwurf 02_TECH §6.4);
+   die CTB-Felder der Defs bleiben (im Validator optional) — das Duell liest sein eigenes Regelbuch `data/stempel/`.
+5. **SD1 statt Löschen** (10 Kap. 6.2): `BattleState.roll_drops` → `BattleResult.roll_drops` (Schritt 0), die fünf
+   Engine-Dateien `ctb_queue`, `battle_state`, `action_resolver`, `enemy_ai`, `auto_policy` nach `core/stempel/ctb/`,
+   `battle_command.gd` bleibt geteilt, `StateHash.of_battle` und die CTB-Konstanten/-Laufzeitfelder bleiben, CTB-Darstellung und
+   Kampagnen-CTB-Pfade weg, neu `test_sd_engine_golden` und `test_sd_boundaries`.
+6. Gates umstellen: `fullrun.sh --strategy=all` und der Autoplay-Smoke laufen dann im Echtzeitkampf (der CTB-Smoke entfällt
+   bzw. wird zum Smoke des Duells).
+7. Doku (Schritt 4, §12.8; 01_GDD, 02_TECH §5, 06 §1.4, README, PERFORMANCE.md).
+
+**Kopplungen, die die Auslagerung erschweren** (in R5b-1 gefunden; 10 Kap. 6.1–6.3 deckt sie ab):
+
+- `core/rt/rt_result.gd` würfelt die Siegbeute mit `BattleState.roll_drops` (statische Hilfe der CTB-Engine) — vor dem Umzug
+  nach `BattleResult` (SD1 Schritt 0), sonst bricht der Echtzeitkampf.
+- `BattleCommand.Kind` ist das Vokabular von `ActionEvent.command` in `core/rt`, `core/show` und `scenes/combat` (bleibt geteilt).
+- Geteilte Basistypen in `core/battle`: `Combatant` ist die Basis von `RtUnit` und trägt CTB-Laufzeitfelder, `DamageCalc` rechnet
+  die Formel-Treffer der Echtzeit, dazu `BattleResult`, `ActionEvent` (mit CTB-Typen), `BattleSetup.Advantage`, `HitResult`;
+  `Balance` mischt geteilte und CTB-Konstanten.
+- `core/rt/rt_gift.gd` spiegelt die Geschenkregeln von `ActionResolver` (doppelte Regel, Kommentare verweisen), `Talents`
+  beschreibt die CTB-Abbildung (Krit, Erster Eindruck, Taktgefühl).
+- Autoloads mit CTB-Typen: `Show.take_pending_gift(battle: BattleState)`/`_battle_party`, `Game` (`auto_battle`, `make_setup`,
+  CTB-Kampfstart über `Router.start_battle`), die CTB-Kampfpfade in `RunSim`/`GameReplay`, `StateHash.of_battle`.
+- `Progression.total_stats` skaliert die HP über `PartyMember.hp_scale_pm` (der Umschalter); nach dem Backen entfällt er für die
+  Kampagne, das Duell rechnet mit dem Regelbuch.
+- Daten: CTB-Werte stehen in den Hauptfeldern, Echtzeit-Werte im `rt`-Block desselben Eintrags; Achievements haben
+  `condition`/`condition_rt`, `ShowRules` die Profile `ctb`/`rt`, die Einstellungen `battle_speed`, `auto_battle_default`,
+  `partner_auto`.
+- Gates und Werkzeuge spielen die Kampagne heute im CTB (`fullrun.sh --strategy=all`, Autoplay-Smoke, `perf.sh`-Kampfansichten,
+  `capture_recipes.gd`); außer `test_m1_*` nennen 27 weitere Testdateien die Engine-Klassen (10 Kap. 6.2 Schritt 4).
 
 ### 12.7 Unverändert wiederverwendet
 

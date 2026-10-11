@@ -943,7 +943,23 @@ signal toast_requested(text: String, icon: StringName)
 ## Bottom corners (canvas px inside the safe frame) a screen keeps for its own panels while overlay `mode` is active;
 ## the ModDialog box centres in the free span between them (battle: command menu / party panels). (0, 0) clears.
 signal dialog_reserve_requested(mode: StringName, left: float, right: float)
+
+# --- Echtzeitkampf (07, R1a) -----------------------------------------------------------------------------------------
+# Object payloads typed as RefCounted on purpose (no dependency on core classes, like the untyped arrays); the concrete
+# type stands in the comment. Battle start/end keep battle_started / battle_ended (07 §12.9 Nr. 4).
+signal combat_started(sim: RefCounted)                   # RtSim — Game.make_rt_setup (R2), Game.replay_log (R5a)
+signal combat_event(e: RefCounted)                       # ActionEvent — Game.combat_boundary / combat_step
+signal combat_finished(result: RefCounted)               # BattleResult — Game.end_combat
+## Layout of the M.O.D. dialog box for overlay `mode` (07 §8.8: subtitle / overlay mode in combat, R3); {} clears.
+signal dialog_layout_requested(mode: StringName, layout: Dictionary)
+signal show_boss_spotted(encounter_id: String)           # 06 §2.6, 07 §9.6: first entry of the show boss's zone (R2)
 ```
+
+**Echtzeitkampf (07, Stand R5b-1):** Im Echtzeitmodus (`GameState.combat_mode = realtime`) startet und endet ein Kampf in der
+Erkundung: `Game.make_rt_setup` sendet `combat_started` und `battle_started`, jede Sim-Ereignis-Lieferung geht als
+`combat_event` an Show und HUD, `Game.end_combat` sendet `combat_finished` und `battle_ended` (gleiche Bedeutung wie im CTB,
+07 §12.9 Nr. 4). `battle_turn_started` gibt es nur im CTB (ab R5b Teil 2 nur noch im CTB-Minispiel „Stempelduell“,
+Orchestrator-Entscheidung 2026-10-11). Der Overlay-Modus im Kampf ist `&"combat"` (07 §8.8, R3).
 
 Wer emittiert was (verbindlich):
 
@@ -960,6 +976,9 @@ Wer emittiert was (verbindlich):
 | `camera_drag`, `camera_zoom` | TouchControls (M6); `camera_zoom` = Zwei-Finger-Pinch auf der freien Kamerafläche (0.02 m/px Abstandsänderung), `CameraRig` klemmt wie das Mausrad auf 5–9 m |
 | `dialog_reserve_requested` | Screens mit eigenen Panels unten links/rechts (BattleHud M5: `&"battle"`); Empfänger ModDialog (M6) |
 | `pause_menu_toggled`, `toast_requested`, `overlay_mode_requested(&"safe_room"/&"menu"/&"hidden"/&"game_over")` | M6-Szenen (`&"game_over"`: GameOver-Screen, nur Scanlines); `toast_requested` darf jeder |
+| `combat_started`, `combat_event`, `combat_finished`, im Echtzeitkampf auch `battle_started`, `battle_ended` | Game (07 §10.6: `make_rt_setup`, `combat_boundary`, `combat_step`, `end_combat`; dieselben Aufrufe in `Game.replay_log`) |
+| `overlay_mode_requested(&"combat")`, `dialog_layout_requested` | Kampf-HUD (07 R3) |
+| `show_boss_spotted` | ExplorationScene (07 R2) |
 
 Achievement-Trigger, deren Name **kein** eigenes Signal ist, bildet `Show` aus bestehenden Signalen (Payload §6.3):
 `battle_started` → `battle_started`, `sponsor_gift_triggered` → `sponsor_gift`, `viewers_changed` → `viewers_changed`,
@@ -1339,6 +1358,32 @@ Qualitätsstufen (angewendet von `Game.apply_settings()` auf `get_tree().root`; 
 | Max. aktive OmniLights in Reichweite | 4 | 2 |
 | Raumlichter (03_ART §5; `distance_fade` ab Kamera 24 m / 6 m auf beiden Stufen) | jeder sichtbare Raum (aktueller + per Tür verbundene) hat sein OmniLight; + 1 Neon-Omni im Treppen- und Safe-Room-Raum | nur der aktuelle Raum hat sein OmniLight (`ExplorationScene._set_room_light`, Raumwechsel blendet 0.4 s über); Nachbarräume im Umgebungs- + Sonnenlicht; kein Neon-Omni |
 
+#### Echtzeitkampf (07 §10.6, §12.1; Stand R5b-1)
+
+```gdscript
+var combat: RtSim = null              # the running real-time combat (null outside one; never part of a save)
+var combat_mode_override: StringName = &""   # --combat=realtime|ctb (boot argument; never written to settings)
+func is_realtime() -> bool            # state.combat_mode == &"realtime"
+func new_game_combat_mode() -> StringName     # the boot argument, else GameSettings.combat_mode
+func make_rt_setup(cmd: Dictionary) -> RtSetup    # records the encounter (with "rt"), seed "battle",
+	# BattleBridge.make_rt_setup_rules (the run's rules), combat_started + battle_started, the ct-0 prelude
+func combat_boundary() -> void        # one tick boundary: at most one gift (external first, then system), 07 §9.2
+func combat_submit(cmd: Dictionary) -> String     # RtSim.submit + record (accepted inputs only); "" or a reason
+func combat_hint(id: String) -> void  # records {"t": "combat_hint", "ct", "id"}; RunRules.mark_hint
+func combat_step() -> Array[ActionEvent]          # one tick; events to Show / Events.combat_event; combat checkpoints
+func end_combat() -> BattleRewards    # apply_battle_result, Show.end_battle, combat_finished, battle_ended
+func rt_party_lock(what: StringName = &"items") -> String   # inventory / equipment locked during a combat
+func apply_loadout(cmd: Dictionary) -> bool      # R5a: the recorded loadout (skills page); refused during a combat
+```
+
+- Ein neues Spiel nimmt `new_game_combat_mode()`; ein Echtzeit-Spiel schreibt `"combat_mode": "realtime"`, `"rt_version"` in den
+  Run-Log-Kopf und startet mit `RunRules.rt_start` (HP × `HP_SCALE_PM`, volle HP/MP) — beide Verifier wiederholen das aus dem
+  Kopf. **Event-Läufe** nehmen den Modus aus `rules.combat.mode` des Events (Teil von `rules_hash`, R5b), nie aus der Einstellung.
+- Eine im Kampf geänderte Partner-Taktik bleibt (R5b): `BattleResult.rt_presets` → `BattleBridge.apply_result` schreibt
+  `PartyMember.rt_preset`/`rt_toggles` (kein Log-Eintrag; live und in beiden Verifiern gleich).
+- `replay_log` spielt einen Echtzeitkampf über genau diese Aufrufe in der Tick-Reihenfolge des `CombatDirector` nach; ein
+  kompaktiertes Log wird expandiert abgespielt (07 §10.3).
+
 ### 3.5 `Show` (M2)
 
 ```gdscript
@@ -1505,6 +1550,19 @@ Hype +5; `say("achievement:<id>")` mit Fallback `"achievement_generic"` und `ctx
 `Events.toast_requested(def.name, &"achievement")`. Meilensteine (`add_followers` überschreitet `MilestoneDef.followers`):
 Box/Credits/Item/Titel gutschreiben (Titel-Flag `title_<id>` direkt in `Game.state.flags` — Reaktion, **nicht** über das
 aufzeichnende `Game.set_flag`), `state.show.milestones.append(id)`, `Events.milestone_reached`, `say("follower_milestone")`.
+
+#### Echtzeitkampf (07 §9, Stand R5b-1)
+
+- Show hört im Echtzeitkampf dieselben Wege wie im CTB: `begin_battle(setup)` (ein `RtSetup`), `on_battle_event(e)` für jedes
+  Sim-Ereignis, `end_battle(result)`; die Hype-Regeln des Echtzeitkampfs sind das `ShowRules`-Profil `rt` (07 §9.1: Abwechslung,
+  Ausweichen, Unterbrechen und neue Achievements zählen nur für die gesteuerte Figur, `ActionEvent.by_ai`).
+- Geschenke im Kampf: `take_pending_gift_rt(sim: RtSim) -> Dictionary` an jeder Tick-Grenze (07 §9.2) — externe zuerst (mit
+  `ct` aufgezeichnet), dann ein fälliges System-Geschenk; `Game.combat_boundary` wendet es mit `RtSim.apply_gift` an.
+- Zeilenrate und Echtzeit-Zeilen §9.3 (`rt_line_priority`); im Kampf keine KI-Zeilen und keine Persona-Zeilen.
+- Achievements: ein Echtzeit-Lauf prüft `AchievementDef.condition_rt`, wo es eine gibt (R5b: `ach_crit_3` 15 Krits,
+  `ach_weakness_5` 10 Schwächetreffer je Kampf; Text `desc_rt`), sonst `condition` (§4.4.9).
+- Unterhosen-Liga: die Stufe gilt wie bisher für Hype-/Follower-Faktoren; im Echtzeitkampf sind Liga-Mitglieder zusätzlich
+  „leichtfüßig“ (07 E31; der Liga-Toast nennt es).
 
 ### 3.6 `Save` (M2)
 
@@ -2238,6 +2296,8 @@ gilt der höchste vorhandene ≤ Etage. `pity: {"rare": 4, "epic": 8}` (Boxen oh
 | `followers` | int | −1 | −1 = nach Box-Tier (bronze 20 / silver 40 / gold 80, sonst 0) |
 | `hidden` | bool | false | |
 | `mod_tag` | String | `""` | `""` → `achievement:<id>` mit Fallback `achievement_generic` |
+| `condition_rt` | String | `""` | R5b (07 §9.4): Bedingung im Echtzeitkampf (gleiche Grammatik und Payload-Schlüssel); `""` = `condition` in beiden Modi |
+| `desc_rt` | String | `""` | R5b: Text im Echtzeitkampf; nur zusammen mit `condition_rt` |
 
 Bedingungs-Grammatik (`ConditionExpr`, §6.1; identisch für `scenes.condition`):
 ```
@@ -2507,6 +2567,20 @@ bei Ko-Vorkommen), Sprachprüfung (`en_stop`/`de_stop`, `lang_min_words` 4, `lan
 `blocked_mopsula_royalty` (Zeile in Graf Mopsulas Stimme oder mit seinem Namen und einem Königs-Wort), `money`,
 `purchase_pressure`, `language`. Gemeinsame Fälle: `tests/fixtures/live/line_filter_cases.json` (GDScript und pytest; optional
 `voice`).
+#### 4.4.19 Echtzeit-Blöcke (07 §4.6–4.11, Stand R5b-1)
+
+Jede Tabelle mit Kampfwerten trägt einen optionalen `rt`-Block für den Echtzeitkampf (Schlüssel, Bereiche und Pflichtfelder:
+07 §4.6–4.9; Normalisierung `RtNorm`, Prüfung `core/data/validators/rt.gd`, Vokabulare `rt_vocab.gd`); die Stellwerte stehen in
+`data/rt_balance.json` (07 §3.16). R5b ergänzt:
+
+| Tabelle | Feld | Bedeutung |
+|---|---|---|
+| `statuses` | `rt.ai_miss_pm` (0–1000, Standard 1000) | Faktor auf `AI_DODGE_MISS_PM` der Einheit (Leichtfüßig 750, 07 E31) |
+| `statuses` | `rt.flags` + `keep` | der Status übersteht ein K.O. (Leichtfüßig) |
+| `items` | `rt.mods` (Array) | RtMods eines angelegten Ausrüstungsstücks ohne `src`/`unit` (`RtMods.from_equipment`: `equip:<id>`, Einheit des Trägers); `dmg_taken_pm` optional mit `element` (nur Skill-Treffer dieses Elements; Samtcape: −10 % physisch) |
+| `achievements` | `condition_rt`, `desc_rt` | §4.4.9 |
+| `events` | `rules.combat.mode` (`realtime`/`ctb`) | Kampfmodus des Events, Teil von `rules_hash` (07 §10.7) |
+
 ### 4.5 Validierung (`DataValidator`) und `GameData`-API
 
 Ablauf `GameData.load_dir(dir)`: (1) alle Dateien aus `TABLES` parsen; (2) je Eintrag Schema prüfen + normalisieren; (3) zweiter
@@ -2661,6 +2735,13 @@ Golden Values (gemessen mit 4.7.2, Pflicht in `test_m0_seed_util.gd`): `mix(1, 2
 > **Hinweis (2026-10-10):** Dieser Abschnitt wird durch [`07_ECHTZEITKAMPF.md`](07_ECHTZEITKAMPF.md) (Echtzeitkampf,
 > Kern `core/rt/`) ersetzt, sobald Phase R5 abgeschlossen ist (07 §12.6). Bis dahin gilt er unverändert für den CTB-Modus
 > (`combat_mode = ctb`); für den Echtzeitmodus gilt 07.
+>
+> **Stand R5b-1 (2026-10-11):** Echtzeit ist für neue Spiele per Einstellung/`--combat=realtime` und für die Events per
+> `rules.combat.mode` aktiv; der Echtzeit-Kern ist 07 §3 (`RtSim`, Tick-Reihenfolge §3.3, Schadensfaltung §3.9,
+> Leistung §3.15). **Entscheidung 2026-10-11 (Orchestrator/Nutzer):** CTB wird nicht gelöscht, sondern in R5b Teil 2 als
+> eigenes Minispiel-Modul „Stempelduell“ ausgelagert (`10_MINISPIEL_STEMPELDUELL.md`); die Kampagne kämpft danach nur
+> noch in Echtzeit. Dieser Abschnitt beschreibt dann die Engine des Minispiels; für die Kampagne gilt 07 §3 (07 §12.6
+> „Stand R5b-1“).
 
 Alle Klassen `extends RefCounted`, keine Autoloads, keine Nodes, kein `await`. Jede Zufallsentscheidung nutzt RNGs, die aus
 `BattleSetup.seed` abgeleitet sind → gleicher Seed + gleiche Befehle = identische Events (Brief §6b.1). Zahlen und Regeln
@@ -3819,6 +3900,31 @@ Nach dem Laden: Etage nicht spielbar (`playable == false`) → `Router.goto(SCEN
 `Router.goto(SCENE_EXPLORATION, {"spawn": state.floor_run.location})`; bei einer Safe-Room-ID ruft die Erkundung nach Aufbau
 `Router.enter_safe_room(id)` auf.
 
+**Echtzeitkampf (07, Stand R5b-1) — additive Felder in Version 1:** `state.combat_mode` (`"realtime"`; ein CTB-Spielstand hat den
+Schlüssel nicht), je Party-Mitglied `hp_scale_pm` (Echtzeit: `HP_SCALE_PM` 4000, die letzte Stufe von
+`Progression.total_stats`), `rt_loadout` ({Slot: Varianten-Id}), `rt_preset`, `rt_toggles`; `flags.rt_hints` (gezeigte
+Hinweiskarten). Ein Spielstand enthält nie eine laufende `RtSim` (Speichern nur im Safe Room).
+
+**Version 2 (Entwurf R5b-1, Umsetzung R5b Teil 2 mit dem Daten-Backen, 07 §12.6 Schritt 2):** `SaveCodec.VERSION = 2`; die
+Echtzeit-HP stehen dann direkt in den Daten (Basis-HP und HP-Wachstum × 4), `hp_scale_pm` und `combat_mode` entfallen.
+Migration beim Laden einer Version-1-Datei (`SaveCodec._migrate_v1`, rein, vor `_sanitize_*`):
+
+| v1-Fall | `party[].hp` | `party[].mp` | entfernt |
+|---|---|---|---|
+| CTB (kein `combat_mode`) | × 4 (gerundet, gedeckelt auf das neue Max-HP; K.O. bleibt 0) | unverändert | — |
+| Echtzeit (`combat_mode = "realtime"`, `hp_scale_pm` 4000) | unverändert (lag schon in Echtzeit-Einheiten vor) | unverändert | `combat_mode`, `hp_scale_pm` |
+
+Alles andere bleibt (06-Felder `talents`, `species_id`, `casting`, `hero`, Marotten, `rt_loadout`/`rt_preset`/`rt_toggles`,
+`flags.rt_hints`, Inventar, Bestiarium, Etagenlauf). Nach der Migration ist der Spielstand ein normaler v2-Stand; der
+Run-Log-Anker (`from_save`) wird beim Laden wie immer aus dem geladenen Zustand gebildet. Alte Replays (anderer `data_hash`,
+höhere `SIM_VERSION`) melden „ältere Version“, nie eine Abweichung. Tests (Teil 2): je eine v1-Datei CTB und Echtzeit als
+Fixture → laden → HP-Regel, alle 06-Felder, Speichern/Laden-Rundreise mit gleichem `StateHash`; eine v2-Datei in einer v1-Version
+wird wie bisher verweigert.
+
+**Kopplung mit dem CTB-Minispiel (Entscheidung 2026-10-11, `10_MINISPIEL_STEMPELDUELL.md` Kap. 6.2):** Das „Stempelduell“
+behält die CTB-Engine, liest aber eigene Regelbuch-Daten (`data/stempel/`). Die Kampagnendaten werden wie geplant gebacken und
+verlieren ihre CTB-Werte; die CTB-Felder der Defs bleiben (im Validator optional) und sind danach nur noch im Regelbuch belegt.
+
 ### 6.5 Talente und Casting (06-B; `core/progression/talents.gd`, `casting.gd`)
 
 **Talent-Show** (06 §2.2, GDD §4.7): Ab Level 3 bringt jedes ungerade Level (L3, L5, L7, L9 …) jedem Mitglied eine
@@ -4302,6 +4408,15 @@ Aufbau für die Budgets (§12.1, Phase C, gemessen mit `tools/perf.sh`):
   gerader x + y, sonst 12; per Tür verbundene Zellen haben immer unterschiedliche Parität), die Raumlichter maskieren die andere
   Parität aus (`light_cull_mask`). Ein Raum-Mesh bekommt so nur das eigene Licht (+ Neon), nicht mehr bis zu drei Nachbarlichter;
   Figuren, Props und Effekte bleiben auf Layer 1 und werden von jedem Licht in Reichweite beleuchtet.
+
+**Echtzeitkampf (07 §2, R2; Stand R5b-1):** Im Echtzeitmodus endet die Erkundung nicht an einem Kampf: `_trigger_encounter`
+verzweigt nach `_rt_trigger` — Kampfbeginn per Pull (Feldschlag, Fähigkeit, Gegenstand), in Waffenreichweite des Anführers oder
+nach 4 s Verfolgung im selben Raum (07 §2.2); die Set-Zelle bekommt den LED-Ring mit weicher Kollision (Türgassen = Flucht),
+andere Gruppen frieren ein (die Uhr steht), wartende Gruppen stehen am Ring, Akteure anderer Räume werden ausgeblendet, Bosse
+spielen vorher ihr Intro (`CombatDirector.run_boss_intro`, R5b: hört das Zeilenende von Anfang an, Sicherheitsnetz in Spielzeit).
+Das `encounter` mit `rt`-Block (`rt_encounter_cmd`: Zelle, Posen, Gruppen, Partner-Taktik, Öffnung) geht über
+`Game.make_rt_setup` an den `CombatDirector` (Kind der Szene), der die Ticks treibt (07 §3.3, §10.6). Treppenräume haben kein
+Set. Ein Skript-Spieler (`CombatDirector.bot_factory`, R5b) ersetzt für Bots die Eingabe der Person.
 
 ### 7.4 Etagen-Events (`FloorEvent`, GDD §2.6)
 
@@ -4998,6 +5113,12 @@ Schritte (Frame-Budgets ab Start des Schritts; Summe 600; Watchdog gesamt 640 Fr
 Fehler (Budget überschritten, falscher Ausgang, Watchdog): `printerr("Assertion failed: AUTOPLAY step '<name>' failed: <grund>")`
 (trifft `ERR_RE`) und `get_tree().quit(1)`. Fortschritt je Schritt: `print("AUTOPLAY: <name> ok @frame <n>")`.
 
+**Echtzeit-Smoke (07 §12.5, R5b-1):** `check.sh` startet danach `--quit-after 1300 -- --autoplay --combat=realtime`; das neue Spiel
+kämpft in der Welt, die Schrittfolge ist `RT_STEPS`: Schritt 4 `force_combat` (60 Frames: `force_encounter("")`, der
+`CombatDirector` läuft), Schritt 5 `combat` (900 Frames: der Autopilot spielt die gesteuerte Einheit — `RtCommand.autopilot` über
+`CombatDirector.submit` —, Hinweiskarten werden gelesen und geschlossen; Erfolg: `Events.battle_ended` VICTORY, Erkundung zurück,
+Director frei); Watchdog `RT_WATCHDOG_FRAMES` 1240. Beide Smokes müssen `AUTOPLAY: OK` melden.
+
 Weitere Boot-Argumente (Entwicklung, `TitleFlow.parse_args`, `boot.gd route()`): `--seed=<int>` (Seed für Neues Spiel und
 für den Dev-Zustand der `--goto`-Ziele) und `--goto=<ziel>` nach der Boot-Karte:
 
@@ -5091,6 +5212,19 @@ Safe Rooms (Erstbesuch), unbesuchte Räume, Streuner ≤ 2 Räume entfernt (max.
   Raums 8 s Umsehen/Ablaufen, vor jedem Ziel 3 s Entscheiden, an jeder Tür 1 s Ausrichten, die letzten 7 m zu einer Gruppe
   schleichen (Präventivschlag), jede nicht blockierende M.O.D.-Zeile in der Erkundung lesen (1 s + Zeichen / 18 je s) — alles
   mit laufendem Countdown (`HUMAN_*`-Konstanten in `fullrun.gd`). Gemessen (GDD §13): `human` ≈ 2,5× `fast` (thorough 11:11 statt 4:31).
+- **Echtzeit (`--combat=realtime`, 07 §12.5, R5b-1):** dieselbe Etage, gekämpft wird in der Welt. `fullrun.gd` gibt dem
+  `CombatDirector` der Erkundung eine `bot_factory`: je Kampf ein `RtBotPlayer` (`tests/tools/rt_bot_player.gd`, zur Laufzeit
+  geladen) mit dem Profil `--rt-profile=typical|perfect|sloppy` (Default `typical`, die Helden-Variante aus
+  `HERO_PROFILES`) auf eigenem Strom (`SeedUtil.derive(seed, "rt_bot", n)`); seine Eingaben gehen wie die einer Person über
+  `Game.combat_submit` ins Run-Log. Solange ein Kampf läuft (`Game.combat` oder Director beschäftigt, Boss-Intro inklusive),
+  ruhen Lauf-/Ziel-Schleifen. Hinweiskarten werden `HOLD_FRAMES` gelesen und geschlossen (`hints_read`), das Ergebnis-Panel
+  läuft von selbst weiter. Berührung startet im Echtzeitkampf keinen Kampf (07 §2.2): Als Graf Mopsula zieht der Bot die
+  verdutzte Gruppe wie eine Person — Anführer gewählt, Taste 1 (`ExplorationScene.pull` mit dem Slot-1-Skill der Leiste) —,
+  der Zug an einer verdutzten Gruppe ist der Erstschlag (E7). Prüfung je Kampf wie oben, die Countdown-Prüfung zählt
+  Start → Ende des Kampfes (07 §2.2: die Uhr steht). Ein verlorener Boss wird nach dem Game Over erneut gekämpft — der
+  Hausmeister bis `MAX_DEATHS`, die optionale Königin `RT_FLOOR_BOSS_ATTEMPTS` (2) Mal (CTB: 1).
+  `tools/fullrun.sh --combat=realtime [--rt-profile=…]` hängt `_rt` an die Log-Namen; `FULLRUN: stats` enthält
+  `combat_mode`, `rt_profile`, `hints_read`. `--combat=ctb` (Default, solange CTB existiert) ist der unveränderte Lauf.
 
 Ausgabe: je Ereignis `FULLRUN: [<frame>] …` (Kämpfe mit Hype Start → Ende, Peak und Geschenken), am Ende `FULLRUN: stats {json}`
 (GDD-§13-Kennzahlen: Etagenzeit, Takt + Wartezeit, Kämpfe, Party-Züge, HP-Verlust, Level/EXP/Ausrüstung/Items an den Bossen,
@@ -5253,6 +5387,8 @@ jobs:
         run: PTD_PERF_ASSERTS=1 GODOT=~/godot/godot prime-time-dungeon/tools/check.sh
       - name: Full run Floor 1 (bot, thorough + rush + dawdle, ~1.5 min)
         run: GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --strategy=all --log-dir=fullrun-logs
+      - name: Full run Floor 1 in real time (07 §12.5, thorough, bot profile typical, ~3 min)
+        run: GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --combat=realtime --log-dir=fullrun-logs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -5343,9 +5479,10 @@ Android wird lokal exportiert (JDK 17 + SDK + Debug-Keystore in den Editor-Einst
 Apple-Entwicklerkonto, in `apple-ios-testflight`. Die Jobs `check`, `export`, `mod-brain-tests` und `nightly-balance` sehen keine
 Secrets.
 
-`check.sh` bleibt die Prüf-Quelle für Import, Tests und Smoke; zusätzlich ruft die CI `tools/fullrun.sh --strategy=all`
-(Full-Run-Bot, §11.4.1, ≈ 1,5 min) als eigenen Schritt auf. Der Job `mod-brain-tests` (06-D) prüft den Referenz-Dienst
-`services/mod-brain/` mit gemocktem Anthropic-Client (kein Schlüssel, kein Netz); die gemeinsamen Fälle
+`check.sh` bleibt die Prüf-Quelle für Import, Tests und Smoke (CTB- und Echtzeit-Smoke, §11.4); zusätzlich ruft die CI
+`tools/fullrun.sh --strategy=all` (Full-Run-Bot, §11.4.1, ≈ 1,5 min) und `tools/fullrun.sh --combat=realtime` (derselbe Bot
+`thorough` als Kai im Echtzeitkampf, R5b-1, ≈ 3 min) als eigene Schritte auf. Der Job `mod-brain-tests` (06-D) prüft den
+Referenz-Dienst `services/mod-brain/` mit gemocktem Anthropic-Client (kein Schlüssel, kein Netz); die gemeinsamen Fälle
 `tests/fixtures/live/twist_cases.json` und `line_filter_cases.json` laufen dort und in `check.sh`.
 
 **Apple-Release (`apple-gate`, `apple-macos`, `apple-ios-testflight`).** Variablen `APPLE_TEAM_ID`, `APPLE_BUNDLE_ID`; Secrets

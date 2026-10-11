@@ -57,6 +57,10 @@ Prüfwerkzeuge (`tools/`).
   M.O.D.s Zeilen (Intro-Bauchbinde, Rival:in, Sponsor, Running Gag, Grüße von zu Hause; nie im Kampf) und ab Etage 2 die
   Marotten-Gewichtung; Kampfwerte ändert sie nicht. Der Name steht nur in der Persona-Datei je Slot (`user://persona/`),
   nie im Spielstand, Replay oder in einer Bestenliste; „Kandidat:in löschen“ in den Optionen.
+- **Echtzeitkampf** (07, Stand R5b-1): Etage 1 ist vollständig im Echtzeitkampf „WoW-light“ direkt in der Welt spielbar
+  (`--combat=realtime`; Autoplay-Smoke und Full-Run-Bot prüfen ihn in CI). Standard bleibt bis R5b Teil 2 der CTB-Kampf; er
+  bleibt danach als eigenes Minispiel „Stempelduell“ erhalten (`docs/10_MINISPIEL_STEMPELDUELL.md`), die Kampagne kämpft
+  dann in Echtzeit.
 - Etage 2 ist nur angelegt (`floors.json`: `playable = false`). Wer abgestiegen ist, landet nach „Fortsetzen“ im Abspann.
 - 3 Speicherslots (JSON in `user://saves/`), Einstellungen, Pausemenü, Touch-Steuerung.
 - **M.O.D.-Marotten & Unterhosen-Liga** (06 Kap. 4): M.O.D. verrät je Etage, was sie heute mag (Show-Wetten mit Herzen,
@@ -290,6 +294,8 @@ Argumente stehen nach `--` (CLI) bzw. in den Main Run Args (Editor). Quelle: `sc
 | `--autoplay=full` | Full-Run-Bot: spielt Etage 1 von Titel bis Abspann (02_TECH §11.4.1), mit echten Spielständen in eigenem Verzeichnis |
 | `--strategy=thorough\|rush\|dawdle\|typical` | Strategie des Full-Run-Bots: alles / nur Safe Rooms, Tore, Bosse / trödeln bis zum Etagenkollaps / typische:r Erstspieler:in |
 | `--pace=fast\|human` | Takt des Full-Run-Bots: ohne Wartezeit oder mit dem Modell eines aufmerksamen Menschen |
+| `--combat=realtime` | neues Spiel (auch `--autoplay`, `--autoplay=full`, `--goto=…`) im **Echtzeitkampf** (07, Stand R5b-1); Standard bleibt bis R5b Teil 2 der CTB-Kampf |
+| `--rt-profile=typical\|perfect\|sloppy` | Full-Run-Bot im Echtzeitkampf: Spielprofil der Person (07 §5.7, je Held:in) |
 
 Beispiel: `godot --path prime-time-dungeon/game -- --autoplay=full --strategy=typical --pace=human`
 
@@ -303,10 +309,11 @@ einer Temp-Kopie, schreibt die Icons aber nach `game/art/icons/` zurück. `--sho
 
 | Skript | Zweck | Erfolg |
 |---|---|---|
-| `tools/check.sh` | Import, alle Tests, Autoplay-Smoke-Test | letzte Zeile `check.sh: OK` |
+| `tools/check.sh` | Import, alle Tests, Autoplay-Smoke-Test (CTB und Echtzeitkampf) | letzte Zeile `check.sh: OK` |
 | `tools/check.sh --tests-only [--filter=<teil>]` | Import und Tests (optional nur Testdateien, deren Name `<teil>` enthält) | `check.sh: OK` |
 | `tools/check.sh --shot <res://szene.tscn> <out.png> [frames] [BxH] [--touch] [--recipe=<name>] [--params=<json>] [--no-global-ui]` | rendert eine Szene unter Xvfb (`xvfb-run` nötig) im Compatibility-Renderer und speichert ein PNG | `saved <pfad>` |
 | `tools/fullrun.sh [--strategy=thorough\|rush\|dawdle\|typical\|all] [--seed=<int>] [--pace=fast\|human] [--log-dir=<dir>]` | Full-Run-Bot headless mit festem 60-fps-Takt; `all` = thorough, rush und dawdle nach einem Import (wie in CI) | `fullrun.sh: OK` |
+| `tools/fullrun.sh --combat=realtime [--rt-profile=typical\|perfect\|sloppy] [weitere Argumente wie oben]` | derselbe Bot im Echtzeitkampf (07 §12.5): der `RtBotPlayer` spielt jeden Kampf als Person; Log-Namen mit `_rt` | `fullrun.sh: OK` |
 | `tools/perf.sh [--driver=opengl3\|vulkan] [--quality=high\|low] [--only=startup,explore,battle,safe_room,leak] [--cycles=20] [--out=<datei.md>] [--shots=<dir>] [--cells] [--headless]` | Performance-Probe unter Xvfb: Budget-Tabelle aus 02_TECH §12.1 (Draw Calls, Primitive, Lichter, Speicher, Ladezeiten) und Leak-Schleife über Szenenwechsel; Ergebnisse in `docs/PERFORMANCE.md` | `PERF: OK`, `perf.sh: exit 0` |
 | `tools/make_icons.sh` | erzeugt die App-Icons (Android, iOS, macOS) und die iOS-Startbilder in `game/art/icons/` aus `game/icon.svg` neu | Zeilen `ICON: …`, Exit 0 |
 | `tools/apple/release.sh <schritt>` | nur CI (macOS-Runner, Secrets): Schritte der Jobs `apple-macos` und `apple-ios-testflight`, Abschnitt 4 „Mit Apple-Entwicklerkonto“, 02_TECH §12.4 | Exit 0 |
@@ -369,6 +376,9 @@ Systeme) > 01_GDD / 02_TECH / 03_ART / 05 (je nach Thema) > 04**.
 | [`docs/05_LIVE_MODUS.md`](docs/05_LIVE_MODUS.md) | Live-Modus SHOWRUN: Stufen S0–S5, Determinismus, Protokoll, Geschenke, Sponsor-Fenster, Wirtschaft, Recht |
 | [`docs/06_PROGRESSION_MAROTTEN_KI_ADMIN.md`](docs/06_PROGRESSION_MAROTTEN_KI_ADMIN.md) | Neue Systeme in Paketen A–D: Figurenwahl (Paket A, umgesetzt), Talent-Show und Spezies (Paket B, umgesetzt), M.O.D.-Marotten, KI-Admin |
 | [`docs/07_ECHTZEITKAMPF.md`](docs/07_ECHTZEITKAMPF.md) | Echtzeitkampf „WoW-light“ direkt in der Welt (ersetzt den CTB-Kampf ab R5): Vertrag, Phasen R1–R5 |
+| [`docs/08_CASTING.md`](docs/08_CASTING.md) | Casting: eigene Kandidat:in (Persona), Vorleben, persönlicher Erzählstrang, Aussehen; KI optional |
+| [`docs/09_STAFFELN.md`](docs/09_STAFFELN.md) | Staffeln: Sendeplan bis Etage 18, KI-Besetzung, Schläfer und Ausloggen, Tod und Modi, Fertigkeiten (ST1–ST3) |
+| [`docs/10_MINISPIEL_STEMPELDUELL.md`](docs/10_MINISPIEL_STEMPELDUELL.md) | Mini-Spiel „Stempelduell“: der CTB-Kampf als optionales Karten-Duell (Etage 8; bis dahin Titel → Extras → Vorschau), Umsetzung SD1–SD3 |
 | [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) | Messergebnisse der Performance-Probe gegen die Budgets aus 02_TECH §12.1 |
 
 ## 10. Screenshots

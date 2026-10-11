@@ -1612,13 +1612,14 @@ func _rt_combat(ex: ExplorationScene) -> bool:
 	while not finished:
 		if Game.combat != null and Game.combat.setup != null:
 			phase = "combat %s" % Game.combat.setup.encounter_id
-		var gone: bool = Router.current != ex or not is_instance_valid(ex)
+		# a lost combat leaves the exploration (Router.game_over): the scene and its director are freed meanwhile
+		var gone: bool = Router.current != ex or not is_instance_valid(ex) or not is_instance_valid(dir)
 		if _rt_result != null and not Router.busy and (gone or (not dir.is_busy() and _rt_results_done(dir)
 				and not ex.is_encounter_pending())):
 			break
-		if _rt_result == null and not _rt_running(ex) and not ex.is_encounter_pending():
+		if not gone and _rt_result == null and not _rt_running(ex) and not ex.is_encounter_pending():
 			return true                                # an encounter that started no combat (e.g. no set)
-		if dir.is_paused_for_hint():
+		if not gone and dir.is_paused_for_hint():
 			hold += 1
 			if hold >= HOLD_FRAMES:                    # read: close the card like the player (its key / any input)
 				hold = 0

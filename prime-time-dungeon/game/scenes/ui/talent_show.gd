@@ -7,6 +7,9 @@ extends CanvasLayer
 ## a battle or the exploration (06: "nie als Unterbrechung").
 ## Keyboard / gamepad: ui_left / ui_right between the cards, ui_accept picks, ui_cancel / pause = Später.
 ## Touch / mouse: the cards are big buttons (>= 88 px hit area), "Später" is a visible close button.
+## Anti-mash (polish pass): the cards of every choice fade in over INPUT_LOCK_SEC; until then they ignore presses and
+## taps (disabled), so an accept that opened the show — or a key still held / mashed after a pick — never picks a card:
+## a pick needs one deliberate press after the cards are fully there. pick() itself (tests, tools) is not locked.
 ## Modal layer 60 (like the vending machine); signal `closed`. Look: ink panel with the gold show accent.
 
 signal closed()
@@ -18,6 +21,7 @@ const TalentText := preload("res://scenes/ui/talent_text.gd")
 const CARD_W: float = 540.0
 const CARD_H: float = 286.0
 const PICK_PAUSE_SEC: float = 0.45          # the chosen card glows before the next choice appears
+const INPUT_LOCK_SEC: float = 0.5           # anti-mash: new cards fade in and ignore input this long
 
 var member_id: String = ""                  # member of the choice on screen ("" = nothing open)
 var offer: PackedStringArray = []           # the two talent ids on screen
@@ -37,6 +41,7 @@ var _status: Label
 var _busy: bool = false
 var _closing: bool = false
 var _total: int = 0                         # open choices when the show opened (progress "Wahl n von total")
+var _lock_tween: Tween = null
 
 
 ## {"safe_room_id": String} (only for the header; the rules are the Game's).
@@ -65,6 +70,16 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"ui_cancel") or event.is_action_pressed(&"pause"):
 		get_viewport().set_input_as_handled()
 		close()
+	elif input_locked() and event.is_action(&"ui_accept"):
+		get_viewport().set_input_as_handled()    # a mashed accept on a fading card goes nowhere else either
+
+
+## True while the cards on screen still fade in (INPUT_LOCK_SEC after the show opened / after each pick).
+func input_locked() -> bool:
+	for b: Button in card_buttons:
+		if b.disabled:
+			return true
+	return false
 
 
 ## Shows the next open choice (party order, oldest level first) or the "all done" state; returns false if none is open.
@@ -171,6 +186,34 @@ func _fill() -> void:
 	if not card_buttons.is_empty():
 		close_button.focus_neighbor_bottom = close_button.get_path_to(card_buttons[0])
 		UiUtil.focus_later(card_buttons[0])
+	_lock_cards()
+
+
+## Anti-mash: the new cards fade in over INPUT_LOCK_SEC and stay disabled until then (a press or tap that starts
+## earlier never picks; disabled cards keep their normal look, only the fade shows the wait).
+func _lock_cards() -> void:
+	if _lock_tween != null and _lock_tween.is_valid():
+		_lock_tween.kill()
+	for b: Button in card_buttons:
+		b.disabled = true
+	_cards.modulate.a = 0.0
+	if not is_inside_tree():
+		_unlock_cards()
+		return
+	_lock_tween = create_tween()
+	_lock_tween.tween_property(_cards, "modulate:a", 1.0, INPUT_LOCK_SEC).set_trans(Tween.TRANS_SINE)
+	_lock_tween.tween_callback(_unlock_cards)
+
+
+func _unlock_cards() -> void:
+	_cards.modulate.a = 1.0
+	var focused: bool = close_button.has_focus()
+	for b: Button in card_buttons:
+		if is_instance_valid(b):
+			b.disabled = false
+			focused = focused or b.has_focus()
+	if not focused and not card_buttons.is_empty():
+		UiUtil.focus_later(card_buttons[0])
 
 
 func _set_portrait(mid: String) -> void:
@@ -208,6 +251,7 @@ func _card(m: PartyMember, def: TalentDef, index: int) -> Button:
 	b.add_theme_stylebox_override("hover", hover)
 	b.add_theme_stylebox_override("pressed", hover)
 	b.add_theme_stylebox_override("focus", focus)
+	b.add_theme_stylebox_override("disabled", normal)    # anti-mash lock: same look, the fade-in shows the wait
 	b.pressed.connect(func() -> void: pick(index))
 	var margin: MarginContainer = MarginContainer.new()
 	UiUtil.full_rect(margin)
@@ -249,11 +293,7 @@ func _card(m: PartyMember, def: TalentDef, index: int) -> Button:
 	tags.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	names.add_child(tags)
 	tags.add_child(_pill(TalentText.kind_tag(def), accent))
-	var r: int = Talents.rank(m, def.id)
-	var rank_text: String = "Neu" if r == 0 else "Stufe %d von %d" % [r + 1, def.max_rank]
-	if def.max_rank > 1 and r == 0:
-		rank_text = "Neu · bis Stufe %d" % def.max_rank
-	tags.add_child(UiUtil.label(rank_text, &"LabelSmall", 16))
+	tags.add_child(UiUtil.label(rank_text(m, def), &"LabelSmall", 16))
 	var desc: Label = UiUtil.label(UiUtil.glyph_safe(UiUtil.tr_text(def.desc)), &"", 19, UiTheme.C_TEXT_DIM)
 	desc.name = "Desc"
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -281,6 +321,14 @@ func _card(m: PartyMember, def: TalentDef, index: int) -> Button:
 	col.add_child(pv)
 	col.add_child(UiUtil.spacer(0, 0, true))
 	return b
+
+
+## Small tag next to the kind pill: "Neu" (one rank) or "Rang 1/2", "Rang 2/2" (talents with two ranks).
+static func rank_text(m: PartyMember, def: TalentDef) -> String:
+	var r: int = Talents.rank(m, def.id) if m != null and def != null else 0
+	if def == null or def.max_rank <= 1:
+		return "Neu"
+	return "Rang %d/%d" % [mini(r + 1, def.max_rank), def.max_rank]
 
 
 ## Value talents: "Jetzt: Stärke 22 -> 24" (the member's real numbers with this talent; a Liga talent shows them while

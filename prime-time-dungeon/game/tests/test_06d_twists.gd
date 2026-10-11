@@ -320,6 +320,7 @@ func test_vending_menu_shows_a_running_happy_hour() -> void:
 	await wait_frames(2)
 	assert_eq(plain.find_child("HappyHour", true, false), null, "no pill without a running Happy Hour")
 	assert_eq(UiUtil.price_of("itm_bandage"), price)
+	assert_null(plain.find_child("WasPrice", true, false), "no struck price without a discount")
 	plain.queue_free()
 	await wait_frames(1)
 	st.floor_run.timer_started = true
@@ -332,10 +333,57 @@ func test_vending_menu_shows_a_running_happy_hour() -> void:
 	assert_ne(pill, null, "pill in the header")
 	if pill != null:
 		assert_eq((pill.get_child(0) as Label).text, "HAPPY HOUR  −25 %")
-	assert_eq(UiUtil.price_of("itm_bandage"), maxi(1, (price * 750 + 500) / 1000), "list shows the discounted price")
+	var cut: int = maxi(1, (price * 750 + 500) / 1000)
+	assert_eq(UiUtil.price_of("itm_bandage"), cut, "list shows the discounted price")
+	# polish pass: the old price struck through right before the new one, also for the sum
+	var row: Node = v.find_child("Item_itm_bandage", true, false)
+	assert_not_null(row)
+	if row != null:
+		var was: Label = row.find_child("WasPrice", true, false) as Label
+		assert_not_null(was, "the original price next to the Happy Hour price")
+		if was != null:
+			assert_eq(was.text, "%d Cr" % price)
+			assert_not_null(was.find_child("Strike", true, false), "struck through")
+			assert_lt(was.get_index(), (row.find_child("Right", true, false) as Node).get_index(), "old before new")
+		assert_eq((row.find_child("Right", true, false) as Label).text, "%d Cr" % cut)
+	v.call("_select", "itm_bandage")
+	var was_total: Label = v.find_child("WasTotal", true, false) as Label
+	assert_true(was_total != null and was_total.visible and was_total.text == "%d Cr" % price, "sum: old one struck")
 	v.queue_free()
 	await wait_frames(1)
 
+
+
+## Polish pass: Stromausfall clearly darkens the 3D picture (veil + vignette + flicker) on a layer under the HUD, so
+## every HUD text stays readable; only in the exploration.
+func test_lights_out_veil_darkens_the_world_under_the_hud() -> void:
+	var st: GameState = _state(2)
+	assert_eq(_apply(st, {"id": "tw_lights_out", "src": "regie"}), "")
+	Game.state = st
+	var fx: CanvasLayer = (load("res://scenes/ui/twist_fx.gd") as GDScript).new() as CanvasLayer
+	add_to_tree(fx)
+	await wait_frames(1)
+	fx.call("set_mode", &"explore")
+	var veil: ColorRect = fx.find_child("Vignette", true, false) as ColorRect
+	assert_not_null(veil)
+	if veil == null:
+		return
+	assert_true(veil.visible, "Stromausfall: the veil is on")
+	var layer: CanvasLayer = veil.get_parent() as CanvasLayer
+	assert_true(layer != null and layer.layer >= 0 and layer.layer < 5, "over the world, under the HUD (layer 5)")
+	var mat: ShaderMaterial = veil.material as ShaderMaterial
+	assert_gte_veil(float(mat.get_shader_parameter("veil")), 0.4)
+	assert_gt(float(mat.get_shader_parameter("edge")), float(mat.get_shader_parameter("veil")), "vignette")
+	assert_gt(float(mat.get_shader_parameter("flicker")), 0.0, "a subtle flicker")
+	assert_lt(float(mat.get_shader_parameter("edge")), 1.0, "still readable")
+	fx.call("set_mode", &"battle")
+	assert_false(veil.visible, "exploration only")
+	fx.queue_free()
+	await wait_frames(1)
+
+
+func assert_gte_veil(v: float, lo: float) -> void:
+	assert_true(v >= lo, "the world is clearly darker (veil %.2f >= %.2f)" % [v, lo])
 
 
 ## The 06-D screenshots (docs/screenshots/twist_*.png) come from capture recipes — they must keep existing.

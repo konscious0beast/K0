@@ -124,7 +124,7 @@
 		},
 		{
 			"id": "ach_preemptive_3",
-			"name": "Leise Sohle",
+			"name": "Überraschungsgast",
 			"desc": "Starte 3 Kämpfe mit Präventivschlag.",
 			"trigger": "battle_started",
 			"condition": "e.encounter_type == \"preemptive\" && s.preemptives == 3",
@@ -333,8 +333,8 @@
 		},
 		{
 			"id": "ach_ul_boss",
-			"name": "Frische Brise im Revier",
-			"desc": "Besiege einen Boss in der Unterhosen-Liga.",
+			"name": "Leichtsinn mit Stil",
+			"desc": "Besiege einen Boss in der Unterhosen-Liga (ohne Rüstung & ohne Accessoire).",
 			"trigger": "show_bet",
 			"condition": "e.kind == \"liga\" && e.event == \"battle\" && e.tier >= 1 && e.is_boss == true",
 			"box": "box_silver",
@@ -344,7 +344,7 @@
 		},
 		{
 			"id": "ach_duo_first",
-			"name": "Doppel-Feinripp",
+			"name": "Leichtes Gepäck im Doppelpack",
 			"desc": "Gewinne einen Kampf in der Duo-Liga: beide ohne Rüstung & ohne Accessoire.",
 			"trigger": "show_bet",
 			"condition": "e.kind == \"liga\" && e.event == \"battle\" && e.tier == 2",
@@ -355,8 +355,8 @@
 		},
 		{
 			"id": "ach_duo_floor",
-			"name": "Eine Etage Feinripp",
-			"desc": "Gewinne alle Kämpfe einer Etage (mindestens 5) in der Duo-Liga.",
+			"name": "Eine Etage leichtes Gepäck",
+			"desc": "Gewinne alle Kämpfe einer Etage (mindestens 5) in der Duo-Liga: beide ohne Rüstung & ohne Accessoire.",
 			"trigger": "show_bet",
 			"condition": "e.kind == \"liga\" && e.event == \"floor\" && e.floor_tier == 2 && e.battles >= 5",
 			"box": "box_gold",
@@ -367,7 +367,7 @@
 		{
 			"id": "ach_duo_flawless",
 			"name": "Ohne Kratzer, ohne Rüstung",
-			"desc": "Besiege den Etagenboss in der Duo-Liga, ohne dass jemand K.O. geht.",
+			"desc": "Besiege den Etagenboss in der Duo-Liga (beide ohne Rüstung & ohne Accessoire), ohne dass jemand K.O. geht.",
 			"trigger": "show_bet",
 			"condition": "e.kind == \"liga\" && e.event == \"battle\" && e.tier == 2 && e.is_floor_boss == true && e.party_kos == 0",
 			"box": "box_gold",

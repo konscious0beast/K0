@@ -140,15 +140,16 @@ func current_shot() -> String:
 func _make_script() -> void:
 	var kai: String = UiUtil.player_name()
 	shots = [
-		{"shot": "night", "caption": "TIERHEIM LINDENHOF · KELLER · NACHTSCHICHT · 23:47", "min": 5.0,
+		{"shot": "night", "caption": "TIERHEIM PFOTENGLÜCK · KELLER · NACHTSCHICHT · 23:47", "min": 5.0,
 			"lines": [["kai", "Na, Graf? Ein Leckerli noch, dann ist Licht aus."], ["mopsula", "*schnauf*"]]},
 		{"shot": "sky", "caption": "AM SELBEN ABEND · ÜBER DER STADT", "min": 6.5,
 			"lines": [["mod", "Liebe Erdbevölkerung: Ihr Planet wurde für eine Sendung umgewidmet. Bitte bleiben Sie sitzen."],
 				["mod", "Rückbau beginnt. Wir danken für Ihr Verständnis. Sie haben keins? Egal."]]},
 		{"shot": "fall", "caption": "", "min": 2.5, "lines": [["kai", "Graf! Komm her!"]]},
 		{"shot": "studio", "caption": "LIVE · DUNGEON PRIME TIME", "min": 3.0,
-			"lines": [["mod", _intro_line(0)], ["mod", _intro_line(1)], ["mopsula", "Endlich. Man versteht Uns."],
-				["kai", "… Graf?"], ["mopsula", "GRAF MOPSULA. Wir bitten um korrekte Anrede, %s." % kai],
+			"lines": [["mod", _intro_line(0)], ["mod", _intro_line(1)],
+				["mopsula", "Endlich. Man versteht mich. Fußnote 1: Ich konnte immer sprechen."],
+				["kai", "… Graf?"], ["mopsula", "GRAF MOPSULA, bitte. Mit Titel, %s. Es ist gleich Mitternacht." % kai],
 				["mod", hero_pick_line()]]},
 	]
 

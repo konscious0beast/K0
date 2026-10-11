@@ -59,7 +59,7 @@ Prüfwerkzeuge (`tools/`).
   Follower. Show-Chip im Overlay, Pausemenü-Reiter „Show“, Achievement-Kette „Ohne alles“.
 - SHOWRUN S0: 2 Offline-Events (`evt_offline_gleis9`, `evt_offline_pacifist`), Event-Lobby, Ergebnis-Screen, lokale Bestenliste,
   Replay-Prüfung.
-- Qualitätssicherung: rund 950 automatische Tests, Autoplay-Smoke-Test (`AUTOPLAY: OK`), Full-Run-Bot, der Etage 1 mit
+- Qualitätssicherung: rund 1 115 automatische Tests, Autoplay-Smoke-Test (`AUTOPLAY: OK`), Full-Run-Bot, der Etage 1 mit
   drei Strategien und als Graf Mopsula durchspielt, Performance-Probe (`PERF: OK`) und der CI-Workflow `ptd-check`.
 
 **Bekannte Lücken:**
@@ -271,7 +271,8 @@ GODOT=… $T --shot res://scenes/battle/battle.tscn shot.png 5 1280x720 --recipe
 GODOT=… $T --shot res://scenes/exploration/exploration.tscn shot.png 5 1280x720 --recipe=secret_wall        # 23 (24: secret_open, 25: secret_note)
 GODOT=… $T --shot res://scenes/safe_room/safe_room.tscn shot.png 5 1600x720 --touch --recipe=safe_hero_talents  # 26
 GODOT=… $T --shot res://scenes/exploration/exploration.tscn shot.png 5 1280x720 --recipe=pause_show         # 27
-GODOT=… $T --shot res://scenes/battle/battle.tscn shot.png 5 1280x720 --recipe=battle_results_show          # 28
+GODOT=… $T --shot res://scenes/battle/battle.tscn shot.png 5 1280x720 --recipe=battle_results_show \
+  '--params={"capture_turns": 99, "encounter": "enc_f1_a2"}'                                                # 28
 GODOT=… $T --shot res://scenes/safe_room/safe_room.tscn shot.png 5 1280x720 --recipe=safe_talent_show       # Talent-Show
 ```
 

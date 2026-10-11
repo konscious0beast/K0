@@ -237,7 +237,7 @@
 		},
 		{
 			"id": "skl_stunt_mop_entrance",
-			"name": "Auftritt Seiner Durchlaucht",
+			"name": "Auftritt um Mitternacht",
 			"user": "party",
 			"category": "stunt",
 			"target": "all_enemies",

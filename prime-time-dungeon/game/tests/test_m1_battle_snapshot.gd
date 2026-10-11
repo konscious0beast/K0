@@ -17,7 +17,7 @@ func _opts(seed: int) -> Dictionary:
 			"stats": {"hp": 150, "str": 30, "def": 22, "spd": 15, "mp": 30}, "crit_bonus": 0.05,
 			"element_mods": {"poison": 0.5}},
 		"mop": {"skills": PackedStringArray(["skl_mop_noble_flame", "skl_mop_holy_lick", "skl_mop_frost_sneeze",
-			"skl_mop_royal_decree", "skl_mop_revive"]), "stats": {"hp": 100, "mag": 32, "res": 25, "spd": 19, "mp": 70}},
+			"skl_mop_expert_opinion", "skl_mop_revive"]), "stats": {"hp": 100, "mag": 32, "res": 25, "spd": 19, "mp": 70}},
 		"enemy_dmg_mult": 0.75, "exp_mult": 1.2, "credits": 77}
 
 

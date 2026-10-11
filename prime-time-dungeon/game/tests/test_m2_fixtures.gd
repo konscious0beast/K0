@@ -229,7 +229,7 @@ static func tables() -> Dictionary:
 				"condition": "f.title_ms_5000 == true && e.items_used == 0"},
 			{"id": "ach_flee_first", "name": "Rückzug", "desc": "d", "trigger": "battle_fled",
 				"condition": "s.battles_fled == 1", "box": "box_bronze"},
-			{"id": "ach_preemptive_2", "name": "Leise Sohle", "desc": "d", "trigger": "battle_started",
+			{"id": "ach_preemptive_2", "name": "Überraschungsgast", "desc": "d", "trigger": "battle_started",
 				"condition": "e.encounter_type == \"preemptive\" && s.preemptives == 2", "box": "box_bronze"},
 			{"id": "ach_stunt_first", "name": "Showtalent", "desc": "d", "trigger": "stunt_resolved",
 				"condition": "e.success == true && s.stunts_success == 1", "box": "box_bronze"},

@@ -1181,6 +1181,27 @@ func test_camera_clears_walls_and_looks_ahead() -> void:
 		assert_gt(mesh.transparency, 0.9, "camera inside 0.6 m → Kai's rig is faded out")
 
 
+## Polish pass: walking towards an open doorway no longer pulls the camera under the lintel (the look-ahead is probed
+## at lintel height too). Before, 1.5 m in front of the door the arm collapsed to ~1.9 m and Kai faded out.
+func test_camera_keeps_its_distance_in_front_of_an_open_doorway() -> void:
+	var scene: ExplorationScene = await _make_scene()
+	var rig: Node3D = scene.get_camera_rig()
+	var cam: Camera3D = scene.get_camera_rig().camera()
+	var start: Vector3 = scene.get_layout().cell_to_world(scene.get_layout().start)
+	var door: Vector3 = start + Vector3(0.0, 0.0, -FloorLayout.ROOM_SIZE * 0.5)      # (3,7) N: open door to (3,6)
+	for d: float in [0.8, 1.5, 2.5]:
+		scene.get_player().teleport(door + Vector3(0.0, 0.05, d), 0.0)                # facing the door (north)
+		rig.call("snap", 0.0)
+		await wait_frames(10)
+		var head: Vector3 = scene.get_player_position() + Vector3(0.0, 1.5, 0.0)
+		var arm: float = float(rig.call("current_arm"))
+		assert_gt(arm, 6.5, "%.1f m before the door: arm %.2f" % [d, arm])
+		assert_gt(cam.global_position.distance_to(head), 3.0, "%.1f m before the door: no close-up" % d)
+		assert_false(cam.is_position_behind(head), "Kai in front of the camera")
+		var y: float = cam.unproject_position(head).y / cam.get_viewport().get_visible_rect().size.y
+		assert_between(y, 0.0, 1.0, "Kai's head on screen (%.1f m)" % d)
+
+
 func test_sleeping_group_and_pips() -> void:
 	var scene: ExplorationScene = await _make_scene()
 	var sleeper: EnemyActor = scene.get_enemy("f1_g0")

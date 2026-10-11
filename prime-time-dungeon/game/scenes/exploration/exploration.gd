@@ -93,7 +93,7 @@ var _room_lights_set: bool = false      # quality low: first room application se
 var _strike_open: bool = false          # 06 package A: a strike is running and not yet reported (field_ability_used)
 var _walls: Dictionary = {}             # 06 package A: secret id → SceneryWall (standing Kulissenwände)
 var _notes: Dictionary = {}             # 06 package A: secret id → NoteInteractable
-var _wall_hint_given: bool = false      # 06 package A: one chat hint per visit of the floor view
+var _wall_hints: Dictionary = {}        # 06 package A: one chat hint per Kulissenwand and visit of the floor view
 
 
 ## Stores params only: {"spawn": &"start" | &"<safe room id>", "capture": bool}
@@ -300,6 +300,9 @@ func refresh_hero() -> void:
 	_player.set_hero(hero)
 	_player.name = _node_name(hero)
 	_companion.snap_behind()
+	if _camera != null:
+		_camera.set_leader(hero)            # framing per leader (look-at height, distance; the follower in view)
+		_camera.snap(_player.rotation.y)
 	if _hud != null and _hud.has_method("refresh_hero"):
 		_hud.call("refresh_hero")
 	_last_prompt = "<refresh>"
@@ -464,6 +467,8 @@ func _build_actors() -> void:
 	_actors_root.add_child(_companion)
 	_camera = CameraRig.new()
 	_camera.target = _player
+	_camera.follower = _companion
+	_camera.set_leader(_player.hero_id)
 	if _prop_blockers != null:
 		_camera.exclude.append(_prop_blockers.get_rid())
 	add_child(_camera)
@@ -1177,14 +1182,16 @@ func get_wall(secret_id: String) -> SceneryWall:
 	return _walls.get(secret_id) as SceneryWall
 
 
-## First room next to a standing Kulissenwand: one chat hint ("… sieht nach Pappe aus"), presentation only.
+## First room next to a standing Kulissenwand: one chat hint per wall ("… ist die aus pappe??"), presentation only.
 func _hint_wall(cell: Vector2i) -> void:
-	if _wall_hint_given or Game.replaying:
+	if Game.replaying:
 		return
 	for sid: Variant in _walls.keys():
 		var w: SceneryWall = _walls[sid] as SceneryWall
-		if w != null and is_instance_valid(w) and not w.opened and w.occupied_cells(_layout).has(cell):
-			_wall_hint_given = true
+		if _wall_hints.has(sid) or w == null or not is_instance_valid(w) or w.opened:
+			continue
+		if w.occupied_cells(_layout).has(cell):
+			_wall_hints[sid] = true
 			Show.chat("chat_secret_hint")
 			return
 
@@ -1329,6 +1336,7 @@ func _log_event(t: ExploreEvent.Type, data: Dictionary) -> void:
 # STUB(R1a) — owned by R2. Replace completely, keep the public API.
 
 ## Control follows life (07 §2.6): the player body temporarily becomes `member_id` (the partner) after
-## CONTROL_CHANGED; Game.state.hero stays. Stub: nothing (no real-time combat before R2).
+## CONTROL_CHANGED; Game.state.hero stays. Stub: nothing (no real-time combat before R2). R2: the camera framing follows
+## the body (_camera.set_leader(member_id), polish pass — 02_TECH §7.3, 07 §7.5).
 func control_temporarily(_member_id: String) -> void:
 	pass

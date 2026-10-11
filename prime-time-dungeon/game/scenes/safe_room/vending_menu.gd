@@ -33,6 +33,7 @@ var _minus: Button
 var _plus: Button
 var close_button: Button
 var _total: Label
+var _total_was: Label                       # 06-D: struck-through sum during a Happy Hour
 var _preview: VBoxContainer
 var _status: Label
 var _closing: bool = false
@@ -192,6 +193,12 @@ func _refresh_list() -> void:
 		own_l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		(b.get_child(0) as HBoxContainer).add_child(own_l)
 		(b.get_child(0) as HBoxContainer).move_child(own_l, 2)
+		var base: int = Shop.price_of(DB.data, id) if mode == "buy" else 0
+		if base > price and price > 0:              # 06-D Happy Hour: the old price struck through, then the new one
+			var was: Label = struck_price("%d Cr" % base)
+			var row: HBoxContainer = b.get_child(0) as HBoxContainer
+			row.add_child(was)
+			row.move_child(was, (b.find_child("Right", true, false) as Label).get_index())
 		if max_qty(id) <= 0:
 			(b.find_child("Right", true, false) as Label).add_theme_color_override("font_color", UiUtil.C_DISABLED)
 		var iid: String = id
@@ -274,11 +281,36 @@ func _update_qty() -> void:
 	var verb: String = "Kaufen" if mode == "buy" else "Verkaufen"
 	_qty_button.text = "%d×  %s" % [qty, verb]
 	_total.text = "Summe: %s Cr" % UiUtil.fmt_int(unit * qty) if selected != "" else ""
+	var base: int = Shop.price_of(DB.data, selected) if mode == "buy" and selected != "" else 0
+	_total_was.visible = base > unit and unit > 0
+	_total_was.text = "%s Cr" % UiUtil.fmt_int(base * qty) if _total_was.visible else ""
 
 
 func _say(text: String, col: Color) -> void:
 	_status.text = UiUtil.glyph_safe(text)
 	_status.add_theme_color_override("font_color", col)
+
+
+## 06-D (polish pass): the original price during a Happy Hour — dimmed, with a line through it ("25 Cr"), shown
+## right before the reduced price.
+static func struck_price(text: String, font_size: int = 16) -> Label:
+	var l: Label = UiUtil.label(text, &"", font_size, UiTheme.C_TEXT_DIM)
+	l.name = "WasPrice"
+	l.add_theme_font_override("font", UiTheme.font_mono())
+	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var line: ColorRect = ColorRect.new()
+	line.name = "Strike"
+	line.color = Color(UiTheme.C_DANGER, 0.9)
+	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	line.anchor_right = 1.0
+	line.anchor_top = 0.5
+	line.anchor_bottom = 0.5
+	line.offset_left = -2.0
+	line.offset_right = 2.0
+	line.offset_top = -1.0
+	line.offset_bottom = 1.0
+	l.add_child(line)
+	return l
 
 
 ## 06-D: gold "HAPPY HOUR −25 %" pill next to the title while a Happy Hour discount runs (prices already reduced).
@@ -402,6 +434,10 @@ func _build() -> void:
 	_total.add_theme_font_override("font", UiTheme.font_mono())
 	_total.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	buy_row.add_child(_total)
+	_total_was = struck_price("", 18)               # 06-D Happy Hour: the undiscounted sum, struck through
+	_total_was.name = "WasTotal"
+	_total_was.visible = false
+	buy_row.add_child(_total_was)
 	_status = UiUtil.label("", &"", 18, UiTheme.C_OK)
 	right.add_child(_status)
 	var foot: HBoxContainer = UiUtil.hbox(18)

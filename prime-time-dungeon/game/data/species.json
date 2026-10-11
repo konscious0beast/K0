@@ -203,7 +203,7 @@
 			},
 			"recommended_classes": [
 				"cls_mop_hexer",
-				"cls_mop_diva"
+				"cls_mop_zeremonienmeister"
 			],
 			"model_hint": {
 				"props_add": [],
@@ -235,7 +235,7 @@
 			},
 			"recommended_classes": [
 				"cls_mop_physician",
-				"cls_mop_diva"
+				"cls_mop_zeremonienmeister"
 			],
 			"model_hint": {
 				"props_add": [

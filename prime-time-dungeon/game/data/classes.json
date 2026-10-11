@@ -153,7 +153,7 @@
 		},
 		{
 			"id": "cls_mop_archmage",
-			"name": "Hofmagier",
+			"name": "Erzmagister",
 			"desc": "Elementarschaden. Jede Schwachstelle ist eine Einladung.",
 			"for": [
 				"mopsula"
@@ -189,7 +189,7 @@
 		},
 		{
 			"id": "cls_mop_physician",
-			"name": "Leibarzt Seiner Hoheit",
+			"name": "Medicus honoris causa",
 			"desc": "Heilung mit Standesdünkel. Gift duldet er nicht.",
 			"for": [
 				"mopsula"
@@ -227,7 +227,7 @@
 		{
 			"id": "cls_mop_hexer",
 			"name": "Fluchgraf",
-			"desc": "Debuffs mit Stammbaum. Flüche halten länger.",
+			"desc": "Debuffs mit Fußnoten. Flüche halten länger.",
 			"for": [
 				"mopsula"
 			],
@@ -262,9 +262,9 @@
 			}
 		},
 		{
-			"id": "cls_mop_diva",
-			"name": "Diva",
-			"desc": "Buffs und Bühne. Sponsoren kommen früher, Applaus sowieso.",
+			"id": "cls_mop_zeremonienmeister",
+			"name": "Zeremonienmeister",
+			"desc": "Buffs mit Protokoll. Sponsoren kommen früher, Applaus sowieso.",
 			"for": [
 				"mopsula"
 			],

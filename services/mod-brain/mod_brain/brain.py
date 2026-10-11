@@ -141,7 +141,7 @@ class ModBrain:
     def _lines(self, req: TurnRequest, out: ModTurnOut, info: RoundInfo) -> list[RespLine]:
         lines: list[RespLine] = []
         for ol in out.lines[:MAX_LINES]:
-            reason = check_line(ol.text, self.catalog.filter_words)
+            reason = check_line(ol.text, self.catalog.filter_words, ol.voice)
             if reason == "" and ol.voice not in VOICES:
                 reason = "voice"
             self.safety.note(reason)

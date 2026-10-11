@@ -2,8 +2,9 @@ extends "res://scenes/ui/menu_base.gd"
 ## Pause tab / safe room "Ausrüstung" (02_TECH §1.6, GDD §10.1): member tabs, three slots, candidate list (inventory
 ## items of the slot type the member may wear + "Ablegen") with stat preview (green/red), Game.equip(member, slot,
 ## item). Layout: slots | candidates | stat column (full stat names, same as the party page).
-## 06-C (06 §4.3): under the slots the Unterhosen-Liga line of the member ("Liga-bereit" / "Liga blockiert durch: …")
-## and the team's current tier — the rule is always phrased "ohne Rüstung & ohne Accessoire".
+## 06-C (06 §4.3): the Unterhosen-Liga line of the member ("Liga-bereit" / "Liga blockiert durch: …") and the team's
+## current tier — the rule is always phrased "ohne Rüstung & ohne Accessoire". Polish pass: both lines sit next to the
+## member tabs (top row), not under the slots, where they ran into the key-hint bar.
 
 var member_id: String = "kai"
 var slot: String = ""                 # "" = slot level, else candidate level
@@ -24,8 +25,22 @@ func _ready() -> void:
 	var col: VBoxContainer = UiUtil.vbox(12)
 	UiUtil.full_rect(col)
 	add_child(col)
+	var top: HBoxContainer = UiUtil.hbox(24)
+	col.add_child(top)
 	_tabs_holder = UiUtil.hbox(8)
-	col.add_child(_tabs_holder)
+	top.add_child(_tabs_holder)
+	var liga: VBoxContainer = UiUtil.vbox(2)
+	liga.name = "Liga"
+	liga.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	liga.alignment = BoxContainer.ALIGNMENT_CENTER
+	top.add_child(liga)
+	liga_line = UiUtil.label("", &"LabelSmall", 16)
+	liga_line.name = "LigaLine"
+	liga_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	liga.add_child(liga_line)
+	liga_tier_line = UiUtil.label("", &"LabelSmall", 15, UiTheme.C_TEXT_DIM)
+	liga_tier_line.name = "LigaTierLine"
+	liga.add_child(liga_tier_line)
 	var row: HBoxContainer = UiUtil.hbox(18)
 	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_child(row)
@@ -34,13 +49,6 @@ func _ready() -> void:
 	row.add_child(left)
 	_slots = UiUtil.vbox(12)                # 12 px between the 88 px hit areas
 	left.add_child(_slots)
-	liga_line = UiUtil.label("", &"LabelSmall", 16)
-	liga_line.name = "LigaLine"
-	liga_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	left.add_child(liga_line)
-	liga_tier_line = UiUtil.label("", &"LabelSmall", 15, UiTheme.C_TEXT_DIM)
-	liga_tier_line.name = "LigaTierLine"
-	left.add_child(liga_tier_line)
 	var mid: VBoxContainer = UiUtil.vbox(8)
 	mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(mid)

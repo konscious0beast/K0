@@ -305,6 +305,14 @@ func test_equipment_menu_names_the_blockers() -> void:
 	var line: Label = page.get("liga_line") as Label
 	assert_eq(line.text, "Liga blockiert durch: Tierheim-Hoodie")
 	assert_eq((page.get("liga_tier_line") as Label).text, "Aktuell: keine Liga")
+	# polish pass: both Liga lines sit in the top row next to the member tabs, above the slots (not under the slots,
+	# where they ran into the key-hint bar)
+	var first_slot: Control = page.find_child("Slot_weapon", true, false) as Control
+	assert_not_null(first_slot)
+	if first_slot != null:
+		var tier_line: Label = page.get("liga_tier_line") as Label
+		assert_lt(tier_line.get_global_rect().end.y, first_slot.get_global_rect().position.y + 0.5, "above the slots")
+		assert_lt(line.get_global_rect().end.y, first_slot.get_global_rect().position.y + 0.5)
 	page.call("equip", "armor", "")
 	await wait_frames(1)
 	assert_eq(line.text, "Liga-bereit: ohne Rüstung & ohne Accessoire")
@@ -322,6 +330,15 @@ func test_show_tab_lists_preferences_and_liga() -> void:
 	assert_not_null(bet, "the preference row")
 	var kai_row: Button = page.find_child("Member_kai", true, false) as Button
 	assert_not_null(kai_row)
+	# polish pass: the member cards share one row (no gap between them, the Count's card never at the bottom edge)
+	var mop_row: Button = page.find_child("Member_mopsula", true, false) as Button
+	assert_not_null(mop_row)
+	if kai_row != null and mop_row != null:
+		assert_almost(kai_row.get_global_rect().position.y, mop_row.get_global_rect().position.y, 0.5, "one row")
+		assert_gt(mop_row.get_global_rect().position.x, kai_row.get_global_rect().end.x - 0.5, "side by side")
+		assert_true(kai_row.size.y >= UiTheme.TOUCH_HIT and mop_row.size.y >= UiTheme.TOUCH_HIT, "88 px hit areas")
+		assert_eq((mop_row.find_child("Status", true, false) as Label).text.begins_with("blockiert durch"), true,
+			"the card names what blocks the Liga")
 	var opened: Array = []
 	page.connect("open_equipment", func(id: String) -> void: opened.append(id))
 	kai_row.pressed.emit()

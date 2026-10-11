@@ -3,15 +3,17 @@
 gives out has passed exactly the rules the client applies again (tests/fixtures/live/line_filter_cases.json is run by
 both sides). Never a reason to show something the game would drop.
 
-check_line(text) → "" (ok) or the first failing rule: empty · too_long · placeholder · url · digits ·
-blocked_<category> · money · purchase_pressure · language."""
+check_line(text, words, voice) → "" (ok) or the first failing rule: empty · too_long · placeholder · url · digits ·
+blocked_<category> (politics, sexual, slurs, violence, real_brands, ip_distance, origin) · blocked_mopsula_royalty (a
+line in Graf Mopsula's voice or naming him with a royalty word) · money · purchase_pressure · language. Word entries:
+"stem*" prefix, "*end" suffix, "*part*" anywhere in a word, an entry with a space = a phrase of whole words."""
 
 from __future__ import annotations
 
 import re
 from collections import Counter
 
-BLOCKED_ORDER = ["politics", "sexual", "slurs", "violence", "real_brands"]
+BLOCKED_ORDER = ["politics", "sexual", "slurs", "violence", "real_brands", "ip_distance", "origin"]
 
 _RE_WORD = re.compile(r"[a-zäöüß]+(?:-[a-zäöüß]+)*")
 _RE_BRACE = re.compile(r"\{[^{}]*\}")
@@ -24,18 +26,22 @@ def tokenize(low: str) -> list[str]:
 
 
 def _any_hit(tokens: list[str], entries) -> bool:
+    """Single-word entries: exact, "stem*" prefix, "*end" suffix, "*part*" anywhere (same as ModLineFilter._any_hit)."""
     if not isinstance(entries, list):
         return False
     for entry in entries:
         e = str(entry).lower()
         if e == "" or " " in e:
             continue
-        if e.endswith("*"):
-            stem = e[:-1]
-            if any(t.startswith(stem) for t in tokens):
+        pre, suf = e.startswith("*"), e.endswith("*")
+        core = e[1:] if pre else e
+        core = core[:-1] if suf and core else core
+        if not core:
+            continue
+        for t in tokens:
+            if ((pre and suf and core in t) or (suf and not pre and t.startswith(core))
+                    or (pre and not suf and t.endswith(core)) or (not pre and not suf and t == core)):
                 return True
-        elif e in tokens:
-            return True
     return False
 
 
@@ -50,8 +56,8 @@ def _has_phrase(tokens: list[str], entries) -> bool:
     return False
 
 
-def check_line(text: str, words: dict) -> str:
-    """Same rules and order as ModLineFilter.check."""
+def check_line(text: str, words: dict, voice: str = "") -> str:
+    """Same rules and order as ModLineFilter.check (voice: mod | mopsula | chat, "" = unknown)."""
     t = (text or "").strip()
     if t == "":
         return "empty"
@@ -75,8 +81,11 @@ def check_line(text: str, words: dict) -> str:
             parts.extend(p for p in tok.split("-") if p)
     blocked = words.get("blocked", {}) if isinstance(words.get("blocked"), dict) else {}
     for cat in BLOCKED_ORDER:
-        if _any_hit(parts, blocked.get(cat, [])):
+        if _any_hit(parts, blocked.get(cat, [])) or _has_phrase(tokens, blocked.get(cat, [])):
             return "blocked_" + cat
+    if ((voice == "mopsula" or _any_hit(parts, words.get("mopsula_names", [])))
+            and _any_hit(parts, words.get("mopsula_royalty", []))):
+        return "blocked_mopsula_royalty"
     if "€" in low or _any_hit(parts, words.get("money", [])):
         return "money"
     if _any_hit(parts, words.get("purchase", [])) and _has_phrase(tokens, words.get("urgency", [])):

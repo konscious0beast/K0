@@ -1,6 +1,6 @@
 {
 	"schema": 1,
-	"doc": "06 §5.9 Nr. 3: ModLineFilter.check (game) and mod_brain.safety.check_line (service) must return the same reason for every text ('' = shown).",
+	"doc": "06 §5.9 Nr. 3: ModLineFilter.check (game) and mod_brain.safety.check_line (service) must return the same reason for every text ('' = shown); 'voice' (optional) is the line's voice. Polish pass: the IP / tone lists (blocked_ip_distance, blocked_origin) and Graf Mopsula's royalty rule (blocked_mopsula_royalty).",
 	"cases": [
 		{
 			"text": "Ein Stunt mit Wischmopp. Ich lasse das als Kunst durchgehen.",
@@ -125,6 +125,68 @@
 		{
 			"text": "Wow, what a great move by the team there.",
 			"expect": "language"
+		},
+		{
+			"text": "Ein Fan-Box-Moment! Die Fans haben zusammengelegt.",
+			"expect": "blocked_ip_distance"
+		},
+		{
+			"text": "Die Fan Box ist da, und sie glitzert.",
+			"expect": "blocked_ip_distance"
+		},
+		{
+			"text": "Gewonnen im Feinripp! Die Quote jubelt.",
+			"expect": "blocked_ip_distance"
+		},
+		{
+			"text": "Kai kämpft barfuß weiter, die Quote jubelt.",
+			"expect": "blocked_ip_distance"
+		},
+		{
+			"text": "Neue Turnschuhe für Kai! Das Publikum tobt.",
+			"expect": "blocked_ip_distance"
+		},
+		{
+			"text": "Ein Fanpost-Paket! Die Fans haben zusammengelegt.",
+			"expect": ""
+		},
+		{
+			"text": "Ein Paket aus Polen, der Zoll lacht noch.",
+			"expect": "blocked_origin"
+		},
+		{
+			"text": "Polenta im Automaten? Ich bin ehrlich überrascht.",
+			"expect": ""
+		},
+		{
+			"text": "Ein Amerikaner vom Kiosk, mit Zuckerguss. Lecker.",
+			"expect": ""
+		},
+		{
+			"text": "Mit dem Franzosen zieht der Hausmeister jede Schraube fest.",
+			"expect": ""
+		},
+		{
+			"text": "Der Graf verlangt einen Thron. Abgelehnt.",
+			"expect": "blocked_mopsula_royalty"
+		},
+		{
+			"text": "Die Krone sitzt schief, sagt der Mops.",
+			"expect": "blocked_mopsula_royalty"
+		},
+		{
+			"text": "Ihre Majestät hat gesprochen. Ich verneige mich nicht.",
+			"voice": "mopsula",
+			"expect": "blocked_mopsula_royalty"
+		},
+		{
+			"text": "Ihre Majestät, die Rattenkönigin, betritt den Bahnsteig.",
+			"expect": ""
+		},
+		{
+			"text": "Ihre Majestät, die Rattenkönigin, betritt den Bahnsteig.",
+			"voice": "mod",
+			"expect": ""
 		}
 	]
 }

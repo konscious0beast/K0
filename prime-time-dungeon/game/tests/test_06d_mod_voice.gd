@@ -174,7 +174,7 @@ func test_remote_parses_only_well_formed_answers() -> void:
 func test_shared_line_filter_cases() -> void:
 	var fx: Dictionary = JsonUtil.read_file(FILTER_CASES)
 	for c: Dictionary in fx["cases"]:
-		assert_eq(ModLineFilter.check(str(c["text"])), str(c["expect"]), str(c["text"]))
+		assert_eq(ModLineFilter.check(str(c["text"]), {}, str(c.get("voice", ""))), str(c["expect"]), str(c["text"]))
 
 
 func test_filter_lets_almost_every_scripted_line_through() -> void:

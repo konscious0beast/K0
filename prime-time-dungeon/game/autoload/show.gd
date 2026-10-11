@@ -266,7 +266,7 @@ func say_external(text: String, voice: StringName, tag: String) -> bool:
 		return false
 	if Game.replaying or st == null:
 		return false
-	var reason: String = ModLineFilter.check(text)
+	var reason: String = ModLineFilter.check(text, {}, String(voice))      # the voice: Graf Mopsula's royalty rule
 	if reason == "" and not ModLineFilter.VOICES.has(String(voice)):
 		reason = "voice"
 	if reason != "":
@@ -1223,7 +1223,7 @@ func _chest_type(chest_id: String) -> String:
 
 
 ## "preemptive" | "ambush" | "normal"; a PREEMPTIVE opened from Mopsula's bark is "bark" (integration round 4: the
-## sneak-themed achievement "Leise Sohle" and the bet "Schleichwerbung" ask for "preemptive").
+## sneak-themed achievement "Überraschungsgast" and the bet "Schleichwerbung" ask for "preemptive").
 static func _encounter_type(advantage: int, opener: String = "") -> String:
 	match advantage:
 		BattleSetup.Advantage.PREEMPTIVE:

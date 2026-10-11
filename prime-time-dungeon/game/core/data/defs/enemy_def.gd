@@ -20,6 +20,16 @@ var tags: PackedStringArray = []
 var boss: bool = false
 var model: Dictionary = {}                  # ModelSpec, normalized
 var explore: Dictionary = {}                # field_speed, patrol_speed, sight_range, … (all keys present)
+# --- Echtzeitkampf (07, R1a): optional `rt` block (07 §4.9), {} = no real-time data; filled by RtNorm ---------------
+const RtNorm := preload("res://core/data/defs/rt_norm.gd")
+## hp 0 = stats.hp × hp_pm / 1000; hp_pm 0 = RtBalance ENEMY_HP_PM; rules / phases stay as in the data
+## (RtRules.compile).
+const RT_SPEC: Array = [["hp", "i", 0], ["hp_pm", "i", 0], ["radius_cm", "i", 30], ["move_cm_s", "i", 360],
+	["stationary", "b", false], ["keep_cm", "i", 0], ["auto_skill", "s", ""], ["auto_ranged_skill", "s", ""],
+	["swing_ms", "i", 2400], ["reach_cm", "i", 220], ["auto_target", "s", "threat_top"], ["dmg_pm", "i", 1000],
+	["immune", "sa", []], ["rules", "a", []], ["phases", "a", []], ["enrage", "d", {}]]
+const RT_ENRAGE_SPEC: Array = [["at_ms", "i", 0], ["every_ms", "i", 0], ["status", "s", "sts_enrage"]]
+var rt: Dictionary = {}
 
 
 static func from_dict(d: Dictionary) -> EnemyDef:
@@ -42,6 +52,9 @@ static func from_dict(d: Dictionary) -> EnemyDef:
 	r.boss = bool(d.get("boss", false))
 	r.model = (d.get("model", {}) as Dictionary).duplicate(true)
 	r.explore = (d.get("explore", {}) as Dictionary).duplicate(true)
+	r.rt = RtNorm.fill(d.get("rt", {}), RT_SPEC)       # Echtzeitkampf (07, R1a)
+	if not r.rt.is_empty():
+		r.rt["enrage"] = RtNorm.fill(r.rt["enrage"], RT_ENRAGE_SPEC)
 	return r
 
 

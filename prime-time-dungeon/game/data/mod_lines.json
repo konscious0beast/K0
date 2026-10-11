@@ -2140,6 +2140,13 @@
 			"voice": "mod",
 			"text": "M.O.D. live ist auf Sendung. Ab jetzt improvisiere ich. Die Rechtsabteilung schwitzt.",
 			"weight": 1
+		},
+		{
+			"id": "mod_rt_set_quiet_01",
+			"tag": "rt_set_quiet",
+			"voice": "mod",
+			"text": "Ruhe am Set! Kamera läuft, Monster auf Position, Sie auf eigene Gefahr.",
+			"weight": 1
 		}
 	]
 }

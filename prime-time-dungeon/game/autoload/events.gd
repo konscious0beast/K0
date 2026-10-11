@@ -107,3 +107,13 @@ signal toast_requested(text: String, icon: StringName)
 ## Bottom corners (canvas px inside the safe frame) a screen keeps for its own panels while overlay `mode` is active;
 ## the ModDialog box centres in the free span between them (battle: command menu / party panels). (0, 0) clears.
 signal dialog_reserve_requested(mode: StringName, left: float, right: float)
+
+# --- Echtzeitkampf (07, R1a) -----------------------------------------------------------------------------------------
+# Object payloads typed as RefCounted on purpose (no dependency on core classes, like the untyped arrays); the concrete
+# type stands in the comment. Battle start/end keep battle_started / battle_ended (07 §12.9 Nr. 4).
+signal combat_started(sim: RefCounted)                   # RtSim — Game.make_rt_setup (R2), Game.replay_log (R5a)
+signal combat_event(e: RefCounted)                       # ActionEvent — Game.combat_boundary / combat_step
+signal combat_finished(result: RefCounted)               # BattleResult — Game.end_combat
+## Layout of the M.O.D. dialog box for overlay `mode` (07 §8.8: subtitle / overlay mode in combat, R3); {} clears.
+signal dialog_layout_requested(mode: StringName, layout: Dictionary)
+signal show_boss_spotted(encounter_id: String)           # 06 §2.6, 07 §9.6: first entry of the show boss's zone (R2)

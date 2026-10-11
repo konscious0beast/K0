@@ -55,3 +55,30 @@ static func _hash(d: Dictionary, what: String) -> String:
 	if h == "":
 		push_warning("[StateHash] %s is not canonically serializable: %s" % [what, CanonicalJson.last_error])
 	return h
+
+
+# --- Echtzeitkampf (07, R1a → R1b) ------------------------------------------------------------------------------------
+
+## SHA-256 over the canonical JSON of sim.snapshot() (07 §10.4) without display names (every "display_name" key: the
+## Def names are presentation, 08 §2.7 Nr. 5 / CR-24); "" for null. Complete once RtSim.snapshot() is (R1b).
+static func of_rt(sim: RtSim) -> String:
+	if sim == null:
+		return ""
+	return _hash(_without_key(sim.snapshot(), "display_name") as Dictionary, "RtSim")
+
+
+## Deep copy of `v` without any dictionary entry named `key`.
+static func _without_key(v: Variant, key: String) -> Variant:
+	match typeof(v):
+		TYPE_DICTIONARY:
+			var out: Dictionary = {}
+			for k: Variant in (v as Dictionary).keys():
+				if str(k) != key:
+					out[k] = _without_key((v as Dictionary)[k], key)
+			return out
+		TYPE_ARRAY:
+			var out_a: Array = []
+			for e: Variant in (v as Array):
+				out_a.append(_without_key(e, key))
+			return out_a
+	return v

@@ -215,6 +215,10 @@ static func _floor_bookkeeping(state: GameState, data: GameData, result: BattleR
 			if not fr.defeated_groups.has(result.group_id):
 				fr.defeated_groups.append(result.group_id)
 			fr.strays.erase(result.group_id)
+		for gid: String in result.group_ids:                  # Echtzeitkampf (07, R1a): every group of the combat
+			if gid != "" and not fr.defeated_groups.has(gid):
+				fr.defeated_groups.append(gid)
+			fr.strays.erase(gid)
 		var fdef: FloorDef = data.floor_def(fr.index)
 		if fdef != null:
 			if result.encounter_id != "" and result.encounter_id == fdef.quarter_boss:
@@ -261,3 +265,15 @@ static func _bestiary_entry(state: GameState, enemy_id: String) -> Dictionary:
 		entry["defeated"] = 0
 	entry["weak_known"] = JsonUtil.to_str_array(entry.get("weak_known", []))
 	return entry
+
+
+# --- Echtzeitkampf (07, R1a) ------------------------------------------------------------------------------------------
+# STUB(R1a) — owned by R1b. Replace completely, keep the public API.
+
+## The start data of a real-time combat from the recorded encounter command `cmd` ({"t": "encounter", "enc", "adv",
+## "group", "rt": {…}}, 07 §10.1) and the battle seed (next_seed "battle", 07 §10.5): party RtUnits from
+## Progression.to_combatant (talent crit / element as in make_setup; opener_pm = Talents.preemptive_dmg_pm, stunt_pm =
+## Talents.stunt_window_pm, 07 §9.6), enemies of every group, geometry, presets, RtMods (equipment → species → spec →
+## show boss → twists), RtBalance.from_data. R1b implements it; the stub returns null (no real-time combat before R1b).
+static func make_rt_setup(_state: GameState, _data: GameData, _cmd: Dictionary, _seed: int) -> RtSetup:
+	return null

@@ -34,14 +34,35 @@ const VALID: Array[Dictionary] = [
 	{"t": "casting", "member": "mopsula", "species": "spc_original", "class": "cls_mop_diva"},
 	{"t": "twist", "twist": {"schema": 1, "id": "tw_overtime", "n": 1, "src": "regie", "params": {"seconds": 60},
 		"duration": 0, "tick": 120}},
+	# Echtzeitkampf (07 §10.1, R1a): schema in RtCommand.validate
+	{"t": "encounter", "enc": "enc_f1_a2", "adv": 0, "group": "f1_g3", "rt": {"v": 1, "cell": [3, 2], "ctl": "p0",
+		"party": [{"u": "p0", "p": [0, 300, 0]}, {"u": "p1", "p": [-150, 400, 0]}],
+		"groups": [{"group": "f1_g3", "enc": "enc_f1_a2", "lead": [0, -300, 128], "state": "PATROL"}],
+		"presets": {"p1": {"preset": "support", "tog": {"interrupt": true, "show": true, "potions": false}}},
+		"auto": true, "retarget": true, "open": {}, "diff": "prime"}},
+	{"t": "ability_use", "ct": 12, "u": "p0", "skill": "skl_kai_heavy_swing", "target": "e0"},
+	{"t": "target_change", "ct": 13, "u": "p0", "target": ""},
+	{"t": "move_sample", "ct": 14, "u": "p0", "p": [120, -45, 18, -3, 64]},
+	{"t": "combat_item", "ct": 15, "u": "p0", "item": "itm_bandage", "target": "p1"},
+	{"t": "partner_preset", "ct": 16, "u": "p1", "preset": "careful", "tog": {"potions": true}},
+	{"t": "partner_special", "ct": 17, "u": "p1"},
+	{"t": "auto_attack", "ct": 18, "u": "p0", "on": false},
+	{"t": "autopilot", "ct": 19, "u": "p0", "on": true},
+	{"t": "combat_hint", "ct": 20, "id": "interrupt"},
+	{"t": "move_input", "ct": 21, "u": "p0", "dir": [0, -127], "run": true},
+	{"t": "combat_speed", "pm": 850},
+	{"t": "move_batch", "u": "p0", "id0": 7, "s": [[0, 120, -45, 18, -3, 64], [4, 140, -50, 18, -3, 64]]},
 ]
 
 
 func test_types_are_the_recorded_list() -> void:
 	assert_eq(Command.TYPES, ["floor", "encounter", "battle", "lootbox", "buy", "sell", "equip", "use_item", "rest",
 		"event", "chest", "gate", "room", "safe_room", "safe_room_exit", "scene", "flag", "difficulty", "descend",
-		"gift", "sponsor_window", "hero", "talent", "casting", "secret", "twist"],
-		"02_TECH §3.4 (+ hero / secret 06 §1.7 / §2.7, talent / casting 06 §2.2 / §3.4, twist 06 §5.7)")
+		"gift", "sponsor_window", "hero", "talent", "casting", "secret", "twist",
+		"ability_use", "target_change", "move_sample", "combat_item", "partner_preset", "partner_special",
+		"auto_attack", "autopilot", "combat_hint", "move_input", "combat_speed", "move_batch"],
+		"02_TECH §3.4 (+ hero / secret 06 §1.7 / §2.7, talent / casting 06 §2.2 / §3.4, twist 06 §5.7, real-time "
+		+ "combat 07 §10.1)")
 	var covered: Dictionary = {"gift": true}
 	for c: Dictionary in VALID:
 		covered[c["t"]] = true

@@ -1323,3 +1323,12 @@ func _log_event(t: ExploreEvent.Type, data: Dictionary) -> void:
 	_log.append(ExploreEvent.make(t, tick, data))
 	while _log.size() > LOG_SIZE:
 		_log.pop_front()
+
+
+# --- Echtzeitkampf (07, R1a → R2) ---------------------------------------------------------------------------------
+# STUB(R1a) — owned by R2. Replace completely, keep the public API.
+
+## Control follows life (07 §2.6): the player body temporarily becomes `member_id` (the partner) after
+## CONTROL_CHANGED; Game.state.hero stays. Stub: nothing (no real-time combat before R2).
+func control_temporarily(_member_id: String) -> void:
+	pass

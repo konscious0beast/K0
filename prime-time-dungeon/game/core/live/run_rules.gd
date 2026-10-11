@@ -197,6 +197,9 @@ static func lower_difficulty(state: GameState, d: StringName) -> bool:
 static func command_refusal(state: GameState, data: GameData, rules: Dictionary, c: Dictionary, floor_done: bool,
 		scene_ctx: Dictionary) -> String:
 	var t: String = str(c.get("t", ""))
+	var rt: String = rt_refusal(c)                 # Echtzeitkampf (07, R1a): no real-time combat path before R5a
+	if rt != "":
+		return rt
 	if t == "gift" or state == null:
 		return ""
 	if floor_done and t != "floor":
@@ -257,4 +260,17 @@ static func refused_id(c: Dictionary) -> String:
 		"twist":
 			var tw: Variant = c.get("twist", null)
 			return str((tw as Dictionary).get("id", "")) if tw is Dictionary else ""
+	return ""
+
+
+# --- Echtzeitkampf (07, R1a → R5a) ------------------------------------------------------------------------------------
+
+## R1a: the real-time combat path of the verifiers does not exist yet (R5a, 07 §10.5) — a real-time combat command
+## (RtCommand.is_combat_cmd: types with "ct", move_batch, a gift with "ct"), a combat_speed record and an encounter with
+## an "rt" block are refused as "rt_unavailable" by both verifiers (RunSim.command_refusal, Game.replay_log), so nothing
+## records or replays them before R5a. R5a replaces this check with the combat branch. "" = not a real-time command.
+static func rt_refusal(c: Dictionary) -> String:
+	var t: String = str(c.get("t", ""))
+	if RtCommand.is_combat_cmd(c) or t == "combat_speed" or (t == "encounter" and c.has("rt")):
+		return "rt_unavailable"
 	return ""

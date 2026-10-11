@@ -3,6 +3,8 @@ class_name GameData extends RefCounted
 ## Loading never prints; problems are collected in `errors` / `warnings` (DB pushes them).
 ## Getters for unknown ids return null and push_error (data bug). Defs are immutable after loading.
 
+## Echtzeitkampf (07 §3.16, R1a): tuning values of the real-time combat — not a table (no "entries"), optional.
+const RT_BALANCE_FILE: String = "rt_balance.json"
 const TABLES: PackedStringArray = ["statuses", "skills", "items", "classes", "party", "enemies", "floors",
 	"lootboxes", "achievements", "sponsors", "milestones", "mod_lines", "scenes",
 	"talents", "species",                       # 06 package B
@@ -55,6 +57,8 @@ var _all_talents: Array[TalentDef] = []    # sorted by id
 var _all_species: Array[SpeciesDef] = []   # file order
 var _all_marotten: Array[MarotteDef] = []  # 06-C: file order
 var _all_twists: Array[TwistDef] = []      # 06-D: sorted by id
+# --- Echtzeitkampf (07, R1a): data/rt_balance.json → "values" (RtBalance.from_data; {} = RtBalance.DEFAULTS) ---------
+var _rt_balance: Dictionary = {}
 
 
 ## Loads all TABLES from `dir` (<table>.json). Full validation (rules 1–10). True if no errors.
@@ -68,6 +72,9 @@ func load_dir(dir: String = "res://data") -> bool:
 			read_errors[t] = "%s (%s)" % [JsonUtil.last_error(), path]
 		else:
 			raw[t] = parsed
+	var rt_path: String = dir.path_join(RT_BALANCE_FILE)         # Echtzeitkampf (07, R1a): optional, not a table
+	if FileAccess.file_exists(rt_path):
+		raw["rt_balance"] = JsonUtil.read_file(rt_path)
 	return _load(raw, dir, true, read_errors)
 
 
@@ -87,6 +94,10 @@ func load_from_dicts(tables: Dictionary) -> bool:
 				file["pools"] = (tables.get("lootbox_pools", {}) as Dictionary).duplicate(true)
 				file["pity"] = (tables.get("lootbox_pity", {"rare": 4, "epic": 8}) as Dictionary).duplicate(true)
 		raw[t] = file
+	if tables.has("rt_balance"):                              # Echtzeitkampf (07, R1a): file object or bare values
+		var rb: Variant = tables["rt_balance"]
+		raw["rt_balance"] = rb if (rb is Dictionary and (rb as Dictionary).has("values")) \
+			else {"schema": 1, "values": rb}
 	return _load(raw, "dicts", false, {})
 
 
@@ -318,6 +329,12 @@ func all_twists() -> Array[TwistDef]:
 	return _all_twists.duplicate()
 
 
+## Echtzeitkampf (07 §3.16, R1a): the "values" of data/rt_balance.json (a copy; {} without the file). Read through
+## RtBalance.from_data(data), which falls back to RtBalance.DEFAULTS.
+func rt_balance_values() -> Dictionary:
+	return _rt_balance.duplicate(true)
+
+
 ## All pseudo units (enemies.json → pseudo_units), file order.
 func all_pseudo_units() -> Array[PseudoUnitDef]:
 	var out: Array[PseudoUnitDef] = []
@@ -336,6 +353,10 @@ func _load(raw: Dictionary, p_source: String, p_strict: bool, read_errors: Dicti
 	errors = v.errors.duplicate()
 	warnings = v.warnings.duplicate()
 	_build(norm)
+	var rb: Variant = raw.get("rt_balance", null)                 # Echtzeitkampf (07, R1a)
+	if rb is Dictionary and (rb as Dictionary).get("values", null) is Dictionary:
+		_rt_balance = ((rb as Dictionary)["values"] as Dictionary).duplicate(true)
+		_freeze(_rt_balance)
 	return errors.is_empty()
 
 
@@ -349,6 +370,7 @@ func _clear() -> void:
 	_party_start = {"inventory": {}, "credits": 0}
 	_pools = {}
 	_pity = {"rare": 4, "epic": 8}
+	_rt_balance = {}                                              # Echtzeitkampf (07, R1a)
 	_all_statuses.clear()
 	_all_skills.clear()
 	_all_items.clear()

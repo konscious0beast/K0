@@ -23,6 +23,8 @@ const SIGNALS: Dictionary = {
 	"talent_pending": 2, "talent_picked": 2,              # 06 package B
 	"marotten_announced": 1, "marotte_progress": 3, "marotte_won": 1, "liga_changed": 1,   # 06-C
 	"twist_applied": 1, "twist_ended": 1, "mod_live_status": 1,          # 06-D
+	"combat_started": 1, "combat_event": 1, "combat_finished": 1, "dialog_layout_requested": 2,   # 07 R1a
+	"show_boss_spotted": 1,                               # 07 R1a (06 §2.6 signal, sent by R2)
 }
 const ACTIONS: PackedStringArray = ["move_forward", "move_back", "move_left", "move_right", "cam_left", "cam_right",
 	"cam_up", "cam_down", "sneak", "action", "pause", "map", "tab_prev", "tab_next", "toggle_auto", "toggle_speed",

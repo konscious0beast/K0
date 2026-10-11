@@ -1245,3 +1245,54 @@ func _restore_context(saved: Dictionary) -> void:
 	_cmd_log = saved["cmd_log"] as RunLog
 	_metric_fed = saved["metric_fed"]
 	_twist_ids = saved["twist_ids"]
+
+
+# ======================================================================================================================
+# Echtzeitkampf (07, R1a → R2 live part, R5a replay branch) — the API of 07 §10.6 / §9.2
+# ======================================================================================================================
+# STUB(R1a) — owned by R2 (live) and R5a (replay branch). Replace completely, keep the public API.
+# The live CombatDirector (R2) and GameReplay (R5a) use exactly these functions, per combat tick c:
+# combat_boundary() → combat_submit(cmd) for every input with ct == c → combat_step(). Until R2 nothing starts a
+# real-time combat (GameSettings.combat_mode stays &"ctb"), so `combat` stays null and nothing is recorded.
+
+var combat: RtSim = null             # the running real-time combat; null outside one (a save never contains it)
+
+
+## Records the encounter (with its "rt" block), draws the seeds "battle" and "show", builds the setup with
+## BattleBridge.make_rt_setup, creates `combat`, sets in_battle, Show.begin_battle(setup), feeds combat.start() to
+## Show.on_battle_event / Events.combat_event, emits Events.combat_started(combat) and Events.battle_started.
+## Stub: nothing recorded, returns null.
+func make_rt_setup(_cmd: Dictionary) -> RtSetup:
+	return null
+
+
+## One tick boundary before combat tick c = combat.tick() (07 §9.2): at most one gift (external first, then system)
+## via Show.take_pending_gift_rt → combat.apply_gift → Show.on_battle_event / Events.combat_event /
+## Show.note_battle_gift. Stub: nothing.
+func combat_boundary() -> void:
+	pass
+
+
+## RtSim.submit + record (accepted commands only, 07 §10.2); "" or one of RtCommand.REASONS. Stub: "finished" (there
+## is no running combat before R2).
+func combat_submit(_cmd: Dictionary) -> String:
+	return "finished"
+
+
+## A hint card was shown at the current combat tick: records {"t": "combat_hint", "ct", "id"} and sets
+## state.flags["rt_hints"][id] (the sim ignores it, 07 §2.13). Stub: nothing.
+func combat_hint(_id: String) -> void:
+	pass
+
+
+## One combat tick: combat.step(), every event to Show.on_battle_event and Events.combat_event, combat checkpoints
+## (RunLog.add_checkpoint(k, StateHash.of_rt(combat), ct)). Stub: [].
+func combat_step() -> Array[ActionEvent]:
+	var out: Array[ActionEvent] = []
+	return out
+
+
+## apply_battle_result(combat.result), Show.end_battle, Events.combat_finished(result), Events.battle_ended, then
+## combat = null. Stub: empty rewards.
+func end_combat() -> BattleRewards:
+	return BattleRewards.new()

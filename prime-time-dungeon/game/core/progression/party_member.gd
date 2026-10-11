@@ -20,6 +20,11 @@ var class_id: String = ""
 var talents: Dictionary = {}           # talent id → rank (1..max_rank); Game.pick_talent / Talents.pick
 var species_id: String = ""            # "" = not cast yet (≙ spc_original); Game.choose_casting / Casting.choose
 var casting: Dictionary = {}           # Casting bookkeeping: {"floor", "visit", "class_floor", "class_visit"} (ints)
+# --- Echtzeitkampf (07, R1a): written by to_dict only when they differ from the default (07 §10.4) ------------------
+var hp_scale_pm: int = 1000            # HP scale, last step of Progression.total_stats (CTB 1000, real-time 4000)
+var rt_preset: String = ""             # partner tactic (RtVocab.RT_PRESETS; "" = party.json rt.default_preset)
+var rt_toggles: Dictionary = {}        # partner switches {interrupt, show, potions} → bool ({} = RtVocab defaults)
+var rt_loadout: Dictionary = {}        # action bar variants: "2".."4" → skill id ({} = the base abilities, §4.1)
 
 
 func to_dict() -> Dictionary:
@@ -36,7 +41,7 @@ func to_dict() -> Dictionary:
 		"equipment": eq,
 		"skills": Array(skills),
 		"class_id": class_id,
-	}.merged(_b_dict())
+	}.merged(_b_dict()).merged(_rt_dict())
 
 
 ## 06 package B fields, only when set (see header).
@@ -96,4 +101,45 @@ static func from_dict(d: Dictionary) -> PartyMember:
 		for k: String in ["class_floor", "class_visit", "floor", "visit"]:
 			if (raw_c as Dictionary).has(k):
 				m.casting[k] = JsonUtil.to_int((raw_c as Dictionary)[k])
+	_rt_from_dict(m, d)                    # Echtzeitkampf (07, R1a)
 	return m
+
+
+# --- Echtzeitkampf (07, R1a) ------------------------------------------------------------------------------------------
+
+## The real-time fields, only when set (see the field comments).
+func _rt_dict() -> Dictionary:
+	var out: Dictionary = {}
+	if hp_scale_pm != 1000:
+		out["hp_scale_pm"] = hp_scale_pm
+	if rt_preset != "":
+		out["rt_preset"] = rt_preset
+	if not rt_toggles.is_empty():
+		var t: Dictionary = {}
+		var keys: Array = rt_toggles.keys()
+		keys.sort_custom(func(a: Variant, b: Variant) -> bool: return str(a) < str(b))
+		for k: Variant in keys:
+			t[str(k)] = bool(rt_toggles[k])
+		out["rt_toggles"] = t
+	if not rt_loadout.is_empty():
+		var l: Dictionary = {}
+		var lkeys: Array = rt_loadout.keys()
+		lkeys.sort_custom(func(a: Variant, b: Variant) -> bool: return str(a) < str(b))
+		for k: Variant in lkeys:
+			l[str(k)] = str(rt_loadout[k])
+		out["rt_loadout"] = l
+	return out
+
+
+static func _rt_from_dict(m: PartyMember, d: Dictionary) -> void:
+	m.hp_scale_pm = maxi(1, JsonUtil.to_int(d.get("hp_scale_pm", 1000), 1000))
+	m.rt_preset = str(d.get("rt_preset", ""))
+	var raw_t: Variant = d.get("rt_toggles", {})
+	if raw_t is Dictionary:
+		for k: Variant in (raw_t as Dictionary).keys():
+			if (raw_t as Dictionary)[k] is bool:
+				m.rt_toggles[str(k)] = bool((raw_t as Dictionary)[k])
+	var raw_l: Variant = d.get("rt_loadout", {})
+	if raw_l is Dictionary:
+		for k: Variant in (raw_l as Dictionary).keys():
+			m.rt_loadout[str(k)] = str((raw_l as Dictionary)[k])

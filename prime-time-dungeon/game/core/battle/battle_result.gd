@@ -5,6 +5,9 @@ const FixedMath := preload("res://core/stats/fixed_math.gd")
 
 enum Outcome { VICTORY, DEFEAT, FLED }
 const OUTCOME_NAMES: PackedStringArray = ["victory", "defeat", "fled"]
+## Echtzeitkampf (07, R1a): integer result fields of 07 §3.12 (serialized only when ≠ 0).
+const RT_INT_FIELDS: PackedStringArray = ["duration_ticks", "interrupts", "dodges", "telegraph_hits", "train_kills",
+	"perfect_phases", "potions_used", "flee_attempts"]
 
 var outcome: BattleResult.Outcome = Outcome.VICTORY
 var encounter_id: String = ""
@@ -38,6 +41,16 @@ var crits: int = 0                     # party crits
 var weakness_hits: int = 0             # party hits on weak
 var items_used: int = 0
 var party_kos: int = 0
+# --- Echtzeitkampf (07, R1a): 07 §3.12; written by to_dict only when set, so CTB results keep their exact JSON -------
+var group_ids: PackedStringArray = []  # every group that took part (BattleBridge.apply_result marks them all defeated)
+var duration_ticks: int = 0            # combat ticks (30 per second)
+var interrupts: int = 0                # CAST_INTERRUPTED by the controlled unit (§9.1)
+var dodges: int = 0                    # TELEGRAPH_DODGED of the controlled unit
+var telegraph_hits: int = 0            # telegraph hits on the controlled unit
+var train_kills: int = 0               # adds killed by an enemy telegraph (train)
+var perfect_phases: int = 0            # boss phases without a telegraph hit on the party
+var potions_used: int = 0              # consumables used in combat (party, ≤ 3)
+var flee_attempts: int = 0             # every start of a flee warning and every smoke (§3.12)
 
 
 func outcome_name() -> String:
@@ -64,7 +77,18 @@ func to_dict() -> Dictionary:
 		"weak_found": wf, "escaped": Array(escaped), "damage_taken": damage_taken, "min_party_hp": min_party_hp,
 		"min_party_hp_pct": min_party_hp_pct, "crits": crits, "weakness_hits": weakness_hits,
 		"items_used": items_used, "party_kos": party_kos,
-	}.merged({"opener": opener} if opener != "" else {})
+	}.merged({"opener": opener} if opener != "" else {}).merged(_rt_dict())
+
+
+## Echtzeitkampf (07, R1a): the real-time fields, only when set.
+func _rt_dict() -> Dictionary:
+	var out: Dictionary = {}
+	if not group_ids.is_empty():
+		out["group_ids"] = Array(group_ids)
+	for k: String in RT_INT_FIELDS:
+		if int(get(k)) != 0:
+			out[k] = int(get(k))
+	return out
 
 
 ## Inverse of to_dict (also accepts "min_party_hp_pct_ppm" from BattleState snapshots and JSON floats for ints).
@@ -111,6 +135,9 @@ static func from_dict(d: Dictionary) -> BattleResult:
 	r.weakness_hits = JsonUtil.to_int(d.get("weakness_hits", 0))
 	r.items_used = JsonUtil.to_int(d.get("items_used", 0))
 	r.party_kos = JsonUtil.to_int(d.get("party_kos", 0))
+	r.group_ids = JsonUtil.to_str_array(d.get("group_ids", []))          # Echtzeitkampf (07, R1a)
+	for k: String in RT_INT_FIELDS:
+		r.set(k, JsonUtil.to_int(d.get(k, 0)))
 	return r
 
 

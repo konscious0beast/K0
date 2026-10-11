@@ -25,6 +25,10 @@ var equip_by: PackedStringArray = []
 var attack_element: String = "physical"
 var icon: String = ""
 var color: String = "#ffffff"
+# --- Echtzeitkampf (07, R1a): optional `rt` block (07 §4.8): {"wheel": 0..99} (-1 = data order) ------------------
+const RtNorm := preload("res://core/data/defs/rt_norm.gd")
+const RT_SPEC: Array = [["wheel", "i", -1]]
+var rt: Dictionary = {}
 
 
 static func from_dict(d: Dictionary) -> ItemDef:
@@ -49,6 +53,7 @@ static func from_dict(d: Dictionary) -> ItemDef:
 	r.attack_element = str(d.get("attack_element", "physical"))
 	r.icon = str(d.get("icon", ""))
 	r.color = str(d.get("color", "#ffffff"))
+	r.rt = RtNorm.fill(d.get("rt", {}), RT_SPEC)       # Echtzeitkampf (07, R1a)
 	return r
 
 

@@ -15,6 +15,13 @@ var excludes: PackedStringArray = []
 var element: String = "none"
 var color: String = "#ffffff"
 var icon: String = ""
+# --- Echtzeitkampf (07, R1a): optional `rt` block (07 §4.7), {} = no real-time data; filled by RtNorm ---------------
+const RtNorm := preload("res://core/data/defs/rt_norm.gd")
+const RT_SPEC: Array = [["default_ms", "i", 3000], ["period_ms", "i", 0], ["tick_pct", "i", 0], ["tick_min", "i", 0],
+	["tick_max", "i", 0], ["boss_tick_pm", "i", 1000], ["max_stacks", "i", 1], ["stack_mode", "s", "replace"],
+	["move_pm", "i", 1000], ["haste_pm", "i", 1000], ["dmg_dealt_pm", "i", 1000], ["dmg_taken_pm", "i", 1000],
+	["boss_ms_pm", "i", 1000], ["flags", "sa", []]]
+var rt: Dictionary = {}
 
 
 ## Expects a normalized dict (GameData/DataValidator output).
@@ -34,6 +41,7 @@ static func from_dict(d: Dictionary) -> StatusDef:
 	r.element = str(d.get("element", "none"))
 	r.color = str(d.get("color", "#ffffff"))
 	r.icon = str(d.get("icon", ""))
+	r.rt = RtNorm.fill(d.get("rt", {}), RT_SPEC)       # Echtzeitkampf (07, R1a)
 	return r
 
 

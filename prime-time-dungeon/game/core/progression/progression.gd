@@ -66,6 +66,8 @@ static func total_stats(member: PartyMember, data: GameData, liga: bool = false)
 			if i >= 0:
 				var mult_pm: int = roundi(float(mults[key]) * _PM)
 				vals[i] = (maxi(0, vals[i]) * mult_pm + _PM / 2) / _PM
+	if member.hp_scale_pm != _PM:                   # Echtzeitkampf (07 §3.9.4, R1a): HP scale as the last step
+		vals[StatBlock.Stat.HP] = (maxi(0, vals[StatBlock.Stat.HP]) * member.hp_scale_pm + _PM / 2) / _PM
 	for i in vals.size():
 		vals[i] = maxi(1 if i == StatBlock.Stat.HP else 0, vals[i])
 	return _block(vals)

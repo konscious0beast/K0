@@ -81,7 +81,8 @@ const OPTIONAL_MOD_TAG_PREFIXES: PackedStringArray = ["achievement:", "boss_intr
 	"hero_", "secret_",                          # 06 package A
 	"talent_", "casting_",                      # 06 package B: Talent-Show / Casting lines
 	"marotte_", "liga_",                        # 06 package C: M.O.D. preferences + Liga (06 §4)
-	"regie_", "mod_live_"]                      # 06-D: Regie lines (regie_cut_in, regie_monologue_<n>), M.O.D. live
+	"regie_", "mod_live_",                      # 06-D: Regie lines (regie_cut_in, regie_monologue_<n>), M.O.D. live
+	"rt_", "showboss_"]                         # Echtzeitkampf (07, R1a): real-time lines (§9.3), show boss (§9.6)
 
 ## Copy of StatIds.ALL (§6.3); test_m2_achievements asserts equality.
 const STAT_IDS: PackedStringArray = ["kills_total", "kills_skill", "battles_won", "battles_fled", "preemptives",
@@ -89,13 +90,15 @@ const STAT_IDS: PackedStringArray = ["kills_total", "kills_skill", "battles_won"
 	"credits_spent_vendor", "lootboxes_opened", "events_completed", "game_overs", "ko_mopsula",
 	"explore_seconds_since_battle", "viewers_max", "viewers_target_peak", "followers_gained_run", "hype_100_count",
 	"bets_won", "liga_battles",                                     # 06-C (06 §4.6)
-	"bark_openers"]                                                 # 06 A × C (integration round 4)
+	"bark_openers",                                                 # 06 A × C (integration round 4)
+	"interrupts_total", "dodges_total", "train_kills", "taunts_total"]   # Echtzeitkampf (07, R1a, §9.4)
 
 ## Trigger payload keys (§6.3) — the `e.` vocabulary of achievement conditions.
 const TRIGGER_PAYLOAD_KEYS: Dictionary = {
 	"enemy_killed": ["enemy_id", "overkill", "by", "member"],
 	"battle_won": ["party_turns", "min_party_hp", "min_party_hp_pct", "crits", "weakness_hits", "items_used", "party_kos",
-		"damage_taken", "is_boss", "boss_id", "encounter_type", "group_id"],
+		"damage_taken", "is_boss", "boss_id", "encounter_type", "group_id",
+		"duration_sec", "interrupts", "dodges", "telegraph_hits", "train_kills", "perfect_phases"],   # 07 R1a (§9.4)
 	"battle_fled": ["encounter_id", "is_boss"],
 	"battle_started": ["encounter_id", "encounter_type", "is_boss"],
 	"stunt_resolved": ["success", "member", "skill_id"],
@@ -204,12 +207,15 @@ const TalentsRules := preload("res://core/data/validators/talents.gd")
 const SpeciesRules := preload("res://core/data/validators/species.gd")
 ## 06-D: rules of twists.json (06 §5.6) — private helper like the others (06 §8.0 Nr. 7).
 const TwistCheck := preload("res://core/data/validators/twists.gd")
+## Echtzeitkampf (07, R1a): rules of the `rt` blocks and of data/rt_balance.json (07 §4.10) — R1a stub, R4 rules.
+const RtCheck := preload("res://core/data/validators/rt.gd")
 
 # --- Field specs: [name, type(, default)] — no default = required. Types: s i f b d a sa ia c2 v2 ---------------------
 const SPEC_STATUS: Array = [["id", "s"], ["name", "s"], ["kind", "s"], ["default_turns", "i", 3],
 	["stat_mult", "d", {}],
 	["tick_timing", "s", "turn_end"], ["tick_pct", "i", 0], ["tick_min", "i", 0], ["tick_speed_mult", "f", 1.0],
-	["flags", "sa", []], ["excludes", "sa", []], ["element", "s", "none"], ["color", "s", "#ffffff"], ["icon", "s", ""]]
+	["flags", "sa", []], ["excludes", "sa", []], ["element", "s", "none"], ["color", "s", "#ffffff"], ["icon", "s", ""],
+	["rt", "d", {}]]                            # Echtzeitkampf (07, R1a): optional rt block (§4.7, rules: RtCheck)
 const SPEC_SKILL: Array = [["id", "s"], ["name", "s"], ["desc", "s", ""], ["user", "s", "any"], ["category", "s"],
 	["target", "s"], ["damage_type", "s", "none"], ["element", "s", "none"], ["power", "i", 100], ["heal_mode", "s", ""],
 	["hits", "i", 1], ["mp_cost", "i", 0], ["rank", "i", 3], ["accuracy", "i", -1], ["crit_bonus", "f", 0.0],
@@ -217,7 +223,8 @@ const SPEC_SKILL: Array = [["id", "s"], ["name", "s"], ["desc", "s", ""], ["user
 	["flee_guaranteed", "b", false], ["special", "d", {}], ["success_base", "f", 0.0], ["success_lck", "f", 0.01],
 	["success_cap", "f", 0.85], ["success_boss_mod", "f", -0.15], ["fail_effect", "d", {}], ["cooldown", "i", 0],
 	["anim", "s", "attack"], ["vfx", "s", ""], ["sfx", "s", ""], ["hype", "i", 0], ["kill_hype", "i", 0],
-	["show_tags", "sa", []]]
+	["show_tags", "sa", []],
+	["rt", "d", {}]]                            # Echtzeitkampf (07, R1a): optional rt block (§4.6, rules: RtCheck)
 const SPEC_SKILL_STATUS: Array = [["id", "s"], ["chance", "f", 1.0], ["turns", "i", 0]]
 const SPEC_SKILL_FAIL: Array = [["self_dmg_pct", "i", 0], ["delay_pct", "i", 0], ["status", "s", ""],
 	["status_turns", "i", 0]]
@@ -226,7 +233,8 @@ const SPEC_ITEM: Array = [["id", "s"], ["name", "s"], ["desc", "s", ""], ["type"
 	["price", "i", 0], ["sell", "i", -1], ["max_stack", "i", 9], ["tags", "sa", []], ["use_skill", "s", ""],
 	["usable", "s", "none"], ["stats", "d", {}], ["crit_bonus", "f", 0.0], ["element_mods", "d", {}],
 	["status_immune", "sa", []], ["show_mods", "d", {}], ["equip_by", "sa", []], ["attack_element", "s", "physical"],
-	["icon", "s", ""], ["color", "s", "#ffffff"]]
+	["icon", "s", ""], ["color", "s", "#ffffff"],
+	["rt", "d", {}]]                            # Echtzeitkampf (07, R1a): optional rt block (§4.8, rules: RtCheck)
 const SPEC_ITEM_SHOW_MODS: Array = [["hype_gain_mult", "f", 1.0], ["follower_mult", "f", 1.0]]
 const SPEC_CLASS: Array = [["id", "s"], ["name", "s"], ["desc", "s", ""], ["for", "sa", []], ["min_floor", "i", 3],
 	["stat_mult", "d", {}], ["growth_add", "d", {}], ["passives", "a", []], ["learnset", "a", []], ["show_mods", "d", {}]]
@@ -238,7 +246,8 @@ const SPEC_LEARN: Array = [["level", "i"], ["skill", "s"]]
 const SPEC_PARTY: Array = [["id", "s"], ["name", "s"], ["title", "s", ""], ["base_stats", "d"], ["growth", "d"],
 	["attack_skill", "s"], ["learnset", "a", []], ["stunts", "sa", []], ["equipment", "d", {}], ["element_mods", "d", {}],
 	["status_immune", "sa", []], ["status_resist", "d", {}], ["battle_slot", "i"], ["model", "d"],
-	["portrait_color", "s", "#ffffff"]]
+	["portrait_color", "s", "#ffffff"],
+	["rt", "d", {}]]                            # Echtzeitkampf (07, R1a): optional rt block (§4.8, rules: RtCheck)
 const SPEC_EQUIPMENT: Array = [["weapon", "s", ""], ["armor", "s", ""], ["accessory", "s", ""]]
 const SPEC_MODEL: Array = [["base", "s"], ["scale", "f", 1.0], ["pose", "s", "auto"], ["colors", "d"],
 	["props", "sa", []],
@@ -249,7 +258,8 @@ const SPEC_ENEMY: Array = [["id", "s"], ["name", "s"], ["level", "i", 1], ["stat
 		{}],
 	["status_immune", "sa", []], ["status_resist", "d", {}], ["drops", "a", []], ["boss_drops", "a", []], ["tags", "sa",
 		[]],
-	["boss", "b", false], ["model", "d"], ["explore", "d"]]
+	["boss", "b", false], ["model", "d"], ["explore", "d"],
+	["rt", "d", {}]]                            # Echtzeitkampf (07, R1a): optional rt block (§4.9, rules: RtCheck)
 const SPEC_AI: Array = [["type", "s", "weighted"], ["actions", "a", []]]
 const SPEC_AI_ACTION: Array = [["skill", "s"], ["weight", "i"], ["target", "s", "random"], ["cond", "d", {}]]
 const SPEC_PHASE: Array = [["hp_above", "f"], ["on_enter", "a", []], ["actions", "a", []]]
@@ -283,7 +293,8 @@ const SPEC_CHEST_TABLE: Array = [["kind", "s"], ["id", "s", ""], ["weight", "i"]
 const SPEC_QUEST: Array = [["type", "s"], ["label", "s", ""], ["params", "d", {}]]
 const SPEC_WINDOW: Array = [["open_at", "s", ""], ["close_at", "s", ""], ["duration_sec", "i", 0]]
 const SPEC_ENCOUNTER: Array = [["id", "s"], ["enemies", "sa"], ["weight", "i", 10], ["min_depth", "f", 0.0],
-	["max_depth", "f", 1.0], ["boss", "b", false], ["can_flee", "b", true], ["tutorial", "b", false], ["music", "s", ""]]
+	["max_depth", "f", 1.0], ["boss", "b", false], ["can_flee", "b", true], ["tutorial", "b", false], ["music", "s", ""],
+	["rt", "d", {}], ["show_boss", "d", {}]]    # Echtzeitkampf (07, R1a): rt (§4.9) + show boss (§9.6, E26)
 const SPEC_LAYOUT: Array = [["cells", "a"], ["zones", "a"], ["gates", "a", []], ["encounters_placed", "a", []],
 	["chests", "a", []], ["events", "a", []], ["spawners", "a", []], ["safe_rooms", "a", []], ["stairs", "d"],
 	["secrets", "a", []]]                   # 06 package A: Kulissenwände / Regie-Notizen (validators/secrets.gd)
@@ -376,6 +387,7 @@ func validate(raw: Dictionary, p_strict: bool = true, read_errors: Dictionary = 
 	_build_lookups()
 	_check_ids()                                   # rule 3
 	_check_references()                            # rules 5, 6 (+ value rules needing other tables)
+	RtCheck.check(self, raw)                       # Echtzeitkampf (07, R1a hook; R4 fills validators/rt.gd)
 	if strict:
 		_check_content_rules()                     # rule 7 (+ required lootboxes / non-empty pools)
 		_check_floor_rules()                       # rule 8

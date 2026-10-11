@@ -1,0 +1,336 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "skl_attack_kai",
+			"name": "Angriff",
+			"user": "party",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 100,
+			"rank": 3,
+			"anim": "attack",
+			"rt": {
+				"icon": "mop_swing",
+				"range_cm": 250,
+				"gcd": false
+			}
+		},
+		{
+			"id": "skl_attack_mopsula",
+			"name": "Angriff",
+			"user": "party",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 100,
+			"rank": 3,
+			"anim": "attack",
+			"rt": {
+				"icon": "monocle_beam",
+				"range_cm": 1000,
+				"gcd": false
+			}
+		},
+		{
+			"id": "skl_kai_heavy_swing",
+			"name": "Wuchtschlag",
+			"desc": "Mit voller Wucht. Und schlechter Haltung.",
+			"user": "party",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 160,
+			"mp_cost": 3,
+			"rank": 4,
+			"anim": "attack",
+			"vfx": "slash",
+			"show_tags": [
+				"flashy"
+			],
+			"rt": {
+				"icon": "mop_swing",
+				"range_cm": 250,
+				"mp": 2,
+				"threat_pm": 2000
+			}
+		},
+		{
+			"id": "skl_stunt_kai_suplex",
+			"name": "Bahnsteig-Suplex",
+			"user": "party",
+			"category": "stunt",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 230,
+			"rank": 4,
+			"cooldown": 3,
+			"success_base": 0.6,
+			"success_lck": 0.01,
+			"success_cap": 0.85,
+			"success_boss_mod": -0.15,
+			"fail_effect": {
+				"self_dmg_pct": 10,
+				"delay_pct": 50
+			},
+			"anim": "stunt",
+			"show_tags": [
+				"risky",
+				"flashy"
+			],
+			"rt": {
+				"icon": "wrestler_stars",
+				"range_cm": 250,
+				"fail_ms": 1500
+			}
+		},
+		{
+			"id": "skl_mop_noble_flame",
+			"name": "Adelsflamme",
+			"desc": "Blaues Blut brennt heißer.",
+			"user": "party",
+			"category": "magic",
+			"target": "single_enemy",
+			"damage_type": "magical",
+			"element": "fire",
+			"power": 110,
+			"mp_cost": 4,
+			"rank": 3,
+			"anim": "cast",
+			"vfx": "fire",
+			"rt": {
+				"icon": "seal_flame",
+				"cast_ms": 1500,
+				"range_cm": 2000
+			}
+		},
+		{
+			"id": "skl_mop_holy_lick",
+			"name": "Heiliges Schlabbern",
+			"desc": "Eine Ehre, die keiner wollte.",
+			"user": "party",
+			"category": "heal",
+			"target": "single_ally",
+			"damage_type": "heal",
+			"heal_mode": "mag",
+			"power": 100,
+			"mp_cost": 4,
+			"rank": 2,
+			"anim": "cast",
+			"vfx": "heal",
+			"rt": {
+				"icon": "tongue_glitter",
+				"cast_ms": 1500,
+				"range_cm": 2000
+			}
+		},
+		{
+			"id": "skl_e_strike",
+			"name": "Angriff",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 100,
+			"rank": 3,
+			"anim": "attack",
+			"rt": {
+				"icon": "claw",
+				"range_cm": 220,
+				"gcd": false
+			}
+		},
+		{
+			"id": "skl_e_bite",
+			"name": "Biss",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 100,
+			"rank": 3,
+			"anim": "attack",
+			"vfx": "bite",
+			"rt": {
+				"icon": "bite",
+				"range_cm": 220,
+				"cooldown_ms": 10000,
+				"statuses": [
+					{
+						"id": "sts_poison",
+						"chance_pm": 300,
+						"ms": 6000,
+						"to": "target"
+					}
+				]
+			}
+		},
+		{
+			"id": "skl_item_bandage",
+			"name": "Werbepflaster",
+			"user": "item",
+			"category": "item",
+			"target": "single_ally",
+			"damage_type": "heal",
+			"heal_mode": "fixed",
+			"power": 45,
+			"rank": 2,
+			"anim": "item",
+			"rt": {
+				"icon": "bandage",
+				"gcd": false,
+				"range_cm": 800
+			}
+		},
+		{
+			"id": "skl_item_antidote",
+			"name": "Gegengift",
+			"user": "item",
+			"category": "item",
+			"target": "single_ally",
+			"damage_type": "none",
+			"cleanse": [
+				"sts_poison"
+			],
+			"rank": 2,
+			"anim": "item",
+			"rt": {
+				"icon": "antidote",
+				"gcd": false,
+				"range_cm": 800
+			}
+		},
+		{
+			"id": "skl_kai_leash_trip",
+			"name": "Leinen-Fallstrick",
+			"user": "party",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 70,
+			"mp_cost": 3,
+			"rank": 3,
+			"anim": "attack",
+			"rt": {
+				"icon": "leash_lasso",
+				"cooldown_ms": 12000,
+				"gcd": false,
+				"range_cm": 800,
+				"interrupt": true,
+				"statuses": [
+					{
+						"id": "sts_slow",
+						"chance_pm": 900,
+						"ms": 4000,
+						"to": "target"
+					}
+				]
+			}
+		},
+		{
+			"id": "skl_stunt_mop_entrance",
+			"name": "Auftritt Seiner Durchlaucht",
+			"user": "party",
+			"category": "stunt",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "fire",
+			"power": 140,
+			"rank": 4,
+			"cooldown": 3,
+			"success_base": 0.55,
+			"anim": "stunt",
+			"show_tags": [
+				"risky",
+				"flashy"
+			],
+			"rt": {
+				"icon": "cape_spotlight",
+				"cast_ms": 1000,
+				"aoe": {
+					"center": "self",
+					"radius_cm": 800
+				}
+			}
+		},
+		{
+			"id": "skl_e_test_hex",
+			"name": "Testfluch",
+			"user": "enemy",
+			"category": "magic",
+			"target": "single_enemy",
+			"damage_type": "magical",
+			"element": "shock",
+			"power": 60,
+			"rank": 3,
+			"anim": "cast",
+			"rt": {
+				"icon": "bolt",
+				"cast_ms": 2000,
+				"range_cm": 1500,
+				"interruptible": true,
+				"interrupt_worthy": true,
+				"pct_maxhp": 20
+			}
+		},
+		{
+			"id": "skl_e_test_slam",
+			"name": "Testhieb",
+			"user": "enemy",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 80,
+			"rank": 3,
+			"anim": "attack",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 1000,
+				"interruptible": false,
+				"pct_maxhp": 25,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "target_pos",
+					"radius_cm": 250
+				}
+			}
+		},
+		{
+			"id": "skl_e_test_train",
+			"name": "Testzug",
+			"user": "enemy",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 100,
+			"rank": 3,
+			"anim": "attack",
+			"rt": {
+				"icon": "train",
+				"cast_ms": 2000,
+				"interruptible": false,
+				"pct_maxhp": 35,
+				"kill_adds": true,
+				"telegraph": {
+					"shape": "line",
+					"anchor": "lane",
+					"length_cm": 1200,
+					"width_cm": 300,
+					"lanes": [
+						0
+					]
+				}
+			}
+		}
+	]
+}

@@ -1,0 +1,43 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "tal_kai_wischtechnik",
+			"name": "Wischtechnik",
+			"desc": "Jahre am Bahnsteig gewischt. Jeder Hieb sitzt.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 2,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "atk",
+			"effects": [
+				{
+					"kind": "stat_flat",
+					"stat": "str",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "tal_mop_mitternachtsformel",
+			"name": "Mitternachtsformel",
+			"desc": "Um Mitternacht gelernt, nie vergessen. Zauber sitzen fester.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 2,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "mag",
+			"effects": [
+				{
+					"kind": "stat_flat",
+					"stat": "mag",
+					"value": 1
+				}
+			]
+		}
+	]
+}

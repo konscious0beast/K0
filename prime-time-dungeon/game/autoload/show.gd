@@ -257,9 +257,12 @@ func say(tag: String, ctx: Dictionary = {}, blocking: bool = false) -> String:
 ## when it passes ModLineFilter.check (reasons counted in external_refused), the voice is mod | mopsula | chat, no
 ## replay / boss battle runs and EXTERNAL_GAP_SEC passed since the last M.O.D. line (lowest priority: it never
 ## pushes a scripted line aside). {name} is filled in here — the service never knows the player name.
+## Never during a battle (Game.in_battle, CTB and real-time — 07 §9.3: the run clock stands, only written lines).
 ## Emits mod_said(text, voice, "live:" + tag, false). true = shown.
 func say_external(text: String, voice: StringName, tag: String) -> bool:
 	var st: GameState = Game.state
+	if Game.in_battle:                             # Echtzeitkampf (07 §9.3, R1a): live lines wait for the battle end
+		return false
 	if Game.replaying or st == null:
 		return false
 	var reason: String = ModLineFilter.check(text)
@@ -502,6 +505,7 @@ func end_battle(result: BattleResult) -> int:
 				"items_used": result.items_used, "party_kos": result.party_kos, "damage_taken": result.damage_taken,
 				"is_boss": result.is_boss, "boss_id": result.boss_id, "encounter_type": enc_type,
 				"group_id": result.group_id}
+			payload.merge(_rt_battle_won_keys(result))    # Echtzeitkampf (07 §9.4, R1a): 0 in a CTB battle
 			Events.battle_won.emit(payload)
 			trigger("battle_won", payload)
 			if result.is_boss:
@@ -1445,3 +1449,24 @@ static func pm_text(pm: int) -> String:
 		return str(whole)
 	var f: String = ("%03d" % frac).rstrip("0")
 	return "%d,%s" % [whole, f]
+
+
+# ======================================================================================================================
+# Echtzeitkampf (07, R1a → R5a)
+# ======================================================================================================================
+# STUB(R1a) — owned by R5a. Replace completely, keep the public API.
+
+## The gift of the tick boundary before combat tick sim.tick() (07 §9.2): like take_pending_gift(battle) — same order
+## (external first, checked again; then a due system gift), same limits, recorded at the application with its "ct",
+## weight conditions (ally_hp_below, ally_mp_below, ally_ko, is_boss) read from sim.units(). {} = none. Stub: {}.
+func take_pending_gift_rt(_sim: RtSim) -> Dictionary:
+	return {}
+
+
+## The real-time battle_won payload keys of 07 §9.4 (DataValidator.TRIGGER_PAYLOAD_KEYS) from the result: the
+## controlled unit's interrupts / dodges / telegraph hits, train kills, perfect phases, whole seconds — all 0 after a
+## CTB battle (the fields are only set by the real-time sim).
+static func _rt_battle_won_keys(result: BattleResult) -> Dictionary:
+	return {"duration_sec": result.duration_ticks / RtSim.TICKS_PER_SEC, "interrupts": result.interrupts,
+		"dodges": result.dodges, "telegraph_hits": result.telegraph_hits, "train_kills": result.train_kills,
+		"perfect_phases": result.perfect_phases}

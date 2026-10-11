@@ -20,6 +20,10 @@ var flags: Dictionary = {}
 var rng_counter: int = 0
 # --- 06 package A: controlled character (HeroRules) -------------------------------------------------------------------
 var hero: String = "kai"               # "kai" | "mopsula" — leads the exploration, the other one follows (06 §1)
+# --- Echtzeitkampf (07, R1a) -----------------------------------------------------------------------------------------
+## Combat mode of this run (07 §12.1): new games take GameSettings.combat_mode, loaded saves keep theirs; serialized
+## and hashed only when ≠ &"ctb" (CTB states keep their exact JSON and StateHash, 07 §10.4).
+var combat_mode: StringName = &"ctb"
 
 
 ## Party from party.json (level 1, full hp/mp, learnset level ≤ 1, start equipment); inventory + credits from
@@ -134,7 +138,7 @@ func to_dict() -> Dictionary:
 		"show": (show if show != null else ShowState.new()).to_dict(),
 		"flags": _normalize(flags),
 		"hero": hero,                          # 06 package A
-	}
+	}.merged({"combat_mode": String(combat_mode)} if combat_mode != &"ctb" else {})   # Echtzeitkampf (07, R1a)
 
 
 ## Missing fields → defaults; numbers converted with int() (JSON numbers are floats); integral float flags → int.
@@ -180,6 +184,7 @@ static func from_dict(d: Dictionary) -> GameState:
 	if raw_flags is Dictionary:
 		st.flags = _normalize(raw_flags)
 	st.hero = HeroRules.sanitize(str(d.get("hero", HeroRules.DEFAULT_HERO)))   # 06 package A: old saves → "kai"
+	st.combat_mode = &"realtime" if str(d.get("combat_mode", "ctb")) == "realtime" else &"ctb"   # 07 R1a
 	return st
 
 

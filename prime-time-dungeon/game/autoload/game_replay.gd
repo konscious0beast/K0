@@ -116,6 +116,9 @@ func _cmd(cmds: Array[Dictionary], i: int, c: Dictionary, errors: PackedStringAr
 	var next: int = i + 1
 	match str(c.get("t", "")):
 		"encounter":
+			if RunRules.rt_refusal(c) != "":         # Echtzeitkampf (07, R1a → R5a): no real-time combat path yet
+				errors.append("cmd %d (encounter): refused by the rules (%s)" % [i, RunRules.rt_refusal(c)])
+				return next
 			_battle = _begin_battle(c)
 			if _battle != null:
 				next = _play(_battle.start(), cmds, next)
@@ -279,6 +282,20 @@ func _apply(c: Dictionary) -> bool:
 			return game.set_hero(str(c.get("id", "")))
 		"secret":
 			return game.open_secret(str(c.get("id", "")))
+		# Echtzeitkampf (07 §10.6): R5a replays them through Game.combat_*; before that RunRules.rt_refusal refuses
+		# them in _cmd, so these branches are never reached ("not applicable")
+		"ability_use": return false
+		"target_change": return false
+		"move_sample": return false
+		"combat_item": return false
+		"partner_preset": return false
+		"partner_special": return false
+		"auto_attack": return false
+		"autopilot": return false
+		"combat_hint": return false
+		"move_input": return false
+		"combat_speed": return false
+		"move_batch": return false
 		_:
 			push_warning("[GameReplay] unknown command '%s'" % str(c.get("t", "")))
 			return false

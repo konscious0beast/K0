@@ -129,6 +129,27 @@ func test_live_core_has_no_exceptions() -> void:
 			assert_false(FileAccess.get_file_as_string(path).contains("det-ok:"), path + " needs no whitelist")
 
 
+## Echtzeitkampf (07 §3.14 Nr. 2, R1a): core/rt/ has no exception either — the only `det-ok` it may ever contain is the
+## exact integer square root of DetMath.isqrt (core/rt/det_math.gd, one line "# det-ok: exact integer sqrt …").
+func test_rt_core_has_no_exceptions() -> void:
+	var rt_files: int = 0
+	for path: String in _core_files():
+		if not path.begins_with("res://core/rt/"):
+			continue
+		rt_files += 1
+		assert_false(TOLERATED.has(path), path)
+		var text: String = FileAccess.get_file_as_string(path)
+		assert_eq(scan_source(text), [], path)
+		var whitelisted: int = text.count("det-ok:")
+		if path == "res://core/rt/det_math.gd":
+			assert_true(whitelisted <= 1, path + ": at most the isqrt line")
+			if whitelisted == 1:
+				assert_true(text.contains("det-ok: exact integer sqrt"), path + ": only the isqrt exception")
+		else:
+			assert_eq(whitelisted, 0, path + " needs no whitelist")
+	assert_gt(rt_files, 8, "the core/rt classes (R1a stubs or R1b) were scanned")
+
+
 func test_tolerated_entries_still_exist() -> void:
 	for path: String in TOLERATED.keys():
 		assert_true(FileAccess.file_exists(path), path)

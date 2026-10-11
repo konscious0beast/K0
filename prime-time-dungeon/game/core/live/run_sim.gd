@@ -220,6 +220,19 @@ func apply(cmd: Dictionary) -> Array[ExploreEvent]:
 				var fi: int = state.floor_run.index
 				out.append(ExploreEvent.make(ExploreEvent.Type.FLOOR_COMPLETED, _tick, {"floor": fi}))
 				_quest_feed({"type": "floor_completed", "floor": state.floor_run.index})
+		# Echtzeitkampf (07 §10.5): unreachable before R5a — command_refusal refuses them (RunRules.rt_refusal)
+		"ability_use": _apply_combat(c, out)
+		"target_change": _apply_combat(c, out)
+		"move_sample": _apply_combat(c, out)
+		"combat_item": _apply_combat(c, out)
+		"partner_preset": _apply_combat(c, out)
+		"partner_special": _apply_combat(c, out)
+		"auto_attack": _apply_combat(c, out)
+		"autopilot": _apply_combat(c, out)
+		"combat_hint": _apply_combat(c, out)
+		"move_input": _apply_combat(c, out)
+		"combat_speed": _apply_combat(c, out)
+		"move_batch": _apply_combat(c, out)
 	return out
 
 
@@ -264,6 +277,9 @@ func next_seed(purpose: String) -> int:
 ## Talents.check_pick / Casting.check allow).
 func command_refusal(c: Dictionary) -> String:
 	var t: String = str(c.get("t", ""))
+	var rt: String = RunRules.rt_refusal(c)        # Echtzeitkampf (07, R1a → R5a): no combat path yet
+	if rt != "":
+		return rt
 	if t == "gift":
 		return gift_refusal(c["gift"])
 	if t == "twist":
@@ -881,3 +897,12 @@ func _stamp_window(g: Dictionary) -> void:
 	var wid: String = SponsorWindows.window_for(live if live is Dictionary else {}, g)
 	if wid != "":
 		g["sponsor_window"] = wid
+
+
+# --- Echtzeitkampf (07 §10.5, R1a → R5a) -------------------------------------------------------------------------
+# STUB(R1a) — owned by R5a. Replace completely, keep the public API.
+
+## A real-time combat command of the log (07 §10.5: advance the running combat to its ct, gift / hint / submit).
+## Stub: never reached — RunRules.rt_refusal refuses every real-time command until R5a builds the combat path.
+func _apply_combat(_c: Dictionary, _out: Array[ExploreEvent]) -> void:
+	pass

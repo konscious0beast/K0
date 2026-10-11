@@ -39,6 +39,7 @@ func run(which: String, scene: Node) -> bool:
 func _regular(scene: Node) -> bool:
 	if not await _start(scene, "f1_g3", "win", 3.0, Rules.PREEMPTIVE):
 		return false
+	await _banner_done(scene)
 	_advance(scene, 70)
 	await rec.call("frames", 6)
 	rec.call("freeze")
@@ -54,6 +55,7 @@ func _two_groups(scene: Node) -> bool:
 	second.global_position = layout.cell_to_world(Vector2i(1, 3)) + Vector3(2.6, 0.05, 1.2)
 	if not await _start(scene, "f1_g3", "win", 3.0, Rules.NORMAL):
 		return false
+	await _banner_done(scene)
 	_advance(scene, 70)
 	await rec.call("frames", 6)
 	rec.call("freeze")
@@ -94,24 +96,28 @@ func _boss(scene: Node, intro: bool = false) -> bool:
 		push_warning("[CaptureRt] the boss combat did not start")
 		return false
 	await rec.call("_quiet_mod_dialog")
+	await _banner_done(scene)
 	_advance(scene, 205)
+	await _banner_done(scene)                       # "PHASE 2" (tick 150) is long over at tick 205
 	await rec.call("frames", 6)
 	rec.call("freeze")
 	return true
 
 
 ## A flight through a door: a fight in (1, 4), Kai runs east into the door lane (ring gap) — the still shows him in the
-## lane, the ring with its gap and the lane tape.
+## lane, the ring with its gap and the lane tape, and R3's flee countdown (world fixture "flee": FLEE_WARNING at 30).
 func _flee(scene: Node) -> bool:
-	if not await _start(scene, "f1_g1", "loop", 3.5, Rules.NORMAL, Vector3(0.0, 0.0, 0.0), -PI * 0.5):
+	if not await _start(scene, "f1_g1", "flee", 3.5, Rules.NORMAL, Vector3(0.0, 0.0, 0.0), -PI * 0.5):
 		return false
+	await _banner_done(scene)
 	var player: Node3D = scene.call("get_player") as Node3D
 	var center: Vector3 = (scene.call("get_layout") as FloorLayout).cell_to_world(Vector2i(1, 4))
 	scene.call("get_camera_rig").set("yaw", -PI * 0.5)
 	Input.action_press(&"move_forward")
 	var ok: bool = await rec.call("until", func() -> bool: return player.global_position.x - center.x >= 5.3, 600)
 	Input.action_release(&"move_forward")
-	await rec.call("frames", 2)
+	_advance(scene, 40)                             # 1.3 s outside: the countdown runs (07 §2.5)
+	await rec.call("frames", 4)
 	rec.call("freeze")
 	return ok
 
@@ -152,6 +158,15 @@ func _start(scene: Node, group_id: String, plan: String, dist: float, adv: int, 
 		return false
 	await rec.call("_quiet_mod_dialog")             # the M.O.D. box is a subtitle in a combat (R3, 07 §8.8)
 	return true
+
+
+## R3's start banner ("KAMPF!" / "ERSTSCHLAG!", 1.2 s) is over before the still (it shows the fight seconds later).
+func _banner_done(scene: Node) -> void:
+	var d: Node = scene.call("get_director") as Node
+	var hud: Node = d.get("hud") as Node if d != null else null
+	var banner: Node = hud.get("banner") as Node if hud != null and is_instance_valid(hud) else null
+	if banner != null:
+		await rec.call("until", func() -> bool: return not bool(banner.call("is_showing")), 600)
 
 
 ## The director steps the combat only through advance() (the still shows an exact tick).

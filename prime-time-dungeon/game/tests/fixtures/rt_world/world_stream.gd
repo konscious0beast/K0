@@ -123,6 +123,8 @@ func _make_setup(cmd: Dictionary, seed: int) -> RtSetup:
 		u.radius = 35 if member == "mopsula" else 40
 		u.swing_ticks = 72 if member == "mopsula" else 60
 		u.reach = 1000 if member == "mopsula" else 250
+		if u.bar.is_empty():
+			u.bar = _bar_of(data.party_member(member), m.level)
 		if uid != _ctl:
 			_ai = uid
 		party.append(u)
@@ -171,6 +173,41 @@ func _make_setup(cmd: Dictionary, seed: int) -> RtSetup:
 		if u.side == Combatant.Side.ENEMY and s.enemy_ids.size() < 4:
 			s.enemy_ids.append(u.def_id)
 	return s
+
+
+## A bar for a party unit when the data has no rt.bar (the real data before R4): the learnset skills up to `level` in
+## slots 1–4 and the first stunt as SHOW (slot 5), so R3's action bar shows real skills in the stills.
+static func _bar_of(def: PartyMemberDef, level: int) -> Dictionary:
+	var out: Dictionary = {}
+	if def == null:
+		return out
+	var slot: int = 1
+	for row: Dictionary in def.learnset:
+		if slot <= 4 and int(row.get("level", 99)) <= level:
+			out[slot] = str(row.get("skill", ""))
+			slot += 1
+	if not def.stunts.is_empty():
+		out[5] = def.stunts[0]
+	return out
+
+
+## The skill behind a fixture telegraph of `a`: the last AI action of its def (a boss: of its second phase, where the
+## fixture's telegraphs run — the queen's Pestbiss), else its attack: real skill names on the cast bars.
+func _tele_skill(a: String) -> String:
+	var u: RtUnit = null
+	for x: RtUnit in _setup.units:
+		if x.id == a:
+			u = x
+	var edef: EnemyDef = data.enemy(u.def_id) if u != null and data.has_id("enemies", u.def_id) else null
+	if edef == null:
+		return "skl_e_strike"
+	var acts: Array = (edef.ai.get("actions", []) as Array) if edef.phases.is_empty() else \
+		((edef.phases[mini(1, edef.phases.size() - 1)] as Dictionary).get("actions", []) as Array)
+	for i: int in range(acts.size() - 1, -1, -1):
+		var sid: String = str((acts[i] as Dictionary).get("skill", ""))
+		if data.has_id("skills", sid):
+			return sid
+	return edef.attack_skill
 
 
 static func _member_of(uid: String) -> String:
@@ -297,15 +334,20 @@ func _telegraph(ct: int, a: String, shape: int, x: int, z: int, yaw: int, r: int
 		hits: PackedStringArray = []) -> void:
 	_tele_id += 1
 	var id: int = _tele_id
-	_ev(ct, T.CAST_START, {"actor_id": a, "skill_id": "skl_e_test_slam", "value": impact - ct, "success": false,
-		"rt": {"end": impact, "worthy": 0}, "by_ai": true})
-	_ev(ct, T.TELEGRAPH_START, {"actor_id": a, "skill_id": "skl_e_test_slam", "value": id, "by_ai": true,
+	var sk: String = _tele_skill(a)
+	var cast: bool = shape != RtTelegraph.Shape.LINE              # the Gleis-9 train is no cast of the queen
+	if cast:
+		_ev(ct, T.CAST_START, {"actor_id": a, "skill_id": sk, "value": impact - ct, "success": false,
+			"rt": {"end": impact, "worthy": 0}, "by_ai": true})
+	_ev(ct, T.TELEGRAPH_START, {"actor_id": a, "skill_id": sk, "value": id, "by_ai": true,
 		"rt": {"shape": shape, "x": x, "z": z, "yaw": yaw, "r": r, "r2": r2, "half": 45, "start": ct, "impact": impact}})
-	_ov(ct, a, {"cast": {"skill": "skl_e_test_slam", "target": "", "x": 0, "z": 0, "start": ct, "end": impact,
-		"interruptible": false, "worthy": false, "moving_cancels": false, "channel": false, "next_tick": -1, "tele": id,
-		"kind": "ability", "item": ""}})
-	_ev(impact, T.TELEGRAPH_IMPACT, {"actor_id": a, "skill_id": "skl_e_test_slam", "value": id, "target_ids": hits})
-	_ov(impact, a, {"cast": {}})
+	if cast:
+		_ov(ct, a, {"cast": {"skill": sk, "target": "", "x": 0, "z": 0, "start": ct, "end": impact,
+			"interruptible": false, "worthy": false, "moving_cancels": false, "channel": false, "next_tick": -1,
+			"tele": id, "kind": "ability", "item": ""}})
+	_ev(impact, T.TELEGRAPH_IMPACT, {"actor_id": a, "skill_id": sk, "value": id, "target_ids": hits})
+	if cast:
+		_ov(impact, a, {"cast": {}})
 
 
 func _end(ct: int, outcome: int) -> void:
@@ -394,6 +436,7 @@ func _script_win(length: int) -> void:
 func _script_flee() -> void:
 	for i in _enemies.size():
 		_walk(_enemies[i], _near(_enemies[i], _ctl, 200), 0, 40)
+	_ov(15, _ctl, {"outside_since": 15})            # left the ring at tick 15: the warning from tick 30 (07 §2.5)
 	_ev(30, T.FLEE_WARNING, {"actor_id": _ctl, "value": 45})
 	_ev(75, T.FLEE_RESULT, {"actor_id": _ctl, "success": true})
 	_end(75, BattleResult.Outcome.FLED)

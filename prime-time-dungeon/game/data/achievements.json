@@ -385,6 +385,50 @@
 			"followers": -1,
 			"hidden": false,
 			"mod_tag": ""
+		},
+		{
+			"id": "ach_interrupt_10",
+			"name": "Wort abgeschnitten",
+			"desc": "Unterbrich mit deiner Figur 10 gegnerische Zauber.",
+			"trigger": "battle_won",
+			"condition": "s.interrupts_total >= 10",
+			"box": "box_bronze",
+			"followers": -1,
+			"hidden": false,
+			"mod_tag": ""
+		},
+		{
+			"id": "ach_dodge_25",
+			"name": "Tanz auf dem Bahnsteig",
+			"desc": "Weiche mit deiner Figur 25 roten Bodenflächen aus.",
+			"trigger": "battle_won",
+			"condition": "s.dodges_total >= 25",
+			"box": "box_bronze",
+			"followers": -1,
+			"hidden": false,
+			"mod_tag": ""
+		},
+		{
+			"id": "ach_train_adds",
+			"name": "Bitte zurückbleiben!",
+			"desc": "Lass in einem Kampf 3 Gegner vom einfahrenden Zug erwischen.",
+			"trigger": "battle_won",
+			"condition": "e.train_kills >= 3",
+			"box": "box_silver",
+			"followers": -1,
+			"hidden": false,
+			"mod_tag": ""
+		},
+		{
+			"id": "ach_perfect_phase",
+			"name": "Fehlerfrei auf Sendung",
+			"desc": "Überstehe eine Bossphase, ohne dass eine rote Bodenfläche jemanden trifft.",
+			"trigger": "battle_won",
+			"condition": "e.perfect_phases >= 1",
+			"box": "box_silver",
+			"followers": -1,
+			"hidden": false,
+			"mod_tag": ""
 		}
 	]
 }

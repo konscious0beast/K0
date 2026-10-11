@@ -236,6 +236,8 @@ func is_unlocked(achievement_id: String) -> bool:
 func say(tag: String, ctx: Dictionary = {}, blocking: bool = false) -> String:
 	if Game.replaying or tag == "":
 		return ""
+	if _rt_line_blocked(tag, blocking):            # Echtzeitkampf (07 §9.3, R5a): one line per 6 s in a combat
+		return ""
 	var prio: int = ModAnnouncer.priority(tag)
 	var outranked: bool = _now - _last_line_at < PRIORITY_WINDOW_SEC and prio < _last_line_prio
 	if outranked and not ModAnnouncer.always_said(tag):
@@ -244,6 +246,7 @@ func say(tag: String, ctx: Dictionary = {}, blocking: bool = false) -> String:
 	if line == null:
 		return ""
 	var text: String = _get_announcer().format(line, _full_ctx(ctx))
+	_rt_line_said(tag, blocking)
 	if not outranked:
 		_last_line_prio = prio
 		_last_line_at = _now
@@ -345,6 +348,8 @@ func begin_battle(setup: BattleSetup) -> void:
 	_unlocked_battle = PackedStringArray()
 	_battle_active = true
 	_battle_closing = false
+	_rt_line_at = -INF                             # Echtzeitkampf (07 §9.3, R5a): the line rate starts fresh
+	_rt_line_prio = -1
 	_peak_battle = viewers()
 	set_stat("explore_seconds_since_battle", 0)
 	if setup.advantage == BattleSetup.Advantage.PREEMPTIVE:
@@ -418,6 +423,12 @@ func receive_gift(gift: Dictionary) -> Dictionary:
 ## else (2) an open hype threshold → SponsorSystem.pick → Gift.make_system → receive_gift → returned.
 ## The controller applies the result with battle.apply_gift and then calls note_battle_gift(g, events).
 func take_pending_gift(battle: BattleState = null) -> Dictionary:
+	return _take_pending(_battle_party(battle), -1)
+
+
+## take_pending_gift / take_pending_gift_rt: `party` = the party situation for SponsorSystem.pick; `ct` >= 0 records
+## the external gift with that combat tick (07 §9.2).
+func _take_pending(party: Array, ct: int) -> Dictionary:
 	var st: GameState = Game.state
 	if st == null or st.show == null:
 		return {}
@@ -437,7 +448,10 @@ func take_pending_gift(battle: BattleState = null) -> Dictionary:
 			if refusal != "":
 				_rejected(str(ext.get("gift_id", "")), refusal)
 				continue
-			Game.record({"t": "gift", "gift": ext})
+			var rec: Dictionary = {"t": "gift", "gift": ext}
+			if ct >= 0:
+				rec["ct"] = ct                         # Echtzeitkampf (07 §9.2): the boundary of combat tick ct
+			Game.record(rec)
 			GiftPolicy.remember(st, str(ext.get("gift_id", "")))
 			GiftPolicy.note_applied(GiftApplier.live_counters(st), ext, {}, _tick())
 			_gifts_given += 1
@@ -452,7 +466,7 @@ func take_pending_gift(battle: BattleState = null) -> Dictionary:
 		var g: Dictionary = {}
 		if _gifts_given < _max_gifts():
 			var sid: String = SponsorSystem.pick(DB.data, {"floor_index": _floor_index(),
-				"is_boss": _setup != null and _setup.is_boss, "party": _battle_party(battle)}, _rng)
+				"is_boss": _setup != null and _setup.is_boss, "party": party}, _rng)
 			if sid != "":
 				g = _system_gift(sid)
 		if not g.is_empty():
@@ -519,6 +533,8 @@ func end_battle(result: BattleResult) -> int:
 				say("boss_defeated")
 				_persona_hooks().on_boss_won(result.boss_id)   # 08 K0 → K1: H3, after the battle (presentation)
 			_marotten_rewards(mres, result)             # 06-C: won bets, Liga, show_bet achievements
+			if _rt_show_boss():
+				say("showboss_won")                    # Echtzeitkampf (07 §9.6, E26): the Kanalratten-Gala is won
 		BattleResult.Outcome.FLED:
 			bump_stat("battles_fled")
 			var lost: int = ShowModel.followers_lost_on_flee(st.show.followers)
@@ -744,9 +760,12 @@ func _apply_delta(d: ShowDelta) -> void:
 func _announce(reasons: Array[StringName], mopsula_moment: bool) -> void:
 	if Game.replaying:
 		return
-	for r: StringName in ANNOUNCE_ORDER:
-		if reasons.has(r) and say(String(r)) != "":
-			break
+	if _rt_combat():
+		_rt_announce(reasons)                      # Echtzeitkampf (07 §9.3, R5a)
+	else:
+		for r: StringName in ANNOUNCE_ORDER:
+			if reasons.has(r) and say(String(r)) != "":
+				break
 	for r: StringName in reasons:
 		if CHAT_FOR_REASON.has(r):
 			chat(str(CHAT_FOR_REASON[r]))
@@ -1461,15 +1480,107 @@ static func pm_text(pm: int) -> String:
 
 
 # ======================================================================================================================
-# Echtzeitkampf (07, R1a → R5a)
+# Echtzeitkampf (07, R5a): profile (ShowRules / MarottenTracker take it from the RtSetup), gifts at the tick boundary,
+# the line rate and the real-time lines (07 §9.1–§9.3)
 # ======================================================================================================================
-# STUB(R1a) — owned by R5a. Replace completely, keep the public API.
+
+const RT_LINE_GAP_SEC: float = 6.0           # 07 §9.3: at most one non-blocking line per 6 s in a real-time combat
+## Battle reasons of the real-time profile that are line tags, in announcement order for equal priority (07 §9.3).
+const RT_ANNOUNCE_ORDER: Array[StringName] = [&"mopsula_ko", &"kai_ko", &"rt_interrupt", &"rt_dodge_close",
+	&"rt_train_kill", &"kill_streak", &"overkill", &"stunt_success", &"stunt_fail", &"rt_finale", &"rt_healer_first",
+	&"rt_telegraph_hit", &"rt_flee_warn", &"low_hp", &"revive", &"flee", &"boring_fight", &"crit", &"weakness"]
+const RT_FINALE_HYPE: float = 85.0           # FINALE at hype >= 85: rt_finale_hype (big confetti, 07 §4.1)
+
+var _rt_line_at: float = -INF                # the last non-blocking line of the running real-time combat
+var _rt_line_prio: int = -1
+
 
 ## The gift of the tick boundary before combat tick sim.tick() (07 §9.2): like take_pending_gift(battle) — same order
 ## (external first, checked again; then a due system gift), same limits, recorded at the application with its "ct",
-## weight conditions (ally_hp_below, ally_mp_below, ally_ko, is_boss) read from sim.units(). {} = none. Stub: {}.
-func take_pending_gift_rt(_sim: RtSim) -> Dictionary:
-	return {}
+## weight conditions (ally_hp_below, ally_mp_below, ally_ko, is_boss) read from sim.units(). {} = none.
+func take_pending_gift_rt(sim: RtSim) -> Dictionary:
+	if sim == null:
+		return {}
+	var party: Array = []
+	for u: RtUnit in sim.units():
+		if u != null and u.side == Combatant.Side.PARTY:
+			party.append(u)
+	return _take_pending(party, sim.tick())
+
+
+## An accepted gift still waits in the battle queue (Game.replay_log: a recorded gift must be applied at its boundary).
+func is_gift_queued(gift_id: String) -> bool:
+	for q: Dictionary in _queue:
+		if str(q.get("gift_id", "")) == gift_id:
+			return true
+	return false
+
+
+## The running battle is a real-time combat (profile rt).
+func _rt_combat() -> bool:
+	return _battle_active and _setup is RtSetup
+
+
+## 07 §9.3: in a real-time combat a non-blocking line waits RT_LINE_GAP_SEC after the last one unless it ranks higher
+## (rt_line_priority); a line pushed aside is dropped (no queue in a combat). Blocking lines (the boss intro) are free.
+func _rt_line_blocked(tag: String, blocking: bool) -> bool:
+	if blocking or not _rt_combat():
+		return false
+	return _now - _rt_line_at < RT_LINE_GAP_SEC and rt_line_priority(tag) <= _rt_line_prio
+
+
+func _rt_line_said(tag: String, blocking: bool) -> void:
+	if blocking or not _rt_combat():
+		return
+	_rt_line_at = _now
+	_rt_line_prio = rt_line_priority(tag)
+
+
+## Rank of a line in a real-time combat (07 §9.3): boss_phase / rt_enrage 4 > a party KO 3 > rt_control_switch 2 >
+## interrupt / close dodge / train kill 1 > the rest 0.
+static func rt_line_priority(tag: String) -> int:
+	if tag.begins_with("boss_phase") or tag.begins_with("rt_enrage"):
+		return 4
+	if tag.ends_with("_ko"):
+		return 3
+	if tag.begins_with("rt_control_switch"):
+		return 2
+	if tag == "rt_interrupt" or tag == "rt_dodge_close" or tag == "rt_train_kill":
+		return 1
+	return 0
+
+
+## The line of a real-time event (presentation only): the highest-ranking line tag among the reasons (equal ranks in
+## RT_ANNOUNCE_ORDER; dynamic tags such as rt_control_switch:<member> / rt_partner_preset:<preset> by their prefix),
+## the FINALE at hype >= 85 as rt_finale_hype. say() applies the rate; a tag without lines says nothing.
+func _rt_announce(reasons: Array[StringName]) -> void:
+	var tags: Array[String] = []
+	for r: StringName in RT_ANNOUNCE_ORDER:
+		if reasons.has(r):
+			tags.append(String(r))
+	for r: StringName in reasons:
+		var s: String = String(r)
+		if s.contains(":") and s.begins_with("rt_"):
+			tags.append(s)
+	for prio: int in [4, 3, 2, 1, 0]:
+		for tag: String in tags:
+			if rt_line_priority(tag) != prio:
+				continue
+			if tag == "rt_finale" and hype() >= RT_FINALE_HYPE and say("rt_finale_hype") != "":
+				return
+			if say(tag) != "":
+				return
+
+
+## The real-time combat that just ended had a show boss group (EncounterDef.show_boss, E26).
+func _rt_show_boss() -> bool:
+	if not (_setup is RtSetup):
+		return false
+	for g: Dictionary in (_setup as RtSetup).groups:
+		var eid: String = str(g.get("encounter_id", ""))
+		if eid != "" and DB.has_id("encounters", eid) and not DB.encounter(eid).show_boss.is_empty():
+			return true
+	return false
 
 
 ## The real-time battle_won payload keys of 07 §9.4 (DataValidator.TRIGGER_PAYLOAD_KEYS) from the result: the

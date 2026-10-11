@@ -189,7 +189,7 @@ func test_quantities_match_gdd() -> void:
 			regular += 1
 	assert_eq(regular, 11, "10 regular enemies + 1 rarity")
 	assert_eq(bosses, 2)
-	assert_len(d.all_achievements(), 35)            # 29 + the "Ohne alles" chain of 06-C (06 §4.3)
+	assert_len(d.all_achievements(), 39)            # 29 + the "Ohne alles" chain of 06-C (06 §4.3) + 4 real-time (07 §9.4)
 	assert_len(d.all_sponsors(), 7)
 	assert_len(d.all_milestones(), 6)
 	assert_len(d.all_scenes(), 4)
@@ -709,8 +709,9 @@ func test_achievements_match_gdd() -> void:
 		assert_gt(d.mod_lines("achievement:" + a.id).size(), 0, a.id + " has its M.O.D. line")
 		assert_not_null(a.expr, a.id)
 	# 06-C adds 1 bronze, 3 silver, 2 gold (ach_ul_first · ach_ul_boss, ach_duo_first, ach_bets_5 · ach_duo_floor,
-	# ach_duo_flawless) and one hidden (ach_duo_flawless)
-	assert_eq(tiers, {"box_bronze": 19, "box_silver": 11, "box_gold": 5})
+	# ach_duo_flawless) and one hidden (ach_duo_flawless); 07 §9.4 (R5a) 2 bronze, 2 silver (ach_interrupt_10,
+	# ach_dodge_25 · ach_train_adds, ach_perfect_phase)
+	assert_eq(tiers, {"box_bronze": 21, "box_silver": 13, "box_gold": 5})
 	hidden.sort()
 	assert_eq(hidden, ["ach_duo_flawless", "ach_last_minute", "ach_mimic", "ach_mopsula_ko", "ach_one_hp",
 		"ach_stunt_fail_3"])

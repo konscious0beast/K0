@@ -207,12 +207,14 @@ static func lower_difficulty(state: GameState, d: StringName) -> bool:
 ##   its reason
 ## - persona (08 §2.3, K0): PersonaRules.check — `event_run` (RunSim.is_event_run: header event_id or event rules) →
 ##   event_run; else version, catalog, bias, once per run before the run started, the one swap in a safe room
+## - Echtzeitkampf (07, R5a): an encounter with "rt", combat_speed and loadout only in a real-time run (rt_refusal);
+##   loadout: loadout_refusal
 ## (flag keys are whitelisted by Command.validate; QA Sponsor-Fenster by SponsorWindows.dev_allowed; twists by
-## twist_refusal below.)
+## twist_refusal below; the entries of a running real-time combat by combat_refusal.)
 static func command_refusal(state: GameState, data: GameData, rules: Dictionary, c: Dictionary, floor_done: bool,
 		scene_ctx: Dictionary, event_run: bool = false) -> String:
 	var t: String = str(c.get("t", ""))
-	var rt: String = rt_refusal(c)                 # Echtzeitkampf (07, R1a): no real-time combat path before R5a
+	var rt: String = rt_refusal(c, state)          # Echtzeitkampf (07, R5a): real-time entries need a real-time run
 	if rt != "":
 		return rt
 	if t == "gift" or state == null:
@@ -244,6 +246,8 @@ static func command_refusal(state: GameState, data: GameData, rules: Dictionary,
 			return Secrets.check_open(state, def, str(c.get("id", "")))
 		"persona":                                 # Casting (08 §2.3, K0): event runs never take one (event_run)
 			return PersonaRules.check(state, data, c, event_run)
+		"loadout":                                 # Echtzeitkampf (07 §4.1, §5.2; R5a)
+			return loadout_refusal(state, data, c)
 	return ""
 
 
@@ -282,14 +286,156 @@ static func refused_id(c: Dictionary) -> String:
 	return ""
 
 
-# --- Echtzeitkampf (07, R1a → R5a) ------------------------------------------------------------------------------------
+# --- Echtzeitkampf (07, R5a) ------------------------------------------------------------------------------------------
 
-## R1a: the real-time combat path of the verifiers does not exist yet (R5a, 07 §10.5) — a real-time combat command
-## (RtCommand.is_combat_cmd: types with "ct", move_batch, a gift with "ct"), a combat_speed record and an encounter with
-## an "rt" block are refused as "rt_unavailable" by both verifiers (RunSim.command_refusal, Game.replay_log), so nothing
-## records or replays them before R5a. R5a replaces this check with the combat branch. "" = not a real-time command.
-static func rt_refusal(c: Dictionary) -> String:
+const RT_VERSION: int = 1                          # 07 §10.2: run log header "rt_version" of a real-time run
+const REALTIME: StringName = &"realtime"
+const LOADOUT_SLOTS: PackedStringArray = ["2", "3", "4"]   # 07 §4.1: the slots with variants
+
+## The run-level check of the real-time entries in both verifiers (RunSim.command_refusal, Game.replay_log through
+## command_refusal) and the live entries: an encounter with an "rt" block, a combat_speed record and a loadout command
+## need a real-time run (GameState.combat_mode realtime, 07 §12.1) → "not_realtime". The entries of a running combat
+## (types with "ct", a gift with "ct", move_batch) are checked against that combat by combat_refusal. "" = allowed.
+## Without a state (schema-level callers) nothing is refused.
+static func rt_refusal(c: Dictionary, state: GameState = null) -> String:
 	var t: String = str(c.get("t", ""))
-	if RtCommand.is_combat_cmd(c) or t == "combat_speed" or (t == "encounter" and c.has("rt")):
-		return "rt_unavailable"
+	var needs_rt: bool = (t == "encounter" and c.has("rt")) or t == "combat_speed" or t == "loadout"
+	if needs_rt and state != null and state.combat_mode != REALTIME:
+		return "not_realtime"
 	return ""
+
+
+## "" or why the combat entry `c` (RtCommand.is_combat_cmd) is refused by a verifier before it is replayed against
+## `sim`, the running combat (07 §10.2, §10.6): none → "no_combat"; a move_batch (verifiers replay the expanded log,
+## RunLog.expanded) → "not_expanded"; a ct before the combat tick → "past_tick" — and for a gift: one per tick boundary
+## (`gift_ct`: ct of the last gift of this combat) → "gift_twice", at the boundary before the inputs of its tick
+## (`input_ct`: ct of the last submitted input) → "gift_order", only external gifts are recorded (05 §10.6: system
+## gifts come back from the Show rng) → "system_gift"; then the gift policy (GiftPolicy, the caller's). After the
+## combat's end (combat_after_end) only a combat_hint of its last tick passes.
+static func combat_refusal(c: Dictionary, sim: RtSim, gift_ct: int, input_ct: int) -> String:
+	if sim == null:
+		return "no_combat"
+	var t: String = str(c.get("t", ""))
+	if t == "move_batch":
+		return "not_expanded"
+	var ct: int = JsonUtil.to_int(c.get("ct", -1), -1)
+	if ct < sim.tick():
+		return "past_tick"
+	if t == "gift":
+		var g: Variant = c.get("gift", null)
+		if g is Dictionary and not Gift.is_external(g):
+			return "system_gift"
+		if ct == gift_ct:
+			return "gift_twice"
+		if ct == input_ct:
+			return "gift_order"
+	return combat_after_end(c, sim)
+
+
+## "" or "combat_cmd_after_end" (07 §10.2): an entry for a combat that is over — except the combat_hint of its last
+## tick (a hint card the events of the final tick showed, recorded before Game.end_combat).
+static func combat_after_end(c: Dictionary, sim: RtSim) -> String:
+	if sim == null or not sim.is_finished():
+		return ""
+	if str(c.get("t", "")) == "combat_hint" and JsonUtil.to_int(c.get("ct", -1), -1) == sim.tick():
+		return ""
+	return "combat_cmd_after_end"
+
+
+## Hint card `id` shown in a real-time combat (07 §2.13): state.flags["rt_hints"][id] = true (the sim ignores it) —
+## Game.combat_hint (live, Game.replay_log) and RunSim.
+static func mark_hint(state: GameState, id: String) -> void:
+	var v: Variant = state.flags.get("rt_hints", {})
+	var hints: Dictionary = v if v is Dictionary else {}
+	hints[id] = true
+	state.flags["rt_hints"] = hints
+
+
+## A new real-time run (07 §12.1, §3.9.4): GameState.combat_mode realtime, every member's hp_scale_pm = HP_SCALE_PM of
+## rt_balance.json (the last step of Progression.total_stats), full HP / MP. Game.new_game (live) and both verifiers
+## for a log whose header names a real-time run (header_realtime, not for a log that starts at a save) — so a replay
+## starts from the same state as the live run.
+static func rt_start(state: GameState, data: GameData) -> void:
+	if state == null:
+		return
+	state.combat_mode = REALTIME
+	var scale_pm: int = RtBalance.from_data(data).i("HP_SCALE_PM") if data != null else 1000
+	for m: PartyMember in state.party:
+		if m != null:
+			m.hp_scale_pm = scale_pm if scale_pm > 0 else 1000
+	Progression.full_heal(state, data)
+
+
+## The run log header names a real-time run (07 §10.2: "combat_mode": "realtime"). CTB headers have no key.
+static func header_realtime(h: Dictionary) -> bool:
+	return str(h.get("combat_mode", "")) == String(REALTIME)
+
+
+## Header problems of a real-time run (07 §10.2): "rt_version" must be RT_VERSION, "combat_mode" realtime or absent.
+static func rt_header_errors(h: Dictionary) -> PackedStringArray:
+	var out: PackedStringArray = []
+	var mode: String = str(h.get("combat_mode", ""))
+	if mode != "" and mode != String(REALTIME) and mode != "ctb":
+		out.append("header: unknown combat_mode '%s'" % mode)
+	if header_realtime(h) and JsonUtil.to_int(h.get("rt_version", 0)) != RT_VERSION:
+		out.append("header: rt_version %s — this kernel plays real-time runs of version %d" % [str(h.get("rt_version",
+			"")), RT_VERSION])
+	return out
+
+
+## The loadout command (R5a; 07 §4.1 variants and §5.2 partner tactic, chosen outside a combat in the skills menu): the
+## member's complete choice {"t": "loadout", "member", "bar": {"2" | "3" | "4": variant skill id}, "preset": "" |
+## RtVocab.RT_PRESETS, "tog": {switch: bool}} — {} / "" are the defaults (the base ability, party.json
+## rt.default_preset, RtVocab.RT_TOGGLE_DEFAULTS). Game.apply_loadout records it.
+static func loadout_cmd(member_id: String, bar: Dictionary, preset: String = "", tog: Dictionary = {}) -> Dictionary:
+	var b: Dictionary = {}
+	var keys: Array = bar.keys()
+	keys.sort_custom(func(a: Variant, z: Variant) -> bool: return str(a) < str(z))
+	for k: Variant in keys:
+		b[str(k)] = str(bar[k])
+	var t: Dictionary = {}
+	for k: String in RtVocab.RT_TOGGLES:
+		if tog.has(k):
+			t[k] = bool(tog[k])
+	return {"t": "loadout", "member": member_id, "bar": b, "preset": preset, "tog": t}
+
+
+## "" or why the loadout command `c` (schema: Command.validate) is refused — both verifiers and Game.apply_loadout: a
+## CTB run → not_realtime; a member without a party.json entry → unknown_member; a bar entry that is no variant of its
+## slot (party.json rt.bar "variant": true) → not_a_variant; a variant above the member's level → not_learned.
+static func loadout_refusal(state: GameState, data: GameData, c: Dictionary) -> String:
+	if state == null or state.combat_mode != REALTIME:
+		return "not_realtime"
+	var m: PartyMember = state.member(str(c.get("member", "")))
+	if m == null or data == null or not data.has_id("party", m.id):
+		return "unknown_member"
+	var raw_rows: Variant = data.party_member(m.id).rt.get("bar", [])
+	var rows: Array = raw_rows if raw_rows is Array else []
+	var raw_bar: Variant = c.get("bar", {})
+	var bar: Dictionary = raw_bar if raw_bar is Dictionary else {}
+	for k: Variant in bar.keys():
+		var level: int = -1
+		for r: Variant in rows:
+			if r is Dictionary and bool((r as Dictionary).get("variant", false)) \
+					and JsonUtil.to_int((r as Dictionary).get("slot", 0)) == str(k).to_int() \
+					and str((r as Dictionary).get("skill", "")) == str(bar[k]):
+				level = JsonUtil.to_int((r as Dictionary).get("level", 1), 1)
+		if level < 0:
+			return "not_a_variant"
+		if level > m.level:
+			return "not_learned"
+	return ""
+
+
+## Applies a loadout command that passed loadout_refusal: the member's rt_loadout (sorted slots), rt_preset and
+## rt_toggles (known switches) — the setup of the next real-time combat (BattleBridge.make_rt_setup) reads them.
+static func apply_loadout(state: GameState, c: Dictionary) -> bool:
+	var m: PartyMember = state.member(str(c.get("member", ""))) if state != null else null
+	if m == null:
+		return false
+	var cmd: Dictionary = loadout_cmd(m.id, c.get("bar", {}) as Dictionary, str(c.get("preset", "")),
+		c.get("tog", {}) as Dictionary)
+	m.rt_loadout = cmd["bar"]
+	m.rt_preset = str(cmd["preset"])
+	m.rt_toggles = cmd["tog"]
+	return true

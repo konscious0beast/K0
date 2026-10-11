@@ -6,6 +6,10 @@ class_name MarottenTracker extends RefCounted
 ##
 ## Counted: distinct party action keys (attack, skill id, item id, stunt, defend, flee — like ShowRules), defends,
 ## flee attempts, successful stunts and the party member that landed the last enemy KO ("" = a status tick or nobody).
+## Echtzeitkampf (07 §9.6, R5a): for an RtSetup the same stream counts the person's actions only (by_ai == false:
+## distinct skill / item ids, own SHOW successes); defends stay 0, flee attempts come from the BattleResult
+## (tally "rt" → MarottenRules.battle_context), the last kill names the member whose hit, status or zone landed it
+## (the AI partner too; train kills "").
 
 var liga_tier: int = 0                     # Liga tier frozen at battle start (MarottenRules.liga_tier)
 var tutorial: bool = false                 # tutorial battles never count for preferences or the Liga
@@ -30,6 +34,7 @@ func begin(setup: BattleSetup, p_liga_tier: int) -> void:
 	gifts = 0
 	liga_tier = p_liga_tier
 	tutorial = setup != null and setup.tutorial
+	rt = setup is RtSetup                       # Echtzeitkampf (07 §9.6, R5a)
 	if setup == null:
 		return
 	for c: Combatant in setup.party:
@@ -39,6 +44,9 @@ func begin(setup: BattleSetup, p_liga_tier: int) -> void:
 
 func on_battle_event(e: ActionEvent) -> void:
 	if e == null:
+		return
+	if rt:                                      # Echtzeitkampf (07 §9.6, R5a)
+		_rt_event(e)
 		return
 	match e.type:
 		ActionEvent.Type.ACTION_START:
@@ -58,11 +66,14 @@ func on_battle_event(e: ActionEvent) -> void:
 
 
 ## {"distinct_actions", "defends", "flee_attempts", "stunts_success", "last_kill_member", "gifts", "liga_tier",
-## "tutorial"} — the tally part of MarottenRules.battle_context.
+## "tutorial"} (+ "rt": true for a real-time combat, R5a) — the tally part of MarottenRules.battle_context.
 func tally() -> Dictionary:
-	return {"distinct_actions": _keys.size(), "defends": _defends, "flee_attempts": _flee_attempts,
+	var out: Dictionary = {"distinct_actions": _keys.size(), "defends": _defends, "flee_attempts": _flee_attempts,
 		"stunts_success": _stunts_success, "last_kill_member": _last_kill_member, "gifts": gifts,
 		"liga_tier": liga_tier, "tutorial": tutorial}
+	if rt:
+		out["rt"] = true
+	return out
 
 
 ## Party action key of an ACTION_START (same vocabulary as ShowRules: attack, skill id, item id, stunt, defend, flee).
@@ -81,3 +92,24 @@ static func action_key(e: ActionEvent) -> String:
 		BattleCommand.Kind.FLEE:
 			return "flee"
 	return e.skill_id if e.skill_id != "" else "attack"
+
+
+# --- Echtzeitkampf (07 §9.6, R5a) ------------------------------------------------------------------------------------
+
+var rt: bool = false                        # the battle is a real-time combat (RtSetup)
+
+
+## The real-time stream: the person's ACTION_START (by_ai false) → distinct skill / item ids (auto-attacks have none);
+## their successful SHOW / FINALE; the member behind the last enemy KO (a party actor — controlled or AI partner — or
+## "" for an enemy actor: the train). Defends do not exist, flee attempts are the result's.
+func _rt_event(e: ActionEvent) -> void:
+	match e.type:
+		ActionEvent.Type.ACTION_START:
+			if e.actor_id.begins_with("p") and not e.by_ai:
+				_keys[e.item_id if e.command == BattleCommand.Kind.ITEM and e.item_id != "" else e.skill_id] = true
+		ActionEvent.Type.STUNT_RESULT:
+			if e.actor_id.begins_with("p") and e.success and not e.by_ai:
+				_stunts_success += 1
+		ActionEvent.Type.KO:
+			if e.target_id.begins_with("e"):
+				_last_kill_member = str(_members.get(e.actor_id, ""))

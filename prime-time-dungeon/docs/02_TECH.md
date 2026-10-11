@@ -151,7 +151,7 @@ von Zuständen gab es in den Tests nicht; neu ist nur die Fixture `tests/fixture
 | R2 (07) | `autoload/game.gd`, `scenes/combat/combat_director.gd`, `scenes/exploration/exploration.gd` | `var combat: RtSim`, `make_rt_setup(cmd) -> RtSetup`, `combat_boundary()`, `combat_submit(cmd) -> String`, `combat_hint(id)`, `combat_step() -> Array[ActionEvent]`, `end_combat() -> BattleRewards`; `CombatDirector.submit/pause_for_hint/resume/unit_position`; `ExplorationScene.control_temporarily(member_id)` |
 | R3 (07) | `scenes/combat/ui/combat_results.gd` | `signal results_shown(result: BattleResult)`, `var show_slot: Control`, `present(result, rewards)` |
 | R4 (07) | `core/data/validators/rt.gd` | `static check(v: DataValidator, raw: Dictionary) -> void` (**Abweichung** von `check(data, errors)`: privater Helfer wie die 06-Validatoren); R4 legt `validators/show_boss.gd` neu an und ruft ihn von hier |
-| R5a (07) | `autoload/show.gd`, `core/live/run_log.gd`, `run_sim.gd`, `game_replay.gd` | `Show.take_pending_gift_rt(sim) -> Dictionary`; `RunLog.compact()/expand()`; Kampfzweig in `RunSim.apply`/`GameReplay` (ersetzt `rt_unavailable`) |
+| R5a (07) — **umgesetzt 2026-10-11** (s. u.) | `autoload/show.gd`, `core/live/run_log.gd`, `run_sim.gd`, `game_replay.gd` | `Show.take_pending_gift_rt(sim) -> Dictionary`; `RunLog.compact()/expand()`; Kampfzweig in `RunSim.apply`/`GameReplay` (ersetzt `rt_unavailable`) |
 | K1 (08) — **umgesetzt 2026-10-11** (s. u.) | `persona_rules.gd`, `persona_profile.gd`, `core/show/persona_text.gd`, `persona_beats.gd`, `autoload/show_persona_hooks.gd`, `validators/origins.gd`, `autoload/save.gd`, `autoload/game.gd`, `scenes/ui/settings_menu.gd`, `scenes/boot/fullrun.gd` | `PersonaRules.offer/bias_for/weight_add/map_text`; `PersonaProfile.canon/from_dict/to_dict/fill_unset/validate`; `PersonaText.ctx/plain_line/check_name/check_free_text/nearest_tile/filter_ai_lines`; `PersonaBeats.plan_for/tag_for`; Haken-Helfer `on_chest/on_boss_won/on_safe_room/on_floor_end/on_floor_start/drop_pending`; Inhaltsregeln 08 §3.9; `Save.save_persona/load_persona/delete_persona/_slot_state_dict` (dann Slot ohne Namen); `Game._choose_initial_persona`; `_persona_section()`; `FullRun.persona_profile()` (Standard `canon`) |
 | K2 (08) — **umgesetzt 2026-10-11** (s. u.) | `art/kit/persona_look.gd`, `validators/looks.gd`, `autoload/db.gd`, `autoload/game.gd` | `PersonaLook.apply(model, look, data) -> Dictionary`; Wertregeln je `kind`; `DB.party_model(member_id)` mit Look; `Game._persona_battle_look(setup)` |
 | K3 (08) | `core/show/mod_announcer.gd` (Provider), Dienst | ein Provider für `ModAnnouncer.set_extra_lines`; `/v1/casting` (08 Kap. 5) |
@@ -187,6 +187,33 @@ Bearbeitungsmodus der Casting-Szene (`{"edit": true}`, Signal `edit_finished(app
 `SafeRoomScene._refresh_candidate()`, Galerien `art/gallery/look_gallery.tscn` / `hair_gallery.tscn`,
 `tools/perf.sh --look=worst`. Änderungsantrag (eine Zeile `data_validator.gd`): `MODEL_HAIR_STYLES` += `braids`,
 `headscarf` (vor `bald`). Tests `test_08_avatar_kit`, `test_08_avatar_ui`, `test_08_avatar_world`.
+
+**Stand R5a (07 §12.2, 2026-10-11):** Show-Profil, Geschenke an der Tick-Grenze und der Echtzeit-Zweig beider Verifier sind
+umgesetzt (Einzelheiten, Abweichungen und Restpunkte: 07 §10.2–§10.6 „Umsetzung (R5a)“ und §12.2 „Stand R5a“); CTB bleibt
+Standard und unverändert. Neue bzw. geänderte API:
+- `RunRules` (Abschnitt R5a): `rt_refusal(c, state = null)` (`not_realtime`: `encounter` mit `rt`, `combat_speed`, `loadout`
+  in einem CTB-Lauf), `combat_refusal(c, sim, gift_ct, input_ct)` / `combat_after_end(c, sim)` (Kampfeinträge gegen den
+  laufenden Kampf), `mark_hint`, `rt_start` (Echtzeit-Start, live und in beiden Verifiern aus dem Kopf), `header_realtime`,
+  `rt_header_errors`, `RT_VERSION`, `REALTIME`; `loadout_cmd`, `loadout_refusal`, `apply_loadout`, `LOADOUT_SLOTS`.
+- `RunSim`: `var combat`, `combat_mismatch_at`, `settle()`, `expect_combat_checkpoints(list)`, `check_combat(k, sim)`,
+  `finish_combat_checks()`, `static first_mismatch(a, b)`; `is_clock_running()` = kein laufender Kampf; das Ergebnis von
+  `replay` und `Game.replay_log` trägt additiv `combat_mismatch_at` (Index in `checkpoints()`, −1 = alle gleich).
+- `RunLog`: `compact()`, `expand()`, `expanded() -> RunLog`, `has_batches()`, `combat_checkpoints()`; `validate` prüft `k`
+  und `ct` der Kampfeinträge und `id0` eines `move_batch`; `walk` überlässt die Kampf-Prüfpunkte den Verifiern.
+- `Game`: `apply_loadout(cmd) -> bool` (der aufzeichnende Eingang, im Kampf gesperrt); `combat_submit` nimmt keinen
+  `combat_hint`; `GameReplay` spielt Kämpfe nach 07 §10.6. `Save._make_run_log` schreibt den Echtzeit-Kopf (`combat_mode`,
+  `rt_version`) auch für Logs ab einem Spielstand.
+- `Show`: `take_pending_gift_rt(sim)` (gemeinsamer Kern mit `take_pending_gift`, zusätzlich `"ct"`), `is_gift_queued(id)`,
+  `static rt_line_priority(tag)`, `RT_LINE_GAP_SEC`, `RT_ANNOUNCE_ORDER`, `RT_FINALE_HYPE`; `ShowRules.profile`
+  (`PROFILE_CTB`/`PROFILE_RT`), `controlled_id()`, Konstanten `RT_*`; `MarottenTracker.rt`; `MarottenRules.BATTLE_KEYS` +
+  `duration_sec` (Spiegel in `validators/marotten.gd`).
+- Befehl `loadout {member, bar: {"2"|"3"|"4": skill}, preset: "" | Preset, tog: {Schalter: bool}}` in `Command.TYPES`
+  (Schema `Command._loadout`, 07 §10.1): Leisten-Varianten und Partner-Taktik außerhalb des Kampfes; für das
+  Fähigkeiten-Menü (R3) — die Anbindung dort steht noch aus.
+- Daten: `ach_interrupt_10`, `ach_dodge_25`, `ach_train_adds`, `ach_perfect_phase` mit je einer M.O.D.-Zeile (hinter
+  `mod_achievement_ach_last_minute_01`). Tests: `test_r5_{show_rt,marotten_rt,achievements_rt,rt_replay,gifts_in_combat,
+  rt_live_equivalence,loadout}`, Kit `tests/fixtures/rt_live/rt_live.gd`; angepasst `test_r1a_contract`, `test_m8_command`,
+  `test_m7_data_content`.
 
 ---
 

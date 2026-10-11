@@ -93,6 +93,7 @@ static func apply_result(state: GameState, data: GameData, result: BattleResult)
 		_floor_bookkeeping(state, data, result)
 	_bestiary_and_kills(state, result)
 	TwistApplier.on_battle_end(state, data)             # 06-D: "battles" twists count down (every outcome)
+	_rt_after_combat(state)                             # Echtzeitkampf (07 §2.7, R1b): regeneration counter
 	return rw
 
 
@@ -293,8 +294,10 @@ static func make_rt_setup(state: GameState, data: GameData, cmd: Dictionary, see
 ##   immunities), the leader at its recorded position (outside the ring: entry to its ring point), the komparsen in
 ##   formation around the entry point with pop_in_until (07 §2.3, §3.5.5); a group-less combat takes
 ##   RtGeo.group_anchor;
-## - the opening action, auto-attack / retarget switches, tutorial steps, RtMods (show boss, battle twists) in their
-##   order, RtBalance.from_data.
+## - the opening action, auto-attack / retarget switches, tutorial steps, RtBalance.from_data;
+## - RtMods in their fixed order (07 §9.5): equipment → species → spec (_rt_member_mods; a unit's unlock_variant
+##   mods widen its bar) → show boss (every encounter of the combat's groups, RtMods.from_show_boss) → battle twists
+##   (RtMods.from_twists), then RtMods.apply_static.
 static func make_rt_setup_rules(state: GameState, data: GameData, cmd: Dictionary, seed: int,
 		rules: Dictionary) -> RtSetup:
 	if state == null or data == null or str(cmd.get("t", "")) != "encounter" or RtCommand.validate(cmd) != "":
@@ -343,6 +346,8 @@ static func make_rt_setup_rules(state: GameState, data: GameData, cmd: Dictionar
 	s.cell = cell
 	s.room_kind = int(info[0])
 	s.geo = RtGeo.make_geo(s.room_kind, int(info[1]), enc.boss or enc.tutorial or not enc.can_flee, bal)
+	var mods: Array[Dictionary] = _rt_member_mods(state, data)
+	s.mods = mods
 	_rt_party(s, state, data, rt, rules, enc, bal)
 	_rt_enemies(s, data, rt, rules, enc, bal)
 	s.presets = {}
@@ -353,8 +358,12 @@ static func make_rt_setup_rules(state: GameState, data: GameData, cmd: Dictionar
 	s.auto_attack = bool(rt.get("auto", true))
 	s.auto_retarget = bool(rt.get("retarget", true))
 	s.tutorial_steps = PackedStringArray(enc.rt.get("tutorial", []))
-	var mods: Array[Dictionary] = []
-	mods.append_array(RtMods.from_show_boss(enc))
+	var seen: Dictionary = {}
+	for g: Dictionary in s.groups:
+		var gid: String = str(g.get("encounter_id", ""))
+		if not seen.has(gid) and data.has_id("encounters", gid):
+			seen[gid] = true
+			mods.append_array(RtMods.from_show_boss(data.encounter(gid)))
 	mods.append_array(RtMods.from_twists(_battle_twists(state), data))
 	s.mods = mods
 	RtMods.apply_static(s, data)
@@ -419,7 +428,7 @@ static func _rt_party(s: RtSetup, state: GameState, data: GameData, rt: Dictiona
 		u.x = int(pose[0])
 		u.z = int(pose[1])
 		u.yaw = posmod(int(pose[2]), 256)
-		_rt_party_fields(u, m, def, data, bal, rt.get("presets", {}))
+		_rt_party_fields(u, m, def, data, bal, rt.get("presets", {}), s.mods)
 		party.append(u)
 		s.units.append(u)
 	s.party = party
@@ -438,7 +447,7 @@ static func _rt_party(s: RtSetup, state: GameState, data: GameData, rt: Dictiona
 
 
 static func _rt_party_fields(u: RtUnit, m: PartyMember, def: PartyMemberDef, data: GameData, bal: RtBalance,
-		presets: Variant) -> void:
+		presets: Variant, mods: Array[Dictionary]) -> void:
 	var prt: Dictionary = def.rt
 	u.radius = int(prt.get("radius_cm", 40))
 	u.move_cm_tick = int(prt.get("move_cm_s", 540)) / 30
@@ -467,20 +476,26 @@ static func _rt_party_fields(u: RtUnit, m: PartyMember, def: PartyMemberDef, dat
 	u.mp_regen_next = int(u.mp_regen["every_ticks"])
 	u.mp_hit_ready = 0
 	u.move_budget = bal.i("MOVE_BUDGET_MM")
-	u.bar = _rt_bar(prt, m)
+	var unlocked: Dictionary = {}
+	for md: Dictionary in mods:
+		if str(md.get("op", "")) == "unlock_variant" and RtMods.applies(md, u):
+			unlocked[str(md.get("skill", ""))] = JsonUtil.to_int(md.get("slot", 0))
+	u.bar = _rt_bar(prt, m, unlocked)
 	u.opener_pm = Talents.preemptive_dmg_pm(m, data)
 	u.stunt_pm = Talents.stunt_window_pm(m, data)
 
 
 ## party.json rt.bar (07 §4.1): the base ability of each slot reached by the level, a chosen variant
-## (PartyMember.rt_loadout "2".."4") once its level is reached; FINALE and context variants stay out (the sim shows
-## them in RtSim.bar).
-static func _rt_bar(prt: Dictionary, m: PartyMember) -> Dictionary:
+## (PartyMember.rt_loadout "2".."4") once its level is reached — or unlocked by an RtMods unlock_variant (`unlocked`:
+## skill → slot, 07 §9.5); FINALE and context variants stay out (the sim shows them in RtSim.bar).
+static func _rt_bar(prt: Dictionary, m: PartyMember, unlocked: Dictionary = {}) -> Dictionary:
 	var out: Dictionary = {}
 	var variants: Dictionary = {}
 	for b: Variant in (prt.get("bar", []) as Array):
 		var e: Dictionary = b
-		if int(e.get("level", 1)) > m.level or bool(e.get("finale", false)):
+		var free: bool = bool(e.get("variant", false)) and int(unlocked.get(str(e.get("skill", "")), -1)) \
+			== int(e.get("slot", 0))
+		if (int(e.get("level", 1)) > m.level and not free) or bool(e.get("finale", false)):
 			continue
 		if bool(e.get("variant", false)):
 			variants[str(e.get("skill", ""))] = int(e.get("slot", 0))
@@ -526,10 +541,7 @@ static func _rt_enemies(s: RtSetup, data: GameData, rt: Dictionary, rules: Dicti
 		for k in ids.size():
 			if not data.has_id("enemies", ids[k]):
 				continue
-			var edef: EnemyDef = data.enemy(ids[k])
-			var u: RtUnit = RtUnit.from_combatant(Combatant.create_enemy(edef, "e%d" % n, n))
-			u.display_name = edef.name
-			_rt_enemy_fields(u, edef, bal)
+			var u: RtUnit = RtUnit.from_enemy(data.enemy(ids[k]), "e%d" % n, n, bal)
 			u.yaw = yaw_l
 			if unit_ids.is_empty():
 				u.x = int(lead[0])
@@ -557,30 +569,6 @@ static func _rt_enemies(s: RtSetup, data: GameData, rt: Dictionary, rules: Dicti
 			"units": unit_ids})
 
 
-static func _rt_enemy_fields(u: RtUnit, def: EnemyDef, bal: RtBalance) -> void:
-	var ert: Dictionary = def.rt
-	var hp: int = int(ert.get("hp", 0))
-	if hp <= 0:
-		var pm: int = int(ert.get("hp_pm", 0))
-		hp = maxi(1, int(def.stats.get("hp", 1)) * (pm if pm > 0 else bal.i("ENEMY_HP_PM")) / 1000)
-	u.stats.values[StatBlock.Stat.HP] = hp
-	u.hp = hp
-	u.driver = RtUnit.Driver.AI
-	u.radius = int(ert.get("radius_cm", 30))
-	u.move_cm_tick = int(ert.get("move_cm_s", 360)) / 30
-	u.stationary = bool(ert.get("stationary", false))
-	u.keep_cm = clampi(int(ert.get("keep_cm", 0)), 0, 700)
-	u.auto_skill = str(ert.get("auto_skill", def.attack_skill))
-	u.auto_ranged_skill = str(ert.get("auto_ranged_skill", ""))
-	u.swing_ticks = maxi(1, int(ert.get("swing_ms", 2400)) * 3 / 100)
-	u.reach = int(ert.get("reach_cm", 220))
-	u.dmg_pm = int(ert.get("dmg_pm", 1000))
-	u.swing_ready = bal.i("FIRST_SWING_TICKS")
-	for sid: Variant in (ert.get("immune", []) as Array):
-		if not u.status_immune.has(str(sid)):
-			u.status_immune.append(str(sid))
-
-
 static func _has_unit(s: RtSetup, id: String) -> bool:
 	for u: RtUnit in s.units:
 		if u.id == id:
@@ -601,3 +589,55 @@ static func _battle_twists(state: GameState) -> Array:
 					and JsonUtil.to_int((e as Dictionary).get("left", 0)) > 0:
 				out.append((e as Dictionary).duplicate(true))
 	return out
+
+
+## RtMods of the party members (07 §9.5) in the fixed order equipment → species → spec: equipment carries none yet
+## (items.json rt has only "wheel"; equipment acts through the Combatant values), species passives map as proposed in
+## 07 §9.6 (_rt_species_mods; built with floor 3), specialisations (classes) have no real-time mapping yet (their
+## passives are CTB rules; unlock_variant waits for data). Members in battle_slot order.
+static func _rt_member_mods(state: GameState, data: GameData) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var members: Array[PartyMember] = []
+	for m: PartyMember in state.party:
+		if m != null and data.has_id("party", m.id):
+			members.append(m)
+	members.sort_custom(func(a: PartyMember, b: PartyMember) -> bool:
+		return data.party_member(a.id).battle_slot < data.party_member(b.id).battle_slot)
+	for m: PartyMember in members:
+		out.append_array(_rt_species_mods(m, "p%d" % data.party_member(m.id).battle_slot, data))
+	return out
+
+
+## The species passive of a member as RtMods (07 §9.6 proposal): pas_grout / pas_see_through → first_hit_taken_pm
+## (params.first_hit_taken_pm), pas_coin_slot → skill_pm "item:*" power (params.consumable_pm), pas_ember → skill_pm
+## "element:fire" power (params.fire_skill_pm), pas_court_flight → on combat_start sts_haste 3 s. pas_authentic (Show
+## only), pas_lightdrunk (a Combatant crit by the hype at the start) and pas_spores (immunity + a regeneration status
+## that does not exist yet) map to no mod.
+static func _rt_species_mods(m: PartyMember, uid: String, data: GameData) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if m.species_id == "" or not data.has_id("species", m.species_id):
+		return out
+	var sp: SpeciesDef = data.species_def(m.species_id)
+	var params: Dictionary = sp.passive.get("params", {}) if sp.passive.get("params", {}) is Dictionary else {}
+	var src: String = "species:" + sp.id
+	match str(sp.passive.get("id", "")):
+		"pas_grout", "pas_see_through":
+			out.append({"src": src, "op": "first_hit_taken_pm", "unit": uid,
+				"pm": JsonUtil.to_int(params.get("first_hit_taken_pm", 1000), 1000)})
+		"pas_coin_slot":
+			out.append({"src": src, "op": "skill_pm", "unit": uid, "skill": "item:*", "field": "power",
+				"pm": JsonUtil.to_int(params.get("consumable_pm", 1000), 1000)})
+		"pas_ember":
+			out.append({"src": src, "op": "skill_pm", "unit": uid, "skill": "element:fire", "field": "power",
+				"pm": JsonUtil.to_int(params.get("fire_skill_pm", 1000), 1000)})
+		"pas_court_flight":
+			out.append({"src": src, "op": "on", "unit": uid, "event": "combat_start",
+				"effect": {"status": "sts_haste", "ms": 3000}})
+	return out
+
+
+## After every combat (apply_result, live and replay alike): the out-of-combat regeneration counts from 0 again
+## (07 §2.7; CTB runs never count, the field stays 0 there).
+static func _rt_after_combat(state: GameState) -> void:
+	if state.floor_run != null:
+		state.floor_run.regen_ticks = 0

@@ -111,7 +111,20 @@ static func apply_floor_event(state: GameState, data: GameData, layout: FloorLay
 	var rng: RandomNumberGenerator = SeedUtil.make_rng(SeedUtil.derive(fr.seed, "event", k * 16 + uses))
 	var outcome: Dictionary = FloorEvent.resolve(ev, choice, state, data, rng)
 	FloorEvent.apply(outcome, ev, choice, state, data)
+	_rt_regen_after_damage(fr, outcome)                  # Echtzeitkampf (07 §2.7, R1b)
 	return outcome
+
+
+## Echtzeitkampf (07 §2.7, R1b): damage outside combat (a floor event's party_damage_pct) restarts the regeneration
+## counter of RunSim step 7 — here, because live play and the replay both apply events through this function.
+static func _rt_regen_after_damage(fr: FloorRun, outcome: Dictionary) -> void:
+	var dmg: Variant = outcome.get("party_damage_pct", {})
+	if not (dmg is Dictionary) or not bool(outcome.get("valid", false)):
+		return
+	for k: Variant in (dmg as Dictionary).keys():
+		if JsonUtil.to_int((dmg as Dictionary)[k]) > 0:
+			fr.regen_ticks = 0
+			return
 
 
 ## outcome["boxes"] of a floor event → pending_lootboxes.

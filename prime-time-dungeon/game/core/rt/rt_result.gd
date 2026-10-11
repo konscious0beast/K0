@@ -26,7 +26,9 @@ static func check_end(sim: RtSim, c: int) -> int:
 	return -1
 
 
-## The result after tick c (07 §3.12).
+## The result after tick c (07 §3.12): like the CTB result (EXP, credits, overkill credits, loot, boss rewards plus
+## the show-boss reward on VICTORY — 07 §9.6, E26 —, theft and refunds: a thief's credits come back on VICTORY with
+## refund_on_win when it was KO'd, else they are stolen) plus the real-time counters.
 static func build(sim: RtSim, outcome: int, c: int) -> BattleResult:
 	var setup: RtSetup = sim.setup
 	var tally: Dictionary = sim.tally
@@ -83,6 +85,17 @@ static func build(sim: RtSim, outcome: int, c: int) -> BattleResult:
 					r.boss_rewards.append({"kind": str(bd.get("kind", "")), "id": str(bd.get("id", "")),
 						"amount": JsonUtil.to_int(bd.get("amount", 1), 1)})
 		r.exp = exp_sum * FixedMath.pm(setup.exp_mult) / FixedMath.PM
+		r.boss_rewards.append_array(show_boss_rewards(sim))
+	var thieves: Dictionary = tally["thieves"]
+	var tkeys: Array = thieves.keys()
+	tkeys.sort()
+	for k: Variant in tkeys:
+		var t: Dictionary = thieves[k]
+		var amount: int = int(t.get("amount", 0))
+		if outcome == BattleResult.Outcome.VICTORY and bool(t.get("refund", false)) and killed.has(str(k)):
+			r.credits_refunded += amount
+		else:
+			r.credits_stolen += amount
 	r.credits_delta = int(tally["credits_delta"])
 	r.item_delta = (tally["item_delta"] as Dictionary).duplicate(true)
 	var wf: Dictionary = tally["weak_found"]
@@ -115,3 +128,24 @@ static func build(sim: RtSim, outcome: int, c: int) -> BattleResult:
 			"flee_attempts"]:
 		r.set(k, int(tally[k]))
 	return r
+
+
+## The rewards of the show bosses of the combat (07 §9.6, E26): show_boss.reward of every encounter named by a
+## "showboss:<encounter id>" mod (list order, each once) as a boss reward {"kind", "id", "amount": 1}.
+static func show_boss_rewards(sim: RtSim) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var data: GameData = sim.game_data()
+	var seen: Dictionary = {}
+	for m: Dictionary in sim.setup.mods:
+		var src: String = str(m.get("src", ""))
+		if not src.begins_with("showboss:") or seen.has(src):
+			continue
+		seen[src] = true
+		var enc_id: String = src.substr(9)
+		if data == null or not data.has_id("encounters", enc_id):
+			continue
+		var reward: Variant = data.encounter(enc_id).show_boss.get("reward", {})
+		if reward is Dictionary and str((reward as Dictionary).get("id", "")) != "":
+			out.append({"kind": str((reward as Dictionary).get("kind", "")), "id": str((reward as Dictionary)["id"]),
+				"amount": 1})
+	return out

@@ -164,7 +164,7 @@ static func precheck(sim: RtSim, u: RtUnit, sk: SkillDef) -> String:
 		busy_left = u.gcd_until - c
 	if busy != "" and busy_left > sim.bal.i("QUEUE_TICKS"):
 		return busy
-	if u.mp < mp_cost(sk):
+	if u.mp < cost(sim, u, sk):
 		return "mp"
 	return "queue" if busy != "" else ""
 
@@ -209,7 +209,7 @@ static func targets(sim: RtSim, u: RtUnit, sk: SkillDef, target_id: String, open
 			else:
 				out["ids"] = area(sim, u, t.x, t.z, radius, 0, 0, int(aoe.get("max_targets", 0)))
 		"random_enemy":
-			if auto_pick_enemy(sim, u, 1 << 20) == null:
+			if random_candidates(sim, u, sk).is_empty():
 				return _no("target")
 		"single_ally":
 			var a: RtUnit = _ally(sim, u, target_id, false)
@@ -327,6 +327,11 @@ static func start(sim: RtSim, u: RtUnit, sk: SkillDef, r: Dictionary, ai: bool) 
 	var c: int = sim.tick()
 	var primary: String = str(r.get("primary", ""))
 	var ids: PackedStringArray = r.get("ids", PackedStringArray())
+	if sk.target == "random_enemy":
+		var cands: Array[RtUnit] = random_candidates(sim, u, sk)
+		if not cands.is_empty():
+			primary = cands[sim.rng().randi_range(0, cands.size() - 1)].id
+			ids = PackedStringArray([primary])
 	if bool(r.get("pick", false)) and primary != "" and u.target_id != primary:
 		target_change(sim, u, primary)
 	if not u.queued.is_empty() and str(u.queued.get("skill", "")) == sk.id:
@@ -350,8 +355,11 @@ static func start(sim: RtSim, u: RtUnit, sk: SkillDef, r: Dictionary, ai: bool) 
 		u.gcd_until = c + u.gcd_len
 	var chan: int = channel_ticks(sk)
 	var cast_t: int = cast_ticks(sim, u, sk)
+	var tele: bool = not (sk.rt.get("telegraph", {}) as Dictionary).is_empty()
+	if tele:
+		cast_t = sim.warn_ticks(cast_t)
 	if chan > 0 or cast_t > 0:
-		if chan > 0:
+		if chan > 0 or tele:
 			_pay(sim, u, sk)
 		var period: int = maxi(1, int(sk.rt.get("period_ms", 0)) * 3 / 100) if chan > 0 else 0
 		u.cast = {"skill": sk.id, "target": primary, "targets": Array(ids), "x": u.x, "z": u.z, "start": c,
@@ -370,6 +378,8 @@ static func start(sim: RtSim, u: RtUnit, sk: SkillDef, r: Dictionary, ai: bool) 
 		cs.by_ai = ai
 		if bool(u.cast["worthy"]) and bool(u.cast["interruptible"]):
 			sim.notice_cast(u)
+		if tele:
+			u.cast["tele"] = sim.telegraph_cast(u, sk, primary, int(u.cast["end"]))
 		return
 	_pay(sim, u, sk)
 	sim.add_hit({"at": c + impact_ticks(sim, sk), "src": u.id, "skill": sk.id, "item": "", "targets": Array(ids),
@@ -378,13 +388,13 @@ static func start(sim: RtSim, u: RtUnit, sk: SkillDef, r: Dictionary, ai: bool) 
 
 ## MP and cooldown of an ability (SHOW / FINALE: the party SHOW cooldown).
 static func _pay(sim: RtSim, u: RtUnit, sk: SkillDef) -> void:
-	var cost: int = mp_cost(sk)
-	if cost > 0:
-		Damage.change_mp(sim, u, -cost)
+	var mp: int = cost(sim, u, sk)
+	if mp > 0:
+		Damage.change_mp(sim, u, -mp)
 	if sim.is_show_skill(u, sk.id):
 		sim.start_show_cd()
 		return
-	var cd: int = int(sk.rt.get("cooldown_ms", 0)) * 3 / 100
+	var cd: int = cooldown_ticks(sim, u, sk)
 	if cd > 0:
 		u.cooldowns[sk.id] = [sim.tick() + cd, cd]
 
@@ -488,7 +498,7 @@ static func potion_pick(sim: RtSim, u: RtUnit) -> String:
 
 ## Expected heal of `sk` on `t` without the variance draw (pure; the potion pick, the AI).
 static func heal_preview(sim: RtSim, u: RtUnit, t: RtUnit, sk: SkillDef) -> int:
-	var view: SkillDef = sim.view(sk)
+	var view: SkillDef = sim.view_for(u, sk)
 	match view.heal_mode:
 		"fixed":
 			return FixedMath.mul_pm(view.power, sim.bal.i("FIXED_SCALE_PM"))
@@ -557,12 +567,16 @@ static func end_casts(sim: RtSim, c: int) -> void:
 			continue
 		if int(cast["end"]) != c:
 			continue
-		if u.mp < mp_cost(sk):
+		if int(cast.get("tele", -1)) >= 0:
+			sim.cast_over(u)
+			sim.end_action(u.id, sk.id, "")
+			continue
+		if u.mp < cost(sim, u, sk):
 			sim.fail_cast(u, "mp")
 			continue
 		var ids: PackedStringArray = _cast_targets(sim, u, sk, cast)
 		if ids.is_empty() and (sk.target == "single_enemy" or sk.target == "single_ally" \
-				or sk.target == "single_ally_ko"):
+				or sk.target == "single_ally_ko" or sk.target == "random_enemy"):
 			sim.fail_cast(u, "target")
 			continue
 		sim.cast_over(u)
@@ -589,7 +603,7 @@ static func _cast_targets(sim: RtSim, u: RtUnit, sk: SkillDef, cast: Dictionary)
 				out = area(sim, u, u.x, u.z, radius, int(aoe.get("cone_deg", 0)), yaw, int(aoe.get("max_targets", 0)))
 			elif primary != null:
 				out = area(sim, u, primary.x, primary.z, radius, 0, 0, int(aoe.get("max_targets", 0)))
-		"single_ally":
+		"single_ally", "random_enemy":
 			if primary != null and sim.is_alive(primary):
 				out.append(primary.id)
 		"single_ally_ko":
@@ -639,7 +653,7 @@ static func resolve_skill(sim: RtSim, u: RtUnit, sk: SkillDef, ids: PackedString
 				if sk.target == "single_ally_ko":
 					Damage.revive(sim, u, t, heal_preview(sim, u, t, sk), sk.id)
 			else:
-				var view: SkillDef = sim.view(sk)
+				var view: SkillDef = sim.view_for(u, sk)
 				var amount: int = DamageCalc.heal_amount(u, t, view, sim.rng()) if view.heal_mode == "mag" \
 					else heal_preview(sim, u, t, sk)
 				Damage.heal(sim, u, t, amount, sk.id, "")
@@ -670,6 +684,8 @@ static func resolve_skill(sim: RtSim, u: RtUnit, sk: SkillDef, ids: PackedString
 					int(sd.get("tick_power", 0)), sk, false, ai)
 	if sk.flee_guaranteed:
 		sim.flee_now(u)
+	if not sk.special.is_empty() or not sk.summon.is_empty():
+		sim.skill_extras(u, sk)
 
 
 ## SHOW success chance in basis points (07 §9.6): clampi(div_round((base + LCK × lck) × stunt_pm, 1000) + boss,
@@ -702,11 +718,14 @@ static func _stunt_fail(sim: RtSim, u: RtUnit, sk: SkillDef, ai: bool) -> void:
 # --- step 7: queue, partner order, AI -------------------------------------------------------------------------------
 
 ## Step 7 (07 §3.3): per unit the buffered ability once GCD / cast are free, then a buffered partner order, then the
-## sim-driven choice (enemies, AI partner, autopilot: RtSim.ai_step). The pull opener runs here at ct 0.
+## sim-driven choice (enemies, AI partner, autopilot: RtSim.ai_step; it thinks every AI_THINK_TICKS ticks, offset by
+## the unit's index). The pull opener runs here at ct 0.
 static func queue_and_ai(sim: RtSim, c: int) -> void:
 	if c == 0:
 		sim.run_opener()
-	for u: RtUnit in sim.units_ref():
+	var list: Array[RtUnit] = sim.units_ref()
+	for i in list.size():
+		var u: RtUnit = list[i]
 		if u.hp <= 0 or u.left_battle:
 			continue
 		if not u.queued.is_empty():
@@ -721,8 +740,12 @@ static func queue_and_ai(sim: RtSim, c: int) -> void:
 		var ordered: bool = false
 		if not u.partner_order.is_empty():
 			ordered = _partner_order(sim, u, c)
-		if u.side == Combatant.Side.ENEMY or u.driver != RtUnit.Driver.PLAYER:
-			sim.ai_step(u, ordered)
+		var think: bool = (c + i) % RtSim.AI_THINK_TICKS == 0
+		if u.side == Combatant.Side.ENEMY:
+			if think:
+				sim.ai_step(u, ordered, true)
+		elif u.driver != RtUnit.Driver.PLAYER:
+			sim.ai_step(u, ordered, think)
 
 
 ## The Partner-Spezial (07 §3.6.13): starts as soon as the partner is free (no cast, GCD free if needed, in range —
@@ -810,6 +833,9 @@ static func cast_ticks(sim: RtSim, u: RtUnit, sk: SkillDef) -> int:
 	var t: int = int(sk.rt.get("cast_ms", 0)) * 3 / 100
 	if t <= 0:
 		return 0
+	var pm: int = sim.skill_pm(u, sk)[2]
+	if pm != 1000:
+		t = FixedMath.mul_pm(t, pm)
 	return maxi(sim.bal.i("CAST_MIN_TICKS"), FixedMath.mul_pm(t, StatusFx.factor(u, "haste_pm")))
 
 
@@ -838,6 +864,30 @@ static func swing_interval(u: RtUnit) -> int:
 
 static func mp_cost(sk: SkillDef) -> int:
 	return maxi(0, int(sk.rt.get("mp", sk.mp_cost)))
+
+
+## The MP cost of `sk` for `u` (RtMods skill_pm mp).
+static func cost(sim: RtSim, u: RtUnit, sk: SkillDef) -> int:
+	return sim.mp_of(u, sk.id, mp_cost(sk))
+
+
+## The cooldown of `sk` for `u` in ticks (rt.cooldown_ms × RtMods skill_pm cooldown).
+static func cooldown_ticks(sim: RtSim, u: RtUnit, sk: SkillDef) -> int:
+	var cd: int = int(sk.rt.get("cooldown_ms", 0)) * 3 / 100
+	var pm: int = sim.skill_pm(u, sk)[1]
+	return FixedMath.mul_pm(cd, pm) if pm != 1000 else cd
+
+
+## The candidates of a random_enemy skill (07 §5.3): hostile units on stage within its range (rt.range_cm; 0 = any),
+## unit order. Pure.
+static func random_candidates(sim: RtSim, u: RtUnit, sk: SkillDef) -> Array[RtUnit]:
+	var out: Array[RtUnit] = []
+	var range_cm: int = int(sk.rt.get("range_cm", 0))
+	for v: RtUnit in sim.units_ref():
+		if v.side != u.side and sim.targetable(v) and v.entry.is_empty() \
+				and (range_cm <= 0 or in_range(u, v, range_cm)):
+			out.append(v)
+	return out
 
 
 static func cooldown_left(sim: RtSim, u: RtUnit, skill_id: String) -> int:

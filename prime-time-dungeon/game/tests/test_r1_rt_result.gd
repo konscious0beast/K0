@@ -3,7 +3,9 @@ extends TestCase
 ## the new overkill rule (killing blow ≥ 50 % of max HP → × 1.25), drops (derive(seed, "drops", 0) in kill order),
 ## party HP / MP, kills, KOs, group_ids, damage taken, crits, weakness hits, the counters of the controlled unit only
 ## (interrupts), turns / party_turns (by_ai), duration; double KO = victory; defeat; the time limit ("Sendezeit
-## überzogen!"). Thieves, refunds, boss rewards and the telegraph / train counters follow with R1b-I3.
+## überzogen!"). R1b-I3: thieves (CREDITS_STOLEN up to the credits, refunded on a VICTORY over the thief, kept when it
+## escapes — ESCAPED, BattleResult.escaped, no rewards), perfect phases and BATTLE_END.success of a phase boss, boss
+## drops, run_to_end.
 
 const Damage := preload("res://core/rt/rt_damage.gd")
 const StatusFx := preload("res://core/rt/rt_status_fx.gd")
@@ -176,3 +178,113 @@ func test_time_limit() -> void:
 	assert_eq([sim.result.outcome, sim.result.duration_ticks, sim.result.flee_attempts],
 		[BattleResult.Outcome.FLED, 900, 0])
 	assert_eq(RtKit.of(ev, T.SECOND).size(), 29, "SECOND 1…29; the last tick ends with BATTLE_END")
+
+
+# --- R1b-I3 ----------------------------------------------------------------------------------------------------------
+
+## A thief fight (enc_rt_thief: the fine at 2 s, the escape from 25 s; stationary) with `credits`; the party only
+## watches (no rules, no auto-attacks).
+func _thief(st: GameState, credits: int = 100) -> RtSim:
+	st.inventory.credits = credits
+	var sim: RtSim = RtSim.new(RtKit.setup(st, RtKit.encounter("enc_rt_thief", [["g", "enc_rt_thief",
+		[0, -300, 128]]])), RtKit.data())
+	sim.start()
+	for u: RtUnit in sim.units_ref():
+		u.auto_on = false
+		if u.side == Combatant.Side.PARTY:
+			u.rules = []
+	return sim
+
+
+static func _until_stolen(sim: RtSim) -> Array[ActionEvent]:
+	var ev: Array[ActionEvent] = []
+	while sim.tick() < 300 and RtKit.of(ev, T.CREDITS_STOLEN).is_empty():
+		ev.append_array(sim.step())
+	return RtKit.of(ev, T.CREDITS_STOLEN)
+
+
+func test_thief_refund_on_victory() -> void:
+	var st: GameState = RtKit.state(6)
+	var sim: RtSim = _thief(st)
+	var cs: Array[ActionEvent] = _until_stolen(sim)
+	assert_true(cs.size() == 1 and cs[0].actor_id == "e0" and cs[0].value == 40, "the fine: special.max 40")
+	assert_eq(sim.tally["thieves"], {"e0": {"amount": 40, "refund": true}})
+	Damage.ko(sim, sim.unit("e0"), sim.unit("p0"), "", "", 1, false, -1, false)
+	sim.step()
+	var r: BattleResult = sim.result
+	assert_eq([r.outcome, r.credits_refunded, r.credits_stolen, r.escaped], [BattleResult.Outcome.VICTORY, 40, 0,
+		PackedStringArray()], "VICTORY + refund_on_win + the thief KO'd: refunded")
+	var rw: BattleRewards = BattleBridge.apply_result(st, RtKit.data(), r)
+	assert_eq([rw.credits_refunded, rw.credits_lost, st.inventory.credits], [40, 0, 100 + r.credits],
+		"the refund never left the inventory")
+	var poor: RtSim = _thief(RtKit.state(6), 25)
+	assert_eq(_until_stolen(poor).map(func(e: ActionEvent) -> int: return e.value), [25], "at most the credits")
+
+
+func test_thief_escape_keeps_the_credits() -> void:
+	var st: GameState = RtKit.state(6)
+	var sim: RtSim = _thief(st)
+	var ev: Array[ActionEvent] = _finish(sim)
+	var esc: Array[ActionEvent] = RtKit.of(ev, T.ESCAPED)
+	assert_true(esc.size() == 1 and esc[0].actor_id == "e0" and esc[0].def_id == "enm_rt_test_thief",
+		"ESCAPED (the escape cast from 25 s)")
+	assert_true(sim.unit("e0").left_battle and not sim.targetable(sim.unit("e0")))
+	var r: BattleResult = sim.result
+	assert_eq([r.outcome, r.escaped, r.kills, r.exp, r.credits, r.credits_stolen, r.credits_refunded],
+		[BattleResult.Outcome.VICTORY, PackedStringArray(["enm_rt_test_thief"]), 0, 0, 0, 40, 0],
+		"the last enemy left: a victory without rewards, the thief keeps its credits")
+	var rw: BattleRewards = BattleBridge.apply_result(st, RtKit.data(), r)
+	assert_eq([rw.credits_lost, rw.credits_refunded, st.inventory.credits], [40, 0, 60])
+
+
+func test_perfect_phases_and_battle_end() -> void:
+	for hit_last: bool in [false, true]:
+		var sim: RtSim = RtKit.sim_no_ai(RtKit.encounter("enc_rt_chief", [["g", "enc_rt_chief", [0, -300, 128]]]), 6)
+		for u: RtUnit in sim.units_ref():
+			u.auto_on = false
+		var chief: RtUnit = sim.unit("e0")
+		RtKit.steps(sim, 5)
+		chief.hp = chief.max_hp() / 2
+		sim.step()
+		chief.hp = chief.max_hp() / 5
+		sim.step()
+		RtKit.no_ai(sim)
+		assert_eq([chief.phase, int(sim.tally["perfect_phases"])], [2, 2], "two perfect phases so far")
+		if hit_last:
+			var kai: RtUnit = sim.unit("p0")
+			var t: RtTelegraph = RtTelegraph.new()
+			t.source_id = "e0"
+			t.skill_id = "skl_e_rt_whirl"
+			t.side = Combatant.Side.PARTY
+			t.shape = RtTelegraph.Shape.CIRCLE
+			t.x = kai.x
+			t.z = kai.z
+			t.r = 150
+			t.start = sim.tick()
+			t.impact_at = sim.tick() + 1
+			sim.add_telegraph(t)
+			RtKit.steps(sim, 2)
+			assert_false(chief.phase_perfect, "a telegraph hit on the party")
+		for u: RtUnit in sim.units_ref():
+			if u.side == Combatant.Side.ENEMY and sim.is_alive(u):
+				Damage.ko(sim, u, sim.unit("p0"), "", "", 1, false, -1, false)
+		var ev: Array[ActionEvent] = sim.step()
+		var be: ActionEvent = ev.back()
+		assert_eq([be.type, be.value, be.success, sim.result.perfect_phases, sim.result.is_boss],
+			[T.BATTLE_END, BattleResult.Outcome.VICTORY, not hit_last, 2 if hit_last else 3, true],
+			"BATTLE_END.success = the last phase perfect too (hit: %s)" % str(hit_last))
+		assert_eq(sim.result.boss_rewards, [{"kind": "item", "id": "itm_bandage", "amount": 1}] as Array[Dictionary],
+			"boss_drops")
+
+
+func test_run_to_end() -> void:
+	var sim: RtSim = _sim(RtKit.dummy_cmd(), {"MAX_COMBAT_TICKS": 300})
+	var ref: RtSim = _sim(RtKit.dummy_cmd(), {"MAX_COMBAT_TICKS": 300})
+	var ev: Array[ActionEvent] = sim.run_to_end(100)
+	assert_eq([sim.tick(), sim.is_finished()], [100, false], "at most max_ticks steps")
+	ev.append_array(sim.run_to_end(100000))
+	assert_true(sim.is_finished() and ev.back().type == T.BATTLE_END)
+	var manual: Array[ActionEvent] = _finish(ref)
+	assert_eq(ev.size(), manual.size())
+	assert_eq(sim.snapshot(), ref.snapshot(), "the same as stepping by hand")
+	assert_eq(sim.run_to_end(10).size(), 0, "nothing after the end")

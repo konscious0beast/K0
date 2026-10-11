@@ -632,6 +632,8 @@ func _tick_once(out: Array[ExploreEvent]) -> bool:
 	# 6 Twists (06-D)
 	out.append_array(TwistApplier.tick(state, data, true, _tick))
 	_apply_schedule(out)
+	# 7 regeneration out of combat (07 §2.7 "Schritt 6", R1b; after the 06-D twist step): real-time runs only
+	_regen_tick()
 	return false
 
 
@@ -932,6 +934,42 @@ func _stamp_window(g: Dictionary) -> void:
 ## Stub: never reached — RunRules.rt_refusal refuses every real-time command until R5a builds the combat path.
 func _apply_combat(_c: Dictionary, _out: Array[ExploreEvent]) -> void:
 	pass
+
+
+# --- Echtzeitkampf (07 §2.7, R1b): regeneration out of combat -------------------------------------------------------
+
+const FixedMath := preload("res://core/stats/fixed_math.gd")
+
+var _regen_bal: RtBalance = null       # RtBalance.from_data(data), read once (not state: a function of the data)
+
+
+## Step 7 of _tick_once (07 §2.7; the document calls it step 6 — the 06-D twists came first): only in a real-time run
+## (GameState.combat_mode realtime; CTB runs stay bit-identical) and only on exploration ticks with a running clock.
+## floor_run.regen_ticks counts the ticks since the last combat end or out-of-combat damage (BattleBridge.apply_result
+## and RunRules.apply_floor_event set it to 0); every REGEN_PERIOD_TICKS of it each member with HP > 0 gets
+## max(1, div_round(max_mp × REGEN_MP_PM, 1000)) MP and — once regen_ticks ≥ REGEN_HP_DELAY_TICKS —
+## max(1, div_round(max_hp × REGEN_HP_PM, 1000)) HP, capped at the maximum (Progression.total_stats).
+func _regen_tick() -> void:
+	if state.combat_mode != &"realtime" or state.floor_run == null:
+		return
+	var fr: FloorRun = state.floor_run
+	fr.regen_ticks += 1
+	if _regen_bal == null:
+		_regen_bal = RtBalance.from_data(data) if data != null else RtBalance.new()
+	if fr.regen_ticks % maxi(1, _regen_bal.i("REGEN_PERIOD_TICKS")) != 0:
+		return
+	var hp_too: bool = fr.regen_ticks >= _regen_bal.i("REGEN_HP_DELAY_TICKS")
+	for m: PartyMember in state.party:
+		if m == null or m.hp <= 0:
+			continue
+		var sb: StatBlock = Progression.total_stats(m, data)
+		if sb == null:
+			continue
+		var max_mp: int = sb.values[StatBlock.Stat.MP]
+		var max_hp: int = sb.values[StatBlock.Stat.HP]
+		m.mp = mini(max_mp, m.mp + maxi(1, FixedMath.div_round(max_mp * _regen_bal.i("REGEN_MP_PM"), 1000)))
+		if hp_too:
+			m.hp = mini(max_hp, m.hp + maxi(1, FixedMath.div_round(max_hp * _regen_bal.i("REGEN_HP_PM"), 1000)))
 
 
 # --- version (08 §10.2 Nr. 7, 07 §10.2: the one SIM_VERSION bump of R1a + K0) --------------------------------------

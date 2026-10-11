@@ -8,15 +8,21 @@ class_name RtSim extends RefCounted
 ## / cancel thresholds, auto-attacks, party abilities with SHOW / FINALE and the Partner-Spezial order, items,
 ## statuses, threat, the damage fold, the MP economy, results, snapshot and the pure queries. R1b-I2: the rule AI of
 ## the AI partner and the autopilot (RtRules with presets, switches and the fixed engine rules), the human reaction of
-## E25 (ai_seen from the own AI stream "rt_ai", the GCD tail), the telegraph reaction (react_at, RtGeo.escape_point;
-## the telegraphs themselves come with the enemy rules), the assist (suggest). Enemy rules, telegraph impacts, zones,
-## phases, enrage, summons and gifts follow in I3 (enemies keep the fallback of 07 §5.3 Nr. 6 until then).
+## E25 (ai_seen from the own AI stream "rt_ai", the GCD tail), the telegraph reaction (react_at, RtGeo.escape_point),
+## the assist (suggest). R1b-I3: the enemy rules (rt.rules / the phase rules, slot offset), telegraph skills with
+## their anchors, impacts, dodges, zones and MAX_TELEGRAPHS (Tele), boss phases with their ops, enrage, summons,
+## credit theft and escape (Boss), the static modifiers (RtMods: fold factors, skill factors, forbid ops, shared
+## rules, "on" reactions), sponsor gifts at the tick boundary (Gifts), random targets, run_to_end.
 ## Steps of a tick and their helpers: 1a Movement.player_positions, 1b Ability.apply_commands, 2 StatusFx.tick_all,
-## 3/4 zones + telegraphs (I3), 5 Ability.resolve_hits, 6 Ability.end_casts, 7 Ability.queue_and_ai → ai_step, 8
-## Ability.auto_attacks, 9 Movement.move_units, 10 Result.check_end, 11 _clock.
+## 3 Tele.zones, 4 Tele.impacts, 5 Ability.resolve_hits, 6 Ability.end_casts, 7 Ability.queue_and_ai → ai_step, 8
+## Ability.auto_attacks, 9 Movement.move_units + Tele.track, 10 Boss.step + Result.check_end, 11 _clock; then the
+## RtMods "on" reactions to the events of the tick.
 ## The methods after "--- helper interface" serve the private helpers of core/rt; nothing outside core/rt calls them.
 
 const TICKS_PER_SEC: int = 30
+## Staggered AI thinking (07 §3.15, §5.3): a sim-driven unit picks its target, rules and goal every AI_THINK_TICKS
+## ticks, at (ct + its index in the unit list) % AI_THINK_TICKS == 0; reactions and movement run every tick.
+const AI_THINK_TICKS: int = 3
 ## The AI escapes shapes that strike within this many ticks (07 §5.5).
 const ESCAPE_LOOKAHEAD_TICKS: int = 60
 ## Reasons a rule's "then" follow-up waits out (anything else drops it).
@@ -29,24 +35,33 @@ const StatusFx := preload("res://core/rt/rt_status_fx.gd")
 const Threat := preload("res://core/rt/rt_threat.gd")
 const Movement := preload("res://core/rt/rt_movement.gd")
 const Result := preload("res://core/rt/rt_result.gd")
+const Tele := preload("res://core/rt/rt_tele.gd")
+const Boss := preload("res://core/rt/rt_boss.gd")
+const Gifts := preload("res://core/rt/rt_gift.gd")
 const TALLY_INTS: PackedStringArray = ["damage_taken", "crits", "weakness_hits", "party_kos", "turns", "party_turns",
 	"interrupts", "dodges", "telegraph_hits", "train_kills", "perfect_phases", "flee_attempts", "potions_used",
 	"credits_delta"]
+const _NO_PMS: Array[int] = []              # the empty factor list of a unit without mods
 
 var setup: RtSetup = null
 var result: BattleResult = null             # set when finished
 
 # --- state read and written by the helpers (all part of snapshot()) ------------------------------------------------
 var bal: RtBalance = null                   # setup.balance (or RtBalance.from_data); not state, pinned by the data
-var tally: Dictionary = {}                  # result counters (07 §3.12) and kill lists
+var tally: Dictionary = {}                  # result counters (07 §3.12), kill lists, the thieves' ledger
 var combo: Dictionary = {}                  # target id → [unit id, ct] of the last party ability hit
 var combo_ready: int = 0                    # ct from which the next COMBO may happen
 var items: Dictionary = {}                  # party battle inventory (item id → count), used up in combat
 var fled: bool = false                      # the party fled (door lane 2 s, smoke) — FLED at step 10
+var lane_n: Dictionary = {}                 # "<unit id>|<skill id>" → lane telegraphs cast so far (07 §6.3 "lane")
+var first_hit: Dictionary = {}              # unit id → first_hit_taken_pm factors not used yet (RtMods)
+var escape: Dictionary = {}                 # party unit id → [x, z]: the escape point of its running reaction (§5.5)
 
 var _data: GameData = null
 var _tick: int = 0
 var _list: Array[RtUnit] = []               # the units (stable order, 07 §3.3); copies of setup.units
+var _party: Array[RtUnit] = []              # the party units of _list (slot order; never changes)
+var _time_regen: Array[RtUnit] = []         # the units of _list with mp_regen mode "time" (step 11), unit order
 var _by_id: Dictionary = {}
 var _ctl: String = ""                       # controlled unit id
 var _rng_n: int = 0
@@ -63,6 +78,7 @@ var _opener: Dictionary = {}                # RtSetup.rt_opener until tick 0 is 
 var _started: bool = false
 var _out: Array[ActionEvent] = []
 var _telegraphs: Array[RtTelegraph] = []
+var _gift_n: int = 0                        # gifts applied (their generator: SeedUtil.derive(seed, "gift", n))
 # --- derived once from setup + data (not state: a function of the start data) ------------------------------------
 var _views: Dictionary = {}                 # skill id → SkillDef with the real-time power (rt.power ≠ power)
 var _finale: Dictionary = {}                # party unit id → FINALE skill id (bar entry finale, level reached)
@@ -71,12 +87,25 @@ var _ps: Dictionary = {}                    # party unit id → Partner-Spezial 
 var _auto_target: Dictionary = {}           # enemy id → EnemyDef.rt.auto_target
 var _followers: Dictionary = {}             # group leader id → [komparse ids] (pop-in after the leader's entry)
 var _pop_in: int = 15                       # bal POP_IN_TICKS (read on every targetable())
+var _margin: int = 60                       # bal ESCAPE_MARGIN_CM (read on every shape test of the AI's dodging)
+var _slot_offset: int = 9                   # bal AI_SLOT_OFFSET_TICKS (enemy rule timers, 07 §5.3)
 var _bar_known: Dictionary = {}             # party unit id → {skill id: true} of its bar (static per combat)
 var _known_all: Dictionary = {}             # party unit id → {skill id: true}: bar + FINALE + context variants
 var _assist: Dictionary = {}                # party unit id → compiled rules of its assist_preset (§5.6)
 var _intr_mp: Dictionary = {}               # party unit id → MP of its interrupter on the bar (filler reserve)
 var _skill_defs: Dictionary = {}            # skill id → SkillDef | null (memo of skill_def)
 var _skill_meta: Dictionary = {}            # skill id → PackedInt32Array (memo of skill_meta)
+var _enemy_rts: Dictionary = {}             # enemy def id → EnemyDef.rt (memo of enemy_rt)
+var _foes: Array[RtUnit] = []               # enemies with rt.phases or an enrage block (Boss.step), unit order
+var _mods_any: bool = false                 # RtSetup.mods is not empty
+var _on_any: bool = false                   # some mod has op "on"
+var _mod_dealt: Dictionary = {}             # unit id → Array[int] dmg_dealt_pm factors (RtMods)
+var _mod_taken: Dictionary = {}             # unit id → Array[int] dmg_taken_pm factors
+var _mod_heal: Dictionary = {}              # unit id → Array[int] heal_taken_pm factors
+var _forbid: Dictionary = {}                # unit id → {"skills": {id: true}, "tags": [tags]} (forbid ops)
+var _skill_mods: Array[Dictionary] = []     # the skill_pm mods
+var _skill_pm: Dictionary = {}              # "<unit id>|<skill id>" → [power, cooldown, cast, mp] ‰ (memo)
+var _unit_views: Dictionary = {}            # "<unit id>|<skill id>" → SkillDef with the unit's power factor (memo)
 
 
 func _init(p_setup: RtSetup, p_data: GameData) -> void:
@@ -84,7 +113,9 @@ func _init(p_setup: RtSetup, p_data: GameData) -> void:
 	_data = p_data
 	bal = setup.balance if setup != null and setup.balance != null else RtBalance.from_data(p_data)
 	_pop_in = bal.i("POP_IN_TICKS")
-	tally = {"killed": [], "overkill": [], "weak_found": {}, "item_delta": {}, "escaped": []}
+	_margin = bal.i("ESCAPE_MARGIN_CM")
+	_slot_offset = bal.i("AI_SLOT_OFFSET_TICKS")
+	tally = {"killed": [], "overkill": [], "weak_found": {}, "item_delta": {}, "escaped": [], "thieves": {}}
 	for k: String in TALLY_INTS:
 		tally[k] = 0
 	if setup == null:
@@ -93,6 +124,10 @@ func _init(p_setup: RtSetup, p_data: GameData) -> void:
 		var u: RtUnit = su.duplicate_unit()
 		_list.append(u)
 		_by_id[u.id] = u
+		if u.side == Combatant.Side.PARTY:
+			_party.append(u)
+		if str(u.mp_regen.get("mode", "")) == "time":
+			_time_regen.append(u)
 		if u.side == Combatant.Side.ENEMY and u.id.begins_with("e"):
 			_next_enemy = maxi(_next_enemy, u.id.substr(1).to_int() + 1)
 	_ctl = setup.controlled_id if _by_id.has(setup.controlled_id) else _first_party_id()
@@ -102,7 +137,8 @@ func _init(p_setup: RtSetup, p_data: GameData) -> void:
 
 
 ## ct 0 prelude: BATTLE_START, ANNOUNCE (first strike / ambush), POS_CORRECTED (party outside the ring), STATUS_ADDED
-## (dazed), the start threat; the pull opener runs at ct 0 (07 §2.2, §3.4). Called by the first step() if needed.
+## (dazed), the start threat, PHASE_CHANGE of the bosses (their first phase with its ops), the "on combat_start"
+## reactions (RtMods); the pull opener runs at ct 0 (07 §2.2, §3.4). Called by the first step() if needed.
 func start() -> Array[ActionEvent]:
 	var out: Array[ActionEvent] = []
 	if _started or setup == null:
@@ -145,6 +181,9 @@ func start() -> Array[ActionEvent]:
 		if str(_opener.get("kind", "")) == "strike":
 			opener_unit.swing_ready = 0
 	_start_threat(opener_unit)
+	Boss.start(self)
+	if _on_any:
+		_react_mods(0)
 	return out
 
 
@@ -192,22 +231,31 @@ func step() -> Array[ActionEvent]:
 			samples.append(e)
 		else:
 			rest.append(e)
+	var mark: int = out.size()
 	Movement.player_positions(self, c, samples)          # 1a
 	Ability.apply_commands(self, rest)                   # 1b
 	StatusFx.tick_all(self, c)                           # 2
-	# 3 zones and 4 telegraph impacts: R1b-I3
+	if not _telegraphs.is_empty():
+		Tele.zones(self, c)                              # 3
+		Tele.impacts(self, c)                            # 4
 	Ability.resolve_hits(self, c)                        # 5
 	Ability.end_casts(self, c)                           # 6
 	Ability.queue_and_ai(self, c)                        # 7
 	Ability.auto_attacks(self, c)                        # 8
 	Movement.move_units(self, c)                         # 9
+	if not _telegraphs.is_empty():
+		Tele.track(self, c)
 	if c == 0:
 		_opener = {}
-	var outcome: int = Result.check_end(self, c)         # 10
+	if not _foes.is_empty():
+		Boss.step(self, c)                               # 10
+	var outcome: int = Result.check_end(self, c)
 	if outcome >= 0:
 		_finish(outcome, c)
 	else:
 		_clock(c)                                        # 11
+		if _on_any:
+			_react_mods(mark)
 	_tick = c + 1
 	_out = []
 	return out
@@ -239,16 +287,32 @@ func units() -> Array[RtUnit]:
 	return out
 
 
-## Active telegraphs and zones, creation order; read-only (R1b-I3).
+## Active telegraphs and zones, creation order; read-only.
 func telegraphs() -> Array[RtTelegraph]:
 	var out: Array[RtTelegraph] = []
 	out.assign(_telegraphs)
 	return out
 
 
-## A gift at a tick boundary (before step), 07 §9.2. R1b-I1: no effect yet (I3 brings the gift kinds).
-func apply_gift(_g: Dictionary) -> Array[ActionEvent]:
+## A gift at the tick boundary before step() of tick() (07 §9.2): its effects (Gifts: SPONSOR_GIFT, HEAL, MP_CHANGE,
+## STATUS_ADDED, REVIVE, ITEM_GAINED, CREDITS_GAINED) with tick = tick() and rt.boundary = 1; chest rolls draw from
+## SeedUtil.derive(seed, "gift", n) (n = gifts so far + 1), never from the combat stream. Plays start() first if it
+## has not run; nothing once the combat is over.
+func apply_gift(g: Dictionary) -> Array[ActionEvent]:
 	var out: Array[ActionEvent] = []
+	if setup == null or is_finished():
+		return out
+	if not _started:
+		out.append_array(start())
+	_out = out
+	var mark: int = out.size()
+	_gift_n += 1
+	Gifts.apply(self, g, SeedUtil.make_rng(SeedUtil.derive(setup.seed, "gift", _gift_n)))
+	for i in range(mark, out.size()):
+		var d: Dictionary = out[i].rt.duplicate()
+		d["boundary"] = 1
+		out[i].rt = d
+	_out = []
 	return out
 
 
@@ -263,7 +327,8 @@ func run_to_end(max_ticks: int) -> Array[ActionEvent]:
 
 
 ## Canonical and complete (StateHash.of_rt, 07 §10.4): the combat counters, every unit (RtUnit.snapshot), telegraphs,
-## pending hits, queued commands, the party cooldowns and inventory, the result, RtSetup.mods.
+## pending hits, queued commands, the party cooldowns and inventory, the result, RtSetup.mods, the lane counters, the
+## unused first-hit factors, the gift counter and the kept escape points.
 func snapshot() -> Dictionary:
 	var us: Array = []
 	for u: RtUnit in _list:
@@ -277,7 +342,8 @@ func snapshot() -> Dictionary:
 		"items": RtUnit._canon(items), "combo": RtUnit._canon(combo), "combo_ready": combo_ready, "fled": fled,
 		"opener": RtUnit._canon(_opener), "tally": RtUnit._canon(tally), "units": us, "telegraphs": tg,
 		"hits": RtUnit._canon(_hits), "cmds": RtUnit._canon(_cmds),
-		"mods": RtUnit._canon(setup.mods if setup != null else [])}
+		"mods": RtUnit._canon(setup.mods if setup != null else []), "lanes": RtUnit._canon(lane_n),
+		"first_hit": RtUnit._canon(first_hit), "gift_n": _gift_n, "escape": RtUnit._canon(escape)}
 
 
 # --- pure queries: no RNG draw, no state change, no events (test_r1_rt_pure) -----------------------------------------
@@ -410,6 +476,16 @@ func units_ref() -> Array[RtUnit]:
 	return _list
 
 
+## The party units without a copy (slot order; the party never changes during a combat).
+func party_ref() -> Array[RtUnit]:
+	return _party
+
+
+## AI_SLOT_OFFSET_TICKS (07 §5.3: an enemy's first rule readiness is first_ms + slot × this).
+func slot_offset() -> int:
+	return _slot_offset
+
+
 func is_alive(u: RtUnit) -> bool:
 	return u != null and u.hp > 0 and not u.left_battle
 
@@ -516,16 +592,24 @@ func skill_meta(id: String) -> PackedInt32Array:
 	return m
 
 
-## RtMods forbid_skill (R1b-I3).
-func forbidden_skill(_u: RtUnit, _skill_id: String) -> bool:
-	return false
+## RtMods forbid_skill (07 §9.5): the skill is forbidden for the unit.
+func forbidden_skill(u: RtUnit, skill_id: String) -> bool:
+	if _forbid.is_empty() or u == null:
+		return false
+	var f: Variant = _forbid.get(u.id)
+	return f != null and ((f as Dictionary)["skills"] as Dictionary).has(skill_id)
 
 
-## The tutorial forbids items (E28), a closed set the smoke bomb (07 §4.5); RtMods forbid_items (R1b-I3).
-func forbidden_item(_u: RtUnit, item_id: String) -> bool:
+## The tutorial forbids items (E28), a closed set the smoke bomb (07 §4.5); RtMods forbid_items: an item with a
+## forbidden tag of the unit.
+func forbidden_item(u: RtUnit, item_id: String) -> bool:
 	if setup.tutorial:
 		return true
 	var it: ItemDef = item_def(item_id)
+	if it != null and not _forbid.is_empty() and u != null and _forbid.has(u.id):
+		for tag: String in ((_forbid[u.id] as Dictionary)["tags"] as PackedStringArray):
+			if it.tags.has(tag):
+				return true
 	var sk: SkillDef = skill_def(it.use_skill) if it != null else null
 	return sk != null and sk.flee_guaranteed and (bool(setup.geo.get("closed", false)) or not setup.can_flee)
 
@@ -632,7 +716,7 @@ func interrupt(src: RtUnit, tgt: RtUnit, ai: bool) -> bool:
 	if src != null and src.id == _ctl and not ai:
 		tally["interrupts"] = int(tally["interrupts"]) + 1
 	var sk: SkillDef = skill_def(skill_id)
-	var cd: int = int(sk.rt.get("cooldown_ms", 0)) * 3 / 100 if sk != null else 0
+	var cd: int = Ability.cooldown_ticks(self, tgt, sk) if sk != null else 0
 	if cd > 0:
 		tgt.cooldowns[skill_id] = [_tick + cd, cd]
 	tgt.lockout_until = _tick + bal.i("INTERRUPT_LOCKOUT_TICKS")
@@ -641,10 +725,13 @@ func interrupt(src: RtUnit, tgt: RtUnit, ai: bool) -> bool:
 	return true
 
 
-## A cast / channel / drink of `u` is over (end, failure, interruption, KO): an interrupt-worthy one is forgotten by
-## every unit (ai_seen, E25).
+## A cast / channel / drink of `u` is over (end, failure, interruption, KO, escape): an interrupt-worthy one is
+## forgotten by every unit (ai_seen, E25); the telegraphs of a telegraph cast still pending are removed
+## (TELEGRAPH_CANCELLED, 07 §6.3 — at the normal end they have struck already).
 func cast_over(u: RtUnit) -> void:
 	var worthy: bool = bool(u.cast.get("worthy", false))
+	if int(u.cast.get("tele", -1)) > 0 and not _telegraphs.is_empty():
+		Tele.cancel(self, u.id, int(u.cast.get("start", -1)), str(u.cast.get("skill", "")))
 	u.cast = {}
 	if worthy:
 		for v: RtUnit in _list:
@@ -667,32 +754,107 @@ func notice_cast(caster: RtUnit) -> void:
 		v.ai_seen[caster.id] = start_ct + react + jitter + (bal.i("AI_INTERRUPT_LATE_TICKS") if late else 0)
 
 
-## A new telegraph or zone of the running tick (07 §6.3; created by the enemy rules, R1b-I3): its id, the set radius
-## it is clipped to, TELEGRAPH_START (rt = {shape, x, z, yaw, r, r2, half, start, impact}) and the reaction draws of
-## the party (_notice_telegraph). Returns the id.
+## A new telegraph or zone of the running tick (07 §6.3): at most MAX_TELEGRAPHS at once — beyond that the oldest zone
+## ends early (ZONE_END); with no zone to end the shape is not placed (0). Then its id, the set radius it is clipped
+## to and TELEGRAPH_START (rt = {shape, x, z, yaw, r, r2, half, start, impact}, by_ai) with the reaction draws of the
+## party (_notice_telegraph), or ZONE_START for a zone (status_id, rt = {shape, x, z, yaw, r, r2, half, start, end}).
+## Returns the id.
 func add_telegraph(t: RtTelegraph) -> int:
+	while _telegraphs.size() >= bal.i("MAX_TELEGRAPHS"):
+		var oldest: RtTelegraph = null
+		for o: RtTelegraph in _telegraphs:
+			if o.is_zone:
+				oldest = o
+				break
+		if oldest == null:
+			return 0
+		end_zone(oldest)
 	t.id = _next_tele
 	_next_tele += 1
 	if t.set_r <= 0:
 		t.set_r = int(setup.geo.get("r", 0))
+	var reach: int = t.bound_radius() + 2 * _margin
+	t.far2 = reach * reach
 	_telegraphs.append(t)
-	if not t.is_zone:
-		var e: ActionEvent = ev(ActionEvent.Type.TELEGRAPH_START)
-		var src: RtUnit = unit(t.source_id)
-		e.actor_id = t.source_id
-		e.skill_id = t.skill_id
-		e.value = t.id
+	var src: RtUnit = unit(t.source_id)
+	var e: ActionEvent = ev(ActionEvent.Type.ZONE_START if t.is_zone else ActionEvent.Type.TELEGRAPH_START)
+	e.actor_id = t.source_id
+	e.skill_id = t.skill_id
+	e.value = t.id
+	if t.is_zone:
+		e.status_id = t.status_id
 		e.rt = {"shape": int(t.shape), "x": t.x, "z": t.z, "yaw": t.yaw, "r": t.r, "r2": t.r2, "half": t.half_deg,
-			"start": t.start, "impact": t.impact_at}
-		e.by_ai = src != null and is_ai_driven(src)
-		_notice_telegraph(t)
+			"start": t.start, "end": t.ends_at}
+		return t.id
+	e.rt = {"shape": int(t.shape), "x": t.x, "z": t.z, "yaw": t.yaw, "r": t.r, "r2": t.r2, "half": t.half_deg,
+		"start": t.start, "impact": t.impact_at}
+	e.by_ai = src != null and is_ai_driven(src)
+	_notice_telegraph(t)
 	return t.id
+
+
+## The telegraphs and zones without a copy (Tele; never resized while a helper iterates it).
+func telegraphs_ref() -> Array[RtTelegraph]:
+	return _telegraphs
+
+
+func remove_telegraph(t: RtTelegraph) -> void:
+	_telegraphs.erase(t)
+
+
+## A zone ends (its time is up, MAX_TELEGRAPHS, clear_zones): ZONE_END.
+func end_zone(z: RtTelegraph) -> void:
+	_telegraphs.erase(z)
+	ev(ActionEvent.Type.ZONE_END).value = z.id
+
+
+## The lane index of the next "lane" telegraph of `u` with skill `skill_id` (07 §6.3: alternating from the first).
+func next_lane(u: RtUnit, skill_id: String) -> int:
+	var key: String = "%s|%s" % [u.id, skill_id]
+	var n: int = int(lane_n.get(key, 0))
+	lane_n[key] = n + 1
+	return n
+
+
+## The shapes of telegraph skill `sk` cast by `u` now, striking at `impact_at` (Tele.create): the id of the first
+## shape, 0 if none could be placed.
+func telegraph_cast(u: RtUnit, sk: SkillDef, primary_id: String, impact_at: int) -> int:
+	return Tele.create(self, u, sk, primary_id, impact_at)
+
+
+## The warning ticks of a telegraph cast of `cast_t` cast ticks (Vorabendprogramm × EASY_WARN_PM, 07 §6.3).
+func warn_ticks(cast_t: int) -> int:
+	return Tele.warn_ticks(self, cast_t)
+
+
+## The specials and summons of a skill at its effect (07 §3.12): credit theft / escape (skill.special), the enemies of
+## skill.summon at the door.
+func skill_extras(u: RtUnit, sk: SkillDef) -> void:
+	if not sk.special.is_empty():
+		Boss.special(self, u, sk)
+	for k in sk.summon.size():
+		if is_alive(u):
+			Boss.summon(self, u, sk.summon[k], "door", k)
+
+
+## A KO'd unit's pending telegraphs end (07 §3.3: TELEGRAPH_CANCELLED).
+func drop_telegraphs(u: RtUnit) -> void:
+	if not _telegraphs.is_empty():
+		Tele.cancel(self, u.id, -1, "")
 
 
 ## Is (x, z) safe for `u` (07 §5.5): outside every hostile shape that strikes within ESCAPE_LOOKAHEAD_TICKS (grown by
 ## ESCAPE_MARGIN_CM) and outside every hostile zone. Pure (RtGeo.escape_point).
 func safe_point(u: RtUnit, x: int, z: int) -> bool:
-	return _shape_impact(u, x, z) < 0 and not _in_zone(u, x, z)
+	for t: RtTelegraph in _telegraphs:
+		if t.side != u.side or (t.far2 >= 0 and (x - t.x) * (x - t.x) + (z - t.z) * (z - t.z) > t.far2):
+			continue
+		if t.is_zone:
+			if t.contains(x, z):
+				return false
+		elif t.impact_at > _tick and t.impact_at - _tick <= ESCAPE_LOOKAHEAD_TICKS and t.contains_inflated(x, z, _margin):
+			return false
+	return true
 
 
 ## Does the sim-driven party unit escape right now (07 §5.5): it reacts (react_at reached) and stands in a hostile
@@ -811,17 +973,23 @@ func assist_target(u: RtUnit) -> String:
 	return best.id if best != null else ""
 
 
-## Step 7 of a sim-driven unit (07 §5.3, §5.5, §6.2): its target (enemies: auto_target — threat_top,
-## lowest_hp_pct_enemy, nearest_enemy; AI partner / autopilot: "assist"); a party unit's telegraph reaction (_react);
-## a due "then" follow-up and the rules (RtRules.choose — both held while a Partner-Spezial order waits); then the
-## movement goal: escape point > following the controlled unit out of the ring (flight, §2.5) > partner order
-## (`ordered`: it walks into range) > the range goal of a rule > §3.5.3 — a party goal into a shape it reacts to
-## becomes "stand", one into a zone the escape point. Stationary units never get one.
-func ai_step(u: RtUnit, ordered: bool) -> void:
+## Step 7 of a sim-driven unit (07 §5.3, §5.5, §6.2). It thinks (`think`) only every AI_THINK_TICKS ticks, offset by
+## its index in the unit list (07 §3.15 "gestaffeltes KI-Denken"): its target (enemies: auto_target — threat_top,
+## lowest_hp_pct_enemy, nearest_enemy, random_enemy; AI partner / autopilot: "assist"); a party unit's telegraph
+## reaction (_react); a due "then" follow-up and the rules (RtRules.choose — both held while a Partner-Spezial order
+## waits); then the movement goal: escape point > following the controlled unit out of the ring (flight, §2.5) >
+## partner order (`ordered`: it walks into range) > the range goal of a rule > §3.5.3 — a party goal into a shape it
+## reacts to becomes "stand", one into a zone the escape point. Stationary units never get one. In between it keeps
+## its target and goal; only a party unit's reaction (escape point) and its flight following run every tick.
+func ai_step(u: RtUnit, ordered: bool, think: bool = true) -> void:
 	if not u.entry.is_empty() or not targetable(u):
 		return
 	var party: bool = u.side == Combatant.Side.PARTY
-	var tid: String = assist_target(u) if party else _enemy_target(u)
+	if not think:
+		if party and not _react(u):
+			_follow_flight(u)
+		return
+	var tid: String = assist_target(u) if party else Boss.auto_target(self, u, str(_auto_target.get(u.id, "")))
 	if tid != u.target_id:
 		Ability.target_change(self, u, tid)
 	var escape: bool = party and _react(u)
@@ -881,8 +1049,181 @@ func leader_arrived(u: RtUnit, c: int) -> void:
 			f.pop_in_until = c + bal.i("POP_IN_TICKS")
 
 
+## The game data of the combat (Gifts, Result).
+func game_data() -> GameData:
+	return _data
+
+
+## EnemyDef.rt of an enemy def id ({} if unknown; memoized — not state).
+func enemy_rt(def_id: String) -> Dictionary:
+	var r: Variant = _enemy_rts.get(def_id)
+	if r == null:
+		r = _data.enemy(def_id).rt if _data != null and def_id != "" and _data.has_id("enemies", def_id) else {}
+		_enemy_rts[def_id] = r
+	return r
+
+
+func enemy_def(id: String) -> EnemyDef:
+	return _data.enemy(id) if _data != null and id != "" and _data.has_id("enemies", id) else null
+
+
+## The enemies with rt.phases or an enrage block (Boss.step; a copy — summons may join while it is walked).
+func special_foes() -> Array[RtUnit]:
+	var out: Array[RtUnit] = []
+	out.assign(_foes)
+	return out
+
+
+## The next enemy number (summons count on, never reused, 07 §3.3).
+func take_enemy_number() -> int:
+	_next_enemy += 1
+	return _next_enemy - 1
+
+
+## Living enemies still in the combat (summon cap MAX_ENEMIES, 07 §3.12).
+func living_enemies() -> int:
+	var n: int = 0
+	for u: RtUnit in _list:
+		if u.side == Combatant.Side.ENEMY and u.hp > 0 and not u.left_battle:
+			n += 1
+	return n
+
+
+## The centre of the living party (rounded mean; the set centre without one).
+func party_center() -> Vector2i:
+	var sx: int = 0
+	var sz: int = 0
+	var n: int = 0
+	for u: RtUnit in _list:
+		if u.side == Combatant.Side.PARTY and is_alive(u):
+			sx += u.x
+			sz += u.z
+			n += 1
+	return Vector2i(FixedMath.div_round(sx, n), FixedMath.div_round(sz, n)) if n > 0 else Vector2i.ZERO
+
+
+## A new unit joins the combat (a summon, 07 §3.12): the per-unit mods of the list (stats, speed, swing, threat,
+## element swap) and its add_rule rules (a shared timer as the others have it), its mod factors, then the unit list
+## (after all others, 07 §3.3).
+func add_unit(u: RtUnit) -> void:
+	if _mods_any:
+		for m: Dictionary in setup.mods:
+			var op: String = str(m.get("op", ""))
+			if op != "add_rule" and op != "on" and op != "extra_enemy" and RtMods.applies(m, u):
+				RtMods.apply_unit_op(u, m)
+		for r: Dictionary in RtMods.unit_rules(setup.mods, u):
+			var key: String = str(r["key"])
+			u.rules.append(r)
+			if r.has("shared"):
+				var ready: int = int(r["first"])
+				for v: RtUnit in _list:
+					if v.rule_ready.has(key):
+						ready = int(v.rule_ready[key])
+						break
+				u.rule_ready[key] = ready
+		_derive_mods(u)
+	_list.append(u)
+	_by_id[u.id] = u
+	if str(u.mp_regen.get("mode", "")) == "time":
+		_time_regen.append(u)
+	if u.side == Combatant.Side.ENEMY:
+		_derive_foe(u)
+
+
+## The add_rule rules of `u` (compiled, list order; RtMods.unit_rules) — a new phase keeps them.
+func mod_rules(u: RtUnit) -> Array[Dictionary]:
+	if not _mods_any:
+		var none: Array[Dictionary] = []
+		return none
+	return RtMods.unit_rules(setup.mods, u)
+
+
+## Index of the next event of the running tick (RtMods.on_event).
+func out_len() -> int:
+	return _out.size()
+
+
+## The events of the running tick from index `i` on.
+func out_from(i: int) -> Array[ActionEvent]:
+	var out: Array[ActionEvent] = []
+	out.assign(_out.slice(i))
+	return out
+
+
+func change_unit_mp(u: RtUnit, delta: int) -> int:
+	return Damage.change_mp(self, u, delta)
+
+
+## A status from `src_id` on `u` without a resistance roll (RtMods "on" effects).
+func add_status(src_id: String, u: RtUnit, status_id: String, ms: int) -> void:
+	StatusFx.apply(self, src_id, u, status_id, ms, 1000, 0, null, true)
+
+
+## [power, cooldown, cast, mp] ‰ of skill `sk` for unit `u` (RtMods skill_pm; [1000 × 4] without; memoized).
+func skill_pm(u: RtUnit, sk: SkillDef) -> PackedInt32Array:
+	if _skill_mods.is_empty() or u == null or sk == null:
+		return RtMods.NEUTRAL4
+	var key: String = "%s|%s" % [u.id, sk.id]
+	var v: Variant = _skill_pm.get(key)
+	if v == null:
+		v = RtMods.skill_factors(_skill_mods, u, sk)
+		_skill_pm[key] = v
+	return v
+
+
+## view() with the unit's power factor (skill_pm power) — the skill as DamageCalc sees it for `u`.
+func view_for(u: RtUnit, sk: SkillDef) -> SkillDef:
+	if _skill_mods.is_empty() or sk == null:
+		return view(sk)
+	var pm: int = skill_pm(u, sk)[0]
+	if pm == 1000:
+		return view(sk)
+	var key: String = "%s|%s" % [u.id, sk.id]
+	var v: SkillDef = _unit_views.get(key, null) as SkillDef
+	if v == null:
+		v = _make_view(sk)
+		v.power = FixedMath.mul_pm(v.power, pm)
+		_unit_views[key] = v
+	return v
+
+
+## The MP cost `base` of skill `skill_id` for `u` with its skill_pm mp factor.
+func mp_of(u: RtUnit, skill_id: String, base: int) -> int:
+	if _skill_mods.is_empty():
+		return base
+	var sk: SkillDef = skill_def(skill_id)
+	return FixedMath.mul_pm(base, skill_pm(u, sk)[3]) if sk != null else base
+
+
+## Appends the mod factors of the damage fold (07 §3.9.1 "mods_pm"): `src`'s dmg_dealt_pm (when `dealt`), `tgt`'s
+## dmg_taken_pm and, once, its first_hit_taken_pm.
+func mod_factors(src: RtUnit, tgt: RtUnit, dealt: bool, factors: Array[int]) -> void:
+	if not _mods_any:
+		return
+	if dealt and src != null:
+		factors.append_array(_mod_dealt.get(src.id, _NO_PMS))
+	factors.append_array(_mod_taken.get(tgt.id, _NO_PMS))
+	if first_hit.has(tgt.id):
+		var fh: Array[int] = []
+		fh.assign(first_hit[tgt.id])
+		factors.append_array(fh)
+		first_hit.erase(tgt.id)
+
+
+## Healing on `u` with its heal_taken_pm factors (each step mul_pm; never below 1 for a positive amount).
+func heal_taken(u: RtUnit, amount: int) -> int:
+	if not _mods_any or amount <= 0 or not _mod_heal.has(u.id):
+		return amount
+	var a: int = amount
+	for pm: Variant in (_mod_heal[u.id] as Array):
+		a = FixedMath.mul_pm(a, int(pm))
+	return maxi(1, a)
+
+
 # --- private --------------------------------------------------------------------------------------------------------
 
+## The end (07 §3.13): FLEE_RESULT on a flight, BATTLE_END (success = a won boss fight whose last phase was perfect —
+## counted as a perfect phase, 07 §6.4), the result.
 func _finish(outcome: int, c: int) -> void:
 	if outcome == BattleResult.Outcome.FLED:
 		var fr: ActionEvent = ev(ActionEvent.Type.FLEE_RESULT)
@@ -892,15 +1233,20 @@ func _finish(outcome: int, c: int) -> void:
 			fr.text = "Sendezeit überzogen!"
 	var be: ActionEvent = ev(ActionEvent.Type.BATTLE_END)
 	be.value = outcome
+	if outcome == BattleResult.Outcome.VICTORY:
+		for u: RtUnit in _foes:
+			if u.is_boss and not u.is_summon and u.phase >= 0 and u.phase_perfect \
+					and not (enemy_rt(u.def_id).get("phases", []) as Array).is_empty():
+				be.success = true
+				tally["perfect_phases"] = int(tally["perfect_phases"]) + 1
+				break
 	result = Result.build(self, outcome, c)
 
 
 ## Step 11 (07 §3.3): MP over time ("time" units: +amount every every_ticks from ct 0, also while casting), SECOND
 ## every 30 ticks (value = whole combat seconds).
 func _clock(c: int) -> void:
-	for u: RtUnit in _list:
-		if str(u.mp_regen.get("mode", "")) != "time":
-			continue
+	for u: RtUnit in _time_regen:
 		var every: int = int(u.mp_regen.get("every_ticks", 0))
 		if every <= 0 or c < u.mp_regen_next:
 			continue
@@ -968,9 +1314,20 @@ func _static_check(t: String, u: RtUnit, cmd: Dictionary) -> String:
 	return ""
 
 
-## Static data derived from the setup: real-time skill views, FINALE / context variants / Partner-Spezial of the party
-## (party.json rt, level reached), the auto targets of enemies, the komparsen of each group leader.
+## Static data derived from the setup: the mod data of every unit (RtMods), real-time skill views, FINALE / context
+## variants / Partner-Spezial of the party (party.json rt, level reached), the interrupter MP, the auto targets of
+## enemies and the foes with phases / enrage, the komparsen of each group leader.
 func _derive() -> void:
+	_mods_any = not setup.mods.is_empty()
+	if _mods_any:
+		for m: Dictionary in setup.mods:
+			match str(m.get("op", "")):
+				"on":
+					_on_any = true
+				"skill_pm":
+					_skill_mods.append(m)
+		for u: RtUnit in _list:
+			_derive_mods(u)
 	var skills: PackedStringArray = []
 	for u: RtUnit in _list:
 		skills.append(u.auto_skill)
@@ -982,7 +1339,7 @@ func _derive() -> void:
 			known[str(s)] = true
 			var bsk: SkillDef = skill_def(str(s))
 			if bsk != null and bool(bsk.rt.get("interrupt", false)):
-				intr = maxi(intr, Ability.mp_cost(bsk))
+				intr = maxi(intr, Ability.cost(self, u, bsk))
 		if u.side == Combatant.Side.PARTY:
 			_bar_known[u.id] = known
 			_known_all[u.id] = known.duplicate()
@@ -1010,8 +1367,8 @@ func _derive() -> void:
 			if ps != "" and u.bar.values().has(ps):
 				_ps[u.id] = ps
 			_assist[u.id] = RtRules.preset_rules(prt, str(prt.get("assist_preset", "attack")))
-		elif u.side == Combatant.Side.ENEMY and _data != null and _data.has_id("enemies", u.def_id):
-			_auto_target[u.id] = str(_data.enemy(u.def_id).rt.get("auto_target", "threat_top"))
+		elif u.side == Combatant.Side.ENEMY:
+			_derive_foe(u)
 	for k: Variant in items.keys():
 		var it: ItemDef = item_def(str(k))
 		if it != null:
@@ -1095,10 +1452,18 @@ func _apply_pick(u: RtUnit, pick: Dictionary) -> void:
 	if reason != "":
 		return
 	var key: String = str(rule["key"])
+	var ready: int = -1
 	if bool(rule["once"]):
-		u.rule_ready[key] = RtRules.NEVER
+		ready = RtRules.NEVER
 	elif int(rule["every"]) > 0:
-		u.rule_ready[key] = _tick + int(rule["every"])
+		ready = _tick + int(rule["every"])
+	if ready >= 0:
+		if rule.has("shared"):
+			for v: RtUnit in _list:
+				if v.rule_ready.has(key):
+					v.rule_ready[key] = ready
+		else:
+			u.rule_ready[key] = ready
 	var th: Dictionary = rule["then"]
 	if not th.is_empty():
 		u.follow_up = {"skill": str(th["skill"]), "target": tid, "at": _tick + int(th["delay"])}
@@ -1127,19 +1492,29 @@ func _follow_up(u: RtUnit) -> void:
 func _react(u: RtUnit) -> bool:
 	if _telegraphs.is_empty():
 		u.react_at = -1
+		escape.erase(u.id)
 		return false
-	if u.react_at >= 0:
-		var pending: bool = false
-		for t: RtTelegraph in _telegraphs:
-			if not t.is_zone and t.side == u.side and t.impact_at > _tick:
-				pending = true
-				break
-		if not pending:
-			u.react_at = -1
-	var impact: int = _shape_impact(u, u.x, u.z) if u.react_at >= 0 and _tick >= u.react_at else -1
-	if impact < 0 and not _in_zone(u, u.x, u.z):
+	var pending: bool = false
+	var zone: bool = false
+	var impact: int = -1
+	var reacting: bool = u.react_at >= 0 and _tick >= u.react_at
+	for t: RtTelegraph in _telegraphs:
+		if t.side != u.side:
+			continue
+		var near: bool = t.far2 < 0 or (u.x - t.x) * (u.x - t.x) + (u.z - t.z) * (u.z - t.z) <= t.far2
+		if t.is_zone:
+			zone = zone or (near and t.contains(u.x, u.z))
+		elif t.impact_at > _tick:
+			pending = true
+			if near and reacting and t.impact_at - _tick <= ESCAPE_LOOKAHEAD_TICKS \
+					and (impact < 0 or t.impact_at < impact) and t.contains_inflated(u.x, u.z, _margin):
+				impact = t.impact_at
+	if u.react_at >= 0 and not pending:
+		u.react_at = -1
+	if impact < 0 and not zone:
+		escape.erase(u.id)
 		return false
-	var p: Vector2i = RtGeo.escape_point(self, u)
+	var p: Vector2i = _escape_point(u)
 	if p.x == u.x and p.y == u.z:
 		return false
 	if not u.cast.is_empty():
@@ -1151,6 +1526,22 @@ func _react(u: RtUnit) -> bool:
 		fail_cast(u, "moved")
 	u.goal = [p.x, p.y]
 	return true
+
+
+## The escape point of `u` (RtGeo.escape_point, 07 §5.5), kept in `escape` while it stays safe — one search when a
+## reaction starts (or when its point becomes unsafe), not one per tick; the unit's own spot is never kept.
+func _escape_point(u: RtUnit) -> Vector2i:
+	var kept: Variant = escape.get(u.id)
+	if kept is Array:
+		var k: Array = kept
+		if (int(k[0]) != u.x or int(k[1]) != u.z) and safe_point(u, int(k[0]), int(k[1])):
+			return Vector2i(int(k[0]), int(k[1]))
+	var p: Vector2i = RtGeo.escape_point(self, u)
+	if p.x != u.x or p.y != u.z:
+		escape[u.id] = [p.x, p.y]
+	else:
+		escape.erase(u.id)
+	return p
 
 
 ## The AI partner follows the controlled unit as soon as it leaves the ring (flight, 07 §2.5, §5.5): the goal next to
@@ -1171,7 +1562,7 @@ func _safe_goal(u: RtUnit, g: Array[int]) -> Array[int]:
 		return g
 	var out: Array[int] = []
 	if _in_zone(u, g[0], g[1]):
-		var p: Vector2i = RtGeo.escape_point(self, u)
+		var p: Vector2i = _escape_point(u)
 		if p.x != u.x or p.y != u.z:
 			out.assign([p.x, p.y])
 		return out
@@ -1208,9 +1599,11 @@ func _notice_telegraph(t: RtTelegraph) -> void:
 ## (x, z) grown by ESCAPE_MARGIN_CM; −1 if none.
 func _shape_impact(u: RtUnit, x: int, z: int) -> int:
 	var best: int = -1
-	var m: int = bal.i("ESCAPE_MARGIN_CM")
+	var m: int = _margin
 	for t: RtTelegraph in _telegraphs:
 		if t.is_zone or t.side != u.side or t.impact_at <= _tick or t.impact_at - _tick > ESCAPE_LOOKAHEAD_TICKS:
+			continue
+		if t.far2 >= 0 and (x - t.x) * (x - t.x) + (z - t.z) * (z - t.z) > t.far2:
 			continue
 		if (best < 0 or t.impact_at < best) and t.contains_inflated(x, z, m):
 			best = t.impact_at
@@ -1220,31 +1613,40 @@ func _shape_impact(u: RtUnit, x: int, z: int) -> int:
 ## Is (x, z) inside a hostile zone of `u`?
 func _in_zone(u: RtUnit, x: int, z: int) -> bool:
 	for t: RtTelegraph in _telegraphs:
-		if t.is_zone and t.side == u.side and t.contains(x, z):
+		if t.is_zone and t.side == u.side and (t.far2 < 0 or (x - t.x) * (x - t.x) + (z - t.z) * (z - t.z) <= t.far2) \
+				and t.contains(x, z):
 			return true
 	return false
 
 
-func _enemy_target(u: RtUnit) -> String:
-	match str(_auto_target.get(u.id, "threat_top")):
-		"lowest_hp_pct_enemy":
-			var best: RtUnit = null
-			for v: RtUnit in _list:
-				if v.side == Combatant.Side.PARTY and is_alive(v) \
-						and (best == null or v.hp * best.max_hp() < best.hp * v.max_hp()):
-					best = v
-			return best.id if best != null else ""
-		"nearest_enemy":
-			var near: RtUnit = null
-			var nd: int = -1
-			for v: RtUnit in _list:
-				if v.side == Combatant.Side.PARTY and is_alive(v):
-					var d2: int = DetMath.dist2(u.x, u.z, v.x, v.z)
-					if near == null or d2 < nd:
-						near = v
-						nd = d2
-			return near.id if near != null else ""
-	return Threat.top_target(self, u)
+## The mod data of one unit (RtMods): fold and heal factors, the unused first-hit factors (state), the forbid ops.
+func _derive_mods(u: RtUnit) -> void:
+	for pair: Array in [[_mod_dealt, "dmg_dealt_pm"], [_mod_taken, "dmg_taken_pm"], [_mod_heal, "heal_taken_pm"]]:
+		var pms: Array[int] = RtMods.pms(setup.mods, u, str(pair[1]))
+		if not pms.is_empty():
+			(pair[0] as Dictionary)[u.id] = pms
+	var fh: Array[int] = RtMods.pms(setup.mods, u, "first_hit_taken_pm")
+	if not fh.is_empty():
+		first_hit[u.id] = fh
+	var f: Dictionary = RtMods.forbidden(setup.mods, u)
+	if not (f["skills"] as Dictionary).is_empty() or not (f["tags"] as PackedStringArray).is_empty():
+		_forbid[u.id] = f
+
+
+## The auto target of an enemy (rt.auto_target) and whether Boss.step looks at it (phases or an enrage block).
+func _derive_foe(u: RtUnit) -> void:
+	var ert: Dictionary = enemy_rt(u.def_id)
+	_auto_target[u.id] = str(ert.get("auto_target", "threat_top"))
+	if not (ert.get("phases", []) as Array).is_empty() or not (ert.get("enrage", {}) as Dictionary).is_empty():
+		_foes.append(u)
+
+
+## The RtMods "on" reactions (07 §9.5) to the events of the running tick from index `mark` on (their own events are
+## not reacted to again).
+func _react_mods(mark: int) -> void:
+	var n: int = _out.size()
+	for i in range(mark, n):
+		RtMods.on_event(self, _out[i])
 
 
 func _first_party_id() -> String:

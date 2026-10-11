@@ -151,6 +151,47 @@ static func from_combatant(c: Combatant) -> RtUnit:
 	return u
 
 
+## A new enemy unit of `def` (07 §4.9, §3.12) — BattleBridge.make_rt_setup and the sim's summons build them alike:
+## Combatant.create_enemy (stats, rewards, element factors, immunities) plus the rt block: the real-time max HP (rt.hp,
+## else stats.hp × rt.hp_pm / 1000 with ENEMY_HP_PM for 0; a summon: stats.hp × SUMMON_HP_PM / 1000, is_summon),
+## radius, speed, stationary, keep distance, auto-attack (rt.auto_skill, else the attack skill), swing, reach, dmg_pm,
+## rt.immune, the first swing after FIRST_SWING_TICKS; phase −1 for an enemy with rt.phases (entered when the combat
+## starts, RtSim.start), else phase 0 with its compiled rt.rules (keys "0:<index>", 07 §5.3).
+static func from_enemy(def: EnemyDef, id: String, slot: int, bal: RtBalance, summon: bool = false) -> RtUnit:
+	var u: RtUnit = from_combatant(Combatant.create_enemy(def, id, slot))
+	if def == null:
+		return u
+	var b: RtBalance = bal if bal != null else RtBalance.new()
+	var ert: Dictionary = def.rt
+	var hp: int = int(ert.get("hp", 0))
+	if summon:
+		hp = maxi(1, int(def.stats.get("hp", 1)) * b.i("SUMMON_HP_PM") / 1000)
+		u.is_summon = true
+	elif hp <= 0:
+		var pm: int = int(ert.get("hp_pm", 0))
+		hp = maxi(1, int(def.stats.get("hp", 1)) * (pm if pm > 0 else b.i("ENEMY_HP_PM")) / 1000)
+	u.stats.values[StatBlock.Stat.HP] = hp
+	u.hp = hp
+	u.driver = Driver.AI
+	u.radius = int(ert.get("radius_cm", 30))
+	u.move_cm_tick = int(ert.get("move_cm_s", 360)) / 30
+	u.stationary = bool(ert.get("stationary", false))
+	u.keep_cm = clampi(int(ert.get("keep_cm", 0)), 0, 700)
+	u.auto_skill = str(ert.get("auto_skill", def.attack_skill))
+	u.auto_ranged_skill = str(ert.get("auto_ranged_skill", ""))
+	u.swing_ticks = maxi(1, int(ert.get("swing_ms", 2400)) * 3 / 100)
+	u.reach = int(ert.get("reach_cm", 220))
+	u.dmg_pm = int(ert.get("dmg_pm", 1000))
+	u.swing_ready = b.i("FIRST_SWING_TICKS")
+	for sid: Variant in (ert.get("immune", []) as Array):
+		if not u.status_immune.has(str(sid)):
+			u.status_immune.append(str(sid))
+	u.phase = -1 if not (ert.get("phases", []) as Array).is_empty() else 0
+	if u.phase == 0:
+		u.rules = RtRules.compile(ert.get("rules", []) as Array, "0")
+	return u
+
+
 ## Deep copy with every field (Combatant + real time); statuses as copies, defs shared (immutable).
 func duplicate_unit() -> RtUnit:
 	var u: RtUnit = RtUnit.new()

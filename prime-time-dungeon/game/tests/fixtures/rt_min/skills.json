@@ -789,6 +789,374 @@
 				"range_cm": 220,
 				"gcd": false
 			}
+		},
+		{
+			"user": "enemy",
+			"rank": 3,
+			"id": "skl_e_rt_cone",
+			"name": "Testkegel",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 80,
+			"anim": "attack",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 1800,
+				"interruptible": false,
+				"pct_maxhp": 20,
+				"telegraph": {
+					"shape": "cone",
+					"anchor": "self",
+					"radius_cm": 400,
+					"angle_deg": 90
+				}
+			}
+		},
+		{
+			"user": "enemy",
+			"rank": 3,
+			"id": "skl_e_rt_ring",
+			"name": "Testring",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 80,
+			"anim": "attack",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 3000,
+				"interruptible": false,
+				"pct_maxhp": 25,
+				"telegraph": {
+					"shape": "ring",
+					"anchor": "self",
+					"radius_cm": 1200,
+					"inner_cm": 300
+				}
+			}
+		},
+		{
+			"user": "enemy",
+			"rank": 3,
+			"id": "skl_e_rt_fog",
+			"name": "Testnebel",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 80,
+			"anim": "attack",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 1000,
+				"interruptible": false,
+				"pct_maxhp": 15,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "each_enemy",
+					"radius_cm": 250,
+					"count": 2
+				},
+				"zone": {
+					"ms": 12000,
+					"period_ms": 2000,
+					"status": "sts_poison"
+				}
+			}
+		},
+		{
+			"user": "enemy",
+			"rank": 3,
+			"id": "skl_e_rt_puddles",
+			"name": "Testpfützen",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 80,
+			"anim": "attack",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 1500,
+				"interruptible": false,
+				"pct_maxhp": 15,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "random",
+					"radius_cm": 200,
+					"count": 3
+				},
+				"zone": {
+					"ms": 10000,
+					"period_ms": 2000,
+					"status": "sts_poison"
+				}
+			}
+		},
+		{
+			"user": "enemy",
+			"rank": 3,
+			"id": "skl_e_rt_lunge",
+			"name": "Testausfall",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 80,
+			"anim": "attack",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 1000,
+				"interruptible": false,
+				"pct_maxhp": 20,
+				"telegraph": {
+					"shape": "line",
+					"anchor": "self",
+					"length_cm": 800,
+					"width_cm": 150
+				},
+				"range_cm": 1500,
+				"dash": true
+			}
+		},
+		{
+			"user": "enemy",
+			"rank": 3,
+			"id": "skl_e_rt_whirl",
+			"name": "Testwirbel",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 80,
+			"anim": "attack",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 1800,
+				"interruptible": false,
+				"pct_maxhp": 25,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "self",
+					"radius_cm": 400
+				},
+				"statuses": [
+					{
+						"id": "sts_rt_test_exposed",
+						"ms": 3000,
+						"to": "self"
+					}
+				]
+			}
+		},
+		{
+			"user": "enemy",
+			"rank": 3,
+			"id": "skl_e_rt_spill",
+			"name": "Testlache",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 80,
+			"anim": "attack",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 1200,
+				"interruptible": false,
+				"pct_maxhp": 15,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "target_pos",
+					"radius_cm": 300
+				},
+				"zone": {
+					"ms": 6000,
+					"period_ms": 2000,
+					"skill": "skl_e_rt_spill_tick"
+				}
+			}
+		},
+		{
+			"user": "enemy",
+			"rank": 3,
+			"id": "skl_e_rt_spill_tick",
+			"name": "Testlachentakt",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "poison",
+			"power": 10,
+			"anim": "attack",
+			"rt": {
+				"icon": "toxic",
+				"gcd": false,
+				"pct_maxhp": 5
+			}
+		},
+		{
+			"user": "enemy",
+			"rank": 3,
+			"id": "skl_e_rt_fine",
+			"name": "Testgebühr",
+			"category": "magic",
+			"target": "single_enemy",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"anim": "cast",
+			"special": {
+				"kind": "steal_credits",
+				"max": 40,
+				"refund_on_win": true
+			},
+			"rt": {
+				"icon": "ticket",
+				"cast_ms": 2500,
+				"range_cm": 1500,
+				"interruptible": true,
+				"interrupt_worthy": true
+			}
+		},
+		{
+			"user": "enemy",
+			"rank": 3,
+			"id": "skl_e_rt_escape",
+			"name": "Testabfahrt",
+			"category": "magic",
+			"target": "self",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"anim": "cast",
+			"special": {
+				"kind": "escape"
+			},
+			"rt": {
+				"icon": "whistle",
+				"cast_ms": 3000,
+				"interruptible": true,
+				"interrupt_worthy": true,
+				"cooldown_ms": 10000
+			}
+		},
+		{
+			"user": "enemy",
+			"rank": 3,
+			"id": "skl_e_rt_call",
+			"name": "Testruf",
+			"category": "summon",
+			"target": "self",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"anim": "cast",
+			"summon": [
+				"enm_kanalratte"
+			],
+			"rt": {
+				"icon": "whistle",
+				"cast_ms": 2000,
+				"interruptible": true,
+				"interrupt_worthy": true
+			}
+		},
+		{
+			"user": "enemy",
+			"rank": 3,
+			"id": "skl_e_rt_slow",
+			"name": "Teststrafzettel",
+			"category": "debuff",
+			"target": "single_enemy",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"anim": "attack",
+			"rt": {
+				"icon": "ticket",
+				"gcd": false,
+				"range_cm": 1500,
+				"statuses": [
+					{
+						"id": "sts_slow",
+						"chance_pm": 1000,
+						"ms": 3000,
+						"to": "target"
+					}
+				]
+			}
+		},
+		{
+			"user": "enemy",
+			"rank": 3,
+			"id": "skl_e_rt_scatter",
+			"name": "Teststreuung",
+			"category": "attack",
+			"target": "random_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 60,
+			"anim": "attack",
+			"rt": {
+				"icon": "claw",
+				"range_cm": 1500
+			}
+		},
+		{
+			"user": "enemy",
+			"rank": 3,
+			"id": "skl_e_rt_lanes",
+			"name": "Testgleise",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 80,
+			"anim": "attack",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 2000,
+				"interruptible": false,
+				"pct_maxhp": 35,
+				"telegraph": {
+					"shape": "line",
+					"anchor": "lane",
+					"length_cm": 1200,
+					"width_cm": 150,
+					"lanes": [
+						-200,
+						200
+					]
+				},
+				"kill_adds": true,
+				"ignore_guard": true
+			}
+		},
+		{
+			"user": "enemy",
+			"rank": 3,
+			"id": "skl_e_rt_charge",
+			"name": "Testaufladung",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 80,
+			"anim": "attack",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 2000,
+				"interruptible": true,
+				"pct_maxhp": 20,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "self",
+					"radius_cm": 300
+				}
+			}
 		}
 	]
 }

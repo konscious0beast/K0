@@ -1,5 +1,5 @@
 class_name RtRules extends RefCounted
-## Rule engine of the AI partner, the autopilot, the assist and (R1b-I3) the enemy AI (07 §5.3, §6.2): compile turns the
+## Rule engine of the AI partner, the autopilot, the assist and the enemy AI (07 §5.3, §6.2): compile turns the
 ## data rules of a preset / phase into tick-based dictionaries, choose picks the action of a sim-driven unit for this
 ## tick, suggest the assist's skill for the person, eval_cond tests the conditions. All of them are pure: no random draw
 ## (a random_enemy target only lists its candidates — the sim draws when it applies the pick), no write, no event
@@ -21,6 +21,8 @@ const Threat := preload("res://core/rt/rt_threat.gd")
 
 ## rule_ready of a used "once" rule: never again in this combat.
 const NEVER: int = 1 << 40
+## The (unused) known-skill set of an enemy in _pick: enemies may use any skill.
+const NO_SKILLS: Dictionary = {}
 ## Conditions that look at interrupt-worthy casts (E25 visibility, GCD tail).
 const CAST_CONDS: PackedStringArray = ["caster_within_cm", "target_casting"]
 ## _conds: the conditions on the unit and the field (before the rule target is resolved), on the rule target, all.
@@ -203,7 +205,7 @@ static func reserve_ok(sim: RtSim, u: RtUnit, sk: SkillDef) -> bool:
 	if not bool(u.toggles.get("interrupt", RtVocab.RT_TOGGLE_DEFAULTS.get("interrupt", true))):
 		return true
 	var need: int = sim.interrupter_mp(u)
-	return need <= 0 or u.mp - Ability.mp_cost(sk) >= need
+	return need <= 0 or u.mp - Ability.cost(sim, u, sk) >= need
 
 
 # --- private --------------------------------------------------------------------------------------------------------
@@ -219,10 +221,10 @@ static func _pick(sim: RtSim, u: RtUnit, rules: Array, ai: bool) -> Dictionary:
 	var party: bool = u.side == Combatant.Side.PARTY
 	var tail: bool = ai and u.gcd_until - c > 0 and u.gcd_until - c <= sim.bal.i("AI_INTERRUPT_GCD_TAIL_TICKS")
 	var grace: bool = ai and party and c < sim.show_ready_at() + sim.bal.i("AI_SHOW_GRACE_TICKS")
-	var escaping: bool = ai and sim.escaping(u)
-	var offset: int = u.slot * sim.bal.i("AI_SLOT_OFFSET_TICKS") if ai and not party else 0
-	var known: Dictionary = sim.known_skills(u)
-	var fin: String = sim.finale_of(u)
+	var escaping: bool = ai and party and sim.escaping(u)
+	var offset: int = u.slot * sim.slot_offset() if ai and not party else 0
+	var known: Dictionary = sim.known_skills(u) if party else NO_SKILLS
+	var fin: String = sim.finale_of(u) if party else ""
 	for pos in rules.size():
 		var r: Dictionary = rules[pos]
 		if ai:
@@ -293,7 +295,7 @@ static func _ai_free(sim: RtSim, u: RtUnit, skill_id: String, m: PackedInt32Arra
 		return false
 	if m[M_GCD] == 1 and u.gcd_until > c:
 		return false
-	return u.mp >= m[M_MP] and not sim.forbidden_skill(u, skill_id)
+	return u.mp >= sim.mp_of(u, skill_id, m[M_MP]) and not sim.forbidden_skill(u, skill_id)
 
 
 ## An item rule of the AI (party only): {"item", "target", "at"} when it fires, {"goal": …} when only the range is

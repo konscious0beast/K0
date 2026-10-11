@@ -75,18 +75,18 @@ static func sim(cmd: Dictionary, level: int = 1, hero: String = "kai", st: GameS
 	return r
 
 
-## sim() with the party's rules cleared (no_ai): the I1 mechanics tests watch one mechanic, the AI partner (and an
-## autopilot) only auto-attacks and moves (07 §5.3 Nr. 6).
+## sim() with every unit's rules cleared (no_ai): the mechanics tests watch one mechanic, the AI partner (and an
+## autopilot) and the enemies only target, move and auto-attack (07 §5.3 Nr. 6).
 static func sim_no_ai(cmd: Dictionary, level: int = 1, hero: String = "kai", st: GameState = null) -> RtSim:
 	var s: RtSim = sim(cmd, level, hero, st)
 	return no_ai(s) if s != null else null
 
 
-## Clears the rules of every party unit of `s` (no rule AI; target, movement and auto-attacks stay). Returns `s`.
+## Clears the rules of every unit of `s` (no rule AI; target, movement and auto-attacks stay; a boss gets the rules of
+## a later phase again when it enters it). Returns `s`.
 static func no_ai(s: RtSim) -> RtSim:
 	for u: RtUnit in s.units_ref():
-		if u.side == Combatant.Side.PARTY:
-			u.rules = []
+		u.rules = []
 	return s
 
 

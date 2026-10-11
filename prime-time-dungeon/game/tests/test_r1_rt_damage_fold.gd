@@ -4,6 +4,7 @@ extends TestCase
 ## f = 8000 without overflow; neutral factors change nothing (no rounding step); dmg_pm only for enemy sources; the
 ## combo factor; percent hits (E30): the target's element factor first (500…1500 ‰, immunity 500, no element no
 ## step), then dmg_taken_pm, then guard 667 ‰ — no formula, so ATK, DEF, RES, crits and dmg_pm play no part.
+## R1b-I3: percent hits of enemy sources × enemy_dmg_mult (Vorabend, tutorial) right after the element factor.
 
 const Damage := preload("res://core/rt/rt_damage.gd")
 const StatusFx := preload("res://core/rt/rt_status_fx.gd")
@@ -237,6 +238,50 @@ func test_percent_hit_element_first_e30() -> void:
 	assert_eq(Damage.fold_factor(_ints([1500, 2500, 2500, 667]), CAP), 5336)
 	assert_eq(Damage.pct_hit(sim, e, kai, hex, 5, Damage.Kind.ABILITY, true, K.SKILL), FixedMath.mul_pm(small, 5336),
 		"element first, then dmg_taken_pm, then guard")
+
+
+## Percent hits scale with the difficulty (decided after I1): an enemy source's enemy_dmg_mult (Vorabend
+## EASY_ENEMY_DMG 750 ‰, tutorial × TUTORIAL_ENEMY_DMG 500 ‰) folds in right after the E30 element factor — element →
+## difficulty → dmg_taken_pm → guard; party sources never.
+func test_percent_hit_difficulty_after_element() -> void:
+	var sim: RtSim = RtKit.sim_no_ai(RtKit.dummy_cmd({"diff": "vorabend"}), 6)
+	for u: RtUnit in sim.units():
+		u.auto_on = false
+	var e: RtUnit = sim.unit("e0")
+	var kai: RtUnit = sim.unit("p0")
+	var hex: SkillDef = sim.skill_def("skl_e_test_hex")
+	assert_eq(FixedMath.pm(sim.setup.enemy_dmg_mult), 750, "Vorabend: EASY_ENEMY_DMG")
+	var base: int = FixedMath.div_round(kai.max_hp() * 20, 100)
+	kai.element_mods = {}
+	assert_eq(Damage.pct_hit(sim, e, kai, hex, 20, Damage.Kind.ABILITY, true, K.SKILL), FixedMath.mul_pm(base, 750))
+	kai.element_mods = {"shock": 1.5}
+	kai.hp = kai.max_hp()
+	assert_eq(Damage.pct_hit(sim, e, kai, hex, 20, Damage.Kind.ABILITY, true, K.SKILL),
+		FixedMath.mul_pm(base, Damage.fold_factor(_ints([1500, 750]), CAP)), "weak: 1500 × 750")
+	# order: element 1500 → difficulty 750 → 2 × dmg_taken 2500 → guard 667: 1125, 2813, 7033, 4691 — the difficulty
+	# after the taken factors would hit the cap first (1500, 3750, 8000, 6000, 4002)
+	StatusFx.apply(sim, "e0", kai, "sts_rt_test_exposed", 0, 1000, 0, null, true)
+	StatusFx.apply(sim, "e0", kai, "sts_rt_test_exposed", 0, 1000, 0, null, true)
+	StatusFx.apply(sim, "p0", kai, "sts_guard", 0, 1000, 0, null, true)
+	var small: int = FixedMath.div_round(kai.max_hp() * 5, 100)
+	kai.hp = kai.max_hp()
+	var want: int = Damage.fold_factor(_ints([1500, 750, 2500, 2500, 667]), CAP)
+	assert_true(want != Damage.fold_factor(_ints([1500, 2500, 2500, 750, 667]), CAP), "the order shows")
+	assert_eq(Damage.pct_hit(sim, e, kai, hex, 5, Damage.Kind.ABILITY, true, K.SKILL), FixedMath.mul_pm(small, want),
+		"element → difficulty → dmg_taken_pm → guard")
+	var plain: SkillDef = SkillDef.new()
+	plain.id = "skl_test_pct_plain"
+	plain.element = Elements.NONE
+	plain.rt = {"pct_maxhp": 10}
+	assert_eq(Damage.pct_hit(sim, kai, e, plain, 10, Damage.Kind.ABILITY, false, K.SKILL),
+		FixedMath.div_round(e.max_hp() * 10, 100), "a party source: no difficulty factor")
+	var tut: RtSim = RtKit.sim_no_ai(RtKit.encounter("enc_f1_a1_tutorial", [], {"diff": "vorabend"}), 6)
+	var rat: RtUnit = tut.unit("e0")
+	var k2: RtUnit = tut.unit("p0")
+	k2.element_mods = {}
+	assert_eq(FixedMath.pm(tut.setup.enemy_dmg_mult), 375, "tutorial × Vorabend: 0.5 × 0.75")
+	assert_eq(Damage.pct_hit(tut, rat, k2, hex, 20, Damage.Kind.ABILITY, true, K.SKILL),
+		FixedMath.mul_pm(FixedMath.div_round(k2.max_hp() * 20, 100), 375))
 
 
 ## The percent hit of an enemy cast as an event (step 6): actor, element, weak flag, never a crit.

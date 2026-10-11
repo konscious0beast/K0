@@ -34,6 +34,13 @@ func _bot(def: EventDef) -> Dictionary:
 	return R.new().call("_bot_run", def, false)
 
 
+## RunSim.replay of the CTB bot's log (a RunLog or its dictionary) with the event's rules in CTB (R.ctb_rules, R5b).
+func _replay(l: Variant) -> Dictionary:
+	var def: EventDef = _event()
+	var rl: RunLog = l if l is RunLog else RunLog.from_dict(l)
+	return RunSim.replay(real_data(), rl, R.ctb_rules(def), def.quest)
+
+
 ## The bot log as a dictionary whose last command (descend) gets `extra` commands in front of it (player ids above the
 ## log's, same tick).
 func _with_cmds_before_descend(run: Dictionary, extra: Array) -> Dictionary:
@@ -75,22 +82,22 @@ func _shop(n: int, load_half: int) -> Dictionary:
 
 func test_event_runs_keep_their_difficulty_and_header() -> void:
 	var def: EventDef = _event()
-	var sim: RunSim = _sim(def.rules)
+	var sim: RunSim = _sim(R.ctb_rules(def))
 	sim.apply({"t": "difficulty", "to": "vorabend"})
 	assert_eq(sim.state.difficulty, &"prime", "event runs play the event's difficulty (05 §10.1)")
 	assert_eq(sim.rejected_cmds.back()["reason"], "not_allowed")
 	var run: Dictionary = _bot(def)
-	var honest: Dictionary = RunSim.replay(real_data(), run["log"])
+	var honest: Dictionary = _replay(run["log"])
 	assert_eq(honest["errors"], PackedStringArray(), "the honest bot log")
 	var forged: Dictionary = _with_cmds_before_descend(run, [{"t": "difficulty", "to": "vorabend"}])
-	assert_has("; ".join(RunSim.replay(real_data(), RunLog.from_dict(forged))["errors"]),
+	assert_has("; ".join(_replay(forged)["errors"]),
 		"difficulty '' refused by the core (not_allowed)")
 	var hd: Dictionary = (run["log"] as RunLog).to_dict()
 	(hd["header"] as Dictionary)["difficulty"] = "vorabend"
-	assert_has("; ".join(RunSim.replay(real_data(), RunLog.from_dict(hd))["errors"]), "event runs play 'prime'")
+	assert_has("; ".join(_replay(hd)["errors"]), "event runs play 'prime'")
 	var hs: Dictionary = (run["log"] as RunLog).to_dict()
 	(hs["header"] as Dictionary)["seed"] = 777
-	assert_has("; ".join(RunSim.replay(real_data(), RunLog.from_dict(hs))["errors"]),
+	assert_has("; ".join(_replay(hs)["errors"]),
 		"seed 777 is not the fixed seed 424242")
 
 
@@ -100,7 +107,7 @@ func test_forged_commands_are_refused_and_reported() -> void:
 	var def: EventDef = _event()
 	var run: Dictionary = _bot(def)
 	var d: Dictionary = _with_cmds_before_descend(run, [{"t": "floor", "floor": 1}, {"t": "scene", "id": "scn_mop_4"}])
-	var res: Dictionary = RunSim.replay(real_data(), RunLog.from_dict(d))
+	var res: Dictionary = _replay(d)
 	var errs: String = "; ".join(res["errors"])
 	assert_has(errs, "floor '' refused by the core (not_allowed)", "a second start of the same floor (timer reset)")
 	assert_has(errs, "scene '' refused by the core (not_allowed)", "a scene outside its safe room (pep talk buff)")
@@ -110,11 +117,11 @@ func test_forged_commands_are_refused_and_reported() -> void:
 	var cmds: Array = after["cmds"]
 	var last: Dictionary = cmds.back()
 	cmds.append({"k": int(last["k"]), "id": int(last["id"]) + 1, "c": {"t": "rest"}})
-	assert_has("; ".join(RunSim.replay(real_data(), RunLog.from_dict(after))["errors"]),
+	assert_has("; ".join(_replay(after)["errors"]),
 		"rest '' refused by the core (run_not_active)")
 	# player flags are whitelisted: "live" (gift counters) and the pep talk flag are no player writes
 	var flags: Dictionary = _with_cmds_before_descend(run, [{"t": "flag", "key": "mop_pep_talk", "value": true}])
-	assert_has("; ".join(RunSim.replay(real_data(), RunLog.from_dict(flags))["errors"]), "not a player flag")
+	assert_has("; ".join(_replay(flags)["errors"]), "not a player flag")
 	var sim: RunSim = _sim({})
 	var live: Variant = (sim.state.flags.get("live", {}) as Dictionary).duplicate(true)
 	sim.apply({"t": "flag", "key": "live", "value": 0})
@@ -127,7 +134,7 @@ func test_forged_talent_and_casting_commands_are_refused_by_both_verifiers() -> 
 	var forged: Array = [{"t": "talent", "member": "kai", "id": "tal_kai_wischtechnik"},
 		{"t": "casting", "member": "mopsula", "species": "spc_original", "class": "cls_mop_zeremonienmeister"}]
 	var run: Dictionary = _bot(_event())
-	var res: Dictionary = RunSim.replay(real_data(), RunLog.from_dict(_with_cmds_before_descend(run, forged)))
+	var res: Dictionary = _replay(_with_cmds_before_descend(run, forged))
 	var errs: String = "; ".join(res["errors"])
 	assert_has(errs, "talent '' refused by the core (", "a pick outside the Talent-Show rules (RunSim.replay)")
 	assert_has(errs, "casting '' refused by the core (floor_too_low)", "a casting on floor 1 (RunSim.replay)")

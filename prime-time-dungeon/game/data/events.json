@@ -46,6 +46,10 @@
 				"max_run_wall_sec": 0,
 				"party_preset": "new_game",
 				"difficulty": "prime_time",
+				"combat": {
+					"mode": "realtime",
+					"autopilot": false
+				},
 				"attempts": {
 					"ranked": 0,
 					"practice": true
@@ -104,6 +108,10 @@
 				"max_run_wall_sec": 0,
 				"party_preset": "new_game",
 				"difficulty": "prime_time",
+				"combat": {
+					"mode": "realtime",
+					"autopilot": false
+				},
 				"attempts": {
 					"ranked": 0,
 					"practice": true

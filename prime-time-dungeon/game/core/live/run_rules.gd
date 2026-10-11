@@ -366,6 +366,44 @@ static func rt_start(state: GameState, data: GameData) -> void:
 	Progression.full_heal(state, data)
 
 
+## Keys of the optional event rules rules.combat (07 §10.7; part of rules_hash): "mode" (R5b) "realtime" | "ctb",
+## "autopilot" / "assist" / "hints" bool, "max_enemies" int >= 1.
+const COMBAT_RULE_KEYS: PackedStringArray = ["mode", "autopilot", "assist", "hints", "max_enemies"]
+
+
+## The combat mode an event binds (R5b, 07 §10.7): rules.combat.mode "realtime" | "ctb". It is part of rules_hash, so
+## every run of the event — live, both verifiers, the leaderboard commit — fights the same way; without the key the
+## event fights in CTB (event definitions before R5b; the CTB removal of R5b part 2 retires the key).
+static func rules_combat_mode(rules: Dictionary) -> StringName:
+	var c: Variant = rules.get("combat", null)
+	if c is Dictionary and str((c as Dictionary).get("mode", "")) == String(REALTIME):
+		return REALTIME
+	return &"ctb"
+
+
+## Schema problems of rules.combat (EventDef.validate): a Dictionary of COMBAT_RULE_KEYS with their types.
+static func combat_rules_errors(rules: Dictionary) -> PackedStringArray:
+	var out: PackedStringArray = []
+	if not rules.has("combat"):
+		return out
+	var raw: Variant = rules["combat"]
+	if not (raw is Dictionary):
+		out.append("rules.combat must be a Dictionary")
+		return out
+	var c: Dictionary = raw
+	for k: Variant in c.keys():
+		if not COMBAT_RULE_KEYS.has(str(k)):
+			out.append("rules.combat: unknown key '%s'" % str(k))
+	if c.has("mode") and not (c["mode"] is String and str(c["mode"]) in [String(REALTIME), "ctb"]):
+		out.append("rules.combat.mode must be realtime|ctb")
+	for k: String in ["autopilot", "assist", "hints"]:
+		if c.has(k) and not (c[k] is bool):
+			out.append("rules.combat.%s must be a bool" % k)
+	if c.has("max_enemies") and not (JsonUtil.is_integral(c["max_enemies"]) and JsonUtil.to_int(c["max_enemies"]) >= 1):
+		out.append("rules.combat.max_enemies must be an integer >= 1")
+	return out
+
+
 ## The run log header names a real-time run (07 §10.2: "combat_mode": "realtime"). CTB headers have no key.
 static func header_realtime(h: Dictionary) -> bool:
 	return str(h.get("combat_mode", "")) == String(REALTIME)

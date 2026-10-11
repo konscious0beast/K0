@@ -307,6 +307,7 @@ func _validate_rules(out: PackedStringArray) -> void:
 	var sw: Variant = rules.get("sponsor_windows", null)
 	out.append_array(SponsorWindows.validate_rules(sw))
 	out.append_array(MarottenRules.validate_rules(rules))   # 06-C: rules.marotten / rules.liga {"enabled": bool}
+	out.append_array(RunRules.combat_rules_errors(rules))   # 07 §10.7: rules.combat (R5b: "mode" binds the combat)
 	out.append_array(TwistApplier.validate_rules(rules.get("twists", null)))      # 06-D
 	out.append_array(persona_rule_errors(rules.get("persona", null)))            # 08 K0: reserved, off
 	if kind != "offline" and not (sw is Dictionary and (sw as Dictionary).get("dev_open", true) is bool

@@ -26,10 +26,21 @@ func _fight(sim: RunSim) -> void:
 		sim.apply({"t": "battle", "cmd": cmd.to_dict(), "auto": true})
 
 
+## The event's rules for this CTB bot: the event fights in real time (R5b: rules.combat.mode, part of rules_hash,
+## 07 §10.7), the headless bot plays CTB battles — so it runs, and its replays check, the rules with combat.mode "ctb"
+## (CTB stays until R5b part 2; test_r5b_event_rt covers the real-time event run through both verifiers).
+static func ctb_rules(def: EventDef) -> Dictionary:
+	var r: Dictionary = def.rules.duplicate(true)
+	var c: Dictionary = (r.get("combat", {}) as Dictionary).duplicate() if r.get("combat", {}) is Dictionary else {}
+	c["mode"] = "ctb"
+	r["combat"] = c
+	return r
+
+
 ## The event rules with the Show-Liga and gifts enabled (gifts only outside the Pur-Liga, L5); the bot's QA gifts need
 ## "dev" in rules.gifts.sources (live-integrity-4: event rules accept dev gifts only when they list them).
 func _show_rules(def: EventDef) -> Dictionary:
-	var r: Dictionary = def.rules.duplicate(true)
+	var r: Dictionary = ctb_rules(def)
 	r["leagues"] = ["show"]
 	r["gifts"] = {"enabled": true, "sources": ["dev"]}
 	return r
@@ -40,7 +51,7 @@ func _bot_run(def: EventDef, with_gifts: bool = false) -> Dictionary:
 	var data: GameData = real_data()
 	var seed: int = def.run_seed()
 	var st: GameState = GameState.create_new(data, 0, "Kai", seed, &"prime")
-	var rules: Dictionary = _show_rules(def) if with_gifts else def.rules
+	var rules: Dictionary = _show_rules(def) if with_gifts else ctb_rules(def)
 	var sim: RunSim = RunSim.new(data, st, rules)
 	var rl: RunLog = RunLog.new()
 	rl.header = {"schema": 1, "seed": seed, "slot": 0, "player_name": "Kai", "difficulty": "prime",
@@ -111,7 +122,7 @@ func test_bot_run_replays_bit_for_bit() -> void:
 		if c["c"]["t"] == "encounter" and str(c["c"]["group"]).contains("_s"):
 			stray_battles += 1
 	assert_gt(stray_battles, 0, "the bot met a stray")
-	var res: Dictionary = RunSim.replay(real_data(), rl, def.rules, def.quest)
+	var res: Dictionary = RunSim.replay(real_data(), rl, ctb_rules(def), def.quest)
 	assert_eq(res["mismatch_at"], -1, "every checkpoint matches")
 	assert_eq(res["final_hash"], run["hash"], "replay → same final hash")
 	assert_eq(res["errors"], PackedStringArray())
@@ -138,7 +149,7 @@ func test_json_round_trip_of_the_log() -> void:
 	var text: String = JSON.stringify((run["log"] as RunLog).to_dict())
 	var back: RunLog = RunLog.from_dict(JSON.parse_string(text))
 	assert_eq(back.digest(), (run["log"] as RunLog).digest())
-	var res: Dictionary = RunSim.replay(real_data(), back, def.rules, def.quest)
+	var res: Dictionary = RunSim.replay(real_data(), back, ctb_rules(def), def.quest)
 	assert_eq(res["final_hash"], run["hash"], "file → replay (ints became floats)")
 	assert_eq(res["mismatch_at"], -1)
 
@@ -159,7 +170,7 @@ func test_manipulated_command_is_detected() -> void:
 			cd["id"] = other_chest
 			changed = true
 	assert_true(changed, "the log has a chest command")
-	var res: Dictionary = RunSim.replay(real_data(), RunLog.from_dict(d), def.rules, def.quest)
+	var res: Dictionary = RunSim.replay(real_data(), RunLog.from_dict(d), ctb_rules(def), def.quest)
 	assert_true(int(res["mismatch_at"]) >= 0, "a checkpoint after the manipulated command fails")
 	assert_ne(res["final_hash"], run["hash"])
 	# a battle command aimed at another target
@@ -169,7 +180,7 @@ func test_manipulated_command_is_detected() -> void:
 		if cd2["t"] == "encounter":
 			cd2["adv"] = BattleSetup.Advantage.AMBUSH
 			break
-	var res2: Dictionary = RunSim.replay(real_data(), RunLog.from_dict(d2), def.rules, def.quest)
+	var res2: Dictionary = RunSim.replay(real_data(), RunLog.from_dict(d2), ctb_rules(def), def.quest)
 	assert_true(int(res2["mismatch_at"]) >= 0, "changed encounter advantage → different battle")
 
 
@@ -209,7 +220,7 @@ func test_forged_gift_in_pur_league_is_reported() -> void:
 	cmds.insert(at, {"k": int((cmds[at - 1] as Dictionary)["k"]), "id": 0, "c": {"t": "gift", "gift": forged}})
 	var forged_log: RunLog = RunLog.from_dict(d)
 	assert_eq(forged_log.rejected, 0, "a well-formed external input (id 0, tick order)")
-	var res: Dictionary = RunSim.replay(real_data(), forged_log, def.rules, def.quest)
+	var res: Dictionary = RunSim.replay(real_data(), forged_log, ctb_rules(def), def.quest)
 	assert_eq(res["final_hash"], run["hash"], "the gift changed nothing")
 	assert_eq(res["mismatch_at"], -1)
 	assert_eq((res["errors"] as PackedStringArray).size(), 1, "; ".join(res["errors"]))
@@ -237,7 +248,8 @@ func test_repeated_gift_id_is_reported() -> void:
 	assert_has("; ".join(res["errors"]), "g_dev_bot_2' refused by the core (duplicate)")
 
 
-## No explicit rules → the event of header.event_id from data/events.json (rules + quest), never from the log.
+## No explicit rules → the event of header.event_id from data/events.json (rules + quest), never from the log. R5b:
+## the catalog's rules bind the combat mode too — the CTB bot log of the real-time event is reported (header).
 func test_replay_takes_rules_and_quest_from_the_catalog() -> void:
 	var def: EventDef = _event()
 	if def == null:
@@ -245,7 +257,8 @@ func test_replay_takes_rules_and_quest_from_the_catalog() -> void:
 	var run: Dictionary = _bot_run(def)
 	var rl: RunLog = run["log"]
 	var res: Dictionary = RunSim.replay(real_data(), rl)
-	assert_eq(res["errors"], PackedStringArray())
+	assert_eq(res["errors"], PackedStringArray(["header: combat_mode 'ctb' — event '%s' fights 'realtime' "
+		% EVENT_ID + "(rules.combat.mode)"]), "the catalog's combat mode (rules_hash), never the log's")
 	assert_eq(res["final_hash"], run["hash"], "the Pur-Liga rules (flags.live) come from the catalog")
 	assert_eq(res["mismatch_at"], -1)
 	assert_eq(res["result"]["quest_progress_ppm"], (run["sim"] as RunSim).quest.progress_ppm(), "and the quest")
@@ -271,7 +284,7 @@ func test_rejected_log_entries_are_errors() -> void:
 	var run: Dictionary = _bot_run(def)
 	var d: Dictionary = (run["log"] as RunLog).to_dict()
 	(d["cmds"] as Array).insert(3, {"k": 0, "id": 0, "c": {"t": "rest"}})
-	var res: Dictionary = RunSim.replay(real_data(), RunLog.from_dict(d), def.rules, def.quest)
+	var res: Dictionary = RunSim.replay(real_data(), RunLog.from_dict(d), ctb_rules(def), def.quest)
 	assert_eq(res["final_hash"], run["hash"], "the extra player command was dropped")
 	assert_has("; ".join(res["errors"]), "1 entries rejected")
 

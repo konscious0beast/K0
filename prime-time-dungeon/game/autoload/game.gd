@@ -213,7 +213,8 @@ func new_game(slot: int, player_name: String = GameState.DEFAULT_NAME, seed: int
 
 ## M8: EventCatalog → EventDef.run_seed(); mode = &"event_offline"; slot 0 (never saved into campaign slots).
 ## p_league: the league the player plays in a multi-league event (05 §10.1); "" → the single league / "pur".
-## `hero_id` (06 §1.7): the controlled character, recorded right after "floor" like in new_game.
+## `hero_id` (06 §1.7): the controlled character, recorded right after "floor" like in new_game. R5b (07 §10.7): the
+## event's rules.combat.mode (part of rules_hash) decides the combat mode — never the player's setting.
 func start_event_run(event_id: String, p_league: String = "", hero_id: String = HeroRules.DEFAULT_HERO) -> void:
 	var def: EventDef = _load_event_def(event_id)
 	if def == null:
@@ -232,9 +233,11 @@ func start_event_run(event_id: String, p_league: String = "", hero_id: String = 
 	quest = QuestTracker.from_def(def.quest)
 	var league: String = _run_league(def.rules, p_league)
 	run_log = _make_run_log(run_seed, 0, &"prime", event_id, league)
+	_rt_begin(RunRules.rules_combat_mode(def.rules))   # R5b (07 §10.7): the event's rules bind its combat mode
 	sim = _make_sim(state, def.rules)
 	start_floor(maxi(1, def.floor_index))
 	_choose_initial_hero(hero_id)
+	_rt_run_started()
 	Events.run_started.emit(event_id, league)
 
 
@@ -1474,9 +1477,15 @@ func new_game_combat_mode() -> StringName:
 ## party's max HP at its creation (07 §3.9.4: PartyMember.hp_scale_pm = HP_SCALE_PM, the last step of
 ## Progression.total_stats) and starts with full HP / MP.
 func _rt_new_game() -> void:
+	_rt_begin(new_game_combat_mode())
+
+
+## The start of a run in combat mode `p_mode` (new game: the setting / boot argument; event run: rules.combat.mode,
+## R5b): a real-time run gets its header keys and RunRules.rt_start.
+func _rt_begin(p_mode: StringName) -> void:
 	_rt_speed_pm = 1000
 	_rt_speed_due = false
-	if state == null or new_game_combat_mode() != &"realtime":
+	if state == null or p_mode != &"realtime":
 		return
 	if run_log != null:
 		run_log.header["combat_mode"] = String(RunRules.REALTIME)

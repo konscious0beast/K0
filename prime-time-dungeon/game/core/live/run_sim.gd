@@ -570,8 +570,9 @@ static func identity_of(header: Dictionary) -> Dictionary:
 
 
 ## Header problems of a catalog event run: fixed seed (seed_policy fixed → EventDef.run_seed()), difficulty "prime"
-## (event runs never lower it, 05 §10.1 rules.difficulty), league ∈ rules.leagues (required for several leagues).
-## An older sim_version is reported as old_version (no mismatch, 08 §10.2 Nr. 7).
+## (event runs never lower it, 05 §10.1 rules.difficulty), league ∈ rules.leagues (required for several leagues), the
+## combat mode of rules.combat.mode (R5b). An older sim_version is reported as old_version (no mismatch, 08 §10.2
+## Nr. 7).
 static func header_errors(h: Dictionary, def: EventDef, p_rules: Dictionary) -> PackedStringArray:
 	var out: PackedStringArray = []
 	if version_status(h) != "":
@@ -586,6 +587,11 @@ static func header_errors(h: Dictionary, def: EventDef, p_rules: Dictionary) -> 
 	var league: String = str(h.get("league", ""))
 	if (leagues.size() > 1 or league != "") and not leagues.has(league):
 		out.append("header: league '%s' is not one of %s" % [league, str(leagues)])
+	# R5b (07 §10.7): the event's rules (rules.combat.mode, part of rules_hash) bind the combat mode of its runs
+	var mode: StringName = RunRules.REALTIME if RunRules.header_realtime(h) else &"ctb"
+	if mode != RunRules.rules_combat_mode(p_rules):
+		out.append("header: combat_mode '%s' — event '%s' fights '%s' (rules.combat.mode)" % [mode, def.id,
+			RunRules.rules_combat_mode(p_rules)])
 	return out
 
 

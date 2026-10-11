@@ -110,29 +110,89 @@ jobs:
         with:
           name: rt-balance
           path: rt-balance/
+  # Playable builds for a pushed tag v* (README „Spielbare Builds“, 02_TECH §12.3): Linux, Windows, macOS (universal .app,
+  # built-in ad-hoc signature, zipped by Godot so the executable bit survives) and the iOS Xcode project (project-only
+  # export, works on Linux; team and signing are chosen in Xcode on the Mac). No secrets, no signing identities.
   export:
     needs: check
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - name: Godot + templates
+      - name: Godot + templates (verified against SHA512-SUMS.txt)
         run: |
           mkdir -p ~/godot && cd ~/godot
-          curl -fsSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
-          unzip -q godot.zip && mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" godot && chmod +x godot
-          curl -fsSL -o tpl.tpz "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
-          mkdir -p ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
-          unzip -q tpl.tpz -d tpl && mv tpl/templates/* ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable/
-      - name: Export desktop
+          base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          editor="Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          tpz="Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          for f in SHA512-SUMS.txt "$editor.zip" "$tpz"; do curl -fsSL -o "$f" "$base/$f"; done
+          sha512sum -c --ignore-missing SHA512-SUMS.txt
+          unzip -q "$editor.zip" && mv "$editor" godot && chmod +x godot
+          templates="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$templates"
+          unzip -q "$tpz" -d tpl && mv tpl/templates/* "$templates/"
+          rm -rf tpl "$tpz" "$editor.zip"
+      - name: Export Linux, Windows, macOS, iOS (Xcode project)
         working-directory: prime-time-dungeon/game
         run: |
-          ~/godot/godot --headless --path . --import
-          mkdir -p ../build/windows ../build/linux ../build/macos
-          ~/godot/godot --headless --path . --export-release "Linux" ../build/linux/PrimeTimeDungeon.x86_64
-          ~/godot/godot --headless --path . --export-release "Windows" ../build/windows/PrimeTimeDungeon.exe
-          ~/godot/godot --headless --path . --export-release "macOS" ../build/macos/PrimeTimeDungeon.zip
+          godot() { ~/godot/godot --headless --path . "$@"; }
+          godot --import
+          mkdir -p ../build/linux ../build/windows ../build/macos ../build/ios
+          godot --export-release "Linux" ../build/linux/PrimeTimeDungeon.x86_64
+          godot --export-release "Windows" ../build/windows/PrimeTimeDungeon.exe
+          godot --export-release "macOS" ../build/macos/PrimeTimeDungeon.zip
+          # warns ".ipa can only be built on macOS. Leaving Xcode project …" — the Xcode project is the product
+          godot --export-release "iOS" ../build/ios/PrimeTimeDungeon.xcodeproj
+          for f in linux/PrimeTimeDungeon.x86_64 windows/PrimeTimeDungeon.exe macos/PrimeTimeDungeon.zip \
+                   ios/PrimeTimeDungeon.pck ios/PrimeTimeDungeon.xcodeproj/project.pbxproj; do
+            test -s "../build/$f" || { echo "::error::export output missing: build/$f"; exit 1; }
+          done
       - uses: actions/upload-artifact@v4
+        id: up-macos
         with:
-          name: builds
-          path: prime-time-dungeon/build/
+          name: PrimeTimeDungeon-${{ github.ref_name }}-macOS
+          path: prime-time-dungeon/build/macos/PrimeTimeDungeon.zip
+          compression-level: 0  # already a zip; Godot's zip keeps the executable bit of the .app
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        id: up-ios
+        with:
+          name: PrimeTimeDungeon-${{ github.ref_name }}-iOS-Xcode
+          path: prime-time-dungeon/build/ios/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        id: up-windows
+        with:
+          name: PrimeTimeDungeon-${{ github.ref_name }}-Windows
+          path: prime-time-dungeon/build/windows/PrimeTimeDungeon.exe
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        id: up-linux
+        with:
+          name: PrimeTimeDungeon-${{ github.ref_name }}-Linux
+          path: prime-time-dungeon/build/linux/PrimeTimeDungeon.x86_64
+          if-no-files-found: error
+      - name: Step summary
+        working-directory: prime-time-dungeon/build
+        env:
+          URL_MACOS: ${{ steps.up-macos.outputs.artifact-url }}
+          URL_IOS: ${{ steps.up-ios.outputs.artifact-url }}
+          URL_WINDOWS: ${{ steps.up-windows.outputs.artifact-url }}
+          URL_LINUX: ${{ steps.up-linux.outputs.artifact-url }}
+        run: |
+          size() { du -sh "$1" | cut -f1; }
+          n="PrimeTimeDungeon-${GITHUB_REF_NAME}"
+          {
+            echo "### Spielbare Builds ${GITHUB_REF_NAME}"
+            echo
+            echo "| Artefakt | Inhalt | Größe |"
+            echo "|---|---|---|"
+            echo "| [$n-macOS]($URL_MACOS) | \`PrimeTimeDungeon.zip\` → \`Prime Time Dungeon.app\` (Universal: Apple Silicon + Intel, ad-hoc signiert) | $(size macos/PrimeTimeDungeon.zip) |"
+            echo "| [$n-iOS-Xcode]($URL_IOS) | Xcode-Projekt \`PrimeTimeDungeon.xcodeproj\` (unsigniert, in Xcode bauen) | $(size ios) |"
+            echo "| [$n-Windows]($URL_WINDOWS) | \`PrimeTimeDungeon.exe\` (x86_64) | $(size windows/PrimeTimeDungeon.exe) |"
+            echo "| [$n-Linux]($URL_LINUX) | \`PrimeTimeDungeon.x86_64\` (vor dem Start \`chmod +x\`) | $(size linux/PrimeTimeDungeon.x86_64) |"
+            echo
+            readme="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/prime-time-dungeon/README.md"
+            echo "Erster Start auf dem Mac, iPhone/iPad über Xcode: [README, Abschnitt 4 Spielbare Builds]($readme#4-spielbare-builds)"
+          } >> "$GITHUB_STEP_SUMMARY"

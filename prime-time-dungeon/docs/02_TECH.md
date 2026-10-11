@@ -239,8 +239,8 @@ Szenen unten eingetragen (`persona_casting`, `persona_card`); Kern und Daten der
 | `../tools/check.sh` | M0 | Import + Tests + Autoplay-Smoke, `--shot` (§11) |
 | `../tools/fullrun.sh` | M6 | Full-Run-Bot Etage 1 headless (§11.4.1; CI-Schritt §12.4) |
 | `../tools/perf.sh` | M0 (Phase C) | Performance-Probe unter Xvfb + Leak-Schleife (§12.5, `docs/PERFORMANCE.md`) |
-| `../tools/make_icons.sh` | M0 (Phase C) | Launcher-Icons aus `icon.svg` neu erzeugen (§12.3) |
-| `../README.md` | M0 | Einstieg: Öffnen/Starten, Steuerung, Dev-Argumente, Werkzeuge, Ordner, Doku-Index, Screenshots |
+| `../tools/make_icons.sh` | M0 (Phase C) | Export-Icons und iOS-Startbilder aus `icon.svg` neu erzeugen (§12.3) |
+| `../README.md` | M0 | Einstieg: Öffnen/Starten, spielbare Builds, Steuerung, Dev-Argumente, Werkzeuge, Ordner, Doku-Index, Screenshots |
 
 ### 1.2 `autoload/`
 
@@ -429,7 +429,7 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `art/gallery/log_spy.gd` | `Logger`, der Log-Nadeln (z. B. „different indices“) sammelt — von Probe und M4-Tests genutzt (privat) |
 | `art/gallery/*_gallery.tscn` (Varianten) | Seiten-Varianten der Galerien (`page`-Export: archetype/hero/enemy/boss/anim/prop, env room/kinds/props/arena/safe; Casting K2: `look_gallery` = looks, `hair_gallery` = hair) |
 | `art/gallery/name_tags.gd` | Bildschirm-Namensschilder der Galerien (2D-Labels an 3D-Punkten, überlappungsfrei; privat) |
-| `art/icons/icon_1024.png`, `icon_192.png`, `icon_fg_432.png`, `icon_bg_432.png` | Export-Launcher-Icons (iOS 1024 deckend, Android Legacy + Adaptive Vorder-/Hintergrund), erzeugt aus `icon.svg` von `tools/make_icons.sh` (§12.3) |
+| `art/icons/icon_1024.png`, `icon_192.png`, `icon_fg_432.png`, `icon_bg_432.png`, `icon_macos_1024.png`, `launch_384.png`, `launch_576.png` | Export-Icons (iOS 1024 deckend, Android Legacy + Adaptive Vorder-/Hintergrund, macOS 1024 im Apple-Raster) und iOS-Startbilder @2x/@3x, erzeugt aus `icon.svg` von `tools/make_icons.sh` (§12.3) |
 
 ### 1.6 `scenes/`
 
@@ -613,7 +613,7 @@ Jede Datei unter `tests/` gehört dem genannten Modul; `test_<modul>_*.gd` ist d
 | `tests/test_06abc_liga_talents.gd` | Integration A × B × C | Liga-Stufe der gesteuerten Figur für beide Held:innen, Liga-Talente folgen ihr (`MarottenRules.in_liga`), „Kamera 3 kennt mich“ füllt ein Extra-Herz je Etage, Replay ab Speicher-Anker |
 | `tests/test_06ac_bark_opener.gd` | Integration A × C, Runde 4 | Bellen ist kein Anschleichen (06 §8.8 I-7): `opener` `"bark"` in `BattleSetup`/`BattleResult`/`encounter`-Command (nur `adv` 1), kein Herz für „Schleichwerbung“, `bark_openers` statt `preemptives`, Replay, `exploration.gd._opener` |
 | `tests/test_perf_router_cycles.gd` | Phase C | Router-Zyklen Erkundung → Kampf → Safe Room ohne Wachstum der Node-/Objekt-Minima, `Sfx.stop_all`, Etagen-Aufbauzeit, Physik-/Licht-Layer der Etage (§12.1, §12.5) |
-| `tests/test_perf_platform.gd` | Phase C | Mobil-Projekteinstellungen, Export-Presets + Launcher-Icons, Boot kompiliert keine Screens vorab (§2.1, §12.3) |
+| `tests/test_perf_platform.gd` | Phase C | Mobil-Projekteinstellungen, Export-Presets + Icons, Apple-Exportmodi, eine angezeigte Version für alle Presets, Boot kompiliert keine Screens vorab (§2.1, §12.3) |
 | `tests/perf/perf_probe.gd` + `perf_runner.gd`, `tests/perf/boot_timer.gd` | Phase C | Mess-Werkzeug für `tools/perf.sh` (§12.5); keine Tests (kein `test_`-Präfix) |
 | `tests/tools/make_icons.gd` | Phase C | Icon-Generator für `tools/make_icons.sh` (§12.3) |
 
@@ -5180,19 +5180,31 @@ darf **nie** `.gd`-Dateien per `DirAccess` suchen (DB lädt feste Dateiliste).
 |---|---|---|---|
 | `Windows` | `Windows Desktop` | `../build/windows/PrimeTimeDungeon.exe` | `binary_format/embed_pck=true`, `texture_format/s3tc_bptc=true` |
 | `Linux` | `Linux` | `../build/linux/PrimeTimeDungeon.x86_64` | `binary_format/embed_pck=true`, `binary_format/architecture="x86_64"` |
-| `macOS` | `macOS` | `../build/macos/PrimeTimeDungeon.zip` | `application/bundle_identifier="org.primetimedungeon.game"`; Codesign/Notarisierung: Editor-Default (ad-hoc), Notarisierung aus |
-| `Android` | `Android` | `../build/android/PrimeTimeDungeon.apk` | `package/unique_name="org.primetimedungeon.game"`, `version/code=1`, `version/name="0.1.0"`, `architectures/arm64-v8a=true`, `architectures/armeabi-v7a=false`, `screen/immersive_mode=true`, `gradle_build/use_gradle_build=false` |
-| `iOS` | `iOS` | `../build/ios/PrimeTimeDungeon.ipa` | `application/bundle_identifier="org.primetimedungeon.game"`, `application/app_store_team_id=""` (lokal setzen), `application/targeted_device_family=2` |
+| `macOS` | `macOS` | `../build/macos/PrimeTimeDungeon.zip` | `binary_format/architecture="universal"`, `application/icon="res://art/icons/icon_macos_1024.png"`, `application/bundle_identifier="org.primetimedungeon.game"`, `display/high_res=true`, `codesign/codesign=1` (eingebaute Ad-hoc-Signatur, auch unter Linux), `notarization/notarization=0` |
+| `Android` | `Android` | `../build/android/PrimeTimeDungeon.apk` | `package/unique_name="org.primetimedungeon.game"`, `version/code=1`, `version/name="0.3.0"`, `architectures/arm64-v8a=true`, `architectures/armeabi-v7a=false`, `screen/immersive_mode=true`, `gradle_build/use_gradle_build=false` |
+| `iOS` | `iOS` | `../build/ios/PrimeTimeDungeon.xcodeproj` | `application/export_project_only=true` (nur das Xcode-Projekt, kein `xcodebuild`), `application/app_store_team_id="XXXXXXXXXX"` (Platzhalter: 4.7.2 verweigert auch den Projekt-Export ohne Team-ID; das echte Team wählt man in Xcode), `application/code_sign_identity_debug`/`_release="Apple Development"` (Xcodes Run nutzt die exportierte Release-Konfiguration; eine kostenlose Apple-ID hat kein Distributionszertifikat), `application/bundle_identifier="org.primetimedungeon.game"`, `application/targeted_device_family=2`, `storyboard/image_scale_mode=1` (Center) mit `storyboard/custom_image@2x`/`@3x` |
 
-Launcher-Icons: Android `launcher_icons/main_192x192`, `adaptive_foreground_432x432`, `adaptive_background_432x432`, iOS
-`icons/icon_1024x1024` (deckend, ohne Alpha) → `res://art/icons/*.png`, erzeugt aus `icon.svg` mit `tools/make_icons.sh`
-(SVG → PNG in Software, headless). Windows/macOS/Linux nutzen `config/icon`. Geprüft (4.7.2, ohne Templates): `--export-pack "Linux"`
-erzeugt ein lauffähiges Paket (Autoplay aus der `.pck` → `AUTOPLAY: OK`; Skripte als Binär-Tokens, `data/*.json` enthalten), die
-übrigen Presets scheitern nur an fehlenden Export-Templates bzw. Android-SDK (keine Konfigurationsfehler); `test_perf_platform.gd`
-prüft Presets, Filter und Icon-Größen.
+Versionen: `application/config/version` (Titelbild, Spielstände) ist die Quelle; die angezeigte Version jedes Presets
+(`application/product_version`, `application/short_version`, `version/name`) ist leer oder gleich (`test_perf_platform.gd`),
+Build-Nummern (`application/file_version`, Apple `application/version`, `version/code`) dürfen weiterzählen. Stand: 0.3.0.
+
+Icons: Android `launcher_icons/main_192x192`, `adaptive_foreground_432x432`, `adaptive_background_432x432`, iOS
+`icons/icon_1024x1024` (deckend, ohne Alpha; Godot erzeugt daraus alle iOS-Größen), macOS `application/icon` (1024, Körper 824 px
+im Apple-Raster, transparenter Rand), iOS-Startbildschirm `storyboard/custom_image@2x`/`@3x` = `launch_384.png`/`launch_576.png`
+(Abzeichen mit 192 pt auf der Boot-Splash-Farbe; ohne eigenes Bild zeigte iOS das Godot-Logo, `boot_splash/show_image=false` gilt
+dort nicht) → `res://art/icons/*.png`, erzeugt aus `icon.svg` mit `tools/make_icons.sh` (SVG → PNG in Software, headless).
+Windows/Linux nutzen `config/icon` (macOS skalierte den 128-px-Import sonst auf 1024 hoch). Geprüft mit 4.7.2 und den offiziellen
+Export-Templates unter Linux (der Export-Job aus §12.4): alle vier CI-Presets exportieren mit Exit 0; das Linux-Release-Binary
+spielt den Autoplay-Smoke durch (`AUTOPLAY: OK`); die macOS-App ist ein Universal-Binary (x86_64 + arm64), beide Slices tragen eine
+gültige Ad-hoc-Signatur (Code-Seiten, Info.plist, versiegelte Ressourcen nachgerechnet), Ausführrecht bleibt im ZIP erhalten;
+das iOS-Projekt ist vollständig (pbxproj parsebar, alle Dateireferenzen vorhanden, 16 Icon-Größen, Startbilder, Querformat).
+Auf Linux endet der iOS-Export immer mit dem Xcode-Projekt (Warnung „.ipa can only be built on macOS“), `export_project_only`
+sorgt dafür, dass ein Export auf dem Mac genauso endet. `test_perf_platform.gd` prüft Presets, Filter, Icon-Größen, die
+Apple-Exportmodi und die Versionen.
 Nicht gelistete Optionen setzt der Editor beim ersten Öffnen auf Defaults; die Datei wird danach so committet.
 Bundle-ID ist ein Platzhalter-Namensraum und wird vor Store-Veröffentlichung auf die eigene Domain umgestellt. `build/` ist per
-Repo-`.gitignore` ausgeschlossen. Plattformnamen wurden gegen 4.7.2 geprüft (`Linux` wird erkannt; Templates fehlen lokal).
+Repo-`.gitignore` ausgeschlossen. Plattformnamen und Optionsnamen wurden gegen 4.7.2 geprüft (Quelltext des Tags `4.7.2-stable`
+und Export mit Templates).
 
 ### 12.4 CI (`K0/.github/workflows/ptd-check.yml`, M0)
 
@@ -5270,35 +5282,34 @@ jobs:
       - name: pytest
         working-directory: services/mod-brain
         run: python -m pytest -q
+  # spielbare Builds für Tags v* (README Abschnitt 4); gekürzt, vollständig in der Workflow-Datei
   export:
     needs: check
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - name: Godot + templates
-        run: |
-          mkdir -p ~/godot && cd ~/godot
-          curl -fsSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
-          unzip -q godot.zip && mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" godot && chmod +x godot
-          curl -fsSL -o tpl.tpz "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
-          mkdir -p ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
-          unzip -q tpl.tpz -d tpl && mv tpl/templates/* ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable/
-      - name: Export desktop
+      - name: Godot + templates (verified against SHA512-SUMS.txt)
+        run: …  # Editor-ZIP + .tpz laden, sha512sum -c --ignore-missing, Templates nach ~/.local/share/godot/export_templates/
+      - name: Export Linux, Windows, macOS, iOS (Xcode project)
         working-directory: prime-time-dungeon/game
         run: |
-          ~/godot/godot --headless --path . --import
-          mkdir -p ../build/windows ../build/linux ../build/macos
-          ~/godot/godot --headless --path . --export-release "Linux" ../build/linux/PrimeTimeDungeon.x86_64
-          ~/godot/godot --headless --path . --export-release "Windows" ../build/windows/PrimeTimeDungeon.exe
-          ~/godot/godot --headless --path . --export-release "macOS" ../build/macos/PrimeTimeDungeon.zip
-      - uses: actions/upload-artifact@v4
-        with:
-          name: builds
-          path: prime-time-dungeon/build/
+          godot() { ~/godot/godot --headless --path . "$@"; }
+          godot --import
+          mkdir -p ../build/linux ../build/windows ../build/macos ../build/ios
+          godot --export-release "Linux" ../build/linux/PrimeTimeDungeon.x86_64
+          godot --export-release "Windows" ../build/windows/PrimeTimeDungeon.exe
+          godot --export-release "macOS" ../build/macos/PrimeTimeDungeon.zip
+          godot --export-release "iOS" ../build/ios/PrimeTimeDungeon.xcodeproj
+          # danach: jede Ausgabe muss existieren
+      # je ein Artefakt PrimeTimeDungeon-<tag>-macOS | -iOS-Xcode | -Windows | -Linux (macOS mit compression-level 0:
+      # das ZIP stammt von Godot und erhält das Ausführrecht), zuletzt eine Schritt-Zusammenfassung mit Links und Größen
 ```
 
-Android/iOS werden lokal exportiert (Android: JDK 17 + SDK + Debug-Keystore in Editor-Einstellungen; iOS: Xcode auf macOS).
+Android wird lokal exportiert (JDK 17 + SDK + Debug-Keystore in den Editor-Einstellungen). iOS: Die CI erzeugt das Xcode-Projekt
+(der Projekt-Export läuft unter Linux); Team, Signatur und Build passieren in Xcode auf dem Mac (README Abschnitt 4). Kein Job
+enthält Secrets oder Signier-Identitäten.
 `check.sh` bleibt die Prüf-Quelle für Import, Tests und Smoke; zusätzlich ruft die CI `tools/fullrun.sh --strategy=all`
 (Full-Run-Bot, §11.4.1, ≈ 1,5 min) als eigenen Schritt auf. Der Job `mod-brain-tests` (06-D) prüft den Referenz-Dienst
 `services/mod-brain/` mit gemocktem Anthropic-Client (kein Schlüssel, kein Netz); die gemeinsamen Fälle

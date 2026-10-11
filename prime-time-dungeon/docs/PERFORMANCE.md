@@ -23,6 +23,9 @@ Maximum über alle gemessenen Ansichten bzw. Frames (Methode §2). „vorher“ 
 | Kampf: Draw Calls UI | 180 | 204 ✗ | **158** | 170 | 158 |
 | Kampf: Omni / Show-Spots | 2 / 2 (nur high) | 2 / 2 | **2 / 2** | 2 / 0 | 2 / 2 |
 | Kampf: Materialien (Bosse) | 24 | 28 ✗ | **20** | 21 | 20 |
+| Echtzeitkampf in der Welt (§3.6, mit Effekten): Draw Calls 3D, schlechtester Fall zwei Gruppen | 150 | – | **141** | 96 | 83 (59 + 24 Schatten) |
+| Echtzeitkampf: Draw Calls UI (mit R3-HUD) | 180 | – | **42–62** | 41–59 | 42–59 |
+| Echtzeitkampf: Materialien · Physik-Körper (Kollisionsring +1) | 24 · 40 | – | **21 · 25** | 22 · 25 | 21 · 25 |
 | Safe Room: Draw Calls 3D / UI | 120 / 100 | 75 / 95 | **74 / 87** | 44 / 88 | 43 / 87 |
 | Safe Room: Physik-Körper | 0 | 3 ✗ | **0** | 0 | 0 |
 | RAM (Godot, Spitze im Kampf) | 400 MB | 255 MB | **218 MB** | 262 MB | 230 MB (VRAM 251 MB) |
@@ -175,6 +178,53 @@ Compatibility high (alle Abschnitte), Compatibility low und Mobile/Vulkan (Erkun
 Primitive max 66 493 (die Publikumstribüne des Visual-Pass liegt in der einen Arena-Geometrie: +≈ 2 500 Tris, kein zusätzlicher
 Draw Call); Safe Rooms DC 3D 73–74 / UI 64–84; erstes Bild 2,3 s; Etage 1 bauen 281 ms warm. Der Full-Run-Bot (`--autoplay=full`)
 wird wie der Smoke-Treiber erst mit dem Argument geladen (§4.6).
+
+### 3.6 Echtzeitkampf in der Welt (07 §8.10, R2)
+
+Stand 2026-10-11, Branch `ptd/r2` (R2 auf R1b-I2 + R3), `tools/perf.sh --only=combat`. Szenarien `combat_regular`,
+`combat_two_groups`, `combat_boss_queen` (07 §8.10, §12.3): Etage 1 (Seed 4242) als neues Echtzeit-Spiel (HP-Skala), der Kampf
+läuft in der Erkundung (kein Szenenwechsel) mit dem Kampf-HUD von R3. Gespielt wird er von der Welt-Fixture
+`tests/fixtures/rt_world/world_stream.gd` (echte Daten, echte Set-Zelle; Schwünge, Treffer, Zonen, bei der Königin die
+Zuglinie, Pfützen und alle fünf beschworenen Ratten), der `CombatDirector` tickt in Echtzeit; Erst-Hinweiskarten aus (sie hielten
+die Ticks an). **Mit Effekten:** Der Telegraph-Pool hält alle 10 Quads (alle vier Formen), dazu Treffer-Funken (≤ 3 Emitter),
+Komparsen-Rigs und Adds. Maximum über 4 Kamerarichtungen × 16 Frames (Kampfkamera 8 m, Boss 9 m); „Erkundung → Kampf“ misst
+dieselbe Stelle vorher mit denselben 4 Richtungen.
+
+| Compatibility high | Gegner (Komparsen/Adds) | DC 3D Erkundung → Kampf | DC UI¹ | Primitive | Materialien | Partikel (Emitter) | `Label3D` | Körper² | Omni / Lichter pro Mesh |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| combat_regular — (1, 3), eine Gruppe | 3 (2) | 100 → 113 | 81 → 42 | 40 865 | 16 → 19 | 28 (2) | 3 | 24 → 25 | 3 / 2 |
+| **combat_two_groups** — (1, 3), zwei Gruppen | 6 (4) | 113 → **141** | 81 → 42 | 50 669 | 16 → 19 | 28 (2) | 3 | 24 → 25 | 3 / 2 |
+| combat_boss_queen — (0, 0), Königin + 5 Ratten, Boss-Set | 6 (5) | 70 → 113 | 84 → 62 | 56 836 | 15 → 21 | 30 (3) | 3 | 24 → 25 | 3 / 2 |
+| **Budget** (07 §8.10, 02_TECH §12.1) | ≤ 6 | 150 | 180 | 120 000 | 24 | 400 (6) | 12 | 40 | 4 + 1 / 3 |
+
+¹ Mit dem Kampf-HUD von R3 (Rahmen, Aktionsleiste, Plaketten, Banner) und dem ShowOverlay im Kampfmodus; Minimap und
+Erkundungshinweise blenden im Kampf aus (07 §2.8). Die echten Daten haben vor R4 keine `rt.bar`: Die Fixture gibt der Party eine
+Leiste aus der Lernliste (Stufe 1: Slot 1 + SHOW), volle Leisten misst R3 (`rt_drawcalls`).
+² Static + Character ohne Areas; +1 = der Kollisionsring (ein `StaticBody3D`, nur während des Kampfes).
+
+| DC 3D Erkundung → Kampf (in Klammern: Prototyp 07 §8.10 ohne Effekte) | Compatibility high | Compatibility low | Mobile (Vulkan) high |
+|---|---:|---:|---:|
+| combat_regular | 100 → **113** (147 / 132³) | 54 → **73** (84) | 60 → **69** = 48 + 21 Schatten (74) |
+| combat_two_groups | 113 → **141** (180 / 147³) | 61 → **96** (99) | 64 → **83** = 59 + 24 Schatten (82) |
+| combat_boss_queen | 70 → **113** (138 / 112³) | 40 → **84** (82) | 38 → **67** = 52 + 15 Schatten (65) |
+| DC UI · Materialien · Partikel (Emitter) · `Label3D` · Körper · Omni | 42–62 · 19–21 · ≤ 30 (3) · 3 · 25 · 3 | 41–59 · 19–22 · ≤ 44 (4) · ≤ 5 · 25 · 1 | 42–59 · 19–21 · ≤ 44 (4) · ≤ 4 · 25 · 3 |
+
+³ Prototyp mit / ohne Echtzeitschatten der Komparsen (07 legt „ohne“ fest, so ist es gebaut). Alle drei Profile `PERF: OK`.
+
+- **Schlechtester Fall `combat_two_groups`: DC 3D 141 von 150 mit Effekten** (Compatibility high; low 96, Mobile 83). Das
+  Rig-LOD der Komparsen (Reserve aus 07 §8.10) ist nicht nötig; der Funken-Deckel (≤ 3 gleichzeitige Emitter) ist ohnehin
+  umgesetzt (`scenes/combat/puppets.gd`). Komparsen und Beschwörungen werfen keine Echtzeitschatten, Akteure anderer Räume sind
+  ausgeblendet, die 10 Telegraph-Quads teilen ein Material (Instanz-Uniforms), der Ring ist 1 Draw Call. Die Königin mit fünf
+  Ratten bleibt mit 113 unter dem Fall mit zwei Gruppen (low 84 und Mobile 67 knapp über dem Prototyp: Adds + Zonen + Effekte).
+- **Materialien:** +3 bis +6 im Kampf (Telegraph +1 und Ring +1 wie 07 §8.10, dazu Effekte); die Königin mit Rolltoren,
+  Zuglinie, Pfützen-Zonen, Rauch und Adds erreicht 21–22 von 24.
+- **Zeit** (llvmpipe auf der geteilten Maschine, Last ≈ 3–4 auf 4 Kernen; nur relativ, §2): Frame Ø (max) Erkundung → Kampf an
+  derselben Stelle, Compatibility high: 201 (281) → 196 (283) ms (eine Gruppe), 264 (404) → 226 (307) ms (zwei Gruppen),
+  210 (373) → 166 (252) ms (Königin) — kein Mehraufwand, die Software-Rasterung bestimmt die Zeit; Physik ≤ 7,3 ms je Frame.
+  Der Director-Frame (`CombatDirector.cost_us`: Tick-Schleife samt Sim-Schritt und allen synchron angehängten Ereignis-Hörern —
+  Show, HUD, Sfx, Puppen, Telegraphen) kostet Ø 0,18–0,49 ms, p95 0,4–3,9 ms (Frames mit Treffern), Spitze ≤ 6,7 ms — im Mittel
+  ≤ 3 % eines 16,7-ms-Frames (low und Mobile gleich, Spitzen unter mehr Last bis 12 ms). Die Sim-Zeit je Tick (07 §3.15,
+  ≤ 0,25 ms Desktop) misst R1b an der echten Sim; hier spielt die Fixture.
 
 ---
 
@@ -411,6 +461,10 @@ unter dem Budget. Auch der Mobil-Richtwert 1,5 s (Etage) ist mit Abstand eingeha
   prüfen.
 - **Export:** Nur `--export-pack "Linux"` vollständig geprüft; Android/iOS/Windows/macOS brauchen Templates, SDK/Keystore bzw. Xcode
   (02_TECH §12.3) und einen Lauf auf echter Hardware. Bundle-ID ist ein Platzhalter.
+- **Echtzeitkampf in der Welt (§3.6):** gemessen mit der Welt-Fixture (die echten Daten haben vor R4 keine `rt`-Blöcke).
+  Nachmessen, sobald die Teile da sind: die echte Sim mit Gegner-KI, Telegraphen, Zonen und Beschwörungen (R1b-I3), die echten
+  `rt`-Daten von Etage 1 samt voller Aktionsleisten und Gleis-9-Bühne (R4) und dann die Sim-Zeit je Tick im laufenden Spiel
+  (07 §3.15).
 
 ---
 
@@ -421,6 +475,7 @@ GODOT=/pfad/zu/godot-4.7.2 tools/perf.sh --out=perf_gl_high.md --cells          
 GODOT=… tools/perf.sh --quality=low --only=startup,explore,battle,safe_room          # Compatibility, low (Mobil-Standard)
 GODOT=… tools/perf.sh --driver=vulkan --only=startup,explore,battle,safe_room        # Mobile-Renderer (Vulkan-ICD nötig)
 GODOT=… tools/perf.sh --headless --only=startup,leak --cycles=20                     # Zeiten + Router-Zyklen ohne Rendering
+GODOT=… tools/perf.sh --only=combat                  # Echtzeitkampf in der Welt (07 §8.10): combat_regular, _two_groups, _boss_queen
 # Diagnose: --mat-dump (Materialien des Spitzen-Frames), --leak-diff (Node-Arten je Zyklus), --full=<enc,…>, --shots=<dir>
 ```
 

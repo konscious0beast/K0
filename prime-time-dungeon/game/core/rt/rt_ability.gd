@@ -156,7 +156,7 @@ static func check(sim: RtSim, u: RtUnit, skill_id: String, target_id: String, op
 	return tr
 
 
-## Pure target resolution of `sk` for `u` (07 §4.4): {"reason", "ids", "primary", "pick"}.
+## Pure target resolution of `sk` for `u` (07 §4.4): {"reason", "ids", "primary", "pick"}; opener: no range check.
 static func targets(sim: RtSim, u: RtUnit, sk: SkillDef, target_id: String, opener: bool) -> Dictionary:
 	var out: Dictionary = {"reason": "", "ids": PackedStringArray(), "primary": "", "pick": false}
 	var rt: Dictionary = sk.rt
@@ -204,7 +204,7 @@ static func targets(sim: RtSim, u: RtUnit, sk: SkillDef, target_id: String, open
 				return _no("target")
 			out["primary"] = a.id
 			out["ids"] = PackedStringArray([a.id])
-			if range_cm > 0 and a != u and not in_range(u, a, range_cm):
+			if range_cm > 0 and a != u and not opener and not in_range(u, a, range_cm):
 				out["reason"] = "range"
 		"single_ally_ko":
 			var k: RtUnit = _ally(sim, u, target_id, true)
@@ -212,7 +212,7 @@ static func targets(sim: RtSim, u: RtUnit, sk: SkillDef, target_id: String, open
 				return _no("target")
 			out["primary"] = k.id
 			out["ids"] = PackedStringArray([k.id])
-			if range_cm > 0 and not in_range(u, k, range_cm):
+			if range_cm > 0 and not opener and not in_range(u, k, range_cm):
 				out["reason"] = "range"
 		"all_allies":
 			var radius_a: int = int(aoe.get("radius_cm", 0))
@@ -376,8 +376,8 @@ static func _pay(sim: RtSim, u: RtUnit, sk: SkillDef) -> void:
 
 # --- items ----------------------------------------------------------------------------------------------------------
 
-## Pure check of a combat item (07 §3.11): {"reason", "ids", "primary", "pick"}.
-static func check_item(sim: RtSim, u: RtUnit, item_id: String, target_id: String) -> Dictionary:
+## Pure check of a combat item (07 §3.11): {"reason", "ids", "primary", "pick"}. opener: the pull at ct 0 (no range).
+static func check_item(sim: RtSim, u: RtUnit, item_id: String, target_id: String, opener: bool = false) -> Dictionary:
 	if u == null:
 		return _no("unknown_unit")
 	if not sim.is_alive(u):
@@ -404,13 +404,14 @@ static func check_item(sim: RtSim, u: RtUnit, item_id: String, target_id: String
 	if tid == "" and (sk.target == "single_ally"):
 		var cur: RtUnit = sim.unit(u.target_id)
 		tid = u.target_id if cur != null and cur.side == u.side and sim.is_alive(cur) else u.id
-	return targets(sim, u, sk, tid, false)
+	return targets(sim, u, sk, tid, opener)
 
 
 ## combat_item: check, then the drink pause (DRINK_TICKS, GCD free) — the item is used up now, its effect comes at the
-## end of the pause (step 6).
-static func use_item(sim: RtSim, u: RtUnit, item_id: String, target_id: String, ai: bool) -> String:
-	var r: Dictionary = check_item(sim, u, item_id, target_id)
+## end of the pause (step 6). opener: the pull at ct 0 (no range check).
+static func use_item(sim: RtSim, u: RtUnit, item_id: String, target_id: String, ai: bool,
+		opener: bool = false) -> String:
+	var r: Dictionary = check_item(sim, u, item_id, target_id, opener)
 	var reason: String = str(r["reason"])
 	if reason != "":
 		var it: ItemDef = sim.item_def(item_id)

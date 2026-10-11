@@ -192,3 +192,35 @@ func test_by_ai() -> void:
 	var st: Array = RtKit.of(_until(p2, 2), T.ACTION_START).filter(func(x: ActionEvent) -> bool:
 		return x.actor_id == "p1")
 	assert_true(st.size() == 1 and not st[0].by_ai, "Partner-Spezial: the person's order")
+
+
+## The pull opener (07 §2.2, rt.open): a skill or an item of the opening unit at ct 0 without a range check, or the
+## field strike as the first auto swing regardless of reach.
+func test_openers_at_ct_0() -> void:
+	var far: Array = [["g", "enc_rt_dummy", [0, -420, 128]]]               # 620 cm from Kai: out of every melee reach
+	var skill: RtSim = RtKit.sim(RtKit.encounter("enc_rt_dummy", far, {"open": {"kind": "skill",
+		"skill": "skl_kai_heavy_swing", "target": "e0"}}), 6)
+	assert_eq(skill.unit("p0").target_id, "e0", "the prelude turns the opener to its target")
+	var ev: Array[ActionEvent] = _until(skill, 10)
+	var st: Array = RtKit.of(ev, T.ACTION_START).filter(func(x: ActionEvent) -> bool: return x.actor_id == "p0")
+	assert_eq(st.map(func(x: ActionEvent) -> Array: return [x.tick, x.skill_id, x.by_ai]),
+		[[0, "skl_kai_heavy_swing", false]], "a skill opener at ct 0, out of range")
+	var hit: Array = RtKit.of(ev, T.DAMAGE).filter(func(x: ActionEvent) -> bool:
+		return x.skill_id == "skl_kai_heavy_swing")
+	assert_true(hit.size() == 1 and hit[0].tick == 9 and hit[0].target_id == "e0")
+	_until(skill, 45)
+	assert_eq(skill.can_use("p0", "skl_kai_heavy_swing", "e0"), "range", "afterwards range counts again")
+	var item: RtSim = RtKit.sim(RtKit.encounter("enc_rt_dummy", far, {"party": [{"u": "p0", "p": [0, 440, 0]},
+		{"u": "p1", "p": [0, -380, 0]}], "open": {"kind": "item", "item": "itm_bandage", "target": "p1"}}), 6)
+	item.unit("p1").hp -= 50
+	ev = _until(item, 16)
+	var drink: Array = RtKit.of(ev, T.ACTION_START).filter(func(x: ActionEvent) -> bool: return x.item_id != "")
+	assert_eq(drink.map(func(x: ActionEvent) -> Array: return [x.tick, x.item_id, x.target_ids]),
+		[[0, "itm_bandage", PackedStringArray(["p1"])]], "an item opener: 820 cm > 800 + 35, used anyway")
+	assert_eq(RtKit.of(ev, T.HEAL).map(func(x: ActionEvent) -> Array: return [x.tick, x.target_id]), [[15, "p1"]])
+	var strike: RtSim = RtKit.sim(RtKit.encounter("enc_rt_dummy", far, {"open": {"kind": "strike", "target": "e0"}}), 6)
+	ev = _until(strike, 70)
+	var sw: Array = RtKit.of(ev, T.SWING).filter(func(x: ActionEvent) -> bool: return x.actor_id == "p0")
+	assert_eq(sw.map(func(x: ActionEvent) -> Array: return [x.tick, x.target_id]), [[0, "e0"]],
+		"the field strike is the first swing (out of reach); later swings need reach")
+	assert_eq(RtKit.of(ev, T.DAMAGE).filter(func(x: ActionEvent) -> bool: return x.actor_id == "p0").size(), 1)

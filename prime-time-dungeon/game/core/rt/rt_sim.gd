@@ -700,7 +700,7 @@ func run_opener() -> void:
 		"skill":
 			Ability.use_ability(self, u, str(_opener.get("skill", "")), str(_opener.get("target", "")), false, true)
 		"item":
-			Ability.use_item(self, u, str(_opener.get("item", "")), str(_opener.get("target", "")), false)
+			Ability.use_item(self, u, str(_opener.get("item", "")), str(_opener.get("target", "")), false, true)
 
 
 ## The pull strike (07 §2.2): at ct 0 the opening unit's first auto swing on the struck enemy, regardless of reach.

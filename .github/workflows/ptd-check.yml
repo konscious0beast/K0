@@ -40,7 +40,7 @@ jobs:
         # (TestCase.assert_time_budget); local parallel check.sh runs print them
         run: PTD_PERF_ASSERTS=1 GODOT=~/godot/godot prime-time-dungeon/tools/check.sh
       # the campaign fights in real time only (07 §12.6, R5b part 2b): the bot plays it with the autopilot
-      - name: Full run Floor 1 (real time: thorough + rush + dawdle)
+      - name: "Full run Floor 1 (real time: thorough + rush + dawdle)"
         run: GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --strategy=all --log-dir=fullrun-logs
       - uses: actions/upload-artifact@v4
         if: always()

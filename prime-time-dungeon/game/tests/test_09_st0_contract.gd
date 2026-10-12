@@ -14,6 +14,7 @@ extends TestCase
 ## ST1-F (2026-10-12): CastSim is real (no stub header; its public API stays) — "cast" is CastSim's (a season without
 ## an AI cast: no_cast); the name catalog has its ≥ 300 names, the cast lines follow the anchor too (validators/cast.gd
 ## stays a stub until its schema hooks come, 02_TECH §0.8).
+## ST1-D (2026-10-12): TalentTree is real (no stub header; its public API stays) — "talent" v2 is TalentTree's.
 
 const R1A := preload("res://tests/test_r1a_contract.gd")
 const SeasonMin := preload("res://tests/fixtures/season_min/season_min.gd")
@@ -95,21 +96,23 @@ const PROPERTIES: Dictionary = {
 		"program": "Array"},
 }
 
-## The stub files of ST0 → the ST1 package that owns them (09 §11.3, §11.4); ST1-B replaced its four, ST1-F CastSim
-## (REAL).
+## The stub files of ST0 → the ST1 package that owns them (09 §11.3, §11.4); ST1-B replaced its four, ST1-F CastSim,
+## ST1-D TalentTree (REAL).
 const STUBS: Dictionary = {
 	"res://core/season/sleep_resolver.gd": "G",
-	"res://core/progression/talent_tree.gd": "D", "res://core/progression/professions.gd": "E",
+	"res://core/progression/professions.gd": "E",
 	"res://core/data/defs/profession_def.gd": "E",
 	"res://core/data/defs/recipe_def.gd": "E", "res://core/data/defs/theme_def.gd": "C",
 	"res://core/data/validators/professions.gd": "E",
 	"res://core/data/validators/cast.gd": "F", "res://core/data/validators/themes.gd": "C",
 }
-## The former stubs, real since ST1-B and ST1-F (no stub header; the public API above stays).
+## The former stubs, real since ST1-B, ST1-F and ST1-D (no stub header; the public API above stays).
 const REAL: PackedStringArray = ["res://core/season/season_state.gd", "res://core/season/season_rules.gd",
-	"res://core/data/defs/season_def.gd", "res://core/data/validators/seasons.gd", "res://core/season/cast_sim.gd"]
-## The season commands whose module is still a stub (season_unavailable): ST1-G, -D, -E.
-const STUB_CMDS: PackedStringArray = ["away", "talent", "prof", "gather", "craft"]
+	"res://core/data/defs/season_def.gd", "res://core/data/validators/seasons.gd", "res://core/season/cast_sim.gd",
+	"res://core/progression/talent_tree.gd"]
+## The season commands whose module is still a stub (season_unavailable): ST1-G, -E (ST1-D: "talent" v2 is
+## TalentTree's).
+const STUB_CMDS: PackedStringArray = ["away", "prof", "gather", "craft"]
 
 ## One schema-valid sample of every season command (09 §9.1) and talent v2; the first is the start of a season.
 const SEASON_CMDS: Array[Dictionary] = [

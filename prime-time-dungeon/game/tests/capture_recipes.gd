@@ -33,6 +33,11 @@ extends Node
 ## 08 K2 (Casting, with capture.gd --look=…): safe_mask (safe room → pause → party → candidate card → "Name & Aussehen
 ##   ändern": the casting's 1/3 in edit mode over the room), safe_look (the candidate in the room, menu open),
 ##   rt_world_look (rt_world_regular, the camera behind Kai's puppet).
+## Staffeln (09 §8.2–8.4, ST1-D; safe_room.tscn, the run turned into a season standing in the room): season_talent_show
+##   (the Talent-Show presents a class row: three cards with their branches), season_talent_tree (pause → Party →
+##   "Talentbaum": every row, picks in gold, the open row), season_party (party page: Aufholjagd, the cap, the rows of
+##   the tree, the button "Talentbaum"), season_skills (the ability book after the Recall: class abilities on their
+##   slots, the ranks), season_preview (before the Recall: the Klassen-Vorschau of the Count).
 ## The pull of a person (07 §2.2, §7, E34–E37): pull_target_<zone> (Kai 2.2 m in front of a group of the zone, its lead
 ##   targeted: target frame with the slot chips, ring + chevron, the pull hint "1 · Angriff eröffnen"), pull_bark_<zone>
 ##   (Graf Mopsula barks at a group that has seen her: dazed, the bark's target, "verdutzt · Erstschlag!"),
@@ -1467,3 +1472,117 @@ func _r_sd_bigview(scene: Node) -> bool:
 	scene.call("open_big_view", int((scene.get("hand") as Node).get("marked_slot")))
 	await seconds(0.4)
 	return scene.get("modal") != null
+
+
+# --- Staffeln (09 §8.2–8.4, ST1-D): levels, the ability book, the talent tree ------------------------------------
+
+const SEASON_NOW: int = 1791918000            # one hour before day 0 of the test seasons (Kit.START)
+
+
+## The run becomes a season (Game.start_season, seed 7) standing in this safe room; the run says floor `floor` (its
+## band of 09 §2.4 — the rooms stay floor 1's: a still only). Kai and the Count at `levels`, of `classes` ("" = before
+## the Recall), with the left talent of every reached row in `picks` (the class rows of Kai's class: as `class_col`).
+func _season_party(scene: Node, floor: int, levels: Array, classes: Array, picks: Array, class_col: int = 0) -> bool:
+	var room: String = str(scene.get("safe_room_id"))
+	if not Game.start_season(0, "ssn_basis", {"now": SEASON_NOW, "tz_sec": 0, "seed": 7}):
+		return false
+	Game.enter_safe_room(room)
+	Game.state.floor_run.index = floor
+	var ids: Array = ["kai", "mopsula"]
+	for i in ids.size():
+		var m: PartyMember = Game.state.member(str(ids[i]))
+		m.level = int(levels[i])
+		m.class_id = str(classes[i])
+		m.exp = LevelBand.exp_to_next(Game.state, DB.data, m.level) * 2 / 5
+		for row: int in picks:
+			var three: Array[TalentDef] = TalentTree.row_talents(DB.data, m, row)
+			if row <= m.level and three.size() == 3:
+				var col: int = class_col if TalentDef.CLASS_ROWS.has(row) else 0
+				m.talent_rows[str(row)] = three[col].id
+	Progression.full_heal(Game.state, DB.data)
+	Events.party_changed.emit()
+	await frames(5)
+	await _quiet_mod_dialog()
+	return true
+
+
+## The Talent-Show of a season: Kai's class row 25 (Abrissbirne: Bollwerk · Show · Abrissunternehmen) is open.
+func _r_season_talent_show(scene: Node) -> bool:
+	if not await _safe_ready(scene):
+		return false
+	if not await _season_party(scene, 8, [25, 25], ["cls_kai_wrecker", "cls_mop_physician"], [3, 5, 7, 9, 15, 20]):
+		return false
+	scene.call("open_talent_show")
+	await frames(40)
+	await _quiet_mod_dialog()
+	return true
+
+
+## Pause → Party → "Talentbaum" in the safe room: Kai's tree with the picks so far and the open row 25.
+func _r_season_talent_tree(scene: Node) -> bool:
+	if not await _safe_ready(scene):
+		return false
+	if not await _season_party(scene, 8, [27, 25], ["cls_kai_wrecker", "cls_mop_physician"], [3, 5, 7, 9, 15, 20]):
+		return false
+	var pm: Node = scene.call("open_pause", "party")
+	if pm == null:
+		return false
+	get_tree().paused = true
+	await frames(10)
+	var party: Node = pm.call("page", "party")
+	if party.call("open_tree", "kai") == null:
+		return false
+	await frames(20)
+	await _quiet_mod_dialog()
+	return true
+
+
+## The party page of a season on floor 4 (band 13–16): Kai at 12 (Aufholjagd × 2, rested EXP), the Count at the cap.
+func _r_season_party(scene: Node) -> bool:
+	if not await _safe_ready(scene):
+		return false
+	if not await _season_party(scene, 4, [12, 16], ["", "cls_mop_physician"], [3, 5, 7, 9, 15]):
+		return false
+	Game.state.member("kai").rested = 120
+	var pm: Node = scene.call("open_pause", "party")
+	if pm == null:
+		return false
+	get_tree().paused = true
+	await frames(20)
+	await _quiet_mod_dialog()
+	return true
+
+
+## The ability book after the Recall: Kai (Abrissbirne, 27) with the signature on slot 1 and Schnellbeton on slot 3.
+func _r_season_skills(scene: Node) -> bool:
+	if not await _safe_ready(scene):
+		return false
+	if not await _season_party(scene, 9, [27, 27], ["cls_kai_wrecker", "cls_mop_physician"], [3, 5, 7, 9, 15, 20, 25]):
+		return false
+	Game.apply_loadout(RunRules.loadout_cmd("kai", {"1": "skl_kai_wrecking_ball", "3": "skl_kai_quick_concrete"}))
+	var pm: Node = scene.call("open_pause", "skills")
+	if pm == null:
+		return false
+	get_tree().paused = true
+	await frames(20)
+	await _quiet_mod_dialog()
+	return true
+
+
+## Before the Recall: the Count's Klassen-Vorschau (all four classes, their abilities and levels).
+func _r_season_preview(scene: Node) -> bool:
+	if not await _safe_ready(scene):
+		return false
+	if not await _season_party(scene, 2, [8, 8], ["", ""], [3, 5, 7]):
+		return false
+	var pm: Node = scene.call("open_pause", "skills")
+	if pm == null:
+		return false
+	get_tree().paused = true
+	await frames(10)
+	var page: Node = pm.call("page", "skills")
+	page.call("select_member", "mopsula")
+	page.call("show_view", "preview")
+	await frames(20)
+	await _quiet_mod_dialog()
+	return true

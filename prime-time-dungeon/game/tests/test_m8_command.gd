@@ -199,7 +199,7 @@ func test_invalid_commands() -> void:
 		# Echtzeitkampf (07 §4.1, §5.2; R5a)
 		[{"t": "loadout", "bar": {}, "preset": "", "tog": {}}, "loadout: member"],
 		[{"t": "loadout", "member": "kai", "preset": "", "tog": {}}, "loadout: bar must be a Dictionary"],
-		[{"t": "loadout", "member": "kai", "bar": {"5": "skl_x"}, "preset": "", "tog": {}}, "bar keys must be"],
+		[{"t": "loadout", "member": "kai", "bar": {"6": "skl_x"}, "preset": "", "tog": {}}, "bar keys must be"],   # 1–5
 		[{"t": "loadout", "member": "kai", "bar": {"2": ""}, "preset": "", "tog": {}}, "bar.2 must be"],
 		[{"t": "loadout", "member": "kai", "bar": {}, "preset": "berserk", "tog": {}}, "loadout: preset must be"],
 		[{"t": "loadout", "member": "kai", "bar": {}, "preset": "", "tog": {"heal": true}}, "tog.heal is not a switch"],

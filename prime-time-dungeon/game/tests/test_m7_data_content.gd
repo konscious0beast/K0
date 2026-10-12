@@ -145,14 +145,18 @@ func test_quantities_match_gdd() -> void:
 	var stunts: int = 0
 	var enemy_skills: int = 0
 	var item_skills: int = 0
+	var class_skills: Dictionary = {}               # 09 ST1-D: the class bars (classes.json rt.bar) come on top
+	for c: ClassDef in d.all_classes():
+		for b: Variant in (c.rt.get("bar", []) as Array):
+			class_skills[str((b as Dictionary).get("skill", ""))] = true
 	for s: SkillDef in d.all_skills():
-		if s.category == "stunt":
+		if s.category == "stunt" and not class_skills.has(s.id):
 			stunts += 1
 		if s.user == "item":
 			item_skills += 1
 		if s.user == "enemy":
 			enemy_skills += 1
-	assert_eq(stunts, 2, "2 stunts")
+	assert_eq(stunts, 2, "2 stunts (the figures'; the SHOW variants of the classes besides them, 09 §8.3)")
 	for id: String in ENEMY_SKILLS_F1:
 		assert_true(d.has_id("skills", id), "enemy skill " + id)
 		if d.has_id("skills", id):

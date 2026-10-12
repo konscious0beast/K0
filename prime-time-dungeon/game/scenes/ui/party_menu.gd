@@ -4,24 +4,33 @@ extends "res://scenes/ui/menu_base.gd"
 ## "Talentwahl offen" badge) and the Casting line (species · class, from floor 3). Cards are focusable; pressing one
 ## jumps to the equipment page (`open_equipment`). Casting (08 §1.7, K1): below the cards the button
 ## "Kandidatenkarte" (only with a candidate persona) opens the card (scenes/ui/persona_card.tscn) as a modal on its own
-## canvas layer.
+## canvas layer. Such buttons stand in a column right of the cards (ST1-D: below them they covered the equipment).
+## Staffeln (09 §8.2–8.4, ST1-D): the EXP bar follows the table up to level 50; at the cap of the floor the line says
+## so (Überstunden); a gold line for the Aufholjagd, Ausgeruht and the class rank; the talent line counts the rows of
+## the talent tree ("7 von 12 Reihen gewählt", the branch, open rows); next to the Kandidatenkarte the button
+## "Talentbaum" (where the tree governs) opens scenes/ui/talent_tree.tscn above the menu — re-picks in a safe room.
 
 signal open_equipment(member_id: String)
 
 const TalentText := preload("res://scenes/ui/talent_text.gd")
 const LevelBadge := preload("res://scenes/ui/level_badge.gd")   # 09 ST1-A: the level plaque, never "Lv"
 const PERSONA_CARD: String = "res://scenes/ui/persona_card.tscn"   # Casting (08 §1.7, K1)
+const TALENT_TREE: String = "res://scenes/ui/talent_tree.tscn"     # Staffeln (09 §8.4, ST1-D)
 const CARD_LAYER: int = 61                 # above the modal menus (60, 02_TECH §9.4)
+const SIDE_W: float = 236.0                # the column of the buttons right of the cards
 
 var _row: HBoxContainer
 var _col: VBoxContainer
+var _side: VBoxContainer = null            # right of the cards: Kandidatenkarte, Talentbaum (only when there is one)
 var card_button: Button = null             # Casting (08 §1.7, K1): "Kandidatenkarte"
+var tree_button: Button = null             # Staffeln (09 §8.4, ST1-D): "Talentbaum"
 var _card_layer: CanvasLayer = null
+var _tree: Node = null
 
 
 func _ready() -> void:
 	page_title = "Party"
-	_col = UiUtil.vbox(12)                     # Casting (08 §1.7, K1): the cards, then the Kandidatenkarte button
+	_col = UiUtil.vbox(12)                     # the cards and their side column
 	UiUtil.full_rect(_col)
 	add_child(_col)
 	_row = UiUtil.hbox(18)
@@ -40,7 +49,13 @@ func refresh() -> void:
 	if cards.is_empty():
 		_row.add_child(empty_note("Keine Party – noch kein Spielstand."))
 	UiUtil.wire_horizontal(cards)
+	_side = UiUtil.vbox(12)
+	_side.name = "Side"
+	_side.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	_row.add_child(_side)
 	_persona_button(cards)                     # Casting (08 §1.7, K1)
+	_tree_button(cards)                        # Staffeln (09 §8.4, ST1-D)
+	_wire_side(cards)
 
 
 func _card(m: PartyMember) -> Button:
@@ -62,7 +77,8 @@ func _card(m: PartyMember) -> Button:
 	for side: String in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
 		margin.add_theme_constant_override(side, 16)
 	b.add_child(margin)
-	var col: VBoxContainer = UiUtil.vbox(8)
+	var season_text: String = season_line(m)
+	var col: VBoxContainer = UiUtil.vbox(6 if season_text != "" else 8)   # ST1-D: room for the season line
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	margin.add_child(col)
 	var head: HBoxContainer = UiUtil.hbox(12)
@@ -91,10 +107,20 @@ func _card(m: PartyMember) -> Button:
 	col.add_child(_bar_row("HP", m.hp, mhp, &"BarHp"))
 	col.add_child(_bar_row("MP", m.mp, mmp, &"BarMp"))
 	var need: int = UiUtil.exp_to_next(m.level)
-	if need > 0:
+	if need > 0 and season_capped(m):           # Staffeln (09 §8.2): the band end of the floor
+		var cap: Label = UiUtil.label("EXP  Deckel dieser Etage – Überstunden werden Credits", &"LabelSmall", 15)
+		cap.name = "ExpCap"
+		col.add_child(cap)
+	elif need > 0:
 		col.add_child(_bar_row("EXP", m.exp, need, &"BarHype"))
 	else:
 		col.add_child(UiUtil.label("EXP  Maximalstufe erreicht", &"LabelSmall", 15))
+	if season_text != "":
+		var sll: Label = UiUtil.label(season_text, &"LabelSmall", 15, UiTheme.C_GOLD)
+		sll.name = "SeasonLine"
+		sll.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		sll.clip_text = true
+		col.add_child(sll)
 	var grid: GridContainer = GridContainer.new()
 	grid.columns = 4
 	grid.add_theme_constant_override("h_separation", 14)
@@ -156,6 +182,11 @@ func _talent_row(m: PartyMember) -> HBoxContainer:
 	var text: String = ", ".join(names)
 	if names.is_empty():
 		text = open_text(open) if open > 0 else "noch keine (ab Stufe 3)"
+	if Game.state != null and TalentTree.governs(Game.state):   # Staffeln (09 §8.4): the rows of the tree
+		var tt: Dictionary = tree_text(m)
+		text = str(tt["text"])
+		open = int(tt["open"])
+		names = PackedStringArray() if int(tt["picked"]) == 0 else PackedStringArray([text])
 	var v: Label = UiUtil.label(text, &"", 17, UiTheme.C_GOLD if names.is_empty() and open > 0 else Color(0, 0, 0, 0))
 	v.name = "TalentNames"
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -168,7 +199,10 @@ func _talent_row(m: PartyMember) -> HBoxContainer:
 		var sb: StyleBoxFlat = UiUtil.box_style(UiTheme.C_GOLD, UiUtil.C_INK, 0, 0.0, 10, 1)
 		sb.set_corner_radius_all(12)
 		pill.add_theme_stylebox_override("panel", sb)
-		var hint: Label = UiUtil.label("1 Wahl offen" if open == 1 else "%d Wahlen offen" % open, &"", 15, UiUtil.C_INK)
+		var hint_text: String = "1 Wahl offen" if open == 1 else "%d Wahlen offen" % open
+		if Game.state != null and TalentTree.governs(Game.state):
+			hint_text = "1 Reihe offen" if open == 1 else "%d Reihen offen" % open
+		var hint: Label = UiUtil.label(hint_text, &"", 15, UiUtil.C_INK)
 		hint.name = "TalentHint"
 		hint.add_theme_font_override("font", UiTheme.font_bold())
 		hint.add_theme_constant_override("outline_size", 0)
@@ -180,6 +214,104 @@ func _talent_row(m: PartyMember) -> HBoxContainer:
 ## "1 Talent offen – im Safe Room wählen" / "2 Talente offen – im Safe Room wählen".
 static func open_text(open: int) -> String:
 	return ("1 Talent offen" if open == 1 else "%d Talente offen" % open) + " – im Safe Room wählen"
+
+
+# --- Staffeln (09 §8.2–8.4, ST1-D) ----------------------------------------------------------------------------------
+
+## In a season: the member stands at the cap of its floor (below 50) — its EXP become Überstunden.
+static func season_capped(m: PartyMember) -> bool:
+	if Game.state == null or Game.state.season == null or m == null:
+		return false
+	return m.level >= LevelBand.cap(Game.state, DB.data) and m.level < LevelBand.SEASON_CAP
+
+
+## The gold season line: "Aufholjagd: EXP × 2 bis Stufe 10 · Ausgeruht: 120 EXP · Rang II" ("" without a season or
+## without news).
+static func season_line(m: PartyMember) -> String:
+	var parts: PackedStringArray = []
+	if Game.state == null or Game.state.season == null or m == null:
+		return ""
+	var pm: int = LevelBand.catch_up_pm(Game.state, DB.data, m)
+	if pm > LevelBand.PM:
+		var lo: int = LevelBand.band(DB.data, Game.state.floor_run.index if Game.state.floor_run != null else 1).x
+		parts.append("Aufholjagd: EXP × %d bis Stufe %d" % [pm / LevelBand.PM, lo])
+	if m.rested > 0:
+		parts.append("Ausgeruht: %d EXP" % m.rested)
+	var rank: Vector2i = AbilityBook.rank_of(Game.state, DB.data, m)
+	if rank.x >= 2:
+		parts.append("Rang " + AbilityBook.RANK_NAMES[rank.x])
+	return "  ·  ".join(parts)
+
+
+## The talent line where the tree governs: "7 von 12 Reihen · Bollwerk" ({"text", "open", "picked"}).
+static func tree_text(m: PartyMember) -> Dictionary:
+	var total: int = TalentTree.rows(DB.data, m).size()
+	var picked: int = TalentTree.picked(DB.data, m).size()
+	var open: int = TalentTree.open_rows(Game.state, DB.data, m).size()
+	var text: String = "%d von %d Reihen" % [picked, total]
+	var spec: String = TalentTree.spec_of(DB.data, m)
+	if spec != "":
+		text += " · " + TalentText.spec_name(spec)
+	if picked == 0:
+		text = (("1 Reihe offen" if open == 1 else "%d Reihen offen" % open) + " – im Safe Room wählen") if open > 0 \
+			else "noch keine (ab Stufe 3)"
+	return {"text": text, "open": open, "picked": picked}
+
+
+## "Talentbaum" below the cards next to the Kandidatenkarte (only where the tree governs).
+func _tree_button(cards: Array[Control]) -> void:
+	if tree_button != null and is_instance_valid(tree_button):
+		tree_button.get_parent().remove_child(tree_button)
+		tree_button.queue_free()
+		tree_button = null
+	if Game.state == null or not TalentTree.governs(Game.state) or cards.is_empty():
+		return
+	tree_button = UiUtil.button("Talentbaum", &"")
+	tree_button.name = "TalentTreeButton"
+	tree_button.custom_minimum_size = Vector2(SIDE_W, 0)
+	UiUtil.touch_pad(tree_button)
+	tree_button.pressed.connect(func() -> void: open_tree())
+	_side.add_child(tree_button)
+
+
+## Focus with the side column: right from the last card to its first button, left back; the buttons up / down among
+## themselves; down from a card to the first button. Without a button the column goes.
+func _wire_side(cards: Array[Control]) -> void:
+	var side: Array[Control] = []
+	for c: Node in _side.get_children():
+		side.append(c as Control)
+	if side.is_empty() or cards.is_empty():
+		_row.remove_child(_side)
+		_side.queue_free()
+		_side = null
+		return
+	UiUtil.wire_vertical(side, false)
+	var last: Control = cards[cards.size() - 1]
+	last.focus_neighbor_right = last.get_path_to(side[0])
+	for c: Control in cards:
+		c.focus_neighbor_bottom = c.get_path_to(side[0])
+	for b: Control in side:
+		b.focus_neighbor_left = b.get_path_to(last)
+		b.focus_neighbor_right = b.get_path_to(cards[0])
+
+
+## Opens the talent tree above the pause menu (it closes on Esc / B / Start / "Schließen"); `member` first.
+func open_tree(member: String = "") -> Node:
+	if _tree != null and is_instance_valid(_tree):
+		return _tree
+	if not ResourceLoader.exists(TALENT_TREE):
+		return null
+	var t: Node = (load(TALENT_TREE) as PackedScene).instantiate()
+	var first: String = member if member != "" else (UiUtil.party()[0].id if not UiUtil.party().is_empty() else "kai")
+	t.call("setup", {"member": first})
+	t.connect("closed", func() -> void:
+		_tree = null
+		refresh()
+		if is_instance_valid(tree_button):
+			UiUtil.focus_later(tree_button))
+	add_child(t)
+	_tree = t
+	return t
 
 
 func _bar_row(label_text: String, value: int, max_value: int, variation: StringName) -> HBoxContainer:
@@ -212,15 +344,10 @@ func _persona_button(cards: Array[Control]) -> void:
 		return
 	card_button = UiUtil.button("Kandidatenkarte", &"")
 	card_button.name = "CandidateCard"
-	card_button.custom_minimum_size = Vector2(300, 0)
-	card_button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	card_button.custom_minimum_size = Vector2(SIDE_W, 0)
 	UiUtil.touch_pad(card_button)
 	card_button.pressed.connect(open_card)
-	_col.add_child(card_button)
-	for c: Control in cards:
-		c.focus_neighbor_bottom = c.get_path_to(card_button)
-	card_button.focus_neighbor_top = card_button.get_path_to(cards[0])
-	card_button.focus_neighbor_bottom = card_button.get_path_to(cards[0])
+	_side.add_child(card_button)
 
 
 ## Opens the candidate card above the pause menu (own canvas layer; it closes on Esc / B / Start / "Schließen").

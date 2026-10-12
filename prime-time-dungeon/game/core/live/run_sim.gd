@@ -849,7 +849,7 @@ func _apply_gate(key: String, out: Array[ExploreEvent]) -> void:
 
 
 ## RunRules.apply_floor_event + add_event_boxes (like Game.apply_floor_event without the Show part: hype, followers,
-## M.O.D.) → EVENT_CHOICE.
+## M.O.D.) → EVENT_CHOICE; in a season (ST1-D) then the event's EXP (the SEASON event "exp", stamped with the tick).
 func _apply_event(event_id: String, choice: String, out: Array[ExploreEvent]) -> void:
 	var outcome: Dictionary = RunRules.apply_floor_event(state, data, _current_layout(), event_id, choice)
 	if outcome.is_empty():
@@ -857,6 +857,12 @@ func _apply_event(event_id: String, choice: String, out: Array[ExploreEvent]) ->
 	RunRules.add_event_boxes(state, outcome)
 	out.append(ExploreEvent.make(ExploreEvent.Type.EVENT_CHOICE, _tick, {"event_id": event_id, "choice": choice,
 		"completed": bool(outcome.get("completed", false))}))
+	var season: Variant = outcome.get("season", null)
+	if season is Array:
+		for e: Variant in (season as Array):
+			if e is ExploreEvent:
+				(e as ExploreEvent).tick = _tick
+				out.append(e as ExploreEvent)
 
 
 ## Event runs: the run's league and rules.gifts → state.flags["live"]. The league is identity.league when it is one of

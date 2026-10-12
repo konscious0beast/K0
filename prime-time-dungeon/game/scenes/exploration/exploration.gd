@@ -1999,7 +1999,8 @@ func pull_slot_skill(slot: int) -> String:
 		return ""
 	if slot != 1 and slot != 5 and _target_is_tutorial():
 		return ""
-	return str(PullRules.bar_slots(m, DB.party_member(hero)).get(slot, ""))
+	var classes: Dictionary = AbilityBook.class_variants(Game.state, DB.data, m)   # Staffeln (09 §8.3, ST1-D)
+	return str(PullRules.bar_slots(m, DB.party_member(hero), classes).get(slot, ""))
 
 
 ## Why a pull with bar slot `slot` is refused right now ("" = it pulls): no_target, room, not_learned, no_opener,

@@ -354,6 +354,12 @@ Felder: `id` ✓, `name` ✓, `desc` (≤ 60 Zeichen, eine Kartenzeile), `for` �
 `min_level` 3..99 (3), `icon` ∈ `TALENT_ICONS` (`hp`, `mp`, `atk`, `mag`, `def`, `res`, `spd`, `lck`, `crit`, `element`, `show`,
 `field`, `stunt`, `liga`), `effects` ✓ (1..3 Einträge, `kind` ∈ `TALENT_KINDS`, Felder und Bereiche je Art wie oben, alle Ganzzahlen).
 
+**Stand 09 ST1-D (2026-10-12):** In Staffeln ersetzt der **Talentbaum** (09 §8.4) dieses Angebot: auf festen Stufen eine
+Reihe aus drei Talenten, eines frei gewählt, im Safe Room jederzeit kostenlos umgewählt (Command `talent` v2); die
+Talent-Show stellt dort die Reihen vor. Die 24 Talente oben bilden die Grundreihen 3/5/7/9, je Talent beide Ränge in einem
+Wert (09 D-2); dieses Angebot bleibt für Kampagne und Event-Läufe unverändert, bis beide am ST1-Gate mit dem einen
+`SIM_VERSION`-Sprung wechseln (09 V-20, D-1: der Schalter `TalentTree.everywhere` ist gebaut, getestet und aus).
+
 ### 2.3 Fähigkeiten, Ausrüstung, Höchststufe
 
 - Fähigkeiten bleiben **lernset-basiert** (lesbar: „mit Stufe 6 lernst du X“). Klassen bringen ab Stufe 11 je 4 Skills (GDD §12).

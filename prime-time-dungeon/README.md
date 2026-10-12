@@ -69,6 +69,13 @@ Prüfwerkzeuge (`tools/`).
 - **Kampf eröffnen** (07 E34–E37, Stand Pull): Außerhalb des Kampfes wählt man den Anführer einer Gruppe als Ziel und
   eröffnet mit einer Fähigkeit (Tastatur, Gamepad und Touch); von hinten, gegen eine ahnungslose oder angebellte Gruppe ist
   das ein Erstschlag — als Graf Mopsula reicht „bellen, dann 1“.
+- **Staffeln: Stufen, Fähigkeiten und Talente wie in WoW** (09 Kap. 8, ST1-D; nur in Staffeln, die heute nur Debug-Builds
+  starten, §6 `--season`): Stufen bis 50 nach fester Tabelle, je Etage ein Band mit Deckel (EXP darüber werden als
+  „Überstunden“ zu Credits), Aufholjagd (EXP × 2/× 3 unter dem Band) und Regie-Crashkurs mit Aufholpaket bei einer
+  Rettung; das Fähigkeitenbuch (Pause → Fähigkeiten) mit Klassenleisten ab dem Recall, Rängen II–IV und der
+  „Klassen-Vorschau“ davor; der Talentbaum: je Reihe eines von drei Talenten (Stufe 3, 5, 7, 9, dann alle fünf Stufen bis
+  50), vorgestellt von der Talent-Show, umgewählt kostenlos im Safe Room (Pause → Party → „Talentbaum“). Die Klassenleisten
+  sind Platzhalter. In der Kampagne und in Event-Läufen bleibt die Talent-Show „1 aus 2“ (bis zum Umstieg, 09 V-20).
 - Etage 2 ist nur angelegt (`floors.json`: `playable = false`). Wer abgestiegen ist, landet nach „Fortsetzen“ im Abspann.
 - 3 Speicherslots (JSON in `user://saves/`), Einstellungen, Pausemenü, Touch-Steuerung.
 - **M.O.D.-Marotten & Unterhosen-Liga** (06 Kap. 4): M.O.D. verrät je Etage, was sie heute mag (Show-Wetten mit Herzen,
@@ -294,6 +301,8 @@ Gamepad und Touch bedienen (02_TECH §2.2, §10). Gekämpft wird in Echtzeit dir
 | Vollbild | F11 | – | – |
 | Debug-Overlay (nur Debug-Build) | F3 | – | – |
 | QA: Test-Geschenk / Sponsor-Fenster öffnen (Debug-Build, Overlay offen) | F4 / F5 | – | Buttons im Overlay |
+| Staffel: Talent-Show (eine von drei Karten je Reihe) | ←/→, Enter; Esc = später | Steuerkreuz / Stick, A; B = später | Karte antippen; „Später“ |
+| Staffel: Talentbaum (Pause → Party → „Talentbaum“) | Pfeiltasten, Enter = wählen / umwählen (nur im Safe Room); Q / E = andere Figur; Esc = schließen | Steuerkreuz / Stick, A; LB / RB; B | Karte antippen; Figur-Reiter; „Schließen“ |
 
 Interagieren hat Vorrang: Zeigt die Erkundung einen Prompt (Truhe, Tür, Event in 1,5 m vor der Figur), löst die
 Aktionstaste die Interaktion aus, sonst den Feldschlag bzw. das Bellen. Einen Kampf eröffnet man selbst mit einem **Pull**:
@@ -382,7 +391,7 @@ Argumente stehen nach `--` (CLI) bzw. in den Main Run Args (Editor). Quelle: `sc
 | `--strategy=thorough\|rush\|dawdle\|typical` | Strategie des Full-Run-Bots: alles / nur Safe Rooms, Tore, Bosse / trödeln bis zum Etagenkollaps / typische:r Erstspieler:in |
 | `--pace=fast\|human` | Takt des Full-Run-Bots: ohne Wartezeit oder mit dem Modell eines aufmerksamen Menschen |
 | `--rt-profile=typical\|perfect\|sloppy` | Full-Run-Bot im Echtzeitkampf: Spielprofil der Person (07 §5.7, je Held:in) |
-| `--season=<ssn-id>` | **nur Debug-Builds** (Staffeln, 09 §11.1, ST1-B): startet eine neue private Staffel der Vorlage (`ssn_basis` 6 Etagen / 24 Tage, `ssn_akt2` 12 / 54, `ssn_akt3` 18 / 84) und geht ohne Titel, Casting und Intro in die Erkundung von Etage 1. Tag 0 ist die nächste Sendezeit; die Einsturz-Termine stehen ab dann in UTC fest. Etage 1 ist die Generalprobe und bis ST1-C die einzige spielbare Etage: ihre Treppe (nach der Etagen-Bilanz) oder ihr Einsturz (Kalender: Tag 2, Am Stück: nach 20 min Erkundung) beendet die Staffel für die Kandidat:in („Bis zum Ende dabei“, Abspann); ein verlorener Kampf kostet dort nichts (die Sanitäter bringen die Gruppe in den zuletzt betretenen Safe Room). Ohne `--slot` im ersten freien Slot (alle belegt: Slot 0, nie gespeichert); gespeichert wird automatisch (Dauerspeicherstand mit Journal). Die freien Plätze spielt die KI-Besetzung (99 KI-Kandidat:innen, ST1-F): ihre Erstbesteigungen, Einstürze und Rekorde meldet M.O.D. als Eilmeldung (höchstens eine je 10 min Spielzeit, nie im Kampf) |
+| `--season=<ssn-id>` | **nur Debug-Builds** (Staffeln, 09 §11.1, ST1-B): startet eine neue private Staffel der Vorlage (`ssn_basis` 6 Etagen / 24 Tage, `ssn_akt2` 12 / 54, `ssn_akt3` 18 / 84) und geht ohne Titel, Casting und Intro in die Erkundung von Etage 1. Tag 0 ist die nächste Sendezeit; die Einsturz-Termine stehen ab dann in UTC fest. Etage 1 ist die Generalprobe und bis ST1-C die einzige spielbare Etage: ihre Treppe (nach der Etagen-Bilanz) oder ihr Einsturz (Kalender: Tag 2, Am Stück: nach 20 min Erkundung) beendet die Staffel für die Kandidat:in („Bis zum Ende dabei“, Abspann); ein verlorener Kampf kostet dort nichts (die Sanitäter bringen die Gruppe in den zuletzt betretenen Safe Room). Ohne `--slot` im ersten freien Slot (alle belegt: Slot 0, nie gespeichert); gespeichert wird automatisch (Dauerspeicherstand mit Journal). Die freien Plätze spielt die KI-Besetzung (99 KI-Kandidat:innen, ST1-F): ihre Erstbesteigungen, Einstürze und Rekorde meldet M.O.D. als Eilmeldung (höchstens eine je 10 min Spielzeit, nie im Kampf). Stufen und Talente (ST1-D): auf Etage 1 endet die Stufe am Deckel 7 (darüber Überstunden als Credits); die Grundreihen des Talentbaums öffnen auf Stufe 3, 5 und 7 (Talent-Show im Safe Room, umwählen in Pause → Party → „Talentbaum“), die Treppe gibt eine halbe Stufe, ein Etagen-Event 5 %; Klassenfähigkeiten, Ränge und Klassenreihen kommen mit dem Recall auf Etage 3 (ST1-C) |
 | `--tempo=calendar\|binge` | mit `--season`: Kalender (Einsturz zu festen Terminen; die Uhr läuft in Erkundung und Safe Room, ein Uhr-Command je 60 s) oder Am Stück (Countdown je Etage: 20, 30, 40, 50 … min) |
 | `--mode=net\|no_net` | mit `--season`: Mit Netz (Rettung, Sanitäter) oder Ohne Netz (ab Etage 2 ein Leben) — hier ohne Freischaltung |
 | `--speed=<n>` | mit `--season`, Zeitraffer: Staffelsekunden je Sekunde Wanduhr (1–10080; `--speed=1440`: ein Tag je Minute) |
@@ -445,9 +454,9 @@ prime-time-dungeon/
     │   ├── show/        ShowModel (Hype, Zuschauer, Follower), Achievements, Sponsoren, M.O.D.-Ansagen, Marotten/Liga
     │   ├── loot/        LootRoller (Lootboxen, Truhen, Pools)
     │   ├── progression/ GameState, FloorRun, Party, Inventar, EXP, Shop, BattleBridge, SaveCodec, Talents, Casting, HeroRules,
-    │   │                Persona; TalentTree, Professions (Staffeln, 09: Stubs aus ST0)
+    │   │                Persona; Staffeln (09): TalentTree und AbilityBook (ST1-D), Professions (Stub aus ST0)
     │   ├── season/      Staffeln (09): SeasonClock, SeasonState, SeasonRules, CastSim (KI-Besetzung: CastModel, CastMember,
-    │   │                CastEvent), SleepResolver — Stubs aus ST0, gefüllt von ST1
+    │   │                CastEvent), LevelBand (Stufen, Band, Aufholjagd, ST1-D), SleepResolver — Stubs aus ST0, gefüllt von ST1
     │   ├── dungeon/     FloorLayout, DungeonGenerator, Spawns, Etagen-Events, ExploreEvent
     │   └── live/        SHOWRUN: RunLog, RunSim, RunRules, StateHash, Gift, GiftPolicy, Sponsor-Fenster, Quest, Bestenliste,
     │                    KI-Admin: TwistApplier (Twists), RegieDirector (Offline-Regie ab Etage 2)
@@ -486,8 +495,8 @@ Systeme) > 01_GDD / 02_TECH / 03_ART / 05 (je nach Thema) > 04**.
 
 ## 10. Screenshots
 
-Alle Bilder stammen aus dem Spiel selbst (Compatibility-Renderer unter Xvfb, 1280 × 720; Bilder 59 und 63 im Handy-Format
-2400 × 1080 und Bild 26 im Handy-Format 1600 × 720, alle drei mit Touch-Steuerung). Die Kampfbilder zeigen den Echtzeitkampf,
+Alle Bilder stammen aus dem Spiel selbst (Compatibility-Renderer unter Xvfb, 1280 × 720; Bilder 59, 63, 70 und 71 im
+Handy-Format 2400 × 1080 und Bild 26 im Handy-Format 1600 × 720, alle mit Touch-Steuerung). Die Kampfbilder zeigen den Echtzeitkampf,
 seit R5b-2b den einzigen Kampf der Kampagne; die Bilder des früheren Rundenkampfs (08–12, 18, 22, 28) liegen als Archiv in
 `docs/screenshots/` (die CTB-Kampfszene, die sie erzeugte, ist gelöscht).
 
@@ -509,6 +518,9 @@ seit R5b-2b den einzigen Kampf der Kampagne; die Bilder des früheren Rundenkamp
 | ![Show](docs/screenshots/27_pause_show_unterhosen_liga.png) **27** Pausemenü, Reiter Show: M.O.D.s Vorliebe und Unterhosen-Liga (06 Paket C) | ![Abspann](docs/screenshots/61_echtzeitkampf_boss_abspann.png) **61** Bosssieg: Abspann mit EXP, Stufenaufstieg, Talent-Hinweis und Beute |
 | ![Ziel wählen](docs/screenshots/62_erkundung_pull_ziel.png) **62** Kampf eröffnen: Kai hat mit Tab einen Anführer als Ziel — Zielrahmen mit den Slots, Ring und Pfeil, Hinweis „1 · Angriff eröffnen“ | ![Handy Pull](docs/screenshots/63_handy_erkundung_pull_touch.png) **63** Handy-Format: Anführer angetippt, der Aktions-Button zeigt Slot 1 und eröffnet den Kampf |
 | ![Bellen, dann 1](docs/screenshots/64_erkundung_bellen_erstschlag.png) **64** Graf Mopsula hat gebellt: Der verdutzte Anführer ist schon Ziel — „verdutzt · Erstschlag!“ | |
+| ![Talent-Show Reihe](docs/screenshots/65_staffel_talent_show_reihe.png) **65** Staffel: Die Talent-Show stellt eine Klassenreihe vor — drei Karten, links und rechts die Zweige der Abrissbirne | ![Talentbaum](docs/screenshots/66_staffel_talentbaum.png) **66** Staffel: Talentbaum (Pause → Party), Wahlen in Gold, Reihe 25 offen, umwählen im Safe Room |
+| ![Party Staffel](docs/screenshots/67_staffel_party_aufholjagd.png) **67** Staffel, Party-Seite: Aufholjagd und Ausgeruht (Kai), Deckel der Etage (Graf Mopsula), Reihen des Talentbaums, Knopf „Talentbaum“ | ![Fähigkeitenbuch](docs/screenshots/68_staffel_faehigkeitenbuch.png) **68** Staffel, Fähigkeitenbuch nach dem Recall: die Signatur der Abrissbirne belegt Slot 1 |
+| ![Klassen-Vorschau](docs/screenshots/69_staffel_klassen_vorschau.png) **69** Staffel, vor dem Recall: Reiter „Klassen-Vorschau“ mit den Fähigkeiten der vier Klassen des Grafen | ![Handy Talentbaum](docs/screenshots/70_handy_staffel_talentbaum_touch.png) **70** Handy-Format mit Touch: Talentbaum (71: die Talent-Show) |
 | ![Casting 1/3](docs/screenshots/29_casting_1_wer_sind_sie.png) **29** Casting 1/3 „Wer sind Sie?“: Name, Wortform, Figur (08 K1) | ![Casting 2/3](docs/screenshots/30_casting_2_steckbrief.png) **30** Casting 2/3 „Steckbrief“: Vorleben, Hobby / Talent, Eigenschaften |
 | ![Vorleben](docs/screenshots/31_casting_2_vorleben_overlay.png) **31** Overlay „Vorleben wählen“ mit „genauer“-Chips | ![Eigenschaften](docs/screenshots/32_casting_2_eigenschaften_overlay.png) **32** Overlay „Eigenschaften“ (0–3, leer erlaubt) |
 | ![Kandidatenkarte](docs/screenshots/33_casting_3_kandidatenkarte.png) **33** Casting 3/3: Kandidatenkarte und Sendeformat | ![Tastatur](docs/screenshots/34_casting_bildschirmtastatur_akzente.png) **34** Bildschirmtastatur mit Akzenttasten |
@@ -558,6 +570,13 @@ GODOT=… $T --shot $C shot.png 60 2400x1080 --params='{"page":3,"demo":true}' -
 GODOT=… $T --shot $C shot.png 60 1280x720 --params='{"page":1,"open":"keyboard","demo":true}' --recipe=casting_accents  # 34
 GODOT=… $T --shot res://scenes/exploration/exploration.tscn shot.png 30 1280x720 --recipe=pause_card      # 41
 GODOT=… $T --shot res://scenes/title/intro.tscn shot.png 20 1280x720 --recipe=intro_card                 # 42
+S=res://scenes/safe_room/safe_room.tscn                                    # 09 ST1-D: der Lauf wird eine Staffel
+GODOT=… $T --shot $S shot.png 30 1280x720 --recipe=season_talent_show                                     # 65
+GODOT=… $T --shot $S shot.png 30 1280x720 --recipe=season_talent_tree                                     # 66
+GODOT=… $T --shot $S shot.png 30 1280x720 --recipe=season_party                                           # 67
+GODOT=… $T --shot $S shot.png 30 1280x720 --recipe=season_skills                                          # 68
+GODOT=… $T --shot $S shot.png 30 1280x720 --recipe=season_preview                                         # 69
+GODOT=… $T --shot $S shot.png 30 2400x1080 --touch --recipe=season_talent_tree                           # 70 (71: season_talent_show)
 ```
 
 ## 11. Nächste Schritte

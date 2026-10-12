@@ -11,6 +11,10 @@ extends CanvasLayer
 ## taps (disabled), so an accept that opened the show — or a key still held / mashed after a pick — never picks a card:
 ## a pick needs one deliberate press after the cards are fully there. pick() itself (tests, tools) is not locked.
 ## Modal layer 60 (like the vending machine); signal `closed`. Look: ink panel with the gold show accent.
+## Staffeln (09 §8.4, ST1-D): where the talent tree governs (TalentTree.governs) the show presents rows — every open
+## row of both members in order (oldest first), its three talents as cards with their column (the branch of a class
+## row, Angriff / Show / Schutz of a figure row); a pick is Game.pick_talent_row ("talent" v2). Re-picks are the
+## talent tree's (scenes/ui/talent_tree.tscn, Party page), not the show's.
 
 signal closed()
 
@@ -20,11 +24,14 @@ const InputGlyph := preload("res://scenes/ui/input_glyph.gd")
 const TalentText := preload("res://scenes/ui/talent_text.gd")
 const CARD_W: float = 540.0
 const CARD_H: float = 286.0
+const ROW_CARD_W: float = 380.0             # Staffeln: three cards of a row side by side at 1280 px
+const ROW_CARD_H: float = 300.0
 const PICK_PAUSE_SEC: float = 0.45          # the chosen card glows before the next choice appears
 const INPUT_LOCK_SEC: float = 0.5           # anti-mash: new cards fade in and ignore input this long
 
 var member_id: String = ""                  # member of the choice on screen ("" = nothing open)
-var offer: PackedStringArray = []           # the two talent ids on screen
+var offer: PackedStringArray = []           # the two talent ids on screen (the tree: the three of the row)
+var row: int = 0                            # Staffeln (09 §8.4): the tree row on screen (0 = the 06-B offer)
 var card_buttons: Array[Button] = []
 var close_button: Button
 var picked: PackedStringArray = []          # "<member>:<talent>" picked during this visit of the show
@@ -57,7 +64,10 @@ func _ready() -> void:
 	Game.ensure_state()
 	_total = Talents.open_choices(Game.state, DB.data)
 	_build()
-	if Talents.picks_in_party(Game.state) == 0 and _total > 0:
+	if tree_mode():
+		if _total > 0 and _tree_picks() == 0:
+			Show.say("season_tree_open")      # the first rows of the season: the rule in one sentence (09 §0.5)
+	elif Talents.picks_in_party(Game.state) == 0 and _total > 0:
 		Show.say("talent_show_open")          # first Talent-Show of the run: the one-sentence rule (06 §0.5)
 	show_next()
 	UiUtil.slide_in(_panel)
@@ -82,11 +92,27 @@ func input_locked() -> bool:
 	return false
 
 
+## True where the talent tree governs (09 §8.4: every season): rows of three instead of the offer of two.
+func tree_mode() -> bool:
+	return Game.state != null and TalentTree.governs(Game.state)
+
+
 ## Shows the next open choice (party order, oldest level first) or the "all done" state; returns false if none is open.
+## The tree: the member's oldest open row and its three talents.
 func show_next() -> bool:
 	member_id = ""
 	offer = PackedStringArray()
+	row = 0
 	for m: PartyMember in UiUtil.party():
+		if tree_mode():
+			var open: PackedInt32Array = TalentTree.open_rows(Game.state, DB.data, m)
+			if open.is_empty():
+				continue
+			member_id = m.id
+			row = open[0]
+			for t: TalentDef in TalentTree.row_talents(DB.data, m, row):
+				offer.append(t.id)
+			break
 		if Talents.has_choice(Game.state, DB.data, m.id):
 			member_id = m.id
 			offer = Talents.current_offer(Game.state, DB.data, m.id)
@@ -101,13 +127,14 @@ func pick(index: int) -> bool:
 		return false
 	var mid: String = member_id
 	var tid: String = offer[index]
-	if not Game.pick_talent(mid, tid):
+	var ok: bool = Game.pick_talent_row(mid, row, tid) if row > 0 else Game.pick_talent(mid, tid)
+	if not ok:
 		Sfx.play_ui(&"ui_error")
 		_say("Das geht gerade nicht.", UiTheme.C_DANGER)
 		return false
 	picked.append("%s:%s" % [mid, tid])
 	Sfx.play(&"achievement")
-	Show.say("talent_pick:" + mid)
+	Show.say(("season_tree_pick:" if row > 0 else "talent_pick:") + mid)
 	_say("%s lernt %s." % [_member_name(mid), UiUtil.tr_text(DB.talent(tid).name)], UiTheme.C_OK)
 	_glow(index)
 	_busy = true
@@ -130,14 +157,32 @@ func close() -> void:
 	queue_free()
 
 
-## Progress text "Wahl 2 von 3" of the choice on screen.
+## Progress text "Wahl 2 von 3" of the choice on screen ("Reihe 2 von 3" for the tree).
 func progress_text() -> String:
 	var open_now: int = Talents.open_choices(Game.state, DB.data)
 	var total: int = maxi(_total, open_now + picked.size())
-	return "Wahl %d von %d" % [picked.size() + 1, maxi(total, 1)]
+	return "%s %d von %d" % ["Reihe" if tree_mode() else "Wahl", picked.size() + 1, maxi(total, 1)]
 
 
 # --- internals --------------------------------------------------------------------------------------------------------
+
+## Picks of the tree in the whole party (0 = the first rows of the season).
+func _tree_picks() -> int:
+	var n: int = 0
+	for m: PartyMember in UiUtil.party():
+		n += TalentTree.picked(DB.data, m).size()
+	return n
+
+
+## The level the next row of the tree opens on for anybody in the party (0 = none left).
+func _next_row_level() -> int:
+	var best: int = 0
+	for m: PartyMember in UiUtil.party():
+		for r: int in TalentTree.rows(DB.data, m):
+			if r > m.level and (best == 0 or r < best):
+				best = r
+	return best
+
 
 func _member_name(mid: String) -> String:
 	var m: PartyMember = Game.state.member(mid) if Game.state != null else null
@@ -158,6 +203,9 @@ func _fill() -> void:
 	if m == null:
 		_who.text = "Alle Talente gewählt"
 		_sub.text = "Neue Wahl ab der nächsten ungeraden Stufe (3, 5, 7, 9)."   # 09 §1.2: "Stufe", never "Level"
+		if tree_mode():
+			var next: int = _next_row_level()
+			_sub.text = "Die nächste Reihe öffnet auf Stufe %d." % next if next > 0 else "Der Talentbaum ist voll."
 		_progress.text = ""
 		_set_portrait("")
 		var done: Label = UiUtil.label("Die Show geht weiter. Die Jury ist zufrieden. Vorerst.", &"", 22,
@@ -172,8 +220,14 @@ func _fill() -> void:
 	_who.text = "%s  ·  Stufe %d" % [_member_name(m.id), open[0] if not open.is_empty() else m.level]
 	var had: PackedStringArray = TalentText.member_talents(m)
 	_sub.text = "Bisher: " + (", ".join(had) if not had.is_empty() else "noch kein Talent")
+	if row > 0:                                   # the tree: which row, of which tree
+		var kind: String = TalentText.row_kind(row)
+		if TalentDef.CLASS_ROWS.has(row) and DB.has_id("classes", m.class_id):
+			kind += " " + UiUtil.tr_text(DB.class_def(m.class_id).name)
+		_who.text = "%s  ·  Stufe %d  ·  %s" % [_member_name(m.id), row, kind]
 	_progress.text = progress_text()
 	_set_portrait(m.id)
+	_cards.add_theme_constant_override("separation", 18 if row > 0 else 24)
 	for i in offer.size():
 		var b: Button = _card(m, DB.talent(offer[i]), i)
 		_cards.add_child(b)
@@ -235,7 +289,9 @@ func _card(m: PartyMember, def: TalentDef, index: int) -> Button:
 	var b: Button = UiUtil.button("", &"ButtonFlat")
 	b.name = "Card_%d" % index
 	b.set_meta("talent_id", def.id)
-	b.custom_minimum_size = Vector2(CARD_W, CARD_H)
+	var narrow: bool = def.is_tree()              # the tree: three cards of a row
+	var w: float = ROW_CARD_W if narrow else CARD_W
+	b.custom_minimum_size = Vector2(w, ROW_CARD_H if narrow else CARD_H)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var accent: Color = TalentText.color_of(def)
 	var normal: StyleBoxFlat = UiUtil.box_style(Color(UiUtil.C_INK, 0.7), Color(accent, 0.55), 2, 0.0, 22, 16)
@@ -257,7 +313,7 @@ func _card(m: PartyMember, def: TalentDef, index: int) -> Button:
 	UiUtil.full_rect(margin)
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for side: String in ["margin_left", "margin_right"]:
-		margin.add_theme_constant_override(side, 24)
+		margin.add_theme_constant_override(side, 18 if narrow else 24)
 	for side: String in ["margin_top", "margin_bottom"]:
 		margin.add_theme_constant_override(side, 18)
 	b.add_child(margin)
@@ -269,11 +325,11 @@ func _card(m: PartyMember, def: TalentDef, index: int) -> Button:
 	col.add_child(head)
 	var badge: PanelContainer = PanelContainer.new()
 	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	badge.custom_minimum_size = Vector2(64, 64)
+	badge.custom_minimum_size = Vector2(52, 52) if narrow else Vector2(64, 64)
 	var bsb: StyleBoxFlat = UiUtil.box_style(Color(accent, 0.18), accent, 2, 0.0, 0, 0)
-	bsb.set_corner_radius_all(32)
+	bsb.set_corner_radius_all(26 if narrow else 32)
 	badge.add_theme_stylebox_override("panel", bsb)
-	var ic: Control = UiIcon.make(TalentText.icon_kind(def.icon), accent, 34)
+	var ic: Control = UiIcon.make(TalentText.icon_kind(def.icon), accent, 28 if narrow else 34)
 	ic.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	badge.add_child(ic)
@@ -283,7 +339,7 @@ func _card(m: PartyMember, def: TalentDef, index: int) -> Button:
 	names.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	names.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	head.add_child(names)
-	var n: Label = UiUtil.label(UiUtil.glyph_safe(UiUtil.tr_text(def.name)), &"", 28)
+	var n: Label = UiUtil.label(UiUtil.glyph_safe(UiUtil.tr_text(def.name)), &"", 22 if narrow else 28)
 	n.name = "Name"
 	n.add_theme_font_override("font", UiTheme.font_bold())
 	n.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -292,40 +348,45 @@ func _card(m: PartyMember, def: TalentDef, index: int) -> Button:
 	var tags: HBoxContainer = UiUtil.hbox(10)
 	tags.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	names.add_child(tags)
-	tags.add_child(_pill(TalentText.kind_tag(def), accent))
+	var caption: String = TalentText.col_caption(def)   # the tree: the column (branch / Angriff · Show · Schutz)
+	tags.add_child(_pill(caption.to_upper() if caption != "" else TalentText.kind_tag(def), accent))
 	tags.add_child(UiUtil.label(rank_text(m, def), &"LabelSmall", 16))
-	var desc: Label = UiUtil.label(UiUtil.glyph_safe(UiUtil.tr_text(def.desc)), &"", 19, UiTheme.C_TEXT_DIM)
+	var desc: Label = UiUtil.label(UiUtil.glyph_safe(UiUtil.tr_text(def.desc)), &"", 17 if narrow else 19,
+		UiTheme.C_TEXT_DIM)
 	desc.name = "Desc"
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.custom_minimum_size = Vector2(CARD_W - 60.0, 0)
+	desc.custom_minimum_size = Vector2(w - 48.0 if narrow else CARD_W - 60.0, 0)
 	col.add_child(desc)
 	# the effect is the headline of the card: big, centered in the free space, the real numbers right under it
 	col.add_child(UiUtil.spacer(0, 0, true))
 	var fx_text: String = TalentText.effects_line(def, m.id)
-	if fx_text.length() > 28:
+	if fx_text.length() > (22 if narrow else 28):
 		fx_text = fx_text.replace(": ", ":\n")      # "… Accessoire:" / "Abwehr +5 %" (no orphaned "+5 %")
-	var fx: Label = UiUtil.label(UiUtil.glyph_safe(fx_text), &"", 30, accent)
+	var fx: Label = UiUtil.label(UiUtil.glyph_safe(fx_text), &"", 23 if narrow else 30, accent)
 	fx.name = "Effect"
 	fx.add_theme_font_override("font", UiTheme.font_bold())
 	fx.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	fx.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	fx.custom_minimum_size = Vector2(CARD_W - 60.0, 0)
+	fx.custom_minimum_size = Vector2(w - 48.0 if narrow else CARD_W - 60.0, 0)
 	col.add_child(fx)
 	var preview: String = _preview(m, def)
-	var pv: Label = UiUtil.label(UiUtil.glyph_safe(preview), &"", 18, UiTheme.C_TEXT)
+	var pv: Label = UiUtil.label(UiUtil.glyph_safe(preview), &"", 16 if narrow else 18, UiTheme.C_TEXT)
 	pv.name = "Preview"
 	pv.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	pv.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	pv.custom_minimum_size = Vector2(CARD_W - 60.0, 0)
+	pv.custom_minimum_size = Vector2(w - 48.0 if narrow else CARD_W - 60.0, 0)
 	pv.visible = preview != ""
 	col.add_child(pv)
 	col.add_child(UiUtil.spacer(0, 0, true))
 	return b
 
 
-## Small tag next to the kind pill: "Neu" (one rank) or "Rang 1/2", "Rang 2/2" (talents with two ranks).
+## Small tag next to the kind pill: "Neu" (one rank) or "Rang 1/2", "Rang 2/2" (talents with two ranks); a talent of
+## the tree: "Neu", or "Gewählt" while it counts in its row.
 static func rank_text(m: PartyMember, def: TalentDef) -> String:
 	var r: int = Talents.rank(m, def.id) if m != null and def != null else 0
+	if def != null and def.is_tree():
+		return "Gewählt" if m != null and TalentTree.pick_of(DB.data, m, def.row) == def.id else "Neu"
 	if def == null or def.max_rank <= 1:
 		return "Neu"
 	return "Rang %d/%d" % [mini(r + 1, def.max_rank), def.max_rank]
@@ -338,7 +399,10 @@ static func rank_text(m: PartyMember, def: TalentDef) -> String:
 func _preview(m: PartyMember, def: TalentDef) -> String:
 	var before: Dictionary = UiUtil.member_stats(m)
 	var probe: PartyMember = PartyMember.from_dict(m.to_dict())
-	probe.talents[def.id] = Talents.rank(m, def.id) + 1
+	if def.is_tree():                              # the tree: this talent in its row (instead of the one there)
+		probe.talent_rows[str(def.row)] = def.id
+	else:
+		probe.talents[def.id] = Talents.rank(m, def.id) + 1
 	var after: Dictionary = UiUtil.member_stats(probe)
 	var parts: PackedStringArray = []
 	for k: String in UiUtil.STAT_KEYS:
@@ -420,8 +484,10 @@ func _build() -> void:
 	var pl: Label = UiUtil.label("TALENT-SHOW", &"LabelHeader", 28, UiUtil.C_INK)
 	pl.add_theme_constant_override("outline_size", 0)
 	pill.add_child(pl)
-	hc.add_child(UiUtil.label("Pro Wahl eins von zwei Talenten. Das andere bekommt jemand anderes. Nie.", &"LabelSmall",
-		16))
+	var rule: String = "Pro Wahl eins von zwei Talenten. Das andere bekommt jemand anderes. Nie."
+	if Game.state != null and TalentTree.governs(Game.state):   # 09 §8.4: the rule in one sentence
+		rule = "Pro Reihe eins von drei Talenten. Umwählen im Safe Room, jederzeit und kostenlos."
+	hc.add_child(UiUtil.label(rule, &"LabelSmall", 16))
 	head.add_child(UiUtil.spacer(0, 0, true))
 	close_button = UiUtil.close_button("Später")
 	close_button.pressed.connect(close)

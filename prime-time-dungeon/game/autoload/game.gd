@@ -419,14 +419,20 @@ func apply_battle_result(result: BattleResult) -> BattleRewards:
 	Events.party_changed.emit()
 	Events.inventory_changed.emit()
 	Events.credits_changed.emit(_credits(), _credits() - credits_before)
+	var tree: bool = TalentTree.governs(state)   # Staffeln (09 §8.4, ST1-D): rows of the tree instead of odd levels
 	for info: LevelUpInfo in rewards.level_ups:
 		if info == null:
 			continue
 		Events.member_leveled.emit(info.member_id, info.new_level, info.learned)
 		for lv in range(info.old_level + 1, info.new_level + 1):
 			Events.level_up.emit({"member": info.member_id, "level": lv})
-			if Talents.is_talent_level(lv):                # 06 package B: a choice waits in the Talent-Show
+			if not tree and Talents.is_talent_level(lv):   # 06 package B: a choice waits in the Talent-Show
 				Events.talent_pending.emit(info.member_id, lv)
+			elif tree and TalentTree.is_row_level(lv) \
+					and TalentTree.rows(DB.data, state.member(info.member_id)).has(lv):
+				Events.talent_pending.emit(info.member_id, lv)
+	if state.season != null:   # Staffeln (09 §8.2–8.4, ST1-D): toasts and M.O.D. lines of the level-ups (live only)
+		_level_after_combat(rewards)
 	if not timer_was_started and state.floor_run != null and state.floor_run.timer_started:
 		Events.floor_timer_started.emit()
 	return rewards
@@ -531,6 +537,10 @@ func apply_floor_event(event_id: String, choice: String) -> Dictionary:
 		return {}
 	var credits_before: int = _credits()
 	var outcome: Dictionary = RunRules.apply_floor_event(state, DB.data, layout, event_id, choice)
+	if outcome.get("season", null) is Array:    # Staffeln (09 §8.2, ST1-D): the event's EXP (SEASON event "exp")
+		var season_evs: Array[ExploreEvent] = []
+		season_evs.assign(outcome["season"] as Array)
+		_dispatch(season_evs)
 	var hype: float = float(outcome.get("hype", 0.0))
 	if hype != 0.0:
 		Show.add_hype(hype, &"event")
@@ -1784,6 +1794,7 @@ func _season_stairs_open() -> bool:
 ## the route.
 func _season_event(ev: ExploreEvent) -> void:
 	var kind: String = str(ev.data.get("kind", ""))
+	_level_event(ev)                              # ST1-D: EXP, the Regie-Crashkurs, the talent tree
 	if kind == "rescue":
 		var idx: int = int(ev.data.get("floor", 0))
 		RunRules.season_moved(state, idx)
@@ -1974,3 +1985,141 @@ func _cast_answer(ev: ExploreEvent) -> void:
 	if CAST_ANSWER_TAGS.has(kind):
 		Show.say(str(CAST_ANSWER_TAGS[kind]), {"cand": CastSim.label(state, DB.data, int(ev.data.get("who", -1))),
 			"count": int(ev.data.get("n", 0))})
+
+
+# --- Staffeln (09 §8.2–8.4, ST1-D): levels, the ability book, the talent tree -----------------------------------------
+# The core decides (LevelBand, AbilityBook, TalentTree); here the signals of a level-up that came without a combat (the
+# SEASON events "exp" — stairs, floor event — and "crash"; live and in Game.replay_log alike, Show counts them for its
+# achievements) and, live only, the toasts and M.O.D.'s one-sentence lines (09 §0.5): new abilities ("Neue
+# Fähigkeit"), a class rank, the rows of the talent tree ("TALENT-SHOW BEREIT"), Überstunden, Aufholjagd, Crashkurs.
+
+## The level part of a SEASON event (_season_event): "exp" and "crash" bring level-ups, "talent" is a pick of the tree
+## (Game.pick_talent_row), "rescue" may put the party into the catch-up of its new floor.
+func _level_event(ev: ExploreEvent) -> void:
+	match str(ev.data.get("kind", "")):
+		"exp":
+			var members: Dictionary = ev.data.get("members", {})
+			var ids: Array = members.keys()
+			ids.sort()
+			for mid: Variant in ids:
+				var e: Dictionary = members[mid]
+				_level_signals(str(mid), int(e.get("from", 0)), int(e.get("level", 0)),
+					PackedStringArray(e.get("learned", [])))
+			Events.party_changed.emit()
+			if int(ev.data.get("overtime", 0)) > 0:
+				Events.credits_changed.emit(_credits(), int(ev.data.get("overtime", 0)))
+			if not replaying:
+				_level_exp_notes(ev.data)
+		"crash":
+			var lifted: Dictionary = ev.data.get("members", {})
+			var lids: Array = lifted.keys()
+			lids.sort()
+			for mid: Variant in lids:
+				var span: Array = lifted[mid]
+				var m: PartyMember = state.member(str(mid))
+				var learned: PackedStringArray = PackedStringArray()
+				if m != null:
+					learned = AbilityBook.new_between(m, DB.data, int(span[0]), int(span[1]))
+				_level_signals(str(mid), int(span[0]), int(span[1]), learned)
+			Events.party_changed.emit()
+			Events.inventory_changed.emit()
+			if not replaying:
+				Show.say("season_crash_course")
+				var parts: PackedStringArray = []
+				for mid: Variant in lids:
+					var m2: PartyMember = state.member(str(mid))
+					var span2: Array = lifted[mid]
+					parts.append("%s: Stufe %d auf %d" % [_level_who(m2) if m2 != null else str(mid),
+						int(span2[0]), int(span2[1])])
+				Events.toast_requested.emit(", ".join(parts) + " · Aufholpaket im Inventar", &"crash")
+		"talent":
+			Events.talent_picked.emit(str(ev.data.get("member", "")), str(ev.data.get("id", "")))
+			Events.party_changed.emit()
+		"rescue":
+			if not replaying:
+				_level_floor_notes()
+
+
+## The signals of a level-up from `from` to `to` (like apply_battle_result): member_leveled, one level_up per level,
+## talent_pending for every row of the tree it opens; live the toasts of _level_notes.
+func _level_signals(mid: String, from: int, to: int, learned: PackedStringArray) -> void:
+	var m: PartyMember = state.member(mid) if state != null else null
+	if m == null or to <= from:
+		return
+	Events.member_leveled.emit(mid, to, learned)
+	for lv in range(from + 1, to + 1):
+		Events.level_up.emit({"member": mid, "level": lv})
+	for row: int in TalentTree.rows_between(DB.data, m, from, to):
+		Events.talent_pending.emit(mid, row)
+	if not replaying:
+		_level_notes(m, from, to, learned)
+
+
+## Live: after a combat in a season — the notes of every level-up, the Überstunden.
+func _level_after_combat(rw: BattleRewards) -> void:
+	if replaying:
+		return
+	for info: LevelUpInfo in rw.level_ups:
+		var m: PartyMember = state.member(info.member_id) if info != null else null
+		if m != null:
+			_level_notes(m, info.old_level, info.new_level, info.learned)
+	if rw.overtime > 0:
+		Events.toast_requested.emit("+%d Credits: EXP über dem Deckel dieser Etage" % rw.overtime, &"overtime")
+		Show.say("season_overtime")
+
+
+## Live: the toasts of a level-up — new abilities (09 §8.3 banner), a class rank, the rows of the tree.
+func _level_notes(m: PartyMember, from: int, to: int, learned: PackedStringArray) -> void:
+	var who: String = _level_who(m)
+	for sid: String in learned:
+		var sk: SkillDef = DB.skill(sid) if DB.has_id("skills", sid) else null
+		Events.toast_requested.emit("%s: %s — im Fähigkeitenbuch auf die Leiste legen" % [who,
+			sk.name if sk != null else sid], &"ability")
+	if not learned.is_empty():
+		Show.say("season_ability")
+	var ranks: Array = DB.class_def(m.class_id).rt.get("ranks", []) as Array \
+		if m.class_id != "" and DB.has_id("classes", m.class_id) else []
+	for i in ranks.size():
+		var lv: int = int((ranks[i] as Dictionary).get("level", 99))
+		if lv > from and lv <= to:
+			Events.toast_requested.emit("%s: Rang %s — alle Klassenfähigkeiten stärker" % [who,
+				AbilityBook.RANK_NAMES[i + 2]], &"ability")
+			Show.say("season_rank", {"count": AbilityBook.RANK_NAMES[i + 2]})
+	var rows: PackedInt32Array = TalentTree.rows_between(DB.data, m, from, to)
+	if not rows.is_empty():
+		Events.toast_requested.emit("%s: neue Talentreihe (Stufe %d) — im Safe Room wählen" % [who, rows[0]],
+			&"talent")
+
+
+## Live: the stairs / event EXP in one toast per member ("+120 EXP · Etagen-Abschluss").
+func _level_exp_notes(data: Dictionary) -> void:
+	var members: Dictionary = data.get("members", {})
+	var ids: Array = members.keys()
+	ids.sort()
+	var what: String = "Etagen-Abschluss" if str(data.get("source", "")) == "stairs" else "Etagen-Event"
+	for mid: Variant in ids:
+		var e: Dictionary = members[mid]
+		var m: PartyMember = state.member(str(mid))
+		if int(e.get("gained", 0)) > 0 and m != null:
+			Events.toast_requested.emit("%s: +%d EXP · %s" % [_level_who(m), int(e["gained"]), what],
+				&"exp")
+	if int(data.get("overtime", 0)) > 0:
+		Events.toast_requested.emit("+%d Credits: EXP über dem Deckel dieser Etage" % int(data["overtime"]),
+			&"overtime")
+
+
+## Live, on a new floor of a season: M.O.D. explains the Aufholjagd when a member stands below the band (09 §0.5).
+func _level_floor_notes() -> void:
+	if state == null or state.season == null:
+		return
+	for m: PartyMember in state.party:
+		if m != null and LevelBand.catch_up_pm(state, DB.data, m) > LevelBand.PM:
+			Show.say("season_catch_up")
+			return
+
+
+## "Graf Mopsula" / the candidate's name (the toasts' wording, like the party page).
+func _level_who(m: PartyMember) -> String:
+	var def: PartyMemberDef = DB.party_member(m.id) if DB.has_id("party", m.id) else null
+	var n: String = m.display_name if m.display_name != "" else (def.name if def != null else m.id)
+	return def.title + " " + n if def != null and def.title != "" and m.id != "kai" else n

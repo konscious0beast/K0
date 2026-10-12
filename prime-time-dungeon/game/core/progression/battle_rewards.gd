@@ -14,3 +14,6 @@ var mp_regen: Dictionary = {}          # member id → MP restored by the "Werbe
 var followers: int = 0
 var revived: PackedStringArray = []
 var achievements: PackedStringArray = []
+# --- Staffeln (09 §8.2, ST1-D): only filled in a season (LevelBand.combat_exp) ---
+var exp_by_member: Dictionary = {}     # member id → EXP taken (colour, catch-up / rested, cap; the rest is overtime)
+var overtime: int = 0                  # "Überstunden": credits from EXP over the cap of the floor

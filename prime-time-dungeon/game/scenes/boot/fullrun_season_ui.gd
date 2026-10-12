@@ -1,13 +1,15 @@
 extends RefCounted
 ## The season screens of the full-run bot (09 §11.3 ST1-I; scenes/boot/fullrun.gd, section "Staffeln"): every place
 ## where the bot touches a season screen or a season facade sits here, so the screens of the season UI (ST1-H: "Sendung
-## starten", the Staffel tab, the tempo offer, the season results) and the Recall's screen are wired in one file. Today:
-## the start through Game.start_season (the facade the title's start uses; the bot passes a fixed start moment), the
-## Recall through Game.choose_casting, the class abilities through Game.apply_loadout (the skills menu's path), the rows
-## of the talent tree through the Talent-Show, the logout through the logout dialog (from the pause menu or the safe
-## room), the login through the title's "Fortsetzen" and "Während Sie schliefen …", the stairs dialog, the Etagen-Bilanz
-## and the end screens. Private helper (no class_name), created by the bot with itself as `bot` (duck-typed: wait_for,
-## note, fail, finished).
+## starten", the Staffel tab, the tempo offer, the season results) are wired in one file. Today: the start through
+## Game.start_season (the facade the title's start uses; the bot passes a fixed start moment), the Recall screen
+## (scenes/ui/recall.tscn: the bot confirms its pairs through the facade of the screen's "Bestätigen" and closes it),
+## the class abilities through Game.apply_loadout (the skills menu's path), the rows of the talent tree through the
+## Talent-Show, the logout through the logout dialog (from the pause menu or the safe room), the login through the
+## title's "Fortsetzen" and "Während Sie schliefen …", the stairs dialog, the Etagen-Bilanz and the end screens. A new
+## season screen (an offer after the Recall, a tab, the season results) gets its function here and one call where the
+## bot meets it (_season_safe_room, _season_settle). Private helper (no class_name), created by the bot with itself as
+## `bot` (duck-typed: wait_for, note, fail, finished).
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const DAY: int = 86400
@@ -17,6 +19,7 @@ const RECALL: Dictionary = {"kai": ["spc_original", "cls_kai_wrecker"],
 const LOGIN_BUDGET: int = 1200
 const DIALOG_BUDGET: int = 300
 const PICK_BUDGET: int = 1500
+const RECALL_BUDGET: int = 120
 
 var bot: Node = null
 ## The logins so far: [{"absence", "away", "question", "lines", "sub"}] (the bot's report).
@@ -39,18 +42,66 @@ func start(slot: int, def_id: String, opts: Dictionary, hero_id: String) -> bool
 	return true
 
 
-## The Recall (09 §0.6: floor 3, a safe room): species and class of both figures through Game.choose_casting (the core
-## facade — the Recall screen of 06 §3 will call the same). true when every figure has a class afterwards.
-func recall() -> bool:
-	for mid: String in ["kai", "mopsula"]:
-		var m: PartyMember = Game.state.member(mid)
-		if m == null or m.class_id != "":
-			continue
-		var pick: Array = RECALL[mid]
-		if not Game.choose_casting(mid, str(pick[0]), str(pick[1])):
-			return bot.fail("Recall: %s cannot become %s / %s (%s)" % [mid, str(pick[0]), str(pick[1]),
-				Casting.check(Game.state, DB.data, mid, str(pick[0]), str(pick[1]))])
-		bot.note("Recall: %s wird %s (%s)" % [mid, DB.class_def(str(pick[1])).name, str(pick[0])])
+## The Recall (06 §3.5, 09 Kap. 11.3 "Stand Recall"): the first visit of a safe room on floor >= 3 opens the screen by
+## itself while a first choice is open (Casting.mode "first"); otherwise its RECALL button does (SafeRoomScene.
+## open_recall). The bot confirms its pair (RECALL) for every member with a first choice, the controlled figure first
+## (Casting.open_members), through the facade the screen's "Bestätigen" calls — Game.choose_casting, then the
+## signature on its slot (Casting.signature_loadout → Game.apply_loadout) — and closes the screen. Nothing to choose: a
+## screen that opened anyway is closed. The pairs as "<member>:<species>/<class>"; null = the run failed.
+func recall(scene: SafeRoomScene) -> Variant:
+	var out: PackedStringArray = []
+	var first: PackedStringArray = []
+	for mid: String in Casting.open_members(Game.state, DB.data):
+		if Casting.mode(Game.state, DB.data, mid) == "first":
+			first.append(mid)
+	var layer: Node = recall_screen(scene)
+	if layer == null and not first.is_empty():
+		layer = scene.open_recall()
+	if layer == null:
+		if first.is_empty():
+			return out
+		bot.fail("the Recall did not open in %s (first choices: %s)" % [scene.safe_room_id, ", ".join(first)])
+		return null
+	for mid: String in first:
+		var pick: Array = RECALL.get(mid, [])
+		if pick.size() != 2 or not Game.choose_casting(mid, str(pick[0]), str(pick[1])):
+			bot.fail("Recall: %s cannot become %s (%s)" % [mid, str(pick), Casting.check(Game.state, DB.data, mid,
+				str(pick[0]) if pick.size() == 2 else "", str(pick[1]) if pick.size() == 2 else "")])
+			return null
+		var lo: Dictionary = Casting.signature_loadout(Game.state, DB.data, mid)
+		if not lo.is_empty() and not Game.apply_loadout(lo):
+			bot.fail("Recall: the signature of %s was refused: %s" % [mid, JSON.stringify(lo)])
+			return null
+		out.append("%s:%s/%s" % [mid, str(pick[0]), str(pick[1])])
+		bot.note("Recall: %s wird %s (%s)%s" % [mid, DB.class_def(str(pick[1])).name, str(pick[0]),
+			", Signatur auf der Leiste" if not lo.is_empty() else ""])
+	layer.call("close")
+	if not await bot.wait_for(func() -> bool: return recall_screen(scene) == null, RECALL_BUDGET, "the Recall closed"):
+		return null
+	return out
+
+
+## The Recall screen open in `scene` (null when none).
+static func recall_screen(scene: Node) -> Node:
+	if scene == null:
+		return null
+	for c: Node in scene.get_children():
+		if c.scene_file_path == SafeRoomScene.RECALL and not c.is_queued_for_deletion():
+			return c
+	return null
+
+
+## A screen the safe room opened by itself after the Recall (ST1-H: the tempo offer after the first class choice, 09
+## §2.1 — answered here once it exists; the bot keeps its tempo). Today there is none: a modal layer still open after
+## two frames (a CanvasLayer with the modal's signal `closed`) fails the run with its scene — the place to teach the
+## bot the new screen. false = the run failed.
+func room_screens(scene: SafeRoomScene) -> bool:
+	for _i in 2:
+		await bot.get_tree().process_frame
+	for c: Node in scene.get_children():
+		if c is CanvasLayer and c.has_signal("closed") and not c.is_queued_for_deletion():
+			return bot.fail("the safe room %s opened a screen the bot does not know: %s (FullRunSeasonUi.room_screens)"
+				% [scene.safe_room_id, c.scene_file_path if c.scene_file_path != "" else str(c.name)])
 	return true
 
 

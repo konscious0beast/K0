@@ -2868,11 +2868,15 @@ func _season_day() -> float:
 	return float(CastSim.now(Game.state)) / float(SeasonClock.DAY_SEC) if Game.state != null else 0.0
 
 
-## The combats since the last look go into the floor's record (count, seconds, defeats, the bosses with outcome).
+## The combats since the last look go into the floor's record (count, seconds, defeats, the bosses with outcome); no
+## level may stand above the cap of the floor.
 func _season_count_battles() -> void:
 	while _season_battles_seen < battles.size():
 		var b: Dictionary = battles[_season_battles_seen]
 		_season_battles_seen += 1
+		var top: int = LevelBand.cap(Game.state, DB.data)       # 09 §8.2 "Deckel" (floor 3: 13)
+		if int(_levels().max()) > top:
+			fail("level %s above the cap %d of floor %d" % [str(_levels()), top, Game.state.floor_run.index])
 		if _season_rec.is_empty():
 			continue
 		_season_rec["combats"] = int(_season_rec["combats"]) + 1
@@ -2894,9 +2898,10 @@ func _season_count_battles() -> void:
 
 # --- the season's screens --------------------------------------------------------------------------------------------
 
-## A safe-room visit in a season: the replay check, the Mopsula scenes, lootboxes, the Recall (floor 3), the rows of the
-## talent tree, the class abilities on the bar, gear and the vending machine — no "Speichern" (a season saves by
-## itself); a finished session logs out here (rested); then back into the exploration.
+## A safe-room visit in a season: the replay check, the Recall (floor >= 3: its screen opens by itself and holds the
+## room until it closes), the Mopsula scenes, lootboxes, the rows of the talent tree, the class abilities on the bar,
+## gear and the vending machine — no "Speichern" (a season saves by itself); a finished session logs out here (rested);
+## then back into the exploration.
 func _season_safe_room(scene: SafeRoomScene) -> bool:
 	phase = "safe room %s" % scene.safe_room_id
 	await get_tree().process_frame
@@ -2905,6 +2910,16 @@ func _season_safe_room(scene: SafeRoomScene) -> bool:
 	if not _season_rec.is_empty():
 		_season_rec["safe_visits"] = int(_season_rec["safe_visits"]) + 1
 	if not _replay_check():
+		return false
+	var pairs: Variant = await _season_ui.call("recall", scene)
+	if pairs == null:
+		return false
+	if not (pairs as PackedStringArray).is_empty():
+		if not _season_rec.is_empty():
+			_season_rec["recall"] = pairs
+		if not SeasonRules.unlocks_no_net(Game.state):
+			return fail("the Recall does not unlock Ohne Netz (09 V-7)")
+	if not await _season_ui.call("room_screens", scene):
 		return false
 	var guard: int = 0
 	while scene.pending_scene != null and guard < 4:
@@ -2919,11 +2934,6 @@ func _season_safe_room(scene: SafeRoomScene) -> bool:
 	if not Game.state.pending_lootboxes.is_empty():
 		if not await _open_lootboxes(scene):
 			return false
-	if fr.index >= 3 and Game.state.member("kai") != null and Game.state.member("kai").class_id == "":
-		if not _season_ui.call("recall"):
-			return false
-		if not SeasonRules.unlocks_no_net(Game.state):
-			return fail("the Recall does not unlock Ohne Netz (09 V-7)")
 	var picks: PackedStringArray = await _season_ui.call("talent_rows", scene)
 	if finished:
 		return false

@@ -58,14 +58,16 @@ const POSES: Dictionary = {"regular": [[0, -150, 128], [0, 250, 0], [-120, 340, 
 ## model: "look" per new room, "decide" per goal, "door" per cell change, "sneak" the last metres to a group — against
 ## its --pace=human run, seed 4242 Am Stück typical, the exploration minutes of floors 1–4 agree within 12 %, the M.O.D.
 ## lines it reads included). Screens (the countdown stands): "event" the event dialog, "safe" a safe-room visit's door
-## and menus, + "lootbox", "pick", "buy", "scene" each, "combat" the results panel, "intro" a boss's intro, "stairs" the
-## stairs dialog and the Etagen-Bilanz — a person's reading and clicking; the bot of the fast pace clicks through them
-## in FAST_SCREENS_PM ‰ of that (the full-run bot: ≈ 45 s per floor).
+## and menus, + "lootbox", "pick", "buy", "scene" each, "recall" per member of the Recall (species and class cards, the
+## jury's verdict), "combat" the results panel, "intro" a boss's intro, "stairs" the stairs dialog and the Etagen-Bilanz
+## — a person's reading and clicking; the bot of the fast pace clicks through them in FAST_SCREENS_PM ‰ of that (the
+## full-run bot: ≈ 45 s per floor).
 const TIME: Dictionary = {"cell": 3.2, "engage": 4.0, "chest": 0.5, "gate": 1.0,
 	"look": 8.0, "decide": 3.0, "door": 1.0, "sneak": 0.0,
-	"event": 6.0, "safe": 12.0, "lootbox": 4.0, "pick": 3.0, "buy": 2.0, "scene": 15.0, "combat": 4.0, "intro": 8.0,
-	"stairs": 8.0}
-const SCREENS: PackedStringArray = ["event", "safe", "lootbox", "pick", "buy", "scene", "combat", "intro", "stairs"]
+	"event": 6.0, "safe": 12.0, "lootbox": 4.0, "pick": 3.0, "buy": 2.0, "scene": 15.0, "recall": 30.0, "combat": 4.0,
+	"intro": 8.0, "stairs": 8.0}
+const SCREENS: PackedStringArray = ["event", "safe", "lootbox", "pick", "buy", "scene", "recall", "combat", "intro",
+	"stairs"]
 const FAST_SCREENS_PM: int = 250
 
 var data: GameData = null
@@ -478,6 +480,7 @@ func _fight(group: String, enc_id: String, cell: Vector2i, boss: bool) -> void:
 	var levels: Array[int] = _levels()
 	rs.settle()
 	_note_credits(credits0)
+	_check_cap()
 	var res: BattleResult = sim.result
 	var sec: float = float(sim.tick()) / float(RtSim.TICKS_PER_SEC)
 	_spend(sec, false)
@@ -505,6 +508,14 @@ func _fight(group: String, enc_id: String, cell: Vector2i, boss: bool) -> void:
 		here = _safe_cell(str(rs.state.floor_run.location))
 	elif not won:
 		here = layout.start
+
+
+## 09 §8.2 "Deckel": no level above the band end of the floor the party stands on (floor 3: 13) — an error otherwise.
+func _check_cap() -> void:
+	var top: int = LevelBand.cap(rs.state, data)
+	for m: PartyMember in rs.state.party:
+		if m.level > top:
+			errors.append("floor %d: %s on level %d above the cap %d" % [rs.state.floor_run.index, m.id, m.level, top])
 
 
 ## The bot's commands into the running combat (RunSim records them at the encounter's tick): "" = accepted.
@@ -578,8 +589,8 @@ func _stairs() -> void:
 
 # --- safe rooms -------------------------------------------------------------------------------------------------------
 
-## A safe-room visit (the full-run bot's _season_safe_room): the door, the Mopsula scenes, lootboxes, the Recall (floor
-## 3), the talent rows, the class abilities, gear and vending; a finished session sleeps here; then out.
+## A safe-room visit (the full-run bot's _season_safe_room): the door, the Recall (floor >= 3), the Mopsula scenes,
+## lootboxes, the talent rows, the class abilities, gear and vending; a finished session sleeps here; then out.
 func _safe_room(sid: String) -> void:
 	var fr: FloorRun = rs.state.floor_run
 	if not layout.safe_room_info.has(sid):
@@ -591,6 +602,7 @@ func _safe_room(sid: String) -> void:
 	var first: bool = not fr.visited_safe_rooms.has(sid)
 	_apply({"t": "safe_room", "id": sid})
 	_rec_add("safe_visits", 1)
+	_recall()                                     # the Recall's screen opens first and holds the room (floor >= 3)
 	_scenes({"safe_room_id": sid, "first_visit": first, "safe_room_visits": fr.safe_room_visits,
 		"kai_level": rs.state.member("kai").level})
 	for box: String in rs.state.pending_lootboxes.duplicate():
@@ -598,11 +610,6 @@ func _safe_room(sid: String) -> void:
 		_apply({"t": "lootbox", "box": box})
 		_note_credits(c0)
 		_spend(float(t["lootbox"]), false)
-	if fr.index >= 3 and rs.state.member("kai").class_id == "":
-		for mid: String in ["kai", "mopsula"]:
-			var pick: Array = RECALL[mid]
-			_apply({"t": "casting", "member": mid, "species": str(pick[0]), "class": str(pick[1])})
-			_spend(float(t["pick"]), false)
 	for m: PartyMember in rs.state.party:
 		for row: int in TalentTree.open_rows(rs.state, data, m):
 			var row_t: Array[TalentDef] = TalentTree.row_talents(data, m, row)
@@ -619,6 +626,23 @@ func _safe_room(sid: String) -> void:
 		_logout_login()
 		return
 	_apply({"t": "safe_room_exit"})
+
+
+## The Recall (06 §3.5; the full-run bot's FullRunSeasonUi.recall): every member with a first choice (Casting.mode
+## "first"; the screen opens by itself in the first safe room of floor >= 3), the controlled figure first
+## (Casting.open_members) — what the screen's "Bestätigen" records: "casting", then in a season the signature on its
+## slot ("loadout" of Casting.signature_loadout). TIME.recall per member (its cards, the jury, the end page).
+func _recall() -> void:
+	for mid: String in Casting.open_members(rs.state, data):
+		if Casting.mode(rs.state, data, mid) != "first":
+			continue
+		var pick: Array = RECALL[mid]
+		_apply({"t": "casting", "member": mid, "species": str(pick[0]), "class": str(pick[1])})
+		var lo: Dictionary = Casting.signature_loadout(rs.state, data, mid)
+		if not lo.is_empty():
+			_apply(lo)
+		_rec_note("recall", "%s %s/%s" % [mid, str(pick[0]), str(pick[1])])
+		_spend(float(t["recall"]), false)
 
 
 ## The Mopsula scenes of the visit (RunRules.scene_allowed, data order, each once per visit; up to four).

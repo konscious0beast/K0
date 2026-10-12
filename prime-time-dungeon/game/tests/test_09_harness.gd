@@ -324,31 +324,48 @@ func test_smoke_floor_one_am_stueck() -> void:
 
 
 ## A calendar run with sessions of its own: 15 min on the evening before day 0, the logout, nine days away (more than
-## seven: the login's "clamp" first, collapses while asleep), 5 min on day 9, the logout and the login before the next
-## session. Twice with the same seed: the same report; the run log replays bit for bit, also as a file.
+## seven: the login's "clamp" first, collapses while asleep), 5 min on day 9, the logout, the login (floor 2's collapse
+## carries the sleeper into the first safe room of floor 3) and the Recall there (06 §3.5: the controlled figure first,
+## each "casting" with its signature's "loadout", Casting.signature_loadout), the logout. Twice with the same seed: the
+## same report; the run log replays bit for bit, also as a file.
 func test_smoke_calendar_sessions_logout_and_login() -> void:
 	var d: GameData = real_data()
 	var plan: Array = [{"day": -1, "start": -1800, "sec": 15 * MIN, "first": true},
 		{"day": 9, "start": 9 * DAY - 600, "sec": 5 * MIN, "first": false},
 		{"day": 9, "start": 9 * DAY + 3000, "sec": 5 * MIN, "first": false}]
-	var opts: Dictionary = {"tempo": "calendar", "strategy": "auto", "pace": "fast", "plan": plan, "sessions": 2,
+	var opts: Dictionary = {"tempo": "calendar", "strategy": "auto", "pace": "fast", "plan": plan, "sessions": 3,
 		"log": true}
 	var h: RefCounted = HarnessScript.new()
 	var r: Dictionary = h.call("play_season", d, 11, opts)
 	assert_eq([r["errors"], int(r["rejected"]), str(r["stop"])], [PackedStringArray(), 0, "sessions"], "a legal run")
 	var outs: Array = r["logouts"]
 	var ins: Array = r["logins"]
-	assert_eq([outs.size(), ins.size()], [2, 2], "two logouts, two logins")
+	assert_eq([outs.size(), ins.size()], [3, 3], "three logouts, three logins")
 	var in1: Dictionary = ins[0]
 	assert_true(int(in1["absence"]) > SeasonClock.MAX_JUMP_SEC, "nine days away")
 	assert_true(bool(in1["question"]) and int(in1["away"]) < int(in1["absence"]), "the clamp: at most seven days")
 	assert_gt(int(in1["floor"]), 1, "the collapses moved the sleeper on")
 	var in2: Dictionary = ins[1]
-	assert_eq([bool(in2["question"]), int(in2["away"])], [false, int(in2["absence"])], "a short absence: all of it")
+	assert_eq([bool(in2["question"]), int(in2["away"]), int(in2["floor"]), int(in2["rescued"])],
+		[false, int(in2["absence"]), 3, 1], "a short absence: all of it — and the rescue to floor 3")
 	assert_between(float((outs[0] as Dictionary)["play_min"]), 15.0, 22.0, "the first session's play time")
 	var again: Dictionary = (HarnessScript.new() as RefCounted).call("play_season", d, 11, opts)
 	assert_eq(again, r, "the same seed, the same report")
 	var rs: RunSim = h.get("rs")
+	var recall: Array = []
+	for e: Dictionary in rs.run_log.cmds():
+		var c: Dictionary = e["c"]
+		if ["casting", "loadout"].has(str(c["t"])):
+			recall.append([str(c["t"]), str(c["member"])])
+	assert_eq(recall, [["casting", "kai"], ["loadout", "kai"], ["casting", "mopsula"], ["loadout", "mopsula"]],
+		"the Recall on floor 3: the controlled figure first, each with the signature on its slot")
+	for mid: String in ["kai", "mopsula"]:
+		var m: PartyMember = rs.state.member(mid)
+		var pick: Array = HarnessScript.RECALL[mid]
+		var sig: Dictionary = Casting.signature(d, mid, m.class_id)
+		assert_eq([m.species_id, m.class_id, str(m.rt_loadout.get(str(int(sig["slot"])), ""))],
+			[str(pick[0]), str(pick[1]), str(sig["skill"])], "%s: species, class and signature" % mid)
+		assert_ne(Casting.mode(rs.state, d, mid), "first", "%s: no first choice left" % mid)
 	var rp: Dictionary = RunSim.replay(d, rs.run_log)
 	assert_eq([rp["errors"], int(rp["mismatch_at"]), str(rp["final_hash"])], [PackedStringArray(), -1, str(r["hash"])],
 		"RunSim.replay reproduces the calendar run")

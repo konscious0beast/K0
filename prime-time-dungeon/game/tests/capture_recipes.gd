@@ -1910,10 +1910,10 @@ func _r_safe_recall(scene: Node) -> bool:
 	var ui: Node = get_tree().root.get_node_or_null("GlobalUi")
 	var d: Node = ui.get("mod_dialog") as Node if ui != null else null
 	await until(func() -> bool: return d == null or bool(d.call("is_busy")), 60)
-	await frames(2)
-	if d != null:
-		d.call("advance")                      # the whole line at once (the typewriter would cut it in the still)
-	await frames(10)                           # shot with --frames=2
+	if d != null:                              # the line typed in to its end (its reading time keeps it up)
+		await until(func() -> bool: return float(d.get("_shown_chars")) >= str((d.call("current_line") as
+			Dictionary).get("text", "")).length(), 600)
+	await frames(2)                            # shot with --frames=2
 	return true
 
 

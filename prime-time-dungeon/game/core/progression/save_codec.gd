@@ -1,7 +1,7 @@
 class_name SaveCodec extends RefCounted
 ## Save dict ↔ GameState, versioning, migration (02_TECH §6.1/§6.4).
 ##
-## File layout (version 1): {"format": "ptd_save", "version": 1, "game_version", "saved_at_unix", "summary", "state"}.
+## File layout (version 2): {"format": "ptd_save", "version": 2, "game_version", "saved_at_unix", "summary", "state"}.
 ## encode() leaves saved_at_unix at 0 (core has no clock, 05 §3.3 Nr. 6); Save stamps it before writing.
 ## decode() = migrate → validate (fatal errors → null) → GameState.from_dict → sanitize against GameData
 ## (unknown item/skill/box/enemy ids are dropped, values clamped; listed as "warning: …" in last_errors()).
@@ -10,9 +10,13 @@ class_name SaveCodec extends RefCounted
 ## - v0 (pre-release prototype, no "format"/"version" or version 0): floor timer in float seconds
 ##   (`floor_run.time_left`, `floor_run.stats.time_used`), no `loot_seed`, no `summary`.
 ## - v1: timer in whole ticks (05 CR-3), `floor_run.loot_seed` (05 CR-11; derived from the run seed if missing).
+## - v2 (R5b part 2b, 07 §12.6 step 2, 02_TECH §6.4): the data carry the real-time HP (party HP × 4 baked in); a state
+##   fights in real time without a `combat_mode` key, members have no `hp_scale_pm` (_migrate_v1_to_v2).
 
 const FORMAT: String = "ptd_save"
-const VERSION: int = 1
+const VERSION: int = 2
+## v1 → v2: a CTB save's party HP in the units of the baked data (07 §3.9.4: the HP scale of the real-time combat).
+const V1_CTB_HP_FACTOR: int = 4
 const TICKS_PER_SEC: int = 30
 const MSG_NEWER: String = "Spielstand stammt aus neuerer Version"
 ## Renamed ids (no version bump): an older save keeps the skill / class under its new id instead of dropping it.
@@ -74,6 +78,8 @@ static func migrate(d: Dictionary) -> Dictionary:
 		match version:
 			0:
 				out = _migrate_v0_to_v1(out)
+			1:
+				out = _migrate_v1_to_v2(out)
 		version += 1
 	out["format"] = FORMAT
 	out["version"] = VERSION
@@ -180,6 +186,30 @@ static func _migrate_v0_to_v1(d: Dictionary) -> Dictionary:
 		out["game_version"] = ""
 	if not out.has("saved_at_unix"):
 		out["saved_at_unix"] = 0
+	return out
+
+
+## v1 → v2 (02_TECH §6.4; R5b part 2b): the data carry the real-time HP since the bake (07 §4.11). A CTB save (no
+## state "combat_mode") counts its party HP in CTB units: × V1_CTB_HP_FACTOR (a K.O. stays 0; _sanitize caps at the new
+## max HP). A real-time save ("combat_mode": "realtime", members with hp_scale_pm) already counts real-time HP. Both
+## lose "combat_mode" (a v2 state fights in real time) and every member's "hp_scale_pm"; MP and everything else (06 / 08
+## fields, rt_loadout / rt_preset / rt_toggles, flags, inventory, bestiary, floor run) stay as they are.
+static func _migrate_v1_to_v2(d: Dictionary) -> Dictionary:
+	var out: Dictionary = d.duplicate(true)
+	var raw_state: Variant = out.get("state", {})
+	var st: Dictionary = raw_state if raw_state is Dictionary else {}
+	var realtime: bool = str(st.get("combat_mode", "")) == "realtime"
+	st.erase("combat_mode")
+	var raw_party: Variant = st.get("party", [])
+	if raw_party is Array:
+		for e: Variant in raw_party:
+			if not (e is Dictionary):
+				continue
+			var m: Dictionary = e
+			if not realtime and m.has("hp"):
+				m["hp"] = maxi(0, JsonUtil.to_int(m["hp"])) * V1_CTB_HP_FACTOR
+			m.erase("hp_scale_pm")
+	out["state"] = st
 	return out
 
 

@@ -308,7 +308,7 @@ func test_new_fields_are_serialized_only_when_set() -> void:
 	st.floor_run = FloorRun.create(real_data().floor_def(1), 11, &"prime")
 	var before: String = StateHash.of(st)
 	var d: Dictionary = st.to_dict()
-	assert_false(d.has("combat_mode"), "ctb is not serialized")
+	assert_eq(d.get("combat_mode", ""), "ctb", "save v2 (R5b part 2b): only a CTB state names its mode")
 	assert_false((d["floor_run"] as Dictionary).has("regen_ticks"))
 	for m: Dictionary in d["party"]:
 		for k: String in ["rt_preset", "rt_toggles", "rt_loadout"]:
@@ -323,6 +323,7 @@ func test_new_fields_are_serialized_only_when_set() -> void:
 	assert_eq(StateHash.of(back_st), StateHash.of(st), "and survive a JSON round trip")
 	assert_eq([back_st.combat_mode, back_st.floor_run.regen_ticks, back_st.party[0].rt_preset],
 		[&"realtime", 40, "careful"])
+	assert_false(st.to_dict().has("combat_mode"), "a real-time state needs no key (the campaign's mode)")
 
 
 ## R5b part 2b (07 §3.9.4, §12.6 step 2): the real-time HP live in the data — no scale at run time any more.

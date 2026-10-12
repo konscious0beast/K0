@@ -95,7 +95,7 @@ func _rich_state() -> GameState:
 func test_codec_round_trip_identical() -> void:
 	var st: GameState = _rich_state()
 	var d1: Dictionary = SaveCodec.encode(st, "0.1.0")
-	assert_eq([d1["format"], d1["version"], d1["game_version"], d1["saved_at_unix"]], ["ptd_save", 1, "0.1.0", 0])
+	assert_eq([d1["format"], d1["version"], d1["game_version"], d1["saved_at_unix"]], ["ptd_save", 2, "0.1.0", 0])
 	var parsed: Variant = JSON.parse_string(JSON.stringify(d1, "\t"))
 	var back: GameState = SaveCodec.decode(parsed, Fx.data())
 	assert_not_null(back, "; ".join(SaveCodec.last_errors()))
@@ -121,7 +121,7 @@ func test_codec_v0_migration_stub() -> void:
 		"inventory": {"credits": 12, "counts": {"itm_bandage": 2}},
 		"floor_run": {"floor_id": "floor_1", "index": 1, "seed": 7, "time_left": 100.5, "stats": {"time_used": 10.0}}}}
 	var m: Dictionary = SaveCodec.migrate(v0)
-	assert_eq([m["format"], m["version"]], ["ptd_save", 1])
+	assert_eq([m["format"], m["version"]], ["ptd_save", SaveCodec.VERSION], "v0 → v1 → v2")
 	assert_eq(m["state"]["floor_run"]["time_left_ticks"], 3015, "seconds → whole ticks (05 CR-3)")
 	assert_eq(m["state"]["floor_run"]["stats"]["time_used_ticks"], 300)
 	assert_false((m["state"]["floor_run"] as Dictionary).has("time_left"))
@@ -150,7 +150,7 @@ func test_codec_v0_migration_stub() -> void:
 func test_codec_refuses_newer_and_invalid_saves() -> void:
 	var d: GameData = Fx.data()
 	var newer: Dictionary = SaveCodec.encode(_rich_state(), "9.9.9")
-	newer["version"] = 2
+	newer["version"] = SaveCodec.VERSION + 1
 	assert_eq(SaveCodec.migrate(newer), {}, "unknown higher version → {}")
 	assert_null(SaveCodec.decode(newer, d))
 	assert_true(SaveCodec.last_errors()[0].begins_with("Spielstand stammt aus neuerer Version"))
@@ -158,7 +158,7 @@ func test_codec_refuses_newer_and_invalid_saves() -> void:
 	var bad: Dictionary = SaveCodec.encode(_rich_state(), "x")
 	bad["format"] = "other"
 	assert_has(SaveCodec.validate(bad, d)[0], "format")
-	var no_state: Dictionary = {"format": "ptd_save", "version": 1}
+	var no_state: Dictionary = {"format": "ptd_save", "version": SaveCodec.VERSION}
 	assert_has(SaveCodec.validate(no_state, d)[0], "state")
 	assert_null(SaveCodec.decode(no_state, d))
 	var no_party: Dictionary = SaveCodec.encode(_rich_state(), "x")

@@ -1,9 +1,9 @@
 extends TestCase
 ## 07 E33 (R5b-2a): real time is the default of new games — GameSettings.DEFAULT_COMBAT_MODE, Game.new_game and the dev
-## state of a standalone scene take it; the boot argument --combat=ctb and the debug-only switch still give CTB; saves
-## keep their stored mode (a CTB save continues in CTB, a real-time one in real time); a settings file of version 1
-## (its combat_mode "ctb" was the old default, not a choice) is read as real time; the CTB battle scene keeps a CTB dev
-## state.
+## state of a standalone scene take it; the boot argument --combat=ctb and the debug-only switch still give CTB; a CTB
+## debug save keeps its mode ("combat_mode": "ctb", save v2 of R5b part 2b — a version-1 CTB save continues in real
+## time, test_r5b_save_v2); a settings file of version 1 (its combat_mode "ctb" was the old default, not a choice) is
+## read as real time; the CTB battle scene keeps a CTB dev state.
 
 const ROOT: String = "user://test_r5b_default_realtime"
 const DIR: String = "user://test_r5b_default_realtime/saves"
@@ -67,7 +67,8 @@ func test_new_games_fight_in_real_time() -> void:
 	assert_false(Game.is_realtime(), "so does the debug switch (07 §12.1)")
 
 
-## Saves keep their stored mode — no conversion before part 2b (SaveCodec v2).
+## Save v2 (R5b part 2b): a real-time state needs no combat_mode key — the campaign's mode; a CTB debug run names
+## "combat_mode": "ctb" and keeps it.
 func test_saves_keep_their_combat_mode() -> void:
 	_rmrf(ROOT)
 	Save.save_dir = DIR
@@ -75,14 +76,15 @@ func test_saves_keep_their_combat_mode() -> void:
 	Game.combat_mode_override = &"ctb"
 	Game.new_game(1, "Kai", 616)
 	Game.combat_mode_override = &""
-	assert_false(Game.state.to_dict().has("combat_mode"), "a CTB state serializes as before (no key)")
+	assert_eq(Game.state.to_dict().get("combat_mode", ""), "ctb", "a CTB debug state names its mode")
 	assert_eq(Save.save_slot(1), OK)
 	Game.state = null
 	assert_eq(Save.load_slot(1), OK)
-	assert_false(Game.is_realtime(), "an old CTB save continues in CTB although new games fight in real time")
+	assert_false(Game.is_realtime(), "a CTB debug save continues in CTB")
 	assert_false(Game.run_log.header.has("combat_mode"), "its run log stays a CTB log")
 	Game.new_game(2, "Kai", 617)
 	assert_true(Game.is_realtime())
+	assert_false(Game.state.to_dict().has("combat_mode"), "a real-time state needs no key")
 	assert_eq(Save.save_slot(2), OK)
 	Game.state = null
 	assert_eq(Save.load_slot(2), OK)

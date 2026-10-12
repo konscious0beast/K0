@@ -24,7 +24,8 @@ const UiUtilRef := preload("res://scenes/ui/ui_util.gd")
 const LevelBadge := preload("res://scenes/ui/level_badge.gd")   # 09 ST1-A
 
 const FRAME: Vector2 = Vector2(300, 68)
-const LEVEL_R: float = 11.0                # radius of the level plaque, top right in the frame (09 §1.2 Nr. 1)
+## Radius of the level plaque, top right in the frame (09 §1.2 Nr. 1): two digits fit, as in the combat's frames.
+const LEVEL_R: float = LevelBadge.FRAME_RADIUS
 const CHIP: float = 26.0
 const CHIP_STEP: float = 30.0
 const RING_M: float = 0.6                  # radius of the ring around the lead's feet

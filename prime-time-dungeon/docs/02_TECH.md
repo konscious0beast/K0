@@ -449,9 +449,9 @@ ausgenommen; Ausnahme je Zeile `# terms-ok: <Grund>`), die Textfelder der `.tscn
 auf „Level“, „Lv“, „LV“, „Lvl“, „Ebene“, „Crawler“ (Wortgrenzen, Groß-/Kleinschreibung beachtet). Neu ist die
 Stufen-Plakette `scenes/ui/level_badge.gd` (privat: `make(level, font_size)` als Steuerelement, `draw(mesh, center, radius)`
 für gezeichnete Rahmen, Tooltip `"Stufe %d"`) in Party-Menü, Erkundungs-HUD und Zielrahmen; sonst „Level“ → „Stufe“,
-„LEVEL UP“ → „NEUE STUFE“, die Unterhosen-Liga heißt „Liga 1“/„Duo-Liga“. Offen ist nur das Kampf-HUD (`scenes/combat/**`,
-07 CR-32 i): `combat_results.gd` und `unit_frames.gd` stehen mit ihrer Fundzahl in der `PENDING`-Liste des Tests, der
-fehlschlägt, sobald sich die Zahl ändert.
+„LEVEL UP“ → „NEUE STUFE“, die Unterhosen-Liga heißt „Liga 1“/„Duo-Liga“. Das Kampf-HUD folgte mit 07 CR-32 i
+(2026-10-12): Plakette in Party- und Zielrahmen, „Stufe“ und „NEUE STUFE!“ in den Ergebnissen; die `PENDING`-Liste des Tests
+ist leer.
 
 *Vertrag 4 — nur Schema:* Jedes Feld ist optional, sein Standard ändert nichts, und ohne Staffel liest es kein Code. Die
 Regeln stehen in Paket-Dateien, die der Validator über je eine Hook-Zeile ruft; Test `test_09_contract4` (Signaturen,

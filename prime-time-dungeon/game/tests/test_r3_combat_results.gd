@@ -116,7 +116,7 @@ func test_level_up_and_talent_chip() -> void:
 	res.call("present", v[0], v[1])
 	var texts: PackedStringArray = res.call("lower_texts")
 	assert_eq(texts.size(), 2, "level-up as a second lower third")
-	assert_eq(texts[1], "Kai: Level 3")
+	assert_eq(texts[1], "Kai: Stufe 3", "09 §1.2 (CR-32 i): \"Stufe\", never \"Level\"")
 	assert_eq(int(res.call("talent_count", v[1])), 1 if Talents.is_talent_level(3) else 0)
 	if Talents.is_talent_level(3):
 		var chip: Label = res.find_child("TalentChip", true, false) as Label

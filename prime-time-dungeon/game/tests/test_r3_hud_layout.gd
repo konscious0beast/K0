@@ -226,6 +226,35 @@ func test_boss_frame_target_below_and_enrage() -> void:
 	assert_eq((frames.call("target_rect") as Rect2).size, Vector2(300, 56), "300 × 56")
 
 
+## 09 CR-32 (i): the level plaques (09 §1.2 Nr. 1) sit inside their frames at the top right of the bars — above the
+## bars, clear of the pill "DU", left of the target's sword; the aggro counter hangs beside them.
+func test_level_plaques_keep_clear() -> void:
+	var data: GameData = FakeSim.load_data()
+	var sim: RtSim = HudScenarios.build(data, {"level": 10, "enemies": ["enm_kanalratte", "enm_kanalratte"]})
+	sim.unit("p0").target_id = "e0"
+	var r: Dictionary = HudRig.make(self, sim, data)
+	await wait_frames(3)
+	var frames: Control = (r["hud"] as Node).get("frames") as Control
+	var ctl: Rect2 = frames.call("level_rect", "ctl_frame")
+	var partner: Rect2 = frames.call("level_rect", "partner_frame")
+	var target: Rect2 = frames.call("level_rect", "target_frame")
+	var tr_r: Rect2 = frames.call("target_rect")
+	assert_true(UnitFrames.CTL_RECT.encloses(ctl), "inside the hero's frame: %s" % ctl)
+	assert_true(UnitFrames.PARTNER_RECT.encloses(partner), "inside the partner's frame: %s" % partner)
+	assert_true(tr_r.encloses(target), "inside the target frame: %s" % target)
+	assert_true(ctl.end.y <= UnitFrames.CTL_RECT.position.y + UnitFrames.CTL_BARS_Y, "above the hero's bars")
+	assert_true(partner.end.y <= UnitFrames.PARTNER_RECT.position.y + UnitFrames.PARTNER_BARS_Y,
+		"above the partner's bars")
+	assert_true(target.position.y >= tr_r.position.y + 2.0, "below the target's colour strip")
+	assert_true(target.end.y <= tr_r.position.y + UnitFrames.TARGET_BARS_Y, "above the target's HP bar")
+	assert_true(target.end.x <= tr_r.end.x - 28.0, "left of the sword")
+	assert_false(ctl.intersects(Rect2(UnitFrames.CTL_RECT.position + Vector2(58.0, 4.0), Vector2(26.0, 15.0))),
+		"clear of the pill DU")
+	for big: bool in [true, false]:
+		assert_false((frames.call("aggro_rect", big) as Rect2).intersects(ctl if big else partner),
+			"the aggro counter beside the plaque")
+
+
 func test_plates_project_pick_and_threat() -> void:
 	var data: GameData = FakeSim.load_data()
 	var sim: RtSim = HudScenarios.build(data, {"level": 2})

@@ -8,6 +8,9 @@ extends Control
 ## sword switch (auto attack) and status row, and the boss frame top centre 520 × 36 with phase diamonds, HP %, enrage
 ## countdown in the last minute and its 520 × 10 cast bar. Party HP has a trailing red damage piece (0.4 s) and a green
 ## heal flash. Aggro counter "×2" and nothing else of the threat model before the player's first own taunt (07 §8.1).
+## A level is the bare number in the round level plaque (09 §1.2 Nr. 1, CR-32 i; scenes/ui/level_badge.gd drawn into
+## the frame like the pull target frame does): top right of the bars, in the target frame left of the sword; on the
+## mouse the plaque says "Stufe N".
 ## Draw calls (07 §8.10 "Rahmen ≈ 10"): every bar, frame, symbol and status sweep = ONE triangle array; the partner
 ## sweep shares the bar's sweep material; labels without outline. Private R3 script.
 
@@ -21,6 +24,7 @@ const CombatIcons := preload("res://scenes/combat/ui/combat_icons.gd")
 const CombatView := preload("res://scenes/combat/ui/combat_view.gd")
 const ActionBar := preload("res://scenes/combat/ui/action_bar.gd")
 const IconMesh := preload("res://scenes/ui/icon_mesh.gd")
+const LevelBadge := preload("res://scenes/ui/level_badge.gd")   # 09 §1.2 (CR-32 i): the level plaque, never "Lv"
 
 const EDGE: float = 24.0                             # safe frame edge: absolute (x, y) of 07 §8.1 minus this
 const CTL_RECT: Rect2 = Rect2(0, 72, 240, 56)        # abs (24, 96)
@@ -51,6 +55,16 @@ const TRAIL_SEC: float = 0.4
 const HEAL_FLASH_SEC: float = 0.35
 const LONG_PRESS_SEC: float = 0.45
 const PCT_POP_SEC: float = 1.2
+## Level plaques (09 §1.2 Nr. 1, CR-32 i): sized for two digits of the 12 px number (LevelBadge.FRAME_RADIUS; the
+## smaller partner frame 0.5 px less), flush with the frame's top (the target's: below its colour strip). The bars
+## start below them (were 22 / 20 / 24 with "Lv" as text).
+const LEVEL_R_CTL: float = LevelBadge.FRAME_RADIUS
+const LEVEL_R_PARTNER: float = LevelBadge.FRAME_RADIUS - 0.5
+const LEVEL_R_TARGET: float = LevelBadge.FRAME_RADIUS
+const CTL_BARS_Y: float = 23.0
+const PARTNER_BARS_Y: float = 22.0
+const TARGET_BARS_Y: float = 25.0
+const TARGET_LEVEL_END: float = 264.0          # right edge of the target's plaque in the frame (the sword from 272)
 const PRESETS: Dictionary = {"attack": "Angriff", "support": "Unterstützen", "careful": "Vorsichtig"}
 
 var sim: RtSim = null
@@ -102,7 +116,7 @@ func _init() -> void:
 	for i in STATUS_MAX * 3:
 		_add_label("sec%d" % i, 12, CombatStyle.C_PAPER, true)
 	for n: String in ["ctl_frame", "partner_frame", "special", "chip", "sword", "target_frame"]:
-		var h: Control = RoundHit.new() if n == "special" else Control.new()
+		var h: Control = RoundHit.new() if n == "special" else FrameHit.new()
 		h.name = "Hit_" + n
 		h.mouse_filter = Control.MOUSE_FILTER_STOP
 		h.visible = false
@@ -155,6 +169,30 @@ func target_rect() -> Rect2:
 	if b != null and b.hp > 0:
 		y = 60.0                                       # abs y 84: below the boss frame
 	return Rect2(Vector2((size.x - TARGET_W) * 0.5, y), Vector2(TARGET_W, TARGET_H))
+
+
+## Local rect of the level plaque in "ctl_frame", "partner_frame" or "target_frame" (09 §1.2 Nr. 1): top right of the
+## bars where "Lv" stood (symbol 48 / 40 + 10, bars 176 / 156 wide), in the target frame left of the sword.
+func level_rect(n: String) -> Rect2:
+	var c: Vector2
+	var rad: float = LEVEL_R_TARGET
+	match n:
+		"ctl_frame":
+			rad = LEVEL_R_CTL
+			c = CTL_RECT.position + Vector2(48.0 + 10.0 + 176.0 - rad, rad)
+		"partner_frame":
+			rad = LEVEL_R_PARTNER
+			c = PARTNER_RECT.position + Vector2(40.0 + 10.0 + 156.0 - rad, rad)
+		_:
+			c = target_rect().position + Vector2(TARGET_LEVEL_END - rad, 2.0 + rad)
+	return Rect2(c - Vector2(rad, rad), Vector2(rad, rad) * 2.0)
+
+
+## Local rect of the aggro counter "×2" of a party frame: on the frame's top edge, left of the level plaque.
+func aggro_rect(big: bool) -> Rect2:
+	var r: Rect2 = CTL_RECT if big else PARTNER_RECT
+	return Rect2(Vector2(level_rect("ctl_frame" if big else "partner_frame").position.x - 28.0, r.position.y - 13.0),
+		Vector2(24.0, 16.0))
 
 
 ## The boss frame: BOSS_W centred at the top — R5b: with `reserve_right` (the touch layout's hype meter, local x of
@@ -291,6 +329,16 @@ func _put(n: String, text: String, pos: Vector2, w: float = 0.0, col: Color = Co
 		l.size = Vector2.ZERO
 
 
+## The bare number of a level plaque, centred in the plaque's rect `pr` (the plaque itself is drawn in _draw).
+func _put_level(n: String, level: int, pr: Rect2, col: Color) -> void:
+	_put(n, str(level), Vector2(pr.position.x, pr.get_center().y - 9.0), pr.size.x, col, HORIZONTAL_ALIGNMENT_CENTER)
+
+
+## The plaque in gold, grey while its unit is K.O. (like the name).
+static func _level_color(u: RtUnit) -> Color:
+	return CombatStyle.C_GOLD if u.hp > 0 else CombatStyle.C_GREY
+
+
 func _layout_labels() -> void:
 	for l: Variant in _labels.values():
 		(l as Label).visible = false
@@ -331,9 +379,8 @@ func _party_labels(u: RtUnit, key: String, r: Rect2, bar_w: float, big: bool) ->
 		name_x += 30.0
 	_put(key + "_name", CombatStyle.unit_name(u), Vector2(name_x, r.position.y + 1.0), 0.0,
 		CombatStyle.C_TEXT if u.hp > 0 else CombatStyle.C_GREY)
-	_put(key + "_level", "Lv %d" % u.level, Vector2(x, r.position.y + 3.0), bar_w, CombatStyle.C_GOLD,
-		HORIZONTAL_ALIGNMENT_RIGHT)
-	var hp_y: float = r.position.y + (22.0 if big else 20.0)
+	_put_level(key + "_level", u.level, level_rect(key + "_frame"), _level_color(u))
+	var hp_y: float = r.position.y + (CTL_BARS_Y if big else PARTNER_BARS_Y)
 	if u.hp > 0:
 		_put(key + "_hp", "%d/%d" % [u.hp, u.max_hp()], Vector2(x, hp_y - (1.0 if big else 2.0)), bar_w - 4.0,
 			CombatStyle.C_PAPER, HORIZONTAL_ALIGNMENT_RIGHT)
@@ -341,7 +388,7 @@ func _party_labels(u: RtUnit, key: String, r: Rect2, bar_w: float, big: bool) ->
 		_put(key + "_ko", "K.O.", Vector2(x + 4.0, hp_y - 2.0), 0.0, CombatStyle.C_DANGER)
 	var aggro: int = int(_model["aggro_" + key])
 	if aggro > 0:
-		_put("aggro_" + key, "×%d" % aggro, Vector2(r.end.x - 30.0, r.position.y - 13.0), 24.0, CombatStyle.C_PAPER,
+		_put("aggro_" + key, "×%d" % aggro, aggro_rect(big).position, 24.0, CombatStyle.C_PAPER,
 			HORIZONTAL_ALIGNMENT_CENTER)
 	if _pct_pop.has(u.id):
 		var d: Dictionary = _pct_pop[u.id]
@@ -360,9 +407,8 @@ func _target_labels(t: RtUnit) -> void:
 	var col: Color = CombatStyle.C_TEXT if t.side == Combatant.Side.ENEMY else CombatStyle.C_PARTY.lightened(0.3)
 	var nx: float = r.position.x + 52.0 + (14.0 if _is_marked(t) else 0.0)
 	_put("target_name", CombatStyle.unit_name(t, sim.units()), Vector2(nx, r.position.y + 2.0), 0.0, col)
-	_put("target_level", "Lv %d" % t.level, Vector2(r.position.x + 52.0, r.position.y + 4.0), 212.0, CombatStyle.C_GOLD,
-		HORIZONTAL_ALIGNMENT_RIGHT)
-	_put("target_pct", "%d %%" % _pct(t), Vector2(r.position.x + 52.0, r.position.y + 21.0), 236.0, CombatStyle.C_PAPER,
+	_put_level("target_level", t.level, level_rect("target_frame"), _level_color(t))
+	_put("target_pct", "%d %%" % _pct(t), r.position + Vector2(52.0, TARGET_BARS_Y - 3.0), 236.0, CombatStyle.C_PAPER,
 		HORIZONTAL_ALIGNMENT_RIGHT)
 	var c: Dictionary = CombatView.cast(sim, t)
 	if not c.is_empty():
@@ -452,6 +498,12 @@ func _layout_hits() -> void:
 	var b: RtUnit = _model["boss"]
 	var tr_r: Rect2 = target_rect()
 	_place_hit("target_frame", tr_r, tgt != null)
+	for spec: Array in [["ctl_frame", ctl], ["partner_frame", p], ["target_frame", tgt]]:
+		var u: RtUnit = spec[1] as RtUnit
+		var fh: FrameHit = _hits[str(spec[0])] as FrameHit
+		var pr: Rect2 = level_rect(str(spec[0]))
+		fh.tip = LevelBadge.tooltip(u.level) if u != null else ""
+		fh.tip_rect = Rect2(pr.position - fh.position, pr.size)
 	var sword: Rect2 = Rect2(tr_r.end.x - 28.0, tr_r.position.y + 2.0, 24.0, 20.0).grow(4.0)
 	_place_hit("sword", sword, tgt != null and tgt.side == Combatant.Side.ENEMY or (tgt == null and b != null))
 	if tgt == null and b != null:
@@ -585,7 +637,9 @@ func _draw_party(m: IconMesh, u: RtUnit, r: Rect2, bar_w: float, hp_h: float, mp
 	var x: float = r.position.x + sym + 10.0
 	if controlled:                                     # pill "DU" (06 A), moves with a control switch
 		m.rect(Rect2(Vector2(x, r.position.y + 4.0), Vector2(26.0, 15.0)), CombatStyle.C_GOLD)
-	var hp_y: float = r.position.y + (22.0 if big else 20.0)
+	var lr: Rect2 = level_rect("ctl_frame" if big else "partner_frame")
+	LevelBadge.draw(m, lr.get_center(), lr.size.x * 0.5, _level_color(u))
+	var hp_y: float = r.position.y + (CTL_BARS_Y if big else PARTNER_BARS_Y)
 	var hp_r: Rect2 = Rect2(Vector2(x, hp_y), Vector2(bar_w, hp_h))
 	var ratio: float = clampf(float(u.hp) / float(maxi(1, u.max_hp())), 0.0, 1.0)
 	m.rect(hp_r, Color(0, 0, 0, 0.55))
@@ -606,7 +660,7 @@ func _draw_party(m: IconMesh, u: RtUnit, r: Rect2, bar_w: float, hp_h: float, mp
 	m.rect(Rect2(mp_r.position, Vector2(bar_w * mp_ratio, mp_h)), CombatStyle.C_MANA if not ko else CombatStyle.C_GREY)
 	var key: String = "ctl" if big else "partner"
 	if int(_model.get("aggro_" + key, 0)) > 0:
-		m.rect(Rect2(Vector2(r.end.x - 30.0, r.position.y - 13.0), Vector2(24.0, 16.0)), CombatStyle.C_DANGER)
+		m.rect(aggro_rect(big), CombatStyle.C_DANGER)
 
 
 ## Static member symbols (no SubViewport portraits in the combat HUD, 07 §8.4): Kai's head drawn from the running
@@ -819,12 +873,14 @@ func _draw_target(m: IconMesh, t: RtUnit) -> void:
 		_member_symbol(m, t.def_id, sr, t.hp <= 0)
 	if _is_marked(t):
 		_diamond(m, Vector2(r.position.x + 58.0, r.position.y + 11.0), 6.0, CombatStyle.C_GOLD)
-	var hp_r: Rect2 = Rect2(r.position + Vector2(52.0, 24.0), Vector2(240.0, 12.0))
+	var lr: Rect2 = level_rect("target_frame")
+	LevelBadge.draw(m, lr.get_center(), lr.size.x * 0.5, _level_color(t))
+	var hp_r: Rect2 = Rect2(r.position + Vector2(52.0, TARGET_BARS_Y), Vector2(240.0, 12.0))
 	m.rect(hp_r, Color(0, 0, 0, 0.55))
 	var ratio: float = clampf(float(t.hp) / float(maxi(1, t.max_hp())), 0.0, 1.0)
 	m.rect(Rect2(hp_r.position, Vector2(hp_r.size.x * ratio, 12.0)), CombatStyle.C_ENEMY if enemy else CombatStyle.C_PARTY)
 	var c: Dictionary = CombatView.cast(sim, t)
-	_cast_bar(m, Rect2(r.position + Vector2(52.0, 42.0), Vector2(240.0, 8.0)), c)
+	_cast_bar(m, Rect2(r.position + Vector2(52.0, TARGET_BARS_Y + 18.0), Vector2(240.0, 8.0)), c)
 	if enemy:
 		_sword(m, Rect2(r.end.x - 28.0, r.position.y + 2.0, 24.0, 20.0))
 	var sts: Array[Dictionary] = CombatView.statuses(sim, t)
@@ -946,3 +1002,12 @@ const UiUtilRef := preload("res://scenes/ui/ui_util.gd")
 class RoundHit extends Control:
 	func _has_point(point: Vector2) -> bool:
 		return point.distance_to(size * 0.5) <= minf(size.x, size.y) * 0.5
+
+
+## Hit box of a frame, the chip or the sword: over a frame's level plaque the mouse gets the tooltip "Stufe N".
+class FrameHit extends Control:
+	var tip: String = ""
+	var tip_rect: Rect2 = Rect2()                       # the plaque, local to this hit box
+
+	func _get_tooltip(at_position: Vector2) -> String:
+		return tip if tip_rect.grow(2.0).has_point(at_position) else ""

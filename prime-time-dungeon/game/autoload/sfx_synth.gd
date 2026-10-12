@@ -247,3 +247,95 @@ const RT_SFX: Dictionary = {
 	"rt_scratch": [["noise", 2400.0, 300.0, 0.12, 0.4, -1.0], ["saw", 520.0, 140.0, 0.12, 0.25, 0.0],
 		["noise", 600.0, 2600.0, 0.1, 0.3, -1.0]],
 }
+
+
+# --- Stempelduell (10, SD2) -----------------------------------------------------------------------------------------
+## The mini-game's sounds (10 §4.9), played by scenes/stempel/sd_audio.gd on the Sfx buses (Sfx.play and the data's
+## SFX ids stay as they are): the Ding-Dong of the number display, a dull stamp, paper, shuffling, the loudspeaker
+## triad of the Durchsage, a short fanfare and the descending trombone; the waiting-room loop (a lift-music parody from
+## the same music synthesis, 4–8 s) and its hurried variant from the Stempelmeister's phase 2. Same tone format as SFX.
+const SD_SFX_IDS: PackedStringArray = ["sd_gong", "sd_stamp", "sd_card", "sd_shuffle", "sd_durchsage", "sd_win",
+	"sd_lose"]
+const SD_MUSIC_IDS: PackedStringArray = ["sd_wartezimmer", "sd_wartezimmer_eilig"]
+const SD_SFX: Dictionary = {
+	"sd_gong": [["sin", 784.0, 784.0, 0.4, 0.34, -1.0], ["sin", 1568.0, 1568.0, 0.22, 0.07, 0.0],
+		["sin", 622.0, 622.0, 0.62, 0.34, 0.32], ["sin", 1244.0, 1244.0, 0.3, 0.06, 0.32]],
+	"sd_stamp": [["sin", 120.0, 48.0, 0.17, 0.62, -1.0], ["noise", 900.0, 260.0, 0.07, 0.34, 0.0],
+		["tri", 230.0, 90.0, 0.09, 0.24, 0.0]],
+	"sd_card": [["noise", 3500.0, 6200.0, 0.09, 0.2, -1.0], ["noise", 6000.0, 2600.0, 0.06, 0.11, -1.0]],
+	"sd_shuffle": [["noise", 4200.0, 3000.0, 0.035, 0.2, 0.0], ["noise", 3800.0, 2800.0, 0.035, 0.18, 0.06],
+		["noise", 4400.0, 3000.0, 0.035, 0.2, 0.12], ["noise", 3600.0, 2600.0, 0.035, 0.18, 0.18],
+		["noise", 4200.0, 3000.0, 0.035, 0.2, 0.24], ["noise", 3000.0, 2000.0, 0.08, 0.16, 0.3]],
+	"sd_durchsage": [["tri", 523.0, 523.0, 0.18, 0.3, -1.0], ["sq", 523.0, 523.0, 0.18, 0.05, 0.0],
+		["tri", 659.0, 659.0, 0.18, 0.3, 0.18], ["tri", 784.0, 784.0, 0.34, 0.3, 0.36],
+		["sq", 784.0, 784.0, 0.34, 0.05, 0.36]],
+	"sd_win": [["sq", 523.0, 523.0, 0.09, 0.22, -1.0], ["sq", 659.0, 659.0, 0.09, 0.22, -1.0],
+		["sq", 784.0, 784.0, 0.09, 0.22, -1.0], ["sq", 1046.0, 1046.0, 0.36, 0.22, -1.0],
+		["sin", 523.0, 523.0, 0.36, 0.2, 0.27]],
+	"sd_lose": [["saw", 392.0, 370.0, 0.24, 0.24, -1.0], ["saw", 349.0, 330.0, 0.24, 0.24, -1.0],
+		["saw", 311.0, 294.0, 0.24, 0.24, -1.0], ["saw", 294.0, 220.0, 0.6, 0.24, -1.0]],
+}
+const SD_MUSIC: Dictionary = {
+	"sd_wartezimmer": {"bpm": 92, "bars": 2, "root": 53, "minor": false, "bass": [0, -99, 4, -99, 5, -99, 4, -99],
+		"lead": [9, -99, 7, 9, 11, -99, 9, -99, 7, -99, 4, 5, 7, -99, -99, -99], "lw": "sin", "drums": false},
+	"sd_wartezimmer_eilig": {"bpm": 120, "bars": 2, "root": 53, "minor": false, "bass": [0, 0, 4, 4, 5, 5, 4, 4],
+		"lead": [9, -99, 7, 9, 11, -99, 9, -99, 7, -99, 4, 5, 7, -99, 9, -99], "lw": "tri", "drums": true},
+}
+
+
+## Stempelduell sound stream for `id` (SD_SFX); null for unknown ids.
+static func make_sd(id: StringName) -> AudioStreamWAV:
+	var key: String = String(id)
+	if not SD_SFX.has(key):
+		return null
+	var tones: Array = SD_SFX[key]
+	var total: float = 0.0
+	var cursor: float = 0.0
+	for t: Array in tones:
+		var start: float = cursor if float(t[5]) < 0.0 else float(t[5])
+		cursor = start + float(t[3])
+		total = maxf(total, cursor)
+	var buf: PackedFloat32Array = PackedFloat32Array()
+	buf.resize(int(total * MIX_RATE) + 64)
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = key.hash()
+	cursor = 0.0
+	for t: Array in tones:
+		var start: float = cursor if float(t[5]) < 0.0 else float(t[5])
+		_add_tone(buf, int(start * MIX_RATE), str(t[0]), float(t[1]), float(t[2]), float(t[3]), float(t[4]), 0.005,
+			0.04, rng)
+		cursor = start + float(t[3])
+	return _to_wav(buf, false)
+
+
+## Looping waiting-room music for `id` (SD_MUSIC, same synthesis as make_music); null for unknown ids.
+static func make_sd_music(id: StringName) -> AudioStreamWAV:
+	var key: String = String(id)
+	if not SD_MUSIC.has(key):
+		return null
+	var m: Dictionary = SD_MUSIC[key]
+	var beat: float = 60.0 / float(m["bpm"])
+	var buf: PackedFloat32Array = PackedFloat32Array()
+	buf.resize(int(round(float(m["bars"]) * 4.0 * beat * MIX_RATE)))
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = key.hash()
+	var scale: Array[int] = MINOR if bool(m["minor"]) else MAJOR
+	var root: int = int(m["root"])
+	var bass: Array = m["bass"]
+	var beats: int = int(m["bars"]) * 4
+	for b in beats:
+		var deg: int = int(bass[b % bass.size()])
+		if deg > -99:
+			_add_tone(buf, int(b * beat * MIX_RATE), "tri", _freq(root, scale, deg), _freq(root, scale, deg),
+				beat * 0.9, 0.26, 0.01, beat * 0.3, rng)
+	var lead: Array = m["lead"]
+	for e in beats * 2:
+		var deg2: int = int(lead[e % lead.size()])
+		if deg2 > -99:
+			var f: float = _freq(root + 12, scale, deg2)
+			_add_tone(buf, int(e * beat * 0.5 * MIX_RATE), str(m["lw"]), f, f, beat * 0.45, 0.13, 0.01, beat * 0.2, rng)
+	if bool(m["drums"]):
+		for b2 in beats:
+			var at: int = int(b2 * beat * MIX_RATE)
+			_add_tone(buf, at + int(beat * 0.5 * MIX_RATE), "noise", 7000.0, 7000.0, 0.03, 0.05, 0.001, 0.02, rng)
+	return _to_wav(buf, true)

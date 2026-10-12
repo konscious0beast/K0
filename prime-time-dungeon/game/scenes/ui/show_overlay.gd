@@ -1251,3 +1251,67 @@ func _build_clock_chip() -> void:
 	t.autostart = true
 	t.timeout.connect(refresh_clock_chip)
 	_clock_chip.add_child(t)
+
+
+# --- Stempelduell (10, SD2) -----------------------------------------------------------------------------------------
+## Overlay mode &"duel" (10 §4.1, §4.2): the Stempelduell's TV frame — the LIVE badge with the channel corner
+## "STEMPELDUELL · Schalter 3" next to it and the chat ticker; no viewer / follower column, hype meter, REC corners or
+## show chip. Hooked in additively: set_mode() only knows MODES and first turns &"duel" into &"hidden"; this deferred
+## handler then switches the frame back on (and hides the corner again for every other mode).
+const DUEL_MODE: StringName = &"duel"
+const DUEL_CORNER: String = "STEMPELDUELL · Schalter 3"
+
+var _duel_hooked: bool = _connect_duel_mode()
+var _duel_corner: PanelContainer = null
+
+
+func _connect_duel_mode() -> bool:
+	Events.overlay_mode_requested.connect(_apply_duel_mode, CONNECT_DEFERRED)
+	return true
+
+
+## True while the duel frame is up (tests).
+func is_duel_mode() -> bool:
+	return mode == DUEL_MODE
+
+
+## Text of the channel corner while shown, else "".
+func duel_corner_text() -> String:
+	return DUEL_CORNER if _duel_corner != null and _duel_corner.visible else ""
+
+
+func _apply_duel_mode(p_mode: StringName) -> void:
+	if _root == null:
+		return
+	var duel: bool = p_mode == DUEL_MODE
+	if duel and _duel_corner == null:
+		_duel_corner = PanelContainer.new()
+		_duel_corner.name = "DuelCorner"
+		_duel_corner.custom_minimum_size = Vector2(0, BADGE_H)
+		_duel_corner.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		_duel_corner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_duel_corner.add_theme_stylebox_override("panel", UiUtil.box_style(Color(UiTheme.C_PANEL, 0.9),
+			Color(UiTheme.C_ACCENT, 0.8), 1, 0.21, 14, 2))
+		var l: Label = UiUtil.label(DUEL_CORNER, &"", 17, UiTheme.C_GOLD)
+		l.add_theme_font_override("font", UiTheme.font_bold())
+		l.add_theme_constant_override("outline_size", 0)
+		_duel_corner.add_child(l)
+		_top_left.add_child(_duel_corner)
+	var viewers_col: Control = _top_left.get_child(1) as Control if _top_left.get_child_count() > 1 else null
+	if viewers_col != null:
+		viewers_col.visible = not duel
+	if _duel_corner != null:
+		_duel_corner.visible = duel
+	if not duel:
+		return
+	mode = DUEL_MODE
+	_root.visible = true
+	_frame.visible = true
+	_rec.visible = false
+	_hype_box.visible = false
+	_ticker_panel.visible = true
+	_badge_label.text = "LIVE"
+	_badge.add_theme_stylebox_override("panel", _pill(UiUtil.C_LIVE))
+	_badge_label.add_theme_color_override("font_color", UiUtil.C_PAPER)
+	_badge_dot.set("color", UiUtil.C_PAPER)
+	refresh_show_chip()

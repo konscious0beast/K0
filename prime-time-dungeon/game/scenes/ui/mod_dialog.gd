@@ -640,3 +640,45 @@ func _subtitle_style() -> void:
 		sb.content_margin_right = 16.0
 		sb.bg_color = Color(sb.bg_color, 0.86)
 		_box.add_theme_stylebox_override("panel", sb)
+
+
+# --- Stempelduell (10, SD2) -----------------------------------------------------------------------------------------
+## The Stempelduell's box (10 §4.1, §4.5, §4.8): its subtitle layout (Events.dialog_layout_requested(&"duel", …): the
+## box sits beside the plates, its bottom edge `bottom` px above the safe frame) may carry four more keys — "font" (text
+## px: the duel's text size option 100–150 %), "drone": true (M.O.D.'s 64 px drone stays, the Graf and the opponent get
+## their portrait — outside the combat, 10 §4.1), "speakers" ({voice: tab name}, e.g. {"opp": "Ferdi Durchschlag"})
+## and "speaker_colors" ({voice: "#rrggbb"}). Hooked in additively: the subtitle code places and styles the box
+## first, these handlers adjust it afterwards (a layout request: deferred; every line: line_started, which _next() emits
+## after the speaker style).
+var _sd_hooked: bool = _sd_hook()
+
+
+func _sd_hook() -> bool:
+	Events.dialog_layout_requested.connect(func(_m: StringName, _l: Dictionary) -> void: _sd_extras(),
+		CONNECT_DEFERRED)
+	line_started.connect(func(_t: String, _v: StringName, _g: String) -> void: _sd_extras())
+	return true
+
+
+func _sd_extras() -> void:
+	if _subtitle.is_empty() or _text == null:
+		return
+	if _subtitle.has("font"):
+		_text.add_theme_font_size_override("font_size", int(_subtitle["font"]))
+	if _cur.is_empty():
+		return
+	var voice: String = String(_cur["voice"] as StringName)
+	var names: Variant = _subtitle.get("speakers", {})
+	if names is Dictionary and (names as Dictionary).has(voice):
+		_speaker.text = UiUtil.glyph_safe(str((names as Dictionary)[voice]))
+	var cols: Variant = _subtitle.get("speaker_colors", {})
+	if cols is Dictionary and (cols as Dictionary).has(voice):
+		var col: Color = UiUtil.hex(str((cols as Dictionary)[voice]), UiTheme.C_ACCENT_2)
+		_speaker_panel.add_theme_stylebox_override("panel", UiUtil.box_style(col, Color(0, 0, 0, 0), 0, 0.21, 14, 2))
+		_speaker.add_theme_color_override("font_color", UiUtil.C_INK if col.get_luminance() > 0.45 else UiUtil.C_PAPER)
+		_portrait.add_theme_stylebox_override("panel", _round_style(col))
+	if bool(_subtitle.get("drone", false)):
+		_drone_view.visible = voice == "mod"
+		_portrait.visible = voice != "mod"
+		if _portrait.visible:
+			_portrait_icon.set("kind", &"paw" if voice == "mopsula" else &"person")

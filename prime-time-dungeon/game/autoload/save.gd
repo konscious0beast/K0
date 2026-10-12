@@ -263,6 +263,46 @@ func journal_replay(_slot: int) -> Array[Dictionary]:
 	return []
 
 
+# --- Stempelduell (10, SD2) -----------------------------------------------------------------------------------------
+# The account collection of the mini-game (10 §6.7): <data root>/stempel/collection.json (default
+# user://stempel/collection.json), atomic like the slots (.tmp → .bak). Catalog ids and numbers only — no names, no
+# persona (08 P-1), so "Kandidat:in löschen" leaves it alone. The file is read as JSON and handed to
+# SdCollection.from_dict by the caller (scenes/stempel/sd_session.gd): this autoload never compiles the duel core at
+# boot (cf. GlobalUi.initial_mode); the account seed is rolled there too, outside core/.
+
+const SD_DIR: String = "stempel"
+const SD_FILE: String = "collection.json"
+
+
+## <data root>/stempel/collection.json.
+func sd_collection_path() -> String:
+	return _data_root().path_join(SD_DIR).path_join(SD_FILE)
+
+
+## The parsed collection file: {"found": false} without a file; {"found": true, "data": <parsed JSON or null>} — the
+## backup when the file itself is unreadable, null when neither parses (SdCollection.from_dict then starts an empty
+## collection with was_reset: the toast "Stempelakte neu angelegt", 10 §6.7).
+func load_sd_collection() -> Dictionary:
+	var path: String = sd_collection_path()
+	var found: bool = false
+	for p: String in [path, path + ".bak"]:
+		if not FileAccess.file_exists(p):
+			continue
+		found = true
+		var raw: Variant = JsonUtil.read_file(p)
+		if raw is Dictionary:
+			return {"found": true, "data": raw}
+	return {"found": found, "data": null}
+
+
+## Writes SdCollection.to_dict() atomically; read_only (autoplay) → OK without writing.
+func save_sd_collection(d: Dictionary) -> Error:
+	_last_error = ""
+	if read_only:
+		return OK
+	return _atomic_write(sd_collection_path(), d)
+
+
 # --- internals --------------------------------------------------------------------------------------------------------
 
 func _valid_slot(slot: int) -> bool:

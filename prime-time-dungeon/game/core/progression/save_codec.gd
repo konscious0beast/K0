@@ -17,7 +17,8 @@ class_name SaveCodec extends RefCounted
 ##   run's `gather_nodes`, `respawn`, `daily` — all optional and written only when set, so a v2 file without them loads
 ##   and hashes exactly as before. The command journal next to the slot is Save's (journal_append / journal_replay);
 ##   since ST1-B a season slot file also carries the top-level key "journal" (the id of its journal, written by Save —
-##   validate ignores it) and the summary a "season" block.
+##   validate ignores it) and the summary a "season" block. Contract pass 4 (09 §8.2): decode clamps a member's level
+##   to level_cap — 50 in a season, 10 outside one (unchanged for every campaign save).
 
 const FORMAT: String = "ptd_save"
 const VERSION: int = 2
@@ -164,6 +165,13 @@ static func last_errors() -> PackedStringArray:
 	return _errors.duplicate()
 
 
+## Staffeln (09 §8.2, contract pass 4): the highest level a loaded member may have — Balance.SEASON_LEVEL_CAP (50) in a
+## season (state.season != null), else Balance.LEVEL_CAP (10). A pure codec rule: decode clamps to it, a member at the
+## cap carries no EXP; how levels above 10 are reached is ST1-D's (party.json exp_table).
+static func level_cap(state: GameState) -> int:
+	return Balance.SEASON_LEVEL_CAP if state != null and state.season != null else Balance.LEVEL_CAP
+
+
 # --- helpers ----------------------------------------------------------------------------------------------------------
 
 ## 0 for pre-release saves without version (or with an integral "version": 0), -1 if unreadable.
@@ -251,9 +259,10 @@ static func _sanitize(st: GameState, data: GameData) -> void:
 		slot_of[m.id] = data.party_member(m.id).battle_slot
 	kept.sort_custom(func(a: PartyMember, b: PartyMember) -> bool: return int(slot_of[a.id]) < int(slot_of[b.id]))
 	st.party = kept
+	var cap: int = level_cap(st)                   # Staffeln (09 §8.2, contract pass 4): 50 in a season, else 10
 	for m: PartyMember in st.party:
-		m.level = clampi(m.level, 1, Balance.LEVEL_CAP)
-		if m.level >= Balance.LEVEL_CAP:
+		m.level = clampi(m.level, 1, cap)
+		if m.level >= cap:
 			m.exp = 0
 		var skills: PackedStringArray = []
 		for s: String in m.skills:

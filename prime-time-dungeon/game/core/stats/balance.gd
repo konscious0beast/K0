@@ -22,6 +22,9 @@ const OVERKILL_CREDIT_MULT: float = 1.25
 const DROP_LCK_DIV: float = 100.0
 const STUNT_CHANCE_MIN: float = 0.05
 const LEVEL_CAP: int = 10
+## Staffeln (09 §8.2, contract pass 4): the highest level in a season (state.season != null); outside a season
+## LEVEL_CAP stays. Read by SaveCodec.level_cap; the levels 11–50 themselves come with ST1-D (party.json exp_table).
+const SEASON_LEVEL_CAP: int = 50
 const EXP_A: float = 18.0
 const EXP_B: float = 1.7
 const EXP_C: float = 15.0

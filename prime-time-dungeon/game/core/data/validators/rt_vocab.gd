@@ -53,7 +53,11 @@ const MOD_OPS: PackedStringArray = ["stat_pm", "skill_pm", "move_pm", "swing_pm"
 	"dmg_taken_pm", "heal_taken_pm", "first_hit_taken_pm", "on", "add_rule", "element_swap", "extra_enemy",
 	"forbid_skill", "forbid_items", "unlock_variant"]
 const MOD_UNITS: PackedStringArray = ["p0", "party", "enemies", "boss", "all"]
-const MOD_SOURCES: PackedStringArray = ["species", "spec", "equip", "showboss", "twist", "liga"]
+## "class" / "talent" (09 contract pass 4, 07 CR-32 b): the ranks of a class (class:<cls_id>) and the rt_mod talents of
+## the talent tree (talent:<tal_id>), applied in the order equipment → species → class → talents → show boss → twists
+## → liga by BattleBridge (ST1-D, only with state.season != null). "spec" (spec:<cls_id>) is the older name of the
+## class source (07 §9.5); nothing writes it.
+const MOD_SOURCES: PackedStringArray = ["species", "spec", "equip", "showboss", "twist", "liga", "class", "talent"]
 const MOD_STATS: PackedStringArray = ["str", "mag", "def", "res", "spd", "lck", "max_hp", "max_mp"]
 const MOD_SKILL_FIELDS: PackedStringArray = ["power", "cooldown", "cast", "mp"]
 const MOD_EVENTS: PackedStringArray = ["combat_start", "kill", "interrupt", "dodge", "crit", "ko_ally",

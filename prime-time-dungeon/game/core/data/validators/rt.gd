@@ -5,6 +5,7 @@ extends RefCounted
 ## like the 06 validators (no class_name; preloaded by DataValidator as RtCheck), working on the DataValidator `v`
 ## (`v._out` = the normalized tables with the raw `rt` dictionaries, `v._err` for messages, its lookup tables) and the
 ## raw file objects (`raw["rt_balance"]` = the parsed data/rt_balance.json or absent). Vocabularies: RtVocab.
+## 09 contract pass 4 (07 CR-32 a): also the `rt` block of classes.json — the class bar and the ranks (_check_classes).
 ##
 ## Unknown keys of an rt block are errors (the defs drop them silently, RtNorm). The "Pflicht" rules (V10: an rt block
 ## for every enemy of a playable floor, V12: combat items with an rt use skill) apply to a real-time data set — one
@@ -34,6 +35,9 @@ const OP_FIELDS: Dictionary = {"say": ["tag"], "status_self": ["status", "ms"], 
 	"fixed_damage_self": ["pct_pm"], "set": ["stationary"], "clear_zones": [], "telegraph": ["skill"]}
 ## Room-local cm bound of a set (07 §10.1: |x|, |z| ≤ 2400).
 const MAX_CM: int = 2400
+## 09 contract pass 4 (07 CR-32 a, 09 §8.3): a class has at most three ranks (Rang II–IV), each a power factor in ‰.
+const CLASS_RANKS_MAX: int = 3
+const CLASS_RANK_PM: Vector2i = Vector2i(1001, 2000)
 
 
 ## Appends every problem of the real-time data to v.errors ("<table>[<i>|<id>].rt.<field>: <message>").
@@ -43,6 +47,7 @@ static func check(v: DataValidator, raw: Dictionary) -> void:
 	_check_skills(v)
 	_check_items(v, rt_set)
 	_check_party(v)
+	_check_classes(v)                                                       # 09 contract pass 4 (CR-32 a)
 	_check_enemies(v, rt_set)
 	_check_encounters(v)
 	ShowBossCheck.check(v)
@@ -358,6 +363,68 @@ static func _check_bar(v: DataValidator, ctx: String, rt: Dictionary) -> Diction
 		if _skill_ref(v, c + ".skill", str(e.get("skill", ""))):
 			known[str(e["skill"])] = true
 	return known
+
+
+# --- classes (09 contract pass 4, 07 CR-32 a; 09 §8.3) ----------------------------------------------------------------
+
+## The `rt` block of a class: keys of ClassDef.RT_SPEC (an empty block or an empty bar is allowed). The bar: rows of the
+## party bar schema (V8: slot 1–5, a party skill with rt, FINALE only in slot 5) at levels 1–50, every row a variant or
+## the FINALE of a slot (class abilities vary the member's bar, 09 §8.3), each skill once. The ranks (Rang II–IV, at
+## most three): level 1–50 and pm 1001–2000, both rising.
+static func _check_classes(v: DataValidator) -> void:
+	var list: Array = v._out["classes"]
+	for i in list.size():
+		var d: Dictionary = list[i]
+		var rt: Dictionary = d.get("rt", {})
+		if rt.is_empty():
+			continue
+		var ctx: String = DataValidator._ctx("classes", i, d) + ".rt"
+		_ints(v, ctx, rt)
+		_keys(v, ctx, rt, ClassDef.RT_SPEC)
+		var bar: Array = rt.get("bar", []) if rt.get("bar", []) is Array else []
+		if not (rt.get("bar", []) is Array):
+			v._err(ctx + ".bar", "an array")
+		var seen: Dictionary = {}
+		for j in bar.size():
+			var c: String = "%s.bar[%d]" % [ctx, j]
+			if not (bar[j] is Dictionary):
+				v._err(c, "an object")
+				continue
+			var b: Dictionary = bar[j]
+			_keys(v, c, b, PartyMemberDef.RT_BAR_SPEC)
+			var slot: int = _i(b.get("slot", 0))
+			var skill: String = str(b.get("skill", ""))
+			_range(v, c + ".slot", b.get("slot", 0), 1, 5)
+			_range(v, c + ".level", b.get("level", 1), 1, DataValidator.SEASON_LEVEL_CAP)
+			if _skill_ref(v, c + ".skill", skill) and str((v._skills[skill] as Dictionary).get("user", "")) != "party":
+				v._err(c + ".skill", "'%s' is no party skill (V8)" % skill)
+			if seen.has(skill):
+				v._err(c + ".skill", "'%s' twice on the class bar" % skill)
+			seen[skill] = true
+			var finale: bool = bool(b.get("finale", false))
+			if finale and slot != 5:
+				v._err(c + ".finale", "only in slot 5 (V8)")
+			if not finale and not bool(b.get("variant", false)):
+				v._err(c + ".variant", "a class ability is a variant (or the FINALE) of a slot (09 §8.3)")
+		var ranks: Array = rt.get("ranks", []) if rt.get("ranks", []) is Array else []
+		if not (rt.get("ranks", []) is Array):
+			v._err(ctx + ".ranks", "an array")
+		if ranks.size() > CLASS_RANKS_MAX:
+			v._err(ctx + ".ranks", "at most %d ranks (Rang II–IV, 09 §8.3; got %d)" % [CLASS_RANKS_MAX, ranks.size()])
+		var last: Vector2i = Vector2i(0, 1000)
+		for j in ranks.size():
+			var c: String = "%s.ranks[%d]" % [ctx, j]
+			if not (ranks[j] is Dictionary):
+				v._err(c, "an object")
+				continue
+			var r: Dictionary = ranks[j]
+			_keys(v, c, r, ClassDef.RT_RANK_SPEC)
+			var at: Vector2i = Vector2i(_i(r.get("level", 0)), _i(r.get("pm", 0)))
+			_range(v, c + ".level", r.get("level", 0), 1, DataValidator.SEASON_LEVEL_CAP)
+			_range(v, c + ".pm", r.get("pm", 0), CLASS_RANK_PM.x, CLASS_RANK_PM.y)
+			if at.x <= last.x or at.y <= last.y:
+				v._err(c, "level and pm rise from rank to rank (%s after %s)" % [str(at), str(last)])
+			last = at
 
 
 ## V9: one rule (party: skills of its bar / context or an item kind; enemy: any skill with rt, every_ms ≥ 1000).

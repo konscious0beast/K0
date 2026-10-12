@@ -64,6 +64,9 @@ Prüfwerkzeuge (`tools/`).
   Show-Zahlen liegen in den Bändern des GDD (07 E32: Hype, Sponsor-Geschenke, Follower, Zuschauer). Autoplay-Smoke und
   Full-Run-Bot prüfen ihn in CI. Alte Spielstände kämpfen weiter im Rundenkampf (CTB); der zieht in Teil 2b als eigenes
   Minispiel „Stempelduell“ um (`docs/10_MINISPIEL_STEMPELDUELL.md`).
+- **Kampf eröffnen** (07 E34–E37, Stand Pull): Außerhalb des Kampfes wählt man den Anführer einer Gruppe als Ziel und
+  eröffnet mit einer Fähigkeit (Tastatur, Gamepad und Touch); von hinten, gegen eine ahnungslose oder angebellte Gruppe ist
+  das ein Erstschlag — als Graf Mopsula reicht „bellen, dann 1“.
 - Etage 2 ist nur angelegt (`floors.json`: `playable = false`). Wer abgestiegen ist, landet nach „Fortsetzen“ im Abspann.
 - 3 Speicherslots (JSON in `user://saves/`), Einstellungen, Pausemenü, Touch-Steuerung.
 - **M.O.D.-Marotten & Unterhosen-Liga** (06 Kap. 4): M.O.D. verrät je Etage, was sie heute mag (Show-Wetten mit Herzen,
@@ -81,8 +84,6 @@ Prüfwerkzeuge (`tools/`).
 - Ausrüstung ist an den Figuren nicht sichtbar (Antrag 03_ART A8)
 - kein Netzwerk, kein Server, kein Echtgeld (SHOWRUN S1 und später)
 - Plattform-Matrix der Stufe S0 noch nicht gemessen (05 Kap. 2), Budgets noch nicht auf einem echten Android-Gerät geprüft
-- außerhalb des Kampfes lässt sich eine Gruppe noch nicht mit einer Fähigkeit „ziehen“ (Ziel + Taste 1–5, 07 §2.2); Kämpfe
-  beginnen per Feldschlag, wenn ein Gegner die Figur einholt, und an den Bossen (07 §12.6 „Stand R5b-2a“)
 - noch keine externen Playtests
 
 ## 3. Öffnen und starten
@@ -273,6 +274,8 @@ Gamepad und Touch bedienen (02_TECH §2.2, §10). Gekämpft wird in Echtzeit dir
 | Kamera zoomen | Mausrad | – | zwei Finger (Pinch) |
 | Schleichen (halten) | Shift | LT oder L3 | Stick nur wenig auslenken (≤ 60 %) |
 | Aktion: Interagieren, Feldschlag (Kai) oder Bellen (Graf Mopsula) | F, Leertaste, Enter | A | runder Aktions-Button rechts |
+| Ziel wählen (Erkundung): Anführer einer Gruppe im Raum | Tab / Shift+Tab, Linksklick auf den Gegner; Linksklick auf freien Boden = Ziel weg | RT; B = Ziel weg | Gegner antippen; freien Boden antippen = Ziel weg |
+| Kampf eröffnen (Pull, mit Ziel) | 1–5: die Fähigkeit des Slots | A (Slot 1, wenn das Ziel in Reichweite ist), X / Y (Slot 2 / 3) | Aktions-Button (zeigt dann das Symbol von Slot 1) |
 | Pause | Esc, P | Start | Pause-Button oben rechts |
 | Karte | M | Back | Karten-Button |
 | Menü-Reiter wechseln | Q / E, Bild↑ / Bild↓ | LB / RB | Reiter antippen |
@@ -291,16 +294,21 @@ Gamepad und Touch bedienen (02_TECH §2.2, §10). Gekämpft wird in Echtzeit dir
 | QA: Test-Geschenk / Sponsor-Fenster öffnen (Debug-Build, Overlay offen) | F4 / F5 | – | Buttons im Overlay |
 
 Interagieren hat Vorrang: Zeigt die Erkundung einen Prompt (Truhe, Tür, Event in 1,5 m vor der Figur), löst die
-Aktionstaste die Interaktion aus, sonst den Feldschlag bzw. das Bellen. Ein Kampf beginnt, wenn Kais Feldschlag eine Gruppe
-trifft (ruht sie, patrouilliert sie, ist sie angebellt oder trifft er sie von hinten: **Erstschlag**, die Gegner sind
-3 s überrumpelt), wenn ein verfolgender Gegner die Figur erreicht (von hinten: Hinterhalt) oder sie 4 s im selben Raum
-verfolgt, und an den Bossen. Gesehen werden allein startet keinen Kampf; Graf Mopsulas Bellen verdutzt eine Gruppe, startet aber
-keinen (07 §2.2). Wer den Ring des Kampf-Sets durch eine Türgasse verlässt, flieht.
+Aktionstaste die Interaktion aus, sonst den Feldschlag bzw. das Bellen. Einen Kampf eröffnet man selbst mit einem **Pull**:
+den Anführer einer Gruppe als Ziel wählen — der Zielrahmen oben zeigt Abstand, was die Gruppe gerade tut und je Slot, ob die
+Fähigkeit reicht — und eine Fähigkeit auf ihn wirken (Kai: Wuchtschlag aus der Nähe; Graf Mopsula: Adelsflamme aus bis zu
+20 m). Ruht die Gruppe, patrouilliert sie, ist sie angebellt oder steht man hinter ihr, ist das ein **Erstschlag** (die
+Gegner sind 3 s überrumpelt). Graf Mopsulas Bellen verdutzt eine Gruppe und macht ihren Anführer gleich zum Ziel: bellen,
+dann 1 (Gamepad: A, dann A; Touch: zweimal der Aktions-Button) ist immer ein Erstschlag. Kais Feldschlag eröffnet einen Kampf
+aus der Nähe ebenso. Geht ein Pull nicht (zu weit weg, zu wenig MP, eine Fähigkeit ohne Gegner-Ziel), steht der Grund kurz
+unter dem Zielrahmen; im Safe Room und im Treppenraum eröffnet man keinen Kampf. Ein Kampf beginnt außerdem, wenn ein
+verfolgender Gegner die Figur erreicht (von hinten: Hinterhalt) oder sie 4 s im selben Raum verfolgt, und an den Bossen.
+Gesehen werden allein startet keinen Kampf (07 §2.2). Wer den Ring des Kampf-Sets durch eine Türgasse verlässt, flieht.
 
 **Rundenkampf (CTB):** Spielstände von vor der Umstellung kämpfen weiter rundenbasiert (Debug-Builds: Einstellung
-„Kampfmodus (Debug)“ oder `--combat=ctb`). Dort gilt zusätzlich: Karte auch mit Tab, Kampf: Auto-Kampf T / Y / AUTO-Button,
-Tempo ×1 / ×2 R / R3 / Tempo-Button, Befehle und Ziele mit Pfeiltasten + Enter, Steuerkreuz / Stick + A oder den
-Befehls-Buttons (2 × 3); die Zugfolge-Leiste zeigt die nächsten 10 Züge.
+„Kampfmodus (Debug)“ oder `--combat=ctb`). Dort gibt es keinen Pull, und es gilt zusätzlich: Karte auch mit Tab, Kampf:
+Auto-Kampf T / Y / AUTO-Button, Tempo ×1 / ×2 R / R3 / Tempo-Button, Befehle und Ziele mit Pfeiltasten + Enter,
+Steuerkreuz / Stick + A oder den Befehls-Buttons (2 × 3); die Zugfolge-Leiste zeigt die nächsten 10 Züge.
 
 ## 6. Entwickler-Argumente
 
@@ -413,8 +421,8 @@ Systeme) > 01_GDD / 02_TECH / 03_ART / 05 (je nach Thema) > 04**.
 
 ## 10. Screenshots
 
-Alle Bilder stammen aus dem Spiel selbst (Compatibility-Renderer unter Xvfb, 1280 × 720; Bild 59 im Handy-Format
-2400 × 1080 und Bild 26 im Handy-Format 1600 × 720, beide mit Touch-Steuerung). Die Kampfbilder zeigen den Echtzeitkampf,
+Alle Bilder stammen aus dem Spiel selbst (Compatibility-Renderer unter Xvfb, 1280 × 720; Bilder 59 und 63 im Handy-Format
+2400 × 1080 und Bild 26 im Handy-Format 1600 × 720, alle drei mit Touch-Steuerung). Die Kampfbilder zeigen den Echtzeitkampf,
 den Standard seit R5b-2a; die Bilder des Rundenkampfs (08–12, 18, 22, 28) liegen weiter in `docs/screenshots/`.
 
 | | |
@@ -433,6 +441,8 @@ den Standard seit R5b-2a; die Bilder des Rundenkampfs (08–12, 18, 22, 28) lieg
 | ![Kulissenwand](docs/screenshots/23_secret_wall.png) **23** Kulissenwand (E1-Geheimnis) | ![Wand fällt](docs/screenshots/24_secret_wall_falls.png) **24** Der Graf bellt die Kulissenwand um |
 | ![Regie-Notiz](docs/screenshots/25_regie_notiz.png) **25** Regie-Notiz mit Prompt | ![Handy Safe Room](docs/screenshots/26_safe_room_hero_talents_phone.png) **26** Handy-Format: Safe Room mit TALENT-SHOW-Knopf und M.O.D.-Kasten |
 | ![Show](docs/screenshots/27_pause_show_unterhosen_liga.png) **27** Pausemenü, Reiter Show: M.O.D.s Vorliebe und Unterhosen-Liga (06 Paket C) | ![Abspann](docs/screenshots/61_echtzeitkampf_boss_abspann.png) **61** Bosssieg: Abspann mit EXP, Level-Up, Talent-Hinweis und Beute |
+| ![Ziel wählen](docs/screenshots/62_erkundung_pull_ziel.png) **62** Kampf eröffnen: Kai hat mit Tab einen Anführer als Ziel — Zielrahmen mit den Slots, Ring und Pfeil, Hinweis „1 · Angriff eröffnen“ | ![Handy Pull](docs/screenshots/63_handy_erkundung_pull_touch.png) **63** Handy-Format: Anführer angetippt, der Aktions-Button zeigt Slot 1 und eröffnet den Kampf |
+| ![Bellen, dann 1](docs/screenshots/64_erkundung_bellen_erstschlag.png) **64** Graf Mopsula hat gebellt: Der verdutzte Anführer ist schon Ziel — „verdutzt · Erstschlag!“ | |
 | ![Casting 1/3](docs/screenshots/29_casting_1_wer_sind_sie.png) **29** Casting 1/3 „Wer sind Sie?“: Name, Wortform, Figur (08 K1) | ![Casting 2/3](docs/screenshots/30_casting_2_steckbrief.png) **30** Casting 2/3 „Steckbrief“: Vorleben, Hobby / Talent, Eigenschaften |
 | ![Vorleben](docs/screenshots/31_casting_2_vorleben_overlay.png) **31** Overlay „Vorleben wählen“ mit „genauer“-Chips | ![Eigenschaften](docs/screenshots/32_casting_2_eigenschaften_overlay.png) **32** Overlay „Eigenschaften“ (0–3, leer erlaubt) |
 | ![Kandidatenkarte](docs/screenshots/33_casting_3_kandidatenkarte.png) **33** Casting 3/3: Kandidatenkarte und Sendeformat | ![Tastatur](docs/screenshots/34_casting_bildschirmtastatur_akzente.png) **34** Bildschirmtastatur, Akzent-Ebene |
@@ -461,6 +471,9 @@ GODOT=… $T --shot $E shot.png 30 1280x720 --recipe=rt_r4_results              
 GODOT=… $T --shot $E shot.png 30 2400x1080 --touch --recipe=rt_r4_regular                                  # 59
 GODOT=… $T --shot $E shot.png 5 1280x720 --recipe=rt_hint                                                  # 60
 GODOT=… $T --shot $E shot.png 5 1280x720 --recipe=rt_credits                                               # 61
+GODOT=… $T --shot $E shot.png 5 1280x720 --recipe=pull_target_platform                                     # 62
+GODOT=… $T --shot $E shot.png 5 2400x1080 --touch --recipe=pull_target_platform                            # 63
+GODOT=… $T --shot $E shot.png 5 1280x720 --recipe=pull_bark_sewer                                          # 64
 GODOT=… $T --shot res://scenes/safe_room/safe_room.tscn shot.png 5 1280x720 --recipe=safe_mopsula           # 13
 GODOT=… $T --shot res://scenes/safe_room/safe_room.tscn shot.png 5 1280x720 --recipe=safe_lootbox_open      # 14
 GODOT=… $T --shot res://scenes/ui/event_lobby.tscn shot.png 120 1280x720                                     # 15

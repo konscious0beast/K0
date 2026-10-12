@@ -452,6 +452,7 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `scenes/exploration/player.tscn` + `player_controller.gd` | M3 | CharacterBody3D + `CharacterRig` der gesteuerten Figur (`set_hero`), Laufen/Schleichen, Feldfähigkeit Feldschlag/Bellen + Interagieren (`action`) |
 | `scenes/exploration/companion_follower.gd` | M3 | Die Partner-Figur folgt der Spur der Held:in (ohne NavigationServer, §7.3) |
 | `scenes/exploration/encounter_rules.gd` | M3 | Privat, rein: Vorteilsregel bei Kontakt/Feldschlag, Bellen-Kegel (`BARK_*`, `DAZE_*`, §7.3) |
+| `scenes/exploration/pull_rules.gd` | 07 Pull | Privat, rein: Pull einer Person (07 E34) — Kampfleiste der Figur außerhalb des Kampfes, eröffnende Fähigkeiten, Reichweite, MP, Tab-Reihenfolge, Zustandswort des Zielrahmens |
 | `scenes/exploration/scenery_wall.gd` | 06-A | Kulissenwand (Tor-Unterklasse ohne Prompt): Pappwand mit Rissen + Staub, fällt beim Feldschlag/Bellen (§7.3) |
 | `scenes/exploration/note_interactable.gd` | 06-A | Regie-Notiz: Ständer mit Post-it, „Regie-Notiz lesen“, versteckt hinter einer stehenden Wand (§7.3) |
 | `scenes/exploration/camera_rig.gd` | M3 | Orbit-Kamera mit SpringArm3D |
@@ -483,6 +484,7 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `scenes/ui/mod_dialog.tscn` + `.gd` | M6 | M.O.D.-/Mopsula-Textbox mit Queue; Dialog-Presenter (`Game.set_dialog_presenter`, §9.4) |
 | `scenes/ui/toast_stack.gd` | M6 | Achievement-/Hinweis-Toasts |
 | `scenes/ui/exploration_hud.tscn` + `.gd` | M6 (S) | `ExplorationHud`: Timer, Etage, Party-Mini-Status, Minimap, Prompt, Touch, Pause |
+| `scenes/ui/explore_target.gd` | 07 Pull | Privat: Zielrahmen und Marker des Pulls in der Echtzeit-Erkundung, Pull-Plakette, Ablehnungstext (07 E34, E37); ein Dreiecks-Array |
 | `scenes/ui/minimap.gd` | M6 | Minimap + große Karte |
 | `scenes/ui/touch_controls.tscn` + `.gd` | M6 | Touch-Layer (virtueller Stick + Buttons + Kamera-Drag) |
 | `scenes/ui/virtual_joystick.gd` | M6 | Floating Joystick |
@@ -759,12 +761,12 @@ Alle Events mit `"device":-1` (= alle Geräte; geprüft: matcht Gamepad 0/1/3 un
 | `cam_up` | 0.2 | – | Achse 3 (RY) −1.0 | Erkundung |
 | `cam_down` | 0.2 | – | Achse 3 (RY) +1.0 | Erkundung |
 | `sneak` | 0.5 | Shift | Achse 4 (LT) +1.0, Button 7 (L3) | Erkundung (halten = Schleichen 2.5 m/s) |
-| `action` | 0.5 | F, Space, Enter, Kp Enter | Button 0 (A) | Erkundung: Interagieren (Vorrang, wenn Prompt aktiv), sonst Feldschlag |
+| `action` | 0.5 | F, Space, Enter, Kp Enter | Button 0 (A) | Erkundung: Interagieren (Vorrang, wenn Prompt aktiv), sonst Feldschlag; Echtzeit mit Pull-Ziel: Pad-A in Reichweite von Slot 1 und der Touch-Knopf ziehen (07 E36) |
 | `pause` | 0.5 | Escape, P | Button 6 (Start) | Erkundung, Safe Room |
-| `map` | 0.5 | M, Tab | Button 4 (Back) | Erkundung |
+| `map` | 0.5 | M | Button 4 (Back) | Erkundung (CTB-Läufe: zur Laufzeit auch Tab, 07 E36) |
 | `tab_prev` | 0.5 | Q, PageUp | Button 9 (LB) | Menüs mit Reitern |
 | `tab_next` | 0.5 | E, PageDown | Button 10 (RB) | Menüs mit Reitern |
-| `toggle_auto` | 0.5 | T | Button 3 (Y) | Kampf |
+| `toggle_auto` | 0.5 | T | Button 11 (Steuerkreuz oben) | Kampf (CTB-Läufe: zur Laufzeit auch Button 3 Y, 07 E36) |
 | `toggle_speed` | 0.5 | R | Button 8 (R3) | Kampf (×1 ↔ ×2) |
 | `toggle_fullscreen` | 0.5 | F11 | – | global (nur PC) |
 | `debug_overlay` | 0.5 | F3 | – | global (nur `OS.is_debug_build()`) |
@@ -805,10 +807,14 @@ dann `"device"` auf `-1` setzen und einfügen.
 **Echtzeitkampf (07 §7.7, R3):** neu `target_next` (Tab; Achse 5 RT +), `target_prev` (Shift+Tab; Achse 4 LT +), `bar_1` … `bar_6`
 (Tasten 1–6; Buttons 0 A, 2 X, 3 Y, 1 B, 10 RB, 9 LB), `partner_special` (R; Button 13 D-Pad links), `partner_preset` (G; Button 14
 D-Pad rechts), `auto_attack_toggle` (V; Button 12 D-Pad unten), alle Deadzone 0.5, `physical_keycode`, `device` −1. Die geänderten
-Bestandsaktionen (`map` ohne Tab, `toggle_auto` ohne Y und mit D-Pad oben, Button 11) setzt `CombatInput.apply_input_mode` zur
-Laufzeit nur für Echtzeit-Läufe (`GameState.combat_mode == &"realtime"`; jede Erkundung ruft `CombatInput.apply_for_game()`) —
-`project.godot` behält bis R5b die CTB-Belegung. `CombatInput` prüft mit `exact_match = true` (Shift+Tab erfüllt sonst auch
-`target_next`); im Kampf wertet es `action` nur von der Tastatur aus („Angriff!“), `map` ist gesperrt („Nicht während der Aufnahme!“).
+Bestandsaktionen (`map` ohne Tab, `toggle_auto` ohne Y und mit D-Pad oben, Button 11) stehen seit dem Pull einer Person (07 E36)
+in `project.godot`; bis dahin setzte `CombatInput.apply_input_mode` sie zur Laufzeit. Jetzt stellt es umgekehrt für CTB-Läufe die
+alte Belegung her (Tab an `map`, Y an `toggle_auto`; jede Erkundung ruft `CombatInput.apply_for_game()`), bis SD1.
+`CombatInput` prüft mit `exact_match = true` (Shift+Tab erfüllt sonst auch `target_next`); im Kampf wertet es `action` nur von der
+Tastatur aus („Angriff!“), `map` ist gesperrt („Nicht während der Aufnahme!“). **Echtzeit-Erkundung (07 E34–E36):** Die
+`ExplorationScene` wertet für den Pull `target_next` / `target_prev` (Tastatur, exakt; am Pad nur RT, ein Schritt je Druck — LT
+bleibt `sneak`), den Linksklick (nur echte Maus, nicht `DEVICE_ID_EMULATION`), `bar_1` … `bar_5` (Tastatur; am Pad X / Y =
+`bar_2` / `bar_3` und B = `ui_cancel` nur mit Ziel) und `action` von Pad und Touch-Knopf aus (`PlayerController.action_source`).
 
 ### 2.3 Autoload-Reihenfolge und Initialisierungsregel
 
@@ -4875,6 +4881,10 @@ func occupied_rects() -> Array[Rect2]    # what the persistent UI covers now (hy
 - Kontextabhängige Doppelbelegungen (Q/E, Tab, Esc, Back) sind gewollt; jeder Kontext wertet nur seine Actions aus.
 - Erkundung: `action` = Interagieren, wenn `ExplorationHud` einen Prompt zeigt (Interactable im Radius 1.5 m / 120°), sonst Feldschlag;
   `sneak` gehalten = Schleichen. Kampf: `toggle_speed` schaltet `battle_speed` 1.0 ↔ 2.0 (auch Speed-Button „»“ im HUD), `toggle_auto`.
+- Echtzeit-Erkundung, Pull einer Person (07 §2.2, E34–E36): Tab / Shift+Tab bzw. Linksklick wählen den Anführer einer Gruppe
+  als Ziel (freier Boden löscht), `bar_1` … `bar_5` eröffnen mit dem Slot; am Pad RT (Ziel), A (Slot 1, nur in dessen
+  Reichweite, sonst Feldschlag), X / Y (Slot 2 / 3), B (Ziel löschen). Der Prompt hat Vorrang vor dem Pull. Kein Pull in
+  Safe Room und Treppenraum, in Dialogen, Übergängen (`Router.busy`) und laufenden Kämpfen.
 - Esc ist `pause` **und** `ui_cancel`: Ein offenes Menü schließt bei `ui_cancel` oder `pause` und ruft
   `get_viewport().set_input_as_handled()`; die Erkundung reagiert auf `pause`/`map` nur, wenn kein Menü und kein Wahl-Dialog
   offen ist, auf `action` außerdem nicht während eines Router-Übergangs (`Router.busy`).
@@ -4897,13 +4907,17 @@ func occupied_rects() -> Array[Rect2]    # what the persistent UI covers now (hy
 - Linke 40 % Bildbreite: Floating-Joystick (erscheint am Berührpunkt, Ruhe-Anzeige bei (147, 573)), Radius 90 px, Knopf 40 px,
   Deadzone 0.15; setzt `Input.action_press(&"move_*", strength)` / `action_release`; Auslenkung ≤ 0.6 hält zusätzlich `sneak`.
 - Rechte Seite: **ein** Button `action` (96 px rund bei (1147, 587); Icon „Hand“ mit Prompt, sonst die Feldfähigkeit der
-  gesteuerten Figur: Faust „Schlag“ bzw. Schallwelle „Bellen“, 06 §1.3), `map` (64 px),
+  gesteuerten Figur: Faust „Schlag“ bzw. Schallwelle „Bellen“, 06 §1.3; in der Echtzeit-Erkundung mit Pull-Ziel das Symbol
+  von Slot 1 in den Tönungen der Aktionsleiste — der Knopf zieht dann, 07 E36), `map` (64 px),
   `pause` (64 px, oben rechts bei (1227, 40)); alle mit Trefferfläche ≥ 88 px. Buttons lösen `Input.parse_input_event()` mit
   `InputEventAction` (pressed true/false) aus. (Positionen = GDD §14.8 × 2/3, bezogen auf 1280 × 720.)
 - Drag auf freier rechter Fläche → `Events.camera_drag(relative)`; zwei Finger dort = Pinch → `Events.camera_zoom(amount)`
   (Abstandsänderung × 0.02 m/px, > 0 = Finger zusammen = herauszoomen; währenddessen kein Drag; `CameraRig` klemmt 5–9 m).
+  Echtzeit-Erkundung (07 E36): wie im Kampf Tippen ≠ Ziehen (≤ 0,25 s und < 12 px = Tippen → `ExplorationHud` →
+  `ExplorationScene.on_world_tap`: Anführer = Pull-Ziel, freier Boden löscht; ab 12 px Kamera-Drag).
 - `emulate_mouse_from_touch = true` (Buttons reagieren auf Touch); keine Maus-Taste ist an Gameplay-Actions gebunden,
-  daher keine Fehlauslösung durch emulierte Klicks.
+  daher keine Fehlauslösung durch emulierte Klicks (der Linksklick des Pulls in der Erkundung wertet nur echte Mausereignisse
+  aus, `device != InputEvent.DEVICE_ID_EMULATION`).
 - Kampf & Menüs: reine Button-UI (Kampfbefehle 2 Spalten × 3 Zeilen, je 200 × 64 px sichtbar / 88 px Treffer); Gegner direkt antippen
   wählt das Ziel (Trefferfläche ≥ 107 px um den Gegner), erneut antippen oder „OK“ führt aus. CTB-Leiste zeigt bei TOUCH 10 Einträge.
 

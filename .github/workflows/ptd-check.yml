@@ -41,7 +41,7 @@ jobs:
         run: PTD_PERF_ASSERTS=1 GODOT=~/godot/godot prime-time-dungeon/tools/check.sh
       # 07 E33: new games fight in real time — the bot plays the default; the CTB run stays until SD1 moves the CTB
       # battle into the Stempelduell (docs/10_MINISPIEL_STEMPELDUELL.md)
-      - name: Full run Floor 1 (real time: thorough + rush + dawdle)
+      - name: "Full run Floor 1 (real time: thorough + rush + dawdle)"
         run: GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --strategy=all --log-dir=fullrun-logs
       - name: Full run Floor 1 (CTB until SD1)
         run: GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --strategy=all --combat=ctb --log-dir=fullrun-logs

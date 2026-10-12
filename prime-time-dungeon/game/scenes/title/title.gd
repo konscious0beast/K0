@@ -275,3 +275,78 @@ func _build_footer(frame: Control) -> void:
 	v.add_theme_constant_override("outline_size", 2)
 	v.add_theme_color_override("font_outline_color", UiUtil.C_INK)
 	foot.add_child(v)
+
+
+# --- Stempelduell (10, SD2) -------------------------------------------------------------------------------------------
+## Titel → Extras → Stempelduell (Vorschau) (10 §4.7). "Extras" shares the Event-Lauf row as a half-width button: an
+## eighth full row does not fit 720 px next to "Fortsetzen" and "Beenden" (menu_ids() keeps its entries). Hooked in
+## additively: the member initializer connects `ready` (build the button) and `tree_entered` (back from the
+## Schalterhalle: title music, overlay mode &"menu", focus on Extras). The rest lives in scenes/stempel/.
+const SdExtras := preload("res://scenes/stempel/sd_extras.gd")
+
+var extras_button: Button = null
+var _sd_hooked: bool = _sd_hook()
+
+
+func _sd_hook() -> bool:
+	ready.connect(_sd_build_extras, CONNECT_ONE_SHOT)
+	tree_entered.connect(_sd_on_tree_entered)
+	return true
+
+
+func _sd_build_extras() -> void:
+	var ev: Button = menu_buttons.get("event") as Button
+	if ev == null or _menu == null:
+		return
+	ev.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	ev.custom_minimum_size.x = 174.0
+	extras_button = UiUtil.button("Extras", &"ButtonBig")
+	extras_button.name = "Menu_extras"
+	extras_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	extras_button.custom_minimum_size = Vector2(0, 64)
+	UiUtil.set_vmargin(extras_button, 8.0)
+	extras_button.pressed.connect(_sd_open_extras)
+	_menu.get_parent().add_child(extras_button)
+	ev.item_rect_changed.connect(_sd_place_extras)
+	_menu.item_rect_changed.connect(_sd_place_extras)
+	_sd_place_extras()
+	var up: Node = ev.get_node_or_null(ev.focus_neighbor_top)
+	var down: Node = ev.get_node_or_null(ev.focus_neighbor_bottom)
+	if up != null:
+		extras_button.focus_neighbor_top = extras_button.get_path_to(up)
+	if down != null:
+		extras_button.focus_neighbor_bottom = extras_button.get_path_to(down)
+		extras_button.focus_next = extras_button.get_path_to(down)
+	extras_button.focus_neighbor_left = extras_button.get_path_to(ev)
+	extras_button.focus_neighbor_right = extras_button.get_path_to(ev)
+	extras_button.focus_previous = extras_button.get_path_to(ev)
+	ev.focus_neighbor_right = ev.get_path_to(extras_button)
+	ev.focus_neighbor_left = ev.get_path_to(extras_button)
+	ev.focus_next = ev.get_path_to(extras_button)
+
+
+## Right of the (now half-width) Event-Lauf button, same row, up to the menu column's width.
+func _sd_place_extras() -> void:
+	var ev: Button = menu_buttons.get("event") as Button
+	if extras_button == null or ev == null:
+		return
+	var x: float = ev.position.x + ev.size.x + 12.0
+	extras_button.position = _menu.position + Vector2(x, ev.position.y)
+	extras_button.size = Vector2(maxf(_menu.size.x - x, 120.0), ev.size.y)
+
+
+func _sd_open_extras() -> void:
+	if _busy or (_modal != null and is_instance_valid(_modal)):
+		return
+	var m: Node = SdExtras.open(self)
+	_modal = m
+	m.connect("closed", func() -> void: _modal = null)
+
+
+## Back on top of the stack (Router.pop from the Schalterhalle): music, overlay and focus as after _ready.
+func _sd_on_tree_entered() -> void:
+	if extras_button == null:
+		return
+	Events.overlay_mode_requested.emit.call_deferred(&"menu")
+	Sfx.music(&"title")
+	UiUtil.focus_later(extras_button)

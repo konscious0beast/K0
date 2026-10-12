@@ -2,22 +2,10 @@ extends "res://tests/fixtures/rt_world/world_case.gd"
 ## Real-time combat in the world (07 §2, §3.5.6, §12.5 test_r2_combat_world; R2) on the real floor 1 with the world
 ## fixture as the sim: the triggers of 07 §2.2 (pull by field strike / ability / item, weapon reach, 4 s of chase,
 ## being seen alone starts nothing, the sleeping tutorial group also by touch — both heroes; no set in the stairs
-## room), the advantage table incl. DAZED (bark opener), the recorded encounter command, the show boss only in
-## real-time runs, "Mitziehen" ≤ 6 units with the others waiting at the ring, hidden actors of other rooms, the set ring
+## room), the advantage table incl. DAZED (bark opener), the recorded encounter command, the show boss groups,
+## "Mitziehen" ≤ 6 units with the others waiting at the ring, hidden actors of other rooms, the set ring
 ## with its collision and door lanes, closed sets, puppets = sim positions, the interaction lock, flight (reset),
 ## victory (groups removed) and the control switch with the body swap and the hero restored at the end.
-
-
-func test_ctb_runs_never_start_a_world_combat() -> void:
-	Game.state.combat_mode = &"ctb"
-	await make_world()
-	scene.auto_start_battle = false
-	place_player(Vector2i(1, 4), Vector3(0.0, 0.0, 2.0))
-	scene.call("_trigger_encounter", "f1_g1", "enc_f1_a2", Rules.NORMAL, "")
-	assert_null(Game.combat, "CTB: no RtSim")
-	assert_false(director.is_busy(), "the director stays idle")
-	assert_len(triggered, 1, "the CTB path announces the encounter")
-	assert_len(encounters(), 0)
 
 
 func test_the_field_strike_pulls_preemptive() -> void:
@@ -156,15 +144,13 @@ func test_no_set_in_the_stairs_room() -> void:
 	assert_false(bool(scene.call("_rt_cell_blocked", scene.get_layout().cell_to_world(Vector2i(1, 1)))))
 
 
-func test_show_boss_groups_spawn_only_in_real_time_runs() -> void:
+func test_show_boss_groups_spawn() -> void:
 	await make_world()
 	var spawn: EnemySpawn = scene.get_layout().enemies[0]
 	var enc: EncounterDef = Game.floor_def().encounter(spawn.encounter_id)
 	var saved: Dictionary = enc.show_boss
 	enc.show_boss = {"id": "test"}
-	assert_true(bool(scene.call("_rt_spawn_allowed", spawn)), "real-time run: the show boss spawns")
-	Game.state.combat_mode = &"ctb"
-	assert_false(bool(scene.call("_rt_spawn_allowed", spawn)), "CTB run: never")
+	assert_true(bool(scene.call("_rt_spawn_allowed", spawn)), "the show boss spawns (every run fights in real time)")
 	enc.show_boss = {}
 	assert_true(bool(scene.call("_rt_spawn_allowed", spawn)), "groups without show_boss always spawn")
 	enc.show_boss = saved

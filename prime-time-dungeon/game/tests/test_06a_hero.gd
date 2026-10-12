@@ -8,6 +8,8 @@ extends TestCase
 const DIR: String = "user://test_06a/saves"
 const ROOT: String = "user://test_06a"
 const TitleFlow := preload("res://scenes/title/title_flow.gd")
+const RtLive := preload("res://tests/fixtures/rt_live/rt_live.gd")
+const Harness := preload("res://tests/tools/rt_harness.gd")
 
 var _changed: Array[String] = []
 
@@ -182,41 +184,12 @@ func test_switch_only_in_a_safe_room() -> void:
 	assert_false(Game.set_hero("mopsula"), "outside again")
 
 
-## The live battle path of BattleController (§5.7): events → Show, gift at every turn boundary, auto commands.
-func _live_battle(enc: String, adv: int, group: String) -> BattleState:
-	var setup: BattleSetup = Game.make_battle_setup(enc, adv, group)
-	assert_not_null(setup)
-	var battle: BattleState = BattleState.new(setup, DB.data)
-	Show.begin_battle(setup)
-	Events.battle_started.emit(setup.encounter_id, setup.is_boss)
-	_feed(battle.start())
-	_boundary(battle)
-	var guard: int = 0
-	while not battle.is_finished() and guard < 400:
-		guard += 1
-		var cmd: BattleCommand = battle.choose_ai_command()
-		Game.record({"t": "battle", "cmd": cmd.to_dict(), "auto": true})
-		_feed(battle.submit(cmd))
-		_boundary(battle)
-	Events.battle_ended.emit(battle.result.outcome, battle.result.encounter_id)
-	Game.apply_battle_result(battle.result)
-	Show.end_battle(battle.result)
-	return battle
-
-
-func _feed(events: Array[ActionEvent]) -> void:
-	for e: ActionEvent in events:
-		Show.on_battle_event(e)
-
-
-func _boundary(battle: BattleState) -> void:
-	if battle.is_finished():
-		return
-	var g: Dictionary = Show.take_pending_gift(battle)
-	if not g.is_empty():
-		var events: Array[ActionEvent] = battle.apply_gift(g)
-		Show.note_battle_gift(g, events)
-		_feed(events)
+## The live combat (R5b part 2b: real time, the autopilot plays the party): RtLive.autopilot_fight through the Game
+## API of the CombatDirector — events → Show, gifts at the tick boundaries, recorded combat entries.
+func _live_battle(enc: String, adv: int, group: String) -> BattleResult:
+	var out: Dictionary = RtLive.autopilot_fight(enc, adv, group)
+	assert_false(out.is_empty(), "a real-time combat for " + enc)
+	return out.get("result") as BattleResult
 
 
 func test_replay_of_a_run_that_starts_as_mopsula_and_switches() -> void:
@@ -259,12 +232,13 @@ func test_runsim_applies_refuses_and_replays_hero_commands() -> void:
 	sim.apply({"t": "floor", "floor": 1})
 	sim.apply({"t": "hero", "id": "mopsula"})
 	assert_eq(st.hero, "mopsula", "initial choice")
-	sim.apply({"t": "encounter", "enc": DB.floor_def(1).timer_start_after, "adv": BattleSetup.Advantage.PREEMPTIVE,
-		"group": "f1_g0"})
-	var guard: int = 0
-	while sim.battle != null and guard < 400:
-		guard += 1
-		sim.apply({"t": "battle", "cmd": sim.battle.choose_ai_command().to_dict(), "auto": true})
+	var enc: Dictionary = Harness.command_for(DB.floor_def(1).timer_start_after, "mopsula",
+		BattleSetup.Advantage.PREEMPTIVE)
+	enc["group"] = "f1_g0"
+	sim.apply(enc)
+	if sim.combat != null:                               # the tutorial in real time, played by the sim's AI
+		sim.apply(RtCommand.autopilot(0, sim.combat.controlled_id(), true))
+	sim.settle()
 	sim.apply({"t": "hero", "id": "kai"})
 	assert_eq(st.hero, "mopsula", "no switch outside a safe room")
 	assert_eq(sim.rejected_cmds.back()["reason"], "not_in_safe_room")

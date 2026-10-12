@@ -1,8 +1,11 @@
 extends TestCase
 ## Performance / robustness (02_TECH §12.1, §12.5): Router transitions free their screens — N cycles of exploration
-## (rebuilt by goto) → battle (auto, Autoplay pacing) → safe room → back, with the real screens; the node / resource /
-## object minima must not grow between an early and the last window (perf_runner.leak_growth) and no orphan nodes
-## remain. Also: the Sfx exit drain, the floor build budget, and the physics / light-layer setup of the floor.
+## (rebuilt by goto) → real-time combat (the tutorial group, autopilot, Autoplay pacing; R5b part 2b: the campaign
+## fights in real time only, in the exploration world) → safe room → back, with the real screens; measured on the
+## floor the next goto rebuilt (the combat's Vfx pools live on the floor that spawned them and differ with each fight,
+## 03_ART A12), the node / resource / object minima must not grow between an early and the last window
+## (perf_runner.leak_growth) and no orphan nodes remain. Also: the Sfx exit drain, the floor build budget, and the
+## physics / light-layer setup of the floor.
 
 const PerfRunner := preload("res://tests/perf/perf_runner.gd")
 const FloorBuilderScript := preload("res://scenes/exploration/floor_builder.gd")
@@ -10,18 +13,18 @@ const CYCLES: int = 8
 const WARMUP: int = 2
 const WINDOW: int = 3
 const OBJECT_SLACK: int = 64           # tweens / function states / timers alive at the snapshot frame
-const LEAK_ENCOUNTER: String = "enc_f1_a1_tutorial"
+const COMBAT_FRAMES: int = 3000
 const FLOOR_BUILD_MS_MAX: float = 1500.0   # §12.1 mobile budget as generous CI guard (PC 500 ms: tools/perf.sh)
 
 var _autoplay: bool = false
 var _fast_text: bool = false
-var _auto_battle: bool = false
+var _hints: bool = true
 
 
 func before_each() -> void:
 	_autoplay = Game.autoplay
 	_fast_text = Game.fast_text
-	_auto_battle = Game.auto_battle
+	_hints = Game.settings.combat_hints
 	Engine.time_scale = 8.0
 	Save.read_only = true
 
@@ -30,7 +33,9 @@ func after_each() -> void:
 	Engine.time_scale = 1.0
 	Game.autoplay = _autoplay
 	Game.fast_text = _fast_text
-	Game.auto_battle = _auto_battle
+	Game.settings.combat_hints = _hints
+	if Game.combat != null:
+		Game.end_combat()
 	Save.read_only = false
 	await wait_until(func() -> bool: return not Router.busy, 600)
 	var cur: Node = Router.current
@@ -51,22 +56,33 @@ func _wait_screen(check: Callable, max_frames: int) -> bool:
 
 func test_router_cycles_do_not_leak() -> void:
 	Game.new_game(0, "Kai", 4242)
-	Game.autoplay = true                  # BattleScene speed 4, results continue after 1 s (§11.4)
+	Game.autoplay = true                  # the results lower third continues on its own (§11.4)
 	Game.fast_text = true
-	Game.auto_battle = true
+	Game.settings.combat_hints = false    # a first-time card would hold the ticks (07 §2.13)
 	var rooms: Array = Game.floor_def().layout.get("safe_rooms", [])
 	var sr_id: String = str((rooms[0] as Dictionary).get("id", "")) if not rooms.is_empty() else ""
 	var snaps: Array[Dictionary] = []
-	for cycle in CYCLES:
+	for cycle in CYCLES + 1:
 		Game.state.floor_run.spawner_ticks.clear()   # same floor every cycle: a stray is game state, not a leak
+		Game.state.floor_run.defeated_groups.clear() # the same combat every cycle (the tutorial group comes back)
 		Router.goto(Router.SCENE_EXPLORATION, {"spawn": &"start"}, Router.Transition.NONE)
 		if not await _wait_screen(func(c: Node) -> bool: return c is ExplorationScene, 600):
 			return
+		if cycle > 0:                                # the last cycle's screens are freed: the fresh floor
+			await wait_frames(4)
+			snaps.append({"objects": int(Performance.get_monitor(Performance.OBJECT_COUNT)),
+				"nodes": int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),
+				"resources": int(Performance.get_monitor(Performance.OBJECT_RESOURCE_COUNT)),
+				"orphans": int(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT)),
+				"ram": Performance.get_monitor(Performance.MEMORY_STATIC) / 1048576.0})
+		if cycle == CYCLES:
+			break
 		Progression.full_heal(Game.state, DB.data)
-		Router.start_battle(Game.make_battle_setup(LEAK_ENCOUNTER, 0, ""))
-		if not await _wait_screen(func(c: Node) -> bool: return c is BattleScene, 600):
+		var fought: Dictionary = await PerfRunner.leak_combat(Router.current as ExplorationScene, COMBAT_FRAMES)
+		assert_eq(str(fought["error"]), "", "cycle %d: a real-time combat" % cycle)
+		if str(fought["error"]) != "":
 			return
-		if not await _wait_screen(func(c: Node) -> bool: return c is ExplorationScene, 3000):
+		if not await _wait_screen(func(c: Node) -> bool: return c is ExplorationScene, 600):
 			return
 		if sr_id != "":
 			Router.enter_safe_room(sr_id)
@@ -75,12 +91,6 @@ func test_router_cycles_do_not_leak() -> void:
 			Router.exit_safe_room()
 			if not await _wait_screen(func(c: Node) -> bool: return c is ExplorationScene, 600):
 				return
-		await wait_frames(4)
-		snaps.append({"objects": int(Performance.get_monitor(Performance.OBJECT_COUNT)),
-			"nodes": int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),
-			"resources": int(Performance.get_monitor(Performance.OBJECT_RESOURCE_COUNT)),
-			"orphans": int(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT)),
-			"ram": Performance.get_monitor(Performance.MEMORY_STATIC) / 1048576.0})
 	var growth: PackedStringArray = PerfRunner.leak_growth(snaps, WARMUP, WINDOW, OBJECT_SLACK)
 	assert_eq(growth, PackedStringArray(), "no growth over %d Router cycles: %s" % [CYCLES,
 		", ".join(snaps.map(func(d: Dictionary) -> String: return "%d/%d" % [int(d["nodes"]), int(d["objects"])]))])

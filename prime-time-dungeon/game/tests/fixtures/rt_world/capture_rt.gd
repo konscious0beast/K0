@@ -14,10 +14,6 @@ func run(which: String, scene: Node) -> bool:
 	if not await rec.call("_explore_ready", scene):
 		return false
 	scene.set("auto_start_battle", true)            # _explore_ready turns battles off for the exploration stills
-	# the run plays real-time combats like a new real-time game (07 §12.1, §3.9.4: run log header, party HP scale)
-	Game.combat_mode_override = &"realtime"
-	Game.call("_rt_new_game")
-	Game.combat_mode_override = &""
 	Game.settings.combat_hints = false              # R3's first-time cards would hold the fixture's ticks (07 §2.13)
 	match which:
 		"regular":

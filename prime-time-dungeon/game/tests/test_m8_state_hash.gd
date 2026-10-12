@@ -1,6 +1,7 @@
 extends TestCase
-## StateHash (05 §3.3 Nr. 8, CR-14): SHA-256 over the canonical GameState without display fields; of_battle over the
-## BattleState snapshot. Integration with the real M2 GameState / M1 BattleState (no autoloads).
+## StateHash (05 §3.3 Nr. 8, CR-14): SHA-256 over the canonical GameState without display fields. Integration with the
+## real M2 GameState (no autoloads). StateHash.of_battle (the CTB engine's snapshot) belongs to the Stempelduell since
+## R5b part 2b: test_sd_engine_golden (10 SD1).
 
 var _hex: RegEx = RegEx.create_from_string("^[0-9a-f]{64}$")
 
@@ -63,25 +64,3 @@ func test_unserializable_state_gives_no_hash() -> void:
 	var st: GameState = _state()
 	st.flags["ratio"] = 0.5
 	assert_eq(StateHash.of(st), "", "a non-integral float makes the state unhashable (never a fake hash)")
-
-
-func test_battle_hash_snapshot_round_trip() -> void:
-	var data: GameData = real_data()
-	var st: GameState = _state()
-	var enc: String = data.floor_def(1).timer_start_after
-	var setup: BattleSetup = BattleBridge.make_setup(st, data, enc, BattleSetup.Advantage.NORMAL, "", 77)
-	assert_not_null(setup)
-	if setup == null:
-		return
-	var battle: BattleState = BattleState.new(setup, data)
-	battle.start()
-	var h0: String = StateHash.of_battle(battle)
-	assert_true(_hex.search(h0) != null, "battle hash: " + h0)
-	var copy: BattleState = BattleState.from_dict(JSON.parse_string(JSON.stringify(battle.to_dict())), data)
-	assert_eq(StateHash.of_battle(copy), h0, "snapshot → from_dict → same hash (resync, 05 §3.4)")
-	var cmd: BattleCommand = battle.choose_ai_command()
-	battle.submit(cmd)
-	copy.submit(BattleCommand.from_dict(cmd.to_dict()))
-	assert_ne(StateHash.of_battle(battle), h0, "an action changes the hash")
-	assert_eq(StateHash.of_battle(copy), StateHash.of_battle(battle), "restored battle continues identically")
-	assert_eq(StateHash.of_battle(null), "")

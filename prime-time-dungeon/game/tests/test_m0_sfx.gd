@@ -34,7 +34,8 @@ func test_every_music_id_builds_a_loop() -> void:
 
 
 func test_every_sfx_id_builds() -> void:
-	assert_len(SfxSynth.SFX_IDS, 41)              # 40 + "bark" (06 package A)
+	assert_len(SfxSynth.SFX_IDS, 40)              # 40 + "bark" (06 package A) − "swirl" (R5b part 2b)
+	assert_false(SfxSynth.SFX_IDS.has("swirl"), "the battle swirl left with the CTB battle")
 	for id: String in SfxSynth.SFX_IDS:
 		var wav: AudioStreamWAV = SfxSynth.make(StringName(id))
 		assert_not_null(wav, "sfx " + id)

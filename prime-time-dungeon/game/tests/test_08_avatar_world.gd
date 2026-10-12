@@ -9,14 +9,12 @@ const LOOK: Dictionary = {"hair": "lk_hair_curls", "hair_color": "lk_hc_black", 
 const STYLE: Dictionary = {"hair": "curls", "beard": "full"}
 
 
-## A real-time game with a persona in LOOK (world_case: the boot argument path).
+## A new game (it fights in real time) with a persona in LOOK.
 func _new_rt_game() -> void:
 	var p: PersonaProfile = PersonaProfile.canon(DB.data)
 	p.name = "Jana"
 	p.look = LOOK.duplicate()
-	Game.combat_mode_override = &"realtime"
 	Game.new_game(0, "Jana", SEED, &"prime", HeroRules.DEFAULT_HERO, p)
-	Game.combat_mode_override = &""
 
 
 func after_each() -> void:

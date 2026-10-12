@@ -6,6 +6,8 @@ extends TestCase
 ## Liga achievements and the Mut-Paket are not capped. Saved + hashed: Game.replay_log repeats it.
 
 const BetsMenu := preload("res://scenes/ui/bets_menu.gd")
+const Harness := preload("res://tests/tools/rt_harness.gd")
+const RtLive := preload("res://tests/fixtures/rt_live/rt_live.gd")
 const CAP_T1: int = 2
 const CAP_T2: int = 3
 const TEST_F2: int = 1500                      # a big Duo follower factor: the bonus of one battle exceeds the caps
@@ -22,9 +24,10 @@ func before_each() -> void:
 
 
 func after_each() -> void:
+	if Game.combat != null:
+		Game.end_combat()
 	if Game.state != null:
 		Show.end_battle(null)
-	Game.auto_battle = false
 	Game.in_battle = false
 	Game.timer_running = false
 	Game.replaying = false
@@ -126,8 +129,8 @@ func _two_battles(cap: int) -> Dictionary:
 
 
 func _battle(st: GameState, i: int) -> int:
-	var setup: BattleSetup = BattleBridge.make_setup(st, DB.data, "enc_f1_a2", BattleSetup.Advantage.NORMAL, "",
-		SeedUtil.derive(1, "cap", i))
+	var setup: RtSetup = BattleBridge.make_rt_setup(st, DB.data, Harness.command_for("enc_f1_a2", st.hero,
+		BattleSetup.Advantage.NORMAL), SeedUtil.derive(1, "cap", i))
 	Game.in_battle = true
 	Show.begin_battle(setup)
 	Show.on_battle_event(ActionEvent.make(ActionEvent.Type.BATTLE_START))
@@ -144,7 +147,6 @@ func _battle(st: GameState, i: int) -> int:
 ## Live through the Game facade: Duo-Liga battles fill the cap; the record survives save → load (SaveCodec) and
 ## Game.replay_log ≡ live.
 func test_live_capped_liga_replays_and_saves() -> void:
-	Game.auto_battle = true
 	Game.new_game(1, "Kai", 6464)
 	for m: PartyMember in Game.state.party:
 		m.level = 5
@@ -161,7 +163,6 @@ func test_live_capped_liga_replays_and_saves() -> void:
 	assert_eq(MarottenRules.liga_tier(Game.state), 2)
 	for enc: String in ["enc_f1_a2", "enc_f1_a3"]:
 		assert_true(_fight(enc), enc + " won")
-	Game.auto_battle = false
 	assert_eq(int(Game.state.show.stats.get("liga_battles", 0)), 2)
 	assert_eq(int(Game.state.show.marotten["liga"]["followers"]), CAP_T2, "two Duo battles fill the cap of 3")
 	assert_eq(Show.marotten_view()["liga_followers_left"], 0)
@@ -175,33 +176,10 @@ func test_live_capped_liga_replays_and_saves() -> void:
 	assert_eq(res["final_hash"], h, "Game.replay_log ≡ live with the capped Liga bonus")
 
 
+## One combat through the Game facade: real time, the autopilot plays the party (RtLive.autopilot_fight).
 func _fight(enc_id: String) -> bool:
-	var setup: BattleSetup = Game.make_battle_setup(enc_id, BattleSetup.Advantage.PREEMPTIVE, "")
-	var battle: BattleState = BattleState.new(setup, DB.data)
-	Show.begin_battle(setup)
-	_play(battle, battle.start())
-	var guard: int = 0
-	while not battle.is_finished() and guard < 400:
-		guard += 1
-		var cmd: BattleCommand = battle.choose_ai_command()
-		Game.record({"t": "battle", "cmd": cmd.to_dict(), "auto": true})
-		_play(battle, battle.submit(cmd))
-	Game.apply_battle_result(battle.result)
-	Show.end_battle(battle.result)
-	return battle.result.outcome == BattleResult.Outcome.VICTORY
-
-
-func _play(battle: BattleState, events: Array[ActionEvent]) -> void:
-	for e: ActionEvent in events:
-		Show.on_battle_event(e)
-	if battle.is_finished():
-		return
-	var g: Dictionary = Show.take_pending_gift(battle)
-	if not g.is_empty():
-		var gift_events: Array[ActionEvent] = battle.apply_gift(g)
-		Show.note_battle_gift(g, gift_events)
-		for e: ActionEvent in gift_events:
-			Show.on_battle_event(e)
+	var out: Dictionary = RtLive.autopilot_fight(enc_id, BattleSetup.Advantage.PREEMPTIVE, "")
+	return not out.is_empty() and (out["result"] as BattleResult).outcome == BattleResult.Outcome.VICTORY
 
 
 func test_validator_checks_the_cap() -> void:

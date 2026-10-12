@@ -1,8 +1,8 @@
 extends CanvasLayer
-## Results of a real-time combat (07 §8.9, R3): successor of scenes/battle/ui/battle_results.gd with the 06 docking
-## points — results_shown + show_slot (06 §8.0 Nr. 12: package C hangs its show-bet effect onto the slot), the chip
-## "TALENT BEREIT · im Safe Room wählen" on a talent level (06 B, never a choice here), present(); autoplay continues
-## after 1.0 s (auto_continue_sec). Forms:
+## Results of a real-time combat (07 §8.9, R3): successor of the CTB results screen (gone since R5b part 2b) with the 06
+## docking points — results_shown + show_slot (06 §8.0 Nr. 12: package C hangs its show-bet effect onto the slot), the
+## chip "TALENT BEREIT · im Safe Room wählen" on a talent level (06 B, never a choice here), present(); autoplay
+## continues after 1.0 s (auto_continue_sec). Forms:
 ## - regular win: lower third "Applaus!" bottom left (380 × 64, 3.0 s): "+36 EXP · +12 Cr · Werbepflaster"; level-ups
 ##   and the talent chip as a second lower third. Not blocking: present() returns at once, the exploration goes on.
 ## - boss win: credits panel (layer 60, tree paused) with EXP bars, boss loot, achievements, talent chip, show_slot and
@@ -10,7 +10,7 @@ extends CanvasLayer
 ## - flight: lower third "Taktischer Rückzug" (the hype loss shows in the meter).
 ## - defeat: nothing here — the existing Sendeschluss / game over flow (07 §8.9).
 ## R2 creates it (load("res://scenes/combat/ui/combat_results.gd").new(), add_child) and calls present(result,
-## rewards) after Game.end_combat(). Private script (no class_name), like battle_results.gd.
+## rewards) after Game.end_combat(). Private script (no class_name).
 
 signal results_shown(result: BattleResult)
 

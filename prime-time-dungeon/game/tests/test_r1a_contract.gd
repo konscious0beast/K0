@@ -100,9 +100,8 @@ const PROPERTIES: Dictionary = {
 		"potions_used": "int", "flee_attempts": "int"},
 	"res://core/progression/party_member.gd": {"rt_preset": "String", "rt_toggles": "Dictionary",
 		"rt_loadout": "Dictionary"},
-	"res://core/progression/game_state.gd": {"combat_mode": "StringName"},
 	"res://core/progression/floor_run.gd": {"regen_ticks": "int"},
-	"res://autoload/game_settings.gd": {"combat_mode": "StringName", "combat_speed_pm": "int", "combat_assist": "int",
+	"res://autoload/game_settings.gd": {"combat_speed_pm": "int", "combat_assist": "int",
 		"combat_camera_assist": "int", "combat_hints": "bool", "telegraph_contrast": "StringName",
 		"auto_attack_default": "bool", "auto_retarget": "bool", "floating_text_scale": "int", "camera_shake": "bool"},
 	"res://core/data/defs/skill_def.gd": {"rt": "Dictionary"},
@@ -246,13 +245,13 @@ func test_events_signals_and_settings() -> void:
 	assert_eq(have.get("show_boss_spotted"), "String")
 	var s: GameSettings = GameSettings.new()
 	s.ephemeral = true
-	assert_eq(s.combat_mode, &"realtime", "real time is the default of new games since R5b-2a (07 E33)")
+	assert_false("combat_mode" in s, "no combat mode: the campaign fights in real time only (R5b part 2b)")
 	assert_eq(s.combat_speed_pm, 1000)
 	assert_eq([s.combat_assist, s.combat_camera_assist], [-1, -1])
 	assert_eq([s.combat_hints, s.auto_attack_default, s.auto_retarget, s.camera_shake], [true, true, true, true])
 	assert_eq([s.telegraph_contrast, s.floating_text_scale], [&"normal", 100])
 	var d: Dictionary = s.to_dict()
-	for key: String in ["combat_mode", "combat_speed_pm", "combat_assist", "combat_camera_assist", "combat_hints",
+	for key: String in ["combat_speed_pm", "combat_assist", "combat_camera_assist", "combat_hints",
 			"telegraph_contrast", "auto_attack_default", "auto_retarget", "floating_text_scale", "camera_shake"]:
 		assert_true(d.has(key), "settings key " + key)
 
@@ -263,7 +262,6 @@ func test_settings_combat_section_round_trip() -> void:
 	var backup: String = FileAccess.get_file_as_string(path) if had else ""
 	var w: GameSettings = GameSettings.new()
 	w.ephemeral = false
-	w.combat_mode = &"ctb"                                 # the debug switch (07 §12.1)
 	w.combat_speed_pm = 850
 	w.telegraph_contrast = &"high"
 	w.floating_text_scale = 130
@@ -271,9 +269,8 @@ func test_settings_combat_section_round_trip() -> void:
 	var r: GameSettings = GameSettings.new()
 	r.ephemeral = false
 	r.load_from_disk()
-	assert_eq([r.combat_mode, r.combat_speed_pm, r.telegraph_contrast, r.floating_text_scale],
-		[&"ctb" if OS.is_debug_build() else &"realtime", 850, &"high", 130],
-		"[combat] section round trip (the combat mode only in debug builds, 07 E33)")
+	assert_eq([r.combat_speed_pm, r.telegraph_contrast, r.floating_text_scale], [850, &"high", 130],
+		"[combat] section round trip")
 	var cfg: ConfigFile = ConfigFile.new()
 	assert_eq(cfg.load(path), OK)
 	assert_true(cfg.has_section("combat"), "keys live under [combat] (07 §7.8)")
@@ -285,11 +282,11 @@ func test_settings_combat_section_round_trip() -> void:
 		DirAccess.remove_absolute(path)
 
 
-# --- additive fields keep CTB states, results and events bit-identical -------------------------------------------
+# --- additive fields: unset, events / results / states keep their JSON (the CTB engine of the Stempelduell too) ------
 
 func test_new_fields_are_serialized_only_when_set() -> void:
 	var e: ActionEvent = ActionEvent.make(ActionEvent.Type.DAMAGE)
-	assert_false(e.to_dict().has("tick") or e.to_dict().has("rt") or e.to_dict().has("by_ai"), "CTB event JSON")
+	assert_false(e.to_dict().has("tick") or e.to_dict().has("rt") or e.to_dict().has("by_ai"), "plain event JSON")
 	e.tick = 12
 	e.rt = {"x": 3}
 	e.by_ai = true
@@ -298,7 +295,7 @@ func test_new_fields_are_serialized_only_when_set() -> void:
 	var r: BattleResult = BattleResult.new()
 	var plain: Dictionary = r.to_dict()
 	for k: String in ["group_ids"] + Array(BattleResult.RT_INT_FIELDS):
-		assert_false(plain.has(k), "CTB result without " + k)
+		assert_false(plain.has(k), "plain result without " + k)
 	r.group_ids = PackedStringArray(["f1_g1", "f1_g2"])
 	r.duration_ticks = 300
 	r.flee_attempts = 2
@@ -308,12 +305,11 @@ func test_new_fields_are_serialized_only_when_set() -> void:
 	st.floor_run = FloorRun.create(real_data().floor_def(1), 11, &"prime")
 	var before: String = StateHash.of(st)
 	var d: Dictionary = st.to_dict()
-	assert_eq(d.get("combat_mode", ""), "ctb", "save v2 (R5b part 2b): only a CTB state names its mode")
+	assert_false(d.has("combat_mode"), "no combat mode (R5b part 2b)")
 	assert_false((d["floor_run"] as Dictionary).has("regen_ticks"))
 	for m: Dictionary in d["party"]:
 		for k: String in ["rt_preset", "rt_toggles", "rt_loadout"]:
 			assert_false(m.has(k), "member without " + k)
-	st.combat_mode = &"realtime"
 	st.floor_run.regen_ticks = 40
 	st.party[0].rt_preset = "careful"
 	st.party[0].rt_toggles = {"potions": true}
@@ -321,9 +317,7 @@ func test_new_fields_are_serialized_only_when_set() -> void:
 	assert_ne(StateHash.of(st), before, "set real-time fields are game-relevant (hashed)")
 	var back_st: GameState = GameState.from_dict(JSON.parse_string(JSON.stringify(st.to_dict())))
 	assert_eq(StateHash.of(back_st), StateHash.of(st), "and survive a JSON round trip")
-	assert_eq([back_st.combat_mode, back_st.floor_run.regen_ticks, back_st.party[0].rt_preset],
-		[&"realtime", 40, "careful"])
-	assert_false(st.to_dict().has("combat_mode"), "a real-time state needs no key (the campaign's mode)")
+	assert_eq([back_st.floor_run.regen_ticks, back_st.party[0].rt_preset], [40, "careful"])
 
 
 ## R5b part 2b (07 §3.9.4, §12.6 step 2): the real-time HP live in the data — no scale at run time any more.
@@ -471,19 +465,16 @@ func test_rt_command_builders_and_schema() -> void:
 	assert_ne(Command.validate(enc_bad), "", "the controlled unit is a party unit")
 
 
-## R5a replaced R1a's "rt_unavailable": a CTB run refuses the real-time entries (not_realtime for an rt encounter and
-## combat_speed, no_combat for the entries of a combat that does not run) — nothing is recorded or started.
-func test_real_time_entries_outside_a_real_time_run() -> void:
+## The entries of a combat that does not run are refused (no_combat) — nothing is recorded or started (R5a's
+## not_realtime for a CTB run left with the CTB campaign, R5b part 2b).
+func test_combat_entries_without_a_combat() -> void:
 	var data: GameData = real_data()
 	var st: GameState = GameState.create_new(data, 0, "Kai", 21, &"prime")
 	var sim: RunSim = RunSim.new(data, st, {})
 	var rl: RunLog = RunLog.new()
 	sim.run_log = rl
 	sim.apply({"t": "floor", "floor": 1})
-	var cmds: Array[Dictionary] = [RtCommand.ability(0, "p0", "skl_kai_heavy_swing", "e0"), RtCommand.speed(850),
-		{"t": "encounter", "enc": data.floor_def(1).timer_start_after, "adv": 0, "group": "", "rt": {"v": 1,
-		"cell": [0, 0], "ctl": "p0", "party": [{"u": "p0", "p": [0, 0, 0]}], "groups": [], "presets": {},
-		"auto": true, "retarget": true, "open": {}, "diff": "prime"}},
+	var cmds: Array[Dictionary] = [RtCommand.ability(0, "p0", "skl_kai_heavy_swing", "e0"),
 		{"t": "gift", "ct": 3, "gift": Gift.make_dev("chest", "bronze", 100)}]
 	var reasons: Array = []
 	for c: Dictionary in cmds:
@@ -492,9 +483,8 @@ func test_real_time_entries_outside_a_real_time_run() -> void:
 		assert_eq(sim.rejected_cmds.size(), before + 1, "refused: " + str(c.get("t")))
 		if sim.rejected_cmds.size() > before:
 			reasons.append(sim.rejected_cmds.back()["reason"])
-	assert_eq(reasons, ["no_combat", "not_realtime", "not_realtime", "no_combat"])
-	assert_null(sim.battle, "no battle started from an rt encounter")
-	assert_null(sim.combat, "no real-time combat in a CTB run")
+	assert_eq(reasons, ["no_combat", "no_combat"])
+	assert_null(sim.combat, "no real-time combat started")
 	assert_eq(rl.size(), 1, "nothing but the floor was recorded")
 	var forged: RunLog = RunLog.new()
 	forged.add_cmd(0, {"t": "floor", "floor": 1}, 1)
@@ -502,7 +492,6 @@ func test_real_time_entries_outside_a_real_time_run() -> void:
 	var errs: PackedStringArray = forged.validate()
 	assert_eq(errs.size(), 1)
 	assert_true(errs.size() == 1 and errs[0].contains("outside a real-time combat"), str(errs))
-	assert_eq(RunRules.rt_refusal({"t": "rest"}), "")
 
 
 func test_run_log_combat_checkpoints_and_ct_order() -> void:

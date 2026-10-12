@@ -30,7 +30,7 @@ const BATTLE_KEYS: PackedStringArray = ["won", "hero", "party_turns", "items_use
 	"flee_attempts", "distinct_actions", "stunts_success", "weakness_hits", "min_party_hp_pct", "party_kos",
 	"last_kill_member", "encounter_type", "is_boss", "is_floor_boss", "boss_id", "kai_weapon", "equip_all_common",
 	"hero_armor_empty", "hero_acc_empty", "party_armor_empty", "party_acc_empty", "liga_tier",
-	"duration_sec"]                          # Echtzeitkampf (07 §9.6, R5a): whole combat seconds (0 in CTB)
+	"duration_sec"]                          # Echtzeitkampf (07 §9.6, R5a): whole combat seconds
 const ZONE_KEYS: PackedStringArray = ["zones_since_battle", "zone", "floor"]
 const LIGA_SLOTS: PackedStringArray = ["armor", "accessory"]
 const DEFAULT_HERO: String = "kai"
@@ -513,15 +513,15 @@ static func _draw_weight(state: GameState, def: MarotteDef, floor_index: int) ->
 
 # --- Echtzeitkampf (07 §9.6, R5a) ------------------------------------------------------------------------------------
 
-## e.flee_attempts: in a real-time combat (tally "rt", MarottenTracker) BattleResult.flee_attempts — every start of a
-## flight warning and every smoke (mar_brave); in CTB the tracker's FLEE_RESULT count as before.
+## e.flee_attempts: BattleResult.flee_attempts — every start of a flight warning and every smoke (mar_brave); the
+## tally's count only without a result (MarottenTracker counts none since the CTB tally left, R5b part 2b).
 static func _rt_flee_attempts(result: BattleResult, tally: Dictionary) -> int:
-	if result != null and bool(tally.get("rt", false)):
+	if result != null:
 		return result.flee_attempts
 	return JsonUtil.to_int(tally.get("flee_attempts", 0))
 
 
-## e.duration_sec: BattleResult.duration_ticks / 30 — whole combat seconds of a real-time combat, 0 in CTB (the
-## real-time condition of mar_speed comes with floor 2, 07 §9.6).
+## e.duration_sec: BattleResult.duration_ticks / 30 — whole combat seconds (the real-time condition of mar_speed,
+## floor 2, 07 §9.6).
 static func _rt_duration_sec(result: BattleResult) -> int:
 	return result.duration_ticks / RtSim.TICKS_PER_SEC if result != null else 0

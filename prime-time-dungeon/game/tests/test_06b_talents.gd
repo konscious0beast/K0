@@ -2,9 +2,9 @@ extends TestCase
 ## 06 package B — Talent-Show core (06 §2.2, 02_TECH §4.4.15/§6.1): talents.json content and validator rules, open
 ## choices on odd levels from L3 (derived, never stored), the seeded offer (deterministic, without replacement,
 ## for / min_level / max_rank), the pick rules (safe room, oldest open level, offer only), every effect kind at its
-## place (Progression stats, to_combatant crit / elements, BattleBridge MP, ActionResolver first strike, BattleState
-## stunt chance, field ability API, show bets API, GameState hype / follower), the recorded command + replay (RunSim
-## verifier and the Game facade) and save / hash compatibility.
+## place (Progression stats, to_combatant crit / elements / talent_mods, BattleBridge MP, field ability API, show bets
+## API, GameState hype / follower; the real-time effects of the first strike and the stunt window: test_r1_rt_talents),
+## the recorded command + replay (RunSim verifier and the Game facade) and save / hash compatibility.
 
 const Fx := preload("res://tests/test_m2_fixtures.gd")
 const Harness := preload("res://tests/tools/rt_harness.gd")
@@ -391,60 +391,6 @@ func test_combat_talents_reach_the_combatant() -> void:
 	assert_eq(back.to_dict(), c.to_dict())
 	assert_false(c0.to_dict().has("talent_mods"))
 	assert_eq(c.duplicate_combatant().talent_mods, c.talent_mods)
-
-
-func test_stunt_talent_raises_the_chance_before_the_cap() -> void:
-	var d: GameData = real_data()
-	var setup: BattleSetup = BattleSetup.new()
-	setup.encounter_id = "enc_f1_a2"
-	setup.enemy_ids = d.encounter("enc_f1_a2").enemies.duplicate()
-	setup.seed = 3
-	var mop: Combatant = Progression.to_combatant(_member("mopsula", 3, {}), d, "p0", 0)
-	var party: Array[Combatant] = [mop]
-	setup.party = party
-	var st: BattleState = BattleState.new(setup, d)
-	var sk: SkillDef = d.skill("skl_stunt_mop_entrance")
-	var base: float = st.stunt_chance(mop, sk)
-	mop.talent_mods = {"stunt_pm": 1200}
-	var lck: int = mop.stat(StatBlock.Stat.LCK)
-	var want: float = minf((sk.success_base + lck * sk.success_lck) * 1.2, sk.success_cap)
-	assert_almost(st.stunt_chance(mop, sk), want, 0.0001)
-	assert_gt(st.stunt_chance(mop, sk), base, "Taktgefühl: stunts land more often")
-	mop.talent_mods = {"stunt_pm": 1250}
-	assert_true(st.stunt_chance(mop, sk) <= sk.success_cap + 0.0001, "the skill cap still holds")
-
-
-func test_first_strike_talent_only_in_the_first_own_turn_after_preemptive() -> void:
-	var d: GameData = real_data()
-	var dmg: Array = []
-	for pm: int in [1000, 1150]:
-		for adv: BattleSetup.Advantage in [BattleSetup.Advantage.PREEMPTIVE, BattleSetup.Advantage.NORMAL]:
-			var setup: BattleSetup = BattleSetup.new()
-			setup.encounter_id = "enc_f1_a2"
-			setup.enemy_ids = d.encounter("enc_f1_a2").enemies.duplicate()
-			setup.seed = 11
-			setup.advantage = adv
-			var kai: Combatant = Progression.to_combatant(_member("kai", 5, {}, {"weapon": "itm_wpn_mop"}), d, "p0", 0)
-			if pm != 1000:
-				kai.talent_mods = {"preemptive_dmg_pm": pm}
-			var party: Array[Combatant] = [kai]
-			setup.party = party
-			var st: BattleState = BattleState.new(setup, d)
-			st.start()
-			var target: String = st.living(Combatant.Side.ENEMY)[0].id
-			var hit: HitResult = HitResult.new()
-			hit.amount = 40
-			kai.own_turns = 0
-			ActionResolver._talent_first_strike(st, kai, hit)
-			var first: int = hit.amount
-			kai.own_turns = 1
-			var hit2: HitResult = HitResult.new()
-			hit2.amount = 40
-			ActionResolver._talent_first_strike(st, kai, hit2)
-			dmg.append([pm, int(adv), first, hit2.amount, target != ""])
-	assert_eq(dmg[0].slice(2, 4), [40, 40], "no talent: unchanged")
-	assert_eq(dmg[2].slice(2, 4), [46, 40], "talent + preemptive: 40 × 1.15 = 46 in the first own turn only")
-	assert_eq(dmg[3].slice(2, 4), [40, 40], "talent without preemptive: unchanged")
 
 
 func test_post_battle_mp_talent_adds_to_the_werbepause() -> void:

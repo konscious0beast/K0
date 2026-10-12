@@ -11,6 +11,7 @@ const SAVES: String = "user://test_08_replay/saves"
 const EVENT_ID: String = "evt_offline_gleis9"
 const OLD_LOG: String = "res://tests/fixtures/live/run_log_sim_v1.json"
 const SEED: int = 9090
+const RtLive := preload("res://tests/fixtures/rt_live/rt_live.gd")
 
 
 func before_each() -> void:
@@ -20,6 +21,8 @@ func before_each() -> void:
 
 
 func after_each() -> void:
+	if Game.combat != null:
+		Game.end_combat()
 	Game.state = null
 	Game.run_log = null
 	Game.sim = null
@@ -68,35 +71,12 @@ static func _safe_room() -> String:
 	return str((DB.floor_def(1).layout.get("safe_rooms", [{}]) as Array)[0].get("id", ""))
 
 
-## The tutorial battle of floor 1, auto-played and recorded like the battle scene does.
+## The tutorial combat of floor 1: real time, the autopilot plays the party (RtLive.autopilot_fight — the Game API of
+## the CombatDirector, recorded like a live combat).
 func _fight() -> void:
-	var setup: BattleSetup = Game.make_battle_setup(DB.floor_def(1).timer_start_after,
-		BattleSetup.Advantage.PREEMPTIVE, "")
-	var battle: BattleState = BattleState.new(setup, DB.data)
-	Show.begin_battle(setup)
-	_play(battle, battle.start())
-	var guard: int = 0
-	while not battle.is_finished() and guard < 400:
-		guard += 1
-		var cmd: BattleCommand = battle.choose_ai_command()
-		Game.record({"t": "battle", "cmd": cmd.to_dict(), "auto": true})
-		_play(battle, battle.submit(cmd))
-	Game.apply_battle_result(battle.result)
-	Show.end_battle(battle.result)
-
-
-## The battle's events through the Show (hype, gifts) like the battle scene.
-func _play(battle: BattleState, events: Array[ActionEvent]) -> void:
-	for e: ActionEvent in events:
-		Show.on_battle_event(e)
-	if battle.is_finished():
-		return
-	var g: Dictionary = Show.take_pending_gift(battle)
-	if not g.is_empty():
-		var gift_events: Array[ActionEvent] = battle.apply_gift(g)
-		Show.note_battle_gift(g, gift_events)
-		for e: ActionEvent in gift_events:
-			Show.on_battle_event(e)
+	var out: Dictionary = RtLive.autopilot_fight(DB.floor_def(1).timer_start_after, BattleSetup.Advantage.PREEMPTIVE,
+		"")
+	assert_false(out.is_empty(), "the tutorial combat")
 
 
 ## Both verifiers reproduce the live hash.

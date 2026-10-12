@@ -1,10 +1,11 @@
 extends TestCase
-## R5b part 2a, decision E32 (07 §0.1, §9.1, §12.6 Nr. 3): the show economy of the real-time combat in the GDD §13
-## bands — auto-attack hits are no actions and bring no crit / weakness hype (the crit still counts as a stat and the
-## M.O.D. line tag stays), combos and SHOW results count less (RT_COMBO, RT_SHOW_*), heals are no repetition, after a
-## regular real-time combat with a system gift the next RT_GIFT_PAUSE regular ones bring none (bosses and viewer gifts
-## are never paced), the followers of a won real-time combat are scaled by RT_FOLLOWER_PM. The CTB profile and every
-## shared rule (thresholds 70/85/100, gift caps, viewer and follower formulas) stay as they were. The change alters what
+## R5b part 2a, decision E32 (07 §0.1, §9.1, §12.6 Nr. 3): the show economy of the real-time combat in the GDD §13 bands
+## — auto-attack hits are no actions and bring no crit / weakness hype (the crit still counts as a stat and the M.O.D.
+## line tag stays), combos and SHOW results count less (RT_COMBO, RT_SHOW_*), heals are no repetition, after a regular
+## real-time combat with a system gift the next RT_GIFT_PAUSE regular ones bring none (bosses and viewer gifts are never
+## paced), the followers of a won real-time combat are scaled by RT_FOLLOWER_PM. Every shared rule (thresholds
+## 70/85/100, gift caps, viewer and follower formulas) stays as it was; since R5b part 2b every combat is a real-time
+## one (the CTB profile left with the CTB battle, so a plain BattleSetup plays these rules too). The change alters what
 ## Game.replay_log computes for a real-time run, so RunSim.SIM_VERSION went 2 → 3: logs and board entries recorded
 ## before are an "ältere Version", never a mismatch.
 
@@ -47,10 +48,8 @@ func test_the_values_are_pinned() -> void:
 		ShowRules.RT_DODGE_CLOSE, ShowRules.RT_TRAIN_KILL, ShowRules.RT_PERFECT_PHASE, ShowRules.RT_ENRAGE,
 		ShowRules.RT_BORING, ShowRules.RT_DRAG], [1.0, -3.0, 3.0, 2.0, 4.0, 4.0, 8.0, 5.0, -2.0, -3.0],
 		"the other real-time values of R5a are unchanged")
-	assert_eq([ShowRules.HYPE_CRIT, ShowRules.HYPE_WEAK, ShowRules.HYPE_COMBO, ShowRules.HYPE_STUNT_SUCCESS,
-		ShowRules.HYPE_STUNT_FAIL, ShowRules.HYPE_VARIETY, ShowRules.HYPE_KILL_ATTACK, ShowRules.HYPE_KILL_SKILL,
-		ShowRules.HYPE_KILL_STUNT, ShowRules.HYPE_OVERKILL, ShowRules.HYPE_KILL_STREAK],
-		[3.0, 2.0, 2.0, 12.0, 4.0, 2.0, 1.0, 2.0, 4.0, 3.0, 5.0], "the CTB profile (GDD §7.3) is untouched")
+	assert_eq([ShowRules.HYPE_KILL_ATTACK, ShowRules.HYPE_KILL_SKILL, ShowRules.HYPE_KILL_STUNT,
+		ShowRules.HYPE_OVERKILL, ShowRules.HYPE_KILL_STREAK], [1.0, 2.0, 4.0, 3.0, 5.0], "the shared kill values")
 	assert_eq([SponsorSystem.THRESHOLDS, SponsorSystem.MAX_GIFTS_PER_BATTLE, SponsorSystem.MAX_GIFTS_PER_BOSS_BATTLE],
 		[PackedInt32Array([70, 85, 100]), 1, 2], "sponsor thresholds and gift caps are shared and unchanged")
 	assert_eq([ShowModel.VIEWER_PER_FOLLOWER, ShowModel.FOLLOWER_CONV_BASE, ShowModel.FOLLOWER_CONV_HYPE,
@@ -92,20 +91,18 @@ func test_quiet_auto_attacks_let_boredom_run() -> void:
 		"auto-attack crits are no positive event: 6 quiet seconds after the start bonus")
 
 
-func test_combo_and_show_values_by_profile() -> void:
+func test_combo_and_show_values() -> void:
 	var r: ShowRules = _rt_rules()
 	assert_eq(r.feed(_ev(ActionEvent.Type.COMBO, {"actor_id": "p1", "target_id": "e0"})).hype, ShowRules.RT_COMBO)
 	assert_eq(r.feed(_ev(ActionEvent.Type.STUNT_RESULT, {"actor_id": "p0", "success": true,
 		"skill_id": "skl_stunt_kai_suplex"})).hype, ShowRules.RT_SHOW_SUCCESS)
 	assert_eq(r.feed(_ev(ActionEvent.Type.STUNT_RESULT, {"actor_id": "p0", "success": false,
 		"skill_id": "skl_stunt_kai_suplex"})).hype, ShowRules.RT_SHOW_FAIL)
-	var ctb: ShowRules = ShowRules.new(RtKit.data(), BattleSetup.new())
-	assert_eq(ctb.profile, ShowRules.PROFILE_CTB)
-	assert_eq(ctb.feed(_ev(ActionEvent.Type.COMBO, {"actor_id": "p1", "target_id": "e0"})).hype, ShowRules.HYPE_COMBO)
-	assert_eq(ctb.feed(_ev(ActionEvent.Type.STUNT_RESULT, {"actor_id": "p0", "success": true,
-		"skill_id": "skl_stunt_kai_suplex"})).hype, ShowRules.HYPE_STUNT_SUCCESS, "CTB stunts as before")
-	assert_eq(ctb.feed(_ev(ActionEvent.Type.DAMAGE, {"actor_id": "p0", "target_id": "e0", "crit": true,
-		"skill_id": "skl_attack_kai", "amount": 9})).hype, ShowRules.HYPE_CRIT, "a CTB attack is a command")
+	var plain: ShowRules = ShowRules.new(RtKit.data(), BattleSetup.new())
+	assert_eq(plain.feed(_ev(ActionEvent.Type.COMBO, {"actor_id": "p1", "target_id": "e0"})).hype, ShowRules.RT_COMBO,
+		"a plain setup plays the real-time values too (R5b part 2b)")
+	assert_eq(plain.feed(_ev(ActionEvent.Type.DAMAGE, {"actor_id": "p0", "target_id": "e0", "crit": true,
+		"skill_id": "skl_attack_kai", "amount": 9})).hype, 0.0, "an auto-attack is no action")
 
 
 func test_heals_are_no_repetition() -> void:
@@ -156,15 +153,6 @@ func test_sponsors_pause_after_a_regular_real_time_gift() -> void:
 		assert_eq(_pause(), ShowRules.RT_GIFT_PAUSE - 1 - i)
 	assert_false(Game.state.floor_run.stats.has(Show.RT_GIFT_PAUSE_KEY), "the key is gone after the pause")
 	assert_eq(str(_regular_gift(60.0).get("source", "")), "system", "the next regular combat may get one again")
-	Game.state.floor_run.stats.erase(Show.RT_GIFT_PAUSE_KEY)
-	Game.state.show.hype = 60.0
-	Show.begin_battle(BattleSetup.new())
-	Game.in_battle = true
-	Show.add_hype(15.0)
-	assert_eq(str(Show._take_pending([], -1).get("source", "")), "system", "CTB: unchanged")
-	Show.abort_battle()
-	Game.in_battle = false
-	assert_eq(_pause(), 0, "a CTB gift starts no pause")
 
 
 func test_the_pause_keeps_viewer_gifts_and_the_top_reset() -> void:
@@ -195,8 +183,8 @@ func test_followers_of_a_real_time_combat_are_scaled() -> void:
 		(hearts * ShowRules.RT_FOLLOWER_PM + 500) / 1000, "after the hearts' factor (06 §4.5)")
 	Show.abort_battle()
 	Show.begin_battle(BattleSetup.new())
-	assert_eq(Show._battle_follower_pm(Game.state, {}, 1000), pm, "CTB: unchanged")
-	assert_eq(Show._battle_follower_pm(Game.state, {"follower_pm": 1150}, 1000), hearts)
+	assert_eq(Show._battle_follower_pm(Game.state, {}, 1000), (pm * ShowRules.RT_FOLLOWER_PM + 500) / 1000,
+		"every combat is a real-time one (R5b part 2b)")
 	Show.abort_battle()
 	var base: int = ShowModel.followers_for_battle_pm(4000, 60.0, false, pm)
 	var scaled: int = ShowModel.followers_for_battle_pm(4000, 60.0, false, (pm * ShowRules.RT_FOLLOWER_PM + 500) / 1000)

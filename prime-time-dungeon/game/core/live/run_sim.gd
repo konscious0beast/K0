@@ -29,19 +29,19 @@ class_name RunSim extends RefCounted
 ## the run clock keeps ticking in safe rooms (Sponsor-Fenster max_sec), the floor timer, hype decay, pacifist
 ## counter, strays and the periodic countdown do not (explore_only: the floor timer runs in the exploration only).
 ## Game steps idle ticks only while the safe room scene is shown and windows are tracked (Game.is_idle_ticking).
-## The clock only runs while the floor timer runs: floor_run.timer_started, time left > 0, no battle started by
-## apply(), no floor finished by "descend" — otherwise step() does nothing and tick() does not advance (Game calls it
-## only in that situation anyway, so live run and replay tick identically).
+## The clock only runs while the floor timer runs: floor_run.timer_started, time left > 0, no combat started by
+## apply() running, no floor finished by "descend" — otherwise step() does nothing and tick() does not advance (Game
+## calls it only in that situation anyway, so live run and replay tick identically).
 ##
 ## apply(cmd) — the recorded commands of 02_TECH §3.4 (Command.TYPES) applied with the core rules only — the SAME
 ## functions the live run calls (RunRules: floor start, rooms, chests, gates, lootboxes, floor events, safe rooms,
-## scenes, difficulty; Shop, Progression; Talents.pick / Casting.choose (06 package B); battles via
-## BattleBridge/BattleState with enemy and party commands from the log; gifts via GiftApplier outside battles,
-## BattleState.apply_gift inside). Before anything changes, command_refusal() checks the legality a verifier needs
-## against forged logs (rule-breaking floor / scene / difficulty / talent / casting commands, commands after "descend",
-## gifts: GiftPolicy.refusal) → rejected_cmds. RNG streams are consumed
-## exactly like the live flow (RunRules.next_seed "battle" + "show" per encounter, "lootbox", "gift"; event/stray
-## seeds from the floor seed, chest seeds from the floor's loot_seed, 05 CR-11). What it does NOT
+## scenes, difficulty; Shop, Progression; Talents.pick / Casting.choose (06 package B); real-time combats via
+## BattleBridge.make_rt_setup_rules / RtSim with the combat entries of the log (07 §10.5 — the campaign fights in real
+## time only since R5b part 2b); gifts via GiftApplier outside a combat, RtSim.apply_gift inside). Before anything
+## changes, command_refusal() checks the legality a verifier needs against forged logs (rule-breaking floor / scene /
+## difficulty / talent / casting commands, commands after "descend", gifts: GiftPolicy.refusal) → rejected_cmds. RNG
+## streams are consumed exactly like the live flow (RunRules.next_seed "battle" + "show" per encounter, "lootbox",
+## "gift"; event/stray seeds from the floor seed, chest seeds from the floor's loot_seed, 05 CR-11). What it does NOT
 ## contain are the reactions of the Show facade (hype/followers from battle events, achievements, milestones, sponsor
 ## gifts, M.O.D.); a RunSim-only run is therefore a "core run": RunSim.replay of its log reproduces it bit for bit
 ## (05 §11.4 test_m8_replay), while Game.replay_log reproduces complete live runs.
@@ -51,7 +51,7 @@ class_name RunSim extends RefCounted
 ## floor_completed (descend), plus the detail events zones (first room visits) and boss_hp (boss damage). Achievement
 ## and metric events need the Show facade and are not part of a core run.
 ## With `run_log` set, apply() records every accepted command (k = tick(), cmd id 0 for gifts, else 1, 2, …) and the
-## clock writes checkpoints: one every CHECKPOINT_TICKS and one after each battle / descend (request_checkpoint() for a
+## clock writes checkpoints: one every CHECKPOINT_TICKS and one after each combat / descend (request_checkpoint() for a
 ## Game-driven sim, which records through Game.record instead of apply()), always taken when the clock leaves a tick
 ## (state after all commands with k' <= k, 05 §10.6), plus close() at the end.
 ## Event rules (rules.leagues / rules.gifts) are stored in state.flags["live"] on construction, so the gift policy
@@ -92,9 +92,8 @@ var data: GameData = null
 var state: GameState = null
 var rules: Dictionary = {}
 var run_log: RunLog = null             # optional: records applied commands + checkpoints (headless driver)
-var battle: BattleState = null         # battle started by apply({"t": "encounter"}) (RunSim-driven runs only)
 var quest: QuestTracker = null         # optional: fed by apply() with the core quest events (see _quest_feed)
-var last_action_events: Array[ActionEvent] = []   # ActionEvents of the last apply() (battle start/commands/gifts)
+var last_action_events: Array[ActionEvent] = []   # ActionEvents of the last apply() (combat start / entries / gifts)
 ## Commands refused by the core rules (command_refusal: gift policy, rule checks — incl. HeroRules.check for "hero",
 ## 06 §1.7, and Secrets.check_open for "secret", 06 §2.7): {"k", "t", "gift_id" (the gift id, or the hero / secret id
 ## of a refused "hero" / "secret"), "reason"} in order.
@@ -105,10 +104,10 @@ var identity: Dictionary = {}
 
 var _tick: int = 0
 var _cmd_id: int = 0
-var _over: bool = false                # timer expired or battle lost: the run is over
+var _over: bool = false                # timer expired or combat lost: the run is over
 var _floor_done: bool = false          # "descend" applied; the clock waits for the next "floor"
 var _checkpoint_due: bool = false
-var _battle_external: int = 0          # external gifts applied in the running battle (max_per_battle)
+var _battle_external: int = 0          # external gifts applied in the running combat (max_per_battle)
 var _layout: FloorLayout = null
 var _layout_key: String = ""
 # scene condition context of the current safe room visit (RunRules.enter_safe_room)
@@ -168,13 +167,8 @@ func apply(cmd: Dictionary) -> Array[ExploreEvent]:
 		"floor":
 			_apply_floor(int(c["floor"]))
 			out.append_array(sponsor_floor())
-		"encounter":
-			if c.has("rt"):                            # Echtzeitkampf (07 §10.5, R5a)
-				_apply_encounter_rt(c, out)
-			else:
-				_apply_encounter(str(c["enc"]), int(c["adv"]), str(c["group"]), out, str(c.get("opener", "")))
-		"battle":
-			_apply_battle(c["cmd"], out)
+		"encounter":                                # Echtzeitkampf (07 §10.5, R5a)
+			_apply_encounter_rt(c, out)
 		"gift":
 			if rt_entry:                               # a gift at a combat tick boundary (07 §9.2)
 				_apply_combat(c, out)
@@ -269,10 +263,10 @@ func tick() -> int:
 ## True while step() advances the clock (see class doc). Echtzeitkampf (07 §12.9 Nr. 3): never with a running combat.
 func is_clock_running() -> bool:
 	return state != null and state.floor_run != null and state.floor_run.timer_started \
-		and state.floor_run.time_left_ticks > 0 and not _over and not _floor_done and battle == null and combat == null
+		and state.floor_run.time_left_ticks > 0 and not _over and not _floor_done and combat == null
 
 
-## The run ended (timer expired or battle lost).
+## The run ended (timer expired or combat lost).
 func is_over() -> bool:
 	return _over
 
@@ -300,14 +294,10 @@ func next_seed(purpose: String) -> int:
 ## against forged logs (05 §11.4). Read-only. gift: gift_refusal(); sponsor_window: SponsorWindows.dev_allowed →
 ## not_allowed; every other command: RunRules.command_refusal (after "descend" only the next floor, floor order,
 ## no difficulty change in event runs, scenes only as their safe room visit allows, talent picks / castings only as
-## Talents.check_pick / Casting.check allow). Echtzeitkampf (07 §10.5, R5a): real-time entries need a real-time run
-## (RunRules.rt_refusal); the entries of the running combat RunRules.combat_refusal (a gift then gift_refusal), the
-## sim's own submit check follows in the combat branch.
+## Talents.check_pick / Casting.check allow). Echtzeitkampf (07 §10.5, R5a): the entries of the running combat
+## RunRules.combat_refusal (a gift then gift_refusal), the sim's own submit check follows in the combat branch.
 func command_refusal(c: Dictionary) -> String:
 	var t: String = str(c.get("t", ""))
-	var rt: String = RunRules.rt_refusal(c, state)
-	if rt != "":
-		return rt
 	if RtCommand.is_combat_cmd(c):
 		var why: String = RunRules.combat_refusal(c, combat, _combat_gift_ct, _combat_input_ct)
 		if why == "" and t == "gift":
@@ -338,7 +328,7 @@ func gift_refusal(g: Dictionary) -> String:
 	var reason: String = GiftPolicy.refusal(state, data, g, rules, gift_context())
 	if reason != "":
 		return reason
-	if (battle != null and not battle.is_finished()) or (combat != null and not combat.is_finished()):
+	if combat != null and not combat.is_finished():
 		var live: Variant = state.flags.get("live", {})
 		var gr: Variant = (live as Dictionary).get("gift_rules", {}) if live is Dictionary else {}
 		var eff: Dictionary = rules if not rules.is_empty() else {"gifts": gr}
@@ -351,7 +341,7 @@ func gift_refusal(g: Dictionary) -> String:
 ## is over / the floor done → run_not_active; its tick has passed → twist_tick_passed; its tick lies ahead → ""
 ## (buffered, checked when it is due); else TwistApplier.validate. Read-only.
 func twist_refusal(tw: Dictionary) -> String:
-	return RunRules.twist_refusal(state, data, rules, tw, _tick, battle != null or combat != null,
+	return RunRules.twist_refusal(state, data, rules, tw, _tick, combat != null,
 		not (_floor_done or _over), true, _current_layout())
 
 
@@ -364,7 +354,7 @@ func gift_context() -> Dictionary:
 	return out
 
 
-## The next tick end writes a checkpoint (like after a battle / descend applied here). Game calls it after its own
+## The next tick end writes a checkpoint (like after a combat / descend applied here). Game calls it after its own
 ## battles and floor ends, because a Game-driven sim never sees those commands in apply().
 func request_checkpoint() -> void:
 	_checkpoint_due = true
@@ -455,7 +445,7 @@ func close(cause: String, extra: Dictionary = {}) -> String:
 ## A Game-recorded run also needs the Show reactions (hype, followers, achievements, sponsor gifts): its verifier is
 ## Game.replay_log (same "errors" contract); a RunSim replay of such a log reports the first diverging checkpoint.
 ## Echtzeitkampf (07 §10.3–§10.5, R5a): a compacted log is replayed in its expanded form (RunLog.expanded); a header
-## that names a real-time run starts from RunRules.rt_start (rt_version checked, RunRules.rt_header_errors); combat
+## that does not start at a save starts from RunRules.rt_start (header checked by RunRules.rt_header_errors); combat
 ## entries run the combat branch (apply), its combat checkpoints are compared tick by tick (check_combat); a state
 ## checkpoint ends a combat that is still running first (settle).
 static func replay(p_data: GameData, p_log: RunLog, p_rules: Dictionary = {}, p_quest: Dictionary = {},
@@ -465,17 +455,16 @@ static func replay(p_data: GameData, p_log: RunLog, p_rules: Dictionary = {}, p_
 	if p_log == null:
 		return out
 	var src: RunLog = p_log.expanded() if p_log.has_batches() else p_log
+	var h: Dictionary = src.header
+	var ver: String = version_status(h)       # 08 §10.2 Nr. 7 / 07 §10.2: an older kernel's log is not replayed here —
+	out["version"] = ver                      # nor checked against this kernel's schema (R5b part 2b: no CTB commands)
+	if ver != "":
+		out["errors"] = PackedStringArray([version_error(h)])
+		return out
 	var errors: PackedStringArray = src.validate()
 	if src.rejected > 0:
 		errors.append("log: %d entries rejected (out of tick order, duplicate / invalid cmd ids, malformed)"
 			% src.rejected)
-	var h: Dictionary = src.header
-	var ver: String = version_status(h)       # 08 §10.2 Nr. 7 / 07 §10.2: an older kernel's log is not replayed here
-	out["version"] = ver
-	if ver != "":
-		errors.append(version_error(h))
-		out["errors"] = errors
-		return out
 	var r: Dictionary = p_rules
 	var q: Dictionary = p_quest
 	var event_id: String = str(h.get("event_id", ""))
@@ -507,8 +496,7 @@ static func replay(p_data: GameData, p_log: RunLog, p_rules: Dictionary = {}, p_
 		st = GameState.create_new(p_data, int(h.get("slot", 0)), GameState.DEFAULT_NAME,
 			int(seed_v) if typeof(seed_v) == TYPE_INT or typeof(seed_v) == TYPE_FLOAT else 1,
 			StringName(str(h.get("difficulty", "prime"))))
-		if RunRules.header_realtime(h):
-			RunRules.rt_start(st, p_data)          # Echtzeitkampf (07 §12.1, R5a): like Game.new_game
+		RunRules.rt_start(st, p_data)              # Echtzeitkampf (07 §12.1, R5a): like Game.new_game
 	var sim: RunSim = RunSim.new(p_data, st, r, identity_of(h))
 	if not q.is_empty():
 		sim.quest = QuestTracker.from_def(q)
@@ -578,8 +566,8 @@ static func identity_of(header: Dictionary) -> Dictionary:
 
 ## Header problems of a catalog event run: fixed seed (seed_policy fixed → EventDef.run_seed()), difficulty "prime"
 ## (event runs never lower it, 05 §10.1 rules.difficulty), league ∈ rules.leagues (required for several leagues), the
-## combat mode of rules.combat.mode (R5b). An older sim_version is reported as old_version (no mismatch, 08 §10.2
-## Nr. 7).
+## combat mode is checked by RunRules.rt_header_errors (real time only since R5b part 2b). An older sim_version is
+## reported as old_version (no mismatch, 08 §10.2 Nr. 7).
 static func header_errors(h: Dictionary, def: EventDef, p_rules: Dictionary) -> PackedStringArray:
 	var out: PackedStringArray = []
 	if version_status(h) != "":
@@ -594,11 +582,6 @@ static func header_errors(h: Dictionary, def: EventDef, p_rules: Dictionary) -> 
 	var league: String = str(h.get("league", ""))
 	if (leagues.size() > 1 or league != "") and not leagues.has(league):
 		out.append("header: league '%s' is not one of %s" % [league, str(leagues)])
-	# R5b (07 §10.7): the event's rules (rules.combat.mode, part of rules_hash) bind the combat mode of its runs
-	var mode: StringName = RunRules.REALTIME if RunRules.header_realtime(h) else &"ctb"
-	if mode != RunRules.rules_combat_mode(p_rules):
-		out.append("header: combat_mode '%s' — event '%s' fights '%s' (rules.combat.mode)" % [mode, def.id,
-			RunRules.rules_combat_mode(p_rules)])
 	return out
 
 
@@ -749,53 +732,7 @@ func _apply_floor(index: int) -> void:
 	_layout_key = ""
 
 
-## §5.7 without presentation: setup ("battle" stream), BattleState, the "show" stream draw of Show.begin_battle,
-## pacifist counter reset, start().
-func _apply_encounter(enc: String, adv: int, group: String, out: Array[ExploreEvent], opener: String = "") -> void:
-	if battle != null:
-		push_warning("[RunSim] encounter '%s' while a battle is running" % enc)
-		return
-	var setup: BattleSetup = BattleBridge.make_setup(state, data, enc, adv, group, next_seed("battle"), rules)
-	if setup == null:
-		return
-	if adv == BattleSetup.Advantage.PREEMPTIVE and BattleSetup.OPENERS.has(opener):
-		setup.opener = opener                          # 06 integration: "bark" (Mopsula's daze) — like Game
-	battle = BattleState.new(setup, data)
-	_battle_external = 0
-	next_seed("show")
-	if state.show != null:
-		state.show.stats["explore_seconds_since_battle"] = 0
-	out.append(ExploreEvent.make(ExploreEvent.Type.ENCOUNTER, _tick, {"group_id": group, "encounter_id": enc,
-		"advantage": adv}))
-	_quest_feed({"type": "battle_started"})
-	last_action_events = battle.start()
-	_quest_feed_battle(last_action_events)
-	if battle.is_finished():
-		_end_battle()
-
-
-func _apply_battle(cmd_dict: Dictionary, _out: Array[ExploreEvent]) -> void:
-	if battle == null or battle.is_finished():
-		push_warning("[RunSim] battle command without an active battle")
-		return
-	var bc: BattleCommand = BattleCommand.from_dict(cmd_dict)
-	var reason: String = battle.validate(bc)
-	if reason != "":
-		push_warning("[RunSim] battle command refused: " + reason)
-		return
-	last_action_events = battle.submit(bc)
-	_quest_feed_battle(last_action_events)
-	if battle.is_finished():
-		_end_battle()
-
-
-func _end_battle() -> void:
-	var result: BattleResult = battle.result
-	battle = null
-	_book_result(result)
-
-
-## The end of a battle / real-time combat (both branches): checkpoint due, BattleBridge.apply_result, the comeback mark,
+## The end of a real-time combat: checkpoint due, BattleBridge.apply_result, the comeback mark,
 ## boss_defeated, DEFEAT → the run is over.
 func _book_result(result: BattleResult) -> void:
 	_checkpoint_due = true
@@ -809,20 +746,14 @@ func _book_result(result: BattleResult) -> void:
 		_over = true
 
 
-## Applies a gift that passed gift_refusal(): external ids → flags.live.gift_ids (GiftPolicy.remember); in battle
-## BattleState.apply_gift + GiftApplier.note_battle_gift (gift items + the one booking into the run counters), outside
+## Applies a gift that passed gift_refusal(): external ids → flags.live.gift_ids (GiftPolicy.remember); outside a combat
 ## GiftApplier.apply ("gift" seed stream; books once) + Inventory.add_rewards — both at run tick `_tick`. Echtzeitkampf
-## (07 §9.2, R5a): in a running combat RtSim.apply_gift at the boundary of its tick, booked like a battle gift.
+## (07 §9.2, R5a): in a running combat RtSim.apply_gift at the boundary of its tick + GiftApplier.note_battle_gift (gift
+## items + the one booking into the run counters).
 func _apply_gift(g: Dictionary, out: Array[ExploreEvent]) -> void:
 	if Gift.is_external(g):
 		GiftPolicy.remember(state, str(g.get("gift_id", "")))
-	if battle != null and not battle.is_finished():
-		last_action_events = battle.apply_gift(g)
-		_quest_feed_battle(last_action_events)
-		GiftApplier.note_battle_gift(state, g, last_action_events, _tick)
-		if Gift.is_external(g):
-			_battle_external += 1
-	elif combat != null and not combat.is_finished():
+	if combat != null and not combat.is_finished():
 		var ev: Array[ActionEvent] = combat.apply_gift(g)
 		last_action_events.append_array(ev)
 		_quest_feed_battle(ev)
@@ -945,7 +876,7 @@ func _apply_twist(tw: Dictionary, out: Array[ExploreEvent]) -> void:
 func _apply_due_twists(out: Array[ExploreEvent]) -> void:
 	for tw: Dictionary in TwistApplier.take_due(state):
 		tw["tick"] = _tick
-		var reason: String = RunRules.twist_refusal(state, data, rules, tw, _tick, battle != null or combat != null,
+		var reason: String = RunRules.twist_refusal(state, data, rules, tw, _tick, combat != null,
 			not (_floor_done or _over), true, _current_layout())
 		if reason != "":
 			rejected_cmds.append({"k": _tick, "t": "twist", "gift_id": str(tw.get("id", "")), "reason": reason})
@@ -963,7 +894,7 @@ func _apply_schedule(out: Array[ExploreEvent]) -> void:
 			continue
 		var tw: Dictionary = TwistApplier.complete(state, data, {"id": str((e as Dictionary).get("id", "")),
 			"src": "schedule", "params": (e as Dictionary).get("params", {})}, _tick)
-		if TwistApplier.validate(state, data, tw, rules, _tick, battle != null or combat != null,
+		if TwistApplier.validate(state, data, tw, rules, _tick, combat != null,
 				_current_layout()) == "":
 			out.append_array(TwistApplier.apply(state, data, tw, _current_layout()))
 
@@ -994,7 +925,7 @@ func _stamp_window(g: Dictionary) -> void:
 # The real-time combat of RunSim-driven runs (bots, RunSim.replay): apply({"t": "encounter", …, "rt"}) builds it with
 # BattleBridge.make_rt_setup_rules ("battle" stream, then "show" like Show.begin_battle), the combat entries advance it
 # lazily to their ct (the clock stands: they all carry the encounter's k), any other command / time passing / close /
-# the replay end let the sim finish it (run_to_end) and book its result like a CTB battle. RunSim has no Show: no
+# the replay end let the sim finish it (run_to_end) and book its result. RunSim has no Show: no
 # system gifts, no Show reactions (05 §11.4) — complete live runs replay through Game.replay_log, which drives
 # Game.combat_* with the same RunSim checkpoint cursor (check_combat).
 
@@ -1070,9 +1001,6 @@ func _combat_mismatch(i: int) -> void:
 ## (BattleBridge.make_rt_setup_rules with the run's rules; none for a cell without a set — then only the seed is drawn,
 ## like live), the "show" seed of Show.begin_battle, the pacifist counter, ENCOUNTER, the ct-0 prelude.
 func _apply_encounter_rt(c: Dictionary, out: Array[ExploreEvent]) -> void:
-	if battle != null:
-		push_warning("[RunSim] real-time encounter '%s' while a battle is running" % str(c["enc"]))
-		return
 	var setup: RtSetup = BattleBridge.make_rt_setup_rules(state, data, c, next_seed("battle"), rules)
 	if setup == null:
 		return
@@ -1178,14 +1106,14 @@ const FixedMath := preload("res://core/stats/fixed_math.gd")
 var _regen_bal: RtBalance = null       # RtBalance.from_data(data), read once (not state: a function of the data)
 
 
-## Step 7 of _tick_once (07 §2.7; the document calls it step 6 — the 06-D twists came first): only in a real-time run
-## (GameState.combat_mode realtime; CTB runs stay bit-identical) and only on exploration ticks with a running clock.
+## Step 7 of _tick_once (07 §2.7; the document calls it step 6 — the 06-D twists came first): every run is a real-time
+## run since R5b part 2b; only on exploration ticks with a running clock.
 ## floor_run.regen_ticks counts the ticks since the last combat end or out-of-combat damage (BattleBridge.apply_result
 ## and RunRules.apply_floor_event set it to 0); every REGEN_PERIOD_TICKS of it each member with HP > 0 gets
 ## max(1, div_round(max_mp × REGEN_MP_PM, 1000)) MP and — once regen_ticks ≥ REGEN_HP_DELAY_TICKS —
 ## max(1, div_round(max_hp × REGEN_HP_PM, 1000)) HP, capped at the maximum (Progression.total_stats).
 func _regen_tick() -> void:
-	if state.combat_mode != &"realtime" or state.floor_run == null:
+	if state.floor_run == null:
 		return
 	var fr: FloorRun = state.floor_run
 	fr.regen_ticks += 1

@@ -248,10 +248,11 @@ func test_context_split() -> void:
 	var n: int = rec.sent.size()
 	ci._unhandled_input(_key(KEY_1))
 	assert_eq(rec.sent.size(), n, "inactive (combat over): nothing")
-	# 07 §7.7 changes of existing actions: only for real-time runs
+	# 07 §7.7 changes of existing actions; the legacy map stays for a screen that wants Tab for the map (no campaign run
+	# uses it since R5b part 2b)
 	CombatInput.apply_input_mode(false)
-	assert_true(_key(KEY_TAB).is_action_pressed(&"map"), "CTB: Tab still opens the map")
-	assert_true(_joy(JOY_BUTTON_Y).is_action_pressed(&"toggle_auto"), "CTB: Y toggles auto")
+	assert_true(_key(KEY_TAB).is_action_pressed(&"map"), "legacy: Tab opens the map")
+	assert_true(_joy(JOY_BUTTON_Y).is_action_pressed(&"toggle_auto"), "legacy: Y toggles auto")
 	CombatInput.apply_input_mode(true)
 	assert_false(_key(KEY_TAB).is_action_pressed(&"map"), "real time: map = M only")
 	assert_true(_key(KEY_M).is_action_pressed(&"map"))
@@ -259,13 +260,9 @@ func test_context_split() -> void:
 	assert_true(_joy(JOY_BUTTON_DPAD_UP).is_action_pressed(&"toggle_auto"), "real time: D-pad up = autopilot")
 	CombatInput.apply_input_mode(true)
 	assert_eq(InputMap.action_get_events(&"toggle_auto").size(), 2, "idempotent")
-	Game.state.combat_mode = &"realtime"
 	CombatInput.apply_input_mode(false)
 	CombatInput.apply_for_game()
-	assert_false(_key(KEY_TAB).is_action_pressed(&"map"), "a real-time run keeps the map in exploration too")
-	Game.state.combat_mode = &"ctb"
-	CombatInput.apply_for_game()
-	assert_true(_key(KEY_TAB).is_action_pressed(&"map"), "a CTB run gets its map back")
+	assert_false(_key(KEY_TAB).is_action_pressed(&"map"), "every run keeps the real-time map in exploration too")
 
 
 func test_new_actions_in_the_input_map() -> void:

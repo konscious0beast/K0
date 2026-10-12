@@ -11,6 +11,7 @@ extends TestCase
 
 const R1A := preload("res://tests/test_r1a_contract.gd")
 const EventInfo := preload("res://scenes/ui/event_info.gd")
+const RtLive := preload("res://tests/fixtures/rt_live/rt_live.gd")
 const CANARY: String = "ZZKANARI"
 const ROOT: String = "user://test_08_k0"
 const SAVES: String = "user://test_08_k0/saves"
@@ -58,8 +59,7 @@ const METHODS: Dictionary = {
 	"res://autoload/save.gd": ["persona_path(int) -> String", "save_persona(int, PersonaProfile) -> Error",
 		"load_persona(int) -> PersonaProfile", "delete_persona(int) -> Error"],
 	"res://autoload/game.gd": ["new_game(int, String=, int=, StringName=, String=, PersonaProfile=) -> void",
-		"apply_persona(Dictionary) -> bool", "_choose_initial_persona(PersonaProfile) -> void",
-		"_persona_battle_look(BattleSetup) -> void"],
+		"apply_persona(Dictionary) -> bool", "_choose_initial_persona(PersonaProfile) -> void"],
 	"res://autoload/show.gd": ["on_safe_room_entered(String, bool) -> void"],
 	"res://core/show/mod_announcer.gd": ["set_extra_lines(Callable) -> void"],
 	"res://core/show/marotten_rules.gd": ["_draw_weight(GameState, MarotteDef, int) -> int static"],
@@ -532,12 +532,11 @@ func test_privacy_canary_in_hashes_header_and_anchor() -> void:
 	var scrubbed: Dictionary = PersonaPrivacy.scrub_state_dict(renamed)
 	assert_false(JSON.stringify(scrubbed).contains(CANARY))
 	assert_eq(str(scrubbed["player_name"]), GameState.DEFAULT_NAME)
-	var setup: BattleSetup = Game.make_battle_setup(DB.floor_def(1).timer_start_after, 0, "")
-	var battle: BattleState = BattleState.new(setup, DB.data)
-	battle.start()
-	assert_true(JSON.stringify(battle.to_dict()).contains(CANARY), "(the battle dictionary does carry it)")
-	assert_false(JSON.stringify(StateHash.battle_hash_input(battle)).contains(CANARY), "StateHash.of_battle input")
-	Game.in_battle = false
+	assert_not_null(Game.make_rt_setup(RtLive.encounter(DB.floor_def(1).timer_start_after,
+		BattleSetup.Advantage.NORMAL, "")), "a real-time combat")
+	assert_false(JSON.stringify(Game.combat.snapshot()).contains(CANARY),
+		"the combat never names the persona (units carry the Def names, 08 §2.7 Nr. 5)")
+	Game.end_combat()
 	var sr: String = _safe_room(DB.data)
 	Game.enter_safe_room(sr)
 	assert_eq(Save.save_slot(1), OK, Save.last_error())

@@ -7,8 +7,9 @@ extends "res://tests/fixtures/rt_world/world_case.gd"
 ## table, Graf Mopsula's bark → pull = Erstschlag (the bark picks the target, E35), refusals (no target, range, MP, no
 ## opener, not learned), interaction priority, no pull in safe / stairs rooms, during a dialog or a combat, the sleeping
 ## tutorial group by pull for both heroes (its cards, E37; slot 1 + SHOW only), the target frame and the pull hint (the
-## frame steps aside for a far lead), the project's input map and the CTB legacy run, the exploration's bar = the
-## combat's, and Game.replay_log of a run with a person's pull.
+## frame steps aside for a far lead), the project's input map and the legacy map (CombatInput.apply_input_mode(false):
+## no campaign run uses it since R5b part 2b — kept for a screen that wants Tab for the map), the exploration's bar =
+## the combat's, and Game.replay_log of a run with a person's pull.
 
 const PullRules := preload("res://scenes/exploration/pull_rules.gd")
 const HintCards := preload("res://scenes/combat/ui/hint_cards.gd")
@@ -634,22 +635,9 @@ func test_the_projects_input_map_tab_and_y() -> void:
 	assert_false(tab.is_action_pressed(&"map"), "real time: the project's map")
 	assert_eq(InputMap.action_get_events(&"toggle_auto").size(), 2, "T + D-pad up (idempotent)")
 	CombatInput.apply_input_mode(false)
-	assert_true(tab.is_action_pressed(&"map"), "the CTB legacy run: Tab opens the map")
-	assert_true(_joy(JOY_BUTTON_Y).is_action_pressed(&"toggle_auto"), "… and Y toggles its auto battle")
+	assert_true(tab.is_action_pressed(&"map"), "the legacy map: Tab opens the map")
+	assert_true(_joy(JOY_BUTTON_Y).is_action_pressed(&"toggle_auto"), "… and Y toggles auto")
 	assert_false(_joy(JOY_BUTTON_DPAD_UP).is_action_pressed(&"toggle_auto"))
-
-
-func test_a_ctb_run_keeps_tab_for_the_map_and_never_targets() -> void:
-	Game.state.combat_mode = &"ctb"
-	await make_world()
-	assert_true(_key(KEY_TAB).is_action_pressed(&"map"), "the CTB exploration applied its legacy map")
-	place_player(ROOM, Vector3(0.0, 0.0, 2.0), 0.0)
-	place_lead("f1_g1", ROOM, Vector3(0.0, 0.0, 0.0), PI)
-	_send(_key(KEY_TAB))
-	_send(_key(KEY_1))
-	assert_eq(scene.pull_target(), "", "no pull target in a CTB run")
-	assert_eq(scene.pull_candidates(), PackedStringArray())
-	assert_len(triggered, 0, "nothing starts")
 
 
 # --- the rules (pure) ------------------------------------------------------------------------------------------------
@@ -726,9 +714,7 @@ func test_a_run_with_a_persons_pull_replays_mopsula_bark() -> void:
 func _replay_world(hero: String) -> void:
 	set("_saved_data", DB.data)
 	DB.data = RtKit.data()
-	Game.combat_mode_override = &"realtime"
 	Game.new_game(0, "Kai", SEED, &"prime", hero)
-	Game.combat_mode_override = &""
 	await make_world("win", 300, hero)
 	Game.rt_sim_factory = Callable()
 

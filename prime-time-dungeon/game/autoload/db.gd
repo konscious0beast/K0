@@ -129,8 +129,8 @@ const LOOK_MEMBER: String = "kai"
 ## THE place where a party figure's ModelSpec comes from (08 §6.3, K2): a copy of PartyMemberDef.model; for "kai" mixed
 ## with the running persona's look (Game.persona, PersonaLook.apply — presentation only, never in a hash or a log).
 ## Without a persona (tests, autoplay, event runs: the canon Kai) and for every other member: the def model; {} for an
-## unknown member. The one figure entry for the exploration rigs (also the real-time puppets), the safe room, the
-## intro and the CTB battle (Game._persona_battle_look); later also the equipment look (03_ART A8).
+## unknown member. The one figure entry for the exploration rigs (also the real-time puppets and the unit frames),
+## the safe room and the intro; later also the equipment look (03_ART A8).
 func party_model(member_id: String) -> Dictionary:
 	if not data.has_id("party", member_id):
 		return {}

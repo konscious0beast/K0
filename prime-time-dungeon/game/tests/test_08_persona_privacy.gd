@@ -7,6 +7,7 @@ extends TestCase
 ## name filter gives a reason; the Android preset keeps user data out of the system backup.
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
+const RtLive := preload("res://tests/fixtures/rt_live/rt_live.gd")
 const CASTING: String = "res://scenes/title/persona_casting.tscn"
 const NAME: String = "ZZKANARI"
 const FREE: String = "ZZFREITEXT"
@@ -89,22 +90,10 @@ func _cast() -> PersonaProfile:
 	return final
 
 
+## The tutorial combat: real time, the autopilot plays the party (RtLive.autopilot_fight).
 func _fight() -> void:
-	var setup: BattleSetup = Game.make_battle_setup(DB.floor_def(1).timer_start_after,
-		BattleSetup.Advantage.PREEMPTIVE, "")
-	var battle: BattleState = BattleState.new(setup, DB.data)
-	Show.begin_battle(setup)
-	for e: ActionEvent in battle.start():
-		Show.on_battle_event(e)
-	var guard: int = 0
-	while not battle.is_finished() and guard < 400:
-		guard += 1
-		var cmd: BattleCommand = battle.choose_ai_command()
-		Game.record({"t": "battle", "cmd": cmd.to_dict(), "auto": true})
-		for e: ActionEvent in battle.submit(cmd):
-			Show.on_battle_event(e)
-	Game.apply_battle_result(battle.result)
-	Show.end_battle(battle.result)
+	assert_false(RtLive.autopilot_fight(DB.floor_def(1).timer_start_after, BattleSetup.Advantage.PREEMPTIVE,
+		"").is_empty(), "the tutorial combat")
 
 
 func test_canary_stays_in_the_persona_folder() -> void:

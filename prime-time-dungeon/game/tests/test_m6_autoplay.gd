@@ -1,7 +1,7 @@
 extends TestCase
-## Autoplay driver (02_TECH §11.4): the step table budgets (R5b: also the real-time table), no skip path
-## (boot_to_title always continues with new_game; check.sh accepts only "AUTOPLAY: OK") in dry-run mode (no quit, no
-## print), the watchdog failure line, the safe room choice, and the boot arguments.
+## Autoplay driver (02_TECH §11.4): the step table budgets (real time: the campaign fights in real time only since
+## R5b part 2b), no skip path (boot_to_title always continues with new_game; check.sh accepts only "AUTOPLAY: OK") in
+## dry-run mode (no quit, no print), the watchdog failure line, the safe room choice, and the boot arguments.
 
 const AutoplayScript := preload("res://scenes/boot/autoplay.gd")
 const TitleFlow := preload("res://scenes/title/title_flow.gd")
@@ -25,17 +25,13 @@ func test_step_table_matches_spec() -> void:
 	for s: Dictionary in AutoplayScript.STEPS:
 		names.append(str(s["name"]))
 		total += int(s["budget"])
-	assert_eq(names, ["boot_to_title", "new_game", "explore", "force_battle", "battle", "safe_room"] as Array[String])
-	assert_eq([60, 90, 30, 60, 300, 60], AutoplayScript.STEPS.map(func(s: Dictionary) -> int: return int(s["budget"])))
-	assert_eq(total, 600, "budgets sum to 600 frames")
-	assert_eq(AutoplayScript.WATCHDOG_FRAMES, 640, "watchdog well before --quit-after 900")
+	# Echtzeitkampf (07 §12.5): force_combat (60, the director runs the tutorial combat), combat (900, autopilot)
+	assert_eq(names, ["boot_to_title", "new_game", "explore", "force_combat", "combat", "safe_room"] as Array[String])
+	assert_eq(AutoplayScript.STEPS.map(func(s: Dictionary) -> int: return int(s["budget"])), [60, 90, 30, 60, 900, 60])
+	assert_eq(total, 1200, "budgets sum to 1200 frames")
+	assert_eq(AutoplayScript.WATCHDOG_FRAMES, 1240, "before check.sh's --quit-after 1300")
 	assert_eq(AutoplayScript.AUTOPLAY_SEED, 4242)
-	# Echtzeitkampf (07 §12.5, R5b): force_battle → force_combat (60), battle → combat (900, autopilot)
-	var rt: Array = AutoplayScript.RT_STEPS.map(func(s: Dictionary) -> String: return str(s["name"]))
-	assert_eq(rt, ["boot_to_title", "new_game", "explore", "force_combat", "combat", "safe_room"])
-	assert_eq(AutoplayScript.RT_STEPS.map(func(s: Dictionary) -> int: return int(s["budget"])),
-		[60, 90, 30, 60, 900, 60])
-	assert_eq(AutoplayScript.RT_WATCHDOG_FRAMES, 1240, "before check.sh's --quit-after 1300")
+	assert_false((AutoplayScript as GDScript).get_script_constant_map().has("RT_STEPS"), "one step table (no CTB)")
 
 
 ## quality-3: the Phase-A stub skip ("AUTOPLAY: SKIPPED (stub)") is gone — a renamed / missing module can no longer
@@ -92,5 +88,5 @@ func test_boot_arguments() -> void:
 	var a: Dictionary = TitleFlow.parse_args(PackedStringArray(["--autoplay"]))
 	assert_true(bool(a["autoplay"]))
 	assert_eq(int(TitleFlow.parse_args(PackedStringArray(["--seed=17"]))["seed"]), 17)
-	for target: String in ["explore", "safe_room", "battle:enc_f1_g0", "credits", "game_over", "lobby", "title"]:
+	for target: String in ["explore", "safe_room", "credits", "game_over", "lobby", "title"]:
 		assert_eq(str(TitleFlow.parse_args(PackedStringArray(["--goto=" + target]))["goto"]), target)

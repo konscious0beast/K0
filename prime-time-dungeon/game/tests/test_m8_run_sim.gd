@@ -1,10 +1,12 @@
 extends TestCase
 ## RunSim without autoloads (02_TECH §7.1, 05 §11.4, §11.5): step(n) counts the timer down in ticks, warnings once,
 ## expiry stops the clock, hype decay / pacifist counter / stray spawners in ticks, step(1) × n ≡ step(n), the clock
-## waits for the timer start and pauses in battles, run rules in flags["live"], recording + checkpoints, core effects
-## of the recorded commands. Uses the real data (GameData) and core classes only.
+## waits for the timer start and pauses in combats, run rules in flags["live"], recording + checkpoints, core effects
+## of the recorded commands. Uses the real data (GameData) and core classes only. Combats are real-time ones (R5b
+## part 2b): the encounter carries the balance harness's rt block, the sim's AI plays them to their end (settle).
 
 const TPS: int = 30
+const Harness := preload("res://tests/tools/rt_harness.gd")
 
 
 func _sim(seed: int = 99, rules: Dictionary = {}, p_log: RunLog = null) -> RunSim:
@@ -34,14 +36,21 @@ func _layout(sim: RunSim) -> FloorLayout:
 	return DungeonGenerator.generate(real_data().floor_def(sim.state.floor_run.index), sim.state.floor_run.seed)
 
 
-## Auto battle (AutoPolicy / EnemyAI choose, the commands go through apply like recorded ones).
+## The encounter command of `enc` for group `group` (a real-time combat: the balance harness's rt block).
+static func _enc(enc: String, adv: int = BattleSetup.Advantage.NORMAL, group: String = "") -> Dictionary:
+	var cmd: Dictionary = Harness.command_for(enc, "kai", adv)
+	cmd["group"] = group
+	(((cmd["rt"] as Dictionary)["groups"] as Array)[0] as Dictionary)["group"] = group
+	return cmd
+
+
+## Plays the running combat to its end: the autopilot from the combat's tick on (recorded like a person's input), then
+## RunSim.settle (the sim's AI).
 func _fight(sim: RunSim) -> void:
-	var guard: int = 0
-	while sim.battle != null and guard < 600:
-		guard += 1
-		var cmd: BattleCommand = sim.battle.choose_ai_command()
-		sim.apply({"t": "battle", "cmd": cmd.to_dict(), "auto": true})
-	assert_null(sim.battle, "battle finished")
+	if sim.combat != null:
+		sim.apply(RtCommand.autopilot(sim.combat.tick(), sim.combat.controlled_id(), true))
+	sim.settle()
+	assert_null(sim.combat, "combat finished")
 
 
 func test_clock_waits_for_the_timer_start() -> void:
@@ -125,8 +134,8 @@ func test_pacifist_counter() -> void:
 	assert_eq(ev.size(), 10)
 	assert_eq(ev.back().data, {"seconds_since_battle": 10})
 	assert_eq(sim.state.show.stats["explore_seconds_since_battle"], 10)
-	sim.apply({"t": "encounter", "enc": "enc_f1_a2", "adv": 1, "group": ""})
-	assert_eq(sim.state.show.stats["explore_seconds_since_battle"], 0, "a battle resets the pacifist counter")
+	sim.apply(_enc("enc_f1_a2", BattleSetup.Advantage.PREEMPTIVE))
+	assert_eq(sim.state.show.stats["explore_seconds_since_battle"], 0, "a combat resets the pacifist counter")
 
 
 func test_step_one_by_one_equals_step_n() -> void:
@@ -177,10 +186,10 @@ func test_battle_pauses_the_clock_and_feeds_the_quest() -> void:
 		"params": {"floor": 1}}}})
 	var counter: int = sim.state.rng_counter
 	var enc: String = real_data().floor_def(1).timer_start_after
-	var ev: Array[ExploreEvent] = sim.apply({"t": "encounter", "enc": enc, "adv": 0, "group": "f1_g0"})
+	var ev: Array[ExploreEvent] = sim.apply(_enc(enc, BattleSetup.Advantage.NORMAL, "f1_g0"))
 	assert_eq(_of(ev, ExploreEvent.Type.ENCOUNTER)[0].data, {"group_id": "f1_g0", "encounter_id": enc, "advantage": 0})
-	assert_eq(sim.state.rng_counter, counter + 2, "\"battle\" + \"show\" seed draws like the live §5.7 flow")
-	assert_not_null(sim.battle)
+	assert_eq(sim.state.rng_counter, counter + 2, "\"battle\" + \"show\" seed draws like the live flow")
+	assert_not_null(sim.combat)
 	assert_gt(sim.last_action_events.size(), 0, "BATTLE_START …")
 	sim.state.floor_run.timer_started = true
 	assert_false(sim.is_clock_running(), "no exploration time during a battle")
@@ -206,7 +215,7 @@ func test_invalid_commands_change_nothing() -> void:
 	assert_eq(rl.size(), 1, "only the valid floor command was recorded")
 	sim.apply({"t": "battle", "cmd": {"kind": "attack", "actor": "p0", "skill": "", "item": "", "targets": ["e0"]},
 		"auto": true})
-	assert_eq(StateHash.of(sim.state), h, "battle command without a battle: no effect")
+	assert_eq(StateHash.of(sim.state), h, "the CTB battle command is an unknown type (R5b part 2b): no effect")
 
 
 func test_event_rules_are_stored_in_the_run() -> void:
@@ -342,16 +351,17 @@ func test_gift_policy_at_application() -> void:
 	assert_eq(camp.gift_refusal(late), "deadline_missed", "deliver_by_tick against the run tick")
 
 
-## In battle (BattleState.apply_gift) the gift's items count into flags.live.gift_items like outside battles (05 §6.9)
-## and its load into the run counters; a second external gift in the same battle is refused (max_per_battle 1).
+## In a combat (RtSim.apply_gift at its tick boundary) the gift's items count into flags.live.gift_items like outside
+## combats (05 §6.9) and its load into the run counters; a second external gift in the same combat is refused
+## (max_per_battle 1).
 func test_gifts_in_battle() -> void:
 	var sim: RunSim = _sim(43)
 	sim.apply({"t": "sponsor_window", "op": "dev_open", "sec": 60, "slots": 3})   # open before the battle, frozen in it
-	sim.apply({"t": "encounter", "enc": real_data().floor_def(1).timer_start_after, "adv": 0, "group": ""})
-	assert_not_null(sim.battle)
+	sim.apply(_enc(real_data().floor_def(1).timer_start_after))
+	assert_not_null(sim.combat)
 	var chest: Dictionary = Gift.make_dev("chest", "bronze", 0)
 	chest["contents"] = [{"rarity": "common", "item_id": "itm_bandage", "qty": 2}, {"rarity": "common", "credits": 40}]
-	sim.apply({"t": "gift", "gift": chest})
+	sim.apply({"t": "gift", "gift": chest, "ct": 1})
 	var live: Dictionary = sim.state.flags["live"]
 	assert_eq(live.get("gift_items", {}), {"itm_bandage": 2}, "ITEM_GAINED of the battle gift → gift_items")
 	assert_eq([live["load_half"], live["chests"], live["external"]], [2, 1, 1])
@@ -398,9 +408,7 @@ func test_quest_detail_events_from_the_core() -> void:
 	var fdef: FloorDef = real_data().floor_def(1)
 	boss.quest = QuestTracker.from_def({"type": "defeat_boss", "params": {"boss_id":
 		real_data().encounter(fdef.quarter_boss).enemies[0]}})
-	boss.apply({"t": "encounter", "enc": fdef.quarter_boss, "adv": 0, "group": "f1_qb"})
-	var guard: int = 0
-	while boss.battle != null and boss.quest.progress_ppm() == 0 and guard < 40:
-		guard += 1
-		boss.apply({"t": "battle", "cmd": boss.battle.choose_ai_command().to_dict(), "auto": true})
+	boss.apply(_enc(fdef.quarter_boss, BattleSetup.Advantage.NORMAL, "f1_qb"))
+	assert_not_null(boss.combat, "the quarter boss in real time")
+	_fight(boss)
 	assert_gt(boss.quest.progress_ppm(), 0, "boss damage → 1 − HP share")

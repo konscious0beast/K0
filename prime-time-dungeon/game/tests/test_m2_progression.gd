@@ -1,8 +1,8 @@
 extends TestCase
 ## M2 progression (02_TECH §6.1, GDD §4/§3.12/§10.2): EXP table (30/63/112/173/246/330/424/529/643, cap 10), stat
 ## table, level-up (no full heal, learnset, cap), equip/unequip, full heal, field item use, to_combatant,
-## GameState / FloorRun (ticks, warnings, loot_seed) and BattleBridge (setup, MP regen 15 %, KO → 1 HP, pep talk,
-## timer start after the tutorial, rewards, bestiary).
+## GameState / FloorRun (ticks, warnings, loot_seed) and BattleBridge.apply_result (MP regen 15 %, KO → 1 HP, timer
+## start after the tutorial, rewards, bestiary; the real-time setup: test_r1_rt_setup).
 
 const Fx := preload("res://tests/test_m2_fixtures.gd")
 const HP: int = StatBlock.Stat.HP
@@ -308,45 +308,8 @@ func test_floor_run_tick_timer_warnings_and_summary() -> void:
 
 # --- BattleBridge -----------------------------------------------------------------------------------------------------
 
-func test_bridge_make_setup() -> void:
-	var d: GameData = Fx.data()
-	var st: GameState = _state()
-	var s: BattleSetup = BattleBridge.make_setup(st, d, "enc_f1_a", BattleSetup.Advantage.PREEMPTIVE, "f1_g1", 1234)
-	assert_not_null(s)
-	assert_eq([s.encounter_id, s.group_id, s.seed, s.advantage], ["enc_f1_a", "f1_g1", 1234, 1])
-	assert_eq(s.enemy_ids, ["enm_rat"])
-	assert_eq([s.party.size(), s.party[0].id, s.party[0].def_id, s.party[1].id, s.party[1].slot],
-		[2, "p0", "kai", "p1", 1])
-	assert_eq(s.items, {"itm_antidote": 1, "itm_bandage": 3}, "battle-usable consumables")
-	assert_eq([s.credits_available, s.is_boss, s.can_flee, s.tutorial], [50, false, true, false])
-	assert_eq([s.enemy_dmg_mult, s.exp_mult], [1.0, 1.0])
-	assert_eq(s.show_mods, {"hype_gain_mult": 1.0, "follower_mult": 1.0})
-	assert_eq([s.theme_id, s.floor_index], ["metro", 1])
-	assert_false(s.palette.is_empty())
-	var boss: BattleSetup = BattleBridge.make_setup(st, d, "enc_f1_qb", BattleSetup.Advantage.AMBUSH, "f1_qb", 1)
-	assert_eq([boss.advantage, boss.is_boss, boss.can_flee], [BattleSetup.Advantage.NORMAL, true, false],
-		"bosses force NORMAL")
-	var tut: BattleSetup = BattleBridge.make_setup(st, d, "enc_f1_tutorial", 0, "f1_g0", 1)
-	assert_eq([tut.tutorial, tut.enemy_dmg_mult], [true, 0.5])
-	st.difficulty = &"vorabend"
-	var easy: BattleSetup = BattleBridge.make_setup(st, d, "enc_f1_tutorial", 0, "f1_g0", 1)
-	assert_almost(easy.enemy_dmg_mult, 0.375)
-	assert_almost(easy.exp_mult, 1.2)
-	assert_null(BattleBridge.make_setup(st, d, "enc_nope", 0, "", 1))
-
-
-func test_bridge_pep_talk() -> void:
-	var d: GameData = Fx.data()
-	var st: GameState = _state()
-	st.flags["mop_pep_talk"] = true
-	var normal: BattleSetup = BattleBridge.make_setup(st, d, "enc_f1_a", 0, "f1_g1", 1)
-	assert_eq(normal.party[0].statuses.size(), 0, "only boss battles")
-	assert_true(st.flags.has("mop_pep_talk"))
-	var boss: BattleSetup = BattleBridge.make_setup(st, d, "enc_f1_qb", 0, "f1_qb", 1)
-	for c: Combatant in boss.party:
-		assert_eq(c.statuses.size(), 1)
-		assert_eq([c.statuses[0].def.id, c.statuses[0].turns_left], ["sts_guard", 2], "guard 2 on " + c.id)
-	assert_false(st.flags.has("mop_pep_talk"), "flag erased")
+## The real-time setup (make_rt_setup: party, items, flags, pep talk of bosses) is tested in test_r1_rt_setup — the CTB
+## setup left with the CTB battle (R5b part 2b).
 
 
 func test_bridge_apply_victory() -> void:
@@ -438,25 +401,19 @@ func test_bridge_apply_boss_flee_and_defeat() -> void:
 
 
 ## core-logic-1 (GDD §3.11 "flieht er, sind sie weg"): the rare Fahrscheinfresser fines the party, escapes and the
-## battle ends in VICTORY — the 40 credits are gone, and nothing is reported as refunded.
+## battle ends in VICTORY — the 40 credits are gone, and nothing is reported as refunded (the result of such a combat:
+## test_r1_rt_result; here its booking).
 func test_bridge_escaped_thief_victory_keeps_the_credits() -> void:
 	var d: GameData = real_data()
 	var st: GameState = GameState.create_new(d, 1, "Kai", 4242)
 	st.floor_run = FloorRun.create(d.floor_def(1), st.seed, st.difficulty)
 	st.inventory.credits = 200
-	var setup: BattleSetup = BattleBridge.make_setup(st, d, "enc_f1_a_rare", 0, "f1_g9", 7)
-	var s: BattleState = BattleState.new(setup, d)
-	s.start()
-	var thief: Combatant = s.get_combatant("e0")
-	assert_eq(thief.def_id, "enm_fahrscheinfresser")
-	_until_turn(s, thief)
-	s.submit(BattleCommand.skill("e0", "skl_e_fine", PackedStringArray(["p0"])))
-	_until_turn(s, thief)
-	s.submit(BattleCommand.skill("e0", "skl_e_escape", PackedStringArray()))
-	assert_true(s.is_finished())
-	assert_eq(s.result.outcome, BattleResult.Outcome.VICTORY, "all remaining enemies fled → victory")
-	assert_eq([s.result.credits_stolen, s.result.credits_refunded], [40, 0])
-	var rw: BattleRewards = BattleBridge.apply_result(st, d, s.result)
+	var r: BattleResult = BattleResult.new()
+	r.outcome = BattleResult.Outcome.VICTORY
+	r.encounter_id = "enc_f1_a_rare"
+	r.credits_stolen = 40
+	r.credits_refunded = 0
+	var rw: BattleRewards = BattleBridge.apply_result(st, d, r)
 	assert_eq(st.inventory.credits, 160, "the escaped thief keeps the 40 credits")
 	assert_eq([rw.credits_lost, rw.credits_refunded], [40, 0], "results screen: −40 Cr, no false refund")
 
@@ -478,9 +435,3 @@ func test_bridge_ko_member_level_up_stands_up_with_1_hp() -> void:
 	assert_eq(mop.hp, Balance.KO_REVIVE_HP, "KO'd member stands up with 1 HP after the EXP")
 	assert_eq(rw.revived, PackedStringArray(["mopsula"]))
 
-
-func _until_turn(s: BattleState, c: Combatant) -> void:
-	for _i in 40:
-		if s.is_finished() or s.current_actor() == c:
-			return
-		s.submit(s.choose_ai_command())

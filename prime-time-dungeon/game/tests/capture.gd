@@ -8,8 +8,7 @@ extends SceneTree
 ## --recipe: named scripted state from res://tests/capture_recipes.gd, run after the scene is in the tree; the
 ##           --frames wait follows it.
 ## --look:   Casting (08 §6, K2): before the scene is built, a new game (seed 1, as Game.ensure_state) whose candidate
-##           persona wears this look — an index into the look gallery's LOOKS (0–8) or a JSON object {kind: lk id};
-##           battle.tscn then gets its setup from Game.make_battle_setup (the look on the stage and in the portraits).
+##           persona wears this look — an index into the look gallery's LOOKS (0–8) or a JSON object {kind: lk id}.
 
 const GLOBAL_UI: String = "res://scenes/ui/global_ui.tscn"
 const RECIPES: String = "res://tests/capture_recipes.gd"
@@ -61,9 +60,6 @@ func _initialize() -> void:
 	var game: Node = root.get_node_or_null("Game")
 	if game != null:
 		game.set("ephemeral", true)
-		# 07 E33: new games fight in real time — battle.tscn is the CTB battle scene, its game (--look) stays CTB
-		if scene_path.ends_with("/battle.tscn") and str(game.get("combat_mode_override")) == "":
-			game.set("combat_mode_override", &"ctb")
 		if touch:
 			var settings: Object = game.get("settings") as Object
 			if settings != null:
@@ -76,8 +72,6 @@ func _initialize() -> void:
 	if look != "":
 		var helper: Node = (load(RECIPES) as GDScript).new() as Node
 		var dressed: bool = bool(helper.call("persona_look", look))
-		if dressed and scene_path.ends_with("/battle.tscn") and not params.has("setup"):
-			params["setup"] = helper.call("persona_battle_setup", str(params.get("encounter", "")))
 		helper.free()
 		if not dressed:
 			printerr("Assertion failed: capture: --look=%s is no gallery index or look object" % look)

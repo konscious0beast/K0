@@ -33,7 +33,6 @@ static func _ev(t: ActionEvent.Type, fields: Dictionary) -> ActionEvent:
 func test_the_tracker_counts_the_person() -> void:
 	var tr: MarottenTracker = MarottenTracker.new()
 	tr.begin(RtKit.setup(RtKit.state(6), RtKit.canned_encounter()), 0)
-	assert_true(tr.rt, "a real-time setup")
 	var evs: Array[ActionEvent] = [
 		_ev(ActionEvent.Type.ACTION_START, {"actor_id": "p0", "command": K.SKILL, "skill_id": "skl_kai_heavy_swing"}),
 		_ev(ActionEvent.Type.ACTION_START, {"actor_id": "p0", "command": K.SKILL, "skill_id": "skl_kai_heavy_swing"}),
@@ -53,13 +52,9 @@ func test_the_tracker_counts_the_person() -> void:
 	var t: Dictionary = tr.tally()
 	assert_eq([t["distinct_actions"], t["stunts_success"], t["defends"], t["flee_attempts"], t["last_kill_member"]],
 		[4, 1, 0, 0, "mopsula"], "own ids: heavy swing, holy lick (Partner-Spezial), bandage, suplex; AI: none")
-	assert_true(bool(t["rt"]))
 	tr.on_battle_event(_ev(ActionEvent.Type.KO, {"actor_id": "e0", "target_id": "e3", "command": -1}))
 	assert_eq(tr.tally()["last_kill_member"], "", "the train's kill belongs to nobody")
-	var ctb: MarottenTracker = MarottenTracker.new()
-	ctb.begin(BattleSetup.new(), 0)
-	assert_false(ctb.rt)
-	assert_false(ctb.tally().has("rt"), "the CTB tally keeps its keys")
+	assert_false("rt" in tr, "one stream only (R5b part 2b: the CTB tally is gone)")
 
 
 func test_context_keys_of_a_real_time_combat() -> void:
@@ -70,21 +65,19 @@ func test_context_keys_of_a_real_time_combat() -> void:
 	r.outcome = BattleResult.Outcome.VICTORY
 	r.duration_ticks = 452
 	r.flee_attempts = 2
-	var rt_ctx: Dictionary = MarottenRules.battle_context(st, RtKit.data(), r, {"rt": true, "flee_attempts": 0})
+	var rt_ctx: Dictionary = MarottenRules.battle_context(st, RtKit.data(), r, {"flee_attempts": 0})
 	assert_eq([rt_ctx["duration_sec"], rt_ctx["flee_attempts"], rt_ctx["defends"]], [15, 2, 0],
 		"whole seconds; flight warnings and smoke from the result")
 	for key: String in MarottenRules.BATTLE_KEYS:
 		assert_true(rt_ctx.has(key), "context key " + key)
-	var ctb: BattleResult = BattleResult.new()
-	ctb.outcome = BattleResult.Outcome.VICTORY
-	var ctb_ctx: Dictionary = MarottenRules.battle_context(st, RtKit.data(), ctb, {"flee_attempts": 1})
-	assert_eq([ctb_ctx["duration_sec"], ctb_ctx["flee_attempts"]], [0, 1], "CTB: the tracker's count, no duration")
+	var no_result: Dictionary = MarottenRules.battle_context(st, RtKit.data(), null, {"flee_attempts": 1})
+	assert_eq([no_result["duration_sec"], no_result["flee_attempts"]], [0, 1], "without a result: the tally's count")
 	var data: GameData = real_data()
 	assert_false(data.marotte("mar_brave").expr.eval(rt_ctx, {}, {}), "mar_brave: a flight warning breaks it")
 	assert_true(data.marotte("mar_speed").expr.eval(rt_ctx, {}, {}),
 		"the real-time mar_speed of floor 2 (07 §9.6, E38): a regular combat of at most 15 s")
 	r.duration_ticks = 16 * 30
-	assert_false(data.marotte("mar_speed").expr.eval(MarottenRules.battle_context(st, RtKit.data(), r, {"rt": true}),
+	assert_false(data.marotte("mar_speed").expr.eval(MarottenRules.battle_context(st, RtKit.data(), r, {}),
 		{}, {}), "16 s are too slow")
 
 

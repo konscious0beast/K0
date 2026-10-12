@@ -1,9 +1,9 @@
 extends TestCase
 ## R5b part 1 (07 §12.2 "Stand R5b-1"): the real-time combat in the run around it — a partner tactic changed during a
 ## combat is kept (BattleResult.rt_presets → PartyMember.rt_preset / rt_toggles in BattleBridge.apply_result: no log
-## entry, both verifiers write the same), and event runs fight in the combat mode of their rules (rules.combat.mode,
-## part of rules_hash — never the player's setting): the shipped events in real time, through both verifiers, with
-## the autopilot refused (rules.combat.autopilot false, 07 §10.7); a log whose header names another mode is reported.
+## entry, both verifiers write the same), and event runs fight in real time like every run (R5b part 2b; their
+## rules.combat names "realtime", part of rules_hash) through both verifiers, with the autopilot refused
+## (rules.combat.autopilot false, 07 §10.7); a log whose header names another mode is reported.
 ## Replay files are stored compacted; the leaderboard's run_log_hash covers the expanded canonical form (07 §10.3).
 ## The skills page of a real-time run chooses variants and the partner tactic (one loadout command per choice).
 
@@ -92,9 +92,7 @@ func _unit(s: RtSetup, id: String) -> RtUnit:
 # --- the skills page is the loadout (07 §4.1, §5.2; R5b) -----------------------------------------------------------
 
 func test_the_skills_page_chooses_variants_and_the_tactic() -> void:
-	Game.combat_mode_override = &"realtime"
 	Game.new_game(0, "Kai", 4242)
-	Game.combat_mode_override = &""
 	var kai: PartyMember = Game.state.member("kai")
 	kai.level = 6                                        # (variants of slots 2 and 4 learned, slot 3's at 7 not yet)
 	var page: Control = (load("res://scenes/ui/skills_menu.gd") as GDScript).new() as Control
@@ -141,41 +139,33 @@ static func _right(list: Node, button: String) -> String:
 	return r.text if r != null else ""
 
 
-# --- event runs fight in the mode of their rules (07 §10.7, R5b) ------------------------------------------------------
+# --- event runs fight in real time (07 §10.7, R5b) ------------------------------------------------------------------
 
-func test_the_event_rules_bind_the_combat_mode() -> void:
+func test_the_event_rules_name_real_time() -> void:
 	var cat: EventCatalog = EventCatalog.new()
 	cat.load_file(RunSim.EVENTS_PATH)
 	for def: EventDef in cat.all():
-		assert_eq(RunRules.rules_combat_mode(def.rules), RunRules.REALTIME, "%s fights in real time" % def.id)
+		assert_eq(str((def.rules["combat"] as Dictionary).get("mode", "")), "realtime", "%s names real time" % def.id)
 		assert_false(bool((def.rules["combat"] as Dictionary).get("autopilot", true)), "%s: no autopilot" % def.id)
 		assert_eq(def.validate(DB.data), PackedStringArray(), def.id)
 	var def: EventDef = cat.get_event(EVENT_ID)
-	var ctb_rules: Dictionary = def.rules.duplicate(true)
-	(ctb_rules["combat"] as Dictionary)["mode"] = "ctb"
-	assert_eq(RunRules.rules_combat_mode(ctb_rules), &"ctb")
-	assert_eq(RunRules.rules_combat_mode({}), &"ctb", "an event without the key (before R5b) fights in CTB")
-	assert_ne(CanonicalJson.sha256_hex(ctb_rules), def.rules_hash(), "the mode is part of rules_hash")
-	for bad: Variant in [{"mode": "turns"}, {"mode": 1}, {"autopilot": "no"}, {"max_enemies": 0}, {"speed": 2}, "rt"]:
+	for bad: Variant in [{"mode": "ctb"}, {"mode": "turns"}, {"mode": 1}, {"autopilot": "no"}, {"max_enemies": 0},
+			{"speed": 2}, "rt"]:
 		var r: Dictionary = def.rules.duplicate(true)
 		r["combat"] = bad
 		assert_false(RunRules.combat_rules_errors(r).is_empty(), "rules.combat %s is refused" % str(bad))
 	var rt_header: Dictionary = {"seed": def.run_seed(), "difficulty": "prime", "league": "pur", "event_id": EVENT_ID,
 		"sim_version": RunSim.SIM_VERSION, "combat_mode": "realtime", "rt_version": RunRules.RT_VERSION}
 	assert_eq(RunSim.header_errors(rt_header, def, def.rules), PackedStringArray())
+	assert_eq(RunRules.rt_header_errors(rt_header), PackedStringArray())
 	var ctb_header: Dictionary = rt_header.duplicate()
-	ctb_header.erase("combat_mode")
-	ctb_header.erase("rt_version")
-	assert_has("; ".join(RunSim.header_errors(ctb_header, def, def.rules)),
-		"combat_mode 'ctb' — event '%s' fights 'realtime'" % EVENT_ID, "a CTB log of a real-time event")
-	assert_has("; ".join(RunSim.header_errors(rt_header, def, ctb_rules)), "combat_mode 'realtime'",
-		"a real-time log of a CTB event")
+	ctb_header["combat_mode"] = "ctb"
+	assert_has("; ".join(RunRules.rt_header_errors(ctb_header)), "real-time runs only",
+		"a CTB log is of an older kernel (R5b part 2b)")
 
 
 func test_an_event_run_fights_in_real_time_and_replays_in_both_verifiers() -> void:
-	Game.combat_mode_override = &"ctb"                    # the player's setting never decides an event's mode
 	Game.start_event_run(EVENT_ID)
-	Game.combat_mode_override = &""
 	if not Game.has_state():
 		fail("start_event_run must create a state")
 		return
@@ -212,12 +202,11 @@ func test_an_event_run_fights_in_real_time_and_replays_in_both_verifiers() -> vo
 	assert_eq(core["errors"], PackedStringArray(), "RunSim.replay: the entries pass the core")
 	if gifts.is_empty():                                  # the core verifier has no Show: equal without system gifts
 		assert_eq(core["combat_mismatch_at"], -1, "RunSim.replay: every combat checkpoint")
-	var stripped: Dictionary = Game.run_log.to_dict()
-	(stripped["header"] as Dictionary).erase("combat_mode")
-	(stripped["header"] as Dictionary).erase("rt_version")
-	var forged: RunLog = RunLog.from_dict(stripped)
-	assert_has("; ".join(Game.replay_log(forged)["errors"]), "fights 'realtime'", "Game.replay_log: header vs rules")
-	assert_has("; ".join(RunSim.replay(DB.data, forged)["errors"]), "fights 'realtime'", "RunSim.replay too")
+	var ctb: Dictionary = Game.run_log.to_dict()
+	(ctb["header"] as Dictionary)["combat_mode"] = "ctb"
+	var forged: RunLog = RunLog.from_dict(ctb)
+	assert_has("; ".join(Game.replay_log(forged)["errors"]), "real-time runs only", "Game.replay_log: a CTB header")
+	assert_has("; ".join(RunSim.replay(DB.data, forged)["errors"]), "real-time runs only", "RunSim.replay too")
 
 
 # --- stored replays are compacted, the board binds the expanded log (07 §10.3, R5b) ---------------------------------

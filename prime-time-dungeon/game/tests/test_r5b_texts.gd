@@ -41,7 +41,7 @@ func test_touch_tooltip_has_no_turns() -> void:
 	assert_eq(_turn_word(text), "", text)
 
 
-func test_skills_page_details_by_mode() -> void:
+func test_skills_page_details() -> void:
 	Game.new_game(0, "Kai", 11)
 	assert_true(Game.is_realtime(), "07 E33")
 	var page: Control = (load("res://scenes/ui/skills_menu.gd") as GDScript).new() as Control
@@ -64,8 +64,8 @@ func test_skills_page_details_by_mode() -> void:
 	page.call("_rt_show", {"skill": "skl_mop_holy_lick", "learned": true, "kind": "", "slot": 2, "level": 1})
 	assert_has((d["sub"] as Label).text, "Zauberzeit 1,5 s", "a cast time")
 	page.call("_show", {"skill": "skl_kai_taunt", "learned": true})
-	assert_has((d["sub"] as Label).text, "Rang 2", "a CTB run keeps its detail")
-	assert_eq((d["body"] as Label).text, "Sie ziehen alle Blicke auf sich.", "with the real-time description")
+	assert_false((d["sub"] as Label).text.contains("Rang"), "no CTB rank any more (R5b part 2b)")
+	assert_has((d["body"] as Label).text, "Sie ziehen alle Blicke auf sich.", "the real-time description")
 
 
 func test_texts_a_real_time_run_shows_name_no_turns() -> void:

@@ -208,7 +208,6 @@ const CONTRACT_DEFAULTS: Dictionary = {
 	"res://art/shaders/glow.gdshader": {"energy": 2.0, "pulse_speed": 0.0},
 	"res://art/shaders/vfx_additive.gdshader": {"softness": 0.5},
 	"res://art/shaders/hologram.gdshader": {"color": Palette.NOVA_CYAN, "scan_speed": 1.5, "alpha": 0.6},
-	"res://art/shaders/ui_swirl.gdshader": {"progress": 0.0, "tint": Palette.INK, "aspect": 1.7778},
 	"res://art/shaders/ui_tv_overlay.gdshader": {"scanline_alpha": 0.08, "vignette": 0.35, "aberration": 0.6},
 	"res://art/shaders/ui_tv_overlay_aberration.gdshader": {"scanline_alpha": 0.08, "vignette": 0.35, "aberration": 0.6},
 }

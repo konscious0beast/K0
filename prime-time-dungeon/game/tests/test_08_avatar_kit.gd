@@ -6,10 +6,8 @@ extends TestCase
 ## vocabularies match DataValidator; the mesh cache keys the style; PersonaLook.apply (ids → style / glasses prop /
 ## colour slots; unknown or foreign ids → canon; only humanoids); data/looks.json (counts, names, glyphs, neutral skin
 ## names) and the validator rules of validators/looks.gd; DB.party_model mixes the running persona's look only into
-## kai; the CTB battle shows the look on the stage and in the HUD portrait while StateHash.of_battle stays the same;
-## the look galleries run.
+## kai (the real-time combat's puppets and unit frames: test_08_avatar_world); the look galleries run.
 
-const BATTLE_SCENE: String = "res://scenes/battle/battle.tscn"
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const SceneKit := preload("res://scenes/ui/scene_kit.gd")
 const GALLERIES: PackedStringArray = ["res://art/gallery/look_gallery.tscn", "res://art/gallery/hair_gallery.tscn"]
@@ -301,73 +299,6 @@ func _raw_tables() -> Dictionary:
 		raw[t] = JsonUtil.read_file("res://data/%s.json" % t)
 	raw["rt_balance"] = JsonUtil.read_file("res://data/" + GameData.RT_BALANCE_FILE)
 	return raw
-
-
-# --- the CTB battle (08 §6.3: Game._persona_battle_look) ------------------------------------------------------------
-
-func test_ctb_battle_shows_the_look_with_the_same_hash() -> void:
-	Engine.time_scale = 8.0
-	var p: PersonaProfile = PersonaProfile.canon(DB.data)
-	p.name = "Jana"
-	p.look = {"hair": "lk_hair_curls", "hair_color": "lk_hc_black", "skin": "lk_skin_7", "beard": "lk_beard_full",
-		"glasses": "lk_glasses_round", "outfit": "lk_outfit_blue"}
-	Game.new_game(0, "Jana", 4242, &"prime", "kai", p)
-	var setup: BattleSetup = Game.make_battle_setup("enc_f1_a2", BattleSetup.Advantage.NORMAL, "")
-	assert_not_null(setup)
-	var kai: Combatant = null
-	for c: Combatant in setup.party:
-		if c.def_id == "kai":
-			kai = c
-	assert_not_null(kai)
-	if kai == null:
-		return
-	assert_eq(kai.model, DB.party_model("kai"), "the kai combatant carries the persona look")
-	assert_eq((kai.model["style"] as Dictionary), {"hair": "curls", "beard": "full"})
-	var with_look: String = _battle_hash(setup)
-	assert_ne(with_look, "")
-	kai.model = DB.data.party_member("kai").model.duplicate(true)
-	assert_eq(_battle_hash(setup), with_look, "the look is presentation only (StateHash.of_battle unchanged)")
-	kai.model = DB.party_model("kai")
-	var started: BattleState = BattleState.new(setup, DB.data)
-	started.start()
-	var input: String = JSON.stringify(StateHash.battle_hash_input(started))
-	for word: String in ["curls", "lk_hair", "lk_skin", "#6b4128", "#1f1a1a"]:
-		assert_false(input.contains(word), "no look in the hash input: " + word)
-	var scene: Node = (load(BATTLE_SCENE) as PackedScene).instantiate()
-	scene.call("setup", {"setup": setup, "capture": true, "stay": true, "speed": 4.0})
-	add_to_tree(scene)
-	await wait_frames(4)
-	var stage: Node = scene.get("stage")
-	var info: Dictionary = stage.call("info", kai.id)
-	assert_eq(info.get("model", {}), kai.model, "the stage builds kai in the look")
-	var rig: Node = scene.find_child("Unit_" + kai.id, true, false)
-	assert_not_null(rig, "kai's stage rig")
-	if rig != null:
-		assert_eq((rig.get("model") as Dictionary).get("style", {}), {"hair": "curls", "beard": "full"})
-	var hud: Node = scene.get("hud")
-	var tex: Texture2D = hud.call("portrait", kai.id)
-	assert_not_null(tex, "kai's HUD portrait")
-	var portrait_rig: Node = null
-	for vp: Node in hud.find_children("Portrait*", "SubViewport", true, false):
-		var r: Node = vp.get_node_or_null("Rig")
-		if r != null and str((r.get("model") as Dictionary).get("base", "")) == "humanoid":
-			portrait_rig = r
-	assert_not_null(portrait_rig, "a humanoid portrait")
-	if portrait_rig != null:
-		assert_eq((portrait_rig.get("model") as Dictionary).get("style", {}), {"hair": "curls", "beard": "full"},
-			"the portrait wears the look")
-	Game.persona = null
-	var plain: BattleSetup = Game.make_battle_setup("enc_f1_a2", BattleSetup.Advantage.NORMAL, "")
-	for c: Combatant in plain.party:
-		if c.def_id == "kai":
-			assert_eq(c.model, DB.data.party_member("kai").model, "no persona: the def model")
-
-
-## StateHash.of_battle of a started BattleState of `setup` (an unstarted state has an unseeded RNG).
-func _battle_hash(setup: BattleSetup) -> String:
-	var b: BattleState = BattleState.new(setup, DB.data)
-	b.start()
-	return StateHash.of_battle(b)
 
 
 # --- galleries -------------------------------------------------------------------------------------------------------

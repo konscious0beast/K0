@@ -118,8 +118,8 @@ func _battle(bare: bool) -> Dictionary:
 	if bare:
 		_strip(st, "kai")
 		_strip(st, "mopsula")
-	var setup: BattleSetup = BattleBridge.make_setup(st, DB.data, "enc_f1_a2", BattleSetup.Advantage.NORMAL, "",
-		SeedUtil.derive(1, "t", 1))
+	var setup: RtSetup = BattleBridge.make_rt_setup(st, DB.data, Harness.command_for("enc_f1_a2", st.hero,
+		BattleSetup.Advantage.NORMAL), SeedUtil.derive(1, "t", 1))
 	Game.in_battle = true
 	Show.begin_battle(setup)
 	var h0: float = Show.hype()
@@ -143,8 +143,8 @@ func test_event_runs_have_no_factors() -> void:
 	Game.new_game(0, "Kai", 6262)
 	_strip(Game.state, "kai")
 	_strip(Game.state, "mopsula")
-	var setup: BattleSetup = BattleBridge.make_setup(Game.state, DB.data, "enc_f1_a2", BattleSetup.Advantage.NORMAL, "",
-		SeedUtil.derive(1, "t", 2))
+	var setup: RtSetup = BattleBridge.make_rt_setup(Game.state, DB.data, Harness.command_for("enc_f1_a2",
+		Game.state.hero, BattleSetup.Advantage.NORMAL), SeedUtil.derive(1, "t", 2))
 	var rules: Dictionary = {"leagues": ["pur"], "mode": "solo"}
 	assert_false(MarottenRules.rewards_on(rules))
 	Show.begin_battle(setup)

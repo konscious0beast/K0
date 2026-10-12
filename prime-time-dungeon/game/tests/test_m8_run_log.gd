@@ -3,6 +3,8 @@ extends TestCase
 ## strictly increasing cmd ids (duplicate → rejected), id 0 only for external inputs, 2 Hz position samples,
 ## checkpoints.
 
+const Harness := preload("res://tests/tools/rt_harness.gd")
+
 
 func _log() -> RunLog:
 	var rl: RunLog = RunLog.new()
@@ -10,9 +12,8 @@ func _log() -> RunLog:
 		"difficulty": "prime", "game_version": "0.1.0", "sim_hz": 30, "event_id": "evt_offline_gleis9",
 		"run_id": "run_local_424242"}
 	rl.add_cmd(0, {"t": "floor", "floor": 1}, 1)
-	rl.add_cmd(0, {"t": "encounter", "enc": "enc_f1_a1_tutorial", "adv": 0, "group": "f1_g0"}, 2)
-	rl.add_cmd(0, {"t": "battle", "cmd": {"kind": "attack", "actor": "p0", "skill": "", "item": "", "targets": ["e0"]},
-		"auto": true}, 3)
+	rl.add_cmd(0, Harness.command_for("enc_f1_a1_tutorial", "kai", BattleSetup.Advantage.NORMAL), 2)
+	rl.add_cmd(0, RtCommand.ability(0, "p0", "skl_kai_heavy_swing", "e0"), 3)      # a real-time combat entry
 	var gift: Dictionary = Gift.make_dev("gold", "", 100)
 	gift["gift_id"] = "g_dev_0001"
 	rl.add_cmd(300, {"t": "gift", "gift": gift}, 0)

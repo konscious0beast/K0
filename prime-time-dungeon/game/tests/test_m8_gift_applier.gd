@@ -3,6 +3,8 @@ extends TestCase
 ## and counts them in flags["live"]["gift_items"]; gold × effect factor; equipment duplicates → credits; server
 ## contents; fan pack; sponsor buffs scaled by effect_pm; run counters.
 
+const Harness := preload("res://tests/tools/rt_harness.gd")
+
 
 func _state(seed: int = 7) -> GameState:
 	var st: GameState = GameState.create_new(real_data(), 0, "Kai", seed, &"prime")
@@ -174,7 +176,7 @@ func test_duplicate_credit_factor_in_integers() -> void:
 		assert_eq(def.duplicate_credits(), roundi(sell * 0.5), "sell %d" % sell)
 
 
-## In-battle gifts (BattleState.apply_gift) are booked like GiftApplier.apply books them outside battles: ITEM_GAINED
+## In-combat gifts (RtSim.apply_gift) are booked like GiftApplier.apply books them outside combats: ITEM_GAINED
 ## items → flags.live.gift_items (05 §6.9), load/caps → run counters. System gifts book nothing.
 func test_note_battle_gift_books_items_and_load() -> void:
 	var st: GameState = _state()
@@ -195,8 +197,8 @@ func test_note_battle_gift_books_items_and_load() -> void:
 
 ## live-integrity-15 (05 §6.9: "Statistiken dürfen nicht davon abhängen, ob das Geschenk im Kampf ankam"): one chest
 ## with the same contents leaves the same inventory, credits and gift_items whether it arrives outside a battle
-## (GiftApplier.apply + add_rewards) or in one (BattleState.apply_gift → note_battle_gift → BattleBridge.apply_result) —
-## an owned weapon and the second piece of a new one become credits in both places.
+## (GiftApplier.apply + add_rewards) or in a real-time combat (RtSim.apply_gift → note_battle_gift →
+## BattleBridge.apply_result) — an owned weapon and the second piece of a new one become credits in both places.
 func test_chest_in_and_out_of_battle_gives_the_same_result() -> void:
 	var data: GameData = real_data()
 	var outside: GameState = _state()
@@ -212,16 +214,17 @@ func test_chest_in_and_out_of_battle_gives_the_same_result() -> void:
 	g["contents"] = [{"rarity": "epic", "item_id": owned, "qty": 1}, {"rarity": "rare", "item_id": fresh, "qty": 2},
 		{"rarity": "common", "credits": 40}, {"rarity": "common", "item_id": "itm_bandage", "qty": 2}]
 	outside.inventory.add_rewards(data, GiftApplier.apply(outside, data, g.duplicate(true), _rng(3)))
-	var setup: BattleSetup = BattleBridge.make_setup(inside, data, "enc_f1_b4", 0, "", 5)
+	var setup: RtSetup = BattleBridge.make_rt_setup(inside, data, Harness.command_for("enc_f1_b4", inside.hero,
+		BattleSetup.Advantage.NORMAL), 5)
 	assert_has(setup.owned_equipment, owned, "the setup knows the owned equipment")
-	var battle: BattleState = BattleState.new(setup, data)
-	battle.start()
-	var events: Array[ActionEvent] = battle.apply_gift(g.duplicate(true))
+	var sim: RtSim = RtSim.new(setup, data)
+	sim.start()
+	var events: Array[ActionEvent] = sim.apply_gift(g.duplicate(true))
 	GiftApplier.note_battle_gift(inside, g, events)
 	var r: BattleResult = BattleResult.new()
 	r.outcome = BattleResult.Outcome.FLED
-	r.item_delta = (battle.tally["item_delta"] as Dictionary).duplicate()
-	r.credits_delta = int(battle.tally["credits_delta"])
+	r.item_delta = (sim.tally["item_delta"] as Dictionary).duplicate()
+	r.credits_delta = int(sim.tally["credits_delta"])
 	BattleBridge.apply_result(inside, data, r)
 	assert_eq(inside.inventory.to_dict(), outside.inventory.to_dict(), "same items and credits")
 	assert_eq(inside.flags["live"]["gift_items"], outside.flags["live"]["gift_items"], "same gift_items statistics")

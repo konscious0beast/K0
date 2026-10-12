@@ -27,7 +27,6 @@ var input_scheme: InputScheme = InputScheme.KEYBOARD_MOUSE
 # "explore view active": true only via ExplorationScene; Router resets to false on goto/push
 var timer_running: bool = false
 var autoplay: bool = false           # set by Boot from --autoplay
-var auto_battle: bool = false        # party uses AutoPolicy (toggle_auto / Settings / Autoplay)
 var fast_text: bool = false          # dialogs show instantly (Autoplay, text_speed=2)
 var ephemeral: bool = false:         # tests, autoplay, capture: settings defaults, never read/written on disk
 	set(value):
@@ -40,7 +39,7 @@ var mode: StringName = &"campaign"   # &"campaign" | &"event_offline" (M8)
 var run_log: RunLog = null           # Brief §6b.3; created by new_game/start_event_run/Save.load_slot
 var quest: QuestTracker = null       # only mode &"event_offline"
 var sim: RunSim = null               # deterministic explore clock (thin variant, 05 CR-6)
-var in_battle: bool = false          # make_battle_setup → apply_battle_result; Show routes external gifts by it (§3.5)
+var in_battle: bool = false          # make_rt_setup → end_combat; Show routes external gifts by it (§3.5)
 var replaying: bool = false          # true while replay_log runs: record() is a no-op, no Router/Save side effects
 var safe_room_clock: bool = false    # SafeRoomScene shown: the run clock keeps ticking (idle ticks, Sponsor-Fenster)
 
@@ -112,9 +111,8 @@ func _ready() -> void:
 	Events.viewers_changed.connect(_on_quest_viewers_changed)
 	Events.followers_changed.connect(_on_quest_followers_changed)
 	Events.hype_changed.connect(_on_quest_hype_changed)
-	auto_battle = settings.auto_battle_default
 	apply_settings()
-	_rt_ready()                               # Echtzeitkampf (07 §12.1, §10.1, R2): --combat, combat_speed
+	_rt_ready()                               # Echtzeitkampf (07 §10.1, R2): combat_speed
 	if not ephemeral:                    # 06-D: M.O.D. live link (off by default, never blocks gameplay)
 		mod_live = ModLiveLinkScript.new()
 		mod_live.name = "ModLiveLink"
@@ -201,7 +199,7 @@ func new_game(slot: int, player_name: String = GameState.DEFAULT_NAME, seed: int
 		push_warning("[Game] GameState.create_new returned null (no game state)")
 		return
 	run_log = _make_run_log(run_seed, slot, difficulty, "")
-	_rt_new_game()                            # Echtzeitkampf (07 §12.1, R2): the run's combat mode
+	_rt_begin()                               # Echtzeitkampf (07 §12.1): the real-time run's header and start
 	sim = _make_sim(state, {})
 	persona = p_persona
 	start_floor(1)
@@ -213,8 +211,8 @@ func new_game(slot: int, player_name: String = GameState.DEFAULT_NAME, seed: int
 
 ## M8: EventCatalog → EventDef.run_seed(); mode = &"event_offline"; slot 0 (never saved into campaign slots).
 ## p_league: the league the player plays in a multi-league event (05 §10.1); "" → the single league / "pur".
-## `hero_id` (06 §1.7): the controlled character, recorded right after "floor" like in new_game. R5b (07 §10.7): the
-## event's rules.combat.mode (part of rules_hash) decides the combat mode — never the player's setting.
+## `hero_id` (06 §1.7): the controlled character, recorded right after "floor" like in new_game. Every run fights in
+## real time (R5b part 2b); the event's rules.combat (part of rules_hash) sets its switches (07 §10.7).
 func start_event_run(event_id: String, p_league: String = "", hero_id: String = HeroRules.DEFAULT_HERO) -> void:
 	var def: EventDef = _load_event_def(event_id)
 	if def == null:
@@ -233,7 +231,7 @@ func start_event_run(event_id: String, p_league: String = "", hero_id: String = 
 	quest = QuestTracker.from_def(def.quest)
 	var league: String = _run_league(def.rules, p_league)
 	run_log = _make_run_log(run_seed, 0, &"prime", event_id, league)
-	_rt_begin(RunRules.rules_combat_mode(def.rules))   # R5b (07 §10.7): the event's rules bind its combat mode
+	_rt_begin()
 	sim = _make_sim(state, def.rules)
 	start_floor(maxi(1, def.floor_index))
 	_choose_initial_hero(hero_id)
@@ -281,17 +279,11 @@ func emit_party_changed() -> void:
 	Events.party_changed.emit()
 
 
-## Standalone scenes, capture, tests: ephemeral-safe new game in slot 0 with seed 1 (`p_seed`). `p_mode` pins its
-## combat mode unless the boot argument --combat= decides — the CTB battle scene asks for &"ctb" (07 E33: new games
-## fight in real time).
-func ensure_state(p_mode: StringName = &"", p_seed: int = 1) -> void:
+## Standalone scenes, capture, tests: ephemeral-safe new game in slot 0 with seed 1 (`p_seed`).
+func ensure_state(p_seed: int = 1) -> void:
 	if has_state():
 		return
-	var keep: StringName = combat_mode_override
-	if keep == &"":
-		combat_mode_override = p_mode
 	new_game(0, "Kai", p_seed)
-	combat_mode_override = keep
 
 
 ## DB.floor_def(state.floor_run.index); null without state.
@@ -394,28 +386,16 @@ func next_seed(purpose: String) -> int:
 	return RunRules.next_seed(state, purpose)
 
 
-## Records the encounter, builds the setup (next_seed("battle")) and sets in_battle (until apply_battle_result).
-## `opener` (06 integration A × C): "bark" when Graf Mopsula's bark dazed the group that a PREEMPTIVE battle starts
-## from — recorded only then ({"opener": "bark"}), so sneak-themed bets / stats can tell it from sneaking up.
-func make_battle_setup(encounter_id: String, advantage: int, group_id: String, opener: String = "") -> BattleSetup:
-	var o: String = opener if advantage == BattleSetup.Advantage.PREEMPTIVE and BattleSetup.OPENERS.has(opener) else ""
-	var cmd: Dictionary = {"t": "encounter", "enc": encounter_id, "adv": advantage, "group": group_id}
-	if o != "":
-		cmd["opener"] = o
-	record(cmd)
-	if state == null:
-		push_warning("[Game] make_battle_setup without state")
-		return null
-	var setup: BattleSetup = BattleBridge.make_setup(state, DB.data, encounter_id, advantage, group_id,
-		next_seed("battle"), event_rules())
-	if setup != null:
-		setup.opener = o
-		setup.auto_battle = auto_battle
-		_persona_battle_look(setup)            # Casting (08 §6.3, K2): kai's look — presentation only
-		in_battle = true
-	return setup
+## R5b part 2b (07 §12.6, 10 SD1): the campaign has no CTB battle any more (combats start through make_rt_setup). Kept
+## only so that the CTB branch of scenes/exploration — owned elsewhere, unreachable since every run fights in real
+## time — still compiles: records nothing and returns null (the exploration then cancels the encounter).
+func make_battle_setup(_encounter_id: String, _advantage: int, _group_id: String, _opener: String = "") -> BattleSetup:
+	push_warning("[Game] make_battle_setup: the campaign fights in real time only (R5b part 2b)")
+	return null
 
 
+## The booking of a finished combat (end_combat; the verifiers book through BattleBridge.apply_result): rewards,
+## level-ups, talent choices, the countdown start of the tutorial victory.
 func apply_battle_result(result: BattleResult) -> BattleRewards:
 	in_battle = false
 	if state == null or result == null:
@@ -1006,21 +986,20 @@ func finish_run(cause: StringName) -> Dictionary:
 ## driving the SAME Game/Show methods as the live run (record() is a no-op meanwhile, no Router/Save calls): RNG
 ## consumption (next_seed "battle"/"show"/"lootbox"/"gift"), Show reactions (hype, followers, milestones, achievements,
 ## sponsor gifts), safe-room bookkeeping and event rules (header.event_id → EventDef.rules) are identical by
-## construction. Battles follow §5.7 (BattleState + Show.begin_battle/on_battle_event/take_pending_gift/end_battle). The
-## live context (state, log, sim, quest, …) is restored afterwards. Not during a battle (Show's battle state would be
-## overwritten). Checkpoint k = state after all commands with k' <= k; the walk is RunLog.walk (shared with
-## RunSim.replay). Same "errors" contract as RunSim.replay — a verifier needs errors == []: log schema / id problems
-## (RunLog.validate), entries the RunLog rejected, a log from a save without a valid anchor and an unknown event (abort:
-## no replay without its start state / rules), header ≠ event (RunSim.header_errors: fixed seed, difficulty, league),
-## commands the rules refuse (RunRules.command_refusal, QA windows not allowed, battle commands without a battle) — they
-## are skipped — and every gift Show refuses (gift_rejected: duplicates, caps, wrong target, run over …). Returns
-## {"final_hash": String, "result": Dictionary, "mismatch_at": int (first failing checkpoint index, -1 = none),
-## "errors": PackedStringArray, "version": String (RunSim.version_status: a log of another sim_version is not replayed
-## — one error, mismatch_at -1, shown as "ältere Version", 08 §10.2 Nr. 7)}. until_tick >= 0: the clock steps on to
-## that tick after the last command (the live sim.tick() — idle ticks in a safe room move the clock without a command).
-## Echtzeitkampf (07 §10.6, R5a): real-time combats replay through this section's API in the loop of
-## GameReplay._combat (combat checkpoints compared per tick; "combat_mismatch_at" in the result); a real-time header
-## starts from RunRules.rt_start; a compacted log replays expanded.
+## construction. The live context (state, log, sim, quest, …) is restored afterwards. Not during a combat (Show's battle
+## state would be overwritten). Checkpoint k = state after all commands with k' <= k; the walk is RunLog.walk (shared
+## with RunSim.replay). Same "errors" contract as RunSim.replay — a verifier needs errors == []: log schema / id
+## problems (RunLog.validate), entries the RunLog rejected, a log from a save without a valid anchor and an unknown
+## event (abort: no replay without its start state / rules), header ≠ event (RunSim.header_errors: fixed seed,
+## difficulty, league), commands the rules refuse (RunRules.command_refusal, QA windows not allowed, combat entries
+## without a combat) — they are skipped — and every gift Show refuses (gift_rejected: duplicates, caps, wrong target,
+## run over …). Returns {"final_hash": String, "result": Dictionary, "mismatch_at": int (first failing checkpoint index,
+## -1 = none), "errors": PackedStringArray, "version": String (RunSim.version_status: a log of another sim_version is
+## not replayed — one error, mismatch_at -1, shown as "ältere Version", 08 §10.2 Nr. 7)}. until_tick >= 0: the clock
+## steps on to that tick after the last command (the live sim.tick() — idle ticks in a safe room move the clock without
+## a command). Echtzeitkampf (07 §10.6, R5a): real-time combats replay through this section's API in the loop of
+## GameReplay._combat (combat checkpoints compared per tick; "combat_mismatch_at" in the result); a new run starts from
+## RunRules.rt_start; a compacted log replays expanded.
 func replay_log(p_log: RunLog, until_tick: int = -1) -> Dictionary:
 	return GameReplay.new(self).run(p_log, until_tick)
 
@@ -1281,9 +1260,8 @@ func _restore_context(saved: Dictionary) -> void:
 # ======================================================================================================================
 # --- Echtzeitkampf (07, R2) ---
 # The live CombatDirector (R2) and GameReplay (R5a) use exactly these functions, per combat tick c:
-# combat_boundary() → combat_submit(cmd) for every input with ct == c → combat_step(). A real-time combat only starts
-# in a run with GameState.combat_mode == &"realtime" (new games take GameSettings.combat_mode, 07 §12.1); CTB runs never
-# reach this section, so they stay bit-identical.
+# combat_boundary() → combat_submit(cmd) for every input with ct == c → combat_step(). Every run fights in real time
+# (R5b part 2b: the CTB battle left the campaign for the Stempelduell, 10 SD1).
 
 var combat: RtSim = null             # the running real-time combat; null outside one (a save never contains it)
 ## Test / capture seam (R2): when valid, make_rt_setup takes the combat from `rt_sim_factory.call(cmd, seed)` (an RtSim,
@@ -1301,7 +1279,7 @@ const RT_LOCK_EQUIP: String = "Im Kampf: Ausrüstung erst nach dem Kampf"
 ## While a real-time fight runs, the party changes only through the recorded combat commands: the pause menu pauses
 ## the sim (07 O2: offline, the tree is paused), field item use and equipment changes are refused (use_item / equip
 ## return false and record nothing) and the menu pages show this hint (`what` = &"items" | &"equipment"); "" when
-## allowed. CTB runs never have a `combat`.
+## allowed.
 func rt_party_lock(what: StringName = &"items") -> String:
 	if combat == null:
 		return ""
@@ -1311,10 +1289,10 @@ func rt_party_lock(what: StringName = &"items") -> String:
 ## Records the encounter (with its "rt" block), draws the seeds "battle" (here) and "show" (Show.begin_battle), builds
 ## the setup with BattleBridge.make_rt_setup_rules (the run's rules: event_rules()), creates `combat`, sets in_battle,
 ## Show.begin_battle(setup), emits Events.combat_started(combat) and Events.battle_started, then feeds the ct-0 prelude
-## of combat.start() to Show.on_battle_event / Events.combat_event (the order of the CTB controller: begin,
-## battle_started, start events — listeners know the combat before its first event). null (nothing started, in_battle
-## stays false) without a run, for a command without "rt" block or when no setup can be built (e.g. the stairs room):
-## then only the encounter is recorded and the seed drawn, like a CTB encounter — the replay draws the same seed.
+## of combat.start() to Show.on_battle_event / Events.combat_event (begin, battle_started, start events — listeners
+## know the combat before its first event). null (nothing started, in_battle stays false) without a run, for a command
+## without "rt" block or when no setup can be built (e.g. the stairs room): then only the encounter is recorded and the
+## seed drawn — the replay draws the same seed.
 func make_rt_setup(cmd: Dictionary) -> RtSetup:
 	if state == null or cmd.is_empty() or str(cmd.get("t", "")) != "encounter" or not (cmd.get("rt", null) is Dictionary):
 		return null
@@ -1327,7 +1305,7 @@ func make_rt_setup(cmd: Dictionary) -> RtSetup:
 	if rt_sim_factory.is_valid():
 		sim_new = rt_sim_factory.call(cmd, seed_battle) as RtSim
 	else:
-		# the run's rules (event / league: liga talents, rules.combat) like make_battle_setup (R1b API)
+		# the run's rules (event / league: liga talents, rules.combat; R1b API)
 		var built: RtSetup = BattleBridge.make_rt_setup_rules(state, DB.data, cmd, seed_battle, event_rules())
 		if built != null:
 			sim_new = RtSim.new(built, DB.data)
@@ -1408,8 +1386,8 @@ func combat_step() -> Array[ActionEvent]:
 
 
 ## apply_battle_result(combat.result), Show.end_battle, Events.combat_finished(result), Events.battle_ended, then
-## combat = null (07 §2.11, §10.6). Without a finished combat: an empty BattleRewards (an unfinished combat is dropped
-## like BattleController.abort_unfinished: no rewards, in_battle false, Show.abort_battle).
+## combat = null (07 §2.11, §10.6). Without a finished combat: an empty BattleRewards (an unfinished combat is
+## dropped: no rewards, in_battle false, Show.abort_battle).
 func end_combat() -> BattleRewards:
 	if combat == null:
 		return BattleRewards.new()
@@ -1450,54 +1428,27 @@ func _combat_checkpoint(force: bool = false) -> void:
 	run_log.add_checkpoint(sim.tick() if sim != null else 0, h, ct)
 
 
-## Session override of GameSettings.combat_mode (07 §12.1: the boot argument --combat=realtime | ctb for development,
-## QA, check.sh --shot, autoplay and fullrun.sh); never written to the settings file. &"" = the setting decides.
-var combat_mode_override: StringName = &""
 var _rt_speed_pm: int = 1000          # the combat speed this run recorded last (07 §10.1 combat_speed)
 var _rt_speed_due: bool = false       # a change during a combat: recorded at its end
 
 
-## Game._ready: the --combat boot argument and the combat speed recording (07 §10.1).
+## Game._ready: the combat speed recording (07 §10.1).
 func _rt_ready() -> void:
-	combat_mode_override = combat_mode_from_args(OS.get_cmdline_user_args())
 	Events.settings_changed.connect(_rt_on_settings_changed)
 
 
-## &"realtime" | &"ctb" from "--combat=<mode>" in `args`; &"" without (or with an unknown mode).
-static func combat_mode_from_args(args: PackedStringArray) -> StringName:
-	for a: String in args:
-		if a.begins_with("--combat="):
-			var v: String = a.trim_prefix("--combat=")
-			if v == "realtime" or v == "ctb":
-				return StringName(v)
-	return &""
-
-
-## The combat mode a new game takes: the boot argument, else GameSettings.combat_mode (real time by default, 07 E33).
-func new_game_combat_mode() -> StringName:
-	if combat_mode_override != &"":
-		return combat_mode_override
-	return settings.combat_mode if settings != null else GameSettings.DEFAULT_COMBAT_MODE
-
-
-## New campaign games take the combat mode (07 §12.1); the run log header names a real-time run
-## (07 §10.2: "combat_mode": "realtime", "rt_version": 1 — CTB headers stay as they are) and starts with full HP / MP
-## (RunRules.rt_start; the real-time HP are in the data since R5b part 2b, 07 §3.9.4).
-func _rt_new_game() -> void:
-	_rt_begin(new_game_combat_mode())
-
-
-## The start of a run in combat mode `p_mode` (new game: the setting / boot argument; event run: rules.combat.mode,
-## R5b): a real-time run gets its header keys and RunRules.rt_start.
-func _rt_begin(p_mode: StringName) -> void:
+## The start of a run (new game, event run): the run log header names the real-time run (07 §10.2: "combat_mode":
+## "realtime", "rt_version": 1) and RunRules.rt_start gives full HP / MP (the real-time HP are in the data since R5b
+## part 2b, 07 §3.9.4) — both verifiers repeat it for a new log.
+func _rt_begin() -> void:
 	_rt_speed_pm = 1000
 	_rt_speed_due = false
-	if state == null or p_mode != &"realtime":
+	if state == null:
 		return
 	if run_log != null:
 		run_log.header["combat_mode"] = String(RunRules.REALTIME)
 		run_log.header["rt_version"] = RunRules.RT_VERSION
-	RunRules.rt_start(state, DB.data)           # R5a: the start both verifiers repeat from the header
+	RunRules.rt_start(state, DB.data)
 
 
 ## After the start commands of a new real-time run (floor, hero, persona): its combat speed when it is not 1000 ‰.
@@ -1526,9 +1477,10 @@ func _rt_record_speed() -> void:
 	record(RtCommand.speed(pm))
 
 
-## True when the running campaign plays real-time combats.
+## True with a running game: every run fights in real time since R5b part 2b (the CTB battle went to the Stempelduell,
+## 10 SD1). Kept for its callers (exploration, menus, bot).
 func is_realtime() -> bool:
-	return state != null and state.combat_mode == &"realtime"
+	return state != null
 
 
 ## A ModDialog presents lines (blocking lines wait for the player): the boss intro waits for its line only then.
@@ -1559,7 +1511,7 @@ func apply_loadout(cmd: Dictionary) -> bool:
 # Casting (08, K0 → K1 persona command / K2 look) — the API of 08 §10.2 Nr. 8
 # ======================================================================================================================
 # K1: the persona command is recorded for every new game with a profile (the casting; the full-run bot). K2: the look
-# reaches the CTB battle through _persona_battle_look (presentation only).
+# reaches the real-time combat through the puppets (DB.party_model, 07 §12.9 Nr. 16; presentation only).
 
 ## The candidate persona of the running slot (08 §2.2): local presentation data (name, form, job, look, …), never
 ## part of GameState, the run log or a hash; the core only sees the ids of the "persona" command. null = no persona
@@ -1592,14 +1544,3 @@ func _choose_initial_persona(p: PersonaProfile) -> void:
 		p.make_beats(DB.data, null)
 	PersonaPrivacy.restore_display(state, p)
 	apply_persona(PersonaRules.command_for(DB.data, "", p.traits))
-
-
-## K2 (08 §6.3): the kai combatant's presentation model from the persona look, `model = DB.party_model("kai")` right
-## after BattleBridge.make_setup — the battle stage and the HUD portraits build kai from it (scenes/battle/** stays
-## untouched). Combatant.model is not in to_dict, the hash or the log; without a persona it stays the def model.
-func _persona_battle_look(setup: BattleSetup) -> void:
-	if setup == null or persona == null:
-		return
-	for c: Combatant in setup.party:
-		if c.def_id == DB.LOOK_MEMBER:
-			c.model = DB.party_model(c.def_id)

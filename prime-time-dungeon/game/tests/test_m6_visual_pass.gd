@@ -2,15 +2,16 @@ extends TestCase
 ## Visual pass (UI layout contracts found in the screenshot matrix): the M.O.D. box centres between the bottom corners a
 ## screen reserves (Events.dialog_reserve_requested) and grows upwards with its tab on top; the exploration prompt sits
 ## above its world anchor inside the band between top HUD and M.O.D. box; the safe room hides its back-wall name sign
-## and its menu column under modals; the opened lootbox shrinks away during the reveal; the battle results scene has a
-## capture still; the capture recipes (tests/capture_recipes.gd, 02_TECH §11.3) cover the screenshot matrix.
+## and its menu column under modals; the opened lootbox shrinks away during the reveal; the combat results have a
+## capture still (R5b part 2b: the real-time results, the CTB results screen is gone); the capture recipes
+## (tests/capture_recipes.gd, 02_TECH §11.3) cover the screenshot matrix.
 
 const ModDialogScript := preload("res://scenes/ui/mod_dialog.gd")
 const SCENE_DIALOG: String = "res://scenes/ui/mod_dialog.tscn"
 const SCENE_HUD: String = "res://scenes/ui/exploration_hud.tscn"
 const SCENE_SAFE: String = "res://scenes/safe_room/safe_room.tscn"
 const SCENE_LOOTBOX: String = "res://scenes/safe_room/lootbox_opening.tscn"
-const SCENE_RESULTS: String = "res://scenes/battle/ui/battle_results.tscn"
+const RESULTS_SCRIPT: String = "res://scenes/combat/ui/combat_results.gd"
 const RECIPES: String = "res://tests/capture_recipes.gd"
 const LONG_LINE: String = "Ein sehr langer Satz der M.O.D., der in einer schmalen Box ganz sicher auf mehr als zwei " \
 	+ "Zeilen umbrechen muss, damit die Box nach oben wachsen muss."
@@ -171,13 +172,14 @@ func test_lootbox_reveal_shrinks_the_opened_box_away() -> void:
 	assert_almost((lb.get("_box_pivot") as Node3D).scale.x, 1.0, 0.001, "back to selection: box shown again")
 
 
-func test_battle_results_scene_has_a_capture_still() -> void:
-	var res: CanvasLayer = (load(SCENE_RESULTS) as PackedScene).instantiate() as CanvasLayer
-	res.call("setup", {"capture": true})
+func test_combat_results_have_a_capture_still() -> void:
+	var res: CanvasLayer = (load(RESULTS_SCRIPT) as GDScript).new() as CanvasLayer
+	res.call("setup", {"capture": true, "demo": "regular"})
 	add_to_tree(res)
 	var shown: bool = await wait_until(func() -> bool: return bool(res.get("shown")), 120)
 	assert_true(shown, "standalone capture shows a sample victory")
-	res.call("_close")
+	assert_eq(res.get("form"), &"applaus", "the lower third of a regular win")
+	res.queue_free()
 
 
 func test_capture_recipes_cover_the_screenshot_matrix() -> void:
@@ -186,14 +188,16 @@ func test_capture_recipes_cover_the_screenshot_matrix() -> void:
 	if script == null:
 		return
 	var r: Node = script.new() as Node
-	for m: String in ["_r_explore", "_r_prompt", "_r_bigmap", "_r_pause", "_r_battle_menu", "_r_battle_skills",
-			"_r_battle_target", "_r_battle_damage", "_r_battle_enemy_turn", "_r_boss_intro", "_r_boss_phase",
-			"_r_battle_gift", "_r_battle_victory", "_r_battle_results", "_r_battle_results_show", "_r_safe_vending",
+	for m: String in ["_r_explore", "_r_prompt", "_r_bigmap", "_r_pause", "_r_safe_vending",
 			"_r_safe_equipment", "_r_safe_lootbox", "_r_safe_lootbox_open", "_r_safe_mopsula",
-			"_r_bark", "_r_hero_mopsula", "_r_battle_partner_auto", "_r_safe_hero_switch",   # 06 package A
+			"_r_bark", "_r_hero_mopsula", "_r_safe_hero_switch",                              # 06 package A
 			"_r_safe_talents_menu", "_r_safe_talent_show", "_r_talents_party",                # 06 package B
-			"_r_safe_hero_talents"]:                                                          # integration A × B
+			"_r_safe_hero_talents",                                                           # integration A × B
+			"_r_rt_world_regular", "_r_rt_r4", "_r_rt_tutorial", "_r_rt_regular", "_r_rt_boss",   # 07 R2–R4
+			"_r_rt_results", "_r_rt_credits"]:
 		assert_true(r.has_method(m), "recipe " + m)
+	for m: String in ["_r_battle_menu", "_r_battle_results", "_r_boss_phase", "_r_battle_partner_auto"]:
+		assert_false(r.has_method(m), "no CTB battle recipe (R5b part 2b): " + m)
 	var ok: Variant = await r.call("run", "no_such_recipe", r)
 	assert_false(bool(ok), "unknown recipe → false")
 	r.free()

@@ -1,10 +1,11 @@
 extends Node
 ## Main scene (02_TECH §1.6, §11.4; GDD §14.1): reads the user args (--autoplay[=full], --seed=<int>,
-## --goto=explore|safe_room|battle:<enc_id>|title|credits|lobby|game_over), applies the settings, adds GlobalUi once
-## under root (deferred) and — with --autoplay — the smoke driver (max_fps 60, time_scale 5, read-only saves, fast
-## text, ephemeral), with --autoplay=full the full Floor-1 bot instead (fullrun.gd: time_scale FullRun TIME_SCALE,
-## real saves in its own directory). Shows the "NOVA SYNDIKAT präsentiert" card for 2 s (any input skips) while
-## pre-warming the shader materials behind it (03_ART §3.10), then routes to the title (or the --goto target).
+## --goto=explore|safe_room|title|credits|lobby|game_over; combats start in the world, 07 §2), applies the settings,
+## adds GlobalUi once under root (deferred) and — with --autoplay — the smoke driver (max_fps 60, time_scale 5,
+## read-only saves, fast text, ephemeral), with --autoplay=full the full Floor-1 bot instead (fullrun.gd: time_scale
+## FullRun TIME_SCALE, real saves in its own directory). Shows the "NOVA SYNDIKAT präsentiert" card for 2 s (any input
+## skips) while pre-warming the shader materials behind it (03_ART §3.10), then routes to the title (or the --goto
+## target).
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const TitleFlow := preload("res://scenes/title/title_flow.gd")
@@ -106,22 +107,15 @@ func route() -> void:
 		"lobby":
 			Router.goto(EVENT_LOBBY)
 		_:
-			if target.begins_with("battle:"):
-				_ensure_dev_state(&"ctb")                  # the CTB battle scene (07 E33: new games fight in real time)
-				var enc: String = target.trim_prefix("battle:")
-				Router.goto(Router.SCENE_EXPLORATION, {"spawn": &"start"})
-				var setup: BattleSetup = Game.make_battle_setup(enc, 0, "")
-				if setup != null:
-					Router.start_battle(setup)
-			else:
-				push_warning("[Boot] unknown --goto target '%s' → title" % target)
-				Router.goto(Router.SCENE_TITLE)
+			# battle:<enc_id> (the CTB battle scene) left with R5b part 2b: combats start in the world (explore)
+			push_warning("[Boot] unknown --goto target '%s' → title" % target)
+			Router.goto(Router.SCENE_TITLE)
 
 
-## The dev state of a --goto target (seed 1 or --seed); `mode` pins its combat mode unless --combat= decides.
-func _ensure_dev_state(mode: StringName = &"") -> void:
+## The dev state of a --goto target (seed 1 or --seed).
+func _ensure_dev_state() -> void:
 	var s: int = int(args.get("seed", -1))
-	Game.ensure_state(mode, s if s >= 0 else 1)
+	Game.ensure_state(s if s >= 0 else 1)
 
 
 func _build_logo() -> void:

@@ -52,9 +52,8 @@ func before_each() -> void:
 	_spy = SpyLog.new()
 	Game.run_log = _spy
 	var s: GameSettings = Game.settings
-	_saved_settings = {"text_speed": s.text_speed, "master_volume": s.master_volume, "battle_speed": s.battle_speed,
-		"show_fps": s.show_fps, "camera_invert_y": s.camera_invert_y, "auto_battle_default": s.auto_battle_default,
-		"show_bets_hud": s.show_bets_hud}
+	_saved_settings = {"text_speed": s.text_speed, "master_volume": s.master_volume, "show_fps": s.show_fps,
+		"camera_invert_y": s.camera_invert_y, "show_bets_hud": s.show_bets_hud}
 
 
 func after_each() -> void:
@@ -64,12 +63,9 @@ func after_each() -> void:
 	var s: GameSettings = Game.settings
 	s.text_speed = int(_saved_settings["text_speed"])
 	s.master_volume = float(_saved_settings["master_volume"])
-	s.battle_speed = float(_saved_settings["battle_speed"])
 	s.show_fps = bool(_saved_settings["show_fps"])
 	s.camera_invert_y = bool(_saved_settings["camera_invert_y"])
-	s.auto_battle_default = bool(_saved_settings["auto_battle_default"])
 	s.show_bets_hud = bool(_saved_settings["show_bets_hud"])
-	Game.auto_battle = false
 	Game.apply_settings()
 	await _settle_router()
 
@@ -228,26 +224,24 @@ func test_settings_rows_write_game_settings() -> void:
 	add_to_tree(sm)
 	await wait_frames(2)
 	var rows: Dictionary = sm.get("rows")
-	for key: String in ["master_volume", "music_volume", "sfx_volume", "battle_speed", "text_speed",
-			"auto_battle_default", "camera_sensitivity", "camera_invert_x", "camera_invert_y", "touch_controls", "quality",
-			"show_fps", "show_bets_hud", "language", "difficulty"]:
+	for key: String in ["master_volume", "music_volume", "sfx_volume", "text_speed", "camera_sensitivity",
+			"camera_invert_x", "camera_invert_y", "touch_controls", "quality", "show_fps", "show_bets_hud", "language",
+			"difficulty"]:
 		assert_true(rows.has(key), "settings row '%s'" % key)
+	for key: String in ["battle_speed", "auto_battle_default", "partner_auto", "combat_mode"]:
+		assert_false(rows.has(key), "no CTB row '%s' (R5b part 2b)" % key)
 	var changed: Array[int] = [0]
 	var cb: Callable = func() -> void: changed[0] += 1
 	Events.settings_changed.connect(cb)
 	(rows["text_speed"] as Button).call("step", 1)
 	assert_eq(Game.settings.text_speed, 2, "text speed → instant")
-	(rows["battle_speed"] as Button).call("step", 1)
-	assert_almost(Game.settings.battle_speed, 2.0 if float(_saved_settings["battle_speed"]) < 1.5 else 1.0, 0.001)
 	(rows["show_fps"] as Button).call("step", 1)
 	assert_eq(Game.settings.show_fps, not bool(_saved_settings["show_fps"]))
-	(rows["auto_battle_default"] as Button).call("step", 1)
-	assert_eq(Game.auto_battle, Game.settings.auto_battle_default, "auto battle follows its default")
 	(rows["show_bets_hud"] as Button).call("step", 1)
 	assert_eq(Game.settings.show_bets_hud, not bool(_saved_settings["show_bets_hud"]), "06-C: show chip switch")
 	(rows["master_volume"] as HSlider).value = 35.0
 	assert_almost(Game.settings.master_volume, 0.35, 0.001, "slider 0..100 → 0..1")
-	assert_true(changed[0] >= 5, "every change applies settings (settings_changed)")
+	assert_true(changed[0] >= 3, "every change applies settings (settings_changed)")
 	assert_true((rows["language"] as Button).disabled, "German only for now")
 	Events.settings_changed.disconnect(cb)
 
@@ -365,8 +359,8 @@ func test_title_flow_helpers() -> void:
 	assert_eq(TitleFlow.clean_name("Jö" + String.chr(0x2665)), "Jö", "unsupported glyphs removed")
 	assert_eq(TitleFlow.parse_args(PackedStringArray()), {"autoplay": false, "autoplay_mode": "", "seed": -1,
 		"goto": ""})
-	assert_eq(TitleFlow.parse_args(PackedStringArray(["--autoplay", "--seed=4242", "--goto=battle:enc_f1_rats"])),
-		{"autoplay": true, "autoplay_mode": "smoke", "seed": 4242, "goto": "battle:enc_f1_rats"})
+	assert_eq(TitleFlow.parse_args(PackedStringArray(["--autoplay", "--seed=4242", "--goto=safe_room"])),
+		{"autoplay": true, "autoplay_mode": "smoke", "seed": 4242, "goto": "safe_room"})
 	assert_eq(int(TitleFlow.parse_args(PackedStringArray(["--seed=abc"]))["seed"]), -1, "invalid seed ignored")
 	assert_has(TitleFlow.load_error_text(ERR_FILE_NOT_FOUND), "Kein Spielstand")
 

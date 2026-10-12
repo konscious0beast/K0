@@ -3,22 +3,18 @@ class_name GameSettings extends RefCounted
 ## keep the defaults and never touch the disk.
 
 const PATH: String = "user://settings.cfg"
-## meta/version of the settings file. 2 (07 E33, R5b-2a): real time became the default of new games — a version-1 file
-## holds combat_mode "ctb" as the old default, not as a choice, and load_from_disk drops it.
+## meta/version of the settings file (2 since 07 E33, R5b-2a). R5b part 2b: the campaign fights in real time only — the
+## CTB keys of older files (game/battle_speed, auto_battle_default, partner_auto, combat/combat_mode) are ignored.
 const FILE_VERSION: int = 2
 const MOD_LIVE_MODES: Array[StringName] = [&"off", &"lines", &"lines_twists"]   # 06-D
 # --- Echtzeitkampf (07, R1a): §7.8 vocabularies --------------------------------------------------------------------
-const COMBAT_MODES: Array[StringName] = [&"ctb", &"realtime"]
-const DEFAULT_COMBAT_MODE: StringName = &"realtime"                      # 07 E33 (R5b-2a; until then &"ctb")
 const COMBAT_SPEEDS_PM: PackedInt32Array = [1000, 850, 700]               # == RtVocab.COMBAT_SPEEDS (§10.7 O1)
 const TELEGRAPH_CONTRASTS: Array[StringName] = [&"normal", &"high"]
 
 var master_volume: float = 0.8              # audio/master, 0..1
 var music_volume: float = 0.6               # audio/music
 var sfx_volume: float = 0.8                 # audio/sfx
-var battle_speed: float = 1.0               # game/battle_speed ∈ {1.0, 2.0}
 var text_speed: int = 1                     # game/text_speed: 0 slow / 1 normal / 2 instant
-var auto_battle_default: bool = false       # game/auto_battle_default
 var fullscreen: bool = false                # display/fullscreen
 var quality: StringName = &"high"           # display/quality: &"high" | &"low" (mobile default &"low")
 var touch_controls: StringName = &"auto"    # display/touch_controls: &"auto" | &"on" | &"off"
@@ -27,15 +23,11 @@ var show_bets_hud: bool = true              # display/show_bets_hud — 06-C: M.
 var camera_invert_x: bool = false           # input/camera_invert_x
 var camera_invert_y: bool = false           # input/camera_invert_y
 var camera_sensitivity: float = 1.0         # input/camera_sensitivity, 0.25..3.0
-var partner_auto: bool = false              # game/partner_auto (06 §1.4, package A): AutoPolicy plays the partner
 # --- 06-D (KI-Admin) ---
 var regie_twists: bool = true               # game/regie_twists: offline Regie twists from floor 2 (06 §5.7a)
 var mod_live: StringName = &"off"           # live/mod_live: &"off" | &"lines" | &"lines_twists" (06 §5.3, opt-in)
 var mod_live_url: String = ""               # live/mod_live_url: mod-brain base URL (debug builds / --mod-live-url=)
 # --- Echtzeitkampf (07, R1a): fields of 07 §7.8, section [combat] (menu: R3) ---------------------------------------
-## combat/combat_mode: &"ctb" | &"realtime" — new games take it (§12.1); the switch is debug-only (release builds keep
-## DEFAULT_COMBAT_MODE, 07 E33).
-var combat_mode: StringName = DEFAULT_COMBAT_MODE
 var combat_speed_pm: int = 1000             # combat/combat_speed_pm ∈ {1000, 850, 700} (recorded as combat_speed)
 var combat_assist: int = -1                 # combat/combat_assist: -1 auto (on with touch), 0 off, 1 on (§5.6)
 var combat_camera_assist: int = -1          # combat/combat_camera_assist: -1 auto, 0 off, 1 on (§7.5)
@@ -58,9 +50,7 @@ func reset_defaults() -> void:
 	master_volume = 0.8
 	music_volume = 0.6
 	sfx_volume = 0.8
-	battle_speed = 1.0
 	text_speed = 1
-	auto_battle_default = false
 	fullscreen = false
 	quality = &"low" if OS.has_feature("mobile") else &"high"
 	touch_controls = &"auto"
@@ -69,7 +59,6 @@ func reset_defaults() -> void:
 	camera_invert_x = false
 	camera_invert_y = false
 	camera_sensitivity = 1.0
-	partner_auto = false
 	regie_twists = true
 	mod_live = &"off"
 	mod_live_url = ""
@@ -89,9 +78,7 @@ func load_from_disk() -> void:
 	master_volume = clampf(float(cfg.get_value("audio", "master", master_volume)), 0.0, 1.0)
 	music_volume = clampf(float(cfg.get_value("audio", "music", music_volume)), 0.0, 1.0)
 	sfx_volume = clampf(float(cfg.get_value("audio", "sfx", sfx_volume)), 0.0, 1.0)
-	battle_speed = 2.0 if float(cfg.get_value("game", "battle_speed", battle_speed)) >= 1.5 else 1.0
 	text_speed = clampi(int(cfg.get_value("game", "text_speed", text_speed)), 0, 2)
-	auto_battle_default = bool(cfg.get_value("game", "auto_battle_default", auto_battle_default))
 	fullscreen = bool(cfg.get_value("display", "fullscreen", fullscreen))
 	var q: StringName = StringName(str(cfg.get_value("display", "quality", quality)))
 	quality = q if (q == &"high" or q == &"low") else quality
@@ -102,12 +89,11 @@ func load_from_disk() -> void:
 	camera_invert_x = bool(cfg.get_value("input", "camera_invert_x", camera_invert_x))
 	camera_invert_y = bool(cfg.get_value("input", "camera_invert_y", camera_invert_y))
 	camera_sensitivity = clampf(float(cfg.get_value("input", "camera_sensitivity", camera_sensitivity)), 0.25, 3.0)
-	partner_auto = bool(cfg.get_value("game", "partner_auto", partner_auto))
 	regie_twists = bool(cfg.get_value("game", "regie_twists", regie_twists))
 	var ml: StringName = StringName(str(cfg.get_value("live", "mod_live", mod_live)))
 	mod_live = ml if MOD_LIVE_MODES.has(ml) else &"off"
 	mod_live_url = str(cfg.get_value("live", "mod_live_url", mod_live_url)) if OS.is_debug_build() else ""
-	_load_combat(cfg, int(cfg.get_value("meta", "version", 1)))   # Echtzeitkampf (07, R1a; E33)
+	_load_combat(cfg)                             # Echtzeitkampf (07, R1a)
 
 
 ## Writes user://settings.cfg. Ephemeral: returns OK without writing.
@@ -119,9 +105,7 @@ func save_to_disk() -> Error:
 	cfg.set_value("audio", "master", master_volume)
 	cfg.set_value("audio", "music", music_volume)
 	cfg.set_value("audio", "sfx", sfx_volume)
-	cfg.set_value("game", "battle_speed", battle_speed)
 	cfg.set_value("game", "text_speed", text_speed)
-	cfg.set_value("game", "auto_battle_default", auto_battle_default)
 	cfg.set_value("display", "fullscreen", fullscreen)
 	cfg.set_value("display", "quality", String(quality))
 	cfg.set_value("display", "touch_controls", String(touch_controls))
@@ -130,7 +114,6 @@ func save_to_disk() -> Error:
 	cfg.set_value("input", "camera_invert_x", camera_invert_x)
 	cfg.set_value("input", "camera_invert_y", camera_invert_y)
 	cfg.set_value("input", "camera_sensitivity", camera_sensitivity)
-	cfg.set_value("game", "partner_auto", partner_auto)
 	cfg.set_value("game", "regie_twists", regie_twists)
 	cfg.set_value("live", "mod_live", String(mod_live))
 	cfg.set_value("live", "mod_live_url", mod_live_url)
@@ -143,9 +126,7 @@ func to_dict() -> Dictionary:
 		"master_volume": master_volume,
 		"music_volume": music_volume,
 		"sfx_volume": sfx_volume,
-		"battle_speed": battle_speed,
 		"text_speed": text_speed,
-		"auto_battle_default": auto_battle_default,
 		"fullscreen": fullscreen,
 		"quality": quality,
 		"touch_controls": touch_controls,
@@ -154,7 +135,6 @@ func to_dict() -> Dictionary:
 		"camera_invert_x": camera_invert_x,
 		"camera_invert_y": camera_invert_y,
 		"camera_sensitivity": camera_sensitivity,
-		"partner_auto": partner_auto,
 		"regie_twists": regie_twists,
 		"mod_live": mod_live,
 		"mod_live_url": mod_live_url,
@@ -164,7 +144,6 @@ func to_dict() -> Dictionary:
 # --- Echtzeitkampf (07, R1a): §7.8 ------------------------------------------------------------------------------------
 
 func _reset_combat() -> void:
-	combat_mode = DEFAULT_COMBAT_MODE
 	combat_speed_pm = 1000
 	combat_assist = -1
 	combat_camera_assist = -1
@@ -176,12 +155,7 @@ func _reset_combat() -> void:
 	camera_shake = true
 
 
-## `file_version`: meta/version of the file (1 without it). The combat mode is read only in debug builds (its switch
-## is debug-only, 07 §12.1) and only from a file of FILE_VERSION or later (07 E33: version 1 wrote "ctb" as default).
-func _load_combat(cfg: ConfigFile, file_version: int) -> void:
-	if OS.is_debug_build() and file_version >= FILE_VERSION:
-		var cm: StringName = StringName(str(cfg.get_value("combat", "combat_mode", combat_mode)))
-		combat_mode = cm if COMBAT_MODES.has(cm) else DEFAULT_COMBAT_MODE
+func _load_combat(cfg: ConfigFile) -> void:
 	var sp: int = int(cfg.get_value("combat", "combat_speed_pm", combat_speed_pm))
 	combat_speed_pm = sp if COMBAT_SPEEDS_PM.has(sp) else 1000
 	combat_assist = clampi(int(cfg.get_value("combat", "combat_assist", combat_assist)), -1, 1)
@@ -196,7 +170,6 @@ func _load_combat(cfg: ConfigFile, file_version: int) -> void:
 
 
 func _save_combat(cfg: ConfigFile) -> void:
-	cfg.set_value("combat", "combat_mode", String(combat_mode))
 	cfg.set_value("combat", "combat_speed_pm", combat_speed_pm)
 	cfg.set_value("combat", "combat_assist", combat_assist)
 	cfg.set_value("combat", "combat_camera_assist", combat_camera_assist)
@@ -209,7 +182,7 @@ func _save_combat(cfg: ConfigFile) -> void:
 
 
 func _combat_dict() -> Dictionary:
-	return {"combat_mode": combat_mode, "combat_speed_pm": combat_speed_pm, "combat_assist": combat_assist,
+	return {"combat_speed_pm": combat_speed_pm, "combat_assist": combat_assist,
 		"combat_camera_assist": combat_camera_assist, "combat_hints": combat_hints,
 		"telegraph_contrast": telegraph_contrast, "auto_attack_default": auto_attack_default,
 		"auto_retarget": auto_retarget, "floating_text_scale": floating_text_scale, "camera_shake": camera_shake}

@@ -11,6 +11,8 @@ extends TestCase
 
 const SHOW_SCENE: String = "res://scenes/ui/talent_show.tscn"
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
+const RtLive := preload("res://tests/fixtures/rt_live/rt_live.gd")
+const Harness := preload("res://tests/tools/rt_harness.gd")
 const SEED: int = 4242
 
 var _prev_data: GameData = null
@@ -26,9 +28,10 @@ func before_each() -> void:
 
 func after_each() -> void:
 	Events.toast_requested.disconnect(_on_toast)
+	if Game.combat != null:
+		Game.end_combat()
 	if Game.state != null:
 		Show.end_battle(null)
-	Game.auto_battle = false
 	Game.in_battle = false
 	Game.timer_running = false
 	Game.replaying = false
@@ -82,13 +85,22 @@ static func _tally() -> Dictionary:
 		"gifts": 0, "liga_tier": 0, "tutorial": false}
 
 
-## DEF / RES of the members' combatants in a fresh battle setup of `enc` (BattleBridge, the live and verifier path).
+## DEF / RES of the members' units in a fresh real-time setup of `enc` (BattleBridge.make_rt_setup_rules, the live and
+## verifier path).
 func _battle_stats(st: GameState, enc: String = "enc_f1_a2", rules: Dictionary = {}) -> Dictionary:
-	var s: BattleSetup = BattleBridge.make_setup(st, real_data(), enc, BattleSetup.Advantage.NORMAL, "", 7, rules)
+	var cmd: Dictionary = Harness.command_for(enc, st.hero, BattleSetup.Advantage.NORMAL)
+	var s: RtSetup = BattleBridge.make_rt_setup_rules(st, real_data(), cmd, 7, rules)
 	var out: Dictionary = {}
-	for c: Combatant in s.party:
-		out[c.def_id] = [c.stat(StatBlock.Stat.DEF), c.stat(StatBlock.Stat.RES)]
+	for u: RtUnit in s.units:
+		if u.side == Combatant.Side.PARTY:
+			out[u.def_id] = [u.stat(StatBlock.Stat.DEF), u.stat(StatBlock.Stat.RES)]
 	return out
+
+
+## A real-time setup of `enc` for the running game (Show.begin_battle takes it like the live combat start).
+static func _rt_setup(enc: String = "enc_f1_a2") -> RtSetup:
+	return BattleBridge.make_rt_setup(Game.state, DB.data, Harness.command_for(enc, Game.hero(),
+		BattleSetup.Advantage.NORMAL), 7)
 
 
 # --- the Liga tier follows the controlled hero ------------------------------------------------------------------------
@@ -125,12 +137,10 @@ func test_liga_tier_with_mopsula_in_control() -> void:
 	var tiers: Array[int] = []
 	var cb: Callable = func(t: int) -> void: tiers.append(t)
 	Events.liga_changed.connect(cb)
-	var setup: BattleSetup = Game.make_battle_setup("enc_f1_a2", BattleSetup.Advantage.NORMAL, "")
-	Show.begin_battle(setup)
+	Show.begin_battle(_rt_setup())
 	Events.liga_changed.disconnect(cb)
 	assert_eq(tiers, [1], "Show: tier 1 with the bare Count in control")
 	Show.end_battle(null)
-	Game.in_battle = false
 
 
 # --- B's Liga talents follow the tier ---------------------------------------------------------------------------------
@@ -300,9 +310,7 @@ func test_show_toasts_the_bonus_heart() -> void:
 	var st: GameState = Game.state
 	st.member("kai").talents = {"tal_kai_kamera3": 1}
 	st.show.marotten["active"] = ["mar_mop_only"]
-	var setup: BattleSetup = Game.make_battle_setup("enc_f1_a2", BattleSetup.Advantage.NORMAL, "")
-	Show.begin_battle(setup)
-	Game.in_battle = false
+	Show.begin_battle(_rt_setup())
 	Show.end_battle(_won())
 	assert_eq(st.show.marotten["hits"], {"mar_mop_only": 2})
 	assert_has(_toasts, "Talent: Extra-Herz für M.O.D.s Vorliebe!")
@@ -314,7 +322,6 @@ func test_show_toasts_the_bonus_heart() -> void:
 ## A run segment in the Liga with Liga talents and the extra heart: Game.replay_log from the save anchor ≡ live.
 func test_liga_talents_and_bonus_heart_replay_for_both_heroes() -> void:
 	for hero: String in ["kai", "mopsula"]:
-		Game.auto_battle = true
 		Game.new_game(1, "Kai", SEED, &"prime", hero)
 		var st: GameState = Game.state
 		for m: PartyMember in st.party:
@@ -338,35 +345,11 @@ func test_liga_talents_and_bonus_heart_replay_for_both_heroes() -> void:
 		var rep: Dictionary = Game.replay_log(Game.run_log, Game.sim.tick())
 		assert_eq(rep["errors"], PackedStringArray(), "verifies (%s)" % hero)
 		assert_eq(rep["final_hash"], live, "Game.replay_log ≡ live with Liga talents + bonus heart (%s)" % hero)
-		Game.auto_battle = false
 
 
-## One battle like the full auto battle through the Game facade (as test_06b_talents / test_06ab_hero_talents).
+## One combat through the Game facade: real time, the autopilot plays the party (RtLive.autopilot_fight).
 func _game_battle(enc: String) -> void:
-	var setup: BattleSetup = Game.make_battle_setup(enc, BattleSetup.Advantage.PREEMPTIVE, "")
-	var battle: BattleState = BattleState.new(setup, DB.data)
-	Show.begin_battle(setup)
-	Events.battle_started.emit(setup.encounter_id, setup.is_boss)
-	_play(battle, battle.start())
-	var guard: int = 0
-	while not battle.is_finished() and guard < 600:
-		guard += 1
-		var cmd: BattleCommand = battle.choose_ai_command()
-		Game.record({"t": "battle", "cmd": cmd.to_dict(), "auto": true})
-		_play(battle, battle.submit(cmd))
-	Events.battle_ended.emit(battle.result.outcome, battle.result.encounter_id)
-	Game.apply_battle_result(battle.result)
-	Show.end_battle(battle.result)
-
-
-func _play(battle: BattleState, events: Array[ActionEvent]) -> void:
-	for e: ActionEvent in events:
-		Show.on_battle_event(e)
-	if battle.is_finished():
-		return
-	var g: Dictionary = Show.take_pending_gift(battle)
-	if not g.is_empty():
-		var gift_events: Array[ActionEvent] = battle.apply_gift(g)
-		Show.note_battle_gift(g, gift_events)
-		for e: ActionEvent in gift_events:
-			Show.on_battle_event(e)
+	var out: Dictionary = RtLive.autopilot_fight(enc, BattleSetup.Advantage.PREEMPTIVE)
+	assert_false(out.is_empty(), "a real-time combat for " + enc)
+	if not out.is_empty():
+		assert_eq(int((out["result"] as BattleResult).outcome), BattleResult.Outcome.VICTORY, enc + " is won")

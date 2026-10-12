@@ -1,13 +1,18 @@
 extends TestCase
 ## Command.validate per "t" (02_TECH §3.4, 05 §11.4): required fields, types, ranges, unknown type → error; ExploreEvent
 ## to_dict/from_dict round trip; every command the live Game records passes the schema (integration with M0's Game).
+## R5b part 2b: an encounter carries its real-time block; the CTB "battle" command is gone (an unknown type now).
+
+const RtLive := preload("res://tests/fixtures/rt_live/rt_live.gd")
+## The rt block of a real-time encounter (07 §10.1) for the samples below.
+const RT: Dictionary = {"v": 1, "cell": [3, 2], "ctl": "p0", "party": [{"u": "p0", "p": [0, 300, 0]}],
+	"groups": [{"group": "f1_g3", "enc": "enc_f1_a2", "lead": [0, -300, 128], "state": "PATROL"}], "presets": {},
+	"auto": true, "retarget": true, "open": {}, "diff": "prime"}
 
 const VALID: Array[Dictionary] = [
 	{"t": "floor", "floor": 1},
-	{"t": "encounter", "enc": "enc_f1_a2", "adv": 2, "group": "f1_g3"},
-	{"t": "encounter", "enc": "enc_f1_evt_pigeons", "adv": 0, "group": ""},
-	{"t": "battle", "cmd": {"kind": "skill", "actor": "p0", "skill": "skl_kai_heavy_swing", "item": "", "targets": ["e1"]},
-		"auto": false},
+	{"t": "encounter", "enc": "enc_f1_a2", "adv": 2, "group": "f1_g3", "rt": RT},
+	{"t": "encounter", "enc": "enc_f1_evt_pigeons", "adv": 0, "group": "", "rt": RT},
 	{"t": "lootbox", "box": "box_bronze"},
 	{"t": "buy", "item": "itm_bandage", "qty": 2, "safe_room": "sr_kiosk"},
 	{"t": "sell", "item": "itm_bandage", "qty": 1},
@@ -64,13 +69,13 @@ const VALID: Array[Dictionary] = [
 
 
 func test_types_are_the_recorded_list() -> void:
-	assert_eq(Command.TYPES, ["floor", "encounter", "battle", "lootbox", "buy", "sell", "equip", "use_item", "rest",
+	assert_eq(Command.TYPES, ["floor", "encounter", "lootbox", "buy", "sell", "equip", "use_item", "rest",
 		"event", "chest", "gate", "room", "safe_room", "safe_room_exit", "scene", "flag", "difficulty", "descend",
 		"gift", "sponsor_window", "hero", "talent", "casting", "secret", "twist",
 		"ability_use", "target_change", "move_sample", "combat_item", "partner_preset", "partner_special",
 		"auto_attack", "autopilot", "combat_hint", "move_input", "combat_speed", "move_batch", "loadout", "persona"],
 		"02_TECH §3.4 (+ hero / secret 06 §1.7 / §2.7, talent / casting 06 §2.2 / §3.4, twist 06 §5.7, real-time "
-		+ "combat 07 §10.1, loadout 07 §4.1 (R5a), persona 08 §2.3)")
+		+ "combat 07 §10.1, loadout 07 §4.1 (R5a), persona 08 §2.3; R5b part 2b: no CTB battle command)")
 	var covered: Dictionary = {"gift": true}
 	for c: Dictionary in VALID:
 		covered[c["t"]] = true
@@ -91,14 +96,13 @@ func test_valid_after_json_round_trip() -> void:
 		assert_eq(Command.validate(parsed), "", "ints became floats: " + str(c))
 
 
-func test_every_battle_command_kind() -> void:
-	var cmds: Array[BattleCommand] = [BattleCommand.attack("p0", "e0"),
-		BattleCommand.skill("p1", "skl_x", PackedStringArray(["e0", "e1"])),
-		BattleCommand.stunt("p0", "skl_stunt", PackedStringArray()),
-		BattleCommand.item("p0", "itm_bandage", PackedStringArray(["p1"])),
-		BattleCommand.defend("p1"), BattleCommand.flee("p0")]
-	for bc: BattleCommand in cmds:
-		assert_eq(Command.validate({"t": "battle", "cmd": bc.to_dict(), "auto": true}), "", bc.kind_name())
+## The CTB battle command left with the CTB campaign (R5b part 2b): an unknown type, an encounter without its real-time
+## block is refused.
+func test_no_ctb_battle_command() -> void:
+	var bc: BattleCommand = BattleCommand.attack("p0", "e0")
+	assert_eq(Command.validate({"t": "battle", "cmd": bc.to_dict(), "auto": true}), "unknown command type 'battle'")
+	assert_has(Command.validate({"t": "encounter", "enc": "enc_f1_a2", "adv": 0, "group": ""}),
+		"rt: the real-time block is required")
 
 
 func test_invalid_commands() -> void:
@@ -109,14 +113,11 @@ func test_invalid_commands() -> void:
 		[{"t": "floor"}, "floor: floor"],
 		[{"t": "floor", "floor": 0}, "floor: floor"],
 		[{"t": "floor", "floor": 1.5}, "floor: floor"],
-		[{"t": "encounter", "enc": "", "adv": 0, "group": ""}, "encounter: enc"],
-		[{"t": "encounter", "enc": "enc_x", "adv": 3, "group": ""}, "encounter: adv"],
-		[{"t": "encounter", "enc": "enc_x", "adv": 0}, "encounter: group"],
-		[{"t": "battle", "cmd": {"kind": "attack", "actor": "p0", "targets": []}}, "battle: auto"],
-		[{"t": "battle", "cmd": {"kind": "dance", "actor": "p0"}, "auto": true}, "battle: cmd.kind"],
-		[{"t": "battle", "cmd": {"kind": "attack", "actor": ""}, "auto": true}, "battle: cmd.actor"],
-		[{"t": "battle", "cmd": {"kind": "attack", "actor": "p0", "targets": [1]}, "auto": true}, "battle: cmd.targets"],
-		[{"t": "battle", "cmd": "attack", "auto": true}, "battle: cmd must be"],
+		[{"t": "encounter", "enc": "", "adv": 0, "group": "", "rt": RT}, "encounter: enc"],
+		[{"t": "encounter", "enc": "enc_x", "adv": 3, "group": "", "rt": RT}, "encounter: adv"],
+		[{"t": "encounter", "enc": "enc_x", "adv": 0, "rt": RT}, "encounter: group"],
+		[{"t": "encounter", "enc": "enc_x", "adv": 0, "group": ""}, "encounter: rt"],
+		[{"t": "battle", "cmd": {"kind": "attack", "actor": "p0", "targets": []}, "auto": true}, "unknown command type"],
 		[{"t": "lootbox"}, "lootbox: box"],
 		[{"t": "buy", "item": "itm_bandage", "qty": 0, "safe_room": ""}, "buy: qty"],
 		[{"t": "buy", "item": "itm_bandage", "qty": 1}, "buy: safe_room"],
@@ -224,12 +225,8 @@ func test_commands_recorded_by_game_are_valid() -> void:
 	Game.visit_room(Vector2i(3, 6))
 	Game.equip("kai", "accessory", "")
 	Game.set_difficulty(&"vorabend")
-	var setup: BattleSetup = Game.make_battle_setup(DB.floor_def(1).timer_start_after, 0, "")
-	var battle: BattleState = BattleState.new(setup, DB.data)
-	battle.start()
-	var cmd: BattleCommand = battle.choose_ai_command()
-	Game.record({"t": "battle", "cmd": cmd.to_dict(), "auto": true})
-	Game.in_battle = false
+	assert_false(RtLive.autopilot_fight(DB.floor_def(1).timer_start_after, BattleSetup.Advantage.NORMAL, "").is_empty(),
+		"a real-time combat: encounter + combat entries recorded")
 	assert_true(Game.open_dev_sponsor_window(), "QA Sponsor-Fenster (recorded)")
 	assert_eq(Show.receive_gift(Gift.make_dev("gold", "", 100))["apply"], "now", "dev gift recorded on application")
 	var errs: PackedStringArray = Game.run_log.validate()

@@ -302,10 +302,9 @@ func _make_run_log(st: GameState) -> RunLog:
 		"run_id": RunLog.local_run_id(st.seed),
 		"player_id": "local",
 		"from_save": true,
+		"combat_mode": String(RunRules.REALTIME),      # Echtzeitkampf (07 §10.2): like Game.new_game's header
+		"rt_version": RunRules.RT_VERSION,
 	}
-	if st.combat_mode == RunRules.REALTIME:          # Echtzeitkampf (07 §10.2, R5a): like Game.new_game's header
-		rl.header["combat_mode"] = String(RunRules.REALTIME)
-		rl.header["rt_version"] = RunRules.RT_VERSION
 	return rl
 
 

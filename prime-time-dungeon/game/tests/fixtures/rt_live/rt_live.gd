@@ -5,6 +5,7 @@ extends RefCounted
 ## class_name): preload it. Callers swap DB.data to RtKit.data() and restore it afterwards (swap_data / restore_data).
 
 const Bot := preload("res://tests/tools/rt_bot_player.gd")
+const Harness := preload("res://tests/tools/rt_harness.gd")
 
 static var _saved: GameData = null
 
@@ -88,6 +89,29 @@ static func fight(cmd: Dictionary, cmds: Array, max_ticks: int = 18000, on_tick:
 	if Game.make_rt_setup(cmd) == null:
 		return {}
 	return play(cmds, max_ticks, on_tick)
+
+
+## The encounter command of `enc_id` on the real floor-1 data (the balance harness's rt block: its cell, poses and
+## lead) for group `group` and the running hero — what the exploration records for a combat (R5b part 2b: every
+## campaign combat is a real-time one). `opener` "bark" (06 A × C) only with a PREEMPTIVE advantage, like the
+## exploration records it.
+static func encounter(enc_id: String, adv: int, group: String = "harness", opener: String = "") -> Dictionary:
+	var cmd: Dictionary = Harness.command_for(enc_id, Game.hero() if Game.state != null else "kai", adv)
+	cmd["group"] = group
+	(((cmd["rt"] as Dictionary)["groups"] as Array)[0] as Dictionary)["group"] = group
+	if opener != "" and adv == BattleSetup.Advantage.PREEMPTIVE:
+		cmd["opener"] = opener
+	return cmd
+
+
+## The live real-time combat of `enc_id` (encounter) on the running game, the controlled unit on autopilot from tick 0
+## (the sim's own AI plays the party, 07 §5.7) — the real-time successor of the CTB auto battle the campaign tests
+## played through BattleState. Returns play()'s dictionary; {} when no combat starts.
+static func autopilot_fight(enc_id: String, adv: int, group: String = "harness", max_ticks: int = 18000,
+		on_tick: Callable = Callable(), opener: String = "") -> Dictionary:
+	if Game.make_rt_setup(encounter(enc_id, adv, group, opener)) == null:
+		return {}
+	return play([RtCommand.autopilot(0, Game.combat.controlled_id(), true)], max_ticks, on_tick)
 
 
 ## A RunSim-driven core run from the anchored `st` (fixture data) that records into a fresh run log whose header names

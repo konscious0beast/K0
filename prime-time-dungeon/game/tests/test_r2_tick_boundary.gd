@@ -3,8 +3,8 @@ extends TestCase
 ## tick c first the boundary (Game.combat_boundary: at most one gift), then every input with ct == c
 ## (Game.combat_submit), then Game.combat_step(); a hint card holds the ticks (no tick passes, the hint is recorded at
 ## the halted ct, inputs given meanwhile keep that ct); at most MAX_CATCHUP ticks per frame; the combat speed scales
-## real time per tick; checkpoints every CHECKPOINT_TICKS and at the end; the end order; the combat_speed command and
-## the --combat boot argument. The sim is a spy over the world fixture stream (tests/fixtures/rt_world).
+## real time per tick; checkpoints every CHECKPOINT_TICKS and at the end; the end order; the combat_speed command of a
+## new run. The sim is a spy over the world fixture stream (tests/fixtures/rt_world).
 
 const WorldStream := preload("res://tests/fixtures/rt_world/world_stream.gd")
 const GEO: Dictionary = {"r": 480, "doors": 0, "closed": false, "blockers": []}
@@ -50,7 +50,6 @@ var _spy: SpySim = null
 func before_each() -> void:
 	_speed = Game.settings.combat_speed_pm
 	Game.new_game(0, "Kai", 4242)
-	Game.state.combat_mode = &"realtime"
 	_spy = null
 
 
@@ -59,7 +58,6 @@ func after_each() -> void:
 		Game.end_combat()
 	Game.rt_sim_factory = Callable()
 	Game.settings.combat_speed_pm = _speed
-	Game.combat_mode_override = &""
 
 
 ## A director without a scene (no bodies: the tick loop alone), armed, and a started combat of `plan`.
@@ -253,25 +251,11 @@ func test_combat_speed_is_recorded_outside_combats() -> void:
 	assert_eq(_speed_cmds(), [850, 700], "recorded at the combat end")
 
 
-func test_ctb_runs_record_no_combat_speed() -> void:
-	Game.state.combat_mode = &"ctb"
-	Game.settings.combat_speed_pm = 850
-	Events.settings_changed.emit()
-	assert_eq(_speed_cmds(), [], "CTB runs stay as they are")
-
-
-func test_new_game_combat_mode_and_boot_argument() -> void:
-	assert_eq(Game.combat_mode_from_args(PackedStringArray(["--autoplay", "--combat=realtime"])), &"realtime")
-	assert_eq(Game.combat_mode_from_args(PackedStringArray(["--combat=ctb"])), &"ctb")
-	assert_eq(Game.combat_mode_from_args(PackedStringArray(["--combat=turbo"])), &"")
-	Game.combat_mode_override = &"ctb"
-	Game.new_game(0, "Kai", 4242)
-	assert_false(Game.is_realtime(), "the boot argument wins over the setting")
-	assert_false(Game.run_log.header.has("combat_mode"), "CTB headers unchanged")
-	Game.combat_mode_override = &""
+## A new run that starts below 1000 ‰ records its combat speed (07 §10.1); its header names the real-time run.
+func test_a_new_run_records_its_combat_speed() -> void:
 	Game.settings.combat_speed_pm = 700
 	Game.new_game(0, "Kai", 4242)
-	assert_true(Game.is_realtime(), "real time is the default of new games (GameSettings.combat_mode, 07 E33)")
+	assert_true(Game.is_realtime())
 	assert_eq(str(Game.run_log.header.get("combat_mode", "")), "realtime")
 	assert_eq(int(Game.run_log.header.get("rt_version", 0)), 1)
 	assert_eq(_speed_cmds(), [700], "a run that starts below 1000 ‰ records its speed")

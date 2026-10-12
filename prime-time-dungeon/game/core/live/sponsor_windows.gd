@@ -223,7 +223,7 @@ static func on_room(st: GameState, rules: Dictionary, kind: int, first: bool = t
 
 # --- 06-C: comeback window after a lost boss attempt (06 §6 decision 3) -----------------------------------------------
 
-## After every battle (Game.apply_battle_result / RunSim._end_battle, after BattleBridge.apply_result): a lost battle
+## After every battle (Game.apply_battle_result / RunSim._book_result, after BattleBridge.apply_result): a lost battle
 ## against the floor's quarter / floor boss marks that boss kind pending (unless its comeback was used on this
 ## floor); a won one clears the mark. No-op when windows are not tracked or boss.comeback is 0.
 static func on_battle_result(st: GameState, rules: Dictionary, data: GameData, result: BattleResult) -> void:

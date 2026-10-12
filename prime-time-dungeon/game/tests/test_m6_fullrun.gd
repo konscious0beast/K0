@@ -194,9 +194,6 @@ func test_planner_on_floor_1() -> void:
 		+ "defeated) + the show boss (E26)")
 	for gid: String in FullRun.TYPICAL_SKIP:
 		assert_false(groups.has(gid), "typical leaves %s alone" % gid)
-	Game.state.combat_mode = &"ctb"
-	assert_len(_group_goals(bot, ex), 11, "a CTB run has no show-boss group")
-	Game.state.combat_mode = &"realtime"
 	bot.set("grind_fights", 2)
 	var wait: Dictionary = bot.call("next_objective")
 	assert_eq(str(wait["kind"]), "wait", "grinding after a boss defeat without a living stray: wait for one")
@@ -296,28 +293,35 @@ func test_clear_saves_only_touches_the_bot_directory() -> void:
 	DirAccess.remove_absolute(dir)
 
 
-## A lost battle, deterministic and independent of the seed (the bot loses bosses only now and then since the GDD §13
-## balancing, ~20 % / ~35 % on the first try). Real screens:
-## exploration (saved in slot 1) → boss battle at 1 HP with auto battle → DEFEAT → Sendeschluss (reason defeat,
-## game_overs +1 in the slot) → "Letzten Spielstand laden" → exploration with the saved party and the countdown grace.
+## A lost combat, deterministic and independent of the seed (the bot loses bosses only now and then since the GDD §13
+## balancing). Real screens: exploration (saved in slot 1) → a real-time combat at 1 HP in the world (the director
+## stepped tick by tick, the party standing) → DEFEAT → Sendeschluss (reason defeat, game_overs +1 in the slot) →
+## "Letzten Spielstand laden" → exploration with the saved party and the countdown grace.
 func test_lost_battle_game_over_and_load_last() -> void:
 	var prev_dir: String = Save.save_dir
 	var prev_autoplay: bool = Game.autoplay
 	Save.save_dir = "user://test_m6_fullrun/saves"
-	Game.autoplay = true                     # battle speed 4, results continue on their own
-	Game.auto_battle = true
+	Game.autoplay = true                     # results continue on their own
 	Game.new_game(1, "Kai", 4242)
 	assert_eq(Save.save_slot(1), OK, "saved in slot 1 (location start)")
 	var ex: ExplorationScene = (load(SCENE_EXPLORATION) as PackedScene).instantiate() as ExplorationScene
 	add_to_tree(ex)
 	await wait_frames(2)
+	var dir: CombatDirector = ex.get_director()
+	dir.use_hud = false                      # no hint cards holding the ticks
+	dir.auto_tick = false
 	for m: PartyMember in Game.state.party:
 		m.hp = 1
-	var setup: BattleSetup = Game.make_battle_setup("enc_f1_boss_rattenkoenigin", 0, "f1_fb")
-	Router.start_battle(setup)
+	ex.force_encounter("f1_g1")
+	var started: bool = await wait_until(func() -> bool: return Game.combat != null and dir.is_running(), 600)
+	assert_true(started, "a real-time combat at 1 HP")
+	for i in 6000:
+		if not dir.is_running():
+			break
+		dir.advance(1)
 	var lost: bool = await wait_until(func() -> bool: return Router.current != null and not Router.busy \
 		and Router.current.scene_file_path == Router.SCENE_GAME_OVER, 3000)
-	assert_true(lost, "a lost battle ends on the Sendeschluss screen")
+	assert_true(lost, "a lost combat ends on the Sendeschluss screen")
 	if lost:
 		var go: Node = Router.current
 		assert_eq(StringName(str(go.get("reason"))), &"defeat")
@@ -350,4 +354,3 @@ func test_lost_battle_game_over_and_load_last() -> void:
 	if Game.state != null:
 		Game.state.slot = 0                 # never let a later test autosave into the real user://saves slot 1
 	Game.autoplay = prev_autoplay
-	Game.auto_battle = false

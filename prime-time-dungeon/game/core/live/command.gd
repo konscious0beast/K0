@@ -1,10 +1,11 @@
 class_name Command extends RefCounted
 ## Schema check of recorded commands (02_TECH §3.4 "t" types, 05 §10.6). Commands are the "Befehle rein" half of the
 ## live contract (Brief §6b.2): plain JSON dictionaries; after a JSON round trip every number is a float, so integer
-## fields accept integral floats. Shapes recorded by Game: floor {"floor"}, encounter {"enc", "adv", "group"}, battle
-## {"cmd", "auto"}, lootbox {"box"}, buy {"item", "qty", "safe_room"}, sell {"item", "qty"}, equip {"member", "slot",
-## "item"}, use_item {"item", "member"}, rest {}, event {"id", "choice"}, chest {"id"}, gate {"key"}, room {"cell": [x,
-## y]}, safe_room {"id"}, safe_room_exit {}, scene {"id"}, flag {"key" ∈ FLAG_KEYS, "value"}, difficulty {"to"}, descend
+## fields accept integral floats. Shapes recorded by Game: floor {"floor"}, encounter {"enc", "adv", "group", "rt"}
+## (R5b part 2b: the real-time block is required — the campaign fights in real time only), lootbox {"box"}, buy
+## {"item", "qty", "safe_room"}, sell {"item", "qty"}, equip {"member", "slot", "item"}, use_item {"item", "member"},
+## rest {}, event {"id", "choice"}, chest {"id"}, gate {"key"}, room {"cell": [x, y]}, safe_room {"id"},
+## safe_room_exit {}, scene {"id"}, flag {"key" ∈ FLAG_KEYS, "value"}, difficulty {"to"}, descend
 ## {}, gift {"gift"} (external input, cmd id 0), sponsor_window {"op": "dev_open", "sec", "slots"} (QA Sponsor-Fenster,
 ## SponsorWindows.dev_open, 05 §6.13), hero {"id": "kai" | "mopsula"} (06 §1.7: the controlled character; the choice
 ## of a new run right after "floor", later switches in a safe room — HeroRules.check), talent {"member", "id"}
@@ -12,11 +13,11 @@ class_name Command extends RefCounted
 ## Kulissenwand knocked over / Regie-Notiz read — Secrets.check_open), twist {"twist": {"schema": 1, "id", "n", "src",
 ## "params", "duration", "tick", "req"?, "vote_id"?}} (06 §5.7, external input, cmd id 0; TwistApplier decides whether
 ## it applies).
-## battle.cmd = BattleCommand.to_dict(): {"kind": attack|skill|stunt|item|defend|flee, "actor", "skill", "item",
-## "targets": [String]}. Additional unknown fields are allowed (additive protocol versions, 05 §4.3).
+## Additional unknown fields are allowed (additive protocol versions, 05 §4.3). The CTB "battle" command left with the
+## CTB campaign (R5b part 2b; a log of that kernel is an older version, RunSim.SIM_VERSION).
 ## Echtzeitkampf (07 §10.1, R1a): the real-time combat types (RtCommand.TYPES: ability_use, target_change, move_sample,
 ## combat_item, partner_preset, partner_special, auto_attack, autopilot, combat_hint, move_input, combat_speed,
-## move_batch) and the optional "rt" block of "encounter" are checked by RtCommand.validate; R5a replays them (RunSim
+## move_batch) and the "rt" block of "encounter" are checked by RtCommand.validate; R5a replays them (RunSim
 ## combat branch, Game.replay_log combat loop). loadout {"member", "bar": {"2" | "3" | "4": skill id}, "preset": "" |
 ## RtVocab.RT_PRESETS, "tog": {switch: bool}} (R5a: action bar variants and partner tactic chosen outside a combat;
 ## the rules are RunRules.loadout_refusal's).
@@ -24,7 +25,7 @@ class_name Command extends RefCounted
 ## "talent", "swap": true} (first Talent-Show) — ids only; the rules are PersonaRules.check's. K1 (CR-33): "talent"
 ## may be "" — the only value K1 records (no start talents; any other talent is refused by PersonaRules.check).
 
-const TYPES: PackedStringArray = ["floor", "encounter", "battle", "lootbox", "buy", "sell", "equip", "use_item", "rest",
+const TYPES: PackedStringArray = ["floor", "encounter", "lootbox", "buy", "sell", "equip", "use_item", "rest",
 	"event", "chest", "gate", "room", "safe_room", "safe_room_exit", "scene", "flag", "difficulty", "descend", "gift",
 	"sponsor_window",
 	"hero", "talent", "casting", "secret",   # 06 packages A (hero, secret) and B (talent, casting)
@@ -76,15 +77,12 @@ static func _validate_fields(t: String, d: Dictionary) -> String:
 			if d.has("opener") and (not (d["opener"] is String) or str(d["opener"]) != "bark" \
 					or int(d["adv"]) != BattleSetup.Advantage.PREEMPTIVE):
 				return "opener must be \"bark\" (only with adv 1)"      # 06 integration: BattleSetup.opener
-			if d.has("rt"):                                            # Echtzeitkampf (07, R1a): the rt block
-				var rt_err: String = RtCommand.validate(d)
-				if rt_err != "":
-					return rt_err
+			if not d.has("rt"):                                        # R5b part 2b: real time only
+				return "rt: the real-time block is required"
+			var rt_err: String = RtCommand.validate(d)              # Echtzeitkampf (07, R1a): the rt block
+			if rt_err != "":
+				return rt_err
 			return _str(d, "group")
-		"battle":
-			if not (d.get("auto", null) is bool):
-				return "auto must be a bool"
-			return _battle_cmd(d.get("cmd", null))
 		"lootbox":
 			return _id(d, "box")
 		"buy":
@@ -171,25 +169,6 @@ static func _validate_fields(t: String, d: Dictionary) -> String:
 				return "gift must be a Dictionary"
 			var reason: String = Gift.validate(d["gift"])
 			return "" if reason == "" else "%s (%s)" % [reason, Gift.last_detail]
-	return ""
-
-
-static func _battle_cmd(v: Variant) -> String:
-	if not (v is Dictionary):
-		return "cmd must be a Dictionary (BattleCommand.to_dict)"
-	var c: Dictionary = v
-	if not BattleCommand.KIND_NAMES.has(str(c.get("kind", ""))):
-		return "cmd.kind must be one of %s" % ", ".join(BattleCommand.KIND_NAMES)
-	if not (c.get("actor", null) is String) or str(c["actor"]) == "":
-		return "cmd.actor must be a non-empty String"
-	if not (c.get("skill", "") is String) or not (c.get("item", "") is String):
-		return "cmd.skill / cmd.item must be Strings"
-	var targets: Variant = c.get("targets", [])
-	if not (targets is Array or targets is PackedStringArray):
-		return "cmd.targets must be an Array of Strings"
-	for tid: Variant in Array(targets):
-		if not (tid is String or tid is StringName):
-			return "cmd.targets must be an Array of Strings"
 	return ""
 
 

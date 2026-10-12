@@ -23,7 +23,6 @@ static func state(level: int = 1, hero: String = "kai", items: Dictionary = {}) 
 	var d: GameData = data()
 	var st: GameState = GameState.create_new(d, 0, "Testperson", 4242)
 	st.hero = hero
-	st.combat_mode = &"realtime"
 	st.floor_run = FloorRun.create(d.floor_def(1), 4242, &"prime")
 	for m: PartyMember in st.party:
 		m.level = level

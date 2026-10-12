@@ -70,7 +70,6 @@ func test_shader_uniforms_match_contract() -> void:
 		"glow": ["color", "energy", "pulse_speed"],
 		"vfx_additive": ["color", "softness"],
 		"hologram": ["color", "scan_speed", "alpha"],
-		"ui_swirl": ["progress", "snapshot", "tint", "aspect"],
 		"ui_tv_overlay": ["scanline_alpha", "vignette", "aberration"],
 	}
 	for shader_name: String in expected.keys():

@@ -219,7 +219,8 @@ func test_show_trigger_signal_payloads_match_validator_keys() -> void:
 	for spec: Array in [[ActionEvent.Type.ACTION_START, {"actor_id": "p0", "command": BattleCommand.Kind.STUNT,
 			"skill_id": "skl_stunt_kai_suplex"}],
 			[ActionEvent.Type.STUNT_RESULT, {"actor_id": "p0", "skill_id": "skl_stunt_kai_suplex", "success": true}],
-			[ActionEvent.Type.KO, {"target_id": "e0", "def_id": "enm_boss", "actor_id": "p0"}],
+			[ActionEvent.Type.KO, {"target_id": "e0", "def_id": "enm_boss", "actor_id": "p0",
+				"command": BattleCommand.Kind.STUNT}],          # the real-time KO names its command (07 §9.1)
 			[ActionEvent.Type.COMBO, {"actor_id": "p1", "target_id": "e1", "def_id": "enm_rat"}],
 			[ActionEvent.Type.KO, {"target_id": "p1", "def_id": "mopsula", "actor_id": "e1"}]]:
 		var e: ActionEvent = ActionEvent.new()

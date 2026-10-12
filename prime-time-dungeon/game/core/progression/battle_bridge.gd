@@ -1,68 +1,12 @@
 class_name BattleBridge extends RefCounted
-## GameState ↔ BattleSetup/BattleResult (02_TECH §6.1, GDD §3.12/§10.2).
+## GameState ↔ RtSetup/BattleResult (02_TECH §6.1, GDD §3.12/§10.2): the setup of a real-time combat from the run
+## (make_rt_setup, 07 §10.5) and the booking of its result (apply_result). The CTB setup (make_setup) left with the CTB
+## battle (R5b part 2b, 10 SD1).
 
 const PEP_TALK_FLAG: String = "mop_pep_talk"
 const PEP_TALK_STATUS: String = "sts_guard"
-const PEP_TALK_TURNS: int = 2
 const LIGHT_FOOTED: String = "sts_light_footed"     # Unterhosen-Liga in the real-time combat (R5b, E31)
 const KO_EXP_PCT: int = 50                   # KO'd members get floori(50 %) of the battle EXP
-
-
-## Party combatants via Progression.to_combatant (ids p0.. in battle_slot order); items = inventory.battle_items;
-## credits_available = inventory.credits; owned_equipment (gift duplicates → credits, 05 §6.9); encounter: is_boss,
-## can_flee, tutorial; bosses force NORMAL;
-## enemy_dmg_mult = (vorabend 0.75) × (tutorial 0.5); exp_mult (vorabend 1.2); show_mods = state.hype_gain_mult /
-## follower_mult; floor palette/theme; is_boss and flags["mop_pep_talk"] → both party combatants start with
-## sts_guard 2, flag erased (GDD §10.2). Unknown encounter → null. `rules` = the run's rules (campaign {}): the
-## Unterhosen-Liga tier (MarottenRules.liga_tier, never in the tutorial) decides who counts liga_stat_pct talents.
-static func make_setup(state: GameState, data: GameData, encounter_id: String, advantage: int, group_id: String,
-		seed: int, rules: Dictionary = {}) -> BattleSetup:
-	if state == null or data == null or not data.has_id("encounters", encounter_id):
-		push_warning("[BattleBridge] unknown encounter '%s'" % encounter_id)
-		return null
-	var enc: EncounterDef = data.encounter(encounter_id)
-	var setup: BattleSetup = BattleSetup.new()
-	setup.encounter_id = encounter_id
-	setup.group_id = group_id
-	setup.enemy_ids = enc.enemies.duplicate()
-	setup.seed = seed
-	setup.is_boss = enc.boss
-	setup.can_flee = enc.can_flee
-	setup.tutorial = enc.tutorial
-	setup.advantage = BattleSetup.Advantage.NORMAL if enc.boss else _advantage(advantage)
-	var vorabend: bool = state.difficulty == &"vorabend"
-	setup.enemy_dmg_mult = (Balance.EASY_ENEMY_DMG if vorabend else 1.0) \
-		* (Balance.TUTORIAL_ENEMY_DMG if enc.tutorial else 1.0)
-	setup.exp_mult = Balance.EASY_EXP if vorabend else 1.0
-	setup.show_mods = {"hype_gain_mult": state.hype_gain_mult(data), "follower_mult": state.follower_mult(data)}
-	setup.floor_index = state.floor_run.index if state.floor_run != null else maxi(1, enc.floor_index)
-	var fdef: FloorDef = data.floor_def(setup.floor_index)
-	if fdef != null:
-		setup.theme_id = fdef.theme
-		setup.palette = fdef.palette.duplicate(true)
-	if state.inventory != null:
-		setup.items = state.inventory.battle_items(data)
-		setup.credits_available = state.inventory.credits
-	setup.owned_equipment = _owned_equipment(state, data)
-	var party: Array[Combatant] = []
-	# 06 B × C: the Liga talents follow the battle's Unterhosen-Liga tier — the tier Show freezes in begin_battle
-	# (tutorial: none; rules = the run's rules, Game.event_rules / RunSim.rules)
-	var liga_tier: int = 0 if enc.tutorial else MarottenRules.liga_tier(state, rules)
-	for i in state.party.size():
-		var m: PartyMember = state.party[i]
-		if m == null or not data.has_id("party", m.id):
-			continue
-		var c: Combatant = Progression.to_combatant(m, data, "p%d" % party.size(), data.party_member(m.id).battle_slot,
-			MarottenRules.in_liga(state, m.id, liga_tier))
-		if c != null:
-			party.append(c)
-	setup.party = party
-	if enc.boss and bool(state.flags.get(PEP_TALK_FLAG, false)) and data.has_id("statuses", PEP_TALK_STATUS):
-		var guard: StatusDef = data.status(PEP_TALK_STATUS)
-		for c: Combatant in setup.party:
-			c.statuses.append(StatusEffect.new(guard, PEP_TALK_TURNS, c.id))
-		state.flags.erase(PEP_TALK_FLAG)
-	return setup
 
 
 ## In this order (GDD §3.11/§3.12): (1) hp/mp writeback (KO'd members stay at 0 HP for now); (2) item_delta →
@@ -280,9 +224,9 @@ static func make_rt_setup(state: GameState, data: GameData, cmd: Dictionary, see
 
 
 ## make_rt_setup with the run's rules (Game.event_rules / RunSim.rules; the contract signature has none): they decide
-## the Unterhosen-Liga tier of liga talents (as in make_setup) and give RtSetup.rules its combat part (rules.combat,
-## 07 §10.7). Built like make_setup — encounter flags, advantage (bosses NORMAL), damage / EXP factors of the recorded
-## difficulty, show mods, floor palette, battle items, credits, the pep talk guard of bosses — plus:
+## the Unterhosen-Liga tier of liga talents (MarottenRules.liga_tier, never in the tutorial) and give RtSetup.rules
+## its combat part (rules.combat, 07 §10.7). Encounter flags, advantage (bosses NORMAL), damage / EXP factors of the
+## recorded difficulty, show mods, floor palette, battle items, credits, the pep talk guard of bosses — plus:
 ## - the set of the recorded cell (kind and open doors from the floor layout; a gate counts as open once opened;
 ##   closed for bosses, the tutorial and can_flee = false), RtGeo.make_geo;
 ## - party RtUnits from Progression.to_combatant (talent crit / element), ids "p<battle_slot>", display_name = the Def

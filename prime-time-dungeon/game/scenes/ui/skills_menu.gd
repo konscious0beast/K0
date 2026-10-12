@@ -1,9 +1,8 @@
 extends "res://scenes/ui/menu_base.gd"
-## Pause tab "Fähigkeiten" (02_TECH §1.6, GDD §14.4): per member the attack skill, the learnset with unlock levels
-## (learned = bright, upcoming = "ab Lv X", dimmed) and stunts (success chance, cooldown). Details on focus.
-## Echtzeitkampf (07 §4.1, R3): a real-time run shows the combat bar instead (slots 1–5 + variants + FINALE, the
-## Partner-Spezial, the auto attack and the partner tactic) — see the section at the end; R5b: variants and the
-## tactic are chosen there (the recorded loadout command).
+## Pause tab "Fähigkeiten" (02_TECH §1.6, GDD §14.4; 07 §4.1): per member the combat bar (slots 1–5 + variants +
+## FINALE, unlock levels: learned = bright, upcoming = "ab Lv X", dimmed), the Partner-Spezial, the auto attack and the
+## partner tactic — see the section at the end; R5b: variants and the tactic are chosen there (the recorded loadout
+## command). Details on focus. The CTB learnset page is gone with the CTB campaign (R5b part 2b).
 
 var member_id: String = "kai"
 
@@ -41,65 +40,13 @@ func select_member(id: String) -> void:
 	focus_default()
 
 
-## [{skill, level, learned, kind}] for the member: attack, learnset (sorted), stunts.
-func entries() -> Array[Dictionary]:
-	var out: Array[Dictionary] = []
-	var def: PartyMemberDef = UiUtil.member_def(member_id)
-	var m: PartyMember = Game.state.member(member_id) if Game.state != null else null
-	if def == null:
-		return out
-	var level: int = m.level if m != null else 1
-	out.append({"skill": def.attack_skill, "level": 1, "learned": true, "kind": "attack"})
-	var ls: Array[Dictionary] = []
-	for e: Dictionary in def.learnset:
-		ls.append(e)
-	ls.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a.get("level", 0)) < int(b.get("level", 0)))
-	for e: Dictionary in ls:
-		var sid: String = str(e.get("skill", ""))
-		var lv: int = int(e.get("level", 1))
-		var learned: bool = (m != null and m.skills.has(sid)) or lv <= level
-		out.append({"skill": sid, "level": lv, "learned": learned, "kind": "skill"})
-	for sid: String in def.stunts:
-		out.append({"skill": sid, "level": 1, "learned": true, "kind": "stunt"})
-	return out
-
-
 func refresh() -> void:
-	if _rt_refresh():                            # Echtzeitkampf (07, R3): the combat bar of a real-time run
+	if _rt_refresh():                            # Echtzeitkampf (07, R3): the combat bar
 		return
 	clear(_tabs_holder)
-	_tabs_holder.add_child(member_tabs(member_id, select_member))
 	clear(_list)
 	_buttons.clear()
-	var last_kind: String = ""
-	for e: Dictionary in entries():
-		var kind: String = str(e["kind"])
-		if kind != last_kind:
-			last_kind = kind
-			var h: Label = UiUtil.label({"attack": "BASISANGRIFF", "skill": "FÄHIGKEITEN", "stunt": "STUNTS"}.get(kind,
-				"") as String, &"", 13, UiTheme.C_ACCENT)
-			h.add_theme_font_override("font", UiTheme.font_bold())
-			_list.add_child(h)
-		var sd: SkillDef = UiUtil.skill_def(str(e["skill"]))
-		var learned: bool = bool(e["learned"])
-		var name_text: String = UiUtil.tr_text(sd.name) if sd != null else str(e["skill"])
-		var right: String = ("%d MP" % sd.mp_cost if sd != null and sd.mp_cost > 0 else "") if learned else \
-			"ab Lv %d" % int(e["level"])
-		var icon: StringName = &"star" if kind == "stunt" else (&"fist" if kind == "attack" else _element_icon(sd))
-		var col: Color = UiUtil.ELEMENT_COLORS.get(sd.element if sd != null else "none", UiTheme.C_TEXT) as Color
-		var b: Button = list_button(name_text, icon, col if learned else UiUtil.C_DISABLED, right,
-			Color(0, 0, 0, 0) if learned else UiTheme.C_TEXT_DIM)
-		b.name = "Skill_" + str(e["skill"])
-		var entry: Dictionary = e
-		b.focus_entered.connect(func() -> void: _show(entry))
-		_list.add_child(b)
-		_buttons.append(b)
-	if _buttons.is_empty():
-		_list.add_child(empty_note("Keine Fähigkeiten."))
-	UiUtil.wire_vertical(_buttons)
-	var all: Array[Dictionary] = entries()
-	if not all.is_empty():
-		_show(all[0])
+	_list.add_child(empty_note("Keine Fähigkeiten."))
 
 
 func focus_default() -> void:
@@ -126,9 +73,9 @@ static func _element_icon(sd: SkillDef) -> StringName:
 	return &"star"
 
 
-## Detail of a skill. `rt`: a real-time run's bar row — real-time MP, cooldown and cast time instead of the CTB rank,
-## statuses in seconds instead of turns, the party's SHOW cooldown (R5b-2a text pass).
-func _show(e: Dictionary, rt: bool = false) -> void:
+## Detail of a bar row: real-time MP, cooldown and cast time, statuses in seconds, the party's SHOW cooldown (R5b-2a
+## text pass).
+func _show(e: Dictionary) -> void:
 	var sd: SkillDef = UiUtil.skill_def(str(e.get("skill", "")))
 	var title: Label = _detail["title"]
 	var sub: Label = _detail["sub"]
@@ -143,21 +90,19 @@ func _show(e: Dictionary, rt: bool = false) -> void:
 		str(UiUtil.TARGET_NAMES.get(sd.target, sd.target))]
 	if sd.element != "none":
 		parts.append(str(UiUtil.ELEMENT_NAMES.get(sd.element, sd.element)))
-	var mp: int = RtView.skill_mp(sd) if rt else sd.mp_cost
+	var mp: int = RtView.skill_mp(sd)
 	if mp > 0:
 		parts.append("%d MP" % mp)
-	if not rt:
-		parts.append("Rang %d" % sd.rank)
-	elif int(sd.rt.get("cast_ms", 0)) > 0:
+	if int(sd.rt.get("cast_ms", 0)) > 0:
 		parts.append("Zauberzeit " + RtView.seconds_text(int(sd.rt["cast_ms"])))
-	if rt and int(sd.rt.get("cooldown_ms", 0)) > 0:
+	if int(sd.rt.get("cooldown_ms", 0)) > 0:
 		parts.append("Abklingzeit " + RtView.seconds_text(int(sd.rt["cooldown_ms"])))
 	sub.text = "  ·  ".join(parts)
 	var lines: PackedStringArray = []
-	var desc: String = RtView.skill_text(sd) if rt else UiUtil.tr_text(sd.desc)
+	var desc: String = RtView.skill_text(sd)
 	if desc != "":
 		lines.append(desc)
-	var power: int = int(sd.rt.get("power", sd.power)) if rt else sd.power
+	var power: int = int(sd.rt.get("power", sd.power))
 	if sd.damage_type in ["physical", "magical"]:
 		lines.append("Stärke %d %%%s" % [power, " × %d Treffer" % sd.hits if sd.hits > 1 else ""])
 	elif sd.damage_type == "heal":
@@ -165,7 +110,7 @@ func _show(e: Dictionary, rt: bool = false) -> void:
 	if sd.is_stunt():
 		lines.append("Erfolg %d %% + %s %% je Glück (max. %d %%), %s" % [roundi(sd.success_base * 100.0),
 			str(snappedf(sd.success_lck * 100.0, 0.1)).replace(".", ","), roundi(sd.success_cap * 100.0),
-			"SHOW-Abklingzeit 30 s (ganze Party)" if rt else "Abklingzeit %d Züge" % maxi(sd.cooldown, 1)])
+			"SHOW-Abklingzeit 30 s (ganze Party)"])
 	if not bool(e.get("learned", true)):
 		lines.append("Wird mit Level %d gelernt." % int(e.get("level", 1)))
 	body.text = UiUtil.glyph_safe("\n".join(lines))
@@ -238,12 +183,12 @@ static func rt_special(def_id: String) -> Array:
 	return RT_SPECIALS.get(def_id, ["", 99]) as Array
 
 
-## Real-time runs list the combat bar instead of the CTB learnset (07 §4.1: "das Fähigkeiten-Menü liest rt.bar").
+## The combat bar (07 §4.1: "das Fähigkeiten-Menü liest rt.bar"); false without a running game.
 ## R5b: the page is the loadout outside a combat — a learned variant of slot 2–4 (or the base ability back) and the
 ## partner tactic with its three switches. Every choice is ONE recorded loadout command with the member's complete
 ## choice (RunRules.loadout_cmd → Game.apply_loadout; refused during a combat or for a variant above the level).
 func _rt_refresh() -> bool:
-	if Game.state == null or Game.state.combat_mode != &"realtime":
+	if Game.state == null:
 		return false
 	clear(_tabs_holder)
 	_tabs_holder.add_child(member_tabs(member_id, select_member))
@@ -444,7 +389,7 @@ func _rt_button(e: Dictionary, prefix: String) -> void:
 
 ## Detail of a bar row: the CTB detail text plus the real-time slot rule.
 func _rt_show(e: Dictionary) -> void:
-	_show(e, true)
+	_show(e)
 	var body: Label = _detail["body"]
 	var extra: String = ""
 	match str(e.get("kind", "")):

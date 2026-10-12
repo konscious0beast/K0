@@ -175,7 +175,7 @@ func test_boot_does_not_compile_the_screens_early() -> void:
 	# with its dependency tree (1.1 s of 2.7 s, §12.1 "Start"). Source-level guard for that rule.
 	for path: String in ["res://scenes/ui/global_ui.gd", "res://scenes/boot/boot.gd"]:
 		var src: String = FileAccess.get_file_as_string(path)
-		for cls: String in ["ExplorationScene", "BattleScene", "SafeRoomScene"]:
+		for cls: String in ["ExplorationScene", "SafeRoomScene", "CombatDirector"]:
 			var code_lines: PackedStringArray = []
 			for line: String in src.split("\n"):
 				if not line.strip_edges().begins_with("#"):

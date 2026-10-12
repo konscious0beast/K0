@@ -37,9 +37,6 @@ const HYPE_TIMER_300: float = 10.0
 const HYPE_TIMER_60: float = 15.0
 const ACH_FOLLOWERS: Dictionary = {"box_bronze": 20, "box_silver": 40, "box_gold": 80}
 const FAN_PACK_HYPE: int = 5                 # 05 §6.10: (5 × effect_pm + 500) // 1000
-## Battle reasons in announcement order (one M.O.D. line per event, GDD §11).
-const ANNOUNCE_ORDER: Array[StringName] = [&"mopsula_ko", &"kai_ko", &"kill_streak", &"overkill", &"stunt_success",
-	&"stunt_fail", &"low_hp", &"revive", &"flee", &"flee_fail", &"boring_fight", &"crit", &"weakness"]
 const CHAT_FOR_REASON: Dictionary = {&"crit": "chat_crit", &"stunt_fail": "chat_stunt_fail",
 	&"boring_fight": "chat_boring"}
 
@@ -61,7 +58,6 @@ var _external_given: int = 0
 var _peak_battle: int = 0                    # viewers_peak_battle (noise-free maximum)
 var _unlocked_battle: PackedStringArray = []
 var _first_fight_said: bool = false
-var _tutorial_turns: int = 0                 # party turns of a tutorial battle (stunt hint after the 2nd, GDD §1.4 B2)
 var _hype_seen: float = -1.0                 # last hype value sent with hype_changed
 var _synced_state: GameState = null
 var _display: float = 0.0
@@ -221,7 +217,7 @@ func trigger(trigger_id: String, payload: Dictionary) -> void:
 	if st == null or st.show == null:
 		return
 	var tracker: AchievementTracker = AchievementTracker.new(DB.data, st.show, st.flags)
-	tracker.realtime = st.combat_mode == &"realtime"           # R5b: condition_rt (07 §9.4)
+	tracker.realtime = true                    # R5b: condition_rt (07 §9.4) — every run fights in real time
 	var unlocked: PackedStringArray = tracker.evaluate(trigger_id, payload)
 	for id: String in unlocked:
 		_unlock(id)
@@ -264,7 +260,7 @@ func say(tag: String, ctx: Dictionary = {}, blocking: bool = false) -> String:
 ## when it passes ModLineFilter.check (reasons counted in external_refused), the voice is mod | mopsula | chat, no
 ## replay / boss battle runs and EXTERNAL_GAP_SEC passed since the last M.O.D. line (lowest priority: it never
 ## pushes a scripted line aside). {name} is filled in here — the service never knows the player name.
-## Never during a battle (Game.in_battle, CTB and real-time — 07 §9.3: the run clock stands, only written lines).
+## Never during a combat (Game.in_battle — 07 §9.3: the run clock stands, only written lines).
 ## Emits mod_said(text, voice, "live:" + tag, false). true = shown.
 func say_external(text: String, voice: StringName, tag: String) -> bool:
 	var st: GameState = Game.state
@@ -362,9 +358,8 @@ func begin_battle(setup: BattleSetup) -> void:
 	if not _first_fight_said and st.show.stats.get("battles_won", 0) == 0 and st.show.stats.get("battles_fled", 0) == 0:
 		_first_fight_said = true
 		say("first_fight")
-	_tutorial_turns = 0
 	if setup.tutorial:
-		say("tutorial_battle")                     # GDD §1.4 B2 guided hints
+		say("tutorial_battle")                     # GDD §1.4 B2 guided hints (the SHOW: the tutorial's hint card)
 	var story: String = "story_battle:" + setup.encounter_id
 	if _get_announcer().has_lines(story):
 		say(story)                                 # GDD §1.4 story banners (B4: "Die Königin hört von euch.")
@@ -380,10 +375,6 @@ func on_battle_event(e: ActionEvent) -> void:
 	if e.type == ActionEvent.Type.MOD_LINE and e.text != "":
 		say(e.text)
 	_emit_boss_hp(e)
-	if _setup != null and _setup.tutorial and e.type == ActionEvent.Type.TURN_END and e.actor_id.begins_with("p"):
-		_tutorial_turns += 1
-		if _tutorial_turns == 2:
-			say("tutorial_stunt")                  # GDD §1.4 B2: stunt hint after turn 2
 
 
 ## THE single gift entry (Brief §6b.4) → {"accepted": bool, "reason": String} (+ "ok", "gift_id", "apply": "now" |
@@ -424,9 +415,11 @@ func receive_gift(gift: Dictionary) -> Dictionary:
 ## gift_rejected), recorded, remembered and booked into the run counters (GiftPolicy.note_applied — the one booking of
 ## an in-battle gift) — while fewer than rules.gifts.max_per_battle external gifts were delivered in this battle;
 ## else (2) an open hype threshold → SponsorSystem.pick → Gift.make_system → receive_gift → returned.
-## The controller applies the result with battle.apply_gift and then calls note_battle_gift(g, events).
-func take_pending_gift(battle: BattleState = null) -> Dictionary:
-	return _take_pending(_battle_party(battle), -1)
+## The live combat takes it through take_pending_gift_rt (its units as the party situation); this boundary without a
+## running sim reads the setup's party (tests, tools). The caller applies the result and then calls
+## note_battle_gift(g, events).
+func take_pending_gift() -> Dictionary:
+	return _take_pending(_setup.party if _setup != null else [], -1)
 
 
 ## take_pending_gift / take_pending_gift_rt: `party` = the party situation for SponsorSystem.pick; `ct` >= 0 records
@@ -527,7 +520,7 @@ func end_battle(result: BattleResult) -> int:
 				"items_used": result.items_used, "party_kos": result.party_kos, "damage_taken": result.damage_taken,
 				"is_boss": result.is_boss, "boss_id": result.boss_id, "encounter_type": enc_type,
 				"group_id": result.group_id}
-			payload.merge(_rt_battle_won_keys(result))    # Echtzeitkampf (07 §9.4, R1a): 0 in a CTB battle
+			payload.merge(_rt_battle_won_keys(result))    # Echtzeitkampf (07 §9.4, R1a)
 			Events.battle_won.emit(payload)
 			trigger("battle_won", payload)
 			if result.is_boss:
@@ -599,9 +592,9 @@ func note_battle_gift(g: Dictionary, events: Array[ActionEvent]) -> void:
 	GiftApplier.count_battle_items(st, g, events)
 
 
-## A battle torn down before its end (BattleScene freed early: tests, debug, scene change) — the battle context is
-## dropped without end_battle (no followers, no stats); accepted gifts still waiting are refused (gift_rejected
-## "run_not_active"), never applied. No-op without a running battle.
+## A combat torn down before its end (Game.end_combat of an unfinished combat: tests, debug, scene change) — the
+## context is dropped without end_battle (no followers, no stats); accepted gifts still waiting are refused
+## (gift_rejected "run_not_active"), never applied. No-op without a running combat.
 func abort_battle() -> void:
 	if not _battle_active and _queue.is_empty():
 		return
@@ -760,16 +753,11 @@ func _apply_delta(d: ShowDelta) -> void:
 	_announce(d.reasons, mopsula_moment)
 
 
-## One M.O.D. line per event (most important reason) + chat reactions.
+## One M.O.D. line per event (most important reason, the real-time order and line rate, 07 §9.3) + chat reactions.
 func _announce(reasons: Array[StringName], mopsula_moment: bool) -> void:
 	if Game.replaying:
 		return
-	if _rt_combat():
-		_rt_announce(reasons)                      # Echtzeitkampf (07 §9.3, R5a)
-	else:
-		for r: StringName in ANNOUNCE_ORDER:
-			if reasons.has(r) and say(String(r)) != "":
-				break
+	_rt_announce(reasons)                          # Echtzeitkampf (07 §9.3, R5a)
 	for r: StringName in reasons:
 		if CHAT_FOR_REASON.has(r):
 			chat(str(CHAT_FOR_REASON[r]))
@@ -997,16 +985,6 @@ func _max_gifts() -> int:
 	if _setup != null and _setup.is_boss:
 		return SponsorSystem.MAX_GIFTS_PER_BOSS_BATTLE
 	return SponsorSystem.MAX_GIFTS_PER_BATTLE
-
-
-## Living party situation for weight_mods: BattleState.party(), falling back to the setup's combatants.
-func _battle_party(battle: BattleState) -> Array:
-	var party: Array = []
-	if battle != null:
-		party = battle.party()
-	if party.is_empty() and _setup != null:
-		party = _setup.party
-	return party
 
 
 func _reset_battle() -> void:
@@ -1367,7 +1345,7 @@ func _marotten_battle_end(result: BattleResult) -> Dictionary:
 ## GameState.follower_pm (equipment × talents) × the Liga factor `liga_pm` (this battle's, or 1000 for the part without
 ## it) × the hearts' follower factor, integer per mille with each step rounded half up (06 §8.0 Nr. 4) — without
 ## talents bit-identical to package C's float path. A real-time combat adds ShowRules.RT_FOLLOWER_PM as the last step
-## (07 E32); CTB battles never take it.
+## (07 E32).
 func _battle_follower_pm(st: GameState, mres: Dictionary, liga_pm: int) -> int:
 	var pm: int = st.follower_pm(DB.data)
 	var extra: int = (liga_pm * int(mres.get("follower_pm", 1000)) + 500) / 1000
@@ -1472,13 +1450,9 @@ func _liga_line(tag: String, tier: int) -> void:
 	if tier <= 0:
 		return
 	var who: String = "Beide ohne" if tier == 2 else "Ohne"
-	var text: String = "%s Rüstung & ohne Accessoire" % who
-	var rt: bool = Game.is_realtime()
-	if rt:
-		text += ": leichtfüßig"                     # R5b (E31): the Liga rule of the real-time combat
+	var text: String = "%s Rüstung & ohne Accessoire: leichtfüßig" % who    # R5b (E31): the Liga rule in real time
 	if MarottenRules.rewards_on(_marotten_rules()):
-		text += "%sHype ×%s · Follower ×%s" % [" · " if rt else ": ",
-			pm_text(MarottenRules.liga_pm(DB.data, tier, &"hype")),
+		text += " · Hype ×%s · Follower ×%s" % [pm_text(MarottenRules.liga_pm(DB.data, tier, &"hype")),
 			pm_text(MarottenRules.liga_pm(DB.data, tier, &"follower"))]
 	Events.toast_requested.emit(text, &"liga_duo" if tier == 2 else &"liga")
 
@@ -1514,7 +1488,7 @@ var _rt_gift_paused: bool = false
 const RT_GIFT_PAUSE_KEY: String = "rt_gift_pause"
 
 
-## The gift of the tick boundary before combat tick sim.tick() (07 §9.2): like take_pending_gift(battle) — same order
+## The gift of the tick boundary before combat tick sim.tick() (07 §9.2): like take_pending_gift() — same order
 ## (external first, checked again; then a due system gift), same limits, recorded at the application with its "ct",
 ## weight conditions (ally_hp_below, ally_mp_below, ally_ko, is_boss) read from sim.units(). {} = none.
 func take_pending_gift_rt(sim: RtSim) -> Dictionary:
@@ -1528,7 +1502,7 @@ func take_pending_gift_rt(sim: RtSim) -> Dictionary:
 
 
 ## 07 E32, begin_battle: a regular real-time combat while the floor's sponsors' pause runs takes one combat off it and
-## gives no system gift (true). Bosses, CTB battles and combats outside the pause: false.
+## gives no system gift (true). Bosses and combats outside the pause: false.
 func _rt_pace_gifts(st: GameState) -> bool:
 	if not _rt_combat() or _setup.is_boss or st.floor_run == null:
 		return false
@@ -1556,9 +1530,9 @@ func is_gift_queued(gift_id: String) -> bool:
 	return false
 
 
-## The running battle is a real-time combat (profile rt).
+## A combat is running (every combat is a real-time one since R5b part 2b).
 func _rt_combat() -> bool:
-	return _battle_active and _setup is RtSetup
+	return _battle_active
 
 
 ## 07 §9.3: in a real-time combat a non-blocking line waits RT_LINE_GAP_SEC after the last one unless it ranks higher
@@ -1624,8 +1598,7 @@ func _rt_show_boss() -> bool:
 
 
 ## The real-time battle_won payload keys of 07 §9.4 (DataValidator.TRIGGER_PAYLOAD_KEYS) from the result: the
-## controlled unit's interrupts / dodges / telegraph hits, train kills, perfect phases, whole seconds — all 0 after a
-## CTB battle (the fields are only set by the real-time sim).
+## controlled unit's interrupts / dodges / telegraph hits, train kills, perfect phases, whole seconds.
 static func _rt_battle_won_keys(result: BattleResult) -> Dictionary:
 	return {"duration_sec": result.duration_ticks / RtSim.TICKS_PER_SEC, "interrupts": result.interrupts,
 		"dodges": result.dodges, "telegraph_hits": result.telegraph_hits, "train_kills": result.train_kills,
@@ -1669,6 +1642,6 @@ func _connect_persona() -> void:
 	Events.game_loaded.connect(func(_slot: int) -> void: _persona_hooks().reset())
 
 
-## 08 §4.3 R6: never a persona line in a battle (CTB and real-time) — a waiting one is dropped at its start.
+## 08 §4.3 R6: never a persona line in a combat — a waiting one is dropped at its start.
 func _on_battle_started_persona(_encounter_id: String, _is_boss: bool) -> void:
 	_persona_hooks().drop_pending()

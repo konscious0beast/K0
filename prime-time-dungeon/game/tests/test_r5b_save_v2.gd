@@ -78,7 +78,7 @@ func test_a_ctb_save_continues_in_real_time_with_four_times_the_hp() -> void:
 	if st == null:
 		return
 	assert_eq(SaveCodec.last_errors(), PackedStringArray(), "no warnings")
-	assert_eq(st.combat_mode, &"realtime", "a CTB save continues in real time")
+	assert_false(st.to_dict().has("combat_mode"), "a CTB save continues in real time (no mode any more)")
 	var kai: PartyMember = st.member("kai")
 	var mop: PartyMember = st.member("mopsula")
 	assert_eq([kai.hp, kai.mp, mop.hp, mop.mp], [148, 5, 0, 46])
@@ -117,7 +117,6 @@ func test_a_real_time_save_keeps_its_hp_and_its_real_time_fields() -> void:
 	if st == null:
 		return
 	assert_eq(SaveCodec.last_errors(), PackedStringArray(), "no warnings")
-	assert_eq(st.combat_mode, &"realtime")
 	var kai: PartyMember = st.member("kai")
 	var mop: PartyMember = st.member("mopsula")
 	assert_eq([kai.hp, kai.mp, mop.hp, mop.mp], [150, 20, 99, 7], "already real-time units")

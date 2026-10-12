@@ -1,6 +1,6 @@
 extends TestCase
-## 07 §9.6 (R1b-I1) test_r1_rt_talents: value talents arrive through the Combatant fields make_rt_setup fills exactly
-## like make_setup (crit_add_pm → crit_bonus, element_pm → element_mods; DamageCalc and E30 use them); "Erster
+## 07 §9.6 (R1b-I1) test_r1_rt_talents: value talents arrive through the Combatant fields make_rt_setup fills from
+## Progression.to_combatant (crit_add_pm → crit_bonus, element_pm → element_mods; DamageCalc and E30 use them); "Erster
 ## Eindruck" (opener_pm: with a PREEMPTIVE start on every hit against a dazed target and on the unit's first damaging
 ## hit, never otherwise); "Taktgefühl" (stunt_pm: the SHOW chance × pm before the boss deduction and the cap — the AI's
 ## SHOW too, E27); the persona rule (display_name = the Def name, never the persona; not hashed).
@@ -40,18 +40,17 @@ func _started(st: GameState, cmd: Dictionary, seed: int = RtKit.SEED) -> RtSim:
 	return sim
 
 
-func test_crit_and_element_like_make_setup() -> void:
+func test_crit_and_element_from_to_combatant() -> void:
 	var st: GameState = RtKit.state(6)
 	st.member("kai").talents = {"tal_kai_scharfes_auge": 2, "tal_kai_feuerfest": 1}
 	var rt: RtSetup = RtKit.setup(st, RtKit.dummy_cmd())
-	var ctb: BattleSetup = BattleBridge.make_setup(st, RtKit.data(), "enc_rt_dummy", 0, "g_dummy", RtKit.SEED)
 	var kai: RtUnit = _unit(rt, "kai")
-	var ref: Combatant = ctb.party[0]
+	var ref: Combatant = Progression.to_combatant(st.member("kai"), RtKit.data(), "p0", 0)
 	assert_eq(ref.def_id, "kai")
 	assert_almost(kai.crit_bonus, 0.06, 0.000001, "2 × 30 ‰")
 	assert_eq([kai.crit_bonus, kai.element_mods, kai.stats.values, kai.status_immune, kai.attack_element],
 		[ref.crit_bonus, ref.element_mods, ref.stats.values, ref.status_immune, ref.attack_element],
-		"the same Combatant fields as make_setup")
+		"the same Combatant fields as Progression.to_combatant")
 	assert_eq(FixedMath.pm(float(kai.element_mods["fire"])), 750)
 	var sim: RtSim = RtSim.new(rt, RtKit.data())
 	sim.start()
@@ -157,8 +156,6 @@ func test_persona_rule() -> void:
 	var s: RtSetup = RtKit.setup(st, RtKit.dummy_cmd())
 	assert_eq([_unit(s, "kai").display_name, _unit(s, "mopsula").display_name, _unit(s, "enm_rt_dummy").display_name],
 		["Kai", "Mopsula", "Trainingspuppe"], "the Def names (08 §2.7 Nr. 5)")
-	var ctb: BattleSetup = BattleBridge.make_setup(st, RtKit.data(), "enc_rt_dummy", 0, "g_dummy", RtKit.SEED)
-	assert_eq(ctb.party[0].display_name, "Kalle", "(CTB keeps the persona)")
 	var a: RtSim = RtSim.new(s, RtKit.data())
 	var b: RtSim = RtSim.new(RtKit.setup(RtKit.state(6), RtKit.dummy_cmd()), RtKit.data())
 	b.unit("p0").display_name = "Kalle"

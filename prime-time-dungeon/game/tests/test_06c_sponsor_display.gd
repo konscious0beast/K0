@@ -7,6 +7,7 @@ extends TestCase
 ##   interaction — never a gift source.
 
 const OverlayScript := preload("res://scenes/ui/show_overlay.gd")
+const RtLive := preload("res://tests/fixtures/rt_live/rt_live.gd")
 const DIR: String = "user://test_06c"
 const TPS: int = 30
 
@@ -22,6 +23,8 @@ func before_each() -> void:
 
 
 func after_each() -> void:
+	if Game.combat != null:
+		Game.end_combat()
 	if Game.state != null:
 		Show.end_battle(null)
 	Game.in_battle = false
@@ -171,9 +174,8 @@ func test_comeback_rules_validation() -> void:
 
 ## Campaign: lose against the quarter boss → game over → load the last save (it already knows the boss room) → the
 ## next entry of the boss room opens the comeback window (recorded "room" command); once — a second defeat and reload
-## never re-arm it.
+## never re-arm it. The lost combat ends in Game.on_game_over(&"defeat") like Router.game_over (RtLive.play).
 func test_comeback_carries_over_the_game_over_into_the_save() -> void:
-	Game.auto_battle = true
 	Game.new_game(1, "Kai", 8383)
 	var layout: FloorLayout = DungeonGenerator.generate(DB.floor_def(1), Game.state.floor_run.seed)
 	var cell: Vector2i = layout.quarter_boss
@@ -186,7 +188,6 @@ func test_comeback_carries_over_the_game_over_into_the_save() -> void:
 	assert_eq(Save.save_slot(1), OK, "saved with the boss room already visited")
 	assert_false(_fight(DB.floor_def(1).quarter_boss), "a level-1 party loses against the Hausmeister")
 	assert_true(SponsorWindows.comeback_due(Game.state, {}, RoomCell.Kind.QUARTER_BOSS))
-	Game.on_game_over(&"defeat")
 	assert_eq(Save.load_slot(1), OK)
 	assert_true(SponsorWindows.comeback_due(Game.state, {}, RoomCell.Kind.QUARTER_BOSS), "carried into the save")
 	opened.clear()
@@ -200,12 +201,10 @@ func test_comeback_carries_over_the_game_over_into_the_save() -> void:
 	Game.visit_room(cell)
 	assert_eq(opened.size(), 0, "only once")
 	assert_false(_fight(DB.floor_def(1).quarter_boss), "the second attempt is lost too")
-	Game.on_game_over(&"defeat")
 	assert_eq(Save.load_slot(1), OK)
 	assert_false(SponsorWindows.comeback_due(Game.state, {}, RoomCell.Kind.QUARTER_BOSS),
 		"a used comeback stays used — reloading never re-arms it")
 	Events.sponsor_window_opened.disconnect(cb)
-	Game.auto_battle = false
 
 
 func test_comeback_line_in_the_live_presentation() -> void:
@@ -220,27 +219,11 @@ func test_comeback_line_in_the_live_presentation() -> void:
 	assert_gt(DB.data.mod_lines("sponsor_window_open:boss_comeback").size(), 0)
 
 
+## One combat through the Game facade: real time, the autopilot plays the party (RtLive.autopilot_fight; a defeat
+## ends in Game.on_game_over(&"defeat")); true = victory.
 func _fight(enc_id: String) -> bool:
-	var setup: BattleSetup = Game.make_battle_setup(enc_id, BattleSetup.Advantage.NORMAL, "")
-	var battle: BattleState = BattleState.new(setup, DB.data)
-	Show.begin_battle(setup)
-	for e: ActionEvent in battle.start():
-		Show.on_battle_event(e)
-	var guard: int = 0
-	while not battle.is_finished() and guard < 600:
-		guard += 1
-		var cmd: BattleCommand = battle.choose_ai_command()
-		Game.record({"t": "battle", "cmd": cmd.to_dict(), "auto": true})
-		for e: ActionEvent in battle.submit(cmd):
-			Show.on_battle_event(e)
-		if not battle.is_finished():
-			var g: Dictionary = Show.take_pending_gift(battle)
-			if not g.is_empty():
-				for e2: ActionEvent in battle.apply_gift(g):
-					Show.on_battle_event(e2)
-	Game.apply_battle_result(battle.result)
-	Show.end_battle(battle.result)
-	return battle.result.outcome == BattleResult.Outcome.VICTORY
+	var out: Dictionary = RtLive.autopilot_fight(enc_id, BattleSetup.Advantage.NORMAL, "")
+	return not out.is_empty() and (out["result"] as BattleResult).outcome == BattleResult.Outcome.VICTORY
 
 
 # --- decisions 4 and 5: co-op slots per player, Bits never a gift source ---------------------------------------------

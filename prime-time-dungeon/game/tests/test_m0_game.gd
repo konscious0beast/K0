@@ -1,7 +1,10 @@
 extends TestCase
 ## Game (02_TECH §3.4): command ids, dialog pause reset, quest metric adapter (05 CR-4/CR-13), replay context restore.
 ## Plus one integration test (live run ≡ replay_log).
-## Spies subclass RunLog / QuestTracker, so the unit parts do not depend on the M8 implementations.
+## Spies subclass RunLog / QuestTracker, so the unit parts do not depend on the M8 implementations. Combats are
+## real-time ones (R5b part 2b): RtLive.autopilot_fight through the Game API of the CombatDirector.
+
+const RtLive := preload("res://tests/fixtures/rt_live/rt_live.gd")
 
 
 
@@ -21,6 +24,8 @@ class _SpyQuest extends QuestTracker:
 
 
 func after_each() -> void:
+	if Game.combat != null:
+		Game.end_combat()
 	Game.state = null
 	Game.run_log = null
 	Game.sim = null
@@ -136,7 +141,6 @@ func test_replay_restores_the_live_context() -> void:
 
 
 func test_replay_matches_live_run_integration() -> void:
-	Game.auto_battle = true
 	Game.new_game(0, "Kai", 4242)
 	assert_true(Game.has_state())
 	if not Game.has_state():
@@ -149,26 +153,11 @@ func test_replay_matches_live_run_integration() -> void:
 		Game.enter_safe_room(sr_id)
 		Game.leave_safe_room()
 	Game.set_flag("intro_seen", true)
-	# §5.7 battle loop without scenes (auto battle for both sides).
-	var enc_id: String = DB.floor_def(1).timer_start_after
-	var setup: BattleSetup = Game.make_battle_setup(enc_id, BattleSetup.Advantage.NORMAL, "")
-	assert_not_null(setup)
-	if setup == null:
+	# a real-time combat without scenes (the autopilot plays the party)
+	var res0: BattleResult = _auto_battle(DB.floor_def(1).timer_start_after)
+	assert_not_null(res0, "the combat ends")
+	if res0 == null:
 		return
-	var battle: BattleState = BattleState.new(setup, DB.data)
-	Show.begin_battle(setup)
-	Events.battle_started.emit(setup.encounter_id, setup.is_boss)
-	_play(battle, battle.start())
-	var guard: int = 0
-	while not battle.is_finished() and guard < 400:
-		guard += 1
-		var cmd: BattleCommand = battle.choose_ai_command()
-		Game.record({"t": "battle", "cmd": cmd.to_dict(), "auto": true})
-		_play(battle, battle.submit(cmd))
-	assert_true(battle.is_finished(), "battle ends")
-	Events.battle_ended.emit(battle.result.outcome, battle.result.encounter_id)
-	Game.apply_battle_result(battle.result)
-	Show.end_battle(battle.result)
 	if not Game.state.pending_lootboxes.is_empty():
 		Game.open_lootbox(Game.state.pending_lootboxes[0])
 	Game.rest_full_heal()
@@ -180,48 +169,20 @@ func test_replay_matches_live_run_integration() -> void:
 	var as_json: Variant = JSON.parse_string(JSON.stringify(Game.run_log.to_dict()))
 	var reloaded: RunLog = RunLog.from_dict(as_json if as_json is Dictionary else {})
 	assert_eq(Game.replay_log(reloaded)["final_hash"], live_hash, "also after a JSON round trip (ints become floats)")
-	Game.auto_battle = false
-
-
-## §5.7 _play without presentation.
-func _play(battle: BattleState, events: Array[ActionEvent]) -> void:
-	for e: ActionEvent in events:
-		Show.on_battle_event(e)
-	if battle.is_finished():
-		return
-	var g: Dictionary = Show.take_pending_gift(battle)
-	if not g.is_empty():
-		var gift_events: Array[ActionEvent] = battle.apply_gift(g)
-		Show.note_battle_gift(g, gift_events)
-		for e: ActionEvent in gift_events:
-			Show.on_battle_event(e)
 
 
 # --- change requests of the integration phase (M2 CR 1–4, M8 CR 1/2/4/5/7) -------------------------------------------
 
-## §5.7 battle without scenes, both sides on AutoPolicy / EnemyAI; returns the finished battle.
-func _auto_battle(enc_id: String) -> BattleState:
-	var setup: BattleSetup = Game.make_battle_setup(enc_id, BattleSetup.Advantage.NORMAL, "")
-	var battle: BattleState = BattleState.new(setup, DB.data)
-	Show.begin_battle(setup)
-	Events.battle_started.emit(setup.encounter_id, setup.is_boss)
-	_play(battle, battle.start())
-	var guard: int = 0
-	while not battle.is_finished() and guard < 400:
-		guard += 1
-		var cmd: BattleCommand = battle.choose_ai_command()
-		Game.record({"t": "battle", "cmd": cmd.to_dict(), "auto": true})
-		_play(battle, battle.submit(cmd))
-	Events.battle_ended.emit(battle.result.outcome, battle.result.encounter_id)
-	Game.apply_battle_result(battle.result)
-	Show.end_battle(battle.result)
-	return battle
+## A real-time combat without scenes, the autopilot plays the party (RtLive.autopilot_fight); the result (null when no
+## combat started).
+func _auto_battle(enc_id: String) -> BattleResult:
+	var out: Dictionary = RtLive.autopilot_fight(enc_id, BattleSetup.Advantage.NORMAL, "")
+	return out.get("result") as BattleResult if not out.is_empty() else null
 
 
 ## M8 CR 1 / 05 §3.3 Nr. 8: the live clock writes checkpoints into Game.run_log (after battles, every 300 ticks);
 ## Game.replay_log matches every one of them and detects a corrupted one.
 func test_live_run_log_gets_checkpoints_that_replay_matches() -> void:
-	Game.auto_battle = true
 	Game.new_game(0, "Kai", 9191)
 	assert_true(Game.sim.run_log == Game.run_log, "the live RunSim records into the run log")
 	_auto_battle(DB.floor_def(1).timer_start_after)
@@ -234,20 +195,23 @@ func test_live_run_log_gets_checkpoints_that_replay_matches() -> void:
 	var cps: Array[Dictionary] = Game.run_log.checkpoints()
 	var ks: Array = []
 	for cp: Dictionary in cps:
-		ks.append(int(cp["k"]))
-	assert_eq(ks, [0, 300], "after the battle (written when the clock leaves tick 0) and at tick 300")
+		if not cp.has("ct"):                      # the combat's own checkpoints carry its tick (07 §10.6)
+			ks.append(int(cp["k"]))
+	assert_eq(ks, [0, 300], "after the combat (written when the clock leaves tick 0) and at tick 300")
 	var res: Dictionary = Game.replay_log(Game.run_log)
 	assert_eq(res["final_hash"], StateHash.of(Game.state))
 	assert_eq(res["mismatch_at"], -1, "every live checkpoint matches the replay")
 	var d: Dictionary = Game.run_log.to_dict()
-	((d["checkpoints"] as Array)[1] as Dictionary)["h"] = "f".repeat(64)
-	assert_eq(int(Game.replay_log(RunLog.from_dict(d))["mismatch_at"]), 1, "a corrupted checkpoint is found")
-	Game.auto_battle = false
+	var bad: int = -1
+	for i in cps.size():
+		if not cps[i].has("ct") and int(cps[i]["k"]) == 300:
+			bad = i
+	((d["checkpoints"] as Array)[bad] as Dictionary)["h"] = "f".repeat(64)
+	assert_eq(int(Game.replay_log(RunLog.from_dict(d))["mismatch_at"]), bad, "a corrupted checkpoint is found")
 
 
 ## M8 CR 1/5: finish_run stores the result in the log (sim.close) and gives ScoreCalc the run-wide summary keys.
 func test_finish_run_closes_the_log_with_the_score() -> void:
-	Game.auto_battle = true
 	Game.start_event_run("evt_offline_gleis9")
 	if not Game.has_state():
 		fail("start_event_run must create a state")
@@ -271,7 +235,6 @@ func test_finish_run_closes_the_log_with_the_score() -> void:
 	assert_eq(res["final_hash"], summary["final_hash"])
 	assert_eq(Game.run_log.checkpoints().back()["h"], res["final_hash"], "final checkpoint")
 	assert_eq(Game.finish_run(&"again"), {}, "once per run")
-	Game.auto_battle = false
 
 
 ## M2 CR 3: Save.load_slot goes through adopt_loaded_state — the private context of the previous run is gone.
@@ -339,8 +302,8 @@ func test_quest_adapter_feeds_zones_and_boss_hp() -> void:
 	var zones: int = (DB.floor_def(1).layout.get("zones", []) as Array).size()
 	assert_eq(spy.events, [{"type": "zones", "explored": 1, "total": zones}], "only first visits")
 	spy.events.clear()
-	var setup: BattleSetup = Game.make_battle_setup("enc_f1_boss_hausmeister", BattleSetup.Advantage.NORMAL, "")
-	Show.begin_battle(setup)
+	Show.begin_battle(BattleBridge.make_rt_setup(Game.state, DB.data, RtLive.encounter("enc_f1_boss_hausmeister",
+		BattleSetup.Advantage.NORMAL, ""), 7))
 	var e: ActionEvent = ActionEvent.new()
 	e.type = ActionEvent.Type.DAMAGE
 	e.actor_id = "p0"

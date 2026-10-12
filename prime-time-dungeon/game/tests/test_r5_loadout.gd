@@ -36,9 +36,7 @@ func test_the_rules_of_a_loadout() -> void:
 	assert_eq(refusal.call("kai", {"2": "skl_kai_deo_torch"}), "not_a_variant", "a variant of another slot")
 	assert_eq(refusal.call("kai", {"3": "skl_kai_cable_whip"}), "not_learned", "level 7 variant")
 	assert_eq(refusal.call("rattenkoenigin", {}), "unknown_member")
-	var ctb: GameState = RtKit.state(6)
-	ctb.combat_mode = &"ctb"
-	assert_eq(RunRules.loadout_refusal(ctb, d, cmd), "not_realtime", "CTB runs have no action bar")
+	assert_eq(RunRules.loadout_refusal(null, d, cmd), "unknown_member", "no run")
 	assert_true(RunRules.apply_loadout(st, cmd))
 	var kai: PartyMember = st.member("kai")
 	assert_eq([kai.rt_loadout, kai.rt_preset, kai.rt_toggles], [{"4": "skl_kai_deo_torch"}, "careful",
@@ -83,9 +81,3 @@ func test_the_core_refuses_forged_loadouts() -> void:
 	var reasons: Array = sim.rejected_cmds.map(func(r: Dictionary) -> String: return str(r["reason"]))
 	assert_eq(reasons, ["not_learned"], "level 1 has no variants")
 	assert_eq(sim.state.member("kai").rt_preset, "support")
-	var ctb: GameState = RtKit.state(6)
-	ctb.combat_mode = &"ctb"
-	var csim: RunSim = RunSim.new(RtKit.data(), ctb, {})
-	csim.apply(RunRules.loadout_cmd("kai", {}))
-	assert_eq(csim.rejected_cmds.size(), 1)
-	assert_eq(str(csim.rejected_cmds[0]["reason"]), "not_realtime")

@@ -1,14 +1,17 @@
 extends Node
 ## Performance probe runner (02_TECH §12.1/§12.5, docs/PERFORMANCE.md). Loaded by perf_probe.gd after the first frame,
 ## so autoloads and class_names are available. Sections (all by default, `--only=` picks some):
-##   startup    boot scene → interactive title (incl. the fixed 2 s card + fades), DB load, floor build cold/warm, arena
-##              and safe-room build times (§12.1 "Aufbauzeit")
+##   startup    boot scene → interactive title (incl. the fixed 2 s card + fades), DB load, floor build cold/warm and
+##              safe-room build times (§12.1 "Aufbauzeit")
 ##   explore    every cell of floor 1 from 4 camera yaws → per zone the worst view, the worst room with enemies
-##   battle     every floor-1 encounter (opening shots) → the largest one and both bosses as full auto battles
 ##   safe_room  the three safe rooms of floor 1
-##   leak       N cycles explore (rebuild) → battle → safe room through the Router, object/memory counts per cycle
+##   combat     the real-time combat in the world (07 §8.10; see the section below)
+##   leak       N cycles explore (rebuild) → real-time combat → safe room through the Router, object/memory counts per
+##              cycle
+## Every section plays a real-time game (the campaign fights in real time only since R5b part 2b: the CTB battle
+## scene and its "battle" section are gone).
 ## Casting (08 §6.2, K2): --look=worst plays every section with a candidate persona in the heaviest look (curls,
-## stubble, glasses: 2 940 tris in Kai's 7 MeshInstances) — Kai in exploration, battle, safe room and real-time combat.
+## stubble, glasses: 2 940 tris in Kai's 7 MeshInstances) — Kai in exploration, safe room and real-time combat.
 ## Render metrics need a display (Xvfb); headless runs print "–" for them. Prints Markdown tables and a final
 ## "PERF: OK" / "PERF: OVER BUDGET (<n>)" line (+ "LEAK: OK" / "LEAK: GROWTH …"); exit code 1 on budget/leak failures.
 
@@ -21,22 +24,8 @@ const OMNI_RADIUS: float = 24.0
 const MB: float = 1048576.0
 const SETTLE_FRAMES: int = 3
 const ROOM_SAMPLES: int = 2
-const BATTLE_OPENING_SKIP: int = 20
-const BATTLE_OPENING_SAMPLES: int = 10
-const BATTLE_MAX_FRAMES: int = 2400
 const SAFE_ROOM_SAMPLES: int = 30
-## Boss runs measure the WHOLE fight (phase changes, the Königin's train, haste) — only a victory gets there, so the
-## party gets the full-run bot's pre-boss kit (scenes/boot/fullrun.gd boss_kit) and a level above the GDD §13 band (an
-## auto-played Königin at Lv 7 is lost about half the time since the balance pass); a boss run that does not end in
-## VICTORY fails the probe (PERF: OVER BUDGET … "kein Sieg").
-const BOSS_LEVEL: int = 10
-const BOSS_KIT: Dictionary = {
-	"kai": {"weapon": "itm_wpn_fire_axe", "armor": "itm_arm_safety_vest", "accessory": "itm_acc_lucky_ticket"},
-	"mopsula": {"weapon": "itm_wpn_collar_signet", "armor": "itm_arm_velvet_cape", "accessory": "itm_acc_lucky_ticket"},
-}
-const BOSS_ITEMS: Dictionary = {"itm_bandage": 9, "itm_smelling_salts": 5, "itm_energy_krawumm": 7, "itm_elixir": 2}
-const FULL_LEVEL: int = 4                     # full non-boss battle: d-zone level, so the fight lasts a few turns
-const LEAK_ENCOUNTER: String = "enc_f1_a1_tutorial"
+const LEAK_COMBAT_FRAMES: int = 3000        # a leak cycle's combat (the tutorial group, autopilot) ends within this
 const LEAK_WARMUP: int = 2                    # cycles before the baseline (caches, pools, lazy streams)
 const LEAK_WINDOW: int = 5                    # baseline = min over cycles WARMUP..WARMUP+4, end = min over the last 5
 const LEAK_OBJECT_SLACK: int = 16             # tolerated object drift of the minima (transient tweens/timers)
@@ -44,30 +33,27 @@ const LEAK_OBJECT_SLACK: int = 16             # tolerated object drift of the mi
 const WORST_LOOK: Dictionary = {"hair": "lk_hair_curls", "hair_color": "lk_hc_black", "skin": "lk_skin_7",
 	"beard": "lk_beard_stubble", "glasses": "lk_glasses_round", "outfit": "lk_outfit_blue"}
 
-## 02_TECH §12.1 (keys: explore / battle / safe_room).
-const BUDGET_DC3D: Dictionary = {"explore": 150, "battle": 150, "safe_room": 120}
+## 02_TECH §12.1 (keys: explore / safe_room; the real-time combat: BUDGET_COMBAT).
+const BUDGET_DC3D: Dictionary = {"explore": 150, "safe_room": 120}
 ## UI canvas draw calls (02_TECH §12.1 "DC 2D"): canvas items only batch while texture and command type stay the same
 ## (measured 4.7.2: every StyleBoxFlat 1 DC, an outlined label 2, a polygon 1) → own ceiling next to the 3D budget.
-const BUDGET_DC2D: Dictionary = {"explore": 100, "battle": 180, "safe_room": 100}
-const BUDGET_PRIMS: Dictionary = {"explore": 120000, "battle": 120000, "safe_room": 60000}
-const BUDGET_OMNI: Dictionary = {"explore": 4, "battle": 2, "safe_room": 3}
-const BUDGET_SPOT: Dictionary = {"explore": 0, "battle": 2, "safe_room": 0}     # 03_ART §5: 2 show spots, high only
+const BUDGET_DC2D: Dictionary = {"explore": 100, "safe_room": 100}
+const BUDGET_PRIMS: Dictionary = {"explore": 120000, "safe_room": 60000}
+const BUDGET_OMNI: Dictionary = {"explore": 4, "safe_room": 3}
+const BUDGET_SPOT: Dictionary = {"explore": 0, "safe_room": 0}
 const BUDGET_OMNI_LOW_EXPLORE: int = 2
 ## Accent omni lights on top of the budget, quality high only, at most one at a time (02_TECH §12.1): the neon signal
 ## of a stairs / safe-room cell (03_ART §5) and the train's head lamp while it passes (Königin, ~1 s).
 const ACCENT_LIGHTS: Array[StringName] = [&"Neon", &"HeadLamp"]
 const BUDGET_LIGHTS_PER_MESH: int = 3
-## Battle on quality high: the arena geometry mesh sits in Fill + Back + both show spots (03_ART §5, high only) → 4;
-## every figure ≤ 3. Quality low (mobile default) has no spots → ≤ 2 (02_TECH §12.1).
-const BUDGET_LIGHTS_PER_MESH_BATTLE_HIGH: int = 4
-const BUDGET_MATS: Dictionary = {"explore": 24, "battle": 24, "safe_room": 16}
+const BUDGET_MATS: Dictionary = {"explore": 24, "safe_room": 16}
 const MATS_FRAME_LIMIT: int = 24              # frames above this count are reported with a material overrun
 const BUDGET_LABEL3D: int = 12
 const BUDGET_PARTICLES: int = 400
 const BUDGET_EMITTERS: int = 6
 const BUDGET_BODIES: int = 40
 const BUDGET_RAM_MB: float = 400.0
-const BUDGET_BUILD_MS: Dictionary = {"explore": 500.0, "battle": 300.0, "safe_room": 300.0}
+const BUDGET_BUILD_MS: Dictionary = {"explore": 500.0, "safe_room": 300.0}
 
 var engine_init_ms: int = 0                   # set by perf_probe.gd (process start → this probe's main loop)
 
@@ -82,7 +68,6 @@ var _leak_diff: bool = false                  # --leak-diff: print which node ki
 var _mat_dump: bool = false                   # --mat-dump: print the unique materials of each row's peak frame
 var _mat_owners: Dictionary = {}              # material instance id → "shader/class @ first owner" (last _audit)
 var _mat_keys: Dictionary = {}                # material instance id → Materials cache key (--mat-dump)
-var _full_only: PackedStringArray = []        # --full=<enc ids>: battle section runs only these full auto battles
 var _look: Dictionary = {}                    # --look=worst: the candidate persona's look (K2), {} = no persona
 var _rendered: bool = false
 var _lines: PackedStringArray = []
@@ -110,8 +95,6 @@ func _ready() -> void:
 			_leak_diff = true
 		elif a == "--mat-dump":
 			_mat_dump = true
-		elif a.begins_with("--full="):
-			_full_only = a.trim_prefix("--full=").split(",", false)
 		elif a.begins_with("--boot="):
 			_boot_line = a.trim_prefix("--boot=")
 		elif a == "--look=worst":
@@ -131,18 +114,14 @@ func _wants(section: String) -> bool:
 	return _only.is_empty() or _only.has(section)
 
 
-## The probe's new game (floor 1, FLOOR_SEED); with --look=worst a candidate persona in that look (K2). `mode`: the
-## exploration, CTB battle and leak sections measure a CTB game as before 07 E33 (new games fight in real time since),
-## the combat views a real-time one.
-func _new_game(mode: StringName = &"ctb") -> void:
+## The probe's new game (floor 1, FLOOR_SEED, a real-time game like every game since R5b part 2b); with --look=worst a
+## candidate persona in that look (K2).
+func _new_game() -> void:
 	var p: PersonaProfile = null
 	if not _look.is_empty():
 		p = PersonaProfile.canon(DB.data)
 		p.look = PersonaProfile.clean_look(_look, DB.data)
-	var keep: StringName = Game.combat_mode_override
-	Game.combat_mode_override = mode
 	Game.new_game(0, "Kai", FLOOR_SEED, &"prime", HeroRules.DEFAULT_HERO, p)
-	Game.combat_mode_override = keep
 
 
 func _run() -> void:
@@ -163,8 +142,6 @@ func _run() -> void:
 	await _section_startup()
 	if _wants("explore"):
 		await _section_explore()
-	if _wants("battle"):
-		await _section_battle()
 	if _wants("safe_room"):
 		await _section_safe_room()
 	if _wants_combat():
@@ -585,8 +562,6 @@ func _check(ctx: String, acc: Dictionary) -> PackedStringArray:
 	if int(acc["spot"]) > spot_budget:
 		issues.append("Spot %d > %d" % [int(acc["spot"]), spot_budget])
 	var lpm_budget: int = BUDGET_LIGHTS_PER_MESH
-	if ctx == "battle" and _quality == &"high":
-		lpm_budget = BUDGET_LIGHTS_PER_MESH_BATTLE_HIGH + mini(int(acc["neon"]), 1)   # + head lamp while passing
 	if int(acc["lpm"]) > lpm_budget:
 		issues.append("Lichter/Mesh %d > %d" % [int(acc["lpm"]), lpm_budget])
 	if int(acc["dirl"]) > 1:
@@ -714,142 +689,6 @@ static func _cell_txt(c: Vector2i) -> String:
 
 
 # ======================================================================================================================
-# Battle
-# ======================================================================================================================
-
-func _section_battle() -> void:
-	await _ensure_exploration()
-	var def: FloorDef = Game.floor_def()
-	if not _full_only.is_empty():
-		_table_head("Kampf — kompletter Auto-Kampf (alle Frames bis Kampfende)")
-		for only_id: String in _full_only:
-			var r0: Dictionary = await _battle(only_id, true)
-			_row("%s (%d Frames, %s)" % [only_id, int((r0["acc"] as Dictionary)["n"]), r0["outcome"]], "battle",
-				r0["acc"] as Dictionary)
-		return
-	var opening: Dictionary = {}             # enc id → acc
-	var cold_ms: float = -1.0
-	var max_build: float = 0.0
-	var largest: String = ""
-	var largest_key: Vector2i = Vector2i(-1, -1)
-	for enc: EncounterDef in def.encounters:
-		if enc.boss:
-			continue
-		var r: Dictionary = await _battle(enc.id, false)
-		opening[enc.id] = r["acc"]
-		if cold_ms < 0.0:
-			cold_ms = float(r["build_ms"])
-		else:
-			max_build = maxf(max_build, float(r["build_ms"]))
-		var acc: Dictionary = r["acc"]
-		var key: Vector2i = Vector2i(enc.enemies.size(), int(acc["dc"]) if _rendered else int(acc["meshes"]))
-		if key.x > largest_key.x or (key.x == largest_key.x and key.y > largest_key.y):
-			largest_key = key
-			largest = enc.id
-	_table_head("Kampf — Eröffnung je Begegnung (Etage 1, Frames %d–%d nach Szenenstart)" % [BATTLE_OPENING_SKIP,
-		BATTLE_OPENING_SKIP + BATTLE_OPENING_SAMPLES])
-	for enc_id: Variant in opening.keys():
-		_row(str(enc_id), "battle", opening[enc_id] as Dictionary)
-	_table_head("Kampf — kompletter Auto-Kampf (alle Frames bis Kampfende)")
-	var boss_build: float = 0.0
-	for enc_id: String in [largest, def.quarter_boss, def.floor_boss]:
-		if enc_id == "":
-			continue
-		var is_boss: bool = enc_id != largest
-		var r2: Dictionary = await _battle(enc_id, true)
-		if is_boss:
-			boss_build = maxf(boss_build, float(r2["build_ms"]))
-		var label: String = "%s (%s, %d Frames, %s)" % [enc_id, "Boss" if is_boss else "größte Begegnung",
-			int((r2["acc"] as Dictionary)["n"]), r2["outcome"]]
-		_row(label, "battle", r2["acc"] as Dictionary)
-	_add_build("Kampf-Arena + Rigs + HUD (`BattleScene._ready`, normale Begegnung)", cold_ms, max_build,
-		float(BUDGET_BUILD_MS["battle"]))
-	if boss_build > 0.0:
-		_add_build("Kampf-Arena Boss (`BattleScene._ready`)", boss_build, boss_build,
-			float(BUDGET_BUILD_MS["battle"]))
-
-
-## Runs one battle scene next to the (detached) exploration: opening shots only or a full auto battle.
-func _battle(enc_id: String, full: bool) -> Dictionary:
-	var root: Window = get_tree().root
-	var enc: EncounterDef = _encounter(enc_id)
-	var boss: bool = full and enc != null and enc.boss
-	if full:
-		_level_party(BOSS_LEVEL if boss else FULL_LEVEL)
-	if boss:
-		_boss_kit()
-	Progression.full_heal(Game.state, DB.data)
-	Game.auto_battle = true
-	var setup: BattleSetup = Game.make_battle_setup(enc_id, 0, "")
-	var acc: Dictionary = _new_acc()
-	if setup == null:
-		return {"acc": acc, "build_ms": 0.0, "outcome": "kein Setup"}
-	_explore.on_suspend()
-	root.remove_child(_explore)
-	var t0: int = Time.get_ticks_usec()
-	var battle: BattleScene = (load(Router.SCENE_BATTLE) as PackedScene).instantiate() as BattleScene
-	battle.setup({"setup": setup, "stay": true, "speed": 4.0, "results_auto_sec": 0.2})
-	root.add_child(battle)
-	var build_ms: float = (Time.get_ticks_usec() - t0) / 1000.0
-	Router.adopt(battle)
-	var outcome: String = "–"
-	if full:
-		var old_scale: float = Engine.time_scale
-		Engine.time_scale = 4.0
-		var frames: int = 0
-		while frames < BATTLE_MAX_FRAMES and not battle.controller.done:
-			await _sample(1, acc)
-			frames += 1
-		Engine.time_scale = old_scale
-		if battle.controller.result != null:
-			outcome = BattleResult.Outcome.keys()[battle.controller.result.outcome]
-		else:
-			outcome = "Abbruch nach %d Frames" % frames
-		if boss and outcome != "VICTORY":
-			_over.append("Boss-Kampf %s: %s, kein Sieg — die späten Phasen sind nicht gemessen" % [enc_id, outcome])
-	else:
-		for i in BATTLE_OPENING_SKIP:
-			await get_tree().process_frame
-		await _sample(BATTLE_OPENING_SAMPLES, acc)
-	root.remove_child(battle)
-	battle.queue_free()
-	Game.in_battle = false
-	root.add_child(_explore)
-	get_tree().current_scene = _explore
-	Router.adopt(_explore)
-	_explore.on_resume({})
-	await get_tree().process_frame
-	return {"acc": acc, "build_ms": build_ms, "outcome": outcome}
-
-
-func _encounter(enc_id: String) -> EncounterDef:
-	for enc: EncounterDef in Game.floor_def().encounters:
-		if enc.id == enc_id:
-			return enc
-	return null
-
-
-## The bot's pre-boss equipment (set directly, not from the inventory) and battle items.
-func _boss_kit() -> void:
-	for m: PartyMember in Game.state.party:
-		var kit: Dictionary = BOSS_KIT.get(m.id, {})
-		for slot: String in kit:
-			if DB.has_id("items", str(kit[slot])):
-				m.equipment[slot] = str(kit[slot])
-	for item_id: String in BOSS_ITEMS:
-		var have: int = Game.state.inventory.count(item_id)
-		Game.state.inventory.add(item_id, maxi(0, int(BOSS_ITEMS[item_id]) - have), 9)
-
-
-func _level_party(level: int) -> void:
-	for m: PartyMember in Game.state.party:
-		var guard: int = 0
-		while m.level < level and guard < 20:
-			Progression.add_exp(m, Progression.exp_to_next(m.level), DB.data)
-			guard += 1
-
-
-# ======================================================================================================================
 # Safe room
 # ======================================================================================================================
 
@@ -896,60 +735,70 @@ func _section_leak() -> void:
 	if _explore != null and is_instance_valid(_explore) and not _explore.is_inside_tree():
 		root.add_child(_explore)
 		Router.adopt(_explore)
-	Game.autoplay = true                    # BattleScene speed 4, results continue after 1 s (§11.4)
+	Game.autoplay = true                    # the results lower third continues on its own (§11.4)
 	Game.fast_text = true
-	Game.auto_battle = true
+	var hints: bool = Game.settings.combat_hints
+	Game.settings.combat_hints = false      # a first-time card would hold the ticks (07 §2.13)
 	var old_scale: float = Engine.time_scale
 	Engine.time_scale = 8.0
 	var sr_list: Array[Dictionary] = UiUtil.floor_safe_rooms(Game.floor_def())
 	var sr_id: String = str(sr_list[0]["id"]) if not sr_list.is_empty() else ""
 	_emit("")
-	_emit("## Router-Zyklen (je Zyklus: Erkundung neu aufbauen → Kampf → Safe Room → zurück)")
+	_emit("## Router-Zyklen (je Zyklus: Echtzeitkampf → Safe Room → zurück → Erkundung neu aufbauen, dort gemessen)")
 	_emit("")
 	_emit("| Zyklus | Objekte | davon in Caches | Nodes | Ressourcen | verwaiste Nodes | RAM MB | Frames |")
 	_emit("|---:|---:|---:|---:|---:|---:|---:|---:|")
 	var snaps: Array[Dictionary] = []
 	var prev_hist: Dictionary = {}
-	for cycle in _cycles:
-		var frames: int = 0
+	var frames: int = 0
+	for cycle in _cycles + 1:
 		# Every cycle builds the same floor: the stray spawners (RunSim, 90 s explore time per zone) are held back —
 		# a stray is game state (≤ 1 per zone, ≈ 21 nodes each), not a leak; measured: +2 strays in cycle 12 of a
 		# rendered run lifted the node minima by 43 and then stayed flat.
+		# The same combat every cycle: the tutorial group comes back (defeated groups cleared) — a defeated group is game
+		# state, not a leak.
 		if Game.state != null and Game.state.floor_run != null:
 			Game.state.floor_run.spawner_ticks.clear()
+			Game.state.floor_run.defeated_groups.clear()
 		Router.goto(Router.SCENE_EXPLORATION, {"spawn": &"start"}, Router.Transition.NONE)
 		frames += await _wait_screen("ExplorationScene", 600)
-		(Router.current as ExplorationScene).auto_start_battle = true
+		if cycle > 0:
+			# Measured on the floor the goto rebuilt: the last cycle's screens are freed, and with them the Vfx pools
+			# of its combat (they live on the floor that spawned them and differ with each fight, 03_ART A12).
+			for i in 4:
+				await get_tree().process_frame
+			var snap: Dictionary = _counts()
+			snap["frames"] = frames
+			snap["cached"] = cache_objects()
+			snap["objects_net"] = int(snap["objects"]) - int(snap["cached"])
+			snaps.append(snap)
+			if _leak_diff:
+				var hist: Dictionary = node_histogram(root)
+				if not prev_hist.is_empty():
+					for line: String in histogram_diff(prev_hist, hist):
+						print("LEAKDIFF cycle %d: %s" % [cycle, line])
+				prev_hist = hist
+			_emit("| %d | %d | %d | %d | %d | %d | %.1f | %d |" % [cycle, int(snap["objects"]), int(snap["cached"]),
+				int(snap["nodes"]), int(snap["resources"]), int(snap["orphans"]), float(snap["ram"]), frames])
+			frames = 0
+		if cycle == _cycles:
+			break
 		Progression.full_heal(Game.state, DB.data)
-		var setup: BattleSetup = Game.make_battle_setup(LEAK_ENCOUNTER, 0, "")
-		Router.start_battle(setup)
-		frames += await _wait_screen("BattleScene", 600)
-		frames += await _wait_screen("ExplorationScene", 6000)
+		var fought: Dictionary = await leak_combat(Router.current as ExplorationScene, LEAK_COMBAT_FRAMES)
+		frames += int(fought["frames"])
+		if str(fought["error"]) != "":
+			_leak_fail.append("cycle %d: %s" % [cycle + 1, str(fought["error"])])
 		if sr_id != "":
 			Router.enter_safe_room(sr_id)
 			frames += await _wait_screen("SafeRoomScene", 600)
 			Router.exit_safe_room()
 			frames += await _wait_screen("ExplorationScene", 600)
-		for i in 4:
-			await get_tree().process_frame
-		var snap: Dictionary = _counts()
-		snap["frames"] = frames
-		snap["cached"] = cache_objects()
-		snap["objects_net"] = int(snap["objects"]) - int(snap["cached"])
-		snaps.append(snap)
-		if _leak_diff:
-			var hist: Dictionary = node_histogram(root)
-			if not prev_hist.is_empty():
-				for line: String in histogram_diff(prev_hist, hist):
-					print("LEAKDIFF cycle %d: %s" % [cycle + 1, line])
-			prev_hist = hist
-		_emit("| %d | %d | %d | %d | %d | %d | %.1f | %d |" % [cycle + 1, int(snap["objects"]), int(snap["cached"]),
-			int(snap["nodes"]), int(snap["resources"]), int(snap["orphans"]), float(snap["ram"]), frames])
 		if not (Router.current is ExplorationScene):
 			_leak_fail.append("cycle %d ended on %s" % [cycle + 1, Router.current])
 			break
 	Engine.time_scale = old_scale
 	Game.autoplay = false
+	Game.settings.combat_hints = hints
 	for k: String in leak_growth(snaps, LEAK_WARMUP, LEAK_WINDOW, LEAK_OBJECT_SLACK):
 		_leak_fail.append(k)
 	if snaps.size() >= LEAK_WARMUP + 2 * LEAK_WINDOW - 1:
@@ -961,6 +810,33 @@ func _section_leak() -> void:
 			snaps.size() - LEAK_WINDOW + 1, snaps.size(), int(b["objects"]) - int(a["objects"]),
 			int(b["objects_net"]) - int(a["objects_net"]), int(b["nodes"]) - int(a["nodes"]),
 			int(b["resources"]) - int(a["resources"]), int(b["orphans"]), float(b["ram"]) - float(a["ram"])])
+
+
+## One real-time combat of a leak cycle in `ex` (also tests/test_perf_router_cycles.gd): the nearest group (the
+## tutorial group) through ExplorationScene.force_encounter, played by the autopilot like the autoplay smoke.
+## {"frames": until the combat ended and the director is idle, "error": "" or why not within `max_frames`}.
+static func leak_combat(ex: ExplorationScene, max_frames: int) -> Dictionary:
+	var tree: SceneTree = ex.get_tree() if ex != null and ex.is_inside_tree() else null
+	if tree == null:
+		return {"frames": 0, "error": "no exploration for the combat"}
+	var d: CombatDirector = ex.get_director()
+	ex.auto_start_battle = true
+	var sent: bool = false
+	var n: int = 0
+	while n < max_frames:
+		if not sent and Game.combat == null and n % 10 == 0 and is_instance_valid(ex):
+			ex.force_encounter("")             # again while a line or a transition still holds the exploration
+		await tree.process_frame
+		n += 1
+		if d == null or not is_instance_valid(d):
+			break
+		if not sent and Game.combat != null and d.is_running():
+			sent = true
+			d.submit(RtCommand.autopilot(Game.combat.tick(), Game.combat.controlled_id(), true))
+		if sent and Game.combat == null and not d.is_busy() and not Router.busy:
+			return {"frames": n, "error": ""}
+	return {"frames": n, "error": "the combat %s within %d frames" % ["did not end" if sent else "did not start",
+		max_frames]}
 
 
 ## Leak verdict of a series of _counts() snapshots (one per cycle): the minima of a window after the warm-up and of
@@ -1076,8 +952,6 @@ static func _is_screen(node: Node, cls_name: String) -> bool:
 	match cls_name:
 		"ExplorationScene":
 			return node is ExplorationScene
-		"BattleScene":
-			return node is BattleScene
 		"SafeRoomScene":
 			return node is SafeRoomScene
 	return false
@@ -1088,7 +962,7 @@ func _free_screens() -> void:
 	if _explore != null and is_instance_valid(_explore) and not _explore.is_inside_tree():
 		_explore.free()
 	for c: Node in root.get_children():
-		if c is ExplorationScene or c is BattleScene or c is SafeRoomScene or c is TitleScreen:
+		if c is ExplorationScene or c is SafeRoomScene or c is TitleScreen:
 			c.queue_free()
 	Sfx.music(&"", 0.0)
 	await get_tree().process_frame
@@ -1184,7 +1058,7 @@ func _rt_explore_audit(scene: ExplorationScene) -> Dictionary:
 
 ## One scenario: {"name", "label", "acc", "time", "units", "extras", "quads"}.
 func _rt_scenario(sc: String) -> Dictionary:
-	_new_game(&"realtime")                     # a new real-time game (07 §12.1, §3.9.4: run log header, HP scale)
+	_new_game()                                # a new game: real time (run log header, RunRules.rt_start)
 	_rt_hints_before = Game.settings.combat_hints
 	Game.settings.combat_hints = false         # a first-time card would hold the ticks (07 §2.13): fixed load
 	await _build_exploration()
@@ -1279,7 +1153,6 @@ func _rt_leave(scene: ExplorationScene, d: CombatDirector) -> void:
 	_explore = null
 	scene.queue_free()
 	await _wait_frames_rt(2)
-	Game.state.combat_mode = &"ctb"
 	Game.settings.combat_hints = _rt_hints_before
 
 

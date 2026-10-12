@@ -1,10 +1,11 @@
 extends TestCase
 ## ExplorationScene (02_TECH §7.3, §9.2, §11.5): headless instancing, spawn not inside a wall, room changes,
-## force_encounter → Events.encounter_triggered (signal spy) and — once BattleBridge is real — Router → BattleScene,
-## interactions (chest, gates, event dialog, stairs dialog), suspend/resume protocol, safe-room return, strays,
-## movement speeds, companion, camera, the enemy state machine and the fallback visuals.
-## Independent of the M7 content: every test runs on fixture_game_data() (the real tables with floor_1 replaced by a
-## small fixture floor that has every placement type); test_real_floor_1_builds checks the real floor_1 once.
+## force_encounter → Events.encounter_triggered (signal spy) and the real-time combat in the world (R5b part 2b: the
+## only combat — the contact / pull rules of the real-time exploration: test_r2_combat_world), interactions (chest,
+## gates, event dialog, stairs dialog), suspend/resume protocol, safe-room return, strays, movement speeds, companion,
+## camera, the enemy state machine and the fallback visuals. Independent of the M7 content: every test runs on
+## fixture_game_data() (the real tables with floor_1 replaced by a small fixture floor that has every placement type);
+## test_real_floor_1_builds checks the real floor_1 once.
 
 const Rules := preload("res://scenes/exploration/encounter_rules.gd")
 const EnemyActor := preload("res://scenes/exploration/enemy_actor.gd")
@@ -31,13 +32,13 @@ func before_each() -> void:
 		_fixture = fixture_game_data()
 	if _fixture != null:
 		DB.data = _fixture
-	Game.combat_mode_override = &"ctb"         # the CTB exploration (07 E33: new games fight in real time, test_r2_*)
 	Game.new_game(0, "Kai", 4242)
 
 
 func after_each() -> void:
 	Engine.time_scale = 1.0
-	Game.combat_mode_override = &""
+	if Game.combat != null:
+		Game.end_combat()
 	for a: StringName in [&"move_forward", &"move_back", &"move_left", &"move_right", &"sneak", &"action",
 			&"cam_left", &"cam_right"]:
 		Input.action_release(a)
@@ -398,14 +399,17 @@ func test_force_encounter_specific_and_fallback() -> void:
 		assert_eq(_spy[0][1], first_enc)
 
 
-func test_force_encounter_starts_battle_via_router() -> void:
+## The combat runs in the world (07 §2.8): no screen is pushed, the exploration stays the current screen and its
+## director runs the real-time combat; the floor timer stands.
+func test_force_encounter_starts_a_combat_in_the_world() -> void:
 	var scene: ExplorationScene = await _make_scene()
 	assert_eq(Router.current, scene, "add_to_tree adopted the screen")
 	scene.force_encounter("")
-	var ok: bool = await wait_until(func() -> bool: return Router.current is BattleScene and not Router.busy,
-		MAX_FRAMES)
-	assert_true(ok, "Router.current is BattleScene")
-	assert_false(scene.is_inside_tree(), "exploration detached, not freed (stack model)")
+	var ok: bool = await wait_until(func() -> bool: return Game.combat != null, MAX_FRAMES)
+	assert_true(ok, "a real-time combat (Game.combat)")
+	assert_eq(Router.current, scene, "no battle screen: the exploration stays")
+	assert_true(scene.is_inside_tree())
+	assert_eq(Router.stack_size(), 1)
 	assert_false(Game.timer_running)
 
 
@@ -478,57 +482,22 @@ func test_field_strike_from_behind_is_preemptive() -> void:
 		assert_eq(_spy[0][2], Rules.PREEMPTIVE)
 
 
-func test_contact_triggers_encounter() -> void:
-	var scene: ExplorationScene = await _make_scene()
-	scene.auto_start_battle = false
-	var target: EnemyActor = null
-	for gid: String in scene.living_groups():
-		var a: EnemyActor = scene.get_enemy(gid)
-		if not a.is_boss():
-			target = a
-			break
-	if target == null:
-		skip("floor has no regular group")
-		return
-	Events.encounter_triggered.connect(_record)
-	var fwd: Vector3 = target.flat_forward()
-	scene.get_player().teleport(target.global_position + fwd * 0.8, Rules.yaw_of(-fwd))
-	await wait_until(func() -> bool: return not _spy.is_empty(), 30)
-	Events.encounter_triggered.disconnect(_record)
-	assert_false(_spy.is_empty(), "contact ≤ 1.1 m starts an encounter")
-	if not _spy.is_empty():
-		assert_eq(_spy[0][0], target.group_id())
-		assert_ne(_spy[0][2], Rules.PREEMPTIVE, "touching the front is not a preemptive strike")
+## Contact alone starts no combat in real time (07 §2.2, E7): test_r2_combat_world.
 
 
 # --- stack protocol ---------------------------------------------------------------------------------------------------
 
-func test_suspend_and_resume_after_battle() -> void:
+## The stack protocol of a pushed screen (safe room, results: R5b part 2b — no battle screen any more): on_suspend stops
+## the floor timer and releases the move actions, on_resume restarts it.
+func test_suspend_and_resume() -> void:
 	var scene: ExplorationScene = await _make_scene()
-	var groups: PackedStringArray = scene.living_groups()
 	Input.action_press(&"move_forward")
 	scene.on_suspend()
 	assert_false(Game.timer_running, "on_suspend stops the floor timer")
 	assert_false(Input.is_action_pressed(&"move_forward"), "move actions released")
-	if groups.is_empty():
-		scene.on_resume({})
-		assert_true(Game.timer_running)
-		return
-	var fled: BattleResult = BattleResult.new()
-	fled.outcome = BattleResult.Outcome.FLED
-	fled.group_id = groups[0]
-	scene.on_resume({"battle_result": fled})
+	scene.on_resume({})
 	await wait_frames(2)
 	assert_true(Game.timer_running, "on_resume restarts the floor timer")
-	assert_has(scene.living_groups(), groups[0], "a fled-from group stays")
-	assert_true(scene.get_player().is_hidden(), "2 s grace after a battle")
-	scene.on_suspend()
-	var won: BattleResult = BattleResult.new()
-	won.outcome = BattleResult.Outcome.VICTORY
-	won.group_id = groups[0]
-	scene.on_resume({"battle_result": won})
-	await wait_frames(2)
-	assert_false(scene.living_groups().has(groups[0]), "a defeated group disappears")
 
 
 func test_resume_from_safe_room_places_kai_at_the_door() -> void:
@@ -908,14 +877,8 @@ func test_real_floor_1_builds() -> void:
 	assert_eq(layout.validate(), PackedStringArray())
 	assert_eq(scene.get_node("World/Rooms").get_child_count(), layout.cells.size(), "one room per cell")
 	assert_eq(scene.get_player_cell(), layout.start)
-	# every group lives — except a show boss's (07 §9.6, E26: real-time runs only; this run is turn-based)
-	var groups: int = 0
-	for e: EnemySpawn in layout.enemies:
-		var enc: EncounterDef = DB.data.encounter(e.encounter_id)
-		if Game.is_realtime() or enc == null or enc.show_boss.is_empty():
-			groups += 1
-	assert_eq(scene.living_groups().size(), groups)
-	assert_eq(groups, layout.enemies.size() - (0 if Game.is_realtime() else 1), "the Kanalratten-Gala waits for RT")
+	# every group lives — the show boss's too (07 §9.6, E26: the Kanalratten-Gala)
+	assert_eq(scene.living_groups().size(), layout.enemies.size())
 
 
 func test_player_speeds_ignore_stick_deflection() -> void:

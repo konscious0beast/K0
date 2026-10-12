@@ -1,7 +1,7 @@
 extends TestCase
 ## Integration round 4 — package A (Graf Mopsula's bark) × C (sneak-themed show bets): a PREEMPTIVE battle opened from
-## the bark (the group is DAZED and is caught from every side) is no sneaking. It still is a preemptive battle for the
-## CTB (party first, preemptive hype, "Erster Eindruck"), but:
+## the bark (the group is DAZED and is caught from every side) is no sneaking. It still is a preemptive combat (the
+## Erstschlag: the opener's damage bonus, preemptive hype, "Erster Eindruck"), but:
 ## - BattleSetup / BattleResult carry opener "bark" (recorded with the encounter: {"opener": "bark"}, replay-safe);
 ## - the bet "Schleichwerbung" (mar_sneaky) and the achievement "Überraschungsgast" (s.preemptives) ask for
 ##   encounter_type "preemptive" — a bark opener is encounter_type "bark" and counts as the stat bark_openers instead;
@@ -10,6 +10,7 @@ extends TestCase
 const ExplorationScript := preload("res://scenes/exploration/exploration.gd")
 const Rules := preload("res://scenes/exploration/encounter_rules.gd")
 const EnemyActor := preload("res://scenes/exploration/enemy_actor.gd")
+const RtLive := preload("res://tests/fixtures/rt_live/rt_live.gd")
 const SEED: int = 777
 
 var _prev_data: GameData = null
@@ -21,9 +22,10 @@ func before_each() -> void:
 
 
 func after_each() -> void:
+	if Game.combat != null:
+		Game.end_combat()
 	if Game.state != null:
 		Show.end_battle(null)
-	Game.auto_battle = false
 	Game.in_battle = false
 	Game.timer_running = false
 	Game.replaying = false
@@ -37,40 +39,15 @@ func after_each() -> void:
 	_prev_data = null
 
 
-## A won battle through the Game facade (auto battle, like test_06abc_liga_talents).
+## A combat through the Game facade: real time, the autopilot plays the party (RtLive.autopilot_fight, like
+## test_06abc_liga_talents).
 func _game_battle(enc: String, adv: int, opener: String) -> BattleResult:
-	var setup: BattleSetup = Game.make_battle_setup(enc, adv, "", opener)
-	var battle: BattleState = BattleState.new(setup, DB.data)
-	Show.begin_battle(setup)
-	Events.battle_started.emit(setup.encounter_id, setup.is_boss)
-	_play(battle, battle.start())
-	var guard: int = 0
-	while not battle.is_finished() and guard < 600:
-		guard += 1
-		var cmd: BattleCommand = battle.choose_ai_command()
-		Game.record({"t": "battle", "cmd": cmd.to_dict(), "auto": true})
-		_play(battle, battle.submit(cmd))
-	Events.battle_ended.emit(battle.result.outcome, battle.result.encounter_id)
-	Game.apply_battle_result(battle.result)
-	Show.end_battle(battle.result)
-	return battle.result
-
-
-func _play(battle: BattleState, events: Array[ActionEvent]) -> void:
-	for e: ActionEvent in events:
-		Show.on_battle_event(e)
-	if battle.is_finished():
-		return
-	var g: Dictionary = Show.take_pending_gift(battle)
-	if not g.is_empty():
-		var gift_events: Array[ActionEvent] = battle.apply_gift(g)
-		Show.note_battle_gift(g, gift_events)
-		for e: ActionEvent in gift_events:
-			Show.on_battle_event(e)
+	var out: Dictionary = RtLive.autopilot_fight(enc, adv, "", 18000, Callable(), opener)
+	assert_false(out.is_empty(), "a real-time combat for " + enc)
+	return out.get("result") as BattleResult if not out.is_empty() else BattleResult.new()
 
 
 func _sneaky_run(hero: String) -> GameState:
-	Game.auto_battle = true
 	Game.new_game(1, "Kai", SEED, &"prime", hero)
 	var st: GameState = Game.state
 	for m: PartyMember in st.party:
@@ -85,7 +62,7 @@ func test_bark_opener_is_no_sneak_for_the_bet_and_the_stats() -> void:
 		var st: GameState = _sneaky_run(hero)
 		var r: BattleResult = _game_battle("enc_f1_a2", BattleSetup.Advantage.PREEMPTIVE, "bark")
 		assert_eq(r.outcome, BattleResult.Outcome.VICTORY)
-		assert_eq(r.advantage, BattleSetup.Advantage.PREEMPTIVE, "the CTB still opens first (%s)" % hero)
+		assert_eq(r.advantage, BattleSetup.Advantage.PREEMPTIVE, "still the Erstschlag (%s)" % hero)
 		assert_eq(r.opener, "bark")
 		assert_eq(st.show.marotten.get("hits", {}), {}, "a bark-daze first strike is no Schleichwerbung (%s)" % hero)
 		assert_eq(int(st.show.stats.get("preemptives", 0)), 0, "no sneak counted")
@@ -96,7 +73,6 @@ func test_bark_opener_is_no_sneak_for_the_bet_and_the_stats() -> void:
 		assert_eq(st.show.marotten.get("hits", {}), {"mar_sneaky": 1}, "a sneaked preemptive fills the heart")
 		assert_eq(int(st.show.stats.get("preemptives", 0)), 1)
 		assert_eq(int(st.show.stats.get("bark_openers", 0)), 1)
-		Game.auto_battle = false
 
 
 func test_bark_opener_is_recorded_and_replays() -> void:
@@ -127,15 +103,17 @@ func test_bark_opener_is_recorded_and_replays() -> void:
 		if str((e["c"] as Dictionary)["t"]) == "encounter":
 			last = e["c"]
 	assert_false(last.has("opener"), "a NORMAL battle has no opener")
-	Game.auto_battle = false
 
 
 func test_command_schema_and_setup_round_trip() -> void:
-	assert_eq(Command.validate({"t": "encounter", "enc": "enc_f1_a2", "adv": 1, "group": "", "opener": "bark"}), "")
-	assert_has(Command.validate({"t": "encounter", "enc": "enc_f1_a2", "adv": 0, "group": "", "opener": "bark"}),
-		"opener")
-	assert_has(Command.validate({"t": "encounter", "enc": "enc_f1_a2", "adv": 1, "group": "", "opener": "sneak"}),
-		"opener")
+	var bark: Dictionary = RtLive.encounter("enc_f1_a2", BattleSetup.Advantage.PREEMPTIVE, "harness", "bark")
+	assert_eq(Command.validate(bark), "")
+	var normal: Dictionary = RtLive.encounter("enc_f1_a2", BattleSetup.Advantage.NORMAL)
+	normal["opener"] = "bark"
+	assert_has(Command.validate(normal), "opener", "a bark opener needs a preemptive combat")
+	var sneak: Dictionary = bark.duplicate(true)
+	sneak["opener"] = "sneak"
+	assert_has(Command.validate(sneak), "opener", "bark is the only opener")
 	var s: BattleSetup = BattleSetup.new()
 	assert_false(s.to_dict().has("opener"), "no opener → the snapshot is unchanged")
 	s.opener = "bark"

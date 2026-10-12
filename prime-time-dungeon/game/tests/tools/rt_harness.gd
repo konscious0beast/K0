@@ -127,7 +127,6 @@ static func state_for(data: GameData, enc_id: String, hero: String, liga: int, n
 	var level: int = level_override if level_override > 0 else int(plan[0])
 	var st: GameState = GameState.create_new(data, 0, "Kai", SeedUtil.derive(SEED, "harness_state", n))
 	st.hero = hero
-	st.combat_mode = &"realtime"
 	st.floor_run = FloorRun.create(data.floor_def(1), st.seed, &"prime")
 	st.floor_run.location = SR
 	for iid: Variant in st.inventory.counts.keys():

@@ -73,7 +73,7 @@ var use_hud: bool = true
 var auto_tick: bool = true
 ## R3's combat HUD of the running combat (it gives the screen back and frees itself at Events.combat_finished).
 var hud: CanvasLayer = null
-## R5b — a scripted person for bots (fullrun.gd --combat=realtime, tests): sim → an object with act() (the inputs of
+## R5b — a scripted person for bots (fullrun.gd, tests): sim → an object with act() (the inputs of
 ## the tick, submitted through Game.combat_submit before the step) and observe(events) (after it), e.g.
 ## tests/tools/rt_bot_player.gd. While one plays, the body follows the sim like the autopilot's (no body samples).
 var bot_factory: Callable = Callable()

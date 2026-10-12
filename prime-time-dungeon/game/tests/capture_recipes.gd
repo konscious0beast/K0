@@ -7,18 +7,14 @@ extends Node
 ## Exploration (exploration.tscn): explore_platform | explore_sewer | explore_cellar (zone room with an enemy group in
 ##   view), prompt_platform | prompt_sewer | prompt_cellar (Kai in front of a chest: HUD prompt + marker), bigmap,
 ##   pause_party | pause_inventory | pause_equipment | pause_skills | pause_show (06-C) | pause_settings.
-## Battle (battle.tscn, optional --params={"encounter": "<enc id>"}): battle_menu, battle_skills, battle_target,
-##   battle_damage, battle_enemy_turn, boss_intro, boss_phase, battle_gift, battle_victory, battle_results,
-##   battle_results_show (06-C: a won show bet in the results).
 ## Safe room (safe_room.tscn): safe_vending, safe_lootbox, safe_lootbox_open, safe_mopsula, safe_equipment,
 ##   safe_talents_menu (menu + the gold TALENT-SHOW button), safe_talent_show (the Talent-Show, 06 package B),
 ##   safe_hero_talents (integration A × B: open choices + "Figur wechseln" → TALENT-SHOW and M.O.D. box side by side).
 ## Exploration + pause: talents_party (party page with talents and an open choice, 06 package B).
 ## 06 package A: bark_platform | bark_sewer | bark_cellar (Graf Mopsula leads and barks at a group: cone + rings,
 ##   "?!"), hero_mopsula_<zone> (exploration as Mopsula, Kai follows), safe_hero_switch ("Figur wechseln" pressed:
-##   the Count in front), battle_partner_auto ("Partner automatisch": DU / AUTO pills at the hero's menu),
-##   secret_wall (Kai in front of the Kulissenwand), secret_open (the Count barks it over), secret_note (Kai in
-##   front of a Regie-Notiz: prompt + marker).
+##   the Count in front), secret_wall (Kai in front of the Kulissenwand), secret_open (the Count barks it over),
+##   secret_note (Kai in front of a Regie-Notiz: prompt + marker).
 ## 06-D (KI-Admin): twist_lights | twist_confetti | twist_live (exploration with a running twist: chip, vignette /
 ##   confetti, an M.O.D. live line labelled "KI live"), safe_happy (vending machine during a Happy Hour).
 ## Polish pass: doorway_approach | doorway_through | doorway_mopapproach | doorway_mopthrough (camera in front of /
@@ -27,7 +23,7 @@ extends Node
 ##   with the LED ring), rt_world_two_groups (two groups on one set), rt_world_boss (Gleis 9 with the train lane
 ##   telegraph), rt_world_boss_intro (the crane), rt_world_flee (Kai in a door lane). The combat HUD stills of R3
 ##   (rt_tutorial, rt_regular, rt_boss, …) follow in their own section below.
-## Echtzeitkampf with the real data (07, R4; tests/tools/capture_r4.gd; real time is the default): rt_r4_regular (zone
+## Echtzeitkampf with the real data (07, R4; tests/tools/capture_r4.gd): rt_r4_regular (zone
 ##   C, a telegraph filling up), rt_r4_showboss (the Kanalratten-Gala, E26), rt_r4_hausmeister (key throw line),
 ##   rt_r4_queen (Gleis 9, phase 2, the train on its track), rt_r4_results (R5b: zone A fought to its end, the results
 ##   panel with the real rewards).
@@ -434,205 +430,6 @@ func _give_loot() -> void:
 		if DB.has_id("items", id):
 			inv.add(id, 2)
 	inv.add_credits(250)
-
-
-# --- battle ----------------------------------------------------------------------------------------------------------
-
-func _hud(scene: Node) -> Node:
-	return scene.get("hud") as Node
-
-
-func _wait_menu(scene: Node, limit: int = 1500) -> bool:
-	var ok: bool = await until(func() -> bool:
-		var h: Node = _hud(scene)
-		return h != null and bool(h.get("awaiting")) and h.get("level") == &"menu", limit)
-	if not ok:
-		push_warning("[CaptureRecipes] no command menu")
-	return ok
-
-
-## Slow playback (speed 1) for mid-action stills.
-func _slow(scene: Node) -> void:
-	scene.set("capture", false)
-	scene.set("speed_override", 1.0)
-
-
-## Waits until the BattlePlayer presents an event of `type` (optionally by an actor id starting with `actor_prefix`).
-func _wait_event(scene: Node, type: ActionEvent.Type, limit: int = 1800, actor_prefix: String = "") -> bool:
-	var seen: Array[bool] = [false]
-	var player: Node = scene.get("player") as Node
-	var cb: Callable = func(e: ActionEvent) -> void:
-		if e.type == type and (actor_prefix == "" or e.actor_id.begins_with(actor_prefix)):
-			seen[0] = true
-	player.connect("event_played", cb)
-	var ok: bool = await until(func() -> bool: return seen[0], limit)
-	player.disconnect("event_played", cb)
-	return ok
-
-
-func _actor(scene: Node) -> Combatant:
-	var h: Node = _hud(scene)
-	return h.get("_actor") as Combatant if h != null else null
-
-
-## Command menu of the first party member that has skills (Mopsula's magic list reads best).
-func _skill_turn(scene: Node) -> bool:
-	for i in 4:
-		if not await _wait_menu(scene):
-			return false
-		var a: Combatant = _actor(scene)
-		if a != null and a.skills.size() > 1:
-			return true
-		_hud(scene).call("_submit", BattleCommand.defend(a.id))
-		await frames(2)
-	return false
-
-
-func _r_battle_menu(scene: Node) -> bool:
-	return await _wait_menu(scene)
-
-
-## 06 package A: "Partner automatisch" on — the menu waits for the hero, the panels read DU / AUTO.
-func _r_battle_partner_auto(scene: Node) -> bool:
-	Game.settings.partner_auto = true
-	var ctrl: Node = scene.get("controller") as Node
-	if ctrl == null:
-		return false
-	ctrl.set("force_manual", false)
-	ctrl.set("auto_turns", 0)
-	if not await _wait_menu(scene):
-		return false
-	ctrl.call("mark_roles")
-	await frames(10)
-	return true
-
-
-func _r_battle_skills(scene: Node) -> bool:
-	if not await _skill_turn(scene):
-		return false
-	_hud(scene).call("_on_command_chosen", BattleCommand.Kind.SKILL)
-	await frames(20)
-	return true
-
-
-func _r_battle_target(scene: Node) -> bool:
-	if not await _wait_menu(scene):
-		return false
-	_hud(scene).call("_on_command_chosen", BattleCommand.Kind.ATTACK)
-	await frames(30)
-	return _hud(scene).get("level") == &"target"
-
-
-func _attack_first_enemy(scene: Node) -> void:
-	var a: Combatant = _actor(scene)
-	var st: BattleState = _hud(scene).get("_state") as BattleState
-	var target: String = st.default_target(a, a.attack_skill)
-	_hud(scene).call("_submit", BattleCommand.attack(a.id, target))
-
-
-func _r_battle_damage(scene: Node) -> bool:
-	if not await _wait_menu(scene):
-		return false
-	_slow(scene)
-	_attack_first_enemy(scene)
-	if not await _wait_event(scene, ActionEvent.Type.DAMAGE, 1800, "p"):
-		return false
-	await seconds(0.25)
-	freeze()
-	return true
-
-
-func _r_battle_enemy_turn(scene: Node) -> bool:
-	if not await _wait_menu(scene):
-		return false
-	_slow(scene)
-	_hud(scene).call("_submit", BattleCommand.defend(_actor(scene).id))
-	if not await _wait_event(scene, ActionEvent.Type.ACTION_START, 1800, "e"):
-		return false
-	await seconds(0.3)
-	freeze()
-	return true
-
-
-## Boss intro (lower third + crane), frozen mid-crane: pass --params={"encounter": "enc_f1_boss_…", "capture": false,
-## "speed": 1.0} (a capture battle plays at speed ≥ 3 from its first frame, before a recipe can slow it down).
-func _r_boss_intro(scene: Node) -> bool:
-	if not await until(func() -> bool: return _hud(scene) != null and bool(_hud(scene).get("_intro")), 600):
-		return false
-	await seconds(1.25)
-	freeze()
-	return true
-
-
-## Phase change: the boss is set just above its first phase threshold, Kai's attack crosses it.
-func _r_boss_phase(scene: Node) -> bool:
-	if not await _wait_menu(scene, 2400):
-		return false
-	var st: BattleState = _hud(scene).get("_state") as BattleState
-	var boss: Combatant = null
-	for c: Combatant in st.enemies():
-		if c.is_boss:
-			boss = c
-	if boss == null:
-		return false
-	var phases: Array = DB.enemy(boss.def_id).phases
-	var limit: float = float((phases[0] as Dictionary).get("hp_above", 0.5)) if not phases.is_empty() else 0.5
-	boss.hp = int(ceil(float(boss.max_hp()) * limit)) + 1
-	_slow(scene)
-	var a: Combatant = _actor(scene)
-	_hud(scene).call("_submit", BattleCommand.attack(a.id, boss.id))
-	if not await _wait_event(scene, ActionEvent.Type.PHASE_CHANGE):
-		return false
-	await seconds(0.45)
-	freeze()
-	return true
-
-
-func _r_battle_gift(scene: Node) -> bool:
-	if not await _wait_menu(scene):
-		return false
-	# hype over the 50 threshold → the sponsor system gift arrives at the next turn boundary (lower third)
-	Show.add_hype(maxf(0.0, 55.0 - Show.hype()), &"capture")
-	_slow(scene)
-	_hud(scene).call("_submit", BattleCommand.defend(_actor(scene).id))
-	if not await _wait_event(scene, ActionEvent.Type.SPONSOR_GIFT):
-		return false
-	await seconds(0.7)
-	freeze()
-	return true
-
-
-## Pass --params={"capture_turns": 99}: AutoPolicy plays every party turn.
-func _r_battle_victory(scene: Node) -> bool:
-	_slow(scene)                                 # constant speed 1: banner, orbit and results keep their timing
-	if not await _wait_event(scene, ActionEvent.Type.BATTLE_END, 12000):
-		return false
-	await seconds(0.9)
-	freeze()
-	return true
-
-
-func _r_battle_results(scene: Node) -> bool:
-	_slow(scene)
-	var ok: bool = await until(func() -> bool:
-		var r: Node = scene.get("results") as Node
-		return r != null and bool(r.get("shown")), 15000)
-	await seconds(1.2)
-	return ok
-
-
-## 06-C: like battle_results, but M.O.D.'s preference of the floor is "Kein Schritt zurück" with two hearts already —
-## this battle fills the third: the results show the "Show" row and the bet is won (toast + line). Pass
-## --params={"capture_turns": 99, "encounter": "enc_f1_a2"}: the debug default is the tutorial battle, which never
-## counts for M.O.D.'s preferences.
-func _r_battle_results_show(scene: Node) -> bool:
-	if Game.state != null and Game.state.show != null:
-		Game.state.show.marotten["active"] = ["mar_brave"]
-		Game.state.show.marotten["hits"] = {"mar_brave": 2}
-		Game.state.show.marotten["won"] = []
-		if Game.state.floor_run != null:
-			Game.state.floor_run.timer_started = true      # the chip shows once the countdown runs (debug setup: not yet)
-	return await _r_battle_results(scene)
 
 
 # --- safe room -------------------------------------------------------------------------------------------------------
@@ -1043,7 +840,7 @@ func _r_rt_credits(scene: Node, variant: String = "") -> bool:
 	return true
 
 
-## The run applies the rewards before the results show them (like the CTB flow): the party frame agrees.
+## The run applies the rewards before the results show them: the party frame agrees.
 func _rt_apply_level(info: LevelUpInfo) -> void:
 	for m: PartyMember in Game.state.party:
 		if m.id == info.member_id:
@@ -1483,18 +1280,6 @@ func persona_look(arg: String) -> bool:
 	p.look = PersonaProfile.clean_look(look, DB.data)
 	Game.new_game(0, "Kai", 1, &"prime", HeroRules.DEFAULT_HERO, p)
 	return Game.persona != null
-
-
-## capture.gd --look with battle.tscn: `encounter_id` (or the floor's first regular one) through Game.make_battle_setup
-## — the CTB stage and portraits show the persona look (08 §6.3).
-func persona_battle_setup(encounter_id: String) -> BattleSetup:
-	var enc_id: String = encounter_id
-	if enc_id == "" and Game.floor_def() != null:
-		for enc: EncounterDef in Game.floor_def().encounters:
-			if not enc.boss:
-				enc_id = enc.id
-				break
-	return Game.make_battle_setup(enc_id, BattleSetup.Advantage.NORMAL, "")
 
 
 ## The candidate in the safe room in the persona look, the menu open (the M.O.D. box quiet).

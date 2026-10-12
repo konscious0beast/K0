@@ -11,10 +11,14 @@ extends TestCase
 ## only in the live presentation, overlay badge texts and the debug tool.
 
 const TPS: int = 30
+const Harness := preload("res://tests/tools/rt_harness.gd")
+const RtLive := preload("res://tests/fixtures/rt_live/rt_live.gd")
 const FAST: Dictionary = {"sponsor_windows": {"periodic": {"first_sec": 10, "every_sec": 20, "open_sec": 5}}}
 
 
 func after_each() -> void:
+	if Game.combat != null:
+		Game.end_combat()
 	Game.state = null
 	Game.run_log = null
 	Game.sim = null
@@ -23,7 +27,6 @@ func after_each() -> void:
 	Game.timer_running = false
 	Game.safe_room_clock = false
 	Game.in_battle = false
-	Game.auto_battle = false
 	Game.clear_blocking_dialogs()
 
 
@@ -51,12 +54,20 @@ func _layout(sim: RunSim) -> FloorLayout:
 	return DungeonGenerator.generate(real_data().floor_def(sim.state.floor_run.index), sim.state.floor_run.seed)
 
 
+## The encounter command of `enc` (a real-time combat, the balance harness's rt block) without a group.
+static func _enc(enc: String, adv: int = BattleSetup.Advantage.NORMAL) -> Dictionary:
+	var cmd: Dictionary = Harness.command_for(enc, "kai", adv)
+	cmd["group"] = ""
+	(((cmd["rt"] as Dictionary)["groups"] as Array)[0] as Dictionary)["group"] = ""
+	return cmd
+
+
+## Plays the running combat of `sim` to its end: the autopilot from the combat's tick on, then RunSim.settle.
 func _fight(sim: RunSim) -> void:
-	var guard: int = 0
-	while sim.battle != null and guard < 600:
-		guard += 1
-		var cmd: BattleCommand = sim.battle.choose_ai_command()
-		sim.apply({"t": "battle", "cmd": cmd.to_dict(), "auto": true})
+	if sim.combat == null:
+		return
+	sim.apply(RtCommand.autopilot(sim.combat.tick(), sim.combat.controlled_id(), true))
+	sim.settle()
 
 
 ## Dev gift of a pseudonymous viewer (sender_ref "" = unknown sender, no per-viewer limit).
@@ -127,15 +138,15 @@ func test_battle_freezes_the_window_and_the_countdown() -> void:
 	sim.step(2 * TPS)
 	var left: int = sim.sponsor_window()["left_ticks"]
 	var next: int = sim.sponsor_window()["next_in_ticks"]
-	sim.apply({"t": "encounter", "enc": real_data().floor_def(1).timer_start_after, "adv": 0, "group": ""})
-	assert_not_null(sim.battle)
-	assert_eq(sim.step(10 * TPS), [], "the run clock stands in battle: no window opens or closes")
+	sim.apply(_enc(real_data().floor_def(1).timer_start_after))
+	assert_not_null(sim.combat)
+	assert_eq(sim.step(10 * TPS), [], "the run clock stands in a combat: no window opens or closes")
 	assert_eq([sim.sponsor_window()["left_ticks"], sim.sponsor_window()["next_in_ticks"]], [left, next], "frozen")
 	assert_eq(sim.gift_refusal(_gift("gold", "v1")), "", "the window opened before the battle takes gifts")
-	sim.apply({"t": "gift", "gift": _gift("gold", "v1", 1)})
-	assert_eq(sim.sponsor_window()["used"], 1, "booked in battle (BattleState.apply_gift + note_battle_gift)")
+	sim.apply({"t": "gift", "gift": _gift("gold", "v1", 1), "ct": 1})
+	assert_eq(sim.sponsor_window()["used"], 1, "booked in the combat (RtSim.apply_gift + note_battle_gift)")
 	_fight(sim)
-	assert_null(sim.battle)
+	assert_null(sim.combat)
 	var closed: Array[ExploreEvent] = _of(sim.step(left), ExploreEvent.Type.SPONSOR_WINDOW_CLOSED)
 	assert_eq(closed.size(), 1, "the rest of the window runs after the battle")
 
@@ -143,7 +154,7 @@ func test_battle_freezes_the_window_and_the_countdown() -> void:
 func test_no_window_opens_during_a_battle() -> void:
 	var sim: RunSim = _sim(FAST)
 	sim.step(10 * TPS - 1)
-	sim.apply({"t": "encounter", "enc": real_data().floor_def(1).timer_start_after, "adv": 0, "group": ""})
+	sim.apply(_enc(real_data().floor_def(1).timer_start_after))
 	assert_eq(sim.step(TPS), [])
 	assert_false(sim.sponsor_window()["open"], "the due window waits for the battle end")
 	assert_eq(sim.gift_refusal(_gift()), "window_closed", "no gift lands mid-battle without a window")
@@ -352,7 +363,7 @@ func test_replay_equivalence_and_forged_gift_outside_a_window() -> void:
 	sim.apply({"t": "floor", "floor": 1})
 	var fdef: FloorDef = data.floor_def(1)
 	var layout: FloorLayout = DungeonGenerator.generate(fdef, st.floor_run.seed)
-	sim.apply({"t": "encounter", "enc": fdef.timer_start_after, "adv": BattleSetup.Advantage.PREEMPTIVE, "group": ""})
+	sim.apply(_enc(fdef.timer_start_after, BattleSetup.Advantage.PREEMPTIVE))
 	_fight(sim)
 	assert_true(st.floor_run.timer_started, "tutorial victory starts the clock")
 	sim.step(11 * TPS)                                               # periodic window open (10 s)
@@ -433,40 +444,21 @@ func test_receive_gift_outside_and_inside_a_window() -> void:
 	Events.gift_rejected.disconnect(cb_r)
 
 
-## In battle the window opened before stays open (frozen); gifts wait in the queue and hold their slot — a third
+## In a combat the window opened before stays open (frozen); gifts wait in the queue and hold their slot — a third
 ## viewer finds the window full although nothing was applied yet; live ≡ Game.replay_log.
 func test_queued_gifts_in_battle_reserve_their_slots() -> void:
 	Game.new_game(0, "Kai", 3132)
 	assert_true(Game.open_dev_sponsor_window(60, 2))
-	var setup: BattleSetup = Game.make_battle_setup(DB.floor_def(1).timer_start_after, BattleSetup.Advantage.NORMAL, "")
-	var battle: BattleState = BattleState.new(setup, DB.data)
-	Show.begin_battle(setup)
-	Events.battle_started.emit(setup.encounter_id, setup.is_boss)
-	for e: ActionEvent in battle.start():
-		Show.on_battle_event(e)
+	assert_not_null(Game.make_rt_setup(RtLive.encounter(DB.floor_def(1).timer_start_after,
+		BattleSetup.Advantage.NORMAL, "")), "a real-time combat")
 	assert_eq(Show.receive_gift(_gift("gold", "a", 1))["apply"], "queued")
 	assert_eq(Show.receive_gift(_gift("gold", "b", 2))["apply"], "queued")
 	assert_eq(Show.sponsor_window_view()["free"], 0, "two reservations")
 	assert_eq(Show.receive_gift(_gift("gold", "c", 3))["reason"], "window_full", "reserved slots count")
 	assert_eq(Show.receive_gift(_gift("gold", "a", 4))["reason"], "window_full")
-	var guard: int = 0
-	while not battle.is_finished() and guard < 400:
-		guard += 1
-		var g: Dictionary = Show.take_pending_gift(battle)
-		if not g.is_empty():
-			var gev: Array[ActionEvent] = battle.apply_gift(g)
-			Show.note_battle_gift(g, gev)
-			for e: ActionEvent in gev:
-				Show.on_battle_event(e)
-		var cmd: BattleCommand = battle.choose_ai_command()
-		Game.record({"t": "battle", "cmd": cmd.to_dict(), "auto": true})
-		for e: ActionEvent in battle.submit(cmd):
-			Show.on_battle_event(e)
-	Events.battle_ended.emit(battle.result.outcome, battle.result.encounter_id)
-	Game.apply_battle_result(battle.result)
-	Show.end_battle(battle.result)
+	RtLive.play([RtCommand.autopilot(0, Game.combat.controlled_id(), true)], 18000)
 	var v: Dictionary = Show.sponsor_window_view()
-	assert_eq([v["used"], v["full"]], [2, true], "one delivered in battle, one after it")
+	assert_eq([v["used"], v["full"]], [2, true], "one delivered in the combat, one after it")
 	var live_hash: String = StateHash.of(Game.state)
 	assert_eq(Game.replay_log(Game.run_log)["final_hash"], live_hash)
 

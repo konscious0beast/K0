@@ -206,7 +206,7 @@ const VFX_KINDS: PackedStringArray = ["hit", "crit", "slash", "bite", "magic", "
 const SFX_IDS: PackedStringArray = ["ui_move", "ui_confirm", "ui_cancel", "ui_error", "step", "swing", "hit",
 	"hit_crit", "hit_weak", "miss", "magic", "fire", "ice", "shock", "toxic", "light", "dark", "heal", "buff", "debuff",
 	"ko", "defend", "flee", "stunt_success", "stunt_fail", "level_up", "chest_open", "coin", "lootbox_shake",
-	"lootbox_open", "lootbox_rare", "sponsor", "achievement", "timer_warn", "stairs", "swirl", "door", "mod_blip",
+	"lootbox_open", "lootbox_rare", "sponsor", "achievement", "timer_warn", "stairs", "door", "mod_blip",
 	"chat_pop", "vending",
 	"bark"]                                 # 06 package A: Graf Mopsula's field ability
 const MUSIC_IDS: PackedStringArray = ["title", "explore", "battle", "boss", "safe_room", "victory", "game_over",

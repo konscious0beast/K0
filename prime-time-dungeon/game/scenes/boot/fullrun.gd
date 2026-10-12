@@ -1,13 +1,13 @@
 extends Node
 ## Full-run bot (02_TECH §11.4.1), added under root by Boot with --autoplay=full (PROCESS_MODE_ALWAYS). Plays Floor 1
 ## end to end through the game's public APIs and the real interactions:
-## title → new game (slot 1, seed 4242, intro) → tutorial fight → room by room over the layout graph (Kai walks with
-## the move actions from door to door; only when he is stuck he is teleported to the next waypoint) → chests, gates
-## and floor events through the focused interactable + `action` (ExplorationScene.perform_action), regular groups
-## by field strike (fallback force_encounter), auto battles (AutoPolicy, levelling naturally) → safe rooms (Mopsula
-## scenes, lootboxes, vending purchase, equipment, save; the save of the visit that completes the safe rooms is loaded
-## back through the title's "Fortsetzen" and must give the same StateHash) → Der Hausmeister → Generalschlüssel →
-## Gleis 9 → optional Die Rattenkönigin (one attempt) → stairs → floor summary → credits "Etage 2 folgt" → title, where
+## title → new game (slot 1, seed 4242, intro) → tutorial fight → room by room over the layout graph (Kai walks with the
+## move actions from door to door; only when he is stuck he is teleported to the next waypoint) → chests, gates and
+## floor events through the focused interactable + `action` (ExplorationScene.perform_action), regular groups by field
+## strike (fallback force_encounter), real-time combats (levelling naturally) → safe rooms (Mopsula scenes, lootboxes,
+## vending purchase, equipment, save; the save of the visit that completes the safe rooms is loaded back through the
+## title's "Fortsetzen" and must give the same StateHash) → Der Hausmeister → Generalschlüssel → Gleis 9 → optional Die
+## Rattenkönigin (FLOOR_BOSS_ATTEMPTS attempts) → stairs → floor summary → credits "Etage 2 folgt" → title, where
 ## "Fortsetzen" of the autosave must route straight back into the credits (unplayable floor 2).
 ## On the way it checks timer pauses, the state after every battle, replay ≡ live (Game.replay_log), the rebuilt map
 ## after loading and the M.O.D. story beats. Strategies: see `strategy`.
@@ -26,12 +26,12 @@ extends Node
 ## bot engages groups with the bark (dazed group → walk into it → PREEMPTIVE; real time: pull it with key 1) instead of
 ## the field strike, and on the first safe-room visit it switches to Kai and back ("Figur wechseln", two recorded hero
 ## commands the replay checks cover).
-## Echtzeitkampf (07 §12.5, R5b): a real-time run (the default since 07 E33; --combat=ctb: CTB battles) fights in the
-## world — the director plays each combat with the RtBotPlayer (tests/tools/rt_bot_player.gd, loaded at run time;
+## Echtzeitkampf (07 §12.5, R5b): the run fights in the world (the campaign fights in real time only since R5b part
+## 2b) — the director plays each combat with the RtBotPlayer (tests/tools/rt_bot_player.gd, loaded at run time;
 ## profile --rt-profile=typical|perfect|sloppy, the hero's variant) as the person: its inputs go through
 ## Game.combat_submit and are recorded like a player's. A hint card is read for HOLD_FRAMES and closed (recorded
 ## combat_hint, the ticks stand meanwhile); the results panel continues by itself (autoplay). A lost boss is fought
-## again after the game over (the Hausmeister until MAX_DEATHS, the optional Königin RT_FLOOR_BOSS_ATTEMPTS times).
+## again after the game over (the Hausmeister until MAX_DEATHS, the optional Königin FLOOR_BOSS_ATTEMPTS times).
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const TitleFlow := preload("res://scenes/title/title_flow.gd")
@@ -45,8 +45,7 @@ const SAVE_DIR: String = "user://fullrun_saves"
 const TIME_SCALE: float = 5.0
 const WATCHDOG_FRAMES: int = 90000
 const MAX_DEATHS: int = 3
-const FLOOR_BOSS_ATTEMPTS: int = 1
-const RT_FLOOR_BOSS_ATTEMPTS: int = 2       # R5b: real time — the optional floor boss once more after a defeat
+const FLOOR_BOSS_ATTEMPTS: int = 2          # R5b: the optional floor boss once more after a defeat
 const RT_BOT_PATH: String = "res://tests/tools/rt_bot_player.gd"
 const RT_PROFILES: PackedStringArray = ["typical", "perfect", "sloppy"]
 ## Frame budgets (60 frames = 1 s × TIME_SCALE of game time).
@@ -147,8 +146,7 @@ var liga: int = 0
 var timer_warnings: PackedInt32Array = []
 var timer_expired: int = 0
 var attempt_floor_boss: bool = true
-## R5b: the run fights in real time (Game.is_realtime() of the new game; the default, 07 E33) with this bot profile.
-var rt: bool = false
+## R5b: the bot profile of the person who plays the real-time combats (--rt-profile).
 var rt_profile: String = "typical"
 var rt_combats: int = 0                    # combats the bot played (its stream: SeedUtil.derive(seed, "rt_bot", n))
 var hints_read: int = 0                    # hint cards the bot read and closed (07 §2.13)
@@ -413,7 +411,6 @@ func _main() -> void:
 	if not await _wait(func() -> bool: return Router.current is TitleScreen and not Router.busy, BOOT_BUDGET, "title"):
 		return
 	phase = "new_game"
-	Game.auto_battle = true
 	var run_seed: int = TitleFlow.boot_seed if TitleFlow.boot_seed >= 0 else RUN_SEED
 	var cast: PersonaProfile = persona_profile()     # Casting (08 §10.2 Nr. 16, K1)
 	_note("new game, seed %d, strategy %s, hero %s, persona %s" % [run_seed, strategy, hero,
@@ -427,13 +424,11 @@ func _main() -> void:
 		return
 	if not check_hero(_ex(), hero) or not check_look(_ex()):
 		return
-	rt = Game.is_realtime()
-	if rt:
-		_rt_seed = run_seed
-		if load(RT_BOT_PATH) == null:
-			fail("real-time run without %s (the bot is part of the test tools)" % RT_BOT_PATH)
-			return
-		_note("real-time combat, bot profile %s" % rt_profile)
+	_rt_seed = run_seed
+	if load(RT_BOT_PATH) == null:
+		fail("real-time run without %s (the bot is part of the test tools)" % RT_BOT_PATH)
+		return
+	_note("real-time combat, bot profile %s" % rt_profile)
 	_note("floor 1 entered (intro played)")
 	while not finished and not _floor_done:
 		if not await settle():
@@ -580,18 +575,13 @@ func _key(code: Key) -> void:
 		Input.parse_input_event(ev)
 
 
-## Waits until the exploration is calm (no battle / dialog / transition): battles, safe rooms and game overs on the
+## Waits until the exploration is calm (no combat / dialog / transition): combats, safe rooms and game overs on the
 ## way are played through. false = the run failed.
 func settle() -> bool:
 	var n: int = 0
 	while not finished:
 		var cur: Node = Router.current
 		if not Router.busy and cur != null:
-			if cur is BattleScene:
-				if not await _battle(cur as BattleScene):
-					return false
-				n = 0
-				continue
 			if cur is SafeRoomScene:
 				if not await _safe_room(cur as SafeRoomScene):
 					return false
@@ -604,7 +594,7 @@ func settle() -> bool:
 				continue
 			if cur is ExplorationScene:
 				var ex: ExplorationScene = cur as ExplorationScene
-				if rt and _rt_arm(ex):
+				if _rt_arm(ex):
 					if not await _rt_combat(ex):
 						return false
 					n = 0
@@ -674,15 +664,6 @@ func next_objective() -> Dictionary:
 	return {"kind": "stairs", "id": "stairs", "cell": layout.stairs, "why": ""}
 
 
-## 07 §9.6 (E26, R4): the group of a show-boss encounter exists only in real-time runs (ExplorationScene spawns it
-## only then) — a turn-based run neither visits nor expects it.
-func group_on_map(e: EnemySpawn) -> bool:
-	if Game.is_realtime():
-		return true
-	var enc: EncounterDef = Game.floor_def().encounter(e.encounter_id) if Game.floor_def() != null else null
-	return enc == null or enc.show_boss.is_empty()
-
-
 ## Every open goal in a fixed order (groups, chests, events, gates, safe rooms, unvisited rooms); boss rooms and the
 ## stairs room are not visited for their own sake.
 func candidates(layout: FloorLayout, fr: FloorRun, dist: Dictionary = {}) -> Array[Dictionary]:
@@ -691,8 +672,6 @@ func candidates(layout: FloorLayout, fr: FloorRun, dist: Dictionary = {}) -> Arr
 	var typical: bool = strategy == "typical"
 	for e: EnemySpawn in layout.enemies:
 		if typical and TYPICAL_SKIP.has(e.id):
-			continue
-		if not group_on_map(e):
 			continue
 		if not rush and not e.is_boss and not e.is_stray() and not fr.defeated_groups.has(e.id):
 			out.append({"kind": "group", "id": e.id, "cell": e.cell, "why": e.encounter_id})
@@ -989,8 +968,6 @@ func _idle_until_collapse() -> bool:
 		await get_tree().process_frame
 	if not await _wait(func() -> bool: return Router.current != null and not Router.busy, 600, "screen after idling"):
 		return false
-	if Router.current is BattleScene:
-		return true                                # a stray found Kai: fight, then idle on
 	var cur: Node = Router.current
 	if cur.scene_file_path != Router.SCENE_GAME_OVER or StringName(str(cur.get("reason"))) != &"timer":
 		return fail("idling ended on %s (reason %s), expected Sendeschluss by timer" % [_screen_name(cur),
@@ -1073,7 +1050,7 @@ func _engage(ex: ExplorationScene, group_id: String) -> bool:
 func _engage_bark(ex: ExplorationScene, a: Node3D) -> void:
 	var body: CharacterBody3D = ex.get_player()
 	var d: float = _flat_dist(ex.get_player_position(), a.global_position)
-	if rt and bool(a.call("is_dazed")) and ex.pull(str(a.call("group_id")), "skill", _rt_slot1_skill()):
+	if bool(a.call("is_dazed")) and ex.pull(str(a.call("group_id")), "skill", _rt_slot1_skill()):
 		UiUtil.release_move_actions()
 		await get_tree().physics_frame
 		return
@@ -1459,56 +1436,6 @@ func _interrupted(ex: ExplorationScene) -> bool:
 # Battles, game over
 # ======================================================================================================================
 
-func _battle(bs: BattleScene) -> bool:
-	phase = "battle %s" % (bs.battle_setup.encounter_id if bs.battle_setup != null else "?")
-	var setup: BattleSetup = bs.battle_setup
-	var max_hp: int = 0
-	for m: PartyMember in Game.state.party:
-		max_hp += Progression.total_stats(m, DB.data).values[StatBlock.Stat.HP]
-	var res: BattleResult = null
-	var rw: BattleRewards = null
-	var tl0: int = Game.state.floor_run.time_left_ticks
-	var n: int = 0
-	while not finished:
-		if is_instance_valid(bs) and bs.controller != null and bs.controller.result != null:
-			res = bs.controller.result
-			rw = bs.controller.rewards
-		var cur: Node = Router.current
-		if not Router.busy and cur != bs and cur != null and res != null:
-			break
-		n += 1
-		if n > BATTLE_BUDGET:
-			return fail("battle %s did not end within %d frames (%s)" % [setup.encounter_id if setup != null else "?",
-				BATTLE_BUDGET, state_text()])
-		await get_tree().process_frame
-	if finished:
-		return false
-	var rec: Dictionary = {"enc": res.encounter_id, "group": res.group_id, "outcome": res.outcome_name(),
-		"boss": res.is_boss, "adv": res.advantage, "party_turns": res.party_turns, "turns": res.turns,
-		"hp_loss_pct": roundi(100.0 * res.damage_taken / maxf(1.0, float(max_hp))), "frames": n,
-		"level": _levels(), "followers": rw.followers if rw != null else 0,
-		"hype_end": roundi(Game.state.show.hype) if Game.state.show != null else 0, "hype_start": _hype_start,
-		"hype_peak": _hype_peak_battle, "gifts": _gifts_battle, "hype_reasons": _reasons_text()}
-	battles.append(rec)
-	var stray_win: bool = res.outcome == BattleResult.Outcome.VICTORY \
-		and res.group_id.get_slice("_", 1).begins_with("s")
-	if grind_fights > 0 and stray_win:
-		grind_fights -= 1
-	_note("battle %d %s %s: %s, adv %d, party turns %d, turns %d, HP loss %d%%, level %s, +%d followers, hype %d" % [
-		battles.size(), res.encounter_id, res.group_id, res.outcome_name(), res.advantage, res.party_turns, res.turns,
-		int(rec["hp_loss_pct"]), str(rec["level"]), int(rec["followers"]), int(rec["hype_end"])])
-	_note("  hype %d → %d (peak %d, %d gifts): %s" % [_hype_start, int(rec["hype_end"]), _hype_peak_battle,
-		_gifts_battle, str(rec["hype_reasons"])])
-	if res.outcome == BattleResult.Outcome.VICTORY and not (Router.current is ExplorationScene):
-		return fail("victory but the screen after the battle is %s" % _screen_name(Router.current))
-	if res.outcome == BattleResult.Outcome.VICTORY and res.group_id != "" \
-			and not Game.state.floor_run.defeated_groups.has(res.group_id):
-		return fail("victory over %s but the group is not marked defeated" % res.group_id)
-	if res.outcome != BattleResult.Outcome.DEFEAT:
-		return _check_after_battle(res, tl0)
-	return true
-
-
 ## Back in the exploration after a battle: Game out of battle mode, the symbol gone, no member below 1 HP, the timer
 ## paused during the fight (only the fade-in may tick), the countdown started after the tutorial.
 func _check_after_battle(res: BattleResult, tl0: int) -> bool:
@@ -1580,9 +1507,9 @@ static func _rt_slot1_skill() -> String:
 	return ""
 
 
-## Attempts at the optional floor boss: CTB once (as before), real time RT_FLOOR_BOSS_ATTEMPTS.
+## Attempts at the optional floor boss (R5b: once more after a defeat).
 func floor_boss_attempts_max() -> int:
-	return RT_FLOOR_BOSS_ATTEMPTS if rt else FLOOR_BOSS_ATTEMPTS
+	return FLOOR_BOSS_ATTEMPTS
 
 
 ## Gives the exploration's director the bot (once per scene instance); true while a combat is being started or runs,
@@ -1598,7 +1525,7 @@ func _rt_arm(ex: ExplorationScene) -> bool:
 
 ## A real-time combat is being started (boss intro) or runs in `ex` (the bot's walking loops stop for it).
 func _rt_running(ex: ExplorationScene) -> bool:
-	return rt and (Game.combat != null or (ex.get_director() != null and ex.get_director().is_busy()))
+	return Game.combat != null or (ex.get_director() != null and ex.get_director().is_busy())
 
 
 ## The person of the next combat: an RtBotPlayer with the run's profile on its own stream (07 §5.7), submitting through
@@ -1619,7 +1546,7 @@ static func _rt_results_done(dir: CombatDirector) -> bool:
 
 
 ## A real-time combat from its start (intro included) to the exploration after its results panel — or the game over
-## screen after a defeat. Recorded like _battle (party_turns / turns as the result counts them, plus seconds).
+## screen after a defeat. Recorded in `battles` (party_turns / turns as the result counts them, plus seconds).
 func _rt_combat(ex: ExplorationScene) -> bool:
 	var dir: CombatDirector = ex.get_director()
 	var max_hp: int = 0
@@ -1831,10 +1758,6 @@ func check_scene_state(ex: ExplorationScene) -> bool:
 	for e: EnemySpawn in layout.enemies:
 		if fr.defeated_groups.has(e.id) and ex.get_enemy(e.id) != null:
 			return fail("defeated group %s is back on the map" % e.id)
-		if not group_on_map(e):
-			if ex.get_enemy(e.id) != null:
-				return fail("show-boss group %s is on the map in a turn-based run (07 §9.6)" % e.id)
-			continue
 		if not e.is_boss and not fr.defeated_groups.has(e.id) and ex.get_enemy(e.id) == null:
 			return fail("living group %s is missing on the map" % e.id)
 	for gid: Variant in fr.strays.keys():
@@ -2259,7 +2182,7 @@ func stats() -> Dictionary:
 	return {
 		"pace": pace, "strategy": strategy, "human_wait_sec": roundi(human_wait_sec),
 		"hero": hero, "barks": barks, "dazed": dazed, "hero_switches": hero_switches,
-		"combat_mode": "realtime" if rt else "ctb", "rt_profile": rt_profile if rt else "", "hints_read": hints_read,
+		"rt_profile": rt_profile, "hints_read": hints_read,
 		"preemptives": int(show.stats.get("preemptives", 0)) if show != null else 0,         # sneaked up first
 		"bark_openers": int(show.stats.get("bark_openers", 0)) if show != null else 0,       # opened from a bark
 		"secrets": Secrets.opened(Game.state) if Game.state != null else PackedStringArray(),
@@ -2373,7 +2296,7 @@ func state_text() -> String:
 			str(ex.is_encounter_pending())]
 	if Game.state != null and Game.state.floor_run != null:
 		s += " time_left=%d" % int(Game.time_left())
-	if rt and cur is ExplorationScene and (cur as ExplorationScene).get_director() != null:
+	if cur is ExplorationScene and (cur as ExplorationScene).get_director() != null:
 		var dir: CombatDirector = (cur as ExplorationScene).get_director()
 		var hc: Node = dir.hud.get_node_or_null("HintCards") if dir.hud != null and is_instance_valid(dir.hud) else null
 		s += " director=%d ticks=%d combat=%s paused=%s hint=%s card=%s" % [int(dir.phase), dir.ticks_run, ("ct %d%s"
@@ -2482,8 +2405,8 @@ func _on_credits_changed(_credits: int, delta: int) -> void:
 		return
 	if delta > 0:
 		credits_earned += delta
-		var src: String = "battle" if Router.current is BattleScene or Game.combat != null else ("safe_room" if \
-			Router.current is SafeRoomScene else "explore")
+		var src: String = "battle" if Game.combat != null else ("safe_room" if Router.current is SafeRoomScene \
+			else "explore")
 		credits_by_source[src] = int(credits_by_source.get(src, 0)) + delta
 	elif delta < 0:
 		credits_spent -= delta

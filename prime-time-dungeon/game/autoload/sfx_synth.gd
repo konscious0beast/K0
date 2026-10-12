@@ -7,7 +7,7 @@ const MIX_RATE: int = 22050
 const SFX_IDS: PackedStringArray = ["ui_move", "ui_confirm", "ui_cancel", "ui_error", "step", "swing", "hit",
 	"hit_crit", "hit_weak", "miss", "magic", "fire", "ice", "shock", "toxic", "light", "dark", "heal", "buff", "debuff",
 	"ko", "defend", "flee", "stunt_success", "stunt_fail", "level_up", "chest_open", "coin", "lootbox_shake",
-	"lootbox_open", "lootbox_rare", "sponsor", "achievement", "timer_warn", "stairs", "swirl", "door", "mod_blip",
+	"lootbox_open", "lootbox_rare", "sponsor", "achievement", "timer_warn", "stairs", "door", "mod_blip",
 	"chat_pop", "vending",
 	"bark"]                                 # 06 package A
 const MUSIC_IDS: PackedStringArray = ["title", "explore", "battle", "boss", "safe_room", "victory", "game_over",
@@ -59,7 +59,6 @@ const SFX: Dictionary = {
 		["tri", 1046.0, 1046.0, 0.08, 0.3, -1.0], ["tri", 1318.0, 1318.0, 0.25, 0.3, -1.0]],
 	"timer_warn": [["sq", 1000.0, 1000.0, 0.1, 0.25, -1.0], ["sq", 1000.0, 1000.0, 0.1, 0.25, 0.18]],
 	"stairs": [["sin", 600.0, 200.0, 0.5, 0.3, -1.0], ["tri", 300.0, 100.0, 0.5, 0.15, 0.05]],
-	"swirl": [["noise", 300.0, 4000.0, 0.6, 0.2, -1.0], ["sin", 200.0, 1200.0, 0.6, 0.25, 0.0]],
 	"door": [["noise", 500.0, 200.0, 0.16, 0.3, -1.0], ["sin", 90.0, 70.0, 0.2, 0.3, 0.0]],
 	"mod_blip": [["sin", 1200.0, 1200.0, 0.03, 0.15, -1.0]],
 	"chat_pop": [["sin", 900.0, 1100.0, 0.04, 0.15, -1.0]],

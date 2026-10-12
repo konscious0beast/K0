@@ -1,7 +1,7 @@
 extends RefCounted
 ## R4 capture recipes (07 §12.5): real-time combats of floor 1 with the REAL data and the real RtSim in the world —
-## `check.sh --shot res://scenes/exploration/exploration.tscn <png> 30 1280x720 --recipe=rt_r4_<name>` (real time is
-## the default of new games since 07 E33; add --touch for the phone layout). Private test helper (no class_name);
+## `check.sh --shot res://scenes/exploration/exploration.tscn <png> 30 1280x720 --recipe=rt_r4_<name>` (the campaign
+## fights in real time only since R5b part 2b; add --touch for the phone layout). Private test helper (no class_name);
 ## tests/capture_recipes.gd forwards rt_r4_regular | rt_r4_showboss | rt_r4_hausmeister | rt_r4_queen | rt_r4_results
 ## (R5b) to run(). `rec` is the CaptureRecipes runner.
 ## The party gets the level and gear the balance harness gives that point of the floor (tests/tools/rt_harness.gd
@@ -19,10 +19,6 @@ func run(which: String, scene: Node) -> bool:
 	if not await rec.call("_explore_ready", scene):
 		return false
 	scene.set("auto_start_battle", true)
-	if not Game.is_realtime():                       # a CTB run (--combat=ctb): switch the fresh run over (R2 way)
-		Game.combat_mode_override = &"realtime"
-		Game.call("_rt_new_game")
-		Game.combat_mode_override = &""
 	Game.settings.combat_hints = false               # R3's first-time cards would hold the ticks (07 §2.13)
 	match which:
 		"regular":

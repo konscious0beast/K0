@@ -1,9 +1,10 @@
 extends TestCase
 ## Router (02_TECH §3.7, §9.2): empty stack / adopt, push/pop with suspend/resume, queueing, goto freeing, failure
-## handling, battle / safe room / game over helpers.
+## handling, safe room / game over helpers (R5b part 2b: no battle screen — the real-time combat runs in the
+## exploration, 07 §2.8).
 ## Generic operations push the fixture screen tests/fixtures/router/router_screen.tscn, so this test never depends on
 ## what other modules put into their screens. The helpers have fixed targets: those cases run against the real scenes
-## (title, battle, safe room, game over) and check the routing — Router.current.scene_file_path == Router.SCENE_*, the
+## (title, safe room, game over) and check the routing — Router.current.scene_file_path == Router.SCENE_*, the
 ## params the screen received and the payloads handed back — never screen internals.
 ## Uses Transition.NONE where possible to stay fast.
 
@@ -180,24 +181,11 @@ func test_pop_with_empty_stack_goes_to_title() -> void:
 	assert_eq(Router.stack_size(), 1)
 
 
-func test_battle_helpers() -> void:
-	Game.new_game(0, "Kai", 3)
-	var s: _Screen = _screen()
-	var setup: BattleSetup = Game.make_battle_setup(DB.floor_def(1).timer_start_after, 0, "")
-	assert_not_null(setup)
-	Router.start_battle(setup)
-	assert_true(await _idle())
-	assert_eq(Router.current.scene_file_path, Router.SCENE_BATTLE, "start_battle pushes the battle scene")
-	assert_eq(Router.current.get("battle_setup"), setup, "the setup reaches the battle scene ({\"setup\": setup})")
-	assert_eq(Router.stack_size(), 2)
-	assert_eq(s.calls, ["suspend"], "the exploration screen is suspended, not freed")
-	var result: BattleResult = BattleResult.new()
-	result.outcome = BattleResult.Outcome.VICTORY
-	Router.end_battle(result)
-	assert_true(await _idle())
-	assert_eq(Router.current, s, "end_battle pops back to the suspended screen")
-	assert_eq(s.payloads, [{"battle_result": result}])
-	assert_eq(Router.stack_size(), 1)
+func test_no_battle_screen() -> void:
+	var consts: Dictionary = (Router.get_script() as GDScript).get_script_constant_map()
+	assert_false(consts.has("SCENE_BATTLE"), "the CTB battle screen is gone (R5b part 2b)")
+	assert_false(Router.has_method("end_battle"))
+	assert_eq(Router.Transition.keys(), ["NONE", "FADE"], "no swirl")
 
 
 func test_safe_room_helpers() -> void:
@@ -219,11 +207,9 @@ func test_defeat_goes_to_game_over() -> void:
 	Game.new_game(0, "Kai", 3)
 	_screen()
 	var stat_before: int = int(Game.state.show.stats.get("game_overs", 0))
-	var result: BattleResult = BattleResult.new()
-	result.outcome = BattleResult.Outcome.DEFEAT
-	Router.end_battle(result)
+	Router.game_over(&"defeat")                          # the director's DEFEAT (07 §8.9)
 	assert_true(await _idle())
-	assert_eq(Router.current.scene_file_path, Router.SCENE_GAME_OVER, "DEFEAT → game over instead of a pop")
+	assert_eq(Router.current.scene_file_path, Router.SCENE_GAME_OVER, "DEFEAT → game over")
 	assert_eq(Router.current.get("reason"), &"defeat", "params {\"reason\": &\"defeat\"}")
 	assert_eq(Router.stack_size(), 1, "goto: the whole stack is replaced")
 	assert_eq(int(Game.state.show.stats.get("game_overs", 0)), stat_before + 1, "Game.on_game_over ran first")

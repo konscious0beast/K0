@@ -31,7 +31,6 @@ signal camera_zoom(amount: float)                        # touch pinch: arm leng
 
 # --- Battle ---------------------------------------------------------------
 signal battle_started(encounter_id: String, is_boss: bool)
-signal battle_turn_started(combatant_id: String, is_party: bool)
 signal battle_ended(outcome: int, encounter_id: String)  # BattleResult.Outcome
 
 # --- Achievement triggers (payload keys: §6.3) --------------------------------

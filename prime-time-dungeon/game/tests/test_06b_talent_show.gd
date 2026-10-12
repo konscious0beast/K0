@@ -5,13 +5,13 @@ extends TestCase
 ## the M.O.D. box at the bottom right); the modal shows two
 ## cards per choice (name, sentence, effect, stat preview), picks through Game.pick_talent (recorded), walks through
 ## every open choice of both members and closes by itself; "Später" / ui_cancel close it with choices still open; the
-## one-sentence rule line comes once; cards are focusable with >= 88 px hit areas. The battle results show
-## "TALENT BEREIT" on a level-up onto L3 / L5 (never a choice there), the party page lists talents and the open
-## choice; TalentText formats every effect kind.
+## one-sentence rule line comes once; cards are focusable with >= 88 px hit areas. The combat results (real time since
+## R5b part 2b) show "TALENT BEREIT" on a level-up onto L3 / L5 (never a choice there), the party page lists talents
+## and the open choice; TalentText formats every effect kind.
 
 const SCENE_SAFE_ROOM: String = "res://scenes/safe_room/safe_room.tscn"
 const SCENE_SHOW: String = "res://scenes/ui/talent_show.tscn"
-const RESULTS_SCENE: String = "res://scenes/battle/ui/battle_results.tscn"
+const RESULTS_SCRIPT: String = "res://scenes/combat/ui/combat_results.gd"
 const TalentText := preload("res://scenes/ui/talent_text.gd")
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const ModDialogScript := preload("res://scenes/ui/mod_dialog.gd")
@@ -195,9 +195,9 @@ func test_value_card_previews_the_real_numbers() -> void:
 	assert_eq(Talents.rank(kai, "tal_kai_wischtechnik"), 0, "the preview never changes the member")
 
 
-func test_battle_results_chip_on_talent_levels_only() -> void:
+func test_combat_results_chip_on_talent_levels_only() -> void:
 	for case: Array in [[2, 3, true], [1, 2, false], [3, 4, false], [4, 6, true]]:
-		var results: CanvasLayer = (load(RESULTS_SCENE) as PackedScene).instantiate() as CanvasLayer
+		var results: CanvasLayer = (load(RESULTS_SCRIPT) as GDScript).new() as CanvasLayer
 		add_to_tree(results)
 		var r: BattleResult = BattleResult.new()
 		r.outcome = BattleResult.Outcome.VICTORY
@@ -215,10 +215,7 @@ func test_battle_results_chip_on_talent_levels_only() -> void:
 		var chip: Node = results.find_child("TalentChip", true, false)
 		assert_eq(chip != null, bool(case[2]), "L%d → L%d: chip %s" % [int(case[0]), int(case[1]), str(case[2])])
 		if chip != null:
-			var texts: PackedStringArray = []
-			for l: Node in chip.find_children("*", "Label", true, false):
-				texts.append((l as Label).text)
-			assert_eq(" ".join(texts), "TALENT BEREIT im Safe Room wählen", "chip text")
+			assert_eq((chip as Label).text, "TALENT BEREIT · im Safe Room wählen", "chip text")
 		await wait_frames(1)                    # the harness frees the results layers after the test
 
 

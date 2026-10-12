@@ -3,7 +3,7 @@ extends TestCase
 ## interrupts / dodges only for the controlled unit (CONTROL_CHANGED moves it), slot 1 without the repetition
 ## penalty, party moments for everyone (the AI's SHOW too, but not as an own SHOW, E27), kills by KO.command, train
 ## kills, perfect phases, the first enrage, boredom and drag on SECOND, taunts_total; the M.O.D. line tags as reasons
-## and the line rate of Show in a real-time combat; the CTB profile stays as it was.
+## and the line rate of Show in a real-time combat (the only profile since R5b part 2b).
 
 const RtLive := preload("res://tests/fixtures/rt_live/rt_live.gd")
 const K := BattleCommand.Kind
@@ -41,15 +41,18 @@ func _hype(e: ActionEvent) -> float:
 	return _rules.feed(e).hype
 
 
+## The real-time profile is the only one since R5b part 2b (the CTB profile left with the CTB battle, 10 SD1).
 func test_the_profile_comes_from_the_setup() -> void:
 	assert_eq(_rules.profile, ShowRules.PROFILE_RT)
 	assert_eq(_rules.controlled_id(), "p0", "RtSetup.controlled_id")
-	var ctb: ShowRules = ShowRules.new(RtKit.data(), BattleSetup.new())
-	assert_eq(ctb.profile, ShowRules.PROFILE_CTB, "a CTB setup keeps the CTB profile")
-	assert_eq(ctb.feed(_act("p0", "skl_kai_heavy_swing", false)).hype, ShowRules.HYPE_VARIETY, "CTB values")
+	var plain: ShowRules = ShowRules.new(RtKit.data(), BattleSetup.new())
+	assert_eq(plain.profile, ShowRules.PROFILE_RT, "any setup plays the real-time profile")
+	var consts: Dictionary = (load("res://core/show/show_rules.gd") as GDScript).get_script_constant_map()
+	assert_false(consts.has("PROFILE_CTB"), "no CTB profile any more")
+	assert_eq(plain.feed(_act("p0", "skl_kai_heavy_swing", false)).hype, ShowRules.RT_VARIETY, "real-time values")
 
 
-func test_start_bonus_as_in_ctb() -> void:
+func test_start_bonus() -> void:
 	var s: RtSetup = RtKit.setup(RtKit.state(6), RtKit.canned_encounter())
 	var expect: Array = [[BattleSetup.Advantage.NORMAL, false, 3.0], [BattleSetup.Advantage.PREEMPTIVE, false, 3.0],
 		[BattleSetup.Advantage.AMBUSH, false, 5.0], [BattleSetup.Advantage.NORMAL, true, 8.0]]
@@ -221,7 +224,7 @@ func test_taunts_and_presentation_tags() -> void:
 
 ## Show (07 §9.3): in a real-time combat at most one non-blocking line per 6 s unless it ranks higher
 ## (boss_phase / rt_enrage > a party KO > rt_control_switch > interrupt / close dodge / train kill > the rest);
-## blocking lines are free; CTB battles keep their pacing.
+## blocking lines are free; every combat keeps this rate (R5b part 2b: no CTB pacing any more).
 func test_line_rate_in_a_real_time_combat() -> void:
 	assert_eq([Show.rt_line_priority("boss_phase:enm_x:2"), Show.rt_line_priority("rt_enrage:enm_x"),
 		Show.rt_line_priority("kai_ko"), Show.rt_line_priority("rt_control_switch:kai"),
@@ -239,5 +242,6 @@ func test_line_rate_in_a_real_time_combat() -> void:
 	assert_false(Show._rt_line_blocked("weakness", false), "6 s later")
 	Show.abort_battle()
 	Show.begin_battle(BattleSetup.new())
+	Show._now = 200.0
 	Show._rt_line_said("crit", false)
-	assert_false(Show._rt_line_blocked("weakness", false), "CTB: no real-time rate")
+	assert_true(Show._rt_line_blocked("weakness", false), "any combat: the real-time rate")

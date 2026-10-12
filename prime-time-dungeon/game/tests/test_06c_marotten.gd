@@ -1,12 +1,13 @@
 extends TestCase
-## 06-C (06 §4): M.O.D.'s preferences ("Marotten", show bets) — data and validator, the seeded rotation per floor,
-## every condition with a context that hits and one that misses, at most one heart per preference and battle, the
-## won bet (Fanpost-Paket, followers, hype, bets_won, show_bet), tutorial / defeat / event runs, the pacifist counter
-## (new rooms only, latch, safe rooms and the stopped countdown never count, save/load mid-period), the battle tally
-## (MarottenTracker), the Show flow (announcement after "floor_start", hearts, toasts, lines) and replay equality of a
-## live run with won bets (Game.replay_log reproduces the state hash).
+## 06-C (06 §4): M.O.D.'s preferences ("Marotten", show bets) — data and validator, the seeded rotation per floor, every
+## condition with a context that hits and one that misses, at most one heart per preference and battle, the won bet
+## (Fanpost-Paket, followers, hype, bets_won, show_bet), tutorial / defeat / event runs, the pacifist counter (new rooms
+## only, latch, safe rooms and the stopped countdown never count, save/load mid-period), the Show flow (announcement
+## after "floor_start", hearts, toasts, lines) and replay equality of a live run with won bets (Game.replay_log
+## reproduces the state hash).
 
 const MarottenCheck := preload("res://core/data/validators/marotten.gd")
+const RtLive := preload("res://tests/fixtures/rt_live/rt_live.gd")
 const STARTERS: PackedStringArray = ["mar_graf_finale", "mar_mop_only", "mar_sneaky", "mar_variety"]
 
 var _prev_data: GameData = null
@@ -18,6 +19,8 @@ func before_each() -> void:
 
 
 func after_each() -> void:
+	if Game.combat != null:
+		Game.end_combat()
 	if Game.state != null:
 		Show.end_battle(null)
 	Game.in_battle = false
@@ -341,53 +344,7 @@ func test_pacifist_needs_the_countdown_and_no_safe_rooms() -> void:
 
 # --- tracker ----------------------------------------------------------------------------------------------------------
 
-func test_tracker_tally_from_action_events() -> void:
-	var setup: BattleSetup = BattleSetup.new()
-	var kai: Combatant = Combatant.new()
-	kai.id = "p0"
-	kai.def_id = "kai"
-	var mop: Combatant = Combatant.new()
-	mop.id = "p1"
-	mop.def_id = "mopsula"
-	var party: Array[Combatant] = [kai, mop]
-	setup.party = party
-	var t: MarottenTracker = MarottenTracker.new()
-	t.begin(setup, 2)
-	var evs: Array[ActionEvent] = [
-		_ev(ActionEvent.Type.ACTION_START, "p0", BattleCommand.Kind.ATTACK),
-		_ev(ActionEvent.Type.ACTION_START, "p1", BattleCommand.Kind.SKILL, "skl_mop_flame"),
-		_ev(ActionEvent.Type.ACTION_START, "p0", BattleCommand.Kind.ATTACK),
-		_ev(ActionEvent.Type.ACTION_START, "p0", BattleCommand.Kind.DEFEND),
-		_ev(ActionEvent.Type.ACTION_START, "e0", BattleCommand.Kind.ATTACK),
-		_ev(ActionEvent.Type.FLEE_RESULT, "p1", -1),
-	]
-	var stunt: ActionEvent = _ev(ActionEvent.Type.STUNT_RESULT, "p0", -1)
-	stunt.success = true
-	evs.append(stunt)
-	var ko: ActionEvent = _ev(ActionEvent.Type.KO, "p1", -1)
-	ko.target_id = "e0"
-	evs.append(ko)
-	for e: ActionEvent in evs:
-		t.on_battle_event(e)
-	var tally: Dictionary = t.tally()
-	assert_eq(tally["distinct_actions"], 3, "attack, skill, defend (enemy actions do not count)")
-	assert_eq(tally["defends"], 1)
-	assert_eq(tally["flee_attempts"], 1)
-	assert_eq(tally["stunts_success"], 1)
-	assert_eq(tally["last_kill_member"], "mopsula")
-	assert_eq(tally["liga_tier"], 2)
-	var tick: ActionEvent = _ev(ActionEvent.Type.KO, "", -1)
-	tick.target_id = "e1"
-	t.on_battle_event(tick)
-	assert_eq(t.tally()["last_kill_member"], "", "a status tick takes the last word from everyone")
-
-
-func _ev(type: ActionEvent.Type, actor: String, command: int, skill: String = "") -> ActionEvent:
-	var e: ActionEvent = ActionEvent.make(type)
-	e.actor_id = actor
-	e.command = command
-	e.skill_id = skill
-	return e
+## The tally of a real-time combat (the only one since R5b part 2b): test_r5_marotten_rt.
 
 
 static func _with(base: Dictionary, changes: Dictionary) -> Dictionary:
@@ -423,7 +380,6 @@ func test_announcement_follows_floor_start() -> void:
 ## replay of the run log reproduces the state hash (06 §4: reactions, never recorded commands).
 func test_live_bets_replay_bit_for_bit() -> void:
 	var seed: int = _seed_for("mar_sneaky")
-	Game.auto_battle = true
 	Game.new_game(0, "Kai", seed)
 	var toasts: Array = []
 	var cb_t: Callable = func(text: String, icon: StringName) -> void: toasts.append([String(icon), text])
@@ -439,7 +395,6 @@ func test_live_bets_replay_bit_for_bit() -> void:
 		won += 1 if _fight("enc_f1_a_rare", BattleSetup.Advantage.PREEMPTIVE) else 0
 	Events.toast_requested.disconnect(cb_t)
 	Events.marotte_progress.disconnect(cb_p)
-	Game.auto_battle = false
 	assert_eq(won, 3, "three preemptive wins (seed %d)" % seed)
 	assert_eq(Game.state.show.marotten["won"], ["mar_sneaky"])
 	assert_eq(int(Game.state.show.stats.get("bets_won", 0)), 1)
@@ -456,40 +411,12 @@ func test_live_bets_replay_bit_for_bit() -> void:
 	assert_eq(res["final_hash"], live_hash, "replay ≡ live with hearts, won bet and box")
 
 
-## §5.7 battle loop without scenes (auto battle); true = victory.
+## One combat without scenes: real time, the autopilot plays the party (RtLive.autopilot_fight), then a full heal;
+## true = victory.
 func _fight(enc_id: String, adv: int) -> bool:
-	var setup: BattleSetup = Game.make_battle_setup(enc_id, adv, "")
-	if setup == null:
-		return false
-	var battle: BattleState = BattleState.new(setup, DB.data)
-	Show.begin_battle(setup)
-	Events.battle_started.emit(setup.encounter_id, setup.is_boss)
-	_play(battle, battle.start())
-	var guard: int = 0
-	while not battle.is_finished() and guard < 400:
-		guard += 1
-		var cmd: BattleCommand = battle.choose_ai_command()
-		Game.record({"t": "battle", "cmd": cmd.to_dict(), "auto": true})
-		_play(battle, battle.submit(cmd))
-	Events.battle_ended.emit(battle.result.outcome, battle.result.encounter_id)
-	Game.apply_battle_result(battle.result)
-	Show.end_battle(battle.result)
+	var out: Dictionary = RtLive.autopilot_fight(enc_id, adv, "")
 	Game.rest_full_heal()
-	return battle.result.outcome == BattleResult.Outcome.VICTORY
-
-
-## §5.7 _play without presentation (the replay engine delivers pending sponsor gifts at the same boundaries).
-func _play(battle: BattleState, events: Array[ActionEvent]) -> void:
-	for e: ActionEvent in events:
-		Show.on_battle_event(e)
-	if battle.is_finished():
-		return
-	var g: Dictionary = Show.take_pending_gift(battle)
-	if not g.is_empty():
-		var gift_events: Array[ActionEvent] = battle.apply_gift(g)
-		Show.note_battle_gift(g, gift_events)
-		for e: ActionEvent in gift_events:
-			Show.on_battle_event(e)
+	return not out.is_empty() and (out["result"] as BattleResult).outcome == BattleResult.Outcome.VICTORY
 
 
 ## Floor end: an unmet preference → one sulk; floor 1 without any Liga battle → the Liga hint (06 §4.3).

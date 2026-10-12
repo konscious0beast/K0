@@ -9,7 +9,7 @@ const SIGNALS: Dictionary = {
 	"floor_timer_started": 0, "floor_timer_changed": 1, "floor_timer_warning": 1, "floor_timer_expired": 0,
 	"floor_completed": 1, "room_entered": 3, "enemy_alerted": 1, "encounter_triggered": 3, "chest_opened": 2,
 	"gate_opened": 2, "stray_spawn_requested": 3, "camera_drag": 1, "camera_zoom": 1, "battle_started": 2,
-	"battle_turn_started": 2, "battle_ended": 2, "enemy_killed": 1, "battle_won": 1, "battle_fled": 1,
+	"battle_ended": 2, "enemy_killed": 1, "battle_won": 1, "battle_fled": 1,
 	"stunt_resolved": 1, "combo": 1, "party_ko": 1, "boss_defeated": 1, "boss_hp_changed": 1, "item_bought": 1,
 	"event_completed": 1, "explore_tick": 1, "level_up": 1,
 	"viewers_changed": 1, "followers_changed": 2, "hype_changed": 3, "achievement_unlocked": 1, "milestone_reached": 1,
@@ -126,13 +126,13 @@ func test_game_settings_dict_and_defaults() -> void:
 	assert_almost(s.master_volume, 0.1, 0.0001, "ephemeral load keeps values")
 	s.reset_defaults()
 	var d: Dictionary = s.to_dict()
-	for key: String in ["master_volume", "music_volume", "sfx_volume", "battle_speed", "text_speed",
-			"auto_battle_default", "fullscreen", "quality", "touch_controls", "show_fps", "camera_invert_x",
-			"camera_invert_y", "camera_sensitivity", "partner_auto", "show_bets_hud", "regie_twists", "mod_live",
-			"mod_live_url"]:
+	for key: String in ["master_volume", "music_volume", "sfx_volume", "text_speed", "fullscreen", "quality",
+			"touch_controls", "show_fps", "camera_invert_x", "camera_invert_y", "camera_sensitivity", "show_bets_hud",
+			"regie_twists", "mod_live", "mod_live_url"]:
 		assert_true(d.has(key), "settings key " + key)
+	for key: String in ["battle_speed", "auto_battle_default", "partner_auto"]:
+		assert_false(d.has(key), "no CTB setting %s (R5b part 2b)" % key)
 	assert_eq(d["music_volume"], 0.6)
-	assert_eq(d["battle_speed"], 1.0)
 	assert_eq(d["text_speed"], 1)
 	assert_eq(d["touch_controls"], &"auto")
 	assert_eq(d["show_bets_hud"], true, "06-C: the show chip is on by default")

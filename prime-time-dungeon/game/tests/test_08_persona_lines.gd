@@ -3,14 +3,15 @@ extends TestCase
 ## persona_intro:custom), the length rule <= 110 with the longest values; >= 3 general lines per hook, >= 2 intro
 ## variants and a card line per Vorleben, 2 rivals per Vorleben; 3 broadcast plans chosen from the seed, at most one
 ## line per hook event (the intro two), every planned tag has lines; persona_* are always said and have no cooldown;
-## never during a battle (CTB and the real-time combat through R2's director) — no persona and no AI line, a waiting
-## one expires; the word lists, foot words, no royal plural and no crown motifs for Graf Mopsula; {club} with its
-## possessive and a singular verb, {job} never "von Beruf"; scn_mop_4 with every word form (fixture); the review
-## matrix builds.
+## never during a combat (Game.make_rt_setup and the real-time combat through R2's director) — no persona and no AI
+## line, a waiting one expires; the word lists, foot words, no royal plural and no crown motifs for Graf Mopsula; {club}
+## with its possessive and a singular verb, {job} never "von Beruf"; scn_mop_4 with every word form (fixture); the
+## review matrix builds.
 
 const Matrix := preload("res://tests/tools/persona_matrix_builder.gd")
 const WorldStream := preload("res://tests/fixtures/rt_world/world_stream.gd")
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
+const RtLive := preload("res://tests/fixtures/rt_live/rt_live.gd")
 const FORMS_FIXTURE: String = "res://tests/fixtures/persona/scn_mop_4_forms.json"
 const HOOK_TAGS: PackedStringArray = ["persona_intro", "persona_first_chest", "persona_boss_won", "persona_safe_room",
 	"persona_floor_end", "persona_game_over", "persona_marotte"]
@@ -312,7 +313,7 @@ func test_persona_lines_are_always_said_without_cooldown() -> void:
 
 # --- never in a battle (08 §4.3 R6) ---------------------------------------------------------------------------------
 
-func test_no_persona_line_in_a_ctb_battle() -> void:
+func test_no_persona_line_in_a_combat() -> void:
 	var p: PersonaProfile = _jana()
 	p.ai = {"lines": [{"hook": "safe_room", "voice": "mod", "text": "Eine KI-Zeile für {name}."}]}
 	Game.new_game(0, p.name, SEED, &"prime", "kai", p)
@@ -322,10 +323,9 @@ func test_no_persona_line_in_a_ctb_battle() -> void:
 	assert_eq(waiting.size(), 1, "H4 waits for safe_room_enter")
 	Game.leave_safe_room()
 	_said.clear()
-	var setup: BattleSetup = Game.make_battle_setup(DB.floor_def(1).timer_start_after,
-		BattleSetup.Advantage.PREEMPTIVE, "")
+	assert_not_null(Game.make_rt_setup(RtLive.encounter(DB.floor_def(1).timer_start_after,
+		BattleSetup.Advantage.PREEMPTIVE, "")), "a real-time combat (battle_started)")
 	assert_true(Game.in_battle)
-	Events.battle_started.emit(setup.encounter_id, setup.is_boss)
 	assert_eq((hooks.call("pending_tags") as PackedStringArray).size(), 0, "a waiting line expires at the battle start")
 	Show.say("safe_room_enter")
 	Game.state.floor_run.opened_chests.append("chest_test")
@@ -337,7 +337,8 @@ func test_no_persona_line_in_a_ctb_battle() -> void:
 	assert_eq((hooks.call("extra_lines", "persona_safe_room") as Array).size(), 0, "no AI line in a battle")
 	assert_eq(_persona_said(), PackedStringArray(), "nothing persona_* during the battle")
 	assert_eq((hooks.call("pending_tags") as PackedStringArray).size(), 1, "H3 waits for the battle end")
-	Game.in_battle = false
+	Game.end_combat()
+	assert_false(Game.in_battle)
 	Events.explore_tick.emit({})
 	assert_eq(_persona_said().size(), 1, "the boss line comes in the next exploration second")
 	assert_eq((hooks.call("extra_lines", "persona_safe_room") as Array).size(), 1, "AI lines outside the battle")
@@ -352,7 +353,6 @@ func test_no_persona_line_in_the_realtime_combat_of_the_director() -> void:
 	var p: PersonaProfile = _jana()
 	p.ai = {"lines": [{"hook": "safe_room", "voice": "mod", "text": "Eine KI-Zeile für {name}."}]}
 	Game.new_game(0, p.name, SEED, &"prime", "kai", p)
-	Game.state.combat_mode = &"realtime"
 	var hooks: RefCounted = Show.persona_hooks()
 	Game.enter_safe_room(_safe_room())
 	Game.leave_safe_room()

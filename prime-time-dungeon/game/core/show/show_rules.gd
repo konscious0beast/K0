@@ -5,14 +5,13 @@ class_name ShowRules extends RefCounted
 ## advantage) and skill/item defs for `hype` / `kill_hype`. Side is read from the id (`p…` party, `e…` enemy,
 ## `u…` pseudo unit, §5.3). Deltas are raw (before hype_gain_mult, which Show applies to the positive parts only).
 ##
-## Interpretations (documented): crit +5 per crit, weakness +4 at most once per action (GDD §7.3 is canonical for
-## numbers); enemies killed without a party actor (status tick) count as kills but give no kill hype (not a party
-## action): the kill is credited to the party action that applied the ticking status (STATUS_ADDED during an open
-## party action → its `by` / `member`, `kills_skill` for a skill), otherwise `by: "attack"`, `member: ""` — `by` stays
-## within the documented attack/skill/stunt/item (§6.3); "falls under 25 %" needs the previous HP at ≥ 25 %.
+## Interpretations (documented): enemies killed without a party hit (status tick, zone) count as kills but give no kill
+## hype: the kill is credited to the party action that applied the ticking status (its `by` / `member`, `kills_skill`
+## for a skill), otherwise `by: "attack"`, `member: ""` — `by` stays within the documented attack/skill/stunt/item
+## (§6.3); "falls under 25 %" needs the previous HP at ≥ 25 %.
 ##
-## Echtzeitkampf (07 §9.1, R5a): `profile` &"rt" for an RtSetup (Show.begin_battle passes the setup), &"ctb" else —
-## the CTB profile stays exactly as it was. The rt profile (constants RT_*) reads the real-time event stream: skill
+## Echtzeitkampf (07 §9.1, R5a): the profile &"rt" — the only one since R5b part 2b (the CTB profile left the campaign
+## with the CTB battle, 10 SD1). It (constants RT_*) reads the real-time event stream: skill
 ## moments (variety, repetition without slot 1, interrupts, dodges, taunts, own SHOW stats) count only the person's
 ## actions (ActionEvent.by_ai == false; interrupts and dodges only of the controlled unit, RtSetup.controlled_id /
 ## CONTROL_CHANGED), crits, weakness, kills, overkill, streaks (3 kills in 6 s), combos and SHOW results count for the
@@ -23,33 +22,16 @@ const HYPE_START_NORMAL: float = 3.0
 const HYPE_START_PREEMPTIVE: float = 3.0
 const HYPE_START_AMBUSH: float = 5.0
 const HYPE_START_BOSS: float = 8.0           # replaces the others
-const HYPE_VARIETY: float = 2.0              # action_key not among the last VARIETY_WINDOW party keys
-const VARIETY_WINDOW: int = 4
-const HYPE_REPEAT: float = -5.0              # same key the REPEAT_COUNT-th time in a row (and every further time)
-const REPEAT_COUNT: int = 3
-const HYPE_DEFEND_TWICE: float = -4.0        # defend twice in a row by the same character
-const HYPE_DRAG: float = -3.0                # every party turn after the DRAG_AFTER-th (boss: DRAG_AFTER_BOSS)
-const DRAG_AFTER: int = 10
-const DRAG_AFTER_BOSS: int = 25
-const HYPE_CRIT: float = 3.0
-const HYPE_WEAK: float = 2.0
 const HYPE_KILL_ATTACK: float = 1.0          # also item kills
 const HYPE_KILL_SKILL: float = 2.0
 const HYPE_KILL_STUNT: float = 4.0
 const HYPE_OVERKILL: float = 3.0
-const HYPE_KILL_STREAK: float = 5.0          # STREAK_KILLS kills within STREAK_ACTIONS consecutive party actions
-const STREAK_KILLS: int = 3
-const STREAK_ACTIONS: int = 3
-const HYPE_COMBO: float = 2.0
-const HYPE_STUNT_SUCCESS: float = 12.0
-const HYPE_STUNT_FAIL: float = 4.0
+const HYPE_KILL_STREAK: float = 5.0          # RT_STREAK_KILLS kills of the party within RT_STREAK_TICKS
 const HYPE_LOW_HP: float = 6.0               # party member falls under LOW_HP_PCT % (once per member and battle)
 const LOW_HP_PCT: int = 25
 const HYPE_PARTY_KO: float = 10.0
 const HYPE_REVIVE: float = 8.0
 const HYPE_FLEE_OK: float = -30.0
-const HYPE_FLEE_FAIL: float = -5.0
-const HYPE_BORING: float = -3.0              # party turn without a positive hype event since its ACTION_START
 const HYPE_CLOSE_WIN: float = 15.0           # victory with min_party_hp_pct <= CLOSE_WIN_PCT
 const CLOSE_WIN_PCT: float = 0.10
 const HYPE_FLAWLESS: float = 3.0             # victory with damage_taken == 0
@@ -58,22 +40,11 @@ var _data: GameData = null
 var _setup: BattleSetup = null
 var _party_defs: Dictionary = {}             # combatant id → party member def id
 var _hp: Dictionary = {}                     # party combatant id → last known hp
-var _keys: PackedStringArray = []            # party action keys, oldest first
-var _repeat: int = 0                         # length of the current run of identical party keys
-var _last_own_key: Dictionary = {}           # combatant id → key of its previous action
-var _party_actions: int = 0
-var _in_action: bool = false                 # a party action is open (ACTION_START … TURN_END)
-var _actor: String = ""
-var _command: int = -1
-var _skill_id: String = ""
-var _item_id: String = ""
-var _positive: bool = false                  # positive hype event since the open party ACTION_START
-var _weak_done: bool = false
-var _kill_window: Array[int] = []            # kills of the last STREAK_ACTIONS party actions (current last)
+var _positive: bool = false                  # a positive hype event since the last SECOND (boredom, 07 §9.1)
 var _low_hp_done: Dictionary = {}
 var _stunts_ok: int = 0
 var _started: bool = false
-# "<enemy id>|<status id>" → {"actor", "command"} of the applying party action
+# "<enemy id>|<status id>" → {"actor", "command"} of the applying party action (a later status kill is credited to it)
 var _status_src: Dictionary = {}
 var _tick_status: Dictionary = {}            # enemy id → status id while its last DAMAGE was a status tick
 
@@ -115,48 +86,9 @@ func feed(e: ActionEvent) -> ShowDelta:
 	var d: ShowDelta = ShowDelta.new()
 	if e == null:
 		return d
-	if profile == PROFILE_RT:                    # Echtzeitkampf (07 §9.1, R5a)
-		if e.type == ActionEvent.Type.BATTLE_START:
-			return start_delta()
-		_rt_feed(d, e)
-		return d
-	match e.type:
-		ActionEvent.Type.BATTLE_START:
-			return start_delta()
-		ActionEvent.Type.ACTION_START:
-			_on_action_start(d, e)
-		ActionEvent.Type.DAMAGE:
-			_on_damage(d, e)
-		ActionEvent.Type.HEAL:
-			if _is_party(e.target_id) and e.hp_after >= 0:
-				_hp[e.target_id] = e.hp_after
-		ActionEvent.Type.KO:
-			_on_ko(d, e)
-		ActionEvent.Type.STATUS_ADDED:
-			_on_status_added(e)
-		ActionEvent.Type.COMBO:
-			if _is_party(e.actor_id):
-				_add(d, HYPE_COMBO, &"combo")
-				_trigger(d, "combo", {"member": _member(e.actor_id), "enemy_id": e.def_id})
-		ActionEvent.Type.STUNT_RESULT:
-			if _is_party(e.actor_id):
-				_on_stunt(d, e)
-		ActionEvent.Type.REVIVE:
-			if _is_party(e.target_id):
-				_add(d, HYPE_REVIVE, &"revive")
-				if e.hp_after >= 0:
-					_hp[e.target_id] = e.hp_after
-		ActionEvent.Type.FLEE_RESULT:
-			if _is_party(e.actor_id):
-				if e.success:
-					_add(d, HYPE_FLEE_OK, &"flee")
-				else:
-					_add(d, HYPE_FLEE_FAIL, &"flee_fail")
-		ActionEvent.Type.TURN_END:
-			if _in_action and e.actor_id == _actor:
-				if not _positive:
-					_add(d, HYPE_BORING)
-				_in_action = false
+	if e.type == ActionEvent.Type.BATTLE_START:
+		return start_delta()
+	_rt_feed(d, e)                               # Echtzeitkampf (07 §9.1, R5a)
 	return d
 
 
@@ -176,141 +108,7 @@ func stunts_succeeded() -> int:
 	return _stunts_ok
 
 
-# --- event handlers ---------------------------------------------------------------------------------------------------
-
-func _on_action_start(d: ShowDelta, e: ActionEvent) -> void:
-	if not _is_party(e.actor_id):
-		_in_action = false
-		return
-	_in_action = true
-	_actor = e.actor_id
-	_command = e.command
-	_skill_id = e.skill_id
-	_item_id = e.item_id
-	_positive = false
-	_weak_done = false
-	_party_actions += 1
-	_kill_window.append(0)
-	while _kill_window.size() > STREAK_ACTIONS:
-		_kill_window.pop_front()
-	var key: String = _action_key(e)
-	var recent: PackedStringArray = _keys.slice(maxi(0, _keys.size() - VARIETY_WINDOW))
-	if not recent.has(key):
-		_add(d, HYPE_VARIETY)
-	if not _keys.is_empty() and _keys[_keys.size() - 1] == key:
-		_repeat += 1
-	else:
-		_repeat = 1
-	if _repeat >= REPEAT_COUNT:
-		_add(d, HYPE_REPEAT, &"boring_fight")
-	var sk: SkillDef = _action_skill(e)
-	if sk != null and sk.hype != 0:
-		_add(d, float(sk.hype))
-	if key == "defend" and str(_last_own_key.get(e.actor_id, "")) == "defend":
-		_add(d, HYPE_DEFEND_TWICE)
-	var drag_after: int = DRAG_AFTER_BOSS if (_setup != null and _setup.is_boss) else DRAG_AFTER
-	if _party_actions > drag_after:
-		_add(d, HYPE_DRAG)
-	_keys.append(key)
-	_last_own_key[e.actor_id] = key
-
-
-func _on_damage(d: ShowDelta, e: ActionEvent) -> void:
-	# _tick_status names the status of the LAST damage on an enemy only while that damage was a status tick: any other
-	# damage clears it, and the KO that follows consumes it (_on_ko) — a later KO is never credited to an old tick.
-	if e.actor_id == "" and e.status_id != "" and _is_enemy(e.target_id):
-		_tick_status[e.target_id] = e.status_id
-	else:
-		_tick_status.erase(e.target_id)
-	if _is_party(e.actor_id) and _is_enemy(e.target_id) and e.status_id == "":
-		if e.crit:
-			_add(d, HYPE_CRIT, &"crit")
-			_stat(d, "crits_total")
-		if e.weak and not _weak_done:
-			_weak_done = true
-			_add(d, HYPE_WEAK, &"weakness")
-	if _is_party(e.target_id):
-		_check_low_hp(d, e)
-		if e.hp_after >= 0:
-			_hp[e.target_id] = e.hp_after
-
-
-func _on_ko(d: ShowDelta, e: ActionEvent) -> void:
-	if _is_enemy(e.target_id):
-		_stat(d, "kills_total")
-		var by: String = "attack"
-		var member: String = ""
-		var overkill: bool = e.value == 1
-		if not _is_party(e.actor_id):
-			var src: Dictionary = _kill_source(e)
-			_tick_status.erase(e.target_id)
-			if not src.is_empty():
-				by = _by_for(int(src.get("command", BattleCommand.Kind.ATTACK)))
-				member = _member(str(src.get("actor", "")))
-				if by == "skill":
-					_stat(d, "kills_skill")
-		else:
-			member = _member(e.actor_id)
-			by = _by_for(_command if (_in_action and e.actor_id == _actor) else BattleCommand.Kind.ATTACK)
-			match by:
-				"skill":
-					_add(d, HYPE_KILL_SKILL)
-					_stat(d, "kills_skill")
-				"stunt":
-					_add(d, HYPE_KILL_STUNT)
-				_:
-					_add(d, HYPE_KILL_ATTACK)
-			var ks: SkillDef = _skill_or_null(e.skill_id if e.skill_id != "" else _skill_id)
-			if ks != null and ks.kill_hype > 0:
-				_add(d, float(ks.kill_hype))
-			if overkill:
-				_add(d, HYPE_OVERKILL, &"overkill")
-			_count_streak_kill(d)
-		_trigger(d, "enemy_killed", {"enemy_id": e.def_id, "overkill": overkill, "by": by, "member": member})
-	elif _is_party(e.target_id):
-		var who: String = _member(e.target_id)
-		if who == "":
-			who = e.def_id
-		_add(d, HYPE_PARTY_KO, StringName(who + "_ko"))
-		if who == "mopsula":
-			_stat(d, "ko_mopsula")
-		_trigger(d, "party_ko", {"member": who})
-		_hp[e.target_id] = 0
-
-
-## Remembers which party action applied a status to an enemy (a later tick kill is credited to it); applied outside a
-## party action (enemy, boss op, gift) → no party source.
-func _on_status_added(e: ActionEvent) -> void:
-	if not _is_enemy(e.target_id) or e.status_id == "":
-		return
-	var key: String = e.target_id + "|" + e.status_id
-	if _in_action:
-		_status_src[key] = {"actor": _actor, "command": _command}
-	else:
-		_status_src.erase(key)
-
-
-## {"actor", "command"} of the party action behind a kill without party actor (status tick); {} if unknown.
-func _kill_source(e: ActionEvent) -> Dictionary:
-	if e.actor_id != "":
-		return {}
-	var status_id: String = str(_tick_status.get(e.target_id, ""))
-	if status_id == "":
-		return {}
-	return _status_src.get(e.target_id + "|" + status_id, {})
-
-
-func _on_stunt(d: ShowDelta, e: ActionEvent) -> void:
-	if e.success:
-		_add(d, HYPE_STUNT_SUCCESS, &"stunt_success")
-		_stat(d, "stunts_success")
-		_stunts_ok += 1
-	else:
-		_add(d, HYPE_STUNT_FAIL, &"stunt_fail")
-		_stat(d, "stunts_fail")
-	var skill_id: String = e.skill_id if e.skill_id != "" else _skill_id
-	_trigger(d, "stunt_resolved", {"success": e.success, "member": _member(e.actor_id), "skill_id": skill_id})
-
+# --- shared rules ---------------------------------------------------------------------------------------------------
 
 ## "Falls under 25 %": previous hp >= 25 % (unknown = full), new hp > 0 and < 25 %; once per member and battle.
 func _check_low_hp(d: ShowDelta, e: ActionEvent) -> void:
@@ -325,38 +123,7 @@ func _check_low_hp(d: ShowDelta, e: ActionEvent) -> void:
 	_add(d, HYPE_LOW_HP, &"low_hp")
 
 
-## STREAK_KILLS kills within the last STREAK_ACTIONS party actions → bonus, then the window starts over.
-func _count_streak_kill(d: ShowDelta) -> void:
-	if _kill_window.is_empty():
-		_kill_window.append(0)
-	_kill_window[_kill_window.size() - 1] += 1
-	var total: int = 0
-	for k: int in _kill_window:
-		total += k
-	if total >= STREAK_KILLS:
-		_add(d, HYPE_KILL_STREAK, &"kill_streak")
-		_kill_window = [0]
-
-
 # --- helpers ----------------------------------------------------------------------------------------------------------
-
-## `attack`, skill id, item id, `stunt`, `defend`, `flee` (§6.2; GDD §7.3 adds `flee`).
-func _action_key(e: ActionEvent) -> String:
-	match e.command:
-		BattleCommand.Kind.ATTACK:
-			return "attack"
-		BattleCommand.Kind.SKILL:
-			return e.skill_id if e.skill_id != "" else "skill"
-		BattleCommand.Kind.STUNT:
-			return "stunt"
-		BattleCommand.Kind.ITEM:
-			return e.item_id if e.item_id != "" else "item"
-		BattleCommand.Kind.DEFEND:
-			return "defend"
-		BattleCommand.Kind.FLEE:
-			return "flee"
-	return e.skill_id if e.skill_id != "" else "attack"
-
 
 ## Skill whose `hype` counts for this action: an item's use_skill, otherwise the action's skill.
 func _action_skill(e: ActionEvent) -> SkillDef:
@@ -417,13 +184,12 @@ static func _is_enemy(combatant_id: String) -> bool:
 
 # --- Echtzeitkampf (07 §9.1, R5a): profile rt ------------------------------------------------------------------------
 
-const PROFILE_CTB: StringName = &"ctb"
 const PROFILE_RT: StringName = &"rt"
 const RT_VARIETY: float = 1.0                # the person's skill / item not among their last RT_VARIETY_WINDOW actions
 const RT_VARIETY_WINDOW: int = 4
 const RT_REPEAT: float = -3.0                # the same skill RT_REPEAT_COUNT times in a row (not the slot-1 skill)
 const RT_REPEAT_COUNT: int = 4
-const RT_CRIT: float = 1.0                   # E32: ability hits only (CTB +3, R5a +2)
+const RT_CRIT: float = 1.0                   # E32: ability hits only (R5a +2)
 const RT_WEAK: float = 1.0                   # E32: once per ability action, ability hits only
 const RT_STREAK_KILLS: int = 3               # kills of the party within RT_STREAK_TICKS → HYPE_KILL_STREAK
 const RT_STREAK_TICKS: int = 180             # 6 s
@@ -442,7 +208,7 @@ const RT_DRAG_EVERY_SEC: int = 10
 # E32 (07 §9.1, R5b-2a): the show economy of the real-time combat in the GDD §13 bands. A real-time combat has about
 # three times the moments per minute of a CTB battle (auto-attacks, a combo every 5 s, the party SHOW every 30 s):
 # auto-attack hits are no actions and bring no crit / weakness hype (RT_CRIT, RT_WEAK), combos and SHOW results count
-# half (CTB HYPE_COMBO, HYPE_STUNT_*), heals are no repetition (the healer's work, like slot 1); after a regular
+# half (CTB +2 / +12 / +4), heals are no repetition (the healer's work, like slot 1); after a regular
 # real-time combat with a system gift the next RT_GIFT_PAUSE regular ones bring none (Show; external gifts are never
 # paced), and the followers of a won real-time combat are scaled (Show.end_battle).
 const RT_COMBO: float = 1.0
@@ -451,8 +217,8 @@ const RT_SHOW_FAIL: float = 2.0
 const RT_GIFT_PAUSE: int = 4                 # regular real-time combats without a system gift after one with a gift
 const RT_FOLLOWER_PM: int = 600              # followers of a won real-time combat, per mille (ShowModel, integer)
 
-## &"ctb" | &"rt" — chosen from the setup (an RtSetup plays the real-time profile).
-var profile: StringName = PROFILE_CTB
+## &"rt" — the only profile since R5b part 2b.
+var profile: StringName = PROFILE_RT
 var _controlled: String = ""                 # the controlled unit (RtSetup.controlled_id, CONTROL_CHANGED)
 var _slot1: Dictionary = {}                  # party unit id → its slot-1 skill (no repetition penalty)
 var _finale_skills: Dictionary = {}          # FINALE skill ids of the party (party.json rt.bar "finale")
@@ -466,13 +232,12 @@ var _rt_enraged: bool = false
 var _rt_healer_said: bool = false
 
 
-## The controlled unit as the profile knows it (rt; "" for CTB).
+## The controlled unit as the profile knows it ("" without an RtSetup).
 func controlled_id() -> String:
 	return _controlled
 
 
 func _rt_init(s: RtSetup) -> void:
-	profile = PROFILE_RT
 	_controlled = s.controlled_id
 	for u: RtUnit in s.units:
 		if u == null or u.side != Combatant.Side.PARTY:
@@ -607,7 +372,7 @@ func _rt_damage(d: ShowDelta, e: ActionEvent) -> void:
 
 ## KO (07 §9.1, §3.13): an enemy killed by a party hit (KO.command ATTACK / SKILL / STUNT / ITEM) → kill hype by kind
 ## (+ kill_hype, overkill, streak); by a party status / zone (command −1) → credited to the action that applied the
-## status, no kill hype (like CTB status ticks); by an enemy telegraph → train kill. A party KO as in CTB.
+## status, no kill hype; by an enemy telegraph → train kill. A party KO: its hype, stat and trigger.
 func _rt_ko(d: ShowDelta, e: ActionEvent) -> void:
 	if _is_enemy(e.target_id):
 		_stat(d, "kills_total")

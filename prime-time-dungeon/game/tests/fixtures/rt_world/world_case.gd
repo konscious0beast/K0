@@ -16,7 +16,6 @@ var scene: ExplorationScene = null
 var director: CombatDirector = null
 var triggered: Array[Array] = []           # Events.encounter_triggered (group, encounter, advantage)
 
-var _settings_mode: StringName = &"ctb"
 var _saved_data: GameData = null
 
 
@@ -25,16 +24,13 @@ func before_each() -> void:
 	scene = null
 	director = null
 	_saved_data = null
-	_settings_mode = Game.settings.combat_mode
 	_new_rt_game()
 	Events.encounter_triggered.connect(_on_triggered)
 
 
-## A new real-time campaign game (07 §12.1: the boot argument path — HP scale, run log header).
+## A new campaign game (it fights in real time: run log header, RunRules.rt_start).
 func _new_rt_game() -> void:
-	Game.combat_mode_override = &"realtime"
 	Game.new_game(0, "Kai", SEED)
-	Game.combat_mode_override = &""
 
 
 func after_each() -> void:
@@ -43,8 +39,6 @@ func after_each() -> void:
 	if Game.combat != null:
 		Game.end_combat()
 	Game.rt_sim_factory = Callable()
-	Game.settings.combat_mode = _settings_mode
-	Game.combat_mode_override = &""
 	if _saved_data != null:
 		DB.data = _saved_data
 		_saved_data = null

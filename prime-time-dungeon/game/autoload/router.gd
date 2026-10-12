@@ -1,25 +1,22 @@
 extends Node
-## Autoload `Router` (02_TECH §3.7, §9): screen stack, transitions, battle / safe room in and out.
+## Autoload `Router` (02_TECH §3.7, §9): screen stack, transitions, safe room in and out (the real-time combat runs in
+## the exploration scene, 07 §2.8 — no screen of its own since R5b part 2b).
 ## All operations are coroutines; callers need not await. Calls while busy are queued and run in order (never dropped).
 ## Every operation starts with `await get_tree().process_frame` (also for Transition.NONE).
 
-enum Transition { NONE, FADE, SWIRL }
+enum Transition { NONE, FADE }
 const SCENE_BOOT: String = "res://scenes/boot/boot.tscn"
 const SCENE_TITLE: String = "res://scenes/title/title.tscn"
 const SCENE_INTRO: String = "res://scenes/title/intro.tscn"
 const SCENE_GAME_OVER: String = "res://scenes/title/game_over.tscn"
 const SCENE_CREDITS: String = "res://scenes/title/credits.tscn"
 const SCENE_EXPLORATION: String = "res://scenes/exploration/exploration.tscn"
-const SCENE_BATTLE: String = "res://scenes/battle/battle.tscn"
 const SCENE_SAFE_ROOM: String = "res://scenes/safe_room/safe_room.tscn"
 const SCENE_FLOOR_SUMMARY: String = "res://scenes/ui/floor_summary.tscn"
 
 const LAYER: int = 100
 const FADE_OUT_SEC: float = 0.25
 const FADE_IN_SEC: float = 0.25
-const SWIRL_OUT_SEC: float = 0.7
-const SWIRL_IN_SEC: float = 0.3
-const SWIRL_SHADER: String = "res://art/shaders/ui_swirl.gdshader"
 const INK: Color = Color("#140d1c")          # == Palette.INK (no M0 → M4 dependency)
 
 signal _op_finished(ticket: int)
@@ -40,7 +37,6 @@ var _boot_freed: bool = false
 var _safe_room_id: String = ""
 var _layer: CanvasLayer
 var _fade: ColorRect
-var _swirl: TextureRect
 
 
 func _init() -> void:
@@ -49,14 +45,6 @@ func _init() -> void:
 	_layer.name = "TransitionLayer"
 	_layer.layer = LAYER
 	add_child(_layer)
-	_swirl = TextureRect.new()
-	_swirl.name = "Swirl"
-	_swirl.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_swirl.stretch_mode = TextureRect.STRETCH_SCALE
-	_swirl.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_swirl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_swirl.visible = false
-	_layer.add_child(_swirl)
 	_fade = ColorRect.new()
 	_fade.name = "Fade"
 	_fade.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -67,12 +55,6 @@ func _init() -> void:
 
 func _ready() -> void:
 	get_tree().root.theme = UiTheme.get_theme()
-	if ResourceLoader.exists(SWIRL_SHADER):
-		var shader: Shader = load(SWIRL_SHADER) as Shader
-		if shader != null:
-			var mat: ShaderMaterial = ShaderMaterial.new()
-			mat.shader = shader
-			_swirl.material = mat
 
 
 func _notification(what: int) -> void:
@@ -112,16 +94,11 @@ func adopt(node: Node) -> void:
 	current = node
 
 
-func start_battle(setup: BattleSetup) -> void:
-	await push(SCENE_BATTLE, {"setup": setup}, Transition.SWIRL)
-
-
-## DEFEAT → game_over(&"defeat"); else pop({"battle_result": result}, FADE).
-func end_battle(result: BattleResult) -> void:
-	if result != null and result.outcome == BattleResult.Outcome.DEFEAT:
-		await game_over(&"defeat")
-	else:
-		await pop({"battle_result": result}, Transition.FADE)
+## R5b part 2b (07 §12.6, 10 SD1): the CTB battle screen is gone — the real-time combat runs in the exploration (07
+## §2.8). Kept only so that the CTB branch of scenes/exploration (owned elsewhere, unreachable: Game.make_battle_setup
+## returns null) still compiles; it does nothing.
+func start_battle(_setup: BattleSetup) -> void:
+	push_warning("[Router] start_battle: the campaign fights in real time only (R5b part 2b)")
 
 
 func enter_safe_room(safe_room_id: String) -> void:
@@ -311,29 +288,19 @@ func _prune() -> void:
 
 func _transition_out(transition: Transition) -> void:
 	_fade.mouse_filter = Control.MOUSE_FILTER_STOP
-	var t: Transition = transition
-	if t == Transition.SWIRL and (DisplayServer.get_name() == "headless" or _swirl.material == null):
-		t = Transition.FADE
-	match t:
+	match transition:
 		Transition.NONE:
 			_fade.color = Color(INK, 0.0)
 		Transition.FADE:
 			await _tween_fade(1.0, FADE_OUT_SEC)
-		Transition.SWIRL:
-			await _swirl_out()
 
 
 func _transition_in(transition: Transition) -> void:
 	match transition:
 		Transition.NONE:
 			_fade.color = Color(INK, 0.0)
-			_swirl.visible = false
 		Transition.FADE:
-			_swirl.visible = false
 			await _tween_fade(0.0, FADE_IN_SEC)
-		Transition.SWIRL:
-			_swirl.visible = false
-			await _tween_fade(0.0, SWIRL_IN_SEC)
 	if not _running or _queue.is_empty():
 		_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
@@ -343,27 +310,3 @@ func _tween_fade(alpha: float, sec: float) -> void:
 	tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	tween.tween_property(_fade, "color:a", alpha, sec)
 	await tween.finished
-
-
-func _swirl_out() -> void:
-	var img: Image = get_viewport().get_texture().get_image()
-	if img == null or img.is_empty():
-		await _tween_fade(1.0, FADE_OUT_SEC)
-		return
-	var tex: ImageTexture = ImageTexture.create_from_image(img)
-	var mat: ShaderMaterial = _swirl.material as ShaderMaterial
-	var size: Vector2 = _swirl.get_rect().size
-	if size.y <= 0.0:
-		size = Vector2(img.get_width(), img.get_height())
-	mat.set_shader_parameter("snapshot", tex)
-	mat.set_shader_parameter("aspect", size.x / maxf(size.y, 1.0))
-	mat.set_shader_parameter("progress", 0.0)
-	_swirl.texture = tex
-	_swirl.visible = true
-	Sfx.play(&"swirl")
-	var tween: Tween = create_tween()
-	tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
-	tween.tween_method(func(p: float) -> void: mat.set_shader_parameter("progress", p), 0.0, 1.0, SWIRL_OUT_SEC)
-	await tween.finished
-	_fade.color = Color(INK, 1.0)

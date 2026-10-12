@@ -1,18 +1,17 @@
 extends TestCase
 ## 07 §2.7 (R1b-I3) test_r1_regen: the regeneration out of combat in RunSim (step 7 of _tick_once, after the 06-D
-## twists) — real-time runs only (CTB runs never count, bit-identical), exploration ticks with a running clock only
-## (no safe room, no stopped clock); floor_run.regen_ticks counts every tick, every REGEN_PERIOD_TICKS (90) each member
-## with HP > 0 gets max(1, div_round(max_mp × 20, 1000)) MP and — from regen_ticks ≥ REGEN_HP_DELAY_TICKS (150) —
+## twists) — every run (the campaign fights in real time only since R5b part 2b), exploration ticks with a running clock
+## only (no safe room, no stopped clock); floor_run.regen_ticks counts every tick, every REGEN_PERIOD_TICKS (90) each
+## member with HP > 0 gets max(1, div_round(max_mp × 20, 1000)) MP and — from regen_ticks ≥ REGEN_HP_DELAY_TICKS (150) —
 ## max(1, div_round(max_hp × 5, 1000)) HP, capped; the counter restarts after every combat (BattleBridge.apply_result)
 ## and after out-of-combat damage (a floor event's party_damage_pct); it is saved and hashed when ≠ 0.
 
 const FixedMath := preload("res://core/stats/fixed_math.gd")
 
 
-## A run on fixture floor 1 with a running clock (real-time unless `mode`), Kai at 1 HP / 0 MP, Mopsula at 0 MP.
-func _run(mode: StringName = &"realtime") -> RunSim:
+## A run on fixture floor 1 with a running clock, Kai at 1 HP / 0 MP, Mopsula at 0 MP.
+func _run() -> RunSim:
 	var st: GameState = RtKit.state(6)
-	st.combat_mode = mode
 	st.floor_run.timer_started = true
 	st.floor_run.time_left_ticks = 30 * 600
 	for m: PartyMember in st.party:
@@ -66,14 +65,7 @@ func test_caps_and_ko() -> void:
 	assert_eq(_hpmp(rs)[1], [0, 0], "a KO'd member does not regenerate")
 
 
-func test_ctb_and_stopped_clock_and_safe_room() -> void:
-	var ctb: RunSim = _run(&"ctb")
-	var before: String = StateHash.of(ctb.state)
-	var hpmp: Array = _hpmp(ctb)
-	ctb.step(400)
-	assert_eq([_hpmp(ctb), ctb.state.floor_run.regen_ticks], [hpmp, 0], "CTB runs never count")
-	assert_false(ctb.state.floor_run.to_dict().has("regen_ticks"), "nothing new in a CTB save")
-	assert_true(StateHash.of(ctb.state) != before, "(the clock itself moved)")
+func test_stopped_clock_and_safe_room() -> void:
 	var idle: RunSim = _run()
 	idle.state.floor_run.timer_started = false
 	idle.step(200)

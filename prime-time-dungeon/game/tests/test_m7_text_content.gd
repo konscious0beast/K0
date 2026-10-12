@@ -5,6 +5,8 @@ extends TestCase
 ## Scene conditions follow GDD §10.2 (`scn_mop_1` `>= 1`, `scn_mop_4` without `first_visit`: a scene skipped on the
 ## first visit stays available); 02_TECH §4.4.13 was aligned to it in the integration phase.
 
+const Harness := preload("res://tests/tools/rt_harness.gd")
+
 ## GDD §11.2/§11.3: tag → minimum number of lines.
 const MIN_LINES: Dictionary = {
 	"intro": 3, "floor_start": 2, "first_fight": 2, "achievement_generic": 4, "low_hp": 3, "kill_streak": 3, "crit": 2,
@@ -243,23 +245,26 @@ func test_story_lines_are_spoken() -> void:
 	Events.floor_entered.emit(1)
 	var tags: Array = lines.map(func(l: Array) -> String: return str(l[0]))
 	assert_eq(tags, ["tutorial_explore", "tutorial_sneak"], "B1 hints before the tutorial battle")
-	var tut: BattleSetup = Game.make_battle_setup("enc_f1_a1_tutorial", BattleSetup.Advantage.NORMAL, "f1_g0")
+	var tut: BattleSetup = BattleBridge.make_rt_setup(Game.state, DB.data, Harness.command_for("enc_f1_a1_tutorial",
+		Game.hero(), BattleSetup.Advantage.NORMAL), 7)
 	lines.clear()
 	Show.begin_battle(tut)
 	tags = lines.map(func(l: Array) -> String: return str(l[0]))
-	assert_has(tags, "tutorial_battle", "B2 hint at the tutorial battle start")
-	for i in 2:
-		var e: ActionEvent = ActionEvent.new()
-		e.type = ActionEvent.Type.TURN_END
-		e.actor_id = "p%d" % i
-		Show.on_battle_event(e)
-	assert_eq(str((lines.back() as Array)[0]), "tutorial_stunt", "B2 stunt hint after the 2nd party turn")
+	# 07 §9.3: one non-blocking line per 6 s in a combat — the run's first fight line comes first and the B2 hint
+	# gives way (the tutorial's hint cards, 07 §2.13, guide that combat); a later tutorial start speaks it.
+	assert_eq(tags, ["first_fight"], "the first fight's line at the tutorial combat start")
+	Show.abort_battle()
+	lines.clear()
+	Show.begin_battle(tut)
+	tags = lines.map(func(l: Array) -> String: return str(l[0]))
+	assert_has(tags, "tutorial_battle", "B2 hint at the tutorial combat start (the SHOW: the tutorial's hint card)")
 	Show.abort_battle()
 	Game.state.floor_run.timer_started = true
 	lines.clear()
 	Events.floor_entered.emit(1)
 	assert_eq(lines, [], "no tutorial hints once the countdown runs")
-	var b2: BattleSetup = Game.make_battle_setup("enc_f1_b2", BattleSetup.Advantage.NORMAL, "f1_g6")
+	var b2: BattleSetup = BattleBridge.make_rt_setup(Game.state, DB.data, Harness.command_for("enc_f1_b2", Game.hero(),
+		BattleSetup.Advantage.NORMAL), 7)
 	lines.clear()
 	Show.begin_battle(b2)
 	assert_has(lines, ["story_battle:enc_f1_b2", "Die Königin hört von euch."], "B4 banner")

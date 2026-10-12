@@ -19,7 +19,6 @@ func after_each() -> void:
 	Game.timer_running = false
 	Game.safe_room_clock = false
 	Game.in_battle = false
-	Game.auto_battle = false
 	Game.settings.regie_twists = true
 	Game.clear_blocking_dialogs()
 

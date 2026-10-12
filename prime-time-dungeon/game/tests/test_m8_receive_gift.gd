@@ -1,7 +1,11 @@
 extends TestCase
 ## Show.receive_gift as the single gift entry (Brief §6b.4, 05 §11.4) with the M8 gift core: a system gift from
 ## take_pending_gift runs through receive_gift and is NOT in the run log; a dev gift is in the log (cmd id 0) and
-## replays; the Pur-Liga rejects dev gifts; duplicates and invalid gifts are rejected.
+## replays; the Pur-Liga rejects dev gifts; duplicates and invalid gifts are rejected. Combats are real-time ones
+## (R5b part 2b): gifts arrive at the tick boundaries (Game.combat_boundary → Show.take_pending_gift_rt).
+
+const RtLive := preload("res://tests/fixtures/rt_live/rt_live.gd")
+const Harness := preload("res://tests/tools/rt_harness.gd")
 
 var _received: Array = []
 var _rejected: Array = []
@@ -17,6 +21,8 @@ func before_each() -> void:
 func after_each() -> void:
 	Events.gift_received.disconnect(_on_received)
 	Events.gift_rejected.disconnect(_on_rejected)
+	if Game.combat != null:
+		Game.end_combat()
 	Game.state = null
 	Game.run_log = null
 	Game.sim = null
@@ -24,7 +30,6 @@ func after_each() -> void:
 	Game.mode = &"campaign"
 	Game.timer_running = false
 	Game.in_battle = false
-	Game.auto_battle = false
 
 
 func _on_received(g: Dictionary) -> void:
@@ -43,49 +48,26 @@ func _gift_cmds() -> Array:
 	return out
 
 
-## §5.7 battle without scenes: start, then turns with recorded commands. `hook` runs once at the first turn boundary,
-## `chooser(battle) -> BattleCommand` may pick a party command (null → AutoPolicy / EnemyAI).
-func _battle(enc: String, hook: Callable = Callable(), chooser: Callable = Callable()) -> BattleState:
-	var setup: BattleSetup = Game.make_battle_setup(enc, BattleSetup.Advantage.NORMAL, "")
-	var battle: BattleState = BattleState.new(setup, DB.data)
-	Show.begin_battle(setup)
-	Events.battle_started.emit(setup.encounter_id, setup.is_boss)
-	_feed(battle.start())
+## A real-time combat without scenes (RtLive.play — the Game API of the CombatDirector, every input recorded): `hook`
+## runs once before the first tick boundary (a gift received there is delivered at it); `item` (optional) is used by the
+## controlled unit at tick 0, then the autopilot plays the party.
+func _battle(enc: String, hook: Callable = Callable(), item: String = "") -> Dictionary:
+	if Game.make_rt_setup(RtLive.encounter(enc, BattleSetup.Advantage.NORMAL, "")) == null:
+		fail("no real-time combat for " + enc)
+		return {}
 	if hook.is_valid():
-		hook.call(battle)
-	_boundary(battle)
-	var guard: int = 0
-	while not battle.is_finished() and guard < 400:
-		guard += 1
-		var cmd: BattleCommand = chooser.call(battle) as BattleCommand if chooser.is_valid() else null
-		if cmd == null:
-			cmd = battle.choose_ai_command()
-		Game.record({"t": "battle", "cmd": cmd.to_dict(), "auto": not chooser.is_valid()})
-		_feed(battle.submit(cmd))
-		_boundary(battle)
-	Events.battle_ended.emit(battle.result.outcome, battle.result.encounter_id)
-	Game.apply_battle_result(battle.result)
-	Show.end_battle(battle.result)
-	return battle
+		hook.call()
+	var ctl: String = Game.combat.controlled_id()
+	var cmds: Array = []
+	if item != "":
+		cmds.append(RtCommand.item(0, ctl, item, ctl))
+	cmds.append(RtCommand.autopilot(0, ctl, true))
+	return RtLive.play(cmds, 18000)
 
 
-func _feed(events: Array[ActionEvent]) -> void:
-	for e: ActionEvent in events:
-		Show.on_battle_event(e)
-
-
-func _boundary(battle: BattleState) -> void:
-	if battle.is_finished():
-		return
-	var g: Dictionary = Show.take_pending_gift(battle)
-	if not g.is_empty():
-		var events: Array[ActionEvent] = battle.apply_gift(g)
-		Show.note_battle_gift(g, events)
-		_feed(events)
-
-
-## Recorded path to a hype threshold: a dev gold gift pays for a Hype-Megafon (Automat), used in battle: 30 + 5
-## (battle start) + 25 → crosses 50 → system gift. Everything that changes the state is in the log.
+## Recorded path to a hype threshold: a dev gold gift pays for a Hype-Megafon (Automat), used in the combat: 30 + 3
+## (combat start) + 25 → crosses 50 → system gift. Everything that changes the state is in the log. A regular combat
+## (the tutorial combat forbids items, 07 E28).
 func test_system_gift_runs_through_receive_gift_and_is_not_logged() -> void:
 	Game.new_game(0, "Kai", 4711)
 	assert_true(Game.open_dev_sponsor_window(), "viewer gifts need an open Sponsor-Fenster (05 §6.13, recorded)")
@@ -94,14 +76,11 @@ func test_system_gift_runs_through_receive_gift_and_is_not_logged() -> void:
 	Game.enter_safe_room(sr)
 	assert_true(Game.buy("itm_hype_megaphone", 1, sr), "150 credits buy the megaphone (120)")
 	Game.leave_safe_room()
-	var used: Array = [false]
-	_battle(DB.floor_def(1).timer_start_after, Callable(), func(battle: BattleState) -> BattleCommand:
-		var actor: Combatant = battle.current_actor()
-		if used[0] or actor == null or not actor.is_party() or not battle.usable_items().has("itm_hype_megaphone"):
-			return null
-		used[0] = true
-		return BattleCommand.item(actor.id, "itm_hype_megaphone", PackedStringArray([actor.id])))
-	assert_true(used[0], "megaphone used")
+	var out: Dictionary = _battle("enc_f1_a2", Callable(), "itm_hype_megaphone")
+	var used: bool = false
+	for e: ActionEvent in out.get("events", []):
+		used = used or (e.type == ActionEvent.Type.ACTION_START and e.item_id == "itm_hype_megaphone")
+	assert_true(used, "megaphone used")
 	var sys: Array = _received.filter(func(id: String) -> bool: return id.begins_with("g_sys_"))
 	assert_gt(sys.size(), 0, "hype 50 crossed → system gift delivered through receive_gift (gift_received)")
 	var logged: Array = []
@@ -142,18 +121,18 @@ func test_dev_gift_in_battle_is_logged_at_delivery_and_replays() -> void:
 	Game.new_game(0, "Kai", 2323)
 	assert_true(Game.open_dev_sponsor_window(), "viewer gifts need an open Sponsor-Fenster (05 §6.13, recorded)")
 	var dev: Dictionary = Gift.make_dev("chest", "bronze", 0)
-	_battle(DB.floor_def(1).timer_start_after, func(_battle_state: BattleState) -> void:
+	_battle(DB.floor_def(1).timer_start_after, func() -> void:
 		assert_eq(Show.receive_gift(dev)["apply"], "queued", "in battle: queued")
 		assert_eq(_gift_cmds(), [], "not recorded on reception"))
 	var kinds: Array = []
 	for c: Dictionary in Game.run_log.cmds():
 		kinds.append(c["c"]["t"])
 	assert_eq(kinds.slice(0, 5), ["floor", "hero", "sponsor_window", "encounter", "gift"],
-		"recorded at the turn boundary where it was delivered (hero: the new game's choice, 06 §1.7)")
+		"recorded at the tick boundary where it was delivered (hero: the new game's choice, 06 §1.7)")
 	assert_has(_received, dev["gift_id"])
 	var live_hash: String = StateHash.of(Game.state)
 	var rep: Dictionary = Game.replay_log(Game.run_log)
-	assert_eq(rep["final_hash"], live_hash, "replayed at the same _play boundary (02_TECH §3.4)")
+	assert_eq(rep["final_hash"], live_hash, "replayed at the same tick boundary (07 §9.2)")
 	_assert_game_checkpoints(Game.run_log, rep)
 
 
@@ -178,10 +157,10 @@ func test_queued_gifts_are_rechecked_and_booked_at_application() -> void:
 	var g1: Dictionary = _fan_pack(1, 0)
 	var g2: Dictionary = _fan_pack(2, 0)
 	assert_eq(Gift.validate(g1), "", Gift.last_detail)
-	_battle(DB.floor_def(1).timer_start_after, func(_b: BattleState) -> void:
+	_battle(DB.floor_def(1).timer_start_after, func() -> void:
 		assert_eq(Show.receive_gift(g1)["apply"], "queued")
 		assert_eq(Show.receive_gift(g2)["apply"], "queued", "same basis is fine while nothing was applied"))
-	assert_has(_received, g1["gift_id"], "first gift delivered at a turn boundary")
+	assert_has(_received, g1["gift_id"], "first gift delivered at a tick boundary")
 	assert_false(_received.has(g2["gift_id"]), "second gift not applied")
 	assert_has(_rejected, [g2["gift_id"], "effect_mismatch"], "refused when it was due (after the battle)")
 	var logged: Array = []
@@ -209,10 +188,11 @@ func test_queued_gift_past_its_deadline_is_refused_at_application() -> void:
 	assert_eq(Show.receive_gift(late)["reason"], "deadline_missed", "outside a battle: checked on reception")
 	Game.sim._tick = 0
 	Game.in_battle = true
-	Show.begin_battle(Game.make_battle_setup(DB.floor_def(1).timer_start_after, BattleSetup.Advantage.NORMAL, ""))
+	Show.begin_battle(BattleBridge.make_rt_setup(Game.state, DB.data, Harness.command_for(
+		DB.floor_def(1).timer_start_after, Game.hero(), BattleSetup.Advantage.NORMAL), 7))
 	assert_eq(Show.receive_gift(late)["apply"], "queued", "tick 0: still in time")
 	Game.sim._tick = 5
-	assert_eq(Show.take_pending_gift(null), {}, "past the deadline when it is due")
+	assert_eq(Show.take_pending_gift(), {}, "past the deadline when it is due")
 	assert_has(_rejected, [late["gift_id"], "deadline_missed"])
 	Show.abort_battle()
 	Game.in_battle = false

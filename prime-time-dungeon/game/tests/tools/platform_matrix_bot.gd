@@ -1,13 +1,15 @@
 extends RefCounted
 ## Helper of tests/tools/platform_matrix.gd (no class_name; loaded with load()): the core bot runs of the platform
 ## matrix (05 Kap. 2 S0 gate, 07 §12.2 / 08 §10.2 Nr. 17 before a SIM_VERSION bump). Each run is a campaign Floor 1
-## driven through RunSim alone (no autoloads, no scene tree — the verifier path): start room, tutorial battle (auto
-## commands), chests, the clock with stray fights, rest, lootbox, a safe room, stairs, descend. The run seed varies,
+## driven through RunSim alone (no autoloads, no scene tree — the verifier path): start room, the tutorial combat (real
+## time since R5b part 2b: the encounter with the balance harness's rt block, the autopilot, the sim's AI to its end),
+## chests, the clock with stray fights, rest, lootbox, a safe room, stairs, descend. The run seed varies,
 ## the decisions are fixed. Per run: final hash, checkpoint count, SHA-256 over all checkpoint hashes (tick order) and
 ## the result of RunSim.replay (mismatch_at, errors). A platform leg passes when every run replays and its digest (over
 ## all runs) equals the reference leg (Linux x86-64 headless).
 
 const TICKS: int = 3300                    # ≈ 110 s floor clock: strays spawn at 90 s
+const Harness := preload("res://tests/tools/rt_harness.gd")
 const SEED_BASE: int = 4100
 
 
@@ -33,7 +35,9 @@ func run_one(data: GameData, seed: int) -> Dictionary:
 	var rl: RunLog = RunLog.new()
 	rl.header = {"schema": 1, "seed": seed, "slot": 0, "difficulty": "prime", "mode": "campaign",
 		"sim_hz": RunSim.TICKS_PER_SEC, "sim_version": RunSim.SIM_VERSION, "event_id": "",
-		"run_id": "run_matrix_%d" % seed, "player_id": "local", "window_id": "", "league": ""}
+		"run_id": "run_matrix_%d" % seed, "player_id": "local", "window_id": "", "league": "",
+		"combat_mode": String(RunRules.REALTIME), "rt_version": RunRules.RT_VERSION}
+	RunRules.rt_start(st, data)
 	sim.run_log = rl
 	sim.apply({"t": "floor", "floor": 1})
 	var fdef: FloorDef = data.floor_def(1)
@@ -43,8 +47,7 @@ func run_one(data: GameData, seed: int) -> Dictionary:
 	for g: EnemySpawn in layout.enemies:
 		if g.encounter_id == fdef.timer_start_after:
 			tutorial_group = g.id
-	sim.apply({"t": "encounter", "enc": fdef.timer_start_after, "adv": BattleSetup.Advantage.PREEMPTIVE,
-		"group": tutorial_group})
+	sim.apply(_encounter(fdef.timer_start_after, tutorial_group))
 	_fight(sim)
 	for c: ChestSpawn in layout.chests.slice(0, 3):
 		sim.apply({"t": "chest", "id": c.id})
@@ -53,8 +56,7 @@ func run_one(data: GameData, seed: int) -> Dictionary:
 		guard += 1
 		for e: ExploreEvent in sim.step(30):
 			if e.type == ExploreEvent.Type.STRAY_DUE and not sim.is_over():
-				sim.apply({"t": "encounter", "enc": e.data["encounter_id"],
-					"adv": BattleSetup.Advantage.PREEMPTIVE, "group": e.data["group_id"]})
+				sim.apply(_encounter(str(e.data["encounter_id"]), str(e.data["group_id"])))
 				_fight(sim)
 	if not sim.is_over():
 		sim.apply({"t": "rest"})
@@ -76,9 +78,16 @@ func run_one(data: GameData, seed: int) -> Dictionary:
 		"replay_errors": Array(errors)}
 
 
+## The encounter of `enc` for `group` (a first strike), real time: the balance harness's rt block (its cell and poses).
+static func _encounter(enc: String, group: String) -> Dictionary:
+	var cmd: Dictionary = Harness.command_for(enc, "kai", BattleSetup.Advantage.PREEMPTIVE)
+	cmd["group"] = group
+	(((cmd["rt"] as Dictionary)["groups"] as Array)[0] as Dictionary)["group"] = group
+	return cmd
+
+
+## The running combat to its end: the autopilot (recorded like a person's input), then RunSim.settle (the sim's AI).
 func _fight(sim: RunSim) -> void:
-	var guard: int = 0
-	while sim.battle != null and guard < 600:
-		guard += 1
-		var cmd: BattleCommand = sim.battle.choose_ai_command()
-		sim.apply({"t": "battle", "cmd": cmd.to_dict(), "auto": true})
+	if sim.combat != null:
+		sim.apply(RtCommand.autopilot(sim.combat.tick(), sim.combat.controlled_id(), true))
+	sim.settle()

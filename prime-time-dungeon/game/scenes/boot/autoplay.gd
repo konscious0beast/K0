@@ -1,16 +1,15 @@
 extends Node
 ## Autoplay driver (02_TECH §11.4), added under root by Boot with --autoplay (PROCESS_MODE_ALWAYS). Runs the step table
-## boot_to_title → new_game → explore → force_battle → battle → safe_room with frame budgets (sum 600, watchdog 640),
-## prints "AUTOPLAY: <step> ok @frame <n>" per step and finally "AUTOPLAY: OK frames=<n>" + quit(0); a failure prints
-## "Assertion failed: AUTOPLAY step '<name>' failed: <reason>" + quit(1). There is no skip path: a module that is
-## missing or broken fails its step (tools/check.sh accepts only "AUTOPLAY: OK").
-## Echtzeitkampf (07 §12.5, R5b): a real-time game (the default of new games since 07 E33; --combat=ctb: the CTB
-## steps above) fights in the world — the steps force_battle → force_combat (60 frames: the director runs the tutorial
-## combat) and battle → combat (900 frames: the autopilot plays it, hint cards are read and closed,
-## Events.battle_ended VICTORY); RT_STEPS, watchdog RT_WATCHDOG_FRAMES (check.sh: --quit-after 1300).
+## boot_to_title → new_game → explore → force_combat → combat → safe_room with frame budgets (sum 1200, watchdog 1240
+## before check.sh's --quit-after 1300), prints "AUTOPLAY: <step> ok @frame <n>" per step and finally
+## "AUTOPLAY: OK frames=<n>" + quit(0); a failure prints "Assertion failed: AUTOPLAY step '<name>' failed: <reason>" +
+## quit(1). There is no skip path: a module that is missing or broken fails its step (tools/check.sh accepts only
+## "AUTOPLAY: OK"). Echtzeitkampf (07 §12.5): the game fights in the world (the only combat of the campaign since R5b
+## part 2b) — force_combat (60 frames: the director runs the tutorial combat) and combat (900 frames: the autopilot
+## plays it, hint cards are read and closed, Events.battle_ended VICTORY).
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
-const WATCHDOG_FRAMES: int = 640
+const WATCHDOG_FRAMES: int = 1240
 const MOVE_FRAMES: int = 24
 const MIN_MOVE_M: float = 1.0
 const AUTOPLAY_SEED: int = 4242
@@ -18,19 +17,10 @@ const STEPS: Array[Dictionary] = [
 	{"name": "boot_to_title", "budget": 60},
 	{"name": "new_game", "budget": 90},
 	{"name": "explore", "budget": 30},
-	{"name": "force_battle", "budget": 60},
-	{"name": "battle", "budget": 300},
-	{"name": "safe_room", "budget": 60},
-]
-const RT_STEPS: Array[Dictionary] = [
-	{"name": "boot_to_title", "budget": 60},
-	{"name": "new_game", "budget": 90},
-	{"name": "explore", "budget": 30},
 	{"name": "force_combat", "budget": 60},
 	{"name": "combat", "budget": 900},
 	{"name": "safe_room", "budget": 60},
 ]
-const RT_WATCHDOG_FRAMES: int = 1240
 const HINT_READ_FRAMES: int = 6
 
 var frames: int = 0
@@ -49,7 +39,6 @@ var _start_pos: Vector3 = Vector3.ZERO
 var _move_released: bool = false
 var _safe_room_reached: bool = false
 var _exit_requested: bool = false
-var _rt: bool = false                     # R5b: the new game fights in real time (Game.new_game_combat_mode)
 var _autopilot_sent: bool = false
 var _hint_frames: int = 0
 
@@ -59,14 +48,13 @@ func _init() -> void:
 
 
 func _ready() -> void:
-	_rt = Game.new_game_combat_mode() == &"realtime"
 	Events.floor_entered.connect(func(_i: int) -> void: _floor_entered = true)
 	Events.battle_ended.connect(func(outcome: int, _enc: String) -> void: _battle_outcome = outcome)
 
 
-## The step table of the run: RT_STEPS in a real-time run, else STEPS.
+## The step table of the run.
 func steps() -> Array[Dictionary]:
-	return RT_STEPS if _rt else STEPS
+	return STEPS
 
 
 func current_step_name() -> String:
@@ -78,9 +66,8 @@ func _process(_delta: float) -> void:
 		return
 	frames += 1
 	step_frames += 1
-	var watchdog: int = RT_WATCHDOG_FRAMES if _rt else WATCHDOG_FRAMES
-	if frames > watchdog:
-		_fail("watchdog (%d frames)" % watchdog)
+	if frames > WATCHDOG_FRAMES:
+		_fail("watchdog (%d frames)" % WATCHDOG_FRAMES)
 		return
 	if step >= steps().size():
 		_done()
@@ -119,25 +106,17 @@ func _enter(step_name: String) -> void:
 				else Vector3.ZERO
 			_move_released = false
 			Input.action_press(&"move_forward")
-		"force_battle":
-			var ex2: Node = Router.current
-			if ex2 == null or not ex2.has_method("force_encounter"):
-				_fail("exploration not active")
-				return
-			Game.auto_battle = true
-			_battle_outcome = -1
-			ex2.call("force_encounter", "")
 		"force_combat":
-			var ex4: Node = Router.current
-			if ex4 == null or not ex4.has_method("force_encounter") or not ex4.has_method("get_director"):
+			var ex: Node = Router.current
+			if ex == null or not ex.has_method("force_encounter") or not ex.has_method("get_director"):
 				_fail("exploration not active")
 				return
 			_battle_outcome = -1
 			_autopilot_sent = false
-			ex4.call("force_encounter", "")
+			ex.call("force_encounter", "")
 		"safe_room":
-			var ex3: Node = Router.current
-			var layout: FloorLayout = ex3.call("get_layout") if ex3 != null and ex3.has_method("get_layout") else null
+			var ex2: Node = Router.current
+			var layout: FloorLayout = ex2.call("get_layout") if ex2 != null and ex2.has_method("get_layout") else null
 			var id: String = smallest_safe_room(layout)
 			if id == "":
 				_fail("no safe room in the floor layout")
@@ -167,18 +146,11 @@ func _check(step_name: String) -> bool:
 					Input.action_release(&"move_forward")
 				return true
 			return false
-		"force_battle":
-			return cur is BattleScene and not Router.busy
 		"force_combat":
 			var dir: Node = cur.call("get_director") if cur != null and cur.has_method("get_director") else null
 			return Game.combat != null and dir != null and bool(dir.call("is_running")) and not Router.busy
 		"combat":
 			return _combat_step(cur)
-		"battle":
-			if _battle_outcome >= 0 and _battle_outcome != BattleResult.Outcome.VICTORY:
-				_fail("battle ended with outcome %d (expected VICTORY)" % _battle_outcome)
-				return false
-			return _battle_outcome == BattleResult.Outcome.VICTORY and cur is ExplorationScene and not Router.busy
 		"safe_room":
 			if not _safe_room_reached:
 				if cur is SafeRoomScene and not Router.busy:
@@ -189,7 +161,7 @@ func _check(step_name: String) -> bool:
 			if not (_exit_requested and cur is ExplorationScene and not Router.busy):
 				return false
 			if Game.state == null or Game.state.floor_run == null or not Game.state.floor_run.timer_started:
-				_fail("floor timer did not start after the tutorial battle")
+				_fail("floor timer did not start after the tutorial combat")
 				return false
 			return true
 	return false

@@ -7,16 +7,15 @@ extends RefCounted
 ## Game/Show methods as the live run (Game.record() is a no-op meanwhile, no Router/Save calls): RNG consumption
 ## (next_seed "battle"/"show"/"lootbox"/"gift"), Show reactions (hype, followers, milestones, achievements, sponsor
 ## gifts), safe-room bookkeeping and event rules (header.event_id → EventDef.rules) are identical by construction.
-## Battles follow §5.7 (BattleState + Show.begin_battle/on_battle_event/take_pending_gift/end_battle). The walk is
-## RunLog.walk (shared with RunSim.replay); checkpoint k = state after all commands with k' <= k. The live context
-## (state, log, sim, quest, …) is restored afterwards (Game._capture_context/_restore_context).
+## The walk is RunLog.walk (shared with RunSim.replay); checkpoint k = state after all commands with k' <= k. The live
+## context (state, log, sim, quest, …) is restored afterwards (Game._capture_context/_restore_context).
 ## Echtzeitkampf (07 §10.6, R5a): a real-time combat replays through the Game API of the live CombatDirector
 ## (Game.make_rt_setup, combat_boundary, combat_submit, combat_hint, combat_step, end_combat) in the exact loop of
 ## _combat; the combat checkpoints are compared tick by tick with the cursor of the replay's RunSim (check_combat); a
-## compacted log is replayed expanded; a real-time header starts from RunRules.rt_start.
+## compacted log is replayed expanded; a log that does not start at a save starts from RunRules.rt_start. The campaign
+## fights in real time only since R5b part 2b (the CTB battle went to the Stempelduell, 10 SD1).
 
 var game: Node                        # the Game autoload
-var _battle: BattleState = null       # the battle the walk is in (encounter → its battle / gift commands)
 
 
 func _init(p_game: Node) -> void:
@@ -32,14 +31,14 @@ func run(p_log: RunLog, until_tick: int) -> Dictionary:
 	if p_log == null:
 		return out
 	var src: RunLog = p_log.expanded() if p_log.has_batches() else p_log   # 07 §10.3: replays use the expanded form
+	out["version"] = RunSim.version_status(src.header)
+	if str(out["version"]) != "":                 # another kernel's log: not replayed, nor checked against this schema
+		out["errors"] = PackedStringArray([RunSim.version_error(src.header)])
+		return out
 	var errors: PackedStringArray = src.validate()
 	out["errors"] = errors
 	if game.replaying or game.in_battle:
-		errors.append("replay_log is not possible during a replay or a battle")
-		return out
-	out["version"] = RunSim.version_status(src.header)
-	if str(out["version"]) != "":
-		errors.append(RunSim.version_error(src.header))
+		errors.append("replay_log is not possible during a replay or a combat")
 		return out
 	if src.rejected > 0:
 		errors.append("log: %d entries rejected (out of tick order, duplicate / invalid cmd ids, malformed)"
@@ -78,7 +77,7 @@ func run(p_log: RunLog, until_tick: int) -> Dictionary:
 	# Casting (08 §2.7 Nr. 2): the header carries no name — the replayed state uses the default display name
 	var st: GameState = anchor if anchor != null else GameState.create_new(DB.data, int(header.get("slot", 0)),
 		GameState.DEFAULT_NAME, run_seed, difficulty)
-	if anchor == null and st != null and RunRules.header_realtime(header):
+	if anchor == null and st != null:
 		RunRules.rt_start(st, DB.data)                 # Echtzeitkampf (07 §12.1, R5a): like Game.new_game
 	game.state = st
 	if anchor != null:
@@ -116,7 +115,6 @@ func run(p_log: RunLog, until_tick: int) -> Dictionary:
 
 func _walk(p_log: RunLog, out: Dictionary, errors: PackedStringArray) -> void:
 	var cmds: Array[Dictionary] = p_log.cmds()
-	_battle = null
 	var advance: Callable = func(k: int) -> void:
 		_advance(k)
 	var apply_cmd: Callable = func(i: int, c: Dictionary) -> int:
@@ -126,12 +124,11 @@ func _walk(p_log: RunLog, out: Dictionary, errors: PackedStringArray) -> void:
 		if int(out["mismatch_at"]) < 0 and want != "" and StateHash.of(game.state) != want:
 			out["mismatch_at"] = cp
 	p_log.walk(advance, apply_cmd, on_checkpoint)
-	_battle = null
 
 
-## One command of the walk (index i) → the index of the next one (a battle replay consumes the gift commands recorded
-## at its turn boundaries). Non-battle commands pass RunRules.command_refusal first (the same legality check as
-## RunSim.command_refusal); refused ones are errors and skipped.
+## One command of the walk (index i) → the index of the next one (a combat replay consumes the entries of its combat).
+## Other commands pass RunRules.command_refusal first (the same legality check as RunSim.command_refusal); refused ones
+## are errors and skipped.
 func _cmd(cmds: Array[Dictionary], i: int, c: Dictionary, errors: PackedStringArray) -> int:
 	var next: int = i + 1
 	if RtCommand.is_combat_cmd(c):                 # Echtzeitkampf (07 §10.6): the combat loop consumes its entries
@@ -139,32 +136,12 @@ func _cmd(cmds: Array[Dictionary], i: int, c: Dictionary, errors: PackedStringAr
 			RunRules.combat_refusal(c, null, -1, -1)])
 		return next
 	match str(c.get("t", "")):
-		"encounter":
-			if c.has("rt"):                           # Echtzeitkampf (07 §10.6, R5a)
-				var why: String = RunRules.rt_refusal(c, game.state)
-				if why != "":
-					errors.append("cmd %d (encounter): refused by the rules (%s)" % [i, why])
-					return next
-				return _combat(cmds, i, c, errors)
-			_battle = _begin_battle(c)
-			if _battle != null:
-				next = _play(_battle.start(), cmds, next)
-				_end_if_finished()
+		"encounter":                                   # Echtzeitkampf (07 §10.6, R5a)
+			return _combat(cmds, i, c, errors)
 		"twist":                                   # 06-D: applied at its tick (buffered when ahead)
 			var why: String = _twist(c.get("twist", {}))
 			if why != "":
 				errors.append("cmd %d (twist '%s'): refused (%s)" % [i, RunRules.refused_id(c), why])
-		"battle":
-			if _battle == null or _battle.is_finished():
-				errors.append("cmd %d: battle command without an active battle" % i)
-			else:
-				var bc: BattleCommand = BattleCommand.from_dict(c.get("cmd", {}))
-				var why: String = _battle.validate(bc) if bc != null else "malformed battle command"
-				if why != "":
-					errors.append("cmd %d: battle command refused (%s)" % [i, why])
-				else:
-					next = _play(_battle.submit(bc), cmds, next)
-				_end_if_finished()
 		_:
 			var refusal: String = RunRules.command_refusal(game.state, DB.data, (game.sim as RunSim).rules, c,
 				game._floor_done, game._scene_ctx, (game.sim as RunSim).is_event_run())
@@ -203,58 +180,7 @@ func _twist(tw: Variant) -> String:
 	return game.apply_twist(tw)
 
 
-## §5.7 BattleController.run: setup (next_seed "battle"), BattleState, Show.begin_battle (next_seed "show"),
-## Events.battle_started.
-func _begin_battle(c: Dictionary) -> BattleState:
-	var setup: BattleSetup = game.make_battle_setup(str(c.get("enc", "")), int(c.get("adv", 0)),
-		str(c.get("group", "")), str(c.get("opener", "")))
-	if setup == null:
-		return null
-	var battle: BattleState = BattleState.new(setup, DB.data)
-	Show.begin_battle(setup)
-	Events.battle_started.emit(setup.encounter_id, setup.is_boss)
-	return battle
-
-
-## §5.7 _play: events → Show.on_battle_event; then (battle not finished) one pending gift. An external gift is recorded
-## when it is delivered (§3.5), i.e. as the "gift" command directly after this boundary → fed before take_pending_gift.
-## Returns the index of the next command.
-func _play(events: Array[ActionEvent], cmds: Array[Dictionary], i: int) -> int:
-	for e: ActionEvent in events:
-		if e != null:
-			Show.on_battle_event(e)
-	if _battle.is_finished():
-		return i
-	if i < cmds.size() and str((cmds[i].get("c", {}) as Dictionary).get("t", "")) == "gift":
-		Show.receive_gift((cmds[i]["c"] as Dictionary).get("gift", {}))
-		i += 1
-	var g: Dictionary = Show.take_pending_gift(_battle)
-	if not g.is_empty():
-		var gift_events: Array[ActionEvent] = _battle.apply_gift(g)
-		Show.note_battle_gift(g, gift_events)
-		for e: ActionEvent in gift_events:
-			if e != null:
-				Show.on_battle_event(e)
-	return i
-
-
-## §5.7 after the loop: battle_ended, apply_battle_result, Show.end_battle; DEFEAT → on_game_over(&"defeat").
-func _end_if_finished() -> void:
-	if not _battle.is_finished():
-		return
-	var result: BattleResult = _battle.result
-	_battle = null
-	if result == null:
-		game.in_battle = false
-		return
-	Events.battle_ended.emit(result.outcome, result.encounter_id)
-	game.apply_battle_result(result)
-	Show.end_battle(result)
-	if result.outcome == BattleResult.Outcome.DEFEAT:
-		game.on_game_over(&"defeat")
-
-
-## Non-battle commands → the same Game/Show method the live run used. false = not applicable (a QA Sponsor-Fenster the
+## The other commands → the same Game/Show method the live run used. false = not applicable (a QA Sponsor-Fenster the
 ## rules do not allow, a talent pick / casting / hero switch / secret / persona the core refuses, an unknown type);
 ## gifts Show refuses are reported through gift_rejected.
 func _apply(c: Dictionary) -> bool:

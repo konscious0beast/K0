@@ -64,7 +64,7 @@ func _ready() -> void:
 ## Capture still: a victory over two Kanalratten with a level up-free EXP gain, overkill credits and achievements.
 ## params {"demo": "talent"} (06 package B): Kai levels up onto L3 — LEVEL UP line + "TALENT BEREIT" chip.
 func _present_demo() -> void:
-	Game.ensure_state()
+	Game.ensure_state(&"ctb")                     # the CTB results still (07 E33: new games fight in real time)
 	var r: BattleResult = BattleResult.new()
 	r.outcome = BattleResult.Outcome.VICTORY
 	r.exp = 24

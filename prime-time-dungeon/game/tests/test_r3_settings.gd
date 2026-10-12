@@ -123,11 +123,14 @@ func test_debug_combat_mode_switch_for_new_games() -> void:
 	var sm: Control = _menu()
 	await wait_frames(2)
 	var c: Button = (sm.get("rows") as Dictionary)["combat_mode"]
-	Game.settings.combat_mode = &"ctb"
-	c.call("set_options", ["Rundenkampf", "Echtzeit"], 0)
+	assert_eq(Game.state.combat_mode, &"realtime", "the new game fights in real time (07 E33)")
+	Game.settings.combat_mode = &"realtime"
+	c.call("set_options", ["Rundenkampf", "Echtzeit"], 1)
 	c.call("step", 1)
-	assert_eq(Game.settings.combat_mode, &"realtime", "new games take it (07 §12.1)")
-	assert_eq(Game.state.combat_mode, &"ctb", "the running game keeps its mode")
+	assert_eq(Game.settings.combat_mode, &"ctb", "new games take it (07 §12.1)")
+	assert_eq(Game.state.combat_mode, &"realtime", "the running game keeps its mode")
+	c.call("step", 1)
+	assert_eq(Game.settings.combat_mode, &"realtime", "and back")
 
 
 func test_skills_page_shows_the_combat_bar_in_real_time_runs() -> void:

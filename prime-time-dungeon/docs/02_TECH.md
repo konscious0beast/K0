@@ -1070,7 +1070,9 @@ func adopt_loaded_state(st: GameState, p_log: RunLog) -> void   # Save.load_slot
 	# into p_log. Save emits game_loaded.
 func event_rules() -> Dictionary     # EventDef.rules of the running event run; {} in the campaign (Show → GiftPolicy)
 func emit_party_changed() -> void    # Game is the only party_changed emitter: Show calls it after an outside gift healed
-func ensure_state() -> void          # if not has_state(): ephemeral-safe new_game(0, "Kai", 1) — standalone scenes, capture, tests
+func ensure_state(p_mode: StringName = &"", p_seed: int = 1) -> void   # if not has_state(): ephemeral-safe new_game(0,
+	# "Kai", p_seed) — standalone scenes, capture, tests; p_mode pins the combat mode unless --combat= decides (the CTB
+	# battle scene asks for &"ctb", 07 E33)
 func floor_def() -> FloorDef         # DB.floor_def(state.floor_run.index)
 func start_floor(floor_index: int) -> void
 	# state.floor_run = FloorRun.create(DB.floor_def(i), state.seed, state.difficulty); clear_blocking_dialogs();
@@ -1343,6 +1345,8 @@ Laufzeitverhalten:
 | `regie_twists` (06-D) | bool | true | `game/regie_twists` — „Regie-Eingriffe (ab Etage 2)“, Offline-Regie 06 §5.7a |
 | `mod_live` (06-D) | StringName &"off"/&"lines"/&"lines_twists" | &"off" | `live/mod_live` — „M.O.D. live (Beta)“, Zeile nur in Debug-Builds mit URL |
 | `mod_live_url` (06-D) | String | "" | `live/mod_live_url` — nur in Debug-Builds gelesen (sonst ""); `--mod-live-url=` / `--mod-live=` überschreiben ebenfalls nur dort |
+| `combat_mode` (07) | StringName &"realtime"/&"ctb" | &"realtime" (`DEFAULT_COMBAT_MODE`, 07 E33; bis R5b-2a &"ctb") | `combat/combat_mode` — gilt für neue Spielstände; gelesen nur in Debug-Builds (Zeile „Kampfmodus (Debug)“) und nur aus einer Datei mit `meta/version` ≥ 2; die übrigen `[combat]`-Felder: 07 §7.8 |
+| — | int | `FILE_VERSION` = 2 | `meta/version` — seit 07 E33; eine Datei ohne (Version 1) trägt `combat_mode = "ctb"` als alten Standard, der beim Laden entfällt |
 
 Methoden: `func load_from_disk() -> void`, `func save_to_disk() -> Error` (ephemer: `OK` ohne Schreiben), `func to_dict() -> Dictionary`.
 Der Spielmodus (Prime Time / Vorabendprogramm) ist **keine** Einstellung, sondern `GameState.difficulty` (pro Spielstand).
@@ -1364,7 +1368,7 @@ Qualitätsstufen (angewendet von `Game.apply_settings()` auf `get_tree().root`; 
 var combat: RtSim = null              # the running real-time combat (null outside one; never part of a save)
 var combat_mode_override: StringName = &""   # --combat=realtime|ctb (boot argument; never written to settings)
 func is_realtime() -> bool            # state.combat_mode == &"realtime"
-func new_game_combat_mode() -> StringName     # the boot argument, else GameSettings.combat_mode
+func new_game_combat_mode() -> StringName     # the boot argument, else GameSettings.combat_mode (default realtime, E33)
 func make_rt_setup(cmd: Dictionary) -> RtSetup    # records the encounter (with "rt"), seed "battle",
 	# BattleBridge.make_rt_setup_rules (the run's rules), combat_started + battle_started, the ct-0 prelude
 func combat_boundary() -> void        # one tick boundary: at most one gift (external first, then system), 07 §9.2
@@ -4772,7 +4776,7 @@ func request_new_game(slot: int, player_name: String, skip_intro: bool, seed: in
 	# fallback outside the flow. The intro ends with the M.O.D. line hero_pick:<hero>, then the candidate's lower third.
 
 class_name BattleScene extends Node3D             # M5
-func setup(params: Dictionary) -> void            # {"setup": BattleSetup}; missing → Game.ensure_state() + debug setup
+func setup(params: Dictionary) -> void            # {"setup": BattleSetup}; missing → Game.ensure_state(&"ctb") + debug setup
 	# with first non-boss encounter of the current floor (seed 1) or {"encounter": "<enc id>"} (boss stills),
 	# {"capture": true} → stop at first command menu. BattleHud reserves the bottom corners of the M.O.D. box
 	# (Events.dialog_reserve_requested(&"battle", command menu / target panel + 12, party panels + 12)); its sub menus
@@ -5127,9 +5131,9 @@ für den Dev-Zustand der `--goto`-Ziele) und `--goto=<ziel>` nach der Boot-Karte
 | Ziel | Wirkung |
 |---|---|
 | `title` (oder leer) | Titel (Standard) |
-| `explore` | `_ensure_dev_state()` (`Game.new_game(0, "Kai", seed)` mit `--seed`, sonst `Game.ensure_state()`), Erkundung am Startpunkt |
+| `explore` | `_ensure_dev_state()` (`Game.ensure_state(mode, seed)`: Seed aus `--seed`, sonst 1; Kampfmodus aus `--combat=`, sonst der Standard Echtzeit), Erkundung am Startpunkt |
 | `safe_room` | wie `explore`, danach `Router.enter_safe_room(<erster Safe Room der Etage>)` |
-| `battle:<enc_id>` | wie `explore`, dann `Game.make_battle_setup(enc_id, 0, "")` → `Router.start_battle(setup)` (z. B. `battle:enc_f1_boss_hausmeister`) |
+| `battle:<enc_id>` | wie `explore` mit einem CTB-Zustand (`_ensure_dev_state(&"ctb")`, 07 E33 — die CTB-Kampfszene), dann `Game.make_battle_setup(enc_id, 0, "")` → `Router.start_battle(setup)` (z. B. `battle:enc_f1_boss_hausmeister`) |
 | `credits` | Abspann mit `{"from_title": true}` (zurück zum Titel) |
 | `lobby` | Event-Lobby `scenes/ui/event_lobby.tscn` |
 | `game_over` | `_ensure_dev_state()`, Game-Over-Screen mit Grund `&"timer"` |

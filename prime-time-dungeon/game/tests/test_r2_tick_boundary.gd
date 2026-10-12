@@ -264,18 +264,18 @@ func test_new_game_combat_mode_and_boot_argument() -> void:
 	assert_eq(Game.combat_mode_from_args(PackedStringArray(["--autoplay", "--combat=realtime"])), &"realtime")
 	assert_eq(Game.combat_mode_from_args(PackedStringArray(["--combat=ctb"])), &"ctb")
 	assert_eq(Game.combat_mode_from_args(PackedStringArray(["--combat=turbo"])), &"")
-	Game.combat_mode_override = &"realtime"
+	Game.combat_mode_override = &"ctb"
+	Game.new_game(0, "Kai", 4242)
+	assert_false(Game.is_realtime(), "the boot argument wins over the setting")
+	assert_false(Game.run_log.header.has("combat_mode"), "CTB headers unchanged")
+	Game.combat_mode_override = &""
 	Game.settings.combat_speed_pm = 700
 	Game.new_game(0, "Kai", 4242)
-	assert_true(Game.is_realtime(), "the boot argument wins over the setting")
+	assert_true(Game.is_realtime(), "real time is the default of new games (GameSettings.combat_mode, 07 E33)")
 	assert_eq(str(Game.run_log.header.get("combat_mode", "")), "realtime")
 	assert_eq(int(Game.run_log.header.get("rt_version", 0)), 1)
 	assert_eq(_speed_cmds(), [700], "a run that starts below 1000 ‰ records its speed")
-	Game.combat_mode_override = &""
 	Game.settings.combat_speed_pm = 1000
-	Game.new_game(0, "Kai", 4242)
-	assert_false(Game.is_realtime(), "CTB stays the default (GameSettings.combat_mode)")
-	assert_false(Game.run_log.header.has("combat_mode"), "CTB headers unchanged")
 
 
 static func _speed_cmds() -> Array[int]:

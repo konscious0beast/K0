@@ -72,7 +72,7 @@
 Die Nutzerin/der Nutzer hat Detailentscheidungen delegiert (Maßstab: gute UX, Spaß, Witz, **einfaches, sofort verständliches**
 Konzept; Grundsatzentscheidung „Variante 3 — WoW-light direkt in der Welt“). Ein unabhängiges Review fand 33 Punkte; so sind sie
 entschieden (Nummern = Review-Punkte). E25–E27 und E29 sind Entscheidungen des Orchestrators nach dem Review, E28 kommt aus
-der Konsistenzprüfung derselben Revision, E30 ist ein angenommener Änderungsantrag aus `08_CASTING` (CR-24), E31 und E32
+der Konsistenzprüfung derselben Revision, E30 ist ein angenommener Änderungsantrag aus `08_CASTING` (CR-24), E31–E33
 sind Entscheidungen des Orchestrators für R5b:
 
 | Nr. | Thema (Review) | Entscheidung | Wo |
@@ -109,6 +109,7 @@ sind Entscheidungen des Orchestrators für R5b:
 | E30 | Element-Abwehr gegen Prozent-Treffer (08 CR-24, angenommen) | **Prozent-Treffer tragen das Element ihres Skills:** Nach dem Grundwert faltet `rt_damage.gd` zuerst den Element-Faktor des Ziels für dieses Element (`element_mods`, auf 500–1500 ‰ begrenzt, Immunität zählt als 500); ohne Element kein Schritt. ATK, DEF, RES, Krit und Varianz wirken auf Prozent-Treffer weiterhin nicht. So wirken Element-Talente (06 B; die Starttalente aus 08 sind mit 08 CR-33 entfallen) in beiden Kampfmodi; R4 misst die Bänder (§11) mit E30. Dazu ein **gemeinsamer Vertrags-Durchgang R1a + 08 K0** mit genau einem `SIM_VERSION`-Sprung, in dem auch die K0-Zeilen in `data_validator.gd` stehen | §3.9.1, §6.3, §9.6, §10.2, §12.2, §12.3, §12.5 |
 | E31 | Unterhosen-Liga im Echtzeitkampf (Orchestrator, R5b) | **Eine** Liga-Regel im Kampf: Wer in der Liga kämpft (`MarottenRules.in_liga` bei der zu Kampfbeginn eingefrorenen Stufe, nie im Tutorial), ist **„leichtfüßig“** — Status `sts_light_footed` für den ganzen Kampf (`BattleBridge` hängt den Mod `{"src": "liga:mar_unterhose", "op": "on", "event": "combat_start"}` als letzten Eintrag der festen Mod-Reihenfolge an): **8 % schneller** (`move_pm` 1080 — Sim, Körper der Person und Bot lesen den Status) und als sim-gesteuerte Einheit **ein Viertel weniger übersehene Telegraphen** (`ai_miss_pm` 750 auf `AI_DODGE_MISS_PM`; der KI-Strom zieht wie zuvor); Flag `keep`: übersteht ein K.O. Angekündigt im Regeltext („Ohne Rüstung & ohne Accessoire: leichtfüßig …“: Liga-Marotte, Pausetab „Show“, Liga-Toast) und als Statussymbol im HUD. Der Liga-Wortlaut bleibt „ohne Rüstung & ohne Accessoire“ (E8); „leichtfüßig“ beschreibt den Schritt, nicht die Ausrüstung. Ziel der Abstimmung: Liga 1 je Held:in und Boss 5–15 Punkte schwerer als Liga 0, Königin in Liga 2 ≤ 80 % Niederlagen (Messung §11.5 „Stand R5b-1“) | §9.5, §11.5, 06 §4.3 |
 | E32 | Show-Ökonomie des Echtzeitkampfs (Orchestrator, R5b-2a) | Die Show-Zahlen des Echtzeitkampfs liegen in den Bändern von GDD §13 (§11.1). Ein Echtzeitkampf hat je Minute etwa dreimal so viele Anlässe wie ein CTB-Kampf (Auto-Angriffe, eine Combo alle 5 s, die SHOW alle 30 s); mit den R5a-Startwerten stand der Hype meist über 70, und fast jeder Kampf brachte ein Geschenk. Hebel im Profil `rt` (CTB unverändert): **Krit und Schwäche nur für Fähigkeitstreffer** (je +1, ein Auto-Angriff ist keine Aktion), **Combo +1, SHOW/FINALE +6 / +2** (halbe CTB-Werte), **Heilen ist keine Wiederholung** (wie Slot 1 — die Heilerin-Held:in verlor sonst ≈ 45 Hype je Bosskampf), **Sponsoren-Pause**: nach einem regulären Echtzeitkampf mit System-Geschenk bringen die nächsten 4 regulären keines (Bosskämpfe und externe Geschenke unberührt, §9.2), und **Follower × 600 ‰** je gewonnenem Echtzeitkampf (`RT_FOLLOWER_PM`). Gemessen mit `fullrun.sh --combat=realtime --strategy=typical --pace=human`, Seeds 101–110 je Held:in, Median vorher → nachher [Spanne nachher]: **Kai** Hype Start 40,5 → 38,8 [37–40,5], Ende 73 → 59,8 [55–64], Geschenke je Etage 17 → 7 [5–7], Follower 2 327 → 1 385 [1 317–1 417], Zuschauer-Spitze 6 274 → 4 880 [4 739–4 955], Etagenzeit 26:36 → 26:55 [25:28–27:36]; **Graf Mopsula** 40 → 38 [36,5–40,5], 69,2 → 57,8 [53–61,5], 16 → 6 [6–7], 2 194 → 1 312 [1 237–1 337], 6 081 → 4 776 [4 505–4 836], 26:25 → 27:10 [26:17–28:01] — alle Mediane in den Bändern (25–45, 45–65, 4–7, 1 200–1 500, 3 000–5 500, 22–28 min). Schneller Takt (`--pace=fast`, gleiche Seeds) Kai / Mopsula: Hype-Ende 79,8 / 77,5 → 75,2 / 70,5, Geschenke 20 / 19,5 → 8 / 7, Follower 2 587 / 2 486 → 1 682 / 1 583, Zuschauer 6 535 / 6 388 → 5 222 / 5 079 (die Bänder gelten für den menschlichen Takt). Im menschlichen Takt schwanken Läufe desselben Stands etwas (die M.O.D.-Zeile ist Darstellungs-Zufall, ihre Lesezeit verschiebt die Erkundung). `SIM_VERSION` 2 → 3: ältere Logs und Einträge zeigen „ältere Version“ (05 §4.3). Werte fest in `test_r5b_show_economy` | §9.1, §9.2, §11.2, §12.6 Nr. 3 |
+| E33 | Echtzeit ist Standard der Kampagne (Orchestrator, R5b-2a) | Neue Spiele kämpfen in Echtzeit: `GameSettings.combat_mode` startet mit `DEFAULT_COMBAT_MODE` = `&"realtime"`, ebenso `Game.new_game_combat_mode()` ohne Einstellungen und der Zustand einer allein gestarteten Szene (`Game.ensure_state`); die CTB-Kampfszene (`battle.tscn`, `--goto=battle:<enc>`, ihre Capture-Rezepte) holt sich weiter einen CTB-Zustand. **Spielstände behalten ihren gespeicherten Modus** — ein alter CTB-Spielstand kämpft weiter im CTB (keine Umrechnung vor Teil 2b, `SaveCodec` v2). Die Einstellungsdatei trägt `meta/version` = 2: In einer Datei der Version 1 steht `combat_mode = "ctb"` als alter Standard, nicht als Wahl, sie wird als Echtzeit gelesen; den Modus liest überhaupt nur ein Debug-Build. Die Zeile „Kampfmodus (Debug)“ und das Boot-Argument `--combat=ctb|realtime` bleiben. **Umgestellt, obwohl `typical` noch nicht aus Probespiel-Logs kalibriert ist** (§11.4, §12.6 Nr. 2): Der Harness erfüllt die Bänder §11.1 schon mit dem Startprofil, und das Probespiel liefert Echtzeit-Logs erst, wenn die Kampagne in Echtzeit startet; die Kalibrierung folgt mit `rt_balance.sh --nightly --strict-bands`. CTB wird **nicht gelöscht**, sondern in Teil 2b zum Minispiel „Stempelduell“ (10). Die Gates folgen dem Standard (`check.sh`, `fullrun.sh`, CI: Echtzeit, CTB mit `--combat=ctb`, §12.5) | §7.6, §7.8, §12.1, §12.5, §12.6 |
 
 ---
 
@@ -1987,7 +1988,7 @@ Rahmen = Status mit Restsekunden (§8.4). Auto-Angriff ist immer automatisch.
 | `auto_retarget` | an/aus | automatische Zielwahl nach einem Kill |
 | `floating_text_scale` | 100 / 125 / 150 % | Kampftext-Größe |
 | `camera_shake` | an/aus | Kamerawackeln |
-| `combat_mode` | `realtime` / `ctb` | nur bis R5b; neue Spielstände (§12.1) |
+| `combat_mode` | `realtime` / `ctb` | neue Spielstände (§12.1); Standard `realtime` seit E33, Zeile „Kampfmodus (Debug)“ nur in Debug-Builds |
 
 Farbenblind-sicher: Telegraphen tragen ihre Bedeutung über **Form, Streifen und Rand**, nicht über Farbe; Zauberleisten
 unterscheiden ihre drei Stufen über Rand + Schloss-Symbol + Ton; Status-Symbole haben Formen (03_ART-Paletten bleiben Zusatz).
@@ -2011,7 +2012,7 @@ unverändert (02_TECH §2.2).
 
 ### 7.8 Neue Felder `GameSettings` (R1a als Felder, R3 im Menü)
 
-`combat_mode: StringName = &"ctb"` (gilt für neue Spielstände; R5b stellt den Standard auf `&"realtime"` um, §12.1),
+`combat_mode: StringName = &"realtime"` (gilt für neue Spielstände; bis R5b-2a `&"ctb"`, E33, §12.1),
 `combat_speed_pm: int = 1000`, `combat_assist: int = -1` (−1 = automatisch: an bei Touch), `combat_camera_assist: int = -1`,
 `combat_hints: bool = true`, `telegraph_contrast: StringName = &"normal"`, `auto_attack_default: bool = true`,
 `auto_retarget: bool = true`, `floating_text_scale: int = 100`, `camera_shake: bool = true`. Schlüssel in `settings.cfg` unter
@@ -3090,11 +3091,13 @@ Gleiches Verhalten: alle Golden-Hashes unverändert (Benchmark, `canned`, die vi
 
 ### 12.1 Schalter (Feature-Flag)
 
-- `GameSettings.combat_mode: StringName` (`&"ctb"` | `&"realtime"`). **Standard bis R5b: `&"ctb"`**; Entwicklung/QA schalten über
-  das Einstellungsmenü (nur Debug-Builds) oder `--combat=realtime` (Boot-Argument, auch für `check.sh --shot`, Autoplay,
-  `fullrun.sh`). R5b stellt den Standard auf `&"realtime"` und entfernt danach CTB.
+- `GameSettings.combat_mode: StringName` (`&"ctb"` | `&"realtime"`). **Standard seit R5b-2a (E33): `&"realtime"`**
+  (`GameSettings.DEFAULT_COMBAT_MODE`; bis dahin `&"ctb"`); Entwicklung/QA schalten über das Einstellungsmenü (Zeile
+  „Kampfmodus (Debug)“, nur Debug-Builds; gelesen wird der Wert nur dort und nur aus einer Einstellungsdatei mit
+  `meta/version` ≥ 2) oder das Boot-Argument `--combat=ctb|realtime` (auch für `check.sh --shot`, Autoplay, `fullrun.sh`).
+  CTB wird nicht gelöscht, sondern in Teil 2b zum Minispiel „Stempelduell“ (§12.6, 10).
 - `GameState.combat_mode` (gespeichert, gehasht wenn ≠ `ctb`): neue Spiele übernehmen die Einstellung, geladene Spielstände
-  behalten ihren Modus (keine Umrechnung vor R5b). Der RunLog-Kopf trägt `combat_mode`.
+  behalten ihren Modus (keine Umrechnung vor Teil 2b, `SaveCodec` v2). Der RunLog-Kopf trägt `combat_mode`.
 - Verzweigungspunkte (die einzigen): `ExplorationScene` (Kampfstart: `Router.start_battle` vs. `CombatDirector`),
   `BattleBridge` (`make_setup` vs. `make_rt_setup`), `Progression.total_stats` (HP-Skala über `PartyMember.hp_scale_pm`),
   `RunSim.apply` (`encounter` mit/ohne `rt`), `RunSim._tick_once` (Regeneration nur im Echtzeitmodus, §2.7),

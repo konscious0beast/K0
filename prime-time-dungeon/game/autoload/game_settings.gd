@@ -3,9 +3,13 @@ class_name GameSettings extends RefCounted
 ## keep the defaults and never touch the disk.
 
 const PATH: String = "user://settings.cfg"
+## meta/version of the settings file. 2 (07 E33, R5b-2a): real time became the default of new games — a version-1 file
+## holds combat_mode "ctb" as the old default, not as a choice, and load_from_disk drops it.
+const FILE_VERSION: int = 2
 const MOD_LIVE_MODES: Array[StringName] = [&"off", &"lines", &"lines_twists"]   # 06-D
 # --- Echtzeitkampf (07, R1a): §7.8 vocabularies --------------------------------------------------------------------
 const COMBAT_MODES: Array[StringName] = [&"ctb", &"realtime"]
+const DEFAULT_COMBAT_MODE: StringName = &"realtime"                      # 07 E33 (R5b-2a; until then &"ctb")
 const COMBAT_SPEEDS_PM: PackedInt32Array = [1000, 850, 700]               # == RtVocab.COMBAT_SPEEDS (§10.7 O1)
 const TELEGRAPH_CONTRASTS: Array[StringName] = [&"normal", &"high"]
 
@@ -29,7 +33,9 @@ var regie_twists: bool = true               # game/regie_twists: offline Regie t
 var mod_live: StringName = &"off"           # live/mod_live: &"off" | &"lines" | &"lines_twists" (06 §5.3, opt-in)
 var mod_live_url: String = ""               # live/mod_live_url: mod-brain base URL (debug builds / --mod-live-url=)
 # --- Echtzeitkampf (07, R1a): fields of 07 §7.8, section [combat] (menu: R3) ---------------------------------------
-var combat_mode: StringName = &"ctb"        # combat/combat_mode: &"ctb" | &"realtime" — new games take it (§12.1)
+## combat/combat_mode: &"ctb" | &"realtime" — new games take it (§12.1); the switch is debug-only (release builds keep
+## DEFAULT_COMBAT_MODE, 07 E33).
+var combat_mode: StringName = DEFAULT_COMBAT_MODE
 var combat_speed_pm: int = 1000             # combat/combat_speed_pm ∈ {1000, 850, 700} (recorded as combat_speed)
 var combat_assist: int = -1                 # combat/combat_assist: -1 auto (on with touch), 0 off, 1 on (§5.6)
 var combat_camera_assist: int = -1          # combat/combat_camera_assist: -1 auto, 0 off, 1 on (§7.5)
@@ -101,7 +107,7 @@ func load_from_disk() -> void:
 	var ml: StringName = StringName(str(cfg.get_value("live", "mod_live", mod_live)))
 	mod_live = ml if MOD_LIVE_MODES.has(ml) else &"off"
 	mod_live_url = str(cfg.get_value("live", "mod_live_url", mod_live_url)) if OS.is_debug_build() else ""
-	_load_combat(cfg)                             # Echtzeitkampf (07, R1a)
+	_load_combat(cfg, int(cfg.get_value("meta", "version", 1)))   # Echtzeitkampf (07, R1a; E33)
 
 
 ## Writes user://settings.cfg. Ephemeral: returns OK without writing.
@@ -109,6 +115,7 @@ func save_to_disk() -> Error:
 	if ephemeral:
 		return OK
 	var cfg: ConfigFile = ConfigFile.new()
+	cfg.set_value("meta", "version", FILE_VERSION)
 	cfg.set_value("audio", "master", master_volume)
 	cfg.set_value("audio", "music", music_volume)
 	cfg.set_value("audio", "sfx", sfx_volume)
@@ -157,7 +164,7 @@ func to_dict() -> Dictionary:
 # --- Echtzeitkampf (07, R1a): §7.8 ------------------------------------------------------------------------------------
 
 func _reset_combat() -> void:
-	combat_mode = &"ctb"
+	combat_mode = DEFAULT_COMBAT_MODE
 	combat_speed_pm = 1000
 	combat_assist = -1
 	combat_camera_assist = -1
@@ -169,9 +176,12 @@ func _reset_combat() -> void:
 	camera_shake = true
 
 
-func _load_combat(cfg: ConfigFile) -> void:
-	var cm: StringName = StringName(str(cfg.get_value("combat", "combat_mode", combat_mode)))
-	combat_mode = cm if COMBAT_MODES.has(cm) else &"ctb"
+## `file_version`: meta/version of the file (1 without it). The combat mode is read only in debug builds (its switch
+## is debug-only, 07 §12.1) and only from a file of FILE_VERSION or later (07 E33: version 1 wrote "ctb" as default).
+func _load_combat(cfg: ConfigFile, file_version: int) -> void:
+	if OS.is_debug_build() and file_version >= FILE_VERSION:
+		var cm: StringName = StringName(str(cfg.get_value("combat", "combat_mode", combat_mode)))
+		combat_mode = cm if COMBAT_MODES.has(cm) else DEFAULT_COMBAT_MODE
 	var sp: int = int(cfg.get_value("combat", "combat_speed_pm", combat_speed_pm))
 	combat_speed_pm = sp if COMBAT_SPEEDS_PM.has(sp) else 1000
 	combat_assist = clampi(int(cfg.get_value("combat", "combat_assist", combat_assist)), -1, 1)

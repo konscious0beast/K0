@@ -314,12 +314,16 @@ func test_screen_modes_applied_and_restored() -> void:
 	tab.physical_keycode = KEY_TAB
 	tab.pressed = true
 	assert_false(tab.is_action_pressed(&"map"), "real-time combat: Tab is targeting, not the map")
+	Game.state.combat_mode = &"ctb"            # 07 E33: new games fight in real time — the CTB case of the input map
 	(r["hud"] as Node).call("finish", null)
 	await wait_frames(2)
 	assert_true(tab.is_action_pressed(&"map"), "a CTB run gets its map back")
 	assert_eq(o.get("mode"), &"explore", "back to the exploration overlay")
 	assert_false(bool(d.call("is_subtitle")), "the normal box again")
 	assert_eq(str(o.call("clock_chip_text")), "", "no chip outside combat")
+	Game.state.combat_mode = &"realtime"
+	CombatInput.apply_for_game()
+	assert_false(tab.is_action_pressed(&"map"), "a real-time run targets with Tab in the exploration too (07 §7.1)")
 
 
 func test_status_seconds_only_on_long_press() -> void:

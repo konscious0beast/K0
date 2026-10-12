@@ -61,6 +61,9 @@ func _initialize() -> void:
 	var game: Node = root.get_node_or_null("Game")
 	if game != null:
 		game.set("ephemeral", true)
+		# 07 E33: new games fight in real time — battle.tscn is the CTB battle scene, its game (--look) stays CTB
+		if scene_path.ends_with("/battle.tscn") and str(game.get("combat_mode_override")) == "":
+			game.set("combat_mode_override", &"ctb")
 		if touch:
 			var settings: Object = game.get("settings") as Object
 			if settings != null:

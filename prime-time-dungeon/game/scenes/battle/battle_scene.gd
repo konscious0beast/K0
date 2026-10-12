@@ -1,12 +1,12 @@
 class_name BattleScene extends Node3D
 ## Battle screen (02_TECH §5.7, §9.5): builds the stage (arena, rigs), the FF10-like camera, the HUD (CanvasLayer 5)
 ## and the results screen, then runs the BattleController. Screen contract: setup(params) only stores the params;
-## the work happens in _ready(). Params: {"setup": BattleSetup} (Router.start_battle); missing → Game.ensure_state()
-## and a debug setup with the first non-boss encounter of the current floor (seed 1); {"capture": true} → stops at the
-## first command menu (§9.5; enemy turns before it play at speed ≥ 3). Optional (tests/tools): "speed" (BattlePlayer
-## speed override), "results_auto_sec" (results continue on their own), "stay" (no Router.end_battle at the end),
-## "capture_turns" (party turns AutoPolicy plays before a capture stops, default 0), "encounter" (encounter id of the
-## debug setup instead of the first non-boss one, e.g. a boss battle still).
+## the work happens in _ready(). Params: {"setup": BattleSetup} (Router.start_battle); missing → a CTB dev state
+## (Game.ensure_state(&"ctb"), 07 E33) and a debug setup with the first non-boss encounter of the current floor
+## (seed 1); {"capture": true} → stops at the first command menu (§9.5; enemy turns before it play at speed ≥ 3).
+## Optional (tests/tools): "speed" (BattlePlayer speed override), "results_auto_sec" (results continue on their own),
+## "stay" (no Router.end_battle at the end), "capture_turns" (party turns AutoPolicy plays before a capture stops,
+## default 0), "encounter" (encounter id of the debug setup instead of the first non-boss one, e.g. a boss still).
 
 const BattleStage := preload("res://scenes/battle/battle_stage.gd")
 const BattleCamera := preload("res://scenes/battle/battle_camera.gd")
@@ -35,13 +35,13 @@ var speed_override: float = -1.0
 var _params: Dictionary = {}
 
 
-## {"setup": BattleSetup}; missing → Game.ensure_state() + debug setup; {"capture": true} → stop at first command menu.
+## {"setup": BattleSetup}; missing → CTB dev state + debug setup; {"capture": true} → stop at the first command menu.
 func setup(params: Dictionary) -> void:
 	_params = params
 
 
 func _ready() -> void:
-	Game.ensure_state()
+	Game.ensure_state(&"ctb")                     # a standalone battle scene plays a CTB game (07 E33)
 	capture = bool(_params.get("capture", false))
 	speed_override = float(_params.get("speed", -1.0))
 	var s: Variant = _params.get("setup", null)

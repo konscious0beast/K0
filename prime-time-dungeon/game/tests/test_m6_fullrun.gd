@@ -152,6 +152,15 @@ func test_shopping_list_buys_upgrades_then_bandages() -> void:
 		assert_ne(str((e as Array)[0]), "itm_bandage", "already 3 bandages")
 
 
+## The group goals among the bot's candidates.
+static func _group_goals(bot: Node, ex: ExplorationScene) -> PackedStringArray:
+	var groups: PackedStringArray = []
+	for c: Dictionary in bot.call("candidates", ex.get_layout(), Game.state.floor_run, {}):
+		if str(c["kind"]) == "group":
+			groups.append(str(c["id"]))
+	return groups
+
+
 func test_planner_on_floor_1() -> void:
 	Game.new_game(0, "Kai", 4242)
 	var ex: ExplorationScene = (load(SCENE_EXPLORATION) as PackedScene).instantiate() as ExplorationScene
@@ -180,14 +189,14 @@ func test_planner_on_floor_1() -> void:
 	for c: Dictionary in rush:
 		assert_true(str(c["kind"]) == "safe" or str(c["kind"]) == "gate", "rush: only safe rooms and gates")
 	bot.set("strategy", "typical")
-	var groups: PackedStringArray = []
-	var typical: Array[Dictionary] = bot.call("candidates", ex.get_layout(), Game.state.floor_run, {})
-	for c: Dictionary in typical:
-		if str(c["kind"]) == "group":
-			groups.append(str(c["id"]))
-	assert_len(groups, 11, "typical: 12 of the 15 regular groups (the tutorial is already defeated)")
+	var groups: PackedStringArray = _group_goals(bot, ex)
+	assert_len(groups, 12, "typical in real time (07 E33): 12 of the 15 regular groups (the tutorial is already "
+		+ "defeated) + the show boss (E26)")
 	for gid: String in FullRun.TYPICAL_SKIP:
 		assert_false(groups.has(gid), "typical leaves %s alone" % gid)
+	Game.state.combat_mode = &"ctb"
+	assert_len(_group_goals(bot, ex), 11, "a CTB run has no show-boss group")
+	Game.state.combat_mode = &"realtime"
 	bot.set("grind_fights", 2)
 	var wait: Dictionary = bot.call("next_objective")
 	assert_eq(str(wait["kind"]), "wait", "grinding after a boss defeat without a living stray: wait for one")

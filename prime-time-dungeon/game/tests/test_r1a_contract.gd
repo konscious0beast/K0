@@ -245,7 +245,7 @@ func test_events_signals_and_settings() -> void:
 	assert_eq(have.get("show_boss_spotted"), "String")
 	var s: GameSettings = GameSettings.new()
 	s.ephemeral = true
-	assert_eq(s.combat_mode, &"ctb", "CTB stays the default until R5b (07 §12.1)")
+	assert_eq(s.combat_mode, &"realtime", "real time is the default of new games since R5b-2a (07 E33)")
 	assert_eq(s.combat_speed_pm, 1000)
 	assert_eq([s.combat_assist, s.combat_camera_assist], [-1, -1])
 	assert_eq([s.combat_hints, s.auto_attack_default, s.auto_retarget, s.camera_shake], [true, true, true, true])
@@ -262,7 +262,7 @@ func test_settings_combat_section_round_trip() -> void:
 	var backup: String = FileAccess.get_file_as_string(path) if had else ""
 	var w: GameSettings = GameSettings.new()
 	w.ephemeral = false
-	w.combat_mode = &"realtime"
+	w.combat_mode = &"ctb"                                 # the debug switch (07 §12.1)
 	w.combat_speed_pm = 850
 	w.telegraph_contrast = &"high"
 	w.floating_text_scale = 130
@@ -271,7 +271,8 @@ func test_settings_combat_section_round_trip() -> void:
 	r.ephemeral = false
 	r.load_from_disk()
 	assert_eq([r.combat_mode, r.combat_speed_pm, r.telegraph_contrast, r.floating_text_scale],
-		[&"realtime", 850, &"high", 130], "[combat] section round trip")
+		[&"ctb" if OS.is_debug_build() else &"realtime", 850, &"high", 130],
+		"[combat] section round trip (the combat mode only in debug builds, 07 E33)")
 	var cfg: ConfigFile = ConfigFile.new()
 	assert_eq(cfg.load(path), OK)
 	assert_true(cfg.has_section("combat"), "keys live under [combat] (07 §7.8)")

@@ -281,10 +281,17 @@ func emit_party_changed() -> void:
 	Events.party_changed.emit()
 
 
-## Standalone scenes, capture, tests: ephemeral-safe new game in slot 0 with seed 1.
-func ensure_state() -> void:
-	if not has_state():
-		new_game(0, "Kai", 1)
+## Standalone scenes, capture, tests: ephemeral-safe new game in slot 0 with seed 1 (`p_seed`). `p_mode` pins its
+## combat mode unless the boot argument --combat= decides — the CTB battle scene asks for &"ctb" (07 E33: new games
+## fight in real time).
+func ensure_state(p_mode: StringName = &"", p_seed: int = 1) -> void:
+	if has_state():
+		return
+	var keep: StringName = combat_mode_override
+	if keep == &"":
+		combat_mode_override = p_mode
+	new_game(0, "Kai", p_seed)
+	combat_mode_override = keep
 
 
 ## DB.floor_def(state.floor_run.index); null without state.
@@ -1466,11 +1473,11 @@ static func combat_mode_from_args(args: PackedStringArray) -> StringName:
 	return &""
 
 
-## The combat mode a new game takes: the boot argument, else GameSettings.combat_mode.
+## The combat mode a new game takes: the boot argument, else GameSettings.combat_mode (real time by default, 07 E33).
 func new_game_combat_mode() -> StringName:
 	if combat_mode_override != &"":
 		return combat_mode_override
-	return settings.combat_mode if settings != null else &"ctb"
+	return settings.combat_mode if settings != null else GameSettings.DEFAULT_COMBAT_MODE
 
 
 ## New campaign games take the combat mode (07 §12.1); the run log header names a real-time run

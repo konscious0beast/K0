@@ -21,7 +21,7 @@
 #                         the bot fills the casting in (keyboard, Vorleben / hobby / traits); none = no casting
 #   --combat=realtime     07 §12.5 (R5b): the run fights in real time — the RtBotPlayer plays each combat as the
 #                         person (--rt-profile=typical|perfect|sloppy, default typical); log names get "_rt"
-#   --combat=ctb          the CTB run (default while CTB exists)
+#   --combat=ctb          the CTB run (default of this script while CTB exists; new games fight in real time, 07 E33)
 #
 # Env: GODOT=<path to godot 4.7 binary> (default: "godot" on PATH)
 set -uo pipefail
@@ -37,7 +37,7 @@ SEED_ARG=()
 PACE_ARG=()
 LIGA_ARG=()
 PERSONA_ARG=()
-COMBAT_ARG=()
+COMBAT_ARG=(--combat=ctb)
 PROFILE_ARG=()
 LOG_DIR=""
 for a in "$@"; do

@@ -107,7 +107,7 @@ func route() -> void:
 			Router.goto(EVENT_LOBBY)
 		_:
 			if target.begins_with("battle:"):
-				_ensure_dev_state()
+				_ensure_dev_state(&"ctb")                  # the CTB battle scene (07 E33: new games fight in real time)
 				var enc: String = target.trim_prefix("battle:")
 				Router.goto(Router.SCENE_EXPLORATION, {"spawn": &"start"})
 				var setup: BattleSetup = Game.make_battle_setup(enc, 0, "")
@@ -118,14 +118,10 @@ func route() -> void:
 				Router.goto(Router.SCENE_TITLE)
 
 
-func _ensure_dev_state() -> void:
-	if Game.has_state():
-		return
+## The dev state of a --goto target (seed 1 or --seed); `mode` pins its combat mode unless --combat= decides.
+func _ensure_dev_state(mode: StringName = &"") -> void:
 	var s: int = int(args.get("seed", -1))
-	if s >= 0:
-		Game.new_game(0, "Kai", s)
-	else:
-		Game.ensure_state()
+	Game.ensure_state(mode, s if s >= 0 else 1)
 
 
 func _build_logo() -> void:

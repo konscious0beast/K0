@@ -131,13 +131,18 @@ func _wants(section: String) -> bool:
 	return _only.is_empty() or _only.has(section)
 
 
-## The probe's new game (floor 1, FLOOR_SEED); with --look=worst a candidate persona in that look (K2).
-func _new_game() -> void:
+## The probe's new game (floor 1, FLOOR_SEED); with --look=worst a candidate persona in that look (K2). `mode`: the
+## exploration, CTB battle and leak sections measure a CTB game as before 07 E33 (new games fight in real time since),
+## the combat views a real-time one.
+func _new_game(mode: StringName = &"ctb") -> void:
 	var p: PersonaProfile = null
 	if not _look.is_empty():
 		p = PersonaProfile.canon(DB.data)
 		p.look = PersonaProfile.clean_look(_look, DB.data)
+	var keep: StringName = Game.combat_mode_override
+	Game.combat_mode_override = mode
 	Game.new_game(0, "Kai", FLOOR_SEED, &"prime", HeroRules.DEFAULT_HERO, p)
+	Game.combat_mode_override = keep
 
 
 func _run() -> void:
@@ -1179,9 +1184,7 @@ func _rt_explore_audit(scene: ExplorationScene) -> Dictionary:
 
 ## One scenario: {"name", "label", "acc", "time", "units", "extras", "quads"}.
 func _rt_scenario(sc: String) -> Dictionary:
-	Game.combat_mode_override = &"realtime"    # a new real-time game (07 §12.1, §3.9.4: run log header, HP scale)
-	_new_game()
-	Game.combat_mode_override = &""
+	_new_game(&"realtime")                     # a new real-time game (07 §12.1, §3.9.4: run log header, HP scale)
 	_rt_hints_before = Game.settings.combat_hints
 	Game.settings.combat_hints = false         # a first-time card would hold the ticks (07 §2.13): fixed load
 	await _build_exploration()

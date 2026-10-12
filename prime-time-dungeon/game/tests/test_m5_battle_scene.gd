@@ -37,12 +37,14 @@ func before_each() -> void:
 	_saved_auto = Game.auto_battle
 	_saved_scheme = Game.input_scheme
 	_ended.clear()
+	Game.combat_mode_override = &"ctb"         # the CTB battle scene (07 E33: new games fight in real time)
 	Game.new_game(0, "Kai", 4242)
 	Events.battle_ended.connect(_on_battle_ended)
 
 
 func after_each() -> void:
 	Engine.time_scale = 1.0
+	Game.combat_mode_override = &""
 	if Events.battle_ended.is_connected(_on_battle_ended):
 		Events.battle_ended.disconnect(_on_battle_ended)
 	Game.auto_battle = _saved_auto

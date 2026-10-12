@@ -31,11 +31,13 @@ func before_each() -> void:
 		_fixture = fixture_game_data()
 	if _fixture != null:
 		DB.data = _fixture
+	Game.combat_mode_override = &"ctb"         # the CTB exploration (07 E33: new games fight in real time, test_r2_*)
 	Game.new_game(0, "Kai", 4242)
 
 
 func after_each() -> void:
 	Engine.time_scale = 1.0
+	Game.combat_mode_override = &""
 	for a: StringName in [&"move_forward", &"move_back", &"move_left", &"move_right", &"sneak", &"action",
 			&"cam_left", &"cam_right"]:
 		Input.action_release(a)

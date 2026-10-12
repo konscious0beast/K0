@@ -62,9 +62,9 @@ run_tests() {
 }
 
 run_smoke() {
-  echo "== smoke (main scene, headless, autoplay, safety net 900 frames) =="
+  echo "== smoke (main scene, headless, autoplay --combat=ctb, safety net 900 frames) =="
   local out code
-  out="$(timeout 300 "$GODOT" --headless --path "$WORK" --quit-after 900 -- --autoplay 2>&1 | filter_noise)"
+  out="$(timeout 300 "$GODOT" --headless --path "$WORK" --quit-after 900 -- --autoplay --combat=ctb 2>&1 | filter_noise)"
   code=$?
   echo "$out" | tail -n 60
   if [ "$code" -ne 0 ] || echo "$out" | grep -qE "$ERR_RE"; then

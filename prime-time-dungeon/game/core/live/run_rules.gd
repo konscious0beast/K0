@@ -29,6 +29,7 @@ static func start_floor(state: GameState, data: GameData, index: int) -> bool:
 	TwistApplier.on_floor(state, index)                 # 06-D: twists end with their floor
 	if state.season != null:                            # Staffeln (09, ST1-B)
 		SeasonRules.on_floor_start(state, data, prev)
+		CastSim.on_floor_start(state, data, prev)       # ST1-F: the cast sees the candidate's arrival
 	return true
 
 
@@ -317,7 +318,8 @@ const SD_UNAVAILABLE: String = "sd_unavailable"      # 10 §6.8: the "sd" comman
 static func season_refusal(state: GameState, data: GameData, c: Dictionary) -> String:
 	var t: String = str(c.get("t", ""))
 	if t == "season" and str(c.get("op", "")) == "start":
-		return SeasonRules.refusal(state, data, c)
+		var why: String = SeasonRules.refusal(state, data, c)
+		return why if why != "" else CastSim.start_refusal(state, data, c)   # ST1-F: the cast block of the start
 	if state == null or state.season == null:
 		return NO_SEASON
 	match t:
@@ -344,21 +346,26 @@ static func season_moved(state: GameState, index: int) -> void:
 
 ## Applies an accepted season command (season_refusal == ""): the owning module's state change — THE rule the live
 ## game (Game's season facades) and RunSim.apply share. Returns its explore events (the stubs of the packages to come
-## change nothing).
+## change nothing). ST1-F: the start draws the AI cast (CastSim.on_start), and after every season command the cast
+## plays on to the season time now (CastSim.advance: the clock, "away", a pause, the tempo, "übernommen").
 static func apply_season(state: GameState, data: GameData, c: Dictionary) -> Array[ExploreEvent]:
+	var out: Array[ExploreEvent] = []
 	match str(c.get("t", "")):
 		"season", "clock", "sleep":
-			return SeasonRules.apply(state, data, c)
+			out = SeasonRules.apply(state, data, c)
+			if str(c.get("op", "")) == "start":
+				CastSim.on_start(state, data)
 		"away":
-			return SleepResolver.apply(state, data, c)
+			out = SleepResolver.apply(state, data, c)
 		"talent":
-			return TalentTree.apply(state, data, c)
+			out = TalentTree.apply(state, data, c)
 		"prof", "gather", "craft":
-			return Professions.apply(state, data, c)
+			out = Professions.apply(state, data, c)
 		"cast":
-			return CastSim.apply(state, data, c)
-	var none: Array[ExploreEvent] = []
-	return none
+			out = CastSim.apply(state, data, c)
+	if state != null and state.season != null:
+		out.append_array(CastSim.advance(state, data))
+	return out
 
 
 # --- Echtzeitkampf (07, R5a) ------------------------------------------------------------------------------------------

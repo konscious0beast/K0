@@ -11,6 +11,9 @@ extends TestCase
 ## run is season_late; the stubs of the packages to come (away, talent v2, prof, gather, craft, cast) still refuse with
 ## season_unavailable. The season block is complete (the fixture save carries it), the season's M.O.D. lines follow
 ## the anchor.
+## ST1-F (2026-10-12): CastSim is real (no stub header; its public API stays) — "cast" is CastSim's (a season without
+## an AI cast: no_cast); the name catalog has its ≥ 300 names, the cast lines follow the anchor too (validators/cast.gd
+## stays a stub until its schema hooks come, 02_TECH §0.8).
 
 const R1A := preload("res://tests/test_r1a_contract.gd")
 const SeasonMin := preload("res://tests/fixtures/season_min/season_min.gd")
@@ -92,20 +95,21 @@ const PROPERTIES: Dictionary = {
 		"program": "Array"},
 }
 
-## The stub files of ST0 → the ST1 package that owns them (09 §11.3, §11.4); ST1-B replaced its four (REAL).
+## The stub files of ST0 → the ST1 package that owns them (09 §11.3, §11.4); ST1-B replaced its four, ST1-F CastSim
+## (REAL).
 const STUBS: Dictionary = {
-	"res://core/season/sleep_resolver.gd": "G", "res://core/season/cast_sim.gd": "F",
+	"res://core/season/sleep_resolver.gd": "G",
 	"res://core/progression/talent_tree.gd": "D", "res://core/progression/professions.gd": "E",
 	"res://core/data/defs/profession_def.gd": "E",
 	"res://core/data/defs/recipe_def.gd": "E", "res://core/data/defs/theme_def.gd": "C",
 	"res://core/data/validators/professions.gd": "E",
 	"res://core/data/validators/cast.gd": "F", "res://core/data/validators/themes.gd": "C",
 }
-## ST1-B's former stubs, real since ST1-B (no stub header; the public API above stays).
+## The former stubs, real since ST1-B and ST1-F (no stub header; the public API above stays).
 const REAL: PackedStringArray = ["res://core/season/season_state.gd", "res://core/season/season_rules.gd",
-	"res://core/data/defs/season_def.gd", "res://core/data/validators/seasons.gd"]
-## The season commands whose module is still a stub (season_unavailable): ST1-G, -D, -E, -F.
-const STUB_CMDS: PackedStringArray = ["away", "talent", "prof", "gather", "craft", "cast"]
+	"res://core/data/defs/season_def.gd", "res://core/data/validators/seasons.gd", "res://core/season/cast_sim.gd"]
+## The season commands whose module is still a stub (season_unavailable): ST1-G, -D, -E.
+const STUB_CMDS: PackedStringArray = ["away", "talent", "prof", "gather", "craft"]
 
 ## One schema-valid sample of every season command (09 §9.1) and talent v2; the first is the start of a season.
 const SEASON_CMDS: Array[Dictionary] = [
@@ -266,6 +270,7 @@ func test_every_season_command_is_refused() -> void:
 		assert_eq(RunRules.season_refusal(st, data, c), "season_unavailable", "with a season, the stub: " + str(c["t"]))
 		assert_eq(RunRules.apply_season(st, data, c).size(), 0, "the stubs change nothing")
 	assert_eq(StateHash.of(st), before)
+	assert_eq(RunRules.season_refusal(st, data, SEASON_CMDS[9]), "no_cast", "ST1-F: CastSim decides (no AI cast)")
 	assert_eq(RunRules.season_refusal(st, data, SEASON_CMDS[0]), "season_started", "ST1-B: SeasonRules decides")
 	for c: Dictionary in [{"t": "clock", "sec": 60}, {"t": "sleep", "tactic": "careful"}, {"t": "season", "v": 1,
 			"op": "leave"}]:
@@ -439,7 +444,7 @@ func test_season_data() -> void:
 	assert_eq(str(data.material("mat_scrap_metal").get("name", "")), "Altmetall")
 	assert_eq(str(data.gather_node("nod_scrap_heap").get("prof", "")), "prf_scrap")
 	assert_eq(str(data.cast_profile("extra").get("name", "")), "Statist:in")
-	assert_eq(data.cast_names().size(), 1)
+	assert_true(data.cast_names().size() >= 300, "ST1-F: the name catalog (09 §4.2: ≥ 300 names)")
 	assert_eq(data.theme("thm_unterstadt").floors, PackedInt32Array([1]))
 	assert_eq(DB.season_def("ssn_basis").id, "ssn_basis")
 	assert_eq(DB.profession("prf_lab").name, "Labor")
@@ -488,6 +493,7 @@ func test_mod_lines_anchor() -> void:
 	assert_gt(at, 0, "the anchor")
 	assert_eq(str((lines[at] as Dictionary)["tag"]), "ssn_anchor")
 	for i in range(at + 1, lines.size()):        # ST1-B: the block of the seasons grows behind it (09 §11.4)
-		assert_true(str((lines[i] as Dictionary)["tag"]).begins_with("season_"), "behind the anchor: season lines only")
+		var tag: String = str((lines[i] as Dictionary)["tag"])
+		assert_true(tag.begins_with("season_") or tag.begins_with("cast_"), "behind the anchor: season lines only")
 	assert_true(DataValidator.is_valid_mod_tag("ssn_anchor"))
 	assert_true(str((lines[at - 1] as Dictionary)["tag"]).begins_with("persona_"), "behind block K")

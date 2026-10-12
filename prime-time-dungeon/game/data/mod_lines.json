@@ -4114,6 +4114,188 @@
 			"voice": "mod",
 			"text": "Weiter reicht das Programm noch nicht, die nächsten Kulissen sind im Aufbau. Sie waren bis zum Ende dabei.",
 			"weight": 1
+		},
+		{
+			"id": "mod_cast_intro_01",
+			"tag": "cast_intro",
+			"voice": "mod",
+			"text": "Sie sind nicht allein. Die anderen Kandidat:innen auch nicht. Einige sind sogar nett.",
+			"weight": 1
+		},
+		{
+			"id": "mod_cast_first_01",
+			"tag": "cast_first",
+			"voice": "mod",
+			"text": "Eilmeldung: {cand} hat Etage {floor} als Erstes erreicht. Die Kulissen sind noch feucht.",
+			"weight": 1
+		},
+		{
+			"id": "mod_cast_first_02",
+			"tag": "cast_first",
+			"voice": "mod",
+			"text": "Eilmeldung: Auf Etage {floor} steht jetzt jemand. {cand}, zuerst und ziemlich stolz.",
+			"weight": 1
+		},
+		{
+			"id": "mod_cast_first_03",
+			"tag": "cast_first",
+			"voice": "mod",
+			"text": "Eilmeldung: {cand} eröffnet Etage {floor}. Die Regie hat noch nicht mal das Licht an.",
+			"weight": 1
+		},
+		{
+			"id": "mod_cast_first_you_01",
+			"tag": "cast_first_you",
+			"voice": "mod",
+			"text": "Eilmeldung: Sie sind als Erstes auf Etage {floor}. Die KI-Konkurrenz prüft ihre Uhren.",
+			"weight": 1
+		},
+		{
+			"id": "mod_cast_first_you_02",
+			"tag": "cast_first_you",
+			"voice": "mod",
+			"text": "Etage {floor}, und Sie sind die erste Person hier. Bitte nichts anfassen, die Farbe ist frisch.",
+			"weight": 1
+		},
+		{
+			"id": "mod_cast_out_01",
+			"tag": "cast_out",
+			"voice": "mod",
+			"text": "Eilmeldung: {cand} ist raus. Wollte einen Rabattschild-Golem streicheln.",
+			"weight": 1
+		},
+		{
+			"id": "mod_cast_out_02",
+			"tag": "cast_out",
+			"voice": "mod",
+			"text": "Eilmeldung: Für {cand} ist auf Etage {floor} Sendeschluss. Ab jetzt im Studio, mit Kaffee.",
+			"weight": 1
+		},
+		{
+			"id": "mod_cast_out_03",
+			"tag": "cast_out",
+			"voice": "mod",
+			"text": "Eilmeldung: {cand} verlässt die Staffel auf Etage {floor}. Die Regie verbeugt sich kurz.",
+			"weight": 1
+		},
+		{
+			"id": "mod_cast_finale_01",
+			"tag": "cast_finale",
+			"voice": "mod",
+			"text": "Eilmeldung: {cand} hat das Große Finale gewonnen. Applaus aus der Konserve, aber ehrlich gemeint.",
+			"weight": 1
+		},
+		{
+			"id": "mod_cast_finale_02",
+			"tag": "cast_finale",
+			"voice": "mod",
+			"text": "Eilmeldung: {cand} ist Finalist:in dieser Staffel. Der Abspann läuft, nur noch nicht für alle.",
+			"weight": 1
+		},
+		{
+			"id": "mod_cast_record_01",
+			"tag": "cast_record",
+			"voice": "mod",
+			"text": "Neue Spitze unter den KI-Kandidat:innen: {cand}. Die Konkurrenz notiert hektisch.",
+			"weight": 1
+		},
+		{
+			"id": "mod_cast_record_02",
+			"tag": "cast_record",
+			"voice": "mod",
+			"text": "Wechsel an der Spitze der KI-Wertung: {cand} führt. Statistik ist auch Unterhaltung.",
+			"weight": 1
+		},
+		{
+			"id": "mod_cast_fboss_01",
+			"tag": "cast_fboss",
+			"voice": "mod",
+			"text": "Eilmeldung: {cand} hat den Etagenboss von Etage {floor} besiegt. Die Requisite kehrt schon zusammen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_cast_fboss_02",
+			"tag": "cast_fboss",
+			"voice": "mod",
+			"text": "{cand} gegen den Etagenboss von Etage {floor}: gewonnen. Die Kulisse wackelt noch.",
+			"weight": 1
+		},
+		{
+			"id": "mod_cast_collapse_01",
+			"tag": "cast_collapse",
+			"voice": "mod",
+			"text": "Etage {floor} ist eingestürzt. Die Regie hat {count} Kandidat:innen geborgen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_cast_collapse_02",
+			"tag": "cast_collapse",
+			"voice": "mod",
+			"text": "Einsturz auf Etage {floor}: {count} Kandidat:innen wurden pünktlich hinübergetragen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_cast_collapse_out_01",
+			"tag": "cast_collapse_out",
+			"voice": "mod",
+			"text": "Etage {floor} ist eingestürzt. Für {count} Kandidat:innen ist die Staffel vorbei.",
+			"weight": 1
+		},
+		{
+			"id": "mod_cast_collapse_out_02",
+			"tag": "cast_collapse_out",
+			"voice": "mod",
+			"text": "Einsturz auf Etage {floor}: {count} Kandidat:innen sitzen ab jetzt im Studio.",
+			"weight": 1
+		},
+		{
+			"id": "mod_cast_leave_01",
+			"tag": "cast_leave",
+			"voice": "mod",
+			"text": "{cand} ist ausgestiegen. Die KI übernimmt den Platz. Höflich, versteht sich.",
+			"weight": 1
+		},
+		{
+			"id": "mod_cast_hired_01",
+			"tag": "cast_hired",
+			"voice": "mod",
+			"text": "{cand} begleitet Sie für {count} Kämpfe. Bosse sind ausgenommen, steht im Vertrag.",
+			"weight": 1
+		},
+		{
+			"id": "mod_cast_hired_02",
+			"tag": "cast_hired",
+			"voice": "mod",
+			"text": "Verstärkung gebucht: {cand}. {count} Kämpfe, kein Bosskampf. Gute Zusammenarbeit!",
+			"weight": 1
+		},
+		{
+			"id": "mod_cast_help_01",
+			"tag": "cast_help",
+			"voice": "mod",
+			"text": "{cand} steckt in einem Kampf fest. Sie helfen? Die Regie nimmt das gern auf.",
+			"weight": 1
+		},
+		{
+			"id": "mod_cast_helped_01",
+			"tag": "cast_helped",
+			"voice": "mod",
+			"text": "{cand} ist frei und dankbar. Ein Gefallen ist notiert.",
+			"weight": 1
+		},
+		{
+			"id": "mod_cast_helped_02",
+			"tag": "cast_helped",
+			"voice": "mod",
+			"text": "Geschafft! {cand} schuldet Ihnen einen Gefallen. Steht jetzt im Drehbuch.",
+			"weight": 1
+		},
+		{
+			"id": "mod_cast_guest_end_01",
+			"tag": "cast_guest_end",
+			"voice": "mod",
+			"text": "{cand} verabschiedet sich. Abgemacht ist abgemacht.",
+			"weight": 1
 		}
 	]
 }

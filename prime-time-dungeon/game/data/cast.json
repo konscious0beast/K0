@@ -5,12 +5,1564 @@
 			"id": "extra",
 			"name": "Statist:in",
 			"weight": 50
+		},
+		{
+			"id": "rival",
+			"name": "Rival:in",
+			"weight": 15
+		},
+		{
+			"id": "helper",
+			"name": "Helfer:in",
+			"weight": 15
+		},
+		{
+			"id": "trader",
+			"name": "Händler:in",
+			"weight": 10
+		},
+		{
+			"id": "unlucky",
+			"name": "Pechvogel",
+			"weight": 10
 		}
 	],
 	"names": [
 		{
 			"name": "Hanne Hammerschlag",
 			"form": "f"
+		},
+		{
+			"name": "Adrian Anker",
+			"form": "m"
+		},
+		{
+			"name": "Ari Aufkleber",
+			"form": "n"
+		},
+		{
+			"name": "Armin Abakus",
+			"form": "m"
+		},
+		{
+			"name": "Aaron Akkordeon",
+			"form": "m"
+		},
+		{
+			"name": "Agnes Achterbahn",
+			"form": "f"
+		},
+		{
+			"name": "Antje Aquarell",
+			"form": "f"
+		},
+		{
+			"name": "Arne Amboss",
+			"form": "m"
+		},
+		{
+			"name": "Ada Alleskleber",
+			"form": "f"
+		},
+		{
+			"name": "Anna Ampel",
+			"form": "f"
+		},
+		{
+			"name": "Amelie Ahornblatt",
+			"form": "f"
+		},
+		{
+			"name": "Andi Aprikose",
+			"form": "n"
+		},
+		{
+			"name": "Alma Adventskranz",
+			"form": "f"
+		},
+		{
+			"name": "Anton Apfelkern",
+			"form": "m"
+		},
+		{
+			"name": "Alex Anorak",
+			"form": "n"
+		},
+		{
+			"name": "Adrian Ackerbohne",
+			"form": "m"
+		},
+		{
+			"name": "Ari Antenne",
+			"form": "n"
+		},
+		{
+			"name": "Armin Aktenordner",
+			"form": "m"
+		},
+		{
+			"name": "Aaron Applaus",
+			"form": "m"
+		},
+		{
+			"name": "Agnes Abendrot",
+			"form": "f"
+		},
+		{
+			"name": "Antje Aufzug",
+			"form": "f"
+		},
+		{
+			"name": "Bianca Butterbrot",
+			"form": "f"
+		},
+		{
+			"name": "Björn Bohnenranke",
+			"form": "m"
+		},
+		{
+			"name": "Bo Briefmarke",
+			"form": "n"
+		},
+		{
+			"name": "Bettina Brotkorb",
+			"form": "f"
+		},
+		{
+			"name": "Boris Buntstift",
+			"form": "m"
+		},
+		{
+			"name": "Bruno Besenstiel",
+			"form": "m"
+		},
+		{
+			"name": "Billie Baumhaus",
+			"form": "n"
+		},
+		{
+			"name": "Bea Brausepulver",
+			"form": "f"
+		},
+		{
+			"name": "Berit Brummkreisel",
+			"form": "f"
+		},
+		{
+			"name": "Britta Bücherwurm",
+			"form": "f"
+		},
+		{
+			"name": "Bastian Brezel",
+			"form": "m"
+		},
+		{
+			"name": "Benno Bügeleisen",
+			"form": "m"
+		},
+		{
+			"name": "Bianca Bettflasche",
+			"form": "f"
+		},
+		{
+			"name": "Björn Bratpfanne",
+			"form": "m"
+		},
+		{
+			"name": "Bo Blumentopf",
+			"form": "n"
+		},
+		{
+			"name": "Bettina Bilderrahmen",
+			"form": "f"
+		},
+		{
+			"name": "Boris Bleistift",
+			"form": "m"
+		},
+		{
+			"name": "Bruno Bauklotz",
+			"form": "m"
+		},
+		{
+			"name": "Billie Badeente",
+			"form": "n"
+		},
+		{
+			"name": "Bea Blechdose",
+			"form": "f"
+		},
+		{
+			"name": "Charlie Clementine",
+			"form": "n"
+		},
+		{
+			"name": "Clara Countdown",
+			"form": "f"
+		},
+		{
+			"name": "Celine Collage",
+			"form": "f"
+		},
+		{
+			"name": "Conny Cocktailkirsche",
+			"form": "n"
+		},
+		{
+			"name": "Cedric Cumulus",
+			"form": "m"
+		},
+		{
+			"name": "Charlotte Cappuccino",
+			"form": "f"
+		},
+		{
+			"name": "Conrad Croissant",
+			"form": "m"
+		},
+		{
+			"name": "Cleo Chili",
+			"form": "f"
+		},
+		{
+			"name": "Cora Cabrio",
+			"form": "f"
+		},
+		{
+			"name": "Cornelius Cocktailschirm",
+			"form": "m"
+		},
+		{
+			"name": "Charlie Cembalo",
+			"form": "n"
+		},
+		{
+			"name": "Clara Comicheft",
+			"form": "f"
+		},
+		{
+			"name": "Celine Chamäleon",
+			"form": "f"
+		},
+		{
+			"name": "Conny Cello",
+			"form": "n"
+		},
+		{
+			"name": "Cedric Clownfisch",
+			"form": "m"
+		},
+		{
+			"name": "Charlotte Couchkissen",
+			"form": "f"
+		},
+		{
+			"name": "Dunja Dreirad",
+			"form": "f"
+		},
+		{
+			"name": "Dario Dachboden",
+			"form": "m"
+		},
+		{
+			"name": "Dominik Drahtesel",
+			"form": "m"
+		},
+		{
+			"name": "Dani Dampfnudel",
+			"form": "n"
+		},
+		{
+			"name": "Dana Drehstuhl",
+			"form": "f"
+		},
+		{
+			"name": "Daphne Dosenöffner",
+			"form": "f"
+		},
+		{
+			"name": "Dennis Drachenflug",
+			"form": "m"
+		},
+		{
+			"name": "Dora Dampflok",
+			"form": "f"
+		},
+		{
+			"name": "David Dachrinne",
+			"form": "m"
+		},
+		{
+			"name": "Dunja Dauerregen",
+			"form": "f"
+		},
+		{
+			"name": "Dario Duftkerze",
+			"form": "m"
+		},
+		{
+			"name": "Dominik Deckel",
+			"form": "m"
+		},
+		{
+			"name": "Dani Dudelsack",
+			"form": "n"
+		},
+		{
+			"name": "Dana Dominostein",
+			"form": "f"
+		},
+		{
+			"name": "Daphne Duschvorhang",
+			"form": "f"
+		},
+		{
+			"name": "Dennis Diskokugel",
+			"form": "m"
+		},
+		{
+			"name": "Dora Donnerwetter",
+			"form": "f"
+		},
+		{
+			"name": "Erik Eisenbahn",
+			"form": "m"
+		},
+		{
+			"name": "Elias Erdbeere",
+			"form": "m"
+		},
+		{
+			"name": "Erika Einhorn",
+			"form": "f"
+		},
+		{
+			"name": "Esther Entenfeder",
+			"form": "f"
+		},
+		{
+			"name": "Emil Eiszapfen",
+			"form": "m"
+		},
+		{
+			"name": "Emma Eisberg",
+			"form": "f"
+		},
+		{
+			"name": "Egon Edelweiß",
+			"form": "m"
+		},
+		{
+			"name": "Eike Efeu",
+			"form": "n"
+		},
+		{
+			"name": "Eli Erdnuss",
+			"form": "n"
+		},
+		{
+			"name": "Edda Echolot",
+			"form": "f"
+		},
+		{
+			"name": "Elena Eimer",
+			"form": "f"
+		},
+		{
+			"name": "Erik Eintopf",
+			"form": "m"
+		},
+		{
+			"name": "Elias Eierlöffel",
+			"form": "m"
+		},
+		{
+			"name": "Erika Eiskaffee",
+			"form": "f"
+		},
+		{
+			"name": "Esther Eierbecher",
+			"form": "f"
+		},
+		{
+			"name": "Emil Espresso",
+			"form": "m"
+		},
+		{
+			"name": "Emma Eulenfeder",
+			"form": "f"
+		},
+		{
+			"name": "Franka Fischbrötchen",
+			"form": "f"
+		},
+		{
+			"name": "Ferdinand Filzstift",
+			"form": "m"
+		},
+		{
+			"name": "Fabian Federball",
+			"form": "m"
+		},
+		{
+			"name": "Felix Feuerwerk",
+			"form": "m"
+		},
+		{
+			"name": "Flo Freibad",
+			"form": "n"
+		},
+		{
+			"name": "Fenja Fliegenpilz",
+			"form": "f"
+		},
+		{
+			"name": "Finn Funkturm",
+			"form": "m"
+		},
+		{
+			"name": "Florian Feuerlöscher",
+			"form": "m"
+		},
+		{
+			"name": "Frida Fruchtgummi",
+			"form": "f"
+		},
+		{
+			"name": "Fiona Flaschenpost",
+			"form": "f"
+		},
+		{
+			"name": "Flora Faltboot",
+			"form": "f"
+		},
+		{
+			"name": "Franka Fernglas",
+			"form": "f"
+		},
+		{
+			"name": "Ferdinand Feuerzeug",
+			"form": "m"
+		},
+		{
+			"name": "Fabian Fahrradklingel",
+			"form": "m"
+		},
+		{
+			"name": "Felix Fledermaus",
+			"form": "m"
+		},
+		{
+			"name": "Flo Fanfare",
+			"form": "n"
+		},
+		{
+			"name": "Fenja Fensterbrett",
+			"form": "f"
+		},
+		{
+			"name": "Finn Flohmarkt",
+			"form": "m"
+		},
+		{
+			"name": "Gunnar Gitarre",
+			"form": "m"
+		},
+		{
+			"name": "Greta Goldfisch",
+			"form": "f"
+		},
+		{
+			"name": "Gina Glockenspiel",
+			"form": "f"
+		},
+		{
+			"name": "Gustav Geschenkband",
+			"form": "m"
+		},
+		{
+			"name": "Gregor Glasmurmel",
+			"form": "m"
+		},
+		{
+			"name": "Georg Grillzange",
+			"form": "m"
+		},
+		{
+			"name": "Gabi Gartenzwerg",
+			"form": "f"
+		},
+		{
+			"name": "Gerri Gewitter",
+			"form": "n"
+		},
+		{
+			"name": "Gesa Galopp",
+			"form": "f"
+		},
+		{
+			"name": "Gunda Gürteltier",
+			"form": "f"
+		},
+		{
+			"name": "Gerrit Gongschlag",
+			"form": "m"
+		},
+		{
+			"name": "Gunnar Grashüpfer",
+			"form": "m"
+		},
+		{
+			"name": "Greta Gartenschlauch",
+			"form": "f"
+		},
+		{
+			"name": "Gina Glitzerstaub",
+			"form": "f"
+		},
+		{
+			"name": "Gustav Gugelhupf",
+			"form": "m"
+		},
+		{
+			"name": "Gregor Gummibärchen",
+			"form": "m"
+		},
+		{
+			"name": "Georg Gummiband",
+			"form": "m"
+		},
+		{
+			"name": "Gabi Glühbirne",
+			"form": "f"
+		},
+		{
+			"name": "Henni Hollerbusch",
+			"form": "n"
+		},
+		{
+			"name": "Hannes Hängematte",
+			"form": "m"
+		},
+		{
+			"name": "Hilde Hausschlüssel",
+			"form": "f"
+		},
+		{
+			"name": "Heike Holzpferd",
+			"form": "f"
+		},
+		{
+			"name": "Hedi Hühnerleiter",
+			"form": "f"
+		},
+		{
+			"name": "Helga Hörspiel",
+			"form": "f"
+		},
+		{
+			"name": "Hanne Hutschachtel",
+			"form": "f"
+		},
+		{
+			"name": "Henning Hefezopf",
+			"form": "m"
+		},
+		{
+			"name": "Holger Heuballen",
+			"form": "m"
+		},
+		{
+			"name": "Harald Honigtopf",
+			"form": "m"
+		},
+		{
+			"name": "Hugo Haselnuss",
+			"form": "m"
+		},
+		{
+			"name": "Henni Hagelkorn",
+			"form": "n"
+		},
+		{
+			"name": "Hannes Heftklammer",
+			"form": "m"
+		},
+		{
+			"name": "Hilde Holzlöffel",
+			"form": "f"
+		},
+		{
+			"name": "Heike Hausboot",
+			"form": "f"
+		},
+		{
+			"name": "Hedi Himbeere",
+			"form": "f"
+		},
+		{
+			"name": "Imke Ingwer",
+			"form": "f"
+		},
+		{
+			"name": "Igor Isolierband",
+			"form": "m"
+		},
+		{
+			"name": "Irma Irrlicht",
+			"form": "f"
+		},
+		{
+			"name": "Ida Imbisswagen",
+			"form": "f"
+		},
+		{
+			"name": "Ivo Inventur",
+			"form": "m"
+		},
+		{
+			"name": "Isa Indigo",
+			"form": "n"
+		},
+		{
+			"name": "Ingo Inselfähre",
+			"form": "m"
+		},
+		{
+			"name": "Ines Iglu",
+			"form": "f"
+		},
+		{
+			"name": "Imke Insektenhotel",
+			"form": "f"
+		},
+		{
+			"name": "Igor Igel",
+			"form": "m"
+		},
+		{
+			"name": "Irma Isomatte",
+			"form": "f"
+		},
+		{
+			"name": "Ida Igelball",
+			"form": "f"
+		},
+		{
+			"name": "Jens Jackentasche",
+			"form": "m"
+		},
+		{
+			"name": "Jules Jubel",
+			"form": "n"
+		},
+		{
+			"name": "Judith Johannisbeere",
+			"form": "f"
+		},
+		{
+			"name": "Jo Jahrmarkt",
+			"form": "n"
+		},
+		{
+			"name": "Jonas Jonglierball",
+			"form": "m"
+		},
+		{
+			"name": "Jana Joghurtbecher",
+			"form": "f"
+		},
+		{
+			"name": "Jule Jazzband",
+			"form": "f"
+		},
+		{
+			"name": "Joscha Juxkiste",
+			"form": "m"
+		},
+		{
+			"name": "Jakob Jahrbuch",
+			"form": "m"
+		},
+		{
+			"name": "Johanna Jojo",
+			"form": "f"
+		},
+		{
+			"name": "Jens Jahreszeit",
+			"form": "m"
+		},
+		{
+			"name": "Kurt Kerzenständer",
+			"form": "m"
+		},
+		{
+			"name": "Kerstin Kirschkern",
+			"form": "f"
+		},
+		{
+			"name": "Kasimir Kompass",
+			"form": "m"
+		},
+		{
+			"name": "Kim Klettband",
+			"form": "n"
+		},
+		{
+			"name": "Konrad Kakaobohne",
+			"form": "m"
+		},
+		{
+			"name": "Knut Kuckucksuhr",
+			"form": "m"
+		},
+		{
+			"name": "Konstanze Knallfrosch",
+			"form": "f"
+		},
+		{
+			"name": "Katrin Kartoffelpuffer",
+			"form": "f"
+		},
+		{
+			"name": "Kiki Kaugummi",
+			"form": "n"
+		},
+		{
+			"name": "Kathi Kastanie",
+			"form": "f"
+		},
+		{
+			"name": "Kilian Klebeband",
+			"form": "m"
+		},
+		{
+			"name": "Kurt Kartenhaus",
+			"form": "m"
+		},
+		{
+			"name": "Kerstin Kochtopf",
+			"form": "f"
+		},
+		{
+			"name": "Kasimir Kugelblitz",
+			"form": "m"
+		},
+		{
+			"name": "Kim Kaffeekanne",
+			"form": "n"
+		},
+		{
+			"name": "Konrad Kerzenwachs",
+			"form": "m"
+		},
+		{
+			"name": "Knut Kühlschrank",
+			"form": "m"
+		},
+		{
+			"name": "Konstanze Kreisel",
+			"form": "f"
+		},
+		{
+			"name": "Katrin Kletterseil",
+			"form": "f"
+		},
+		{
+			"name": "Kiki Kleiderbügel",
+			"form": "n"
+		},
+		{
+			"name": "Lina Leiterwagen",
+			"form": "f"
+		},
+		{
+			"name": "Levin Lötkolben",
+			"form": "m"
+		},
+		{
+			"name": "Lilli Linsensuppe",
+			"form": "f"
+		},
+		{
+			"name": "Lotte Lindenblatt",
+			"form": "f"
+		},
+		{
+			"name": "Lio Lakritz",
+			"form": "n"
+		},
+		{
+			"name": "Lou Laubfrosch",
+			"form": "n"
+		},
+		{
+			"name": "Lars Lampenschirm",
+			"form": "m"
+		},
+		{
+			"name": "Leon Lavalampe",
+			"form": "m"
+		},
+		{
+			"name": "Luise Lochkarte",
+			"form": "f"
+		},
+		{
+			"name": "Lorenz Lagerfeuer",
+			"form": "m"
+		},
+		{
+			"name": "Lutz Laternenpfahl",
+			"form": "m"
+		},
+		{
+			"name": "Lena Lebkuchen",
+			"form": "f"
+		},
+		{
+			"name": "Luca Leuchtturm",
+			"form": "n"
+		},
+		{
+			"name": "Lina Limonade",
+			"form": "f"
+		},
+		{
+			"name": "Levin Löwenzahn",
+			"form": "m"
+		},
+		{
+			"name": "Lilli Lesezeichen",
+			"form": "f"
+		},
+		{
+			"name": "Lotte Luftballon",
+			"form": "f"
+		},
+		{
+			"name": "Lio Liegestuhl",
+			"form": "n"
+		},
+		{
+			"name": "Marta Melonenkern",
+			"form": "f"
+		},
+		{
+			"name": "Moritz Mohnblume",
+			"form": "m"
+		},
+		{
+			"name": "Micha Mondschein",
+			"form": "n"
+		},
+		{
+			"name": "Mats Mikado",
+			"form": "m"
+		},
+		{
+			"name": "Milan Mausefalle",
+			"form": "m"
+		},
+		{
+			"name": "Merle Mistgabel",
+			"form": "f"
+		},
+		{
+			"name": "Malte Marmelade",
+			"form": "m"
+		},
+		{
+			"name": "Mira Milchkanne",
+			"form": "f"
+		},
+		{
+			"name": "Mika Moosgummi",
+			"form": "n"
+		},
+		{
+			"name": "Mila Mixtape",
+			"form": "f"
+		},
+		{
+			"name": "Maxi Magnet",
+			"form": "n"
+		},
+		{
+			"name": "Maren Muschel",
+			"form": "f"
+		},
+		{
+			"name": "Mona Möwenfeder",
+			"form": "f"
+		},
+		{
+			"name": "Matti Mottenkugel",
+			"form": "m"
+		},
+		{
+			"name": "Marta Maulwurf",
+			"form": "f"
+		},
+		{
+			"name": "Moritz Maibaum",
+			"form": "m"
+		},
+		{
+			"name": "Micha Murmel",
+			"form": "n"
+		},
+		{
+			"name": "Mats Milchschaum",
+			"form": "m"
+		},
+		{
+			"name": "Milan Mondrakete",
+			"form": "m"
+		},
+		{
+			"name": "Niklas Notizzettel",
+			"form": "m"
+		},
+		{
+			"name": "Nils Nieselregen",
+			"form": "m"
+		},
+		{
+			"name": "Nele Nougat",
+			"form": "f"
+		},
+		{
+			"name": "Noah Nebelhorn",
+			"form": "m"
+		},
+		{
+			"name": "Nadja Nudelholz",
+			"form": "f"
+		},
+		{
+			"name": "Nina Nachtfalter",
+			"form": "f"
+		},
+		{
+			"name": "Noemi Nachtlicht",
+			"form": "f"
+		},
+		{
+			"name": "Nepomuk Nebelmaschine",
+			"form": "m"
+		},
+		{
+			"name": "Nicky Nusskuchen",
+			"form": "n"
+		},
+		{
+			"name": "Noa Notenblatt",
+			"form": "n"
+		},
+		{
+			"name": "Nik Nadelkissen",
+			"form": "n"
+		},
+		{
+			"name": "Norbert Nachschlag",
+			"form": "m"
+		},
+		{
+			"name": "Niklas Nashorn",
+			"form": "m"
+		},
+		{
+			"name": "Nils Nussknacker",
+			"form": "m"
+		},
+		{
+			"name": "Nele Nordlicht",
+			"form": "f"
+		},
+		{
+			"name": "Noah Nähkästchen",
+			"form": "m"
+		},
+		{
+			"name": "Olga Ölkännchen",
+			"form": "f"
+		},
+		{
+			"name": "Olli Opernglas",
+			"form": "n"
+		},
+		{
+			"name": "Oda Origami",
+			"form": "f"
+		},
+		{
+			"name": "Ottilie Orangensaft",
+			"form": "f"
+		},
+		{
+			"name": "Olivia Oldtimer",
+			"form": "f"
+		},
+		{
+			"name": "Otto Obstkorb",
+			"form": "m"
+		},
+		{
+			"name": "Oskar Ofenkartoffel",
+			"form": "m"
+		},
+		{
+			"name": "Oliver Ofenrohr",
+			"form": "m"
+		},
+		{
+			"name": "Ole Ozelot",
+			"form": "m"
+		},
+		{
+			"name": "Olga Osterei",
+			"form": "f"
+		},
+		{
+			"name": "Olli Oktopus",
+			"form": "n"
+		},
+		{
+			"name": "Oda Orgelpfeife",
+			"form": "f"
+		},
+		{
+			"name": "Pauline Pomelo",
+			"form": "f"
+		},
+		{
+			"name": "Paula Plüschtier",
+			"form": "f"
+		},
+		{
+			"name": "Pit Pfeffermühle",
+			"form": "m"
+		},
+		{
+			"name": "Philipp Paternoster",
+			"form": "m"
+		},
+		{
+			"name": "Piet Puzzleteil",
+			"form": "m"
+		},
+		{
+			"name": "Polly Pinnwand",
+			"form": "f"
+		},
+		{
+			"name": "Pascal Popcorn",
+			"form": "m"
+		},
+		{
+			"name": "Petra Papierflieger",
+			"form": "f"
+		},
+		{
+			"name": "Pat Pfannkuchen",
+			"form": "n"
+		},
+		{
+			"name": "Paul Plattenspieler",
+			"form": "m"
+		},
+		{
+			"name": "Pia Pusteblume",
+			"form": "f"
+		},
+		{
+			"name": "Pauline Purzelbaum",
+			"form": "f"
+		},
+		{
+			"name": "Paula Pfirsich",
+			"form": "f"
+		},
+		{
+			"name": "Pit Planschbecken",
+			"form": "m"
+		},
+		{
+			"name": "Philipp Pappkarton",
+			"form": "m"
+		},
+		{
+			"name": "Piet Pilzsuppe",
+			"form": "m"
+		},
+		{
+			"name": "Polly Pflasterstein",
+			"form": "f"
+		},
+		{
+			"name": "Pascal Pinsel",
+			"form": "m"
+		},
+		{
+			"name": "Petra Pustekuchen",
+			"form": "f"
+		},
+		{
+			"name": "Quinta Quietscheente",
+			"form": "f"
+		},
+		{
+			"name": "Quirin Quittengelee",
+			"form": "m"
+		},
+		{
+			"name": "Quentin Quaste",
+			"form": "m"
+		},
+		{
+			"name": "Quinn Quarkspeise",
+			"form": "n"
+		},
+		{
+			"name": "Quinta Quellwasser",
+			"form": "f"
+		},
+		{
+			"name": "Quirin Quirl",
+			"form": "m"
+		},
+		{
+			"name": "Quentin Quecksilber",
+			"form": "m"
+		},
+		{
+			"name": "Robert Ringelblume",
+			"form": "m"
+		},
+		{
+			"name": "Rosa Regenschirm",
+			"form": "f"
+		},
+		{
+			"name": "Ruben Riesenrad",
+			"form": "m"
+		},
+		{
+			"name": "Rudi Rumpelkammer",
+			"form": "m"
+		},
+		{
+			"name": "Remy Rettich",
+			"form": "n"
+		},
+		{
+			"name": "Rasmus Rollladen",
+			"form": "m"
+		},
+		{
+			"name": "Ricarda Rodelbahn",
+			"form": "f"
+		},
+		{
+			"name": "Rolf Rosine",
+			"form": "m"
+		},
+		{
+			"name": "Ruth Radiergummi",
+			"form": "f"
+		},
+		{
+			"name": "Robin Rührbesen",
+			"form": "n"
+		},
+		{
+			"name": "Romy Rührei",
+			"form": "f"
+		},
+		{
+			"name": "Ronja Rasenmäher",
+			"form": "f"
+		},
+		{
+			"name": "Ricky Regenbogen",
+			"form": "n"
+		},
+		{
+			"name": "Robert Rotkehlchen",
+			"form": "m"
+		},
+		{
+			"name": "Rosa Reißzwecke",
+			"form": "f"
+		},
+		{
+			"name": "Ruben Rauchmelder",
+			"form": "m"
+		},
+		{
+			"name": "Rudi Raumschiff",
+			"form": "m"
+		},
+		{
+			"name": "Remy Rhabarber",
+			"form": "n"
+		},
+		{
+			"name": "Sven Sonnenschirm",
+			"form": "m"
+		},
+		{
+			"name": "Sascha Stecknadel",
+			"form": "n"
+		},
+		{
+			"name": "Selma Sauerteig",
+			"form": "f"
+		},
+		{
+			"name": "Sina Strohhalm",
+			"form": "f"
+		},
+		{
+			"name": "Stefan Schaukelstuhl",
+			"form": "m"
+		},
+		{
+			"name": "Saskia Sandburg",
+			"form": "f"
+		},
+		{
+			"name": "Sunny Schnittlauch",
+			"form": "n"
+		},
+		{
+			"name": "Svea Spielkarte",
+			"form": "f"
+		},
+		{
+			"name": "Simon Staubwedel",
+			"form": "m"
+		},
+		{
+			"name": "Sören Stoppuhr",
+			"form": "m"
+		},
+		{
+			"name": "Sam Schneekugel",
+			"form": "n"
+		},
+		{
+			"name": "Sophie Sonnenblume",
+			"form": "f"
+		},
+		{
+			"name": "Samuel Spülschwamm",
+			"form": "m"
+		},
+		{
+			"name": "Sven Sägespäne",
+			"form": "m"
+		},
+		{
+			"name": "Sascha Seifenblase",
+			"form": "n"
+		},
+		{
+			"name": "Selma Schlagsahne",
+			"form": "f"
+		},
+		{
+			"name": "Sina Springseil",
+			"form": "f"
+		},
+		{
+			"name": "Stefan Sprudelwasser",
+			"form": "m"
+		},
+		{
+			"name": "Saskia Sternschnuppe",
+			"form": "f"
+		},
+		{
+			"name": "Sunny Strandkorb",
+			"form": "n"
+		},
+		{
+			"name": "Svea Schmetterling",
+			"form": "f"
+		},
+		{
+			"name": "Tanja Taschenlampe",
+			"form": "f"
+		},
+		{
+			"name": "Torben Teekessel",
+			"form": "m"
+		},
+		{
+			"name": "Tamara Trompete",
+			"form": "f"
+		},
+		{
+			"name": "Tobias Tomatensaft",
+			"form": "m"
+		},
+		{
+			"name": "Timo Tannenzapfen",
+			"form": "m"
+		},
+		{
+			"name": "Toni Tischglocke",
+			"form": "n"
+		},
+		{
+			"name": "Tessa Teppichklopfer",
+			"form": "f"
+		},
+		{
+			"name": "Thea Turmuhr",
+			"form": "f"
+		},
+		{
+			"name": "Till Tonband",
+			"form": "m"
+		},
+		{
+			"name": "Tiki Tamburin",
+			"form": "n"
+		},
+		{
+			"name": "Tilda Trampolin",
+			"form": "f"
+		},
+		{
+			"name": "Theo Tischtennis",
+			"form": "m"
+		},
+		{
+			"name": "Tanja Taschentuch",
+			"form": "f"
+		},
+		{
+			"name": "Torben Tapetenrolle",
+			"form": "m"
+		},
+		{
+			"name": "Tamara Topflappen",
+			"form": "f"
+		},
+		{
+			"name": "Tobias Teelicht",
+			"form": "m"
+		},
+		{
+			"name": "Timo Traumfänger",
+			"form": "m"
+		},
+		{
+			"name": "Toni Tortenheber",
+			"form": "n"
+		},
+		{
+			"name": "Tessa Tintenfass",
+			"form": "f"
+		},
+		{
+			"name": "Ute Umleitung",
+			"form": "f"
+		},
+		{
+			"name": "Uwe Uferweg",
+			"form": "m"
+		},
+		{
+			"name": "Ulf Ukulele",
+			"form": "m"
+		},
+		{
+			"name": "Uta Universum",
+			"form": "f"
+		},
+		{
+			"name": "Ulla Uhrwerk",
+			"form": "f"
+		},
+		{
+			"name": "Uli Unterlegscheibe",
+			"form": "n"
+		},
+		{
+			"name": "Udo Ulmenblatt",
+			"form": "m"
+		},
+		{
+			"name": "Ute Urknall",
+			"form": "f"
+		},
+		{
+			"name": "Uwe Umzugskarton",
+			"form": "m"
+		},
+		{
+			"name": "Ulf Uhu",
+			"form": "m"
+		},
+		{
+			"name": "Val Ventilator",
+			"form": "n"
+		},
+		{
+			"name": "Vera Vollmond",
+			"form": "f"
+		},
+		{
+			"name": "Vince Vogelhaus",
+			"form": "m"
+		},
+		{
+			"name": "Valentin Vorratsdose",
+			"form": "m"
+		},
+		{
+			"name": "Volker Vanillepudding",
+			"form": "m"
+		},
+		{
+			"name": "Valerie Videokassette",
+			"form": "f"
+		},
+		{
+			"name": "Vicky Vogelbeere",
+			"form": "f"
+		},
+		{
+			"name": "Val Vulkan",
+			"form": "n"
+		},
+		{
+			"name": "Vera Vergissmeinnicht",
+			"form": "f"
+		},
+		{
+			"name": "Wim Wackelpudding",
+			"form": "m"
+		},
+		{
+			"name": "Werner Walnuss",
+			"form": "m"
+		},
+		{
+			"name": "Wilma Waffeleisen",
+			"form": "f"
+		},
+		{
+			"name": "Winnie Wäschekorb",
+			"form": "n"
+		},
+		{
+			"name": "Wiebke Wollknäuel",
+			"form": "f"
+		},
+		{
+			"name": "Wanda Weckglas",
+			"form": "f"
+		},
+		{
+			"name": "Wendelin Würfelzucker",
+			"form": "m"
+		},
+		{
+			"name": "Wolfgang Wäscheklammer",
+			"form": "m"
+		},
+		{
+			"name": "Wim Wunderkerze",
+			"form": "m"
+		},
+		{
+			"name": "Werner Windspiel",
+			"form": "m"
+		},
+		{
+			"name": "Wilma Wolkenkratzer",
+			"form": "f"
+		},
+		{
+			"name": "Winnie Wanduhr",
+			"form": "n"
+		},
+		{
+			"name": "Wiebke Wanderkarte",
+			"form": "f"
+		},
+		{
+			"name": "Wanda Wetterhahn",
+			"form": "f"
+		},
+		{
+			"name": "Wendelin Wasserkocher",
+			"form": "m"
+		},
+		{
+			"name": "Wolfgang Wirbelwind",
+			"form": "m"
+		},
+		{
+			"name": "Zacharias Zahnrad",
+			"form": "m"
+		},
+		{
+			"name": "Zita Zirkuszelt",
+			"form": "f"
+		},
+		{
+			"name": "Zarah Zebrastreifen",
+			"form": "f"
+		},
+		{
+			"name": "Ziggy Zwetschge",
+			"form": "n"
+		},
+		{
+			"name": "Zino Zauberwürfel",
+			"form": "m"
+		},
+		{
+			"name": "Zeno Zeppelin",
+			"form": "m"
+		},
+		{
+			"name": "Zoe Zündholz",
+			"form": "f"
+		},
+		{
+			"name": "Zora Zeitlupe",
+			"form": "f"
+		},
+		{
+			"name": "Zacharias Zuckerwatte",
+			"form": "m"
+		},
+		{
+			"name": "Zita Zollstock",
+			"form": "f"
+		},
+		{
+			"name": "Zarah Zitronenfalter",
+			"form": "f"
+		},
+		{
+			"name": "Ziggy Zuckerstange",
+			"form": "n"
+		},
+		{
+			"name": "Zino Zimtschnecke",
+			"form": "m"
+		},
+		{
+			"name": "Zeno Zimtstern",
+			"form": "m"
 		}
 	]
 }

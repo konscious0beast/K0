@@ -412,6 +412,7 @@ func apply_battle_result(result: BattleResult) -> BattleRewards:
 		SponsorWindows.on_battle_result(state, sim.rules, DB.data, result)   # 06-C: comeback mark (06 §6 decision 3)
 	if state.season != null:   # Staffeln (09 §7, ST1-B): the death rule (no game over), the finale, the clock grace
 		_dispatch(SeasonRules.on_combat_end(state, DB.data, result))
+		_dispatch(CastSim.on_combat_end(state, DB.data, result))   # ST1-F: the guest (never in a boss fight)
 	if sim != null:
 		sim.request_checkpoint()   # 05 §3.3 Nr. 8: a checkpoint after every battle (written when the clock moves on)
 	_sync_twist_ends()             # 06-D: "battles" twists counted down in BattleBridge.apply_result
@@ -1622,7 +1623,8 @@ func start_season(slot: int, def_id: String, opts: Dictionary = {}, hero_id: Str
 	var cmd: Dictionary = {"t": "season", "v": Command.SEASON_VERSION, "op": "start", "def": def_id,
 		"format": def.format, "tempo": str(opts.get("tempo", "calendar")), "mode": season_mode,
 		"number": maxi(1, int(opts.get("number", int(Save.career().get("seasons", 0)) + 1))), "day0_utc": day0,
-		"collapse_utc": SeasonClock.schedule(day0, def.format), "cast": {}, "utc": now_utc}
+		"collapse_utc": SeasonClock.schedule(day0, def.format), "cast": CastSim.start_block(def, def.min_humans),
+		"utc": now_utc}
 	var run_seed: int = int(opts.get("seed", -1))
 	if run_seed == -1:
 		run_seed = int(Time.get_unix_time_from_system() * 1000.0) & 0x7FFFFFFF
@@ -1652,6 +1654,7 @@ func start_season(slot: int, def_id: String, opts: Dictionary = {}, hero_id: Str
 	Events.new_game_started.emit(slot)
 	if not replaying:
 		Show.say("season_start")
+	_cast_news_reset(0)                       # ST1-F: every breaking news of the new season is still to come
 	_season_autosave()
 	return true
 
@@ -1744,6 +1747,7 @@ func season_login() -> void:
 		_season_absence((wall - s.seen_unix) * clampi(season_speed, 1, SEASON_SPEED_MAX))
 	s.seen_unix = maxi(s.seen_unix, wall)
 	_season_saved_at = wall
+	_cast_news_reset(CastSim.last_seq(state))   # ST1-F: the news until the login are the Login-Bilanz's (ST1-G)
 
 
 ## Router.game_over in a season (09 §7): no game over — the death rule ran at the end of the combat
@@ -1824,6 +1828,8 @@ func _season_event(ev: ExploreEvent) -> void:
 		"left":
 			_season_autosave()
 			_season_goto.call_deferred(Router.SCENE_TITLE, "")
+		"cast":                                   # ST1-F: the answers to the candidate's own "cast" commands
+			_cast_answer(ev)
 
 
 ## The deferred route of a season event (after the frame's processing): the exploration of the new floor at
@@ -1893,6 +1899,7 @@ func _season_process() -> void:
 			_season_fight_ended = false
 	if wall - _season_saved_at >= SEASON_SAVE_SEC:
 		_season_autosave()
+	_cast_news()                              # ST1-F: the breaking news of the AI cast
 
 
 ## An absence of `sec` season seconds (09 §5.5): over seven days the rest becomes a pause "clamp", then "away" — the
@@ -1911,3 +1918,59 @@ func _season_absence(sec: int) -> void:
 ## The local UTC offset in seconds (Time zone bias of the system; the client's, never the core's).
 static func _season_tz_offset() -> int:
 	return int(Time.get_time_zone_from_system().get("bias", 0)) * 60
+
+
+# --- Staffeln (09 §4.6, ST1-F): the breaking news of the AI cast -----------------------------------------------------
+# The cast's newsworthy events (CastSim: the ticker of the season block) become M.O.D. lines cast_<kind> — at most one
+# per CAST_NEWS_GAP_SEC of play time, never in a combat, the most important one first (the rest stays in the ticker for
+# ST1-H's Staffel tab); in a session on floor 1 the introduction comes first (09 §0.5). Live only, never recorded:
+# presentation like every M.O.D. line (_cast_news at the end of _season_process: the season views, no combat, no
+# replay). The candidate's own "cast" commands get their answer right away (_cast_answer).
+
+const CAST_NEWS_GAP_SEC: float = 600.0     # 09 §4.6: höchstens eine Eilmeldung je 10 min Spielzeit
+## The answers to the candidate's "cast" commands and their guest (CastEvent kind → M.O.D. tag).
+const CAST_ANSWER_TAGS: Dictionary = {"hired": "cast_hired", "help": "cast_help", "helped": "cast_helped",
+	"guest_end": "cast_guest_end"}
+
+var _cast_news_seq: int = 0                # the cast's events up to this number were news (or are the login's)
+var _cast_news_at: float = -1.0e9          # play time of the last breaking news
+var _cast_intro_said: bool = false         # the introduction of the cast (09 §0.5) in this session
+
+
+## The next breaking news when it is due: the most important news since the last one (CastSim.news) as its M.O.D. line;
+## the less important ones leave the news (they stay in the ticker). A line Show suppresses comes again later.
+func _cast_news() -> void:
+	if replaying or state == null or state.season == null or combat != null or in_battle:
+		return
+	if state.play_time_sec - _cast_news_at < CAST_NEWS_GAP_SEC or not CastSim.has_cast(state):
+		return
+	var items: Array[Dictionary] = CastSim.news(state, DB.data, _cast_news_seq)
+	if items.is_empty():
+		return
+	var tag: String = str(items[0]["tag"])
+	var ctx: Dictionary = items[0]["ctx"]
+	if not _cast_intro_said and state.floor_run != null and state.floor_run.index == 1:
+		tag = "cast_intro"                    # 09 §0.5: "Sie sind nicht allein …" — the news follow
+		ctx = {}
+	if Show.say(tag, ctx) == "":
+		return
+	_cast_news_at = state.play_time_sec
+	if tag == "cast_intro":
+		_cast_intro_said = true
+	else:
+		_cast_news_seq = CastSim.last_seq(state)
+
+
+## A new season (0) or a login (the newest event: what happened before belongs to the Login-Bilanz, ST1-G).
+func _cast_news_reset(seq: int) -> void:
+	_cast_news_seq = seq
+	_cast_news_at = -1.0e9
+	_cast_intro_said = false
+
+
+## M.O.D. answers the candidate's own "cast" command (hire, help) and the guest's farewell (live only).
+func _cast_answer(ev: ExploreEvent) -> void:
+	var kind: String = str(ev.data.get("ev", ""))
+	if CAST_ANSWER_TAGS.has(kind):
+		Show.say(str(CAST_ANSWER_TAGS[kind]), {"cand": CastSim.label(state, DB.data, int(ev.data.get("who", -1))),
+			"count": int(ev.data.get("n", 0))})

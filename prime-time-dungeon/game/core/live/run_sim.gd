@@ -680,6 +680,8 @@ func _tick_once(out: Array[ExploreEvent]) -> bool:
 				return true
 			_over = true
 			return true
+		if state.season != null:   # Staffeln (09 §4.2, ST1-F): Am Stück the cast follows the binge clock
+			out.append_array(_season_events(CastSim.on_tick(state, data)))
 	# 2 explore seconds (pacifist counter)
 	if state.show != null and int(fr.stats.get("time_used_ticks", 0)) % TICKS_PER_SEC == 0:
 		var secs: int = int(state.show.stats.get("explore_seconds_since_battle", 0)) + 1
@@ -785,6 +787,7 @@ func _book_result(result: BattleResult) -> void:
 		_quest_feed({"type": "boss_defeated", "boss_id": result.boss_id})
 	if state.season != null:
 		_season_events(SeasonRules.on_combat_end(state, data, result))
+		_season_events(CastSim.on_combat_end(state, data, result))   # ST1-F: the guest (never in a boss fight)
 		return
 	if result.outcome == BattleResult.Outcome.DEFEAT:
 		_over = true

@@ -2,7 +2,18 @@
 
 Spielbare Builds baut die CI (README, Abschnitt 4 „Spielbare Builds“). Hier steht je Build, was für Spieler:innen neu ist.
 
-## 0.3.0 – Vorschau 4: nur noch Echtzeit
+## 0.3.0 – Vorschau 5: Stempelduell
+
+- **Neues Minispiel „Stempelduell“** unter Titel → **Extras**: ein Kartenduell am Amtsschalter. Wer an der Reihe ist, zeigt
+  die **Wartenummern-Anzeige**; lange Formulare bedeuten lange Wartezeit. 24 Karten, drei Gegenüber (Ferdi Durchschlag,
+  Ulla Umlauf, der Stempelmeister) und ein Übungsduell gegen Graf Mopsula.
+- **Lernduell** in sechs kurzen Lektionen; danach gibt es die Grundakte mit einer fertigen Startmappe.
+- **Schalterhalle, Aktenschrank (drei Mappen à 20 Karten), Stempelalbum** mit Stempelheft und Dienstauszeichnungen. Karten
+  gibt es nur durch Spielen, nichts ist käuflich oder gewürfelt.
+- Spielbar mit Tastatur, Gamepad und Touch; Hilfen wie Tipps vom Grafen, „Der Graf übernimmt“, Tempo, weniger Bewegung,
+  Linkshänder-Spiegelung und Textgröße bis 150 %.
+
+## 0.3.0 – Vorschau 4 (build-80): nur noch Echtzeit
 
 - **Alte Spielstände spielen jetzt in Echtzeit:** Spielstände aus Vorschau 1 (rundenbasiert) werden beim Laden einmal
   umgestellt (Spielstand-Version 2, Lebenspunkte im neuen Maßstab) und kämpfen danach in Echtzeit weiter.

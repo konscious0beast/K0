@@ -64,8 +64,8 @@ Prüfwerkzeuge (`tools/`).
   Show-Zahlen liegen in den Bändern des GDD (07 E32: Hype, Sponsor-Geschenke, Follower, Zuschauer). Autoplay-Smoke und
   Full-Run-Bot prüfen ihn in CI. Die Daten tragen die Echtzeit-Werte (HP × 4); Spielstände von vor der Umstellung laden ins
   neue Format (Version 2) und spielen in Echtzeit weiter. **Der Rundenkampf (CTB) lebt im Minispiel „Stempelduell“ weiter:**
-  Seine Engine liegt eingefroren in `game/core/stempel/ctb/` (Golden- und Grenztest), das Minispiel selbst folgt
-  (`docs/10_MINISPIEL_STEMPELDUELL.md`, SD2).
+  Seine Engine liegt eingefroren in `game/core/stempel/ctb/` (Golden- und Grenztest); das Minispiel ist als Vorschau unter
+  Titel → Extras spielbar (Abschnitt „Stempelduell“ unten, `docs/10_MINISPIEL_STEMPELDUELL.md`).
 - **Kampf eröffnen** (07 E34–E37, Stand Pull): Außerhalb des Kampfes wählt man den Anführer einer Gruppe als Ziel und
   eröffnet mit einer Fähigkeit (Tastatur, Gamepad und Touch); von hinten, gegen eine ahnungslose oder angebellte Gruppe ist
   das ein Erstschlag — als Graf Mopsula reicht „bellen, dann 1“.
@@ -76,7 +76,7 @@ Prüfwerkzeuge (`tools/`).
   Follower. Show-Chip im Overlay, Pausemenü-Reiter „Show“, Achievement-Kette „Ohne alles“.
 - SHOWRUN S0: 2 Offline-Events (`evt_offline_gleis9`, `evt_offline_pacifist`), Event-Lobby, Ergebnis-Screen, lokale Bestenliste,
   Replay-Prüfung.
-- Qualitätssicherung: rund 1 600 automatische Tests (darunter Golden- und Grenztest der Stempelduell-Engine),
+- Qualitätssicherung: rund 1 700 automatische Tests (darunter Golden- und Grenztest der Stempelduell-Engine),
   Autoplay-Smoke-Test im Echtzeitkampf (`AUTOPLAY: OK`), Full-Run-Bot, der Etage 1 mit drei Strategien und als Graf Mopsula
   durchspielt, Balance-Harness des Echtzeitkampfs, Performance-Probe (`PERF: OK`) und der CI-Workflow `ptd-check`.
 

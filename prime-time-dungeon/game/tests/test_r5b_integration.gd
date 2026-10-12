@@ -182,9 +182,9 @@ func test_an_event_run_fights_in_real_time_and_replays_in_both_verifiers() -> vo
 	assert_true(Game.is_realtime(), "the event's rules: real time")
 	var h: Dictionary = Game.run_log.header
 	assert_eq([h.get("combat_mode", ""), h.get("rt_version", 0)], ["realtime", RunRules.RT_VERSION])
-	var scale: int = RtBalance.from_data(DB.data).i("HP_SCALE_PM")
 	for m: PartyMember in Game.state.party:
-		assert_eq(m.hp_scale_pm, scale, "%s: real-time HP (07 §3.9.4)" % m.id)
+		assert_eq(m.hp, Progression.total_stats(m, DB.data).values[StatBlock.Stat.HP],
+			"%s: full real-time HP (07 §3.9.4)" % m.id)
 	var cmd: Dictionary = _tutorial_cmd()
 	assert_false(cmd.is_empty(), "the tutorial group of the event's floor")
 	assert_not_null(Game.make_rt_setup(cmd), "a real-time combat")

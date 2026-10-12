@@ -45,7 +45,7 @@
 			"damage_type": "physical",
 			"element": "physical",
 			"power": 160,
-			"mp_cost": 3,
+			"mp_cost": 2,
 			"rank": 4,
 			"anim": "attack",
 			"vfx": "slash",
@@ -55,7 +55,6 @@
 			"rt": {
 				"icon": "mop_swing",
 				"range_cm": 250,
-				"mp": 2,
 				"threat_pm": 2000
 			}
 		},
@@ -156,20 +155,20 @@
 			"element": "physical",
 			"power": 100,
 			"rank": 3,
+			"statuses": [
+				{
+					"id": "sts_poison",
+					"chance_pm": 300,
+					"ms": 6000,
+					"to": "target"
+				}
+			],
 			"anim": "attack",
 			"vfx": "bite",
 			"rt": {
 				"icon": "bite",
 				"range_cm": 220,
-				"cooldown_ms": 10000,
-				"statuses": [
-					{
-						"id": "sts_poison",
-						"chance_pm": 300,
-						"ms": 6000,
-						"to": "target"
-					}
-				]
+				"cooldown_ms": 10000
 			}
 		},
 		{
@@ -180,7 +179,7 @@
 			"target": "single_ally",
 			"damage_type": "heal",
 			"heal_mode": "fixed",
-			"power": 45,
+			"power": 180,
 			"rank": 2,
 			"anim": "item",
 			"rt": {
@@ -218,21 +217,21 @@
 			"power": 70,
 			"mp_cost": 3,
 			"rank": 3,
+			"statuses": [
+				{
+					"id": "sts_slow",
+					"chance_pm": 900,
+					"ms": 4000,
+					"to": "target"
+				}
+			],
 			"anim": "attack",
 			"rt": {
 				"icon": "leash_lasso",
 				"cooldown_ms": 12000,
 				"gcd": false,
 				"range_cm": 800,
-				"interrupt": true,
-				"statuses": [
-					{
-						"id": "sts_slow",
-						"chance_pm": 900,
-						"ms": 4000,
-						"to": "target"
-					}
-				]
+				"interrupt": true
 			}
 		},
 		{
@@ -335,6 +334,18 @@
 		{
 			"user": "party",
 			"rank": 3,
+			"statuses": [
+				{
+					"id": "sts_taunted",
+					"ms": 4000,
+					"to": "target"
+				},
+				{
+					"id": "sts_guard",
+					"ms": 6000,
+					"to": "self"
+				}
+			],
 			"id": "skl_kai_taunt",
 			"name": "Hier spielt die Musik!",
 			"category": "buff",
@@ -355,19 +366,7 @@
 				"aoe": {
 					"center": "self",
 					"radius_cm": 1000
-				},
-				"statuses": [
-					{
-						"id": "sts_taunted",
-						"ms": 4000,
-						"to": "target"
-					},
-					{
-						"id": "sts_guard",
-						"ms": 6000,
-						"to": "self"
-					}
-				]
+				}
 			}
 		},
 		{
@@ -399,6 +398,14 @@
 		{
 			"user": "party",
 			"rank": 3,
+			"statuses": [
+				{
+					"id": "sts_stun",
+					"chance_pm": 1000,
+					"ms": 1500,
+					"to": "target"
+				}
+			],
 			"id": "skl_kai_cable_whip",
 			"name": "Kabelpeitsche",
 			"category": "attack",
@@ -416,15 +423,7 @@
 				"cooldown_ms": 18000,
 				"gcd": false,
 				"range_cm": 600,
-				"interrupt": true,
-				"statuses": [
-					{
-						"id": "sts_stun",
-						"chance_pm": 1000,
-						"ms": 1500,
-						"to": "target"
-					}
-				]
+				"interrupt": true
 			}
 		},
 		{
@@ -456,6 +455,14 @@
 		{
 			"user": "party",
 			"rank": 3,
+			"statuses": [
+				{
+					"id": "sts_burn",
+					"ms": 6000,
+					"to": "target",
+					"tick_power": 20
+				}
+			],
 			"id": "skl_kai_deo_torch",
 			"name": "Deo-Flammenwerfer",
 			"category": "attack",
@@ -479,15 +486,7 @@
 					"center": "self",
 					"radius_cm": 500,
 					"cone_deg": 60
-				},
-				"statuses": [
-					{
-						"id": "sts_burn",
-						"ms": 6000,
-						"to": "target",
-						"tick_power": 20
-					}
-				]
+				}
 			}
 		},
 		{
@@ -516,6 +515,14 @@
 		{
 			"user": "party",
 			"rank": 3,
+			"statuses": [
+				{
+					"id": "sts_slow",
+					"chance_pm": 1000,
+					"ms": 4000,
+					"to": "target"
+				}
+			],
 			"id": "skl_mop_frost_sneeze",
 			"name": "Frostniesen",
 			"category": "magic",
@@ -531,20 +538,19 @@
 			"rt": {
 				"icon": "pug_nose_ice",
 				"cooldown_ms": 6000,
-				"range_cm": 1500,
-				"statuses": [
-					{
-						"id": "sts_slow",
-						"chance_pm": 1000,
-						"ms": 4000,
-						"to": "target"
-					}
-				]
+				"range_cm": 1500
 			}
 		},
 		{
 			"user": "party",
 			"rank": 3,
+			"statuses": [
+				{
+					"id": "sts_haste",
+					"ms": 10000,
+					"to": "target"
+				}
+			],
 			"id": "skl_mop_expert_opinion",
 			"name": "Gräfliches Gutachten",
 			"category": "buff",
@@ -557,14 +563,7 @@
 			"rt": {
 				"icon": "scroll_seal",
 				"cooldown_ms": 25000,
-				"range_cm": 2000,
-				"statuses": [
-					{
-						"id": "sts_haste",
-						"ms": 10000,
-						"to": "target"
-					}
-				]
+				"range_cm": 2000
 			}
 		},
 		{
@@ -596,6 +595,13 @@
 		{
 			"user": "party",
 			"rank": 3,
+			"statuses": [
+				{
+					"id": "sts_regen",
+					"ms": 10000,
+					"to": "target"
+				}
+			],
 			"id": "skl_mop_mass_lick",
 			"name": "Massen-Schlabbern",
 			"category": "heal",
@@ -616,14 +622,7 @@
 			"rt": {
 				"icon": "two_tongues",
 				"cooldown_ms": 20000,
-				"cast_ms": 2000,
-				"statuses": [
-					{
-						"id": "sts_regen",
-						"ms": 10000,
-						"to": "target"
-					}
-				]
+				"cast_ms": 2000
 			}
 		},
 		{
@@ -652,6 +651,14 @@
 		{
 			"user": "party",
 			"rank": 3,
+			"statuses": [
+				{
+					"id": "sts_burn",
+					"ms": 6000,
+					"to": "target",
+					"tick_power": 20
+				}
+			],
 			"id": "skl_mop_inferno",
 			"name": "Gräfliches Inferno",
 			"category": "magic",
@@ -672,15 +679,7 @@
 				"aoe": {
 					"center": "target",
 					"radius_cm": 600
-				},
-				"statuses": [
-					{
-						"id": "sts_burn",
-						"ms": 6000,
-						"to": "target",
-						"tick_power": 20
-					}
-				]
+				}
 			}
 		},
 		{
@@ -691,7 +690,7 @@
 			"target": "single_ally",
 			"damage_type": "heal",
 			"heal_mode": "fixed",
-			"power": 120,
+			"power": 480,
 			"rank": 2,
 			"anim": "item",
 			"rt": {
@@ -743,7 +742,7 @@
 			"target": "all_enemies",
 			"damage_type": "fixed",
 			"element": "fire",
-			"power": 60,
+			"power": 240,
 			"rank": 2,
 			"anim": "item",
 			"rt": {
@@ -925,6 +924,13 @@
 		{
 			"user": "enemy",
 			"rank": 3,
+			"statuses": [
+				{
+					"id": "sts_rt_test_exposed",
+					"ms": 3000,
+					"to": "self"
+				}
+			],
 			"id": "skl_e_rt_whirl",
 			"name": "Testwirbel",
 			"category": "attack",
@@ -942,14 +948,7 @@
 					"shape": "circle",
 					"anchor": "self",
 					"radius_cm": 400
-				},
-				"statuses": [
-					{
-						"id": "sts_rt_test_exposed",
-						"ms": 3000,
-						"to": "self"
-					}
-				]
+				}
 			}
 		},
 		{
@@ -1067,6 +1066,14 @@
 		{
 			"user": "enemy",
 			"rank": 3,
+			"statuses": [
+				{
+					"id": "sts_slow",
+					"chance_pm": 1000,
+					"ms": 3000,
+					"to": "target"
+				}
+			],
 			"id": "skl_e_rt_slow",
 			"name": "Teststrafzettel",
 			"category": "debuff",
@@ -1078,15 +1085,7 @@
 			"rt": {
 				"icon": "ticket",
 				"gcd": false,
-				"range_cm": 1500,
-				"statuses": [
-					{
-						"id": "sts_slow",
-						"chance_pm": 1000,
-						"ms": 3000,
-						"to": "target"
-					}
-				]
+				"range_cm": 1500
 			}
 		},
 		{

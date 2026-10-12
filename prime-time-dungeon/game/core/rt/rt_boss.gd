@@ -2,7 +2,7 @@ extends RefCounted
 ## Enemies beyond the rule walk (07 §6, §3.12) — private helper of RtSim (no class_name; preloaded as Boss): the auto
 ## target of an enemy, boss phases (PHASE_CHANGE at the start and at the thresholds of step 10, the rules of the phase
 ## from its start, the on_enter ops, the perfect phase), the enrage timer, summons (MAX_ENEMIES, door / near,
-## SUMMON_HP_PM, pop-in, start threat) and the specials of enemy skills (credit theft, escape).
+## rt.summon_hp, pop-in, start threat) and the specials of enemy skills (credit theft, escape).
 
 const FixedMath := preload("res://core/stats/fixed_math.gd")
 const Ability := preload("res://core/rt/rt_ability.gd")
@@ -154,7 +154,7 @@ static func run_ops(sim: RtSim, u: RtUnit, ops: Array) -> void:
 
 ## A summon (07 §3.12): an enemy of `enemy_id` while fewer than MAX_ENEMIES enemies live — "near": formation slot
 ## 1 + k around the summoner; "door": RtGeo.door_spot towards the party centre (open set: the end of the door lane,
-## then the walk in, ENTER_MAX_TICKS at most; closed set: the ring point in front of the door) — with SUMMON_HP_PM,
+## then the walk in, ENTER_MAX_TICKS at most; closed set: the ring point in front of the door) — with rt.summon_hp,
 ## is_summon (no EXP / loot), the next enemy number, its rules from the summon on, pop-in (acts POP_IN_TICKS later),
 ## SUMMON (value = its number) and threat 1 on the nearest party unit. Returns the unit or null.
 static func summon(sim: RtSim, src: RtUnit, enemy_id: String, at: String, k: int = 0) -> RtUnit:

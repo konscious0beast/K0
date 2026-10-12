@@ -467,7 +467,7 @@
 			"stats": {
 				"def": 6,
 				"res": 9,
-				"hp": 15
+				"hp": 60
 			},
 			"equip_by": [
 				"mopsula"

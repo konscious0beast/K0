@@ -164,9 +164,9 @@ static func _apply_sponsor(state: GameState, data: GameData, sponsor_id: String,
 			"heal_party_pct":
 				for m: PartyMember in _living(state):
 					_heal(m, FixedMath.div_round(_max_hp(m, data) * scaled, 100), data)
-			"heal_party_flat":                           # in the member's HP units (07 §3.9.4: × 4 in real time)
+			"heal_party_flat":
 				for m: PartyMember in _living(state):
-					_heal(m, value * m.hp_scale_pm / 1000 * effect / 1000, data)
+					_heal(m, scaled, data)
 			"mp_party_pct":
 				for m: PartyMember in _living(state):
 					var max_mp: int = _max_mp(m, data)

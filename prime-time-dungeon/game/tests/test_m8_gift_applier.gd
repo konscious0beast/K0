@@ -138,7 +138,7 @@ func test_sponsor_buffs_scaled() -> void:
 		_rng(1))
 	assert_eq(rewards.size(), 1)
 	assert_eq([rewards[0].kind, rewards[0].id, rewards[0].amount], ["item", "itm_brutzel_burger", 1])
-	assert_eq(st2.party[0].hp, 21, "+20 flat")
+	assert_eq(st2.party[0].hp, 81, "+80 flat (20 × 4, baked in R5b part 2b)")
 	var st3: GameState = _state()
 	st3.party[1].hp = 0
 	GiftApplier.apply(st3, data, Gift.make_dev("sponsor_buff", "spn_sorgenfrei", 0), _rng(1))

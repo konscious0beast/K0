@@ -78,7 +78,11 @@ const CHECKPOINT_TICKS: int = 300      # 05 §3.3 Nr. 8: checkpoint every 300 ti
 ## 3 — 07 E32 (R5b-2a): the show economy of the real-time combat (ShowRules RT_*: crit / weakness of ability hits only,
 ## combo and SHOW values, RT_FOLLOWER_PM) — Game.replay_log of a real-time run and the follower score of an event run
 ## change; CTB rules are untouched.
-const SIM_VERSION: int = 3
+## 4 — R5b part 2b (07 §12.6 step 2): the real-time HP baked into the data (party HP × 4, the enemies' real-time HP,
+## fixed heals / damage × 4; PartyMember.hp_scale_pm is gone) — the real-time game plays the same, but every StateHash
+## of a run changes; the campaign fights in real time only, a CTB campaign log is never replayed again (the CTB engine
+## moves to the Stempelduell, 10 SD1).
+const SIM_VERSION: int = 4
 const OLD_VERSION: String = "old_version"
 const NEW_VERSION: String = "new_version"
 const OLD_VERSION_TAG: String = "ältere Version"   # display tag of old replays and board entries (08 §10.2 Nr. 7)

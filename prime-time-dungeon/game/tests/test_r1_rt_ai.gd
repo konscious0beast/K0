@@ -9,7 +9,7 @@ extends TestCase
 ## RtGeo.escape_point, the cast abort, zones; the Partner-Spezial holds the rules, keep_cm with the tactic, the
 ## autopilot, suggest(); the fast rule walk equals a plain reference of 07 §5.3 in whole combats (party and enemies).
 ## R1b-I3: the enemy rules (rt.rules, slot offset, timers), boss phases with every op (PHASE_CHANGE at the start,
-## perfect phases, several thresholds in one tick), enrage, summons (cap, door / near, SUMMON_HP_PM, pop-in, threat),
+## perfect phases, several thresholds in one tick), enrage, summons (cap, door / near, rt.summon_hp, pop-in, threat),
 ## random targets (auto_target random_enemy, skill target random_enemy), the staggered thinking (07 §3.15).
 
 const Ability := preload("res://core/rt/rt_ability.gd")
@@ -1007,7 +1007,7 @@ func test_boss_phases_and_ops() -> void:
 		and sm[0].def_id == "enm_kanalratte", "summon: SUMMON (value = its number)")
 	var add: RtUnit = sim.unit("e1")
 	assert_eq([add.x, add.z, add.is_summon, add.max_hp(), add.pop_in_until], [0, 450, true, 96, 10 + 15],
-		"at the ring point before the door nearest to the party (closed boss set), stats.hp × SUMMON_HP_PM, pop-in")
+		"at the ring point before the door nearest to the party (closed boss set), rt.summon_hp, pop-in")
 	assert_eq(RtKit.of(ev, T.CAST_START).size(), 0, "the telegraph op: shapes without a cast")
 	assert_eq(RtKit.of(ev, T.TELEGRAPH_START).map(func(e: ActionEvent) -> String: return e.skill_id),
 		["skl_e_rt_puddles", "skl_e_rt_puddles", "skl_e_rt_puddles"])
@@ -1077,7 +1077,7 @@ func test_summons() -> void:
 	var near: Vector2i = RtGeo.project_walkable(sim.setup.geo, RtGeo.formation(1, dummy.x, dummy.z, dummy.yaw).x,
 		RtGeo.formation(1, dummy.x, dummy.z, dummy.yaw).y, add.radius, false)
 	assert_eq([add.id, add.x, add.z, add.max_hp(), add.hp, add.is_summon, add.pop_in_until], ["e3", near.x, near.y, 96,
-		96, true, 35], "near: formation slot 1 + k around the summoner; 24 × SUMMON_HP_PM 4000; acts 15 ticks later")
+		96, true, 35], "near: formation slot 1 + k around the summoner; rt.summon_hp 96 (24 × 4); acts 15 ticks later")
 	assert_eq(add.threat, {"p0": 1}, "threat 1 on the nearest party unit")
 	assert_eq(int(add.rule_ready["0:0"]), 20 + 90 + 3 * 9, "its rules from the summon on (first_ms + slot offset)")
 	var open: RtSim = RtKit.sim_no_ai(RtKit.dummy_cmd(), 6)

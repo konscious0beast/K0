@@ -74,8 +74,7 @@
 			"rt": {
 				"icon": "claw",
 				"range_cm": 220,
-				"gcd": false,
-				"mp": 0
+				"gcd": false
 			}
 		},
 		{
@@ -98,7 +97,6 @@
 			"rt": {
 				"icon": "mop_swing",
 				"range_cm": 250,
-				"mp": 3,
 				"threat_pm": 2000
 			}
 		},
@@ -116,14 +114,14 @@
 			"rank": 2,
 			"statuses": [
 				{
-					"id": "sts_taunt",
-					"chance": 1.0,
-					"turns": 3
+					"id": "sts_taunted",
+					"ms": 4000,
+					"to": "all_enemies"
 				},
 				{
 					"id": "sts_guard",
-					"chance": 1.0,
-					"turns": 3
+					"ms": 6000,
+					"to": "self"
 				}
 			],
 			"anim": "cast",
@@ -135,20 +133,7 @@
 				"icon": "megaphone_notes",
 				"cooldown_ms": 15000,
 				"gcd": false,
-				"mp": 2,
-				"impact_ms": 0,
-				"statuses": [
-					{
-						"id": "sts_taunted",
-						"ms": 4000,
-						"to": "all_enemies"
-					},
-					{
-						"id": "sts_guard",
-						"ms": 6000,
-						"to": "self"
-					}
-				]
+				"impact_ms": 0
 			}
 		},
 		{
@@ -173,7 +158,6 @@
 				"cooldown_ms": 8000,
 				"impact_ms": 400,
 				"threat_pm": 1500,
-				"mp": 5,
 				"aoe": {
 					"center": "self",
 					"radius_cm": 350
@@ -194,7 +178,8 @@
 			"rank": 2,
 			"heal_mode": "pct",
 			"cleanse": [
-				"sts_poison"
+				"sts_poison",
+				"sts_burn"
 			],
 			"anim": "cast",
 			"vfx": "heal",
@@ -204,12 +189,7 @@
 			"rt": {
 				"icon": "paw_plaster",
 				"cooldown_ms": 12000,
-				"range_cm": 800,
-				"mp": 4,
-				"cleanse": [
-					"sts_poison",
-					"sts_burn"
-				]
+				"range_cm": 800
 			}
 		},
 		{
@@ -222,13 +202,13 @@
 			"damage_type": "physical",
 			"element": "physical",
 			"power": 70,
-			"mp_cost": 5,
+			"mp_cost": 3,
 			"rank": 3,
 			"statuses": [
 				{
 					"id": "sts_slow",
-					"chance": 0.9,
-					"turns": 3
+					"chance_pm": 900,
+					"ms": 4000
 				}
 			],
 			"anim": "attack",
@@ -238,15 +218,7 @@
 				"cooldown_ms": 12000,
 				"gcd": false,
 				"range_cm": 800,
-				"mp": 3,
-				"interrupt": true,
-				"statuses": [
-					{
-						"id": "sts_slow",
-						"chance_pm": 900,
-						"ms": 4000
-					}
-				]
+				"interrupt": true
 			}
 		},
 		{
@@ -258,9 +230,16 @@
 			"target": "single_enemy",
 			"damage_type": "physical",
 			"element": "fire",
-			"power": 130,
+			"power": 40,
 			"mp_cost": 7,
 			"rank": 3,
+			"statuses": [
+				{
+					"id": "sts_burn",
+					"ms": 6000,
+					"tick_power": 20
+				}
+			],
 			"anim": "attack",
 			"vfx": "fire",
 			"show_tags": [
@@ -273,19 +252,10 @@
 				"channel_ms": 2000,
 				"period_ms": 500,
 				"range_cm": 500,
-				"power": 40,
-				"mp": 7,
 				"aoe": {
 					"center": "target",
 					"radius_cm": 200
-				},
-				"statuses": [
-					{
-						"id": "sts_burn",
-						"ms": 6000,
-						"tick_power": 20
-					}
-				]
+				}
 			}
 		},
 		{
@@ -298,13 +268,12 @@
 			"damage_type": "physical",
 			"element": "shock",
 			"power": 120,
-			"mp_cost": 8,
+			"mp_cost": 6,
 			"rank": 3,
 			"statuses": [
 				{
 					"id": "sts_stun",
-					"chance": 0.35,
-					"turns": 0
+					"ms": 1500
 				}
 			],
 			"anim": "attack",
@@ -317,14 +286,7 @@
 				"cooldown_ms": 18000,
 				"gcd": false,
 				"range_cm": 600,
-				"mp": 6,
-				"interrupt": true,
-				"statuses": [
-					{
-						"id": "sts_stun",
-						"ms": 1500
-					}
-				]
+				"interrupt": true
 			}
 		},
 		{
@@ -337,7 +299,7 @@
 			"damage_type": "physical",
 			"element": "physical",
 			"power": 260,
-			"mp_cost": 12,
+			"mp_cost": 8,
 			"rank": 5,
 			"crit_bonus": 0.2,
 			"kill_hype": 10,
@@ -350,7 +312,6 @@
 			"rt": {
 				"icon": "studio_camera",
 				"range_cm": 250,
-				"mp": 8,
 				"impact_ms": 800
 			}
 		},
@@ -374,8 +335,7 @@
 			"rt": {
 				"icon": "seal_flame",
 				"cast_ms": 1500,
-				"range_cm": 2000,
-				"mp": 4
+				"range_cm": 2000
 			}
 		},
 		{
@@ -400,8 +360,7 @@
 			"rt": {
 				"icon": "tongue_glitter",
 				"cast_ms": 1500,
-				"range_cm": 2000,
-				"mp": 4
+				"range_cm": 2000
 			}
 		},
 		{
@@ -419,8 +378,7 @@
 			"statuses": [
 				{
 					"id": "sts_slow",
-					"chance": 0.25,
-					"turns": 3
+					"ms": 4000
 				}
 			],
 			"anim": "cast",
@@ -431,14 +389,7 @@
 			"rt": {
 				"icon": "pug_nose_ice",
 				"cooldown_ms": 6000,
-				"range_cm": 1500,
-				"mp": 5,
-				"statuses": [
-					{
-						"id": "sts_slow",
-						"ms": 4000
-					}
-				]
+				"range_cm": 1500
 			}
 		},
 		{
@@ -451,7 +402,7 @@
 			"damage_type": "magical",
 			"element": "shock",
 			"power": 75,
-			"mp_cost": 7,
+			"mp_cost": 5,
 			"rank": 3,
 			"anim": "cast",
 			"vfx": "shock",
@@ -462,7 +413,6 @@
 				"icon": "bark_bolt",
 				"cooldown_ms": 15000,
 				"gcd": false,
-				"mp": 5,
 				"interrupt": true,
 				"aoe": {
 					"center": "self",
@@ -485,8 +435,7 @@
 			"statuses": [
 				{
 					"id": "sts_haste",
-					"chance": 1.0,
-					"turns": 3
+					"ms": 10000
 				}
 			],
 			"anim": "cast",
@@ -494,14 +443,7 @@
 			"rt": {
 				"icon": "scroll_seal",
 				"cooldown_ms": 25000,
-				"range_cm": 2000,
-				"mp": 6,
-				"statuses": [
-					{
-						"id": "sts_haste",
-						"ms": 10000
-					}
-				]
+				"range_cm": 2000
 			}
 		},
 		{
@@ -516,6 +458,12 @@
 			"power": 60,
 			"mp_cost": 10,
 			"rank": 3,
+			"statuses": [
+				{
+					"id": "sts_regen",
+					"ms": 10000
+				}
+			],
 			"heal_mode": "mag",
 			"cleanse": [
 				"sts_poison"
@@ -529,17 +477,7 @@
 			"rt": {
 				"icon": "two_tongues",
 				"cooldown_ms": 20000,
-				"cast_ms": 2000,
-				"mp": 10,
-				"statuses": [
-					{
-						"id": "sts_regen",
-						"ms": 10000
-					}
-				],
-				"cleanse": [
-					"sts_poison"
-				]
+				"cast_ms": 2000
 			}
 		},
 		{
@@ -564,8 +502,7 @@
 				"icon": "drool_halo",
 				"cooldown_ms": 30000,
 				"cast_ms": 3000,
-				"range_cm": 2000,
-				"mp": 14
+				"range_cm": 2000
 			}
 		},
 		{
@@ -578,8 +515,15 @@
 			"damage_type": "magical",
 			"element": "fire",
 			"power": 130,
-			"mp_cost": 14,
+			"mp_cost": 12,
 			"rank": 4,
+			"statuses": [
+				{
+					"id": "sts_burn",
+					"ms": 6000,
+					"tick_power": 20
+				}
+			],
 			"anim": "cast",
 			"vfx": "fire",
 			"show_tags": [
@@ -590,18 +534,10 @@
 				"icon": "monocle_flames",
 				"cast_ms": 2000,
 				"range_cm": 2000,
-				"mp": 12,
 				"aoe": {
 					"center": "target",
 					"radius_cm": 600
-				},
-				"statuses": [
-					{
-						"id": "sts_burn",
-						"ms": 6000,
-						"tick_power": 20
-					}
-				]
+				}
 			}
 		},
 		{
@@ -616,6 +552,12 @@
 			"power": 230,
 			"mp_cost": 0,
 			"rank": 4,
+			"statuses": [
+				{
+					"id": "sts_stun",
+					"ms": 2000
+				}
+			],
 			"cooldown": 3,
 			"success_base": 0.6,
 			"success_lck": 0.01,
@@ -635,13 +577,7 @@
 			"rt": {
 				"icon": "wrestler_stars",
 				"range_cm": 250,
-				"fail_ms": 1500,
-				"statuses": [
-					{
-						"id": "sts_stun",
-						"ms": 2000
-					}
-				]
+				"fail_ms": 1500
 			}
 		},
 		{
@@ -699,8 +635,7 @@
 			"rt": {
 				"icon": "bite",
 				"range_cm": 220,
-				"gcd": false,
-				"mp": 0
+				"gcd": false
 			}
 		},
 		{
@@ -718,22 +653,14 @@
 			"statuses": [
 				{
 					"id": "sts_poison",
-					"chance": 0.35,
-					"turns": 0
+					"chance_pm": 500,
+					"ms": 8000
 				}
 			],
 			"vfx": "toxic",
 			"rt": {
 				"icon": "bite",
-				"range_cm": 220,
-				"mp": 0,
-				"statuses": [
-					{
-						"id": "sts_poison",
-						"chance_pm": 500,
-						"ms": 8000
-					}
-				]
+				"range_cm": 220
 			}
 		},
 		{
@@ -754,7 +681,6 @@
 				"cast_ms": 2000,
 				"interruptible": false,
 				"pct_maxhp": 15,
-				"mp": 0,
 				"telegraph": {
 					"shape": "circle",
 					"anchor": "target_pos",
@@ -778,8 +704,7 @@
 			"rt": {
 				"icon": "claw",
 				"range_cm": 220,
-				"gcd": false,
-				"mp": 0
+				"gcd": false
 			}
 		},
 		{
@@ -800,7 +725,6 @@
 				"cast_ms": 1200,
 				"interruptible": false,
 				"pct_maxhp": 15,
-				"mp": 0,
 				"telegraph": {
 					"shape": "circle",
 					"anchor": "target_pos",
@@ -824,8 +748,7 @@
 			"rt": {
 				"icon": "claw",
 				"range_cm": 220,
-				"gcd": false,
-				"mp": 0
+				"gcd": false
 			}
 		},
 		{
@@ -847,7 +770,6 @@
 				"interruptible": false,
 				"pct_maxhp": 20,
 				"range_cm": 400,
-				"mp": 0,
 				"telegraph": {
 					"shape": "cone",
 					"anchor": "self",
@@ -872,8 +794,7 @@
 			"rt": {
 				"icon": "claw",
 				"range_cm": 220,
-				"gcd": false,
-				"mp": 0
+				"gcd": false
 			}
 		},
 		{
@@ -886,13 +807,12 @@
 			"damage_type": "magical",
 			"element": "poison",
 			"power": 90,
-			"mp_cost": 2,
+			"mp_cost": 0,
 			"rank": 3,
 			"statuses": [
 				{
 					"id": "sts_poison",
-					"chance": 0.5,
-					"turns": 0
+					"ms": 8000
 				}
 			],
 			"anim": "cast",
@@ -900,14 +820,7 @@
 			"rt": {
 				"icon": "toxic",
 				"cast_ms": 1500,
-				"range_cm": 1200,
-				"mp": 0,
-				"statuses": [
-					{
-						"id": "sts_poison",
-						"ms": 8000
-					}
-				]
+				"range_cm": 1200
 			}
 		},
 		{
@@ -920,7 +833,7 @@
 			"damage_type": "magical",
 			"element": "shock",
 			"power": 100,
-			"mp_cost": 3,
+			"mp_cost": 0,
 			"rank": 3,
 			"anim": "cast",
 			"vfx": "shock",
@@ -928,8 +841,7 @@
 				"icon": "bolt",
 				"cast_ms": 1500,
 				"range_cm": 1500,
-				"interruptible": false,
-				"mp": 0
+				"interruptible": false
 			}
 		},
 		{
@@ -941,8 +853,8 @@
 			"target": "single_ally",
 			"damage_type": "heal",
 			"element": "none",
-			"power": 30,
-			"mp_cost": 5,
+			"power": 15,
+			"mp_cost": 0,
 			"rank": 2,
 			"heal_mode": "pct",
 			"anim": "cast",
@@ -951,9 +863,7 @@
 				"icon": "whistle",
 				"cast_ms": 2000,
 				"range_cm": 2000,
-				"interrupt_worthy": true,
-				"mp": 0,
-				"power": 15
+				"interrupt_worthy": true
 			}
 		},
 		{
@@ -972,8 +882,7 @@
 			"rt": {
 				"icon": "claw",
 				"range_cm": 250,
-				"gcd": false,
-				"mp": 0
+				"gcd": false
 			}
 		},
 		{
@@ -986,7 +895,7 @@
 			"damage_type": "magical",
 			"element": "shock",
 			"power": 80,
-			"mp_cost": 6,
+			"mp_cost": 0,
 			"rank": 4,
 			"anim": "cast",
 			"vfx": "shock",
@@ -995,7 +904,6 @@
 				"cast_ms": 2000,
 				"interruptible": false,
 				"pct_maxhp": 20,
-				"mp": 0,
 				"telegraph": {
 					"shape": "circle",
 					"anchor": "self",
@@ -1018,23 +926,15 @@
 			"statuses": [
 				{
 					"id": "sts_poison",
-					"chance": 0.5,
-					"turns": 0
+					"chance_pm": 500,
+					"ms": 8000
 				}
 			],
 			"vfx": "toxic",
 			"rt": {
 				"icon": "bite",
 				"range_cm": 220,
-				"gcd": false,
-				"mp": 0,
-				"statuses": [
-					{
-						"id": "sts_poison",
-						"chance_pm": 500,
-						"ms": 8000
-					}
-				]
+				"gcd": false
 			}
 		},
 		{
@@ -1047,27 +947,19 @@
 			"damage_type": "none",
 			"element": "none",
 			"power": 0,
-			"mp_cost": 2,
+			"mp_cost": 0,
 			"rank": 3,
 			"statuses": [
 				{
 					"id": "sts_slow",
-					"chance": 0.8,
-					"turns": 0
+					"ms": 5000
 				}
 			],
 			"anim": "cast",
 			"vfx": "debuff",
 			"rt": {
 				"icon": "generic",
-				"range_cm": 1500,
-				"mp": 0,
-				"statuses": [
-					{
-						"id": "sts_slow",
-						"ms": 5000
-					}
-				]
+				"range_cm": 1500
 			}
 		},
 		{
@@ -1080,7 +972,7 @@
 			"damage_type": "magical",
 			"element": "fire",
 			"power": 110,
-			"mp_cost": 4,
+			"mp_cost": 0,
 			"rank": 3,
 			"anim": "cast",
 			"vfx": "fire",
@@ -1088,8 +980,7 @@
 				"icon": "fire",
 				"cast_ms": 1500,
 				"range_cm": 1500,
-				"interruptible": false,
-				"mp": 0
+				"interruptible": false
 			}
 		},
 		{
@@ -1102,15 +993,8 @@
 			"damage_type": "magical",
 			"element": "poison",
 			"power": 60,
-			"mp_cost": 6,
+			"mp_cost": 0,
 			"rank": 4,
-			"statuses": [
-				{
-					"id": "sts_poison",
-					"chance": 0.3,
-					"turns": 0
-				}
-			],
 			"anim": "cast",
 			"vfx": "toxic",
 			"rt": {
@@ -1118,7 +1002,6 @@
 				"cast_ms": 1200,
 				"interruptible": false,
 				"pct_maxhp": 15,
-				"mp": 0,
 				"telegraph": {
 					"shape": "circle",
 					"anchor": "target_pos",
@@ -1147,8 +1030,7 @@
 			"rt": {
 				"icon": "claw",
 				"range_cm": 250,
-				"gcd": false,
-				"mp": 0
+				"gcd": false
 			}
 		},
 		{
@@ -1166,21 +1048,13 @@
 			"statuses": [
 				{
 					"id": "sts_guard",
-					"chance": 1.0,
-					"turns": 2
+					"ms": 4000
 				}
 			],
 			"anim": "cast",
 			"vfx": "buff",
 			"rt": {
-				"icon": "guard",
-				"mp": 0,
-				"statuses": [
-					{
-						"id": "sts_guard",
-						"ms": 4000
-					}
-				]
+				"icon": "guard"
 			}
 		},
 		{
@@ -1202,7 +1076,6 @@
 				"interruptible": false,
 				"pct_maxhp": 25,
 				"range_cm": 1200,
-				"mp": 0,
 				"telegraph": {
 					"shape": "circle",
 					"anchor": "self",
@@ -1226,8 +1099,7 @@
 			"rt": {
 				"icon": "claw",
 				"range_cm": 300,
-				"gcd": false,
-				"mp": 0
+				"gcd": false
 			}
 		},
 		{
@@ -1240,13 +1112,12 @@
 			"damage_type": "none",
 			"element": "none",
 			"power": 0,
-			"mp_cost": 4,
+			"mp_cost": 0,
 			"rank": 3,
 			"statuses": [
 				{
 					"id": "sts_guard",
-					"chance": 1.0,
-					"turns": 3
+					"ms": 8000
 				}
 			],
 			"anim": "cast",
@@ -1254,14 +1125,7 @@
 			"rt": {
 				"icon": "guard",
 				"cast_ms": 2000,
-				"interrupt_worthy": true,
-				"mp": 0,
-				"statuses": [
-					{
-						"id": "sts_guard",
-						"ms": 8000
-					}
-				]
+				"interrupt_worthy": true
 			}
 		},
 		{
@@ -1283,7 +1147,6 @@
 				"interruptible": false,
 				"pct_maxhp": 20,
 				"range_cm": 900,
-				"mp": 0,
 				"dash": true,
 				"telegraph": {
 					"shape": "line",
@@ -1309,8 +1172,7 @@
 			"rt": {
 				"icon": "ticket",
 				"range_cm": 250,
-				"gcd": false,
-				"mp": 0
+				"gcd": false
 			}
 		},
 		{
@@ -1336,8 +1198,7 @@
 				"icon": "ticket",
 				"cast_ms": 2500,
 				"range_cm": 1500,
-				"interrupt_worthy": true,
-				"mp": 0
+				"interrupt_worthy": true
 			}
 		},
 		{
@@ -1361,8 +1222,7 @@
 				"icon": "whistle",
 				"cast_ms": 3000,
 				"cooldown_ms": 10000,
-				"interrupt_worthy": true,
-				"mp": 0
+				"interrupt_worthy": true
 			}
 		},
 		{
@@ -1377,19 +1237,18 @@
 			"power": 0,
 			"mp_cost": 0,
 			"rank": 3,
+			"statuses": [
+				{
+					"id": "sts_slow",
+					"ms": 3000
+				}
+			],
 			"anim": "cast",
 			"vfx": "debuff",
 			"rt": {
 				"icon": "ticket",
 				"gcd": false,
-				"range_cm": 1500,
-				"mp": 0,
-				"statuses": [
-					{
-						"id": "sts_slow",
-						"ms": 3000
-					}
-				]
+				"range_cm": 1500
 			}
 		},
 		{
@@ -1408,8 +1267,7 @@
 			"rt": {
 				"icon": "claw",
 				"range_cm": 320,
-				"gcd": false,
-				"mp": 0
+				"gcd": false
 			}
 		},
 		{
@@ -1430,7 +1288,6 @@
 				"cast_ms": 1200,
 				"interruptible": false,
 				"pct_maxhp": 35,
-				"mp": 0,
 				"telegraph": {
 					"shape": "line",
 					"anchor": "self",
@@ -1454,8 +1311,13 @@
 			"statuses": [
 				{
 					"id": "sts_guard",
-					"chance": 1.0,
-					"turns": 2
+					"ms": 12000,
+					"to": "self"
+				},
+				{
+					"id": "sts_admonished",
+					"ms": 12000,
+					"to": "all_enemies"
 				}
 			],
 			"anim": "cast",
@@ -1463,20 +1325,7 @@
 			"rt": {
 				"icon": "whistle",
 				"cast_ms": 3000,
-				"interrupt_worthy": true,
-				"mp": 0,
-				"statuses": [
-					{
-						"id": "sts_guard",
-						"ms": 12000,
-						"to": "self"
-					},
-					{
-						"id": "sts_admonished",
-						"ms": 12000,
-						"to": "all_enemies"
-					}
-				]
+				"interrupt_worthy": true
 			}
 		},
 		{
@@ -1489,15 +1338,8 @@
 			"damage_type": "magical",
 			"element": "poison",
 			"power": 60,
-			"mp_cost": 8,
+			"mp_cost": 0,
 			"rank": 4,
-			"statuses": [
-				{
-					"id": "sts_poison",
-					"chance": 0.4,
-					"turns": 0
-				}
-			],
 			"anim": "cast",
 			"vfx": "toxic",
 			"rt": {
@@ -1505,7 +1347,6 @@
 				"cast_ms": 1000,
 				"interruptible": false,
 				"pct_maxhp": 25,
-				"mp": 0,
 				"telegraph": {
 					"shape": "circle",
 					"anchor": "each_enemy",
@@ -1529,7 +1370,7 @@
 			"damage_type": "none",
 			"element": "none",
 			"power": 0,
-			"mp_cost": 6,
+			"mp_cost": 0,
 			"rank": 3,
 			"summon": [
 				"enm_kanalratte"
@@ -1539,8 +1380,7 @@
 			"rt": {
 				"icon": "whistle",
 				"cast_ms": 2000,
-				"interrupt_worthy": true,
-				"mp": 0
+				"interrupt_worthy": true
 			}
 		},
 		{
@@ -1555,25 +1395,24 @@
 			"power": 90,
 			"mp_cost": 0,
 			"rank": 3,
+			"statuses": [
+				{
+					"id": "sts_dizzy",
+					"ms": 3000,
+					"to": "self"
+				}
+			],
 			"vfx": "slash",
 			"rt": {
 				"icon": "claw",
 				"cast_ms": 1800,
 				"interruptible": false,
 				"pct_maxhp": 30,
-				"mp": 0,
 				"telegraph": {
 					"shape": "circle",
 					"anchor": "self",
 					"radius_cm": 400
-				},
-				"statuses": [
-					{
-						"id": "sts_dizzy",
-						"ms": 3000,
-						"to": "self"
-					}
-				]
+				}
 			}
 		},
 		{
@@ -1592,8 +1431,7 @@
 			"rt": {
 				"icon": "claw",
 				"range_cm": 350,
-				"gcd": false,
-				"mp": 0
+				"gcd": false
 			}
 		},
 		{
@@ -1611,22 +1449,14 @@
 			"statuses": [
 				{
 					"id": "sts_poison",
-					"chance": 0.5,
-					"turns": 0
+					"chance_pm": 500,
+					"ms": 8000
 				}
 			],
 			"vfx": "toxic",
 			"rt": {
 				"icon": "bite",
-				"range_cm": 350,
-				"mp": 0,
-				"statuses": [
-					{
-						"id": "sts_poison",
-						"chance_pm": 500,
-						"ms": 8000
-					}
-				]
+				"range_cm": 350
 			}
 		},
 		{
@@ -1639,7 +1469,7 @@
 			"damage_type": "magical",
 			"element": "shock",
 			"power": 80,
-			"mp_cost": 8,
+			"mp_cost": 0,
 			"rank": 4,
 			"anim": "cast",
 			"vfx": "shock",
@@ -1647,8 +1477,7 @@
 				"icon": "bolt",
 				"cast_ms": 2000,
 				"interrupt_worthy": true,
-				"pct_maxhp": 20,
-				"mp": 0
+				"pct_maxhp": 20
 			}
 		},
 		{
@@ -1661,7 +1490,7 @@
 			"damage_type": "none",
 			"element": "none",
 			"power": 0,
-			"mp_cost": 10,
+			"mp_cost": 0,
 			"rank": 3,
 			"summon": [
 				"enm_kanalratte",
@@ -1672,8 +1501,7 @@
 			"rt": {
 				"icon": "whistle",
 				"cast_ms": 2500,
-				"interrupt_worthy": true,
-				"mp": 0
+				"interrupt_worthy": true
 			}
 		},
 		{
@@ -1686,7 +1514,7 @@
 			"damage_type": "magical",
 			"element": "shock",
 			"power": 110,
-			"mp_cost": 16,
+			"mp_cost": 0,
 			"rank": 5,
 			"anim": "cast",
 			"vfx": "shock",
@@ -1695,7 +1523,6 @@
 				"cast_ms": 3000,
 				"interruptible": false,
 				"pct_maxhp": 30,
-				"mp": 0,
 				"telegraph": {
 					"shape": "ring",
 					"anchor": "self",
@@ -1722,7 +1549,6 @@
 				"cast_ms": 3000,
 				"interruptible": false,
 				"pct_maxhp": 35,
-				"mp": 0,
 				"ignore_guard": true,
 				"kill_adds": true,
 				"telegraph": {
@@ -1753,8 +1579,7 @@
 			"rt": {
 				"icon": "bolt",
 				"range_cm": 1500,
-				"gcd": false,
-				"mp": 0
+				"gcd": false
 			}
 		},
 		{
@@ -1776,7 +1601,6 @@
 				"cast_ms": 1500,
 				"interruptible": false,
 				"pct_maxhp": 25,
-				"mp": 0,
 				"telegraph": {
 					"shape": "circle",
 					"anchor": "random",
@@ -1854,7 +1678,7 @@
 			"target": "single_ally",
 			"damage_type": "heal",
 			"element": "none",
-			"power": 45,
+			"power": 180,
 			"mp_cost": 0,
 			"rank": 2,
 			"heal_mode": "fixed",
@@ -1879,18 +1703,15 @@
 			"mp_cost": 0,
 			"rank": 2,
 			"cleanse": [
-				"sts_poison"
+				"sts_poison",
+				"sts_burn"
 			],
 			"anim": "item",
 			"vfx": "heal",
 			"rt": {
 				"icon": "antidote",
 				"gcd": false,
-				"range_cm": 800,
-				"cleanse": [
-					"sts_poison",
-					"sts_burn"
-				]
+				"range_cm": 800
 			}
 		},
 		{
@@ -1923,7 +1744,7 @@
 			"target": "single_ally",
 			"damage_type": "heal",
 			"element": "none",
-			"power": 120,
+			"power": 480,
 			"mp_cost": 0,
 			"rank": 2,
 			"heal_mode": "fixed",
@@ -1965,7 +1786,7 @@
 			"target": "all_enemies",
 			"damage_type": "fixed",
 			"element": "fire",
-			"power": 60,
+			"power": 240,
 			"mp_cost": 0,
 			"rank": 2,
 			"anim": "item",
@@ -1992,21 +1813,21 @@
 			"target": "single_enemy",
 			"damage_type": "fixed",
 			"element": "ice",
-			"power": 90,
+			"power": 360,
 			"mp_cost": 0,
 			"rank": 2,
+			"statuses": [
+				{
+					"id": "sts_slow",
+					"ms": 4000
+				}
+			],
 			"anim": "item",
 			"vfx": "ice",
 			"rt": {
 				"icon": "ice_spray",
 				"gcd": false,
-				"range_cm": 1500,
-				"statuses": [
-					{
-						"id": "sts_slow",
-						"ms": 4000
-					}
-				]
+				"range_cm": 1500
 			}
 		},
 		{

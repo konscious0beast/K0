@@ -6,7 +6,7 @@
 			"name": "Kanalratte",
 			"level": 1,
 			"stats": {
-				"hp": 24,
+				"hp": 168,
 				"mp": 0,
 				"str": 13,
 				"mag": 3,
@@ -54,7 +54,7 @@
 				"field_speed": 4.8
 			},
 			"rt": {
-				"hp_pm": 7000,
+				"summon_hp": 96,
 				"radius_cm": 30,
 				"move_cm_s": 360,
 				"auto_skill": "skl_e_strike",
@@ -76,7 +76,7 @@
 			"name": "Testschamane",
 			"level": 2,
 			"stats": {
-				"hp": 30,
+				"hp": 210,
 				"mp": 20,
 				"str": 8,
 				"mag": 14,
@@ -127,7 +127,6 @@
 				"field_speed": 4.8
 			},
 			"rt": {
-				"hp_pm": 7000,
 				"radius_cm": 30,
 				"move_cm_s": 360,
 				"keep_cm": 600,
@@ -155,7 +154,7 @@
 			"name": "Testboss",
 			"level": 4,
 			"stats": {
-				"hp": 220,
+				"hp": 1600,
 				"mp": 0,
 				"str": 16,
 				"mag": 8,
@@ -194,7 +193,6 @@
 				"field_speed": 3.0
 			},
 			"rt": {
-				"hp": 1600,
 				"radius_cm": 60,
 				"move_cm_s": 300,
 				"stationary": true,
@@ -252,7 +250,7 @@
 			"name": "Trainingspuppe",
 			"level": 1,
 			"stats": {
-				"hp": 100,
+				"hp": 2000,
 				"mp": 0,
 				"str": 6,
 				"mag": 3,
@@ -296,7 +294,6 @@
 				"field_speed": 0.0
 			},
 			"rt": {
-				"hp": 2000,
 				"radius_cm": 40,
 				"move_cm_s": 0,
 				"stationary": true,
@@ -310,7 +307,7 @@
 			"name": "Sprühtester",
 			"level": 2,
 			"stats": {
-				"hp": 30,
+				"hp": 210,
 				"mp": 0,
 				"str": 10,
 				"mag": 8,
@@ -350,7 +347,6 @@
 				"field_speed": 3.0
 			},
 			"rt": {
-				"hp_pm": 7000,
 				"radius_cm": 35,
 				"move_cm_s": 300,
 				"keep_cm": 600,
@@ -378,7 +374,7 @@
 			"name": "Testkontrolleur",
 			"level": 3,
 			"stats": {
-				"hp": 60,
+				"hp": 420,
 				"mp": 0,
 				"str": 10,
 				"mag": 8,
@@ -418,7 +414,6 @@
 				"field_speed": 3.0
 			},
 			"rt": {
-				"hp_pm": 7000,
 				"radius_cm": 50,
 				"move_cm_s": 0,
 				"stationary": true,
@@ -447,7 +442,7 @@
 			"name": "Testtaube",
 			"level": 1,
 			"stats": {
-				"hp": 20,
+				"hp": 140,
 				"mp": 0,
 				"str": 10,
 				"mag": 8,
@@ -487,7 +482,6 @@
 				"field_speed": 3.0
 			},
 			"rt": {
-				"hp_pm": 7000,
 				"radius_cm": 40,
 				"move_cm_s": 450,
 				"auto_skill": "skl_e_strike",
@@ -501,7 +495,7 @@
 			"name": "Testchefin",
 			"level": 5,
 			"stats": {
-				"hp": 300,
+				"hp": 3000,
 				"mp": 0,
 				"str": 10,
 				"mag": 8,
@@ -541,7 +535,6 @@
 				"field_speed": 3.0
 			},
 			"rt": {
-				"hp": 3000,
 				"radius_cm": 80,
 				"move_cm_s": 300,
 				"stationary": true,

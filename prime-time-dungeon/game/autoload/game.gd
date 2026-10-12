@@ -1481,9 +1481,8 @@ func new_game_combat_mode() -> StringName:
 
 
 ## New campaign games take the combat mode (07 §12.1); the run log header names a real-time run
-## (07 §10.2: "combat_mode": "realtime", "rt_version": 1 — CTB headers stay as they are). A real-time save scales the
-## party's max HP at its creation (07 §3.9.4: PartyMember.hp_scale_pm = HP_SCALE_PM, the last step of
-## Progression.total_stats) and starts with full HP / MP.
+## (07 §10.2: "combat_mode": "realtime", "rt_version": 1 — CTB headers stay as they are) and starts with full HP / MP
+## (RunRules.rt_start; the real-time HP are in the data since R5b part 2b, 07 §3.9.4).
 func _rt_new_game() -> void:
 	_rt_begin(new_game_combat_mode())
 

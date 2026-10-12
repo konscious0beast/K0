@@ -1,7 +1,7 @@
 extends RefCounted
 ## Sponsor gifts in a real-time combat (07 §9.2) — private helper of RtSim (no class_name; preloaded as Gifts): the
 ## effects of one gift at a tick boundary, the same kinds as the CTB battle (ActionResolver.apply_gift_effects):
-## sponsor_buff (the sponsor's effects: heal_party_pct, heal_party_flat × FIXED_SCALE_PM, mp_party_pct, status_party /
+## sponsor_buff (the sponsor's effects: heal_party_pct, heal_party_flat, mp_party_pct, status_party /
 ## status_enemies, item, revive_or_heal_lowest), gold, chest and fan_pack (server contents, else rolls). Draws (chest
 ## rolls) come from the gift's own generator SeedUtil.derive(seed, "gift", n) (RtSim.apply_gift), like the CTB battle.
 
@@ -33,7 +33,7 @@ static func apply(sim: RtSim, g: Dictionary, rng: RandomNumberGenerator) -> void
 # --- private --------------------------------------------------------------------------------------------------------
 
 ## SPONSOR_GIFT (sponsor id, name), then each effect of the sponsor scaled by effect_pm (07 §9.2): heals and MP on the
-## living party (percent of the max, or flat × FIXED_SCALE_PM), statuses on the living party / the enemies on stage
+## living party (percent of the max, or flat), statuses on the living party / the enemies on stage
 ## (the gift's ms × effect_pm, else the status's default duration; ignore_resist), items into the battle inventory,
 ## revive_or_heal_lowest (the KO'd member with the smallest slot is revived with value % HP, else the lowest share is
 ## healed by value %).
@@ -58,12 +58,10 @@ static func _sponsor(sim: RtSim, sponsor_id: String, effect_pm: int) -> void:
 				for m: RtUnit in party:
 					if sim.is_alive(m):
 						Damage.heal(sim, null, m, FixedMath.div_round(m.max_hp() * scaled, 100), "", "")
-			"heal_party_flat":                           # the scale before the effect factor (where the data carry it)
-				var flat: int = FixedMath.mul_pm(JsonUtil.to_int(g.get("value", 0)), sim.bal.i("FIXED_SCALE_PM")) \
-					* effect_pm / 1000
+			"heal_party_flat":
 				for m: RtUnit in party:
 					if sim.is_alive(m):
-						Damage.heal(sim, null, m, flat, "", "")
+						Damage.heal(sim, null, m, scaled, "", "")
 			"mp_party_pct":
 				for m: RtUnit in party:
 					if sim.is_alive(m):

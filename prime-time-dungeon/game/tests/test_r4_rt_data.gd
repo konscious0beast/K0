@@ -115,7 +115,7 @@ func test_new_entries_of_r4() -> void:
 		assert_true(d.has_id("skills", id), id)
 		if d.has_id("skills", id):
 			assert_false(d.skill(id).rt.is_empty(), id + ": rt block")
-	assert_eq(d.enemy("enm_kanalratte_azubi").rt.get("hp", 0), 280, "the tutorial rat: 280 HP absolute (07 §6.5)")
+	assert_eq(d.enemy("enm_kanalratte_azubi").stats["hp"], 280, "the tutorial rat: 280 HP absolute (07 §6.5)")
 	assert_eq(d.encounter("enc_f1_a1_tutorial").rt.get("enemies", []), ["enm_kanalratte_azubi", "enm_kanalratte_azubi"])
 	assert_eq(d.encounter("enc_f1_a1_tutorial").rt.get("tutorial", []), ["target", "bar1", "show", "dodge"])
 	for tag: String in ["rt_interrupt", "rt_train_kill", "rt_healer_first", "rt_finale", "showboss_rule",
@@ -240,7 +240,10 @@ func test_validator_rejects_bad_rt_blocks() -> void:
 		["banner_tag_prefix", "showboss_"],
 		["show_boss_on_tutorial", "a show boss is an optional regular group"],
 		["show_boss_rule_every", "every_ms"],
-		["balance_range", "ENEMY_HP_PM"],
+		["balance_range", "COMBO_PM"],
+		["rt_power_baked", "baked into the main field power"],
+		["rt_statuses_baked", "baked into the main field statuses"],
+		["main_status_rt_form", "chance_pm"],
 	]
 	var base: Dictionary = _raw()
 	var ok: GameData = GameData.new()
@@ -283,4 +286,10 @@ static func _mutate(r: Dictionary, what: String) -> void:
 		"show_boss_rule_every":
 			(sb["rule"] as Dictionary)["every_ms"] = 500
 		"balance_range":
-			((r["rt_balance"] as Dictionary)["values"] as Dictionary)["ENEMY_HP_PM"] = 50000
+			((r["rt_balance"] as Dictionary)["values"] as Dictionary)["COMBO_PM"] = 50000
+		"rt_power_baked":                       # R5b part 2b: the real-time values live in the main fields
+			(_entry(r, "skills", "skl_kai_heavy_swing")["rt"] as Dictionary)["power"] = 120
+		"rt_statuses_baked":
+			(_entry(r, "skills", "skl_kai_taunt")["rt"] as Dictionary)["statuses"] = []
+		"main_status_rt_form":
+			((_entry(r, "skills", "skl_kai_leash_trip")["statuses"] as Array)[0] as Dictionary)["chance_pm"] = 0

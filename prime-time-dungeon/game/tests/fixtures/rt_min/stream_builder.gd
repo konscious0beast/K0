@@ -262,9 +262,7 @@ func _begin(enc_id: String, group_id: String, enemy_ids: Array, boss: bool) -> v
 
 func _party_rt(u: RtUnit, def: PartyMemberDef, slot: int, bal: RtBalance) -> void:
 	var rt: Dictionary = def.rt
-	var hp: int = u.max_hp() * bal.i("HP_SCALE_PM") / 1000
-	u.stats.values[StatBlock.Stat.HP] = hp
-	u.hp = hp
+	u.hp = u.max_hp()
 	u.driver = RtUnit.Driver.PLAYER if slot == 0 else RtUnit.Driver.AI
 	u.x = -150 * slot
 	u.z = 300 + 100 * slot
@@ -290,10 +288,7 @@ func _party_rt(u: RtUnit, def: PartyMemberDef, slot: int, bal: RtBalance) -> voi
 
 func _enemy_rt(u: RtUnit, def: EnemyDef, slot: int, bal: RtBalance) -> void:
 	var rt: Dictionary = def.rt
-	var hp_pm: int = int(rt.get("hp_pm", 0))
-	var hp: int = int(rt.get("hp", 0))
-	if hp <= 0:
-		hp = int(def.stats.get("hp", 1)) * (hp_pm if hp_pm > 0 else bal.i("ENEMY_HP_PM")) / 1000
+	var hp: int = maxi(1, int(def.stats.get("hp", 1)))
 	u.stats.values[StatBlock.Stat.HP] = hp
 	u.hp = hp
 	u.driver = RtUnit.Driver.AI
@@ -412,7 +407,7 @@ func _summon(ct: int, a: String, id: String, enemy_id: String, slot: int, x: int
 	var def: EnemyDef = data.enemy(enemy_id)
 	var u: RtUnit = RtUnit.from_snapshot(Combatant.create_enemy(def, id, slot).to_dict(), data)
 	_enemy_rt(u, def, slot, _setup.balance)
-	var hp: int = int(def.stats.get("hp", 1)) * _setup.balance.i("SUMMON_HP_PM") / 1000
+	var hp: int = int(def.rt.get("summon_hp", 0)) if int(def.rt.get("summon_hp", 0)) > 0 else int(def.stats.get("hp", 1))
 	u.stats.values[StatBlock.Stat.HP] = hp
 	u.hp = hp
 	u.is_summon = true

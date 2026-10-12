@@ -152,24 +152,22 @@ static func from_combatant(c: Combatant) -> RtUnit:
 
 
 ## A new enemy unit of `def` (07 §4.9, §3.12) — BattleBridge.make_rt_setup and the sim's summons build them alike:
-## Combatant.create_enemy (stats, rewards, element factors, immunities) plus the rt block: the real-time max HP (rt.hp,
-## else stats.hp × rt.hp_pm / 1000 with ENEMY_HP_PM for 0; a summon: stats.hp × SUMMON_HP_PM / 1000, is_summon),
-## radius, speed, stationary, keep distance, auto-attack (rt.auto_skill, else the attack skill), swing, reach, dmg_pm,
-## rt.immune, the first swing after FIRST_SWING_TICKS; phase −1 for an enemy with rt.phases (entered when the combat
-## starts, RtSim.start), else phase 0 with its compiled rt.rules (keys "0:<index>", 07 §5.3).
+## Combatant.create_enemy (stats, rewards, element factors, immunities) plus the rt block: the real-time max HP
+## (stats.hp, baked in R5b part 2b; a summon: rt.summon_hp when set, is_summon), radius, speed, stationary, keep
+## distance, auto-attack (rt.auto_skill, else the attack skill), swing, reach, dmg_pm, rt.immune, the first swing after
+## FIRST_SWING_TICKS; phase −1 for an enemy with rt.phases (entered when the combat starts, RtSim.start), else phase 0
+## with its compiled rt.rules (keys "0:<index>", 07 §5.3).
 static func from_enemy(def: EnemyDef, id: String, slot: int, bal: RtBalance, summon: bool = false) -> RtUnit:
 	var u: RtUnit = from_combatant(Combatant.create_enemy(def, id, slot))
 	if def == null:
 		return u
 	var b: RtBalance = bal if bal != null else RtBalance.new()
 	var ert: Dictionary = def.rt
-	var hp: int = int(ert.get("hp", 0))
+	var hp: int = maxi(1, int(def.stats.get("hp", 1)))
 	if summon:
-		hp = maxi(1, int(def.stats.get("hp", 1)) * b.i("SUMMON_HP_PM") / 1000)
+		if int(ert.get("summon_hp", 0)) > 0:
+			hp = int(ert["summon_hp"])
 		u.is_summon = true
-	elif hp <= 0:
-		var pm: int = int(ert.get("hp_pm", 0))
-		hp = maxi(1, int(def.stats.get("hp", 1)) * (pm if pm > 0 else b.i("ENEMY_HP_PM")) / 1000)
 	u.stats.values[StatBlock.Stat.HP] = hp
 	u.hp = hp
 	u.driver = Driver.AI

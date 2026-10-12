@@ -17,8 +17,8 @@ static func data() -> GameData:
 	return _data
 
 
-## A real-time GameState on fixture floor 1: hero, level of both members (stats, full HP / MP, HP × 4 like a
-## real-time save), the start inventory plus `items`.
+## A real-time GameState on fixture floor 1: hero, level of both members (stats, full HP / MP — real-time HP from the
+## data, baked in R5b part 2b), the start inventory plus `items`.
 static func state(level: int = 1, hero: String = "kai", items: Dictionary = {}) -> GameState:
 	var d: GameData = data()
 	var st: GameState = GameState.create_new(d, 0, "Testperson", 4242)
@@ -27,7 +27,6 @@ static func state(level: int = 1, hero: String = "kai", items: Dictionary = {}) 
 	st.floor_run = FloorRun.create(d.floor_def(1), 4242, &"prime")
 	for m: PartyMember in st.party:
 		m.level = level
-		m.hp_scale_pm = 4000
 		var sb: StatBlock = Progression.total_stats(m, d)
 		m.hp = sb.values[StatBlock.Stat.HP]
 		m.mp = sb.values[StatBlock.Stat.MP]

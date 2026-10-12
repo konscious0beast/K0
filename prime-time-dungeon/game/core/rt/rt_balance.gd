@@ -6,6 +6,8 @@ class_name RtBalance extends RefCounted
 ## Values are integers or {sub key: integer} (IMPACT_TICKS, REACT_TICKS, AI_DODGE_MISS_PM, SET_R_CM).
 ## R1a shipped this class complete (it is the key/range table); R1b took it over unchanged (from_data reads the file
 ## once per combat in BattleBridge.make_rt_setup, RtSim falls back to it). Getters may grow, the keys never alone.
+## R5b part 2b baked the HP scale into the data (07 §3.9.4, §12.6 step 2): HP_SCALE_PM, FIXED_SCALE_PM, ENEMY_HP_PM and
+## SUMMON_HP_PM are gone (party / enemy HP, fixed amounts and summon HP live in the data tables).
 
 const SCHEMA: int = 1
 ## Start values (07 §3.16, identical to data/rt_balance.json at R1a).
@@ -29,7 +31,7 @@ const DEFAULTS: Dictionary = {
 	"OVERKILL_PM": 500, "DMG_FACTOR_MAX_PM": 8000, "PCT_GUARD_PM": 667, "CLOSE_DODGE_TICKS": 9,
 	"HIT_MP_EVERY_TICKS": 30,
 	"MAX_PARTY": 4, "MAX_ENEMIES": 6, "MAX_TELEGRAPHS": 10, "MAX_COMBAT_TICKS": 18000, "CHECKPOINT_TICKS": 300,
-	"HP_SCALE_PM": 4000, "FIXED_SCALE_PM": 4000, "ENEMY_HP_PM": 7000, "SUMMON_HP_PM": 4000, "EASY_WARN_PM": 1250,
+	"EASY_WARN_PM": 1250,
 	"REVIVE_GUARD_MS": 3000, "REGEN_PERIOD_TICKS": 90, "REGEN_HP_DELAY_TICKS": 150, "REGEN_HP_PM": 5,
 	"REGEN_MP_PM": 20, "CHASE_COMBAT_SEC_X10": 40,
 }
@@ -56,8 +58,7 @@ const RANGES: Dictionary = {
 	"OVERKILL_PM": [0, 2000], "DMG_FACTOR_MAX_PM": [1000, 20000], "PCT_GUARD_PM": [0, 1000],
 	"CLOSE_DODGE_TICKS": [0, 60], "HIT_MP_EVERY_TICKS": [1, 300],
 	"MAX_PARTY": [1, 4], "MAX_ENEMIES": [1, 12], "MAX_TELEGRAPHS": [1, 32], "MAX_COMBAT_TICKS": [900, 54000],
-	"CHECKPOINT_TICKS": [30, 3000], "HP_SCALE_PM": [1000, 10000], "FIXED_SCALE_PM": [1000, 10000],
-	"ENEMY_HP_PM": [1000, 20000], "SUMMON_HP_PM": [1000, 20000], "EASY_WARN_PM": [1000, 3000],
+	"CHECKPOINT_TICKS": [30, 3000], "EASY_WARN_PM": [1000, 3000],
 	"REVIVE_GUARD_MS": [0, 10000], "REGEN_PERIOD_TICKS": [1, 900], "REGEN_HP_DELAY_TICKS": [0, 1800],
 	"REGEN_HP_PM": [0, 1000], "REGEN_MP_PM": [0, 1000], "CHASE_COMBAT_SEC_X10": [0, 600],
 }

@@ -55,8 +55,8 @@ func test_new_games_fight_in_real_time() -> void:
 	assert_eq(Game.new_game_combat_mode(), &"realtime")
 	assert_true(Game.is_realtime(), "Game.new_game takes the setting")
 	assert_eq(str(Game.run_log.header.get("combat_mode", "")), "realtime", "the run log names it (07 §10.2)")
-	assert_eq(Game.state.member("kai").hp_scale_pm, RtBalance.from_data(DB.data).i("HP_SCALE_PM"),
-		"the real-time HP scale (07 §3.9.4)")
+	assert_eq(Game.state.member("kai").hp, Progression.total_stats(Game.state.member("kai"), DB.data).values[
+		StatBlock.Stat.HP], "full real-time HP (07 §3.9.4, baked in R5b part 2b)")
 	Game.combat_mode_override = &"ctb"
 	Game.new_game(0, "Kai", 4242)
 	assert_false(Game.is_realtime(), "--combat=ctb still gives a CTB game")

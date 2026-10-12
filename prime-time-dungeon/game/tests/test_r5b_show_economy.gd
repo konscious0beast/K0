@@ -203,22 +203,25 @@ func test_followers_of_a_real_time_combat_are_scaled() -> void:
 	assert_true(scaled < base and scaled >= base * ShowRules.RT_FOLLOWER_PM / 1000 - 1, "%d of %d" % [scaled, base])
 
 
+## Logs of version 2 (before E32) and 3 (before the HP bake of R5b part 2b, 07 §12.6) are an "ältere Version" in both
+## verifiers, the leaderboard and the lobby — tagged, not replayed, never a mismatch.
 func test_older_logs_are_an_older_version() -> void:
-	assert_eq(RunSim.SIM_VERSION, 3, "07 E32: 2 → 3")
+	assert_eq(RunSim.SIM_VERSION, 4, "07 E32: 2 → 3; R5b part 2b: 3 → 4")
 	RtLive.adopt(RtLive.state(6, 30.0, {"itm_brutzel_burger": 2, "itm_energy_krawumm": 1, "itm_molotov": 1}))
 	var r: Dictionary = RtLive.fight(RtKit.canned_encounter(), RtKit.canned_commands())
 	assert_false(r.is_empty(), "a live real-time combat")
 	var live: Dictionary = Game.replay_log(Game.run_log)
 	assert_eq([live["errors"], live["mismatch_at"], live["version"]], [PackedStringArray(), -1, ""],
 		"this kernel replays its own log")
-	var raw: Dictionary = Game.run_log.to_dict()
-	(raw["header"] as Dictionary)["sim_version"] = 2
-	var old: RunLog = RunLog.from_dict(raw)
-	var g: Dictionary = Game.replay_log(old)
-	assert_eq([g["version"], g["mismatch_at"], g["final_hash"]], [RunSim.OLD_VERSION, -1, ""],
-		"a real-time log recorded before E32: tagged, not replayed, never a mismatch")
-	assert_has("; ".join(g["errors"]), "ältere Version")
-	var c: Dictionary = RunSim.replay(RtKit.data(), old)
-	assert_eq([c["version"], c["mismatch_at"]], [RunSim.OLD_VERSION, -1], "the core verifier alike")
-	assert_eq(Leaderboard.version_status({"score": 9, "sim_version": 2}), RunSim.OLD_VERSION)
-	assert_eq(EventInfo.version_tag({"score": 9, "sim_version": 2}), RunSim.OLD_VERSION_TAG, "the lobby's tag")
+	for v: int in [2, 3]:
+		var raw: Dictionary = Game.run_log.to_dict()
+		(raw["header"] as Dictionary)["sim_version"] = v
+		var old: RunLog = RunLog.from_dict(raw)
+		var g: Dictionary = Game.replay_log(old)
+		assert_eq([g["version"], g["mismatch_at"], g["final_hash"]], [RunSim.OLD_VERSION, -1, ""],
+			"a real-time log of version %d: tagged, not replayed, never a mismatch" % v)
+		assert_has("; ".join(g["errors"]), "ältere Version")
+		var c: Dictionary = RunSim.replay(RtKit.data(), old)
+		assert_eq([c["version"], c["mismatch_at"]], [RunSim.OLD_VERSION, -1], "the core verifier alike")
+		assert_eq(Leaderboard.version_status({"score": 9, "sim_version": v}), RunSim.OLD_VERSION)
+		assert_eq(EventInfo.version_tag({"score": 9, "sim_version": v}), RunSim.OLD_VERSION_TAG, "the lobby's tag")

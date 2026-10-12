@@ -26,7 +26,6 @@ static func build(data: GameData, opts: Dictionary = {}) -> HudSim:
 	var level: int = int(opts.get("level", 1))
 	var tutorial: bool = bool(opts.get("tutorial", false))
 	var bal: RtBalance = RtBalance.from_data(data)
-	var scale: int = bal.i("HP_SCALE_PM") if bal != null and bal.i("HP_SCALE_PM") > 0 else 1000
 	var st: GameState = GameState.create_new(data, 0, GameState.DEFAULT_NAME, 4242)
 	st.hero = hero
 	var s: RtSetup = RtSetup.new()
@@ -51,9 +50,7 @@ static func build(data: GameData, opts: Dictionary = {}) -> HudSim:
 		if c == null:
 			continue
 		var u: RtUnit = RtUnit.from_snapshot(c.to_dict(), data)
-		var mhp: int = c.max_hp() * scale / 1000
-		u.stats.values[StatBlock.Stat.HP] = mhp
-		u.hp = mhp
+		u.hp = c.max_hp()
 		u.mp = c.max_mp()
 		u.level = level
 		u.driver = RtUnit.Driver.PLAYER if m.id == hero else RtUnit.Driver.AI
@@ -70,9 +67,7 @@ static func build(data: GameData, opts: Dictionary = {}) -> HudSim:
 	for i in ids.size():
 		var edef: EnemyDef = data.enemy(str(ids[i]))
 		var u2: RtUnit = RtUnit.from_snapshot(Combatant.create_enemy(edef, "e%d" % i, i).to_dict(), data)
-		var ehp: int = u2.max_hp() * scale / 1000
-		u2.stats.values[StatBlock.Stat.HP] = ehp
-		u2.hp = ehp
+		u2.hp = u2.max_hp()
 		u2.x = -250 + 250 * i
 		u2.z = -300
 		u2.driver = RtUnit.Driver.AI

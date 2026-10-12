@@ -16,7 +16,10 @@ var mp_cost: int = 0
 var rank: int = 3
 var accuracy: int = -1
 var crit_bonus: float = 0.0
-var statuses: Array[Dictionary] = []        # [{"id": String, "chance": float, "turns": int}]
+## With an rt block (the campaign; R5b part 2b baked the real-time values in): [{"id", "chance_pm", "ms", "to",
+## "tick_power"}] (07 §4.6), the list rt.statuses fills; without one (the CTB engine of the Stempelduell, 10 §6.4):
+## [{"id": String, "chance": float, "turns": int}].
+var statuses: Array[Dictionary] = []
 var cleanse: PackedStringArray = []
 var mp_restore: int = 0
 var mp_restore_pct: int = 0
@@ -38,7 +41,9 @@ var show_tags: PackedStringArray = []
 # --- Echtzeitkampf (07, R1a): optional `rt` block (07 §4.6), {} = no real-time data; filled by RtNorm ---------------
 const RtNorm := preload("res://core/data/defs/rt_norm.gd")
 ## impact_ms -1 = derived from `anim` (RtBalance.IMPACT_TICKS, 07 §3.6.7); statuses[].ms 0 = the status's
-## rt.default_ms; power / mp / cleanse default to the CTB fields; moving_cancels defaults to cast_ms / channel_ms > 0.
+## rt.default_ms; power / mp / cleanse / statuses come from the main fields power / mp_cost / cleanse / statuses (R5b
+## part 2b baked the real-time values into them, validators/rt.gd refuses them in the block); moving_cancels defaults
+## to cast_ms / channel_ms > 0.
 const RT_SPEC: Array = [["icon", "s", ""], ["cast_ms", "i", 0], ["channel_ms", "i", 0], ["period_ms", "i", 0],
 	["cooldown_ms", "i", 0], ["gcd", "b", true], ["range_cm", "i", 0], ["aoe", "d", {}], ["moving_cancels", "b", false],
 	["interrupt", "b", false], ["interruptible", "b", true], ["interrupt_worthy", "b", false], ["threat_pm", "i", 1000],
@@ -106,7 +111,7 @@ func is_damaging() -> bool:
 
 # --- Echtzeitkampf (07, R1a) ------------------------------------------------------------------------------------------
 
-## The filled `rt` block (07 §4.6) — {} without one. CTB defaults: power, mp (mp_cost), cleanse.
+## The filled `rt` block (07 §4.6) — {} without one. From the main fields: power, mp (mp_cost), cleanse, statuses.
 static func _norm_rt(raw: Variant, def: SkillDef) -> Dictionary:
 	var out: Dictionary = RtNorm.fill(raw, RT_SPEC)
 	if out.is_empty():
@@ -118,6 +123,8 @@ static func _norm_rt(raw: Variant, def: SkillDef) -> Dictionary:
 		out["mp"] = def.mp_cost
 	if not src.has("cleanse"):
 		out["cleanse"] = Array(def.cleanse)
+	if not src.has("statuses"):
+		out["statuses"] = (def.statuses as Array).duplicate(true)
 	if not src.has("moving_cancels"):
 		out["moving_cancels"] = int(out["cast_ms"]) > 0 or int(out["channel_ms"]) > 0
 	out["aoe"] = RtNorm.fill(out["aoe"], RT_AOE_SPEC)

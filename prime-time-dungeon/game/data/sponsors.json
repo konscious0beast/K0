@@ -131,7 +131,7 @@
 				},
 				{
 					"kind": "heal_party_flat",
-					"value": 20,
+					"value": 80,
 					"target": "party"
 				}
 			],

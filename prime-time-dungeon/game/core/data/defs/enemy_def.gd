@@ -22,9 +22,9 @@ var model: Dictionary = {}                  # ModelSpec, normalized
 var explore: Dictionary = {}                # field_speed, patrol_speed, sight_range, … (all keys present)
 # --- Echtzeitkampf (07, R1a): optional `rt` block (07 §4.9), {} = no real-time data; filled by RtNorm ---------------
 const RtNorm := preload("res://core/data/defs/rt_norm.gd")
-## hp 0 = stats.hp × hp_pm / 1000; hp_pm 0 = RtBalance ENEMY_HP_PM; rules / phases stay as in the data
-## (RtRules.compile).
-const RT_SPEC: Array = [["hp", "i", 0], ["hp_pm", "i", 0], ["radius_cm", "i", 30], ["move_cm_s", "i", 360],
+## stats.hp is the real-time max HP (R5b part 2b baked it in); summon_hp > 0: the max HP as a summoned add (07 §3.12;
+## 0 = stats.hp); rules / phases stay as in the data (RtRules.compile).
+const RT_SPEC: Array = [["summon_hp", "i", 0], ["radius_cm", "i", 30], ["move_cm_s", "i", 360],
 	["stationary", "b", false], ["keep_cm", "i", 0], ["auto_skill", "s", ""], ["auto_ranged_skill", "s", ""],
 	["swing_ms", "i", 2400], ["reach_cm", "i", 220], ["auto_target", "s", "threat_top"], ["dmg_pm", "i", 1000],
 	["immune", "sa", []], ["rules", "a", []], ["phases", "a", []], ["enrage", "d", {}]]

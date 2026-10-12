@@ -22,7 +22,7 @@
 			"name": "Kanalratte",
 			"level": 1,
 			"stats": {
-				"hp": 24,
+				"hp": 206,
 				"mp": 0,
 				"str": 13,
 				"mag": 3,
@@ -86,6 +86,7 @@
 				"field_speed": 4.8
 			},
 			"rt": {
+				"summon_hp": 96,
 				"radius_cm": 30,
 				"move_cm_s": 360,
 				"auto_skill": "skl_e_bite",
@@ -106,7 +107,7 @@
 			"name": "Kanalratte (Azubi)",
 			"level": 1,
 			"stats": {
-				"hp": 24,
+				"hp": 280,
 				"mp": 0,
 				"str": 13,
 				"mag": 3,
@@ -156,7 +157,6 @@
 				"field_speed": 4.8
 			},
 			"rt": {
-				"hp": 280,
 				"radius_cm": 30,
 				"move_cm_s": 300,
 				"auto_skill": "skl_e_bite",
@@ -177,7 +177,7 @@
 			"name": "Taubenschwarm",
 			"level": 2,
 			"stats": {
-				"hp": 20,
+				"hp": 200,
 				"mp": 0,
 				"str": 12,
 				"mag": 4,
@@ -238,7 +238,6 @@
 				"sight_range": 14.0
 			},
 			"rt": {
-				"hp_pm": 10000,
 				"radius_cm": 40,
 				"move_cm_s": 450,
 				"auto_skill": "skl_e_peck",
@@ -260,7 +259,7 @@
 			"name": "Pendler (ewig verspätet)",
 			"level": 2,
 			"stats": {
-				"hp": 48,
+				"hp": 412,
 				"mp": 0,
 				"str": 17,
 				"mag": 2,
@@ -351,7 +350,7 @@
 			"name": "Kanalschleim",
 			"level": 2,
 			"stats": {
-				"hp": 40,
+				"hp": 192,
 				"mp": 10,
 				"str": 12,
 				"mag": 12,
@@ -414,7 +413,6 @@
 				"field_speed": 3.0
 			},
 			"rt": {
-				"hp_pm": 4800,
 				"radius_cm": 45,
 				"move_cm_s": 180,
 				"auto_skill": "skl_e_slam",
@@ -438,7 +436,7 @@
 			"name": "Rattenschamane",
 			"level": 3,
 			"stats": {
-				"hp": 34,
+				"hp": 292,
 				"mp": 30,
 				"str": 9,
 				"mag": 16,
@@ -545,7 +543,7 @@
 			"name": "Kabelsalat",
 			"level": 3,
 			"stats": {
-				"hp": 46,
+				"hp": 395,
 				"mp": 20,
 				"str": 14,
 				"mag": 17,
@@ -640,7 +638,7 @@
 			"name": "Kellerspinne",
 			"level": 4,
 			"stats": {
-				"hp": 50,
+				"hp": 430,
 				"mp": 10,
 				"str": 22,
 				"mag": 6,
@@ -741,7 +739,7 @@
 			"name": "Sprühgeist",
 			"level": 4,
 			"stats": {
-				"hp": 44,
+				"hp": 308,
 				"mp": 40,
 				"str": 8,
 				"mag": 23,
@@ -816,7 +814,6 @@
 				"field_speed": 5.0
 			},
 			"rt": {
-				"hp_pm": 7000,
 				"radius_cm": 35,
 				"move_cm_s": 300,
 				"keep_cm": 600,
@@ -842,7 +839,7 @@
 			"name": "Rolltreppenkrabbe",
 			"level": 5,
 			"stats": {
-				"hp": 72,
+				"hp": 504,
 				"mp": 0,
 				"str": 25,
 				"mag": 4,
@@ -928,7 +925,6 @@
 				"field_speed": 3.8
 			},
 			"rt": {
-				"hp_pm": 7000,
 				"radius_cm": 60,
 				"move_cm_s": 240,
 				"auto_skill": "skl_e_pinch",
@@ -953,7 +949,7 @@
 			"name": "Rattengardist",
 			"level": 6,
 			"stats": {
-				"hp": 78,
+				"hp": 546,
 				"mp": 10,
 				"str": 27,
 				"mag": 6,
@@ -1031,7 +1027,6 @@
 				"field_speed": 5.0
 			},
 			"rt": {
-				"hp_pm": 7000,
 				"radius_cm": 45,
 				"move_cm_s": 300,
 				"auto_skill": "skl_e_halberd",
@@ -1066,7 +1061,7 @@
 			"name": "Fahrscheinfresser",
 			"level": 4,
 			"stats": {
-				"hp": 60,
+				"hp": 516,
 				"mp": 0,
 				"str": 18,
 				"mag": 18,
@@ -1176,7 +1171,7 @@
 			"level": 6,
 			"boss": true,
 			"stats": {
-				"hp": 330,
+				"hp": 4400,
 				"mp": 60,
 				"str": 40,
 				"mag": 26,
@@ -1348,7 +1343,6 @@
 				"field_speed": 0.0
 			},
 			"rt": {
-				"hp": 4400,
 				"radius_cm": 90,
 				"move_cm_s": 240,
 				"auto_skill": "skl_b_broom",
@@ -1457,7 +1451,7 @@
 			"level": 8,
 			"boss": true,
 			"stats": {
-				"hp": 550,
+				"hp": 7800,
 				"mp": 120,
 				"str": 52,
 				"mag": 44,
@@ -1644,7 +1638,6 @@
 				"field_speed": 0.0
 			},
 			"rt": {
-				"hp": 7800,
 				"radius_cm": 110,
 				"move_cm_s": 300,
 				"stationary": true,
@@ -1784,7 +1777,7 @@
 			"name": "Schaufensterpuppe",
 			"level": 8,
 			"stats": {
-				"hp": 90,
+				"hp": 774,
 				"mp": 10,
 				"str": 28,
 				"mag": 8,
@@ -1857,7 +1850,7 @@
 			"name": "Einkaufswagen-Rudel",
 			"level": 8,
 			"stats": {
-				"hp": 55,
+				"hp": 473,
 				"mp": 0,
 				"str": 24,
 				"mag": 4,
@@ -1926,7 +1919,7 @@
 			"name": "Rabattschild-Golem",
 			"level": 9,
 			"stats": {
-				"hp": 120,
+				"hp": 1032,
 				"mp": 20,
 				"str": 30,
 				"mag": 20,

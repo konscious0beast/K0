@@ -135,9 +135,7 @@ static func state_for(data: GameData, enc_id: String, hero: String, liga: int, n
 	var kit: Dictionary = ITEMS[str(plan[2])]
 	for iid: String in kit:
 		st.inventory.add(iid, int(kit[iid]), 9)
-	var scale: int = RtBalance.from_data(data).i("HP_SCALE_PM")
 	for m: PartyMember in st.party:
-		m.hp_scale_pm = scale
 		level_to(m, data, level)
 		var g: Array = (GEAR[str(plan[1])] as Dictionary)[m.id]
 		var strip: bool = liga >= 2 or (liga == 1 and m.id == hero)

@@ -57,10 +57,6 @@ static func total_stats(member: PartyMember, data: GameData, liga: bool = false)
 			var i: int = StatBlock.KEYS.find(str(key))
 			if i >= 0:
 				vals[i] += JsonUtil.to_int(item.stats[key])
-	# Echtzeitkampf (07 §3.9.4): the HP scale on the HP of level and equipment — before the percentages of talents,
-	# class and species, which round on the real-time HP (where R5b part 2b bakes it into the data)
-	if member.hp_scale_pm != _PM:
-		vals[StatBlock.Stat.HP] = (maxi(0, vals[StatBlock.Stat.HP]) * member.hp_scale_pm + _PM / 2) / _PM
 	if Talents.has_any(member, data):                # Casting (08, K0): pool or start talent (CR-21)
 		for i in vals.size():
 			vals[i] += Talents.stat_bonus(member, data, i, vals[i], liga)
@@ -350,8 +346,8 @@ static func _apply_field_skill(m: PartyMember, skill: SkillDef, data: GameData) 
 				amount = ((sb.values[StatBlock.Stat.MAG] * 15 + 100) * skill.power + 500) / 1000
 			"pct":
 				amount = (max_hp * skill.power + 50) / 100
-			"fixed":                                     # in the member's HP units (07 §3.9.4: × 4 in real time)
-				amount = skill.power * m.hp_scale_pm / _PM
+			"fixed":
+				amount = skill.power
 		if revive:
 			m.hp = clampi(amount, 1, max_hp)
 		else:

@@ -11,7 +11,7 @@ const Damage := preload("res://core/rt/rt_damage.gd")
 const StatusFx := preload("res://core/rt/rt_status_fx.gd")
 const T := ActionEvent.Type
 const K := BattleCommand.Kind
-const RAT_HP: int = 168                      # Kanalratte: 24 × ENEMY_HP_PM 7000
+const RAT_HP: int = 168                      # Kanalratte: 24 × 7 (rt_min, baked in R5b part 2b)
 
 
 func _two_groups(opts: Dictionary = {}) -> Dictionary:

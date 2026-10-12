@@ -26,21 +26,22 @@ const RT_STATUSES: int = 9
 const RT_BOSS_SKILLS: PackedStringArray = ["skl_q_train", "skl_q_scepter_flash", "skl_q_puddles"]   # R5b: the flash
 const RT_ENEMY_SKILLS: PackedStringArray = ["skl_e_azubi_hop", "skl_e_showboss_slow"]
 
-## GDD §5.1: id → [lv, hp, mp, str, mag, def, res, spd, lck, exp, credits, field_speed].
+## GDD §5.1: id → [lv, hp, mp, str, mag, def, res, spd, lck, exp, credits, field_speed]. HP: the real-time max HP
+## baked into the data in R5b part 2b (07 §3.9.4, §12.6 step 2: the GDD HP × 8.6, × rt.hp_pm, or the absolute boss HP).
 const ENEMY_TABLE: Dictionary = {
-	"enm_kanalratte": [1, 24, 0, 13, 3, 5, 3, 13, 5, 12, 6, 4.8],
-	"enm_taubenschwarm": [2, 20, 0, 12, 4, 3, 6, 19, 8, 14, 5, 6.2],
-	"enm_pendler": [2, 48, 0, 17, 2, 8, 4, 7, 3, 22, 14, 3.5],
-	"enm_kanalschleim": [2, 40, 10, 12, 12, 10, 4, 9, 3, 20, 8, 3.0],
-	"enm_rattenschamane": [3, 34, 30, 9, 16, 6, 12, 12, 6, 26, 12, 4.5],
-	"enm_kabelsalat": [3, 46, 20, 14, 17, 12, 10, 14, 5, 30, 15, 4.0],
-	"enm_kellerspinne": [4, 50, 10, 22, 6, 10, 8, 17, 10, 34, 12, 5.8],
-	"enm_spruehgeist": [4, 44, 40, 8, 23, 18, 10, 15, 8, 36, 18, 5.0],
-	"enm_rolltreppenkrabbe": [5, 72, 0, 25, 4, 24, 8, 10, 4, 60, 20, 3.8],
-	"enm_rattengardist": [6, 78, 10, 27, 6, 17, 10, 14, 8, 66, 22, 5.0],
-	"enm_fahrscheinfresser": [4, 60, 0, 18, 18, 20, 20, 16, 20, 60, 100, 0.0],
-	"enm_boss_hausmeister": [6, 330, 60, 40, 26, 14, 10, 12, 6, 180, 150, 0.0],
-	"enm_boss_rattenkoenigin": [8, 550, 120, 52, 44, 18, 16, 15, 10, 420, 300, 0.0],
+	"enm_kanalratte": [1, 206, 0, 13, 3, 5, 3, 13, 5, 12, 6, 4.8],
+	"enm_taubenschwarm": [2, 200, 0, 12, 4, 3, 6, 19, 8, 14, 5, 6.2],
+	"enm_pendler": [2, 412, 0, 17, 2, 8, 4, 7, 3, 22, 14, 3.5],
+	"enm_kanalschleim": [2, 192, 10, 12, 12, 10, 4, 9, 3, 20, 8, 3.0],
+	"enm_rattenschamane": [3, 292, 30, 9, 16, 6, 12, 12, 6, 26, 12, 4.5],
+	"enm_kabelsalat": [3, 395, 20, 14, 17, 12, 10, 14, 5, 30, 15, 4.0],
+	"enm_kellerspinne": [4, 430, 10, 22, 6, 10, 8, 17, 10, 34, 12, 5.8],
+	"enm_spruehgeist": [4, 308, 40, 8, 23, 18, 10, 15, 8, 36, 18, 5.0],
+	"enm_rolltreppenkrabbe": [5, 504, 0, 25, 4, 24, 8, 10, 4, 60, 20, 3.8],
+	"enm_rattengardist": [6, 546, 10, 27, 6, 17, 10, 14, 8, 66, 22, 5.0],
+	"enm_fahrscheinfresser": [4, 516, 0, 18, 18, 20, 20, 16, 20, 60, 100, 0.0],
+	"enm_boss_hausmeister": [6, 4400, 60, 40, 26, 14, 10, 12, 6, 180, 150, 0.0],
+	"enm_boss_rattenkoenigin": [8, 7800, 120, 52, 44, 18, 16, 15, 10, 420, 300, 0.0],
 }
 
 ## GDD §5.1 affinities: id → element_mods.
@@ -93,7 +94,7 @@ const EQUIPMENT: Dictionary = {
 	"itm_arm_sewer_suit": ["armor", 420, 210, "common", {"def": 9, "res": 4}, ["kai"]],
 	"itm_arm_pug_sweater": ["armor", 0, 0, "common", {"def": 2, "res": 3}, ["mopsula"]],
 	"itm_arm_velvet_cape": ["armor", 220, 110, "common", {"def": 4, "res": 6}, ["mopsula"]],
-	"itm_arm_ermine": ["armor", 0, 250, "epic", {"def": 6, "res": 9, "hp": 15}, ["mopsula"]],
+	"itm_arm_ermine": ["armor", 0, 250, "epic", {"def": 6, "res": 9, "hp": 60}, ["mopsula"]],
 	"itm_acc_lucky_ticket": ["accessory", 150, 75, "rare", {"lck": 5}, []],
 	"itm_acc_rubber_boots": ["accessory", 200, 100, "rare", {}, []],
 	"itm_acc_sneakers": ["accessory", 260, 130, "epic", {"spd": 2}, []],
@@ -104,14 +105,15 @@ const EQUIPMENT: Dictionary = {
 	"itm_acc_clip_mic": ["accessory", 0, 150, "rare", {}, []],
 }
 
-## GDD §4.2 result table: level → [kai stats..., mopsula stats...] (without equipment; order = StatBlock.KEYS).
+## GDD §4.2 result table: level → [kai stats..., mopsula stats...] (without equipment; order = StatBlock.KEYS). HP: the
+## real-time HP baked in R5b part 2b (07 §3.9.4: the GDD HP × 4).
 const LEVEL_TABLE: Dictionary = {
-	1: [[64, 12, 12, 5, 9, 6, 11, 8], [42, 30, 5, 13, 6, 11, 14, 12]],
-	3: [[82, 16, 16, 6, 12, 7, 12, 9], [54, 38, 6, 17, 7, 14, 15, 13]],
-	5: [[100, 20, 20, 7, 15, 9, 13, 10], [66, 46, 7, 21, 9, 17, 16, 14]],
-	7: [[118, 24, 24, 8, 18, 10, 14, 11], [78, 54, 8, 26, 10, 20, 17, 16]],
-	8: [[127, 26, 26, 9, 19, 11, 14, 11], [84, 58, 9, 28, 11, 22, 18, 16]],
-	10: [[145, 30, 30, 10, 22, 13, 15, 12], [96, 66, 10, 32, 13, 25, 19, 18]],
+	1: [[256, 12, 12, 5, 9, 6, 11, 8], [168, 30, 5, 13, 6, 11, 14, 12]],
+	3: [[328, 16, 16, 6, 12, 7, 12, 9], [216, 38, 6, 17, 7, 14, 15, 13]],
+	5: [[400, 20, 20, 7, 15, 9, 13, 10], [264, 46, 7, 21, 9, 17, 16, 14]],
+	7: [[472, 24, 24, 8, 18, 10, 14, 11], [312, 54, 8, 26, 10, 20, 17, 16]],
+	8: [[508, 26, 26, 9, 19, 11, 14, 11], [336, 58, 9, 28, 11, 22, 18, 16]],
+	10: [[580, 30, 30, 10, 22, 13, 15, 12], [384, 66, 10, 32, 13, 25, 19, 18]],
 }
 const STAT_KEYS: PackedStringArray = ["hp", "mp", "str", "mag", "def", "res", "spd", "lck"]
 
@@ -277,24 +279,25 @@ func test_party_start_block_and_equipment() -> void:
 
 func test_party_skill_rows_match_gdd() -> void:
 	var d: GameData = _data()
-	# id → [mp, power, rank, target, element, damage_type]
+	# id → [mp, power, rank, target, element, damage_type] — MP cost and power as baked in R5b part 2b (07 §4.11: the
+	# real-time values of the rt blocks moved into the main fields)
 	var rows: Dictionary = {
 		"skl_kai_heavy_swing": [3, 160, 4, "single_enemy", "physical", "physical"],
 		"skl_kai_taunt": [2, 0, 2, "self", "none", "none"],
 		"skl_kai_sweep": [5, 80, 3, "all_enemies", "physical", "physical"],
 		"skl_kai_first_aid": [4, 30, 2, "single_ally", "none", "heal"],
-		"skl_kai_leash_trip": [5, 70, 3, "single_enemy", "physical", "physical"],
-		"skl_kai_deo_torch": [7, 130, 3, "single_enemy", "fire", "physical"],
-		"skl_kai_cable_whip": [8, 120, 3, "single_enemy", "shock", "physical"],
-		"skl_kai_prime_finisher": [12, 260, 5, "single_enemy", "physical", "physical"],
+		"skl_kai_leash_trip": [3, 70, 3, "single_enemy", "physical", "physical"],
+		"skl_kai_deo_torch": [7, 40, 3, "single_enemy", "fire", "physical"],
+		"skl_kai_cable_whip": [6, 120, 3, "single_enemy", "shock", "physical"],
+		"skl_kai_prime_finisher": [8, 260, 5, "single_enemy", "physical", "physical"],
 		"skl_mop_noble_flame": [4, 110, 3, "single_enemy", "fire", "magical"],
 		"skl_mop_holy_lick": [4, 100, 2, "single_ally", "none", "heal"],
 		"skl_mop_frost_sneeze": [5, 105, 3, "single_enemy", "ice", "magical"],
-		"skl_mop_thunder_bark": [7, 75, 3, "all_enemies", "shock", "magical"],
+		"skl_mop_thunder_bark": [5, 75, 3, "all_enemies", "shock", "magical"],
 		"skl_mop_expert_opinion": [6, 0, 2, "single_ally", "none", "none"],
 		"skl_mop_mass_lick": [10, 60, 3, "all_allies", "none", "heal"],
 		"skl_mop_revive": [14, 40, 4, "single_ally_ko", "none", "heal"],
-		"skl_mop_inferno": [14, 130, 4, "all_enemies", "fire", "magical"],
+		"skl_mop_inferno": [12, 130, 4, "all_enemies", "fire", "magical"],
 		"skl_attack_kai": [0, 100, 3, "single_enemy", "physical", "physical"],
 		"skl_attack_mopsula": [0, 100, 3, "single_enemy", "physical", "physical"],
 		"skl_e_strike": [0, 100, 3, "single_enemy", "physical", "physical"],
@@ -305,16 +308,21 @@ func test_party_skill_rows_match_gdd() -> void:
 		assert_eq([s.mp_cost, s.power, s.rank, s.target, s.element, s.damage_type], r, id)
 		assert_eq(s.accuracy, -1, id + " always hits")
 	assert_eq(d.skill("skl_kai_first_aid").heal_mode, "pct")
-	assert_eq(d.skill("skl_kai_first_aid").cleanse, ["sts_poison"])
+	assert_eq(d.skill("skl_kai_first_aid").cleanse, ["sts_poison", "sts_burn"])
 	assert_eq(d.skill("skl_mop_mass_lick").cleanse, ["sts_poison"])
 	assert_eq(d.skill("skl_mop_holy_lick").heal_mode, "mag")
 	assert_eq(d.skill("skl_mop_revive").heal_mode, "pct")
-	assert_eq(d.skill("skl_kai_taunt").statuses, [{"id": "sts_taunt", "chance": 1.0, "turns": 3},
-		{"id": "sts_guard", "chance": 1.0, "turns": 3}])
-	assert_eq(d.skill("skl_kai_leash_trip").statuses, [{"id": "sts_slow", "chance": 0.9, "turns": 3}])
-	assert_eq(d.skill("skl_kai_cable_whip").statuses, [{"id": "sts_stun", "chance": 0.35, "turns": 0}])
-	assert_eq(d.skill("skl_mop_frost_sneeze").statuses, [{"id": "sts_slow", "chance": 0.25, "turns": 3}])
-	assert_eq(d.skill("skl_mop_expert_opinion").statuses, [{"id": "sts_haste", "chance": 1.0, "turns": 3}])
+	# statuses in real-time form (07 §4.6), [id, chance ‰, ms, to]
+	var sts: Dictionary = {
+		"skl_kai_taunt": [["sts_taunted", 1000, 4000, "all_enemies"], ["sts_guard", 1000, 6000, "self"]],
+		"skl_kai_leash_trip": [["sts_slow", 900, 4000, "target"]], "skl_kai_cable_whip": [["sts_stun", 1000, 1500, "target"]],
+		"skl_mop_frost_sneeze": [["sts_slow", 1000, 4000, "target"]],
+		"skl_mop_expert_opinion": [["sts_haste", 1000, 10000, "target"]]}
+	for id: String in sts:
+		var got: Array = []
+		for st: Dictionary in d.skill(id).statuses:
+			got.append([st["id"], st["chance_pm"], st["ms"], st["to"]])
+		assert_eq(got, sts[id], id)
 	assert_almost(d.skill("skl_kai_prime_finisher").crit_bonus, 0.2)
 	assert_eq(d.skill("skl_kai_prime_finisher").kill_hype, 10)
 
@@ -553,17 +561,18 @@ func test_consumables_match_gdd() -> void:
 		assert_eq(it.use_skill, "skl_item_" + id.trim_prefix("itm_"), id + " use_skill naming")
 		var s: SkillDef = d.skill(it.use_skill)
 		assert_eq([s.user, s.category, s.rank], ["item", "item", 2], it.use_skill)
-	assert_eq([d.skill("skl_item_bandage").heal_mode, d.skill("skl_item_bandage").power], ["fixed", 45])
-	assert_eq([d.skill("skl_item_brutzel_burger").heal_mode, d.skill("skl_item_brutzel_burger").power], ["fixed", 120])
-	assert_eq(d.skill("skl_item_antidote").cleanse, ["sts_poison"])
+	# fixed amounts in real-time HP units: the GDD values × 4 (baked in R5b part 2b, 07 §3.9.4)
+	assert_eq([d.skill("skl_item_bandage").heal_mode, d.skill("skl_item_bandage").power], ["fixed", 180])
+	assert_eq([d.skill("skl_item_brutzel_burger").heal_mode, d.skill("skl_item_brutzel_burger").power], ["fixed", 480])
+	assert_eq(d.skill("skl_item_antidote").cleanse, ["sts_poison", "sts_burn"], "real time: also the burn (07 §4.5)")
 	assert_eq(d.skill("skl_item_energy_krawumm").mp_restore, 20)
 	var salts: SkillDef = d.skill("skl_item_smelling_salts")
 	assert_eq([salts.target, salts.heal_mode, salts.power], ["single_ally_ko", "pct", 30])
 	var molotov: SkillDef = d.skill("skl_item_molotov")
-	assert_eq([molotov.damage_type, molotov.power, molotov.element, molotov.target], ["fixed", 60, "fire",
+	assert_eq([molotov.damage_type, molotov.power, molotov.element, molotov.target], ["fixed", 240, "fire",
 		"all_enemies"])
 	var spray: SkillDef = d.skill("skl_item_ice_spray")
-	assert_eq([spray.damage_type, spray.power, spray.element, spray.target], ["fixed", 90, "ice", "single_enemy"])
+	assert_eq([spray.damage_type, spray.power, spray.element, spray.target], ["fixed", 360, "ice", "single_enemy"])
 	assert_true(d.skill("skl_item_smoke").flee_guaranteed)
 	assert_eq(d.skill("skl_item_hype_megaphone").hype, 25)
 	var elixir: SkillDef = d.skill("skl_item_elixir")
@@ -843,7 +852,7 @@ func test_floor_2_stub() -> void:
 			enc.id, carts])
 	for id: String in ["enm_schaufensterpuppe", "enm_einkaufswagen_rudel", "enm_rabattschild"]:
 		assert_true(d.has_id("enemies", id), id)
-	assert_eq(d.enemy("enm_schaufensterpuppe").stats["hp"], 90)
+	assert_eq(d.enemy("enm_schaufensterpuppe").stats["hp"], 774, "90 × 8.6 (baked in R5b part 2b)")
 	assert_eq(d.enemy("enm_einkaufswagen_rudel").stats["spd"], 20)
 	assert_eq(d.enemy("enm_rabattschild").stats["def"], 26)
 

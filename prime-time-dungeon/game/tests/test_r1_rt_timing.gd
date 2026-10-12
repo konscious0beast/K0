@@ -195,7 +195,7 @@ func test_drink_pause_and_party_cooldowns() -> void:
 	assert_eq(sim.can_use("p0", "skl_kai_heavy_swing", ""), "drinking")
 	ev = _until(sim, 16)
 	var heal: ActionEvent = _first(ev, T.HEAL)
-	assert_true(heal != null and heal.tick == 15 and heal.amount == 180, "45 × FIXED_SCALE_PM 4000 at the end")
+	assert_true(heal != null and heal.tick == 15 and heal.amount == 180, "180 (45 × 4, baked) at the end")
 	assert_eq(kai.gcd_until, 0, "items are GCD-free")
 	assert_eq(sim.can_use_item("p0", "itm_bandage", ""), "item_cd")
 	var show: RtSim = _sim()

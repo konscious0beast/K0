@@ -35,7 +35,9 @@ func _tutorial(hero: String) -> void:
 	assert_eq(ctl, "p%d" % DB.party_member(hero).battle_slot, "the hero is the controlled unit")
 	var member: PartyMember = Game.state.member(hero)
 	assert_eq(sim.unit(ctl).max_hp(), Progression.total_stats(member, DB.data).values[StatBlock.Stat.HP])
-	assert_eq(member.hp_scale_pm, 4000, "a real-time game scales the party HP (07 §3.9.4)")
+	var pdef: PartyMemberDef = DB.party_member(hero)
+	assert_eq(sim.unit(ctl).max_hp(), int(pdef.base_stats["hp"]) + (member.level - 1) * int(pdef.growth["hp"]),
+		"the real-time HP of the data (07 §3.9.4, baked in R5b part 2b)")
 	assert_true(director.puppets.call("node_of", "e0") == tut, "the lead is shown by its EnemyActor")
 	var bar: Dictionary = sim.bar(ctl)
 	assert_true(bar.has(1), "slot 1 in the tutorial")

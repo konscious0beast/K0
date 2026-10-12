@@ -83,7 +83,6 @@ var _out: Array[ActionEvent] = []
 var _telegraphs: Array[RtTelegraph] = []
 var _gift_n: int = 0                        # gifts applied (their generator: SeedUtil.derive(seed, "gift", n))
 # --- derived once from setup + data (not state: a function of the start data) ------------------------------------
-var _views: Dictionary = {}                 # skill id → SkillDef with the real-time power (rt.power ≠ power)
 var _finale: Dictionary = {}                # party unit id → FINALE skill id (bar entry finale, level reached)
 var _context: Dictionary = {}               # party unit id → [{"slot", "skill", "when"}] (level reached)
 var _ps: Dictionary = {}                    # party unit id → Partner-Spezial skill (rt.partner_special, on its bar)
@@ -640,21 +639,10 @@ func item_def(id: String) -> ItemDef:
 	return _data.item(id) if _data != null and id != "" and _data.has_id("items", id) else null
 
 
-## The skill with its real-time power (rt.power overrides power, 07 §3.9.1) for DamageCalc.
+## The skill as DamageCalc sees it (07 §3.9.1): the skill itself — R5b part 2b baked the real-time power (and the fixed
+## amounts in real-time HP units, 07 §3.9.4) into SkillDef.power. view_for adds a unit's power factor.
 func view(sk: SkillDef) -> SkillDef:
-	if sk == null or rt_power(sk) == sk.power:
-		return sk
-	var v: SkillDef = _views.get(sk.id, null) as SkillDef
-	return v if v != null else _make_view(sk, rt_power(sk))
-
-
-## The real-time power of `sk`: rt.power (else power); a fixed amount (fixed damage, fixed heal) × FIXED_SCALE_PM in
-## the HP units of the real-time combat (07 §3.9.4) — before any skill_pm factor, like the baked data of R5b part 2b.
-func rt_power(sk: SkillDef) -> int:
-	var p: int = int(sk.rt.get("power", sk.power))
-	if sk.damage_type == "fixed" or sk.heal_mode == "fixed":
-		return FixedMath.mul_pm(p, bal.i("FIXED_SCALE_PM"))
-	return p
+	return sk
 
 
 ## Static: may unit u use skill_id at all (bar, FINALE, context variants; enemies: any)?
@@ -1329,7 +1317,7 @@ func view_for(u: RtUnit, sk: SkillDef) -> SkillDef:
 	var key: String = "%s|%s" % [u.id, sk.id]
 	var v: SkillDef = _unit_views.get(key, null) as SkillDef
 	if v == null:
-		v = _make_view(sk, FixedMath.mul_pm(rt_power(sk), pm))
+		v = _make_view(sk, FixedMath.mul_pm(sk.power, pm))
 		_unit_views[key] = v
 	return v
 
@@ -1463,9 +1451,9 @@ func _static_check(t: String, u: RtUnit, cmd: Dictionary) -> String:
 	return ""
 
 
-## Static data derived from the setup: the mod data of every unit (RtMods), real-time skill views, FINALE / context
-## variants / Partner-Spezial of the party (party.json rt, level reached), the interrupter MP, the auto targets of
-## enemies and the foes with phases / enrage, the komparsen of each group leader.
+## Static data derived from the setup: the mod data of every unit (RtMods), FINALE / context variants /
+## Partner-Spezial of the party (party.json rt, level reached), the interrupter MP, the auto targets of enemies and the
+## foes with phases / enrage, the komparsen of each group leader.
 func _derive() -> void:
 	_mods_any = not setup.mods.is_empty()
 	if _mods_any:
@@ -1477,14 +1465,10 @@ func _derive() -> void:
 					_skill_mods.append(m)
 		for u: RtUnit in _list:
 			_derive_mods(u)
-	var skills: PackedStringArray = []
 	for u: RtUnit in _list:
-		skills.append(u.auto_skill)
-		skills.append(u.auto_ranged_skill)
 		var known: Dictionary = {}
 		var intr: int = 0
 		for s: Variant in u.bar.values():
-			skills.append(str(s))
 			known[str(s)] = true
 			var bsk: SkillDef = skill_def(str(s))
 			if bsk != null and bool(bsk.rt.get("interrupt", false)):
@@ -1499,7 +1483,6 @@ func _derive() -> void:
 				var bd: Dictionary = b
 				if bool(bd.get("finale", false)) and int(bd.get("level", 1)) <= u.level:
 					_finale[u.id] = str(bd.get("skill", ""))
-					skills.append(str(bd.get("skill", "")))
 			var extra: Dictionary = _known_all[u.id]
 			if _finale.has(u.id):
 				extra[str(_finale[u.id])] = true
@@ -1509,7 +1492,6 @@ func _derive() -> void:
 				if int(cd.get("level", 1)) <= u.level:
 					ctx.append({"slot": int(cd.get("slot", 0)), "skill": str(cd.get("skill", "")),
 						"when": str(cd.get("when", ""))})
-					skills.append(str(cd.get("skill", "")))
 					extra[str(cd.get("skill", ""))] = true
 			_context[u.id] = ctx
 			var ps: String = str(prt.get("partner_special", ""))
@@ -1518,14 +1500,6 @@ func _derive() -> void:
 			_assist[u.id] = RtRules.preset_rules(prt, str(prt.get("assist_preset", "attack")))
 		elif u.side == Combatant.Side.ENEMY:
 			_derive_foe(u)
-	for k: Variant in items.keys():
-		var it: ItemDef = item_def(str(k))
-		if it != null:
-			skills.append(it.use_skill)
-	for sid: String in skills:
-		var sk: SkillDef = skill_def(sid)
-		if sk != null and not _views.has(sid) and rt_power(sk) != sk.power:
-			_views[sid] = _make_view(sk, rt_power(sk))
 	for g: Dictionary in setup.groups:
 		var ids: Array = g.get("units", [])
 		if ids.size() > 1:

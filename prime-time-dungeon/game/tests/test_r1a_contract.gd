@@ -6,8 +6,9 @@ extends TestCase
 ## tests/fixtures/rt_min. A phase that has to change one of these signatures files a change request first (07 §12.2).
 
 const BUILDER: String = "res://tests/fixtures/rt_min/stream_builder.gd"
-## The values R4 tuned in data/rt_balance.json (07 §11.2; Eigentum R4) — everything else keeps the 07 §3.16 start value.
-const R4_TUNED: Dictionary = {"ENEMY_HP_PM": 8600, "AI_DODGE_MISS_PM": {"attack": 200, "support": 200, "careful": 40},
+## The values R4 tuned in data/rt_balance.json (07 §11.2; Eigentum R4) — everything else keeps the 07 §3.16 start value
+## (R4's ENEMY_HP_PM 8600 is baked into enemies.json since R5b part 2b, with the other three HP scale keys).
+const R4_TUNED: Dictionary = {"AI_DODGE_MISS_PM": {"attack": 200, "support": 200, "careful": 40},
 	"REACT_TICKS": {"attack": 15, "support": 15, "careful": 6}, "AI_INTERRUPT_LATE_PM": 450}
 const STATIC: String = " static"
 
@@ -97,8 +98,8 @@ const PROPERTIES: Dictionary = {
 	"res://core/battle/battle_result.gd": {"group_ids": "PackedStringArray", "duration_ticks": "int",
 		"interrupts": "int", "dodges": "int", "telegraph_hits": "int", "train_kills": "int", "perfect_phases": "int",
 		"potions_used": "int", "flee_attempts": "int"},
-	"res://core/progression/party_member.gd": {"hp_scale_pm": "int", "rt_preset": "String",
-		"rt_toggles": "Dictionary", "rt_loadout": "Dictionary"},
+	"res://core/progression/party_member.gd": {"rt_preset": "String", "rt_toggles": "Dictionary",
+		"rt_loadout": "Dictionary"},
 	"res://core/progression/game_state.gd": {"combat_mode": "StringName"},
 	"res://core/progression/floor_run.gd": {"regen_ticks": "int"},
 	"res://autoload/game_settings.gd": {"combat_mode": "StringName", "combat_speed_pm": "int", "combat_assist": "int",
@@ -310,43 +311,41 @@ func test_new_fields_are_serialized_only_when_set() -> void:
 	assert_false(d.has("combat_mode"), "ctb is not serialized")
 	assert_false((d["floor_run"] as Dictionary).has("regen_ticks"))
 	for m: Dictionary in d["party"]:
-		for k: String in ["hp_scale_pm", "rt_preset", "rt_toggles", "rt_loadout"]:
+		for k: String in ["rt_preset", "rt_toggles", "rt_loadout"]:
 			assert_false(m.has(k), "member without " + k)
 	st.combat_mode = &"realtime"
 	st.floor_run.regen_ticks = 40
-	st.party[0].hp_scale_pm = 4000
 	st.party[0].rt_preset = "careful"
 	st.party[0].rt_toggles = {"potions": true}
 	st.party[0].rt_loadout = {"2": "skl_kai_first_aid"}
 	assert_ne(StateHash.of(st), before, "set real-time fields are game-relevant (hashed)")
 	var back_st: GameState = GameState.from_dict(JSON.parse_string(JSON.stringify(st.to_dict())))
 	assert_eq(StateHash.of(back_st), StateHash.of(st), "and survive a JSON round trip")
-	assert_eq([back_st.combat_mode, back_st.floor_run.regen_ticks, back_st.party[0].hp_scale_pm],
-		[&"realtime", 40, 4000])
+	assert_eq([back_st.combat_mode, back_st.floor_run.regen_ticks, back_st.party[0].rt_preset],
+		[&"realtime", 40, "careful"])
 
 
-func test_hp_scale_before_the_percentages() -> void:
+## R5b part 2b (07 §3.9.4, §12.6 step 2): the real-time HP live in the data — no scale at run time any more.
+func test_real_time_hp_baked_into_the_data() -> void:
 	var data: GameData = real_data()
 	var st: GameState = GameState.create_new(data, 0, "Kai", 3, &"prime")
 	var kai: PartyMember = st.member("kai")
-	var base: int = Progression.total_stats(kai, data).values[StatBlock.Stat.HP]
-	kai.hp_scale_pm = 4000
-	assert_eq(Progression.total_stats(kai, data).values[StatBlock.Stat.HP], base * 4, "07 §3.9.4 HP × 4")
-	kai.hp_scale_pm = 1000
-	assert_eq(Progression.total_stats(kai, data).values[StatBlock.Stat.HP], base, "1000 = CTB, unchanged")
-	# the percentages of talents (and class / species) round on the real-time HP — where the baked data put them
+	assert_eq(Progression.total_stats(kai, data).values[StatBlock.Stat.HP], 256, "64 × 4 at level 1")
+	assert_eq(kai.hp, 256, "a new game starts with the real-time HP")
+	# the percentages of talents (and class / species) round on the real-time HP
 	var mop: PartyMember = st.member("mopsula")
 	mop.level = 5
 	mop.talents = {"tal_mop_leberwurst": 1}
-	assert_eq(Progression.total_stats(mop, data).values[StatBlock.Stat.HP], 69, "CTB: 66 × 1.05 = 69.3")
-	mop.hp_scale_pm = 4000
-	assert_eq(Progression.total_stats(mop, data).values[StatBlock.Stat.HP], 277, "real time: 264 × 1.05 = 277.2")
-	# fixed field heals in the member's HP units: the bandage's 45 heal 180 in real time
-	kai.hp_scale_pm = 4000
+	assert_eq(Progression.total_stats(mop, data).values[StatBlock.Stat.HP], 277, "264 × 1.05 = 277.2")
+	# fixed amounts in real-time units: the bandage heals 180 in the field as in a combat
 	kai.hp = 10
 	st.inventory.add("itm_bandage", 1)
 	assert_true(Progression.use_item(st, data, "itm_bandage", "kai"))
-	assert_eq(kai.hp, 190, "45 × 4")
+	assert_eq(kai.hp, 190, "45 × 4 baked")
+	assert_eq([data.enemy("enm_kanalratte").stats["hp"], data.enemy("enm_kanalratte").rt["summon_hp"],
+		data.enemy("enm_boss_rattenkoenigin").stats["hp"]], [206, 96, 7800], "24 × 8.6, 24 × 4 as an add, absolute")
+	for k: String in ["HP_SCALE_PM", "FIXED_SCALE_PM", "ENEMY_HP_PM", "SUMMON_HP_PM"]:
+		assert_false(RtBalance.DEFAULTS.has(k), k + " is gone")
 
 
 func test_validator_constants_of_r1a() -> void:
@@ -409,18 +408,20 @@ func test_def_rt_normalization_fills_defaults() -> void:
 	assert_true(d.is_valid(), "rt_min fixture loads: " + "; ".join(d.errors))
 	var noble: Dictionary = d.skill("skl_mop_noble_flame").rt
 	assert_eq([noble["cast_ms"], noble["gcd"], noble["moving_cancels"], noble["power"], noble["mp"]],
-		[1500, true, true, 110, 4], "defaults: gcd on, moving cancels a cast, power / mp from the CTB fields")
+		[1500, true, true, 110, 4], "defaults: gcd on, moving cancels a cast, power / mp from the main fields")
 	assert_eq(noble["impact_ms"], -1, "impact_ms -1 = derived from anim")
 	var bite: Dictionary = d.skill("skl_e_bite").rt
 	assert_eq(bite["statuses"], [{"id": "sts_poison", "chance_pm": 300, "ms": 6000, "to": "target", "tick_power": 0}])
 	assert_eq(bite["moving_cancels"], false)
 	var slam: Dictionary = d.skill("skl_e_test_slam").rt
 	assert_eq(slam["telegraph"]["count"], 1, "telegraph block filled")
-	assert_eq(d.skill("skl_item_antidote").rt["cleanse"], ["sts_poison"], "cleanse defaults to the CTB field")
+	assert_eq(d.skill("skl_item_antidote").rt["cleanse"], ["sts_poison"], "cleanse comes from the main field")
+	assert_eq(d.skill("skl_e_bite").statuses, bite["statuses"], "statuses: the baked main field (R5b part 2b)")
 	assert_eq(d.status("sts_poison").rt["boss_ms_pm"], 1000)
 	assert_eq(d.status("sts_stun").rt["stack_mode"], "replace")
 	var boss: Dictionary = d.enemy("enm_rt_test_boss").rt
-	assert_eq([boss["hp"], boss["dmg_pm"], boss["enrage"]["status"]], [1600, 1000, "sts_enrage"])
+	assert_eq([d.enemy("enm_rt_test_boss").stats["hp"], boss["summon_hp"], boss["dmg_pm"], boss["enrage"]["status"]],
+		[1600, 0, 1000, "sts_enrage"], "stats.hp is the real-time HP (baked, R5b part 2b)")
 	assert_eq(d.enemy("enm_kanalratte").rt["enrage"], {}, "no enrage block → {}")
 	var kai: Dictionary = d.party_member("kai").rt
 	assert_eq(kai["bar"][0], {"slot": 1, "skill": "skl_kai_heavy_swing", "level": 1, "variant": false,

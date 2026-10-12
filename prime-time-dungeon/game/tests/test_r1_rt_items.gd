@@ -164,7 +164,7 @@ func test_molotov_area_fixed_damage() -> void:
 	var d: Array[ActionEvent] = RtKit.of(ev, T.DAMAGE)
 	assert_eq(d.map(func(x: ActionEvent) -> Array: return [x.tick, x.target_id, x.amount, x.item_id, x.element]),
 		[[15, "e0", 360, "itm_molotov", "fire"], [15, "e1", 360, "itm_molotov", "fire"]],
-		"60 × FIXED_SCALE_PM 4000 × fire weakness 1.5 on both rats within 4 m of the target")
+		"240 (60 × 4, baked) × fire weakness 1.5 on both rats within 4 m of the target")
 	var ko: Array[ActionEvent] = RtKit.of(ev, T.KO)
 	assert_eq(ko.map(func(x: ActionEvent) -> Array: return [x.target_id, x.command, x.item_id, x.value]),
 		[["e0", K.ITEM, "itm_molotov", 1], ["e1", K.ITEM, "itm_molotov", 1]], "overkill: 360 ≥ 50 % of 168")

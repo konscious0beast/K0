@@ -21,7 +21,6 @@ var talents: Dictionary = {}           # talent id → rank (1..max_rank); Game.
 var species_id: String = ""            # "" = not cast yet (≙ spc_original); Game.choose_casting / Casting.choose
 var casting: Dictionary = {}           # Casting bookkeeping: {"floor", "visit", "class_floor", "class_visit"} (ints)
 # --- Echtzeitkampf (07, R1a): written by to_dict only when they differ from the default (07 §10.4) ------------------
-var hp_scale_pm: int = 1000            # HP scale, last step of Progression.total_stats (CTB 1000, real-time 4000)
 var rt_preset: String = ""             # partner tactic (RtVocab.RT_PRESETS; "" = party.json rt.default_preset)
 var rt_toggles: Dictionary = {}        # partner switches {interrupt, show, potions} → bool ({} = RtVocab defaults)
 var rt_loadout: Dictionary = {}        # action bar variants: "2".."4" → skill id ({} = the base abilities, §4.1)
@@ -115,8 +114,6 @@ static func from_dict(d: Dictionary) -> PartyMember:
 ## The real-time fields, only when set (see the field comments).
 func _rt_dict() -> Dictionary:
 	var out: Dictionary = {}
-	if hp_scale_pm != 1000:
-		out["hp_scale_pm"] = hp_scale_pm
 	if rt_preset != "":
 		out["rt_preset"] = rt_preset
 	if not rt_toggles.is_empty():
@@ -137,7 +134,6 @@ func _rt_dict() -> Dictionary:
 
 
 static func _rt_from_dict(m: PartyMember, d: Dictionary) -> void:
-	m.hp_scale_pm = maxi(1, JsonUtil.to_int(d.get("hp_scale_pm", 1000), 1000))
 	m.rt_preset = str(d.get("rt_preset", ""))
 	var raw_t: Variant = d.get("rt_toggles", {})
 	if raw_t is Dictionary:

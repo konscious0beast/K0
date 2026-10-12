@@ -148,7 +148,7 @@ func test_shipped_names_and_the_liga_rule() -> void:
 	var st: Array[Dictionary] = d.skill("skl_mop_expert_opinion").statuses
 	assert_len(st, 1, "same effect as before: Turbo")
 	assert_eq(str(st[0]["id"]), "sts_haste")
-	assert_eq(int(st[0]["turns"]), 3)
+	assert_eq(int(st[0]["ms"]), 10000, "10 s Turbo in real time (baked in R5b part 2b)")
 	assert_has(d.party_member("mopsula").learnset.map(func(l: Dictionary) -> String: return str(l["skill"])),
 		"skl_mop_expert_opinion", "Mopsula learns it (level 4)")
 	assert_eq(d.achievement("ach_duo_first").name, "Leichtes Gepäck im Doppelpack")

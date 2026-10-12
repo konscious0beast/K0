@@ -15,7 +15,11 @@ const ShowBossCheck := preload("res://core/data/validators/show_boss.gd")
 
 ## V3 upper bounds of skill fields (07 §4.10).
 const SKILL_MAX: Dictionary = {"cast_ms": 5000, "channel_ms": 5000, "cooldown_ms": 120000, "impact_ms": 1500,
-	"range_cm": 3000, "threat_pm": 10000, "power": 500, "mp": 99, "pct_maxhp": 100}
+	"range_cm": 3000, "threat_pm": 10000, "pct_maxhp": 100}
+## R5b part 2b (07 §4.11): the real-time power, MP cost, cleanse and statuses are baked into the main fields of a skill
+## with an rt block; the rt block no longer carries them. V3 bounds of the baked main fields.
+const BAKED_SKILL_KEYS: Dictionary = {"power": "power", "mp": "mp_cost", "cleanse": "cleanse", "statuses": "statuses"}
+const BAKED_SKILL_MAX: Dictionary = {"power": 500, "mp_cost": 99}
 ## V5 (E14): enemy telegraph hits cost 15–35 % of the max HP.
 const TELEGRAPH_PCT: Vector2i = Vector2i(15, 35)
 const TELEGRAPH_MIN_CAST_MS: int = 600
@@ -100,6 +104,12 @@ static func _check_skills(v: DataValidator) -> void:
 		var ctx: String = DataValidator._ctx("skills", i, d) + ".rt"
 		_ints(v, ctx, rt)
 		_keys(v, ctx, rt, SkillDef.RT_SPEC)
+		for k: String in BAKED_SKILL_KEYS:
+			if rt.has(k):
+				v._err(ctx + "." + k, "baked into the main field %s (R5b, 07 §4.11)" % BAKED_SKILL_KEYS[k])
+		var mctx: String = DataValidator._ctx("skills", i, d)
+		for k: String in BAKED_SKILL_MAX:
+			_range(v, mctx + "." + k, d.get(k, 0), 0, int(BAKED_SKILL_MAX[k]))
 		_ms_fields(v, ctx, rt, [])
 		for k: String in SKILL_MAX:
 			if rt.has(k):
@@ -112,10 +122,7 @@ static func _check_skills(v: DataValidator) -> void:
 			v._err(ctx + ".channel_ms", "needs period_ms > 0 and a multiple of it (V3, got %d / %d)" % [channel,
 				period])
 		_check_aoe(v, ctx + ".aoe", rt.get("aoe", {}))
-		_check_skill_statuses(v, ctx + ".statuses", rt.get("statuses", []))
-		var cleanse: Variant = rt.get("cleanse", [])
-		for s: Variant in (cleanse as Array) if cleanse is Array else []:
-			v._ref(ctx + ".cleanse", str(s), v._statuses, "status")
+		_check_skill_statuses(v, mctx + ".statuses", d.get("statuses", []))
 		var tg: Dictionary = rt.get("telegraph", {}) if rt.get("telegraph", {}) is Dictionary else {}
 		if not tg.is_empty():
 			_check_telegraph(v, ctx, d, rt, tg)
@@ -455,10 +462,7 @@ static func _check_enemies(v: DataValidator, rt_set: bool) -> void:
 		_ints(v, ctx, rt)
 		_keys(v, ctx, rt, EnemyDef.RT_SPEC)
 		_ms_fields(v, ctx, rt, ["rules", "phases"])
-		_range(v, ctx + ".hp", rt.get("hp", 0), 0, 99999)
-		var hp_pm: int = _i(rt.get("hp_pm", 0))
-		if hp_pm != 0 and (hp_pm < 1000 or hp_pm > 20000):
-			v._err(ctx + ".hp_pm", "0 (= ENEMY_HP_PM) or 1000…20000 (got %d)" % hp_pm)
+		_range(v, ctx + ".summon_hp", rt.get("summon_hp", 0), 0, 99999)      # R5b part 2b: stats.hp is baked
 		_range(v, ctx + ".radius_cm", rt.get("radius_cm", 30), 20, 150)
 		_range(v, ctx + ".reach_cm", rt.get("reach_cm", 220), 100, 600)
 		_range(v, ctx + ".dmg_pm", rt.get("dmg_pm", 1000), 100, 5000)
@@ -480,8 +484,6 @@ static func _check_enemies(v: DataValidator, rt_set: bool) -> void:
 			_check_enemy_rule(v, "%s.rules[%d]" % [ctx, j], rules[j])
 		var phases: Array = rt.get("phases", []) if rt.get("phases", []) is Array else []
 		if bool(d.get("boss", false)):
-			if _i(rt.get("hp", 0)) <= 0:
-				v._err(ctx + ".hp", "a boss needs an absolute hp > 0 (V10)")
 			if phases.is_empty():
 				v._err(ctx + ".phases", "a boss needs phases (V10)")
 		_check_phases(v, ctx + ".phases", phases)

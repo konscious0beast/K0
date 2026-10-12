@@ -255,6 +255,11 @@ const SPEC_SKILL: Array = [["id", "s"], ["name", "s"], ["desc", "s", ""], ["user
 	["show_tags", "sa", []],
 	["rt", "d", {}]]                            # Echtzeitkampf (07, R1a): optional rt block (§4.6, rules: RtCheck)
 const SPEC_SKILL_STATUS: Array = [["id", "s"], ["chance", "f", 1.0], ["turns", "i", 0]]
+## R5b part 2b (07 §4.11): a skill with an rt block carries the real-time statuses in `statuses`
+## (SkillDef.RT_STATUS_SPEC; ranges and references: validators/rt.gd) — the CTB form above stays for the engine data
+## of the Stempelduell (10 §6.4).
+const SPEC_SKILL_STATUS_RT: Array = [["id", "s"], ["chance_pm", "i", 1000], ["ms", "i", 0], ["to", "s", "target"],
+	["tick_power", "i", 0]]
 const SPEC_SKILL_FAIL: Array = [["self_dmg_pct", "i", 0], ["delay_pct", "i", 0], ["status", "s", ""],
 	["status_turns", "i", 0]]
 const SPEC_SKILL_SPECIAL: Array = [["kind", "s"], ["max", "i", 0], ["refund_on_win", "b", false]]
@@ -712,13 +717,15 @@ func _n_skill(ctx: String, raw: Variant) -> Dictionary:
 	_range_f(ctx + ".crit_bonus", float(d["crit_bonus"]), 0.0, 1.0)
 	var sts: Array[Dictionary] = []
 	var raw_sts: Array = d["statuses"]
+	var rt_skill: bool = not (d["rt"] as Dictionary).is_empty()        # R5b part 2b: the real-time form
 	for i in raw_sts.size():
 		var sctx: String = "%s.statuses[%d]" % [ctx, i]
-		var s: Dictionary = _norm(sctx, raw_sts[i], SPEC_SKILL_STATUS)
+		var s: Dictionary = _norm(sctx, raw_sts[i], SPEC_SKILL_STATUS_RT if rt_skill else SPEC_SKILL_STATUS)
 		if s.is_empty():
 			continue
-		_range_f(sctx + ".chance", float(s["chance"]), 0.0, 1.0)
-		_range_i(sctx + ".turns", int(s["turns"]), 0, 99)
+		if not rt_skill:
+			_range_f(sctx + ".chance", float(s["chance"]), 0.0, 1.0)
+			_range_i(sctx + ".turns", int(s["turns"]), 0, 99)
 		sts.append(s)
 	d["statuses"] = sts
 	_range_i(ctx + ".mp_restore", int(d["mp_restore"]), 0, 999)

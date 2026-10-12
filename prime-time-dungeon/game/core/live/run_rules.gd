@@ -351,18 +351,13 @@ static func mark_hint(state: GameState, id: String) -> void:
 	state.flags["rt_hints"] = hints
 
 
-## A new real-time run (07 §12.1, §3.9.4): GameState.combat_mode realtime, every member's hp_scale_pm = HP_SCALE_PM of
-## rt_balance.json (the last step of Progression.total_stats), full HP / MP. Game.new_game (live) and both verifiers
-## for a log whose header names a real-time run (header_realtime, not for a log that starts at a save) — so a replay
-## starts from the same state as the live run.
+## A new real-time run (07 §12.1): GameState.combat_mode realtime, full HP / MP (the real-time HP are in the data
+## since R5b part 2b, 07 §3.9.4). Game.new_game (live) and both verifiers for a log whose header names a real-time run
+## (header_realtime, not for a log that starts at a save) — so a replay starts from the same state as the live run.
 static func rt_start(state: GameState, data: GameData) -> void:
 	if state == null:
 		return
 	state.combat_mode = REALTIME
-	var scale_pm: int = RtBalance.from_data(data).i("HP_SCALE_PM") if data != null else 1000
-	for m: PartyMember in state.party:
-		if m != null:
-			m.hp_scale_pm = scale_pm if scale_pm > 0 else 1000
 	Progression.full_heal(state, data)
 
 

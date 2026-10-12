@@ -107,7 +107,7 @@ func test_enemy_units() -> void:
 	var caster: RtUnit = _unit(s, "e1")
 	assert_eq([rat.def_id, rat.hp, rat.max_hp(), rat.radius, rat.move_cm_tick, rat.swing_ticks, rat.reach, rat.dmg_pm,
 		rat.swing_ready, rat.auto_skill, rat.keep_cm], ["enm_kanalratte", 168, 168, 30, 12, 72, 220, 1000, 30,
-		"skl_e_strike", 0], "24 HP × ENEMY_HP_PM 7000 (rt.hp_pm), first swing at ct 30")
+		"skl_e_strike", 0], "24 × 7 = 168 HP (baked, R5b part 2b), first swing at ct 30")
 	assert_eq([caster.def_id, caster.hp, caster.keep_cm], ["enm_rt_test_caster", 210, 600], "rt.enemies of enc_f1_a2")
 	assert_eq([rat.x, rat.z, rat.yaw, Array(rat.entry), rat.pop_in_until], [0, -300, 128, [], 0],
 		"the leader at its recorded position")

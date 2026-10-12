@@ -41,7 +41,9 @@ const STEP_JUDGED: int = 4                  # the choice is made, M.O.D. comment
 const STEP_DONE: int = 5
 const STEP_NAMES: Dictionary = {STEP_SPECIES: "Wer bist du?", STEP_CLASS: "Was kannst du?", STEP_CONFIRM: "Bestätigen"}
 const SPECIES_VIS_H: float = 80.0           # a species card: name + passive (hit area UiTheme.TOUCH_HIT)
-const CLASS_VIS_H: float = 100.0            # a class card: name + badges + role
+const CLASS_VIS_H: float = 100.0            # a class card: name + role in two lines, or + badges and one line
+const TALL_VIS_H: float = 120.0             # a class card with badges and a role of two lines
+const CARD_TEXT_INSET: float = 82.0         # a card's width minus its text column (margins 16 + 12, dot 40, gap 14)
 const LIST_GAP: int = 12                    # 02_TECH §10.2 rule 5: 12 px between the hit areas
 const LIST_W_MIN: float = 420.0
 const LIST_W_MAX: float = 560.0
@@ -408,7 +410,9 @@ func _card(id: String, index: int) -> Button:
 	b.name = "Card_%d" % index
 	b.set_meta("option_id", id)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var vis: float = SPECIES_VIS_H if is_species else CLASS_VIS_H
+	var line: String = passive_text(DB.species_def(id)) if is_species else UiUtil.tr_text(DB.class_def(id).desc)
+	var badges: Array = _card_pills(id, is_species)
+	var vis: float = _card_vis_h(line, is_species, not badges.is_empty())
 	b.custom_minimum_size = Vector2(0, vis)
 	var normal: StyleBoxFlat = UiUtil.box_style(Color(UiUtil.C_INK, 0.72), Color(accent, 0.5), 2, 0.0, 16, 8)
 	normal.set_corner_radius_all(10)
@@ -462,21 +466,17 @@ func _card(id: String, index: int) -> Button:
 	var pills: HBoxContainer = UiUtil.hbox(6)
 	pills.name = "Pills"
 	pills.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	for pill: Array in _card_pills(id, is_species):
+	for pill: Array in badges:
 		pills.add_child(_pill(str(pill[0]), pill[1] as Color))
 	if is_species:
 		head.add_child(pills)
 	else:
 		col.add_child(pills)
-	var line: String = passive_text(DB.species_def(id)) if is_species else UiUtil.tr_text(DB.class_def(id).desc)
 	var l: Label = UiUtil.label(UiUtil.glyph_safe(line), &"", 16 if is_species else 15, UiTheme.C_TEXT_DIM)
 	l.name = "Line"
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART   # a second line when needed: the card grew for it
+	l.max_lines_visible = 2
 	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	if is_species:
-		l.clip_text = true
-	else:                                       # the role may take two lines (a class card is taller)
-		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		l.max_lines_visible = 1 if pills.get_child_count() > 0 else 2
 	col.add_child(l)
 	var why: String = Casting.check(Game.state, DB.data, member_id, id if is_species else species_id,
 		(class_id if class_id != "" else _any_class(id)) if is_species else id)
@@ -490,6 +490,17 @@ func _card(id: String, index: int) -> Button:
 		if not b.disabled and not b.has_focus():
 			b.grab_focus())
 	return b
+
+
+## The visible height of a card: a species card grows when its passive needs a second line at this list width, a class
+## card when badges and a role of two lines meet — so no card cuts its sentence (test_the_recall_fits_a_720p_screen).
+func _card_vis_h(line: String, is_species: bool, badges: bool) -> float:
+	var w: float = ThemeDB.fallback_font.get_string_size(UiUtil.glyph_safe(line), HORIZONTAL_ALIGNMENT_LEFT, -1,
+		16 if is_species else 15).x
+	var two: bool = w > _list.custom_minimum_size.x - CARD_TEXT_INSET
+	if is_species:
+		return CLASS_VIS_H if two else SPECIES_VIS_H
+	return TALL_VIS_H if two and badges else CLASS_VIS_H
 
 
 ## A class the species could go with right now (the check of a species card in the first turn, no class yet).

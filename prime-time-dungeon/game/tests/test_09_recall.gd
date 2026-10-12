@@ -602,7 +602,8 @@ func test_the_level_cap_rises_with_floor_three() -> void:
 
 ## The canvas is never smaller than 1280 × 720 (stretch aspect "expand"; the phone's is wider). The panel's minimum
 ## height stays inside the safe area for every card of every step of both members — the class detail (role, stats, the
-## first class abilities) is the tallest.
+## first class abilities) is the tallest — and no card cuts its sentence (the badges of a class card vary with the
+## species, so every species is chosen once).
 func test_the_recall_fits_a_720p_screen() -> void:
 	_season_on(3)
 	Game.persona = PersonaProfile.canon(DB.data)
@@ -623,15 +624,16 @@ func test_the_recall_fits_a_720p_screen() -> void:
 			worst[1] = what
 	for turn in 2:
 		var mid: String = str(rc.get("member_id"))
-		for step: int in [RecallScript.STEP_SPECIES, RecallScript.STEP_CLASS]:
-			var cards: Array = rc.get("card_buttons")
-			for i in cards.size():
-				(cards[i] as Button).grab_focus()
-				await wait_frames(1)
-				probe.call("%s %s" % [mid, str(rc.get("preview_id"))])
-			if step == RecallScript.STEP_SPECIES:
-				assert_true(bool(rc.call("choose", 0)), mid + ": Original-Verpackung")
-				await wait_frames(1)
+		var species: PackedStringArray = rc.get("options")
+		await _probe_cards(rc, probe, mid)
+		for si in species.size():
+			assert_true(bool(rc.call("choose", si)), "%s: %s" % [mid, species[si]])
+			await wait_frames(1)
+			await _probe_cards(rc, probe, "%s %s" % [mid, species[si]])
+			rc.call("back")
+			await wait_frames(1)
+		assert_true(bool(rc.call("choose", 0)), mid + ": Original-Verpackung")
+		await wait_frames(1)
 		for i in (rc.get("options") as PackedStringArray).size():
 			assert_true(bool(rc.call("choose", i)))
 			await wait_frames(1)
@@ -646,6 +648,28 @@ func test_the_recall_fits_a_720p_screen() -> void:
 	assert_eq(rc.get("step"), RecallScript.STEP_DONE)
 	probe.call("the end page")
 	assert_true(float(worst[0]) <= limit, "the tallest: %s, %.0f px of %.0f" % [worst[1], worst[0], limit])
+
+
+## Every card of the step on screen in the detail (the panel's height) and its sentence whole on the card: one line on
+## an 80 px species card and on a 100 px class card with badges, else two.
+func _probe_cards(rc: Node, probe: Callable, what: String) -> void:
+	var cards: Array = rc.get("card_buttons")
+	var on_species: bool = int(rc.get("step")) == RecallScript.STEP_SPECIES
+	for c: Variant in cards:
+		var card: Button = c
+		var line: Label = card.find_child("Line", true, false) as Label
+		var badges: bool = card.find_child("Pills", true, false).get_child_count() > 0
+		var vis: float = UiUtil.visible_height(card)
+		var room: int = 2
+		if (on_species and vis <= RecallScript.SPECIES_VIS_H) or (not on_species and badges and
+				vis <= RecallScript.CLASS_VIS_H):
+			room = 1
+		assert_true(line.get_line_count() <= room, "%s: '%s' whole on its card (%d lines, room for %d)" % [what,
+			line.text, line.get_line_count(), room])
+	for i in cards.size():
+		(cards[i] as Button).grab_focus()
+		await wait_frames(1)
+		probe.call("%s %s" % [what, str(rc.get("preview_id"))])
 
 
 # --- texts, lines, the party page -------------------------------------------------------------------------------------

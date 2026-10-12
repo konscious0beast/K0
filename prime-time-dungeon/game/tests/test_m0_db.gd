@@ -569,8 +569,8 @@ func test_defs_are_read_only() -> void:
 	# would raise a SCRIPT ERROR (fails the test run by design), so only the lock state and copies are checked here.
 	var kai: PartyMemberDef = real_data().party_member("kai")
 	assert_true(kai.base_stats.is_read_only(), "real data: base_stats")
-	assert_true(kai.learnset.is_read_only(), "real data: learnset")
-	assert_true((kai.learnset[0] as Dictionary).is_read_only(), "real data: nested learnset entry")
+	assert_true(kai.rt.is_read_only(), "real data: rt")
+	assert_true(((kai.rt["bar"] as Array)[0] as Dictionary).is_read_only(), "real data: nested rt.bar entry")
 	assert_true((kai.model["colors"] as Dictionary).is_read_only(), "real data: nested model colors")
 	assert_true(DB.party_member("kai").base_stats.is_read_only(), "DB.data too")
 	var hp: int = int(kai.base_stats["hp"])

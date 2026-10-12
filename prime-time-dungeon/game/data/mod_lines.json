@@ -962,13 +962,6 @@
 			"weight": 1
 		},
 		{
-			"id": "mod_boss_train_warning_01",
-			"tag": "boss_train_warning",
-			"voice": "mod",
-			"text": "Zug fährt ein! Zurückbleiben, bitte — oder verteidigen Sie sich!",
-			"weight": 1
-		},
-		{
 			"id": "mod_boss_phase_enm_boss_rattenkoenigin_3_01",
 			"tag": "boss_phase:enm_boss_rattenkoenigin:3",
 			"voice": "mod",
@@ -1494,14 +1487,14 @@
 			"id": "mod_achievement_ach_crit_3_01",
 			"tag": "achievement:ach_crit_3",
 			"voice": "mod",
-			"text": "Drei Kritische in einem Kampf. Statistiker:innen weinen.",
+			"text": "Fünfzehn Kritische in einem Kampf. Statistiker:innen weinen.",
 			"weight": 1
 		},
 		{
 			"id": "mod_achievement_ach_weakness_5_01",
 			"tag": "achievement:ach_weakness_5",
 			"voice": "mod",
-			"text": "Fünfmal genau dahin, wo es wehtut. Empathie: null. Quote: hoch.",
+			"text": "Zehnmal genau dahin, wo es wehtut. Empathie: null. Quote: hoch.",
 			"weight": 1
 		},
 		{
@@ -1880,13 +1873,6 @@
 			"tag": "tutorial_battle",
 			"voice": "mod",
 			"text": "Zuschlagen kostet nichts. Mopsulas Adelsflamme kostet MP – und Ratten hassen Feuer. Fast so sehr wie Steuern.",
-			"weight": 1
-		},
-		{
-			"id": "mod_tutorial_stunt_01",
-			"tag": "tutorial_stunt",
-			"voice": "mod",
-			"text": "Tipp der Regie: Stunts sind riskant, laut und teuer. Das Publikum liebt alle drei.",
 			"weight": 1
 		},
 		{

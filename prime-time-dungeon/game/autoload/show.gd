@@ -217,7 +217,6 @@ func trigger(trigger_id: String, payload: Dictionary) -> void:
 	if st == null or st.show == null:
 		return
 	var tracker: AchievementTracker = AchievementTracker.new(DB.data, st.show, st.flags)
-	tracker.realtime = true                    # R5b: condition_rt (07 §9.4) — every run fights in real time
 	var unlocked: PackedStringArray = tracker.evaluate(trigger_id, payload)
 	for id: String in unlocked:
 		_unlock(id)

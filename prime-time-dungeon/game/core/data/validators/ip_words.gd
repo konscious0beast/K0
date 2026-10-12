@@ -6,9 +6,9 @@ extends RefCounted
 ##     never underwear), no barefoot / shoe words, no real nationality or ethnic group (a curated list, whole words —
 ##     the show is set in a fictional galaxy, an origin is never a punchline);
 ##   · texts for, by or about Graf Mopsula: no royalty motif (Majestät, Durchlaucht, Hoheit, Thron, Krone) — he is a
-##     count and a scholar, not a king. Mopsula's texts: lines in his voice, every scene name, his skills (learnset,
-##     attack, stunts), equipment he can wear, classes / talents / species for him, his party entry and every text that
-##     names him ("Graf", "Grafen", "Mopsula", "Mops" as whole words).
+##     count and a scholar, not a king. Mopsula's texts: lines in his voice, every scene name, his skills (attack,
+##     stunts, the rt bar), equipment he can wear, classes / talents / species for him, his party entry and every text
+##     that names him ("Graf", "Grafen", "Mopsula", "Mops" as whole words).
 ## Texts = the fields "name", "desc", "text", "title" and "slogan" at any depth of the normalized tables (mod lines,
 ## scene lines, floors with their zones and safe rooms included). Substrings are checked case-insensitively; the origin
 ## list as whole words. The Rattenkönigin keeps her title and crown — only Mopsula's texts are checked for royalty.
@@ -119,7 +119,8 @@ static func _entry_for_mopsula(table: String, d: Dictionary, mop_skills: Diction
 	return false
 
 
-## Skill ids Graf Mopsula uses: attack skill, learnset and stunts of the party entry "mopsula".
+## Skill ids Graf Mopsula uses: attack skill and stunts of the party entry "mopsula", and from its rt block the
+## auto-attack, the bar (FINALE and variants included), the context abilities and the Partner-Spezial.
 static func _mopsula_skills(party: Array) -> Dictionary:
 	var out: Dictionary = {}
 	for p: Variant in party:
@@ -127,9 +128,15 @@ static func _mopsula_skills(party: Array) -> Dictionary:
 			continue
 		var d: Dictionary = p
 		out[str(d.get("attack_skill", ""))] = true
-		for l: Variant in d.get("learnset", []):
-			if l is Dictionary:
-				out[str((l as Dictionary).get("skill", ""))] = true
 		for s: Variant in d.get("stunts", []):
 			out[str(s)] = true
+		var rt: Dictionary = d.get("rt", {}) if d.get("rt", {}) is Dictionary else {}
+		for key: String in ["auto_skill", "partner_special"]:
+			if str(rt.get(key, "")) != "":
+				out[str(rt[key])] = true
+		for list_key: String in ["bar", "context"]:
+			var rows: Variant = rt.get(list_key, [])
+			for r: Variant in (rows as Array if rows is Array else []):
+				if r is Dictionary and str((r as Dictionary).get("skill", "")) != "":
+					out[str((r as Dictionary)["skill"])] = true
 	return out

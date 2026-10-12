@@ -5,10 +5,6 @@
 			"id": "sts_poison",
 			"name": "Vergiftet",
 			"kind": "debuff",
-			"default_turns": 4,
-			"tick_timing": "turn_start",
-			"tick_pct": -8,
-			"tick_min": 1,
 			"element": "poison",
 			"color": "#7cc242",
 			"icon": "poison",
@@ -27,10 +23,6 @@
 			"id": "sts_stun",
 			"name": "Betäubt",
 			"kind": "debuff",
-			"default_turns": 1,
-			"flags": [
-				"delay_on_apply"
-			],
 			"color": "#f5d90a",
 			"icon": "stun",
 			"rt": {
@@ -48,8 +40,6 @@
 			"id": "sts_slow",
 			"name": "Verlangsamt",
 			"kind": "debuff",
-			"default_turns": 3,
-			"tick_speed_mult": 1.5,
 			"excludes": [
 				"sts_haste"
 			],
@@ -65,8 +55,6 @@
 			"id": "sts_haste",
 			"name": "Turbo",
 			"kind": "buff",
-			"default_turns": 3,
-			"tick_speed_mult": 0.6,
 			"excludes": [
 				"sts_slow"
 			],
@@ -82,7 +70,6 @@
 			"id": "sts_guard",
 			"name": "Gepanzert",
 			"kind": "buff",
-			"default_turns": 3,
 			"flags": [
 				"guard"
 			],
@@ -96,7 +83,6 @@
 			"id": "sts_taunt",
 			"name": "Provoziert",
 			"kind": "buff",
-			"default_turns": 3,
 			"flags": [
 				"taunt"
 			],
@@ -110,7 +96,6 @@
 			"id": "sts_taunted",
 			"name": "Provoziert",
 			"kind": "debuff",
-			"default_turns": 2,
 			"color": "#e8455a",
 			"icon": "taunted",
 			"rt": {
@@ -124,7 +109,6 @@
 			"id": "sts_dazed",
 			"name": "Überrumpelt",
 			"kind": "debuff",
-			"default_turns": 1,
 			"color": "#ffd23f",
 			"icon": "dazed",
 			"rt": {
@@ -140,7 +124,6 @@
 			"id": "sts_regen",
 			"name": "Erholung",
 			"kind": "buff",
-			"default_turns": 3,
 			"color": "#5ed37a",
 			"icon": "regen",
 			"rt": {
@@ -153,7 +136,6 @@
 			"id": "sts_burn",
 			"name": "Brennt",
 			"kind": "debuff",
-			"default_turns": 3,
 			"element": "fire",
 			"color": "#ff7a1a",
 			"icon": "burn",
@@ -167,7 +149,6 @@
 			"id": "sts_admonished",
 			"name": "Ermahnt",
 			"kind": "debuff",
-			"default_turns": 3,
 			"color": "#c9a227",
 			"icon": "admonished",
 			"rt": {
@@ -179,7 +160,6 @@
 			"id": "sts_dizzy",
 			"name": "Schwindelig",
 			"kind": "debuff",
-			"default_turns": 1,
 			"color": "#b48cff",
 			"icon": "dizzy",
 			"rt": {
@@ -195,7 +175,6 @@
 			"id": "sts_enrage",
 			"name": "Feierabend!",
 			"kind": "buff",
-			"default_turns": 3,
 			"color": "#ff3b30",
 			"icon": "enrage",
 			"rt": {
@@ -209,7 +188,6 @@
 			"id": "sts_spores",
 			"name": "Sporenkur",
 			"kind": "buff",
-			"default_turns": 3,
 			"color": "#a3c76d",
 			"icon": "regen",
 			"rt": {
@@ -222,7 +200,6 @@
 			"id": "sts_light_footed",
 			"name": "Leichtfüßig",
 			"kind": "buff",
-			"default_turns": 1,
 			"color": "#7fe3d0",
 			"icon": "light_feet",
 			"rt": {

@@ -1,7 +1,9 @@
 extends TestCase
 ## M7 data content (02_TECH §11.5): res://data is valid and holds the complete Floor-1 content of 01_GDD —
-## quantities, the numbers of the GDD tables (stats, skills, items, prices, AI patterns, rewards) and cross-table sanity
-## (every AI action is affordable, every consumable reachable, shops priced, encounter EXP/credits = GDD §5.4).
+## quantities, the numbers of the GDD tables (stats, skills, items, prices, enemy skills, rewards) and cross-table
+## sanity (every skill an enemy uses is affordable, every consumable reachable, shops priced, encounter EXP/credits =
+## GDD §5.4). R5b part 2b (07 §4.11, 10 SD1 step 3): the data carry no CTB fields any more — the abilities come from
+## the rt bars, the enemy skills from the real-time rules (07 §6), the statuses from their rt blocks.
 
 const KAI_SKILLS: PackedStringArray = ["skl_kai_heavy_swing", "skl_kai_taunt", "skl_kai_sweep", "skl_kai_first_aid",
 	"skl_kai_leash_trip", "skl_kai_deo_torch", "skl_kai_cable_whip", "skl_kai_prime_finisher"]
@@ -136,11 +138,10 @@ func test_quantities_match_gdd() -> void:
 		"GDD §3.9: exactly 6 statuses + 9 of the real-time combat (R4; R5b: Leichtfüßig)")
 	var party_skills: Dictionary = {}
 	for m: PartyMemberDef in d.all_party():
-		for l: Dictionary in m.learnset:
-			party_skills[str(l["skill"])] = true
-	assert_eq(party_skills.size(), 16, "8 skills per party member")
+		party_skills.merge(_party_skills(m))
+	assert_eq(party_skills.size(), 16, "8 skills per party member (rt bar without the SHOW, context abilities)")
 	for id: String in KAI_SKILLS + MOP_SKILLS:
-		assert_true(party_skills.has(id), "learnset contains " + id)
+		assert_true(party_skills.has(id), "the rt data contain " + id)
 	var stunts: int = 0
 	var enemy_skills: int = 0
 	var item_skills: int = 0
@@ -158,21 +159,20 @@ func test_quantities_match_gdd() -> void:
 			assert_eq(d.skill(id).user, "enemy", id)
 	for id: String in BOSS_SKILLS:
 		assert_true(d.has_id("skills", id), "boss skill " + id)
-	# Counted from the data (TECH §1.7: 25 enemy skills, 11 boss skills), not from the constants above.
+	# Counted from the data (TECH §1.7: 25 enemy skills, 11 boss skills), not from the constants above: the skills of
+	# the real-time auto-attacks and rules (07 §6) of the regular floor-1 enemies, without the tutorial rat's hop.
 	var f1_ai: Dictionary = {}
-	var f2_ai: Dictionary = {}
 	for e: EnemyDef in d.all_enemies():
-		if e.boss:
+		if e.boss or not e.tags.has("floor_1"):
 			continue
-		var bucket: Dictionary = f1_ai if e.tags.has("floor_1") else f2_ai
-		for sid: String in _skills_of(e.ai.get("actions", []) as Array):
-			if sid != "skl_e_strike":
-				bucket[sid] = true
+		for sid: String in _rt_skills_of(e):
+			if sid != "skl_e_strike" and not RT_ENEMY_SKILLS.has(sid):
+				f1_ai[sid] = true
 	var f1_list: Array = f1_ai.keys()
 	f1_list.sort()
 	var expected_f1: Array = Array(ENEMY_SKILLS_F1)
 	expected_f1.sort()
-	assert_eq(f1_list, expected_f1, "skills used by floor-1 regular enemy AI (minus strike) = GDD §5.2 list")
+	assert_eq(f1_list, expected_f1, "skills of the floor-1 regular enemies in real time = GDD §5.2 list")
 	assert_len(f1_list, 25, "25 floor-1 enemy skills")
 	var boss_list: Array = []
 	for sid: String in d.ids("skills"):
@@ -183,10 +183,10 @@ func test_quantities_match_gdd() -> void:
 	expected_boss.sort()
 	assert_eq(boss_list, expected_boss, "skl_b_*/skl_q_* skills = GDD boss skill list + the queen's R4 skills")
 	assert_len(boss_list, 11 + RT_BOSS_SKILLS.size(), "11 boss skills + 3 (07 §6.7)")
-	for sid: String in f2_ai:
-		assert_false(f1_ai.has(sid), sid + " is a floor-2 stub skill, not shared with floor 1")
-	assert_eq(enemy_skills, 25 + 11 + 1 + f2_ai.size() + RT_BOSS_SKILLS.size() + RT_ENEMY_SKILLS.size(),
-		"enemy skills = 25 + 11 boss + strike + floor-2 stubs + the R4 real-time enemy skills")
+	assert_eq(enemy_skills, 25 + 11 + 1 + RT_BOSS_SKILLS.size() + RT_ENEMY_SKILLS.size(),
+		"enemy skills = 25 + 11 boss + strike + the R4 real-time enemy skills (the floor-2 stubs' CTB skills left)")
+	for id: String in ["skl_e_pose", "skl_e_ram", "skl_e_price_slam"]:
+		assert_false(d.has_id("skills", id), id + ": only the CTB AI of a floor-2 stub used it (R5b part 2b)")
 	assert_eq(item_skills, 10, "one use_skill per consumable")
 	var regular: int = 0
 	var bosses: int = 0
@@ -205,19 +205,28 @@ func test_quantities_match_gdd() -> void:
 	assert_len(d.all_scenes(), 4)
 	assert_len(d.all_classes(), 8)
 	assert_len(d.all_lootboxes(), 4)
-	assert_len(d.all_pseudo_units(), 1)
+	assert_len(d.all_pseudo_units(), 0, "the CTB train left the data (the real-time train: skl_q_train, 07 §6.7)")
 	assert_len(d.all_floors(), 2)
 
 
+## The GDD §3.9 statuses in their real-time form (07 §4.7); the CTB turn fields left the data (R5b part 2b, 07 §4.11:
+## default_turns, tick_timing, tick_speed_mult, the main tick_pct / tick_min, the flag delay_on_apply — the
+## Stempelduell's rulebook carries its own, 10 §6.4).
 func test_status_rows_match_gdd() -> void:
 	var d: GameData = _data()
 	var poison: StatusDef = d.status("sts_poison")
-	assert_eq([poison.kind, poison.default_turns, poison.tick_timing, poison.tick_pct, poison.tick_min, poison.element],
-		["debuff", 4, "turn_start", -8, 1, "poison"])
-	assert_true(d.status("sts_stun").has_flag("delay_on_apply"))
-	assert_eq(d.status("sts_stun").default_turns, 1)
-	assert_almost(d.status("sts_slow").tick_speed_mult, 1.5)
-	assert_almost(d.status("sts_haste").tick_speed_mult, 0.6)
+	assert_eq([poison.kind, poison.element, int(poison.rt["default_ms"]), int(poison.rt["period_ms"]),
+		int(poison.rt["tick_pct"]), int(poison.rt["tick_min"]), int(poison.rt["tick_max"])],
+		["debuff", "poison", 8000, 2000, -2, 1, 12], "poison: −2 % every 2 s for 8 s")
+	assert_eq(poison.tick_pct, 0, "no CTB tick in the main fields")
+	var stun: StatusDef = d.status("sts_stun")
+	assert_eq([int(stun.rt["default_ms"]), stun.rt["flags"]], [2000, ["no_act", "no_move", "interrupt_on_apply"]])
+	assert_false(stun.has_flag("delay_on_apply"), "the CTB delay flag left the data")
+	assert_eq([int(d.status("sts_slow").rt["move_pm"]), int(d.status("sts_slow").rt["haste_pm"])], [600, 1250])
+	assert_eq([int(d.status("sts_haste").rt["move_pm"]), int(d.status("sts_haste").rt["haste_pm"])], [1200, 750])
+	for st: StatusDef in d.all_statuses():
+		assert_eq([st.default_turns, st.tick_timing, st.tick_speed_mult], [3, "turn_end", 1.0],
+			st.id + ": the CTB fields stand at their defaults")
 	assert_eq(d.status("sts_slow").excludes, ["sts_haste"])
 	assert_eq(d.status("sts_haste").excludes, ["sts_slow"])
 	assert_true(d.status("sts_guard").has_flag("guard"))
@@ -259,53 +268,52 @@ func test_party_start_block_and_equipment() -> void:
 	assert_has(kai.model["props"], "mop")
 	assert_eq(mop.model["base"], "pug")
 	assert_false((mop.model["props"] as PackedStringArray).has("crown"), "no crown motif on Mopsula (03_ART §5.3)")
-	# Unlock levels (GDD §4.5 / §4.6).
-	var kai_levels: Array = []
-	for l: Dictionary in kai.learnset:
-		kai_levels.append(int(l["level"]))
-	assert_eq(kai_levels, [1, 2, 3, 4, 5, 6, 7, 9])
-	var mop_levels: Array = []
-	for l: Dictionary in mop.learnset:
-		mop_levels.append(int(l["level"]))
-	assert_eq(mop_levels, [1, 1, 2, 3, 4, 6, 7, 9])
-	# Level 1: exactly one damage skill + Mopsula's heal (start kit of GameState.create_new).
+	# Unlock levels of the real-time bar and context abilities (07 §5.1; the CTB learnset left the data in R5b part 2b).
+	assert_eq(_party_skills(kai), {"skl_kai_heavy_swing": 1, "skl_kai_taunt": 2, "skl_kai_leash_trip": 3,
+		"skl_kai_first_aid": 4, "skl_kai_sweep": 4, "skl_kai_deo_torch": 6, "skl_kai_prime_finisher": 6,
+		"skl_kai_cable_whip": 7})
+	assert_eq(_party_skills(mop), {"skl_mop_noble_flame": 1, "skl_mop_holy_lick": 1, "skl_mop_frost_sneeze": 2,
+		"skl_mop_thunder_bark": 3, "skl_mop_expert_opinion": 4, "skl_mop_mass_lick": 6, "skl_mop_inferno": 6,
+		"skl_mop_revive": 7})
+	assert_true(kai.learnset.is_empty() and mop.learnset.is_empty(), "no learnset any more")
+	# Level 1: exactly one damage skill + Mopsula's heal (the start bar).
 	var learnable_l1: int = 0
 	for m: PartyMemberDef in d.all_party():
-		for l: Dictionary in m.learnset:
-			if int(l["level"]) == 1:
+		for lv: Variant in _party_skills(m).values():
+			if int(lv) == 1:
 				learnable_l1 += 1
 	assert_eq(learnable_l1, 3)
 
 
 func test_party_skill_rows_match_gdd() -> void:
 	var d: GameData = _data()
-	# id → [mp, power, rank, target, element, damage_type] — MP cost and power as baked in R5b part 2b (07 §4.11: the
-	# real-time values of the rt blocks moved into the main fields)
+	# id → [mp, power, target, element, damage_type] — MP cost and power as baked in R5b part 2b (07 §4.11: the
+	# real-time values of the rt blocks moved into the main fields; the CTB rank left the data)
 	var rows: Dictionary = {
-		"skl_kai_heavy_swing": [3, 160, 4, "single_enemy", "physical", "physical"],
-		"skl_kai_taunt": [2, 0, 2, "self", "none", "none"],
-		"skl_kai_sweep": [5, 80, 3, "all_enemies", "physical", "physical"],
-		"skl_kai_first_aid": [4, 30, 2, "single_ally", "none", "heal"],
-		"skl_kai_leash_trip": [3, 70, 3, "single_enemy", "physical", "physical"],
-		"skl_kai_deo_torch": [7, 40, 3, "single_enemy", "fire", "physical"],
-		"skl_kai_cable_whip": [6, 120, 3, "single_enemy", "shock", "physical"],
-		"skl_kai_prime_finisher": [8, 260, 5, "single_enemy", "physical", "physical"],
-		"skl_mop_noble_flame": [4, 110, 3, "single_enemy", "fire", "magical"],
-		"skl_mop_holy_lick": [4, 100, 2, "single_ally", "none", "heal"],
-		"skl_mop_frost_sneeze": [5, 105, 3, "single_enemy", "ice", "magical"],
-		"skl_mop_thunder_bark": [5, 75, 3, "all_enemies", "shock", "magical"],
-		"skl_mop_expert_opinion": [6, 0, 2, "single_ally", "none", "none"],
-		"skl_mop_mass_lick": [10, 60, 3, "all_allies", "none", "heal"],
-		"skl_mop_revive": [14, 40, 4, "single_ally_ko", "none", "heal"],
-		"skl_mop_inferno": [12, 130, 4, "all_enemies", "fire", "magical"],
-		"skl_attack_kai": [0, 100, 3, "single_enemy", "physical", "physical"],
-		"skl_attack_mopsula": [0, 100, 3, "single_enemy", "physical", "physical"],
-		"skl_e_strike": [0, 100, 3, "single_enemy", "physical", "physical"],
+		"skl_kai_heavy_swing": [3, 160, "single_enemy", "physical", "physical"],
+		"skl_kai_taunt": [2, 0, "self", "none", "none"],
+		"skl_kai_sweep": [5, 80, "all_enemies", "physical", "physical"],
+		"skl_kai_first_aid": [4, 30, "single_ally", "none", "heal"],
+		"skl_kai_leash_trip": [3, 70, "single_enemy", "physical", "physical"],
+		"skl_kai_deo_torch": [7, 40, "single_enemy", "fire", "physical"],
+		"skl_kai_cable_whip": [6, 120, "single_enemy", "shock", "physical"],
+		"skl_kai_prime_finisher": [8, 260, "single_enemy", "physical", "physical"],
+		"skl_mop_noble_flame": [4, 110, "single_enemy", "fire", "magical"],
+		"skl_mop_holy_lick": [4, 100, "single_ally", "none", "heal"],
+		"skl_mop_frost_sneeze": [5, 105, "single_enemy", "ice", "magical"],
+		"skl_mop_thunder_bark": [5, 75, "all_enemies", "shock", "magical"],
+		"skl_mop_expert_opinion": [6, 0, "single_ally", "none", "none"],
+		"skl_mop_mass_lick": [10, 60, "all_allies", "none", "heal"],
+		"skl_mop_revive": [14, 40, "single_ally_ko", "none", "heal"],
+		"skl_mop_inferno": [12, 130, "all_enemies", "fire", "magical"],
+		"skl_attack_kai": [0, 100, "single_enemy", "physical", "physical"],
+		"skl_attack_mopsula": [0, 100, "single_enemy", "physical", "physical"],
+		"skl_e_strike": [0, 100, "single_enemy", "physical", "physical"],
 	}
 	for id: String in rows:
 		var s: SkillDef = d.skill(id)
 		var r: Array = rows[id]
-		assert_eq([s.mp_cost, s.power, s.rank, s.target, s.element, s.damage_type], r, id)
+		assert_eq([s.mp_cost, s.power, s.target, s.element, s.damage_type], r, id)
 		assert_eq(s.accuracy, -1, id + " always hits")
 	assert_eq(d.skill("skl_kai_first_aid").heal_mode, "pct")
 	assert_eq(d.skill("skl_kai_first_aid").cleanse, ["sts_poison", "sts_burn"])
@@ -330,14 +338,15 @@ func test_party_skill_rows_match_gdd() -> void:
 func test_stunts_match_gdd() -> void:
 	var d: GameData = _data()
 	var suplex: SkillDef = d.skill("skl_stunt_kai_suplex")
-	assert_eq([suplex.category, suplex.rank, suplex.cooldown, suplex.power, suplex.target, suplex.damage_type],
-		["stunt", 4, 3, 230, "single_enemy", "physical"])
+	assert_eq([suplex.category, suplex.power, suplex.target, suplex.damage_type],
+		["stunt", 230, "single_enemy", "physical"])
 	assert_eq([suplex.success_base, suplex.success_lck, suplex.success_cap, suplex.success_boss_mod],
 		[0.60, 0.01, 0.85, -0.15])
-	assert_eq(suplex.fail_effect, {"self_dmg_pct": 10, "delay_pct": 50, "status": "", "status_turns": 0})
+	assert_eq(suplex.fail_effect, {"self_dmg_pct": 10, "delay_pct": 0, "status": "", "status_turns": 0},
+		"the CTB delay of a failed stunt left the data (R5b part 2b)")
 	var entrance: SkillDef = d.skill("skl_stunt_mop_entrance")
-	assert_eq([entrance.category, entrance.rank, entrance.cooldown, entrance.power, entrance.target, entrance.element,
-		entrance.damage_type], ["stunt", 4, 3, 140, "all_enemies", "fire", "magical"])
+	assert_eq([entrance.category, entrance.power, entrance.target, entrance.element, entrance.damage_type],
+		["stunt", 140, "all_enemies", "fire", "magical"])
 	assert_eq([entrance.success_base, entrance.success_lck, entrance.success_cap, entrance.success_boss_mod],
 		[0.55, 0.01, 0.85, -0.15])
 	assert_eq(entrance.fail_effect, {"self_dmg_pct": 0, "delay_pct": 0, "status": "sts_stun", "status_turns": 0})
@@ -371,8 +380,7 @@ func test_enemy_table_matches_gdd() -> void:
 	for id: String in BOSSES:
 		var b: EnemyDef = d.enemy(id)
 		assert_true(b.boss)
-		assert_true(b.is_phased())
-		assert_len(b.phases, 3)
+		assert_len(b.rt["phases"] as Array, 3, id + ": three real-time phases (07 §6.6 / §6.7)")
 		assert_eq(b.status_resist, {"sts_stun": 0.5, "sts_slow": 0.5})
 	assert_almost(float(d.enemy("enm_taubenschwarm").explore["sight_range"]), 14.0)
 	var fr: EnemyDef = d.enemy("enm_fahrscheinfresser")
@@ -407,86 +415,65 @@ func test_enemy_drops_match_gdd() -> void:
 		{"kind": "item", "id": "itm_acc_queen_crown", "amount": 1}, {"kind": "box", "id": "box_gold", "amount": 1}])
 
 
-func test_enemy_ai_patterns_match_gdd() -> void:
+## The skills of GDD §5.1's patterns as the real-time rules and auto-attacks use them (07 §6.3: some secondary CTB
+## actions folded into the auto-attack or a rule; the CTB AI left the data in R5b part 2b).
+func test_enemy_rt_skills_match_07() -> void:
 	var d: GameData = _data()
-	# id → [[skill, weight, target, cond], …] (GDD §5.1 "KI-Muster").
-	var patterns: Dictionary = {
-		"enm_kanalratte": [["skl_e_bite", 3, "random", {}], ["skl_e_gnaw_poison", 1, "not_status:sts_poison", {}]],
-		"enm_taubenschwarm": [["skl_e_peck", 3, "lowest_hp_pct", {}], ["skl_e_dive_bomb", 1, "all_enemies", {}]],
-		"enm_pendler": [["skl_e_briefcase", 3, "random", {}],
-			["skl_e_delay_rage", 10, "random", {"turn_mod": [3, 2]}]],
-		"enm_kanalschleim": [["skl_e_slam", 2, "random", {}], ["skl_e_toxic_splash", 2, "not_status:sts_poison", {}]],
-		"enm_rattenschamane": [["skl_e_bite", 1, "random", {}], ["skl_e_zap", 2, "random", {}],
-			["skl_e_rat_heal", 6, "ally_lowest_hp_pct", {"ally_hp_below": 0.5}]],
-		"enm_kabelsalat": [["skl_e_lash", 2, "random", {}],
-			["skl_e_short_circuit", 10, "all_enemies", {"turn_mod": [3, 1]}]],
-		"enm_kellerspinne": [["skl_e_venom_bite", 3, "not_status:sts_poison", {}], ["skl_e_bite", 1, "random", {}],
-			["skl_e_web", 2, "not_status:sts_slow", {"once": true}]],
-		"enm_spruehgeist": [["skl_e_spray_flame", 3, "random", {}], ["skl_e_fumes", 1, "all_enemies", {}],
-			["skl_e_slam", 1, "random", {}]],
-		"enm_rolltreppenkrabbe": [["skl_e_brace", 10, "self", {"turn_mod": [3, 0]}],
-			["skl_e_step_crush", 10, "highest_hp", {"turn_mod": [3, 1]}], ["skl_e_pinch", 3, "random", {}]],
-		"enm_rattengardist": [["skl_e_shield_wall", 10, "all_allies", {"once": true}],
-			["skl_e_lunge", 2, "lowest_hp_pct", {}], ["skl_e_halberd", 3, "random", {}]],
-		"enm_fahrscheinfresser": [["skl_e_fine", 10, "random", {"once": true}], ["skl_e_ticket_cut", 3, "random", {}],
-			["skl_e_escape", 100, "self", {"turn_mod": [4, 3]}]],
+	var skills: Dictionary = {
+		"enm_kanalratte": ["skl_e_bite", "skl_e_gnaw_poison"], "enm_taubenschwarm": ["skl_e_dive_bomb", "skl_e_peck"],
+		"enm_pendler": ["skl_e_briefcase", "skl_e_delay_rage"], "enm_kanalschleim": ["skl_e_slam", "skl_e_toxic_splash"],
+		"enm_rattenschamane": ["skl_e_rat_heal", "skl_e_zap"], "enm_kabelsalat": ["skl_e_lash", "skl_e_short_circuit"],
+		"enm_kellerspinne": ["skl_e_venom_bite", "skl_e_web"], "enm_spruehgeist": ["skl_e_fumes", "skl_e_spray_flame"],
+		"enm_rolltreppenkrabbe": ["skl_e_brace", "skl_e_pinch", "skl_e_step_crush"],
+		"enm_rattengardist": ["skl_e_halberd", "skl_e_lunge", "skl_e_shield_wall"],
+		"enm_fahrscheinfresser": ["skl_e_escape", "skl_e_fine", "skl_e_ticket_cut"],
 	}
-	for id: String in patterns:
+	for id: String in skills:
 		var e: EnemyDef = d.enemy(id)
-		assert_eq(e.ai["type"], "weighted", id)
-		var got: Array = []
-		for a: Dictionary in e.ai["actions"]:
-			got.append([a["skill"], a["weight"], a["target"], a["cond"]])
-		assert_eq(got, patterns[id], id)
+		var got: Dictionary = {}
+		for sid: String in _rt_skills_of(e):
+			got[sid] = true
+		var list: Array = got.keys()
+		list.sort()
+		assert_eq(list, skills[id], id)
+		assert_true((e.ai.get("actions", []) as Array).is_empty() and e.phases.is_empty(), id + ": no CTB AI any more")
 
 
+## The bosses' content that outlived the CTB phases (their real-time phases: test_r4_rt_data, 07 §6.6 / §6.7).
 func test_boss_phases_match_gdd() -> void:
 	var d: GameData = _data()
-	var hm: EnemyDef = d.enemy("enm_boss_hausmeister")
-	assert_eq([hm.phases[0]["hp_above"], hm.phases[1]["hp_above"], hm.phases[2]["hp_above"]], [0.60, 0.25, 0.0])
-	assert_eq(hm.phases[0]["on_enter"], [{"op": "say", "tag": "boss_intro:enm_boss_hausmeister"}])
-	assert_eq(hm.phases[1]["on_enter"], [{"op": "summon", "enemy": "enm_kanalratte", "count": 1},
-		{"op": "say", "tag": "boss_phase:enm_boss_hausmeister:2"}])
-	assert_eq(hm.phases[2]["on_enter"], [{"op": "status_self", "status": "sts_haste", "turns": 5},
-		{"op": "say", "tag": "boss_phase:enm_boss_hausmeister:3"}])
-	assert_eq(_skills_of(hm.phases[0]["actions"]), ["skl_b_rules", "skl_b_broom", "skl_b_keys"])
-	assert_eq(_skills_of(hm.phases[1]["actions"]), ["skl_b_broom", "skl_b_cleaner_fog", "skl_b_keys",
-		"skl_b_call_tenant"])
-	assert_eq(hm.phases[1]["actions"][3]["cond"], {"allies_alive_below": 2, "turn_mod": [4, 0]})
-	assert_eq(_skills_of(hm.phases[2]["actions"]), ["skl_b_mop_whirl", "skl_b_broom"])
+	for id: String in BOSSES:
+		var b: EnemyDef = d.enemy(id)
+		assert_false(b.is_phased(), id + ": no CTB phases (R5b part 2b)")
+		assert_true(b.phases.is_empty(), id)
+		var ops: Array = []
+		for p: Variant in (b.rt["phases"] as Array):
+			for op: Variant in ((p as Dictionary).get("on_enter", []) as Array):
+				ops.append(str((op as Dictionary)["op"]))
+		assert_has(ops, "summon", id + ": a phase calls the rats (07 §6.6 / §6.7)")
 	var q: EnemyDef = d.enemy("enm_boss_rattenkoenigin")
-	assert_eq([q.phases[0]["hp_above"], q.phases[1]["hp_above"], q.phases[2]["hp_above"]], [0.65, 0.30, 0.0])
-	assert_eq(q.phases[0]["on_enter"][0], {"op": "summon", "enemy": "enm_kanalratte", "count": 2})
-	assert_eq(q.phases[1]["on_enter"][0], {"op": "add_pseudo", "unit": "pu_train_gleis9", "ctr": 120})
-	assert_eq(q.phases[2]["on_enter"], [{"op": "remove_pseudo", "unit": "pu_train_gleis9"},
-		{"op": "fixed_damage_self", "amount": 72, "min_hp": 1}, {"op": "status_self", "status": "sts_haste", "turns": 99},
-		{"op": "say", "tag": "boss_phase:enm_boss_rattenkoenigin:3"}])
-	assert_eq(_skills_of(q.phases[2]["actions"]), ["skl_q_scepter", "skl_q_plague_bite", "skl_q_crown_nova"])
-	assert_eq(q.phases[2]["actions"][2]["cond"], {"turn_mod": [4, 1]})
 	assert_eq(q.model["pose"], "quadruped")
 	assert_eq(q.status_immune, ["sts_poison"])
 	assert_eq(d.skill("skl_q_summon").summon, ["enm_kanalratte", "enm_kanalratte"])
 	assert_eq(d.skill("skl_b_call_tenant").summon, ["enm_kanalratte"])
-	var train: PseudoUnitDef = d.pseudo_unit("pu_train_gleis9")
-	assert_eq(train.action, {"fixed_pct_maxhp": 35, "element": "physical", "ignores_guard": true, "target": "all_party"})
-	assert_eq([train.ctr_after, train.warn_tag, train.warn_at], [160, "boss_train_warning", 2])
+	assert_true(d.all_pseudo_units().is_empty(), "the CTB train left the data — the real-time one is skl_q_train")
 
 
-func test_every_ai_action_is_usable() -> void:
-	# Dead data guard: an action whose MP cost exceeds the unit's max MP would never be chosen.
+func test_every_enemy_skill_is_usable() -> void:
+	# Dead data guard: a skill whose MP cost exceeds the unit's max MP would never be used (real-time auto-attacks,
+	# rules, their "then" and phase skills — the CTB AI left the data in R5b part 2b).
 	var d: GameData = _data()
 	for e: EnemyDef in d.all_enemies():
-		var lists: Array = [e.ai["actions"]]
-		for p: Dictionary in e.phases:
-			lists.append(p["actions"])
-		for actions: Array in lists:
-			for a: Dictionary in actions:
-				var s: SkillDef = d.skill(str(a["skill"]))
-				assert_true(s.mp_cost <= int(e.stats["mp"]), "%s: %s costs %d MP > %d" % [e.id, s.id, s.mp_cost,
-					int(e.stats["mp"])])
-				assert_ne(s.user, "item", "%s uses an item skill" % e.id)
-				if s.category == "summon":
-					assert_eq(a["target"], "self", e.id + ": summons target self")
+		for sid: String in _rt_skills_of(e):
+			var s: SkillDef = d.skill(sid)
+			assert_not_null(s, "%s uses %s" % [e.id, sid])
+			if s == null:
+				continue
+			assert_true(s.mp_cost <= int(e.stats["mp"]), "%s: %s costs %d MP > %d" % [e.id, s.id, s.mp_cost,
+				int(e.stats["mp"])])
+			assert_ne(s.user, "item", "%s uses an item skill" % e.id)
+			if s.category == "summon":
+				assert_eq(s.target, "self", e.id + ": summons target self")
 
 
 func test_enemy_models_follow_art_casting() -> void:
@@ -560,7 +547,7 @@ func test_consumables_match_gdd() -> void:
 		assert_eq(it.max_stack, 9, id)
 		assert_eq(it.use_skill, "skl_item_" + id.trim_prefix("itm_"), id + " use_skill naming")
 		var s: SkillDef = d.skill(it.use_skill)
-		assert_eq([s.user, s.category, s.rank], ["item", "item", 2], it.use_skill)
+		assert_eq([s.user, s.category], ["item", "item"], it.use_skill)
 	# fixed amounts in real-time HP units: the GDD values × 4 (baked in R5b part 2b, 07 §3.9.4)
 	assert_eq([d.skill("skl_item_bandage").heal_mode, d.skill("skl_item_bandage").power], ["fixed", 180])
 	assert_eq([d.skill("skl_item_brutzel_burger").heal_mode, d.skill("skl_item_brutzel_burger").power], ["fixed", 480])
@@ -859,10 +846,36 @@ func test_floor_2_stub() -> void:
 
 # --- helpers -------------------------------------------------------------------------------------------------------
 
-func _skills_of(actions: Array) -> Array:
-	var out: Array = []
-	for a: Dictionary in actions:
-		out.append(str(a["skill"]))
+## A member's abilities in the real-time data (07 §5.1): the rt bar without the SHOW slot (its stunt) and the context
+## abilities → {skill id: unlock level}.
+static func _party_skills(m: PartyMemberDef) -> Dictionary:
+	var out: Dictionary = {}
+	for b: Variant in (m.rt.get("bar", []) as Array):
+		var sid: String = str((b as Dictionary).get("skill", ""))
+		if not m.stunts.has(sid):
+			out[sid] = int((b as Dictionary).get("level", 1))
+	for c: Variant in (m.rt.get("context", []) as Array):
+		out[str((c as Dictionary).get("skill", ""))] = int((c as Dictionary).get("level", 1))
+	return out
+
+
+## Every skill an enemy uses in real time (07 §4.9): auto-attacks, rules and their "then", phase rules and phase ops.
+static func _rt_skills_of(e: EnemyDef) -> PackedStringArray:
+	var out: PackedStringArray = []
+	for k: String in ["auto_skill", "auto_ranged_skill"]:
+		if str(e.rt.get(k, "")) != "":
+			out.append(str(e.rt[k]))
+	var rules: Array = (e.rt.get("rules", []) as Array).duplicate()
+	for p: Variant in (e.rt.get("phases", []) as Array):
+		rules.append_array((p as Dictionary).get("rules", []) as Array)
+		for op: Variant in ((p as Dictionary).get("on_enter", []) as Array):
+			if str((op as Dictionary).get("skill", "")) != "":
+				out.append(str((op as Dictionary)["skill"]))
+	for r: Variant in rules:
+		out.append(str((r as Dictionary).get("skill", "")))
+		var then: Variant = (r as Dictionary).get("then", {})
+		if then is Dictionary and str((then as Dictionary).get("skill", "")) != "":
+			out.append(str((then as Dictionary)["skill"]))
 	return out
 
 

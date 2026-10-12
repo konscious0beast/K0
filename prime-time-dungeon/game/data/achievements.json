@@ -70,28 +70,24 @@
 		{
 			"id": "ach_crit_3",
 			"name": "Kritische Masse",
-			"desc": "Lande 3 kritische Treffer in einem Kampf.",
+			"desc": "Lande 15 kritische Treffer in einem Kampf.",
 			"trigger": "battle_won",
-			"condition": "e.crits >= 3",
+			"condition": "e.crits >= 15",
 			"box": "box_bronze",
 			"followers": -1,
 			"hidden": false,
-			"mod_tag": "",
-			"condition_rt": "e.crits >= 15",
-			"desc_rt": "Lande 15 kritische Treffer in einem Kampf."
+			"mod_tag": ""
 		},
 		{
 			"id": "ach_weakness_5",
 			"name": "Wunder Punkt",
-			"desc": "Triff 5× eine Schwachstelle in einem Kampf.",
+			"desc": "Triff 10× eine Schwachstelle in einem Kampf.",
 			"trigger": "battle_won",
-			"condition": "e.weakness_hits >= 5",
+			"condition": "e.weakness_hits >= 10",
 			"box": "box_bronze",
 			"followers": -1,
 			"hidden": false,
-			"mod_tag": "",
-			"condition_rt": "e.weakness_hits >= 10",
-			"desc_rt": "Triff 10× eine Schwachstelle in einem Kampf."
+			"mod_tag": ""
 		},
 		{
 			"id": "ach_stunt_first",

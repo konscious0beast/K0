@@ -12,7 +12,6 @@
 			"element": "physical",
 			"power": 100,
 			"mp_cost": 0,
-			"rank": 3,
 			"anim": "attack",
 			"vfx": "hit",
 			"rt": {
@@ -32,7 +31,6 @@
 			"element": "physical",
 			"power": 100,
 			"mp_cost": 0,
-			"rank": 3,
 			"anim": "attack",
 			"vfx": "bite"
 		},
@@ -47,7 +45,6 @@
 			"element": "physical",
 			"power": 60,
 			"mp_cost": 0,
-			"rank": 3,
 			"anim": "cast",
 			"vfx": "magic",
 			"rt": {
@@ -68,7 +65,6 @@
 			"element": "physical",
 			"power": 100,
 			"mp_cost": 0,
-			"rank": 3,
 			"anim": "attack",
 			"vfx": "hit",
 			"rt": {
@@ -88,7 +84,6 @@
 			"element": "physical",
 			"power": 160,
 			"mp_cost": 3,
-			"rank": 4,
 			"anim": "attack",
 			"vfx": "slash",
 			"show_tags": [
@@ -111,7 +106,6 @@
 			"element": "none",
 			"power": 0,
 			"mp_cost": 2,
-			"rank": 2,
 			"statuses": [
 				{
 					"id": "sts_taunted",
@@ -147,7 +141,6 @@
 			"element": "physical",
 			"power": 80,
 			"mp_cost": 5,
-			"rank": 3,
 			"anim": "attack",
 			"vfx": "slash",
 			"show_tags": [
@@ -175,7 +168,6 @@
 			"element": "none",
 			"power": 30,
 			"mp_cost": 4,
-			"rank": 2,
 			"heal_mode": "pct",
 			"cleanse": [
 				"sts_poison",
@@ -203,7 +195,6 @@
 			"element": "physical",
 			"power": 70,
 			"mp_cost": 3,
-			"rank": 3,
 			"statuses": [
 				{
 					"id": "sts_slow",
@@ -232,7 +223,6 @@
 			"element": "fire",
 			"power": 40,
 			"mp_cost": 7,
-			"rank": 3,
 			"statuses": [
 				{
 					"id": "sts_burn",
@@ -269,7 +259,6 @@
 			"element": "shock",
 			"power": 120,
 			"mp_cost": 6,
-			"rank": 3,
 			"statuses": [
 				{
 					"id": "sts_stun",
@@ -300,7 +289,6 @@
 			"element": "physical",
 			"power": 260,
 			"mp_cost": 8,
-			"rank": 5,
 			"crit_bonus": 0.2,
 			"kill_hype": 10,
 			"anim": "attack",
@@ -326,7 +314,6 @@
 			"element": "fire",
 			"power": 110,
 			"mp_cost": 4,
-			"rank": 3,
 			"anim": "cast",
 			"vfx": "fire",
 			"show_tags": [
@@ -349,7 +336,6 @@
 			"element": "none",
 			"power": 100,
 			"mp_cost": 4,
-			"rank": 2,
 			"heal_mode": "mag",
 			"anim": "cast",
 			"vfx": "heal",
@@ -374,7 +360,6 @@
 			"element": "ice",
 			"power": 105,
 			"mp_cost": 5,
-			"rank": 3,
 			"statuses": [
 				{
 					"id": "sts_slow",
@@ -403,7 +388,6 @@
 			"element": "shock",
 			"power": 75,
 			"mp_cost": 5,
-			"rank": 3,
 			"anim": "cast",
 			"vfx": "shock",
 			"show_tags": [
@@ -431,7 +415,6 @@
 			"element": "none",
 			"power": 0,
 			"mp_cost": 6,
-			"rank": 2,
 			"statuses": [
 				{
 					"id": "sts_haste",
@@ -457,7 +440,6 @@
 			"element": "none",
 			"power": 60,
 			"mp_cost": 10,
-			"rank": 3,
 			"statuses": [
 				{
 					"id": "sts_regen",
@@ -491,7 +473,6 @@
 			"element": "none",
 			"power": 40,
 			"mp_cost": 14,
-			"rank": 4,
 			"heal_mode": "pct",
 			"anim": "cast",
 			"vfx": "heal",
@@ -516,7 +497,6 @@
 			"element": "fire",
 			"power": 130,
 			"mp_cost": 12,
-			"rank": 4,
 			"statuses": [
 				{
 					"id": "sts_burn",
@@ -551,21 +531,18 @@
 			"element": "physical",
 			"power": 230,
 			"mp_cost": 0,
-			"rank": 4,
 			"statuses": [
 				{
 					"id": "sts_stun",
 					"ms": 2000
 				}
 			],
-			"cooldown": 3,
 			"success_base": 0.6,
 			"success_lck": 0.01,
 			"success_cap": 0.85,
 			"success_boss_mod": -0.15,
 			"fail_effect": {
 				"self_dmg_pct": 10,
-				"delay_pct": 50,
 				"status": ""
 			},
 			"anim": "stunt",
@@ -591,15 +568,12 @@
 			"element": "fire",
 			"power": 140,
 			"mp_cost": 0,
-			"rank": 4,
-			"cooldown": 3,
 			"success_base": 0.55,
 			"success_lck": 0.01,
 			"success_cap": 0.85,
 			"success_boss_mod": -0.15,
 			"fail_effect": {
 				"self_dmg_pct": 0,
-				"delay_pct": 0,
 				"status": "sts_stun"
 			},
 			"anim": "stunt",
@@ -630,7 +604,6 @@
 			"element": "physical",
 			"power": 100,
 			"mp_cost": 0,
-			"rank": 3,
 			"vfx": "bite",
 			"rt": {
 				"icon": "bite",
@@ -649,7 +622,6 @@
 			"element": "poison",
 			"power": 80,
 			"mp_cost": 0,
-			"rank": 3,
 			"statuses": [
 				{
 					"id": "sts_poison",
@@ -674,7 +646,6 @@
 			"element": "physical",
 			"power": 60,
 			"mp_cost": 0,
-			"rank": 4,
 			"vfx": "hit",
 			"rt": {
 				"icon": "claw",
@@ -699,7 +670,6 @@
 			"element": "physical",
 			"power": 90,
 			"mp_cost": 0,
-			"rank": 3,
 			"vfx": "hit",
 			"rt": {
 				"icon": "claw",
@@ -718,7 +688,6 @@
 			"element": "physical",
 			"power": 60,
 			"mp_cost": 0,
-			"rank": 4,
 			"vfx": "hit",
 			"rt": {
 				"icon": "claw",
@@ -743,7 +712,6 @@
 			"element": "physical",
 			"power": 100,
 			"mp_cost": 0,
-			"rank": 3,
 			"vfx": "hit",
 			"rt": {
 				"icon": "claw",
@@ -762,7 +730,6 @@
 			"element": "physical",
 			"power": 150,
 			"mp_cost": 0,
-			"rank": 5,
 			"vfx": "crit",
 			"rt": {
 				"icon": "claw",
@@ -789,7 +756,6 @@
 			"element": "physical",
 			"power": 100,
 			"mp_cost": 0,
-			"rank": 3,
 			"vfx": "hit",
 			"rt": {
 				"icon": "claw",
@@ -808,7 +774,6 @@
 			"element": "poison",
 			"power": 90,
 			"mp_cost": 0,
-			"rank": 3,
 			"statuses": [
 				{
 					"id": "sts_poison",
@@ -834,7 +799,6 @@
 			"element": "shock",
 			"power": 100,
 			"mp_cost": 0,
-			"rank": 3,
 			"anim": "cast",
 			"vfx": "shock",
 			"rt": {
@@ -855,7 +819,6 @@
 			"element": "none",
 			"power": 15,
 			"mp_cost": 0,
-			"rank": 2,
 			"heal_mode": "pct",
 			"anim": "cast",
 			"vfx": "heal",
@@ -877,7 +840,6 @@
 			"element": "physical",
 			"power": 100,
 			"mp_cost": 0,
-			"rank": 3,
 			"vfx": "slash",
 			"rt": {
 				"icon": "claw",
@@ -896,7 +858,6 @@
 			"element": "shock",
 			"power": 80,
 			"mp_cost": 0,
-			"rank": 4,
 			"anim": "cast",
 			"vfx": "shock",
 			"rt": {
@@ -922,7 +883,6 @@
 			"element": "poison",
 			"power": 90,
 			"mp_cost": 0,
-			"rank": 3,
 			"statuses": [
 				{
 					"id": "sts_poison",
@@ -948,7 +908,6 @@
 			"element": "none",
 			"power": 0,
 			"mp_cost": 0,
-			"rank": 3,
 			"statuses": [
 				{
 					"id": "sts_slow",
@@ -973,7 +932,6 @@
 			"element": "fire",
 			"power": 110,
 			"mp_cost": 0,
-			"rank": 3,
 			"anim": "cast",
 			"vfx": "fire",
 			"rt": {
@@ -994,7 +952,6 @@
 			"element": "poison",
 			"power": 60,
 			"mp_cost": 0,
-			"rank": 4,
 			"anim": "cast",
 			"vfx": "toxic",
 			"rt": {
@@ -1025,7 +982,6 @@
 			"element": "physical",
 			"power": 100,
 			"mp_cost": 0,
-			"rank": 3,
 			"vfx": "hit",
 			"rt": {
 				"icon": "claw",
@@ -1044,7 +1000,6 @@
 			"element": "none",
 			"power": 0,
 			"mp_cost": 0,
-			"rank": 2,
 			"statuses": [
 				{
 					"id": "sts_guard",
@@ -1068,7 +1023,6 @@
 			"element": "physical",
 			"power": 170,
 			"mp_cost": 0,
-			"rank": 5,
 			"vfx": "crit",
 			"rt": {
 				"icon": "claw",
@@ -1094,7 +1048,6 @@
 			"element": "physical",
 			"power": 100,
 			"mp_cost": 0,
-			"rank": 3,
 			"vfx": "slash",
 			"rt": {
 				"icon": "claw",
@@ -1113,7 +1066,6 @@
 			"element": "none",
 			"power": 0,
 			"mp_cost": 0,
-			"rank": 3,
 			"statuses": [
 				{
 					"id": "sts_guard",
@@ -1139,7 +1091,6 @@
 			"element": "physical",
 			"power": 140,
 			"mp_cost": 0,
-			"rank": 4,
 			"vfx": "slash",
 			"rt": {
 				"icon": "claw",
@@ -1167,7 +1118,6 @@
 			"element": "physical",
 			"power": 120,
 			"mp_cost": 0,
-			"rank": 3,
 			"vfx": "bite",
 			"rt": {
 				"icon": "ticket",
@@ -1186,7 +1136,6 @@
 			"element": "none",
 			"power": 0,
 			"mp_cost": 0,
-			"rank": 3,
 			"special": {
 				"kind": "steal_credits",
 				"max": 40,
@@ -1212,7 +1161,6 @@
 			"element": "none",
 			"power": 0,
 			"mp_cost": 0,
-			"rank": 2,
 			"special": {
 				"kind": "escape"
 			},
@@ -1236,7 +1184,6 @@
 			"element": "none",
 			"power": 0,
 			"mp_cost": 0,
-			"rank": 3,
 			"statuses": [
 				{
 					"id": "sts_slow",
@@ -1262,7 +1209,6 @@
 			"element": "physical",
 			"power": 110,
 			"mp_cost": 0,
-			"rank": 3,
 			"vfx": "hit",
 			"rt": {
 				"icon": "claw",
@@ -1281,7 +1227,6 @@
 			"element": "physical",
 			"power": 70,
 			"mp_cost": 0,
-			"rank": 4,
 			"vfx": "hit",
 			"rt": {
 				"icon": "claw",
@@ -1307,7 +1252,6 @@
 			"element": "none",
 			"power": 0,
 			"mp_cost": 0,
-			"rank": 3,
 			"statuses": [
 				{
 					"id": "sts_guard",
@@ -1339,7 +1283,6 @@
 			"element": "poison",
 			"power": 60,
 			"mp_cost": 0,
-			"rank": 4,
 			"anim": "cast",
 			"vfx": "toxic",
 			"rt": {
@@ -1371,7 +1314,6 @@
 			"element": "none",
 			"power": 0,
 			"mp_cost": 0,
-			"rank": 3,
 			"summon": [
 				"enm_kanalratte"
 			],
@@ -1394,7 +1336,6 @@
 			"element": "physical",
 			"power": 90,
 			"mp_cost": 0,
-			"rank": 3,
 			"statuses": [
 				{
 					"id": "sts_dizzy",
@@ -1426,7 +1367,6 @@
 			"element": "physical",
 			"power": 120,
 			"mp_cost": 0,
-			"rank": 3,
 			"vfx": "hit",
 			"rt": {
 				"icon": "claw",
@@ -1445,7 +1385,6 @@
 			"element": "poison",
 			"power": 90,
 			"mp_cost": 0,
-			"rank": 3,
 			"statuses": [
 				{
 					"id": "sts_poison",
@@ -1470,7 +1409,6 @@
 			"element": "shock",
 			"power": 80,
 			"mp_cost": 0,
-			"rank": 4,
 			"anim": "cast",
 			"vfx": "shock",
 			"rt": {
@@ -1491,7 +1429,6 @@
 			"element": "none",
 			"power": 0,
 			"mp_cost": 0,
-			"rank": 3,
 			"summon": [
 				"enm_kanalratte",
 				"enm_kanalratte"
@@ -1515,7 +1452,6 @@
 			"element": "shock",
 			"power": 110,
 			"mp_cost": 0,
-			"rank": 5,
 			"anim": "cast",
 			"vfx": "shock",
 			"rt": {
@@ -1542,7 +1478,6 @@
 			"element": "physical",
 			"power": 100,
 			"mp_cost": 0,
-			"rank": 5,
 			"vfx": "hit",
 			"rt": {
 				"icon": "train",
@@ -1574,7 +1509,6 @@
 			"element": "shock",
 			"power": 128,
 			"mp_cost": 0,
-			"rank": 3,
 			"vfx": "shock",
 			"rt": {
 				"icon": "bolt",
@@ -1593,7 +1527,6 @@
 			"element": "poison",
 			"power": 50,
 			"mp_cost": 0,
-			"rank": 4,
 			"anim": "cast",
 			"vfx": "toxic",
 			"rt": {
@@ -1615,61 +1548,6 @@
 			}
 		},
 		{
-			"id": "skl_e_pose",
-			"name": "Schaufensterpose",
-			"desc": "Starr, schön, unangreifbar.",
-			"user": "enemy",
-			"category": "buff",
-			"target": "self",
-			"damage_type": "none",
-			"element": "none",
-			"power": 0,
-			"mp_cost": 0,
-			"rank": 2,
-			"statuses": [
-				{
-					"id": "sts_guard",
-					"chance": 1.0,
-					"turns": 2
-				},
-				{
-					"id": "sts_taunt",
-					"chance": 1.0,
-					"turns": 2
-				}
-			],
-			"anim": "cast",
-			"vfx": "buff"
-		},
-		{
-			"id": "skl_e_ram",
-			"name": "Ramm-Kette",
-			"desc": "Drei Wagen, ein Ziel. Quietschend.",
-			"user": "enemy",
-			"category": "attack",
-			"target": "single_enemy",
-			"damage_type": "physical",
-			"element": "physical",
-			"power": 90,
-			"mp_cost": 0,
-			"rank": 3,
-			"vfx": "hit"
-		},
-		{
-			"id": "skl_e_price_slam",
-			"name": "Preissturz",
-			"desc": "−70 % auf alles. Auch auf deine HP.",
-			"user": "enemy",
-			"category": "attack",
-			"target": "single_enemy",
-			"damage_type": "physical",
-			"element": "physical",
-			"power": 170,
-			"mp_cost": 0,
-			"rank": 5,
-			"vfx": "crit"
-		},
-		{
 			"id": "skl_item_bandage",
 			"name": "Werbepflaster",
 			"desc": "Heilt 180 HP.",
@@ -1680,7 +1558,6 @@
 			"element": "none",
 			"power": 180,
 			"mp_cost": 0,
-			"rank": 2,
 			"heal_mode": "fixed",
 			"anim": "item",
 			"vfx": "heal",
@@ -1701,7 +1578,6 @@
 			"element": "none",
 			"power": 0,
 			"mp_cost": 0,
-			"rank": 2,
 			"cleanse": [
 				"sts_poison",
 				"sts_burn"
@@ -1725,7 +1601,6 @@
 			"element": "none",
 			"power": 0,
 			"mp_cost": 0,
-			"rank": 2,
 			"mp_restore": 20,
 			"anim": "item",
 			"vfx": "buff",
@@ -1746,7 +1621,6 @@
 			"element": "none",
 			"power": 480,
 			"mp_cost": 0,
-			"rank": 2,
 			"heal_mode": "fixed",
 			"anim": "item",
 			"vfx": "heal",
@@ -1767,7 +1641,6 @@
 			"element": "none",
 			"power": 30,
 			"mp_cost": 0,
-			"rank": 2,
 			"heal_mode": "pct",
 			"anim": "item",
 			"vfx": "heal",
@@ -1788,7 +1661,6 @@
 			"element": "fire",
 			"power": 240,
 			"mp_cost": 0,
-			"rank": 2,
 			"anim": "item",
 			"vfx": "fire",
 			"show_tags": [
@@ -1815,7 +1687,6 @@
 			"element": "ice",
 			"power": 360,
 			"mp_cost": 0,
-			"rank": 2,
 			"statuses": [
 				{
 					"id": "sts_slow",
@@ -1841,7 +1712,6 @@
 			"element": "none",
 			"power": 0,
 			"mp_cost": 0,
-			"rank": 2,
 			"flee_guaranteed": true,
 			"anim": "item",
 			"vfx": "smoke",
@@ -1861,7 +1731,6 @@
 			"element": "none",
 			"power": 0,
 			"mp_cost": 0,
-			"rank": 2,
 			"hype": 25,
 			"anim": "item",
 			"vfx": "confetti",
@@ -1885,7 +1754,6 @@
 			"element": "none",
 			"power": 100,
 			"mp_cost": 0,
-			"rank": 2,
 			"heal_mode": "pct",
 			"mp_restore_pct": 100,
 			"anim": "item",

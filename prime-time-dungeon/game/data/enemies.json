@@ -1,21 +1,5 @@
 {
 	"schema": 1,
-	"pseudo_units": [
-		{
-			"id": "pu_train_gleis9",
-			"name": "Einfahrender Zug",
-			"icon": "train",
-			"action": {
-				"fixed_pct_maxhp": 35,
-				"element": "physical",
-				"ignores_guard": true,
-				"target": "all_party"
-			},
-			"ctr_after": 160,
-			"warn_tag": "boss_train_warning",
-			"warn_at": 2
-		}
-	],
 	"entries": [
 		{
 			"id": "enm_kanalratte",
@@ -34,21 +18,6 @@
 			"exp": 12,
 			"credits": 6,
 			"attack_skill": "skl_e_strike",
-			"ai": {
-				"type": "weighted",
-				"actions": [
-					{
-						"skill": "skl_e_bite",
-						"weight": 3,
-						"target": "random"
-					},
-					{
-						"skill": "skl_e_gnaw_poison",
-						"weight": 1,
-						"target": "not_status:sts_poison"
-					}
-				]
-			},
 			"element_mods": {
 				"fire": 1.5
 			},
@@ -119,16 +88,6 @@
 			"exp": 12,
 			"credits": 6,
 			"attack_skill": "skl_e_strike",
-			"ai": {
-				"type": "weighted",
-				"actions": [
-					{
-						"skill": "skl_e_bite",
-						"weight": 1,
-						"target": "random"
-					}
-				]
-			},
 			"element_mods": {
 				"fire": 1.5
 			},
@@ -189,21 +148,6 @@
 			"exp": 14,
 			"credits": 5,
 			"attack_skill": "skl_e_strike",
-			"ai": {
-				"type": "weighted",
-				"actions": [
-					{
-						"skill": "skl_e_peck",
-						"weight": 3,
-						"target": "lowest_hp_pct"
-					},
-					{
-						"skill": "skl_e_dive_bomb",
-						"weight": 1,
-						"target": "all_enemies"
-					}
-				]
-			},
 			"element_mods": {
 				"shock": 1.5
 			},
@@ -271,27 +215,6 @@
 			"exp": 22,
 			"credits": 14,
 			"attack_skill": "skl_e_strike",
-			"ai": {
-				"type": "weighted",
-				"actions": [
-					{
-						"skill": "skl_e_briefcase",
-						"weight": 3,
-						"target": "random"
-					},
-					{
-						"skill": "skl_e_delay_rage",
-						"weight": 10,
-						"target": "random",
-						"cond": {
-							"turn_mod": [
-								3,
-								2
-							]
-						}
-					}
-				]
-			},
 			"element_mods": {
 				"fire": 1.5,
 				"poison": 0.5
@@ -362,21 +285,6 @@
 			"exp": 20,
 			"credits": 8,
 			"attack_skill": "skl_e_strike",
-			"ai": {
-				"type": "weighted",
-				"actions": [
-					{
-						"skill": "skl_e_slam",
-						"weight": 2,
-						"target": "random"
-					},
-					{
-						"skill": "skl_e_toxic_splash",
-						"weight": 2,
-						"target": "not_status:sts_poison"
-					}
-				]
-			},
 			"element_mods": {
 				"fire": 1.5,
 				"physical": 0.5,
@@ -448,29 +356,6 @@
 			"exp": 26,
 			"credits": 12,
 			"attack_skill": "skl_e_strike",
-			"ai": {
-				"type": "weighted",
-				"actions": [
-					{
-						"skill": "skl_e_bite",
-						"weight": 1,
-						"target": "random"
-					},
-					{
-						"skill": "skl_e_zap",
-						"weight": 2,
-						"target": "random"
-					},
-					{
-						"skill": "skl_e_rat_heal",
-						"weight": 6,
-						"target": "ally_lowest_hp_pct",
-						"cond": {
-							"ally_hp_below": 0.5
-						}
-					}
-				]
-			},
 			"element_mods": {
 				"fire": 1.5,
 				"shock": 0.5
@@ -555,27 +440,6 @@
 			"exp": 30,
 			"credits": 15,
 			"attack_skill": "skl_e_strike",
-			"ai": {
-				"type": "weighted",
-				"actions": [
-					{
-						"skill": "skl_e_lash",
-						"weight": 2,
-						"target": "random"
-					},
-					{
-						"skill": "skl_e_short_circuit",
-						"weight": 10,
-						"target": "all_enemies",
-						"cond": {
-							"turn_mod": [
-								3,
-								1
-							]
-						}
-					}
-				]
-			},
 			"element_mods": {
 				"ice": 1.5,
 				"fire": 0.5,
@@ -650,29 +514,6 @@
 			"exp": 34,
 			"credits": 12,
 			"attack_skill": "skl_e_strike",
-			"ai": {
-				"type": "weighted",
-				"actions": [
-					{
-						"skill": "skl_e_venom_bite",
-						"weight": 3,
-						"target": "not_status:sts_poison"
-					},
-					{
-						"skill": "skl_e_bite",
-						"weight": 1,
-						"target": "random"
-					},
-					{
-						"skill": "skl_e_web",
-						"weight": 2,
-						"target": "not_status:sts_slow",
-						"cond": {
-							"once": true
-						}
-					}
-				]
-			},
 			"element_mods": {
 				"fire": 1.5,
 				"poison": 0.0
@@ -751,26 +592,6 @@
 			"exp": 36,
 			"credits": 18,
 			"attack_skill": "skl_e_strike",
-			"ai": {
-				"type": "weighted",
-				"actions": [
-					{
-						"skill": "skl_e_spray_flame",
-						"weight": 3,
-						"target": "random"
-					},
-					{
-						"skill": "skl_e_fumes",
-						"weight": 1,
-						"target": "all_enemies"
-					},
-					{
-						"skill": "skl_e_slam",
-						"weight": 1,
-						"target": "random"
-					}
-				]
-			},
 			"element_mods": {
 				"ice": 1.5,
 				"physical": 0.5,
@@ -851,38 +672,6 @@
 			"exp": 60,
 			"credits": 20,
 			"attack_skill": "skl_e_strike",
-			"ai": {
-				"type": "weighted",
-				"actions": [
-					{
-						"skill": "skl_e_brace",
-						"weight": 10,
-						"target": "self",
-						"cond": {
-							"turn_mod": [
-								3,
-								0
-							]
-						}
-					},
-					{
-						"skill": "skl_e_step_crush",
-						"weight": 10,
-						"target": "highest_hp",
-						"cond": {
-							"turn_mod": [
-								3,
-								1
-							]
-						}
-					},
-					{
-						"skill": "skl_e_pinch",
-						"weight": 3,
-						"target": "random"
-					}
-				]
-			},
 			"element_mods": {
 				"shock": 1.5,
 				"physical": 0.5,
@@ -961,29 +750,6 @@
 			"exp": 66,
 			"credits": 22,
 			"attack_skill": "skl_e_strike",
-			"ai": {
-				"type": "weighted",
-				"actions": [
-					{
-						"skill": "skl_e_shield_wall",
-						"weight": 10,
-						"target": "all_allies",
-						"cond": {
-							"once": true
-						}
-					},
-					{
-						"skill": "skl_e_lunge",
-						"weight": 2,
-						"target": "lowest_hp_pct"
-					},
-					{
-						"skill": "skl_e_halberd",
-						"weight": 3,
-						"target": "random"
-					}
-				]
-			},
 			"element_mods": {
 				"fire": 1.5,
 				"ice": 1.5
@@ -1073,35 +839,6 @@
 			"exp": 60,
 			"credits": 100,
 			"attack_skill": "skl_e_strike",
-			"ai": {
-				"type": "weighted",
-				"actions": [
-					{
-						"skill": "skl_e_fine",
-						"weight": 10,
-						"target": "random",
-						"cond": {
-							"once": true
-						}
-					},
-					{
-						"skill": "skl_e_ticket_cut",
-						"weight": 3,
-						"target": "random"
-					},
-					{
-						"skill": "skl_e_escape",
-						"weight": 100,
-						"target": "self",
-						"cond": {
-							"turn_mod": [
-								4,
-								3
-							]
-						}
-					}
-				]
-			},
 			"element_mods": {
 				"shock": 1.5,
 				"physical": 0.5,
@@ -1208,110 +945,6 @@
 					"kind": "box",
 					"id": "box_silver",
 					"amount": 1
-				}
-			],
-			"ai": {
-				"type": "phased",
-				"actions": []
-			},
-			"phases": [
-				{
-					"hp_above": 0.6,
-					"on_enter": [
-						{
-							"op": "say",
-							"tag": "boss_intro:enm_boss_hausmeister"
-						}
-					],
-					"actions": [
-						{
-							"skill": "skl_b_rules",
-							"weight": 10,
-							"target": "self",
-							"cond": {
-								"once": true
-							}
-						},
-						{
-							"skill": "skl_b_broom",
-							"weight": 3,
-							"target": "random"
-						},
-						{
-							"skill": "skl_b_keys",
-							"weight": 1,
-							"target": "all_enemies"
-						}
-					]
-				},
-				{
-					"hp_above": 0.25,
-					"on_enter": [
-						{
-							"op": "summon",
-							"enemy": "enm_kanalratte",
-							"count": 1
-						},
-						{
-							"op": "say",
-							"tag": "boss_phase:enm_boss_hausmeister:2"
-						}
-					],
-					"actions": [
-						{
-							"skill": "skl_b_broom",
-							"weight": 2,
-							"target": "random"
-						},
-						{
-							"skill": "skl_b_cleaner_fog",
-							"weight": 2,
-							"target": "all_enemies"
-						},
-						{
-							"skill": "skl_b_keys",
-							"weight": 1,
-							"target": "all_enemies"
-						},
-						{
-							"skill": "skl_b_call_tenant",
-							"weight": 4,
-							"target": "self",
-							"cond": {
-								"allies_alive_below": 2,
-								"turn_mod": [
-									4,
-									0
-								]
-							}
-						}
-					]
-				},
-				{
-					"hp_above": 0.0,
-					"on_enter": [
-						{
-							"op": "status_self",
-							"status": "sts_haste",
-							"turns": 5
-						},
-						{
-							"op": "say",
-							"tag": "boss_phase:enm_boss_hausmeister:3"
-						}
-					],
-					"actions": [
-						{
-							"skill": "skl_b_mop_whirl",
-							"weight": 2,
-							"target": "all_enemies"
-						},
-						{
-							"skill": "skl_b_broom",
-							"weight": 2,
-							"target": "lowest_hp_pct"
-						}
-					]
 				}
 			],
 			"tags": [
@@ -1486,127 +1119,6 @@
 					"kind": "box",
 					"id": "box_gold",
 					"amount": 1
-				}
-			],
-			"ai": {
-				"type": "phased",
-				"actions": []
-			},
-			"phases": [
-				{
-					"hp_above": 0.65,
-					"on_enter": [
-						{
-							"op": "summon",
-							"enemy": "enm_kanalratte",
-							"count": 2
-						},
-						{
-							"op": "say",
-							"tag": "boss_intro:enm_boss_rattenkoenigin"
-						}
-					],
-					"actions": [
-						{
-							"skill": "skl_q_scepter",
-							"weight": 3,
-							"target": "random"
-						},
-						{
-							"skill": "skl_q_plague_bite",
-							"weight": 1,
-							"target": "not_status:sts_poison"
-						},
-						{
-							"skill": "skl_q_summon",
-							"weight": 4,
-							"target": "self",
-							"cond": {
-								"allies_alive_below": 3,
-								"turn_mod": [
-									3,
-									2
-								]
-							}
-						}
-					]
-				},
-				{
-					"hp_above": 0.3,
-					"on_enter": [
-						{
-							"op": "add_pseudo",
-							"unit": "pu_train_gleis9",
-							"ctr": 120
-						},
-						{
-							"op": "say",
-							"tag": "boss_phase:enm_boss_rattenkoenigin:2"
-						}
-					],
-					"actions": [
-						{
-							"skill": "skl_q_scepter",
-							"weight": 3,
-							"target": "random"
-						},
-						{
-							"skill": "skl_q_screech",
-							"weight": 2,
-							"target": "all_enemies"
-						},
-						{
-							"skill": "skl_q_plague_bite",
-							"weight": 1,
-							"target": "random"
-						}
-					]
-				},
-				{
-					"hp_above": 0.0,
-					"on_enter": [
-						{
-							"op": "remove_pseudo",
-							"unit": "pu_train_gleis9"
-						},
-						{
-							"op": "fixed_damage_self",
-							"amount": 72,
-							"min_hp": 1
-						},
-						{
-							"op": "status_self",
-							"status": "sts_haste",
-							"turns": 99
-						},
-						{
-							"op": "say",
-							"tag": "boss_phase:enm_boss_rattenkoenigin:3"
-						}
-					],
-					"actions": [
-						{
-							"skill": "skl_q_scepter",
-							"weight": 3,
-							"target": "lowest_hp_pct"
-						},
-						{
-							"skill": "skl_q_plague_bite",
-							"weight": 2,
-							"target": "random"
-						},
-						{
-							"skill": "skl_q_crown_nova",
-							"weight": 10,
-							"target": "all_enemies",
-							"cond": {
-								"turn_mod": [
-									4,
-									1
-								]
-							}
-						}
-					]
 				}
 			],
 			"tags": [
@@ -1789,27 +1301,6 @@
 			"exp": 88,
 			"credits": 26,
 			"attack_skill": "skl_e_strike",
-			"ai": {
-				"type": "weighted",
-				"actions": [
-					{
-						"skill": "skl_e_strike",
-						"weight": 3,
-						"target": "random"
-					},
-					{
-						"skill": "skl_e_pose",
-						"weight": 4,
-						"target": "self",
-						"cond": {
-							"turn_mod": [
-								3,
-								0
-							]
-						}
-					}
-				]
-			},
 			"element_mods": {
 				"fire": 1.5,
 				"ice": 0.5
@@ -1862,21 +1353,6 @@
 			"exp": 52,
 			"credits": 18,
 			"attack_skill": "skl_e_strike",
-			"ai": {
-				"type": "weighted",
-				"actions": [
-					{
-						"skill": "skl_e_ram",
-						"weight": 3,
-						"target": "lowest_hp_pct"
-					},
-					{
-						"skill": "skl_e_strike",
-						"weight": 1,
-						"target": "random"
-					}
-				]
-			},
 			"element_mods": {
 				"shock": 1.5,
 				"physical": 0.5
@@ -1931,27 +1407,6 @@
 			"exp": 110,
 			"credits": 34,
 			"attack_skill": "skl_e_strike",
-			"ai": {
-				"type": "weighted",
-				"actions": [
-					{
-						"skill": "skl_e_strike",
-						"weight": 3,
-						"target": "random"
-					},
-					{
-						"skill": "skl_e_price_slam",
-						"weight": 10,
-						"target": "random",
-						"cond": {
-							"turn_mod": [
-								3,
-								2
-							]
-						}
-					}
-				]
-			},
 			"element_mods": {
 				"ice": 1.5,
 				"fire": 0.5

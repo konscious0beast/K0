@@ -2,9 +2,10 @@ extends TestCase
 ## R5b part 1 (07 §9.4, §12.2 "Stand R5a" Nr. 6): ach_crit_3 and ach_weakness_5 measured in the real-time combat —
 ## a real-time fight has many more hits than a CTB battle (auto attacks, both units): with the bot `typical` 52–63 % of
 ## the regular fights land 3 crits and the tutorial alone ≈ 7 weakness hits, so both came in the first fights (CTB
-## thorough: crit 3 never, weakness 5 after the Hausmeister). achievements.json condition_rt / desc_rt hold the
-## real-time thresholds (15 crits: ≈ every second Hausmeister fight, every Königin; 10 weakness hits: about one regular
-## fight in twenty, mostly d2), AchievementDef.expr_for / desc_for pick them in a real-time run; CTB stays as it was.
+## thorough: crit 3 never, weakness 5 after the Hausmeister). The real-time thresholds (15 crits: ≈ every second
+## Hausmeister fight, every Königin; 10 weakness hits: about one regular fight in twenty, mostly d2) held their own keys
+## condition_rt / desc_rt in R5b part 1; part 2b baked them into condition / desc (and M.O.D.'s lines) — the validator
+## refuses the old keys.
 
 const RtLive := preload("res://tests/fixtures/rt_live/rt_live.gd")
 const Harness := preload("res://tests/tools/rt_harness.gd")
@@ -28,11 +29,10 @@ func _payload(crits: int, weak: int) -> Dictionary:
 		"telegraph_hits": 0, "train_kills": 0, "perfect_phases": 0}
 
 
-func _won(realtime: bool, crits: int, weak: int) -> PackedStringArray:
+func _won(crits: int, weak: int) -> PackedStringArray:
 	var d: GameData = real_data()
 	var st: GameState = GameState.create_new(d, 0, "Kai", 1)
 	var t: AchievementTracker = AchievementTracker.new(d, st.show, st.flags)
-	t.realtime = realtime
 	var got: PackedStringArray = t.evaluate("battle_won", _payload(crits, weak))
 	var out: PackedStringArray = []
 	for id: String in got:
@@ -45,20 +45,21 @@ func test_the_real_time_thresholds() -> void:
 	var d: GameData = real_data()
 	var crit: AchievementDef = d.achievement("ach_crit_3")
 	var weak: AchievementDef = d.achievement("ach_weakness_5")
-	assert_eq([crit.condition, crit.condition_rt], ["e.crits >= 3", "e.crits >= 15"])
-	assert_eq([weak.condition, weak.condition_rt], ["e.weakness_hits >= 5", "e.weakness_hits >= 10"])
-	assert_eq(crit.desc_for(true), "Lande 15 kritische Treffer in einem Kampf.")
-	assert_eq(crit.desc_for(false), crit.desc, "CTB keeps its text")
-	assert_eq(weak.desc_for(true), "Triff 10× eine Schwachstelle in einem Kampf.")
-	assert_eq(_won(false, 3, 5), PackedStringArray(["ach_crit_3", "ach_weakness_5"]), "CTB as before")
-	assert_eq(_won(true, 14, 9), PackedStringArray(), "real time: below the thresholds")
-	assert_eq(_won(true, 15, 10), PackedStringArray(["ach_crit_3", "ach_weakness_5"]))
+	assert_eq([crit.condition, crit.desc], ["e.crits >= 15", "Lande 15 kritische Treffer in einem Kampf."])
+	assert_eq([weak.condition, weak.desc], ["e.weakness_hits >= 10", "Triff 10× eine Schwachstelle in einem Kampf."])
+	assert_eq(_won(14, 9), PackedStringArray(), "below the thresholds")
+	assert_eq(_won(15, 10), PackedStringArray(["ach_crit_3", "ach_weakness_5"]))
+	assert_true(d.mod_lines("achievement:ach_crit_3")[0].text.begins_with("Fünfzehn"), "M.O.D. counts 15")
+	assert_true(d.mod_lines("achievement:ach_weakness_5")[0].text.begins_with("Zehnmal"), "M.O.D. counts 10")
 	for a: AchievementDef in d.all_achievements():
-		if a.condition_rt == "":
-			assert_eq(a.expr_for(true), a.expr, a.id + ": one condition for both modes")
-			assert_eq(a.desc_for(true), a.desc)
-		else:
-			assert_eq(a.expr_rt.error, "", a.id)
+		assert_eq(a.expr.error, "", a.id)
+	var raw: Dictionary = {}
+	for t: String in GameData.TABLES:
+		raw[t] = JsonUtil.read_file("res://data/%s.json" % t)
+	(((raw["achievements"] as Dictionary)["entries"] as Array)[0] as Dictionary)["condition_rt"] = "e.crits >= 1"
+	var bad: GameData = GameData.new()
+	assert_false(bad.load_from_tables(raw), "the R5b part 1 key is refused")
+	assert_true("; ".join(bad.errors).contains("condition_rt: unknown key"), "; ".join(bad.errors))
 
 
 ## Fled (smoke), three sneaked first strikes, a knocked-out Graf Mopsula, a win with one member at 1 HP.

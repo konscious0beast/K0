@@ -2,16 +2,13 @@ class_name AchievementTracker extends RefCounted
 ## Achievement evaluation (02_TECH §6.1, GDD §8).
 ##
 ## evaluate(trigger, payload) checks every not-yet-unlocked AchievementDef of that trigger (data order) against its
-## parsed ConditionExpr (R5b: of the combat mode, `realtime`) with e = payload, s = ShowState.stats, f =
-## GameState.flags, appends the newly unlocked ids to
+## parsed ConditionExpr with e = payload, s = ShowState.stats, f = GameState.flags, appends the newly unlocked ids to
 ## ShowState.achievements (each id at most once ever) and returns them. Rewards (box, followers, hype, M.O.D. line,
 ## toast) are handled by the Show autoload. Counters of the same trigger must be raised before (GDD §8).
 
 var _data: GameData = null
 var _show: ShowState = null
 var _flags: Dictionary = {}
-## R5b: a real-time run evaluates AchievementDef.condition_rt where one exists (AchievementDef.expr_for).
-var realtime: bool = false
 
 
 func _init(p_data: GameData, p_show: ShowState, p_flags: Dictionary) -> void:
@@ -28,7 +25,7 @@ func evaluate(trigger_id: String, payload: Dictionary) -> PackedStringArray:
 	for def: AchievementDef in _data.all_achievements_for(trigger_id):
 		if def == null or _show.achievements.has(def.id):
 			continue
-		var ex: ConditionExpr = def.expr_for(realtime)
+		var ex: ConditionExpr = def.expr
 		if ex == null or ex.error != "":
 			continue
 		if ex.eval(payload, _show.stats, _flags):

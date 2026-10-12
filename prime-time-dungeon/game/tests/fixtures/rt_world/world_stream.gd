@@ -124,7 +124,7 @@ func _make_setup(cmd: Dictionary, seed: int) -> RtSetup:
 		u.swing_ticks = 72 if member == "mopsula" else 60
 		u.reach = 1000 if member == "mopsula" else 250
 		if u.bar.is_empty():
-			u.bar = _bar_of(data.party_member(member), m.level)
+			u.bar = BattleBridge._rt_bar(data.party_member(member).rt, m)
 		if uid != _ctl:
 			_ai = uid
 		party.append(u)
@@ -175,24 +175,8 @@ func _make_setup(cmd: Dictionary, seed: int) -> RtSetup:
 	return s
 
 
-## A bar for a party unit when the data has no rt.bar (the real data before R4): the learnset skills up to `level` in
-## slots 1–4 and the first stunt as SHOW (slot 5), so R3's action bar shows real skills in the stills.
-static func _bar_of(def: PartyMemberDef, level: int) -> Dictionary:
-	var out: Dictionary = {}
-	if def == null:
-		return out
-	var slot: int = 1
-	for row: Dictionary in def.learnset:
-		if slot <= 4 and int(row.get("level", 99)) <= level:
-			out[slot] = str(row.get("skill", ""))
-			slot += 1
-	if not def.stunts.is_empty():
-		out[5] = def.stunts[0]
-	return out
-
-
-## The skill behind a fixture telegraph of `a`: the last AI action of its def (a boss: of its second phase, where the
-## fixture's telegraphs run — the queen's Pestbiss), else its attack: real skill names on the cast bars.
+## The skill behind a fixture telegraph of `a`: the last real-time rule of its def (a boss: of its second phase, where
+## the fixture's telegraphs run — the queen's Pestbiss), else its attack: real skill names on the cast bars.
 func _tele_skill(a: String) -> String:
 	var u: RtUnit = null
 	for x: RtUnit in _setup.units:
@@ -201,10 +185,11 @@ func _tele_skill(a: String) -> String:
 	var edef: EnemyDef = data.enemy(u.def_id) if u != null and data.has_id("enemies", u.def_id) else null
 	if edef == null:
 		return "skl_e_strike"
-	var acts: Array = (edef.ai.get("actions", []) as Array) if edef.phases.is_empty() else \
-		((edef.phases[mini(1, edef.phases.size() - 1)] as Dictionary).get("actions", []) as Array)
-	for i: int in range(acts.size() - 1, -1, -1):
-		var sid: String = str((acts[i] as Dictionary).get("skill", ""))
+	var phases: Array = edef.rt.get("phases", [])
+	var rules: Array = (edef.rt.get("rules", []) as Array) if phases.is_empty() else \
+		((phases[mini(1, phases.size() - 1)] as Dictionary).get("rules", []) as Array)
+	for i: int in range(rules.size() - 1, -1, -1):
+		var sid: String = str((rules[i] as Dictionary).get("skill", ""))
 		if data.has_id("skills", sid):
 			return sid
 	return edef.attack_skill

@@ -149,8 +149,9 @@ func test_shipped_names_and_the_liga_rule() -> void:
 	assert_len(st, 1, "same effect as before: Turbo")
 	assert_eq(str(st[0]["id"]), "sts_haste")
 	assert_eq(int(st[0]["ms"]), 10000, "10 s Turbo in real time (baked in R5b part 2b)")
-	assert_has(d.party_member("mopsula").learnset.map(func(l: Dictionary) -> String: return str(l["skill"])),
-		"skl_mop_expert_opinion", "Mopsula learns it (level 4)")
+	assert_has((d.party_member("mopsula").rt["bar"] as Array).map(func(b: Dictionary) -> String:
+		return str(b["skill"]) if int(b["level"]) == 4 else ""), "skl_mop_expert_opinion",
+		"Mopsula's bar has it (level 4)")
 	assert_eq(d.achievement("ach_duo_first").name, "Leichtes Gepäck im Doppelpack")
 	assert_eq(d.achievement("ach_duo_floor").name, "Eine Etage leichtes Gepäck")
 	for id: String in ["ach_ul_first", "ach_ul_boss", "ach_duo_first", "ach_duo_floor", "ach_duo_flawless"]:

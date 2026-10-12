@@ -10,12 +10,7 @@ var box: String = ""
 var followers: int = -1                     # -1 = by box tier (bronze 20 / silver 40 / gold 80, else 0)
 var hidden: bool = false
 var mod_tag: String = ""                    # "" → "achievement:<id>" with fallback "achievement_generic"
-var expr: ConditionExpr = null              # parsed `condition`
-## R5b (07 §9.4): an optional threshold of the real-time combat — "" = `condition` in both modes. A real-time run
-## evaluates `condition_rt` and shows `desc_rt` (a real-time combat has many more hits than a CTB battle).
-var condition_rt: String = ""
-var desc_rt: String = ""
-var expr_rt: ConditionExpr = null           # parsed `condition_rt` (null without one)
+var expr: ConditionExpr = null              # parsed `condition` (R5b part 2b: the real-time thresholds of 07 §9.4)
 
 
 static func from_dict(d: Dictionary) -> AchievementDef:
@@ -30,17 +25,4 @@ static func from_dict(d: Dictionary) -> AchievementDef:
 	r.hidden = bool(d.get("hidden", false))
 	r.mod_tag = str(d.get("mod_tag", ""))
 	r.expr = ConditionExpr.parse(r.condition)
-	r.condition_rt = str(d.get("condition_rt", ""))
-	r.desc_rt = str(d.get("desc_rt", ""))
-	r.expr_rt = ConditionExpr.parse(r.condition_rt) if r.condition_rt != "" else null
 	return r
-
-
-## The condition of the combat mode: expr_rt in a real-time run when there is one, else expr.
-func expr_for(realtime: bool) -> ConditionExpr:
-	return expr_rt if realtime and expr_rt != null else expr
-
-
-## The description of the combat mode: desc_rt in a real-time run when there is one, else desc.
-func desc_for(realtime: bool) -> String:
-	return desc_rt if realtime and desc_rt != "" else desc

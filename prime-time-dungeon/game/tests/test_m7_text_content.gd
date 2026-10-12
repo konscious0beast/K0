@@ -15,7 +15,7 @@ const MIN_LINES: Dictionary = {
 	"lootbox_open_silver": 2, "lootbox_open_gold": 2, "lootbox_open_fan": 2, "lootbox_pity": 1, "death": 3,
 	"mopsula_ko": 2, "kai_ko": 2, "revive": 1, "boss_intro:enm_boss_hausmeister": 2,
 	"boss_phase:enm_boss_hausmeister:2": 1, "boss_phase:enm_boss_hausmeister:3": 1,
-	"boss_intro:enm_boss_rattenkoenigin": 2, "boss_phase:enm_boss_rattenkoenigin:2": 1, "boss_train_warning": 1,
+	"boss_intro:enm_boss_rattenkoenigin": 2, "boss_phase:enm_boss_rattenkoenigin:2": 1,
 	"boss_phase:enm_boss_rattenkoenigin:3": 1, "boss_defeated": 2, "level_up": 2, "follower_milestone": 2,
 	"safe_room_enter": 3, "vendor_buy": 2, "stairs_found": 2, "floor_end": 2,
 	"timer_warn_600": 2, "chat_handle": 8, "chat_hype_high": 3, "chat_hype_mid": 3, "chat_hype_low": 3, "chat_crit": 3,

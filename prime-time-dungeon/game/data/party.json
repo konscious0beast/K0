@@ -34,40 +34,6 @@
 				"lck": 0.5
 			},
 			"attack_skill": "skl_attack_kai",
-			"learnset": [
-				{
-					"level": 1,
-					"skill": "skl_kai_heavy_swing"
-				},
-				{
-					"level": 2,
-					"skill": "skl_kai_taunt"
-				},
-				{
-					"level": 3,
-					"skill": "skl_kai_sweep"
-				},
-				{
-					"level": 4,
-					"skill": "skl_kai_first_aid"
-				},
-				{
-					"level": 5,
-					"skill": "skl_kai_leash_trip"
-				},
-				{
-					"level": 6,
-					"skill": "skl_kai_deo_torch"
-				},
-				{
-					"level": 7,
-					"skill": "skl_kai_cable_whip"
-				},
-				{
-					"level": 9,
-					"skill": "skl_kai_prime_finisher"
-				}
-			],
 			"stunts": [
 				"skl_stunt_kai_suplex"
 			],
@@ -384,40 +350,6 @@
 				"lck": 0.7
 			},
 			"attack_skill": "skl_attack_mopsula",
-			"learnset": [
-				{
-					"level": 1,
-					"skill": "skl_mop_noble_flame"
-				},
-				{
-					"level": 1,
-					"skill": "skl_mop_holy_lick"
-				},
-				{
-					"level": 2,
-					"skill": "skl_mop_frost_sneeze"
-				},
-				{
-					"level": 3,
-					"skill": "skl_mop_thunder_bark"
-				},
-				{
-					"level": 4,
-					"skill": "skl_mop_expert_opinion"
-				},
-				{
-					"level": 6,
-					"skill": "skl_mop_mass_lick"
-				},
-				{
-					"level": 7,
-					"skill": "skl_mop_revive"
-				},
-				{
-					"level": 9,
-					"skill": "skl_mop_inferno"
-				}
-			],
 			"stunts": [
 				"skl_stunt_mop_entrance"
 			],

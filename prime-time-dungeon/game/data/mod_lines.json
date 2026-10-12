@@ -4023,6 +4023,13 @@
 			"voice": "mod",
 			"text": "Die Redaktion ist in der Kaffeepause. Wir casten klassisch.",
 			"weight": 1
+		},
+		{
+			"id": "mod_ssn_anchor_01",
+			"tag": "ssn_anchor",
+			"voice": "mod",
+			"text": "Willkommen zur neuen Staffel! Jede Etage stürzt pünktlich ein. Pünktlicher als jeder Zug.",
+			"weight": 1
 		}
 	]
 }

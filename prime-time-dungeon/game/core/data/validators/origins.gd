@@ -3,8 +3,9 @@ extends RefCounted
 ## hobbies, traits, rivals, brands, gags, greetings, plans and the canon persona (the dormant K0 start talents left
 ## with CR-33 in 09 ST0). Private helper of DataValidator (no class_name; preloaded as OriginsCheck). Schema
 ## (normalize / read_extras), id patterns and uniqueness (K0) and the content rules of 08 §3.9 (K1): text lengths and
-## word lists, `prof` (the Vorleben head start of 09 §8.6), references, keywords, icons, broadcast plans and the canon
-## persona. Counts are the real catalog's business (test_08_origins_data) — fixtures may carry fewer entries.
+## word lists, `prof` (the Vorleben head start of 09 §8.6; since 09 ST0 a reference to professions.json), references,
+## keywords, icons, broadcast plans and the canon persona. Counts are the real catalog's business
+## (test_08_origins_data) — fixtures may carry fewer entries.
 
 const TalentsRules := preload("res://core/data/validators/talents.gd")
 const IpWords := preload("res://core/data/validators/ip_words.gd")
@@ -38,7 +39,7 @@ const FORMS: PackedStringArray = ["n", "f", "m"]
 const CLUB_GENDERS: PackedStringArray = ["f", "m", "n"]
 const ALLROUND: String = "org_allround"     # the catch-all origin of "Anderes …" without a match (no tile)
 const SPEC_HINT_PREFIX: String = "cls_kai_"
-const PROF_RE: String = "^prf_[a-z0-9_]+$"  # 09 §8.5 profession ids (professions.json from 09 ST0)
+const PROF_RE: String = "^prf_[a-z0-9_]+$"  # 09 §8.5 profession ids (professions.json, checked since 09 ST0)
 ## Keywords after normalization (08 §3.7): lower-case ASCII words, "=" = whole word, else a part (>= 4 characters);
 ## a part may span words ("3d druck").
 const KEYWORD_RE: String = "^=?[a-z0-9]+( [a-z0-9]+)*$"
@@ -128,12 +129,13 @@ static func check(v: DataValidator) -> void:
 
 # --- K1 rules ------------------------------------------------------------------------------------------------------
 
-## {list → {id → entry}} of every persona list, plus "origins", "classes", "marotten".
+## {list → {id → entry}} of every persona list, plus "origins", "classes", "marotten", "professions" (09 ST0).
 static func _id_sets(v: DataValidator, extras: Dictionary) -> Dictionary:
 	var out: Dictionary = {}
 	for list: String in LISTS.keys():
 		out[list] = _by_id(extras.get(list, []))
 	out["origins"] = _by_id(v._out.get("origins", []))
+	out["professions"] = _by_id(v._out.get("professions", []))
 	out["classes"] = _by_id(v._out.get("classes", []))
 	out["marotten"] = _by_id(v._out.get("marotten", []))
 	return out
@@ -166,6 +168,8 @@ static func _check_entries(v: DataValidator, ids: Dictionary) -> void:
 			v._err(ctx + ".prof", "status tiles and %s pick the profession freely (\"\", 09 §8.6)" % ALLROUND)
 		elif not free_pick and not v._matches(PROF_RE, prof):
 			v._err(ctx + ".prof", "needs a profession id prf_* (09 §8.6), got '%s'" % prof)
+		elif not free_pick:
+			_ref(v, ctx + ".prof", prof, ids["professions"], "profession (professions.json)")
 		var hint: String = str(o["spec_hint"])
 		if not hint.begins_with(SPEC_HINT_PREFIX) or not (ids["classes"] as Dictionary).has(hint):
 			v._err(ctx + ".spec_hint", "needs a Kai class %s* (classes.json), got '%s'" % [SPEC_HINT_PREFIX, hint])
@@ -188,6 +192,8 @@ static func _check_hobbies(v: DataValidator, ids: Dictionary) -> void:
 		if not v._matches(PROF_RE, str(h["prof"])):
 			v._err(ctx + ".prof", "every hobby gives a recipe of a profession prf_* (09 §8.6), got '%s'" %
 				str(h["prof"]))
+		else:
+			_ref(v, ctx + ".prof", str(h["prof"]), ids["professions"], "profession (professions.json)")
 		var club: Dictionary = h["club"]
 		if not (club.get("text", null) is String) or str(club.get("text", "")) == "":
 			v._err(ctx + ".club.text", "needs the club noun (\"Kochkurs\", 08 §3.5)")

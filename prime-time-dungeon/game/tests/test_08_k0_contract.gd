@@ -297,7 +297,12 @@ func test_mod_lines_anchor_order() -> void:
 		j -= 1
 	assert_eq(str((lines[j] as Dictionary)["id"]), "mod_rt_set_quiet_01", "behind the R1a anchor (and its R4 block)")
 	assert_eq(str((lines[at] as Dictionary)["tag"]), "persona_intro")
-	for i in range(at, lines.size()):
+	var end: int = lines.size()                   # 09 ST0: the Staffeln block starts behind block K
+	for i in lines.size():
+		if str((lines[i] as Dictionary)["id"]) == "mod_ssn_anchor_01":
+			end = i
+	assert_gt(end, at, "09 ST0: mod_ssn_anchor_01 behind block K")
+	for i in range(at, end):
 		assert_true(str((lines[i] as Dictionary)["tag"]).begins_with("persona_"),
 			"08 §10.7: block K grows only behind its anchor: " + str((lines[i] as Dictionary)["id"]))
 

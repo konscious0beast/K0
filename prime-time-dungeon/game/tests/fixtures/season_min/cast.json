@@ -1,0 +1,16 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "extra",
+			"name": "Statist:in",
+			"weight": 50
+		}
+	],
+	"names": [
+		{
+			"name": "Hanne Hammerschlag",
+			"form": "f"
+		}
+	]
+}

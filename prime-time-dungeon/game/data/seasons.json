@@ -1,0 +1,16 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "ssn_basis",
+			"name": "Basis-Staffel",
+			"format": 6,
+			"days": 24,
+			"places": 100,
+			"air_time": "20:00",
+			"rules": {
+				"pvp": "arena"
+			}
+		}
+	]
+}

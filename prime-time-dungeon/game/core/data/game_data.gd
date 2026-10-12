@@ -10,7 +10,8 @@ const TABLES: PackedStringArray = ["statuses", "skills", "items", "classes", "pa
 	"talents", "species",                       # 06 package B
 	"marotten",                                 # 06-C
 	"twists",                                   # 06-D (KI-Admin): twists.json
-	"origins", "looks"]                         # Casting (08, K0): persona catalog + avatar looks (08 §3.8, §6.1)
+	"origins", "looks",                         # Casting (08, K0): persona catalog + avatar looks (08 §3.8, §6.1)
+	"seasons", "professions", "cast", "themes"]   # Staffeln (09, ST0): templates, professions, AI cast, Kulissen
 
 var source: String = ""                    # dir or "dicts"
 var errors: PackedStringArray = []
@@ -68,6 +69,20 @@ var _persona_plans: Array = []             # origins.json → plans (file order)
 var _persona_canon: Dictionary = {}        # origins.json → canon
 var _looks: Dictionary = {}                # lk id → entry
 var _looks_by_kind: Dictionary = {}        # kind → Array[Dictionary] (file order)
+# --- Staffeln (09, ST0): seasons / professions / cast / themes.json --------------------------------------------------
+var _seasons: Dictionary = {}              # ssn id → SeasonDef
+var _all_seasons: Array[SeasonDef] = []    # file order
+var _professions: Dictionary = {}          # prf id → ProfessionDef
+var _all_professions: Array[ProfessionDef] = []
+var _recipes: Dictionary = {}              # rcp id → RecipeDef (professions.json → recipes)
+var _all_recipes: Array[RecipeDef] = []
+var _materials: Dictionary = {}            # mat id → entry (professions.json → materials)
+var _nodes: Dictionary = {}                # nod id → entry (professions.json → nodes)
+var _cast: Dictionary = {}                 # profile id → entry
+var _all_cast: Array[Dictionary] = []      # file order
+var _cast_names: Array[Dictionary] = []    # cast.json → names ({"name", "form"}, file order)
+var _themes: Dictionary = {}               # thm id → ThemeDef
+var _all_themes: Array[ThemeDef] = []
 
 
 ## Loads all TABLES from `dir` (<table>.json). Full validation (rules 1–10). True if no errors.
@@ -104,6 +119,10 @@ func load_from_dicts(tables: Dictionary) -> bool:
 				file["pity"] = (tables.get("lootbox_pity", {"rare": 4, "epic": 8}) as Dictionary).duplicate(true)
 			"origins":                                    # Casting (08, K0): {hobbies, traits, …, canon}
 				file.merge((tables.get("origin_extras", {}) as Dictionary).duplicate(true))
+			"professions":                                # Staffeln (09, ST0): {recipes, materials, nodes}
+				file.merge((tables.get("profession_extras", {}) as Dictionary).duplicate(true))
+			"cast":                                       # Staffeln (09, ST0): {names}
+				file.merge((tables.get("cast_extras", {}) as Dictionary).duplicate(true))
 		raw[t] = file
 	if tables.has("rt_balance"):                              # Echtzeitkampf (07, R1a): file object or bare values
 		var rb: Variant = tables["rt_balance"]
@@ -256,13 +275,14 @@ func pity_limits() -> Dictionary:
 	return _pity.duplicate()
 
 
-## Tables: TABLES plus "pseudo_units" and "encounters".
+## Tables: TABLES plus "pseudo_units" and "encounters" (09 ST0: plus "recipes", "materials", "nodes" of
+## professions.json).
 func has_id(table: String, id: String) -> bool:
 	var d: Dictionary = _table_dict(table)
 	return d.has(id)
 
 
-## Sorted ascending. Tables: TABLES plus "pseudo_units" and "encounters".
+## Sorted ascending. Tables: as has_id.
 func ids(table: String) -> PackedStringArray:
 	var out: PackedStringArray = []
 	var d: Dictionary = _table_dict(table)
@@ -435,6 +455,114 @@ func _build_persona(norm: Dictionary) -> void:
 	_freeze(_persona_plans)
 
 
+# --- Staffeln (09, ST0): getters of seasons / professions / cast / themes.json (defs: null + error if unknown, like
+# every def getter; entries: {} if unknown) ---------------------------------------------------------------------------
+
+## seasons.json template (ssn_).
+func season_def(id: String) -> SeasonDef:
+	return _get_def(_seasons, "seasons", id) as SeasonDef
+
+
+## All season templates, file order.
+func all_seasons() -> Array[SeasonDef]:
+	return _all_seasons.duplicate()
+
+
+## professions.json entry (prf_).
+func profession(id: String) -> ProfessionDef:
+	return _get_def(_professions, "professions", id) as ProfessionDef
+
+
+## All professions, file order.
+func all_professions() -> Array[ProfessionDef]:
+	return _all_professions.duplicate()
+
+
+## professions.json → recipes entry (rcp_).
+func recipe(id: String) -> RecipeDef:
+	return _get_def(_recipes, "professions", id) as RecipeDef
+
+
+## All recipes, file order.
+func all_recipes() -> Array[RecipeDef]:
+	return _all_recipes.duplicate()
+
+
+## professions.json → materials entry ({} if unknown).
+func material(id: String) -> Dictionary:
+	return _materials.get(id, {})
+
+
+## professions.json → nodes entry, a gathering node ({} if unknown).
+func gather_node(id: String) -> Dictionary:
+	return _nodes.get(id, {})
+
+
+## cast.json profile of the AI candidates ({} if unknown).
+func cast_profile(id: String) -> Dictionary:
+	return _cast.get(id, {})
+
+
+## All AI candidate profiles, file order.
+func all_cast_profiles() -> Array[Dictionary]:
+	return _all_cast.duplicate()
+
+
+## cast.json → names: the name catalog of the AI candidates ({"name", "form"}, file order).
+func cast_names() -> Array[Dictionary]:
+	return _cast_names.duplicate()
+
+
+## themes.json Kulisse (thm_).
+func theme(id: String) -> ThemeDef:
+	return _get_def(_themes, "themes", id) as ThemeDef
+
+
+## All Kulissen, file order.
+func all_themes() -> Array[ThemeDef]:
+	return _all_themes.duplicate()
+
+
+func _build_season(norm: Dictionary) -> void:
+	for d: Dictionary in norm.get("seasons", []):
+		var s: SeasonDef = SeasonDef.from_dict(d)
+		if not _seasons.has(s.id):
+			_seasons[s.id] = s
+			_all_seasons.append(s)
+	for d: Dictionary in norm.get("professions", []):
+		var p: ProfessionDef = ProfessionDef.from_dict(d)
+		if not _professions.has(p.id):
+			_professions[p.id] = p
+			_all_professions.append(p)
+	var extras: Dictionary = norm.get("profession_extras", {})
+	for d: Dictionary in extras.get("recipes", []):
+		var r: RecipeDef = RecipeDef.from_dict(d)
+		if not _recipes.has(r.id):
+			_recipes[r.id] = r
+			_all_recipes.append(r)
+	for d: Dictionary in extras.get("materials", []):
+		if not _materials.has(str(d["id"])):
+			_materials[str(d["id"])] = d
+	for d: Dictionary in extras.get("nodes", []):
+		if not _nodes.has(str(d["id"])):
+			_nodes[str(d["id"])] = d
+	for d: Dictionary in norm.get("cast", []):
+		if not _cast.has(str(d["id"])):
+			_cast[str(d["id"])] = d
+			_all_cast.append(d)
+	_cast_names.assign((norm.get("cast_extras", {}) as Dictionary).get("names", []))
+	for d: Dictionary in norm.get("themes", []):
+		var t: ThemeDef = ThemeDef.from_dict(d)
+		if not _themes.has(t.id):
+			_themes[t.id] = t
+			_all_themes.append(t)
+	for v: Variant in [_materials, _nodes, _cast, _cast_names]:
+		_freeze(v)
+	for table: Dictionary in [_seasons, _professions, _recipes, _themes]:
+		for def: Variant in table.values():
+			_freeze_object(def as Object)
+
+
 ## Echtzeitkampf (07 §3.16, R1a): the "values" of data/rt_balance.json (a copy; {} without the file). Read through
 ## RtBalance.from_data(data), which falls back to RtBalance.DEFAULTS.
 func rt_balance_values() -> Dictionary:
@@ -485,6 +613,20 @@ func _clear() -> void:
 	_looks_by_kind = {}
 	_all_origins = []
 	_persona_plans = []
+	# Staffeln (09, ST0): fresh containers (the loaded entries are frozen)
+	_seasons = {}
+	_all_seasons = []
+	_professions = {}
+	_all_professions = []
+	_recipes = {}
+	_all_recipes = []
+	_materials = {}
+	_nodes = {}
+	_cast = {}
+	_all_cast = []
+	_cast_names = []
+	_themes = {}
+	_all_themes = []
 	_all_statuses.clear()
 	_all_skills.clear()
 	_all_items.clear()
@@ -616,6 +758,7 @@ func _build(norm: Dictionary) -> void:
 	_pools = (norm.get("lootbox_pools", {}) as Dictionary).duplicate(true)
 	_pity = (norm.get("lootbox_pity", {"rare": 4, "epic": 8}) as Dictionary).duplicate(true)
 	_build_persona(norm)                                          # Casting (08, K0)
+	_build_season(norm)                                           # Staffeln (09, ST0)
 	_freeze_defs()
 
 
@@ -702,6 +845,21 @@ func _table_dict(table: String) -> Dictionary:
 			return _origins
 		"looks":
 			return _looks
+		# --- Staffeln (09, ST0) ---
+		"seasons":
+			return _seasons
+		"professions":
+			return _professions
+		"recipes":
+			return _recipes
+		"materials":
+			return _materials
+		"nodes":
+			return _nodes
+		"cast":
+			return _cast
+		"themes":
+			return _themes
 	return {}
 
 

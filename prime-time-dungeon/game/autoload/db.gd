@@ -103,6 +103,24 @@ func has_id(table: String, id: String) -> bool:
 	return data.has_id(table, id)
 
 
+# --- Staffeln (09, ST0) ---
+
+func season_def(id: String) -> SeasonDef:
+	return data.season_def(id)
+
+
+func profession(id: String) -> ProfessionDef:
+	return data.profession(id)
+
+
+func recipe(id: String) -> RecipeDef:
+	return data.recipe(id)
+
+
+func theme(id: String) -> ThemeDef:
+	return data.theme(id)
+
+
 ## SHA-256 (hex) over the game data files (res://data/*.json, sorted by name: name + per-file SHA-256) — the
 ## data_hash of leaderboard entries and commits (05 §7.3/§10.4). Cached after the first call.
 func data_hash() -> String:

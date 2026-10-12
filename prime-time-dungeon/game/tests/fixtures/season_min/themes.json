@@ -1,0 +1,13 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "thm_test",
+			"name": "Testkulisse",
+			"floors": [
+				1
+			],
+			"program": []
+		}
+	]
+}

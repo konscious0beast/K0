@@ -1,0 +1,46 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "prf_cooking",
+			"name": "Kochen",
+			"kind": "side"
+		},
+		{
+			"id": "prf_first_aid",
+			"name": "Erste Hilfe",
+			"kind": "side"
+		},
+		{
+			"id": "prf_scrap",
+			"name": "Schrottsammeln",
+			"kind": "gather"
+		}
+	],
+	"recipes": [
+		{
+			"id": "rcp_cooking_hobby",
+			"name": "Kantinen-Eintopf à la Zwinger 7",
+			"prof": "prf_cooking",
+			"grade": 1,
+			"req": 1,
+			"hobby_recipe": true
+		}
+	],
+	"materials": [
+		{
+			"id": "mat_test_metal",
+			"name": "Altmetall",
+			"grade": 1
+		}
+	],
+	"nodes": [
+		{
+			"id": "nod_test_heap",
+			"name": "Schrotthaufen",
+			"prof": "prf_scrap",
+			"grade": 1,
+			"req": 1
+		}
+	]
+}

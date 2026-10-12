@@ -1,0 +1,13 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "thm_unterstadt",
+			"name": "Die Unterstadt",
+			"floors": [
+				1
+			],
+			"program": []
+		}
+	]
+}

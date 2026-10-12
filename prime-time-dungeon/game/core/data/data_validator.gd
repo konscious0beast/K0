@@ -93,7 +93,10 @@ const OPTIONAL_MOD_TAG_PREFIXES: PackedStringArray = ["achievement:", "boss_intr
 	"marotte_", "liga_",                        # 06 package C: M.O.D. preferences + Liga (06 §4)
 	"regie_", "mod_live_",                      # 06-D: Regie lines (regie_cut_in, regie_monologue_<n>), M.O.D. live
 	"rt_", "showboss_",                         # Echtzeitkampf (07, R1a): real-time lines (§9.3), show boss (§9.6)
-	"persona_"]                                 # Casting (08, K0): persona hooks, casting pages (08 §4.3)
+	"persona_",                                 # Casting (08, K0): persona hooks, casting pages (08 §4.3)
+	# --- Staffeln (09, ST0): AI candidates (§4.6), the season, professions, sleepers, the daily programme; ssn_: the
+	# block anchor mod_ssn_anchor_01 (tag ssn_anchor — the ids follow mod_<tag>_<nn>, 09 §11.2 Nr. 9) ---
+	"cast_", "season_", "prof_", "sleep_", "daily_", "ssn_"]
 
 ## Copy of StatIds.ALL (§6.3); test_m2_achievements asserts equality.
 const STAT_IDS: PackedStringArray = ["kills_total", "kills_skill", "battles_won", "battles_fled", "preemptives",
@@ -171,6 +174,14 @@ const ID_PATTERNS: Dictionary = {
 	"greetings": "^gr_[a-z0-9_]+$",
 	"plans": "^plan_[a-z0-9_]+$",
 	"looks": "^lk_[a-z0-9_]+$",
+	# --- Staffeln (09, ST0): seasons / professions / cast / themes.json (prf_ instead of the reserved job_, CR-27) ----
+	"seasons": "^ssn_[a-z0-9_]+$",
+	"professions": "^prf_[a-z0-9_]+$",
+	"recipes": "^rcp_[a-z0-9_]+$",
+	"materials": "^mat_[a-z0-9_]+$",
+	"nodes": "^nod_[a-z0-9_]+$",
+	"cast": "^[a-z][a-z0-9_]*$",
+	"themes": "^thm_[a-z0-9_]+$",
 }
 
 const TABLES: PackedStringArray = ["statuses", "skills", "items", "classes", "party", "enemies", "floors",
@@ -178,10 +189,12 @@ const TABLES: PackedStringArray = ["statuses", "skills", "items", "classes", "pa
 	"talents", "species",                       # 06 package B
 	"marotten",                                 # 06-C
 	"twists",                                   # 06-D: validated by validators/twists.gd (TwistCheck)
-	"origins", "looks"]                         # Casting (08, K0): validators/origins.gd (K1), looks.gd (K2)
+	"origins", "looks",                         # Casting (08, K0): validators/origins.gd (K1), looks.gd (K2)
+	"seasons", "professions", "cast", "themes"]   # Staffeln (09, ST0): validators/{seasons,professions,cast,themes}.gd
 ## Allowed extra top-level keys per file (§4.1); everything else is an error.
 const TABLE_EXTRA_KEYS: Dictionary = {"party": ["start"], "enemies": ["pseudo_units"], "lootboxes": ["pools", "pity"],
-	"origins": ["hobbies", "traits", "rivals", "brands", "gags", "greetings", "plans", "canon"]}   # 08 K0 (09 ST0)
+	"origins": ["hobbies", "traits", "rivals", "brands", "gags", "greetings", "plans", "canon"],   # 08 K0 (09 ST0)
+	"professions": ["recipes", "materials", "nodes"], "cast": ["names"]}                        # Staffeln (09, ST0)
 const REQUIRED_BOXES: PackedStringArray = ["box_bronze", "box_silver", "box_gold", "box_fan"]
 const LEVEL_CAP: int = 10                    # copy of Balance.LEVEL_CAP (core/data must not depend on core/stats)
 const MAX_TEXT_LEN: int = 110
@@ -230,6 +243,11 @@ const RtCheck := preload("res://core/data/validators/rt.gd")
 ## Casting (08 §3.9, K0): rules of origins.json (K1) and looks.json (K2) — private helpers like the others.
 const OriginsCheck := preload("res://core/data/validators/origins.gd")
 const LooksCheck := preload("res://core/data/validators/looks.gd")
+# --- Staffeln (09, ST0): the third contract pass — one private helper per new table (stubs, owned by ST1-B/E/F/C) ---
+const SeasonsCheck := preload("res://core/data/validators/seasons.gd")
+const ProfessionsCheck := preload("res://core/data/validators/professions.gd")
+const CastCheck := preload("res://core/data/validators/cast.gd")
+const ThemesCheck := preload("res://core/data/validators/themes.gd")
 
 # --- 06 package B: per-table rule files (06 §8.0 Nr. 7) ------------------------------------------------------------
 const TalentsRules := preload("res://core/data/validators/talents.gd")
@@ -412,6 +430,8 @@ func validate(raw: Dictionary, p_strict: bool = true, read_errors: Dictionary = 
 	for t: String in TABLES:
 		_out[t] = []
 	_out["origin_extras"] = {}                    # Casting (08, K0): hobbies, traits, …, canon of origins.json
+	_out["profession_extras"] = {}                # Staffeln (09, ST0): recipes, materials, nodes of professions.json
+	_out["cast_extras"] = {}                      # Staffeln (09, ST0): names of cast.json
 	# Rule 1 + rules 2/4 per entry.
 	for t: String in TABLES:
 		var entries: Array = _file_entries(t, raw, read_errors)
@@ -506,6 +526,10 @@ func _file_entries(t: String, raw: Dictionary, read_errors: Dictionary) -> Array
 		_read_lootbox_extras(f)
 	elif t == "origins":
 		OriginsCheck.read_extras(self, f)         # Casting (08, K0)
+	elif t == "professions":
+		ProfessionsCheck.read_extras(self, f)     # Staffeln (09, ST0)
+	elif t == "cast":
+		CastCheck.read_extras(self, f)            # Staffeln (09, ST0)
 	if not f.has("entries"):
 		_err(t + ".entries", "missing")
 		return []
@@ -668,6 +692,15 @@ func _normalize_entry(t: String, i: int, raw: Variant) -> Dictionary:
 			return OriginsCheck.normalize(self, ctx, raw)           # Casting (08, K0)
 		"looks":
 			return LooksCheck.normalize(self, ctx, raw)             # Casting (08, K0)
+		# --- Staffeln (09, ST0) ---
+		"seasons":
+			return SeasonsCheck.normalize(self, ctx, raw)
+		"professions":
+			return ProfessionsCheck.normalize(self, ctx, raw)
+		"cast":
+			return CastCheck.normalize(self, ctx, raw)
+		"themes":
+			return ThemesCheck.normalize(self, ctx, raw)
 	return {}
 
 
@@ -1630,8 +1663,13 @@ func _check_references() -> void:
 	TalentsRules.check_refs(self)              # 06 package B
 	SpeciesRules.check_refs(self)
 	MarottenCheck.check_refs(self, _out["marotten"], _boxes)   # 06-C
-	OriginsCheck.check(self)                   # Casting (08, K0 stub → K1 rules)
+	OriginsCheck.check(self)                   # Casting (08, K0 stub → K1 rules; 09 ST0: prof → professions)
 	LooksCheck.check(self)                     # Casting (08, K0 stub → K2 rules)
+	# --- Staffeln (09, ST0 stubs → ST1-B/E/F/C rules) ---
+	SeasonsCheck.check(self)
+	ProfessionsCheck.check(self)
+	CastCheck.check(self)
+	ThemesCheck.check(self)
 
 
 func _ref(ctx: String, id: String, table: Dictionary, what: String) -> bool:

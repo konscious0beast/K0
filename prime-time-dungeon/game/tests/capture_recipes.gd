@@ -58,9 +58,10 @@ extends Node
 ##   season_tab_<ranking | ticker | programme | actions> (exploration.tscn: pause → "Staffel"),
 ##   season_ask_<pause | binge | leave> (its dialog), season_hud (the collapse display and the counter; season_hud_warn
 ##   with --before=warn: 40 min before, gold, M.O.D.'s line), season_stairs (--before=cal3: the closed stairs),
-##   season_guests (safe_room.tscn: the AI candidates, "Anheuern"), season_offer (safe_room.tscn: the tempo offer after
-##   the class choice), season_quiet (any screen without M.O.D.'s box and the toasts: the title with --before=career,
-##   season_summary.tscn with finale | out, hall_of_fame.tscn with hall).
+##   season_guests (safe_room.tscn: the AI candidates, "Anheuern"; season_hire: its dialog with the price),
+##   season_offer (safe_room.tscn: the tempo offer after the class choice), season_quiet (any screen without M.O.D.'s
+##   box and the toasts: the title with --before=career, season_summary.tscn with finale | out, hall_of_fame.tscn with
+##   hall).
 
 const ZONES: Dictionary = {"platform": "zone_platform", "sewer": "zone_sewer", "cellar": "zone_cellar"}
 
@@ -2031,6 +2032,18 @@ func _r_season_guests(scene: Node) -> bool:
 	await _settle(10)
 	var g: Control = scene.get("season_guests") as Control
 	return g != null and g.visible
+
+
+## season_hire (safe_room.tscn --before=cal2): the Helfer:in pressed — "Anheuern?" with her line and the price.
+func _r_season_hire(scene: Node) -> bool:
+	if not await _r_season_guests(scene):
+		return false
+	var buttons: Dictionary = scene.get("season_guest_buttons")
+	for k: Variant in buttons.keys():
+		if str(k).begins_with("hire_"):
+			(buttons[k] as Button).pressed.emit()
+			return await _settle(10)
+	return false
 
 
 ## season_offer (safe_room.tscn --before=cal3): the class is chosen — M.O.D.'s tempo offer.

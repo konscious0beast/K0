@@ -629,10 +629,24 @@ func test_the_guests_of_a_safe_room_and_the_hire() -> void:
 	assert_ne(hire_id, "", "a Helfer:in can be hired")
 	var place: int = hire_id.trim_prefix("hire_").to_int()
 	assert_not_null(_find_text_part(panel, "(KI)"), "labelled")
+	var said: Array = []
+	var on_said: Callable = func(_t: String, _v: StringName, tag: String, _b: bool) -> void: said.append(tag)
+	Events.mod_said.connect(on_said)
+	for k2: Variant in buttons.keys():
+		if str(k2).begins_with("talk_"):
+			(buttons[k2] as Button).pressed.emit()        # one button per guest: "Reden" — M.O.D. quotes them
+			break
+	Events.mod_said.disconnect(on_said)
+	assert_true(said.any(func(t: Variant) -> bool: return str(t).begins_with("season_guest_")), str(said))
 	var credits: int = st.inventory.credits
-	var d: Node = sr.call("season_ask_hire", place)
+	(buttons[hire_id] as Button).pressed.emit()          # the Helfer:in's button asks first
 	await wait_frames(2)
+	var d: Node = sr.get("_modal") as Node
+	assert_not_null(d, "Anheuern? — a dialog")
+	if d == null:
+		return
 	assert_true(_find_text_part(d, "150 Credits") != null or _find_text_part(d, "Gefallen") != null, "the price")
+	_check_screen(d, "hire dialog")
 	d.call("answer", "hire")
 	await wait_frames(2)
 	assert_eq(int(CastSim.guest(st, DB.data).get("who", -1)), place, "recorded: cast hire")

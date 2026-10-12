@@ -79,8 +79,9 @@ Prüfwerkzeuge (`tools/`).
 - Die Kampagne endet nach Etage 1: Wer abgestiegen ist, landet nach „Fortsetzen“ im Abspann. Die Etagen 2–6 gehören den
   **Staffeln** (09, Stand ST1-C1; nur Debug-Builds, `--season`, Abschnitt 6): die Passage Ewiger Rabatt, Der Fundus und
   Das Paketzentrum (Hallen 4–6) — prozedural in Vierteln (Generator v2) mit Schlüsseltor vor der Treppe, Revier- und
-  Etagenbossen, einem Safe Room je Viertel und fünf Programmtüren, die das Tagesprogramm öffnet; die Gegner wachsen mit
-  dem Stufen-Band der Etage. Eine Basis-Staffel läuft von Etage 1 bis zum Finale auf Etage 6.
+  Etagenbossen, einem Safe Room je Viertel und fünf Programmtüren, die das Tagesprogramm öffnet; die Gegner stehen auf
+  den Stufen-Bändern der Etagen (7–10 auf Etage 2 bis 19–22 auf Etage 6) und geben die EP-Anteile der Staffel-Stufen.
+  Eine Basis-Staffel läuft von Etage 1 bis zum Finale auf Etage 6.
 - 3 Speicherslots (JSON in `user://saves/`), Einstellungen, Pausemenü, Touch-Steuerung.
 - **M.O.D.-Marotten & Unterhosen-Liga** (06 Kap. 4): M.O.D. verrät je Etage, was sie heute mag (Show-Wetten mit Herzen,
   Fanpost-Paket bei drei Treffern); wer ohne Rüstung & ohne Accessoire kämpft, spielt in der Liga und bekommt mehr Hype und
@@ -400,7 +401,7 @@ Argumente stehen nach `--` (CLI) bzw. in den Main Run Args (Editor). Quelle: `sc
 | `--mode=net\|no_net` | mit `--season`: Mit Netz (Rettung, Sanitäter) oder Ohne Netz (ab Etage 2 ein Leben) — hier ohne Freischaltung |
 | `--speed=<n>` | mit `--season`, Zeitraffer: Staffelsekunden je Sekunde Wanduhr (1–10080; `--speed=1440`: ein Tag je Minute) |
 | `--slot=<1-3>`, `--hero=kai\|mopsula`, `--air=HH:MM` | mit `--season`: Spielstand-Slot, Held:in, eigene Sendezeit (Standard: die der Vorlage, 20:00 Ortszeit) |
-| `--floor=<n>` | mit `--season` (ST1-C1): nimmt gleich nach dem Start die Treppen bis Etage n (aufgezeichnete Abstiege ohne Etagen-Bilanz; die Treppenregel gilt — Am Stück jede Etage, im Kalender zu Beginn bis Etage 3). Zum Ansehen der Etagen, nicht für die Balance: die Gruppe bleibt auf Stufe 1 |
+| `--floor=<n>` | mit `--season` (ST1-C1): nimmt gleich nach dem Start die Treppen bis Etage n (aufgezeichnete Abstiege ohne Etagen-Bilanz; die Treppenregel gilt — Am Stück jede Etage, im Kalender zu Beginn bis Etage 3). Zum Ansehen der Etagen, nicht für die Balance: ohne Kämpfe hat die Gruppe nur die Abschluss-EP der Treppen (ST1-D; auf Etage n etwa Stufe n), weit unter dem Band der Etage |
 
 Beispiel: `godot --path prime-time-dungeon/game -- --autoplay=full --strategy=typical --pace=human`
 Staffel (Debug): `godot --path prime-time-dungeon/game -- --season=ssn_basis --tempo=calendar --speed=1440`
@@ -505,10 +506,10 @@ Systeme) > 01_GDD / 02_TECH / 03_ART / 05 (je nach Thema) > 04**.
 
 Alle Bilder stammen aus dem Spiel selbst (Compatibility-Renderer unter Xvfb, 1280 × 720; Bilder 59, 63, 70, 71 und 78 im
 Handy-Format 2400 × 1080 und Bild 26 im Handy-Format 1600 × 720, alle mit Touch-Steuerung). Die Staffel-Bilder 72–78
-zeigen eine Basis-Staffel, die mit `--season-floor` direkt auf die Etage gestiegen ist (die Gruppe steht noch auf
-Stufe 1). Die Kampfbilder zeigen den Echtzeitkampf, seit R5b-2b den einzigen Kampf der Kampagne; die Bilder des früheren
-Rundenkampfs (08–12, 18, 22, 28) liegen als Archiv in `docs/screenshots/` (die CTB-Kampfszene, die sie erzeugte, ist
-gelöscht).
+zeigen eine Basis-Staffel, die mit `--season-floor` direkt auf die Etage gestiegen ist (ohne Kämpfe: die Gruppe hat nur
+die Abschluss-EP der Treppen, Stufe 2 auf Etage 2 bis Stufe 6 auf Etage 6). Die Kampfbilder zeigen den Echtzeitkampf, seit
+R5b-2b den einzigen Kampf der Kampagne; die Bilder des früheren Rundenkampfs (08–12, 18, 22, 28) liegen als Archiv in
+`docs/screenshots/` (die CTB-Kampfszene, die sie erzeugte, ist gelöscht).
 
 | | |
 |---|---|

@@ -1505,7 +1505,7 @@ func _r_season(scene: Node, what: String) -> bool:
 				_reveal_zone(scene, layout, zone)
 				_place_facing(scene, layout, e.cell, (scene.call("get_enemy", e.id) as Node3D).global_position, 6.0)
 				await frames(20)
-				await _quiet_mod_dialog()
+				await _quiet_mod_queue()
 				return true
 		push_warning("[CaptureRecipes] no group in quarter %s" % zone)
 		return false
@@ -1517,7 +1517,7 @@ func _r_season(scene: Node, what: String) -> bool:
 					_reveal_zone(scene, layout, layout.cell_at(cell).zone)
 					_place_facing(scene, layout, cell, (scene.call("get_enemy", e.id) as Node3D).global_position, 7.0)
 					await frames(20)
-					await _quiet_mod_dialog()
+					await _quiet_mod_queue()
 					return true
 			return false
 		"door", "gate":
@@ -1548,14 +1548,14 @@ func _r_season(scene: Node, what: String) -> bool:
 			(scene.call("get_companion") as Node).call("snap_behind")
 			scene.call("_update_room", true)
 			await frames(30)
-			await _quiet_mod_dialog()
+			await _quiet_mod_queue()
 			return true
 		"safe":
 			var sc: Vector2i = layout.safe_rooms[0]
 			_reveal_zone(scene, layout, layout.cell_at(sc).zone)
 			_place_facing(scene, layout, sc, layout.cell_to_world(sc), 4.0)
 			await frames(30)
-			await _quiet_mod_dialog()
+			await _quiet_mod_queue()
 			return true
 		"map":
 			for zid: Variant in layout.zones.keys():
@@ -1565,6 +1565,20 @@ func _r_season(scene: Node, what: String) -> bool:
 			return hud != null and hud.call("open_big_map") != null
 	push_warning("[CaptureRecipes] unknown season view '%s'" % what)
 	return false
+
+
+## The M.O.D. box after the descents of --season-floor: the lines of every stairs and level-up queue up (ST1-D adds the
+## season's EXP lines), the floor start and M.O.D.'s preferences of the day follow one per explore tick (Show) — every
+## line ended until Show has none left to say (at most ≈ 5 s; _quiet_mod_dialog ends at most 16 lines per call).
+func _quiet_mod_queue() -> void:
+	for i in 60:
+		await _quiet_mod_dialog()
+		var queue: Variant = Show.get("_announce_queue")
+		if not bool(Show.get("_floor_start_pending")) and (queue == null or queue.size() == 0):
+			break
+		await frames(5)
+	for i in 4:
+		await _quiet_mod_dialog()
 
 
 ## The id of quarter `order` (0 = the first) of a generator-v2 layout; "" if none.

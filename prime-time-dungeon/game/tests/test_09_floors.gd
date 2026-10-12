@@ -93,8 +93,8 @@ func test_enemy_level_table() -> void:
 	assert_eq(EnemyLevels.factor_pm(bal, 10, 8), (2350 * 1000 + 1025) / 2050)
 
 
-## A combat on floor 2 of a season gets the group's level (unit level, HP, STR, MAG, DEF, RES, EXP, credits); the same
-## combat without a season keeps the data values bit for bit.
+## A combat on floor 2 of a season gets the group's level (unit level, HP, STR, MAG, DEF, RES, credits) and the EXP
+## share of ST1-D for its group (09 §8.2, D-6); the same combat without a season keeps the data values bit for bit.
 func test_enemy_levels_only_in_a_season() -> void:
 	var d: GameData = real_data()
 	var st: GameState = GameState.create_new(d, 0, "Kai", 404, &"prime")
@@ -102,10 +102,11 @@ func test_enemy_levels_only_in_a_season() -> void:
 	var layout: FloorLayout = DungeonGenerator.generate(d.floor_def(2), st.floor_run.seed)
 	var group: EnemySpawn = null
 	for e: EnemySpawn in layout.enemies:
-		if not e.is_boss and e.level > ZoneGenerator.band_middle(d.floor_def(2)):
+		var regular: bool = not e.is_boss and d.floor_def(2).encounter(e.encounter_id).show_boss.is_empty()
+		if regular and e.level > ZoneGenerator.band_middle(d.floor_def(2)):
 			group = e
 			break
-	assert_not_null(group, "a side group above the band's middle")
+	assert_not_null(group, "a regular side group above the band's middle")
 	if group == null:
 		return
 	var plain: RtSetup = BattleBridge.make_rt_setup(st, d, _command(group), 77)
@@ -115,6 +116,7 @@ func test_enemy_levels_only_in_a_season() -> void:
 	var bal: RtBalance = RtBalance.from_data(d)
 	var want_level: int = mini(group.level, EnemyLevels.level_cap(d))
 	var checked: int = 0
+	var exp_sum: int = 0
 	for i in plain.units.size():
 		var a: RtUnit = plain.units[i]
 		var b: RtUnit = lifted.units[i]
@@ -123,17 +125,71 @@ func test_enemy_levels_only_in_a_season() -> void:
 			continue
 		var def_level: int = d.enemy(a.def_id).level
 		assert_eq(a.level, def_level, "no season: the data level")
+		assert_eq(a.exp_reward, d.enemy(a.def_id).exp, "no season: the data EXP")
 		assert_eq(b.level, want_level, "a season: the group's level")
 		var pm: int = EnemyLevels.factor_pm(bal, want_level, def_level)
 		var hp: int = (a.stats.values[StatBlock.Stat.HP] * pm + 500) / 1000
 		assert_between(b.stats.values[StatBlock.Stat.HP], hp - 1, hp + 1, "HP × the level factor (± rounding of the mods)")
 		assert_eq(b.stats.values[StatBlock.Stat.SPD], a.stats.values[StatBlock.Stat.SPD], "speed stays")
-		var xp: int = (a.exp_reward * pm + 500) / 1000
-		assert_between(b.exp_reward, xp - 1, xp + 1, "EXP × the level factor")
+		var cr: int = (a.credit_reward * pm + 500) / 1000
+		assert_between(b.credit_reward, cr - 1, cr + 1, "credits × the level factor")
+		exp_sum += b.exp_reward
 		checked += 1
 	assert_gt(checked, 0)
+	var share: int = EnemyLevels.exp_share_pm(d.floor_def(2), group.encounter_id)
+	assert_eq(share, LevelBand.SHARE_GROUP_PM, "a regular group: 4 % of a level")
+	assert_eq(exp_sum, LevelBand.exp_to_next(st, d, want_level) * share / 1000, "the group is worth its share exactly")
 	assert_eq(EnemyLevels.enemy_level(GameState.create_new(d, 0, "Kai", 1, &"prime"), d, group.id), 0,
 		"no season: no level")
+
+
+## ST1-D × ST1-C (09 §8.2, D-6): the colour of a won fight's EXP reads the level its groups fought on
+## (LevelBand.group_level → EnemyLevels.result_level), not the enemies' data levels; bosses and the show boss's group
+## are worth their shares of a level.
+func test_combat_exp_reads_the_band_level() -> void:
+	var d: GameData = real_data()
+	var st: GameState = GameState.create_new(d, 0, "Kai", 404, &"prime")
+	RunRules.start_floor(st, d, 2)
+	st.season = SeasonState.new()
+	st.season.format = 6
+	var def: FloorDef = d.floor_def(2)
+	var layout: FloorLayout = DungeonGenerator.generate(def, st.floor_run.seed)
+	var group: EnemySpawn = null
+	for e: EnemySpawn in layout.enemies:
+		if not e.is_boss and e.level == ZoneGenerator.band_middle(def):
+			group = e
+			break
+	assert_not_null(group, "a group on the Pflichtweg")
+	if group == null:
+		return
+	var res: BattleResult = BattleResult.new()
+	res.group_id = group.id
+	res.group_ids = PackedStringArray([group.id])
+	res.defeated_ids = PackedStringArray(def.encounter(group.encounter_id).enemies)
+	var data_level: int = 0
+	for id: String in res.defeated_ids:
+		data_level = maxi(data_level, d.enemy(id).level)
+	assert_eq(LevelBand.group_level(d, res), data_level, "without the state: the enemies' data level")
+	assert_eq(LevelBand.group_level(d, res, st), group.level, "a season floor: the group's band level")
+	var kai: PartyMember = st.member("kai")
+	kai.level = group.level
+	kai.exp = 0
+	kai.rested = 0
+	var rw: BattleRewards = BattleRewards.new()
+	LevelBand.combat_exp(st, d, res, 20, {}, rw)
+	assert_eq(int(rw.exp_by_member["kai"]), 20, "at the group's level the EXP count in full (yellow)")
+	var plain: GameState = GameState.create_new(d, 0, "Kai", 404, &"prime")
+	RunRules.start_floor(plain, d, 2)
+	assert_eq(EnemyLevels.result_level(plain, d, res), EnemyLevels.NO_LEVEL, "no season: no band level")
+	assert_eq([EnemyLevels.exp_share_pm(def, def.quarter_boss), EnemyLevels.exp_share_pm(def, def.floor_boss),
+		EnemyLevels.exp_share_pm(def, group.encounter_id)], [LevelBand.SHARE_QUARTER_BOSS_PM,
+		LevelBand.SHARE_FLOOR_BOSS_PM, LevelBand.SHARE_GROUP_PM], "Revier-Boss 25 %, Etagenboss 50 %, a group 4 %")
+	for enc: EncounterDef in def.encounters:
+		if not enc.show_boss.is_empty():
+			assert_eq(EnemyLevels.exp_share_pm(def, enc.id), LevelBand.SHARE_SHOW_BOSS_PM, "the show boss's group 15 %")
+	assert_eq(EnemyLevels.group_exp(st, d, 8, 40), LevelBand.exp_to_next(st, d, 8) * 40 / 1000)
+	assert_eq(EnemyLevels.group_exp(st, d, 52, 500), LevelBand.exp_to_next(st, d, 49) * 500 / 1000,
+		"the elite levels above 49 count as 49")
 
 
 static func _command(g: EnemySpawn) -> Dictionary:

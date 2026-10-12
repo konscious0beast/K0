@@ -57,6 +57,24 @@ var flee_attempts: int = 0             # every start of a flee warning and every
 var rt_presets: Dictionary = {}
 
 
+## THE victory drop rule (GDD §3.12, the only implementation; shared by the real-time combat and the
+## Stempelduell engine — 10 SD1 moved it here from BattleState): each {item, chance} of a defeated enemy hits with
+## chance × (1 + Ø LCK / 100), Ø over `members` party members with LCK sum `lck_sum` — in basis points with integer
+## division: bp = bp(chance) × (100·n + ΣLCK) / (100·n); FixedMath.roll_bp draws once per entry (no draw at 0 % or
+## ≥ 100 %). Item ids in drop order.
+static func roll_drops(drops: Array, lck_sum: int, members: int, rng: RandomNumberGenerator) -> PackedStringArray:
+	var out: PackedStringArray = []
+	var den: int = FixedMath.pm(Balance.DROP_LCK_DIV) * maxi(1, members)
+	for v: Variant in drops:
+		if not (v is Dictionary):
+			continue
+		var drop: Dictionary = v
+		var bp: int = FixedMath.bp(float(drop.get("chance", 0.0))) * (den + maxi(0, lck_sum) * FixedMath.PM) / den
+		if FixedMath.roll_bp(rng, bp):
+			out.append(str(drop.get("item", "")))
+	return out
+
+
 func outcome_name() -> String:
 	return OUTCOME_NAMES[int(outcome)]
 

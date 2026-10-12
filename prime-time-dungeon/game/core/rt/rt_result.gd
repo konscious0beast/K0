@@ -79,7 +79,7 @@ static func build(sim: RtSim, outcome: int, c: int) -> BattleResult:
 				r.overkill_credits += bonus - cr
 				cr = bonus
 			r.credits += cr
-			r.drops.append_array(BattleState.roll_drops(e.drops, lck_sum, members, rng))
+			r.drops.append_array(BattleResult.roll_drops(e.drops, lck_sum, members, rng))
 			if e.is_boss:
 				for bd: Dictionary in e.boss_drops:
 					r.boss_rewards.append({"kind": str(bd.get("kind", "")), "id": str(bd.get("id", "")),

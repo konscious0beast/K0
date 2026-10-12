@@ -200,7 +200,7 @@ func test_wood_chest_with_contents_gives_them() -> void:
 		assert_eq([got[i]["kind"], got[i]["amount"]], [chest.contents[i]["kind"], chest.contents[i]["amount"]])
 
 
-## quality-5: the victory drop rule has one implementation (BattleState.roll_drops, used by the battle itself).
+## quality-5: the victory drop rule has one implementation (BattleResult.roll_drops: both kinds of combat, 10 SD1).
 ## GDD §3.12: chance × (1 + Ø LCK / 100) with Ø over all party members.
 func test_drops_chance_with_luck() -> void:
 	var drops: Array[Dictionary] = [{"item": "itm_bandage", "chance": 0.25}, {"item": "itm_salts", "chance": 0.0},
@@ -208,7 +208,7 @@ func test_drops_chance_with_luck() -> void:
 	var rng: RandomNumberGenerator = make_rng(3)
 	var hits: int = 0
 	for i in 4000:
-		var got: PackedStringArray = BattleState.roll_drops(drops, 0, 2, rng)
+		var got: PackedStringArray = BattleResult.roll_drops(drops, 0, 2, rng)
 		assert_false(got.has("itm_salts"), "chance 0 never drops")
 		assert_true(got.has("itm_antidote"), "chance 1 always drops")
 		if got.has("itm_bandage"):
@@ -216,13 +216,13 @@ func test_drops_chance_with_luck() -> void:
 	assert_between(hits, 880, 1120, "≈ 25 %")
 	hits = 0
 	for i in 4000:
-		if BattleState.roll_drops(drops, 200, 2, rng).has("itm_bandage"):
+		if BattleResult.roll_drops(drops, 200, 2, rng).has("itm_bandage"):
 			hits += 1
 	assert_between(hits, 1850, 2150, "× (1 + Ø LCK 100 / 100) → ≈ 50 %")
-	assert_eq(BattleState.roll_drops(drops, 20, 2, make_rng(5)), BattleState.roll_drops(drops, 20, 2, make_rng(5)))
+	assert_eq(BattleResult.roll_drops(drops, 20, 2, make_rng(5)), BattleResult.roll_drops(drops, 20, 2, make_rng(5)))
 	var probe: RandomNumberGenerator = make_rng(9)
 	var before: int = probe.state
-	BattleState.roll_drops([{"item": "itm_salts", "chance": 0.0}, {"item": "itm_antidote", "chance": 1.0}], 0, 2, probe)
+	BattleResult.roll_drops([{"item": "itm_salts", "chance": 0.0}, {"item": "itm_antidote", "chance": 1.0}], 0, 2, probe)
 	assert_eq(probe.state, before, "no draw at 0 % or >= 100 % (FixedMath.roll_bp)")
 
 

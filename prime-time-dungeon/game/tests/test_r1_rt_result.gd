@@ -75,7 +75,7 @@ func test_victory_rewards() -> void:
 	var rng: RandomNumberGenerator = SeedUtil.make_rng(SeedUtil.derive(sim.setup.seed, "drops", 0))
 	var drops: PackedStringArray = []
 	for id: String in ["e0", "e1", "e2", "e3"]:
-		drops.append_array(BattleState.roll_drops(sim.unit(id).drops, lck, 2, rng))
+		drops.append_array(BattleResult.roll_drops(sim.unit(id).drops, lck, 2, rng))
 	assert_eq(r.drops, drops, "drops in kill order from derive(seed, \"drops\", 0)")
 	var kai: RtUnit = sim.unit("p0")
 	var mop: RtUnit = sim.unit("p1")

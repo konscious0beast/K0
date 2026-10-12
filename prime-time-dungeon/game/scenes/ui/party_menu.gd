@@ -153,10 +153,14 @@ func _card(m: PartyMember) -> Button:
 
 
 ## "Recall auf Etage 3" before the Recall (08 C-16: the floor-3 round of 06 §3 is called "Recall"; the casting is
-## the new game's), else "Kachelgolem · Abrissbirne" (species · class).
+## the new game's), else "Kachelgolem · Abrissbirne" (species · class). Recall (06 §3.5): from that floor on the
+## line says where it waits — "Recall offen – im Safe Room".
 static func casting_text(m: PartyMember) -> String:
 	if m.species_id == "" and m.class_id == "":
-		return "Spezies & Klasse: Recall auf Etage 3"
+		var on: int = Casting.min_floor(DB.data)
+		if Game.state != null and Game.state.floor_run != null and on > 0 and Game.state.floor_run.index >= on:
+			return "Spezies & Klasse: Recall offen – im Safe Room"
+		return "Spezies & Klasse: Recall auf Etage %d" % maxi(on, 3)
 	var parts: PackedStringArray = []
 	if m.species_id != "":
 		parts.append(UiUtil.tr_text(DB.species_def(m.species_id).name) if DB.has_id("species", m.species_id)

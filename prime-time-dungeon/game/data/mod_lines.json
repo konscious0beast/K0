@@ -1032,6 +1032,258 @@
 			"weight": 1
 		},
 		{
+			"id": "mod_casting_open_01",
+			"tag": "casting_open",
+			"voice": "mod",
+			"text": "Recall! Wer wollen Sie sein? Und was wollen Sie können? Die Jury bin ich.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_open_02",
+			"tag": "casting_open",
+			"voice": "mod",
+			"text": "Willkommen zum Recall! Wer wollen Sie sein? Wählen Sie weise. Oder telegen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_species_01",
+			"tag": "casting_species",
+			"voice": "mod",
+			"text": "Und nun Sie, {name}: Wer wollen Sie sein? Original bleiben ist auch eine Antwort.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_species_mopsula_01",
+			"tag": "casting_species:mopsula",
+			"voice": "mod",
+			"text": "Jetzt der Graf. Wer möchte er sein? Er sagt, er sei bereits vollendet. Die Jury notiert: optimistisch.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_class_01",
+			"tag": "casting_class",
+			"voice": "mod",
+			"text": "Und was wollen Sie können? Vier Klassen. Eine davon trägt Sie bis ins Finale. Vielleicht.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_class_02",
+			"tag": "casting_class",
+			"voice": "mod",
+			"text": "Zweite Runde: die Klasse. Umschulen geht später, einmal je Etage im ersten Safe Room.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_class_mopsula_01",
+			"tag": "casting_class:mopsula",
+			"voice": "mod",
+			"text": "Was soll der Graf können? Er meint: alles. Die Jury bittet um eine Klasse.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_confirm_01",
+			"tag": "casting_confirm",
+			"voice": "mod",
+			"text": "Letzte Frage der Jury: sicher? Die Spezies gilt, sobald Sie diesen Raum verlassen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_combo_01",
+			"tag": "casting_combo",
+			"voice": "mod",
+			"text": "Notiert. Die Jury nickt. Die Jury nickt immer. Diesmal aus Überzeugung.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_combo_02",
+			"tag": "casting_combo",
+			"voice": "mod",
+			"text": "Eine mutige Kombination. Das Publikum liebt Mut. Die Statistik schaut noch skeptisch.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_combo_03",
+			"tag": "casting_combo",
+			"voice": "mod",
+			"text": "Angenommen! Ihre Fans basteln schon Schilder. Mit Glitzer, aus Liebe.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_combo_spc_original_01",
+			"tag": "casting_combo:spc_original",
+			"voice": "mod",
+			"text": "Original bleiben. Kein Kostüm, keine Ausrede. Das Publikum liebt Echtes.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_combo_spc_kai_kachelgolem_01",
+			"tag": "casting_combo:spc_kai_kachelgolem",
+			"voice": "mod",
+			"text": "Kachelgolem! Fugenfest, abwaschbar, schwer zu verschieben. Die Requisite bestellt Ersatzfliesen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_combo_spc_kai_neonfalter_01",
+			"tag": "casting_combo:spc_kai_neonfalter",
+			"voice": "mod",
+			"text": "Neonfalter! Sie leuchten jetzt. Bitte nicht zu nah an die Scheinwerfer.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_combo_spc_kai_pilzling_01",
+			"tag": "casting_combo:spc_kai_pilzling",
+			"voice": "mod",
+			"text": "Pilzling! Gift schmeckt Ihnen jetzt nach Waldboden. Die Kantine notiert das.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_combo_spc_kai_teilautomat_01",
+			"tag": "casting_combo:spc_kai_teilautomat",
+			"voice": "mod",
+			"text": "Teilautomat! Münzschlitz in der Brust. Bitte keine Knöpfe einwerfen, auch nicht im Scherz.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_combo_spc_mop_glutmops_01",
+			"tag": "casting_combo:spc_mop_glutmops",
+			"voice": "mod",
+			"text": "Glutmops! Der Graf glüht jetzt auch außen. Die Requisite stellt einen Feuerlöscher bereit.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_combo_spc_mop_spukmops_01",
+			"tag": "casting_combo:spc_mop_spukmops",
+			"voice": "mod",
+			"text": "Spukmops! Halb durchsichtig, voll überzeugt. Das Licht-Team weiß nicht, wohin damit.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_combo_spc_mop_flattermops_01",
+			"tag": "casting_combo:spc_mop_flattermops",
+			"voice": "mod",
+			"text": "Flattermops! Winzige Flügel, große Pläne. Gelandet wird bisher nur auf Kissen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_combo_spc_kai_kachelgolem_cls_kai_wrecker_01",
+			"tag": "casting_combo:spc_kai_kachelgolem:cls_kai_wrecker",
+			"voice": "mod",
+			"text": "Ein Bauprojekt auf zwei Beinen. Die Statik nickt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_combo_spc_kai_neonfalter_cls_kai_runner_01",
+			"tag": "casting_combo:spc_kai_neonfalter:cls_kai_runner",
+			"voice": "mod",
+			"text": "Ein Neonfalter auf Gleisen. Sie leuchten schneller, als die Anzeigetafel umschalten kann.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_combo_spc_kai_neonfalter_cls_kai_showrunner_01",
+			"tag": "casting_combo:spc_kai_neonfalter:cls_kai_showrunner",
+			"voice": "mod",
+			"text": "Leuchtende Showrunner:in! Die Kamera muss Sie nicht einmal mehr suchen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_combo_spc_kai_pilzling_cls_kai_wrecker_01",
+			"tag": "casting_combo:spc_kai_pilzling:cls_kai_wrecker",
+			"voice": "mod",
+			"text": "Pilzling mit Abrissbirne. Wo Sie zuschlagen, wächst danach etwas. Ökologisch wertvoll.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_combo_spc_kai_pilzling_cls_kai_showrunner_01",
+			"tag": "casting_combo:spc_kai_pilzling:cls_kai_showrunner",
+			"voice": "mod",
+			"text": "Ein Pilzling im Rampenlicht. Sporen glitzern im Gegenlicht. Wussten Sie nicht? Jetzt schon.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_combo_spc_kai_teilautomat_cls_kai_tinker_01",
+			"tag": "casting_combo:spc_kai_teilautomat:cls_kai_tinker",
+			"voice": "mod",
+			"text": "Teilautomat und Schrott-Tüftler:in. Sie reparieren sich jetzt selbst. Theoretisch.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_combo_spc_mop_glutmops_cls_mop_archmage_01",
+			"tag": "casting_combo:spc_mop_glutmops:cls_mop_archmage",
+			"voice": "mod",
+			"text": "Glutmops und Erzmagister. Der Graf nennt es Feuerwerk. Die Versicherung nennt es anders.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_combo_spc_mop_spukmops_cls_mop_hexer_01",
+			"tag": "casting_combo:spc_mop_spukmops:cls_mop_hexer",
+			"voice": "mod",
+			"text": "Ein spukender Fluchgraf. Die Akten verschwinden jetzt von selbst. Mit Fußnote.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_combo_spc_mop_spukmops_cls_mop_zeremonienmeister_01",
+			"tag": "casting_combo:spc_mop_spukmops:cls_mop_zeremonienmeister",
+			"voice": "mod",
+			"text": "Spukmops als Zeremonienmeister. Die Mitternachtsgala hat endlich ihr Gespenst.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_combo_spc_mop_flattermops_cls_mop_physician_01",
+			"tag": "casting_combo:spc_mop_flattermops:cls_mop_physician",
+			"voice": "mod",
+			"text": "Flattermops und Medicus. Hausbesuche jetzt per Luftpost.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_combo_spc_mop_flattermops_cls_mop_zeremonienmeister_01",
+			"tag": "casting_combo:spc_mop_flattermops:cls_mop_zeremonienmeister",
+			"voice": "mod",
+			"text": "Flattermops als Zeremonienmeister. Der Abend wird jetzt von oben eröffnet.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_redo_01",
+			"tag": "casting_redo",
+			"voice": "mod",
+			"text": "Umentscheiden? In diesem Raum ist alles noch offen. Draußen gilt: Vertrag ist Vertrag.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_retrain_01",
+			"tag": "casting_retrain",
+			"voice": "mod",
+			"text": "Umschulung! Einmal je Etage, kostenlos, im ersten Safe Room. Die Spezies bleibt, wie sie ist.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_done_01",
+			"tag": "casting_done",
+			"voice": "mod",
+			"text": "Fertig! Entschieden haben Sie. Ich habe nur genickt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_done_02",
+			"tag": "casting_done",
+			"voice": "mod",
+			"text": "Das war der Recall. Die Kostüme sitzen, die Kamera läuft. Weiter geht's.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_later_01",
+			"tag": "casting_later",
+			"voice": "mod",
+			"text": "Kein Stress. Der Recall wartet in jedem Safe Room dieser Etage. Die Jury hat Zeit. Gerade so.",
+			"weight": 1
+		},
+		{
+			"id": "mod_casting_no_net_01",
+			"tag": "casting_no_net",
+			"voice": "mod",
+			"text": "Ohne Netz ist frei: Ein Leben. Keine Rettung. Das Publikum liebt das. Sie hoffentlich auch.",
+			"weight": 1
+		},
+		{
 			"id": "mod_follower_milestone_01",
 			"tag": "follower_milestone",
 			"voice": "mod",

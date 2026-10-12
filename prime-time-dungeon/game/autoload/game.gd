@@ -698,13 +698,14 @@ func pick_talent(member_id: String, talent_id: String) -> bool:
 	return true
 
 
-## Casting (06 §3.4; UI with floor 3): only an allowed choice (Casting.check) is recorded
+## Casting (06 §3.4; the Recall screen of floor 3, 06 §3.5): only an allowed choice (Casting.check) is recorded
 ## ({"t": "casting", "member", "species", "class"}) and applied; emits party_changed.
 func choose_casting(member_id: String, species_id: String, class_id: String) -> bool:
 	if state == null or Casting.check(state, DB.data, member_id, species_id, class_id) != "":
 		return false
 	record({"t": "casting", "member": member_id, "species": species_id, "class": class_id})
 	Casting.choose(state, DB.data, member_id, species_id, class_id)
+	_recall_unlock()                           # Recall (06 §3.5): the first class choice unlocks Ohne Netz
 	Events.party_changed.emit()
 	return true
 
@@ -723,6 +724,15 @@ func set_difficulty(d: StringName) -> bool:
 ## The settings menu offers lowering the mode only where set_difficulty would accept it.
 func can_lower_difficulty() -> bool:
 	return state != null and mode == &"campaign" and state.difficulty == &"prime"
+
+
+# --- Recall (06 §3.5) -------------------------------------------------------------------------------------------------
+
+## 09 §2.2 (B-14): the first class choice unlocks "Ohne Netz" for the device — kept right away in the career file (the
+## season autosave would at its next save), so the Recall can say so. Live only: a replay never writes the career.
+func _recall_unlock() -> void:
+	if state.season != null and not replaying and SeasonRules.unlocks_no_net(state):
+		Save.career_set("no_net", true)
 
 
 # --- 06 package A: hero choice (HeroRules) ----------------------------------------------------------------------------

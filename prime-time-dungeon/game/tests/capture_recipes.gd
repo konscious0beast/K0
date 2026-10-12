@@ -48,6 +48,11 @@ extends Node
 ##   the Etagenboss on its stage), season_door (in front of a closed programme door: its prompt), season_gate (in front
 ##   of the key gate before the stairs), season_safe (in front of the safe room door of the first quarter),
 ##   season_map (the big map, every quarter revealed).
+## Recall (06 §3.5; with capture.gd --season-floor=3, safe_room.tscn — the Recall opens by itself): recall_species
+##   (Kai's species cards), recall_class (his class cards with the badges and the first class abilities),
+##   recall_confirm (step 3), recall_judged (M.O.D. judges the pair), recall_mopsula (the Count's species cards),
+##   recall_done (the end page), safe_recall ("Später": the room with the RECALL button), recall_party (pause →
+##   Party with species · class).
 
 const ZONES: Dictionary = {"platform": "zone_platform", "sewer": "zone_sewer", "cellar": "zone_cellar"}
 
@@ -1700,4 +1705,118 @@ func _r_season_preview(scene: Node) -> bool:
 	page.call("show_view", "preview")
 	await frames(20)
 	await _quiet_mod_dialog()
+	return true
+
+
+# --- Recall (06 §3.5): species and class on floor 3 (safe_room.tscn with capture.gd --season-floor=3) ------------
+
+## The Recall modal of the safe room (null until it is there). The room opens it by itself on its first visit while a
+## first choice is open; the candidate persona is the canon one (Vorleben Tierpflege → the class tip Abrissbirne).
+func _recall(scene: Node) -> Node:
+	Game.persona = PersonaProfile.canon(DB.data)
+	if not await _safe_ready(scene):
+		return null
+	if not await until(func() -> bool: return _recall_of(scene) != null, 120):
+		return null
+	await _quiet_mod_queue()                   # the lines of the descents and the room wait behind the modal
+	return _recall_of(scene)
+
+
+static func _recall_of(scene: Node) -> Node:
+	for c: Node in scene.get_children():
+		if c.has_method("confirm") and c.has_signal("closed") and not c.is_queued_for_deletion():
+			return c
+	return null
+
+
+## Kai's species cards, Kachelgolem in the detail (passive, stats before -> after, "Passt gut zu").
+func _r_recall_species(scene: Node) -> bool:
+	var rc: Node = await _recall(scene)
+	if rc == null:
+		return false
+	((rc.get("card_buttons") as Array)[1] as Button).grab_focus()
+	await frames(30)
+	return true
+
+
+## Kai's class cards after Kachelgolem: Abrissbirne EMPFOHLEN and PASST ZU IHREM VORLEBEN, its first abilities.
+func _r_recall_class(scene: Node) -> bool:
+	var rc: Node = await _recall(scene)
+	if rc == null or not bool(rc.call("choose", 1)):
+		return false
+	await frames(30)
+	return true
+
+
+## Step 3: the pair, its stats, where the signature goes, the re-spec rules — "BESTÄTIGEN".
+func _r_recall_confirm(scene: Node) -> bool:
+	var rc: Node = await _recall(scene)
+	if rc == null or not bool(rc.call("choose", 1)) or not bool(rc.call("choose", 0)):
+		return false
+	await frames(30)
+	return true
+
+
+## Kai's pair confirmed: M.O.D. judges it ("Ein Bauprojekt auf zwei Beinen …"), "WEITER: GRAF MOPSULA".
+func _r_recall_judged(scene: Node) -> bool:
+	var rc: Node = await _recall(scene)
+	if rc == null or not bool(rc.call("choose", 1)) or not bool(rc.call("choose", 0)) or not bool(rc.call("confirm")):
+		return false
+	await frames(30)
+	return true
+
+
+## The Count's turn: his species cards, Flattermops in the detail.
+func _r_recall_mopsula(scene: Node) -> bool:
+	var rc: Node = await _recall(scene)
+	if rc == null or not bool(rc.call("choose", 1)) or not bool(rc.call("choose", 0)) or not bool(rc.call("confirm")):
+		return false
+	(rc.get("next_button") as Button).pressed.emit()
+	await frames(5)
+	((rc.get("card_buttons") as Array)[3] as Button).grab_focus()
+	await frames(30)
+	return true
+
+
+## Both pairs chosen: the end page (roles, rules, the floor's level cap, "NEU: OHNE NETZ").
+func _r_recall_done(scene: Node) -> bool:
+	var rc: Node = await _recall(scene)
+	if rc == null or not bool(rc.call("choose", 1)) or not bool(rc.call("choose", 0)) or not bool(rc.call("confirm")):
+		return false
+	(rc.get("next_button") as Button).pressed.emit()
+	await frames(5)
+	if not bool(rc.call("choose", 3)) or not bool(rc.call("choose", 3)) or not bool(rc.call("confirm")):
+		return false
+	(rc.get("next_button") as Button).pressed.emit()
+	await frames(30)
+	return true
+
+
+## "Später": the room with the RECALL button (a first choice waits) and M.O.D.'s line where it waits.
+func _r_safe_recall(scene: Node) -> bool:
+	var rc: Node = await _recall(scene)
+	if rc == null:
+		return false
+	rc.call("close")
+	var ui: Node = get_tree().root.get_node_or_null("GlobalUi")
+	var d: Node = ui.get("mod_dialog") as Node if ui != null else null
+	await until(func() -> bool: return d == null or bool(d.call("is_busy")), 60)
+	await frames(10)                           # the line typed in (shot with --frames=2)
+	return true
+
+
+## After the Recall: pause → Party shows species · class of both.
+func _r_recall_party(scene: Node) -> bool:
+	if not await _r_recall_done(scene):
+		return false
+	var rc: Node = _recall_of(scene)
+	if rc != null:
+		rc.call("close")
+	await frames(10)
+	await _quiet_mod_dialog()
+	var pm: Node = scene.call("open_pause", "party")
+	if pm == null:
+		return false
+	get_tree().paused = true
+	await frames(20)
 	return true

@@ -18,6 +18,8 @@ class_name SafeRoomScene extends Node3D
 ## right-aligned M.O.D. box at the bottom right, which talks on every visit and after "Figur wechseln"); it opens
 ## scenes/ui/talent_show.tscn (activate("talents")). Focus: first focus after pending lootboxes, ui_right from the
 ## right end of every menu row.
+## Recall (06 §3.5, from floor 3): the RECALL button under the TALENT-SHOW (section at the end) while Casting names a
+## member who can choose here; the Recall opens by itself on the first visit of a room while a first choice is open.
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const InputGlyph := preload("res://scenes/ui/input_glyph.gd")
@@ -99,6 +101,7 @@ func _ready() -> void:
 	Vfx.spawn(&"heal", self, _kai.global_position if _kai.is_inside_tree() else Vector3.ZERO)
 	Show.say("safe_room_enter")
 	_focus_first()
+	_recall_on_enter()                         # Recall (06 §3.5): opens by itself while a first choice is open
 
 
 func _exit_tree() -> void:
@@ -144,6 +147,8 @@ func activate(id: String) -> void:
 			talk_to_mopsula()
 		"talents":
 			open_talent_show()
+		"recall":                              # Recall (06 §3.5)
+			open_recall()
 		"leave":
 			leave()
 
@@ -533,6 +538,7 @@ func _refresh_menu_labels() -> void:
 		(save_b.find_child("Text", true, false) as Label).add_theme_color_override("font_color", UiTheme.C_TEXT_DIM)
 	_refresh_talent_cta()
 	_wire_menu_focus()
+	_refresh_recall_cta()                      # Recall (06 §3.5): its button and its place in the focus chain
 
 
 ## 06 package B: the call-to-action shows the open talent choices (its focus: _wire_menu_focus).
@@ -751,6 +757,7 @@ func _build_ui() -> void:
 	hints.add_child(InputGlyph.make(&"ui_accept", "Wählen", 16))
 	hints.add_child(InputGlyph.make(&"pause", "Party-Menü", 16))
 	_build_talent_cta(frame)                    # 06 package B
+	_build_recall_cta(frame)                    # Recall (06 §3.5)
 	_heal_banner = PanelContainer.new()
 	_heal_banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	_heal_banner.offset_left = -150
@@ -824,3 +831,164 @@ func _new_badge() -> PanelContainer:
 	badge.add_child(t)
 	badge.visible = false
 	return badge
+
+
+# --- Recall (06 §3.5) -------------------------------------------------------------------------------------------------
+# From floor 3 on (06 §0.6; the wish behind it: species and class from floor 3, not from level 3): the Recall
+# (scenes/ui/recall.tscn) — the show segment where M.O.D. sits on the jury and every party member chooses a species
+# and a class. A RECALL button at the top right (under the TALENT-SHOW while that one is shown) is there while
+# Casting.open_members names a member who can choose here: a first choice (any safe room of the floor), trying again
+# during the visit of the choice, the Umschulung in the first safe room of a later floor (06 §3.6). The first visit of
+# a room while a first choice is open opens the Recall by itself (06 §3.5 step 1); a revisit only offers the button.
+
+const RECALL: String = "res://scenes/ui/recall.tscn"
+const RECALL_SUBS: Dictionary = {"first": "Spezies & Klasse wählen", "redo": "Umentscheiden – noch frei",
+	"retrain": "Umschulung: Klasse wechseln"}
+const C_RECALL: Color = Color("#ff2e88")    # M.O.D.'s jury colour (NOVA magenta, 03_ART §2.4)
+
+var _recall_cta: Button = null
+
+
+## The Recall modal for every member Casting.open_members names (the hero first); null when nobody can choose here.
+func open_recall() -> Node:
+	if Game.state == null or Casting.open_members(Game.state, DB.data).is_empty():
+		return null
+	var layer: CanvasLayer = (load(RECALL) as PackedScene).instantiate() as CanvasLayer
+	layer.call("setup", {"safe_room_id": safe_room_id})
+	add_child(layer)
+	_modal = layer
+	_set_menu_shown(false)
+	layer.connect("closed", _recall_closed)
+	return layer
+
+
+## True while the RECALL button is offered (someone can choose here).
+func recall_available() -> bool:
+	return _recall_cta != null and _recall_cta.visible
+
+
+## The strongest mode among the members who can choose here: first > retrain > redo ("" = none).
+func recall_mode() -> String:
+	if Game.state == null:
+		return ""
+	var modes: PackedStringArray = []
+	for mid: String in Casting.open_members(Game.state, DB.data):
+		modes.append(Casting.mode(Game.state, DB.data, mid))
+	for m: String in ["first", "retrain", "redo"]:
+		if modes.has(m):
+			return m
+	return ""
+
+
+## 06 §3.5 step 1: the first visit of a room while a first choice is open opens the Recall (deferred: the room is
+## built and entered first). A capture or test can keep the room alone ({"recall": false}). Otherwise the button takes
+## the first focus when nothing more pressing waits (lootboxes, the Talent-Show).
+func _recall_on_enter() -> void:
+	if Game.state == null:
+		return
+	if recall_mode() == "first" and bool(context.get("first_visit", false)) and bool(_params.get("recall", true)):
+		_recall_auto.call_deferred()
+	elif recall_available() and Game.state.pending_lootboxes.is_empty() and not talent_show_available():
+		UiUtil.focus_later(_recall_cta)
+
+
+func _recall_auto() -> void:
+	if is_inside_tree() and not _leaving and not _busy and (_modal == null or not is_instance_valid(_modal)):
+		open_recall()
+
+
+func _recall_closed() -> void:
+	_after_modal("")
+	if recall_available():
+		UiUtil.focus_later(_recall_cta)
+
+
+func _build_recall_cta(frame: Control) -> void:
+	var b: Button = UiUtil.button("", &"ButtonBig")
+	b.name = "RecallButton"
+	b.set_meta("menu_id", "recall")
+	b.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	b.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	b.offset_left = -380
+	b.offset_right = -8
+	b.offset_top = CTA_TOP
+	b.offset_bottom = CTA_TOP + UiTheme.TOUCH_HIT
+	var normal: StyleBoxFlat = UiUtil.box_style(Color(UiTheme.C_PANEL, 0.95), C_RECALL, 3, 0.0, 16, 8)
+	normal.set_corner_radius_all(8)
+	var hover: StyleBoxFlat = normal.duplicate() as StyleBoxFlat
+	hover.bg_color = Color(0.3, 0.07, 0.18, 0.95)
+	b.add_theme_stylebox_override("normal", normal)
+	b.add_theme_stylebox_override("hover", hover)
+	b.add_theme_stylebox_override("pressed", hover)
+	var row: HBoxContainer = UiUtil.hbox(14)
+	UiUtil.full_rect(row)
+	row.offset_left = 18
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(row)
+	var ic: Control = UiIcon.make(&"mic", C_RECALL, 34)
+	ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(ic)
+	var col: VBoxContainer = UiUtil.vbox(-2)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(col)
+	var t: Label = UiUtil.label("RECALL", &"", 26, C_RECALL.lightened(0.25))
+	t.name = "Text"
+	t.add_theme_font_override("font", UiTheme.font_bold())
+	col.add_child(t)
+	var sub: Label = UiUtil.label("", &"", 17, UiTheme.C_TEXT)
+	sub.name = "Sub"
+	col.add_child(sub)
+	b.pressed.connect(func() -> void: activate("recall"))
+	UiUtil.touch_pad(b, 80.0)
+	b.visible = false
+	frame.add_child(b)
+	_recall_cta = b
+	menu_buttons["recall"] = b
+
+
+## Shown while someone can choose here; under the TALENT-SHOW (one hit area and the 12-px gap lower) while that one
+## is shown, else level with the first menu row.
+func _refresh_recall_cta() -> void:
+	if _recall_cta == null:
+		return
+	var mode: String = recall_mode()
+	_recall_cta.visible = mode != ""
+	var top: float = CTA_TOP + (float(UiTheme.TOUCH_HIT + MENU_GAP) if talent_show_available() else 0.0)
+	_recall_cta.offset_top = top
+	_recall_cta.offset_bottom = top + UiTheme.TOUCH_HIT
+	var sub: Label = _recall_cta.find_child("Sub", true, false) as Label
+	if sub != null:
+		sub.text = str(RECALL_SUBS.get(mode, ""))
+	_wire_recall_focus()
+
+
+## The button in the focus chain (after _wire_menu_focus): ui_right from every row reaches it when no TALENT-SHOW is
+## shown, ui_down from the TALENT-SHOW otherwise; ui_left leads back to the first row; Tab after the last entry.
+func _wire_recall_focus() -> void:
+	var r: Button = _recall_cta
+	if r == null or not r.visible:
+		return
+	var order: Array[Button] = _menu_buttons_in_order()
+	if order.is_empty():
+		return
+	var talent: Control = _talent_cta if talent_show_available() else null
+	if talent == null:
+		for ids: Array in MENU_ROWS:
+			var e: Control = menu_buttons.get(str(ids.back())) as Control
+			if e != null:
+				e.focus_neighbor_right = e.get_path_to(r)
+		r.focus_neighbor_top = r.get_path_to(r)
+	else:
+		talent.focus_neighbor_bottom = talent.get_path_to(r)
+		r.focus_neighbor_top = r.get_path_to(talent)
+	var first_end: Control = menu_buttons.get(str((MENU_ROWS[0] as Array).back())) as Control
+	r.focus_neighbor_left = r.get_path_to(first_end if first_end != null else order[0])
+	r.focus_neighbor_bottom = r.get_path_to(r)
+	r.focus_neighbor_right = r.get_path_to(r)
+	var prev: Control = talent if talent != null else order[order.size() - 1]
+	var first: Control = order[0]
+	prev.focus_next = prev.get_path_to(r)
+	r.focus_previous = r.get_path_to(prev)
+	r.focus_next = r.get_path_to(first)
+	first.focus_previous = first.get_path_to(r)

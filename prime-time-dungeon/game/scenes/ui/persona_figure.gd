@@ -22,6 +22,8 @@ var swaps: int = 0
 var _world: Node3D = null
 var _fig: Node3D = null
 var _t: float = 0.0
+var _light: OmniLight3D = null             # Recall (06 §3.5): set_accent tints the light and the stage ring
+var _ring: MeshInstance3D = null
 
 
 func _init(p_member: String = "kai", p_accent: Color = Color("#3aa9a0"), p_look: Variant = null,
@@ -48,16 +50,28 @@ func _ready() -> void:
 	we.environment = SceneKit.environment(Color("#1b1026"), Color("#6a5a8a"), 0.9, false)
 	_world.add_child(we)
 	_world.add_child(SceneKit.sun(Color("#fff2e0"), 1.3, Vector3(-40, -30, 0)))
-	_world.add_child(SceneKit.omni(accent, 2.2, 6.0, Vector3(-1.4, 1.6, 1.2)))
+	_light = SceneKit.omni(accent, 2.2, 6.0, Vector3(-1.4, 1.6, 1.2))
+	_world.add_child(_light)
 	_swap_figure()
 	var height: float = maxf(0.6, float(_fig.get("height")) if "height" in _fig else 1.0)
 	var r: float = 0.5 + height * 0.35
 	_world.add_child(SceneKit.cylinder(r, r, 0.12, Color("#2a1c3a"), Vector3(0, -0.06, 0)))
-	_world.add_child(SceneKit.cylinder(r + 0.02, r + 0.02, 0.02, accent.darkened(0.2), Vector3(0, 0.005, 0), 0.6))
+	_ring = SceneKit.cylinder(r + 0.02, r + 0.02, 0.02, accent.darkened(0.2), Vector3(0, 0.005, 0), 0.6)
+	_world.add_child(_ring)
 	var f: Dictionary = CLOSEUP if closeup else FULL
 	var dist: float = height * float(f["dist_k"]) + float(f["dist_c"])
 	_world.add_child(SceneKit.camera(Vector3(0.0, float(f["cam_h"]), dist), Vector3(0.0, height * float(f["aim"]), 0.0),
 		40.0))
+
+
+## Recall (06 §3.5): the stage light and its ring in `col` (the species' colour, 03_ART: the look itself follows) —
+## nothing is rebuilt; the shared materials of SceneKit stay untouched (the ring gets the cached one of its colour).
+func set_accent(col: Color) -> void:
+	accent = col
+	if _light != null:
+		_light.light_color = col
+	if _ring != null:
+		_ring.material_override = SceneKit.mat(col.darkened(0.2), 0.6)
 
 
 ## Shows `p_look` ({kind: lk id}) now: the rig is replaced in the running world (no scene rebuild).

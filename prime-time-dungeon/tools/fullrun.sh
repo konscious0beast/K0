@@ -153,7 +153,7 @@ for run in "${RUNS[@]}"; do
   fi
   if [ -n "$LOG_DIR" ]; then mkdir -p "$LOG_DIR" && printf '%s\n' "$out" > "$LOG_DIR/$log_name.log"; fi
   echo "$out" | grep -E '^FULLRUN: (\[|stats|season|OK)|Assertion failed|SCRIPT ERROR|ERROR:' \
-    | grep -v '^FULLRUN: \[[0-9]*\]   hype' | tail -n 160
+    | grep -v '^FULLRUN: \[[0-9]*\]   hype' | tail -n 120
   echo "wall time: $((end - start)) s"
   ok=1
   if [ "$code" -ne 0 ]; then echo "fullrun.sh: $run exit code $code"; ok=0; fi

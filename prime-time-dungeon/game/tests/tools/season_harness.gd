@@ -1,21 +1,22 @@
 extends RefCounted
-## Staffel-Harness, the headless level (09 §11.6, ST1-I; decisions in 09 Kap. 11.3 "Stand ST1-I"): a whole season in
-## the core — RunSim, the verifier's engine, with the season rules (SeasonRules, LevelBand, EnemyLevels, CastSim and the
-## SleepResolver) — played by a core bot as recorded commands, the way the full-run bot plays it in the world
-## (scenes/boot/fullrun.gd, tools/fullrun.sh --season): the goals of tests/tools/season_planner.gd (the same rules),
-## walking = run ticks along the BFS path (the time model TIME, calibrated against the full-run bot), groups and bosses
-## = real combats on RtSim in the group's room (the person: RtBotPlayer `typical`, like the full-run bot; or the
-## autopilot), chests, floor events (their fights too), gates, safe rooms (Mopsula scenes, lootboxes, the Recall, the
-## talent rows, the class abilities on the bar, vending, gear), the stairs. Calendar: the sessions of a play profile
-## (tests/tools/season_profiles.gd), the season clock 1:1 with the play time of the session ("clock" per minute, a
-## combat's time right after it), the logout ("sleep" in a safe room within LOGOUT_DIST rooms, else in the corridor,
-## Vorsichtig), the absence ("away"; over seven days the login's "clamp" — 09 V-17, like Game.season_login_answer).
-## Am Stück the floors' countdowns. Pure and deterministic per (data, seed, options): no scene, no autoload, no wall
-## clock. run() → the report with the same per-floor records as the full-run bot's "FULLRUN: season"; with "log" the
-## run log (closed with its final checkpoint), which RunSim.replay reproduces bit for bit (test_09_harness).
+## Staffel-Harness in the core (09 §11.6, ST1-I; decisions in 09 Kap. 11.3 "Stand ST1-I"): a whole season — RunSim,
+## the verifier's engine, with the season rules (SeasonRules, LevelBand, EnemyLevels, CastSim and the SleepResolver) —
+## played by a core bot as recorded commands, the way the full-run bot plays it in the world (scenes/boot/fullrun.gd,
+## tools/fullrun.sh --season): the goals of tests/tools/season_planner.gd (the same rules), walking = run ticks along
+## the BFS path (the time model TIME, calibrated against the full-run bot), groups and bosses = real combats on RtSim in
+## the group's room (the person: RtBotPlayer `typical`, like the full-run bot; or the autopilot) — the groups of the
+## rooms on the way engage like in the exploration —, chests, floor events (their fights too), gates, safe rooms
+## (Mopsula scenes, lootboxes, the Recall, the talent rows, the class abilities on the bar, vending, gear), the stairs.
+## Calendar: the sessions of a play profile (tests/tools/season_profiles.gd), the season clock 1:1 with the play time
+## of the session ("clock" per minute, a combat's time right after it), the logout ("sleep" in a safe room within
+## LOGOUT_DIST rooms, else in the corridor, Vorsichtig), the absence ("away"; over seven days the login's "clamp" — 09
+## V-17, like Game.season_login_answer). Am Stück the floors' countdowns. Pure and deterministic per (data, seed,
+## options): no scene, no autoload, no wall clock. run() → the report with the same per-floor records as the full-run
+## bot's "FULLRUN: season" (and the Pensum marks of season_planner.pensum); with "log" the run log (closed with its
+## final checkpoint), which RunSim.replay reproduces bit for bit (test_09_harness).
 ##
 ## Formats: 6 (Basis, floors 1–6). Formats 12 / 18 need the floors 7–18 of ST1-C2 — refused with FORMAT_REFUSAL (09
-## Kap. 11.3 decision I-2); the cast model alone runs every format (calibration, cast_only).
+## Kap. 11.3 decision I-2).
 
 const Bot := preload("res://tests/tools/rt_bot_player.gd")
 const Profiles := preload("res://tests/tools/season_profiles.gd")
@@ -58,8 +59,8 @@ const POSES: Dictionary = {"regular": [[0, -150, 128], [0, 250, 0], [-120, 340, 
 ## its --pace=human run, seed 4242 Am Stück typical, the exploration minutes of floors 1–4 agree within 12 %, the M.O.D.
 ## lines it reads included). Screens (the countdown stands): "event" the event dialog, "safe" a safe-room visit's door
 ## and menus, + "lootbox", "pick", "buy", "scene" each, "combat" the results panel, "intro" a boss's intro, "stairs" the
-## stairs dialog and the Etagen-Bilanz — a person's reading and clicking; the bot of the fast pace clicks through them in
-## FAST_SCREENS_PM ‰ of that (the full-run bot: ≈ 45 s per floor).
+## stairs dialog and the Etagen-Bilanz — a person's reading and clicking; the bot of the fast pace clicks through them
+## in FAST_SCREENS_PM ‰ of that (the full-run bot: ≈ 45 s per floor).
 const TIME: Dictionary = {"cell": 3.2, "engage": 4.0, "chest": 0.5, "gate": 1.0,
 	"look": 8.0, "decide": 3.0, "door": 1.0, "sneak": 0.0,
 	"event": 6.0, "safe": 12.0, "lootbox": 4.0, "pick": 3.0, "buy": 2.0, "scene": 15.0, "combat": 4.0, "intro": 8.0,
@@ -565,11 +566,11 @@ func _stairs() -> void:
 	_rec["leave_play"] = play
 	_descended = true
 	var fr: FloorRun = rs.state.floor_run
-	_apply({"t": "descend"})
-	_spend(float(t["stairs"]) * 0.5, false)
+	_apply({"t": "descend"})                      # nothing between "descend" and "floor" (a clock would be refused)
 	if rs.state.season.result != "":
 		return
 	_apply({"t": "floor", "floor": fr.index + 1})
+	_spend(float(t["stairs"]) * 0.5, false)       # the Etagen-Bilanz (still the old floor's record until _track)
 
 
 # --- safe rooms -------------------------------------------------------------------------------------------------------

@@ -240,7 +240,7 @@ Im **Safe-Room-Menü** neuer Eintrag **„Figur wechseln“** (zwischen „Ausr�
 | **Talente** | jede 2. Stufe eine Entscheidung | **Paket B**: 1 aus 2 ab Stufe 3, gesammelt in der Talent-Show; 12 je Figur (⅓ Verhaltens-Talente) | Talent-Reset, seltene Talente aus Show-Bossen |
 | **Fähigkeiten** | neue Werkzeuge | Lernsets wie GDD §4.5/4.6 | Klassen-Skills L11–L17 (GDD §12) |
 | **Ausrüstung** | Beute, Ausprobieren | 3 Slots wie GDD §6 | Tiers, Set-Boni, „Ramsch“-Seltenheit (graue Items à la WoW, M.O.D. liebt sie) |
-| **Spezies + Spezialisierung** | Identität, Rolle | **Paket B**: Datenmodell + Regeln + Tests | Casting-UI auf Etage 3, Optik je Spezies (03_ART) |
+| **Spezies + Spezialisierung** | Identität, Rolle | **Paket B**: Datenmodell + Regeln + Tests | **Recall gebaut** (Etage 3, in Staffeln; Kap. 3.5), Optik je Spezies (03_ART) |
 | **Fanclubs (Gilden)** | Zugehörigkeit, Aufträge | — | ab Etage 2 (2.4) |
 | **Gruppe** | „wir werden mehr“ | Duo | 3. Begleitfigur ab E2, Koop 2–4 (05 S4) |
 | **Bosse** | Höhepunkte | 2 je Etage + **1 optionaler Show-Boss auf E1** (Paket C) | weitere Show-Bosse (Elite), Raids (Kap. 7) |
@@ -365,6 +365,9 @@ Wert (09 D-2); dieses Angebot bleibt für Kampagne und Event-Läufe unverändert
 - Fähigkeiten bleiben **lernset-basiert** (lesbar: „mit Stufe 6 lernst du X“). Klassen bringen ab Stufe 11 je 4 Skills (GDD §12).
 - **Höchststufe je Etage** (Vorschlag, mit Etage 3 festzurren): E1–2: 10 · E3: 13 · E4: 15 · E5: 17 · E6: 20 (Staffelfinale).
   Das hält die EXP-Kurve (GDD §4.3) je Etage lesbar und gibt jeder Etage Stufenaufstiege für die Talentwahl.
+  **Festgelegt mit 09 (CR-31, ST1-D; schließt O-2):** In Staffeln ist die Höchststufe das Bandende der Etage, auf der die
+  Gruppe steht (09 Kap. 2.4/8.2: Etage 1 → 7, Etage n → 3n + 4, also E2 10 · E3 13 · E4 16 · E5 19 · E6 22, höchstens 50);
+  der Recall nennt sie („Höchststufe auf dieser Etage: 13“). Die Kampagne behält Stufe 10.
 - Ausrüstung später: Tiers je Etage, **Set-Boni** (2 Teile eines Sponsors), **„Ramsch“** als vierte Seltenheit (grau, nur zum
   Verkaufen — und für die Marotte „Second-Hand-Schick“).
 
@@ -438,7 +441,7 @@ Reichweite ist Szenenlogik Grad A, aufgezeichnet wird das Ergebnis — wie `enco
 |---|---|
 | Figurenwahl, Bellen, Partner automatisch (Option), E1-Kulissenwände + Regie-Notizen (A) | Rollentausch-Achievements, Mopsula-Kamera-Feinschliff |
 | Talent-Show komplett inkl. UI (B) | Talent-Reset, seltene Talente |
-| Spezies/Spezialisierung: Datenmodell, Validierung, Regeln, Tests (B) | Casting-UI, Optik, Etage 3 |
+| Spezies/Spezialisierung: Datenmodell, Validierung, Regeln, Tests (B) | Optik je Spezies (Recall und Etage 3: gebaut, Kap. 3.5) |
 | Marotten, Show-Wetten, Unterhosen-Liga, Achievements, E1-Show-Boss (C) | Fanclub-Wetten, Liga-Optik (nur Kostüm-Details der Figuren, **kein** Fuß-/Barfuß-Rig, nie in Key Art) |
 | KI-Admin: Schnittstelle, Twist-Katalog, Applier, **Regie (offline, ab E2)**, Referenz-Dienst (D) | Live-Betrieb, Votes, Live-Events (S1–S3) |
 | — | Fanclubs, 3. Figur, weitere Show-Bosse und Geheimnisse, Sammelkarten (Phase 3/4) |
@@ -535,14 +538,37 @@ static func choose(state: GameState, data: GameData, member_id: String, species_
 
 `Game.choose_casting(member, species, class)` → Command `{"t": "casting", "member", "species", "class"}`.
 
-### 3.5 Casting-Ablauf (UX, später mit Etage 3)
+### 3.5 Recall-Ablauf (UX; Code-Name „Casting“) — **Recall gebaut**
 
-1. Betreten des Safe Rooms: M.O.D. `casting_open` („Willkommen zum Casting! Wer wollen Sie sein? Wählen Sie weise. Oder telegen.“).
+1. Betreten des Safe Rooms: M.O.D. `casting_open` (gebaut: „Recall! Wer wollen Sie sein? Und was wollen Sie können? Die Jury
+   bin ich.“ — der Satz aus Kap. 0.5; der Entwurf hieß „Willkommen zum Casting! …“, 08 F-7).
 2. Bildschirm „Wer bist du?“: Karten der Spezies (Rig-Vorschau dreht sich, Werte-Balken mit +/−, Passiv in einem Satz).
 3. Bildschirm „Was kannst du?“: Karten der 4 Spezialisierungen, Empfehlungen markiert.
 4. Bestätigen → Jury-Kommentar zur Kombination (Tag `casting_combo:<spc>:<cls>`, Fallback `casting_combo`), z. B. Kachelgolem +
    Abrissbirne: „Ein Bauprojekt auf zwei Beinen. Die Statik nickt.“
 5. Danach Mopsula (bzw. die andere Figur) — gleiche Schritte.
+
+**Stand Recall (2026-10-12, Branch `ptd/recall`) — gebaut** (`scenes/ui/recall.{gd,tscn}`; Einzelheiten 09 Kap. 11.3
+„Stand Recall“, Entscheidungen R-1 … R-14; 02_TECH §0.8 „Stand Recall“). Etage 3 gibt es nur in Staffeln (09; heute
+Debug-Builds, README §6), der Recall also auch. **Was man auf Etage 3 sieht:** Beim ersten Betreten eines Safe Rooms,
+solange eine erste Wahl offen ist, öffnet der Recall von selbst (sonst über den magentafarbenen Knopf **RECALL** im Menü
+des Safe Rooms: „Spezies & Klasse wählen“, „Umentscheiden – noch frei“, „Umschulung: Klasse wechseln“). Oben steht, wer
+gerade wählt (Porträt, Name, Stufen-Plakette, „Schritt 1 von 3 · Wer bist du?“, „Figur 1 von 2“) und „Etage 3 · Höchststufe
+13“; links die Karten, rechts die Figur (Farbe der Spezies am Sockel), der Name, die Wirkung in einem Satz, die acht Werte
+vorher → nachher mit +/−-Balken und der Kasten „JURY · M.O.D.“. Spezies-Karten: die Wirkung, die wirklich gilt
+(Original-Verpackung „Follower aus Kämpfen +10 %.“, Kachelgolem „Erster erlittener Treffer je Kampf −30 %.“, Flattermops
+„Turbo zum Kampfstart; Bellen reicht 50 % weiter.“ …) und „Passt gut zu: …“. Klassen-Karten: die Rolle, die Plaketten
+EMPFOHLEN (Empfehlung der gewählten Spezies) und PASST ZU IHREM VORLEBEN (08 C-9), dazu die ersten drei Fähigkeiten
+der Klassenleiste aus dem Fähigkeitenbuch (die Signatur „beim Recall“ mit ihrem Satz, dann „ab Stufe 12“, „ab Stufe 17“;
+„Dann Stufe 22, 27, 32 · Ränge ab 37 · Klassenreihen ab 15“). „Bestätigen“ zeigt das Paar, die Signatur („kommt auf Slot 1 —
+tauschen im Fähigkeitenbuch“) und die Regeln aus 3.6; danach urteilt M.O.D. über das Paar, und die andere Figur ist dran
+(die gesteuerte zuerst). Die Schlussseite fasst beide Rollen zusammen, nennt die Regeln, „Höchststufe auf dieser Etage:
+13“, bietet den **Talentbaum** an und meldet beim ersten Mal auf dem Gerät **„NEU: OHNE NETZ“** (09 §2.2). „Später“
+schließt jederzeit — M.O.D. sagt, wo die Wahl wartet (`casting_later`), und jeder Safe Room der Etage bietet sie wieder an.
+Aufgezeichnet wird erst „Bestätigen“: das Command `casting` und in Staffeln ein `loadout` mit der Signatur (beide über die
+bestehenden Wege, deterministisch, in beiden Verifiern nachgespielt). Tastatur, Gamepad, Maus und Touch (erstes Antippen
+zeigt, zweites wählt; Trefferflächen ≥ 88 px). Die Spezies-Optik am Rig folgt mit 03_ART; Spezies und Klasse am
+Party-Rahmen im Kampf und die Bauchbinde „ORIGINAL“ sind Antrag 07 CR-32 m.
 
 ### 3.6 Umentscheiden (Re-Spec)
 
@@ -554,6 +580,13 @@ static func choose(state: GameState, data: GameData, member_id: String, species_
 
 Alle drei sind aufgezeichnete Commands (`casting`, später `respec`, `talent_reset`).
 
+**Stand Recall:** Spezies und Klasse gehen beide über `casting` — die Umschulung ist dasselbe Command (ein eigenes `respec`
+braucht es nicht). Die Talent-Zeile ersetzt 09 (CR-31, §8.4): In Staffeln wählt man jede Talentreihe im Safe Room jederzeit
+kostenlos um (`talent` v2); der Recall öffnet den Talentbaum von seiner Schlussseite aus. Ein `talent_reset` und der
+„Neuanfang-Vertrag“ entfallen damit (Kap. 8.3 B-10). Die Umschulung setzt die Klassenreihen frei (09 D-11) und nimmt die
+Fähigkeiten der alten Klasse von der Leiste; die Signatur der neuen kommt auf ihren Platz, außer dort liegt eine selbst
+gewählte Figurenvariante.
+
 ### 3.7 Jetzt gebaut (Paket B)
 
 `species.json` mit 8 Einträgen, `SpeciesDef`, Validator-Regeln, `PartyMember.species_id`, Werte-Anwendung in `Progression`,
@@ -563,6 +596,12 @@ Alle drei sind aufgezeichnete Commands (`casting`, später `respec`, `talent_res
 (Tabelle 3.6) stehen in `Casting.check`; Buchführung in `PartyMember.casting {floor, visit, class_floor, class_visit}`. Die erste
 Casting-Wahl einer Figur geht in **jedem** Safe Room einer Etage ≥ 3 (wer den ersten auslässt, verpasst nichts). Talent-Reset
 (Zeile 3 der Tabelle) folgt mit der Casting-UI.
+
+**Stand Recall (2026-10-12): gebaut** — die Oberfläche (Kap. 3.5), die zwei Passive, die außerhalb des Kampfes wirken
+(`pas_authentic`: Follower aus Kämpfen × 1,1 über `Casting.follower_pm` in `GameState.follower_pm`; `pas_court_flight`:
+Bellen-Reichweite × 1,5 über `Casting.field_range_pm` in `HeroRules.field_mods` — die sechs Kampf-Passive wirken seit 07 R4
+in `BattleBridge`), die Signatur auf der Leiste und die Talent-Zeile über den Talentbaum (Kap. 3.6 „Stand Recall“). Ohne
+Spezies sind beide Faktoren 1000: jeder Lauf ohne Staffel bleibt bitgleich.
 
 ---
 
@@ -1450,7 +1489,7 @@ Angebotsfolgen der 4 Wahlen je Figur geprüft); Anteil Verhaltens-Talente je Poo
 | B-7 | — | eine Wahl hebt MaxHP/MaxMP-Zuwachs sofort auf HP/MP (wie ein Stufenaufstieg, `Progression.follow_max_vitals`) | sonst wirkt „HP +5 %“ erst nach der nächsten Heilung |
 | B-8 | `field_range_pm`, `field_cd_pm`, `marotte_heart` | Werte und APIs da (`Talents.field_range_pm/field_cd_pm/marotte_bonus_hearts`), **Auswertung** folgt mit Paket A (Feldfähigkeit) bzw. C (`MarottenRules`); Feldfähigkeit umgesetzt in der Integration A × B (`HeroRules.field_mods`, Talente der führenden Figur), `marotte_heart` in der Integration B × C (`MarottenRules`: erstes Herz der Etage +1, Kap. 8.8) | Besitzgrenzen 8.1; die Karte sagt „Wirkt, wenn … die Gruppe anführt.“ |
 | B-9 | `hype_gain_pm`/`follower_pm` | im Kern verdrahtet als **Ganzzahl-Promille** (`GameState.hype_gain_pm/follower_pm` = Ausrüstung, einmal `roundi(x × 1000)`, × `Talents.hype_pm/follower_pm`, je Schritt `(a × b + 500) / 1000`; Show nutzt nur diese; `hype_gain_mult/follower_mult` bleiben reine Ausrüstungs-Floats), im Pool **nicht** verwendet | Kap. 4.8 Nr. 4: Event-Wertung ohne Talent-Multiplikatoren bleibt trivial erfüllt |
-| B-10 | Talent-Reset beim Casting | noch nicht gebaut | kommt mit der Casting-UI (Etage 3) |
+| B-10 | Talent-Reset beim Casting | **geschlossen mit dem Recall** (2026-10-12): kein eigenes Reset — in Staffeln wählt man jede Talentreihe im Safe Room jederzeit kostenlos um (09 §8.4, CR-31); die Schlussseite des Recalls öffnet den Talentbaum | die Regel des Talentbaums macht ein einmaliges Reset überflüssig (Kap. 3.6 „Stand Recall“) |
 | B-11 | Verifier: `Talents.pick`/`Casting.choose` prüfen selbst (ein gefälschtes Command ändert nichts, der Hash weicht ab) | Integration (Merge mit dem Final-Review): die Legalität steht zusätzlich in `RunRules.command_refusal` — ein gefälschtes `talent`/`casting` ist für `RunSim.replay` **und** `Game.replay_log` ein Fehler in `errors` | gleicher Vertrag wie alle übrigen Commands (05 §11.4, `test_m8_integrity`) |
 
 **Balance-Messung (Paket B):** Bot-Wahl „erstes Angebot“, gepaarte Kämpfe (gleiche Seeds, mit/ohne Talente, Geschenke wie im Spiel):
@@ -1823,5 +1862,5 @@ aufzeichnende `Game`-Methode. Alle bisherigen ~806 Tests bleiben grün; jedes Pa
 | R-8 | Prompt-Injection/Provokation über manipulierte Clients | Kap. 5.4/5.9: kein Client-String im Prompt, Zeilen-Puffer serverseitig, IDs katalog-geprüft |
 | R-9 | Liga/Wetten werden Ranglisten-Pflicht | Kap. 4.8 Nr. 4: Option (a), Event-Wertung ohne Liga-/Marotten-/Talent-Multiplikatoren |
 | O-1 | Herr Brettschneider als 3. Figur oder neue Figur? | Vorschlag Brettschneider (Story-Rückbezug); Entscheidung mit Etage-2-Design |
-| O-2 | Plan der Höchststufe je Etage | mit Etage 3 festlegen (Kap. 2.3) |
+| O-2 | Plan der Höchststufe je Etage | **geschlossen** mit 09 (CR-31, ST1-D): Bandende der Etage, höchstens 50; Etage 3 → 13 (Kap. 2.3), der Recall nennt sie |
 | O-3 | Fanclub-Namen | Vorschläge Kap. 2.4; Humor-Redaktion |

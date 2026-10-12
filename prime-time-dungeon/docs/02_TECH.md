@@ -583,8 +583,8 @@ und `core/progression` (`GameState` für die Programmtüren); was `core/rt` brau
 Kulissenwände auf Generator-v2-Etagen (`Secrets` liest nur `FloorDef.layout`), `item_level` (dann auch im Aufholpaket
 von ST1-D) und das Viertel-Streaming; ST1-D (gemergt) — die Bänder gelten voll, die Gruppen geben die Anteile
 `LevelBand.SHARE_*_PM` und `group_level` kennt ihre Bandstufe (09 C-23); offen ist die Oberfläche des Recalls auf Etage
-3 (Spezies und Klasse, heute nur `Game.choose_casting`); ST1-E — die Fundstellen in `FloorLayout.nodes`; ST1-G — die
-Gefahr je Viertel (`ZoneGenerator.danger_at`); ST1-H — Farbe und Differenz der Plakette lesen `RtUnit.level` (Kampf) und
+3 (Spezies und Klasse, heute nur `Game.choose_casting`; **gebaut:** „Stand Recall“ unten); ST1-E — die Fundstellen in
+`FloorLayout.nodes`; ST1-G — die Gefahr je Viertel (`ZoneGenerator.danger_at`); ST1-H — Farbe und Differenz der Plakette lesen `RtUnit.level` (Kampf) und
 `EnemySpawn.level` (Erkundung), der Marker „NEU“ der Programmpunkte (`FloorLayout.programme`, `ThemeDef.point_name`);
 ST1-I — der Full-Run-Bot braucht eine Wegplanung auf `FloorLayout` (Revier-Boss → Schlüssel → Tor → Treppe,
 Programmtüren, Safe Room je Viertel) und `--season=ssn_basis --tempo=binge --floor=<n>`. **Leistung** (`PERFORMANCE.md`
@@ -593,6 +593,27 @@ Median (Budget 500 ms). Dafür legt `FloorBuilder.build_rooms` die Türstürze i
 kommt (§4.10 dort: ein Box-Zusatz in der Welt baut unter Jolt die ganze Form neu). **Offen:** die Aufbauzeit auf
 Mobilgeräten (gemessen nur am PC); die Bühne der Bossräume ist ein Platzhalter bis zu den Raumteilen je Kulisse (03_ART,
 09 CR-28).
+
+**Stand Recall (2026-10-12, Branch `ptd/recall`): Spezies und Klasse auf Etage 3** (06 §3.5–3.7, 09 Kap. 11.3 „Stand
+Recall“, Entscheidungen R-1 … R-14). Neu sind `scenes/ui/recall.{gd,tscn}` und `tests/test_09_recall.gd`; Regeln und
+Command bleiben die von 06 Paket B (`Casting.check`/`choose`, `{"t": "casting", "member", "species", "class"}`). **Kein
+`SIM_VERSION`-Sprung**, Save v2 unverändert (`PartyMember.species_id`, `class_id`, `casting`, `rt_loadout` bestehen),
+ohne Staffel bitgleich (`fullrun.sh` mit `--strategy=all`, `--hero=mopsula`, `--liga=1`, `--liga=2`: gleiche
+Ereigniszeilen und Statistiken; die beiden neuen Faktoren sind ohne Spezies 1000). Die Kampagne erreicht Etage 3 nie;
+Etage 3 und damit der Recall gibt es nur in Staffeln.
+
+| Teil | API |
+|---|---|
+| `Casting` (Abschnitt „Recall“, rein, statisch) | `MODES`; `mode(state, data, member) -> String` (`first` \| `redo` \| `retrain` \| `""`, über `check` je Option), `open_members(state, data)` (gesteuerte Figur zuerst), `min_floor(data)` (3), `signature(data, member, class)` (die Zeile mit Stufe 1 aus `AbilityBook.rows`), `signature_loadout(state, data, member) -> Dictionary` (`RunRules.loadout_cmd` mit der Signatur auf ihrem Platz; nur in Staffeln, nie über eine eigene Figurenvariante, `{}` wenn nichts zu tun ist oder `loadout_refusal` ablehnt), `follower_pm(state, data)` (`pas_authentic`, Produkt der Party), `field_range_pm(member, data)` (`pas_court_flight`), `passive_pm(member, data, passive, key)`; in `choose` die Zeile `_drop_foreign_variants` (Plätze, deren Fähigkeit keine Variante der Figur mehr ist, `AbilityBook.variant_level` < 0, gehen von `rt_loadout`) |
+| Haken (je eine markierte Zeile) | `GameState.follower_pm` × `Casting.follower_pm`; `HeroRules.field_mods`: `range_pm` × `Casting.field_range_pm` (je `(a × b + 500) / 1000`); `Game.choose_casting` → `_recall_unlock()` (in Staffeln, live: `Save.career_set("no_net", true)`, sobald `SeasonRules.unlocks_no_net`); `ModAnnouncer.ALWAYS_SAID_TAGS` += `casting_later` |
+| Oberfläche | `recall.gd` (Ebene 60 wie die Talent-Show; `setup({"safe_room_id"})`; Signal `closed`; `member_id`, `step` (`STEP_SPECIES` 1, `STEP_CLASS` 2, `STEP_CONFIRM` 3, `STEP_JUDGED` 4, `STEP_DONE` 5), `turn_mode`, `species_id`, `class_id`, `preview_id`, `options`, `card_buttons`, `queue`, `judged`, `close_button`, `next_button`, `back_button`, `tree_button`; `choose(index)`, `confirm()`, `back()`, `close()`, `show_step(step, say)`, `jury_text()`, `open_tree()`; statisch `pair_text(spc, cls)`, `passive_text(species_def)`, `species_color(spc, member)`, `vorleben_class(member)`); `safe_room.gd` Abschnitt „Recall“ (`open_recall()`, `recall_available()`, `recall_mode()`, Auto-Öffnen beim ersten Besuch, `params` `{"recall": false}` schaltet es ab; Knopf `menu_buttons["recall"]`); `party_menu.gd` `casting_text` („Recall offen – im Safe Room“ ab `Casting.min_floor`); `PersonaFigure.set_accent(color)` (Licht und Sockel in der Farbe der Spezies, `model_hint.colors.primary`) |
+| Daten | `mod_lines.json`: 36 Zeilen `mod_casting_*` hinter `mod_talent_pick_mopsula_02` (`casting_open`, `casting_species[:mopsula]`, `casting_class[:mopsula]`, `casting_confirm`, `casting_combo[:<spc>[:<cls>]]`, `casting_redo`, `casting_retrain`, `casting_done`, `casting_later`, `casting_no_net`) |
+| Werkzeuge | Capture-Rezepte `recall_species`, `recall_class`, `recall_confirm`, `recall_judged`, `recall_mopsula`, `recall_done`, `recall_party` und `safe_recall` (Safe Room nach „Später“), alle mit einer Basis-Staffel auf Etage 3 |
+
+**Für die anderen Pakete:** ST1-H — das Tempo-Angebot nach der ersten Klassenwahl (09 Kap. 0.6) hängt sich an das Signal
+`closed` des Recalls oder an `Casting.mode`; ST1-I — der Full-Run-Bot bestätigt auf Etage 3 den Recall (Rezept wie
+`recall_done`: `choose(0)` und `confirm()` je Figur); 07 — CR-32 m (Spezies und Klasse am Party-Rahmen, Bauchbinde
+„ORIGINAL“); 03_ART — die Spezies-Optik am Rig (`model_hint.props_add`), bis dahin nur die Farbe am Sockel.
 
 ---
 

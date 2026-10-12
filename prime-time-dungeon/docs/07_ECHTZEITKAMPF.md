@@ -2636,6 +2636,12 @@ Aufbau des Combatants) + `on combat_start` mit einer schwachen `sts_regen`-Varia
 `pas_coin_slot` → `skill_pm` `item:*` `power` 1250; `pas_ember` → `skill_pm` `element:fire` `power` 1150; `pas_see_through` →
 `first_hit_taken_pm` 500; `pas_court_flight` → `on combat_start` `sts_haste` 3 s (Bellen-Reichweite: Erkundung). Alles über
 bestehende `MOD_OPS` und Combatant-Felder — Etage 3 braucht keine neue Sim-Funktion, nur Daten.
+**Stand Recall (09, 2026-10-12):** Alle acht wirken. Die sechs Kampf-Passive setzt `BattleBridge` seit R4 so um
+(`_rt_species_mods`, `_rt_species_unit`; `pas_spores` mit „Sporenkur“ `sts_spores`, +1 % HP alle 3 s); `pas_authentic`
+multipliziert die Follower aus Kämpfen (`Casting.follower_pm` im Produkt `GameState.follower_pm`), die Bellen-Reichweite von
+`pas_court_flight` die Feldfähigkeit der führenden Figur (`Casting.field_range_pm` in `HeroRules.field_mods`) — beides
+außerhalb von `core/rt`. Die Anzeige im Kampf (Spezies und Klasse am Party-Rahmen, Bauchbinde „ORIGINAL“) ist Antrag
+CR-32 m (§12.10).
 
 ---
 
@@ -3781,7 +3787,7 @@ Datentabellen (um `rt` erweitert).
 | 16 | Persona im Kampf (08 CR-24, Exportgrenze 08 §2.7 Nr. 5) | `RtUnit.display_name` ist der Def-Name, nie der Persona-Name (Regel für `make_rt_setup`, R1b); `StateHash.of_rt` lässt jeden `display_name` aus (**R1a umgesetzt**); Puppen bauen ihre Figur über `DB.party_model` (R2), Einheitenrahmen lösen Namen über `UiUtil.member_name` (R3) | R1b, R2, R3 |
 | 17 | Persona-Zeilen im Kampf | nie: `show_persona_hooks.gd` feuert nicht, solange `Game.in_battle`; eine wartende Persona-Zeile verfällt bei `Events.battle_started` (08 §4.3, K0-Haken) | R2 (Kampfbeginn sendet `battle_started`) |
 
-### 12.10 Änderungsanträge aus 09 (CR-32; Stand Vertrag 4 und ST1-D, 2026-10-12)
+### 12.10 Änderungsanträge aus 09 (CR-32; Stand Vertrag 4, ST1-D und Recall, 2026-10-12)
 
 09 CR-32 (a)–(c) sollen vor R4 nur Schema-Haken sein. Vertrag 4 (09 ST1-A; 02_TECH §0.8 „Stand Vertrag 4“) hat erledigt,
 was ohne `core/rt/**` und `scenes/combat/**` geht: (a) `classes.json → rt` (Klassenleiste im Schema von `party.json → rt.bar`
@@ -3799,6 +3805,7 @@ bitgleich.
 | CR-32 j (ST1-D) | `scenes/combat/ui/combat_results.gd` | **Kampfergebnis in Staffeln** (09 §8.2–8.4, D-16): EP je Figur aus `BattleRewards.exp_by_member` (Farbe, Aufholjagd, Ausgeruht und Deckel sind schon eingerechnet) und die Überstunden `BattleRewards.overtime` („+N Cr Überstunden“); EP-Leisten mit `LevelBand.exp_to_next(state, data, stufe)` statt `Progression.exp_to_next` (das ab Stufe 10 0 liefert); der Chip „TALENT-SHOW BEREIT“ nur für Reihen des Baums (`TalentTree.rows_between(data, member, alt, neu)`; `Talents.has_choice` fragt in Staffeln schon den Baum); das Banner „Neue Fähigkeit: <Name> — im Fähigkeitenbuch auf die Leiste legen“ aus `LevelUpInfo.learned` (in Staffeln = `AbilityBook.new_between`). Ohne Staffel unverändert. Bis dahin zeigt `Game` (`_level_after_combat`) diese Punkte als Hinweise | Eigentum `scenes/combat` (R3) |
 | CR-32 k (ST1-D) | `core/rt/rt_sim.gd` (`change_preset`, die `_assist`-Regeln beim Aufbau) | **Klassenfähigkeiten in den KI-Regeln halten** (09 D-9): `BattleBridge._rt_class_bar` legt eine gewählte Klassenfähigkeit auf ihren Platz und ersetzt in `u.rules` die Grundfähigkeit dieses Platzes (`skill` und `then.skill`). `RtSim.change_preset` (Taktik-Chip im Kampf) und die Vorschlagsregeln (`_assist`, §5.6) übersetzen `party.json → rt.presets` neu und verlieren die Ersetzung: Danach nutzt die KI die Klassenfähigkeit dieses Platzes nicht mehr und der Vorschlag nennt sie nie. Antrag: nach `RtRules.preset_rules` dieselbe Ersetzung — die Grundfähigkeit eines Platzes, dessen Leiste (`u.bar`) eine andere Fähigkeit ohne Eintrag in `rt.presets` trägt, wird zu ihr. Ohne Staffel trägt keine Leiste eine solche Fähigkeit: bitgleich | Eigentum `core/rt` |
 | CR-32 l (ST1-D, mit ST1-H) | `scenes/combat/ui/unit_frames.gd` (Zielrahmen), Namensschilder | **Gegnerfarbe und Stufendifferenz** (09 §3.4, D-7; 03_ART CR-28): in Staffeln die Plakette des Gegners in der Farbe `LevelBand.color_name(gegner − figur)` (grau, grün, gelb, orange, rot), daneben `LevelBand.diff_text` („+3“, „−4“, „±0“), bei Rot das Warnzeichen (`LevelBand.is_warning`); Bezug ist die gesteuerte Figur. Die Regeln stehen in `core/season/level_band.gd` | Eigentum `scenes/combat` (R3) und ST1-H |
+| CR-32 m (Recall, 2026-10-12) | `scenes/combat/ui/unit_frames.gd` (Party-Rahmen), die Bauchbinde beim Kampfstart (`scenes/combat`) | **Spezies und Klasse im Kampf** (06 §3.2, §3.5; 09 R-14): (1) nach dem Recall nennt der Party-Rahmen unter dem Namen „Spezies · Klasse“ (die Form der statischen Helfer `pair_text`/`passive_text` in `scenes/ui/recall.gd`, z. B. „Kachelgolem · Abrissbirne“; gekürzt mit Ellipse, der Tooltip trägt beides und den Satz des Passivs), vorher nichts; (2) eine Figur mit `spc_original` bekommt beim Kampfstart die Bauchbinde „ORIGINAL“ (06 §3.2; einmal je Kampf wie die Show-Boss-Bauchbinde, nicht über einem Boss-Intro). Daten: `PartyMember.species_id`/`class_id`, Namen aus `species.json`/`classes.json`; nur Anzeige, die Sim bleibt unberührt; ohne Staffel nie sichtbar (`class_id` bleibt `""`). Bis dahin zeigt Pausemenü → Party beides | Eigentum `scenes/combat` (R3) |
 
 ---
 

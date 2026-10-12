@@ -350,3 +350,145 @@ func _sd_on_tree_entered() -> void:
 	Events.overlay_mode_requested.emit.call_deferred(&"menu")
 	Sfx.music(&"title")
 	UiUtil.focus_later(extras_button)
+
+
+# --- Staffeln (09, ST1-H) ---------------------------------------------------------------------------------------------
+## "Sendung starten" (the first season of this device) or "Neue Staffel" (every further one) and the Ruhmeshalle as a
+## card at the bottom right, above the footer — beside the menu column, which keeps its entries and its 720 px
+## (menu_ids(); the Stempelduell's Extras stay in the Event-Lauf row). Orchestrator decision 1 (09 "Stand ST1-H"):
+## until the ST1 gate the card exists in debug builds only — a release build keeps today's title. `season_gate`
+## overrides the build for tests (-1 = the build decides, 0 = off, 1 = on). "Fortsetzen" names the season of its slot
+## (every build: a season slot exists only where seasons do).
+## Hooked in additively like the Extras: the member initializer connects `ready`. The screens live in
+## scenes/title/season_setup.* and scenes/ui/hall_of_fame.*.
+const SEASON_SETUP: String = "res://scenes/title/season_setup.tscn"
+const SeasonView := preload("res://scenes/ui/season_view.gd")
+const SEASON_CARD_W: float = 380.0
+const SEASON_CARD_BOTTOM: float = 56.0     # above the footer strip
+
+static var season_gate: int = -1
+
+var season_buttons: Dictionary = {}          # "start" | "hall" → Button (tests)
+var season_card: PanelContainer = null
+var _st_hooked: bool = _st_hook()
+
+
+func _st_hook() -> bool:
+	ready.connect(_st_build, CONNECT_ONE_SHOT)
+	return true
+
+
+## True when the title offers seasons (debug builds until the ST1 gate; season_gate for tests).
+static func seasons_offered() -> bool:
+	return season_gate == 1 or (season_gate == -1 and OS.is_debug_build())
+
+
+func _st_build() -> void:
+	TitleFlow.pending_season = {}                # back on the title: "Neues Spiel" is a campaign game again
+	_st_continue_label()
+	if season_card != null and is_instance_valid(season_card):   # rebuilt (tests): the old card goes
+		season_card.queue_free()
+		season_card = null
+		season_buttons.clear()
+	if not seasons_offered() or _menu == null or DB.data == null or SeasonView.default_def(DB.data) == "":
+		return
+	var first: bool = int(Save.career().get("seasons", 0)) <= 0
+	season_card = PanelContainer.new()
+	season_card.name = "SeasonCard"
+	season_card.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	season_card.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	season_card.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	season_card.offset_left = -SEASON_CARD_W
+	season_card.offset_right = 0
+	season_card.offset_bottom = -SEASON_CARD_BOTTOM
+	season_card.offset_top = -SEASON_CARD_BOTTOM
+	season_card.add_theme_stylebox_override("panel", UiUtil.box_style(Color(UiTheme.C_PANEL, 0.9), UiTheme.C_GOLD, 2,
+		0.0, 18, 12))
+	_menu.get_parent().add_child(season_card)
+	var col: VBoxContainer = UiUtil.vbox(12)             # 12 px between the 88 px hit areas
+	season_card.add_child(col)
+	var head: HBoxContainer = UiUtil.hbox(8)
+	col.add_child(head)
+	var ic: Control = UiIcon.make(&"tv", UiTheme.C_GOLD, 22)
+	ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head.add_child(ic)
+	var k: Label = UiUtil.label("STAFFELN", &"", 17, UiTheme.C_GOLD)
+	k.add_theme_font_override("font", UiTheme.font_bold())
+	k.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(k)
+	head.add_child(UiUtil.label("Vorschau", &"", 16, UiTheme.C_TEXT_DIM))
+	var list: Array[Control] = []
+	var go: Button = _st_button("start", "Sendung starten" if first else "Neue Staffel", true)
+	go.pressed.connect(func() -> void: _st_open("first" if first else "new"))
+	col.add_child(go)
+	list.append(go)
+	if not Save.career_hall().is_empty():
+		var hall: Button = _st_button("hall", "Ruhmeshalle", false)
+		hall.pressed.connect(_st_open_hall)
+		col.add_child(hall)
+		list.append(hall)
+	var t: Label = UiUtil.label(UiUtil.glyph_safe(str(SeasonView.EXPLAIN["season"]) + (" " +
+		str(SeasonView.EXPLAIN["cast"]) if first else "")), &"", 16, UiTheme.C_TEXT)
+	t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	t.custom_minimum_size = Vector2(SEASON_CARD_W - 36.0, 0)
+	col.add_child(t)
+	_st_wire(list)
+
+
+func _st_button(id: String, text: String, gold: bool) -> Button:
+	var b: Button = UiUtil.button(text, &"ButtonBig")
+	b.name = "Season_" + id
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	if gold:
+		var sb: StyleBoxFlat = UiUtil.box_style(Color(0.25, 0.17, 0.08, 0.95), UiTheme.C_GOLD, 3, 0.0, 24, 8)
+		b.add_theme_stylebox_override("normal", sb)
+		b.add_theme_color_override("font_color", UiTheme.C_GOLD)
+	UiUtil.touch_pad(b, 64.0)
+	season_buttons[id] = b
+	return b
+
+
+## ui_right from the menu column (Event-Lauf keeps Extras) → the card; ui_left back to the first menu entry; up / down
+## inside the card.
+func _st_wire(list: Array[Control]) -> void:
+	UiUtil.wire_vertical(list)
+	var home: Control = null
+	for id: String in ["continue", "new", "load"]:
+		if menu_buttons.has(id):
+			home = menu_buttons[id] as Control
+			break
+	for c: Control in list:
+		if home != null:
+			c.focus_neighbor_left = c.get_path_to(home)
+		c.focus_neighbor_right = c.get_path_to(c)
+	for id2: Variant in menu_buttons.keys():
+		if str(id2) == "event":
+			continue
+		var b: Control = menu_buttons[id2] as Control
+		b.focus_neighbor_right = b.get_path_to(list[0])
+
+
+func _st_open(setup_mode: String) -> void:
+	if _busy or (_modal != null and is_instance_valid(_modal)):
+		return
+	_busy = true
+	Sfx.play_ui(&"ui_confirm")
+	Router.goto(SEASON_SETUP, {"mode": setup_mode})
+
+
+func _st_open_hall() -> void:
+	if _busy or (_modal != null and is_instance_valid(_modal)):
+		return
+	_busy = true
+	Sfx.play_ui(&"ui_confirm")
+	Router.goto(Game.SCENE_HALL_OF_FAME, {"from": "title"})
+
+
+## "Fortsetzen  ·  Staffel 3" when the newest slot holds a running season (its floor: the slot list).
+func _st_continue_label() -> void:
+	var b: Button = menu_buttons.get("continue") as Button
+	if b == null:
+		return
+	var s: Variant = Save.slot_summary(Save.newest_slot()).get("season", null)
+	if s is Dictionary:
+		b.text = "Fortsetzen  ·  Staffel %d" % int((s as Dictionary).get("number", 0))

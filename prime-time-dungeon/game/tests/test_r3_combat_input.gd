@@ -42,7 +42,7 @@ func before_each() -> void:
 
 
 func after_each() -> void:
-	CombatInput.apply_input_mode(false)
+	CombatInput.apply_input_mode(true)             # the project map (07 §7.7, E36)
 
 
 func _key(code: Key, shift: bool = false, pressed: bool = true) -> InputEventKey:

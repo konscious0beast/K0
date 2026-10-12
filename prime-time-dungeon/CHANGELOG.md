@@ -2,7 +2,19 @@
 
 Spielbare Builds baut die CI (README, Abschnitt 4 „Spielbare Builds“). Hier steht je Build, was für Spieler:innen neu ist.
 
-## 0.3.0 – Vorschau 2: Echtzeitkampf
+## 0.3.0 – Vorschau 3: Kampf eröffnen
+
+- **Ziel wählen in der Erkundung:** Tab / Shift+Tab, Linksklick auf eine Gruppe, am Gamepad RT, auf Touch die Gruppe antippen
+  (freie Fläche bzw. Gamepad B: Ziel weg). Der Zielrahmen zeigt Entfernung, Zustand und ob es ein Erstschlag wird; ein Ring
+  und ein Pfeil markieren die Anführer:in, golden bei Erstschlag.
+- **Kampf mit einer Fähigkeit eröffnen:** Tasten 1–5, am Gamepad A / X / Y, auf Touch der Aktionsknopf (zeigt dann das Symbol
+  von Slot 1). Ruht die Gruppe, patrouilliert sie, ist sie angebellt oder kommst du von hinten, gibt es den **Erstschlag**.
+  Zu weit weg, zu wenig MP oder keine Angriffsfähigkeit: ein kurzer Hinweis unter dem Zielrahmen.
+- **Graf Mopsula:** Bellen nimmt die verdutzte Gruppe gleich ins Ziel — Bellen, dann 1 (Gamepad: zweimal A, Touch: zweimal den
+  Knopf) ist ein Erstschlag.
+- Die Karte liegt jetzt nur noch auf M (Tab wählt Ziele); am Gamepad sitzt der Autopilot auf dem Steuerkreuz oben.
+
+## 0.3.0 – Vorschau 2 (build-76): Echtzeitkampf
 
 - **Echtzeitkampf ist Standard** für neue Spiele: gekämpft wird direkt in der Welt, mit Laufen, Auto-Angriff, Fähigkeiten auf
   1–4, SHOW auf 5, Trank auf 6, Abklingzeiten, Ausweichen vor roten Bodenflächen und einer Partner:in mit eigener Taktik

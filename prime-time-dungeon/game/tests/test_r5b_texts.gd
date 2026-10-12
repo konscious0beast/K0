@@ -1,7 +1,7 @@
 extends TestCase
 ## R5b part 2a, text pass (07 E33: new games fight in real time): what a real-time player reads names no CTB turns —
 ## skill details and the touch tooltip give real-time costs, cooldowns and status durations in seconds (since the data
-## bake of part 2b the descriptions themselves speak real time, 07 E34), the SHOW row its party cooldown; the talent
+## bake of part 2b the descriptions themselves speak real time, 07 E38), the SHOW row its party cooldown; the talent
 ## cards and the M.O.D. lines a real-time combat says are worded for both modes.
 
 const CombatView := preload("res://scenes/combat/ui/combat_view.gd")
@@ -20,7 +20,7 @@ func _turn_word(text: String) -> String:
 
 func test_real_time_skill_text_counts_seconds() -> void:
 	var taunt: SkillDef = DB.skill("skl_kai_taunt")
-	assert_eq(taunt.desc, "Sie ziehen alle Blicke auf sich.", "the data speak real time (baked in part 2b, E34)")
+	assert_eq(taunt.desc, "Sie ziehen alle Blicke auf sich.", "the data speak real time (baked in part 2b, E38)")
 	assert_eq(CombatView.skill_text(taunt),
 		"Sie ziehen alle Blicke auf sich.\nWirkung: Provoziert (alle Gegner) 4 s · Gepanzert (selbst) 6 s")
 	assert_eq(CombatView.skill_text(DB.skill("skl_kai_leash_trip")),

@@ -8,8 +8,9 @@ class_name CombatInput extends Node
 ## left Partner-Spezial. Touch (07 §7.3): combat_touch.gd buttons and the taps of TouchControls (tap ≠ drag) through
 ## pick(). Every command carries ct = the sim's current tick and goes through the HUD (→ CombatDirector.submit,
 ## hint cards). Context split (07 §7.2): the combat never evaluates `action` from a gamepad, `sneak` or `map`.
-## The input-map changes of 07 §7.7 for `map` (no Tab) and `toggle_auto` (no Y, D-pad up) apply only to real-time runs
-## (apply_input_mode / apply_for_game) — CTB keeps its map until R5b (07 §12.1).
+## The input-map changes of 07 §7.7 for `map` (no Tab) and `toggle_auto` (no Y, D-pad up) are project.godot's map since
+## the pull of a person (07 E36); a CTB run gets its legacy map back (Tab = map, Y = auto battle) through
+## apply_input_mode / apply_for_game until SD1 moves the CTB battle (07 §12.6).
 ## Soft target framing (07 §7.5, GameSettings.combat_camera_assist, touch default on): the camera yaw follows the
 ## enemy target at ≤ 90°/s when it is more than 40° off and the camera was not moved for 1.5 s (stops within 25°).
 
@@ -45,8 +46,8 @@ func _ready() -> void:
 
 # --- 07 §7.7 input map, real-time part ---------------------------------------------------------------------------
 
-## Applies the 07 §7.7 changes of the existing actions for a real-time run (true) or restores the CTB map (false):
-## `map` without / with Tab, `toggle_auto` with D-pad up instead of / with Y. Idempotent.
+## The 07 §7.7 map of the existing actions for a real-time run (true: project.godot's own) or the CTB legacy map
+## (false): `map` without / with Tab, `toggle_auto` with D-pad up instead of / with Y. Idempotent.
 static func apply_input_mode(realtime: bool) -> void:
 	_set_key(&"map", KEY_TAB, not realtime)
 	_set_joy(&"toggle_auto", JOY_BUTTON_Y, not realtime)

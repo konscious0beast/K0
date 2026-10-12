@@ -28,6 +28,7 @@ const SafeDoorInteractable := preload("res://scenes/exploration/safe_door_intera
 const SceneryWall := preload("res://scenes/exploration/scenery_wall.gd")         # 06 package A: Kulissenwand
 const NoteInteractable := preload("res://scenes/exploration/note_interactable.gd")   # 06 package A: Regie-Notiz
 const ChoiceDialog := preload("res://scenes/exploration/choice_dialog.gd")
+const PullRules := preload("res://scenes/exploration/pull_rules.gd")   # 07 §2.2, §7: the pull by a person (E34)
 const PLAYER_SCENE: PackedScene = preload("res://scenes/exploration/player.tscn")
 const ENEMY_SCENE: PackedScene = preload("res://scenes/exploration/enemy_actor.tscn")
 const HUD_SCENE: String = "res://scenes/ui/exploration_hud.tscn"     # M6 scene: loaded at runtime (§13.2 rule 5)
@@ -146,6 +147,7 @@ func on_suspend() -> void:
 	Game.timer_running = false
 	if _player != null:
 		_player.release_inputs()
+	_set_target("", false)                  # 07 §2.2 (E34): the pull target is a moment of this view
 	_set_focus(null)
 
 
@@ -281,9 +283,10 @@ func recent_events() -> Array[ExploreEvent]:
 	return _log.duplicate()
 
 
-## Called by the scene itself and by interactables: performs `action` like the player key would.
+## Called by the scene itself and by interactables: performs `action` like the player key would (the keyboard's
+## meaning: interact or the field ability, never a pull — 07 §7.1).
 func perform_action() -> void:
-	_on_player_action()
+	_do_action(&"key")
 
 
 ## 06 package A: the bodies follow Game.hero() — the player becomes the hero, the follower the partner (spawn and after
@@ -703,6 +706,7 @@ func _physics_process(delta: float) -> void:
 	if _strike_open and not _player.is_striking():
 		_report_field_ability(&"strike", 0)
 	_rt_triggers(delta)                     # Echtzeitkampf (07 §2.2, R2): weapon reach, 4 s chase
+	_pull_frame()                           # 07 §2.2, §7 (E34): the target of a pull, its frame and hint
 	if _hud != null:
 		var yaw: float = _player.rotation.y
 		if _cur_cell != _hud_cell or absf(wrapf(yaw - _hud_yaw, -PI, PI)) > 0.02:
@@ -874,6 +878,13 @@ func _place_marker() -> void:
 
 
 func _on_player_action() -> void:
+	_do_action(_player.action_source if _player != null else &"key")
+
+
+## `action` from `source` (&"key" | &"pad" | &"touch"): interact (priority), the pull of the targeted lead (real time:
+## the pad's A with the lead in slot 1's range, the touch button with a lead targeted — 07 §7.2, §7.3), else the
+## hero's field ability.
+func _do_action(source: StringName) -> void:
 	# Router.busy: the fade back in after a battle / safe room (or out to the next screen) is still running — a mashed
 	# confirm key (results screen, safe-room menu) must not strike or interact through it.
 	if not _built or _suspended or is_modal() or _encounter_pending or Router.busy or _rt_busy():
@@ -881,6 +892,8 @@ func _on_player_action() -> void:
 	_update_focus()
 	if _focused != null and is_instance_valid(_focused) and _focused.is_available():
 		_focused.interact()
+		return
+	if _pull_by_action(source):
 		return
 	if _player.field_ability() == &"bark":     # 06 package A: Graf Mopsula leads
 		if _player.start_bark():
@@ -912,6 +925,7 @@ func bark_now() -> int:
 	_report_field_ability(&"bark", hits)
 	if hits > 0:
 		Show.chat("chat_bark")
+		_target_dazed()                     # 07 E35: the bark picks the target — key 1 / A / the button = Erstschlag
 	for sid: Variant in _walls.keys():                 # 06 §2.7: the bark knocks Kulissenwände over, too
 		var w: SceneryWall = _walls[sid] as SceneryWall
 		if w == null or not is_instance_valid(w) or w.opened:
@@ -1459,34 +1473,53 @@ func rt_room_doors(cell: Vector2i) -> int:
 	return out
 
 
-## Pull with an ability or a consumable (07 §2.2; R3 calls it for `1`–`5` with a lead selected outside a combat):
-## `kind` = "skill" | "item", `id` = skill / item id. Only a non-boss lead in the player's own cell; the advantage
-## follows the pull table (PREEMPTIVE for IDLE / PATROL / DAZED or from behind, else NORMAL). false = no pull.
+## Pull with an ability or a consumable (07 §2.2; a person's keys 1–5 / pad / touch button come through pull_slot):
+## `kind` = "skill" | "item", `id` = skill / item id. Only a non-boss lead in the player's own cell, never in a safe or
+## stairs room (E34); the advantage follows the pull table (pull_advantage). false = no pull.
 func pull(group_id: String, kind: String, id: String) -> bool:
 	if not Game.is_realtime() or not _built or _rt_busy() or _encounter_pending or is_modal() or _suspended:
 		return false
 	if kind != "skill" and kind != "item":
 		return false
 	var a: EnemyActor = _actor_at(group_id)
-	if a == null or a.is_boss() or _layout.world_to_cell(a.global_position) != get_player_cell():
+	if a == null or a.is_boss() or _layout.world_to_cell(a.global_position) != get_player_cell() \
+			or not pull_room_allowed(get_player_cell()):
 		return false
-	var adv: int = Rules.strike_advantage(a.state, a.global_position, a.flat_forward(), _player.global_position, false,
-		Balance.BACK_DOT)
-	if a.is_asleep():
-		adv = Rules.PREEMPTIVE                 # 07 §2.2: the sleeping tutorial group is always caught first
+	var adv: int = pull_advantage(group_id)
 	var ctl: String = _rt_unit_of(Game.hero())
 	_rt_open = {"kind": kind, "u": ctl, kind: id, "target": "e0"}
 	_trigger_encounter(group_id, a.encounter_id(), adv, _opener(a, adv))
 	return _rt_busy() or _encounter_pending
 
 
+## The advantage a pull on `group_id` gets now (07 §2.2 table): PREEMPTIVE for an IDLE / PATROL / DAZED lead or from
+## behind it, else NORMAL; the sleeping tutorial group always PREEMPTIVE. NORMAL for unknown groups and bosses.
+func pull_advantage(group_id: String) -> int:
+	var a: EnemyActor = _actor_at(group_id)
+	if a == null or _player == null:
+		return Rules.NORMAL
+	if a.is_asleep():
+		return Rules.PREEMPTIVE                # 07 §2.2: the sleeping tutorial group is always caught first
+	return Rules.strike_advantage(a.state, a.global_position, a.flat_forward(), _player.global_position, a.is_boss(),
+		Balance.BACK_DOT)
+
+
+## A pull may start in room `cell`: not in a safe room (a safe place) and not in the stairs room (no set there, 07 §2.4;
+## E34).
+func pull_room_allowed(cell: Vector2i) -> bool:
+	var rc: RoomCell = _layout.cell_at(cell) if _layout != null else null
+	return rc != null and rc.kind != RoomCell.Kind.SAFE and rc.kind != RoomCell.Kind.STAIRS
+
+
 ## Leads a pull can target right now (07 §7.4 outside a combat: leads in the player's room with line of sight up to
-## 25 m), nearest first — R3's Tab order outside a combat.
+## 25 m; none in a safe or stairs room), nearest first — the order of pull_target_order is the camera's (Tab).
 func pull_candidates() -> PackedStringArray:
 	var out: Array[Dictionary] = []
 	if not Game.is_realtime() or _player == null or _rt_busy():
 		return PackedStringArray()
 	var cell: Vector2i = get_player_cell()
+	if not pull_room_allowed(cell):
+		return PackedStringArray()
 	for gid: Variant in _enemies.keys():
 		var a: EnemyActor = _actor_at(gid)
 		if a == null or a.is_boss() or _layout.world_to_cell(a.global_position) != cell:
@@ -1740,6 +1773,7 @@ func _rt_enter(ctx: Dictionary) -> void:
 	_rt_groups = ctx["groups"]
 	_rt_waiting = ctx["waiting"]
 	_rt_chase.clear()
+	_set_target("", false)                    # in a combat the target is the sim's (07 §7.4)
 	for gid: Variant in _enemies.keys():
 		var a: EnemyActor = _actor_at(gid)
 		if a != null:
@@ -1901,3 +1935,323 @@ func _rt_on_room(cell: Vector2i) -> void:
 				Events.show_boss_spotted.emit(enc.id)
 	if not extras.is_empty():
 		_director.prewarm(extras)
+
+
+# ======================================================================================================================
+# --- Pull by a person (07 §2.2, §7.1–§7.4; E34–E37) ---
+# ======================================================================================================================
+# Outside a combat a person targets the lead of a group in the own room — Tab / Shift+Tab or a left click on it, RT
+# on a pad, a tap on touch (a click / tap on free ground or B on a pad clears it) — and opens the combat with an
+# ability of the bar: keys 1–5, the pad's A with the lead in slot 1's range (X / Y: slots 2 / 3), the touch action
+# button (slot 1). Interaction prompts keep their priority. The target is presentation only (never recorded; dropped
+# at a combat start, a suspend, when the lead is no candidate any more); the pull goes through pull() — the same
+# encounter command, run log and replay as the full-run bot's. Graf Mopsula's bark picks the nearest dazed lead
+# (E35): bark, then 1 / A / the button = Erstschlag.
+
+const PICK_RADIUS: float = 53.5            # ≥ 107 px click / tap area around a lead's body (03_ART §9.4, 07 §7.3)
+const BAR_KEYS: Array[StringName] = [&"bar_1", &"bar_2", &"bar_3", &"bar_4", &"bar_5"]
+
+## Session flag (presentation only, E37): the pull hint shows until the first pull of a person in this session.
+static var pull_taught: bool = false
+
+var _target: String = ""                   # targeted lead (group id), "" = none
+var _target_auto: bool = false             # picked by the bark (E35): dropped once its daze is over
+var _rt_trigger_down: bool = false         # RT held (one target step per press)
+
+
+## The targeted lead's group id ("" = none).
+func pull_target() -> String:
+	return _target
+
+
+## Targets the lead of `group_id` ("" clears); false when it is no candidate right now (pull_candidates).
+func set_pull_target(group_id: String) -> bool:
+	if group_id == "":
+		_set_target("", false)
+		return true
+	if not pull_candidates().has(group_id):
+		return false
+	_set_target(group_id, false)
+	return true
+
+
+## Tab / Shift+Tab / RT: the next (previous) lead after the current target in pull_target_order (wraps); "" = none.
+func cycle_pull_target(forward: bool) -> String:
+	var nxt: String = PullRules.next_in(pull_target_order(), _target, forward)
+	if nxt != "":
+		_set_target(nxt, false)
+	return nxt
+
+
+## The candidates in Tab order (07 §7.4): within ±60° of the camera's forward first, then by distance.
+func pull_target_order() -> PackedStringArray:
+	var cands: Array[Dictionary] = []
+	for gid: String in pull_candidates():
+		cands.append({"id": gid, "pos": _actor_at(gid).global_position})
+	return PullRules.tab_order(cands, get_player_position(), _cam_forward())
+
+
+## The candidate lead whose body (foot to head, projected) lies within PICK_RADIUS px of `screen_pos` — the nearest
+## one; "" if none.
+func lead_at_screen(screen_pos: Vector2) -> String:
+	var cam: Camera3D = _camera.camera() if _camera != null else null
+	if cam == null or not cam.is_inside_tree():
+		return ""
+	var best: String = ""
+	var best_d: float = PICK_RADIUS
+	for gid: String in pull_candidates():
+		var a: EnemyActor = _actor_at(gid)
+		var foot: Vector3 = a.global_position
+		var head: Vector3 = foot + Vector3(0.0, a.top_m, 0.0)
+		if cam.is_position_behind(foot) or cam.is_position_behind(head):
+			continue
+		var f: Vector2 = cam.unproject_position(foot)
+		var d: float = Geometry2D.get_closest_point_to_segment(screen_pos, f, cam.unproject_position(head)) \
+			.distance_to(screen_pos)
+		if d <= best_d:
+			best_d = d
+			best = gid
+	return best
+
+
+## A left click / a tap at `screen_pos` (07 §7.1, §7.3): the lead there becomes the target, free ground clears it.
+## Returns the new target ("" = none).
+func pick_pull_target(screen_pos: Vector2) -> String:
+	var gid: String = lead_at_screen(screen_pos)
+	_set_target(gid, false)
+	return gid
+
+
+## A tap of the touch layer on the world (ExplorationHud, 07 §7.3): pick_pull_target while a person may act.
+func on_world_tap(canvas_pos: Vector2) -> void:
+	if _pull_input_ok():
+		pick_pull_target(canvas_pos)
+
+
+## The skill on bar slot `slot` of the controlled figure at its level and loadout ("" = none) — against the sleeping
+## tutorial group only slots 1 and 5, like the bar of its combat (07 §2.13, E28).
+func pull_slot_skill(slot: int) -> String:
+	var hero: String = Game.hero()
+	var m: PartyMember = Game.state.member(hero) if Game.state != null else null
+	if m == null or not DB.has_id("party", hero):
+		return ""
+	if slot != 1 and slot != 5 and _target_is_tutorial():
+		return ""
+	return str(PullRules.bar_slots(m, DB.party_member(hero)).get(slot, ""))
+
+
+## Why a pull with bar slot `slot` is refused right now ("" = it pulls): no_target, room, not_learned, no_opener,
+## range, mp (07 §2.2: only abilities usable as an opener; E34).
+func pull_check(slot: int) -> String:
+	var a: EnemyActor = _actor_at(_target)
+	if _target == "" or a == null or _player == null:
+		return "no_target"
+	var cell: Vector2i = get_player_cell()
+	if not pull_room_allowed(cell) or _layout.world_to_cell(a.global_position) != cell:
+		return "room"
+	var sid: String = pull_slot_skill(slot)
+	var sk: SkillDef = DB.skill(sid) if sid != "" and DB.has_id("skills", sid) else null
+	if sk == null:
+		return "not_learned"
+	var m: PartyMember = Game.state.member(Game.hero())
+	return PullRules.refusal(sk, m.mp if m != null else 0, roundi(Rules.flat_dist(a.global_position,
+		_player.global_position) * 100.0), _hero_reach_cm(), _lead_radius_cm(a))
+
+
+## Pull with bar slot `slot` (keys 1–5, the pad's A / X / Y, the touch button): refused → the short text under the
+## target frame and false; else pull() with the slot's skill as the opener (07 §2.2, RtSetup.rt_opener) → true.
+func pull_slot(slot: int) -> bool:
+	if not _pull_input_ok():
+		return false
+	var why: String = pull_check(slot)
+	if why != "":
+		if _hud != null:
+			_hud.pull_refused(slot, why)
+		Sfx.play_ui(&"ui_error")
+		return false
+	if not pull(_target, "skill", pull_slot_skill(slot)):
+		return false
+	pull_taught = true
+	return true
+
+
+## The target frame model for the HUD ({} = none): {"group", "lead" (RT lead enemy id), "count", "state", "first" (a
+## pull now is a first strike), "dist_m", "foot" / "head" (world points of the lead), "bubble" (its "!" / "?!" shows),
+## "auto", "hint" (the pull hint shows, E37), "slots": [{"slot", "id", "reason"}] for the bar slots 1–5 of the figure}.
+func pull_frame_model() -> Dictionary:
+	var a: EnemyActor = _actor_at(_target)
+	if a == null or _player == null:
+		return {}
+	var slots: Array[Dictionary] = []
+	for slot in range(1, PullRules.SLOTS + 1):
+		var sid: String = pull_slot_skill(slot)
+		if sid != "":
+			slots.append({"slot": slot, "id": sid, "reason": pull_check(slot)})
+	var enc: EncounterDef = _encounter_def(a.encounter_id())
+	return {"group": _target, "lead": _rt_lead_of(a), "count": _rt_unit_count(enc),
+		"state": PullRules.state_text(a.state, a.is_asleep()), "first": pull_advantage(_target) == Rules.PREEMPTIVE,
+		"dist_m": Rules.flat_dist(a.global_position, _player.global_position), "foot": a.global_position,
+		"head": a.global_position + Vector3(0.0, a.top_m, 0.0), "bubble": a.state in [&"ALERT", &"CHASE", &"DAZED"],
+		"auto": _target_auto, "hint": _pull_hint_on(), "slots": slots}
+
+
+## A person may act now: a real-time run, the settled exploration (no dialog, combat, suspend or transition).
+func _pull_input_ok() -> bool:
+	return _built and Game.is_realtime() and not _suspended and not is_modal() and not _encounter_pending \
+		and not _rt_busy() and not Router.busy and _player != null and _player.input_enabled
+
+
+## `action` of the pad / the touch button with a lead targeted (07 §7.2, §7.3): the pull with slot 1 (or its
+## refusal) → true — the pad only with the lead in slot 1's range (else its field ability), the touch button always.
+func _pull_by_action(source: StringName) -> bool:
+	if _target == "" or source == &"key" or not _pull_input_ok():
+		return false
+	if source == &"pad" and pull_check(1) != "" and pull_check(1) != "mp":
+		return false
+	pull_slot(1)
+	return true
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventJoypadMotion and event.is_action(&"target_next") \
+			and not event.is_action_pressed(&"target_next"):
+		_rt_trigger_down = false               # RT let go (also during a dialog): the next press steps again
+	if _pull_input_ok() and _pull_input(event):
+		get_viewport().set_input_as_handled()
+
+
+## One input event of the pull (07 §7.1–§7.3, E36); true when it was used. The CTB legacy run never gets here
+## (_pull_input_ok: real time only), so Tab stays its map key there.
+func _pull_input(event: InputEvent) -> bool:
+	if event is InputEventKey:
+		if (event as InputEventKey).echo:
+			return false
+		if event.is_action_pressed(&"target_prev", false, true):        # Shift+Tab (exact: it also matches Tab)
+			cycle_pull_target(false)
+			return true
+		if event.is_action_pressed(&"target_next", false, true):
+			cycle_pull_target(true)
+			return true
+		for i in BAR_KEYS.size():
+			if event.is_action_pressed(BAR_KEYS[i], false, true):
+				pull_slot(i + 1)
+				return true
+		return false
+	if event is InputEventJoypadMotion:
+		if not event.is_action(&"target_next"):           # LT (target_prev) stays `sneak` in the exploration (07 §7.2)
+			return false
+		var down: bool = event.is_action_pressed(&"target_next")
+		var step: bool = down and not _rt_trigger_down
+		_rt_trigger_down = down
+		if step:
+			cycle_pull_target(true)
+		return step
+	if event is InputEventJoypadButton and _target != "":
+		if event.is_action_pressed(&"bar_2"):             # X / Y: slots 2 / 3, only with a target (07 §7.2)
+			pull_slot(2)
+			return true
+		if event.is_action_pressed(&"bar_3"):
+			pull_slot(3)
+			return true
+		if event.is_action_pressed(&"ui_cancel"):         # B drops the target (E36)
+			_set_target("", false)
+			return true
+		return false
+	if event is InputEventMouseButton:
+		var mb: InputEventMouseButton = event
+		if mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT and mb.device != InputEvent.DEVICE_ID_EMULATION:
+			var had: String = _target
+			return pick_pull_target(mb.position) != "" or had != ""
+	return false
+
+
+## Every physics frame of a real-time run outside a combat: the target stays a candidate (else it is dropped; the
+## bark's target once its daze is over) and the HUD gets the frame model (target frame, marker, touch button).
+func _pull_frame() -> void:
+	if not Game.is_realtime():
+		return
+	if _target != "" and (_rt_busy() or not _target_ok()):
+		_set_target("", false)
+	if _hud != null and _target != "":
+		_hud.set_pull_target(pull_frame_model() if not is_modal() else {})
+
+
+func _target_ok() -> bool:
+	var a: EnemyActor = _actor_at(_target)
+	if a == null or (_target_auto and not a.is_dazed()):
+		return false
+	return pull_candidates().has(_target)
+
+
+func _set_target(group_id: String, auto: bool) -> void:
+	var changed: bool = group_id != _target
+	_target = group_id
+	_target_auto = auto and group_id != ""
+	if not changed:
+		return
+	if group_id != "" and not auto and is_inside_tree():
+		Sfx.play_ui(&"ui_move")
+	if _hud != null and group_id == "":
+		_hud.set_pull_target({})
+
+
+## 07 E35: after a bark that dazed a group the nearest dazed lead becomes the target — a lead the person targeted
+## stays.
+func _target_dazed() -> void:
+	if not Game.is_realtime() or (_target != "" and not _target_auto):
+		return
+	var best: String = ""
+	var best_d: float = INF
+	for gid: String in pull_candidates():
+		var a: EnemyActor = _actor_at(gid)
+		var d: float = Rules.flat_dist(a.global_position, _player.global_position)
+		if a.is_dazed() and d < best_d:
+			best_d = d
+			best = gid
+	if best != "":
+		_set_target(best, true)
+
+
+## The pull hint "1 · Angriff eröffnen" under the target frame (touch: the action button pulses) shows (E37): a
+## campaign with combat hints on, the settled exploration, a lead targeted that slot 1 pulls right now, and no pull of
+## a person in this session yet.
+func _pull_hint_on() -> bool:
+	if pull_taught or _target == "" or Game.mode != &"campaign" or not _pull_input_ok():
+		return false
+	if Game.settings != null and not Game.settings.combat_hints:
+		return false
+	return pull_check(1) == ""
+
+
+func _target_is_tutorial() -> bool:
+	var a: EnemyActor = _actor_at(_target)
+	var enc: EncounterDef = _encounter_def(a.encounter_id()) if a != null else null
+	return enc != null and enc.tutorial
+
+
+## The lead enemy of the group's combat units: encounters[].rt.enemies[0], else the CTB lead (07 §4.9).
+func _rt_lead_of(a: EnemyActor) -> String:
+	var enc: EncounterDef = _encounter_def(a.encounter_id())
+	var ids: Array = enc.rt.get("enemies", []) as Array if enc != null and not enc.rt.is_empty() else []
+	return str(ids[0]) if not ids.is_empty() else a.spawn.lead_enemy_id
+
+
+## Radius of the lead's combat unit in cm (enemies.json rt.radius_cm, 07 §4.9 default 30).
+func _lead_radius_cm(a: EnemyActor) -> int:
+	var id: String = _rt_lead_of(a)
+	return int(DB.enemy(id).rt.get("radius_cm", 30)) if DB.has_id("enemies", id) else 30
+
+
+## Reach of the controlled figure in cm (party.json rt.reach_cm: the range of a skill without its own, 07 §4.8).
+func _hero_reach_cm() -> int:
+	var hero: String = Game.hero()
+	return int(DB.party_member(hero).rt.get("reach_cm", 250)) if DB.has_id("party", hero) else 250
+
+
+## The camera's flat forward (the figure's when there is no camera yet).
+func _cam_forward() -> Vector3:
+	var cam: Camera3D = _camera.camera() if _camera != null else null
+	if cam != null and cam.is_inside_tree():
+		var f: Vector3 = -cam.global_transform.basis.z
+		return Vector3(f.x, 0.0, f.z)
+	return _player.flat_forward() if _player != null else Vector3.FORWARD

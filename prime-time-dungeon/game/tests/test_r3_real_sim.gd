@@ -32,7 +32,7 @@ func after_each() -> void:
 	Game.settings.combat_hints = _hints_setting
 	tree.root.size = _size
 	tree.paused = false
-	CombatInput.apply_input_mode(false)
+	CombatInput.apply_input_mode(true)             # the project map (07 §7.7, E36)
 	Events.overlay_mode_requested.emit(&"hidden")
 
 

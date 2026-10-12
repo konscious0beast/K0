@@ -37,6 +37,11 @@ extends Node
 ## 08 K2 (Casting, with capture.gd --look=…): safe_mask (safe room → pause → party → candidate card → "Name & Aussehen
 ##   ändern": the casting's 1/3 in edit mode over the room), safe_look (the candidate in the room, menu open),
 ##   rt_world_look (rt_world_regular, the camera behind Kai's puppet).
+## The pull of a person (07 §2.2, §7, E34–E37): pull_target_<zone> (Kai 2.2 m in front of a group of the zone, its lead
+##   targeted: target frame with the slot chips, ring + chevron, the pull hint "1 · Angriff eröffnen"), pull_bark_<zone>
+##   (Graf Mopsula barks at a group that has seen her: dazed, the bark's target, "verdutzt · Erstschlag!"),
+##   pull_far_<zone> (Graf Mopsula targets a lead 7 m away: the frame steps aside) — with --touch the action button
+##   shows slot 1's symbol instead of the hint.
 
 const ZONES: Dictionary = {"platform": "zone_platform", "sewer": "zone_sewer", "cellar": "zone_cellar"}
 
@@ -144,6 +149,70 @@ func _r_bark(scene: Node, zone_key: String) -> bool:
 	await seconds(0.12)
 	freeze()
 	return true
+
+
+## 07 §2.2, §7 (E34, E37): Kai 2.2 m in front of a group of `zone` (in his slot-1 reach), its lead targeted — the
+## target frame below the timer with the pull hint under it, ring and chevron at the lead (touch: the action button).
+func _r_pull_target(scene: Node, zone_key: String) -> bool:
+	if not await _explore_ready(scene):
+		return false
+	ExplorationScene.pull_taught = false
+	var layout: FloorLayout = scene.call("get_layout")
+	var zone: String = str(ZONES.get(zone_key, zone_key))
+	var spawn: EnemySpawn = _zone_group(scene, layout, zone)
+	if spawn == null:
+		return false
+	_freeze_enemies(scene)
+	_reveal_zone(scene, layout, zone)
+	var actor: Node3D = scene.call("get_enemy", spawn.id) as Node3D
+	_place_facing(scene, layout, spawn.cell, actor.global_position, 2.2)
+	await frames(20)
+	if not bool(scene.call("set_pull_target", spawn.id)):
+		push_warning("[CaptureRecipes] %s is no pull candidate" % spawn.id)
+		return false
+	await seconds(0.3)
+	return str(scene.call("pull_target")) == spawn.id
+
+
+## 07 E35: Graf Mopsula 3.4 m in front of a group of `zone` that has seen her (ALERT) barks: the group is dazed, the
+## bark picks its lead, the frame says "verdutzt · Erstschlag!" and the hint shows the key that pulls.
+func _r_pull_bark(scene: Node, zone_key: String) -> bool:
+	ExplorationScene.pull_taught = false
+	if not await _r_hero_mopsula(scene, zone_key, 3.4):
+		return false
+	var layout: FloorLayout = scene.call("get_layout")
+	var spawn: EnemySpawn = _zone_group(scene, layout, str(ZONES.get(zone_key, zone_key)))
+	var actor: Node3D = scene.call("get_enemy", spawn.id) as Node3D
+	var to: Vector3 = (scene.call("get_player_position") as Vector3) - actor.global_position
+	actor.call("face", atan2(-to.x, -to.z))                 # it looks at the Count: a pull alone would be NORMAL
+	actor.call("_set_state", &"ALERT")
+	scene.call("perform_action")
+	await seconds(0.25)
+	freeze()
+	return str(scene.call("pull_target")) == spawn.id
+
+
+## 07 E34: Graf Mopsula 7 m in front of a group of `zone`, its lead targeted — far away the lead stands high on the
+## screen, and the target frame steps aside so it does not hide the lead.
+func _r_pull_far(scene: Node, zone_key: String) -> bool:
+	ExplorationScene.pull_taught = false
+	if not await _r_hero_mopsula(scene, zone_key, 7.0):
+		return false
+	var spawn: EnemySpawn = _zone_group(scene, scene.call("get_layout"), str(ZONES.get(zone_key, zone_key)))
+	if spawn == null or not bool(scene.call("set_pull_target", spawn.id)):
+		return false
+	await seconds(0.3)
+	return str(scene.call("pull_target")) == spawn.id
+
+
+## The first living non-boss group of `zone` (null + warning if none).
+func _zone_group(scene: Node, layout: FloorLayout, zone: String) -> EnemySpawn:
+	for e: EnemySpawn in layout.enemies:
+		var rc: RoomCell = layout.cell_at(e.cell)
+		if rc != null and rc.zone == zone and not e.is_boss and scene.call("get_enemy", e.id) != null:
+			return e
+	push_warning("[CaptureRecipes] no enemy group in %s" % zone)
+	return null
 
 
 ## 06 package A: exploration with Graf Mopsula as the player body, `dist` m in front of a group of `zone`.

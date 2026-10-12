@@ -550,7 +550,8 @@ func _start_banners() -> void:
 	match int(st.advantage):
 		int(BattleSetup.Advantage.PREEMPTIVE):
 			title = "ERSTSCHLAG!"
-			sub = "Die Gegner sind noch ganz verdattert."
+			# 07 E35: Graf Mopsula's bark → pull says where the first strike came from
+			sub = "Angebellt und noch ganz verdattert." if st.opener == "bark" else "Die Gegner sind noch ganz verdattert."
 			col = CombatStyle.C_GOLD
 		int(BattleSetup.Advantage.AMBUSH):
 			title = "HINTERHALT!"

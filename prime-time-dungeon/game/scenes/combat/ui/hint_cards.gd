@@ -1,10 +1,10 @@
 extends Control
 ## Hint cards of the real-time combat (07 §2.13, E21/E28/E29): the tutorial steps of RtSetup.tutorial_steps
-## ("target" at ct 0 → "bar1" → "show" after the first party hit → "dodge" at the first enemy telegraph) and the
-## first-time hints (RtVocab.HINT_IDS: interrupt, zone, partner_special, finale, flee, enrage, partner_tactic) — each
-## once per save (GameState.flags["rt_hints"]), at most ONE first-time card per combat, partner_special never in the
-## tutorial fight, none with GameSettings.combat_hints off or in event / league runs (RtSetup.rules "hints" false,
-## 07 §10.7).
+## ("target" at ct 0 → "bar1" → "show" after the first party hit → "dodge" at the first enemy telegraph; after a pull
+## with an ability the person did "target" / "bar1" already, done_by_pull, E37) and the first-time hints
+## (RtVocab.HINT_IDS: interrupt, zone, partner_special, finale, flee, enrage, partner_tactic) — each once per save
+## (GameState.flags["rt_hints"]), at most ONE first-time card per combat, partner_special never in the tutorial fight,
+## none with GameSettings.combat_hints off or in event / league runs (RtSetup.rules "hints" false, 07 §10.7).
 ## While a card is up the sim does not tick: CombatDirector.pause_for_hint(id) records {"t": "combat_hint", "ct", "id"}
 ## and holds the ticks, resume() continues (07 §2.13 "Pause ohne Determinismus-Risiko"); inputs during the card carry
 ## the held ct. The card sits where the M.O.D. subtitle sits (same box, with the key / gesture) and has priority over
@@ -110,7 +110,7 @@ func begin(p_sim: RtSim, p_director: Node, p_ctx: Dictionary) -> void:
 	if not enabled or sim == null or sim.setup == null:
 		return
 	for step: String in sim.setup.tutorial_steps:
-		if RtVocab.TUTORIAL_STEPS.has(step) and not already_shown(step):
+		if RtVocab.TUTORIAL_STEPS.has(step) and not already_shown(step) and not done_by_pull(sim, step):
 			_queue.append(step)
 	if not _queue.is_empty() and (_queue[0] == "target" or _queue[0] == "bar1"):
 		_show(_queue[0])
@@ -133,6 +133,25 @@ static func allowed(p_sim: RtSim) -> bool:
 		if c is Dictionary and (c as Dictionary).has("hints") and not bool((c as Dictionary)["hints"]):
 			return false
 	return Game.mode == &"campaign"
+
+
+## 07 E37 (with E21 / E28): a combat opened by a pull with an ability or an item (RtSetup.rt_opener aimed at the lead)
+## needs no "target" card — the person chose the lead before — and no "bar1" card when the opener was the slot-1
+## skill; the field strike's opener (kind "strike") keeps both. The opener already set the target and started slot 1:
+## a card asking for them again made the person press 1 a second time, which the sim refuses while the opener still
+## casts or its GCD runs (a refusal as the first lesson).
+static func done_by_pull(p_sim: RtSim, step: String) -> bool:
+	if p_sim == null or p_sim.setup == null:
+		return false
+	var op: Dictionary = p_sim.setup.rt_opener
+	var kind: String = str(op.get("kind", ""))
+	if kind != "skill" and kind != "item":
+		return false
+	if step == "target":
+		return true
+	var u: RtUnit = CombatView.controlled(p_sim)
+	return step == "bar1" and kind == "skill" and u != null \
+		and str(CombatView.bar_entries(p_sim, u.id).get(1, "")) == str(op.get("skill", ""))
 
 
 ## "Schon gezeigt" survives saving / loading through the recorded combat_hint (GameState.flags["rt_hints"]).

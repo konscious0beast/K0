@@ -73,7 +73,8 @@ Die Nutzerin/der Nutzer hat Detailentscheidungen delegiert (Maßstab: gute UX, S
 Konzept; Grundsatzentscheidung „Variante 3 — WoW-light direkt in der Welt“). Ein unabhängiges Review fand 33 Punkte; so sind sie
 entschieden (Nummern = Review-Punkte). E25–E27 und E29 sind Entscheidungen des Orchestrators nach dem Review, E28 kommt aus
 der Konsistenzprüfung derselben Revision, E30 ist ein angenommener Änderungsantrag aus `08_CASTING` (CR-24), E31–E33
-sind Entscheidungen des Orchestrators für R5b, E34 hält die Text- und Bedingungs-Umstellung beim Daten-Backen (R5b-2b) fest:
+sind Entscheidungen des Orchestrators für R5b, E34–E37 die Auslegungen zum Pull einer Person außerhalb des Kampfes
+(§12.6 „Stand Pull“), E38 hält die Text- und Bedingungs-Umstellung beim Daten-Backen (R5b-2b) fest:
 
 | Nr. | Thema (Review) | Entscheidung | Wo |
 |---|---|---|---|
@@ -110,7 +111,11 @@ sind Entscheidungen des Orchestrators für R5b, E34 hält die Text- und Bedingun
 | E31 | Unterhosen-Liga im Echtzeitkampf (Orchestrator, R5b) | **Eine** Liga-Regel im Kampf: Wer in der Liga kämpft (`MarottenRules.in_liga` bei der zu Kampfbeginn eingefrorenen Stufe, nie im Tutorial), ist **„leichtfüßig“** — Status `sts_light_footed` für den ganzen Kampf (`BattleBridge` hängt den Mod `{"src": "liga:mar_unterhose", "op": "on", "event": "combat_start"}` als letzten Eintrag der festen Mod-Reihenfolge an): **8 % schneller** (`move_pm` 1080 — Sim, Körper der Person und Bot lesen den Status) und als sim-gesteuerte Einheit **ein Viertel weniger übersehene Telegraphen** (`ai_miss_pm` 750 auf `AI_DODGE_MISS_PM`; der KI-Strom zieht wie zuvor); Flag `keep`: übersteht ein K.O. Angekündigt im Regeltext („Ohne Rüstung & ohne Accessoire: leichtfüßig …“: Liga-Marotte, Pausetab „Show“, Liga-Toast) und als Statussymbol im HUD. Der Liga-Wortlaut bleibt „ohne Rüstung & ohne Accessoire“ (E8); „leichtfüßig“ beschreibt den Schritt, nicht die Ausrüstung. Ziel der Abstimmung: Liga 1 je Held:in und Boss 5–15 Punkte schwerer als Liga 0, Königin in Liga 2 ≤ 80 % Niederlagen (Messung §11.5 „Stand R5b-1“) | §9.5, §11.5, 06 §4.3 |
 | E32 | Show-Ökonomie des Echtzeitkampfs (Orchestrator, R5b-2a) | Die Show-Zahlen des Echtzeitkampfs liegen in den Bändern von GDD §13 (§11.1). Ein Echtzeitkampf hat je Minute etwa dreimal so viele Anlässe wie ein CTB-Kampf (Auto-Angriffe, eine Combo alle 5 s, die SHOW alle 30 s); mit den R5a-Startwerten stand der Hype meist über 70, und fast jeder Kampf brachte ein Geschenk. Hebel im Profil `rt` (CTB unverändert): **Krit und Schwäche nur für Fähigkeitstreffer** (je +1, ein Auto-Angriff ist keine Aktion), **Combo +1, SHOW/FINALE +6 / +2** (halbe CTB-Werte), **Heilen ist keine Wiederholung** (wie Slot 1 — die Heilerin-Held:in verlor sonst ≈ 45 Hype je Bosskampf), **Sponsoren-Pause**: nach einem regulären Echtzeitkampf mit System-Geschenk bringen die nächsten 4 regulären keines (Bosskämpfe und externe Geschenke unberührt, §9.2), und **Follower × 600 ‰** je gewonnenem Echtzeitkampf (`RT_FOLLOWER_PM`). Gemessen mit `fullrun.sh --combat=realtime --strategy=typical --pace=human`, Seeds 101–110 je Held:in, Median vorher → nachher [Spanne nachher]: **Kai** Hype Start 40,5 → 38,8 [37–40,5], Ende 73 → 59,8 [55–64], Geschenke je Etage 17 → 7 [5–7], Follower 2 327 → 1 385 [1 317–1 417], Zuschauer-Spitze 6 274 → 4 880 [4 739–4 955], Etagenzeit 26:36 → 26:55 [25:28–27:36]; **Graf Mopsula** 40 → 38 [36,5–40,5], 69,2 → 57,8 [53–61,5], 16 → 6 [6–7], 2 194 → 1 312 [1 237–1 337], 6 081 → 4 776 [4 505–4 836], 26:25 → 27:10 [26:17–28:01] — alle Mediane in den Bändern (25–45, 45–65, 4–7, 1 200–1 500, 3 000–5 500, 22–28 min). Schneller Takt (`--pace=fast`, gleiche Seeds) Kai / Mopsula: Hype-Ende 79,8 / 77,5 → 75,2 / 70,5, Geschenke 20 / 19,5 → 8 / 7, Follower 2 587 / 2 486 → 1 682 / 1 583, Zuschauer 6 535 / 6 388 → 5 222 / 5 079 (die Bänder gelten für den menschlichen Takt). Im menschlichen Takt schwanken Läufe desselben Stands etwas (die M.O.D.-Zeile ist Darstellungs-Zufall, ihre Lesezeit verschiebt die Erkundung). `SIM_VERSION` 2 → 3: ältere Logs und Einträge zeigen „ältere Version“ (05 §4.3). Werte fest in `test_r5b_show_economy` | §9.1, §9.2, §11.2, §12.6 Nr. 3 |
 | E33 | Echtzeit ist Standard der Kampagne (Orchestrator, R5b-2a) | Neue Spiele kämpfen in Echtzeit: `GameSettings.combat_mode` startet mit `DEFAULT_COMBAT_MODE` = `&"realtime"`, ebenso `Game.new_game_combat_mode()` ohne Einstellungen und der Zustand einer allein gestarteten Szene (`Game.ensure_state`); die CTB-Kampfszene (`battle.tscn`, `--goto=battle:<enc>`, ihre Capture-Rezepte) holt sich weiter einen CTB-Zustand. **Spielstände behalten ihren gespeicherten Modus** — ein alter CTB-Spielstand kämpft weiter im CTB (keine Umrechnung vor Teil 2b, `SaveCodec` v2). Die Einstellungsdatei trägt `meta/version` = 2: In einer Datei der Version 1 steht `combat_mode = "ctb"` als alter Standard, nicht als Wahl, sie wird als Echtzeit gelesen; den Modus liest überhaupt nur ein Debug-Build. Die Zeile „Kampfmodus (Debug)“ und das Boot-Argument `--combat=ctb|realtime` bleiben. **Umgestellt, obwohl `typical` noch nicht aus Probespiel-Logs kalibriert ist** (§11.4, §12.6 Nr. 2): Der Harness erfüllt die Bänder §11.1 schon mit dem Startprofil, und das Probespiel liefert Echtzeit-Logs erst, wenn die Kampagne in Echtzeit startet; die Kalibrierung folgt mit `rt_balance.sh --nightly --strict-bands`. CTB wird **nicht gelöscht**, sondern in Teil 2b zum Minispiel „Stempelduell“ (10). Die Gates folgen dem Standard (`check.sh`, `fullrun.sh`, CI: Echtzeit, CTB mit `--combat=ctb`, §12.5) | §7.6, §7.8, §12.1, §12.5, §12.6 |
-| E34 | Echtzeit-Texte und -Bedingungen beim Daten-Backen (R5b-2b) | Mit dem Backen (§4.11) sprechen die Daten Echtzeit; keine Spieler:innen-Zeile nennt mehr CTB-Züge. **Skills:** Spott und Gutachten behalten den Satz vor dem Doppelpunkt („Sie ziehen alle Blicke auf sich.“ — die Wirkung in Sekunden hängt `CombatView.skill_text` aus `statuses` an, ohne den bisherigen Doppelpunkt-Schnitt), Gegner-Skills nennen Sekunden (Stufen 4 s, Garde 8 s, Paragrafen 12 s und „die Party ist ermahnt“, Pose ohne Dauer), Rattenheilung 15 %, Pflaster 180 HP, Brutzel-Burger 480 HP, Molotow 240 „im Umkreis von 4 m“, Eisspray 360, Hermelin HP +60; Erste Hilfe und Gegengift nennen auch die Verbrennung (ihr Echtzeit-`cleanse`). **Marotten ab Etage 2** (Bedingungen aus §9.6, `min_floor` 2 — auf Etage 1 nie aktiv, die Full-Runs bleiben gleich): `mar_speed` „Gewinne einen normalen Kampf in höchstens 15 Sekunden.“ (`e.duration_sec <= 15 && e.is_boss == false` statt `e.party_turns <= 3`), `mar_brave` „Gewinne ohne Fluchtversuch: kein Schritt aus dem Ring, kein Nebel.“ (`e.flee_attempts == 0` — Verteidigen gibt es nicht), `mar_stunt` „Lass in einem Kampf mindestens eine eigene SHOW gelingen.“ (Bedingung `e.stunts_success >= 1` bleibt: die eigene SHOW, nie die der KI); ihre Ansagen in `mod_lines.json` folgen („Kämpfe unter 15 Sekunden“, „Eine gelungene SHOW pro Kampf“, „Kein Weglaufen, kein Nebel“). Tests `test_r5b_texts`, `test_06c_marotten`, `test_r5_marotten_rt` | §4.11, §9.6, §12.6 |
+| E34 | Pull einer Person (Stand Pull) | Außerhalb des Kampfes wählt die Person den **Anführer** einer Gruppe als Ziel und eröffnet den Kampf mit einer Fähigkeit ihrer Leiste. **Ziele:** Anführer im eigenen Raum mit Sichtlinie bis 25 m, keine Bosse (§7.4); Tab-Reihenfolge zuerst ±60° um die Kamera, dann nach Abstand. Das Ziel ist reine Darstellung: nie aufgezeichnet, es fällt beim Kampfstart, beim Verlassen der Szene und sobald der Anführer kein Kandidat mehr ist. **Eröffnen** können die Slots 1–5 der gesteuerten Figur (nach Stufe und Varianten, wie `BattleBridge` die Kampfleiste baut; der Trank-Slot 6 nie; gegen die schlafende Tutorial-Gruppe nur Slot 1 und SHOW wie ihre Kampfleiste, E28), und nur eine Fähigkeit **auf einen Gegner** (`single_enemy` oder eine Fläche um das Ziel, `aoe.center` = `target`; keine Fläche um die Figur, keine Heilung, keine Stärkung), in Reichweite (Mitte–Mitte ≤ `range_cm`, sonst `reach_cm`, + Radius des Anführers, §3.6 Nr. 9) und mit genug MP. Die Sim führt die Eröffnung ohne Reichweitenprüfung aus und lehnt sie bei fehlenden MP erst im gestarteten Kampf ab (§3.4), deshalb prüft die Szene vorher und lehnt sonst mit Fehlerton und einem kurzen Text unter dem Zielrahmen ab: „Kein Ziel (Tab)“, „Zu weit weg“, „Nicht genug MP“, „Damit eröffnest du keinen Kampf“, „Noch nicht gelernt“, „Hier wird nicht gekämpft“. **Kein Pull** im Safe Room (ein sicherer Ort) und im Treppenraum (dort gibt es kein Set, §2.4) — beides gilt auch für den Full-Run-Bot —, in Dialogen, Übergängen und laufenden Kämpfen. Aufgezeichnet wird nur der Pull, auf demselben Weg wie beim Bot (`ExplorationScene.pull` → `encounter` mit `rt.open`): Run-Log, Replay und Determinismus wie bisher. **Zielrahmen** in der Sprache des Kampf-Zielrahmens (§8.4), oben mittig unter dem Etagen-Timer, 300 × 68 px (ein ferner Anführer steht hoch im Bild: läge sein Marker hinter Rahmen oder Plakette, gleitet der Rahmen neben ihn, zwischen Party-Spalte und Minimap, und zurück, sobald Platz ist): Symbol, Name mit Gruppengröße, Stufe, Abstand, Zustand und Vorteil („auf Streife · Erstschlag!“ in Gold, „hat dich bemerkt · kein Erstschlag“), je Slot ein Chip mit Taste und der Tönung der Leiste (§8.2: rot = zu weit, blau = zu wenig MP, gedimmt = eröffnet nicht bzw. am Pad nicht belegt); dazu ein Ring um die Füße des Anführers und ein Pfeil über seinem Kopf (Gold, solange ein Pull ein Erstschlag wäre) | §2.2, §7.1–§7.4, §8.4 |
+| E35 | Bellen, dann Pull (Graf Mopsula, Stand Pull) | Verdutzt ein Bellen eine Gruppe, wird ihr Anführer (bei mehreren der nächste) **automatisch Ziel**, wenn die Person nicht selbst eines gewählt hat; dieses Ziel fällt, sobald die Verdutzung endet. So genügt als Held:in Mopsula „bellen, dann 1“ (Pad: A, dann A; Touch: zweimal der Aktionsknopf) für den Erstschlag aus jeder Richtung (06-Regel, §2.2) — Adelsflamme reicht 20 m, das Bellen 4 m. Der Startbanner sagt dann „ERSTSCHLAG! — Angebellt und noch ganz verdattert.“ (`BattleSetup.opener` = `bark`), sonst wie bisher „Die Gegner sind noch ganz verdattert.“ | §2.2, §8.8 |
+| E36 | Eingabe des Pulls (Stand Pull) | Die Echtzeit-Belegung steht jetzt in `project.godot` (§7.7): `map` = M und Back (ohne Tab), `toggle_auto` = T und Steuerkreuz oben (ohne Y). Ein CTB-Lauf bekommt die alte Belegung (Tab = Karte, Y = Auto-Kampf) bis SD1 zur Laufzeit zurück (`CombatInput.apply_input_mode(false)` über `apply_for_game`); dort gibt es kein Ziel außerhalb des Kampfes. **Tastatur/Maus:** Tab / Shift+Tab (exakter Abgleich), Linksklick auf den Körper eines Anführers (Fuß bis Kopf, Trefferfläche ≥ 107 px) wählt, Linksklick auf freien Boden löscht; 1–5 ziehen; `action` bleibt Interagieren bzw. Feldfähigkeit, auch mit Ziel. **Gamepad:** RT = nächstes Ziel (ein Schritt je Druck), LT bleibt Schleichen, **B löscht das Ziel** (sonst gäbe es am Pad keinen Weg dazu); A zieht mit Slot 1, wenn das Ziel in dessen Reichweite ist (fehlen nur MP, kommt die Ablehnung), sonst bleibt A die Feldfähigkeit; X / Y ziehen mit Slot 2 / 3, nur mit Ziel (RB und LB bleiben in der Erkundung frei). **Touch:** In der Echtzeit-Erkundung ist eine kurze Berührung außerhalb von Stick und Knöpfen (≤ 0,25 s, < 12 px) ein Tippen: auf einen Anführer = Ziel, auf freien Boden = Ziel löschen; Ziehen dreht weiter die Kamera. Mit Ziel zeigt der Aktionsknopf das Symbol von Slot 1 in den Tönungen der Leiste und zieht damit (bei einer Ablehnung schüttelt sich das Symbol). **Ein Interaktions-Prompt hat immer Vorrang** (Hand auf dem Knopf, Interagieren auf `action`). Woher `action` kam, merkt sich `PlayerController.action_source` (Taste, Pad, Touch-Knopf) | §7.1–§7.3, §7.7, 02_TECH §2.2, §10 |
+| E37 | Pull lehren (Stand Pull) | Kein Lesetext vorab: bis zum ersten Pull einer Person in der Sitzung steht unter dem Zielrahmen die goldene Plakette „1 · Angriff eröffnen“ (Glyphe des Schemas, Pad: A), auf Touch pulsiert stattdessen ein goldener Ring um den Aktionsknopf mit dem Slot-1-Symbol — nur in der Kampagne mit „Kampf-Hinweise“ an und nur, solange Slot 1 jetzt ziehen würde. Die Hinweiszeile der Erkundung nennt in Echtzeit-Läufen „Ziel“ (Tab bzw. RT). „Gelehrt“ ist ein Sitzungswert der Darstellung (nicht gespeichert, nicht aufgezeichnet). **Erster Kampf (E21, E28):** Wer die Tutorial-Gruppe mit einer Fähigkeit weckt, hat Ziel und Slot 1 schon benutzt — die Karte `target` entfällt, `bar1` ebenso, wenn die Eröffnung die Slot-1-Fähigkeit war (`HintCards.done_by_pull`; sonst verlangte die Karte ein zweites Drücken von 1, das die Sim ablehnt, solange die Eröffnung noch zaubert oder ihr GCD läuft — eine Ablehnung als erste Lektion); SHOW und Ausweichen bleiben. Geweckt durch Feldschlag oder Berührung laufen alle vier Schritte wie bisher | §2.13, §7.1, §7.3 |
+| E38 | Echtzeit-Texte und -Bedingungen beim Daten-Backen (R5b-2b) | Mit dem Backen (§4.11) sprechen die Daten Echtzeit; keine Spieler:innen-Zeile nennt mehr CTB-Züge. **Skills:** Spott und Gutachten behalten den Satz vor dem Doppelpunkt („Sie ziehen alle Blicke auf sich.“ — die Wirkung in Sekunden hängt `CombatView.skill_text` aus `statuses` an, ohne den bisherigen Doppelpunkt-Schnitt), Gegner-Skills nennen Sekunden (Stufen 4 s, Garde 8 s, Paragrafen 12 s und „die Party ist ermahnt“, Pose ohne Dauer), Rattenheilung 15 %, Pflaster 180 HP, Brutzel-Burger 480 HP, Molotow 240 „im Umkreis von 4 m“, Eisspray 360, Hermelin HP +60; Erste Hilfe und Gegengift nennen auch die Verbrennung (ihr Echtzeit-`cleanse`). **Marotten ab Etage 2** (Bedingungen aus §9.6, `min_floor` 2 — auf Etage 1 nie aktiv, die Full-Runs bleiben gleich): `mar_speed` „Gewinne einen normalen Kampf in höchstens 15 Sekunden.“ (`e.duration_sec <= 15 && e.is_boss == false` statt `e.party_turns <= 3`), `mar_brave` „Gewinne ohne Fluchtversuch: kein Schritt aus dem Ring, kein Nebel.“ (`e.flee_attempts == 0` — Verteidigen gibt es nicht), `mar_stunt` „Lass in einem Kampf mindestens eine eigene SHOW gelingen.“ (Bedingung `e.stunts_success >= 1` bleibt: die eigene SHOW, nie die der KI); ihre Ansagen in `mod_lines.json` folgen („Kämpfe unter 15 Sekunden“, „Eine gelungene SHOW pro Kampf“, „Kein Weglaufen, kein Nebel“). Tests `test_r5b_texts`, `test_06c_marotten`, `test_r5_marotten_rt` | §4.11, §9.6, §12.6 |
 
 ---
 
@@ -180,7 +185,12 @@ Leine oder 8 s ab) oder die Gruppe anbellen. Ein Kampf beginnt nur so:
   Tutorial-Gruppe, Tabelle oben).
 - Mopsula als Held:in: Bellen startet nie einen Kampf (06 §1.3); ihr Pull ist eine Fähigkeit auf einen Anführer (Slot 1
   Adelsflamme, Slot 3 Frostniesen) oder ein Gegenstand. Eine `DAZED`-Gruppe ist aus jeder Richtung `PREEMPTIVE`
-  (06-Regel `EncounterRules.advantage_for_contact`, auch für Pulls).
+  (06-Regel `EncounterRules.advantage_for_contact`, auch für Pulls). Nach dem Bellen ist der verdutzte Anführer schon Ziel
+  (E35): „bellen, dann 1“ ist der Erstschlag.
+- **Pull einer Person** (E34, Eingabe §7.1–§7.3): Anführer als Ziel wählen (Tab, Linksklick, RT, Antippen), dann Taste 1–5,
+  Pad A / X / Y oder der Touch-Aktionsknopf. Es eröffnen nur Fähigkeiten auf einen Gegner in Reichweite und mit genug MP,
+  sonst erscheint ein kurzer Ablehnungstext; kein Pull im Safe Room und im Treppenraum. Gegenstände haben außerhalb des
+  Kampfes keine Taste (der Trank-Slot zieht nie); `ExplorationScene.pull(gid, "item", id)` bleibt für Bot und Tests.
 - Erkennung und Vorteil sind Szenenlogik (Grad A, 05 §3.3); aufgezeichnet wird wie bisher nur das Ergebnis (`encounter`).
 
 Wirkung des Vorteils:
@@ -359,6 +369,10 @@ Ziel: Niemand muss vor dem ersten Kampf etwas lesen; jede Regel kommt in dem Mom
   3. `show` nach dem ersten Party-Treffer: „SHOW: riskant, aber das Publikum liebt es.“ Weiter mit SHOW oder „Später“.
   4. `dodge` beim ersten `TELEGRAPH_START` (Azubi-Sprung, Warnzeit 2,0 s): „Rote Fläche? Raus da!“ Weiter mit einer beliebigen
      Eingabe; die volle Warnzeit bleibt danach erhalten.
+
+  Weckt die Person die Gruppe mit einer Fähigkeit (Pull, E34), hat sie Ziel und Taste schon benutzt (E37): `target` entfällt,
+  `bar1` ebenso, wenn die Eröffnung die Slot-1-Fähigkeit war (`HintCards.done_by_pull`); SHOW und Ausweichen bleiben.
+  Nach Feldschlag oder Berührung laufen alle vier Schritte.
 - **Pause ohne Determinismus-Risiko:** Während eine Karte steht, ruft der `CombatDirector` kein `combat_step()` auf — es vergeht
   kein Tick, die Sim ändert sich nicht. Eingaben in dieser Zeit tragen den angehaltenen `ct`. Jede gezeigte Karte wird als
   `{"t": "combat_hint", "ct", "id"}` aufgezeichnet (§10.1); `RunSim` und `GameReplay` setzen damit
@@ -1883,14 +1897,14 @@ Neuer Baustein für Etage 2: `rt.counter` = `{"every_ms", "max", "at_max_skill",
 |---|---|---|
 | Bewegen | WASD / Pfeile (kamerarelativ, unverändert) | gleich; immer Lauftempo (Schleichen wirkungslos) |
 | Kamera | Q/E, rechte Maustaste ziehen, Mausrad = Zoom (unverändert) | gleich |
-| Ziel wählen | `Tab` = nächster Anführer im Raum (Zielrahmen erscheint), Linksklick auf Gegner | `Tab` / `Shift+Tab` (vor/zurück), Linksklick auf Gegner oder Plakette; Linksklick auf Party-Rahmen = freundliches Ziel; Linksklick auf freien Boden = Ziel löschen |
+| Ziel wählen | `Tab` / `Shift+Tab` = nächster / vorheriger Anführer im Raum (Zielrahmen erscheint), Linksklick auf einen Anführer; Linksklick auf freien Boden = Ziel löschen (E34, E36) | `Tab` / `Shift+Tab` (vor/zurück), Linksklick auf Gegner oder Plakette; Linksklick auf Party-Rahmen = freundliches Ziel; Linksklick auf freien Boden = Ziel löschen |
 | Auto-Angriff | — | automatisch; `F`/`Leertaste`/`Enter` = „Angriff!“ (kein Ziel → nächster Gegner; Auto an); Klick auf das Schwert im Zielrahmen oder `V` = Auto an/aus |
-| Fähigkeiten | `1`–`5` mit Ziel = Pull (§2.2) | `1`–`5` (Klick auf Slot ebenso) |
+| Fähigkeiten | `1`–`5` mit Ziel = Pull (§2.2, E34; geht es nicht, steht der Grund kurz unter dem Zielrahmen) | `1`–`5` (Klick auf Slot ebenso) |
 | Trank | — (Feldnutzung im Menü wie bisher) | `6`; Rechtsklick auf Slot 6 = Gegenstandsrad |
 | **Partner-Spezial** | — | `R` (Klick auf den Knopf am Partner-Rahmen ebenso) |
 | Partner-Taktik | — | ab Stufe 3 (§5.2): `G` (zyklisch Angriff → Unterstützen → Vorsichtig), Klick auf den Taktik-Chip öffnet Taktik + Schalter |
 | Autopilot | — | `T` (`toggle_auto`) |
-| Interagieren / Feldfähigkeit | `F`/`Leertaste`/`Enter` (unverändert; Kai: Feldschlag, Mopsula: Bellen, 06 §1.3) | gesperrt |
+| Interagieren / Feldfähigkeit | `F`/`Leertaste`/`Enter` (unverändert, auch mit Ziel; Kai: Feldschlag, Mopsula: Bellen, 06 §1.3) | gesperrt |
 | Karte | `M` (Tab entfällt) | gesperrt (Hinweis „Nicht während der Aufnahme!“) |
 | Pause | `Esc`/`P` | `Esc`/`P` (Offline-Läufe: die Sim tickt nicht; Server-Läufe: keine Pause, §13.2 O2) |
 
@@ -1899,22 +1913,28 @@ Neuer Baustein für Etage 2: `rt.counter` = `{"every_ms", "max", "at_max_skill",
 | Aktion | Erkundung | Kampf |
 |---|---|---|
 | Bewegen / Kamera | linker / rechter Stick | gleich |
-| A | `action` (Interagieren; mit gewähltem Ziel in Reichweite von Slot 1: Pull mit Slot 1; sonst Feldfähigkeit) | Slot 1 |
-| X / Y / B | X, Y: Pull mit Slot 2/3 (wenn Ziel); B = `ui_cancel` in Menüs | Slot 2 / 3 / 4 |
+| A | `action` (Interagieren; mit gewähltem Ziel in Reichweite von Slot 1: Pull mit Slot 1, fehlen nur MP: Ablehnung; sonst Feldfähigkeit) | Slot 1 |
+| X / Y / B | X, Y: Pull mit Slot 2/3 (wenn Ziel); B mit Ziel = Ziel löschen (E36), sonst `ui_cancel` in Menüs | Slot 2 / 3 / 4 |
 | RB / LB | `tab_next`/`tab_prev` in Menüs | RB = SHOW (Slot 5), LB = Trank (Slot 6; 0,4 s halten = Gegenstandsrad, Auswahl mit rechtem Stick, loslassen = benutzen) |
-| RT | nächstes Ziel | nächstes Ziel |
+| RT | nächstes Ziel (ein Schritt je Druck) | nächstes Ziel |
 | LT | Schleichen (unverändert) | vorheriges Ziel |
 | Steuerkreuz | oben = Autopilot | oben = Autopilot, rechts = Taktik wechseln, unten = Auto-Angriff an/aus, **links = Partner-Spezial** |
 | Start / Back | Pause / Karte | Pause / gesperrt |
 
-Hinweis: Y war bisher `toggle_auto`; das wandert auf Steuerkreuz oben (Y ist im Kampf Slot 3). Kontexttrennung: Die Erkundung
-wertet `bar_*` nur als Pull aus, der Kampf wertet `action`, `sneak`, `map` nicht aus.
+Hinweis: Y war bisher `toggle_auto`; das wandert auf Steuerkreuz oben (Y ist im Kampf Slot 3) — seit Stand Pull in
+`project.godot` selbst (E36; ein CTB-Lauf bekommt Y bis SD1 zur Laufzeit zurück). Kontexttrennung: Die Erkundung wertet
+`bar_*` nur als Pull aus (am Pad nur X und Y, und nur mit Ziel), der Kampf wertet `action`, `sneak`, `map` nicht aus. Ein
+Interaktions-Prompt hat in der Erkundung immer Vorrang vor dem Pull mit A.
 
 ### 7.3 Touch
 
 Erkundung: unverändert (schwebender Stick links, Aktionsknopf mit Faust bzw. Schallwellen für Mopsulas Bellen — 06 A, Karte,
 Pause). Ist außerhalb des Kampfes ein Anführer als Ziel gewählt (Antippen), zeigt der Aktionsknopf das Symbol von Slot 1 und zieht
-damit (Pull).
+damit (Pull). **Stand Pull (E36, E37):** Tippen ≠ Ziehen (unten) gilt in der Echtzeit-Erkundung ebenso — Antippen eines
+Anführers (Körper, Trefferfläche ≥ 107 px) wählt ihn, Antippen von freiem Boden löscht das Ziel, Ziehen dreht die Kamera.
+Das Slot-1-Symbol trägt die Tönung der Leiste (rot = zu weit, blau = zu wenig MP, gedimmt = eröffnet nicht) und schüttelt
+sich bei einer Ablehnung; bis zum ersten Pull pulsiert ein goldener Ring um den Knopf. Mit Interaktions-Prompt bleibt die
+Hand (Vorrang).
 
 Kampf (Referenz 1280 × 720, Zentren in px, verschieben sich mit den Safe-Area-Insets wie bisher, §10.4 02_TECH):
 
@@ -1951,8 +1971,10 @@ Rahmen = Status mit Restsekunden (§8.4). Auto-Angriff ist immer automatisch.
 
 - **Tab-Reihenfolge** (Client, ergibt `target_change`): lebende Gegner im Set; zuerst die im Sichtkegel der Kamera (±60° um die
   Kamera-Vorwärtsrichtung) nach Abstand zur gesteuerten Figur, dann die übrigen nach Abstand; Start nach dem aktuellen Ziel.
-  Außerhalb des Kampfes: Gegner-Anführer im aktuellen Raum mit Sichtlinie bis 25 m.
-- **Klick/Tippen**: projizierte Fußpunkte und Plaketten; nächster Treffer gewinnt (`target_change`).
+  Außerhalb des Kampfes: Gegner-Anführer im aktuellen Raum mit Sichtlinie bis 25 m, keine Bosse, keine im Safe Room und im
+  Treppenraum (E34); dieses Ziel ist Darstellung und ergibt keinen Befehl.
+- **Klick/Tippen**: projizierte Fußpunkte und Plaketten; nächster Treffer gewinnt (`target_change`). Außerhalb des Kampfes:
+  der projizierte Körper des Anführers (Fuß bis Kopf, ≥ 107 px Trefferfläche), freier Boden löscht das Ziel (E36).
 - **Automatisch (Sim-Regeln, kein Befehl nötig):** fällt das Ziel und ist `auto_retarget` an, wählt die Sim den Gegner, der die
   gesteuerte Figur angreift (sonst den nächsten; Gleichstand Nummer) → `TARGET_CHANGED`. Fähigkeiten ohne Ziel: §4.4.
 - **Smart-Heilung:** Heilfähigkeiten ohne freundliches Ziel heilen den Verbündeten mit dem kleinsten HP-Anteil.
@@ -2005,11 +2027,13 @@ Untertitel für M.O.D. sind immer an. Autopilot und Vorabendprogramm (Warnzeiten
 | `partner_special` | Taste R (`KEY_R` = 82); Joypad Steuerkreuz links (13) | neu |
 | `partner_preset` | Taste G (71); Joypad Steuerkreuz rechts (14) | neu |
 | `auto_attack_toggle` | Taste V (86); Joypad Steuerkreuz unten (12) | neu |
-| `map` | Taste M, Joypad Back (4) — **ohne** Tab | geändert |
-| `toggle_auto` | Taste T, Joypad Steuerkreuz oben (11) — **ohne** Y | geändert |
+| `map` | Taste M, Joypad Back (4) — **ohne** Tab | geändert (seit Stand Pull in `project.godot`, E36) |
+| `toggle_auto` | Taste T, Joypad Steuerkreuz oben (11) — **ohne** Y | geändert (seit Stand Pull in `project.godot`, E36) |
 
 Alle Konstanten geprüft (Anhang A7, A16). Deadzone der Achsen-Aktionen Standard 0,2 (geprüft). Bestehende Aktionen bleiben sonst
-unverändert (02_TECH §2.2).
+unverändert (02_TECH §2.2). Bis R5b-2a stand in `project.godot` die CTB-Belegung, und `CombatInput.apply_input_mode` stellte
+Echtzeit-Läufe zur Laufzeit um; seit Stand Pull (E36) ist es umgekehrt: Die Datei trägt die Echtzeit-Belegung, ein CTB-Lauf
+bekommt Tab an `map` und Y an `toggle_auto` über `CombatInput.apply_for_game()` zurück (bis SD1).
 
 ### 7.8 Neue Felder `GameSettings` (R1a als Felder, R3 im Menü)
 
@@ -2133,6 +2157,12 @@ Ton „Plattennadel-Kratzer“.
   **Aggro-Zähler** (rotes Abzeichen „×2“ = so viele Gegner greifen dieses Mitglied an) ab dem ersten eigenen Spott (§8.1).
 - Partner-Spezial-Knopf am Partner-Rahmen (§8.1, §7.3): Symbol, Abklingzeit-Sweep, bei Ablehnung Rütteln + Kurztext.
 - Ziel: HP in Gegnerfarbe (`ui_enemy` #E8455A), Elite/Boss-Marke, Schwert-Schalter für Auto-Angriff.
+- **Ziel eines Pulls in der Erkundung** (E34, `scenes/ui/explore_target.gd`): derselbe Rahmen ohne HP (oben mittig unter
+  dem Etagen-Timer, 300 × 68): Anführer-Symbol, Name und Gruppengröße, Stufe, Abstand, Zustand und Vorteil, Chips der
+  Slots 1–5 mit Taste und der Tönung der Leiste (§8.2); darunter die Pull-Plakette (E37) oder der Ablehnungstext. Ring um
+  die Füße und Pfeil über dem Kopf des Anführers; Gold, solange ein Pull ein Erstschlag wäre. Der Rahmen verdeckt seinen
+  Anführer nie: Läge dessen Marker dahinter (ferne Ziele stehen hoch im Bild), gleitet er seitlich neben ihn. Ein
+  Dreiecks-Array.
 - Boss: Phasen-Rauten (gefüllt = erreicht), HP-Prozent, in der letzten Minute vor dem Enrage „Feierabend in 0:42“.
 - Status-Symbole: 20 px (Ziel 18 px), Buffs vor Debuffs, nach Restzeit; Restzeit als Radial-Sweep, Restsekunden als Ganzzahl nur
   per langem Druck/Mauszeiger, Stapel unten rechts; mehr als 6 → „+n“. Symbole kommen aus `StatusDef.icon` (icon_mesh), Farben aus
@@ -3199,6 +3229,11 @@ er enthält alles, was mehr als eine Phase braucht:
   Fähigkeiten-Details und Touch-Tooltip nennen im Echtzeitkampf Sekunden statt Züge, Talent- und M.O.D.-Texte passen zu beiden
   Modi, README „Steuerung“. Gates: Smoke, Full-Run und CI im Echtzeitkampf, CTB über `--combat=ctb`. Messwerte, Paritäts-Nachtrag,
   Abweichungen und die Liste für Teil 2b: §12.6 „Stand R5b-2a“.
+- **Stand Pull (2026-10-12, Branch `ptd/pull`):** Personen eröffnen Kämpfe selbst — einen Anführer als Ziel wählen (Tab /
+  Shift+Tab, Linksklick, RT, Antippen) und mit Taste 1–5, Pad A / X / Y oder dem Touch-Aktionsknopf ziehen (E34–E37);
+  Graf Mopsulas „bellen, dann 1“ ist ein Erstschlag (E35). `project.godot` trägt die Echtzeit-Belegung (Tab = Ziel, Karte
+  nur M, Autopilot am Pad auf Steuerkreuz oben), CTB-Läufe stellen bis SD1 zur Laufzeit zurück. Schließt Abweichung (6) von
+  „Stand R5b-2a“; Einzelheiten §12.6 „Stand Pull“.
 
 **Phasenübergreifende Signaturen — vollständige Stub-Liste von R1a** (alles, was eine Phase von einer anderen aufruft oder
 liest; `test_r1a_contract` prüft jede Zeile per Reflexion):
@@ -3292,6 +3327,7 @@ Durchgang (08 §10.2, Dateieigentum 08 §10.7); die 08-Pakete schreiben nie in `
 | `autoload/sfx_synth.gd` | — | R2 Klänge | additiv |
 | `tests/perf/perf_runner.gd`, `tools/perf.sh` | — | R2: Szenarien `combat_regular`, `combat_two_groups`, `combat_boss_queen` | additiv |
 | `scenes/boot/autoplay.gd`, `fullrun.gd`, `tools/fullrun.sh` | Schritt 0 + A/B/C (Hooks) | R5b: Autoplay-Schritte, `--combat=realtime` | Abschnitte |
+| `scenes/exploration/pull_rules.gd`, `scenes/ui/explore_target.gd`, `tests/test_r5b_pull.gd` | — | Stand Pull (E34–E37): Regeln, Zielrahmen, Tests; dazu je ein Abschnitt „Pull by a person“ in `exploration.gd`, `exploration_hud.gd`, `touch_controls.gd`, `action_source` in `player_controller.gd`, `HintCards.done_by_pull` und `project.godot` `[input]` (`map`, `toggle_auto`) | neu / Abschnitte |
 | `tests/test_m8_no_global_rng.gd` | — | R1a: `core/rt/` ohne `det-ok` außer `DetMath.isqrt` | additiv |
 | `scenes/battle/**`, `core/battle/{ctb_queue,battle_state,action_resolver,enemy_ai,auto_policy,battle_command}.gd` | A/B/C (Hooks) | niemand bis R5b; dann löschen (§12.6) | unberührt |
 | `docs/07_ECHTZEITKAMPF.md` | — | R4 §11.5; R5b Endstand | Abschnitte |
@@ -3374,6 +3410,7 @@ Echtzeit-Nachfolger mit Test:
 | R5b-2a | `test_r5b_show_economy` | E32: Werte fest (`RT_*`, CTB-Profil und gemeinsame Regeln unverändert); Auto-Angriffe ohne Krit-/Schwäche-Hype (Statistik und Zeilen-Tag bleiben), Langeweile läuft weiter; Combo und SHOW je Profil; Heilen ist keine Wiederholung; Sponsoren-Pause (Start, Speichern, Bosse zählen nicht, 4 reguläre ohne System-Geschenk, CTB unberührt), externe Geschenke und das Zurücksetzen auf 80 bleiben; Follower-Faktor nur im Echtzeitkampf; Logs der Version 2 → „ältere Version“ in beiden Verifiern, Bestenliste und Lobby |
 | R5b-2a | `test_r5b_default_realtime` | E33: Standard `realtime` (Einstellungen, `Game.new_game`, Dev-Zustand), `--combat=ctb` und die Debug-Zeile geben CTB; Spielstände behalten ihren Modus (CTB- und Echtzeit-Rundlauf über `Save`); Einstellungsdatei Version 1 → Echtzeit, Version 2 behält die Debug-Wahl; `Game.ensure_state(mode, seed)` |
 | R5b-2a | `test_r5b_texts` | Fähigkeiten-Detail und Touch-Tooltip im Echtzeitkampf ohne Züge (Sekunden aus `rt.statuses`, SHOW-Abklingzeit der Party), CTB-Detail unverändert; Talent- und M.O.D.-Texte des Echtzeitkampfs ohne CTB-Wörter |
+| Pull | `test_r5b_pull` | E34–E37 je Eingabeschema: Tab / Shift+Tab-Reihenfolge, Linksklick wählt, freier Boden löscht; Taste 1 zieht (`PREEMPTIVE` gegen Streife und von hinten, `NORMAL` gegen eine Gruppe, die die Figur sieht); Ablehnungen ohne Kampf (kein Ziel, zu weit, zu wenig MP, eröffnet nicht, nicht gelernt); Pad: RT ein Schritt je Druck, LT bleibt Schleichen, B löscht, A zieht nur in Reichweite von Slot 1 (sonst Feldschlag), X / Y = Slot 2 / 3; ein Interaktions-Prompt hat Vorrang; Touch: Tippen wählt bzw. löscht, der Aktionsknopf zieht oder lehnt ab; Graf Mopsula bellt → Taste 1, A + A oder zweimal der Knopf = `PREEMPTIVE` mit `opener` `bark`; das Ziel des Bellens fällt mit der Verdutzung; kein Pull im Safe Room, im Treppenraum, im Dialog; Tutorial-Gruppe per Pull für beide Held:innen (ohne Karten `target` / `bar1`, per Feldschlag mit ihnen; nur Slot 1 und SHOW); Zielrahmen und Pull-Plakette, der Rahmen weicht einem fernen Anführer aus; Belegung in `project.godot`, ein CTB-Lauf behält Tab = Karte; Leiste der Erkundung = Kampfleiste; Läufe mit dem Pull einer Person spielen über `Game.replay_log` und `RunSim.replay` bitgenau nach (Kai; Mopsula mit Bellen) |
 
 ### 12.6 Parität und CTB-Entfernung
 
@@ -3519,6 +3556,32 @@ die Oberfläche zeigt im Echtzeitkampf schon Sekunden, `CombatView.skill_text`);
 Y an `toggle_auto` stellt `CombatInput` erst zur Laufzeit um, §7.7); die CTB-gebundenen Tests (`test_m3_exploration_scene`,
 `test_m5_battle_scene` setzen `--combat=ctb`); die Erkundungs- und Leak-Messung der Perf-Probe in einem Echtzeitspiel (sie misst
 Erkundung, CTB-Kampf und Leak-Schleife bewusst weiter im CTB, damit PERFORMANCE.md vergleichbar bleibt).
+
+**Stand Pull (2026-10-12, Branch `ptd/pull`) — der Pull einer Person (E34–E37).** Schließt Abweichung (6) von
+„Stand R5b-2a“ und zwei Punkte der Liste für Teil 2b (Pull für Personen; Belegung in `project.godot`). Außerhalb des
+Kampfes wählt die Person den Anführer einer Gruppe im eigenen Raum als Ziel und eröffnet mit einer Fähigkeit ihrer Leiste —
+Tastatur/Maus: Tab / Shift+Tab oder Linksklick, dann 1–5; Gamepad: RT, dann A (Slot 1, in Reichweite) bzw. X / Y (Slot 2 / 3),
+B löscht; Touch: Antippen, dann der Aktions-Button (Slot 1). Der Pull läuft über `ExplorationScene.pull` wie beim
+Full-Run-Bot (gleicher `encounter`-Befehl mit `rt.open`, Run-Log, Replay); der Vorteil folgt der Tabelle §2.2, die
+schlafende Tutorial-Gruppe ist immer `PREEMPTIVE` (Pull oder Berührung). Graf Mopsulas Bellen macht den verdutzten Anführer
+zum Ziel (E35): „bellen, dann 1“ ist der Erstschlag. Gelehrt wird ohne Text vorab (E37). Tests: `test_r5b_pull` (§12.5,
+28 Tests); angepasst: `test_r3_combat_input`, `test_r3_hud_layout`, `test_r3_real_sim` (sie stellen nach jedem Test die
+Belegung aus `project.godot` wieder her). Gates: `check.sh` (1651 Tests, 0 fehlgeschlagen, 0 übersprungen, 0 Fehler; beide
+Smokes `AUTOPLAY: OK`), `fullrun.sh --strategy=all`, `--hero=mopsula` und `--strategy=all --combat=ctb` bestanden, alle
+Replay-Prüfungen der Läufe ohne Abweichung. README: §5 „Steuerung“ (Ziel wählen, Kampf eröffnen), Bilder 62–64.
+
+Abweichungen und Auslegungen: (1) Kein Pull im Safe Room und im Treppenraum, auch nicht über die API des Bots (der Safe
+Room ist ein sicherer Ort, im Treppenraum steht kein Set, §2.4). (2) Gegenstände eröffnen weiter nur über
+`pull(gid, "item", id)` (Bot, Tests): Die Erkundung hat keinen Trank-Slot und kein Gegenstandsrad. (3) Das Pad zieht nur mit den Slots 1–3 (A, X, Y); RB / LB bleiben in der Erkundung
+frei, B löscht das Ziel. (4) Die Szene prüft Reichweite und MP selbst, weil die Sim die Eröffnung ohne Reichweite ausführt
+und bei fehlenden MP erst im Kampf ablehnt; die Sichtlinie prüft die Kandidatenliste (§7.4). (5) Gegen die schlafende
+Tutorial-Gruppe bietet der Rahmen nur Slot 1 und SHOW an, wie ihre Kampfleiste (E28; sonst lehnte die Sim die Eröffnung mit
+`not_learned` ab). (6) „Gelehrt“ gilt je Sitzung, nicht je Spielstand: Die Plakette erscheint nach einem Neustart einmal
+wieder; sie ist Darstellung und wird weder gespeichert noch aufgezeichnet. (7) Der Zielrahmen steht unter dem Etagen-Timer,
+also tiefer als im Kampf (dort rückt der Timer als Chip nach links); ferne Anführer stehen hoch im Bild, deshalb gleitet
+der Rahmen beiseite, statt sie zu verdecken (E34). (8) Offen für SD1: `10_MINISPIEL_STEMPELDUELL.md` nennt „Tab oder M
+(`map`)“ für die Großansicht einer Karte — `project.godot` bindet Tab nicht mehr an `map`; das Stempelduell bindet Tab
+selbst oder nutzt `CombatInput.apply_input_mode(false)`.
 
 ### 12.7 Unverändert wiederverwendet
 

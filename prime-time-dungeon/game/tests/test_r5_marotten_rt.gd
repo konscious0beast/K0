@@ -82,7 +82,7 @@ func test_context_keys_of_a_real_time_combat() -> void:
 	var data: GameData = real_data()
 	assert_false(data.marotte("mar_brave").expr.eval(rt_ctx, {}, {}), "mar_brave: a flight warning breaks it")
 	assert_true(data.marotte("mar_speed").expr.eval(rt_ctx, {}, {}),
-		"the real-time mar_speed of floor 2 (07 §9.6, E34): a regular combat of at most 15 s")
+		"the real-time mar_speed of floor 2 (07 §9.6, E38): a regular combat of at most 15 s")
 	r.duration_ticks = 16 * 30
 	assert_false(data.marotte("mar_speed").expr.eval(MarottenRules.battle_context(st, RtKit.data(), r, {"rt": true}),
 		{}, {}), "16 s are too slow")

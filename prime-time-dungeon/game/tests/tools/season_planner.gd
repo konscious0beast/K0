@@ -27,6 +27,8 @@ const GROUP_TRIES: int = 2
 ## up to YELLOW levels above the hero (09 §3.4: yellow ±2), no show boss.
 const BOSS_GAP: int = 1
 const YELLOW: int = 2
+## Ohne Netz (one life from floor 2, 09 §7.2) the bots play careful(): no show boss, no group above yellow, no optional
+## Etagenboss, and a boss only at its level (BOSS_GAP 0) — in every strategy.
 ## Before a boss: a safe room first below 90 % party HP or 70 % MP (the caller decides; "heal" in the goal).
 const BOSS_HP_MIN: float = 0.9
 const BOSS_MP_MIN: float = 0.7
@@ -53,10 +55,13 @@ static func candidates(state: GameState, data: GameData, layout: FloorLayout, st
 	var floor_one: bool = layout.programme.is_empty() and fr.index == 1
 	var near: Dictionary = corridor(layout, 1) if strategy == "typical" and not floor_one else {}
 	var lv: int = hero_level(state)
+	var safe: bool = careful(state)
 	for e: EnemySpawn in layout.enemies:
 		if rush or e.is_boss or e.is_stray() or fr.defeated_groups.has(e.id):
 			continue
 		var level: int = group_level(data, e)
+		if safe and (level > lv + YELLOW or is_show_boss(data, e)):
+			continue
 		var is_red: bool = level - lv >= RED
 		var rc: RoomCell = layout.cell_at(e.cell)
 		if strategy == "typical" and floor_one and FLOOR1_SKIP.has(e.id):
@@ -131,9 +136,10 @@ static func goal(state: GameState, data: GameData, layout: FloorLayout, here: Ve
 		if not best.is_empty():
 			return best
 		b = boss(state, layout, strat, qb_tries, fb_tries, false, fb_floor)
-	if not b.is_empty() and strat != "thorough" and strat != "rush":
+	if not b.is_empty() and ((strat != "thorough" and strat != "rush") or careful(state)):
 		var spawn: EnemySpawn = layout.enemy_by_id(str(b["id"]))
-		if spawn != null and hero_level(state) < group_level(data, spawn) - BOSS_GAP:
+		var gap: int = 0 if careful(state) else BOSS_GAP
+		if spawn != null and hero_level(state) < group_level(data, spawn) - gap:
 			best = nearest(level_up(state, data, layout, tried), dist)
 			if not best.is_empty():
 				best["before"] = str(b["id"])         # a level-up goal ("why" stays the choice of an event)
@@ -208,12 +214,18 @@ static func boss(state: GameState, layout: FloorLayout, strategy: String, qb_tri
 	if qb_only or layout.floor_boss == Vector2i(-1, -1) or fr.floor_boss_defeated:
 		return {}
 	var finale: bool = state.season != null and fr.index >= state.season.format
-	if not finale and strategy != "thorough":
+	if not finale and (strategy != "thorough" or careful(state)):
 		return {}
 	if (finale and fb_tries >= most) or (not finale and fb_floor >= FLOOR_BOSS_TRIES):
 		return {}
 	return {"kind": "boss", "id": "f%d_fb" % fr.index, "cell": layout.floor_boss,
 		"why": "Großes Finale" if finale else "Etagenboss"}
+
+
+## Ohne Netz a lost combat ends the candidate's season from floor 2 on: the bots play carefully (see BOSS_GAP).
+static func careful(state: GameState) -> bool:
+	return state.season != null and state.season.mode == "no_net" and state.floor_run != null \
+		and state.floor_run.index >= 2
 
 
 ## Party HP or MP ratio (sum / sum of the maxima).

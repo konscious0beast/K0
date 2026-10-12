@@ -226,6 +226,35 @@ func test_planner_bosses_level_up_auto_and_waits() -> void:
 	assert_eq(Planner.boss(cst, l6, "typical", 0, Planner.BOSS_TRIES_SESSION, false), {}, "the finale: per session")
 
 
+## Ohne Netz (one life from floor 2) the planner plays carefully in every strategy: no show boss, nothing above yellow,
+## no optional Etagenboss, a boss only at its level (BOSS_GAP 0) — floor 1 (the dress rehearsal) as Mit Netz.
+func test_planner_careful_ohne_netz() -> void:
+	var d: GameData = real_data()
+	var s: RunSim = Kit.sim(d, "ssn_basis", "binge", "no_net")
+	assert_false(Planner.careful(s.state), "floor 1: the dress rehearsal costs nothing")
+	s.apply({"t": "descend"})
+	s.apply({"t": "floor", "floor": 2})
+	var st: GameState = s.state
+	var l: FloorLayout = DungeonGenerator.generate(d.floor_def(2), st.floor_run.seed)
+	_set_level(st, LevelBand.band(d, 2).x)
+	assert_true(Planner.careful(st), "floor 2 Ohne Netz: careful")
+	for strat: String in ["thorough", "typical"]:
+		for red: bool in [false, true]:
+			for c: Dictionary in Planner.candidates(st, d, l, strat, {}, red):
+				if str(c["kind"]) != "group":
+					continue
+				var e: EnemySpawn = l.enemy_by_id(str(c["id"]))
+				assert_false(Planner.is_show_boss(d, e), "%s: no show boss Ohne Netz" % strat)
+				assert_true(Planner.group_level(d, e) <= Planner.hero_level(st) + Planner.YELLOW, "%s: yellow at most" % strat)
+	st.floor_run.quarter_boss_defeated = true
+	assert_eq(Planner.boss(st, l, "thorough", 0, 0, false), {}, "no optional Etagenboss Ohne Netz")
+	st.floor_run.quarter_boss_defeated = false
+	var qb: EnemySpawn = l.enemy_by_id("f2_qb")
+	_set_level(st, Planner.group_level(d, qb) - 1)
+	var g: Dictionary = Planner.goal(st, d, l, l.start, "thorough", {}, {})
+	assert_true(str(g["kind"]) != "boss" or Planner.level_up(st, d, l, {}).is_empty(), "one level below: level up first")
+
+
 func _set_level(st: GameState, lv: int) -> void:
 	for m: PartyMember in st.party:
 		m.level = maxi(1, lv)

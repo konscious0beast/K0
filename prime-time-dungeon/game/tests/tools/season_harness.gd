@@ -50,15 +50,22 @@ const RECALL: Dictionary = {"kai": ["spc_original", "cls_kai_wrecker"],
 const POSES: Dictionary = {"regular": [[0, -150, 128], [0, 250, 0], [-120, 340, 0]],
 	"boss": [[0, 0, 64], [-420, 0, 192], [-470, 120, 192]]}
 
-## The time model (game seconds of the person; 09 Kap. 11.3 decision I-5): calibrated against the full-run bot in the
-## world (tools/fullrun.sh --season, the same seeds) — "cell": a cell change (door to door, fast pace); "engage": up to
-## a group, the strike; "chest", "gate", "event": an interaction (the event dialog and its reveal); "safe": a safe-room
-## visit's door and menus, + "lootbox", "pick", "buy", "scene" each; "combat": the results panel after a combat,
-## "intro": a boss's intro; "stairs": the stairs dialog and the Etagen-Bilanz; human pace (02_TECH §11.4.1): "look" per
-## new room, "decide" per goal, "door" per cell change.
-const TIME: Dictionary = {"cell": 4.0, "engage": 4.0, "chest": 2.0, "gate": 2.0, "event": 6.0, "safe": 12.0,
-	"lootbox": 4.0, "pick": 3.0, "buy": 2.0, "scene": 15.0, "combat": 4.0, "intro": 8.0, "stairs": 8.0,
-	"look": 8.0, "decide": 3.0, "door": 1.0}
+## The time model (game seconds; 09 Kap. 11.3 decision I-5). Exploration (the countdown runs), calibrated against the
+## full-run bot in the world (tools/fullrun.sh --season, seed 4242, Am Stück thorough fast: 3.15 s per cell change and
+## 4.15 s per group, least squares over floors 1–5, ± 10 % per floor): "cell" a cell change door to door, "engage" up
+## to a group and the strike, "chest", "gate" the interaction. Human pace (02_TECH §11.4.1, the full-run bot's HUMAN_*
+## model: "look" per new room, "decide" per goal, "door" per cell change, "sneak" the last metres to a group — against
+## its --pace=human run, seed 4242 Am Stück typical, the exploration minutes of floors 1–4 agree within 12 %, the M.O.D.
+## lines it reads included). Screens (the countdown stands): "event" the event dialog, "safe" a safe-room visit's door
+## and menus, + "lootbox", "pick", "buy", "scene" each, "combat" the results panel, "intro" a boss's intro, "stairs" the
+## stairs dialog and the Etagen-Bilanz — a person's reading and clicking; the bot of the fast pace clicks through them in
+## FAST_SCREENS_PM ‰ of that (the full-run bot: ≈ 45 s per floor).
+const TIME: Dictionary = {"cell": 3.2, "engage": 4.0, "chest": 0.5, "gate": 1.0,
+	"look": 8.0, "decide": 3.0, "door": 1.0, "sneak": 0.0,
+	"event": 6.0, "safe": 12.0, "lootbox": 4.0, "pick": 3.0, "buy": 2.0, "scene": 15.0, "combat": 4.0, "intro": 8.0,
+	"stairs": 8.0}
+const SCREENS: PackedStringArray = ["event", "safe", "lootbox", "pick", "buy", "scene", "combat", "intro", "stairs"]
+const FAST_SCREENS_PM: int = 250
 
 var data: GameData = null
 var o: Dictionary = {}
@@ -102,8 +109,9 @@ var _final_hash: String = ""
 ## One season: `seed` and the options {"def" (ssn_basis), "tempo" (calendar), "mode" (net), "profile" (typical;
 ## calendar), "strategy" (auto in the calendar, thorough Am Stück), "pace" (human), "fighter" (bot), "log" (false),
 ## "time" ({} — overrides of TIME), "floors" / "sessions" (0; > 0: stop after leaving floor n / after n logouts),
-## "plan" (the sessions instead of the profile's, season_profiles.gd format), "debug" (false: a line per goal)}. The
-## report (see report()); {"error": …} for a refused format.
+## "plan" (the sessions instead of the profile's, season_profiles.gd format), "debug" (false: a line per goal and
+## fight), "probe" (a Callable(harness, encounter command) before every boss fight: balance probes)}. The report (see
+## report()); {"error": …} for a refused format.
 static func run(p_data: GameData, p_seed: int, opts: Dictionary = {}) -> Dictionary:
 	var h: RefCounted = (load("res://tests/tools/season_harness.gd") as GDScript).new()
 	return h.call("play_season", p_data, p_seed, opts)
@@ -118,6 +126,9 @@ func play_season(p_data: GameData, p_seed: int, opts: Dictionary) -> Dictionary:
 	if not o.has("strategy"):
 		o["strategy"] = "auto" if str(o["tempo"]) == "calendar" else "thorough"
 	t = TIME.duplicate()
+	if str(o["pace"]) != "human":
+		for k: String in SCREENS:
+			t[k] = float(t[k]) * float(FAST_SCREENS_PM) / 1000.0
 	t.merge(o["time"] as Dictionary, true)
 	var def: SeasonDef = data.season_def(str(o["def"])) if data.has_id("seasons", str(o["def"])) else null
 	if def == null:
@@ -286,12 +297,12 @@ func _do(g: Dictionary) -> void:
 			return
 	if kind != "safe" and kind != "boss":
 		_heal_trips = 0
-	if not _walk(g["cell"], kind == "boss"):
+	if not _walk(g["cell"], kind == "boss", str(g["id"]) if kind == "group" or kind == "boss" else ""):
 		return
 	match kind:
 		"group":
 			var e: EnemySpawn = layout.enemy_by_id(str(g["id"]))
-			_spend(float(t["engage"]), true)
+			_engage()
 			if not _moved() and e != null and not rs.state.floor_run.defeated_groups.has(e.id):
 				_fight(e.id, e.encounter_id, e.cell, false)
 		"boss":
@@ -321,9 +332,10 @@ func _do(g: Dictionary) -> void:
 # --- walking and time -------------------------------------------------------------------------------------------------
 
 ## Walks door by door to `cell` (shortest path over open doors; living boss rooms only as the goal): per cell change
-## TIME.cell (+ door at human pace) as exploration time, the "room" command on a first visit (+ look). false when the
-## floor changed meanwhile (a collapse, the countdown) or the season ended.
-func _walk(cell: Vector2i, boss: bool) -> bool:
+## TIME.cell (+ door at human pace) as exploration time, the "room" command on a first visit (+ look), the groups of
+## the rooms on the way (_aggro; `goal_group` is the goal's own). false when the floor changed meanwhile (a collapse,
+## the countdown), the season ended or a group on the way won.
+func _walk(cell: Vector2i, boss: bool, goal_group: String = "") -> bool:
 	var fr: FloorRun = rs.state.floor_run
 	var p: Array[Vector2i] = Planner.path(layout, here, cell, fr.opened_gates, Planner.boss_blocks(layout, fr,
 		cell if boss else Planner.NO_CELL))
@@ -339,10 +351,37 @@ func _walk(cell: Vector2i, boss: bool) -> bool:
 		if _moved():
 			return false
 		here = p[i]
+		_rec_add("cells", 1)
 		if _enter_room() and human:
 			_spend(float(t["look"]), true)
+		if not _aggro(here, goal_group):
+			return false
 		_spend(float(t["cell"]) * 0.5, true)
 		if _moved():
+			return false
+	return true
+
+
+## Up to a group and the strike (human pace: the last metres sneaking, fullrun.gd HUMAN_SNEAK_DIST).
+func _engage() -> void:
+	_spend(float(t["engage"]) + (float(t["sneak"]) if str(o["pace"]) == "human" else 0.0), true)
+
+
+## The groups standing in a room the party walks into notice it and fight (exploration.gd _rt_triggers: sight 10 m,
+## hearing 4 m, contact or 4 s of chase in the room — the full-run bot walks through their rooms like a person): every
+## living regular group of `at` but `goal_group` (the goal's own fight). false when a fight was lost (the medics moved
+## the party) or the floor changed.
+func _aggro(at: Vector2i, goal_group: String) -> bool:
+	var fr: FloorRun = rs.state.floor_run
+	for e: EnemySpawn in layout.enemies:
+		if e.cell != at or e.is_boss or e.is_stray() or e.id == goal_group or fr.defeated_groups.has(e.id):
+			continue
+		_rec_add("aggro", 1)
+		_engage()
+		if _moved():
+			return false
+		_fight(e.id, e.encounter_id, e.cell, false)
+		if _moved() or not rs.state.floor_run.defeated_groups.has(e.id):
 			return false
 	return true
 
@@ -414,6 +453,8 @@ func _fight(group: String, enc_id: String, cell: Vector2i, boss: bool) -> void:
 		"cell": [cell.x, cell.y], "ctl": "p0", "party": [{"u": "p0", "p": (poses[1] as Array).duplicate()},
 		{"u": "p1", "p": (poses[2] as Array).duplicate()}], "groups": groups, "presets": {"p1": _preset("mopsula")},
 		"auto": true, "retarget": true, "open": {}, "diff": "prime"}}
+	if boss and o.get("probe") is Callable:            # a balance probe sees the boss fight's command first
+		(o["probe"] as Callable).call(self, cmd)
 	var credits0: int = rs.state.inventory.credits
 	_apply(cmd)
 	var sim: RtSim = rs.combat
@@ -441,6 +482,9 @@ func _fight(group: String, enc_id: String, cell: Vector2i, boss: bool) -> void:
 		return
 	_rec_add("combats", 1)
 	_rec_addf("combat_sec", sec)
+	if bool(o.get("debug", false)):
+		print("HARNESS-FIGHT: f%d %s %s: %s, %.1f s, level %s" % [rs.state.floor_run.index, enc_id, group,
+			res.outcome_name(), sec, str(levels)])
 	var won: bool = res.outcome == BattleResult.Outcome.VICTORY
 	if not won:
 		_rec_add("defeats", 1)
@@ -487,7 +531,7 @@ func _preset(member_id: String) -> Dictionary:
 ## A floor event: its outcome first (FloorEvent.resolve with RunRules' stream — pure), then the command; a fight of the
 ## outcome (wheel, lever) follows like in the world.
 func _event(event_id: String, choice: String) -> void:
-	_spend(float(t["event"]), true)
+	_spend(float(t["event"]), false)              # the event dialog stops the countdown (GDD §2.8)
 	if _moved():
 		return
 	var fr: FloorRun = rs.state.floor_run

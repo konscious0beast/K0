@@ -230,7 +230,7 @@ func test_party_page_lists_talents_and_the_open_choice() -> void:
 	var names: Label = kai_card.find_child("TalentNames", true, false) as Label
 	assert_eq(names.text, "Wischtechnik")
 	assert_eq((kai_card.find_child("TalentHint", true, false) as Label).text, "1 Wahl offen")
-	# polish pass: a member without talents but with open choices reads what to do, not "noch keine (ab Level 3)"
+	# polish pass: a member without talents but with open choices reads what to do, not "noch keine (ab Stufe 3)"
 	var mop_card: Node = page.find_child("Card_mopsula", true, false)
 	assert_eq((mop_card.find_child("TalentNames", true, false) as Label).text, "2 Talente offen – im Safe Room wählen")
 	assert_null(mop_card.find_child("TalentHint", true, false), "no second pill for the same news")
@@ -242,7 +242,8 @@ func test_party_page_lists_talents_and_the_open_choice() -> void:
 	add_to_tree(page2)
 	await wait_frames(2)
 	var kai2: Node = page2.find_child("Card_kai", true, false)
-	assert_eq((kai2.find_child("TalentNames", true, false) as Label).text, "noch keine (ab Level 3)", "below L3")
+	assert_eq((kai2.find_child("TalentNames", true, false) as Label).text, "noch keine (ab Stufe 3)",
+		"below L3 (09 §1.2: Stufe, never Level)")
 
 
 ## Polish pass (anti-mash): the cards fade in and ignore input for INPUT_LOCK_SEC after the show opens and after every

@@ -157,7 +157,7 @@ func _fill() -> void:
 	var m: PartyMember = Game.state.member(member_id) if member_id != "" else null
 	if m == null:
 		_who.text = "Alle Talente gewählt"
-		_sub.text = "Neue Wahl ab dem nächsten ungeraden Level (3, 5, 7, 9)."
+		_sub.text = "Neue Wahl ab der nächsten ungeraden Stufe (3, 5, 7, 9)."   # 09 §1.2: "Stufe", never "Level"
 		_progress.text = ""
 		_set_portrait("")
 		var done: Label = UiUtil.label("Die Show geht weiter. Die Jury ist zufrieden. Vorerst.", &"", 22,
@@ -169,7 +169,7 @@ func _fill() -> void:
 		UiUtil.focus_later(close_button)
 		return
 	var open: PackedInt32Array = Talents.pending_levels(m)
-	_who.text = "%s  ·  Level %d" % [_member_name(m.id), open[0] if not open.is_empty() else m.level]
+	_who.text = "%s  ·  Stufe %d" % [_member_name(m.id), open[0] if not open.is_empty() else m.level]
 	var had: PackedStringArray = TalentText.member_talents(m)
 	_sub.text = "Bisher: " + (", ".join(had) if not had.is_empty() else "noch kein Talent")
 	_progress.text = progress_text()

@@ -112,7 +112,7 @@ func test_the_skills_page_chooses_variants_and_the_tactic() -> void:
 	assert_ne(_right(list, "RtSkill_skl_kai_sweep"), "belegt")
 	(list.get_node("RtSkill_skl_kai_cable_whip") as Button).pressed.emit()
 	assert_eq(kai.rt_loadout, {"4": "skl_kai_deo_torch"}, "a variant above the level: nothing")
-	assert_has(str(said.back()), "Level 7")
+	assert_has(str(said.back()), "Stufe 7")                # 09 §1.2 (ST1-A): "Stufe", never "Level"
 	(list.get_node("RtSkill_skl_kai_heavy_swing") as Button).pressed.emit()
 	assert_eq(RtLive.cmd_types(Game.run_log).count("loadout"), 1, "slot 1 has no choice")
 	(list.get_node("RtPreset_careful") as Button).pressed.emit()

@@ -13,7 +13,7 @@ extends Control
 ## column and the minimap) and back to the centre once there is room.
 ## Frames, chips, symbols and the marker = ONE triangle array (IconMesh + CombatIcons), labels without outline. The
 ## model comes from ExplorationScene.pull_frame_model through ExplorationHud.set_pull_target. Private helper (no
-## class_name).
+## class_name). 09 ST1-A: the level is the bare number in the round level plaque (level_badge.gd), never "Lv".
 
 const CombatStyle := preload("res://scenes/combat/ui/combat_style.gd")
 const CombatIcons := preload("res://scenes/combat/ui/combat_icons.gd")
@@ -21,8 +21,10 @@ const CombatView := preload("res://scenes/combat/ui/combat_view.gd")
 const IconMesh := preload("res://scenes/ui/icon_mesh.gd")
 const InputGlyph := preload("res://scenes/ui/input_glyph.gd")
 const UiUtilRef := preload("res://scenes/ui/ui_util.gd")
+const LevelBadge := preload("res://scenes/ui/level_badge.gd")   # 09 ST1-A
 
 const FRAME: Vector2 = Vector2(300, 68)
+const LEVEL_R: float = 11.0                # radius of the level plaque, top right in the frame (09 §1.2 Nr. 1)
 const CHIP: float = 26.0
 const CHIP_STEP: float = 30.0
 const RING_M: float = 0.6                  # radius of the ring around the lead's feet
@@ -252,8 +254,9 @@ func _layout_labels() -> void:
 		var nm: String = TranslationServer.translate(def.name) if def != null else lead
 		var count: int = int(model.get("count", 1))
 		_put("name", nm + (" ×%d" % count if count > 1 else ""), r.position + Vector2(52.0, 2.0), 0.0)
-		_put("level", "Lv %d" % (def.level if def != null else 1), r.position + Vector2(52.0, 4.0), 236.0,
-			HORIZONTAL_ALIGNMENT_RIGHT)
+		var lc: Vector2 = level_center(r)
+		_put("level", str(def.level if def != null else 1), lc - Vector2(LEVEL_R, 9.0), LEVEL_R * 2.0,
+			HORIZONTAL_ALIGNMENT_CENTER)
 		_put("dist", ("%.1f m" % float(model.get("dist_m", 0.0))).replace(".", ","), r.position + Vector2(52.0, 28.0),
 			236.0, HORIZONTAL_ALIGNMENT_RIGHT)
 		var first: bool = bool(model.get("first", false))
@@ -295,6 +298,11 @@ func _put(n: String, text: String, pos: Vector2, w: float, align: HorizontalAlig
 	l.horizontal_alignment = align
 	l.position = pos
 	l.size = Vector2(w, 18.0) if w > 0.0 else Vector2.ZERO
+
+
+## Centre of the level plaque in the frame `r` (top right, where the level stood before 09 ST1-A).
+static func level_center(r: Rect2) -> Vector2:
+	return r.position + Vector2(FRAME.x - 12.0 - LEVEL_R, 3.0 + LEVEL_R)
 
 
 # --- drawing ----------------------------------------------------------------------------------------------------------
@@ -343,6 +351,7 @@ func _draw_frame(m: IconMesh) -> void:
 	m.rect(r, CombatStyle.C_PANEL)
 	m.rect(Rect2(r.position, Vector2(r.size.x, 2.0)), CombatStyle.C_GOLD if first else CombatStyle.C_ENEMY)
 	_lead_symbol(m, Rect2(r.position + Vector2(6.0, 8.0), Vector2(40.0, 40.0)))
+	LevelBadge.draw(m, level_center(r), LEVEL_R, CombatStyle.C_GOLD)
 	var pad: bool = _scheme() == Game.InputScheme.GAMEPAD
 	for s: Variant in model.get("slots", []) as Array:
 		var d: Dictionary = s

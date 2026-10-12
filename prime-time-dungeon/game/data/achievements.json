@@ -213,7 +213,7 @@
 		{
 			"id": "ach_level_5",
 			"name": "Aufsteiger:in",
-			"desc": "Bring die Spielfigur auf Level 5.",
+			"desc": "Bring die Spielfigur auf Stufe 5.",
 			"trigger": "level_up",
 			"condition": "e.member == \"kai\" && e.level == 5",
 			"box": "box_bronze",

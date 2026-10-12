@@ -221,7 +221,7 @@ func setup(p_kind: StringName, p_life: float, p_loop: bool) -> void:
 			ls.explosiveness = 0.5
 			var lbl := Label3D.new()
 			lbl.name = "LevelUp"
-			lbl.text = "LEVEL UP!"
+			lbl.text = "NEUE STUFE!"                     # 09 §1.2 (ST1-A): "Stufe", never "Level"
 			lbl.font_size = 72
 			lbl.outline_size = 14
 			lbl.pixel_size = 0.005

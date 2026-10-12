@@ -14,12 +14,19 @@ extends CanvasLayer
 ## Echtzeitkampf (07 §7.3, R3): set_combat_mode() hides the action and map buttons (the combat thumb group takes the
 ## action spot), limits the stick to the bottom left (x 0–40 %, y ≥ 320 of the reference) without `sneak`, and splits
 ## a touch elsewhere into a tap (≤ 0.25 s, < 12 px → target pick) or a camera drag (from the frame it passes 12 px).
+## The pull outside a combat (07 §2.2, §7.3, E36): set_explore_tap() splits the touches of the exploration the same
+## way (a tap targets a lead, free ground clears it); set_pull_slot() lets the action button show slot 1's symbol in
+## the action bar's tints while a lead is targeted (it pulls then), with a gold pulse while the pull hint shows (E37).
 
 signal shown_changed(shown: bool)
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const UiIcon := preload("res://scenes/ui/ui_icon.gd")
 const Joystick := preload("res://scenes/ui/virtual_joystick.gd")
+const CombatStyle := preload("res://scenes/combat/ui/combat_style.gd")
+const CombatIcons := preload("res://scenes/combat/ui/combat_icons.gd")
+const CombatView := preload("res://scenes/combat/ui/combat_view.gd")
+const IconMesh := preload("res://scenes/ui/icon_mesh.gd")
 const REF: Vector2 = Vector2(1280, 720)
 const BUTTONS: Array[Dictionary] = [
 	{"name": "Action", "action": &"action", "center": Vector2(1147, 587), "size": 96.0, "icon": &"fist"},
@@ -143,12 +150,11 @@ func is_shown() -> bool:
 	return _root != null and _root.visible
 
 
-## Hand icon while an interaction prompt is active, the hero's field ability otherwise (fist / bark).
+## Hand icon while an interaction prompt is active, the hero's field ability otherwise (fist / bark) — or slot 1's
+## symbol while a lead is targeted (set_pull_slot; the prompt keeps its priority).
 func set_prompt_active(active: bool) -> void:
 	_prompt = active
-	var b: Button = buttons.get(&"action") as Button
-	if b != null and b.has_node("Icon"):
-		b.get_node("Icon").set("kind", &"hand" if active else field_icon())
+	_refresh_action_icon()
 
 
 ## 06 package A: &"fist" (Kai strikes) | &"bark" (Graf Mopsula barks).
@@ -191,6 +197,14 @@ func _make_button(spec: Dictionary) -> void:
 	icon.offset_top = -vis * 0.25
 	icon.offset_bottom = vis * 0.25
 	b.add_child(icon)
+	if spec["action"] == &"action":                # 07 §7.3 (E36): slot 1's symbol while a lead is targeted
+		var pull_icon: Control = Control.new()
+		pull_icon.name = "PullIcon"
+		pull_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		pull_icon.set_anchors_preset(Control.PRESET_FULL_RECT)
+		pull_icon.visible = false
+		pull_icon.draw.connect(_draw_pull_icon.bind(pull_icon))
+		b.add_child(pull_icon)
 	var action: StringName = spec["action"]
 	b.button_down.connect(func() -> void:
 		_held[action] = true
@@ -276,7 +290,7 @@ func _over_button(global_pos: Vector2) -> bool:
 func _input(event: InputEvent) -> void:
 	if not is_shown():
 		return
-	if combat_mode and _combat_input(event):      # Echtzeitkampf (07, R3)
+	if (combat_mode or _explore_tap.is_valid()) and _combat_input(event):      # Echtzeitkampf (07, R3; E36)
 		return
 	if event is InputEventScreenTouch:
 		var st: InputEventScreenTouch = event
@@ -401,9 +415,10 @@ func _combat_input(event: InputEvent) -> bool:
 		if st.index == _drag_index:
 			_drag_index = int(_cam_touches.keys()[0]) if not _cam_touches.is_empty() else -1
 		_pinch_dist = _pinch_distance()
+		var tap: Callable = _combat_tap if combat_mode else _explore_tap
 		if not t.is_empty() and not bool(t["drag"]) and _now_ms() - int(t["t"]) <= TAP_MAX_MS \
-				and st.position.distance_to(t["pos"] as Vector2) < TAP_MAX_PX and _combat_tap.is_valid():
-			_combat_tap.call(st.position)
+				and st.position.distance_to(t["pos"] as Vector2) < TAP_MAX_PX and tap.is_valid():
+			tap.call(st.position)
 		get_viewport().set_input_as_handled()
 		return true
 	if event is InputEventScreenDrag:
@@ -434,3 +449,99 @@ func _combat_input(event: InputEvent) -> bool:
 		get_viewport().set_input_as_handled()
 		return true
 	return false
+
+
+# --- the pull outside a combat (07 §2.2, §7.3; E36, E37) --------------------------------------------------------------
+
+const PULL_SHAKE_SEC: float = 0.2
+
+var _explore_tap: Callable = Callable()
+var _pull: Dictionary = {}                   # {"id": slot 1's skill, "reason", "hint"} while a lead is targeted
+var _pull_shake: float = 0.0
+var _pull_t: float = 0.0
+
+
+## On (a callable): the exploration's touches outside the stick and the buttons split into a tap (≤ 0.25 s, < 12 px:
+## `tap(canvas_pos)` — a lead there becomes the target, free ground clears it) or a camera drag (from the frame it
+## passes 12 px), like the combat (07 §7.3). Callable() restores the plain camera drag (CTB runs).
+func set_explore_tap(tap: Callable) -> void:
+	release_all()
+	_explore_tap = tap
+
+
+## A lead is targeted outside a combat: the action button shows `skill_id` (slot 1; "" = back to the field ability) in
+## the tints of the action bar (`reason`: "" ready, "range" red, "mp" blue, else dimmed) and pulses gold while the pull
+## hint shows (`hint`). An interaction prompt keeps the hand.
+func set_pull_slot(skill_id: String, reason: String, hint: bool) -> void:
+	var p: Dictionary = {"id": skill_id, "reason": reason, "hint": hint} if skill_id != "" else {}
+	if p == _pull:
+		return
+	_pull = p
+	_refresh_action_icon()
+
+
+## The symbol the action button shows: &"hand", &"fist", &"bark" or "pull:<skill id>" (tests).
+func action_symbol() -> String:
+	var b: Button = buttons.get(&"action") as Button
+	var pi: Control = b.get_node_or_null("PullIcon") as Control if b != null else null
+	if pi != null and pi.visible:
+		return "pull:" + str(_pull.get("id", ""))
+	var icon: Node = b.get_node_or_null("Icon") if b != null else null
+	return str(icon.get("kind")) if icon != null else ""
+
+
+## A refused pull of the action button: its symbol shakes.
+func refuse_pull() -> void:
+	_pull_shake = PULL_SHAKE_SEC
+
+
+func _refresh_action_icon() -> void:
+	var b: Button = buttons.get(&"action") as Button
+	if b == null:
+		return
+	var pull_on: bool = not _prompt and not _pull.is_empty()
+	var icon: CanvasItem = b.get_node_or_null("Icon") as CanvasItem
+	if icon != null:
+		icon.set("kind", &"hand" if _prompt else field_icon())
+		icon.visible = not pull_on
+	var pi: Control = b.get_node_or_null("PullIcon") as Control
+	if pi != null:
+		pi.visible = pull_on
+		pi.queue_redraw()
+
+
+func _process(delta: float) -> void:
+	if _pull.is_empty() and _pull_shake <= 0.0:
+		return
+	_pull_t += delta
+	_pull_shake = maxf(0.0, _pull_shake - delta)
+	var b: Button = buttons.get(&"action") as Button
+	var pi: Control = b.get_node_or_null("PullIcon") as Control if b != null else null
+	if pi != null and pi.visible:
+		pi.queue_redraw()
+
+
+## Slot 1's symbol on the action button in the action bar's tints (07 §8.2), the gold pulse of the pull hint.
+func _draw_pull_icon(pi: Control) -> void:
+	if _pull.is_empty():
+		return
+	var m: IconMesh = IconMesh.new()
+	var c: Vector2 = pi.size * 0.5 + Vector2(sin(_pull_t * 70.0) * 5.0 * _pull_shake / PULL_SHAKE_SEC, 0.0)
+	var vis: float = float((BUTTONS[0] as Dictionary)["size"])
+	var isz: float = vis * 0.58
+	var from: int = m.colors.size()
+	CombatIcons.draw(m, CombatStyle.skill_icon(CombatView.skill_of(str(_pull["id"]))),
+		Rect2(c - Vector2(isz, isz) * 0.5, Vector2(isz, isz)))
+	match str(_pull.get("reason", "")):
+		"":
+			pass
+		"mp":
+			CombatIcons.recolor(m, from, 0.85, Color(CombatStyle.C_MANA, 0.5))
+		"range":
+			CombatIcons.recolor(m, from, 0.4, Color(CombatStyle.C_DANGER, 0.6))
+		_:
+			CombatIcons.recolor(m, from, 0.0, Color(0, 0, 0, 0), 0.4)
+	if bool(_pull.get("hint", false)):
+		var a: float = 0.45 + 0.55 * (0.5 + 0.5 * sin(_pull_t * TAU * 1.2))
+		m.ring(c, vis * 0.5 + 7.0, Color(CombatStyle.C_GOLD, a), 3.0, true)
+	m.commit(pi)

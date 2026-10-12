@@ -3,12 +3,20 @@ class_name ExplorationHud extends CanvasLayer
 ## the countdown starts; < 5:00 orange, < 1:00 red pulsing + light screenshake every 10 s, ≤ 0:10 beep per second),
 ## floor name, quest line (event runs), minimap (+ big map on `map`), party mini status, interaction prompt with input
 ## glyph, control hints, touch layer (layer 20). `pause` opens the PauseMenu (tree paused, §9.4).
+## Real-time runs (07 §2.2, §7, E34–E37): the target of a pull (explore_target.gd: frame below the timer with the pull
+## hint, marker at the lead), its refusal texts, "Tab Ziel" in the control hints, the touch layer's taps (target) and
+## its action button with slot 1's symbol.
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const InputGlyph := preload("res://scenes/ui/input_glyph.gd")
 const UiIcon := preload("res://scenes/ui/ui_icon.gd")
 const MinimapScript := preload("res://scenes/ui/minimap.gd")
 const EventInfo := preload("res://scenes/ui/event_info.gd")
+const ExploreTarget := preload("res://scenes/ui/explore_target.gd")
+## A refused pull (07 §2.2: only abilities usable as an opener; ExplorationScene.pull_check) → the short text.
+const PULL_TEXTS: Dictionary = {"no_target": "Kein Ziel", "room": "Hier wird nicht gekämpft",
+	"not_learned": "Noch nicht gelernt", "no_opener": "Damit eröffnest du keinen Kampf", "range": "Zu weit weg",
+	"mp": "Nicht genug MP"}
 const PAUSE_MENU: String = "res://scenes/ui/pause_menu.tscn"
 const TOUCH_CONTROLS: String = "res://scenes/ui/touch_controls.tscn"
 const WARN_ORANGE_SEC: int = 300
@@ -142,6 +150,7 @@ var _quest_text: String = ""
 var _demo: bool = false
 var _dirty: Dictionary = {}                 # handler → pending while detached (§13.3); applied on re-attach
 var _quest_progress_pending: float = -1.0
+var _target_view: Control                   # 07 E34: the target frame + marker of a pull (explore_target.gd)
 
 
 ## Optional (captures): {"capture": true} → standalone still with floor map, timer, prompt and quest line.
@@ -399,6 +408,10 @@ func _build() -> void:
 	_build_party()
 	_build_prompt()
 	_build_hints()
+	_target_view = ExploreTarget.new()
+	_target_view.name = "PullTarget"
+	UiUtil.full_rect(_target_view)
+	_frame.add_child(_target_view)
 	if ResourceLoader.exists(TOUCH_CONTROLS):
 		touch = (load(TOUCH_CONTROLS) as PackedScene).instantiate() as CanvasLayer
 		touch.name = "TouchControls"
@@ -546,6 +559,10 @@ func _build_hints() -> void:
 	_hints.alignment = BoxContainer.ALIGNMENT_END
 	_frame.add_child(_hints)
 	_hints.add_child(InputGlyph.make(&"sneak", "Schleichen", 16))
+	if Game.is_realtime():                       # 07 §7.1 (E37): Tab / RT targets a group's lead for a pull
+		var target: Control = InputGlyph.make(&"target_next", "Ziel", 16)
+		target.name = "TargetHint"
+		_hints.add_child(target)
 	var field: Control = InputGlyph.make(&"action", field_hint(), 16)
 	field.name = "FieldHint"
 	_hints.add_child(field)
@@ -823,6 +840,52 @@ func _start_demo() -> void:
 func _rt_ready() -> void:
 	Events.overlay_mode_requested.connect(_on_rt_overlay_mode)
 	CombatInput.apply_for_game()
+	if touch != null and Game.is_realtime():     # 07 §7.3 (E36): a tap targets a lead, free ground clears
+		touch.call("set_explore_tap", _on_explore_tap)
+
+
+# --- the pull by a person (07 §2.2, §7.1–§7.4; E34–E37) -----------------------------------------------------------
+
+## The target of a pull ({} hides it; ExplorationScene.pull_frame_model): the frame below the floor name / timer /
+## quest column, the marker at the lead, and on touch the action button with slot 1's symbol (07 §7.3).
+func set_pull_target(model: Dictionary) -> void:
+	var col: Control = _frame.get_node_or_null("TopCenter") as Control
+	if col != null:
+		_target_view.set("top", col.position.y + col.size.y + 10.0)
+	# the frame may step aside for a far lead (E34) — between the party column and the minimap
+	_target_view.set("band", Vector2(_party_box.position.x + _party_box.size.x + 16.0, minimap.position.x - 16.0))
+	_target_view.call("set_model", model)
+	if touch == null:
+		return
+	var s1: Dictionary = {}
+	for s: Variant in model.get("slots", []) as Array:
+		if int((s as Dictionary)["slot"]) == 1:
+			s1 = s
+	touch.call("set_pull_slot", str(s1.get("id", "")), str(s1.get("reason", "")), bool(model.get("hint", false)))
+
+
+## A key / button that could not pull (07 §2.2): the short text under the target frame, the chip of `slot` shakes
+## ("Kein Ziel" names the target key of the scheme: "Kein Ziel (Tab)").
+func pull_refused(slot: int, reason: String) -> void:
+	var text: String = str(PULL_TEXTS.get(reason, "Geht gerade nicht"))
+	if reason == "no_target" and Game.input_scheme != Game.InputScheme.TOUCH:
+		var key: String = InputGlyph.binding_text(&"target_next", Game.input_scheme)
+		if key != "":
+			text += " (%s)" % key
+	_target_view.call("refuse", slot, text)
+	if touch != null and slot == 1:
+		touch.call("refuse_pull")
+
+
+## The target frame / marker view (tests, captures).
+func pull_target_view() -> Control:
+	return _target_view
+
+
+func _on_explore_tap(canvas_pos: Vector2) -> void:
+	var ex: Node = get_parent()
+	if ex != null and ex.has_method("on_world_tap"):
+		ex.call("on_world_tap", canvas_pos)
 
 
 func _on_rt_overlay_mode(p_mode: StringName) -> void:

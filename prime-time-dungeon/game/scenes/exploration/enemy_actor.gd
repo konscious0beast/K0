@@ -70,6 +70,8 @@ var puppet: bool = false
 ## room); set by the ExplorationScene. Callable(world_pos: Vector3) -> bool.
 var blocked_cell: Callable = Callable()
 var show_boss: bool = false                # 07 §9.6 (E26): gold frame of the show boss's lead
+## Height of the figure's head in m (the rig's height, ≥ 0.6): the target marker and click picking of a pull (E34).
+var top_m: float = 1.0
 
 
 func _ready() -> void:
@@ -433,6 +435,7 @@ func _build_visual(def: EnemyDef) -> void:
 	add_child(r)
 	rig = r
 	var top: float = maxf(0.6, float(r.get("height")) if "height" in r else 1.0)
+	top_m = top
 	if get_node_or_null("Collision") == null:
 		var cs: CollisionShape3D = CollisionShape3D.new()
 		cs.name = "Collision"

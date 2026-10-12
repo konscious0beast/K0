@@ -5,10 +5,11 @@ extends CharacterBody3D
 ## decel 40 m/s², turn 12 rad/s towards the move direction, gravity 20 m/s², no jump — identical for both heroes.
 ## Movement is camera relative (Input.get_vector of the move_* actions: keyboard, gamepad and touch alike; the
 ## deflection only sets the direction).
-## `action` (one key) → signal action_requested; the ExplorationScene decides between interact (focused interactable)
-## and the hero's field ability (start_field_ability): Kai's field strike (start_strike: arc 100°, reach 1.8 m, 0.45 s,
-## cooldown 0.6 s) or Mopsula's bark (start_bark: cone 120°, 4 m, 0.4 s, cooldown 3 s; 06 §1.3). Reach and cooldown
-## carry the leader's field talents (field_range_pm / field_cd_pm, set by the scene from HeroRules.field_mods).
+## `action` (one key) → signal action_requested (its device in action_source); the ExplorationScene decides between
+## interact (focused interactable), a pull of the targeted lead (real time: the pad's A, the touch button — 07 §7.2,
+## §7.3) and the hero's field ability (start_field_ability): Kai's field strike (start_strike: arc 100°, reach 1.8 m,
+## 0.45 s, cooldown 0.6 s) or Mopsula's bark (start_bark: cone 120°, 4 m, 0.4 s, cooldown 3 s; 06 §1.3). Reach and
+## cooldown carry the leader's field talents (field_range_pm / field_cd_pm, set by the scene from HeroRules.field_mods).
 ## Standalone (scene root, e.g. capture of player.tscn) it builds a small preview stage around itself.
 
 signal action_requested
@@ -59,6 +60,9 @@ var rt_combat: bool = false
 ## Run-speed factor in a real-time combat: the controlled unit's move_pm × combat_speed_pm (07 §3.5.2: honest samples
 ## never exceed the plausibility limits). 1.0 outside a combat.
 var speed_scale: float = 1.0
+## Device of the last `action` press (07 §7.2 / §7.3, E36): &"key", &"pad" (gamepad A: with a target in slot 1's range
+## it pulls) or &"touch" (the touch action button sends an InputEventAction: with a target it pulls).
+var action_source: StringName = &"key"
 
 
 func _ready() -> void:
@@ -224,6 +228,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event.is_action_pressed(&"action") and not event.is_echo():
 		get_viewport().set_input_as_handled()
+		action_source = &"pad" if event is InputEventJoypadButton else (&"touch" if event is InputEventAction else &"key")
 		action_requested.emit()
 
 

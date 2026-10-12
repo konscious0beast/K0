@@ -16,8 +16,10 @@ Prüfwerkzeuge (`tools/`).
   sarkastischen System-KI **M.O.D.**
 - **Look:** stilisiertes Low-Poly mit Toon-Shading (Option B). Figuren, Räume und Effekte entstehen prozedural aus Primitiven
   und Shadern, ohne externe Assets. glTF-Modelle aus Blender sollen die Platzhalter später 1:1 ersetzen (03_ART Kap. 10).
-- **Spiel:** Echtzeit-Erkundung in 3D mit sichtbaren Gegnern (wie FF12) und rundenbasierte **CTB-Kämpfe** mit sichtbarer
-  Zugreihenfolge (wie FF10). Befehle: Angriff, Fähigkeit, Item, Stunt, Verteidigen, Flucht.
+- **Spiel:** Echtzeit-Erkundung in 3D mit sichtbaren Gegnern (wie FF12) und **Echtzeitkämpfe direkt in der Welt**
+  („WoW-light“, 07): Ziel wählen, der Auto-Angriff läuft, dazu vier Fähigkeiten, **SHOW**, Trank und Partner-Spezial; rote
+  Bodenflächen kündigen Treffer an, denen man ausweicht. Der frühere Rundenkampf (CTB) bleibt für alte Spielstände und wird
+  zum Minispiel „Stempelduell“ (`docs/10_MINISPIEL_STEMPELDUELL.md`).
 - **Die Show ist das UI:** Zuschauer, Follower, Hype, Sponsor-Geschenke mitten im Kampf, Achievements, Lootboxen,
   M.O.D.-Kommentare und Graf-Mopsula-Szenen im Safe Room.
 - **SHOWRUN-Kern (Live-Modus, Stufe S0):** Offline-Event-Läufe mit festem Seed, Quest und lokaler Bestenliste. Jeder Lauf
@@ -257,29 +259,43 @@ echte Lauf mit den Secrets steht noch aus.
 ## 5. Steuerung
 
 Tasten sind als physische Tasten belegt und funktionieren daher auch mit QWERTZ. Alle Menüs lassen sich mit Tastatur,
-Gamepad und Touch bedienen (02_TECH §2.2, §10).
+Gamepad und Touch bedienen (02_TECH §2.2, §10). Gekämpft wird in Echtzeit direkt in der Welt (07 §7).
 
 | Aktion | Tastatur / Maus | Gamepad (SDL-Layout) | Touch |
 |---|---|---|---|
-| Bewegen | WASD oder Pfeiltasten | linker Stick | schwebender Stick in den linken 40 % des Bildschirms |
+| Bewegen | WASD oder Pfeiltasten | linker Stick | schwebender Stick in den linken 40 % des Bildschirms (im Kampf unten links) |
 | Kamera drehen | Q / E, rechte Maustaste gedrückt ziehen | rechter Stick | auf der freien rechten Fläche ziehen |
-| Kamera zoomen | – | – | zwei Finger (Pinch) |
+| Kamera zoomen | Mausrad | – | zwei Finger (Pinch) |
 | Schleichen (halten) | Shift | LT oder L3 | Stick nur wenig auslenken (≤ 60 %) |
-| Aktion: Interagieren oder Feldschlag | F, Leertaste, Enter | A | runder Aktions-Button rechts |
+| Aktion: Interagieren, Feldschlag (Kai) oder Bellen (Graf Mopsula) | F, Leertaste, Enter | A | runder Aktions-Button rechts |
 | Pause | Esc, P | Start | Pause-Button oben rechts |
-| Karte | M, Tab | Back | Karten-Button |
+| Karte | M | Back | Karten-Button |
 | Menü-Reiter wechseln | Q / E, Bild↑ / Bild↓ | LB / RB | Reiter antippen |
 | Bestätigen / Zurück | Enter, Leertaste / Esc | A / B | Button antippen |
-| Kampf: Auto-Kampf an/aus | T | Y | AUTO-Button |
-| Kampf: Tempo ×1 / ×2 | R | R3 | Tempo-Button |
-| Kampf: Befehle und Ziele | Pfeiltasten + Enter | Steuerkreuz / Stick + A | Befehls-Buttons (2 × 3), Gegner antippen wählt das Ziel, erneut antippen oder „OK“ führt aus; die Zugfolge-Leiste zeigt 10 Einträge |
+| Kampf: Ziel wählen | Tab / Shift+Tab, Linksklick auf Gegner oder Namensplakette (auf einen Party-Rahmen: Verbündete) | RT / LT | Gegner antippen; Ziel-Button (halten: vorheriges Ziel) |
+| Kampf: Angriff | läuft von selbst; F, Leertaste, Enter = „Angriff!“ (ohne Ziel auf den nächsten Gegner); V = Auto-Angriff an/aus | Steuerkreuz unten = Auto-Angriff an/aus | läuft von selbst |
+| Kampf: Fähigkeiten (Slot 1–4) | 1–4 oder Klick auf den Slot | A, X, Y, B | großer Knopf (Slot 1) und der Bogen darum |
+| Kampf: SHOW (riskant, das Publikum liebt es) | 5 | RB | goldener SHOW-Knopf |
+| Kampf: Trank | 6; Rechtsklick auf den Slot = Gegenstandsrad | LB (0,4 s halten = Gegenstandsrad) | Trank-Knopf (halten = Gegenstandsrad) |
+| Kampf: Partner-Spezial | R | Steuerkreuz links | Knopf neben dem Partner-Rahmen |
+| Kampf: Partner-Taktik (ab Stufe 3) | G | Steuerkreuz rechts | Taktik-Chip |
+| Kampf: Autopilot an/aus | T | Steuerkreuz oben | AUTOPILOT-Button |
+| Kampf: Ausweichen | aus der roten Bodenfläche laufen, bevor sie voll ist | linker Stick | Stick |
 | Vollbild | F11 | – | – |
 | Debug-Overlay (nur Debug-Build) | F3 | – | – |
 | QA: Test-Geschenk / Sponsor-Fenster öffnen (Debug-Build, Overlay offen) | F4 / F5 | – | Buttons im Overlay |
 
-Interagieren hat Vorrang: Zeigt die Erkundung einen Prompt (Truhe, Tür, Event in 1,5 m vor Kai), löst die Aktionstaste
-die Interaktion aus, sonst einen Feldschlag. Trifft der Feldschlag eine Gruppe, die noch nicht jagt (oder ihren Rücken),
-beginnt der Kampf mit Präventivschlag; dasselbe gilt, wenn Kai eine Gruppe von hinten berührt (01_GDD Kap. 2.4).
+Interagieren hat Vorrang: Zeigt die Erkundung einen Prompt (Truhe, Tür, Event in 1,5 m vor der Figur), löst die
+Aktionstaste die Interaktion aus, sonst den Feldschlag bzw. das Bellen. Ein Kampf beginnt, wenn Kais Feldschlag eine Gruppe
+trifft (ruht sie, patrouilliert sie, ist sie angebellt oder trifft er sie von hinten: **Erstschlag**, die Gegner sind
+3 s überrumpelt), wenn ein verfolgender Gegner die Figur erreicht (von hinten: Hinterhalt) oder sie 4 s im selben Raum
+verfolgt, und an den Bossen. Gesehen werden allein startet keinen Kampf; Graf Mopsulas Bellen verdutzt eine Gruppe, startet aber
+keinen (07 §2.2). Wer den Ring des Kampf-Sets durch eine Türgasse verlässt, flieht.
+
+**Rundenkampf (CTB):** Spielstände von vor der Umstellung kämpfen weiter rundenbasiert (Debug-Builds: Einstellung
+„Kampfmodus (Debug)“ oder `--combat=ctb`). Dort gilt zusätzlich: Karte auch mit Tab, Kampf: Auto-Kampf T / Y / AUTO-Button,
+Tempo ×1 / ×2 R / R3 / Tempo-Button, Befehle und Ziele mit Pfeiltasten + Enter, Steuerkreuz / Stick + A oder den
+Befehls-Buttons (2 × 3); die Zugfolge-Leiste zeigt die nächsten 10 Züge.
 
 ## 6. Entwickler-Argumente
 

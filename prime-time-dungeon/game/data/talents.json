@@ -176,7 +176,7 @@
 		{
 			"id": "tal_kai_erster_eindruck",
 			"name": "Erster Eindruck",
-			"desc": "Nach einem Präventivschlag trifft die erste Runde härter.",
+			"desc": "Nach einem Präventivschlag sitzen die ersten Treffer härter.",
 			"for": [
 				"kai"
 			],
@@ -418,7 +418,7 @@
 		{
 			"id": "tal_mop_taktgefuehl",
 			"name": "Taktgefühl",
-			"desc": "Der Graf wartet den richtigen Moment ab: Stunts gelingen öfter.",
+			"desc": "Der Graf wartet den richtigen Moment ab: Stunts und SHOW gelingen öfter.",
 			"for": [
 				"mopsula"
 			],

@@ -51,10 +51,10 @@ static func effect_text(fx: Dictionary, member_id: String = "") -> String:
 			return "%s reicht %s %% weiter" % [ability, _pct(pm - 1000)]
 		"field_cd_pm":
 			return "%s %s %% schneller wieder bereit" % [ability, _pct(1000 - pm)]
-		"preemptive_dmg_pm":
-			return "Nach Präventivschlag: 1. Zug +%s %% Schaden" % _pct(pm - 1000)
+		"preemptive_dmg_pm":                     # R5b-2a: worded for both combat modes (07 §9.6)
+			return "Nach Präventivschlag: erste Treffer +%s %% Schaden" % _pct(pm - 1000)
 		"stunt_window_pm":
-			return "Stunts gelingen %s %% öfter" % _pct(pm - 1000)
+			return "Stunts und SHOW gelingen %s %% öfter" % _pct(pm - 1000)
 		"marotte_heart":
 			return "1× je Etage: +%d Herz für M.O.D.s Vorliebe" % int(fx.get("per_floor", 1))
 		"liga_stat_pct":

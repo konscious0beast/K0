@@ -187,7 +187,7 @@
 			"id": "mod_first_fight_01",
 			"tag": "first_fight",
 			"voice": "mod",
-			"text": "Ihr erster Kampf! Die Leiste rechts zeigt, wer dran ist. Die Leiste links zeigt, wie sehr Sie verlieren.",
+			"text": "Ihr erster Kampf! Das Publikum will Treffer sehen. Es ist da nicht wählerisch.",
 			"weight": 1
 		},
 		{
@@ -1879,7 +1879,7 @@
 			"id": "mod_tutorial_battle_01",
 			"tag": "tutorial_battle",
 			"voice": "mod",
-			"text": "Angriff kostet nichts. Mopsulas Adelsflamme kostet MP – und Ratten hassen Feuer. Fast so sehr wie Steuern.",
+			"text": "Zuschlagen kostet nichts. Mopsulas Adelsflamme kostet MP – und Ratten hassen Feuer. Fast so sehr wie Steuern.",
 			"weight": 1
 		},
 		{

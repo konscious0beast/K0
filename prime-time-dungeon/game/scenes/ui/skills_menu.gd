@@ -126,7 +126,9 @@ static func _element_icon(sd: SkillDef) -> StringName:
 	return &"star"
 
 
-func _show(e: Dictionary) -> void:
+## Detail of a skill. `rt`: a real-time run's bar row — real-time MP, cooldown and cast time instead of the CTB rank,
+## statuses in seconds instead of turns, the party's SHOW cooldown (R5b-2a text pass).
+func _show(e: Dictionary, rt: bool = false) -> void:
 	var sd: SkillDef = UiUtil.skill_def(str(e.get("skill", "")))
 	var title: Label = _detail["title"]
 	var sub: Label = _detail["sub"]
@@ -141,27 +143,37 @@ func _show(e: Dictionary) -> void:
 		str(UiUtil.TARGET_NAMES.get(sd.target, sd.target))]
 	if sd.element != "none":
 		parts.append(str(UiUtil.ELEMENT_NAMES.get(sd.element, sd.element)))
-	if sd.mp_cost > 0:
-		parts.append("%d MP" % sd.mp_cost)
-	parts.append("Rang %d" % sd.rank)
+	var mp: int = RtView.skill_mp(sd) if rt else sd.mp_cost
+	if mp > 0:
+		parts.append("%d MP" % mp)
+	if not rt:
+		parts.append("Rang %d" % sd.rank)
+	elif int(sd.rt.get("cast_ms", 0)) > 0:
+		parts.append("Zauberzeit " + RtView.seconds_text(int(sd.rt["cast_ms"])))
+	if rt and int(sd.rt.get("cooldown_ms", 0)) > 0:
+		parts.append("Abklingzeit " + RtView.seconds_text(int(sd.rt["cooldown_ms"])))
 	sub.text = "  ·  ".join(parts)
 	var lines: PackedStringArray = []
-	if sd.desc != "":
-		lines.append(UiUtil.tr_text(sd.desc))
+	var desc: String = RtView.skill_text(sd) if rt else UiUtil.tr_text(sd.desc)
+	if desc != "":
+		lines.append(desc)
+	var power: int = int(sd.rt.get("power", sd.power)) if rt else sd.power
 	if sd.damage_type in ["physical", "magical"]:
-		lines.append("Stärke %d %%%s" % [sd.power, " × %d Treffer" % sd.hits if sd.hits > 1 else ""])
+		lines.append("Stärke %d %%%s" % [power, " × %d Treffer" % sd.hits if sd.hits > 1 else ""])
 	elif sd.damage_type == "heal":
 		lines.append("Heilung (%s)" % {"mag": "Magie", "pct": "% MaxHP", "fixed": "fest"}.get(sd.heal_mode, sd.heal_mode))
 	if sd.is_stunt():
-		lines.append("Erfolg %d %% + %s %% je Glück (max. %d %%), Abklingzeit %d Züge" % [roundi(sd.success_base * 100.0),
+		lines.append("Erfolg %d %% + %s %% je Glück (max. %d %%), %s" % [roundi(sd.success_base * 100.0),
 			str(snappedf(sd.success_lck * 100.0, 0.1)).replace(".", ","), roundi(sd.success_cap * 100.0),
-			maxi(sd.cooldown, 1)])
+			"SHOW-Abklingzeit 30 s (ganze Party)" if rt else "Abklingzeit %d Züge" % maxi(sd.cooldown, 1)])
 	if not bool(e.get("learned", true)):
 		lines.append("Wird mit Level %d gelernt." % int(e.get("level", 1)))
 	body.text = UiUtil.glyph_safe("\n".join(lines))
 
 
 # --- Echtzeitkampf (07, R3): the combat bar of a real-time run (07 §4.1–4.3) ------------------------------------------
+
+const RtView := preload("res://scenes/combat/ui/combat_view.gd")
 
 ## 07 §4.2 / §4.3 as long as party.json has no rt.bar yet (R4 writes it; rt.bar wins): [slot, skill, level, kind] with
 ## kind "" (base), "variant", "context" or "finale".
@@ -432,7 +444,7 @@ func _rt_button(e: Dictionary, prefix: String) -> void:
 
 ## Detail of a bar row: the CTB detail text plus the real-time slot rule.
 func _rt_show(e: Dictionary) -> void:
-	_show(e)
+	_show(e, true)
 	var body: Label = _detail["body"]
 	var extra: String = ""
 	match str(e.get("kind", "")):

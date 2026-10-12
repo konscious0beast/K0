@@ -12,6 +12,8 @@ const TICKS_PER_SEC: int = 30
 ## Reasons that mean "the unit could act, only this skill cannot right now" (state tints, never a hidden slot).
 const ENEMY_TARGETS: PackedStringArray = ["single_enemy", "all_enemies", "random_enemy"]
 const ALLY_TARGETS: PackedStringArray = ["single_ally", "all_allies", "single_ally_ko"]
+## Whom a status of a skill's rt block lands on (RtVocab.STATUS_TO; "target" needs no word).
+const STATUS_TO_NAMES: Dictionary = {"self": "selbst", "all_enemies": "alle Gegner", "all_allies": "ganze Party"}
 
 
 ## The controlled unit (null when unknown).
@@ -110,6 +112,53 @@ static func skill_mp(def: SkillDef) -> int:
 
 static func uses_gcd(def: SkillDef) -> bool:
 	return def != null and (def.rt.is_empty() or bool(def.rt.get("gcd", true)))
+
+
+## Real-time text of a skill (R5b-2a text pass): its description without a rule part that counts CTB turns ("Sie
+## ziehen alle Blicke auf sich: Provoziert und Gepanzert für 3 Züge." keeps the part before the colon — the data keep
+## the CTB text until they are baked, R5b part 2) plus one line with the statuses of its rt block in seconds, e.g.
+## "Wirkung: Provoziert (alle Gegner) 4 s · Gepanzert (selbst) 6 s".
+static func skill_text(def: SkillDef) -> String:
+	if def == null:
+		return ""
+	var lines: PackedStringArray = []
+	var desc: String = TranslationServer.translate(def.desc)
+	if desc.contains(" Züge") or desc.contains(" Zug."):
+		var cut: int = desc.rfind(": ")
+		desc = desc.substr(0, cut) + "." if cut > 0 else ""
+	if desc != "":
+		lines.append(desc)
+	var parts: PackedStringArray = []
+	for v: Variant in def.rt.get("statuses", []) as Array:
+		var s: Dictionary = (v as Dictionary) if v is Dictionary else {}
+		var sid: String = str(s.get("id", ""))
+		if not CombatStyle.gd().has_id("statuses", sid):
+			continue
+		var st: StatusDef = CombatStyle.gd().status(sid)
+		var ms: int = int(s.get("ms", 0)) if int(s.get("ms", 0)) > 0 else int(st.rt.get("default_ms", 0))
+		var text: String = TranslationServer.translate(st.name)
+		var to: String = str(STATUS_TO_NAMES.get(str(s.get("to", "target")), ""))
+		if to != "":
+			text += " (%s)" % to
+		if ms > 0:
+			text += " " + seconds_text(ms)
+		var pm: int = int(s.get("chance_pm", 1000))
+		if pm < 1000:
+			text += " (%s %%)" % _decimal(pm)
+		parts.append(text)
+	if not parts.is_empty():
+		lines.append("Wirkung: " + " · ".join(parts))
+	return "\n".join(lines)
+
+
+## 4000 ms → "4 s", 1500 → "1,5 s" (German decimal comma).
+static func seconds_text(ms: int) -> String:
+	return "%s s" % _decimal(ms / 100)
+
+
+## Tenths → "4" / "1,5": 40 → "4", 15 → "1,5".
+static func _decimal(tenths: int) -> String:
+	return str(tenths / 10) if tenths % 10 == 0 else "%d,%d" % [tenths / 10, tenths % 10]
 
 
 ## True if `skill_id` is the FINALE entry of slot 5 of party member `def_id` (party.json rt.bar "finale", 07 §4.1;

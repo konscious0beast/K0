@@ -249,11 +249,13 @@ static func tooltip_text(s: Dictionary) -> String:
 	if bool(s["show"]):
 		parts.append("Abklingzeit 30 s (ganze Party)")
 	var desc: String = ""
-	if def != null and def.desc != "":
-		desc = "\n" + TranslationServer.translate(def.desc)
+	if def != null and not bool(s["is_item"]):
+		desc = CombatView.skill_text(def)          # R5b-2a: statuses in seconds, no CTB turn counts
+	elif def != null and def.desc != "":
+		desc = TranslationServer.translate(def.desc)
 	elif bool(s["is_item"]) and CombatStyle.gd().has_id("items", str(s["id"])):
-		desc = "\n" + TranslationServer.translate(CombatStyle.gd().item(str(s["id"])).desc)
-	return " · ".join(parts) + desc
+		desc = TranslationServer.translate(CombatStyle.gd().item(str(s["id"])).desc)
+	return " · ".join(parts) + ("\n" + desc if desc != "" else "")
 
 
 func tooltip_shown() -> String:

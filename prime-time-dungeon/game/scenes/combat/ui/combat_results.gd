@@ -4,9 +4,11 @@ extends CanvasLayer
 ## chip "TALENT BEREIT · im Safe Room wählen" on a talent level (06 B, never a choice here), present(); autoplay
 ## continues after 1.0 s (auto_continue_sec). Forms:
 ## - regular win: lower third "Applaus!" bottom left (380 × 64, 3.0 s): "+36 EXP · +12 Cr · Werbepflaster"; level-ups
-##   and the talent chip as a second lower third. Not blocking: present() returns at once, the exploration goes on.
-## - boss win: credits panel (layer 60, tree paused) with EXP bars, boss loot, achievements, talent chip, show_slot and
-##   "Weiter"; present() returns when it closes (R2 opens the doors afterwards, 07 §2.9).
+##   ("NEUE STUFE!", "Kai: Stufe 4") and the talent chip as a second lower third. Not blocking: present() returns at
+##   once, the exploration goes on.
+## - boss win: credits panel (layer 60, tree paused) with EXP bars (each level as the round level plaque, 09 §1.2),
+##   boss loot, achievements, talent chip, show_slot and "Weiter"; present() returns when it closes (R2 opens the
+##   doors afterwards, 07 §2.9).
 ## - flight: lower third "Taktischer Rückzug" (the hype loss shows in the meter).
 ## - defeat: nothing here — the existing Sendeschluss / game over flow (07 §8.9).
 ## R2 creates it (load("res://scenes/combat/ui/combat_results.gd").new(), add_child) and calls present(result,
@@ -18,6 +20,7 @@ const CombatStyle := preload("res://scenes/combat/ui/combat_style.gd")
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const UiIcon := preload("res://scenes/ui/ui_icon.gd")
 const ModDialogScript := preload("res://scenes/ui/mod_dialog.gd")
+const LevelBadge := preload("res://scenes/ui/level_badge.gd")   # 09 §1.2 (CR-32 i): the level plaque, never "Lv"
 const TouchScript := preload("res://scenes/ui/touch_controls.gd")
 const JoystickScript := preload("res://scenes/ui/virtual_joystick.gd")
 
@@ -31,6 +34,8 @@ const LAYER_LOWER: int = 6
 const LAYER_PANEL: int = 60
 const STAT_NAMES: Dictionary = {"hp": "HP", "mp": "MP", "str": "ANG", "mag": "MAG", "def": "VER", "res": "RES",
 	"spd": "TEM", "lck": "GLÜ"}
+## A level-up (09 §1.2: "Stufe", never "Level"; the same words as the toast "NEUE STUFE" and the level-up effect).
+const LEVEL_UP_TITLE: String = "NEUE STUFE!"
 
 ## Slot for the show-bet effect of package C (hearts flying into the show chip): an empty Control inside the shown
 ## lower third / panel; null before present() and for a defeat.
@@ -143,7 +148,7 @@ static func applaus_line(result: BattleResult, rw: BattleRewards) -> String:
 	return " · ".join(parts) if not parts.is_empty() else "Die Show geht weiter."
 
 
-## Level-up line of the second lower third ("Kai: Level 4 · Graf Mopsula: Level 4"), "" without one.
+## Level-up line of the second lower third ("Kai: Stufe 4 · Graf Mopsula: Stufe 4"), "" without one.
 static func level_line(rw: BattleRewards) -> String:
 	var parts: PackedStringArray = []
 	for li: LevelUpInfo in rw.level_ups:
@@ -151,7 +156,7 @@ static func level_line(rw: BattleRewards) -> String:
 			continue
 		var m: PartyMember = Game.state.member(li.member_id) if Game.state != null else null
 		var who: String = UiUtil.member_name(m) if m != null else li.member_id
-		parts.append("%s: Level %d" % [who, li.new_level])
+		parts.append("%s: Stufe %d" % [who, li.new_level])
 	return " · ".join(parts)
 
 
@@ -175,9 +180,9 @@ func _build_applaus(result: BattleResult, rw: BattleRewards) -> void:
 	var first: Control = _lower("APPLAUS!", applaus_line(result, rw), CombatStyle.C_GOLD)
 	show_slot = first.get_node("Slot") as Control
 	var lv: String = level_line(rw)
-	var tc: int = talent_count(rw)
-	if lv != "" or tc > 0:
-		var second: Control = _lower("LEVEL UP!", lv if lv != "" else "Neue Stufe!", CombatStyle.C_CYAN)
+	if lv != "":                                     # a talent level is a level-up: no chip without a line
+		var second: Control = _lower(LEVEL_UP_TITLE, lv, CombatStyle.C_CYAN)
+		var tc: int = talent_count(rw)
 		if tc > 0:
 			var chip: Label = CombatStyle.label(talent_text(tc), 15, CombatStyle.C_GOLD, true)
 			chip.name = "TalentChip"
@@ -412,7 +417,7 @@ func _member_rows(v: VBoxContainer, result: BattleResult, rw: BattleRewards) -> 
 		var nm: Label = CombatStyle.label(UiUtil.glyph_safe(UiUtil.member_name(m)), 20, CombatStyle.C_PAPER, true)
 		nm.custom_minimum_size = Vector2(170, 0)
 		row.add_child(nm)
-		row.add_child(CombatStyle.label("Lv %d" % m.level, 18, CombatStyle.C_GOLD, true))
+		row.add_child(LevelBadge.make(m.level, 18))      # 09 §1.2 Nr. 1: the number in a plaque, tooltip "Stufe N"
 		var bar: ProgressBar = ProgressBar.new()
 		bar.show_percentage = false
 		bar.custom_minimum_size = Vector2(220, 12)
@@ -432,7 +437,7 @@ func _member_rows(v: VBoxContainer, result: BattleResult, rw: BattleRewards) -> 
 			var up: HBoxContainer = HBoxContainer.new()
 			up.add_theme_constant_override("separation", 10)
 			v.add_child(up)
-			up.add_child(CombatStyle.label("LEVEL UP!", 16, CombatStyle.C_GOLD, true))
+			up.add_child(CombatStyle.label(LEVEL_UP_TITLE, 16, CombatStyle.C_GOLD, true))
 			var gains: PackedStringArray = []
 			for key: String in ["hp", "mp", "str", "mag", "def", "res", "spd", "lck"]:
 				var g: int = int(li.stat_gains.get(key, 0))

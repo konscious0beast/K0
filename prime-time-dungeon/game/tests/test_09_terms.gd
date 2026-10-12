@@ -11,10 +11,15 @@ extends TestCase
 ## (09 §1.2 Nr. 3), never "Stufe 1 / Stufe 2".
 ##
 ## PENDING: findings in files no 09 package may touch (09 §11.4: core/rt/**, scenes/combat/**) — the exact number per
-## file, each waiting for its change request to 07; the list only shrinks (a fixed file must leave it).
+## file, each waiting for its change request to 07; the list only shrinks (a fixed file must leave it). Empty since
+## CR-32 (i): the combat HUD says "Stufe" too (plaques in the frames and the credits, "NEUE STUFE!").
 
 const LevelBadge := preload("res://scenes/ui/level_badge.gd")
 const BetsMenu := preload("res://scenes/ui/bets_menu.gd")
+const HudRig := preload("res://tests/fixtures/rt_hud/hud_rig.gd")
+const HudScenarios := preload("res://tests/fixtures/rt_hud/hud_scenarios.gd")
+const FakeSim := preload("res://tests/fixtures/rt_min/fake_rt_sim.gd")
+const RESULTS: String = "res://scenes/combat/ui/combat_results.gd"
 
 ## Whole words, case-sensitive (09 §1.2 Nr. 6, plus plurals, capitals and "Lvl").
 const PATTERN: String = "\\b(Level|Levels|LEVEL|LEVELS|Lv|LV|Lvl|LVL|Ebene|Ebenen|EBENE|Crawler|Crawlern|Crawlers" \
@@ -26,12 +31,7 @@ const DATA_ROOT: String = "res://data"
 ## Text properties of .tscn / .tres files.
 const SCENE_TEXT_PROPS: PackedStringArray = ["text", "tooltip_text", "placeholder_text", "title", "dialog_text"]
 ## file → [findings, change request]: texts in files 09 must not touch (09 §11.4), each with its open change request.
-const PENDING: Dictionary = {
-	# "Kai: Level 4" in the second lower third, "LEVEL UP!" twice, "Lv %d" in the result rows (combat results, R3)
-	"res://scenes/combat/ui/combat_results.gd": [4, "09 §11.7 CR-32 (i)"],
-	# "Lv %d" in the party frames and the target frame of the combat HUD (R3)
-	"res://scenes/combat/ui/unit_frames.gd": [2, "09 §11.7 CR-32 (i)"],
-}
+const PENDING: Dictionary = {}
 
 var _re: RegEx = null
 
@@ -258,7 +258,15 @@ func test_level_plaque() -> void:
 	assert_eq(p.tooltip_text, "Stufe 12", "the tooltip names the level")
 	assert_eq((p.get_node("Number") as Label).text, "12", "the plaque shows the bare number")
 	assert_eq(p.size.x, p.size.y, "round: as wide as high (%s)" % str(p.size))
+	assert_eq(p.size.x, LevelBadge.diameter(24))
 	assert_eq(p.mouse_filter, Control.MOUSE_FILTER_PASS, "the tooltip shows, a click reaches the card underneath")
+	# CR-32 (i): two digits keep 2 px to the ring (1.6 × the size alone let "48" touch it from 12 to 18 px)
+	var font: Font = UiTheme.font_bold()
+	for px: int in [12, 15, 18, 24]:
+		var w: float = font.get_string_size("48", HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
+		assert_true(w + 2.0 * (LevelBadge.BORDER_PX + 2.0) <= LevelBadge.diameter(px),
+			"%d px: \"48\" (%.0f px) in a %.0f px plaque" % [px, w, LevelBadge.diameter(px)])
+	assert_eq(LevelBadge.FRAME_RADIUS, LevelBadge.diameter(12) * 0.5, "the drawn plaques fit two digits of 12 px")
 
 
 func test_party_menu_and_hud_show_the_plaque() -> void:
@@ -299,6 +307,76 @@ func test_party_menu_and_hud_show_the_plaque() -> void:
 	assert_eq(lv.text, str(DB.enemy("enm_kanalratte").level), "the pull target frame: the bare number in its plaque")
 	assert_eq(lv.horizontal_alignment, HORIZONTAL_ALIGNMENT_CENTER)
 	target.queue_free()
+
+
+## CR-32 (i): the combat HUD — the bare number in the plaque of the party and target frames (tooltip "Stufe N" over
+## the plaque only), "NEUE STUFE!" and "Kai: Stufe 2" in the second lower third, plaques in the credits' rows.
+func test_combat_frames_and_results_show_the_plaque() -> void:
+	Game.new_game(0, "Kai", 4242)
+	var data: GameData = FakeSim.load_data()
+	var sim: RtSim = HudScenarios.build(data, {"level": 4, "enemies": ["enm_kanalratte", "enm_kanalratte"]})
+	sim.unit("p0").target_id = "e0"
+	sim.unit("e0").level = 12
+	var rig: Dictionary = HudRig.make(self, sim, data)
+	await wait_frames(3)
+	var frames: Control = (rig["hud"] as Node).get("frames") as Control
+	for spec: Array in [["ctl", "p0"], ["partner", "p1"], ["target", "e0"]]:
+		var key: String = str(spec[0])
+		var u: RtUnit = sim.unit(str(spec[1]))
+		var l: Label = frames.get_node("L_%s_level" % key) as Label
+		var pr: Rect2 = frames.call("level_rect", key + "_frame") as Rect2
+		assert_eq([l.visible, l.text], [true, str(u.level)], key + ": the bare number, never \"Lv\"")
+		assert_almost(l.get_rect().get_center().x, pr.get_center().x, 0.6, key + ": centred in its plaque")
+		var hit: Control = frames.get_node("Hit_%s_frame" % key) as Control
+		assert_eq(hit.get_tooltip(pr.get_center() - hit.position), "Stufe %d" % u.level, key + ": the plaque's tooltip")
+		assert_eq(hit.get_tooltip(Vector2(4.0, 30.0)), "", key + ": the rest of the frame has none")
+	for n: Node in frames.find_children("*", "Label", true, false):
+		assert_eq(words_in((n as Label).text), PackedStringArray(), "frames: " + (n as Label).text)
+	(rig["hud"] as Node).queue_free()
+	Game.state.member("kai").level = 2
+	var info: LevelUpInfo = LevelUpInfo.new()
+	info.member_id = "kai"
+	info.old_level = 1
+	info.new_level = 2
+	var rw: BattleRewards = BattleRewards.new()
+	rw.exp = 40
+	rw.level_ups = [info]
+	var res: CanvasLayer = (load(RESULTS) as GDScript).new() as CanvasLayer
+	var holder: Node = Node.new()
+	add_to_tree(holder)
+	holder.add_child(res)
+	var win: BattleResult = BattleResult.new()
+	win.outcome = BattleResult.Outcome.VICTORY
+	res.call("present", win, rw)
+	assert_eq(res.call("lower_texts"), PackedStringArray(["+40 EXP", "Kai: Stufe 2"]), "the second lower third")
+	assert_eq(_label_texts(res).count("NEUE STUFE!"), 1, "its title, in the words of the toast \"NEUE STUFE\"")
+	var boss: BattleResult = BattleResult.new()
+	boss.outcome = BattleResult.Outcome.VICTORY
+	boss.is_boss = true
+	boss.boss_id = "enm_boss_hausmeister"
+	res.set("auto_continue_sec", 0.15)
+	var done: Array[bool] = [false]
+	var run: Callable = func() -> void:
+		await res.call("present", boss, rw)
+		done[0] = true
+	run.call()
+	var plaques: Array[Node] = res.find_children("LevelBadge", "PanelContainer", true, false)
+	assert_eq(plaques.size(), Game.state.party.size(), "the credits: a plaque in every member's row")
+	for i in mini(plaques.size(), Game.state.party.size()):
+		assert_eq((plaques[i] as Control).tooltip_text, "Stufe %d" % Game.state.party[i].level)
+	var texts: PackedStringArray = _label_texts(res)
+	assert_eq(texts.count("NEUE STUFE!"), 1, "Kai's level-up row")
+	for t: String in texts:
+		assert_eq(words_in(t), PackedStringArray(), "credits: " + t)
+	await wait_until(func() -> bool: return done[0], 600)
+	tree.paused = false
+
+
+static func _label_texts(root: Node) -> PackedStringArray:
+	var out: PackedStringArray = []
+	for n: Node in root.find_children("*", "Label", true, false):
+		out.append((n as Label).text)
+	return out
 
 
 func test_liga_tiers_read_liga_1_and_duo_liga() -> void:

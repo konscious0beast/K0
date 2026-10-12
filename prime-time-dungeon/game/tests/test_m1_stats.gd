@@ -177,7 +177,7 @@ func test_battle_core_uses_integer_rng_only() -> void:
 			"randf|randfn|\\bpow\\(|\\bexp\\(|\\bsin\\(|\\bcos\\(|atan2\\(|\\blerp\\(|Time\\.|OS\\.get_ticks|"
 			+ "randomize\\(|(^|[^.\\w])randi\\(|(^|[^.\\w])randi_range\\(")
 	var files: PackedStringArray = []
-	for dir: String in ["res://core/stats", "res://core/battle"]:
+	for dir: String in ["res://core/stats", "res://core/battle", "res://core/stempel/ctb"]:   # 10 SD1: the moved engine
 		for f: String in DirAccess.get_files_at(dir):
 			if f.ends_with(".gd"):
 				files.append(dir + "/" + f)

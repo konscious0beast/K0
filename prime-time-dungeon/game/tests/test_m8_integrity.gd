@@ -7,11 +7,14 @@ extends TestCase
 ## replay.
 
 const R := preload("res://tests/test_m8_replay.gd")
+const RtLive := preload("res://tests/fixtures/rt_live/rt_live.gd")
 const EVENT_ID: String = "evt_offline_gleis9"
 const NO_WINDOWS: Dictionary = {"sponsor_windows": {"enabled": false}}
 
 
 func after_each() -> void:
+	if Game.combat != null:
+		Game.end_combat()
 	Game.state = null
 	Game.run_log = null
 	Game.sim = null
@@ -19,7 +22,6 @@ func after_each() -> void:
 	Game.mode = &"campaign"
 	Game.timer_running = false
 	Game.in_battle = false
-	Game.auto_battle = false
 	Game.safe_room_clock = false
 
 
@@ -29,16 +31,16 @@ func _event() -> EventDef:
 	return cat.get_event(EVENT_ID)
 
 
-## test_m8_replay's bot on the Pur-Liga event: {"log", "hash", "sim"}.
+## test_m8_replay's real-time bot on the Pur-Liga event: {"log", "hash", "sim"}.
 func _bot(def: EventDef) -> Dictionary:
 	return R.new().call("_bot_run", def, false)
 
 
-## RunSim.replay of the CTB bot's log (a RunLog or its dictionary) with the event's rules in CTB (R.ctb_rules, R5b).
+## RunSim.replay of the bot's log (a RunLog or its dictionary) with the event's rules.
 func _replay(l: Variant) -> Dictionary:
 	var def: EventDef = _event()
 	var rl: RunLog = l if l is RunLog else RunLog.from_dict(l)
-	return RunSim.replay(real_data(), rl, R.ctb_rules(def), def.quest)
+	return RunSim.replay(real_data(), rl, def.rules, def.quest)
 
 
 ## The bot log as a dictionary whose last command (descend) gets `extra` commands in front of it (player ids above the
@@ -82,7 +84,7 @@ func _shop(n: int, load_half: int) -> Dictionary:
 
 func test_event_runs_keep_their_difficulty_and_header() -> void:
 	var def: EventDef = _event()
-	var sim: RunSim = _sim(R.ctb_rules(def))
+	var sim: RunSim = _sim(def.rules)
 	sim.apply({"t": "difficulty", "to": "vorabend"})
 	assert_eq(sim.state.difficulty, &"prime", "event runs play the event's difficulty (05 §10.1)")
 	assert_eq(sim.rejected_cmds.back()["reason"], "not_allowed")
@@ -175,37 +177,16 @@ func test_gifts_after_descend_are_refused() -> void:
 
 # --- live-integrity-2: Game.replay_log has the verifier contract ------------------------------------------------------
 
-func _play(battle: BattleState, events: Array[ActionEvent]) -> void:
-	for e: ActionEvent in events:
-		Show.on_battle_event(e)
-	if battle.is_finished():
-		return
-	var g: Dictionary = Show.take_pending_gift(battle)
-	if not g.is_empty():
-		var ge: Array[ActionEvent] = battle.apply_gift(g)
-		Show.note_battle_gift(g, ge)
-		for e: ActionEvent in ge:
-			Show.on_battle_event(e)
-
-
 func test_game_replay_log_verifies_a_live_event_run() -> void:
-	Game.auto_battle = true
 	Game.start_event_run(EVENT_ID)
 	var fdef: FloorDef = DB.floor_def(1)
-	var setup: BattleSetup = Game.make_battle_setup(fdef.timer_start_after, BattleSetup.Advantage.NORMAL, "")
-	var battle: BattleState = BattleState.new(setup, DB.data)
-	Show.begin_battle(setup)
-	Events.battle_started.emit(setup.encounter_id, setup.is_boss)
-	_play(battle, battle.start())
-	var guard: int = 0
-	while not battle.is_finished() and guard < 400:
-		guard += 1
-		var cmd: BattleCommand = battle.choose_ai_command()
-		Game.record({"t": "battle", "cmd": cmd.to_dict(), "auto": true})
-		_play(battle, battle.submit(cmd))
-	Events.battle_ended.emit(battle.result.outcome, battle.result.encounter_id)
-	Game.apply_battle_result(battle.result)
-	Show.end_battle(battle.result)
+	var layout: FloorLayout = DungeonGenerator.generate(fdef, Game.state.floor_run.seed)
+	var group: String = ""
+	for g: EnemySpawn in layout.enemies:
+		if g.encounter_id == fdef.timer_start_after:
+			group = g.id
+	# the tutorial combat in real time (the event's rules), without inputs: the sim's AI and the auto-attack
+	assert_false(RtLive.fight(R.rt_encounter(fdef.timer_start_after, group, Game.hero()), []).is_empty())
 	Game.timer_running = true
 	for i in 30:
 		Game._process(0.5)

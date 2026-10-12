@@ -5,6 +5,9 @@ extends TestCase
 ## achievement chain "Ohne alles" (all six reachable), event runs (no factors, rules.liga / rules.marotten switches in
 ## rules_hash), and the UI: equipment line, pause tab "Show", show chip, results row.
 
+const Harness := preload("res://tests/tools/rt_harness.gd")
+const RtLive := preload("res://tests/fixtures/rt_live/rt_live.gd")
+
 var _prev_data: GameData = null
 
 
@@ -14,6 +17,8 @@ func before_each() -> void:
 
 
 func after_each() -> void:
+	if Game.combat != null:
+		Game.end_combat()
 	if Game.state != null:
 		Show.end_battle(null)
 	Game.in_battle = false
@@ -239,10 +244,11 @@ func test_achievement_chain_is_reachable() -> void:
 	assert_true(Show.is_unlocked("ach_bets_5"))
 
 
-## Live: taking the hoodie off (recorded equip) puts the next battle in the Liga — tier line, toast, stat, replay.
+## Live: taking the hoodie off (recorded equip) puts the next real-time combat in the Liga — tier line, toast, stat,
+## replay.
 func test_live_liga_battle_replays() -> void:
-	Game.auto_battle = true
 	Game.new_game(0, "Kai", 6464)
+	assert_true(Game.is_realtime(), "a new game fights in real time")
 	var toasts: Array = []
 	var cb: Callable = func(_text: String, icon: StringName) -> void: toasts.append(String(icon))
 	Events.toast_requested.connect(cb)
@@ -254,7 +260,6 @@ func test_live_liga_battle_replays() -> void:
 	var won: bool = _fight("enc_f1_a2")
 	Events.toast_requested.disconnect(cb)
 	Events.liga_changed.disconnect(cb2)
-	Game.auto_battle = false
 	assert_true(won, "the Liga battle is won")
 	assert_has(toasts, "liga", "the Liga toast with its rule")
 	assert_eq(tiers, [0, 1], "tutorial outside, then the Liga")
@@ -266,33 +271,13 @@ func test_live_liga_battle_replays() -> void:
 	assert_eq(res["final_hash"], h, "replay ≡ live with the Liga factors")
 
 
+## One real-time combat of `enc_id` through the Game facade (RtLive.fight like the CombatDirector, the encounter's
+## room from rt_harness, the autopilot on: the AI plays both). True when won.
 func _fight(enc_id: String) -> bool:
-	var setup: BattleSetup = Game.make_battle_setup(enc_id, BattleSetup.Advantage.PREEMPTIVE, "")
-	var battle: BattleState = BattleState.new(setup, DB.data)
-	Show.begin_battle(setup)
-	_play(battle, battle.start())
-	var guard: int = 0
-	while not battle.is_finished() and guard < 400:
-		guard += 1
-		var cmd: BattleCommand = battle.choose_ai_command()
-		Game.record({"t": "battle", "cmd": cmd.to_dict(), "auto": true})
-		_play(battle, battle.submit(cmd))
-	Game.apply_battle_result(battle.result)
-	Show.end_battle(battle.result)
-	return battle.result.outcome == BattleResult.Outcome.VICTORY
-
-
-func _play(battle: BattleState, events: Array[ActionEvent]) -> void:
-	for e: ActionEvent in events:
-		Show.on_battle_event(e)
-	if battle.is_finished():
-		return
-	var g: Dictionary = Show.take_pending_gift(battle)
-	if not g.is_empty():
-		var gift_events: Array[ActionEvent] = battle.apply_gift(g)
-		Show.note_battle_gift(g, gift_events)
-		for e: ActionEvent in gift_events:
-			Show.on_battle_event(e)
+	var cmd: Dictionary = Harness.command_for(enc_id, Game.hero(), BattleSetup.Advantage.PREEMPTIVE)
+	var r: Dictionary = RtLive.fight(cmd, [RtCommand.autopilot(0, str((cmd["rt"] as Dictionary)["ctl"]), true)])
+	var res: BattleResult = r.get("result", null)
+	return res != null and res.outcome == BattleResult.Outcome.VICTORY
 
 
 # --- UI ---------------------------------------------------------------------------------------------------------------

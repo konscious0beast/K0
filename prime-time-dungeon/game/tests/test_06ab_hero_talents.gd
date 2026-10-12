@@ -1,37 +1,36 @@
 extends TestCase
 ## Integration 06 package A × B (hero choice × talents). Talents belong to the party member, never to the controlled
-## character: offers, picks and their effects are the same whoever leads, the Talent-Show works for both choices and an
-## automatic partner (06 §1.4) fights with its own talents (AutoPolicy plays the talent-modified combatant). The
-## leader's own field talents drive the field ability — Kai: "Weit ausholen" → Feldschlag reach; Graf Mopsula:
-## "Bellen in Stereo" → Bellen reach, "Schwer vermittelbar" → Bellen cooldown (HeroRules.field_mods → PlayerController,
-## integer per-mille via EncounterRules.scale_pm) — and move with "Figur wechseln". One integration test per hero
-## (recorded run → Talent-Show in the safe room → switch → Game.replay_log ≡ live → battle with "Partner automatisch"),
-## the field geometry in the exploration scene for both heroes, and the safe-room layout for desktop (1280×720) and the
-## phone touch layout (1600×720): every hit area >= 88 px, 12 px apart, "Weiter" on screen, the TALENT-SHOW button
-## clear of the menu, the banners and the M.O.D. box.
+## character: offers, picks and their effects are the same whoever leads, the Talent-Show works for both choices and the
+## AI partner of a real-time combat (07 §5) fights with its own talents (its unit is built from the talent-modified
+## combatant). The leader's own field talents drive the field ability — Kai: "Weit ausholen" → Feldschlag reach; Graf
+## Mopsula: "Bellen in Stereo" → Bellen reach, "Schwer vermittelbar" → Bellen cooldown (HeroRules.field_mods →
+## PlayerController, integer per-mille via EncounterRules.scale_pm) — and move with "Figur wechseln". One integration
+## test per hero (recorded run with real-time combats → Talent-Show in the safe room → switch → Game.replay_log ≡ live
+## → a real-time combat whose AI partner carries its talents), the field geometry in the exploration scene for both
+## heroes, and the safe-room layout for desktop (1280×720) and the phone touch layout (1600×720): every hit area
+## >= 88 px, 12 px apart, "Weiter" on screen, the TALENT-SHOW button clear of the menu, the banners and the M.O.D. box.
 
 const Rules := preload("res://scenes/exploration/encounter_rules.gd")
 const M3 := preload("res://tests/test_m3_exploration_scene.gd")
-const BattleController := preload("res://scenes/battle/battle_controller.gd")
+const Harness := preload("res://tests/tools/rt_harness.gd")
+const RtLive := preload("res://tests/fixtures/rt_live/rt_live.gd")
 const ModDialogScript := preload("res://scenes/ui/mod_dialog.gd")
 const SCENE_EXPLORE: String = "res://scenes/exploration/exploration.tscn"
 const SCENE_SAFE: String = "res://scenes/safe_room/safe_room.tscn"
-const SCENE_BATTLE: String = "res://scenes/battle/battle.tscn"
 const SCENE_SHOW: String = "res://scenes/ui/talent_show.tscn"
 const ROUTER_FIXTURE: String = "res://tests/fixtures/router/router_screen.tscn"
 const MAX_FRAMES: int = 600
+const MAX_COMBAT_TICKS: int = 18000
 const RUN_SEED: int = 5150                   # reaches L3 for both members within LEVEL_ENCS (as test_06b_talents)
 const LEVEL_ENCS: PackedStringArray = ["enc_f1_a1_tutorial", "enc_f1_a2", "enc_f1_a3", "enc_f1_a_rare", "enc_f1_a4",
 	"enc_f1_b1"]
-## Damage talents of the automatic partner (counterfactual check): Kai +2 STR and the preemptive first strike,
+## Damage talents of the AI partner (counterfactual check): Kai +2 STR and the preemptive first strike,
 ## Graf Mopsula +2 MAG.
 const PARTNER_TALENTS: Dictionary = {"kai": {"tal_kai_wischtechnik": 2, "tal_kai_erster_eindruck": 1},
 	"mopsula": {"tal_mop_mitternachtsformel": 2}}
 
 var _spy: Array[Array] = []
 var _saved_data: GameData = null
-var _saved_auto: bool = false
-var _saved_partner: bool = false
 
 static var _fixture: GameData = null
 
@@ -41,8 +40,6 @@ func before_each() -> void:
 	tree.paused = false
 	_spy.clear()
 	_saved_data = DB.data
-	_saved_auto = Game.auto_battle
-	_saved_partner = Game.settings.partner_auto
 	Events.encounter_triggered.connect(_on_encounter)
 
 
@@ -52,8 +49,8 @@ func after_each() -> void:
 	Events.encounter_triggered.disconnect(_on_encounter)
 	for a: StringName in [&"move_forward", &"move_back", &"move_left", &"move_right", &"sneak", &"action"]:
 		Input.action_release(a)
-	Game.auto_battle = _saved_auto
-	Game.settings.partner_auto = _saved_partner
+	if Game.combat != null:
+		Game.end_combat()
 	Game.clear_blocking_dialogs()
 	if Router.stack_size() > 1 or Router.busy:
 		Router.goto(ROUTER_FIXTURE, {}, Router.Transition.NONE)
@@ -241,26 +238,26 @@ func test_figur_wechseln_hands_the_field_talents_to_the_new_leader() -> void:
 
 # --- one integration test per hero ------------------------------------------------------------------------------------
 
-func test_kai_leads_talent_show_switch_replay_and_automatic_partner() -> void:
+func test_kai_leads_talent_show_switch_replay_and_ai_partner() -> void:
 	await _hero_integration("kai")
 
 
-func test_mopsula_leads_talent_show_switch_replay_and_automatic_partner() -> void:
+func test_mopsula_leads_talent_show_switch_replay_and_ai_partner() -> void:
 	await _hero_integration("mopsula")
 
 
-## Recorded run as `hero` → L3 (Game facade, like test_06b_talents) → Talent-Show in the real safe room (one choice per
-## member) → "Figur wechseln" → Game.replay_log ≡ live → battle with "Partner automatisch".
+## Recorded run as `hero` → L3 through real-time combats (Game facade, like test_06b_talents) → Talent-Show in the real
+## safe room (one choice per member) → "Figur wechseln" → Game.replay_log ≡ live → the AI partner's talents.
 func _hero_integration(hero: String) -> void:
-	Game.auto_battle = true
 	Game.new_game(0, "Kai", RUN_SEED, &"prime", hero)
 	assert_eq(Game.hero(), hero)
+	assert_true(Game.is_realtime(), "a new game fights in real time")
 	var partner: String = Game.partner()
 	for enc: String in LEVEL_ENCS:
 		if Game.state.member("kai").level >= 3 and Game.state.member("mopsula").level >= 3:
 			break
 		Game.rest_full_heal()
-		_game_battle(enc)
+		assert_eq(_rt_battle(enc), BattleResult.Outcome.VICTORY, "%s won (the AI plays both)" % enc)
 	assert_true(Game.state.member("kai").level >= 3 and Game.state.member("mopsula").level >= 3, "both reached L3")
 	var sr: String = str(((DB.floor_def(1).layout.get("safe_rooms", []) as Array)[0] as Dictionary)["id"])
 	var room: Node = (load(SCENE_SAFE) as PackedScene).instantiate()
@@ -312,120 +309,67 @@ func _hero_integration(hero: String) -> void:
 	assert_eq(rep["mismatch_at"], -1)
 	assert_eq(Array(rep["errors"]), [], "no refused command")
 	assert_eq(Game.hero(), partner, "the live context is back after the replay")
-	await _automatic_partner(Game.partner())
+	_ai_partner(Game.partner())
 
 
-## Plays one battle like the full auto battle (Game facade; recorded "battle" commands + apply_battle_result), as
-## test_06b_talents does.
-func _game_battle(enc: String) -> void:
-	var setup: BattleSetup = Game.make_battle_setup(enc, BattleSetup.Advantage.PREEMPTIVE, "")
-	var battle: BattleState = BattleState.new(setup, DB.data)
-	Show.begin_battle(setup)
-	Events.battle_started.emit(setup.encounter_id, setup.is_boss)
-	_play(battle, battle.start())
-	var guard: int = 0
-	while not battle.is_finished() and guard < 600:
-		guard += 1
-		var cmd: BattleCommand = battle.choose_ai_command()
-		Game.record({"t": "battle", "cmd": cmd.to_dict(), "auto": true})
-		_play(battle, battle.submit(cmd))
-	Events.battle_ended.emit(battle.result.outcome, battle.result.encounter_id)
-	Game.apply_battle_result(battle.result)
-	Show.end_battle(battle.result)
+## One real-time combat of `enc` through the Game facade like the CombatDirector (RtLive.fight: the recorded encounter
+## command in the encounter's room, rt_harness poses; the autopilot on for the controlled unit — the AI plays both;
+## boundary → inputs → step per tick; Game.end_combat books the result). The outcome, -1 without a combat.
+func _rt_battle(enc: String) -> int:
+	var cmd: Dictionary = Harness.command_for(enc, Game.hero(), BattleSetup.Advantage.PREEMPTIVE)
+	var r: Dictionary = RtLive.fight(cmd, [RtCommand.autopilot(0, str((cmd["rt"] as Dictionary)["ctl"]), true)],
+		MAX_COMBAT_TICKS)
+	var res: BattleResult = r.get("result", null)
+	return res.outcome if res != null else -1
 
 
-## Like BattleController._play / Game._replay_play: events → Show, then one pending sponsor gift at the boundary.
-func _play(battle: BattleState, events: Array[ActionEvent]) -> void:
-	for e: ActionEvent in events:
-		Show.on_battle_event(e)
-	if battle.is_finished():
-		return
-	var g: Dictionary = Show.take_pending_gift(battle)
-	if not g.is_empty():
-		var gift_events: Array[ActionEvent] = battle.apply_gift(g)
-		Show.note_battle_gift(g, gift_events)
-		for e: ActionEvent in gift_events:
-			Show.on_battle_event(e)
-
-
-## "Partner automatisch" (06 §1.4) with talents on the partner: in the real battle scene the partner's turns come from
-## AutoPolicy (recorded "auto": true) on the combatant built from the member WITH its talents (stats, crit, element,
-## talent_mods); its first damaging action hits harder than the same command without the talents (counterfactual:
-## the recorded commands replayed on a twin BattleState whose partner has no talents).
-func _automatic_partner(partner: String) -> void:
+## The AI partner (07 §5: in real time the partner is always the sim's AI) with talents: its unit is built from the
+## member WITH its talents (Progression.to_combatant: stats, crit, element, talent_mods; opener_pm from the preemptive
+## talent, 07 §9.6) and its first hit deals more than in the same combat without them (counterfactual: same command,
+## seed and inputs — none: the controlled unit stands and auto-attacks — on a twin state whose partner has no talents).
+func _ai_partner(partner: String) -> void:
 	var member: PartyMember = Game.state.member(partner)
 	member.talents = (PARTNER_TALENTS[partner] as Dictionary).duplicate()     # test-only: a measurable effect
 	Game.rest_full_heal()
-	Game.auto_battle = false
-	Game.settings.partner_auto = true
-	assert_true(BattleController.is_partner_auto(partner))
-	var setup: BattleSetup = Game.make_battle_setup("enc_f1_a2", BattleSetup.Advantage.PREEMPTIVE, "")
-	var twin_setup: BattleSetup = BattleSetup.from_dict(setup.to_dict(), DB.data)
-	var scene: BattleScene = (load(SCENE_BATTLE) as PackedScene).instantiate() as BattleScene
-	scene.setup({"setup": setup, "speed": 8.0, "stay": true, "results_auto_sec": 0.05})
-	add_to_tree(scene)
-	assert_true(await wait_until(func() -> bool: return scene.hud != null and scene.hud.awaiting, MAX_FRAMES),
-		"the hero's command menu")
-	var live_c: Combatant = null
-	for c: Combatant in scene.controller.state.combatants:
-		if c.side == Combatant.Side.PARTY and c.def_id == partner:
-			live_c = c
-	assert_not_null(live_c, "partner combatant")
-	if live_c == null:
+	var cmd: Dictionary = Harness.command_for("enc_f1_a2", Game.hero(), BattleSetup.Advantage.PREEMPTIVE)
+	var with_t: RtSetup = BattleBridge.make_rt_setup(Game.state, DB.data, cmd, 77)
+	var bare: GameState = GameState.from_dict(Game.state.to_dict())
+	bare.member(partner).talents = {}
+	var without_t: RtSetup = BattleBridge.make_rt_setup(bare, DB.data, cmd, 77)
+	assert_not_null(with_t, "a real-time combat")
+	if with_t == null or without_t == null:
 		return
-	var want: Combatant = Progression.to_combatant(member, DB.data, live_c.id, live_c.slot)
+	var unit: RtUnit = null
+	for u: RtUnit in with_t.units:
+		if u.side == Combatant.Side.PARTY and u.def_id == partner:
+			unit = u
+	assert_not_null(unit, "partner unit")
+	if unit == null:
+		return
+	assert_ne(unit.id, with_t.controlled_id, "the partner is not the controlled unit")
+	var want: Combatant = Progression.to_combatant(member, DB.data, unit.id, unit.slot)
 	for s in StatBlock.Stat.size():
-		assert_eq(live_c.stats.values[s], want.stats.values[s], "%s stat %d with its talents" % [partner, s])
-	assert_eq(live_c.talent_mods, Talents.battle_mods(member, DB.data), "talent_mods of the automatic partner")
-	assert_eq(live_c.crit_bonus, want.crit_bonus)
-	# the hero defends (the player's choice); everything after that the partner decides itself
-	var hero_c: Combatant = scene.controller.state.current_actor()
-	assert_eq(hero_c.def_id, Game.hero(), "the menu is the hero's")
-	scene.hud.call("_on_command_chosen", BattleCommand.Kind.DEFEND)
-	var partner_acted: Callable = func() -> bool:
-		for rec: Dictionary in scene.controller.commands:
-			if str((rec["cmd"] as Dictionary)["actor"]) == live_c.id:
-				return true
-		return scene.controller.done
-	assert_true(await wait_until(partner_acted, MAX_FRAMES), "the partner acted on its own")
-	var records: Array[Dictionary] = []
-	for rec2: Dictionary in scene.controller.commands:
-		records.append(rec2)
-		if str((rec2["cmd"] as Dictionary)["actor"]) == live_c.id:
-			assert_true(bool(rec2["auto"]), "partner turn = AutoPolicy (recorded auto)")
-			assert_eq(BattleCommand.from_dict(rec2["cmd"]).actor_id, live_c.id)
-	# counterfactual: the same commands without the partner's talents → less damage from its first damaging action
-	var with_t: int = _first_damage(BattleSetup.from_dict(twin_setup.to_dict(), DB.data), records, live_c.id)
-	var bare: PartyMember = PartyMember.from_dict(member.to_dict())
-	bare.talents = {}
-	var plain_setup: BattleSetup = BattleSetup.from_dict(twin_setup.to_dict(), DB.data)
-	for i in plain_setup.party.size():
-		if plain_setup.party[i].def_id == partner:
-			plain_setup.party[i] = Progression.to_combatant(bare, DB.data, live_c.id, live_c.slot)
-	var without_t: int = _first_damage(plain_setup, records, live_c.id)
-	assert_gt(without_t, 0, "the partner's first action deals damage")
-	assert_gt(with_t, without_t, "%s's automatic attack carries its talents (%d vs %d)" % [partner, with_t, without_t])
-	if not Game.auto_battle:
-		scene.hud.toggle_auto()
-	await wait_until(func() -> bool: return scene.controller != null and scene.controller.done, MAX_FRAMES)
-	await _dispose(scene)
+		assert_eq(unit.stats.values[s], want.stats.values[s], "%s stat %d with its talents" % [partner, s])
+	assert_eq(unit.talent_mods, Talents.battle_mods(member, DB.data), "talent_mods of the AI partner")
+	assert_eq(unit.crit_bonus, want.crit_bonus)
+	assert_eq(unit.opener_pm, Talents.preemptive_dmg_pm(member, DB.data), "the preemptive talent (07 §9.6)")
+	var dmg_with: int = _first_damage(with_t, unit.id)
+	var dmg_without: int = _first_damage(without_t, unit.id)
+	assert_gt(dmg_without, 0, "the partner's first hit deals damage")
+	assert_gt(dmg_with, dmg_without, "%s's AI hit carries its talents (%d vs %d)" % [partner, dmg_with, dmg_without])
 
 
-## Replays `records` on a fresh BattleState of `setup` and returns the damage of the first action of `actor_id` that
-## deals damage (0 if it never does).
-func _first_damage(setup: BattleSetup, records: Array[Dictionary], actor_id: String) -> int:
-	var st: BattleState = BattleState.new(setup, DB.data)
-	st.start()
-	for rec: Dictionary in records:
-		if st.is_finished():
-			break
-		var cmd: BattleCommand = BattleCommand.from_dict(rec["cmd"])
-		var dmg: int = 0
-		for e: ActionEvent in st.submit(cmd):
-			if e.type == ActionEvent.Type.DAMAGE and e.actor_id == actor_id:
-				dmg += e.amount
-		if cmd.actor_id == actor_id and dmg > 0:
-			return dmg
+## Steps a fresh RtSim of `setup` without inputs until `actor_id` deals damage; that damage (0 if it never does).
+func _first_damage(setup: RtSetup, actor_id: String) -> int:
+	var sim: RtSim = RtSim.new(setup, DB.data)
+	var events: Array[ActionEvent] = sim.start()
+	while true:
+		for e: ActionEvent in events:
+			if e.type == ActionEvent.Type.DAMAGE and e.actor_id == actor_id and e.amount > 0:
+				return e.amount
+		if sim.is_finished() or sim.tick() >= MAX_COMBAT_TICKS:
+			return 0
+		events = sim.step()
 	return 0
 
 

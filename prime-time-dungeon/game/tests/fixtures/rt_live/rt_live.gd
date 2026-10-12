@@ -4,6 +4,8 @@ extends RefCounted
 ## "from_save" header of Save.load_slot), so a replay starts from the same levels, items and hype. Private helper (no
 ## class_name): preload it. Callers swap DB.data to RtKit.data() and restore it afterwards (swap_data / restore_data).
 
+const Bot := preload("res://tests/tools/rt_bot_player.gd")
+
 static var _saved: GameData = null
 
 
@@ -111,6 +113,32 @@ static func core_play(sim: RunSim, cmds: Array) -> Array:
 		if sim.rejected_cmds.size() > before:
 			reasons.append(str(sim.rejected_cmds.back()["reason"]))
 	return reasons
+
+
+## The inputs a person-like bot (rt_bot_player, `profile`) gives in the real-time combat the core sim `sim` starts
+## for the encounter command `cmd`: played first on a twin combat (a copy of the state, its next "battle" seed, the
+## run's rules — what RunSim._apply_encounter_rt builds), its accepted commands in order. Fed to `sim` after `cmd`
+## (core_play), they replay that combat exactly. [] when no combat would start.
+static func bot_inputs(sim: RunSim, cmd: Dictionary, profile: String = "typical", bot_seed: int = 7,
+		max_ticks: int = 18000) -> Array:
+	var twin: GameState = GameState.from_dict(sim.state.to_dict())
+	var setup: RtSetup = BattleBridge.make_rt_setup_rules(twin, sim.data, cmd, RunRules.next_seed(twin, "battle"),
+		sim.rules)
+	if setup == null:
+		return []
+	var rt: RtSim = RtSim.new(setup, sim.data)
+	var out: Array = []
+	var bot: RefCounted = Bot.new(rt, profile, bot_seed)
+	bot.set("submitter", func(c: Dictionary) -> String:
+		var why: String = rt.submit(c)
+		if why == "":
+			out.append(c.duplicate(true))
+		return why)
+	rt.start()
+	while not rt.is_finished() and rt.tick() < max_ticks:
+		bot.call("act")
+		bot.call("observe", rt.step())
+	return out
 
 
 ## The run log as JSON and back (what a stored replay is).

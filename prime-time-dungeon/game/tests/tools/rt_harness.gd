@@ -80,8 +80,8 @@ const BAND_LIGA_STEP: float = 5.0
 const BAND_LIGA_STEP_MAX: float = 15.0
 const BAND_SEQ_ITEMS: Array = [4.0, 9.0]
 const BAND_SEQ_STREAK: Array = [2.0, 3.0]
-## Gear per point of the floor (test_m7_balance GEAR: start kit; safe room 1 + metal chests A / B; after the
-## Hausmeister: fire axe, key ring, signet collar, gas mask). [weapon, armor, accessory].
+## Gear per point of the floor (the GEAR of the former CTB balance test: start kit; safe room 1 + metal chests A / B;
+## after the Hausmeister: fire axe, key ring, signet collar, gas mask). [weapon, armor, accessory].
 const GEAR: Dictionary = {
 	"start": {"kai": ["itm_wpn_mop", "itm_arm_hoodie", ""],
 		"mopsula": ["itm_wpn_collar_leather", "itm_arm_pug_sweater", ""]},

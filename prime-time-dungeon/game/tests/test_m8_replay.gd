@@ -1,11 +1,13 @@
 extends TestCase
 ## Replay equality (05 §2 S0 exit criteria, §11.4): a bot event run driven headless by RunSim WITHOUT autoloads
-## (auto battle, force_encounter equivalent via commands, strays, chests, lootbox, rest, gifts, descend) replays via
-## RunSim.replay to the same final hash; the same seed gives the same run; a manipulated command is detected
-## (mismatch_at >= 0); forged gifts (Pur-Liga, repeated gift id) and rejected log entries are reported in "errors";
-## without explicit rules the replay takes them from the event catalog (header.event_id). Plus a thin integration test
-## through the Game facade (event mode, ticks via Game._process).
+## (real-time combats — the event's rules, 07 §10.7 — force_encounter equivalent via commands, strays, chests, lootbox,
+## rest, gifts, descend) replays via RunSim.replay to the same final hash; the same seed gives the same run; a
+## manipulated command is detected (mismatch_at >= 0); forged gifts (Pur-Liga, repeated gift id) and rejected log
+## entries are reported in "errors"; without explicit rules the replay takes them from the event catalog
+## (header.event_id). Plus a thin integration test through the Game facade (event mode, ticks via Game._process).
 
+const Harness := preload("res://tests/tools/rt_harness.gd")
+const RtLive := preload("res://tests/fixtures/rt_live/rt_live.gd")
 const EVENT_ID: String = "evt_offline_gleis9"
 const BOT_TICKS: int = 3300
 
@@ -18,44 +20,39 @@ func _event() -> EventDef:
 	return def
 
 
-func _fight(sim: RunSim) -> void:
-	var guard: int = 0
-	while sim.battle != null and guard < 600:
-		guard += 1
-		var cmd: BattleCommand = sim.battle.choose_ai_command()
-		sim.apply({"t": "battle", "cmd": cmd.to_dict(), "auto": true})
-
-
-## The event's rules for this CTB bot: the event fights in real time (R5b: rules.combat.mode, part of rules_hash,
-## 07 §10.7), the headless bot plays CTB battles — so it runs, and its replays check, the rules with combat.mode "ctb"
-## (CTB stays until R5b part 2; test_r5b_event_rt covers the real-time event run through both verifiers).
-static func ctb_rules(def: EventDef) -> Dictionary:
-	var r: Dictionary = def.rules.duplicate(true)
-	var c: Dictionary = (r.get("combat", {}) as Dictionary).duplicate() if r.get("combat", {}) is Dictionary else {}
-	c["mode"] = "ctb"
-	r["combat"] = c
-	return r
+## The encounter command of a real-time combat (07 §10.1) of group `group` (rt_harness: the encounter's room and
+## poses).
+static func rt_encounter(enc: String, group: String, hero: String = "kai") -> Dictionary:
+	var cmd: Dictionary = Harness.command_for(enc, hero, BattleSetup.Advantage.PREEMPTIVE)
+	cmd["group"] = group
+	(((cmd["rt"] as Dictionary)["groups"] as Array)[0] as Dictionary)["group"] = group
+	return cmd
 
 
 ## The event rules with the Show-Liga and gifts enabled (gifts only outside the Pur-Liga, L5); the bot's QA gifts need
 ## "dev" in rules.gifts.sources (live-integrity-4: event rules accept dev gifts only when they list them).
 func _show_rules(def: EventDef) -> Dictionary:
-	var r: Dictionary = ctb_rules(def)
+	var r: Dictionary = def.rules.duplicate(true)
 	r["leagues"] = ["show"]
 	r["gifts"] = {"enabled": true, "sources": ["dev"]}
 	return r
 
 
-## The bot: {"log": RunLog, "hash": String, "sim": RunSim}.
+## The bot: {"log": RunLog, "hash": String, "sim": RunSim}. A real-time run (the header names it, RunRules.rt_start
+## like Game.start_event_run; the event's rules forbid the autopilot, 07 §10.7): the tutorial combat without inputs
+## (the next command lets RunSim finish it with its own AI — the controlled unit stands and auto-attacks, the partner
+## plays its tactic), the strays with the inputs of a person-like bot (RtLive.bot_inputs → RtLive.core_play).
 func _bot_run(def: EventDef, with_gifts: bool = false) -> Dictionary:
 	var data: GameData = real_data()
 	var seed: int = def.run_seed()
 	var st: GameState = GameState.create_new(data, 0, "Kai", seed, &"prime")
-	var rules: Dictionary = _show_rules(def) if with_gifts else ctb_rules(def)
+	RunRules.rt_start(st, data)
+	var rules: Dictionary = _show_rules(def) if with_gifts else def.rules.duplicate(true)
 	var sim: RunSim = RunSim.new(data, st, rules)
 	var rl: RunLog = RunLog.new()
 	rl.header = {"schema": 1, "seed": seed, "slot": 0, "player_name": "Kai", "difficulty": "prime",
-		"mode": "event_offline", "sim_hz": RunSim.TICKS_PER_SEC, "event_id": def.id, "run_id": "run_bot_%d" % seed}
+		"mode": "event_offline", "sim_hz": RunSim.TICKS_PER_SEC, "event_id": def.id, "run_id": "run_bot_%d" % seed,
+		"combat_mode": String(RunRules.REALTIME), "rt_version": RunRules.RT_VERSION}
 	sim.run_log = rl
 	sim.quest = QuestTracker.from_def(def.quest)
 	sim.apply({"t": "floor", "floor": def.floor_index})
@@ -70,11 +67,9 @@ func _bot_run(def: EventDef, with_gifts: bool = false) -> Dictionary:
 	if with_gifts:
 		# viewer gifts need an open Sponsor-Fenster (05 §6.13): a recorded QA window, open across the bot run
 		sim.apply({"t": "sponsor_window", "op": "dev_open", "sec": 600, "slots": 4})
-	sim.apply({"t": "encounter", "enc": fdef.timer_start_after, "adv": BattleSetup.Advantage.PREEMPTIVE,
-		"group": tutorial_group})
-	if with_gifts:
-		sim.apply({"t": "gift", "gift": _fixed_gift("chest", "bronze", 1)})     # in battle → BattleState.apply_gift
-	_fight(sim)
+	sim.apply(rt_encounter(fdef.timer_start_after, tutorial_group))
+	if with_gifts:   # in the combat: a combat entry at a tick boundary → RtSim.apply_gift (07 §9.2)
+		sim.apply({"t": "gift", "gift": _fixed_gift("chest", "bronze", 1), "ct": 1})
 	for c: ChestSpawn in layout.chests.slice(0, 3):
 		sim.apply({"t": "chest", "id": c.id})
 	if with_gifts:
@@ -84,9 +79,11 @@ func _bot_run(def: EventDef, with_gifts: bool = false) -> Dictionary:
 		guard += 1
 		for e: ExploreEvent in sim.step(30):
 			if e.type == ExploreEvent.Type.STRAY_DUE and not sim.is_over():
-				sim.apply({"t": "encounter", "enc": e.data["encounter_id"], "adv": BattleSetup.Advantage.PREEMPTIVE,
-					"group": e.data["group_id"]})
-				_fight(sim)
+				var cmd: Dictionary = rt_encounter(str(e.data["encounter_id"]), str(e.data["group_id"]))
+				var inputs: Array = RtLive.bot_inputs(sim, cmd)
+				sim.apply(cmd)
+				RtLive.core_play(sim, inputs)
+				sim.settle()
 	if not sim.is_over():
 		sim.apply({"t": "rest"})
 		if not st.pending_lootboxes.is_empty():
@@ -114,7 +111,7 @@ func test_bot_run_replays_bit_for_bit() -> void:
 	var rl: RunLog = run["log"]
 	var sim: RunSim = run["sim"]
 	assert_eq(rl.validate(), PackedStringArray(), "every recorded command passes the schema")
-	assert_gt(rl.size(), 20, "battle commands, chests, rooms, …")
+	assert_gt(rl.size(), 20, "encounters, the bot's combat inputs, chests, rooms, …")
 	assert_gt(sim.tick(), 3000, "the clock ran (strays spawned at 90 s)")
 	assert_gt(rl.checkpoints().size(), 10, "checkpoints every 300 ticks and after battles")
 	var stray_battles: int = 0
@@ -122,7 +119,7 @@ func test_bot_run_replays_bit_for_bit() -> void:
 		if c["c"]["t"] == "encounter" and str(c["c"]["group"]).contains("_s"):
 			stray_battles += 1
 	assert_gt(stray_battles, 0, "the bot met a stray")
-	var res: Dictionary = RunSim.replay(real_data(), rl, ctb_rules(def), def.quest)
+	var res: Dictionary = RunSim.replay(real_data(), rl, def.rules, def.quest)
 	assert_eq(res["mismatch_at"], -1, "every checkpoint matches")
 	assert_eq(res["final_hash"], run["hash"], "replay → same final hash")
 	assert_eq(res["errors"], PackedStringArray())
@@ -149,7 +146,7 @@ func test_json_round_trip_of_the_log() -> void:
 	var text: String = JSON.stringify((run["log"] as RunLog).to_dict())
 	var back: RunLog = RunLog.from_dict(JSON.parse_string(text))
 	assert_eq(back.digest(), (run["log"] as RunLog).digest())
-	var res: Dictionary = RunSim.replay(real_data(), back, ctb_rules(def), def.quest)
+	var res: Dictionary = RunSim.replay(real_data(), back, def.rules, def.quest)
 	assert_eq(res["final_hash"], run["hash"], "file → replay (ints became floats)")
 	assert_eq(res["mismatch_at"], -1)
 
@@ -170,7 +167,7 @@ func test_manipulated_command_is_detected() -> void:
 			cd["id"] = other_chest
 			changed = true
 	assert_true(changed, "the log has a chest command")
-	var res: Dictionary = RunSim.replay(real_data(), RunLog.from_dict(d), ctb_rules(def), def.quest)
+	var res: Dictionary = RunSim.replay(real_data(), RunLog.from_dict(d), def.rules, def.quest)
 	assert_true(int(res["mismatch_at"]) >= 0, "a checkpoint after the manipulated command fails")
 	assert_ne(res["final_hash"], run["hash"])
 	# a battle command aimed at another target
@@ -180,7 +177,7 @@ func test_manipulated_command_is_detected() -> void:
 		if cd2["t"] == "encounter":
 			cd2["adv"] = BattleSetup.Advantage.AMBUSH
 			break
-	var res2: Dictionary = RunSim.replay(real_data(), RunLog.from_dict(d2), ctb_rules(def), def.quest)
+	var res2: Dictionary = RunSim.replay(real_data(), RunLog.from_dict(d2), def.rules, def.quest)
 	assert_true(int(res2["mismatch_at"]) >= 0, "changed encounter advantage → different battle")
 
 
@@ -216,11 +213,16 @@ func test_forged_gift_in_pur_league_is_reported() -> void:
 	var cmds: Array = d["cmds"]
 	var forged: Dictionary = _fixed_gift("gold", "", 7)
 	forged["amount"] = 250
-	var at: int = cmds.size() / 2
+	var at: int = -1                  # in front of the first chest: outside a combat (a gift without "ct" there would
+	for i in cmds.size():             # end the running combat first, 07 §10.5)
+		if str(((cmds[i] as Dictionary)["c"] as Dictionary)["t"]) == "chest":
+			at = i
+			break
+	assert_gt(at, 0, "the log has a chest command")
 	cmds.insert(at, {"k": int((cmds[at - 1] as Dictionary)["k"]), "id": 0, "c": {"t": "gift", "gift": forged}})
 	var forged_log: RunLog = RunLog.from_dict(d)
 	assert_eq(forged_log.rejected, 0, "a well-formed external input (id 0, tick order)")
-	var res: Dictionary = RunSim.replay(real_data(), forged_log, ctb_rules(def), def.quest)
+	var res: Dictionary = RunSim.replay(real_data(), forged_log, def.rules, def.quest)
 	assert_eq(res["final_hash"], run["hash"], "the gift changed nothing")
 	assert_eq(res["mismatch_at"], -1)
 	assert_eq((res["errors"] as PackedStringArray).size(), 1, "; ".join(res["errors"]))
@@ -248,8 +250,7 @@ func test_repeated_gift_id_is_reported() -> void:
 	assert_has("; ".join(res["errors"]), "g_dev_bot_2' refused by the core (duplicate)")
 
 
-## No explicit rules → the event of header.event_id from data/events.json (rules + quest), never from the log. R5b:
-## the catalog's rules bind the combat mode too — the CTB bot log of the real-time event is reported (header).
+## No explicit rules → the event of header.event_id from data/events.json (rules + quest), never from the log.
 func test_replay_takes_rules_and_quest_from_the_catalog() -> void:
 	var def: EventDef = _event()
 	if def == null:
@@ -257,8 +258,7 @@ func test_replay_takes_rules_and_quest_from_the_catalog() -> void:
 	var run: Dictionary = _bot_run(def)
 	var rl: RunLog = run["log"]
 	var res: Dictionary = RunSim.replay(real_data(), rl)
-	assert_eq(res["errors"], PackedStringArray(["header: combat_mode 'ctb' — event '%s' fights 'realtime' "
-		% EVENT_ID + "(rules.combat.mode)"]), "the catalog's combat mode (rules_hash), never the log's")
+	assert_eq(res["errors"], PackedStringArray(), "the catalog's rules (rules_hash), never the log's")
 	assert_eq(res["final_hash"], run["hash"], "the Pur-Liga rules (flags.live) come from the catalog")
 	assert_eq(res["mismatch_at"], -1)
 	assert_eq(res["result"]["quest_progress_ppm"], (run["sim"] as RunSim).quest.progress_ppm(), "and the quest")
@@ -284,7 +284,7 @@ func test_rejected_log_entries_are_errors() -> void:
 	var run: Dictionary = _bot_run(def)
 	var d: Dictionary = (run["log"] as RunLog).to_dict()
 	(d["cmds"] as Array).insert(3, {"k": 0, "id": 0, "c": {"t": "rest"}})
-	var res: Dictionary = RunSim.replay(real_data(), RunLog.from_dict(d), ctb_rules(def), def.quest)
+	var res: Dictionary = RunSim.replay(real_data(), RunLog.from_dict(d), def.rules, def.quest)
 	assert_eq(res["final_hash"], run["hash"], "the extra player command was dropped")
 	assert_has("; ".join(res["errors"]), "1 entries rejected")
 
@@ -292,6 +292,8 @@ func test_rejected_log_entries_are_errors() -> void:
 # --- thin integration test through the Game facade (02_TECH §3.4 "Replay") -------------------------------------------
 
 func after_each() -> void:
+	if Game.combat != null:
+		Game.end_combat()
 	Game.state = null
 	Game.run_log = null
 	Game.sim = null
@@ -299,24 +301,9 @@ func after_each() -> void:
 	Game.mode = &"campaign"
 	Game.timer_running = false
 	Game.in_battle = false
-	Game.auto_battle = false
-
-
-func _play(battle: BattleState, events: Array[ActionEvent]) -> void:
-	for e: ActionEvent in events:
-		Show.on_battle_event(e)
-	if battle.is_finished():
-		return
-	var g: Dictionary = Show.take_pending_gift(battle)
-	if not g.is_empty():
-		var gift_events: Array[ActionEvent] = battle.apply_gift(g)
-		Show.note_battle_gift(g, gift_events)
-		for e: ActionEvent in gift_events:
-			Show.on_battle_event(e)
 
 
 func test_game_event_run_replays_through_the_facade() -> void:
-	Game.auto_battle = true
 	Game.start_event_run(EVENT_ID)
 	if not Game.has_state():
 		fail("start_event_run must create a state")
@@ -325,21 +312,15 @@ func test_game_event_run_replays_through_the_facade() -> void:
 	assert_not_null(Game.quest)
 	assert_eq(Game.state.seed, 424242, "seed_policy fixed")
 	assert_eq(Game.state.flags["live"]["league"], "pur", "RunSim stored the run's league")
+	assert_true(Game.is_realtime(), "the event's rules: real time")
 	var fdef: FloorDef = DB.floor_def(1)
-	var setup: BattleSetup = Game.make_battle_setup(fdef.timer_start_after, BattleSetup.Advantage.NORMAL, "")
-	var battle: BattleState = BattleState.new(setup, DB.data)
-	Show.begin_battle(setup)
-	Events.battle_started.emit(setup.encounter_id, setup.is_boss)
-	_play(battle, battle.start())
-	var guard: int = 0
-	while not battle.is_finished() and guard < 400:
-		guard += 1
-		var cmd: BattleCommand = battle.choose_ai_command()
-		Game.record({"t": "battle", "cmd": cmd.to_dict(), "auto": true})
-		_play(battle, battle.submit(cmd))
-	Events.battle_ended.emit(battle.result.outcome, battle.result.encounter_id)
-	Game.apply_battle_result(battle.result)
-	Show.end_battle(battle.result)
+	var layout: FloorLayout = DungeonGenerator.generate(fdef, Game.state.floor_run.seed)
+	var group: String = ""
+	for g: EnemySpawn in layout.enemies:
+		if g.encounter_id == fdef.timer_start_after:
+			group = g.id
+	var r: Dictionary = RtLive.fight(rt_encounter(fdef.timer_start_after, group, Game.hero()), [])
+	assert_false(r.is_empty(), "a real-time combat (no inputs: the sim's AI and the auto-attack)")
 	assert_true(Game.state.floor_run.timer_started, "the tutorial victory starts the countdown")
 	# the live clock: Game._process accumulates frame delta into whole ticks and steps RunSim tick by tick
 	var left: int = Game.state.floor_run.time_left_ticks

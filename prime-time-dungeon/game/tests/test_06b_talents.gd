@@ -7,17 +7,20 @@ extends TestCase
 ## verifier and the Game facade) and save / hash compatibility.
 
 const Fx := preload("res://tests/test_m2_fixtures.gd")
+const Harness := preload("res://tests/tools/rt_harness.gd")
+const RtLive := preload("res://tests/fixtures/rt_live/rt_live.gd")
 const TalentsRules := preload("res://core/data/validators/talents.gd")
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const SR: StringName = &"sr_test"
 
 
 func after_each() -> void:
+	if Game.combat != null:
+		Game.end_combat()
 	Game.state = null
 	Game.run_log = null
 	Game.sim = null
 	Game.in_battle = false
-	Game.auto_battle = false
 
 
 ## Real-data state at `level` for both members, in a safe room (unless `in_room` is false).
@@ -593,13 +596,18 @@ func test_talent_commands_replay_bit_for_bit_in_runsim() -> void:
 	assert_ne(forged["final_hash"], run["hash"], "a forged pick does not reproduce the run")
 
 
+## A RunSim-driven real-time run (the verifier's core): every encounter with its "rt" block in the encounter's room
+## (rt_harness poses), the autopilot on — the sim's AI plays both — until both members reach L3, then the picks in a
+## safe room. The header names the real-time run, so RunSim.replay starts from RunRules.rt_start as well.
 func _runsim_run(seed: int) -> Dictionary:
 	var data: GameData = real_data()
 	var st: GameState = GameState.create_new(data, 0, "Kai", seed, &"prime")
+	RunRules.rt_start(st, data)
 	var sim: RunSim = RunSim.new(data, st, {})
 	var rl: RunLog = RunLog.new()
 	rl.header = {"schema": 1, "seed": seed, "slot": 0, "player_name": "Kai", "difficulty": "prime",
-		"mode": "campaign", "sim_hz": RunSim.TICKS_PER_SEC, "event_id": "", "run_id": "run_b_%d" % seed}
+		"mode": "campaign", "sim_hz": RunSim.TICKS_PER_SEC, "event_id": "", "run_id": "run_b_%d" % seed,
+		"combat_mode": String(RunRules.REALTIME), "rt_version": RunRules.RT_VERSION}
 	sim.run_log = rl
 	sim.apply({"t": "floor", "floor": 1})
 	for enc: String in ["enc_f1_a1_tutorial", "enc_f1_a2", "enc_f1_a3", "enc_f1_a_rare", "enc_f1_a4", "enc_f1_b1",
@@ -607,11 +615,11 @@ func _runsim_run(seed: int) -> Dictionary:
 		if st.member("mopsula").level >= 3 and st.member("kai").level >= 3:
 			break
 		sim.apply({"t": "rest"})
-		sim.apply({"t": "encounter", "enc": enc, "adv": BattleSetup.Advantage.PREEMPTIVE, "group": ""})
-		var guard: int = 0
-		while sim.battle != null and guard < 600:
-			guard += 1
-			sim.apply({"t": "battle", "cmd": sim.battle.choose_ai_command().to_dict(), "auto": true})
+		sim.apply(Harness.command_for(enc, st.hero, BattleSetup.Advantage.PREEMPTIVE))
+		assert_not_null(sim.combat, "%s: a real-time combat" % enc)
+		if sim.combat != null:
+			sim.apply(RtCommand.autopilot(sim.combat.tick(), sim.combat.controlled_id(), true))
+		sim.settle()                               # the sim plays it to its end and books the result
 	var fdef: FloorDef = data.floor_def(1)
 	var sr: String = str((fdef.layout.get("safe_rooms", []) as Array)[0]["id"])
 	sim.apply({"t": "safe_room", "id": sr})
@@ -623,16 +631,19 @@ func _runsim_run(seed: int) -> Dictionary:
 	return {"log": rl, "hash": h, "state": st}
 
 
-## The live path: Game facade (Show in the loop) → Game.replay_log reproduces the live StateHash with talent picks.
+## The live path: Game facade (Show in the loop) with real-time combats (RtLive.fight like the CombatDirector, the
+## autopilot on) → Game.replay_log reproduces the live StateHash with talent picks.
 func test_game_facade_replays_talent_picks() -> void:
-	Game.auto_battle = true
 	Game.new_game(0, "Kai", 5150)
+	assert_true(Game.is_realtime(), "a new game fights in real time")
 	var fdef: FloorDef = DB.floor_def(1)
 	for enc: String in ["enc_f1_a1_tutorial", "enc_f1_a2", "enc_f1_a3", "enc_f1_a_rare", "enc_f1_a4", "enc_f1_b1"]:
 		if Game.state.member("kai").level >= 3 and Game.state.member("mopsula").level >= 3:
 			break
 		Game.rest_full_heal()
-		_game_battle(enc)
+		var cmd: Dictionary = Harness.command_for(enc, Game.hero(), BattleSetup.Advantage.PREEMPTIVE)
+		var r: Dictionary = RtLive.fight(cmd, [RtCommand.autopilot(0, str((cmd["rt"] as Dictionary)["ctl"]), true)])
+		assert_false(r.is_empty(), "%s: a real-time combat" % enc)
 	var srs: Array = fdef.layout.get("safe_rooms", [])
 	Game.enter_safe_room(str((srs[0] as Dictionary)["id"]))
 	var picked: int = 0
@@ -645,38 +656,7 @@ func test_game_facade_replays_talent_picks() -> void:
 	var live: String = StateHash.of(Game.state)
 	var res: Dictionary = Game.replay_log(Game.run_log)
 	assert_eq(res["final_hash"], live, "Game.replay_log ≡ live run with talent picks")
-	Game.auto_battle = false
-
-
-func _game_battle(enc: String) -> void:
-	var setup: BattleSetup = Game.make_battle_setup(enc, BattleSetup.Advantage.PREEMPTIVE, "")
-	var battle: BattleState = BattleState.new(setup, DB.data)
-	Show.begin_battle(setup)
-	Events.battle_started.emit(setup.encounter_id, setup.is_boss)
-	_play(battle, battle.start())
-	var guard: int = 0
-	while not battle.is_finished() and guard < 600:
-		guard += 1
-		var cmd: BattleCommand = battle.choose_ai_command()
-		Game.record({"t": "battle", "cmd": cmd.to_dict(), "auto": true})
-		_play(battle, battle.submit(cmd))
-	Events.battle_ended.emit(battle.result.outcome, battle.result.encounter_id)
-	Game.apply_battle_result(battle.result)
-	Show.end_battle(battle.result)
-
-
-## Like BattleController._play / Game._replay_play: events → Show, then one pending sponsor gift at the boundary.
-func _play(battle: BattleState, events: Array[ActionEvent]) -> void:
-	for e: ActionEvent in events:
-		Show.on_battle_event(e)
-	if battle.is_finished():
-		return
-	var g: Dictionary = Show.take_pending_gift(battle)
-	if not g.is_empty():
-		var gift_events: Array[ActionEvent] = battle.apply_gift(g)
-		Show.note_battle_gift(g, gift_events)
-		for e: ActionEvent in gift_events:
-			Show.on_battle_event(e)
+	assert_eq(Array(res["errors"]), [], "no refused command")
 
 
 func test_save_round_trip_and_hash_compatibility() -> void:

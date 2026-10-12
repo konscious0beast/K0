@@ -69,7 +69,11 @@ Prüfwerkzeuge (`tools/`).
 - **Kampf eröffnen** (07 E34–E37, Stand Pull): Außerhalb des Kampfes wählt man den Anführer einer Gruppe als Ziel und
   eröffnet mit einer Fähigkeit (Tastatur, Gamepad und Touch); von hinten, gegen eine ahnungslose oder angebellte Gruppe ist
   das ein Erstschlag — als Graf Mopsula reicht „bellen, dann 1“.
-- Etage 2 ist nur angelegt (`floors.json`: `playable = false`). Wer abgestiegen ist, landet nach „Fortsetzen“ im Abspann.
+- Die Kampagne endet nach Etage 1: Wer abgestiegen ist, landet nach „Fortsetzen“ im Abspann. Die Etagen 2–6 gehören den
+  **Staffeln** (09, Stand ST1-C1; nur Debug-Builds, `--season`, Abschnitt 6): die Passage Ewiger Rabatt, Der Fundus und
+  Das Paketzentrum (Hallen 4–6) — prozedural in Vierteln (Generator v2) mit Schlüsseltor vor der Treppe, Revier- und
+  Etagenbossen, einem Safe Room je Viertel und fünf Programmtüren, die das Tagesprogramm öffnet; die Gegner wachsen mit
+  dem Stufen-Band der Etage. Eine Basis-Staffel läuft von Etage 1 bis zum Finale auf Etage 6.
 - 3 Speicherslots (JSON in `user://saves/`), Einstellungen, Pausemenü, Touch-Steuerung.
 - **M.O.D.-Marotten & Unterhosen-Liga** (06 Kap. 4): M.O.D. verrät je Etage, was sie heute mag (Show-Wetten mit Herzen,
   Fanpost-Paket bei drei Treffern); wer ohne Rüstung & ohne Accessoire kämpft, spielt in der Liga und bekommt mehr Hype und
@@ -382,14 +386,16 @@ Argumente stehen nach `--` (CLI) bzw. in den Main Run Args (Editor). Quelle: `sc
 | `--strategy=thorough\|rush\|dawdle\|typical` | Strategie des Full-Run-Bots: alles / nur Safe Rooms, Tore, Bosse / trödeln bis zum Etagenkollaps / typische:r Erstspieler:in |
 | `--pace=fast\|human` | Takt des Full-Run-Bots: ohne Wartezeit oder mit dem Modell eines aufmerksamen Menschen |
 | `--rt-profile=typical\|perfect\|sloppy` | Full-Run-Bot im Echtzeitkampf: Spielprofil der Person (07 §5.7, je Held:in) |
-| `--season=<ssn-id>` | **nur Debug-Builds** (Staffeln, 09 §11.1, ST1-B): startet eine neue private Staffel der Vorlage (`ssn_basis` 6 Etagen / 24 Tage, `ssn_akt2` 12 / 54, `ssn_akt3` 18 / 84) und geht ohne Titel, Casting und Intro in die Erkundung von Etage 1. Tag 0 ist die nächste Sendezeit; die Einsturz-Termine stehen ab dann in UTC fest. Etage 1 ist die Generalprobe und bis ST1-C die einzige spielbare Etage: ihre Treppe (nach der Etagen-Bilanz) oder ihr Einsturz (Kalender: Tag 2, Am Stück: nach 20 min Erkundung) beendet die Staffel für die Kandidat:in („Bis zum Ende dabei“, Abspann); ein verlorener Kampf kostet dort nichts (die Sanitäter bringen die Gruppe in den zuletzt betretenen Safe Room). Ohne `--slot` im ersten freien Slot (alle belegt: Slot 0, nie gespeichert); gespeichert wird automatisch (Dauerspeicherstand mit Journal). Die freien Plätze spielt die KI-Besetzung (99 KI-Kandidat:innen, ST1-F): ihre Erstbesteigungen, Einstürze und Rekorde meldet M.O.D. als Eilmeldung (höchstens eine je 10 min Spielzeit, nie im Kampf) |
+| `--season=<ssn-id>` | **nur Debug-Builds** (Staffeln, 09 §11.1, ST1-B): startet eine neue private Staffel der Vorlage (`ssn_basis` 6 Etagen / 24 Tage, `ssn_akt2` 12 / 54, `ssn_akt3` 18 / 84) und geht ohne Titel, Casting und Intro in die Erkundung von Etage 1. Tag 0 ist die nächste Sendezeit; die Einsturz-Termine stehen ab dann in UTC fest. Etage 1 ist die Generalprobe (ein verlorener Kampf kostet dort nichts: die Sanitäter bringen die Gruppe in den zuletzt betretenen Safe Room); ihre Treppe führt nach der Etagen-Bilanz auf die Etagen 2–6 (ST1-C1: Passage, Fundus, Paketzentrum). Etage 6 ist das Finale der Basis-Staffel: Der Sieg über ihren Etagenboss oder der letzte Einsturz beendet die Staffel; längere Formate enden nach Etage 6 mit dem Ende des Inhalts („Bis zum Ende dabei“, Abspann). Ohne `--slot` im ersten freien Slot (alle belegt: Slot 0, nie gespeichert); gespeichert wird automatisch (Dauerspeicherstand mit Journal). Die freien Plätze spielt die KI-Besetzung (99 KI-Kandidat:innen, ST1-F): ihre Erstbesteigungen, Einstürze und Rekorde meldet M.O.D. als Eilmeldung (höchstens eine je 10 min Spielzeit, nie im Kampf) |
 | `--tempo=calendar\|binge` | mit `--season`: Kalender (Einsturz zu festen Terminen; die Uhr läuft in Erkundung und Safe Room, ein Uhr-Command je 60 s) oder Am Stück (Countdown je Etage: 20, 30, 40, 50 … min) |
 | `--mode=net\|no_net` | mit `--season`: Mit Netz (Rettung, Sanitäter) oder Ohne Netz (ab Etage 2 ein Leben) — hier ohne Freischaltung |
 | `--speed=<n>` | mit `--season`, Zeitraffer: Staffelsekunden je Sekunde Wanduhr (1–10080; `--speed=1440`: ein Tag je Minute) |
 | `--slot=<1-3>`, `--hero=kai\|mopsula`, `--air=HH:MM` | mit `--season`: Spielstand-Slot, Held:in, eigene Sendezeit (Standard: die der Vorlage, 20:00 Ortszeit) |
+| `--floor=<n>` | mit `--season` (ST1-C1): nimmt gleich nach dem Start die Treppen bis Etage n (aufgezeichnete Abstiege ohne Etagen-Bilanz; die Treppenregel gilt — Am Stück jede Etage, im Kalender zu Beginn bis Etage 3). Zum Ansehen der Etagen, nicht für die Balance: die Gruppe bleibt auf Stufe 1 |
 
 Beispiel: `godot --path prime-time-dungeon/game -- --autoplay=full --strategy=typical --pace=human`
 Staffel (Debug): `godot --path prime-time-dungeon/game -- --season=ssn_basis --tempo=calendar --speed=1440`
+Etage 4 einer Staffel ansehen: `godot --path prime-time-dungeon/game -- --season=ssn_basis --tempo=binge --floor=4`
 
 Kämpfe beginnen in der Welt (`--goto=explore`); bestimmte Kämpfe stellen die Capture-Rezepte her (Abschnitt 10). Die
 Argumente `--combat=ctb|realtime` und `--goto=battle:<enc_id>` gibt es seit R5b-2b nicht mehr (die Kampagne kämpft nur in
@@ -445,10 +451,11 @@ prime-time-dungeon/
     │   ├── show/        ShowModel (Hype, Zuschauer, Follower), Achievements, Sponsoren, M.O.D.-Ansagen, Marotten/Liga
     │   ├── loot/        LootRoller (Lootboxen, Truhen, Pools)
     │   ├── progression/ GameState, FloorRun, Party, Inventar, EXP, Shop, BattleBridge, SaveCodec, Talents, Casting, HeroRules,
-    │   │                Persona; TalentTree, Professions (Staffeln, 09: Stubs aus ST0)
+    │   │                Persona; Staffeln (09): EnemyLevels (ST1-C), TalentTree, Professions (Stubs aus ST0)
     │   ├── season/      Staffeln (09): SeasonClock, SeasonState, SeasonRules, CastSim (KI-Besetzung: CastModel, CastMember,
     │   │                CastEvent), SleepResolver — Stubs aus ST0, gefüllt von ST1
-    │   ├── dungeon/     FloorLayout, DungeonGenerator, Spawns, Etagen-Events, ExploreEvent
+    │   ├── dungeon/     FloorLayout, DungeonGenerator, ZoneGenerator (Generator v2 der Staffeln), Spawns, Etagen-Events,
+    │   │                ExploreEvent
     │   └── live/        SHOWRUN: RunLog, RunSim, RunRules, StateHash, Gift, GiftPolicy, Sponsor-Fenster, Quest, Bestenliste,
     │                    KI-Admin: TwistApplier (Twists), RegieDirector (Offline-Regie ab Etage 2)
     ├── data/            26 JSON-Dateien: 23 GameData-Tabellen (seit 09 ST0 auch seasons, professions, cast, themes) +
@@ -486,10 +493,12 @@ Systeme) > 01_GDD / 02_TECH / 03_ART / 05 (je nach Thema) > 04**.
 
 ## 10. Screenshots
 
-Alle Bilder stammen aus dem Spiel selbst (Compatibility-Renderer unter Xvfb, 1280 × 720; Bilder 59 und 63 im Handy-Format
-2400 × 1080 und Bild 26 im Handy-Format 1600 × 720, alle drei mit Touch-Steuerung). Die Kampfbilder zeigen den Echtzeitkampf,
-seit R5b-2b den einzigen Kampf der Kampagne; die Bilder des früheren Rundenkampfs (08–12, 18, 22, 28) liegen als Archiv in
-`docs/screenshots/` (die CTB-Kampfszene, die sie erzeugte, ist gelöscht).
+Alle Bilder stammen aus dem Spiel selbst (Compatibility-Renderer unter Xvfb, 1280 × 720; Bilder 59, 63 und 78 im
+Handy-Format 2400 × 1080 und Bild 26 im Handy-Format 1600 × 720, alle vier mit Touch-Steuerung). Die Staffel-Bilder 72–78
+zeigen eine Basis-Staffel, die mit `--season-floor` direkt auf die Etage gestiegen ist (die Gruppe steht noch auf
+Stufe 1). Die Kampfbilder zeigen den Echtzeitkampf, seit R5b-2b den einzigen Kampf der Kampagne; die Bilder des früheren
+Rundenkampfs (08–12, 18, 22, 28) liegen als Archiv in `docs/screenshots/` (die CTB-Kampfszene, die sie erzeugte, ist
+gelöscht).
 
 | | |
 |---|---|
@@ -508,7 +517,10 @@ seit R5b-2b den einzigen Kampf der Kampagne; die Bilder des früheren Rundenkamp
 | ![Regie-Notiz](docs/screenshots/25_regie_notiz.png) **25** Regie-Notiz mit Prompt | ![Handy Safe Room](docs/screenshots/26_safe_room_hero_talents_phone.png) **26** Handy-Format: Safe Room mit TALENT-SHOW-Knopf und M.O.D.-Kasten |
 | ![Show](docs/screenshots/27_pause_show_unterhosen_liga.png) **27** Pausemenü, Reiter Show: M.O.D.s Vorliebe und Unterhosen-Liga (06 Paket C) | ![Abspann](docs/screenshots/61_echtzeitkampf_boss_abspann.png) **61** Bosssieg: Abspann mit EXP, Stufenaufstieg, Talent-Hinweis und Beute |
 | ![Ziel wählen](docs/screenshots/62_erkundung_pull_ziel.png) **62** Kampf eröffnen: Kai hat mit Tab einen Anführer als Ziel — Zielrahmen mit den Slots, Ring und Pfeil, Hinweis „1 · Angriff eröffnen“ | ![Handy Pull](docs/screenshots/63_handy_erkundung_pull_touch.png) **63** Handy-Format: Anführer angetippt, der Aktions-Button zeigt Slot 1 und eröffnet den Kampf |
-| ![Bellen, dann 1](docs/screenshots/64_erkundung_bellen_erstschlag.png) **64** Graf Mopsula hat gebellt: Der verdutzte Anführer ist schon Ziel — „verdutzt · Erstschlag!“ | |
+| ![Bellen, dann 1](docs/screenshots/64_erkundung_bellen_erstschlag.png) **64** Graf Mopsula hat gebellt: Der verdutzte Anführer ist schon Ziel — „verdutzt · Erstschlag!“ | ![Passage](docs/screenshots/72_staffel_passage_food_court.png) **72** Staffel, Etage 2 „Passage Ewiger Rabatt“: Food-Court mit einem Durchsage-Geist und einem verschlossenen Tor (09, ST1-C1) |
+| ![Fundus](docs/screenshots/73_staffel_fundus_kostuemfundus.png) **73** Etage 3 „Der Fundus“: Viertel Kostümfundus mit einer Pappritter-Ratte | ![Paketzentrum](docs/screenshots/74_staffel_paketzentrum_sortierhalle.png) **74** Etage 4 „Das Paketzentrum“: Sortierhalle mit einer Paketkrabbe |
+| ![Paketberg](docs/screenshots/75_staffel_paketberg_buehne.png) **75** Etage 6: Der Paketberg auf der Bühne seines Bossraums (Finale der Basis-Staffel) | ![Programmtür](docs/screenshots/76_staffel_programmtuer.png) **76** Programmtür: „Noch geschlossen — öffnet mit Programmpunkt 2“ |
+| ![Karte](docs/screenshots/77_staffel_karte_viertel.png) **77** Karte von Etage 6: vier Viertel, Safe Room je Viertel, Programmtüren (eine offen), Schlüsseltor vor der Treppe, Revier- und Etagenboss | ![Handy Staffel](docs/screenshots/78_handy_staffel_paketzentrum_touch.png) **78** Handy-Format: das Paketzentrum mit Touch-Steuerung |
 | ![Casting 1/3](docs/screenshots/29_casting_1_wer_sind_sie.png) **29** Casting 1/3 „Wer sind Sie?“: Name, Wortform, Figur (08 K1) | ![Casting 2/3](docs/screenshots/30_casting_2_steckbrief.png) **30** Casting 2/3 „Steckbrief“: Vorleben, Hobby / Talent, Eigenschaften |
 | ![Vorleben](docs/screenshots/31_casting_2_vorleben_overlay.png) **31** Overlay „Vorleben wählen“ mit „genauer“-Chips | ![Eigenschaften](docs/screenshots/32_casting_2_eigenschaften_overlay.png) **32** Overlay „Eigenschaften“ (0–3, leer erlaubt) |
 | ![Kandidatenkarte](docs/screenshots/33_casting_3_kandidatenkarte.png) **33** Casting 3/3: Kandidatenkarte und Sendeformat | ![Tastatur](docs/screenshots/34_casting_bildschirmtastatur_akzente.png) **34** Bildschirmtastatur mit Akzenttasten |
@@ -539,6 +551,11 @@ GODOT=… $T --shot $E shot.png 5 1280x720 --recipe=rt_credits                  
 GODOT=… $T --shot $E shot.png 5 1280x720 --recipe=pull_target_platform                                     # 62
 GODOT=… $T --shot $E shot.png 5 2400x1080 --touch --recipe=pull_target_platform                            # 63
 GODOT=… $T --shot $E shot.png 5 1280x720 --recipe=pull_bark_sewer                                          # 64
+GODOT=… $T --shot $E shot.png 20 1280x720 --season-floor=2 --recipe=season_q1          # 72 (73: Etage 3, 74: Etage 4)
+GODOT=… $T --shot $E shot.png 20 1280x720 --season-floor=6 --recipe=season_fb                              # 75
+GODOT=… $T --shot $E shot.png 20 1280x720 --season-floor=2 --recipe=season_door                            # 76
+GODOT=… $T --shot $E shot.png 20 1280x720 --season-floor=6 --recipe=season_map                             # 77
+GODOT=… $T --shot $E shot.png 20 2400x1080 --touch --season-floor=4 --recipe=season_q1                     # 78
 GODOT=… $T --shot res://scenes/safe_room/safe_room.tscn shot.png 5 1280x720 --recipe=safe_mopsula           # 13
 GODOT=… $T --shot res://scenes/safe_room/safe_room.tscn shot.png 5 1280x720 --recipe=safe_lootbox_open      # 14
 GODOT=… $T --shot res://scenes/ui/event_lobby.tscn shot.png 120 1280x720                                     # 15

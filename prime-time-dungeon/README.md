@@ -112,6 +112,7 @@ Fertige Builds baut die CI: Für jeden gepushten Tag `v*` (z. B. `v0.3.0`) oder 
 läuft im Workflow `ptd-check` nach dem Prüf-Job der Job `export` und legt vier Artefakte ab. Godot braucht man dafür nicht. Mit
 einem bezahlten Apple-Developer-Account kommen zwei Jobs dazu (Abschnitt „Mit Apple-Entwicklerkonto“ unten): eine notarisierte
 Mac-App und ein iPhone/iPad-Build in TestFlight.
+Was in welchem Build neu ist, steht in [`CHANGELOG.md`](CHANGELOG.md).
 
 | Artefakt | Inhalt | läuft auf |
 |---|---|---|
@@ -361,6 +362,7 @@ GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --strategy=all --combat=
 ```
 prime-time-dungeon/
 ├── README.md            diese Datei
+├── CHANGELOG.md         was in welchem spielbaren Build neu ist
 ├── docs/                Design- und Technik-Dokumente (Abschnitt 9), docs/screenshots/
 ├── tools/               check.sh, fullrun.sh, perf.sh, make_icons.sh, apple/ (release.sh + Entitlements, nur CI)
 └── game/                Godot-Projekt (= res://), project.godot, export_presets.cfg, icon.svg

@@ -2,7 +2,17 @@
 
 Spielbare Builds baut die CI (README, Abschnitt 4 „Spielbare Builds“). Hier steht je Build, was für Spieler:innen neu ist.
 
-## 0.3.0 – Vorschau 3: Kampf eröffnen
+## 0.3.0 – Vorschau 4: nur noch Echtzeit
+
+- **Alte Spielstände spielen jetzt in Echtzeit:** Spielstände aus Vorschau 1 (rundenbasiert) werden beim Laden einmal
+  umgestellt (Spielstand-Version 2, Lebenspunkte im neuen Maßstab) und kämpfen danach in Echtzeit weiter.
+- **Texte in Echtzeit-Sprache:** Fähigkeiten, Marotten und M.O.D.-Sprüche nennen Sekunden und Treffer statt Zügen; die
+  Achievements „15 kritische Treffer“ und „10 Schwachstellen-Treffer“ sagen jetzt auch M.O.D. richtig an.
+- Verbandszeug und andere Heilungen außerhalb des Kampfes heilen im neuen Maßstab (z. B. 180 statt 45 Lebenspunkte).
+- Der Rundenkampf ist aus der Kampagne verschwunden; er lebt als Kern des Minispiels „Stempelduell“ weiter, das als Nächstes
+  spielbar wird.
+
+## 0.3.0 – Vorschau 3 (build-78): Kampf eröffnen
 
 - **Ziel wählen in der Erkundung:** Tab / Shift+Tab, Linksklick auf eine Gruppe, am Gamepad RT, auf Touch die Gruppe antippen
   (freie Fläche bzw. Gamepad B: Ziel weg). Der Zielrahmen zeigt Entfernung, Zustand und ob es ein Erstschlag wird; ein Ring

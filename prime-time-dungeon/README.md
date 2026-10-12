@@ -307,10 +307,9 @@ unter dem Zielrahmen; im Safe Room und im Treppenraum eröffnet man keinen Kampf
 verfolgender Gegner die Figur erreicht (von hinten: Hinterhalt) oder sie 4 s im selben Raum verfolgt, und an den Bossen.
 Gesehen werden allein startet keinen Kampf (07 §2.2). Wer den Ring des Kampf-Sets durch eine Türgasse verlässt, flieht.
 
-**Rundenkampf (CTB):** Spielstände von vor der Umstellung kämpfen weiter rundenbasiert (Debug-Builds: Einstellung
-„Kampfmodus (Debug)“ oder `--combat=ctb`). Dort gibt es keinen Pull, und es gilt zusätzlich: Karte auch mit Tab, Kampf:
-Auto-Kampf T / Y / AUTO-Button, Tempo ×1 / ×2 R / R3 / Tempo-Button, Befehle und Ziele mit Pfeiltasten + Enter,
-Steuerkreuz / Stick + A oder den Befehls-Buttons (2 × 3); die Zugfolge-Leiste zeigt die nächsten 10 Züge.
+**Rundenkampf (CTB):** gibt es in der Kampagne nicht mehr. Spielstände aus der Zeit davor werden beim Laden auf das neue
+Format umgestellt (Version 2) und spielen in Echtzeit weiter. Der Rundenkampf lebt als Minispiel „Stempelduell“ weiter
+(`docs/10_MINISPIEL_STEMPELDUELL.md`); dessen Steuerung beschreibt das Minispiel selbst.
 
 ## 6. Entwickler-Argumente
 

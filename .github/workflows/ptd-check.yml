@@ -39,7 +39,8 @@ jobs:
         # one test process on a dedicated runner: the wall-clock budgets of the unit tests are asserted here only
         # (TestCase.assert_time_budget); local parallel check.sh runs print them
         run: PTD_PERF_ASSERTS=1 GODOT=~/godot/godot prime-time-dungeon/tools/check.sh
-      # the campaign fights in real time only (07 §12.6, R5b part 2b): the bot plays it with the autopilot
+      # the campaign fights in real time only (07 §12.6, R5b part 2b): the bot plays each combat as the person
+      # (RtBotPlayer, profile typical); the CTB engine lives on in the Stempelduell (10, its own tests)
       - name: "Full run Floor 1 (real time: thorough + rush + dawdle)"
         run: GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --strategy=all --log-dir=fullrun-logs
       - uses: actions/upload-artifact@v4
@@ -51,11 +52,11 @@ jobs:
         run: |
           mkdir -p shots
           for s in res://art/gallery/character_gallery.tscn res://art/gallery/env_gallery.tscn res://art/gallery/vfx_gallery.tscn \
-                   res://scenes/title/title.tscn res://scenes/exploration/exploration.tscn res://scenes/battle/battle.tscn \
+                   res://scenes/title/title.tscn res://scenes/exploration/exploration.tscn \
                    res://scenes/safe_room/safe_room.tscn; do
             GODOT=~/godot/godot prime-time-dungeon/tools/check.sh --shot "$s" "shots/$(basename "$s" .tscn).png" 120 1280x720
           done
-          # the default combat (07 E33): a real-time fight in the world with the real data (battle.tscn above is CTB)
+          # the combat (real time only since R5b part 2b): a real-time fight in the world with the real data
           GODOT=~/godot/godot prime-time-dungeon/tools/check.sh --shot res://scenes/exploration/exploration.tscn \
             shots/combat_realtime.png 30 1280x720 --recipe=rt_r4_regular
       - name: Render probe (03_ART A11)

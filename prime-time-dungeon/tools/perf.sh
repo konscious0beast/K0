@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Performance probe (02_TECH §12.5, docs/PERFORMANCE.md): renders floor 1 / battles / safe rooms under Xvfb and prints
-# the §12.1 budget table (draw calls, primitives, lights, materials, memory, build times) plus the Router leak loop.
+# Performance probe (02_TECH §12.5, docs/PERFORMANCE.md): renders floor 1 / real-time combats / safe rooms under Xvfb
+# and prints the §12.1 budget table (draw calls, primitives, lights, materials, memory, build times) plus the Router
+# leak loop. The CTB battle scene and its "battle" section are gone (R5b part 2b, 07 §12.6).
 #
 # Usage:
-#   tools/perf.sh [--driver=opengl3|vulkan] [--res=1280x720] [--quality=high|low] [--only=startup,explore,battle,safe_room,leak]
+#   tools/perf.sh [--driver=opengl3|vulkan] [--res=1280x720] [--quality=high|low] [--only=startup,explore,safe_room,combat,leak]
 #                 [--cycles=20] [--out=<file.md>] [--shots=<dir>] [--headless] [--look=worst]
 #   --only=combat (or combat_regular,combat_two_groups,combat_boss_queen): the real-time combat in the world (07 §8.10,
 #   R2) with effects — telegraph pool full, zones, hits, extras, the queen's adds — plus a timing pass (exploration vs.

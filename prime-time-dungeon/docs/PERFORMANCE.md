@@ -4,6 +4,15 @@ Stand: 2026-10-10, Branch `ptd/final-a` (komplett nachgemessen nach Boss-Balanci
 Godot 4.7.2. Erste Fassung: Branch `ptd/int-perf` (Phase C). Budgets: 02_TECH §12.1, Messwerkzeug: `tools/perf.sh` (02_TECH §12.5).
 Dieses Dokument hält fest, **was** gemessen wurde, **wie**, was vorher/nachher herauskam und welche Abweichungen bewusst bleiben.
 
+> **Stand R5b-2b (2026-10-12, Branch `ptd/r5b2b`) — Nachmessung fällig.** Der CTB-Kampf der Kampagne ist entfernt (07 §12.6,
+> 10 SD1): `scenes/battle/**` und der Abschnitt `battle` von `tools/perf.sh` gibt es nicht mehr. Die Zeilen „Kampf: …“ in §1
+> und die Kampfmessungen in §3.2, §3.4, §3.5, §4.5 beschreiben die gelöschte CTB-Kampfszene und bleiben als Verlauf stehen.
+> Der Kampf der Kampagne ist der Echtzeitkampf in der Welt (§3.6, `--only=combat`; in 2b nachgemessen: `PERF: OK`, Werte wie
+> R5b-1, §3.6 „Nachmessung R5b-2b“); die Router-Zyklen (§5.1) spielen einen Echtzeitkampf und messen seit 2b auf der Etage,
+> die das nächste `goto` neu gebaut hat. **Neu zu messen** auf der Referenz-Hardware und mit allen drei Profilen
+> (Compatibility high/low, Mobile): `tools/perf.sh` vollständig — Start, Erkundung, Safe Rooms, Kampf, Router-Zyklen — mit den
+> gebackenen Daten; §1 bekommt dann die Echtzeit-Kampfzeilen statt der CTB-Szene. [zu messen]
+
 ---
 
 ## 1. Ergebnis auf einen Blick
@@ -218,6 +227,12 @@ heutige HUD mit Persona-Gesicht im Rahmen): DC 3D `combat_regular` / `combat_two
 high **113 / 141 / 112**, low 74 / 96 / 82, Mobile (Vulkan, lavapipe) high 68 / 82 / 69 (inkl. Schatten); DC UI 43–61;
 Materialien 19–22; Körper 26 (Kollisionsring +1); alle drei Profile `PERF: OK` — gleich zum Stand R2/R3 (Königin high 113 → 112).
 
+**Nachmessung R5b-2b** (2026-10-12, Branch `ptd/r5b2b`, `tools/perf.sh --only=combat`, Compatibility high; gebackene Daten, die
+Welt-Fixture baut die Leiste aus `rt.bar`, ohne CTB-Kampagne): DC 3D **113 / 141 / 113** (Erkundung → Kampf 100 → 113,
+113 → 141, 72 → 113), DC UI 43 / 43 / 61, Primitive 40 938 / 50 706 / 57 707, Materialien 19 / 19 / 21, Partikel 28–30 (2–3
+Emitter), Körper 26; `PERF: OK`. Director Ø 0,26–0,56 ms, p95 1,3–4,2 ms, Spitze ≤ 7,9 ms je Frame (llvmpipe, nur relativ).
+low und Mobile in 2b nicht nachgemessen (keine Änderung an Kampfszene oder Rendering) [zu messen].
+
 - **Schlechtester Fall `combat_two_groups`: DC 3D 141 von 150 mit Effekten** (Compatibility high; low 96, Mobile 83). Das
   Rig-LOD der Komparsen (Reserve aus 07 §8.10) ist nicht nötig; der Funken-Deckel (≤ 3 gleichzeitige Emitter) ist ohnehin
   umgesetzt (`scenes/combat/puppets.gd`). Komparsen und Beschwörungen werfen keine Echtzeitschatten, Akteure anderer Räume sind
@@ -416,6 +431,13 @@ bleiben), auf „high“ leuchtet es nur während der ≈ 1 s Durchfahrt und ist
 20 Zyklen Erkundung (jedes Mal neu gebaut) → Kampf (`enc_f1_a1_tutorial`, Auto-Kampf) → Safe Room → zurück, über den echten Router,
 nach vorherigem Durchlauf aller Etagen-Ansichten. Je Zyklus nach 4 Frames: Objekte, davon Einträge der begrenzten Art-Caches
 (Materialien, Figuren-Meshes ≤ 96 Modelle, getönte Effekt-Quads ≤ 64), Nodes, Ressourcen, verwaiste Nodes, RAM.
+
+**Seit R5b-2b** ist der Kampf eines Zyklus der Echtzeitkampf in der Welt (Tutorial-Gruppe, Autopilot; die besiegten Gruppen
+werden je Zyklus zurückgesetzt) und gemessen wird auf der Etage, die das `goto` des **nächsten** Zyklus neu gebaut hat: Die
+Effekt-Pools eines Kampfes (`Vfx`, je Art höchstens 4 Knoten) hängen an der Etage, die sie erzeugt hat, und ihre Größe wechselt
+mit jedem Kampf (in `test_perf_router_cycles` nach der Safe-Room-Rückkehr gemessen: 1 625–1 647 Nodes je Zyklus, ein
+Schein-Wachstum von +4 Nodes zwischen den Fenstern; auf der neu gebauten Etage flach). Die Tabelle unten stammt aus dem
+CTB-Stand [neu zu messen].
 
 | Lauf | Objekte (ohne Caches) | Nodes | Ressourcen | verwaiste Nodes | RAM |
 |---|---:|---:|---:|---:|---:|

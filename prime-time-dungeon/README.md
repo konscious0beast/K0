@@ -419,6 +419,22 @@ Beispiel: `godot --path prime-time-dungeon/game -- --autoplay=full --strategy=ty
 Staffel (Debug): `godot --path prime-time-dungeon/game -- --season=ssn_basis --tempo=calendar --speed=1440`
 Etage 4 einer Staffel ansehen: `godot --path prime-time-dungeon/game -- --season=ssn_basis --tempo=binge --floor=4`
 
+**Staffel-Bots (09 Kap. 11.6, ST1-I):** Zwei Werkzeuge spielen ganze Staffeln (Abschnitt 7). `tools/fullrun.sh
+--season=ssn_basis` lässt den Full-Run-Bot in der Welt spielen: Start zu festem Tag 0 mit dem Lauf-Seed (reproduzierbar),
+alle Etagen der Basis-Staffel mit derselben Wegplanung wie der Harness (Revier-Boss → Schlüssel → Tor → Treppe,
+Programmtüren, Safe Room je Viertel), Recall auf Etage 3, Klassenfähigkeiten und Talentreihen, Finale; `--tempo=calendar`
+spielt die Sitzungen eines Profils mit Ausloggen, Abwesenheit, Login und „Während Sie schliefen …“.
+`tools/season_harness.sh` spielt dieselben Staffeln ohne Welt im Kern (RunSim, echte Echtzeitkämpfe, KI-Besetzung,
+Schläfer) in etwa 1–2 min je Staffel und misst Pensum, Stufen gegen das Band, Bosse, Tode, Rettungen und Credits je
+Etage gegen die Bänder des ST1-Gates (auf Format 6 skaliert; Formate 12/18 lehnt er bis ST1-C2 ab, Exit 3).
+
+```bash
+GODOT=… prime-time-dungeon/tools/fullrun.sh --season=ssn_basis --tempo=binge --strategy=thorough     # Am Stück, alles
+GODOT=… prime-time-dungeon/tools/fullrun.sh --season=ssn_basis --tempo=calendar --sessions=20min     # Kalender
+GODOT=… prime-time-dungeon/tools/season_harness.sh --gate --seeds=10 --jobs=2      # vier Profile, Mit/Ohne Netz
+GODOT=… prime-time-dungeon/tools/season_harness.sh --tempo=binge --strategy=typical --seeds=10   # Pflichtweg Am Stück
+```
+
 Kämpfe beginnen in der Welt (`--goto=explore`); bestimmte Kämpfe stellen die Capture-Rezepte her (Abschnitt 10). Die
 Argumente `--combat=ctb|realtime` und `--goto=battle:<enc_id>` gibt es seit R5b-2b nicht mehr (die Kampagne kämpft nur in
 Echtzeit, die CTB-Kampfszene ist gelöscht).
@@ -437,6 +453,8 @@ einer Temp-Kopie, schreibt die Icons aber nach `game/art/icons/` zurück. `--sho
 | `tools/check.sh --tests-only [--filter=<teil>]` | Import und Tests (optional nur Testdateien, deren Name `<teil>` enthält) | `check.sh: OK` |
 | `tools/check.sh --shot <res://szene.tscn> <out.png> [frames] [BxH] [--touch] [--recipe=<name>] [--params=<json>] [--no-global-ui]` | rendert eine Szene unter Xvfb (`xvfb-run` nötig) im Compatibility-Renderer und speichert ein PNG | `saved <pfad>` |
 | `tools/fullrun.sh [--strategy=thorough\|rush\|dawdle\|typical\|all] [--hero=kai\|mopsula] [--seed=<int>] [--pace=fast\|human] [--liga=0\|1\|2] [--rt-profile=typical\|perfect\|sloppy] [--log-dir=<dir>]` | Full-Run-Bot headless mit festem 60-fps-Takt im Echtzeitkampf (07 §12.5): der `RtBotPlayer` spielt jeden Kampf als Person; `all` = thorough, rush und dawdle als Kai plus thorough als Graf Mopsula nach einem Import (wie in CI) | `fullrun.sh: OK` |
+| `tools/fullrun.sh --season=<ssn-id> [--tempo=binge\|calendar] [--sessions=typical\|20min\|weekend\|away2w\|none] [--mode=net\|no_net] [--strategy=thorough\|typical\|rush\|auto] [--speed=<n>] [--floors=<n>] [--pace=…] [--seed=…]` | Full-Run-Bot in einer Staffel (09, ST1-I): alle Etagen des Formats, im Kalender mit Ausloggen und Login nach dem Profil; misst je Etage Minuten, Pflichtweg/vollständig, Stufen gegen das Band, Bosse, Tode, Rettungen, Credits (`FULLRUN: season {json}`) | `FULLRUN: OK season=…`, `fullrun.sh: OK` |
+| `tools/season_harness.sh [--format=6] [--tempo=calendar\|binge] [--profile=typical\|20min\|weekend\|away2w\|all] [--mode=net\|no_net\|both] [--strategy=auto\|thorough\|typical\|rush] [--pace=human\|fast] [--seeds=10] [--first-seed=0] [--jobs=1] [--out=<datei.json>] [--runs] [--strict-bands]`, `--gate` | Staffel-Harness (09 §11.6, ST1-I): ganze Staffeln headless im Kern mit Bot, KI-Besetzung und Schläfern im Zeitraffer; Zeilen je Staffel, Zusammenfassung je Profil, `HARNESS-BAND`-Urteile gegen das ST1-Gate (Format 6); `--format=12\|18` → Exit 3 bis ST1-C2 | `season_harness.sh: OK`, Exit 0 |
 | `tools/rt_balance.sh [--seeds=20] [--hero=kai\|mopsula\|both] [--liga=0\|1\|2\|all] [--profile=typical\|perfect\|sloppy\|all] [--strict-bands] [--out=<datei>]`, `--sequence`, `--perf`, `--nightly` | Balance-Harness des Echtzeitkampfs (07 §11.4): die Begegnungen von Etage 1 auf der echten Sim mit den Bot-Profilen, Urteile gegen die Bänder aus 07 §11.1; nachts 200 Seeds (CI-Job `nightly-balance`) | Tabelle mit `RT-BAND`-Zeilen, Exit 0 |
 | `tools/perf.sh [--driver=opengl3\|vulkan] [--quality=high\|low] [--only=startup,explore,safe_room,combat,leak] [--cycles=20] [--out=<datei.md>] [--shots=<dir>] [--cells] [--headless]` | Performance-Probe unter Xvfb: Budget-Tabelle aus 02_TECH §12.1 (Draw Calls, Primitive, Lichter, Speicher, Ladezeiten), der Echtzeitkampf in der Welt (`combat`: regulär, zwei Gruppen, Königin) und Leak-Schleife über Szenenwechsel; Ergebnisse in `docs/PERFORMANCE.md` | `PERF: OK`, `perf.sh: exit 0` |
 | `tools/make_icons.sh` | erzeugt die App-Icons (Android, iOS, macOS) und die iOS-Startbilder in `game/art/icons/` aus `game/icon.svg` neu | Zeilen `ICON: …`, Exit 0 |
@@ -444,7 +462,8 @@ einer Temp-Kopie, schreibt die Icons aber nach `game/art/icons/` zurück. `--sho
 
 **Exit-Codes:** `0` = bestanden. `1` = Fehler: Import, Test, Smoke-Test, Screenshot, Bot-Lauf, Budget-Überschreitung oder
 Speicherwachstum. Jede Zeile mit `SCRIPT ERROR`, `Assertion failed`, `ERROR:` usw. zählt als Fehler, auch bei Exit 0 des
-Godot-Prozesses. `2` = Aufruffehler (Godot-Binary nicht gefunden; bei `fullrun.sh` auch ein unbekanntes Argument). Der Test-Runner wertet auch
+Godot-Prozesses. `2` = Aufruffehler (Godot-Binary nicht gefunden; bei `fullrun.sh` auch ein unbekanntes Argument). `3` =
+`season_harness.sh` lehnt das Format ab (12/18 bis ST1-C2). Der Test-Runner wertet auch
 übersprungene Tests als Fehler, sofern sie nicht ausdrücklich zugelassen sind. Zeitbudgets in Tests werden nur mit
 `PTD_PERF_ASSERTS=1` geprüft (CI-Check-Job).
 
@@ -461,7 +480,7 @@ prime-time-dungeon/
 ├── README.md            diese Datei
 ├── CHANGELOG.md         was in welchem spielbaren Build neu ist
 ├── docs/                Design- und Technik-Dokumente (Abschnitt 9), docs/screenshots/
-├── tools/               check.sh, fullrun.sh, perf.sh, make_icons.sh, apple/ (release.sh + Entitlements, nur CI)
+├── tools/               check.sh, fullrun.sh, season_harness.sh, perf.sh, make_icons.sh, apple/ (release.sh + Entitlements, nur CI)
 └── game/                Godot-Projekt (= res://), project.godot, export_presets.cfg, icon.svg
     ├── autoload/        Events, DB, Game, Show, Save, Router, Sfx (+ private Helfer wie game_replay.gd)
     ├── core/            reine Logik (RefCounted, headless testbar, ohne Autoloads)

@@ -1736,6 +1736,7 @@ oder sie über 10 min im Hintergrund lässt, schläft dort, wo die Figur stand (
 | `test_09_replay` | Sitzung mit `season`/`clock`/`away`/`sleep`/`prof`/`craft`/`talent` v2 → `RunSim.replay` und `Game.replay_log` hash-gleich; manipulierte Uhr-Commands → Fehler; Läufe ohne Staffel bitgleich zu den Golden-Hashes |
 | `test_09_terms` | Sprachregel (Kap. 1.2) |
 | `test_09_zone_generator` | 200 Seeds je Etage 3–18 erfüllen die Prüfregeln (Kap. 3.6), deterministisch (ST1-C1: Etagen 2–6; dazu `test_09_floors`) |
+| `test_09_harness` | Stand ST1-I: Spielprofile je Format (je Seed gleich, nie zwei Sitzungen zugleich, Wochenende, zwei Wochen weg), Planer beider Bots auf den echten Etagen 2–6 (Pflichtweg, Programmtüren, rote Gruppen, Aufleveln vor Bossen, Boss-Versuche, `auto`, geschlossene Treppe, Ohne Netz vorsichtig, Pensum-Marken), Formate 12/18 abgelehnt, Etage 1 Am Stück und eine Kalender-Staffel mit neun Tagen Abwesenheit — legal, je Seed gleich, `RunSim.replay` bitgleich; `PTD_HARNESS_SEEDS=<n>` spielt n ganze Staffeln je Gate-Profil |
 
 **ST1-Gate — nur Mechanik (V-5):** Alle Tests grün; Am-Stück-Etage 1 in den neu gemessenen GDD-§13-Bändern; Staffel-Harness
 (`tools/season_harness.sh --format=18 --tempo=calendar --speed=dev`) mit diesen Profilen (V-8):
@@ -1746,6 +1747,9 @@ oder sie über 10 min im Hintergrund lässt, schläft dort, wo die Figur stand (
 | `20 min/Tag` | 20 min an jedem Tag | ≥ 90 % der Etagen per Treppe; Stufe beim Abstieg ≥ Bandanfang − 1 |
 | `nur Wochenende` | Samstag und Sonntag je 90 min | Stufe nach jedem Login ≥ Bandanfang − 2; ≥ 50 % der Etagen per Treppe; Credits am Staffelende ≥ 50 % von `typical` |
 | `2 Wochen weg` | wie `typical`, Tage 30–44 abwesend | nach der Rückkehr binnen 2 Sitzungen im Band; Finale in ≥ 60 % der Seeds |
+
+**Stand ST1-I:** Bis die Etagen 7–18 stehen, misst der Harness Format 6 (`tools/season_harness.sh --gate`, Kap. 11.3
+„Stand ST1-I“, I-2/I-3: die Profile auf 24 Tage skaliert, zwei Wochen weg = Tage 7–20); `--format=18` lehnt er mit Exit 3 ab.
 
 **Echtzeit-Tagebuchstudie (V-5):** Eine Basis-Staffel (6 Etagen, 24 Tage) in echter Zeit mit **≥ 10 Tester:innen** und einer
 täglichen Zwei-Minuten-Notiz. Bestanden, wenn ≥ 8 von 10 Einsturz, Vorlauf und Schläfer in einem Satz richtig erklären,

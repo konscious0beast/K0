@@ -622,6 +622,34 @@ die Bilanz liest schon `CastSim.news`. ST1-I — Harness-Profile mit Abwesenheit
 mit gesetzter Wanduhr wie in `test_09_sleep`). 07 — CR-32 m (Gast im Schlafkampf), n (Layout einmal je Kampf), o
 (Autopilot für die ganze Party, `result_now`).
 
+**Stand ST1-I (2026-10-12, Branch `ptd/st1i`): der Staffel-Harness** (09 Kap. 11.6, Kap. 11.3 „Stand ST1-I“,
+Entscheidungen I-1 … I-14). Nur Werkzeuge und Tests: kein Spielcode, keine Daten, **kein `SIM_VERSION`-Sprung**, ohne
+`--season` bitgleich (`fullrun.sh` mit `--strategy=all`, `--hero=mopsula`, `--liga=1`, `--liga=2` gegen die Basis `8e02f2c`:
+gleiche Ereigniszeilen samt Frames und gleiche Statistiken). Zwei Schichten (09 I-1): der Full-Run-Bot in der Welt
+(`scenes/boot/fullrun.gd`, Abschnitt „Staffeln (09, ST1-I)“, und der Adapter `scenes/boot/fullrun_season_ui.gd` für jeden
+Staffel-Bildschirm) und der Harness im Kern (`tests/tools/season_harness.gd`: `RunSim` mit den Staffel-Regeln, echte
+`RtSim`-Kämpfe mit dem `RtBotPlayer`, `CastSim`, `SleepResolver`); beide planen mit `tests/tools/season_planner.gd` und
+spielen die Sitzungen von `tests/tools/season_profiles.gd`. Die Hilfsdateien unter `tests/tools/` haben keinen
+`class_name`; `fullrun.gd` lädt Planer und Profile zur Laufzeit (`load`, wie den `RtBotPlayer`), damit Exporte ohne
+`tests/` bauen.
+
+| Teil | API |
+|---|---|
+| `fullrun.gd` (Abschnitt „Staffeln“) | User-Argumente `--fullrun-season=<ssn id>` (setzt `tools/fullrun.sh --season`), `--tempo`, `--mode`, `--sessions=typical\|20min\|weekend\|away2w\|none`, `--speed`, `--floors=<n>`, `--strategy=auto`; `season_from_args(args)`, `season_report()`, `wait_for`/`note` (für den Adapter); Haken, je mit `season_def != ""` und markiert: `_ready` (Einstellungen), `_process` (Spielzeit, Uhr, Watchdog `SEASON_WATCHDOG_FRAMES`), `_main`, `_safe_room`, `_use_interactable` (Treppe), `human_wait`, `_rt_combat` (nach dem gewonnenen Finale der Abspann), `_boss_blocks` und `travel` (die gemiedenen Räume des Planers, sonst hindurch). Ablauf: `_season_main` (Start zu festem Tag 0 `SEASON_DAY0_UTC`, Kalender: Start der ersten Sitzung, Am Stück `SEASON_START_UTC`; Ortszeit-Versatz 0; Lauf-Seed) → `_season_step` (Ansichten beruhigen, Etage verfolgen, Sitzungsende, Ziel `_season_objective` = Planer, Pensum-Marken) → Bildschirme `_season_safe_room` (Replay-Prüfung, Szenen, Lootboxen, Recall, Talentreihen, Leiste, Ausrüstung, Automat, Ausloggen), `_season_stairs` („Noch nicht“ je Etage einmal, geschlossen → warten), `_season_floor_summary`, `_season_end_screen`, `_season_logout` (Abwesenheit bis zur nächsten Sitzung) → `_season_finish`. Ausgabe `FULLRUN: season {json}` (je Etage `play_sec`, `explore_sec`, `combat_sec`, `pflicht_sec`, `full_sec`, Stufen an/ab, Band, `qb`/`fb` mit Ausgang, Sekunden, Stufe und Sitzung, Niederlagen, verlorene Gruppen, Tode, Credits, Wege `stairs\|rescue\|finale\|end\|out`; Ausloggen, Logins, Talente, Besetzung) und `FULLRUN: OK season=<result> floor=… battles=… level=… deaths=… rescues=… frames=…` |
+| `fullrun_season_ui.gd` (privat, neu) | `start(slot, def_id, opts, hero)` (`Game.start_season`), `recall()` (`Game.choose_casting`, `RECALL`: Kai „Abrissbirne“, Graf Mopsula „Medicus honoris causa“, Spezies „Original-Verpackung“), `loadout()` (`Game.apply_loadout`: je Platz die gelernte Klassenvariante der höchsten Stufe), `talent_rows(scene)` (Talent-Show, je Reihe `pick(0)`), `logout_safe_room(scene)`, `logout_exploration(ex, tactic)` (Pausemenü → Ausloggen-Dialog), `login(absence)` (Titel „Fortsetzen“; die Abwesenheit kommt über `Events.game_loaded` in `seen_unix` — die Wanduhr eines Geräts, 09 I-6), `wake(screen)` („Während Sie schliefen …“, Uhrsprung → „Ja“), `is_wake_summary`, `stairs(dlg)`, `floor_summary(fs)`, `end_screen(cur)`; `logins` |
+| `season_planner.gd` (privat, neu) | `goal(state, data, layout, here, strategy, tried, tries)` → {kind group\|chest\|event\|gate\|safe\|visit\|boss\|stairs\|wait, id, cell, why, heal?, before?}, `candidates(…, strategy, tried, red)`, `level_up`, `boss(state, layout, strategy, qb_tries, fb_tries, qb_only, fb_floor)`, `auto_strategy(state)`, `careful(state)` (Ohne Netz ab Etage 2), `pensum(state, data, layout, here, tried, fb_floor)` → {pflicht, full}, `event_choice`, `corridor(layout, rooms)`, `programme_cell`, `is_show_boss`, `group_level`, `hero_level`, `party_ratio`, `nearest`, `blocks(state, data, layout, tried, goal)` (Bossräume, Räume von Gruppen, die zweimal gewannen, Ohne Netz gefährliche), `boss_blocks`, `path`; Konstanten `STRATEGIES`, `RED` 5, `YELLOW` 2, `BOSS_GAP` 1, `BOSS_TRIES_BINGE` 4, `BOSS_TRIES_SESSION` 2, `FLOOR_BOSS_TRIES` 2, `GROUP_TRIES` 2, `BOSS_HP_MIN` 0,9, `BOSS_MP_MIN` 0,7, `HURRY_SEC` 86 400, `HURRY_PM` 250, `FLOOR1_SKIP`, `WHEEL_RESERVE` 60, `CLOSED` |
+| `season_profiles.gd` (privat, neu) | `sessions(profile, seed, format)` → [{day, start (Besetzungssekunden seit Tag 0), sec, first}], `day0_weekday`, `planned_minutes`, `idle_days`; `PROFILES` typical, 20min, weekend, away2w; `AWAY_FROM` {6: 7, 12: 19, 18: 30}, `AWAY_DAYS` 14, `GAP_MIN` 30; Ströme `SeedUtil.derive(seed, "harness_sessions", Profil)`, `"harness_weekday"` |
+| `season_harness.gd` (privat, neu) | `run(data, seed, opts)` → Bericht {seed, def, tempo, mode, profile, strategy, pace, fighter, stop, result, result_floor, vest, deaths, rescues, stairs, quote, level_end, play_min, combats, credits_end/won/spent, floors (wie der Full-Run-Bot, dazu `cells`, `aggro`), logouts, logins, talents, cast {ai, vest, in, finalists, ai_first, compared}, errors, rejected, hash (mit `log`)}; Optionen `def`, `tempo`, `mode`, `profile`, `strategy`, `pace`, `fighter` (bot \| autopilot), `log`, `time`, `floors`, `sessions`, `plan`, `debug`, `probe`; Zeitmodell `TIME` (09 I-5), `SCREENS`, `FAST_SCREENS_PM`; `PLAYABLE_FORMATS` [6], `FORMAT_REFUSAL`; Kämpfe über `RunSim.apply` (Command `encounter` mit `rt`-Block, `POSES`) und `rs.settle()`, Gruppen auf dem Weg greifen an (`_aggro`), Schluss mit `RunSim.close` (der Log endet mit seinem Prüfpunkt) |
+| `season_report.gd` (privat, neu) | `run_line(r)`, `summary(runs)`, `summary_lines(s)`, `band_report(series)` (ok\|OUT\|info je Gate-Band, 09 I-3), `pensum_report(floors, name, verdict)`, `median`; `PFLICHT_MIN`, `FULL_MIN`, `PFLICHT_TOL_PM` 250, Bänder `TYPICAL_FINALE_PM` 800, `SHORT_STAIRS_PM` 900, `WEEKEND_STAIRS_PM` 500, `WEEKEND_CREDITS_PM` 500, `AWAY_FINALE_PM` 600 |
+| `season_harness_main.gd` (neu) | Einstieg `-s res://tests/tools/season_harness_main.gd -- [Optionen]` (`--format`, `--tempo`, `--profile=…\|all`, `--mode=…\|both`, `--strategy`, `--pace`, `--fighter`, `--seeds`, `--first-seed`, `--speed`, `--time`, `--out`, `--runs`, `--part`, `--merge`); Zeilen `HARNESS: run|summary|refused|done`, `HARNESS-BAND: ok|OUT|info`; Exit 0, 2 (Argumente), 3 (Format abgelehnt) |
+| Werkzeuge | `tools/fullrun.sh --season=<ssn id> [--tempo] [--sessions] [--mode] [--speed] [--floors] [--strategy=…\|auto]` (Log `fullrun_<ssn>_<strategie>_<optionen>.log`, Wanduhr bis 4 h), `tools/season_harness.sh` (README §6/§7; `--jobs=N` teilt die Seeds, `--merge` fasst zusammen; `--gate` = Kalender, vier Profile, Mit und Ohne Netz) |
+| Tests | `test_09_harness` (neu, ≈ 28 s): Profile je Format, Planer auf den echten Etagen 2–6, Formate 12/18 abgelehnt, Etage 1 Am Stück und eine Kalender-Staffel mit neun Tagen Abwesenheit — legal, je Seed gleich, `RunSim.replay` bitgleich (auch als Datei); Bericht auf erfundenen Läufen; `PTD_HARNESS_SEEDS=<n>` spielt n ganze Staffeln je Gate-Profil und Am Stück |
+
+**Für die anderen Pakete:** ST1-H — der Adapter `fullrun_season_ui.gd` ist die eine Stelle für „Sendung starten“, den
+Reiter „Staffel“, das Tempo-Angebot und die Staffel-Bilanz (heute `Game.start_season` und der Abspann); ST1-C2 —
+Formate 12/18 im Harness, sobald die Etagen 7–18 in den Daten stehen (`PLAYABLE_FORMATS`); 09 Kap. 11.3 „Stand ST1-I“ —
+die gemessenen Bänder und die Anträge an Balance und Oberfläche.
+
 ---
 
 ## 1. Dateibaum und Modulzuordnung
@@ -648,7 +676,8 @@ Validatoren der Staffel-Tabellen, `data/{seasons,professions,cast,themes}.json`,
 | `icon.svg` | M0 | App-Icon (handgeschriebenes SVG: „PTD“-Logo, Magenta/Cyan) |
 | `../.github/workflows/ptd-check.yml` (Repo-Root `K0/.github/…`) | M0 | CI (§12.4) |
 | `../tools/check.sh` | M0 | Import + Tests + Autoplay-Smoke, `--shot` (§11) |
-| `../tools/fullrun.sh` | M6 | Full-Run-Bot Etage 1 headless (§11.4.1; CI-Schritt §12.4) |
+| `../tools/fullrun.sh` | M6 | Full-Run-Bot Etage 1 headless (§11.4.1; CI-Schritt §12.4); `--season` spielt eine Staffel (09, ST1-I) |
+| `../tools/season_harness.sh` | ST1-I | Staffel-Harness: ganze Staffeln headless im Kern, Profile, Bänder des ST1-Gates (09 §11.6, §0.8 „Stand ST1-I“) |
 | `../tools/perf.sh` | M0 (Phase C) | Performance-Probe unter Xvfb + Leak-Schleife (§12.5, `docs/PERFORMANCE.md`) |
 | `../tools/make_icons.sh` | M0 (Phase C) | Export-Icons und iOS-Startbilder aus `icon.svg` neu erzeugen (§12.3) |
 | `../tools/apple/release.sh`, `../tools/apple/PrimeTimeDungeon.entitlements` | M0 (Release) | Apple-Release-Schritte der CI-Jobs `apple-macos`/`apple-ios-testflight` (nur macOS-Runner mit Secrets) und die Entitlements der Mac-App (§12.4) |
@@ -848,7 +877,8 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 |---|---|---|
 | `scenes/boot/boot.tscn` + `boot.gd` | M6 (S) | **Main Scene**: Args lesen, Settings anwenden, GlobalUi + ggf. Autoplay anlegen, → Titel |
 | `scenes/boot/autoplay.gd` | M6 | Autoplay-Treiber (§11.4) |
-| `scenes/boot/fullrun.gd` | M6 | Full-Run-Bot `--autoplay=full` (§11.4.1) |
+| `scenes/boot/fullrun.gd` | M6 | Full-Run-Bot `--autoplay=full` (§11.4.1); Abschnitt „Staffeln“ ST1-I |
+| `scenes/boot/fullrun_season_ui.gd` | ST1-I | privat: die Staffel-Bildschirme des Full-Run-Bots (Start, Recall, Leiste, Talentreihen, Ausloggen, Login, Bilanz, Treppe, Abspann) |
 | `scenes/title/title.tscn` + `title.gd` | M6 (S) | `TitleScreen`: Fortsetzen / Neues Spiel / Laden / Event-Lauf / Optionen / Credits / Beenden (§9.5) |
 | `scenes/title/slot_select.tscn` + `.gd` | M6 | Slot-Auswahl (Neu/Laden); „Neu“ → Figurenwahl |
 | `scenes/title/hero_select.tscn` + `.gd` | 06-A | Figurenwahl „Wen steuerst du?“: zwei Karten Kandidat:in / Graf Mopsula mit 3D-Vorschau (06 §1.1, CR-16; Kartentext 08 §1.1) → Casting |
@@ -1018,6 +1048,7 @@ Jede Datei unter `tests/` gehört dem genannten Modul; `test_<modul>_*.gd` ist d
 | `tests/perf/perf_probe.gd` + `perf_runner.gd`, `tests/perf/boot_timer.gd` | Phase C | Mess-Werkzeug für `tools/perf.sh` (§12.5); keine Tests (kein `test_`-Präfix) |
 | `tests/tools/make_icons.gd` | Phase C | Icon-Generator für `tools/make_icons.sh` (§12.3) |
 | `tests/tools/apple_preset.gd` | Release | schreibt Team-ID, Bundle-ID, Build-Nummer und Signatur in eine Temp-Kopie der Presets (`tools/apple/release.sh export`, §12.3/§12.4) |
+| `tests/tools/season_planner.gd`, `season_profiles.gd`, `season_harness.gd`, `season_harness_main.gd`, `season_report.gd` | ST1-I | Staffel-Harness (§0.8 „Stand ST1-I“): Ziele beider Bots, Spielprofile, der Kern-Bot, Einstieg von `tools/season_harness.sh`, Bericht und Bänder |
 
 ### 1.8 Private Helfer, auf die andere Abschnitte verweisen (§0.3)
 
@@ -5737,6 +5768,29 @@ Boss-Ausgänge je Versuch, Credits gesamt / bis zur Königin / nach Quelle / aus
 Meilensteine, Follower gesamt / aus Kämpfen / aus Achievements, Zuschauer-Peak, Sponsor-Geschenke regulär/Boss, Hype-Mediane
 Kampfstart/-ende/-peak, Teleports, Fallbacks, Replay-Prüfungen, M.O.D.-Tags, `hero`, `barks`, `dazed`, `hero_switches`, `secrets`,
 `walls_knocked`, `notes_read`, `wall_fallbacks`, `shortcut_trips`, `shortcut_cells`, `sec_per_cell`, `shortcut_gain_sec`) und `FULLRUN: OK floor_time=<s> battles=<n> level=<kai>/<mopsula> deaths=<n> frames=<n>`, `quit(0)`.
+
+**Staffeln (09, ST1-I; §0.8 „Stand ST1-I“):** `tools/fullrun.sh --season=<ssn id> [--tempo=binge|calendar]
+[--sessions=typical|20min|weekend|away2w|none] [--mode=net|no_net] [--speed=<n>] [--floors=<n>]
+[--strategy=thorough|typical|rush|auto] [--pace=…] [--seed=…]` gibt dem Bot `--fullrun-season=<id>` (Boots eigenes
+`--season` startete zur Wanduhr) und lässt ihn eine Staffel spielen: Start über `Game.start_season` zu festem Tag 0
+(1791921600, 20:00 UTC; Am Stück 90 min davor, im Kalender zur ersten Sitzung des Profils; Ortszeit-Versatz 0; Lauf-Seed)
+— reproduzierbar wie ein Kampagnenlauf. Etage 1 (handgebaut, Generalprobe) plant er wie in der Kampagne (die Strategie
+`auto` folgt dort `season_planner.auto_strategy`), die Generator-v2-Etagen mit `tests/tools/season_planner.gd` (09 §3.6:
+Revier-Boss → Schlüssel → Tor → Treppe, offene Programmtüren, ein Safe Room je Viertel; rote Gruppen nach dem
+Revier-Boss, mehr als eine Stufe unter einem Boss erst die übrigen Ziele, ein Boss Am Stück viermal je Etage, im Kalender
+zweimal je Sitzung, der optionale Etagenboss zweimal je Etage, eine Gruppe nach zwei Siegen über die Party in Ruhe);
+Recall auf Etage 3, Klassenleiste, Talentreihen, Automat und Ausrüstung im Safe Room; die Treppe erst „Noch nicht“,
+dann „Abstieg“ — geschlossen („Kulissen im Aufbau“) wartet er. Im Kalender folgt die Staffel-Uhr der Spielzeit (ein
+`clock` je 60 s Spielzeit × `--speed`, die Kampfzeit danach); am Ende einer Sitzung des Profils loggt er aus (Safe Room
+höchstens 4 Räume entfernt, sonst im Gang, „Vorsichtig“), wartet am Titel die Abwesenheit bis zur nächsten Sitzung ab
+(sie geht als Wanduhr-Lücke in den Login, 09 I-6) und loggt mit „Fortsetzen“ ein: „Während Sie schliefen …“ (über
+sieben Tage „Ja“), dann weiter. Prüfungen wie oben (Replay-Prüfung bei jedem Safe-Room-Besuch und jeder Etagen-Bilanz,
+Fortschritts-Wächter), dazu: die Programmtüren stimmen mit den Programmpunkten der Etage, der Revier-Boss lässt den
+Schlüssel fallen, der Recall schaltet Ohne Netz frei, nach den Talent-Shows ist keine Reihe offen, Mit Netz endet keine
+Staffel mit `fallen`/`buried`, die Etagen-Aufzeichnungen lassen keine Etage aus. Watchdog 2 400 000 Frames (55 h
+Spielzeit), Wanduhr-Grenze in `fullrun.sh` 4 h; gemessen Am Stück `thorough`/`fast` 36 min Wanduhr (Seed 4242, ≈ 203 min
+Spielzeit, 97 Kämpfe). Ausgabe `FULLRUN: season {json}` und `FULLRUN: OK season=<result> floor=<n> battles=<n>
+level=<kai>/<mopsula> deaths=<n> rescues=<n> frames=<n>`. Nicht mit `--strategy=all|dawdle`, `--liga`, `--persona`.
 
 ### 11.5 Was jedes Modul testen muss (Minimum)
 

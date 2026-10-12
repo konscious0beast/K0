@@ -763,6 +763,7 @@ func _choose_initial_hero(hero_id: String) -> void:
 
 ## run_log.add_cmd(sim.tick(), cmd, cmd_id); no-op if run_log == null or while replaying.
 ## cmd_id: 0 for external inputs (Command.EXTERNAL), else strictly increasing from 1 per run log (05 §10.6).
+## Staffeln (09 §9.1, ST0): with a season the command also goes to the slot's journal (Save.journal_append).
 func record(cmd: Dictionary) -> void:
 	if run_log == null or replaying:
 		return
@@ -774,6 +775,8 @@ func record(cmd: Dictionary) -> void:
 		_cmd_id += 1
 		cmd_id = _cmd_id
 	run_log.add_cmd(sim.tick() if sim != null else 0, cmd, cmd_id)
+	if state != null and state.season != null:     # Staffeln (09 §9.1, ST0): the journal line before the command acts
+		Save.journal_append(state.slot, cmd)
 
 
 ## Recorded ({"t": "flag", "key", "value"}); value bool/int/String (JSON-safe). Only player flags (Command.FLAG_KEYS:

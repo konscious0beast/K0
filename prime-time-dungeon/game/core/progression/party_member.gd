@@ -24,6 +24,11 @@ var casting: Dictionary = {}           # Casting bookkeeping: {"floor", "visit",
 var rt_preset: String = ""             # partner tactic (RtVocab.RT_PRESETS; "" = party.json rt.default_preset)
 var rt_toggles: Dictionary = {}        # partner switches {interrupt, show, potions} → bool ({} = RtVocab defaults)
 var rt_loadout: Dictionary = {}        # action bar variants: "2".."4" → skill id ({} = the base abilities, §4.1)
+# --- Staffeln (09, ST0): written by to_dict only when they differ from the default (09 §9.1) -------------------------
+var rested: int = 0                    # Ausgeruht: the bonus EP pool (09 §8.2, §5.2)
+var professions: Dictionary = {}       # prf id → value 1–300 (09 §8.5; only the candidate kai learns professions)
+var prof_head: String = ""             # the profession with the +50 head start (09 §8.6: persona v2 or "prof" head)
+var talent_rows: Dictionary = {}       # talent tree: row (level "3", "5", …) → talent id (09 §8.4, "talent" v2)
 
 
 func to_dict() -> Dictionary:
@@ -40,7 +45,7 @@ func to_dict() -> Dictionary:
 		"equipment": eq,
 		"skills": Array(skills),
 		"class_id": class_id,
-	}.merged(_b_dict()).merged(_rt_dict())
+	}.merged(_b_dict()).merged(_rt_dict()).merged(_season_dict())
 
 
 ## 06 package B fields, only when set (see header).
@@ -101,6 +106,7 @@ static func from_dict(d: Dictionary) -> PartyMember:
 			if (raw_c as Dictionary).has(k):
 				m.casting[k] = JsonUtil.to_int((raw_c as Dictionary)[k])
 	_rt_from_dict(m, d)                    # Echtzeitkampf (07, R1a)
+	_season_from_dict(m, d)                # Staffeln (09, ST0)
 	return m
 
 
@@ -139,3 +145,44 @@ static func _rt_from_dict(m: PartyMember, d: Dictionary) -> void:
 	if raw_l is Dictionary:
 		for k: Variant in (raw_l as Dictionary).keys():
 			m.rt_loadout[str(k)] = str((raw_l as Dictionary)[k])
+
+
+# --- Staffeln (09, ST0) -----------------------------------------------------------------------------------------------
+
+## The season fields, only when set (see the field comments).
+func _season_dict() -> Dictionary:
+	var out: Dictionary = {}
+	if rested != 0:
+		out["rested"] = rested
+	if not professions.is_empty():
+		var p: Dictionary = {}
+		var keys: Array = professions.keys()
+		keys.sort_custom(func(a: Variant, b: Variant) -> bool: return str(a) < str(b))
+		for k: Variant in keys:
+			p[str(k)] = int(professions[k])
+		out["professions"] = p
+	if prof_head != "":
+		out["prof_head"] = prof_head
+	if not talent_rows.is_empty():
+		var r: Dictionary = {}
+		var rkeys: Array = talent_rows.keys()
+		rkeys.sort_custom(func(a: Variant, b: Variant) -> bool: return str(a) < str(b))
+		for k: Variant in rkeys:
+			r[str(k)] = str(talent_rows[k])
+		out["talent_rows"] = r
+	return out
+
+
+static func _season_from_dict(m: PartyMember, d: Dictionary) -> void:
+	m.rested = maxi(0, JsonUtil.to_int(d.get("rested", 0)))
+	var raw_p: Variant = d.get("professions", {})
+	if raw_p is Dictionary:
+		for k: Variant in (raw_p as Dictionary).keys():
+			if str(k) != "":
+				m.professions[str(k)] = JsonUtil.to_int((raw_p as Dictionary)[k])
+	m.prof_head = str(d.get("prof_head", ""))
+	var raw_r: Variant = d.get("talent_rows", {})
+	if raw_r is Dictionary:
+		for k: Variant in (raw_r as Dictionary).keys():
+			if str(k) != "" and str((raw_r as Dictionary)[k]) != "":
+				m.talent_rows[str(k)] = str((raw_r as Dictionary)[k])

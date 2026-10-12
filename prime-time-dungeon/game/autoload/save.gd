@@ -237,6 +237,32 @@ func last_error() -> String:
 	return _last_error
 
 
+# --- Staffeln (09 §9.1, ST0): the command journal of a slot (hooks; ST1-B fills them) ------------------------------
+# A season saves at fixed moments (after a combat, in a safe room, at a floor change, at logout, at the latest every
+# 60 s); in between an append-only journal per slot holds every recorded command — one line, written and flushed
+# BEFORE the command acts; the next save empties it. On start: load the slot, replay the journal (a torn last line is
+# dropped). ST0 ships the hooks as stubs: nothing is written, nothing replayed. Game.record calls journal_append only
+# with a season (Game.state.season != null), so a run without a season never touches a journal.
+
+const JOURNAL_EXT: String = "journal"
+
+
+## save_dir + "/slot_%d.journal" % slot (09 §9.1: user://saves/slot_N.journal).
+func journal_path(slot: int) -> String:
+	return save_dir + "/slot_%d.%s" % [slot, JOURNAL_EXT]
+
+
+## Stub (ST0): ST1-B appends `cmd` as one line to journal_path(slot) and flushes it before the command acts. OK,
+## nothing written.
+func journal_append(_slot: int, _cmd: Dictionary) -> Error:
+	return OK
+
+
+## Stub (ST0): ST1-B returns the commands of journal_path(slot) in order (a torn last line dropped). Always [].
+func journal_replay(_slot: int) -> Array[Dictionary]:
+	return []
+
+
 # --- internals --------------------------------------------------------------------------------------------------------
 
 func _valid_slot(slot: int) -> bool:

@@ -12,6 +12,10 @@ class_name SaveCodec extends RefCounted
 ## - v1: timer in whole ticks (05 CR-3), `floor_run.loot_seed` (05 CR-11; derived from the run seed if missing).
 ## - v2 (R5b part 2b, 07 §12.6 step 2, 02_TECH §6.4): the data carry the real-time HP (party HP × 4 baked in); a state
 ##   fights in real time without a `combat_mode` key, members have no `hp_scale_pm` (_migrate_v1_to_v2).
+##   Season block (09 §9.1, ST0 — additive, no version bump): `state.season` (an object or absent; absent / null = no
+##   season, every campaign save), the members' `rested`, `professions`, `prof_head`, `talent_rows` and the floor
+##   run's `gather_nodes`, `respawn`, `daily` — all optional and written only when set, so a v2 file without them loads
+##   and hashes exactly as before. The command journal next to the slot is Save's (journal_append / journal_replay).
 
 const FORMAT: String = "ptd_save"
 const VERSION: int = 2
@@ -24,6 +28,7 @@ const MSG_NEWER: String = "Spielstand stammt aus neuerer Version"
 ## "Gräfliches Gutachten", class "Diva" → "Zeremonienmeister".
 const RENAMED_SKILLS: Dictionary = {"skl_mop_royal_decree": "skl_mop_expert_opinion"}
 const RENAMED_CLASSES: Dictionary = {"cls_mop_diva": "cls_mop_zeremonienmeister"}
+const PROF_VALUE_MAX: int = 300              # Staffeln (09 §8.5): profession values 1–300
 
 static var _errors: PackedStringArray = []
 
@@ -116,6 +121,8 @@ static func validate(d: Dictionary, data: GameData) -> PackedStringArray:
 	for key: String in ["inventory", "show", "flags", "bestiary"]:
 		if st.has(key) and not (st[key] is Dictionary):
 			errs.append("state.%s: not an object" % key)
+	if st.get("season", null) != null and not (st["season"] is Dictionary):   # Staffeln (09, ST0): optional block
+		errs.append("state.season: not an object")
 	var raw_fr: Variant = st.get("floor_run", null)
 	if raw_fr != null:
 		if not (raw_fr is Dictionary):
@@ -258,6 +265,7 @@ static func _sanitize(st: GameState, data: GameData) -> void:
 			_warn("class '%s' of %s dropped (unknown)" % [m.class_id, m.id])
 			m.class_id = ""
 		_sanitize_b(m, data)                       # 06 package B: talents, species
+		_sanitize_season_member(m, data)           # Staffeln (09, ST0): professions, talent rows
 		var sb: StatBlock = Progression.total_stats(m, data)
 		m.hp = clampi(m.hp, 0, sb.values[StatBlock.Stat.HP])
 		m.mp = clampi(m.mp, 0, sb.values[StatBlock.Stat.MP])
@@ -300,6 +308,7 @@ static func _sanitize(st: GameState, data: GameData) -> void:
 		if not StatIds.ALL.has(str(stat_id)):
 			_warn("stat '%s' dropped (unknown)" % str(stat_id))
 			st.show.stats.erase(stat_id)
+	_sanitize_season(st, data)                     # Staffeln (09, ST0): the season block
 	# floor run: index follows the floor id
 	if st.floor_run != null and data.has_id("floors", st.floor_run.floor_id):
 		var idx: int = data.floor_by_id(st.floor_run.floor_id).index
@@ -326,3 +335,30 @@ static func _sanitize_b(m: PartyMember, data: GameData) -> void:
 			or not data.species_def(m.species_id).is_for(m.id)):
 		_warn("species '%s' of %s dropped (unknown)" % [m.species_id, m.id])
 		m.species_id = ""
+
+
+# --- Staffeln (09, ST0) -----------------------------------------------------------------------------------------------
+
+## Unknown professions are dropped and values clamped to 1..PROF_VALUE_MAX; an unknown head-start profession becomes
+## ""; talent rows naming an unknown talent are dropped (the row is open again); rested never below 0.
+static func _sanitize_season_member(m: PartyMember, data: GameData) -> void:
+	m.rested = maxi(0, m.rested)
+	for pid: Variant in m.professions.keys():
+		if not data.has_id("professions", str(pid)):
+			_warn("profession '%s' of %s dropped (unknown)" % [str(pid), m.id])
+			m.professions.erase(pid)
+		else:
+			m.professions[pid] = clampi(int(m.professions[pid]), 1, PROF_VALUE_MAX)
+	if m.prof_head != "" and not data.has_id("professions", m.prof_head):
+		_warn("head-start profession '%s' of %s dropped (unknown)" % [m.prof_head, m.id])
+		m.prof_head = ""
+	for row: Variant in m.talent_rows.keys():
+		if not data.has_id("talents", str(m.talent_rows[row])):
+			_warn("talent row %s of %s dropped (unknown talent '%s')" % [str(row), m.id, str(m.talent_rows[row])])
+			m.talent_rows.erase(row)
+
+
+## A season whose template is unknown keeps its block (a season never turns into a campaign by loading); warning.
+static func _sanitize_season(st: GameState, data: GameData) -> void:
+	if st.season != null and not data.has_id("seasons", st.season.def_id):
+		_warn("season template '%s' unknown (the season block is kept)" % st.season.def_id)

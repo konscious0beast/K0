@@ -11,6 +11,10 @@ class_name StateHash extends RefCounted
 ## Casting (08 §2.1 P-2, §2.7, K0): display names are not game state — of() leaves out `player_name` and every party
 ## member's `display_name`, of_battle() the `display_name` of the party combatants (setup.party and combatants), so
 ## renaming the candidate changes no hash and no hash input carries the name (canary test, test_08_k0_contract).
+## Staffeln (09 §9.1, ST0): the season block (GameState.season) and the season fields of the members (rested,
+## professions, prof_head, talent_rows) and of the floor run (gather_nodes, respawn, daily) are hashed like the rest —
+## additive: GameState / PartyMember / FloorRun write them only when set, so every state without a season keeps its
+## hash. Only the local wall clock of the season (EXCLUDED_SEASON_KEYS) is left out.
 ## A state that cannot be serialized canonically (e.g. a non-integral float in flags) yields "" plus a warning; ""
 ## is never a valid hash.
 
@@ -19,6 +23,7 @@ const EXCLUDED_KEYS: PackedStringArray = ["play_time_sec", "slot",
 const EXCLUDED_MEMBER_KEYS: PackedStringArray = ["display_name"]   # Casting (08, K0): party members, combatants
 const EXCLUDED_SHOW_KEYS: PackedStringArray = ["viewers"]
 const EXCLUDED_FLAG_KEYS: PackedStringArray = ["twist_buffer"]        # == TwistApplier.BUFFER_KEY
+const EXCLUDED_SEASON_KEYS: PackedStringArray = ["seen_unix"]         # == SeasonState.UNHASHED_KEYS (09 §9.1)
 
 
 static func of(state: GameState) -> String:
@@ -67,6 +72,12 @@ static func hash_input(state: GameState) -> Dictionary:
 		for k: String in EXCLUDED_FLAG_KEYS:
 			f.erase(k)
 		d["flags"] = f
+	var season: Variant = d.get("season", null)                       # Staffeln (09, ST0): only with a season
+	if season is Dictionary:
+		var sd: Dictionary = (season as Dictionary).duplicate()
+		for k: String in EXCLUDED_SEASON_KEYS:
+			sd.erase(k)
+		d["season"] = sd
 	var party: Array = []                                             # Casting (08, K0): no display names
 	for m: Variant in (d.get("party", []) as Array):
 		var md: Dictionary = (m as Dictionary).duplicate() if m is Dictionary else {}

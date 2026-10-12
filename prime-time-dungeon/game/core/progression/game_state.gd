@@ -24,6 +24,10 @@ var flags: Dictionary = {}
 var rng_counter: int = 0
 # --- 06 package A: controlled character (HeroRules) -------------------------------------------------------------------
 var hero: String = "kai"               # "kai" | "mopsula" — leads the exploration, the other one follows (06 §1)
+# --- Staffeln (09, ST0) -----------------------------------------------------------------------------------------------
+## The season (09 §9.1; the "season" command's start sets it). null = no season: THE switch of every rule of 09 —
+## to_dict writes "season" only when set, so every state without one keeps its exact JSON and StateHash.
+var season: SeasonState = null
 
 
 ## Party from party.json (level 1, full hp/mp, learnset level ≤ 1, start equipment); inventory + credits from
@@ -138,7 +142,7 @@ func to_dict() -> Dictionary:
 		"show": (show if show != null else ShowState.new()).to_dict(),
 		"flags": _normalize(flags),
 		"hero": hero,                          # 06 package A
-	}
+	}.merged({"season": season.to_dict()} if season != null else {})   # Staffeln (09, ST0): only with a season
 
 
 ## Missing fields → defaults; numbers converted with int() (JSON numbers are floats); integral float flags → int.
@@ -184,6 +188,9 @@ static func from_dict(d: Dictionary) -> GameState:
 	if raw_flags is Dictionary:
 		st.flags = _normalize(raw_flags)
 	st.hero = HeroRules.sanitize(str(d.get("hero", HeroRules.DEFAULT_HERO)))   # 06 package A: old saves → "kai"
+	var raw_season: Variant = d.get("season", null)          # Staffeln (09, ST0): absent / null = no season
+	if raw_season is Dictionary:
+		st.season = SeasonState.from_dict(raw_season)
 	return st
 
 

@@ -34,6 +34,10 @@ var stats: Dictionary = {"time_used_ticks": 0, "kills": 0, "viewers_peak": 0, "f
 ## Echtzeitkampf (07, R1a): out-of-combat regeneration counter (07 §2.7; RunSim step 6, R1b) — serialized only when
 ## ≠ 0, so CTB states keep their exact JSON and StateHash (07 §10.4).
 var regen_ticks: int = 0
+# --- Staffeln (09, ST0): serialized only when not empty, so states without a season keep their JSON and StateHash ---
+var gather_nodes: Dictionary = {}      # Fundstellen: node key → stored loads 0–4 (09 §3.2, §8.5; ST1-E)
+var respawn: Dictionary = {}           # Nachschub: group id → season second it returns (09 §3.2; ST1-C)
+var daily: PackedStringArray = []      # Programmpunkte of the floor, in order (09 §3.3; ST1-C)
 
 
 ## time_left_ticks = roundi(def.timer_seconds × (difficulty == &"vorabend" ? 1.5 : 1.0) × 30)
@@ -129,7 +133,7 @@ func to_dict() -> Dictionary:
 		"visited_safe_rooms": Array(visited_safe_rooms),
 		"safe_room_visits": safe_room_visits,
 		"stats": _int_dict(stats),
-	}.merged({"regen_ticks": regen_ticks} if regen_ticks != 0 else {})   # Echtzeitkampf (07, R1a)
+	}.merged({"regen_ticks": regen_ticks} if regen_ticks != 0 else {}).merged(_season_dict())   # 07 R1a, 09 ST0
 
 
 ## Missing fields → defaults; numbers converted with int(); `loot_seed` missing (save before CR-11) → -1, the
@@ -190,7 +194,26 @@ static func from_dict(d: Dictionary) -> FloorRun:
 			st[str(k)] = JsonUtil.to_int((raw_st as Dictionary)[k])
 	fr.stats = st
 	fr.regen_ticks = maxi(0, JsonUtil.to_int(d.get("regen_ticks", 0)))   # Echtzeitkampf (07, R1a)
+	var raw_n: Variant = d.get("gather_nodes", {})                          # Staffeln (09, ST0)
+	if raw_n is Dictionary:
+		fr.gather_nodes = _int_dict(raw_n)
+	var raw_r: Variant = d.get("respawn", {})
+	if raw_r is Dictionary:
+		fr.respawn = _int_dict(raw_r)
+	fr.daily = JsonUtil.to_str_array(d.get("daily", []))
 	return fr
+
+
+## Staffeln (09, ST0): the season fields, only when not empty.
+func _season_dict() -> Dictionary:
+	var out: Dictionary = {}
+	if not gather_nodes.is_empty():
+		out["gather_nodes"] = _int_dict(gather_nodes)
+	if not respawn.is_empty():
+		out["respawn"] = _int_dict(respawn)
+	if not daily.is_empty():
+		out["daily"] = Array(daily)
+	return out
 
 
 ## Original keys, sorted by their String form (deterministic iteration, 05 §3.3 Nr. 6).

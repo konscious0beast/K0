@@ -6,6 +6,11 @@ extends TestCase
 ## additive fields (a state without a season keeps its exact JSON and hash; the season block round-trips through Save
 ## v2), persona v2 (v1 stays readable), the data tables, the third validator pass and the mod_lines anchor — and no
 ## SIM_VERSION bump. A package that has to change one of these signatures files a change request first (09 §11.7).
+## ST1-B (2026-10-12): SeasonState, SeasonRules, SeasonDef and validators/seasons.gd are real now (no stub header);
+## a season can start (Game.start_season), its "season" / "clock" / "sleep" are SeasonRules' — the start in a running
+## run is season_late; the stubs of the packages to come (away, talent v2, prof, gather, craft, cast) still refuse with
+## season_unavailable. The season block is complete (the fixture save carries it), the season's M.O.D. lines follow
+## the anchor.
 
 const R1A := preload("res://tests/test_r1a_contract.gd")
 const SeasonMin := preload("res://tests/fixtures/season_min/season_min.gd")
@@ -87,16 +92,20 @@ const PROPERTIES: Dictionary = {
 		"program": "Array"},
 }
 
-## The stub files of ST0 → the ST1 package that owns them (09 §11.3, §11.4).
+## The stub files of ST0 → the ST1 package that owns them (09 §11.3, §11.4); ST1-B replaced its four (REAL).
 const STUBS: Dictionary = {
-	"res://core/season/season_state.gd": "B", "res://core/season/season_rules.gd": "B",
 	"res://core/season/sleep_resolver.gd": "G", "res://core/season/cast_sim.gd": "F",
 	"res://core/progression/talent_tree.gd": "D", "res://core/progression/professions.gd": "E",
-	"res://core/data/defs/season_def.gd": "B", "res://core/data/defs/profession_def.gd": "E",
+	"res://core/data/defs/profession_def.gd": "E",
 	"res://core/data/defs/recipe_def.gd": "E", "res://core/data/defs/theme_def.gd": "C",
-	"res://core/data/validators/seasons.gd": "B", "res://core/data/validators/professions.gd": "E",
+	"res://core/data/validators/professions.gd": "E",
 	"res://core/data/validators/cast.gd": "F", "res://core/data/validators/themes.gd": "C",
 }
+## ST1-B's former stubs, real since ST1-B (no stub header; the public API above stays).
+const REAL: PackedStringArray = ["res://core/season/season_state.gd", "res://core/season/season_rules.gd",
+	"res://core/data/defs/season_def.gd", "res://core/data/validators/seasons.gd"]
+## The season commands whose module is still a stub (season_unavailable): ST1-G, -D, -E, -F.
+const STUB_CMDS: PackedStringArray = ["away", "talent", "prof", "gather", "craft", "cast"]
 
 ## One schema-valid sample of every season command (09 §9.1) and talent v2; the first is the start of a season.
 const SEASON_CMDS: Array[Dictionary] = [
@@ -197,6 +206,9 @@ func test_stub_headers_and_owners() -> void:
 		var text: String = FileAccess.get_file_as_string(path)
 		assert_true(text.begins_with(STUB_HEAD % str(STUBS[path]) + "\n"), "stub header (09 §11.4): " + path)
 		assert_true((load(path) as GDScript).can_instantiate(), "compiles: " + path)
+	for path: String in REAL:
+		assert_false(FileAccess.get_file_as_string(path).begins_with("# STUB"), "ST1-B replaced the stub: " + path)
+		assert_true((load(path) as GDScript).can_instantiate(), "compiles: " + path)
 	for path: String in ["res://core/season/season_rules.gd", "res://core/season/sleep_resolver.gd",
 			"res://core/season/cast_sim.gd", "res://core/progression/talent_tree.gd",
 			"res://core/progression/professions.gd"]:
@@ -241,7 +253,7 @@ func test_every_season_command_is_refused() -> void:
 	var st: GameState = _sim(data).state
 	for c: Dictionary in SEASON_CMDS:
 		assert_eq(Command.validate(c), "", "schema: " + str(c))
-		var want: String = "season_unavailable" if c == SEASON_CMDS[0] else "no_season"
+		var want: String = "season_late" if c == SEASON_CMDS[0] else "no_season"   # ST1-B: the run has started
 		assert_eq(RunRules.command_refusal(st, data, {}, c, false, {}), want, "without a season: " + str(c["t"]))
 	assert_eq(RunRules.command_refusal(st, data, {}, SD_START, false, {}), "sd_unavailable", "10 §6.8: until SD3")
 	assert_eq(RunRules.command_refusal(st, data, {}, {"t": "talent", "member": "kai", "id": "tal_kai_dicke_haut"},
@@ -249,9 +261,15 @@ func test_every_season_command_is_refused() -> void:
 	st.season = _season()
 	var before: String = StateHash.of(st)
 	for c: Dictionary in SEASON_CMDS:
+		if not STUB_CMDS.has(str(c["t"])):
+			continue
 		assert_eq(RunRules.season_refusal(st, data, c), "season_unavailable", "with a season, the stub: " + str(c["t"]))
 		assert_eq(RunRules.apply_season(st, data, c).size(), 0, "the stubs change nothing")
 	assert_eq(StateHash.of(st), before)
+	assert_eq(RunRules.season_refusal(st, data, SEASON_CMDS[0]), "season_started", "ST1-B: SeasonRules decides")
+	for c: Dictionary in [{"t": "clock", "sec": 60}, {"t": "sleep", "tactic": "careful"}, {"t": "season", "v": 1,
+			"op": "leave"}]:
+		assert_eq(RunRules.season_refusal(st, data, c), "", "ST1-B: " + str(c["t"]))
 	assert_eq(RunRules.refused_id({"t": "persona", "v": 2, "prof": "prf_lab", "recipe": "", "bias": []}), "prf_lab")
 
 
@@ -265,7 +283,7 @@ func test_run_sim_refuses_them() -> void:
 	var reasons: Array = []
 	for rc: Dictionary in sim.rejected_cmds:
 		reasons.append(str(rc["reason"]))
-	assert_eq(reasons, ["season_unavailable", "no_season", "no_season", "no_season", "no_season", "no_season",
+	assert_eq(reasons, ["season_late", "no_season", "no_season", "no_season", "no_season", "no_season",
 		"no_season", "no_season", "no_season", "no_season", "sd_unavailable"])
 	assert_eq(StateHash.of(sim.state), before, "nothing changed")
 	assert_null(sim.state.season)
@@ -278,7 +296,7 @@ func test_both_verifiers_report_them_in_logs() -> void:
 	assert_eq(rl.rejected, 0, "clock carries cmd id 0 (external), the others the next player ids")
 	var g: String = "; ".join(Game.replay_log(rl)["errors"])
 	var r: String = "; ".join(RunSim.replay(DB.data, rl)["errors"])
-	for want: String in ["sd_unavailable", "no_season", "season_unavailable"]:
+	for want: String in ["sd_unavailable", "no_season", "season_late"]:   # ST1-B: the start comes before the floor
 		assert_has(g, want, "Game.replay_log")
 		assert_has(r, want, "RunSim.replay")
 	assert_eq(Game.run_log.cmds().size(), live, "a replay records nothing")
@@ -288,8 +306,7 @@ func test_game_facades_record_nothing() -> void:
 	Game.new_game(0, "Kai", 4242)
 	var n: int = Game.run_log.cmds().size()
 	var before: String = StateHash.of(Game.state)
-	assert_false(Game.start_season(1, "ssn_basis"), "ST1-B builds the start")
-	assert_false(Game.season_op(SEASON_CMDS[0]))
+	assert_false(Game.season_op(SEASON_CMDS[0]), "season_late: the run has started")
 	assert_false(Game.season_op({"t": "season", "v": 1, "op": "leave"}))
 	assert_false(Game.season_clock(60))
 	assert_false(Game.season_away(3600))
@@ -301,8 +318,14 @@ func test_game_facades_record_nothing() -> void:
 	assert_false(Game.cast_action("help", 3, "itm_bandage"))
 	assert_eq([Game.run_log.cmds().size(), StateHash.of(Game.state)], [n, before], "nothing recorded, nothing changed")
 	assert_null(Game.state.season)
-	assert_eq(Save.journal_append(1, {"t": "clock", "sec": 60}), OK, "stub")
-	assert_eq(Save.journal_replay(1), [] as Array[Dictionary], "stub")
+	assert_eq(Save.journal_append(1, {"t": "clock", "sec": 60}), OK, "no journal without a season save")
+	assert_eq(Save.journal_replay(1), [] as Array[Dictionary], "no journal file")
+	var ro: bool = Save.read_only
+	Save.read_only = true                         # (no slot, journal or career file of this test stays behind)
+	assert_true(Game.start_season(1, "ssn_basis"), "ST1-B: a season starts (debug builds: --season, README §6)")
+	Save.read_only = ro
+	assert_eq(Game.run_log.cmds()[0]["c"]["t"], "season", "the start before floor → hero")
+	assert_not_null(Game.state.season)
 
 
 # --- additive fields, hash and save -----------------------------------------------------------------------------------
@@ -458,7 +481,13 @@ func test_validator_third_pass() -> void:
 
 func test_mod_lines_anchor() -> void:
 	var lines: Array = (JsonUtil.read_file("res://data/mod_lines.json") as Dictionary)["entries"]
-	var last: Dictionary = lines.back()
-	assert_eq([last["id"], last["tag"]], ["mod_ssn_anchor_01", "ssn_anchor"], "09 §11.2 Nr. 9: at the end of the file")
+	var at: int = -1
+	for i in lines.size():
+		if str((lines[i] as Dictionary)["id"]) == "mod_ssn_anchor_01":
+			at = i
+	assert_gt(at, 0, "the anchor")
+	assert_eq(str((lines[at] as Dictionary)["tag"]), "ssn_anchor")
+	for i in range(at + 1, lines.size()):        # ST1-B: the block of the seasons grows behind it (09 §11.4)
+		assert_true(str((lines[i] as Dictionary)["tag"]).begins_with("season_"), "behind the anchor: season lines only")
 	assert_true(DataValidator.is_valid_mod_tag("ssn_anchor"))
-	assert_true(str((lines[lines.size() - 2] as Dictionary)["tag"]).begins_with("persona_"), "behind block K")
+	assert_true(str((lines[at - 1] as Dictionary)["tag"]).begins_with("persona_"), "behind block K")

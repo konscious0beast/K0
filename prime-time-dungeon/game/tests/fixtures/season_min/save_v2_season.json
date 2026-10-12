@@ -108,6 +108,13 @@
 		"player_name": "Kai",
 		"rng_counter": 0,
 		"season": {
+			"after_combat": false,
+			"airs": 1,
+			"asleep": false,
+			"binge_mark": 0,
+			"binge_sec": 0,
+			"binge_utc0": 1791918000,
+			"cast": {},
 			"collapse_utc": [
 				1792094400,
 				1792353600,
@@ -116,15 +123,49 @@
 				1793563200,
 				1793995200
 			],
+			"collapsed": 0,
 			"day0_utc": 1791921600,
+			"deaths": 0,
 			"def": "ssn_test",
+			"descent_at": -1,
+			"fbosses": 0,
+			"fee_at": -1,
+			"finale_at": -1,
 			"format": 6,
+			"hold_utc": 0,
+			"last_safe_room": "",
 			"mode": "net",
+			"next_air_utc": 1792008000,
 			"number": 1,
+			"pause_sec": 0,
+			"programme": [
+				1,
+				1,
+				1,
+				0,
+				0,
+				0
+			],
+			"qbosses": 0,
+			"reached": [
+				1791918000,
+				-1,
+				-1,
+				-1,
+				-1,
+				-1
+			],
+			"rescues": 0,
+			"result": "",
+			"result_floor": 0,
 			"seen_unix": 1791925200,
+			"sleep_room": "",
+			"sleep_tactic": "",
+			"stairs": 0,
 			"tempo": "calendar",
 			"utc": 1791925200,
-			"v": 1
+			"v": 1,
+			"vest": true
 		},
 		"seed": 4242,
 		"show": {
@@ -145,7 +186,16 @@
 		"level": 1,
 		"location": "start",
 		"play_time_sec": 0,
-		"player_name": "Kai"
+		"player_name": "Kai",
+		"season": {
+			"def": "ssn_test",
+			"format": 6,
+			"mode": "net",
+			"number": 1,
+			"on_air": 1,
+			"result": "",
+			"tempo": "calendar"
+		}
 	},
 	"version": 2
 }

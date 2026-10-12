@@ -35,6 +35,11 @@
 > jeder heutige Lauf bleibt bitgleich (kein `SIM_VERSION`-Sprung, Save v2 additiv). CR-25, CR-27, CR-29 und der Code-Teil
 > von CR-33 sind eingearbeitet. Die ST1-Pakete schreiben ab jetzt nur ihre eigenen Dateien und Abschnitte (Kap. 11.4).
 >
+> **Stand ST1-B (2026-10-12, Branch `ptd/st1b`):** Der Staffel-Kern ist umgesetzt (Kap. 11.3 „Stand ST1-B“, Entscheidungen
+> B-1 … B-22; 02_TECH §0.8): Sendeplan in UTC, Uhr, Einsturz, Treppenregel, Rettung, Tod Mit/Ohne Netz, Generalprobe,
+> Tagesprogramm, Quote, Titel, Dauerspeicherstand mit Journal. Staffeln starten nur in Debug-Builds (`--season`, README §6);
+> ohne Staffel bleibt jeder Lauf bitgleich (kein `SIM_VERSION`-Sprung, Golden-Werte in `test_09_replay`).
+>
 > **Namen der Phasen:** Der Orchestrator nennt sie S1–S3. Weil „S0–S5“ schon die SHOWRUN-Stufen (05) und „S0–S3“ die
 > KI-Stufen (06 §5.12) sind, heißen sie hier **ST1–ST3** (Staffel-Phasen) — gleicher Inhalt, keine Verwechslung.
 >
@@ -1378,6 +1383,45 @@ Hobby-Rezept leer (Kap. 8.6: es kostet dann Credits). **Offen:** Die neuen Felde
 Nicht enthalten: echte Inhalte der Kulissen (Gegner, Bosse, Musik, Raumteile, Programmpunkte, Talent- und Rezepttexte) —
 Produktion nach 04 Phase 4/5, ehrlich geschätzt in Kap. 3.5 (eine Etage je 8–10 Wochen Team für jede neue Kulisse, 3–4 Wochen
 je weitere Etage einer Kulisse, Letzteres erst nach Beweis) **[Schätzung]**.
+
+**Stand ST1-B (2026-10-12, Branch `ptd/st1b`) — umgesetzt** (Einzelheiten 02_TECH §0.8 „Stand ST1-B“): `SeasonClock`
+(neu: Sendeplan, Tag 0, Countdown je Etage, offene Etagen), `SeasonDef`/`SeasonState`/`SeasonRules` und
+`validators/seasons.gd` (die ST0-Stubs ersetzt, öffentliche API behalten), `CommandJournal` (neu), die Abschnitte in
+`RunRules`, `RunSim`, `Game`, `GameReplay`, `Save`, `SaveCodec`, `Router` (Niederlage in einer Staffel) und `boot.gd`
+(`--season`), `ExploreEvent.Type.SEASON`, die Daten `ssn_basis`/`ssn_akt2`/`ssn_akt3` und die M.O.D.-Zeilen `season_*`
+hinter dem Anker; Tests `test_09_season_clock`, `test_09_stairs_collapse`, `test_09_death_modes`, `test_09_journal`,
+`test_09_replay` (Staffel-Teile), `test_09_st0_contract` nur dort angepasst, wo ein Stub echt wurde. Ein Debug-Build spielt
+mit den heutigen Daten Etage 1 als Generalprobe einer echten Staffel (Kalender oder Am Stück, Mit oder Ohne Netz); die
+Platzhalter-Etagen der Tests (`tests/fixtures/season_core/`) zeigen alle Regeln über die Etagen 2–18. Nicht in ST1-B:
+`away` und `SleepResolver` (ST1-G — bis dahin zählt Zeit ohne App nicht), Etagen und Programmpunkt-Pools (ST1-C),
+Stufen und Talente (ST1-D), Berufe (ST1-E), Besetzung (ST1-F), Staffel-UI (ST1-H), Harness (ST1-I).
+
+**Entscheidungen ST1-B** (Auslegungen dieses Dokuments, Startwerte):
+
+| Nr. | Thema | Entscheidung | Kap. |
+|---|---|---|---|
+| B-1 | Sendeplan | Tag 0 = die erste Sendezeit (Ortszeit der Vorlage oder eigene, Zeitzone des Geräts beim Start) **zum oder nach** dem Start; jeder Einsturz = Tag 0 + Endtag × 86 400 s, fest in UTC (Endtage 2, 5, 9, 14, 19, 24 …: Formate 24/54/84 Tage). Nach einer Zeitumstellung liegen die Termine eine Stunde verschoben in Ortszeit (V-17). Der Start-Command trägt den ganzen Plan; beide Verifier prüfen ihn gegen `SeasonClock.schedule` (`schedule_mismatch`) und die Startzeit (höchstens einen Tag vor Tag 0, `bad_start`). | 2.4, 9.1 |
+| B-2 | Staffelzeit | Kalender: die Staffeluhr `utc` (nur `clock`/`away` bewegen sie). Am Stück: die Binge-Uhr = Startwert + 144 × erkundete Sekunden (ein Staffeltag ≙ 10 min Erkundung). Gebühr, Finale, letzter Abstieg und „erreicht“ zählen in dieser Zeit. | 2.1 |
+| B-3 | Live-Uhr | Ein `clock` je 60 s Wanduhr in Erkundung und Safe Room, nie im Kampf; die Zeit eines Kampfs gleich nach seinem Ende; eine rückwärts laufende Gerätezeit steht, bis sie aufholt; höchstens 7 Tage je `clock` (`clock_jump`); eine Lücke über 10 min ist Abwesenheit (`away`, ST1-G — bis dahin wird sie nicht aufgezeichnet). Zeitraffer `--speed` nur in Debug-Builds. | 9.1, V-17 |
+| B-4 | Einsturz nach Kampf | Fällt ein Einsturz in das Uhr-Fenster direkt nach einem Kampf, wartet er bis zum Fensterende + 2 min (`hold`); ein weiterer Kampf darin verlängert erneut. In derselben Sekunde kommt der Einsturz vor der Sendezeit. | 2.5, V-17 |
+| B-5 | Treppenregel | Etagen 1–3 offen; Etage M ≥ 4 öffnet mit dem Einsturz von M − 2 (Ereignis `opened`); Am Stück ohne Grenze; die letzte Etage des Formats hat keine Treppe (das Finale). | 2.6 |
+| B-6 | Rettung | In den Safe Room der nächsten Etage, der dem Eingang am nächsten liegt (sonst den Eingang); Gebühr −30 % Credits, −10 % Follower; **höchstens eine Gebühr (Rettung oder Sanitäter) je 7 Staffeltage** (`waived: week`); Etage 1 gratis (Generalprobe: Weste bleibt, zählt nicht); Schläfer im Safe Room gratis (zählt als Rettung, Weste geht). Keine Etagen-Bilanz. | 2.5, V-9 |
+| B-7 | Tod Mit Netz | Die Sanitäter bringen die Gruppe in den zuletzt betretenen Safe Room der Etage, sonst zum Etageneingang; volle Heilung; ab Etage 2 −10 % Credits (7-Tage-Regel), Weste weg, der Tod zählt. Kein Game Over (`Router.game_over` → `Game.season_defeat_route`). | 7.1, V-16 |
+| B-8 | Ohne Netz | Ab Etage 2: Tod = „gefallen“, Einsturz = „verschüttet“ → Studiogast (Ergebnis bleibt, die Staffeluhr läuft für den Gast weiter, sonst nichts). Etage 1 ist auch Ohne Netz die Generalprobe. | 7.2, 7.3 |
+| B-9 | Ende des Inhalts | Solange die Etagen ab 2 fehlen (ST1-C), endet die Staffel der Kandidat:in auf der letzten Etage mit spielbarem Inhalt (`FloorDef.playable`): ihre Treppe (nach der Etagen-Bilanz) oder ihr Einsturz → „Bis zum Ende dabei“ (`end`, Grund `content`), Abspann; nie eine Rettung auf eine Etage ohne Inhalt. Mit den heutigen Daten ist das Etage 1; mit ST1-C entfällt die Regel von selbst. | 2.7 |
+| B-10 | Finale, Ende | Etagenboss der letzten Etage des Formats besiegt → Finalist:in; letzter Einsturz → „Bis zum Ende dabei“ für alle, die noch spielen (`end`, Grund `last`). | 2.7 |
+| B-11 | Tagesprogramm | Kalender: zu jeder Sendezeit ab Tag 0 +1 Punkt für jede offene, nicht eingestürzte Etage (höchstens 5, bleibt bis zum Einsturz); Am Stück: 1 Punkt beim Betreten einer Etage. Ids aus dem Pool der Kulisse (`themes.json` `program`, je Seed und Etage gemischt, ohne Wiederholung vor dem Pool-Ende), ohne Pool `daily_f<N>_<n>` (Platzhalter bis ST1-C). | 3.3 |
+| B-12 | Quote | Treppen × 1 000 + Revier-Bosse × 200 + Etagenbosse × 500 + Finale 3 000 + Erfolge × 50 + ⌊min(Follower, 20 000) / 10⌋ − Rettungen × 500 − Tode × 200 (Etage 1 zählt nicht); Gleichstand: früheres Finale, dann früherer letzter Abstieg. | 2.7 |
+| B-13 | Titel | Nur nach dem eigenen Staffelende, in privaten Staffeln mit „(privat)“: Finalist:in der Staffel N, Weiße Weste (Mit Netz), Überlebende:r — Ohne Netz, Studiogast verschüttet/gefallen auf Etage N, Legende: <Beruf> (Wert ≥ 300). Ranglisten-Titel erst mit ST2. | 2.7, V-11 |
+| B-14 | Freischaltung Ohne Netz | Die erste Klassenwahl oder eine bis zum Ende gespielte Staffel (Finale oder „Bis zum Ende dabei“); das Gerät behält sie in `career.json` neben den Spielständen (mit dem Staffelzähler „Staffel N“). Debug: `--mode=no_net` ohne Freischaltung. | 2.2, V-7 |
+| B-15 | Tempo | Nur Kalender → Am Stück (privat); der Countdown der aktuellen Etage beginnt neu (keine Gnadenfrist), die Binge-Uhr setzt die Staffeluhr fort. Countdown je Etage 20/30/40/50 … min (× 1,5 Vorabend); keine Ladegnade in Staffeln (02_TECH §0.8). | 2.1, V-6 |
+| B-16 | Sendepause | Nur private Kalender-Staffeln; „user“ höchstens 14 Tage je Staffel; verschiebt alle offenen Termine, einen wartenden Einsturz und die nächste Sendezeit; „clamp“ (Uhrsprung über 7 Tage, ST1-G) zählt nicht mit. | 2.9, V-9 |
+| B-17 | Schlaf | `sleep` merkt Taktik und Raum (Safe Room oder Gang); danach lehnen beide Verifier jeden Command außer `away` und der Sendepause ab (`asleep`), auch `clock` — die Abwesenheit ist `away` (ST1-G, mit „clamp“ über 7 Tage). | 5.1, 9.1 |
+| B-18 | Dauerspeicherstand | Eine Staffel speichert nur in ihren eigenen Slot und nie im Kampf: nach jedem Kampf, bei jedem Safe-Room-Besuch, beim Etagenwechsel, beim Ausloggen, spätestens alle 60 s. Eine beendete Staffel lädt nicht mehr („Staffel beendet“; Ruhmeshalle ST1-H). | 9.1 |
+| B-19 | Journal | Kopfzeile `{"journal": 1, "id", "k0"}` (die Id — 8 Zufallsbytes — steht auch im Spielstand unter `"journal"`), dann je Command `{"k", "c"}`, geschrieben und geleert, bevor er wirkt. Eine abgerissene letzte Zeile fällt weg, eine kaputte Zeile beendet das Journal, ein Journal mit fremder Id (älter als der Spielstand) wird ignoriert. Laden spielt es mit dem Motor von `Game.replay_log` ab (`GameReplay.resume`); ein offener Kampf wird mit denselben Seeds vom Kampfanfang an vom Autopiloten entschieden; danach sofort Speichern und ein neues Journal. | 9.1, V-3 |
+| B-20 | Migration | `SeasonRules.migrate_campaign` (privat, Am Stück, Mit Netz, die größte Vorlage, Countdown = Restzeit der Etage, ohne Gnadenfrist, frühere Etagen als Treppe und „erreicht“) ist gebaut, greift aber erst ab `SIM_VERSION` 5 (der Umstieg, Kap. 11.1); bis dahin bleibt ein Kampagnen-Spielstand eine Kampagne. | 8.7, 11.1 |
+| B-21 | Daten | `ssn_basis`, `ssn_akt2`, `ssn_akt3` (6/12/18 Etagen, privat, 100 Plätze, 20:00, PvP `arena`); `SeasonDef` += `kind` (`private` \| `friends` \| `public`) und `min_humans`; die Vorlage einer neuen privaten Staffel ist das größte Format (offline alle). | 2.1, 2.2 |
+| B-22 | Verifier | Beide Verifier spielen jede Staffel-Sitzung ab: `RunSim.replay` eine RunSim-Sitzung bitgleich, `Game.replay_log` eine Live-Sitzung bitgleich; über Kreuz stimmen Staffel-Block und Kernzustand überein — nur der Show-eigene Teil (Zuschauer, Follower, Erfolge, Marotten) gehört wie in jedem Kampagnenlauf allein `Game.replay_log` (05 §11.4). | 9.1, 11.6 |
 
 ### 11.4 Dateieigentum gegenüber 07 und 08
 

@@ -105,8 +105,12 @@ func exit_safe_room() -> void:
 	await pop({"from_safe_room": id}, Transition.FADE)
 
 
-## Game.on_game_over(reason); goto(SCENE_GAME_OVER, {"reason": reason}, FADE).
+## Game.on_game_over(reason); goto(SCENE_GAME_OVER, {"reason": reason}, FADE). Staffeln (09 §7, ST1-B): a season has no
+## game over — Game.season_defeat_route routes after its death rule (medics: the exploration; Ohne Netz out: the
+## Sendeschluss screen).
 func game_over(reason: StringName) -> void:
+	if Game.season_defeat_route(reason):          # Staffeln (09, ST1-B)
+		return
 	Game.on_game_over(reason)
 	await goto(SCENE_GAME_OVER, {"reason": reason}, Transition.FADE)
 

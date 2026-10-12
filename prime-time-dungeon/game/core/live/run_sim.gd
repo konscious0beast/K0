@@ -46,9 +46,14 @@ class_name RunSim extends RefCounted
 ## gifts, M.O.D.); a RunSim-only run is therefore a "core run": RunSim.replay of its log reproduces it bit for bit
 ## (05 §11.4 test_m8_replay), while Game.replay_log reproduces complete live runs.
 ## Staffeln (09 §9.1, ST0): the season commands (season, clock, away, sleep, prof, gather, craft, cast, talent v2) run
-## RunRules.season_refusal / apply_season — the switch is state.season != null (without a season: no_season), the
-## module stubs of ST0 refuse them all, so every run of today replays bit for bit (no SIM_VERSION bump until the season
-## becomes the default, 09 §11.1). "sd" (Stempelduell, 10 §6.8) is refused with sd_unavailable until SD3.
+## RunRules.season_refusal / apply_season — the switch is state.season != null (without a season: no_season), so every
+## run of today replays bit for bit (no SIM_VERSION bump until the season becomes the default, 09 §11.1). "sd"
+## (Stempelduell, 10 §6.8) is refused with sd_unavailable until SD3. ST1-B fills SeasonRules (season, clock, sleep);
+## with a season the run also follows its rules here (section "Staffeln (09, ST1-B)"): the calendar has no floor
+## countdown (step 1 counts only the floor time), Am Stück the countdown's end is the collapse of the floor (not the end
+## of the run), a lost combat is the death rule (SeasonRules.on_combat_end, never the end of the run), "descend" counts
+## the stairs (below the last playable floor it ends the candidate's season), and a rescue moves the run to the next
+## floor (_season_events).
 ##
 ## With `quest` set, apply() feeds it the quest events the core can tell on its own (same shapes as the Game adapter,
 ## CR-4): battle_started (encounter), enemy_killed (KO of an enemy unit), boss_defeated (boss victory),
@@ -216,7 +221,7 @@ func apply(cmd: Dictionary) -> Array[ExploreEvent]:
 			out.append_array(sponsor_dev_open(int(c["sec"]), int(c["slots"])))
 		"talent":                                # 06 package B (legality: RunRules.command_refusal)
 			if c.has("v"):                         # Staffeln (09, ST0): talent v2 (a row; only with a season)
-				out.append_array(RunRules.apply_season(state, data, c))
+				out.append_array(_season_events(RunRules.apply_season(state, data, c)))
 			else:
 				Talents.pick(state, data, str(c["member"]), str(c["id"]))
 		"casting":
@@ -235,24 +240,24 @@ func apply(cmd: Dictionary) -> Array[ExploreEvent]:
 			PersonaRules.apply(state, data, c)
 		"loadout":                                 # Echtzeitkampf (07 §4.1, §5.2; R5a; RunRules.loadout_refusal)
 			RunRules.apply_loadout(state, c)
-		# Staffeln (09 §9.1, ST0): only with a season (RunRules.season_refusal: no_season; ST0's stubs refuse them all).
-		# One case per type: test_m8_command reads the cases of this dispatcher.
+		# Staffeln (09 §9.1, ST0): only with a season (RunRules.season_refusal: no_season); their events through
+		# _season_events (ST1-B: a rescue changes the floor). One case per type: test_m8_command reads the cases.
 		"season":
-			out.append_array(RunRules.apply_season(state, data, c))
+			out.append_array(_season_events(RunRules.apply_season(state, data, c)))
 		"clock":
-			out.append_array(RunRules.apply_season(state, data, c))
+			out.append_array(_season_events(RunRules.apply_season(state, data, c)))
 		"away":
-			out.append_array(RunRules.apply_season(state, data, c))
+			out.append_array(_season_events(RunRules.apply_season(state, data, c)))
 		"sleep":
-			out.append_array(RunRules.apply_season(state, data, c))
+			out.append_array(_season_events(RunRules.apply_season(state, data, c)))
 		"prof":
-			out.append_array(RunRules.apply_season(state, data, c))
+			out.append_array(_season_events(RunRules.apply_season(state, data, c)))
 		"gather":
-			out.append_array(RunRules.apply_season(state, data, c))
+			out.append_array(_season_events(RunRules.apply_season(state, data, c)))
 		"craft":
-			out.append_array(RunRules.apply_season(state, data, c))
+			out.append_array(_season_events(RunRules.apply_season(state, data, c)))
 		"cast":
-			out.append_array(RunRules.apply_season(state, data, c))
+			out.append_array(_season_events(RunRules.apply_season(state, data, c)))
 		"sd":                                      # Stempelduell (10 §6.8): refused (sd_unavailable) until SD3
 			pass
 		"descend":
@@ -262,6 +267,8 @@ func apply(cmd: Dictionary) -> Array[ExploreEvent]:
 				var fi: int = state.floor_run.index
 				out.append(ExploreEvent.make(ExploreEvent.Type.FLOOR_COMPLETED, _tick, {"floor": fi}))
 				_quest_feed({"type": "floor_completed", "floor": state.floor_run.index})
+				if state.season != null:   # Staffeln (09 §2.7, ST1-B): the Quote counts the stairs; the end of the content
+					out.append_array(_season_events(SeasonRules.on_descend(state, data)))
 		# Echtzeitkampf (07 §10.5, R5a): the entries of the running combat (move_batch: command_refusal → not_expanded,
 		# the verifiers replay RunLog.expanded)
 		"ability_use": _apply_combat(c, out)
@@ -655,17 +662,24 @@ func _tick_once(out: Array[ExploreEvent]) -> bool:
 		return false
 	var def: FloorDef = data.floor_def(fr.index) if data != null else null
 	var warnings: PackedInt32Array = def.timer_warnings if def != null else PackedInt32Array()
-	# 1 timer
-	var t: Dictionary = fr.tick_timer(1, warnings)
-	if bool(t.get("second_changed", false)):
-		var secs_left: int = fr.time_left_ticks / TICKS_PER_SEC
-		out.append(ExploreEvent.make(ExploreEvent.Type.TIMER_SECOND, _tick, {"seconds": secs_left}))
-	for w: int in (t.get("warnings", PackedInt32Array()) as PackedInt32Array):
-		out.append(ExploreEvent.make(ExploreEvent.Type.TIMER_WARNING, _tick, {"seconds": w}))
-	if bool(t.get("expired", false)):
-		out.append(ExploreEvent.make(ExploreEvent.Type.TIMER_EXPIRED, _tick, {}))
-		_over = true
-		return true
+	# 1 timer (Staffeln, 09 §2.1, ST1-B: in the calendar tempo the floor ends with its collapse date — only its time
+	# counts; Am Stück the countdown's end is the collapse of the floor, not the end of the run)
+	if SeasonRules.floor_timer_frozen(state):
+		fr.stats["time_used_ticks"] = int(fr.stats.get("time_used_ticks", 0)) + 1
+	else:
+		var t: Dictionary = fr.tick_timer(1, warnings)
+		if bool(t.get("second_changed", false)):
+			var secs_left: int = fr.time_left_ticks / TICKS_PER_SEC
+			out.append(ExploreEvent.make(ExploreEvent.Type.TIMER_SECOND, _tick, {"seconds": secs_left}))
+		for w: int in (t.get("warnings", PackedInt32Array()) as PackedInt32Array):
+			out.append(ExploreEvent.make(ExploreEvent.Type.TIMER_WARNING, _tick, {"seconds": w}))
+		if bool(t.get("expired", false)):
+			out.append(ExploreEvent.make(ExploreEvent.Type.TIMER_EXPIRED, _tick, {}))
+			if state.season != null:
+				out.append_array(_season_events(SeasonRules.on_countdown_end(state, data)))
+				return true
+			_over = true
+			return true
 	# 2 explore seconds (pacifist counter)
 	if state.show != null and int(fr.stats.get("time_used_ticks", 0)) % TICKS_PER_SEC == 0:
 		var secs: int = int(state.show.stats.get("explore_seconds_since_battle", 0)) + 1
@@ -760,7 +774,7 @@ func _apply_floor(index: int) -> void:
 
 
 ## The end of a real-time combat: checkpoint due, BattleBridge.apply_result, the comeback mark,
-## boss_defeated, DEFEAT → the run is over.
+## boss_defeated, DEFEAT → the run is over — in a season the death rule instead (Staffeln, 09 §7, ST1-B).
 func _book_result(result: BattleResult) -> void:
 	_checkpoint_due = true
 	if result == null:
@@ -769,6 +783,9 @@ func _book_result(result: BattleResult) -> void:
 	SponsorWindows.on_battle_result(state, rules, data, result)   # 06-C: comeback mark after a lost boss attempt
 	if result.outcome == BattleResult.Outcome.VICTORY and result.is_boss:
 		_quest_feed({"type": "boss_defeated", "boss_id": result.boss_id})
+	if state.season != null:
+		_season_events(SeasonRules.on_combat_end(state, data, result))
+		return
 	if result.outcome == BattleResult.Outcome.DEFEAT:
 		_over = true
 
@@ -1160,6 +1177,30 @@ func _regen_tick() -> void:
 		m.mp = mini(max_mp, m.mp + maxi(1, FixedMath.div_round(max_mp * _regen_bal.i("REGEN_MP_PM"), 1000)))
 		if hp_too:
 			m.hp = mini(max_hp, m.hp + maxi(1, FixedMath.div_round(max_hp * _regen_bal.i("REGEN_HP_PM"), 1000)))
+
+
+# --- Staffeln (09, ST1-B) ---------------------------------------------------------------------------------------------
+
+## The season events of an applied command, a combat end or the Am-Stück countdown (SeasonRules), stamped with the
+## tick. A "rescue" moved the run to a new floor: RunRules.season_moved (the twists of the old floor end), the hype of
+## a floor start (like _apply_floor; Show.start_floor in the live game), the floor context and the Sponsor-Fenster floor
+## trigger — Game._season_event does the same for the live run and Game.replay_log.
+func _season_events(evs: Array[ExploreEvent]) -> Array[ExploreEvent]:
+	var out: Array[ExploreEvent] = []
+	for ev: ExploreEvent in evs:
+		ev.tick = _tick
+		out.append(ev)
+		if ev.type != ExploreEvent.Type.SEASON or str(ev.data.get("kind", "")) != "rescue":
+			continue
+		RunRules.season_moved(state, int(ev.data.get("floor", 0)))
+		if state.show != null:
+			state.show.hype = ShowModel.HYPE_START
+		_floor_done = false
+		_scene_ctx = {}
+		_layout = null
+		_layout_key = ""
+		out.append_array(sponsor_floor())
+	return out
 
 
 # --- version (08 §10.2 Nr. 7, 07 §10.2: the one SIM_VERSION bump of R1a + K0) --------------------------------------

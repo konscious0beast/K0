@@ -70,15 +70,25 @@ func save_slot(slot: int) -> Error:
 	if Game.state == null:
 		Events.game_saved.emit(slot, false)
 		return _fail(ERR_UNCONFIGURED, "no game state")
+	var season_why: String = _season_save_refusal(slot)   # Staffeln (09 §9.1, ST1-B): its own slot, never in a combat
+	if season_why != "":
+		Events.game_saved.emit(slot, false)
+		return _fail(ERR_UNAVAILABLE, season_why)
 	var d: Dictionary = SaveCodec.encode(Game.state, _game_version())
 	d["saved_at_unix"] = int(Time.get_unix_time_from_system())
 	(d["state"] as Dictionary)["slot"] = slot
 	d["state"] = _slot_state_dict(d["state"])       # Casting (08 §2.7 Nr. 1): the slot without the name (K1)
 	(d["summary"] as Dictionary)["player_name"] = GameState.DEFAULT_NAME    # (the name: the persona file's)
+	var journal_id: String = ""
+	if Game.state.season != null:                   # Staffeln (09 §9.1, ST1-B): the journal this save starts
+		journal_id = Crypto.new().generate_random_bytes(8).hex_encode()
+		d[JOURNAL_KEY] = journal_id
 	var err: Error = _atomic_write(slot_path(slot), d)
 	if err == OK:
 		Game.state.slot = slot
 		err = save_persona(slot, Game.persona)       # Casting (08 §2.5): directly after the slot (K1)
+		if journal_id != "":
+			_journal_reset(slot, journal_id)
 	Events.game_saved.emit(slot, err == OK)
 	return err
 
@@ -101,7 +111,12 @@ func load_slot(slot: int) -> Error:
 	if not warnings.is_empty():
 		push_warning("[Save] slot %d loaded with corrections: %s" % [slot, "; ".join(warnings)])
 	st.slot = slot
-	if st.floor_run != null:
+	_season_migrate(st)                              # Staffeln (09 §8.7, ST1-B): from the switch to seasons on
+	if st.season != null:                            # Staffeln (09 §9.1, ST1-B): no grace; the journal follows the save
+		if st.season.result != "":
+			return _fail(ERR_UNAVAILABLE, "%s (%s)" % [MSG_SEASON_OVER, st.season.result])
+		st = _season_resume(slot, st, str(loaded.get(JOURNAL_KEY, "")))
+	elif st.floor_run != null:
 		st.floor_run.time_left_ticks = maxi(st.floor_run.time_left_ticks, GRACE_SECONDS * FloorRun.TICKS_PER_SEC)
 	# Casting (08 §2.5): the persona file of the slot sets the display fields (K1; old saves with a name: migration)
 	var p: PersonaProfile = load_persona(slot)
@@ -119,6 +134,8 @@ func load_slot(slot: int) -> Error:
 	if Game.run_log != null:
 		Game.run_log.header["start_state"] = PersonaPrivacy.scrub_state_dict(st.to_dict())
 		Game.run_log.header["start_hash"] = StateHash.of(st)
+	if st.season != null:                            # Staffeln (09 §9.1, ST1-B): the login, then a fresh journal
+		_season_loaded(slot, str(loaded.get(JOURNAL_KEY, "")))
 	return OK
 
 
@@ -129,7 +146,9 @@ func delete_slot(slot: int) -> Error:
 	if read_only:
 		return OK
 	var path: String = slot_path(slot)
-	for p: String in [path, path + ".bak", path + ".tmp"]:
+	if _journal_slot == slot:                        # Staffeln (09 §9.1, ST1-B): the journal goes with the slot
+		_journal_close()
+	for p: String in [path, path + ".bak", path + ".tmp", journal_path(slot)]:
 		if FileAccess.file_exists(p):
 			var err: Error = DirAccess.remove_absolute(p)
 			if err != OK:
@@ -237,14 +256,27 @@ func last_error() -> String:
 	return _last_error
 
 
-# --- Staffeln (09 §9.1, ST0): the command journal of a slot (hooks; ST1-B fills them) ------------------------------
-# A season saves at fixed moments (after a combat, in a safe room, at a floor change, at logout, at the latest every
-# 60 s); in between an append-only journal per slot holds every recorded command — one line, written and flushed
-# BEFORE the command acts; the next save empties it. On start: load the slot, replay the journal (a torn last line is
-# dropped). ST0 ships the hooks as stubs: nothing is written, nothing replayed. Game.record calls journal_append only
-# with a season (Game.state.season != null), so a run without a season never touches a journal.
+# --- Staffeln (09 §9.1, ST0 → ST1-B): the persistent save of a season and its command journal -----------------------
+# A season saves at fixed moments (Game: after a combat, at a safe-room visit, at a floor change, at logout, at the
+# latest every 60 s) and only into its own slot — there is no reloading of an older state ("Dauerspeicherstand"; no
+# save during a combat). In between an append-only journal per slot holds every recorded command — one line, written and
+# flushed BEFORE the command acts (Game.record → journal_append; CommandJournal is the line format). Every season save
+# writes a new journal id into the slot file and starts the journal with it (header line, the sim tick of the save);
+# loading replays a journal that continues the loaded save (same id; a torn last line is dropped, a combat it ends in
+# goes to the autopilot from its start — GameReplay.resume), saves the result at once and starts a fresh journal. A run
+# without a season never touches a journal. The loaded season gets no grace (09 §9.1: TIMER_GRACE_ON_LOAD is the
+# campaign's); a finished season does not load (it is in the hall of fame, ST1-H). The career file keeps what stays
+# across seasons (09 §2.8): the Ohne-Netz unlock and the season counter.
 
 const JOURNAL_EXT: String = "journal"
+const JOURNAL_KEY: String = "journal"               # the journal id in the slot file (top level, seasons only)
+const CAREER_FILE: String = "career.json"
+const MSG_SEASON_OVER: String = "Staffel beendet"
+
+var _journal: FileAccess = null                      # the open journal (append) of _journal_slot
+var _journal_slot: int = 0
+var _journal_k0: int = 0                             # Game.sim.tick() of the save the journal continues
+var _journal_resumed: bool = false                   # load_slot replayed a journal: it saves at once
 
 
 ## save_dir + "/slot_%d.journal" % slot (09 §9.1: user://saves/slot_N.journal).
@@ -252,15 +284,145 @@ func journal_path(slot: int) -> String:
 	return save_dir + "/slot_%d.%s" % [slot, JOURNAL_EXT]
 
 
-## Stub (ST0): ST1-B appends `cmd` as one line to journal_path(slot) and flushes it before the command acts. OK,
-## nothing written.
-func journal_append(_slot: int, _cmd: Dictionary) -> Error:
-	return OK
+## Appends `cmd` as one line (CommandJournal.line: the ticks since the save, the command) to the open journal of `slot`
+## and flushes it — Game.record calls it with a season before the command acts. OK without writing while the slot has
+## no journal yet (no season save in this session), for slot 0 and read_only.
+func journal_append(slot: int, cmd: Dictionary) -> Error:
+	if read_only or not _valid_slot(slot) or _journal == null or _journal_slot != slot:
+		return OK
+	var k: int = Game.sim.tick() - _journal_k0 if Game.sim != null else 0
+	_journal.store_line(CommandJournal.line(k, cmd))
+	_journal.flush()
+	return _journal.get_error()
 
 
-## Stub (ST0): ST1-B returns the commands of journal_path(slot) in order (a torn last line dropped). Always [].
-func journal_replay(_slot: int) -> Array[Dictionary]:
-	return []
+## The entries of journal_path(slot) in order ({"k": ticks since the save, "c": the command}; a torn last line dropped,
+## a broken line ends it). [] without a journal.
+func journal_replay(slot: int) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	out.assign(journal_read(slot)["entries"])
+	return out
+
+
+## CommandJournal.parse of the slot's journal ({"header", "entries", "torn", "bad"}; empty without a file).
+func journal_read(slot: int) -> Dictionary:
+	var path: String = journal_path(slot)
+	var text: String = FileAccess.get_file_as_string(path) if _valid_slot(slot) and FileAccess.file_exists(path) else ""
+	return CommandJournal.parse(text)
+
+
+## The file of what stays across seasons on this device (09 §2.8): <parent of save_dir>/career.json.
+func career_path() -> String:
+	return _data_root().path_join(CAREER_FILE)
+
+
+## {"v": 1, "no_net": bool (the Ohne-Netz unlock, 09 §2.2), "seasons": int (the last season number)}; {} without
+## a file. ST1-H adds the titles and the hall of fame.
+func career() -> Dictionary:
+	var path: String = career_path()
+	for p: String in [path, path + ".bak"]:
+		if FileAccess.file_exists(p):
+			var raw: Variant = JsonUtil.read_file(p)
+			if raw is Dictionary:
+				return raw
+	return {}
+
+
+## Sets one career value (atomic like the slots). read_only → OK without writing.
+func career_set(key: String, value: Variant) -> Error:
+	if read_only:
+		return OK
+	var d: Dictionary = career()
+	if d.get(key, null) == value:
+		return OK
+	d["v"] = 1
+	d[key] = value
+	return _atomic_write(career_path(), d)
+
+
+## "" or why Game.state may not be saved into `slot` now: a season saves only into its own slot and never during a
+## combat (a save there would drop the combat from the journal).
+func _season_save_refusal(slot: int) -> String:
+	var st: GameState = Game.state
+	if st == null or st.season == null:
+		return ""
+	if Game.combat != null or Game.in_battle:
+		return "a season never saves during a combat (09 §9.1)"
+	if st.slot > 0 and slot != st.slot:
+		return "a season saves only into its own slot (09 §9.1: no reloading)"
+	return ""
+
+
+## Starts the journal of `slot` anew: the header with the save's journal id and the current sim tick (the entries count
+## their ticks from it). The handle stays open for journal_append.
+func _journal_reset(slot: int, id: String) -> void:
+	_journal_close()
+	if read_only or not _valid_slot(slot):
+		return
+	var f: FileAccess = FileAccess.open(journal_path(slot), FileAccess.WRITE)
+	if f == null:
+		push_warning("[Save] cannot write the journal of slot %d (%s)" % [slot, error_string(FileAccess.get_open_error())])
+		return
+	_journal_k0 = Game.sim.tick() if Game.sim != null else 0
+	f.store_line(CommandJournal.header_line(id, _journal_k0))
+	f.flush()
+	_journal = f
+	_journal_slot = slot
+
+
+func _journal_close() -> void:
+	if _journal != null:
+		_journal.close()
+	_journal = null
+	_journal_slot = 0
+	_journal_k0 = 0
+
+
+## The journal of `slot` replayed from the loaded save `st` when it continues this save (the same journal id — a stale
+## journal, whose save was written after it, is ignored); the result of GameReplay.resume is the state to adopt. A
+## journal that does not replay cleanly is ignored (warning): the save stays the state.
+func _season_resume(slot: int, st: GameState, save_journal_id: String) -> GameState:
+	_journal_close()
+	_journal_resumed = false
+	var j: Dictionary = journal_read(slot)
+	var entries: Array = j["entries"]
+	if save_journal_id == "" or str((j["header"] as Dictionary).get("id", "")) != save_journal_id or entries.is_empty():
+		return st
+	if bool(j["torn"]) or int(j["bad"]) > 0:
+		push_warning("[Save] slot %d: dropped %d journal line(s) at its end" % [slot, int(j["bad"]) + int(j["torn"])])
+	var res: Dictionary = Game.season_resume(st, entries)
+	var errors: PackedStringArray = res["errors"]
+	if res["state"] == null or not errors.is_empty():
+		push_warning("[Save] slot %d: the journal was not replayed (%s)" % [slot, "; ".join(errors)])
+		return st
+	var out: GameState = res["state"]
+	out.slot = slot
+	_journal_resumed = true
+	return out
+
+
+## After a season slot was adopted: a fresh journal — a save at once when the journal was replayed or the slot has no
+## journal id yet (the slot holds that state from now on), else the journal of this save starts anew from the new
+## session's tick 0 — then the login (Game.season_login: "away", ST1-G), so it lands in the journal.
+func _season_loaded(slot: int, save_journal_id: String) -> void:
+	if not read_only:
+		if _journal_resumed or save_journal_id == "":
+			save_slot(slot)
+		else:
+			_journal_reset(slot, save_journal_id)
+	_journal_resumed = false
+	Game.season_login()
+
+
+## 09 §8.7, §11.1: from the switch to seasons on (RunSim.SIM_VERSION ≥ SeasonRules.CAMPAIGN_SEASON_SIM_VERSION) a
+## campaign save becomes a private season Am Stück (SeasonRules.migrate_campaign: the default template, the floor's
+## time left as its countdown — no grace —, a new anchor). Until then a campaign save stays a campaign.
+func _season_migrate(st: GameState) -> void:
+	if st.season != null or RunSim.SIM_VERSION < SeasonRules.CAMPAIGN_SEASON_SIM_VERSION:
+		return
+	var tz: int = int(Time.get_time_zone_from_system().get("bias", 0)) * 60
+	SeasonRules.migrate_campaign(st, DB.data, SeasonRules.default_def(DB.data), int(Time.get_unix_time_from_system()),
+		tz)
 
 
 # --- Stempelduell (10, SD2) -----------------------------------------------------------------------------------------
@@ -343,7 +505,8 @@ func _load_state(slot: int) -> Dictionary:
 			for e: String in errs:
 				warnings.append(e.trim_prefix("warning: "))
 			var saved_at: int = JsonUtil.to_int((raw as Dictionary).get("saved_at_unix", 0))
-			return {"state": st, "warnings": warnings, "saved_at_unix": saved_at}
+			return {"state": st, "warnings": warnings, "saved_at_unix": saved_at,
+				JOURNAL_KEY: str((raw as Dictionary).get(JOURNAL_KEY, ""))}   # Staffeln (09, ST1-B)
 		var msg: String = "; ".join(errs)
 		if msg.begins_with(SaveCodec.MSG_NEWER):
 			_last_error = msg

@@ -113,6 +113,7 @@ func _ready() -> void:
 	Events.hype_changed.connect(_on_quest_hype_changed)
 	apply_settings()
 	_rt_ready()                               # Echtzeitkampf (07 §10.1, R2): combat_speed
+	season_live_clock = not ephemeral         # Staffeln (09 §9.1, ST1-B): tests and tools set the clock themselves
 	if not ephemeral:                    # 06-D: M.O.D. live link (off by default, never blocks gameplay)
 		mod_live = ModLiveLinkScript.new()
 		mod_live.name = "ModLiveLink"
@@ -123,6 +124,8 @@ func _process(delta: float) -> void:
 	if state == null:
 		return
 	state.play_time_sec += delta
+	if state.season != null:
+		_season_process()                         # Staffeln (09 §9.1, ST1-B): the wall clock, the 60-s save
 	if sim == null or not (is_timer_ticking() or is_idle_ticking()):
 		return
 	_acc += delta
@@ -332,9 +335,13 @@ func is_idle_ticking() -> bool:
 func complete_floor() -> void:
 	if state == null or state.floor_run == null:
 		return
+	if state.season != null and not _season_stairs_open():   # Staffeln (09 §2.6, ST1-B): the staircase rule
+		return
 	timer_running = false
 	record({"t": "descend"})
 	_floor_done = true
+	if state.season != null:   # Staffeln (09 §2.7, ST1-B): the Quote counts the stairs; the end of the content
+		_dispatch(SeasonRules.on_descend(state, DB.data))
 	if sim != null:
 		sim.request_checkpoint()
 	Events.floor_completed.emit(state.floor_run.index)
@@ -353,6 +360,9 @@ func continue_after_summary() -> void:
 	if state == null or state.floor_run == null:
 		Router.goto(Router.SCENE_TITLE)
 		return
+	if state.season != null and state.season.result != "":   # Staffeln (09, ST1-B): the stairs ended the season
+		Router.goto(Router.SCENE_CREDITS)
+		return
 	var idx: int = state.floor_run.index
 	var next: FloorDef = DB.floor_def(idx + 1)
 	if next != null:
@@ -365,10 +375,11 @@ func continue_after_summary() -> void:
 
 
 ## Router.game_over calls this first: stat game_overs +1; Save.record_game_over(state.slot) (not while replaying).
+## Staffeln (09 §7, ST1-B): a season has no game over — the season rules decided at the end of the combat.
 func on_game_over(reason: StringName) -> void:
 	timer_running = false
 	in_battle = false
-	if state == null:
+	if state == null or state.season != null:
 		return
 	Show.bump_stat("game_overs", 1)
 	if replaying:
@@ -399,6 +410,8 @@ func apply_battle_result(result: BattleResult) -> BattleRewards:
 		rewards = BattleRewards.new()
 	if sim != null:
 		SponsorWindows.on_battle_result(state, sim.rules, DB.data, result)   # 06-C: comeback mark (06 §6 decision 3)
+	if state.season != null:   # Staffeln (09 §7, ST1-B): the death rule (no game over), the finale, the clock grace
+		_dispatch(SeasonRules.on_combat_end(state, DB.data, result))
 	if sim != null:
 		sim.request_checkpoint()   # 05 §3.3 Nr. 8: a checkpoint after every battle (written when the clock moves on)
 	_sync_twist_ends()             # 06-D: "battles" twists counted down in BattleBridge.apply_result
@@ -606,6 +619,8 @@ func enter_safe_room(safe_room_id: String) -> Dictionary:
 	if sim != null:
 		_dispatch(sim.sponsor_safe_room(safe_room_id))
 	Show.on_safe_room_entered(safe_room_id, bool(ctx.get("first_visit", false)))   # 08 §4.3 H4 (presentation)
+	if state.season != null:
+		_season_autosave()                        # Staffeln (09 §9.1, ST1-B): the save at every safe-room visit
 	return ctx
 
 
@@ -1115,13 +1130,16 @@ func _dispatch(events: Array[ExploreEvent]) -> void:
 			ExploreEvent.Type.TIMER_WARNING:
 				Events.floor_timer_warning.emit(int(ev.data.get("seconds", 0)))
 			ExploreEvent.Type.TIMER_EXPIRED:
-				timer_running = false
-				Events.floor_timer_expired.emit()
-				if replaying:
-					on_game_over(&"timer")
+				if state != null and state.season != null:   # Staffeln (09 §2.5, ST1-B): the collapse follows (SEASON)
+					Events.floor_timer_expired.emit()
 				else:
-					Router.game_over(&"timer")
-				return
+					timer_running = false
+					Events.floor_timer_expired.emit()
+					if replaying:
+						on_game_over(&"timer")
+					else:
+						Router.game_over(&"timer")
+					return
 			ExploreEvent.Type.EXPLORE_TICK:
 				Events.explore_tick.emit(ev.data.duplicate())
 			ExploreEvent.Type.HYPE:
@@ -1142,6 +1160,8 @@ func _dispatch(events: Array[ExploreEvent]) -> void:
 			ExploreEvent.Type.TWIST_ENDED:
 				_twist_ids = TwistApplier.active_ids(state)
 				Events.twist_ended.emit(str(ev.data.get("id", "")))
+			ExploreEvent.Type.SEASON:                        # Staffeln (09, ST1-B)
+				_season_event(ev)
 
 
 func _on_mod_said(_text: String, _voice: StringName, _tag: String, blocking: bool) -> void:
@@ -1403,6 +1423,8 @@ func end_combat() -> BattleRewards:
 	Events.battle_ended.emit(result.outcome, result.encounter_id)
 	if _rt_speed_due:
 		_rt_record_speed()
+	if state != null and state.season != null:
+		_season_after_combat()                    # Staffeln (09 §9.1, ST1-B): its time next, the save after a combat
 	return rewards
 
 
@@ -1543,20 +1565,95 @@ func _choose_initial_persona(p: PersonaProfile) -> void:
 
 
 # ======================================================================================================================
-# Staffeln (09 §9.1, ST0) — the season facades; ST1-B (season, clock, sleep), ST1-G (away), ST1-D (talent rows), ST1-E
-# (professions) and ST1-F (cast) fill the rules behind them
+# Staffeln (09 §9.1, ST0 → ST1-B) — the season facades and the live season; ST1-B (season, clock, sleep, the wall clock,
+# saving, journal, routing), ST1-G (away), ST1-D (talent rows), ST1-E (professions) and ST1-F (cast) fill the rules
 # ======================================================================================================================
 # Every facade builds its command (09 §9.1) and goes the one recording path of _season_command: Command.validate +
-# RunRules.command_refusal (season_refusal: no season → no_season, the module stubs → season_unavailable) → record →
-# RunRules.apply_season → the explore events through _dispatch. false = refused, nothing recorded. ST0: no season can
-# start (start_season is a stub, SeasonRules refuses every start), so every facade returns false and nothing is ever
-# recorded. GameReplay replays the season commands through these facades.
+# RunRules.command_refusal (SeasonRules.gate, season_refusal: no season → no_season, the module stubs of the packages to
+# come → season_unavailable) → record (and the slot's journal) → RunRules.apply_season → the explore events through
+# _dispatch (_season_event). false = refused, nothing recorded. GameReplay replays the season commands through these
+# facades. Seasons start only through start_season — in ST1 from the debug boot argument --season (boot.gd, debug builds
+# only, README §6) until "Sendung starten" becomes the default (ST1-H, the ST1 gate).
+#
+# The live season (ST1-B, never while replaying): the wall clock (_season_process: one "clock" command per 60 s of wall
+# time in the season views — exploration, safe room —, the time of a combat right after it, × season_speed in debug
+# builds; a backwards clock stands until it catches up; a gap over 10 min is an absence → "away", ST1-G), the
+# persistent save (after every combat, at every safe-room visit, at a floor change, at logout, at the latest every 60 s;
+# Save writes the journal in between), the routing of the season events (rescue → the next floor, out → Sendeschluss,
+# end / finale → Abspann, left → title, death → Router.game_over → season_defeat_route) and M.O.D.'s season lines.
 
-## Stub (ST0; ST1-B): a new game in a season ("Sendung starten" / "Neue Staffel", 09 §2.2) — like new_game, with the
-## "season" start command before floor → hero → persona. `opts`: format, tempo, mode, air time (09 §2.1). false.
-func start_season(_slot: int, _def_id: String, _opts: Dictionary = {}, _hero_id: String = HeroRules.DEFAULT_HERO,
-		_p_persona: PersonaProfile = null) -> bool:
-	return false
+## Zeitraffer (09 §2.1: debug builds and the harness only): season seconds per wall-clock second of the live clock.
+var season_speed: int = 1
+## The live season clock records "clock" from the wall clock (_season_process); off in tests and tools (ephemeral).
+var season_live_clock: bool = false
+
+const SEASON_CLOCK_STEP_SEC: int = 60      # 09 §9.1: one clock command per 60 s of wall time
+const SEASON_AWAY_SEC: int = 600           # 09 §5.1: more than 10 min of pause or background is an absence
+const SEASON_SAVE_SEC: int = 60            # 09 §9.1: a season saves at the latest every 60 s
+const SEASON_SPEED_MAX: int = 10080        # Zeitraffer: 60 s × speed stays one clock jump (7 days)
+
+var _season_fight_ended: bool = false      # a combat ended: its time is recorded right away (V-17: + 2 min grace)
+var _season_saved_at: int = 0              # wall clock of the last season save
+
+
+## A new game in a season ("Sendung starten" / "Neue Staffel", 09 §2.2): like new_game, with the "season" start
+## command before floor → hero → persona. `opts`: "tempo" (calendar | binge — binge private only), "mode" (net | no_net
+## — Ohne Netz needs the account's unlock, Save.career(), unless "unlock": true, the debug boot argument), "air_time"
+## ("HH:MM" local; default the template's), "seed" (-1 = time based), "difficulty", "name", "now" (unix seconds of the
+## start; default the wall clock), "tz_sec" (the local UTC offset; default the system's), "number" (default the career
+## counter + 1). Day 0 is the first air time at or after the start, every collapse date follows from it (SeasonClock,
+## V-17). Saves the slot at once (the journal starts; slot 0 is never written). false = refused (unknown template, a
+## start SeasonRules refuses, a locked Ohne Netz) — nothing changes then.
+func start_season(slot: int, def_id: String, opts: Dictionary = {}, hero_id: String = HeroRules.DEFAULT_HERO,
+		p_persona: PersonaProfile = null) -> bool:
+	if DB.data == null or not DB.data.has_id("seasons", def_id):
+		push_warning("[Game] start_season: unknown season template '%s'" % def_id)
+		return false
+	var def: SeasonDef = DB.season_def(def_id)
+	var season_mode: String = str(opts.get("mode", "net"))
+	if season_mode == "no_net" and not bool(opts.get("unlock", false)) and not bool(Save.career().get("no_net", false)):
+		push_warning("[Game] start_season: Ohne Netz is locked (09 §2.2: after the first class choice or a season)")
+		return false
+	var now_utc: int = int(opts.get("now", int(Time.get_unix_time_from_system())))
+	var air: int = SeasonClock.air_seconds(str(opts.get("air_time", def.air_time)))
+	if air < 0:
+		air = SeasonClock.air_seconds(def.air_time)
+	var day0: int = SeasonClock.day0(now_utc, air, int(opts.get("tz_sec", _season_tz_offset())))
+	var cmd: Dictionary = {"t": "season", "v": Command.SEASON_VERSION, "op": "start", "def": def_id,
+		"format": def.format, "tempo": str(opts.get("tempo", "calendar")), "mode": season_mode,
+		"number": maxi(1, int(opts.get("number", int(Save.career().get("seasons", 0)) + 1))), "day0_utc": day0,
+		"collapse_utc": SeasonClock.schedule(day0, def.format), "cast": {}, "utc": now_utc}
+	var run_seed: int = int(opts.get("seed", -1))
+	if run_seed == -1:
+		run_seed = int(Time.get_unix_time_from_system() * 1000.0) & 0x7FFFFFFF
+	var difficulty: StringName = StringName(str(opts.get("difficulty", "prime")))
+	var fresh: GameState = GameState.create_new(DB.data, slot, str(opts.get("name", GameState.DEFAULT_NAME)), run_seed,
+		difficulty)
+	var why: String = Command.validate(cmd) if fresh != null else "no game state"
+	if why == "":
+		why = RunRules.command_refusal(fresh, DB.data, {}, cmd, false, {})
+	if why != "":
+		push_warning("[Game] start_season refused: %s" % why)
+		return false
+	_reset_run()
+	mode = &"campaign"
+	state = fresh
+	run_log = _make_run_log(run_seed, slot, difficulty, "")
+	_rt_begin()
+	sim = _make_sim(state, {})
+	persona = p_persona
+	_season_command(cmd)
+	state.season.seen_unix = int(Time.get_unix_time_from_system())   # the wall clock (never hashed)
+	start_floor(1)
+	_choose_initial_hero(hero_id)
+	_choose_initial_persona(p_persona)
+	_rt_run_started()
+	Save.career_set("seasons", maxi(int(Save.career().get("seasons", 0)), int(cmd["number"])))
+	Events.new_game_started.emit(slot)
+	if not replaying:
+		Show.say("season_start")
+	_season_autosave()
+	return true
 
 
 ## A "season" command (09 §9.1: tempo, pause, leave; the replay also passes its start).
@@ -1574,9 +1671,13 @@ func season_away(sec: int) -> bool:
 	return _season_command({"t": "away", "sec": sec})
 
 
-## Logout with the sleeping tactic (09 §5.1; RtVocab.RT_PRESETS): {"t": "sleep", "tactic"}.
+## Logout with the sleeping tactic (09 §5.1; RtVocab.RT_PRESETS): {"t": "sleep", "tactic"}, then the save (09 §9.1:
+## "sleep → Speichern → Titel" — the caller, ST1-G's logout dialog, goes to the title).
 func logout(tactic: String) -> bool:
-	return _season_command({"t": "sleep", "tactic": tactic})
+	if not _season_command({"t": "sleep", "tactic": tactic}):
+		return false
+	_season_autosave()
+	return true
 
 
 ## A row of the talent tree (09 §8.4): {"t": "talent", "v": 2, "member", "row", "id"}.
@@ -1608,8 +1709,10 @@ func cast_action(op: String, who: int, item: String = "") -> bool:
 	return _season_command(cmd)
 
 
+## Never during a combat (09 §9.1: the clock and every season command act outside a combat; the time of a combat comes
+## after it).
 func _season_command(cmd: Dictionary) -> bool:
-	if state == null or Command.validate(cmd) != "":
+	if state == null or combat != null or Command.validate(cmd) != "":
 		return false
 	var rules: Dictionary = sim.rules if sim != null else {}
 	if RunRules.command_refusal(state, DB.data, rules, cmd, _floor_done, _scene_ctx,
@@ -1619,3 +1722,192 @@ func _season_command(cmd: Dictionary) -> bool:
 	_dispatch(RunRules.apply_season(state, DB.data, cmd))
 	return true
 
+
+# --- Staffeln (09, ST1-B): the live season ---------------------------------------------------------------------------
+
+## Save.load_slot replays the journal of a season slot (09 §9.1, V-3) from the loaded save `st` (GameReplay.resume —
+## Game.replay_log's engine; a combat the journal ends in is decided by the autopilot from its start). {"state":
+## GameState (null on a failure), "errors": PackedStringArray, "autopilot": bool}.
+func season_resume(st: GameState, entries: Array) -> Dictionary:
+	return GameReplay.new(self).resume(st, entries)
+
+
+## Save.load_slot after a season slot was adopted (09 §9.1, "Login: away → Login-Bilanz → Welt"): the absence since the
+## wall clock seen last becomes "away" (ST1-G — its stub refuses it until then, so the time without the app does not
+## count yet); the wall clock is seen now.
+func season_login() -> void:
+	if replaying or state == null or state.season == null:
+		return
+	var wall: int = int(Time.get_unix_time_from_system())
+	var s: SeasonState = state.season
+	if season_live_clock and s.seen_unix > 0 and wall > s.seen_unix and s.tempo == "calendar":
+		_season_absence((wall - s.seen_unix) * clampi(season_speed, 1, SEASON_SPEED_MAX))
+	s.seen_unix = maxi(s.seen_unix, wall)
+	_season_saved_at = wall
+
+
+## Router.game_over in a season (09 §7): no game over — the death rule ran at the end of the combat
+## (SeasonRules.on_combat_end): Mit Netz and the dress rehearsal go back into the exploration at the medics'
+## destination (a safe room is entered from there), an Ohne-Netz candidate who is out sees the Sendeschluss screen.
+## true = routed (Router does nothing more); false without a season.
+func season_defeat_route(reason: StringName) -> bool:
+	if state == null or state.season == null:
+		return false
+	timer_running = false
+	in_battle = false
+	if state.season.result != "" or state.floor_run == null:
+		Router.goto(Router.SCENE_GAME_OVER, {"reason": reason})
+	else:
+		Router.goto(Router.SCENE_EXPLORATION, {"spawn": state.floor_run.location})
+	return true
+
+
+## The stairs lead down now (SeasonRules.gate for "descend": asleep, over, the staircase rule) — else M.O.D. says why
+## ("Kulissen im Aufbau"; the stairs dialog itself is ST1-H's).
+func _season_stairs_open() -> bool:
+	var why: String = SeasonRules.gate(state, DB.data, {"t": "descend"}, false)
+	if why == "":
+		return true
+	push_warning("[Game] the stairs are closed in this season (%s)" % why)
+	if not replaying and why == "floor_closed":
+		Show.say("season_stairs_closed")
+	return false
+
+
+## A SEASON event (09, ST1-B; SeasonRules' class doc) of the live run and of Game.replay_log: a rescue moved the run to
+## a new floor — the twists of the old floor end (RunRules.season_moved), the floor context, Show.start_floor (hype and
+## the floor's preferences, like start_floor), the Sponsor-Fenster floor trigger. Live only: M.O.D.'s line, the save and
+## the route.
+func _season_event(ev: ExploreEvent) -> void:
+	var kind: String = str(ev.data.get("kind", ""))
+	if kind == "rescue":
+		var idx: int = int(ev.data.get("floor", 0))
+		RunRules.season_moved(state, idx)
+		_floor_done = false
+		_scene_ctx = {}
+		_acc = 0.0
+		_layout = null
+		_layout_key = ""
+		clear_blocking_dialogs()
+		Show.start_floor(idx)
+		if sim != null:
+			_dispatch(sim.sponsor_floor())
+		_sync_twist_ends()
+	if kind == "rescue" or kind == "death":
+		Show.sync_from_state()
+		Events.party_changed.emit()
+		Events.inventory_changed.emit()
+		Events.credits_changed.emit(_credits(), 0)
+	if replaying:
+		return
+	var waived: String = str(ev.data.get("waived", ""))
+	match kind:
+		"rescue":
+			Show.say("season_rescue_free" if waived != "" else "season_rescue")
+			_season_autosave()
+			_season_goto.call_deferred(Router.SCENE_EXPLORATION, str(ev.data.get("location", "start")))
+		"death":
+			Show.say("season_medics" if waived == "" else "season_medics_" + ("rehearsal" if waived == "rehearsal"
+				else "free"))
+		"daily":
+			Show.say("season_daily")
+		"out":
+			Show.say("season_out")
+			_season_autosave()
+			if combat == null:                    # buried (a death goes Router.game_over → season_defeat_route)
+				_season_goto.call_deferred(Router.SCENE_GAME_OVER, "timer")
+		"finale", "end":
+			Show.say("season_content" if str(ev.data.get("why", "")) == "content" else "season_" + kind)
+			_season_autosave()
+			if not _floor_done:                   # by the stairs: the floor summary first (continue_after_summary)
+				_season_goto.call_deferred(Router.SCENE_CREDITS, "")
+		"left":
+			_season_autosave()
+			_season_goto.call_deferred(Router.SCENE_TITLE, "")
+
+
+## The deferred route of a season event (after the frame's processing): the exploration of the new floor at
+## `arg` (its first safe room — entered from there — or the entrance; a floor without playable content shows the
+## Abspann, like the campaign's last floor), the Sendeschluss screen (reason `arg`), the credits or the title.
+func _season_goto(path: String, arg: String) -> void:
+	if state == null or replaying:
+		return
+	timer_running = false
+	if path == Router.SCENE_EXPLORATION:
+		var def: FloorDef = floor_def()
+		if def == null or not def.playable:
+			Router.goto(Router.SCENE_CREDITS)
+		else:
+			Router.goto(Router.SCENE_EXPLORATION, {"spawn": StringName(arg if arg != "" else "start")})
+	elif path == Router.SCENE_GAME_OVER:
+		Router.goto(Router.SCENE_GAME_OVER, {"reason": StringName(arg)})
+	else:
+		Router.goto(path)
+
+
+## Game.end_combat in a season (live): the combat's time comes with the next clock command (the wall clock ran on), then
+## the save after every combat (09 §9.1) — it starts a new journal.
+func _season_after_combat() -> void:
+	if replaying:
+		return
+	_season_fight_ended = true
+	_season_autosave()
+
+
+## The persistent save of a season (09 §9.1: after a combat, at a safe-room visit, at a floor change, at logout, at the
+## latest every 60 s): never during a combat or a replay; slot 0 is never written. The account keeps the Ohne-Netz
+## unlock once the season earned it (SeasonRules.unlocks_no_net: the first class choice, a season played to its end).
+func _season_autosave() -> void:
+	if replaying or state == null or state.season == null or combat != null or in_battle:
+		return
+	_season_saved_at = int(Time.get_unix_time_from_system())
+	if SeasonRules.unlocks_no_net(state):
+		Save.career_set("no_net", true)
+	if state.slot > 0:
+		Save.autosave()
+
+
+## The live wall clock of a calendar season (_process; 09 §9.1, V-17): in the season views (exploration, safe room;
+## never in a combat) one "clock" command per 60 s of wall time — right away after a combat (its time, V-17) and every
+## second under the Zeitraffer; a backwards wall clock stands until it catches up; a gap over 10 min is an absence
+## (_season_absence). The 60-s save.
+func _season_process() -> void:
+	if replaying or not season_live_clock or state.season == null or combat != null or in_battle:
+		return
+	if not (timer_running or safe_room_clock):
+		return
+	var s: SeasonState = state.season
+	var wall: int = int(Time.get_unix_time_from_system())
+	if s.seen_unix <= 0:
+		s.seen_unix = wall
+	var speed: int = clampi(season_speed, 1, SEASON_SPEED_MAX)
+	if wall > s.seen_unix and s.tempo == "calendar" and not s.asleep:
+		var gap: int = wall - s.seen_unix
+		var step: int = maxi(1, SEASON_CLOCK_STEP_SEC / speed)
+		if gap > SEASON_AWAY_SEC:
+			_season_absence(gap * speed)
+			s.seen_unix = wall
+		elif gap >= step or (_season_fight_ended and gap >= 1):
+			season_clock(gap * speed)
+			s.seen_unix = wall
+			_season_fight_ended = false
+	if wall - _season_saved_at >= SEASON_SAVE_SEC:
+		_season_autosave()
+
+
+## An absence of `sec` season seconds (09 §5.5): over seven days the rest becomes a pause "clamp", then "away" — the
+## SleepResolver of ST1-G; while its stub refuses "away" nothing is recorded (ST1-G also asks first, V-17).
+func _season_absence(sec: int) -> void:
+	if state == null or state.season == null or sec <= 0:
+		return
+	var away: int = mini(sec, SeasonClock.MAX_JUMP_SEC)
+	if SleepResolver.refusal(state, DB.data, {"t": "away", "sec": away}) != "":
+		return
+	if sec > away:
+		season_op({"t": "season", "v": Command.SEASON_VERSION, "op": "pause", "sec": sec - away, "why": "clamp"})
+	season_away(away)
+
+
+## The local UTC offset in seconds (Time zone bias of the system; the client's, never the core's).
+static func _season_tz_offset() -> int:
+	return int(Time.get_time_zone_from_system().get("bias", 0)) * 60

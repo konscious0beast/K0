@@ -406,6 +406,40 @@ unbekannte Schlüssel ablehnt; `rt_balance.json` (`enemy_level_pm`) prüft `RtBa
 09 Kap. 11.2 Nr. 4 nennt sie für ST0 nicht; sie kommen per Änderungsantrag (oder in einem vierten Vertrags-Durchgang) mit
 dem jeweiligen Paket.
 
+**Stand ST1-B (2026-10-12, Branch `ptd/st1b`): der Staffel-Kern** (09 Kap. 11.3 „Stand ST1-B“, Entscheidungen B-1 … B-22).
+Die ST0-Stubs `SeasonState`, `SeasonRules`, `SeasonDef` und `validators/seasons.gd` sind ersetzt (öffentliche API
+behalten), neu sind `core/season/season_clock.gd` und `core/live/command_journal.gd`. Weiter gilt: alles hängt an
+`state.season != null`, **kein `SIM_VERSION`-Sprung**, ohne Staffel bitgleich (Golden-Werte von `bc54fca` in
+`test_09_replay`; `fullrun.sh` mit gleichen Ereigniszeilen und Statistiken). Staffeln starten nur über
+`Game.start_season` — in Debug-Builds mit `--season` (README §6).
+
+| Teil | API (für die Pakete C–I) |
+|---|---|
+| `SeasonClock` (rein) | `floor_days(floor)`, `end_day(floor)`, `format_days(format)`, `schedule(day0_utc, format) -> Array[int]` (UTC), `air_seconds("HH:MM")`, `day0(start_utc, air_local_sec, tz_offset_sec)` (erste Sendezeit ≥ Start), `binge_ticks(floor, vorabend)`, `open_floor_max(collapsed, format, binge)`, `opener_index(floor)`; `MAX_JUMP_SEC` (7 Tage), `COMBAT_GRACE_SEC` (120), `PAUSE_MAX_SEC` (14 Tage), `FEE_GAP_SEC` (7 Tage), `DAILY_MAX` (5), `BINGE_FACTOR` (144), `WARN_SEC` (Einsturz-Warnungen 60/10/1 min) |
+| `SeasonState` | der ganze Block (`to_dict` schreibt jedes Feld, `from_dict` nimmt auch den ST0-Block): Start-Command, Uhr (`utc`, `seen_unix` ungehasht, `collapsed`, `hold_utc`, `after_combat`, `next_air_utc`, `airs`, `pause_sec`, Binge-Uhr), Etagen (`programme`, `reached` — `points()`/`reached_at()` lesen fehlende Einträge als 0/−1), Kandidat:in (`vest`, `rescues`, `deaths`, `fee_at`, `stairs`, `qbosses`, `fbosses`, `finale_at`, `descent_at`, `result` ∈ `RESULTS`, `result_floor`), Schläfer (`asleep`, `sleep_tactic`, `sleep_room`); `on_air()` |
+| `SeasonRules` (rein) | Commands `refusal`/`apply` (`season` start/tempo/pause/leave, `clock`, `sleep`; Gründe `REASONS`); `gate(state, data, c, event_run)` — `RunRules.command_refusal` fragt es zuerst; `advance(state, data, sec, combat_grace = true)` — **der Weg der Zeit, auch für `away` (ST1-G)**: Einstürze und Sendezeiten in Reihenfolge; Haken `on_floor_start`, `on_safe_room`, `on_descend` → Ereignisse, `on_combat_end` → Ereignisse, `on_countdown_end`; Abfragen für ST1-H: `now`, `open_floor_max`, `stairs_refusal`, `opens_in` („Kulissen im Aufbau — öffnet in …“), `collapse_in`, `last_floor`, `season_over`, `is_spectator`, `respawn_point`, `quote`, `rank_key`, `titles`, `daily_id`, `default_def`, `unlocks_no_net`; `migrate_campaign` (erst ab `CAMPAIGN_SEASON_SIM_VERSION` = 5) |
+| Ereignisse | `ExploreEvent.Type.SEASON` (am Ende des Enums, additiv), `data.kind`: `start`, `collapse`, `opened`, `hold`, `rescue` {from, floor, location, credits, followers, waived}, `death` {floor, location, credits, waived}, `out` {why: fallen \| buried}, `finale`, `end` {why: last \| content}, `left`, `daily` {floor, n, id}, `pause`, `tempo`, `sleep` |
+| `RunRules` | `command_refusal` → `SeasonRules.gate` vor den eigenen Prüfungen; `start_floor` → `on_floor_start` (mit der alten Etage), `enter_safe_room` → `on_safe_room`; neu `season_moved(state, index)` (die Twists der alten Etage enden bei einer Rettung) |
+| `RunSim` | `descend` → `on_descend`; Schritt 1: Kalender zählt nur die Etagenzeit (`floor_timer_frozen`), Am Stück endet der Countdown im Einsturz statt im Laufende; `_book_result` → `on_combat_end` (in einer Staffel nie `_over`); `_season_events` (Rettung: Twists, Hype, Sponsor-Fenster) |
+| `Game` | `start_season(slot, def_id, opts, hero_id, persona)` mit `opts` `tempo`, `mode`, `unlock`, `air_time`, `seed`, `difficulty`, `name`, `now`, `tz_sec`, `number`; Live-Uhr `season_live_clock`, Zeitraffer `season_speed` (Debug), `season_login()` (Abwesenheit → `away`, sobald `SleepResolver` es annimmt), `season_resume(st, entries)`, `season_defeat_route(reason)`; Staffel-Commands nie im Kampf; Dauerspeicherstand nach Kampf, Safe Room, Etagenwechsel, Ausloggen, alle 60 s; ein Staffelende per Treppe zeigt erst die Etagen-Bilanz (`continue_after_summary` → Abspann) |
+| `GameReplay` | `resume(st, entries)`: das Journal ab dem Spielstand mit dem Motor von `replay_log`; ein offener Kampf → Autopilot vom Kampfanfang (gleiche Seeds); `descend` → `on_descend` |
+| `Save` | Journal `journal_path`/`journal_append`/`journal_replay`/`journal_read` (Kopf `{"journal", "id", "k0"}`, Zeilen `{"k", "c"}`, abgerissene letzte Zeile verworfen), die Journal-Id im Spielstand (Schlüssel `"journal"`, `JOURNAL_KEY`); eine Staffel speichert nur in ihren Slot und nie im Kampf und lädt ohne Gnadenfrist, eine beendete gar nicht (`MSG_SEASON_OVER`); `career()`/`career_set()` (`career.json` neben `saves/`: `no_net`, `seasons`) |
+| `SaveCodec` | `summary(state)["season"]` = {def, number, format, tempo, mode, on_air, result} (Slot-Liste ST1-H); `_sanitize_season` setzt unbekanntes Tempo/Modus/Ergebnis auf Kalender/Mit Netz/"" (Warnung) |
+| Sonst | `Router.game_over` fragt zuerst `Game.season_defeat_route` (eine Zeile); `boot.gd` `--season` (Debug); `data/seasons.json` drei private Vorlagen; `SeasonDef.kind`/`min_humans`; M.O.D.-Tags `season_*` hinter dem Anker |
+
+**Für die anderen Pakete:** ST1-C — `last_floor` zählt die spielbaren Etagen (`FloorDef.playable`, B-9), `daily_id` nimmt
+den Pool `themes.json → program`; ST1-D — `unlocks_no_net` (erste Klassenwahl); ST1-E — `titles` („Legende“ ab Wert 300),
+die Stubs `prof`/`gather`/`craft` bleiben; ST1-F — der `cast`-Block des Start-Commands ist `{}`; ST1-G — `SleepResolver`
+entscheidet `away`, die Zeit läuft über `SeasonRules.advance`, der Schläfer steht in `SeasonState.asleep/sleep_*`
+(Rettung im Safe Room gratis, Tod als Schläfer), `Game.season_login`/`_season_absence` rufen `away` (mit `pause`
+„clamp“ über 7 Tage), sobald der Stub es annimmt; ST1-H — die Abfragen und Ereignisse oben, `Save.career()`,
+`SaveCodec.summary`; ST1-I — RunSim-Staffeln über Start-Command + `clock`, die Platzhalter-Etagen
+`tests/fixtures/season_core/`. **Geteilte Dateien außerhalb der Liste in 09 §11.4** (je ein markierter Haken, additiv):
+`core/live/run_rules.gd`, `core/dungeon/explore_event.gd` (Enum-Wert `SEASON`), `autoload/router.gd`,
+`scenes/boot/boot.gd`. **Offen:** (1) Der Server-Verifier (ST2) braucht für einen Hash-Vergleich über Kreuz den
+Show-Teil oder einen Kern-Hash ohne ihn (B-22); (2) die Ankunft einer Rettung im Safe Room ist kein „Besuch“ (keine
+Heilung, keine Erstbesuch-Reaktion der Show) — ST1-G/H entscheiden, ob sie es sein soll.
+
 ---
 
 ## 1. Dateibaum und Modulzuordnung

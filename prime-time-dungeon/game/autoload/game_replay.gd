@@ -14,8 +14,12 @@ extends RefCounted
 ## _combat; the combat checkpoints are compared tick by tick with the cursor of the replay's RunSim (check_combat); a
 ## compacted log is replayed expanded; a log that does not start at a save starts from RunRules.rt_start. The campaign
 ## fights in real time only since R5b part 2b (the CTB battle went to the Stempelduell, 10 SD1).
+## Staffeln (09 §9.1, ST1-B): resume replays the command journal of a season slot from its loaded save (Save.load_slot)
+## with this engine — a combat the journal ends in is decided by the autopilot from its start.
 
 var game: Node                        # the Game autoload
+var _autopilot_at: int = -1           # Staffeln (09, ST1-B): the command index of the open combat of a journal
+var _final_state: GameState = null    # the replayed state of the last run()
 
 
 func _init(p_game: Node) -> void:
@@ -97,6 +101,7 @@ func run(p_log: RunLog, until_tick: int) -> Dictionary:
 			errors.append("k %d: %s '%s' refused by the core (%s)" % [int(rc["k"]), str(rc["t"]), str(rc["gift_id"]),
 				str(rc["reason"])])
 		var quest: QuestTracker = game.quest
+		_final_state = st
 		out["final_hash"] = StateHash.of(st)
 		out["result"] = {"ticks": (game.sim as RunSim).tick(), "cmds": src.size(),
 			"floor": st.floor_run.index if st.floor_run != null else 1,
@@ -137,6 +142,8 @@ func _cmd(cmds: Array[Dictionary], i: int, c: Dictionary, errors: PackedStringAr
 		return next
 	match str(c.get("t", "")):
 		"encounter":                                   # Echtzeitkampf (07 §10.6, R5a)
+			if i == _autopilot_at:                     # Staffeln (09 §9.1, ST1-B): the open combat of a journal
+				return _combat_autopilot(cmds, i, c, errors)
 			return _combat(cmds, i, c, errors)
 		"twist":                                   # 06-D: applied at its tick (buffered when ahead)
 			var why: String = _twist(c.get("twist", {}))
@@ -221,6 +228,8 @@ func _apply(c: Dictionary) -> bool:
 			game.timer_running = false
 			game._floor_done = true
 			var st: GameState = game.state
+			if st.season != null:                      # Staffeln (09 §2.7, ST1-B): the stairs, the end of the content
+				game._dispatch(SeasonRules.on_descend(st, DB.data))
 			if st.floor_run != null:
 				Events.floor_completed.emit(st.floor_run.index)
 		"gift":
@@ -354,6 +363,61 @@ func _combat(cmds: Array[Dictionary], i: int, c: Dictionary, errors: PackedStrin
 				why2 if why2 != "" else "combat_cmd_after_end"])
 		j += 1
 	var result: BattleResult = end.result
+	game.end_combat()
+	if result != null and result.outcome == BattleResult.Outcome.DEFEAT:
+		game.on_game_over(&"defeat")
+	return j
+
+
+## The command journal of a season slot (Save.load_slot; 09 §9.1, V-3), replayed from the loaded save `st` with the
+## engine of run — every entry through the same Game methods as live, so the Show reactions follow; the log is
+## anchored at `st` (a "from_save" header). A combat the journal ends in (CommandJournal.open_combat) is decided from
+## its start by the autopilot (_combat_autopilot). {"state": the replayed GameState (null when nothing could be
+## replayed), "errors": PackedStringArray (like replay_log's), "autopilot": bool}. The live context is restored
+## afterwards like after every replay; the caller (Save) adopts the state.
+func resume(st: GameState, entries: Array) -> Dictionary:
+	var out: Dictionary = {"state": null, "errors": PackedStringArray(), "autopilot": false}
+	if st == null:
+		return out
+	var open_at: int = CommandJournal.open_combat(entries)
+	var header: Dictionary = {"schema": 1, "seed": st.seed, "slot": st.slot, "mode": "campaign",
+		"difficulty": String(st.difficulty), "sim_version": RunSim.SIM_VERSION, "event_id": "", "run_id": "journal",
+		"player_id": "local", "window_id": "", "league": "", "from_save": true,
+		"combat_mode": String(RunRules.REALTIME), "rt_version": RunRules.RT_VERSION,
+		"start_state": PersonaPrivacy.scrub_state_dict(st.to_dict()), "start_hash": StateHash.of(st)}
+	_autopilot_at = open_at
+	_final_state = null
+	var res: Dictionary = run(CommandJournal.to_run_log(header, entries, open_at), -1)
+	_autopilot_at = -1
+	out["state"] = _final_state
+	out["errors"] = res["errors"]
+	out["autopilot"] = open_at >= 0
+	return out
+
+
+## The open combat of a journal (09 §9.1: "gleicher Seed, beide Einheiten KI, die bis dahin gemachten Eingaben zählen
+## nicht"): built like the live one (Game.make_rt_setup: the same seeds), its recorded entries dropped, the controlled
+## unit on autopilot from tick 0, played to its end through the CombatDirector's Game API (combat_boundary → submit →
+## combat_step), then Game.end_combat (a defeat is the season's death rule). Returns the index of the next command.
+func _combat_autopilot(cmds: Array[Dictionary], i: int, c: Dictionary, errors: PackedStringArray) -> int:
+	var j: int = i + 1
+	while j < cmds.size() and _entry_ct(cmds[j]) >= 0:
+		j += 1
+	if game.make_rt_setup(c) == null:
+		return j
+	var rt: RtSim = game.combat
+	var guard: int = rt.bal.i("MAX_COMBAT_TICKS") + 1
+	var first: bool = true
+	while game.combat != null and not (game.combat as RtSim).is_finished() and guard > 0:
+		guard -= 1
+		game.combat_boundary()
+		if first:
+			first = false
+			var why: String = game.combat_submit(RtCommand.autopilot(0, rt.controlled_id(), true))
+			if why != "":
+				errors.append("journal: the autopilot was refused (%s)" % why)
+		game.combat_step()
+	var result: BattleResult = (game.combat as RtSim).result if game.combat != null else null
 	game.end_combat()
 	if result != null and result.outcome == BattleResult.Outcome.DEFEAT:
 		game.on_game_over(&"defeat")

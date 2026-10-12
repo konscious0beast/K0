@@ -41,6 +41,13 @@
 > und `GameReplay` lehnen ihn mit `sd_unavailable` ab (`test_m8_command`, `test_09_st0_contract`); der Tag-Präfix `cast_`
 > ist registriert (02_TECH §0.8). SD3 ersetzt die Ablehnung durch `SdRules` in eigenen Abschnitten.
 >
+> **Stand SD2-A/B (2026-10-12, Branch `ptd/sd2`):** Regelbuch und Duell-Kern sind umgesetzt — rein, headless, noch ohne
+> Bildschirm: `data/stempel/*.json` (24 Karten, 4 Gegner, 4 Zustände, Durchsage, Lernduell-Drehbuch, 101 Zeilen, 12
+> Kosmetik-Einträge, 10 Dienstauszeichnungen), `SdRulebook` mit eigenem Validator, `SdSetup`, `SdDuel`, `SdEvent`, `SdAi`,
+> `SdLog`, `SdCollection` und sieben neue Testdateien. Die Engine ist unverändert (`test_sd_engine_golden` grün). Was beim
+> Umsetzen entschieden wurde (U-1 … U-16), die Gates und was SD2-C … F vorfinden: Kap. 7.3 „Stand SD2-A/B“; Messwerte und
+> die geänderte Band-Grenze des Stempelmeisters: Kap. 6.9.
+>
 > **Namen der Phasen:** Der Orchestrator nennt sie M1–M3. Weil „M0–M8“ schon die Module aus 02_TECH sind — und **M1 genau der
 > CTB-Kampf-Kern ist, um den es hier geht** —, heißen sie hier **SD1–SD3** (Stempelduell-Phasen): SD1 = M1, SD2 = M2,
 > SD3 = M3, gleicher Inhalt.
@@ -622,7 +629,8 @@ Gründlich, nie gemein, liest wirklich alles.
 - **Deck:** je 2 × Kleingedrucktes, Leinen-Fallstrick, Ablehnungsbescheid, Formular 27b, Wiedervorlage, Erste Hilfe,
   Heiliges Schlabbern, Doppelstempel, Frostniesen, Gegengift-Gurgler.
 - **Spielweise (plant):** bei jeder vierten eigenen Karte bevorzugt sie den Leinen-Fallstrick (Dienst nach Vorschrift,
-  `turn_mod [4, 0]`), sonst gern Kleingedrucktes, unter 50 % Geduld heilt sie; ansonsten arbeitet sie ihren Stapel ab.
+  `turn_mod [4, 0]`), sonst gern Kleingedrucktes, unter 40 % Geduld heilt sie; ansonsten arbeitet sie ihren Stapel ab.
+  (SD2: 40 statt 50 % und Heilkarten mit kleinem Gewicht — sonst lag die Startmappe unter ihrem Band, U-14.)
 
 ### 3.4 Der Stempelmeister — Endgegner
 
@@ -638,6 +646,10 @@ Feierabend-Eilvermerk und der Große Amtsstempel.
 - **Startwerte aus dem Review:** Mit Geduld 72, Tempo 12 und je 2 × Großem Amtsstempel, Wuchtschlag und Kabelpeitsche gab es
   im Prototyp einen Sieg in 1 200 Duellen (auch mit passender Mappe nur 0,3 %). Mit den Werten oben: Startmappe ≈ 4 %, Mappe
   aus dem, was man beim ersten Besuch besitzt, ≈ 50 %, volle Sammlung ≈ 63 % (Kap. 6.9).
+- **Gemessen in SD2** (`SdAi` statt der Prototyp-Heuristik, Gewichte aus `opponents.json`, 1 000 Seeds): Startmappe 7,5 %,
+  erster Besuch 46,8 %, volle Sammlung 83,1 %. Die volle Sammlung bleibt mit jeder geprüften Gewichtung über 65 % — das Band
+  ist deshalb 70–90 % (U-15). Gewichte je Phase: 1 ausgewogen (Kleingedrucktes, Leinen-Fallstrick, Wiedervorlage vorn,
+  Großer Amtsstempel 1), 2 Wiedervorlage und Tief durchatmen (unter 50 %) vorn, 3 Großer Amtsstempel und Wuchtschlag vorn.
 - **Phasen** (`phases`, GDD §3.11; Phasenwechsel nach jedem Ärger, nie übersprungen):
 
 | Phase | Geduld | `on_enter` | Spielweise | M.O.D. |
@@ -1219,6 +1231,10 @@ SD1 Schritt 0 und 4 (Kap. 6.2) — grün seit 07 R5b-2b.
   Duell-Hash.
 - **Prototyp (Review 2026-10-11):** So umgewandelt lädt das ganze Regelbuch (24 Karten, 4 Gegner, 4 Zustände, Durchsage)
   über `load_from_dicts` ohne Fehler und ohne Warnung.
+- **Umgesetzt (SD2-A):** wie in der Tabelle, dazu der Lernduell-Gegner `enm_sd_lernduell` (U-9). `SdRulebook.load_dir()`
+  sammelt alle Fehler (Validator, dann `load_from_dicts`) in `errors`; nur ein fehlerfreies Regelbuch hat einen `rules_hash`
+  (Umfang: U-3). `SdRulebook.shared()` lädt einmal je Sitzung; mit der Kampagnen-`GameData` prüft `load_dir(dir, DB.data)`
+  bzw. `campaign_problems()` zusätzlich die Kampagnen-IDs der Freischaltungen (in `test_sd_rulebook` gegen die echten Daten).
 
 ### 6.5 `SdDuel`: der Adapter um `BattleState`
 
@@ -1252,6 +1268,19 @@ func to_dict() -> Dictionary                        # float-free snapshot incl. 
 static func from_dict(d: Dictionary, p_book: SdRulebook) -> SdDuel
 func hash() -> String                               # SHA-256 over {"b": StateHash.battle_hash_input(battle), "sd": …}
 ```
+
+**Umgesetzt (SD2-B) — Abweichungen von der Skizze:** `hash()` heißt `state_hash()` (02_TECH §13.1: kein Name einer
+eingebauten Funktion); Deckgröße, Hand, Kopien, Geduld, Tempo und Dienstschluss sind keine Konstanten der Klasse, sondern
+stehen in `rules.json → constants` (`book.constant("dienstschluss")`, im `rules_hash`, U-1). `start()` startet nur ein
+Setup ohne `SdSetup.problem()` (anderer `rules_hash`, unbekannter Gegner, Deckregeln). `preview(move)` liefert
+`{"order", "geduld", "delta", "weak", "resist", "immune", "blocked", "ends"}` — `order` sind die nächsten 12 Nummern als
+Combatant-IDs vom Ziehenden an (alles hinter der nächsten Nummer des Gegenübers ist Prognose), `blocked` die Zustände, die
+nicht greifen (Wiedervorlage „nicht doppelt“, Immunität); Show-Karten, Aufgeben und illegale Züge: `{}`. `ai_move()` gibt
+es, dazu getrennt `opponent_move()` (EnemyAI auf der Hand, Notlösung U-8) und `auto_policy_move()` (Harness „einfach“).
+Lesezugriff für Tisch und Ansager: `ticket()` (JETZT-Nummer = `turn_count`), `order(n)`, `side_of(id)`, `combatant(side)`,
+`geduld`/`max_geduld(side)`, `hand(side)`, `chain()` (Nummern in Folge), `dienstschluss_near()` (ab Nummer 60),
+`forced_move()`/`lessons_now()` (Lernduell), `summary()` (Ergebnis-Panel, `SdCollection.record_duel`). Reihenfolge der
+Ereignisse eines Zugs: U-5.
 
 **So spricht das Duell mit der Engine** — ohne eine Zeile Engine-Code zu ändern:
 
@@ -1305,6 +1334,10 @@ Marotten der Kampagne merken vom Duell nichts.
   `a: true` markiert Auto-Züge (nur Statistik). Namen, Persona und Kosmetik stehen nie im Log.
 - **Replay:** `SdLog.replay(book) -> {"ok", "hash", "result", "error", "mismatch_at"}` spielt bitgenau nach; ein Zug, der
   nicht legal ist, oder ein anderes Ergebnis als `res` ist ein Fehler.
+  **Umgesetzt (SD2-B)** mit dem zusätzlichen Feld `"h"` = `state_hash()` am Ende: `replay` erkennt damit auch einen
+  gefälschten Zug, der das Ergebnis nicht ändert (ohne `"h"` prüft es nur das Ergebnis). Ebenfalls Fehler: Züge nach dem
+  Ende, ein Log, das vor dem Ende aufhört, und ein Setup mit Problem (`bad setup`, z. B. 3 × Großer Amtsstempel). Das Ergebnis
+  trägt zusätzlich `"version"`.
 - **Versionen:** `SdLog.version_status(log)` → `ok` | `old_version` | `new_version` | `other_rules` (anderer `rules_hash`).
   Logs einer anderen Version spielt der Kern nicht ab und zeigt sie als „ältere Version“ (wie `RunSim.version_status`).
   `SD_VERSION` steigt, wenn sich das Ergebnis eines Duells ändern kann (Duell-Regeln, umgezogene Engine, geteilte Klassen);
@@ -1323,6 +1356,12 @@ Marotten der Kampagne merken vom Duell nichts.
 
 - **Kaputte Datei:** wie bei den Bestenlisten → leere Sammlung mit Toast „Stempelakte neu angelegt“; die Grundakte kommt
   über „Lernduell“ wieder (Kampagnen-Freischaltungen werden beim nächsten Öffnen neu gelesen).
+- **Umgesetzt (SD2-B)** als reines `SdCollection.to_dict()`/`from_dict(v, book)`; die Datei schreibt erst der Abschnitt in
+  `autoload/save.gd` (nicht Teil von SD2-A/B). Abweichungen vom Format oben: `cosmetics` hat auch den Platz `title`; neu
+  `"stats": {"duels", "wins", "show_ok", "loss_streak"}` (Showtalent zählt über alle Duelle, der Mappen-Tipp nach zwei
+  Niederlagen, Kap. 5.5); `seed` als Dezimal-String. Unbekannte IDs fallen beim Laden weg; kein Objekt, eine andere Version
+  oder falsche Listentypen → leere Sammlung mit `was_reset = true` (der Bildschirm zeigt den Toast). Den Konto-Seed würfelt
+  der Aufrufer einmal (`SdCollection.create(seed)`), der Kern hat keinen Zufall.
 - **Privatsphäre:** Die Sammlung enthält nur Katalog-IDs und Zahlen — keine Namen, keine Persona-Angaben (08 P-1, D-2);
   „Kandidat:in löschen“ (08) lässt sie unberührt. Geräteübergreifend erst mit dem Konto-Dienst (F-10).
 - **Kein Speichern im Duell:** Ein Spielstand enthält nie ein laufendes Duell; im Freien Spiel ist ein abgebrochenes Duell
@@ -1365,13 +1404,13 @@ Operationen — das Muster von `encounter` (07 §10.5):
 | `test_m1_*` (8 Dateien) | SD1 (bleiben) | die Engine wie bisher: Tick-System, Vorschau, Formeln, Zustände, KI, Kampfablauf, Schnappschuss (`test_m1_stats`: Lint-Ordner + `core/stempel/ctb`) |
 | `test_sd_engine_golden` | SD1 (umgesetzt) | zwei feste Engine-Kämpfe (regulär und Boss, Kap. 6.2 „Umgesetzt“ (e)) → eingefrorener `StateHash.of_battle`, Ereigniszahl, Prüfsumme der Ereignisse und Ausgang; zweimal gleich, Befehle über JSON nachgespielt (dazu der CTB-Teil aus `test_m8_state_hash`: Schnappschuss → `from_dict` → gleicher Hash); Änderung nur mit Begründung im Commit |
 | `test_sd_boundaries` | SD1 (umgesetzt) | die fünf Engine-Klassen kommen in Code-Zeilen (ohne Kommentare) nur in `core/stempel/**`, `scenes/stempel/**`, `core/live/state_hash.gd` und den SD-/M1-Tests vor; die Dateien liegen in `core/stempel/ctb/`, `scenes/battle/` bleibt gelöscht; `BattleState.roll_drops` gibt es nicht mehr; ein alter CTB-Kampagnen-Log ist in beiden Verifiern, Bestenliste und Lobby „ältere Version“ |
-| `test_sd_rulebook` | SD2 | Daten gültig (Validator positiv/negativ), Konverter → gültige `GameData` ohne Fehler und Warnung (Grundangriff formal gültig, Engine-Namen = IDs, kein `boss`), `rules_hash` stabil und textunabhängig, Gegnerdecks regelkonform und jede ihrer Karten mit `ai`-Eintrag, Show-Karten mit `cooldown 0`, Freischaltquellen existieren, Texte (IP-Wörter, 110 Zeichen, Platzhalter, Glyphen F8, Kurznamen ≤ 7 Zeichen) |
-| `test_sd_duel` | SD2 | Hand 5, Nachziehen, Mischen bei leerem Stapel, Umlaufmappe, Abheften (halber Ärger, Tausch, 2 WT), jede Karte des Regelbuchs gegen ihre gedruckte Wirkung, Zustände in **Nummern** (Kap. 1.6), Wiedervorlage nicht doppelt, Zuständigkeiten, Immunität, Show-Karten (Chance, Patzer), Durchsage (Warnung, Abheften halbiert), Phasen, Leinen-Fallstrick hebt den Feierabend-Eilvermerk auf, Gleichstand „Kundschaft geht vor“, Dienstschluss = vertagt, Aufgeben, Lernduell (Geduld ≥ 1, Drehbuch) |
-| `test_sd_ai` | SD2 | Gegner spielen nur aus der Hand, Notlösung → Abheften mit der richtigen Karte, Profile (Bedingungen, `turn_mod`), `SdAi.suggest` und `AutoPolicy` liefern nur legale Züge, beide würfelfrei |
-| `test_sd_replay` | SD2 | `SdLog.replay` bitgenau (Hash, Ergebnis), gefälschte Züge/Ergebnisse → Fehler, `version_status`, Schnappschuss → `from_dict` → identisches Weiterspielen, Vorschau ändert den Hash nicht (1 000 Aufrufe) |
-| `test_sd_golden` | SD2 | festes Duell mit ≈ 40 geskripteten Zügen → fester Hash und Ereigniszahl |
-| `test_sd_balance` | SD2 | Harness (CI 50 Seeds je Gegner und Bot-Profil, nachts 1 000): Bänder unten |
-| `test_sd_collection` | SD2 | Rundlauf, kaputte Datei → leer, Deckregeln, Freischaltungen (Gegner, Stempelheft, Kampagne), Seed-Zähler vor dem Duell gespeichert, keine Namen in der Datei |
+| `test_sd_rulebook` | SD2 (umgesetzt, 9 Tests) | Daten gültig (Validator positiv/negativ), Konverter → gültige `GameData` ohne Fehler und Warnung (Grundangriff formal gültig, Engine-Namen = IDs, kein `boss`), `rules_hash` stabil und textunabhängig, Gegnerdecks regelkonform und jede ihrer Karten mit `ai`-Eintrag, Show-Karten mit `cooldown 0`, Freischaltquellen existieren, Texte (IP-Wörter, 110 Zeichen, Platzhalter, Glyphen F8, Kurznamen ≤ 7 Zeichen) |
+| `test_sd_duel` | SD2 (umgesetzt, 15 Tests) | Hand 5, Nachziehen, Mischen bei leerem Stapel, Umlaufmappe, Abheften (halber Ärger, Tausch, 2 WT), jede Karte des Regelbuchs gegen ihre gedruckte Wirkung, Zustände in **Nummern** (Kap. 1.6), Wiedervorlage nicht doppelt, Zuständigkeiten, Immunität, Show-Karten (Chance, Patzer), Durchsage (Warnung, Abheften halbiert), Phasen, Leinen-Fallstrick hebt den Feierabend-Eilvermerk auf, Gleichstand „Kundschaft geht vor“, Dienstschluss = vertagt, Aufgeben, Lernduell (Geduld ≥ 1, Drehbuch) |
+| `test_sd_ai` | SD2 (umgesetzt, 5 Tests) | Gegner spielen nur aus der Hand, Notlösung → Abheften mit der richtigen Karte, Profile (Bedingungen, `turn_mod`), `SdAi.suggest` und `AutoPolicy` liefern nur legale Züge, beide würfelfrei |
+| `test_sd_replay` | SD2 (umgesetzt, 6 Tests) | `SdLog.replay` bitgenau (Hash, Ergebnis), gefälschte Züge/Ergebnisse → Fehler, `version_status`, Schnappschuss → `from_dict` → identisches Weiterspielen, Vorschau ändert den Hash nicht (1 000 Aufrufe) |
+| `test_sd_golden` | SD2 (umgesetzt, 3 Tests) | festes Duell mit ≈ 40 geskripteten Zügen → fester Hash und Ereigniszahl |
+| `test_sd_balance` | SD2 (umgesetzt, 2 Tests) | Harness (CI 50 Seeds je Gegner und Bot-Profil, nachts 1 000): Bänder unten |
+| `test_sd_collection` | SD2 (umgesetzt, 8 Tests) | Rundlauf, kaputte Datei → leer, Deckregeln, Freischaltungen (Gegner, Stempelheft, Kampagne), Seed-Zähler vor dem Duell gespeichert, keine Namen in der Datei |
 | `test_sd_ui` | SD2 | Szenen instanziieren, Fokus-Navigation, Trefferflächen ≥ 88 px und Abstände ≥ 12 px, keine Überlappung bei 1280 × 720, 1600 × 720, 1920 × 1080, 2400 × 1080 und mit Notch-Insets, Geist-Zettel, Tastatur-/Gamepad-/Touch-Zuordnung, Linkshänder-Spiegelung, statische Texte nach F8 |
 | `test_sd_tutorial` | SD2 | sechs Lektionen in Reihenfolge, Überspringen, Wiederholen, Grundakte danach |
 | `test_sd_campaign` | SD3 | Command `sd` in `Game` ≡ `RunSim` ≡ `GameReplay` (Hashes), Belohnung genau einmal je Gegner und Staffel, jeder Ablehnungsgrund, offenes Duell schließt beim nächsten eigenen Command und bleibt bei `clock`/`gift`/`twist` offen, Einsturz wartet bis Duellende + 2 min, Journal-Abbruch mitten im Duell → aufgegeben, alte Läufe ohne `sd` bitgleich |
@@ -1385,7 +1424,7 @@ Handkarte, nie Abheften; je mit Startmappe bzw. „passender“ Mappe) [zu messe
 | Ferdi | ≥ 95 % | — | ≥ 85 % | ≥ 70 % | 14–24 |
 | Graf (Übung) | 85–97 % | — | 15–40 % | 15–40 % | 24–34 |
 | Ulla | 30–50 % | ≥ 80 % | ≤ 15 % | — | 28–40 |
-| Stempelmeister | ≤ 10 % (Deckbau-Prüfung) | 50–65 % (Besitz beim ersten Besuch: 40–55 %) | ≤ 10 % | — | 20–30 |
+| Stempelmeister | ≤ 10 % (Deckbau-Prüfung) | **70–90 %** (bis SD2 50–65 %, U-15; Besitz beim ersten Besuch: 40–55 %) | ≤ 10 % | — | 20–30 |
 
 **Prototyp-Werte (Review 2026-10-11** — echte Engine, Heuristik statt `SdAi`, geschätzte KI-Gewichte, 200–300 Seeds je
 Zelle): Ferdi 100 / 99 / 99,5 % („gut“ / „einfach“ / „Zufall“, 16 Nummern); Graf 97 / 20 / 25 % (28); Ulla 32 % mit der
@@ -1397,6 +1436,34 @@ soll auf „gut“-Niveau raten.
 
 Dazu: Dienstschluss in < 1 % der Duelle, Unterschied der Siegquote mit und ohne erste Nummer ≤ 10 Punkte, keine Karte in
 > 80 % der „gut“-Siegmappen (sonst ist sie zu stark), jede Karte in ≥ 5 % (sonst zu schwach).
+
+**Gemessen in SD2-B (2026-10-12)** — `SdAi.suggest` („gut“), `AutoPolicy` („einfach“), zufällige Handkarte („Zufall“),
+Gewichte aus `opponents.json`, Seeds `1000 + i × 7919`; 1 000 Seeds je Zelle (die CI rechnet die ersten 50):
+
+| Gegner | Mappe | „gut“ | „einfach“ | „Zufall“ | Nummern (Median, „gut“) | Band | CI (50 Seeds, „gut“) |
+|---|---|---|---|---|---|---|---|
+| Ferdi | Startmappe | 100,0 % | 99,6 % | 99,4 % | 16 | ✓ | 100 % |
+| Graf | Startmappe | 92,6 % | 24,4 % | 29,7 % | 30 | ✓ | 90 % |
+| Ulla | Startmappe | 38,4 % | 11,6 % | — | 31 | ✓ | 40 % |
+| Ulla | passend (`ulla_passend`) | 99,7 % | — | — | 21 | ✓ | 100 % |
+| Stempelmeister | Startmappe | 7,5 % | 0,0 % | — | 23 | ✓ | 6 % |
+| Stempelmeister | volle Sammlung (`meister_passend`) | 83,1 % | — | — | 15 | ✓ (70–90 %) | 94 % |
+| Stempelmeister | erster Besuch (`meister_erster_besuch`) | 46,8 % | — | — | 18 | ✓ | 60 % |
+
+Dienstschluss in 0 von 13 000 Duellen. Erste Nummer: in den „gut“-Zellen höchstens 9 Punkte Unterschied (Ulla, Startmappe:
+42 zu 33 %), im Mittel 3 Punkte (CI: +6,1). Karten in den gewinnenden Zufallsmappen (CI: 25 Mappen × 4 Gegner, 65 Siege):
+20–66 % — keine über 80 %, keine unter 5 % (Bahnsteig-Suplex 20 %, Leinen-Fallstrick 66 %).
+
+- **Prüfung in der CI** (`test_sd_balance`): 50 Seeds je Zelle; eine Zelle besteht, wenn ihre Siegquote höchstens zwei
+  Standardfehler (binomial, an der Bandgrenze) außerhalb des Bands liegt — bei 50 Seeds bis zu 14 Punkte, bei 1 000 Seeds
+  ≈ 3. Mit `SD_BALANCE_SEEDS=1000` rechnet derselbe Test die 1 000 Seeds (≈ 6–7 min; ein nächtlicher Lauf ist noch nicht
+  eingerichtet — CI-Dateien gehören nicht zu SD2-A/B). Die Medianwerte prüft er ohne Spielraum.
+- **Karten-Anteile:** ausgewogene Zufallsmappen aus der vollen Sammlung — Karten-Arten in zufälliger Reihenfolge mit voller
+  Kopienzahl, bis 20 voll sind (≈ 10 Arten je Mappe, Grundanteil ≈ 45 %). Ein „gut“-Duell je Gegner und Mappe; gezählt wird,
+  in wie vielen gewinnenden Mappen eine Karte steckt. (Mappen aus ganz zufällig gezogenen Karten gewinnen fast immer und
+  messen nur den Grundanteil.)
+- **CI-Zeit** der sieben neuen Testdateien ≈ 33 s, davon `test_sd_balance` ≈ 22 s (Bänder ≈ 19 s, Karten-Anteile ≈ 3 s);
+  zum Vergleich: `check.sh` lief vorher ≈ 407 s für 1 599 Tests.
 
 **Playtest-Gate (SD2):** 5 Personen nach dem Lernduell — mindestens 4 erklären die Regel „lange Formulare, lange
 Wartezeit“ in einem eigenen Satz und finden die Wartenummern-Anzeige ohne Hilfe; Spaß ≥ 4 von 5 im Median; niemand fühlt
@@ -1436,7 +1503,8 @@ SD3 (Etage 8)
 ```
 
 **Stand 2026-10-12:** 07 R5b Schritte 1–4 mit SD1 sind umgesetzt (07 §12.6 „Stand R5b-2b“); ST0 mit dem Stub `sd` ist
-gelandet (Branch `ptd/st0`, 02_TECH §0.8: `sd` → `sd_unavailable` in `RunRules`/`RunSim`/`GameReplay`). SD2 kann beginnen.
+gelandet (Branch `ptd/st0`, 02_TECH §0.8: `sd` → `sd_unavailable` in `RunRules`/`RunSim`/`GameReplay`). SD2-A/B
+(Regelbuch, Duell-Kern, Harness) sind umgesetzt (Kap. 7.3 „Stand SD2-A/B“); SD2-C … G folgen.
 
 **Warum so:** SD1 muss in R5b liegen, weil R5b sonst löscht, was SD2 braucht. SD2 hängt an keiner Staffel-Mechanik und
 kann deshalb früh Spaß beweisen (Extras-Vorschau); SD3 braucht eine Etage 8, die es erst mit ST1-C gibt.
@@ -1493,6 +1561,66 @@ kann deshalb früh Spaß beweisen (Extras-Vorschau); SD3 braucht eine Etage 8, d
 §2.2), `core/data/seed_util.gd` (Kommentar: Zwecke `sd`, `sd_deck`), `tests/capture_recipes.gd` (Rezepte), `tools/perf.sh`
 (Szenario), `README.md` (Extras, Dokument-Index). **Gate:** alle SD2-Tests grün, Balance-Bänder, Captures in 1280 × 720,
 1600 × 720, 1920 × 1080 und 2400 × 1080 gesichtet, Perf-Ziele, Playtest-Gate (Kap. 6.9).
+
+**Stand SD2-A/B (2026-10-12, Branch `ptd/sd2`)** — umgesetzt, rein und headless (kein Bildschirm, kein Menü, kein Ton,
+kein Titel-Eintrag, kein Speicher-Haken; die Engine und alle geteilten Dateien sind unberührt):
+
+| Paket | Dateien (relativ zu `game/`) |
+|---|---|
+| SD2-A Regelbuch | `data/stempel/{cards,opponents,rules,lines,cosmetics,awards}.json`; `core/stempel/sd_rulebook.gd` (`SdRulebook`: laden, prüfen, Engine-`GameData` über `load_from_dicts`, `rules_hash`), `sd_card_def.gd` (`SdCardDef`), `sd_opponent_def.gd` (`SdOpponentDef`), `validators/sd_validator.gd` (privat; der Kampagnen-`DataValidator` bekommt keine Regel) |
+| SD2-B Duell-Kern | `core/stempel/sd_setup.gd` (`SdSetup`), `sd_duel.gd` (`SdDuel`), `sd_event.gd` (`SdEvent`), `sd_ai.gd` (`SdAi`), `sd_log.gd` (`SdLog`, `LOG_VERSION` 1; `SdDuel.SD_VERSION` 1, getrennt von `RunSim.SIM_VERSION`), `sd_collection.gd` (`SdCollection`) |
+| Tests | `tests/test_sd_{rulebook,duel,ai,replay,golden,collection,balance}.gd` (48 Tests), `tests/test_sd_fixture.gd` (Helfer `Sx` + Selbsttest), `tests/fixtures/stempel/balance_decks.json` (Harness-Mappen „passend“ und „erster Besuch“) |
+
+**Gate:** `tools/check.sh` (voll): 1 648 Tests, 0 fehlgeschlagen, 0 übersprungen, 0 Fehler in 450 s (vorher 1 599 Tests in
+407 s), `AUTOPLAY: OK`, `check.sh: OK`; alle `test_sd_*` (57, davon 49 neu) und `test_m1_*` (86) grün,
+`test_sd_engine_golden` und `test_sd_boundaries` unverändert grün; Balance: die 1 000-Seed-Werte liegen in allen Bändern,
+die 50-Seed-Zellen der CI in ihren Bändern oder im Stichproben-Spielraum (Kap. 6.9). Offen bleiben SD2-C … G: Tisch,
+Menüs, Lernduell-Bildschirme, Ton, Titel-Eintrag, Speicher-Haken, Captures, Perf und das Playtest-Gate.
+
+**Entscheidungen beim Umsetzen** (U = Umsetzung; Startwerte bleiben Daten):
+
+| Nr. | Thema | Entscheidung |
+|---|---|---|
+| U-1 | Konstanten, Namen | Deck 20, Hand 5, Kopien 2 (Show 1), Geduld 50, Tempo 10, Dienstschluss 80 (Hinweis ab 60), Lernduell-Ärger 50 %, 3 Mappen, eine Stempelheft-Belohnung je 3 Stempel stehen in `rules.json → constants` und damit im `rules_hash`; die Klassen halten keine Kopien. `SdDuel.state_hash()` statt `hash()` (02_TECH §13.1) |
+| U-2 | Datenformat (Kap. 2.7) | jede Datei `{"schema": 1, "entries": […]}` (`rules.json`: Objekte). Karten: `campaign` (Kampagnen-IDs, Kap. 2.5) statt `unlock` — Grundakte, Stempelheft und Gegner-Belohnungen stehen dort, wo sie vergeben werden (`rules.json → grundakte`/`heft`/`rewards`, `opponents.json → first_win`); neu `form` (dreistellige Formularnummer, nur Deko), `hand: "refresh"` (Umlaufmappe), `owner` (Talentkarten: `kandidat`/`graf`); der `skill`-Block trägt nur Mechanik. Gegner: `first_win.cosmetics` ist eine Liste (der Stempelmeister gibt Titel und Stempelfarbe), dazu `akte`, `rule`, `open_hand` (Graf: an) |
+| U-3 | `rules_hash` | SHA-256 über `{"sd_version", "engine": Engine-Tabellen, "duel": {Konstanten, Deckregeln je Karte (`max_copies`, `show`, `hand`), Gegnerdecks, Lernduell-Decks und Pflichtzüge}}`, jede Zahl als ppm-Ganzzahl (`CanonicalJson` nimmt keine Brüche: 1,5 → 1 500 000). Ohne Namen, Texte, Zeilen, Kosmetik, Auszeichnungen, Freischaltungen und Belohnungen. Ein Regelbuch mit Fehlern hat keinen `rules_hash` und startet kein Duell |
+| U-4 | Mischen, Ziehen | Decks werden vor dem Mischen sortiert (die Reihenfolge der Mappe zählt nicht); eine gezogene Karte kommt rechts in die Hand, die übrigen behalten ihren Platz; die Ablage wird erst gemischt, wenn vom leeren Stapel gezogen werden muss; nach Bewilligt/Abgelehnt wird nicht mehr gezogen |
+| U-5 | Ereignisse eines Zugs | `CARD_PLAYED`/`CARD_FILED` (Platz vor dem Zug) → Engine-Ereignisse der Aktion bis zum `TURN_END` des Akteurs → `HAND_REFRESHED` (Umlaufmappe) → je Karte `RESHUFFLED` (falls nötig) und `CARD_DRAWN` → Engine-Ereignisse der folgenden Nummern (Durchsage, Kleingedrucktes, `TURN_START`) → `DUEL_END`. Aus der Engine kommen auch der Phasenwechsel (`PHASE_CHANGE`), das Erscheinen der Durchsage (`SUMMON`) sowie Durchsage-Warnung und `say` (`MOD_LINE`, Text = Zeilen-Tag) |
+| U-6 | Dienstschluss | Ist nach einem Zug Nummer 80 aufgerufen (`turn_count ≥ 80`), endet das Duell `ADJOURNED` — Nummer 80 wird nicht mehr bedient |
+| U-7 | Aufgeben | ein Zug `{"op": "forfeit"}`, nur die Spieler:in und nur, wenn sie dran ist (die Züge des Gegenübers rechnet der Tisch sofort); steht im Log wie jeder Zug |
+| U-8 | Notlösung des Gegenübers | Liefert `EnemyAI` den Grundangriff, heftet das Gegenüber die Handkarte mit dem kleinsten Gewicht ab — Gewicht = größtes Gewicht der Karte in der aktuellen Aktionsliste (Phase), Bedingungen nicht beachtet, ohne Eintrag 0; Gleichstand: links |
+| U-9 | Lernduell | eigener Engine-Gegner `enm_sd_lernduell` (Ferdis Zuständigkeiten, **Geduld 26** statt 36, damit es kurz bleibt) mit dem Drehbuch als `ai` (`turn_mod [3, 0/1/2]`: Wiedervorlage, Formular 27b, Ablehnungsbescheid); feste Decks; Lektionen in `rules.json → tutorial.lessons` (`step`, `ticket`, `move`, `card`, `line`, `note`). An Nummern mit Pflichtzug (1 Stempel, 2 Formular 27b, 5 Abheften, 7 Adelsflamme) lässt `validate` nur diesen Zug zu; Tipp und Auto spielen ihn. Das Lernduell gibt keinen Heft-Stempel und zählt nicht als Sieg gegen Ferdi |
+| U-10 | Zeilen (`lines.json`) | IDs `sdl_<Tag ohne sd_, „:“ → „_“>_<nn>`; Stimmen `mod`, `mopsula`, `chat`, `opp` (das Gegenüber; Tags `sd_opp_intro:`/`sd_opp_win:`/`sd_opp_lose:`/`sd_akte:` + Feld `lines`); Platzhalter `{opp}`, `{ticket}`, `{card}`, `{count}`, `{name}`; Pflicht-Tags prüft der Validator (Ansager, Gegner, Phasen, Durchsage-Warnung, Lektionen, Tipps `sd_hint:<Grund>` aus `SdAi.HINTS`) |
+| U-11 | Ton und IP | geprüft werden **alle** Texte des Regelbuchs: `ip_words.gd`, eine eigene Wortliste (echte Behörden und Einrichtungen, „A38“, DCC-Begriffe), keine Königs- und Kronenmotive (auch außerhalb der Grafen-Zeilen), kein Pluralis Majestatis in der Grafenstimme, keine Glyphen ohne Schrift (F8), ≤ 110 Zeichen, Kurznamen ≤ 7 |
+| U-12 | Kleingedrucktes | Der Zustand trägt das Element `poison` wie seine Karte (Formular-Art Papierkram): Der Tick-Ärger erscheint in der Farbe der Art; Zuständigkeiten ändern ihn nicht (fest 2), nur eine Immunität (Faktor 0) hielte den Zustand ab — keiner der vier Gegner hat eine |
+| U-13 | Sammlung | `SdCollection` (Format Kap. 6.7 „Umgesetzt“): Lernduell → Grundakte, Startmappe als Mappe A, Kartenrücken „Durchschlag“; erster Sieg → `first_win`; jeder Sieg außerhalb des Lernduells ein Heft-Stempel, je 3 Stempel der nächste noch nicht besessene Eintrag der Heft-Reihenfolge; volles Album → `rewards.album`; Aufgeben zählt als Niederlage, Vertagt gar nicht. „Automatisch füllen“ wie Kap. 2.6 (Gleichstand: Reihenfolge in `cards.json`) |
+| U-14 | Ulla | heilt erst unter 40 % Geduld (Erste Hilfe und Schlabbern Gewicht 3, Gegengift 2); mit dem ersten Entwurf (unter 50 %, Gewicht 8) lag die Startmappe bei 22–25 %, jetzt 38 % |
+| U-15 | Band Stempelmeister | „passend“ (volle Sammlung) **70–90 %** statt 50–65 %: `SdAi` spielt stärker als die Prototyp-Heuristik, und die volle Sammlung (Großer Amtsstempel, Kaffee, Leinen-Fallstrick gegen den Feierabend-Eilvermerk) lag mit allen geprüften Gewichtungen bei ≈ 82–84 %. Startmappe (≤ 10 %) und erster Besuch (40–55 %) — die eigentliche Deckbau-Prüfung — halten ihre Bänder. **Freigegeben (Orchestrator, 2026-10-12):** Wer die Sammlung vollständig hat, soll den Endgegner meist schlagen; die Herausforderung liegt beim ersten Besuch, und menschliche Spieler:innen liegen ohnehin unter dem Bot „gut“ |
+| U-16 | Balance in der CI | 50 Seeds je Zelle mit 2-σ-Spielraum, 1 000 Seeds über `SD_BALANCE_SEEDS`; Karten-Anteile über ausgewogene Zufallsmappen (Kap. 6.9) |
+
+**Was SD2-C … F vorfinden:**
+
+- **Tisch (SD2-C):** `SdRulebook.shared()` (einmal je Sitzung; `is_valid()`, sonst `errors`), `SdSetup.create(book, opp,
+  mappe, seed)` bzw. `SdSetup.lernduell(book)`, `SdDuel.new(setup, book)`, `start()`. Ist die Spieler:in dran:
+  `legal_moves()`/`validate(move)`, bei Fokuswechsel `preview(move)` (Geist-Zettel, Plaketten-Hinweise), dann `submit(move)`
+  → `Array[SdEvent]` abspielen und erst danach den Zustand lesen; ist das Gegenüber dran: `submit(opponent_move())` (die
+  Durchsage rechnet die Engine selbst). Pfote: `SdAi.suggest(duel)` → `{"op", "slot", "hint"}`, Fußnote aus
+  `book.lines_for("sd_hint:" + hint)`. Anzeige: `order()`, `ticket()`, `dienstschluss_near()`, `chain()`,
+  `geduld`/`max_geduld(side)`, `hand(side)` (Gegenhand nur offen zeigen, wenn `open_hand`), `combatant(side).statuses`
+  (Plaketten aus `book.statuses[id]`: Name, Text, Farbe, Symbol), `book.durchsage` (Kurzname, Symbol, Text); Karten und
+  Gegner: `book.card(id)`, `book.opponent(id)`.
+- **Menüs (SD2-D):** `SdCollection.is_unlocked`, `deck_problem` (ein deutscher Satz fürs Aktenschrank-Banner), `auto_fill`,
+  `set_deck`/`set_active`/`active_deck`, `equip`/`unequip`, `set_option`, `next_heft_reward`, `wants_deck_tip`,
+  `apply_campaign(ids)` (die IDs liest der Bildschirm aus den Speicherplätzen); vor dem Duell `next_duel_seed()` und
+  **speichern**, danach `record_duel(duel.summary(), book)` → `{"cards", "cosmetics", "awards", "heft"}` für die Toasts.
+  Album: `book.card_ids`, `book.heft`, `book.cosmetics`, `book.awards`.
+- **Lernduell (SD2-E):** je Nummer `lessons_now()` (Zeile `line`, Hinweiskarte `note`) und `forced_move()` (hervorgehobene
+  Karte); andere Züge lehnt `validate` ab. „Ich kenne mich aus“: `SdCollection.complete_tutorial(book)`.
+- **Ton und Overlay (SD2-F):** Klänge an `SdEvent.kind` und den Engine-Typen (`DAMAGE` mit `weak`/`resist`/`immune`,
+  `STATUS_ADDED`/`STATUS_BLOCKED`, `STUNT_RESULT`, `MOD_LINE`); Zeilen über `book.lines_for(tag)` (Feld `voice`).
+- **Speicher-Haken** (`autoload/save.gd`, eigener Abschnitt): `load_sd_collection()` = `SdCollection.from_dict(JSON, book)`
+  (`was_reset` → Toast), `save_sd_collection(c.to_dict())` atomar; den Konto-Seed einmal außerhalb von `core/` würfeln
+  (`SdCollection.create(seed)`). Der Titel-Eintrag „Extras“ ruft nur `scenes/stempel/`.
 
 ### 7.4 SD3 — Etage 8 (mit 09 ST1)
 

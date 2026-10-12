@@ -1,0 +1,121 @@
+{
+	"schema": 1,
+	"constants": {
+		"deck_size": 20,
+		"hand_size": 5,
+		"max_copies": 2,
+		"max_copies_show": 1,
+		"player_geduld": 50,
+		"tempo": 10,
+		"dienstschluss": 80,
+		"dienstschluss_warn": 60,
+		"tutorial_dmg_pct": 50,
+		"mappen": 3,
+		"heft_every": 3
+	},
+	"statuses": [
+		{
+			"id": "sts_sd_wiedervorlage",
+			"name": "Wiedervorlage",
+			"text": "Die nächste Nummer rutscht 3 Werktage nach hinten. Endet bei dieser Nummer. Nicht doppelt.",
+			"color": "#ffc93c",
+			"icon": "clock_arrow",
+			"kind": "debuff",
+			"default_turns": 1,
+			"flags": ["delay_on_apply"]
+		},
+		{
+			"id": "sts_sd_vorschrift",
+			"name": "Dienst nach Vorschrift",
+			"text": "Die nächsten 2 Nummern dauern 50 % länger.",
+			"color": "#4f8dff",
+			"icon": "snail",
+			"kind": "debuff",
+			"default_turns": 3,
+			"tick_speed_mult": 1.5,
+			"excludes": ["sts_sd_eilvermerk"]
+		},
+		{
+			"id": "sts_sd_eilvermerk",
+			"name": "Eilvermerk",
+			"text": "Karten sind 40 % schneller bearbeitet. Hebt Dienst nach Vorschrift auf.",
+			"color": "#ff9a2e",
+			"icon": "seal_exclamation",
+			"kind": "buff",
+			"default_turns": 3,
+			"tick_speed_mult": 0.6,
+			"excludes": ["sts_sd_vorschrift"]
+		},
+		{
+			"id": "sts_sd_kleingedrucktes",
+			"name": "Kleingedrucktes",
+			"text": "Zu Beginn jeder der nächsten 3 Nummern: 2 Geduld weniger.",
+			"color": "#4ade80",
+			"icon": "magnifier",
+			"kind": "debuff",
+			"default_turns": 3,
+			"tick_timing": "turn_start",
+			"tick_pct": -1,
+			"tick_min": 2,
+			"element": "poison"
+		}
+	],
+	"durchsage": {
+		"id": "pu_sd_durchsage",
+		"name": "Durchsage",
+		"short": "DURCHSAGE",
+		"text": "Wenn ihre Nummer kommt: 4 Ärger, mit Abheften 2. Danach 6 Werktage Pause.",
+		"icon": "speaker",
+		"action": {"fixed_pct_maxhp": 8, "element": "none", "target": "all_party"},
+		"ctr_after": 100,
+		"warn_at": 2,
+		"warn_tag": "sd_durchsage_warn"
+	},
+	"grundakte": ["sdc_stempel", "sdc_doppelstempel", "sdc_formular_27b", "sdc_ablehnung", "sdc_wiedervorlage",
+		"sdc_kleingedrucktes", "sdc_durchatmen", "sdc_umlaufmappe", "sdc_werbepflaster", "sdc_kaeltespray",
+		"sdc_wuchtschlag", "sdc_adelsflamme"],
+	"startmappe": {"sdc_stempel": 2, "sdc_doppelstempel": 2, "sdc_formular_27b": 2, "sdc_ablehnung": 2,
+		"sdc_wiedervorlage": 2, "sdc_wuchtschlag": 1, "sdc_kleingedrucktes": 2, "sdc_durchatmen": 2,
+		"sdc_umlaufmappe": 1, "sdc_werbepflaster": 2, "sdc_kaeltespray": 1, "sdc_adelsflamme": 1},
+	"heft": ["sdc_frostniesen", "sdc_erste_hilfe", "sdc_kaffee", "sdc_suplex", "sdc_auftritt", "sdk_back_wartemarke",
+		"sdk_back_rohrpost", "sdk_back_durchsage", "sdk_mat_gummibaum"],
+	"rewards": {
+		"tutorial": {"cosmetics": ["sdk_back_durchschlag"]},
+		"album": {"cosmetics": ["sdk_title_vollstaendige_akte", "sdk_back_goldschnitt"]}
+	},
+	"autofill": {"max_per_art": 6, "min_heal": 3},
+	"tutorial": {
+		"opponent": "sdo_ferdi",
+		"geduld": 26,
+		"player_deck": ["sdc_stempel", "sdc_formular_27b", "sdc_ablehnung", "sdc_kaeltespray", "sdc_durchatmen",
+			"sdc_doppelstempel", "sdc_wiedervorlage", "sdc_adelsflamme", "sdc_stempel", "sdc_wuchtschlag",
+			"sdc_formular_27b", "sdc_kleingedrucktes", "sdc_doppelstempel", "sdc_werbepflaster", "sdc_ablehnung",
+			"sdc_umlaufmappe", "sdc_wiedervorlage", "sdc_kleingedrucktes", "sdc_durchatmen", "sdc_werbepflaster"],
+		"opponent_deck": ["sdc_wiedervorlage", "sdc_formular_27b", "sdc_ablehnung", "sdc_durchatmen",
+			"sdc_werbepflaster", "sdc_durchatmen", "sdc_werbepflaster", "sdc_stempel", "sdc_doppelstempel",
+			"sdc_kaeltespray", "sdc_umlaufmappe", "sdc_gegengift", "sdc_stempel", "sdc_doppelstempel",
+			"sdc_formular_27b", "sdc_ablehnung", "sdc_kaeltespray", "sdc_wiedervorlage", "sdc_umlaufmappe",
+			"sdc_gegengift"],
+		"ai": {"type": "weighted", "actions": [
+			{"skill": "skl_sdc_wiedervorlage", "weight": 10, "target": "random", "cond": {"turn_mod": [3, 0]}},
+			{"skill": "skl_sdc_formular_27b", "weight": 10, "target": "random", "cond": {"turn_mod": [3, 1]}},
+			{"skill": "skl_sdc_ablehnung", "weight": 10, "target": "random", "cond": {"turn_mod": [3, 2]}},
+			{"skill": "skl_sdc_durchatmen", "weight": 6, "target": "self", "cond": {"self_hp_below": 0.5}},
+			{"skill": "skl_sdc_werbepflaster", "weight": 4, "target": "self", "cond": {"self_hp_below": 0.5}},
+			{"skill": "skl_sdc_gegengift", "weight": 2, "target": "self", "cond": {"self_hp_below": 0.5}},
+			{"skill": "skl_sdc_doppelstempel", "weight": 3, "target": "random"},
+			{"skill": "skl_sdc_stempel", "weight": 2, "target": "random"},
+			{"skill": "skl_sdc_kaeltespray", "weight": 2, "target": "random"},
+			{"skill": "skl_sdc_umlaufmappe", "weight": 1, "target": "self"}]},
+		"lessons": [
+			{"step": 1, "ticket": 1, "move": "play", "card": "sdc_stempel", "line": "sd_tut:1", "note": ""},
+			{"step": 2, "ticket": 2, "move": "", "card": "", "line": "sd_tut:2", "note": "sd_tut_note:2"},
+			{"step": 3, "ticket": 2, "move": "play", "card": "sdc_formular_27b", "line": "sd_tut:3",
+				"note": ""},
+			{"step": 4, "ticket": 3, "move": "", "card": "", "line": "sd_tut:4", "note": "sd_tut_note:4"},
+			{"step": 5, "ticket": 5, "move": "file", "card": "", "line": "sd_tut:5", "note": ""},
+			{"step": 6, "ticket": 7, "move": "play", "card": "sdc_adelsflamme", "line": "sd_tut:6",
+				"note": "sd_tut_note:6"}
+		]
+	}
+}

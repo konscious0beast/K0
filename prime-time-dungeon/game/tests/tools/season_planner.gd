@@ -122,7 +122,7 @@ static func candidates(state: GameState, data: GameData, layout: FloorLayout, st
 static func goal(state: GameState, data: GameData, layout: FloorLayout, here: Vector2i, strategy: String,
 		tried: Dictionary, tries: Dictionary) -> Dictionary:
 	var fr: FloorRun = state.floor_run
-	var dist: Dictionary = layout.distances(here, fr.opened_gates, false, boss_blocks(layout, fr, NO_CELL))
+	var dist: Dictionary = layout.distances(here, fr.opened_gates, false, blocks(state, data, layout, tried, NO_CELL))
 	var strat: String = auto_strategy(state) if strategy == "auto" else strategy
 	var best: Dictionary = nearest(candidates(state, data, layout, strat, tried, false), dist)
 	if not best.is_empty():
@@ -163,7 +163,7 @@ static func goal(state: GameState, data: GameData, layout: FloorLayout, here: Ve
 static func pensum(state: GameState, data: GameData, layout: FloorLayout, here: Vector2i, tried: Dictionary,
 		fb_floor: int) -> Dictionary:
 	var fr: FloorRun = state.floor_run
-	var dist: Dictionary = layout.distances(here, fr.opened_gates, false, boss_blocks(layout, fr, NO_CELL))
+	var dist: Dictionary = layout.distances(here, fr.opened_gates, false, blocks(state, data, layout, tried, NO_CELL))
 	var qb_done: bool = layout.quarter_boss == Vector2i(-1, -1) or fr.quarter_boss_defeated
 	var pflicht: bool = qb_done and nearest(candidates(state, data, layout, "typical", tried, false), dist).is_empty()
 	var fb_done: bool = layout.floor_boss == Vector2i(-1, -1) or fr.floor_boss_defeated or fb_floor >= FLOOR_BOSS_TRIES
@@ -329,6 +329,24 @@ static func nearest(cands: Array[Dictionary], dist: Dictionary) -> Dictionary:
 			best_d = d
 			best = c
 	return best
+
+
+## The rooms a walk goes round unless they are the goal: boss_blocks and the rooms of living groups the party lost to
+## GROUP_TRIES times (a person avoids them); Ohne Netz (careful) also those of groups above yellow and of show bosses.
+## When no way is left round them, the bots walk through anyway (boss_blocks only).
+static func blocks(state: GameState, data: GameData, layout: FloorLayout, tried: Dictionary,
+		goal: Vector2i) -> Array[Vector2i]:
+	var fr: FloorRun = state.floor_run
+	var out: Array[Vector2i] = boss_blocks(layout, fr, goal)
+	var lv: int = hero_level(state)
+	var safe: bool = careful(state)
+	for e: EnemySpawn in layout.enemies:
+		if e.is_boss or e.is_stray() or e.cell == goal or out.has(e.cell) or fr.defeated_groups.has(e.id):
+			continue
+		if int(tried.get("lost:" + e.id, 0)) >= GROUP_TRIES \
+				or (safe and (group_level(data, e) > lv + YELLOW or is_show_boss(data, e))):
+			out.append(e.cell)
+	return out
 
 
 ## Living boss rooms (never walked through unless they are the goal).

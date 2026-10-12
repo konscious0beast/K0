@@ -786,6 +786,10 @@ func _boss_objective(layout: FloorLayout, fr: FloorRun) -> Dictionary:
 
 ## Living boss rooms (never walked through unless they are the goal).
 func _boss_blocks(layout: FloorLayout, fr: FloorRun, goal: Vector2i) -> Array[Vector2i]:
+	if season_def != "" and _season_planner != null:   # Staffeln (09, ST1-I): season_planner.gd blocks
+		var avoid: Array[Vector2i] = []
+		avoid.assign(_season_planner.call("blocks", Game.state, DB.data, layout, tried, goal))
+		return avoid
 	var out: Array[Vector2i] = []
 	if layout.quarter_boss != Vector2i(-1, -1) and not fr.quarter_boss_defeated and layout.quarter_boss != goal:
 		out.append(layout.quarter_boss)
@@ -1239,6 +1243,9 @@ func travel(cell: Vector2i) -> Walk:
 	var fr: FloorRun = Game.state.floor_run
 	var path: Array[Vector2i] = find_path(layout, ex.get_player_cell(), cell, fr.opened_gates,
 		_boss_blocks(layout, fr, cell))
+	if path.is_empty() and season_def != "":          # Staffeln (09, ST1-I): no way round avoided rooms — through them
+		path = find_path(layout, ex.get_player_cell(), cell, fr.opened_gates,
+			_season_planner.call("boss_blocks", layout, fr, cell))
 	if path.is_empty():
 		fail("no path from %s to %s" % [str(ex.get_player_cell()), str(cell)])
 		return Walk.INTERRUPTED

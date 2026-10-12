@@ -162,6 +162,9 @@ func test_planner_strategies_on_the_season_floors() -> void:
 		var lost: Dictionary = {"lost:" + gid: Planner.GROUP_TRIES}
 		for c5: Dictionary in Planner.candidates(st, d, l, "thorough", lost, false):
 			assert_ne(str(c5["id"]), gid, "floor %d: a group that won twice stays alone" % f)
+		var gcell: Vector2i = l.enemy_by_id(gid).cell
+		assert_true(Planner.blocks(st, d, l, lost, Planner.NO_CELL).has(gcell), "floor %d: … and its room is avoided" % f)
+		assert_false(Planner.blocks(st, d, l, lost, gcell).has(gcell), "floor %d: unless it is the goal" % f)
 	assert_eq(s.rejected_cmds, [] as Array[Dictionary])
 
 
@@ -246,6 +249,11 @@ func test_planner_careful_ohne_netz() -> void:
 				var e: EnemySpawn = l.enemy_by_id(str(c["id"]))
 				assert_false(Planner.is_show_boss(d, e), "%s: no show boss Ohne Netz" % strat)
 				assert_true(Planner.group_level(d, e) <= Planner.hero_level(st) + Planner.YELLOW, "%s: yellow at most" % strat)
+	var avoid: Array[Vector2i] = Planner.blocks(st, d, l, {}, Planner.NO_CELL)
+	for e: EnemySpawn in l.enemies:
+		if not e.is_boss and not e.is_stray() and (Planner.group_level(d, e) > Planner.hero_level(st) + Planner.YELLOW
+				or Planner.is_show_boss(d, e)):
+			assert_has(avoid, e.cell, "Ohne Netz the room of %s is walked round" % e.id)
 	st.floor_run.quarter_boss_defeated = true
 	assert_eq(Planner.boss(st, l, "thorough", 0, 0, false), {}, "no optional Etagenboss Ohne Netz")
 	st.floor_run.quarter_boss_defeated = false

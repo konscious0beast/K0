@@ -258,8 +258,8 @@ func _progress(g: Dictionary) -> bool:
 ## safe room first).
 func _goal() -> Dictionary:
 	var fr: FloorRun = rs.state.floor_run
-	var dist: Dictionary = layout.distances(here, fr.opened_gates, false, Planner.boss_blocks(layout, fr,
-		Planner.NO_CELL))
+	var dist: Dictionary = layout.distances(here, fr.opened_gates, false, Planner.blocks(rs.state, data, layout,
+		tried, Planner.NO_CELL))
 	_heal_items()
 	_equip_best()
 	if _logout_due:
@@ -338,8 +338,11 @@ func _do(g: Dictionary) -> void:
 ## the countdown), the season ended or a group on the way won.
 func _walk(cell: Vector2i, boss: bool, goal_group: String = "") -> bool:
 	var fr: FloorRun = rs.state.floor_run
-	var p: Array[Vector2i] = Planner.path(layout, here, cell, fr.opened_gates, Planner.boss_blocks(layout, fr,
-		cell if boss else Planner.NO_CELL))
+	var goal: Vector2i = cell if boss else Planner.NO_CELL
+	var p: Array[Vector2i] = Planner.path(layout, here, cell, fr.opened_gates, Planner.blocks(rs.state, data, layout,
+		tried, goal))
+	if p.is_empty():                                 # no way round the avoided rooms: through them
+		p = Planner.path(layout, here, cell, fr.opened_gates, Planner.boss_blocks(layout, fr, goal))
 	if p.is_empty():
 		errors.append("floor %d: no path from %s to %s" % [fr.index, str(here), str(cell)])
 		tried["unreachable:%s" % str(cell)] = true

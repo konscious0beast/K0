@@ -2636,6 +2636,12 @@ Aufbau des Combatants) + `on combat_start` mit einer schwachen `sts_regen`-Varia
 `pas_coin_slot` → `skill_pm` `item:*` `power` 1250; `pas_ember` → `skill_pm` `element:fire` `power` 1150; `pas_see_through` →
 `first_hit_taken_pm` 500; `pas_court_flight` → `on combat_start` `sts_haste` 3 s (Bellen-Reichweite: Erkundung). Alles über
 bestehende `MOD_OPS` und Combatant-Felder — Etage 3 braucht keine neue Sim-Funktion, nur Daten.
+**Stand Recall (09, 2026-10-12):** Alle acht wirken. Die sechs Kampf-Passive setzt `BattleBridge` seit R4 so um
+(`_rt_species_mods`, `_rt_species_unit`; `pas_spores` mit „Sporenkur“ `sts_spores`, +1 % HP alle 3 s); `pas_authentic`
+multipliziert die Follower aus Kämpfen (`Casting.follower_pm` im Produkt `GameState.follower_pm`), die Bellen-Reichweite von
+`pas_court_flight` die Feldfähigkeit der führenden Figur (`Casting.field_range_pm` in `HeroRules.field_mods`) — beides
+außerhalb von `core/rt`. Die Anzeige im Kampf (Spezies und Klasse am Party-Rahmen, Bauchbinde „ORIGINAL“) ist Antrag
+CR-32 p (§12.10).
 
 ---
 
@@ -3781,7 +3787,7 @@ Datentabellen (um `rt` erweitert).
 | 16 | Persona im Kampf (08 CR-24, Exportgrenze 08 §2.7 Nr. 5) | `RtUnit.display_name` ist der Def-Name, nie der Persona-Name (Regel für `make_rt_setup`, R1b); `StateHash.of_rt` lässt jeden `display_name` aus (**R1a umgesetzt**); Puppen bauen ihre Figur über `DB.party_model` (R2), Einheitenrahmen lösen Namen über `UiUtil.member_name` (R3) | R1b, R2, R3 |
 | 17 | Persona-Zeilen im Kampf | nie: `show_persona_hooks.gd` feuert nicht, solange `Game.in_battle`; eine wartende Persona-Zeile verfällt bei `Events.battle_started` (08 §4.3, K0-Haken) | R2 (Kampfbeginn sendet `battle_started`) |
 
-### 12.10 Änderungsanträge aus 09 (CR-32; Stand Vertrag 4, ST1-D und ST1-G, 2026-10-12)
+### 12.10 Änderungsanträge aus 09 (CR-32; Stand Vertrag 4, ST1-D, ST1-G und Recall, 2026-10-12)
 
 09 CR-32 (a)–(c) sollen vor R4 nur Schema-Haken sein. Vertrag 4 (09 ST1-A; 02_TECH §0.8 „Stand Vertrag 4“) hat erledigt,
 was ohne `core/rt/**` und `scenes/combat/**` geht: (a) `classes.json → rt` (Klassenleiste im Schema von `party.json → rt.bar`
@@ -3802,6 +3808,7 @@ bitgleich.
 | CR-32 m (ST1-G) | `core/rt/rt_setup.gd`, `core/rt/rt_sim.gd`, `core/progression/battle_bridge.gd` | **Der Gast im Schlafkampf** (09 §5.3, G-5): Eine Helfer:in, die Wache hält, kämpft gegen die nächste Streife mit — als Gast `p2` aus CR-32 c (`RtSetup.guest`), den `SleepFight.command` (`core/season/sleep_fight.gd`) dann in den Kampf-Command legt (Klasse und Stufe aus `CastSim.member_view`, Taktik „Unterstützen“). Bis dahin halbiert die Wache den Schaden der Streife (`SleepFight.WATCH_DMG_PM`) und die Streife ist nie aufgebracht | Eigentum `core/rt`, mit CR-32 c |
 | CR-32 n (ST1-G) | `core/progression/battle_bridge.gd` (`_rt_cell`), `core/progression/enemy_levels.gd` (`apply`) | **Das Layout einmal je Kampf** (09 G-15): Beide erzeugen je Kampf `DungeonGenerator.generate` neu — auf einer Staffel-Etage ≈ 2 × 10 ms. Vorschlag: `make_rt_setup_rules` nimmt ein optionales `layout` an und reicht es weiter (der Live-Kampf hat es in `Game._layout`, `RunSim` in `_current_layout`, der Schlafkampf in `SleepResolver.layout_of`), oder `DungeonGenerator.generate` merkt sich das letzte Layout (Schlüssel: Etage und Seed). Ohne Wirkung auf Ergebnisse; spart im Todesraten-Test (09 G-9) rund ein Fünftel | Eigentum 07 (R1b) und ST1-C |
 | CR-32 o (ST1-G) | `core/rt/rt_sim.gd`, `core/rt/rt_setup.gd` | **Schlafkampf ohne Hilfskonstruktionen** (09 G-6): (1) ein Schalter „Autopilot für jede Figur der Party“ im Setup — heute schickt `SleepFight` nach jedem `CONTROL_CHANGED` den Autopilot neu an die gesteuerte Figur; (2) ein öffentliches `RtSim.result_now(outcome)` — das Ergebnis des Kampfs, wie es in diesem Tick steht (Flucht beim Notfall-Rückzug oder wenn die Streife weiterzieht); heute setzt `SleepFight.flight` es aus `tally` und den Einheiten zusammen (gleiche Felder wie `rt_result.gd` für eine Flucht). Ohne Staffel unberührt | Eigentum `core/rt` |
+| CR-32 p (Recall, 2026-10-12) | `scenes/combat/ui/unit_frames.gd` (Party-Rahmen), die Bauchbinde beim Kampfstart (`scenes/combat`) | **Spezies und Klasse im Kampf** (06 §3.2, §3.5; 09 R-14): (1) nach dem Recall nennt der Party-Rahmen unter dem Namen „Spezies · Klasse“ (die Form der statischen Helfer `pair_text`/`passive_text` in `scenes/ui/recall.gd`, z. B. „Kachelgolem · Abrissbirne“; gekürzt mit Ellipse, der Tooltip trägt beides und den Satz des Passivs), vorher nichts; (2) eine Figur mit `spc_original` bekommt beim Kampfstart die Bauchbinde „ORIGINAL“ (06 §3.2; einmal je Kampf wie die Show-Boss-Bauchbinde, nicht über einem Boss-Intro). Daten: `PartyMember.species_id`/`class_id`, Namen aus `species.json`/`classes.json`; nur Anzeige, die Sim bleibt unberührt; ohne Staffel nie sichtbar (`class_id` bleibt `""`). Bis dahin zeigt Pausemenü → Party beides | Eigentum `scenes/combat` (R3) |
 
 ---
 

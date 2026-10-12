@@ -1785,6 +1785,11 @@ Neue Tags (Block D in `mod_lines.json`, 39 Zeilen):
   Regeln in `Casting` (Command `casting`). `classes.json` (8) und `species.json` (8) werden validiert; Werte-Multiplikatoren
   wirken in `Progression.total_stats` (Klasse, dann Spezies); Passiva sind validiert, aber noch nicht ausgewertet; **noch keine
   Casting-UI** (kommt mit Etage 3).
+- **Stand Recall (2026-10-12):** Die Runde heißt sichtbar **„Recall“** (08 F-7) und ist gebaut — in Staffeln auf Etage 3
+  (06 §3.5 „Stand Recall“, 09 Kap. 11.3): öffnet im ersten Safe Room von selbst, Spezies- und Klassen-Karten mit Wirkung in
+  einem Satz, Werten vorher → nachher und den ersten Klassenfähigkeiten, Urteil der Jury; alle acht Spezies-Passive wirken.
+  Talente wählt man in Staffeln im Safe Room jederzeit kostenlos um (Talentbaum, 09 §8.4) — ein eigenes Talent-Reset
+  entfällt.
 
 ### 12.2 Schema `classes.json` (= `ClassDef`, 02_TECH §4.4.4 erweitert)
 

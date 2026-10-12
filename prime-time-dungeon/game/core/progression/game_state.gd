@@ -102,9 +102,11 @@ func hype_gain_pm(data: GameData) -> int:
 
 
 ## Follower factor in integer per mille (06 §8.0 Nr. 4): maxi(0, roundi(follower_mult × 1000)) × Talents.follower_pm,
-## round half up; Show.end_battle passes it to ShowModel.followers_for_battle_pm.
+## round half up; Show.end_battle passes it to ShowModel.followers_for_battle_pm. Recall (06 §3.2): × the species
+## passive Original-Verpackung (Casting.follower_pm, 1000 without a species — the same value bit for bit).
 func follower_pm(data: GameData) -> int:
-	return _mul_pm(maxi(0, roundi(follower_mult(data) * 1000.0)), Talents.follower_pm(self, data))
+	var pm: int = _mul_pm(maxi(0, roundi(follower_mult(data) * 1000.0)), Talents.follower_pm(self, data))
+	return _mul_pm(pm, Casting.follower_pm(self, data))
 
 
 ## a × b / 1000 for per-mille factors >= 0, round half up (06 §8.0 Nr. 4: (a × b + 500) / 1000); b == 1000 → a.

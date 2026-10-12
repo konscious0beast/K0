@@ -17,7 +17,8 @@ const NO_COOLDOWN_TAGS: PackedStringArray = ["death", "intro"]
 ## "marotte_won").
 const ALWAYS_SAID_TAGS: PackedStringArray = ["vendor_buy", "safe_room_enter", "stairs_found", "floor_end",
 	"talent_show_open",                         # 06 package B
-	"marotte_announce", "marotte_won", "liga_hint"]   # 06 package C
+	"marotte_announce", "marotte_won", "liga_hint",   # 06 package C
+	"casting_later"]                            # Recall (06 §3.5): "Später" — where the open choice waits
 ## 08 K0: every persona line (08 §4.3) queues behind the running line instead of being dropped; the broadcast plan
 ## limits their number. They also skip the key cooldown (NO_COOLDOWN_PREFIXES).
 const ALWAYS_SAID_PREFIXES: PackedStringArray = ["persona_"]

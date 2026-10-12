@@ -54,8 +54,15 @@ Verzeichnis.*
   Geheimnisse.
 - **Talent-Show** (06 Paket B): Ab Stufe 3 bringt jede ungerade Stufe jeder Figur eine Talentwahl (1 aus 2, gewählt im
   Safe Room über den goldenen Knopf „TALENT-SHOW“). Feld-Talente wirken für die Figur, die gerade führt. Spezies und
-  Klasse ab Etage 3 sind als geprüftes Datenmodell angelegt (`species.json`, Command `casting`); die
-  Recall-Oberfläche folgt mit Etage 3.
+  Klasse wählt man ab Etage 3 im **Recall** (nächster Punkt; `species.json`, `classes.json`, Command `casting`).
+- **Recall** (06 §3.5; nur in Staffeln, die heute nur Debug-Builds starten, §6 `--season`): Im ersten Safe Room von
+  Etage 3 öffnet die Show-Runde, in der M.O.D. Jury ist. Erst wählt die gesteuerte Figur, dann die andere eine
+  **Spezies** („Wer bist du?“: Original-Verpackung oder eine von drei bzw. vier eigenen) und eine **Klasse** („Was kannst
+  du?“: eine von vier). Jede Karte sagt ihre Wirkung in einem Satz; daneben die Werte vorher → nachher, die ersten
+  Fähigkeiten der Klassenleiste und die Plaketten „EMPFOHLEN“ und „PASST ZU IHREM VORLEBEN“. Nach „Bestätigen“ liegt die
+  Signatur der Klasse auf Slot 1, M.O.D. urteilt über das Paar, und die erste Klassenwahl schaltet „Ohne Netz“ frei.
+  Umentscheiden geht, bis man den Safe Room verlässt; danach bleibt die Spezies, die Klasse wechselt man einmal je Etage
+  im ersten Safe Room („Umschulung“). „Später“ wartet in jedem Safe Room der Etage (Knopf **RECALL**).
 - **Casting** (08 K1): Nach der Figurenwahl drei Bildschirme — Name und Wortform, Vorleben / Hobby / Eigenschaften,
   Kandidatenkarte — oder „Rest automatisch“ (Esc / Start: die Kanon-Kandidat:in Kai in zwei Eingaben). Die Karte prägt
   M.O.D.s Zeilen (Intro-Bauchbinde, Rival:in, Sponsor, Running Gag, Grüße von zu Hause; nie im Kampf) und ab Etage 2 die
@@ -320,6 +327,8 @@ Gamepad und Touch bedienen (02_TECH §2.2, §10). Gekämpft wird in Echtzeit dir
 | Staffel: Talentbaum (Pause → Party → „Talentbaum“) | Pfeiltasten, Enter = wählen / umwählen (nur im Safe Room); Q / E = andere Figur; Esc = schließen | Steuerkreuz / Stick, A; LB / RB; B | Karte antippen; Figur-Reiter; „Schließen“ |
 | Staffel: Ausloggen (Pause → „Ausloggen“; Safe Room → „Ausloggen“) | Pfeiltasten, Enter: Taktik, Sendepause −/+, „Hier schlafen“; Esc = zurück | Steuerkreuz / Stick, A; B = zurück | Taktik antippen, −/+, „Hier schlafen“ / „Zurück“ |
 | Staffel: Login-Bilanz „Während Sie schliefen …“ | Enter = Weiter; „Tag für Tag“ (wenn eingeschaltet) | A | „Weiter“ antippen |
+| Staffel: Recall (Etage 3, Safe Room; sonst Knopf „RECALL“) | ↑/↓ = Karte (rechts die Vorschau), Enter = wählen und weiter, → = zu „WEITER“; Maus: Zeigen = Vorschau, Klick = wählen; Esc = einen Schritt zurück (im ersten Schritt: „Später“) | Steuerkreuz / Stick, A; B = zurück / später | Karte antippen = Vorschau, nochmal antippen oder „WEITER“ = wählen; „Zurück“, „Später“ |
+| Staffel: Recall bestätigen | Enter auf „BESTÄTIGEN“, dann „WEITER: <Figur>“ bzw. „FERTIG“ („Talentbaum“ auf der Schlussseite) | A | „BESTÄTIGEN“, „WEITER“, „FERTIG“ |
 
 Interagieren hat Vorrang: Zeigt die Erkundung einen Prompt (Truhe, Tür, Event in 1,5 m vor der Figur), löst die
 Aktionstaste die Interaktion aus, sonst den Feldschlag bzw. das Bellen. Einen Kampf eröffnet man selbst mit einem **Pull**:
@@ -408,7 +417,7 @@ Argumente stehen nach `--` (CLI) bzw. in den Main Run Args (Editor). Quelle: `sc
 | `--strategy=thorough\|rush\|dawdle\|typical` | Strategie des Full-Run-Bots: alles / nur Safe Rooms, Tore, Bosse / trödeln bis zum Etagenkollaps / typische:r Erstspieler:in |
 | `--pace=fast\|human` | Takt des Full-Run-Bots: ohne Wartezeit oder mit dem Modell eines aufmerksamen Menschen |
 | `--rt-profile=typical\|perfect\|sloppy` | Full-Run-Bot im Echtzeitkampf: Spielprofil der Person (07 §5.7, je Held:in) |
-| `--season=<ssn-id>` | **nur Debug-Builds** (Staffeln, 09 §11.1, ST1-B): startet eine neue private Staffel der Vorlage (`ssn_basis` 6 Etagen / 24 Tage, `ssn_akt2` 12 / 54, `ssn_akt3` 18 / 84) und geht ohne Titel, Casting und Intro in die Erkundung von Etage 1. Tag 0 ist die nächste Sendezeit; die Einsturz-Termine stehen ab dann in UTC fest. Etage 1 ist die Generalprobe (ein verlorener Kampf kostet dort nichts: die Sanitäter bringen die Gruppe in den zuletzt betretenen Safe Room); ihre Treppe führt nach der Etagen-Bilanz auf die Etagen 2–6 (ST1-C1: Passage, Fundus, Paketzentrum). Etage 6 ist das Finale der Basis-Staffel: Der Sieg über ihren Etagenboss oder der letzte Einsturz beendet die Staffel; längere Formate enden nach Etage 6 mit dem Ende des Inhalts („Bis zum Ende dabei“, Abspann). Ohne `--slot` im ersten freien Slot (alle belegt: Slot 0, nie gespeichert); gespeichert wird automatisch (Dauerspeicherstand mit Journal). Die freien Plätze spielt die KI-Besetzung (99 KI-Kandidat:innen, ST1-F): ihre Erstbesteigungen, Einstürze und Rekorde meldet M.O.D. als Eilmeldung (höchstens eine je 10 min Spielzeit, nie im Kampf). Stufen und Talente (ST1-D): auf Etage 1 endet die Stufe am Deckel 7 (darüber Überstunden als Credits); die Grundreihen des Talentbaums öffnen auf Stufe 3, 5 und 7 (Talent-Show im Safe Room, umwählen in Pause → Party → „Talentbaum“), die Treppe gibt eine halbe Stufe, ein Etagen-Event 5 %; Klassenfähigkeiten, Ränge und Klassenreihen kommen mit dem Recall auf Etage 3 (dessen Auswahl hat noch keine Oberfläche: `Game.choose_casting`). Schläfer (ST1-G): Pause → „Ausloggen“ legt die Figur schlafen und führt zum Titel; beim Laden des Slots wird die Abwesenheit gebucht (mit `--speed` × Zeitraffer) und „Während Sie schliefen …“ gezeigt; über 10 min geschlossen oder im Hintergrund gilt als Ausloggen |
+| `--season=<ssn-id>` | **nur Debug-Builds** (Staffeln, 09 §11.1, ST1-B): startet eine neue private Staffel der Vorlage (`ssn_basis` 6 Etagen / 24 Tage, `ssn_akt2` 12 / 54, `ssn_akt3` 18 / 84) und geht ohne Titel, Casting und Intro in die Erkundung von Etage 1. Tag 0 ist die nächste Sendezeit; die Einsturz-Termine stehen ab dann in UTC fest. Etage 1 ist die Generalprobe (ein verlorener Kampf kostet dort nichts: die Sanitäter bringen die Gruppe in den zuletzt betretenen Safe Room); ihre Treppe führt nach der Etagen-Bilanz auf die Etagen 2–6 (ST1-C1: Passage, Fundus, Paketzentrum). Etage 6 ist das Finale der Basis-Staffel: Der Sieg über ihren Etagenboss oder der letzte Einsturz beendet die Staffel; längere Formate enden nach Etage 6 mit dem Ende des Inhalts („Bis zum Ende dabei“, Abspann). Ohne `--slot` im ersten freien Slot (alle belegt: Slot 0, nie gespeichert); gespeichert wird automatisch (Dauerspeicherstand mit Journal). Die freien Plätze spielt die KI-Besetzung (99 KI-Kandidat:innen, ST1-F): ihre Erstbesteigungen, Einstürze und Rekorde meldet M.O.D. als Eilmeldung (höchstens eine je 10 min Spielzeit, nie im Kampf). Stufen und Talente (ST1-D): auf Etage 1 endet die Stufe am Deckel 7 (darüber Überstunden als Credits); die Grundreihen des Talentbaums öffnen auf Stufe 3, 5 und 7 (Talent-Show im Safe Room, umwählen in Pause → Party → „Talentbaum“), die Treppe gibt eine halbe Stufe, ein Etagen-Event 5 %; Klassenfähigkeiten, Ränge und Klassenreihen kommen mit dem Recall auf Etage 3: Er öffnet im ersten Safe Room der Etage von selbst (Spezies und Klasse beider Figuren, Abschnitt 2; danach liegt die Signatur der Klasse auf Slot 1, „Ohne Netz“ ist frei) — am schnellsten mit `--tempo=binge --floor=3` und dem ersten Safe Room. Schläfer (ST1-G): Pause → „Ausloggen“ legt die Figur schlafen und führt zum Titel; beim Laden des Slots wird die Abwesenheit gebucht (mit `--speed` × Zeitraffer) und „Während Sie schliefen …“ gezeigt; über 10 min geschlossen oder im Hintergrund gilt als Ausloggen |
 | `--tempo=calendar\|binge` | mit `--season`: Kalender (Einsturz zu festen Terminen; die Uhr läuft in Erkundung und Safe Room, ein Uhr-Command je 60 s) oder Am Stück (Countdown je Etage: 20, 30, 40, 50 … min) |
 | `--mode=net\|no_net` | mit `--season`: Mit Netz (Rettung, Sanitäter) oder Ohne Netz (ab Etage 2 ein Leben) — hier ohne Freischaltung |
 | `--speed=<n>` | mit `--season`, Zeitraffer: Staffelsekunden je Sekunde Wanduhr (1–10080; `--speed=1440`: ein Tag je Minute) |
@@ -418,6 +427,8 @@ Argumente stehen nach `--` (CLI) bzw. in den Main Run Args (Editor). Quelle: `sc
 Beispiel: `godot --path prime-time-dungeon/game -- --autoplay=full --strategy=typical --pace=human`
 Staffel (Debug): `godot --path prime-time-dungeon/game -- --season=ssn_basis --tempo=calendar --speed=1440`
 Etage 4 einer Staffel ansehen: `godot --path prime-time-dungeon/game -- --season=ssn_basis --tempo=binge --floor=4`
+Recall ansehen: `godot --path prime-time-dungeon/game -- --season=ssn_basis --tempo=binge --floor=3`, dann in den Safe
+Room des ersten Viertels (die Karte, M, zeigt ihn)
 
 **Staffel-Bots (09 Kap. 11.6, ST1-I):** Zwei Werkzeuge spielen ganze Staffeln (Abschnitt 7). `tools/fullrun.sh
 --season=ssn_basis` lässt den Full-Run-Bot in der Welt spielen: Start zu festem Tag 0 mit dem Lauf-Seed (reproduzierbar),
@@ -535,14 +546,15 @@ Systeme) > 01_GDD / 02_TECH / 03_ART / 05 (je nach Thema) > 04**.
 
 ## 10. Screenshots
 
-Alle Bilder stammen aus dem Spiel selbst (Compatibility-Renderer unter Xvfb, 1280 × 720; Bilder 59, 63, 70, 71, 78 und
-84 im Handy-Format 2400 × 1080 und Bild 26 im Handy-Format 1600 × 720, alle mit Touch-Steuerung). Die Staffel-Bilder
-72–78 zeigen eine Basis-Staffel, die mit `--season-floor` direkt auf die Etage gestiegen ist (ohne Kämpfe: die Gruppe
-hat nur die Abschluss-EP der Treppen, Stufe 2 auf Etage 2 bis Stufe 6 auf Etage 6). Die Bilder 79–84 (09, ST1-G) zeigen
-das Ausloggen und den Login einer Kalender-Staffel: 79, 80 und 84 im Modus Ohne Netz, 81 und 82 nach fünf Tagen Schlaf
-auf Etage 2 im Modus Mit Netz (die Etage stürzte dabei ein), 83 nach einem Uhrsprung von 23 Tagen. Die Kampfbilder
-zeigen den Echtzeitkampf, seit R5b-2b den einzigen Kampf der Kampagne; die Bilder des früheren Rundenkampfs (08–12, 18,
-22, 28) liegen als Archiv in `docs/screenshots/` (die CTB-Kampfszene, die sie erzeugte, ist gelöscht).
+Alle Bilder stammen aus dem Spiel selbst (Compatibility-Renderer unter Xvfb, 1280 × 720; Bilder 59, 63, 70, 71, 78, 84,
+98 und 99 im Handy-Format 2400 × 1080 und Bild 26 im Handy-Format 1600 × 720, alle mit Touch-Steuerung). Die
+Staffel-Bilder 72–78 und 90–99 (Recall, Etage 3) zeigen eine Basis-Staffel, die mit `--season-floor` direkt auf die Etage
+gestiegen ist (ohne Kämpfe: die Gruppe hat nur die Abschluss-EP der Treppen, Stufe 2 auf Etage 2 bis Stufe 6 auf Etage
+6). Die Bilder 79–84 (09, ST1-G) zeigen das Ausloggen und den Login einer Kalender-Staffel: 79, 80 und 84 im Modus Ohne
+Netz, 81 und 82 nach fünf Tagen Schlaf auf Etage 2 im Modus Mit Netz (die Etage stürzte dabei ein), 83 nach einem
+Uhrsprung von 23 Tagen. Die Kampfbilder zeigen den Echtzeitkampf, seit R5b-2b den einzigen Kampf der Kampagne; die
+Bilder des früheren Rundenkampfs (08–12, 18, 22, 28) liegen als Archiv in `docs/screenshots/` (die CTB-Kampfszene, die
+sie erzeugte, ist gelöscht).
 
 | | |
 |---|---|
@@ -572,6 +584,11 @@ zeigen den Echtzeitkampf, seit R5b-2b den einzigen Kampf der Kampagne; die Bilde
 | ![Ausloggen im Gang](docs/screenshots/79_staffel_ausloggen_gang.png) **79** Staffel: Ausloggen im Gang (Pause → Ausloggen) — Gefahr, Begegnungen, nächster Safe Room, Schlaftaktik, Sendepause, Einsturz-Wecker | ![Ausloggen im Safe Room](docs/screenshots/80_staffel_ausloggen_safe_room.png) **80** Ausloggen im Safe Room: „sicher, Sie werden ausgeruht“ |
 | ![Login-Bilanz](docs/screenshots/81_staffel_login_bilanz.png) **81** Login-Bilanz „Während Sie schliefen …“: Rettung beim Einsturz, Begegnungen, Crashkurs, Ausgeruht, Sendeplan, ein Zettel aus der KI-Besetzung | ![Tag für Tag](docs/screenshots/82_staffel_tag_fuer_tag.png) **82** Tageszusammenfassung „Tag für Tag“ |
 | ![Uhrsprung](docs/screenshots/83_staffel_login_frage.png) **83** Die Uhr sprang um mehr als 7 Tage: Der Login fragt zuerst nach | ![Handy Ausloggen](docs/screenshots/84_handy_staffel_ausloggen_touch.png) **84** Handy-Format mit Touch: Ausloggen im Gang |
+| ![Recall Spezies](docs/screenshots/90_staffel_recall_spezies.png) **90** Recall auf Etage 3, Schritt 1 „Wer bist du?“: Kais Spezies-Karten, rechts Kachelgolem mit Werten vorher → nachher und der Jury | ![Recall Klasse](docs/screenshots/91_staffel_recall_klasse.png) **91** Schritt 2 „Was kannst du?“: Abrissbirne EMPFOHLEN und PASST ZU IHREM VORLEBEN, die ersten Klassenfähigkeiten |
+| ![Recall Bestätigen](docs/screenshots/92_staffel_recall_bestaetigen.png) **92** Schritt 3: das Paar, die Signatur auf Slot 1, die Regeln fürs Umentscheiden | ![Recall Urteil](docs/screenshots/93_staffel_recall_urteil.png) **93** Die Jury urteilt: „Ein Bauprojekt auf zwei Beinen. Die Statik nickt.“ |
+| ![Recall Graf](docs/screenshots/94_staffel_recall_mopsula.png) **94** Graf Mopsula ist dran: seine eigenen Spezies, Flattermops in der Vorschau | ![Recall fertig](docs/screenshots/95_staffel_recall_fertig.png) **95** Schlussseite: beide Rollen, Höchststufe 13, „NEU: OHNE NETZ“, Knopf „Talentbaum“ |
+| ![Safe Room Recall](docs/screenshots/96_staffel_safe_room_recall.png) **96** Nach „Später“: der Knopf RECALL im Safe Room, M.O.D. sagt, wo die Wahl wartet | ![Party Recall](docs/screenshots/97_staffel_party_recall.png) **97** Pausemenü → Party nach dem Recall: Spezies und Klasse beider Figuren |
+| ![Handy Recall](docs/screenshots/98_handy_staffel_recall_spezies_touch.png) **98** Handy-Format mit Touch: Recall, Spezies-Karten (99: Klassen) | |
 | ![Casting 1/3](docs/screenshots/29_casting_1_wer_sind_sie.png) **29** Casting 1/3 „Wer sind Sie?“: Name, Wortform, Figur (08 K1) | ![Casting 2/3](docs/screenshots/30_casting_2_steckbrief.png) **30** Casting 2/3 „Steckbrief“: Vorleben, Hobby / Talent, Eigenschaften |
 | ![Vorleben](docs/screenshots/31_casting_2_vorleben_overlay.png) **31** Overlay „Vorleben wählen“ mit „genauer“-Chips | ![Eigenschaften](docs/screenshots/32_casting_2_eigenschaften_overlay.png) **32** Overlay „Eigenschaften“ (0–3, leer erlaubt) |
 | ![Kandidatenkarte](docs/screenshots/33_casting_3_kandidatenkarte.png) **33** Casting 3/3: Kandidatenkarte und Sendeformat | ![Tastatur](docs/screenshots/34_casting_bildschirmtastatur_akzente.png) **34** Bildschirmtastatur mit Akzenttasten |
@@ -638,6 +655,12 @@ GODOT=… $T --shot $S shot.png 30 1280x720 --recipe=season_party               
 GODOT=… $T --shot $S shot.png 30 1280x720 --recipe=season_skills                                          # 68
 GODOT=… $T --shot $S shot.png 30 1280x720 --recipe=season_preview                                         # 69
 GODOT=… $T --shot $S shot.png 30 2400x1080 --touch --recipe=season_talent_tree                           # 70 (71: season_talent_show)
+R="--season-floor=3"                                                       # Recall: Basis-Staffel auf Etage 3
+GODOT=… $T --shot $S shot.png 30 1280x720 $R --recipe=recall_species        # 90 (91–95: recall_class, recall_confirm,
+                                                                           #  recall_judged, recall_mopsula, recall_done)
+GODOT=… $T --shot $S shot.png 2 1280x720 $R --recipe=safe_recall                                          # 96
+GODOT=… $T --shot $S shot.png 30 1280x720 $R --recipe=recall_party                                        # 97
+GODOT=… $T --shot $S shot.png 30 2400x1080 --touch $R --recipe=recall_species                  # 98 (99: recall_class)
 ```
 
 ## 11. Nächste Schritte

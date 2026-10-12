@@ -79,6 +79,8 @@ var _awards: Dictionary = {}
 var _constants: Dictionary = {}
 var _words_re: RegEx = null
 var _royal_re: RegEx = null
+var _origin_re: RegEx = null                # IpWords.ORIGIN_WORDS, compiled once per check (10 §6.10: ≤ 50 ms)
+var _form_re: RegEx = null
 
 
 ## Checks the parsed files (file name → parsed JSON or null). `campaign` (optional): the campaign data whose skill,
@@ -88,6 +90,8 @@ func check(files: Dictionary, campaign: GameData = null) -> void:
 	warnings.clear()
 	_words_re = RegEx.create_from_string("(?i)\\b(%s)\\b" % "|".join(WHOLE_WORDS))
 	_royal_re = RegEx.create_from_string(ROYAL_PLURAL)
+	_origin_re = RegEx.create_from_string("(?i)\\b(%s)\\b" % "|".join(IpWords.ORIGIN_WORDS))
+	_form_re = RegEx.create_from_string("^[0-9]{3}$")
 	for f: String in FILES:
 		if not files.get(f, null) is Dictionary:
 			_err(f, "file missing or not a JSON object")
@@ -346,7 +350,7 @@ func _check_cards(campaign: GameData) -> void:
 		var cap: int = _c("max_copies_show") if show else _c("max_copies")
 		if not JsonUtil.is_integral(copies) or int(copies) < 1 or int(copies) > cap:
 			_err(ctx + ".max_copies", "integer 1..%d required" % cap)
-		if not RegEx.create_from_string("^[0-9]{3}$").search(str(c.get("form", ""))):
+		if _form_re.search(str(c.get("form", ""))) == null:
 			_err(ctx + ".form", "three digits required (decorative form number)")
 		if not SdCardDef.HAND_EFFECTS.has(str(c.get("hand", ""))):
 			_err(ctx + ".hand", "'%s' not in [\"\", \"refresh\"]" % str(c.get("hand", "")))
@@ -617,6 +621,19 @@ func _id_list(ctx: String, v: Variant, known: Dictionary, what: String) -> Packe
 	return out
 
 
+## IpWords.general_word (same lists, same result) with the origin pattern compiled once per check — the shared helper
+## compiles it on every call, ≈ 250 texts per rulebook load.
+func _general_word(text: String) -> String:
+	if _origin_re == null:
+		return IpWords.general_word(text)
+	var low: String = text.to_lower()
+	for word: String in IpWords.ALL_WORDS:
+		if low.contains(word):
+			return word
+	var m: RegExMatch = _origin_re.search(text)
+	return m.get_string(1).to_lower() if m != null else ""
+
+
 # --- lines, cosmetics, awards -------------------------------------------------------------------------------------
 
 func _check_lines(list: Array) -> void:
@@ -698,7 +715,7 @@ func _texts(ctx: String, d: Dictionary, keys: Array, graf: bool) -> void:
 ## First problem of a player-facing text ("" = fine): IP / tone words of ip_words.gd, the own list, royalty motifs,
 ## the royal plural in the Count's voice (`graf`), font-less glyphs.
 func text_problem(text: String, graf: bool) -> String:
-	var w: String = IpWords.general_word(text)
+	var w: String = _general_word(text)
 	if w != "":
 		return "contains '%s' (IP distance / tone, 04 §2.3, 06 §0.3)" % w
 	w = IpWords.mopsula_word(text)

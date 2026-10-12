@@ -47,7 +47,17 @@ var cosmetic_ids: PackedStringArray = []
 var awards: Dictionary = {}                 # id → entry
 var award_ids: PackedStringArray = []
 var data: GameData = null                   # the engine data
-var rules_hash: String = ""
+## "" for a rulebook with errors. Computed on first read (SdSetup.create, is_valid): the load stays within the 50 ms of
+## 10 §6.10 and the first duel of a session pays the hash once.
+var rules_hash: String = "":
+	get:
+		if not _hashed:
+			_hashed = true
+			_rules_hash = CanonicalJson.sha256_hex(hash_input()) if errors.is_empty() and data != null else ""
+		return _rules_hash
+
+var _rules_hash: String = ""
+var _hashed: bool = false
 
 var _skill_cards: Dictionary = {}           # skl id → card id
 
@@ -250,7 +260,7 @@ func _load(p_files: Dictionary, campaign: GameData) -> void:
 		errors.append("engine: " + e)
 	for w: String in data.warnings:
 		warnings.append("engine: " + w)
-	rules_hash = CanonicalJson.sha256_hex(hash_input()) if errors.is_empty() else ""
+	_hashed = false                                # rules_hash: on first read
 
 
 func _build() -> void:

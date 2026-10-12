@@ -33,8 +33,10 @@ func _init(p_layout: FloorLayout, p_def: FloorDef, p_quality: StringName = &"hig
 	quality = p_quality
 
 
+## The art theme of the floor (02_TECH §7.3; Staffeln, ST1-C: a floor that names its Kulisse renders with the
+## Kulisse's art theme, themes.json `art` — ThemeDef.art_of).
 func theme_id() -> String:
-	return def.theme if def != null else "metro"
+	return ThemeDef.art_of(def, DB.data) if def != null else "metro"
 
 
 func floor_palette() -> Dictionary:
@@ -59,6 +61,10 @@ func spec_for(c: Vector2i) -> RoomSpec:
 	spec.palette = palette_at(c)
 	spec.with_light = true
 	spec.quality = quality
+	if rc != null and def != null and def.season_only():   # Staffeln (ST1-C): the quarter's dressing, Kulisse stages
+		spec.style = StringName(str((layout.zones.get(rc.zone, {}) as Dictionary).get("style", "")))
+		if rc.kind == RoomCell.Kind.QUARTER_BOSS or rc.kind == RoomCell.Kind.FLOOR_BOSS:
+			spec.stage = RoomSpec.STAGE_PLAIN
 	specs[c] = spec
 	return spec
 

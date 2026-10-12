@@ -256,8 +256,8 @@ func _layout_labels() -> void:
 		var count: int = int(model.get("count", 1))
 		_put("name", nm + (" ×%d" % count if count > 1 else ""), r.position + Vector2(52.0, 2.0), 0.0)
 		var lc: Vector2 = level_center(r)
-		_put("level", str(def.level if def != null else 1), lc - Vector2(LEVEL_R, 9.0), LEVEL_R * 2.0,
-			HORIZONTAL_ALIGNMENT_CENTER)
+		var level: int = int(model.get("level", def.level if def != null else 1))   # Staffeln (ST1-C): group level
+		_put("level", str(level), lc - Vector2(LEVEL_R, 9.0), LEVEL_R * 2.0, HORIZONTAL_ALIGNMENT_CENTER)
 		_put("dist", ("%.1f m" % float(model.get("dist_m", 0.0))).replace(".", ","), r.position + Vector2(52.0, 28.0),
 			236.0, HORIZONTAL_ALIGNMENT_RIGHT)
 		var first: bool = bool(model.get("first", false))

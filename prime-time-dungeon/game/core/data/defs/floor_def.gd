@@ -105,6 +105,18 @@ func has_band() -> bool:
 	return level_band.size() == 2
 
 
+## Staffeln (09 S-14, §11.1; ST1-C): a floor of the seasons' content — its `theme` names its Kulisse. Until "Sendung
+## starten" replaces the campaign (SIM_VERSION 5) only a season reaches it: the campaign ends before it as before.
+func season_only() -> bool:
+	return kulisse() != ""
+
+
+## Staffeln (ST1-C): the floor has playable content for a run with (`season`) or without a season (playable_in(false)
+## is false for every season floor, so the campaign's credits come after floor 1 as before).
+func playable_in(season: bool) -> bool:
+	return playable and (season or not season_only())
+
+
 ## Encounter of this floor by id (null if this floor does not declare it).
 func encounter(enc_id: String) -> EncounterDef:
 	for e: EncounterDef in encounters:

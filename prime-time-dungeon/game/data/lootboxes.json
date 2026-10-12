@@ -322,6 +322,18 @@
 					"id": "itm_arm_velvet_cape",
 					"amount": 1,
 					"weight": 5
+				},
+				{
+					"kind": "item",
+					"id": "itm_wpn_price_lance",
+					"amount": 1,
+					"weight": 5
+				},
+				{
+					"kind": "item",
+					"id": "itm_acc_customer_card",
+					"amount": 1,
+					"weight": 5
 				}
 			],
 			"epic": [
@@ -371,6 +383,338 @@
 					"kind": "credits",
 					"id": "",
 					"amount": 600,
+					"weight": 10
+				}
+			],
+			"fan": [
+				{
+					"kind": "item",
+					"id": "itm_acc_clip_mic",
+					"amount": 1,
+					"weight": 30
+				},
+				{
+					"kind": "item",
+					"id": "itm_acc_fan_scarf",
+					"amount": 1,
+					"weight": 10
+				},
+				{
+					"kind": "item",
+					"id": "itm_elixir",
+					"amount": 1,
+					"weight": 30
+				},
+				{
+					"kind": "item",
+					"id": "itm_hype_megaphone",
+					"amount": 2,
+					"weight": 30
+				}
+			]
+		},
+		"f3": {
+			"common": [
+				{
+					"kind": "credits",
+					"id": "",
+					"amount": 60,
+					"weight": 30
+				},
+				{
+					"kind": "item",
+					"id": "itm_bandage",
+					"amount": 3,
+					"weight": 15
+				},
+				{
+					"kind": "item",
+					"id": "itm_brutzel_burger",
+					"amount": 1,
+					"weight": 15
+				},
+				{
+					"kind": "item",
+					"id": "itm_energy_krawumm",
+					"amount": 2,
+					"weight": 15
+				},
+				{
+					"kind": "item",
+					"id": "itm_antidote",
+					"amount": 2,
+					"weight": 10
+				},
+				{
+					"kind": "item",
+					"id": "itm_molotov",
+					"amount": 2,
+					"weight": 8
+				},
+				{
+					"kind": "item",
+					"id": "itm_ice_spray",
+					"amount": 2,
+					"weight": 7
+				}
+			],
+			"rare": [
+				{
+					"kind": "item",
+					"id": "itm_brutzel_burger",
+					"amount": 3,
+					"weight": 20
+				},
+				{
+					"kind": "item",
+					"id": "itm_smelling_salts",
+					"amount": 2,
+					"weight": 20
+				},
+				{
+					"kind": "credits",
+					"id": "",
+					"amount": 260,
+					"weight": 15
+				},
+				{
+					"kind": "item",
+					"id": "itm_hype_megaphone",
+					"amount": 1,
+					"weight": 10
+				},
+				{
+					"kind": "item",
+					"id": "itm_smoke",
+					"amount": 1,
+					"weight": 10
+				},
+				{
+					"kind": "item",
+					"id": "itm_arm_cardboard_armor",
+					"amount": 1,
+					"weight": 8
+				},
+				{
+					"kind": "item",
+					"id": "itm_acc_customer_card",
+					"amount": 1,
+					"weight": 8
+				},
+				{
+					"kind": "item",
+					"id": "itm_arm_sale_vest",
+					"amount": 1,
+					"weight": 6
+				},
+				{
+					"kind": "item",
+					"id": "itm_wpn_collar_glitter",
+					"amount": 1,
+					"weight": 6
+				}
+			],
+			"epic": [
+				{
+					"kind": "item",
+					"id": "itm_elixir",
+					"amount": 1,
+					"weight": 25
+				},
+				{
+					"kind": "credits",
+					"id": "",
+					"amount": 900,
+					"weight": 10
+				},
+				{
+					"kind": "item",
+					"id": "itm_wpn_stage_sword",
+					"amount": 1,
+					"weight": 20
+				},
+				{
+					"kind": "item",
+					"id": "itm_wpn_collar_gala",
+					"amount": 1,
+					"weight": 20
+				},
+				{
+					"kind": "item",
+					"id": "itm_arm_ermine",
+					"amount": 1,
+					"weight": 10
+				},
+				{
+					"kind": "item",
+					"id": "itm_acc_sneakers",
+					"amount": 1,
+					"weight": 10
+				}
+			],
+			"fan": [
+				{
+					"kind": "item",
+					"id": "itm_acc_clip_mic",
+					"amount": 1,
+					"weight": 30
+				},
+				{
+					"kind": "item",
+					"id": "itm_acc_fan_scarf",
+					"amount": 1,
+					"weight": 10
+				},
+				{
+					"kind": "item",
+					"id": "itm_elixir",
+					"amount": 1,
+					"weight": 30
+				},
+				{
+					"kind": "item",
+					"id": "itm_hype_megaphone",
+					"amount": 2,
+					"weight": 30
+				}
+			]
+		},
+		"f4": {
+			"common": [
+				{
+					"kind": "credits",
+					"id": "",
+					"amount": 90,
+					"weight": 30
+				},
+				{
+					"kind": "item",
+					"id": "itm_bandage",
+					"amount": 3,
+					"weight": 15
+				},
+				{
+					"kind": "item",
+					"id": "itm_brutzel_burger",
+					"amount": 1,
+					"weight": 15
+				},
+				{
+					"kind": "item",
+					"id": "itm_energy_krawumm",
+					"amount": 2,
+					"weight": 15
+				},
+				{
+					"kind": "item",
+					"id": "itm_antidote",
+					"amount": 2,
+					"weight": 10
+				},
+				{
+					"kind": "item",
+					"id": "itm_molotov",
+					"amount": 2,
+					"weight": 8
+				},
+				{
+					"kind": "item",
+					"id": "itm_ice_spray",
+					"amount": 2,
+					"weight": 7
+				}
+			],
+			"rare": [
+				{
+					"kind": "item",
+					"id": "itm_brutzel_burger",
+					"amount": 3,
+					"weight": 20
+				},
+				{
+					"kind": "item",
+					"id": "itm_smelling_salts",
+					"amount": 2,
+					"weight": 20
+				},
+				{
+					"kind": "credits",
+					"id": "",
+					"amount": 380,
+					"weight": 15
+				},
+				{
+					"kind": "item",
+					"id": "itm_hype_megaphone",
+					"amount": 1,
+					"weight": 10
+				},
+				{
+					"kind": "item",
+					"id": "itm_smoke",
+					"amount": 1,
+					"weight": 10
+				},
+				{
+					"kind": "item",
+					"id": "itm_arm_padded_vest",
+					"amount": 1,
+					"weight": 8
+				},
+				{
+					"kind": "item",
+					"id": "itm_arm_bubble_cape",
+					"amount": 1,
+					"weight": 8
+				},
+				{
+					"kind": "item",
+					"id": "itm_arm_cardboard_armor",
+					"amount": 1,
+					"weight": 6
+				},
+				{
+					"kind": "item",
+					"id": "itm_acc_customer_card",
+					"amount": 1,
+					"weight": 6
+				}
+			],
+			"epic": [
+				{
+					"kind": "item",
+					"id": "itm_elixir",
+					"amount": 1,
+					"weight": 25
+				},
+				{
+					"kind": "credits",
+					"id": "",
+					"amount": 1300,
+					"weight": 10
+				},
+				{
+					"kind": "item",
+					"id": "itm_wpn_carton_lever",
+					"amount": 1,
+					"weight": 20
+				},
+				{
+					"kind": "item",
+					"id": "itm_wpn_collar_tape",
+					"amount": 1,
+					"weight": 20
+				},
+				{
+					"kind": "item",
+					"id": "itm_wpn_stage_sword",
+					"amount": 1,
+					"weight": 10
+				},
+				{
+					"kind": "item",
+					"id": "itm_wpn_collar_gala",
+					"amount": 1,
 					"weight": 10
 				}
 			],

@@ -18,13 +18,15 @@ const SAFE_THEMES: PackedStringArray = ["kiosk", "pumphouse", "signalbox"]
 const SAFE_NAMES: Dictionary = {"kiosk": "Kiosk 24/7", "pumphouse": "Pumpenhaus", "signalbox": "Stellwerk"}
 
 
-## def.layout not empty → from_layout(), else procedural.
+## def.layout not empty → from_layout(), a FloorDef with quarters → ZoneGenerator (09 §3.6), else procedural.
 static func generate(def: FloorDef, floor_seed: int) -> FloorLayout:
 	if def == null:
 		push_error("DungeonGenerator.generate: FloorDef is null (res://data/floors.json)")
 		return null
 	if def.has_layout():
 		return from_layout(def, floor_seed)
+	if def.has_zones():                       # Staffeln (09 §3.6, ST1-C): floors with quarters → the generator v2
+		return ZoneGenerator.generate(def, floor_seed)
 	return _procedural(def, floor_seed)
 
 

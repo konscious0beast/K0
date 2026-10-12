@@ -45,7 +45,7 @@ static func load_and_route(slot: int) -> Error:
 	if not Game.has_state() or Game.state.floor_run == null:
 		return ERR_INVALID_DATA
 	var def: FloorDef = DB.floor_def(Game.state.floor_run.index)
-	if def == null or not def.playable:
+	if def == null or not def.playable_in(Game.state.season != null):   # Staffeln (ST1-C): season floors need a season
 		Router.goto(Router.SCENE_CREDITS)
 	else:
 		Router.goto(Router.SCENE_EXPLORATION, {"spawn": Game.state.floor_run.location})

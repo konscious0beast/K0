@@ -2,13 +2,15 @@ extends SceneTree
 ## Screenshot tool (02_TECH §11.3), used by `check.sh --shot`. No class_name / autoload identifiers.
 ## godot --path <game> --rendering-driver opengl3 --resolution WxH -s res://tests/capture.gd -- \
 ##     --scene=<res://…tscn> --out=<abs.png> [--frames=<n>] [--no-global-ui] [--params=<json>] [--touch] \
-##     [--recipe=<name>] [--look=<n | json>]
+##     [--recipe=<name>] [--look=<n | json>] [--season-floor=<n>]
 ## --params: JSON object merged over {"capture": true} for the scene's setup(params).
 ## --touch:  touch controls on + input scheme TOUCH before the scene is built (phone layout stills).
 ## --recipe: named scripted state from res://tests/capture_recipes.gd, run after the scene is in the tree; the
 ##           --frames wait follows it.
 ## --look:   Casting (08 §6, K2): before the scene is built, a new game (seed 1, as Game.ensure_state) whose candidate
 ##           persona wears this look — an index into the look gallery's LOOKS (0–8) or a JSON object {kind: lk id}.
+## --season-floor: Staffeln (ST1-C): before the scene is built, a basis season (Am Stück, seed 1) taken down the stairs
+##           to floor n (capture_recipes.season_floor).
 
 const GLOBAL_UI: String = "res://scenes/ui/global_ui.tscn"
 const RECIPES: String = "res://tests/capture_recipes.gd"
@@ -24,6 +26,7 @@ func _initialize() -> void:
 	var touch: bool = false
 	var recipe: String = ""
 	var look: String = ""
+	var season_floor: int = 0
 	for a: String in OS.get_cmdline_user_args():
 		if a.begins_with("--scene="):
 			scene_path = a.trim_prefix("--scene=")
@@ -39,6 +42,8 @@ func _initialize() -> void:
 			recipe = a.trim_prefix("--recipe=")
 		elif a.begins_with("--look="):
 			look = a.trim_prefix("--look=")
+		elif a.begins_with("--season-floor="):
+			season_floor = a.trim_prefix("--season-floor=").to_int()
 		elif a.begins_with("--params="):
 			var parsed: Variant = JSON.parse_string(a.trim_prefix("--params="))
 			if not (parsed is Dictionary):
@@ -75,6 +80,14 @@ func _initialize() -> void:
 		helper.free()
 		if not dressed:
 			printerr("Assertion failed: capture: --look=%s is no gallery index or look object" % look)
+			quit(1)
+			return
+	if season_floor > 0:
+		var sh: Node = (load(RECIPES) as GDScript).new() as Node
+		var on_floor: bool = bool(sh.call("season_floor", season_floor))
+		sh.free()
+		if not on_floor:
+			printerr("Assertion failed: capture: --season-floor=%d: no season on that floor" % season_floor)
 			quit(1)
 			return
 	var packed: PackedScene = load(scene_path) as PackedScene

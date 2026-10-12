@@ -275,7 +275,7 @@ static func make_rt_setup_rules(state: GameState, data: GameData, cmd: Dictionar
 	s.floor_index = state.floor_run.index if state.floor_run != null else maxi(1, enc.floor_index)
 	var fdef: FloorDef = data.floor_def(s.floor_index)
 	if fdef != null:
-		s.theme_id = fdef.theme
+		s.theme_id = ThemeDef.art_of(fdef, data)        # Staffeln (ST1-C): a Kulisse floor's art theme (themes.json)
 		s.palette = fdef.palette.duplicate(true)
 	if state.inventory != null:
 		s.items = state.inventory.battle_items(data)
@@ -298,6 +298,7 @@ static func make_rt_setup_rules(state: GameState, data: GameData, cmd: Dictionar
 	s.mods = mods
 	_rt_party(s, state, data, rt, rules, enc, bal)
 	_rt_enemies(s, data, rt, rules, enc, bal)
+	EnemyLevels.apply(s, state, data, bal)              # Staffeln (09 §3.4; 07 CR-32 d, ST1-C): a season only
 	s.presets = {}
 	for u: RtUnit in s.units:
 		if u.side == Combatant.Side.PARTY and u.id != s.controlled_id:

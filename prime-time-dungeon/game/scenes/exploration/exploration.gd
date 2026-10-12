@@ -2039,7 +2039,8 @@ func pull_slot(slot: int) -> bool:
 
 ## The target frame model for the HUD ({} = none): {"group", "lead" (RT lead enemy id), "count", "state", "first" (a
 ## pull now is a first strike), "dist_m", "foot" / "head" (world points of the lead), "bubble" (its "!" / "?!" shows),
-## "auto", "hint" (the pull hint shows, E37), "slots": [{"slot", "id", "reason"}] for the bar slots 1–5 of the figure}.
+## "auto", "hint" (the pull hint shows, E37), "slots": [{"slot", "id", "reason"}] for the bar slots 1–5 of the figure,
+## "level" (Staffeln, ST1-C: the group's level on a generator-v2 floor of a season — the data level otherwise)}.
 func pull_frame_model() -> Dictionary:
 	var a: EnemyActor = _actor_at(_target)
 	if a == null or _player == null:
@@ -2050,11 +2051,15 @@ func pull_frame_model() -> Dictionary:
 		if sid != "":
 			slots.append({"slot": slot, "id": sid, "reason": pull_check(slot)})
 	var enc: EncounterDef = _encounter_def(a.encounter_id())
-	return {"group": _target, "lead": _rt_lead_of(a), "count": _rt_unit_count(enc),
+	var m: Dictionary = {"group": _target, "lead": _rt_lead_of(a), "count": _rt_unit_count(enc),
 		"state": PullRules.state_text(a.state, a.is_asleep()), "first": pull_advantage(_target) == Rules.PREEMPTIVE,
 		"dist_m": Rules.flat_dist(a.global_position, _player.global_position), "foot": a.global_position,
 		"head": a.global_position + Vector3(0.0, a.top_m, 0.0), "bubble": a.state in [&"ALERT", &"CHASE", &"DAZED"],
 		"auto": _target_auto, "hint": _pull_hint_on(), "slots": slots}
+	var lv: int = EnemyLevels.enemy_level(Game.state, DB.data, _target, _layout)   # Staffeln (09 §3.4, ST1-C)
+	if lv > 0:
+		m["level"] = lv
+	return m
 
 
 ## A person may act now: a running game, the settled exploration (no dialog, combat, suspend or transition).

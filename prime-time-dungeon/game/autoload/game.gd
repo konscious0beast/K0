@@ -368,7 +368,7 @@ func continue_after_summary() -> void:
 	if next != null:
 		start_floor(idx + 1)
 		Save.autosave()
-	if next == null or not next.playable:
+	if next == null or not next.playable_in(state.season != null):   # Staffeln (ST1-C): season floors need a season
 		Router.goto(Router.SCENE_CREDITS)
 	else:
 		Router.goto(Router.SCENE_EXPLORATION, {"spawn": &"start"})
@@ -1918,6 +1918,24 @@ func _season_absence(sec: int) -> void:
 ## The local UTC offset in seconds (Time zone bias of the system; the client's, never the core's).
 static func _season_tz_offset() -> int:
 	return int(Time.get_time_zone_from_system().get("bias", 0)) * 60
+
+
+# --- Staffeln (09 §11.1, ST1-C): the debug stairs --------------------------------------------------------------------
+
+## Debug builds and the test tools only (boot --floor, the capture recipes, the perf probe): the stairs of the running
+## season without walking to them — "descend" and the next "floor" as recorded commands, like complete_floor and
+## continue_after_summary without the Etagen-Bilanz (both verifiers accept the pair; the staircase rule applies: Am
+## Stück every floor, the calendar the open ones). false when refused or when the stairs ended the season.
+func season_debug_descend() -> bool:
+	if state == null or state.season == null or state.floor_run == null or not _season_stairs_open():
+		return false
+	timer_running = false
+	record({"t": "descend"})
+	_dispatch(SeasonRules.on_descend(state, DB.data))
+	if state.season.result != "":
+		return false
+	start_floor(state.floor_run.index + 1)
+	return true
 
 
 # --- Staffeln (09 §4.6, ST1-F): the breaking news of the AI cast -----------------------------------------------------

@@ -4296,6 +4296,174 @@
 			"voice": "mod",
 			"text": "{cand} verabschiedet sich. Abgemacht ist abgemacht.",
 			"weight": 1
+		},
+		{
+			"id": "mod_boss_intro_enm_boss_filialleiterin_01",
+			"tag": "boss_intro:enm_boss_filialleiterin",
+			"voice": "mod",
+			"text": "Applaus für die Filialleiterin! Sie lächelt seit der Eröffnung. Die Passage auch — gezwungenermaßen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_phase_enm_boss_filialleiterin_2_01",
+			"tag": "boss_phase:enm_boss_filialleiterin:2",
+			"voice": "mod",
+			"text": "Sie hat die Kundenordnung dabei. Paragraf eins: Die Kundschaft hat immer Unrecht.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_phase_enm_boss_filialleiterin_3_01",
+			"tag": "boss_phase:enm_boss_filialleiterin:3",
+			"voice": "mod",
+			"text": "Alles muss raus! Und sie meint: Sie.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_intro_enm_boss_ausverkauf_01",
+			"tag": "boss_intro:enm_boss_ausverkauf",
+			"voice": "mod",
+			"text": "Der Ausverkauf! Regale, Wühltische und ein Rolltor — verschmolzen zu einem einzigen Schnäppchen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_phase_enm_boss_ausverkauf_2_01",
+			"tag": "boss_phase:enm_boss_ausverkauf:2",
+			"voice": "mod",
+			"text": "Alles reduziert! Auch Ihre Lebenspunkte!",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_phase_enm_boss_ausverkauf_3_01",
+			"tag": "boss_phase:enm_boss_ausverkauf:3",
+			"voice": "mod",
+			"text": "Letzte Preissenkung! Danach wird verschenkt — an Sie, in Schlägen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_intro_enm_boss_requisiteurin_01",
+			"tag": "boss_intro:enm_boss_requisiteurin",
+			"voice": "mod",
+			"text": "Die Requisiteurin! Sie kennt jedes Teil im Fundus. Und jedes Teil kennt sie.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_phase_enm_boss_requisiteurin_2_01",
+			"tag": "boss_phase:enm_boss_requisiteurin:2",
+			"voice": "mod",
+			"text": "Sie verliest die Requisitenliste! Posten 412: Ihre Niederlage.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_phase_enm_boss_requisiteurin_3_01",
+			"tag": "boss_phase:enm_boss_requisiteurin:3",
+			"voice": "mod",
+			"text": "Letzter Akt! Die Requisiteurin spielt jetzt alle Rollen gleichzeitig.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_intro_enm_boss_garderobe_01",
+			"tag": "boss_intro:enm_boss_garderobe",
+			"voice": "mod",
+			"text": "Die Garderobe! Ein Kleiderschrank mit Ambitionen. Er will die Hauptrolle.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_phase_enm_boss_garderobe_2_01",
+			"tag": "boss_phase:enm_boss_garderobe:2",
+			"voice": "mod",
+			"text": "Die Türen gehen auf! Was da rauskommt, hat seit Jahren kein Licht gesehen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_phase_enm_boss_garderobe_3_01",
+			"tag": "boss_phase:enm_boss_garderobe:3",
+			"voice": "mod",
+			"text": "Großer Auftritt! Die Garderobe trägt jetzt alles auf einmal.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_intro_enm_boss_schichtleiterin_f4_01",
+			"tag": "boss_intro:enm_boss_schichtleiterin_f4",
+			"voice": "mod",
+			"text": "Die Schichtleiterin! Pünktlich, gründlich, und Pausen hält sie für ein Gerücht.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_phase_enm_boss_schichtleiterin_f4_2_01",
+			"tag": "boss_phase:enm_boss_schichtleiterin_f4:2",
+			"voice": "mod",
+			"text": "Neuer Schichtplan! Ihre Pause wurde gestrichen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_phase_enm_boss_schichtleiterin_f4_3_01",
+			"tag": "boss_phase:enm_boss_schichtleiterin_f4:3",
+			"voice": "mod",
+			"text": "Feierabend? Nicht in dieser Halle.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_intro_enm_boss_schichtleiterin_f5_01",
+			"tag": "boss_intro:enm_boss_schichtleiterin_f5",
+			"voice": "mod",
+			"text": "Die Schichtleiterin ist zurück. Mit Hubwagen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_phase_enm_boss_schichtleiterin_f5_2_01",
+			"tag": "boss_phase:enm_boss_schichtleiterin_f5:2",
+			"voice": "mod",
+			"text": "Zweite Schicht, zweite Runde. Sie hat dazugelernt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_phase_enm_boss_schichtleiterin_f5_3_01",
+			"tag": "boss_phase:enm_boss_schichtleiterin_f5:3",
+			"voice": "mod",
+			"text": "Überstunden! Und die Schichtleiterin rechnet jede Minute ab.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_intro_enm_boss_schichtleiterin_f6_01",
+			"tag": "boss_intro:enm_boss_schichtleiterin_f6",
+			"voice": "mod",
+			"text": "Die Schichtleiterin, zum dritten Mal. Diesmal mit Stempelkarte und schlechter Laune.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_phase_enm_boss_schichtleiterin_f6_2_01",
+			"tag": "boss_phase:enm_boss_schichtleiterin_f6:2",
+			"voice": "mod",
+			"text": "Letzte Schicht vor dem Finale! Sie gibt alles. Wirklich alles.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_phase_enm_boss_schichtleiterin_f6_3_01",
+			"tag": "boss_phase:enm_boss_schichtleiterin_f6:3",
+			"voice": "mod",
+			"text": "Sie stempelt aus — aber erst nach Ihnen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_intro_enm_boss_paketberg_01",
+			"tag": "boss_intro:enm_boss_paketberg",
+			"voice": "mod",
+			"text": "Das Große Finale! Der Paketberg: tausend unzustellbare Pakete, die sich selbst zustellen wollen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_phase_enm_boss_paketberg_2_01",
+			"tag": "boss_phase:enm_boss_paketberg:2",
+			"voice": "mod",
+			"text": "Zustellung gescheitert! Der Berg nimmt es persönlich.",
+			"weight": 1
+		},
+		{
+			"id": "mod_boss_phase_enm_boss_paketberg_3_01",
+			"tag": "boss_phase:enm_boss_paketberg:3",
+			"voice": "mod",
+			"text": "Der Berg rutscht! Bitte nicht unterschreiben, einfach ausweichen!",
+			"weight": 1
 		}
 	]
 }

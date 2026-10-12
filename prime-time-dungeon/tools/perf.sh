@@ -4,13 +4,16 @@
 # leak loop. The CTB battle scene and its "battle" section are gone (R5b part 2b, 07 §12.6).
 #
 # Usage:
-#   tools/perf.sh [--driver=opengl3|vulkan] [--res=1280x720] [--quality=high|low] [--only=startup,explore,safe_room,combat,leak]
+#   tools/perf.sh [--driver=opengl3|vulkan] [--res=1280x720] [--quality=high|low]
+#                 [--only=startup,explore,safe_room,combat,season,leak]
 #                 [--cycles=20] [--out=<file.md>] [--shots=<dir>] [--headless] [--look=worst]
 #   --only=combat (or combat_regular,combat_two_groups,combat_boss_queen): the real-time combat in the world (07 §8.10,
 #   R2) with effects — telegraph pool full, zones, hits, extras, the queen's adds — plus a timing pass (exploration vs.
 #   combat at the same spot, the CombatDirector's own cost per frame).
 #   --driver=opengl3 (default) = gl_compatibility like CI screenshots; --driver=vulkan = Mobile renderer (needs a Vulkan
 #   ICD, e.g. Mesa lavapipe: apt install mesa-vulkan-drivers). --headless: timing + leak loop only (no render metrics).
+#   --only=season (ST1-C1): floors 2–6 of the basis season — build time of each whole floor (budget as floor 1),
+#   its layout, every cell × 4 camera yaws.
 #   --shots=<dir>: saves the frame with the most draw calls of every table row as PNG.
 #   --look=worst: every section with a candidate persona in the heaviest look (08 §6.2, K2: Kai ≤ 3 000 tris, 7 meshes).
 #

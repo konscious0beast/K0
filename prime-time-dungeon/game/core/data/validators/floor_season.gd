@@ -5,15 +5,29 @@ extends RefCounted
 ## the generator v2 (`zones`, core/dungeon/zone_generator.gd). All optional with defaults that change nothing: variant 0
 ## (no place stated), level_band [] (no band), zones [] (the DungeonGenerator as today). Private helper of
 ## DataValidator (no class_name; preloaded as FloorSeasonCheck): the frozen validator calls normalize (per floor),
-## zone_ids (rule 3) and check (cross-table rules). Contract pass 4 ships the schema and these rules; owned by
-## 09-ST1-C, which may extend the zone schema with the generator v2 without touching DataValidator.
+## zone_ids (rule 3) and check (cross-table rules). Contract pass 4 shipped the schema and these rules; ST1-C (the
+## owner) extended the quarter schema with the generator v2 (events, programme doors, gather nodes, the safe room) and
+## added its rules — one safe room per quarter, the floor's key (itm_key_f<index>, dropped by the Revier-Boss), the
+## references of the quarters' events and gather nodes — without touching DataValidator.
 
 ## A quarter of a generator-v2 floor (09 §3.2, §3.6): id (zone_, unique like every zone id), name (the login summary
 ## names it, 09 §5.4), rooms (09 §3.6: 10–14 per quarter), palette (overrides the floor palette in the quarter, keys of
 ## DataValidator.PALETTE_KEYS / PALETTE_ART_KEYS) and pool (regular encounters of this floor that roam the quarter;
-## [] = the floor's pool by depth). The danger for sleepers follows the position (09 §3.6 Nr. 4), it is no field.
+## [] = the floor's pool by depth). ST1-C: events (templates {type, params} of DataValidator.FLOOR_EVENT_PARAMS, each
+## placed once in the quarter — no lever, it needs a hand-built gate — and drawn for the programme rooms), spots
+## (programme doors in this quarter, 09 §3.3; at most five per floor), nodes (gather node kinds, nod_ of
+## professions.json: 4–6 positions per quarter, ST1-E), safe ({name, theme}: the quarter's safe room) and style (the
+## dressing of its rooms, a style of the floor's art theme: STYLES; "" = the one its palette is closest to). The danger
+## for sleepers follows the position (09 §3.6 Nr. 4), it is no field.
 const ZONE_SPEC: Array = [["id", "s"], ["name", "s"], ["rooms", "d", {"min": 10, "max": 14}], ["palette", "d", {}],
-	["pool", "sa", []]]
+	["pool", "sa", []], ["events", "a", []], ["spots", "i", 0], ["nodes", "sa", []], ["safe", "d", {}],
+	["style", "s", ""]]
+## The dressing styles of a quarter per art theme (RoomSpec.style; the boss and safe-room looks are no quarter style).
+const STYLES: Dictionary = {"metro": ["platform", "sewer", "cellar", "track9"], "mall": ["mall"]}
+const EVENT_SPEC: Array = [["type", "s"], ["params", "d", {}]]
+const SAFE_SPEC: Array = [["name", "s", ""], ["theme", "s", "kiosk"]]
+const SPOTS_MAX: int = 5                   # == ZoneGenerator.SPOTS_MAX (09 §3.3: at most five programme points)
+const KEY_PREFIX: String = "itm_key_f"     # == ZoneGenerator.KEY_PREFIX: the floor's key itm_key_f<index>
 const VARIANT_MAX: int = 3                 # a Kulisse spans one to three floors (09 §3.1)
 const ZONES_MIN: int = 2                   # floor 2: two quarters; floors 3–18: three or four (09 §3.1)
 const ZONES_MAX: int = 4
@@ -80,6 +94,7 @@ static func normalize(v: DataValidator, ctx: String, d: Dictionary, _raw: Dictio
 		sum_min += int(rooms["min"])
 		sum_max += int(rooms["max"])
 		z["palette"] = v._n_palette(zctx + ".palette", z["palette"])
+		_normalize_v2(v, zctx, z)                # ST1-C: events, spots, nodes, safe room
 		zones.append(z)
 	var fr: Dictionary = d["rooms"]
 	if not zones.is_empty() and (sum_min > int(fr["max"]) or sum_max < int(fr["min"])):
@@ -87,7 +102,51 @@ static func normalize(v: DataValidator, ctx: String, d: Dictionary, _raw: Dictio
 			int(fr["min"]), int(fr["max"])])
 	if int(d["safe_rooms"]) > zones.size():
 		v._err(ctx + ".safe_rooms", "at most one safe room per quarter (%d quarters)" % zones.size())
+	elif not zones.is_empty() and int(d["safe_rooms"]) < zones.size():   # ST1-C: 09 §3.6 Nr. 5
+		v._err(ctx + ".safe_rooms", "one safe room in every quarter (09 §3.6; %d quarters)" % zones.size())
+	var spots: int = 0
+	var templates: int = 0
+	for z: Dictionary in zones:
+		spots += int(z["spots"])
+		templates += (z["events"] as Array).size()
+	if spots > SPOTS_MAX:
+		v._err(ctx + ".zones", "%d programme doors (at most %d per floor, 09 §3.3)" % [spots, SPOTS_MAX])
+	if spots > 0 and templates == 0:
+		v._err(ctx + ".zones", "programme doors need event templates (a programme room holds an event)")
 	d["zones"] = zones
+
+
+## ST1-C: the generator-v2 fields of one normalized quarter `z` (in place): event templates, programme doors, gather
+## node kinds (references: check), the safe room.
+static func _normalize_v2(v: DataValidator, zctx: String, z: Dictionary) -> void:
+	var events: Array[Dictionary] = []
+	var raw_e: Array = z["events"]
+	for i in raw_e.size():
+		var ectx: String = "%s.events[%d]" % [zctx, i]
+		var e: Dictionary = v._norm(ectx, raw_e[i], EVENT_SPEC)
+		if e.is_empty():
+			continue
+		var etype: String = str(e["type"])
+		v._enum(ectx + ".type", etype, ZoneGenerator.EVENT_TYPES)
+		if DataValidator.FLOOR_EVENT_PARAMS.has(etype):
+			var spec: Array = []
+			for f: Array in DataValidator.FLOOR_EVENT_PARAMS[etype]:
+				spec.append([f[0], f[1]])
+			var params: Dictionary = v._norm(ectx + ".params", e["params"], spec)
+			if not params.is_empty():
+				v._n_event_params(ectx + ".params", etype, params)
+			e["params"] = params
+		events.append(e)
+	z["events"] = events
+	v._range_i(zctx + ".spots", int(z["spots"]), 0, SPOTS_MAX)
+	var safe: Dictionary = z["safe"]
+	if not safe.is_empty():
+		safe = v._norm(zctx + ".safe", safe, SAFE_SPEC)
+		if not safe.is_empty():
+			v._enum(zctx + ".safe.theme", str(safe["theme"]), DataValidator.SAFE_ROOM_THEMES)
+			if str(safe["name"]).length() > NAME_MAX:
+				v._err(zctx + ".safe.name", "0..%d characters" % NAME_MAX)
+		z["safe"] = safe
 
 
 ## The quarter ids of a normalized floor (rule 3: zone ids are global).
@@ -139,6 +198,8 @@ static func check(v: DataValidator) -> void:
 					v._err(zctx, "'%s' is a boss (bosses have their own rooms)" % enc)
 		if not (d["level_band"] as PackedInt32Array).is_empty():
 			banded.append([idx, ctx, d["level_band"]])
+		if not (d["zones"] as Array).is_empty():
+			_check_v2(v, ctx, d)                     # ST1-C: the key, the quarters' events and gather nodes
 	banded.sort_custom(func(a: Array, b: Array) -> bool: return int(a[0]) < int(b[0]))
 	for k in range(1, banded.size()):
 		var prev: PackedInt32Array = (banded[k - 1] as Array)[2]
@@ -146,3 +207,65 @@ static func check(v: DataValidator) -> void:
 		if cur.size() == 2 and prev.size() == 2 and (cur[0] < prev[0] or cur[1] < prev[1]):
 			v._err(str((banded[k] as Array)[1]) + ".level_band", "falls below the band of floor %d (%s → %s)" % [
 				int((banded[k - 1] as Array)[0]), str(Array(prev)), str(Array(cur))])
+
+
+## ST1-C: the cross-table rules of a generator-v2 floor `d`: the floor's key (itm_key_f<index>, an item of type key)
+## drops from the lead of its Revier-Boss; the quarters' events name known items, boxes and regular encounters of this
+## floor; the gather nodes are nod_ entries of professions.json.
+static func _check_v2(v: DataValidator, ctx: String, d: Dictionary) -> void:
+	var idx: int = int(d["index"])
+	var qb: String = str(d["quarter_boss"])
+	if qb != "" and v._encounters.has(qb):
+		var key: String = KEY_PREFIX + str(idx)
+		if not v._items.has(key):
+			v._err(ctx + ".quarter_boss", "the floor's key '%s' is missing (items.json, type key)" % key)
+		elif str((v._items[key] as Dictionary).get("type", "")) != "key":
+			v._err(ctx + ".quarter_boss", "'%s' must be an item of type key" % key)
+		var lead: String = ""
+		var enemies: PackedStringArray = ((v._encounters[qb] as Dictionary)["def"] as Dictionary)["enemies"]
+		if not enemies.is_empty():
+			lead = enemies[0]
+		var drops: bool = false
+		if v._enemies.has(lead):
+			for bd: Variant in ((v._enemies[lead] as Dictionary).get("boss_drops", []) as Array):
+				if bd is Dictionary and str((bd as Dictionary).get("kind", "")) == "item" \
+						and str((bd as Dictionary).get("id", "")) == key:
+					drops = true
+		if not drops:
+			v._err(ctx + ".quarter_boss", "the Revier-Boss '%s' must drop the floor's key '%s' (boss_drops)" % [lead,
+				key])
+	var art: String = str(d["theme"])
+	for t: Dictionary in v._out.get("themes", []):
+		if str(t["id"]) == art:
+			art = str(t["art"])
+	var nodes: Dictionary = {}
+	for n: Variant in ((v._out.get("profession_extras", {}) as Dictionary).get("nodes", []) as Array):
+		nodes[str((n as Dictionary).get("id", ""))] = true
+	for z: Dictionary in d["zones"]:
+		var zctx: String = "%s.zones[%s]" % [ctx, str(z["id"])]
+		var style: String = str(z["style"])
+		if style != "" and not (STYLES.get(art, []) as Array).has(style):
+			v._err(zctx + ".style", "'%s' is no dressing style of the art theme %s (%s)" % [style, art,
+				str(STYLES.get(art, []))])
+		for nod: String in z["nodes"]:
+			if not nodes.is_empty() and not nodes.has(nod):    # tables without professions.json's nodes: unchecked
+				v._err(zctx + ".nodes", "unknown gather node (professions.json nodes) '%s'" % nod)
+		var events: Array = z["events"]
+		for i in events.size():
+			var e: Dictionary = events[i]
+			var p: Dictionary = e["params"]
+			var ectx: String = "%s.events[%d].params" % [zctx, i]
+			if p.has("reward_item"):
+				v._ref(ectx + ".reward_item", str(p["reward_item"]), v._items, "item")
+			for t: Variant in (p.get("table", []) as Array):
+				var te: Dictionary = t
+				match str(te.get("kind", "")):
+					"item":
+						v._ref(ectx + ".table", str(te["id"]), v._items, "item")
+					"box":
+						v._ref(ectx + ".table", str(te["id"]), v._boxes, "lootbox")
+					"encounter":
+						var enc: String = str(te["id"])
+						if not v._encounters.has(enc) or int((v._encounters[enc] as Dictionary)["floor"]) != idx \
+								or bool(((v._encounters[enc] as Dictionary)["def"] as Dictionary)["boss"]):
+							v._err(ectx + ".table", "'%s' is no regular encounter of this floor" % enc)

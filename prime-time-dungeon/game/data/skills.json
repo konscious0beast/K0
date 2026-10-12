@@ -1763,6 +1763,1675 @@
 				"gcd": false,
 				"range_cm": 800
 			}
+		},
+		{
+			"id": "skl_e_stiff_slap",
+			"name": "Steifer Schlag",
+			"desc": "Ein Arm, der nie gelernt hat, sich zu beugen.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 100,
+			"mp_cost": 0,
+			"vfx": "slash",
+			"rt": {
+				"icon": "claw",
+				"range_cm": 250,
+				"gcd": false
+			}
+		},
+		{
+			"id": "skl_e_frozen_pose",
+			"name": "Starre Pose",
+			"desc": "Die Puppe erstarrt im Schaufenster-Look: Gepanzert für 8 Sekunden.",
+			"user": "enemy",
+			"category": "buff",
+			"target": "all_allies",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 0,
+			"statuses": [
+				{
+					"id": "sts_guard",
+					"ms": 8000
+				}
+			],
+			"anim": "cast",
+			"vfx": "buff",
+			"rt": {
+				"icon": "guard",
+				"cast_ms": 2000,
+				"interrupt_worthy": true
+			}
+		},
+		{
+			"id": "skl_e_window_leap",
+			"name": "Schaufenster-Sprung",
+			"desc": "Raus aus der Auslage, rein ins Gesicht.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 140,
+			"mp_cost": 0,
+			"vfx": "slash",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 1000,
+				"interruptible": false,
+				"pct_maxhp": 20,
+				"range_cm": 900,
+				"dash": true,
+				"telegraph": {
+					"shape": "line",
+					"anchor": "self",
+					"length_cm": 800,
+					"width_cm": 150
+				}
+			}
+		},
+		{
+			"id": "skl_e_cart_ram",
+			"name": "Rammen",
+			"desc": "Ein Rad eiert immer. Hier: absichtlich.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 100,
+			"mp_cost": 0,
+			"vfx": "hit",
+			"rt": {
+				"icon": "bite",
+				"range_cm": 220,
+				"gcd": false
+			}
+		},
+		{
+			"id": "skl_e_cart_run",
+			"name": "Anlauf mit Pfand",
+			"desc": "Der Wagen nimmt Anlauf. Die Münze klimpert.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 60,
+			"mp_cost": 0,
+			"vfx": "hit",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 2000,
+				"interruptible": false,
+				"pct_maxhp": 15,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "target_pos",
+					"radius_cm": 200
+				}
+			}
+		},
+		{
+			"id": "skl_e_sign_slap",
+			"name": "Schild-Klatscher",
+			"desc": "Ein Preisschild mit Wucht. Reduziert: dich.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 100,
+			"mp_cost": 0,
+			"vfx": "hit",
+			"rt": {
+				"icon": "claw",
+				"range_cm": 250,
+				"gcd": false
+			}
+		},
+		{
+			"id": "skl_e_discount_up",
+			"name": "Rabatt steigt",
+			"desc": "Minus dreißig, minus fünfzig, minus siebzig: Gepanzert für 4 Sekunden.",
+			"user": "enemy",
+			"category": "buff",
+			"target": "self",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 0,
+			"statuses": [
+				{
+					"id": "sts_guard",
+					"ms": 4000
+				}
+			],
+			"anim": "cast",
+			"vfx": "buff",
+			"rt": {
+				"icon": "guard"
+			}
+		},
+		{
+			"id": "skl_e_price_crash",
+			"name": "Preissturz",
+			"desc": "Alles muss raus. Auch der Boden unter dir.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 170,
+			"mp_cost": 0,
+			"vfx": "crit",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 1500,
+				"interruptible": false,
+				"pct_maxhp": 25,
+				"range_cm": 1200,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "self",
+					"radius_cm": 300
+				}
+			}
+		},
+		{
+			"id": "skl_e_spore_splash",
+			"name": "Sporenspritzer",
+			"desc": "Leuchtende Sporen aus dem Food-Court. Kann vergiften.",
+			"user": "enemy",
+			"category": "magic",
+			"target": "single_enemy",
+			"damage_type": "magical",
+			"element": "poison",
+			"power": 90,
+			"mp_cost": 0,
+			"statuses": [
+				{
+					"id": "sts_poison",
+					"ms": 8000
+				}
+			],
+			"anim": "cast",
+			"vfx": "toxic",
+			"rt": {
+				"icon": "toxic",
+				"cast_ms": 1500,
+				"range_cm": 1200
+			}
+		},
+		{
+			"id": "skl_e_feedback",
+			"name": "Lautsprecher-Rückkopplung",
+			"desc": "Ein Pfeifton, der alle trifft.",
+			"user": "enemy",
+			"category": "magic",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "shock",
+			"power": 80,
+			"mp_cost": 0,
+			"anim": "cast",
+			"vfx": "shock",
+			"rt": {
+				"icon": "bolt",
+				"cast_ms": 2000,
+				"interruptible": false,
+				"pct_maxhp": 20,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "self",
+					"radius_cm": 500
+				}
+			}
+		},
+		{
+			"id": "skl_e_jingle",
+			"name": "Werbejingle",
+			"desc": "Ein Ohrwurm mit Stromschlag.",
+			"user": "enemy",
+			"category": "magic",
+			"target": "single_enemy",
+			"damage_type": "magical",
+			"element": "shock",
+			"power": 100,
+			"mp_cost": 0,
+			"anim": "cast",
+			"vfx": "shock",
+			"rt": {
+				"icon": "bolt",
+				"cast_ms": 1500,
+				"range_cm": 1500,
+				"interruptible": false
+			}
+		},
+		{
+			"id": "skl_e_hanger_swipe",
+			"name": "Bügel-Hieb",
+			"desc": "Ein Kleiderbügel, sehr entschlossen.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 100,
+			"mp_cost": 0,
+			"vfx": "slash",
+			"rt": {
+				"icon": "claw",
+				"range_cm": 250,
+				"gcd": false
+			}
+		},
+		{
+			"id": "skl_e_quick_change",
+			"name": "Kostümwechsel",
+			"desc": "In Sekunden umgezogen: Gepanzert für 8 Sekunden.",
+			"user": "enemy",
+			"category": "buff",
+			"target": "all_allies",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 0,
+			"statuses": [
+				{
+					"id": "sts_guard",
+					"ms": 8000
+				}
+			],
+			"anim": "cast",
+			"vfx": "buff",
+			"rt": {
+				"icon": "guard",
+				"cast_ms": 2000,
+				"interrupt_worthy": true
+			}
+		},
+		{
+			"id": "skl_e_entrance",
+			"name": "Auftritt!",
+			"desc": "Ein Schritt nach vorn, mitten ins Rampenlicht.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 140,
+			"mp_cost": 0,
+			"vfx": "slash",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 1000,
+				"interruptible": false,
+				"pct_maxhp": 20,
+				"range_cm": 900,
+				"dash": true,
+				"telegraph": {
+					"shape": "line",
+					"anchor": "self",
+					"length_cm": 800,
+					"width_cm": 150
+				}
+			}
+		},
+		{
+			"id": "skl_e_cardboard_sword",
+			"name": "Pappschwert",
+			"desc": "Aus Pappe. Trifft trotzdem.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 100,
+			"mp_cost": 0,
+			"vfx": "slash",
+			"rt": {
+				"icon": "claw",
+				"range_cm": 300,
+				"gcd": false
+			}
+		},
+		{
+			"id": "skl_e_cardboard_wall",
+			"name": "Pappschild-Wall",
+			"desc": "Die Pappritter rücken zusammen: Gepanzert für 8 Sekunden.",
+			"user": "enemy",
+			"category": "buff",
+			"target": "all_allies",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 0,
+			"statuses": [
+				{
+					"id": "sts_guard",
+					"ms": 8000
+				}
+			],
+			"anim": "cast",
+			"vfx": "buff",
+			"rt": {
+				"icon": "guard",
+				"cast_ms": 2000,
+				"interrupt_worthy": true
+			}
+		},
+		{
+			"id": "skl_e_knight_lunge",
+			"name": "Ritterlicher Ausfall",
+			"desc": "Ein Stoß auf die schwächste Stelle der Gruppe.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 140,
+			"mp_cost": 0,
+			"vfx": "slash",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 1000,
+				"interruptible": false,
+				"pct_maxhp": 20,
+				"range_cm": 900,
+				"dash": true,
+				"telegraph": {
+					"shape": "line",
+					"anchor": "self",
+					"length_cm": 800,
+					"width_cm": 150
+				}
+			}
+		},
+		{
+			"id": "skl_e_nibble",
+			"name": "Knabbern",
+			"desc": "Wolle, Samt, Kandidat:innen — alles schmeckt.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 90,
+			"mp_cost": 0,
+			"vfx": "hit",
+			"rt": {
+				"icon": "claw",
+				"range_cm": 220,
+				"gcd": false
+			}
+		},
+		{
+			"id": "skl_e_moth_cloud",
+			"name": "Mottenwolke",
+			"desc": "Der ganze Schwarm auf einmal. Auf alle.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 60,
+			"mp_cost": 0,
+			"vfx": "hit",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 1200,
+				"interruptible": false,
+				"pct_maxhp": 15,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "target_pos",
+					"radius_cm": 250
+				}
+			}
+		},
+		{
+			"id": "skl_e_stage_fog",
+			"name": "Bühnennebel",
+			"desc": "Dichter Kunstnebel. Wer drinsteht, wird langsam.",
+			"user": "enemy",
+			"category": "magic",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "poison",
+			"power": 60,
+			"mp_cost": 0,
+			"anim": "cast",
+			"vfx": "toxic",
+			"rt": {
+				"icon": "toxic",
+				"cast_ms": 1200,
+				"interruptible": false,
+				"pct_maxhp": 15,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "target_pos",
+					"radius_cm": 300
+				},
+				"zone": {
+					"ms": 6000,
+					"period_ms": 2000,
+					"status": "sts_slow"
+				}
+			},
+			"statuses": []
+		},
+		{
+			"id": "skl_e_spot_heat",
+			"name": "Scheinwerferhitze",
+			"desc": "Zu nah am Licht. Brennt.",
+			"user": "enemy",
+			"category": "magic",
+			"target": "single_enemy",
+			"damage_type": "magical",
+			"element": "fire",
+			"power": 110,
+			"mp_cost": 0,
+			"anim": "cast",
+			"vfx": "fire",
+			"rt": {
+				"icon": "fire",
+				"cast_ms": 1500,
+				"range_cm": 1500,
+				"interruptible": false
+			}
+		},
+		{
+			"id": "skl_e_lid_shut",
+			"name": "Deckel zu",
+			"desc": "Der Karton macht dicht: Gepanzert für 4 Sekunden.",
+			"user": "enemy",
+			"category": "buff",
+			"target": "self",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 0,
+			"statuses": [
+				{
+					"id": "sts_guard",
+					"ms": 4000
+				}
+			],
+			"anim": "cast",
+			"vfx": "buff",
+			"rt": {
+				"icon": "guard"
+			}
+		},
+		{
+			"id": "skl_e_parcel_stomp",
+			"name": "Paket-Stampfer",
+			"desc": "Ein Stapel Pakete in die Magengrube.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 170,
+			"mp_cost": 0,
+			"vfx": "crit",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 1500,
+				"interruptible": false,
+				"pct_maxhp": 25,
+				"range_cm": 1200,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "self",
+					"radius_cm": 300
+				}
+			}
+		},
+		{
+			"id": "skl_e_tape_web",
+			"name": "Klebeband-Netz",
+			"desc": "Klebrige Bahnen. Verlangsamt das Ziel.",
+			"user": "enemy",
+			"category": "debuff",
+			"target": "single_enemy",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 0,
+			"statuses": [
+				{
+					"id": "sts_slow",
+					"ms": 5000
+				}
+			],
+			"anim": "cast",
+			"vfx": "debuff",
+			"rt": {
+				"icon": "generic",
+				"range_cm": 1500
+			}
+		},
+		{
+			"id": "skl_e_glue_bite",
+			"name": "Kleberbiss",
+			"desc": "Hält ewig. Kann vergiften.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "poison",
+			"power": 90,
+			"mp_cost": 0,
+			"statuses": [
+				{
+					"id": "sts_poison",
+					"chance_pm": 500,
+					"ms": 8000
+				}
+			],
+			"vfx": "toxic",
+			"rt": {
+				"icon": "bite",
+				"range_cm": 220,
+				"gcd": false
+			}
+		},
+		{
+			"id": "skl_e_bubble_field",
+			"name": "Luftpolster-Feld",
+			"desc": "Es ploppt überall. Wer drinsteht, wird langsam.",
+			"user": "enemy",
+			"category": "magic",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "poison",
+			"power": 60,
+			"mp_cost": 0,
+			"anim": "cast",
+			"vfx": "toxic",
+			"rt": {
+				"icon": "toxic",
+				"cast_ms": 1200,
+				"interruptible": false,
+				"pct_maxhp": 15,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "target_pos",
+					"radius_cm": 300
+				},
+				"zone": {
+					"ms": 6000,
+					"period_ms": 2000,
+					"status": "sts_slow"
+				}
+			},
+			"statuses": []
+		},
+		{
+			"id": "skl_e_crackle",
+			"name": "Knisterfunken",
+			"desc": "Reibung, Folie, Funken.",
+			"user": "enemy",
+			"category": "magic",
+			"target": "single_enemy",
+			"damage_type": "magical",
+			"element": "fire",
+			"power": 110,
+			"mp_cost": 0,
+			"anim": "cast",
+			"vfx": "fire",
+			"rt": {
+				"icon": "fire",
+				"cast_ms": 1500,
+				"range_cm": 1500,
+				"interruptible": false
+			}
+		},
+		{
+			"id": "skl_e_return_slime",
+			"name": "Retourenbrühe",
+			"desc": "Was zurückkommt, riecht. Kann vergiften.",
+			"user": "enemy",
+			"category": "magic",
+			"target": "single_enemy",
+			"damage_type": "magical",
+			"element": "poison",
+			"power": 90,
+			"mp_cost": 0,
+			"statuses": [
+				{
+					"id": "sts_poison",
+					"ms": 8000
+				}
+			],
+			"anim": "cast",
+			"vfx": "toxic",
+			"rt": {
+				"icon": "toxic",
+				"cast_ms": 1500,
+				"range_cm": 1200
+			}
+		},
+		{
+			"id": "skl_e_scan_beam",
+			"name": "Scanner-Strahl",
+			"desc": "Piep. Treffer.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 100,
+			"mp_cost": 0,
+			"vfx": "slash",
+			"rt": {
+				"icon": "claw",
+				"range_cm": 250,
+				"gcd": false
+			}
+		},
+		{
+			"id": "skl_e_misscan",
+			"name": "Fehlscan",
+			"desc": "Alles zuckt. Alle. Bitte erneut scannen.",
+			"user": "enemy",
+			"category": "magic",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "shock",
+			"power": 80,
+			"mp_cost": 0,
+			"anim": "cast",
+			"vfx": "shock",
+			"rt": {
+				"icon": "bolt",
+				"cast_ms": 2000,
+				"interruptible": false,
+				"pct_maxhp": 20,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "self",
+					"radius_cm": 500
+				}
+			}
+		},
+		{
+			"id": "skl_bf_clipboard",
+			"name": "Klemmbrett-Hieb",
+			"desc": "Mit Durchschlag.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 110,
+			"mp_cost": 0,
+			"vfx": "hit",
+			"rt": {
+				"icon": "claw",
+				"range_cm": 320,
+				"gcd": false
+			}
+		},
+		{
+			"id": "skl_bf_store_rules",
+			"name": "Kundenordnung verlesen",
+			"desc": "Paragraf für Paragraf: Gepanzert für 12 Sekunden, die Party ist ermahnt.",
+			"user": "enemy",
+			"category": "buff",
+			"target": "self",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 0,
+			"statuses": [
+				{
+					"id": "sts_guard",
+					"ms": 12000,
+					"to": "self"
+				},
+				{
+					"id": "sts_admonished",
+					"ms": 12000,
+					"to": "all_enemies"
+				}
+			],
+			"anim": "cast",
+			"vfx": "buff",
+			"rt": {
+				"icon": "whistle",
+				"cast_ms": 3000,
+				"interrupt_worthy": true
+			}
+		},
+		{
+			"id": "skl_bf_price_hail",
+			"name": "Preisschild-Hagel",
+			"desc": "Zwölf Preisschilder, alle reduziert. Trifft alle.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 70,
+			"mp_cost": 0,
+			"vfx": "hit",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 1200,
+				"interruptible": false,
+				"pct_maxhp": 35,
+				"telegraph": {
+					"shape": "line",
+					"anchor": "self",
+					"length_cm": 1200,
+					"width_cm": 150
+				}
+			}
+		},
+		{
+			"id": "skl_bf_room_scent",
+			"name": "Raumduft „Frühlingswiese“",
+			"desc": "Riecht nach Wiese, wirkt wie Gift. Kann vergiften.",
+			"user": "enemy",
+			"category": "magic",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "poison",
+			"power": 60,
+			"mp_cost": 0,
+			"anim": "cast",
+			"vfx": "toxic",
+			"rt": {
+				"icon": "toxic",
+				"cast_ms": 1000,
+				"interruptible": false,
+				"pct_maxhp": 25,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "each_enemy",
+					"radius_cm": 250,
+					"count": 2
+				},
+				"zone": {
+					"ms": 12000,
+					"period_ms": 2000,
+					"status": "sts_poison"
+				}
+			}
+		},
+		{
+			"id": "skl_bf_till_three",
+			"name": "„Aushilfe an Kasse 3!“",
+			"desc": "Ruft eine Schaufensterpuppe als Aushilfe an die Kasse.",
+			"user": "enemy",
+			"category": "summon",
+			"target": "self",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 0,
+			"summon": [
+				"enm_schaufensterpuppe"
+			],
+			"anim": "cast",
+			"vfx": "smoke",
+			"rt": {
+				"icon": "whistle",
+				"cast_ms": 2000,
+				"interrupt_worthy": true
+			}
+		},
+		{
+			"id": "skl_bf_sale_whirl",
+			"name": "Sonderangebots-Wirbel",
+			"desc": "Alles muss raus. Trifft alle.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 90,
+			"mp_cost": 0,
+			"statuses": [
+				{
+					"id": "sts_dizzy",
+					"ms": 3000,
+					"to": "self"
+				}
+			],
+			"vfx": "slash",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 1800,
+				"interruptible": false,
+				"pct_maxhp": 30,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "self",
+					"radius_cm": 400
+				}
+			}
+		},
+		{
+			"id": "skl_br_folding_rule",
+			"name": "Zollstock-Klaps",
+			"desc": "Gemessen, gewogen, getroffen.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 110,
+			"mp_cost": 0,
+			"vfx": "hit",
+			"rt": {
+				"icon": "claw",
+				"range_cm": 320,
+				"gcd": false
+			}
+		},
+		{
+			"id": "skl_br_prop_list",
+			"name": "Requisitenliste verlesen",
+			"desc": "Posten für Posten: Gepanzert für 12 Sekunden, die Party ist ermahnt.",
+			"user": "enemy",
+			"category": "buff",
+			"target": "self",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 0,
+			"statuses": [
+				{
+					"id": "sts_guard",
+					"ms": 12000,
+					"to": "self"
+				},
+				{
+					"id": "sts_admonished",
+					"ms": 12000,
+					"to": "all_enemies"
+				}
+			],
+			"anim": "cast",
+			"vfx": "buff",
+			"rt": {
+				"icon": "whistle",
+				"cast_ms": 3000,
+				"interrupt_worthy": true
+			}
+		},
+		{
+			"id": "skl_br_sword_volley",
+			"name": "Pappschwert-Salve",
+			"desc": "Zwölf Pappschwerter auf einmal. Trifft alle.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 70,
+			"mp_cost": 0,
+			"vfx": "hit",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 1200,
+				"interruptible": false,
+				"pct_maxhp": 35,
+				"telegraph": {
+					"shape": "line",
+					"anchor": "self",
+					"length_cm": 1200,
+					"width_cm": 150
+				}
+			}
+		},
+		{
+			"id": "skl_br_mothball_fog",
+			"name": "Mottenkugel-Nebel",
+			"desc": "Gut für Kostüme, schlecht für dich. Kann vergiften.",
+			"user": "enemy",
+			"category": "magic",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "poison",
+			"power": 60,
+			"mp_cost": 0,
+			"anim": "cast",
+			"vfx": "toxic",
+			"rt": {
+				"icon": "toxic",
+				"cast_ms": 1000,
+				"interruptible": false,
+				"pct_maxhp": 25,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "each_enemy",
+					"radius_cm": 250,
+					"count": 2
+				},
+				"zone": {
+					"ms": 12000,
+					"period_ms": 2000,
+					"status": "sts_poison"
+				}
+			}
+		},
+		{
+			"id": "skl_br_extras",
+			"name": "„Komparsen, bitte!“",
+			"desc": "Ruft einen Mottenschwarm aus der Garderobe.",
+			"user": "enemy",
+			"category": "summon",
+			"target": "self",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 0,
+			"summon": [
+				"enm_mottenschwarm"
+			],
+			"anim": "cast",
+			"vfx": "smoke",
+			"rt": {
+				"icon": "whistle",
+				"cast_ms": 2000,
+				"interrupt_worthy": true
+			}
+		},
+		{
+			"id": "skl_br_revolving_stage",
+			"name": "Drehbühnen-Wirbel",
+			"desc": "Die Bühne dreht sich. Alle mit. Trifft alle.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 90,
+			"mp_cost": 0,
+			"statuses": [
+				{
+					"id": "sts_dizzy",
+					"ms": 3000,
+					"to": "self"
+				}
+			],
+			"vfx": "slash",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 1800,
+				"interruptible": false,
+				"pct_maxhp": 30,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "self",
+					"radius_cm": 400
+				}
+			}
+		},
+		{
+			"id": "skl_bs_waybill",
+			"name": "Lieferschein-Hieb",
+			"desc": "Bitte hier unterschreiben. Und hier. Und hier.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 110,
+			"mp_cost": 0,
+			"vfx": "hit",
+			"rt": {
+				"icon": "claw",
+				"range_cm": 320,
+				"gcd": false
+			}
+		},
+		{
+			"id": "skl_bs_shift_plan",
+			"name": "Schichtplan verlesen",
+			"desc": "Pause gestrichen: Gepanzert für 12 Sekunden, die Party ist ermahnt.",
+			"user": "enemy",
+			"category": "buff",
+			"target": "self",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 0,
+			"statuses": [
+				{
+					"id": "sts_guard",
+					"ms": 12000,
+					"to": "self"
+				},
+				{
+					"id": "sts_admonished",
+					"ms": 12000,
+					"to": "all_enemies"
+				}
+			],
+			"anim": "cast",
+			"vfx": "buff",
+			"rt": {
+				"icon": "whistle",
+				"cast_ms": 3000,
+				"interrupt_worthy": true
+			}
+		},
+		{
+			"id": "skl_bs_tape_sling",
+			"name": "Paketband-Schleuder",
+			"desc": "Zwölf Meter Paketband in einem Zug. Trifft alle.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 70,
+			"mp_cost": 0,
+			"vfx": "hit",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 1200,
+				"interruptible": false,
+				"pct_maxhp": 35,
+				"telegraph": {
+					"shape": "line",
+					"anchor": "self",
+					"length_cm": 1200,
+					"width_cm": 150
+				}
+			}
+		},
+		{
+			"id": "skl_bs_carton_dust",
+			"name": "Kartonstaub",
+			"desc": "Staub aus tausend Kartons. Kann vergiften.",
+			"user": "enemy",
+			"category": "magic",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "poison",
+			"power": 60,
+			"mp_cost": 0,
+			"anim": "cast",
+			"vfx": "toxic",
+			"rt": {
+				"icon": "toxic",
+				"cast_ms": 1000,
+				"interruptible": false,
+				"pct_maxhp": 25,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "each_enemy",
+					"radius_cm": 250,
+					"count": 2
+				},
+				"zone": {
+					"ms": 12000,
+					"period_ms": 2000,
+					"status": "sts_poison"
+				}
+			}
+		},
+		{
+			"id": "skl_bs_belt_two",
+			"name": "„Nachschub an Band 2!“",
+			"desc": "Ruft eine Paketkrabbe vom Förderband.",
+			"user": "enemy",
+			"category": "summon",
+			"target": "self",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 0,
+			"summon": [
+				"enm_paketkrabbe"
+			],
+			"anim": "cast",
+			"vfx": "smoke",
+			"rt": {
+				"icon": "whistle",
+				"cast_ms": 2000,
+				"interrupt_worthy": true
+			}
+		},
+		{
+			"id": "skl_bs_pallet_round",
+			"name": "Hubwagen-Runde",
+			"desc": "Eine Runde mit dem Hubwagen. Trifft alle.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 90,
+			"mp_cost": 0,
+			"statuses": [
+				{
+					"id": "sts_dizzy",
+					"ms": 3000,
+					"to": "self"
+				}
+			],
+			"vfx": "slash",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 1800,
+				"interruptible": false,
+				"pct_maxhp": 30,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "self",
+					"radius_cm": 400
+				}
+			}
+		},
+		{
+			"id": "skl_ba_bargain_flash",
+			"name": "Rabattblitz",
+			"desc": "Ein roter Preis blitzt auf — nah oder quer durch die Passage.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "magical",
+			"element": "shock",
+			"power": 128,
+			"mp_cost": 0,
+			"vfx": "shock",
+			"rt": {
+				"icon": "bolt",
+				"range_cm": 1500,
+				"gcd": false
+			}
+		},
+		{
+			"id": "skl_ba_bargain_bite",
+			"name": "Schnäppchenbiss",
+			"desc": "Ein Biss zum halben Preis. Kann vergiften.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "poison",
+			"power": 90,
+			"mp_cost": 0,
+			"statuses": [
+				{
+					"id": "sts_poison",
+					"chance_pm": 500,
+					"ms": 8000
+				}
+			],
+			"vfx": "toxic",
+			"rt": {
+				"icon": "bite",
+				"range_cm": 350
+			}
+		},
+		{
+			"id": "skl_ba_restock",
+			"name": "Wühltisch-Nachschub",
+			"desc": "Zwei Rabattschilder klappen aus dem Wühltisch.",
+			"user": "enemy",
+			"category": "summon",
+			"target": "self",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 0,
+			"summon": [
+				"enm_rabattschild"
+			],
+			"anim": "cast",
+			"vfx": "smoke",
+			"rt": {
+				"icon": "whistle",
+				"cast_ms": 2500,
+				"interrupt_worthy": true
+			}
+		},
+		{
+			"id": "skl_ba_only_today",
+			"name": "Durchsage „Nur heute!“",
+			"desc": "Eine Durchsage wie eine Notbremse. Trifft alle.",
+			"user": "enemy",
+			"category": "magic",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "shock",
+			"power": 80,
+			"mp_cost": 0,
+			"anim": "cast",
+			"vfx": "shock",
+			"rt": {
+				"icon": "bolt",
+				"cast_ms": 2000,
+				"interrupt_worthy": true,
+				"pct_maxhp": 20
+			}
+		},
+		{
+			"id": "skl_ba_tag_rain",
+			"name": "Preisschild-Regen",
+			"desc": "Drei Stapel Preisschilder. Wer drinsteht, steht drin.",
+			"user": "enemy",
+			"category": "magic",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "poison",
+			"power": 50,
+			"mp_cost": 0,
+			"anim": "cast",
+			"vfx": "toxic",
+			"rt": {
+				"icon": "toxic",
+				"cast_ms": 1500,
+				"interruptible": false,
+				"pct_maxhp": 25,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "random",
+					"radius_cm": 200,
+					"count": 3
+				},
+				"zone": {
+					"ms": 10000,
+					"period_ms": 2000,
+					"status": "sts_poison"
+				}
+			}
+		},
+		{
+			"id": "skl_ba_clearance_nova",
+			"name": "Räumungs-Nova",
+			"desc": "Jedes Preisschild entlädt sich. Trifft alle.",
+			"user": "enemy",
+			"category": "magic",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "shock",
+			"power": 110,
+			"mp_cost": 0,
+			"anim": "cast",
+			"vfx": "shock",
+			"rt": {
+				"icon": "bolt",
+				"cast_ms": 3000,
+				"interruptible": false,
+				"pct_maxhp": 30,
+				"telegraph": {
+					"shape": "ring",
+					"anchor": "self",
+					"radius_cm": 1200,
+					"inner_cm": 400
+				}
+			}
+		},
+		{
+			"id": "skl_ba_shutter",
+			"name": "Rolltor-Sturz",
+			"desc": "Das Rolltor kommt runter. Bitte zurückbleiben.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 70,
+			"mp_cost": 0,
+			"vfx": "hit",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 1200,
+				"interruptible": false,
+				"pct_maxhp": 35,
+				"telegraph": {
+					"shape": "line",
+					"anchor": "self",
+					"length_cm": 1200,
+					"width_cm": 150
+				}
+			}
+		},
+		{
+			"id": "skl_bg_hanger_throw",
+			"name": "Kleiderbügel-Wurf",
+			"desc": "Ein Bügel, nah oder quer durch den Fundus.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "magical",
+			"element": "shock",
+			"power": 128,
+			"mp_cost": 0,
+			"vfx": "shock",
+			"rt": {
+				"icon": "bolt",
+				"range_cm": 1500,
+				"gcd": false
+			}
+		},
+		{
+			"id": "skl_bg_moth_bite",
+			"name": "Mottenbiss",
+			"desc": "Löcher im Kostüm, Löcher in dir. Kann vergiften.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "poison",
+			"power": 90,
+			"mp_cost": 0,
+			"statuses": [
+				{
+					"id": "sts_poison",
+					"chance_pm": 500,
+					"ms": 8000
+				}
+			],
+			"vfx": "toxic",
+			"rt": {
+				"icon": "bite",
+				"range_cm": 350
+			}
+		},
+		{
+			"id": "skl_bg_dress_rehearsal",
+			"name": "Kostümprobe",
+			"desc": "Zwei Mottenschwärme steigen aus dem Schrank.",
+			"user": "enemy",
+			"category": "summon",
+			"target": "self",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 0,
+			"summon": [
+				"enm_mottenschwarm"
+			],
+			"anim": "cast",
+			"vfx": "smoke",
+			"rt": {
+				"icon": "whistle",
+				"cast_ms": 2500,
+				"interrupt_worthy": true
+			}
+		},
+		{
+			"id": "skl_bg_door_slam",
+			"name": "Türenknall",
+			"desc": "Beide Schranktüren auf einmal. Trifft alle.",
+			"user": "enemy",
+			"category": "magic",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "shock",
+			"power": 80,
+			"mp_cost": 0,
+			"anim": "cast",
+			"vfx": "shock",
+			"rt": {
+				"icon": "bolt",
+				"cast_ms": 2000,
+				"interrupt_worthy": true,
+				"pct_maxhp": 20
+			}
+		},
+		{
+			"id": "skl_bg_mothballs",
+			"name": "Mottenkugeln",
+			"desc": "Drei Hände voll Mottenkugeln. Wer drinsteht, steht drin.",
+			"user": "enemy",
+			"category": "magic",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "poison",
+			"power": 50,
+			"mp_cost": 0,
+			"anim": "cast",
+			"vfx": "toxic",
+			"rt": {
+				"icon": "toxic",
+				"cast_ms": 1500,
+				"interruptible": false,
+				"pct_maxhp": 25,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "random",
+					"radius_cm": 200,
+					"count": 3
+				},
+				"zone": {
+					"ms": 10000,
+					"period_ms": 2000,
+					"status": "sts_poison"
+				}
+			}
+		},
+		{
+			"id": "skl_bg_grand_entrance",
+			"name": "Großer Auftritt",
+			"desc": "Alle Kostüme auf einmal. Trifft alle.",
+			"user": "enemy",
+			"category": "magic",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "shock",
+			"power": 110,
+			"mp_cost": 0,
+			"anim": "cast",
+			"vfx": "shock",
+			"rt": {
+				"icon": "bolt",
+				"cast_ms": 3000,
+				"interruptible": false,
+				"pct_maxhp": 30,
+				"telegraph": {
+					"shape": "ring",
+					"anchor": "self",
+					"radius_cm": 1200,
+					"inner_cm": 400
+				}
+			}
+		},
+		{
+			"id": "skl_bg_sliding_door",
+			"name": "Schiebetür-Schwung",
+			"desc": "Die Schiebetür schwingt durch den Raum.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 70,
+			"mp_cost": 0,
+			"vfx": "hit",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 1200,
+				"interruptible": false,
+				"pct_maxhp": 35,
+				"telegraph": {
+					"shape": "line",
+					"anchor": "self",
+					"length_cm": 1200,
+					"width_cm": 150
+				}
+			}
+		},
+		{
+			"id": "skl_bp_parcel_throw",
+			"name": "Paketwurf",
+			"desc": "Ein Paket, nah oder quer durch die Halle.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "magical",
+			"element": "shock",
+			"power": 128,
+			"mp_cost": 0,
+			"vfx": "shock",
+			"rt": {
+				"icon": "bolt",
+				"range_cm": 1500,
+				"gcd": false
+			}
+		},
+		{
+			"id": "skl_bp_paper_bite",
+			"name": "Altpapier-Biss",
+			"desc": "Feucht, alt, gemein. Kann vergiften.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "poison",
+			"power": 90,
+			"mp_cost": 0,
+			"statuses": [
+				{
+					"id": "sts_poison",
+					"chance_pm": 500,
+					"ms": 8000
+				}
+			],
+			"vfx": "toxic",
+			"rt": {
+				"icon": "bite",
+				"range_cm": 350
+			}
+		},
+		{
+			"id": "skl_bp_forwarding",
+			"name": "Nachsendung",
+			"desc": "Zwei Retourenschleime quellen aus dem Berg.",
+			"user": "enemy",
+			"category": "summon",
+			"target": "self",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 0,
+			"summon": [
+				"enm_retourenschleim"
+			],
+			"anim": "cast",
+			"vfx": "smoke",
+			"rt": {
+				"icon": "whistle",
+				"cast_ms": 2500,
+				"interrupt_worthy": true
+			}
+		},
+		{
+			"id": "skl_bp_siren",
+			"name": "Sirene „Zustellung gescheitert!“",
+			"desc": "Laut wie eine Notbremse. Trifft alle.",
+			"user": "enemy",
+			"category": "magic",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "shock",
+			"power": 80,
+			"mp_cost": 0,
+			"anim": "cast",
+			"vfx": "shock",
+			"rt": {
+				"icon": "bolt",
+				"cast_ms": 2000,
+				"interrupt_worthy": true,
+				"pct_maxhp": 20
+			}
+		},
+		{
+			"id": "skl_bp_leaking",
+			"name": "Auslaufende Pakete",
+			"desc": "Drei Pakete laufen aus. Wer drinsteht, steht drin.",
+			"user": "enemy",
+			"category": "magic",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "poison",
+			"power": 50,
+			"mp_cost": 0,
+			"anim": "cast",
+			"vfx": "toxic",
+			"rt": {
+				"icon": "toxic",
+				"cast_ms": 1500,
+				"interruptible": false,
+				"pct_maxhp": 25,
+				"telegraph": {
+					"shape": "circle",
+					"anchor": "random",
+					"radius_cm": 200,
+					"count": 3
+				},
+				"zone": {
+					"ms": 10000,
+					"period_ms": 2000,
+					"status": "sts_poison"
+				}
+			}
+		},
+		{
+			"id": "skl_bp_avalanche",
+			"name": "Kartonlawine",
+			"desc": "Der Berg rutscht. In alle Richtungen. Trifft alle.",
+			"user": "enemy",
+			"category": "magic",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "shock",
+			"power": 110,
+			"mp_cost": 0,
+			"anim": "cast",
+			"vfx": "shock",
+			"rt": {
+				"icon": "bolt",
+				"cast_ms": 3000,
+				"interruptible": false,
+				"pct_maxhp": 30,
+				"telegraph": {
+					"shape": "ring",
+					"anchor": "self",
+					"radius_cm": 1200,
+					"inner_cm": 400
+				}
+			}
+		},
+		{
+			"id": "skl_bp_conveyor",
+			"name": "Förderband-Schub",
+			"desc": "Das Band schiebt alles vor sich her.",
+			"user": "enemy",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 70,
+			"mp_cost": 0,
+			"vfx": "hit",
+			"rt": {
+				"icon": "claw",
+				"cast_ms": 1200,
+				"interruptible": false,
+				"pct_maxhp": 35,
+				"telegraph": {
+					"shape": "line",
+					"anchor": "self",
+					"length_cm": 1200,
+					"width_cm": 150
+				}
+			}
 		}
 	]
 }

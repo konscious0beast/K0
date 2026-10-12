@@ -216,7 +216,7 @@ func _slot_card(slot: int) -> Button:
 		var name_l: Label = UiUtil.label(UiUtil.glyph_safe(str(info.get("player_name", "Kai"))), &"", 28)
 		name_l.add_theme_font_override("font", UiTheme.font_bold())
 		texts.add_child(name_l)
-		var parts: PackedStringArray = ["Etage %d" % int(info.get("floor_index", 1)), "Level %d" % int(info.get("level",
+		var parts: PackedStringArray = ["Etage %d" % int(info.get("floor_index", 1)), "Stufe %d" % int(info.get("level",
 			1)), "Spielzeit %s" % UiUtil.fmt_time(int(info.get("play_time_sec", 0))),
 			"%s Follower" % UiUtil.fmt_int(int(info.get("followers", 0)))]
 		texts.add_child(UiUtil.label("  ·  ".join(parts), &"", 18, UiTheme.C_TEXT_DIM))

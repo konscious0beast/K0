@@ -1,8 +1,9 @@
 extends "res://scenes/ui/menu_base.gd"
 ## Pause tab "Fähigkeiten" (02_TECH §1.6, GDD §14.4; 07 §4.1): per member the combat bar (slots 1–5 + variants +
-## FINALE, unlock levels: learned = bright, upcoming = "ab Lv X", dimmed), the Partner-Spezial, the auto attack and the
-## partner tactic — see the section at the end; R5b: variants and the tactic are chosen there (the recorded loadout
-## command). Details on focus. The CTB learnset page is gone with the CTB campaign (R5b part 2b).
+## FINALE, unlock levels: learned = bright, upcoming = "ab Stufe X", dimmed), the Partner-Spezial, the auto attack and
+## the partner tactic — see the section at the end; R5b: variants and the tactic are chosen there (the recorded loadout
+## command). Details on focus. The CTB learnset page is gone with the CTB campaign (R5b part 2b). 09 ST1-A: a level
+## reads "Stufe", never "Lv" / "Level" (09 §1.2).
 
 var member_id: String = "kai"
 
@@ -112,7 +113,7 @@ func _show(e: Dictionary) -> void:
 			str(snappedf(sd.success_lck * 100.0, 0.1)).replace(".", ","), roundi(sd.success_cap * 100.0),
 			"SHOW-Abklingzeit 30 s (ganze Party)"])
 	if not bool(e.get("learned", true)):
-		lines.append("Wird mit Level %d gelernt." % int(e.get("level", 1)))
+		lines.append("Wird mit Stufe %d gelernt." % int(e.get("level", 1)))
 	body.text = UiUtil.glyph_safe("\n".join(lines))
 
 
@@ -304,7 +305,7 @@ func _rt_choose(e: Dictionary) -> void:
 	if not bool(e.get("choice", false)) or bool(e.get("equipped", false)):
 		return
 	if not bool(e["learned"]):
-		say("Wird mit Level %d gelernt." % int(e["level"]))
+		say("Wird mit Stufe %d gelernt." % int(e["level"]))
 		return
 	var m: PartyMember = Game.state.member(member_id) if Game.state != null else null
 	if m == null:
@@ -372,7 +373,7 @@ func _rt_button(e: Dictionary, prefix: String) -> void:
 	var name_text: String = prefix + (UiUtil.tr_text(sd.name) if sd != null else str(e["skill"]))
 	var mp: int = int(sd.rt.get("mp", sd.mp_cost)) if sd != null and not sd.rt.is_empty() else (sd.mp_cost if sd != null
 		else 0)
-	var right: String = ("%d MP" % mp if mp > 0 else "") if learned else "ab Lv %d" % int(e["level"])
+	var right: String = ("%d MP" % mp if mp > 0 else "") if learned else "ab Stufe %d" % int(e["level"])
 	if bool(e.get("equipped", false)):
 		right = "belegt"
 	var col: Color = UiUtil.ELEMENT_COLORS.get(sd.element if sd != null else "none", UiTheme.C_TEXT) as Color
@@ -395,15 +396,15 @@ func _rt_show(e: Dictionary) -> void:
 	match str(e.get("kind", "")):
 		"variant":
 			extra = ("Belegt Slot %d statt der Grundfähigkeit." % int(e["slot"]) if bool(e.get("equipped", false)) else
-				"Variante für Slot %d (ab Lv %d): auswählen, um sie statt der Grundfähigkeit zu belegen." % [int(
+				"Variante für Slot %d (ab Stufe %d): auswählen, um sie statt der Grundfähigkeit zu belegen." % [int(
 				e["slot"]), int(e["level"])])
 		"":
 			if bool(e.get("choice", false)) and not bool(e.get("equipped", false)):
 				extra = "Auswählen, um wieder die Grundfähigkeit in Slot %d zu belegen." % int(e["slot"])
 		"context":
-			extra = "Ersetzt den Slot automatisch, wenn das Ziel K.O. ist (ab Lv %d)." % int(e["level"])
+			extra = "Ersetzt den Slot automatisch, wenn das Ziel K.O. ist (ab Stufe %d)." % int(e["level"])
 		"finale":
-			extra = "Das FINALE ersetzt die SHOW, sobald dein Ziel unter 30 % HP hat (ab Lv %d)." % int(e["level"])
+			extra = "Das FINALE ersetzt die SHOW, sobald dein Ziel unter 30 % HP hat (ab Stufe %d)." % int(e["level"])
 		"special":
 			extra = "Mit Taste R (Pad: Steuerkreuz links) befiehlst du sie deinem Partner sofort."
 	if extra != "":

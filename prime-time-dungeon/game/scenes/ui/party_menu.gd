@@ -1,13 +1,15 @@
 extends "res://scenes/ui/menu_base.gd"
-## Pause tab "Party" (02_TECH §1.6, GDD §14.4): per member level, HP/MP, EXP to the next level, all 8 stats (total with
-## equipment and talents), equipment, talents (06 §2.2: picked talents + "Talentwahl offen" badge) and the Casting line
-## (species · specialization, from floor 3). Cards are focusable; pressing one jumps to the equipment page
-## (`open_equipment`). Casting (08 §1.7, K1): below the cards the button "Kandidatenkarte" (only with a candidate
-## persona) opens the card (scenes/ui/persona_card.tscn) as a modal on its own canvas layer.
+## Pause tab "Party" (02_TECH §1.6, GDD §14.4): per member level (the round level plaque, 09 §1.2), HP/MP, EXP to the
+## next level, all 8 stats (total with equipment and talents), equipment, talents (06 §2.2: picked talents +
+## "Talentwahl offen" badge) and the Casting line (species · class, from floor 3). Cards are focusable; pressing one
+## jumps to the equipment page (`open_equipment`). Casting (08 §1.7, K1): below the cards the button
+## "Kandidatenkarte" (only with a candidate persona) opens the card (scenes/ui/persona_card.tscn) as a modal on its own
+## canvas layer.
 
 signal open_equipment(member_id: String)
 
 const TalentText := preload("res://scenes/ui/talent_text.gd")
+const LevelBadge := preload("res://scenes/ui/level_badge.gd")   # 09 ST1-A: the level plaque, never "Lv"
 const PERSONA_CARD: String = "res://scenes/ui/persona_card.tscn"   # Casting (08 §1.7, K1)
 const CARD_LAYER: int = 61                 # above the modal menus (60, 02_TECH §9.4)
 
@@ -83,9 +85,7 @@ func _card(m: PartyMember) -> Button:
 	n.add_theme_font_override("font", UiTheme.font_bold())
 	names.add_child(n)
 	names.add_child(UiUtil.label(casting_text(m), &"LabelSmall", 16))
-	var lv: Label = UiUtil.label("Lv %d" % m.level, &"", 28, UiTheme.C_GOLD)
-	lv.add_theme_font_override("font", UiTheme.font_bold())
-	head.add_child(lv)
+	head.add_child(LevelBadge.make(m.level, 24))         # 09 §1.2 Nr. 1: the number in a plaque, tooltip "Stufe N"
 	var mhp: int = UiUtil.max_hp(m)
 	var mmp: int = UiUtil.max_mp(m)
 	col.add_child(_bar_row("HP", m.hp, mhp, &"BarHp"))
@@ -127,7 +127,7 @@ func _card(m: PartyMember) -> Button:
 
 
 ## "Recall auf Etage 3" before the Recall (08 C-16: the floor-3 round of 06 §3 is called "Recall"; the casting is
-## the new game's), else "Kachelgolem · Abrissbirne" (species · specialization).
+## the new game's), else "Kachelgolem · Abrissbirne" (species · class).
 static func casting_text(m: PartyMember) -> String:
 	if m.species_id == "" and m.class_id == "":
 		return "Spezies & Klasse: Recall auf Etage 3"
@@ -141,8 +141,9 @@ static func casting_text(m: PartyMember) -> String:
 
 
 ## Star + "Talente" + the picked talents ("Wischtechnik II, Bissfest"); without any: "2 Talente offen – im Safe Room
-## wählen" while choices wait (polish pass: never "noch keine (ab Level 3)" for a member who can already choose), else
-## "noch keine (ab Level 3)". Picked talents and open choices: a gold pill "1 Wahl offen" next to the names.
+## wählen" while choices wait (polish pass: never "noch keine (ab Stufe 3)" for a member who can already choose), else
+## "noch keine (ab Stufe 3)" (09 §1.2: "Stufe", never "Level"). Picked talents and open choices: a gold pill
+## "1 Wahl offen" next to the names.
 func _talent_row(m: PartyMember) -> HBoxContainer:
 	var r: HBoxContainer = UiUtil.hbox(8)
 	r.name = "Talents"
@@ -154,7 +155,7 @@ func _talent_row(m: PartyMember) -> HBoxContainer:
 	var open: int = Talents.pending_levels(m).size() if Talents.has_choice(Game.state, DB.data, m.id) else 0
 	var text: String = ", ".join(names)
 	if names.is_empty():
-		text = open_text(open) if open > 0 else "noch keine (ab Level 3)"
+		text = open_text(open) if open > 0 else "noch keine (ab Stufe 3)"
 	var v: Label = UiUtil.label(text, &"", 17, UiTheme.C_GOLD if names.is_empty() and open > 0 else Color(0, 0, 0, 0))
 	v.name = "TalentNames"
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL

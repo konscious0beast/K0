@@ -13,6 +13,7 @@ const UiIcon := preload("res://scenes/ui/ui_icon.gd")
 const MinimapScript := preload("res://scenes/ui/minimap.gd")
 const EventInfo := preload("res://scenes/ui/event_info.gd")
 const ExploreTarget := preload("res://scenes/ui/explore_target.gd")
+const LevelBadge := preload("res://scenes/ui/level_badge.gd")   # 09 ST1-A: the level plaque, never "Lv"
 ## A refused pull (07 §2.2: only abilities usable as an opener; ExplorationScene.pull_check) → the short text.
 const PULL_TEXTS: Dictionary = {"no_target": "Kein Ziel", "room": "Hier wird nicht gekämpft",
 	"not_learned": "Noch nicht gelernt", "no_opener": "Damit eröffnest du keinen Kampf", "range": "Zu weit weg",
@@ -703,7 +704,8 @@ func _refresh_party() -> void:
 		n.add_theme_font_override("font", UiTheme.font_bold())
 		n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		top.add_child(n)
-		var lv: Label = UiUtil.label("Lv %d" % m.level, &"LabelSmall", 15)
+		var lv: PanelContainer = LevelBadge.make(m.level, 15)    # 09 §1.2 Nr. 1: the number in a round plaque
+		lv.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		top.add_child(lv)
 		var hp_row: HBoxContainer = UiUtil.hbox(6)
 		col.add_child(hp_row)

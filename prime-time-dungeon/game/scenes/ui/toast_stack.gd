@@ -16,7 +16,7 @@ const STYLES: Dictionary = {
 	&"warning": ["ACHTUNG", &"cross", Color("#ff4d4d")],
 	&"item": ["ITEM", &"potion", Color("#22d3ee")],
 	&"gift": ["GESCHENK", &"gift", Color("#ff2e88")],
-	&"level": ["LEVEL UP", &"star", Color("#ffc93c")],
+	&"level": ["NEUE STUFE", &"star", Color("#ffc93c")],          # 09 §1.2: "Stufe", never "Level"
 	&"credits": ["CREDITS", &"coin", Color("#ffc93c")],
 	&"milestone": ["FOLLOWER-MEILENSTEIN", &"heart", Color("#ff2e88")],
 	&"info": ["HINWEIS", &"dot", Color("#22d3ee")],

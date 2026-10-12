@@ -51,9 +51,9 @@ Prüfwerkzeuge (`tools/`).
   Gegnergruppen, die man dann von jeder Seite zuerst erwischt); die andere Figur folgt und kämpft als KI-Partner mit
   (Taktik und Partner-Spezial). „Figur wechseln“ im Safe Room, auf Etage 1 eine Kulissenwand und drei Regie-Notizen als
   Geheimnisse.
-- **Talent-Show** (06 Paket B): Ab Level 3 bringt jedes ungerade Level jeder Figur eine Talentwahl (1 aus 2, gewählt im
+- **Talent-Show** (06 Paket B): Ab Stufe 3 bringt jede ungerade Stufe jeder Figur eine Talentwahl (1 aus 2, gewählt im
   Safe Room über den goldenen Knopf „TALENT-SHOW“). Feld-Talente wirken für die Figur, die gerade führt. Spezies und
-  Spezialisierung ab Etage 3 sind als geprüftes Datenmodell angelegt (`species.json`, Command `casting`); die
+  Klasse ab Etage 3 sind als geprüftes Datenmodell angelegt (`species.json`, Command `casting`); die
   Recall-Oberfläche folgt mit Etage 3.
 - **Casting** (08 K1): Nach der Figurenwahl drei Bildschirme — Name und Wortform, Vorleben / Hobby / Eigenschaften,
   Kandidatenkarte — oder „Rest automatisch“ (Esc / Start: die Kanon-Kandidat:in Kai in zwei Eingaben). Die Karte prägt
@@ -423,7 +423,7 @@ Godot-Prozesses. `2` = Aufruffehler (Godot-Binary nicht gefunden; bei `fullrun.s
 ```bash
 GODOT=~/godot/godot prime-time-dungeon/tools/check.sh
 GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --strategy=all
-GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --hero=mopsula --liga=2      # Graf Mopsula, Unterhosen-Liga Stufe 2
+GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --hero=mopsula --liga=2      # Graf Mopsula, Duo-Liga
 ```
 
 ## 8. Ordner
@@ -505,12 +505,12 @@ seit R5b-2b den einzigen Kampf der Kampagne; die Bilder des früheren Rundenkamp
 | ![Figur wechseln](docs/screenshots/21_safe_room_hero_switch.png) **21** Safe Room nach „Figur wechseln“ | ![Hinweiskarte](docs/screenshots/60_echtzeitkampf_hinweis_unterbrechen.png) **60** Hinweiskarte beim ersten Mal: Unterbrechen (goldener Rand) |
 | ![Kulissenwand](docs/screenshots/23_secret_wall.png) **23** Kulissenwand (E1-Geheimnis) | ![Wand fällt](docs/screenshots/24_secret_wall_falls.png) **24** Der Graf bellt die Kulissenwand um |
 | ![Regie-Notiz](docs/screenshots/25_regie_notiz.png) **25** Regie-Notiz mit Prompt | ![Handy Safe Room](docs/screenshots/26_safe_room_hero_talents_phone.png) **26** Handy-Format: Safe Room mit TALENT-SHOW-Knopf und M.O.D.-Kasten |
-| ![Show](docs/screenshots/27_pause_show_unterhosen_liga.png) **27** Pausemenü, Reiter Show: M.O.D.s Vorliebe und Unterhosen-Liga (06 Paket C) | ![Abspann](docs/screenshots/61_echtzeitkampf_boss_abspann.png) **61** Bosssieg: Abspann mit EXP, Level-Up, Talent-Hinweis und Beute |
+| ![Show](docs/screenshots/27_pause_show_unterhosen_liga.png) **27** Pausemenü, Reiter Show: M.O.D.s Vorliebe und Unterhosen-Liga (06 Paket C) | ![Abspann](docs/screenshots/61_echtzeitkampf_boss_abspann.png) **61** Bosssieg: Abspann mit EXP, Stufenaufstieg, Talent-Hinweis und Beute |
 | ![Ziel wählen](docs/screenshots/62_erkundung_pull_ziel.png) **62** Kampf eröffnen: Kai hat mit Tab einen Anführer als Ziel — Zielrahmen mit den Slots, Ring und Pfeil, Hinweis „1 · Angriff eröffnen“ | ![Handy Pull](docs/screenshots/63_handy_erkundung_pull_touch.png) **63** Handy-Format: Anführer angetippt, der Aktions-Button zeigt Slot 1 und eröffnet den Kampf |
 | ![Bellen, dann 1](docs/screenshots/64_erkundung_bellen_erstschlag.png) **64** Graf Mopsula hat gebellt: Der verdutzte Anführer ist schon Ziel — „verdutzt · Erstschlag!“ | |
 | ![Casting 1/3](docs/screenshots/29_casting_1_wer_sind_sie.png) **29** Casting 1/3 „Wer sind Sie?“: Name, Wortform, Figur (08 K1) | ![Casting 2/3](docs/screenshots/30_casting_2_steckbrief.png) **30** Casting 2/3 „Steckbrief“: Vorleben, Hobby / Talent, Eigenschaften |
 | ![Vorleben](docs/screenshots/31_casting_2_vorleben_overlay.png) **31** Overlay „Vorleben wählen“ mit „genauer“-Chips | ![Eigenschaften](docs/screenshots/32_casting_2_eigenschaften_overlay.png) **32** Overlay „Eigenschaften“ (0–3, leer erlaubt) |
-| ![Kandidatenkarte](docs/screenshots/33_casting_3_kandidatenkarte.png) **33** Casting 3/3: Kandidatenkarte und Sendeformat | ![Tastatur](docs/screenshots/34_casting_bildschirmtastatur_akzente.png) **34** Bildschirmtastatur, Akzent-Ebene |
+| ![Kandidatenkarte](docs/screenshots/33_casting_3_kandidatenkarte.png) **33** Casting 3/3: Kandidatenkarte und Sendeformat | ![Tastatur](docs/screenshots/34_casting_bildschirmtastatur_akzente.png) **34** Bildschirmtastatur mit Akzenttasten |
 | ![Handy](docs/screenshots/35_phone_casting_1_touch.png) **35** Handy-Format mit Touch, Casting 1/3 (36, 37: 2/3 und 3/3) | ![130 %](docs/screenshots/38_casting_1_text130.png) **38** Casting mit 130 % Text (39, 40: Overlay und Karte) |
 | ![Karte im Pausemenü](docs/screenshots/41_pause_kandidatenkarte.png) **41** Pausemenü → Party → „Kandidatenkarte“ | ![Bauchbinde](docs/screenshots/42_intro_bauchbinde.png) **42** Intro: Bauchbinde der Kandidat:in und ihre `persona_intro`-Zeile |
 | ![Talent-Show](docs/screenshots/talent_show.png) **Talent-Show** (06 Paket B): zwei Karten je Wahl | ![TALENT-SHOW](docs/screenshots/safe_talents_menu.png) **Safe Room** mit offener Talentwahl |

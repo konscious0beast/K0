@@ -651,7 +651,7 @@ stat(L) = floori(base + growth * (L - 1)) + Ausrüstung          # Progression.b
         + Talente (Kap. 4.7)  → × Klasse → × Spezies              # ab Etage 3 (Kap. 12), je Schritt „round half up“
 ```
 
-Level-Up: HP/MP steigen um die Differenz (aktuelle Werte + Delta), **keine** Vollheilung. Level-Cap im Slice: **10**
+Stufenaufstieg: HP/MP steigen um die Differenz (aktuelle Werte + Delta), **keine** Vollheilung. Höchststufe im Slice: **10**
 (`Balance.LEVEL_CAP = 10`, ersetzt `MAX_LEVEL 99`).
 
 ### 4.2 Basiswerte L1 & Wachstum
@@ -718,10 +718,10 @@ Ergebniswerte (ohne Ausrüstung):
 ### 4.3 EXP-Kurve
 
 ```text
-exp_to_next(L) = floori(18.0 * pow(L, 1.7) + 15.0)  # Progression.exp_to_next(level); L = aktuelles Level, gilt für L1..L9
+exp_to_next(L) = floori(18.0 * pow(L, 1.7) + 15.0)  # Progression.exp_to_next(level); L = aktuelle Stufe, gilt für L1..L9
 ```
 
-| Level | EXP bis nächstes | EXP gesamt (Beginn des Levels) |
+| Stufe | EXP bis zur nächsten | EXP gesamt (Beginn der Stufe) |
 |---|---|---|
 | 1 | 33 | 0 |
 | 2 | 73 | 33 |
@@ -800,15 +800,15 @@ Die Skill-Tabellen (Kap. 3.6, 4.5, 4.6, 5.1–5.3, 6.1) nutzen Kurzspalten. Verb
 | 7 | `mop_revive` | Sabber der Wiederkehr | 14 | 40 | 4 | `ko_ally` | none | revive | „Resurrectio sabberis!“ Belebt mit 40 % MaxHP (`heal_mode "pct"`, `power 40`, Ziel `single_ally_ko`). |
 | 9 | `mop_inferno` | Gräfliches Inferno | 14 | 130 | 4 | `all_enemies` | fire | mag | „Für die Ahnen. Alle 300 davon.“ |
 
-### 4.7 Talent-Show (ab Level 3; 06 Kap. 2.2, `talents.json`)
+### 4.7 Talent-Show (ab Stufe 3; 06 Kap. 2.2, `talents.json`)
 
-**Regel in einem Satz:** Ab Level 3 verdient jede Figur auf jedem zweiten Level (L3, L5, L7, L9) eine Talentwahl; in der
+**Regel in einem Satz:** Ab Stufe 3 verdient jede Figur auf jeder zweiten Stufe (3, 5, 7, 9) eine Talentwahl; in der
 **Talent-Show** im Safe Room wählt man je offener Wahl **eines von zwei** Talenten.
 
 - **Wann/wo:** Wahlen sammeln sich; gewählt wird nur im Safe Room (goldener Knopf „TALENT-SHOW“, Kap. 14.7). Nichts unterbricht
   Kampf oder Erkundung — die Kampfergebnisse zeigen nur einen Chip „TALENT BEREIT · im Safe Room wählen“ (Kap. 14.5).
 - **Angebot:** 2 verschiedene Talente aus dem Pool der Figur (12 je Figur, ⅓ Verhaltens-Talente), gewichtet gezogen; das Angebot
-  hängt nur von Spielstand-Seed, Figur, Level und bisherigen Rängen ab — **Neuladen ändert es nicht**.
+  hängt nur von Spielstand-Seed, Figur, Stufe und bisherigen Rängen ab — **Neuladen ändert es nicht**.
 - **Später:** „Später“ schließt die Show, die Wahl bleibt offen (Party-Seite im Pausemenü: „2 Talente offen – im Safe Room
   wählen“, solange die Figur noch keins hat; sonst hinter den Talenten der Chip „1 Wahl offen“).
 - **Stapeln:** Talente mit `max_rank` 2 können ein zweites Mal kommen („Wischtechnik II“); die Karte zeigt „Rang 1/2“ bzw.
@@ -838,7 +838,7 @@ Die Skill-Tabellen (Kap. 3.6, 4.5, 4.6, 5.1–5.3, 6.1) nutzen Kurzspalten. Verb
 *Kursiv* = Verhaltens-Talent. ¹ wirkt mit der Feldfähigkeit, solange die eigene Figur führt (06 Paket A; die Talente der
 folgenden Figur ruhen); ² das erste Herz einer Etage für M.O.D.s Vorliebe zählt doppelt (Kap. 7.8, 06 Paket C). Die Karte sagt,
 wann ein Verhaltens-Talent wirkt. Die beiden Liga-Talente wirken, solange ihre Figur in der **Unterhosen-Liga** kämpft (Kap.
-7.8, eine Quelle: die Liga-Stufe): die gesteuerte Figur ab Stufe 1 (sie selbst ohne Rüstung & ohne Accessoire), die andere nur
+7.8, eine Quelle: die Liga des Kampfes): die gesteuerte Figur ab Liga 1 (sie selbst ohne Rüstung & ohne Accessoire), die andere nur
 in der Duo-Liga (beide); nie im Tutorial-Kampf.
 
 ---
@@ -847,7 +847,7 @@ in der Duo-Liga (beide); nie im Tutorial-Kampf.
 
 ### 5.1 Reguläre Gegner (10) + 1 Rarität
 
-Werte sind fest pro Typ (kein Gegner-Level-Scaling im Slice). `Lv` = Richtwert für UI/Bestiarium.
+Werte sind fest pro Typ (keine Skalierung nach Gegnerstufe im Slice). `Stufe` = Richtwert für UI/Bestiarium.
 
 **Datenabbildung `enemies.json` (`EnemyDef`):** `id` = `enm_` + Kurz-ID; Werte → `level`, `stats`, `exp`, `credits`;
 `field_speed` → `explore.field_speed` (übrige `explore`-Felder: Defaults aus Kap. 2.3, Taubenschwarm `sight_range: 14`,
@@ -858,7 +858,7 @@ Fahrscheinfresser s. Kap. 2.3); weak/resist/immune → `element_mods` 1.5/0.5/0.
 `model` = ModelSpec laut 03_ART §5.5 (die „Visuelle Beschreibung“ unten ist die Art-Vorgabe dafür, es gibt kein Feld `visual`);
 Kill-Hype nach Kap. 7.3 (kein `hype_value`).
 
-| ID | Name | Lv | HP | MP | STR | MAG | DEF | RES | SPD | LCK | EXP | Cr | `field_speed` | Zone |
+| ID | Name | Stufe | HP | MP | STR | MAG | DEF | RES | SPD | LCK | EXP | Cr | `field_speed` | Zone |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | `kanalratte` | Kanalratte | 1 | 24 | 0 | 13 | 3 | 5 | 3 | 13 | 5 | 12 | 6 | 4.8 | A, B |
 | `taubenschwarm` | Taubenschwarm | 2 | 20 | 0 | 12 | 4 | 3 | 6 | 19 | 8 | 14 | 5 | 6.2 | A |
@@ -956,13 +956,13 @@ Kill-Hype nach Kap. 7.3 (kein `hype_value`).
 
 | Feld | Wert |
 |---|---|
-| Lv / HP / MP | 6 / **330** / 60 |
+| Stufe / HP / MP | 6 / **330** / 60 |
 | STR / MAG / DEF / RES / SPD / LCK | **40 / 26** / 14 / 10 / 12 / 6 (Balancing Kap. 13: vorher 380 HP, STR 23, MAG 14 — auch ohne Sponsoren 100 % Auto-Sieg eine Stufe unter Ziel) |
 | Affinitäten | weak `shock`, resist `poison` → `element_mods {"shock": 1.5, "poison": 0.5}` |
 | Status-Resistenz | `status_resist {"sts_stun": 0.5, "sts_slow": 0.5}` |
 | EXP / Credits | **180 / 150** |
 | Drops (100 %) | `key_master` (Schlüsselitem), `acc_key_ring`, Lootbox `silver` → `boss_drops: [{"kind": "item", "id": "itm_key_master", "amount": 1}, {"kind": "item", "id": "itm_acc_key_ring", "amount": 1}, {"kind": "box", "id": "box_silver", "amount": 1}]` |
-| Ziel-Party-Level | **5** (L4 schaffbar mit Items) |
+| Ziel-Stufe der Party | **5** (Stufe 4 schaffbar mit Items) |
 
 **Skills:** `b_broom` Besenhieb (110, R3, physical, str) · `b_keys` Schlüsselbund-Wurf (70, R4, all_enemies, physical) ·
 `b_rules` Hausordnung verlesen (self, `guard` 2, R3) · `b_cleaner_fog` Putzmittelnebel (60, R4, all_enemies, poison, mag, `poison` 0.40, MP 8) ·
@@ -983,14 +983,14 @@ Sinus), Besen = langer Zylinder + Box-Bürste. Phase 3: Augen emissive Rot #FF3B
 
 | Feld | Wert |
 |---|---|
-| Lv / HP / MP | 8 / **550** / 120 |
+| Stufe / HP / MP | 8 / **550** / 120 |
 | STR / MAG / DEF / RES / SPD / LCK | **52 / 44** / 18 / 16 / 15 / 10 (Balancing Kap. 13: vorher 720 HP, STR 26, MAG 20) |
 | Affinitäten | weak `ice`, resist `fire`, immune `poison` → `element_mods {"ice": 1.5, "fire": 0.5, "poison": 0.0}`, `status_immune ["sts_poison"]` |
 | Status-Resistenz | `status_resist {"sts_stun": 0.5, "sts_slow": 0.5}` |
 | EXP / Credits | **420 / 300** |
 | Drops (100 %) | `acc_queen_crown`, Lootbox `gold` → `boss_drops: [{"kind": "item", "id": "itm_acc_queen_crown", "amount": 1}, {"kind": "box", "id": "box_gold", "amount": 1}]`; Achievement `ach_queen` (+ Gold-Box) |
 | Modell | `model.pose: "quadruped"` (liegt, Kapsel 3.5 m; überschreibt die ART-Regel „rodent scale ≥ 1.0 = aufrecht“) |
-| Ziel-Party-Level | **7** (L6 schaffbar mit guter Ausrüstung + Items) |
+| Ziel-Stufe der Party | **7** (Stufe 6 schaffbar mit guter Ausrüstung + Items) |
 
 **Skills:** `q_scepter` Zepterstoß (120, R3, physical, str) · `q_plague_bite` Pestbiss (90, R3, poison, str, `poison` 0.50) ·
 `q_screech` Kreischen der Krone (80, R4, all_enemies, shock, mag, MP 8) · `q_summon` Schwanzknoten lösen (beschwört bis zu 2 `kanalratte`, R3, MP 10) ·
@@ -1322,11 +1322,11 @@ bleibt er ein Präventivschlag (Party zuerst, Hype +3, „Erster Eindruck“). O
   füllt **ein Herz** (je Vorliebe und Kampf höchstens eins): Hype **+6**, Follower dieses Kampfes **×1,15**. **Drei Herzen** =
   Wette gewonnen: **Fanpost-Paket** (`box_fan`), **+30 Follower**, +5 Hype, Zähler `bets_won`. Nicht gewonnene Wetten verfallen mit
   der Etage ohne Abzug (M.O.D. schmollt höchstens einmal, `marotte_missed`). Tutorial, Niederlage und Flucht zählen nie.
-- **Unterhosen-Liga** (immer verfügbar, Regeltext überall „**ohne Rüstung & ohne Accessoire**“, die Waffe bleibt): Stufe beim
-  Kampfstart eingefroren — **Stufe 1** = die **gesteuerte** Figur trägt weder Rüstung noch Accessoire: Hype-Gewinne im Kampf
-  **×1,05**, Follower **×1,1** (der Follower-Bonus höchstens **+60 je Etage**); **Stufe 2 „Duo-Liga“** (ultimativ) = beide:
-  **×1,2 / ×1,35** (höchstens **+180 je Etage**; beide Stufen füllen dieselbe Etagensumme). Etagen-Bonus: alle (≥ 3) Siege
-  einer Etage in Stufe ≥ 1 → 1 Fanpost-Paket („Mut-Paket“) in der Etagen-Bilanz. Wieder anziehen kostet nichts (Zeile
+- **Unterhosen-Liga** (immer verfügbar, Regeltext überall „**ohne Rüstung & ohne Accessoire**“, die Waffe bleibt): Liga beim
+  Kampfstart eingefroren — **Liga 1** = die **gesteuerte** Figur trägt weder Rüstung noch Accessoire: Hype-Gewinne im Kampf
+  **×1,05**, Follower **×1,1** (der Follower-Bonus höchstens **+60 je Etage**); **„Duo-Liga“** (ultimativ) = beide:
+  **×1,2 / ×1,35** (höchstens **+180 je Etage**; beide füllen dieselbe Etagensumme). Etagen-Bonus: alle (≥ 3) Siege
+  einer Etage in der Liga → 1 Fanpost-Paket („Mut-Paket“) in der Etagen-Bilanz. Wieder anziehen kostet nichts (Zeile
   `liga_leave`). M.O.D. verrät die Liga einmalig in der Etagen-Bilanz von E1 (`liga_hint`), bis dahin steht sie im Pausemenü-Tab
   „Show“. Startwerte aus 06 §4.3 (×1,25/×1,20 bzw. ×1,5/×1,4) wurden auf das Band „Follower ≤ 2 000 am Ende von E1“ gesenkt
   (Kap. 13); Integration Runde 4: kleinere Hype-Faktoren und der Deckel des Follower-Bonus je Etage (06 §4.3, §8.8 I-8).
@@ -1334,10 +1334,10 @@ bleibt er ein Präventivschlag (Party zuerst, Hype +3, „Erster Eindruck“). O
   dahinter „LIGA ×1,05“ bzw. „DUO-LIGA ×1,2“ (Event-Läufe: nur „LIGA“) — in der Erkundung unter der Minimap-Spalte, im Kampf unter der Hype-Leiste (während des Ergebnis-Panels ausgeblendet —
   das Panel zeigt die Herzen selbst); ab E2 wechseln
   zwei Vorlieben alle 4 s; erst sichtbar, wenn der Countdown läuft. Abschaltbar: Optionen → „Show-Wetten anzeigen“. Pausemenü-Tab
-  **„Show“**: Vorlieben mit Regel, Herzen, Status; Liga mit Regeltext, Stufe, Faktoren, Deckel und Rest der Etage („noch +N
-  Follower“) und „Liga blockiert durch: …“ je Figur
+  **„Show“**: Vorlieben mit Regel, Herzen, Status; Liga mit Regeltext, Liga 1/Duo-Liga, Faktoren, Deckel und Rest der
+  Etage („noch +N Follower“) und „Liga blockiert durch: …“ je Figur
   (Sprung ins Ausrüstungsmenü, das dieselbe Zeile zeigt). Ergebnisbildschirm: Zeile „Show“ mit den Herzen des Kampfes und der
-  Liga-Stufe; Toasts „M.O.D. mag das: … (2/3)“ / „Wette gewonnen: …!“.
+  Liga (Liga 1/Duo-Liga); Toasts „M.O.D. mag das: … (2/3)“ / „Wette gewonnen: …!“.
 - **Event-Läufe** (06 §4.8 Nr. 4, Option a): Vorlieben und Liga werden angezeigt und gezählt, zahlen aber **nichts** (keine
   Faktoren, Boxen, Follower, keine `show_bet`-Achievements) — die Wertung hängt nie daran; `rules.marotten.enabled` /
   `rules.liga.enabled` schalten beides ab.
@@ -1369,7 +1369,7 @@ gold 80 + Hype +5 + M.O.D.-Spruch (Tag `achievement:<id>`, Fallback `achievement
 | `sponsor_gift` | Geschenk angekommen | `sponsor_id` |
 | `party_ko` | `KO` eines Party-Mitglieds | `member` |
 | `boss_defeated` | Sieg über Boss | `boss_id, party_turns` |
-| `level_up` | Level-Aufstieg | `member, level` |
+| `level_up` | Stufenaufstieg | `member, level` |
 | `viewers_changed` | Logik-Zuschauerwert ändert sich | `viewers` |
 | `chest_opened` | Truhe | `chest_id, type` |
 | `item_bought` | Automat | `item_id, qty, cost, safe_room_id` |
@@ -1409,7 +1409,7 @@ game_overs, ko_mopsula, explore_seconds_since_battle, viewers_max` (+ Quest-Metr
 | `ach_chests_10` | Schatzsucher:in | Öffne 10 Truhen. | `chest_opened` | `s.chests_opened == 10` | silver | — | „Zehn Kisten. Das nennt man bei uns ‚Kundenbindung‘.“ |
 | `ach_vendor_500` | Kaufrausch | Gib 500 Credits am Automaten aus. | `item_bought` | `s.credits_spent_vendor >= 500` | bronze | — | „500 Credits im Automaten. Die Wirtschaft dankt.“ |
 | `ach_lootbox_10` | Gacha-Gewohnheit | Öffne 10 Lootboxen. | `lootbox_opened` | `s.lootboxes_opened == 10` | bronze | — | „Zehn Boxen. Hier ist noch eine. Für die Gewohnheit.“ |
-| `ach_level_5` | Aufsteiger:in | Bring die Spielfigur auf Level 5. | `level_up` | `e.member == "kai" && e.level == 5` | bronze | — | „Level fünf. Sie sind jetzt offiziell schwer zu ersetzen.“ |
+| `ach_level_5` | Aufsteiger:in | Bring die Spielfigur auf Stufe 5. | `level_up` | `e.member == "kai" && e.level == 5` | bronze | — | „Stufe fünf. Sie sind jetzt offiziell schwer zu ersetzen.“ |
 | `ach_mopsula_ko` | Der Graf ist gefallen | Graf Mopsula geht zum ersten Mal KO. | `party_ko` | `e.member == "mopsula" && s.ko_mopsula == 1` | bronze | ✓ | „Der Graf liegt! Die Quote liegt mit ihm! Tun Sie was!“ |
 | `ach_mimic` | Fahrschein, bitte | Besiege einen Fahrscheinfresser. | `enemy_killed` | `e.enemy_id == "enm_fahrscheinfresser"` | silver | ✓ | „Schwarzfahren war gestern. Heute: Schwarzautomat.“ |
 | `ach_events_all` | Neugierig | Schließe alle 5 Events der Etage ab. | `event_completed` | `s.events_completed == 5` | silver | — | „Alle Events gesehen. Sie lesen auch das Kleingedruckte, oder?“ |
@@ -1593,7 +1593,7 @@ und löscht das Flag.
 > **Kai:** Da oben ist nichts mehr.
 > **Mopsula:** Dann warten wir eben aufeinander. Das ist keine Bitte. Das ist eine These.
 
-**Szene 3 — `scn_mop_3` „Das Tierheim“** (Bedingung: Kai-Level ≥ 4 und Szene 1 gesehen)
+**Szene 3 — `scn_mop_3` „Das Tierheim“** (Bedingung: Kai-Stufe ≥ 4 und Szene 1 gesehen)
 
 > **Mopsula:** Weißt du, warum ich in Zwinger 7 „schwer vermittelbar“ war?
 > **Kai:** Weil du jeden Besucher angeknurrt hast.
@@ -1692,7 +1692,7 @@ Validator: max. **110 Zeichen** je Zeile, nur obige Platzhalter.
 | `boss_train_warning` | „Zug fährt ein! Zurückbleiben, bitte — oder verteidigen Sie sich!“ |
 | `boss_phase:enm_boss_rattenkoenigin:3` | „Der Zug ist entgleist! Die Königin ist wütend! Ich bin begeistert!“ |
 | `boss_defeated` | „Boss besiegt! Die Einschaltquote macht gerade einen Handstand.“ · „Gefallen! Und das zur besten Sendezeit. Danke!“ |
-| `level_up` | „Level up! Sie sind jetzt {level}% weniger verzichtbar.“ · „Stufenaufstieg! Mehr HP, mehr MP, gleich wenig Gage.“ |
+| `level_up` | „Aufstieg! Sie sind jetzt {level}% weniger verzichtbar.“ · „Stufenaufstieg! Mehr HP, mehr MP, gleich wenig Gage.“ |
 | `follower_milestone` | „{followers} Follower! Sie haben jetzt mehr Fans als Ihre alte Stadt Einwohner. Hatte.“ · „Meilenstein! Ihre Fans schicken eine Box. Und Liebesbriefe an den Hund.“ |
 | `safe_room_enter` | „Safe Room. Keine Monster, keine Kameras. Doch, eine Kamera. Okay, sieben.“ · „Werbepause! Heilen Sie sich, wir verkaufen solange Ihre Highlights.“ · „Willkommen im Safe Room. Bitte den Automaten füttern, er hat Familie.“ |
 | `vendor_buy` | „Danke für Ihren Einkauf! Ein Teil des Erlöses geht an … uns.“ · „{item}! Exzellente Wahl. Die anderen waren schlechter. Für uns.“ |
@@ -1857,7 +1857,7 @@ Kein Kronen-Motiv an Mopsula, auch nicht über eine Spezies-Optik (Validator: `c
 | Kämpfe zwischen Safe Rooms ohne Items | 2–3 | — |
 | Hausmeister: Party-Züge / Dauer | 16–22 / 2.5–4 min | Sim (`test_m7_show_balance`, 100 Seeds, L5, Bot-Ausrüstung): 21 Züge |
 | Rattenkönigin: Party-Züge / Dauer | 20–26 / 3.5–5 min | Sim (dto., L7): 24 Züge |
-| Level bei Hausmeister / Königin | **5 / 7** | EXP-Kurve Kap. 4.3 (Faktor 18): auch bei allen Gruppen + Event-Kampf |
+| Stufe bei Hausmeister / Königin | **5 / 7** | EXP-Kurve Kap. 4.3 (Faktor 18): auch bei allen Gruppen + Event-Kampf |
 | Erwartete Game Overs Etage 1 (Erstspieler) | **0–1** gesamt; Hausmeister ~20 % Niederlage-Rate beim 1. Versuch, Königin ~35 % | Sim mit Sponsor-Geschenken, Hype-Start 25: Hausmeister 17 % (ohne Geschenke 34 %), Königin 29 % (41 %); Test-Band 10–30 % / 25–45 % |
 | Timer-Verbrauch Etage 1 | 11–15 min von 20:00 (Rest 5–9 min) | 31 Zellen à 16 m (Hauptpfad ≈ 75 s Laufzeit) + Erkundung, Schleichen, Events, Streuner; Bot `--pace=human` (Messung unten) |
 | Gesamtspielzeit Etage 1 (Erstdurchlauf) | **22–28 min** (Median 25) inkl. Tutorial; Wiederholer 15–20 min | Brief: 15–25 min |
@@ -1867,7 +1867,7 @@ Kein Kronen-Motiv an Mopsula, auch nicht über eine Spezies-Optik (Validator: `c
 | Achievements pro Etage (Erstdurchlauf) | 12–16 von 35 (29 ohne die Liga-Kette) | — |
 | Lootboxen pro Etage | 15–22 (06 §4.5; vor den Show-Wetten 15–20) | Achievements + Bosse + Meilensteine 250/1 000 (+ Glücksrad) + Show-Wette/Mut-Paket (Kap. 7.8) |
 | Show-Wetten je Etage (06 §4.10) | ohne gezieltes Spielen 0–1, gezielt alle | Staffel-Simulation E1 (Auto-Kampf, 8 Seeds): höchstens 1 gewonnen |
-| Unterhosen-Liga: Boss-Niederlage 1. Versuch | Stufe 1 ≤ 40 % / ≤ 55 %, Stufe 2 ≤ 55 % / ≤ 70 % (Hausmeister / Königin) | `test_06c_balance` (100 Seeds, Geschenke wie im Spiel): Stufe 1 27 % / 47 % (Graf Mopsula gesteuert 28 % / 35 %), Stufe 2 40 % / 56 % — Integration Runde 4 (Paket C: 26 % / 42 %, 37 % / 57 %); ohne Liga 17 % / 29 % |
+| Unterhosen-Liga: Boss-Niederlage 1. Versuch | Liga 1 ≤ 40 % / ≤ 55 %, Duo-Liga ≤ 55 % / ≤ 70 % (Hausmeister / Königin) | `test_06c_balance` (100 Seeds, Geschenke wie im Spiel): Liga 1 27 % / 47 % (Graf Mopsula gesteuert 28 % / 35 %), Duo-Liga 40 % / 56 % — Integration Runde 4 (Paket C: 26 % / 42 %, 37 % / 57 %); ohne Liga 17 % / 29 % |
 | Follower Ende E1 im Liga-Durchlauf | ≤ 2 000 in der Simulation (Rückkopplung gedämpft, Kap. 7.2), die Duo-Liga zahlt am meisten; Bot-Band für den CTB bis R5 (Polish-Pass, 2026-10-10; vorher Liga 1 ≤ 1 800, Duo-Liga ≤ 2 000): **Liga 1 ≤ 1 900, Duo-Liga ≤ 2 400 Follower und ≤ 30 Lootboxen**, ≥ +25 % gegenüber ohne Liga | Staffel-Simulation (Median 8 Seeds): ohne Liga 1 357, Stufe 1 1 449, Stufe 2 1 512; Lootboxen 20 / 21,5 / 21. Full-Run-Bot `human`, *thorough*, Seeds 1–3, Kai / Graf Mopsula: ohne Liga 1 495 / 1 582, Stufe 1 1 759 / 1 525, Stufe 2 2 336 / 2 304 (Seeds 1–8: 2 064 / 2 222 — über dem alten Ziel 2 000, im CTB-Band ≤ 2 400), Boxen Stufe 2 28 / 29 (≤ 30) (Bewertung 06 Kap. 8.4 „Stand Runde 4“; Paket C: 1 562 / 1 928 / 2 299) |
 | Follower am Ende E1 | 1 200–1 500 | Kap. 7.6. Graf Mopsula gesteuert ohne Liga (L0): Bot *thorough* ~1 580 Follower / 17–18 Achievements — für den CTB akzeptiert (über 1 500 bzw. 12–16); **R4-Ziel:** Mopsula-Held L0 innerhalb der Basis-Bänder (06 Kap. 8.4) |
 | Max. Zuschauer E1 | 3 000–5 500 | Kap. 7.2 |
@@ -1888,7 +1888,7 @@ Punkte.
 | Timer-Verbrauch | 11–15 min | 10:46 → **11:02** [10:32–11:49] | 11:13 → **11:11** [10:47–14:53] | 6:41 → **11:55** |
 | Kämpfe / bekämpfte Gruppen | 11–13 von 15 | 18,5 / 15 → 19 / 15 | 19,5 / 15 → 20 / 15 | 14 / 12 → 22 / 15 |
 | Party-Züge regulär / HP-Verlust | 4–6 / 20–35 % | 4 / 14 % → 4,2 / 17 % | 4 / 13 % → 4 / 14 % | 4,5 / 18 % → 4 / 17 % |
-| Level bei Hausmeister / Königin | 5 / 7 | 6 / 7 → **5 / 7** | 6 / 7 → 6 / 7 | 4 / 7 → 6 [4–6] / 7 |
+| Stufe bei Hausmeister / Königin | 5 / 7 | 6 / 7 → **5 / 7** | 6 / 7 → 6 / 7 | 4 / 7 → 6 [4–6] / 7 |
 | Hausmeister: Party-Züge, Niederlage 1. Versuch | 16–22, ~20 % | 13, 0/10 → **19, 2/10** | 12,5, 0/10 → 18,5, 2/10 | 20,5, 0/10 → 17, 4/10 |
 | Königin: Party-Züge, Niederlage 1. Versuch | 20–26, ~35 % | 26, 0/10 → **23, 3/10** | 22,5, 0/10 → 22, 5/10 | 24, 1/10 → 21,5, 6/10 |
 | Hype Kampfstart / -ende (Median regulär) | 25–45 / 45–65 | 96 / 100 → **37 / 57** | 96,5 / 100 → 37 / 60 | 95 / 100 → 37,5 / 61 |
@@ -1934,7 +1934,7 @@ Geschenken: Hausmeister 17 %, Königin 29 % bei 100 Seeds, Band 10–30 % / 25�
 Geschenke ≥ 50 % Sieg, Party-Züge in den Bändern).
 
 **Talente (Kap. 4.7, `test_06b_balance.gd`):** Summe aller Talentboni je Kampfwert bei L10 ≤ +15 % für **jede** mögliche
-Wahlfolge (erschöpfend, gemessen gegen die Level-Werte ohne Ausrüstung; Krit höchstens +8 Punkte, Werbepause höchstens +10 %
+Wahlfolge (erschöpfend, gemessen gegen die Stufen-Werte ohne Ausrüstung; Krit höchstens +8 Punkte, Werbepause höchstens +10 %
 MaxMP). Boss-Quoten mit der Bot-Wahl „erstes Angebot“ gegen dieselben Kämpfe ohne Talente (gepaart, 300 Seeds, Geschenke wie im
 Spiel): Hausmeister −1,0, Königin +4,3 Punkte Siegquote — Band ±5 Punkte (vor den IP-Umbenennungen der Integrationsrunde 1b
 +0,3/+3,7: neue IDs ändern die ID-Reihenfolge des Pools und damit die gezogenen Angebote, Werte unverändert). Auf 100 Seeds ist
@@ -1949,7 +1949,7 @@ der Stichprobenfehler (~4 Punkte) so groß wie das Band; deshalb misst der Test 
   (Samtcape, Rohrzange, Glücks-Fahrschein, Warnweste, Kanalarbeiter-Kombi, Siegel-Halsband = 1 650 Cr). Weitere Kürzungen
   nur zusammen mit den Automatenpreisen: die gemessenen Boss-Quoten setzen diese Käufe voraus.
 - **Bekämpfte Gruppen 15 statt 11–13:** Patrouillen jagen Kai auch auf dem *typical*-Weg; das Ziel gilt für Spieler, die Streifen
-  ausweichen. Folge: Level am Hausmeister 5–6 statt 5.
+  ausweichen. Folge: Stufe am Hausmeister 5–6 statt 5.
 - **Achievements 15–17** (Median je Strategie, Einzelläufe bis 19): am oberen Rand bzw. eins darüber, weil der Bot alle Kisten,
   Events und Gruppen mitnimmt; Erstspieler, die nicht alles finden, liegen im Band (Staffel-Simulation 16).
 - **Bot vs. Simulation bei den Bossen:** Die Simulation (feste Bot-Ausrüstung, Hype-Start 25, Geschenke wie im Spiel) verliert die
@@ -1967,7 +1967,7 @@ von 07 R5a.
 | Follower Ende | 1 200–1 500 | 2 327 → **1 385** [1 317–1 417] | 2 194 → **1 312** [1 237–1 337] |
 | Max. Zuschauer | 3 000–5 500 | 6 274 → **4 880** [4 739–4 955] | 6 081 → **4 776** [4 505–4 836] |
 | Etagenzeit gesamt (Timer + Kämpfe) | 22–28 min | 26:36 → **26:55** [25:28–27:36] | 26:25 → **27:10** [26:17–28:01] |
-| Level bei Hausmeister / Königin | 5 / 7 | 5–6 / 7 | 5–6 / 7 |
+| Stufe bei Hausmeister / Königin | 5 / 7 | 5–6 / 7 | 5–6 / 7 |
 
 Im schnellen Takt (Untergrenze) liegen Hype-Ende 75 / 70,5, Geschenke 8 / 7, Follower 1 682 / 1 583 und Zuschauer 5 222 / 5 079
 (vorher 80 / 77,5, 20 / 19,5, 2 587 / 2 486, 6 535 / 6 388). Läufe im menschlichen Takt sind nicht bitgenau wiederholbar: die
@@ -1991,7 +1991,7 @@ Menü (`TitleScreen`): **Fortsetzen** (Slot mit dem neuesten `saved_at_unix`, nu
 
 ### 14.2 Neues Spiel
 
-1. Slot wählen (3 Slots; belegte zeigen Name, Etage, Level, Spielzeit, Datum) → bei belegtem: „Überschreiben?“
+1. Slot wählen (3 Slots; belegte zeigen Name, Etage, Stufe, Spielzeit, Datum) → bei belegtem: „Überschreiben?“
 2. **Figurenwahl** „Wen steuerst du?“ (06 §1.1, `hero_select`): zwei große Karten nebeneinander — **Kai** („Tierpfleger:in.
    Wischmopp. Haut zu.“ · Feldschlag · Nahkampf/Tank) und **Graf Mopsula** („Mops. Magier. Schwer vermittelbar.“ · Bellen ·
    Magie/Heilung), je mit drehender 3D-Vorschau; Kai hat den Fokus, Links/Rechts wechselt, ein Druck wählt, Zurück → Slots.
@@ -2013,7 +2013,7 @@ Interaktionsprompt über Objekt.
 
 ### 14.4 Pausemenü (Esc / Start / Touch ☰; Timer pausiert)
 
-Tabs: **Party** (Werte, EXP) · **Inventar** (benutzen außerhalb des Kampfes) · **Ausrüstung** · **Fähigkeiten** (Liste + Freischalt-Level,
+Tabs: **Party** (Werte, EXP) · **Inventar** (benutzen außerhalb des Kampfes) · **Ausrüstung** · **Fähigkeiten** (Liste + Freischalt-Stufe,
 `scenes/ui/skills_menu.gd`) · **Achievements** (erhalten / verborgen „???“, `scenes/ui/achievements_menu.gd`) · **Bestiarium**
 (`scenes/ui/bestiary_menu.gd`) · **Optionen** (Lautstärke Master/Musik/SFX, Kampfgeschwindigkeit, Kamera-Empfindlichkeit, Kamera
 invertieren, Modus, Sprache, **Partner automatisch** — Aus/An, Hilfezeile „Dein:e Partner:in kämpft von selbst.“: die nicht gesteuerte
@@ -2023,7 +2023,7 @@ letzten Safe Room geht verloren.“).
 
 **Bestiarium:** Zustand `GameState.bestiary: Dictionary` = `enemy_id → {defeated: int, weak_known: PackedStringArray}`; `defeated` pflegt
 `BattleBridge.apply_result` (Sieg), `weak_known` ergänzt `ShowRules` bei jedem Schwachstellen-Treffer (Element). Einträge erscheinen ab
-der ersten Begegnung (Name, Modell, Lv), Werte/HP ab `defeated ≥ 1`, Schwächen einzeln nach Entdeckung.
+der ersten Begegnung (Name, Modell, Stufe), Werte/HP ab `defeated ≥ 1`, Schwächen einzeln nach Entdeckung.
 
 ### 14.5 Kampf-UI
 
@@ -2043,8 +2043,8 @@ der ersten Begegnung (Name, Modell, Lv), Werte/HP ab `defeated ≥ 1`, Schwäche
 | Auto-Button | oben rechts neben Speed | Auto-Kampf an/aus (`toggle_auto`: T / Y); Auto nutzt `AutoPolicy` (nie Stunt, nie Flucht) |
 
 Zielwahl: Pfeil/Highlight + Name; Links/Rechts wechselt, Bestätigen führt aus, Zurück bricht ab. Schadenszahlen: Popups (weiß normal, gelb Schwachstelle, orange Krit, grün Heilung, grau resistent).
-Kampfende: Ergebnis-Panel (EXP-Leisten füllen sich, Level-Up-Banner, Credits, Drops, Follower +X) → Bestätigen → Erkundung.
-Erreicht eine Figur ein Talent-Level (L3/L5/L7/L9), zeigt das Panel zusätzlich den Chip **„TALENT BEREIT“** („im Safe Room wählen“) —
+Kampfende: Ergebnis-Panel (EXP-Leisten füllen sich, Banner „NEUE STUFE!“, Credits, Drops, Follower +X) → Bestätigen → Erkundung.
+Erreicht eine Figur eine Talent-Stufe (3/5/7/9), zeigt das Panel zusätzlich den Chip **„TALENT BEREIT“** („im Safe Room wählen“) —
 keine Wahl im Kampfende (Kap. 4.7).
 
 ### 14.6 Game Over „Sendeschluss“
@@ -2088,10 +2088,10 @@ Lootboxen); er verschwindet, sobald nichts mehr offen ist.
 | Timer | **25:00** |
 | `floor_mult` (Zuschauer) | 1.5 |
 | Raster | 9×9 Zellen, prozedural aus Modulen (`DungeonGenerator`, kein `layout`; Seed pro Spielstand) |
-| Ziel-Level | 7–10 |
+| Ziel-Stufe | 7–10 |
 | Daten (`floors.json → floor_2`) | `index 2`, `playable: false` (Slice), `theme: "mall"`, `timer_seconds: 1500`, `timer_warnings: [600, 300, 60]`, `floor_mult: 1.5`, `safe_rooms: 2` (Bereich 0..3) |
 
-| ID | Name | Lv | HP | STR/MAG/DEF/RES/SPD | weak / resist | Idee |
+| ID | Name | Stufe | HP | STR/MAG/DEF/RES/SPD | weak / resist | Idee |
 |---|---|---|---|---|---|---|
 | `schaufensterpuppe` | Schaufensterpuppe | 8 | 90 | 28/8/22/12/12 | fire / ice | Auf der Karte: bewegt sich nur, wenn Kai wegschaut (Kamera-Frustum) → lauert auf Hinterhalt. Im Kampf: `e_pose` (`guard` + `taunt` auf sich). |
 | `einkaufswagen_rudel` | Einkaufswagen-Rudel | 8 | 55 ×3 | 24/4/16/8/20 | shock / physical | Tritt immer zu dritt auf, sehr schnell; „Ramm-Kette“: Schaden steigt pro lebendem Rudelmitglied (+20 % je Wagen). |

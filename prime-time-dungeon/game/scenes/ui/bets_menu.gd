@@ -182,21 +182,22 @@ func _wire_cards(cards: Array[Control]) -> void:
 			c.focus_neighbor_bottom = c.get_path_to(below)
 
 
-## "Jetzt: Unterhosen-Liga · Stufe 1 (gesteuerte Figur): Hype ×1,05, Follower ×1,1 (bis +60 je Etage) · Stufe 2
-## (Duo-Liga, beide): Hype ×1,2, Follower ×1,35 (bis +180 je Etage) · Liga-Bonus dieser Etage: noch +60 Follower" —
-## the cap parts only with a floor_follower_cap (integration round 4); event runs without the factors.
+## "Jetzt: Unterhosen-Liga · Liga 1 (gesteuerte Figur): Hype ×1,05, Follower ×1,1 (bis +60 je Etage) · Duo-Liga
+## (beide): Hype ×1,2, Follower ×1,35 (bis +180 je Etage) · Liga-Bonus dieser Etage: noch +60 Follower" — the cap parts
+## only with a floor_follower_cap (integration round 4); event runs without the factors. The tiers read "Liga 1" /
+## "Duo-Liga", never "Stufe 1 / Stufe 2": "Stufe" is the level of a figure (09 §1.2 Nr. 3; code: liga_tier).
 static func _tier_text(v: Dictionary) -> String:
 	var tier: int = int(v.get("liga_tier", 0))
 	var now: String = "Jetzt: " + ["keine Liga", "Unterhosen-Liga", "Duo-Liga"][clampi(tier, 0, 2)]
 	if not bool(v.get("rewards", true)):
-		return now + " · Stufe 1: die gesteuerte Figur · Stufe 2 (Duo-Liga): beide. In Event-Läufen nur zum Spaß."
+		return now + " · Liga 1: die gesteuerte Figur · Duo-Liga: beide. In Event-Läufen nur zum Spaß."
 	var f: Array = []
 	for t: int in [1, 2]:
 		var cap: int = MarottenRules.liga_floor_cap(DB.data, t)
 		f.append(Show.pm_text(MarottenRules.liga_pm(DB.data, t, &"hype")))
 		f.append(Show.pm_text(MarottenRules.liga_pm(DB.data, t, &"follower"))
 			+ (" (bis +%d je Etage)" % cap if cap >= 0 else ""))
-	var text: String = now + (" · Stufe 1 (gesteuerte Figur): Hype ×%s, Follower ×%s · Stufe 2 (Duo-Liga, beide): "
+	var text: String = now + (" · Liga 1 (gesteuerte Figur): Hype ×%s, Follower ×%s · Duo-Liga (beide): "
 		+ "Hype ×%s, Follower ×%s") % f
 	var left: int = int(v.get("liga_followers_left", -1))
 	if tier > 0 and left >= 0:

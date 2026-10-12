@@ -2,12 +2,18 @@ class_name FloorDef extends RefCounted
 ## floors.json entry (02_TECH §4.4.7). Immutable after loading.
 ## `layout` is the normalized layout dictionary (grid coordinates stay [x, y] int arrays,
 ## offsets/waypoints [x, z] float arrays; use JsonUtil.arr_to_vec2i / arr_to_vec2). {} = procedural floor.
+## Staffeln (09 §2.4, §3.6; CR-27; contract pass 4): `theme` may name a Kulisse (thm_, themes.json; kulisse()) instead
+## of an art theme, `variant` the floor's place in its Kulisse (1–3; 0 = not stated), `level_band` its level band
+## ([from, to]; [] = none) and `zones` its quarters for the generator v2 ([] = the DungeonGenerator as today).
+## Nothing reads them outside a season; ST1-C writes the floors 2–18, ST1-D reads the bands.
+
+const KULISSE_PREFIX: String = "thm_"
 
 var id: String = ""
 var index: int = 1
 var name: String = ""
 var playable: bool = true
-var theme: String = "metro"
+var theme: String = "metro"                 # art theme (DataValidator.THEMES) or a Kulisse (thm_)
 var timer_seconds: int = 1200
 var timer_warnings: PackedInt32Array = [600, 300, 60]
 var timer_start_after: String = ""
@@ -27,6 +33,10 @@ var palette: Dictionary = {}                # floor, wall, accent, light, fog, a
 var music: String = "explore"
 var quest: Dictionary = {}
 var window: Dictionary = {}
+# --- Staffeln (contract pass 4) ---
+var variant: int = 0                        # place in the Kulisse 1..3 (0 = not stated)
+var level_band: PackedInt32Array = []       # [from, to] (1..50) or [] (no band)
+var zones: Array[Dictionary] = []           # [{"id", "name", "rooms": {min, max}, "palette", "pool"}] (generator v2)
 
 
 static func from_dict(d: Dictionary) -> FloorDef:
@@ -62,11 +72,37 @@ static func from_dict(d: Dictionary) -> FloorDef:
 	r.music = str(d.get("music", "explore"))
 	r.quest = (d.get("quest", {}) as Dictionary).duplicate(true)
 	r.window = (d.get("window", {}) as Dictionary).duplicate(true)
+	r.variant = int(d.get("variant", 0))                          # Staffeln (contract pass 4)
+	var band: Variant = d.get("level_band", PackedInt32Array())
+	if band is PackedInt32Array:                                # the validator's normalized form ("ia")
+		r.level_band = (band as PackedInt32Array).duplicate()
+	elif band is Array:                                         # a raw JSON entry
+		for b: Variant in (band as Array):
+			r.level_band.append(int(b))
+	for z: Variant in (d.get("zones", []) as Array):
+		if z is Dictionary:
+			r.zones.append((z as Dictionary).duplicate(true))
 	return r
 
 
 func has_layout() -> bool:
 	return not layout.is_empty()
+
+
+## Staffeln (contract pass 4): the Kulisse of the floor named by `theme` ("" when `theme` is an art theme; the Kulisse
+## may still list the floor in themes.json).
+func kulisse() -> String:
+	return theme if theme.begins_with(KULISSE_PREFIX) else ""
+
+
+## Staffeln (contract pass 4): the floor has quarters for the generator v2 (09 §3.6).
+func has_zones() -> bool:
+	return not zones.is_empty()
+
+
+## Staffeln (contract pass 4): the floor has a level band (09 §2.4).
+func has_band() -> bool:
+	return level_band.size() == 2
 
 
 ## Encounter of this floor by id (null if this floor does not declare it).

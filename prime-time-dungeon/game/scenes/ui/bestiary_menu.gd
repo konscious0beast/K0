@@ -82,7 +82,7 @@ func _show(id: String) -> void:
 	var defeated: int = int(e.get("defeated", 0))
 	title.text = UiUtil.tr_text(def.name)
 	title.add_theme_color_override("font_color", UiTheme.C_DANGER if def.boss else UiTheme.C_TEXT)
-	sub.text = "Lv %d%s  ·  besiegt: %d" % [def.level, "  ·  BOSS" if def.boss else "", defeated]
+	sub.text = "Stufe %d%s  ·  besiegt: %d" % [def.level, "  ·  BOSS" if def.boss else "", defeated]   # 09 §1.2
 	if defeated >= 1:
 		var lines: PackedStringArray = []
 		lines.append("HP %d   MP %d" % [int(def.stats.get("hp", 0)), int(def.stats.get("mp", 0))])

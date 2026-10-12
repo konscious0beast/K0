@@ -986,7 +986,7 @@
 			"id": "mod_level_up_01",
 			"tag": "level_up",
 			"voice": "mod",
-			"text": "Level up! Sie sind jetzt {level}% weniger verzichtbar.",
+			"text": "Aufstieg! Sie sind jetzt {level}% weniger verzichtbar.",
 			"weight": 1
 		},
 		{
@@ -1578,7 +1578,7 @@
 			"id": "mod_achievement_ach_level_5_01",
 			"tag": "achievement:ach_level_5",
 			"voice": "mod",
-			"text": "Level fünf. Sie sind jetzt offiziell schwer zu ersetzen.",
+			"text": "Stufe fünf. Sie sind jetzt offiziell schwer zu ersetzen.",
 			"weight": 1
 		},
 		{

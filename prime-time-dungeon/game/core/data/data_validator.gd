@@ -191,12 +191,15 @@ const TABLES: PackedStringArray = ["statuses", "skills", "items", "classes", "pa
 	"twists",                                   # 06-D: validated by validators/twists.gd (TwistCheck)
 	"origins", "looks",                         # Casting (08, K0): validators/origins.gd (K1), looks.gd (K2)
 	"seasons", "professions", "cast", "themes"]   # Staffeln (09, ST0): validators/{seasons,professions,cast,themes}.gd
-## Allowed extra top-level keys per file (§4.1); everything else is an error.
-const TABLE_EXTRA_KEYS: Dictionary = {"party": ["start"], "enemies": ["pseudo_units"], "lootboxes": ["pools", "pity"],
+## Allowed extra top-level keys per file (§4.1); everything else is an error. Contract pass 4 (09 §8.2): party.json →
+## exp_table (validators/levels.gd).
+const TABLE_EXTRA_KEYS: Dictionary = {"party": ["start", "exp_table"], "enemies": ["pseudo_units"],
+	"lootboxes": ["pools", "pity"],
 	"origins": ["hobbies", "traits", "rivals", "brands", "gags", "greetings", "plans", "canon"],   # 08 K0 (09 ST0)
 	"professions": ["recipes", "materials", "nodes"], "cast": ["names"]}                        # Staffeln (09, ST0)
 const REQUIRED_BOXES: PackedStringArray = ["box_bronze", "box_silver", "box_gold", "box_fan"]
 const LEVEL_CAP: int = 10                    # copy of Balance.LEVEL_CAP (core/data must not depend on core/stats)
+const SEASON_LEVEL_CAP: int = 50             # copy of Balance.SEASON_LEVEL_CAP (09 §8.2, contract pass 4)
 const MAX_TEXT_LEN: int = 110
 const MAX_OFFSET: float = 4.5
 const PALETTE_KEYS: PackedStringArray = ["floor", "wall", "accent", "light", "fog", "ambient"]
@@ -248,6 +251,9 @@ const SeasonsCheck := preload("res://core/data/validators/seasons.gd")
 const ProfessionsCheck := preload("res://core/data/validators/professions.gd")
 const CastCheck := preload("res://core/data/validators/cast.gd")
 const ThemesCheck := preload("res://core/data/validators/themes.gd")
+# --- Staffeln (09, contract pass 4): the season fields of floors.json (ST1-C) and the level curve (ST1-D) ---
+const FloorSeasonCheck := preload("res://core/data/validators/floor_season.gd")
+const LevelsCheck := preload("res://core/data/validators/levels.gd")
 
 # --- 06 package B: per-table rule files (06 §8.0 Nr. 7) ------------------------------------------------------------
 const TalentsRules := preload("res://core/data/validators/talents.gd")
@@ -288,7 +294,8 @@ const SPEC_ITEM: Array = [["id", "s"], ["name", "s"], ["desc", "s", ""], ["type"
 	["rt", "d", {}]]                            # Echtzeitkampf (07, R1a): optional rt block (§4.8, rules: RtCheck)
 const SPEC_ITEM_SHOW_MODS: Array = [["hype_gain_mult", "f", 1.0], ["follower_mult", "f", 1.0]]
 const SPEC_CLASS: Array = [["id", "s"], ["name", "s"], ["desc", "s", ""], ["for", "sa", []], ["min_floor", "i", 3],
-	["stat_mult", "d", {}], ["growth_add", "d", {}], ["passives", "a", []], ["learnset", "a", []], ["show_mods", "d", {}]]
+	["stat_mult", "d", {}], ["growth_add", "d", {}], ["passives", "a", []], ["learnset", "a", []], ["show_mods", "d", {}],
+	["rt", "d", {}]]       # 09 contract pass 4 (07 CR-32 a): the class bar + ranks (ClassDef.RT_SPEC, rules: RtCheck)
 const SPEC_CLASS_SHOW_MODS: Array = [["hype_gain_mult", "f", 1.0], ["stunt_success_add", "f", 0.0],
 	["stunt_cooldown", "i", 3],
 	["sponsor_thresholds", "ia", [70, 85, 100]]]
@@ -338,7 +345,10 @@ const SPEC_FLOOR: Array = [["id", "s"], ["index", "i"], ["name", "s"], ["playabl
 	["grid", "d"], ["layout", "d", {}], ["rooms", "d", {}], ["safe_rooms", "i", 1], ["chests", "d", {}],
 	["enemy_groups", "d", {}], ["chest_table", "a", []], ["shop", "sa", []], ["quarter_boss", "s", ""],
 	["floor_boss", "s", ""], ["encounters", "a"], ["palette", "d", {}], ["music", "s", "explore"], ["quest", "d", {}],
-	["window", "d", {}]]
+	["window", "d", {}],
+	# Staffeln (09 §3.6, CR-27; contract pass 4, rules: FloorSeasonCheck): the floor's place in its Kulisse, its level
+	# band and its quarters for the generator v2 — the defaults change nothing (`theme` may also name a thm_ Kulisse)
+	["variant", "i", 0], ["level_band", "ia", []], ["zones", "a", []]]
 const SPEC_GRID: Array = [["w", "i"], ["h", "i"]]
 const SPEC_MINMAX: Array = [["min", "i"], ["max", "i"]]
 const SPEC_CHEST_TABLE: Array = [["kind", "s"], ["id", "s", ""], ["weight", "i"], ["min", "i"], ["max", "i"]]
@@ -432,6 +442,7 @@ func validate(raw: Dictionary, p_strict: bool = true, read_errors: Dictionary = 
 	_out["origin_extras"] = {}                    # Casting (08, K0): hobbies, traits, …, canon of origins.json
 	_out["profession_extras"] = {}                # Staffeln (09, ST0): recipes, materials, nodes of professions.json
 	_out["cast_extras"] = {}                      # Staffeln (09, ST0): names of cast.json
+	_out["exp_table"] = PackedInt32Array()        # Staffeln (09 §8.2, contract pass 4): party.json → exp_table
 	# Rule 1 + rules 2/4 per entry.
 	for t: String in TABLES:
 		var entries: Array = _file_entries(t, raw, read_errors)
@@ -520,6 +531,7 @@ func _file_entries(t: String, raw: Dictionary, read_errors: Dictionary) -> Array
 		_err(t + "." + key, "unknown top-level key")
 	if t == "party":
 		_read_party_start(f)
+		LevelsCheck.read_exp_table(self, f)       # Staffeln (09 §8.2, contract pass 4): optional
 	elif t == "enemies":
 		_read_pseudo_units(f)
 	elif t == "lootboxes":
@@ -1107,7 +1119,9 @@ func _n_floor(ctx: String, raw: Variant) -> Dictionary:
 	if str(d["id"]) != "floor_%d" % idx:
 		_err(ctx + ".id", "must be floor_<index> (floor_%d)" % idx)
 	var theme: String = str(d["theme"])
-	_enum(ctx + ".theme", theme, THEMES)
+	if not FloorSeasonCheck.is_kulisse(theme):      # contract pass 4: a thm_ Kulisse is checked by FloorSeasonCheck
+		_enum(ctx + ".theme", theme, THEMES)
+	var zone_floor: bool = FloorSeasonCheck.is_zone_floor(d)   # generator v2 (09 §3.6): bigger grids, 4 safe rooms
 	var timer: int = int(d["timer_seconds"])
 	_range_i(ctx + ".timer_seconds", timer, 60, 7200)
 	var tw: PackedInt32Array = d["timer_warnings"]
@@ -1120,8 +1134,9 @@ func _n_floor(ctx: String, raw: Variant) -> Dictionary:
 	var grid: Dictionary = _norm(ctx + ".grid", d["grid"], SPEC_GRID)
 	if grid.is_empty():
 		grid = {"w": 3, "h": 3}
-	_range_i(ctx + ".grid.w", int(grid["w"]), 3, 12)
-	_range_i(ctx + ".grid.h", int(grid["h"]), 3, 12)
+	var grid_max: int = FloorSeasonCheck.ZONE_GRID_MAX if zone_floor else 12
+	_range_i(ctx + ".grid.w", int(grid["w"]), 3, grid_max)
+	_range_i(ctx + ".grid.h", int(grid["h"]), 3, grid_max)
 	d["grid"] = grid
 	var has_layout: bool = not (d["layout"] as Dictionary).is_empty()
 	for key: String in ["rooms", "chests", "enemy_groups"]:
@@ -1146,7 +1161,8 @@ func _n_floor(ctx: String, raw: Variant) -> Dictionary:
 			_range_i(ctx + "." + key + ".max", int(mm2["max"]), 0, 20)
 		if not raw_d.has("chest_table"):
 			_err(ctx + ".chest_table", "required for procedural floors (no layout)")
-	_range_i(ctx + ".safe_rooms", int(d["safe_rooms"]), 0, 3)
+	_range_i(ctx + ".safe_rooms", int(d["safe_rooms"]), 0, FloorSeasonCheck.ZONE_SAFE_ROOMS_MAX if zone_floor else 3)
+	FloorSeasonCheck.normalize(self, ctx, d, raw_d)  # Staffeln (contract pass 4): variant, level_band, zones
 	var ct: Array[Dictionary] = []
 	var raw_ct: Array = d["chest_table"]
 	for i in raw_ct.size():
@@ -1621,6 +1637,9 @@ func _check_ids() -> void:
 				var encs: Array = d["encounters"]
 				for j in encs.size():
 					_check_id(seen, "encounters", str(encs[j]["id"]), _ctx(ctx + ".encounters", j, encs[j]) + ".id")
+				var zids: PackedStringArray = FloorSeasonCheck.zone_ids(d)   # contract pass 4: the quarters (gen. v2)
+				for j in zids.size():
+					_check_id(seen, "zones", zids[j], "%s.zones[%d|%s].id" % [ctx, j, zids[j]])
 				var lay: Dictionary = d["layout"]
 				if not lay.is_empty():
 					for key: String in ["events", "zones", "safe_rooms"]:
@@ -1670,6 +1689,7 @@ func _check_references() -> void:
 	ProfessionsCheck.check(self)
 	CastCheck.check(self)
 	ThemesCheck.check(self)
+	FloorSeasonCheck.check(self)               # Staffeln (09, contract pass 4): Kulisse, variant, quarters, bands
 
 
 func _ref(ctx: String, id: String, table: Dictionary, what: String) -> bool:

@@ -83,6 +83,8 @@ var _all_cast: Array[Dictionary] = []      # file order
 var _cast_names: Array[Dictionary] = []    # cast.json → names ({"name", "form"}, file order)
 var _themes: Dictionary = {}               # thm id → ThemeDef
 var _all_themes: Array[ThemeDef] = []
+# --- Staffeln (09 §8.2, contract pass 4): party.json → exp_table ([] without the key; never mutated) -----------------
+var _exp_table: PackedInt32Array = []
 
 
 ## Loads all TABLES from `dir` (<table>.json). Full validation (rules 1–10). True if no errors.
@@ -111,6 +113,8 @@ func load_from_dicts(tables: Dictionary) -> bool:
 		match t:
 			"party":
 				file["start"] = (tables.get("party_start", {"inventory": {}, "credits": 0}) as Dictionary).duplicate(true)
+				if tables.has("exp_table"):                   # Staffeln (09 §8.2, contract pass 4)
+					file["exp_table"] = (tables["exp_table"] as Array).duplicate()
 			"enemies":
 				if tables.has("pseudo_units"):
 					file["pseudo_units"] = (tables["pseudo_units"] as Array).duplicate(true)
@@ -206,11 +210,12 @@ func all_talents() -> Array[TalentDef]:
 	return _all_talents.duplicate()
 
 
-## Talents whose `for` includes `member_id` (or is empty), sorted by id.
+## Talents whose `for` includes `member_id` (or is empty), sorted by id. The 06-B pool only: a talent of the talent
+## tree (row > 0, 09 §8.4, contract pass 4) is never offered by the Talent-Show — ST1-D reads them via all_talents().
 func talents_for(member_id: String) -> Array[TalentDef]:
 	var out: Array[TalentDef] = []
 	for t: TalentDef in _all_talents:
-		if t.is_for(member_id):
+		if t.is_for(member_id) and not t.is_tree():
 			out.append(t)
 	return out
 
@@ -252,6 +257,12 @@ func mod_lines(tag: String) -> Array[ModLineDef]:
 ## {"inventory": {item_id: int}, "credits": int}
 func party_start() -> Dictionary:
 	return _party_start.duplicate(true)
+
+
+## Staffeln (09 §8.2, contract pass 4): party.json → exp_table — the EXP of level 1..49 to the next (index level − 1;
+## levels 1–9 = Progression.EXP_TABLE), a copy; [] without the key (nothing reads it outside a season, ST1-D).
+func exp_table() -> PackedInt32Array:
+	return _exp_table.duplicate()
 
 
 ## pools.f<i> (fallback: highest pool index <= floor_index); rarity incl. "fan". [] if none.
@@ -627,6 +638,7 @@ func _clear() -> void:
 	_cast_names = []
 	_themes = {}
 	_all_themes = []
+	_exp_table = PackedInt32Array()                               # Staffeln (contract pass 4)
 	_all_statuses.clear()
 	_all_skills.clear()
 	_all_items.clear()
@@ -757,6 +769,8 @@ func _build(norm: Dictionary) -> void:
 	_party_start = (norm.get("party_start", {"inventory": {}, "credits": 0}) as Dictionary).duplicate(true)
 	_pools = (norm.get("lootbox_pools", {}) as Dictionary).duplicate(true)
 	_pity = (norm.get("lootbox_pity", {"rare": 4, "epic": 8}) as Dictionary).duplicate(true)
+	var exp_t: Variant = norm.get("exp_table", PackedInt32Array())       # Staffeln (09 §8.2, contract pass 4)
+	_exp_table = (exp_t as PackedInt32Array).duplicate() if exp_t is PackedInt32Array else PackedInt32Array()
 	_build_persona(norm)                                          # Casting (08, K0)
 	_build_season(norm)                                           # Staffeln (09, ST0)
 	_freeze_defs()

@@ -41,7 +41,7 @@
    automatisch“).
 2. Jede Figur hat eine eigene **Feldfähigkeit**: Kai schlägt (Präventivschlag), Mopsula **bellt** (Gegner erschrecken, vorbeischleichen).
    Beides öffnet außerdem rissige **Kulissenwände** (Geheimnisse, Abkürzungen).
-3. Ab **Level 3** gibt es auf jedem zweiten Level ein **Talent** (1 von 2) — gesammelt gewählt in der **Talent-Show** im Safe Room,
+3. Ab **Stufe 3** gibt es auf jeder zweiten Stufe ein **Talent** (1 von 2) — gesammelt gewählt in der **Talent-Show** im Safe Room,
    nie als Unterbrechung nach dem Kampf. Talente sind klein, lesbar, witzig und oft **Verhaltens**-Boni („Bellen in Stereo: +25 % Reichweite“).
 4. **Ab Etage 3** findet im Safe Room das **Casting** statt: Spezies wählen (4 für Kai, 3 für Mopsula, oder „Original bleiben“) und
    die erste **Spezialisierung** (die vorhandenen 4 Klassen je Figur). Ab hier wird das Spiel deutlich vielfältiger.
@@ -50,7 +50,7 @@
 6. M.O.D. hat **Marotten**: Pro Etage verkündet sie 1–2 **Vorlieben** („M.O.D. mag heute: Nur der Mopp“). Wer sie bedient,
    bekommt Hype, Follower und ein Fanpost-Paket — **nie Pflicht, nie Strafe**.
 7. Immer verfügbar ist die **Unterhosen-Liga** (Arbeitstitel): Regeltext **„ohne Rüstung & ohne Accessoire“** — schwerer, aber vom
-   Publikum geliebt. Stufe 2 **„Duo-Liga“** (beide Figuren) ist die ultimative Spielweise mit eigener Achievement-Kette.
+   Publikum geliebt. Die **„Duo-Liga“** (beide Figuren) ist die ultimative Spielweise mit eigener Achievement-Kette.
 8. **KI-generierte Kommentare sind machbar** — als serverseitiger Dienst „mod-brain“ mit Claude, ohne API-Schlüssel im Spiel,
    mit Sicherheitsfilter, Kostendeckel und Skript-Fallback. Dass M.O.D. das Spiel **leicht verändert**, erlebt jede:r ab Etage 2
    über die **Regie** — offline, aus dem Seed, mit geschriebenen Zeilen; die KI ersetzt später nur Auswahl und Sprüche. Eingriffe
@@ -134,7 +134,7 @@ Spielergilden, Bosse werden zu Raids („Großproduktionen“) mehrerer Teams, E
 |---|---|---|---|---|
 | 1 | Figurenwahl, Bellen, **1** Vorliebe | 1–2 Kulissenwände, 3 Regie-Notizen, 1 goldgerahmter Show-Boss (optional) | Talent-Show (ab SR2, sobald L3 erreicht), Liga-Hinweis in der Etagen-Bilanz | Gilden, Spezies, Twists, Partner-Tutorial |
 | 2 | **2** Vorlieben, Fanclubs, **Regie-Twists** (skriptiert) | 3. Begleitfigur (rekrutierbar), mehr Kulissenwände, Sammelkarten | — | Spezies |
-| 3 | **Recall** (vormals „Casting“, 08 F-7): Spezies + Spezialisierung; Level-Cap steigt | — | — | — |
+| 3 | **Recall** (vormals „Casting“, 08 F-7): Spezies + Spezialisierung; Höchststufe steigt | — | — | — |
 | 4+ | Show-Bosse mit eigenen Regeln, Fanclub-Ränge 3–5 | Sammelkarten-Album | — | — |
 
 **HUD-Budget E1:** Zu Hype, Followern, Timer, Sponsor-Badge kommt genau **ein** neuer kompakter **Show-Chip** (Vorliebe + Herzen,
@@ -236,8 +236,8 @@ Im **Safe-Room-Menü** neuer Eintrag **„Figur wechseln“** (zwischen „Ausr�
 
 | Achse | Spielgefühl | Slice (jetzt) | Später |
 |---|---|---|---|
-| **Stats** (HP, MP, STR, MAG, DEF, RES, SPD, LCK) | sichtbar wachsen | wie GDD §4 | Level-Cap je Etage anheben (2.3) |
-| **Talente** | jedes 2. Level eine Entscheidung | **Paket B**: 1 aus 2 ab L3, gesammelt in der Talent-Show; 12 je Figur (⅓ Verhaltens-Talente) | Talent-Reset, seltene Talente aus Show-Bossen |
+| **Stats** (HP, MP, STR, MAG, DEF, RES, SPD, LCK) | sichtbar wachsen | wie GDD §4 | Höchststufe je Etage anheben (2.3) |
+| **Talente** | jede 2. Stufe eine Entscheidung | **Paket B**: 1 aus 2 ab Stufe 3, gesammelt in der Talent-Show; 12 je Figur (⅓ Verhaltens-Talente) | Talent-Reset, seltene Talente aus Show-Bossen |
 | **Fähigkeiten** | neue Werkzeuge | Lernsets wie GDD §4.5/4.6 | Klassen-Skills L11–L17 (GDD §12) |
 | **Ausrüstung** | Beute, Ausprobieren | 3 Slots wie GDD §6 | Tiers, Set-Boni, „Ramsch“-Seltenheit (graue Items à la WoW, M.O.D. liebt sie) |
 | **Spezies + Spezialisierung** | Identität, Rolle | **Paket B**: Datenmodell + Regeln + Tests | Casting-UI auf Etage 3, Optik je Spezies (03_ART) |
@@ -249,22 +249,22 @@ Im **Safe-Room-Menü** neuer Eintrag **„Figur wechseln“** (zwischen „Ausr�
 
 ### 2.2 Talentwahl (Paket B)
 
-**Regel in einem Satz:** Ab Level 3 verdient jede Figur auf jedem zweiten Level eine Talentwahl; in der **Talent-Show** im Safe
+**Regel in einem Satz:** Ab Stufe 3 verdient jede Figur auf jeder zweiten Stufe eine Talentwahl; in der **Talent-Show** im Safe
 Room wählt man je offener Wahl **eines von zwei** Talenten.
 
 | Regel | Wert |
 |---|---|
-| Wann | Level-ups auf **ungerade Level ab L3** (L3, L5, L7, L9 → im Slice mit Cap 10 **4 Wahlen je Figur**; spätere Caps setzen das fort: L11, L13 …) |
+| Wann | Stufenaufstiege auf **ungerade Stufen ab 3** (3, 5, 7, 9 → im Slice mit Höchststufe 10 **4 Wahlen je Figur**; spätere Höchststufen setzen das fort: 11, 13 …) |
 | Wo | **Talent-Show** im Safe-Room-Menü (ein Bildschirm, alle offenen Wahlen beider Figuren nacheinander). Erstes Auftreten auf E1 in **Safe Room 2** „Pumpenhaus“ (oder später, sobald L3 erreicht ist) — nie als Unterbrechung nach einem Kampf |
-| Angebot | 2 verschiedene Talente aus dem Pool der Figur (`for` enthält die Figur, `min_level ≤ Level`, Rang < `max_rank`), gewichtet ohne Zurücklegen; Zufall `SeedUtil.derive(state.seed, "talent:" + member_id, level)` → **Neuladen ändert das Angebot nicht**, kein Angebot muss aufgezeichnet werden |
-| Wahl | `Game.pick_talent(member_id, talent_id)` → Command `{"t": "talent", "member", "id"}`; gültig nur für das Angebot des ältesten offenen Levels und nur im Safe Room (`not_in_safe_room`) |
-| Später wählen | erlaubt: offene Wahlen stehen in `PartyMember.talent_pending` (Level-Liste). Hinweis nur als kleiner Chip „Talent bereit“ in den Kampfergebnissen und als Badge „!“ am Safe-Room-Eintrag „Talent-Show“ bzw. im Pausemenü (Party). **Nichts blockiert den Spielfluss.** |
+| Angebot | 2 verschiedene Talente aus dem Pool der Figur (`for` enthält die Figur, `min_level ≤ Stufe`, Rang < `max_rank`), gewichtet ohne Zurücklegen; Zufall `SeedUtil.derive(state.seed, "talent:" + member_id, level)` → **Neuladen ändert das Angebot nicht**, kein Angebot muss aufgezeichnet werden |
+| Wahl | `Game.pick_talent(member_id, talent_id)` → Command `{"t": "talent", "member", "id"}`; gültig nur für das Angebot der ältesten offenen Stufe und nur im Safe Room (`not_in_safe_room`) |
+| Später wählen | erlaubt: offene Wahlen stehen in `PartyMember.talent_pending` (Stufen-Liste). Hinweis nur als kleiner Chip „Talent bereit“ in den Kampfergebnissen und als Badge „!“ am Safe-Room-Eintrag „Talent-Show“ bzw. im Pausemenü (Party). **Nichts blockiert den Spielfluss.** |
 | Stapeln | Talente mit `max_rank` 2 können erneut angeboten werden (Rang +1) |
 | Autoplay/Bot | wählt deterministisch das erste Angebot beim nächsten Safe-Room-Besuch (Full-Run-Bot, Kap. 8) |
 | Umfang (Band) | Werte-Talente **+3–5 % je Rang** auf **eine** Größe (`max_rank` ≤ 2); Summe aller Talentboni je Kampfwert bis L10 **≤ +15 %** (Test in Paket B). Verhaltens-Talente ändern Feldfähigkeit, Stunt, Präventivschlag, Marotten oder Liga — keine reinen Zahlenbumps |
 
 **Starttalent der Kandidat:in (08 Kap. 3, CR-21, seit K0 im Kern):** `kai.origin_talent` (Command `persona`, 08 §2.3) ist eine
-**zusätzliche Quelle** neben den Pool-Talenten — Rang 1, wirkt **ab Level 1** und unter denselben Deckeln (Umfang-Band oben, 08
+**zusätzliche Quelle** neben den Pool-Talenten — Rang 1, wirkt **ab Stufe 1** und unter denselben Deckeln (Umfang-Band oben, 08
 §3.4). Dafür prüfen die vier Wächter (`Talents.stat_bonus`, `Talents._effects`, `Progression.total_stats`,
 `Progression.to_combatant`) `Talents.has_any(member)` (Pool-Talente **oder** gültiges Starttalent) statt „`talents` nicht leer“;
 `Talents._effects` hängt die Effekte des Starttalents an. Ein Feld-Starttalent (`field_range_pm`) trägt auch der führende Graf:
@@ -354,11 +354,11 @@ Felder: `id` ✓, `name` ✓, `desc` (≤ 60 Zeichen, eine Kartenzeile), `for` �
 `min_level` 3..99 (3), `icon` ∈ `TALENT_ICONS` (`hp`, `mp`, `atk`, `mag`, `def`, `res`, `spd`, `lck`, `crit`, `element`, `show`,
 `field`, `stunt`, `liga`), `effects` ✓ (1..3 Einträge, `kind` ∈ `TALENT_KINDS`, Felder und Bereiche je Art wie oben, alle Ganzzahlen).
 
-### 2.3 Fähigkeiten, Ausrüstung, Level-Cap
+### 2.3 Fähigkeiten, Ausrüstung, Höchststufe
 
-- Fähigkeiten bleiben **lernset-basiert** (lesbar: „mit Level 6 lernst du X“). Klassen bringen ab L11 je 4 Skills (GDD §12).
-- **Level-Cap je Etage** (Vorschlag, mit Etage 3 festzurren): E1–2: 10 · E3: 13 · E4: 15 · E5: 17 · E6: 20 (Staffelfinale).
-  Das hält die EXP-Kurve (GDD §4.3) je Etage lesbar und gibt jeder Etage Level-ups für die Talentwahl.
+- Fähigkeiten bleiben **lernset-basiert** (lesbar: „mit Stufe 6 lernst du X“). Klassen bringen ab Stufe 11 je 4 Skills (GDD §12).
+- **Höchststufe je Etage** (Vorschlag, mit Etage 3 festzurren): E1–2: 10 · E3: 13 · E4: 15 · E5: 17 · E6: 20 (Staffelfinale).
+  Das hält die EXP-Kurve (GDD §4.3) je Etage lesbar und gibt jeder Etage Stufenaufstiege für die Talentwahl.
 - Ausrüstung später: Tiers je Etage, **Set-Boni** (2 Teile eines Sponsors), **„Ramsch“** als vierte Seltenheit (grau, nur zum
   Verkaufen — und für die Marotte „Second-Hand-Schick“).
 
@@ -591,11 +591,11 @@ nennt deshalb nie Schuhe oder Füße. Die **Waffe ist erlaubt**.
 Liga-Zeilen stehen oben neben den Figuren-Reitern (über den Slots) statt unten in der linken Spalte, mit Abstand zur
 Tastenleiste.
 
-| Stufe | Bedingung (zu Kampfbeginn geprüft, gilt den ganzen Kampf) | Hype-Gewinne | Follower (Bonus je Etage gedeckelt) | Show-Chip-Zusatz |
+| Liga (`liga_tier`) | Bedingung (zu Kampfbeginn geprüft, gilt den ganzen Kampf) | Hype-Gewinne | Follower (Bonus je Etage gedeckelt) | Show-Chip-Zusatz |
 |---|---|---|---|---|
-| 0 | sonst | ×1.0 | ×1.0 | — |
-| **1 „Unterhosen-Liga“** | **gesteuerte Figur** (`GameState.hero`): `armor == ""` **und** `accessory == ""` | **×1.05** (Plan ×1.25, Paket C ×1.20) | **×1.10, höchstens +60 je Etage** (Plan ×1.20, Paket C ×1.15 ohne Deckel) | „LIGA ×1,05“ |
-| **2 „Duo-Liga“** (ultimativ) | **beide** Figuren: `armor == ""` und `accessory == ""` | **×1.20** (Plan ×1.50, Paket C ×1.40) | **×1.35, höchstens +180 je Etage** (Plan ×1.40, Paket C ohne Deckel) | „DUO-LIGA ×1,2“ |
+| keine (0) | sonst | ×1.0 | ×1.0 | — |
+| **Liga 1** (1) | **gesteuerte Figur** (`GameState.hero`): `armor == ""` **und** `accessory == ""` | **×1.05** (Plan ×1.25, Paket C ×1.20) | **×1.10, höchstens +60 je Etage** (Plan ×1.20, Paket C ×1.15 ohne Deckel) | „LIGA ×1,05“ |
+| **Duo-Liga** (2, ultimativ) | **beide** Figuren: `armor == ""` und `accessory == ""` | **×1.20** (Plan ×1.50, Paket C ×1.40) | **×1.35, höchstens +180 je Etage** (Plan ×1.40, Paket C ohne Deckel) | „DUO-LIGA ×1,2“ |
 
 *Paket C (gemessen):* Mit den Planwerten lag die Duo-Liga-Staffel bei 2 096 Followern am Ende von E1 (Band 4.10: ≤ 2 000) —
 die Faktoren wurden deshalb auf 1,2/1,15 bzw. 1,4/1,35 gesenkt (Daten `marotten.json`, Band als Test `test_06c_balance`).
@@ -603,12 +603,12 @@ die Faktoren wurden deshalb auf 1,2/1,15 bzw. 1,4/1,35 gesenkt (Daten `marotten.
 *Integration Runde 4 (Kap. 8.8 I-8, Messung Kap. 8.4 „Stand Runde 4“):* **Deckel auf den Liga-Follower-Bonus je Etage**
 (`reward.tiers[].floor_follower_cap`, optional, 0..2 000): Nach jedem gewonnenen Liga-Kampf bucht
 `MarottenRules.take_liga_followers`, was der Follower-Faktor hinzufügt (Follower mit − ohne Faktor), und zahlt es nur bis zum
-Deckel der Stufe dieses Kampfes aus; beide Stufen füllen dieselbe Etagensumme `ShowState.marotten.liga.followers` (gespeichert,
-im Hash, `Game.replay_log`-gleich), die nächste Etage beginnt bei 0. Hype-Faktor, Liga-Achievements und Mut-Paket bleiben
+Deckel der Liga dieses Kampfes aus; Liga 1 und Duo-Liga füllen dieselbe Etagensumme `ShowState.marotten.liga.followers`
+(gespeichert, im Hash, `Game.replay_log`-gleich), die nächste Etage beginnt bei 0. Hype-Faktor, Liga-Achievements und Mut-Paket bleiben
 ungedeckelt. Der Pausemenü-Tab „Show“ nennt Faktoren, Deckel und den Rest der Etage („noch +N Follower“). Kleinere
 Hype-Faktoren, weil Hype-Gewinne ganzzahlig gerundet werden (Kap. 8.0 Nr. 4): ab ×1,25 wird jedes +2 (Abwechslung,
 Schwachstelle, Combo, Skill-Kill) zu +3 — die Duo-Liga lag damit im Bot bei Hype-Ende ~79 und bis zu 11 Geschenken; ×1,2 hebt
-erst Gewinne ab +3 an, ×1,05 erst ab +10 (Stufe 1 ist beim Hype fast neutral, ihr Lohn sind Follower-Bonus, Kette und
+erst Gewinne ab +3 an, ×1,05 erst ab +10 (Liga 1 ist beim Hype fast neutral, ihr Lohn sind Follower-Bonus, Kette und
 Mut-Paket).
 
 Die Multiplikatoren wirken auf die **Kampagnen-Show-Währung**; in gewerteten Event-Läufen zählen sie nicht in die Punkte (4.8 Nr. 4).
@@ -616,11 +616,11 @@ Die Multiplikatoren wirken auf die **Kampagnen-Show-Währung**; in gewerteten Ev
 - **Schwerer, aber belohnt:** weniger DEF/RES (z. B. Kai L5 ohne Kanalarbeiter-Kombi: DEF 15 statt 24). Ausgleich ist
   thematisch: mehr Hype ⇒ Sponsoren-Schwellen 70/85/100 werden öfter erreicht ⇒ mehr System-Geschenke (Limits GDD §7.4 bleiben).
   „Das Publikum liebt Mut — und Sponsoren lieben das Publikum.“
-- **Etagen-Bonus:** Wurden alle (≥ 3) gewonnenen Kämpfe einer Etage in Stufe ≥ 1 bestritten → 1 Fanpost-Paket („Mut-Paket“) bei
-  der Etagen-Bilanz; alle (≥ 5) in Stufe 2 → zusätzlich Achievement `ach_duo_floor`.
-- **Keine Strafe beim Wiederanziehen:** Stufe sinkt einfach (Zeile `liga_leave`, einmal je Etage).
-- **Mopsula als gesteuerte Figur:** ohne Pulli/Umhang und ohne Accessoire → Stufe 1 (`liga_enter:1:mopsula`).
-- **Im Echtzeitkampf (07 E31, R5b): leichtfüßig.** Wer in der Liga kämpft (Stufe 1: die gesteuerte Figur, Stufe 2: beide), ist
+- **Etagen-Bonus:** Wurden alle (≥ 3) gewonnenen Kämpfe einer Etage in der Liga (Liga 1 oder Duo-Liga) bestritten → 1
+  Fanpost-Paket („Mut-Paket“) bei der Etagen-Bilanz; alle (≥ 5) in der Duo-Liga → zusätzlich Achievement `ach_duo_floor`.
+- **Keine Strafe beim Wiederanziehen:** Die Liga endet einfach (Zeile `liga_leave`, einmal je Etage).
+- **Mopsula als gesteuerte Figur:** ohne Pulli/Umhang und ohne Accessoire → Liga 1 (`liga_enter:1:mopsula`).
+- **Im Echtzeitkampf (07 E31, R5b): leichtfüßig.** Wer in der Liga kämpft (Liga 1: die gesteuerte Figur, Duo-Liga: beide), ist
   den ganzen Kampf „leichtfüßig“ (Status `sts_light_footed`): 8 % schneller und — als von der KI gesteuerte Figur — ein Viertel
   weniger übersehene Boden-Telegraphen. Regeltext überall: „Ohne Rüstung & ohne Accessoire: leichtfüßig …“ (Liga-Marotte, Tab
   „Show“, Liga-Toast); im HUD ein eigenes Statussymbol. Nie im Tutorial; im CTB-Kampf ohne Wirkung (bis zu dessen Entfernung).
@@ -776,8 +776,8 @@ Distanz-Regel 0.3).
 |---|---|
 | Gewonnene Wetten je Etage (Erstspieler:in, ohne gezieltes Spielen) | 0–1 von 2 |
 | … bei gezieltem Spielen | 2 von 2 |
-| Liga Stufe 1: Niederlage 1. Versuch Hausmeister / Königin | ≤ 40 % / ≤ 55 % (heute ~20 % / ~35 %) |
-| Liga Stufe 2: dto. | ≤ 55 % / ≤ 70 % — „ultimativ“, aber schaffbar |
+| Liga 1: Niederlage 1. Versuch Hausmeister / Königin | ≤ 40 % / ≤ 55 % (heute ~20 % / ~35 %) |
+| Duo-Liga: dto. | ≤ 55 % / ≤ 70 % — „ultimativ“, aber schaffbar |
 | Lootboxen je Etage | 15–22 (bisher 15–20) |
 | Follower Ende E1 bei Liga-Durchlauf | ≤ 2 000 (Rückkopplung bleibt gedämpft, GDD §7.2) |
 
@@ -1274,7 +1274,7 @@ harten Abhängigkeiten; nach jedem Merge Gate 8.6).
 | `scenes/boot/fullrun.gd`, `tools/fullrun.sh` | ✎ Hooks | `_apply_hero_choice` | `_pick_pending_talents` | `_apply_liga_strategy` | — |
 | `scenes/exploration/enemy_actor.gd` | ✎ Twist-Zeile | Zustand `DAZED` | — | — | — |
 | `core/progression/battle_bridge.gd` | ✎ Twist-Zeile, Show-Boss-Hook | — | Talent-Krit/Element/MP/Präventiv | — | — |
-| `core/progression/progression.gd` | — | — | ✎ Talente/Spezies in `total_stats`, `talent_pending` (ungerade Level ab L3) | — | — |
+| `core/progression/progression.gd` | — | — | ✎ Talente/Spezies in `total_stats`, `talent_pending` (ungerade Stufen ab 3) | — | — |
 | `core/live/run_sim.gd`, `core/progression/shop.gd` | ✎ Hooks | — | — | — | Rumpf (Twist-Ticks, Replay-Puffer) |
 | `scenes/ui/settings_menu.gd` | ✎ Zeilen für C/D | ✎ (Rest, Schalter „Partner automatisch“) | — | — | — |
 | `scenes/battle/ui/battle_results.gd` | ✎ Signal + Slot | — | ✎ (Chip „Talent bereit“) | `bets_results_fx.gd` am Slot | — |
@@ -1380,7 +1380,7 @@ Integrationstest).
 
 ### 8.3 Paket B — Talent-Show + Spezies/Spezialisierung (Datenmodell)
 
-**Ziel:** Talent-Show spielbar (Kap. 2.2: ungerade Level ab L3, gesammelt im Safe Room); Spezies/Casting als geprüftes Datenmodell
+**Ziel:** Talent-Show spielbar (Kap. 2.2: ungerade Stufen ab 3, gesammelt im Safe Room); Spezies/Casting als geprüftes Datenmodell
 (Kap. 3.4/3.6), ohne Casting-UI.
 
 | Art | Dateien |
@@ -1415,8 +1415,8 @@ static func pending_levels(member: PartyMember) -> PackedInt32Array             
 sortiert (deterministisch).
 
 **Tests (Minimum):** offene Wahlen nur auf L3/L5/L7/L9 (nicht auf L2/L4 …); Wahl nur im Safe Room; Angebot deterministisch (gleicher
-Seed/Level → gleiche 2 IDs; anderer Level → anders), nie doppelt, respektiert `for`/`min_level`/`max_rank`; Wahl nur aus dem Angebot
-des ältesten offenen Levels; Wirkungen je `kind` (Stat-Rechnung exakt in Promille, Krit, Element, MP nach Kampf, Reichweite/
+Seed/Stufe → gleiche 2 IDs; andere Stufe → anders), nie doppelt, respektiert `for`/`min_level`/`max_rank`; Wahl nur aus dem Angebot
+der ältesten offenen Stufe; Wirkungen je `kind` (Stat-Rechnung exakt in Promille, Krit, Element, MP nach Kampf, Reichweite/
 Cooldown, Präventiv-Schaden, Stunt-Fenster, Zusatz-Herz 1× je Etage, Liga-Stat nur bei `liga_tier ≥ 1`); Validator lehnt Werte
 außerhalb der Bereiche je `kind` ab; Save-Rundlauf inkl. alter Stände ohne Felder; Replay mit
 `talent`-Commands = gleicher Hash; Validator: 24 Talente (12/12), 8 Spezies, Fehlerfälle (unbekannter `kind`, Bereich, Referenz);
@@ -1435,13 +1435,13 @@ Angebotsfolgen der 4 Wahlen je Figur geprüft); Anteil Verhaltens-Talente je Poo
 
 | # | Entwurf | Gebaut | Grund |
 |---|---|---|---|
-| B-1 | `PartyMember.talent_pending` (gespeicherte Level-Liste) | offene Wahlen **abgeleitet**: ungerade Level ≥ 3 bis zum Level minus Σ Ränge (`Talents.pending_levels`) | kein zweiter Zustand, der auseinanderlaufen kann; alte Spielstände und `StateHash` bleiben byte-gleich (neue Felder nur, wenn gesetzt) |
+| B-1 | `PartyMember.talent_pending` (gespeicherte Stufen-Liste) | offene Wahlen **abgeleitet**: ungerade Stufen ≥ 3 bis zur Stufe minus Σ Ränge (`Talents.pending_levels`) | kein zweiter Zustand, der auseinanderlaufen kann; alte Spielstände und `StateHash` bleiben byte-gleich (neue Felder nur, wenn gesetzt) |
 | B-2 | Menüeintrag „Talent-Show“ mit „!“-Badge in der Safe-Room-Spalte | **goldener Knopf „TALENT-SHOW“ + „n Talentwahlen offen“** unten rechts, nur solange eine Wahl offen ist; die Menüspalte bleibt bei 6 Einträgen; Pausemenü → Party zeigt „n Wahl(en) offen“. Integration A × B: oben rechts auf Höhe des ersten Eintrags (unten rechts spricht der M.O.D.-Kasten), Menü in 5 Zeilen mit 88-px-Trefferflächen | ein 7. Eintrag schob „Weiter“ aus dem Bild (720p); der Knopf ist auffälliger, verschwindet von selbst und kollidiert nicht mit Paket A („Figur wechseln“) |
 | B-3 | Liga-Talente wirken bei `MarottenRules.liga_tier(state) ≥ 1` | wirken, solange **diese Figur** weder Rüstung noch Accessoire trägt (`Talents.liga_dressed`) | Paket C (`MarottenRules`) existiert noch nicht; die Regel „ohne Rüstung & ohne Accessoire“ ist je Figur sofort verständlich. Paket C darf auf `liga_tier` umstellen (eine Funktion) |
 | B-4 | Werte-Talente +3–5 % je Rang | STR/MAG/DEF/RES/LCK/SPD als **flache Punkte** (+1/+2), HP/MP/Liga als +5 % | bei L10 sind DEF/RES/LCK ~10–30 Punkte; +5 % wäre 0–1 Punkt (unlesbar) oder durch Rundung sprunghaft. Erschöpfender Test (L10, ohne Ausrüstung): Kai höchstens +15 HP auf 145, +3 DEF auf 22; Mopsula +10 HP auf 96, +3 RES auf 25, +2 LCK auf 18 — alle ≤ +15 % |
 | B-5 | `stunt_window_pm` = Stunt-Zeitfenster | Faktor auf die **Stunt-Erfolgschance** vor Boss-Abzug und Obergrenze (`BattleState.stunt_chance`, GDD §3.6) | die Stunts haben im Slice kein Zeitfenster (Erfolg ist eine Chance); Kartentext „Stunts gelingen 20 % öfter“ |
 | B-6 | Krit/Element/Präventiv in `BattleBridge.make_setup` | Krit/Element in `Progression.to_combatant` (wie die Ausrüstung), Präventiv als `Combatant.talent_mods` → `ActionResolver` (nur erster eigener Zug nach Präventivschlag) | ein Ort für alle Combatant-Werte; Replays und M7-Simulation nutzen denselben Weg |
-| B-7 | — | eine Wahl hebt MaxHP/MaxMP-Zuwachs sofort auf HP/MP (wie ein Level-up, `Progression.follow_max_vitals`) | sonst wirkt „HP +5 %“ erst nach der nächsten Heilung |
+| B-7 | — | eine Wahl hebt MaxHP/MaxMP-Zuwachs sofort auf HP/MP (wie ein Stufenaufstieg, `Progression.follow_max_vitals`) | sonst wirkt „HP +5 %“ erst nach der nächsten Heilung |
 | B-8 | `field_range_pm`, `field_cd_pm`, `marotte_heart` | Werte und APIs da (`Talents.field_range_pm/field_cd_pm/marotte_bonus_hearts`), **Auswertung** folgt mit Paket A (Feldfähigkeit) bzw. C (`MarottenRules`); Feldfähigkeit umgesetzt in der Integration A × B (`HeroRules.field_mods`, Talente der führenden Figur), `marotte_heart` in der Integration B × C (`MarottenRules`: erstes Herz der Etage +1, Kap. 8.8) | Besitzgrenzen 8.1; die Karte sagt „Wirkt, wenn … die Gruppe anführt.“ |
 | B-9 | `hype_gain_pm`/`follower_pm` | im Kern verdrahtet als **Ganzzahl-Promille** (`GameState.hype_gain_pm/follower_pm` = Ausrüstung, einmal `roundi(x × 1000)`, × `Talents.hype_pm/follower_pm`, je Schritt `(a × b + 500) / 1000`; Show nutzt nur diese; `hype_gain_mult/follower_mult` bleiben reine Ausrüstungs-Floats), im Pool **nicht** verwendet | Kap. 4.8 Nr. 4: Event-Wertung ohne Talent-Multiplikatoren bleibt trivial erfüllt |
 | B-10 | Talent-Reset beim Casting | noch nicht gebaut | kommt mit der Casting-UI (Etage 3) |
@@ -1501,7 +1501,7 @@ Zeilen gilt die Ko-Vorkommens-Regel aus Kap. 5.9, damit z. B. `marotte_hit:mar_s
 11 Bedingungen mit synthetischem Kontext (trifft/trifft nicht); höchstens 1 Treffer je Vorliebe und Kampf; 3 Treffer → Box,
 Follower, Zähler, Trigger `show_bet`; `mar_pacifist`: zählt nur neue Räume, Kampf setzt zurück, Latch, Safe Room/Pause zählen nicht,
 **Speichern/Laden mitten in der Periode**; Strichliste übersteht Save/Load (`ShowState.marotten.tally`) und ist in `RunSim` gleich;
-Liga-Stufen 0/1/2 je Held:in und Ausrüstung, `liga_blockers` nennt z. B. die Gasmaske, Multiplikatoren im **Promille**-Produkt
+`liga_tier` 0/1/2 je Held:in und Ausrüstung, `liga_blockers` nennt z. B. die Gasmaske, Multiplikatoren im **Promille**-Produkt
 `hype_gain_pm`/`follower_pm`; Achievement-Kette (alle 6 erreichbar, Bedingungen parsen); Replay mit Liga-Kämpfen = gleicher Hash;
 **Event-Wertung:** `show_pts` mit und ohne Liga/Wetten gleich, `show_bet`-Achievements ohne `ach_pts`, `rules.marotten.enabled`/
 `rules.liga.enabled` ändern `rules_hash`; Show-Boss: Elite-Werte, Slow jeder 3. Zug, Belohnung genau 1 Fanpost-Paket, optional
@@ -1544,7 +1544,7 @@ Pausemenü-Tab „Show“ (`bets_menu.gd`), Liga-Zeile im Ausrüstungsmenü, Zei
 6. **Show-Chip:** in der Erkundung unter der Minimap-Spalte (rechts oben ist dort frei), im Kampf unter der Hype-Leiste;
    erst sichtbar, wenn der Countdown läuft (E1: nach dem Tutorial — eine neue Sache nach der anderen, 0.6).
 7. **Kampfende-Feedback:** Zeile „Show“ im Ergebnis-Panel (Herzen + Liga-Stufe) und Toasts statt eines eigenen Herz-Flug-FX
-   (`bets_results_fx.gd` entfällt); der Chip blendet sich aus, solange das Ergebnis-Panel steht (es reicht mit Level-ups bis
+   (`bets_results_fx.gd` entfällt); der Chip blendet sich aus, solange das Ergebnis-Panel steht (es reicht mit Stufenaufstiegen bis
    unter die Hype-Leiste).
 8. **Ansage:** `marotte_announce:<id>` direkt nach `floor_start` in derselben Tick-Warteschlange (E1 nach dem Tutorial-Kampf);
    `marotte_announce`, `marotte_won` und `liga_hint` stehen in `ModAnnouncer.ALWAYS_SAID_TAGS` (gehen nie im Prioritätsfenster unter).
@@ -1768,7 +1768,7 @@ aufzeichnende `Game`-Methode. Alle bisherigen ~806 Tests bleiben grün; jedes Pa
 | Dokument | Änderung | Paket |
 |---|---|---|
 | `00_BRIEF` Kap. 4 | Zeile „Progression“: Talentwahl, Spezies ab E3; Zeile „Show-System“: Show-Wetten/Liga; Kap. 6b: KI-Admin als optionaler Eingang (Twist = externes Command) — **Brief-Änderung bewusst, mit Verweis auf dieses Dokument** | Integrator |
-| `01_GDD` | §1 (E1: Kulissenwände, Regie-Notizen, Show-Boss), §2.1 (Held:in, Bellen), §4 (Talent-Show, ungerade Level ab L3), §7 (Liga-/Wetten-Hype, Show-Chip), §8 (+6 Achievements), §11 (neue Tags), §12.1 (Re-Spec ersetzt „kein Wechsel“), §13 (Lootbox-Band 15–22, Liga-Quoten), §14.2 (Ablauf Neues Spiel) | A/B/C |
+| `01_GDD` | §1 (E1: Kulissenwände, Regie-Notizen, Show-Boss), §2.1 (Held:in, Bellen), §4 (Talent-Show, ungerade Stufen ab 3), §7 (Liga-/Wetten-Hype, Show-Chip), §8 (+6 Achievements), §11 (neue Tags), §12.1 (Re-Spec ersetzt „kein Wechsel“), §13 (Lootbox-Band 15–22, Liga-Quoten), §14.2 (Ablauf Neues Spiel) | A/B/C |
 | `02_TECH` | §3.2 Signale, §3.4 Commands `hero/talent/casting/secret/twist` (Twist mit `tick`, Replay-Puffer), §4.2 Präfixe `tal_/spc_/mar_/tw_/sec_` (+ reservierte `gld_/job_/ssn_/raid_`), §4.3 Vokabulare, §4.4 Schemas, §4.5 Tabellen 17 + `validators/`-Aufteilung, §6.3 Trigger `show_bet` + StatIds, Promille-API `hype_gain_pm/follower_pm`; CR-16…CR-19 | 0/A–D |
 | `03_ART` | Bellen-VFX, Mopsula als Spielerkörper, Riss-Wand/Regie-Notiz, Show-Boss-Goldrahmen, Liga-Optik (später; **kein** Fuß-/Barfuß-Rig, nie in Key Art), Spezies-Optik (später), Partyhut-Prop (später) | A/C (+ später) |
 | `04_STRATEGIE` | Kap. 2.3 Distanz-Review + „Unterhosen-Liga“ (**Nähe hoch**, Maßnahmen 0.3 Nr. 1–6) + Mopsula-Talentnamen (Kap. 2.2); Marketing-Regel „keine Liga-Optik von Kai in Key Art/Trailer/Store“; Kap. 3 Roadmap-Ergänzungen (Kap. 7); Kap. 11 erledigte Entscheidungen | Integrator |
@@ -1790,12 +1790,12 @@ aufzeichnende `Game`-Methode. Alle bisherigen ~806 Tests bleiben grün; jedes Pa
 |---|---|---|
 | I-1 | **Kein E1-Show-Boss im CTB.** Der von Paket C zurückgestellte Show-Boss (Kap. 2.6) wird direkt im Echtzeitkampf gebaut (`07_ECHTZEITKAMPF.md`, Phase R4, Entscheidung E26). | keine Wegwerf-CTB-Inhalte; GDD §1 vermerkt es; E1 bringt bis dahin höchstens 2 Show-Boxen (Wette + Mut-Paket) |
 | I-2 | **Bekannte CTB-Grenze bis R5:** ein automatischer Partner („Partner automatisch“, Kap. 1.4) stuntet nie (AutoPolicy) — „Taktgefühl“ hilft im CTB nur, wenn Graf Mopsula gesteuert wird. Im Echtzeitkampf nutzt auch die KI SHOW, dort wirkt es (07 E27: `tal_mop_taktgefuehl` über `RtUnit.stunt_pm`). | nur hier vermerkt, **kein UI-Text** |
-| I-3 | **Liga-Stufe = einzige Quelle** für die Liga-Talente (`tal_kai_liga_routine`, `tal_mop_liga_gelassen`): `MarottenRules.in_liga` — die gesteuerte Figur ab Stufe 1, die andere nur in der Duo-Liga (Stufe 2); nie im Tutorial-Kampf, nie bei `rules.liga.enabled = false`. | `BattleBridge.make_setup` (Kampfwerte, Regeln des Laufs), `UiUtil.member_stats`, Talent-Show-Vorschau; `Talents.liga_dressed` entfällt; `liga_stat_pct` nur für Kampfwerte (nie HP/MP, Validator); Ganzzahl-Promille; Tests `test_06abc_liga_talents` |
+| I-3 | **Liga-Stufe = einzige Quelle** für die Liga-Talente (`tal_kai_liga_routine`, `tal_mop_liga_gelassen`): `MarottenRules.in_liga` — die gesteuerte Figur ab Liga 1, die andere nur in der Duo-Liga; nie im Tutorial-Kampf, nie bei `rules.liga.enabled = false`. | `BattleBridge.make_setup` (Kampfwerte, Regeln des Laufs), `UiUtil.member_stats`, Talent-Show-Vorschau; `Talents.liga_dressed` entfällt; `liga_stat_pct` nur für Kampfwerte (nie HP/MP, Validator); Ganzzahl-Promille; Tests `test_06abc_liga_talents` |
 | I-4 | **„Kamera 3 kennt mich“** (`marotte_heart`) wirkt in C's Herz-Logik: das erste Herz einer Etage zählt doppelt (Party-Summe, einmal je Etage, bis zum Ziel), für beide Held:innen, auch in Event-Läufen (zählen ja, zahlen nicht); Toast „Talent: Extra-Herz …“. | `MarottenRules._bonus_hearts`, `ShowState.marotten["bonus"]` (Save + Hash, `Game.replay_log`-gleich; Runde 4: `ShowState.marotten_dict` behält den Marker — vorher fiel er beim Speichern weg, nach dem Laden kam das Extra-Herz auf derselben Etage erneut; Test `test_06abc_liga_talents`) |
 | I-5 | **Gesteuerte Figur:** die Liga-Stufe liest `GameState.hero` (Paket A) direkt. | `MarottenRules.hero_of`; Tests für Kai und Graf Mopsula |
 | I-6 | **IP:** Kai und Graf Mopsula; keine Kronen-/Majestäts-/Königsmotive für Mopsula; ohne Rüstung zu spielen ist ein Spielstil, nie ein Charakterzug; der allgemeine „Wir/Uns“-Stil des Grafen bekommt einen eigenen Stimm-Durchgang nach allen vier Paketen. | **Stimm-Durchgang erledigt (Polish-Pass):** eigene Stimme in der Ich-Form (belehrender Grafen-Gelehrter, Fußnoten, pseudolateinische Formeln, Mitternachts-Pathos, Tierheim-Biografie „Zwinger 7“) in Daten, Namenseingabe, Intro, Safe-Room-Leerlauf und KI-Persona; `skl_mop_royal_decree` → `skl_mop_expert_opinion` „Gräfliches Gutachten“ (Spielstände: `SaveCodec.RENAMED_SKILLS`); Klassen „Erzmagister“ / „Medicus honoris causa“; Validator `validators/ip_words.gd`; Tests `test_06_ip_words` |
 | I-7 | **Bellen ist kein Anschleichen.** Ein Präventivschlag aus Graf Mopsulas Bellen (die Gruppe ist benommen und wird von jeder Seite erwischt) zählt nicht für „Schleichwerbung“ (`mar_sneaky`) oder andere Schleich-Vorlieben und nicht für „Überraschungsgast“ (`ach_preemptive_3`, bis zum Polish-Pass „Leise Sohle“), sondern als eigener Zähler `bark_openers`; im Kampf bleibt er ein Präventivschlag (Party zuerst, Hype +3, „Erster Eindruck“). | `BattleSetup.opener` / `BattleResult.opener` = `"bark"` (im `encounter`-Command als `opener`, nur bei `adv` 1 — Logs ohne Bellen bleiben bytegleich), `encounter_type` `"bark"` in `Show` und `MarottenRules`, `exploration.gd._opener`; Test `test_06ac_bark_opener` |
-| I-8 | **Liga-Ökonomie: sichtbar belohnt, aber begrenzt.** Faktoren Stufe 1 Hype ×1,05 / Follower ×1,1, Stufe 2 ×1,2 / ×1,35; **Deckel auf den Liga-Follower-Bonus je Etage** +60 / +180 (Kap. 4.3). Die Duo-Liga zahlt am meisten auch in der Simulation ohne Wiederholungen (Kap. 4.10), Messung und verbleibende Abweichungen Kap. 8.4 „Stand Runde 4“. | `floor_follower_cap` in `marotten.json` (Validator optional 0..2 000), `MarottenRules.liga_floor_cap` / `take_liga_followers` / `liga_followers_left`, `ShowState.marotten.liga.followers`, Tab „Show“ nennt Deckel und Rest; Tests `test_06c_liga_cap`, `test_06c_liga`, `test_06c_balance` |
+| I-8 | **Liga-Ökonomie: sichtbar belohnt, aber begrenzt.** Faktoren Liga 1 Hype ×1,05 / Follower ×1,1, Duo-Liga ×1,2 / ×1,35; **Deckel auf den Liga-Follower-Bonus je Etage** +60 / +180 (Kap. 4.3). Die Duo-Liga zahlt am meisten auch in der Simulation ohne Wiederholungen (Kap. 4.10), Messung und verbleibende Abweichungen Kap. 8.4 „Stand Runde 4“. | `floor_follower_cap` in `marotten.json` (Validator optional 0..2 000), `MarottenRules.liga_floor_cap` / `take_liga_followers` / `liga_followers_left`, `ShowState.marotten.liga.followers`, Tab „Show“ nennt Deckel und Rest; Tests `test_06c_liga_cap`, `test_06c_liga`, `test_06c_balance` |
 | I-9 | **CTB-Grenze bis R5:** Ist Graf Mopsula gesteuert, legt in Liga 1 nur der Graf Rüstung und Accessoire ab, Kai kämpft voll ausgerüstet. Mit Hype ×1,2 war Liga 1 dann im CTB kaum schwerer als ohne Liga (Boss-Niederlage 1. Versuch Hausmeister/Königin 19 %/35 % gegen 17 %/29 %); mit ×1,05 (I-8) 28 %/35 % (+11/+6 Punkte; Kai gesteuert 27 %/47 %). Für den CTB akzeptiert (vorläufig bis R5). **R4-Ziel (07, Echtzeitkampf):** „Liga 1 muss für beide Held:innen messbar schwerer sein als Liga 0 (≥ +5 Punkte Boss-Niederlage im 1. Versuch).“ | Messung im Harness von `test_06c_balance` (100 Seeds, Geschenke) mit Liga-Stufe 1 auf der gesteuerten Figur; 07 übernimmt das Ziel in den R4-Harness |
 | I-10 | **Twists × Speichern/Replay (Paket D):** Der Replay-Puffer (ein Twist-Command vor seinem Tick einsortiert) liegt im Zustand (`GameState.flags.twist_buffer`, gespeichert, nicht gehasht, `RunSim.step` macht ihn fällig); Ablehnung zentral in `RunRules.twist_refusal` (Live-Eingang und beide Prüfer), abgelehnte Commands nennen ihre ID (`RunRules.refused_id`); Hype-Kette Ganzzahl-Promille: Ausrüstung × Talente → Liga → Partyhüte-Twist, je Schritt halb aufgerundet; der Twist-Validator ist privat (`validators/twists.gd`, Kap. 8.0 Nr. 7). | Tests `test_06d_twist_save`, `test_06d_twists` |
 | I-11 | **RemoteModVoice:** Ein neuer Lauf oder ein Laden (`run_ref` ändert sich) verwirft das Sitzungs-Token und eine laufende Anfrage; gesund ist nur eine 2xx-Antwort mit JSON-Objekt ohne `error`/`detail` — 429/413/5xx und Fehler-JSON zählen als Fehler, damit greifen die 3-Fehler-Pause und die Rückgabe an die Regie. | `RemoteModVoice.healthy_body`; Tests in `test_06d_mod_voice` |
@@ -1817,5 +1817,5 @@ aufzeichnende `Game`-Methode. Alle bisherigen ~806 Tests bleiben grün; jedes Pa
 | R-8 | Prompt-Injection/Provokation über manipulierte Clients | Kap. 5.4/5.9: kein Client-String im Prompt, Zeilen-Puffer serverseitig, IDs katalog-geprüft |
 | R-9 | Liga/Wetten werden Ranglisten-Pflicht | Kap. 4.8 Nr. 4: Option (a), Event-Wertung ohne Liga-/Marotten-/Talent-Multiplikatoren |
 | O-1 | Herr Brettschneider als 3. Figur oder neue Figur? | Vorschlag Brettschneider (Story-Rückbezug); Entscheidung mit Etage-2-Design |
-| O-2 | Level-Cap-Plan je Etage | mit Etage 3 festlegen (Kap. 2.3) |
+| O-2 | Plan der Höchststufe je Etage | mit Etage 3 festlegen (Kap. 2.3) |
 | O-3 | Fanclub-Namen | Vorschläge Kap. 2.4; Humor-Redaktion |

@@ -133,7 +133,6 @@ func test_the_same_seed_is_the_same_cast_however_the_time_is_cut() -> void:
 	assert_eq([steps.first_who, steps.first_t, steps.ai_first], [one.first_who, one.first_t, one.ai_first],
 		"the same first ascents")
 	var c: GameState = _season(d, 7)
-	CastKit.model(c, d)
 	RunRules.apply_season(c, d, {"t": "clock", "sec": 7 * DAY})
 	RunRules.apply_season(c, d, {"t": "clock", "sec": 7 * DAY})
 	var e: GameState = _season(d, 7)
@@ -229,7 +228,6 @@ func test_binge_the_cast_follows_the_candidate() -> void:
 	var t: int = CastSim.now(s.state)
 	s.apply({"t": "descend"})
 	s.apply({"t": "floor", "floor": 2})
-	s.state.floor_run.timer_started = true
 	c = CastSim.census(s.state, d)
 	on = c["on_floor"]
 	assert_eq(on[0], 0, "the old floor played to its end for everyone")
@@ -269,6 +267,8 @@ func test_a_candidate_who_leaves_is_taken_over_by_the_ai() -> void:
 	var tags: Array = []
 	for n: Dictionary in news:
 		tags.append(n["tag"])
+		if n["tag"] == "cast_leave":
+			assert_eq(n["ctx"]["cand"], s.state.player_name, "the line names the candidate who left")
 	assert_has(tags, "cast_leave")
 	var m: CastModel = CastKit.model(s.state, d)
 	var fl: int = m.members[0].fl

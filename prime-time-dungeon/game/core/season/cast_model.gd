@@ -7,7 +7,7 @@ extends RefCounted
 ## plays each of its hours once — its own cursor `CastMember.t` — so a floor played to its end out of turn never
 ## reuses a roll). No clock of its own: CastSim hands in the cast time.
 ##
-## The model (09 §4.2, CastSim's class doc for the decisions): every AI place plays one session a day — `pace` tenths of
+## The model (09 §4.2; decisions F-3 … F-8 in 09 Kap. 11.3): every AI place plays one session a day — `pace` tenths of
 ## an hour from `sess` hours after the air time, one step per hour (the calendar's season hour; Am Stück one step per
 ## 25 s of exploration, the binge clock). A step plays the minutes of that hour: a death roll (by floor, skill and
 ## mode), else work at a rate by skill (rivals: a rubber band to the candidate's floor) — the floor needs its

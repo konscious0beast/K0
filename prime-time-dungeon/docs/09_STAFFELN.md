@@ -46,6 +46,11 @@
 > die Staffel-Felder als optionale Schema-Haken (CR-27, CR-32 a/b), `SaveCodec` erlaubt in Staffeln Stufe 50. Ohne Staffel
 > bleibt jeder Lauf bitgleich.
 >
+> **Stand ST1-F (2026-10-12, Branch `ptd/st1f`):** Die KI-Besetzung ist umgesetzt (Kap. 11.3 „Stand ST1-F“, Entscheidungen
+> F-1 … F-19; 02_TECH §0.8 „Stand ST1-F“): 99 KI-Kandidat:innen je Staffel (Kalender und „folgt“ Am Stück), Ereignisse,
+> Ticker und Eilmeldungen, Zähler, Rangliste, „übernommen“, Safe-Room-Gäste, Gastauftritt (Regeln) und Pechvogel, der
+> Namenskatalog; kalibriert auf die Bänder von Kap. 4.2. Ohne Staffel bleibt jeder Lauf bitgleich.
+>
 > **Namen der Phasen:** Der Orchestrator nennt sie S1–S3. Weil „S0–S5“ schon die SHOWRUN-Stufen (05) und „S0–S3“ die
 > KI-Stufen (06 §5.12) sind, heißen sie hier **ST1–ST3** (Staffel-Phasen) — gleicher Inhalt, keine Verwechslung.
 >
@@ -1455,6 +1460,47 @@ Stufen und Talente (ST1-D), Berufe (ST1-E), Besetzung (ST1-F), Staffel-UI (ST1-H
 | B-20 | Migration | `SeasonRules.migrate_campaign` (privat, Am Stück, Mit Netz, die größte Vorlage, Countdown = Restzeit der Etage, ohne Gnadenfrist, frühere Etagen als Treppe und „erreicht“) ist gebaut, greift aber erst ab `SIM_VERSION` 5 (der Umstieg, Kap. 11.1); bis dahin bleibt ein Kampagnen-Spielstand eine Kampagne. | 8.7, 11.1 |
 | B-21 | Daten | `ssn_basis`, `ssn_akt2`, `ssn_akt3` (6/12/18 Etagen, privat, 100 Plätze, 20:00, PvP `arena`); `SeasonDef` += `kind` (`private` \| `friends` \| `public`) und `min_humans`; die Vorlage einer neuen privaten Staffel ist das größte Format (offline alle). | 2.1, 2.2 |
 | B-22 | Verifier | Beide Verifier spielen jede Staffel-Sitzung ab: `RunSim.replay` eine RunSim-Sitzung bitgleich, `Game.replay_log` eine Live-Sitzung bitgleich; über Kreuz stimmen Staffel-Block und Kernzustand überein — nur der Show-eigene Teil (Zuschauer, Follower, Erfolge, Marotten) gehört wie in jedem Kampagnenlauf allein `Game.replay_log` (05 §11.4). | 9.1, 11.6 |
+
+**Stand ST1-F (2026-10-12, Branch `ptd/st1f`) — umgesetzt** (Einzelheiten 02_TECH §0.8 „Stand ST1-F“): `CastSim`
+(der ST0-Stub ersetzt, öffentliche API behalten) mit den privaten Helfern `CastModel` (`core/season/cast_model.gd`, das
+Populationsmodell), `CastMember` und `CastEvent` (neu); `data/cast.json` mit den fünf Profilen und 384 erfundenen,
+alliterierenden Namen; 26 M.O.D.-Zeilen `cast_*` hinter dem Staffel-Anker; die Haken in `RunRules` (Start-Block,
+`apply_season`, `start_floor`), `RunSim` (Tick Am Stück, Kampfende) und `Game` (Start-Block, Eilmeldungen, Antworten,
+Kampfende) — alles hinter `state.season != null` und einer Besetzung im Staffel-Block. Test `test_09_cast_sim`
+(Determinismus je Seed auch über verschieden geschnittene Zeit, eine Sitzung mit Besetzung in beiden Verifiern, die
+Kalibrierung über 200 Seeds, Am Stück, „übernommen“, Ereignisse und Eilmeldungen, Zähler, Rangliste, Kennzeichnung,
+Gastauftritt nie im Bosskampf, Pechvogel, Start-Block, Namenskatalog); `test_09_st0_contract` nur dort angepasst, wo der
+Stub echt wurde. **Kalibrierung** (Kap. 4.2, Akt 3, 200 Seeds, Referenz-Mensch F-18): Mit Netz weiße Weste nach Etage 3 /
+9 / Finale 68,6 % / 41,5 % / 20,7 %, Finale geschafft 43,6 %, erste KI vor dem ersten Menschen auf 49,4 % der Etagen;
+Ohne Netz noch dabei nach Etage 3 / 9 77,6 % / 43,1 %, Finale geschafft 21,1 %, erste KI vor dem Menschen 48,1 %. Nicht
+in ST1-F: die Safe-Room-Figuren und die Staffel-UI (ST1-H: Zähler, Rangliste, Ticker, Gäste und Gastauftritt bedienen die
+Abfragen von `CastSim`), die Kampfeinheit des Gasts (07 CR-32 c; `CastSim.guest_for_combat` liefert ihre Vorlage), die
+Waren der Händler:in (ST1-E, bis dahin `trade_unavailable`), Begegnungen mit der Besetzung im Schlaf (ST1-G), der Harness
+(ST1-I) und die Prüfregeln von `validators/cast.gd` (bleibt der ST0-Stub; bis dahin prüft sie der Test, 02_TECH §0.8).
+
+**Entscheidungen ST1-F** (Auslegungen dieses Dokuments, Startwerte):
+
+| Nr. | Thema | Entscheidung | Kap. |
+|---|---|---|---|
+| F-1 | Start-Block | Der Start-Command trägt `cast` = `{"v": 1, "places", "humans"}` der Vorlage (privat 100 Plätze, 1 Mensch); `{}` bleibt gültig (eine Staffel ohne Besetzung, der Start aus ST1-B — `cast` dann `no_cast`); alles andere lehnen beide Verifier ab (`cast_mismatch`). Die Besetzung selbst (Namen, Profile, Werte) zieht `CastSim.on_start` aus dem Staffel-Seed und legt sie in den Staffel-Block: ein Daten-Update benennt keine laufende Besetzung um. | 2.2, 9.1 |
+| F-2 | Besetzungszeit | Sekunden seit Tag 0 **ohne die Sendepause** (`CastSim.now`): während einer Pause oder eines „clamp“ steht die Besetzung wie alle Termine; Am Stück zählt die Binge-Uhr (25 s Erkundung = eine Stunde). | 2.1, 2.9 |
+| F-3 | Takt und Zufall | Jede KI-Kandidat:in spielt eine Sitzung am Tag: `pace` (0,3–3,0 h) ab `sess` Stunden nach der Sendezeit (55 % abends von 3 h vor bis 2 h nach der Sendezeit, sonst über den Tag). Ein Schritt je Staffel-Stunde ihrer Sitzung; die Stunden außerhalb und das Warten an geschlossener Treppe überspringt das Modell. Jeder Wurf gehört zu (Platz, Stunde) — `SeedUtil.mix(SeedUtil.derive(seed, "cast", platz), stunde + 4096)`, je Platz ein eigener Cursor —, daher dasselbe Ergebnis bei einem Sprung über Tage oder bei vielen kleinen. | 4.2 |
+| F-4 | Schritt | Todeswurf je gespielte Stunde (je Etage, mal Risiko ((100 − Können) / 45)², Ohne Netz auf den Etagen 1–3 × 0,38 — vorsichtiger), sonst Fortschritt (‰ je Minute 1 000 + 12 × (Können − 55) − 5 × (Etage − 1), 450–1 600; Ohne Netz × 0,9; Rival:in × 0,7 vor, × 1,3 hinter der Kandidat:in) auf den Pflichtweg 20/30/45/60 min. Tod: −25 % Fortschritt (Mit Netz ab Etage 2 Weste weg; Ohne Netz raus). Fertig: der Etagenboss (Etagen 1, 2, 3, 6, 9, 12, 15; Chance nach Können), dann die Treppe, sobald sie offen ist — auf der letzten Etage das Finale (Chance (Können − 58) × 8 %, höchstens 95 %; verloren = Tod und −50 % Fortschritt). | 4.2, 3.3 |
+| F-5 | Stufe | Folgt dem Band der Etage mit dem Fortschritt (nie über dessen Ende); beim Abstieg das Ende des alten Bands, bei einer Rettung der Crashkurs (Bandanfang − 2). | 2.4, 8.2 |
+| F-6 | Einsturz, Treppe | Wie für Menschen: Etage 1 Generalprobe (Rettung gratis, Weste bleibt), Mit Netz Rettung auf die nächste Etage (Weste weg), Ohne Netz „verschüttet“, die letzte Etage „Bis zum Ende dabei“; Treppenregel wie B-5. | 2.5, 2.6 |
+| F-7 | Am Stück | Die Besetzung folgt: höchstens eine Etage vor der Kandidat:in; steigt sie ab, rechnet das Modell ihre alte Etage für alle zu Ende — deren Einsturz ist das Ende ihres Countdowns (der Rest in Binge-Zeit); endet der Countdown, stürzt die Etage sofort für alle ein. Kalender → Am Stück: Etagen unter der Kandidat:in enden zu ihren Kalenderterminen (sofort zu Ende gerechnet), die übrigen warten auf die Countdowns. Endet die Staffel der Kandidat:in, ist die Besetzung „Bis zum Ende dabei“, wo sie steht. | 2.1, 4.2, V-2 |
+| F-8 | Erstbesteigung | Nur per Treppe; die früheste Ankunft entscheidet. Eine KI-Ankunft nach „jetzt“ (eine Stunde wird auf einmal gespielt) wartet im Staffel-Block, bis ihre Zeit da ist; die Ankunft der Kandidat:in (auch per Rettung) schließt spätere KI-Erstbesteigungen derselben Etage aus. | 4.6 |
+| F-9 | Ereignisse | Aus dem Modell kommen nur Meldungen (Wichtigkeit ≥ 2): Finale 9 (das erste, danach 3), Erstbesteigung 8, Raus 7, Rekord 6 (neue Spitze der KI-Wertung, gestempelt „jetzt“), Etagenboss 5 (der erste je Etage), Aussteigen 5, Einsturz 4 (eine Zusammenfassung je Einsturz: gerettet / raus). Abstiege, Tode, Rettungen und Enden zählen nur im Modell. Der Ticker hält die letzten 40 Meldungen (`CastSim.ticker` filtert 24 h). | 4.6 |
+| F-10 | Eilmeldungen | Nur live (Präsentation, nie aufgezeichnet): höchstens eine je 10 min Spielzeit, nie im Kampf, die wichtigste zuerst — die übrigen bleiben im Ticker; in einer Sitzung auf Etage 1 kommt zuerst die Vorstellung (`cast_intro`, Kap. 0.5). Nach einem Login beginnen sie beim neuesten Ereignis (davor ist Sache der Login-Bilanz, ST1-G). Die eigenen `cast`-Commands bekommen sofort ihre Antwort (`cast_hired`, `cast_help`, `cast_helped`, `cast_guest_end`). Zeilen mit `{cand}`, `{floor}`, `{count}`; die eigene Erstbesteigung `cast_first_you`, ein Einsturz Ohne Netz `cast_collapse_out`. | 4.6, 0.5 |
+| F-11 | Zähler, Rangliste | Zähler über alle Plätze (Mit Netz „Weiße Weste“, Ohne Netz „Noch dabei“; die Kandidat:in aus ihrem Staffel-Block); Rangliste privat alle Plätze nach Quote (B-12) — KI-Plätze mit geschätzten Erfolgen (Treppen × (20 + Können) / 25, höchstens 39) und Followern (Treppen × (600 + 12 × Können)); Gleichstand wie B-12, zuletzt der Platz. | 2.3, 2.7 |
+| F-12 | Kennzeichnung, Namen | Überall „Name (KI)“, ein übernommener Platz „Name (KI, übernommen)“ (Rangliste, Ticker, Ansichten, Gäste). Der Katalog: 384 erfundene Namen „Vorname Gegenstand“, alliterierend, ohne echte Personen, Herkunft oder Rang; die Wortform (f/m/n) wählt die Berufsbezeichnung des Vorlebens. | S-6, 4.1, 4.2 |
+| F-13 | „übernommen“ | Steigt die Kandidat:in aus, spielt die KI ihren Platz weiter: Können 55, 1 h am Tag zur Sendezeit, ab ihrer Etage, Stufe, Weste und ihren Zählern; die Meldung nennt ihren Namen. | 2.2, 4.2 |
+| F-14 | Safe-Room-Gäste | Bis zu zwei KI-Kandidat:innen der Etage der Kandidat:in, je Besuch fest (Staffel-Seed, Etage, Safe Room, Besuchszähler); Helfer:innen und Händler:innen wiegen doppelt. | 4.3 |
+| F-15 | Gastauftritt | Nur Regeln und Buchführung (die Kampfeinheit braucht 07 CR-32 c): `hire` im Safe Room, nur eine Helfer:in unter den Gästen, ein Gast zur Zeit; ein Gefallen zahlt zuerst, sonst 100 + 25 × Etage Credits; drei Kämpfe — ein Bosskampf zählt nie und bekommt nie den Gast (`guest_for_combat(boss)` = `{}`); der Gast bleibt beim Etagenwechsel zurück. Vorlage der Einheit: Klasse, Spezies, Stufe, Taktik „support“. | 4.3, 4.5 |
+| F-16 | Pechvogel, Handel | Je Etage eine Pechvogel-Kandidat:in in Not (Seed und Etage), außerhalb eines Safe Rooms; `help` = sie kommt in den nächsten Kampf (kein Bosskampf); gewonnen: 100 + 25 × Etage Follower, ein Gefallen, sie erinnert sich und kommt ein Viertel ihrer Etage weiter; je Etage einmal, Absage ohne Strafe. `trade` → `trade_unavailable`, bis ST1-E Waren bringt. | 4.3 |
+| F-17 | Recall der KI | Auf Etage 3: eine Klasse von Kai (der Hinweis des Vorlebens wiegt 3) und eine Spezies von Kai (passend empfohlene oder „Original“ wiegen 2) — nie die des Grafen. | 4.2 |
+| F-18 | Kalibrierung | Referenz-Mensch der Tests (`tests/fixtures/season_cast/`): startet im Vorprogramm zu zufälliger Minute, spielt den ersten Abend 60–90 min und ab Tag 0 täglich 45–60 min um die Sendezeit (± 1 h), Pflichtweg 20/30/45/60 min, wartet an geschlossener Treppe und geht beim Öffnen los, ein Einsturz rettet ihn. Bänder im Test: „≈ x“ = x ± 6 Punkte, „erste KI“ 44–56 %, Bereiche wie Kap. 4.2. Die Modell-Konstanten sind Startwerte (ST1-I/ST2 stellen nach). | 4.2, 11.6 |
+| F-19 | Staffel-Block | `cast` hält den Start-Block, die Besetzung als zwei Texte (Stammdaten, Zustand; je Platz ein Eintrag), Einsturzzeiten, Ankünfte der Kandidat:in, Erstbesteigungen, wartende KI-Ankünfte, Ticker, Gast und Gefallen — kompakt, der State-Hash bleibt billig. Kein `SIM_VERSION`-Sprung; ohne Staffel bitgleich. | 9.1 |
 
 ### 11.4 Dateieigentum gegenüber 07 und 08
 

@@ -496,6 +496,38 @@ braucht 07 CR-32 c.
 lehnt unbekannte Schlüssel ab), i (Kampf-HUD) und die Meldung von `RtMods.validate` für eine unbekannte Quelle (nennt noch
 die sechs alten Quellen; kosmetisch, zu b). `species.json`: 09 verlangt kein neues Feld — nichts geändert.
 
+**Stand ST1-F (2026-10-12, Branch `ptd/st1f`): die KI-Besetzung** (09 Kap. 4, Kap. 11.3 „Stand ST1-F“, Entscheidungen
+F-1 … F-19). Der ST0-Stub `CastSim` ist ersetzt (öffentliche API behalten); neu sind `core/season/cast_event.gd`
+(`CastEvent`), `core/season/cast_member.gd` (`CastMember`) und der private Helfer `core/season/cast_model.gd`
+(`CastSim.CastModel`, ohne `class_name`). Alles hängt an `state.season != null` und an einer Besetzung im Staffel-Block
+(`SeasonState.cast` mit `"roster"`); **kein `SIM_VERSION`-Sprung**, Save v2 unverändert (der Block ist JSON), ohne Staffel
+bitgleich (`fullrun.sh` mit `--strategy=all`, `--hero=mopsula`, `--liga=1`, `--liga=2`: gleiche Ereigniszeilen und
+Statistiken). Rein und deterministisch: Ganzzahlen, Zufall nur aus den Strömen `cast` (je Platz und Stunde), `cast_roster`,
+`cast_names`, `cast_profiles`, `cast_room`, `cast_need`, `cast_rival` des Staffel-Seeds, keine Wanduhr — die Zeit ist die
+Besetzungszeit `CastSim.now` (Staffelzeit ohne Sendepause seit Tag 0, F-2). Kosten: eine ganze Akt-3-Staffel (99 Plätze,
+84 Tage) in rund 40 ms; das Modell überspringt Stunden außerhalb der Sitzungen und das Warten an geschlossenen Treppen.
+
+| Teil | API |
+|---|---|
+| `CastSim` (rein, statisch) | Start: `start_block(def, humans) -> Dictionary` (`{"v": 1, "places", "humans"}`; `Game.start_season` schreibt ihn), `start_refusal(state, data, c)` (`cast_mismatch`; `RunRules.season_refusal` fragt nach `SeasonRules`), `on_start(state, data)` (zieht die Besetzung); Command `cast`: `refusal`/`apply` (Gründe `REASONS`: `no_cast`, `unknown_place`, `not_in_safe_room`, `in_safe_room`, `not_here`, `not_helper`, `guest_active`, `no_credits`, `not_in_need`, `trade_unavailable`, `not_allowed`), `hire_cost(state)`; Haken: `advance(state, data)` (nach jedem Staffel-Command), `on_tick` (Am Stück, billig ohne neue Stunde), `on_floor_start(state, data, prev)`, `on_combat_end(state, data, result)` → Ereignisse; Abfragen (ST1-H, ST1-G, ST1-I): `has_cast`, `now`, `pause_total`, `label(p)`, `member_view(p)` {place, name, label, ai, taken, profile, profile_name, skill, pace, floor, level, vest, out, result, org, job, hobby, species, class, rescues, deaths, stairs, quote}, `counter` {kind vest \| in, label, n, of}, `ranking` [{rank, place, label, ai, taken, quote, floor, level, result}], `rank_of(p)`, `ticker(hours)`, `news(after_seq)` [{seq, t, kind, who, label, floor, n, m, importance, tag, ctx}], `last_seq`, `safe_room_guests`, `in_need`, `rival_near`, `guest`, `guest_for_combat(boss)` {who, label, class, species, level, tactic, kind, left} (`{}` im Bosskampf — der Haken für 07 CR-32 c), `favors`, `census` (Harness: Zählungen, `on_floor`, Erstbesteigungen, Ankünfte, Einsturzzeiten) |
+| `CastEvent` | `KINDS`, `IMPORTANCE`, `TICKER_MIN` (2), `make`, `importance()`, `to_text`/`from_text` (Ticker im Block), `to_explore()` → `ExploreEvent.Type.SEASON` `{"kind": "cast", "ev", "seq", "t", "who", "floor", "n", "m"}`, `before` (Zeitordnung, total) |
+| `CastMember` | ein Platz: Stammdaten (Name, Wortform, Profil, Können, Tempo, Vorleben, Hobby, Sitzung), Zustand (Etage, Fortschritt, Stufe, Flags `F_*`, Zähler, Cursor, Zeiten, Spezies, Klasse), `roster_text`/`state_text`/`from_texts` |
+| `CastModel` (privat) | `read`/`write`/`create`, `catch_up(until_h, now_t)`, `run`, `flush(now_t)`, `human_arrives`, `finish_floors` (Am Stück), `take_over` („übernommen“), `end_all`, `open_for`/`open_hour`, `human_floor`, `level_of`, `band_lo`/`band_hi`, `ai_quote`/`ai_key`/`ai_leader`; die Konstanten des Modells (`DEATH`, `WORK_MIN`, `EFF_*`, `FINALE_*`, `FBOSS_*`, `RIVAL_*`) sind die Kalibrierung (09 §4.2, F-18) |
+| Haken (je markiert) | `RunRules.season_refusal` (Start-Block), `RunRules.apply_season` (`on_start`, `advance`), `RunRules.start_floor` (`on_floor_start`); `RunSim._tick_once` (`on_tick`), `RunSim._book_result` (`on_combat_end`); `Game.start_season` (Start-Block), `Game.apply_battle_result` (`on_combat_end`), `Game._season_event` (Antworten), `Game._season_process` (Eilmeldungen `_cast_news`: höchstens eine je 600 s Spielzeit, nie im Kampf, die wichtigste zuerst, auf Etage 1 zuerst `cast_intro`), `Game.season_login` (Eilmeldungen ab dem neuesten Ereignis) |
+| Daten | `data/cast.json`: `entries` = fünf Profile (`extra` Statist:in 50, `rival` Rival:in 15, `helper` Helfer:in 15, `trader` Händler:in 10, `unlucky` Pechvogel 10), `names` = 384 erfundene Namen `{name, form}` — im heutigen Schema; `mod_lines.json`: 26 Zeilen `cast_*` hinter `mod_ssn_anchor_01` (Platzhalter `{cand}`, `{floor}`, `{count}`) |
+
+**Für die anderen Pakete:** ST1-H — die Abfragen oben (Zähler im HUD, Reiter „Staffel“: Rangliste, Ticker; Safe Room:
+`safe_room_guests` mit `member_view`, Anheuern über `Game.cast_action("hire", who)` mit `refusal` als Grund im Menü,
+Pechvogel-Event über `in_need` und `Game.cast_action("help", who)`; die Rival:in vor dem Revier-Boss über `rival_near`);
+07 CR-32 c — `guest_for_combat(state, data, boss)` beim Kampfaufbau, das Kampfende zählt `on_combat_end` schon; ST1-G —
+Begegnungen im Schlaf mit `member_view`/`census` (Profile, Etage; deterministisch über einen eigenen Strom), die
+Login-Bilanz über `news(seq)` ab dem Stand vor dem Ausloggen; ST1-E — `trade` (die Ware im Feld `item`); ST1-I — die
+Kalibrierung des Tests (`tests/fixtures/season_cast/cast_kit.gd`: Referenz-Mensch, `calibrate`) und `census`.
+**Offen:** `validators/cast.gd` ist noch der ST0-Stub (Schema und Länge der Namen); die Regeln, die `test_09_cast_sim`
+heute prüft, gehören in den Validator: genau die fünf Profil-Ids mit der Gewichtssumme 100, ≥ 300 Namen, „Vorname
+Gegenstand“ (Buchstaben, ein Leerzeichen, alliterierend), die IP- und Tabu-Wörter (`ip_words.gd`, keine Namen anderer
+Shows). Ranglisten-Titel vergibt erst ST2 nach der Menschen-Rangfolge (V-11); privat zeigt die Rangliste alle Plätze.
+
 ---
 
 ## 1. Dateibaum und Modulzuordnung

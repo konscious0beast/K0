@@ -2746,6 +2746,10 @@ Golden Values (gemessen mit 4.7.2, Pflicht in `test_m0_seed_util.gd`): `mix(1, 2
 > eigenes Minispiel-Modul „Stempelduell“ ausgelagert (`10_MINISPIEL_STEMPELDUELL.md`); die Kampagne kämpft danach nur
 > noch in Echtzeit. Dieser Abschnitt beschreibt dann die Engine des Minispiels; für die Kampagne gilt 07 §3 (07 §12.6
 > „Stand R5b-1“).
+>
+> **Stand R5b-2a (2026-10-12, 07 E33):** **Echtzeit ist der Standard neuer Spiele** (`GameSettings.DEFAULT_COMBAT_MODE`);
+> dieser Abschnitt gilt für den Rundenkampf alter Spielstände und für `--combat=ctb` (Entwicklung, QA, der CTB-Smoke und der
+> CTB-Full-Run der CI), bis SD1 die Engine in das Minispiel verschiebt (10 Kap. 6.2).
 
 Alle Klassen `extends RefCounted`, keine Autoloads, keine Nodes, kein `await`. Jede Zufallsentscheidung nutzt RNGs, die aus
 `BattleSetup.seed` abgeleitet sind → gleicher Seed + gleiche Befehle = identische Events (Brief §6b.1). Zahlen und Regeln
@@ -5093,8 +5097,9 @@ Beispiel (Handy-Format, Touch an): `tools/check.sh --shot res://scenes/battle/ba
 
 ### 11.4 `--autoplay` (Boot + `scenes/boot/autoplay.gd`, M6)
 
-`check.sh` startet `godot --headless --path <tmp> --quit-after 900 -- --autoplay` (900 Frames = reines Sicherheitsnetz; normal beendet
-Autoplay selbst mit `quit(0)`/`quit(1)`). `run_smoke` in `check.sh` **muss** den Exit-Code prüfen (`code=${PIPESTATUS[0]}`, ≠ 0 → Fehler)
+`check.sh` startet `godot --headless --path <tmp> --quit-after 1300 -- --autoplay` (das neue Spiel kämpft in Echtzeit, der Standard
+seit 07 E33; Schritte `RT_STEPS` unten) und danach den CTB-Smoke `--quit-after 900 -- --autoplay --combat=ctb` (Schritte dieser
+Tabelle; bis SD1). Die `--quit-after`-Werte sind reine Sicherheitsnetze; normal beendet Autoplay selbst mit `quit(0)`/`quit(1)`. `run_smoke` in `check.sh` **muss** den Exit-Code prüfen (`code=${PIPESTATUS[0]}`, ≠ 0 → Fehler)
 und verlangt die Zeile `AUTOPLAY: OK` (Regex `AUTOPLAY: OK`; der Phase-A-Skip `AUTOPLAY: SKIPPED (stub)` ist entfernt — ein
 fehlendes/umbenanntes Modul lässt seinen Schritt scheitern, statt den Lauf still zu überspringen); fehlt sie → Fehler.
 Gemessen: headless ohne FPS-Limit ≈ 144 Frames/s;
@@ -5119,8 +5124,8 @@ Schritte (Frame-Budgets ab Start des Schritts; Summe 600; Watchdog gesamt 640 Fr
 Fehler (Budget überschritten, falscher Ausgang, Watchdog): `printerr("Assertion failed: AUTOPLAY step '<name>' failed: <grund>")`
 (trifft `ERR_RE`) und `get_tree().quit(1)`. Fortschritt je Schritt: `print("AUTOPLAY: <name> ok @frame <n>")`.
 
-**Echtzeit-Smoke (07 §12.5, R5b-1):** `check.sh` startet danach `--quit-after 1300 -- --autoplay --combat=realtime`; das neue Spiel
-kämpft in der Welt, die Schrittfolge ist `RT_STEPS`: Schritt 4 `force_combat` (60 Frames: `force_encounter("")`, der
+**Echtzeit-Smoke (07 §12.5, R5b-1; seit 07 E33 der Standard-Smoke):** `check.sh` startet `--quit-after 1300 -- --autoplay`; das
+neue Spiel kämpft in der Welt, die Schrittfolge ist `RT_STEPS`: Schritt 4 `force_combat` (60 Frames: `force_encounter("")`, der
 `CombatDirector` läuft), Schritt 5 `combat` (900 Frames: der Autopilot spielt die gesteuerte Einheit — `RtCommand.autopilot` über
 `CombatDirector.submit` —, Hinweiskarten werden gelesen und geschlossen; Erfolg: `Events.battle_ended` VICTORY, Erkundung zurück,
 Director frei); Watchdog `RT_WATCHDOG_FRAMES` 1240. Beide Smokes müssen `AUTOPLAY: OK` melden.
@@ -5154,8 +5159,10 @@ Rüstung und Accessoire der gesteuerten Figur bzw. beider Figuren leer und zieht
 `tools/fullrun.sh [--strategy=…|all] [--hero=…] [--seed=…] [--pace=…] [--liga=…] [--log-dir=…]`: isolierte Kopie, Import, dann
 `godot --headless --fixed-fps 60 --quit-after 95000 -- --autoplay=full --strategy=<s> --hero=<h>` (feste 60 Frames/s Spielzeit-Takt, nicht an
 die Wanduhr gebunden → reproduzierbar bis auf wenige Frames Jitter zwischen zwei Läufen, der selten einen Kampf anders
-ausgehen lässt (GDD §13), und so schnell, wie die CPU kann; gemessen thorough ≈ 18 s, rush ≈ 21 s (verliert seit dem
-Balancing einen Boss und spielt dann `thorough` weiter), dawdle ≈ 46 s Wanduhr). Bestanden = Exit 0, Zeile `FULLRUN: OK …`, keine `ERR_RE`-Zeile (wie `check.sh`). CI: eigener Schritt `--strategy=all`
+ausgehen lässt (GDD §13), und so schnell, wie die CPU kann; gemessen im CTB thorough ≈ 18 s, rush ≈ 21 s (verliert seit dem
+Balancing einen Boss und spielt dann `thorough` weiter), dawdle ≈ 46 s Wanduhr; im Echtzeitkampf — dem Standard seit 07 E33 —
+auf der lokalen 4-Kern-Maschine thorough 166 s, rush 235 s, dawdle 201 s, Graf Mopsula 150 s gegen 28 / 38 / 71 / 30 s im CTB
+derselben Maschine). Bestanden = Exit 0, Zeile `FULLRUN: OK …`, keine `ERR_RE`-Zeile (wie `check.sh`). CI: eigener Schritt `--strategy=all`
 (§12.4). `--strategy=all` = `thorough`, `rush`, `dawdle` als Kai **plus** `thorough` als Graf Mopsula (Log
 `fullrun_thorough_mopsula.log`); gemessen Mopsula ≈ 20 s Wanduhr.
 
@@ -5218,7 +5225,7 @@ Safe Rooms (Erstbesuch), unbesuchte Räume, Streuner ≤ 2 Räume entfernt (max.
   Raums 8 s Umsehen/Ablaufen, vor jedem Ziel 3 s Entscheiden, an jeder Tür 1 s Ausrichten, die letzten 7 m zu einer Gruppe
   schleichen (Präventivschlag), jede nicht blockierende M.O.D.-Zeile in der Erkundung lesen (1 s + Zeichen / 18 je s) — alles
   mit laufendem Countdown (`HUMAN_*`-Konstanten in `fullrun.gd`). Gemessen (GDD §13): `human` ≈ 2,5× `fast` (thorough 11:11 statt 4:31).
-- **Echtzeit (`--combat=realtime`, 07 §12.5, R5b-1):** dieselbe Etage, gekämpft wird in der Welt. `fullrun.gd` gibt dem
+- **Echtzeit (Standard seit 07 E33; `--combat=realtime`, 07 §12.5, R5b-1):** dieselbe Etage, gekämpft wird in der Welt. `fullrun.gd` gibt dem
   `CombatDirector` der Erkundung eine `bot_factory`: je Kampf ein `RtBotPlayer` (`tests/tools/rt_bot_player.gd`, zur Laufzeit
   geladen) mit dem Profil `--rt-profile=typical|perfect|sloppy` (Default `typical`, die Helden-Variante aus
   `HERO_PROFILES`) auf eigenem Strom (`SeedUtil.derive(seed, "rt_bot", n)`); seine Eingaben gehen wie die einer Person über
@@ -5229,8 +5236,8 @@ Safe Rooms (Erstbesuch), unbesuchte Räume, Streuner ≤ 2 Räume entfernt (max.
   der Zug an einer verdutzten Gruppe ist der Erstschlag (E7). Prüfung je Kampf wie oben, die Countdown-Prüfung zählt
   Start → Ende des Kampfes (07 §2.2: die Uhr steht). Ein verlorener Boss wird nach dem Game Over erneut gekämpft — der
   Hausmeister bis `MAX_DEATHS`, die optionale Königin `RT_FLOOR_BOSS_ATTEMPTS` (2) Mal (CTB: 1).
-  `tools/fullrun.sh --combat=realtime [--rt-profile=…]` hängt `_rt` an die Log-Namen; `FULLRUN: stats` enthält
-  `combat_mode`, `rt_profile`, `hints_read`. `--combat=ctb` (Default, solange CTB existiert) ist der unveränderte Lauf.
+  `tools/fullrun.sh` spielt ohne `--combat` in Echtzeit (`--rt-profile=…`, Default `typical`); `FULLRUN: stats` enthält
+  `combat_mode`, `rt_profile`, `hints_read`. `--combat=ctb` ist der unveränderte CTB-Lauf (bis SD1; Log-Namen mit `_ctb`).
 
 Ausgabe: je Ereignis `FULLRUN: [<frame>] …` (Kämpfe mit Hype Start → Ende, Peak und Geschenken), am Ende `FULLRUN: stats {json}`
 (GDD-§13-Kennzahlen: Etagenzeit, Takt + Wartezeit, Kämpfe, Party-Züge, HP-Verlust, Level/EXP/Ausrüstung/Items an den Bossen,
@@ -5391,10 +5398,10 @@ jobs:
         # one test process on a dedicated runner: the wall-clock budgets of the unit tests are asserted here only
         # (TestCase.assert_time_budget); local parallel check.sh runs print them
         run: PTD_PERF_ASSERTS=1 GODOT=~/godot/godot prime-time-dungeon/tools/check.sh
-      - name: Full run Floor 1 (bot, thorough + rush + dawdle, ~1.5 min)
+      - name: Full run Floor 1 (real time: thorough + rush + dawdle)
         run: GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --strategy=all --log-dir=fullrun-logs
-      - name: Full run Floor 1 in real time (07 §12.5, thorough, bot profile typical, ~3 min)
-        run: GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --combat=realtime --log-dir=fullrun-logs
+      - name: Full run Floor 1 (CTB until SD1)
+        run: GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --strategy=all --combat=ctb --log-dir=fullrun-logs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -5408,6 +5415,9 @@ jobs:
                    res://scenes/safe_room/safe_room.tscn; do
             GODOT=~/godot/godot prime-time-dungeon/tools/check.sh --shot "$s" "shots/$(basename "$s" .tscn).png" 120 1280x720
           done
+          # the default combat (07 E33): a real-time fight in the world with the real data (battle.tscn above is CTB)
+          GODOT=~/godot/godot prime-time-dungeon/tools/check.sh --shot res://scenes/exploration/exploration.tscn \
+            shots/combat_realtime.png 30 1280x720 --recipe=rt_r4_regular
       - name: Render probe (03_ART A11)
         run: |
           mkdir -p shots
@@ -5488,9 +5498,14 @@ Android wird lokal exportiert (JDK 17 + SDK + Debug-Keystore in den Editor-Einst
 Apple-Entwicklerkonto, in `apple-ios-testflight`. Die Jobs `check`, `export`, `mod-brain-tests` und `nightly-balance` sehen keine
 Secrets.
 
-`check.sh` bleibt die Prüf-Quelle für Import, Tests und Smoke (CTB- und Echtzeit-Smoke, §11.4); zusätzlich ruft die CI
-`tools/fullrun.sh --strategy=all` (Full-Run-Bot, §11.4.1, ≈ 1,5 min) und `tools/fullrun.sh --combat=realtime` (derselbe Bot
-`thorough` als Kai im Echtzeitkampf, R5b-1, ≈ 3 min) als eigene Schritte auf. Der Job `mod-brain-tests` (06-D) prüft den
+`check.sh` bleibt die Prüf-Quelle für Import, Tests und Smoke (Echtzeit-Smoke als Standard, CTB-Smoke mit `--combat=ctb`,
+§11.4); zusätzlich ruft die CI den Full-Run-Bot (§11.4.1) in zwei eigenen Schritten auf: „Full run Floor 1 (real time: thorough
++ rush + dawdle)“ = `tools/fullrun.sh --strategy=all` (Echtzeit, der Standard seit 07 E33; thorough, rush, dawdle als Kai und
+thorough als Graf Mopsula) und „Full run Floor 1 (CTB until SD1)“ = `--strategy=all --combat=ctb`. Die Screenshots enthalten
+zusätzlich einen Echtzeitkampf (`exploration.tscn`, Rezept `rt_r4_regular`); `battle.tscn` ist die CTB-Kampfszene.
+**Laufzeit des Jobs `check` (R5b-2a):** Lauf 73 auf `22c95c0` brauchte 13:24 (Tests + Smokes 5:23, CTB `all` 1:45, Echtzeit
+`thorough` 1:41, Screenshots 4:07); lokal braucht Echtzeit `all` 764 s gegen 179 s für CTB `all` (CI ≈ 0,5–0,6 × lokal) — mit
+dem Echtzeit-`all` statt `thorough` und dem zusätzlichen Bild ≈ 18,5–20 min, rund 10 min unter `timeout-minutes: 30`. Der Job `mod-brain-tests` (06-D) prüft den
 Referenz-Dienst `services/mod-brain/` mit gemocktem Anthropic-Client (kein Schlüssel, kein Netz); die gemeinsamen Fälle
 `tests/fixtures/live/twist_cases.json` und `line_filter_cases.json` laufen dort und in `check.sh`.
 

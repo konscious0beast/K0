@@ -185,6 +185,10 @@ Bellen ist wie der Feldschlag **Szenenlogik (Grad A)**: aufgezeichnet wird nur d
 
 ### 1.4 Kampf
 
+> **Echtzeitkampf (Standard neuer Spiele seit 07 E33, R5b-2a):** Man steuert die gewählte Figur; die andere kämpft als
+> KI-Partner mit Taktik und Partner-Spezial (07 §5.1). „Partner automatisch“ ist dort ausgeblendet; die Regeln unten gelten
+> für den Rundenkampf (CTB) alter Spielstände und `--combat=ctb`.
+
 - **Standard:** Man befehligt **beide** Figuren (wie heute). Das Party-Panel der gesteuerten Figur trägt einen Stern-Marker.
 - **Option „Partner automatisch“** (`GameSettings.partner_auto`, nur im Optionsmenü, **ohne** Tutorial- oder M.O.D.-Zeile; Standard aus): Züge der **nicht** gesteuerten Figur
   wählt `AutoPolicy` (nie Stunt, nie Flucht, 02_TECH §5.8). Aufgezeichnet wie heute `{"t": "battle", "cmd", "auto": true}` →

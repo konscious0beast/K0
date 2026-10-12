@@ -4,7 +4,7 @@
 Dieses Verzeichnis enthält den **Vertical Slice von Etage 1**: Spiel (`game/`), Design- und Technik-Dokumente (`docs/`) und
 Prüfwerkzeuge (`tools/`).
 
-![Kampf mit Sponsor-Geschenk](docs/screenshots/11_battle_sponsor_gift.png)
+![Echtzeitkampf gegen die Rattenkönigin von Gleis 9](docs/screenshots/57_echtzeitkampf_koenigin_zug.png)
 
 ---
 
@@ -40,7 +40,7 @@ Prüfwerkzeuge (`tools/`).
 
 ## 2. Status
 
-*Stand: 2026-10-10, Branch `ptd/final-a`. Die genaue Version ergibt sich aus `git log -1` in diesem Verzeichnis.*
+*Stand: 2026-10-12, Branch `ptd/r5b2a`. Die genaue Version ergibt sich aus `git log -1` in diesem Verzeichnis.*
 
 **Läuft:**
 
@@ -48,8 +48,9 @@ Prüfwerkzeuge (`tools/`).
   16 Truhen, 3 Safe Rooms (Heilen, Speichern, Automat, Lootboxen, Mopsula-Szenen), der Quartier-Boss **Der Hausmeister**
   und der Etagenboss **Die Rattenkönigin von Gleis 9**, danach Etagen-Bilanz, Autosave und Abspann.
 - **Figurenwahl** (06 Paket A): Zu Beginn wählt man, wen man steuert — Kai (Feldschlag) oder Graf Mopsula (Bellen: verdutzt
-  Gegnergruppen, die man dann von jeder Seite zuerst erwischt); die andere Figur folgt. „Figur wechseln“ im Safe Room,
-  „Partner automatisch“ in den Optionen, auf Etage 1 eine Kulissenwand und drei Regie-Notizen als Geheimnisse.
+  Gegnergruppen, die man dann von jeder Seite zuerst erwischt); die andere Figur folgt und kämpft als KI-Partner mit
+  (Taktik und Partner-Spezial). „Figur wechseln“ im Safe Room, auf Etage 1 eine Kulissenwand und drei Regie-Notizen als
+  Geheimnisse.
 - **Talent-Show** (06 Paket B): Ab Level 3 bringt jedes ungerade Level jeder Figur eine Talentwahl (1 aus 2, gewählt im
   Safe Room über den goldenen Knopf „TALENT-SHOW“). Feld-Talente wirken für die Figur, die gerade führt. Spezies und
   Spezialisierung ab Etage 3 sind als geprüftes Datenmodell angelegt (`species.json`, Command `casting`); die
@@ -59,10 +60,10 @@ Prüfwerkzeuge (`tools/`).
   M.O.D.s Zeilen (Intro-Bauchbinde, Rival:in, Sponsor, Running Gag, Grüße von zu Hause; nie im Kampf) und ab Etage 2 die
   Marotten-Gewichtung; Kampfwerte ändert sie nicht. Der Name steht nur in der Persona-Datei je Slot (`user://persona/`),
   nie im Spielstand, Replay oder in einer Bestenliste; „Kandidat:in löschen“ in den Optionen.
-- **Echtzeitkampf** (07, Stand R5b-1): Etage 1 ist vollständig im Echtzeitkampf „WoW-light“ direkt in der Welt spielbar
-  (`--combat=realtime`; Autoplay-Smoke und Full-Run-Bot prüfen ihn in CI). Standard bleibt bis R5b Teil 2 der CTB-Kampf; er
-  bleibt danach als eigenes Minispiel „Stempelduell“ erhalten (`docs/10_MINISPIEL_STEMPELDUELL.md`), die Kampagne kämpft
-  dann in Echtzeit.
+- **Echtzeitkampf** (07, Stand R5b-2a): Neue Spiele kämpfen in Echtzeit „WoW-light“ direkt in der Welt (07 E33); die
+  Show-Zahlen liegen in den Bändern des GDD (07 E32: Hype, Sponsor-Geschenke, Follower, Zuschauer). Autoplay-Smoke und
+  Full-Run-Bot prüfen ihn in CI. Alte Spielstände kämpfen weiter im Rundenkampf (CTB); der zieht in Teil 2b als eigenes
+  Minispiel „Stempelduell“ um (`docs/10_MINISPIEL_STEMPELDUELL.md`).
 - Etage 2 ist nur angelegt (`floors.json`: `playable = false`). Wer abgestiegen ist, landet nach „Fortsetzen“ im Abspann.
 - 3 Speicherslots (JSON in `user://saves/`), Einstellungen, Pausemenü, Touch-Steuerung.
 - **M.O.D.-Marotten & Unterhosen-Liga** (06 Kap. 4): M.O.D. verrät je Etage, was sie heute mag (Show-Wetten mit Herzen,
@@ -70,8 +71,9 @@ Prüfwerkzeuge (`tools/`).
   Follower. Show-Chip im Overlay, Pausemenü-Reiter „Show“, Achievement-Kette „Ohne alles“.
 - SHOWRUN S0: 2 Offline-Events (`evt_offline_gleis9`, `evt_offline_pacifist`), Event-Lobby, Ergebnis-Screen, lokale Bestenliste,
   Replay-Prüfung.
-- Qualitätssicherung: rund 1 115 automatische Tests, Autoplay-Smoke-Test (`AUTOPLAY: OK`), Full-Run-Bot, der Etage 1 mit
-  drei Strategien und als Graf Mopsula durchspielt, Performance-Probe (`PERF: OK`) und der CI-Workflow `ptd-check`.
+- Qualitätssicherung: rund 1 600 automatische Tests, Autoplay-Smoke-Tests im Echtzeitkampf und im CTB (`AUTOPLAY: OK`),
+  Full-Run-Bot, der Etage 1 mit drei Strategien und als Graf Mopsula durchspielt (Echtzeit, dazu der CTB-Lauf), Balance-Harness
+  des Echtzeitkampfs, Performance-Probe (`PERF: OK`) und der CI-Workflow `ptd-check`.
 
 **Bekannte Lücken:**
 
@@ -79,6 +81,8 @@ Prüfwerkzeuge (`tools/`).
 - Ausrüstung ist an den Figuren nicht sichtbar (Antrag 03_ART A8)
 - kein Netzwerk, kein Server, kein Echtgeld (SHOWRUN S1 und später)
 - Plattform-Matrix der Stufe S0 noch nicht gemessen (05 Kap. 2), Budgets noch nicht auf einem echten Android-Gerät geprüft
+- außerhalb des Kampfes lässt sich eine Gruppe noch nicht mit einer Fähigkeit „ziehen“ (Ziel + Taste 1–5, 07 §2.2); Kämpfe
+  beginnen per Feldschlag, wenn ein Gegner die Figur einholt, und an den Bossen (07 §12.6 „Stand R5b-2a“)
 - noch keine externen Playtests
 
 ## 3. Öffnen und starten
@@ -95,7 +99,7 @@ Von der Kommandozeile aus dem Repo-Wurzelverzeichnis:
 
 ```bash
 godot --path prime-time-dungeon/game                         # Spiel starten
-godot --path prime-time-dungeon/game -- --goto=battle:enc_f1_boss_hausmeister   # mit Entwickler-Argumenten
+godot --path prime-time-dungeon/game -- --goto=explore --seed=7   # mit Entwickler-Argumenten (Abschnitt 6)
 ```
 
 Alles nach `--` sind Argumente für das Spiel (Abschnitt 6). Im Editor trägt man sie unter
@@ -306,7 +310,7 @@ Argumente stehen nach `--` (CLI) bzw. in den Main Run Args (Editor). Quelle: `sc
 | `--seed=<int>` | Seed für „Neues Spiel“ und für die `--goto`-Ziele (sonst Standard-Spielstand) |
 | `--goto=explore` | überspringt den Titel und startet die Erkundung von Etage 1 am Startpunkt |
 | `--goto=safe_room` | wie `explore`, betritt danach den ersten Safe Room |
-| `--goto=battle:<enc_id>` | startet direkt einen Kampf, z. B. `--goto=battle:enc_f1_boss_hausmeister` oder `battle:enc_f1_boss_rattenkoenigin` (IDs in `game/data/floors.json`) |
+| `--goto=battle:<enc_id>` | startet direkt einen Rundenkampf (CTB-Kampfszene, eigener CTB-Spielstand), z. B. `--goto=battle:enc_f1_boss_hausmeister` oder `battle:enc_f1_boss_rattenkoenigin` (IDs in `game/data/floors.json`); Echtzeitkämpfe beginnen in der Welt (`--goto=explore`) |
 | `--goto=title` | Titel (Standard) |
 | `--goto=credits` | Abspann |
 | `--goto=lobby` | SHOWRUN-Event-Lobby |
@@ -315,7 +319,7 @@ Argumente stehen nach `--` (CLI) bzw. in den Main Run Args (Editor). Quelle: `sc
 | `--autoplay=full` | Full-Run-Bot: spielt Etage 1 von Titel bis Abspann (02_TECH §11.4.1), mit echten Spielständen in eigenem Verzeichnis |
 | `--strategy=thorough\|rush\|dawdle\|typical` | Strategie des Full-Run-Bots: alles / nur Safe Rooms, Tore, Bosse / trödeln bis zum Etagenkollaps / typische:r Erstspieler:in |
 | `--pace=fast\|human` | Takt des Full-Run-Bots: ohne Wartezeit oder mit dem Modell eines aufmerksamen Menschen |
-| `--combat=realtime` | neues Spiel (auch `--autoplay`, `--autoplay=full`, `--goto=…`) im **Echtzeitkampf** (07, Stand R5b-1); Standard bleibt bis R5b Teil 2 der CTB-Kampf |
+| `--combat=ctb\|realtime` | Kampfmodus eines neuen Spiels (auch `--autoplay`, `--autoplay=full`, `--goto=…`); Standard ist der **Echtzeitkampf** (07 E33), `ctb` der Rundenkampf bis zum Umzug ins Stempelduell |
 | `--rt-profile=typical\|perfect\|sloppy` | Full-Run-Bot im Echtzeitkampf: Spielprofil der Person (07 §5.7, je Held:in) |
 
 Beispiel: `godot --path prime-time-dungeon/game -- --autoplay=full --strategy=typical --pace=human`
@@ -330,11 +334,12 @@ einer Temp-Kopie, schreibt die Icons aber nach `game/art/icons/` zurück. `--sho
 
 | Skript | Zweck | Erfolg |
 |---|---|---|
-| `tools/check.sh` | Import, alle Tests, Autoplay-Smoke-Test (CTB und Echtzeitkampf) | letzte Zeile `check.sh: OK` |
+| `tools/check.sh` | Import, alle Tests, Autoplay-Smoke-Test im Echtzeitkampf (Standard) und im CTB (`--combat=ctb`) | letzte Zeile `check.sh: OK` |
 | `tools/check.sh --tests-only [--filter=<teil>]` | Import und Tests (optional nur Testdateien, deren Name `<teil>` enthält) | `check.sh: OK` |
 | `tools/check.sh --shot <res://szene.tscn> <out.png> [frames] [BxH] [--touch] [--recipe=<name>] [--params=<json>] [--no-global-ui]` | rendert eine Szene unter Xvfb (`xvfb-run` nötig) im Compatibility-Renderer und speichert ein PNG | `saved <pfad>` |
-| `tools/fullrun.sh [--strategy=thorough\|rush\|dawdle\|typical\|all] [--seed=<int>] [--pace=fast\|human] [--log-dir=<dir>]` | Full-Run-Bot headless mit festem 60-fps-Takt; `all` = thorough, rush und dawdle nach einem Import (wie in CI) | `fullrun.sh: OK` |
-| `tools/fullrun.sh --combat=realtime [--rt-profile=typical\|perfect\|sloppy] [weitere Argumente wie oben]` | derselbe Bot im Echtzeitkampf (07 §12.5): der `RtBotPlayer` spielt jeden Kampf als Person; Log-Namen mit `_rt` | `fullrun.sh: OK` |
+| `tools/fullrun.sh [--strategy=thorough\|rush\|dawdle\|typical\|all] [--hero=kai\|mopsula] [--seed=<int>] [--pace=fast\|human] [--liga=0\|1\|2] [--rt-profile=typical\|perfect\|sloppy] [--log-dir=<dir>]` | Full-Run-Bot headless mit festem 60-fps-Takt im Echtzeitkampf (07 §12.5): der `RtBotPlayer` spielt jeden Kampf als Person; `all` = thorough, rush und dawdle als Kai plus thorough als Graf Mopsula nach einem Import (wie in CI) | `fullrun.sh: OK` |
+| `tools/fullrun.sh --combat=ctb [weitere Argumente wie oben]` | derselbe Bot im Rundenkampf (CTB, bis zum Umzug ins Stempelduell); Log-Namen mit `_ctb` | `fullrun.sh: OK` |
+| `tools/rt_balance.sh [--seeds=20] [--hero=kai\|mopsula\|both] [--liga=0\|1\|2\|all] [--profile=typical\|perfect\|sloppy\|all] [--strict-bands] [--out=<datei>]`, `--sequence`, `--perf`, `--nightly` | Balance-Harness des Echtzeitkampfs (07 §11.4): die Begegnungen von Etage 1 auf der echten Sim mit den Bot-Profilen, Urteile gegen die Bänder aus 07 §11.1; nachts 200 Seeds (CI-Job `nightly-balance`) | Tabelle mit `RT-BAND`-Zeilen, Exit 0 |
 | `tools/perf.sh [--driver=opengl3\|vulkan] [--quality=high\|low] [--only=startup,explore,battle,safe_room,leak] [--cycles=20] [--out=<datei.md>] [--shots=<dir>] [--cells] [--headless]` | Performance-Probe unter Xvfb: Budget-Tabelle aus 02_TECH §12.1 (Draw Calls, Primitive, Lichter, Speicher, Ladezeiten) und Leak-Schleife über Szenenwechsel; Ergebnisse in `docs/PERFORMANCE.md` | `PERF: OK`, `perf.sh: exit 0` |
 | `tools/make_icons.sh` | erzeugt die App-Icons (Android, iOS, macOS) und die iOS-Startbilder in `game/art/icons/` aus `game/icon.svg` neu | Zeilen `ICON: …`, Exit 0 |
 | `tools/apple/release.sh <schritt>` | nur CI (macOS-Runner, Secrets): Schritte der Jobs `apple-macos` und `apple-ios-testflight`, Abschnitt 4 „Mit Apple-Entwicklerkonto“, 02_TECH §12.4 | Exit 0 |
@@ -347,7 +352,8 @@ Godot-Prozesses. `2` = Aufruffehler (Godot-Binary nicht gefunden; bei `fullrun.s
 
 ```bash
 GODOT=~/godot/godot prime-time-dungeon/tools/check.sh
-GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --strategy=all
+GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --strategy=all                 # Echtzeitkampf (Standard)
+GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --strategy=all --combat=ctb    # Rundenkampf (CTB)
 ```
 
 ## 8. Ordner
@@ -362,7 +368,8 @@ prime-time-dungeon/
     ├── core/            reine Logik (RefCounted, headless testbar, ohne Autoloads)
     │   ├── data/        GameData, Defs, DataValidator (+ validators/ je neuer Tabelle), SeedUtil, JsonUtil
     │   ├── stats/       StatBlock, Elemente, Balance-Konstanten, FixedMath
-    │   ├── battle/      CTB-Kampf: BattleState, CTB-Queue, Schadensformeln, Status, Gegner-KI, ActionEvent
+    │   ├── rt/          Echtzeitkampf: RtSim (30 Ticks/s), Fähigkeiten, Telegraphen, Partner- und Gegner-KI, RtMods
+    │   ├── battle/      CTB-Kampf (bis zum Stempelduell) und geteilte Typen: Schadensformeln, Status, ActionEvent
     │   ├── show/        ShowModel (Hype, Zuschauer, Follower), Achievements, Sponsoren, M.O.D.-Ansagen, Marotten/Liga
     │   ├── loot/        LootRoller (Lootboxen, Truhen, Pools)
     │   ├── progression/ GameState, FloorRun, Party, Inventar, EXP, Shop, BattleBridge, SaveCodec, Talents, Casting, HeroRules
@@ -372,7 +379,7 @@ prime-time-dungeon/
     ├── data/            19 JSON-Dateien: 17 GameData-Tabellen + events.json (SHOWRUN-Events) + mod_filter.json (Filter
     │                    für „M.O.D. live“)
     ├── art/             shaders/, materials/, kit/ (prozedurale Figuren, Räume, Props, VFX), gallery/, icons/
-    ├── scenes/          boot/, title/, exploration/, battle/, safe_room/, ui/
+    ├── scenes/          boot/, title/, exploration/, combat/ (Echtzeitkampf: Director, HUD), battle/ (CTB), safe_room/, ui/
     └── tests/           run_tests.gd, test_*.gd, lib/, fixtures/, perf/, tools/, capture.gd, capture_recipes.gd
 ```
 
@@ -404,25 +411,26 @@ Systeme) > 01_GDD / 02_TECH / 03_ART / 05 (je nach Thema) > 04**.
 
 ## 10. Screenshots
 
-Alle Bilder stammen aus dem Spiel selbst (Compatibility-Renderer unter Xvfb, 1280 × 720; Bild 18 im Handy-Format
-2400 × 1080 und Bild 26 im Handy-Format 1600 × 720, beide mit Touch-Steuerung).
+Alle Bilder stammen aus dem Spiel selbst (Compatibility-Renderer unter Xvfb, 1280 × 720; Bild 59 im Handy-Format
+2400 × 1080 und Bild 26 im Handy-Format 1600 × 720, beide mit Touch-Steuerung). Die Kampfbilder zeigen den Echtzeitkampf,
+den Standard seit R5b-2a; die Bilder des Rundenkampfs (08–12, 18, 22, 28) liegen weiter in `docs/screenshots/`.
 
 | | |
 |---|---|
 | ![Titel](docs/screenshots/01_title_menu.png) **01** Titelmenü | ![Intro](docs/screenshots/02_intro_mod_studio.png) **02** Intro im Studio von M.O.D. |
 | ![U-Bahn-Gleise](docs/screenshots/03_explore_ubahn_gleise_enemy_group.png) **03** Erkundung, Zone U-Bahn-Gleise mit Gegnergruppe (rechts der Show-Chip) | ![Kanalisation](docs/screenshots/04_explore_kanalisation_enemy_group.png) **04** Erkundung, Zone Kanalisation mit Gegnergruppe |
 | ![Keller](docs/screenshots/05_explore_keller_chest_prompt.png) **05** Zone Keller: Kai vor einer Truhe mit Prompt | ![Karte](docs/screenshots/06_explore_floor_map.png) **06** Etagenkarte |
-| ![Pausemenü](docs/screenshots/07_pause_menu_equipment.png) **07** Pausemenü, Reiter Ausrüstung (mit Liga-Zeile) | ![Befehlsmenü](docs/screenshots/08_battle_command_menu.png) **08** Kampf: Befehlsmenü und Zugfolge-Leiste |
-| ![Rattenkönigin](docs/screenshots/09_battle_boss_intro_rattenkoenigin.png) **09** Boss-Intro: Die Rattenkönigin von Gleis 9 | ![Hausmeister](docs/screenshots/10_battle_boss_phase_hausmeister.png) **10** Phasenwechsel des Hausmeisters |
-| ![Sponsor-Geschenk](docs/screenshots/11_battle_sponsor_gift.png) **11** Sponsor-Geschenk mitten im Kampf | ![Sieg](docs/screenshots/12_battle_victory_results.png) **12** Sieg und Ergebnis-Screen |
+| ![Pausemenü](docs/screenshots/07_pause_menu_equipment.png) **07** Pausemenü, Reiter Ausrüstung (mit Liga-Zeile) | ![Echtzeitkampf](docs/screenshots/54_echtzeitkampf_telegraph.png) **54** Echtzeitkampf in der Welt: Lichtring des Kampf-Sets, Aktionsleiste, rote Bodenwarnung |
+| ![Rattenkönigin](docs/screenshots/57_echtzeitkampf_koenigin_zug.png) **57** Die Rattenkönigin von Gleis 9: der Zug fährt ein | ![Hausmeister](docs/screenshots/56_echtzeitkampf_hausmeister.png) **56** Der Hausmeister holt zum Schlüsselbund-Wurf aus |
+| ![Show-Boss](docs/screenshots/55_echtzeitkampf_showboss.png) **55** Show-Boss „Kanalratten-Gala“ mit dem Rattenschamanen | ![Applaus](docs/screenshots/58_echtzeitkampf_applaus.png) **58** Sieg: Bauchbinde „Applaus!“ mit EXP, Credits und Beute |
 | ![Mopsula](docs/screenshots/13_safe_room_mopsula_scene.png) **13** Safe Room: Szene mit Graf Mopsula | ![Lootbox](docs/screenshots/14_safe_room_lootbox_reveal_odds.png) **14** Lootbox-Öffnung mit veröffentlichten Wahrscheinlichkeiten |
 | ![Event-Lobby](docs/screenshots/15_event_run_lobby.png) **15** SHOWRUN-Event-Lobby mit lokaler Bestenliste | ![Cast](docs/screenshots/16_gallery_cast_floor1.png) **16** Galerie: Besetzung von Etage 1 |
-| ![VFX](docs/screenshots/17_gallery_vfx.png) **17** Galerie: Effekte | ![Handy](docs/screenshots/18_phone_battle_skill_list_touch.png) **18** Handy-Format: Fähigkeitenliste mit Touch-Steuerung |
+| ![VFX](docs/screenshots/17_gallery_vfx.png) **17** Galerie: Effekte | ![Handy](docs/screenshots/59_handy_echtzeitkampf_touch.png) **59** Handy-Format: Echtzeitkampf mit Touch-Steuerung |
 | ![Figurenwahl](docs/screenshots/19_hero_select.png) **19** Figurenwahl: Kai oder Graf Mopsula (06 Paket A) | ![Bellen](docs/screenshots/20_explore_mopsula_bark.png) **20** Graf Mopsula führt und bellt eine Gruppe an |
-| ![Figur wechseln](docs/screenshots/21_safe_room_hero_switch.png) **21** Safe Room nach „Figur wechseln“ | ![Partner automatisch](docs/screenshots/22_battle_partner_auto.png) **22** Kampf mit „Partner automatisch“ (DU / AUTO) |
+| ![Figur wechseln](docs/screenshots/21_safe_room_hero_switch.png) **21** Safe Room nach „Figur wechseln“ | ![Hinweiskarte](docs/screenshots/60_echtzeitkampf_hinweis_unterbrechen.png) **60** Hinweiskarte beim ersten Mal: Unterbrechen (goldener Rand) |
 | ![Kulissenwand](docs/screenshots/23_secret_wall.png) **23** Kulissenwand (E1-Geheimnis) | ![Wand fällt](docs/screenshots/24_secret_wall_falls.png) **24** Der Graf bellt die Kulissenwand um |
 | ![Regie-Notiz](docs/screenshots/25_regie_notiz.png) **25** Regie-Notiz mit Prompt | ![Handy Safe Room](docs/screenshots/26_safe_room_hero_talents_phone.png) **26** Handy-Format: Safe Room mit TALENT-SHOW-Knopf und M.O.D.-Kasten |
-| ![Show](docs/screenshots/27_pause_show_unterhosen_liga.png) **27** Pausemenü, Reiter Show: M.O.D.s Vorliebe und Unterhosen-Liga (06 Paket C) | ![Show-Wette](docs/screenshots/28_battle_results_show_bet_won.png) **28** Kampfergebnis: dritter Herz-Treffer, Show-Wette gewonnen (Fanpost-Paket) |
+| ![Show](docs/screenshots/27_pause_show_unterhosen_liga.png) **27** Pausemenü, Reiter Show: M.O.D.s Vorliebe und Unterhosen-Liga (06 Paket C) | ![Abspann](docs/screenshots/61_echtzeitkampf_boss_abspann.png) **61** Bosssieg: Abspann mit EXP, Level-Up, Talent-Hinweis und Beute |
 | ![Casting 1/3](docs/screenshots/29_casting_1_wer_sind_sie.png) **29** Casting 1/3 „Wer sind Sie?“: Name, Wortform, Figur (08 K1) | ![Casting 2/3](docs/screenshots/30_casting_2_steckbrief.png) **30** Casting 2/3 „Steckbrief“: Vorleben, Hobby / Talent, Eigenschaften |
 | ![Vorleben](docs/screenshots/31_casting_2_vorleben_overlay.png) **31** Overlay „Vorleben wählen“ mit „genauer“-Chips | ![Eigenschaften](docs/screenshots/32_casting_2_eigenschaften_overlay.png) **32** Overlay „Eigenschaften“ (0–3, leer erlaubt) |
 | ![Kandidatenkarte](docs/screenshots/33_casting_3_kandidatenkarte.png) **33** Casting 3/3: Kandidatenkarte und Sendeformat | ![Tastatur](docs/screenshots/34_casting_bildschirmtastatur_akzente.png) **34** Bildschirmtastatur, Akzent-Ebene |
@@ -432,7 +440,8 @@ Alle Bilder stammen aus dem Spiel selbst (Compatibility-Renderer unter Xvfb, 128
 | ![Sponsor-Fenster](docs/screenshots/overlay_sponsor_window.png) **Overlay** Show-Overlay (Demo-Werte): Sponsor-Fenster offen mit Platz-Punkten, Show-Chip „M.O.D. mag heute“ mit Herzen und Liga-Stufe | ![Party](docs/screenshots/talents_party.png) **Party-Seite** mit Talenten und offener Wahl |
 
 **Neu erzeugen:** `tools/check.sh --shot` rendert eine Szene. Zustände, die man nur durch Spielen erreicht, stellen die
-Capture-Rezepte in `game/tests/capture_recipes.gd` her (02_TECH §11.3). Beispiele:
+Capture-Rezepte in `game/tests/capture_recipes.gd` her (02_TECH §11.3). Die Rundenkampf-Bilder entstehen mit
+`res://scenes/battle/battle.tscn` und den Rezepten `battle_*` (die Szene spielt immer einen CTB-Spielstand). Beispiele:
 
 ```bash
 T=prime-time-dungeon/tools/check.sh
@@ -441,30 +450,27 @@ GODOT=… $T --shot res://scenes/exploration/exploration.tscn shot.png 5 1280x72
 GODOT=… $T --shot res://scenes/exploration/exploration.tscn shot.png 5 1280x720 --recipe=prompt_cellar      # 05
 GODOT=… $T --shot res://scenes/exploration/exploration.tscn shot.png 5 1280x720 --recipe=bigmap             # 06
 GODOT=… $T --shot res://scenes/exploration/exploration.tscn shot.png 5 1280x720 --recipe=pause_equipment    # 07
-GODOT=… $T --shot res://scenes/battle/battle.tscn shot.png 5 1280x720 --recipe=battle_menu                  # 08
-GODOT=… $T --shot res://scenes/battle/battle.tscn shot.png 5 1280x720 --recipe=boss_intro \
-  '--params={"encounter": "enc_f1_boss_rattenkoenigin", "capture": false, "speed": 1.0}'                     # 09
-GODOT=… $T --shot res://scenes/battle/battle.tscn shot.png 5 1280x720 --recipe=boss_phase \
-  '--params={"encounter": "enc_f1_boss_hausmeister"}'                                                        # 10
-GODOT=… $T --shot res://scenes/battle/battle.tscn shot.png 5 1280x720 --recipe=battle_gift                  # 11
-GODOT=… $T --shot res://scenes/battle/battle.tscn shot.png 5 1280x720 --recipe=battle_results \
-  '--params={"capture_turns": 99}'                                                                           # 12
+E=res://scenes/exploration/exploration.tscn                                # Echtzeitkampf mit den echten Daten
+GODOT=… $T --shot $E shot.png 30 1280x720 --recipe=rt_r4_regular                                           # 54
+GODOT=… $T --shot $E shot.png 30 1280x720 --recipe=rt_r4_showboss                                          # 55
+GODOT=… $T --shot $E shot.png 30 1280x720 --recipe=rt_r4_hausmeister                                       # 56
+GODOT=… $T --shot $E shot.png 30 1280x720 --recipe=rt_r4_queen                                             # 57
+GODOT=… $T --shot $E shot.png 30 1280x720 --recipe=rt_r4_results                                           # 58
+GODOT=… $T --shot $E shot.png 30 2400x1080 --touch --recipe=rt_r4_regular                                  # 59
+GODOT=… $T --shot $E shot.png 5 1280x720 --recipe=rt_hint                                                  # 60
+GODOT=… $T --shot $E shot.png 5 1280x720 --recipe=rt_credits                                               # 61
 GODOT=… $T --shot res://scenes/safe_room/safe_room.tscn shot.png 5 1280x720 --recipe=safe_mopsula           # 13
 GODOT=… $T --shot res://scenes/safe_room/safe_room.tscn shot.png 5 1280x720 --recipe=safe_lootbox_open      # 14
 GODOT=… $T --shot res://scenes/ui/event_lobby.tscn shot.png 120 1280x720                                     # 15
 GODOT=… $T --shot res://art/gallery/character_gallery.tscn shot.png 120 1280x720                             # 16
 GODOT=… $T --shot res://art/gallery/vfx_gallery.tscn shot.png 120 1280x720                                   # 17
-GODOT=… $T --shot res://scenes/battle/battle.tscn shot.png 5 2400x1080 --touch --recipe=battle_skills       # 18
 GODOT=… $T --shot res://scenes/ui/show_overlay.tscn shot.png 120 1280x720                                    # Overlay
 GODOT=… $T --shot res://scenes/title/hero_select.tscn shot.png 60 1280x720                                  # 19
 GODOT=… $T --shot res://scenes/exploration/exploration.tscn shot.png 5 1280x720 --recipe=bark_platform      # 20
 GODOT=… $T --shot res://scenes/safe_room/safe_room.tscn shot.png 5 1280x720 --recipe=safe_hero_switch       # 21
-GODOT=… $T --shot res://scenes/battle/battle.tscn shot.png 5 1280x720 --recipe=battle_partner_auto          # 22
 GODOT=… $T --shot res://scenes/exploration/exploration.tscn shot.png 5 1280x720 --recipe=secret_wall        # 23 (24: secret_open, 25: secret_note)
 GODOT=… $T --shot res://scenes/safe_room/safe_room.tscn shot.png 5 1600x720 --touch --recipe=safe_hero_talents  # 26
 GODOT=… $T --shot res://scenes/exploration/exploration.tscn shot.png 5 1280x720 --recipe=pause_show         # 27
-GODOT=… $T --shot res://scenes/battle/battle.tscn shot.png 5 1280x720 --recipe=battle_results_show \
-  '--params={"capture_turns": 99, "encounter": "enc_f1_a2"}'                                                # 28
 GODOT=… $T --shot res://scenes/safe_room/safe_room.tscn shot.png 5 1280x720 --recipe=safe_talent_show       # Talent-Show
 C=res://scenes/title/persona_casting.tscn                                  # 08 K1: Casting (Seite, Overlay, Beispiel-Persona)
 GODOT=… $T --shot $C shot.png 60 1280x720 --params='{"page":2,"open":"origin","demo":true}'               # 31

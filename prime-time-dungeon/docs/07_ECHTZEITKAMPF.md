@@ -3085,6 +3085,11 @@ Gleiches Verhalten: alle Golden-Hashes unverändert (Benchmark, `canned`, die vi
 `test_r4_rt_balance` braucht in den Gate-Läufen ≈ 57 s (vorher 72–75 s; Ziel < 60 s). Messmethode und Hebel:
 `docs/PERFORMANCE.md` §3.8.
 
+**Stand R5b-2a — Show-Zahlen der Etage** (`fullrun.sh --strategy=typical --pace=human`, Seeds 101–110 je Held:in): alle
+Mediane in den Bändern von §11.1 (Hype 25–45 / 45–65, Geschenke 4–7, Follower 1 200–1 500, Zuschauer 3 000–5 500,
+Etagenzeit 22–28 min) — Zahlen in E32 und §12.6 „Stand R5b-2a“. Der Harness rechnet ohne Show; seine Werte oben gelten
+unverändert.
+
 ---
 
 ## 12. Migrations- und Umsetzungsplan
@@ -3187,6 +3192,12 @@ er enthält alles, was mehr als eine Phase braucht:
   Nr. 3, rot) — Abstimmung in Teil 2. (7) Orchestrator-Entscheidung 2026-10-11: CTB wird in Teil 2 nicht gelöscht, sondern
   als Minispiel „Stempelduell“ ausgelagert (`10_MINISPIEL_STEMPELDUELL.md`) — §12.6 „Stand R5b-1“ führt die Teil-2-Liste
   und die Kopplungen.
+- **Stand R5b-2a (2026-10-12, Branch `ptd/r5b2a`, Teil 2a: Show-Ökonomie und Standard Echtzeit, CTB bleibt):** E32 bringt die
+  Show-Zahlen des Echtzeitkampfs in die GDD-§13-Bänder (§9.1, §9.2; `SIM_VERSION` 2 → 3, Plattform-Matrix vor und nach dem
+  Sprung mit gleichem Digest), E33 macht Echtzeit zum Standard neuer Spiele (§12.1; Spielstände behalten ihren Modus). Texte:
+  Fähigkeiten-Details und Touch-Tooltip nennen im Echtzeitkampf Sekunden statt Züge, Talent- und M.O.D.-Texte passen zu beiden
+  Modi, README „Steuerung“. Gates: Smoke, Full-Run und CI im Echtzeitkampf, CTB über `--combat=ctb`. Messwerte, Paritäts-Nachtrag,
+  Abweichungen und die Liste für Teil 2b: §12.6 „Stand R5b-2a“.
 
 **Phasenübergreifende Signaturen — vollständige Stub-Liste von R1a** (alles, was eine Phase von einer anderen aufruft oder
 liest; `test_r1a_contract` prüft jede Zeile per Reflexion):
@@ -3359,6 +3370,9 @@ Echtzeit-Nachfolger mit Test:
 | R5b-1 | `test_r5b_achievements` | Echtzeit-Schwellen `ach_crit_3` (15) und `ach_weakness_5` (10) über `condition_rt`/`desc_rt`; CTB unverändert; die seltenen Kampf-Achievements, die der Full-Run-Bot nicht trifft, schalten in Live-Echtzeitkämpfen frei (Flucht, drei Erstschläge, Mopsula K.O. durch einen Gift-Tick, Sieg mit 1 HP bzw. ≤ 10 %) |
 | R5b-1 | `test_r5b_hud` | Kais Rahmen-Symbol trägt den Persona-Look (Haut, Haarfarbe und -schnitt, Bart, Brille; ohne Persona der Kanon-Look), Touch: Boss-Rahmen endet vor der Hype-Leiste; die Autopilot-Beschriftung nennt die Taste des Schemas (Touch: keine) |
 | R5b-1 | `test_r5b_equipment_mods` | `items.json` `rt.mods`: das Samtcape gibt seinem Träger `equip:itm_arm_velvet_cape` (erste Stelle der festen Reihenfolge), `dmg_taken_pm` mit `element` faltet nur in Treffer dieses Elements (Formel und Prozent, nie Status-Ticks), nur Ausrüstung trägt gültige Mods (Validator) |
+| R5b-2a | `test_r5b_show_economy` | E32: Werte fest (`RT_*`, CTB-Profil und gemeinsame Regeln unverändert); Auto-Angriffe ohne Krit-/Schwäche-Hype (Statistik und Zeilen-Tag bleiben), Langeweile läuft weiter; Combo und SHOW je Profil; Heilen ist keine Wiederholung; Sponsoren-Pause (Start, Speichern, Bosse zählen nicht, 4 reguläre ohne System-Geschenk, CTB unberührt), externe Geschenke und das Zurücksetzen auf 80 bleiben; Follower-Faktor nur im Echtzeitkampf; Logs der Version 2 → „ältere Version“ in beiden Verifiern, Bestenliste und Lobby |
+| R5b-2a | `test_r5b_default_realtime` | E33: Standard `realtime` (Einstellungen, `Game.new_game`, Dev-Zustand), `--combat=ctb` und die Debug-Zeile geben CTB; Spielstände behalten ihren Modus (CTB- und Echtzeit-Rundlauf über `Save`); Einstellungsdatei Version 1 → Echtzeit, Version 2 behält die Debug-Wahl; `Game.ensure_state(mode, seed)` |
+| R5b-2a | `test_r5b_texts` | Fähigkeiten-Detail und Touch-Tooltip im Echtzeitkampf ohne Züge (Sekunden aus `rt.statuses`, SHOW-Abklingzeit der Party), CTB-Detail unverändert; Talent- und M.O.D.-Texte des Echtzeitkampfs ohne CTB-Wörter |
 
 ### 12.6 Parität und CTB-Entfernung
 
@@ -3462,6 +3476,48 @@ fällt wie zwischen zwei Läufen desselben Stands mal so, mal so; die Kampagne i
   `partner_auto`.
 - Gates und Werkzeuge spielen die Kampagne heute im CTB (`fullrun.sh --strategy=all`, Autoplay-Smoke, `perf.sh`-Kampfansichten,
   `capture_recipes.gd`); außer `test_m1_*` nennen 27 weitere Testdateien die Engine-Klassen (10 Kap. 6.2 Schritt 4).
+  **Seit R5b-2a** spielen Smoke, Full-Run und CI im Echtzeitkampf; CTB läuft über `--combat=ctb` mit (unten).
+
+**Stand R5b-2a (2026-10-12, Branch `ptd/r5b2a`) — Teil 2a: Show-Ökonomie (E32) und Echtzeit als Standard (E33), CTB bleibt.**
+Erledigt aus der Liste „Für Teil 2“: Nr. 1 (E32), Nr. 3 (E33; die Zeile „Kampfmodus (Debug)“ bleibt bis SD1) und Nr. 6 (Gates;
+der CTB-Smoke und ein CTB-Full-Run bleiben bis SD1). Nachtrag zum Paritätsbericht:
+
+| Nr. | Kriterium | Messung R5b-2a | Stand |
+|---|---|---|---|
+| 1 | Full-Run Echtzeit | jetzt das Standard-Gate: `fullrun.sh --strategy=all` (thorough, rush, dawdle als Kai, thorough als Graf Mopsula), `--hero=mopsula`, `--liga=1` und `--liga=2` bestanden; die 108-Seed-Messung von R5b-1 gilt weiter (E32 ändert nur Hype, Geschenke und Follower) | grün |
+| 2 | `typical` kalibriert | unverändert: noch keine Probespiel-Logs; der Standard ist trotzdem umgestellt (E33) | gelb |
+| 3 | Show-Zahlen in den GDD-§13-Bändern | E32, `typical` im menschlichen Takt, Seeds 101–110 je Held:in, Median [Spanne]: **Kai** Hype 38,8 [37–40,5] / 59,8 [55–64], Geschenke 7 [5–7], Follower 1 385 [1 317–1 417], Zuschauer-Spitze 4 880 [4 739–4 955], Etagenzeit 26:55; **Graf Mopsula** 38 [36,5–40,5] / 57,8 [53–61,5], 6 [6–7], 1 312 [1 237–1 337], 4 776 [4 505–4 836], 27:10 (vorher Kai / Mopsula: Hype-Ende 73 / 69,2, Geschenke 17 / 16, Follower 2 327 / 2 194, Zuschauer 6 274 / 6 081) | **grün** |
+| 4 | Echtzeit-Läufe bitgenau | `SIM_VERSION` 3 (E32); die Replay-Prüfungen der Full-Runs (`Game.replay_log` bei jedem Safe-Room-Besuch und am Etagenende) laufen in den Gates ohne Abweichung; Logs der Version 2 melden „ältere Version“ (`test_r5b_show_economy`) | grün |
+| 9 | Spielstände | neue Spiele in Echtzeit, geladene behalten ihren Modus, Einstellungsdatei Version 2 (`test_r5b_default_realtime`); v1 → v2 der Spielstände in Teil 2b | gelb |
+
+CTB unverändert: `fullrun.sh --strategy=all --combat=ctb` liefert dieselben vier Läufe wie `fullrun.sh --strategy=all` auf
+`22c95c0` — alle Kennzahlen und Ereigniszeilen gleich; nur die Persona-Münze im Safe Room (`mod_tags`) fällt wie zwischen zwei
+Läufen desselben Stands. Gates: `check.sh` (Standard-Smoke Echtzeit, dazu der CTB-Smoke), CI-Schritte „Full run Floor 1 (real
+time: thorough + rush + dawdle)“ und „Full run Floor 1 (CTB until SD1)“, bei den Screenshots zusätzlich ein Echtzeitkampf; der
+Job `check` braucht damit geschätzt 18,5–20 statt 13:24 min (02_TECH §12.4). README: Echtzeit-Bilder 54–61 statt der
+CTB-Kampfbilder (deren Dateien 08–12, 18, 22, 28 bleiben im Ordner, für das Stempelduell).
+
+Abweichungen und Auslegungen: (1) Die Hype-Werte allein reichten nicht: Heilungen zählen nicht als Wiederholung (sonst verlor
+die Heilerin-Held:in Mopsula ≈ 45 Hype je Bosskampf), und erst die Sponsoren-Pause hält die Geschenke im Band — Hype-Schnitte,
+die die Geschenke allein auf 4–7 gedrückt hätten, hätten Held:in Mopsula unter das Hype-Band gebracht. (2) Event-Läufe binden
+ihren Modus weiter über `rules.combat.mode` (beide Events stehen schon auf `realtime`; ohne Eintrag bleibt CTB, er gehört zum
+`rules_hash`). (3) Die Zeile „Kampfmodus (Debug)“ bleibt (anders als Schritt 1 oben, „Einstellungseintrag entfernt“), sie
+fällt mit SD1. (4) `--goto=battle:<enc>` und `battle.tscn` bleiben die CTB-Kampfszene mit eigenem CTB-Zustand. (5) Läufe im
+menschlichen Takt sind nicht bitgenau wiederholbar (die Wahl der M.O.D.-Zeile ist Darstellungs-Zufall, ihre Lesezeit
+verschiebt die Erkundung): die Show-Zahlen sind Mediane über 10 Seeds, der CTB-Gleichstand ist im schnellen Takt geprüft.
+(6) Gefunden, offen: Außerhalb des Kampfes kann eine Person noch nicht mit Tab-Ziel und Taste 1–5 bzw. Antippen und
+Aktionsknopf ziehen (§2.2, §7.1, §7.3 — `ExplorationScene.pull` ruft nur der Full-Run-Bot). Kais Feldschlag startet den
+Erstschlag; eine angebellte Gruppe erreicht Graf Mopsula als Person erst, wenn sie aufwacht und verfolgt.
+
+**Für Teil 2b:** `typical` aus Probespiel-Logs kalibrieren, dann `--strict-bands` (Nr. 2); Daten backen und `SaveCodec` v2
+(Nr. 9); SD1 — danach entfallen der CTB-Smoke, der CTB-Full-Run, die Zeile „Kampfmodus (Debug)“, die CTB-Kampfszene hinter
+`--goto=battle:` und das `ShowRules`-Profil `ctb` der Kampagne. Dazu die offenen Punkte aus 2a: der Pull außerhalb des Kampfes
+für Personen (oben (6)); Marotten-Texte ab Etage 2 mit CTB-Wörtern (`mar_speed` „in höchstens drei Zügen“, `mar_brave`
+„ohne zu verteidigen“, `mar_stunt`); Skill-Beschreibungen mit Zügen in den Daten (`skl_kai_taunt`, `skl_mop_expert_opinion` —
+die Oberfläche zeigt im Echtzeitkampf schon Sekunden, `CombatView.skill_text`); die Belegung in `project.godot` (Tab an `map`,
+Y an `toggle_auto` stellt `CombatInput` erst zur Laufzeit um, §7.7); die CTB-gebundenen Tests (`test_m3_exploration_scene`,
+`test_m5_battle_scene` setzen `--combat=ctb`); die Erkundungs- und Leak-Messung der Perf-Probe in einem Echtzeitspiel (sie misst
+Erkundung, CTB-Kampf und Leak-Schleife bewusst weiter im CTB, damit PERFORMANCE.md vergleichbar bleibt).
 
 ### 12.7 Unverändert wiederverwendet
 

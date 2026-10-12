@@ -238,6 +238,11 @@ Bosse haben kein Symbolverhalten: Kampf beim Betreten des Radius 5 m um den Anke
 
 ### 2.4 Kampfauslösung & Erstschlag
 
+> **Echtzeitkampf (Standard seit R5b-2a, 07 E33):** Gekämpft wird direkt in der Welt; einen Kampf starten dort ein Pull
+> (Feldschlag oder Fähigkeit auf eine Gruppe), ein verfolgender Gegner in Waffenreichweite oder 4 s Verfolgung im selben
+> Raum — Kontakt allein nur bei der schlafenden Tutorial-Gruppe (07 §2.2). Die Tabelle unten gilt für den Rundenkampf (CTB:
+> alte Spielstände, `--combat=ctb`); `PREEMPTIVE` heißt im Echtzeitkampf „Erstschlag“ (Gegner 3 s überrumpelt).
+
 Kampf startet bei **Kontakt** (Symbol ≤ 1.1 m an Kai) oder **Feldschlag-Treffer** auf ein Symbol.
 Zur Gruppe gehören **alle Gegner des Symbols**; zusätzlich schließen sich **keine** weiteren Symbole an (klare Regel, lesbar).
 
@@ -337,9 +342,11 @@ auf Vorabend umstellbar, nie zurück. Schaden/EXP wirken sofort, der Timer-Fakto
 
 ## 3. Kampf (CTB — Conditional Turn-Based)
 
-> **Hinweis (2026-10-10):** Dieser Abschnitt wird durch [`07_ECHTZEITKAMPF.md`](07_ECHTZEITKAMPF.md) (Echtzeitkampf
-> „WoW-light“ direkt in der Welt) ersetzt, sobald Phase R5 abgeschlossen ist (07 §12.6). Bis dahin gilt er unverändert für den
-> CTB-Modus (`combat_mode = ctb`); für den Echtzeitmodus gilt 07.
+> **Hinweis (Stand R5b-2a, 2026-10-12):** Neue Spiele kämpfen in Echtzeit nach [`07_ECHTZEITKAMPF.md`](07_ECHTZEITKAMPF.md)
+> („WoW-light“ direkt in der Welt; Standard seit 07 E33). Dieser Abschnitt gilt nur noch für den Rundenkampf (CTB): alte
+> Spielstände behalten ihn, Entwicklung und QA erreichen ihn mit `--combat=ctb`. In Teil 2b zieht die CTB-Engine in das
+> Minispiel „Stempelduell“ um ([`10_MINISPIEL_STEMPELDUELL.md`](10_MINISPIEL_STEMPELDUELL.md)); die Formeln (Kap. 3.2, 3.7)
+> rechnen auch die Formel-Treffer der Echtzeit (07 §3.9).
 
 ### 3.1 Grundprinzip
 
@@ -1179,6 +1186,9 @@ ShowModel.viewers_for(floor_mult: float, hype: float, followers: int) -> int
 | Timer-Warnung 5:00 / 1:00 | +10 / +15 | einmalig |
 
 Positive Ereignisse werden mit `hype_gain_mult` multipliziert (Produkt aller `show_mods`, z. B. `acc_fan_scarf` 1.2). Danach `clamp(0, 100)`.
+**Echtzeitkampf:** eigenes Profil `rt` mit eigenen Werten (07 §9.1, abgestimmt mit 07 E32): Krit und Schwäche nur bei
+Fähigkeitstreffern (je +1), Combo +1, SHOW +6 / +2, dazu Ausweichen, Unterbrechen und perfekte Bossphasen; Langeweile −2 je 6 s
+ohne positives Ereignis. Die Tabelle oben ist das CTB-Profil.
 Kein Hype-Drift im Kampf und kein `hype_value`-Kill-Faktor (die Werte oben ersetzen 02_TECH §6.2 vollständig).
 
 **Dramaturgie (Balancing 2026-10, Kap. 13):** Jeder Kampf ist ein Show-Segment. Ein Routinekampf hebt die Quote um ~15–25
@@ -1196,6 +1206,8 @@ oben) endete fast jeder Kampf bei 96–100: Zuschauerfaktor dauerhaft 2.9, Spons
   drei Heilungen trivial).
   Werden mehrere Schwellen auf einmal überschritten, kommen die Geschenke nacheinander (im Rahmen des Limits).
   **Keine Hype-Kosten** (`HYPE_COST = 0`). Nach dem Geschenk zu Schwelle 100: Hype auf **80** setzen.
+  **Echtzeitkampf (07 E32):** Nach einem regulären Kampf mit System-Geschenk bringen die nächsten 4 regulären Kämpfe der Etage
+  keines („Sponsoren-Pause“, 07 §9.2); Bosskämpfe und Zuschauer-Geschenke im Sponsor-Fenster sind davon nicht betroffen.
 - **Ablauf:** Vor dem nächsten Zug fliegt eine Sponsor-Drohne ein (1.5 s, überspringbar), Banner oben rechts,
   M.O.D. `sponsor_gift`. Kostet **keine** Ticks. Eingang immer über `Show.receive_gift(gift)` (Brief §6b).
 - **Auswahl:** gewichteter Zufall (Show-`rng`), Gewicht = `weight` × Produkt der zutreffenden `weight_mods`:
@@ -1239,7 +1251,7 @@ eine Zeile nach Hype-Band (`chat_hype_high` ≥ 70, `chat_hype_mid` 30–70, `ch
 ```text
 # bei Kampfsieg (ShowModel.followers_for_battle)
 follower_gain = floori(viewers_peak_battle * (0.007 + 0.014 * hype_end / 100.0) * mult)
-mult = 2.0 (Boss) | 1.0 sonst;  × follower_mult (acc_clip_mic 1.15)
+mult = 2.0 (Boss) | 1.0 sonst;  × follower_mult (acc_clip_mic 1.15);  Echtzeitkampf zuletzt × 0.6 (07 E32)
 # bei Flucht
 followers -= floori(followers * 0.01)
 # Niederlage: 0
@@ -1820,6 +1832,11 @@ Kein Kronen-Motiv an Mopsula, auch nicht über eine Spezies-Optik (Validator: `c
 
 ## 13. Balancing-Ziele
 
+> **Echtzeitkampf (Standard seit R5b-2a, 07 E33):** Die Kampfzeilen dieser Tabelle (Züge, Kampfdauer ×1, Boss-Züge) gelten für
+> den Rundenkampf; der Echtzeitkampf hat eigene Ziele in 07 §11.1 (Kampfdauer, HP-Verlust, Boss-Niederlagen je Held:in).
+> Etagenzeit, Stufen und die **Show-Bänder** (Hype, Geschenke, Follower, Zuschauer) gelten für beide Kampfmodi — Messung im
+> Echtzeitkampf am Ende dieses Kapitels.
+
 | Kennzahl | Ziel | Grundlage |
 |---|---|---|
 | Regulärer Kampf: Party-Züge | **4–6** (Median 4.5) | Simulation: 3.2 (Tutorial) bis 5.8 (`grp_c3`) |
@@ -1928,6 +1945,23 @@ der Stichprobenfehler (~4 Punkte) so groß wie das Band; deshalb misst der Test 
   Königin in 29 %, der Bot im echten Spiel bei typical/thorough in 8 von 20 Läufen (40 %), *rush* (unterlevelt) 6/10; Hausmeister
   Simulation 17 %, Bot typical/thorough 11 von 60 Läufen über drei Messreihen mit identischem Hausmeister (18 %).
 
+**Messung Echtzeitkampf (R5b-2a, 2026-10-12, 07 E32):** `tools/fullrun.sh --strategy=typical --pace=human` (der Bot spielt jeden
+Kampf als Person mit dem Profil `typical`, 07 §5.7), Seeds 101–110 je Held:in, Median [Min–Max]; „vorher“ = die Startwerte
+von 07 R5a.
+
+| Kennzahl (Takt `human`) | Ziel | Kai vorher → nachher | Graf Mopsula vorher → nachher |
+|---|---|---|---|
+| Hype Kampfstart / -ende (Median regulär) | 25–45 / 45–65 | 40,5 / 73 → **38,8 / 59,8** [37–40,5 / 55–64] | 40 / 69,2 → **38 / 57,8** [36,5–40,5 / 53–61,5] |
+| Sponsor-Geschenke je Etage | 4–7 | 17 → **7** [5–7] | 16 → **6** [6–7] |
+| Follower Ende | 1 200–1 500 | 2 327 → **1 385** [1 317–1 417] | 2 194 → **1 312** [1 237–1 337] |
+| Max. Zuschauer | 3 000–5 500 | 6 274 → **4 880** [4 739–4 955] | 6 081 → **4 776** [4 505–4 836] |
+| Etagenzeit gesamt (Timer + Kämpfe) | 22–28 min | 26:36 → **26:55** [25:28–27:36] | 26:25 → **27:10** [26:17–28:01] |
+| Level bei Hausmeister / Königin | 5 / 7 | 5–6 / 7 | 5–6 / 7 |
+
+Im schnellen Takt (Untergrenze) liegen Hype-Ende 75 / 70,5, Geschenke 8 / 7, Follower 1 682 / 1 583 und Zuschauer 5 222 / 5 079
+(vorher 80 / 77,5, 20 / 19,5, 2 587 / 2 486, 6 535 / 6 388). Läufe im menschlichen Takt sind nicht bitgenau wiederholbar: die
+Wahl der M.O.D.-Zeile ist Darstellungs-Zufall, ihre Lesezeit verschiebt die Erkundung um einige Frames.
+
 ---
 
 ## 14. UX-Flows
@@ -1981,6 +2015,9 @@ letzten Safe Room geht verloren.“).
 der ersten Begegnung (Name, Modell, Lv), Werte/HP ab `defeated ≥ 1`, Schwächen einzeln nach Entdeckung.
 
 ### 14.5 Kampf-UI
+
+> Rundenkampf (CTB). Das HUD des Echtzeitkampfs (Standard seit 07 E33: Aktionsleiste, Einheitenrahmen, Zauberleisten,
+> Telegraphen, Hinweiskarten) steht in 07 §8, die Steuerung in 07 §7.
 
 | Element | Position / Größe (720p) | Inhalt |
 |---|---|---|

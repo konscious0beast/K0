@@ -48,6 +48,13 @@
 > Umsetzen entschieden wurde (U-1 … U-16), die Gates und was SD2-C … F vorfinden: Kap. 7.3 „Stand SD2-A/B“; Messwerte und
 > die geänderte Band-Grenze des Stempelmeisters: Kap. 6.9.
 >
+> **Stand SD2-C … F (2026-10-12, Branch `ptd/sd2ui`):** Das Duell ist als Vorschau spielbar — Titel → Extras →
+> Stempelduell (Vorschau) → Schalterhalle mit Akte, Aktenschrank, Stempelalbum (mit Stempelheft) und Regeln; der
+> Kartentisch für Tastatur, Gamepad und Touch; das Lernduell mit sechs Lektionskarten; Klänge, Wartezimmer-Schleife,
+> Overlay-Modus `duel`; Speicher-Haken mit eigener Datei. Dazu aus SD2-G die Tests `test_sd_ui` und `test_sd_tutorial`,
+> die Capture-Rezepte und das Perf-Szenario `stempel`. Dateien, Gates, Messwerte und die Entscheidungen U-17 … U-36:
+> Kap. 7.3 „Stand SD2-C … F“. Offen bleibt das Playtest-Gate (Kap. 6.9).
+>
 > **Namen der Phasen:** Der Orchestrator nennt sie M1–M3. Weil „M0–M8“ schon die Module aus 02_TECH sind — und **M1 genau der
 > CTB-Kampf-Kern ist, um den es hier geht** —, heißen sie hier **SD1–SD3** (Stempelduell-Phasen): SD1 = M1, SD2 = M2,
 > SD3 = M3, gleicher Inhalt.
@@ -1411,8 +1418,8 @@ Operationen — das Muster von `encounter` (07 §10.5):
 | `test_sd_golden` | SD2 (umgesetzt, 3 Tests) | festes Duell mit ≈ 40 geskripteten Zügen → fester Hash und Ereigniszahl |
 | `test_sd_balance` | SD2 (umgesetzt, 2 Tests) | Harness (CI 50 Seeds je Gegner und Bot-Profil, nachts 1 000): Bänder unten |
 | `test_sd_collection` | SD2 (umgesetzt, 8 Tests) | Rundlauf, kaputte Datei → leer, Deckregeln, Freischaltungen (Gegner, Stempelheft, Kampagne), Seed-Zähler vor dem Duell gespeichert, keine Namen in der Datei |
-| `test_sd_ui` | SD2 | Szenen instanziieren, Fokus-Navigation, Trefferflächen ≥ 88 px und Abstände ≥ 12 px, keine Überlappung bei 1280 × 720, 1600 × 720, 1920 × 1080, 2400 × 1080 und mit Notch-Insets, Geist-Zettel, Tastatur-/Gamepad-/Touch-Zuordnung, Linkshänder-Spiegelung, statische Texte nach F8 |
-| `test_sd_tutorial` | SD2 | sechs Lektionen in Reihenfolge, Überspringen, Wiederholen, Grundakte danach |
+| `test_sd_ui` | SD2 (umgesetzt, 17 Tests) | Szenen instanziieren, Fokus-Navigation, Trefferflächen ≥ 88 px und Abstände ≥ 12 px, keine Überlappung bei 1280 × 720, 1600 × 720, 1920 × 1080, 2400 × 1080 und mit Notch-Insets (Layout-Leiter für Touch, 100/125/150 %, Linkshänder, offene Hand), Geist-Zettel, Tastatur-/Gamepad-/Touch-Zuordnung, Linkshänder-Spiegelung, statische Texte nach F8 und den Textregeln des Regelbuchs; dazu Schalterhalle, Akte und „Passend zur Akte“, Aktenschrank, Album, Titel → Extras → Duell → zurück (Router), Speicher-Haken (eigene Datei, Toast bei kaputter Datei), Kampagnen-Freischaltung nur über IDs, Klänge, Overlay-Modus `duel` |
+| `test_sd_tutorial` | SD2 (umgesetzt, 5 Tests) | sechs Lektionen in Reihenfolge (Pflichtkarte markiert und hervorgehoben), Überspringen („Ich kenne mich aus“), Wiederholen aus den Regeln ohne zweite Belohnung, Wortlaut je Eingabeschema, Begrüßungskarte der Schalterhalle, Grundakte danach |
 | `test_sd_campaign` | SD3 | Command `sd` in `Game` ≡ `RunSim` ≡ `GameReplay` (Hashes), Belohnung genau einmal je Gegner und Staffel, jeder Ablehnungsgrund, offenes Duell schließt beim nächsten eigenen Command und bleibt bei `clock`/`gift`/`twist` offen, Einsturz wartet bis Duellende + 2 min, Journal-Abbruch mitten im Duell → aufgegeben, alte Läufe ohne `sd` bitgleich |
 | `test_sd_cast` | SD3 | KI-Gegner aus jedem Profil, deterministisch je Platz, keine Belohnung außer Kosmetik, Eilmeldung höchstens einmal je Tag |
 
@@ -1483,6 +1490,10 @@ sich zum Weiterspielen gedrängt.
 
 `tools/perf.sh` bekommt das Szenario `stempel` (Duell mit vollem Tisch, Durchsage aktiv); Ergebnisse in `PERFORMANCE.md`.
 
+**Umgesetzt (SD2-G):** `tools/perf.sh --only=stempel` → `tests/perf/sd_perf_probe.gd`; ohne `--only` läuft das Szenario
+zuerst und bricht bei einer Überschreitung ab. Messwerte: Kap. 7.3 „Stand SD2-C … F“ (dort statt in `PERFORMANCE.md`,
+U-34). Die Duell-Box hat keine Drohne (U-21): 0 3D-Draw-Calls.
+
 ---
 
 ## 7. Umsetzung SD1–SD3 (= M1–M3 des Orchestrators)
@@ -1504,7 +1515,8 @@ SD3 (Etage 8)
 
 **Stand 2026-10-12:** 07 R5b Schritte 1–4 mit SD1 sind umgesetzt (07 §12.6 „Stand R5b-2b“); ST0 mit dem Stub `sd` ist
 gelandet (Branch `ptd/st0`, 02_TECH §0.8: `sd` → `sd_unavailable` in `RunRules`/`RunSim`/`GameReplay`). SD2-A/B
-(Regelbuch, Duell-Kern, Harness) sind umgesetzt (Kap. 7.3 „Stand SD2-A/B“); SD2-C … G folgen.
+(Regelbuch, Duell-Kern, Harness) sind umgesetzt (Kap. 7.3 „Stand SD2-A/B“), SD2-C … F und die Bildschirm-Teile von SD2-G
+ebenso (Kap. 7.3 „Stand SD2-C … F“); offen ist das Playtest-Gate.
 
 **Warum so:** SD1 muss in R5b liegen, weil R5b sonst löscht, was SD2 braucht. SD2 hängt an keiner Staffel-Mechanik und
 kann deshalb früh Spaß beweisen (Extras-Vorschau); SD3 braucht eine Etage 8, die es erst mit ST1-C gibt.
@@ -1621,6 +1633,88 @@ Menüs, Lernduell-Bildschirme, Ton, Titel-Eintrag, Speicher-Haken, Captures, Per
 - **Speicher-Haken** (`autoload/save.gd`, eigener Abschnitt): `load_sd_collection()` = `SdCollection.from_dict(JSON, book)`
   (`was_reset` → Toast), `save_sd_collection(c.to_dict())` atomar; den Konto-Seed einmal außerhalb von `core/` würfeln
   (`SdCollection.create(seed)`). Der Titel-Eintrag „Extras“ ruft nur `scenes/stempel/`.
+
+**Stand SD2-C … F (2026-10-12, Branch `ptd/sd2ui`)** — umgesetzt: SD2-C … F und die Bildschirm-Teile von SD2-G (Tests,
+Captures, Perf). Die Engine (`core/stempel/ctb/`) ist unberührt, `test_sd_engine_golden` grün.
+
+| Paket | Dateien (relativ zu `game/`) |
+|---|---|
+| SD2-C Kartentisch | `scenes/stempel/sd_table.{gd,tscn}` (Ablauf, Eingabe, Ereignisse abspielen), `sd_layout.gd` (Layout als reine Funktion des sicheren Rahmens), `sd_board.gd` (Wartenummern-Anzeige), `sd_plate.gd` (Plaketten), `sd_counter.gd` (Schalter), `sd_hand.gd`, `sd_card_view.gd`, `sd_results.gd` (Ergebnis-Panel), `sd_host.gd` (Ansage: M.O.D., Graf, Chat), `sd_modal.gd`, `sd_menu.gd` (Menü, Hilfen), `sd_akte.gd`, `sd_style.gd`, `sd_icons.gd` (gezeichnete Symbole, F8), `sd_table_bg.gd`, `sd_texts.gd` (fünf Sätze, Glossar, Steuerung) |
+| SD2-D Menüs | `scenes/stempel/sd_extras.gd` (Untermenü Extras), `sd_hall.{gd,tscn}` (Schalterhalle), `sd_hall_akte.gd` (Akte mit „Passend zur Akte“), `sd_deck_builder.{gd,tscn}` (Aktenschrank), `sd_album.{gd,tscn}` (Album, Stempelheft, Auszeichnungen, Kosmetik), `sd_rules_page.gd`, `sd_screen.gd` (gemeinsame Bausteine), `sd_session.gd` (Regelbuch, Sammlung, Speichern, Kampagnen-Freischaltung) |
+| SD2-E Lernduell | `scenes/stempel/sd_tutorial.gd` (Lektionskarten, Tastenzeile je Eingabeschema), Begrüßungskarte in `sd_hall.gd`; `data/stempel/lines.json` + 1 Zeile (`sd_tut:1:keys`, jetzt 102) |
+| SD2-F Ton, Overlay | `scenes/stempel/sd_audio.gd`; Abschnitte in `autoload/sfx_synth.gd` (Klänge, Wartezimmer-Schleife, eilige Fassung), `scenes/ui/show_overlay.gd` (Modus `duel`), `scenes/ui/mod_dialog.gd` (Lage `duel`, Stimmen; U-22) |
+| Speicher, Titel | Abschnitte in `autoload/save.gd` (`load_sd_collection`/`save_sd_collection`, `sd_collection_path`), `scenes/title/title.gd` (Knopf „Extras“), `project.godot` (Aktion `sd_file`), `core/data/seed_util.gd` (Kommentar: Zwecke `sd`, `sd_deck`) |
+| SD2-G (Bildschirm) | `tests/test_sd_ui.gd` (17 Tests), `tests/test_sd_tutorial.gd` (5 Tests), Abschnitt in `tests/capture_recipes.gd` (Rezepte `sd_table`, `sd_table_touch`, `sd_boss_durchsage`, `sd_results`, `sd_deck_builder`, `sd_album`, dazu `sd_hall`, `sd_akte`, `sd_lernduell`, `sd_menu`, `sd_bigview`), `tests/perf/sd_perf_probe.gd` + Abschnitt in `tools/perf.sh` (Szenario `stempel`), Unterabschnitt im `README.md` |
+| Regelbuch (Ladezeit) | `core/stempel/sd_rulebook.gd` (`rules_hash` beim ersten Lesen, U-28), `core/stempel/validators/sd_validator.gd` (Muster einmal kompiliert) |
+
+**Gate:** nach dem Merge von `main` (`3e4b0b1`, Staffel-Kern ST1-B) `tools/check.sh` (voll): 1 727 Tests,
+0 fehlgeschlagen, 0 übersprungen, 0 Fehler in 495 s, `AUTOPLAY: OK`, `check.sh: OK` (vor dem Merge 1 685 Tests in
+464 s); alle 79 `test_sd_*` grün (22 neu: `test_sd_ui` 17, `test_sd_tutorial` 5), `test_sd_engine_golden` und
+`test_sd_boundaries` unverändert grün; `tools/fullrun.sh --strategy=all`: viermal `FULLRUN: OK`, `fullrun.sh: OK`;
+`tools/perf.sh --only=stempel`: `PERF: OK`. Kein Workflow geändert, `CHANGELOG.md` unberührt. Offen: das Playtest-Gate
+(unten).
+
+**Messwerte (Kap. 6.10)** — `tools/perf.sh --only=stempel` (Compatibility-Renderer unter Xvfb, 1280 × 720; der Tisch gegen
+den Stempelmeister in Phase 2 mit der Durchsage an zweiter Stelle, im echten `GlobalUi`):
+
+| Größe | Wert | Ziel |
+|---|---|---|
+| Regelbuch laden (bester von 3; das erste Mal mit Kompilieren der Skripte 33 ms) | 25,4 ms | ≤ 50 ms |
+| Zug (Mittel, 63 Züge in 6 Duellen gegen den Stempelmeister) | 0,50 ms | ≤ 2 ms |
+| Vorschau (Mittel, 315 Probeläufe) | 1,02 ms | ≤ 3 ms |
+| Tisch aufbauen (warm; kalt mit Skripten und der Wartezimmer-Schleife 492 ms) | 7 ms | ≤ 300 ms |
+| UI-Draw-Calls (ganzes Bild mit M.O.D.-Zeile, Höchstwert über 60 Frames) | 101 | ≤ 120 |
+| 3D-Draw-Calls | 0 | 0 (keine Drohne, U-21) |
+| `_process` im Leerlauf | keiner | keiner |
+| Partikel-Emitter | 0 | ≤ 1 |
+
+Die Tabelle ist der Lauf auf ruhiger Maschine. Über die Läufe dieser Sitzung (llvmpipe, teils neben zwei anderen
+Full-Runs): Regelbuch 25–45 ms, Zug 0,5–0,9 ms, Vorschau 1,0–1,9 ms, Tisch warm 5–7 ms, UI-Draw-Calls 101 — immer
+`PERF: OK`, `perf.sh: exit 0`.
+
+**Captures gesichtet** (je 1280 × 720, 1600 × 720, 1920 × 1080, 2400 × 1080): `sd_table`, `sd_table_touch`,
+`sd_boss_durchsage`, `sd_results`, `sd_deck_builder`, `sd_album`; dazu bei 1280 × 720 `sd_hall`, `sd_akte`,
+`sd_lernduell`, `sd_menu`, `sd_bigview` und der Titel mit „Extras“. Was dabei auffiel und behoben ist: Text der Anzeige
+über dem JETZT-Kasten, Beschriftungen unter 16 px, Fußzeile der Karte über der Pfoten-Marke, Zuständigkeiten der
+Gegner-Plakette über den Rand (→ Zeilen nach Breite, U-26), STEMPELN außerhalb des Rahmens bei Touch mit Notch, Rahmen
+beim Wackeln ohne sicheren Rand, die M.O.D.-Zeile im Rezept zu früh weg, der Lektionstext über der Hand, die Bühnenlinie
+durch Umriss-Karten und Seitenleisten (Flächen jetzt deckend), die halb unsichtbare Lesebrille im Symbol von Ulla Umlauf.
+
+**Entscheidungen beim Umsetzen (Fortsetzung):**
+
+| Nr. | Thema | Entscheidung |
+|---|---|---|
+| U-17 | Titel-Eintrag | „Extras“ ist ein halber Knopf neben „Event-Lauf“ (eine achte Titelzeile passt bei 720 p nicht); das Untermenü ist ein Modal aus `scenes/stempel/sd_extras.gd` — der Titel-Abschnitt baut nur den Knopf, ruft `open()` und setzt nach der Rückkehr aus der Schalterhalle Titelmusik, Overlay-Modus `menu` und den Fokus auf „Extras“ |
+| U-18 | Begrüßung | Vor dem Lernduell begrüßt die Schalterhalle mit einer Karte („Lernduell starten“ / „Ich kenne mich aus“); die Wartemarken sind bis dahin gesperrt und nennen den Weg. Das Lernduell endet mit „Zur Schalterhalle“ |
+| U-19 | Speicher-Haken | `Save.load_sd_collection()` liefert nur das gelesene JSON (`{"found", "data"}`); `SdCollection.from_dict` ruft `scenes/stempel/sd_session.gd` — so kompiliert das Autoload beim Start keinen Duell-Kern. Der Konto-Seed wird dort gewürfelt (nie in `core/`). Datei `<Daten>/stempel/collection.json`, atomar wie die Slots (`.tmp` → `.bak`); `read_only` (Autoplay) schreibt nichts; „Kandidat:in löschen“ lässt sie stehen |
+| U-20 | Kampagnen-Freischaltung | Beim Öffnen der Schalterhalle liest `SdSession.campaign_ids()` alle Speicherplätze und die laufende Kampagne — nur IDs (Fähigkeiten bis zur erreichten Stufe, Talente, Ausrüstung, Inventar), nie geschrieben; neue Karten meldet ein Toast einmal |
+| U-21 | Ton | eigener Player `sd_audio.gd` auf den Bussen SFX und Music (`Sfx.play` kennt nur Kampagnen-IDs); Klänge und Schleifen prozedural im `SfxSynth`-Abschnitt, einmal je Sitzung erzeugt und von Schalterhalle und Tisch geteilt (die Schleife kostet ≈ 55 ms); in der Endphase des Stempelmeisters die eilige Wartezimmer-Schleife. Schließt das Fenster mitten im Duell, wartet `sd_audio.gd` wie das Sfx-Autoload kurz, bis der Mix-Thread die Wiedergaben freigibt (02_TECH §3.8); Captures sind stumm. **Keine M.O.D.-Drohne** in der Duell-Box: 0 3D-Draw-Calls |
+| U-22 | ModDialog | `scenes/ui/mod_dialog.gd` hat einen eigenen markierten Abschnitt (die Datei stand nicht in der Liste der geteilten Dateien, aber Kap. 4.5 verlangt die Lage): Untertitel-Lage `duel` (Box rechts neben den Plaketten über `Events.dialog_layout_requested`), Namen und Farben der Duell-Stimmen. Nur additiv, die Kampagnen-Lagen sind unverändert |
+| U-23 | Zustände | Chips aus Symbol und Zahl der verbleibenden Nummern, nie Farbe allein; was neben Name und Geduld keinen Platz hat, rückt in die Zeile der Zuständigkeiten |
+| U-24 | Tippen | Tippen markiert, ein zweites Tippen auf dieselbe Karte spielt sie — aber nur, wenn das erste Tippen markiert hat: Eine Karte, die der Tisch selbst markiert (Pflichtzug, Tipp), spielt nie auf ein Tippen. Die Maus verhält sich wie Touch |
+| U-25 | Aufruf | „Nummer 017 — Sie sind dran.“ und der Hinweis stehen im Schalter-Feld (keine eigene Bauchbinde); im Abheften-Modus dort „Abheften: Welche Karte?“ |
+| U-26 | Layout-Leiter | `sd_layout.gd` rechnet den Tisch aus dem sicheren Rahmen; passt er nicht, gibt er in Stufen nach: Abstände 8 px → Schalter ohne Titelzeile → gerade Hand statt Fächer → kompakte Plaketten → kompakte Anzeige → offene Gegnerhand nur noch in der Akte. Zuständigkeiten brechen nach Breite in zwei Zeilen um. Auf schmalem 16:9 mit Notch werden Touch-Karten bis 20 px schmaler. ABLAGE und STEMPELN wachsen nicht mit der Schriftgröße und sitzen bei Touch an den Bildschirmrändern (Daumen). `test_sd_ui` prüft alle Kombinationen (vier Auflösungen, Notch, Touch, 100/125/150 %, Linkshänder, offene Hand) |
+| U-27 | „Passend zur Akte“ | Der Graf stellt aus dem Besitz eine Mappe zusammen: unwirksame Karten raus (Art, für die das Gegenüber nicht zuständig ist; Zustand, gegen den es immun ist), bis zu vier schwächere Karten gegen gewünschte (Wunder Punkt; gegen Phasen auch Dienst nach Vorschrift gegen den Feierabend-Eilvermerk), Lücken mit den besten übrigen, schwache zuletzt, Rest `auto_fill`. Er schreibt nur eine Kopie: in die erste leere andere Mappe, sonst nach Rückfrage in die nächste |
+| U-28 | Ladezeit Regelbuch | `rules_hash` entsteht beim ersten Lesen, die Muster des Validators werden einmal je Prüfung kompiliert: Laden ≈ 25–45 ms statt ≈ 60 ms. Der Hash selbst ist unverändert |
+| U-29 | Anzeige am Ende | Nach der Entscheidung behält die Wartenummern-Anzeige ihr letztes Bild (kein Neuaufbau unter dem Ergebnis-Panel) |
+| U-30 | Offene Gegnerhand | „Gegnerhand offen“ (beim Grafen an) zeigt die Karten als Reihe in der Gegner-Plakette, wenn Platz ist, sonst nur in der Akte |
+| U-31 | Vorschau Heilen | Eine Heilkarte zeigt höchstens die fehlende Geduld (der Probelauf enthält auch, was danach kommt, z. B. die Durchsage) |
+| U-32 | Lektionen | Lektion 1 hat eine Zeile für Tastatur und Gamepad (`sd_tut:1:keys`: „Markieren Sie …“), Touch sagt „Tippen“. Die Lektionskarte erscheint, nachdem der Tisch die Pflichtkarte markiert hat (sie leuchtet, die anderen sind gedimmt), steht über der Hand und nennt die Tasten des Eingabeschemas |
+| U-33 | Beispiel-Sammlung | Captures und Perf-Probe nutzen `SdSession.use_sample()`: eine feste Sammlung im Speicher (Lernduell erledigt, Ferdi zweimal und der Graf einmal besiegt, vier Heft-Stempel, Mappe B halb gebaut), nie die Datei |
+| U-34 | Messwerte | stehen hier und in Kap. 6.10, nicht in `docs/PERFORMANCE.md` (nicht in der Liste der geteilten Dateien von SD2) — beim nächsten Integrationslauf übernehmen |
+| U-35 | Mappen-Liste | Die Zeilen der Mappe im Aktenschrank sind 88-px-Ziele mit 12 px Abstand (Kap. 4.8); bei 720 p zeigt die Liste zwei bis drei Zeilen, die Zeile „in der Mappe: n / 2“ unter jeder Karte im Raster zeigt die ganze Mappe |
+| U-36 | Gamepad | Im Duell und im Aktenschrank gilt `CombatInput.apply_input_mode(false)` (Kap. 4.6 „Stand nach SD1“): „Der Graf übernimmt“ auf Y, die Großansicht auf Tab, M und Select; beim Verlassen `apply_for_game()` |
+
+**Playtest-Gate (Kap. 6.9) — offen, Sache der Nutzer:in.** Fünf Personen spielen ab Titel → Extras ohne Erklärung das
+Lernduell und danach ein Duell gegen Ferdi. Zu prüfen:
+
+1. Mindestens vier erklären die Regel „lange Formulare, lange Wartezeit“ in einem eigenen Satz.
+2. Mindestens vier finden die Wartenummern-Anzeige ohne Hilfe und sagen, wer als Nächstes dran ist (auch mehrmals
+   hintereinander).
+3. Spaß ≥ 4 von 5 im Median; niemand fühlt sich zum Weiterspielen gedrängt.
+4. Beobachten (notieren, nicht abfragen): Wird „erneut antippen“ bzw. Enter zum Spielen gefunden? Wird Abheften verstanden
+   und genutzt? Fällt die Durchsage-Warnung beim Stempelmeister auf? Werden Pfote und Akte („Passend zur Akte“) gefunden?
+   Ist der Text auf dem Telefon lesbar (100 % und 150 %)? Wie lange dauert ein Duell gegen Ferdi?
 
 ### 7.4 SD3 — Etage 8 (mit 09 ST1)
 

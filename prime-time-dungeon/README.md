@@ -311,6 +311,59 @@ Gesehen werden allein startet keinen Kampf (07 §2.2). Wer den Ring des Kampf-Se
 Format umgestellt (Version 2) und spielen in Echtzeit weiter. Der Rundenkampf lebt als Minispiel „Stempelduell“ weiter
 (`docs/10_MINISPIEL_STEMPELDUELL.md`); dessen Steuerung beschreibt das Minispiel selbst.
 
+<!-- --- Stempelduell (10, SD2) --- -->
+### Stempelduell (Titel → Extras → Stempelduell (Vorschau))
+
+Das Minispiel aus [`docs/10_MINISPIEL_STEMPELDUELL.md`](docs/10_MINISPIEL_STEMPELDUELL.md) ist als Vorschau spielbar
+(Stand SD2-C … F, Kap. 7.3; Etage 8 folgt mit SD3). Im Titel steht neben „Event-Lauf“ der Knopf **Extras**; dort öffnet
+„Stempelduell (Vorschau)“ die **Schalterhalle**:
+
+- **Wartemarken** der Gegenüber (Ferdi Durchschlag, Ulla Umlauf, der Stempelmeister; Graf Mopsula als Übungsduell) →
+  **Akte**: Zuständigkeiten, die eine neue Regel, was der erste Sieg bringt, Mappe wählen, „Passend zur Akte“ (der Graf
+  stellt eine Mappe zusammen und legt sie als Kopie in eine freie Mappe, sonst nach Rückfrage), Duell starten.
+- **Aktenschrank:** drei Mappen à 20 Karten bauen (Filter, Kurve der Bearbeitungszeit, „Auffüllen“, „Aktiv setzen“);
+  eine Mappe, die nicht geht, sagt in einem Satz, warum.
+- **Stempelalbum:** Karten je Herkunft (fehlende als Umriss mit dem Weg dorthin), Stempelheft, Dienstauszeichnungen und
+  Kosmetik zum Anlegen. Nichts zu kaufen, nichts gewürfelt.
+- **Regeln:** fünf Sätze, Glossar, die Steuerung des aktuellen Eingabeschemas, „Lernduell wiederholen“.
+- Beim ersten Besuch begrüßt eine Karte und bietet das **Lernduell** an: sechs Lektionen am Tisch, danach die Grundakte
+  mit der Startmappe als Mappe A. „Ich kenne mich aus“ gibt die Grundakte sofort.
+
+Die Sammlung liegt in einer eigenen Datei (`user://stempel/collection.json`: Katalog-IDs und Zahlen, keine Namen) und
+bleibt beim Löschen eines Spielstands oder der Kandidat:in erhalten. Die Kampagne schaltet Karten nur frei: Die
+Speicherplätze werden gelesen, nie geschrieben.
+
+| Am Tisch | Tastatur / Maus | Gamepad | Touch |
+|---|---|---|---|
+| Karte markieren (Vorschau: Geist-Zettel auf der Anzeige, Balken der Plaketten) | ← / → oder 1–5; Klick | Steuerkreuz / linker Stick ← → | Karte antippen |
+| Markierte Karte spielen | Enter, Leertaste, F; zweiter Klick, „STEMPELN“ oder auf den Schalter ziehen | A | erneut antippen, „STEMPELN“ oder auf den Schalter ziehen |
+| Abheften (Karte tauschen, bald wieder dran) | X oder Rücktaste, dann Karte und Enter (Esc bricht ab) | X, dann Karte und A (B bricht ab) | „ABLAGE“, dann Karte — oder Karte auf „ABLAGE“ ziehen |
+| Großansicht der markierten Karte | Tab oder M | Select | Karte lang drücken (0,4 s) |
+| Bereich wechseln: Hand → Wartenummern → Akte | Q / E | LB / RB | Gegner-Plakette antippen: Akte |
+| Fußnote des Grafen zur empfohlenen Karte | Pfote anklicken | Großansicht der empfohlenen Karte | Pfote antippen |
+| „Der Graf übernimmt“ an / aus | T | Y | Menü → Hilfen |
+| Tempo × 1 / × 2 | R | R3 | Menü → Hilfen |
+| Menü: Weiter, Regeln, Hilfen, Antrag zurückziehen | Esc oder P | Start | Menü-Knopf oben rechts |
+
+In der Schalterhalle und den Menüs gilt die übliche Steuerung (Enter / A / Antippen, Esc / B zurück). Im Aktenschrank und
+im Album wechseln Q / E bzw. LB / RB die Mappe oder Seite. Im Aktenschrank legt Enter / A / Antippen eine Karte in die
+Mappe (eine Zeile der Mappe nimmt sie wieder heraus), Tab, M, Y oder langes Drücken zeigt sie groß; im Album öffnet ein
+Druck auf die Karte die Großansicht. Die Hilfen im Menü: Tipps des Grafen, „Der Graf übernimmt“, Gegnerhand offen, Tempo,
+Animationen reduzieren, Linkshänder-Spiegelung, Schriftgröße 100 / 125 / 150 %.
+
+Prüfen: die Tests `test_sd_*` (`tools/check.sh --tests-only --filter=test_sd_`), das Perf-Szenario
+`tools/perf.sh --only=stempel` (10 §6.10) und die Capture-Rezepte `sd_table`, `sd_table_touch`, `sd_boss_durchsage`,
+`sd_results`, `sd_deck_builder`, `sd_album` (dazu `sd_hall`, `sd_akte`, `sd_lernduell`, `sd_menu`, `sd_bigview`):
+
+```bash
+T=prime-time-dungeon/tools/check.sh; D=res://scenes/stempel
+GODOT=… $T --shot $D/sd_table.tscn shot.png 20 2400x1080 --touch --recipe=sd_table_touch --params='{"opp":"sdo_ulla","mappe":"a","seed":7}'
+GODOT=… $T --shot $D/sd_table.tscn shot.png 20 1280x720 --recipe=sd_boss_durchsage --params='{"opp":"sdo_meister","mappe":"a","seed":11}'
+GODOT=… $T --shot $D/sd_deck_builder.tscn shot.png 20 1280x720 --recipe=sd_deck_builder --params='{"mappe":"b"}'
+GODOT=… $T --shot $D/sd_album.tscn shot.png 20 1280x720 --recipe=sd_album --params='{"page":"graf"}'
+```
+<!-- --- end Stempelduell --- -->
+
 ## 6. Entwickler-Argumente
 
 Argumente stehen nach `--` (CLI) bzw. in den Main Run Args (Editor). Quelle: `scenes/boot/boot.gd`, 02_TECH §11.4.

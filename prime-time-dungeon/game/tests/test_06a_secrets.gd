@@ -281,7 +281,7 @@ func _make_scene(hero: String, prepare: Callable = Callable()) -> ExplorationSce
 	if prepare.is_valid():
 		prepare.call()
 	var scene: ExplorationScene = (load(SCENE) as PackedScene).instantiate() as ExplorationScene
-	scene.auto_start_battle = false
+	scene.auto_start_combat = false
 	add_to_tree(scene)
 	await wait_frames(6)
 	return scene

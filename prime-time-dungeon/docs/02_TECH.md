@@ -252,11 +252,26 @@ Zeile „Kampfmodus (Debug)“, die Boot-Argumente `--combat=` und `--goto=battl
 CTB-Läufe (07 E36; `CombatInput.apply_input_mode(false)` bleibt für das Duell, 10 §4.6), die CTB-Tests `test_m5_*`,
 `test_06a_partner_auto`. **Übergangs-Shims** (bis `scenes/exploration/exploration.gd` seinen unerreichbaren CTB-Zweig
 verliert, eigene Datei eines anderen Pakets): `Game.make_battle_setup` zeichnet nichts auf und liefert `null`,
-`Router.start_battle` tut nichts (je eine Warnung).
+`Router.start_battle` tut nichts (je eine Warnung). **Seit ST0 entfernt** (§0.8): der CTB-Zweig der Erkundung, beide Shims,
+die immer wahren `Game.is_realtime()`-Abfragen der Szenen (sie fragen `Game.has_state()`), `auto_start_battle` heißt
+`auto_start_combat`.
 
 **Neu:** `tests/test_sd_engine_golden.gd` (Goldwerte der Engine auf dem `test_m1`-Mini-Datensatz, dazu der CTB-Teil des
 früheren `test_m8_state_hash`), `tests/test_sd_boundaries.gd` (Grenztest 10 §6.3, alte CTB-Logs „ältere Version“),
 `tests/fixtures/live/run_log_sim_v3_ctb.json`, `tests/fixtures/saves/save_v1_{ctb,realtime}.json` (§6.4).
+
+### 0.8 Vertrags-Durchgang ST0: Staffeln (09, CR-27, Stand 2026-10-12)
+
+Ein Durchgang des Integrators (09 Kap. 11.2), Branch `ptd/st0`.
+
+**Vorlauf — CTB-Reste der Erkundung (07 §12.6):** `scenes/exploration/exploration.gd` verliert den unerreichbaren
+CTB-Kampfstart (`_after_battle`, die `battle_result`-Rückkehr, den Zweig in `_trigger_encounter`/`on_enemy_contact`/
+`_check_strike`, `_rt_spawn_allowed`) und seine Kommentare; entfernt sind die Shims `Game.make_battle_setup` und
+`Router.start_battle`. `auto_start_battle` heißt `auto_start_combat`. Die Szenen fragen `Game.has_state()` statt des immer
+wahren `Game.is_realtime()` (ohne Spielstand startet nichts, wie bisher); `Game.is_realtime()` bleibt als öffentliche API.
+`CombatInput.apply_for_game()` im Erkundungs-HUD bleibt (stellt die Echtzeit-Belegung nach einem Bildschirm mit der alten
+Belegung wieder her, 10 §4.6), ebenso die Belegung `toggle_speed` (Tempo des Duells). Verhalten unverändert (`fullrun.sh`
+gleich).
 
 ---
 
@@ -1126,8 +1141,8 @@ func on_game_over(reason: StringName) -> void   # Router.game_over calls it firs
 func next_seed(purpose: String) -> int   # state.rng_counter += 1; SeedUtil.derive(state.seed, purpose, state.rng_counter)
 	# purposes of the live game: "battle" (make_rt_setup), "show" (Show.begin_battle), "lootbox" (open_lootbox),
 	# "gift" (Show: GiftApplier outside battles) — replay_log consumes them identically (same code path)
-# make_battle_setup (CTB) is gone since R5b part 2b: combats start through make_rt_setup (below); a shim that records
-# nothing and returns null stays until scenes/exploration loses its unreachable CTB branch (§0.7)
+# make_battle_setup (CTB) is gone since R5b part 2b: combats start through make_rt_setup (below); its shim went with
+# the unreachable CTB branch of scenes/exploration in ST0 (§0.7, §0.8)
 func apply_battle_result(result: BattleResult) -> BattleRewards
 	# in_battle = false; BattleBridge.apply_result(state, DB.data, result); sim.request_checkpoint(); emits party_changed,
 	# inventory_changed, credits_changed, member_leveled + level_up({"member", "level"}) per level; floor_timer_started if
@@ -1654,7 +1669,7 @@ func pop(payload: Dictionary = {}, transition: Transition = Transition.FADE) -> 
 func adopt(node: Node) -> void                      # _stack = [node], current = node (node already under root);
                                                     # used by capture.gd and TestCase.add_to_tree for screen scenes (§9.2)
 # start_battle / end_battle and SCENE_BATTLE are gone since R5b part 2b (the combat runs in the exploration, 07 §2.8);
-# start_battle stays as a no-op shim until scenes/exploration loses its unreachable CTB branch (§0.7)
+# the no-op shim start_battle went with the unreachable CTB branch of scenes/exploration in ST0 (§0.7, §0.8)
 func enter_safe_room(safe_room_id: String) -> void  # push(SCENE_SAFE_ROOM, {"safe_room_id": safe_room_id}, FADE)
 func exit_safe_room() -> void                       # pop({"from_safe_room": <id of the safe room>}, FADE)
 func game_over(reason: StringName) -> void          # Game.on_game_over(reason); goto(SCENE_GAME_OVER, {"reason": reason}, FADE)
@@ -4433,7 +4448,8 @@ Betreten der Etage `Events.floor_entered`; `Events.overlay_mode_requested(&"expl
 `Game.timer_running = true` (der Countdown tickt erst, wenn `floor_run.timer_started`). Hört auf `Events.stray_spawn_requested`.
 Encounter: `Events.encounter_triggered` → der Echtzeitkampf startet in der Erkundung (`Game.make_rt_setup` mit dem
 `rt`-Block der Begegnung, `CombatDirector`, 07 §2, §10.6); bis R5b-2a startete ein CTB-Lauf hier
-`Router.start_battle(Game.make_battle_setup(…))` (entfallen, §0.7).
+`Router.start_battle(Game.make_battle_setup(…))` (entfallen, §0.7; der unerreichbare Zweig samt Shims seit ST0, §0.8).
+`auto_start_combat` (Standard `true`; Tests schalten ihn ab: eine Begegnung ohne Kampf) startet den Echtzeitkampf.
 Ein Encounter startet nur aus dem eingeschwungenen aktiven Screen (im Baum, nicht suspendiert, `Router.current == self`,
 `not Router.busy`): läuft ein Übergang (z. B. das Ausblenden zu Game Over / Titel / Etagenbilanz), wird kein Kampf auf den
 nächsten Screen gestapelt — Kontakte versuchen es im nächsten Frame erneut, ein Feldschlag-Hitstop entscheidet nach dem Übergang

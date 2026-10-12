@@ -386,14 +386,6 @@ func next_seed(purpose: String) -> int:
 	return RunRules.next_seed(state, purpose)
 
 
-## R5b part 2b (07 §12.6, 10 SD1): the campaign has no CTB battle any more (combats start through make_rt_setup). Kept
-## only so that the CTB branch of scenes/exploration — owned elsewhere, unreachable since every run fights in real
-## time — still compiles: records nothing and returns null (the exploration then cancels the encounter).
-func make_battle_setup(_encounter_id: String, _advantage: int, _group_id: String, _opener: String = "") -> BattleSetup:
-	push_warning("[Game] make_battle_setup: the campaign fights in real time only (R5b part 2b)")
-	return null
-
-
 ## The booking of a finished combat (end_combat; the verifiers book through BattleBridge.apply_result): rewards,
 ## level-ups, talent choices, the countdown start of the tutorial victory.
 func apply_battle_result(result: BattleResult) -> BattleRewards:
@@ -1461,14 +1453,14 @@ func _rt_run_started() -> void:
 ## end — a command without "ct" inside a combat would end it in the replay (07 §10.5).
 func _rt_on_settings_changed() -> void:
 	if combat != null:
-		_rt_speed_due = is_realtime() and settings != null and settings.combat_speed_pm != _rt_speed_pm
+		_rt_speed_due = state != null and settings != null and settings.combat_speed_pm != _rt_speed_pm
 		return
 	_rt_record_speed()
 
 
 func _rt_record_speed() -> void:
 	_rt_speed_due = false
-	if not is_realtime() or settings == null or run_log == null or replaying:
+	if state == null or settings == null or run_log == null or replaying:
 		return
 	var pm: int = settings.combat_speed_pm
 	if pm == _rt_speed_pm or not RtVocab.COMBAT_SPEEDS.has(pm):
@@ -1478,7 +1470,7 @@ func _rt_record_speed() -> void:
 
 
 ## True with a running game: every run fights in real time since R5b part 2b (the CTB battle went to the Stempelduell,
-## 10 SD1). Kept for its callers (exploration, menus, bot).
+## 10 SD1). No game code asks any more (ST0 asks has_state); kept as public API for tools and tests.
 func is_realtime() -> bool:
 	return state != null
 

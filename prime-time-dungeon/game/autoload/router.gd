@@ -94,13 +94,6 @@ func adopt(node: Node) -> void:
 	current = node
 
 
-## R5b part 2b (07 §12.6, 10 SD1): the CTB battle screen is gone — the real-time combat runs in the exploration (07
-## §2.8). Kept only so that the CTB branch of scenes/exploration (owned elsewhere, unreachable: Game.make_battle_setup
-## returns null) still compiles; it does nothing.
-func start_battle(_setup: BattleSetup) -> void:
-	push_warning("[Router] start_battle: the campaign fights in real time only (R5b part 2b)")
-
-
 func enter_safe_room(safe_room_id: String) -> void:
 	_safe_room_id = safe_room_id
 	await push(SCENE_SAFE_ROOM, {"safe_room_id": safe_room_id}, Transition.FADE)

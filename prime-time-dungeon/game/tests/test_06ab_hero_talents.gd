@@ -143,7 +143,7 @@ func _make_scene(hero: String, talents: Dictionary) -> ExplorationScene:
 	for mid: Variant in talents.keys():
 		Game.state.member(str(mid)).talents = (talents[mid] as Dictionary).duplicate()
 	var scene: ExplorationScene = (load(SCENE_EXPLORE) as PackedScene).instantiate() as ExplorationScene
-	scene.auto_start_battle = false
+	scene.auto_start_combat = false
 	add_to_tree(scene)
 	await wait_frames(6)
 	return scene

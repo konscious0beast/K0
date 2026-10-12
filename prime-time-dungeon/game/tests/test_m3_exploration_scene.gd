@@ -346,7 +346,7 @@ func test_room_change_visits_the_room() -> void:
 
 func test_force_encounter_signal_spy_nearest_group() -> void:
 	var scene: ExplorationScene = await _make_scene()
-	scene.auto_start_battle = false
+	scene.auto_start_combat = false
 	var layout: FloorLayout = scene.get_layout()
 	var nearest: String = ""
 	var best: float = INF
@@ -377,7 +377,7 @@ func test_force_encounter_signal_spy_nearest_group() -> void:
 
 func test_force_encounter_specific_and_fallback() -> void:
 	var scene: ExplorationScene = await _make_scene()
-	scene.auto_start_battle = false
+	scene.auto_start_combat = false
 	var groups: PackedStringArray = scene.living_groups()
 	Events.encounter_triggered.connect(_record)
 	if not groups.is_empty():
@@ -411,6 +411,9 @@ func test_force_encounter_starts_a_combat_in_the_world() -> void:
 	assert_true(scene.is_inside_tree())
 	assert_eq(Router.stack_size(), 1)
 	assert_false(Game.timer_running)
+	assert_true(scene.auto_start_combat, "real time is the default start (ST0: was auto_start_battle)")
+	assert_false("auto_start_battle" in scene)
+	assert_false(scene.has_method("_after_battle"), "the CTB branch of the combat start is gone (ST0)")
 
 
 func test_contact_and_strike_advantage_rules() -> void:
@@ -457,7 +460,7 @@ func test_contact_and_strike_advantage_rules() -> void:
 
 func test_field_strike_from_behind_is_preemptive() -> void:
 	var scene: ExplorationScene = await _make_scene()
-	scene.auto_start_battle = false
+	scene.auto_start_combat = false
 	var target: EnemyActor = null
 	for gid: String in scene.living_groups():
 		var a: EnemyActor = scene.get_enemy(gid)
@@ -751,7 +754,7 @@ func test_stray_spawn_far_from_kai() -> void:
 
 func test_enemy_patrol_alert_chase_return() -> void:
 	var scene: ExplorationScene = await _make_scene()
-	scene.auto_start_battle = false
+	scene.auto_start_combat = false
 	var actor: EnemyActor = scene.get_enemy("f1_g1")
 	assert_not_null(actor, "fixture patrol group f1_g1")
 	if actor == null:
@@ -799,7 +802,7 @@ func test_enemy_patrol_alert_chase_return() -> void:
 
 func test_chasing_group_needs_the_sight_cone() -> void:
 	var scene: ExplorationScene = await _make_scene()
-	scene.auto_start_battle = false
+	scene.auto_start_combat = false
 	var actor: EnemyActor = scene.get_enemy("f1_g1")
 	if actor == null:
 		fail("fixture patrol group f1_g1 missing")
@@ -883,7 +886,7 @@ func test_real_floor_1_builds() -> void:
 
 func test_player_speeds_ignore_stick_deflection() -> void:
 	var scene: ExplorationScene = await _make_scene()
-	scene.auto_start_battle = false
+	scene.auto_start_combat = false
 	var kai: PlayerBody = scene.get_player()
 	# Touch: deflection 0.6 holds sneak → 2.5 m/s (GDD §2.1, TECH §10.3), never 0.6 × something.
 	Input.action_press(&"sneak")
@@ -989,7 +992,7 @@ func test_wheel_copy() -> void:
 
 func test_event_reveal_waits_for_the_prop() -> void:
 	var scene: ExplorationScene = await _make_scene()
-	scene.auto_start_battle = false
+	scene.auto_start_combat = false
 	var it: EventInteractable = scene.get_interactable("fev_t_wheel") as EventInteractable
 	assert_not_null(it)
 	if it == null:
@@ -1021,7 +1024,7 @@ func test_lever_reveal_waits_for_the_prop() -> void:
 	DB.data = flood                                     # after_each restores the real data
 	Game.new_game(0, "Kai", 4242)
 	var scene: ExplorationScene = await _make_scene()
-	scene.auto_start_battle = false
+	scene.auto_start_combat = false
 	var it: EventInteractable = scene.get_interactable("fev_t_lever") as EventInteractable
 	assert_not_null(it)
 	if it == null:
@@ -1061,7 +1064,7 @@ func test_lever_reveal_waits_for_the_prop() -> void:
 ## no result toast, gate or follow-up fight under the open pause menu; it finishes after unpausing.
 func test_event_reveal_pauses_with_the_tree() -> void:
 	var scene: ExplorationScene = await _make_scene()
-	scene.auto_start_battle = false
+	scene.auto_start_combat = false
 	var it: EventInteractable = scene.get_interactable("fev_t_wheel") as EventInteractable
 	assert_not_null(it)
 	if it == null:
@@ -1088,7 +1091,7 @@ func test_event_reveal_pauses_with_the_tree() -> void:
 
 func test_force_encounter_is_ignored_behind_a_dialog() -> void:
 	var scene: ExplorationScene = await _make_scene()
-	scene.auto_start_battle = false
+	scene.auto_start_combat = false
 	scene.open_stairs_dialog()
 	Events.encounter_triggered.connect(_record)
 	scene.force_encounter("")
@@ -1192,7 +1195,7 @@ func test_sleeping_group_and_pips() -> void:
 
 func test_strike_arc_and_hit_flash() -> void:
 	var scene: ExplorationScene = await _make_scene()
-	scene.auto_start_battle = false
+	scene.auto_start_combat = false
 	var kai: PlayerBody = scene.get_player()
 	var arc: Node3D = kai.get_node("StrikeArc") as Node3D
 	assert_not_null(arc)
@@ -1277,7 +1280,7 @@ func _push_action(action: StringName) -> void:
 ## pause / map keys wait for the battle as well.
 func test_strike_hit_stops_the_run_clock_during_the_hitstop() -> void:
 	var scene: ExplorationScene = await _make_scene()
-	scene.auto_start_battle = false
+	scene.auto_start_combat = false
 	scene.hitstop_sec = 30.0                    # stays in the hitstop for the whole test
 	var target: EnemyActor = _behind_first_group(scene)
 	if target == null:
@@ -1334,7 +1337,7 @@ func test_hitstop_ending_during_a_goto_starts_no_battle() -> void:
 ## (pending flag, run clock); a contact simply tries again the next frame once the screen is settled.
 func test_no_encounter_while_the_router_is_busy() -> void:
 	var scene: ExplorationScene = await _make_scene()
-	scene.auto_start_battle = false
+	scene.auto_start_combat = false
 	Events.encounter_triggered.connect(_record)
 	Router.busy = true                          # a transition of another screen op (restored below)
 	scene.force_encounter("")
@@ -1352,7 +1355,7 @@ func test_no_encounter_while_the_router_is_busy() -> void:
 ## strikes / interacts; once the transition is over it works again.
 func test_action_is_ignored_while_the_router_fades_back_in() -> void:
 	var scene: ExplorationScene = await _make_scene()
-	scene.auto_start_battle = false
+	scene.auto_start_combat = false
 	await wait_frames(2)
 	assert_null(scene.focused_interactable(), "precondition: nothing to interact with at the start")
 	var kai: PlayerBody = scene.get_player()

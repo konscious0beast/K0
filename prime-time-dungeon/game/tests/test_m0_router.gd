@@ -185,6 +185,7 @@ func test_no_battle_screen() -> void:
 	var consts: Dictionary = (Router.get_script() as GDScript).get_script_constant_map()
 	assert_false(consts.has("SCENE_BATTLE"), "the CTB battle screen is gone (R5b part 2b)")
 	assert_false(Router.has_method("end_battle"))
+	assert_false(Router.has_method("start_battle"), "its no-op shim left with the CTB branch of the exploration (ST0)")
 	assert_eq(Router.Transition.keys(), ["NONE", "FADE"], "no swirl")
 
 

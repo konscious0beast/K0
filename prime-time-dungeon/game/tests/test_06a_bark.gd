@@ -73,7 +73,7 @@ func _on_ability(hero_id: String, ability: StringName, hits: int) -> void:
 func _make_scene(hero: String) -> ExplorationScene:
 	Game.new_game(0, "Kai", 4242, &"prime", hero)
 	var scene: ExplorationScene = (load(SCENE) as PackedScene).instantiate() as ExplorationScene
-	scene.auto_start_battle = false
+	scene.auto_start_combat = false
 	add_to_tree(scene)
 	await wait_frames(6)
 	return scene

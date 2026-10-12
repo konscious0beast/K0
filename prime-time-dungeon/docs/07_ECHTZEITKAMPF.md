@@ -3142,7 +3142,8 @@ unverändert.
 > trägt weiter `combat_mode: "realtime"` (ein anderer Wert wird abgelehnt). Die Verzweigungspunkte unten sind aufgelöst
 > (`Progression.total_stats` ohne HP-Skala, `BattleBridge` nur `make_rt_setup`, `Show` nur das Profil `rt`); der CTB-Zweig
 > von `ExplorationScene` ist unerreichbar und hängt an zwei Shims (`Game.make_battle_setup` → `null`, `Router.start_battle`
-> ohne Wirkung), bis sein Paket ihn entfernt. Der Text unten beschreibt den Stand bis R5b-2a.
+> ohne Wirkung), bis sein Paket ihn entfernt (**Stand ST0:** entfernt, samt beiden Shims; 02_TECH §0.8). Der Text unten
+> beschreibt den Stand bis R5b-2a.
 
 - `GameSettings.combat_mode: StringName` (`&"ctb"` | `&"realtime"`). **Standard seit R5b-2a (E33): `&"realtime"`**
   (`GameSettings.DEFAULT_COMBAT_MODE`; bis dahin `&"ctb"`); Entwicklung/QA schalten über das Einstellungsmenü (Zeile
@@ -3365,7 +3366,8 @@ Echtzeit-Nachfolger mit Test:
 > **Stand R5b-2b:** Alle Nachfolger existieren und sind getestet; die CTB-Andockpunkte der linken Spalte sind entfernt
 > (`scenes/battle/**` mit `battle_results.gd`, `party_panel.gd`, `battle_controller.gd`; `BattleBridge.make_setup`,
 > `Show.take_pending_gift(battle)`, die CTB-Pfade von `GameReplay` und `RunSim`, `Router.end_battle` samt Swirl —
-> `Router.start_battle` bleibt nur als wirkungsloser Shim für den unerreichbaren CTB-Zweig der Erkundung —,
+> `Router.start_battle` bleibt nur als wirkungsloser Shim für den unerreichbaren CTB-Zweig der Erkundung, seit ST0
+> entfernt —,
 > `Events.battle_turn_started`, `GameSettings.partner_auto`). `ActionResolver` lebt als Teil der Stempelduell-Engine in
 > `core/stempel/ctb/` (10 SD1). `test_06c_balance` und die CTB-Boss-Verschiebung von `test_06b_balance` sind gelöscht
 > (Nachfolger: die Harness-Bänder); `test_r3_settings` prüft, dass das Einstellungsmenü keine CTB-Zeilen mehr hat.
@@ -3696,7 +3698,10 @@ Echtzeit-Zahlen, als Korrektur: Ein Echtzeit-Spiel heilte im Feld bisher den CTB
 Gegenstands im Kampf — jetzt heilt ein Pflaster im Feld 180 statt 45; max. HP mit einem HP-%-Talent verschieben sich um
 bis zu 3 (Graf Mopsula Stufe 5 mit Leberwurst 276 → 277). (12) Für das Stempelduell bleibt die Eingabe offen (unten).
 
-**CTB-Reste außerhalb dieses Pakets** (Auftrag: nicht angefasst; für ihre Eigentümer):
+**CTB-Reste außerhalb dieses Pakets** (Auftrag: nicht angefasst; für ihre Eigentümer). **Stand ST0** (02_TECH §0.8):
+Der erste Punkt ist erledigt (CTB-Zweig, beide Shims, Kommentare, `Game.has_state()` statt `Game.is_realtime()` in den
+Szenen, `auto_start_combat`); `apply_for_game()` bleibt (stellt die Belegung nach einem Duell-Bildschirm wieder her,
+10 §4.6), ebenso `toggle_speed`. Offen: README §5 und die zwei Kennungen ohne Auslöser.
 
 - `scenes/exploration/exploration.gd`: der CTB-Zweig des Kampfstarts (`Game.make_battle_setup` + `Router.start_battle`,
   unerreichbar), Kommentare (Dateikopf, „CTB runs never enter this section“, „else the CTB list“/„the CTB lead“, „The CTB

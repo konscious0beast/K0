@@ -164,7 +164,7 @@ static func _group_goals(bot: Node, ex: ExplorationScene) -> PackedStringArray:
 func test_planner_on_floor_1() -> void:
 	Game.new_game(0, "Kai", 4242)
 	var ex: ExplorationScene = (load(SCENE_EXPLORATION) as PackedScene).instantiate() as ExplorationScene
-	ex.auto_start_battle = false
+	ex.auto_start_combat = false
 	add_to_tree(ex)
 	await wait_frames(2)
 	var bot: Node = _bot()

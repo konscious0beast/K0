@@ -342,7 +342,7 @@ func _explore_ready(scene: Node) -> bool:
 	if not await until(func() -> bool: return bool(scene.get("_built")), 300):
 		push_warning("[CaptureRecipes] exploration not built")
 		return false
-	scene.set("auto_start_battle", false)
+	scene.set("auto_start_combat", false)
 	# the countdown runs in a real run after the tutorial battle: show the timer like in play
 	if Game.state != null and Game.state.floor_run != null and not Game.state.floor_run.timer_started:
 		Game.state.floor_run.timer_started = true

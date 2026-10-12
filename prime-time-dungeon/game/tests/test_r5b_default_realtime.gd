@@ -45,7 +45,7 @@ func test_there_is_no_combat_mode_to_choose() -> void:
 	assert_false("combat_mode" in GameState.new(), "GameState.combat_mode is gone")
 	for prop: String in ["combat_mode_override", "auto_battle"]:
 		assert_false(prop in Game, "Game.%s is gone" % prop)
-	for fn: String in ["new_game_combat_mode", "combat_mode_from_args", "_rt_new_game"]:
+	for fn: String in ["new_game_combat_mode", "combat_mode_from_args", "_rt_new_game", "make_battle_setup"]:
 		assert_false(Game.has_method(fn), "Game.%s is gone" % fn)
 
 

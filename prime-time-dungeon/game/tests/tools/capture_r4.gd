@@ -18,7 +18,7 @@ var rec: Node = null
 func run(which: String, scene: Node) -> bool:
 	if not await rec.call("_explore_ready", scene):
 		return false
-	scene.set("auto_start_battle", true)
+	scene.set("auto_start_combat", true)
 	Game.settings.combat_hints = false               # R3's first-time cards would hold the ticks (07 §2.13)
 	match which:
 		"regular":

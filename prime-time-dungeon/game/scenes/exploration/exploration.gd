@@ -3,9 +3,10 @@ class_name ExplorationScene extends Node3D
 ## DungeonGenerator.generate(Game.floor_def(), floor_run.seed): rooms (EnvKit via FloorBuilder), closed gates, chests
 ## (opened ones open), enemy groups (without defeated groups / beaten bosses, living strays), floor events, stairs, safe
 ## doors, Kai (player.tscn), Mopsula (companion_follower.gd), the orbit camera and the ExplorationHud (M6).
-## Reacts to room changes (Game.visit_room, Events.room_entered), interactions, field strikes and contacts
-## (Events.encounter_triggered → Game.make_battle_setup → Router.start_battle), Events.stray_spawn_requested, and the
-## stack protocol of the Router (setup / on_suspend / on_resume). The floor timer runs through Game (timer_running).
+## Reacts to room changes (Game.visit_room, Events.room_entered), interactions, field strikes, pulls and contacts
+## (Events.encounter_triggered → the real-time combat in this room: the encounter command, Game.make_rt_setup, the
+## CombatDirector; 07 §2), Events.stray_spawn_requested, and the stack protocol of the Router (setup / on_suspend /
+## on_resume). The floor timer runs through Game (timer_running).
 ## Serializable ExploreEvents of what happened are kept in a short log (recent_events(); Brief §6b.2 "events out").
 ## 06 §1 (package A): the player body is the controlled character (Game.hero(): Kai or Graf Mopsula), the partner
 ## follows; `action` without a prompt uses the hero's field ability — Kai's field strike or Mopsula's bark (dazes the
@@ -40,7 +41,7 @@ const ZONE_ENV_SEC: float = 1.2
 const NO_CELL: Vector2i = Vector2i(-999, -999)
 const CAPTURE_STEP: float = 4.0         # capture mode: Kai starts 4 m towards the first door of the start room
 const BOSS_EXTRA_ARM: float = 1.5       # boss rooms: longer arm so the large boss figure stays in the frame
-const HITSTOP_SEC: float = 0.07         # field strike hit: 70 ms freeze + flash before the battle transition
+const HITSTOP_SEC: float = 0.07         # field strike hit: 70 ms freeze + flash before the combat starts
 const HITSTOP_RETRY_SEC: float = 0.05   # hitstop over while a Router transition runs: decide again after this
 const REVEAL_BEAT_SEC: float = 0.25     # pause after an event prop animation before its result is shown
 const MARKER_LIFT: float = 0.3          # focus marker above the focused object's visual top
@@ -48,8 +49,8 @@ const PROMPT_LIFT: float = 0.35         # HUD prompt anchor above the marker
 const ROOM_LIGHT_FADE_SEC: float = 0.4  # quality low: the left room's light fades out, the entered room's fades in
 const WALL_REACH_BONUS: float = 0.3     # 06 package A: the strike reaches the panel's face (half its depth + margin)
 
-## Tests may switch this off: encounters then only emit Events.encounter_triggered (no Game/Router battle start).
-var auto_start_battle: bool = true
+## Tests may switch this off: encounters then only emit Events.encounter_triggered (no real-time combat starts).
+var auto_start_combat: bool = true
 ## Test hook: false → event outcomes (toast, gate, encounter) follow at once instead of after the prop animation.
 var reveal_waits: bool = true
 ## Freeze + white flash on the struck group before the battle starts (0 = none).
@@ -151,7 +152,7 @@ func on_suspend() -> void:
 	_set_focus(null)
 
 
-## {"battle_result": BattleResult} | {"from_safe_room": "<sr id>"}
+## {} | {"from_safe_room": "<sr id>"} (a combat ends in this scene: rt_combat_ended, 07 §2.11)
 func on_resume(payload: Dictionary) -> void:
 	_suspended = false
 	_encounter_pending = false
@@ -159,9 +160,7 @@ func on_resume(payload: Dictionary) -> void:
 		return
 	# A dialog that is still open (e.g. a debug encounter started behind it) keeps the floor frozen and the timer off.
 	_freeze(is_modal())
-	if payload.has("battle_result"):
-		_after_battle(payload["battle_result"] as BattleResult)
-	elif payload.has("from_safe_room"):
+	if payload.has("from_safe_room"):
 		_after_safe_room(str(payload["from_safe_room"]))
 	refresh_hero()                          # 06 package A: a switch in the safe room
 	_sync_groups()
@@ -477,7 +476,7 @@ func _build_actors() -> void:
 		_camera.exclude.append(_prop_blockers.get_rid())
 	add_child(_camera)
 	for e: EnemySpawn in _layout.enemies:
-		if not _is_defeated(e) and _rt_spawn_allowed(e):
+		if not _is_defeated(e):
 			_spawn_enemy(e)
 	_sync_groups()
 
@@ -961,7 +960,7 @@ func _report_field_ability(ability: StringName, hits: int) -> void:
 
 
 ## Field strike: the first group inside the 100° arc of the strike reach (1.8 m × Kai's field_range_pm talents) during
-## the hitting part of the swing starts the battle.
+## the hitting part of the swing starts the combat (07 §2.2: the strike is its opener).
 func _check_strike() -> void:
 	if _encounter_pending or not _player.is_strike_hitting():
 		return
@@ -983,8 +982,7 @@ func _check_strike() -> void:
 		var adv: int = Rules.strike_advantage(hit.state, hit.global_position, hit.flat_forward(), pos, hit.is_boss(),
 			Balance.BACK_DOT)
 		_report_field_ability(&"strike", 1)
-		if Game.is_realtime():
-			_rt_open = {"kind": "strike", "target": "e0"}   # 07 §2.2: the field strike opens the combat (pull)
+		_rt_open = {"kind": "strike", "target": "e0"}       # 07 §2.2: the field strike opens the combat (pull)
 		_strike_hit(hit, adv, _opener(hit, adv))
 		return
 	for sid: Variant in _walls.keys():                 # 06 §2.7: no group in reach → a Kulissenwand?
@@ -994,20 +992,20 @@ func _check_strike() -> void:
 			knock_wall(str(sid))
 
 
-## Hit confirm: everything freezes for hitstop_sec while the struck group flashes white, then the battle starts.
+## Hit confirm: everything freezes for hitstop_sec while the struck group flashes white, then the combat starts.
 func _strike_hit(hit: EnemyActor, adv: int, opener: String = "") -> void:
 	if hitstop_sec <= 0.0 or not is_inside_tree():
 		_trigger_encounter(hit.group_id(), hit.encounter_id(), adv, opener)
 		return
 	_encounter_pending = true
 	_freeze(true)
-	# The run clock stops with the hit (not only when the Router pushes the battle): an expiring floor timer inside the
-	# hitstop would otherwise queue the game over first and the battle on top of the Sendeschluss screen.
+	# The run clock stops with the hit (not only when the combat starts): an expiring floor timer inside the hitstop
+	# would otherwise queue the game over first and start the combat under the Sendeschluss screen.
 	Game.timer_running = false
 	_set_focus(null)
 	FB.flash_rig(hit.rig, hitstop_sec + 0.05)
 	Sfx.play(&"hit")
-	# process_always = false: the hitstop pauses with the tree (PauseMenu, §9.4) instead of starting the battle under it
+	# process_always = false: the hitstop pauses with the tree (PauseMenu, §9.4) instead of starting the combat under it
 	get_tree().create_timer(hitstop_sec, false).timeout.connect(
 		_after_hitstop.bind(hit.group_id(), hit.encounter_id(), adv, opener))
 
@@ -1015,36 +1013,32 @@ func _strike_hit(hit: EnemyActor, adv: int, opener: String = "") -> void:
 func _after_hitstop(group_id: String, encounter_id: String, advantage: int, opener: String = "") -> void:
 	if is_inside_tree() and not _suspended and Router.busy:
 		# A Router transition is still running (e.g. "Zum Titel" from a pause opened during the hitstop): decide when
-		# it is over. A goto frees this screen meanwhile (the timer callback dies with it) — no battle is pushed on top
-		# of the next screen.
+		# it is over. A goto frees this screen meanwhile (the timer callback dies with it) — no combat starts under the
+		# next screen.
 		get_tree().create_timer(HITSTOP_RETRY_SEC, false).timeout.connect(
 			_after_hitstop.bind(group_id, encounter_id, advantage, opener))
 		return
 	_encounter_pending = false
 	if not _can_start_encounter():
-		# Covered (on_resume restores freeze + timer) or detached: no battle from here.
+		# Covered (on_resume restores freeze + timer) or detached: no combat from here.
 		_freeze(_suspended or is_modal())
 		return
 	_trigger_encounter(group_id, encounter_id, advantage, opener)
 
 
-## Battles start only from the settled, active screen: in the tree, not covered by a pushed screen, the Router's
-## current screen and no transition running (a running/queued goto — game over, title, floor summary — would get the
-## battle pushed on top of the NEXT screen; a fade-in finishes first, contacts simply retry the next frame).
+## Combats start only from the settled, active screen: in the tree, not covered by a pushed screen, the Router's
+## current screen and no transition running (a running/queued goto — game over, title, floor summary — would start the
+## combat under the NEXT screen; a fade-in finishes first, contacts simply retry the next frame).
 func _can_start_encounter() -> bool:
 	return is_inside_tree() and not _suspended and not Router.busy and Router.current == self
 
 
-## Contact ≤ 1.1 m (EnemyActor) or a boss trigger radius.
+## Contact ≤ 1.1 m (EnemyActor) or a boss trigger radius — 07 §2.2: contact starts nothing but the combat of the
+## sleeping tutorial group and of a boss (_rt_contact).
 func on_enemy_contact(actor: EnemyActor) -> void:
 	if not _built or _suspended or is_modal() or _encounter_pending or _player.is_hidden():
 		return
-	if Game.is_realtime():
-		_rt_contact(actor)                  # 07 §2.2: contact starts nothing — only the sleeping tutorial group and bosses
-		return
-	var adv: int = Rules.contact_advantage(actor.state, actor.global_position, actor.flat_forward(),
-		_player.global_position, _player.flat_forward(), actor.is_boss(), actor.can_ambush(), Balance.BACK_DOT)
-	_trigger_encounter(actor.group_id(), actor.encounter_id(), adv, _opener(actor, adv))
+	_rt_contact(actor)
 
 
 ## 06 integration (A × C, round 4): "bark" when the group's PREEMPTIVE comes from Graf Mopsula's bark (DAZED: caught
@@ -1053,46 +1047,22 @@ static func _opener(actor: EnemyActor, adv: int) -> String:
 	return "bark" if adv == Rules.PREEMPTIVE and actor != null and actor.state == Rules.DAZED else ""
 
 
-## Events.encounter_triggered → Router.start_battle(Game.make_battle_setup(encounter_id, advantage, group_id, opener)).
+## Events.encounter_triggered → the real-time combat in this room (07 §2, R2: _rt_trigger).
 func _trigger_encounter(group_id: String, encounter_id: String, advantage: int, opener: String = "") -> void:
 	if _encounter_pending or not _can_start_encounter() or encounter_id == "":
 		return
-	if Game.is_realtime():
-		_rt_trigger(group_id, encounter_id, advantage, opener)   # Echtzeitkampf (07 §2, R2): in the world
-		return
-	_encounter_pending = true
-	_freeze(true)
-	Game.timer_running = false          # at once, not one frame later in Router._do_push
-	_set_focus(null)
-	Events.encounter_triggered.emit(group_id, encounter_id, advantage)
-	_log_event(ExploreEvent.Type.ENCOUNTER, {"group_id": group_id, "encounter_id": encounter_id,
-		"advantage": advantage})
-	if not auto_start_battle:
+	if not Game.has_state():                # a scene that outlives its run (a test frees the state first): no combat
+		_rt_open = {}
 		_cancel_encounter()
 		return
-	var setup: BattleSetup = Game.make_battle_setup(encounter_id, advantage, group_id, opener)
-	if setup == null:
-		push_warning("[Exploration] no BattleSetup for '%s' (BattleBridge not ready?) — battle skipped" % encounter_id)
-		_cancel_encounter()
-		return
-	Router.start_battle(setup)
+	_rt_trigger(group_id, encounter_id, advantage, opener)
 
 
-## Encounter without a battle (tests / missing setup): back to exploring with the after-battle grace.
+## Encounter without a combat (tests: auto_start_combat off; no setup): back to exploring with the after-combat grace.
 func _cancel_encounter() -> void:
 	_encounter_pending = false
 	_freeze(false)
 	Game.timer_running = not _suspended and not is_modal()
-	_player.set_grace(Rules.GRACE_SEC)
-	_return_nearby()
-
-
-func _after_battle(result: BattleResult) -> void:
-	if result != null and result.outcome == BattleResult.Outcome.VICTORY and result.group_id != "":
-		var a: EnemyActor = _actor_at(result.group_id)
-		if a != null and is_instance_valid(a):
-			a.queue_free()
-		_enemies.erase(result.group_id)
 	_player.set_grace(Rules.GRACE_SEC)
 	_return_nearby()
 
@@ -1366,11 +1336,12 @@ func _log_event(t: ExploreEvent.Type, data: Dictionary) -> void:
 # ======================================================================================================================
 # --- Echtzeitkampf (07, R2) ---
 # ======================================================================================================================
-# A run with GameState.combat_mode == &"realtime" fights in the world (07 §2): the triggers of 07 §2.2 (pull = field
-# strike / ability / item on a lead, the sleeping tutorial group also by touch; weapon reach of a chasing lead; 4 s of
-# chase in the same cell; bosses at 5 m with their intro), the encounter command with its "rt" block (07 §10.1),
-# Game.make_rt_setup and the CombatDirector (tick loop, set ring, puppets, telegraphs). CTB runs never enter this
-# section (every hook checks Game.is_realtime() or a running combat), so they stay bit-identical.
+# Every run fights in the world (07 §2; the only combat of the campaign since R5b part 2b): the triggers of 07 §2.2
+# (pull = field strike / ability / item on a lead, the sleeping tutorial group also by touch; weapon reach of a chasing
+# lead; 4 s of chase in the same cell; bosses at 5 m with their intro), the encounter command with its "rt" block
+# (07 §10.1), Game.make_rt_setup and the CombatDirector (tick loop, set ring, puppets, telegraphs). The per-frame hooks,
+# the pull and the combat start ask Game.has_state(): a scene that outlives its run (a test frees the state first)
+# starts nothing.
 
 var _director: CombatDirector = null
 var _rt_cell: Vector2i = NO_CELL          # set cell of the running combat (NO_CELL = none)
@@ -1477,7 +1448,7 @@ func rt_room_doors(cell: Vector2i) -> int:
 ## `kind` = "skill" | "item", `id` = skill / item id. Only a non-boss lead in the player's own cell, never in a safe or
 ## stairs room (E34); the advantage follows the pull table (pull_advantage). false = no pull.
 func pull(group_id: String, kind: String, id: String) -> bool:
-	if not Game.is_realtime() or not _built or _rt_busy() or _encounter_pending or is_modal() or _suspended:
+	if not Game.has_state() or not _built or _rt_busy() or _encounter_pending or is_modal() or _suspended:
 		return false
 	if kind != "skill" and kind != "item":
 		return false
@@ -1515,7 +1486,7 @@ func pull_room_allowed(cell: Vector2i) -> bool:
 ## 25 m; none in a safe or stairs room), nearest first — the order of pull_target_order is the camera's (Tab).
 func pull_candidates() -> PackedStringArray:
 	var out: Array[Dictionary] = []
-	if not Game.is_realtime() or _player == null or _rt_busy():
+	if not Game.has_state() or _player == null or _rt_busy():
 		return PackedStringArray()
 	var cell: Vector2i = get_player_cell()
 	if not pull_room_allowed(cell):
@@ -1569,7 +1540,7 @@ func _rt_contact(actor: EnemyActor) -> void:
 ## AMBUSH when the figure turns its back to it, else NORMAL; a lead chasing for CHASE_COMBAT_SEC_X10 / 10 s in the
 ## player's cell → NORMAL ("Die Kamera hat euch!"; a room change resets the count). Seen alone starts nothing.
 func _rt_triggers(delta: float) -> void:
-	if not Game.is_realtime() or _encounter_pending or is_modal() or _suspended or _player.is_hidden():
+	if not Game.has_state() or _encounter_pending or is_modal() or _suspended or _player.is_hidden():
 		return
 	var pcell: Vector2i = get_player_cell()
 	var prc: RoomCell = _layout.cell_at(pcell)
@@ -1611,7 +1582,7 @@ static func _rt_party_radius_cm(member_id: String) -> int:
 	return int(DB.party_member(member_id).rt.get("radius_cm", dflt))
 
 
-## Units of an encounter in a real-time combat: encounters[].rt.enemies when set, else the CTB list (07 §4.9).
+## Units of an encounter in a real-time combat: encounters[].rt.enemies when set, else its enemies (07 §4.9).
 static func _rt_unit_count(enc: EncounterDef) -> int:
 	if enc == null:
 		return 1
@@ -1733,7 +1704,7 @@ func _rt_trigger(group_id: String, encounter_id: String, advantage: int, opener:
 	Events.encounter_triggered.emit(group_id, encounter_id, advantage)
 	_log_event(ExploreEvent.Type.ENCOUNTER, {"group_id": group_id, "encounter_id": encounter_id,
 		"advantage": advantage})
-	if not auto_start_battle:
+	if not auto_start_combat:
 		_freeze(true)
 		_cancel_encounter()
 		return
@@ -1885,17 +1856,8 @@ func _rt_actor_shown(gid: String, a: EnemyActor) -> bool:
 	return _rt_groups.has(gid) or _rt_waiting.has(gid) or _layout.world_to_cell(a.global_position) == _rt_cell
 
 
-## 07 §9.6 (E26): groups of an encounter with a show_boss block exist only in real-time runs.
-func _rt_spawn_allowed(e: EnemySpawn) -> bool:
-	if Game.is_realtime():
-		return true
-	var enc: EncounterDef = _encounter_def(e.encounter_id)
-	return enc == null or enc.show_boss.is_empty()
-
-
+## 07 §2.4 and §9.6 (E26): the stairs rule of every group; a show-boss group wears its golden frame.
 func _rt_setup_actor(actor: EnemyActor) -> void:
-	if not Game.is_realtime():
-		return
 	actor.blocked_cell = _rt_cell_blocked
 	var enc: EncounterDef = _encounter_def(actor.encounter_id())
 	if enc != null and not enc.show_boss.is_empty():
@@ -1908,10 +1870,10 @@ func _rt_cell_blocked(pos: Vector3) -> bool:
 	return rc != null and rc.kind == RoomCell.Kind.STAIRS
 
 
-## Room entry in a real-time run: the extra rigs of the cell's groups are built invisibly (07 §8.10 rule 5); the first
-## entry into the show boss's zone sends Events.show_boss_spotted (06 §2.6, 07 §9.6).
+## Room entry: the extra rigs of the cell's groups are built invisibly (07 §8.10 rule 5); the first entry into the
+## show boss's zone sends Events.show_boss_spotted (06 §2.6, 07 §9.6).
 func _rt_on_room(cell: Vector2i) -> void:
-	if not Game.is_realtime() or _director == null:
+	if not Game.has_state() or _director == null:
 		return
 	var rc: RoomCell = _layout.cell_at(cell)
 	var extras: PackedStringArray = []
@@ -2095,9 +2057,9 @@ func pull_frame_model() -> Dictionary:
 		"auto": _target_auto, "hint": _pull_hint_on(), "slots": slots}
 
 
-## A person may act now: a real-time run, the settled exploration (no dialog, combat, suspend or transition).
+## A person may act now: a running game, the settled exploration (no dialog, combat, suspend or transition).
 func _pull_input_ok() -> bool:
-	return _built and Game.is_realtime() and not _suspended and not is_modal() and not _encounter_pending \
+	return _built and Game.has_state() and not _suspended and not is_modal() and not _encounter_pending \
 		and not _rt_busy() and not Router.busy and _player != null and _player.input_enabled
 
 
@@ -2120,8 +2082,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
-## One input event of the pull (07 §7.1–§7.3, E36); true when it was used. The CTB legacy run never gets here
-## (_pull_input_ok: real time only), so Tab stays its map key there.
+## One input event of the pull (07 §7.1–§7.3, E36); true when it was used.
 func _pull_input(event: InputEvent) -> bool:
 	if event is InputEventKey:
 		if (event as InputEventKey).echo:
@@ -2165,10 +2126,10 @@ func _pull_input(event: InputEvent) -> bool:
 	return false
 
 
-## Every physics frame of a real-time run outside a combat: the target stays a candidate (else it is dropped; the
-## bark's target once its daze is over) and the HUD gets the frame model (target frame, marker, touch button).
+## Every physics frame of a run outside a combat: the target stays a candidate (else it is dropped; the bark's target
+## once its daze is over) and the HUD gets the frame model (target frame, marker, touch button).
 func _pull_frame() -> void:
-	if not Game.is_realtime():
+	if not Game.has_state():
 		return
 	if _target != "" and (_rt_busy() or not _target_ok()):
 		_set_target("", false)
@@ -2198,7 +2159,7 @@ func _set_target(group_id: String, auto: bool) -> void:
 ## 07 E35: after a bark that dazed a group the nearest dazed lead becomes the target — a lead the person targeted
 ## stays.
 func _target_dazed() -> void:
-	if not Game.is_realtime() or (_target != "" and not _target_auto):
+	if not Game.has_state() or (_target != "" and not _target_auto):
 		return
 	var best: String = ""
 	var best_d: float = INF
@@ -2229,7 +2190,7 @@ func _target_is_tutorial() -> bool:
 	return enc != null and enc.tutorial
 
 
-## The lead enemy of the group's combat units: encounters[].rt.enemies[0], else the CTB lead (07 §4.9).
+## The lead enemy of the group's combat units: encounters[].rt.enemies[0], else the spawn's lead (07 §4.9).
 func _rt_lead_of(a: EnemyActor) -> String:
 	var enc: EncounterDef = _encounter_def(a.encounter_id())
 	var ids: Array = enc.rt.get("enemies", []) as Array if enc != null and not enc.rt.is_empty() else []

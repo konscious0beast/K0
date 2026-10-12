@@ -559,7 +559,7 @@ func _build_hints() -> void:
 	_hints.alignment = BoxContainer.ALIGNMENT_END
 	_frame.add_child(_hints)
 	_hints.add_child(InputGlyph.make(&"sneak", "Schleichen", 16))
-	if Game.is_realtime():                       # 07 §7.1 (E37): Tab / RT targets a group's lead for a pull
+	if Game.has_state():                         # 07 §7.1 (E37): Tab / RT targets a group's lead for a pull
 		var target: Control = InputGlyph.make(&"target_next", "Ziel", 16)
 		target.name = "TargetHint"
 		_hints.add_child(target)
@@ -835,12 +835,12 @@ func _start_demo() -> void:
 
 ## Overlay mode &"combat" hides the whole frame (minimap + "Karte" hint, exploration hints, mini party, prompt, floor
 ## name / timer / quest at the top centre: the top centre belongs to the combat, the stopped clock is ShowOverlay's
-## chip); the touch layer stays (its combat mode). Every exploration applies the input map of its run's combat mode
-## (07 §7.7: real-time runs target with Tab and toggle the autopilot with the D-pad, CTB runs keep their map).
+## chip); the touch layer stays (its combat mode). Every exploration applies the real-time input map (07 §7.7: Tab
+## targets, the D-pad toggles the autopilot) — it restores the map after a screen that set the legacy one (10 §4.6).
 func _rt_ready() -> void:
 	Events.overlay_mode_requested.connect(_on_rt_overlay_mode)
 	CombatInput.apply_for_game()
-	if touch != null and Game.is_realtime():     # 07 §7.3 (E36): a tap targets a lead, free ground clears
+	if touch != null and Game.has_state():       # 07 §7.3 (E36): a tap targets a lead, free ground clears
 		touch.call("set_explore_tap", _on_explore_tap)
 
 

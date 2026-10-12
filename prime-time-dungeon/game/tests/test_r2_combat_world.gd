@@ -146,14 +146,18 @@ func test_no_set_in_the_stairs_room() -> void:
 
 func test_show_boss_groups_spawn() -> void:
 	await make_world()
-	var spawn: EnemySpawn = scene.get_layout().enemies[0]
-	var enc: EncounterDef = Game.floor_def().encounter(spawn.encounter_id)
-	var saved: Dictionary = enc.show_boss
-	enc.show_boss = {"id": "test"}
-	assert_true(bool(scene.call("_rt_spawn_allowed", spawn)), "the show boss spawns (every run fights in real time)")
-	enc.show_boss = {}
-	assert_true(bool(scene.call("_rt_spawn_allowed", spawn)), "groups without show_boss always spawn")
-	enc.show_boss = saved
+	assert_false(scene.has_method("_rt_spawn_allowed"), "ST0: no spawn filter — every run fights in real time")
+	var shown: int = 0
+	for spawn: EnemySpawn in scene.get_layout().enemies:
+		var enc: EncounterDef = Game.floor_def().encounter(spawn.encounter_id)
+		var actor: Node = scene.get_enemy(spawn.id)
+		if enc == null or spawn.id.contains("_s"):
+			continue
+		assert_not_null(actor, "every group spawns: " + spawn.id)
+		if actor != null:
+			assert_eq(bool(actor.get("show_boss")), not enc.show_boss.is_empty(), "the gold frame only on show-boss groups")
+			shown += 1 if bool(actor.get("show_boss")) else 0
+	assert_gt(shown, 0, "floor 1 of seed 4242 has its show boss group (07 §9.6)")
 
 
 func test_mitziehen_up_to_six_units_the_rest_waits_at_the_ring() -> void:

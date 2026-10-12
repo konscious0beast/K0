@@ -288,7 +288,7 @@ func _ensure_exploration() -> void:
 		layout.cells.size() if layout != null else 0), gen1_ms, gen1_ms, 0.0)
 	if gen2_ms >= 0.0:
 		_add_build("Layout Etage 2 (prozedural, Seed 777)", gen2_ms, gen2_ms, 0.0)
-	_explore.auto_start_battle = false
+	_explore.auto_start_combat = false
 
 
 # ======================================================================================================================
@@ -820,7 +820,7 @@ static func leak_combat(ex: ExplorationScene, max_frames: int) -> Dictionary:
 	if tree == null:
 		return {"frames": 0, "error": "no exploration for the combat"}
 	var d: CombatDirector = ex.get_director()
-	ex.auto_start_battle = true
+	ex.auto_start_combat = true
 	var sent: bool = false
 	var n: int = 0
 	while n < max_frames:
@@ -1067,7 +1067,7 @@ func _rt_scenario(sc: String) -> Dictionary:
 	var d: CombatDirector = scene.get_director()
 	d.present_results = false
 	d.auto_tick = true
-	scene.auto_start_battle = true
+	scene.auto_start_combat = true
 	var out: Dictionary = {"name": sc, "label": sc, "acc": _new_acc(), "time": {"frame_avg": 0.0, "frame_max": 0.0,
 		"proc_max": 0.0, "phys_max": 0.0, "dir_avg": 0, "dir_max": 0}, "base": {}, "explore": _new_acc(), "units": 0,
 		"extras": 0, "quads": 0}

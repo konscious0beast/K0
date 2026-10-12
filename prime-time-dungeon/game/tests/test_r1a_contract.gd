@@ -325,7 +325,7 @@ func test_new_fields_are_serialized_only_when_set() -> void:
 		[&"realtime", 40, 4000])
 
 
-func test_hp_scale_is_the_last_step_of_total_stats() -> void:
+func test_hp_scale_before_the_percentages() -> void:
 	var data: GameData = real_data()
 	var st: GameState = GameState.create_new(data, 0, "Kai", 3, &"prime")
 	var kai: PartyMember = st.member("kai")
@@ -334,6 +334,19 @@ func test_hp_scale_is_the_last_step_of_total_stats() -> void:
 	assert_eq(Progression.total_stats(kai, data).values[StatBlock.Stat.HP], base * 4, "07 §3.9.4 HP × 4")
 	kai.hp_scale_pm = 1000
 	assert_eq(Progression.total_stats(kai, data).values[StatBlock.Stat.HP], base, "1000 = CTB, unchanged")
+	# the percentages of talents (and class / species) round on the real-time HP — where the baked data put them
+	var mop: PartyMember = st.member("mopsula")
+	mop.level = 5
+	mop.talents = {"tal_mop_leberwurst": 1}
+	assert_eq(Progression.total_stats(mop, data).values[StatBlock.Stat.HP], 69, "CTB: 66 × 1.05 = 69.3")
+	mop.hp_scale_pm = 4000
+	assert_eq(Progression.total_stats(mop, data).values[StatBlock.Stat.HP], 277, "real time: 264 × 1.05 = 277.2")
+	# fixed field heals in the member's HP units: the bandage's 45 heal 180 in real time
+	kai.hp_scale_pm = 4000
+	kai.hp = 10
+	st.inventory.add("itm_bandage", 1)
+	assert_true(Progression.use_item(st, data, "itm_bandage", "kai"))
+	assert_eq(kai.hp, 190, "45 × 4")
 
 
 func test_validator_constants_of_r1a() -> void:

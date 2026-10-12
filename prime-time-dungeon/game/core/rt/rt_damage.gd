@@ -57,9 +57,8 @@ static func skill_hit(sim: RtSim, src: RtUnit, tgt: RtUnit, sk: SkillDef, kind: 
 		var r: HitResult
 		var enemy_src: bool = src.side == Combatant.Side.ENEMY
 		if sk.damage_type == "fixed":
-			var value: int = FixedMath.mul_pm(view.power, sim.bal.i("FIXED_SCALE_PM"))
-			r = DamageCalc.fixed(tgt, value, element, sim.setup.enemy_dmg_mult) if enemy_src \
-				else DamageCalc.fixed(tgt, value, element)
+			r = DamageCalc.fixed(tgt, view.power, element, sim.setup.enemy_dmg_mult) if enemy_src \
+				else DamageCalc.fixed(tgt, view.power, element)
 		elif enemy_src:
 			r = DamageCalc.compute(src, tgt, view, element, sim.rng(), false, sim.setup.enemy_dmg_mult)
 		else:

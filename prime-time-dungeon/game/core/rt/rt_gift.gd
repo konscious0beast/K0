@@ -58,10 +58,12 @@ static func _sponsor(sim: RtSim, sponsor_id: String, effect_pm: int) -> void:
 				for m: RtUnit in party:
 					if sim.is_alive(m):
 						Damage.heal(sim, null, m, FixedMath.div_round(m.max_hp() * scaled, 100), "", "")
-			"heal_party_flat":
+			"heal_party_flat":                           # the scale before the effect factor (where the data carry it)
+				var flat: int = FixedMath.mul_pm(JsonUtil.to_int(g.get("value", 0)), sim.bal.i("FIXED_SCALE_PM")) \
+					* effect_pm / 1000
 				for m: RtUnit in party:
 					if sim.is_alive(m):
-						Damage.heal(sim, null, m, FixedMath.mul_pm(scaled, sim.bal.i("FIXED_SCALE_PM")), "", "")
+						Damage.heal(sim, null, m, flat, "", "")
 			"mp_party_pct":
 				for m: RtUnit in party:
 					if sim.is_alive(m):

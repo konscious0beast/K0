@@ -536,7 +536,7 @@ static func heal_preview(sim: RtSim, u: RtUnit, t: RtUnit, sk: SkillDef) -> int:
 	var view: SkillDef = sim.view_for(u, sk)
 	match view.heal_mode:
 		"fixed":
-			return FixedMath.mul_pm(view.power, sim.bal.i("FIXED_SCALE_PM"))
+			return view.power
 		"pct":
 			return FixedMath.div_round(t.max_hp() * view.power, 100)
 		"mag":

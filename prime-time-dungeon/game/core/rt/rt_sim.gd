@@ -642,10 +642,19 @@ func item_def(id: String) -> ItemDef:
 
 ## The skill with its real-time power (rt.power overrides power, 07 §3.9.1) for DamageCalc.
 func view(sk: SkillDef) -> SkillDef:
-	if sk == null or int(sk.rt.get("power", sk.power)) == sk.power:
+	if sk == null or rt_power(sk) == sk.power:
 		return sk
 	var v: SkillDef = _views.get(sk.id, null) as SkillDef
-	return v if v != null else _make_view(sk)
+	return v if v != null else _make_view(sk, rt_power(sk))
+
+
+## The real-time power of `sk`: rt.power (else power); a fixed amount (fixed damage, fixed heal) × FIXED_SCALE_PM in
+## the HP units of the real-time combat (07 §3.9.4) — before any skill_pm factor, like the baked data of R5b part 2b.
+func rt_power(sk: SkillDef) -> int:
+	var p: int = int(sk.rt.get("power", sk.power))
+	if sk.damage_type == "fixed" or sk.heal_mode == "fixed":
+		return FixedMath.mul_pm(p, bal.i("FIXED_SCALE_PM"))
+	return p
 
 
 ## Static: may unit u use skill_id at all (bar, FINALE, context variants; enemies: any)?
@@ -1320,8 +1329,7 @@ func view_for(u: RtUnit, sk: SkillDef) -> SkillDef:
 	var key: String = "%s|%s" % [u.id, sk.id]
 	var v: SkillDef = _unit_views.get(key, null) as SkillDef
 	if v == null:
-		v = _make_view(sk)
-		v.power = FixedMath.mul_pm(v.power, pm)
+		v = _make_view(sk, FixedMath.mul_pm(rt_power(sk), pm))
 		_unit_views[key] = v
 	return v
 
@@ -1516,15 +1524,15 @@ func _derive() -> void:
 			skills.append(it.use_skill)
 	for sid: String in skills:
 		var sk: SkillDef = skill_def(sid)
-		if sk != null and not _views.has(sid) and int(sk.rt.get("power", sk.power)) != sk.power:
-			_views[sid] = _make_view(sk)
+		if sk != null and not _views.has(sid) and rt_power(sk) != sk.power:
+			_views[sid] = _make_view(sk, rt_power(sk))
 	for g: Dictionary in setup.groups:
 		var ids: Array = g.get("units", [])
 		if ids.size() > 1:
 			_followers[str(ids[0])] = ids.slice(1)
 
 
-static func _make_view(sk: SkillDef) -> SkillDef:
+static func _make_view(sk: SkillDef, power: int) -> SkillDef:
 	var v: SkillDef = SkillDef.new()
 	v.id = sk.id
 	v.name = sk.name
@@ -1533,7 +1541,7 @@ static func _make_view(sk: SkillDef) -> SkillDef:
 	v.target = sk.target
 	v.damage_type = sk.damage_type
 	v.element = sk.element
-	v.power = int(sk.rt.get("power", sk.power))
+	v.power = power
 	v.heal_mode = sk.heal_mode
 	v.hits = sk.hits
 	v.crit_bonus = sk.crit_bonus

@@ -8,6 +8,10 @@
 #   tools/fullrun.sh [--strategy=thorough|rush|dawdle|typical|all] [--hero=kai|mopsula] [--seed=<int>]
 #                    [--pace=fast|human] [--liga=0|1|2] [--persona=none|canon|random|<org_id>]
 #                    [--rt-profile=typical|perfect|sloppy] [--log-dir=<dir>]
+#   tools/fullrun.sh --season=<ssn id> [--tempo=binge|calendar] [--mode=net|no_net] [--speed=<n>]
+#                    [--sessions=typical|20min|weekend|away2w|none] [--floors=<n>]
+#                    [--strategy=thorough|typical|rush|auto] [--hero=…] [--seed=…] [--pace=…] [--rt-profile=…]
+#                    [--log-dir=…]
 #     thorough (default)  every group, chest, event and room; bosses; stairs → summary → credits
 #     rush                safe rooms, gates and bosses only (under-levelled)
 #     dawdle              idles after the first save until the floor collapses → Sendeschluss → load → finishes
@@ -23,6 +27,15 @@
 #   --rt-profile=…        the person the RtBotPlayer plays each combat as (07 §12.5; default typical) — the campaign
 #                         fights in real time only since R5b part 2b (07 §12.6; the CTB engine lives on in the
 #                         Stempelduell, 10)
+#   --season=<ssn id>     09 ST1-I: a season instead of the campaign — the bot starts it (reproducibly: day 0 fixed,
+#                         the run seed) and plays every floor of the format (ssn_basis: 1–6, the finale on floor 6):
+#                         thorough = vollständig (default), typical = Pflichtweg, rush = bosses only, auto = the
+#                         play profiles' person (Pflichtweg, then the rest while the floor has time). --tempo=binge
+#                         (default; every floor's countdown) or calendar (--sessions: the play profile of
+#                         tests/tools/season_profiles.gd, default typical — logout, absence, login; none = play on;
+#                         --speed: season seconds per game second); --mode=net|no_net; --floors=<n> stops after the
+#                         Etagen-Bilanz of floor n. Prints "FULLRUN: season {json}" (per floor: minutes, levels vs the
+#                         band, bosses, defeats, rescues, credits) and "FULLRUN: OK season=<result> …"
 #
 # Env: GODOT=<path to godot 4.7 binary> (default: "godot" on PATH)
 set -uo pipefail
@@ -39,17 +52,24 @@ PACE_ARG=()
 LIGA_ARG=()
 PERSONA_ARG=()
 PROFILE_ARG=()
+SEASON_ARG=()             # Staffeln (09, ST1-I): --season → --fullrun-season (boot leaves the start to the bot)
+SEASON_OPTS=()
 LOG_DIR=""
 for a in "$@"; do
   case "$a" in
     --strategy=all) STRATEGIES=(thorough rush dawdle); ALL=1 ;;
     --strategy=thorough|--strategy=rush|--strategy=dawdle|--strategy=typical) STRATEGIES=("${a#--strategy=}") ;;
+    --strategy=auto) STRATEGIES=(auto) ;;   # seasons only (season_planner.gd auto_strategy)
     --hero=kai|--hero=mopsula) HERO="${a#--hero=}" ;;
     --seed=*) SEED_ARG=("$a") ;;
     --pace=fast|--pace=human) PACE_ARG=("$a") ;;
     --liga=0|--liga=1|--liga=2) LIGA_ARG=("$a") ;;
     --persona=none|--persona=canon|--persona=random|--persona=org_*) PERSONA_ARG=("$a") ;;
     --rt-profile=typical|--rt-profile=perfect|--rt-profile=sloppy) PROFILE_ARG=("$a") ;;
+    --season=ssn_*) SEASON_ARG=("--fullrun-season=${a#--season=}") ;;
+    --tempo=binge|--tempo=calendar|--mode=net|--mode=no_net) SEASON_OPTS+=("$a") ;;
+    --sessions=typical|--sessions=20min|--sessions=weekend|--sessions=away2w|--sessions=none) SEASON_OPTS+=("$a") ;;
+    --speed=[0-9]*|--floors=[0-9]*) SEASON_OPTS+=("$a") ;;
     --log-dir=*) LOG_DIR="${a#--log-dir=}" ;;
     *) echo "fullrun.sh: unknown argument $a" >&2; exit 2 ;;
   esac
@@ -58,6 +78,21 @@ done
 if ! command -v "$GODOT" >/dev/null 2>&1; then
   echo "fullrun.sh: Godot binary not found (set GODOT=/path/to/godot)" >&2
   exit 2
+fi
+if [ ${#SEASON_ARG[@]} -eq 0 ] && [ ${#SEASON_OPTS[@]} -gt 0 ]; then
+  echo "fullrun.sh: ${SEASON_OPTS[*]} only with --season=<ssn id>" >&2; exit 2
+fi
+if [ ${#SEASON_ARG[@]} -eq 0 ] && [ "${STRATEGIES[0]}" = "auto" ]; then
+  echo "fullrun.sh: --strategy=auto only with --season=<ssn id>" >&2; exit 2
+fi
+WALL_LIMIT=900
+if [ ${#SEASON_ARG[@]} -gt 0 ]; then
+  if [ $ALL -eq 1 ] || [ "${STRATEGIES[0]}" = "dawdle" ] || [ ${#LIGA_ARG[@]} -gt 0 ] || [ ${#PERSONA_ARG[@]} -gt 0 ]; then
+    echo "fullrun.sh: --season plays thorough, typical, rush or auto (no --strategy=all|dawdle, --liga, --persona)" >&2
+    exit 2
+  fi
+  QUIT_AFTER=2500000      # behind the bot's season watchdog (FullRun SEASON_WATCHDOG_FRAMES 2 400 000)
+  WALL_LIMIT=14400
 fi
 
 WORK="$(mktemp -d -t ptd-fullrun-XXXXXX)"
@@ -97,21 +132,28 @@ for run in "${RUNS[@]}"; do
   IFS=: read -r st hero pers <<< "$run"
   PERS=()
   [ -n "$pers" ] && PERS=("$pers")
+  what="Floor 1"
+  [ ${#SEASON_ARG[@]} -gt 0 ] && what="season ${SEASON_ARG[0]#--fullrun-season=} ${SEASON_OPTS[*]:-}"
   echo "== full run: strategy $st hero $hero ${SEED_ARG[*]:-} ${PACE_ARG[*]:-} ${LIGA_ARG[*]:-} ${PERS[*]:-}" \
-    "${PROFILE_ARG[*]:-} (Floor 1, headless, fixed 60 fps) =="
+    "${PROFILE_ARG[*]:-} ($what, headless, fixed 60 fps) =="
   start=$(date +%s)
-  out="$(timeout 900 "$GODOT" --headless --path "$WORK" --fixed-fps 60 --quit-after "$QUIT_AFTER" \
+  out="$(timeout "$WALL_LIMIT" "$GODOT" --headless --path "$WORK" --fixed-fps 60 --quit-after "$QUIT_AFTER" \
         -- --autoplay=full "--strategy=$st" "--hero=$hero" "${SEED_ARG[@]}" "${PACE_ARG[@]}" "${LIGA_ARG[@]}" \
-        "${PERS[@]}" "${PROFILE_ARG[@]}" 2>&1 | filter_noise)"
+        "${PERS[@]}" "${PROFILE_ARG[@]}" "${SEASON_ARG[@]}" "${SEASON_OPTS[@]}" 2>&1 | filter_noise)"
   code=${PIPESTATUS[0]}
   end=$(date +%s)
   log_name="fullrun_$st"
   [ "$hero" != "kai" ] && log_name="fullrun_${st}_$hero"
   [ ${#LIGA_ARG[@]} -gt 0 ] && log_name="${log_name}_liga${LIGA_ARG[0]#--liga=}"
   [ ${#PERS[@]} -gt 0 ] && log_name="${log_name}_persona_${PERS[0]#--persona=}"
+  if [ ${#SEASON_ARG[@]} -gt 0 ]; then
+    log_name="fullrun_${SEASON_ARG[0]#--fullrun-season=}_$st"
+    for o in "${SEASON_OPTS[@]}" "${PACE_ARG[@]}"; do log_name="${log_name}_${o#--*=}"; done
+    [ "$hero" != "kai" ] && log_name="${log_name}_$hero"
+  fi
   if [ -n "$LOG_DIR" ]; then mkdir -p "$LOG_DIR" && printf '%s\n' "$out" > "$LOG_DIR/$log_name.log"; fi
-  echo "$out" | grep -E '^FULLRUN: (\[|stats|OK)|Assertion failed|SCRIPT ERROR|ERROR:' | grep -v '^FULLRUN: \[[0-9]*\]   hype' \
-    | tail -n 120
+  echo "$out" | grep -E '^FULLRUN: (\[|stats|season|OK)|Assertion failed|SCRIPT ERROR|ERROR:' \
+    | grep -v '^FULLRUN: \[[0-9]*\]   hype' | tail -n 160
   echo "wall time: $((end - start)) s"
   ok=1
   if [ "$code" -ne 0 ]; then echo "fullrun.sh: $run exit code $code"; ok=0; fi

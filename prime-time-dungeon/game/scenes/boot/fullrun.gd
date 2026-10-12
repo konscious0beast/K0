@@ -217,6 +217,7 @@ func _ready() -> void:
 		liga = liga_from_args(OS.get_cmdline_user_args())
 		persona = persona_from_args(OS.get_cmdline_user_args())
 		rt_profile = rt_profile_from_args(OS.get_cmdline_user_args())
+		_season_setup(season_from_args(OS.get_cmdline_user_args()))   # Staffeln (09, ST1-I)
 	Events.combat_started.connect(func(_sim: RefCounted) -> void:
 		if not Game.replaying:
 			_rt_result = null
@@ -280,12 +281,15 @@ func _ready() -> void:
 		_main.call_deferred()
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if finished:
 		return
 	frames += 1
-	if frames > WATCHDOG_FRAMES:
-		fail("watchdog (%d frames)" % WATCHDOG_FRAMES)
+	var watchdog: int = WATCHDOG_FRAMES if season_def == "" else SEASON_WATCHDOG_FRAMES   # Staffeln (ST1-I)
+	if frames > watchdog:
+		fail("watchdog (%d frames)" % watchdog)
+	if season_def != "":                           # Staffeln (09, ST1-I): play time, the calendar's clock
+		_season_process(delta)
 
 
 ## --strategy=rush|dawdle → that strategy; anything else → "thorough".
@@ -407,6 +411,9 @@ static func clear_saves() -> void:
 # ======================================================================================================================
 
 func _main() -> void:
+	if season_def != "":                           # Staffeln (09, ST1-I): the floors of a season
+		await _season_main()
+		return
 	phase = "boot_to_title"
 	if not await _wait(func() -> bool: return Router.current is TitleScreen and not Router.busy, BOOT_BUDGET, "title"):
 		return
@@ -1128,6 +1135,8 @@ func _use_interactable(ex: ExplorationScene, it: Node, obj: Dictionary) -> bool:
 			var dlg: Node = ex.active_dialog()
 			if dlg == null:
 				return fail("stairs did not ask for confirmation")
+			if season_def != "":                   # Staffeln (09, ST1-I): per floor, closed stairs, the summary
+				return await _season_stairs(ex, dlg)
 			if not await _hold_and_check_timer("stairs dialog"):
 				return false
 			if not tried.has("stairs"):
@@ -1298,6 +1307,8 @@ func _travel_path(ex: ExplorationScene, layout: FloorLayout, fr: FloorRun, path:
 ## stands still; ends early when the exploration is interrupted (stray, dialog) or the countdown does not run.
 ## No-op with --pace=fast. false = the run failed.
 func human_wait(sec: float) -> bool:
+	if season_def != "":                           # Staffeln (09, ST1-I): play time instead of the countdown
+		return await _season_human_wait(sec)
 	var ex: ExplorationScene = _ex()
 	if pace != "human" or ex == null or Game.state.floor_run == null or not Game.state.floor_run.timer_started:
 		return not finished
@@ -1614,6 +1625,8 @@ func _rt_combat(ex: ExplorationScene) -> bool:
 # ======================================================================================================================
 
 func _safe_room(scene: SafeRoomScene) -> bool:
+	if season_def != "":                           # Staffeln (09, ST1-I): the season's visit
+		return await _season_safe_room(scene)
 	phase = "safe room %s" % scene.safe_room_id
 	await get_tree().process_frame
 	var sid: String = scene.safe_room_id
@@ -2411,3 +2424,723 @@ func _on_credits_changed(_credits: int, delta: int) -> void:
 		credits_by_source[src] = int(credits_by_source.get(src, 0)) + delta
 	elif delta < 0:
 		credits_spent -= delta
+
+
+# ======================================================================================================================
+# Staffeln (09, ST1-I): the full-run bot on the floors of a season
+# ======================================================================================================================
+# tools/fullrun.sh --season=<ssn id> passes --fullrun-season=<id> with --tempo, --mode, --speed, --sessions, --floors:
+# boot leaves the start to the bot (boot's own --season starts at the wall clock), and the bot starts the season through
+# the facade of the title's start (FullRunSeasonUi.start → Game.start_season) at a fixed moment — the first session of
+# the profile (calendar) or SEASON_START_UTC (Am Stück), UTC offset 0, the run seed: a season run is reproducible like a
+# campaign run. It plays every floor of the format: floor 1 (handbuilt, the dress rehearsal) with the campaign's
+# candidates, the generator-v2 floors with season_planner.gd (09 §3.6: the Revier-Boss, its key, the key gate, the
+# stairs; a programme room once the daily programme opened its door; a safe room per quarter), the Recall on floor 3,
+# the class abilities on the bar, the rows of the talent tree, the stairs (Etagen-Bilanz → next floor; closed in the
+# calendar: the bot waits), the finale on the last floor. Am Stück it plays straight through (every floor's countdown);
+# in the calendar it plays the sessions of a profile (tests/tools/season_profiles.gd): the season clock follows the game
+# time (× --speed; one "clock" per SEASON_CLOCK_STEP seconds, a combat's time after it), a session ends with the logout
+# (a safe room within SEASON_LOGOUT_DIST rooms, else the corridor), the absence until the next session is the login's
+# ("Fortsetzen" → "away" → "Während Sie schliefen …"). Strategies thorough, typical, rush and auto (--strategy=auto,
+# seasons only: the play profiles' person — the Pflichtweg, then the rest while the floor has time). Combat strategy for
+# the bands (season_planner.gd): nearest goal first, red groups (5+ levels above the hero) after the Revier-Boss, more
+# than a level below a boss the other groups first, heal before bosses, the best gear, the class abilities on the bar,
+# the first card of every talent row, Mit Netz a boss again after the medics (4 per floor Am Stück, 2 per session).
+# Measured per floor (season_floor_log): play / explore / combat seconds, levels at arrival and departure against the
+# band, bosses (outcome, seconds, levels), defeats, rescues, credits, how the floor was left — "FULLRUN: season {json}"
+# and "FULLRUN: OK season=<result> …". Without --fullrun-season nothing here runs: the campaign run stays bit-identical.
+
+const SeasonUi := preload("res://scenes/boot/fullrun_season_ui.gd")
+const SEASON_PROFILES_PATH: String = "res://tests/tools/season_profiles.gd"
+const SEASON_PLANNER_PATH: String = "res://tests/tools/season_planner.gd"
+const SEASON_DAY0_UTC: int = 1791921600        # day 0 of the bot's seasons: an air time 20:00 UTC (season_core DAY0)
+const SEASON_START_UTC: int = SEASON_DAY0_UTC - 5400   # Am Stück: started 90 min before the first air time
+const SEASON_AIR: String = "20:00"
+const SEASON_WATCHDOG_FRAMES: int = 2400000    # 55 h of game time (calendar runs log out and in for 24 days)
+const SEASON_STRATEGIES: PackedStringArray = ["thorough", "typical", "rush", "auto"]
+const SEASON_SESSIONS: PackedStringArray = ["typical", "20min", "weekend", "away2w", "none"]
+const SEASON_LOGOUT_DIST: int = 4              # session end: a safe room at most this many rooms away → sleep there
+const SEASON_CLOCK_STEP: float = 60.0          # 09 §9.1: one "clock" per 60 s (here: game time)
+const SEASON_SETTLE_BUDGET: int = 3000
+const SEASON_IDLE_FRAMES: int = 600            # one waiting step (Am Stück: until the countdown or a change)
+const SEASON_AFTER_END_SEC: int = 3600         # the last login comes this long after the last collapse
+const SEASON_NO_CELL: Vector2i = Vector2i(-99, -99)
+
+## --fullrun-season=<ssn id> ("" = the campaign run) and its settings: tempo (binge | calendar), mode (net | no_net),
+## speed (calendar: season seconds per second of game time), sessions (calendar: a profile of season_profiles.gd or
+## "none" = play on without logouts), floors (0 = the whole format; n = stop after the Etagen-Bilanz of floor n),
+## strategy ("auto" — the campaign's --strategy does not know it).
+var season_def: String = ""
+var season_tempo: String = "binge"
+var season_mode: String = "net"
+var season_speed: int = 1
+var season_sessions: String = "typical"
+var season_floors: int = 0
+## One record per floor stay (_season_open_floor / _season_close_floor), the logouts and the bot's season result.
+var season_floor_log: Array[Dictionary] = []
+var season_logouts: Array[Dictionary] = []
+var season_stop: String = ""                   # why the run ended: the season's result, "floors", "out"
+
+var _season_ui: RefCounted = null
+var _season_planner: GDScript = null           # tests/tools/season_planner.gd (loaded at run time, like the RtBot)
+var _season_rec: Dictionary = {}
+var _season_plan: Array[Dictionary] = []       # calendar: the sessions of the profile
+var _season_session: int = 0
+var _season_session_play: float = 0.0          # game seconds of the running session
+var _season_session_wall: int = 0              # the person's clock (unix seconds) at the start of the session
+var _season_play: float = 0.0                  # game seconds of the whole run in the season views
+var _season_in_session: bool = false
+var _season_clock_acc: float = 0.0
+var _season_fight_acc: float = 0.0
+var _season_battles_seen: int = 0
+var _season_descended: bool = false
+var _season_logout_due: bool = false
+var _season_shut: bool = false                 # the stairs of this floor were closed ("Kulissen im Aufbau")
+var _season_done: bool = false
+var _season_clocks: int = 0                    # clock commands the bot recorded
+var _season_talents: PackedStringArray = []
+
+
+## The season settings of the user args ({} without --fullrun-season; malformed values keep the defaults).
+static func season_from_args(args: PackedStringArray) -> Dictionary:
+	var out: Dictionary = {}
+	for a: String in args:
+		var kv: PackedStringArray = a.trim_prefix("--").split("=", true, 1)
+		if not a.begins_with("--") or kv.size() != 2 or kv[1] == "":
+			continue
+		match kv[0]:
+			"fullrun-season":
+				out["def"] = kv[1]
+			"tempo":
+				if SeasonState.TEMPOS.has(kv[1]):
+					out["tempo"] = kv[1]
+			"mode":
+				if SeasonState.MODES.has(kv[1]):
+					out["mode"] = kv[1]
+			"sessions":
+				if SEASON_SESSIONS.has(kv[1]):
+					out["sessions"] = kv[1]
+			"speed", "floors":
+				if kv[1].is_valid_int():
+					out[kv[0]] = kv[1].to_int()
+			"strategy":
+				if kv[1] == "auto":
+					out["strategy"] = kv[1]
+	return out if out.has("def") else {}
+
+
+func _season_setup(o: Dictionary) -> void:
+	if o.is_empty():
+		return
+	season_def = str(o["def"])
+	season_tempo = str(o.get("tempo", "binge"))
+	season_mode = str(o.get("mode", "net"))
+	season_speed = clampi(int(o.get("speed", 1)), 1, Game.SEASON_SPEED_MAX)
+	season_sessions = str(o.get("sessions", "typical" if season_tempo == "calendar" else "none"))
+	season_floors = maxi(0, int(o.get("floors", 0)))
+	if str(o.get("strategy", "")) == "auto":
+		strategy = "auto"
+	if not SEASON_STRATEGIES.has(strategy):
+		strategy = "thorough"
+
+
+## Duck-typed helpers for the season screens (FullRunSeasonUi): wait, note.
+func wait_for(cond: Callable, budget: int, what: String) -> bool:
+	return await _wait(cond, budget, what)
+
+
+func note(text: String) -> void:
+	_note(text)
+
+
+# --- the run ----------------------------------------------------------------------------------------------------------
+
+func _season_main() -> void:
+	phase = "boot_to_title"
+	if not await _wait(func() -> bool: return Router.current is TitleScreen and not Router.busy, BOOT_BUDGET, "title"):
+		return
+	var run_seed: int = TitleFlow.boot_seed if TitleFlow.boot_seed >= 0 else RUN_SEED
+	_rt_seed = run_seed
+	if load(RT_BOT_PATH) == null:
+		fail("real-time run without %s (the bot is part of the test tools)" % RT_BOT_PATH)
+		return
+	if not DB.has_id("seasons", season_def):
+		fail("unknown season template %s" % season_def)
+		return
+	var fmt: int = DB.season_def(season_def).format
+	_season_planner = load(SEASON_PLANNER_PATH) as GDScript
+	if _season_planner == null:
+		fail("a season run without %s (the planner is part of the test tools)" % SEASON_PLANNER_PATH)
+		return
+	if season_tempo == "calendar" and season_sessions != "none":
+		var prof: GDScript = load(SEASON_PROFILES_PATH) as GDScript
+		_season_plan.assign(prof.call("sessions", season_sessions, run_seed, fmt))
+	var start_utc: int = SEASON_START_UTC if _season_plan.is_empty() else SEASON_DAY0_UTC + int(_season_plan[0]["start"])
+	phase = "season start"
+	_season_ui = SeasonUi.new(self)
+	var opts: Dictionary = {"tempo": season_tempo, "mode": season_mode, "unlock": true, "seed": run_seed,
+		"now": start_utc, "tz_sec": 0, "air_time": SEASON_AIR, "number": 1}
+	_note("season %s (%d floors), %s, %s, strategy %s, pace %s, sessions %s, speed %d, seed %d, hero %s" % [
+		season_def, fmt, season_tempo, season_mode, strategy, pace, season_sessions, season_speed, run_seed, hero])
+	if not _season_ui.call("start", SAVE_SLOT, season_def, opts, hero):
+		return
+	if not await _wait(func() -> bool: return Router.current is ExplorationScene and not Router.busy, INTRO_BUDGET,
+			"the exploration of floor 1"):
+		return
+	if Game.state.season == null or Game.state.season.day0_utc != SEASON_DAY0_UTC:
+		fail("the season did not start at day 0 = %d" % SEASON_DAY0_UTC)
+		return
+	_note("real-time combat, bot profile %s" % rt_profile)
+	_season_session_wall = start_utc
+	_season_in_session = true
+	while not finished and not _season_done:
+		if not await _season_step():
+			return
+	if finished:
+		return
+	_season_finish()
+
+
+## One step: settle the views, follow the floor, end a session, the next goal.
+func _season_step() -> bool:
+	if not await _season_settle():
+		return false
+	if _season_done:
+		return true
+	_season_track()
+	_season_pensum()
+	if _season_session_over():
+		_season_logout_due = true
+	var obj: Dictionary = _season_objective()
+	phase = "floor %d: %s" % [Game.state.floor_run.index, objective_text(obj)]
+	if not _check_progress(obj):
+		return false
+	if pace == "human" and not ["wait", "logout"].has(str(obj["kind"])):
+		if not await human_wait(HUMAN_DECIDE_SEC):
+			return false
+		if _interrupted(_ex()):
+			return true
+	return await _season_do(obj)
+
+
+## Waits until the season run is calm in the exploration: combats, safe rooms (_season_safe_room), the Etagen-Bilanz,
+## the wake summary after a login, the medics' route and a rescue (a new exploration), the end screens.
+func _season_settle() -> bool:
+	var n: int = 0
+	while not finished and not _season_done:
+		var cur: Node = Router.current
+		_season_count_battles()
+		if not Router.busy and cur != null:
+			if cur is SafeRoomScene:
+				_season_track()
+				if not await _season_safe_room(cur as SafeRoomScene):
+					return false
+				n = 0
+				continue
+			if cur is FloorSummary:
+				if not await _season_floor_summary(cur as FloorSummary):
+					return false
+				n = 0
+				continue
+			if cur.scene_file_path == Router.SCENE_CREDITS or cur.scene_file_path == Router.SCENE_GAME_OVER:
+				return await _season_end_screen(cur)
+			if bool(_season_ui.call("is_wake_summary", cur)):
+				if not await _season_ui.call("wake", cur):
+					return false
+				_season_in_session = true
+				n = 0
+				continue
+			if cur is ExplorationScene:
+				var ex: ExplorationScene = cur as ExplorationScene
+				if _rt_arm(ex):
+					if not await _rt_combat(ex):
+						return false
+					n = 0
+					continue
+				if ex.active_dialog() != null and not ex.is_revealing():
+					ex.active_dialog().cancel()             # a dialog the bot did not open: close it
+				elif not ex.is_encounter_pending() and not ex.is_modal():
+					return true
+			else:
+				return fail("unexpected screen %s in the season run" % _screen_name(cur))
+		n += 1
+		if n > SEASON_SETTLE_BUDGET:
+			return fail("the season run did not settle within %d frames (%s)" % [SEASON_SETTLE_BUDGET, state_text()])
+		await get_tree().process_frame
+	return not finished
+
+
+# --- the planner ------------------------------------------------------------------------------------------------------
+
+## The next goal on a season floor: the logout of a finished session (the nearest safe room within SEASON_LOGOUT_DIST,
+## else here), the tutorial (floor 1), a heal trip, then the planner's goal (season_planner.gd goal — the same rules as
+## the headless harness: the strategy's candidates, level up before a boss, the Revier-Boss, the red groups, the
+## Etagenboss, the stairs, else "wait"); a boss with the party below 90 % HP / 70 % MP → a safe room first; closed
+## stairs ("Kulissen im Aufbau") are walked to once per floor (the dialog says so), then waited for.
+func _season_objective() -> Dictionary:
+	var ex: ExplorationScene = _ex()
+	var layout: FloorLayout = ex.get_layout()
+	var fr: FloorRun = Game.state.floor_run
+	var here: Vector2i = ex.get_player_cell()
+	var dist: Dictionary = layout.distances(here, fr.opened_gates, false, _boss_blocks(layout, fr, SEASON_NO_CELL))
+	_use_heal_items()
+	equip_best()
+	if _season_logout_due:
+		var sr: Dictionary = _nearest_safe(layout, dist)
+		if not sr.is_empty() and int(dist.get(sr["cell"], 99)) <= SEASON_LOGOUT_DIST:
+			sr["why"] = "logout"
+			return sr
+		return {"kind": "logout", "id": "", "cell": here, "why": "corridor"}
+	if fr.index == 1 and fr.defeated_groups.is_empty() and layout.enemy_by_id("f1_g0") != null:
+		return {"kind": "group", "id": "f1_g0", "cell": layout.enemy_by_id("f1_g0").cell, "why": "tutorial"}
+	if party_ratio("hp") < SAFE_ROOM_BELOW and _heal_trips < 2:
+		var heal: Dictionary = _nearest_safe(layout, dist)
+		if not heal.is_empty() and int(dist.get(heal["cell"], 99)) <= SAFE_ROOM_MAX_DIST:
+			_heal_trips += 1
+			heal["why"] = "heal"
+			return heal
+	var tries: Dictionary = {"qb": _season_tries("qb"), "fb": _season_tries("fb"),
+		"fb_floor": (_season_rec.get("fb", []) as Array).size()}
+	var g: Dictionary = {}
+	if fr.index == 1 and layout.programme.is_empty():
+		var best: Dictionary = _season_floor_one(layout, fr, dist)
+		g = best if not best.is_empty() else _season_planner.call("goal", Game.state, DB.data, layout, here,
+			strategy, tried, tries)
+	else:
+		g = _season_planner.call("goal", Game.state, DB.data, layout, here, strategy, tried, tries)
+	if str(g["kind"]) == "boss" and bool(g.get("heal", false)) and _heal_trips < 2:
+		var sr2: Dictionary = _nearest_safe(layout, dist)
+		if not sr2.is_empty():
+			_heal_trips += 1
+			sr2["why"] = "heal before " + str(g["id"])
+			return sr2
+	var closed: String = str(_season_planner.get_script_constant_map().get("CLOSED", "?"))
+	if str(g["kind"]) == "wait" and str(g["why"]).begins_with(closed) and not _season_shut:
+		return {"kind": "stairs", "id": "stairs", "cell": layout.stairs, "why": "closed?"}
+	return g
+
+
+## Floor 1 (handbuilt, no quarters): the campaign's candidates (strays, E1 secrets; `auto` → the planner's
+## auto_strategy); {} when none is left (then the planner's bosses and stairs).
+func _season_floor_one(layout: FloorLayout, fr: FloorRun, dist: Dictionary) -> Dictionary:
+	var keep: String = strategy
+	if strategy == "auto":
+		strategy = str(_season_planner.call("auto_strategy", Game.state))
+	var best: Dictionary = _season_planner.call("nearest", candidates(layout, fr, dist), dist)
+	strategy = keep
+	return best
+
+
+## Boss attempts of this floor stay since the last login (kind "qb" | "fb").
+func _season_tries(kind: String) -> int:
+	var n: int = 0
+	for b: Dictionary in (_season_rec.get(kind, []) as Array):
+		if int(b.get("session", -1)) == _season_session:
+			n += 1
+	return n
+
+
+func _season_do(obj: Dictionary) -> bool:
+	match str(obj["kind"]):
+		"wait":
+			return await _season_wait(str(obj["why"]))
+		"logout":
+			return await _season_logout(null)
+	return await _do(obj)
+
+
+## Nothing to do now (closed stairs, a boss lost too often, the finale floor done): with sessions the session ends (the
+## logout); Am Stück and without sessions the bot stands still for SEASON_IDLE_FRAMES (the countdown or the clock
+## brings the collapse, the next floor opens, the next programme point comes).
+func _season_wait(why: String) -> bool:
+	if season_tempo == "calendar" and not _season_plan.is_empty():
+		_note("nothing to do on floor %d (%s): the session ends" % [Game.state.floor_run.index, why])
+		_season_logout_due = true
+		return true
+	var ex: ExplorationScene = _ex()
+	var fr: FloorRun = Game.state.floor_run
+	UiUtil.release_move_actions()
+	var n: int = 0
+	while not finished and n < SEASON_IDLE_FRAMES and not _interrupted(ex) and Game.state.floor_run == fr:
+		n += 1
+		await get_tree().process_frame
+	_last_sig = ""                                  # waiting is progress (the clock moved)
+	return not finished
+
+
+# --- floors -----------------------------------------------------------------------------------------------------------
+
+## Follows the candidate's floor: a new floor (stairs or rescue) closes the record of the old one and opens one; a load
+## (login) keeps the record and takes the loaded floor run.
+func _season_track() -> void:
+	var fr: FloorRun = Game.state.floor_run if Game.state != null else null
+	if fr == null:
+		return
+	if not _season_rec.is_empty() and int(_season_rec["floor"]) == fr.index:
+		_season_rec["fr"] = fr
+		return
+	if not _season_rec.is_empty():
+		_season_close_floor("stairs" if _season_descended else "rescue")
+	_season_descended = false
+	_season_open_floor()
+
+
+func _season_open_floor() -> void:
+	var fr: FloorRun = Game.state.floor_run
+	var band: Vector2i = LevelBand.band(DB.data, fr.index)
+	_season_rec = {"floor": fr.index, "fr": fr, "arrive_play": _season_play, "arrive_day": _season_day(),
+		"level_in": _levels(), "band": [band.x, band.y], "combats": 0, "combat_sec": 0.0, "defeats": 0, "qb": [],
+		"fb": [], "lost": [], "credits_in": Game.state.inventory.credits, "credits_won": credits_earned,
+		"safe_visits": 0, "deaths_in": Game.state.season.deaths, "rescues_in": Game.state.season.rescues}
+	tried.clear()
+	_heal_trips = 0
+	_last_sig = ""
+	_same_sig = 0
+	_season_shut = false
+	var def: FloorDef = Game.floor_def()
+	_note("floor %d (%s): band %d–%d, level %s, day %.2f" % [fr.index, def.name if def != null else "?", band.x,
+		band.y, str(_levels()), _season_day()])
+	if fr.index > 1 and def != null and def.has_zones():
+		var layout: FloorLayout = DungeonGenerator.generate(def, fr.seed)
+		var open: int = 0
+		for p: Dictionary in layout.programme:
+			open += 1 if fr.opened_gates.has(str(p["key"])) else 0
+		if open != mini(Game.state.season.points(fr.index), layout.programme.size()):
+			fail("floor %d: %d programme doors open, %d programme points" % [fr.index, open,
+				Game.state.season.points(fr.index)])
+
+
+func _season_close_floor(how: String) -> void:
+	if _season_rec.is_empty():
+		return
+	var fr: FloorRun = _season_rec["fr"]
+	var r: Dictionary = _season_rec.duplicate(true)
+	r.erase("fr")
+	r["how"] = how
+	r["explore_sec"] = int(fr.stats.get("time_used_ticks", 0)) / FloorRun.TICKS_PER_SEC
+	r["play_sec"] = roundi(_season_play - float(r["arrive_play"]))
+	r["combat_sec"] = roundi(float(r["combat_sec"]))
+	r["level_out"] = _levels()
+	r["leave_day"] = _season_day()
+	r["credits_out"] = Game.state.inventory.credits
+	r["credits_won"] = credits_earned - int(r["credits_won"])
+	r["groups"] = fr.defeated_groups.size()
+	r["chests"] = fr.opened_chests.size()
+	r["events"] = fr.completed_events.size()
+	r["rooms"] = fr.visited.size()
+	r["safe_rooms"] = fr.visited_safe_rooms.size()
+	r["programme"] = fr.daily.size()
+	r["deaths"] = Game.state.season.deaths - int(r["deaths_in"])
+	r["rescued"] = how == "rescue"
+	r.erase("deaths_in")
+	r.erase("rescues_in")
+	season_floor_log.append(r)
+	_season_rec = {}
+	_note("floor %d left (%s): %d s play, %d s explored, %d combats (%d s), level %s → %s, band %s" % [int(r["floor"]),
+		how, int(r["play_sec"]), int(r["explore_sec"]), int(r["combats"]), int(r["combat_sec"]), str(r["level_in"]),
+		str(r["level_out"]), str(r["band"])])
+
+
+## The Pensum marks of the floor stay (season_planner.gd pensum): play seconds since the arrival when the Pflichtweg
+## ("pflicht_sec") and vollständig ("full_sec") were done.
+func _season_pensum() -> void:
+	var ex: ExplorationScene = _ex()
+	if _season_rec.is_empty() or ex == null or (_season_rec.has("pflicht_sec") and _season_rec.has("full_sec")):
+		return
+	var pm: Dictionary = _season_planner.call("pensum", Game.state, DB.data, ex.get_layout(), ex.get_player_cell(),
+		tried, (_season_rec["fb"] as Array).size())
+	for k: String in ["pflicht", "full"]:
+		if bool(pm[k]) and not _season_rec.has(k + "_sec"):
+			_season_rec[k + "_sec"] = roundi(_season_play - float(_season_rec["arrive_play"]))
+
+
+## Days since day 0 in season time (the cast's clock: without the Sendepause).
+func _season_day() -> float:
+	return float(CastSim.now(Game.state)) / float(SeasonClock.DAY_SEC) if Game.state != null else 0.0
+
+
+## The combats since the last look go into the floor's record (count, seconds, defeats, the bosses with outcome).
+func _season_count_battles() -> void:
+	while _season_battles_seen < battles.size():
+		var b: Dictionary = battles[_season_battles_seen]
+		_season_battles_seen += 1
+		if _season_rec.is_empty():
+			continue
+		_season_rec["combats"] = int(_season_rec["combats"]) + 1
+		_season_rec["combat_sec"] = float(_season_rec["combat_sec"]) + float(b["sec"])
+		if str(b["outcome"]) == "defeat":
+			_season_rec["defeats"] = int(_season_rec["defeats"]) + 1
+			if not bool(b["boss"]) and str(b["group"]) != "":   # season_planner.gd GROUP_TRIES
+				tried["lost:" + str(b["group"])] = int(tried.get("lost:" + str(b["group"]), 0)) + 1
+				(_season_rec["lost"] as Array).append(str(b["enc"]))
+		var def: FloorDef = DB.floor_def(int(_season_rec["floor"]))
+		if bool(b["boss"]) and def != null:
+			var kind: String = "qb" if str(b["enc"]) == def.quarter_boss else "fb"
+			(_season_rec[kind] as Array).append({"outcome": str(b["outcome"]), "sec": b["sec"], "level": b["level"],
+				"session": _season_session})
+			if kind == "qb" and str(b["outcome"]) == "victory" and def.has_zones() \
+					and not Game.state.inventory.has(ZoneGenerator.key_item(def)):
+				fail("floor %d: the Revier-Boss fell without dropping %s" % [def.index, ZoneGenerator.key_item(def)])
+
+
+# --- the season's screens --------------------------------------------------------------------------------------------
+
+## A safe-room visit in a season: the replay check, the Mopsula scenes, lootboxes, the Recall (floor 3), the rows of the
+## talent tree, the class abilities on the bar, gear and the vending machine — no "Speichern" (a season saves by
+## itself); a finished session logs out here (rested); then back into the exploration.
+func _season_safe_room(scene: SafeRoomScene) -> bool:
+	phase = "safe room %s" % scene.safe_room_id
+	await get_tree().process_frame
+	var fr: FloorRun = Game.state.floor_run
+	_note("safe room %s (visit %d, floor %d)" % [scene.safe_room_id, fr.safe_room_visits, fr.index])
+	if not _season_rec.is_empty():
+		_season_rec["safe_visits"] = int(_season_rec["safe_visits"]) + 1
+	if not _replay_check():
+		return false
+	var guard: int = 0
+	while scene.pending_scene != null and guard < 4:
+		guard += 1
+		var played: int = scene.played_scenes.size()
+		var scene_id: String = scene.pending_scene.id
+		scene.activate("mopsula")
+		if not await _wait(func() -> bool: return scene.played_scenes.size() > played, SAFE_BUDGET,
+				"Mopsula scene %s" % scene_id):
+			return false
+		_note("Mopsula scene %s" % scene_id)
+	if not Game.state.pending_lootboxes.is_empty():
+		if not await _open_lootboxes(scene):
+			return false
+	if fr.index >= 3 and Game.state.member("kai") != null and Game.state.member("kai").class_id == "":
+		if not _season_ui.call("recall"):
+			return false
+		if not SeasonRules.unlocks_no_net(Game.state):
+			return fail("the Recall does not unlock Ohne Netz (09 V-7)")
+	var picks: PackedStringArray = await _season_ui.call("talent_rows", scene)
+	if finished:
+		return false
+	_season_talents.append_array(picks)
+	for p: String in picks:
+		_note("talent row: %s" % p)
+	_season_ui.call("loadout")
+	equip_best()
+	if not await _shop(scene):
+		return false
+	equip_best()
+	if _season_logout_due:
+		return await _season_logout(scene)
+	scene.activate("leave")
+	return await _wait(func() -> bool: return Router.current is ExplorationScene and not Router.busy, 300,
+		"exploration after leaving %s" % scene.safe_room_id)
+
+
+## The stairs dialog of a season floor (_use_interactable): "Noch nicht" once per floor (the floor stays, the floor
+## time goes on), then "Abstieg" — or, closed in the calendar ("Kulissen im Aufbau", 09 §2.6), "Noch nicht" and wait.
+func _season_stairs(ex: ExplorationScene, dlg: Node) -> bool:
+	var fr: FloorRun = Game.state.floor_run
+	if not await _hold_and_check_timer("stairs dialog"):
+		return false
+	if not tried.has("stairs"):
+		tried["stairs"] = true
+		dlg.call("choose", "stay")
+		if not await _wait(func() -> bool: return not ex.is_modal(), 60, "stairs dialog closed"):
+			return false
+		if Router.current != ex or Game.state.floor_run != fr:
+			return fail("\"Noch nicht\" at the stairs left floor %d" % fr.index)
+		_note("stairs: \"Noch nicht\" keeps the party on floor %d" % fr.index)
+		return true
+	if str(_season_ui.call("stairs", dlg)) == "closed":
+		_season_shut = true
+		if not await _wait(func() -> bool: return not ex.is_modal(), 60, "stairs dialog closed"):
+			return false
+		_note("stairs of floor %d closed: Kulissen im Aufbau (opens in %d s)" % [fr.index,
+			SeasonRules.opens_in(Game.state, fr.index + 1)])
+		return true
+	_note("stairs: descend from floor %d" % fr.index)
+	_season_descended = true
+	return true
+
+
+## The Etagen-Bilanz: checked against the floor run (the stairs only — a rescue has none), recorded; "Weiter" (the
+## next floor; with --floors the run stops after floor n).
+func _season_floor_summary(fs: FloorSummary) -> bool:
+	phase = "floor summary"
+	var s: Dictionary = fs.summary
+	if not _season_descended:
+		return fail("an Etagen-Bilanz without the stairs: %s" % JSON.stringify(s))
+	if not _season_rec.is_empty():
+		_season_rec["summary"] = {"time_used_sec": int(s.get("time_used_sec", 0)), "kills": int(s.get("kills", 0)),
+			"credits": int(s.get("credits", 0))}
+	_note("floor summary %s" % JSON.stringify(s))
+	if not _replay_check():
+		return false
+	if season_floors > 0 and Game.state.floor_run.index >= season_floors:
+		_season_close_floor("stairs")
+		season_stop = "floors"
+		_season_done = true
+		return true
+	_season_ui.call("floor_summary", fs)
+	return await _wait(func() -> bool: return Router.current != fs and not Router.busy, 600,
+		"the next floor after the Etagen-Bilanz")
+
+
+## The end of the candidate's season (the Abspann after the finale or the last collapse; the Sendeschluss Ohne Netz):
+## the last floor's record, the replay check, the end screen.
+func _season_end_screen(cur: Node) -> bool:
+	phase = "season end"
+	var s: SeasonState = Game.state.season
+	if s.result == "":
+		return fail("an end screen (%s) while the season goes on" % _screen_name(cur))
+	season_stop = s.result
+	var how: String = {"finalist": "finale", "end": "end", "fallen": "out", "buried": "out"}.get(s.result, s.result)
+	_season_close_floor(how)
+	_note("season over: %s on floor %d (Quote %d, Weste %s)" % [s.result, s.result_floor, SeasonRules.quote(
+		Game.state), str(s.vest)])
+	if not _replay_check():
+		return false
+	_season_done = true
+	return await _season_ui.call("end_screen", cur)
+
+
+# --- calendar: the clock, sessions, logout and login ------------------------------------------------------------------
+
+## FullRun._process in a season run: play time (the season views of a session, never while paused) and in the calendar
+## the season clock — one "clock" per SEASON_CLOCK_STEP game seconds (× speed), a combat's time right after it.
+func _season_process(delta: float) -> void:
+	if not _season_in_session or get_tree().paused or Game.state == null or Game.state.season == null:
+		return
+	_season_play += delta
+	_season_session_play += delta
+	if season_tempo != "calendar" or Game.state.season.asleep or Game.state.season.result != "":
+		return
+	if Game.combat != null or Game.in_battle:
+		_season_fight_acc += delta
+		return
+	_season_clock_acc += delta
+	if not (Game.timer_running or Game.safe_room_clock):
+		return
+	if _season_clock_acc + _season_fight_acc < SEASON_CLOCK_STEP and _season_fight_acc <= 0.0:
+		return
+	var sec: int = floori(_season_clock_acc + _season_fight_acc)
+	if sec < 1:
+		return
+	if Game.season_clock(sec * season_speed):
+		_season_clocks += 1
+		_season_clock_acc -= float(sec) - _season_fight_acc
+		_season_fight_acc = 0.0
+
+
+## The session of the profile is played (calendar with sessions).
+func _season_session_over() -> bool:
+	return season_tempo == "calendar" and not _season_plan.is_empty() and _season_session < _season_plan.size() \
+		and _season_session_play >= float(_season_plan[_season_session]["sec"])
+
+
+## The logout of a finished session (in `scene` — a safe room, rested — or where the figure stands, Vorsichtig), the
+## absence until the next session of the profile (after the last one: until after the last collapse), the login.
+func _season_logout(scene: SafeRoomScene) -> bool:
+	phase = "logout"
+	var fr: FloorRun = Game.state.floor_run
+	var rec: Dictionary = {"session": _season_session, "floor": fr.index, "day": snappedf(_season_day(), 0.01),
+		"safe": scene != null, "play_min": snappedf(_season_session_play / 60.0, 0.1), "level": _levels()}
+	_note("logout after %.1f min of session %d on floor %d (%s)" % [_season_session_play / 60.0, _season_session,
+		fr.index, "safe room" if scene != null else "corridor"])
+	var ok: bool = await _season_ui.call("logout_safe_room", scene) if scene != null \
+		else await _season_ui.call("logout_exploration", _ex(), "careful")
+	if not ok:
+		return false
+	_season_in_session = false
+	_season_logout_due = false
+	if not _season_rec.is_empty():
+		_season_rec["sleeps"] = int(_season_rec.get("sleeps", 0)) + 1
+	var wall: int = _season_session_wall + roundi(_season_session_play)
+	_season_session += 1
+	var next: int = SEASON_DAY0_UTC + SeasonClock.format_days(Game.state.season.format) * SeasonClock.DAY_SEC \
+		+ SEASON_AFTER_END_SEC
+	if _season_session < _season_plan.size():
+		next = SEASON_DAY0_UTC + int(_season_plan[_season_session]["start"])
+	var absence: int = maxi(SeasonClock.COMBAT_GRACE_SEC, next - wall)
+	rec["absence"] = absence
+	season_logouts.append(rec)
+	_season_session_wall = wall + absence
+	_season_session_play = 0.0
+	_season_clock_acc = 0.0
+	_season_fight_acc = 0.0
+	phase = "login"
+	if not await _season_ui.call("login", absence):
+		return false
+	var logins: Array = _season_ui.get("logins")
+	var away: int = int((logins.back() as Dictionary).get("away", -1)) if not logins.is_empty() else -1
+	if away != absence and not bool((logins.back() as Dictionary).get("question", false)):
+		_note("the login booked away %d s for an absence of %d s (wall clock second)" % [away, absence])
+	return true
+
+
+## The end of a season run: the report and the OK line (quit 0).
+func _season_finish() -> void:
+	if finished:
+		return
+	var s: SeasonState = Game.state.season if Game.state != null else null
+	if s == null:
+		fail("no season at the end of the run")
+		return
+	if season_stop != "floors" and s.mode == "net" and (s.result == "fallen" or s.result == "buried"):
+		fail("Mit Netz the season ended with %s" % s.result)
+		return
+	var floors_seen: PackedInt32Array = []
+	for r: Dictionary in season_floor_log:
+		floors_seen.append(int(r["floor"]))
+	for i in floors_seen.size():
+		if floors_seen[i] != i + 1:
+			fail("the floor records skip a floor: %s" % str(floors_seen))
+			return
+	finished = true
+	result_code = 0
+	result_line = "FULLRUN: OK season=%s floor=%d battles=%d level=%s deaths=%d rescues=%d frames=%d" % [
+		season_stop, floors_seen[floors_seen.size() - 1] if not floors_seen.is_empty() else 0, battles.size(),
+		"/".join(PackedStringArray(_levels().map(func(x: int) -> String: return str(x)))), s.deaths, s.rescues, frames]
+	UiUtil.release_move_actions()
+	if not dry_run:
+		print("FULLRUN: season ", JSON.stringify(season_report()))
+		print(result_line)
+		clear_saves()
+		get_tree().quit(0)
+
+
+## The numbers of a season run (09 §11.6; the harness compares them, tools/season_harness.sh).
+func season_report() -> Dictionary:
+	var s: SeasonState = Game.state.season if Game.state != null else null
+	var census: Dictionary = CastSim.census(Game.state, DB.data) if s != null else {}
+	return {"def": season_def, "tempo": season_tempo, "mode": season_mode, "strategy": strategy, "pace": pace,
+		"sessions": season_sessions, "speed": season_speed, "seed": _rt_seed, "hero": hero, "rt_profile": rt_profile,
+		"stop": season_stop, "result": s.result if s != null else "", "result_floor": s.result_floor if s != null else 0,
+		"vest": s.vest if s != null else false, "deaths": s.deaths if s != null else 0,
+		"rescues": s.rescues if s != null else 0, "quote": SeasonRules.quote(Game.state) if s != null else 0,
+		"stairs": s.stairs if s != null else 0, "level_end": _levels(), "play_min": snappedf(_season_play / 60.0, 0.1),
+		"battles": battles.size(), "credits_earned": credits_earned, "credits_spent": credits_spent,
+		"credits_end": Game.state.inventory.credits if Game.state != null else 0, "clocks": _season_clocks,
+		"floors": season_floor_log, "logouts": season_logouts, "logins": _season_ui.get("logins"),
+		"talents": _season_talents, "teleports": teleports, "direct_interactions": direct_interactions,
+		"forced_encounters": forced_encounters, "replay_checks": replay_checks, "hints_read": hints_read,
+		"cast": {"vest": int(census.get("vest", 0)), "in": int(census.get("in", 0)),
+			"finalists": int(census.get("finalists", 0)), "ai": int(census.get("ai", 0))}, "frames": frames}
+
+
+## --pace=human in a season: lets `sec` seconds of play time (+ the reading time of M.O.D. lines said meanwhile) pass
+## while the figure stands still — the season's play time in both tempos (the calendar has no running countdown).
+func _season_human_wait(sec: float) -> bool:
+	var ex: ExplorationScene = _ex()
+	if pace != "human" or ex == null:
+		return not finished
+	var until: float = _season_play + sec + _read_backlog
+	_read_backlog = 0.0
+	var start: float = _season_play
+	var budget: int = roundi((sec + 60.0) * 60.0 / TIME_SCALE)
+	UiUtil.release_move_actions()
+	var n: int = 0
+	while not finished and _season_play < until and n < budget:
+		if _interrupted(ex):
+			break
+		n += 1
+		await get_tree().process_frame
+	human_wait_sec += _season_play - start
+	return not finished

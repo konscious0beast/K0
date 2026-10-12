@@ -40,6 +40,12 @@
 > Tagesprogramm, Quote, Titel, Dauerspeicherstand mit Journal. Staffeln starten nur in Debug-Builds (`--season`, README §6);
 > ohne Staffel bleibt jeder Lauf bitgleich (kein `SIM_VERSION`-Sprung, Golden-Werte in `test_09_replay`).
 >
+> **Stand ST1-A (2026-10-12, Branch `ptd/st1a`):** Begriffe und Vertrag 4 sind umgesetzt (Kap. 11.3 „Stand ST1-A“, 02_TECH
+> §0.8 „Stand Vertrag 4“): Jeder Text, den Spieler:innen lesen, sagt „Etage“, „Stufe“ und „Kandidat:in“
+> (`test_09_terms`; offen nur das Kampf-HUD, CR-32 i); `floors.json`, `talents.json`, `classes.json` und `party.json` tragen
+> die Staffel-Felder als optionale Schema-Haken (CR-27, CR-32 a/b), `SaveCodec` erlaubt in Staffeln Stufe 50. Ohne Staffel
+> bleibt jeder Lauf bitgleich.
+>
 > **Namen der Phasen:** Der Orchestrator nennt sie S1–S3. Weil „S0–S5“ schon die SHOWRUN-Stufen (05) und „S0–S3“ die
 > KI-Stufen (06 §5.12) sind, heißen sie hier **ST1–ST3** (Staffel-Phasen) — gleicher Inhalt, keine Verwechslung.
 >
@@ -258,10 +264,12 @@ Werbung mit „18 Etagen“.
    Casting.
 5. Bezeichner im Code bleiben englisch (`level`, `LEVEL_CAP`, `floor_index`); die Regel gilt für alles, was Spieler:innen
    lesen.
-6. **Lint-Test** `test_09_terms`: durchsucht `data/*.json` (`name`, `desc`, `text`) und Stringliterale in `scenes/**/*.gd`
-   nach `\bLevel\b`, `\bLv\b`, `\bLV\b`, `\bEbene\b`, `\bCrawler\b` (Wortgrenzen, Groß-/Kleinschreibung beachtet — Schlüssel
-   wie `"level"` und Platzhalter wie `{level}` bleiben erlaubt) und schlägt fehl — Ausnahmen nur per Kommentar
-   `# terms-ok: <Grund>` (z. B. Debug-Overlay).
+6. **Lint-Test** `test_09_terms`: durchsucht jeden String in `data/**/*.json` (auch `data/stempel/` und die M.O.D.-Zeilen),
+   die Stringliterale aller Skripte in `scenes/`, `art/`, `autoload/` und `core/` (Kommentare nicht) und die Textfelder der
+   Szenen-Dateien nach `\bLevel\b`, `\bLv\b`, `\bLV\b`, `\bLvl\b`, `\bEbene\b`, `\bCrawler\b` samt Plural- und
+   Großschreibformen (Wortgrenzen, Groß-/Kleinschreibung beachtet — Schlüssel wie `"level"` und Platzhalter wie `{level}`
+   bleiben erlaubt) und schlägt fehl — Ausnahmen nur per Kommentar `# terms-ok: <Grund>` (z. B. Debug-Overlay). Dateien mit
+   offenem Änderungsantrag stehen mit ihrer genauen Fundzahl in der Liste `PENDING` (seit ST1-A nur das Kampf-HUD, CR-32 i).
 
 **Fundstellen heute** (Stand `dff0345`; Umsetzung in ST1-A, Dateieigentum Kap. 11.4): `test_09_terms` findet die „Level“- und
 „Lv“-Stellen selbst, deshalb keine Zeilenliste mehr. Betroffen sind `party_menu.gd` (`"Lv %d"`, „Casting ab Etage 3“, „noch
@@ -269,6 +277,13 @@ keine (ab Level 3)“), `talent_show.gd`, `skills_menu.gd`, `exploration_hud.gd`
 `bets_menu.gd` („Stufe 1 … Stufe 2 (Duo-Liga)“ → „Liga 1 … Duo-Liga“), `battle_results.gd` (CTB, entfällt mit 07 R5b),
 `achievements.json:216`, `mod_lines.json:996` und `:1588`, `README.md:51`, dazu `00_BRIEF` (CR-25) sowie GDD, 06 und 02_TECH
 (CR-26, CR-27, CR-31). Ersatz: `"Lv %d"` → Stufen-Plakette mit Tooltip `"Stufe %d"`, sonst „Level“ → „Stufe“.
+
+**Stand ST1-A (2026-10-12) — umgesetzt:** Stufen-Plakette `scenes/ui/level_badge.gd` (Zahl im runden Schild, Tooltip
+„Stufe N“) in Party-Menü, Erkundungs-HUD und Zielrahmen; „Stufe“ in Fähigkeiten-Menü, Talent-Show, Bestiarium und
+Slot-Liste; „noch keine (ab Stufe 3)“; „NEUE STUFE“ für Toast und Aufstiegs-Effekt; „Liga 1 … Duo-Liga“ im Wetten-Menü;
+`ach_level_5` und die zwei M.O.D.-Zeilen (gleich lang, damit die Lesezeit des Dialogs bleibt); README. In den Dokumenten
+GDD, 06, 02_TECH, 03_ART und 07 (Sprachteil von CR-26, CR-27, CR-31; wörtliche Zitate, Gattungsbegriffe und technische
+„Ebenen“ bleiben). `battle_results.gd` gibt es seit R5b nicht mehr. Offen: das Kampf-HUD (`scenes/combat/**`, CR-32 i).
 
 Die Ursache der Verwechslung, die die Idee anspricht, steht so im Party-Menü nebeneinander: „Casting ab **Etage** 3“ und
 „Talente … ab **Level** 3“. Mit der Regel heißt es „Recall auf Etage 3“ und „Talentreihe ab Stufe 3“.
@@ -951,7 +966,8 @@ Countdown × 1,5. Online-Staffeln teilen eine Uhr und ein Regelwerk — dort gib
 | Stufe 37/42/47 | Rang II/III/IV | — | Klassenfähigkeiten +10 % Kraft je Rang |
 
 Datenform: `classes.json` → `rt.bar` (dasselbe Schema wie `party.json` → `rt.bar`, 07 §4.8) und Ränge als `skill_pm` mit
-Quelle `class:<id>` (CR-32 a/b: vor R4 nur Schema-Haken). 8 Klassen × 6 Fähigkeiten = 48 neue Fähigkeiten; ST1 darf
+Quelle `class:<id>` (CR-32 a/b: vor R4 nur Schema-Haken; seit Vertrag 4 im Validator: die Signatur mit `level` 1, die Ränge
+als Daten `rt.ranks` = `[{level, pm}]`, 02_TECH §0.8). 8 Klassen × 6 Fähigkeiten = 48 neue Fähigkeiten; ST1 darf
 Platzhalter (Varianten vorhandener Fähigkeiten mit anderen Zahlen) nutzen.
 
 ### 8.4 Talentbaum
@@ -971,7 +987,8 @@ jederzeit kostenlos umwählen.
 - **Kein Zufall mehr (überall, V-20):** Das Angebot „1 aus 2“ (06 §2.2) entfällt überall (V-20); Event-Läufe sind über `rules_hash`/Version gebunden. Ränge
   (`max_rank` 2) gehen in einen Wert auf (Wischtechnik STR +2 statt 2 × +1); dafür erweitert der Talent-Validator die Bereiche
   der Arten (z. B. `stat_pct` bis 100 ‰, `crit_add_pm` bis 60, `post_battle_mp_pm` bis 100) und kennt die neue Art `rt_mod`
-  (Operationen aus 07 `MOD_OPS`, CR-31/32).
+  (Operationen aus 07 `MOD_OPS`, CR-31/32; seit Vertrag 4 im Validator: die Operationen auf die eigene Einheit,
+  `TREE_MOD_OPS`, 02_TECH §0.8).
 - **Klassenwechsel** (06 §3.6, „Umschulung“ 1× je Etage) setzt die Klassenreihen frei; die Grund- und Figurenreihen bleiben.
 - **Grundreihen** (aus den vorhandenen Talenten, Werte zusammengefasst):
 
@@ -1359,10 +1376,10 @@ Gate: `check.sh` grün, `fullrun.sh` (`--strategy=all`, `--hero=mopsula`, `--lig
 und Statistiken wie vor ST0. **Abweichungen:** alle acht Berufe statt eines Eintrags (die `prof`-Spalte der `origins.json`
 nennt alle acht); Tag-Präfix `ssn_` zusätzlich (der Anker braucht nach der Id-Regel `mod_<tag>_<nn>` den Tag
 `ssn_anchor`); `sleep` liegt bei `SeasonRules` (ST1-B laut Kap. 11.3), `away` bei `SleepResolver`; ohne Hobby bleibt das
-Hobby-Rezept leer (Kap. 8.6: es kostet dann Credits). **Offen:** Die neuen Felder der Bestandstabellen (`floors.json`
-`variant`/`level_band`/`zones`, `talents.json` `row`/`col`/`tree`/`spec`, `party.json` `exp_table`) kennt der eingefrorene
-`DataValidator` noch nicht, `enemy_level_pm` nicht `RtBalance` — Nr. 4 nennt sie für ST0 nicht; sie kommen per
-Änderungsantrag mit ST1-C/D (02_TECH §0.8).
+Hobby-Rezept leer (Kap. 8.6: es kostet dann Credits). **Offen nach ST0:** Die neuen Felder der Bestandstabellen
+(`floors.json` `variant`/`level_band`/`zones`, `talents.json` `row`/`col`/`tree`/`spec`, `party.json` `exp_table`) kannte der
+eingefrorene `DataValidator` nicht, `enemy_level_pm` nicht `RtBalance` — Nr. 4 nannte sie für ST0 nicht. Die Felder kamen
+mit Vertrag 4 (Kap. 11.3 „Stand ST1-A“); `enemy_level_pm` bleibt Änderungsantrag (CR-32 d, 07 §12.10).
 
 ### 11.3 ST1-Pakete
 
@@ -1383,6 +1400,22 @@ Hobby-Rezept leer (Kap. 8.6: es kostet dann Credits). **Offen:** Die neuen Felde
 Nicht enthalten: echte Inhalte der Kulissen (Gegner, Bosse, Musik, Raumteile, Programmpunkte, Talent- und Rezepttexte) —
 Produktion nach 04 Phase 4/5, ehrlich geschätzt in Kap. 3.5 (eine Etage je 8–10 Wochen Team für jede neue Kulisse, 3–4 Wochen
 je weitere Etage einer Kulisse, Letzteres erst nach Beweis) **[Schätzung]**.
+
+**Stand ST1-A (2026-10-12, Branch `ptd/st1a`) — umgesetzt** (Einzelheiten 02_TECH §0.8 „Stand Vertrag 4“):
+*Begriffe* — Kap. 1.2 „Stand ST1-A“, Test `test_09_terms`. *Vertrag 4* (vom Orchestrator mit ST1-A dem Integrator übertragen;
+in den geteilten Dateien `data_validator.gd`, `game_data.gd`, `save_codec.gd`, `balance.gd` und den Defs nur Felder und
+Hook-Zeilen, kommentiert mit „contract pass 4“): `floors.json` → `theme` als Kulisse, `variant`, `level_band`, `zones` (`validators/floor_season.gd`,
+Eigentum ST1-C); `talents.json` → `row`, `col`, `tree`, `spec`, Bereiche für zwei Ränge in einem Wert und die Art `rt_mod`
+(CR-32 b); `classes.json` → `rt` mit Klassenleiste und Rängen II–IV (CR-32 a); `party.json` → `exp_table`
+(`validators/levels.gd`, ST1-D); `RtVocab.MOD_SOURCES` += `class`, `talent`; `SaveCodec.level_cap` (50 mit Staffel, sonst
+10); das Angebot der Talent-Show nimmt nie ein Baum-Talent; Test `test_09_contract4`. Gate: `check.sh` grün, `fullrun.sh`
+(`--strategy=all`, `--hero=mopsula`, `--liga=1`, `--liga=2`) mit gleichen Ereigniszeilen und Statistiken wie vorher.
+**Änderungsanträge statt Code** (`core/rt/**`, `scenes/combat/**`, Kap. 11.4): CR-32 c (Gast-Einheit), d (`enemy_level_pm`),
+i (Kampf-HUD) und die Quellen-Meldung von `RtMods.validate` (Rest von b) — Wortlaut 07 §12.10. **Auslegungen:** `theme`
+bleibt Pflicht und nimmt ein Kunst-Thema oder eine Kulisse (gebunden wird die Etage immer über `themes.json → floors`);
+`variant` 0 heißt „nicht angegeben“; Viertel nur auf prozeduralen Etagen; die Signatur einer Klasse steht in `rt.bar` mit
+`level` 1 (ab dem Recall); Ränge sind Daten `{level, pm}`, aus denen `BattleBridge` `skill_pm`-Mods mit Quelle `class:<id>`
+macht (ST1-D); `species.json` bekommt nichts (dieses Dokument verlangt dort kein Feld).
 
 **Stand ST1-B (2026-10-12, Branch `ptd/st1b`) — umgesetzt** (Einzelheiten 02_TECH §0.8 „Stand ST1-B“): `SeasonClock`
 (neu: Sendeplan, Tag 0, Countdown je Etage, offene Etagen), `SeasonDef`/`SeasonState`/`SeasonRules` und
@@ -1489,13 +1522,13 @@ fühlen **[Schwellen festzulegen]**. Inhalte dürfen Platzhalter sein — die St
 | CR | Betrifft | Änderung | Wann |
 |---|---|---|---|
 | **CR-25** (**eingearbeitet mit ST0**) | `00_BRIEF` | Entscheidungsblock „Staffeln“ mit dem Wortlaut der Nutzeridee 2026-10-11 und den Entscheidungen S-1 … S-12 in Kurzform (Formate 6/12/18, Generalprobe); Vorrang `09` nach `07`; Kap. 1 „Etagen („Level“)“ → „Etagen“, Einsturz Mit Netz/Ohne Netz statt „Game Over“, „die System-KI“ → „die Show-KI“, „Crawler“ → „Kandidat:innen“ (wörtliche Zitate bleiben); Kap. 2 Säule 3 („Eine Sitzung 15–60 min; eine Etage über Tage — oder am Stück“); Kap. 3 Schleife mit Ausloggen; Kap. 4 Zeilen Etagen-Timer (Sendeplan), Speichern (Dauerspeicherstand mit Journal, Ausloggen überall), Progression (Stufe 50, Fähigkeitenbuch, Talentbaum, Berufe), Casting (Vorleben), Game Over (nur Ohne Netz und Event-Läufe); Kap. 6b Nr. 4: Uhr-Commands als externer Eingang | vor ST0 |
-| **CR-26** | `01_GDD` | Sprachregel „Stufe/Etage“ im ganzen Dokument; **§2.7 Streuner bleiben auf Etage 1** (beide Tempi, V-2); §2.8/2.9 Treppe und Timer → Sendeplan (Am Stück = Countdown je Etage wie heute, Etage 2 30:00), keine Gnadenfrist beim Laden in Staffeln; §4.1 Höchststufe 50, §4.3 Tabelle; §4.7 Talent-Show → Grundreihen (in Staffeln); **§12.2 Klassenfähigkeiten** über `rt.bar` beim Recall und auf Stufe 12/17/22/27/32 statt `learnset` 11/13, Beispiel `skl_kai_concrete_boots` → `skl_kai_quick_concrete` (V-16); §12 Talentbäume; **§13 Bänder je Etage, Etage 1 neu gemessen** mit Generalprobe statt Game Over; §14.2 „Sendung starten“/„Neue Staffel“; §14.4 Pausemenü „Staffel“, „Ausloggen“; §14.6 Game Over nur Ohne Netz/Event; §14.7 Safe-Room-Menü; §15 Etage 2 | mit ST1 |
-| **CR-27** (**eingearbeitet mit ST0**, 02_TECH §0.8) | `02_TECH` | Modul `core/season`, `CommandJournal`, Dateibaum und Eigentum; neue Tabellen und Präfixe (`prf_` statt des reservierten `job_`); Commands Kap. 9.1; Felder in `GameState`/`PartyMember`/`FloorRun`; Spielstand (Dauerspeicherstand mit Journal, Staffel-Block in Save v2, Migration Kampagne → private Staffel); `StateHash`-Abdeckung; Schalter `state.season != null`; Versions-Bindung und Sendetermine; **§4.4.4** Klassenfähigkeiten wie CR-26 (V-16); `FloorDef` mit `theme`/`variant`/`level_band`/`zones`; `exp_table` | ST0 |
+| **CR-26** (Sprachregel **eingearbeitet mit ST1-A**) | `01_GDD` | Sprachregel „Stufe/Etage“ im ganzen Dokument; **§2.7 Streuner bleiben auf Etage 1** (beide Tempi, V-2); §2.8/2.9 Treppe und Timer → Sendeplan (Am Stück = Countdown je Etage wie heute, Etage 2 30:00), keine Gnadenfrist beim Laden in Staffeln; §4.1 Höchststufe 50, §4.3 Tabelle; §4.7 Talent-Show → Grundreihen (in Staffeln); **§12.2 Klassenfähigkeiten** über `rt.bar` beim Recall und auf Stufe 12/17/22/27/32 statt `learnset` 11/13, Beispiel `skl_kai_concrete_boots` → `skl_kai_quick_concrete` (V-16); §12 Talentbäume; **§13 Bänder je Etage, Etage 1 neu gemessen** mit Generalprobe statt Game Over; §14.2 „Sendung starten“/„Neue Staffel“; §14.4 Pausemenü „Staffel“, „Ausloggen“; §14.6 Game Over nur Ohne Netz/Event; §14.7 Safe-Room-Menü; §15 Etage 2 | mit ST1 |
+| **CR-27** (**eingearbeitet mit ST0**; Sprachregel, `FloorDef`-Felder und `exp_table` **mit ST1-A/Vertrag 4**, 02_TECH §0.8) | `02_TECH` | Modul `core/season`, `CommandJournal`, Dateibaum und Eigentum; neue Tabellen und Präfixe (`prf_` statt des reservierten `job_`); Commands Kap. 9.1; Felder in `GameState`/`PartyMember`/`FloorRun`; Spielstand (Dauerspeicherstand mit Journal, Staffel-Block in Save v2, Migration Kampagne → private Staffel); `StateHash`-Abdeckung; Schalter `state.season != null`; Versions-Bindung und Sendetermine; **§4.4.4** Klassenfähigkeiten wie CR-26 (V-16); `FloorDef` mit `theme`/`variant`/`level_band`/`zones`; `exp_table` | ST0 |
 | **CR-28** | `03_ART` | Paletten der Kulissen 3–8; Requisiten für Fundstellen und Gewerke-Büro; Schläfer-Optik („Zzz“, Schlafsack); KI-Kandidat:innen aus dem Persona-Kit (08 K2) statt eigener Rigs; Stufen-Plakette mit Differenz-Zahl (farbenblind-sicher); Marker „NEU“ für Programmpunkte; Raumteile je Kulisse (Produktion) | ST1-C/H |
 | **CR-29** (**eingearbeitet mit ST0**) | `04_STRATEGIE_ROADMAP` | **Namenskonflikt:** Inhaltspakete heißen „Akt 1–3“ (Akt 1 = Etagen 1–6, Akt 2 = 7–12, Akt 3 = 13–18) statt „Staffel 1/2“. **Formate nach Kauf (V-14):** Grundspiel = Basis-Staffel (6 Etagen, 24 Tage), Erweiterung Akt 2 = 12 Etagen (54 Tage), Akt 3 = 18 Etagen (84 Tage); Staffeln je Format, nie gemischt; in der Staffel nichts käuflich; §6.1 „Staffel 1 komplett“ und „Staffel 2 (Etagen 7–9)“ → „Akt 1“, „Akt 2 (Etagen 7–12)“, „Akt 3 (Etagen 13–18)“. **§6.2 Nr. 3:** „Wartezeit-Mechanik“ heißt: Warten wird verkauft; der Kalender ist eine Wartezeit, verkauft aber nichts (Kap. 10 Nr. 7). **§3.5 (V-5):** Die KPI „1 Etage / 8–10 Wochen“ bleibt für jede neue Kulisse; Varianten-Etagen 3–4 Wochen erst nach Beweis (Kap. 3.5). **Kap. 2.3 (V-15):** neue Zeile (unten, Nähe hoch); das Anwalts-Memo deckt die Staffel-Struktur vor jeder öffentlichen Erwähnung; Marketing ohne „18 Etagen“. Kap. 1.2/1.4/1.5 „20-Minuten-Etagen“ → „Folgen à 20–60 min, als Staffel über Wochen oder am Stück“; Kap. 3 Phasen ST1–ST3; Kap. 9 Risiken R13–R20 (Kap. 11.8); Kap. 11 E5 ersetzt | vor ST0 |
 | **CR-30** | `05_LIVE_MODUS` | SHOWRUN bleibt eigener Modus mit eigenen Regeln; Staffeln nutzen dessen Bausteine: Konten und Verifier (S1), Zuschauen (S2), Sponsor-Fenster (S3, nur Show-Staffeln). **§4.3 Versionen (V-1):** Regel- und Datenänderungen nur zu Sendeterminen; öffentliche Staffeln starten in Wellen danach und enden vor dem nächsten; dazwischen nur hash-neutrale Patches, die CI spielt die gespeicherten Logs jeder Live-Version nach; Rückfall Datenstand je Staffel (`data_hash`-Schnappschuss) und archivierte Verifier-Builds je `sim_version`; Freunde-Staffeln wechseln am nächsten Einsturz gemeinsam. **§3.6 (V-12):** `reconnect_grace_sec` 120 gilt in Staffeln (ein Tunnel ist kein Ausloggen); der Resync stellt den kanonischen Zustand des Staffel-Dienstes her. L3 = Etagen-Bindung; Staffeln ohne Geschenke außer Show-Staffeln; Ranglisten je Staffel; Uhr-Tickets mit externen Eingängen in Kap. 4; Hinweis: Staffel-Phasen heißen ST1–ST3 | §4.3 vor der ST2-Beta, Rest mit ST2 |
-| **CR-31** | `06` | §0.1 Nr. 3, §0.5, §2.2: Talentbaum statt „1 aus 2“ überall (V-20), der Absatz „Starttalent der Kandidat:in“ (CR-21) entfällt mit CR-33; §0.6: Etage 2 bekommt Berufe statt Fanclubs (Fanclubs ab Etage 4 oder als spätere Spielergilden), Einführungsfahrplan der Staffel (Kap. 0.6); §2.3 Höchststufe 50 und Bänder (schließt O-2); §3: „Spezialisierung“ heißt „Klasse“, Spezialisierungen = Äste des Talentbaums; §3.6 Talent-Reset kostenlos im Safe Room; §4: weitere Vorlieben als Programmpunkte, Liga-Texte „Liga 1/Duo-Liga“; §7: Staffeln, Berufe (statt „Nebenjobs“; Präfix `prf_`, `job_` wird frei), PvP = Arenen opt-in | mit ST1-D |
-| **CR-32** | `07` | (a)–(c) **nur Schema-Haken vor R4**, ohne Wirkung — R4 misst, was gilt (V-4): (a) `classes.json` darf `rt.bar` tragen (Schema wie `party.json`, der Validator kennt das Feld, leer erlaubt); (b) `RtMods`-Quellen `talent:<id>` und `class:<id>` (Reihenfolge Ausrüstung → Spezies → Klasse → Talente → Show-Boss → Twists) und die Talent-Art `rt_mod` mit Operationen aus `MOD_OPS` im Vokabular; (c) `RtSetup` kennt eine optionale Gast-Einheit `p2` (Klassenvorlage × Stufe, Partner-KI „Unterstützen“, kein Partner-Spezial, nie im Bosskampf). Die Wirkung kommt mit ST1-D/ST1-F, nur mit `state.season != null`. (d) Stufen-Skalierung `enemy_level_pm`, Höchststufe 50 (MP-/HP-Formeln §4.2/§4.3 bis 50 prüfen); (e) Hinweis ohne Sim-Änderung: Schlaf-, Journal- und Absturz-Kämpfe nutzen `RtSim` headless mit beiden Einheiten auf Autopilot, der `SleepResolver` liest nur (Halt unter 25 % Party-HP für den Fluchtwurf); (f) §2.10: im Kalender-Tempo zählt Kampfzeit zur Staffel-Uhr (nach `end_combat` nachgereicht), ein fälliger Einsturz wartet bis Kampfende + 2 min; (g) mit CR-33 entfallen der Harness `--persona` und das nächtliche Persona-Gate (§12.4), §12.9 Nr. 16/17 (Persona-Namen im Kampf) bleiben; (h) **§2.6 Niederlage (V-16):** in Staffeln gilt die Todesregel aus 09 Kap. 7 (Mit Netz Safe Room oder Etageneingang, Ohne Netz raus, Etage 1 Generalprobe) statt Sendeschluss mit Neuladen; ohne Staffel unverändert | (a)–(c) und (g) vor R4, Rest mit ST1 |
+| **CR-31** (Sprachregel und Liga-Texte **eingearbeitet mit ST1-A**) | `06` | §0.1 Nr. 3, §0.5, §2.2: Talentbaum statt „1 aus 2“ überall (V-20), der Absatz „Starttalent der Kandidat:in“ (CR-21) entfällt mit CR-33; §0.6: Etage 2 bekommt Berufe statt Fanclubs (Fanclubs ab Etage 4 oder als spätere Spielergilden), Einführungsfahrplan der Staffel (Kap. 0.6); §2.3 Höchststufe 50 und Bänder (schließt O-2); §3: „Spezialisierung“ heißt „Klasse“, Spezialisierungen = Äste des Talentbaums; §3.6 Talent-Reset kostenlos im Safe Room; §4: weitere Vorlieben als Programmpunkte, Liga-Texte „Liga 1/Duo-Liga“; §7: Staffeln, Berufe (statt „Nebenjobs“; Präfix `prf_`, `job_` wird frei), PvP = Arenen opt-in | mit ST1-D |
+| **CR-32** ((a), (b) **eingearbeitet mit Vertrag 4** als Schema-Haken; Rest von (b), (c), (d), (i) als Antrag in 07 §12.10; (h) im Text von 07 §2.6, Code ST1-B) | `07` | (a)–(c) **nur Schema-Haken vor R4**, ohne Wirkung — R4 misst, was gilt (V-4): (a) `classes.json` darf `rt.bar` tragen (Schema wie `party.json`, der Validator kennt das Feld, leer erlaubt); (b) `RtMods`-Quellen `talent:<id>` und `class:<id>` (Reihenfolge Ausrüstung → Spezies → Klasse → Talente → Show-Boss → Twists) und die Talent-Art `rt_mod` mit Operationen aus `MOD_OPS` im Vokabular; (c) `RtSetup` kennt eine optionale Gast-Einheit `p2` (Klassenvorlage × Stufe, Partner-KI „Unterstützen“, kein Partner-Spezial, nie im Bosskampf). Die Wirkung kommt mit ST1-D/ST1-F, nur mit `state.season != null`. (d) Stufen-Skalierung `enemy_level_pm`, Höchststufe 50 (MP-/HP-Formeln §4.2/§4.3 bis 50 prüfen); (e) Hinweis ohne Sim-Änderung: Schlaf-, Journal- und Absturz-Kämpfe nutzen `RtSim` headless mit beiden Einheiten auf Autopilot, der `SleepResolver` liest nur (Halt unter 25 % Party-HP für den Fluchtwurf); (f) §2.10: im Kalender-Tempo zählt Kampfzeit zur Staffel-Uhr (nach `end_combat` nachgereicht), ein fälliger Einsturz wartet bis Kampfende + 2 min; (g) mit CR-33 entfallen der Harness `--persona` und das nächtliche Persona-Gate (§12.4), §12.9 Nr. 16/17 (Persona-Namen im Kampf) bleiben; (h) **§2.6 Niederlage (V-16):** in Staffeln gilt die Todesregel aus 09 Kap. 7 (Mit Netz Safe Room oder Etageneingang, Ohne Netz raus, Etage 1 Generalprobe) statt Sendeschluss mit Neuladen; ohne Staffel unverändert; (i) **Sprachregel im Kampf-HUD** (Kap. 1.2): „Lv“, „Level“ und „LEVEL UP!“ in `combat_results.gd` und `unit_frames.gd` → Stufen-Plakette, „Stufe“, „NEUE STUFE!“ (`test_09_terms` zählt die Stellen in `PENDING`) | (a)–(c) und (g) vor R4, Rest mit ST1 |
 | **CR-33** | `08` — **dringend, vor 08 K1** (K0 ist mit 07 R1a gelandet) | „Beruf“ im Casting heißt **„Vorleben“** (Bildschirm 2/3, Overlay „VORLEBEN WÄHLEN“, Zeilen „Vorleben und Hobby …“; IDs `org_*`/`occ_*` und der Platzhalter `{job}` bleiben); die **17 Starttalente `tal_org_*` entfallen** und werden durch den Vorsprung aus Kap. 8.6 ersetzt (+50 in einem Beruf, Hobby-Rezept; `origins.json` und `hobbies[]` bekommen in K1 die Spalte `prof` mit `prf_`-IDs als reine Daten — Status-Kacheln und Allrounder:in leer; die Referenzprüfung kommt mit ST0). **K1 schrumpft:** keine Starttalent-Daten, kein Tausch in der ersten Talent-Show, kein `test_08_origin_talents`/`_balance`, kein Persona-Balance-Gate; `PersonaRules.check` nimmt bis ST0 `"talent": ""` an (Persona ohne Kampfwirkung, `bias` wirkt). **ST0** führt `persona` v2 ein (Kap. 8.7; v1 bleibt lesbar) und entfernt im Durchgang mit 07 R5b den ruhenden K0-Pfad (`PartyMember.origin_talent`, Starttalent-Zweig in `Talents.has_any`/`_effects`, `origin_field_range_pm`, `tal_org_`-Prüfung in `Command.validate`) — hash-neutral, Save v2 ohne `origin_talent`. Karte 3/3 zeigt ab ST1-E „Vorsprung: Erste Hilfe +50 · Hobby-Rezept: Kochen“ (vorher keine Zeile); Stempel „STAFFEL N · FOLGE M“ mit echter Staffelnummer; keine „Letzte Karte“, auch nicht über Staffeln (C-2 bleibt); **bleiben:** Datenschutz (P-1, P-2, D-1 … D-14), Persona-Datei, `bias`, Erzählstrang, KI-Casting, Avatar-Editor | **Text in 08 eingearbeitet (2026-10-11)**; Code in K1 und ST0 (**ST0-Teil umgesetzt 2026-10-12**) |
 
 **Distanz-Notiz für 04 Kap. 2.3** (neue Zeile, zur Übernahme mit CR-29):

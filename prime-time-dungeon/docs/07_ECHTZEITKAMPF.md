@@ -129,7 +129,7 @@ sind Entscheidungen des Orchestrators für R5b, E34–E37 die Auslegungen zum Pu
    Freies Zielen/Skillshots des Spielers, Kombopunkte, zweite Ressource, Eigenbeschuss (Friendly Fire), Rüstungsklassen,
    Trefferchance-Würfe (alles trifft; Würfel nur für Varianz, Krit, Status, Stunt-Erfolg).
 2. **Einfach und sofort verständlich.** Höchstens 5 Fähigkeiten pro Figur (4 + SHOW) plus Trank, dazu eine Taste für den
-   Partner. Die Leiste **wächst mit dem Level** (Tutorial-Kampf: nur Taste 1 + SHOW; Stufe 1: Kai 1 Fähigkeit + SHOW, Mopsula
+   Partner. Die Leiste **wächst mit der Stufe** (Tutorial-Kampf: nur Taste 1 + SHOW; Stufe 1: Kai 1 Fähigkeit + SHOW, Mopsula
    2 + SHOW; ab Stufe 4 voll). Pro Gegnerfamilie genau **eine** neue Mechanik, pro Bossphase genau **eine** neue Mechanik. Jede
    gefährliche Aktion ist dreifach angekündigt: Bodenform + Ton + Zauberleiste mit Namen. Der Kampfort ist sichtbar begrenzt
    (LED-Ring des Sets, §2.1).
@@ -273,7 +273,10 @@ Gegner (Treffer bei `ct = 9`). Außerhalb des Kampfes sind Fähigkeiten nur als 
 - **Wiederbelebung im Kampf:** Mopsula ab Stufe 7 (Slot 2 wird auf einem K.O.-Ziel automatisch zu „Sabber der Wiederkehr“,
   §4.3) oder Riechsalz (`itm_smelling_salts`). Wiederbelebte erhalten `sts_guard` für 3,0 s („Comeback“).
 - Nach `VICTORY`/`FLED`: K.O.-Mitglieder stehen mit 1 HP auf (bestehende Regel `KO_REVIVE_HP`).
-- **Niederlage** (alle Party-Einheiten K.O.): `DEFEAT` → bestehender Sendeschluss/Game-Over-Ablauf mit Neuladen (unverändert).
+- **Niederlage** (alle Party-Einheiten K.O.): `DEFEAT` → ohne Staffel der bestehende Sendeschluss/Game-Over-Ablauf mit
+  Neuladen (unverändert). **In Staffeln** (09 CR-32 h, V-16) gilt die Todesregel aus 09 Kap. 7: Mit Netz zurück in den Safe
+  Room oder an den Etageneingang, Ohne Netz raus (Studiogast), Etage 1 ist die Generalprobe; `Router.game_over` fragt zuerst
+  `Game.season_defeat_route` (ST1-B).
   Sterben Party und letzter Gegner im selben Tick, zählt es als **Sieg** („Doppel-K.O. — die Show liebt Drama“).
 - Tutorial: Party-HP fallen nie unter 1 (bestehende Regel), Gegnerschaden × 0,5.
 
@@ -1195,7 +1198,7 @@ Gegnerwerte in `enemies.json → rt`, Fähigkeitswerte in `skills.json → rt`.
 | 6 | **Trank** (automatische Wahl, §3.11; Gegenstandsrad per Rechtsklick/Halten) | `6` / LB |
 | — | **Partner-Spezial** (eigener Knopf neben dem Party-Rahmen, §7.3, §8.4) | `R` / Steuerkreuz links |
 
-- **Die Leiste wächst mit dem Level:** Slots ohne freigeschaltete Fähigkeit werden nicht angezeigt (Tutorial-Kampf: nur Slot 1 +
+- **Die Leiste wächst mit der Stufe:** Slots ohne freigeschaltete Fähigkeit werden nicht angezeigt (Tutorial-Kampf: nur Slot 1 +
   5, §2.13; danach Stufe 1: Kai Slot 1 + 5 + 6, Mopsula Slot 1 + 2 + 5 + 6; ab Stufe 4 sind alle Slots belegt). Die Freischaltung
   steht in `party.json` → `rt.bar` (unabhängig von der CTB-Lernliste, §4.8), sodass CTB bis zur Entfernung unverändert bleibt.
 - **Varianten:** Ab Stufe 4–7 erhalten Slots 2–4 je eine Alternative. Die Belegung wählt man außerhalb des Kampfes im
@@ -2859,7 +2862,7 @@ ist ein Fehler —, die übrigen Einträge von `c` (ein weiteres Geschenk → `g
 | Verbrauchte Heilgegenstände je Etage | 4–9 (Bosskämpfe je höchstens 3) | neu; Etagenfolge-Harness |
 | Erstversuch-Niederlage Hausmeister / Königin, **je Held:in** | ≈ 20 % / ≈ 35 % (Startwerte 15–25 % / 30–40 %; Harness-Band 10–30 % / 25–45 %) | GDD §13; Harness `--hero=kai` und `--hero=mopsula` |
 | Show-Boss `enc_e1_showboss` (Stufe 3, optional, E26), **je Held:in** | Dauer 20–40 s, HP-Verlust ohne Tränke 20–40 %, Erstversuch-Niederlage ≤ 5 % | 06 §2.6; Harness |
-| … in der Unterhosen-Liga Stufe 1 / Stufe 2 | ≤ 40 % / ≤ 55 % bzw. ≤ 55 % / ≤ 70 % | 06 §4.10; Harness `--liga=1|2` |
+| … in der Unterhosen-Liga (Liga 1 / Duo-Liga) | ≤ 40 % / ≤ 55 % bzw. ≤ 55 % / ≤ 70 % | 06 §4.10; Harness `--liga=1|2` |
 | Stufe bei Hausmeister / Königin | 5 / 7 | GDD §13; R5-Full-Run |
 | Etagenzeit Timer-Nutzung (Erkundung) / gesamt | 11–15 min / 22–28 min | GDD §13; R5-Full-Run |
 | Unterbrochene unterbrechenswerte Boss-Zauber | ≥ 60 % | neu; Harness |
@@ -3419,7 +3422,7 @@ Echtzeit-Nachfolger mit Test:
 | R2 | `test_r2_move_sampler` | Schwellen 15 cm / 15 mm/Tick / 8 Stufen / 15 Ticks, Stopp-Probe, Pflichtprobe vor Einschlag, ehrliche Läufe ohne `POS_CORRECTED` |
 | R2 | `test_r2_telegraph_layer` | Pool ≤ 10, Instanz-Uniforms je Form, Fortschritt, Set-Uniforms (Beschneiden), Farben/Kontrastmodus |
 | R2 | `test_r2_boss_intro` | Ablauf, Sim startet erst danach, blockierende Zeile nur hier |
-| R3 | `test_r3_action_bar` | Zustände aus der Sim (Abklingzeit, GCD, MP, Reichweite, Queue, Assist, SHOW → FINALE ab Stufe 6 bei Ziel < 30 %), Leiste wächst mit dem Level, Trank „2/3“ |
+| R3 | `test_r3_action_bar` | Zustände aus der Sim (Abklingzeit, GCD, MP, Reichweite, Queue, Assist, SHOW → FINALE ab Stufe 6 bei Ziel < 30 %), Leiste wächst mit der Stufe, Trank „2/3“ |
 | R3 | `test_r3_combat_input` | Tasten/Gamepad/Touch → Befehle (inkl. `exact_match` für Shift+Tab, `R` = Partner-Spezial), Tab-Reihenfolge, Klick-Auswahl, Kontexttrennung Erkundung/Kampf |
 | R3 | `test_r3_touch_layout` | Positionen §7.3, Trefferflächen ≥ 88 px, keine Überlappungen, Stick-Zone nur unten links, Tippen ≠ Ziehen (0,25 s, 12 px), Safe-Area-Verschiebung |
 | R3 | `test_r3_hud_layout` | keine Überlappung bei 1280 × 720 und 1920 × 1080, schrittweises Aufdecken (§8.1: Tutorial nur Slot 1 + SHOW, Trank und Partner-Spezial ab Kampf 2, Taktik-Chip ab Stufe 3, Bedrohung erst nach eigenem Spott), Pille „DU“ |
@@ -3437,7 +3440,7 @@ Echtzeit-Nachfolger mit Test:
 | R5b | `test_m6_autoplay` (angepasst) | Schritte `force_battle` → `force_combat` (60 Frames), `battle` → `combat` (900 Frames, Autopilot, `Events.battle_ended` VICTORY) |
 | R5b | `test_m6_fullrun` + `tools/fullrun.sh` (bis R5b-2b mit `--combat=realtime`) | Etage 1 vollständig mit Autopilot (alle Strategien, beide Held:innen), Zeitbänder; der Show-Boss bleibt optional (der Bot erreicht die Treppe auch ohne ihn) |
 | R5b-1 | `test_r5b_integration` | im Kampf gewählte Partner-Taktik bleibt (`BattleBridge.apply_result`, beide Verifier gleich, nur bekannte Werte), Fähigkeiten-Seite → je Wahl ein `loadout`, `rules.combat.mode` bindet den Kampfmodus eines Events (Kopf-Prüfung, Event-Lauf in Echtzeit durch beide Verifier, Autopilot abgelehnt), kompaktierte Replay-Datei + `run_log_hash` über die expandierte Form |
-| R5b-1 | `test_r5b_liga` | E31: Liga-Mod je Stufe (Stufe 1 gesteuerte Figur, Stufe 2 beide, nie im Tutorial; Fixtures ohne den Status unverändert), 8 % schneller (Sim, Körper), `ai_miss_pm` 750, übersteht ein K.O., deterministisch, angekündigt (Marotte, Status, HUD-Symbol, Regeltext) |
+| R5b-1 | `test_r5b_liga` | E31: Liga-Mod je Liga (Liga 1 gesteuerte Figur, Duo-Liga beide, nie im Tutorial; Fixtures ohne den Status unverändert), 8 % schneller (Sim, Körper), `ai_miss_pm` 750, übersteht ein K.O., deterministisch, angekündigt (Marotte, Status, HUD-Symbol, Regeltext) |
 | R5b-1 | `test_r5b_achievements` | Echtzeit-Schwellen `ach_crit_3` (15) und `ach_weakness_5` (10) — bis R5b-2b über `condition_rt`/`desc_rt`, seither in `condition`/`desc` gebacken; die seltenen Kampf-Achievements, die der Full-Run-Bot nicht trifft, schalten in Live-Echtzeitkämpfen frei (Flucht, drei Erstschläge, Mopsula K.O. durch einen Gift-Tick, Sieg mit 1 HP bzw. ≤ 10 %) |
 | R5b-1 | `test_r5b_hud` | Kais Rahmen-Symbol trägt den Persona-Look (Haut, Haarfarbe und -schnitt, Bart, Brille; ohne Persona der Kanon-Look), Touch: Boss-Rahmen endet vor der Hype-Leiste; die Autopilot-Beschriftung nennt die Taste des Schemas (Touch: keine) |
 | R5b-1 | `test_r5b_equipment_mods` | `items.json` `rt.mods`: das Samtcape gibt seinem Träger `equip:itm_arm_velvet_cape` (erste Stelle der festen Reihenfolge), `dmg_taken_pm` mit `element` faltet nur in Treffer dieses Elements (Formel und Prozent, nie Status-Ticks), nur Ausrüstung trägt gültige Mods (Validator) |
@@ -3766,7 +3769,7 @@ Datentabellen (um `rt` erweitert).
 | 4 | `Events.battle_started`/`battle_ended` | gleiche Bedeutung wie bisher (Show, Achievements, Musik) | R2 |
 | 5 | Musik | Kampfmusik nach 5 s, Bosse sofort (§2.8) | R2 |
 | 6 | Speichern im Kampf | nicht möglich (Pausemenü ohne „Speichern“); ein Spielstand enthält nie eine `RtSim` | R3 |
-| 7 | Niederlage | bestehender Sendeschluss/Game-Over-Ablauf | R2 |
+| 7 | Niederlage | ohne Staffel bestehender Sendeschluss/Game-Over-Ablauf; in Staffeln die Todesregel aus 09 Kap. 7 (CR-32 h, §2.6) | R2, ST1-B |
 | 8 | Streuner und Etagen-Events | Streuner stoßen nicht zu einem laufenden Kampf (die Uhr steht); Event-Kämpfe ohne Gruppe nutzen den festen Anker (§2.3) | R2 |
 | 9 | Story-Banner | `story_battle:<encounter_id>` erscheint als Kampf-Banner (§8.8) | R3 |
 | 10 | Karte, Interaktionen, Safe-Room-Tür | im Kampf gesperrt (§2.4, §7.1) | R2, R3 |
@@ -3777,6 +3780,22 @@ Datentabellen (um `rt` erweitert).
 | 15 | README, Screenshots, PERFORMANCE.md | Neuaufnahme mit Echtzeitkampf | R5b |
 | 16 | Persona im Kampf (08 CR-24, Exportgrenze 08 §2.7 Nr. 5) | `RtUnit.display_name` ist der Def-Name, nie der Persona-Name (Regel für `make_rt_setup`, R1b); `StateHash.of_rt` lässt jeden `display_name` aus (**R1a umgesetzt**); Puppen bauen ihre Figur über `DB.party_model` (R2), Einheitenrahmen lösen Namen über `UiUtil.member_name` (R3) | R1b, R2, R3 |
 | 17 | Persona-Zeilen im Kampf | nie: `show_persona_hooks.gd` feuert nicht, solange `Game.in_battle`; eine wartende Persona-Zeile verfällt bei `Events.battle_started` (08 §4.3, K0-Haken) | R2 (Kampfbeginn sendet `battle_started`) |
+
+### 12.10 Änderungsanträge aus 09 (CR-32; Stand Vertrag 4, 2026-10-12)
+
+09 CR-32 (a)–(c) sollen vor R4 nur Schema-Haken sein. Vertrag 4 (09 ST1-A; 02_TECH §0.8 „Stand Vertrag 4“) hat erledigt,
+was ohne `core/rt/**` und `scenes/combat/**` geht: (a) `classes.json → rt` (Klassenleiste im Schema von `party.json → rt.bar`
+und Ränge II–IV, Regeln in `validators/rt.gd`), (b) `RtVocab.MOD_SOURCES` += `class`, `talent` und die Talent-Art `rt_mod`
+(`validators/talents.gd`, geprüft mit `RtMods.validate`). Die Punkte unten brauchen Zeilen in Dateien der R-Phasen und
+stehen deshalb hier als Antrag (09 §11.4). Jeder wirkt nur mit `state.season != null`; ohne Staffel bleibt jeder Kampf
+bitgleich.
+
+| Nr. | Datei(en) | Änderung | Wer |
+|---|---|---|---|
+| CR-32 b (Rest) | `core/rt/rt_mods.gd` | Die Meldung von `validate` für eine unbekannte Quelle nennt fest `<species\|spec\|equip\|showboss\|twist\|liga>`; sie soll die Liste aus `RtVocab.MOD_SOURCES` bilden (kosmetisch: Prüfung und Wirkung kennen `class` und `talent` schon) | Eigentum `core/rt` |
+| CR-32 c | `core/rt/rt_setup.gd`, `core/rt/rt_sim.gd` (Partner-KI), `core/progression/battle_bridge.gd`, `scenes/combat/ui/unit_frames.gd` | **Gast-Einheit `p2`** (mit einer dritten Begleitfigur nach 06 §2.5: `p3`): `RtSetup` bekommt ein optionales Feld `guest: Dictionary` (`{}` = kein Gast; `to_dict` schreibt es nur, wenn gesetzt — ohne Staffel gleicher Hash). `BattleBridge.make_rt_setup` füllt es nur mit Staffel und nie im Bosskampf aus dem Zustand von ST1-F (Kandidat:in, Klasse, Stufe, verbleibende Kämpfe); Werte aus der Klassenvorlage × Stufe (`classes.json → rt.bar` bis zur Stufe, Grundwerte und Wachstum der Figur aus `for` der Klasse, `stat_mult`). `RtSim`: Partner-KI mit Taktik „Unterstützen“, nie gesteuert, kein Partner-Spezial, keine EP und Credits. HUD: ein dritter Party-Rahmen ohne Leiste. Offen: Zählt ein stehender Gast gegen die Niederlage? (Vorschlag: nein — verloren ist, wenn alle Figuren der Party K.O. sind.) | Eigentum `core/rt` und HUD, mit ST1-F |
+| CR-32 d | `core/rt/rt_balance.gd`, `data/rt_balance.json` | **`ENEMY_LEVEL_PM`** (09 §3.4 `enemy_level_pm[stufe]`): ein Wert in der Form der Unterschlüssel-Werte, `{"1": 1000, …, "52": …}` (Stufe 1–52 = Bandende 50 + Elite 2), Ganzzahl-Promille, Stufe 1 = 1000, steigend, Bereich in `RANGES`; Getter `enemy_level_pm(level) -> int`. Ohne Staffel setzt `BattleBridge` keine Gegnerstufe (Faktor 1000). `RtBalance.validate` lehnt den Schlüssel heute als unbekannt ab — darum kein Schema-Haken in Vertrag 4. Dazu als Test ohne Code-Änderung: die MP- und HP-Formeln aus §4.2/§4.3 bis Stufe 50 prüfen | Eigentum `core/rt`; Werte R4/ST1-D |
+| CR-32 i | `scenes/combat/ui/combat_results.gd`, `scenes/combat/ui/unit_frames.gd` | **Sprachregel (09 Kap. 1.2) im Kampf-HUD:** `"%s: Level %d"` → `"%s: Stufe %d"`; `"LEVEL UP!"` (Bauchbinde und Ergebnis-Panel) → `"NEUE STUFE!"`; `"Lv %d"` im Ergebnis-Panel → Stufen-Plakette `LevelBadge.make(level, 18)`, in Party- und Zielrahmen → gezeichnete Plakette `LevelBadge.draw` (wie `scenes/ui/explore_target.gd`), Tooltip „Stufe %d“. Danach leert `test_09_terms` seine `PENDING`-Liste (sie zählt die sechs Stellen genau) | Eigentum `scenes/combat` (R3) |
 
 ---
 

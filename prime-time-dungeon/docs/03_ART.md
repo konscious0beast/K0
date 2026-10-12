@@ -76,7 +76,7 @@ Die ersten sieben Werte sind die Konstanten aus 02_TECH §8.2 (unverändert). Di
 | `INK` | `#140D1C` | Outline, UI-Dunkel, Übergangs-Schwarz, `default_clear_color`-Nähe |
 | `NOVA_MAGENTA` | `#FF2E88` | NOVA SYNDIKAT, Show, Hype, Swirl-Splitter, Fokus-Akzent |
 | `NOVA_CYAN` | `#22D3EE` | M.O.D., Hologramme, UI-Rahmen, Safe-Room-Technik |
-| `HYPE_GOLD` | `#FFC93C` | Belohnung, Level-Up, Treppen-Licht, Highlight (Zielwahl) |
+| `HYPE_GOLD` | `#FFC93C` | Belohnung, Stufenaufstieg, Treppen-Licht, Highlight (Zielwahl) |
 | `DANGER` | `#FF4D4D` | Gefahr, niedrige HP, Boss-Phase |
 | `HEAL` | `#4ADE80` | Heilung, HP-Leiste |
 | `MANA` | `#60A5FA` | MP |
@@ -1437,7 +1437,7 @@ Darstellungs-Zufall (Jitter) darf `randf()` nutzen (02_TECH §0), nie den Kern-R
 | `heal` | 20 Sterne `#6BFFB0`, `tangential_accel 3` (Spirale); Ziel-`flash(#6BFFB0)` | 20 | 0.80 s |
 | `buff` / `debuff` | 2 Ringe aufsteigend (Status-Farbe) / absteigend | 12 | 0.70 s |
 | `ko` | `DANGER`-Ring + 3 Sterne kreisen am `overhead` | 6 | 1.00 s |
-| `levelup` | Gold-Säule Cyl 0.6/0.6/3.0 ohne Kappen `hologram` `HYPE_GOLD`, Skal. y 0→1 in 0.25 s (`TRANS_BACK`); 32 Sterne; `Label3D` „LEVEL UP!“ | 32 | 1.50 s |
+| `levelup` | Gold-Säule Cyl 0.6/0.6/3.0 ohne Kappen `hologram` `HYPE_GOLD`, Skal. y 0→1 in 0.25 s (`TRANS_BACK`); 32 Sterne; `Label3D` „NEUE STUFE!“ | 32 | 1.50 s |
 | `sponsor` | Drohnen-Drop, s. 7.2 | 40 | 1.50 s |
 | `confetti` | 40 Box-Partikel (Mesh `BoxMesh 0.04` mit `Materials.toon_vc({"outline": false})`, Farbe über Partikelfarbe) in `NOVA_MAGENTA`/`HYPE_GOLD`/`NOVA_CYAN`/`EXIT_GREEN`, g −4, Drehung | 40 | 1.20 s |
 | `smoke` | 10 Punkte `#E8E8E8` α 0.4, Größe 0.2→0.6, v 1.2 m/s aufwärts | 10 | 1.00 s |
@@ -1612,7 +1612,7 @@ Zeichen für Zeichen gegen `ThemeDB.fallback_font.has_char()` (A13, übernommen 
 | Fließtext, Menüs | Godot-Standardschrift (UiTheme, Umlaute vorhanden) | **Inter** |
 | Überschriften / Bauchbinden | Standardschrift + `FontVariation.variation_embolden 0.5` (UiTheme) | **Anton** oder **Barlow Condensed** |
 | Zahlen / Timer / Zuschauer | `UiTheme.font_mono()` (02_TECH §3.9) = `SystemFont` mit `font_names = ["Consolas", "Roboto Mono", "DejaVu Sans Mono", "monospace"]`, Fallback Standardschrift | **JetBrains Mono** |
-| Schadenszahlen / „LEVEL UP!“ | Standardschrift + `variation_embolden 1.0`, Outline 12–16 `INK` | **Lilita One** |
+| Schadenszahlen / „NEUE STUFE!“ | Standardschrift + `variation_embolden 1.0`, Outline 12–16 `INK` | **Lilita One** |
 
 Größen (720p, UiTheme): Text 22, klein 16, Header 30, Titel 56; Ticker 15, Timer 38. Minimum 15 px.
 
@@ -1646,7 +1646,7 @@ aus `combat_style.gd`: Party-HP `ui_party` #4AA8FF, Gegner-HP `ui_enemy` #E8455A
   wie der Aktionsknopf der Erkundung, SHOW mit Goldrand; Trank-Scheibe 12 px über 07 (endet über dem Chat-Ticker), Anzahl in der
   Scheibe. Spieler-Zauberleiste, M.O.D.-Untertitel und Hinweiskarte stehen in der Mittelspalte 50 px links der Bildmitte (bei 1280
   genau x 590 bzw. 330–850 aus 07 §8.1; auf breiteren Phones wandert die Spalte mit der Mitte zwischen Stick und Daumen-Gruppe).
-- **Bauchbinden:** Kampf-Banner oben Mitte unter Ziel-/Bossrahmen (Schrägschnitt 0.21, 1,2 s), Ergebnis „Applaus!“/„Level up!“ unten
+- **Bauchbinden:** Kampf-Banner oben Mitte unter Ziel-/Bossrahmen (Schrägschnitt 0.21, 1,2 s), Ergebnis „Applaus!“/„Neue Stufe!“ unten
   links 380 px über dem Ticker, Abspann-Panel (Layer 60) mit Goldrahmen 3 px.
 
 ---

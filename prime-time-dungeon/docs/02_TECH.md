@@ -50,7 +50,7 @@
 - M0 legt für **jede** Datei, deren öffentliche API in §3, §5, §6, §7, §8, §9 definiert ist, einen **Stub** an:
   exakte `class_name`, exakte Signaturen, Rümpfe geben Default-Werte zurück (`return null`, `return []`, `pass`).
   Erste Zeile jedes Stubs: `# STUB(M0) — owned by Mx. Replace completely, keep the public API.`
-  **Ausnahme Zustands-Stubs (M2):** `GameState.create_new` (Party aus `party.json` mit Level 1/Basis-HP/-MP/Startausrüstung/
+  **Ausnahme Zustands-Stubs (M2):** `GameState.create_new` (Party aus `party.json` mit Stufe 1/Basis-HP/-MP/Startausrüstung/
   Lernset ≤ 1, Startinventar + Credits, leerer `ShowState`), `GameState.member`, `FloorRun.create` (`floor_id`, `index`, `seed`,
   `time_left_ticks`, `timer_started`), `FloorRun.time_left_sec` und `FloorRun.summary` (alle Schlüssel) liefern **minimal gültige**
   Werte statt `null`, damit `Game.new_game`/`ensure_state()` schon in Phase B einen Zustand haben und die Szenentests von M3/M5/M6
@@ -400,11 +400,10 @@ Regel- und Datenänderungen nur zu festen Sendeterminen; dazwischen gibt es nur 
 jeder live laufenden Version nach). Rückfall: Datenstand je Staffel und archivierte Verifier je `sim_version` (05 §4.3).
 Logs einer anderen Version zeigt der Kern wie seit K0 als „ältere Version“ (`RunSim.version_status`).
 
-**Offen für ST1-C/D (Schema der Bestandstabellen):** `floors.json` (`variant`, `level_band`, `zones`), `talents.json`
-(`row`, `col`, `tree`, `spec`) und `party.json` (`exp_table`) brauchen Regeln im eingefrorenen `DataValidator`, der
-unbekannte Schlüssel ablehnt; `rt_balance.json` (`enemy_level_pm`) prüft `RtBalance.validate` (`core/rt`, 07 CR-32 d).
-09 Kap. 11.2 Nr. 4 nennt sie für ST0 nicht; sie kommen per Änderungsantrag (oder in einem vierten Vertrags-Durchgang) mit
-dem jeweiligen Paket.
+**Schema der Bestandstabellen für ST1-C/D** (`floors.json`: `variant`, `level_band`, `zones`; `talents.json`: `row`, `col`,
+`tree`, `spec`; `party.json`: `exp_table`; `classes.json`: `rt`): seit dem vierten Vertrags-Durchgang im eingefrorenen
+`DataValidator` („Stand Vertrag 4“ unten). `rt_balance.json → enemy_level_pm` prüft `RtBalance.validate` (`core/rt`) und
+bleibt Änderungsantrag (07 CR-32 d).
 
 **Stand ST1-B (2026-10-12, Branch `ptd/st1b`): der Staffel-Kern** (09 Kap. 11.3 „Stand ST1-B“, Entscheidungen B-1 … B-22).
 Die ST0-Stubs `SeasonState`, `SeasonRules`, `SeasonDef` und `validators/seasons.gd` sind ersetzt (öffentliche API
@@ -440,6 +439,63 @@ entscheidet `away`, die Zeit läuft über `SeasonRules.advance`, der Schläfer s
 Show-Teil oder einen Kern-Hash ohne ihn (B-22); (2) die Ankunft einer Rettung im Safe Room ist kein „Besuch“ (keine
 Heilung, keine Erstbesuch-Reaktion der Show) — ST1-G/H entscheiden, ob sie es sein soll.
 
+**Stand Vertrag 4 (ST1-A, 2026-10-12, Branch `ptd/st1a`): Schema-Haken der Bestandstabellen und Begriffe** (09 Kap. 1.2,
+11.2, 11.3; CR-27; 07 CR-32 a/b). Ohne Staffel bitgleich (`fullrun.sh` mit `--strategy=all`, `--hero=mopsula`,
+`--liga=1`, `--liga=2`: gleiche Ereigniszeilen und Statistiken wie vor dem Paket), kein `SIM_VERSION`-Sprung, Save v2
+unverändert.
+
+*Begriffe (09 Kap. 1.2):* `test_09_terms` prüft jedes Stringliteral in `scenes/`, `art/`, `autoload/`, `core/` (Kommentare
+ausgenommen; Ausnahme je Zeile `# terms-ok: <Grund>`), die Textfelder der `.tscn`/`.tres` und jeden String in `data/**/*.json`
+auf „Level“, „Lv“, „LV“, „Lvl“, „Ebene“, „Crawler“ (Wortgrenzen, Groß-/Kleinschreibung beachtet). Neu ist die
+Stufen-Plakette `scenes/ui/level_badge.gd` (privat: `make(level, font_size)` als Steuerelement, `draw(mesh, center, radius)`
+für gezeichnete Rahmen, Tooltip `"Stufe %d"`) in Party-Menü, Erkundungs-HUD und Zielrahmen; sonst „Level“ → „Stufe“,
+„LEVEL UP“ → „NEUE STUFE“, die Unterhosen-Liga heißt „Liga 1“/„Duo-Liga“. Offen ist nur das Kampf-HUD (`scenes/combat/**`,
+07 CR-32 i): `combat_results.gd` und `unit_frames.gd` stehen mit ihrer Fundzahl in der `PENDING`-Liste des Tests, der
+fehlschlägt, sobald sich die Zahl ändert.
+
+*Vertrag 4 — nur Schema:* Jedes Feld ist optional, sein Standard ändert nichts, und ohne Staffel liest es kein Code. Die
+Regeln stehen in Paket-Dateien, die der Validator über je eine Hook-Zeile ruft; Test `test_09_contract4` (Signaturen,
+Felder, Standardwerte, je ein gültiges Muster, je Regel ein kaputtes Muster mit seiner Meldung, 06-B-Pool, Stufen-Grenze des
+Spielstands).
+
+| Datei → Feld | Regel (Validator) | Standard | schreibt |
+|---|---|---|---|
+| `floors.json` → `theme` | Kunst-Thema (`THEMES`) **oder** eine Kulisse `thm_`: Die muss in `themes.json` stehen und die Etage in ihren `floors` führen (`FloorDef.kulisse()`); Palette-Standard einer Kulisse = `metro` | wie heute | ST1-C |
+| `floors.json` → `variant` | 0–3; > 0 = Platz der Etage in ihrer Kulisse (deren `floors` aufsteigend gezählt) | 0 (nicht angegeben) | ST1-C |
+| `floors.json` → `level_band` | `[]` oder `[von, bis]` mit 1 ≤ von ≤ bis ≤ 50; von Etage zu Etage fällt kein Ende (`FloorDef.has_band()`) | `[]` | ST1-C (liest ST1-D) |
+| `floors.json` → `zones` | `[]` oder 2–4 Viertel `{id, name, rooms, palette, pool}`: `id` `zone_` (global eindeutig), `name` 1–32 Zeichen, `rooms` `{min, max}` 1–30 (Standard 10–14), `palette` wie die der Etage, `pool` = Nicht-Boss-Begegnungen dieser Etage (`[]` = Pool nach Tiefe); nur prozedural (ohne `layout`); die Räume der Viertel treffen `rooms` der Etage; mit Vierteln `grid` bis 13 × 13 und `safe_rooms` bis 4, höchstens einer je Viertel (`FloorDef.has_zones()`) | `[]` (heutiger `DungeonGenerator`) | ST1-C |
+| `talents.json` → `row`, `col`, `tree`, `spec` | `row` 0 = 06-B-Pool (Regeln wie bisher, `col`/`tree`/`spec` verboten); sonst eine Reihe aus `TalentDef.tree_rows()` (Grund 3/5/7/9, Klasse 15/25/35/45, Figur 20/30/40/50), `col` 1–3, `max_rank` 1, `min_level` = `row`; `tree` = Figur (Grund- und Figurenreihen, `for` = `[tree]`) oder `cls_` (Klassenreihen, `for` nennt Figuren der Klasse); je Zelle ein Talent, jede Reihe eines Baums mit allen drei Spalten; `spec` (Ast, `^[a-z][a-z0-9_]*$`) Pflicht in den Außenspalten der Klassenreihen und sonst verboten, links ≠ rechts, je Spalte derselbe Ast | 0, 0, `""`, `""` | ST1-D |
+| `talents.json` → `effects` eines Baum-Talents | Bereiche für zwei Ränge in einem Wert (`TREE_RANGES`: `stat_flat` 1–6, `stat_pct` 30–100, `crit_add_pm` 10–60, `post_battle_mp_pm` 30–100); die Art **`rt_mod`** nur im Baum: `{"kind": "rt_mod", "op", <Felder der Operation>}`, `op` ∈ `TREE_MOD_OPS` (`stat_pm`, `skill_pm`, `move_pm`, `swing_pm`, `threat_pm`, `dmg_dealt_pm`, `dmg_taken_pm`, `heal_taken_pm`, `first_hit_taken_pm`, `on`), geprüft mit `RtMods.validate` als Quelle `talent:<id>` auf der eigenen Einheit (`src` und `unit` nie in den Daten); genannte Skills (`skl_`) und Status müssen existieren | — | ST1-D |
+| `classes.json` → `rt` | `{}` oder `{"bar": […], "ranks": […]}`: `bar` = Zeilen wie `party.json → rt.bar` (`slot` 1–5, `skill` = Party-Skill mit `rt`, `level` 1–50 mit 1 = ab dem Recall, `variant`, `finale`), jede Zeile eine Variante oder das FINALE (Slot 5), jeder Skill einmal; `ranks` = höchstens drei `{level 1–50, pm 1001–2000}` (Rang II–IV, beide steigend; ab `level` wirkt jede Klassenfähigkeit mit `pm` ‰ Kraft) → `ClassDef.rt` (gefüllt wie `PartyMemberDef.rt`), Regeln `validators/rt.gd` | `{}` | ST1-D (Vorlage auch für den Gast, CR-32 c) |
+| `party.json` → `exp_table` | fehlt oder genau 49 Ganzzahlen (EP von Stufe 1 … 49 zur nächsten), 1–1 000 000, streng steigend, Stufen 1–9 = GDD §4.3 (`Progression.EXP_TABLE`) → `GameData.exp_table()` (Kopie) | `[]` | ST1-D |
+
+*Code-Haken:* `Balance.SEASON_LEVEL_CAP` = 50 (Kopie `DataValidator.SEASON_LEVEL_CAP`); `SaveCodec.level_cap(state)` = 50
+mit Staffel, sonst 10 — `decode` begrenzt die Stufen der Mitglieder darauf (an der Grenze 0 EP; ein Kampagnen-Spielstand
+lädt wie bisher). `RtVocab.MOD_SOURCES` += `class`, `talent` (Reihenfolge in `BattleBridge`, ST1-D, nur mit Staffel:
+Ausrüstung → Spezies → Klasse → Talente → Show-Boss → Twists → Liga). `GameData.talents_for(member)` liefert nur den
+06-B-Pool, nie ein Baum-Talent: Baum-Talente sind eigene Einträge, und die Talent-Show der Läufe ohne Staffel bleibt
+gleich (09 §11.4). Macht ST1-D die heutigen 24 Pool-Talente selbst zu Grundreihen (09 §8.4), ist der Pool leer — das ist
+der Umstieg aus V-20 und gehört zu ST1-D. Neu in den Defs:
+`FloorDef.variant`, `level_band`, `zones`, `kulisse()`, `has_band()`, `has_zones()`; `TalentDef.row`, `col`, `tree`, `spec`,
+`is_tree()`, `tree_rows()`, `BASE_ROWS`, `CLASS_ROWS`, `FIGURE_ROWS`, `COLS`, `TREE_KINDS`; `ClassDef.rt`, `RT_SPEC`,
+`RT_RANK_SPEC`. Regel-Dateien (privat, ohne `class_name`): `core/data/validators/floor_season.gd` (`FloorSeasonCheck`,
+Eigentum ST1-C, darf das Viertel-Schema mit dem Generator v2 erweitern), `validators/levels.gd` (`LevelsCheck`, ST1-D),
+`validators/talents.gd` (06-B/ST1-D: Zellen, Äste, `rt_mod`), `validators/rt.gd` (`_check_classes`).
+
+*Was C, D und F jetzt schreiben können:* **ST1-C** die Etagen 2–18 mit `theme`, `variant`, `level_band` und `zones` und die
+Kulissen in `themes.json` (`floors`). Achtung: `FloorBuilder.theme_id()` liest `theme` als Kunst-Thema — eine Etage mit
+`thm_`-Thema braucht dort die Zuordnung Kulisse → Kunst-Thema; sonst bleibt das Kunst-Thema in `theme` und
+`themes.json → floors` bindet die Etage. Der heutige `DungeonGenerator` liest `zones` nicht (das ist der Generator v2).
+**ST1-D** die Talentreihen (Grund-, Klassen- und Figurenreihen mit Ästen und `rt_mod`), die Klassenleisten mit den Rängen
+II–IV und die EP-Tabelle bis 50; die Wirkung (Stufen über 10, `class:`/`talent:`-Mods in `BattleBridge`, Fähigkeitenbuch)
+hängt an `state.season != null`. **ST1-F** die Klassenvorlage eines Gasts steht in `classes.json → rt.bar`; der Gast selbst
+braucht 07 CR-32 c.
+
+*Nicht in Vertrag 4* (09 §11.4: `core/rt/**` und `scenes/combat/**` nie ohne Antrag; Wortlaut 07 §12.10): 07 CR-32 c
+(Gast-Einheit `p2` in `RtSetup`, `RtSim`, `BattleBridge`, HUD), d (`rt_balance.json → enemy_level_pm`: `RtBalance.validate`
+lehnt unbekannte Schlüssel ab), i (Kampf-HUD) und die Meldung von `RtMods.validate` für eine unbekannte Quelle (nennt noch
+die sechs alten Quellen; kosmetisch, zu b). `species.json`: 09 verlangt kein neues Feld — nichts geändert.
+
 ---
 
 ## 1. Dateibaum und Modulzuordnung
@@ -454,7 +510,8 @@ origins,looks}.gd`, `core/progression/persona_*.gd`, `core/show/persona_*.gd`, `
 Szenen unten eingetragen (`persona_casting`, `persona_card`); Kern und Daten der Persona stehen weiter in §0.6. Die
 Dateien des Durchgangs ST0 (`core/season/**`, `core/progression/{talent_tree,professions}.gd`, die vier Defs und
 Validatoren der Staffel-Tabellen, `data/{seasons,professions,cast,themes}.json`, `tests/fixtures/season_min/**`,
-`tests/test_09_st0_contract.gd`) stehen mit ihrem Eigentümer (ST1-B … ST1-G) in §0.8.
+`tests/test_09_st0_contract.gd`) stehen mit ihrem Eigentümer (ST1-B … ST1-G) in §0.8, die von ST1-A und Vertrag 4
+(`core/data/validators/{floor_season,levels}.gd`, `tests/test_09_{terms,contract4}.gd`) in §0.8 „Stand Vertrag 4“.
 
 ### 1.1 Projektwurzel
 
@@ -556,7 +613,7 @@ Validatoren der Staffel-Tabellen, `data/{seasons,professions,cast,themes}.json`,
 | `core/progression/party_member.gd` | M2 (S) | `PartyMember` |
 | `core/progression/inventory.gd` | M2 (S) | `Inventory` (Items + Credits) |
 | `core/progression/floor_run.gd` | M2 (S) | `FloorRun`: Zustand der aktuellen Etage |
-| `core/progression/progression.gd` | M2 (S) | `Progression`: EXP-Kurve, Level-Up, Stats, Ausrüsten |
+| `core/progression/progression.gd` | M2 (S) | `Progression`: EXP-Kurve, Stufenaufstieg, Stats, Ausrüsten |
 | `core/progression/level_up_info.gd` | M2 (S) | `LevelUpInfo` |
 | `core/progression/battle_bridge.gd` | M2 (S) | `BattleBridge`: `GameState` ↔ `BattleSetup`/`BattleResult` |
 | `core/progression/battle_rewards.gd` | M2 (S) | `BattleRewards` |
@@ -669,7 +726,7 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `scenes/title/title.tscn` + `title.gd` | M6 (S) | `TitleScreen`: Fortsetzen / Neues Spiel / Laden / Event-Lauf / Optionen / Credits / Beenden (§9.5) |
 | `scenes/title/slot_select.tscn` + `.gd` | M6 | Slot-Auswahl (Neu/Laden); „Neu“ → Figurenwahl |
 | `scenes/title/hero_select.tscn` + `.gd` | 06-A | Figurenwahl „Wen steuerst du?“: zwei Karten Kandidat:in / Graf Mopsula mit 3D-Vorschau (06 §1.1, CR-16; Kartentext 08 §1.1) → Casting |
-| `scenes/title/persona_casting.tscn` + `.gd` | 08-K1, K2 | Casting (08 §1): 1/3 „Wer sind Sie?“ (Name, Wortform; K2: Aussehen — sechs ◀ ▶-Wähler mit Live-Vorschau, Würfeln), 2/3 „Steckbrief“ (Vorleben, Hobby / Talent, „+ Eigenschaften“, Würfeln), 3/3 Kandidatenkarte + Sendeformat; „Rest automatisch“ (Esc / Start) auf 1/3 und 2/3; K2-Bearbeitungsmodus `{"edit": true}` (Name & Aussehen im Safe Room); private Helfer `scenes/ui/persona_picker.gd` (Auswahl-Overlays), `scenes/ui/osk_keyboard.gd` (Bildschirmtastatur mit Akzent-Ebene), `scenes/ui/persona_figure.gd` (3D-Figur, `set_look`) |
+| `scenes/title/persona_casting.tscn` + `.gd` | 08-K1, K2 | Casting (08 §1): 1/3 „Wer sind Sie?“ (Name, Wortform; K2: Aussehen — sechs ◀ ▶-Wähler mit Live-Vorschau, Würfeln), 2/3 „Steckbrief“ (Vorleben, Hobby / Talent, „+ Eigenschaften“, Würfeln), 3/3 Kandidatenkarte + Sendeformat; „Rest automatisch“ (Esc / Start) auf 1/3 und 2/3; K2-Bearbeitungsmodus `{"edit": true}` (Name & Aussehen im Safe Room); private Helfer `scenes/ui/persona_picker.gd` (Auswahl-Overlays), `scenes/ui/osk_keyboard.gd` (Bildschirmtastatur mit Akzenttasten), `scenes/ui/persona_figure.gd` (3D-Figur, `set_look`) |
 | `scenes/title/name_entry.tscn` + `.gd` | M6 | Namenseingabe (Default „Kai“, `LineEdit.max_length = 12`, Überschrift je Figur, 06 §1.1) + Modus Prime Time / Vorabendprogramm — seit 08 K1 nicht mehr im Neues-Spiel-Fluss (Rückfall, bis K1-Ende) |
 | `scenes/title/intro.tscn` + `.gd` | M6 | M.O.D.-Intro-Sequenz |
 | `scenes/title/game_over.tscn` + `.gd` | M6 | Game Over (Grund: `defeat`/`timer`) |
@@ -700,6 +757,7 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `scenes/ui/mod_dialog.tscn` + `.gd` | M6 | M.O.D.-/Mopsula-Textbox mit Queue; Dialog-Presenter (`Game.set_dialog_presenter`, §9.4) |
 | `scenes/ui/toast_stack.gd` | M6 | Achievement-/Hinweis-Toasts |
 | `scenes/ui/exploration_hud.tscn` + `.gd` | M6 (S) | `ExplorationHud`: Timer, Etage, Party-Mini-Status, Minimap, Prompt, Touch, Pause |
+| `scenes/ui/level_badge.gd` | 09 ST1-A | Privat: Stufen-Plakette (die Zahl im runden Schild, Tooltip „Stufe %d“, 09 §1.2): `make` als Steuerelement (Party-Menü, Erkundungs-HUD), `draw` für gezeichnete Rahmen (Zielrahmen) |
 | `scenes/ui/explore_target.gd` | 07 Pull | Privat: Zielrahmen und Marker des Pulls in der Echtzeit-Erkundung, Pull-Plakette, Ablehnungstext (07 E34, E37); ein Dreiecks-Array |
 | `scenes/ui/minimap.gd` | M6 | Minimap + große Karte |
 | `scenes/ui/touch_controls.tscn` + `.gd` | M6 | Touch-Layer (virtueller Stick + Buttons + Kamera-Drag) |
@@ -710,9 +768,9 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `scenes/ui/talent_show.tscn` + `.gd` | 06-B | Talent-Show (Modal, Ebene 60): je offene Wahl zwei Karten, `pick(i)` → `Game.pick_talent`; „Später“ |
 | `scenes/ui/talent_text.gd` | 06-B | Texte/Icons der Talente (Wirkungszeilen aus den Daten), privat |
 | `scenes/ui/inventory_menu.gd` | M6 | Inventar (Feld-Nutzung) |
-| `scenes/ui/equipment_menu.gd` | M6 | Ausrüstung; 06-C: je Figur „Liga: aktiv“ bzw. „Liga blockiert durch: <Item>“ + Stufe der Party |
-| `scenes/ui/bets_menu.gd` | 06-C | Pausemenü-Tab „Show“: Vorlieben der Etage (Regel im Klartext, Herzen, gewonnen), Unterhosen-Liga (Regeltext, Stufe, Faktoren, Blocker je Figur → Ausrüstung) |
-| `scenes/ui/skills_menu.gd` | M6 | Fähigkeiten + Freischalt-Level (aus `party.json` `rt.bar`, 07 §5.1; das CTB-`learnset` ist mit R5b-2b entfallen) |
+| `scenes/ui/equipment_menu.gd` | M6 | Ausrüstung; 06-C: je Figur „Liga: aktiv“ bzw. „Liga blockiert durch: <Item>“ + aktuelle Liga der Party |
+| `scenes/ui/bets_menu.gd` | 06-C | Pausemenü-Tab „Show“: Vorlieben der Etage (Regel im Klartext, Herzen, gewonnen), Unterhosen-Liga (Regeltext, Liga 1/Duo-Liga mit Faktoren, Blocker je Figur → Ausrüstung) |
+| `scenes/ui/skills_menu.gd` | M6 | Fähigkeiten + Freischalt-Stufe (aus `party.json` `rt.bar`, 07 §5.1; das CTB-`learnset` ist mit R5b-2b entfallen) |
 | `scenes/ui/achievements_menu.gd` | M6 | Achievements (erhalten / verborgen „???“) |
 | `scenes/ui/bestiary_menu.gd` | M6 | Bestiarium aus `GameState.bestiary` |
 | `scenes/ui/floor_summary.tscn` + `.gd` | M6 | `FloorSummary`: Etagen-Bilanz (Zeit, Kills, Zuschauer-Peak, Follower, Achievements; Zeile „Regie-Notizen n/3“ bei `regie_notes_total` > 0, 06 §2.7) → `Game.continue_after_summary()` |
@@ -762,7 +820,7 @@ Jede Datei unter `tests/` gehört dem genannten Modul; `test_<modul>_*.gd` ist d
 | `tests/test_m2_show.gd` | M2 | ShowRules-Hype, Zuschauer, Follower, Sponsor-Trigger |
 | `tests/test_m2_achievements.gd` | M2 | Zähler, Schwellen, Belohnungen |
 | `tests/test_m2_loot.gd` | M2 | Lootbox/Truhe deterministisch, Ausrüstungs-Duplikate → Credits, Drop-Regel `BattleResult.roll_drops` |
-| `tests/test_m2_progression.gd` | M2 | EXP-Kurve, Level-Up, Equip, BattleBridge (Diebstahl bei geflohenem Dieb, KO-Rückkehr mit 1 HP nach der EXP) |
+| `tests/test_m2_progression.gd` | M2 | EXP-Kurve, Stufenaufstieg, Equip, BattleBridge (Diebstahl bei geflohenem Dieb, KO-Rückkehr mit 1 HP nach der EXP) |
 | `tests/test_m2_save.gd` | M2 | Roundtrip, Migration, kaputte Dateien, Slots; Anker des Logs nach dem Laden (`Game.replay_log`/`RunSim.replay` ab `start_state`); umbenannte Skill-IDs (`SaveCodec.RENAMED_SKILLS`, Polish-Pass) |
 | `tests/test_m2_shop.gd` | M2 | Kaufen/Verkaufen |
 | `tests/test_m3_dungeon_gen.gd` | M3 | `floor_1`-Layout valide/deterministisch; 200 Seeds prozedural: Invarianten, Determinismus, Laufzeit |
@@ -812,7 +870,7 @@ Jede Datei unter `tests/` gehört dem genannten Modul; `test_<modul>_*.gd` ist d
 | `tests/test_m8_state_hash.gd` | M8 | `StateHash.of` ohne Anzeigefelder (`of_battle`: `test_sd_engine_golden`) |
 | `tests/test_sd_engine_golden.gd` | SD (R5b-2b) | Goldwerte der CTB-Engine (10 §6.9): zwei feste Kämpfe auf dem `test_m1`-Mini-Datensatz mit geskripteter Party → eingefrorener `StateHash.of_battle`, Ereigniszahl, Digest des Ereignisstroms, Ausgang, Befehle; zwei Läufe gleich, Befehle über JSON nachgespielt; Schnappschuss → `from_dict` → gleicher Hash (auch mitten im Kampf bis zum Ende) |
 | `tests/test_sd_boundaries.gd` | SD (R5b-2b) | Grenztest 10 §6.3: die fünf Engine-Klassen in Code-Zeilen nur in `core/stempel/**`, `scenes/stempel/**`, `core/live/state_hash.gd` und den `test_m1_*`/`test_sd_*`; Engine-Dateien in `core/stempel/ctb`, `scenes/battle` gelöscht, `roll_drops` nur in `BattleResult`; ein CTB-Kampagnen-Log von Kernel `2246c31` (`tests/fixtures/live/run_log_sim_v3_ctb.json`) ist „ältere Version“ in beiden Verifiern, Bestenliste und Lobby |
-| `tests/test_06b_talents.gd` | 06-B | `talents.json` + Validator, offene Wahlen (ungerade Level ab L3), geseedetes Angebot, Wahlregeln, jede Wirkungsart an ihrem Ort, Hype-/Follower-Faktoren als Ganzzahl-Promille (`GameState.hype_gain_pm/follower_pm`, Show), Command + Replay (`RunSim`, `Game`-Fassade), Save/Hash-Kompatibilität |
+| `tests/test_06b_talents.gd` | 06-B | `talents.json` + Validator, offene Wahlen (ungerade Stufen ab 3), geseedetes Angebot, Wahlregeln, jede Wirkungsart an ihrem Ort, Hype-/Follower-Faktoren als Ganzzahl-Promille (`GameState.hype_gain_pm/follower_pm`, Show), Command + Replay (`RunSim`, `Game`-Fassade), Save/Hash-Kompatibilität |
 | `tests/test_06b_species.gd` | 06-B | `species.json` + Validator (kein Kronen-Motiv an Mopsula, `spc_original`), `Casting` (Optionen, Gründe, Re-Spec-Regeln, Werte Klasse × Spezies), Command + Replay, Save |
 | `tests/test_06b_talent_show.gd` | 06-B | Talent-Show-Szene (Karten, „Später“, Erst-Erklärung, Vorschau), TALENT-SHOW-Knopf im Safe Room, Chip „TALENT BEREIT“, Party-Seite („n Talente offen – im Safe Room wählen“); Polish-Pass: Karten blenden 0.5 s ein und ignorieren gehämmerte Eingaben, Rang-Tag „Rang 1/2“ |
 | `tests/test_06b_balance.gd` | 06-B | Talentboni bei L10 ≤ +15 % je Kampfwert für jede Wahlfolge (erschöpfend); Boss-Quoten mit Bot-Wahl ±5 Punkte (gepaart, 300 Seeds) |
@@ -2282,6 +2340,7 @@ Helfer: `ItemDef.sell_value()` (`sell`, −1 → `floori(price / 2)`) und `ItemD
 | `passives` | Array[{id, params}] | `[]` | id `pas_`; `params` freies Dictionary (wird im Slice nicht ausgewertet) |
 | `learnset` | Array[{level, skill}] | `[]` | level 1..99; Skill-Referenz darf fehlen, wenn `min_floor > 1` (Warnung, kein Fehler) |
 | `show_mods` | {hype_gain_mult, stunt_success_add, stunt_cooldown, sponsor_thresholds} | `{1.0, 0.0, 3, [70, 85, 100]}` | |
+| `rt` | {bar, ranks} | `{}` | Staffeln (Vertrag 4, 07 CR-32 a): Klassenleiste wie `party.json → rt.bar` (Stufe 1–50, jede Zeile Variante oder FINALE) und höchstens drei Ränge `{level, pm}` (pm 1001–2000, beide steigend) — Regeln §0.8 „Stand Vertrag 4“, `validators/rt.gd` |
 
 ```json
 {"id": "cls_kai_wrecker", "name": "Abrissbirne", "for": ["kai"], "min_floor": 3,
@@ -2293,10 +2352,10 @@ Helfer: `ItemDef.sell_value()` (`sell`, −1 → `floori(price / 2)`) und `ItemD
 
 **Klassenfähigkeiten (CR-27 wie CR-26, 09 §8.3, V-16):** Die `learnset`-Listen der Kampagnen-Daten sind leer (die früheren
 Beispiel-Ids waren nur Doku). In Staffeln kommen Klassenfähigkeiten über eine Klassenleiste `rt.bar` (Schema wie
-`party.json`, Schema-Haken 07 CR-32 a): die Signatur beim Recall, dann je eine auf Stufe 12, 17, 22, 27 und 32, die Ränge
-II–IV auf 37, 42 und 47 (`AbilityBook`, ST1-D). Beispiel Abrissbirne: `skl_kai_wrecking_ball` beim Recall,
-`skl_kai_quick_concrete` („Schnellbeton“) auf Stufe 12 statt `skl_kai_concrete_boots` auf 13 (die Wortliste `ip_words.gd`
-sperrt Schuh-Wörter).
+`party.json`, Schema-Haken 07 CR-32 a, seit Vertrag 4 im Validator): die Signatur beim Recall (`level` 1), dann je eine auf
+Stufe 12, 17, 22, 27 und 32, die Ränge II–IV auf 37, 42 und 47 als `rt.ranks` (`AbilityBook`, ST1-D). Beispiel
+Abrissbirne: `skl_kai_wrecking_ball` beim Recall, `skl_kai_quick_concrete` („Schnellbeton“) auf Stufe 12 statt
+`skl_kai_concrete_boots` auf 13 (die Wortliste `ip_words.gd` sperrt Schuh-Wörter).
 
 #### 4.4.5 `party.json` → `PartyMemberDef` (+ Top-Level `start`)
 
@@ -2306,7 +2365,7 @@ sperrt Schuh-Wörter).
 | `name` | String | ✓ | Default-Anzeigename (Kai: vom Spieler überschreibbar, max. 12 Zeichen) |
 | `title` | String | `""` | z. B. „Graf“ |
 | `base_stats` | Dict<stat,int> | ✓ | alle 8 STATS, hp ≥ 1 |
-| `growth` | Dict<stat,float> | ✓ | alle 8 STATS, 0..50 pro Level |
+| `growth` | Dict<stat,float> | ✓ | alle 8 STATS, 0..50 pro Stufe |
 | `attack_skill` | String | ✓ | |
 | `learnset` | Array[{level:int, skill:String}] | `[]` | level 1..`Balance.LEVEL_CAP` — seit R5b-2b in den Kampagnen-Daten leer (die Leiste ist `rt.bar`, 07 §5.1); optional für die Engine des Stempelduells |
 | `stunts` | Array[String] | `[]` | Skills mit `category: stunt` |
@@ -2322,7 +2381,8 @@ Top-Level `start` (Pflicht): `{"inventory": {item_id: int 1..max_stack}, "credit
 
 Staffeln (CR-27, 09 §8.2, ST1-D): Top-Level `exp_table` — EP je Stufe 1–49 als vorberechnete Ganzzahl-Tabelle (Stufen 1–9
 wie GDD §4.3, danach dieselbe Kurve fortgesetzt), gilt nur mit `state.season != null` (Höchststufe 50; ohne Staffel bleibt
-`Balance.LEVEL_CAP` 10).
+`Balance.LEVEL_CAP` 10). Regeln seit Vertrag 4 (`validators/levels.gd`): genau 49 Ganzzahlen 1–1 000 000, streng steigend,
+Stufen 1–9 gleich `Progression.EXP_TABLE`; ohne Schlüssel `[]` (`GameData.exp_table()`).
 
 ```json
 {"schema": 1,
@@ -2432,15 +2492,15 @@ Rattenkönigin P2/P3 nutzen `{"op": "add_pseudo", "unit": "pu_train_gleis9", "ct
 | `index` | int | ✓ | 1..99, eindeutig |
 | `name` | String | ✓ | |
 | `playable` | bool | true | false → Abspann nach der vorherigen Etage |
-| `theme` | String | ✓ | `THEMES` |
+| `theme` | String | ✓ | `THEMES` oder eine Kulisse `thm_` (Staffeln, Vertrag 4: steht in `themes.json` und führt die Etage) |
 | `timer_seconds` | int | ✓ | 60..7200 (Etage 1: 1200; Vorabendprogramm × 1.5) |
 | `timer_warnings` | Array[int] | `[600, 300, 60]` | absteigend, < timer_seconds |
 | `timer_start_after` | String | `""` | enc id; Countdown startet nach dessen Sieg (`""` = bei Betreten). Etage 1: `enc_f1_a1_tutorial` |
 | `floor_mult` | float | 1.0 | 0.1..100 (Zuschauer-Basis, GDD §7.2: E1 1.0, E2 1.5) |
-| `grid` | {w:int, h:int} | ✓ | 3..12 |
+| `grid` | {w:int, h:int} | ✓ | 3..12 (mit `zones` 3..13) |
 | `layout` | Layout | `{}` | handgebaute Etage (unten); leer → prozedural (§7.2) |
 | `rooms` | {min:int, max:int} | ✓ ohne `layout` | 6 ≤ min ≤ max ≤ w·h − 2 |
-| `safe_rooms` | int | 1 | 0..3 (nur prozedural) |
+| `safe_rooms` | int | 1 | 0..3 (nur prozedural; mit `zones` 0..4, höchstens einer je Viertel) |
 | `chests` | {min, max} | ✓ ohne `layout` | 0..20 |
 | `enemy_groups` | {min, max} | ✓ ohne `layout` | 0..20 |
 | `chest_table` | Array[{kind, id, weight, min, max}] | ✓ ohne `layout` | kind ∈ {item, credits} |
@@ -2452,10 +2512,14 @@ Rattenkönigin P2/P3 nutzen `{"op": "add_pseudo", "unit": "pu_train_gleis9", "ct
 | `music` | String | `"explore"` | Sfx-Musik-ID |
 | `quest` | Dictionary | `{}` | Brief §6b.5: `{type ∈ QUEST_TYPES, label, params}`; nur Event-Läufe werten aus |
 | `window` | Dictionary | `{}` | Brief §6b.5: `{open_at, close_at (ISO-8601 UTC), duration_sec}` |
+| `variant` | int | 0 | Staffeln: 0–3, > 0 = Platz in der Kulisse |
+| `level_band` | [int, int] | `[]` | Staffeln: 1 ≤ von ≤ bis ≤ 50, fällt nie von Etage zu Etage |
+| `zones` | Array[{id, name, rooms, palette, pool}] | `[]` | Staffeln: 2–4 Viertel, nur prozedural (Regeln §0.8 „Stand Vertrag 4“) |
 
 Staffeln (CR-27, 09 Kap. 3.1 und 3.6, ST1-C): Die Etagen 2–18 tragen zusätzlich `variant` (1–3, die Etage innerhalb ihrer
 Kulisse), `level_band` (Stufen-Band der Etage) und `zones` (Viertel für `core/dungeon/zone_generator.gd`, Generator v2),
 `safe_rooms` bis 4; die Kulisse steht in `themes.json` (`thm_`, ihre `floors`, ST0), `theme` bindet die Etage an sie.
+Seit Vertrag 4 prüft der Validator diese Felder (`validators/floor_season.gd`, Eigentum ST1-C; alle Regeln in §0.8).
 
 `EncounterDef`: `id` (✓ `enc_`), `enemies` (✓ Array 1..4 enemy ids), `weight` (int, 10; Boss/platziert: 0), `min_depth`/`max_depth`
 (float 0..1, Default 0.0/1.0, nur prozedural), `boss` (bool false), `can_flee` (bool, Default `!boss`), `tutorial` (bool false:
@@ -2712,7 +2776,7 @@ Wirkungsarten (`TalentDef.KINDS`, alle Zahlen int, je Rang einmal angewandt; Ber
 | `kind` | Felder (Bereich) | Wirkung (Auswertung in `Talents`) |
 |---|---|---|
 | `stat_flat` | `stat` ∈ STATS, `value` 1..3 | +value auf den Wert (vor den Multiplikatoren) |
-| `stat_pct` | `stat`, `pm` 30..50 | +pm ‰ des Level-+Ausrüstungswerts (Summe aller ‰, dann einmal gerundet) |
+| `stat_pct` | `stat`, `pm` 30..50 | +pm ‰ des Stufen- und Ausrüstungswerts (Summe aller ‰, dann einmal gerundet) |
 | `crit_add_pm` | `pm` 10..30 | Kritchance +pm ‰ (`Combatant.crit_bonus`) |
 | `element_pm` | `element` ∈ ELEMENTS ohne `none`, `pm` 700..1000 | erlittener Schaden dieses Elements × pm ‰ (`Combatant.element_mods`, multiplikativ) |
 | `post_battle_mp_pm` | `pm` 30..50 | Werbepause regeneriert zusätzlich pm ‰ MaxMP (`BattleBridge`) |
@@ -2721,12 +2785,18 @@ Wirkungsarten (`TalentDef.KINDS`, alle Zahlen int, je Rang einmal angewandt; Ber
 | `preemptive_dmg_pm` | `pm` 1000..1200 | Präventivschlag: erster eigener Zug macht × pm ‰ Schaden (`ActionResolver`) |
 | `stunt_window_pm` | `pm` 1000..1250 | Stunt-Erfolgschance × pm ‰ vor der Obergrenze (`BattleState.stunt_chance`) |
 | `marotte_heart` | `per_floor` 1 | 1× je Etage +1 Herz: das erste Herz der Etage zählt `Talents.marotte_bonus_hearts` mehr (`MarottenRules._evaluate`, Marker `marotten.bonus`, bis zum Ziel; Integration B × C) |
-| `liga_stat_pct` | `stat` ∈ STATS ohne `hp`/`mp`, `pm` 30..50 | wie `stat_pct`, nur solange das Mitglied in der Unterhosen-Liga kämpft — **einzige Quelle** ist die Liga-Stufe von 06-C (`MarottenRules.in_liga`: die gesteuerte Figur ab Stufe 1, die andere nur in der Duo-Liga; nie im Tutorial, nie mit `rules.liga.enabled = false`; Integration B × C) |
+| `liga_stat_pct` | `stat` ∈ STATS ohne `hp`/`mp`, `pm` 30..50 | wie `stat_pct`, nur solange das Mitglied in der Unterhosen-Liga kämpft — **einzige Quelle** ist die Liga-Stufe von 06-C (`MarottenRules.in_liga`: die gesteuerte Figur ab Liga 1, die andere nur in der Duo-Liga; nie im Tutorial, nie mit `rules.liga.enabled = false`; Integration B × C) |
 | `hype_gain_pm` | `pm` 1000..1200 | Hype-Gewinn × pm ‰ (`GameState.hype_gain_pm`, Ganzzahl-Promille) |
 | `follower_pm` | `pm` 1000..1200 | Follower-Gewinn × pm ‰ (`GameState.follower_pm`, Ganzzahl-Promille) |
 
 `TalentDef.BEHAVIOUR_KINDS` (Karte „VERHALTEN“, cyan): `field_range_pm`, `field_cd_pm`, `preemptive_dmg_pm`, `stunt_window_pm`,
 `marotte_heart`, `liga_stat_pct`; alle übrigen sind „WERT“ (grün).
+
+**Talentbaum (Staffeln, 09 §8.4; Vertrag 4):** optionale Felder `row` (0 = 06-B-Pool, sonst die Stufe der Reihe aus
+`TalentDef.tree_rows()`), `col` (1–3), `tree` (Figur oder `cls_`) und `spec` (Ast der Außenspalten einer Klassenreihe); ein
+Baum-Talent hat `max_rank` 1 und `min_level` = `row`, seine Werte dürfen zwei Ränge in einem tragen (`TREE_RANGES`), und es
+kennt die Art `rt_mod` (`{"kind": "rt_mod", "op", …}`, Operationen aus `TREE_MOD_OPS`, Quelle `talent:<id>`). Regeln in §0.8
+„Stand Vertrag 4“; `GameData.talents_for` (das Angebot der Talent-Show) liefert nie ein Baum-Talent.
 
 #### 4.4.16 `species.json` (06-B, Casting ab Etage 3; 06 §3)
 
@@ -2738,7 +2808,7 @@ Wirkungsarten (`TalentDef.KINDS`, alle Zahlen int, je Rang einmal angewandt; Ber
 ```
 
 Teilmenge von ClassDef: `name` ✓ ≤ 32, `desc` ≤ 60, `for` (`[]` = alle), `min_floor` 1..99 (3), `stat_mult` 0.5..2.0 je Wert,
-`growth_add` 0..20 je Wert (pro Level ab 1, wie Klassen), `passive` ✓ (`{id: pas_…, params}`; **validiert, im Slice nicht
+`growth_add` 0..20 je Wert (pro Stufe ab 1, wie Klassen), `passive` ✓ (`{id: pas_…, params}`; **validiert, im Slice nicht
 ausgewertet** — 06 §3.4), `recommended_classes` (existieren und passen zu jedem Mitglied der Spezies), `model_hint {props_add ⊂
 MODEL_PROPS, colors ⊂ MODEL_COLOR_KEYS (hex)}` (Look-Hinweis für die spätere Casting-Szene). Für Graf Mopsula sind `crown` und
 `ticket_crown` verboten (04 §2.3). Strikte Inhaltsregel (`load_dir`): `spc_original` existiert mit `for: []` und `stat_mult: {}`
@@ -4221,9 +4291,9 @@ belegt. Duell-Stände speichert das Stempelduell getrennt (10 §6.7).
 
 ### 6.5 Talente und Casting (06-B; `core/progression/talents.gd`, `casting.gd`)
 
-**Talent-Show** (06 §2.2, GDD §4.7): Ab Level 3 bringt jedes ungerade Level (L3, L5, L7, L9 …) jedem Mitglied eine
+**Talent-Show** (06 §2.2, GDD §4.7): Ab Stufe 3 bringt jede ungerade Stufe (3, 5, 7, 9 …) jedem Mitglied eine
 Talentwahl — 1 aus 2 Talenten seines Pools (`talents_for(member)`). Offene Wahlen sind **abgeleitet**, nicht gespeichert:
-die ungeraden Level ≥ 3 bis zum eigenen Level minus Anzahl der Wahlen (Summe der Ränge); es wird immer die älteste offene
+die ungeraden Stufen ≥ 3 bis zur eigenen Stufe minus Anzahl der Wahlen (Summe der Ränge); es wird immer die älteste offene
 Wahl zuerst gelöst. Gewählt wird nur im Safe Room (`floor_run.location != &"start"`), nichts unterbricht Kampf oder Erkundung.
 
 ```gdscript
@@ -5505,7 +5575,7 @@ Safe Rooms (Erstbesuch), unbesuchte Räume, Streuner ≤ 2 Räume entfernt (max.
   Sendeschluss mit Grund `timer`); `typical` (wie `thorough`, aber ohne die Nebengruppen a4/b3/c2 und ohne Streuner-Jagd —
   der Erstspieler der GDD-§13-Ziele; Streifen erwischen ihn trotzdem). Nach jedem Game Over: „Letzten Spielstand laden“
   (Restzeit ≥ 180 s geprüft) und weiter mit `thorough` (`typical` bleibt `typical`); mehr als 3 Game Over = Fehler. Seit dem
-  Balancing (GDD §13) verliert der Auto-Kampf Bosse auf Ziel-Level gewollt (~20 % / ~35 %): nach einer Boss-Niederlage, die
+  Balancing (GDD §13) verliert der Auto-Kampf Bosse auf Ziel-Stufe gewollt (~20 % / ~35 %): nach einer Boss-Niederlage, die
   wiederholt wird (Hausmeister; die Königin hat 1 Versuch), grindet der Bot erst 2 Streuner-Kämpfe (wartet bis 100 s
   Countdown auf einen Spawn) — gleicher Spielstand und gleiche Befehle ergäben sonst dieselbe Niederlage (deterministische
   Seeds). Den Weg Niederlage → Sendeschluss „defeat“ → `game_overs` +1 im Slot → „Letzten Spielstand laden“ → Erkundung prüft
@@ -5530,7 +5600,7 @@ Safe Rooms (Erstbesuch), unbesuchte Räume, Streuner ≤ 2 Räume entfernt (max.
   entfällt seit R5b-2b mit dem Schalter `--combat=`).
 
 Ausgabe: je Ereignis `FULLRUN: [<frame>] …` (Kämpfe mit Hype Start → Ende, Peak und Geschenken), am Ende `FULLRUN: stats {json}`
-(GDD-§13-Kennzahlen: Etagenzeit, Takt + Wartezeit, Kämpfe, Party-Züge, HP-Verlust, Level/EXP/Ausrüstung/Items an den Bossen,
+(GDD-§13-Kennzahlen: Etagenzeit, Takt + Wartezeit, Kämpfe, Party-Züge, HP-Verlust, Stufe/EXP/Ausrüstung/Items an den Bossen,
 Boss-Ausgänge je Versuch, Credits gesamt / bis zur Königin / nach Quelle / aus Lootboxen, Boxen je Typ, Achievements (IDs),
 Meilensteine, Follower gesamt / aus Kämpfen / aus Achievements, Zuschauer-Peak, Sponsor-Geschenke regulär/Boss, Hype-Mediane
 Kampfstart/-ende/-peak, Teleports, Fallbacks, Replay-Prüfungen, M.O.D.-Tags, `hero`, `barks`, `dazed`, `hero_switches`, `secrets`,
@@ -5547,7 +5617,7 @@ Kampfstart/-ende/-peak, Teleports, Fallbacks, Replay-Prüfungen, M.O.D.-Tags, `h
 | M4 | Jede Base × Prop baut; Tri-Budgets §12.1; Rigs nur über `add_to_tree()`; `play_and_wait` jeder One-Shot-Anim endet, `impact` feuert genau 1× bei attack/cast/stunt/item; außerhalb des Baums sofortiges Ende; `build_room` für alle 16 Türmasken; `build_safe_room` alle 3 Themes; Log ohne „different indices“; alle festen `Label3D`-/Schadenszahl-Texte bestehen `ThemeDB.fallback_font.has_char()` Zeichen für Zeichen (03_ART A13, `test_m4_env`, `test_m4_vfx`) |
 | M5 | entfallen mit der CTB-Kampfszene (R5b-2b); der Kampf in der Welt testet 07 §12.5 (`test_r2_*`, `test_r3_*`) |
 | M6 | Jede UI-Szene instanziierbar + Default-Fokus; alle statischen UI- und `Label3D`-Texte bestehen `ThemeDB.fallback_font.has_char()` Zeichen für Zeichen (03_ART A13/F8, `test_m6_ui_scenes`); `PauseMenu.process_mode == PROCESS_MODE_WHEN_PAUSED` (und alle Untermenüs); Touch-Trefferflächen ≥ 88; SafeAreaContainer-Ränder ≥ 24; `name_entry` `max_length == 12`; Full-Run-Bot: Helfer/Planer/Story-Beats (`test_m6_fullrun`) + ganzer Lauf über `tools/fullrun.sh` (CI, §11.4.1) |
-| M7 | `real_data()` valide; Mindestmengen laut GDD; jede reguläre Etage-1-Encounter per Auto-Kampf (50 Seeds) ≥ 80 % Siegquote mit dem Level/der Ausrüstung, die der GDD-Fortschritt dort erwartet (§5.4/§13): Zone A Lv 2 (Tutorial Lv 1), Zone B Lv 3 (Startausrüstung), Zone C Lv 4 + mittlere Ausrüstung, Hausmeister Lv 5, Zone D Lv 6 + späte Ausrüstung, Königin Lv 7; Bosse ohne Geschenke ≥ 50 %; Party-Züge je Sieg: Median aller regulären Encounter 4–6, je Encounter 3–7, Hausmeister 16–22, Königin 20–26 (GDD §13). Seit R5b-2b (07 §12.6) ersetzen die Echtzeit-Bänder diese CTB-Bilanzen (`test_m7_balance`, `test_m7_show_balance` sind entfallen): Kampf-Bänder `test_r4_rt_balance` / `tools/rt_balance.sh` (07 §11), Show-Bänder die Full-Runs (07 §12.6 Nr. 3); `test_m7_data_content` prüft die Echtzeit-Inhalte |
+| M7 | `real_data()` valide; Mindestmengen laut GDD; jede reguläre Etage-1-Encounter per Auto-Kampf (50 Seeds) ≥ 80 % Siegquote mit der Stufe/der Ausrüstung, die der GDD-Fortschritt dort erwartet (§5.4/§13): Zone A Stufe 2 (Tutorial Stufe 1), Zone B Stufe 3 (Startausrüstung), Zone C Stufe 4 + mittlere Ausrüstung, Hausmeister Stufe 5, Zone D Stufe 6 + späte Ausrüstung, Königin Stufe 7; Bosse ohne Geschenke ≥ 50 %; Party-Züge je Sieg: Median aller regulären Encounter 4–6, je Encounter 3–7, Hausmeister 16–22, Königin 20–26 (GDD §13). Seit R5b-2b (07 §12.6) ersetzen die Echtzeit-Bänder diese CTB-Bilanzen (`test_m7_balance`, `test_m7_show_balance` sind entfallen): Kampf-Bänder `test_r4_rt_balance` / `tools/rt_balance.sh` (07 §11), Show-Bänder die Full-Runs (07 §12.6 Nr. 3); `test_m7_data_content` prüft die Echtzeit-Inhalte |
 | M8 | 05_LIVE_MODUS §11.4; zusätzlich `RunSim.step(1) × n ≡ step(n)` und Timer/Hype-Zerfall in Ticks; Verifier gegen gefälschte Logs (`test_m8_integrity`); jeder `Command.TYPES`-Eintrag hat einen Zweig in `RunSim.apply` und im Replay-Motor (`test_m8_command`) |
 | 06-A | 06 §8.2 (`tests/test_06a_*.gd`): Startwahl/Safe-Room-Wechsel inkl. Ablehnungsgründe und `RunSim`-Gleichheit, Replay-Hash auch für einen Lauf als Mopsula, Altstand ohne `hero` → `kai`; Bellen-Geometrie/Sichtlinie/Immunität/Bosse, `DAZED` → PREEMPTIVE aus jeder Richtung; der Partner ist im Echtzeitkampf immer KI (07 §5.1; „Partner automatisch“ ist mit R5b-2b entfallen); Figurenwahl-Szene (Fokus, Touch-Flächen), Safe-Room-Menü passt über den Chat-Ticker; Full-Run-Bot `--hero=mopsula`; E1-Geheimnisse (`test_06a_secrets`: Regeln, Command + Replay + `RunSim`, Save, Datenregeln, Wand fällt mit Feldschlag und Bellen, nie mit Interagieren, Notizen genau einmal) |
 | 06 A × B | `tests/test_06ab_hero_talents.gd`: Feld-Talente nur der führenden Figur (Ganzzahl-Promille, Szene für Kai und Graf Mopsula, Wechsel im Safe Room), je Held:in Talent-Show + Replay-Hash + KI-Partner mit Talenten im Echtzeitkampf, Safe-Room-Layout Desktop und Handy (Trefferflächen ≥ 88) |

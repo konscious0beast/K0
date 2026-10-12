@@ -39,10 +39,12 @@ jobs:
         # one test process on a dedicated runner: the wall-clock budgets of the unit tests are asserted here only
         # (TestCase.assert_time_budget); local parallel check.sh runs print them
         run: PTD_PERF_ASSERTS=1 GODOT=~/godot/godot prime-time-dungeon/tools/check.sh
-      - name: Full run Floor 1 (bot, thorough + rush + dawdle, ~1.5 min)
+      # 07 E33: new games fight in real time — the bot plays the default; the CTB run stays until SD1 moves the CTB
+      # battle into the Stempelduell (docs/10_MINISPIEL_STEMPELDUELL.md)
+      - name: Full run Floor 1 (real time: thorough + rush + dawdle)
         run: GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --strategy=all --log-dir=fullrun-logs
-      - name: Full run Floor 1 in real time (07 §12.5, thorough, bot profile typical, ~3 min)
-        run: GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --combat=realtime --log-dir=fullrun-logs
+      - name: Full run Floor 1 (CTB until SD1)
+        run: GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --strategy=all --combat=ctb --log-dir=fullrun-logs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -56,6 +58,9 @@ jobs:
                    res://scenes/safe_room/safe_room.tscn; do
             GODOT=~/godot/godot prime-time-dungeon/tools/check.sh --shot "$s" "shots/$(basename "$s" .tscn).png" 120 1280x720
           done
+          # the default combat (07 E33): a real-time fight in the world with the real data (battle.tscn above is CTB)
+          GODOT=~/godot/godot prime-time-dungeon/tools/check.sh --shot res://scenes/exploration/exploration.tscn \
+            shots/combat_realtime.png 30 1280x720 --recipe=rt_r4_regular
       - name: Render probe (03_ART A11)
         run: |
           mkdir -p shots

@@ -2,8 +2,8 @@
 # Verifies the Godot project in an isolated temp copy (safe to run concurrently).
 #
 # Usage:
-#   tools/check.sh                 # import + unit tests + headless smoke runs of the main scene (CTB, and real time
-#                                  # with --combat=realtime: 07 §12.5, R5b)
+#   tools/check.sh                 # import + unit tests + headless smoke runs of the main scene (real time, the default
+#                                  # of new games since 07 E33, and CTB with --combat=ctb until SD1 moves it, 10)
 #   tools/check.sh --tests-only [--filter=<substr>]
 #                                  # import + unit tests (optionally only test files whose name contains <substr>)
 #   tools/check.sh --shot <res://scene.tscn> <out.png> [frames] [WxH] [capture args...]
@@ -61,10 +61,12 @@ run_tests() {
   fi
 }
 
+# The smoke of the default game: real time (07 E33) — force_combat / combat (the autopilot plays the tutorial combat);
+# the driver's own watchdog (1240 frames) sits before --quit-after 1300.
 run_smoke() {
-  echo "== smoke (main scene, headless, autoplay --combat=ctb, safety net 900 frames) =="
+  echo "== smoke (main scene, headless, autoplay, real time, safety net 1300 frames) =="
   local out code
-  out="$(timeout 300 "$GODOT" --headless --path "$WORK" --quit-after 900 -- --autoplay --combat=ctb 2>&1 | filter_noise)"
+  out="$(timeout 300 "$GODOT" --headless --path "$WORK" --quit-after 1300 -- --autoplay 2>&1 | filter_noise)"
   code=$?
   echo "$out" | tail -n 60
   if [ "$code" -ne 0 ] || echo "$out" | grep -qE "$ERR_RE"; then
@@ -76,20 +78,19 @@ run_smoke() {
   fi
 }
 
-# Echtzeitkampf (07 §12.5, R5b): the same smoke in a real-time game — force_combat / combat (autopilot) instead of
-# force_battle / battle; its own watchdog (1240 frames) sits before --quit-after 1300.
-run_smoke_rt() {
-  echo "== smoke real time (main scene, headless, autoplay --combat=realtime, safety net 1300 frames) =="
+# The CTB smoke (until SD1 moves the CTB battle into the Stempelduell, 10): --combat=ctb — force_battle / battle;
+# its watchdog (640 frames) sits before --quit-after 900.
+run_smoke_ctb() {
+  echo "== smoke CTB (main scene, headless, autoplay --combat=ctb, safety net 900 frames) =="
   local out code
-  out="$(timeout 300 "$GODOT" --headless --path "$WORK" --quit-after 1300 -- --autoplay --combat=realtime 2>&1 \
-    | filter_noise)"
+  out="$(timeout 300 "$GODOT" --headless --path "$WORK" --quit-after 900 -- --autoplay --combat=ctb 2>&1 | filter_noise)"
   code=$?
   echo "$out" | tail -n 60
   if [ "$code" -ne 0 ] || echo "$out" | grep -qE "$ERR_RE"; then
-    echo "check.sh: SMOKE (real time) FAILED (exit $code)"; return 1
+    echo "check.sh: SMOKE (CTB) FAILED (exit $code)"; return 1
   fi
   if ! echo "$out" | grep -qE 'AUTOPLAY: OK'; then
-    echo "check.sh: SMOKE (real time) FAILED (no 'AUTOPLAY: OK' line)"; return 1
+    echo "check.sh: SMOKE (CTB) FAILED (no 'AUTOPLAY: OK' line)"; return 1
   fi
 }
 
@@ -127,7 +128,7 @@ case "${1:-}" in
     run_import || status=1
     [ $status -eq 0 ] && { run_tests || status=1; }
     [ $status -eq 0 ] && { run_smoke || status=1; }
-    [ $status -eq 0 ] && { run_smoke_rt || status=1; }
+    [ $status -eq 0 ] && { run_smoke_ctb || status=1; }
     ;;
 esac
 

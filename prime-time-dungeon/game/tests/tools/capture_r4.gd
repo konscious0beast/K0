@@ -1,9 +1,9 @@
 extends RefCounted
 ## R4 capture recipes (07 §12.5): real-time combats of floor 1 with the REAL data and the real RtSim in the world —
-## `check.sh --shot res://scenes/exploration/exploration.tscn <png> 30 1280x720 --combat=realtime --recipe=rt_r4_<name>`
-## (add --touch for the phone layout). Private test helper (no class_name); tests/capture_recipes.gd forwards
-## rt_r4_regular | rt_r4_showboss | rt_r4_hausmeister | rt_r4_queen | rt_r4_results (R5b) to run(). `rec` is the
-## CaptureRecipes runner.
+## `check.sh --shot res://scenes/exploration/exploration.tscn <png> 30 1280x720 --recipe=rt_r4_<name>` (real time is
+## the default of new games since 07 E33; add --touch for the phone layout). Private test helper (no class_name);
+## tests/capture_recipes.gd forwards rt_r4_regular | rt_r4_showboss | rt_r4_hausmeister | rt_r4_queen | rt_r4_results
+## (R5b) to run(). `rec` is the CaptureRecipes runner.
 ## The party gets the level and gear the balance harness gives that point of the floor (tests/tools/rt_harness.gd
 ## PLAN / GEAR), Kai plays on autopilot (the sim's own AI), the director is stepped tick by tick until the moment of
 ## the still: a telegraph filling up (regular: the cable salad's short circuit or the sprayer's fumes), the first
@@ -19,7 +19,7 @@ func run(which: String, scene: Node) -> bool:
 	if not await rec.call("_explore_ready", scene):
 		return false
 	scene.set("auto_start_battle", true)
-	if not Game.is_realtime():                       # without --combat=realtime: switch the fresh run over (R2 way)
+	if not Game.is_realtime():                       # a CTB run (--combat=ctb): switch the fresh run over (R2 way)
 		Game.combat_mode_override = &"realtime"
 		Game.call("_rt_new_game")
 		Game.combat_mode_override = &""

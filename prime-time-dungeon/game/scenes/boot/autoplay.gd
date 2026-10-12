@@ -4,10 +4,10 @@ extends Node
 ## prints "AUTOPLAY: <step> ok @frame <n>" per step and finally "AUTOPLAY: OK frames=<n>" + quit(0); a failure prints
 ## "Assertion failed: AUTOPLAY step '<name>' failed: <reason>" + quit(1). There is no skip path: a module that is
 ## missing or broken fails its step (tools/check.sh accepts only "AUTOPLAY: OK").
-## Echtzeitkampf (07 §12.5, R5b): with --combat=realtime the new game fights in the world — the steps force_battle →
-## force_combat (60 frames: the director runs the tutorial combat) and battle → combat (900 frames: the autopilot
-## plays it, hint cards are read and closed, Events.battle_ended VICTORY); RT_STEPS, watchdog RT_WATCHDOG_FRAMES
-## (check.sh runs this smoke with --quit-after 1300).
+## Echtzeitkampf (07 §12.5, R5b): a real-time game (the default of new games since 07 E33; --combat=ctb: the CTB
+## steps above) fights in the world — the steps force_battle → force_combat (60 frames: the director runs the tutorial
+## combat) and battle → combat (900 frames: the autopilot plays it, hint cards are read and closed,
+## Events.battle_ended VICTORY); RT_STEPS, watchdog RT_WATCHDOG_FRAMES (check.sh: --quit-after 1300).
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const WATCHDOG_FRAMES: int = 640

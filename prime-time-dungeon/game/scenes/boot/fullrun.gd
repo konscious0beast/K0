@@ -26,12 +26,12 @@ extends Node
 ## bot engages groups with the bark (dazed group → walk into it → PREEMPTIVE; real time: pull it with key 1) instead of
 ## the field strike, and on the first safe-room visit it switches to Kai and back ("Figur wechseln", two recorded hero
 ## commands the replay checks cover).
-## Echtzeitkampf (07 §12.5, R5b): with --combat=realtime the run fights in the world — the director plays each combat
-## with the RtBotPlayer (tests/tools/rt_bot_player.gd, loaded at run time; profile --rt-profile=typical|perfect|sloppy,
-## the hero's variant) as the person: its inputs go through Game.combat_submit and are recorded like a player's. A
-## hint card is read for HOLD_FRAMES and closed (recorded combat_hint, the ticks stand meanwhile); the results panel
-## continues by itself (autoplay). A lost boss is fought again after the game over (the Hausmeister until MAX_DEATHS,
-## the optional Königin RT_FLOOR_BOSS_ATTEMPTS times).
+## Echtzeitkampf (07 §12.5, R5b): a real-time run (the default since 07 E33; --combat=ctb: CTB battles) fights in the
+## world — the director plays each combat with the RtBotPlayer (tests/tools/rt_bot_player.gd, loaded at run time;
+## profile --rt-profile=typical|perfect|sloppy, the hero's variant) as the person: its inputs go through
+## Game.combat_submit and are recorded like a player's. A hint card is read for HOLD_FRAMES and closed (recorded
+## combat_hint, the ticks stand meanwhile); the results panel continues by itself (autoplay). A lost boss is fought
+## again after the game over (the Hausmeister until MAX_DEATHS, the optional Königin RT_FLOOR_BOSS_ATTEMPTS times).
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const TitleFlow := preload("res://scenes/title/title_flow.gd")
@@ -147,7 +147,7 @@ var liga: int = 0
 var timer_warnings: PackedInt32Array = []
 var timer_expired: int = 0
 var attempt_floor_boss: bool = true
-## R5b: the run fights in real time (Game.is_realtime() of the new game, --combat=realtime) with this bot profile.
+## R5b: the run fights in real time (Game.is_realtime() of the new game; the default, 07 E33) with this bot profile.
 var rt: bool = false
 var rt_profile: String = "typical"
 var rt_combats: int = 0                    # combats the bot played (its stream: SeedUtil.derive(seed, "rt_bot", n))

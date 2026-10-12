@@ -4,6 +4,9 @@ extends TestCase
 ## sanity (every skill an enemy uses is affordable, every consumable reachable, shops priced, encounter EXP/credits =
 ## GDD §5.4). R5b part 2b (07 §4.11, 10 SD1 step 3): the data carry no CTB fields any more — the abilities come from
 ## the rt bars, the enemy skills from the real-time rules (07 §6), the statuses from their rt blocks.
+## ST1-C1 (09 §3): the season floors 2–6 add their own enemies, skills, equipment and pools — counted apart (the
+## enemies without the floor_1 tag and what only they use; equipment the floors 2–6 sell or drop); floor 1 stays as
+## the GDD has it.
 
 const KAI_SKILLS: PackedStringArray = ["skl_kai_heavy_swing", "skl_kai_taunt", "skl_kai_sweep", "skl_kai_first_aid",
 	"skl_kai_leash_trip", "skl_kai_deo_torch", "skl_kai_cable_whip", "skl_kai_prime_finisher"]
@@ -124,6 +127,90 @@ func _data() -> GameData:
 	return real_data()
 
 
+## Every item floor 1 offers: its shops, chests, loot pools and events, the drops of the floor-1 enemies, the sponsors'
+## gifts and the milestones.
+static func _floor_1_sources(d: GameData) -> Dictionary:
+	var sources: Dictionary = {}
+	var f1: FloorDef = d.floor_def(1)
+	for sr: Dictionary in f1.layout["safe_rooms"]:
+		for id: String in sr["shop"]:
+			sources[id] = true
+	for e: EnemyDef in d.all_enemies():
+		if not e.tags.has("floor_1"):
+			continue
+		for dr: Dictionary in e.drops:
+			sources[str(dr["item"])] = true
+		for bd: Dictionary in e.boss_drops:
+			sources[str(bd["id"])] = true
+	for c: Dictionary in f1.layout["chests"]:
+		for it: Dictionary in c["contents"]:
+			sources[str(it["id"])] = true
+	for rarity: String in ["common", "rare", "epic", "fan"]:
+		for entry: Dictionary in d.loot_pool(1, rarity):
+			sources[str(entry["id"])] = true
+	for ev: Dictionary in f1.layout["events"]:
+		var p: Dictionary = ev["params"]
+		if p.has("reward_item"):
+			sources[str(p["reward_item"])] = true
+	for sp: SponsorDef in d.all_sponsors():
+		for g: Dictionary in sp.gift:
+			sources[str(g["item"])] = true
+	for ms: MilestoneDef in d.all_milestones():
+		sources[ms.item] = true
+	return sources
+
+
+## Every item the season floors 2–6 offer (ST1-C1): their shops, chest tables, loot pools and quarter events (rewards,
+## wheel tables), the drops of the enemies without the floor_1 tag.
+static func _season_sources(d: GameData) -> Dictionary:
+	var out: Dictionary = {}
+	for f: FloorDef in d.all_floors():
+		if f.index < 2:
+			continue
+		for id: String in f.shop:
+			out[id] = true
+		for row: Dictionary in f.chest_table:
+			out[str(row["id"])] = true
+		for rarity: String in ["common", "rare", "epic", "fan"]:
+			for entry: Dictionary in d.loot_pool(f.index, rarity):
+				out[str(entry["id"])] = true
+		for z: Dictionary in f.zones:
+			for ev: Variant in (z.get("events", []) as Array):
+				var p: Dictionary = (ev as Dictionary).get("params", {})
+				out[str(p.get("reward_item", ""))] = true
+				for row: Variant in (p.get("table", []) as Array):
+					out[str((row as Dictionary).get("id", ""))] = true
+	for e: EnemyDef in d.all_enemies():
+		if e.tags.has("floor_1"):
+			continue
+		for dr: Dictionary in e.drops:
+			out[str(dr["item"])] = true
+		for bd: Dictionary in e.boss_drops:
+			out[str(bd["id"])] = true
+	out.erase("")
+	return out
+
+
+## The skills only the season enemies use (ST1-C1; enemies without the floor_1 tag): their real-time skills and
+## attack skills that no floor-1 enemy uses.
+static func _season_enemy_skills(d: GameData) -> Dictionary:
+	var f1: Dictionary = {}
+	var season: Dictionary = {}
+	for e: EnemyDef in d.all_enemies():
+		var ids: PackedStringArray = _rt_skills_of(e)
+		ids.append(e.attack_skill)
+		for sid: String in ids:
+			if sid == "":
+				continue
+			if e.tags.has("floor_1"):
+				f1[sid] = true
+			else:
+				season[sid] = true
+	for sid: Variant in f1:
+		season.erase(sid)
+	return season
+
+
 # --- validity + quantities -------------------------------------------------------------------------------------------
 
 func test_real_data_is_valid_without_warnings() -> void:
@@ -187,8 +274,12 @@ func test_quantities_match_gdd() -> void:
 	expected_boss.sort()
 	assert_eq(boss_list, expected_boss, "skl_b_*/skl_q_* skills = GDD boss skill list + the queen's R4 skills")
 	assert_len(boss_list, 11 + RT_BOSS_SKILLS.size(), "11 boss skills + 3 (07 §6.7)")
-	assert_eq(enemy_skills, 25 + 11 + 1 + RT_BOSS_SKILLS.size() + RT_ENEMY_SKILLS.size(),
-		"enemy skills = 25 + 11 boss + strike + the R4 real-time enemy skills (the floor-2 stubs' CTB skills left)")
+	var season_skills: Dictionary = _season_enemy_skills(d)
+	assert_eq(enemy_skills - season_skills.size(), 25 + 11 + 1 + RT_BOSS_SKILLS.size() + RT_ENEMY_SKILLS.size(),
+		"enemy skills = 25 + 11 boss + strike + the R4 real-time enemy skills (the floor-2 stubs' CTB skills left)"
+		+ " + the season enemies' own (ST1-C1)")
+	for sid: String in season_skills:
+		assert_eq(d.skill(sid).user, "enemy", sid + ": a season enemy skill")
 	for id: String in ["skl_e_pose", "skl_e_ram", "skl_e_price_slam"]:
 		assert_false(d.has_id("skills", id), id + ": only the CTB AI of a floor-2 stub used it (R5b part 2b)")
 	assert_eq(item_skills, 10, "one use_skill per consumable")
@@ -210,7 +301,7 @@ func test_quantities_match_gdd() -> void:
 	assert_len(d.all_classes(), 8)
 	assert_len(d.all_lootboxes(), 4)
 	assert_len(d.all_pseudo_units(), 0, "the CTB train left the data (the real-time train: skl_q_train, 07 §6.7)")
-	assert_len(d.all_floors(), 2)
+	assert_len(d.all_floors(), 6, "floor 1 + the season floors 2–6 (ST1-C1)")
 
 
 ## The GDD §3.9 statuses in their real-time form (07 §4.7); the CTB turn fields left the data (R5b part 2b, 07 §4.11:
@@ -576,9 +667,14 @@ func test_consumables_match_gdd() -> void:
 func test_equipment_matches_gdd() -> void:
 	var d: GameData = _data()
 	var counts: Dictionary = {"weapon": 0, "armor": 0, "accessory": 0}
+	var floor_1: Dictionary = _floor_1_sources(d)
+	var season: Dictionary = _season_sources(d)
 	for it: ItemDef in d.all_items():
-		if it.is_equipment():
+		if it.is_equipment() and EQUIPMENT.has(it.id):
 			counts[it.type] = int(counts[it.type]) + 1
+		elif it.is_equipment():                  # ST1-C1: the equipment of the season floors 2–6
+			assert_false(floor_1.has(it.id), it.id + ": no floor-1 source (the campaign stays as it is)")
+			assert_true(season.has(it.id), it.id + ": sold or dropped on a season floor")
 	assert_eq(counts, {"weapon": 8, "armor": 6, "accessory": 8})
 	for id: String in EQUIPMENT:
 		var it: ItemDef = d.item(id)
@@ -629,34 +725,15 @@ func test_shops_match_gdd() -> void:
 
 
 func test_every_consumable_is_obtainable() -> void:
-	# Each consumable must come from a shop, a drop, a chest, a pool, an event or a sponsor.
+	# Each consumable must come from a shop, a drop, a chest, a pool, an event or a sponsor — the items of the GDD on
+	# floor 1, the items of the season floors (ST1-C1) on floors 2–6.
 	var d: GameData = _data()
-	var sources: Dictionary = {}
-	var f1: FloorDef = d.floor_def(1)
-	for sr: Dictionary in f1.layout["safe_rooms"]:
-		for id: String in sr["shop"]:
-			sources[id] = true
-	for e: EnemyDef in d.all_enemies():
-		for dr: Dictionary in e.drops:
-			sources[str(dr["item"])] = true
-		for bd: Dictionary in e.boss_drops:
-			sources[str(bd["id"])] = true
-	for c: Dictionary in f1.layout["chests"]:
-		for it: Dictionary in c["contents"]:
-			sources[str(it["id"])] = true
-	for rarity: String in ["common", "rare", "epic", "fan"]:
-		for entry: Dictionary in d.loot_pool(1, rarity):
-			sources[str(entry["id"])] = true
-	for ev: Dictionary in f1.layout["events"]:
-		var p: Dictionary = ev["params"]
-		if p.has("reward_item"):
-			sources[str(p["reward_item"])] = true
-	for sp: SponsorDef in d.all_sponsors():
-		for g: Dictionary in sp.gift:
-			sources[str(g["item"])] = true
-	for ms: MilestoneDef in d.all_milestones():
-		sources[ms.item] = true
+	var sources: Dictionary = _floor_1_sources(d)
+	var season: Dictionary = _season_sources(d)
 	for it: ItemDef in d.all_items():
+		if not sources.has(it.id) and not CONSUMABLES.has(it.id) and not EQUIPMENT.has(it.id) \
+				and season.has(it.id):
+			continue   # a season item (floors 2–6)
 		if it.id == "itm_wpn_collar_royal":
 			assert_true(_in_pool(d, 2, it.id), "Juwelen-Halsband enters the epic pool on floor 2")
 			assert_false(_in_pool(d, 1, it.id), "…and is not available on floor 1")
@@ -821,26 +898,34 @@ func test_classes_prepared_for_floor_3() -> void:
 	assert_eq(d.class_def("cls_mop_zeremonienmeister").show_mods["sponsor_thresholds"], [65, 80, 95])
 
 
-func test_floor_2_stub() -> void:
+## Floor 2 (GDD §15), completed by ST1-C1 as the first season floor (the Passage, 09 §3): playable in a season only —
+## the campaign (the slice) still ends after floor 1.
+func test_floor_2_season_floor() -> void:
 	var d: GameData = _data()
 	var f2: FloorDef = d.floor_def(2)
 	assert_not_null(f2)
 	if f2 == null:
 		return
-	assert_false(f2.playable, "slice ends after floor 1")
+	assert_true(f2.playable and f2.playable_in(true), "a season plays floor 2 (ST1-C1)")
+	assert_false(f2.playable_in(false), "the slice (campaign) ends after floor 1")
 	assert_false(f2.has_layout(), "floor 2 is procedural")
-	assert_eq([f2.theme, f2.timer_seconds, f2.floor_mult, f2.safe_rooms], ["mall", 1500, 1.5, 2])
+	assert_eq([f2.kulisse(), ThemeDef.art_of(f2, d), f2.timer_seconds, f2.floor_mult, f2.safe_rooms],
+		["thm_passage", "mall", 1500, 1.5, 2])
 	assert_eq(f2.grid, {"w": 9, "h": 9})
 	assert_eq(f2.timer_warnings, [600, 300, 60])
 	assert_gt(f2.chest_table.size(), 0)
 	assert_gt(f2.shop.size(), 0)
+	var rollable: int = 0
 	for enc: EncounterDef in f2.encounters:
-		assert_gt(enc.weight, 0, enc.id + " rollable")
+		rollable += 1 if enc.weight > 0 else 0
+		assert_true(enc.weight > 0 or enc.boss or not enc.show_boss.is_empty() or enc.id.contains("_evt_"),
+			enc.id + " rollable (or a boss, the show boss, an event's fight)")
 		for e: String in enc.enemies:
 			assert_true(d.enemy(e).tags.has("floor_2"), enc.id + " uses floor-2 enemies")
 		var carts: int = enc.enemies.count("enm_einkaufswagen_rudel")
 		assert_true(carts == 0 or carts == 3, "%s: the Einkaufswagen-Rudel always comes in threes (GDD §15), got %d" % [
 			enc.id, carts])
+	assert_gt(rollable, 5)
 	for id: String in ["enm_schaufensterpuppe", "enm_einkaufswagen_rudel", "enm_rabattschild"]:
 		assert_true(d.has_id("enemies", id), id)
 	assert_eq(d.enemy("enm_schaufensterpuppe").stats["hp"], 774, "90 × 8.6 (baked in R5b part 2b)")

@@ -12,6 +12,10 @@ Dieses Dokument hält fest, **was** gemessen wurde, **wie**, was vorher/nachher 
 > die das nächste `goto` neu gebaut hat. **Neu zu messen** auf der Referenz-Hardware und mit allen drei Profilen
 > (Compatibility high/low, Mobile): `tools/perf.sh` vollständig — Start, Erkundung, Safe Rooms, Kampf, Router-Zyklen — mit den
 > gebackenen Daten; §1 bekommt dann die Echtzeit-Kampfzeilen statt der CTB-Szene. [zu messen]
+>
+> **Stand ST1-C1 (2026-10-12, Branch `ptd/st1c1`):** die Etagen 2–6 der Basis-Staffel gemessen (§3.9, `--only=season`):
+> jede Größe im Budget, die größte Etage (48 Räume, ganz gebaut) warm 408 ms im Median (Probe 428 ms). Die Türstürze kommen
+> vor dem Eintritt in die Welt in den Etagen-Körper (§4.10: −14 ms auf Etage 1, −32–52 ms auf Etage 6).
 
 ---
 
@@ -41,6 +45,8 @@ Maximum über alle gemessenen Ansichten bzw. Frames (Methode §2). „vorher“ 
 | Safe Room: Physik-Körper | 0 | 3 ✗ | **0** | 0 | 0 |
 | RAM (Godot, Spitze im Kampf) | 400 MB | 255 MB | **218 MB** | 262 MB | 230 MB (VRAM 251 MB) |
 | Etage 1 bauen, warm | 500 ms | 181 ms | **242 ms** | – | – |
+| Staffel-Etagen 2–6 (§3.9, ST1-C1): Draw Calls 3D / UI · Körper | 150 / 100 · 40 | – | **109 / 94 · 27** | – | – |
+| Staffel-Etage 6 bauen (48 Räume, ganze Etage), warm: Median aus 9 · Probe | 500 ms | – | **408 · 428 ms** | – | – |
 | Router-Zyklen (20×), Wachstum | 0 | – | **0 Nodes, 0 Ressourcen** | | |
 | „ObjectDB instances leaked at exit“ | 0 | 6 (sporadisch) ✗ | **0** | | |
 | Erstes Bild nach Prozessstart (llvmpipe) | – | 3,0–3,1 s | 2,0–2,4 s (Phase C); heute 5,2–5,4 s auf einer anderen, geteilten Maschine — Basisstand gleich schnell, §3.5 | | |
@@ -307,6 +313,63 @@ die Kosten liegen im Schleifen-Overhead von GDScript, nicht im Feldzugriff); `De
 je Tick, zusammen < 3 µs). Nächster Hebel, falls nötig: die Formen als gepackte Arrays je Seite (Reaktion, Fluchtpunkt,
 Zonen-Test und `safe_point` laufen jeden Tick über dieselben Felder).
 
+### 3.9 Staffel-Etagen 2–6 (09 ST1-C1)
+
+Stand 2026-10-12, Branch `ptd/st1c1`, Compatibility high, `tools/perf.sh --only=startup,explore,season` → `PERF: OK`. Der
+Abschnitt `season` startet eine Basis-Staffel „Am Stück“ (Seed 4242, fester Start), nimmt mit `Game.season_debug_descend`
+die Treppen bis zur gemessenen Etage und baut dort die **ganze** Etage — Viertel-Streaming gibt es erst mit ST1-C2 (09 C-18),
+das Budget ist das der Erkundung (500 ms am PC). Danach jede Zelle × 4 Kamerarichtungen wie §3.1, je Viertel das Maximum.
+Die geteilte 4-Kern-Maschine war während des Laufs belastet (Last 1 → 7,5); Etage 1 im selben Lauf als Bezug.
+
+**Aufbau** (`ExplorationScene._ready`: Layout, Räume, Tore, Kisten, Events, Akteure, HUD). „Median“ = 9 warme Neubauten je
+Etage in einer Mess-Kopie des Abschnitts (gleich danach, Last 3–4,6):
+
+| Etage (Räume, Viertel) | kalt | warm | Median warm (min–max) | davon Layout | Budget |
+|---|---:|---:|---:|---:|---:|
+| 1 U-Bahn (31, handgebaut) | 405 ms | 304 ms | 305 ms (277–365) | 2 ms | 500 ms |
+| 2 Passage Ewiger Rabatt (27, 2) | 265 ms | 275 ms | 245 ms (215–360) | 8 ms | 500 ms |
+| 3 Der Fundus (32, 3) | 314 ms | 275 ms | 276 ms (254–378) | 9 ms | 500 ms |
+| 4 Paketzentrum, Halle 4 (40, 3) | 415 ms | 372 ms | 362 ms (296–460) | 14 ms | 500 ms |
+| 5 Paketzentrum, Halle 5 (41, 3) | 433 ms | 436 ms | 375 ms (332–452) | 13 ms | 500 ms |
+| 6 Paketzentrum, Halle 6 (48, 4) | 418 ms | 428 ms | **408 ms** (350–525) | 16 ms | 500 ms |
+
+- **Wohin die Zeit geht** (Phasen-Zeitmesser in einer Profil-Kopie, Etage 6 warm ≈ 416 ms): die Räume aus dem Bau-Kit
+  (Meshes je Raum zusammenführen) ≈ 75 % — ≈ 6,5 ms je Raum, auf Etage 1 genauso —, Layout 13–27 ms, Events 16 ms, Tore und
+  Kisten zusammen ≈ 25 ms, Akteure 20–30 ms, HUD ≈ 9 ms. Die Zeit wächst linear mit der Raumzahl. Die Türstürze wuchsen
+  quadratisch (Etage 6: 32–52 ms) und sind behoben (§4.10); vorher lag Etage 6 warm in vier Läufen bei 466–585 ms, zweimal
+  über 500. Die Raumzahl hängt am Seed (09 C-2: Etage 6 44–52 Räume über 200 Seeds); der gemessene hat 48, die größte
+  Etage 6 kostet also ≈ 26 ms mehr (≈ 435 ms im Median).
+- Der kalte Bau einer Staffel-Etage ist kaum teurer als der warme (Skripte und Shader kennt der Prozess schon von Etage 1);
+  einzelne Neubauten unter Last bis 538 ms kalt (Etage 5) bzw. 525 ms warm (Etage 6).
+- Das Layout (`ZoneGenerator.generate`, jeder Versuch eingeschlossen) braucht 8–16 ms; `test_09_zone_generator` misst es über
+  200 Seeds je Etage (Mittel 9–24 ms, Höchstwert unter 250 ms).
+- **Daten:** `GameData.load_dir` lädt mit den Etagen 2–6 ≈ 80 ms länger (headless, je 18 Ladungen abwechselnd mit dem
+  Basisstand `187d2ed`: 280–490 ms → 350–515 ms). Der Start bleibt gleich: Boot-Timer abwechselnd, je drei Läufe —
+  Autoloads 3,6–3,9 s → 3,6–3,7 s, Titel → Erkundung 2,5–5,1 s → 2,6–3,0 s (beides auf dieser Maschine langsamer als §6).
+
+**Darstellung** (Etage gesamt, Maximum über alle Zellen × 4 Richtungen; ohne M.O.D.-Kasten und Toasts, s. u.):
+
+| Etage | DC gesamt max | DC 3D | DC UI | Primitive | Omni aktiv | Lichter/Mesh | Materialien | Label3D | Partikel (Emitter) | Körper stat./kin. (Areas) | RAM MB |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 (Bezug, gleicher Stand) | 203 | 112 | 94 | 50 644 | 4 + 1 Neon | 2 | 24 | 4 | 12 (2) | 5 / 20 (31) | 229 |
+| 2 Passage | 193 | 104 | 94 | 46 811 | 4 | 2 | 14 | 6 | 6 (1) | 7 / 13 (26) | 204 |
+| 3 Fundus | 197 | 108 | 94 | 48 413 | 4 | 2 | 16 | 5 | 6 (1) | 7 / 16 (25) | 213 |
+| 4 Paketzentrum | 191 | 105 | 91 | 49 182 | 4 | 2 | 14 | 7 | 0 | 7 / 16 (26) | 215 |
+| 5 Paketzentrum | 185 | 98 | 94 | 47 267 | 4 + 1 Neon | 2 | 15 | 4 | 6 (1) | 7 / 18 (27) | 213 |
+| 6 Paketzentrum | 196 | 109 | 94 | 46 464 | 4 | 2 | 15 | 3 | 6 (1) | 7 / 20 (30) | 223 |
+| **Budget** (02_TECH §12.1) | – | 150 | 100 | 120 000 | 4 + 1 | 3 | 24 | 12 | 400 (6) | 40 | 400 |
+
+Die Staffel-Etagen liegen in jeder Größe auf oder unter Etage 1 (gleiche Raumteile, Lichter und HUD; 14–16 statt bis zu
+24 Materialien). Statisch 7 Körper statt 5: die Tore (Schlüsseltor und die noch geschlossenen Programmtüren) behalten ihren
+eigenen Blocker (§4.2). Zellen mit den meisten Draw Calls: Räume mit 2–3 sichtbaren Gruppen und Bossräume mit Bühne.
+
+**M.O.D.-Kasten und Toasts.** Die Probe steigt in einem Zug von Etage 1 hinunter, ohne zu kämpfen; die Wett-Auflösungen und
+Erfolge dieser Abstiege („Wette gewonnen!“ der Vorliebe „Friedliche Runde“, bis zu drei Toasts) stehen dann beim Abtasten
+im Bild. Zusammen kosten sie ≈ 25–30 UI-Draw-Calls über der Erkundungs-UI: gemessen **102–125 > 100** auf den Etagen 2–6
+(zwei Läufe vor dem Ausblenden), unabhängig von der Etage — es ist der Overlay-Stapel der Show, den ein Mensch nach einem
+Abstieg ebenso sieht. Der Abschnitt `season` blendet beide Ebenen beim Abtasten aus und misst die Etagen; der Stapel steht
+in §8.2.
+
 ---
 
 ## 4. Optimierungen
@@ -420,6 +483,22 @@ bleiben), auf „high“ leuchtet es nur während der ≈ 1 s Durchfahrt und ist
 | Kürzere Distance-Fades der Raumlichter | s. 4.4 |
 | MultiMesh / weiteres Mesh-Merging | Raum-Props sind je Raum bereits **ein** gemergtes Mesh, Figuren je Teil 1 Mesh; 3D-DC lagen schon im Budget |
 | `visibility_range` | unsichtbare Räume sind ohnehin aus (nur aktueller + Nachbarräume sichtbar, M3); kein messbarer Gewinn |
+
+### 4.10 Etagen-Aufbau: Türstürze vor dem Eintritt in die Welt (ST1-C1)
+
+**Befund.** Phasen-Zeitmesser in einer Profil-Kopie von `ExplorationScene._ready` (Staffel-Etagen, §3.9): die Türsturz-Boxen
+(§4.2) kosteten auf Etage 1 **14 ms**, auf Etage 6 der Basis-Staffel (48 Räume) **32–52 ms**. Jede Box kam in den Körper
+„FloorCollision“, als er schon in der Welt war — Jolt baut dann die ganze Form des Körpers neu, je Tür einmal über alle Boxen
+der Etage (wächst quadratisch mit der Raumzahl).
+
+**Maßnahme.** `FloorBuilder.build_rooms` legt die Türstürze in den Körper, **bevor** er in die Welt kommt;
+`build_door_lintels` gibt ihn dann nur zurück (ohne `build_rooms` baut es wie bisher einen eigenen Körper „DoorLintels“).
+Dieselben Boxen in derselben Reihenfolge, ein Körper wie vorher.
+
+**Wirkung.** Türstürze 14 → **0,1 ms** (Etage 1), 32–52 → **0,1 ms** (Etage 6). Verhalten unverändert: die Full-Runs
+`--strategy=all`, `--hero=mopsula`, `--liga=1` und `--liga=2` gleichen dem Basisstand in jeder Ereigniszeile und Statistik.
+(`test_perf_router_cycles`: ein Körper für Raumboxen und Stürze, ≤ 40 Körper; `test_m3_exploration_scene`: die Kamera
+taucht vor einer Tür nicht unter den Sturz.)
 
 
 ---
@@ -554,6 +633,15 @@ unter dem Budget. Auch der Mobil-Richtwert 1,5 s (Etage) ist mit Abstand eingeha
 - **Echtzeitkampf in der Welt (§3.6):** gemessen mit der Welt-Fixture (die echten Daten haben vor R4 keine `rt`-Blöcke).
   Die Sim-Zeit je Tick mit den echten Daten steht in §3.8 (R5b-1); die Darstellungs-Szenarien spielen weiterhin die Fixture
   (volle Last: 10 Formen, Komparsen, Adds) — R5b-1 hat sie mit dem heutigen HUD nachgemessen (§3.6, „Nachmessung R5b-1“).
+- **Staffel-Etagen ganz gebaut (§3.9, ST1-C1):** ≈ 6,5 ms je Raum; Etage 6 (48 Räume) warm 408 ms im Median, einzelne
+  Neubauten unter Last bis 525 ms. Die Etagen 7–18 haben dieselbe Größe (09 Kap. 3.6 Nr. 6: 36–48 Räume); das
+  Viertel-Streaming (ST1-C2, 09 C-18) baut nur das aktuelle und die angrenzenden Viertel — Reserve am PC, auf Mobilgeräten
+  (Richtwert 1,5 s) auf den Referenzgeräten zu messen. Nicht gemessen: Kämpfe auf den Etagen 2–6 (der Abschnitt `combat`
+  spielt die Welt-Fixture); ihre Gegner nutzen die Archetypen und Fähigkeiten-Bausätze von Etage 1 (03_ART §2.5,
+  09 C-14), die Bosse die von Hausmeister und Rattenkönigin (09 C-13).
+- **Overlay-Stapel nach einem Abstieg (§3.9):** M.O.D.-Kasten („Wette gewonnen!“) und bis zu drei Toasts über der
+  Erkundungs-UI ergeben 102–125 Canvas-DC > 100, solange sie stehen (wenige Sekunden). Hebel: Toasts zu einer Zeile bündeln
+  oder nacheinander zeigen, solange der M.O.D.-Kasten offen ist.
 
 ---
 
@@ -565,6 +653,7 @@ GODOT=… tools/perf.sh --quality=low --only=startup,explore,battle,safe_room   
 GODOT=… tools/perf.sh --driver=vulkan --only=startup,explore,battle,safe_room        # Mobile-Renderer (Vulkan-ICD nötig)
 GODOT=… tools/perf.sh --headless --only=startup,leak --cycles=20                     # Zeiten + Router-Zyklen ohne Rendering
 GODOT=… tools/perf.sh --only=combat                  # Echtzeitkampf in der Welt (07 §8.10): combat_regular, _two_groups, _boss_queen
+GODOT=… tools/perf.sh --only=season                  # Staffel-Etagen 2–6 (09 ST1-C1): Aufbau je Etage, Layout, jede Zelle × 4
 # Diagnose: --mat-dump (Materialien des Spitzen-Frames), --leak-diff (Node-Arten je Zyklus), --full=<enc,…>, --shots=<dir>
 ```
 

@@ -1527,14 +1527,18 @@
 				"key": "#ffb866",
 				"neon2": "#2bd66b"
 			},
-			"music": "explore"
+			"music": "explore",
+			"level_band": [
+				1,
+				7
+			]
 		},
 		{
 			"id": "floor_2",
 			"index": 2,
 			"name": "Etage 2 – Passage Ewiger Rabatt",
-			"playable": false,
-			"theme": "mall",
+			"playable": true,
+			"theme": "thm_passage",
 			"timer_seconds": 1500,
 			"timer_warnings": [
 				600,
@@ -1548,8 +1552,8 @@
 				"h": 9
 			},
 			"rooms": {
-				"min": 16,
-				"max": 22
+				"min": 18,
+				"max": 24
 			},
 			"safe_rooms": 2,
 			"chests": {
@@ -1557,44 +1561,51 @@
 				"max": 9
 			},
 			"enemy_groups": {
-				"min": 7,
-				"max": 10
+				"min": 8,
+				"max": 11
 			},
 			"chest_table": [
 				{
 					"kind": "credits",
 					"id": "",
 					"weight": 40,
-					"min": 30,
-					"max": 60
+					"min": 40,
+					"max": 80
 				},
 				{
 					"kind": "item",
 					"id": "itm_bandage",
-					"weight": 20,
+					"weight": 18,
 					"min": 1,
 					"max": 2
 				},
 				{
 					"kind": "item",
 					"id": "itm_brutzel_burger",
-					"weight": 15,
+					"weight": 14,
 					"min": 1,
 					"max": 1
 				},
 				{
 					"kind": "item",
 					"id": "itm_energy_krawumm",
-					"weight": 15,
+					"weight": 14,
 					"min": 1,
-					"max": 1
+					"max": 2
 				},
 				{
 					"kind": "item",
 					"id": "itm_antidote",
-					"weight": 10,
+					"weight": 8,
 					"min": 1,
 					"max": 2
+				},
+				{
+					"kind": "item",
+					"id": "itm_ice_spray",
+					"weight": 6,
+					"min": 1,
+					"max": 1
 				}
 			],
 			"shop": [
@@ -1617,7 +1628,11 @@
 				"itm_arm_sewer_suit",
 				"itm_acc_rubber_boots",
 				"itm_acc_sneakers",
-				"itm_acc_gas_mask"
+				"itm_acc_gas_mask",
+				"itm_wpn_price_lance",
+				"itm_wpn_collar_glitter",
+				"itm_arm_sale_vest",
+				"itm_acc_customer_card"
 			],
 			"encounters": [
 				{
@@ -1662,6 +1677,75 @@
 					"weight": 6,
 					"min_depth": 0.5,
 					"max_depth": 1.0
+				},
+				{
+					"id": "enc_f2_pilze",
+					"enemies": [
+						"enm_leuchtpilz",
+						"enm_leuchtpilz",
+						"enm_schaufensterpuppe"
+					],
+					"weight": 8
+				},
+				{
+					"id": "enc_f2_durchsage",
+					"enemies": [
+						"enm_durchsage_geist",
+						"enm_leuchtpilz",
+						"enm_schaufensterpuppe"
+					],
+					"weight": 8,
+					"min_depth": 0.3
+				},
+				{
+					"id": "enc_f2_evt_wagen",
+					"enemies": [
+						"enm_einkaufswagen_rudel",
+						"enm_einkaufswagen_rudel",
+						"enm_einkaufswagen_rudel"
+					],
+					"weight": 0
+				},
+				{
+					"id": "enc_e2_showboss",
+					"enemies": [
+						"enm_rabattschild",
+						"enm_schaufensterpuppe",
+						"enm_leuchtpilz"
+					],
+					"weight": 0,
+					"show_boss": {
+						"elite_pm": 1200,
+						"banner_tag": "showboss_rule",
+						"reward": {
+							"kind": "box",
+							"id": "box_fan"
+						},
+						"rule": {
+							"skill": "skl_e_showboss_slow",
+							"target": "threat_top",
+							"first_ms": 4000,
+							"every_ms": 8000
+						}
+					}
+				},
+				{
+					"id": "enc_f2_boss_filialleiterin",
+					"enemies": [
+						"enm_boss_filialleiterin"
+					],
+					"weight": 0,
+					"boss": true,
+					"can_flee": false
+				},
+				{
+					"id": "enc_f2_boss_ausverkauf",
+					"enemies": [
+						"enm_boss_ausverkauf"
+					],
+					"weight": 0,
+					"boss": true,
+					"can_flee": false
 				}
 			],
 			"palette": {
@@ -1677,7 +1761,1706 @@
 				"key": "#fff0f5",
 				"neon2": "#4fe6ff"
 			},
-			"music": "explore"
+			"music": "explore",
+			"quarter_boss": "enc_f2_boss_filialleiterin",
+			"floor_boss": "enc_f2_boss_ausverkauf",
+			"variant": 1,
+			"level_band": [
+				7,
+				10
+			],
+			"zones": [
+				{
+					"id": "zone_f2_eingang",
+					"name": "Eingangshalle",
+					"rooms": {
+						"min": 9,
+						"max": 12
+					},
+					"palette": {},
+					"pool": [
+						"enc_f2_puppen",
+						"enc_f2_wagen",
+						"enc_f2_pilze"
+					],
+					"events": [
+						{
+							"type": "photo_drone",
+							"params": {
+								"pose_hype": 15,
+								"pose_followers": 30,
+								"smash_credits": 50,
+								"smash_hype": -5
+							}
+						},
+						{
+							"type": "broken_vending",
+							"params": {
+								"base": 0.5,
+								"per_lck": 0.01,
+								"reward_item": "itm_energy_krawumm",
+								"reward_amount": 2,
+								"fail_pct": 10,
+								"fail_hype": 4
+							}
+						}
+					],
+					"spots": 3,
+					"nodes": [
+						"nod_scrap_heap"
+					],
+					"safe": {
+						"name": "Zeitschriftenkiosk",
+						"theme": "kiosk"
+					},
+					"style": "mall"
+				},
+				{
+					"id": "zone_f2_food",
+					"name": "Food-Court",
+					"rooms": {
+						"min": 9,
+						"max": 12
+					},
+					"palette": {
+						"floor": "#8a8470",
+						"accent": "#c8e04a",
+						"light": "#f4ffd8",
+						"ambient": "#33362a"
+					},
+					"pool": [
+						"enc_f2_schild",
+						"enc_f2_sale",
+						"enc_f2_durchsage",
+						"enc_f2_wagen"
+					],
+					"events": [
+						{
+							"type": "wheel",
+							"params": {
+								"cost": 30,
+								"max_spins": 3,
+								"table": [
+									{
+										"kind": "item",
+										"id": "itm_brutzel_burger",
+										"amount": 2,
+										"weight": 35
+									},
+									{
+										"kind": "credits",
+										"id": "",
+										"amount": 80,
+										"weight": 25
+									},
+									{
+										"kind": "box",
+										"id": "box_bronze",
+										"amount": 1,
+										"weight": 15
+									},
+									{
+										"kind": "nothing",
+										"id": "",
+										"amount": 0,
+										"weight": 15
+									},
+									{
+										"kind": "encounter",
+										"id": "enc_f2_evt_wagen",
+										"amount": 1,
+										"weight": 10
+									}
+								]
+							}
+						},
+						{
+							"type": "lost_candidate",
+							"params": {
+								"tag": "heal",
+								"reward_item": "itm_acc_customer_card",
+								"followers": 60
+							}
+						}
+					],
+					"spots": 2,
+					"nodes": [
+						"nod_scrap_heap"
+					],
+					"safe": {
+						"name": "Haustechnik",
+						"theme": "pumphouse"
+					},
+					"style": "mall"
+				}
+			]
+		},
+		{
+			"id": "floor_3",
+			"index": 3,
+			"name": "Etage 3 – Der Fundus",
+			"playable": true,
+			"theme": "thm_fundus",
+			"timer_seconds": 2400,
+			"timer_warnings": [
+				600,
+				300,
+				60
+			],
+			"timer_start_after": "",
+			"floor_mult": 2.0,
+			"grid": {
+				"w": 11,
+				"h": 11
+			},
+			"rooms": {
+				"min": 26,
+				"max": 32
+			},
+			"safe_rooms": 3,
+			"chests": {
+				"min": 7,
+				"max": 10
+			},
+			"enemy_groups": {
+				"min": 10,
+				"max": 13
+			},
+			"chest_table": [
+				{
+					"kind": "credits",
+					"id": "",
+					"weight": 40,
+					"min": 60,
+					"max": 110
+				},
+				{
+					"kind": "item",
+					"id": "itm_bandage",
+					"weight": 18,
+					"min": 1,
+					"max": 2
+				},
+				{
+					"kind": "item",
+					"id": "itm_brutzel_burger",
+					"weight": 14,
+					"min": 1,
+					"max": 1
+				},
+				{
+					"kind": "item",
+					"id": "itm_energy_krawumm",
+					"weight": 14,
+					"min": 1,
+					"max": 2
+				},
+				{
+					"kind": "item",
+					"id": "itm_antidote",
+					"weight": 8,
+					"min": 1,
+					"max": 2
+				},
+				{
+					"kind": "item",
+					"id": "itm_smoke",
+					"weight": 5,
+					"min": 1,
+					"max": 1
+				},
+				{
+					"kind": "item",
+					"id": "itm_smelling_salts",
+					"weight": 4,
+					"min": 1,
+					"max": 1
+				}
+			],
+			"shop": [
+				"itm_bandage",
+				"itm_antidote",
+				"itm_energy_krawumm",
+				"itm_brutzel_burger",
+				"itm_smelling_salts",
+				"itm_molotov",
+				"itm_ice_spray",
+				"itm_smoke",
+				"itm_hype_megaphone",
+				"itm_wpn_fire_axe",
+				"itm_wpn_collar_signet",
+				"itm_arm_sewer_suit",
+				"itm_arm_velvet_cape",
+				"itm_acc_sneakers",
+				"itm_wpn_price_lance",
+				"itm_wpn_collar_glitter",
+				"itm_arm_sale_vest",
+				"itm_acc_customer_card",
+				"itm_wpn_stage_sword",
+				"itm_wpn_collar_gala",
+				"itm_arm_cardboard_armor"
+			],
+			"quarter_boss": "enc_f3_boss_requisiteurin",
+			"floor_boss": "enc_f3_boss_garderobe",
+			"encounters": [
+				{
+					"id": "enc_f3_staender",
+					"enemies": [
+						"enm_kostuemstaender",
+						"enm_kostuemstaender"
+					],
+					"weight": 10,
+					"max_depth": 0.7
+				},
+				{
+					"id": "enc_f3_ritter",
+					"enemies": [
+						"enm_pappritter",
+						"enm_mottenschwarm"
+					],
+					"weight": 10
+				},
+				{
+					"id": "enc_f3_motten",
+					"enemies": [
+						"enm_mottenschwarm",
+						"enm_mottenschwarm",
+						"enm_nebelmaschine"
+					],
+					"weight": 9
+				},
+				{
+					"id": "enc_f3_nebel",
+					"enemies": [
+						"enm_nebelmaschine",
+						"enm_kostuemstaender"
+					],
+					"weight": 8,
+					"min_depth": 0.3
+				},
+				{
+					"id": "enc_f3_garde",
+					"enemies": [
+						"enm_pappritter",
+						"enm_pappritter",
+						"enm_nebelmaschine"
+					],
+					"weight": 6,
+					"min_depth": 0.5
+				},
+				{
+					"id": "enc_f3_evt_motten",
+					"enemies": [
+						"enm_mottenschwarm",
+						"enm_mottenschwarm"
+					],
+					"weight": 0
+				},
+				{
+					"id": "enc_e3_showboss",
+					"enemies": [
+						"enm_pappritter",
+						"enm_kostuemstaender",
+						"enm_mottenschwarm"
+					],
+					"weight": 0,
+					"show_boss": {
+						"elite_pm": 1200,
+						"banner_tag": "showboss_rule",
+						"reward": {
+							"kind": "box",
+							"id": "box_fan"
+						},
+						"rule": {
+							"skill": "skl_e_showboss_slow",
+							"target": "threat_top",
+							"first_ms": 4000,
+							"every_ms": 8000
+						}
+					}
+				},
+				{
+					"id": "enc_f3_boss_requisiteurin",
+					"enemies": [
+						"enm_boss_requisiteurin"
+					],
+					"weight": 0,
+					"boss": true,
+					"can_flee": false
+				},
+				{
+					"id": "enc_f3_boss_garderobe",
+					"enemies": [
+						"enm_boss_garderobe"
+					],
+					"weight": 0,
+					"boss": true,
+					"can_flee": false
+				}
+			],
+			"palette": {
+				"floor": "#3c2a24",
+				"wall": "#4a2440",
+				"accent": "#e8b84a",
+				"light": "#ffd8a0",
+				"fog": "#1e1020",
+				"ambient": "#2e1c2c",
+				"grout": "#22160e",
+				"key": "#ffd8a0",
+				"neon2": "#ff5a8a",
+				"shade": "#3e1e3c",
+				"rim": "#ffe4b8"
+			},
+			"music": "explore",
+			"variant": 1,
+			"level_band": [
+				10,
+				13
+			],
+			"zones": [
+				{
+					"id": "zone_f3_anlieferung",
+					"name": "Anlieferung",
+					"rooms": {
+						"min": 8,
+						"max": 10
+					},
+					"palette": {
+						"wall": "#3e3440",
+						"light": "#ffe6c0"
+					},
+					"pool": [
+						"enc_f3_staender",
+						"enc_f3_ritter"
+					],
+					"events": [
+						{
+							"type": "photo_drone",
+							"params": {
+								"pose_hype": 15,
+								"pose_followers": 40,
+								"smash_credits": 70,
+								"smash_hype": -5
+							}
+						}
+					],
+					"spots": 2,
+					"nodes": [
+						"nod_scrap_heap"
+					],
+					"safe": {
+						"name": "Pförtnerloge",
+						"theme": "kiosk"
+					},
+					"style": "cellar"
+				},
+				{
+					"id": "zone_f3_kostuem",
+					"name": "Kostümfundus",
+					"rooms": {
+						"min": 9,
+						"max": 11
+					},
+					"palette": {
+						"wall": "#5a2448",
+						"accent": "#ff5a8a",
+						"light": "#ffd0e0",
+						"ambient": "#3a1c34"
+					},
+					"pool": [
+						"enc_f3_staender",
+						"enc_f3_motten",
+						"enc_f3_nebel"
+					],
+					"events": [
+						{
+							"type": "lost_candidate",
+							"params": {
+								"tag": "heal",
+								"reward_item": "itm_brutzel_burger",
+								"followers": 70
+							}
+						},
+						{
+							"type": "broken_vending",
+							"params": {
+								"base": 0.5,
+								"per_lck": 0.01,
+								"reward_item": "itm_smelling_salts",
+								"reward_amount": 1,
+								"fail_pct": 10,
+								"fail_hype": 4
+							}
+						}
+					],
+					"spots": 3,
+					"nodes": [
+						"nod_scrap_heap"
+					],
+					"safe": {
+						"name": "Maske",
+						"theme": "pumphouse"
+					},
+					"style": "cellar"
+				},
+				{
+					"id": "zone_f3_requisite",
+					"name": "Requisitenhalle",
+					"rooms": {
+						"min": 9,
+						"max": 11
+					},
+					"palette": {
+						"floor": "#38302a",
+						"wall": "#4a3a2e",
+						"accent": "#e2a03e",
+						"light": "#ffe8b0",
+						"ambient": "#302820"
+					},
+					"pool": [
+						"enc_f3_ritter",
+						"enc_f3_nebel",
+						"enc_f3_garde"
+					],
+					"events": [
+						{
+							"type": "wheel",
+							"params": {
+								"cost": 40,
+								"max_spins": 3,
+								"table": [
+									{
+										"kind": "item",
+										"id": "itm_smelling_salts",
+										"amount": 1,
+										"weight": 30
+									},
+									{
+										"kind": "credits",
+										"id": "",
+										"amount": 120,
+										"weight": 25
+									},
+									{
+										"kind": "box",
+										"id": "box_silver",
+										"amount": 1,
+										"weight": 15
+									},
+									{
+										"kind": "nothing",
+										"id": "",
+										"amount": 0,
+										"weight": 15
+									},
+									{
+										"kind": "encounter",
+										"id": "enc_f3_evt_motten",
+										"amount": 1,
+										"weight": 15
+									}
+								]
+							}
+						}
+					],
+					"spots": 0,
+					"nodes": [
+						"nod_scrap_heap"
+					],
+					"safe": {
+						"name": "Inspizientenpult",
+						"theme": "signalbox"
+					},
+					"style": "cellar"
+				}
+			]
+		},
+		{
+			"id": "floor_4",
+			"index": 4,
+			"name": "Etage 4 – Das Paketzentrum, Halle 4",
+			"playable": true,
+			"theme": "thm_paketzentrum",
+			"timer_seconds": 3000,
+			"timer_warnings": [
+				600,
+				300,
+				60
+			],
+			"timer_start_after": "",
+			"floor_mult": 2.5,
+			"grid": {
+				"w": 12,
+				"h": 12
+			},
+			"rooms": {
+				"min": 34,
+				"max": 40
+			},
+			"safe_rooms": 3,
+			"chests": {
+				"min": 8,
+				"max": 11
+			},
+			"enemy_groups": {
+				"min": 11,
+				"max": 14
+			},
+			"chest_table": [
+				{
+					"kind": "credits",
+					"id": "",
+					"weight": 40,
+					"min": 80,
+					"max": 150
+				},
+				{
+					"kind": "item",
+					"id": "itm_bandage",
+					"weight": 18,
+					"min": 1,
+					"max": 2
+				},
+				{
+					"kind": "item",
+					"id": "itm_brutzel_burger",
+					"weight": 14,
+					"min": 1,
+					"max": 1
+				},
+				{
+					"kind": "item",
+					"id": "itm_energy_krawumm",
+					"weight": 14,
+					"min": 1,
+					"max": 2
+				},
+				{
+					"kind": "item",
+					"id": "itm_antidote",
+					"weight": 8,
+					"min": 1,
+					"max": 2
+				},
+				{
+					"kind": "item",
+					"id": "itm_smelling_salts",
+					"weight": 5,
+					"min": 1,
+					"max": 1
+				},
+				{
+					"kind": "item",
+					"id": "itm_hype_megaphone",
+					"weight": 4,
+					"min": 1,
+					"max": 1
+				}
+			],
+			"shop": [
+				"itm_bandage",
+				"itm_antidote",
+				"itm_energy_krawumm",
+				"itm_brutzel_burger",
+				"itm_smelling_salts",
+				"itm_molotov",
+				"itm_ice_spray",
+				"itm_smoke",
+				"itm_hype_megaphone",
+				"itm_wpn_fire_axe",
+				"itm_wpn_collar_signet",
+				"itm_acc_sneakers",
+				"itm_wpn_stage_sword",
+				"itm_wpn_collar_gala",
+				"itm_arm_cardboard_armor",
+				"itm_acc_customer_card",
+				"itm_wpn_carton_lever",
+				"itm_arm_padded_vest"
+			],
+			"quarter_boss": "enc_f4_boss_schichtleiterin",
+			"floor_boss": "",
+			"encounters": [
+				{
+					"id": "enc_f4_krabben",
+					"enemies": [
+						"enm_paketkrabbe",
+						"enm_retourenschleim"
+					],
+					"weight": 10,
+					"max_depth": 0.7
+				},
+				{
+					"id": "enc_f4_spinnen",
+					"enemies": [
+						"enm_klebebandspinne",
+						"enm_klebebandspinne"
+					],
+					"weight": 10
+				},
+				{
+					"id": "enc_f4_polster",
+					"enemies": [
+						"enm_luftpolstergeist",
+						"enm_retourenschleim",
+						"enm_retourenschleim"
+					],
+					"weight": 9
+				},
+				{
+					"id": "enc_f4_scanner",
+					"enemies": [
+						"enm_scannerdrohne",
+						"enm_paketkrabbe"
+					],
+					"weight": 8,
+					"min_depth": 0.3
+				},
+				{
+					"id": "enc_f4_band",
+					"enemies": [
+						"enm_paketkrabbe",
+						"enm_klebebandspinne",
+						"enm_scannerdrohne"
+					],
+					"weight": 6,
+					"min_depth": 0.5
+				},
+				{
+					"id": "enc_f4_evt_schleim",
+					"enemies": [
+						"enm_retourenschleim",
+						"enm_retourenschleim"
+					],
+					"weight": 0
+				},
+				{
+					"id": "enc_e4_showboss",
+					"enemies": [
+						"enm_paketkrabbe",
+						"enm_scannerdrohne",
+						"enm_klebebandspinne"
+					],
+					"weight": 0,
+					"show_boss": {
+						"elite_pm": 1200,
+						"banner_tag": "showboss_rule",
+						"reward": {
+							"kind": "box",
+							"id": "box_fan"
+						},
+						"rule": {
+							"skill": "skl_e_showboss_slow",
+							"target": "threat_top",
+							"first_ms": 4000,
+							"every_ms": 8000
+						}
+					}
+				},
+				{
+					"id": "enc_f4_boss_schichtleiterin",
+					"enemies": [
+						"enm_boss_schichtleiterin_f4"
+					],
+					"weight": 0,
+					"boss": true,
+					"can_flee": false
+				}
+			],
+			"palette": {
+				"floor": "#585c60",
+				"wall": "#36424e",
+				"accent": "#f2c230",
+				"light": "#e6f2ff",
+				"fog": "#141a22",
+				"ambient": "#262e38",
+				"grout": "#30343a",
+				"key": "#e6f2ff",
+				"neon2": "#ff6a1a",
+				"shade": "#2c3646",
+				"rim": "#d8ecff"
+			},
+			"music": "explore",
+			"variant": 1,
+			"level_band": [
+				13,
+				16
+			],
+			"zones": [
+				{
+					"id": "zone_f4_annahme",
+					"name": "Warenannahme",
+					"rooms": {
+						"min": 11,
+						"max": 13
+					},
+					"palette": {
+						"accent": "#f2c230"
+					},
+					"pool": [
+						"enc_f4_krabben",
+						"enc_f4_spinnen"
+					],
+					"events": [
+						{
+							"type": "photo_drone",
+							"params": {
+								"pose_hype": 15,
+								"pose_followers": 50,
+								"smash_credits": 90,
+								"smash_hype": -5
+							}
+						}
+					],
+					"spots": 1,
+					"nodes": [
+						"nod_scrap_heap"
+					],
+					"safe": {
+						"name": "Pförtnerhäuschen",
+						"theme": "kiosk"
+					},
+					"style": "cellar"
+				},
+				{
+					"id": "zone_f4_sortier",
+					"name": "Sortierhalle",
+					"rooms": {
+						"min": 12,
+						"max": 14
+					},
+					"palette": {
+						"wall": "#2e3c4a",
+						"accent": "#ff7a2a",
+						"light": "#d8eaff",
+						"ambient": "#22303c"
+					},
+					"pool": [
+						"enc_f4_spinnen",
+						"enc_f4_polster",
+						"enc_f4_scanner"
+					],
+					"events": [
+						{
+							"type": "broken_vending",
+							"params": {
+								"base": 0.5,
+								"per_lck": 0.01,
+								"reward_item": "itm_brutzel_burger",
+								"reward_amount": 2,
+								"fail_pct": 10,
+								"fail_hype": 4
+							}
+						},
+						{
+							"type": "lost_candidate",
+							"params": {
+								"tag": "heal",
+								"reward_item": "itm_smelling_salts",
+								"followers": 90
+							}
+						}
+					],
+					"spots": 4,
+					"nodes": [
+						"nod_scrap_heap"
+					],
+					"safe": {
+						"name": "Leitstand",
+						"theme": "signalbox"
+					},
+					"style": "cellar"
+				},
+				{
+					"id": "zone_f4_rampe",
+					"name": "Laderampe",
+					"rooms": {
+						"min": 11,
+						"max": 13
+					},
+					"palette": {
+						"floor": "#4a4e52",
+						"wall": "#2e3a44",
+						"accent": "#ff3b30",
+						"light": "#fff0e0",
+						"ambient": "#242c34"
+					},
+					"pool": [
+						"enc_f4_scanner",
+						"enc_f4_band",
+						"enc_f4_krabben"
+					],
+					"events": [
+						{
+							"type": "wheel",
+							"params": {
+								"cost": 50,
+								"max_spins": 3,
+								"table": [
+									{
+										"kind": "item",
+										"id": "itm_brutzel_burger",
+										"amount": 2,
+										"weight": 30
+									},
+									{
+										"kind": "credits",
+										"id": "",
+										"amount": 150,
+										"weight": 25
+									},
+									{
+										"kind": "box",
+										"id": "box_silver",
+										"amount": 1,
+										"weight": 15
+									},
+									{
+										"kind": "nothing",
+										"id": "",
+										"amount": 0,
+										"weight": 15
+									},
+									{
+										"kind": "encounter",
+										"id": "enc_f4_evt_schleim",
+										"amount": 1,
+										"weight": 15
+									}
+								]
+							}
+						}
+					],
+					"spots": 0,
+					"nodes": [
+						"nod_scrap_heap"
+					],
+					"safe": {
+						"name": "Funkkabine",
+						"theme": "signalbox"
+					},
+					"style": "cellar"
+				}
+			]
+		},
+		{
+			"id": "floor_5",
+			"index": 5,
+			"name": "Etage 5 – Das Paketzentrum, Halle 5",
+			"playable": true,
+			"theme": "thm_paketzentrum",
+			"timer_seconds": 3000,
+			"timer_warnings": [
+				600,
+				300,
+				60
+			],
+			"timer_start_after": "",
+			"floor_mult": 3.0,
+			"grid": {
+				"w": 12,
+				"h": 12
+			},
+			"rooms": {
+				"min": 36,
+				"max": 42
+			},
+			"safe_rooms": 3,
+			"chests": {
+				"min": 8,
+				"max": 11
+			},
+			"enemy_groups": {
+				"min": 12,
+				"max": 15
+			},
+			"chest_table": [
+				{
+					"kind": "credits",
+					"id": "",
+					"weight": 40,
+					"min": 100,
+					"max": 180
+				},
+				{
+					"kind": "item",
+					"id": "itm_bandage",
+					"weight": 18,
+					"min": 1,
+					"max": 2
+				},
+				{
+					"kind": "item",
+					"id": "itm_brutzel_burger",
+					"weight": 14,
+					"min": 1,
+					"max": 1
+				},
+				{
+					"kind": "item",
+					"id": "itm_energy_krawumm",
+					"weight": 14,
+					"min": 1,
+					"max": 2
+				},
+				{
+					"kind": "item",
+					"id": "itm_antidote",
+					"weight": 8,
+					"min": 1,
+					"max": 2
+				},
+				{
+					"kind": "item",
+					"id": "itm_smelling_salts",
+					"weight": 5,
+					"min": 1,
+					"max": 1
+				},
+				{
+					"kind": "item",
+					"id": "itm_hype_megaphone",
+					"weight": 4,
+					"min": 1,
+					"max": 1
+				}
+			],
+			"shop": [
+				"itm_bandage",
+				"itm_antidote",
+				"itm_energy_krawumm",
+				"itm_brutzel_burger",
+				"itm_smelling_salts",
+				"itm_molotov",
+				"itm_ice_spray",
+				"itm_smoke",
+				"itm_hype_megaphone",
+				"itm_wpn_fire_axe",
+				"itm_wpn_collar_signet",
+				"itm_acc_sneakers",
+				"itm_wpn_stage_sword",
+				"itm_wpn_collar_gala",
+				"itm_arm_cardboard_armor",
+				"itm_acc_customer_card",
+				"itm_wpn_carton_lever",
+				"itm_wpn_collar_tape",
+				"itm_arm_padded_vest",
+				"itm_arm_bubble_cape"
+			],
+			"quarter_boss": "enc_f5_boss_schichtleiterin",
+			"floor_boss": "",
+			"encounters": [
+				{
+					"id": "enc_f5_krabben",
+					"enemies": [
+						"enm_paketkrabbe",
+						"enm_retourenschleim"
+					],
+					"weight": 10,
+					"max_depth": 0.7
+				},
+				{
+					"id": "enc_f5_spinnen",
+					"enemies": [
+						"enm_klebebandspinne",
+						"enm_klebebandspinne"
+					],
+					"weight": 10
+				},
+				{
+					"id": "enc_f5_polster",
+					"enemies": [
+						"enm_luftpolstergeist",
+						"enm_retourenschleim",
+						"enm_retourenschleim"
+					],
+					"weight": 9
+				},
+				{
+					"id": "enc_f5_scanner",
+					"enemies": [
+						"enm_scannerdrohne",
+						"enm_paketkrabbe"
+					],
+					"weight": 8,
+					"min_depth": 0.3
+				},
+				{
+					"id": "enc_f5_band",
+					"enemies": [
+						"enm_paketkrabbe",
+						"enm_klebebandspinne",
+						"enm_scannerdrohne"
+					],
+					"weight": 6,
+					"min_depth": 0.5
+				},
+				{
+					"id": "enc_f5_container",
+					"enemies": [
+						"enm_rollcontainer",
+						"enm_rollcontainer",
+						"enm_rollcontainer"
+					],
+					"weight": 8
+				},
+				{
+					"id": "enc_f5_evt_schleim",
+					"enemies": [
+						"enm_retourenschleim",
+						"enm_retourenschleim"
+					],
+					"weight": 0
+				},
+				{
+					"id": "enc_e5_showboss",
+					"enemies": [
+						"enm_paketkrabbe",
+						"enm_scannerdrohne",
+						"enm_klebebandspinne"
+					],
+					"weight": 0,
+					"show_boss": {
+						"elite_pm": 1200,
+						"banner_tag": "showboss_rule",
+						"reward": {
+							"kind": "box",
+							"id": "box_fan"
+						},
+						"rule": {
+							"skill": "skl_e_showboss_slow",
+							"target": "threat_top",
+							"first_ms": 4000,
+							"every_ms": 8000
+						}
+					}
+				},
+				{
+					"id": "enc_f5_boss_schichtleiterin",
+					"enemies": [
+						"enm_boss_schichtleiterin_f5"
+					],
+					"weight": 0,
+					"boss": true,
+					"can_flee": false
+				}
+			],
+			"palette": {
+				"floor": "#585c60",
+				"wall": "#36424e",
+				"accent": "#f2c230",
+				"light": "#e6f2ff",
+				"fog": "#141a22",
+				"ambient": "#262e38",
+				"grout": "#30343a",
+				"key": "#e6f2ff",
+				"neon2": "#ff6a1a",
+				"shade": "#2c3646",
+				"rim": "#d8ecff"
+			},
+			"music": "explore",
+			"variant": 2,
+			"level_band": [
+				16,
+				19
+			],
+			"zones": [
+				{
+					"id": "zone_f5_annahme",
+					"name": "Warenannahme",
+					"rooms": {
+						"min": 11,
+						"max": 13
+					},
+					"palette": {
+						"accent": "#f2c230"
+					},
+					"pool": [
+						"enc_f5_krabben",
+						"enc_f5_spinnen"
+					],
+					"events": [
+						{
+							"type": "photo_drone",
+							"params": {
+								"pose_hype": 15,
+								"pose_followers": 50,
+								"smash_credits": 90,
+								"smash_hype": -5
+							}
+						}
+					],
+					"spots": 1,
+					"nodes": [
+						"nod_scrap_heap"
+					],
+					"safe": {
+						"name": "Pförtnerhäuschen",
+						"theme": "kiosk"
+					},
+					"style": "cellar"
+				},
+				{
+					"id": "zone_f5_sortier",
+					"name": "Sortierhalle",
+					"rooms": {
+						"min": 12,
+						"max": 14
+					},
+					"palette": {
+						"wall": "#2e3c4a",
+						"accent": "#ff7a2a",
+						"light": "#d8eaff",
+						"ambient": "#22303c"
+					},
+					"pool": [
+						"enc_f5_spinnen",
+						"enc_f5_polster",
+						"enc_f5_scanner",
+						"enc_f5_container"
+					],
+					"events": [
+						{
+							"type": "broken_vending",
+							"params": {
+								"base": 0.5,
+								"per_lck": 0.01,
+								"reward_item": "itm_brutzel_burger",
+								"reward_amount": 2,
+								"fail_pct": 10,
+								"fail_hype": 4
+							}
+						},
+						{
+							"type": "lost_candidate",
+							"params": {
+								"tag": "heal",
+								"reward_item": "itm_smelling_salts",
+								"followers": 90
+							}
+						}
+					],
+					"spots": 4,
+					"nodes": [
+						"nod_scrap_heap"
+					],
+					"safe": {
+						"name": "Leitstand",
+						"theme": "signalbox"
+					},
+					"style": "cellar"
+				},
+				{
+					"id": "zone_f5_rampe",
+					"name": "Laderampe",
+					"rooms": {
+						"min": 11,
+						"max": 13
+					},
+					"palette": {
+						"floor": "#4a4e52",
+						"wall": "#2e3a44",
+						"accent": "#ff3b30",
+						"light": "#fff0e0",
+						"ambient": "#242c34"
+					},
+					"pool": [
+						"enc_f5_scanner",
+						"enc_f5_band",
+						"enc_f5_krabben",
+						"enc_f5_container"
+					],
+					"events": [
+						{
+							"type": "wheel",
+							"params": {
+								"cost": 60,
+								"max_spins": 3,
+								"table": [
+									{
+										"kind": "item",
+										"id": "itm_brutzel_burger",
+										"amount": 2,
+										"weight": 30
+									},
+									{
+										"kind": "credits",
+										"id": "",
+										"amount": 180,
+										"weight": 25
+									},
+									{
+										"kind": "box",
+										"id": "box_silver",
+										"amount": 1,
+										"weight": 15
+									},
+									{
+										"kind": "nothing",
+										"id": "",
+										"amount": 0,
+										"weight": 15
+									},
+									{
+										"kind": "encounter",
+										"id": "enc_f5_evt_schleim",
+										"amount": 1,
+										"weight": 15
+									}
+								]
+							}
+						}
+					],
+					"spots": 0,
+					"nodes": [
+						"nod_scrap_heap"
+					],
+					"safe": {
+						"name": "Funkkabine",
+						"theme": "signalbox"
+					},
+					"style": "cellar"
+				}
+			]
+		},
+		{
+			"id": "floor_6",
+			"index": 6,
+			"name": "Etage 6 – Das Paketzentrum, Halle 6",
+			"playable": true,
+			"theme": "thm_paketzentrum",
+			"timer_seconds": 3000,
+			"timer_warnings": [
+				600,
+				300,
+				60
+			],
+			"timer_start_after": "",
+			"floor_mult": 3.5,
+			"grid": {
+				"w": 13,
+				"h": 13
+			},
+			"rooms": {
+				"min": 38,
+				"max": 46
+			},
+			"safe_rooms": 4,
+			"chests": {
+				"min": 9,
+				"max": 12
+			},
+			"enemy_groups": {
+				"min": 13,
+				"max": 16
+			},
+			"chest_table": [
+				{
+					"kind": "credits",
+					"id": "",
+					"weight": 40,
+					"min": 120,
+					"max": 210
+				},
+				{
+					"kind": "item",
+					"id": "itm_bandage",
+					"weight": 18,
+					"min": 1,
+					"max": 2
+				},
+				{
+					"kind": "item",
+					"id": "itm_brutzel_burger",
+					"weight": 14,
+					"min": 1,
+					"max": 1
+				},
+				{
+					"kind": "item",
+					"id": "itm_energy_krawumm",
+					"weight": 14,
+					"min": 1,
+					"max": 2
+				},
+				{
+					"kind": "item",
+					"id": "itm_antidote",
+					"weight": 8,
+					"min": 1,
+					"max": 2
+				},
+				{
+					"kind": "item",
+					"id": "itm_smelling_salts",
+					"weight": 5,
+					"min": 1,
+					"max": 1
+				},
+				{
+					"kind": "item",
+					"id": "itm_hype_megaphone",
+					"weight": 4,
+					"min": 1,
+					"max": 1
+				}
+			],
+			"shop": [
+				"itm_bandage",
+				"itm_antidote",
+				"itm_energy_krawumm",
+				"itm_brutzel_burger",
+				"itm_smelling_salts",
+				"itm_molotov",
+				"itm_ice_spray",
+				"itm_smoke",
+				"itm_hype_megaphone",
+				"itm_wpn_fire_axe",
+				"itm_wpn_collar_signet",
+				"itm_acc_sneakers",
+				"itm_wpn_stage_sword",
+				"itm_wpn_collar_gala",
+				"itm_arm_cardboard_armor",
+				"itm_acc_customer_card",
+				"itm_wpn_carton_lever",
+				"itm_wpn_collar_tape",
+				"itm_arm_padded_vest",
+				"itm_arm_bubble_cape"
+			],
+			"quarter_boss": "enc_f6_boss_schichtleiterin",
+			"floor_boss": "enc_f6_boss_paketberg",
+			"encounters": [
+				{
+					"id": "enc_f6_krabben",
+					"enemies": [
+						"enm_paketkrabbe",
+						"enm_retourenschleim"
+					],
+					"weight": 10,
+					"max_depth": 0.7
+				},
+				{
+					"id": "enc_f6_spinnen",
+					"enemies": [
+						"enm_klebebandspinne",
+						"enm_klebebandspinne"
+					],
+					"weight": 10
+				},
+				{
+					"id": "enc_f6_polster",
+					"enemies": [
+						"enm_luftpolstergeist",
+						"enm_retourenschleim",
+						"enm_retourenschleim"
+					],
+					"weight": 9
+				},
+				{
+					"id": "enc_f6_scanner",
+					"enemies": [
+						"enm_scannerdrohne",
+						"enm_paketkrabbe"
+					],
+					"weight": 8,
+					"min_depth": 0.3
+				},
+				{
+					"id": "enc_f6_band",
+					"enemies": [
+						"enm_paketkrabbe",
+						"enm_klebebandspinne",
+						"enm_scannerdrohne"
+					],
+					"weight": 6,
+					"min_depth": 0.5
+				},
+				{
+					"id": "enc_f6_container",
+					"enemies": [
+						"enm_rollcontainer",
+						"enm_rollcontainer",
+						"enm_rollcontainer"
+					],
+					"weight": 8
+				},
+				{
+					"id": "enc_f6_schicht",
+					"enemies": [
+						"enm_luftpolstergeist",
+						"enm_scannerdrohne",
+						"enm_klebebandspinne"
+					],
+					"weight": 6,
+					"min_depth": 0.4
+				},
+				{
+					"id": "enc_f6_evt_schleim",
+					"enemies": [
+						"enm_retourenschleim",
+						"enm_retourenschleim"
+					],
+					"weight": 0
+				},
+				{
+					"id": "enc_e6_showboss",
+					"enemies": [
+						"enm_paketkrabbe",
+						"enm_scannerdrohne",
+						"enm_klebebandspinne"
+					],
+					"weight": 0,
+					"show_boss": {
+						"elite_pm": 1200,
+						"banner_tag": "showboss_rule",
+						"reward": {
+							"kind": "box",
+							"id": "box_fan"
+						},
+						"rule": {
+							"skill": "skl_e_showboss_slow",
+							"target": "threat_top",
+							"first_ms": 4000,
+							"every_ms": 8000
+						}
+					}
+				},
+				{
+					"id": "enc_f6_boss_schichtleiterin",
+					"enemies": [
+						"enm_boss_schichtleiterin_f6"
+					],
+					"weight": 0,
+					"boss": true,
+					"can_flee": false
+				},
+				{
+					"id": "enc_f6_boss_paketberg",
+					"enemies": [
+						"enm_boss_paketberg"
+					],
+					"weight": 0,
+					"boss": true,
+					"can_flee": false
+				}
+			],
+			"palette": {
+				"floor": "#585c60",
+				"wall": "#36424e",
+				"accent": "#f2c230",
+				"light": "#e6f2ff",
+				"fog": "#141a22",
+				"ambient": "#262e38",
+				"grout": "#30343a",
+				"key": "#e6f2ff",
+				"neon2": "#ff6a1a",
+				"shade": "#2c3646",
+				"rim": "#d8ecff"
+			},
+			"music": "explore",
+			"variant": 3,
+			"level_band": [
+				19,
+				22
+			],
+			"zones": [
+				{
+					"id": "zone_f6_annahme",
+					"name": "Warenannahme",
+					"rooms": {
+						"min": 9,
+						"max": 11
+					},
+					"palette": {
+						"accent": "#f2c230"
+					},
+					"pool": [
+						"enc_f6_krabben",
+						"enc_f6_spinnen"
+					],
+					"events": [
+						{
+							"type": "photo_drone",
+							"params": {
+								"pose_hype": 15,
+								"pose_followers": 50,
+								"smash_credits": 90,
+								"smash_hype": -5
+							}
+						}
+					],
+					"spots": 1,
+					"nodes": [
+						"nod_scrap_heap"
+					],
+					"safe": {
+						"name": "Pförtnerhäuschen",
+						"theme": "kiosk"
+					},
+					"style": "cellar"
+				},
+				{
+					"id": "zone_f6_sortier",
+					"name": "Sortierhalle",
+					"rooms": {
+						"min": 10,
+						"max": 12
+					},
+					"palette": {
+						"wall": "#2e3c4a",
+						"accent": "#ff7a2a",
+						"light": "#d8eaff",
+						"ambient": "#22303c"
+					},
+					"pool": [
+						"enc_f6_spinnen",
+						"enc_f6_polster",
+						"enc_f6_scanner",
+						"enc_f6_container"
+					],
+					"events": [
+						{
+							"type": "broken_vending",
+							"params": {
+								"base": 0.5,
+								"per_lck": 0.01,
+								"reward_item": "itm_brutzel_burger",
+								"reward_amount": 2,
+								"fail_pct": 10,
+								"fail_hype": 4
+							}
+						},
+						{
+							"type": "lost_candidate",
+							"params": {
+								"tag": "heal",
+								"reward_item": "itm_smelling_salts",
+								"followers": 90
+							}
+						}
+					],
+					"spots": 2,
+					"nodes": [
+						"nod_scrap_heap"
+					],
+					"safe": {
+						"name": "Leitstand",
+						"theme": "signalbox"
+					},
+					"style": "cellar"
+				},
+				{
+					"id": "zone_f6_lager",
+					"name": "Hochregallager",
+					"rooms": {
+						"min": 10,
+						"max": 12
+					},
+					"palette": {
+						"floor": "#4e5256",
+						"wall": "#3a3a36",
+						"accent": "#ff9a2e",
+						"light": "#ffd59e",
+						"ambient": "#2e2a26"
+					},
+					"pool": [
+						"enc_f6_polster",
+						"enc_f6_scanner",
+						"enc_f6_band",
+						"enc_f6_schicht"
+					],
+					"events": [
+						{
+							"type": "photo_drone",
+							"params": {
+								"pose_hype": 20,
+								"pose_followers": 60,
+								"smash_credits": 110,
+								"smash_hype": -5
+							}
+						}
+					],
+					"spots": 2,
+					"nodes": [
+						"nod_scrap_heap"
+					],
+					"safe": {
+						"name": "Pausenraum",
+						"theme": "pumphouse"
+					},
+					"style": "cellar"
+				},
+				{
+					"id": "zone_f6_rampe",
+					"name": "Laderampe",
+					"rooms": {
+						"min": 9,
+						"max": 11
+					},
+					"palette": {
+						"floor": "#4a4e52",
+						"wall": "#2e3a44",
+						"accent": "#ff3b30",
+						"light": "#fff0e0",
+						"ambient": "#242c34"
+					},
+					"pool": [
+						"enc_f6_scanner",
+						"enc_f6_band",
+						"enc_f6_krabben",
+						"enc_f6_container"
+					],
+					"events": [
+						{
+							"type": "wheel",
+							"params": {
+								"cost": 70,
+								"max_spins": 3,
+								"table": [
+									{
+										"kind": "item",
+										"id": "itm_brutzel_burger",
+										"amount": 2,
+										"weight": 30
+									},
+									{
+										"kind": "credits",
+										"id": "",
+										"amount": 210,
+										"weight": 25
+									},
+									{
+										"kind": "box",
+										"id": "box_silver",
+										"amount": 1,
+										"weight": 15
+									},
+									{
+										"kind": "nothing",
+										"id": "",
+										"amount": 0,
+										"weight": 15
+									},
+									{
+										"kind": "encounter",
+										"id": "enc_f6_evt_schleim",
+										"amount": 1,
+										"weight": 15
+									}
+								]
+							}
+						}
+					],
+					"spots": 0,
+					"nodes": [
+						"nod_scrap_heap"
+					],
+					"safe": {
+						"name": "Funkkabine",
+						"theme": "signalbox"
+					},
+					"style": "cellar"
+				}
+			]
 		}
 	]
 }

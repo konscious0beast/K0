@@ -33,8 +33,10 @@ func _init(p_layout: FloorLayout, p_def: FloorDef, p_quality: StringName = &"hig
 	quality = p_quality
 
 
+## The art theme of the floor (02_TECH §7.3; Staffeln, ST1-C: a floor that names its Kulisse renders with the
+## Kulisse's art theme, themes.json `art` — ThemeDef.art_of).
 func theme_id() -> String:
-	return def.theme if def != null else "metro"
+	return ThemeDef.art_of(def, DB.data) if def != null else "metro"
 
 
 func floor_palette() -> Dictionary:
@@ -59,12 +61,16 @@ func spec_for(c: Vector2i) -> RoomSpec:
 	spec.palette = palette_at(c)
 	spec.with_light = true
 	spec.quality = quality
+	if rc != null and def != null and def.season_only():   # Staffeln (ST1-C): the quarter's dressing, Kulisse stages
+		spec.style = StringName(str((layout.zones.get(rc.zone, {}) as Dictionary).get("style", "")))
+		if rc.kind == RoomCell.Kind.QUARTER_BOSS or rc.kind == RoomCell.Kind.FLOOR_BOSS:
+			spec.stage = RoomSpec.STAGE_PLAIN
 	specs[c] = spec
 	return spec
 
 
-## Builds every room under `parent` (World/Rooms; only rooms there): room checkerboard layers, room collision moved
-## into the one "FloorCollision" body under `collision_parent` (null → `parent`).
+## Builds every room under `parent` (World/Rooms; only rooms there): room checkerboard layers, room collision and the
+## door lintels (build_door_lintels) in the one "FloorCollision" body under `collision_parent` (null → `parent`).
 func build_rooms(parent: Node3D, collision_parent: Node3D = null) -> void:
 	collision = StaticBody3D.new()
 	collision.name = "FloorCollision"
@@ -84,6 +90,9 @@ func build_rooms(parent: Node3D, collision_parent: Node3D = null) -> void:
 		_take_collision(room)
 		parent.add_child(room)
 		rooms[c] = room
+	# The lintels go in before the body enters the world: every box added to a body in the world rebuilds its whole
+	# shape (Jolt) — one build instead of one per door (ST1-C1: 32–52 ms on a 48-room floor before; the same boxes).
+	_add_door_lintels(collision)
 	(collision_parent if collision_parent != null else parent).add_child(collision)
 
 
@@ -125,16 +134,22 @@ func _take_collision(room: Node3D) -> void:
 
 ## Collision boxes for the door lintels (layer 1, y 3.0–3.5 m over every door, through both walls): the art kit's
 ## walls only collide beside the openings, but the camera treats the wall above a door as wall (camera_rig.gd).
-## Kai (1.7 m) and the groups never reach that height → no gameplay change. One box per door, added to the
-## "FloorCollision" body when build_rooms() ran (else to an own "DoorLintels" body under `parent`).
+## Kai (1.7 m) and the groups never reach that height → no gameplay change. One box per door: build_rooms() already
+## put them into the "FloorCollision" body (returned, nothing added twice); without build_rooms() an own
+## "DoorLintels" body under `parent`.
 func build_door_lintels(parent: Node3D) -> StaticBody3D:
-	var body: StaticBody3D = collision
-	if body == null:
-		body = StaticBody3D.new()
-		body.name = "DoorLintels"
-		body.collision_layer = 1
-		body.collision_mask = 0
-		parent.add_child(body)
+	if collision != null:
+		return collision
+	var body: StaticBody3D = StaticBody3D.new()
+	body.name = "DoorLintels"
+	body.collision_layer = 1
+	body.collision_mask = 0
+	_add_door_lintels(body)
+	parent.add_child(body)
+	return body
+
+
+func _add_door_lintels(body: StaticBody3D) -> void:
 	for c: Vector2i in layout.sorted_cells():
 		var rc: RoomCell = layout.cell_at(c)
 		for b: int in RoomCell.DIR_BITS:
@@ -148,7 +163,6 @@ func build_door_lintels(parent: Node3D) -> StaticBody3D:
 			cs.shape = box
 			cs.transform = Transform3D(t.basis, t.origin + Vector3(0.0, (LINTEL_Y + LINTEL_TOP) * 0.5, 0.0))
 			body.add_child(cs)
-	return body
 
 
 ## Room-local anchor; the art kit decides (EnvKit.anchor_for). While EnvKit is a stub it returns IDENTITY for every

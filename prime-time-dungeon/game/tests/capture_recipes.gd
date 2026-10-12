@@ -43,6 +43,11 @@ extends Node
 ##   (Graf Mopsula barks at a group that has seen her: dazed, the bark's target, "verdutzt · Erstschlag!"),
 ##   pull_far_<zone> (Graf Mopsula targets a lead 7 m away: the frame steps aside) — with --touch the action button
 ##   shows slot 1's symbol instead of the hint.
+## Staffeln (09 §3, ST1-C; with capture.gd --season-floor=<n>: a basis season Am Stück on floor n): season_q<k> (Kai
+##   6 m in front of a group of quarter k, the quarter revealed), season_qb / season_fb (in front of the Revier-Boss /
+##   the Etagenboss on its stage), season_door (in front of a closed programme door: its prompt), season_gate (in front
+##   of the key gate before the stairs), season_safe (in front of the safe room door of the first quarter),
+##   season_map (the big map, every quarter revealed).
 
 const ZONES: Dictionary = {"platform": "zone_platform", "sewer": "zone_sewer", "cellar": "zone_cellar"}
 
@@ -1472,6 +1477,116 @@ func _r_sd_bigview(scene: Node) -> bool:
 	scene.call("open_big_view", int((scene.get("hand") as Node).get("marked_slot")))
 	await seconds(0.4)
 	return scene.get("modal") != null
+
+
+# --- Staffeln (09 §3, ST1-C): the floors of the basis season ----------------------------------------------------------
+
+## capture.gd --season-floor=<n>: a basis season (Am Stück, seed 1, a fixed start) taken down the stairs to floor `n`
+## (Game.season_debug_descend); false when it does not get there.
+func season_floor(n: int) -> bool:
+	if not Game.start_season(0, "ssn_basis", {"tempo": "binge", "seed": 1, "unlock": true, "now": SEASON_NOW}):
+		return false
+	while Game.state.floor_run.index < n:
+		if not Game.season_debug_descend():
+			return false
+	return Game.state.floor_run.index == n
+
+
+func _r_season(scene: Node, what: String) -> bool:
+	if not await _explore_ready(scene):
+		return false
+	var layout: FloorLayout = scene.call("get_layout")
+	_freeze_enemies(scene)
+	if what.begins_with("q") and what.substr(1).is_valid_int():
+		var zone: String = _season_zone(layout, what.substr(1).to_int())
+		for e: EnemySpawn in layout.enemies:
+			var rc: RoomCell = layout.cell_at(e.cell)
+			if rc != null and rc.zone == zone and not e.is_boss and scene.call("get_enemy", e.id) != null:
+				_reveal_zone(scene, layout, zone)
+				_place_facing(scene, layout, e.cell, (scene.call("get_enemy", e.id) as Node3D).global_position, 6.0)
+				await frames(20)
+				await _quiet_mod_queue()
+				return true
+		push_warning("[CaptureRecipes] no group in quarter %s" % zone)
+		return false
+	match what:
+		"qb", "fb":
+			var cell: Vector2i = layout.quarter_boss if what == "qb" else layout.floor_boss
+			for e: EnemySpawn in layout.enemies:
+				if e.is_boss and e.cell == cell and scene.call("get_enemy", e.id) != null:
+					_reveal_zone(scene, layout, layout.cell_at(cell).zone)
+					_place_facing(scene, layout, cell, (scene.call("get_enemy", e.id) as Node3D).global_position, 7.0)
+					await frames(20)
+					await _quiet_mod_queue()
+					return true
+			return false
+		"door", "gate":
+			var key: String = ""
+			for g: Dictionary in layout.gates:          # a closed one, a room without a group in front first
+				var programme: bool = ZoneGenerator.programme_number(str(g["requires"])) > 0
+				if (what == "door") != programme or Game.state.floor_run.opened_gates.has(str(g["key"])):
+					continue
+				var busy: bool = false
+				for e: EnemySpawn in layout.enemies:
+					busy = busy or e.cell == (g["cell"] as Vector2i)
+				if key == "" or not busy:
+					key = str(g["key"])
+				if not busy:
+					break
+			var gate: Node3D = (scene.get("_gates") as Dictionary).get(key) as Node3D
+			if gate == null:
+				return false
+			var gc: Vector2i = layout.gate_by_key(key)["cell"]
+			_reveal_zone(scene, layout, layout.cell_at(gc).zone)
+			var inward: Vector3 = layout.cell_to_world(gc) - gate.global_position     # 1.4 m in front of the gate
+			inward.y = 0.0
+			var spot: Vector3 = gate.global_position + inward.normalized() * 1.4
+			var to: Vector3 = gate.global_position - spot
+			var yaw: float = atan2(-to.x, -to.z)
+			(scene.call("get_player") as Node).call("teleport", Vector3(spot.x, 0.05, spot.z), yaw)
+			(scene.call("get_camera_rig") as Node).call("snap", yaw)
+			(scene.call("get_companion") as Node).call("snap_behind")
+			scene.call("_update_room", true)
+			await frames(30)
+			await _quiet_mod_queue()
+			return true
+		"safe":
+			var sc: Vector2i = layout.safe_rooms[0]
+			_reveal_zone(scene, layout, layout.cell_at(sc).zone)
+			_place_facing(scene, layout, sc, layout.cell_to_world(sc), 4.0)
+			await frames(30)
+			await _quiet_mod_queue()
+			return true
+		"map":
+			for zid: Variant in layout.zones.keys():
+				_reveal_zone(scene, layout, str(zid))
+			var hud: Node = scene.get("_hud")
+			await frames(5)
+			return hud != null and hud.call("open_big_map") != null
+	push_warning("[CaptureRecipes] unknown season view '%s'" % what)
+	return false
+
+
+## The M.O.D. box after the descents of --season-floor: the lines of every stairs and level-up queue up (ST1-D adds the
+## season's EXP lines), the floor start and M.O.D.'s preferences of the day follow one per explore tick (Show) — every
+## line ended until Show has none left to say (at most ≈ 5 s; _quiet_mod_dialog ends at most 16 lines per call).
+func _quiet_mod_queue() -> void:
+	for i in 60:
+		await _quiet_mod_dialog()
+		var queue: Variant = Show.get("_announce_queue")
+		if not bool(Show.get("_floor_start_pending")) and (queue == null or queue.size() == 0):
+			break
+		await frames(5)
+	for i in 4:
+		await _quiet_mod_dialog()
+
+
+## The id of quarter `order` (0 = the first) of a generator-v2 layout; "" if none.
+static func _season_zone(layout: FloorLayout, order: int) -> String:
+	for zid: Variant in layout.zones.keys():
+		if int((layout.zones[zid] as Dictionary).get("order", -1)) == order:
+			return str(zid)
+	return ""
 
 
 # --- Staffeln (09 §8.2–8.4, ST1-D): levels, the ability book, the talent tree ------------------------------------

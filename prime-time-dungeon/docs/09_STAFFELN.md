@@ -58,6 +58,14 @@
 > wirkt nur mit `state.season != null`; der V-20-Schalter ist gebaut, getestet und aus (D-1) — Kampagne und Event-Läufe
 > behalten die 06-B-Talent-Show bitgleich.
 >
+> **Stand ST1-C1 (2026-10-12, Branch `ptd/st1c1`):** Die Etagen 2–6 der Basis-Staffel sind spielbar (Kap. 11.3 „Stand
+> ST1-C1“, Entscheidungen C-1 … C-23; 02_TECH §0.8 „Stand ST1-C1“): Generator v2 mit Vierteln, Schleifen, Schlüsseltor vor
+> der Treppe, fünf Programmtüren und einem Safe Room je Viertel; die Kulissen Passage, Fundus und Paketzentrum mit
+> Programmpunkt-Pools; Gegnerstufen über die Stufen-Tabelle (07 CR-32 d) mit den EP-Anteilen von ST1-D; Revier- und
+> Etagenbosse aus den Bausätzen von Etage 1. Eine Basis-Staffel läuft in Debug-Builds (`--season=ssn_basis`, README §6)
+> von Etage 1 bis zum Finale auf Etage 6; ohne Staffel bleibt jeder Lauf bitgleich, die Kampagne endet weiter nach
+> Etage 1. Etagen 7–18, Boss-Baukasten und Viertel-Streaming folgen mit ST1-C2.
+>
 > **Namen der Phasen:** Der Orchestrator nennt sie S1–S3. Weil „S0–S5“ schon die SHOWRUN-Stufen (05) und „S0–S3“ die
 > KI-Stufen (06 §5.12) sind, heißen sie hier **ST1–ST3** (Staffel-Phasen) — gleicher Inhalt, keine Verwechslung.
 >
@@ -634,7 +642,8 @@ für Etage 2 und wird für Etagen 3–18 erweitert (`core/dungeon/zone_generator
 5. **Prüfregeln** wie heute (`FloorLayout.validate`) plus: jedes Viertel erreichbar, jede Fundstelle erreichbar, Pflichtweg
    Start → Revier-Boss → Treppe ohne Etagenboss, Safe Room in jedem Viertel.
 6. **Leistung:** 36–48 Räume statt 31 — Bau der Erkundung nur für das aktuelle und die angrenzenden Viertel
-   (Viertel-Streaming), Budgets 02_TECH §12.1 / `PERFORMANCE.md` **[zu messen]**.
+   (Viertel-Streaming), Budgets 02_TECH §12.1 / `PERFORMANCE.md` **[zu messen]** (ST1-C1 baut noch die ganze Etage und
+   bleibt im Budget: `PERFORMANCE.md` §3.9, C-18).
 
 Daten: `data/themes.json` (Präfix `thm_`: Palette, Gegnerpool je Viertel, Revier-Boss, Etagenboss, Event-, Fundstellen- und
 Programmpunkt-Pool, Musik) und je Etage ein Eintrag in `floors.json` mit `theme`, `variant` (1–3), `level_band`, `zones`,
@@ -1562,6 +1571,75 @@ Stufe = 226, HP 168 + 24 je Stufe = 1 344; mit Klasse und Spezies Kai HP 2 020�
 +1 je 1,5 s) wachsen nicht mit; ab etwa Stufe 25 begrenzen MP kaum noch. Vorschlag (07 §12.10, CR-32 d): MP-Kosten der
 Leisten mit dem Band skalieren oder in ‰ der Max-MP rechnen — Werte-Eigentum R4/ST1-C.
 
+**Stand ST1-C1 (2026-10-12, Branch `ptd/st1c1`) — umgesetzt** (Einzelheiten 02_TECH §0.8 „Stand ST1-C1“): der Generator
+v2 `ZoneGenerator` (`core/dungeon/zone_generator.gd`; `DungeonGenerator` gibt jede Etage mit `zones` an ihn weiter —
+eine Zeile) mit den Prüfregeln aus Kap. 3.6 Nr. 5 (`ZoneGenerator.check`); die Kulissen in `themes.json` (`ThemeDef`,
+`validators/themes.gd` ersetzen die ST0-Stubs); die Etagen 2–6 in `floors.json` (Etage 2 vervollständigt, 3–6 neu) mit
+20 Gegnern, 69 Gegner-Fähigkeiten, 18 Gegenständen, den Lootbox-Pools `f3`/`f4` und 24 M.O.D.-Zeilen der Bosse; 07 CR-32
+d (`ENEMY_LEVEL_PM` in `RtBalance` und `data/rt_balance.json`) mit `EnemyLevels` (`core/progression/enemy_levels.gd`,
+der Haken in `BattleBridge`; seit dem Merge von ST1-D auch die EP-Anteile der Gruppen und ihre Stufe für die Farbe der
+Kampf-EP, `LevelBand.group_level`, C-23); die Programmtüren in Kern (`SeasonRules._sync_daily`) und Erkundung
+(`GateInteractable`); Kunst-Thema, Ausstattung je Viertel und die Bühne der Bossräume im Bau (`FloorBuilder`,
+`RoomSpec`, `RoomBuilder`). Tests `test_09_zone_generator` (200 Seeds je Etage 2–6 gegen `FloorLayout.validate` und die
+Prüfregeln, Determinismus, kaputte Layouts, Programmtüren; die Erzeugungszeit je Etage) und `test_09_floors` (Kulissen
+und Etagen, eine neue Sache je Etage, Stufen-Tabelle und `EnemyLevels` nur mit Staffel, die EP-Anteile und die Farbe der
+Kampf-EP nach Bandstufe (C-23), die Kampagne endet nach Etage 1, eine Basis-Staffel von Etage 1 bis zum Finale auf Etage
+6, das Ende mit dem letzten Einsturz, die MP- und HP-Formeln bis Stufe 50 nach CR-32 d); Bestandstests nur dort
+angepasst, wo sie „eine spielbare Etage“ oder genau den Inhalt von Etage 1 zählten (C-15, C-20).
+
+*Was ein Debug-Build zeigt* (`--season=ssn_basis`, mit `--tempo=binge --floor=<n>` direkt auf Etage n): nach Etage 1
+(Generalprobe, Etagen-Bilanz) die **Passage Ewiger Rabatt** (Eingangshalle und Food-Court; Schaufensterpuppen,
+Einkaufswagen-Rudel, Rabattschild-Golem, Leuchtpilze, Durchsage-Geist; Revier-Boss Die Filialleiterin im Dauerlächeln
+mit dem Schlüssel der Passage, Etagenboss Der Ausverkauf hinter dem Tor neben der Treppe), dann **Der Fundus**
+(Anlieferung, Kostümfundus, Requisitenhalle; Kostümständer, Pappritter-Ratten, Mottenschwärme, Nebelmaschinen; Die
+Requisiteurin, Die Garderobe) und **Das Paketzentrum, Hallen 4–6** (Warenannahme, Sortierhalle, Hochregallager auf Etage
+6, Laderampe; Paketkrabben, Klebebandspinnen, Luftpolstergeister, Retourenschleim, Scannerdrohnen, ab Halle 5
+Rollcontainer-Rudel; Die Schichtleiterin je Halle, auf Etage 6 Der Paketberg). Jede Etage hat einen Safe Room je
+Viertel, fünf verschlossene Programmtüren, die das Tagesprogramm nacheinander öffnet (Kalender: ein Punkt je Sendezeit;
+Am Stück: einer beim Betreten), Gegner auf den Stufen des Bands (7–10 auf Etage 2 bis 19–22 auf Etage 6, Elite bis
+Bandende + 2; ihre EP nach ST1-D, C-23), Truhen und Automaten mit der Beute der Etage. Auf Etage 6 endet die Staffel mit
+dem Sieg über den Paketberg (Finale) oder dem letzten Einsturz; die Treppe von Etage 6 gibt es nicht (Finale-Etage des
+Formats). Ein Akt-2-/Akt-3-Format endet nach Etage 6 mit dem Ende des Inhalts (B-9).
+
+*Für ST1-C2:* Etagen 7–18 als Daten (Kulissen, Paletten, Gegner, Bosse, Programmpunkte) — der Generator und die
+Prüfregeln tragen sie; der Boss-Baukasten (Kap. 3.4: eine Mechanik mehr je Auftritt); Kulissenwände auf
+Generator-v2-Etagen (C-17); `item_level` (C-10); Viertel-Streaming (C-18); eigene Raumteile je Kulisse (03_ART, CR-28).
+*Für ST1-I:* Der Full-Run-Bot (`scenes/boot/fullrun.gd`) kennt nur das handgebaute Layout von Etage 1; für die Etagen
+2–6 braucht er eine Wegplanung auf `FloorLayout` (Revier-Boss → Schlüssel → Tor → Treppe, offene Programmtüren, Safe
+Room je Viertel), den Staffelstart `--season=ssn_basis --tempo=binge` (Kap. 11.4) und eine Kampfstrategie für die Bänder
+(EP-Tabelle und Anteile von ST1-D, C-23); dann misst er das Pensum (Kap. 3.3: Pflichtweg und „vollständig“ je Etage),
+die Stufe beim Abstieg und die Balance der Bosse. Offen für ein Paket: die Oberfläche des Recalls auf Etage 3 (Spezies
+und Klasse; heute nur `Game.choose_casting`) — ohne sie bleiben Klassenleisten und Klassenreihen von ST1-D in der
+Debug-Staffel zu.
+
+**Entscheidungen ST1-C1** (Auslegungen dieses Dokuments, Startwerte):
+
+| Nr. | Thema | Entscheidung | Kap. |
+|---|---|---|---|
+| C-1 | Etage 2 im Generator v2 | Kap. 3.6 lässt Etage 2 beim heutigen Generator; ST1-C1 gibt ihr trotzdem zwei Viertel (Eingangshalle, Food-Court), weil Schlüsseltor, Programmtüren, Safe Room je Viertel und Gegnerstufen an den Vierteln hängen. Das Baumverfahren lebt in jedem Viertel weiter; Raster und Countdown der alten Etage 2 bleiben (9 × 9, 25 min). | 3.6 |
+| C-2 | Wachstum | Viertel nacheinander, je bis zu 8 Versuche (ein gescheiterter wird zurückgebaut, der Generator läuft weiter), je Etage bis zu 40 Durchgänge. Anschluss = der tiefste Raum des vorigen Viertels, dessen freier Nachbar genug Fläche (Flutfüllung) für alle späteren Viertel öffnet; gewachsen wird gleichmäßig (jeder Raum des Viertels kann den nächsten Ast tragen: kompakte Viertel mit Sackgassen); die Raumzahlen der Viertel werden so gezogen, dass ihre Summe in `rooms` der Etage liegt; Programmräume und der Etagenboss kommen dazu (über 200 Seeds: Etage 2 24–30 Räume, 3 32–38, 4 39–45, 5 41–45, 6 44–52 — Etage 6 also bis zu 4 Räume über den 36–48 aus Kap. 3.6 Nr. 6, je Raum ≈ 6,5 ms Aufbau, C-18). Gemessen: 1,00–1,03 Durchgänge im Schnitt, höchstens 2 (200 Seeds je Etage). | 3.6 Nr. 1 |
+| C-3 | Schleifen | „Abstand ≥ 4 Zellwechsel“: Nachbarräume liegen im Raster immer eine ungerade Zahl von Zellwechseln auseinander, die Regel heißt also ≥ 5. Hat ein Viertel kein solches Paar, verbindet sein letzter Raum zwei Räume, die ≥ 4 auseinanderliegen (eine Schleife über sechs Räume). 1–2 je Viertel (die zweite, wenn der Generator zwei will und das Viertel ein Paar hat); nie an Start, Bossräumen, Safe Rooms oder Programmräumen, nie die vierte Tür eines Raums. | 3.6 Nr. 2 |
+| C-4 | Treppe, Schlüssel | Treppe = die tiefste Sackgasse des letzten Viertels (eine Tür: das Schlüsseltor schließt sie ganz); Schlüssel `itm_key_f<N>` (Typ `key`), den der Revier-Boss fallen lässt (`boss_drops`, vom Validator geprüft); Revier-Boss bei 60 % des Pfadstücks im letzten Viertel; Etagenboss als Sackgasse neben der Treppe, also hinter dem Tor. | 3.6 Nr. 3 |
+| C-5 | Programmtüren | `zones[].spots` je Viertel (zusammen höchstens 5; die Etagen 2–6 haben je 5, Kap. 3.3): Sackgassen, die das Viertel beim Wachsen neben seinem Weg Eingang → Ausgang freihält; das Tor davor verlangt `daily:<n>`, im Raum steht ein Event aus den Vorlagen des Viertels (`fev_f<N>_p<n>`). Punkt n des Tagesprogramms (`FloorRun.daily`, B-11) öffnet Tür n (`SeasonRules._sync_daily` → `ZoneGenerator.open_programme_doors`); in der Erkundung hebt sich das Tor, sobald der Punkt da ist, geschlossen sagt es „Noch geschlossen — öffnet mit Programmpunkt n“. Etage 1 (handgebaut) behält ihre Platzhalter-Ids ohne Türen. Der Marker „NEU“ auf der Karte ist ST1-H. | 3.3, 3.6 Nr. 3 |
+| C-6 | Safe Rooms | Einer je Viertel nahe seinem Eingang (Name und Art aus `zones[].safe`), nie ein Programmraum oder der Raum davor; `safe_rooms` = Zahl der Viertel (Validator). | 3.2, 3.6 Nr. 5 |
+| C-7 | Gefahr | `FloorLayout.zones[].danger`: erstes Viertel ruhig, letztes gefährlich, die anderen unruhig (`ZoneGenerator.danger_at`, für ST1-G). | 3.6 Nr. 4, 5.3 |
+| C-8 | Gruppenstufen | Pflichtweg = Bandmitte; Nebenwege von der Bandmitte (erstes Viertel) bis Bandende + 1 (letztes); die Gruppe des Show-Bosses Bandende + 2, in einem Seitenviertel; Revier-Boss Bandende, Etagenboss Bandende + 1. Mit der EP-Tabelle von ST1-D gelten die Bänder voll (bis Stufe 52); Daten ohne Tabelle (Fixtures) deckeln jede Gegnerstufe bei `Balance.LEVEL_CAP` 10 (`EnemyLevels.level_cap`). | 3.4 |
+| C-9 | Stufen-Tabelle | `ENEMY_LEVEL_PM` = 1 000 + 150 × (Stufe − 1) für Stufe 1–52 (das Wachstum der Figuren, etwa +15 % je Stufe). Ein Gegner der Datenstufe d auf Stufe L: HP, STR, MAG, DEF, RES und Credits × Tabelle(L) / Tabelle(d) (`EnemyLevels.apply` in `BattleBridge`, vor den RtMods), die EP nach C-23; SPD, LCK, MP und Fähigkeiten bleiben; der Zielrahmen zeigt L in der Plakette. Nur mit Staffel auf einer Etage mit Band und Vierteln — Etage 1 behält ihre Datenstufen auch in einer Staffel. | 3.4, CR-32 d |
+| C-10 | Beute | Truhentabellen, Credits und Automaten je Etage in den Daten (Credits der Truhen 40–80 auf Etage 2 bis 120–210 auf Etage 6), Lootbox-Pools `f3` und `f4` (die Etagen 5 und 6 nehmen `f4`), 13 Ausrüstungsteile der Kulissen (im Automaten, als Boss-Beute oder im Pool) und die Schlüssel. `item_level` (Werte aus Vorlagen × Bandmitte) gibt es noch nicht: jedes Teil hat feste Werte — Vorlagen und Skalierung mit ST1-C2/D. | 3.4 |
+| C-11 | Kulissen | `themes.json`: `thm_passage` (Etage 2, Kunst-Thema `mall`, 7 Programmpunkte), `thm_fundus` (3, `metro`, 6), `thm_paketzentrum` (4–6, `metro`, 12); `theme` der Etage ist die Kulisse, `ThemeDef.art` das Kunst-Thema (Zuordnung in `FloorBuilder` und `BattleBridge`). Je Viertel wählt `style` die Ausstattung des Bau-Kits (Passage `mall`, Fundus und Paketzentrum `cellar`) — sonst wählte das Kit den Stil nach der nächsten Palette, und jede Kulisse sähe nach U-Bahn aus. Paletten 03_ART §2.5. | 3.1 |
+| C-12 | Bossräume | Auf Etagen einer Kulisse kein Hausmeister-Büro und kein Gleis 9, sondern eine Bühne (Scheibe mit Goldrand und vier Lampen) in der Palette des Viertels (`RoomSpec.stage`). | 3.1 |
+| C-13 | Bosse | Revier-Bosse aus dem Bausatz des Hausmeisters (sechs umbenannte Fähigkeiten, Phasen, Ruf nach Verstärkung), Etagenbosse aus dem der Rattenkönigin (der Zug von Gleis 9 wird ein Linien-Telegraph auf ein zufälliges Ziel); Grundwerte × 1,00 (Passage) bis 1,25 (Paketberg), dazu die Stufe (C-8, C-9); je Boss `boss_intro` und `boss_phase` hinter dem Staffel-Anker. Etagenbosse auf den Etagen 2, 3 und 6 (wie im Modell der KI-Besetzung, F-4); die Schichtleiterin sind drei Einträge (je Halle stärker, je ein Schlüssel). Der Boss-Baukasten (Kap. 3.4) folgt mit ST1-C2. | 3.4 |
+| C-14 | Eine neue Sache je Etage | Etage 2: Viertel, Schlüssel und Programmtüren (dazu der Durchsage-Geist mit Dauer-Jingle); Etage 3: der Bühnennebel der Nebelmaschine (Zone, verlangsamt); Etage 4: eine neue Kulisse mit eigener Besetzung, keine neue Regel; Etage 5: das Rollcontainer-Rudel (immer zu dritt); Etage 6: der Paketberg als Etagenboss. Die Gegnerarten sind umbenannte Bausätze von Etage 1 (die Passage nach GDD §15). | 0.6 |
+| C-15 | Kampagne | Etagen mit Kulisse sind Staffel-Etagen (`FloorDef.season_only`, `playable_in(season)`): Die Kampagne geht nach Etage 1 weiter in den Abspann (`Game.continue_after_summary`, `TitleFlow`), Statistiken und Ereigniszeilen bleiben gleich. Das Ende des Inhalts (B-9) liegt jetzt nach Etage 6. | 2.7, 11.1 |
+| C-16 | Fundstellen | Nur Positionen (`FloorLayout.nodes`: 4–6 je Viertel, Art aus `zones[].nodes`); sichtbar und nutzbar mit ST1-E. | 3.2 |
+| C-17 | Kulissenwände | Fehlen noch (Kap. 3.6 Nr. 3: 1–3 je Etage): `Secrets` liest nur handgebaute Layouts — ST1-C2. | 3.6 Nr. 3 |
+| C-18 | Viertel-Streaming | Noch nicht: die ganze Etage wird gebaut. Gemessen mit `tools/perf.sh --only=season` (`PERFORMANCE.md` §3.9): Etage 6 (48 Räume) warm 408 ms im Median, Budget 500 ms am PC, ≈ 6,5 ms je Raum; jede Darstellungsgröße im Budget. Die Türstürze kommen dafür vor dem Eintritt in die Welt in den Etagen-Körper (§4.10 dort, −32–52 ms auf Etage 6). Das Streaming (ST1-C2) ist Reserve am PC und für Mobilgeräte gedacht. | 3.6 Nr. 6 |
+| C-19 | Debug | `--floor=<n>` mit `--season`: die Treppen ohne Laufen (aufgezeichnete Paare `descend`/`floor`, `Game.season_debug_descend`; die Treppenregel gilt — Am Stück jede Etage, im Kalender zu Beginn bis Etage 3); Capture `--season-floor=<n>` mit den Rezepten `season_*`, Perf `--only=season`. | 11.6 |
+| C-20 | Test-Platzhalter | Die Platzhalter-Etagen von `tests/fixtures/season_core/` entstehen aus den regulären Begegnungen von Etage 2 ohne Kulisse, Viertel und Band (die Regeln von ST1-B bleiben vom Inhalt unabhängig); die echten Etagen prüfen `test_09_zone_generator` und `test_09_floors`. | 11.6 |
+| C-21 | Einkaufswagen-Rudel | Kommt immer zu dritt (GDD §15), auch in den neuen Begegnungen; die Bosse der Passage rufen deshalb Schaufensterpuppen und Rabattschilder statt einzelner Wagen. | GDD §15 |
+| C-22 | Ausrüstung | Teile nur aus Beute verkaufen wie bisher für 150 (selten) / 250 (episch); Halsbänder sind Halsbänder, ohne Kronen- oder Adelsmotiv (06 §3.2). | 3.4 |
+| C-23 | EP der Gegner (mit ST1-D) | Eine Gruppe ist auf ihrer Stufe L den Anteil einer Stufe wert, den ST1-D vorgibt (D-6, `LevelBand.SHARE_*_PM`): EP bis zur nächsten Stufe von L (`LevelBand.exp_to_next`; Elite über 49 zählt wie 49) × 4 % für eine reguläre Gruppe, 15 % für die Gruppe des Show-Bosses, 25 % für den Revier-Boss, 50 % für den Etagenboss — verteilt auf ihre Gegner nach deren Daten-EP, der Rest der Ganzzahl-Teilung beim Anführer (`EnemyLevels.exp_share_pm`, `group_exp`). Die Farbe der Kampf-EP liest die Stufe der geschlagenen Gruppen (`LevelBand.group_level` mit dem Zustand → `EnemyLevels.result_level`), nicht die Datenstufen. Vorher (Daten-EP × Stufenfaktor) gab eine Gruppe auf Etage 2 156–259 EP statt 25, auf Etage 6 134–323 statt 117 — und mit den Datenstufen als Gruppenstufe wären die Gruppen ab Etage 3 für eine Figur im Band meist grün oder grau gewesen (50 % bzw. 0 % der EP). | 8.2, D-6 |
+
 ### 11.4 Dateieigentum gegenüber 07 und 08
 
 | Datei / Bereich | Eigentum heute (06/07/08) | 09 | Regel |
@@ -1606,7 +1684,7 @@ Leisten mit dem Band skalieren oder in ‰ der Max-MP rechnen — Werte-Eigentum
 | `test_09_ability_book` | Freischaltung auf festen Stufen, Vorschau, Klassenleisten über `rt.bar`, Rang II–IV; Stand ST1-D: dazu Belegung der Plätze 1–5, Kampfleiste und KI-Regeln, Zugleiste der Erkundung |
 | `test_09_replay` | Sitzung mit `season`/`clock`/`away`/`sleep`/`prof`/`craft`/`talent` v2 → `RunSim.replay` und `Game.replay_log` hash-gleich; manipulierte Uhr-Commands → Fehler; Läufe ohne Staffel bitgleich zu den Golden-Hashes |
 | `test_09_terms` | Sprachregel (Kap. 1.2) |
-| `test_09_zone_generator` | 200 Seeds je Etage 3–18 erfüllen die Prüfregeln (Kap. 3.6), deterministisch |
+| `test_09_zone_generator` | 200 Seeds je Etage 3–18 erfüllen die Prüfregeln (Kap. 3.6), deterministisch (ST1-C1: Etagen 2–6; dazu `test_09_floors`) |
 
 **ST1-Gate — nur Mechanik (V-5):** Alle Tests grün; Am-Stück-Etage 1 in den neu gemessenen GDD-§13-Bändern; Staffel-Harness
 (`tools/season_harness.sh --format=18 --tempo=calendar --speed=dev`) mit diesen Profilen (V-8):

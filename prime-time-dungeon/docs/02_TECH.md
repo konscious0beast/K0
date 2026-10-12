@@ -556,6 +556,44 @@ Differenz (`color_name`, `diff_text`, `is_warning`; 07 CR-32 l), die Staffel-Bil
 07 — CR-32 j (Kampfergebnis), k (KI-Regeln bei Taktikwechsel), d (MP bis Stufe 50). **Offen:** Der Baum hat keine
 Gegenprobe gegen einen echten Bot über eine ganze Staffel (ST1-I misst Stufen und Pensum mit dem Harness).
 
+**Stand ST1-C1 (2026-10-12, Branch `ptd/st1c1`): Generator v2, Kulissen, Etagen 2–6** (09 Kap. 3, Kap. 11.3 „Stand
+ST1-C1“, Entscheidungen C-1 … C-23). Der Generator v2 hängt an `FloorDef.has_zones()`, Stufen, Programmtüren und die
+spielbaren Etagen 2–6 hängen an `state.season != null`; **kein `SIM_VERSION`-Sprung**, Save v2 unverändert, ohne Staffel
+bitgleich (`fullrun.sh` mit `--strategy=all`, `--hero=mopsula`, `--liga=1`, `--liga=2`: gleiche Ereigniszeilen und
+Statistiken; die Golden-Werte des Echtzeitkampfs unverändert). Neu sind `core/dungeon/zone_generator.gd`
+(`ZoneGenerator`) und `core/progression/enemy_levels.gd` (`EnemyLevels`); die ST0-Stubs `ThemeDef` und
+`validators/themes.gd` sind ersetzt. Schicht: `ZoneGenerator` nutzt wie `DungeonGenerator` nur `core/data`, `core/loot`
+und `core/progression` (`GameState` für die Programmtüren); was `core/rt` braucht (die Stufen-Tabelle), steht in
+`EnemyLevels` (`core/progression`, wie `BattleBridge`), das die EP-Tabelle und die EP-Anteile aus `LevelBand` liest
+(`core/season`, wie `BattleBridge` seit ST1-D).
+
+| Teil | API |
+|---|---|
+| `ZoneGenerator` (rein) | `generate(def, floor_seed) -> FloorLayout` (Durchgang k mit `SeedUtil.derive(floor_seed, "zone_gen_f<N>", k)`, die Truhen mit `"chest_table"` wie `DungeonGenerator`; bis `MAX_ATTEMPTS` 40 Durchgänge, je Viertel `QUARTER_TRIES` 8 Versuche mit Rückbau), `check(layout, def) -> PackedStringArray` (09 §3.6 Nr. 5: jede ungeschützte Zelle bei geschlossenen Toren erreichbar, jedes Viertel, jede Fundstelle; Start → Revier-Boss ohne Schlüssel und nie durch den Etagenboss, Revier-Boss → Treppe nur mit dem Schlüsseltor, die Treppe nie ohne; Treppe, Revier- und Etagenboss im letzten Viertel, der Etagenboss abseits des Pfads; ein Safe Room je Viertel; höchstens fünf Programmtüren, nummeriert, Sackgassen abseits des Pfads mit Tor `daily:<n>` und Event; keine Gruppe in Treppe oder Programmraum; Stufen im Band bis Bandende + 2; die Gruppe des Show-Bosses; 1–2 Schleifen je Viertel; die Viertel als Kette), `key_item(def)` (`itm_key_f<N>`), `programme_requirement(n)` (`"daily:<n>"`), `programme_number(requires)`, `danger_at(layout, cell)`, `band_middle(def)`, `open_programme_doors(state, data)` |
+| `FloorLayout` (additiv) | `zones[id]` += `order`, `danger` (`calm` \| `restless` \| `dangerous`), `style`; `nodes` [{id `f<N>_n<k>`, node, cell, offset}], `programme` [{n, cell, key, event, zone, q}]; `to_debug_string` nennt Viertel, Programm und Fundstellen nur auf Generator-v2-Etagen (Etage 1 unverändert); `EnemySpawn.level` (0 = Datenstufen; `to_dict` nur > 0) |
+| `EnemyLevels` (rein) | `enemy_level(state, data, group_id, layout = null)` (Stufe der Gruppe im Layout, ein Kampf ohne Gruppe die Bandmitte; 0 ohne Staffel oder ohne Band und Viertel), `result_level(state, data, result)` (die höchste Stufe der geschlagenen Gruppen, für die Farbe der Kampf-EP), `level_cap(data)` (`Balance.LEVEL_CAP` ohne `exp_table`, sonst `RtBalance.ENEMY_LEVEL_MAX`), `factor_pm(bal, level, def_level)`, `exp_share_pm(def, enc_id)` (`LevelBand.SHARE_*_PM`: Etagenboss, Revier-Boss, Show-Boss, Gruppe), `group_exp(state, data, level, share_pm)`, `apply(setup, state, data, bal)` — der Haken in `BattleBridge.make_rt_setup` vor den RtMods: `RtUnit.level`, HP, STR, MAG, DEF, RES, Credits × Faktor; die EP der Gruppe = ihr Anteil (09 C-23), nach Daten-EP auf ihre Gegner verteilt |
+| `RtBalance` (07 CR-32 d) | `ENEMY_LEVEL_PM` in `DEFAULTS` (`{"1": 1000, …, "52": 8650}`, 1 000 + 150 × (Stufe − 1)), `RANGES` (1 000–20 000), `validate` (Stufe 1 = 1 000, steigend), `ENEMY_LEVEL_KEY`, `ENEMY_LEVEL_MAX` (52), `ENEMY_LEVEL_BASE_PM`, `enemy_level_pm(level)` (geklemmt 1–52); `data/rt_balance.json` und `tests/fixtures/rt_min/rt_balance.json` tragen die Tabelle. Sonst nichts in `core/rt/**` und `scenes/combat/**` |
+| Defs | `ThemeDef`: `id`, `name`, `floors`, `art` (Kunst-Thema, Standard `metro`), `program` [{id `daily_…`, name}], `point_name(id)`, `ThemeDef.art_of(def, data)` (das Kunst-Thema einer Etage: `theme` selbst oder `art` ihrer Kulisse); `FloorDef.season_only()` (Etage einer Kulisse), `playable_in(season)` |
+| Validatoren | `validators/themes.gd`: Name, `art` ∈ `THEMES`, Etagen 1–18 je einmal, Programmpunkte `^daily_[a-z0-9_]+$` über alle Kulissen eindeutig, Name 1–40 Zeichen. `validators/floor_season.gd` (Viertel-Schema für den Generator v2): `events` [{type ∈ `ZoneGenerator.EVENT_TYPES`, params wie die Etagen-Events}], `spots` (0–5, je Etage ≤ 5, nur mit Event-Vorlagen), `nodes` (`nod_` aus `professions.json → nodes`; Tabellen ohne diese Liste bleiben ungeprüft), `safe` {name, theme ∈ `SAFE_ROOM_THEMES`}, `style` (Ausstattung des Kunst-Themas: `metro` → platform \| sewer \| cellar \| track9, `mall` → mall); `safe_rooms` = Zahl der Viertel; der Schlüssel `itm_key_f<N>` (Typ `key`) fällt vom Anführer des Revier-Bosses; Event-Referenzen auf Gegenstände, Boxen und reguläre Begegnungen der Etage |
+| Haken (je markiert) | `DungeonGenerator.generate` (eine Zeile: Viertel → `ZoneGenerator`); `BattleBridge.make_rt_setup` (Kunst-Thema über `ThemeDef.art_of`, `EnemyLevels.apply`); `LevelBand.group_level` (mit dem Zustand aus `combat_exp`: `EnemyLevels.result_level`, ST1-D-Datei); `SeasonRules._sync_daily` (`open_programme_doors`); `Game.continue_after_summary` und `TitleFlow.load_and_route` (`playable_in`); `Game.season_debug_descend()` (Debug und Werkzeuge: `descend` + `floor` ohne Etagen-Bilanz); `boot.gd` `--floor`; `FloorBuilder.theme_id()` (`ThemeDef.art_of`) und `spec_for` (`RoomSpec.style` je Viertel, `RoomSpec.stage` der Bossräume einer Kulisse); `RoomSpec.style`, `stage`, `STAGE_PLAIN`; `RoomBuilder._stage()` (Bühne); `GateInteractable` (Programmtür: Hinweis, hebt sich, sobald `FloorRun.opened_gates` ihren Schlüssel hat) |
+| Daten | `themes.json` (drei Kulissen), `floors.json` (`floor_1` += `level_band` [1, 7]; `floor_2` vervollständigt; `floor_3` … `floor_6`), `enemies.json` (+20; `rt` für die drei Platzhalter von Etage 2), `skills.json` (+69 umbenannte Bausätze), `items.json` (+5 Schlüssel, +13 Ausrüstung), `lootboxes.json` (`f3`, `f4`, Seltenes in `f2`), `mod_lines.json` (+24 `boss_intro`/`boss_phase` hinter dem Staffel-Anker) |
+| Werkzeuge | `tests/capture.gd --season-floor=<n>` und die Rezepte `season_q<k>`, `season_qb`, `season_fb`, `season_door`, `season_gate`, `season_safe`, `season_map`; `tools/perf.sh --only=season` (Aufbau je Etage gegen das Erkundungs-Budget, jede Zelle × 4 Richtungen); Tests `test_09_zone_generator`, `test_09_floors` |
+
+**Für die anderen Pakete:** ST1-C2 — die Etagen 7–18 sind Daten für denselben Generator; offen sind der Boss-Baukasten,
+Kulissenwände auf Generator-v2-Etagen (`Secrets` liest nur `FloorDef.layout`), `item_level` (dann auch im Aufholpaket
+von ST1-D) und das Viertel-Streaming; ST1-D (gemergt) — die Bänder gelten voll, die Gruppen geben die Anteile
+`LevelBand.SHARE_*_PM` und `group_level` kennt ihre Bandstufe (09 C-23); offen ist die Oberfläche des Recalls auf Etage
+3 (Spezies und Klasse, heute nur `Game.choose_casting`); ST1-E — die Fundstellen in `FloorLayout.nodes`; ST1-G — die
+Gefahr je Viertel (`ZoneGenerator.danger_at`); ST1-H — Farbe und Differenz der Plakette lesen `RtUnit.level` (Kampf) und
+`EnemySpawn.level` (Erkundung), der Marker „NEU“ der Programmpunkte (`FloorLayout.programme`, `ThemeDef.point_name`);
+ST1-I — der Full-Run-Bot braucht eine Wegplanung auf `FloorLayout` (Revier-Boss → Schlüssel → Tor → Treppe,
+Programmtüren, Safe Room je Viertel) und `--season=ssn_basis --tempo=binge --floor=<n>`. **Leistung** (`PERFORMANCE.md`
+§3.9): jede Darstellungsgröße der Etagen 2–6 im Budget §12.1; der Bau der ganzen Etage 6 (48 Räume) warm 408 ms im
+Median (Budget 500 ms). Dafür legt `FloorBuilder.build_rooms` die Türstürze in den Etagen-Körper, bevor er in die Welt
+kommt (§4.10 dort: ein Box-Zusatz in der Welt baut unter Jolt die ganze Form neu). **Offen:** die Aufbauzeit auf
+Mobilgeräten (gemessen nur am PC); die Bühne der Bossräume ist ein Platzhalter bis zu den Raumteilen je Kulisse (03_ART,
+09 CR-28).
+
 ---
 
 ## 1. Dateibaum und Modulzuordnung
@@ -2574,12 +2612,14 @@ Rattenkönigin P2/P3 nutzen `{"op": "add_pseudo", "unit": "pu_train_gleis9", "ct
 | `window` | Dictionary | `{}` | Brief §6b.5: `{open_at, close_at (ISO-8601 UTC), duration_sec}` |
 | `variant` | int | 0 | Staffeln: 0–3, > 0 = Platz in der Kulisse |
 | `level_band` | [int, int] | `[]` | Staffeln: 1 ≤ von ≤ bis ≤ 50, fällt nie von Etage zu Etage |
-| `zones` | Array[{id, name, rooms, palette, pool}] | `[]` | Staffeln: 2–4 Viertel, nur prozedural (Regeln §0.8 „Stand Vertrag 4“) |
+| `zones` | Array[{id, name, rooms, palette, pool, events, spots, nodes, safe, style}] | `[]` | Staffeln: 2–4 Viertel, nur prozedural (Regeln §0.8 „Stand Vertrag 4“; `events`, `spots`, `nodes`, `safe`, `style` für den Generator v2: §0.8 „Stand ST1-C1“) |
 
 Staffeln (CR-27, 09 Kap. 3.1 und 3.6, ST1-C): Die Etagen 2–18 tragen zusätzlich `variant` (1–3, die Etage innerhalb ihrer
 Kulisse), `level_band` (Stufen-Band der Etage) und `zones` (Viertel für `core/dungeon/zone_generator.gd`, Generator v2),
 `safe_rooms` bis 4; die Kulisse steht in `themes.json` (`thm_`, ihre `floors`, ST0), `theme` bindet die Etage an sie.
 Seit Vertrag 4 prüft der Validator diese Felder (`validators/floor_season.gd`, Eigentum ST1-C; alle Regeln in §0.8).
+Seit ST1-C1 stehen die Etagen 2–6 der Basis-Staffel in den Daten (09 Kap. 11.3 „Stand ST1-C1“); `playable` gilt für
+eine Etage mit Kulisse nur in einer Staffel (`FloorDef.playable_in`), die Kampagne endet weiter nach Etage 1.
 
 `EncounterDef`: `id` (✓ `enc_`), `enemies` (✓ Array 1..4 enemy ids), `weight` (int, 10; Boss/platziert: 0), `min_depth`/`max_depth`
 (float 0..1, Default 0.0/1.0, nur prozedural), `boss` (bool false), `can_flee` (bool, Default `!boss`), `tutorial` (bool false:
@@ -4828,7 +4868,9 @@ Weitere Abläufe in der Erkundung (M3, verbindlich):
 
 Aufbau für die Budgets (§12.1, Phase C, gemessen mit `tools/perf.sh`):
 - **Physik:** `FloorBuilder.build_rooms(rooms_root, world)` zieht die Boxen jedes Raum-„Collision“-Körpers (EnvKit-Vertrag §8.5
-  bleibt) in **einen** `StaticBody3D` „FloorCollision“ unter `World` (Etagen-Koordinaten), die Türstürze kommen dazu.
+  bleibt) in **einen** `StaticBody3D` „FloorCollision“ unter `World` (Etagen-Koordinaten), die Türstürze kommen dazu —
+  seit ST1-C1, bevor der Körper in die Welt kommt (jede Box an einem Körper in der Welt baut unter Jolt seine ganze Form
+  neu: auf Etage 6 der Staffel 32–52 ms, jetzt 0,1 ms; `PERFORMANCE.md` §4.10).
   Die dauerhaften Blocker von Truhen und Etagen-Events liegen in **einem** Körper „PropBlockers“ (die Kamera ignoriert ihn wie
   vorher die einzelnen Blocker); Tore behalten ihren eigenen „Blocker“ (wird beim Öffnen freigegeben). Interactables entfernen
   den doppelten „Collision“-Körper ihres Art-Props (`_drop_prop_collision`). Etage 1: 76 statische + 19 kinematische → 4 statische + 19 kinematische Körper (dazu unverändert 27 Areas).

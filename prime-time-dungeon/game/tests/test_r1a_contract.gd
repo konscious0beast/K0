@@ -392,8 +392,12 @@ func test_rt_balance_file_and_defaults() -> void:
 ## content itself is checked by test_r4_rt_data; here only that the floor-2 stubs still have none (built with floor 2).
 func test_real_data_rt_blocks_arrive_with_r4() -> void:
 	var d: GameData = real_data()
-	for e: EnemyDef in d.all_enemies():
-		assert_eq(e.rt.is_empty(), not e.tags.has("floor_1"), e.id + ": rt block exactly on floor-1 enemies")
+	for e: EnemyDef in d.all_enemies():                 # ST1-C1: and on the enemies of the season floors 2–6
+		var season: bool = false
+		for f in range(2, 7):
+			season = season or e.tags.has("floor_%d" % f)
+		assert_eq(e.rt.is_empty(), not (e.tags.has("floor_1") or season),
+			e.id + ": rt block exactly on floor-1 enemies and the season floors' (ST1-C1)")
 	assert_false(d.encounter("enc_e1_showboss").show_boss.is_empty(), "the floor-1 show boss (E26)")
 	assert_eq(d.encounter(d.floor_def(1).timer_start_after).show_boss, {}, "never on the tutorial (E26)")
 

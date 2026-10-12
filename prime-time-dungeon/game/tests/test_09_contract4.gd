@@ -115,7 +115,7 @@ const BROKEN: Array[Dictionary] = [
 	{"want": "zone_f2_food].name: 1..32 characters", "set": [["floors", "floor_2", ["zones", 1, "name"], ""]]},
 	{"want": "zone_f2_food].rooms: needs 1 <= min <= max <= 30",
 		"set": [["floors", "floor_2", ["zones", 1, "rooms"], {"min": 0, "max": 5}]]},
-	{"want": "floor_2].zones: the quarters' rooms (4..6) miss the floor's rooms (16..22)",
+	{"want": "floor_2].zones: the quarters' rooms (4..6) miss the floor's rooms (18..24)",
 		"set": [["floors", "floor_2", ["zones", 0, "rooms"], {"min": 2, "max": 3}],
 			["floors", "floor_2", ["zones", 1, "rooms"], {"min": 2, "max": 3}]]},
 	{"want": "floor_2].safe_rooms: at most one safe room per quarter (2 quarters)",
@@ -257,8 +257,9 @@ func _sample() -> Dictionary:
 			if not (e as Dictionary).has("row"):
 				pool.append(e)
 		(raw["talents"] as Dictionary)["entries"] = pool
-		((raw["themes"] as Dictionary)["entries"] as Array).append({"id": "thm_passage", "name": "Die Passage",
-			"floors": [2], "program": []})
+		if _entry(raw, "themes", "thm_passage").is_empty():     # ST1-C1: the real data hold the Passage
+			((raw["themes"] as Dictionary)["entries"] as Array).append({"id": "thm_passage", "name": "Die Passage",
+				"floors": [2], "program": []})
 		var f1: Dictionary = _entry(raw, "floors", "floor_1")
 		f1.merge({"variant": 1, "level_band": [1, 3]}, true)
 		var f2: Dictionary = _entry(raw, "floors", "floor_2")

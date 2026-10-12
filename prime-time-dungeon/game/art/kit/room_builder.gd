@@ -46,10 +46,10 @@ func _init(p_spec: RoomSpec) -> void:
 	spec = p_spec
 	rng.seed = hash("room") ^ (spec.seed * 2654435761) ^ (spec.variant * 97)
 	match spec.kind:
-		RoomSpec.Kind.QUARTER_BOSS:
+		RoomSpec.Kind.QUARTER_BOSS when not _plain_stage():
 			pal = Palette.resolve(Palette.ZONE_PRESETS["boss_office"] as Dictionary, spec.theme_id)
 			style = &"boss_office"
-		RoomSpec.Kind.FLOOR_BOSS:
+		RoomSpec.Kind.FLOOR_BOSS when not _plain_stage():
 			pal = Palette.resolve(Palette.ZONE_PRESETS["throne"] as Dictionary, spec.theme_id)
 			style = &"throne"
 		_:
@@ -57,6 +57,14 @@ func _init(p_spec: RoomSpec) -> void:
 			style = Palette.zone_style(spec.palette, spec.theme_id)
 			if style == &"safe" or style == &"boss_office" or style == &"throne":
 				style = &"platform" if spec.theme_id != "mall" else &"mall"
+			if DRESSING_STYLES.has(spec.style):     # Staffeln (ST1-C): the quarter names its dressing
+				style = spec.style
+
+
+## Staffeln (ST1-C): a boss room of a Kulisse floor — its own palette and dressing with a stage disc (RoomSpec.stage).
+func _plain_stage() -> bool:
+	return spec.stage == RoomSpec.STAGE_PLAIN and (spec.kind == RoomSpec.Kind.QUARTER_BOSS
+		or spec.kind == RoomSpec.Kind.FLOOR_BOSS)
 
 
 static func edge_basis(side: int) -> Basis:
@@ -495,10 +503,12 @@ func _build_kind() -> void:
 			set_pieces.append(door)
 			extra_lights.insert(0, {"pos": (door.transform * Vector3(0, 2.6, -1.0)), "color": Palette.EXIT_GREEN,
 				"energy": 1.5, "range": 5.0})
-		RoomSpec.Kind.QUARTER_BOSS:
+		RoomSpec.Kind.QUARTER_BOSS when not _plain_stage():
 			_office()
-		RoomSpec.Kind.FLOOR_BOSS:
+		RoomSpec.Kind.FLOOR_BOSS when not _plain_stage():
 			_throne()
+		RoomSpec.Kind.QUARTER_BOSS, RoomSpec.Kind.FLOOR_BOSS:
+			_stage()
 
 
 ## Moves a set piece's StaticBody shapes into the room collision (one body per room).
@@ -543,6 +553,22 @@ func _start_marking() -> void:
 	set_pieces.append(l)
 	extra_lights.insert(0,
 		{"pos": edge_xf(side, u, 2.2, 1.5).origin, "color": Palette.NOVA_MAGENTA, "energy": 1.8, "range": 6.0})
+
+
+## Staffeln (ST1-C; 03_ART CR-28): the boss stage of a Kulisse floor — a dark disc inside the 6 m boss set (the LED
+## ring of the combat lights up around it) with a gold rim and four floor lamps on its edge, in the
+## room's own palette; no set piece in the 6.2 m clearance (07 §2.4). One merged geometry part each, no light.
+func _stage() -> void:
+	var disc: Mesh = MeshUtil.cylinder(STAGE_R, STAGE_R, 0.03)
+	geo.append(MeshUtil.part(disc, Vector3(0, 0.016, 0), Palette.mul(pal["floor"], 0.55)))
+	var rim: TorusMesh = MeshUtil.torus(STAGE_R - 0.12, STAGE_R, 32)
+	geo.append(MeshUtil.part(rim, Vector3(0, 0.03, 0), Palette.HYPE_GOLD, Vector3.ZERO, Vector3(1, 0.06, 1), 0.7))
+	for k in 4:
+		var a: float = PI * 0.25 + PI * 0.5 * float(k)
+		var p: Vector3 = Vector3(cos(a), 0.0, sin(a)) * (STAGE_R - 0.5)
+		geo.append(MeshUtil.part(MeshUtil.box(Vector3(0.36, 0.08, 0.36)), p + Vector3(0, 0.04, 0), Palette.DARK_METAL))
+		geo.append(MeshUtil.part(MeshUtil.box(Vector3(0.22, 0.05, 0.22)), p + Vector3(0, 0.1, 0), pal["accent"],
+			Vector3.ZERO, Vector3.ONE, 0.9))
 
 
 ## Hausmeister-Büro (03_ART §2.2 boss palette): desk, filing cabinets, notice board, "staff only" sign.
@@ -688,6 +714,11 @@ func _waggon() -> void:
 
 
 # --- dressing ---------------------------------------------------------------------------------------------------------
+
+## Staffeln (ST1-C): the quarter dressings a RoomSpec may name (RoomSpec.style) and the stage disc of a Kulisse boss
+## room (inside the 6 m boss set, 07 §2.4).
+const DRESSING_STYLES: Array[StringName] = [&"platform", &"sewer", &"cellar", &"track9", &"mall"]
+const STAGE_R: float = 5.6
 
 const STYLE_PROPS: Dictionary = {
 	"platform": ["bench", "bench", "trash_bin", "lamp", "lamp", "pillar", "crate"],

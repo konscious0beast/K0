@@ -1,9 +1,11 @@
 extends RefCounted
-## Test kit of 09 ST1-B (the season core): the real data with placeholder floors — the floor-2 stub made playable and
-## floors 3..N cloned from it (procedural layout, encounter ids renamed, floor-1 enemies with their rt blocks, a Revier-
-## and an Etagenboss each) — so a season runs through every floor of a format in the core (with the real data alone the
-## content ends after floor 1, SeasonRules.last_floor); the start command of a season at a fixed day 0; season runs
-## (RunSim, recording into a run log) and synthetic combat results. Private test helper (no class_name): preload it.
+## Test kit of 09 ST1-B (the season core): the real data with placeholder floors — floors 2..N built from floor 2's
+## regular encounters (a classic procedural layout without Kulisse, quarters or level band, encounter ids renamed,
+## floor-1 enemies with their rt blocks, a Revier- and an Etagenboss each) — so a season runs through every floor of a
+## format in the core, independent of the season content (ST1-C1: the real floors 2–6 are generator-v2 floors with
+## keys, levels and programme doors; test_09_zone_generator plays them); the start command of a season at a fixed
+## day 0; season runs (RunSim, recording into a run log) and synthetic combat results. Private test helper (no
+## class_name): preload it.
 
 const DAY: int = 86400
 const DAY0: int = 1791921600               # day 0 of the test seasons (the first air time, a whole UTC hour)
@@ -14,7 +16,7 @@ const PLACEHOLDER_ENEMY: String = "enm_kanalratte"   # a floor-1 enemy with its 
 static var _cache: Dictionary = {}         # floor count → GameData
 
 
-## The real data plus placeholder floors 3..`floors` (and floor 2 playable) — cached per floor count.
+## The real data with placeholder floors 2..`floors` in place of the real floors 2.. — cached per floor count.
 static func data(floors: int = 6) -> GameData:
 	if _cache.has(floors):
 		return _cache[floors]
@@ -25,17 +27,29 @@ static func data(floors: int = 6) -> GameData:
 		raw["rt_balance"] = JsonUtil.read_file("res://data/" + GameData.RT_BALANCE_FILE)
 	var entries: Array = (raw["floors"] as Dictionary)["entries"]
 	var stub: Dictionary = {}
+	var first: Array = []
 	for e: Variant in entries:
 		if int((e as Dictionary)["index"]) == 2:
-			stub = e
+			stub = (e as Dictionary).duplicate(true)
+		elif int((e as Dictionary)["index"]) == 1:
+			first.append(e)
+	entries.assign(first)                                        # floor 1 as it is, the placeholders after it
+	for key: String in ["zones", "level_band", "variant"]:      # a classic procedural floor (no generator v2)
+		stub.erase(key)
+	stub["theme"] = "mall"
 	stub["playable"] = true                                      # playable: its enemies need rt blocks (V10)
-	for enc: Variant in (stub["encounters"] as Array):
-		(enc as Dictionary)["enemies"] = [PLACEHOLDER_ENEMY]
-	for n in range(3, floors + 1):
+	var regular: Array = []
+	for enc: Variant in (stub["encounters"] as Array):          # the rollable ones; bosses below, no show boss
+		if not bool((enc as Dictionary).get("boss", false)) and int((enc as Dictionary).get("weight", 0)) > 0:
+			(enc as Dictionary)["enemies"] = [PLACEHOLDER_ENEMY]
+			regular.append(enc)
+	stub["encounters"] = regular
+	for n in range(2, floors + 1):
 		var f: Dictionary = stub.duplicate(true)
 		f["id"] = "floor_%d" % n
 		f["index"] = n
-		f["name"] = "Etage %d – Platzhalter" % n
+		if n > 2:
+			f["name"] = "Etage %d – Platzhalter" % n
 		for enc: Variant in (f["encounters"] as Array):
 			(enc as Dictionary)["id"] = str((enc as Dictionary)["id"]).replace("enc_f2_", "enc_f%d_" % n)
 		for key: String in ["quarter_boss", "floor_boss"]:           # placeholder bosses (the Quote, the finale)

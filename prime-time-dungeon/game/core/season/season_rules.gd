@@ -257,9 +257,9 @@ static func on_safe_room(state: GameState, safe_room_id: String) -> void:
 
 
 ## The stairs were taken ("descend"; RunSim.apply, Game.complete_floor, GameReplay): the Quote counts the floor, the
-## tie-break its time (09 §2.7). Stairs below the last floor with playable content (last_floor; floors 2–18 come with
-## ST1-C) lead to the end of the content: the candidate's season ends there ("end", why "content" — ST1-B decision).
-## ST1-D: the stairs bring half a level of EXP ("Abschluss-EP", LevelBand.on_descend: event "exp").
+## tie-break its time (09 §2.7). Stairs below the last floor with playable content (last_floor; floors 1–6 since
+## ST1-C1, 7–18 with ST1-C2) lead to the end of the content: the candidate's season ends there ("end", why "content" —
+## ST1-B decision). ST1-D: the stairs bring half a level of EXP ("Abschluss-EP", LevelBand.on_descend: event "exp").
 static func on_descend(state: GameState, data: GameData) -> Array[ExploreEvent]:
 	var out: Array[ExploreEvent] = []
 	var s: SeasonState = state.season if state != null else null
@@ -836,6 +836,7 @@ static func _sync_daily(state: GameState, data: GameData) -> void:
 	var want: int = s.points(fr.index)
 	while fr.daily.size() < want:
 		fr.daily.append(daily_id(state, data, fr.index, fr.daily.size() + 1))
+	ZoneGenerator.open_programme_doors(state, data)   # ST1-C (09 §3.3): point n opens programme door n
 
 
 static func _programme_pool(data: GameData, floor: int) -> PackedStringArray:

@@ -1334,6 +1334,36 @@
 			},
 			"explore": {
 				"field_speed": 4.2
+			},
+			"rt": {
+				"radius_cm": 40,
+				"move_cm_s": 300,
+				"auto_skill": "skl_e_stiff_slap",
+				"swing_ms": 2600,
+				"reach_cm": 250,
+				"rules": [
+					{
+						"skill": "skl_e_frozen_pose",
+						"target": "self",
+						"first_ms": 3000,
+						"once": true
+					},
+					{
+						"skill": "skl_e_frozen_pose",
+						"target": "self",
+						"cond": {
+							"self_hp_below_pm": 500
+						},
+						"once": true
+					},
+					{
+						"skill": "skl_e_window_leap",
+						"target": "lowest_hp_pct_enemy",
+						"first_ms": 6000,
+						"every_ms": 11000
+					}
+				],
+				"summon_hp": 180
 			}
 		},
 		{
@@ -1388,6 +1418,22 @@
 			},
 			"explore": {
 				"field_speed": 7.0
+			},
+			"rt": {
+				"summon_hp": 96,
+				"radius_cm": 30,
+				"move_cm_s": 420,
+				"auto_skill": "skl_e_cart_ram",
+				"swing_ms": 2400,
+				"reach_cm": 220,
+				"rules": [
+					{
+						"skill": "skl_e_cart_run",
+						"target": "threat_top",
+						"first_ms": 5000,
+						"every_ms": 11000
+					}
+				]
 			}
 		},
 		{
@@ -1446,6 +1492,2433 @@
 			},
 			"explore": {
 				"field_speed": 3.2
+			},
+			"rt": {
+				"radius_cm": 55,
+				"move_cm_s": 240,
+				"auto_skill": "skl_e_sign_slap",
+				"swing_ms": 3000,
+				"reach_cm": 250,
+				"rules": [
+					{
+						"skill": "skl_e_discount_up",
+						"target": "threat_top",
+						"first_ms": 5000,
+						"every_ms": 15000,
+						"then": {
+							"skill": "skl_e_price_crash",
+							"delay_ms": 1500
+						}
+					}
+				],
+				"summon_hp": 160
+			}
+		},
+		{
+			"id": "enm_leuchtpilz",
+			"name": "Food-Court-Leuchtpilz",
+			"level": 2,
+			"stats": {
+				"hp": 192,
+				"mp": 10,
+				"str": 12,
+				"mag": 12,
+				"def": 10,
+				"res": 4,
+				"spd": 9,
+				"lck": 3
+			},
+			"exp": 20,
+			"credits": 8,
+			"attack_skill": "skl_e_strike",
+			"element_mods": {
+				"fire": 1.5,
+				"physical": 0.5,
+				"poison": 0.0
+			},
+			"status_immune": [
+				"sts_poison"
+			],
+			"status_resist": {},
+			"drops": [
+				{
+					"item": "itm_antidote",
+					"chance": 0.3
+				},
+				{
+					"item": "itm_brutzel_burger",
+					"chance": 0.1
+				}
+			],
+			"tags": [
+				"floor_2",
+				"mall"
+			],
+			"model": {
+				"base": "blob",
+				"scale": 0.9,
+				"pose": "auto",
+				"colors": {
+					"primary": "#c8e04a",
+					"secondary": "#ff4fa0",
+					"eyes": "#1a1420"
+				},
+				"props": [],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 3.0
+			},
+			"rt": {
+				"radius_cm": 45,
+				"move_cm_s": 180,
+				"auto_skill": "skl_e_slam",
+				"swing_ms": 3000,
+				"reach_cm": 220,
+				"rules": [
+					{
+						"skill": "skl_e_spore_splash",
+						"target": "random_enemy",
+						"cond": {
+							"target_no_status": "sts_poison"
+						},
+						"first_ms": 4000,
+						"every_ms": 9000
+					}
+				]
+			}
+		},
+		{
+			"id": "enm_durchsage_geist",
+			"name": "Durchsage-Geist",
+			"level": 4,
+			"stats": {
+				"hp": 308,
+				"mp": 40,
+				"str": 8,
+				"mag": 23,
+				"def": 18,
+				"res": 10,
+				"spd": 15,
+				"lck": 8
+			},
+			"exp": 36,
+			"credits": 18,
+			"attack_skill": "skl_e_strike",
+			"element_mods": {
+				"ice": 1.5,
+				"physical": 0.5,
+				"shock": 0.5
+			},
+			"status_immune": [
+				"sts_poison"
+			],
+			"status_resist": {},
+			"drops": [
+				{
+					"item": "itm_hype_megaphone",
+					"chance": 0.08
+				},
+				{
+					"item": "itm_energy_krawumm",
+					"chance": 0.15
+				}
+			],
+			"tags": [
+				"floor_2",
+				"mall"
+			],
+			"model": {
+				"base": "specter",
+				"scale": 0.7,
+				"pose": "auto",
+				"colors": {
+					"primary": "#4fe6ff",
+					"secondary": "#fff0f5",
+					"accent": "#ff4fa0",
+					"eyes": "#1a1420"
+				},
+				"props": [],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 5.0
+			},
+			"rt": {
+				"radius_cm": 35,
+				"move_cm_s": 300,
+				"keep_cm": 600,
+				"rules": [
+					{
+						"skill": "skl_e_feedback",
+						"target": "threat_top",
+						"first_ms": 6000,
+						"every_ms": 14000
+					},
+					{
+						"skill": "skl_e_jingle",
+						"target": "threat_top",
+						"first_ms": 1000,
+						"every_ms": 3500,
+						"filler": true
+					}
+				]
+			}
+		},
+		{
+			"id": "enm_kostuemstaender",
+			"name": "Kostümständer",
+			"level": 8,
+			"stats": {
+				"hp": 774,
+				"mp": 10,
+				"str": 28,
+				"mag": 8,
+				"def": 22,
+				"res": 12,
+				"spd": 12,
+				"lck": 6
+			},
+			"exp": 88,
+			"credits": 26,
+			"attack_skill": "skl_e_strike",
+			"element_mods": {
+				"fire": 1.5,
+				"ice": 0.5
+			},
+			"status_immune": [],
+			"status_resist": {},
+			"drops": [
+				{
+					"item": "itm_brutzel_burger",
+					"chance": 0.15
+				},
+				{
+					"item": "itm_smoke",
+					"chance": 0.05
+				}
+			],
+			"tags": [
+				"floor_3",
+				"fundus"
+			],
+			"model": {
+				"base": "humanoid",
+				"scale": 1.05,
+				"pose": "auto",
+				"colors": {
+					"primary": "#6a2a4a",
+					"secondary": "#3d2f4a",
+					"accent": "#e8b84a",
+					"skin": "#c9b8a0",
+					"eyes": "#c9b8a0"
+				},
+				"props": [
+					"cape"
+				],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 4.2
+			},
+			"rt": {
+				"radius_cm": 40,
+				"move_cm_s": 300,
+				"auto_skill": "skl_e_hanger_swipe",
+				"swing_ms": 2600,
+				"reach_cm": 250,
+				"rules": [
+					{
+						"skill": "skl_e_quick_change",
+						"target": "self",
+						"first_ms": 3000,
+						"once": true
+					},
+					{
+						"skill": "skl_e_quick_change",
+						"target": "self",
+						"cond": {
+							"self_hp_below_pm": 500
+						},
+						"once": true
+					},
+					{
+						"skill": "skl_e_entrance",
+						"target": "lowest_hp_pct_enemy",
+						"first_ms": 6000,
+						"every_ms": 11000
+					}
+				]
+			}
+		},
+		{
+			"id": "enm_pappritter",
+			"name": "Pappritter-Ratte",
+			"level": 6,
+			"stats": {
+				"hp": 546,
+				"mp": 10,
+				"str": 27,
+				"mag": 6,
+				"def": 17,
+				"res": 10,
+				"spd": 14,
+				"lck": 8
+			},
+			"exp": 66,
+			"credits": 22,
+			"attack_skill": "skl_e_strike",
+			"element_mods": {
+				"fire": 1.5,
+				"ice": 1.0
+			},
+			"status_immune": [],
+			"status_resist": {},
+			"drops": [
+				{
+					"item": "itm_brutzel_burger",
+					"chance": 0.2
+				},
+				{
+					"item": "itm_smelling_salts",
+					"chance": 0.1
+				}
+			],
+			"tags": [
+				"floor_3",
+				"fundus",
+				"elite"
+			],
+			"model": {
+				"base": "rodent",
+				"scale": 1.8,
+				"pose": "auto",
+				"colors": {
+					"primary": "#8a6a4a",
+					"secondary": "#e88a9a",
+					"accent": "#c9a227",
+					"eyes": "#ff3030"
+				},
+				"props": [
+					"helmet",
+					"shield",
+					"halberd"
+				],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 5.0
+			},
+			"rt": {
+				"radius_cm": 45,
+				"move_cm_s": 300,
+				"auto_skill": "skl_e_cardboard_sword",
+				"swing_ms": 2600,
+				"reach_cm": 300,
+				"rules": [
+					{
+						"skill": "skl_e_cardboard_wall",
+						"target": "self",
+						"first_ms": 3000,
+						"once": true
+					},
+					{
+						"skill": "skl_e_cardboard_wall",
+						"target": "self",
+						"cond": {
+							"self_hp_below_pm": 500
+						},
+						"once": true
+					},
+					{
+						"skill": "skl_e_knight_lunge",
+						"target": "lowest_hp_pct_enemy",
+						"first_ms": 6000,
+						"every_ms": 11000
+					}
+				]
+			}
+		},
+		{
+			"id": "enm_mottenschwarm",
+			"name": "Mottenschwarm",
+			"level": 2,
+			"stats": {
+				"hp": 200,
+				"mp": 0,
+				"str": 12,
+				"mag": 4,
+				"def": 3,
+				"res": 6,
+				"spd": 19,
+				"lck": 8
+			},
+			"exp": 14,
+			"credits": 5,
+			"attack_skill": "skl_e_strike",
+			"element_mods": {
+				"fire": 1.5
+			},
+			"status_immune": [],
+			"status_resist": {},
+			"drops": [
+				{
+					"item": "itm_bandage",
+					"chance": 0.2
+				}
+			],
+			"tags": [
+				"floor_3",
+				"fundus"
+			],
+			"model": {
+				"base": "swarm",
+				"scale": 0.9,
+				"pose": "auto",
+				"colors": {
+					"primary": "#b8ae98",
+					"secondary": "#8a8070",
+					"accent": "#e8dcc0",
+					"eyes": "#ffe08a"
+				},
+				"props": [],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 6.2,
+				"sight_range": 14.0
+			},
+			"rt": {
+				"radius_cm": 40,
+				"move_cm_s": 450,
+				"auto_skill": "skl_e_nibble",
+				"swing_ms": 1800,
+				"reach_cm": 220,
+				"auto_target": "lowest_hp_pct_enemy",
+				"rules": [
+					{
+						"skill": "skl_e_moth_cloud",
+						"target": "lowest_hp_pct_enemy",
+						"first_ms": 6000,
+						"every_ms": 12000
+					}
+				],
+				"summon_hp": 96
+			}
+		},
+		{
+			"id": "enm_nebelmaschine",
+			"name": "Nebelmaschine",
+			"level": 4,
+			"stats": {
+				"hp": 308,
+				"mp": 40,
+				"str": 8,
+				"mag": 23,
+				"def": 18,
+				"res": 10,
+				"spd": 15,
+				"lck": 8
+			},
+			"exp": 36,
+			"credits": 18,
+			"attack_skill": "skl_e_strike",
+			"element_mods": {
+				"ice": 1.5,
+				"physical": 0.5,
+				"poison": 0.0
+			},
+			"status_immune": [
+				"sts_poison"
+			],
+			"status_resist": {},
+			"drops": [
+				{
+					"item": "itm_smoke",
+					"chance": 0.1
+				},
+				{
+					"item": "itm_ice_spray",
+					"chance": 0.15
+				}
+			],
+			"tags": [
+				"floor_3",
+				"fundus"
+			],
+			"model": {
+				"base": "specter",
+				"scale": 0.75,
+				"pose": "auto",
+				"colors": {
+					"primary": "#d8d4e8",
+					"secondary": "#8a80a8",
+					"accent": "#e8b84a",
+					"eyes": "#1a1420"
+				},
+				"props": [
+					"spray_cap"
+				],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 5.0
+			},
+			"rt": {
+				"radius_cm": 35,
+				"move_cm_s": 300,
+				"keep_cm": 600,
+				"rules": [
+					{
+						"skill": "skl_e_stage_fog",
+						"target": "threat_top",
+						"first_ms": 6000,
+						"every_ms": 14000
+					},
+					{
+						"skill": "skl_e_spot_heat",
+						"target": "threat_top",
+						"first_ms": 1000,
+						"every_ms": 3500,
+						"filler": true
+					}
+				]
+			}
+		},
+		{
+			"id": "enm_paketkrabbe",
+			"name": "Paketkrabbe",
+			"level": 5,
+			"stats": {
+				"hp": 504,
+				"mp": 0,
+				"str": 25,
+				"mag": 4,
+				"def": 24,
+				"res": 8,
+				"spd": 10,
+				"lck": 4
+			},
+			"exp": 60,
+			"credits": 20,
+			"attack_skill": "skl_e_strike",
+			"element_mods": {
+				"shock": 1.5,
+				"physical": 0.5,
+				"ice": 0.5
+			},
+			"status_immune": [],
+			"status_resist": {},
+			"drops": [
+				{
+					"item": "itm_brutzel_burger",
+					"chance": 0.2
+				},
+				{
+					"item": "itm_bandage",
+					"chance": 0.2
+				}
+			],
+			"tags": [
+				"floor_4",
+				"floor_5",
+				"floor_6",
+				"paket"
+			],
+			"model": {
+				"base": "insect",
+				"scale": 1.4,
+				"pose": "auto",
+				"colors": {
+					"primary": "#b08a5a",
+					"secondary": "#e8dcb8",
+					"accent": "#5a4632",
+					"eyes": "#f5f0e6"
+				},
+				"props": [
+					"escalator_back",
+					"claws"
+				],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 3.8
+			},
+			"rt": {
+				"radius_cm": 60,
+				"move_cm_s": 240,
+				"auto_skill": "skl_e_pinch",
+				"swing_ms": 3000,
+				"reach_cm": 250,
+				"rules": [
+					{
+						"skill": "skl_e_lid_shut",
+						"target": "threat_top",
+						"first_ms": 5000,
+						"every_ms": 15000,
+						"then": {
+							"skill": "skl_e_parcel_stomp",
+							"delay_ms": 1500
+						}
+					}
+				],
+				"summon_hp": 180
+			}
+		},
+		{
+			"id": "enm_klebebandspinne",
+			"name": "Klebebandspinne",
+			"level": 4,
+			"stats": {
+				"hp": 430,
+				"mp": 10,
+				"str": 22,
+				"mag": 6,
+				"def": 10,
+				"res": 8,
+				"spd": 17,
+				"lck": 10
+			},
+			"exp": 34,
+			"credits": 12,
+			"attack_skill": "skl_e_strike",
+			"element_mods": {
+				"fire": 1.5,
+				"poison": 0.0
+			},
+			"status_immune": [
+				"sts_poison"
+			],
+			"status_resist": {},
+			"drops": [
+				{
+					"item": "itm_antidote",
+					"chance": 0.3
+				},
+				{
+					"item": "itm_bandage",
+					"chance": 0.2
+				}
+			],
+			"tags": [
+				"floor_4",
+				"floor_5",
+				"floor_6",
+				"paket"
+			],
+			"model": {
+				"base": "insect",
+				"scale": 1.05,
+				"pose": "auto",
+				"colors": {
+					"primary": "#c8b070",
+					"secondary": "#8a8f96",
+					"accent": "#e8dcb8",
+					"eyes": "#ffb000"
+				},
+				"props": [],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 5.8
+			},
+			"rt": {
+				"radius_cm": 40,
+				"move_cm_s": 420,
+				"auto_skill": "skl_e_glue_bite",
+				"swing_ms": 2000,
+				"reach_cm": 220,
+				"rules": [
+					{
+						"skill": "skl_e_tape_web",
+						"target": "farthest_enemy",
+						"first_ms": 4000,
+						"once": true
+					},
+					{
+						"skill": "skl_e_glue_bite",
+						"target": "threat_top",
+						"first_ms": 3000,
+						"every_ms": 8000
+					}
+				]
+			}
+		},
+		{
+			"id": "enm_luftpolstergeist",
+			"name": "Luftpolstergeist",
+			"level": 4,
+			"stats": {
+				"hp": 308,
+				"mp": 40,
+				"str": 8,
+				"mag": 23,
+				"def": 18,
+				"res": 10,
+				"spd": 15,
+				"lck": 8
+			},
+			"exp": 36,
+			"credits": 18,
+			"attack_skill": "skl_e_strike",
+			"element_mods": {
+				"ice": 1.5,
+				"physical": 0.5,
+				"poison": 0.0
+			},
+			"status_immune": [
+				"sts_poison"
+			],
+			"status_resist": {},
+			"drops": [
+				{
+					"item": "itm_ice_spray",
+					"chance": 0.15
+				},
+				{
+					"item": "itm_energy_krawumm",
+					"chance": 0.15
+				}
+			],
+			"tags": [
+				"floor_4",
+				"floor_5",
+				"floor_6",
+				"paket"
+			],
+			"model": {
+				"base": "specter",
+				"scale": 0.8,
+				"pose": "auto",
+				"colors": {
+					"primary": "#e8f4f8",
+					"secondary": "#a8c8d8",
+					"accent": "#4fc8ff",
+					"eyes": "#1a1420"
+				},
+				"props": [],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 5.0
+			},
+			"rt": {
+				"radius_cm": 35,
+				"move_cm_s": 300,
+				"keep_cm": 600,
+				"rules": [
+					{
+						"skill": "skl_e_bubble_field",
+						"target": "threat_top",
+						"first_ms": 6000,
+						"every_ms": 14000
+					},
+					{
+						"skill": "skl_e_crackle",
+						"target": "threat_top",
+						"first_ms": 1000,
+						"every_ms": 3500,
+						"filler": true
+					}
+				]
+			}
+		},
+		{
+			"id": "enm_retourenschleim",
+			"name": "Retourenschleim",
+			"level": 2,
+			"stats": {
+				"hp": 192,
+				"mp": 10,
+				"str": 12,
+				"mag": 12,
+				"def": 10,
+				"res": 4,
+				"spd": 9,
+				"lck": 3
+			},
+			"exp": 20,
+			"credits": 8,
+			"attack_skill": "skl_e_strike",
+			"element_mods": {
+				"fire": 1.5,
+				"physical": 0.5,
+				"poison": 0.0
+			},
+			"status_immune": [
+				"sts_poison"
+			],
+			"status_resist": {},
+			"drops": [
+				{
+					"item": "itm_antidote",
+					"chance": 0.3
+				}
+			],
+			"tags": [
+				"floor_4",
+				"floor_5",
+				"floor_6",
+				"paket"
+			],
+			"model": {
+				"base": "blob",
+				"scale": 1.1,
+				"pose": "auto",
+				"colors": {
+					"primary": "#8a7a5a",
+					"secondary": "#c8a870",
+					"eyes": "#1a1420"
+				},
+				"props": [],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 3.0
+			},
+			"rt": {
+				"radius_cm": 45,
+				"move_cm_s": 180,
+				"auto_skill": "skl_e_slam",
+				"swing_ms": 3000,
+				"reach_cm": 220,
+				"rules": [
+					{
+						"skill": "skl_e_return_slime",
+						"target": "random_enemy",
+						"cond": {
+							"target_no_status": "sts_poison"
+						},
+						"first_ms": 4000,
+						"every_ms": 9000
+					}
+				],
+				"summon_hp": 120
+			}
+		},
+		{
+			"id": "enm_scannerdrohne",
+			"name": "Scannerdrohne",
+			"level": 3,
+			"stats": {
+				"hp": 395,
+				"mp": 20,
+				"str": 14,
+				"mag": 17,
+				"def": 12,
+				"res": 10,
+				"spd": 14,
+				"lck": 5
+			},
+			"exp": 30,
+			"credits": 15,
+			"attack_skill": "skl_e_strike",
+			"element_mods": {
+				"ice": 1.5,
+				"fire": 0.5,
+				"shock": 0.0
+			},
+			"status_immune": [],
+			"status_resist": {},
+			"drops": [
+				{
+					"item": "itm_energy_krawumm",
+					"chance": 0.2
+				},
+				{
+					"item": "itm_acc_rubber_boots",
+					"chance": 0.03
+				}
+			],
+			"tags": [
+				"floor_4",
+				"floor_5",
+				"floor_6",
+				"paket"
+			],
+			"model": {
+				"base": "robot",
+				"scale": 0.9,
+				"pose": "auto",
+				"colors": {
+					"primary": "#f2c230",
+					"secondary": "#3a3a44",
+					"accent": "#ff3b30",
+					"eyes": "#ff3b30"
+				},
+				"props": [],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 4.0
+			},
+			"rt": {
+				"radius_cm": 45,
+				"move_cm_s": 270,
+				"auto_skill": "skl_e_scan_beam",
+				"swing_ms": 2600,
+				"reach_cm": 250,
+				"rules": [
+					{
+						"skill": "skl_e_misscan",
+						"target": "threat_top",
+						"first_ms": 8000,
+						"every_ms": 12000
+					}
+				]
+			}
+		},
+		{
+			"id": "enm_rollcontainer",
+			"name": "Rollcontainer-Rudel",
+			"level": 8,
+			"stats": {
+				"hp": 473,
+				"mp": 0,
+				"str": 24,
+				"mag": 4,
+				"def": 16,
+				"res": 8,
+				"spd": 20,
+				"lck": 8
+			},
+			"exp": 52,
+			"credits": 18,
+			"attack_skill": "skl_e_strike",
+			"element_mods": {
+				"shock": 1.5,
+				"physical": 0.5
+			},
+			"status_immune": [],
+			"status_resist": {},
+			"drops": [
+				{
+					"item": "itm_energy_krawumm",
+					"chance": 0.15
+				}
+			],
+			"tags": [
+				"floor_5",
+				"floor_6",
+				"paket",
+				"pack"
+			],
+			"model": {
+				"base": "robot",
+				"scale": 0.6,
+				"pose": "auto",
+				"colors": {
+					"primary": "#8a8f96",
+					"secondary": "#3a3f4b",
+					"accent": "#f2c230",
+					"eyes": "#fff2c8"
+				},
+				"props": [
+					"cart"
+				],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 7.0
+			},
+			"rt": {
+				"summon_hp": 96,
+				"radius_cm": 30,
+				"move_cm_s": 420,
+				"auto_skill": "skl_e_cart_ram",
+				"swing_ms": 2400,
+				"reach_cm": 220,
+				"rules": [
+					{
+						"skill": "skl_e_cart_run",
+						"target": "threat_top",
+						"first_ms": 5000,
+						"every_ms": 11000
+					}
+				]
+			}
+		},
+		{
+			"id": "enm_boss_filialleiterin",
+			"name": "Die Filialleiterin im Dauerlächeln",
+			"level": 6,
+			"boss": true,
+			"stats": {
+				"hp": 4400,
+				"mp": 60,
+				"str": 40,
+				"mag": 26,
+				"def": 14,
+				"res": 10,
+				"spd": 12,
+				"lck": 6
+			},
+			"exp": 180,
+			"credits": 150,
+			"attack_skill": "skl_e_strike",
+			"element_mods": {
+				"shock": 1.5,
+				"poison": 0.5
+			},
+			"status_immune": [],
+			"status_resist": {
+				"sts_stun": 0.5,
+				"sts_slow": 0.5
+			},
+			"drops": [],
+			"boss_drops": [
+				{
+					"kind": "item",
+					"id": "itm_key_f2",
+					"amount": 1
+				},
+				{
+					"kind": "item",
+					"id": "itm_acc_customer_card",
+					"amount": 1
+				},
+				{
+					"kind": "box",
+					"id": "box_silver",
+					"amount": 1
+				}
+			],
+			"tags": [
+				"floor_2",
+				"mall",
+				"boss",
+				"quarter_boss"
+			],
+			"model": {
+				"base": "humanoid",
+				"scale": 1.3,
+				"pose": "auto",
+				"colors": {
+					"primary": "#2a3a44",
+					"secondary": "#ff4fa0",
+					"accent": "#3b2a22",
+					"skin": "#e8b48f",
+					"eyes": "#1a1420"
+				},
+				"props": [
+					"glasses",
+					"briefcase"
+				],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 0.0
+			},
+			"rt": {
+				"radius_cm": 90,
+				"move_cm_s": 240,
+				"auto_skill": "skl_bf_clipboard",
+				"swing_ms": 2800,
+				"reach_cm": 320,
+				"dmg_pm": 920,
+				"immune": [
+					"sts_dazed"
+				],
+				"phases": [
+					{
+						"hp_above_pm": 600,
+						"on_enter": [],
+						"rules": [
+							{
+								"skill": "skl_bf_store_rules",
+								"target": "self",
+								"first_ms": 8000,
+								"every_ms": 25000
+							},
+							{
+								"skill": "skl_bf_price_hail",
+								"target": "random_enemy",
+								"first_ms": 5000,
+								"every_ms": 8000
+							}
+						]
+					},
+					{
+						"hp_above_pm": 250,
+						"on_enter": [
+							{
+								"op": "say",
+								"tag": "boss_phase:enm_boss_filialleiterin:2"
+							},
+							{
+								"op": "summon",
+								"enemy": "enm_schaufensterpuppe",
+								"count": 1,
+								"at": "door"
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_bf_room_scent",
+								"target": "threat_top",
+								"first_ms": 4000,
+								"every_ms": 15000
+							},
+							{
+								"skill": "skl_bf_till_three",
+								"target": "self",
+								"cond": {
+									"adds_below": 2
+								},
+								"first_ms": 10000,
+								"every_ms": 20000
+							},
+							{
+								"skill": "skl_bf_price_hail",
+								"target": "random_enemy",
+								"first_ms": 8000,
+								"every_ms": 8000
+							}
+						]
+					},
+					{
+						"hp_above_pm": 0,
+						"on_enter": [
+							{
+								"op": "say",
+								"tag": "boss_phase:enm_boss_filialleiterin:3"
+							},
+							{
+								"op": "status_self",
+								"status": "sts_haste",
+								"ms": -1
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_bf_sale_whirl",
+								"target": "threat_top",
+								"first_ms": 3000,
+								"every_ms": 14000
+							},
+							{
+								"skill": "skl_bf_room_scent",
+								"target": "threat_top",
+								"first_ms": 10000,
+								"every_ms": 20000
+							}
+						]
+					}
+				],
+				"enrage": {
+					"at_ms": 270000,
+					"every_ms": 30000,
+					"status": "sts_enrage"
+				}
+			}
+		},
+		{
+			"id": "enm_boss_ausverkauf",
+			"name": "Der Ausverkauf",
+			"level": 8,
+			"boss": true,
+			"stats": {
+				"hp": 7800,
+				"mp": 120,
+				"str": 52,
+				"mag": 44,
+				"def": 18,
+				"res": 16,
+				"spd": 15,
+				"lck": 10
+			},
+			"exp": 420,
+			"credits": 300,
+			"attack_skill": "skl_e_strike",
+			"element_mods": {
+				"ice": 1.5,
+				"fire": 0.5,
+				"poison": 0.0
+			},
+			"status_immune": [
+				"sts_poison"
+			],
+			"status_resist": {
+				"sts_stun": 0.5,
+				"sts_slow": 0.5
+			},
+			"drops": [],
+			"boss_drops": [
+				{
+					"kind": "item",
+					"id": "itm_wpn_price_lance",
+					"amount": 1
+				},
+				{
+					"kind": "box",
+					"id": "box_gold",
+					"amount": 1
+				}
+			],
+			"tags": [
+				"floor_2",
+				"mall",
+				"boss",
+				"floor_boss"
+			],
+			"model": {
+				"base": "brute",
+				"scale": 1.75,
+				"pose": "auto",
+				"colors": {
+					"primary": "#d9cbb0",
+					"secondary": "#ff4fa0",
+					"accent": "#e8455a",
+					"skin": "#c0c6cc",
+					"eyes": "#ff4fa0"
+				},
+				"props": [
+					"discount_tag",
+					"cart"
+				],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 0.0
+			},
+			"rt": {
+				"radius_cm": 110,
+				"move_cm_s": 300,
+				"stationary": true,
+				"auto_skill": "skl_ba_bargain_flash",
+				"auto_ranged_skill": "skl_ba_bargain_flash",
+				"swing_ms": 3000,
+				"reach_cm": 350,
+				"dmg_pm": 740,
+				"immune": [
+					"sts_dazed"
+				],
+				"phases": [
+					{
+						"hp_above_pm": 650,
+						"on_enter": [
+							{
+								"op": "summon",
+								"enemy": "enm_rabattschild",
+								"count": 2,
+								"at": "door"
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_ba_bargain_bite",
+								"target": "threat_top",
+								"first_ms": 4000,
+								"every_ms": 8000
+							},
+							{
+								"skill": "skl_ba_restock",
+								"target": "self",
+								"cond": {
+									"adds_below": 3
+								},
+								"first_ms": 12000,
+								"every_ms": 25000
+							}
+						]
+					},
+					{
+						"hp_above_pm": 300,
+						"on_enter": [
+							{
+								"op": "say",
+								"tag": "boss_phase:enm_boss_ausverkauf:2"
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_ba_shutter",
+								"target": "random_enemy",
+								"first_ms": 6000,
+								"every_ms": 15000
+							},
+							{
+								"skill": "skl_ba_only_today",
+								"target": "self",
+								"first_ms": 10000,
+								"every_ms": 16000
+							},
+							{
+								"skill": "skl_ba_tag_rain",
+								"target": "self",
+								"first_ms": 8000,
+								"every_ms": 12000
+							},
+							{
+								"skill": "skl_ba_bargain_bite",
+								"target": "threat_top",
+								"first_ms": 4000,
+								"every_ms": 8000
+							}
+						]
+					},
+					{
+						"hp_above_pm": 0,
+						"on_enter": [
+							{
+								"op": "say",
+								"tag": "boss_phase:enm_boss_ausverkauf:3"
+							},
+							{
+								"op": "fixed_damage_self",
+								"pct_pm": 50
+							},
+							{
+								"op": "clear_zones"
+							},
+							{
+								"op": "set",
+								"stationary": false
+							},
+							{
+								"op": "status_self",
+								"status": "sts_haste",
+								"ms": -1
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_ba_clearance_nova",
+								"target": "self",
+								"first_ms": 5000,
+								"every_ms": 18000
+							},
+							{
+								"skill": "skl_ba_bargain_bite",
+								"target": "threat_top",
+								"first_ms": 8000,
+								"every_ms": 8000
+							},
+							{
+								"skill": "skl_ba_only_today",
+								"target": "self",
+								"first_ms": 20000,
+								"every_ms": 20000
+							},
+							{
+								"skill": "skl_ba_tag_rain",
+								"target": "self",
+								"first_ms": 20000,
+								"every_ms": 15000
+							}
+						]
+					}
+				],
+				"enrage": {
+					"at_ms": 300000,
+					"every_ms": 30000,
+					"status": "sts_enrage"
+				}
+			}
+		},
+		{
+			"id": "enm_boss_requisiteurin",
+			"name": "Die Requisiteurin",
+			"level": 6,
+			"boss": true,
+			"stats": {
+				"hp": 4752,
+				"mp": 60,
+				"str": 43,
+				"mag": 28,
+				"def": 15,
+				"res": 11,
+				"spd": 12,
+				"lck": 6
+			},
+			"exp": 180,
+			"credits": 150,
+			"attack_skill": "skl_e_strike",
+			"element_mods": {
+				"shock": 1.5,
+				"poison": 0.5
+			},
+			"status_immune": [],
+			"status_resist": {
+				"sts_stun": 0.5,
+				"sts_slow": 0.5
+			},
+			"drops": [],
+			"boss_drops": [
+				{
+					"kind": "item",
+					"id": "itm_key_f3",
+					"amount": 1
+				},
+				{
+					"kind": "box",
+					"id": "box_silver",
+					"amount": 1
+				}
+			],
+			"tags": [
+				"floor_3",
+				"fundus",
+				"boss",
+				"quarter_boss"
+			],
+			"model": {
+				"base": "humanoid",
+				"scale": 1.3,
+				"pose": "auto",
+				"colors": {
+					"primary": "#3d2f4a",
+					"secondary": "#e8b84a",
+					"accent": "#6b3a22",
+					"skin": "#d19a6e",
+					"eyes": "#1a1420"
+				},
+				"props": [
+					"glasses",
+					"staff",
+					"apron"
+				],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 0.0
+			},
+			"rt": {
+				"radius_cm": 90,
+				"move_cm_s": 240,
+				"auto_skill": "skl_br_folding_rule",
+				"swing_ms": 2800,
+				"reach_cm": 320,
+				"dmg_pm": 920,
+				"immune": [
+					"sts_dazed"
+				],
+				"phases": [
+					{
+						"hp_above_pm": 600,
+						"on_enter": [],
+						"rules": [
+							{
+								"skill": "skl_br_prop_list",
+								"target": "self",
+								"first_ms": 8000,
+								"every_ms": 25000
+							},
+							{
+								"skill": "skl_br_sword_volley",
+								"target": "random_enemy",
+								"first_ms": 5000,
+								"every_ms": 8000
+							}
+						]
+					},
+					{
+						"hp_above_pm": 250,
+						"on_enter": [
+							{
+								"op": "say",
+								"tag": "boss_phase:enm_boss_requisiteurin:2"
+							},
+							{
+								"op": "summon",
+								"enemy": "enm_mottenschwarm",
+								"count": 1,
+								"at": "door"
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_br_mothball_fog",
+								"target": "threat_top",
+								"first_ms": 4000,
+								"every_ms": 15000
+							},
+							{
+								"skill": "skl_br_extras",
+								"target": "self",
+								"cond": {
+									"adds_below": 2
+								},
+								"first_ms": 10000,
+								"every_ms": 20000
+							},
+							{
+								"skill": "skl_br_sword_volley",
+								"target": "random_enemy",
+								"first_ms": 8000,
+								"every_ms": 8000
+							}
+						]
+					},
+					{
+						"hp_above_pm": 0,
+						"on_enter": [
+							{
+								"op": "say",
+								"tag": "boss_phase:enm_boss_requisiteurin:3"
+							},
+							{
+								"op": "status_self",
+								"status": "sts_haste",
+								"ms": -1
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_br_revolving_stage",
+								"target": "threat_top",
+								"first_ms": 3000,
+								"every_ms": 14000
+							},
+							{
+								"skill": "skl_br_mothball_fog",
+								"target": "threat_top",
+								"first_ms": 10000,
+								"every_ms": 20000
+							}
+						]
+					}
+				],
+				"enrage": {
+					"at_ms": 270000,
+					"every_ms": 30000,
+					"status": "sts_enrage"
+				}
+			}
+		},
+		{
+			"id": "enm_boss_garderobe",
+			"name": "Die Garderobe",
+			"level": 8,
+			"boss": true,
+			"stats": {
+				"hp": 8424,
+				"mp": 120,
+				"str": 56,
+				"mag": 48,
+				"def": 19,
+				"res": 17,
+				"spd": 15,
+				"lck": 10
+			},
+			"exp": 420,
+			"credits": 300,
+			"attack_skill": "skl_e_strike",
+			"element_mods": {
+				"ice": 1.5,
+				"fire": 0.5,
+				"poison": 0.0
+			},
+			"status_immune": [
+				"sts_poison"
+			],
+			"status_resist": {
+				"sts_stun": 0.5,
+				"sts_slow": 0.5
+			},
+			"drops": [],
+			"boss_drops": [
+				{
+					"kind": "item",
+					"id": "itm_arm_opera_cape",
+					"amount": 1
+				},
+				{
+					"kind": "box",
+					"id": "box_gold",
+					"amount": 1
+				}
+			],
+			"tags": [
+				"floor_3",
+				"fundus",
+				"boss",
+				"floor_boss"
+			],
+			"model": {
+				"base": "brute",
+				"scale": 1.8,
+				"pose": "auto",
+				"colors": {
+					"primary": "#6b4a2e",
+					"secondary": "#3d2f4a",
+					"accent": "#e8b84a",
+					"skin": "#8a5a32",
+					"eyes": "#ffe08a"
+				},
+				"props": [
+					"cape",
+					"helmet"
+				],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 0.0
+			},
+			"rt": {
+				"radius_cm": 110,
+				"move_cm_s": 300,
+				"stationary": true,
+				"auto_skill": "skl_bg_hanger_throw",
+				"auto_ranged_skill": "skl_bg_hanger_throw",
+				"swing_ms": 3000,
+				"reach_cm": 350,
+				"dmg_pm": 740,
+				"immune": [
+					"sts_dazed"
+				],
+				"phases": [
+					{
+						"hp_above_pm": 650,
+						"on_enter": [
+							{
+								"op": "summon",
+								"enemy": "enm_mottenschwarm",
+								"count": 2,
+								"at": "door"
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_bg_moth_bite",
+								"target": "threat_top",
+								"first_ms": 4000,
+								"every_ms": 8000
+							},
+							{
+								"skill": "skl_bg_dress_rehearsal",
+								"target": "self",
+								"cond": {
+									"adds_below": 3
+								},
+								"first_ms": 12000,
+								"every_ms": 25000
+							}
+						]
+					},
+					{
+						"hp_above_pm": 300,
+						"on_enter": [
+							{
+								"op": "say",
+								"tag": "boss_phase:enm_boss_garderobe:2"
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_bg_sliding_door",
+								"target": "random_enemy",
+								"first_ms": 6000,
+								"every_ms": 15000
+							},
+							{
+								"skill": "skl_bg_door_slam",
+								"target": "self",
+								"first_ms": 10000,
+								"every_ms": 16000
+							},
+							{
+								"skill": "skl_bg_mothballs",
+								"target": "self",
+								"first_ms": 8000,
+								"every_ms": 12000
+							},
+							{
+								"skill": "skl_bg_moth_bite",
+								"target": "threat_top",
+								"first_ms": 4000,
+								"every_ms": 8000
+							}
+						]
+					},
+					{
+						"hp_above_pm": 0,
+						"on_enter": [
+							{
+								"op": "say",
+								"tag": "boss_phase:enm_boss_garderobe:3"
+							},
+							{
+								"op": "fixed_damage_self",
+								"pct_pm": 50
+							},
+							{
+								"op": "clear_zones"
+							},
+							{
+								"op": "set",
+								"stationary": false
+							},
+							{
+								"op": "status_self",
+								"status": "sts_haste",
+								"ms": -1
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_bg_grand_entrance",
+								"target": "self",
+								"first_ms": 5000,
+								"every_ms": 18000
+							},
+							{
+								"skill": "skl_bg_moth_bite",
+								"target": "threat_top",
+								"first_ms": 8000,
+								"every_ms": 8000
+							},
+							{
+								"skill": "skl_bg_door_slam",
+								"target": "self",
+								"first_ms": 20000,
+								"every_ms": 20000
+							},
+							{
+								"skill": "skl_bg_mothballs",
+								"target": "self",
+								"first_ms": 20000,
+								"every_ms": 15000
+							}
+						]
+					}
+				],
+				"enrage": {
+					"at_ms": 300000,
+					"every_ms": 30000,
+					"status": "sts_enrage"
+				}
+			}
+		},
+		{
+			"id": "enm_boss_schichtleiterin_f4",
+			"name": "Die Schichtleiterin",
+			"level": 6,
+			"boss": true,
+			"stats": {
+				"hp": 4840,
+				"mp": 60,
+				"str": 44,
+				"mag": 29,
+				"def": 15,
+				"res": 11,
+				"spd": 12,
+				"lck": 6
+			},
+			"exp": 180,
+			"credits": 150,
+			"attack_skill": "skl_e_strike",
+			"element_mods": {
+				"shock": 1.5,
+				"poison": 0.5
+			},
+			"status_immune": [],
+			"status_resist": {
+				"sts_stun": 0.5,
+				"sts_slow": 0.5
+			},
+			"drops": [],
+			"boss_drops": [
+				{
+					"kind": "item",
+					"id": "itm_key_f4",
+					"amount": 1
+				},
+				{
+					"kind": "box",
+					"id": "box_silver",
+					"amount": 1
+				}
+			],
+			"tags": [
+				"floor_4",
+				"paket",
+				"boss",
+				"quarter_boss"
+			],
+			"model": {
+				"base": "humanoid",
+				"scale": 1.3,
+				"pose": "auto",
+				"colors": {
+					"primary": "#f28c28",
+					"secondary": "#3a3f4b",
+					"accent": "#2a2024",
+					"skin": "#b07a50",
+					"eyes": "#1a1420"
+				},
+				"props": [
+					"lamp_helmet",
+					"cart"
+				],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 0.0
+			},
+			"rt": {
+				"radius_cm": 90,
+				"move_cm_s": 240,
+				"auto_skill": "skl_bs_waybill",
+				"swing_ms": 2800,
+				"reach_cm": 320,
+				"dmg_pm": 920,
+				"immune": [
+					"sts_dazed"
+				],
+				"phases": [
+					{
+						"hp_above_pm": 600,
+						"on_enter": [],
+						"rules": [
+							{
+								"skill": "skl_bs_shift_plan",
+								"target": "self",
+								"first_ms": 8000,
+								"every_ms": 25000
+							},
+							{
+								"skill": "skl_bs_tape_sling",
+								"target": "random_enemy",
+								"first_ms": 5000,
+								"every_ms": 8000
+							}
+						]
+					},
+					{
+						"hp_above_pm": 250,
+						"on_enter": [
+							{
+								"op": "say",
+								"tag": "boss_phase:enm_boss_schichtleiterin_f4:2"
+							},
+							{
+								"op": "summon",
+								"enemy": "enm_paketkrabbe",
+								"count": 1,
+								"at": "door"
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_bs_carton_dust",
+								"target": "threat_top",
+								"first_ms": 4000,
+								"every_ms": 15000
+							},
+							{
+								"skill": "skl_bs_belt_two",
+								"target": "self",
+								"cond": {
+									"adds_below": 2
+								},
+								"first_ms": 10000,
+								"every_ms": 20000
+							},
+							{
+								"skill": "skl_bs_tape_sling",
+								"target": "random_enemy",
+								"first_ms": 8000,
+								"every_ms": 8000
+							}
+						]
+					},
+					{
+						"hp_above_pm": 0,
+						"on_enter": [
+							{
+								"op": "say",
+								"tag": "boss_phase:enm_boss_schichtleiterin_f4:3"
+							},
+							{
+								"op": "status_self",
+								"status": "sts_haste",
+								"ms": -1
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_bs_pallet_round",
+								"target": "threat_top",
+								"first_ms": 3000,
+								"every_ms": 14000
+							},
+							{
+								"skill": "skl_bs_carton_dust",
+								"target": "threat_top",
+								"first_ms": 10000,
+								"every_ms": 20000
+							}
+						]
+					}
+				],
+				"enrage": {
+					"at_ms": 270000,
+					"every_ms": 30000,
+					"status": "sts_enrage"
+				}
+			}
+		},
+		{
+			"id": "enm_boss_schichtleiterin_f5",
+			"name": "Die Schichtleiterin",
+			"level": 6,
+			"boss": true,
+			"stats": {
+				"hp": 5104,
+				"mp": 60,
+				"str": 46,
+				"mag": 30,
+				"def": 16,
+				"res": 12,
+				"spd": 12,
+				"lck": 6
+			},
+			"exp": 180,
+			"credits": 150,
+			"attack_skill": "skl_e_strike",
+			"element_mods": {
+				"shock": 1.5,
+				"poison": 0.5
+			},
+			"status_immune": [],
+			"status_resist": {
+				"sts_stun": 0.5,
+				"sts_slow": 0.5
+			},
+			"drops": [],
+			"boss_drops": [
+				{
+					"kind": "item",
+					"id": "itm_key_f5",
+					"amount": 1
+				},
+				{
+					"kind": "box",
+					"id": "box_silver",
+					"amount": 1
+				}
+			],
+			"tags": [
+				"floor_5",
+				"paket",
+				"boss",
+				"quarter_boss"
+			],
+			"model": {
+				"base": "humanoid",
+				"scale": 1.35,
+				"pose": "auto",
+				"colors": {
+					"primary": "#f28c28",
+					"secondary": "#3a3f4b",
+					"accent": "#2a2024",
+					"skin": "#b07a50",
+					"eyes": "#1a1420"
+				},
+				"props": [
+					"lamp_helmet",
+					"cart"
+				],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 0.0
+			},
+			"rt": {
+				"radius_cm": 90,
+				"move_cm_s": 240,
+				"auto_skill": "skl_bs_waybill",
+				"swing_ms": 2800,
+				"reach_cm": 320,
+				"dmg_pm": 920,
+				"immune": [
+					"sts_dazed"
+				],
+				"phases": [
+					{
+						"hp_above_pm": 600,
+						"on_enter": [],
+						"rules": [
+							{
+								"skill": "skl_bs_shift_plan",
+								"target": "self",
+								"first_ms": 8000,
+								"every_ms": 25000
+							},
+							{
+								"skill": "skl_bs_tape_sling",
+								"target": "random_enemy",
+								"first_ms": 5000,
+								"every_ms": 8000
+							}
+						]
+					},
+					{
+						"hp_above_pm": 250,
+						"on_enter": [
+							{
+								"op": "say",
+								"tag": "boss_phase:enm_boss_schichtleiterin_f5:2"
+							},
+							{
+								"op": "summon",
+								"enemy": "enm_paketkrabbe",
+								"count": 1,
+								"at": "door"
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_bs_carton_dust",
+								"target": "threat_top",
+								"first_ms": 4000,
+								"every_ms": 15000
+							},
+							{
+								"skill": "skl_bs_belt_two",
+								"target": "self",
+								"cond": {
+									"adds_below": 2
+								},
+								"first_ms": 10000,
+								"every_ms": 20000
+							},
+							{
+								"skill": "skl_bs_tape_sling",
+								"target": "random_enemy",
+								"first_ms": 8000,
+								"every_ms": 8000
+							}
+						]
+					},
+					{
+						"hp_above_pm": 0,
+						"on_enter": [
+							{
+								"op": "say",
+								"tag": "boss_phase:enm_boss_schichtleiterin_f5:3"
+							},
+							{
+								"op": "status_self",
+								"status": "sts_haste",
+								"ms": -1
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_bs_pallet_round",
+								"target": "threat_top",
+								"first_ms": 3000,
+								"every_ms": 14000
+							},
+							{
+								"skill": "skl_bs_carton_dust",
+								"target": "threat_top",
+								"first_ms": 10000,
+								"every_ms": 20000
+							}
+						]
+					}
+				],
+				"enrage": {
+					"at_ms": 270000,
+					"every_ms": 30000,
+					"status": "sts_enrage"
+				}
+			}
+		},
+		{
+			"id": "enm_boss_schichtleiterin_f6",
+			"name": "Die Schichtleiterin",
+			"level": 6,
+			"boss": true,
+			"stats": {
+				"hp": 5368,
+				"mp": 60,
+				"str": 49,
+				"mag": 32,
+				"def": 17,
+				"res": 12,
+				"spd": 12,
+				"lck": 6
+			},
+			"exp": 180,
+			"credits": 150,
+			"attack_skill": "skl_e_strike",
+			"element_mods": {
+				"shock": 1.5,
+				"poison": 0.5
+			},
+			"status_immune": [],
+			"status_resist": {
+				"sts_stun": 0.5,
+				"sts_slow": 0.5
+			},
+			"drops": [],
+			"boss_drops": [
+				{
+					"kind": "item",
+					"id": "itm_key_f6",
+					"amount": 1
+				},
+				{
+					"kind": "box",
+					"id": "box_silver",
+					"amount": 1
+				}
+			],
+			"tags": [
+				"floor_6",
+				"paket",
+				"boss",
+				"quarter_boss"
+			],
+			"model": {
+				"base": "humanoid",
+				"scale": 1.4000000000000001,
+				"pose": "auto",
+				"colors": {
+					"primary": "#f28c28",
+					"secondary": "#3a3f4b",
+					"accent": "#2a2024",
+					"skin": "#b07a50",
+					"eyes": "#1a1420"
+				},
+				"props": [
+					"lamp_helmet",
+					"cart"
+				],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 0.0
+			},
+			"rt": {
+				"radius_cm": 90,
+				"move_cm_s": 240,
+				"auto_skill": "skl_bs_waybill",
+				"swing_ms": 2800,
+				"reach_cm": 320,
+				"dmg_pm": 920,
+				"immune": [
+					"sts_dazed"
+				],
+				"phases": [
+					{
+						"hp_above_pm": 600,
+						"on_enter": [],
+						"rules": [
+							{
+								"skill": "skl_bs_shift_plan",
+								"target": "self",
+								"first_ms": 8000,
+								"every_ms": 25000
+							},
+							{
+								"skill": "skl_bs_tape_sling",
+								"target": "random_enemy",
+								"first_ms": 5000,
+								"every_ms": 8000
+							}
+						]
+					},
+					{
+						"hp_above_pm": 250,
+						"on_enter": [
+							{
+								"op": "say",
+								"tag": "boss_phase:enm_boss_schichtleiterin_f6:2"
+							},
+							{
+								"op": "summon",
+								"enemy": "enm_paketkrabbe",
+								"count": 1,
+								"at": "door"
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_bs_carton_dust",
+								"target": "threat_top",
+								"first_ms": 4000,
+								"every_ms": 15000
+							},
+							{
+								"skill": "skl_bs_belt_two",
+								"target": "self",
+								"cond": {
+									"adds_below": 2
+								},
+								"first_ms": 10000,
+								"every_ms": 20000
+							},
+							{
+								"skill": "skl_bs_tape_sling",
+								"target": "random_enemy",
+								"first_ms": 8000,
+								"every_ms": 8000
+							}
+						]
+					},
+					{
+						"hp_above_pm": 0,
+						"on_enter": [
+							{
+								"op": "say",
+								"tag": "boss_phase:enm_boss_schichtleiterin_f6:3"
+							},
+							{
+								"op": "status_self",
+								"status": "sts_haste",
+								"ms": -1
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_bs_pallet_round",
+								"target": "threat_top",
+								"first_ms": 3000,
+								"every_ms": 14000
+							},
+							{
+								"skill": "skl_bs_carton_dust",
+								"target": "threat_top",
+								"first_ms": 10000,
+								"every_ms": 20000
+							}
+						]
+					}
+				],
+				"enrage": {
+					"at_ms": 270000,
+					"every_ms": 30000,
+					"status": "sts_enrage"
+				}
+			}
+		},
+		{
+			"id": "enm_boss_paketberg",
+			"name": "Der Paketberg",
+			"level": 8,
+			"boss": true,
+			"stats": {
+				"hp": 9750,
+				"mp": 120,
+				"str": 65,
+				"mag": 55,
+				"def": 23,
+				"res": 20,
+				"spd": 15,
+				"lck": 10
+			},
+			"exp": 600,
+			"credits": 500,
+			"attack_skill": "skl_e_strike",
+			"element_mods": {
+				"ice": 1.5,
+				"fire": 0.5,
+				"poison": 0.0
+			},
+			"status_immune": [
+				"sts_poison"
+			],
+			"status_resist": {
+				"sts_stun": 0.5,
+				"sts_slow": 0.5
+			},
+			"drops": [],
+			"boss_drops": [
+				{
+					"kind": "item",
+					"id": "itm_acc_express_sticker",
+					"amount": 1
+				},
+				{
+					"kind": "box",
+					"id": "box_gold",
+					"amount": 1
+				}
+			],
+			"tags": [
+				"floor_6",
+				"paket",
+				"boss",
+				"floor_boss"
+			],
+			"model": {
+				"base": "brute",
+				"scale": 2.0,
+				"pose": "auto",
+				"colors": {
+					"primary": "#b08a5a",
+					"secondary": "#e8dcb8",
+					"accent": "#f2c230",
+					"skin": "#8a6a4a",
+					"eyes": "#ff3b30"
+				},
+				"props": [
+					"backpack",
+					"crowbar"
+				],
+				"seed": 0,
+				"gltf": ""
+			},
+			"explore": {
+				"field_speed": 0.0
+			},
+			"rt": {
+				"radius_cm": 110,
+				"move_cm_s": 300,
+				"stationary": true,
+				"auto_skill": "skl_bp_parcel_throw",
+				"auto_ranged_skill": "skl_bp_parcel_throw",
+				"swing_ms": 3000,
+				"reach_cm": 350,
+				"dmg_pm": 740,
+				"immune": [
+					"sts_dazed"
+				],
+				"phases": [
+					{
+						"hp_above_pm": 650,
+						"on_enter": [
+							{
+								"op": "summon",
+								"enemy": "enm_retourenschleim",
+								"count": 2,
+								"at": "door"
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_bp_paper_bite",
+								"target": "threat_top",
+								"first_ms": 4000,
+								"every_ms": 8000
+							},
+							{
+								"skill": "skl_bp_forwarding",
+								"target": "self",
+								"cond": {
+									"adds_below": 3
+								},
+								"first_ms": 12000,
+								"every_ms": 25000
+							}
+						]
+					},
+					{
+						"hp_above_pm": 300,
+						"on_enter": [
+							{
+								"op": "say",
+								"tag": "boss_phase:enm_boss_paketberg:2"
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_bp_conveyor",
+								"target": "random_enemy",
+								"first_ms": 6000,
+								"every_ms": 15000
+							},
+							{
+								"skill": "skl_bp_siren",
+								"target": "self",
+								"first_ms": 10000,
+								"every_ms": 16000
+							},
+							{
+								"skill": "skl_bp_leaking",
+								"target": "self",
+								"first_ms": 8000,
+								"every_ms": 12000
+							},
+							{
+								"skill": "skl_bp_paper_bite",
+								"target": "threat_top",
+								"first_ms": 4000,
+								"every_ms": 8000
+							}
+						]
+					},
+					{
+						"hp_above_pm": 0,
+						"on_enter": [
+							{
+								"op": "say",
+								"tag": "boss_phase:enm_boss_paketberg:3"
+							},
+							{
+								"op": "fixed_damage_self",
+								"pct_pm": 50
+							},
+							{
+								"op": "clear_zones"
+							},
+							{
+								"op": "set",
+								"stationary": false
+							},
+							{
+								"op": "status_self",
+								"status": "sts_haste",
+								"ms": -1
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_bp_avalanche",
+								"target": "self",
+								"first_ms": 5000,
+								"every_ms": 18000
+							},
+							{
+								"skill": "skl_bp_paper_bite",
+								"target": "threat_top",
+								"first_ms": 8000,
+								"every_ms": 8000
+							},
+							{
+								"skill": "skl_bp_siren",
+								"target": "self",
+								"first_ms": 20000,
+								"every_ms": 20000
+							},
+							{
+								"skill": "skl_bp_leaking",
+								"target": "self",
+								"first_ms": 20000,
+								"every_ms": 15000
+							}
+						]
+					}
+				],
+				"enrage": {
+					"at_ms": 300000,
+					"every_ms": 30000,
+					"status": "sts_enrage"
+				}
 			}
 		}
 	]

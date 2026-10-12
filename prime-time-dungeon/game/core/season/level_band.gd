@@ -24,8 +24,8 @@ const CRASH_GAP: int = 2
 const CRASH_POTIONS: int = 3               # the Aufholpaket's three potions
 const POTION_TAG: String = "heal"
 ## The EXP sources as shares of a level in per mille (09 §8.2, start values at band level): a regular group 4 %, a
-## show boss 15 %, a Revier-Boss 25 %, an Etagenboss 50 % (ST1-C tunes the enemies' EXP towards these), the stairs
-## 50 % and a floor event 5 % (here), one profession point 0.2 % (ST1-E).
+## show boss 15 %, a Revier-Boss 25 %, an Etagenboss 50 % (the groups of the season floors give exactly these:
+## EnemyLevels.apply, ST1-C), the stairs 50 % and a floor event 5 % (here), one profession point 0.2 % (ST1-E).
 const SHARE_GROUP_PM: int = 40
 const SHARE_SHOW_BOSS_PM: int = 150
 const SHARE_QUARTER_BOSS_PM: int = 250
@@ -130,12 +130,16 @@ static func is_warning(diff: int) -> bool:
 	return color_index(diff) == COLORS.size() - 1
 
 
-## The level of a beaten group (09 §3.4): the highest level of its defeated enemies (until ST1-C gives every group
-## its level in the band, the enemy's own level stands for it); 0 without one.
-static func group_level(data: GameData, result: BattleResult) -> int:
+## The level of a beaten group (09 §3.4): on a season floor with band and quarters the level its groups fought on
+## (ST1-C: EnemyLevels.result_level, with `state`), else the highest level of its defeated enemies; 0 without one.
+static func group_level(data: GameData, result: BattleResult, state: GameState = null) -> int:
 	var lv: int = 0
 	if data == null or result == null:
 		return lv
+	if state != null:
+		lv = EnemyLevels.result_level(state, data, result)
+		if lv > 0:
+			return lv
 	for id: String in result.defeated_ids:
 		if data.has_id("enemies", id):
 			lv = maxi(lv, data.enemy(id).level)
@@ -198,7 +202,7 @@ static func add_exp(state: GameState, data: GameData, member: PartyMember, amoun
 ## add_exp ("combat"). Fills rw.level_ups, rw.exp_by_member and rw.overtime.
 static func combat_exp(state: GameState, data: GameData, result: BattleResult, base: int, was_ko: Dictionary,
 		rw: BattleRewards) -> void:
-	var group: int = group_level(data, result)
+	var group: int = group_level(data, result, state)
 	for m: PartyMember in state.party:
 		if m == null:
 			continue

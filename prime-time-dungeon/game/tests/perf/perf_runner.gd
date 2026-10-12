@@ -6,6 +6,8 @@ extends Node
 ##   explore    every cell of floor 1 from 4 camera yaws → per zone the worst view, the worst room with enemies
 ##   safe_room  the three safe rooms of floor 1
 ##   combat     the real-time combat in the world (07 §8.10; see the section below)
+##   season     Staffeln (09 §3.6 Nr. 6, ST1-C1): floors 2–6 of the basis season — the build of each whole floor (cold,
+##              warm; against the explore budget), its layout alone, every cell from 4 camera yaws like floor 1
 ##   leak       N cycles explore (rebuild) → real-time combat → safe room through the Router, object/memory counts per
 ##              cycle
 ## Every section plays a real-time game (the campaign fights in real time only since R5b part 2b: the CTB battle
@@ -54,6 +56,8 @@ const BUDGET_EMITTERS: int = 6
 const BUDGET_BODIES: int = 40
 const BUDGET_RAM_MB: float = 400.0
 const BUDGET_BUILD_MS: Dictionary = {"explore": 500.0, "safe_room": 300.0}
+const SEASON_FLOORS: Array[int] = [2, 3, 4, 5, 6]   # ST1-C1: the floors of the basis season after floor 1
+const SEASON_NOW: int = 1791918000          # the probe season's fixed start (UTC)
 
 var engine_init_ms: int = 0                   # set by perf_probe.gd (process start → this probe's main loop)
 
@@ -146,7 +150,9 @@ func _run() -> void:
 		await _section_safe_room()
 	if _wants_combat():
 		await _section_combat()                # Echtzeitkampf (07 §8.10, R2)
-	if _wants("startup"):
+	if _wants("season"):
+		await _section_season()                # Staffeln (09 §3.6 Nr. 6, ST1-C1)
+	if _wants("startup") or _wants("season"):
 		_print_build_table()
 	if _wants("leak"):
 		await _section_leak()
@@ -599,6 +605,12 @@ static func _fmt_int(v: int) -> String:
 
 func _section_explore() -> void:
 	await _ensure_exploration()
+	await _explore_floor("Erkundung Etage 1 (je Zone: Maximum jeder Größe über alle Zellen × 4 Kamerarichtungen)")
+
+
+## Every cell of the running exploration from 4 camera yaws → per zone (quarter) the worst view, the worst single view
+## and the floor's maximum, under the table title `title`.
+func _explore_floor(title: String) -> void:
 	var scene: ExplorationScene = _explore
 	var layout: FloorLayout = scene.get_layout()
 	var zones: Dictionary = {}               # zone id → {"acc" (max over its cells), "cell", "kind", "enemies", "cells"}
@@ -634,7 +646,7 @@ func _section_explore() -> void:
 		if all_cell.is_empty() or _worse(acc, all_cell["acc"] as Dictionary):
 			all_cell = {"acc": acc, "cell": c, "kind": RoomCell.kind_to_string(rc.kind), "enemies": enemies}
 		_merge(all, acc)
-	_table_head("Erkundung Etage 1 (je Zone: Maximum jeder Größe über alle Zellen × 4 Kamerarichtungen)")
+	_table_head(title)
 	var names: Array = zones.keys()
 	names.sort()
 	for zn: Variant in names:
@@ -686,6 +698,70 @@ func _visible_enemies(scene: ExplorationScene) -> int:
 
 static func _cell_txt(c: Vector2i) -> String:
 	return "(%d, %d)" % [c.x, c.y]
+
+
+# ======================================================================================================================
+# Staffeln (09 §3.6 Nr. 6, ST1-C1)
+# ======================================================================================================================
+
+## Floors 2–6 of the basis season (Am Stück, seed FLOOR_SEED, a fixed start, taken down the stairs with
+## Game.season_debug_descend): the build of the whole floor cold and warm against the explore budget (no quarter
+## streaming yet — ST1-C2), the layout alone (ZoneGenerator.generate) and every cell × 4 yaws (_explore_floor). The
+## probe's floor-1 game comes back for the later sections.
+func _section_season() -> void:
+	if _build_rows.is_empty():                  # alone (--only=season): floor 1 of the same process as the reference
+		_new_game()
+		var c1: float = await _build_exploration()
+		var w1: float = await _build_exploration()
+		_add_build("Etage 1 (Referenz im selben Lauf, handgebaut)", c1, w1, float(BUDGET_BUILD_MS["explore"]))
+	for f: int in SEASON_FLOORS:
+		var def: FloorDef = DB.floor_def(f)
+		if def == null or not def.has_zones():
+			continue
+		if not _season_on_floor(f):
+			_over.append("season: floor %d not reached" % f)
+			continue
+		var cold: float = await _build_exploration()
+		var warm: float = await _build_exploration()
+		var t0: int = Time.get_ticks_usec()
+		var layout: FloorLayout = DungeonGenerator.generate(def, Game.state.floor_run.seed)
+		var gen_ms: float = (Time.get_ticks_usec() - t0) / 1000.0
+		_add_build("Etage %d (Staffel: %d Zellen, %d Viertel; ganze Etage, `ExplorationScene._ready`)" % [f,
+			layout.cells.size(), def.zones.size()], cold, warm, float(BUDGET_BUILD_MS["explore"]))
+		_add_build("davon Layout Etage %d (`ZoneGenerator.generate`)" % f, gen_ms, gen_ms, 0.0)
+		_explore.auto_start_combat = false
+		_show_passing_ui(false)
+		await _explore_floor("Erkundung Etage %d – %s (Staffel; je Viertel: Maximum über alle Zellen × 4 Richtungen; "
+			% [f, def.name.get_slice("– ", 1)] + "ohne M.O.D.-Kasten und Toasts)")
+		_show_passing_ui(true)
+	if _explore != null and is_instance_valid(_explore):
+		_explore.queue_free()
+	_explore = null
+	await get_tree().process_frame
+
+
+## Staffeln (ST1-C1): the season section measures the floors, not the Show's passing UI — while it samples, the layers
+## of the M.O.D. box and the toasts are hidden (`on` = false) and shown again afterwards. The probe walks every room
+## without a fight, so bets, achievements and boxes come in bursts: three toasts and the M.O.D. box add ≈ 30 UI draw
+## calls on any floor (PERFORMANCE.md §3.9).
+func _show_passing_ui(on: bool) -> void:
+	var ui: Node = get_tree().root.get_node_or_null("GlobalUi")
+	if ui == null:
+		return
+	for n: String in ["mod_dialog", "toasts"]:
+		var layer: CanvasLayer = ui.get(n) as CanvasLayer
+		if layer != null:
+			layer.visible = on
+
+
+## A basis season taken down the stairs to floor `f` (Game.start_season + Game.season_debug_descend); false if not.
+func _season_on_floor(f: int) -> bool:
+	if not Game.start_season(0, "ssn_basis", {"tempo": "binge", "seed": FLOOR_SEED, "unlock": true, "now": SEASON_NOW}):
+		return false
+	while Game.state.floor_run.index < f:
+		if not Game.season_debug_descend():
+			return false
+	return Game.state.floor_run.index == f
 
 
 # ======================================================================================================================

@@ -28,6 +28,16 @@ var spawners: Array[Dictionary] = [] # [{"zone", "pool": PackedStringArray, "int
 ## Procedural floors only: count limits of the FloorDef checked by validate()
 ## {"rooms": [min, max], "chests": [min, max], "enemy_groups": [min, max], "safe_rooms": int}; {} = handbuilt.
 var bounds: Dictionary = {}
+# --- Staffeln (09 §3.2, §3.3, §3.6; ST1-C): generator-v2 floors only (ZoneGenerator), empty on every other floor.
+# zones then holds every quarter: zone id → {"name", "palette", "order": 0.., "danger": calm | restless | dangerous,
+# "style": the art kit's dressing of its rooms, "" = by palette}.
+## Gather nodes (Fundstellen; positions for ST1-E): [{"id": "f<i>_n<k>", "node": nod_ id, "cell": Vector2i,
+## "offset": Vector2}].
+var nodes: Array[Dictionary] = []
+## Programme doors (09 §3.3): [{"n": 1…5, "cell": Vector2i (the dead-end room), "key": its gate key (requires
+## "daily:<n>"), "event": the fev id in the room, "zone": quarter id, "q": its order}] — point n of the daily
+## programme opens door n.
+var programme: Array[Dictionary] = []
 
 
 func cell_at(c: Vector2i) -> RoomCell:
@@ -319,15 +329,39 @@ func to_debug_string() -> String:
 		var wps: PackedStringArray = []
 		for w: Vector2 in e.waypoints:
 			wps.append("(%.2f,%.2f)" % [w.x, w.y])
-		lines.append("group %s %s %s lead=%s boss=%s %s turn=%s (%.3f,%.3f) wp=[%s]" % [e.id, _p(e.cell),
+		lines.append("group %s %s %s lead=%s boss=%s %s turn=%s (%.3f,%.3f) wp=[%s]%s" % [e.id, _p(e.cell),
 			e.encounter_id, e.lead_enemy_id, str(e.is_boss), String(e.start_state), str(e.can_turn), e.offset.x,
-			e.offset.y, ",".join(wps)])
+			e.offset.y, ",".join(wps), " level=%d" % e.level if e.level > 0 else ""])
 	for ev: EventSpawn in events:
 		lines.append("event %s %s %s (%.3f,%.3f)" % [ev.id, ev.type, _p(ev.cell), ev.offset.x, ev.offset.y])
 	for sp: Dictionary in spawners:
 		lines.append("spawner %s %s %ds" % [str(sp.get("zone", "")),
 			",".join(sp.get("pool", PackedStringArray()) as PackedStringArray), int(sp.get("interval_sec", 0))])
+	_debug_season_lines(lines)
 	return "\n".join(lines)
+
+
+## Staffeln (ST1-C): the generator-v2 parts of to_debug_string() — the quarter of every cell, the quarters' danger,
+## the programme doors and the gather nodes; nothing on other floors (their strings stay as they were).
+func _debug_season_lines(lines: PackedStringArray) -> void:
+	var ordered: bool = false
+	for z: Variant in zones.values():
+		ordered = ordered or (z as Dictionary).has("order")
+	if ordered:
+		var zs: PackedStringArray = []
+		for c: Vector2i in sorted_cells():
+			zs.append("%s:%s" % [_p(c), (cells[c] as RoomCell).zone])
+		lines.append("zones " + " ".join(zs))
+		var keys: Array = zones.keys()
+		keys.sort()
+		for zid: Variant in keys:
+			var z: Dictionary = zones[zid]
+			lines.append("quarter %s order=%d danger=%s" % [str(zid), int(z.get("order", 0)), str(z.get("danger", ""))])
+	for p: Dictionary in programme:
+		lines.append("programme %d %s %s %s" % [int(p["n"]), _p(p["cell"] as Vector2i), str(p["key"]), str(p["event"])])
+	for n: Dictionary in nodes:
+		var o: Vector2 = n["offset"]
+		lines.append("node %s %s %s (%.3f,%.3f)" % [str(n["id"]), str(n["node"]), _p(n["cell"] as Vector2i), o.x, o.y])
 
 
 # ======================================================================================================================

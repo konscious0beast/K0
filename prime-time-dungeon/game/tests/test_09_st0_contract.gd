@@ -14,6 +14,8 @@ extends TestCase
 ## ST1-F (2026-10-12): CastSim is real (no stub header; its public API stays) — "cast" is CastSim's (a season without
 ## an AI cast: no_cast); the name catalog has its ≥ 300 names, the cast lines follow the anchor too (validators/cast.gd
 ## stays a stub until its schema hooks come, 02_TECH §0.8).
+## ST1-C1 (2026-10-12): ThemeDef and validators/themes.gd are real (the Kulissen with art theme and programme pool);
+## the boss lines of the season bosses (floors 2–6, enemies without the floor_1 tag) follow the anchor too.
 ## ST1-D (2026-10-12): TalentTree is real (no stub header; its public API stays) — "talent" v2 is TalentTree's.
 
 const R1A := preload("res://tests/test_r1a_contract.gd")
@@ -97,18 +99,19 @@ const PROPERTIES: Dictionary = {
 }
 
 ## The stub files of ST0 → the ST1 package that owns them (09 §11.3, §11.4); ST1-B replaced its four, ST1-F CastSim,
-## ST1-D TalentTree (REAL).
+## ST1-C the Kulissen, ST1-D TalentTree (REAL).
 const STUBS: Dictionary = {
 	"res://core/season/sleep_resolver.gd": "G",
 	"res://core/progression/professions.gd": "E",
 	"res://core/data/defs/profession_def.gd": "E",
-	"res://core/data/defs/recipe_def.gd": "E", "res://core/data/defs/theme_def.gd": "C",
+	"res://core/data/defs/recipe_def.gd": "E",
 	"res://core/data/validators/professions.gd": "E",
-	"res://core/data/validators/cast.gd": "F", "res://core/data/validators/themes.gd": "C",
+	"res://core/data/validators/cast.gd": "F",
 }
-## The former stubs, real since ST1-B, ST1-F and ST1-D (no stub header; the public API above stays).
+## The former stubs, real since ST1-B, ST1-F, ST1-C and ST1-D (no stub header; the public API above stays).
 const REAL: PackedStringArray = ["res://core/season/season_state.gd", "res://core/season/season_rules.gd",
 	"res://core/data/defs/season_def.gd", "res://core/data/validators/seasons.gd", "res://core/season/cast_sim.gd",
+	"res://core/data/defs/theme_def.gd", "res://core/data/validators/themes.gd",
 	"res://core/progression/talent_tree.gd"]
 ## The season commands whose module is still a stub (season_unavailable): ST1-G, -E (ST1-D: "talent" v2 is
 ## TalentTree's).
@@ -495,8 +498,15 @@ func test_mod_lines_anchor() -> void:
 			at = i
 	assert_gt(at, 0, "the anchor")
 	assert_eq(str((lines[at] as Dictionary)["tag"]), "ssn_anchor")
+	var data: GameData = real_data()
 	for i in range(at + 1, lines.size()):        # ST1-B: the block of the seasons grows behind it (09 §11.4)
 		var tag: String = str((lines[i] as Dictionary)["tag"])
-		assert_true(tag.begins_with("season_") or tag.begins_with("cast_"), "behind the anchor: season lines only")
+		var season_boss: bool = false             # ST1-C1: the lines of a season boss (no floor_1 tag)
+		if tag.begins_with("boss_intro:") or tag.begins_with("boss_phase:"):
+			var eid: String = tag.split(":")[1]
+			var e: EnemyDef = data.enemy(eid) if data.has_id("enemies", eid) else null
+			season_boss = e != null and e.boss and not e.tags.has("floor_1")
+		assert_true(tag.begins_with("season_") or tag.begins_with("cast_") or season_boss,
+			"behind the anchor: season lines only (%s)" % tag)
 	assert_true(DataValidator.is_valid_mod_tag("ssn_anchor"))
 	assert_true(str((lines[at - 1] as Dictionary)["tag"]).begins_with("persona_"), "behind block K")

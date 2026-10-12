@@ -3,7 +3,8 @@ class_name RtBalance extends RefCounted
 ## only R1 changes the structure); the VALUES live in data/rt_balance.json ({"schema": 1, "values": {…}}, owned by R4,
 ## part of DB.data_hash). from_data() reads them once per combat; a missing file or key falls back to DEFAULTS.
 ## validate() is V1 + V14 of 07 §4.10 (validators/rt.gd calls it from R4 on; test_r1a_contract checks the file).
-## Values are integers or {sub key: integer} (IMPACT_TICKS, REACT_TICKS, AI_DODGE_MISS_PM, SET_R_CM).
+## Values are integers or {sub key: integer} (IMPACT_TICKS, REACT_TICKS, AI_DODGE_MISS_PM, SET_R_CM; Staffeln, 07
+## CR-32 d: ENEMY_LEVEL_PM with the levels "1" … "52").
 ## R1a shipped this class complete (it is the key/range table); R1b took it over unchanged (from_data reads the file
 ## once per combat in BattleBridge.make_rt_setup, RtSim falls back to it). Getters may grow, the keys never alone.
 ## R5b part 2b baked the HP scale into the data (07 §3.9.4, §12.6 step 2): HP_SCALE_PM, FIXED_SCALE_PM, ENEMY_HP_PM and
@@ -34,7 +35,21 @@ const DEFAULTS: Dictionary = {
 	"EASY_WARN_PM": 1250,
 	"REVIVE_GUARD_MS": 3000, "REGEN_PERIOD_TICKS": 90, "REGEN_HP_DELAY_TICKS": 150, "REGEN_HP_PM": 5,
 	"REGEN_MP_PM": 20, "CHASE_COMBAT_SEC_X10": 40,
+	# Staffeln (09 §3.4; 07 CR-32 d, ST1-C): ‰ factor of an enemy at level 1–52 (band end 50 + elite 2), level 1 =
+	# 1000, rising (+150 a level ≈ the party's growth, GDD §4.1). Read only through enemy_level_pm(); BattleBridge sets
+	# an enemy level only in a season (EnemyLevels.apply) — without one every factor stays 1000.
+	"ENEMY_LEVEL_PM": {
+		"1": 1000, "2": 1150, "3": 1300, "4": 1450, "5": 1600, "6": 1750, "7": 1900, "8": 2050, "9": 2200,
+		"10": 2350, "11": 2500, "12": 2650, "13": 2800, "14": 2950, "15": 3100, "16": 3250, "17": 3400, "18": 3550,
+		"19": 3700, "20": 3850, "21": 4000, "22": 4150, "23": 4300, "24": 4450, "25": 4600, "26": 4750, "27": 4900,
+		"28": 5050, "29": 5200, "30": 5350, "31": 5500, "32": 5650, "33": 5800, "34": 5950, "35": 6100, "36": 6250,
+		"37": 6400, "38": 6550, "39": 6700, "40": 6850, "41": 7000, "42": 7150, "43": 7300, "44": 7450, "45": 7600,
+		"46": 7750, "47": 7900, "48": 8050, "49": 8200, "50": 8350, "51": 8500, "52": 8650},
 }
+## Staffeln (07 CR-32 d): the key of the level table, its highest level (band end 50 + elite 2) and level 1's value.
+const ENEMY_LEVEL_KEY: String = "ENEMY_LEVEL_PM"
+const ENEMY_LEVEL_MAX: int = 52
+const ENEMY_LEVEL_BASE_PM: int = 1000
 ## Allowed range [lo, hi] of every value (for {sub: int} keys: of each sub value). TICKS_PER_SEC is structure, not
 ## balance: it is in the file only to be checked (must be 30).
 const RANGES: Dictionary = {
@@ -61,6 +76,7 @@ const RANGES: Dictionary = {
 	"CHECKPOINT_TICKS": [30, 3000], "EASY_WARN_PM": [1000, 3000],
 	"REVIVE_GUARD_MS": [0, 10000], "REGEN_PERIOD_TICKS": [1, 900], "REGEN_HP_DELAY_TICKS": [0, 1800],
 	"REGEN_HP_PM": [0, 1000], "REGEN_MP_PM": [0, 1000], "CHASE_COMBAT_SEC_X10": [0, 600],
+	"ENEMY_LEVEL_PM": [1000, 20000],           # Staffeln (07 CR-32 d): plus "1" = 1000 and rising (validate)
 }
 
 ## The effective values: DEFAULTS overlaid with the known, well-typed values of the file.
@@ -110,6 +126,12 @@ func sub(key: String, sub_key: String) -> int:
 	return int((v as Dictionary).get(sub_key, 0)) if v is Dictionary else 0
 
 
+## Staffeln (09 §3.4; 07 CR-32 d, ST1-C): the ‰ factor of the level table at `level` (clamped to 1–52). BattleBridge
+## scales an enemy only in a season (EnemyLevels.apply); without one no level is set (factor 1000).
+func enemy_level_pm(level: int) -> int:
+	return sub(ENEMY_LEVEL_KEY, str(clampi(level, 1, ENEMY_LEVEL_MAX)))
+
+
 ## Deep copy of the values (ints only; core/rt does not depend on core/live, the hashing side canonicalizes).
 func to_dict() -> Dictionary:
 	return values.duplicate(true)
@@ -156,12 +178,29 @@ static func validate(file: Variant) -> PackedStringArray:
 					out.append("rt_balance.%s.%s: unknown key" % [k, str(sk)])
 		else:
 			_check_int(out, k, v[k], int(r[0]), int(r[1]))
+	_check_level_table(out, v.get(ENEMY_LEVEL_KEY, null))   # Staffeln (07 CR-32 d)
 	var extra: Array = v.keys()
 	extra.sort()
 	for k: Variant in extra:
 		if not DEFAULTS.has(str(k)):
 			out.append("rt_balance.%s: unknown key" % str(k))
 	return out
+
+
+## Staffeln (07 CR-32 d): the level table starts at 1000 on level 1 and rises from level to level (the range of every
+## value is checked with the other sub values).
+static func _check_level_table(out: PackedStringArray, table: Variant) -> void:
+	if not (table is Dictionary):
+		return
+	var t: Dictionary = table
+	if JsonUtil.is_integral(t.get("1", null)) and int(t["1"]) != ENEMY_LEVEL_BASE_PM:
+		out.append("rt_balance.%s.1: level 1 is %d (got %d)" % [ENEMY_LEVEL_KEY, ENEMY_LEVEL_BASE_PM, int(t["1"])])
+	for lv in range(2, ENEMY_LEVEL_MAX + 1):
+		var a: Variant = t.get(str(lv - 1), null)
+		var b: Variant = t.get(str(lv), null)
+		if JsonUtil.is_integral(a) and JsonUtil.is_integral(b) and int(b) <= int(a):
+			out.append("rt_balance.%s.%d: must rise above level %d (%d <= %d)" % [ENEMY_LEVEL_KEY, lv, lv - 1, int(b),
+				int(a)])
 
 
 static func _check_int(out: PackedStringArray, key: String, value: Variant, lo: int, hi: int) -> void:

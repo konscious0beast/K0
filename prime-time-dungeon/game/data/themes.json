@@ -7,7 +7,140 @@
 			"floors": [
 				1
 			],
+			"art": "metro",
 			"program": []
+		},
+		{
+			"id": "thm_passage",
+			"name": "Passage Ewiger Rabatt",
+			"floors": [
+				2
+			],
+			"art": "mall",
+			"program": [
+				{
+					"id": "daily_passage_midnight_sale",
+					"name": "Mitternachtsverkauf in Halle B"
+				},
+				{
+					"id": "daily_passage_wheel_shift",
+					"name": "Glücksrad-Sonderschicht"
+				},
+				{
+					"id": "daily_passage_remnants",
+					"name": "Restposten-Raum geöffnet"
+				},
+				{
+					"id": "daily_passage_survey",
+					"name": "Kundenbefragung im Hinterzimmer"
+				},
+				{
+					"id": "daily_passage_warehouse_sale",
+					"name": "Lagerverkauf ohne Lager"
+				},
+				{
+					"id": "daily_passage_window",
+					"name": "Schaufenster-Umbau"
+				},
+				{
+					"id": "daily_passage_lost_found",
+					"name": "Fundbüro der Passage"
+				}
+			]
+		},
+		{
+			"id": "thm_fundus",
+			"name": "Der Fundus",
+			"floors": [
+				3
+			],
+			"art": "metro",
+			"program": [
+				{
+					"id": "daily_fundus_costume_rehearsal",
+					"name": "Kostümprobe in Lager 4"
+				},
+				{
+					"id": "daily_fundus_prop_bazaar",
+					"name": "Requisiten-Basar"
+				},
+				{
+					"id": "daily_fundus_makeup",
+					"name": "Maske hat noch fünf Minuten"
+				},
+				{
+					"id": "daily_fundus_script",
+					"name": "Drehbuch-Fund im Archiv"
+				},
+				{
+					"id": "daily_fundus_set_swap",
+					"name": "Kulissentausch: neue Tür"
+				},
+				{
+					"id": "daily_fundus_premiere",
+					"name": "Premierenfeier hinter Tür 2"
+				}
+			]
+		},
+		{
+			"id": "thm_paketzentrum",
+			"name": "Das Paketzentrum",
+			"floors": [
+				4,
+				5,
+				6
+			],
+			"art": "metro",
+			"program": [
+				{
+					"id": "daily_paket_special_delivery",
+					"name": "Sonderzustellung in Halle 7"
+				},
+				{
+					"id": "daily_paket_returns",
+					"name": "Retourenberg geöffnet"
+				},
+				{
+					"id": "daily_paket_belt_three",
+					"name": "Band 3 läuft wieder"
+				},
+				{
+					"id": "daily_paket_auction",
+					"name": "Fundsachen-Versteigerung"
+				},
+				{
+					"id": "daily_paket_inventory",
+					"name": "Inventur im Nebenlager"
+				},
+				{
+					"id": "daily_paket_shift_party",
+					"name": "Schichtwechsel-Party"
+				},
+				{
+					"id": "daily_paket_express",
+					"name": "Express-Raum: heute geöffnet"
+				},
+				{
+					"id": "daily_paket_unknown_sender",
+					"name": "Absender unbekannt: Tür offen"
+				},
+				{
+					"id": "daily_paket_wishlist",
+					"name": "Wunschlager der Regie"
+				},
+				{
+					"id": "daily_paket_overtime",
+					"name": "Überstunden-Lager"
+				},
+				{
+					"id": "daily_paket_sample_room",
+					"name": "Musterraum mit Mustern"
+				},
+				{
+					"id": "daily_paket_last_call",
+					"name": "Letzte Leerung: Raum 12"
+				}
+			]
 		}
 	]
 }

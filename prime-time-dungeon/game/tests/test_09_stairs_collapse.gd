@@ -57,8 +57,12 @@ func test_staircase_rule_at_every_boundary() -> void:
 	st.tempo = "binge"
 	assert_eq(SeasonRules.stairs_refusal(s.state, d), "", "Am Stück: no limit")
 	var real: RunSim = Kit.sim(real_data())
-	assert_eq(SeasonRules.last_floor(real.state, real.data), 1, "the real data: one playable floor (2–18: ST1-C)")
-	assert_eq(SeasonRules.stairs_refusal(real.state, real.data), "", "its stairs lead to the end of the content")
+	assert_eq(SeasonRules.last_floor(real.state, real.data), 6, "the real data: floors 1–6 (ST1-C1; 7–18: ST1-C2)")
+	assert_eq(SeasonRules.stairs_refusal(real.state, real.data), "", "floor 1's stairs lead to floor 2")
+	var akt2: RunSim = Kit.sim(real_data(), "ssn_akt2", "binge")
+	Kit.put_on_floor(akt2, 6)
+	assert_eq(SeasonRules.stairs_refusal(akt2.state, akt2.data), "",
+		"a longer format (Am Stück): floor 6's stairs lead to the end of the content")
 	var none: GameState = GameState.create_new(d, 0, "Kai", 1, &"prime")
 	RunRules.start_floor(none, d, 3)
 	assert_eq(RunRules.command_refusal(none, d, {}, {"t": "descend"}, false, {}), "", "no season: no rule")
@@ -247,17 +251,22 @@ func test_last_collapse_and_the_end_of_the_data() -> void:
 	assert_eq(Kit.event(ev, "end"), {"kind": "end", "why": "last", "floor": 6}, "Letzter Einsturz = Staffelende")
 	assert_eq(s.state.season.result, "end")
 	assert_true(SeasonRules.unlocks_no_net(s.state), "a season played to its end unlocks Ohne Netz (V-7)")
-	var real: RunSim = Kit.sim(real_data())
+	# ST1-C1: the real data end after floor 6 — the finale floor of the basis format, so only a longer format (Akt 2;
+	# Am Stück: its stairs are open) still meets the end of the content there.
+	var real: RunSim = Kit.sim(real_data(), "ssn_akt2", "binge")
+	Kit.put_on_floor(real, 6)
 	ev = real.apply({"t": "descend"})
 	assert_eq(Kit.kinds(ev), ["exp", "end"], "ST1-B decision: the stairs of the last playable floor end the season "
 		+ "(ST1-D: after their Abschluss-EP)")
-	assert_eq(Kit.event(ev, "end"), {"kind": "end", "why": "content", "floor": 1})
+	assert_eq(Kit.event(ev, "end"), {"kind": "end", "why": "content", "floor": 6})
 	assert_eq([real.state.season.result, real.state.season.stairs], ["end", 1], "Bis zum Ende dabei; the stairs count")
-	real.apply({"t": "floor", "floor": 2})
+	real.apply({"t": "floor", "floor": 7})
 	assert_eq(real.rejected_cmds.back()["reason"], "season_over", "no floor after the end")
-	var stay: RunSim = Kit.sim(real_data())
-	ev = Kit.clock_to(stay, DAY0 + 2 * DAY)
-	assert_eq(Kit.event(ev, "end"), {"kind": "end", "why": "content", "floor": 1},
+	var stay: RunSim = Kit.sim(real_data(), "ssn_akt2")
+	Kit.put_on_floor(stay, 6)
+	stay.state.season.collapsed = 5
+	ev = Kit.clock_to(stay, stay.state.season.collapse_utc[5])
+	assert_eq(Kit.event(ev, "end"), {"kind": "end", "why": "content", "floor": 6},
 		"or its collapse: a rescue never goes to a floor without content")
 	assert_false(Kit.kinds(ev).has("rescue"))
 

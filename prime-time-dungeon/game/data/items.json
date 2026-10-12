@@ -597,6 +597,290 @@
 			},
 			"icon": "mic",
 			"color": "#22d3ee"
+		},
+		{
+			"id": "itm_key_f2",
+			"name": "Schlüssel der Passage",
+			"desc": "Öffnet die Treppe der Passage. Mit Kundenkarte, ohne Rabatt.",
+			"type": "key",
+			"rarity": "rare",
+			"price": 0,
+			"sell": 0,
+			"max_stack": 1,
+			"icon": "key",
+			"color": "#c9a227"
+		},
+		{
+			"id": "itm_key_f3",
+			"name": "Requisitenschlüssel",
+			"desc": "Öffnet die Treppe des Fundus. Aus Pappe — schließt trotzdem.",
+			"type": "key",
+			"rarity": "rare",
+			"price": 0,
+			"sell": 0,
+			"max_stack": 1,
+			"icon": "key",
+			"color": "#c9a227"
+		},
+		{
+			"id": "itm_key_f4",
+			"name": "Schichtschlüssel Halle 4",
+			"desc": "Öffnet die Treppe dieser Halle. Bitte quittieren.",
+			"type": "key",
+			"rarity": "rare",
+			"price": 0,
+			"sell": 0,
+			"max_stack": 1,
+			"icon": "key",
+			"color": "#c9a227"
+		},
+		{
+			"id": "itm_key_f5",
+			"name": "Schichtschlüssel Halle 5",
+			"desc": "Öffnet die Treppe dieser Halle. Bitte zweimal quittieren.",
+			"type": "key",
+			"rarity": "rare",
+			"price": 0,
+			"sell": 0,
+			"max_stack": 1,
+			"icon": "key",
+			"color": "#c9a227"
+		},
+		{
+			"id": "itm_key_f6",
+			"name": "Schichtschlüssel Halle 6",
+			"desc": "Öffnet das Finalstudio. Quittieren lohnt sich jetzt.",
+			"type": "key",
+			"rarity": "rare",
+			"price": 0,
+			"sell": 0,
+			"max_stack": 1,
+			"icon": "key",
+			"color": "#c9a227"
+		},
+		{
+			"id": "itm_wpn_price_lance",
+			"name": "Preisschild-Lanze",
+			"desc": "ATK +14. Spitz kalkuliert.",
+			"type": "weapon",
+			"rarity": "rare",
+			"price": 420,
+			"sell": -1,
+			"stats": {
+				"str": 14
+			},
+			"equip_by": [
+				"kai"
+			],
+			"icon": "weapon",
+			"color": "#ff4fa0"
+		},
+		{
+			"id": "itm_wpn_collar_glitter",
+			"name": "Glitzer-Halsband",
+			"desc": "MAG +12. Funkelt bei jedem Bellen.",
+			"type": "weapon",
+			"rarity": "rare",
+			"price": 400,
+			"sell": -1,
+			"stats": {
+				"mag": 12
+			},
+			"equip_by": [
+				"mopsula"
+			],
+			"icon": "collar",
+			"color": "#4fe6ff"
+		},
+		{
+			"id": "itm_arm_sale_vest",
+			"name": "Steppweste „Sale“",
+			"desc": "DEF +10, RES +4. War einmal teuer.",
+			"type": "armor",
+			"rarity": "rare",
+			"price": 380,
+			"sell": -1,
+			"stats": {
+				"def": 10,
+				"res": 4
+			},
+			"equip_by": [
+				"kai"
+			],
+			"icon": "armor",
+			"color": "#ff4fa0"
+		},
+		{
+			"id": "itm_acc_customer_card",
+			"name": "Kundenkarte (abgelaufen)",
+			"desc": "LCK +7. Punkte zählen nicht mehr. Glück schon.",
+			"type": "accessory",
+			"rarity": "rare",
+			"price": 260,
+			"sell": -1,
+			"stats": {
+				"lck": 7
+			},
+			"icon": "ticket",
+			"color": "#ffc93c"
+		},
+		{
+			"id": "itm_wpn_stage_sword",
+			"name": "Theaterschwert",
+			"desc": "ATK +16. Stumpf, aber sehr laut.",
+			"type": "weapon",
+			"rarity": "epic",
+			"price": 560,
+			"sell": -1,
+			"stats": {
+				"str": 16
+			},
+			"crit_bonus": 0.05,
+			"equip_by": [
+				"kai"
+			],
+			"icon": "weapon",
+			"color": "#e8b84a"
+		},
+		{
+			"id": "itm_wpn_collar_gala",
+			"name": "Gala-Halsband",
+			"desc": "MAG +15, MP +10. Für Premieren und Ernstfälle.",
+			"type": "weapon",
+			"rarity": "epic",
+			"price": 540,
+			"sell": -1,
+			"stats": {
+				"mag": 15,
+				"mp": 10
+			},
+			"equip_by": [
+				"mopsula"
+			],
+			"icon": "collar",
+			"color": "#e8b84a"
+		},
+		{
+			"id": "itm_arm_cardboard_armor",
+			"name": "Ritterrüstung aus Pappe",
+			"desc": "DEF +12, RES +5. Bitte nicht nass werden.",
+			"type": "armor",
+			"rarity": "rare",
+			"price": 460,
+			"sell": -1,
+			"stats": {
+				"def": 12,
+				"res": 5
+			},
+			"equip_by": [
+				"kai"
+			],
+			"icon": "armor",
+			"color": "#b08a5a"
+		},
+		{
+			"id": "itm_arm_opera_cape",
+			"name": "Opernumhang",
+			"desc": "DEF +7, RES +11. Rauscht beim Abgang.",
+			"type": "armor",
+			"rarity": "epic",
+			"price": 0,
+			"sell": 250,
+			"stats": {
+				"def": 7,
+				"res": 11
+			},
+			"equip_by": [
+				"mopsula"
+			],
+			"icon": "armor",
+			"color": "#6a2a4a"
+		},
+		{
+			"id": "itm_wpn_carton_lever",
+			"name": "Kartonhebel",
+			"desc": "ATK +19. Öffnet jedes Paket. Und Gegner.",
+			"type": "weapon",
+			"rarity": "epic",
+			"price": 720,
+			"sell": -1,
+			"stats": {
+				"str": 19
+			},
+			"equip_by": [
+				"kai"
+			],
+			"icon": "weapon",
+			"color": "#8a8f96"
+		},
+		{
+			"id": "itm_wpn_collar_tape",
+			"name": "Paketband-Halsband",
+			"desc": "MAG +18, MP +15. Hält, was es verspricht.",
+			"type": "weapon",
+			"rarity": "epic",
+			"price": 700,
+			"sell": -1,
+			"stats": {
+				"mag": 18,
+				"mp": 15
+			},
+			"equip_by": [
+				"mopsula"
+			],
+			"icon": "collar",
+			"color": "#c8b070"
+		},
+		{
+			"id": "itm_arm_padded_vest",
+			"name": "Polsterweste",
+			"desc": "DEF +15, RES +7. Aus echter Luftpolsterfolie.",
+			"type": "armor",
+			"rarity": "rare",
+			"price": 600,
+			"sell": -1,
+			"stats": {
+				"def": 15,
+				"res": 7
+			},
+			"equip_by": [
+				"kai"
+			],
+			"icon": "armor",
+			"color": "#e8f4f8"
+		},
+		{
+			"id": "itm_arm_bubble_cape",
+			"name": "Luftpolster-Cape",
+			"desc": "DEF +9, RES +13, HP +40. Ploppt bei jedem Treffer.",
+			"type": "armor",
+			"rarity": "rare",
+			"price": 600,
+			"sell": -1,
+			"stats": {
+				"def": 9,
+				"res": 13,
+				"hp": 40
+			},
+			"equip_by": [
+				"mopsula"
+			],
+			"icon": "armor",
+			"color": "#a8c8d8"
+		},
+		{
+			"id": "itm_acc_express_sticker",
+			"name": "Express-Aufkleber",
+			"desc": "SPD +3. Alles mit diesem Aufkleber kommt schneller an.",
+			"type": "accessory",
+			"rarity": "epic",
+			"price": 0,
+			"sell": 250,
+			"stats": {
+				"spd": 3
+			},
+			"icon": "stopwatch",
+			"color": "#ff3b30"
 		}
 	]
 }

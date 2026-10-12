@@ -126,7 +126,9 @@ func _ensure_dev_state() -> void:
 ## harness only): --season=<ssn id> starts a new season (Game.start_season) and goes straight into the exploration of
 ## floor 1 — no title, casting or intro. Options (season_args): --tempo=calendar|binge, --mode=net|no_net (Ohne Netz
 ## without the unlock), --speed=<n> (Zeitraffer: season seconds per wall second, 1–10080), --slot=<1..3> (default: the
-## first empty slot, else 0 = never saved), --hero=kai|mopsula, --air=HH:MM, --seed=<int>. true = started and routed.
+## first empty slot, else 0 = never saved), --hero=kai|mopsula, --air=HH:MM, --seed=<int>, --floor=<n> (ST1-C: down
+## the stairs to floor n at once — recorded "descend" / "floor" pairs, Game.season_debug_descend; the staircase rule
+## holds: Am Stück every floor, the calendar floors 1–3 at the start). true = started and routed.
 func _season_boot() -> bool:
 	var o: Dictionary = season_args(OS.get_cmdline_user_args())
 	if o.is_empty():
@@ -151,12 +153,17 @@ func _season_boot() -> bool:
 		push_warning("[Boot] --season=%s could not start → title" % str(o["season"]))
 		return false
 	Game.season_speed = clampi(int(o.get("speed", 1)), 1, Game.SEASON_SPEED_MAX)
+	while Game.state.floor_run.index < int(o.get("floor", 1)):     # ST1-C: --floor=<n>
+		if not Game.season_debug_descend():
+			push_warning("[Boot] --floor=%d: the stairs stay closed below floor %d" % [int(o["floor"]),
+				Game.state.floor_run.index])
+			break
 	Router.goto(Router.SCENE_EXPLORATION, {"spawn": &"start"})
 	return true
 
 
-## The season arguments of the user args: {"season", "tempo", "mode", "speed", "slot", "hero", "air"} — {} without
-## --season=<id>; malformed values are left out (the defaults apply).
+## The season arguments of the user args: {"season", "tempo", "mode", "speed", "slot", "hero", "air", "floor"} — {}
+## without --season=<id>; malformed values are left out (the defaults apply).
 static func season_args(user_args: PackedStringArray) -> Dictionary:
 	var out: Dictionary = {}
 	for a: String in user_args:
@@ -175,7 +182,7 @@ static func season_args(user_args: PackedStringArray) -> Dictionary:
 			"hero":
 				if HeroRules.HEROES.has(kv[1]):
 					out["hero"] = kv[1]
-			"speed", "slot":
+			"speed", "slot", "floor":
 				if kv[1].is_valid_int():
 					out[kv[0]] = kv[1].to_int()
 	return out if out.has("season") else {}

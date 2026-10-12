@@ -116,6 +116,8 @@ Bahnsteigkante/Warnband überall `#F2C230`. Graffiti `#E23E9B`. Schienen `#A8B0B
 |---|---|---|---|---|---|---|---|---|---|---|
 | `#9A9080` (entsättigtes Fliesen-Beige `#D9CBB0`) | `#2A3A44` | `#FF4FA0` | `#FFF0F5` | `#2A1A2A` | `#3A2A3A` | `#5A3A6A` | `#FFE0F0` | `#6E665A` | `#FFF0F5` | `#4FE6FF` (+ Schimmel `#C8E04A`) |
 
+Seit ST1-C1 ist das die Palette der Kulisse Passage (Etage 2 der Staffeln, mit dem Viertel Food-Court, §2.5).
+
 ### 2.4 UI-Palette
 
 | Token | Wert | Verwendung |
@@ -135,6 +137,37 @@ Basis sind die Konstanten von `UiTheme` (02_TECH §3.9); Art ergänzt nur LIVE/P
 | `ui_disabled` | `#5A5266` | ausgegraute Befehle |
 
 ---
+
+### 2.5 Kulissen der Staffeln (09 §3.1, ST1-C1; 09 CR-28)
+
+Die Etagen 2–6 der Basis-Staffel binden ihr Kunst-Thema über die Kulisse (`themes.json → art`: Passage `mall`, Fundus und
+Paketzentrum `metro`). Je Viertel überschreibt eine Palette die der Etage (Schlüssel wie §2.2; leere Zellen = Wert der
+Etagenzeile), und `style` wählt die Ausstattung des Bau-Kits (§6) — ohne sie nähme das Kit den Stil der nächsten Palette,
+und jede Kulisse sähe nach U-Bahn aus. Leitlinie: Passage hell und kühl (Fliesen, Neon-Pink), Fundus warm und samtig
+(dunkles Bühnenholz, Pflaume, Gold, Spotlicht), Paketzentrum kalt und industriell (Beton, Stahlblau, Warngelb,
+Leuchtstoffröhre).
+
+| Kulisse / Viertel | floor | wall | accent | light | fog | ambient | shade | rim | grout | key | neon2 | style |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| **Passage** (Etage 2) = Eingangshalle | `#9A9080` | `#2A3A44` | `#FF4FA0` | `#FFF0F5` | `#2A1A2A` | `#3A2A3A` | `#5A3A6A` | `#FFE0F0` | `#6E665A` | `#FFF0F5` | `#4FE6FF` | mall |
+| Food-Court | `#8A8470` | | `#C8E04A` | `#F4FFD8` | | `#33362A` | | | | | | mall |
+| **Fundus** (Etage 3) | `#3C2A24` | `#4A2440` | `#E8B84A` | `#FFD8A0` | `#1E1020` | `#2E1C2C` | `#3E1E3C` | `#FFE4B8` | `#22160E` | `#FFD8A0` | `#FF5A8A` | — |
+| Anlieferung | | `#3E3440` | | `#FFE6C0` | | | | | | | | cellar |
+| Kostümfundus | | `#5A2448` | `#FF5A8A` | `#FFD0E0` | | `#3A1C34` | | | | | | cellar |
+| Requisitenhalle | `#38302A` | `#4A3A2E` | `#E2A03E` | `#FFE8B0` | | `#302820` | | | | | | cellar |
+| **Paketzentrum** (Etagen 4–6) = Warenannahme | `#585C60` | `#36424E` | `#F2C230` | `#E6F2FF` | `#141A22` | `#262E38` | `#2C3646` | `#D8ECFF` | `#30343A` | `#E6F2FF` | `#FF6A1A` | cellar |
+| Sortierhalle | | `#2E3C4A` | `#FF7A2A` | `#D8EAFF` | | `#22303C` | | | | | | cellar |
+| Hochregallager (Etage 6) | `#4E5256` | `#3A3A36` | `#FF9A2E` | `#FFD59E` | | `#2E2A26` | | | | | | cellar |
+| Laderampe | `#4A4E52` | `#2E3A44` | `#FF3B30` | `#FFF0E0` | | `#242C34` | | | | | | cellar |
+
+**Bossräume einer Kulisse** (`RoomSpec.stage` = `plain`): statt Hausmeister-Büro und Gleis 9 eine Bühne — Scheibe
+Ø 11,2 m im Bodenton × 0,55, leuchtender Goldrand (`HYPE_GOLD`), vier Lampen im Akzent der Palette; Platzhalter bis zu den
+Raumteilen je Kulisse (CR-28). **Besetzung:** Die neuen Gegner und Bosse der Etagen 2–6 sind `ModelSpec`s aus den
+vorhandenen Archetypen und Props (§5.3, §5.4) in den Farben ihrer Kulisse (Kostümständer = `humanoid` + Umhang,
+Pappritter-Ratte = `rodent` + Helm/Schild/Hellebarde, Mottenschwarm = `swarm`, Nebelmaschine und Luftpolstergeist =
+`specter`, Paketkrabbe und Klebebandspinne = `insect`, Retourenschleim und Leuchtpilz = `blob`, Scannerdrohne und
+Rollcontainer = `robot`; Revier-Bosse `humanoid`, Etagenbosse `brute`); jede bleibt im Dreiecks-Budget von
+`test_m4_art_kit`.
 
 ## 3. Shader — verifizierter Code
 

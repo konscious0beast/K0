@@ -10,6 +10,9 @@ var is_boss: bool = false
 var start_state: StringName = &"PATROL"      # &"IDLE" | &"PATROL"
 var can_turn: bool = true                    # false: IDLE group never turns (tutorial)
 var waypoints: Array[Vector2] = []           # room-local XZ; empty PATROL → circle r 4 m around offset
+## Staffeln (09 §3.4; ST1-C, generator v2): the group's level in the floor's band (0 = the encounter's data levels;
+## only ZoneGenerator sets it — BattleBridge scales the enemies of a season to it, 07 CR-32 d).
+var level: int = 0
 
 
 ## Builds a spawn for `encounter` (lead enemy = first enemy of the encounter).
@@ -36,5 +39,8 @@ func to_dict() -> Dictionary:
 	var wps: Array = []
 	for w: Vector2 in waypoints:
 		wps.append([w.x, w.y])
-	return {"id": id, "cell": [cell.x, cell.y], "offset": [offset.x, offset.y], "enc": encounter_id,
+	var d: Dictionary = {"id": id, "cell": [cell.x, cell.y], "offset": [offset.x, offset.y], "enc": encounter_id,
 		"lead": lead_enemy_id, "boss": is_boss, "state": String(start_state), "turn": can_turn, "waypoints": wps}
+	if level > 0:                              # Staffeln (ST1-C): only generator-v2 groups carry a level
+		d["level"] = level
+	return d

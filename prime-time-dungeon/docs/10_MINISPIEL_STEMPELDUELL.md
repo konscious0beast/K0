@@ -1491,8 +1491,8 @@ sich zum Weiterspielen gedrängt.
 `tools/perf.sh` bekommt das Szenario `stempel` (Duell mit vollem Tisch, Durchsage aktiv); Ergebnisse in `PERFORMANCE.md`.
 
 **Umgesetzt (SD2-G):** `tools/perf.sh --only=stempel` → `tests/perf/sd_perf_probe.gd`; ohne `--only` läuft das Szenario
-zuerst und bricht bei einer Überschreitung ab. Messwerte: Kap. 7.3 „Stand SD2-C … F“ (dort statt in `PERFORMANCE.md`,
-U-34). Die Duell-Box hat keine Drohne (U-21): 0 3D-Draw-Calls.
+zuerst und bricht bei einer Überschreitung ab. Messwerte: Kap. 7.3 „Stand SD2-C … F“, seit dem Integrationslauf nach
+ST1-G auch in `PERFORMANCE.md` §1 und §3.10 (U-34). Die Duell-Box hat keine Drohne (U-21): 0 3D-Draw-Calls.
 
 ---
 
@@ -1701,7 +1701,7 @@ durch Umriss-Karten und Seitenleisten (Flächen jetzt deckend), die halb unsicht
 | U-31 | Vorschau Heilen | Eine Heilkarte zeigt höchstens die fehlende Geduld (der Probelauf enthält auch, was danach kommt, z. B. die Durchsage) |
 | U-32 | Lektionen | Lektion 1 hat eine Zeile für Tastatur und Gamepad (`sd_tut:1:keys`: „Markieren Sie …“), Touch sagt „Tippen“. Die Lektionskarte erscheint, nachdem der Tisch die Pflichtkarte markiert hat (sie leuchtet, die anderen sind gedimmt), steht über der Hand und nennt die Tasten des Eingabeschemas |
 | U-33 | Beispiel-Sammlung | Captures und Perf-Probe nutzen `SdSession.use_sample()`: eine feste Sammlung im Speicher (Lernduell erledigt, Ferdi zweimal und der Graf einmal besiegt, vier Heft-Stempel, Mappe B halb gebaut), nie die Datei |
-| U-34 | Messwerte | stehen hier und in Kap. 6.10, nicht in `docs/PERFORMANCE.md` (nicht in der Liste der geteilten Dateien von SD2) — beim nächsten Integrationslauf übernehmen |
+| U-34 | Messwerte | stehen hier und in Kap. 6.10, nicht in `docs/PERFORMANCE.md` (nicht in der Liste der geteilten Dateien von SD2) — beim nächsten Integrationslauf übernehmen; **übernommen** nach ST1-G (`PERFORMANCE.md` §1, §3.10) |
 | U-35 | Mappen-Liste | Die Zeilen der Mappe im Aktenschrank sind 88-px-Ziele mit 12 px Abstand (Kap. 4.8); bei 720 p zeigt die Liste zwei bis drei Zeilen, die Zeile „in der Mappe: n / 2“ unter jeder Karte im Raster zeigt die ganze Mappe |
 | U-36 | Gamepad | Im Duell und im Aktenschrank gilt `CombatInput.apply_input_mode(false)` (Kap. 4.6 „Stand nach SD1“): „Der Graf übernimmt“ auf Y, die Großansicht auf Tab, M und Select; beim Verlassen `apply_for_game()` |
 

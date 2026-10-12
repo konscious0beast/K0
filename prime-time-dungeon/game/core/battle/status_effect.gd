@@ -1,7 +1,8 @@
 class_name StatusEffect extends RefCounted
 ## Active status on a combatant (02_TECH §5.4, GDD §3.9).
 ## Durations count own turns of the bearer and drop by 1 at its TURN_END. A status applied during the bearer's own turn
-## (`fresh`) is not counted down at that turn's end (GDD §3.3: "3 eigene Züge" = the 3 following own turns).
+## (`fresh`) is not counted down at that turn's end (GDD §3.3: "3 eigene Züge" = the 3 following own turns). These turn
+## counts belong to the CTB engine of the Stempelduell (core/stempel/ctb, 10 SD1); RtStatus keeps its own ticks.
 
 var def: StatusDef = null
 var turns_left: int = 0

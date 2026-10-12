@@ -1,5 +1,8 @@
 class_name Combatant extends RefCounted
 ## Battle participant (02_TECH §5.4). Effective stats are integers (status stat_mult applied in permille, 05 CR-12).
+## Shared base of RtUnit (07 §12.7) and of the CTB engine's units (core/stempel/ctb, the Stempelduell, 10 SD1): the CTB
+## runtime fields (ctb_counter, defending, stunt_cooldown, ai / phases / used_once, own_turns, pseudo_def, warned) stay
+## for that engine (10 §6.2 step 2); a real-time unit carries them unused.
 
 const FixedMath := preload("res://core/stats/fixed_math.gd")
 

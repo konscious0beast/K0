@@ -934,7 +934,8 @@ var _season_rival_pending: bool = false
 var _season_intro_pending: bool = false
 var _season_seen: Dictionary = {}           # career "seen" keys read once (Save.career reads the file)
 var _season_cast_at: String = ""            # _season_cast_key of the cached cast reads
-var _season_cast: Dictionary = {}           # "counter", "rank", "need_label" (_season_slow)
+var _season_cast: Dictionary = {}           # "counter", "rank", "need", "need_label" (_season_read)
+var _season_reads: Array[String] = []       # the cast reads still due after a change, one per tick
 
 
 ## A calendar season: the floor countdown is frozen (SeasonRules.floor_timer_frozen) — the collapse display replaces it.
@@ -982,15 +983,18 @@ func _season_ready() -> void:
 	_season_timer.timeout.connect(_season_tick)
 	add_child(_season_timer)
 	_season_timer.start()
-	_season_ticks = SEASON_SLOW_TICKS
-	_season_tick()
+	season_refresh()                          # the counter from the first frame (the floor is built right now)
 
 
-## The collapse display and its warnings now (also the tests' way to refresh it at once).
+## The collapse display, the counter and the warnings now — the cast reads at once instead of one per tick (also the
+## tests' way to refresh the HUD).
 func season_refresh() -> void:
 	_season_ticks = SEASON_SLOW_TICKS
-	_season_cast_at = ""                      # the cast reads again, too
+	_season_cast_at = ""
 	_season_tick()
+	var st: GameState = Game.state
+	while not _season_reads.is_empty() and st != null and st.season != null and st.floor_run != null:
+		_season_read(st, _season_reads.pop_front())
 
 
 func _season_tick() -> void:
@@ -1033,30 +1037,54 @@ func _season_tick() -> void:
 			_season_intro_pending = false
 	if _season_rival_pending:
 		_season_rival_after(st)
+	if not _season_reads.is_empty():              # one cast read per tick after a change (_season_slow)
+		_season_read(st, _season_reads.pop_front())
 	_season_ticks += 1
 	if _season_ticks >= SEASON_SLOW_TICKS:
 		_season_ticks = 0
 		_season_slow(st)
 
 
-## Every 5 s: the counter line (from floor 2), its first explanation, the Pechvogel of the floor. The cast reads
-## (CastSim rebuilds its model from the season block on every call: a few ms each) run only when their inputs moved
-## (_season_cast_key) — the 5-s tick itself costs next to nothing (PERFORMANCE.md §3.11).
+## Every 5 s: the counter line (from floor 2), its first explanation, the Pechvogel of the floor. CastSim rebuilds its
+## model from the season block on every call (≈ 3 ms; the rank ≈ 6 ms): the reads run only when their inputs moved
+## (_season_cast_key: a command changed the cast or the candidate's standing, at the latest after a minute) and then
+## one per 0.5-s tick — the 5-s tick itself costs next to nothing (PERFORMANCE.md §3.11).
 func _season_slow(st: GameState) -> void:
-	var s: SeasonState = st.season
-	var has_cast: bool = CastSim.has_cast(st)
-	var show_counter: bool = st.floor_run.index >= 2 and has_cast
 	var ck: String = _season_cast_key(st)
 	if ck != _season_cast_at:
 		_season_cast_at = ck
-		_season_cast = {"counter": SeasonView.counter(st, DB.data) if show_counter else {},
-			"rank": CastSim.rank_of(st, DB.data, 0) if show_counter else 0, "need_label": ""}
-		var need: int = CastSim.in_need(st, DB.data) if has_cast else -1
-		if need >= 0:
-			_season_cast["need_label"] = CastSim.label(st, DB.data, need)
+		_season_reads.clear()
+		if CastSim.has_cast(st):
+			if st.floor_run.index >= 2:
+				_season_reads.append("counter")
+				_season_reads.append("rank")
+			_season_reads.append("need")
+	_season_show(st)
+
+
+## One cast read of the HUD (counter | rank | need — the label only when the Pechvogel changed), then the lines.
+func _season_read(st: GameState, what: String) -> void:
+	match what:
+		"counter":
+			_season_cast["counter"] = SeasonView.counter(st, DB.data)
+		"rank":
+			_season_cast["rank"] = CastSim.rank_of(st, DB.data, 0)
+		"need":
+			var need: int = CastSim.in_need(st, DB.data)
+			if need != int(_season_cast.get("need", -1)):
+				_season_cast["need"] = need
+				_season_cast["need_label"] = CastSim.label(st, DB.data, need) if need >= 0 else ""
+	_season_show(st)
+
+
+## The counter line from the cached reads (hidden until the first read) and the cues that go with it.
+func _season_show(st: GameState) -> void:
+	var s: SeasonState = st.season
+	var has_cast: bool = CastSim.has_cast(st)
+	var c: Dictionary = _season_cast.get("counter", {}) as Dictionary
+	var show_counter: bool = st.floor_run.index >= 2 and has_cast and not c.is_empty()
 	season_counter.visible = show_counter
 	if show_counter:
-		var c: Dictionary = _season_cast.get("counter", {}) as Dictionary
 		var rank: int = int(_season_cast.get("rank", 0))
 		season_counter.text = UiUtil.glyph_safe(str(c.get("text", "")) + (" · Platz %d" % rank if rank > 0 else ""))
 		var key: String = "season_counter_intro_" + str(c.get("kind", "vest"))
@@ -1068,15 +1096,16 @@ func _season_slow(st: GameState) -> void:
 		_season_say("season_need", {"cand": need_label}, "need")
 
 
-## What the HUD's cast reads depend on (cheap to build): the cast's stored rows, clock and bookkeeping, the candidate's
-## sort key and pause shift, the floor, the result and the minute of the season clock.
+## What the HUD's cast reads depend on (cheap to build): the cast's stored rows, clock and bookkeeping (they change
+## only with a command), the candidate's sort key and pause shift, the floor, the result — and the wall-clock minute,
+## so nothing stays stale for longer than that. Not the season clock: Am Stück it moves every 0.4 s.
 func _season_cast_key(st: GameState) -> String:
 	var s: SeasonState = st.season
 	var c: Dictionary = s.cast
 	return "%d|%s|%s|%s|%s|%s|%s|%d|%d|%s|%s|%d" % [str(c.get("state", "")).hash(), str(c.get("h", 0)),
 		str(c.get("seq", 0)), str(c.get("favors", 0)), str(c.get("helped", 0)), str(c.get("lead", -1)),
 		str(SeasonRules.rank_key(st)), CastSim.pause_total(s), st.floor_run.index, s.result, str(s.vest),
-		SeasonRules.now(st) / 60]
+		Time.get_ticks_msec() / 60000]
 
 
 func _season_was_seen(key: String) -> bool:
@@ -1136,6 +1165,8 @@ func _season_on_room(cell: Vector2i, _kind: int, _first: bool) -> void:
 	var layout: FloorLayout = minimap.get("layout") as FloorLayout if minimap != null else null
 	if layout == null or layout.quarter_boss == Vector2i(-1, -1) or not layout.linked(layout.quarter_boss).has(cell):
 		return
+	if season_said.has("%d:%d:rival" % [st.season.day0_utc, st.floor_run.index]):
+		return                                    # said on this floor: no cast reads on the next door
 	var who: int = CastSim.rival_near(st, DB.data)
 	if who >= 0:
 		_season_say("season_rival", {"cand": CastSim.label(st, DB.data, who)}, "rival")

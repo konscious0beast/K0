@@ -573,9 +573,16 @@ func test_the_collapse_display_in_the_hud() -> void:
 	var cached: String = str(hud.get("_season_cast_at"))
 	hud.call("_season_slow", st)
 	assert_eq(str(hud.get("_season_cast_at")), cached, "PERFORMANCE.md §3.11: no cast read while nothing moved")
+	assert_true((hud.get("_season_reads") as Array).is_empty(), "nothing queued")
+	Game.replaying = true
+	assert_true(Game.season_clock(HOUR), "a recorded clock step moves the cast")
+	Game.replaying = false
+	hud.call("_season_slow", st)
+	assert_ne(str(hud.get("_season_cast_at")), cached, "the cast moved: read again")
+	assert_eq((hud.get("_season_reads") as Array).size(), 3, "counter, rank, Pechvogel — one per 0.5-s tick")
 	st.season.utc = st.season.collapse_utc[1] - 50 * 60
 	hud.season_refresh()
-	assert_ne(str(hud.get("_season_cast_at")), cached, "the season clock moved: the cast is read again")
+	assert_true((hud.get("_season_reads") as Array).is_empty(), "season_refresh reads at once")
 	var lbl: Label = hud.season_panel.find_child("CollapseText", true, false) as Label
 	assert_eq(lbl.get_theme_color("font_color"), UiTheme.C_GOLD, "≤ 1 h: gold — calm, never red")
 	assert_has(said, "season_warn_3600", "M.O.D. says it once")

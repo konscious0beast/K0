@@ -428,6 +428,7 @@ func _fill_programme(st: GameState) -> void:
 		row.add_child(n)
 		var nm: Label = UiUtil.label(UiUtil.glyph_safe(str(pd["name"])), &"", 16)
 		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		nm.size_flags_vertical = Control.SIZE_SHRINK_BEGIN   # a row beside a two-line name keeps its text on top
 		nm.custom_minimum_size = Vector2(120, 0)
 		nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART   # a long name takes a second line, never "…"
 		row.add_child(nm)

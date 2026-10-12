@@ -385,12 +385,14 @@ prime-time-dungeon/
     │   ├── stempel/     Minispiel „Stempelduell“ (10): ctb/ = die Engine des früheren Rundenkampfs, eingefroren
     │   ├── show/        ShowModel (Hype, Zuschauer, Follower), Achievements, Sponsoren, M.O.D.-Ansagen, Marotten/Liga
     │   ├── loot/        LootRoller (Lootboxen, Truhen, Pools)
-    │   ├── progression/ GameState, FloorRun, Party, Inventar, EXP, Shop, BattleBridge, SaveCodec, Talents, Casting, HeroRules
+    │   ├── progression/ GameState, FloorRun, Party, Inventar, EXP, Shop, BattleBridge, SaveCodec, Talents, Casting, HeroRules,
+    │   │                Persona; TalentTree, Professions (Staffeln, 09: Stubs aus ST0)
+    │   ├── season/      Staffeln (09): SeasonState, SeasonRules, SleepResolver, CastSim — Stubs aus ST0, gefüllt von ST1
     │   ├── dungeon/     FloorLayout, DungeonGenerator, Spawns, Etagen-Events, ExploreEvent
     │   └── live/        SHOWRUN: RunLog, RunSim, RunRules, StateHash, Gift, GiftPolicy, Sponsor-Fenster, Quest, Bestenliste,
     │                    KI-Admin: TwistApplier (Twists), RegieDirector (Offline-Regie ab Etage 2)
-    ├── data/            19 JSON-Dateien: 17 GameData-Tabellen + events.json (SHOWRUN-Events) + mod_filter.json (Filter
-    │                    für „M.O.D. live“)
+    ├── data/            26 JSON-Dateien: 23 GameData-Tabellen (seit 09 ST0 auch seasons, professions, cast, themes) +
+    │                    rt_balance.json + events.json (SHOWRUN-Events) + mod_filter.json (Filter für „M.O.D. live“)
     ├── art/             shaders/, materials/, kit/ (prozedurale Figuren, Räume, Props, VFX), gallery/, icons/
     ├── scenes/          boot/, title/, exploration/, combat/ (Echtzeitkampf: Director, HUD), safe_room/, ui/
     └── tests/           run_tests.gd, test_*.gd, lib/, fixtures/, perf/, tools/, capture.gd, capture_recipes.gd

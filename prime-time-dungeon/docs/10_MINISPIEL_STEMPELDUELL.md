@@ -36,6 +36,11 @@
 > Einzelheiten und Abweichungen: Kap. 6.2 „Umgesetzt“; was SD2 vorfindet und braucht: Kap. 7.3 „Stand nach SD1“; Bericht mit
 > Gates: 07 §12.6 „Stand R5b-2b“.
 >
+> **Stand ST0 (2026-10-12, Branch `ptd/st0`):** Kap. 6.2 Zeile 6 ist mit 09 ST0 umgesetzt — `Command.TYPES` kennt `sd`
+> (Schema `{"v": 1, "op": "start", "opp", "deck", "rh"}` | `{"v": 1, "op": "end", "moves", "res"}`), `RunRules`, `RunSim`
+> und `GameReplay` lehnen ihn mit `sd_unavailable` ab (`test_m8_command`, `test_09_st0_contract`); der Tag-Präfix `cast_`
+> ist registriert (02_TECH §0.8). SD3 ersetzt die Ablehnung durch `SdRules` in eigenen Abschnitten.
+>
 > **Namen der Phasen:** Der Orchestrator nennt sie M1–M3. Weil „M0–M8“ schon die Module aus 02_TECH sind — und **M1 genau der
 > CTB-Kampf-Kern ist, um den es hier geht** —, heißen sie hier **SD1–SD3** (Stempelduell-Phasen): SD1 = M1, SD2 = M2,
 > SD3 = M3, gleicher Inhalt.
@@ -1430,8 +1435,8 @@ SD3 (Etage 8)
    └─ Feinschliff (Art, Ton) mit der Akt-2-Produktion der Kulisse Amt (04 Phase 4/5, 09 Kap. 3.5)
 ```
 
-**Stand 2026-10-12:** 07 R5b Schritte 1–4 mit SD1 sind umgesetzt (07 §12.6 „Stand R5b-2b“); ST0 mit dem Stub `sd` steht
-aus. SD2 kann beginnen.
+**Stand 2026-10-12:** 07 R5b Schritte 1–4 mit SD1 sind umgesetzt (07 §12.6 „Stand R5b-2b“); ST0 mit dem Stub `sd` ist
+gelandet (Branch `ptd/st0`, 02_TECH §0.8: `sd` → `sd_unavailable` in `RunRules`/`RunSim`/`GameReplay`). SD2 kann beginnen.
 
 **Warum so:** SD1 muss in R5b liegen, weil R5b sonst löscht, was SD2 braucht. SD2 hängt an keiner Staffel-Mechanik und
 kann deshalb früh Spaß beweisen (Extras-Vorschau); SD3 braucht eine Etage 8, die es erst mit ST1-C gibt.

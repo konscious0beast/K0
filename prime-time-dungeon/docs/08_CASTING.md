@@ -12,6 +12,14 @@
 > sind kein Kampftalent mehr, sondern ein Vorsprung wie in WoW: **+50 in einem Beruf** und ein **Hobby-Rezept** (09 Kap. 8.6).
 > Die 17 Starttalente, die Wahl 1 aus 2 und der Tausch entfallen; K1 schrumpft (Kap. 10.3).
 >
+> **Stand 09 ST0 (2026-10-12, Branch `ptd/st0`, 02_TECH §0.8):** Der ruhende K0-Starttalent-Pfad ist in einem Commit entfernt
+> (`PartyMember.origin_talent` und Leser, `PersonaRules.offer`/`swap_command`/`can_swap`, `PersonaText.plain_line`,
+> `PersonaProfile.talent`/`offer`, die Starttalente in Daten, Validator und Fixtures) — hash-neutral, das v1-Flag behält
+> seine K1-Form. Das Casting zeichnet **`persona` v2** auf (`{"v": 2, "prof", "recipe", "bias"}`; Kanon-Kai, Status-Kacheln
+> und Allrounder:in mit leerem `prof`), v1 bleibt lesbar; neue Gründe `unknown_prof`, `unknown_recipe`. Die Spalte `prof` der
+> `origins.json` wird gegen `professions.json` geprüft. Wo dieses Dokument unten „bis 09 ST0“ oder „ab 09 ST0“ sagt, gilt
+> jetzt der Stand nach ST0.
+>
 > **Abgestimmt auf** `00_BRIEF.md`, `01_GDD.md` (§1.2, §1.4, §4, §10.2, §11, §13, §14.2), `02_TECH.md` (§0.2, §3.4, §4, §6.4,
 > §10, §12.1), `03_ART.md` (§5.3–5.5), `04_STRATEGIE_ROADMAP.md` (Kap. 2.3, 2.7, 3), `05_LIVE_MODUS.md` (Kap. 2, §1.5, §4.3,
 > §7.3, §10.4, §10.6), `06_PROGRESSION_MAROTTEN_KI_ADMIN.md` (§1, §3, §4, §5), `07_ECHTZEITKAMPF.md` (§2.9, §9.3, §10.2, §12) und

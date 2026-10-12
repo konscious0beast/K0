@@ -13,6 +13,10 @@
 >
 > Stand: 2026-10-10. Phase 0 abgeschlossen; Phase 1 (Grey-Box-Loop) und der technische Teil von Phase 2 (Etage 1 spielbar,
 > SHOWRUN S0) sind gebaut; offen sind die Exit-Punkte von Phase 2 (Kap. 3.4, Stand in Kap. 10.1).
+>
+> **CR-29 (2026-10-12, mit 09 ST0 eingearbeitet):** „Staffel“ heißt seit `09_STAFFELN.md` der Spielzyklus (6, 12 oder 18
+> Etagen mit Einsturzterminen über Wochen). Die Inhaltspakete heißen deshalb **„Akt 1–3“** (Akt 1 = Etagen 1–6, Akt 2 =
+> 7–12, Akt 3 = 13–18), das **Format einer Staffel folgt aus dem Kauf** (09 V-14), und in einer Staffel ist nichts käuflich.
 
 ---
 
@@ -44,7 +48,8 @@
    **Entscheidung 2026-10-08:** Echtgeld von Zuschauer:innen fließt **nur an Spiel/Betreiber**, nie an Spieler:innen oder
    Streamer:innen (keine Creator-Beteiligung); Echtgeld-Weg ist der **eigene Shop (Web + App-Store-IAP)**, Twitch nur kostenlose
    Interaktion. Geholfen werden darf nur in **Sponsor-Fenstern** (begrenzte Plätze, feste Zeitpunkte; 05 Kap. 6.13).
-8. Inhaltlich: **Staffel 1 = Etagen 1–6** bis 1.0; **Staffel 2 = Etagen 7–9** als bezahlte Erweiterung nach 1.0.
+8. Inhaltlich: **Akt 1 = Etagen 1–6** (Grundspiel, Format Basis-Staffel) bis 1.0; **Akt 2 = Etagen 7–12** und **Akt 3 =
+   Etagen 13–18** als bezahlte Erweiterungen nach 1.0 (CR-29; „Staffel“ ist seit 09 der Spielzyklus).
 9. Baseline-Szenario: **Solo + KI bis Ende Phase 2**, danach **kleines Team (4–5 Personen)**, finanziert aus Förderung + Publisher oder Crowdfunding.
 10. Marketing beginnt mit der **Steam-Seite in Phase 3** und lebt von **15–30-Sekunden-Clips der Show-Mechanik** (M.O.D.-Sprüche, Stunts, Sponsor-Drops).
 11. Rechtlich: DCC ist **Inspiration, keine Vorlage**. Vor dem ersten öffentlichen Auftritt machen wir ein **Distanz-Review** (Begriffe/Figuren) und eine **Markenrecherche** für den Titel.
@@ -66,7 +71,7 @@ Nachtschicht im Tierheim, und plötzlich **Kandidat:in in DUNGEON PRIME TIME** �
 kann, sich für Hochadel hält und Feuer zaubert. Jede Etage hat einen **Countdown**; findest du die Treppe nicht, ist die Sendung
 für dich vorbei. Kämpfe laufen **rundenbasiert mit sichtbarer Zugreihenfolge** — aber die Zuschauer:innen langweilen sich schnell:
 Abwechslung, Stunts, knappe Siege und Combos treiben den **Hype** — und Hype bringt **Sponsor-Geschenke mitten im Kampf**.
-Sicher spielen oder spektakulär spielen? Das ist jede Runde die Frage. Eine Etage = 20 Minuten. Perfekt für Feierabend, Steam Deck und Handy.
+Sicher spielen oder spektakulär spielen? Das ist jede Runde die Frage. Folgen à 20–60 Minuten, als Staffel über Wochen oder am Stück. Perfekt für Feierabend, Steam Deck und Handy.
 
 ### 1.3 Zielgruppe
 
@@ -92,7 +97,7 @@ Altersfreigabe-Ziel: **USK 12 / PEGI 12** (Comic-Gewalt, schwarzer Humor, kein G
 | **Hades** | Erzählung, die mit jedem Lauf weiterläuft; Figuren reagieren auf Ereignisse; EA als Entwicklungsmodell | Echtzeit-Action |
 | **Spiele mit Zuschauer-Integration** (z. B. Dead Cells' Twitch-Modus, Choice Chamber) | Chat stimmt über Ereignisse ab → Streams werden zu Inhalten | Zuschauer-Macht, die Spieler:innen bestraft |
 
-Positionierungs-Satz (intern): **„FF10-Kampf trifft Reality-TV-Satire — in 20-Minuten-Etagen.“**
+Positionierungs-Satz (intern): **„FF10-Kampf trifft Reality-TV-Satire — in Folgen à 20–60 min, als Staffel über Wochen oder am Stück.“**
 Abgrenzung zu DCC-nahen Erwartungen: **europäische TV-Satire** (Teleshopping, Bürokratie, „Hausordnung § 7“, U-Bahn, Kiosk 24/7)
 statt amerikanischer Reality-Ästhetik — das ist zugleich Markenkern und rechtlicher Abstand (Kap. 2).
 
@@ -105,7 +110,7 @@ statt amerikanischer Reality-Ästhetik — das ist zugleich Markenkern und recht
 | U3 | **Die Show ist das UI** | sofort erkennbare Screenshots (LIVE-Badge, Zuschauerzahl, Chat-Ticker) | ShowOverlay, 03_ART Kap. 9 |
 | U4 | **M.O.D.** — sarkastische Moderations-KI | Stimme der Marke, kommentiert Achievements, Loot, Tode | `mod_lines.json` |
 | U5 | **Graf Mopsula** | Maskottchen, gelehrter Graf mit Fußnoten, Merch-fähig | GDD 1.2, Safe-Room-Szenen |
-| U6 | **Countdown-Etagen (20–25 min)** | Druck + kurze Sessions → ideal für Deck/Handy | Etagen-Timer GDD 2.9 |
+| U6 | **Folgen à 20–60 min** — als Staffel über Wochen (Einsturztermine) oder am Stück (Countdown je Etage) | Druck + kurze Sessions → ideal für Deck/Handy | Etagen-Timer GDD 2.9, Sendeplan 09 §2.4 |
 | U7 | **SHOWRUN** — gleiche Seeds, Live-Fenster, Bestenlisten, Zuschauer-Votes | Wiederspielwert + Streamer-Inhalte, eingebaut statt aufgesetzt | 05_LIVE_MODUS, S0 im Slice |
 | U8 | **Fair by design** | Satire auf Gacha-Kultur, die selbst kein Gacha ist: keine gekauften Zufallsinhalte für Spieler:innen | Brief Kap. 5 |
 
@@ -148,6 +153,7 @@ Umbenennungen kosten dank datengetriebenem Design (`res://data/*.json`, `mod_lin
 | Kronen an Mopsula (Item + Optik) | „adliges Haustier mit Krone“ ist DCC-Archetyp-nah | **bereits im Slice umgesetzt, bindend:** Waffe heißt `itm_wpn_collar_signet` „Siegel-Halsband“ (Werte unverändert MAG +11, MP +10; ersetzt das frühere „Kronen-Halsband“). Optik-Signatur: **goldene Siegel-Plakette am Halsband (Torus + Box, Metall-Material M)**, **kein** `crown`-Prop am Mopsula-Rig. `itm_acc_queen_crown` „Rattenkrone“ hat `equip_by: ["kai"]` — Mopsula kann sie nicht tragen. Die Krone der Rattenkönigin (`ticket_crown`) bleibt: Sie ist die Gegenspielerin, deren Adelsanspruch Mopsula verspottet. |
 | Erdoberfläche wird „zurückgebaut“ | Prämissen-Idee, frei — aber prominent | **behalten**, in Marketing nicht als Haupt-Hook nutzen; Hook ist das Show-System |
 | Safe Room | Gattungsbegriff in Spielen | behalten (In-World-Name je Raum: „Kiosk 24/7“, „Pumpenhaus“, „Stellwerk“) |
+| **Staffel-Struktur** (09; CR-29, 09 V-15: Etagen mit Einsturztermin über Wochen, bis zu 18 Etagen, Spezies und Klasse auf Etage 3, Zähler der verbliebenen Mitkandidat:innen, Ausloggen in der Welt) | **hoch** — jede Mechanik ist frei, aber die Summe ist die Struktur des Buchs | Ausdruck konsequent eigen: TV-Sprache (Staffel, Folge, Sendeplan, Generalprobe, Recall, Vorlauf, „Kulissen im Aufbau“, Tagesprogramm), Rettung durch die Regie (Mit Netz), „Ohne Netz“ statt Buch-Begriffen; im Spiel **Kandidat:innen**, nie „Crawler“; Zähler „Weiße Weste“/„Noch dabei“; keine Etagenthemen, -reihenfolge, Figuren, Titel oder Ränge des Buchs; M.O.D. statt „System-KI“. **Das Anwalts-Memo (unten) prüft die Staffel-Struktur, bevor sie irgendwo öffentlich erwähnt wird [zu prüfen].** Marketing nennt weder „18 Etagen“ noch die Staffel-Struktur als Hook oder Buch-Bezug; 18 bleibt das größte Format, weil die Idee es nennt. |
 
 **Regel für den Slice:** Die Anzeigenamen „NOVA SYNDIKAT“ und „Quartier-Boss“ bleiben in Brief, GDD und ART
 vorerst stehen (der Brief ist bindend); „Fan-Box“ ist seit dem Polish-Pass überall „Fanpost-Paket“ (E2, erster Schritt). Alle IDs sind bewusst **neutral** (`box_fan`, `enm_boss_hausmeister`, `RoomCell.Kind.QUARTER_BOSS`,
@@ -251,7 +257,7 @@ Creator-Beteiligung ist gestrichen, Twitch Bits tragen kein Echtgeld-Geschenk (n
 | **4** | Production (bis EA) | Sep 2027 – Apr 2028 | 8 Monate | **M-P4:** Etagen 1–3 EA-fertig, Next-Fest-Demo |
 | **5** | Early Access PC | Mai 2028 – Mai 2029 | 12 Monate | **M-P5:** Etagen 4–6, Klassen, **1.0 PC** |
 | **6** | Mobile-Port & Launch | Nov 2028 – Aug 2029 | 9 Monate (parallel zu 5) | **M-P6:** Android + iOS Launch |
-| **7** | Live-Ops / Updates | ab Mai 2028 fortlaufend | — | SHOWRUN S1–S5, Staffel 2 (Etagen 7–9) 2030 |
+| **7** | Live-Ops / Updates | ab Mai 2028 fortlaufend | — | SHOWRUN S1–S5, Akt 2 (Etagen 7–12) 2030, Akt 3 (Etagen 13–18) danach |
 
 Termine mit Steam Next Fest (in der Regel Februar, Juni, Oktober) **[Termine je Jahr in Steamworks prüfen]**.
 Dauer-Faktoren: Szenario A (Solo + KI durchgehend) **× 1,8**; Szenario C (Team 8–12) **× 0,7** bei größerem Umfang (Etagen 1–9 bis 1.0).
@@ -269,8 +275,13 @@ Dauer-Faktoren: Szenario A (Solo + KI durchgehend) **× 1,8**; Szenario C (Team 
 2029 Q1 | P5 ██████   Update 3: Etage 6 | P6 Soft-Launch Android
 2029 Q2 | 1.0 PC (Mai) | P6 ████
 2029 Q3 | P6 Launch Android + iOS | P7
-2030    | P7: Staffel 2 (Etagen 7–9), SHOWRUN S2–S4
+2030    | P7: Akt 2 (Etagen 7–12), SHOWRUN S2–S4
 ```
+
+**Staffel-Phasen (09 Kap. 11, CR-29):** Die Staffeln kommen in drei Phasen, unabhängig von der Kalender-Leiste oben:
+**ST1** Offline-Staffel (privat, ohne Server; nach dem Echtzeitkampf 07 R5b — Vertrags-Durchgang ST0 gelandet), **ST2**
+Online-Staffeln asynchron (mit 05 S1: Konten, Verifier), **ST3** Echtzeit-Präsenz (mit 05 S4: Dedicated Server). Gates und
+Aufwand: 09 Kap. 11.3–11.6; „Sendung starten“ wird mit dem ST1-Gate Standard.
 
 ### 3.2 Phase 0 — Konzept / Brief ✔
 
@@ -333,7 +344,7 @@ Safe Room (Speichern, Automat) → Hausmeister → Treppe/Rattenkönigin → „
 | **Art-Upgrade** | Blender → glTF nach 03_ART Kap. 10: Kai, Mopsula, M.O.D., 6 Gegner Etage 1, Hausmeister; Post-Import-Skript; Key Art | Figuren **ersetzen Kit-Rezepte ohne Code-Änderung**; Steam-Kapselbilder |
 | **Umgebungs-Upgrade** | Modulteile Etage 1 als `.glb` (Wände, Säulen, Props) | gleiche MultiMesh-Pipeline |
 | **Audio** | Komponist:in: Haupt-Thema, Erkundung, Kampf, Boss, Safe Room (5 Tracks); SFX-Grundbibliothek | Musik-Bus, Ducking unter M.O.D. |
-| **Tools** | (1) Etagen-Editor (Godot-`@tool`-Szene für `floors.json`), (2) Balancing-Simulator als CLI (`godot --headless -s tools/sim_balance.gd`) mit CSV-Ausgabe, (3) Text-Pipeline: alle Strings → CSV/PO für Übersetzung, (4) Crash-Report (Opt-in) | Content-Durchsatz 1 Etage / 8–10 Wochen |
+| **Tools** | (1) Etagen-Editor (Godot-`@tool`-Szene für `floors.json`), (2) Balancing-Simulator als CLI (`godot --headless -s tools/sim_balance.gd`) mit CSV-Ausgabe, (3) Text-Pipeline: alle Strings → CSV/PO für Übersetzung, (4) Crash-Report (Opt-in) | Content-Durchsatz 1 Etage / 8–10 Wochen für jede **neue Kulisse** (CR-29, 09 V-5); Varianten-Etagen einer Kulisse 3–4 Wochen erst nach Beweis (09 Kap. 3.5) |
 | **Content-Prototypen** | Etage 2 (Grey Box, 3 Gegner, Boss „Der Ausverkauf“), Etage 3 mit **Klassenwahl** (Datenmodell steht bereits) | Beweis, dass die Pipeline skaliert |
 | **Business** | UG gründen, Markenanmeldung, Förderanträge, Publisher-Pitches, Steam-Seite (Monat 1), Discord, Website | Finanzierung für Phase 4–5 gesichert |
 | **Team** | Hiring nach Kap. 4 | Team ab Phase 4 vollständig |
@@ -377,7 +388,7 @@ Safe Room (Speichern, Automat) → Hausmeister → Treppe/Rattenkönigin → „
 | EA-Launch 0.5 | Mai 2028 | Etagen 1–3, Klassen, SHOWRUN S0 |
 | Update 1 (0.6) | Jul/Aug 2028 | **Etage 4**, Community-Wünsche (QoL), Balancing |
 | Update 2 (0.7) | Okt/Nov 2028 | **Etage 5**, **Streamer-Modus lite** (Twitch-Chat-Votes lokal im Client, ohne eigenen Server, ohne Geld), SHOWRUN **S1** (Tages-Seed + Online-Bestenliste) |
-| Update 3 (0.8) | Feb 2029 | **Etage 6** + Staffel-Finale, Vertonung M.O.D. (DE + EN) |
+| Update 3 (0.8) | Feb 2029 | **Etage 6** + Großes Finale von Akt 1, Vertonung M.O.D. (DE + EN) |
 | 1.0 | Mai 2029 | Polish, 5 weitere Sprachen, Achievements Steam, Cloud-Saves, Preis 19,99 € |
 
 | | |
@@ -406,7 +417,7 @@ Safe Room (Speichern, Automat) → Hausmeister → Treppe/Rattenkönigin → „
 
 | Strang | Inhalt | Gate |
 |---|---|---|
-| **Staffel 2** | Etagen 7–9 als bezahlte Erweiterung (2030) | 1.0 ≥ 85 % positiv, Umsatz deckt ≥ 9 Monate Team |
+| **Akt 2 / Akt 3** | Etagen 7–12 bzw. 13–18 als bezahlte Erweiterungen (Akt 2 2030); Staffel-Formate 12 bzw. 18 Etagen | 1.0 ≥ 85 % positiv, Umsatz deckt ≥ 9 Monate Team |
 | **SHOWRUN S2** | Live-Zuschauen, Votes, kostenlose Fan-Währung „Applaus“ | S1 stabil (0 Desyncs in 1 000 Bot-Läufen) |
 | **SHOWRUN S3/S5** | Echtgeld-Zuschauergeschenke über den **eigenen Shop** (S3 Web-Shop, S5 App-Store-IAP), nur in Sponsor-Fenstern; Twitch nur kostenlos (Entscheidung 2026-10-08) | **schriftliche Rechtsprüfung** für alle Zielländer (05 L10), Store-Regeln für Geschenke an Dritte geklärt **[zu prüfen]**, Betriebsteam für Support/Zahlungen vorhanden |
 | **SHOWRUN S4** | Koop 2–4 (Dedicated Server) | Netcode-Prototyp, Budget für Server-Betrieb |
@@ -580,21 +591,28 @@ teilnehmen **[Regel prüfen]**, deshalb nicht zu früh mit Primitiv-Optik.
 
 | Plattform | Modell | Preis (**Planwert**) |
 |---|---|---|
-| **Steam EA** | Premium | **14,99 €** (EA-Käufer:innen erhalten alle Staffel-1-Updates) |
+| **Steam EA** | Premium | **14,99 €** (EA-Käufer:innen erhalten alle Akt-1-Updates) |
 | **Steam 1.0** | Premium | **19,99 €**; Launch-Rabatt 10 % |
 | **Demo (PC)** | kostenlos | Etage 1 + 1 Event-Lauf; Spielstand übertragbar |
-| **Android/iOS** | Free-Demo + **einmaliger Vollversions-Kauf** | **9,99 €** (Staffel 1 komplett); keine Werbung, keine Energie, keine Verbrauchs-IAPs |
-| **Staffel 2** (Etagen 7–9) | Erweiterung | PC 9,99 €, Mobile 6,99 € |
+| **Android/iOS** | Free-Demo + **einmaliger Vollversions-Kauf** | **9,99 €** (Akt 1 komplett); keine Werbung, keine Energie, keine Verbrauchs-IAPs |
+| **Akt 2** (Etagen 7–12) | Erweiterung | PC 9,99 €, Mobile 6,99 € |
+| **Akt 3** (Etagen 13–18) | Erweiterung | **[Preis festzulegen]** |
 | **Soundtrack** | DLC | 4,99 € |
 | **Supporter-Pack** | DLC (ab 1.0) | 6,99 € — digitales Artbook + **rein kosmetische** Outfits für Kai/Mopsula |
 
 Regionale Preise nach Steam-Empfehlung; erster Rabatt frühestens **3 Monate** nach EA-Launch.
 
+**Formate nach Kauf (CR-29, 09 V-14):** Das Grundspiel spielt die **Basis-Staffel** (6 Etagen, 24 Tage), die Erweiterung
+Akt 2 das Format mit 12 Etagen (54 Tage), Akt 3 das mit 18 Etagen (84 Tage). Staffeln werden je Format zusammengestellt,
+nie gemischt; **in einer Staffel ist für Kandidat:innen nichts käuflich**.
+
 ### 6.2 Regeln (verbindlich)
 
 1. **Kein Pay-to-Win:** nichts Kaufbares wirkt auf Werte, Kämpfe, Bestenlisten.
 2. **Keine Echtgeld-Zufallsinhalte für Spieler:innen** (Brief Kap. 5). Lootboxen werden nur **verdient**.
-3. **Keine Werbung**, keine Energie-/Wartezeit-Mechaniken, keine Verbrauchs-Käufe.
+3. **Keine Werbung**, keine Energie-/Wartezeit-Mechaniken, keine Verbrauchs-Käufe. „Wartezeit-Mechanik“ heißt: Warten
+   wird verkauft. Der Kalender einer Staffel ist eine Wartezeit, verkauft aber nichts (09 Kap. 10 Nr. 7); privat geht es
+   auch „Am Stück“ (CR-29).
 4. **Kosmetik** ist der einzige zusätzliche Kaufinhalt neben Erweiterungen/Soundtrack.
 5. **Zuschauer-Echtgeldgeschenke** (SHOWRUN S3/S5) nur nach Rechtsprüfung, nur im Live-Modus, mit allen Leitplanken L1–L16 aus 05 — als Zusatz, nicht als Geschäftsgrundlage.
 6. **Erlös nur an den Betreiber** (Entscheidung 2026-10-08): keine Auszahlung, keine Beteiligung an Spieler:innen oder
@@ -663,7 +681,7 @@ für Code, Menschen für Kunst/Text/Musik“.
 | Jan 2028 | Demo öffentlich | 10 000 |
 | Feb 2028 | **Steam Next Fest** | 15 000–18 000 |
 | Mai 2028 | **EA-Launch** (Gate ≥ 15 000, Ziel 25 000) | 25 000 |
-| Mai 2029 | 1.0 + Rabatt-Event, Presse-Welle 2 | Follower-Basis für Staffel 2 |
+| Mai 2029 | 1.0 + Rabatt-Event, Presse-Welle 2 | Follower-Basis für Akt 2 |
 
 Weitere Termine: Deutscher Computerspielpreis (Einreichung prüfen), devcom/Indie-Arena-Formate, Steam-Themen-Festivals (RPG, Roguelike) **[Termine prüfen]**.
 
@@ -727,7 +745,7 @@ Skala: Wahrscheinlichkeit (W) / Auswirkung (A) = niedrig · mittel · hoch.
 
 | # | Risiko | W | A | Gegenmaßnahme | Frühindikator |
 |---|---|---|---|---|---|
-| R1 | **Scope Creep** — 6–9 Etagen sind zu viel Content | hoch | hoch | Staffel 1 = Etagen 1–6, Staffel 2 nach 1.0; Etagen-Template (8–10 Gegner, 2 Bosse, 25–30 Achievements) als Obergrenze; Pipeline-Beweis Phase 3 (Etage in ≤ 4 Wochen Grey Box) | Etage dauert > 10 Wochen |
+| R1 | **Scope Creep** — 6–9 Etagen sind zu viel Content | hoch | hoch | Akt 1 = Etagen 1–6, Akt 2 nach 1.0; Etagen-Template (8–10 Gegner, 2 Bosse, 25–30 Achievements) als Obergrenze; Pipeline-Beweis Phase 3 (Etage in ≤ 4 Wochen Grey Box) | Etage dauert > 10 Wochen |
 | R2 | **Show-USP trägt nicht** (wird ignoriert oder nervt) | mittel | hoch | Gate Phase 1/2 mit harten Playtest-Zahlen; Hype-Werte datengetrieben (`Balance`), schnell änderbar | < 50 % nennen Show-System als Highlight |
 | R3 | **Sichtbarkeit auf Steam** zu gering | hoch | hoch | Steam-Seite früh, Clip-Takt, Next Fest, Streamer-Modus; Launch-Gate 15 000 Wishlists | < 3 000 Wishlists nach 6 Monaten |
 | R4 | **IP-Nähe zu DCC** (Abklatsch-Vorwurf, Ansprüche) | mittel | hoch | Distanz-Review + Anwalts-Memo vor Steam-Seite; keine DCC-Begriffe im Marketing; europäische Satire als Profil | Community-Kommentare „DCC-Kopie“ |
@@ -739,6 +757,19 @@ Skala: Wahrscheinlichkeit (W) / Auswirkung (A) = niedrig · mittel · hoch.
 | R10 | **Echtgeld-Zuschauergeschenke**: Recht/Plattform/Reputation | mittel | hoch | Phase 7, schriftliche Rechtsprüfung, Pur-Liga Standard, Leitplanken L1–L16, Erlös nur an den Betreiber, Hilfe nur in Sponsor-Fenstern; kein Budget davon abhängig | Gutachten negativ → Fallback „nur nicht-zufällig/kostenlos“ |
 | R11 | **KI-Abhängigkeit**: Codequalität, Wartbarkeit, Offenlegung, Kosten | mittel | mittel | statische Typisierung, Modulverträge, Tests als Pflicht, Code-Reviews, menschliche Abnahme; keine KI-Assets im finalen Spiel | wachsende Bug-Rate pro Update |
 | R12 | **Marktumfeld**: offizielles DCC-Spiel/TV-Start besetzt die Nische — oder Engine-/Store-Änderungen | mittel | mittel | Eigenes Profil (Show-System, europäische Satire); TV-Hype als Chance für das Genre nutzen, ohne DCC zu nennen; Godot-Version pro Phase einfrieren, Updates nur zwischen Phasen | Ankündigungen der Rechteinhaber |
+
+**Risiken der Staffeln (CR-29; Details, Gegenmaßnahmen und Frühindikatoren: 09 Kap. 11.8):**
+
+| # | Risiko | W | A | Gegenmaßnahme (Kurzform) | Frühindikator |
+|---|---|---|---|---|---|
+| R13 | **Inhaltsmenge** für bis zu 18 Etagen | hoch | hoch | Kulissen × 3, wiederkehrende Revier-Bosse, Boss-Baukasten, Formate nach Kauf 6 → 12 → 18 | Varianten-Etage > 4 Wochen |
+| R14 | **Kalender-Bindung** bricht ab | mittel | hoch | Tagesprogramm, Gratis-Tragen, Wochen-Gebühr, Crashkurs, Sendepause; privat „Am Stück“ | Tagebuchstudie < 7 von 10 bis zum Ende |
+| R15 | **Überforderung** durch neue Systeme | mittel | hoch | „Sendung starten“ mit Standardwerten, eine neue Regel je Etage | < 8 von 10 erklären die Regeln |
+| R16 | **Tod als Schläfer** (Ohne Netz) wirkt unfair | mittel | mittel | Warnung, Taktik, sichtbare Gefahr, Notfall-Rückzug, getestete Todesraten | Abbrüche nach Schläfer-Tod |
+| R17 | **Determinismus über bis zu 84 Tage** | mittel | hoch | Sendetermine, hash-neutrale Patches, Journal, Uhr als Command, Plattform-Matrix | Desync im Harness |
+| R18 | **Server- und Moderationskosten** (ST2/ST3) | mittel | hoch | Gates mit Messung, ein Schreiber, Shards nur mit Menschen, Arenen statt Welt-PvP | Kosten je Spielenden über Plan |
+| R19 | **KI-Besetzung wirkt künstlich** | mittel | mittel | Kalibrierung, Profile mit Gedächtnis, ehrliche Kennzeichnung | Playtest: „Ticker ist egal“ |
+| R20 | **IP-Summe** wirkt wie Buch-Kopie | hoch | hoch | Distanz-Notiz (Kap. 2.3), Anwalts-Memo vor jeder Erwähnung, eigene Begriffe, kein „18 Etagen“ im Marketing | Community-Kommentare |
 
 ### 9.2 KPIs je Phase
 
@@ -772,7 +803,7 @@ Skala: Wahrscheinlichkeit (W) / Auswirkung (A) = niedrig · mittel · hoch.
 | | Store-Bewertung | ≥ 4,3 |
 | **7** | Teilnahme Event-Läufe (Anteil monatlich aktiver Spieler:innen) | ≥ 20 % |
 | | Streamer-Modus-Nutzung (Sessions mit aktivem Modus) | ≥ 300/Monat |
-| | Staffel-2-Kaufquote der 1.0-Besitzer:innen | ≥ 25 % |
+| | Akt-2-Kaufquote der 1.0-Besitzer:innen | ≥ 25 % |
 
 ---
 
@@ -851,7 +882,7 @@ anderen — auch wenn deren Implementierung noch fehlt. Die Tests von M1/M2 nutz
 | E2 | Distanz-Review: Umbenennungen (Fan-Box → „Fanpost-Paket“, Quartier-Boss → „Revier-Boss“, NOVA SYNDIKAT → „NOVA MEDIENGRUPPE“, Box → „Requisitenkiste“) | Vorschläge aus Kap. 2.3 übernehmen; reine Textänderung in `name`/`text`, IDs (`box_fan`, `enm_boss_hausmeister`) bleiben. Mopsula-Kronenverzicht (`itm_wpn_collar_signet`, `acc_queen_crown` nur Kai) ist bereits umgesetzt; **Polish-Pass (2026-10-10):** „Fanpost-Paket“ umgesetzt, Mopsula ohne Pluralis Majestatis und Königs-Motive (`skl_mop_expert_opinion` „Gräfliches Gutachten“ statt „Königlicher Erlass“), Liga-Achievements neutral („Leichtes Gepäck im Doppelpack“), Validator-Wortlisten `ip_words.gd` | Exit Phase 2 |
 | E3 | Finaler Titel | Markenrecherche „PRIME TIME DUNGEON“; Fallback „RATINGS DUNGEON“ | Exit Phase 2 |
 | E4 | Firmenform & Sitz | UG (haftungsbeschränkt) am Wohnort | Start Phase 3 |
-| E5 | Staffel-Schnitt | Staffel 1 = Etagen 1–6 (1.0), Staffel 2 = 7–9 (Erweiterung) | jetzt (Planungsgrundlage) |
+| E5 | Akt-Schnitt und Formate (CR-29, ersetzt „Staffel-Schnitt“) | Akt 1 = Etagen 1–6 (Grundspiel, Basis-Staffel 24 Tage, 1.0), Akt 2 = 7–12 (Format 12 Etagen, 54 Tage), Akt 3 = 13–18 (18 Etagen, 84 Tage) als Erweiterungen; Format nach Kauf, nie gemischt, in der Staffel nichts käuflich | **entschieden 2026-10-11** (09 V-14) |
 | E6 | Kickstarter ja/nein | nur bei erfüllten Gates (Kap. 5.4) | Phase-3-Monat 5 |
 | E7 | Lizenz-Track DCC | nur bei erfüllten drei Bedingungen (Kap. 2.4) | frühestens Ende Phase 3 |
 | E8 | Echtgeld-Zuschauergeschenke | bleiben gewollt (Brief), aber **Phase 7 nach Rechtsprüfung**. **Entschieden 2026-10-08:** C (eigener Shop: Web + App-Store-IAP) ist der Echtgeld-Weg, Erlös nur an den Betreiber, B (Twitch Bits) nur kostenlose Interaktion; Hilfe nur in Sponsor-Fenstern (05 Kap. 6.13). Offen nur: gibt es ein Bits-Erlösmodell für Entwickler **[zu prüfen]**? | vor Planung von S3 |

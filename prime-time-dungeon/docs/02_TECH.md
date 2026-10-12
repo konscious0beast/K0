@@ -262,7 +262,11 @@ früheren `test_m8_state_hash`), `tests/test_sd_boundaries.gd` (Grenztest 10 §6
 
 ### 0.8 Vertrags-Durchgang ST0: Staffeln (09, CR-27, Stand 2026-10-12)
 
-Ein Durchgang des Integrators (09 Kap. 11.2), Branch `ptd/st0`.
+Ein Durchgang des Integrators (09 Kap. 11.2), Branch `ptd/st0`. ST0 legt für die Staffeln (`09_STAFFELN.md`) nur Verträge an
+— Felder, Tabellen, Commands, Stubs und Haken in geteilten Dateien; danach schreibt jedes ST1-Paket nur eigene Dateien.
+**Schalter (09 V-4):** Jede Regel der Staffeln hängt an `state.season != null`. In ST0 kann keine Staffel starten (die
+Stubs lehnen jeden Staffel-Command ab), also bleibt jeder heutige Lauf bitgleich: **kein `SIM_VERSION`-Sprung** (bleibt 4;
+er kommt, wenn „Sendung starten“ die Kampagne ersetzt, 09 Kap. 11.1), `SaveCodec.VERSION` bleibt 2.
 
 **Vorlauf — CTB-Reste der Erkundung (07 §12.6):** `scenes/exploration/exploration.gd` verliert den unerreichbaren
 CTB-Kampfstart (`_after_battle`, die `battle_result`-Rückkehr, den Zweig in `_trigger_encounter`/`on_enemy_contact`/
@@ -272,6 +276,135 @@ wahren `Game.is_realtime()` (ohne Spielstand startet nichts, wie bisher); `Game.
 `CombatInput.apply_for_game()` im Erkundungs-HUD bleibt (stellt die Echtzeit-Belegung nach einem Bildschirm mit der alten
 Belegung wieder her, 10 §4.6), ebenso die Belegung `toggle_speed` (Tempo des Duells). Verhalten unverändert (`fullrun.sh`
 gleich).
+
+**K0-Starttalent-Pfad entfernt (CR-33, ein Commit, hash-neutral):** `PartyMember.origin_talent` und seine Leser
+(Starttalent-Zweig von `Talents.has_any`/`_effects`, `Talents.origin_field_range_pm` und sein Aufruf in
+`HeroRules.field_mods`, `SaveCodec._sanitize_persona`), die Starttalente in `GameData` (`origin_talent`,
+`has_origin_talent`) und im Validator (`origins.json → talents`, die Kachel-Felder `talent`/`alt`, die Hobby-Felder
+`talent`/`title`/`desc`, `canon.talent`, Id-Muster `origin_talents`), die `tal_org_`-Prüfung und die Tausch-Form des
+Commands `persona`, `PersonaRules.offer`/`swap_command`/`can_swap` mit den Gründen `no_swap`/`same`,
+`PersonaText.plain_line`, `PersonaProfile.talent`/`offer`; die Fixtures ohne `tal_org_`-Einträge. Hash-neutral: Seit K1
+trug kein Zustand ein Starttalent, und das Flag behält die K1-Form `{"v": 1, "bias", "swapped": false}` — K1-Logs und
+-Spielstände spielen und hashen wie bisher; der Schlüssel `origin_talent` eines K0-Spielstands wird ignoriert.
+
+**Modul `core/season/`** (09 §9.1; rein, `RefCounted`, ohne Szenen und Autoloads, Ganzzahlen, Zufall nur `SeedUtil`).
+Schicht: nutzt `core/data`, `core/dungeon`, `core/progression`, `core/rt`; `core/live` nutzt es, nie umgekehrt;
+`GameState` hält `SeasonState` als reines Datenobjekt. Die Stub-Dateien beginnen mit
+`# STUB(ST0) — owned by 09-ST1-<X>. Replace completely, keep the public API.`:
+
+| Datei | Klasse | Eigentum | Stand ST0 |
+|---|---|---|---|
+| `core/season/season_state.gd` | `SeasonState` | ST1-B | Felder des Start-Commands (`def_id`, `format`, `tempo`, `mode`, `number`, `day0_utc`, `collapse_utc`) und die Uhr (`utc`; `seen_unix` = lokale Wanduhr, `UNHASHED_KEYS`); `to_dict`/`from_dict` |
+| `core/season/season_rules.gd` | `SeasonRules` | ST1-B | `refusal`/`apply` für `season`, `clock`, `sleep` — lehnt mit `season_unavailable` ab |
+| `core/season/sleep_resolver.gd` | `SleepResolver` | ST1-G | dto. für `away` |
+| `core/season/cast_sim.gd` | `CastSim` | ST1-F | dto. für `cast` |
+| `core/progression/talent_tree.gd` | `TalentTree` | ST1-D | dto. für `talent` v2 |
+| `core/progression/professions.gd` | `Professions` | ST1-E | dto. für `prof`, `gather`, `craft` |
+| `core/data/defs/{season,profession,recipe,theme}_def.gd` | `SeasonDef`, `ProfessionDef`, `RecipeDef`, `ThemeDef` | ST1-B, -E, -E, -C | Mindestschema mit `from_dict` |
+| `core/data/validators/{seasons,professions,cast,themes}.gd` | (ohne `class_name`) | ST1-B, -E, -F, -C | Schema, Id-Muster, Referenzen, Bereiche |
+
+`season_clock.gd`, `level_band.gd`, `cast_member.gd`, `cast_event.gd`, `ability_book.gd`, `zone_generator.gd` und
+`core/live/command_journal.gd` (`CommandJournal`, ST1-B: Zeilen schreiben und lesen, offenen Kampf finden; die Haken in
+`Save` stehen unten) entstehen in ihren Paketen — kein geteilter Code braucht sie in ST0.
+
+**Commands (09 §9.1, §8.7; 10 §6.8):** `Command.TYPES` += `season`, `clock`, `away`, `sleep`, `prof`, `gather`, `craft`,
+`cast` und der Stub `sd`; extern (cmd id 0, Brief 6b Nr. 4: die Uhr wird von außen gestellt) sind `clock` und `away`
+(`Command.EXTERNAL` = `gift`, `twist`, `clock`, `away`).
+
+| `t` | Form (`Command.validate`) |
+|---|---|
+| `season` | `{"v": 1, "op": "start", "def": ssn_, "format": 6 \| 12 \| 18, "tempo": calendar \| binge, "mode": net \| no_net, "number" ≥ 1, "day0_utc", "collapse_utc": [eine Zeit je Etage, aufsteigend nach day0_utc], "cast": {}}`; `{"v": 1, "op": "tempo" \| "leave"}`; `{"v": 1, "op": "pause", "sec" ≥ 1, "why": user \| clamp}` |
+| `clock`, `away` | `{"sec" ≥ 1}` |
+| `sleep` | `{"tactic": RtVocab.RT_PRESETS}` |
+| `prof` | `{"op": learn \| unlearn \| rank \| head, "id": prf_}` |
+| `gather` | `{"node"}` |
+| `craft` | `{"recipe": rcp_, "n" ≥ 1}` |
+| `cast` | `{"op": hire \| trade \| help, "who" ≥ 0 (Platz), "item"?}` |
+| `talent` v2 | `{"v": 2, "member", "row" ≥ 1, "id"}` (ohne `v` die 06-B-Wahl) |
+| `persona` v2 | `{"v": 2, "prof": "" \| prf_, "recipe": "" \| rcp_, "bias"}` (v1 `{"v": 1, "talent", "bias"}` bleibt lesbar) |
+| `sd` | `{"v": 1, "op": "start", "opp", "deck": [Karten-Ids], "rh"}` \| `{"v": 1, "op": "end", "moves", "res"}` |
+
+Legalität: `RunRules.command_refusal` → `RunRules.season_refusal(state, data, c)` — der Start einer Staffel fragt
+`SeasonRules` (es gibt noch keine), jeder andere Staffel-Command ohne Staffel → `no_season`, mit Staffel das zuständige
+Modul (ST0: `season_unavailable`); `sd` → `sd_unavailable` bis SD3. Wirkung: `RunRules.apply_season(state, data, c) ->
+Array[ExploreEvent]` — die eine Regel von Live-Spiel und `RunSim.apply`. `RunSim.apply` und `GameReplay._apply` haben je
+Typ einen eigenen Zweig (`test_m8_command`); `RunRules.refused_id` nennt bei `persona` v2 den Beruf.
+
+**Persona v2 (CR-33, 09 §8.6):** Das Casting zeichnet seit ST0 `{"t": "persona", "v": 2, "prof", "recipe", "bias"}` auf
+(`PersonaRules.command_for(data, persona)`: Beruf des Vorleben-Vorsprungs aus `origins.json → prof`, leer für Kanon-Kai,
+Status-Kacheln und Allrounder:in; Hobby-Rezept = das `hobby_recipe` des Hobby-Berufs; keine Vorleben- oder Hobby-Id im
+Command). Flag `{"v": 2, "prof", "recipe", "bias"}`; `PersonaRules.head_start(state)` liefert `{"prof", "recipe"}` für
+ST1-E. Neue Gründe `unknown_prof`, `unknown_recipe`. v1 bleibt lesbar und legt das K1-Flag bitgleich an. Spielwirkung
+außerhalb von Staffeln: nur `bias` (wie bisher).
+
+**Felder (additiv, nur geschrieben, wenn vom Standard abweichend):** `GameState.season: SeasonState` (null = keine
+Staffel; `to_dict` schreibt `"season"` nur mit Staffel), `PartyMember.rested` (Ausgeruht-EP), `professions` (prf → Wert
+1–300), `prof_head` (Vorsprung-Beruf), `talent_rows` (Reihe → Talent), `FloorRun.gather_nodes` (Fundstelle → Ladungen),
+`respawn` (Gruppe → Rückkehr-Sekunde der Staffel-Uhr), `daily` (Programmpunkte der Etage).
+
+**StateHash-Abdeckung:** `StateHash.of` hasht den Staffel-Block und alle neuen Felder (über `to_dict`) — außer
+`StateHash.EXCLUDED_SEASON_KEYS` = `SeasonState.UNHASHED_KEYS` = `["seen_unix"]` (die lokale Wanduhr, nur offline). Ohne
+Staffel gibt es die Schlüssel nicht: alle alten Golden-Hashes gelten.
+
+**Spielstand (§6.4):** Save v2 mit **Staffel-Block** — additiv, keine Version 3: `state.season` (Objekt oder fehlt) und die
+Felder oben, alle optional; v2-Dateien ohne Block laden und hashen unverändert. `SaveCodec.validate` verlangt für
+`state.season` ein Objekt; `_sanitize_season_member` verwirft unbekannte Berufe (Werte auf 1–300), einen unbekannten
+Vorsprung-Beruf und Talentreihen mit unbekanntem Talent; `_sanitize_season` behält den Block bei unbekannter Vorlage
+(Warnung — eine Staffel wird durch Laden nie zur Kampagne). **Journal-Haken (Stubs, ST1-B):** `Save.journal_path(slot)`
+(`<save_dir>/slot_N.journal`), `Save.journal_append(slot, cmd) -> Error`, `Save.journal_replay(slot) -> Array[Dictionary]`;
+`Game.record` ruft `journal_append` nur mit Staffel, bevor der Command wirkt. Die Migration Kampagne → private Staffel kommt
+mit dem `SIM_VERSION`-Sprung (09 §8.7).
+
+**Daten (dritter Vertrags-Durchgang des eingefrorenen `DataValidator`):** Tabellen `seasons`, `professions`, `cast`, `themes`
+(in `GameData.TABLES`, Pflichtdateien für `load_dir`); Id-Muster `ssn_`, `prf_` (statt des reservierten `job_`), `rcp_`,
+`mat_`, `nod_`, `thm_`, Profile `^[a-z][a-z0-9_]*$`; Zusatzschlüssel `professions.json → recipes, materials, nodes`,
+`cast.json → names`; Hook-Zeilen für die vier Validatoren; Tag-Präfixe `cast_`, `season_`, `prof_`, `sleep_`, `daily_`
+und `ssn_` (der Anker); die Referenzprüfung `origins.json → prof` (Kacheln und Hobbys) gegen `professions.json` (CR-33).
+Getter in `GameData` (`season_def`, `all_seasons`, `profession`, `all_professions`, `recipe`, `all_recipes`, `material`,
+`gather_node`, `cast_profile`, `all_cast_profiles`, `cast_names`, `theme`, `all_themes`; `has_id`/`ids` kennen auch
+`recipes`, `materials`, `nodes`) und `DB` (`season_def`, `profession`, `recipe`, `theme`). Daten minimal: `ssn_basis`
+(6 Etagen, 24 Tage, 100 Plätze, 20:00, `rules.pvp` = `arena`), **alle acht Berufe** (die Referenzprüfung der `origins.json`
+verlangt sie) mit dem Hobby-Rezept `rcp_cooking_hobby` „Kantinen-Eintopf à la Zwinger 7“, einem Material und einer
+Fundstelle, ein Profil (Statist:in) mit einem Namen, die Kulisse `thm_unterstadt` „Die Unterstadt“. Fixtures:
+`data_min`/`rt_min` bekommen die vier Tabellen (leer bzw. die zwei Berufe ihrer Kataloge), neu
+`tests/fixtures/season_min/` (vier Tabellen, `season_min.gd`, `save_v2_season.json`). `mod_lines.json`: Anker
+`mod_ssn_anchor_01` (Tag `ssn_anchor`; die Ids folgen `mod_<tag>_<nn>`) am Dateiende hinter Block K — dahinter wächst der
+Block der Staffeln.
+
+**`Game`-Fassaden (§3.4):** `start_season(slot, def_id, opts = {}, hero_id = …, p_persona = null)` (Stub, ST1-B),
+`season_op(cmd)`, `season_clock(sec)`, `season_away(sec)`, `logout(tactic)`, `pick_talent_row(member, row, talent)`,
+`prof_action(op, id)`, `gather(node)`, `craft(recipe, n = 1)`, `cast_action(op, who, item = "")` — alle `-> bool` über
+einen Weg (`Command.validate` + `RunRules.command_refusal` → `record` → `RunRules.apply_season` → `_dispatch`);
+`GameReplay` spielt die Staffel-Commands über sie nach. In ST0 liefern alle `false` und zeichnen nichts auf.
+
+**Tests:** neu `test_09_st0_contract` (Signaturen per Reflexion, Felder, Stub-Köpfe und Eigentümer, Konstanten, Schalter
+und Ablehnungen in `RunRules`/`RunSim`/beiden Verifiern, Fassaden ohne Aufzeichnung, additive Felder und Hash, Save-Block-
+Rundreise, Persona v2, Daten, Validator, Anker). Angepasst: `test_08_k0_contract` (K0-API weg, Persona v2,
+`Command.TYPES`, Anker-Reihenfolge), `test_m8_command` (neue Typen, Schemas, externe Eingänge), `test_08_persona_rules`,
+`test_08_persona_replay`, `test_08_casting_ui`, `test_08_origins_data`; mit dem Vorlauf `test_m0_router`,
+`test_m3_exploration_scene`, `test_r2_combat_world`, `test_r5b_default_realtime` und die Nutzer von
+`auto_start_battle` (jetzt `auto_start_combat`) in Tests und Werkzeugen. Der Full-Run-Bot (`scenes/boot/fullrun.gd`) prüft
+im Casting jetzt `persona` v2 (`PersonaRules.command_for` des eingegebenen Profils).
+
+**Abweichungen und Auslegungen:** (1) Berufe: alle acht statt „je ein Eintrag“ (die `prof`-Spalte der `origins.json`
+nennt alle acht, die Referenzprüfung gilt ab ST0). (2) Tag-Präfix `ssn_` zusätzlich zur Liste aus 09 Kap. 11.2 Nr. 4: Der
+Anker `mod_ssn_anchor_01` braucht nach der Id-Regel den Tag `ssn_anchor`. (3) `sleep` gehört zu `SeasonRules` (ST1-B,
+09 Kap. 11.3), `away` zu `SleepResolver` (ST1-G). (4) Ohne Hobby ist das Hobby-Rezept leer (es kostet dann im
+Gewerke-Büro Credits, 09 §8.6); Kanon-Kai bekommt das Kochen-Rezept über sein Hobby Tiere. (5) `DB.data_hash()` ändert
+sich durch die neuen Datendateien (Bestenlisten-Einträge tragen ihn nur als Information). (6) `Game.is_realtime()` bleibt
+als öffentliche API (Tests, Werkzeuge).
+
+**Versionen und Sendetermine (09 §9.1, V-1, V-4; Regel ab ST1-B/ST2):** Der Staffel-Eintrag trägt `sim_version` und
+`data_hash`. Privat übernimmt ein App-Update eine laufende Staffel beim nächsten Etagenwechsel (neuer Anker). Online kommen
+Regel- und Datenänderungen nur zu festen Sendeterminen; dazwischen gibt es nur hash-neutrale Patches (die CI spielt die Logs
+jeder live laufenden Version nach). Rückfall: Datenstand je Staffel und archivierte Verifier je `sim_version` (05 §4.3).
+Logs einer anderen Version zeigt der Kern wie seit K0 als „ältere Version“ (`RunSim.version_status`).
+
+**Offen für ST1-C/D (Schema der Bestandstabellen):** `floors.json` (`variant`, `level_band`, `zones`), `talents.json`
+(`row`, `col`, `tree`, `spec`) und `party.json` (`exp_table`) brauchen Regeln im eingefrorenen `DataValidator`, der
+unbekannte Schlüssel ablehnt; `rt_balance.json` (`enemy_level_pm`) prüft `RtBalance.validate` (`core/rt`, 07 CR-32 d).
+09 Kap. 11.2 Nr. 4 nennt sie für ST0 nicht; sie kommen per Änderungsantrag (oder in einem vierten Vertrags-Durchgang) mit
+dem jeweiligen Paket.
 
 ---
 
@@ -284,7 +417,10 @@ Die Dateien des Vertrags-Durchgangs 07 R1a + 08 K0 (`core/rt/**`, `scenes/combat
 origins,looks}.gd`, `core/progression/persona_*.gd`, `core/show/persona_*.gd`, `autoload/show_persona_hooks.gd`,
 `art/kit/persona_look.gd`, `data/{rt_balance,origins,looks}.json`, `tests/fixtures/rt_min/**`, `tests/tools/platform_matrix*.gd`,
 `tools/platform_matrix.sh`) stehen mit Eigentümer-Phase in §0.6 (Stand R1a/K0; R5b trägt sie hier nach). K1 (08) hat seine
-Szenen unten eingetragen (`persona_casting`, `persona_card`); Kern und Daten der Persona stehen weiter in §0.6.
+Szenen unten eingetragen (`persona_casting`, `persona_card`); Kern und Daten der Persona stehen weiter in §0.6. Die
+Dateien des Durchgangs ST0 (`core/season/**`, `core/progression/{talent_tree,professions}.gd`, die vier Defs und
+Validatoren der Staffel-Tabellen, `data/{seasons,professions,cast,themes}.json`, `tests/fixtures/season_min/**`,
+`tests/test_09_st0_contract.gd`) stehen mit ihrem Eigentümer (ST1-B … ST1-G) in §0.8.
 
 ### 1.1 Projektwurzel
 
@@ -1403,7 +1539,7 @@ Qualitätsstufen (angewendet von `Game.apply_settings()` auf `get_tree().root`; 
 
 ```gdscript
 var combat: RtSim = null              # the running real-time combat (null outside one; never part of a save)
-func is_realtime() -> bool            # a run exists (state != null): every run fights in real time since R5b part 2b
+func is_realtime() -> bool            # a run exists (state != null); no game code asks since ST0 (scenes: has_state)
 func make_rt_setup(cmd: Dictionary) -> RtSetup    # records the encounter (with "rt"), seed "battle",
 	# BattleBridge.make_rt_setup_rules (the run's rules), combat_started + battle_started, the ct-0 prelude
 func combat_boundary() -> void        # one tick boundary: at most one gift (external first, then system), 07 §9.2
@@ -1423,6 +1559,26 @@ func apply_loadout(cmd: Dictionary) -> bool      # R5a: the recorded loadout (sk
   `PartyMember.rt_preset`/`rt_toggles` (kein Log-Eintrag; live und in beiden Verifiern gleich).
 - `replay_log` spielt einen Echtzeitkampf über genau diese Aufrufe in der Tick-Reihenfolge des `CombatDirector` nach; ein
   kompaktiertes Log wird expandiert abgespielt (07 §10.3).
+
+#### Staffeln (09 §9.1; Stand ST0: Fassaden, die Regeln dahinter sind Stubs, §0.8)
+
+```gdscript
+func start_season(slot: int, def_id: String, opts: Dictionary = {}, hero_id: String = HeroRules.DEFAULT_HERO,
+		p_persona: PersonaProfile = null) -> bool   # Stub (ST1-B): new game with the "season" start before floor/hero/persona
+func season_op(cmd: Dictionary) -> bool        # "season" (tempo, pause, leave; the replay also passes its start)
+func season_clock(sec: int) -> bool            # {"t": "clock", "sec"} — external input (cmd id 0)
+func season_away(sec: int) -> bool             # {"t": "away", "sec"} — external input (cmd id 0)
+func logout(tactic: String) -> bool            # {"t": "sleep", "tactic"} (RtVocab.RT_PRESETS)
+func pick_talent_row(member_id: String, row: int, talent_id: String) -> bool   # "talent" v2
+func prof_action(op: String, prof_id: String) -> bool     # "prof": learn | unlearn | rank | head
+func gather(node_id: String) -> bool           # "gather"
+func craft(recipe_id: String, n: int = 1) -> bool          # "craft"
+func cast_action(op: String, who: int, item: String = "") -> bool   # "cast": hire | trade | help
+	# all: Command.validate + RunRules.command_refusal (season_refusal) → record → RunRules.apply_season → _dispatch;
+	# false = refused, nothing recorded (ST0: always false — no season can start)
+```
+
+`record(cmd)` schreibt mit Staffel zusätzlich `Save.journal_append(state.slot, cmd)` (vor der Wirkung, 09 V-3).
 
 ### 3.5 `Show` (M2)
 
@@ -1639,6 +1795,12 @@ func save_replay(p_log: RunLog) -> Error                         # user://replay
 func last_error() -> String
 ```
 
+Staffeln (09 §9.1, ST0 — Haken; ST1-B füllt sie): `func journal_path(slot: int) -> String` (`save_dir +
+"/slot_%d.journal"`), `func journal_append(slot: int, cmd: Dictionary) -> Error` (eine Zeile, geschrieben und geflusht,
+bevor der Command wirkt; Stub: `OK`, schreibt nichts), `func journal_replay(slot: int) -> Array[Dictionary]` (die Commands
+des Journals, eine abgerissene letzte Zeile verworfen; Stub: `[]`). `Game.record` ruft `journal_append` nur mit Staffel
+(`state.season != null`), §0.8.
+
 Event-Läufe (`Game.mode == &"event_offline"`, Slot 0) werden nie in einen Spielstand-Slot geschrieben — weder `save_slot`
 noch `autosave` noch `record_game_over` berühren dann Slot-Dateien; sie hinterlassen nur Bestenliste und Replay. Lokale
 Bestenlisten und Replays sind normales, editierbares JSON: nie hochgeladen, nie vertrauenswürdig (05 §10.4).
@@ -1810,6 +1972,11 @@ Fokus-Stil aller Buttons: 3 px `C_ACCENT_2`-Rahmen (StyleBox `focus`).
 | talents (06-B) | `tal_` | `^tal_[a-z0-9_]+$` | `tal_kai_wischtechnik`, `tal_mop_mitternachtsformel` |
 | species (06-B) | `spc_` | `^spc_[a-z0-9_]+$` | `spc_original`, `spc_kai_kachelgolem` |
 | twists (06-D, `twists.json`) | `tw_` | `^tw_[a-z0-9_]+$` | `tw_lights_out`, `tw_happy_hour` |
+| seasons (09, ST0, `seasons.json`) | `ssn_` | `^ssn_[a-z0-9_]+$` | `ssn_basis` |
+| professions (09, ST0, `professions.json`; `prf_` statt des reservierten `job_`) | `prf_` | `^prf_[a-z0-9_]+$` | `prf_cooking`, `prf_first_aid` |
+| Rezepte / Material / Fundstellen (in `professions.json`) | `rcp_` / `mat_` / `nod_` | `^rcp_…$` / `^mat_…$` / `^nod_…$` | `rcp_cooking_hobby`, `mat_scrap_metal`, `nod_scrap_heap` |
+| cast (09, ST0, `cast.json`: Profile der KI-Kandidat:innen) | – | `^[a-z][a-z0-9_]*$` | `extra` |
+| themes (09, ST0, `themes.json`: Kulissen) | `thm_` | `^thm_[a-z0-9_]+$` | `thm_unterstadt` |
 
 IDs sind **global eindeutig** über alle Tabellen (inkl. Encounter-, Etagen-Event-, Zonen- und Safe-Room-IDs).
 Laufzeit-IDs (nicht in Daten): Kampfteilnehmer `p0..p3`, `e0..eN`, Pseudo-Einheiten `u0..`; Gegnergruppen `f<etage>_g<i>`,
@@ -2086,9 +2253,16 @@ Helfer: `ItemDef.sell_value()` (`sell`, −1 → `floori(price / 2)`) und `ItemD
 {"id": "cls_kai_wrecker", "name": "Abrissbirne", "for": ["kai"], "min_floor": 3,
  "stat_mult": {"hp": 1.10, "str": 1.15, "def": 1.10, "spd": 0.95}, "growth_add": {"hp": 3.0, "def": 0.5},
  "passives": [{"id": "pas_thick_skin", "params": {"taunt_turns_add": 1, "dmg_taken_mult_while_taunt": 0.9}}],
- "learnset": [{"level": 11, "skill": "skl_kai_wrecking_ball"}, {"level": 13, "skill": "skl_kai_concrete_boots"}],
+ "learnset": [],
  "show_mods": {"hype_gain_mult": 1.0, "stunt_success_add": 0.0, "stunt_cooldown": 3, "sponsor_thresholds": [70, 85, 100]}}
 ```
+
+**Klassenfähigkeiten (CR-27 wie CR-26, 09 §8.3, V-16):** Die `learnset`-Listen der Kampagnen-Daten sind leer (die früheren
+Beispiel-Ids waren nur Doku). In Staffeln kommen Klassenfähigkeiten über eine Klassenleiste `rt.bar` (Schema wie
+`party.json`, Schema-Haken 07 CR-32 a): die Signatur beim Recall, dann je eine auf Stufe 12, 17, 22, 27 und 32, die Ränge
+II–IV auf 37, 42 und 47 (`AbilityBook`, ST1-D). Beispiel Abrissbirne: `skl_kai_wrecking_ball` beim Recall,
+`skl_kai_quick_concrete` („Schnellbeton“) auf Stufe 12 statt `skl_kai_concrete_boots` auf 13 (die Wortliste `ip_words.gd`
+sperrt Schuh-Wörter).
 
 #### 4.4.5 `party.json` → `PartyMemberDef` (+ Top-Level `start`)
 
@@ -2111,6 +2285,10 @@ Helfer: `ItemDef.sell_value()` (`sell`, −1 → `floori(price / 2)`) und `ItemD
 | `portrait_color` | String | `"#ffffff"` | |
 
 Top-Level `start` (Pflicht): `{"inventory": {item_id: int 1..max_stack}, "credits": int ≥ 0}` — liest `GameState.create_new`.
+
+Staffeln (CR-27, 09 §8.2, ST1-D): Top-Level `exp_table` — EP je Stufe 1–49 als vorberechnete Ganzzahl-Tabelle (Stufen 1–9
+wie GDD §4.3, danach dieselbe Kurve fortgesetzt), gilt nur mit `state.season != null` (Höchststufe 50; ohne Staffel bleibt
+`Balance.LEVEL_CAP` 10).
 
 ```json
 {"schema": 1,
@@ -2240,6 +2418,10 @@ Rattenkönigin P2/P3 nutzen `{"op": "add_pseudo", "unit": "pu_train_gleis9", "ct
 | `music` | String | `"explore"` | Sfx-Musik-ID |
 | `quest` | Dictionary | `{}` | Brief §6b.5: `{type ∈ QUEST_TYPES, label, params}`; nur Event-Läufe werten aus |
 | `window` | Dictionary | `{}` | Brief §6b.5: `{open_at, close_at (ISO-8601 UTC), duration_sec}` |
+
+Staffeln (CR-27, 09 Kap. 3.1 und 3.6, ST1-C): Die Etagen 2–18 tragen zusätzlich `variant` (1–3, die Etage innerhalb ihrer
+Kulisse), `level_band` (Stufen-Band der Etage) und `zones` (Viertel für `core/dungeon/zone_generator.gd`, Generator v2),
+`safe_rooms` bis 4; die Kulisse steht in `themes.json` (`thm_`, ihre `floors`, ST0), `theme` bindet die Etage an sie.
 
 `EncounterDef`: `id` (✓ `enc_`), `enemies` (✓ Array 1..4 enemy ids), `weight` (int, 10; Boss/platziert: 0), `min_depth`/`max_depth`
 (float 0..1, Default 0.0/1.0, nur prozedural), `boss` (bool false), `can_flee` (bool, Default `!boss`), `tutorial` (bool false:
@@ -3989,6 +4171,14 @@ Alte Replays (anderer `data_hash`, ältere `SIM_VERSION`) melden „ältere Vers
 (`test_r5b_save_v2`): echte v1-Dateien von Kernel `2246c31` (`tests/fixtures/saves/save_v1_ctb.json` mit Graf Mopsula als
 Held, `save_v1_realtime.json` mit Kai, beide Stufe 5 im Kiosk) → laden → HP-Regel (Deckel, K.O.), alle 06-/08-Felder,
 Speichern/Laden-Rundreise mit gleichem `StateHash`, Laden nach einem Game Over, eine neuere Datei wird verweigert.
+
+**Staffel-Block (09 §9.1, ST0 — additiv in Version 2, keine Version 3):** `state.season` (`SeasonState.to_dict`: `v`,
+`def`, `format`, `tempo`, `mode`, `number`, `day0_utc`, `collapse_utc`, `utc`, `seen_unix`; ST1-B ergänzt), je
+Party-Mitglied `rested`, `professions`, `prof_head`, `talent_rows`, im Etagenlauf `gather_nodes`, `respawn`, `daily` — alle
+optional und nur geschrieben, wenn gesetzt. Eine v2-Datei ohne sie lädt und hasht genau wie vorher (die Kampagne hat keine
+Staffel). `validate`: `state.season` ist ein Objekt oder fehlt; `_sanitize_season_member`/`_sanitize_season` siehe §0.8.
+Fixture: `tests/fixtures/season_min/save_v2_season.json` (lädt gegen `SeasonMin.data()`). Das Journal neben dem Slot ist
+`Save`s (§3.6). In Staffeln gilt die Gnadenfrist nicht (09 §2.1) — das stellt ST1-B in `Save.load_slot` um.
 
 **Kopplung mit dem CTB-Minispiel (Entscheidung 2026-10-11, `10_MINISPIEL_STEMPELDUELL.md` Kap. 6.2):** Das „Stempelduell“
 behält die CTB-Engine, liest aber eigene Regelbuch-Daten (`data/stempel/`). Die Kampagnendaten sind gebacken und haben

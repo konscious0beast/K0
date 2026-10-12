@@ -74,9 +74,12 @@ static func field_ability(hero_id: String) -> StringName:
 ## (integer per-mille, 1000 = neutral). Always the LEADER's own talents — Kai's change the Feldschlag, Graf Mopsula's
 ## the Bellen; a follower's field talents rest until it leads ("Wirkt, wenn … die Gruppe anführt."). Derived from
 ## the state (talent ranks + hero), never recorded: what the ability causes (encounter, secret) is.
+## Recall (06 §3.2): the leader's species reach (Flattermops: Bellen +50 %, Casting.field_range_pm) multiplies in,
+## round half up — 1000 without a species, so the talent value stays bit for bit.
 static func field_mods(state: GameState, data: GameData) -> Dictionary:
 	var m: PartyMember = state.member(state.hero) if state != null else null
-	return {"range_pm": Talents.field_range_pm(m, data), "cd_pm": Talents.field_cd_pm(m, data)}
+	var reach: int = (Talents.field_range_pm(m, data) * Casting.field_range_pm(m, data) + 500) / 1000
+	return {"range_pm": reach, "cd_pm": Talents.field_cd_pm(m, data)}
 
 
 ## "kai" for anything that is not a known hero id (old saves, hand-edited files).

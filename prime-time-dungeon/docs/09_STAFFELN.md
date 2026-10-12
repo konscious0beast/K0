@@ -73,6 +73,12 @@
 > „Während Sie schliefen …“ mit Tageszusammenfassung, Uhrsprung-Rückfrage, Hinweisplan; die Todesraten Ohne Netz liegen
 > in den Bändern von Kap. 5.3 (1 000 Nächte je Gefahr). Ohne Staffel bleibt jeder Lauf bitgleich.
 >
+> **Stand Recall (2026-10-12, Branch `ptd/recall`):** Der Recall ist gebaut (Kap. 11.3 „Stand Recall“, Entscheidungen
+> R-1 … R-14; 02_TECH §0.8 „Stand Recall“; 06 §3.5): Im ersten Safe Room von Etage 3 wählen Graf Mopsula und Kai
+> (bzw. die Kandidat:in) Spezies und Klasse mit M.O.D. als Jury; die Klassenleiste beginnt mit der Signatur auf der
+> Leiste, Klassenreihen ab Stufe 15, die erste Klassenwahl schaltet „Ohne Netz“ frei. Umentscheiden und Umschulung nach
+> 06 §3.6, Talente im Talentbaum. Ohne Staffel bleibt jeder Lauf bitgleich.
+>
 > **Stand ST1-H (2026-10-12, Branch `ptd/st1h`):** Die Staffel-UI ist umgesetzt (Kap. 11.3 „Stand ST1-H“, Entscheidungen
 > H-1 … H-20 und die Orchestrator-Entscheidungen O-1 … O-4; 02_TECH §0.8 „Stand ST1-H“): im Titel „Sendung starten“ bzw.
 > „Neue Staffel“ und die Ruhmeshalle (bis zum ST1-Gate nur in Debug-Builds, O-1), die Wahl von Modus, Tempo und Sendezeit
@@ -1626,7 +1632,7 @@ Room je Viertel), den Staffelstart `--season=ssn_basis --tempo=binge` (Kap. 11.4
 (EP-Tabelle und Anteile von ST1-D, C-23); dann misst er das Pensum (Kap. 3.3: Pflichtweg und „vollständig“ je Etage),
 die Stufe beim Abstieg und die Balance der Bosse. Offen für ein Paket: die Oberfläche des Recalls auf Etage 3 (Spezies
 und Klasse; heute nur `Game.choose_casting`) — ohne sie bleiben Klassenleisten und Klassenreihen von ST1-D in der
-Debug-Staffel zu.
+Debug-Staffel zu. (**Gebaut:** „Stand Recall“ unten.)
 
 **Entscheidungen ST1-C1** (Auslegungen dieses Dokuments, Startwerte):
 
@@ -1699,6 +1705,38 @@ oder sie über 10 min im Hintergrund lässt, schläft dort, wo die Figur stand (
 | G-14 | Stille beim Buchen | Die SEASON-Ereignisse einer Nacht lösen beim Buchen keine M.O.D.-Zeile, keinen Hinweis und keine Weiterleitung aus (`Game._season_quiet`); die Bilanz erzählt sie. Replays bleiben unverändert. | 5.4 |
 | G-15 | Kosten | Eine Nacht kostet je Kampf ≈ 50–130 ms (`RtSim` bis 900 Ticks), sonst wenige ms; ein Login nach einer Woche im gefährlichen Gang (höchstens drei Begegnungen je Abwesenheit) unter 0,5 s. Je Kampf erzeugen `BattleBridge` und `EnemyLevels` das Layout neu (≈ 2 × 10 ms auf einer Staffel-Etage) — Vorschlag CR-32 n (07 §12.10). | 5.3, 9.1 |
 
+**Stand Recall (2026-10-12, Branch `ptd/recall`) — umgesetzt** (Einzelheiten 02_TECH §0.8 „Stand Recall“; UX 06 §3.5
+„Stand Recall“): der Bildschirm `scenes/ui/recall.{gd,tscn}` (neu); im Kern der Abschnitt „Recall“ in `casting.gd`
+(`Casting.mode`, `open_members`, `min_floor`, `signature`, `signature_loadout`, `follower_pm`, `field_range_pm`,
+`passive_pm`; eine markierte Zeile in `Casting.choose`), je eine Zeile in `GameState.follower_pm` und
+`HeroRules.field_mods`, `Game._recall_unlock`, `casting_later` in `ModAnnouncer.ALWAYS_SAID_TAGS`, 36 Zeilen `casting_*` in
+`mod_lines.json`; in der Oberfläche der Abschnitt „Recall“ in `safe_room.gd` (öffnet von selbst, Knopf RECALL), die Zeile
+„Spezies & Klasse“ in `party_menu.gd`, `PersonaFigure.set_accent`; Capture-Rezepte `recall_*` und `safe_recall`; Test
+`test_09_recall` (15 Tests). **Was ein Debug-Build zeigt** (`--season=ssn_basis --tempo=binge --floor=3`, dann in den
+ersten Safe Room): den Recall wie in 06 §3.5 beschrieben; danach trägt die Party Spezies und Klasse (Pausemenü → Party),
+die Signatur liegt auf Platz 1, das Fähigkeitenbuch zeigt die Klassenleiste statt der Klassen-Vorschau, der Talentbaum
+die Klassenreihen ab Stufe 15. **Offen:** das Tempo-Angebot nach der Klassenwahl (Kap. 0.6 Etage 3, ST1-H); die
+Spezies-Optik am Rig (03_ART); die Kampf-Anzeige (07 CR-32 p); der Full-Run-Bot kennt Etage 3 nicht (ST1-I: er sollte dort
+den Recall bestätigen).
+
+**Entscheidungen Recall** (Auslegungen von 06 Kap. 3 und dieses Dokuments):
+
+| Nr. | Thema | Entscheidung | Kap. |
+|---|---|---|---|
+| R-1 | Wann | Beim ersten Betreten eines Safe Rooms auf Etage ≥ 3 (`Casting.min_floor`) öffnet der Recall von selbst, solange eine erste Wahl offen ist (`Casting.mode` = `first`) — nach Plan im ersten Safe Room der Etage (06 §0.5). „Später“ schließt; jeder Safe Room der Etage bietet die Wahl über den Knopf RECALL wieder an (06 §3.7: die erste Wahl geht in jedem Safe Room ab Etage 3). Kein zweites Auto-Öffnen im selben Raum, nie außerhalb eines Safe Rooms. | 06 §3.5, §3.7 |
+| R-2 | Reihenfolge | Die gesteuerte Figur zuerst, dann die andere (`Casting.open_members`); jede mit ihren eigenen Karten (`Casting.options`: Original-Verpackung und ihre Spezies, ihre vier Klassen). Je Figur „Wer bist du?“, „Was kannst du?“, „Bestätigen“, dann das Urteil der Jury und „WEITER: <Name>“; am Ende die Schlussseite. | 06 §3.5 |
+| R-3 | Modi | `Casting.mode`: `first` (noch keine Klasse), `redo` (im Besuch der Wahl sind Spezies und Klasse frei: „Umentscheiden – noch frei“), `retrain` (Umschulung im ersten Safe Room einer späteren Etage: nur die Klasse, der Spezies-Schritt entfällt). Der Knopf RECALL nennt den Modus (`first` vor `retrain` vor `redo`). Die Regeln bleiben in `Casting.check`; der Bildschirm fragt nur. | 06 §3.6 |
+| R-4 | Aufzeichnung | Erst „Bestätigen“ zeichnet auf: `casting` über `Game.choose_casting`, in Staffeln danach `loadout` über `Game.apply_loadout` (die Signatur, `Casting.signature_loadout`, geprüft mit `RunRules.loadout_refusal`). Ein unverändertes Paar zeichnet nichts auf. `RunSim.replay` und `Game.replay_log` spielen eine Recall-Sitzung fehlerfrei nach (Kern-Teil hash-gleich), ein zweiter Live-Lauf mit denselben Eingaben ergibt denselben `StateHash`; ein gefälschtes `casting` (Spezies der anderen Figur) ist ein Fehler (`not_for_member`; beide Verifier fragen `RunRules.command_refusal`, 06 B-11). | 9.1, 06 B-11 |
+| R-5 | Signatur | Die Signatur der neuen Klasse (`classes.json → rt.bar`, Stufe 1) kommt auf ihren Platz (heute Platz 1), außer dort liegt eine selbst gewählte Figurenvariante — dann wartet sie im Fähigkeitenbuch. Die Umschulung nimmt die Fähigkeiten der alten Klasse von der Leiste (`Casting.choose`, in beiden Verifiern gleich): Sonst lehnte jedes spätere `loadout` — es trägt die ganze Leiste — mit `not_a_variant` ab. | 8.3, D-9 |
+| R-6 | Passive | Jede Karte sagt, was wirklich wirkt: sechs Passive wirken im Kampf (07 R4, `BattleBridge`), `pas_authentic` gibt je Figur mit Original-Verpackung Follower aus Kämpfen × 1,1 (`Casting.follower_pm` im Produkt `GameState.follower_pm`), `pas_court_flight` Bellen-Reichweite × 1,5 für die führende Figur (`Casting.field_range_pm` in `HeroRules.field_mods`). `pas_lightdrunk` heißt „Krit +10 % bei Kampfbeginn ab Hype 70.“ (gebaut wie 07 §9.6). Ohne Spezies sind beide Faktoren 1000. | 06 §3.2, 07 §9.6 |
+| R-7 | Werte | Vorher → nachher für die acht Kampfwerte, gerechnet an einer Kopie der Figur (`UiUtil.member_stats`, wie `Progression.total_stats`); der Balken füllt eine Hälfte bei ± 30 %. | 06 §3.1 |
+| R-8 | Klassenfähigkeiten | Die Vorschau einer Klasse zeigt die ersten drei Fähigkeiten der Leiste (`AbilityBook.rows`): die Signatur mit der Plakette SIGNATUR, ihrem Platz („Slot 1 · beim Recall“) und ihrem Satz, die nächsten zwei in einer Zeile („Schnellbeton ab Stufe 12“, „Bauzaun ab Stufe 17“), den Rest in Worten („Dann Stufe 22, 27, 32 · Ränge ab 37 · Klassenreihen ab 15“). So knapp, dass jeder Schritt mit jeder Karte auf 1280 × 720 passt; keine Karte schneidet ihren Satz ab (eine Spezies-Karte wird für eine zweite Zeile höher, eine Klassen-Karte mit Plaketten ebenso; `test_the_recall_fits_a_720p_screen`). | 8.3, 8.4 |
+| R-9 | Vorleben | Die Klasse aus `spec_hint` trägt „PASST ZU IHREM VORLEBEN“, M.O.D. sagt einmal je Bildschirm `persona_spec_hint:<cls>` (08 C-9, H8) — nur bei Kai, die Hinweise sind Kai-Klassen. „EMPFOHLEN“ markiert die Klassen der gewählten Spezies. | 08 C-9 |
+| R-10 | Talente | Kein eigenes Reset: Wo der Baum regiert, öffnet die Schlussseite den Talentbaum; umgewählt wird kostenlos im Safe Room wie immer (06 §3.6 Zeile 3 → Kap. 8.4, CR-31; 06 B-10 geschlossen). | 8.4 |
+| R-11 | Ohne Netz | Die erste Klassenwahl schaltet „Ohne Netz“ frei (B-14, `SeasonRules.unlocks_no_net`); `Game` schreibt die Karriere gleich beim Bestätigen (nur live, nie im Replay), damit die Schlussseite es sagt („NEU: OHNE NETZ“ und `casting_no_net`). | 2.2 |
+| R-12 | Höchststufe | Kopfzeile („Etage 3 · Höchststufe 13“) und Schlussseite nennen den Deckel der Etage (`LevelBand.cap`); 06 O-2 ist damit geschlossen. | 8.2, 06 §2.3 |
+| R-13 | M.O.D. | 36 Zeilen `casting_*`: Eröffnung (06 §0.5), Schritte je Figur, Bestätigen, Urteile mit der Kette `casting_combo:<spc>:<cls>` (die elf empfohlenen Paare) → `casting_combo:<spc>` → `casting_combo`, Umentscheiden, Umschulung, Schluss, „Später“, Ohne Netz; je ≤ 110 Zeichen, eigene Show-Sprache, keine Namen oder Begriffe des Buchs. Sie stehen im Kasten „JURY · M.O.D.“ (`UiUtil.mod_line`, nie aufgezeichnet); nur `casting_later` geht über `Show.say` und wird nie verschluckt (`ALWAYS_SAID_TAGS`). | 06 §3.5 |
+| R-14 | Kampf-Anzeige | Spezies und Klasse am Party-Rahmen und die Bauchbinde „ORIGINAL“ beim Kampfstart (06 §3.2) gehören `scenes/combat`: Antrag 07 CR-32 p (07 §12.10). Pausemenü → Party zeigt beide; vor der Wahl „Spezies & Klasse: Recall offen – im Safe Room“ (ab Etage 3) bzw. „Recall auf Etage 3“. | 06 §3.2 |
 
 **Stand ST1-H (2026-10-12, Branch `ptd/st1h`) — umgesetzt** (Einzelheiten 02_TECH §0.8 „Stand ST1-H“): neu
 `scenes/ui/season_view.gd` (privat: alle Wörter, Termine und Zeilen der Staffel-Oberfläche als reine Sichten auf
@@ -1819,6 +1857,7 @@ es neu (≈ 3 ms), und HUD, Reiter und Safe Room fragen mehrmals hintereinander 
 | `test_09_terms` | Sprachregel (Kap. 1.2) |
 | `test_09_season_ui` | Stand ST1-H: Wörter, Ortszeit und Zeilen der Staffel-UI (Sendeplan, Einsturz-Anzeige, Zähler, Rangliste mit KI-Kennzeichnung, Ticker, Tagesprogramm, gesperrte Treppe), `.ics` ohne persönliche Daten, Ruhmeshalle einmal je Staffel und ohne Namen, „Staffel beenden“ gibt den Slot frei, Wege zum Ende, Titel-Karte nur in Debug-Builds (O-1), Einrichtung und der eine Neues-Spiel-Weg, Reiter „Staffel“ mit Rückfragen, HUD, Gäste und Anheuern, Tempo-Angebot einmal; Fokus in jedem Bildschirm, Trefferflächen ≥ 88 px mit 12 px Abstand, keine Überlappung in 1280 × 720, 1920 × 1080 und 2400 × 1080 mit Notch, Texte ≥ 16 px mit gezeichneten Glyphen; die Sichten ändern den aufgezeichneten Zustand nie |
 | `test_09_zone_generator` | 200 Seeds je Etage 3–18 erfüllen die Prüfregeln (Kap. 3.6), deterministisch (ST1-C1: Etagen 2–6; dazu `test_09_floors`) |
+| `test_09_recall` | Recall (06 §3.5): Modi auf Etage 3 und 4, keiner vor Etage 3; öffnet von selbst, „Später“, Knopf, zweiter Besuch; ein ganzer Recall beider Figuren (Karten, Plaketten, Vorleben-Zeile, Klassenzeilen, Commands `casting` und `loadout`, Urteile, Deckel 13, „Ohne Netz“, Talentbaum, Signatur in der Zugleiste); Touch (zweites Antippen), Zurück; Ablehnungen außerhalb (Etage 2, Erkundung, fremde Spezies/Klasse, gefälschtes Command); Replay in beiden Verifiern und ein zweiter Live-Lauf; Re-Spec (Spezies fest, Umschulung je Etage, alte Signatur weg, eigene Varianten bleiben); Original-Follower und Flattermops-Bellen; jeder Kartentext ein Satz, jede Jury-Zeile da; jeder Schritt mit jeder Karte passt auf 1280 × 720, jede Karte zeigt ihren Satz ganz |
 
 **ST1-Gate — nur Mechanik (V-5):** Alle Tests grün; Am-Stück-Etage 1 in den neu gemessenen GDD-§13-Bändern; Staffel-Harness
 (`tools/season_harness.sh --format=18 --tempo=calendar --speed=dev`) mit diesen Profilen (V-8):

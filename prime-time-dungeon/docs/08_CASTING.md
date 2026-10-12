@@ -700,7 +700,7 @@ legt fest, welcher Beat an welchem Hook kommt; ohne Beat spricht M.O.D. eine all
 | H5 Etagenende | `persona_floor_end:<org>` → `persona_floor_end` | nach `floor_end` | 1× je Etage | `Show.say` |
 | H6 Game Over | `persona_game_over:<org>` → `persona_game_over` | Sendeschluss | je Game Over | `game_over.gd`: zweite Zeile unter dem `death`-Zitat |
 | H7 Etagenstart (E2+) | `persona_marotte` | Ansage einer Vorliebe, die aus der Karte gewichtet war | ≤ 1 je Etage | `Show.say`, vor `marotte_announce` |
-| H8 Recall (E3) | `persona_spec_hint:<cls>` | Recall-Bildschirm „Was kannst du?“ (06 §3.5) | 1× | Recall-UI (mit Etage 3) |
+| H8 Recall (E3) | `persona_spec_hint:<cls>` | Recall-Bildschirm „Was kannst du?“ (06 §3.5) | 1× | Recall-UI (mit Etage 3) — **gebaut** (2026-10-12): `scenes/ui/recall.gd` im Jury-Kasten (`UiUtil.mod_line`), einmal je Bildschirm, nur für Kai (09 R-9) |
 | Casting-Seiten | `persona_casting_open[:mopsula]`, `persona_casting_dice`, `persona_card[:<org>]`, `persona_casting_ai_wait`, `persona_casting_ai_offline` | Casting | je Seite | Casting-Szene (`UiUtil.mod_line`) |
 
 - **Nie im Kampf (R6).** Der private Helfer `show_persona_hooks.gd` feuert nie, solange `Game.in_battle` gilt, und eine noch
@@ -833,7 +833,8 @@ Rival:in-Nachricht, Safe Room 2 Grüße (jede zweite Etage, sonst allgemeine Zei
 - **Ansage:** Wird eine gewichtete Vorliebe angesagt, kommt davor `persona_marotte` (H7).
 - **Klassen-Tipp (C-9):** Im Recall-Bildschirm „Was kannst du?“ (06 §3.5 Schritt 3) trägt die Klasse aus `spec_hint`
   die Plakette „PASST ZU IHREM VORLEBEN“ (neben den Spezies-Empfehlungen aus 06 §3.1), und M.O.D. sagt
-  `persona_spec_hint:<cls>`. Keine Regel, kein Bonus.
+  `persona_spec_hint:<cls>`. Keine Regel, kein Bonus. **Gebaut mit dem Recall** (2026-10-12, 09 Kap. 11.3 „Stand
+  Recall“): Die Plakette steht auf der Klassen-Karte neben „EMPFOHLEN“ (Empfehlung der gewählten Spezies).
 
 ### 4.9 Humor-Leitplanken
 
@@ -1212,7 +1213,7 @@ gewerteten Events nicht; alle haben dieselben Vorlieben) und zur Pur-Liga (05 §
 | §1.1 Mopsula-Variante | „Wer begleitet den Grafen?“ mit neutralen Überschriften (Kap. 1.8) | Texte |
 | §1.3 Feldfähigkeiten (A), §2.2 Talente (B) | keine Starttalente (CR-33): Pool, Angebote und Talent-Show bleiben, wie 06/09 sie regeln, ohne Tausch; die K0-Haken (`Talents.has_any`, Quelle in `_effects`, `HeroRules.field_mods`) ruhen bis 09 ST0 (Kap. 3.3) | `party_menu.gd` (Knopf „Kandidatenkarte“) |
 | §2.2 Kai-Pool-Texte | zwei `desc` nennen „Kai“ → neutral (Kap. 4.1) | Text-Änderungsantrag |
-| §3 Spezies/Spezialisierung | Anzeigename der E3-Runde **„Recall“** (C-16); `spec_hint` als Plakette | Texte der Tags `casting_*`, Recall-UI (mit Etage 3) |
+| §3 Spezies/Spezialisierung | Anzeigename der E3-Runde **„Recall“** (C-16); `spec_hint` als Plakette | Texte der Tags `casting_*`, Recall-UI (mit Etage 3) — **gebaut** (2026-10-12, 06 §3.5 „Stand Recall“) |
 | §4 Marotten (C) | Gewichtung ab Etage 2 (Kap. 4.8); `persona_marotte` vor der Ansage; `mar_mop_only` neutral formuliert | `marotten_rules.gd` (eigener Abschnitt), `marotten.json` (`desc`) |
 | §5 KI-Admin (D) | Endpunkt `/v1/casting` im selben Dienst (Token, Kill-Switch, Kosten-Log, Konfiguration) mit eigenem Pseudonym; Live-Prompt neutral; `ModLiveSummary` ohne Persona | `services/mod-brain` (neue Dateien, Route, `persona.py`), `mod_filter.json` (`special`), `mod_line_filter.gd` (CR-23) |
 | §5.7a Regie | unberührt — die Persona beeinflusst keine Twists | — |

@@ -4569,6 +4569,188 @@
 			"voice": "mod",
 			"text": "Der Berg rutscht! Bitte nicht unterschreiben, einfach ausweichen!",
 			"weight": 1
+		},
+		{
+			"id": "mod_season_welcome_01",
+			"tag": "season_welcome",
+			"voice": "mod",
+			"text": "Willkommen in Staffel {count}! Jede Etage stürzt pünktlich ein. Pünktlicher als jeder Zug.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_welcome_02",
+			"tag": "season_welcome",
+			"voice": "mod",
+			"text": "Staffel {count} ist auf Sendung! Die Etagen stürzen nach Plan ein. Der Plan ist sehr pünktlich.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_collapse_intro_01",
+			"tag": "season_collapse_intro",
+			"voice": "mod",
+			"text": "Etage {floor} stürzt zu ihrem Termin ein, oben steht wann. Seien Sie dann woanders. Am besten tiefer.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_warn_3600_01",
+			"tag": "season_warn_3600",
+			"voice": "mod",
+			"text": "Noch {min} Minuten bis zum Einsturz von Etage {floor}. Die Treppe wäre eine gute Idee.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_warn_600_01",
+			"tag": "season_warn_600",
+			"voice": "mod",
+			"text": "Etage {floor} stürzt in {min} Minuten ein. Die Regie räumt schon die Kulissen weg.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_warn_60_01",
+			"tag": "season_warn_60",
+			"voice": "mod",
+			"text": "Noch eine Minute für Etage {floor}. Bitte Abstand von den Kulissen halten.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_vest_01",
+			"tag": "season_vest",
+			"voice": "mod",
+			"text": "Noch nie gerettet, noch nie gestorben: weiße Weste. Davon gibt es nicht mehr viele.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_counter_in_01",
+			"tag": "season_counter_in",
+			"voice": "mod",
+			"text": "Oben steht, wer noch dabei ist. Ohne Netz hat jede Person genau ein Leben. Auch Sie.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_tempo_offer_01",
+			"tag": "season_tempo_offer",
+			"voice": "mod",
+			"text": "Sie sind schnell. Weiter wie im Fernsehen — oder am Stück, ganz ohne Warten?",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_tempo_binge_01",
+			"tag": "season_tempo_binge",
+			"voice": "mod",
+			"text": "Am Stück! Ab hier wartet niemand. Der Countdown läuft nur, solange Sie erkunden.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_no_net_unlocked_01",
+			"tag": "season_no_net_unlocked",
+			"voice": "mod",
+			"text": "Ein Leben. Keine Rettung. Das Publikum liebt das. Sie hoffentlich auch. Ohne Netz ist ab sofort frei.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_rival_01",
+			"tag": "season_rival",
+			"voice": "mod",
+			"text": "{cand} steht schon vor der Tür des Revier-Bosses. Angeblich nur zum Aufwärmen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_rival_02",
+			"tag": "season_rival",
+			"voice": "mod",
+			"text": "Vor der Boss-Tür wartet {cand}. Rivalität ist gut für die Quote. Und für den Puls.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_rival_after_01",
+			"tag": "season_rival_after",
+			"voice": "mod",
+			"text": "Zeitvergleich mit {cand}: Sie waren {min} Minuten schneller. Die Konkurrenz ist entsetzt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_need_01",
+			"tag": "season_need",
+			"voice": "mod",
+			"text": "Meldung aus dem Gang: {cand} steckt in einem Kampf fest. Wer hilft, bekommt einen Gefallen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_left_01",
+			"tag": "season_left",
+			"voice": "mod",
+			"text": "Ausgestiegen. Die Regie winkt zum Abschied, und die Ruhmeshalle hat schon einen Platz für Sie.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_guest_extra_01",
+			"tag": "season_guest_extra",
+			"voice": "mod",
+			"text": "{cand} nickt Ihnen zu: „Ich bin nur wegen der Kantine hier. Die ist auf jeder Etage gleich.“",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_guest_extra_02",
+			"tag": "season_guest_extra",
+			"voice": "mod",
+			"text": "{cand} zählt die Fliesen. Angeblich eine Strategie. Die Regie hat nicht nachgefragt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_guest_rival_01",
+			"tag": "season_guest_rival",
+			"voice": "mod",
+			"text": "{cand} mustert Sie: „Wir sehen uns an der Treppe. Ich bin dann schon unten.“",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_guest_rival_02",
+			"tag": "season_guest_rival",
+			"voice": "mod",
+			"text": "{cand} kennt Ihre Quote auswendig. Die eigene hängt gerahmt über dem Bett.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_guest_helper_01",
+			"tag": "season_guest_helper",
+			"voice": "mod",
+			"text": "{cand} bietet Hilfe an: drei Kämpfe, kein Bosskampf. Kleingedrucktes inklusive.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_guest_helper_02",
+			"tag": "season_guest_helper",
+			"voice": "mod",
+			"text": "{cand} dehnt sich schon mal: „Wenn Sie Verstärkung brauchen, ich bin da. Gegen Credits.“",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_guest_trader_01",
+			"tag": "season_guest_trader",
+			"voice": "mod",
+			"text": "{cand} klappt einen Koffer voller Kram auf: „Heute leider ohne Ware. Morgen vielleicht.“",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_guest_unlucky_01",
+			"tag": "season_guest_unlucky",
+			"voice": "mod",
+			"text": "{cand} hat sich wieder verlaufen. Im Safe Room. Die Regie findet das bemerkenswert.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_guest_unlucky_02",
+			"tag": "season_guest_unlucky",
+			"voice": "mod",
+			"text": "{cand} erzählt von der letzten Pechsträhne. Sie dauert noch an.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_warn_last_01",
+			"tag": "season_warn_last",
+			"voice": "mod",
+			"text": "Noch {min} Minuten bis zum letzten Einsturz der Staffel. Das Finale wartet, die Uhr nicht.",
+			"weight": 1
 		}
 	]
 }

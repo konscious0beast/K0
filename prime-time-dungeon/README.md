@@ -11,9 +11,9 @@ Prüfwerkzeuge (`tools/`).
 ## 1. Was es ist
 
 - **Prämisse:** Das Medienkonglomerat NOVA SYNDIKAT hat die Erdoberfläche „zurückgebaut“ und macht aus dem Dungeon darunter
-  die Reality-Show **DUNGEON PRIME TIME**. Kai, Tierpfleger:in, und **Graf Mopsula**, ein sprechender Mops mit Adelsallüren,
-  kämpfen sich Etage für Etage nach unten. Jede Etage bricht nach einem Countdown zusammen. Moderiert wird alles von der
-  sarkastischen System-KI **M.O.D.**
+  die Reality-Show **DUNGEON PRIME TIME**. Kai, Tierpfleger:in, und **Graf Mopsula**, ein sprechender Mops, der sich für
+  einen Grafen und Gelehrten hält, kämpfen sich Etage für Etage nach unten. Jede Etage bricht nach einem Countdown
+  zusammen. Moderiert wird alles von der sarkastischen System-KI **M.O.D.**
 - **Look:** stilisiertes Low-Poly mit Toon-Shading (Option B). Figuren, Räume und Effekte entstehen prozedural aus Primitiven
   und Shadern, ohne externe Assets. glTF-Modelle aus Blender sollen die Platzhalter später 1:1 ersetzen (03_ART Kap. 10).
 - **Spiel:** Echtzeit-Erkundung in 3D mit sichtbaren Gegnern (wie FF12) und **Echtzeitkämpfe direkt in der Welt**
@@ -40,7 +40,8 @@ Prüfwerkzeuge (`tools/`).
 
 ## 2. Status
 
-*Stand: 2026-10-12, Branch `ptd/r5b2b`. Die genaue Version ergibt sich aus `git log -1` in diesem Verzeichnis.*
+*Stand: 2026-10-12, nach ST1-G (Schläfer und Ausloggen). Die genaue Version ergibt sich aus `git log -1` in diesem
+Verzeichnis.*
 
 **Läuft:**
 
@@ -97,7 +98,7 @@ Prüfwerkzeuge (`tools/`).
   Follower. Show-Chip im Overlay, Pausemenü-Reiter „Show“, Achievement-Kette „Ohne alles“.
 - SHOWRUN S0: 2 Offline-Events (`evt_offline_gleis9`, `evt_offline_pacifist`), Event-Lobby, Ergebnis-Screen, lokale Bestenliste,
   Replay-Prüfung.
-- Qualitätssicherung: rund 1 700 automatische Tests (darunter Golden- und Grenztest der Stempelduell-Engine),
+- Qualitätssicherung: rund 1 800 automatische Tests (darunter Golden- und Grenztest der Stempelduell-Engine),
   Autoplay-Smoke-Test im Echtzeitkampf (`AUTOPLAY: OK`), Full-Run-Bot, der Etage 1 mit drei Strategien und als Graf Mopsula
   durchspielt, Balance-Harness des Echtzeitkampfs, Performance-Probe (`PERF: OK`) und der CI-Workflow `ptd-check`.
 

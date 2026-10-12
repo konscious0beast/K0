@@ -47,6 +47,8 @@ Maximum über alle gemessenen Ansichten bzw. Frames (Methode §2). „vorher“ 
 | Etage 1 bauen, warm | 500 ms | 181 ms | **242 ms** | – | – |
 | Staffel-Etagen 2–6 (§3.9, ST1-C1): Draw Calls 3D / UI · Körper | 150 / 100 · 40 | – | **109 / 94 · 27** | – | – |
 | Staffel-Etage 6 bauen (48 Räume, ganze Etage), warm: Median aus 9 · Probe | 500 ms | – | **408 · 428 ms** | – | – |
+| Stempelduell (§3.10, 10 §6.10): Draw Calls UI · 3D, Tisch gegen den Stempelmeister mit Durchsage | 120 · 0 | – | **101 · 0** | – | – |
+| Stempelduell: Zug · Vorschau (Mittel) · Tisch aufbauen, warm | 2 · 3 · 300 ms | – | **0,50 · 1,02 · 7 ms** | – | – |
 | Router-Zyklen (20×), Wachstum | 0 | – | **0 Nodes, 0 Ressourcen** | | |
 | „ObjectDB instances leaked at exit“ | 0 | 6 (sporadisch) ✗ | **0** | | |
 | Erstes Bild nach Prozessstart (llvmpipe) | – | 3,0–3,1 s | 2,0–2,4 s (Phase C); heute 5,2–5,4 s auf einer anderen, geteilten Maschine — Basisstand gleich schnell, §3.5 | | |
@@ -370,6 +372,29 @@ im Bild. Zusammen kosten sie ≈ 25–30 UI-Draw-Calls über der Erkundungs-UI: 
 Abstieg ebenso sieht. Der Abschnitt `season` blendet beide Ebenen beim Abtasten aus und misst die Etagen; der Stapel steht
 in §8.2.
 
+### 3.10 Stempelduell (10 §6.10, SD2-G)
+
+Stand 2026-10-12, Branch `ptd/sd2ui` (nach dem Merge des Staffel-Kerns ST1-B), Compatibility-Renderer unter Xvfb,
+1280 × 720, `tools/perf.sh --only=stempel` → `PERF: OK`. Die Probe `tests/perf/sd_perf_probe.gd` spielt den Tisch gegen
+den Stempelmeister in Phase 2 mit der Durchsage an zweiter Stelle, im echten `GlobalUi` und mit der Beispiel-Sammlung
+(10 U-33). Die Werte standen bis hierher nur in 10 Kap. 7.3 (U-34) und sind von dort übernommen.
+
+| Größe | Wert | Ziel (10 §6.10) |
+|---|---:|---:|
+| Regelbuch laden (bester von 3; das erste Mal mit Kompilieren der Skripte 33 ms) | 25,4 ms | ≤ 50 ms |
+| Zug (Mittel, 63 Züge in 6 Duellen gegen den Stempelmeister) | 0,50 ms | ≤ 2 ms |
+| Vorschau (Mittel, 315 Probeläufe) | 1,02 ms | ≤ 3 ms |
+| Tisch aufbauen (warm; kalt mit Skripten und der Wartezimmer-Schleife 492 ms) | 7 ms | ≤ 300 ms |
+| UI-Draw-Calls (ganzes Bild mit M.O.D.-Zeile, Höchstwert über 60 Frames) | 101 | ≤ 120 |
+| 3D-Draw-Calls (die Duell-Box hat keine Drohne, 10 U-21) | 0 | 0 |
+| `_process` im Leerlauf | keiner | keiner |
+| Partikel-Emitter | 0 | ≤ 1 |
+
+Die Tabelle ist der Lauf auf ruhiger Maschine. Über die Läufe der SD2-Sitzung (llvmpipe, teils neben zwei anderen
+Full-Runs): Regelbuch 25–45 ms, Zug 0,5–0,9 ms, Vorschau 1,0–1,9 ms, Tisch warm 5–7 ms, UI-Draw-Calls 101 — immer
+`PERF: OK`. Ohne `--only` läuft das Szenario `stempel` zuerst und bricht `perf.sh` bei einer Überschreitung ab. Auf den
+mobilen Referenzgeräten (60 FPS, Quality `low`) ist das Duell noch nicht gemessen [zu messen].
+
 ---
 
 ## 4. Optimierungen
@@ -654,6 +679,7 @@ GODOT=… tools/perf.sh --driver=vulkan --only=startup,explore,battle,safe_room 
 GODOT=… tools/perf.sh --headless --only=startup,leak --cycles=20                     # Zeiten + Router-Zyklen ohne Rendering
 GODOT=… tools/perf.sh --only=combat                  # Echtzeitkampf in der Welt (07 §8.10): combat_regular, _two_groups, _boss_queen
 GODOT=… tools/perf.sh --only=season                  # Staffel-Etagen 2–6 (09 ST1-C1): Aufbau je Etage, Layout, jede Zelle × 4
+GODOT=… tools/perf.sh --only=stempel                 # Stempelduell (10 §6.10): Regelbuch, Zug, Vorschau, Tisch, DC
 # Diagnose: --mat-dump (Materialien des Spitzen-Frames), --leak-diff (Node-Arten je Zyklus), --full=<enc,…>, --shots=<dir>
 ```
 

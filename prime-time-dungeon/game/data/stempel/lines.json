@@ -75,6 +75,8 @@
 			"text": "Er will nach Hause. Er wird schneller. Und gefährlicher."},
 		{"id": "sdl_tut_1_01", "tag": "sd_tut:1", "voice": "mod",
 			"text": "Ihre Hand: fünf Karten. Tippen Sie den Stempel an — und noch einmal zum Spielen."},
+		{"id": "sdl_tut_1_keys_01", "tag": "sd_tut:1:keys", "voice": "mod",
+			"text": "Ihre Hand: fünf Karten. Markieren Sie den Stempel und spielen Sie ihn."},
 		{"id": "sdl_tut_2_01", "tag": "sd_tut:2", "voice": "mod",
 			"text": "Kurze Karte: Sie sind gleich wieder dran. Die Wartenummern-Anzeige zeigt es."},
 		{"id": "sdl_tut_note_2_01", "tag": "sd_tut_note:2", "voice": "mopsula",

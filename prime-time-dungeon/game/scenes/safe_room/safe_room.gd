@@ -99,6 +99,7 @@ func _ready() -> void:
 	Vfx.spawn(&"heal", self, _kai.global_position if _kai.is_inside_tree() else Vector3.ZERO)
 	Show.say("safe_room_enter")
 	_focus_first()
+	_season_offer.call_deferred()              # Staffeln (09 §2.1, ST1-H): the tempo offer after the class choice
 
 
 func _exit_tree() -> void:
@@ -465,6 +466,7 @@ func _after_modal(focus_id: String) -> void:
 		UiUtil.focus_later((menu_buttons[focus_id] as Control))
 	elif is_inside_tree():
 		_focus_first()
+	_season_offer.call_deferred()              # Staffeln (09 §2.1, ST1-H): e.g. after the Recall's class choice
 
 
 ## Casting (08 §1.7, K2): after the pause menu (Kandidatenkarte → "Name & Aussehen ändern") the candidate stands
@@ -530,6 +532,7 @@ func _refresh_menu_labels() -> void:
 	_header_sub.text = "Credits %s  ·  Countdown angehalten%s" % [UiUtil.fmt_int(UiUtil.credits()),
 		(": " + UiUtil.fmt_time(floori(Game.time_left()))) if Game.state != null and Game.state.floor_run != null and
 		Game.state.floor_run.timer_started else ""]
+	_season_header()                           # Staffeln (09 §2.5, ST1-H): the collapse, not a frozen countdown
 	for b: Button in _menu_buttons_in_order():
 		_style_enabled(b)
 	var save_b: Button = menu_buttons.get("save") as Button
@@ -592,6 +595,7 @@ func _wire_menu_focus() -> void:
 	for k in order.size():
 		order[k].focus_previous = order[k].get_path_to(order[(k + order.size() - 1) % order.size()])
 		order[k].focus_next = order[k].get_path_to(order[(k + 1) % order.size()])
+	_season_wire(rows, cta)                    # Staffeln (09 §4.3, ST1-H): the guests right of the menu
 
 
 func _build_talent_cta(frame: Control) -> void:
@@ -755,6 +759,7 @@ func _build_ui() -> void:
 	hints.add_child(InputGlyph.make(&"ui_accept", "Wählen", 16))
 	hints.add_child(InputGlyph.make(&"pause", "Party-Menü", 16))
 	_build_talent_cta(frame)                    # 06 package B
+	_season_build(frame)                        # Staffeln (09 §4.3, ST1-H): the AI candidates in this safe room
 	_heal_banner = PanelContainer.new()
 	_heal_banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	_heal_banner.offset_left = -150
@@ -846,4 +851,262 @@ func open_logout() -> Node:
 		_modal = null
 		if not slept and menu_buttons.has("save"):
 			UiUtil.focus_later(menu_buttons["save"] as Control))
+	return d
+
+
+# --- Staffeln (09, ST1-H) ---------------------------------------------------------------------------------------------
+# 09 §4.3: up to two AI candidates of the floor sit in this safe room (CastSim.safe_room_guests, deterministic per
+# visit) — a panel on the right under the TALENT-SHOW slot, clear of the M.O.D. box at the bottom right: one button per
+# guest with the name (labelled "KI"), profile, place and level. Pressing it: "Reden" (M.O.D. quotes them,
+# season_guest_<profile>) or, for a Helfer:in who can come, "Anheuern" (three combats, never a boss fight; a favour
+# pays first, else credits — a dialog names the price; Game.cast_action("hire") records it, a refusal names its
+# reason). The header names the collapse of the floor (calendar) or the standing countdown (Am Stück) instead of
+# "Countdown angehalten". After the class choice of the Recall (09 §2.1, §0.5) M.O.D. offers "Am Stück" once in a
+# private calendar season (season_dialog; career "seen") and names the Ohne-Netz unlock once.
+
+const SeasonView := preload("res://scenes/ui/season_view.gd")
+const SEASON_DIALOG: String = "res://scenes/ui/season_dialog.tscn"
+const GUESTS_W: float = 560.0
+const GUESTS_TOP: float = CTA_TOP + 88.0 + MENU_GAP    # under the TALENT-SHOW hit area (UiTheme.TOUCH_HIT)
+
+var season_guests: PanelContainer = null
+var season_guest_buttons: Dictionary = {}    # "talk_<place>" | "hire_<place>" → Button (tests)
+var _season_guest_list: VBoxContainer
+var _season_offering: bool = false
+
+
+func _season_build(frame: Control) -> void:
+	if Game.state == null or Game.state.season == null:
+		return
+	season_guests = PanelContainer.new()
+	season_guests.name = "SeasonGuests"
+	season_guests.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	season_guests.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	season_guests.offset_left = -GUESTS_W - 8.0
+	season_guests.offset_right = -8.0
+	season_guests.offset_top = GUESTS_TOP
+	season_guests.add_theme_stylebox_override("panel", UiUtil.box_style(Color(UiTheme.C_PANEL, 0.88),
+		Color(UiTheme.C_ACCENT_2, 0.45), 1, 0.0, 14, 8))
+	frame.add_child(season_guests)
+	_season_guest_list = UiUtil.vbox(MENU_GAP)
+	season_guests.add_child(_season_guest_list)
+	season_refresh_guests()
+
+
+## Rebuilds the guest rows (after a hire the Helfer:in shows as Begleitung); hidden without guests.
+func season_refresh_guests() -> void:
+	if season_guests == null:
+		return
+	for c: Node in _season_guest_list.get_children():
+		_season_guest_list.remove_child(c)
+		c.queue_free()
+	season_guest_buttons.clear()
+	var rows: Array[Dictionary] = []
+	if CastSim.has_cast(Game.state):
+		rows = SeasonView.guest_rows(Game.state, DB.data)
+	season_guests.visible = not rows.is_empty()
+	if rows.is_empty():
+		return
+	var head: Label = _season_flat(UiUtil.label("KI-KANDIDAT:INNEN IM SAFE ROOM", &"", 16, UiTheme.C_ACCENT))
+	head.add_theme_font_override("font", UiTheme.font_bold())
+	_season_guest_list.add_child(head)
+	var guest: Dictionary = CastSim.guest(Game.state, DB.data)
+	for r: Dictionary in rows:
+		_season_guest_list.add_child(_season_guest_row(r, guest))
+
+
+## One guest is one button: the name (labelled "KI"), below the profile, place and level — or the Begleitung, or why a
+## Helfer:in cannot come — and on the right what pressing does: "Anheuern" (a Helfer:in who can come: the dialog with
+## the price) or "Reden" (M.O.D. quotes the guest). One box per guest keeps the panel at ≈ 8 UI draw calls (the safe
+## room's budget is 100, PERFORMANCE.md §3.11).
+func _season_guest_row(r: Dictionary, guest: Dictionary) -> Control:
+	var place: int = int(r["place"])
+	var hire: bool = r.has("hire_refusal") and str(r["hire_refusal"]) == ""
+	var b: Button = UiUtil.button("", &"")
+	b.name = "Guest_%d" % place
+	b.custom_minimum_size = Vector2(0, MENU_BOX_H)
+	var row: HBoxContainer = UiUtil.hbox(MENU_GAP)
+	UiUtil.full_rect(row)
+	row.offset_left = 16
+	row.offset_right = -16
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(row)
+	var texts: VBoxContainer = UiUtil.vbox(0)
+	texts.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	texts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	texts.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_child(texts)
+	var n: Label = _season_flat(UiUtil.label(UiUtil.glyph_safe(str(r["label"])), &"", 19, UiTheme.C_TEXT))
+	n.name = "Name"
+	n.add_theme_font_override("font", UiTheme.font_bold())
+	n.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	texts.add_child(n)
+	var line: String = "%s · %s" % [str(r["profile_name"]), str(r["line"])]
+	if not guest.is_empty() and int(guest.get("who", -1)) == place:
+		line = "Ihre Begleitung · noch %d %s" % [int(guest["left"]), "Kampf" if int(guest["left"]) == 1 else "Kämpfe"]
+	elif r.has("hire_refusal") and str(r["hire_refusal"]) != "" and str(r["hire_refusal"]) != "not_here":
+		line = SeasonView.cast_reason(str(r["hire_refusal"]))
+	var sub: Label = _season_flat(UiUtil.label(UiUtil.glyph_safe(line), &"", 16, UiTheme.C_TEXT_DIM))
+	sub.name = "Line"
+	sub.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	texts.add_child(sub)
+	var act: Label = _season_flat(UiUtil.label("Anheuern" if hire else "Reden", &"", 16,
+		UiTheme.C_GOLD if hire else UiTheme.C_ACCENT_2))
+	act.name = "Action"
+	act.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(act)
+	if hire:
+		b.pressed.connect(func() -> void: season_ask_hire(place))
+	else:
+		b.pressed.connect(func() -> void: _season_talk(r))
+	UiUtil.touch_pad(b, MENU_BOX_H)
+	season_guest_buttons[("hire_%d" if hire else "talk_%d") % place] = b
+	return b
+
+
+## A label of the guest panel without the theme's outline: it sits on the panel, and an outline costs a second draw
+## call per label (02_TECH §12.1).
+func _season_flat(l: Label) -> Label:
+	l.add_theme_constant_override("outline_size", 0)
+	return l
+
+
+## "Reden": M.O.D. quotes the guest (season_guest_<profile>, the line by the visit).
+func _season_talk(r: Dictionary) -> void:
+	if _modal != null and is_instance_valid(_modal):
+		return
+	Sfx.play_ui(&"ui_confirm")
+	var tag: String = "season_guest_" + str(r["profile"])
+	if Show.say(tag, {"cand": str(r["label"])}) == "":
+		Events.mod_said.emit(UiUtil.mod_line(tag, {"cand": str(r["label"])}, Game.state.floor_run.safe_room_visits),
+			&"mod", tag, false)
+
+
+## "Anheuern" asks first: who, for how long, the price (a favour or credits), then records the hire.
+func season_ask_hire(place: int) -> Node:
+	if (_modal != null and is_instance_valid(_modal)) or not ResourceLoader.exists(SEASON_DIALOG):
+		return null
+	var why: String = CastSim.refusal(Game.state, DB.data, {"t": "cast", "op": "hire", "who": place})
+	if why != "":
+		Sfx.play_ui(&"ui_error")
+		_set_status(SeasonView.cast_reason(why), UiTheme.C_DANGER)
+		return null
+	var d: Node = (load(SEASON_DIALOG) as PackedScene).instantiate()
+	var cost: String = SeasonView.hire_cost_text(Game.state, DB.data)
+	var who: String = CastSim.label(Game.state, DB.data, place)
+	d.call("setup", {"title": "%s anheuern?" % who, "kicker": "HELFER:IN",
+		"lines": [UiUtil.mod_line("season_guest_helper", {"cand": who}, Game.state.floor_run.safe_room_visits),
+		"Kommt für %d Kämpfe mit — nie in einen Bosskampf." % CastSim.HIRE_FIGHTS,
+		"Kosten: %s · Sie haben %s Credits." % [cost, UiUtil.fmt_int(UiUtil.credits())]],
+		"buttons": [{"id": "no", "text": "Lieber nicht"}, {"id": "hire", "text": "Anheuern"}], "focus": "hire",
+		"cancel_id": "no"})
+	_modal = d
+	add_child(d)
+	d.connect("closed", func(id: String, _days: int) -> void:
+		_modal = null
+		if id == "hire":
+			if Game.cast_action("hire", place):
+				Sfx.play_ui(&"ui_confirm")
+				_set_status("%s kommt für %d Kämpfe mit." % [CastSim.label(Game.state, DB.data, place),
+					CastSim.HIRE_FIGHTS], UiTheme.C_OK)
+			else:
+				Sfx.play_ui(&"ui_error")
+				_set_status(SeasonView.cast_reason(CastSim.refusal(Game.state, DB.data, {"t": "cast", "op": "hire",
+					"who": place})), UiTheme.C_DANGER)
+		_refresh_menu_labels()
+		season_refresh_guests()
+		_season_wire_again()
+		var back: Control = season_guest_buttons.get("talk_%d" % place, season_guest_buttons.get("hire_%d" % place,
+			null)) as Control
+		UiUtil.focus_later(back if back != null else menu_buttons["save"] as Control))
+	return d
+
+
+## The header in a season: credits · the collapse of the floor (calendar) or the standing countdown (Am Stück).
+func _season_header() -> void:
+	var st: GameState = Game.state
+	if st == null or st.season == null or _header_sub == null:
+		return
+	var parts: PackedStringArray = ["Credits %s" % UiUtil.fmt_int(UiUtil.credits())]
+	var cv: Dictionary = SeasonView.collapse_view(st, 0, SeasonView.tz_offset())
+	if not cv.is_empty():
+		parts.append("%s (%s)" % [str(cv["text"]), str(cv["sub"])])
+	elif st.season.tempo == "binge" and st.floor_run != null and st.floor_run.timer_started:
+		parts.append("Countdown steht: %s" % UiUtil.fmt_time(floori(Game.time_left())))
+	_header_sub.text = UiUtil.glyph_safe("  ·  ".join(parts))
+
+
+## Focus with guests: ui_right from the right end of every menu row (without the TALENT-SHOW button) and ui_down from
+## the TALENT-SHOW button reach the first guest; between the guests up / down; ui_left back to the TALENT-SHOW button
+## or the first menu row.
+func _season_wire(rows: Array[Array], cta: Control) -> void:
+	var list: Array[Control] = []
+	if season_guests == null or not season_guests.visible:
+		return
+	for c: Node in _season_guest_list.get_children():
+		if c is Button:
+			list.append(c as Control)
+	if list.is_empty() or rows.is_empty():
+		return
+	var first_menu: Array = rows[0]
+	var home: Control = first_menu[first_menu.size() - 1]
+	if cta != null:
+		cta.focus_neighbor_bottom = cta.get_path_to(list[0])
+	else:
+		for row2: Array in rows:
+			var last: Control = row2[row2.size() - 1]
+			last.focus_neighbor_right = last.get_path_to(list[0])
+	for i in list.size():
+		var b2: Control = list[i]
+		b2.focus_neighbor_left = b2.get_path_to(cta if cta != null else home)
+		b2.focus_neighbor_right = b2.get_path_to(b2)
+		b2.focus_neighbor_top = b2.get_path_to(list[i - 1] if i > 0 else (cta if cta != null else b2))
+		b2.focus_neighbor_bottom = b2.get_path_to(list[i + 1] if i < list.size() - 1 else b2)
+
+
+func _season_wire_again() -> void:
+	if is_inside_tree() and _menu != null:
+		_wire_menu_focus()
+
+
+## After the class choice (the Recall, 06 §3; 09 §2.1, §0.5): the Ohne-Netz unlock once, then the tempo offer once —
+## private calendar seasons; never while a modal is open.
+func _season_offer() -> void:
+	var st: GameState = Game.state
+	if not is_inside_tree() or st == null or st.season == null or _season_offering or _leaving:
+		return
+	if (_modal != null and is_instance_valid(_modal)) or not SeasonRules.unlocks_no_net(st) or st.season.result != "":
+		return
+	if not Save.career_seen("season_no_net_unlocked") and Show.say("season_no_net_unlocked") != "":
+		Save.career_mark("season_no_net_unlocked")
+	var c: Dictionary = {"t": "season", "v": Command.SEASON_VERSION, "op": "tempo"}
+	if Save.career_seen("season_tempo_offer") or SeasonRules.refusal(st, DB.data, c) != "":
+		return
+	season_open_tempo_offer()
+
+
+## The tempo offer (09 §2.1, V-6): "Weiter im Kalender" or "Am Stück" — once on this device.
+func season_open_tempo_offer() -> Node:
+	if not ResourceLoader.exists(SEASON_DIALOG):
+		return null
+	_season_offering = true
+	var fr: FloorRun = Game.state.floor_run
+	var mins: int = SeasonClock.binge_ticks(fr.index, Game.state.difficulty == &"vorabend") / SeasonClock.TICKS_PER_MIN
+	var d: Node = (load(SEASON_DIALOG) as PackedScene).instantiate()
+	d.call("setup", {"title": "Weiter wie im Fernsehen?", "kicker": "TEMPO · STAFFEL %d" % Game.state.season.number,
+		"lines": ["M.O.D.: „%s“" % UiUtil.mod_line("season_tempo_offer"), str(SeasonView.EXPLAIN["calendar"]),
+		str(SeasonView.EXPLAIN["binge"]) + " Etage %d bekommt dann %d:00." % [fr.index, mins],
+		"Umschalten geht nur in diese Richtung — später auch im Pausemenü unter „Staffel“."],
+		"buttons": [{"id": "calendar", "text": "Weiter im Kalender"}, {"id": "binge", "text": "Am Stück"}],
+		"focus": "calendar", "cancel_id": "calendar"})
+	_modal = d
+	add_child(d)
+	Save.career_mark("season_tempo_offer")
+	d.connect("closed", func(id: String, _days: int) -> void:
+		_modal = null
+		_season_offering = false
+		if id == "binge" and Game.season_tempo_binge():
+			Show.say("season_tempo_binge")
+		_refresh_menu_labels()
+		_focus_first())
 	return d

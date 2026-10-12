@@ -1258,6 +1258,8 @@ func _finish_event_choice(choice: String, outcome: Dictionary, ev_it: EventInter
 func open_stairs_dialog() -> void:
 	if is_modal() or _encounter_pending:
 		return
+	if _season_stairs_dialog():                    # Staffeln (09 §2.6, ST1-H): closed stairs say why, no descent
+		return
 	var opts: Array[Dictionary] = [{"id": "descend", "label": tr("Abstieg"), "enabled": true},
 		{"id": "stay", "label": tr("Noch nicht"), "enabled": true}]
 	_open_dialog(tr("Treppe nach unten"), tr("Etage verlassen? Offene Truhen und der Etagenboss bleiben zurück."),
@@ -2223,3 +2225,32 @@ func _cam_forward() -> Vector3:
 		var f: Vector3 = -cam.global_transform.basis.z
 		return Vector3(f.x, 0.0, f.z)
 	return _player.flat_forward() if _player != null else Vector3.FORWARD
+
+
+# --- Staffeln (09, ST1-H) ---------------------------------------------------------------------------------------------
+# The staircase rule (09 §2.6): stairs that do not lead down now open a dialog with the reason instead of the descent —
+# "Etage 4: Kulissen im Aufbau — öffnet in 1 T 6 Std. Eine Etage dürfen Sie vorgehen …" (M.O.D.'s sentence of 09 §0.5
+# in the dialog itself; a line in the box would sit behind it) — and, in a private calendar season, the tempo offer "Am
+# Stück spielen" (09 §2.6: "genau dort bietet M.O.D. privat „Am Stück“ an"); after the switch the stairs ask again.
+# The descent itself is never tried there (Game.complete_floor would refuse it — this scene would wait suspended).
+
+const SeasonStairs := preload("res://scenes/ui/season_view.gd")
+
+
+## True when the stairs of a season are closed now and the dialog with the reason is open.
+func _season_stairs_dialog() -> bool:
+	var v: Dictionary = SeasonStairs.stairs_view(Game.state, DB.data)
+	if v.is_empty():
+		return false
+	var opts: Array[Dictionary] = [{"id": "stay", "label": tr("Weiter erkunden"), "enabled": true}]
+	if bool(v.get("binge", false)):
+		opts.append({"id": "binge", "label": tr("Am Stück spielen"), "enabled": true})
+	_open_dialog(tr("Treppe nach unten"), str(v["text"]), opts, _season_stairs_choice, "stay")
+	return true
+
+
+func _season_stairs_choice(choice: String) -> void:
+	if choice != "binge" or not Game.season_tempo_binge():
+		return
+	Show.say("season_tempo_binge")
+	open_stairs_dialog.call_deferred()

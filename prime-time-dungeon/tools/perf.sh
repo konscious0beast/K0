@@ -65,6 +65,26 @@ run_godot() {   # run_godot <timeout> <args…>: headless or under Xvfb with the
   fi
 }
 
+# --- Stempelduell (10, SD2) -------------------------------------------------------------------------------------------
+# Scenario "stempel" (10 §6.10): tests/perf/sd_perf_probe.gd — the table against the Stempelmeister with the Durchsage
+# on the board in the real GlobalUi: UI draw calls <= 120, 0 3D, rulebook <= 50 ms, table <= 300 ms, move <= 2 ms,
+# preview <= 3 ms, no _process while it waits. --only=stempel runs it alone and exits with its code; a full run (no
+# --only) starts with it and stops on a failure; --only lists without "stempel" skip it.
+SD_ONLY=""
+for a in "${PASS[@]}"; do
+  case "$a" in --only=*) SD_ONLY="${a#--only=}" ;; esac
+done
+if [ -z "$SD_ONLY" ] || [[ ",$SD_ONLY," == *",stempel,"* ]]; then
+  echo "== stempel (10 §6.10, driver $DRIVER, $RES) =="
+  run_godot 600 -s res://tests/perf/sd_perf_probe.gd 2>&1 | grep -vE "$NOISE"
+  sd_code=${PIPESTATUS[0]}
+  if [ "$SD_ONLY" = "stempel" ] || [ "$sd_code" -ne 0 ]; then
+    echo "perf.sh: exit $sd_code"
+    exit "$sd_code"
+  fi
+fi
+# --- end Stempelduell ------------------------------------------------------------------------------------------------
+
 echo "== boot timer (real main scene, driver $DRIVER) =="
 BOOT_LINE="$(run_godot 300 -s res://tests/perf/boot_timer.gd 2>&1 | grep -E '^BOOT:' | tail -n 1)"
 echo "${BOOT_LINE:-BOOT: (failed)}"

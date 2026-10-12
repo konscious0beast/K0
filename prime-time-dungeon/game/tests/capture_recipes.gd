@@ -1325,3 +1325,145 @@ func _r_rt_world_look(scene: Node) -> bool:
 	cam.call("snap", player.rotation.y + PI * 0.8)
 	await frames(4)
 	return true
+
+
+# --- Stempelduell (10, SD2) -------------------------------------------------------------------------------------------
+## Scenes of scenes/stempel/ get {"capture": true}: the fixed sample collection in memory (sd_session.gd use_sample,
+## never saved) and the M.O.D. lines on. Table recipes (sd_table.tscn, --params={"opp": …, "mappe": "a", "seed": …}):
+## sd_table — the player's first number: the recommended card marked (ghost tickets, the real number on the card, the
+## pale segment on the opponent's bar) and an M.O.D. line in the box; sd_table_touch — the same, run with --touch (fan,
+## 170 × 236 cards, 8 tickets); sd_boss_durchsage (opp sdo_meister) — the Graf's suggestions play the duel until the
+## Stempelmeister is in phase 2 and the Durchsage stands at the second place (blinking) with its warning in the box;
+## sd_results (opp sdo_ferdi) — played to its end, the results panel. sd_deck_builder (sd_deck_builder.tscn,
+## --params={"mappe": "b"}) — Mappe B half built with the Aktenschrank's sentence; sd_album (sd_album.tscn,
+## --params={"page": "graf"}) — owned cards and outlines with the way there. Review stills: sd_hall (sd_hall.tscn),
+## sd_akte (the hall with Ulla's Akte and the Graf's tip), sd_lernduell (sd_table.tscn, --params={"tutorial": true}:
+## the first lesson card), sd_menu (the table's menu), sd_bigview (the marked card's big view).
+
+## Waits until the table waits for the player (no events playing, duel running).
+func _sd_ready(scene: Node, limit: int = 1500) -> bool:
+	return await until(func() -> bool:
+		var d: SdDuel = scene.get("duel") as SdDuel
+		return d != null and not bool(scene.get("busy")) and not bool(scene.get("finished")) \
+			and d.side_to_move() == SdDuel.Side.PLAYER, limit)
+
+
+## Says `tag` through the table's announcer, typed at once (Game.fast_text: the reading time starts now, so the still
+## shows the whole line).
+func _sd_line(scene: Node, tag: String) -> void:
+	await _quiet_mod_dialog()
+	var game: Node = get_tree().root.get_node_or_null("Game")
+	if game != null:
+		game.set("fast_text", true)
+	var host: RefCounted = scene.get("host") as RefCounted
+	if host != null:
+		host.call("say_now", tag)
+	await frames(3)
+
+
+## Plays the Graf's suggestions with the table's waits off until `cond` holds on the player's number (or the end).
+func _sd_play_until(scene: Node, cond: Callable, max_moves: int = 120) -> bool:
+	scene.set("instant", true)
+	for i in max_moves:
+		var d: SdDuel = scene.get("duel") as SdDuel
+		if d == null or bool(scene.get("finished")):
+			break
+		if d.side_to_move() == SdDuel.Side.PLAYER and not bool(scene.get("busy")) and bool(cond.call()):
+			scene.set("instant", false)
+			return true
+		if d.side_to_move() != SdDuel.Side.PLAYER or bool(scene.get("busy")):
+			await frames(1)
+			continue
+		var m: Dictionary = SdAi.suggest(d)
+		await scene.call("_submit_player", m)
+	scene.set("instant", false)
+	return bool(cond.call())
+
+
+func _r_sd_table(scene: Node) -> bool:
+	if not await _sd_ready(scene):
+		return false
+	await _sd_line(scene, "sd_first_card")
+	await seconds(0.3)
+	return true
+
+
+func _r_sd_table_touch(scene: Node) -> bool:
+	return await _r_sd_table(scene)
+
+
+func _r_sd_boss_durchsage(scene: Node) -> bool:
+	if not await _sd_ready(scene):
+		return false
+	var ok: bool = await _sd_play_until(scene, func() -> bool:
+		var d: SdDuel = scene.get("duel") as SdDuel
+		var foe: Combatant = d.combatant(SdDuel.Side.OPPONENT)
+		var order: PackedStringArray = d.order()
+		return foe != null and foe.phase >= 1 and order.size() > 1 and order[1].begins_with("u"))
+	if not ok:
+		push_warning("[CaptureRecipes] sd_boss_durchsage: no Durchsage at the second place (another seed?)")
+		return false
+	scene.call("_player_turn")
+	await _sd_line(scene, "sd_durchsage_warn")
+	await seconds(0.6)
+	return true
+
+
+func _r_sd_results(scene: Node) -> bool:
+	if not await _sd_ready(scene):
+		return false
+	await _sd_play_until(scene, func() -> bool: return false, 200)
+	return await until(func() -> bool: return scene.get("results") != null, 300)
+
+
+func _r_sd_deck_builder(scene: Node) -> bool:
+	await frames(6)
+	var tiles: Dictionary = scene.get("tiles")
+	if tiles.has("sdc_frostniesen"):
+		(tiles["sdc_frostniesen"] as Control).grab_focus()
+	await frames(4)
+	return true
+
+
+func _r_sd_album(scene: Node) -> bool:
+	await frames(6)
+	var items: Array = scene.get("items")
+	if not items.is_empty():
+		(items[0] as Control).grab_focus()
+	await frames(4)
+	return true
+
+
+func _r_sd_hall(scene: Node) -> bool:
+	await frames(10)
+	return true
+
+
+func _r_sd_akte(scene: Node) -> bool:
+	await frames(6)
+	scene.call("open_akte", "sdo_ulla")
+	return await until(func() -> bool: return scene.get("modal") != null, 120)
+
+
+func _r_sd_lernduell(scene: Node) -> bool:
+	var ok: bool = await until(func() -> bool:
+		var m: Variant = scene.get("modal")
+		return m != null and is_instance_valid(m) and str((m as Node).name).begins_with("Lesson"), 1500)
+	await seconds(0.4)
+	return ok
+
+
+func _r_sd_menu(scene: Node) -> bool:
+	if not await _sd_ready(scene):
+		return false
+	scene.call("open_menu")
+	await seconds(0.4)
+	return scene.get("modal") != null
+
+
+func _r_sd_bigview(scene: Node) -> bool:
+	if not await _sd_ready(scene):
+		return false
+	scene.call("open_big_view", int((scene.get("hand") as Node).get("marked_slot")))
+	await seconds(0.4)
+	return scene.get("modal") != null

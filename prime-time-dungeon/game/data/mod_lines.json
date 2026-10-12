@@ -4298,6 +4298,111 @@
 			"weight": 1
 		},
 		{
+			"id": "mod_season_tree_open_01",
+			"tag": "season_tree_open",
+			"voice": "mod",
+			"text": "Talent-Show! Eine neue Reihe, drei Talente, eins nehmen Sie. Umentscheiden dürfen Sie im Safe Room.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_tree_open_02",
+			"tag": "season_tree_open",
+			"voice": "mod",
+			"text": "Talent-Show, neue Reihe! Drei Talente stehen bereit. Wer sich vertut, wählt im Safe Room einfach neu.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_tree_pick_01",
+			"tag": "season_tree_pick",
+			"voice": "mod",
+			"text": "Gewählt! Die Jury nickt. Die Jury nickt immer. Dafür wird sie bezahlt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_tree_pick_02",
+			"tag": "season_tree_pick",
+			"voice": "mod",
+			"text": "Eine Reihe weiter. Bereuen ist erlaubt — im Safe Room, kostenlos.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_tree_pick_mopsula_01",
+			"tag": "season_tree_pick:mopsula",
+			"voice": "mod",
+			"text": "Der Graf wählt. Er nennt es Fortbildung. Wir nennen es Quote.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_tree_repick_01",
+			"tag": "season_tree_repick",
+			"voice": "mod",
+			"text": "Umentschieden. Kostet nichts, steht trotzdem im Protokoll.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_tree_reset_01",
+			"tag": "season_tree_reset",
+			"voice": "mod",
+			"text": "Neuer Talentbaum — bitte neu wählen. Kostenlos. Diesmal.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_ability_01",
+			"tag": "season_ability",
+			"voice": "mod",
+			"text": "Neue Fähigkeit! Legen Sie sie im Fähigkeitenbuch auf die Leiste.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_ability_02",
+			"tag": "season_ability",
+			"voice": "mod",
+			"text": "Neue Fähigkeit gelernt. Das Fähigkeitenbuch hat schon ein Lesezeichen gesetzt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_rank_01",
+			"tag": "season_rank",
+			"voice": "mod",
+			"text": "Rang {count}! Ihre Klassenfähigkeiten haben dazugelernt. Sie hoffentlich auch.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_catch_up_01",
+			"tag": "season_catch_up",
+			"voice": "mod",
+			"text": "Sie hängen hinterher. Bis Sie aufgeholt haben, zählt jede Erfahrung doppelt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_catch_up_02",
+			"tag": "season_catch_up",
+			"voice": "mod",
+			"text": "Aufholjagd! Die Regie spendiert doppelte Erfahrung, bis Sie wieder im Band sind.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_crash_course_01",
+			"tag": "season_crash_course",
+			"voice": "mod",
+			"text": "Regie-Crashkurs! Wir haben Sie über Nacht nachgeschult. Das Aufholpaket liegt bei.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_overtime_01",
+			"tag": "season_overtime",
+			"voice": "mod",
+			"text": "Überstunden! Mehr Stufen gibt es auf dieser Etage nicht. Die Regie zahlt in Credits.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_overtime_02",
+			"tag": "season_overtime",
+			"voice": "mod",
+			"text": "Deckel erreicht. Ihre Erfahrung geht jetzt auf das Überstundenkonto.",
+			"weight": 1
+		},
+		{
 			"id": "mod_boss_intro_enm_boss_filialleiterin_01",
 			"tag": "boss_intro:enm_boss_filialleiterin",
 			"voice": "mod",

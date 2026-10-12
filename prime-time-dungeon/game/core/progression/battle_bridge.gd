@@ -103,16 +103,20 @@ static func _apply_stolen(state: GameState, result: BattleResult, rw: BattleRewa
 		rw.credits_refunded = maxi(0, result.credits_refunded)
 
 
-## (4) VICTORY: EXP (KO'd members still at 0 HP: half EXP, no level-up heal), credits, drops, boss rewards,
-## Werbepause MP for the living.
+## (4) VICTORY: EXP (KO'd members still at 0 HP: half EXP, no level-up heal; in a season LevelBand.combat_exp — the
+## colour of the beaten group, the catch-up or "Ausgeruht", the cap of the floor and its overtime credits, ST1-D),
+## credits, drops, boss rewards, Werbepause MP for the living.
 static func _apply_victory_rewards(state: GameState, data: GameData, result: BattleResult, rw: BattleRewards,
 		was_ko: Dictionary) -> void:
 	rw.exp = maxi(0, result.exp)
-	for m: PartyMember in state.party:
-		if m == null:
-			continue
-		var gain: int = rw.exp * KO_EXP_PCT / 100 if was_ko.has(m.id) else rw.exp
-		rw.level_ups.append_array(Progression.add_exp(m, gain, data))
+	if state.season != null:   # Staffeln (09 §8.2, ST1-D): colour, catch-up / rested, the cap and its overtime
+		LevelBand.combat_exp(state, data, result, rw.exp, was_ko, rw)
+	else:
+		for m: PartyMember in state.party:
+			if m == null:
+				continue
+			var gain: int = rw.exp * KO_EXP_PCT / 100 if was_ko.has(m.id) else rw.exp
+			rw.level_ups.append_array(Progression.add_exp(m, gain, data))
 	rw.credits = maxi(0, result.credits)
 	rw.credits += TwistApplier.take_bonus_credits(state, rw.credits)   # 06-D: tw_double_credits
 	rw.overkill_credits = maxi(0, result.overkill_credits)
@@ -379,6 +383,7 @@ static func _rt_party(s: RtSetup, state: GameState, data: GameData, rt: Dictiona
 		u.z = int(pose[1])
 		u.yaw = posmod(int(pose[2]), 256)
 		_rt_party_fields(u, m, def, data, bal, rt.get("presets", {}), s.mods)
+		_rt_class_bar(u, m, state, data)           # Staffeln (09 §8.3, ST1-D): the class abilities on the bar
 		_rt_species_unit(u, m, state, data)
 		party.append(u)
 		s.units.append(u)
@@ -542,11 +547,12 @@ static func _battle_twists(state: GameState) -> Array:
 	return out
 
 
-## RtMods of the party members (07 §9.5) in the fixed order equipment → species → spec: equipment (R5b) the
-## items.json rt.mods of every equipped piece (weapon, armor, accessory; RtMods.from_equipment) — besides the Combatant
-## values every piece gives in both combat modes —, species passives map as proposed in 07 §9.6 (_rt_species_mods;
-## built with floor 3), specialisations (classes) have no real-time mapping yet (their passives are CTB rules;
-## unlock_variant waits for data). Members in battle_slot order.
+## RtMods of the party members (07 §9.5) in the fixed order equipment → species → class → talents: equipment (R5b)
+## the items.json rt.mods of every equipped piece (weapon, armor, accessory; RtMods.from_equipment) — besides the
+## Combatant values every piece gives in both combat modes —, species passives map as proposed in 07 §9.6
+## (_rt_species_mods; built with floor 3); in a season (09 ST1-D, 07 CR-32 b) the class rank II–IV (skill_pm power of
+## every class ability, source class:<id>, AbilityBook.rank_mods) and the rt_mod talents of the tree (source
+## talent:<id>, TalentTree.rt_mods); the classes' CTB passives have no real-time mapping. Members in battle_slot order.
 static func _rt_member_mods(state: GameState, data: GameData) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var members: Array[PartyMember] = []
@@ -565,6 +571,11 @@ static func _rt_member_mods(state: GameState, data: GameData) -> Array[Dictionar
 					out.append_array(RtMods.from_equipment(iid, raw as Array, uid))
 	for m: PartyMember in members:
 		out.append_array(_rt_species_mods(m, "p%d" % data.party_member(m.id).battle_slot, data))
+	if state.season != null:   # Staffeln (09 §8.3/§8.4, ST1-D; 07 CR-32 b): class ranks, then the tree's rt_mod talents
+		for m: PartyMember in members:
+			out.append_array(AbilityBook.rank_mods(state, data, m, "p%d" % data.party_member(m.id).battle_slot))
+		for m: PartyMember in members:
+			out.append_array(TalentTree.rt_mods(data, m, "p%d" % data.party_member(m.id).battle_slot))
 	return out
 
 
@@ -666,3 +677,32 @@ static func write_presets(state: GameState, result: BattleResult) -> void:
 			if src.has(k):
 				tog[k] = bool(src[k])
 		m.rt_toggles = tog
+
+
+# --- Staffeln (09 §8.3, ST1-D) ----------------------------------------------------------------------------------------
+
+## The class abilities of a season on the bar (09 §8.3): a learned class variant the loadout put on a slot (1–5) sits
+## there instead of the slot's ability, and the AI rules of the slot's base ability fire the variant — the partner and
+## the autopilot use it like the ability it replaces (every class variant keeps the target kind of its slot's base
+## ability, a data rule of classes.json → rt.bar). Nothing without a season or a class (AbilityBook.class_variants).
+static func _rt_class_bar(u: RtUnit, m: PartyMember, state: GameState, data: GameData) -> void:
+	var vars: Dictionary = AbilityBook.class_variants(state, data, m)
+	if vars.is_empty():
+		return
+	var keys: Array = m.rt_loadout.keys()
+	keys.sort()
+	for k: Variant in keys:
+		var sid: String = str(m.rt_loadout[k])
+		var slot: int = str(k).to_int()
+		if not vars.has(sid) or int(vars[sid]) != slot or not u.bar.has(slot):
+			continue
+		var base: String = AbilityBook.base_skill(data, m.id, slot)
+		u.bar[slot] = sid
+		if base == "":
+			continue
+		for r: Dictionary in u.rules:
+			if str(r.get("skill", "")) == base:
+				r["skill"] = sid
+			var then_d: Variant = r.get("then", {})
+			if then_d is Dictionary and str((then_d as Dictionary).get("skill", "")) == base:
+				(then_d as Dictionary)["skill"] = sid

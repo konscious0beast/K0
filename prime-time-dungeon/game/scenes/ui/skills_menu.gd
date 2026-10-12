@@ -4,8 +4,13 @@ extends "res://scenes/ui/menu_base.gd"
 ## the partner tactic — see the section at the end; R5b: variants and the tactic are chosen there (the recorded loadout
 ## command). Details on focus. The CTB learnset page is gone with the CTB campaign (R5b part 2b). 09 ST1-A: a level
 ## reads "Stufe", never "Lv" / "Level" (09 §1.2).
+## Staffeln (09 §8.3, ST1-D): the page is the ability book — after the Recall the class abilities join their slots
+## ("Klasse: …", learned bright, the rest "ab Stufe X"; slot 1 and the SHOW become a choice when the class gives them a
+## variant), then the class ranks II–IV; before the Recall a second tab "Klassen-Vorschau" lists the abilities of all
+## four classes of the figure with their levels. Without a season the page is unchanged.
 
 var member_id: String = "kai"
+var view: String = "book"                    # Staffeln: "book" | "preview" (the Klassen-Vorschau before the Recall)
 
 var _tabs_holder: HBoxContainer
 var _list: VBoxContainer
@@ -86,7 +91,8 @@ func _show(e: Dictionary) -> void:
 		sub.text = ""
 		body.text = ""
 		return
-	title.text = UiUtil.tr_text(sd.name) if bool(e.get("learned", true)) else UiUtil.tr_text(sd.name) + "  (gesperrt)"
+	title.text = UiUtil.tr_text(sd.name) if bool(e.get("learned", true)) else UiUtil.tr_text(sd.name) + ("  (Vorschau)"
+		if str(e.get("kind", "")) == "preview" else "  (gesperrt)")
 	var parts: PackedStringArray = [str(UiUtil.CATEGORY_NAMES.get(sd.category, sd.category)),
 		str(UiUtil.TARGET_NAMES.get(sd.target, sd.target))]
 	if sd.element != "none":
@@ -112,7 +118,7 @@ func _show(e: Dictionary) -> void:
 		lines.append("Erfolg %d %% + %s %% je Glück (max. %d %%), %s" % [roundi(sd.success_base * 100.0),
 			str(snappedf(sd.success_lck * 100.0, 0.1)).replace(".", ","), roundi(sd.success_cap * 100.0),
 			"SHOW-Abklingzeit 30 s (ganze Party)"])
-	if not bool(e.get("learned", true)):
+	if not bool(e.get("learned", true)) and str(e.get("kind", "")) != "preview":
 		lines.append("Wird mit Stufe %d gelernt." % int(e.get("level", 1)))
 	body.text = UiUtil.glyph_safe("\n".join(lines))
 
@@ -196,8 +202,17 @@ func _rt_refresh() -> bool:
 	clear(_list)
 	_buttons.clear()
 	var m: PartyMember = Game.state.member(member_id)
+	if Game.state.season != null and m != null and m.class_id == "":   # Staffeln (09 §8.3): before the Recall
+		_tabs_holder.add_child(_view_tabs())
+	else:
+		view = "book"
+	_wire_tabs()
+	if view == "preview":
+		_preview_list()
+		UiUtil.wire_vertical(_buttons)
+		return true
 	var level: int = m.level if m != null else 1
-	var rows: Array[Dictionary] = rt_bar_rows(member_id)
+	var rows: Array[Dictionary] = book_rows(m, member_id)
 	var choosable: Dictionary = rt_variant_slots(rows)
 	var last_slot: int = -1
 	var first: Dictionary = {}
@@ -207,13 +222,18 @@ func _rt_refresh() -> bool:
 			last_slot = slot
 			_rt_header(str(RT_SLOT_NAMES.get(slot, "SLOT %d" % slot)))
 		var kind: String = str(r["kind"])
+		var cls: bool = str(r.get("source", AbilityBook.SOURCE_PARTY)) != AbilityBook.SOURCE_PARTY   # 09 §8.3
 		var e: Dictionary = {"skill": str(r["skill"]), "level": int(r["level"]), "learned": int(r["level"]) <= level,
-			"kind": kind, "slot": slot, "choice": choosable.has(slot) and (kind == "" or kind == "variant")}
+			"kind": kind, "slot": slot, "choice": choosable.has(slot) and (kind == "" or kind == "variant"),
+			"class": cls}
+		if cls:
+			e["learned"] = AbilityBook.is_learned(m, r)
 		if bool(e["choice"]):
 			e["equipped"] = rt_equipped(m, slot, str(r["skill"]), kind)
-		_rt_button(e, str(RT_KIND_TEXT.get(kind, "")))
+		_rt_button(e, CLASS_PREFIX if cls else str(RT_KIND_TEXT.get(kind, "")))
 		if first.is_empty():
 			first = e
+	_rank_rows(m)                                # Staffeln (09 §8.3): Rang II–IV of the class
 	var sp: Array = rt_special(member_id)
 	if str(sp[0]) != "":
 		_rt_header("PARTNER-SPEZIAL · WENN DU DEN ANDEREN SPIELST")
@@ -231,7 +251,16 @@ func _rt_refresh() -> bool:
 	return true
 
 
-## Slots of `rows` with a variant (07 §4.1: slots 2–4) → true: their base row and variants are a choice.
+## The rows of the member's book: the figure's bar (rt_bar_rows) — in a season after the Recall with the class bar
+## (AbilityBook.rows_of: party rows, then the class rows of each slot, "source" = the class).
+static func book_rows(m: PartyMember, def_id: String) -> Array[Dictionary]:
+	if m == null or Game.state == null or Game.state.season == null or m.class_id == "":
+		return rt_bar_rows(def_id)
+	return AbilityBook.rows_of(Game.state, DB.data, m)
+
+
+## Slots of `rows` with a variant (07 §4.1: slots 2–4; 09 §8.3: a class may give slot 1 and the SHOW one) → true:
+## their base row and variants are a choice.
 static func rt_variant_slots(rows: Array[Dictionary]) -> Dictionary:
 	var out: Dictionary = {}
 	for r: Dictionary in rows:
@@ -374,6 +403,8 @@ func _rt_button(e: Dictionary, prefix: String) -> void:
 	var mp: int = int(sd.rt.get("mp", sd.mp_cost)) if sd != null and not sd.rt.is_empty() else (sd.mp_cost if sd != null
 		else 0)
 	var right: String = ("%d MP" % mp if mp > 0 else "") if learned else "ab Stufe %d" % int(e["level"])
+	if not learned and int(e["level"]) <= 1 and (bool(e.get("class", false)) or str(e["kind"]) == "preview"):
+		right = "beim Recall"                    # 09 §8.3: the class signature comes with the Recall
 	if bool(e.get("equipped", false)):
 		right = "belegt"
 	var col: Color = UiUtil.ELEMENT_COLORS.get(sd.element if sd != null else "none", UiTheme.C_TEXT) as Color
@@ -407,5 +438,107 @@ func _rt_show(e: Dictionary) -> void:
 			extra = "Das FINALE ersetzt die SHOW, sobald dein Ziel unter 30 % HP hat (ab Stufe %d)." % int(e["level"])
 		"special":
 			extra = "Mit Taste R (Pad: Steuerkreuz links) befiehlst du sie deinem Partner sofort."
+		"preview":
+			extra = "%s · Slot %d: %s." % [str(e.get("class_name", "")), int(e["slot"]), "beim Recall" if int(
+				e["level"]) <= 1 else "ab Stufe %d nach dem Recall" % int(e["level"])]
+	if bool(e.get("class", false)) and str(e.get("kind", "")) == "variant":
+		extra = ("Klassenfähigkeit (Signatur, ab dem Recall). " if int(e["level"]) <= 1 else
+			"Klassenfähigkeit (ab Stufe %d). " % int(e["level"])) + ("Belegt Slot %d." % int(e["slot"]) if bool(
+			e.get("equipped", false)) else "Auswählen, um sie statt der Grundfähigkeit in Slot %d zu belegen."
+			% int(e["slot"]))
 	if extra != "":
 		body.text = UiUtil.glyph_safe((body.text + "\n" if body.text != "" else "") + extra)
+
+
+# --- Staffeln (09 §8.3, ST1-D): the class ranks and the Klassen-Vorschau ----------------------------------------------
+
+const CLASS_PREFIX: String = "Klasse: "
+const VIEW_NAMES: Array = [["book", "Fähigkeitenbuch"], ["preview", "Klassen-Vorschau"]]
+
+
+## The two tabs of the book before the Recall: "Fähigkeitenbuch" | "Klassen-Vorschau".
+func _view_tabs() -> HBoxContainer:
+	var row: HBoxContainer = UiUtil.hbox(12)
+	for v: Array in VIEW_NAMES:
+		var b: Button = UiUtil.button(str(v[1]), &"ButtonFlat")
+		b.name = "View_" + str(v[0])
+		b.custom_minimum_size = Vector2(220, 0)
+		UiUtil.touch_pad(b)
+		b.alignment = HORIZONTAL_ALIGNMENT_CENTER
+		b.toggle_mode = true
+		b.button_pressed = view == str(v[0])
+		if view == str(v[0]):
+			b.add_theme_color_override("font_color", UiTheme.C_GOLD)
+			b.add_theme_color_override("font_focus_color", UiTheme.C_GOLD)
+		var id: String = str(v[0])
+		b.pressed.connect(func() -> void: show_view(id))
+		row.add_child(b)
+	return row
+
+
+## Switches the book to `id` ("book" | "preview"); the focus stays on its tab.
+func show_view(id: String) -> void:
+	view = id
+	refresh()
+	var t: Control = _tabs_holder.find_child("View_" + id, true, false) as Control
+	if t != null:
+		UiUtil.focus_later(t)
+
+
+## One horizontal focus chain over the member tabs and the view tabs.
+func _wire_tabs() -> void:
+	var tabs: Array[Control] = []
+	for c: Node in _tabs_holder.find_children("*", "Button", true, false):
+		tabs.append(c as Control)
+	UiUtil.wire_horizontal(tabs)
+
+
+## The class ranks (09 §8.3: Rang II–IV on 37 / 42 / 47, every class ability +10 % power each) — after the Recall.
+func _rank_rows(m: PartyMember) -> void:
+	if m == null or Game.state == null or Game.state.season == null or m.class_id == "" \
+			or not DB.has_id("classes", m.class_id):
+		return
+	var ranks: Array = DB.class_def(m.class_id).rt.get("ranks", []) as Array
+	if ranks.is_empty():
+		return
+	_rt_header("KLASSE · RÄNGE")
+	var cls: String = UiUtil.tr_text(DB.class_def(m.class_id).name)
+	for i in ranks.size():
+		var lv: int = int((ranks[i] as Dictionary).get("level", 99))
+		var pm: int = int((ranks[i] as Dictionary).get("pm", 1000))
+		var got: bool = lv <= m.level
+		var rank_name: String = "Rang " + AbilityBook.RANK_NAMES[i + 2]
+		var b: Button = list_button(rank_name, &"star", UiTheme.C_GOLD if got else UiUtil.C_DISABLED,
+			"erreicht" if got else "ab Stufe %d" % lv, Color(0, 0, 0, 0) if got else UiTheme.C_TEXT_DIM)
+		b.name = "RtRank_%d" % (i + 2)
+		var body: String = "Alle Klassenfähigkeiten treffen und heilen %d %% stärker." % ((pm - 1000) / 10)
+		if not got:
+			body += "\nWird mit Stufe %d erreicht." % lv
+		b.focus_entered.connect(func() -> void:
+			(_detail["title"] as Label).text = rank_name
+			(_detail["sub"] as Label).text = "%s · ab Stufe %d" % [cls, lv]
+			(_detail["body"] as Label).text = UiUtil.glyph_safe(body))
+		_list.add_child(b)
+		_buttons.append(b)
+
+
+## The Klassen-Vorschau (09 §8.3): every class of the figure (AbilityBook.preview) with its six abilities and their
+## levels; nothing to choose — the class is chosen at the Recall.
+func _preview_list() -> void:
+	var note: Label = UiUtil.label("Beim Recall auf Etage 3 wählen Sie eine Klasse. Ihre Fähigkeiten kommen danach auf "
+		+ "festen Stufen.", &"LabelSmall", 16, UiTheme.C_TEXT_DIM)
+	note.name = "PreviewNote"
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_list.add_child(note)
+	var first: Dictionary = {}
+	for c: Dictionary in AbilityBook.preview(DB.data, member_id):
+		_rt_header(UiUtil.tr_text(str(c["name"])).to_upper())
+		for r: Variant in (c["rows"] as Array):
+			var row: Dictionary = r
+			var e: Dictionary = {"skill": str(row["skill"]), "level": int(row["level"]), "learned": false,
+				"kind": "preview", "slot": int(row["slot"]), "class_name": UiUtil.tr_text(str(c["name"]))}
+			_rt_button(e, "Slot %d: " % int(row["slot"]))
+			if first.is_empty():
+				first = e
+	if not first.is_empty():
+		_rt_show(first)

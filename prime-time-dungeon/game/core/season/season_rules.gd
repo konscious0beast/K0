@@ -259,7 +259,7 @@ static func on_safe_room(state: GameState, safe_room_id: String) -> void:
 ## The stairs were taken ("descend"; RunSim.apply, Game.complete_floor, GameReplay): the Quote counts the floor, the
 ## tie-break its time (09 §2.7). Stairs below the last floor with playable content (last_floor; floors 1–6 since
 ## ST1-C1, 7–18 with ST1-C2) lead to the end of the content: the candidate's season ends there ("end", why "content" —
-## ST1-B decision).
+## ST1-B decision). ST1-D: the stairs bring half a level of EXP ("Abschluss-EP", LevelBand.on_descend: event "exp").
 static func on_descend(state: GameState, data: GameData) -> Array[ExploreEvent]:
 	var out: Array[ExploreEvent] = []
 	var s: SeasonState = state.season if state != null else null
@@ -268,6 +268,7 @@ static func on_descend(state: GameState, data: GameData) -> Array[ExploreEvent]:
 		return out
 	s.stairs += 1
 	s.descent_at = now(state)
+	out.append_array(LevelBand.on_descend(state, data))   # ST1-D (09 §2.5 Nr. 7, §8.2): the Abschluss-EP
 	if s.result == "" and fr.index >= last_floor(state, data):
 		out.append_array(_finish(state, "content", fr.index))
 	return out
@@ -680,6 +681,7 @@ static func _collapse_hits(state: GameState, data: GameData, n: int) -> Array[Ex
 ## The rescue (09 §2.5 Nr. 3, V-9): the fee (−30 % credits, −10 % followers) unless it is the dress rehearsal, the
 ## figure sleeps in a safe room (carried for free) or a fee was charged in the last seven days; from floor 2 the vest
 ## goes and the Quote counts the rescue; the figure stands (or sleeps on) in the first safe room of the next floor.
+## ST1-D: a figure far below the band of the new floor gets the Regie-Crashkurs there (LevelBand.crash_course).
 static func _rescue(state: GameState, data: GameData, rehearsal: bool) -> Array[ExploreEvent]:
 	var s: SeasonState = state.season
 	var from: int = state.floor_run.index
@@ -707,6 +709,7 @@ static func _rescue(state: GameState, data: GameData, rehearsal: bool) -> Array[
 	var loc: String = _move(state, data, from + 1)
 	var out: Array[ExploreEvent] = [_ev("rescue", {"from": from, "floor": from + 1, "location": loc,
 		"credits": credits, "followers": followers, "waived": waived})]
+	out.append_array(LevelBand.crash_course(state, data))   # ST1-D (09 §8.2, V-8): the Regie-Crashkurs, event "crash"
 	return out
 
 

@@ -24,6 +24,12 @@ const STYLES: Dictionary = {
 	&"marotte": ["M.O.D. MAG DAS", &"heart", Color("#ff2e88")],
 	&"liga": ["UNTERHOSEN-LIGA", &"star", Color("#ff2e88")],
 	&"liga_duo": ["DUO-LIGA", &"star", Color("#ffc93c")],
+	# 09 ST1-D (seasons): the ability book, the talent tree, the level band
+	&"ability": ["NEUE FÄHIGKEIT", &"star", Color("#22d3ee")],
+	&"talent": ["TALENT-SHOW BEREIT", &"star", Color("#ffc93c")],
+	&"overtime": ["ÜBERSTUNDEN", &"coin", Color("#ffc93c")],
+	&"crash": ["REGIE-CRASHKURS", &"star", Color("#4ade80")],
+	&"exp": ["ERFAHRUNG", &"star", Color("#4ade80")],
 }
 
 var _root: Control

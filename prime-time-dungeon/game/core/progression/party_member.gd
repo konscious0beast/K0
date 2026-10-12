@@ -23,7 +23,7 @@ var casting: Dictionary = {}           # Casting bookkeeping: {"floor", "visit",
 # --- Echtzeitkampf (07, R1a): written by to_dict only when they differ from the default (07 §10.4) ------------------
 var rt_preset: String = ""             # partner tactic (RtVocab.RT_PRESETS; "" = party.json rt.default_preset)
 var rt_toggles: Dictionary = {}        # partner switches {interrupt, show, potions} → bool ({} = RtVocab defaults)
-var rt_loadout: Dictionary = {}        # action bar variants: "2".."4" → skill id ({} = the base abilities, §4.1)
+var rt_loadout: Dictionary = {}        # bar variants: "2".."4" (09 ST1-D: "1".."5") → skill id ({} = base, §4.1)
 # --- Staffeln (09, ST0): written by to_dict only when they differ from the default (09 §9.1) -------------------------
 var rested: int = 0                    # Ausgeruht: the bonus EP pool (09 §8.2, §5.2)
 var professions: Dictionary = {}       # prf id → value 1–300 (09 §8.5; only the candidate kai learns professions)

@@ -21,6 +21,10 @@ class_name Talents extends RefCounted
 ##   marotte_heart → MarottenRules (package C) via marotte_bonus_hearts; hype_gain_pm / follower_pm → GameState
 ## has_any() is the "no talents" guard of stat_bonus, _effects, Progression.total_stats and Progression.to_combatant
 ## (the start talents of 08 K0 left with CR-33 in ST0: the pool talents are the only source of effects).
+## Staffeln (09 §8.4, ST1-D): where the talent tree governs (TalentTree.governs: every season; every run once the V-20
+## switch is on) the offer of this file stands aside — open_choices / has_choice count the tree's open rows, check_pick
+## refuses the 06-B pick (TalentTree.TREE_RULES) — and the effects of the tree's picks (PartyMember.talent_rows, rank 1)
+## join _effects. Without a season nothing changes: talent_rows stays empty there.
 
 const OFFER_SIZE: int = 2
 const FIRST_LEVEL: int = 3
@@ -108,16 +112,20 @@ static func current_offer(state: GameState, data: GameData, member_id: String) -
 	return offer(state, data, member_id, open[0])
 
 
-## True if the member has an open choice with a non-empty offer.
+## True if the member has an open choice with a non-empty offer. Where the tree governs: an open row.
 static func has_choice(state: GameState, data: GameData, member_id: String) -> bool:
+	if TalentTree.governs(state):                     # Staffeln (09 §8.4, ST1-D)
+		return not TalentTree.open_rows(state, data, state.member(member_id)).is_empty()
 	return not current_offer(state, data, member_id).is_empty()
 
 
-## Total open choices over the party (badges: safe room menu, party menu).
+## Total open choices over the party (badges: safe room menu, party menu). Where the tree governs: its open rows.
 static func open_choices(state: GameState, data: GameData) -> int:
 	var n: int = 0
 	if state == null:
 		return n
+	if TalentTree.governs(state):                     # Staffeln (09 §8.4, ST1-D)
+		return TalentTree.open_total(state, data)
 	for m: PartyMember in state.party:
 		if m != null and has_choice(state, data, m.id):
 			n += pending_levels(m).size()
@@ -131,11 +139,14 @@ static func in_safe_room(state: GameState) -> bool:
 
 
 ## "" = the pick is valid, else "unknown_member" | "unknown_talent" | "no_pending" | "not_in_safe_room" |
-## "max_rank" | "not_offered" (only the offer of the oldest open level can be picked).
+## "max_rank" | "not_offered" (only the offer of the oldest open level can be picked) | "talent_tree" (the tree governs:
+## its picks are "talent" v2, 09 §8.4).
 static func check_pick(state: GameState, data: GameData, member_id: String, talent_id: String) -> String:
 	var m: PartyMember = state.member(member_id) if state != null else null
 	if m == null or data == null:
 		return "unknown_member"
+	if TalentTree.governs(state):                     # Staffeln (09 §8.4, ST1-D)
+		return TalentTree.TREE_RULES
 	if not data.has_id("talents", talent_id):
 		return "unknown_talent"
 	var open: PackedInt32Array = pending_levels(m)
@@ -270,7 +281,8 @@ static func follower_pm(state: GameState, data: GameData) -> int:
 
 # --- helpers ----------------------------------------------------------------------------------------------------------
 
-## [[effect: Dictionary, rank: int], …] of the member's known talents (talent id order, effect order).
+## [[effect: Dictionary, rank: int], …] of the member's known talents (talent id order, effect order), then the picks
+## of the talent tree (row order, rank 1; 09 §8.4, ST1-D — rt_mod effects among them are BattleBridge's).
 static func _effects(member: PartyMember, data: GameData) -> Array:
 	var out: Array = []
 	if member == null or data == null or not has_any(member, data):
@@ -283,6 +295,7 @@ static func _effects(member: PartyMember, data: GameData) -> Array:
 			continue
 		for fx: Dictionary in data.talent(str(id)).effects:
 			out.append([fx, r])
+	out.append_array(TalentTree.effects(data, member))   # Staffeln (09 §8.4, ST1-D): empty without a season
 	return out
 
 
@@ -316,7 +329,7 @@ static func _party_product(state: GameState, data: GameData, kind: String) -> in
 	return acc
 
 
-## True if the member has a source of talent effects: pool talents (the K0 start talents left with CR-33, 09 ST0).
-## `_data` stays in the signature (the callers pass it).
+## True if the member has a source of talent effects: pool talents (the K0 start talents left with CR-33, 09 ST0) or
+## picks of the talent tree (09 §8.4, ST1-D; only in a season). `_data` stays in the signature (the callers pass it).
 static func has_any(member: PartyMember, _data: GameData = null) -> bool:
-	return member != null and not member.talents.is_empty()
+	return member != null and (not member.talents.is_empty() or not member.talent_rows.is_empty())

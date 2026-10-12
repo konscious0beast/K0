@@ -55,7 +55,10 @@ func _talent(effects: Array, extra: Dictionary = {}) -> Dictionary:
 
 func test_pool_has_12_talents_per_member_with_a_third_behaviour() -> void:
 	var d: GameData = real_data()
-	assert_eq(d.all_talents().size(), 24, "06 §2.2: 24 talents")
+	var pool_size: int = 0
+	for t: TalentDef in d.all_talents():
+		pool_size += 0 if t.is_tree() else 1          # 09 ST1-D: the talent tree lives beside the pool (row > 0)
+	assert_eq(pool_size, 24, "06 §2.2: 24 talents")
 	for mid: String in ["kai", "mopsula"]:
 		var pool: Array[TalentDef] = d.talents_for(mid)
 		assert_eq(pool.size(), 12, mid + ": 12 talents")

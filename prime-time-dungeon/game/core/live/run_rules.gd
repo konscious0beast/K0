@@ -103,7 +103,9 @@ static func open_gate(state: GameState, key: String) -> bool:
 
 ## Floor event (02_TECH §7.4): k = index of the event in layout.events, rng SeedUtil.derive(floor_run.seed, "event",
 ## k × 16 + event_uses[id]); FloorEvent.resolve + apply. Returns the outcome ({} = unknown event, warning). Lootboxes of
-## the outcome are added by add_event_boxes — the live run adds them after its Show reactions.
+## the outcome are added by add_event_boxes — the live run adds them after its Show reactions. Staffeln (09 §8.2,
+## ST1-D): the first completion of an event gives every member 5 % of a level (outcome["season"]: the SEASON events of
+## LevelBand.on_floor_event, for the live run's presentation).
 static func apply_floor_event(state: GameState, data: GameData, layout: FloorLayout, event_id: String,
 		choice: String) -> Dictionary:
 	var fr: FloorRun = state.floor_run if state != null else null
@@ -115,8 +117,11 @@ static func apply_floor_event(state: GameState, data: GameData, layout: FloorLay
 	var uses: int = int(fr.event_uses.get(event_id, 0))
 	var rng: RandomNumberGenerator = SeedUtil.make_rng(SeedUtil.derive(fr.seed, "event", k * 16 + uses))
 	var outcome: Dictionary = FloorEvent.resolve(ev, choice, state, data, rng)
+	var was_done: bool = fr.completed_events.has(event_id)
 	FloorEvent.apply(outcome, ev, choice, state, data)
 	_rt_regen_after_damage(fr, outcome)                  # Echtzeitkampf (07 §2.7, R1b)
+	if state.season != null and not was_done and fr.completed_events.has(event_id):
+		outcome["season"] = LevelBand.on_floor_event(state, data)   # Staffeln (09 §8.2, ST1-D): 5 % of a level
 	return outcome
 
 
@@ -206,7 +211,9 @@ static func lower_difficulty(state: GameState, d: StringName) -> bool:
 ## - floor: the first floor of the run, or exactly floor_run.index + 1 after "descend" → not_allowed
 ## - difficulty: event runs (rules non-empty) play the event's difficulty (05 §10.1) → not_allowed
 ## - scene: only in a safe room, not yet seen (once) and its condition true for the visit (scene_allowed) → not_allowed
-## - talent (06 §2.2): Talents.check_pick — in a safe room, from the offer of the oldest open level → its reason
+## - talent (06 §2.2): Talents.check_pick — in a safe room, from the offer of the oldest open level → its reason; where
+##   the talent tree governs (09 §8.4, ST1-D: a season, or every run with the V-20 switch) talent_tree, and talent v2 is
+##   TalentTree.refusal's
 ## - casting (06 §3.4/§3.6): Casting.check — floor >= min_floor, in a safe room, re-spec locks → its reason
 ## - hero (06 §1.7): HeroRules.check — the choice of a new run before it started, later switches in a safe room →
 ##   its reason
@@ -246,6 +253,8 @@ static func command_refusal(state: GameState, data: GameData, rules: Dictionary,
 				return "not_allowed"
 		"talent":
 			if c.has("v"):                         # Staffeln (09, ST0): talent v2, a row of the talent tree
+				if state.season == null and TalentTree.governs(state):   # ST1-D: the V-20 switch (off until ST1)
+					return TalentTree.refusal(state, data, c)
 				return season_refusal(state, data, c)
 			return Talents.check_pick(state, data, str(c.get("member", "")), str(c.get("id", "")))
 		"casting":
@@ -372,7 +381,9 @@ static func apply_season(state: GameState, data: GameData, c: Dictionary) -> Arr
 
 const RT_VERSION: int = 1                          # 07 §10.2: run log header "rt_version" of a real-time run
 const REALTIME: StringName = &"realtime"
-const LOADOUT_SLOTS: PackedStringArray = ["2", "3", "4"]   # 07 §4.1: the slots with variants
+## 07 §4.1: the slots with variants — the figures' own on 2–4; 09 §8.3 (ST1-D): the class abilities of a season are
+## variants of every slot, the SHOW included (a figure without a class has none on 1 and 5: not_a_variant).
+const LOADOUT_SLOTS: PackedStringArray = ["1", "2", "3", "4", "5"]
 
 ## "" or why the combat entry `c` (RtCommand.is_combat_cmd) is refused by a verifier before it is replayed against
 ## `sim`, the running combat (07 §10.2, §10.6): none → "no_combat"; a move_batch (verifiers replay the expanded log,
@@ -495,7 +506,8 @@ static func loadout_cmd(member_id: String, bar: Dictionary, preset: String = "",
 
 ## "" or why the loadout command `c` (schema: Command.validate) is refused — both verifiers and Game.apply_loadout: no
 ## run or a member without a party.json entry → unknown_member; a bar entry that is no variant of its slot (party.json
-## rt.bar "variant": true) → not_a_variant; a variant above the member's level → not_learned.
+## rt.bar "variant": true; in a season also a class ability of the member's class, AbilityBook.variant_level, 09 §8.3)
+## → not_a_variant; a variant above the member's level → not_learned.
 static func loadout_refusal(state: GameState, data: GameData, c: Dictionary) -> String:
 	if state == null:
 		return "unknown_member"
@@ -513,6 +525,8 @@ static func loadout_refusal(state: GameState, data: GameData, c: Dictionary) -> 
 					and JsonUtil.to_int((r as Dictionary).get("slot", 0)) == str(k).to_int() \
 					and str((r as Dictionary).get("skill", "")) == str(bar[k]):
 				level = JsonUtil.to_int((r as Dictionary).get("level", 1), 1)
+		if level < 0 and state.season != null:     # Staffeln (09 §8.3, ST1-D): the class abilities
+			level = AbilityBook.variant_level(state, data, m, str(k).to_int(), str(bar[k]))
 		if level < 0:
 			return "not_a_variant"
 		if level > m.level:

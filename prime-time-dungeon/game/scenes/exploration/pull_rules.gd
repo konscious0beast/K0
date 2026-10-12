@@ -15,8 +15,9 @@ const TAB_CONE_DEG: float = 60.0
 ## party.json rt.bar of `def` for `m`: slot (1..SLOTS) → skill id — the base skill of every slot reached by the level, a
 ## chosen variant (PartyMember.rt_loadout "2".."4") once its level is reached; FINALE entries stay out (the sim shows
 ## them only in a combat). The rule of BattleBridge._rt_bar without RtMods unlock_variant (no data use one;
-## test_r5b_pull compares both).
-static func bar_slots(m: PartyMember, def: PartyMemberDef) -> Dictionary:
+## test_r5b_pull compares both). Staffeln (09 §8.3, ST1-D): `class_vars` (AbilityBook.class_variants: skill → slot,
+## {} without a season) puts a chosen class ability on its slot like BattleBridge._rt_class_bar.
+static func bar_slots(m: PartyMember, def: PartyMemberDef, class_vars: Dictionary = {}) -> Dictionary:
 	var out: Dictionary = {}
 	if m == null or def == null:
 		return out
@@ -32,8 +33,11 @@ static func bar_slots(m: PartyMember, def: PartyMemberDef) -> Dictionary:
 			out[slot] = str(e.get("skill", ""))
 	for k: Variant in m.rt_loadout.keys():
 		var sid: String = str(m.rt_loadout[k])
-		if variants.has(sid) and int(variants[sid]) == str(k).to_int():
-			out[str(k).to_int()] = sid
+		var slot: int = str(k).to_int()
+		if variants.has(sid) and int(variants[sid]) == slot:
+			out[slot] = sid
+		elif class_vars.has(sid) and int(class_vars[sid]) == slot and out.has(slot):
+			out[slot] = sid
 	return out
 
 

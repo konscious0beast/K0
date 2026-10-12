@@ -573,8 +573,11 @@ static func max_mp(m: PartyMember) -> int:
 	return maxi(int(member_stats(m).get("mp", 0)), m.mp) if m != null else 0
 
 
-## EXP needed for the next level (Progression, else GDD §4.3 curve).
+## EXP needed for the next level (Progression, else GDD §4.3 curve). In a season (09 §8.2, ST1-D) the table up to
+## level 50 (LevelBand.exp_to_next; 0 at 50).
 static func exp_to_next(level: int) -> int:
+	if Game.state != null and Game.state.season != null:
+		return LevelBand.exp_to_next(Game.state, DB.data, level)
 	var v: int = Progression.exp_to_next(level)
 	if v <= 0 and level < Balance.LEVEL_CAP:
 		v = floori(Balance.EXP_A * pow(float(level), Balance.EXP_B) + Balance.EXP_C)

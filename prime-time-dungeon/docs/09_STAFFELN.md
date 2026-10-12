@@ -51,6 +51,13 @@
 > Ticker und Eilmeldungen, Zähler, Rangliste, „übernommen“, Safe-Room-Gäste, Gastauftritt (Regeln) und Pechvogel, der
 > Namenskatalog; kalibriert auf die Bänder von Kap. 4.2. Ohne Staffel bleibt jeder Lauf bitgleich.
 >
+> **Stand ST1-D (2026-10-12, Branch `ptd/st1d`):** Stufen, Fähigkeiten und Talente wie in WoW sind umgesetzt (Kap. 11.3
+> „Stand ST1-D“, Entscheidungen D-1 … D-16; 02_TECH §0.8 „Stand ST1-D“): EP-Tabelle bis Stufe 50, Band und Deckel,
+> Überstunden, Aufholjagd, Regie-Crashkurs mit Aufholpaket, Gegnerfarben, Fähigkeitenbuch mit Klassenleisten (Platzhalter)
+> und Rängen, Talentbaum mit 144 Talenten, `talent` v2, Talent-Show als Reihen-Präsentation, Talentbaum-Bildschirm. Alles
+> wirkt nur mit `state.season != null`; der V-20-Schalter ist gebaut, getestet und aus (D-1) — Kampagne und Event-Läufe
+> behalten die 06-B-Talent-Show bitgleich.
+>
 > **Stand ST1-C1 (2026-10-12, Branch `ptd/st1c1`):** Die Etagen 2–6 der Basis-Staffel sind spielbar (Kap. 11.3 „Stand
 > ST1-C1“, Entscheidungen C-1 … C-22; 02_TECH §0.8 „Stand ST1-C1“): Generator v2 mit Vierteln, Schleifen, Schlüsseltor vor
 > der Treppe, fünf Programmtüren und einem Safe Room je Viertel; die Kulissen Passage, Fundus und Paketzentrum mit
@@ -1034,6 +1041,9 @@ jederzeit kostenlos umwählen.
   `skill_pm`/`dmg_dealt_pm` ≤ +40 %, erlittener Schaden ≥ −25 % — für **jede** Wahlfolge (erschöpfend wie `test_06b_balance`;
   bei 12 Reihen × 3 = 531 441 Folgen je Klasse, in CI auf die Spitzen je Reihe reduziert). Bei Stufe 10 gilt weiter der
   06-Deckel (+15 %).
+- **Stand ST1-D:** Die Tabellen oben sind so umgesetzt, mit einer Abweichung für den Deckel: „Abrissbirne XXL“ gibt +15 %
+  statt +25 % Kraft (mit Vorschlaghammer und Durchschlagskraft sonst × 1,51; jetzt × 1,39). Die Grundreihen sind eigene
+  Einträge neben dem unveränderten 06-B-Angebot (D-2); alle 144 Texte sagen ihre Wirkung in einem Satz (06 L-1).
 
 ### 8.5 Berufe
 
@@ -1511,6 +1521,56 @@ Waren der Händler:in (ST1-E, bis dahin `trade_unavailable`), Begegnungen mit de
 | F-18 | Kalibrierung | Referenz-Mensch der Tests (`tests/fixtures/season_cast/`): startet im Vorprogramm zu zufälliger Minute, spielt den ersten Abend 60–90 min und ab Tag 0 täglich 45–60 min um die Sendezeit (± 1 h), Pflichtweg 20/30/45/60 min, wartet an geschlossener Treppe und geht beim Öffnen los, ein Einsturz rettet ihn. Bänder im Test: „≈ x“ = x ± 6 Punkte, „erste KI“ 44–56 %, Bereiche wie Kap. 4.2. Die Modell-Konstanten sind Startwerte (ST1-I/ST2 stellen nach). | 4.2, 11.6 |
 | F-19 | Staffel-Block | `cast` hält den Start-Block, die Besetzung als zwei Texte (Stammdaten, Zustand; je Platz ein Eintrag), Einsturzzeiten, Ankünfte der Kandidat:in, Erstbesteigungen, wartende KI-Ankünfte, Ticker, Gast und Gefallen — kompakt, der State-Hash bleibt billig. Kein `SIM_VERSION`-Sprung; ohne Staffel bitgleich. | 9.1 |
 
+**Stand ST1-D (2026-10-12, Branch `ptd/st1d`) — umgesetzt** (Einzelheiten 02_TECH §0.8 „Stand ST1-D“): `LevelBand`
+(neu, `core/season/level_band.gd`: Tabelle, Band, Deckel, Überstunden, Aufholjagd, Ausgeruht, Crashkurs, Farben, die
+EP-Quellen), `AbilityBook` (neu, `core/progression/ability_book.gd`), `TalentTree` (der ST0-Stub ersetzt, öffentliche API
+behalten); die Abschnitte in `talents.gd` (der Baum regiert, wo `TalentTree.governs`), `BattleBridge` (Kampf-EP, Klassenleiste
+und Regeln, Ränge und `talent:`-Mods), `RunRules` (`talent` v2, Belegung der Plätze 1–5, Etagen-Event-EP), `RunSim`
+(Etagen-Event-EP als Ereignis), `SeasonRules` (Treppe, Rettung), `Save` (Migration), `Game` (Signale, Hinweise),
+`Progression.learn_between`; die Daten `party.json → exp_table`, 48 Klassenfähigkeiten in `skills.json` (ein Block),
+`classes.json → rt` (Leisten und Ränge), 144 Baum-Talente in `talents.json`, 15 M.O.D.-Zeilen `season_tree_*`,
+`season_ability`, `season_rank`, `season_catch_up`, `season_crash_course`, `season_overtime`; die Oberfläche
+`talent_show.gd` (Reihen), `scenes/ui/talent_tree.*` (neu), `party_menu.gd`, `skills_menu.gd` („Buch und Vorschau“),
+`talent_text.gd`, `ui_util.gd`, `toast_stack.gd`, `safe_room.gd` (Zähler der Reihen), `pull_rules.gd`/`exploration.gd` (die
+Zugleiste kennt Klassenfähigkeiten); Tests `test_09_level_band`, `test_09_talent_tree`, `test_09_ability_book`, angepasst nur,
+wo neue Ereignisse oder Daten zählen (`test_09_stairs_collapse`, `test_09_st0_contract`, `test_09_contract4`,
+`test_06b_talents`, `test_m7_data_content`, `test_m8_command`). **Was ein Debug-Build zeigt** (`--season`, README §6; mit
+den heutigen Daten ist Etage 1 die einzige Etage, B-9): Kämpfe geben EP nach der Staffel-Tabelle, die Stufe endet am Deckel
+7 der Etage 1 (darüber Überstunden: 10 % als Credits, Hinweis „ÜBERSTUNDEN“); auf Stufe 3, 5 und 7 öffnen Grundreihen
+(Hinweis „TALENT-SHOW BEREIT“), der Safe Room zeigt „n Talentreihen offen“, die Talent-Show stellt jede Reihe mit drei
+Karten vor, umgewählt wird im Talentbaum (Pause → Party → „Talentbaum“, nur im Safe Room); die Treppe gibt eine halbe Stufe
+(gezählt für das Band der Etage darunter), ein Etagen-Event 5 %; das Fähigkeitenbuch hat vor dem Recall den Reiter
+„Klassen-Vorschau“. Klassenfähigkeiten, Ränge, Klassenreihen, Crashkurs und Aufholjagd zeigen die Platzhalter-Etagen der
+Tests (`tests/fixtures/season_core/`) und die Aufnahmen; im Spiel kommen sie mit den Etagen ab 2 (ST1-C).
+
+**Entscheidungen ST1-D** (Auslegungen dieses Dokuments, Startwerte):
+
+| Nr. | Thema | Entscheidung | Kap. |
+|---|---|---|---|
+| D-1 | V-20-Schalter | `TalentTree.everywhere` (heute `false`) ist der eine Schalter: Der Baum regiert jede Staffel schon jetzt; Kampagne und SHOWRUN-Event-Läufe wechseln **gemeinsam am ST1-Gate** mit dem einen `SIM_VERSION`-Sprung (Kap. 11.1, V-20). Gebaut und mit Schalter an getestet (`test_09_talent_tree`: Kampagne und Event-Lauf nutzen den Baum, die 06-B-Wahl wird mit `talent_tree` abgelehnt, `talent` v2 ohne Staffel geht über `TalentTree.refusal`, die Migration beim Laden). Aus: Jeder Lauf ohne Staffel behält die 06-B-Talent-Show bitgleich (Fullrun-Gates, Golden-Werte von `test_09_replay`). | 8.4, 8.7, V-20 |
+| D-2 | Grundreihen | Die 24 Talente von 06-B bleiben im Angebot (Reihe 0) unverändert für Läufe ohne Staffel; der Baum hat 24 eigene Einträge (`tal_<kai\|mop>_r<3\|5\|7\|9>_*`) mit denselben Namen, beide Ränge in einem Wert (Summen-Arten × Ränge, Faktor-Arten 1000 + (pm − 1000) × Ränge — heute hat jede Faktor-Art einen Rang) und einem Satz mit der Wirkung (06 L-1). Ein Umbau an Ort und Stelle hätte das Angebot geleert und die Kampagne jetzt verändert; am ST1-Gate gehen Angebot und 06-B-Code mit dem `SIM_VERSION`-Sprung. | 8.4 |
+| D-3 | EP-Tabelle | `party.json → exp_table` = ⌊18 × L^1,7 + 15⌋ für L 1–49 (1–9 = GDD §4.3), 251 503 EP von Stufe 1 bis 50; nur Staffeln lesen sie (`LevelBand.exp_to_next`), die Kampagne behält `Progression.EXP_TABLE` und Deckel 10. | 8.2 |
+| D-4 | Band und Deckel | Band einer Etage: `floors.json → level_band` (ST1-C), sonst Kap. 2.4 (Etage 1: 1–7; Etage n ≥ 2: 3n + 1 … 3n + 4, höchstens 50). Deckel = Bandende der Etage, auf der die Gruppe steht; EP darüber sind Überstunden: 10 % als Credits ins Inventar, die EP der Figur bleiben 0. | 8.2, 2.4 |
+| D-5 | Aufholjagd, Ausgeruht | Faktor je Figur: × 2 unter dem Bandanfang, × 3 ab Bandanfang − 3; für alle Quellen (Kampf, Treppe, Event, Beruf). Ausgeruht nur für Kampf-EP: Bonus = min(EP, Vorrat), nur ohne Aufholjagd (der höhere Faktor gilt, der Vorrat bleibt). Aufbau und Deckel 150 % des Vorrats: ST1-G. | 8.2 |
+| D-6 | EP-Quellen | Kampf: die EP des Kampfs (`BattleBridge`, wie in der Kampagne; K.O. die Hälfte) × Farbfaktor der Gruppe (ihre höchste Gegnerstufe; ST1-C gibt Gruppen Bandstufen) gegen die Stufe der Figur. Treppe: eine halbe Stufe der Figur, gezählt für das Band der Etage darunter (die Treppe führt dorthin). Etagen-Event: 5 % beim ersten Abschluss. Beruf: 0,2 % je Punkt (Konstante für ST1-E). Die Anteile 4/15/25/50 % für Gruppen und Bosse sind das Ziel der Gegner-EP von ST1-C (Konstanten in `LevelBand`). | 8.2 |
+| D-7 | Farben | grau ≤ −6, grün −5 … −3, gelb ± 2, orange + 3/+ 4, rot ≥ + 5 mit Warnung; EP 0/50/100/120/140 %; Differenz „+3“, „−4“, „±0“ (`LevelBand.diff_text`; Namensschilder ST1-H, CR-28). | 3.4, 8.2 |
+| D-8 | Regie-Crashkurs | Bei jeder Rettung (`SeasonRules._rescue`, nach dem Umzug): jede Figur unter Bandanfang − 2 der neuen Etage genau dorthin (EP 0, HP/MP wie beim Stufenaufstieg, neue Fähigkeiten gemeldet). Aufholpaket: je Ausrüstungsplatz mit Schwächerem das beste gewöhnliche Teil der Daten, das die Figur tragen kann (Wertesumme; nicht, wenn schon im Inventar) — bis ST1-C der Beute Stufen gibt —, dazu dreimal der billigste gewöhnliche Heiltrank; Überlauf wird Credits wie jede Belohnung. Den Crashkurs beim Login ruft ST1-G als letzten Schritt von `away` (`LevelBand.crash_course`). | 8.2, V-8 |
+| D-9 | Fähigkeitenbuch | `AbilityBook`: Figurenzeilen (`party.json → rt.bar` + `context`, unverändert) und — nur in Staffeln — die Klassenzeilen der eigenen Klasse (`classes.json → rt.bar`): Signatur beim Recall (Stufe 1 = mit der Klasse gelernt), dann 12/17/22/27/32; Ränge 37/42/47 (+10 % je Rang: pm 1100/1200/1300 → `skill_pm` `power` auf jede Klassenfähigkeit, Quelle `class:<id>`). Belegung: Plätze 1–5 (`RunRules.LOADOUT_SLOTS`; in Staffeln auch eine gelernte Klassenfähigkeit ihres Platzes, `variant_level`); `BattleBridge` legt sie auf die Leiste und ersetzt in den KI-Regeln (Partner, Autopilot) die Grundfähigkeit dieses Platzes; die Zugleiste der Erkundung folgt (`PullRules.bar_slots`). | 8.3 |
+| D-10 | Klassenleisten | 48 ehrliche Platzhalter (8 × 6): die Form der Grundfähigkeit desselben Platzes (Ziel, Element, Zustand, Abklingzeit) mit neuen Zahlen, eigenen Namen und einzeiligen Echtzeit-Texten (Sekunden, Meter); Platz 5 ist ein Stunt. Die Tabelle „Abrissbirne“ aus Kap. 8.3 wie geschrieben („Schnellbeton“ statt „Betonschuhe“, V-16). Inhaltspass später. | 8.3, V-16 |
+| D-11 | Talentbaum | 144 Einträge: Grundreihen (D-2), Klassenreihen 15/25/35/45 (links Zweig A, Mitte Show, rechts Zweig B; Zweig-Ids wie `bollwerk`/`abriss`), Figurenreihen 20/30/40/50 (Angriff/Show/Schutz) — mit den Talent-Arten von 06 und `rt_mod` (die Operationen auf die eigene Einheit, Quelle `talent:<id>`, von `BattleBridge` nach den Klassenrängen angewandt). Eine Wahl zählt, solange sie ein Talent dieser Reihe der Bäume der Figur nennt: ein Klassenwechsel (Umschulung) setzt die Klassenreihen frei (zurück zur alten Klasse zählen deren Wahlen wieder); die Plakette des Zweigs = die Seite mit mehr Klassenwahlen. | 8.4 |
+| D-12 | `talent` v2 | `{"t": "talent", "v": 2, "member", "row", "id"}` = Wahl und Umwahl, kostenlos; Gründe `unknown_member`, `unknown_row`, `not_in_row`, `row_locked`, `not_in_safe_room`, `same`; HP/MP folgen den Maxima; Ereignis `talent` {member, row, id, before}. Die 06-B-Wahl in einer Staffel → `talent_tree`. Beide Verifier teilen `RunRules.apply_season`. | 8.4, 9.1 |
+| D-13 | Deckel | Genau über jede Wahlfolge (die Spitzen je Reihe sind exakt, weil die Reihen unabhängig sind): Stufe 10 der 06-Deckel (+15 % je Wert, Krit ≤ +8 Punkte, Werbepause ≤ +10 %); Stufe 50 +30 % je Wert (strengste Basis: die nackten Stufenwerte), Krit ≤ +120 ‰, Schaden aus `skill_pm`/`dmg_dealt_pm` je Fähigkeit ≤ × 1,4, erlittener Schaden (`dmg_taken_pm`) ≥ × 0,75; die Element-Widerstände von 06 (`element_pm`) gelten je Element und zählen nicht in den Deckel. Gemessen: Krit höchstens +120 ‰ (Gleisläufer:in), Schaden ≤ 1388 ‰ (Abrissbirne), HP ≤ +20 %. | 8.4 |
+| D-14 | Migration | `TalentTree.migrate_06b` in `Save.load_slot` vor dem Anker des Laufprotokolls: wo der Baum regiert, gehen 06-B-Wahlen zurück (jede erreichte Reihe ist offen), HP/MP folgen, M.O.D. sagt `season_tree_reset`. Mit Schalter aus passiert nichts (eine Staffel hat nie 06-B-Wahlen). | 8.7 |
+| D-15 | Präsentation | Der Safe Room zählt offene Reihen („n Talentreihen offen“); die Talent-Show zeigt jede offene Reihe (die älteste zuerst, beide Figuren) mit drei Karten und ihrer Spalte; Umwählen im Talentbaum (Pause → Party → „Talentbaum“, im Safe Room, sonst nur ansehen). Hinweise beim Stufenaufstieg: „NEUE FÄHIGKEIT“, Rang, „TALENT-SHOW BEREIT“ (neue Reihe), „ÜBERSTUNDEN“, „REGIE-CRASHKURS“, „ERFAHRUNG“ (Treppe, Event). Die Party-Seite zeigt Aufholjagd, Ausgeruht, Rang und den Deckel; Kandidatenkarte und Talentbaum stehen als Spalte rechts der Karten (darunter verdeckten sie die Ausrüstung). | 8.3, 8.4 |
+| D-16 | Kampfergebnis | `combat_results.gd` gehört `scenes/combat`: der Chip „TALENT-SHOW BEREIT“ für Reihen des Baums, EP je Figur und Überstunden, EP-Leisten über Stufe 10 und das Banner „Neue Fähigkeit“ sind Änderungsantrag CR-32 j (07 §12.10); bis dahin zeigt die Staffel sie als Hinweise. | 8.3, 8.4 |
+
+**07 §4.2/§4.3 bis Stufe 50 (CR-32 d, Test ohne Code-Änderung):** Die Formeln gelten unverändert bis Stufe 50 (kein
+Deckel in `Progression.base_stats_at`): Kai MP 12 + 2 je Stufe = 110, HP 256 + 36 je Stufe = 2 020; Mopsula MP 30 + 4 je
+Stufe = 226, HP 168 + 24 je Stufe = 1 344; mit Klasse und Spezies Kai HP 2 020–3 299, MP 110–159, Mopsula HP 1 210–1 910, MP
+226–303 (`test_09_level_band`). **Befund:** Die MP-Kosten der Fähigkeiten (2–14) und das Laden (Kai +1 je Treffer, Mopsula
++1 je 1,5 s) wachsen nicht mit; ab etwa Stufe 25 begrenzen MP kaum noch. Vorschlag (07 §12.10, CR-32 d): MP-Kosten der
+Leisten mit dem Band skalieren oder in ‰ der Max-MP rechnen — Werte-Eigentum R4/ST1-C.
+
 **Stand ST1-C1 (2026-10-12, Branch `ptd/st1c1`) — umgesetzt** (Einzelheiten 02_TECH §0.8 „Stand ST1-C1“): der Generator
 v2 `ZoneGenerator` (`core/dungeon/zone_generator.gd`; `DungeonGenerator` gibt jede Etage mit `zones` an ihn weiter — eine
 Zeile) mit den Prüfregeln aus Kap. 3.6 Nr. 5 (`ZoneGenerator.check`); die Kulissen in `themes.json` (`ThemeDef`,
@@ -1608,13 +1668,13 @@ tragen sie; der Boss-Baukasten (Kap. 3.4: eine Mechanik mehr je Auftritt); Kulis
 | `test_09_season_clock` | Sendeplan (2/3/4/5…, Formate 24/54/84), Tag 0 = nächste Sendezeit, UTC-Termine und Zeitumstellung, Etage auf Sendung, Vorlauf ab Etage 4, Am-Stück-Countdown je Etage (Etage 1 = 20:00, keine Gnadenfrist), monotone Uhr, Sprung über 7 Tage, Sendepause, Tagesprogramm-Takt (höchstens 5, bleibt bis zum Einsturz) |
 | `test_09_stairs_collapse` | Treppenregel an jeder Grenze (Etage 1–3 offen); Einsturz eingeloggt, als Schläfer, im Kampf (wartet, dann 2 min); höchstens eine Gebühr je 7 Tage (Rettung oder Sanitäter), Schläfer im Safe Room gratis; Generalprobe; Ohne Netz raus; Etagen-Bilanz nur per Treppe |
 | `test_09_death_modes` | Tod Mit Netz (Safe Room oder Etageneingang, −10 %, Weste), Ohne Netz (Studiogast ab Etage 2), Generalprobe, Tod als Schläfer, Freischaltung „Ohne Netz“ |
-| `test_09_level_band` | EP-Tabelle, Deckel, Überstunden, Aufholjagd × 2/× 3, Crashkurs und Aufholpaket, Ausgeruht (Aufbau, Deckel 150 %, Verbrauch, höherer Faktor gilt), Farbe und Differenz |
+| `test_09_level_band` | EP-Tabelle, Deckel, Überstunden, Aufholjagd × 2/× 3, Crashkurs und Aufholpaket, Ausgeruht (Aufbau, Deckel 150 %, Verbrauch, höherer Faktor gilt), Farbe und Differenz; Stand ST1-D: dazu Kampf-EP nach Farbe, Treppe und Etagen-Event, MP/HP bis Stufe 50 (07 CR-32 d); Aufbau und Deckel 150 % des Ruhevorrats prüft ST1-G (`test_09_sleep`) |
 | `test_09_sleep` | `away` deterministisch (gleicher Zustand + Dauer → gleicher Hash), Begegnungen (Streifen und alle KI-Profile), Taktik aus `sleep`, Notfall-Rückzug, keine Begegnungen im Safe Room/Bossraum, Am Stück ohne Begegnungen, **Todesraten Ohne Netz je Nacht in den Bändern** (1 000 Seeds je Gefahr) |
 | `test_09_journal` | App „beendet“ an jedem zehnten Tick eines Kampfs → nach dem Neustart dasselbe Ergebnis wie der Autopilot-Lauf vom Kampfanfang; Journal nach dem Spielstand leer; abgerissene letzte Zeile verworfen |
 | `test_09_cast_sim` | Determinismus je Seed, Kalibrierungs-Bänder (Kap. 4.2) über 200 Seeds, Am Stück folgt die Besetzung, „übernommen“, Ereignisse, Zähler, Kennzeichnung, Gastauftritt nie im Bosskampf |
 | `test_09_professions` | Lernen (≤ 2 Hauptberufe), Ränge, Farben und Chancen, Sammeln, Ausschlachten, Herstellen nur im Safe Room, Vorsprung +50 (fest oder frei gewählt) und Hobby-Rezept aus `persona` v2, Tägliches sammelt sich 4 Tage |
 | `test_09_talent_tree` | Reihen, Umwählen nur im Safe Room, Migration 06-B, Deckel bei Stufe 10 (06) und 50 (Kap. 8.4), Klassenwechsel; Event-Lauf nutzt denselben Baum (V-20) |
-| `test_09_ability_book` | Freischaltung auf festen Stufen, Vorschau, Klassenleisten über `rt.bar`, Rang II–IV |
+| `test_09_ability_book` | Freischaltung auf festen Stufen, Vorschau, Klassenleisten über `rt.bar`, Rang II–IV; Stand ST1-D: dazu Belegung der Plätze 1–5, Kampfleiste und KI-Regeln, Zugleiste der Erkundung |
 | `test_09_replay` | Sitzung mit `season`/`clock`/`away`/`sleep`/`prof`/`craft`/`talent` v2 → `RunSim.replay` und `Game.replay_log` hash-gleich; manipulierte Uhr-Commands → Fehler; Läufe ohne Staffel bitgleich zu den Golden-Hashes |
 | `test_09_terms` | Sprachregel (Kap. 1.2) |
 | `test_09_zone_generator` | 200 Seeds je Etage 3–18 erfüllen die Prüfregeln (Kap. 3.6), deterministisch (ST1-C1: Etagen 2–6; dazu `test_09_floors`) |

@@ -96,6 +96,8 @@ func test_collapse_logged_in_with_the_weekly_fee() -> void:
 	var s: RunSim = Kit.sim(d)
 	var st: SeasonState = s.state.season
 	_purse(s, 1000, 500)
+	for m: PartyMember in s.state.party:      # ST1-D: in the bands of floors 2–4, no Regie-Crashkurs (its package
+		m.level = 13                          # would add potions to the credits this test counts)
 	var ev: Array = Kit.clock_to(s, DAY0 + 2 * DAY)
 	var r1: Dictionary = Kit.event(ev, "rescue")
 	assert_eq([r1["from"], r1["floor"], r1["credits"], r1["waived"]], [1, 2, 0, "rehearsal"],
@@ -254,7 +256,8 @@ func test_last_collapse_and_the_end_of_the_data() -> void:
 	var real: RunSim = Kit.sim(real_data(), "ssn_akt2", "binge")
 	Kit.put_on_floor(real, 6)
 	ev = real.apply({"t": "descend"})
-	assert_eq(Kit.kinds(ev), ["end"], "ST1-B decision: the stairs of the last playable floor end the season")
+	assert_eq(Kit.kinds(ev), ["exp", "end"], "ST1-B decision: the stairs of the last playable floor end the season "
+		+ "(ST1-D: after their Abschluss-EP)")
 	assert_eq(Kit.event(ev, "end"), {"kind": "end", "why": "content", "floor": 6})
 	assert_eq([real.state.season.result, real.state.season.stairs], ["end", 1], "Bis zum Ende dabei; the stairs count")
 	real.apply({"t": "floor", "floor": 7})
@@ -272,8 +275,9 @@ func test_floor_balance_only_by_the_stairs() -> void:
 	var d: GameData = Kit.data()
 	var s: RunSim = Kit.sim(d)
 	var ev: Array = s.apply({"t": "descend"})
-	assert_eq([ev.size(), (ev[0] as ExploreEvent).type], [1, ExploreEvent.Type.FLOOR_COMPLETED],
+	assert_eq([ev.size(), (ev[0] as ExploreEvent).type], [2, ExploreEvent.Type.FLOOR_COMPLETED],
 		"the stairs: the Etagen-Bilanz as today (09 §2.5 Nr. 7)")
+	assert_eq(Kit.kinds(ev), ["exp"], "ST1-D: plus the Abschluss-EP (09 §8.2)")
 	s.apply({"t": "floor", "floor": 2})
 	ev = Kit.clock_to(s, DAY0 + 5 * DAY)
 	for e: ExploreEvent in ev:
@@ -287,11 +291,12 @@ func test_binge_countdown_end_is_the_collapse() -> void:
 	var fr: FloorRun = s.state.floor_run
 	fr.timer_started = true
 	var ev: Array = s.step(36000)
-	assert_eq(Kit.kinds(ev), ["collapse", "rescue"], "20:00 Am Stück: floor 1 collapses at 0:00")
+	assert_eq(Kit.kinds(ev), ["collapse", "rescue", "crash"], "20:00 Am Stück: floor 1 collapses at 0:00 (ST1-D: "
+		+ "level 1 below the band of floor 2 — the Regie-Crashkurs follows the rescue)")
 	assert_false(s.is_over(), "never the end of the run in a season")
 	assert_eq([s.state.floor_run.index, s.state.floor_run.time_left_ticks, s.state.season.vest], [2, 54000, true])
 	s.apply({"t": "safe_room_exit"})
 	ev = s.step(54000)
-	assert_eq(Kit.kinds(ev), ["collapse", "rescue"])
+	assert_eq(Kit.kinds(ev), ["collapse", "rescue", "crash"])
 	assert_eq([s.state.floor_run.index, s.state.season.rescues, s.state.season.vest], [3, 1, false])
 	assert_eq(s.rejected_cmds, [] as Array[Dictionary])

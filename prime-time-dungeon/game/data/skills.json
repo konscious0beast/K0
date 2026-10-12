@@ -1765,6 +1765,1413 @@
 			}
 		},
 		{
+			"id": "skl_kai_wrecking_ball",
+			"name": "Abrissbirne",
+			"desc": "Ein schwerer Schwinger mit dreifacher Bedrohung: Die Gegner halten sich an Sie.",
+			"user": "party",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 220,
+			"mp_cost": 3,
+			"anim": "attack",
+			"vfx": "slash",
+			"show_tags": [
+				"flashy"
+			],
+			"rt": {
+				"icon": "mop_swing",
+				"range_cm": 250,
+				"threat_pm": 3000
+			}
+		},
+		{
+			"id": "skl_kai_quick_concrete",
+			"name": "Schnellbeton",
+			"desc": "Unterbricht einen Zauber und verlangsamt das Ziel 6 Sekunden. Härtet sofort aus.",
+			"user": "party",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 60,
+			"mp_cost": 3,
+			"statuses": [
+				{
+					"id": "sts_slow",
+					"ms": 6000
+				}
+			],
+			"anim": "attack",
+			"vfx": "debuff",
+			"rt": {
+				"icon": "leash_lasso",
+				"cooldown_ms": 12000,
+				"gcd": false,
+				"range_cm": 800,
+				"interrupt": true
+			}
+		},
+		{
+			"id": "skl_kai_construction_fence",
+			"name": "Bauzaun",
+			"desc": "Spott auf alle Gegner, und Sie sind 8 Sekunden gepanzert. Bitte nicht übersteigen.",
+			"user": "party",
+			"category": "buff",
+			"target": "self",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 3,
+			"statuses": [
+				{
+					"id": "sts_taunted",
+					"ms": 4000,
+					"to": "all_enemies"
+				},
+				{
+					"id": "sts_guard",
+					"ms": 8000,
+					"to": "self"
+				}
+			],
+			"anim": "cast",
+			"vfx": "buff",
+			"show_tags": [
+				"risky"
+			],
+			"rt": {
+				"icon": "megaphone_notes",
+				"cooldown_ms": 15000,
+				"gcd": false,
+				"impact_ms": 0
+			}
+		},
+		{
+			"id": "skl_kai_jackhammer",
+			"name": "Presslufthammer",
+			"desc": "2 Sekunden Dauerbetrieb: Schockschaden an allen Gegnern um Sie herum.",
+			"user": "party",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "shock",
+			"power": 45,
+			"mp_cost": 6,
+			"statuses": [
+				{
+					"id": "sts_stun",
+					"chance_pm": 200,
+					"ms": 1000
+				}
+			],
+			"anim": "attack",
+			"vfx": "shock",
+			"show_tags": [
+				"flashy"
+			],
+			"rt": {
+				"icon": "mop_circle",
+				"cooldown_ms": 12000,
+				"channel_ms": 2000,
+				"period_ms": 500,
+				"threat_pm": 1500,
+				"aoe": {
+					"center": "self",
+					"radius_cm": 350
+				}
+			}
+		},
+		{
+			"id": "skl_kai_demolition",
+			"name": "Sprengung!",
+			"desc": "Riskanter Stunt: Gelingt er, trifft die Explosion alle Gegner im Umkreis von 4,5 Metern.",
+			"user": "party",
+			"category": "stunt",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "fire",
+			"power": 200,
+			"mp_cost": 0,
+			"success_base": 0.55,
+			"success_lck": 0.01,
+			"success_cap": 0.85,
+			"success_boss_mod": -0.15,
+			"fail_effect": {
+				"self_dmg_pct": 10,
+				"status": ""
+			},
+			"anim": "stunt",
+			"vfx": "fire",
+			"show_tags": [
+				"risky",
+				"flashy"
+			],
+			"rt": {
+				"icon": "wrestler_stars",
+				"fail_ms": 1500,
+				"aoe": {
+					"center": "self",
+					"radius_cm": 450
+				}
+			}
+		},
+		{
+			"id": "skl_kai_structural_report",
+			"name": "Statik-Gutachten",
+			"desc": "10 Sekunden gepanzert und in Erholung: Die Statik hält, das Gutachten sagt es.",
+			"user": "party",
+			"category": "buff",
+			"target": "self",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 4,
+			"statuses": [
+				{
+					"id": "sts_guard",
+					"ms": 10000,
+					"to": "self"
+				},
+				{
+					"id": "sts_regen",
+					"ms": 10000,
+					"to": "self"
+				}
+			],
+			"anim": "cast",
+			"vfx": "buff",
+			"rt": {
+				"icon": "paw_plaster",
+				"cooldown_ms": 25000,
+				"gcd": false,
+				"impact_ms": 0
+			}
+		},
+		{
+			"id": "skl_kai_switch_kick",
+			"name": "Weichenstoß",
+			"desc": "Ein schneller Stoß, der oft kritisch trifft.",
+			"user": "party",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 170,
+			"mp_cost": 2,
+			"crit_bonus": 0.2,
+			"anim": "attack",
+			"vfx": "crit",
+			"show_tags": [
+				"flashy"
+			],
+			"rt": {
+				"icon": "mop_swing",
+				"range_cm": 250,
+				"threat_pm": 2000
+			}
+		},
+		{
+			"id": "skl_kai_emergency_brake",
+			"name": "Notbremse",
+			"desc": "Unterbricht einen Zauber und betäubt das Ziel 1 Sekunde.",
+			"user": "party",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 60,
+			"mp_cost": 3,
+			"statuses": [
+				{
+					"id": "sts_stun",
+					"ms": 1000
+				}
+			],
+			"anim": "attack",
+			"vfx": "debuff",
+			"rt": {
+				"icon": "cable_sparks",
+				"cooldown_ms": 14000,
+				"gcd": false,
+				"range_cm": 800,
+				"interrupt": true
+			}
+		},
+		{
+			"id": "skl_kai_timetable_change",
+			"name": "Fahrplanwechsel",
+			"desc": "Spott auf alle Gegner, und Sie sind 6 Sekunden im Turbo.",
+			"user": "party",
+			"category": "buff",
+			"target": "self",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 3,
+			"statuses": [
+				{
+					"id": "sts_taunted",
+					"ms": 4000,
+					"to": "all_enemies"
+				},
+				{
+					"id": "sts_haste",
+					"ms": 6000,
+					"to": "self"
+				}
+			],
+			"anim": "cast",
+			"vfx": "buff",
+			"show_tags": [
+				"risky"
+			],
+			"rt": {
+				"icon": "megaphone_notes",
+				"cooldown_ms": 16000,
+				"gcd": false,
+				"impact_ms": 0
+			}
+		},
+		{
+			"id": "skl_kai_stand_back",
+			"name": "Bitte zurücktreten!",
+			"desc": "Fegt alle Gegner im Umkreis von 4 Metern und verlangsamt sie 3 Sekunden.",
+			"user": "party",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 90,
+			"mp_cost": 6,
+			"statuses": [
+				{
+					"id": "sts_slow",
+					"ms": 3000
+				}
+			],
+			"anim": "attack",
+			"vfx": "slash",
+			"show_tags": [
+				"flashy"
+			],
+			"rt": {
+				"icon": "mop_circle",
+				"cooldown_ms": 10000,
+				"impact_ms": 400,
+				"threat_pm": 1500,
+				"aoe": {
+					"center": "self",
+					"radius_cm": 400
+				}
+			}
+		},
+		{
+			"id": "skl_kai_train_jump",
+			"name": "Sprung vom Zug",
+			"desc": "Riskanter Stunt: Gelingt er, trifft ein Sprungtritt mit hoher Krit-Chance.",
+			"user": "party",
+			"category": "stunt",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 260,
+			"mp_cost": 0,
+			"crit_bonus": 0.25,
+			"statuses": [
+				{
+					"id": "sts_stun",
+					"ms": 1500
+				}
+			],
+			"success_base": 0.55,
+			"success_lck": 0.01,
+			"success_cap": 0.85,
+			"success_boss_mod": -0.15,
+			"fail_effect": {
+				"self_dmg_pct": 10,
+				"status": ""
+			},
+			"anim": "stunt",
+			"vfx": "crit",
+			"show_tags": [
+				"risky",
+				"flashy"
+			],
+			"rt": {
+				"icon": "wrestler_stars",
+				"range_cm": 250,
+				"fail_ms": 1500
+			}
+		},
+		{
+			"id": "skl_kai_on_time",
+			"name": "Pünktlich wie nie",
+			"desc": "10 Sekunden Turbo und 4 Sekunden gepanzert. Die Bahn staunt.",
+			"user": "party",
+			"category": "buff",
+			"target": "self",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 4,
+			"statuses": [
+				{
+					"id": "sts_haste",
+					"ms": 10000,
+					"to": "self"
+				},
+				{
+					"id": "sts_guard",
+					"ms": 4000,
+					"to": "self"
+				}
+			],
+			"anim": "cast",
+			"vfx": "buff",
+			"rt": {
+				"icon": "paw_plaster",
+				"cooldown_ms": 24000,
+				"gcd": false,
+				"impact_ms": 0
+			}
+		},
+		{
+			"id": "skl_kai_soldering_iron",
+			"name": "Lötkolben",
+			"desc": "Ein heißer Stich: Feuerschaden, berechnet mit Magie statt Stärke.",
+			"user": "party",
+			"category": "magic",
+			"target": "single_enemy",
+			"damage_type": "magical",
+			"element": "fire",
+			"power": 150,
+			"mp_cost": 3,
+			"anim": "attack",
+			"vfx": "fire",
+			"rt": {
+				"icon": "spray_flame",
+				"range_cm": 400
+			}
+		},
+		{
+			"id": "skl_kai_short_circuit",
+			"name": "Kurzschluss",
+			"desc": "Unterbricht einen Zauber und betäubt das Ziel 1,5 Sekunden.",
+			"user": "party",
+			"category": "magic",
+			"target": "single_enemy",
+			"damage_type": "magical",
+			"element": "shock",
+			"power": 80,
+			"mp_cost": 4,
+			"statuses": [
+				{
+					"id": "sts_stun",
+					"ms": 1500
+				}
+			],
+			"anim": "attack",
+			"vfx": "shock",
+			"show_tags": [
+				"flashy"
+			],
+			"rt": {
+				"icon": "cable_sparks",
+				"cooldown_ms": 16000,
+				"gcd": false,
+				"range_cm": 600,
+				"interrupt": true
+			}
+		},
+		{
+			"id": "skl_kai_tin_shield",
+			"name": "Blechschild",
+			"desc": "Spott auf alle Gegner, und ein Blechschild panzert Sie 6 Sekunden.",
+			"user": "party",
+			"category": "buff",
+			"target": "self",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 3,
+			"statuses": [
+				{
+					"id": "sts_taunted",
+					"ms": 4000,
+					"to": "all_enemies"
+				},
+				{
+					"id": "sts_guard",
+					"ms": 6000,
+					"to": "self"
+				}
+			],
+			"anim": "cast",
+			"vfx": "buff",
+			"show_tags": [
+				"risky"
+			],
+			"rt": {
+				"icon": "megaphone_notes",
+				"cooldown_ms": 15000,
+				"gcd": false,
+				"impact_ms": 0
+			}
+		},
+		{
+			"id": "skl_kai_spark_rain",
+			"name": "Funkenregen",
+			"desc": "Schockschaden an allen Gegnern im Umkreis von 4 Metern.",
+			"user": "party",
+			"category": "magic",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "shock",
+			"power": 85,
+			"mp_cost": 6,
+			"anim": "cast",
+			"vfx": "shock",
+			"show_tags": [
+				"flashy"
+			],
+			"rt": {
+				"icon": "cable_sparks",
+				"cooldown_ms": 9000,
+				"impact_ms": 400,
+				"aoe": {
+					"center": "self",
+					"radius_cm": 400
+				}
+			}
+		},
+		{
+			"id": "skl_kai_scrap_cannon",
+			"name": "Schrottkanone",
+			"desc": "Riskanter Stunt: Gelingt er, trifft eine Schrottsalve alle Gegner um das Ziel.",
+			"user": "party",
+			"category": "stunt",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "fire",
+			"power": 190,
+			"mp_cost": 0,
+			"success_base": 0.55,
+			"success_lck": 0.01,
+			"success_cap": 0.85,
+			"success_boss_mod": -0.15,
+			"fail_effect": {
+				"self_dmg_pct": 10,
+				"status": ""
+			},
+			"anim": "stunt",
+			"vfx": "fire",
+			"show_tags": [
+				"risky",
+				"flashy"
+			],
+			"rt": {
+				"icon": "spray_flame",
+				"range_cm": 800,
+				"fail_ms": 1500,
+				"aoe": {
+					"center": "target",
+					"radius_cm": 300
+				}
+			}
+		},
+		{
+			"id": "skl_kai_generator",
+			"name": "Notstromaggregat",
+			"desc": "12 Sekunden Erholung und 4 Sekunden gepanzert. Brummt beruhigend.",
+			"user": "party",
+			"category": "buff",
+			"target": "self",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 4,
+			"statuses": [
+				{
+					"id": "sts_regen",
+					"ms": 12000,
+					"to": "self"
+				},
+				{
+					"id": "sts_guard",
+					"ms": 4000,
+					"to": "self"
+				}
+			],
+			"anim": "cast",
+			"vfx": "buff",
+			"rt": {
+				"icon": "paw_plaster",
+				"cooldown_ms": 24000,
+				"gcd": false,
+				"impact_ms": 0
+			}
+		},
+		{
+			"id": "skl_kai_punchline",
+			"name": "Pointe",
+			"desc": "Ein Schlag mit Timing; besiegte Gegner bringen extra Hype.",
+			"user": "party",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 180,
+			"mp_cost": 3,
+			"kill_hype": 5,
+			"anim": "attack",
+			"vfx": "slash",
+			"show_tags": [
+				"flashy"
+			],
+			"rt": {
+				"icon": "mop_swing",
+				"range_cm": 250,
+				"threat_pm": 2000
+			}
+		},
+		{
+			"id": "skl_kai_ad_break",
+			"name": "Werbeunterbrechung",
+			"desc": "Unterbricht einen Zauber; das Ziel ist 2 Sekunden überrumpelt.",
+			"user": "party",
+			"category": "attack",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 50,
+			"mp_cost": 3,
+			"statuses": [
+				{
+					"id": "sts_dazed",
+					"ms": 2000
+				}
+			],
+			"anim": "attack",
+			"vfx": "debuff",
+			"rt": {
+				"icon": "leash_lasso",
+				"cooldown_ms": 14000,
+				"gcd": false,
+				"range_cm": 800,
+				"interrupt": true
+			}
+		},
+		{
+			"id": "skl_kai_applause",
+			"name": "Applaus, bitte!",
+			"desc": "Spott auf alle Gegner, und der Applaus heilt Sie 8 Sekunden lang.",
+			"user": "party",
+			"category": "buff",
+			"target": "self",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 3,
+			"statuses": [
+				{
+					"id": "sts_taunted",
+					"ms": 4000,
+					"to": "all_enemies"
+				},
+				{
+					"id": "sts_regen",
+					"ms": 8000,
+					"to": "self"
+				}
+			],
+			"anim": "cast",
+			"vfx": "buff",
+			"show_tags": [
+				"risky"
+			],
+			"rt": {
+				"icon": "megaphone_notes",
+				"cooldown_ms": 15000,
+				"gcd": false,
+				"impact_ms": 0
+			}
+		},
+		{
+			"id": "skl_kai_confetti_cannon",
+			"name": "Konfettikanone",
+			"desc": "Trifft alle Gegner im Umkreis von 4,5 Metern; manche sind 2 Sekunden schwindelig.",
+			"user": "party",
+			"category": "attack",
+			"target": "all_enemies",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 80,
+			"mp_cost": 6,
+			"statuses": [
+				{
+					"id": "sts_dizzy",
+					"chance_pm": 300,
+					"ms": 2000
+				}
+			],
+			"anim": "attack",
+			"vfx": "confetti",
+			"show_tags": [
+				"flashy"
+			],
+			"rt": {
+				"icon": "mop_circle",
+				"cooldown_ms": 12000,
+				"impact_ms": 400,
+				"threat_pm": 1500,
+				"aoe": {
+					"center": "self",
+					"radius_cm": 450
+				}
+			}
+		},
+		{
+			"id": "skl_kai_double_flip",
+			"name": "Doppelsalto",
+			"desc": "Riskanter Stunt: Gelingt er, landet ein Salto-Tritt mit großem Schaden.",
+			"user": "party",
+			"category": "stunt",
+			"target": "single_enemy",
+			"damage_type": "physical",
+			"element": "physical",
+			"power": 250,
+			"mp_cost": 0,
+			"statuses": [
+				{
+					"id": "sts_stun",
+					"ms": 2000
+				}
+			],
+			"success_base": 0.55,
+			"success_lck": 0.01,
+			"success_cap": 0.85,
+			"success_boss_mod": -0.15,
+			"fail_effect": {
+				"self_dmg_pct": 10,
+				"status": ""
+			},
+			"anim": "stunt",
+			"vfx": "crit",
+			"show_tags": [
+				"risky",
+				"flashy"
+			],
+			"rt": {
+				"icon": "wrestler_stars",
+				"range_cm": 250,
+				"fail_ms": 1500
+			}
+		},
+		{
+			"id": "skl_kai_stage_fright",
+			"name": "Lampenfieber",
+			"desc": "8 Sekunden Turbo und 4 Sekunden gepanzert. Das Fieber hilft.",
+			"user": "party",
+			"category": "buff",
+			"target": "self",
+			"damage_type": "none",
+			"element": "none",
+			"power": 0,
+			"mp_cost": 4,
+			"statuses": [
+				{
+					"id": "sts_haste",
+					"ms": 8000,
+					"to": "self"
+				},
+				{
+					"id": "sts_guard",
+					"ms": 4000,
+					"to": "self"
+				}
+			],
+			"anim": "cast",
+			"vfx": "buff",
+			"rt": {
+				"icon": "paw_plaster",
+				"cooldown_ms": 22000,
+				"gcd": false,
+				"impact_ms": 0
+			}
+		},
+		{
+			"id": "skl_mop_arch_flame",
+			"name": "Erzflamme",
+			"desc": "Ein stärkerer Feuerzauber; 1,5 Sekunden Zauberzeit.",
+			"user": "party",
+			"category": "magic",
+			"target": "single_enemy",
+			"damage_type": "magical",
+			"element": "fire",
+			"power": 140,
+			"mp_cost": 5,
+			"anim": "cast",
+			"vfx": "fire",
+			"show_tags": [
+				"flashy"
+			],
+			"rt": {
+				"icon": "seal_flame",
+				"cast_ms": 1500,
+				"range_cm": 2000
+			}
+		},
+		{
+			"id": "skl_mop_ball_lightning",
+			"name": "Kugelblitz",
+			"desc": "Schockschaden; mit 50 % Chance ist das Ziel 1 Sekunde betäubt.",
+			"user": "party",
+			"category": "magic",
+			"target": "single_enemy",
+			"damage_type": "magical",
+			"element": "shock",
+			"power": 110,
+			"mp_cost": 6,
+			"statuses": [
+				{
+					"id": "sts_stun",
+					"chance_pm": 500,
+					"ms": 1000
+				}
+			],
+			"anim": "cast",
+			"vfx": "shock",
+			"show_tags": [
+				"flashy"
+			],
+			"rt": {
+				"icon": "bark_bolt",
+				"cooldown_ms": 8000,
+				"range_cm": 1500
+			}
+		},
+		{
+			"id": "skl_mop_cooling_formula",
+			"name": "Kühlende Formel",
+			"desc": "Heilt einen Verbündeten und löscht Brand und Gift; 1,5 Sekunden Zauberzeit.",
+			"user": "party",
+			"category": "heal",
+			"target": "single_ally",
+			"damage_type": "heal",
+			"element": "none",
+			"power": 90,
+			"mp_cost": 5,
+			"heal_mode": "mag",
+			"cleanse": [
+				"sts_burn",
+				"sts_poison"
+			],
+			"anim": "cast",
+			"vfx": "heal",
+			"rt": {
+				"icon": "tongue_glitter",
+				"cast_ms": 1500,
+				"range_cm": 2000
+			}
+		},
+		{
+			"id": "skl_mop_storm_bark",
+			"name": "Gewitterbellen",
+			"desc": "Unterbricht alle Zauber im Umkreis von 7 Metern; Schockschaden an allen dort.",
+			"user": "party",
+			"category": "magic",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "shock",
+			"power": 90,
+			"mp_cost": 6,
+			"anim": "cast",
+			"vfx": "shock",
+			"show_tags": [
+				"flashy"
+			],
+			"rt": {
+				"icon": "bark_bolt",
+				"cooldown_ms": 15000,
+				"gcd": false,
+				"interrupt": true,
+				"aoe": {
+					"center": "self",
+					"radius_cm": 700
+				}
+			}
+		},
+		{
+			"id": "skl_mop_ancestor_fireworks",
+			"name": "Feuerwerk der Ahnen",
+			"desc": "Riskanter Stunt: Gelingt er, brennen alle Gegner im Umkreis von 9 Metern.",
+			"user": "party",
+			"category": "stunt",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "fire",
+			"power": 170,
+			"mp_cost": 0,
+			"statuses": [
+				{
+					"id": "sts_burn",
+					"ms": 6000,
+					"tick_power": 20
+				}
+			],
+			"success_base": 0.55,
+			"success_lck": 0.01,
+			"success_cap": 0.85,
+			"success_boss_mod": -0.15,
+			"fail_effect": {
+				"self_dmg_pct": 0,
+				"status": "sts_stun"
+			},
+			"anim": "stunt",
+			"vfx": "fire",
+			"show_tags": [
+				"risky",
+				"flashy"
+			],
+			"rt": {
+				"icon": "cape_spotlight",
+				"cast_ms": 1000,
+				"fail_ms": 2000,
+				"aoe": {
+					"center": "self",
+					"radius_cm": 900
+				}
+			}
+		},
+		{
+			"id": "skl_mop_ember_comfort",
+			"name": "Glimmender Trost",
+			"desc": "Heilt einen Verbündeten kräftig und 6 Sekunden nach; 2 Sekunden Zauberzeit.",
+			"user": "party",
+			"category": "heal",
+			"target": "single_ally",
+			"damage_type": "heal",
+			"element": "none",
+			"power": 130,
+			"mp_cost": 7,
+			"statuses": [
+				{
+					"id": "sts_regen",
+					"ms": 6000
+				}
+			],
+			"heal_mode": "mag",
+			"anim": "cast",
+			"vfx": "heal",
+			"rt": {
+				"icon": "tongue_glitter",
+				"cast_ms": 2000,
+				"range_cm": 2000
+			}
+		},
+		{
+			"id": "skl_mop_firm_diagnosis",
+			"name": "Diagnose mit Nachdruck",
+			"desc": "Magischer Schaden; das Ziel ist 6 Sekunden ermahnt und trifft schwächer.",
+			"user": "party",
+			"category": "magic",
+			"target": "single_enemy",
+			"damage_type": "magical",
+			"element": "physical",
+			"power": 120,
+			"mp_cost": 5,
+			"statuses": [
+				{
+					"id": "sts_admonished",
+					"ms": 6000
+				}
+			],
+			"anim": "cast",
+			"vfx": "magic",
+			"rt": {
+				"icon": "scroll_seal",
+				"cast_ms": 1500,
+				"range_cm": 2000
+			}
+		},
+		{
+			"id": "skl_mop_sedative",
+			"name": "Beruhigungsmittel",
+			"desc": "Eisschaden; das Ziel ist 6 Sekunden verlangsamt.",
+			"user": "party",
+			"category": "magic",
+			"target": "single_enemy",
+			"damage_type": "magical",
+			"element": "ice",
+			"power": 80,
+			"mp_cost": 5,
+			"statuses": [
+				{
+					"id": "sts_slow",
+					"ms": 6000
+				}
+			],
+			"anim": "cast",
+			"vfx": "ice",
+			"rt": {
+				"icon": "pug_nose_ice",
+				"cooldown_ms": 8000,
+				"range_cm": 1500
+			}
+		},
+		{
+			"id": "skl_mop_house_call",
+			"name": "Hausbesuch",
+			"desc": "Eine kräftige Heilung für einen Verbündeten; 1,5 Sekunden Zauberzeit.",
+			"user": "party",
+			"category": "heal",
+			"target": "single_ally",
+			"damage_type": "heal",
+			"element": "none",
+			"power": 130,
+			"mp_cost": 5,
+			"heal_mode": "mag",
+			"anim": "cast",
+			"vfx": "heal",
+			"show_tags": [
+				"cute"
+			],
+			"rt": {
+				"icon": "tongue_glitter",
+				"cast_ms": 1500,
+				"range_cm": 2000
+			}
+		},
+		{
+			"id": "skl_mop_ward_round",
+			"name": "Visite",
+			"desc": "Ein strenges „Ruhe bitte!“: unterbricht alle Zauber im Umkreis von 6,5 Metern.",
+			"user": "party",
+			"category": "magic",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "shock",
+			"power": 60,
+			"mp_cost": 5,
+			"anim": "cast",
+			"vfx": "shock",
+			"rt": {
+				"icon": "bark_bolt",
+				"cooldown_ms": 14000,
+				"gcd": false,
+				"interrupt": true,
+				"aoe": {
+					"center": "self",
+					"radius_cm": 650
+				}
+			}
+		},
+		{
+			"id": "skl_mop_defibrillator",
+			"name": "Defibrillator-Show",
+			"desc": "Riskanter Stunt: Gelingt er, schockt er alle Gegner im Umkreis von 8 Metern.",
+			"user": "party",
+			"category": "stunt",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "shock",
+			"power": 160,
+			"mp_cost": 0,
+			"statuses": [
+				{
+					"id": "sts_stun",
+					"ms": 1500
+				}
+			],
+			"success_base": 0.55,
+			"success_lck": 0.01,
+			"success_cap": 0.85,
+			"success_boss_mod": -0.15,
+			"fail_effect": {
+				"self_dmg_pct": 0,
+				"status": "sts_stun"
+			},
+			"anim": "stunt",
+			"vfx": "shock",
+			"show_tags": [
+				"risky",
+				"flashy"
+			],
+			"rt": {
+				"icon": "cape_spotlight",
+				"cast_ms": 1000,
+				"fail_ms": 2000,
+				"aoe": {
+					"center": "self",
+					"radius_cm": 800
+				}
+			}
+		},
+		{
+			"id": "skl_mop_consilium",
+			"name": "Konsilium",
+			"desc": "Eine sehr große Heilung für einen Verbündeten; 2,5 Sekunden Zauberzeit.",
+			"user": "party",
+			"category": "heal",
+			"target": "single_ally",
+			"damage_type": "heal",
+			"element": "none",
+			"power": 170,
+			"mp_cost": 9,
+			"heal_mode": "mag",
+			"anim": "cast",
+			"vfx": "heal",
+			"rt": {
+				"icon": "drool_halo",
+				"cast_ms": 2500,
+				"range_cm": 2000
+			}
+		},
+		{
+			"id": "skl_mop_file_curse",
+			"name": "Aktenfluch",
+			"desc": "Giftschaden; das Ziel ist 8 Sekunden vergiftet.",
+			"user": "party",
+			"category": "magic",
+			"target": "single_enemy",
+			"damage_type": "magical",
+			"element": "poison",
+			"power": 100,
+			"mp_cost": 5,
+			"statuses": [
+				{
+					"id": "sts_poison",
+					"ms": 8000
+				}
+			],
+			"anim": "cast",
+			"vfx": "toxic",
+			"rt": {
+				"icon": "monocle_beam",
+				"cast_ms": 1500,
+				"range_cm": 2000
+			}
+		},
+		{
+			"id": "skl_mop_objection",
+			"name": "Einspruch",
+			"desc": "Eisschaden; das Ziel ist 8 Sekunden ermahnt und trifft schwächer.",
+			"user": "party",
+			"category": "magic",
+			"target": "single_enemy",
+			"damage_type": "magical",
+			"element": "ice",
+			"power": 80,
+			"mp_cost": 5,
+			"statuses": [
+				{
+					"id": "sts_admonished",
+					"ms": 8000
+				}
+			],
+			"anim": "cast",
+			"vfx": "ice",
+			"rt": {
+				"icon": "scroll_seal",
+				"cooldown_ms": 10000,
+				"range_cm": 1500
+			}
+		},
+		{
+			"id": "skl_mop_eerie_lick",
+			"name": "Schauriges Schlabbern",
+			"desc": "Heilt einen Verbündeten und 8 Sekunden nach; 1,5 Sekunden Zauberzeit.",
+			"user": "party",
+			"category": "heal",
+			"target": "single_ally",
+			"damage_type": "heal",
+			"element": "none",
+			"power": 90,
+			"mp_cost": 5,
+			"statuses": [
+				{
+					"id": "sts_regen",
+					"ms": 8000
+				}
+			],
+			"heal_mode": "mag",
+			"anim": "cast",
+			"vfx": "heal",
+			"show_tags": [
+				"gross"
+			],
+			"rt": {
+				"icon": "tongue_glitter",
+				"cast_ms": 1500,
+				"range_cm": 2000
+			}
+		},
+		{
+			"id": "skl_mop_haunt_bark",
+			"name": "Spukbellen",
+			"desc": "Unterbricht alle Zauber im Umkreis von 6 Metern und vergiftet die Gegner dort.",
+			"user": "party",
+			"category": "magic",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "poison",
+			"power": 65,
+			"mp_cost": 6,
+			"statuses": [
+				{
+					"id": "sts_poison",
+					"ms": 6000
+				}
+			],
+			"anim": "cast",
+			"vfx": "toxic",
+			"rt": {
+				"icon": "bark_bolt",
+				"cooldown_ms": 15000,
+				"gcd": false,
+				"interrupt": true,
+				"aoe": {
+					"center": "self",
+					"radius_cm": 600
+				}
+			}
+		},
+		{
+			"id": "skl_mop_witching_hour",
+			"name": "Geisterstunde",
+			"desc": "Riskanter Stunt: Gelingt er, vergiftet er alle Gegner im Umkreis von 8 Metern.",
+			"user": "party",
+			"category": "stunt",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "poison",
+			"power": 150,
+			"mp_cost": 0,
+			"statuses": [
+				{
+					"id": "sts_poison",
+					"ms": 8000
+				}
+			],
+			"success_base": 0.55,
+			"success_lck": 0.01,
+			"success_cap": 0.85,
+			"success_boss_mod": -0.15,
+			"fail_effect": {
+				"self_dmg_pct": 0,
+				"status": "sts_stun"
+			},
+			"anim": "stunt",
+			"vfx": "toxic",
+			"show_tags": [
+				"risky",
+				"flashy"
+			],
+			"rt": {
+				"icon": "cape_spotlight",
+				"cast_ms": 1000,
+				"fail_ms": 2000,
+				"aoe": {
+					"center": "self",
+					"radius_cm": 800
+				}
+			}
+		},
+		{
+			"id": "skl_mop_ward_circle",
+			"name": "Bannkreis",
+			"desc": "Heilt einen Verbündeten und panzert ihn 4 Sekunden; 1,5 Sekunden Zauberzeit.",
+			"user": "party",
+			"category": "heal",
+			"target": "single_ally",
+			"damage_type": "heal",
+			"element": "none",
+			"power": 100,
+			"mp_cost": 6,
+			"statuses": [
+				{
+					"id": "sts_guard",
+					"ms": 4000
+				}
+			],
+			"heal_mode": "mag",
+			"anim": "cast",
+			"vfx": "heal",
+			"rt": {
+				"icon": "drool_halo",
+				"cast_ms": 1500,
+				"range_cm": 2000
+			}
+		},
+		{
+			"id": "skl_mop_etiquette_flame",
+			"name": "Etikette-Flamme",
+			"desc": "Feuerschaden mit Haltung; besiegte Gegner bringen extra Hype.",
+			"user": "party",
+			"category": "magic",
+			"target": "single_enemy",
+			"damage_type": "magical",
+			"element": "fire",
+			"power": 125,
+			"mp_cost": 4,
+			"kill_hype": 5,
+			"anim": "cast",
+			"vfx": "fire",
+			"show_tags": [
+				"flashy"
+			],
+			"rt": {
+				"icon": "seal_flame",
+				"cast_ms": 1500,
+				"range_cm": 2000
+			}
+		},
+		{
+			"id": "skl_mop_call_to_order",
+			"name": "Ordnungsruf",
+			"desc": "Schockschaden; das Ziel ist 2 Sekunden überrumpelt.",
+			"user": "party",
+			"category": "magic",
+			"target": "single_enemy",
+			"damage_type": "magical",
+			"element": "shock",
+			"power": 90,
+			"mp_cost": 5,
+			"statuses": [
+				{
+					"id": "sts_dazed",
+					"ms": 2000
+				}
+			],
+			"anim": "cast",
+			"vfx": "shock",
+			"rt": {
+				"icon": "scroll_seal",
+				"cooldown_ms": 10000,
+				"range_cm": 1500
+			}
+		},
+		{
+			"id": "skl_mop_lap_of_honour",
+			"name": "Ehrenrunde",
+			"desc": "Heilt einen Verbündeten, der danach 5 Sekunden im Turbo ist.",
+			"user": "party",
+			"category": "heal",
+			"target": "single_ally",
+			"damage_type": "heal",
+			"element": "none",
+			"power": 100,
+			"mp_cost": 5,
+			"statuses": [
+				{
+					"id": "sts_haste",
+					"ms": 5000
+				}
+			],
+			"heal_mode": "mag",
+			"anim": "cast",
+			"vfx": "heal",
+			"show_tags": [
+				"cute"
+			],
+			"rt": {
+				"icon": "tongue_glitter",
+				"cast_ms": 1500,
+				"range_cm": 2000
+			}
+		},
+		{
+			"id": "skl_mop_fanfare_bark",
+			"name": "Fanfarenbellen",
+			"desc": "Unterbricht alle Zauber im Umkreis von 6,5 Metern; Schockschaden an allen dort.",
+			"user": "party",
+			"category": "magic",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "shock",
+			"power": 70,
+			"mp_cost": 5,
+			"anim": "cast",
+			"vfx": "shock",
+			"show_tags": [
+				"flashy"
+			],
+			"rt": {
+				"icon": "bark_bolt",
+				"cooldown_ms": 14000,
+				"gcd": false,
+				"interrupt": true,
+				"aoe": {
+					"center": "self",
+					"radius_cm": 650
+				}
+			}
+		},
+		{
+			"id": "skl_mop_midnight_gala",
+			"name": "Mitternachtsgala",
+			"desc": "Riskanter Stunt: Gelingt er, trifft Feuer alle Gegner im Umkreis von 9 Metern.",
+			"user": "party",
+			"category": "stunt",
+			"target": "all_enemies",
+			"damage_type": "magical",
+			"element": "fire",
+			"power": 160,
+			"mp_cost": 0,
+			"success_base": 0.55,
+			"success_lck": 0.01,
+			"success_cap": 0.85,
+			"success_boss_mod": -0.15,
+			"fail_effect": {
+				"self_dmg_pct": 0,
+				"status": "sts_stun"
+			},
+			"anim": "stunt",
+			"vfx": "fire",
+			"show_tags": [
+				"risky",
+				"flashy",
+				"cute"
+			],
+			"rt": {
+				"icon": "cape_spotlight",
+				"cast_ms": 1000,
+				"fail_ms": 2000,
+				"aoe": {
+					"center": "self",
+					"radius_cm": 900
+				}
+			}
+		},
+		{
+			"id": "skl_mop_formal_support",
+			"name": "Protokollarischer Beistand",
+			"desc": "Heilt einen Verbündeten und panzert ihn 5 Sekunden; 1,5 Sekunden Zauberzeit.",
+			"user": "party",
+			"category": "heal",
+			"target": "single_ally",
+			"damage_type": "heal",
+			"element": "none",
+			"power": 110,
+			"mp_cost": 6,
+			"statuses": [
+				{
+					"id": "sts_guard",
+					"ms": 5000
+				}
+			],
+			"heal_mode": "mag",
+			"anim": "cast",
+			"vfx": "heal",
+			"rt": {
+				"icon": "two_tongues",
+				"cast_ms": 1500,
+				"range_cm": 2000
+			}
+		},
+		{
 			"id": "skl_e_stiff_slap",
 			"name": "Steifer Schlag",
 			"desc": "Ein Arm, der nie gelernt hat, sich zu beugen.",

@@ -18,9 +18,9 @@ class_name Command extends RefCounted
 ## Echtzeitkampf (07 §10.1, R1a): the real-time combat types (RtCommand.TYPES: ability_use, target_change, move_sample,
 ## combat_item, partner_preset, partner_special, auto_attack, autopilot, combat_hint, move_input, combat_speed,
 ## move_batch) and the "rt" block of "encounter" are checked by RtCommand.validate; R5a replays them (RunSim
-## combat branch, Game.replay_log combat loop). loadout {"member", "bar": {"2" | "3" | "4": skill id}, "preset": "" |
+## combat branch, Game.replay_log combat loop). loadout {"member", "bar": {"1" … "5": skill id}, "preset": "" |
 ## RtVocab.RT_PRESETS, "tog": {switch: bool}} (R5a: action bar variants and partner tactic chosen outside a combat;
-## the rules are RunRules.loadout_refusal's).
+## the rules are RunRules.loadout_refusal's; slots 1 and 5 carry class abilities of a season, 09 §8.3 / ST1-D).
 ## Casting (08 §2.3, K0): persona {"v": 1, "talent", "bias": [≤ 3 Strings]} (start, once per run) — ids only; the
 ## rules are PersonaRules.check's. K1 (CR-33): "talent" is "" (no start talents; any other talent is refused by
 ## PersonaRules.check; the K0 swap left with the start talents in 09 ST0).
@@ -340,10 +340,10 @@ static func _loadout(d: Dictionary) -> String:
 		return e
 	var bar: Variant = d.get("bar", null)
 	if not (bar is Dictionary):
-		return "bar must be a Dictionary (slot \"2\" | \"3\" | \"4\" → skill id)"
+		return "bar must be a Dictionary (slot \"1\" … \"5\" → skill id)"
 	for k: Variant in (bar as Dictionary).keys():
-		if not (k is String) or not RunRules.LOADOUT_SLOTS.has(str(k)):
-			return "bar keys must be \"2\", \"3\" or \"4\""
+		if not (k is String) or not RunRules.LOADOUT_SLOTS.has(str(k)):   # 09 §8.3 (ST1-D): 1 and 5 for classes
+			return "bar keys must be \"1\" … \"5\""
 		if not ((bar as Dictionary)[k] is String) or str((bar as Dictionary)[k]) == "":
 			return "bar.%s must be a non-empty skill id" % str(k)
 	var preset: Variant = d.get("preset", null)

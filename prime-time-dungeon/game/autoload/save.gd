@@ -95,7 +95,9 @@ func save_slot(slot: int) -> Error:
 
 ## read → SaveCodec.decode → Game.adopt_loaded_state(state, run log) (+ grace time_left ≥ 180 s, §6.4; Game resets its
 ## private run context, new sim/run_log with header like new_game + "from_save": true); emits game_loaded; the log
-## header gets its anchor "start_state" (the loaded state) + "start_hash" (replayable, RunSim.anchor_state).
+## header gets its anchor "start_state" (the loaded state) + "start_hash" (replayable, RunSim.anchor_state). ST1-D
+## (09 §8.7): where the talent tree governs, old 06-B picks are reset before the anchor (TalentTree.migrate_06b — a
+## no-op until the V-20 switch: a season never holds 06-B picks).
 func load_slot(slot: int) -> Error:
 	_last_error = ""
 	if not _valid_slot(slot):
@@ -112,6 +114,7 @@ func load_slot(slot: int) -> Error:
 		push_warning("[Save] slot %d loaded with corrections: %s" % [slot, "; ".join(warnings)])
 	st.slot = slot
 	_season_migrate(st)                              # Staffeln (09 §8.7, ST1-B): from the switch to seasons on
+	var talents_reset: int = TalentTree.migrate_06b(st, DB.data)   # ST1-D (09 §8.7): only with the V-20 switch on
 	if st.season != null:                            # Staffeln (09 §9.1, ST1-B): no grace; the journal follows the save
 		if st.season.result != "":
 			return _fail(ERR_UNAVAILABLE, "%s (%s)" % [MSG_SEASON_OVER, st.season.result])
@@ -128,6 +131,8 @@ func load_slot(slot: int) -> Error:
 	Game.persona = p
 	Events.game_loaded.emit(slot)
 	Show.sync_from_state()
+	if talents_reset > 0:                            # ST1-D: "Neuer Talentbaum — bitte neu wählen." (09 §8.7)
+		Show.say("season_tree_reset")
 	# The anchor of the new log (05 §11.4): Game.replay_log / RunSim.replay replay a "from_save" log from this state
 	# (RunSim.anchor_state checks it against start_hash) — the segment after a load is verifiable like a new game.
 	# Casting (08 §2.7 Nr. 3): without the display name (StateHash leaves it out, so start_hash stays valid).

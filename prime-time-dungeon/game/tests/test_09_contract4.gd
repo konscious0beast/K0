@@ -247,10 +247,16 @@ static func _exp_curve() -> Array:
 
 ## The real data plus one sample of every hook (a fresh deep copy): floor 2 in its own Kulisse thm_passage (place 1,
 ## band 3–6, two quarters on a 13 × 13 grid), floor 1 banded 1–3 at place 1 of thm_unterstadt, the level curve to 50,
-## cls_kai_wrecker's class bar with three ranks and two full rows of the talent tree (TREE).
+## cls_kai_wrecker's class bar with three ranks and two full rows of the talent tree (TREE). Since 09 ST1-D the real
+## data carry their own tree: the samples stand alone, so the real tree rows (talents with "row") are left out here.
 func _sample() -> Dictionary:
 	if _sample_raw.is_empty():
 		var raw: Dictionary = _raw_tables()
+		var pool: Array = []
+		for e: Variant in ((raw["talents"] as Dictionary)["entries"] as Array):
+			if not (e as Dictionary).has("row"):
+				pool.append(e)
+		(raw["talents"] as Dictionary)["entries"] = pool
 		if _entry(raw, "themes", "thm_passage").is_empty():     # ST1-C1: the real data hold the Passage
 			((raw["themes"] as Dictionary)["entries"] as Array).append({"id": "thm_passage", "name": "Die Passage",
 				"floors": [2], "program": []})

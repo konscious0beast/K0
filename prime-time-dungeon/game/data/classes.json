@@ -37,6 +37,60 @@
 					85,
 					100
 				]
+			},
+			"rt": {
+				"bar": [
+					{
+						"slot": 1,
+						"skill": "skl_kai_wrecking_ball",
+						"level": 1,
+						"variant": true
+					},
+					{
+						"slot": 3,
+						"skill": "skl_kai_quick_concrete",
+						"level": 12,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_kai_construction_fence",
+						"level": 17,
+						"variant": true
+					},
+					{
+						"slot": 4,
+						"skill": "skl_kai_jackhammer",
+						"level": 22,
+						"variant": true
+					},
+					{
+						"slot": 5,
+						"skill": "skl_kai_demolition",
+						"level": 27,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_kai_structural_report",
+						"level": 32,
+						"variant": true
+					}
+				],
+				"ranks": [
+					{
+						"level": 37,
+						"pm": 1100
+					},
+					{
+						"level": 42,
+						"pm": 1200
+					},
+					{
+						"level": 47,
+						"pm": 1300
+					}
+				]
 			}
 		},
 		{
@@ -74,6 +128,60 @@
 					85,
 					100
 				]
+			},
+			"rt": {
+				"bar": [
+					{
+						"slot": 1,
+						"skill": "skl_kai_switch_kick",
+						"level": 1,
+						"variant": true
+					},
+					{
+						"slot": 3,
+						"skill": "skl_kai_emergency_brake",
+						"level": 12,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_kai_timetable_change",
+						"level": 17,
+						"variant": true
+					},
+					{
+						"slot": 4,
+						"skill": "skl_kai_stand_back",
+						"level": 22,
+						"variant": true
+					},
+					{
+						"slot": 5,
+						"skill": "skl_kai_train_jump",
+						"level": 27,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_kai_on_time",
+						"level": 32,
+						"variant": true
+					}
+				],
+				"ranks": [
+					{
+						"level": 37,
+						"pm": 1100
+					},
+					{
+						"level": 42,
+						"pm": 1200
+					},
+					{
+						"level": 47,
+						"pm": 1300
+					}
+				]
 			}
 		},
 		{
@@ -110,6 +218,60 @@
 					85,
 					100
 				]
+			},
+			"rt": {
+				"bar": [
+					{
+						"slot": 1,
+						"skill": "skl_kai_soldering_iron",
+						"level": 1,
+						"variant": true
+					},
+					{
+						"slot": 3,
+						"skill": "skl_kai_short_circuit",
+						"level": 12,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_kai_tin_shield",
+						"level": 17,
+						"variant": true
+					},
+					{
+						"slot": 4,
+						"skill": "skl_kai_spark_rain",
+						"level": 22,
+						"variant": true
+					},
+					{
+						"slot": 5,
+						"skill": "skl_kai_scrap_cannon",
+						"level": 27,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_kai_generator",
+						"level": 32,
+						"variant": true
+					}
+				],
+				"ranks": [
+					{
+						"level": 37,
+						"pm": 1100
+					},
+					{
+						"level": 42,
+						"pm": 1200
+					},
+					{
+						"level": 47,
+						"pm": 1300
+					}
+				]
 			}
 		},
 		{
@@ -145,6 +307,60 @@
 					85,
 					100
 				]
+			},
+			"rt": {
+				"bar": [
+					{
+						"slot": 1,
+						"skill": "skl_kai_punchline",
+						"level": 1,
+						"variant": true
+					},
+					{
+						"slot": 3,
+						"skill": "skl_kai_ad_break",
+						"level": 12,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_kai_applause",
+						"level": 17,
+						"variant": true
+					},
+					{
+						"slot": 4,
+						"skill": "skl_kai_confetti_cannon",
+						"level": 22,
+						"variant": true
+					},
+					{
+						"slot": 5,
+						"skill": "skl_kai_double_flip",
+						"level": 27,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_kai_stage_fright",
+						"level": 32,
+						"variant": true
+					}
+				],
+				"ranks": [
+					{
+						"level": 37,
+						"pm": 1100
+					},
+					{
+						"level": 42,
+						"pm": 1200
+					},
+					{
+						"level": 47,
+						"pm": 1300
+					}
+				]
 			}
 		},
 		{
@@ -179,6 +395,60 @@
 					70,
 					85,
 					100
+				]
+			},
+			"rt": {
+				"bar": [
+					{
+						"slot": 1,
+						"skill": "skl_mop_arch_flame",
+						"level": 1,
+						"variant": true
+					},
+					{
+						"slot": 3,
+						"skill": "skl_mop_ball_lightning",
+						"level": 12,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_mop_cooling_formula",
+						"level": 17,
+						"variant": true
+					},
+					{
+						"slot": 4,
+						"skill": "skl_mop_storm_bark",
+						"level": 22,
+						"variant": true
+					},
+					{
+						"slot": 5,
+						"skill": "skl_mop_ancestor_fireworks",
+						"level": 27,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_mop_ember_comfort",
+						"level": 32,
+						"variant": true
+					}
+				],
+				"ranks": [
+					{
+						"level": 37,
+						"pm": 1100
+					},
+					{
+						"level": 42,
+						"pm": 1200
+					},
+					{
+						"level": 47,
+						"pm": 1300
+					}
 				]
 			}
 		},
@@ -216,6 +486,60 @@
 					85,
 					100
 				]
+			},
+			"rt": {
+				"bar": [
+					{
+						"slot": 1,
+						"skill": "skl_mop_firm_diagnosis",
+						"level": 1,
+						"variant": true
+					},
+					{
+						"slot": 3,
+						"skill": "skl_mop_sedative",
+						"level": 12,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_mop_house_call",
+						"level": 17,
+						"variant": true
+					},
+					{
+						"slot": 4,
+						"skill": "skl_mop_ward_round",
+						"level": 22,
+						"variant": true
+					},
+					{
+						"slot": 5,
+						"skill": "skl_mop_defibrillator",
+						"level": 27,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_mop_consilium",
+						"level": 32,
+						"variant": true
+					}
+				],
+				"ranks": [
+					{
+						"level": 37,
+						"pm": 1100
+					},
+					{
+						"level": 42,
+						"pm": 1200
+					},
+					{
+						"level": 47,
+						"pm": 1300
+					}
+				]
 			}
 		},
 		{
@@ -251,6 +575,60 @@
 					70,
 					85,
 					100
+				]
+			},
+			"rt": {
+				"bar": [
+					{
+						"slot": 1,
+						"skill": "skl_mop_file_curse",
+						"level": 1,
+						"variant": true
+					},
+					{
+						"slot": 3,
+						"skill": "skl_mop_objection",
+						"level": 12,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_mop_eerie_lick",
+						"level": 17,
+						"variant": true
+					},
+					{
+						"slot": 4,
+						"skill": "skl_mop_haunt_bark",
+						"level": 22,
+						"variant": true
+					},
+					{
+						"slot": 5,
+						"skill": "skl_mop_witching_hour",
+						"level": 27,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_mop_ward_circle",
+						"level": 32,
+						"variant": true
+					}
+				],
+				"ranks": [
+					{
+						"level": 37,
+						"pm": 1100
+					},
+					{
+						"level": 42,
+						"pm": 1200
+					},
+					{
+						"level": 47,
+						"pm": 1300
+					}
 				]
 			}
 		},
@@ -291,6 +669,60 @@
 					65,
 					80,
 					95
+				]
+			},
+			"rt": {
+				"bar": [
+					{
+						"slot": 1,
+						"skill": "skl_mop_etiquette_flame",
+						"level": 1,
+						"variant": true
+					},
+					{
+						"slot": 3,
+						"skill": "skl_mop_call_to_order",
+						"level": 12,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_mop_lap_of_honour",
+						"level": 17,
+						"variant": true
+					},
+					{
+						"slot": 4,
+						"skill": "skl_mop_fanfare_bark",
+						"level": 22,
+						"variant": true
+					},
+					{
+						"slot": 5,
+						"skill": "skl_mop_midnight_gala",
+						"level": 27,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_mop_formal_support",
+						"level": 32,
+						"variant": true
+					}
+				],
+				"ranks": [
+					{
+						"level": 37,
+						"pm": 1100
+					},
+					{
+						"level": 42,
+						"pm": 1200
+					},
+					{
+						"level": 47,
+						"pm": 1300
+					}
 				]
 			}
 		}

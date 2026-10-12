@@ -276,6 +276,19 @@ static func follow_max_vitals(member: PartyMember, before: StatBlock, after: Sta
 	member.mp = clampi(member.mp + mp_delta, 0, after.values[StatBlock.Stat.MP])
 
 
+## The learnset skills of the levels old_level+1 … new_level join member.skills (like add_exp) — the season's level-up
+## (LevelBand, 09 §8.2, ST1-D) keeps the list the same as the campaign's. Returns the newly added ids.
+static func learn_between(member: PartyMember, data: GameData, old_level: int, new_level: int) -> PackedStringArray:
+	var out: PackedStringArray = []
+	if member == null:
+		return out
+	for skill_id: String in _learnset_between(member, data, old_level, new_level):
+		if not member.skills.has(skill_id):
+			member.skills.append(skill_id)
+			out.append(skill_id)
+	return out
+
+
 ## Known skills of the member's class learnset up to `level` (data order).
 static func class_skills_up_to(member: PartyMember, data: GameData, level: int) -> PackedStringArray:
 	var out: PackedStringArray = []

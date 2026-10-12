@@ -544,6 +544,8 @@ func _refresh_talent_cta() -> void:
 	var sub: Label = _talent_cta.find_child("Sub", true, false) as Label
 	if sub != null:
 		sub.text = "1 Talentwahl offen" if n == 1 else "%d Talentwahlen offen" % n
+		if Game.state != null and TalentTree.governs(Game.state):   # Staffeln (09 §8.4, ST1-D): rows of the tree
+			sub.text = "1 Talentreihe offen" if n == 1 else "%d Talentreihen offen" % n
 
 
 ## Focus through the menu rows (02_TECH §10.2 rule 2): ui_up / ui_down move between the rows and wrap (from a row of

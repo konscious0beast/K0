@@ -9,7 +9,9 @@
 > Twists und KI-Zeilen gibt es im Kampf nicht) > `08_CASTING` (Persona, Vorleben) > `01_GDD` / `02_TECH` / `03_ART` /
 > `05_LIVE_MODUS` (je nach Thema; Bestands-APIs aus 02_TECH gelten, soweit 07 oder 06 sie nicht ändern). Bis zum Abschluss
 > von R5 bleibt der CTB-Kampf hinter dem Schalter `combat_mode` (§12.1) unverändert lauffähig; mit R5 ersetzen §2–§11 dieses
-> Dokuments 01_GDD §3 und 02_TECH §5.
+> Dokuments 01_GDD §3 und 02_TECH §5. **Seit R5b-2b (2026-10-12)** kämpft die Kampagne nur noch in Echtzeit — der Schalter ist
+> entfernt; die CTB-Engine lebt als Kern des optionalen Minispiels „Stempelduell“ weiter (`10_MINISPIEL_STEMPELDUELL.md`,
+> §12.6 „Stand R5b-2b“).
 > **Reihenfolge:** Die 06-Pakete A–D (Heldenwahl, Talent-Show/Spezies, Marotten, KI-Admin) werden **vor** jeder 07-Umsetzung
 > nach `claude/prime-time-dungeon` gemergt. R1a ist danach der **zweite Vertrags-Commit** (§12.2); Dateieigentum und
 > Merge-Regeln je Datei stehen in §12.3.
@@ -110,10 +112,10 @@ sind Entscheidungen des Orchestrators für R5b, E34–E37 die Auslegungen zum Pu
 | E30 | Element-Abwehr gegen Prozent-Treffer (08 CR-24, angenommen) | **Prozent-Treffer tragen das Element ihres Skills:** Nach dem Grundwert faltet `rt_damage.gd` zuerst den Element-Faktor des Ziels für dieses Element (`element_mods`, auf 500–1500 ‰ begrenzt, Immunität zählt als 500); ohne Element kein Schritt. ATK, DEF, RES, Krit und Varianz wirken auf Prozent-Treffer weiterhin nicht. So wirken Element-Talente (06 B; die Starttalente aus 08 sind mit 08 CR-33 entfallen) in beiden Kampfmodi; R4 misst die Bänder (§11) mit E30. Dazu ein **gemeinsamer Vertrags-Durchgang R1a + 08 K0** mit genau einem `SIM_VERSION`-Sprung, in dem auch die K0-Zeilen in `data_validator.gd` stehen | §3.9.1, §6.3, §9.6, §10.2, §12.2, §12.3, §12.5 |
 | E31 | Unterhosen-Liga im Echtzeitkampf (Orchestrator, R5b) | **Eine** Liga-Regel im Kampf: Wer in der Liga kämpft (`MarottenRules.in_liga` bei der zu Kampfbeginn eingefrorenen Stufe, nie im Tutorial), ist **„leichtfüßig“** — Status `sts_light_footed` für den ganzen Kampf (`BattleBridge` hängt den Mod `{"src": "liga:mar_unterhose", "op": "on", "event": "combat_start"}` als letzten Eintrag der festen Mod-Reihenfolge an): **8 % schneller** (`move_pm` 1080 — Sim, Körper der Person und Bot lesen den Status) und als sim-gesteuerte Einheit **ein Viertel weniger übersehene Telegraphen** (`ai_miss_pm` 750 auf `AI_DODGE_MISS_PM`; der KI-Strom zieht wie zuvor); Flag `keep`: übersteht ein K.O. Angekündigt im Regeltext („Ohne Rüstung & ohne Accessoire: leichtfüßig …“: Liga-Marotte, Pausetab „Show“, Liga-Toast) und als Statussymbol im HUD. Der Liga-Wortlaut bleibt „ohne Rüstung & ohne Accessoire“ (E8); „leichtfüßig“ beschreibt den Schritt, nicht die Ausrüstung. Ziel der Abstimmung: Liga 1 je Held:in und Boss 5–15 Punkte schwerer als Liga 0, Königin in Liga 2 ≤ 80 % Niederlagen (Messung §11.5 „Stand R5b-1“) | §9.5, §11.5, 06 §4.3 |
 | E32 | Show-Ökonomie des Echtzeitkampfs (Orchestrator, R5b-2a) | Die Show-Zahlen des Echtzeitkampfs liegen in den Bändern von GDD §13 (§11.1). Ein Echtzeitkampf hat je Minute etwa dreimal so viele Anlässe wie ein CTB-Kampf (Auto-Angriffe, eine Combo alle 5 s, die SHOW alle 30 s); mit den R5a-Startwerten stand der Hype meist über 70, und fast jeder Kampf brachte ein Geschenk. Hebel im Profil `rt` (CTB unverändert): **Krit und Schwäche nur für Fähigkeitstreffer** (je +1, ein Auto-Angriff ist keine Aktion), **Combo +1, SHOW/FINALE +6 / +2** (halbe CTB-Werte), **Heilen ist keine Wiederholung** (wie Slot 1 — die Heilerin-Held:in verlor sonst ≈ 45 Hype je Bosskampf), **Sponsoren-Pause**: nach einem regulären Echtzeitkampf mit System-Geschenk bringen die nächsten 4 regulären keines (Bosskämpfe und externe Geschenke unberührt, §9.2), und **Follower × 600 ‰** je gewonnenem Echtzeitkampf (`RT_FOLLOWER_PM`). Gemessen mit `fullrun.sh --combat=realtime --strategy=typical --pace=human`, Seeds 101–110 je Held:in, Median vorher → nachher [Spanne nachher]: **Kai** Hype Start 40,5 → 38,8 [37–40,5], Ende 73 → 59,8 [55–64], Geschenke je Etage 17 → 7 [5–7], Follower 2 327 → 1 385 [1 317–1 417], Zuschauer-Spitze 6 274 → 4 880 [4 739–4 955], Etagenzeit 26:36 → 26:55 [25:28–27:36]; **Graf Mopsula** 40 → 38 [36,5–40,5], 69,2 → 57,8 [53–61,5], 16 → 6 [6–7], 2 194 → 1 312 [1 237–1 337], 6 081 → 4 776 [4 505–4 836], 26:25 → 27:10 [26:17–28:01] — alle Mediane in den Bändern (25–45, 45–65, 4–7, 1 200–1 500, 3 000–5 500, 22–28 min). Schneller Takt (`--pace=fast`, gleiche Seeds) Kai / Mopsula: Hype-Ende 79,8 / 77,5 → 75,2 / 70,5, Geschenke 20 / 19,5 → 8 / 7, Follower 2 587 / 2 486 → 1 682 / 1 583, Zuschauer 6 535 / 6 388 → 5 222 / 5 079 (die Bänder gelten für den menschlichen Takt). Im menschlichen Takt schwanken Läufe desselben Stands etwas (die M.O.D.-Zeile ist Darstellungs-Zufall, ihre Lesezeit verschiebt die Erkundung). `SIM_VERSION` 2 → 3: ältere Logs und Einträge zeigen „ältere Version“ (05 §4.3). Werte fest in `test_r5b_show_economy` | §9.1, §9.2, §11.2, §12.6 Nr. 3 |
-| E33 | Echtzeit ist Standard der Kampagne (Orchestrator, R5b-2a) | Neue Spiele kämpfen in Echtzeit: `GameSettings.combat_mode` startet mit `DEFAULT_COMBAT_MODE` = `&"realtime"`, ebenso `Game.new_game_combat_mode()` ohne Einstellungen und der Zustand einer allein gestarteten Szene (`Game.ensure_state`); die CTB-Kampfszene (`battle.tscn`, `--goto=battle:<enc>`, ihre Capture-Rezepte) holt sich weiter einen CTB-Zustand. **Spielstände behalten ihren gespeicherten Modus** — ein alter CTB-Spielstand kämpft weiter im CTB (keine Umrechnung vor Teil 2b, `SaveCodec` v2). Die Einstellungsdatei trägt `meta/version` = 2: In einer Datei der Version 1 steht `combat_mode = "ctb"` als alter Standard, nicht als Wahl, sie wird als Echtzeit gelesen; den Modus liest überhaupt nur ein Debug-Build. Die Zeile „Kampfmodus (Debug)“ und das Boot-Argument `--combat=ctb|realtime` bleiben. **Umgestellt, obwohl `typical` noch nicht aus Probespiel-Logs kalibriert ist** (§11.4, §12.6 Nr. 2): Der Harness erfüllt die Bänder §11.1 schon mit dem Startprofil, und das Probespiel liefert Echtzeit-Logs erst, wenn die Kampagne in Echtzeit startet; die Kalibrierung folgt mit `rt_balance.sh --nightly --strict-bands`. CTB wird **nicht gelöscht**, sondern in Teil 2b zum Minispiel „Stempelduell“ (10). Die Gates folgen dem Standard (`check.sh`, `fullrun.sh`, CI: Echtzeit, CTB mit `--combat=ctb`, §12.5) | §7.6, §7.8, §12.1, §12.5, §12.6 |
+| E33 | Echtzeit ist Standard der Kampagne (Orchestrator, R5b-2a) | Neue Spiele kämpfen in Echtzeit: `GameSettings.combat_mode` startet mit `DEFAULT_COMBAT_MODE` = `&"realtime"`, ebenso `Game.new_game_combat_mode()` ohne Einstellungen und der Zustand einer allein gestarteten Szene (`Game.ensure_state`); die CTB-Kampfszene (`battle.tscn`, `--goto=battle:<enc>`, ihre Capture-Rezepte) holt sich weiter einen CTB-Zustand. **Spielstände behalten ihren gespeicherten Modus** — ein alter CTB-Spielstand kämpft weiter im CTB (keine Umrechnung vor Teil 2b, `SaveCodec` v2). Die Einstellungsdatei trägt `meta/version` = 2: In einer Datei der Version 1 steht `combat_mode = "ctb"` als alter Standard, nicht als Wahl, sie wird als Echtzeit gelesen; den Modus liest überhaupt nur ein Debug-Build. Die Zeile „Kampfmodus (Debug)“ und das Boot-Argument `--combat=ctb|realtime` bleiben. **Umgestellt, obwohl `typical` noch nicht aus Probespiel-Logs kalibriert ist** (§11.4, §12.6 Nr. 2): Der Harness erfüllt die Bänder §11.1 schon mit dem Startprofil, und das Probespiel liefert Echtzeit-Logs erst, wenn die Kampagne in Echtzeit startet; die Kalibrierung folgt mit `rt_balance.sh --nightly --strict-bands`. CTB wird **nicht gelöscht**, sondern in Teil 2b zum Minispiel „Stempelduell“ (10). Die Gates folgen dem Standard (`check.sh`, `fullrun.sh`, CI: Echtzeit, CTB mit `--combat=ctb`, §12.5). **Seit R5b-2b** gibt es keinen Schalter mehr (§12.1): nur Echtzeit, ein Spielstand der Version 1 wird umgerechnet (02_TECH §6.4) | §7.6, §7.8, §12.1, §12.5, §12.6 |
 | E34 | Pull einer Person (Stand Pull) | Außerhalb des Kampfes wählt die Person den **Anführer** einer Gruppe als Ziel und eröffnet den Kampf mit einer Fähigkeit ihrer Leiste. **Ziele:** Anführer im eigenen Raum mit Sichtlinie bis 25 m, keine Bosse (§7.4); Tab-Reihenfolge zuerst ±60° um die Kamera, dann nach Abstand. Das Ziel ist reine Darstellung: nie aufgezeichnet, es fällt beim Kampfstart, beim Verlassen der Szene und sobald der Anführer kein Kandidat mehr ist. **Eröffnen** können die Slots 1–5 der gesteuerten Figur (nach Stufe und Varianten, wie `BattleBridge` die Kampfleiste baut; der Trank-Slot 6 nie; gegen die schlafende Tutorial-Gruppe nur Slot 1 und SHOW wie ihre Kampfleiste, E28), und nur eine Fähigkeit **auf einen Gegner** (`single_enemy` oder eine Fläche um das Ziel, `aoe.center` = `target`; keine Fläche um die Figur, keine Heilung, keine Stärkung), in Reichweite (Mitte–Mitte ≤ `range_cm`, sonst `reach_cm`, + Radius des Anführers, §3.6 Nr. 9) und mit genug MP. Die Sim führt die Eröffnung ohne Reichweitenprüfung aus und lehnt sie bei fehlenden MP erst im gestarteten Kampf ab (§3.4), deshalb prüft die Szene vorher und lehnt sonst mit Fehlerton und einem kurzen Text unter dem Zielrahmen ab: „Kein Ziel (Tab)“, „Zu weit weg“, „Nicht genug MP“, „Damit eröffnest du keinen Kampf“, „Noch nicht gelernt“, „Hier wird nicht gekämpft“. **Kein Pull** im Safe Room (ein sicherer Ort) und im Treppenraum (dort gibt es kein Set, §2.4) — beides gilt auch für den Full-Run-Bot —, in Dialogen, Übergängen und laufenden Kämpfen. Aufgezeichnet wird nur der Pull, auf demselben Weg wie beim Bot (`ExplorationScene.pull` → `encounter` mit `rt.open`): Run-Log, Replay und Determinismus wie bisher. **Zielrahmen** in der Sprache des Kampf-Zielrahmens (§8.4), oben mittig unter dem Etagen-Timer, 300 × 68 px (ein ferner Anführer steht hoch im Bild: läge sein Marker hinter Rahmen oder Plakette, gleitet der Rahmen neben ihn, zwischen Party-Spalte und Minimap, und zurück, sobald Platz ist): Symbol, Name mit Gruppengröße, Stufe, Abstand, Zustand und Vorteil („auf Streife · Erstschlag!“ in Gold, „hat dich bemerkt · kein Erstschlag“), je Slot ein Chip mit Taste und der Tönung der Leiste (§8.2: rot = zu weit, blau = zu wenig MP, gedimmt = eröffnet nicht bzw. am Pad nicht belegt); dazu ein Ring um die Füße des Anführers und ein Pfeil über seinem Kopf (Gold, solange ein Pull ein Erstschlag wäre) | §2.2, §7.1–§7.4, §8.4 |
 | E35 | Bellen, dann Pull (Graf Mopsula, Stand Pull) | Verdutzt ein Bellen eine Gruppe, wird ihr Anführer (bei mehreren der nächste) **automatisch Ziel**, wenn die Person nicht selbst eines gewählt hat; dieses Ziel fällt, sobald die Verdutzung endet. So genügt als Held:in Mopsula „bellen, dann 1“ (Pad: A, dann A; Touch: zweimal der Aktionsknopf) für den Erstschlag aus jeder Richtung (06-Regel, §2.2) — Adelsflamme reicht 20 m, das Bellen 4 m. Der Startbanner sagt dann „ERSTSCHLAG! — Angebellt und noch ganz verdattert.“ (`BattleSetup.opener` = `bark`), sonst wie bisher „Die Gegner sind noch ganz verdattert.“ | §2.2, §8.8 |
-| E36 | Eingabe des Pulls (Stand Pull) | Die Echtzeit-Belegung steht jetzt in `project.godot` (§7.7): `map` = M und Back (ohne Tab), `toggle_auto` = T und Steuerkreuz oben (ohne Y). Ein CTB-Lauf bekommt die alte Belegung (Tab = Karte, Y = Auto-Kampf) bis SD1 zur Laufzeit zurück (`CombatInput.apply_input_mode(false)` über `apply_for_game`); dort gibt es kein Ziel außerhalb des Kampfes. **Tastatur/Maus:** Tab / Shift+Tab (exakter Abgleich), Linksklick auf den Körper eines Anführers (Fuß bis Kopf, Trefferfläche ≥ 107 px) wählt, Linksklick auf freien Boden löscht; 1–5 ziehen; `action` bleibt Interagieren bzw. Feldfähigkeit, auch mit Ziel. **Gamepad:** RT = nächstes Ziel (ein Schritt je Druck), LT bleibt Schleichen, **B löscht das Ziel** (sonst gäbe es am Pad keinen Weg dazu); A zieht mit Slot 1, wenn das Ziel in dessen Reichweite ist (fehlen nur MP, kommt die Ablehnung), sonst bleibt A die Feldfähigkeit; X / Y ziehen mit Slot 2 / 3, nur mit Ziel (RB und LB bleiben in der Erkundung frei). **Touch:** In der Echtzeit-Erkundung ist eine kurze Berührung außerhalb von Stick und Knöpfen (≤ 0,25 s, < 12 px) ein Tippen: auf einen Anführer = Ziel, auf freien Boden = Ziel löschen; Ziehen dreht weiter die Kamera. Mit Ziel zeigt der Aktionsknopf das Symbol von Slot 1 in den Tönungen der Leiste und zieht damit (bei einer Ablehnung schüttelt sich das Symbol). **Ein Interaktions-Prompt hat immer Vorrang** (Hand auf dem Knopf, Interagieren auf `action`). Woher `action` kam, merkt sich `PlayerController.action_source` (Taste, Pad, Touch-Knopf) | §7.1–§7.3, §7.7, 02_TECH §2.2, §10 |
+| E36 | Eingabe des Pulls (Stand Pull) | Die Echtzeit-Belegung steht jetzt in `project.godot` (§7.7): `map` = M und Back (ohne Tab), `toggle_auto` = T und Steuerkreuz oben (ohne Y). Ein CTB-Lauf bekam die alte Belegung (Tab = Karte, Y = Auto-Kampf) bis SD1 zur Laufzeit zurück (`CombatInput.apply_input_mode(false)` über `apply_for_game`); seit R5b-2b gibt es keine CTB-Läufe mehr, `apply_for_game` setzt immer die Echtzeit-Belegung (`apply_input_mode(false)` bleibt für das Stempelduell, 10 §4.6). **Tastatur/Maus:** Tab / Shift+Tab (exakter Abgleich), Linksklick auf den Körper eines Anführers (Fuß bis Kopf, Trefferfläche ≥ 107 px) wählt, Linksklick auf freien Boden löscht; 1–5 ziehen; `action` bleibt Interagieren bzw. Feldfähigkeit, auch mit Ziel. **Gamepad:** RT = nächstes Ziel (ein Schritt je Druck), LT bleibt Schleichen, **B löscht das Ziel** (sonst gäbe es am Pad keinen Weg dazu); A zieht mit Slot 1, wenn das Ziel in dessen Reichweite ist (fehlen nur MP, kommt die Ablehnung), sonst bleibt A die Feldfähigkeit; X / Y ziehen mit Slot 2 / 3, nur mit Ziel (RB und LB bleiben in der Erkundung frei). **Touch:** In der Echtzeit-Erkundung ist eine kurze Berührung außerhalb von Stick und Knöpfen (≤ 0,25 s, < 12 px) ein Tippen: auf einen Anführer = Ziel, auf freien Boden = Ziel löschen; Ziehen dreht weiter die Kamera. Mit Ziel zeigt der Aktionsknopf das Symbol von Slot 1 in den Tönungen der Leiste und zieht damit (bei einer Ablehnung schüttelt sich das Symbol). **Ein Interaktions-Prompt hat immer Vorrang** (Hand auf dem Knopf, Interagieren auf `action`). Woher `action` kam, merkt sich `PlayerController.action_source` (Taste, Pad, Touch-Knopf) | §7.1–§7.3, §7.7, 02_TECH §2.2, §10 |
 | E37 | Pull lehren (Stand Pull) | Kein Lesetext vorab: bis zum ersten Pull einer Person in der Sitzung steht unter dem Zielrahmen die goldene Plakette „1 · Angriff eröffnen“ (Glyphe des Schemas, Pad: A), auf Touch pulsiert stattdessen ein goldener Ring um den Aktionsknopf mit dem Slot-1-Symbol — nur in der Kampagne mit „Kampf-Hinweise“ an und nur, solange Slot 1 jetzt ziehen würde. Die Hinweiszeile der Erkundung nennt in Echtzeit-Läufen „Ziel“ (Tab bzw. RT). „Gelehrt“ ist ein Sitzungswert der Darstellung (nicht gespeichert, nicht aufgezeichnet). **Erster Kampf (E21, E28):** Wer die Tutorial-Gruppe mit einer Fähigkeit weckt, hat Ziel und Slot 1 schon benutzt — die Karte `target` entfällt, `bar1` ebenso, wenn die Eröffnung die Slot-1-Fähigkeit war (`HintCards.done_by_pull`; sonst verlangte die Karte ein zweites Drücken von 1, das die Sim ablehnt, solange die Eröffnung noch zaubert oder ihr GCD läuft — eine Ablehnung als erste Lektion); SHOW und Ausweichen bleiben. Geweckt durch Feldschlag oder Berührung laufen alle vier Schritte wie bisher | §2.13, §7.1, §7.3 |
 | E38 | Echtzeit-Texte und -Bedingungen beim Daten-Backen (R5b-2b) | Mit dem Backen (§4.11) sprechen die Daten Echtzeit; keine Spieler:innen-Zeile nennt mehr CTB-Züge. **Skills:** Spott und Gutachten behalten den Satz vor dem Doppelpunkt („Sie ziehen alle Blicke auf sich.“ — die Wirkung in Sekunden hängt `CombatView.skill_text` aus `statuses` an, ohne den bisherigen Doppelpunkt-Schnitt), Gegner-Skills nennen Sekunden (Stufen 4 s, Garde 8 s, Paragrafen 12 s und „die Party ist ermahnt“, Pose ohne Dauer), Rattenheilung 15 %, Pflaster 180 HP, Brutzel-Burger 480 HP, Molotow 240 „im Umkreis von 4 m“, Eisspray 360, Hermelin HP +60; Erste Hilfe und Gegengift nennen auch die Verbrennung (ihr Echtzeit-`cleanse`). **Marotten ab Etage 2** (Bedingungen aus §9.6, `min_floor` 2 — auf Etage 1 nie aktiv, die Full-Runs bleiben gleich): `mar_speed` „Gewinne einen normalen Kampf in höchstens 15 Sekunden.“ (`e.duration_sec <= 15 && e.is_boss == false` statt `e.party_turns <= 3`), `mar_brave` „Gewinne ohne Fluchtversuch: kein Schritt aus dem Ring, kein Nebel.“ (`e.flee_attempts == 0` — Verteidigen gibt es nicht), `mar_stunt` „Lass in einem Kampf mindestens eine eigene SHOW gelingen.“ (Bedingung `e.stunts_success >= 1` bleibt: die eigene SHOW, nie die der KI); ihre Ansagen in `mod_lines.json` folgen („Kämpfe unter 15 Sekunden“, „Eine gelungene SHOW pro Kampf“, „Kein Weglaufen, kein Nebel“). Tests `test_r5b_texts`, `test_06c_marotten`, `test_r5_marotten_rt` | §4.11, §9.6, §12.6 |
 
@@ -1449,6 +1451,12 @@ Vokabulare (`RtVocab`, verbindlich): `RT_TARGETS`, `RT_CONDITIONS` (§5.3), `RT_
 
 ### 4.11 Migration der bestehenden Daten
 
+**Umgesetzt in R5b-2b** (§12.6 „Stand R5b-2b“): Die Spalte „Ab R5b“ gilt für die Kampagnen-Daten. Abweichend davon bleiben die
+CTB-Felder in den Defs und als optionale Felder im Validator (das Regelbuch des Stempelduells belegt sie, 10 §6.4), ebenso
+`Balance.FLEE_*`, `DEFEND_MULT`, `STUNT_COOLDOWN` (10 SD1 Zeile 2). Mit den Feldern gingen die Skills, die nur die CTB-KI der
+Etage-2-Platzhalter nannte (`skl_e_pose`, `skl_e_ram`, `skl_e_price_slam`), und die Zeilen der CTB-Haken (`tutorial_stunt`,
+`boss_train_warning`); die Achievements tragen ihre Echtzeit-Schwellen in `condition`/`desc` (§9.4).
+
 | Bestehend (CTB) | Echtzeit | Ab R5b (CTB entfernt) |
 |---|---|---|
 | `skills[].rank` | ignoriert (Taktung über `rt`) | gelöscht |
@@ -1484,8 +1492,8 @@ Neue Einträge (R4): Skills `skl_rt_auto_mopsula`, `skl_e_azubi_hop`, `skl_q_tra
   Abklingzeit (Kai: „Hier spielt die Musik!“ — Spott, ab Stufe 2; Mopsula: „Heiliges Schlabbern“ — Heilung auf das Smart-Ziel, ab
   Stufe 1; nie im Tutorial-Kampf, §2.13), §3.6.13. Einfach, lesbar, und man hat den Partner im entscheidenden Moment in der Hand.
   Die so ausgelöste Aktion zählt als Aktion der Person (`by_ai = false`, §9.1).
-- 06 „Partner automatisch“ (`GameSettings.partner_auto`) betrifft nur den CTB-Modus; im Echtzeitkampf ist der Partner immer KI.
-  Die Optionszeile wird im Echtzeitmodus ausgeblendet und entfällt mit R5b (06 §1.4 wird dann nachgezogen, §12.8).
+- 06 „Partner automatisch“ (`GameSettings.partner_auto`) betraf nur den CTB-Modus; im Echtzeitkampf ist der Partner immer KI.
+  Einstellung und Optionszeile sind mit R5b-2b entfallen (06 §1.4 nachgezogen).
 - **Steuerung folgt dem Leben** (§2.6): K.O. der gesteuerten Einheit → die erste lebende KI-Einheit wird `PLAYER`
   (`CONTROL_CHANGED`), vorübergehend und nur für diesen Kampf. Ab da kommen Proben und Befehle für die neue Einheit; der
   `CombatDirector` tauscht die Körperrollen in der Szene und stellt sie am Kampfende über `ExplorationScene.refresh_hero()` (06 A)
@@ -2033,7 +2041,9 @@ Untertitel für M.O.D. sind immer an. Autopilot und Vorabendprogramm (Warnzeiten
 Alle Konstanten geprüft (Anhang A7, A16). Deadzone der Achsen-Aktionen Standard 0,2 (geprüft). Bestehende Aktionen bleiben sonst
 unverändert (02_TECH §2.2). Bis R5b-2a stand in `project.godot` die CTB-Belegung, und `CombatInput.apply_input_mode` stellte
 Echtzeit-Läufe zur Laufzeit um; seit Stand Pull (E36) ist es umgekehrt: Die Datei trägt die Echtzeit-Belegung, ein CTB-Lauf
-bekommt Tab an `map` und Y an `toggle_auto` über `CombatInput.apply_for_game()` zurück (bis SD1).
+bekam Tab an `map` und Y an `toggle_auto` über `CombatInput.apply_for_game()` zurück — mit SD1 (R5b-2b) entfallen, es gibt
+nur noch Echtzeit-Läufe. Das Stempelduell bindet Tab für seine Kartengroßansicht selbst oder nutzt
+`CombatInput.apply_input_mode(false)` (10 §4.6).
 
 ### 7.8 Neue Felder `GameSettings` (R1a als Felder, R3 im Menü)
 
@@ -2956,7 +2966,7 @@ Lesart und Folgen für R4:
   Safe-Room-Vollheilung; prüft „2–3 Kämpfe zwischen zwei Safe Rooms ohne Tränke“ und die Heilgegenstände je Etage. Gate für die
   Regenerationswerte (§2.7).
 - **Etagen-Bänder** (Etagenzeit, Stufen bei den Bossen, Show-Zahlen) gelten erst im **R5-Full-Run** (`tools/fullrun.sh
-  --combat=realtime --strategy=typical --pace=human`): 10 Seeds lokal, 1 Seed in CI.
+  --strategy=typical --pace=human`, bis R5b-2b mit `--combat=realtime`): 10 Seeds lokal, 1 Seed in CI.
 - **`typical` aus Replays kalibriert** (R5b): Aus aufgezeichneten Probespiel-Läufen echter Erstspieler:innen werden
   Ausweichquote, Unterbrechungsquote, genutzte GCDs und Trank-Schwelle gemessen und als Profilwerte eingetragen; danach läuft der
   nächtliche Harness erneut.
@@ -3127,6 +3137,13 @@ unverändert.
 
 ### 12.1 Schalter (Feature-Flag)
 
+> **Stand R5b-2b:** Der Schalter ist entfernt — `GameSettings.combat_mode`, `GameState.combat_mode`, die Zeile
+> „Kampfmodus (Debug)“ und das Boot-Argument `--combat=` gibt es nicht mehr; jeder Lauf kämpft in Echtzeit, der Run-Log-Kopf
+> trägt weiter `combat_mode: "realtime"` (ein anderer Wert wird abgelehnt). Die Verzweigungspunkte unten sind aufgelöst
+> (`Progression.total_stats` ohne HP-Skala, `BattleBridge` nur `make_rt_setup`, `Show` nur das Profil `rt`); der CTB-Zweig
+> von `ExplorationScene` ist unerreichbar und hängt an zwei Shims (`Game.make_battle_setup` → `null`, `Router.start_battle`
+> ohne Wirkung), bis sein Paket ihn entfernt. Der Text unten beschreibt den Stand bis R5b-2a.
+
 - `GameSettings.combat_mode: StringName` (`&"ctb"` | `&"realtime"`). **Standard seit R5b-2a (E33): `&"realtime"`**
   (`GameSettings.DEFAULT_COMBAT_MODE`; bis dahin `&"ctb"`); Entwicklung/QA schalten über das Einstellungsmenü (Zeile
   „Kampfmodus (Debug)“, nur Debug-Builds; gelesen wird der Wert nur dort und nur aus einer Einstellungsdatei mit
@@ -3234,6 +3251,13 @@ er enthält alles, was mehr als eine Phase braucht:
   Graf Mopsulas „bellen, dann 1“ ist ein Erstschlag (E35). `project.godot` trägt die Echtzeit-Belegung (Tab = Ziel, Karte
   nur M, Autopilot am Pad auf Steuerkreuz oben), CTB-Läufe stellen bis SD1 zur Laufzeit zurück. Schließt Abweichung (6) von
   „Stand R5b-2a“; Einzelheiten §12.6 „Stand Pull“.
+- **Stand R5b-2b (2026-10-12, Branch `ptd/r5b2b`, Teil 2b: Kampagne nur Echtzeit, CTB → Stempelduell):** Daten gebacken
+  (§4.11: HP × 4, Echtzeit-Werte in den Hauptfeldern, Skala-Code weg, `SIM_VERSION` 3 → 4; Texte und Marotten-Bedingungen
+  nach E38), `SaveCodec` v2 (ein CTB-Spielstand spielt mit HP × 4 in Echtzeit weiter), SD1 aus 10 Kap. 6.2 Zeilen 0–5
+  (Beuteregel nach `BattleResult`, die fünf Engine-Dateien nach `core/stempel/ctb/`, Konstanten/Hash/Felder bleiben,
+  Kampagnen-Daten ohne CTB-Felder, CTB-Kampfszene und alle CTB-Pfade der Kampagne weg, `test_sd_engine_golden`,
+  `test_sd_boundaries`), Gates ohne CTB (Smoke, Full-Run, CI, Perf-Probe). Einzelheiten, Paritäts-Nachtrag und Abweichungen:
+  §12.6 „Stand R5b-2b“.
 
 **Phasenübergreifende Signaturen — vollständige Stub-Liste von R1a** (alles, was eine Phase von einer anderen aufruft oder
 liest; `test_r1a_contract` prüft jede Zeile per Reflexion):
@@ -3292,8 +3316,8 @@ Durchgang (08 §10.2, Dateieigentum 08 §10.7); die 08-Pakete schreiben nie in `
 | `core/battle/action_event.gd`, `battle_result.gd` | — | R1a: `Type`-Werte am Enum-Ende (§3.13), Felder `tick`, `rt`, `by_ai`; Ergebnisfelder §3.12 | additiv |
 | `core/data/defs/{skill,status,enemy,item,party_member,encounter}_def.gd` | — (C hat `show_boss` nicht angelegt) | R1a: Feld `rt` + Normalisierung (§4.6–4.9), `EncounterDef.show_boss` | additiv |
 | `core/progression/battle_bridge.gd` | Schritt 0 (Twist-Zeile, Show-Boss-Hook), B (Talente) | R1a Stub `make_rt_setup` → R1b Implementierung (inkl. `RtMods.from_show_boss`/`from_twists`), `apply_result` mit `group_ids` | eigener Abschnitt |
-| `core/progression/party_member.gd`, `game_state.gd`, `floor_run.gd` | Schritt 0 (Felder) | R1a: `hp_scale_pm`, `rt_preset`, `rt_toggles`, `rt_loadout`, `combat_mode`, `regen_ticks` | additiv |
-| `core/progression/progression.gd` | B (Talente/Spezies in `total_stats`) | R1a: HP-Skala als letzter Schritt von `total_stats` (nach Klasse/Spezies) | eine Zeile, eigener Abschnitt |
+| `core/progression/party_member.gd`, `game_state.gd`, `floor_run.gd` | Schritt 0 (Felder) | R1a: `hp_scale_pm`, `rt_preset`, `rt_toggles`, `rt_loadout`, `combat_mode`, `regen_ticks` (`hp_scale_pm` und `combat_mode` entfielen mit R5b-2b) | additiv |
+| `core/progression/progression.gd` | B (Talente/Spezies in `total_stats`) | R1a: HP-Skala als letzter Schritt von `total_stats` (nach Klasse/Spezies) — mit dem Backen (R5b-2b) entfallen | eine Zeile, eigener Abschnitt |
 | `core/live/command.gd`, `state_hash.gd` | Schritt 0 | R1a: `TYPES` + Delegation an `RtCommand`, `of_rt`-Stub → R1b | additiv |
 | `core/live/run_log.gd` | — | R1a: `add_checkpoint(k, h, ct = -1)`, `ct`-Ordnung in `validate` → R5a: `compact`/`expand` | Abschnitte |
 | `core/live/run_sim.gd` | Schritt 0 + D (Twist-Ticks, Replay-Puffer) | R1b: Schritt 6 Regeneration; R5a: Echtzeitkampf (§10.5) | je ein Abschnitt |
@@ -3316,7 +3340,7 @@ Durchgang (08 §10.2, Dateieigentum 08 §10.7); die 08-Pakete schreiben nie in `
 | `scenes/exploration/enemy_actor.gd` | A (`DAZED`), Schritt 0 (Twist-Zeile) | R2: Puppenmodus, Sperren, Goldrahmen des Show-Boss | Abschnitt |
 | `scenes/exploration/player_controller.gd`, `companion_follower.gd`, `encounter_rules.gd` | A | R2: Kampfmodus, Auslöser §2.2 (Pull, Reichweite, 4 s), Puppe | Abschnitte |
 | `scenes/exploration/camera_rig.gd`, `interactable.gd` | — | R2 | additiv |
-| `scenes/ui/settings_menu.gd` | A (+ Zeilen für C/D) | R3: Abschnitt Kampf; „Partner automatisch“ im Echtzeitmodus ausgeblendet | Abschnitt |
+| `scenes/ui/settings_menu.gd` | A (+ Zeilen für C/D) | R3: Abschnitt Kampf; „Partner automatisch“ im Echtzeitmodus ausgeblendet (R5b-2b: Zeile entfernt, ebenso „Kampfmodus (Debug)“) | Abschnitt |
 | `scenes/ui/show_overlay.gd` | C (Show-Chip, Sponsor-Badge) | R3: Overlay-Modus `combat` (Timer-Chip) | Abschnitt |
 | `scenes/ui/touch_controls.gd` | A (Aktionssymbol) | R3: Kampfmodus | Abschnitt |
 | `scenes/ui/mod_dialog.gd`, `exploration_hud.gd`, `input_glyph.gd`, `skills_menu.gd`, `ui_icon.gd`, `icon_mesh.gd` | — | R3 | additiv |
@@ -3326,10 +3350,10 @@ Durchgang (08 §10.2, Dateieigentum 08 §10.7); die 08-Pakete schreiben nie in `
 | `art/kit/character_rig.gd` / `vfx.gd` / `env_kit.gd` + Bühnenbau | — | R2 Animationen / R3 Kampftext-Stile / R4 `CLEAR_RADIUS_BOSS`, Gleis 9 | Abschnitte |
 | `autoload/sfx_synth.gd` | — | R2 Klänge | additiv |
 | `tests/perf/perf_runner.gd`, `tools/perf.sh` | — | R2: Szenarien `combat_regular`, `combat_two_groups`, `combat_boss_queen` | additiv |
-| `scenes/boot/autoplay.gd`, `fullrun.gd`, `tools/fullrun.sh` | Schritt 0 + A/B/C (Hooks) | R5b: Autoplay-Schritte, `--combat=realtime` | Abschnitte |
+| `scenes/boot/autoplay.gd`, `fullrun.gd`, `tools/fullrun.sh` | Schritt 0 + A/B/C (Hooks) | R5b: Autoplay-Schritte, `--combat=realtime` (seit R5b-2b ohne `--combat=`: nur Echtzeit) | Abschnitte |
 | `scenes/exploration/pull_rules.gd`, `scenes/ui/explore_target.gd`, `tests/test_r5b_pull.gd` | — | Stand Pull (E34–E37): Regeln, Zielrahmen, Tests; dazu je ein Abschnitt „Pull by a person“ in `exploration.gd`, `exploration_hud.gd`, `touch_controls.gd`, `action_source` in `player_controller.gd`, `HintCards.done_by_pull` und `project.godot` `[input]` (`map`, `toggle_auto`) | neu / Abschnitte |
 | `tests/test_m8_no_global_rng.gd` | — | R1a: `core/rt/` ohne `det-ok` außer `DetMath.isqrt` | additiv |
-| `scenes/battle/**`, `core/battle/{ctb_queue,battle_state,action_resolver,enemy_ai,auto_policy,battle_command}.gd` | A/B/C (Hooks) | niemand bis R5b; dann löschen (§12.6) | unberührt |
+| `scenes/battle/**`, `core/battle/{ctb_queue,battle_state,action_resolver,enemy_ai,auto_policy,battle_command}.gd` | A/B/C (Hooks) | niemand bis R5b; dann löschen (§12.6) — **R5b-2b (SD1, 10 CR-34):** `scenes/battle/**` gelöscht, die fünf Engine-Dateien nach `core/stempel/ctb/` umgezogen (Eigentum SD, eingefroren, 10 §7.5), `battle_command.gd` bleibt geteilt in `core/battle` | unberührt |
 | `docs/07_ECHTZEITKAMPF.md` | — | R4 §11.5; R5b Endstand | Abschnitte |
 | `docs/01_GDD.md`, `02_TECH.md`, `05_LIVE_MODUS.md`, `06_…`, `PERFORMANCE.md`, `README.md` | 06 | R5b (§12.8) | nach R5b |
 
@@ -3337,6 +3361,14 @@ Durchgang (08 §10.2, Dateieigentum 08 §10.7); die 08-Pakete schreiben nie in `
 
 R5b löscht den CTB-Kampf. Jeder Andockpunkt, den die 06-Pakete oder der Bestand am CTB-Kampf haben, braucht vorher einen
 Echtzeit-Nachfolger mit Test:
+
+> **Stand R5b-2b:** Alle Nachfolger existieren und sind getestet; die CTB-Andockpunkte der linken Spalte sind entfernt
+> (`scenes/battle/**` mit `battle_results.gd`, `party_panel.gd`, `battle_controller.gd`; `BattleBridge.make_setup`,
+> `Show.take_pending_gift(battle)`, die CTB-Pfade von `GameReplay` und `RunSim`, `Router.end_battle` samt Swirl —
+> `Router.start_battle` bleibt nur als wirkungsloser Shim für den unerreichbaren CTB-Zweig der Erkundung —,
+> `Events.battle_turn_started`, `GameSettings.partner_auto`). `ActionResolver` lebt als Teil der Stempelduell-Engine in
+> `core/stempel/ctb/` (10 SD1). `test_06c_balance` und die CTB-Boss-Verschiebung von `test_06b_balance` sind gelöscht
+> (Nachfolger: die Harness-Bänder); `test_r3_settings` prüft, dass das Einstellungsmenü keine CTB-Zeilen mehr hat.
 
 | CTB-Andockpunkt (Eigentum) | Echtzeit-Nachfolger | Phase | Test |
 |---|---|---|---|
@@ -3401,16 +3433,19 @@ Echtzeit-Nachfolger mit Test:
 | R5a | `test_r5_rt_live_equivalence` | geskripteter Live-Lauf ≡ `Game.replay_log` (Hashes, Prüfpunkte, Show-Zahlen, Marotten-Strichliste) |
 | R5a | `test_r5_loadout` | Befehl `loadout` (§10.1): Schema, Regeln (`not_realtime`, `unknown_member`, `not_a_variant`, `not_learned`, Kampfsperre), Wirkung im nächsten Kampf, gleiche Prüfung in beiden Verifiern |
 | R5b | `test_m6_autoplay` (angepasst) | Schritte `force_battle` → `force_combat` (60 Frames), `battle` → `combat` (900 Frames, Autopilot, `Events.battle_ended` VICTORY) |
-| R5b | `test_m6_fullrun` + `tools/fullrun.sh --combat=realtime` | Etage 1 vollständig mit Autopilot (alle Strategien, beide Held:innen), Zeitbänder; der Show-Boss bleibt optional (der Bot erreicht die Treppe auch ohne ihn) |
+| R5b | `test_m6_fullrun` + `tools/fullrun.sh` (bis R5b-2b mit `--combat=realtime`) | Etage 1 vollständig mit Autopilot (alle Strategien, beide Held:innen), Zeitbänder; der Show-Boss bleibt optional (der Bot erreicht die Treppe auch ohne ihn) |
 | R5b-1 | `test_r5b_integration` | im Kampf gewählte Partner-Taktik bleibt (`BattleBridge.apply_result`, beide Verifier gleich, nur bekannte Werte), Fähigkeiten-Seite → je Wahl ein `loadout`, `rules.combat.mode` bindet den Kampfmodus eines Events (Kopf-Prüfung, Event-Lauf in Echtzeit durch beide Verifier, Autopilot abgelehnt), kompaktierte Replay-Datei + `run_log_hash` über die expandierte Form |
 | R5b-1 | `test_r5b_liga` | E31: Liga-Mod je Stufe (Stufe 1 gesteuerte Figur, Stufe 2 beide, nie im Tutorial; Fixtures ohne den Status unverändert), 8 % schneller (Sim, Körper), `ai_miss_pm` 750, übersteht ein K.O., deterministisch, angekündigt (Marotte, Status, HUD-Symbol, Regeltext) |
-| R5b-1 | `test_r5b_achievements` | Echtzeit-Schwellen `ach_crit_3` (15) und `ach_weakness_5` (10) über `condition_rt`/`desc_rt`; CTB unverändert; die seltenen Kampf-Achievements, die der Full-Run-Bot nicht trifft, schalten in Live-Echtzeitkämpfen frei (Flucht, drei Erstschläge, Mopsula K.O. durch einen Gift-Tick, Sieg mit 1 HP bzw. ≤ 10 %) |
+| R5b-1 | `test_r5b_achievements` | Echtzeit-Schwellen `ach_crit_3` (15) und `ach_weakness_5` (10) — bis R5b-2b über `condition_rt`/`desc_rt`, seither in `condition`/`desc` gebacken; die seltenen Kampf-Achievements, die der Full-Run-Bot nicht trifft, schalten in Live-Echtzeitkämpfen frei (Flucht, drei Erstschläge, Mopsula K.O. durch einen Gift-Tick, Sieg mit 1 HP bzw. ≤ 10 %) |
 | R5b-1 | `test_r5b_hud` | Kais Rahmen-Symbol trägt den Persona-Look (Haut, Haarfarbe und -schnitt, Bart, Brille; ohne Persona der Kanon-Look), Touch: Boss-Rahmen endet vor der Hype-Leiste; die Autopilot-Beschriftung nennt die Taste des Schemas (Touch: keine) |
 | R5b-1 | `test_r5b_equipment_mods` | `items.json` `rt.mods`: das Samtcape gibt seinem Träger `equip:itm_arm_velvet_cape` (erste Stelle der festen Reihenfolge), `dmg_taken_pm` mit `element` faltet nur in Treffer dieses Elements (Formel und Prozent, nie Status-Ticks), nur Ausrüstung trägt gültige Mods (Validator) |
-| R5b-2a | `test_r5b_show_economy` | E32: Werte fest (`RT_*`, CTB-Profil und gemeinsame Regeln unverändert); Auto-Angriffe ohne Krit-/Schwäche-Hype (Statistik und Zeilen-Tag bleiben), Langeweile läuft weiter; Combo und SHOW je Profil; Heilen ist keine Wiederholung; Sponsoren-Pause (Start, Speichern, Bosse zählen nicht, 4 reguläre ohne System-Geschenk, CTB unberührt), externe Geschenke und das Zurücksetzen auf 80 bleiben; Follower-Faktor nur im Echtzeitkampf; Logs der Version 2 → „ältere Version“ in beiden Verifiern, Bestenliste und Lobby |
-| R5b-2a | `test_r5b_default_realtime` | E33: Standard `realtime` (Einstellungen, `Game.new_game`, Dev-Zustand), `--combat=ctb` und die Debug-Zeile geben CTB; Spielstände behalten ihren Modus (CTB- und Echtzeit-Rundlauf über `Save`); Einstellungsdatei Version 1 → Echtzeit, Version 2 behält die Debug-Wahl; `Game.ensure_state(mode, seed)` |
-| R5b-2a | `test_r5b_texts` | Fähigkeiten-Detail und Touch-Tooltip im Echtzeitkampf ohne Züge (Sekunden aus `rt.statuses`, SHOW-Abklingzeit der Party), CTB-Detail unverändert; Talent- und M.O.D.-Texte des Echtzeitkampfs ohne CTB-Wörter |
-| Pull | `test_r5b_pull` | E34–E37 je Eingabeschema: Tab / Shift+Tab-Reihenfolge, Linksklick wählt, freier Boden löscht; Taste 1 zieht (`PREEMPTIVE` gegen Streife und von hinten, `NORMAL` gegen eine Gruppe, die die Figur sieht); Ablehnungen ohne Kampf (kein Ziel, zu weit, zu wenig MP, eröffnet nicht, nicht gelernt); Pad: RT ein Schritt je Druck, LT bleibt Schleichen, B löscht, A zieht nur in Reichweite von Slot 1 (sonst Feldschlag), X / Y = Slot 2 / 3; ein Interaktions-Prompt hat Vorrang; Touch: Tippen wählt bzw. löscht, der Aktionsknopf zieht oder lehnt ab; Graf Mopsula bellt → Taste 1, A + A oder zweimal der Knopf = `PREEMPTIVE` mit `opener` `bark`; das Ziel des Bellens fällt mit der Verdutzung; kein Pull im Safe Room, im Treppenraum, im Dialog; Tutorial-Gruppe per Pull für beide Held:innen (ohne Karten `target` / `bar1`, per Feldschlag mit ihnen; nur Slot 1 und SHOW); Zielrahmen und Pull-Plakette, der Rahmen weicht einem fernen Anführer aus; Belegung in `project.godot`, ein CTB-Lauf behält Tab = Karte; Leiste der Erkundung = Kampfleiste; Läufe mit dem Pull einer Person spielen über `Game.replay_log` und `RunSim.replay` bitgenau nach (Kai; Mopsula mit Bellen) |
+| R5b-2a | `test_r5b_show_economy` | E32: Werte fest (`RT_*` und gemeinsame Regeln; das CTB-Profil entfiel mit R5b-2b); Auto-Angriffe ohne Krit-/Schwäche-Hype (Statistik und Zeilen-Tag bleiben), Langeweile läuft weiter; Combo und SHOW je Profil; Heilen ist keine Wiederholung; Sponsoren-Pause (Start, Speichern, Bosse zählen nicht, 4 reguläre ohne System-Geschenk), externe Geschenke und das Zurücksetzen auf 80 bleiben; Follower-Faktor nur im Echtzeitkampf; Logs der Version 2 → „ältere Version“ in beiden Verifiern, Bestenliste und Lobby |
+| R5b-2a | `test_r5b_default_realtime` | E33: Standard `realtime` (Einstellungen, `Game.new_game`, Dev-Zustand), `--combat=ctb` und die Debug-Zeile geben CTB; Spielstände behalten ihren Modus (CTB- und Echtzeit-Rundlauf über `Save`); Einstellungsdatei Version 1 → Echtzeit, Version 2 behält die Debug-Wahl; `Game.ensure_state(mode, seed)` — **seit R5b-2b:** es gibt keinen Modus mehr zu wählen (kein `combat_mode` in Einstellungen, Zustand und Spielstand, kein `--combat=`), neue Spiele und Dev-Zustände sind Echtzeit-Läufe, eine Einstellungsdatei mit den CTB-Schlüsseln lädt (sie werden ignoriert und nicht zurückgeschrieben) |
+| R5b-2a | `test_r5b_texts` | Fähigkeiten-Detail und Touch-Tooltip im Echtzeitkampf ohne Züge (Sekunden aus `statuses`, bis R5b-2b `rt.statuses`; SHOW-Abklingzeit der Party), ohne CTB-Rang; Talent- und M.O.D.-Texte des Echtzeitkampfs ohne CTB-Wörter |
+| Pull | `test_r5b_pull` | E34–E37 je Eingabeschema: Tab / Shift+Tab-Reihenfolge, Linksklick wählt, freier Boden löscht; Taste 1 zieht (`PREEMPTIVE` gegen Streife und von hinten, `NORMAL` gegen eine Gruppe, die die Figur sieht); Ablehnungen ohne Kampf (kein Ziel, zu weit, zu wenig MP, eröffnet nicht, nicht gelernt); Pad: RT ein Schritt je Druck, LT bleibt Schleichen, B löscht, A zieht nur in Reichweite von Slot 1 (sonst Feldschlag), X / Y = Slot 2 / 3; ein Interaktions-Prompt hat Vorrang; Touch: Tippen wählt bzw. löscht, der Aktionsknopf zieht oder lehnt ab; Graf Mopsula bellt → Taste 1, A + A oder zweimal der Knopf = `PREEMPTIVE` mit `opener` `bark`; das Ziel des Bellens fällt mit der Verdutzung; kein Pull im Safe Room, im Treppenraum, im Dialog; Tutorial-Gruppe per Pull für beide Held:innen (ohne Karten `target` / `bar1`, per Feldschlag mit ihnen; nur Slot 1 und SHOW); Zielrahmen und Pull-Plakette, der Rahmen weicht einem fernen Anführer aus; Belegung in `project.godot` (bis R5b-2b auch: ein CTB-Lauf behält Tab = Karte — mit den CTB-Läufen entfallen, 27 Tests); Leiste der Erkundung = Kampfleiste; Läufe mit dem Pull einer Person spielen über `Game.replay_log` und `RunSim.replay` bitgenau nach (Kai; Mopsula mit Bellen) |
+| R5b-2b | `test_r5b_save_v2` | `SaveCodec` v2 (02_TECH §6.4) mit zwei echten Dateien der Version 1 von `2246c31`: ein CTB-Spielstand (Graf Mopsula führt) bekommt HP × 4 (K.O. bleibt 0, gedeckelt auf die neuen max. HP), ein Echtzeit-Spielstand (Kai) behält seine HP; beide ohne `combat_mode`/`hp_scale_pm`, 06-/08-Felder und Echtzeit-Felder bleiben; Rundlauf mit gleichem `StateHash`; ein migrierter Slot spielt und speichert in Echtzeit; Laden nach Game Over rechnet genau einmal um; eine neuere Datei wird abgelehnt |
+| R5b-2b (SD1) | `test_sd_engine_golden` | 10 §6.9: zwei feste Kämpfe der Stempelduell-Engine auf dem `test_m1`-Mini-Datensatz (ohne `res://data`) mit geskripteter Party und `EnemyAI` — ein regulärer (verloren nach 35 Befehlen: Diebstahl und Flucht, Heilungen, Wiederbelebung, Stunts, Verteidigen) und die Königin als Boss (gewonnen nach 32: Phasenwechsel, Beschwörungen, Pseudo-Einheit Zug); eingefroren: `StateHash.of_battle`, Ereigniszahl, Prüfsumme des Ereignisstroms, Ausgang; zweimal gleich, Befehle über JSON nachgespielt; der CTB-Teil des früheren `test_m8_state_hash` (Schnappschuss → `from_dict` → gleicher Hash, auch mitten im Kampf) |
+| R5b-2b (SD1) | `test_sd_boundaries` | 10 §6.3: außerhalb von `core/stempel/**`, `scenes/stempel/**`, `core/live/state_hash.gd` und den Tests `test_m1_*`/`test_sd_*` nennt keine Code-Zeile (ohne Kommentare) `BattleState`, `CTBQueue`, `ActionResolver`, `EnemyAI` oder `AutoPolicy`; die fünf Dateien liegen in `core/stempel/ctb/`, `scenes/battle/` bleibt gelöscht, `roll_drops` gibt es nur in `BattleResult`; ein alter CTB-Kampagnen-Log (Fixture `run_log_sim_v3_ctb.json`, aufgenommen von `2246c31`) ist in beiden Verifiern, Bestenliste und Lobby „ältere Version“, nie eine Abweichung |
 
 ### 12.6 Parität und CTB-Entfernung
 
@@ -3514,7 +3549,7 @@ fällt wie zwischen zwei Läufen desselben Stands mal so, mal so; die Kampagne i
   `partner_auto`.
 - Gates und Werkzeuge spielen die Kampagne heute im CTB (`fullrun.sh --strategy=all`, Autoplay-Smoke, `perf.sh`-Kampfansichten,
   `capture_recipes.gd`); außer `test_m1_*` nennen 27 weitere Testdateien die Engine-Klassen (10 Kap. 6.2 Schritt 4).
-  **Seit R5b-2a** spielen Smoke, Full-Run und CI im Echtzeitkampf; CTB läuft über `--combat=ctb` mit (unten).
+  **Seit R5b-2a** spielen Smoke, Full-Run und CI im Echtzeitkampf; CTB lief bis R5b-2b über `--combat=ctb` mit (unten).
 
 **Stand R5b-2a (2026-10-12, Branch `ptd/r5b2a`) — Teil 2a: Show-Ökonomie (E32) und Echtzeit als Standard (E33), CTB bleibt.**
 Erledigt aus der Liste „Für Teil 2“: Nr. 1 (E32), Nr. 3 (E33; die Zeile „Kampfmodus (Debug)“ bleibt bis SD1) und Nr. 6 (Gates;
@@ -3583,6 +3618,108 @@ der Rahmen beiseite, statt sie zu verdecken (E34). (8) Offen für SD1: `10_MINIS
 (`map`)“ für die Großansicht einer Karte — `project.godot` bindet Tab nicht mehr an `map`; das Stempelduell bindet Tab
 selbst oder nutzt `CombatInput.apply_input_mode(false)`.
 
+**Stand R5b-2b (2026-10-12, Branch `ptd/r5b2b`) — Teil 2b: Kampagne nur Echtzeit, CTB → Stempelduell (SD1).** Erledigt
+aus der Liste „Für Teil 2“: Nr. 4 (Daten backen, `SaveCodec` v2), Nr. 5 (SD1, 10 Kap. 6.2 Zeilen 0–5), Nr. 6 (CTB-Smoke und
+CTB-Full-Run sind entfallen) und Nr. 7 (Doku); aus „Für Teil 2b“ alles bis auf die Kalibrierung von `typical` (Nr. 2). Je
+ein grüner Commit, in dieser Reihenfolge:
+
+| Commit | Inhalt |
+|---|---|
+| `d87e8f7` | Vorbereitung des Backens: Die HP-Skala wirkt dort, wo danach die Daten den Faktor tragen — `Progression.total_stats` skaliert die HP aus Stufe und Ausrüstung vor den Prozenten von Talent, Klasse und Spezies; feste Heilungen außerhalb des Kampfes (`Progression.use_item`, `GiftApplier`) zählen in HP-Einheiten des Mitglieds; `RtSim.rt_power` und `rt_gift` skalieren feste Beträge vor jedem Faktor. Echtzeit ändert sich dabei wenig, aber sichtbar (Abweichung (11)) |
+| `065fbe2` | Die Prüfungen, die die Kampagne im CTB spielten, vor dem Backen umgestellt (Echtzeit-Kämpfe über `encounter` mit `rt`-Block, Autopilot oder `RtLive.bot_inputs`) oder entfernt: `test_m7_balance`, `test_m7_show_balance`, `test_06c_balance`, die CTB-Boss-Verschiebung von `test_06b_balance`, der volle Königinnen-Kampf von `test_m5_battle_scene`; `check.sh` ohne CTB-Smoke, CI ohne „Full run Floor 1 (CTB until SD1)“ |
+| `0aaf01b` | **Daten backen** (§4.11, Spalte „Ab R5b“): HP × 4 in `party.json` (Kai 256 / +36, Graf Mopsula 168 / +24), in Klassen, Spezies, Talenten und Ausrüstung; feste Heilungen und Schäden × 4; `enemies.json` `stats.hp` = Echtzeit-HP (Beschwörungen: `rt.summon_hp`); Skills mit `rt`-Block: `rt.power`/`rt.mp`/`rt.cleanse`/`rt.statuses` → `power`/`mp_cost`/`cleanse`/`statuses` (Statusform §4.3), der Validator lehnt die alten Schlüssel ab; Skala-Code entfernt (`PartyMember.hp_scale_pm`, `HP_SCALE_PM`, `FIXED_SCALE_PM`, `ENEMY_HP_PM`, `SUMMON_HP_PM`); `RunSim.SIM_VERSION` 3 → 4 |
+| `27bacc5` | Texte und Marotten-Bedingungen in Echtzeit (E38) |
+| `21fe9ab` | `SaveCodec.VERSION` 2 mit `_migrate_v1_to_v2` (unten; 02_TECH §6.4) |
+| `48eac82`, `78efb98`, `585188b` | SD1 Zeilen 0–2: `BattleResult.roll_drops`; die fünf Engine-Dateien per `git mv` nach `core/stempel/ctb/` (Klassennamen und Verhalten gleich); Engine-Konstanten im `Balance`-Abschnitt „Stempelduell-Engine (10, SD1)“, `StateHash.of_battle`, die CTB-Felder der Defs und die CTB-Laufzeitfelder der geteilten Klassen bleiben |
+| `dcccac0` | SD1 Zeile 4: gelöscht `scenes/battle/**`, der Swirl (Shader, Übergang, Sfx-Id), `Router.end_battle` (`start_battle` bleibt als Shim, Abweichung (4)), `Events.battle_turn_started`; die CTB-Pfade von `Game`, `RunSim`, `GameReplay` und `RunRules` (ein Run-Log-Kopf mit `combat_mode` `ctb` wird abgelehnt), `BattleBridge.make_setup`, der Befehl `battle`, `Show.take_pending_gift(battle)`/`_battle_party`, das `ShowRules`-Profil `ctb`, der Show-Haken `tutorial_stunt`, die CTB-Strichliste des `MarottenTracker`; `GameSettings.battle_speed`/`auto_battle_default`/`partner_auto`/`combat_mode` samt Zeilen (auch „Kampfmodus (Debug)“), die Boot-Argumente `--combat=` und `--goto=battle:`, die Laufzeit-Rückstellung von Tab/Y (E36). Die CTB-Teile von 58 Testdateien sind Echtzeit-Varianten (`RtLive`, `rt_harness`, Autopilot, `Game.make_rt_setup`) oder entfallen, wo sie den CTB selbst prüften; gelöscht `test_m5_battle_scene`, `test_m5_visual_pass`, `test_06a_partner_auto` |
+| `8d4cee4` | SD1 Zeile 3: Kampagnen-Daten ohne CTB-Felder (§4.11), Achievements mit den Echtzeit-Schwellen in `condition`/`desc` |
+| `04fbda5` | SD1 Zeile 5: `test_sd_engine_golden`, `test_sd_boundaries` (§12.5) |
+| `c17a860` | Gates ohne CTB: `fullrun.sh` ohne `--combat`, CI ohne das Bild von `battle.tscn`, Perf-Probe (Abschnitte `startup`, `explore`, `safe_room`, `combat`, `leak`; die Leak-Schleife spielt einen Echtzeitkampf), PERFORMANCE.md §3.6 |
+| Doku | dieser Stand; 01_GDD §3/§4.2/§8, 02_TECH (§0.7 „Vertrags-Durchgang R5b-2b“), 03_ART, 06 §1.4/§4.4, 10 (SD1 umgesetzt), README |
+
+Dazu zwei Merges von `claude/prime-time-dungeon`: `14cda3e` (Schrittname mit „: “ in Anführungszeichen) und `ac2f954`
+(Stand Pull).
+
+**Bitgleichheit.** Das Backen ändert kein Spiel: `fullrun.sh --strategy=all` (vier Läufe) und `--hero=mopsula` liefern auf
+`0aaf01b` dieselben Ereigniszeilen und Kennzahlen wie auf `065fbe2`, die Ausgabe von `rt_balance.sh --seeds=5 --hero=both
+--liga=all` und `--sequence` ist identisch, der Echtzeit-Golden (`test_r1_rt_golden`) unverändert; es unterscheidet sich
+nur die Präsentations-Münze der Persona-Zeile im Safe Room (`mod_tags`), die wie zwischen zwei Läufen desselben Stands
+fällt. Nach SD1 Zeile 3 (`8d4cee4`) und am Ende dieses Teils liefern dieselben Läufe wieder die Zeilen und Kennzahlen von
+`0aaf01b` (es fehlt nur die Kennzahl `combat_mode`), die Harness-Ausgabe ist bis auf die Laufzeit identisch.
+
+**Migration.** Eine Spielstand-Datei der Version 1 wird beim Laden einmal umgerechnet (`SaveCodec._migrate_v1_to_v2`, rein,
+vor `_sanitize`): Ein CTB-Spielstand (ohne `combat_mode` im Zustand) bekommt die HP der Party × 4 (ein K.O. bleibt 0,
+`_sanitize` deckelt auf die neuen max. HP, MP unverändert), ein Echtzeit-Spielstand (`combat_mode` `realtime`,
+`hp_scale_pm` 4000) behält seine HP. Beide verlieren `combat_mode` und `hp_scale_pm`; die 06-/08-Felder, die
+Echtzeit-Felder der Mitglieder, `rt_hints`, Inventar, Bestiarium und Etagenlauf bleiben. Gespeichert wird danach Version 2,
+eine neuere Datei wird abgelehnt (`test_r5b_save_v2` mit zwei echten Dateien der Version 1 von `2246c31`). Die
+Einstellungsdatei bleibt Version 2: Die CTB-Schlüssel einer älteren Datei werden ignoriert und nicht zurückgeschrieben.
+Run-Logs: `SIM_VERSION` 4 — ältere Logs, auch CTB-Kampagnen-Logs, sind in beiden Verifiern, Bestenliste und Lobby
+„ältere Version“, nie eine Abweichung.
+
+**Nachtrag zum Paritätsbericht:**
+
+| Nr. | Kriterium | Messung R5b-2b | Stand |
+|---|---|---|---|
+| 1 | Full-Run Echtzeit | einziger Kampfmodus der Kampagne: `fullrun.sh --strategy=all` (thorough, rush, dawdle als Kai, thorough als Graf Mopsula), `--hero=mopsula`, `--liga=1` und `--liga=2` — **7 / 7** bestanden, 53 Replay-Prüfungen (`Game.replay_log`) ohne Abweichung. Die 108-Seed-Messung von R5b-1 ist nicht wiederholt (seither E32 und die Feld-Heilungen von `d87e8f7`; das Backen selbst ist bitgleich) | grün |
+| 2 | `typical` kalibriert | unverändert offen: noch keine Probespiel-Logs. Die CI-Bänder (`test_r4_rt_balance`) sind grün, die Harness-Ausgabe gleicht dem Stand vor dem Backen | gelb |
+| 4 | Echtzeit-Läufe bitgenau | `SIM_VERSION` 4; alle Replay-Prüfungen der Gate-Läufe ohne Abweichung; Logs der Version 3, auch ein CTB-Kampagnen-Log (`run_log_sim_v3_ctb.json`), sind „ältere Version“ (`test_sd_boundaries`, `test_r5b_show_economy`) | grün |
+| 8 | Nachfolger §12.4 | alle vorhanden und getestet; die CTB-Andockpunkte sind entfernt (§12.4 „Stand R5b-2b“) | grün |
+| 9 | Spielstände | `SaveCodec` v2 mit Migration (`test_r5b_save_v2`, §12.5): ein CTB-Spielstand spielt mit HP × 4 in Echtzeit weiter, ein Echtzeit-Spielstand unverändert, die 06-/08-Felder bleiben | grün |
+
+**Gates** (Stand `c17a860` + Doku): `check.sh` — `RESULT: 1599 passed, 0 failed, 0 skipped, 0 errors in 423.11 s`,
+`AUTOPLAY: OK frames=286`, `check.sh: OK` (7:33 min lokal); `fullrun.sh --strategy=all` (Etagen-Timer
+320 / 427 / 313 / 375 s, 20 / 22 / 21 / 20 Kämpfe, Stufe 8/8, Game Over 0 / 1 / 1 / 0, 31 Replay-Prüfungen),
+`--hero=mopsula` (375 s, 20 Kämpfe, 0 Game Over, 7 Prüfungen), `--liga=1` (374 s, 23 Kämpfe, 1 Game Over an der Königin,
+8 Prüfungen) und `--liga=2` (319 s, 20 Kämpfe, 0 Game Over, 7 Prüfungen): `fullrun.sh: OK`;
+`rt_balance.sh --seeds=5 --hero=both --liga=all` und `--sequence --seeds=5 --hero=both`: `rt_balance.sh: OK`, Ausgabe gleich
+dem Stand vor dem Backen; `perf.sh --only=combat`: `PERF: OK`; `test_sd_engine_golden` und `test_sd_boundaries` (8 Tests)
+grün; `actionlint -shellcheck` auf `ptd-check.yml` ohne Befund. Job `check` in CI geschätzt ≈ 16–18 min (02_TECH §12.4).
+
+Abweichungen und Auslegungen: (1) SD1 Zeile 4 vor Zeile 3 (10 §6.2 „Umgesetzt“ (a)): Die CTB-Pfade und -Tests der Kampagne
+lasen die CTB-Felder der Daten, solange es sie gab; so blieb jeder Commit grün. (2) Zeile 6 (Stub für den Befehl `sd`)
+entfällt hier; sie gehört zu ST0 bzw. SD3 (10 §6.8, CR-36). (3) `--goto=battle:<enc>` ist entfernt statt auf einen
+Echtzeitkampf umgelenkt: Die Boot-Szene ist frei, bevor die Welt steht; bestimmte Echtzeitkämpfe stellen die
+Capture-Rezepte her (`rt_r4_*`). (4) Zwei Shims halten den unerreichbaren CTB-Zweig von `scenes/exploration/exploration.gd`
+übersetzbar (Paket Erkundung, hier nicht angefasst): `Game.make_battle_setup` liefert `null`, `Router.start_battle` tut
+nichts. (5) Jeder Kampf spielt das `ShowRules`-Profil `rt`, auch ein bloßes `BattleSetup` in Tests (`RT_FOLLOWER_PM` 600,
+`RT_LINE_GAP_SEC` 6 s, Geschenk-Takt E32). (6) M.O.D. spricht im ersten Kampf einer Sitzung `first_fight` statt
+`tutorial_battle` (im Echtzeitkampf schon seit R5a; die Hinweiskarten führen), erst ein zweiter Tutorial-Kampf derselben
+Sitzung sagt `tutorial_battle` — der CTB-Test erwartete es umgekehrt. (7) Die Etage-2-Platzhalter verlieren die drei
+Skills, die nur ihre CTB-KI nannte (`skl_e_pose`, `skl_e_ram`, `skl_e_price_slam`); ihre Echtzeit-Fähigkeiten bleiben.
+(8) `PartyMember.skills` wird für ein neues Spiel nicht mehr gefüllt (die Leiste ist `rt.bar`); gespeicherte Listen laden
+weiter. (9) Die M.O.D.-Zeilen von `ach_crit_3` und `ach_weakness_5` nannten noch 3 und 5 — jetzt 15 und 10 wie die
+Echtzeit-Schwellen seit R5b-1. (10) Die Leak-Messung der Router-Zyklen (`test_perf_router_cycles`, Perf-Probe `leak`)
+misst auf der Etage, die das nächste `goto` neu gebaut hat: Die Effekt-Pools eines Kampfes (`Vfx`, höchstens 4 je Art)
+hängen an der Etage, die sie erzeugt hat, und wechseln mit jedem Kampf. (11) Die Vorbereitung `d87e8f7` ändert
+Echtzeit-Zahlen, als Korrektur: Ein Echtzeit-Spiel heilte im Feld bisher den CTB-Betrag, ein Viertel desselben
+Gegenstands im Kampf — jetzt heilt ein Pflaster im Feld 180 statt 45; max. HP mit einem HP-%-Talent verschieben sich um
+bis zu 3 (Graf Mopsula Stufe 5 mit Leberwurst 276 → 277). (12) Für das Stempelduell bleibt die Eingabe offen (unten).
+
+**CTB-Reste außerhalb dieses Pakets** (Auftrag: nicht angefasst; für ihre Eigentümer):
+
+- `scenes/exploration/exploration.gd`: der CTB-Zweig des Kampfstarts (`Game.make_battle_setup` + `Router.start_battle`,
+  unerreichbar), Kommentare (Dateikopf, „CTB runs never enter this section“, „else the CTB list“/„the CTB lead“, „The CTB
+  legacy run never gets here“), die Abfragen `Game.is_realtime()` (wahr mit jedem laufenden Spiel) und der Name
+  `auto_start_battle`.
+- `scenes/ui/exploration_hud.gd`: `CombatInput.apply_for_game()` setzt nur noch die Echtzeit-Belegung (harmlos).
+- `project.godot` `[input]`: `toggle_speed` (R, R3) nutzt die Kampagne nicht mehr (10 §4.6 plant „Tempo × 2“ des Duells
+  darauf); `test_m0_autoloads` prüft die Belegung.
+- README §5 „Steuerung“: der Absatz „Rundenkampf (CTB)“ (Spielstände von vor der Umstellung, „Kampfmodus (Debug)“,
+  `--combat=ctb`, Tab für die Karte, Tempo-Taste) beschreibt den alten Stand.
+- Ohne Auslöser im Echtzeitkampf: das Pflicht-Tag `flee_fail` in `REQUIRED_MOD_TAGS` (seine Zeile fällt nie) und die
+  Sfx-Id `defend` (das Duell kann sie fürs Abheften nutzen).
+
+**Für SD2** (10 Kap. 7.3 „Stand nach SD1“): die Engine per `class_name` aus `core/stempel/ctb/`, eingefroren durch
+`test_sd_engine_golden` (eine Änderung nur mit Antrag und `SD_VERSION`); das Regelbuch liefert die CTB-Felder selbst — die
+Kampagnen-Daten tragen keine mehr, Defs und Validator nehmen sie optional an (Vorbild `Fx.tables()` in
+`test_m1_fixture`); Duell-Code nur in `core/stempel/**` und `scenes/stempel/**` (`test_sd_boundaries`); Tab und Y für
+Großansicht und „Der Graf übernimmt“: `CombatInput.apply_input_mode(false)` beim Betreten und
+`CombatInput.apply_for_game()` beim Verlassen, oder selbst lesen (10 §4.6 „Stand nach SD1“); `toggle_speed` ist frei,
+`sd_file` kommt additiv dazu; Bildschirmwechsel mit `Router.push`/`pop` (kein Swirl mehr); `perf.sh` bekommt `stempel`.
+Offen außerhalb von SD2: `typical` kalibrieren (Nr. 2), 05_LIVE §3.4/§10.6 (§12.8), die volle Perf-Probe auf der
+Referenz-Hardware (PERFORMANCE.md), die Reste oben.
+
 ### 12.7 Unverändert wiederverwendet
 
 Schadensformel (`DamageCalc`, GDD §3.7), `Elements`, `StatBlock`, Krit/Varianz/Element-Konstanten in `Balance`, EXP-Kurve,
@@ -3600,16 +3737,19 @@ Datentabellen (um `rt` erweitert).
 |---|---|---|---|
 | 00_BRIEF | Kap. 2, 3, 4, 6, 7 + Entscheidungsblock | Entscheidung „Variante 3 bitte“ im Wortlaut, CTB „bis R5“, Kampf in der Welt, Vorrangregel | **mit diesem Dokumentstand** |
 | 05_LIVE | §3.3 (Grad A/B), §3.7 | Kampfbewegung Grad A mit Plausibilität, `move_input` für Grad B reserviert; Echtzeit-Befehle mit `ct` | **mit diesem Dokumentstand** |
-| 05_LIVE | §3.4, §10.6 | Echtzeit-Befehle mit `ct`, Kampf-Prüfpunkte (§10) statt CTB-Lockstep | R5b |
+| 05_LIVE | §3.4, §10.6 | Echtzeit-Befehle mit `ct`, Kampf-Prüfpunkte (§10) statt CTB-Lockstep | R5b — offen (05 ist nicht nachgezogen; 02_TECH §0.6/§0.7 und 07 §10 gelten) |
 | 02_TECH | §2.2 Input-Map | §7.7 | R3 |
-| 02_TECH | §3.2 Events, §3.4 Game, §3.5 Show | Signale §12.3, Echtzeit-API §10.6, `take_pending_gift_rt`, ShowRules-Profil | R5b |
-| 02_TECH | §4 Daten | `rt`-Blöcke §4.6–4.9, `rt_balance.json`, Validator §4.10 | R5b |
-| 02_TECH | §5 Kampf-Kern | ersetzt durch 07 §3 (der Hinweis „abgelöst durch 07“ steht schon) | R5b |
-| 02_TECH | §6.4 Save, §7.3 Erkundung, §11 Autoplay/Full-Run, §12 Budgets | additive Felder und v2; Auslöser §2.2; §12.5; §8.10 | R5b |
-| 01_GDD | §2.3/2.4, §3, §4.2, §5, §7, §13 | Kampfauslöser; §3 ersetzt durch 07 (Hinweis steht schon); HP × 4 nach dem Backen; Echtzeit-Gegner §6; Hype-Tabelle §9.1; Messwerte | R5b |
-| 06 | §1.4, §2.2 (Spalte „Angewendet in“), §2.6, §4.4 `mar_speed`, §8 | „Partner automatisch“ entfällt; Talent-Anwendung §9.6 (`opener_pm`/`stunt_pm`, „Taktgefühl“ auch als KI-SHOW, E27); Show-Boss „alle 8 s“, nur im Echtzeitkampf gebaut (E26); Echtzeit-Bedingung mit Etage 2; Verweise auf die gelöschten CTB-Dateien | R5b |
-| 03_ART | §8, §9 | Telegraph-Farben, Kampf-HUD-Elemente, LED-Ring, Decal-Befund | R3 |
-| PERFORMANCE.md | alles | Neumessung mit Echtzeitkampf | R5b |
+| 02_TECH | §3.2 Events, §3.4 Game, §3.5 Show | Signale §12.3, Echtzeit-API §10.6, `take_pending_gift_rt`, ShowRules-Profil | R5b — **erledigt R5b-2b** (02_TECH §0.7, §3.2–§3.8) |
+| 02_TECH | §4 Daten | `rt`-Blöcke §4.6–4.9, `rt_balance.json`, Validator §4.10 | R5b — **erledigt** (R5b-1, gebacken R5b-2b) |
+| 02_TECH | §5 Kampf-Kern | ersetzt durch 07 §3 (der Hinweis „abgelöst durch 07“ steht schon) | R5b — **erledigt R5b-2b**: §5 beschreibt die Engine des Stempelduells |
+| 02_TECH | §6.4 Save, §7.3 Erkundung, §11 Autoplay/Full-Run, §12 Budgets | additive Felder und v2; Auslöser §2.2; §12.5; §8.10 | R5b — **erledigt R5b-2b** (§6.4 Version 2, §11.4, §12.4, §12.5) |
+| 01_GDD | §2.3/2.4, §3, §4.2, §5, §7, §13 | Kampfauslöser; §3 ersetzt durch 07 (Hinweis steht schon); HP × 4 nach dem Backen; Echtzeit-Gegner §6; Hype-Tabelle §9.1; Messwerte | R5b — **R5b-2b:** Stand-Hinweise in §2 (Kampfauslöser) und §3 (CTB = Stempelduell), HP × 4 in §4.2, Echtzeit-Schwellen von `ach_crit_3`/`ach_weakness_5` in §8; Echtzeit-Gegner/Hype bleiben in 07 §6, §9.1 |
+| 06 | §1.4, §2.2 (Spalte „Angewendet in“), §2.6, §4.4 `mar_speed`, §8 | „Partner automatisch“ entfällt; Talent-Anwendung §9.6 (`opener_pm`/`stunt_pm`, „Taktgefühl“ auch als KI-SHOW, E27); Show-Boss „alle 8 s“, nur im Echtzeitkampf gebaut (E26); Echtzeit-Bedingung mit Etage 2; Verweise auf die gelöschten CTB-Dateien | R5b — **R5b-2b:** §1.4 nachgezogen (dazu §0.1, Tabelle §0.4); `mar_speed`, `mar_brave`, `mar_stunt` in §4.4 mit E38; die übrigen Spalten gelten über 07 §9.6 |
+| 10_MINISPIEL_STEMPELDUELL | Kap. 6.1, 6.2, 6.9, 7.2 | SD1 umgesetzt, Stand und Bedarf von SD2 | **R5b-2b** |
+| README | Gates, Werkzeuge, Ordner, Boot-Argumente, Capture-Rezepte | ohne CTB-Kampagne; „CTB lebt im Stempelduell weiter“ | **R5b-2b** |
+| 03_ART | §8, §9 | Telegraph-Farben, Kampf-HUD-Elemente, LED-Ring, Decal-Befund | R3; **R5b-2b:** Swirl (§3.8, §7), CTB-Kampfbühne (§8.2, §8.3) und CTB-Kampf-UI (§9.2) als Geschichte markiert |
+| 08_CASTING | Capture `--look` | `battle.tscn` über `Game.make_battle_setup` entfällt | **R5b-2b** |
+| PERFORMANCE.md | alles | Neumessung mit Echtzeitkampf | R5b — Echtzeitkampf nachgemessen (§3.6), die volle Probe auf der Referenz-Hardware steht aus (Hinweis oben im Dokument) |
 
 ### 12.9 Restpunkte der Migration
 

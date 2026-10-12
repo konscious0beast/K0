@@ -238,10 +238,11 @@ Bosse haben kein Symbolverhalten: Kampf beim Betreten des Radius 5 m um den Anke
 
 ### 2.4 Kampfauslösung & Erstschlag
 
-> **Echtzeitkampf (Standard seit R5b-2a, 07 E33):** Gekämpft wird direkt in der Welt; einen Kampf starten dort ein Pull
-> (Feldschlag oder Fähigkeit auf eine Gruppe), ein verfolgender Gegner in Waffenreichweite oder 4 s Verfolgung im selben
-> Raum — Kontakt allein nur bei der schlafenden Tutorial-Gruppe (07 §2.2). Die Tabelle unten gilt für den Rundenkampf (CTB:
-> alte Spielstände, `--combat=ctb`); `PREEMPTIVE` heißt im Echtzeitkampf „Erstschlag“ (Gegner 3 s überrumpelt).
+> **Echtzeitkampf (Standard seit R5b-2a, 07 E33; seit R5b-2b der einzige Kampf der Kampagne):** Gekämpft wird direkt in
+> der Welt; einen Kampf starten dort ein Pull (Feldschlag oder Fähigkeit auf eine Gruppe), ein verfolgender Gegner in
+> Waffenreichweite oder 4 s Verfolgung im selben Raum — Kontakt allein nur bei der schlafenden Tutorial-Gruppe (07 §2.2). Die
+> Tabelle unten beschreibt den früheren Rundenkampf (CTB, bis R5b-2b); `PREEMPTIVE` heißt im Echtzeitkampf „Erstschlag“
+> (Gegner 3 s überrumpelt).
 
 Kampf startet bei **Kontakt** (Symbol ≤ 1.1 m an Kai) oder **Feldschlag-Treffer** auf ein Symbol.
 Zur Gruppe gehören **alle Gegner des Symbols**; zusätzlich schließen sich **keine** weiteren Symbole an (klare Regel, lesbar).
@@ -342,11 +343,14 @@ auf Vorabend umstellbar, nie zurück. Schaden/EXP wirken sofort, der Timer-Fakto
 
 ## 3. Kampf (CTB — Conditional Turn-Based)
 
-> **Hinweis (Stand R5b-2a, 2026-10-12):** Neue Spiele kämpfen in Echtzeit nach [`07_ECHTZEITKAMPF.md`](07_ECHTZEITKAMPF.md)
-> („WoW-light“ direkt in der Welt; Standard seit 07 E33). Dieser Abschnitt gilt nur noch für den Rundenkampf (CTB): alte
-> Spielstände behalten ihn, Entwicklung und QA erreichen ihn mit `--combat=ctb`. In Teil 2b zieht die CTB-Engine in das
-> Minispiel „Stempelduell“ um ([`10_MINISPIEL_STEMPELDUELL.md`](10_MINISPIEL_STEMPELDUELL.md)); die Formeln (Kap. 3.2, 3.7)
-> rechnen auch die Formel-Treffer der Echtzeit (07 §3.9).
+> **Hinweis (Stand R5b-2b, 2026-10-12):** Die Kampagne kämpft nur noch in Echtzeit nach
+> [`07_ECHTZEITKAMPF.md`](07_ECHTZEITKAMPF.md) („WoW-light“ direkt in der Welt). Dieses Kapitel beschreibt den früheren
+> Rundenkampf (CTB). Seine Engine lebt als Kern des optionalen Minispiels **„Stempelduell“** weiter
+> ([`10_MINISPIEL_STEMPELDUELL.md`](10_MINISPIEL_STEMPELDUELL.md), Code in `core/stempel/ctb/`): Das Duell spielt diese Regeln
+> mit eigenem Regelbuch (Wartenummern statt Zugfolge, Karten statt Befehle). Spielstände von vor der Umstellung spielen in
+> Echtzeit weiter (HP × 4, 02_TECH §6.4); `--combat=ctb` gibt es nicht mehr. Die Formeln (Kap. 3.2, 3.7) rechnen weiter die
+> Formel-Treffer der Echtzeit (07 §3.9), die Siegbeute (Kap. 3.12) gilt für beide (`BattleResult.roll_drops`). Feste
+> HP-Zahlen dieses Kapitels (Heilungen, Schaden) sind CTB-Werte; die Kampagnen-Daten tragen sie × 4 (Kap. 4.2).
 
 ### 3.1 Grundprinzip
 
@@ -651,6 +655,13 @@ Level-Up: HP/MP steigen um die Differenz (aktuelle Werte + Delta), **keine** Vol
 (`Balance.LEVEL_CAP = 10`, ersetzt `MAX_LEVEL 99`).
 
 ### 4.2 Basiswerte L1 & Wachstum
+
+> **Stand R5b-2b (Daten gebacken, 07 §4.11):** Die Kampagne rechnet in Echtzeit-HP — `party.json` trägt HP × 4: Kai Basis
+> **256**, Wachstum **36**; Graf Mopsula **168** / **24** (die HP-Spalte der Ergebniswerte unten × 4, z. B. Kai Stufe 10:
+> 580). Ebenso × 4: die HP aus Klasse, Spezies, Talenten und Ausrüstung (Hermelin HP +60) und feste Heilungen und Schäden
+> (Pflaster 180, Brutzel-Burger 480, Molotow 240, Eisspray 360). Alle anderen Werte sind unverändert. Die Tabellen und das
+> JSON-Beispiel unten zeigen die ursprünglichen CTB-Werte (Faktor 1), auf denen 07 §3 aufbaut; `learnset` entfiel mit
+> R5b-2b (die Fähigkeitenleiste steht in `rt.bar`, 07 §5.1).
 
 | Stat | Kai Basis | Kai Wachstum | Mopsula Basis | Mopsula Wachstum |
 |---|---|---|---|---|
@@ -1385,8 +1396,8 @@ game_overs, ko_mopsula, explore_seconds_since_battle, viewers_max` (+ Quest-Metr
 | `ach_one_hp` | Haaresbreite | Gewinne mit einem Mitglied auf genau 1 HP. | `battle_won` | `e.min_party_hp == 1` | silver | ✓ | „Ein. Einziger. Lebenspunkt. Das schneiden wir in den Trailer.“ |
 | `ach_pacifist` | Pazifist | Erkunde 5 Minuten ohne Kampf. | `explore_tick` | `s.explore_seconds_since_battle >= 300` | bronze | — | „Fünf Minuten ohne Gewalt. Die Zuschauer schlafen ein. Hier, nimm das.“ |
 | `ach_overkill` | Overkill | Besiege einen Gegner mit Overkill. | `enemy_killed` | `e.overkill == true` | bronze | — | „Das war … gründlich. Die Reinigung stellt das in Rechnung.“ |
-| `ach_crit_3` | Kritische Masse | Lande 3 kritische Treffer in einem Kampf. | `battle_won` | `e.crits >= 3` | bronze | — | „Drei Kritische in einem Kampf. Statistiker:innen weinen.“ |
-| `ach_weakness_5` | Wunder Punkt | Triff 5× eine Schwachstelle in einem Kampf. | `battle_won` | `e.weakness_hits >= 5` | bronze | — | „Fünfmal genau dahin, wo es wehtut. Empathie: null. Quote: hoch.“ |
+| `ach_crit_3` | Kritische Masse | Lande 15 kritische Treffer in einem Kampf. (Echtzeit-Schwelle, 07 §9.4; im CTB: 3) | `battle_won` | `e.crits >= 15` | bronze | — | „Fünfzehn Kritische in einem Kampf. Statistiker:innen weinen.“ |
+| `ach_weakness_5` | Wunder Punkt | Triff 10× eine Schwachstelle in einem Kampf. (Echtzeit-Schwelle, 07 §9.4; im CTB: 5) | `battle_won` | `e.weakness_hits >= 10` | bronze | — | „Zehnmal genau dahin, wo es wehtut. Empathie: null. Quote: hoch.“ |
 | `ach_stunt_first` | Showtalent | Schaffe deinen ersten Stunt. | `stunt_resolved` | `e.success == true && s.stunts_success == 1` | bronze | — | „DAS ist Fernsehen!“ |
 | `ach_stunt_fail_3` | Pannenshow | Verpatze 3 Stunts. | `stunt_resolved` | `e.success == false && s.stunts_fail == 3` | bronze | ✓ | „Drei Pannen. Wir machen eine eigene Sendung daraus.“ |
 | `ach_combo_first` | Eingespieltes Team | Lande deine erste Combo. | `combo` | `true` | bronze | — | „Mensch und Mops im Gleichschritt. Rührend. Und lukrativ.“ |

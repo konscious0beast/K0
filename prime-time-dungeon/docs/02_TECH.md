@@ -215,6 +215,49 @@ Standard und unverändert. Neue bzw. geänderte API:
   rt_live_equivalence,loadout}`, Kit `tests/fixtures/rt_live/rt_live.gd`; angepasst `test_r1a_contract`, `test_m8_command`,
   `test_m7_data_content`.
 
+### 0.7 Vertrags-Durchgang R5b-2b: Kampagne nur Echtzeit, CTB → Stempelduell (Stand 2026-10-12)
+
+Ein Durchgang des Integrators (07 §12.6 Schritte 2–4, 10 Kap. 6.2 = SD1 Zeilen 0–5), Branch `ptd/r5b2b`. Die Kampagne
+kämpft nur noch in Echtzeit (07); die CTB-Engine lebt als Kern des optionalen Minispiels „Stempelduell“ weiter
+(`10_MINISPIEL_STEMPELDUELL.md`). Wo dieses Dokument den CTB-Kampf beschreibt (§5, Teile von §3, §6, §11), beschreibt es
+seitdem die Engine des Stempelduells; die Kampagne folgt 07.
+
+**Versionen:** `RunSim.SIM_VERSION` **3 → 4** (Daten gebacken: jeder `StateHash` eines Laufs ändert sich; ältere Logs —
+auch die CTB-Logs der Kampagne — sind „ältere Version“, nie ein Mismatch: `test_r5b_show_economy`, `test_sd_boundaries`),
+`SaveCodec.VERSION` **1 → 2** (§6.4), `GameSettings.FILE_VERSION` bleibt 2 (CTB-Schlüssel alter Dateien werden beim Laden
+ignoriert und nicht zurückgeschrieben), `RunRules.RT_VERSION` unverändert.
+
+**Umgezogen (SD1 Zeilen 0–2, 10 §6.3):** `BattleState.roll_drops` → `BattleResult.roll_drops` (die eine Siegbeute-Regel
+beider Kampfarten); die fünf Engine-Dateien `ctb_queue`, `battle_state`, `action_resolver`, `enemy_ai`, `auto_policy` von
+`core/battle/` nach `core/stempel/ctb/` (Klassennamen und Verhalten gleich; `battle_command.gd` bleibt geteilt in
+`core/battle`). Es bleiben: `Balance.FLEE_*`, `DEFEND_MULT`, `STUNT_COOLDOWN` (Abschnitt „Stempelduell-Engine“),
+`StateHash.of_battle`/`battle_hash_input`, die CTB-Felder der Defs samt `PseudoUnitDef` und der Tabelle `pseudo_units` (im
+Validator optional), die CTB-Laufzeitfelder von `Combatant`/`StatusEffect` und die CTB-Typen von `ActionEvent`.
+
+**Gebacken (07 §4.11, Schritt 2 und SD1 Zeile 3):** Basis-HP, HP-Wachstum, feste Heilungen/Schäden × 4, `enemies.json`
+`stats.hp` = Echtzeit-HP, `rt.power`/`rt.mp`/`rt.cleanse`/`rt.statuses` → Hauptfelder (der Validator lehnt die alten
+`rt`-Schlüssel ab), Skala-Code (`hp_scale_pm`, `FIXED_SCALE_PM`, `ENEMY_HP_PM`, `SUMMON_HP_PM`) entfernt. Die Kampagnen-Daten
+tragen keine CTB-Felder mehr (`rank`, `cooldown`, `fail_effect.delay_pct`, `default_turns`, `tick_timing`, `tick_speed_mult`,
+Haupt-`tick_pct`/`tick_min`, Flag `delay_on_apply`, `ai`, `phases`, `pseudo_units`, `learnset`); `achievements.json`
+`condition_rt`/`desc_rt` → `condition`/`desc` (der Validator lehnt die alten Schlüssel ab).
+
+**Entfernt (SD1 Zeile 4):** `scenes/battle/**`, `art/shaders/ui_swirl.gdshader` und die Sfx-ID `swirl`,
+`Router.SCENE_BATTLE`/`end_battle`/Übergang `SWIRL`, `Events.battle_turn_started`, `Game.auto_battle`,
+`combat_mode_override`, `new_game_combat_mode`, `GameState.combat_mode`, `BattleBridge.make_setup`, die CTB-Zweige von `Game`,
+`GameReplay`, `RunSim` und `RunRules` (ein Kopf mit `combat_mode` ≠ `realtime` wird abgelehnt), der Befehlstyp `battle` (ein
+`encounter` braucht seinen `rt`-Block), `Show.take_pending_gift(battle)` (ohne Argument) / `_battle_party`, das
+`ShowRules`-Profil `ctb` (jeder Kampf spielt das Profil `rt`), der Tutorial-Stunt-Hinweis, die CTB-Strichliste des
+`MarottenTracker`, `GameSettings.battle_speed`/`auto_battle_default`/`partner_auto`/`combat_mode` mit ihren Zeilen, die
+Zeile „Kampfmodus (Debug)“, die Boot-Argumente `--combat=` und `--goto=battle:`, die Laufzeit-Belegung von Tab/Y für
+CTB-Läufe (07 E36; `CombatInput.apply_input_mode(false)` bleibt für das Duell, 10 §4.6), die CTB-Tests `test_m5_*`,
+`test_06a_partner_auto`. **Übergangs-Shims** (bis `scenes/exploration/exploration.gd` seinen unerreichbaren CTB-Zweig
+verliert, eigene Datei eines anderen Pakets): `Game.make_battle_setup` zeichnet nichts auf und liefert `null`,
+`Router.start_battle` tut nichts (je eine Warnung).
+
+**Neu:** `tests/test_sd_engine_golden.gd` (Goldwerte der Engine auf dem `test_m1`-Mini-Datensatz, dazu der CTB-Teil des
+früheren `test_m8_state_hash`), `tests/test_sd_boundaries.gd` (Grenztest 10 §6.3, alte CTB-Logs „ältere Version“),
+`tests/fixtures/live/run_log_sim_v3_ctb.json`, `tests/fixtures/saves/save_v1_{ctb,realtime}.json` (§6.4).
+
 ---
 
 ## 1. Dateibaum und Modulzuordnung
@@ -300,16 +343,16 @@ Szenen unten eingetragen (`persona_casting`, `persona_card`); Kern und Daten der
 | `core/battle/battle_setup.gd` | M1 (S) | `BattleSetup`: Eingabe für einen Kampf |
 | `core/battle/combatant.gd` | M1 (S) | `Combatant`: Kampfteilnehmer |
 | `core/battle/status_effect.gd` | M1 (S) | `StatusEffect`: aktiver Status |
-| `core/battle/ctb_queue.gd` | M1 (S) | `CTBQueue`: Tick-System, Zugreihenfolge, Vorschau |
+| `core/stempel/ctb/ctb_queue.gd` | SD (M1) | `CTBQueue`: Tick-System, Zugreihenfolge, Vorschau — Engine des Stempelduells (seit R5b-2b, 10 §6.3) |
 | `core/battle/battle_command.gd` | M1 (S) | `BattleCommand`: Befehl eines Akteurs |
 | `core/battle/action_event.gd` | M1 (S) | `ActionEvent`: Ergebnis-Ereignis für die Darstellung (§5.3) |
 | `core/battle/hit_result.gd` | M1 (S) | `HitResult`: Ergebnis einer Schadens-/Heilberechnung |
 | `core/battle/damage_calc.gd` | M1 (S) | `DamageCalc`: Formeln (statisch) |
-| `core/battle/action_resolver.gd` | M1 (S) | `ActionResolver`: wendet Befehle an, erzeugt `ActionEvent`s |
-| `core/battle/enemy_ai.gd` | M1 (S) | `EnemyAI`: Gegner-Befehlswahl |
-| `core/battle/auto_policy.gd` | M1 (S) | `AutoPolicy`: Auto-Kampf für die Party |
-| `core/battle/battle_state.gd` | M1 (S) | `BattleState`: Kampfmodell + Zustandsautomat (§5.6) |
-| `core/battle/battle_result.gd` | M1 (S) | `BattleResult`: Kampfausgang |
+| `core/stempel/ctb/action_resolver.gd` | SD (M1) | `ActionResolver`: wendet Befehle an, erzeugt `ActionEvent`s |
+| `core/stempel/ctb/enemy_ai.gd` | SD (M1) | `EnemyAI`: Gegner-Befehlswahl |
+| `core/stempel/ctb/auto_policy.gd` | SD (M1) | `AutoPolicy`: Auto-Kampf für die Party |
+| `core/stempel/ctb/battle_state.gd` | SD (M1) | `BattleState`: Kampfmodell + Zustandsautomat (§5.6) |
+| `core/battle/battle_result.gd` | M1 (S) | `BattleResult`: Kampfausgang; `static roll_drops` = die Siegbeute beider Kampfarten (seit R5b-2b, 10 SD1 Zeile 0) |
 | `core/show/stat_ids.gd` | M2 (S) | `StatIds`: Achievement-Zähler-IDs (§6.3) |
 | `core/show/show_state.gd` | M2 (S) | `ShowState`: Zuschauer/Follower/Hype/Zähler (Teil von `GameState`) |
 | `core/show/show_model.gd` | M2 (S) | `ShowModel`: Zuschauer-/Follower-/Hype-Mathe |
@@ -319,11 +362,11 @@ Szenen unten eingetragen (`persona_casting`, `persona_card`); Kern und Daten der
 | `core/show/sponsor_system.gd` | M2 (S) | `SponsorSystem`: Sponsor-Auswahl |
 | `core/show/mod_announcer.gd` | M2 (S) | `ModAnnouncer`: M.O.D.-/Chat-Zeilen wählen + formatieren |
 | `core/show/marotten_rules.gd` | 06-C | `MarottenRules`: M.O.D.-Marotten (Show-Wetten) + Unterhosen-Liga, statisch und rein — Auswahl je Etage aus dem Seed, Liga-Stufe/-Faktoren, Kampf-/Raum-Kontext, Herzen, gewonnene Wetten, Etagen-Bonus, `show_bet`-Payloads; einziger Schreiber von `ShowState.marotten` (§3.5 „Marotten“, 06 §4) |
-| `core/show/marotten_tracker.gd` | 06-C | `MarottenTracker`: Strichliste eines Kampfes aus dem `ActionEvent`-Strom (Verteidigen, Fluchtversuche, verschiedene Aktionen, Stunts, letzter Treffer) — flüchtig wie `ShowRules` |
+| `core/show/marotten_tracker.gd` | 06-C | `MarottenTracker`: Strichliste eines Kampfes aus dem Echtzeit-`ActionEvent`-Strom (verschiedene eigene Aktionen, eigene SHOWs, letzter Treffer; Fluchtversuche zählt das `BattleResult`) — flüchtig wie `ShowRules` |
 | `core/show/mod_line_filter.gd` | 06-D | `ModLineFilter`: Nachfilter für Live-Zeilen (`data/mod_filter.json`, §4.4.18), rein/statisch, gleiche Fälle wie mod-brain |
 | `core/show/mod_live_summary.gd` | 06-D | `ModLiveSummary`: die Anfrage an mod-brain (Schema 1) — nur Zahlen in Grenzen und Katalog-IDs, nie Spielername oder Freitext |
 | `core/loot/loot_reward.gd` | M2 (S) | `LootReward` |
-| `core/loot/loot_roller.gd` | M2 (S) | `LootRoller`: Lootbox/Truhe würfeln, Pools, Besitz-Menge für die Duplikat-Regel (Kampf-Drops: `BattleState.roll_drops`) |
+| `core/loot/loot_roller.gd` | M2 (S) | `LootRoller`: Lootbox/Truhe würfeln, Pools, Besitz-Menge für die Duplikat-Regel (Kampf-Drops: `BattleResult.roll_drops`) |
 | `core/progression/game_state.gd` | M2 (S) | `GameState`: kompletter Laufzeit-Spielstand |
 | `core/progression/party_member.gd` | M2 (S) | `PartyMember` |
 | `core/progression/inventory.gd` | M2 (S) | `Inventory` (Items + Credits) |
@@ -357,7 +400,7 @@ Szenen unten eingetragen (`persona_casting`, `persona_card`); Kern und Daten der
 | `core/live/run_log.gd` | M8 (S) | `RunLog`: Seed + Commands + Ticks (Brief §6b.3); `to_dict`/`from_dict`/`digest` |
 | `core/live/command.gd` | M8 (S) | `Command`: Schema-Prüfung der aufgezeichneten Commands (`t`-Typen aus §3.4) |
 | `core/live/canonical_json.gd` | M8 (S) | `CanonicalJson`: kanonische Serialisierung für Hashes; `static var last_error: String` (von den statischen Funktionen gesetzt, gelesen als `CanonicalJson.last_error`) |
-| `core/live/state_hash.gd` | M8 (S) | `StateHash`: SHA-256 über `GameState`/`BattleState` (ohne Anzeigefelder und ohne den Twist-Replay-Puffer `flags.twist_buffer`, 06-D) |
+| `core/live/state_hash.gd` | M8 (S) | `StateHash`: SHA-256 über `GameState`, die Echtzeit-Sim (`of_rt`) und den CTB-Zustand des Stempelduells (`of_battle`, 10 §6.6) — ohne Anzeigefelder und ohne den Twist-Replay-Puffer `flags.twist_buffer`, 06-D |
 | `core/live/event_def.gd` | M8 (S) | `EventDef`: Live-/Offline-Event inkl. `quest`, `window` (Brief §6b.5) |
 | `core/live/event_catalog.gd` | M8 (S) | `EventCatalog`: lädt/validiert `data/events.json` |
 | `core/live/quest_tracker.gd` | M8 (S) | `QuestTracker`: Quest-Fortschritt aus normalisierten Events |
@@ -407,7 +450,6 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `art/shaders/glow.gdshader` (S) | Unshaded Emissive (Neon, Treppen-Glühen) |
 | `art/shaders/vfx_additive.gdshader` (S) | Additive Billboard-Partikel |
 | `art/shaders/hologram.gdshader` (S) | M.O.D.-Hologramm / Bildschirme |
-| `art/shaders/ui_swirl.gdshader` (S) | canvas_item: Kampf-Swirl-Übergang (Router) |
 | `art/shaders/ui_tv_overlay.gdshader` (S) | canvas_item: Scanlines/Vignette/Chromatic für TV-Overlay |
 | `art/shaders/ui_tv_overlay_aberration.gdshader` | canvas_item: TV-Overlay Qualität `high` (chromatische Aberration über einen Screen-Sampler, sonst gleiche Uniforms wie `ui_tv_overlay`, 03_ART §3.9/F7, A10); `ShowOverlay` wählt ihn bei `high`, sonst `ui_tv_overlay` |
 | `art/shaders/ptd_color.gdshaderinc` | Gemeinsamer Farbraum-Helfer `ptd_vertex_albedo` (sRGB-Vertex-/Partikelfarben → linear nur außerhalb von Compatibility, 03_ART F1/A10) für `toon`/`env_tiles`/`vfx_additive` (`#include`) |
@@ -463,18 +505,7 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `scenes/exploration/event_interactable.gd` | M3 | Etagen-Event mit Wahl-Dialog (§7.4) |
 | `scenes/exploration/stairs_interactable.gd` | M3 | Treppe |
 | `scenes/exploration/safe_door_interactable.gd` | M3 | Safe-Room-Tür (trägt die Safe-Room-ID) |
-| `scenes/battle/battle.tscn` + `battle_scene.gd` | M5 (S) | `BattleScene`: Root, Setup, Ende → Router |
-| `scenes/battle/battle_controller.gd` | M5 | Kampfschleife (§5.7) |
-| `scenes/battle/battle_player.gd` | M5 | Spielt `ActionEvent`-Listen ab |
-| `scenes/battle/battle_stage.gd` | M5 | Arena, Slot-Positionen, Rigs |
-| `scenes/battle/battle_camera.gd` | M5 | Kamera-Shots |
-| `scenes/battle/ui/battle_hud.tscn` + `.gd` | M5 | Kampf-HUD (CanvasLayer 5): Party-Panels, CTB-Leiste, Menüs |
-| `scenes/battle/ui/party_panel.gd` | M5 | HP/MP/Status je Partymitglied; Rollen-Pille „DU“/„AUTO“ (06 §1.4) |
-| `scenes/battle/ui/ctb_bar.gd` | M5 | Zugreihenfolge-Leiste rechts (12 Einträge, bei Schema TOUCH 10; Pseudo-Icons, Geist-Vorschau) |
-| `scenes/battle/ui/command_menu.gd` | M5 | Angriff/Fähigkeit/Stunt (mit Cooldown-Zahl)/Item/Verteidigen/Flucht |
-| `scenes/battle/ui/action_list.gd` | M5 | Untermenü Fähigkeiten/Stunts/Items |
-| `scenes/battle/ui/target_cursor.gd` | M5 | Zielauswahl |
-| `scenes/battle/ui/battle_results.tscn` + `.gd` | M5 | Ergebnis: EXP, Credits, Items, Level-Ups, Follower, Achievements; 06-C: Zeile „Show“ (Herzen der Vorlieben, Liga-Stufe) |
+| ~~`scenes/battle/**`~~ | M5 | **Entfernt mit R5b-2b** (07 §12.6, 10 SD1 Zeile 4): Die CTB-Kampfszene (Bühne, Kamera, Player, HUD mit CTB-Leiste und Befehlsmenü, Ergebnis) ist gelöscht und bleibt es (10 Kap. 4.1); gekämpft wird in der Welt (`scenes/combat/`, 07 §8), das Ergebnis zeigt `scenes/combat/ui/combat_results.gd` |
 | `scenes/safe_room/safe_room.tscn` + `safe_room.gd` | M6 (S) | `SafeRoomScene`: Innenraum (Theme je Safe Room) + Menü (inkl. „Figur wechseln“, 06 §1.6) + Mopsula-Szenen (`scenes.json`) |
 | `scenes/safe_room/vending_menu.tscn` + `.gd` | M6 | Automat (Shop) |
 | `scenes/safe_room/lootbox_opening.tscn` + `.gd` | M6 | Lootbox-Öffnung mit M.O.D.-Kommentar |
@@ -496,13 +527,13 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `scenes/ui/inventory_menu.gd` | M6 | Inventar (Feld-Nutzung) |
 | `scenes/ui/equipment_menu.gd` | M6 | Ausrüstung; 06-C: je Figur „Liga: aktiv“ bzw. „Liga blockiert durch: <Item>“ + Stufe der Party |
 | `scenes/ui/bets_menu.gd` | 06-C | Pausemenü-Tab „Show“: Vorlieben der Etage (Regel im Klartext, Herzen, gewonnen), Unterhosen-Liga (Regeltext, Stufe, Faktoren, Blocker je Figur → Ausrüstung) |
-| `scenes/ui/skills_menu.gd` | M6 | Fähigkeiten + Freischalt-Level (aus `learnset`) |
+| `scenes/ui/skills_menu.gd` | M6 | Fähigkeiten + Freischalt-Level (aus `party.json` `rt.bar`, 07 §5.1; das CTB-`learnset` ist mit R5b-2b entfallen) |
 | `scenes/ui/achievements_menu.gd` | M6 | Achievements (erhalten / verborgen „???“) |
 | `scenes/ui/bestiary_menu.gd` | M6 | Bestiarium aus `GameState.bestiary` |
 | `scenes/ui/floor_summary.tscn` + `.gd` | M6 | `FloorSummary`: Etagen-Bilanz (Zeit, Kills, Zuschauer-Peak, Follower, Achievements; Zeile „Regie-Notizen n/3“ bei `regie_notes_total` > 0, 06 §2.7) → `Game.continue_after_summary()` |
 | `scenes/ui/event_lobby.tscn` + `.gd` | M6 | Event-Lauf-Karte (05 CR-10) |
 | `scenes/ui/run_result.tscn` + `.gd` | M6 | Event-Lauf-Ergebnis (05 CR-10) |
-| `scenes/ui/settings_menu.tscn` + `.gd` | M6 | Einstellungen (inkl. „Partner automatisch“, 06 §1.4) |
+| `scenes/ui/settings_menu.tscn` + `.gd` | M6 | Einstellungen (Echtzeit-Kampfzeilen 07 §7.8; „Partner automatisch“, Kampftempo und Auto-Kampf sind mit R5b-2b entfallen) |
 | `scenes/ui/confirm_dialog.tscn` + `.gd` | M6 | Ja/Nein-Dialog |
 | `scenes/ui/safe_area_container.gd` | M6 | MarginContainer mit Safe-Area-Rändern |
 | `scenes/ui/input_glyph.gd` | M6 | Tasten-/Button-Symbol je Input-Schema |
@@ -534,7 +565,7 @@ Jede Datei unter `tests/` gehört dem genannten Modul; `test_<modul>_*.gd` ist d
 | `tests/test_m0_seed_util.gd` | M0 | Determinismus `SeedUtil` |
 | `tests/test_m0_sfx.gd` | M0 | Busse, jede ID baut, Musik-Loop läuft weiter (`loop_end`), unbekannte ID ohne Absturz |
 | `tests/test_m0_condition_expr.gd` | M0 | `ConditionExpr`: Grammatik, Typvergleiche, Fehlerfälle |
-| `tests/test_m1_fixture.gd` | M1 | Mini-Datensatz unabhängig von `res://data` + gemeinsame Helfer der `test_m1_*` (per `preload`), mit Selbsttest |
+| `tests/test_m1_fixture.gd` | M1 → SD | Mini-Datensatz unabhängig von `res://data` + gemeinsame Helfer der `test_m1_*` (per `preload`), mit Selbsttest. Seit R5b-2b testen die `test_m1_*` die Engine des Stempelduells (Namen und Inhalt unverändert, 10 §6.2) |
 | `tests/test_m1_stats.gd` | M1 | StatBlock, Elemente |
 | `tests/test_m1_ctb.gd` | M1 | Tick-System, Vorschau, Haste/Slow, Präventiv/Hinterhalt |
 | `tests/test_m1_damage.gd` | M1 | Formeln, Krit, Elemente, Verteidigen, Treffer, Stunt-Chance |
@@ -545,7 +576,7 @@ Jede Datei unter `tests/` gehört dem genannten Modul; `test_<modul>_*.gd` ist d
 | `tests/test_m2_fixtures.gd` | M2 | Mini-Datensatz + Helfer der `test_m2_*` (per `preload`) |
 | `tests/test_m2_show.gd` | M2 | ShowRules-Hype, Zuschauer, Follower, Sponsor-Trigger |
 | `tests/test_m2_achievements.gd` | M2 | Zähler, Schwellen, Belohnungen |
-| `tests/test_m2_loot.gd` | M2 | Lootbox/Truhe deterministisch, Ausrüstungs-Duplikate → Credits, Drop-Regel `BattleState.roll_drops` |
+| `tests/test_m2_loot.gd` | M2 | Lootbox/Truhe deterministisch, Ausrüstungs-Duplikate → Credits, Drop-Regel `BattleResult.roll_drops` |
 | `tests/test_m2_progression.gd` | M2 | EXP-Kurve, Level-Up, Equip, BattleBridge (Diebstahl bei geflohenem Dieb, KO-Rückkehr mit 1 HP nach der EXP) |
 | `tests/test_m2_save.gd` | M2 | Roundtrip, Migration, kaputte Dateien, Slots; Anker des Logs nach dem Laden (`Game.replay_log`/`RunSim.replay` ab `start_state`); umbenannte Skill-IDs (`SaveCodec.RENAMED_SKILLS`, Polish-Pass) |
 | `tests/test_m2_shop.gd` | M2 | Kaufen/Verkaufen |
@@ -559,8 +590,6 @@ Jede Datei unter `tests/` gehört dem genannten Modul; `test_<modul>_*.gd` ist d
 | `tests/test_m4_style.gd` | M4 | §13.1 Zeilenlänge in `art/**` und den M4-Tests (seit `test_m0_compile_all` projektweit auch dort geprüft) |
 | `tests/test_m4_vfx.gd` | M4 | Jede Vfx-Art (CPUParticles, Budgets, Pool, Dauer), Schadenszahlen, Glyphen (`has_char`) |
 | `tests/test_m4_visual_pass.gd` | M4 | Befunde der Screenshot-Matrix im Art-Kit (Türsturz-Lampe, Arena-Bildschirm, Müll-Abstand …) |
-| `tests/test_m5_battle_scene.gd` | M5 | Battle-Szene headless mit Auto-Kampf bis Ende |
-| `tests/test_m5_visual_pass.gd` | M5 | Kampf-Framing/HUD-Layout der Screenshot-Matrix (reservierte Ecken der M.O.D.-Box, Untermenüs darüber) |
 | `tests/test_m6_ui_scenes.gd` | M6 | Alle UI-Szenen instanziieren, Default-Fokus vorhanden, Glyphen statischer Texte (`has_char`) |
 | `tests/test_m6_autoplay.gd` | M6 | Autoplay-Schritttabelle, Trockenlauf über `boot_to_title`, Watchdog, Safe-Room-Wahl, Boot-Argumente |
 | `tests/test_m6_fullrun.gd` | M6 | Full-Run-Bot: Argumente, reine Helfer (Wege, Stick-Eingabe, Bewertungen), Niederlage → Game Over → Laden mit echten Screens |
@@ -571,8 +600,6 @@ Jede Datei unter `tests/` gehört dem genannten Modul; `test_<modul>_*.gd` ist d
 | `tests/test_m6_safe_room.gd` | M6 | Safe Room: Aufzeichnung + Vollheilung, Menüreihenfolge, Modals mit Fokus-Rückgabe, Mopsula-Szenen, Event-Läufe speichern nicht |
 | `tests/test_m6_visual_pass.gd` | M6 | UI-Layout-Verträge der Screenshot-Matrix; alle Capture-Rezepte existieren |
 | `tests/test_m7_data_content.gd` | M7 | Inhalt: Mengen laut GDD (11 Gegner, 2 Bosse, 16 Party-Skills, 2 Stunts, 25 Gegner-Skills, 11 Boss-Skills, 35 Achievements, 7 Sponsoren, 6 Meilensteine, 6 Status, 4 Szenen), Balancing-Sanity |
-| `tests/test_m7_balance.gd` | M7 | Jede reguläre Begegnung von Etage 1 ≥ 80 % Siegquote (50 Seeds) auf GDD-§13-Level und -Ausrüstung; Boss-Bänder |
-| `tests/test_m7_show_balance.gd` | M7 | Etage 1 als Show-Staffel mit dem echten `Show`-Autoload: Follower-, Hype- und Geschenk-Bänder (GDD §13) |
 | `tests/test_m7_events.gd` | M7 | Inhalt von `data/events.json` gegen das Schema (05 §10.1) und die Spieldaten |
 | `tests/test_m7_floor_layout.gd` | M7 | Handgebautes Layout Etage 1 (Zellen, Zonen, Tore, Truhen, Gruppen, Events, Streuner, Safe Rooms, Treppe, Routen) |
 | `tests/test_m7_text_content.gd` | M7 | M.O.D.-/Chat-/Mopsula-Zeilen (Mindestzahlen, Längen, Platzhalter, IDs), Szenen, deutsche Anzeigetexte |
@@ -597,21 +624,21 @@ Jede Datei unter `tests/` gehört dem genannten Modul; `test_<modul>_*.gd` ist d
 | `tests/test_m8_run_sim.gd` | M8 | `RunSim` ohne Autoloads: Timer, Hype-Abkühlung, Pazifist-Zählung, Streuner in Ticks; `step(1)` × n ≡ `step(n)` |
 | `tests/test_m8_score_calc.gd` | M8 | `ScoreCalc`: Beispiel 05 §10.4, Caps, Tie-Break |
 | `tests/test_m8_sponsor_windows.gd` | M8 | Sponsor-Fenster (05 §6.13): Fahrplan in Ticks, Kampf friert ein, Plätze/Zuschauer-Limit, Codes, Safe Room (Leerlauf-Ticks), Boss-Countdown, Replay-Gleichheit; Integration `Show.receive_gift`, Overlay-Badge (06-C: Zustand statt Sekunden), Druckwort-Prüfung aller `sponsor_window_*`-Zeilen, Debug-Werkzeug |
-| `tests/test_m8_state_hash.gd` | M8 | `StateHash.of`/`of_battle` ohne Anzeigefelder |
+| `tests/test_m8_state_hash.gd` | M8 | `StateHash.of` ohne Anzeigefelder (`of_battle`: `test_sd_engine_golden`) |
+| `tests/test_sd_engine_golden.gd` | SD (R5b-2b) | Goldwerte der CTB-Engine (10 §6.9): zwei feste Kämpfe auf dem `test_m1`-Mini-Datensatz mit geskripteter Party → eingefrorener `StateHash.of_battle`, Ereigniszahl, Digest des Ereignisstroms, Ausgang, Befehle; zwei Läufe gleich, Befehle über JSON nachgespielt; Schnappschuss → `from_dict` → gleicher Hash (auch mitten im Kampf bis zum Ende) |
+| `tests/test_sd_boundaries.gd` | SD (R5b-2b) | Grenztest 10 §6.3: die fünf Engine-Klassen in Code-Zeilen nur in `core/stempel/**`, `scenes/stempel/**`, `core/live/state_hash.gd` und den `test_m1_*`/`test_sd_*`; Engine-Dateien in `core/stempel/ctb`, `scenes/battle` gelöscht, `roll_drops` nur in `BattleResult`; ein CTB-Kampagnen-Log von Kernel `2246c31` (`tests/fixtures/live/run_log_sim_v3_ctb.json`) ist „ältere Version“ in beiden Verifiern, Bestenliste und Lobby |
 | `tests/test_06b_talents.gd` | 06-B | `talents.json` + Validator, offene Wahlen (ungerade Level ab L3), geseedetes Angebot, Wahlregeln, jede Wirkungsart an ihrem Ort, Hype-/Follower-Faktoren als Ganzzahl-Promille (`GameState.hype_gain_pm/follower_pm`, Show), Command + Replay (`RunSim`, `Game`-Fassade), Save/Hash-Kompatibilität |
 | `tests/test_06b_species.gd` | 06-B | `species.json` + Validator (kein Kronen-Motiv an Mopsula, `spc_original`), `Casting` (Optionen, Gründe, Re-Spec-Regeln, Werte Klasse × Spezies), Command + Replay, Save |
 | `tests/test_06b_talent_show.gd` | 06-B | Talent-Show-Szene (Karten, „Später“, Erst-Erklärung, Vorschau), TALENT-SHOW-Knopf im Safe Room, Chip „TALENT BEREIT“, Party-Seite („n Talente offen – im Safe Room wählen“); Polish-Pass: Karten blenden 0.5 s ein und ignorieren gehämmerte Eingaben, Rang-Tag „Rang 1/2“ |
 | `tests/test_06b_balance.gd` | 06-B | Talentboni bei L10 ≤ +15 % je Kampfwert für jede Wahlfolge (erschöpfend); Boss-Quoten mit Bot-Wahl ±5 Punkte (gepaart, 300 Seeds) |
 | `tests/test_06a_hero.gd` | 06-A | `HeroRules`, `Game.new_game(…, hero)`/`set_hero`, `hero`-Command (Start- vs. Safe-Room-Prüfung, `RunSim`-Ablehnung), Save-Rundlauf/Altstand → `kai`, Replay-Hash (auch Lauf als Mopsula), Erkundung mit Mopsula als Spielerkörper |
 | `tests/test_06a_bark.gd` | 06-A | Bellen: Kegel/Reichweite/Sichtlinie, `DAZED` (Dauer, Immunität 15 s, Rückkehr), Vorteilsregel `DAZED` → `PREEMPTIVE` aus jeder Richtung, Bosse/Fahrscheinfresser unbeeinflusst, Cooldown, Szene (Signal `field_ability_used`, Chat); Kamera-Rahmung je Figur (Polish-Pass) |
-| `tests/test_06a_partner_auto.gd` | 06-A | `GameSettings.partner_auto` (Default, Rundlauf, Optionszeile), Kampf: Partner-Züge `auto: true`, Menü nur für die Held:in, Rollen-Pillen |
 | `tests/test_06a_secrets.gd` | 06-A | `Secrets`-Regeln, `Game.open_secret` (Aufzeichnung, +15 Follower genau einmal, M.O.D.), `Game.replay_log`/`RunSim` (Ablehnungen), Save, Datenregeln, Szene (Feldschlag und Bellen öffnen die Wand, Interagieren nie; Notizen; Neuaufbau), Minimap, Etagen-Bilanz, Bot-Planer |
 | `tests/test_06a_hero_ui.gd` | 06-A | Ablauf Slot → Figur → Name → Intro (Fokus, Navigation, Zurück), Safe-Room-Wechsel (aufgezeichnet, Figuren tauschen, M.O.D.-Zeile), Menü passt über den Chat-Ticker, Zeilen-Block A |
-| `tests/test_06ab_hero_talents.gd` | 06 A × B | Integration Figurenwahl × Talente: Feld-Talente der führenden Figur (`HeroRules.field_mods`, `EncounterRules.scale_pm` Ganzzahl-Promille; Szene: Feldschlag 2.25 m, Bellen 5 m / 2.1 s, Wechsel im Safe Room), Talent-Show-Vorschau, je Held:in ein Integrationstest (aufgezeichneter Lauf → Talent-Show im Safe Room → „Figur wechseln“ → `Game.replay_log` ≡ live → Kampf mit „Partner automatisch“: AutoPolicy spielt den Partner mit seinen Talenten, Gegenprobe ohne), Safe-Room-Layout 1280×720 und 1600×720 (Trefferflächen ≥ 88, Abstände ≥ 12, nichts überlappt) |
+| `tests/test_06ab_hero_talents.gd` | 06 A × B | Integration Figurenwahl × Talente: Feld-Talente der führenden Figur (`HeroRules.field_mods`, `EncounterRules.scale_pm` Ganzzahl-Promille; Szene: Feldschlag 2.25 m, Bellen 5 m / 2.1 s, Wechsel im Safe Room), Talent-Show-Vorschau, je Held:in ein Integrationstest (aufgezeichneter Lauf → Talent-Show im Safe Room → „Figur wechseln“ → `Game.replay_log` ≡ live → Echtzeitkampf mit dem KI-Partner und seinen Talenten, Gegenprobe ohne; bis R5b-2a „Partner automatisch“ im CTB), Safe-Room-Layout 1280×720 und 1600×720 (Trefferflächen ≥ 88, Abstände ≥ 12, nichts überlappt) |
 | `tests/test_06c_marotten.gd` | 06-C | Marotten: Daten + Validator, Auswahl je Seed/Etage, jede Bedingung trifft/trifft nicht, 1 Herz je Kampf, gewonnene Wette (Box, Follower, Hype, `bets_won`, `show_bet`), Tutorial/Niederlage/Event-Lauf, Pazifist-Zähler (Latch, Countdown, Save/Load), Strichliste, Ansage nach `floor_start`, Replay-Gleichheit |
 | `tests/test_06c_liga.gd` | 06-C | Unterhosen-Liga: Stufen 0/1/2 je gesteuerter Figur, Blocker, Promille-Faktoren (beim Kampfstart eingefroren, nur Kampagne), Etagen-Bonus, Kette „Ohne alles“ erreichbar, Regel-Schalter im `rules_hash`, UI (Ausrüstung: Liga-Zeilen über den Slots; Tab „Show“: Figuren-Karten nebeneinander; Chip, Ergebniszeile), Replay |
 | `tests/test_06c_sponsor_display.gd` | 06-C | Die fünf Sponsor-Fenster-Entscheidungen (06 §6): Badge ohne Sekunden/Druckwörter + Platz-Punkte, Fan-Pakete nur im Fenster/Cheers immer, Comeback-Fenster (Regeln, Save-Übertrag, genau einmal, Live-Zeile), Koop-Plätze je Spieler, Bits nie Geschenkquelle |
-| `tests/test_06c_balance.gd` | 06-C | Balance-Bänder 06 §4.10 mit dem echten `Show`: Boss-Niederlagequote Liga 1/2 (100 Seeds), Staffel Etage 1 (Follower ≤ 2 000, Lootboxen, Liga-Kämpfe, Referenz ≤ 1 Wette) |
 | `tests/test_06c_liga_cap.gd` | 06-C, Integration Runde 4 | Deckel des Liga-Follower-Bonus je Etage (06 §4.3, §8.8 I-8): `MarottenRules.take_liga_followers` (Stufen-Deckel, gemeinsame Etagensumme, neue Etage, ohne Schlüssel ungedeckelt), `Show.end_battle` zahlt Basis + höchstens den Deckel, Live-Lauf über Speichern → Laden und `Game.replay_log`, Validator, Tab „Show“ |
 | `tests/test_06abc_liga_talents.gd` | Integration A × B × C | Liga-Stufe der gesteuerten Figur für beide Held:innen, Liga-Talente folgen ihr (`MarottenRules.in_liga`), „Kamera 3 kennt mich“ füllt ein Extra-Herz je Etage, Replay ab Speicher-Anker |
 | `tests/test_06ac_bark_opener.gd` | Integration A × C, Runde 4 | Bellen ist kein Anschleichen (06 §8.8 I-7): `opener` `"bark"` in `BattleSetup`/`BattleResult`/`encounter`-Command (nur `adv` 1), kein Herz für „Schleichwerbung“, `bark_openers` statt `preemptives`, Replay, `exploration.gd._opener` |
@@ -630,7 +657,6 @@ Ohne `class_name`, genutzt per `const X := preload("res://…")` innerhalb des M
 | `core/stats/fixed_math.gd` | M1 | `FixedMath`: Ganzzahl-/Promille-/Basispunkt-Arithmetik (`div_round`, `roll_bp`, …), CR-12 |
 | `autoload/game_replay.gd` | M0 | Replay-Motor von `Game.replay_log` (§3.4) |
 | `scenes/title/title_flow.gd` | M6 | `TitleFlow.parse_args` (Boot-Argumente, §11.4) |
-| `scenes/battle/ui/hud_style.gd` | M5 | `HudStyle` inkl. `HudStyle.Icon` (§12.1) |
 | `scenes/exploration/encounter_rules.gd`, `choice_dialog.gd` | M3 | Kontakt-/Vorteilsregeln (`CONTACT_RADIUS`, `GRACE_*`), Wahl-Dialog der Etagen-Events |
 | `scenes/ui/ui_util.gd`, `menu_base.gd`, `scene_kit.gd`, `broadcast_bg.gd` | M6 | UI-Bausteine, Menü-Basis, Safe-Room-/Studio-Kulissen, TV-Hintergrund |
 | `art/kit/room_builder.gd`, `set_builder.gd`, `gltf_rig.gd` | M4 | Raum-/Kulissenbau und glTF-Rig hinter `EnvKit`/`CharacterBuilder` |
@@ -767,7 +793,7 @@ Alle Events mit `"device":-1` (= alle Geräte; geprüft: matcht Gamepad 0/1/3 un
 | `tab_prev` | 0.5 | Q, PageUp | Button 9 (LB) | Menüs mit Reitern |
 | `tab_next` | 0.5 | E, PageDown | Button 10 (RB) | Menüs mit Reitern |
 | `toggle_auto` | 0.5 | T | Button 11 (Steuerkreuz oben) | Kampf (CTB-Läufe: zur Laufzeit auch Button 3 Y, 07 E36) |
-| `toggle_speed` | 0.5 | R | Button 8 (R3) | Kampf (×1 ↔ ×2) |
+| `toggle_speed` | 0.5 | R | Button 8 (R3) | bis R5b-2b CTB-Kampf (×1 ↔ ×2); in der Kampagne ungenutzt, geplant für das Tempo des Stempelduells (10 §4.6) |
 | `toggle_fullscreen` | 0.5 | F11 | – | global (nur PC) |
 | `debug_overlay` | 0.5 | F3 | – | global (nur `OS.is_debug_build()`) |
 | `ui_accept` (Override!) | 0.5 | Enter, Kp Enter, Space | Button 0 (A) | Menüs |
@@ -873,7 +899,6 @@ signal camera_zoom(amount: float)                        # touch pinch: arm leng
 
 # --- Battle ---------------------------------------------------------------
 signal battle_started(encounter_id: String, is_boss: bool)
-signal battle_turn_started(combatant_id: String, is_party: bool)
 signal battle_ended(outcome: int, encounter_id: String)  # BattleResult.Outcome
 
 # --- Achievement triggers (payload keys: §6.3) --------------------------------
@@ -961,11 +986,11 @@ signal dialog_layout_requested(mode: StringName, layout: Dictionary)
 signal show_boss_spotted(encounter_id: String)           # 06 §2.6, 07 §9.6: first entry of the show boss's zone (R2)
 ```
 
-**Echtzeitkampf (07, Stand R5b-1):** Im Echtzeitmodus (`GameState.combat_mode = realtime`) startet und endet ein Kampf in der
-Erkundung: `Game.make_rt_setup` sendet `combat_started` und `battle_started`, jede Sim-Ereignis-Lieferung geht als
-`combat_event` an Show und HUD, `Game.end_combat` sendet `combat_finished` und `battle_ended` (gleiche Bedeutung wie im CTB,
-07 §12.9 Nr. 4). `battle_turn_started` gibt es nur im CTB (ab R5b Teil 2 nur noch im CTB-Minispiel „Stempelduell“,
-Orchestrator-Entscheidung 2026-10-11). Der Overlay-Modus im Kampf ist `&"combat"` (07 §8.8, R3).
+**Echtzeitkampf (07; seit R5b-2b der einzige Kampf der Kampagne):** Ein Kampf startet und endet in der Erkundung:
+`Game.make_rt_setup` sendet `combat_started` und `battle_started`, jede Sim-Ereignis-Lieferung geht als `combat_event` an Show
+und HUD, `Game.end_combat` sendet `combat_finished` und `battle_ended` (07 §12.9 Nr. 4). `battle_turn_started` ist mit dem
+CTB-Kampf der Kampagne entfallen (das Stempelduell meldet seine Züge selbst, 10 §6.5). Der Overlay-Modus im Kampf ist
+`&"combat"` (07 §8.8, R3).
 
 Wer emittiert was (verbindlich):
 
@@ -976,11 +1001,11 @@ Wer emittiert was (verbindlich):
 | `mod_live_status` | ModLiveLink (06-D, Kind von Game) |
 | `game_loaded`, `game_saved` | Save |
 | `floor_entered`, `room_entered`, `enemy_alerted`, `encounter_triggered`, `gate_opened`, `overlay_mode_requested(&"explore")`, `field_ability_used` (Feldschlag: `hits` 0/1 je Schlag; Bellen: Zahl der verdutzten Gruppen), `gate_opened` auch für eine gefallene Kulissenwand | ExplorationScene (M3) |
-| `battle_started`, `battle_turn_started`, `battle_ended`, `overlay_mode_requested(&"battle")` | BattleScene/BattleController (M5) |
+| `battle_started`, `battle_ended`, `combat_started`, `combat_event`, `combat_finished` | Game (`make_rt_setup`, Kampf-API, `end_combat`; 07 §10.6) |
 | `viewers_changed`, `followers_changed`, `hype_changed`, `achievement_unlocked`, `milestone_reached`, `sponsor_gift_triggered`, `mod_said`, `chat_posted`, `lootbox_earned`, `enemy_killed`, `battle_won`, `battle_fled`, `stunt_resolved`, `combo`, `party_ko`, `boss_defeated`, `boss_hp_changed`, `gift_received`, `gift_rejected`, `sponsor_window_updated`, `marotten_announced`, `marotte_progress`, `marotte_won`, `liga_changed` (06-C) | Show |
 | `dialog_finished` | ModDialog (M6) |
 | `camera_drag`, `camera_zoom` | TouchControls (M6); `camera_zoom` = Zwei-Finger-Pinch auf der freien Kamerafläche (0.02 m/px Abstandsänderung), `CameraRig` klemmt wie das Mausrad auf 5–9 m |
-| `dialog_reserve_requested` | Screens mit eigenen Panels unten links/rechts (BattleHud M5: `&"battle"`); Empfänger ModDialog (M6) |
+| `dialog_reserve_requested` | Screens mit eigenen Panels unten links/rechts (bis R5b-2b BattleHud M5: `&"battle"`); Empfänger ModDialog (M6) |
 | `pause_menu_toggled`, `toast_requested`, `overlay_mode_requested(&"safe_room"/&"menu"/&"hidden"/&"game_over")` | M6-Szenen (`&"game_over"`: GameOver-Screen, nur Scanlines); `toast_requested` darf jeder |
 | `combat_started`, `combat_event`, `combat_finished`, im Echtzeitkampf auch `battle_started`, `battle_ended` | Game (07 §10.6: `make_rt_setup`, `combat_boundary`, `combat_step`, `end_combat`; dieselben Aufrufe in `Game.replay_log`) |
 | `overlay_mode_requested(&"combat")`, `dialog_layout_requested` | Kampf-HUD (07 R3) |
@@ -1035,14 +1060,13 @@ var settings: GameSettings           # created in _init(); loaded from user://se
 var input_scheme: InputScheme = InputScheme.KEYBOARD_MOUSE
 var timer_running: bool = false      # "explore view active": true only via ExplorationScene; Router resets to false on goto/push
 var autoplay: bool = false           # set by Boot from --autoplay (smoke) and --autoplay=full (full-run bot)
-var auto_battle: bool = false        # party uses AutoPolicy (toggle_auto / Settings / Autoplay)
 var fast_text: bool = false          # dialogs show instantly (Autoplay, text_speed=2)
 var ephemeral: bool = false          # tests, autoplay, capture: settings defaults, never read/written on disk
 var mode: StringName = &"campaign"   # &"campaign" | &"event_offline" (M8)
 var run_log: RunLog = null           # Brief §6b.3; created by new_game/start_event_run/Save.load_slot
 var quest: QuestTracker = null       # only mode &"event_offline"
 var sim: RunSim = null               # deterministic explore clock (thin variant, 05 CR-6)
-var in_battle: bool = false          # make_battle_setup → apply_battle_result (also reset by new run/game over); Show routes
+var in_battle: bool = false          # make_rt_setup → end_combat (also reset by new run/game over); Show routes
                                      # external gifts by it (§3.5)
 var replaying: bool = false          # true while replay_log runs: record() no-op, no Router/Save calls; UI/Show may skip
                                      # pure presentation (M.O.D. lines, toasts)
@@ -1076,9 +1100,8 @@ func adopt_loaded_state(st: GameState, p_log: RunLog) -> void   # Save.load_slot
 	# into p_log. Save emits game_loaded.
 func event_rules() -> Dictionary     # EventDef.rules of the running event run; {} in the campaign (Show → GiftPolicy)
 func emit_party_changed() -> void    # Game is the only party_changed emitter: Show calls it after an outside gift healed
-func ensure_state(p_mode: StringName = &"", p_seed: int = 1) -> void   # if not has_state(): ephemeral-safe new_game(0,
-	# "Kai", p_seed) — standalone scenes, capture, tests; p_mode pins the combat mode unless --combat= decides (the CTB
-	# battle scene asks for &"ctb", 07 E33)
+func ensure_state(p_seed: int = 1) -> void   # if not has_state(): ephemeral-safe new_game(0, "Kai", p_seed) —
+	# standalone scenes, capture, tests (a real-time game like every game since R5b part 2b)
 func floor_def() -> FloorDef         # DB.floor_def(state.floor_run.index)
 func start_floor(floor_index: int) -> void
 	# state.floor_run = FloorRun.create(DB.floor_def(i), state.seed, state.difficulty); clear_blocking_dialogs();
@@ -1101,12 +1124,10 @@ func continue_after_summary() -> void   # called by FloorSummary "Weiter"
 func on_game_over(reason: StringName) -> void   # Router.game_over calls it first: in_battle = false; stat game_overs +1;
 	# not while replaying: Save.record_game_over(state.slot), event run → finish_run(reason)
 func next_seed(purpose: String) -> int   # state.rng_counter += 1; SeedUtil.derive(state.seed, purpose, state.rng_counter)
-	# purposes of the live game: "battle" (make_battle_setup), "show" (Show.begin_battle), "lootbox" (open_lootbox),
+	# purposes of the live game: "battle" (make_rt_setup), "show" (Show.begin_battle), "lootbox" (open_lootbox),
 	# "gift" (Show: GiftApplier outside battles) — replay_log consumes them identically (same code path)
-func make_battle_setup(encounter_id: String, advantage: int, group_id: String) -> BattleSetup
-	# record({"t": "encounter", "enc": encounter_id, "adv": advantage, "group": group_id});
-	# BattleBridge.make_setup(state, DB.data, encounter_id, advantage, group_id, next_seed("battle")); setup.auto_battle = auto_battle;
-	# setup != null → in_battle = true
+# make_battle_setup (CTB) is gone since R5b part 2b: combats start through make_rt_setup (below); a shim that records
+# nothing and returns null stays until scenes/exploration loses its unreachable CTB branch (§0.7)
 func apply_battle_result(result: BattleResult) -> BattleRewards
 	# in_battle = false; BattleBridge.apply_result(state, DB.data, result); sim.request_checkpoint(); emits party_changed,
 	# inventory_changed, credits_changed, member_leveled + level_up({"member", "level"}) per level; floor_timer_started if
@@ -1314,12 +1335,11 @@ Laufzeitverhalten:
   von `wait` herunter und wendet ihn am selben Lauf-Tick an; `twist.tick` < aktueller Tick → Fehler `twist_tick_passed`;
   am Ende noch wartende Twists stehen in `result.twists_waiting` (kein Fehler: sie bleiben im Zustand); sonst
   `RunRules.twist_refusal` → `TwistApplier.validate` + `apply` wie live). Kämpfe
-  exakt nach §5.7 ohne Szene: `encounter` → `make_battle_setup` (next_seed "battle") → `BattleState.new` → `Show.begin_battle`
-  (next_seed "show") → `battle_started` → `_play(start())`; `battle` → `BattleState.validate`, dann
-  `_play(submit(BattleCommand.from_dict(cmd)))`; `_play` = Events → `Show.on_battle_event`, dann (Kampf läuft) ein direkt
-  folgendes `gift`-Command in `Show.receive_gift` und `Show.take_pending_gift(battle)` → `apply_gift` →
-  `Show.note_battle_gift(g, events)`; Kampfende → `battle_ended`, `apply_battle_result`, `Show.end_battle`, DEFEAT →
-  `on_game_over(&"defeat")`. Checkpoint `k` = Zustand nach allen Commands mit `k' ≤ k`. Danach Live-Kontext zurück,
+  (seit R5b-2b nur Echtzeit) über dieselben Aufrufe wie live in der Tick-Reihenfolge des `CombatDirector` (07 §10.6,
+  „Echtzeitkampf“ unten): `encounter` (mit `rt`-Block) → `make_rt_setup`, je Tick `combat_boundary` (Geschenke) → die
+  aufgezeichneten Eingaben dieses `ct` → `combat_step`, Kampfende → `end_combat`, DEFEAT → `on_game_over(&"defeat")`; ein
+  Log mit einem `battle`-Command oder einem CTB-Kopf wird abgelehnt (ein CTB-Log der Kampagne hat ohnehin eine ältere
+  `sim_version`: „ältere Version“, §0.7). Checkpoint `k` = Zustand nach allen Commands mit `k' ≤ k`. Danach Live-Kontext zurück,
   `replaying = false`, `Show.sync_from_state()`. RNG-Verbrauch, Show-Reaktionen, Meilensteine und Safe-Room-Buchhaltung sind
   damit per Konstruktion identisch.
   **Vertrag (05 §11.4):** `errors` (PackedStringArray) sammelt `RunLog.validate()` und abgelehnte Log-Einträge, Header-Fehler
@@ -1337,9 +1357,7 @@ Laufzeitverhalten:
 | `master_volume` | float 0..1 | 0.8 | `audio/master` |
 | `music_volume` | float | 0.6 | `audio/music` |
 | `sfx_volume` | float | 0.8 | `audio/sfx` |
-| `battle_speed` | float ∈ {1.0, 2.0} | 1.0 | `game/battle_speed` |
 | `text_speed` | int 0 langsam / 1 normal / 2 sofort | 1 | `game/text_speed` |
-| `auto_battle_default` | bool | false | `game/auto_battle_default` |
 | `fullscreen` | bool | false | `display/fullscreen` |
 | `quality` | StringName &"high"/&"low" | PC &"high", `OS.has_feature("mobile")` &"low" | `display/quality` |
 | `touch_controls` | StringName &"auto"/&"on"/&"off" | &"auto" | `display/touch_controls` |
@@ -1347,12 +1365,10 @@ Laufzeitverhalten:
 | `show_bets_hud` | bool | true | `display/show_bets_hud` (06-C: Show-Chip „M.O.D. mag heute“; Optionen → „Show-Wetten anzeigen“) |
 | `camera_invert_x` / `camera_invert_y` | bool | false | `input/…` |
 | `camera_sensitivity` | float 0.25..3.0 | 1.0 | `input/camera_sensitivity` |
-| `partner_auto` | bool | false | `game/partner_auto` — „Partner automatisch“: die Züge der nicht gesteuerten Figur wählt `AutoPolicy` (§5.7, 06 §1.4) |
 | `regie_twists` (06-D) | bool | true | `game/regie_twists` — „Regie-Eingriffe (ab Etage 2)“, Offline-Regie 06 §5.7a |
 | `mod_live` (06-D) | StringName &"off"/&"lines"/&"lines_twists" | &"off" | `live/mod_live` — „M.O.D. live (Beta)“, Zeile nur in Debug-Builds mit URL |
 | `mod_live_url` (06-D) | String | "" | `live/mod_live_url` — nur in Debug-Builds gelesen (sonst ""); `--mod-live-url=` / `--mod-live=` überschreiben ebenfalls nur dort |
-| `combat_mode` (07) | StringName &"realtime"/&"ctb" | &"realtime" (`DEFAULT_COMBAT_MODE`, 07 E33; bis R5b-2a &"ctb") | `combat/combat_mode` — gilt für neue Spielstände; gelesen nur in Debug-Builds (Zeile „Kampfmodus (Debug)“) und nur aus einer Datei mit `meta/version` ≥ 2; die übrigen `[combat]`-Felder: 07 §7.8 |
-| — | int | `FILE_VERSION` = 2 | `meta/version` — seit 07 E33; eine Datei ohne (Version 1) trägt `combat_mode = "ctb"` als alten Standard, der beim Laden entfällt |
+| — | int | `FILE_VERSION` = 2 | `meta/version` — seit 07 E33; die `[combat]`-Felder: 07 §7.8. Seit R5b-2b gibt es keinen Kampfmodus mehr: die Schlüssel `game/battle_speed`, `game/auto_battle_default`, `game/partner_auto` und `combat/combat_mode` älterer Dateien werden beim Laden ignoriert und nicht zurückgeschrieben (`test_r5b_default_realtime`) |
 
 Methoden: `func load_from_disk() -> void`, `func save_to_disk() -> Error` (ephemer: `OK` ohne Schreiben), `func to_dict() -> Dictionary`.
 Der Spielmodus (Prime Time / Vorabendprogramm) ist **keine** Einstellung, sondern `GameState.difficulty` (pro Spielstand).
@@ -1368,13 +1384,11 @@ Qualitätsstufen (angewendet von `Game.apply_settings()` auf `get_tree().root`; 
 | Max. aktive OmniLights in Reichweite | 4 | 2 |
 | Raumlichter (03_ART §5; `distance_fade` ab Kamera 24 m / 6 m auf beiden Stufen) | jeder sichtbare Raum (aktueller + per Tür verbundene) hat sein OmniLight; + 1 Neon-Omni im Treppen- und Safe-Room-Raum | nur der aktuelle Raum hat sein OmniLight (`ExplorationScene._set_room_light`, Raumwechsel blendet 0.4 s über); Nachbarräume im Umgebungs- + Sonnenlicht; kein Neon-Omni |
 
-#### Echtzeitkampf (07 §10.6, §12.1; Stand R5b-1)
+#### Echtzeitkampf (07 §10.6, §12.1; Stand R5b-2b: der einzige Kampf der Kampagne)
 
 ```gdscript
 var combat: RtSim = null              # the running real-time combat (null outside one; never part of a save)
-var combat_mode_override: StringName = &""   # --combat=realtime|ctb (boot argument; never written to settings)
-func is_realtime() -> bool            # state.combat_mode == &"realtime"
-func new_game_combat_mode() -> StringName     # the boot argument, else GameSettings.combat_mode (default realtime, E33)
+func is_realtime() -> bool            # a run exists (state != null): every run fights in real time since R5b part 2b
 func make_rt_setup(cmd: Dictionary) -> RtSetup    # records the encounter (with "rt"), seed "battle",
 	# BattleBridge.make_rt_setup_rules (the run's rules), combat_started + battle_started, the ct-0 prelude
 func combat_boundary() -> void        # one tick boundary: at most one gift (external first, then system), 07 §9.2
@@ -1386,9 +1400,10 @@ func rt_party_lock(what: StringName = &"items") -> String   # inventory / equipm
 func apply_loadout(cmd: Dictionary) -> bool      # R5a: the recorded loadout (skills page); refused during a combat
 ```
 
-- Ein neues Spiel nimmt `new_game_combat_mode()`; ein Echtzeit-Spiel schreibt `"combat_mode": "realtime"`, `"rt_version"` in den
-  Run-Log-Kopf und startet mit `RunRules.rt_start` (HP × `HP_SCALE_PM`, volle HP/MP) — beide Verifier wiederholen das aus dem
-  Kopf. **Event-Läufe** nehmen den Modus aus `rules.combat.mode` des Events (Teil von `rules_hash`, R5b), nie aus der Einstellung.
+- Jedes Spiel schreibt `"combat_mode": "realtime"`, `"rt_version"` in den Run-Log-Kopf und startet mit `RunRules.rt_start`
+  (volle HP/MP; die Echtzeit-HP stehen seit R5b-2b in den Daten) — beide Verifier wiederholen das aus dem Kopf; einen Kopf mit
+  einem anderen `combat_mode` lehnt `RunRules.rt_header_errors` ab. **Event-Läufe:** `rules.combat.mode` darf nur noch
+  `realtime` sein (`RunRules.combat_rules_errors`, Teil von `rules_hash`).
 - Eine im Kampf geänderte Partner-Taktik bleibt (R5b): `BattleResult.rt_presets` → `BattleBridge.apply_result` schreibt
   `PartyMember.rt_preset`/`rt_toggles` (kein Log-Eintrag; live und in beiden Verifiern gleich).
 - `replay_log` spielt einen Echtzeitkampf über genau diese Aufrufe in der Tick-Reihenfolge des `CombatDirector` nach; ein
@@ -1431,13 +1446,14 @@ func on_battle_event(e: ActionEvent) -> void
 	# ShowRules.feed(e) → ShowDelta → add_hype, stats, triggers (enemy_killed/stunt_resolved/combo/party_ko signals + trigger());
 	# M.O.D. lines for delta.reasons; viewers_peak_battle = max(viewers()); sponsor threshold check (§6.2)
 func receive_gift(gift: Dictionary) -> Dictionary                   # THE single gift entry (Brief §6b.4) → {"accepted": bool, "reason": String}
-func take_pending_gift(battle: BattleState = null) -> Dictionary   # {} = none; battle gives the party situation for weight_mods
+func take_pending_gift() -> Dictionary   # {} = none (R5b part 2b: no CTB battle argument; the real-time combat uses
+	# take_pending_gift_rt(sim), which gives the party situation for the sponsors' weight_mods)
 func note_battle_gift(g: Dictionary, events: Array[ActionEvent]) -> void   # after battle.apply_gift(g): counts the gift
 	# items (GiftApplier.count_battle_items); the run counters were booked once in take_pending_gift
 func application_refusal(g: Dictionary) -> String                  # "" or why an external gift may not be applied NOW:
 	# GiftPolicy.refusal(Game.state, DB.data, g, event rules, _gift_extra()) — THE rule RunSim.gift_refusal uses too
 func end_battle(result: BattleResult) -> int                        # followers gained; stats; battle_won/battle_fled/boss_defeated
-func abort_battle() -> void          # battle torn down before its end (BattleScene freed): drops _rules/_setup/thresholds/queue
+func abort_battle() -> void          # combat torn down before its end (scene freed, tests): drops _rules/_setup/thresholds/queue
 	# without end_battle (no followers/stats); waiting external gifts → gift_rejected(id, "run_not_active"), never applied
 func unlocked_this_battle() -> PackedStringArray
 func sponsor_presentation() -> StringName   # Sponsor-Fenster (05 §6.13): &"off" (no windows: Pur-Liga, gifts disabled),
@@ -1466,13 +1482,13 @@ und Lauf-Identität — plus die Reservierungen der Queue; Lauf-Bindung `wrong_t
 die **Sponsor-Fenster**,
 05 §6.13: offenes Fenster, freier Platz, Pro-Zuschauer-Limit; wartende Geschenke der Queue zählen als Reservierung →
 `window_closed` / `window_full` / `window_sender_limit`) → Stempel `g["sponsor_window"] = <Fenster-ID>` → angenommen: **im Kampf**
-(`Game.in_battle`, also schon ab `Game.make_battle_setup`, auch während des Swirl-Übergangs) in `_queue`; **außerhalb** sofort
+(`Game.in_battle`, also schon ab `Game.make_rt_setup`) in `_queue`; **außerhalb** sofort
 anwenden = `Game.record({"t": "gift", "gift": g})` (nur `source ≠ "system"`) → `GiftApplier.apply(Game.state, DB.data, g,
 SeedUtil.make_rng(Game.next_seed("gift")), tick)` (Show merkt sich die ID per `GiftPolicy.remember`; `apply` bucht genau einmal
 über `GiftPolicy.note_applied`) +
 `Game.add_rewards()` → `Events.gift_received(g)`; abgelehnt →
 `Events.gift_rejected(gift_id, reason)`.
-`take_pending_gift(battle)`: (1) erstes wartendes externes Geschenk, solange in diesem Kampf weniger als
+`take_pending_gift()` / `take_pending_gift_rt(sim)`: (1) erstes wartendes externes Geschenk, solange in diesem Kampf weniger als
 `rules.gifts.max_per_battle` (Standard 1, `GiftPolicy.can_deliver_in_battle`) externe ausgeliefert wurden → **erneut geprüft**
 (`application_refusal` = `GiftPolicy.refusal` mit aktuellen Lauf-Zählern und `tick = Game.sim.tick()` — Duplikat, Frist,
 Caps, Wirkungsfaktor, Lauf-Bindung; `too_soon` bleibt in der Queue für eine spätere Zuggrenze, jeder andere Grund → aus der
@@ -1485,7 +1501,7 @@ Der Hype-Schwellen-Trigger hat damit keinen eigenen Geschenkweg. Externe Geschen
 abgelehnt → `gift_rejected`), sonst wie oben: record → `GiftApplier` → `gift_received`. Die Prüfung bei Anwendung ist maßgeblich
 (05 §6.10): Live-Lauf, `Game.replay_log` und `RunSim.replay` verwerfen dasselbe Geschenk und buchen dieselben Zähler
 (`flags["live"]`), sonst wichen Checkpoints/Final-Hash ab. Nach einem `sponsor_buff` außerhalb des Kampfes ruft Show
-`Game.emit_party_changed()`. Ein vorzeitig freigegebener Kampf (`BattleScene._exit_tree` ohne Ergebnis) ruft `abort_battle()`.
+`Game.emit_party_changed()`. Ein vorzeitig abgebrochener Kampf (Szene ohne Ergebnis freigegeben) ruft `abort_battle()`.
 Zeilen: `gift_received` mit `{sender}` (nur bei nicht-anonymem Absender, sonst `gift_received:anon`), `gift_received:credits`
 mit `{amount}` (angewendete Credits), `fan_pack_received` mit `{sender}`, `gift_diminished` mit `{pct}` (Wirkung < 100 %),
 Ablehnungen `cap_reached`/`chest_blocked` → `gift_capped`, `not_accepting` → `gift_declined` (05 §6.12; Pur-Liga,
@@ -1542,7 +1558,9 @@ Replay: Alle Show-Methoden laufen auch während `Game.replay_log` (`Game.replayi
 
 Story-Beats (GDD §1.4, `tutorial_*`/`story_*`-Zeilen): `floor_entered` einer Etage, deren Countdown auf ihr Tutorial wartet
 (`FloorDef.timer_start_after` gesetzt, `timer_started == false`) → `say("tutorial_explore")` + `say("tutorial_sneak")` (B1);
-`begin_battle` mit `setup.tutorial` → `say("tutorial_battle")`, nach dem 2. Party-Zug (`TURN_END`) → `say("tutorial_stunt")`
+`begin_battle` mit `setup.tutorial` → `say("tutorial_battle")` (im Echtzeitkampf verdrängt die Zeile des ersten Kampfes sie
+in der ersten Sitzung, 07 §9.3; die Hinweiskarten führen das Tutorial, 07 §2.13; den CTB-Hinweis `tutorial_stunt` nach dem
+2. Party-Zug gibt es seit R5b-2b nicht mehr)
 (B2); `begin_battle` → `say("story_battle:<encounter_id>")`, falls Zeilen existieren (B4: `enc_f1_b2` „Die Königin hört von
 euch.“). `on_battle_event` emittiert `boss_hp_changed({"boss_id", "hp", "max_hp"})` für Events mit `hp_after` auf einer
 Boss-Einheit (Quest-Fortschritt `defeat_boss`, gleiche Regel wie `RunSim`).
@@ -1569,8 +1587,8 @@ aufzeichnende `Game.set_flag`), `state.show.milestones.append(id)`, `Events.mile
 - Geschenke im Kampf: `take_pending_gift_rt(sim: RtSim) -> Dictionary` an jeder Tick-Grenze (07 §9.2) — externe zuerst (mit
   `ct` aufgezeichnet), dann ein fälliges System-Geschenk; `Game.combat_boundary` wendet es mit `RtSim.apply_gift` an.
 - Zeilenrate und Echtzeit-Zeilen §9.3 (`rt_line_priority`); im Kampf keine KI-Zeilen und keine Persona-Zeilen.
-- Achievements: ein Echtzeit-Lauf prüft `AchievementDef.condition_rt`, wo es eine gibt (R5b: `ach_crit_3` 15 Krits,
-  `ach_weakness_5` 10 Schwächetreffer je Kampf; Text `desc_rt`), sonst `condition` (§4.4.9).
+- Achievements: seit R5b-2b gelten die Echtzeit-Schwellen als `condition`/`desc` (gebacken aus `condition_rt`/`desc_rt` von R5b-1:
+  `ach_crit_3` 15 Krits, `ach_weakness_5` 10 Schwächetreffer je Kampf, §4.4.9).
 - Unterhosen-Liga: die Stufe gilt wie bisher für Hype-/Follower-Faktoren; im Echtzeitkampf sind Liga-Mitglieder zusätzlich
   „leichtfüßig“ (07 E31; der Liga-Toast nennt es).
 
@@ -1624,7 +1642,6 @@ const SCENE_INTRO: String = "res://scenes/title/intro.tscn"
 const SCENE_GAME_OVER: String = "res://scenes/title/game_over.tscn"
 const SCENE_CREDITS: String = "res://scenes/title/credits.tscn"
 const SCENE_EXPLORATION: String = "res://scenes/exploration/exploration.tscn"
-const SCENE_BATTLE: String = "res://scenes/battle/battle.tscn"
 const SCENE_SAFE_ROOM: String = "res://scenes/safe_room/safe_room.tscn"
 const SCENE_FLOOR_SUMMARY: String = "res://scenes/ui/floor_summary.tscn"
 
@@ -1636,8 +1653,8 @@ func push(path: String, params: Dictionary = {}, transition: Transition = Transi
 func pop(payload: Dictionary = {}, transition: Transition = Transition.FADE) -> void
 func adopt(node: Node) -> void                      # _stack = [node], current = node (node already under root);
                                                     # used by capture.gd and TestCase.add_to_tree for screen scenes (§9.2)
-func start_battle(setup: BattleSetup) -> void       # push(SCENE_BATTLE, {"setup": setup}, SWIRL)
-func end_battle(result: BattleResult) -> void       # DEFEAT → game_over(&"defeat"); else pop({"battle_result": result}, FADE)
+# start_battle / end_battle and SCENE_BATTLE are gone since R5b part 2b (the combat runs in the exploration, 07 §2.8);
+# start_battle stays as a no-op shim until scenes/exploration loses its unreachable CTB branch (§0.7)
 func enter_safe_room(safe_room_id: String) -> void  # push(SCENE_SAFE_ROOM, {"safe_room_id": safe_room_id}, FADE)
 func exit_safe_room() -> void                       # pop({"from_safe_room": <id of the safe room>}, FADE)
 func game_over(reason: StringName) -> void          # Game.on_game_over(reason); goto(SCENE_GAME_OVER, {"reason": reason}, FADE)
@@ -1681,7 +1698,7 @@ Unbekannte ID → einmal `push_warning`, kein Absturz.
 
 Feste IDs — SFX: `ui_move, ui_confirm, ui_cancel, ui_error, step, swing, hit, hit_crit, hit_weak, miss, magic, fire, ice,
 shock, toxic, light, dark, heal, buff, debuff, ko, defend, flee, stunt_success, stunt_fail, level_up, chest_open, coin,
-lootbox_shake, lootbox_open, lootbox_rare, sponsor, achievement, timer_warn, stairs, swirl, door, mod_blip, chat_pop, vending,
+lootbox_shake, lootbox_open, lootbox_rare, sponsor, achievement, timer_warn, stairs, door, mod_blip, chat_pop, vending,
 bark` (`bark`: Graf Mopsulas Bellen, 06 §1.3 — zwei fallende Säge-Beller mit Rauschen).
 Musik: `title, explore, battle, boss, safe_room, victory, game_over, credits` (Loops 4–8 s, Loop-Regel oben).
 
@@ -1890,7 +1907,7 @@ Das GDD beschreibt Inhalte mit eigenen Spaltennamen. Verbindlich für `data/` is
 | GDD | Schema (dieses Dokument) |
 |---|---|
 | `name_key`, `desc_key` | `name`, `desc` (deutscher Text, `tr()`-fähig) |
-| Skill `owner` + `unlock_level` | `party.json → learnset[{level, skill}]` des Besitzers; Skill selbst `user: "party"` |
+| Skill `owner` + `unlock_level` | `party.json → rt.bar[{slot, skill, level}]` des Besitzers (bis R5b-2b `learnset[{level, skill}]`); Skill selbst `user: "party"` |
 | `mp` | `mp_cost` |
 | `status` / `status_chance` / `status_turns` | `statuses: [{id, chance, turns}]` |
 | `hype_tags` | `show_tags` |
@@ -2068,7 +2085,7 @@ Helfer: `ItemDef.sell_value()` (`sell`, −1 → `floori(price / 2)`) und `ItemD
 | `base_stats` | Dict<stat,int> | ✓ | alle 8 STATS, hp ≥ 1 |
 | `growth` | Dict<stat,float> | ✓ | alle 8 STATS, 0..50 pro Level |
 | `attack_skill` | String | ✓ | |
-| `learnset` | Array[{level:int, skill:String}] | `[]` | level 1..`Balance.LEVEL_CAP` |
+| `learnset` | Array[{level:int, skill:String}] | `[]` | level 1..`Balance.LEVEL_CAP` — seit R5b-2b in den Kampagnen-Daten leer (die Leiste ist `rt.bar`, 07 §5.1); optional für die Engine des Stempelduells |
 | `stunts` | Array[String] | `[]` | Skills mit `category: stunt` |
 | `equipment` | {weapon, armor, accessory} | alle `""` | Item-IDs passenden Typs |
 | `element_mods` | Dict<element,float> | `{}` | |
@@ -2306,8 +2323,9 @@ gilt der höchste vorhandene ≤ Etage. `pity: {"rare": 4, "epic": 8}` (Boxen oh
 | `followers` | int | −1 | −1 = nach Box-Tier (bronze 20 / silver 40 / gold 80, sonst 0) |
 | `hidden` | bool | false | |
 | `mod_tag` | String | `""` | `""` → `achievement:<id>` mit Fallback `achievement_generic` |
-| `condition_rt` | String | `""` | R5b (07 §9.4): Bedingung im Echtzeitkampf (gleiche Grammatik und Payload-Schlüssel); `""` = `condition` in beiden Modi |
-| `desc_rt` | String | `""` | R5b: Text im Echtzeitkampf; nur zusammen mit `condition_rt` |
+
+`condition_rt`/`desc_rt` (R5b-1: die Echtzeit-Schwellen neben den CTB-Werten) sind mit R5b-2b in `condition`/`desc` gebacken
+(07 §9.4: `ach_crit_3` 15 Krits, `ach_weakness_5` 10 Schwächetreffer); der Validator lehnt die Schlüssel als unbekannt ab.
 
 Bedingungs-Grammatik (`ConditionExpr`, §6.1; identisch für `scenes.condition`):
 ```
@@ -2392,7 +2410,7 @@ sonst niedrigsten HP-Anteil +value % MaxHP). Gewicht = `weight × Π mult` aller
 GDD-Key → Tag: alle Keys aus GDD §11.2 sind 1:1 Tags, außer `timer_warning_5` → `timer_warn_300`, `timer_warning_1` →
 `timer_warn_60`, `timer_zero` → `timer_expired`, `boss_intro_<boss>` → `boss_intro:<enemy_id>`, `boss_phase_<boss>_<n>` →
 `boss_phase:<enemy_id>:<n>`; die 10:00-Meldung ist `timer_warn_600` mit `voice: chat`. Fallback bei der Auswahl: `a:b:c` → `a:b` → `a`.
-Story-Beats (GDD §1.4, Konsument `Show`, §3.5): `tutorial_explore`, `tutorial_sneak` (B1), `tutorial_battle`, `tutorial_stunt` (B2),
+Story-Beats (GDD §1.4, Konsument `Show`, §3.5): `tutorial_explore`, `tutorial_sneak` (B1), `tutorial_battle` (B2; `tutorial_stunt` entfiel mit dem CTB-Kampf, R5b-2b),
 `story_battle:enc_f1_b2` (B4). Live-Zeilen 05 §6.12: `gift_received` (`{sender}`), `gift_received:anon`, `gift_received:credits`
 (`{amount}`), `gift_diminished` (`{pct}`), `gift_capped`, `gift_declined`, `fan_pack_received` (`{sender}`), `live_closing` (`{min}`,
 S2), `vote_open` (S2).
@@ -2588,8 +2606,8 @@ Jede Tabelle mit Kampfwerten trägt einen optionalen `rt`-Block für den Echtzei
 | `statuses` | `rt.ai_miss_pm` (0–1000, Standard 1000) | Faktor auf `AI_DODGE_MISS_PM` der Einheit (Leichtfüßig 750, 07 E31) |
 | `statuses` | `rt.flags` + `keep` | der Status übersteht ein K.O. (Leichtfüßig) |
 | `items` | `rt.mods` (Array) | RtMods eines angelegten Ausrüstungsstücks ohne `src`/`unit` (`RtMods.from_equipment`: `equip:<id>`, Einheit des Trägers); `dmg_taken_pm` optional mit `element` (nur Skill-Treffer dieses Elements; Samtcape: −10 % physisch) |
-| `achievements` | `condition_rt`, `desc_rt` | §4.4.9 |
-| `events` | `rules.combat.mode` (`realtime`/`ctb`) | Kampfmodus des Events, Teil von `rules_hash` (07 §10.7) |
+| `achievements` | `condition_rt`, `desc_rt` | §4.4.9 — seit R5b-2b in `condition`/`desc` gebacken (Schlüssel abgelehnt) |
+| `events` | `rules.combat.mode` | Kampfmodus des Events, Teil von `rules_hash` (07 §10.7); seit R5b-2b nur `realtime` |
 
 ### 4.5 Validierung (`DataValidator`) und `GameData`-API
 
@@ -2636,7 +2654,7 @@ Regeln (jede Verletzung = ein Eintrag in `errors`, Format `"<table>[<index>|<id>
     Nationalität/Volksgruppe als Pointe (`ORIGIN_WORDS`, kuratierte Liste, ganze Wörter; ohne mehrdeutige Alltagswörter wie
     „Amerikaner“ = Gebäck, „Franzose“ = Schraubenschlüssel). Dieselben Listen sperrt der Live-Filter (`mod_filter.json`,
     `blocked.ip_distance` / `blocked.origin` / `mopsula_royalty`; `test_06_ip_words` prüft die Abdeckung). Texte von, für oder über Graf
-    Mopsula — seine Stimme (`voice` `mopsula`), jede Szene, seine Skills (Angriff, `learnset`, `stunts`), Ausrüstung, die er
+    Mopsula — seine Stimme (`voice` `mopsula`), jede Szene, seine Skills (Angriff, `stunts`, `rt`-Leiste und Kontext), Ausrüstung, die er
     tragen kann, Klassen/Talente/Spezies für ihn, sein Party-Eintrag und jeder Text, der „Graf“, „Grafen“, „Mopsula“ oder
     „Mops“ nennt — ohne Königs-Motiv (`MOPSULA_WORDS`: Majestät, Durchlaucht, Hoheit, Thron, Krone). Die Rattenkönigin behält
     Titel, Thronsaal und Krone. Tests: `test_06_ip_words.gd`.
@@ -2756,6 +2774,15 @@ Golden Values (gemessen mit 4.7.2, Pflicht in `test_m0_seed_util.gd`): `mix(1, 2
 > **Stand R5b-2a (2026-10-12, 07 E33):** **Echtzeit ist der Standard neuer Spiele** (`GameSettings.DEFAULT_COMBAT_MODE`);
 > dieser Abschnitt gilt für den Rundenkampf alter Spielstände und für `--combat=ctb` (Entwicklung, QA, der CTB-Smoke und der
 > CTB-Full-Run der CI), bis SD1 die Engine in das Minispiel verschiebt (10 Kap. 6.2).
+>
+> **Stand R5b-2b (2026-10-12, 10 SD1):** Die Kampagne kämpft nur noch in Echtzeit (07 §3). **Dieser Abschnitt beschreibt
+> die Engine des Stempelduells:** `CTBQueue`, `BattleState`, `ActionResolver`, `EnemyAI`, `AutoPolicy` liegen in
+> `core/stempel/ctb/` (Klassennamen und Verhalten unverändert, §0.7); `BattleCommand`, `Combatant`, `StatusEffect`,
+> `ActionEvent`, `DamageCalc`, `BattleSetup`, `BattleResult` (mit `roll_drops`) bleiben geteilt in `core/battle/`. Was hier
+> die Kampagne anbindet — §5.7 (`BattleController` der gelöschten Kampfszene), `Game.auto_battle`, `BattleBridge.make_setup`,
+> die CTB-Felder der Kampagnen-Daten — ist entfallen; das Stempelduell baut seine Engine-Daten aus dem eigenen Regelbuch
+> (10 §6.4) und treibt die Engine über `SdDuel` (10 §6.5). Eingefroren durch `test_sd_engine_golden`, abgegrenzt durch
+> `test_sd_boundaries` (10 §6.9).
 
 Alle Klassen `extends RefCounted`, keine Autoloads, keine Nodes, kein `await`. Jede Zufallsentscheidung nutzt RNGs, die aus
 `BattleSetup.seed` abgeleitet sind → gleicher Seed + gleiche Befehle = identische Events (Brief §6b.1). Zahlen und Regeln
@@ -3183,12 +3210,16 @@ Regeln (GDD §3):
 - **Sieg**, wenn kein echter Gegner mehr lebt (getötet oder geflohen): Drops je getötetem, nicht beschworenem Gegner
   `chance × (1 + Ø LCK / 100)` mit Ø über **alle** Party-Mitglieder (auch KO, GDD §3.12) in Basispunkten:
   `bp = bp(chance) × (100·n + ΣLCK) // (100·n)`, `FixedMath.roll_bp` (ein `randi_range(0, 9999)` je Eintrag, kein Zug bei 0 % / ≥ 100 %;
-  `BattleState.roll_drops` — die einzige Implementierung, 05 CR-12); `boss_drops` immer; EXP/Credits summiert (Overkill: Credits
+  `BattleResult.roll_drops` — die einzige Implementierung beider Kampfarten, 05 CR-12, seit R5b-2b in `BattleResult`); `boss_drops` immer; EXP/Credits summiert (Overkill: Credits
   dieses Gegners × 1.25, Differenz in `overkill_credits`), `exp × exp_mult`.
 - `apply_gift(g)`: `kind: "sponsor_buff"` → `SPONSOR_GIFT` + Effekte aus `SponsorDef.gift` (§4.4.10, RNG `"gift"`); `gold` →
   `CREDITS_GAINED`; `chest`/`fan_pack` → `ITEM_GAINED`/`CREDITS_GAINED` je Inhalt. Ändert sich die Reihenfolge (Status), folgt `CTB_ORDER`.
 
 ### 5.7 Darstellungs-Protokoll (M5 treibt den Kern)
+
+> **Stand R5b-2b:** Die Kampfszene (`scenes/battle/**`) ist gelöscht — der Ablauf unten ist der Verlauf des CTB-Kampfes
+> der Kampagne. Das Command-Pattern (synchroner Kern, Event-Liste) gilt weiter für die Engine; das Stempelduell treibt sie
+> über `SdDuel` und zeigt sie auf seinem Kartentisch (10 §4, §6.5).
 
 Command-Pattern: Der Kern rechnet **synchron** und gibt eine Event-Liste zurück; die Szene spielt sie ab.
 
@@ -3436,7 +3467,8 @@ static func view(state, data, rules) -> Dictionary                           # S
 class_name MarottenTracker extends RefCounted  # 06-C: tally of ONE battle (volatile, like ShowRules)
 var liga_tier: int; var tutorial: bool; var gifts: int
 func begin(setup: BattleSetup, p_liga_tier: int) -> void
-func on_battle_event(e: ActionEvent) -> void   # defends, flee attempts, distinct party actions, stunts, last kill member
+func on_battle_event(e: ActionEvent) -> void   # the real-time stream (R5b part 2b): the person's distinct skill / item
+	# ids, own SHOW successes, the member behind the last enemy KO (defends do not exist; flee attempts: BattleResult)
 func tally() -> Dictionary
 
 class_name ShowModel extends RefCounted
@@ -3468,7 +3500,7 @@ var stats: Dictionary = {}                   # StatIds → increment
 var reasons: Array[StringName] = []          # &"crit", &"weakness", &"overkill", &"kill_streak", &"low_hp", … → M.O.D./chat tags
 var triggers: Array[Dictionary] = []         # [{"trigger": "enemy_killed", "payload": {...}}, …] (§6.3)
 
-class_name ShowRules extends RefCounted
+class_name ShowRules extends RefCounted       # R5b part 2b: one profile, the real-time one (07 §9.1, E32)
 func _init(p_data: GameData, p_setup: BattleSetup) -> void   # self-contained: needs only ActionEvent fields + setup
 func start_delta() -> ShowDelta                              # battle start hype (§6.2)
 func feed(e: ActionEvent) -> ShowDelta
@@ -3544,7 +3576,7 @@ var exp: int = 0                       # progress toward next level (0 at LEVEL_
 var hp: int
 var mp: int
 var equipment: Dictionary = {"weapon": "", "armor": "", "accessory": ""}
-var skills: PackedStringArray = []     # learned (learnset up to level)
+var skills: PackedStringArray = []     # learned (learnset up to level; R5b part 2b: the campaign data have none → empty)
 var class_id: String = ""
 var talents: Dictionary = {}           # 06-B: talent id → rank (1..max_rank); open choices are derived (§6.5)
 var species_id: String = ""            # 06-B: "" = original; set by the casting (floor 3)
@@ -3713,14 +3745,10 @@ var revived: PackedStringArray = []
 var achievements: PackedStringArray = []
 
 class_name BattleBridge extends RefCounted
-static func make_setup(state: GameState, data: GameData, encounter_id: String, advantage: int, group_id: String, seed: int,
-		rules: Dictionary = {}) -> BattleSetup
-	# party combatants via Progression.to_combatant(…, MarottenRules.in_liga(state, id, tier)) with tier = 0 in the
-	# tutorial, else MarottenRules.liga_tier(state, rules) — rules = the run's rules (Game.event_rules / RunSim.rules), the
-	# same tier Show freezes in begin_battle (06 B × C); items = inventory.battle_items; credits_available = inventory.credits;
-	# encounter: is_boss, can_flee, tutorial; bosses force NORMAL; enemy_dmg_mult = (vorabend 0.75) × (tutorial 0.5);
-	# exp_mult (vorabend 1.2); show_mods = state.hype_gain_mult/follower_mult; floor palette/theme;
-	# is_boss and flags["mop_pep_talk"] → both party combatants start with sts_guard 2, flag erased (GDD §10.2)
+# make_setup (the CTB BattleSetup of an encounter) is gone since R5b part 2b; the real-time setup is make_rt_setup /
+# make_rt_setup_rules (07 §10.6): party units via Progression.to_combatant with the Liga tier Show freezes in
+# begin_battle (06 B × C), encounter flags, Vorabend factors, the bar (rt.bar + loadout variants), mods; the pep talk
+# (flags["mop_pep_talk"]): the party starts a boss combat with sts_guard for its rt.default_ms, flag erased (GDD §10.2)
 static func apply_result(state: GameState, data: GameData, result: BattleResult) -> BattleRewards
 	# in this order (private steps _writeback … _bestiary_and_kills): (1) hp/mp writeback, KO'd members stay at 0 HP;
 	# (2) item_delta → inventory, credits_delta; (3) result.credits_stolen (what the thieves kept — also on a VICTORY when
@@ -3754,9 +3782,15 @@ static func last_errors() -> PackedStringArray
 
 ### 6.2 Show-Zahlen (verbindlich, GDD §7; Konstanten in `show_model.gd` / `show_rules.gd` / `sponsor_system.gd`)
 
-Stand Balancing 2026-10 (GDD §13: Ursachen, Messung vorher/nachher, Bänder in `tests/test_m7_show_balance.gd`).
+Stand Balancing 2026-10 (GDD §13: Ursachen, Messung vorher/nachher).
 
-Hype-Ereignisse im Kampf (`ShowRules`, nur Party-Aktionen außer markiert; positive Werte × `hype_gain_mult` in `Show.add_hype`):
+> **Stand R5b-2b:** Die Kampf-Tabelle unten ist das CTB-Profil von `ShowRules` — es ist mit dem CTB-Kampf der Kampagne
+> entfallen (bleibt als Herkunft der Werte stehen). Jeder Kampf spielt das Profil `rt`: Hype-Ereignisse 07 §9.1,
+> Geschenk-Taktung und Sponsoren-Pause E32, Follower × `RT_FOLLOWER_PM`, Zeilen-Takt 07 §9.3; die Show-Bänder prüfen
+> die Full-Runs (07 §12.6 Nr. 3). Erkundung, Schwellen, Zuschauer und Follower-Formel unten gelten unverändert.
+
+Hype-Ereignisse im Kampf (CTB-Profil, bis R5b-2b; `ShowRules`, nur Party-Aktionen außer markiert; positive Werte ×
+`hype_gain_mult` in `Show.add_hype`):
 
 | Ereignis (ActionEvent) | Δ Hype | Stats / Trigger |
 |---|---|---|
@@ -3857,15 +3891,15 @@ Trigger-Payloads (`e.`-Schlüssel; der Validator prüft Bedingungen dagegen):
 | `floor_completed` | `floor`, `timer_left` (Sekunden, int) |
 | `show_bet` (06-C) | `kind` (`liga`/`marotte`), `event` (`battle`/`floor`/`won`), `id`, `tier`, `floor_tier`, `battles`, `is_boss`, `is_floor_boss`, `boss_id`, `party_kos`, `floor` — nur Kampagne (Event-Läufe feuern ihn nicht) |
 
-### 6.4 Save-Format (Version 1)
+### 6.4 Save-Format (Version 2)
 
 Datei `user://saves/slot_<1..3>.json` (bei `use_custom_user_dir` unter `…/PrimeTimeDungeon/saves/`), UTF-8, `JSON.stringify(d, "\t")`.
 
 ```json
 {
   "format": "ptd_save",
-  "version": 1,
-  "game_version": "0.1.0",
+  "version": 2,
+  "game_version": "0.3.0",
   "saved_at_unix": 1760000000,
   "summary": {"player_name": "Kai", "floor_index": 1, "level": 3, "play_time_sec": 812, "followers": 420, "location": "sr_kiosk"},
   "state": {
@@ -3878,10 +3912,12 @@ Datei `user://saves/slot_<1..3>.json` (bei `use_custom_user_dir` unter `…/Prim
     "pity_rare": 2,
     "pity_epic": 5,
     "party": [
-      {"id": "kai", "display_name": "Kai", "level": 3, "exp": 12, "hp": 82, "mp": 16,
-       "equipment": {"weapon": "itm_wpn_mop", "armor": "itm_arm_hoodie", "accessory": ""}, "skills": ["skl_kai_heavy_swing", "skl_kai_taunt", "skl_kai_sweep"], "class_id": ""},
-      {"id": "mopsula", "display_name": "Mopsula", "level": 3, "exp": 30, "hp": 54, "mp": 38,
-       "equipment": {"weapon": "itm_wpn_collar_leather", "armor": "itm_arm_pug_sweater", "accessory": ""}, "skills": ["skl_mop_noble_flame", "skl_mop_holy_lick"], "class_id": ""}
+      {"id": "kai", "display_name": "Kai", "level": 3, "exp": 12, "hp": 328, "mp": 16,
+       "equipment": {"weapon": "itm_wpn_mop", "armor": "itm_arm_hoodie", "accessory": ""}, "skills": [], "class_id": "",
+       "rt_loadout": {}, "rt_preset": "", "rt_toggles": {}},
+      {"id": "mopsula", "display_name": "Mopsula", "level": 3, "exp": 30, "hp": 216, "mp": 38,
+       "equipment": {"weapon": "itm_wpn_collar_leather", "armor": "itm_arm_pug_sweater", "accessory": ""}, "skills": [], "class_id": "",
+       "rt_loadout": {"3": "skl_mop_expert_opinion"}, "rt_preset": "careful", "rt_toggles": {}}
     ],
     "inventory": {"credits": 140, "counts": {"itm_bandage": 3}},
     "pending_lootboxes": ["box_bronze"],
@@ -3915,14 +3951,15 @@ Nach dem Laden: Etage nicht spielbar (`playable == false`) → `Router.goto(SCEN
 `Router.goto(SCENE_EXPLORATION, {"spawn": state.floor_run.location})`; bei einer Safe-Room-ID ruft die Erkundung nach Aufbau
 `Router.enter_safe_room(id)` auf.
 
-**Echtzeitkampf (07, Stand R5b-1) — additive Felder in Version 1:** `state.combat_mode` (`"realtime"`; ein CTB-Spielstand hat den
-Schlüssel nicht), je Party-Mitglied `hp_scale_pm` (Echtzeit: `HP_SCALE_PM` 4000, die letzte Stufe von
-`Progression.total_stats`), `rt_loadout` ({Slot: Varianten-Id}), `rt_preset`, `rt_toggles`; `flags.rt_hints` (gezeigte
-Hinweiskarten). Ein Spielstand enthält nie eine laufende `RtSim` (Speichern nur im Safe Room).
+**Echtzeitkampf (07):** je Party-Mitglied `rt_loadout` ({Slot: Varianten-Id}), `rt_preset`, `rt_toggles`; `flags.rt_hints`
+(gezeigte Hinweiskarten). Ein Spielstand enthält nie eine laufende `RtSim` (Speichern nur im Safe Room). `skills` (die
+gelernten Fähigkeiten des CTB-Kampfes) bleibt als Feld, wird seit R5b-2b für neue Spiele aber nicht mehr gefüllt (die
+Kampagnen-Daten haben kein `learnset`; die Leiste kommt aus `party.json` `rt.bar`, 07 §5.1).
 
-**Version 2 (Entwurf R5b-1, Umsetzung R5b Teil 2 mit dem Daten-Backen, 07 §12.6 Schritt 2):** `SaveCodec.VERSION = 2`; die
-Echtzeit-HP stehen dann direkt in den Daten (Basis-HP und HP-Wachstum × 4), `hp_scale_pm` und `combat_mode` entfallen.
-Migration beim Laden einer Version-1-Datei (`SaveCodec._migrate_v1`, rein, vor `_sanitize_*`):
+**Version 2 (R5b-2b, 07 §12.6 Schritt 2):** `SaveCodec.VERSION = 2`; die Echtzeit-HP stehen direkt in den Daten (Basis-HP und
+HP-Wachstum × 4), `hp_scale_pm` und `combat_mode` (Version 1, Stand R5b-1: `"realtime"` für Echtzeit-Stände, fehlend für
+CTB-Stände) entfallen. Migration beim Laden einer Version-1-Datei (`SaveCodec.migrate` → `_migrate_v1_to_v2`, rein, vor
+`_sanitize_*`; Faktor `V1_CTB_HP_FACTOR` = 4):
 
 | v1-Fall | `party[].hp` | `party[].mp` | entfernt |
 |---|---|---|---|
@@ -3930,15 +3967,18 @@ Migration beim Laden einer Version-1-Datei (`SaveCodec._migrate_v1`, rein, vor `
 | Echtzeit (`combat_mode = "realtime"`, `hp_scale_pm` 4000) | unverändert (lag schon in Echtzeit-Einheiten vor) | unverändert | `combat_mode`, `hp_scale_pm` |
 
 Alles andere bleibt (06-Felder `talents`, `species_id`, `casting`, `hero`, Marotten, `rt_loadout`/`rt_preset`/`rt_toggles`,
-`flags.rt_hints`, Inventar, Bestiarium, Etagenlauf). Nach der Migration ist der Spielstand ein normaler v2-Stand; der
-Run-Log-Anker (`from_save`) wird beim Laden wie immer aus dem geladenen Zustand gebildet. Alte Replays (anderer `data_hash`,
-höhere `SIM_VERSION`) melden „ältere Version“, nie eine Abweichung. Tests (Teil 2): je eine v1-Datei CTB und Echtzeit als
-Fixture → laden → HP-Regel, alle 06-Felder, Speichern/Laden-Rundreise mit gleichem `StateHash`; eine v2-Datei in einer v1-Version
-wird wie bisher verweigert.
+`flags.rt_hints`, Inventar, Bestiarium, Etagenlauf). Nach der Migration ist der Spielstand ein normaler v2-Stand und spielt in
+Echtzeit (einen Kampfmodus gibt es nicht mehr); der Run-Log-Anker (`from_save`) wird beim Laden wie immer aus dem geladenen
+Zustand gebildet, `Save.record_game_over` schreibt einen v1-Slot migriert zurück (die HP werden genau einmal umgerechnet).
+Alte Replays (anderer `data_hash`, ältere `SIM_VERSION`) melden „ältere Version“, nie eine Abweichung. Tests
+(`test_r5b_save_v2`): echte v1-Dateien von Kernel `2246c31` (`tests/fixtures/saves/save_v1_ctb.json` mit Graf Mopsula als
+Held, `save_v1_realtime.json` mit Kai, beide Stufe 5 im Kiosk) → laden → HP-Regel (Deckel, K.O.), alle 06-/08-Felder,
+Speichern/Laden-Rundreise mit gleichem `StateHash`, Laden nach einem Game Over, eine neuere Datei wird verweigert.
 
 **Kopplung mit dem CTB-Minispiel (Entscheidung 2026-10-11, `10_MINISPIEL_STEMPELDUELL.md` Kap. 6.2):** Das „Stempelduell“
-behält die CTB-Engine, liest aber eigene Regelbuch-Daten (`data/stempel/`). Die Kampagnendaten werden wie geplant gebacken und
-verlieren ihre CTB-Werte; die CTB-Felder der Defs bleiben (im Validator optional) und sind danach nur noch im Regelbuch belegt.
+behält die CTB-Engine, liest aber eigene Regelbuch-Daten (`data/stempel/`). Die Kampagnendaten sind gebacken und haben
+ihre CTB-Werte verloren (R5b-2b); die CTB-Felder der Defs bleiben (im Validator optional) und werden nur noch vom Regelbuch
+belegt. Duell-Stände speichert das Stempelduell getrennt (10 §6.7).
 
 ### 6.5 Talente und Casting (06-B; `core/progression/talents.gd`, `casting.gd`)
 
@@ -4391,7 +4431,9 @@ func get_player_cell() -> Vector2i
 Events (abgeschlossene ohne Prompt), Spieler, Begleiter, Kamera, `ExplorationHud` instanziieren und `bind_layout()`; beim ersten
 Betreten der Etage `Events.floor_entered`; `Events.overlay_mode_requested(&"explore")`; `Sfx.music(&"explore")`;
 `Game.timer_running = true` (der Countdown tickt erst, wenn `floor_run.timer_started`). Hört auf `Events.stray_spawn_requested`.
-Encounter: `Events.encounter_triggered` → `Router.start_battle(Game.make_battle_setup(encounter_id, advantage, group_id))`.
+Encounter: `Events.encounter_triggered` → der Echtzeitkampf startet in der Erkundung (`Game.make_rt_setup` mit dem
+`rt`-Block der Begegnung, `CombatDirector`, 07 §2, §10.6); bis R5b-2a startete ein CTB-Lauf hier
+`Router.start_battle(Game.make_battle_setup(…))` (entfallen, §0.7).
 Ein Encounter startet nur aus dem eingeschwungenen aktiven Screen (im Baum, nicht suspendiert, `Router.current == self`,
 `not Router.busy`): läuft ein Übergang (z. B. das Ausblenden zu Game Over / Titel / Etagenbilanz), wird kein Kampf auf den
 nächsten Screen gestapelt — Kontakte versuchen es im nächsten Frame erneut, ein Feldschlag-Hitstop entscheidet nach dem Übergang
@@ -4527,7 +4569,6 @@ static func tri_count(mesh: Mesh) -> int
 | `glow.gdshader` | spatial, `unshaded` | `color: vec4`, `energy: float = 2.0`, `pulse_speed: float = 0.0` |
 | `vfx_additive.gdshader` | spatial, `unshaded, blend_add, cull_disabled, depth_draw_never` | `color: vec4`, `softness: float = 0.5` |
 | `hologram.gdshader` | spatial, `unshaded, blend_add` | `color: vec4 = NOVA_CYAN`, `scan_speed: float = 1.5`, `alpha: float = 0.6` |
-| `ui_swirl.gdshader` | canvas_item | `progress: float = 0` (0..1), `snapshot: sampler2D`, `tint: vec4 = INK`, `aspect: float = 1.7778` (Router setzt `size.x / size.y`) |
 | `ui_tv_overlay.gdshader` | canvas_item | `scanline_alpha: float = 0.08`, `vignette: float = 0.35`, `aberration: float = 0.6` |
 
 Instance-Uniforms setzen nur über `GeometryInstance3D.set_instance_shader_parameter()` (via `CharacterRig`-Methoden), nie Material duplizieren.
@@ -4681,8 +4722,7 @@ flowchart LR
   Boot --> Title
   Title -->|Neues Spiel| SlotSelect --> HeroSelect --> NameEntry --> Intro --> Exploration
   Title -->|Laden| SlotSelect2[SlotSelect] --> Exploration
-  Exploration -->|push SWIRL| Battle -->|pop FADE| Exploration
-  Battle -->|DEFEAT goto| GameOver
+  Exploration -->|Kampf in der Welt, DEFEAT goto| GameOver
   Exploration -->|push FADE| SafeRoom -->|pop FADE| Exploration
   Exploration -->|Treppe: complete_floor goto| FloorSummary
   FloorSummary -->|nächste Etage spielbar| Exploration
@@ -4709,8 +4749,9 @@ Abläufe:
 
 Null-Guards (Pflicht): `-s`-Läufe (Tests, Capture) haben **keine** Boot-Szene; `get_tree().current_scene` ist `null` und `_stack`
 ist leer, Test-/Capture-Szenen hängen direkt an `root`. `goto`/`push`/`pop` behandeln `null`/leeren Stack ohne Fehler; `capture.gd`
-und `TestCase.add_to_tree()` rufen für Screen-Szenen (`ExplorationScene`, `BattleScene`, `SafeRoomScene`, `TitleScreen`)
-`Router.adopt(node)` auf, damit `start_battle`/`enter_safe_room` aus diesen Szenen sauber pushen.
+und `TestCase.add_to_tree()` rufen für Screen-Szenen (`ExplorationScene`, `SafeRoomScene`, `TitleScreen`)
+`Router.adopt(node)` auf, damit `enter_safe_room` aus diesen Szenen sauber pusht (die CTB-Kampfszene und
+`start_battle` sind seit R5b-2b entfallen: gekämpft wird in der Erkundung, 07 §2.8).
 
 Screen-Vertrag (Duck-Typing, alle optional): `setup(params: Dictionary) -> void` wird **vor** `add_child` aufgerufen und **speichert
 nur** `_params = params` (dort sind `@onready`-Variablen und `get_tree()` noch `null`); die Arbeit passiert in `_ready()` bzw.
@@ -4719,16 +4760,16 @@ nur** `_params = params` (dort sind `@onready`-Variablen und `get_tree()` noch `
 
 ### 9.3 Übergänge
 
-Router besitzt `CanvasLayer` (layer 100) mit `ColorRect` (Mausfilter STOP während `busy`) und `TextureRect` (Swirl).
+Router besitzt `CanvasLayer` (layer 100) mit `ColorRect` (Mausfilter STOP während `busy`).
 Tweens auf Router (`PROCESS_MODE_ALWAYS`, Tween `set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)`).
 
 | Transition | aus | ein |
 |---|---|---|
 | `NONE` | 0 s | 0 s |
 | `FADE` | 0.25 s nach `Palette.INK` | 0.25 s |
-| `SWIRL` | Snapshot `get_viewport().get_texture().get_image()` → `ui_swirl.gdshader` (`snapshot` = Textur, `aspect = size.x / size.y` des TextureRect) `progress` 0→1 in 0.7 s (`TRANS_CUBIC`, `EASE_IN`) + `Sfx.play(&"swirl")` | 0.3 s Fade |
 
-Headless (`DisplayServer.get_name() == "headless"`) → **kein Snapshot** (liefert dort `null` + Engine-Fehler, geprüft), SWIRL wird zu FADE.
+Der Kampf-Übergang `SWIRL` (Snapshot + `ui_swirl.gdshader` + `Sfx` `swirl`) ist mit der CTB-Kampfszene entfallen (R5b-2b): der
+Echtzeitkampf beginnt ohne Szenenwechsel mit Kamerafahrt und Banner (07 §8.8).
 
 ### 9.4 CanvasLayer-Ordnung
 
@@ -4736,7 +4777,7 @@ Headless (`DisplayServer.get_name() == "headless"`) → **kein Snapshot** (liefe
 |---|---|---|
 | 3 | GlobalUi: TwistFx-Kind `LightsOut` (Stromausfall-Schleier nur in `explore`: über der 3D-Welt, unter Schadenszahlen und HUD — jede HUD-Schrift bleibt lesbar) | 06-D, Polish-Pass |
 | 4 | Schadenszahl-Zwillinge (`DamageNumberLayer`, §8.6) | M4 |
-| 5 | ExplorationHud / BattleHud | M6 / M5 |
+| 5 | ExplorationHud / Kampf-HUD (07 §8) | M6 / R3 |
 | 20 | TouchControls | M6 |
 | 40 | GlobalUi: ShowOverlay | M6 |
 | 41 | GlobalUi: TwistFx (Twist-Chip unter dem Timer in den Modi `MODES_CHIP`; Konfetti nur in `explore`; der Stromausfall-Schleier liegt auf Layer 3) | 06-D |
@@ -4785,12 +4826,8 @@ func request_new_game(slot: int, player_name: String, skip_intro: bool, seed: in
 	# canon Kai; "Sendung starten" → TitleFlow.start_new_game(…, profile)); back → hero_select. name_entry stays as a
 	# fallback outside the flow. The intro ends with the M.O.D. line hero_pick:<hero>, then the candidate's lower third.
 
-class_name BattleScene extends Node3D             # M5
-func setup(params: Dictionary) -> void            # {"setup": BattleSetup}; missing → Game.ensure_state(&"ctb") + debug setup
-	# with first non-boss encounter of the current floor (seed 1) or {"encounter": "<enc id>"} (boss stills),
-	# {"capture": true} → stop at first command menu. BattleHud reserves the bottom corners of the M.O.D. box
-	# (Events.dialog_reserve_requested(&"battle", command menu / target panel + 12, party panels + 12)); its sub menus
-	# end above the box incl. speaker tab (keys 178 px, touch 206 px above the safe frame's bottom)
+# BattleScene (M5, the CTB battle screen) is gone since R5b part 2b (07 §12.6); the combat runs in the exploration
+# (CombatDirector, scenes/combat/, 07 §8).
 
 class_name SafeRoomScene extends Node3D           # M6
 func setup(params: Dictionary) -> void            # stores params only: {"safe_room_id": String}; missing → first safe room of the floor
@@ -4880,7 +4917,9 @@ func occupied_rects() -> Array[Rect2]    # what the persistent UI covers now (hy
 - Menü-Logik für `ui_cancel`/`pause`/`tab_*` ebenfalls in `_unhandled_input` (nie `_input`), damit fokussierte `LineEdit`s Tasten zuerst bekommen.
 - Kontextabhängige Doppelbelegungen (Q/E, Tab, Esc, Back) sind gewollt; jeder Kontext wertet nur seine Actions aus.
 - Erkundung: `action` = Interagieren, wenn `ExplorationHud` einen Prompt zeigt (Interactable im Radius 1.5 m / 120°), sonst Feldschlag;
-  `sneak` gehalten = Schleichen. Kampf: `toggle_speed` schaltet `battle_speed` 1.0 ↔ 2.0 (auch Speed-Button „»“ im HUD), `toggle_auto`.
+  `sneak` gehalten = Schleichen. Kampf: Echtzeit-Belegung 07 §7.7 (`toggle_auto` = Autopilot). `toggle_speed` (R / R3)
+  schaltete bis R5b-2b `battle_speed` des CTB-Kampfes; die Kampagne nutzt es nicht mehr, das Stempelduell übernimmt es für sein
+  Tempo × 1 / × 2 (10 §4.6).
 - Echtzeit-Erkundung, Pull einer Person (07 §2.2, E34–E36): Tab / Shift+Tab bzw. Linksklick wählen den Anführer einer Gruppe
   als Ziel (freier Boden löscht), `bar_1` … `bar_5` eröffnen mit dem Slot; am Pad RT (Ziel), A (Slot 1, nur in dessen
   Reichweite, sonst Feldschlag), X / Y (Slot 2 / 3), B (Ziel löschen). Der Prompt hat Vorrang vor dem Pull. Kein Pull in
@@ -4918,8 +4957,8 @@ func occupied_rects() -> Array[Rect2]    # what the persistent UI covers now (hy
 - `emulate_mouse_from_touch = true` (Buttons reagieren auf Touch); keine Maus-Taste ist an Gameplay-Actions gebunden,
   daher keine Fehlauslösung durch emulierte Klicks (der Linksklick des Pulls in der Erkundung wertet nur echte Mausereignisse
   aus, `device != InputEvent.DEVICE_ID_EMULATION`).
-- Kampf & Menüs: reine Button-UI (Kampfbefehle 2 Spalten × 3 Zeilen, je 200 × 64 px sichtbar / 88 px Treffer); Gegner direkt antippen
-  wählt das Ziel (Trefferfläche ≥ 107 px um den Gegner), erneut antippen oder „OK“ führt aus. CTB-Leiste zeigt bei TOUCH 10 Einträge.
+- Menüs: reine Button-UI (88 px Treffer). Kampf: die Touch-Belegung des Echtzeitkampfs (07 §7.3: Daumengruppe, Leiste,
+  Antippen = Ziel); die Kampfbefehl-Knöpfe und die CTB-Leiste der CTB-Kampfszene sind mit R5b-2b entfallen.
 
 ### 10.4 Safe Area und Seitenverhältnis
 
@@ -5072,7 +5111,7 @@ _initialize():
     --touch (vor dem Szenenaufbau: Game.settings.touch_controls = &"on", Game.set_input_scheme(TOUCH) — Handy-Layout),
     --recipe=<name> (benannter Zustand aus tests/capture_recipes.gd, s. u.),
     --look=<n | JSON> (Casting K2: vor dem Szenenaufbau ein neues Spiel, Seed 1, mit einer Persona im Look LOOKS[n] der
-    Look-Galerie bzw. {kind: lk-ID}; battle.tscn bekommt dann sein Setup aus Game.make_battle_setup)
+    Look-Galerie bzw. {kind: lk-ID})
   fehlend → printerr("Assertion failed: capture: missing --scene/--out"); quit(1)
   DisplayServer.get_name() == "headless" → printerr("Assertion failed: capture: needs a display (run via check.sh --shot / xvfb)");
     quit(2)   # der Dummy-Renderer sendet nie frame_post_draw → ohne diese Prüfung hängt der Prozess (gemessen)
@@ -5102,18 +5141,17 @@ offene M.O.D.-Zeilen, damit die Box nicht über Kai, Prompt und Marker liegt.
 | Szene | Rezepte |
 |---|---|
 | `exploration.tscn` | `explore_platform` / `explore_sewer` / `explore_cellar` (Gruppe der Zone 6 m vor Kai), `prompt_<zone>` (Kai vor einer Truhe: Prompt + Marker), `bigmap`, `pause_party` / `pause_inventory` / `pause_equipment` / `pause_skills` / `pause_show` (06-C) / `pause_settings`, `talents_party` (06-B: Party-Seite mit Talenten und offener Wahl); 06-A: `hero_mopsula_<zone>` (Graf Mopsula führt, Kai folgt), `bark_<zone>` (Graf bellt die Gruppe der Zone an: Kegel, Ringe, „?!“), `twist_lights` / `twist_confetti` / `twist_live` (06-D: QA-Twist + Chip, Stromausfall-Schleier/Konfetti bzw. Live-Zeile „KI live“; wenige `frames`, z. B. 3); Polish-Pass: `doorway_approach` / `doorway_through` / `doorway_mopapproach` / `doorway_mopthrough` (Kamera vor bzw. knapp hinter einer offenen Tür, Kai oder Graf Mopsula führt) |
-| `battle.tscn` | `battle_menu`, `battle_skills`, `battle_target`, `battle_damage`, `battle_enemy_turn`, `boss_intro` (mit `--params={"encounter": "<boss enc>", "capture": false, "speed": 1.0}`), `boss_phase`, `battle_gift`, `battle_victory` / `battle_results` / `battle_results_show` (06-C: gewonnene Show-Wette im Ergebnis; mit `--params={"capture_turns": 99, "encounter": "enc_f1_a2"}` — der Tutorial-Kampf, die erste Begegnung der Etage, zählt nie für M.O.D.s Vorlieben), `battle_partner_auto` (06-A: „Partner automatisch“ an, Pillen „DU“/„AUTO“) |
+| `exploration.tscn` (07, Echtzeitkampf; die CTB-Rezepte `battle_*`, `boss_intro`, `boss_phase` sind mit `battle.tscn` entfallen, R5b-2b) | Welt-Fixture (R2): `rt_world_regular`, `rt_world_two_groups`, `rt_world_boss`, `rt_world_boss_intro`, `rt_world_flee`; Kampf-HUD (R3): `rt_tutorial`, `rt_regular`, `rt_boss`, `rt_hint`, `rt_results`, `rt_credits` (je mit Varianten, `capture_recipes.gd`); echte Daten (R4/R5b): `rt_r4_regular`, `rt_r4_showboss`, `rt_r4_hausmeister`, `rt_r4_queen`, `rt_r4_results`; Pull (E34–E37): `pull_target_<zone>`, `pull_bark_<zone>`, `pull_far_<zone>` |
 | `safe_room.tscn` | `safe_vending`, `safe_equipment`, `safe_lootbox`, `safe_lootbox_open`, `safe_mopsula`, `safe_talents_menu` / `safe_talent_show` (06-B: TALENT-SHOW-Knopf / Talent-Show), `safe_hero_switch` (06-A: nach „Figur wechseln“), `safe_hero_talents` (06 A × B: offene Talentwahl + „Figur wechseln“ — TALENT-SHOW oben rechts neben dem M.O.D.-Kasten unten rechts), `safe_happy` (06-D: Automat mit Happy Hour) |
 | `exploration.tscn` (06-A, E1-Geheimnisse) | `secret_wall` (Kai vor der Kulissenwand), `secret_open` (der Graf bellt sie um, mitten im Fall), `secret_note` (Kai vor Regie-Notiz 1: Prompt + Marker) |
 
-Beispiel (Handy-Format, Touch an): `tools/check.sh --shot res://scenes/battle/battle.tscn /tmp/b.png 5 2400x1080 --touch --recipe=battle_skills`.
+Beispiel (Handy-Format, Touch an): `tools/check.sh --shot res://scenes/exploration/exploration.tscn /tmp/b.png 30 2400x1080 --touch --recipe=rt_r4_regular`.
 `test_m6_visual_pass` prüft, dass alle Rezepte existieren.
 
 ### 11.4 `--autoplay` (Boot + `scenes/boot/autoplay.gd`, M6)
 
-`check.sh` startet `godot --headless --path <tmp> --quit-after 1300 -- --autoplay` (das neue Spiel kämpft in Echtzeit, der Standard
-seit 07 E33; Schritte `RT_STEPS` unten) und danach den CTB-Smoke `--quit-after 900 -- --autoplay --combat=ctb` (Schritte dieser
-Tabelle; bis SD1). Die `--quit-after`-Werte sind reine Sicherheitsnetze; normal beendet Autoplay selbst mit `quit(0)`/`quit(1)`. `run_smoke` in `check.sh` **muss** den Exit-Code prüfen (`code=${PIPESTATUS[0]}`, ≠ 0 → Fehler)
+`check.sh` startet `godot --headless --path <tmp> --quit-after 1300 -- --autoplay` (das neue Spiel kämpft in Echtzeit — seit
+R5b-2b der einzige Kampf der Kampagne; den CTB-Smoke gibt es nicht mehr). Die `--quit-after`-Werte sind reine Sicherheitsnetze; normal beendet Autoplay selbst mit `quit(0)`/`quit(1)`. `run_smoke` in `check.sh` **muss** den Exit-Code prüfen (`code=${PIPESTATUS[0]}`, ≠ 0 → Fehler)
 und verlangt die Zeile `AUTOPLAY: OK` (Regex `AUTOPLAY: OK`; der Phase-A-Skip `AUTOPLAY: SKIPPED (stub)` ist entfernt — ein
 fehlendes/umbenanntes Modul lässt seinen Schritt scheitern, statt den Lauf still zu überspringen); fehlt sie → Fehler.
 Gemessen: headless ohne FPS-Limit ≈ 144 Frames/s;
@@ -5121,28 +5159,25 @@ mit `Engine.max_fps = 60` exakt 16,7 ms/Frame; `Engine.time_scale` skaliert `_pr
 
 Boot bei `--autoplay`: `Game.autoplay = true`, `Engine.max_fps = 60`, `Engine.time_scale = 5.0` (1 Frame = 0,083 s Spielzeit;
 600 Frames = 10 s real = 50 s Spielzeit), `Save.read_only = true`, `Game.fast_text = true`, `Game.ephemeral = true`, Autoplay-Node per `get_tree().root.add_child.call_deferred()` unter `root`
-(`PROCESS_MODE_ALWAYS`), dann normaler Start → Titel. `BattlePlayer.speed = 4.0`, Ergebnis-Screen fährt nach 1,0 s automatisch fort.
+(`PROCESS_MODE_ALWAYS`), dann normaler Start → Titel. Das Ergebnis-Panel des Kampfes fährt mit `Game.autoplay` selbst fort.
 
-Schritte (Frame-Budgets ab Start des Schritts; Summe 600; Watchdog gesamt 640 Frames, deutlich vor `--quit-after 900`):
+Schritte (Frame-Budgets ab Start des Schritts; Summe 1 200; Watchdog gesamt 1 240 Frames, vor `--quit-after 1300`):
 
 | # | Schritt | Aktion | Erfolgsbedingung | Budget |
 |---|---|---|---|---|
 | 1 | `boot_to_title` | – | `Router.current is TitleScreen` und `not Router.busy` | 60 |
 | 2 | `new_game` | `title.request_new_game(0, "Kai", true, 4242)` | `Router.current is ExplorationScene`, nicht busy, `Events.floor_entered` empfangen | 90 |
 | 3 | `explore` | `Input.action_press(&"move_forward")` 24 Frames, dann `action_release` | Spieler ≥ 1,0 m bewegt (`get_player_position()`) | 30 |
-| 4 | `force_battle` | `Game.auto_battle = true`; `exploration.force_encounter("")` (nächste Gruppe = Tutorial `f1_g0`) | `Router.current is BattleScene`, nicht busy | 60 |
-| 5 | `battle` | – (AutoPolicy) | `Events.battle_ended` mit `VICTORY` **und** wieder `ExplorationScene`, nicht busy | 300 |
+| 4 | `force_combat` | `exploration.force_encounter("")` (nächste Gruppe = Tutorial `f1_g0`) | der `CombatDirector` läuft (Kampf in der Welt) | 60 |
+| 5 | `combat` | Autopilot der gesteuerten Einheit (`RtCommand.autopilot` über `CombatDirector.submit`); Hinweiskarten werden gelesen und geschlossen | `Events.battle_ended` mit `VICTORY`, Erkundung zurück, Director frei | 900 |
 | 6 | `safe_room` | `Router.enter_safe_room(<kleinste Safe-Room-ID des Layouts>)`, nach Ankunft `Router.exit_safe_room()` | erst `SafeRoomScene`, dann `ExplorationScene`; `Game.state.floor_run.timer_started == true` | 60 |
 | 7 | `done` | `print("AUTOPLAY: OK frames=%d" % n)`; `get_tree().quit(0)` | | |
 
 Fehler (Budget überschritten, falscher Ausgang, Watchdog): `printerr("Assertion failed: AUTOPLAY step '<name>' failed: <grund>")`
 (trifft `ERR_RE`) und `get_tree().quit(1)`. Fortschritt je Schritt: `print("AUTOPLAY: <name> ok @frame <n>")`.
 
-**Echtzeit-Smoke (07 §12.5, R5b-1; seit 07 E33 der Standard-Smoke):** `check.sh` startet `--quit-after 1300 -- --autoplay`; das
-neue Spiel kämpft in der Welt, die Schrittfolge ist `RT_STEPS`: Schritt 4 `force_combat` (60 Frames: `force_encounter("")`, der
-`CombatDirector` läuft), Schritt 5 `combat` (900 Frames: der Autopilot spielt die gesteuerte Einheit — `RtCommand.autopilot` über
-`CombatDirector.submit` —, Hinweiskarten werden gelesen und geschlossen; Erfolg: `Events.battle_ended` VICTORY, Erkundung zurück,
-Director frei); Watchdog `RT_WATCHDOG_FRAMES` 1240. Beide Smokes müssen `AUTOPLAY: OK` melden.
+Bis R5b-2a gab es daneben den CTB-Smoke (`--autoplay --combat=ctb`, Schritte `force_battle`/`battle` über die Kampfszene); er
+ist mit dem CTB-Kampf der Kampagne entfallen (07 §12.6).
 
 Weitere Boot-Argumente (Entwicklung, `TitleFlow.parse_args`, `boot.gd route()`): `--seed=<int>` (Seed für Neues Spiel und
 für den Dev-Zustand der `--goto`-Ziele) und `--goto=<ziel>` nach der Boot-Karte:
@@ -5150,14 +5185,15 @@ für den Dev-Zustand der `--goto`-Ziele) und `--goto=<ziel>` nach der Boot-Karte
 | Ziel | Wirkung |
 |---|---|
 | `title` (oder leer) | Titel (Standard) |
-| `explore` | `_ensure_dev_state()` (`Game.ensure_state(mode, seed)`: Seed aus `--seed`, sonst 1; Kampfmodus aus `--combat=`, sonst der Standard Echtzeit), Erkundung am Startpunkt |
+| `explore` | `_ensure_dev_state()` (`Game.ensure_state(seed)`: Seed aus `--seed`, sonst 1), Erkundung am Startpunkt |
 | `safe_room` | wie `explore`, danach `Router.enter_safe_room(<erster Safe Room der Etage>)` |
-| `battle:<enc_id>` | wie `explore` mit einem CTB-Zustand (`_ensure_dev_state(&"ctb")`, 07 E33 — die CTB-Kampfszene), dann `Game.make_battle_setup(enc_id, 0, "")` → `Router.start_battle(setup)` (z. B. `battle:enc_f1_boss_hausmeister`) |
 | `credits` | Abspann mit `{"from_title": true}` (zurück zum Titel) |
 | `lobby` | Event-Lobby `scenes/ui/event_lobby.tscn` |
 | `game_over` | `_ensure_dev_state()`, Game-Over-Screen mit Grund `&"timer"` |
 
-Unbekannte Ziele → Warnung, Titel. Im Editor stehen die Argumente unter Projekteinstellungen → Editor → Run → Main Run Args.
+Unbekannte Ziele → Warnung, Titel (auch `battle:<enc_id>`: das Ziel der CTB-Kampfszene ist mit R5b-2b entfallen; einen
+Echtzeitkampf erreicht man über `explore` und die Kampf-Rezepte, §11.3). `--combat=` liest seit R5b-2b niemand mehr. Im Editor
+stehen die Argumente unter Projekteinstellungen → Editor → Run → Main Run Args.
 
 #### 11.4.1 `--autoplay=full` — Full-Run-Bot Etage 1 (`scenes/boot/fullrun.gd`, `tools/fullrun.sh`, M6)
 
@@ -5196,7 +5232,7 @@ Safe Rooms (Erstbesuch), unbesuchte Räume, Streuner ≤ 2 Räume entfernt (max.
   `ExplorationScene.perform_action()` (= Taste `action`); sonst Fallback `interact()` (gezählt, Soll 0). Gruppen: hinlaufen +
   Feldschlag, Fallback nach 600 Frames `force_encounter(group)`. Als Graf Mopsula (`--hero=mopsula`): ab 3 m Abstand bellen
   (`perform_action`, wenn `bark_ready` und die Gruppe verdutzbar ist), dann in die verdutzte Gruppe laufen (Kontakt =
-  PREEMPTIVE). Bosse: Raum betreten (5-m-Auslöser). Kämpfe: `Game.auto_battle`.
+  PREEMPTIVE). Bosse: Raum betreten (5-m-Auslöser). Kämpfe: der `RtBotPlayer` (unten, „Echtzeit“).
 - **Safe Room:** Mopsula-Szenen, Lootboxen (`tap`×3, `reveal_all`, `next_box`/`finish`), Automat (Item-Button `pressed`,
   `set_qty`, `confirm`: erst Ausrüstungs-Upgrades, dann Bandagen bis 3), Ausrüstung (`Game.equip`, bestes je Slot nach
   Werte-Summe), Talent-Show (06-B: nach den Lootboxen, solange `talent_show_available()`, je offene Wahl `pick(0)` = erstes
@@ -5239,7 +5275,7 @@ Safe Rooms (Erstbesuch), unbesuchte Räume, Streuner ≤ 2 Räume entfernt (max.
   Raums 8 s Umsehen/Ablaufen, vor jedem Ziel 3 s Entscheiden, an jeder Tür 1 s Ausrichten, die letzten 7 m zu einer Gruppe
   schleichen (Präventivschlag), jede nicht blockierende M.O.D.-Zeile in der Erkundung lesen (1 s + Zeichen / 18 je s) — alles
   mit laufendem Countdown (`HUMAN_*`-Konstanten in `fullrun.gd`). Gemessen (GDD §13): `human` ≈ 2,5× `fast` (thorough 11:11 statt 4:31).
-- **Echtzeit (Standard seit 07 E33; `--combat=realtime`, 07 §12.5, R5b-1):** dieselbe Etage, gekämpft wird in der Welt. `fullrun.gd` gibt dem
+- **Echtzeit (seit R5b-2b der einzige Kampf; 07 §12.5):** dieselbe Etage, gekämpft wird in der Welt. `fullrun.gd` gibt dem
   `CombatDirector` der Erkundung eine `bot_factory`: je Kampf ein `RtBotPlayer` (`tests/tools/rt_bot_player.gd`, zur Laufzeit
   geladen) mit dem Profil `--rt-profile=typical|perfect|sloppy` (Default `typical`, die Helden-Variante aus
   `HERO_PROFILES`) auf eigenem Strom (`SeedUtil.derive(seed, "rt_bot", n)`); seine Eingaben gehen wie die einer Person über
@@ -5249,9 +5285,9 @@ Safe Rooms (Erstbesuch), unbesuchte Räume, Streuner ≤ 2 Räume entfernt (max.
   verdutzte Gruppe wie eine Person — Anführer gewählt, Taste 1 (`ExplorationScene.pull` mit dem Slot-1-Skill der Leiste) —,
   der Zug an einer verdutzten Gruppe ist der Erstschlag (E7). Prüfung je Kampf wie oben, die Countdown-Prüfung zählt
   Start → Ende des Kampfes (07 §2.2: die Uhr steht). Ein verlorener Boss wird nach dem Game Over erneut gekämpft — der
-  Hausmeister bis `MAX_DEATHS`, die optionale Königin `RT_FLOOR_BOSS_ATTEMPTS` (2) Mal (CTB: 1).
-  `tools/fullrun.sh` spielt ohne `--combat` in Echtzeit (`--rt-profile=…`, Default `typical`); `FULLRUN: stats` enthält
-  `combat_mode`, `rt_profile`, `hints_read`. `--combat=ctb` ist der unveränderte CTB-Lauf (bis SD1; Log-Namen mit `_ctb`).
+  Hausmeister bis `MAX_DEATHS`, die optionale Königin `FLOOR_BOSS_ATTEMPTS` (2) Mal (der CTB-Lauf hatte 1 Versuch).
+  `tools/fullrun.sh --rt-profile=…` (Default `typical`); `FULLRUN: stats` enthält `rt_profile`, `hints_read` (`combat_mode`
+  entfällt seit R5b-2b mit dem Schalter `--combat=`).
 
 Ausgabe: je Ereignis `FULLRUN: [<frame>] …` (Kämpfe mit Hype Start → Ende, Peak und Geschenken), am Ende `FULLRUN: stats {json}`
 (GDD-§13-Kennzahlen: Etagenzeit, Takt + Wartezeit, Kämpfe, Party-Züge, HP-Verlust, Level/EXP/Ausrüstung/Items an den Bossen,
@@ -5265,17 +5301,17 @@ Kampfstart/-ende/-peak, Teleports, Fallbacks, Replay-Prüfungen, M.O.D.-Tags, `h
 | Modul | Pflicht-Tests |
 |---|---|
 | M0 | Harness-Selbsttest (inkl. `_deep_eq`-Fälle, `await_signal`-Timeout, Methoden-Deduplizierung, Runner wertet SCRIPT ERROR als FAIL, Fehler schlagen Skip, nicht zugelassener Skip → Exit 1); `GameData` lädt `tests/fixtures/data_min` fehlerfrei; ≥ 1 Negativtest je Validierungsregel 1–10; Defs read-only; compile-all inkl. Zeilenlänge §13.1; SeedUtil-Golden-Values; Musik-Loop (§3.8); `ConditionExpr`; Router mit leerem Stack/`adopt` über den Fixture-Screen, Kampf-/Safe-Room-/Game-Over-Helfer und Rückfall auf den Titel gegen die **echten** Ziel-Screens (kein Skip); Game: Command-IDs, Dialog-Pause, Quest-Metriken, Replay ≡ Live |
-| M1 | `base_delay`-Tabelle §5.5; Startwerte NORMAL/PREEMPTIVE/AMBUSH; Preview 12 inkl. `pending_rank`, Overrides, Pseudo-Einheit; Haste 0.6/Slow 1.5; jede Formel aus §5.9 mit festen Zahlen (inkl. Combo, Fixschaden, Heilmodi, Krit-Cap); Status (Gift am Zugbeginn, Stun-Verzögerung + Boss × 0.5, Resist, Reapply setzt Dauer); Flucht-/Stunt-Chancen; Cooldown 3; AI-Bedingungen/Zielregeln/Taunt 80 %; Phasen-Ops; `steal_credits`/`escape`; `BattleCommand`/`ActionEvent` `to_dict`↔`from_dict`; gleicher Seed + gleiche Befehle → identische `to_dict()`-Liste; 100 Seeds Auto-vs-Auto terminiert < 200 Züge; Event-Reihenfolge (§5.3) |
+| M1 (seit R5b-2b: SD, die Engine des Stempelduells; dazu `test_sd_engine_golden`, `test_sd_boundaries`) | `base_delay`-Tabelle §5.5; Startwerte NORMAL/PREEMPTIVE/AMBUSH; Preview 12 inkl. `pending_rank`, Overrides, Pseudo-Einheit; Haste 0.6/Slow 1.5; jede Formel aus §5.9 mit festen Zahlen (inkl. Combo, Fixschaden, Heilmodi, Krit-Cap); Status (Gift am Zugbeginn, Stun-Verzögerung + Boss × 0.5, Resist, Reapply setzt Dauer); Flucht-/Stunt-Chancen; Cooldown 3; AI-Bedingungen/Zielregeln/Taunt 80 %; Phasen-Ops; `steal_credits`/`escape`; `BattleCommand`/`ActionEvent` `to_dict`↔`from_dict`; gleicher Seed + gleiche Befehle → identische `to_dict()`-Liste; 100 Seeds Auto-vs-Auto terminiert < 200 Züge; Event-Reihenfolge (§5.3) |
 | M2 | Hype-Tabelle §6.2 Zeile für Zeile; Abkühlen (proportional, Boden 25); Sponsor-Schwellen 70/85/100, Limits 1/2, Hype → 80, `weight_mods`; Prioritätsfenster inkl. `ALWAYS_SAID_TAGS`; Achievement-Bedingungen mit allen Triggern (Payloads §6.3) + Tier-Belohnung; Meilensteine; Lootbox: Rarität→Pool, Garantie letzter Wurf, Pity 4/8 persistent, Duplikat → Credits × 0.5; EXP-Tabelle GDD §4.3 (33/73/131/205/292/393/506/632/769, Cap 10); Equip/Unequip; BattleBridge (MP-Regen 15 %, KO → 1 HP, Pep-Talk, Timer-Start nach Tutorial); Save-Roundtrip (encode→decode→encode identisch), Gnadenfrist 180 s, v0-Migration-Stub, kaputte Datei → `.bak` |
-| M3 | `floor_1`-Layout valide + deterministisch; prozedural 200 Seeds §7.2; `FloorEvent` alle Typen; Szene: Spawn ≠ in Wand, `force_encounter` → `Events.encounter_triggered` per Signal-Spion (startet keinen echten Kampf) **oder** mit `Router.adopt(scene)` → danach `Router.current is BattleScene` (per `wait_until`) |
+| M3 | `floor_1`-Layout valide + deterministisch; prozedural 200 Seeds §7.2; `FloorEvent` alle Typen; Szene: Spawn ≠ in Wand, `force_encounter` → `Events.encounter_triggered` per Signal-Spion (startet keinen echten Kampf) **oder** mit `Router.adopt(scene)` → danach läuft der Echtzeitkampf in der Szene (`Game.combat`, `CombatDirector`, per `wait_until`; bis R5b-2b `Router.current is BattleScene`) |
 | M4 | Jede Base × Prop baut; Tri-Budgets §12.1; Rigs nur über `add_to_tree()`; `play_and_wait` jeder One-Shot-Anim endet, `impact` feuert genau 1× bei attack/cast/stunt/item; außerhalb des Baums sofortiges Ende; `build_room` für alle 16 Türmasken; `build_safe_room` alle 3 Themes; Log ohne „different indices“; alle festen `Label3D`-/Schadenszahl-Texte bestehen `ThemeDB.fallback_font.has_char()` Zeichen für Zeichen (03_ART A13, `test_m4_env`, `test_m4_vfx`) |
-| M5 | Battle-Szene headless mit `auto_battle` bis `BATTLE_END` (time_scale 8, speed 4); HUD-Werte = letzte `hp_after`; CTB-Leiste 12/10 Einträge |
+| M5 | entfallen mit der CTB-Kampfszene (R5b-2b); der Kampf in der Welt testet 07 §12.5 (`test_r2_*`, `test_r3_*`) |
 | M6 | Jede UI-Szene instanziierbar + Default-Fokus; alle statischen UI- und `Label3D`-Texte bestehen `ThemeDB.fallback_font.has_char()` Zeichen für Zeichen (03_ART A13/F8, `test_m6_ui_scenes`); `PauseMenu.process_mode == PROCESS_MODE_WHEN_PAUSED` (und alle Untermenüs); Touch-Trefferflächen ≥ 88; SafeAreaContainer-Ränder ≥ 24; `name_entry` `max_length == 12`; Full-Run-Bot: Helfer/Planer/Story-Beats (`test_m6_fullrun`) + ganzer Lauf über `tools/fullrun.sh` (CI, §11.4.1) |
-| M7 | `real_data()` valide; Mindestmengen laut GDD; jede reguläre Etage-1-Encounter per Auto-Kampf (50 Seeds) ≥ 80 % Siegquote mit dem Level/der Ausrüstung, die der GDD-Fortschritt dort erwartet (§5.4/§13): Zone A Lv 2 (Tutorial Lv 1), Zone B Lv 3 (Startausrüstung), Zone C Lv 4 + mittlere Ausrüstung, Hausmeister Lv 5, Zone D Lv 6 + späte Ausrüstung, Königin Lv 7; Bosse ohne Geschenke ≥ 50 %; Party-Züge je Sieg: Median aller regulären Encounter 4–6, je Encounter 3–7, Hausmeister 16–22, Königin 20–26 (GDD §13). **Show-Bilanz** (`test_m7_show_balance.gd`, echtes `Show` im Kampf-Loop, Geschenke wie im `BattleController`): Etage 1 als Staffel (Kämpfe in Kartenreihenfolge auf Plan-Level, Abkühlen im Bot-Takt `--pace=human`, Truhen/Events/Level-ups/Lootboxen über `Events`) → Follower, Zuschauer-Peak, Sponsor-Geschenke, Achievements, Lootboxen, Hype am Kampfanfang/-ende in den GDD-§13-Bändern; Boss-Niederlagequote auf Ziel-Level mit Geschenken (100 Seeds; Hype beim Kampfstart = Abkühl-Boden 25, Ausrüstung/Items wie vom Bot vor den Bossen gemessen): Hausmeister 10–30 %, Königin 25–45 % (GDD ~20 / ~35 %) |
+| M7 | `real_data()` valide; Mindestmengen laut GDD; jede reguläre Etage-1-Encounter per Auto-Kampf (50 Seeds) ≥ 80 % Siegquote mit dem Level/der Ausrüstung, die der GDD-Fortschritt dort erwartet (§5.4/§13): Zone A Lv 2 (Tutorial Lv 1), Zone B Lv 3 (Startausrüstung), Zone C Lv 4 + mittlere Ausrüstung, Hausmeister Lv 5, Zone D Lv 6 + späte Ausrüstung, Königin Lv 7; Bosse ohne Geschenke ≥ 50 %; Party-Züge je Sieg: Median aller regulären Encounter 4–6, je Encounter 3–7, Hausmeister 16–22, Königin 20–26 (GDD §13). Seit R5b-2b (07 §12.6) ersetzen die Echtzeit-Bänder diese CTB-Bilanzen (`test_m7_balance`, `test_m7_show_balance` sind entfallen): Kampf-Bänder `test_r4_rt_balance` / `tools/rt_balance.sh` (07 §11), Show-Bänder die Full-Runs (07 §12.6 Nr. 3); `test_m7_data_content` prüft die Echtzeit-Inhalte |
 | M8 | 05_LIVE_MODUS §11.4; zusätzlich `RunSim.step(1) × n ≡ step(n)` und Timer/Hype-Zerfall in Ticks; Verifier gegen gefälschte Logs (`test_m8_integrity`); jeder `Command.TYPES`-Eintrag hat einen Zweig in `RunSim.apply` und im Replay-Motor (`test_m8_command`) |
-| 06-A | 06 §8.2 (`tests/test_06a_*.gd`): Startwahl/Safe-Room-Wechsel inkl. Ablehnungsgründe und `RunSim`-Gleichheit, Replay-Hash auch für einen Lauf als Mopsula, Altstand ohne `hero` → `kai`; Bellen-Geometrie/Sichtlinie/Immunität/Bosse, `DAZED` → PREEMPTIVE aus jeder Richtung; Partner automatisch (`auto: true` nur für den Partner); Figurenwahl-Szene (Fokus, Touch-Flächen), Safe-Room-Menü passt über den Chat-Ticker; Full-Run-Bot `--hero=mopsula`; E1-Geheimnisse (`test_06a_secrets`: Regeln, Command + Replay + `RunSim`, Save, Datenregeln, Wand fällt mit Feldschlag und Bellen, nie mit Interagieren, Notizen genau einmal) |
-| 06 A × B | `tests/test_06ab_hero_talents.gd`: Feld-Talente nur der führenden Figur (Ganzzahl-Promille, Szene für Kai und Graf Mopsula, Wechsel im Safe Room), je Held:in Talent-Show + Replay-Hash + „Partner automatisch“ mit Talenten, Safe-Room-Layout Desktop und Handy (Trefferflächen ≥ 88) |
-| 06-C | Marotten (`test_06c_marotten`): Auswahl deterministisch je Seed/Etage (E1 nur Starter, möglichst ohne Wiederholung), jede Bedingung trifft/trifft nicht, ≤ 1 Herz je Vorliebe und Kampf, Wette → Box/Follower/Hype/`bets_won`/`show_bet`, Tutorial/Niederlage/Event-Lauf zahlen nichts, Pazifist (Erstbesuch, Countdown, kein Safe Room, Latch, Save/Load), Replay-Gleichheit; Liga (`test_06c_liga`): Stufen je gesteuerter Figur, Blocker, Faktoren beim Kampfstart eingefroren, Etagen-Bonus, Kette „Ohne alles“, Regel-Schalter im `rules_hash`, UI; Sponsor-Fenster-Entscheidungen (`test_06c_sponsor_display`); Balance-Bänder 06 §4.10 (`test_06c_balance`); Integration Runde 4: Deckel des Liga-Follower-Bonus je Etage (`test_06c_liga_cap`), Bellen ≠ Anschleichen (`test_06ac_bark_opener`) |
+| 06-A | 06 §8.2 (`tests/test_06a_*.gd`): Startwahl/Safe-Room-Wechsel inkl. Ablehnungsgründe und `RunSim`-Gleichheit, Replay-Hash auch für einen Lauf als Mopsula, Altstand ohne `hero` → `kai`; Bellen-Geometrie/Sichtlinie/Immunität/Bosse, `DAZED` → PREEMPTIVE aus jeder Richtung; der Partner ist im Echtzeitkampf immer KI (07 §5.1; „Partner automatisch“ ist mit R5b-2b entfallen); Figurenwahl-Szene (Fokus, Touch-Flächen), Safe-Room-Menü passt über den Chat-Ticker; Full-Run-Bot `--hero=mopsula`; E1-Geheimnisse (`test_06a_secrets`: Regeln, Command + Replay + `RunSim`, Save, Datenregeln, Wand fällt mit Feldschlag und Bellen, nie mit Interagieren, Notizen genau einmal) |
+| 06 A × B | `tests/test_06ab_hero_talents.gd`: Feld-Talente nur der führenden Figur (Ganzzahl-Promille, Szene für Kai und Graf Mopsula, Wechsel im Safe Room), je Held:in Talent-Show + Replay-Hash + KI-Partner mit Talenten im Echtzeitkampf, Safe-Room-Layout Desktop und Handy (Trefferflächen ≥ 88) |
+| 06-C | Marotten (`test_06c_marotten`): Auswahl deterministisch je Seed/Etage (E1 nur Starter, möglichst ohne Wiederholung), jede Bedingung trifft/trifft nicht, ≤ 1 Herz je Vorliebe und Kampf, Wette → Box/Follower/Hype/`bets_won`/`show_bet`, Tutorial/Niederlage/Event-Lauf zahlen nichts, Pazifist (Erstbesuch, Countdown, kein Safe Room, Latch, Save/Load), Replay-Gleichheit; Liga (`test_06c_liga`): Stufen je gesteuerter Figur, Blocker, Faktoren beim Kampfstart eingefroren, Etagen-Bonus, Kette „Ohne alles“, Regel-Schalter im `rules_hash`, UI; Sponsor-Fenster-Entscheidungen (`test_06c_sponsor_display`); Balance-Bänder 06 §4.10 (seit R5b-2b Echtzeit: Liga-Schritt im Harness, 07 E31, §11.5); Integration Runde 4: Deckel des Liga-Follower-Bonus je Etage (`test_06c_liga_cap`), Bellen ≠ Anschleichen (`test_06ac_bark_opener`) |
 
 ---
 
@@ -5412,10 +5448,10 @@ jobs:
         # one test process on a dedicated runner: the wall-clock budgets of the unit tests are asserted here only
         # (TestCase.assert_time_budget); local parallel check.sh runs print them
         run: PTD_PERF_ASSERTS=1 GODOT=~/godot/godot prime-time-dungeon/tools/check.sh
-      - name: Full run Floor 1 (real time: thorough + rush + dawdle)
+      # the campaign fights in real time only (07 §12.6, R5b part 2b): the bot plays each combat as the person
+      # (RtBotPlayer, profile typical); the CTB engine lives on in the Stempelduell (10, its own tests)
+      - name: "Full run Floor 1 (real time: thorough + rush + dawdle)"
         run: GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --strategy=all --log-dir=fullrun-logs
-      - name: Full run Floor 1 (CTB until SD1)
-        run: GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --strategy=all --combat=ctb --log-dir=fullrun-logs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -5425,11 +5461,11 @@ jobs:
         run: |
           mkdir -p shots
           for s in res://art/gallery/character_gallery.tscn res://art/gallery/env_gallery.tscn res://art/gallery/vfx_gallery.tscn \
-                   res://scenes/title/title.tscn res://scenes/exploration/exploration.tscn res://scenes/battle/battle.tscn \
+                   res://scenes/title/title.tscn res://scenes/exploration/exploration.tscn \
                    res://scenes/safe_room/safe_room.tscn; do
             GODOT=~/godot/godot prime-time-dungeon/tools/check.sh --shot "$s" "shots/$(basename "$s" .tscn).png" 120 1280x720
           done
-          # the default combat (07 E33): a real-time fight in the world with the real data (battle.tscn above is CTB)
+          # the combat (real time only since R5b part 2b): a real-time fight in the world with the real data
           GODOT=~/godot/godot prime-time-dungeon/tools/check.sh --shot res://scenes/exploration/exploration.tscn \
             shots/combat_realtime.png 30 1280x720 --recipe=rt_r4_regular
       - name: Render probe (03_ART A11)
@@ -5512,14 +5548,18 @@ Android wird lokal exportiert (JDK 17 + SDK + Debug-Keystore in den Editor-Einst
 Apple-Entwicklerkonto, in `apple-ios-testflight`. Die Jobs `check`, `export`, `mod-brain-tests` und `nightly-balance` sehen keine
 Secrets.
 
-`check.sh` bleibt die Prüf-Quelle für Import, Tests und Smoke (Echtzeit-Smoke als Standard, CTB-Smoke mit `--combat=ctb`,
-§11.4); zusätzlich ruft die CI den Full-Run-Bot (§11.4.1) in zwei eigenen Schritten auf: „Full run Floor 1 (real time: thorough
-+ rush + dawdle)“ = `tools/fullrun.sh --strategy=all` (Echtzeit, der Standard seit 07 E33; thorough, rush, dawdle als Kai und
-thorough als Graf Mopsula) und „Full run Floor 1 (CTB until SD1)“ = `--strategy=all --combat=ctb`. Die Screenshots enthalten
-zusätzlich einen Echtzeitkampf (`exploration.tscn`, Rezept `rt_r4_regular`); `battle.tscn` ist die CTB-Kampfszene.
-**Laufzeit des Jobs `check` (R5b-2a):** Lauf 73 auf `22c95c0` brauchte 13:24 (Tests + Smokes 5:23, CTB `all` 1:45, Echtzeit
-`thorough` 1:41, Screenshots 4:07); lokal braucht Echtzeit `all` 764 s gegen 179 s für CTB `all` (CI ≈ 0,5–0,6 × lokal) — mit
-dem Echtzeit-`all` statt `thorough` und dem zusätzlichen Bild ≈ 18,5–20 min, rund 10 min unter `timeout-minutes: 30`. Der Job `mod-brain-tests` (06-D) prüft den
+`check.sh` bleibt die Prüf-Quelle für Import, Tests und Smoke (der Echtzeit-Smoke, §11.4; den CTB-Smoke gibt es seit R5b-2b
+nicht mehr); zusätzlich ruft die CI den Full-Run-Bot (§11.4.1) im Schritt „Full run Floor 1 (real time: thorough + rush +
+dawdle)“ auf = `tools/fullrun.sh --strategy=all` (thorough, rush, dawdle als Kai und thorough als Graf Mopsula). Ein
+Schrittname mit „: “ steht in Anführungszeichen (sonst ist die YAML-Datei ungültig und GitHub verwirft den ganzen
+Workflow); geprüft mit `actionlint -shellcheck …`. Die Screenshots: sechs Szenen und ein Echtzeitkampf (`exploration.tscn`,
+Rezept `rt_r4_regular`); die CTB-Kampfszene `battle.tscn` und der Schritt „Full run Floor 1 (CTB until SD1)“ sind mit
+R5b-2b entfallen.
+**Laufzeit des Jobs `check`:** Lauf 73 auf `22c95c0` (vor R5b-2a) brauchte 13:24 (Tests + Smokes 5:23, CTB `all` 1:45,
+Echtzeit `thorough` 1:41, Screenshots 4:07); lokal braucht Echtzeit `all` 740–800 s gegen 179 s für CTB `all` (CI ≈ 0,5–0,6 ×
+lokal) — R5b-2a schätzte mit Echtzeit-`all` und CTB-`all` 18,5–20 min. **R5b-2b** (geschätzt, ohne CI-Lauf): Tests unverändert
+(lokal 1 599 Tests in ≈ 425 s wie 1 623 vor 2b: die Echtzeit-Varianten kosten so viel wie die CTB-Tests, die gingen), ohne
+CTB-Smoke (≈ 0:15) und CTB-`all` (1:45), ein Bild weniger und eins mehr — **≈ 16–18 min**, 12–14 min unter `timeout-minutes: 30`. Der Job `mod-brain-tests` (06-D) prüft den
 Referenz-Dienst `services/mod-brain/` mit gemocktem Anthropic-Client (kein Schlüssel, kein Netz); die gemeinsamen Fälle
 `tests/fixtures/live/twist_cases.json` und `line_filter_cases.json` laufen dort und in `check.sh`.
 
@@ -5583,22 +5623,24 @@ Distribution), `IOS_PROFILE_BASE64` (Profil „App Store Connect“), `ASC_KEY_I
 
 ### 12.5 Messung (`tools/perf.sh`, Phase C)
 
-`GODOT=… tools/perf.sh [--driver=opengl3|vulkan] [--quality=high|low] [--only=startup,explore,battle,safe_room,leak]
+`GODOT=… tools/perf.sh [--driver=opengl3|vulkan] [--quality=high|low] [--only=startup,explore,safe_room,combat,leak]
 [--cycles=20] [--out=<md>] [--shots=<dir>] [--cells] [--headless]` kopiert das Projekt wie `check.sh`, importiert und startet
 1. `tests/perf/boot_timer.gd` — echter Boot (Main Scene) bis Titel interaktiv und weiter über „Neues Spiel“ bis zur Erkundung,
    ohne vorher Screen-Skripte zu kompilieren (Zeiten ab Prozessstart);
 2. `tests/perf/perf_probe.gd` → `perf_runner.gd` (unter Xvfb; `--driver=vulkan` = Mobile-Renderer, braucht ein Vulkan-ICD, z. B.
-   Mesa lavapipe): je Zelle von Etage 1 vier Kamerarichtungen, jede Begegnung von Etage 1 (Eröffnung), größte Begegnung (Party
-   Lv 4) + beide Bosse als kompletter Auto-Kampf, die drei Safe Rooms. Die Boss-Läufe messen den **ganzen** Kampf (Phasenwechsel,
-   Zug der Königin, Haste): Party Lv 10 mit der Vor-Boss-Ausrüstung des Full-Run-Bots (`BOSS_KIT`, `BOSS_ITEMS`); ein Boss-Lauf,
-   der nicht mit VICTORY endet, lässt die Probe scheitern (`PERF: OVER BUDGET … kein Sieg`). Je Ansicht das Maximum von Draw Calls (gesamt/3D/2D), Primitiven, aktiven
+   Mesa lavapipe): je Zelle von Etage 1 vier Kamerarichtungen, die drei Safe Rooms und der Echtzeitkampf in der Welt
+   (`combat` = `combat_regular`, `combat_two_groups`, `combat_boss_queen`, 07 §8.10; bis R5b-2b dazu der Abschnitt `battle`
+   der CTB-Kampfszene: jede Begegnung als Eröffnung, die größte und beide Bosse als kompletter Auto-Kampf — mit der Szene
+   entfallen). Je Ansicht das Maximum von Draw Calls (gesamt/3D/2D), Primitiven, aktiven
    Lichtern, Lichtern pro Mesh, eindeutigen Materialien, Label3D, Partikeln, Physik-Körpern, Nodes, RAM, VRAM; Aufbauzeiten; Status
-   gegen §12.1. `leak`: N Router-Zyklen Erkundung (neu gebaut) → Kampf → Safe Room → zurück, Objekt-/Node-/Ressourcen-Zahlen je
-   Zyklus; Urteil über die Minima eines frühen und des letzten Fensters (`perf_runner.leak_growth`, auch von
+   gegen §12.1. `leak`: N Router-Zyklen Erkundung (neu gebaut) → Echtzeitkampf (Tutorial-Gruppe, Autopilot) → Safe Room →
+   zurück, Objekt-/Node-/Ressourcen-Zahlen je Zyklus, gemessen auf der Etage, die das nächste `goto` neu gebaut hat (die
+   Effekt-Pools eines Kampfes hängen an der Etage, die sie erzeugt hat, und wechseln mit jedem Kampf, 03_ART A12); Urteil
+   über die Minima eines frühen und des letzten Fensters (`perf_runner.leak_growth`, auch von
    `test_perf_router_cycles.gd` genutzt; Objekte ohne die Einträge der begrenzten Art-Caches, `perf_runner.cache_objects()`).
    Die Streuner-Spawner (RunSim) werden je Zyklus zurückgesetzt, damit jeder Zyklus dieselbe Etage baut (ein Streuner ist
    Spielzustand, kein Leck). Letzte Zeilen `PERF: OK|OVER BUDGET (…)`, `LEAK: OK|GROWTH …`; Exit 1 bei Überschreitung.
-Diagnose-Schalter: `--full=<enc,…>` (nur diese kompletten Auto-Kämpfe), `--mat-dump` (je Zeile die eindeutigen Materialien des
+Diagnose-Schalter: `--mat-dump` (je Zeile die eindeutigen Materialien des
 Spitzen-Frames mit Shader, erstem Besitzer und `Materials`-Cache-Schlüssel, Zeilen `MATDUMP …`), `--leak-diff` (je Router-Zyklus,
 welche Node-Arten — Pfad ohne Ziffern + Klasse — sich gegenüber dem Vorzyklus geändert haben, Zeilen `LEAKDIFF …`),
 `--look=worst` (Casting K2: jede Sektion mit einer Kandidat:in im schwersten Persona-Look, 08 §6.2).
@@ -5652,7 +5694,7 @@ und gelten 1:1; Zeiten sind CPU-gebunden und nur relativ (Vorher/Nachher) aussag
 5. Skripte werden über `class_name` referenziert, **Szenen** über Pfad-Konstanten + `load()` zur Laufzeit; kein `preload()` von
    Szenen anderer Module (verhindert Lade-Zyklen und Kaskaden-Ladefehler). `preload()` nur modulintern.
 6. Skripte, die vor dem ersten Bild kompiliert werden (Autoloads, `boot.gd`, `global_ui.gd` und deren `preload`s), nennen die
-   Screen-Klassen (`ExplorationScene`, `BattleScene`, `SafeRoomScene`) nicht: jede Typ-Referenz kompiliert die Klasse samt
+   Screen-Klassen (`ExplorationScene`, `SafeRoomScene`, bis R5b-2b auch `BattleScene`) nicht: jede Typ-Referenz kompiliert die Klasse samt
    Abhängigkeitsbaum mit (gemessen 1,1 s von 2,7 s bis zum ersten Bild). Vergleich über `scene_file_path`/`Router.SCENE_*`;
    `autoplay.gd` bzw. `fullrun.gd` werden nur mit `--autoplay` bzw. `--autoplay=full` per `load()` geholt (auch
    `FullRun.TIME_SCALE` über `get_script_constant_map()`, kein `preload`). `test_perf_platform.gd` prüft das.

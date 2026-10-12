@@ -36,8 +36,9 @@
 ### 0.1 Die Vision in 12 Sätzen
 
 1. Man startet **immer als Duo** — **Kai** (Mensch, Tierpfleger:in, Wischmopp) und **Graf Mopsula** (sprechender Mops, Magier) —
-   und wählt beim neuen Spiel, **wen man steuert**. Der/die andere folgt in der Erkundung; im Kampf befehligt man standardmäßig
-   beide; wer mag, schaltet in den Optionen „Partner automatisch“ ein.
+   und wählt beim neuen Spiel, **wen man steuert**. Der/die andere folgt in der Erkundung und kämpft als KI-Partner mit
+   Taktik und Partner-Spezial (Echtzeitkampf, 07 §5.1; bis R5b befehligte man im Rundenkampf beide, optional mit „Partner
+   automatisch“).
 2. Jede Figur hat eine eigene **Feldfähigkeit**: Kai schlägt (Präventivschlag), Mopsula **bellt** (Gegner erschrecken, vorbeischleichen).
    Beides öffnet außerdem rissige **Kulissenwände** (Geheimnisse, Abkürzungen).
 3. Ab **Level 3** gibt es auf jedem zweiten Level ein **Talent** (1 von 2) — gesammelt gewählt in der **Talent-Show** im Safe Room,
@@ -118,7 +119,7 @@ Spielergilden, Bosse werden zu Raids („Großproduktionen“) mehrerer Teams, E
 |---|---|---|
 | Figurenwahl | „Wen steuern Sie? Der/die andere kommt mit — ob er/sie will oder nicht.“ | Neues Spiel |
 | Feldfähigkeit | „Kai haut zu, der Graf bellt. Beides beeindruckt Monster.“ | Tutorial (B1) |
-| Partner automatisch | (keine Tutorial-Zeile; Hilfetext im Optionsmenü: „Ihr Partner kämpft von selbst.“) | nur Optionen |
+| Partner automatisch | (keine Tutorial-Zeile; Hilfetext im Optionsmenü: „Ihr Partner kämpft von selbst.“) — **entfallen mit 07 R5b-2b** (der Partner ist im Echtzeitkampf immer KI) | — |
 | Talent-Show | „Talent-Show! Wählen Sie je Figur eines von zwei Talenten. Das andere bekommt jemand anderes. Nie.“ | E1, Safe Room 2 (erste offene Wahl ab L3) |
 | Vorlieben (Marotten) | „Ich mag heute etwas Bestimmtes. Tun Sie es, und ich mag Sie.“ | nach dem Tutorial-Kampf (E1) |
 | Unterhosen-Liga | „Ohne Rüstung & ohne Accessoire: schwerer, aber das Publikum liebt Mut.“ | Etagen-Bilanz E1 (Hinweis, einmalig) |
@@ -185,9 +186,12 @@ Bellen ist wie der Feldschlag **Szenenlogik (Grad A)**: aufgezeichnet wird nur d
 
 ### 1.4 Kampf
 
-> **Echtzeitkampf (Standard neuer Spiele seit 07 E33, R5b-2a):** Man steuert die gewählte Figur; die andere kämpft als
-> KI-Partner mit Taktik und Partner-Spezial (07 §5.1). „Partner automatisch“ ist dort ausgeblendet; die Regeln unten gelten
-> für den Rundenkampf (CTB) alter Spielstände und `--combat=ctb`.
+> **Stand 07 R5b-2b (2026-10-12):** Die Kampagne kämpft nur noch in Echtzeit. Man steuert die gewählte Figur; die andere
+> kämpft als KI-Partner mit Taktik und Partner-Spezial (07 §5.1); „Steuerung folgt dem Leben“ bei einem K.O. (07 §2.6). Die
+> Option „Partner automatisch“ (`GameSettings.partner_auto`) ist mit dem Rundenkampf entfallen — Einstellung, Optionszeile
+> und `tests/test_06a_partner_auto.gd`; eine ältere Einstellungsdatei mit dem Schlüssel lädt (er wird ignoriert). Den
+> Stern-Marker des CTB-Party-Panels ersetzt die Pille „DU“ im Einheitenrahmen (07 §8.4). Die Liste unten beschreibt den Rundenkampf (CTB) bis R5b-2a; seine Engine lebt im Minispiel
+> „Stempelduell“ weiter (`10_MINISPIEL_STEMPELDUELL.md`).
 
 - **Standard:** Man befehligt **beide** Figuren (wie heute). Das Party-Panel der gesteuerten Figur trägt einen Stern-Marker.
 - **Option „Partner automatisch“** (`GameSettings.partner_auto`, nur im Optionsmenü, **ohne** Tutorial- oder M.O.D.-Zeile; Standard aus): Züge der **nicht** gesteuerten Figur
@@ -666,10 +670,10 @@ ist bei Kampf-Marotten implizit (nur Siege werden ausgewertet).
 | `mar_sneaky` | **Schleichwerbung** (Paket C; `ach_preemptive_3` heißt seit dem Polish-Pass „Überraschungsgast“ statt „Leise Sohle“, Fuß-Regel 0.3) | Kampf: `e.encounter_type == "preemptive"` | ✓ | „Heute mag ich Schleichwerbung: anschleichen, zuerst zuschlagen. Überraschung ist Quote.“ | „Erwischt, bevor sie es merkten. Ich liebe Pünktlichkeit.“ |
 | `mar_pacifist` | **Friedliche Runde** | `explore_zone`: `e.zones_since_battle >= 3` (3 Räume/Zonen-Zellen erstmals betreten ohne Kampf dazwischen) | — | „Heute mag ich es ruhig. Drei neue Räume ohne Prügelei, und ich werde sentimental.“ | „Drei Räume Frieden. Die Werbekunden sind nervös. Ich bin gerührt.“ |
 | `mar_secondhand` | **Second-Hand-Schick** | Kampf: `e.equip_all_common == true` (alle belegten Slots beider Figuren `common`) | — | „Meine Laune heute: Flohmarkt. Nur gewöhnliche Ausrüstung, bitte. Vintage ist Quote.“ | „Gewonnen in Ramsch-Couture. Die Modeabteilung weint vor Glück.“ |
-| `mar_speed` | **Schnellschnitt** | Kampf: `e.party_turns <= 3 && e.is_boss == false` | — | „Ich habe heute wenig Sendezeit. Kämpfe in höchstens drei Zügen, und ich liebe Sie.“ | „Zack, fertig! So schnell schneidet nicht mal mein Praktikant.“ |
-| `mar_stunt` | **Akrobatik-Abend** | Kampf: `e.stunts_success >= 1` | — | „Heute Abend: Akrobatik! Ein gelungener Stunt pro Kampf, und ich bin Ihr Fan.“ | „Gelandet! Ich habe die Zeitlupe schon dreimal angesehen.“ |
+| `mar_speed` | **Schnellschnitt** | Kampf: `e.duration_sec <= 15 && e.is_boss == false` (Echtzeit, 07 E38; bis R5b-2b `e.party_turns <= 3`) | — | „Ich habe heute wenig Sendezeit. Kämpfe unter 15 Sekunden, und ich liebe Sie.“ | „Zack, fertig! So schnell schneidet nicht mal mein Praktikant.“ |
+| `mar_stunt` | **Akrobatik-Abend** | Kampf: `e.stunts_success >= 1` (die eigene SHOW, nie die der KI, 07 E38) | — | „Heute Abend: Akrobatik! Eine gelungene SHOW pro Kampf, und ich bin Ihr Fan.“ | „Gelandet! Ich habe die Zeitlupe schon dreimal angesehen.“ |
 | `mar_bio` | **Bio-Siegel** | Kampf: `e.items_used == 0 && e.gifts == 0` | — | „Heute bin ich auf Natur. Keine Items, keine Sponsoren. Ja, ich höre mich selbst.“ | „Ohne Zusatzstoffe gewonnen. Ich verleihe Ihnen das Siegel ‚garantiert ungesponsert‘.“ |
-| `mar_brave` | **Kein Schritt zurück** | Kampf: `e.defends == 0 && e.flee_attempts == 0` | — | „Heute mag ich Mut. Kein Verteidigen, kein Weglaufen. Nur nach vorn.“ | „Nicht einen Schritt zurück! Die Versicherung hat aufgelegt.“ |
+| `mar_brave` | **Kein Schritt zurück** | Kampf: `e.flee_attempts == 0` (Echtzeit, 07 E38: Verteidigen gibt es nicht mehr; bis R5b-2b `e.defends == 0 && e.flee_attempts == 0`) | — | „Heute mag ich Mut. Kein Weglaufen, kein Nebel. Nur nach vorn.“ | „Nicht einen Schritt zurück! Die Versicherung hat aufgelegt.“ |
 | `mar_gourmet` | **Schwachstellen-Gourmet** (Paket C: passt in 28 Zeichen) | Kampf: `e.weakness_hits >= 3` | — | „Ich habe Appetit auf Schwachstellen. Drei pro Kampf, serviert mit Stil.“ | „Genau da, wo es wehtut. Drei Gänge, null Mitleid.“ |
 
 Sonderzeilen: `marotte_won:<id>` (Fallback `marotte_won`: „Wette gewonnen! Sie haben verstanden, was ich mag. Das ist mir fast

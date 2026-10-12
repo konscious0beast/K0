@@ -18,8 +18,8 @@ Prüfwerkzeuge (`tools/`).
   und Shadern, ohne externe Assets. glTF-Modelle aus Blender sollen die Platzhalter später 1:1 ersetzen (03_ART Kap. 10).
 - **Spiel:** Echtzeit-Erkundung in 3D mit sichtbaren Gegnern (wie FF12) und **Echtzeitkämpfe direkt in der Welt**
   („WoW-light“, 07): Ziel wählen, der Auto-Angriff läuft, dazu vier Fähigkeiten, **SHOW**, Trank und Partner-Spezial; rote
-  Bodenflächen kündigen Treffer an, denen man ausweicht. Der frühere Rundenkampf (CTB) bleibt für alte Spielstände und wird
-  zum Minispiel „Stempelduell“ (`docs/10_MINISPIEL_STEMPELDUELL.md`).
+  Bodenflächen kündigen Treffer an, denen man ausweicht. Der frühere Rundenkampf (CTB) lebt als Kern des optionalen
+  Minispiels „Stempelduell“ weiter (`docs/10_MINISPIEL_STEMPELDUELL.md`).
 - **Die Show ist das UI:** Zuschauer, Follower, Hype, Sponsor-Geschenke mitten im Kampf, Achievements, Lootboxen,
   M.O.D.-Kommentare und Graf-Mopsula-Szenen im Safe Room.
 - **SHOWRUN-Kern (Live-Modus, Stufe S0):** Offline-Event-Läufe mit festem Seed, Quest und lokaler Bestenliste. Jeder Lauf
@@ -40,7 +40,7 @@ Prüfwerkzeuge (`tools/`).
 
 ## 2. Status
 
-*Stand: 2026-10-12, Branch `ptd/r5b2a`. Die genaue Version ergibt sich aus `git log -1` in diesem Verzeichnis.*
+*Stand: 2026-10-12, Branch `ptd/r5b2b`. Die genaue Version ergibt sich aus `git log -1` in diesem Verzeichnis.*
 
 **Läuft:**
 
@@ -60,10 +60,12 @@ Prüfwerkzeuge (`tools/`).
   M.O.D.s Zeilen (Intro-Bauchbinde, Rival:in, Sponsor, Running Gag, Grüße von zu Hause; nie im Kampf) und ab Etage 2 die
   Marotten-Gewichtung; Kampfwerte ändert sie nicht. Der Name steht nur in der Persona-Datei je Slot (`user://persona/`),
   nie im Spielstand, Replay oder in einer Bestenliste; „Kandidat:in löschen“ in den Optionen.
-- **Echtzeitkampf** (07, Stand R5b-2a): Neue Spiele kämpfen in Echtzeit „WoW-light“ direkt in der Welt (07 E33); die
+- **Echtzeitkampf** (07, Stand R5b-2b): Die Kampagne kämpft nur noch in Echtzeit „WoW-light“ direkt in der Welt; die
   Show-Zahlen liegen in den Bändern des GDD (07 E32: Hype, Sponsor-Geschenke, Follower, Zuschauer). Autoplay-Smoke und
-  Full-Run-Bot prüfen ihn in CI. Alte Spielstände kämpfen weiter im Rundenkampf (CTB); der zieht in Teil 2b als eigenes
-  Minispiel „Stempelduell“ um (`docs/10_MINISPIEL_STEMPELDUELL.md`).
+  Full-Run-Bot prüfen ihn in CI. Die Daten tragen die Echtzeit-Werte (HP × 4); Spielstände von vor der Umstellung laden ins
+  neue Format (Version 2) und spielen in Echtzeit weiter. **Der Rundenkampf (CTB) lebt im Minispiel „Stempelduell“ weiter:**
+  Seine Engine liegt eingefroren in `game/core/stempel/ctb/` (Golden- und Grenztest), das Minispiel selbst folgt
+  (`docs/10_MINISPIEL_STEMPELDUELL.md`, SD2).
 - **Kampf eröffnen** (07 E34–E37, Stand Pull): Außerhalb des Kampfes wählt man den Anführer einer Gruppe als Ziel und
   eröffnet mit einer Fähigkeit (Tastatur, Gamepad und Touch); von hinten, gegen eine ahnungslose oder angebellte Gruppe ist
   das ein Erstschlag — als Graf Mopsula reicht „bellen, dann 1“.
@@ -74,9 +76,9 @@ Prüfwerkzeuge (`tools/`).
   Follower. Show-Chip im Overlay, Pausemenü-Reiter „Show“, Achievement-Kette „Ohne alles“.
 - SHOWRUN S0: 2 Offline-Events (`evt_offline_gleis9`, `evt_offline_pacifist`), Event-Lobby, Ergebnis-Screen, lokale Bestenliste,
   Replay-Prüfung.
-- Qualitätssicherung: rund 1 600 automatische Tests, Autoplay-Smoke-Tests im Echtzeitkampf und im CTB (`AUTOPLAY: OK`),
-  Full-Run-Bot, der Etage 1 mit drei Strategien und als Graf Mopsula durchspielt (Echtzeit, dazu der CTB-Lauf), Balance-Harness
-  des Echtzeitkampfs, Performance-Probe (`PERF: OK`) und der CI-Workflow `ptd-check`.
+- Qualitätssicherung: rund 1 600 automatische Tests (darunter Golden- und Grenztest der Stempelduell-Engine),
+  Autoplay-Smoke-Test im Echtzeitkampf (`AUTOPLAY: OK`), Full-Run-Bot, der Etage 1 mit drei Strategien und als Graf Mopsula
+  durchspielt, Balance-Harness des Echtzeitkampfs, Performance-Probe (`PERF: OK`) und der CI-Workflow `ptd-check`.
 
 **Bekannte Lücken:**
 
@@ -319,7 +321,6 @@ Argumente stehen nach `--` (CLI) bzw. in den Main Run Args (Editor). Quelle: `sc
 | `--seed=<int>` | Seed für „Neues Spiel“ und für die `--goto`-Ziele (sonst Standard-Spielstand) |
 | `--goto=explore` | überspringt den Titel und startet die Erkundung von Etage 1 am Startpunkt |
 | `--goto=safe_room` | wie `explore`, betritt danach den ersten Safe Room |
-| `--goto=battle:<enc_id>` | startet direkt einen Rundenkampf (CTB-Kampfszene, eigener CTB-Spielstand), z. B. `--goto=battle:enc_f1_boss_hausmeister` oder `battle:enc_f1_boss_rattenkoenigin` (IDs in `game/data/floors.json`); Echtzeitkämpfe beginnen in der Welt (`--goto=explore`) |
 | `--goto=title` | Titel (Standard) |
 | `--goto=credits` | Abspann |
 | `--goto=lobby` | SHOWRUN-Event-Lobby |
@@ -328,10 +329,13 @@ Argumente stehen nach `--` (CLI) bzw. in den Main Run Args (Editor). Quelle: `sc
 | `--autoplay=full` | Full-Run-Bot: spielt Etage 1 von Titel bis Abspann (02_TECH §11.4.1), mit echten Spielständen in eigenem Verzeichnis |
 | `--strategy=thorough\|rush\|dawdle\|typical` | Strategie des Full-Run-Bots: alles / nur Safe Rooms, Tore, Bosse / trödeln bis zum Etagenkollaps / typische:r Erstspieler:in |
 | `--pace=fast\|human` | Takt des Full-Run-Bots: ohne Wartezeit oder mit dem Modell eines aufmerksamen Menschen |
-| `--combat=ctb\|realtime` | Kampfmodus eines neuen Spiels (auch `--autoplay`, `--autoplay=full`, `--goto=…`); Standard ist der **Echtzeitkampf** (07 E33), `ctb` der Rundenkampf bis zum Umzug ins Stempelduell |
 | `--rt-profile=typical\|perfect\|sloppy` | Full-Run-Bot im Echtzeitkampf: Spielprofil der Person (07 §5.7, je Held:in) |
 
 Beispiel: `godot --path prime-time-dungeon/game -- --autoplay=full --strategy=typical --pace=human`
+
+Kämpfe beginnen in der Welt (`--goto=explore`); bestimmte Kämpfe stellen die Capture-Rezepte her (Abschnitt 10). Die
+Argumente `--combat=ctb|realtime` und `--goto=battle:<enc_id>` gibt es seit R5b-2b nicht mehr (die Kampagne kämpft nur in
+Echtzeit, die CTB-Kampfszene ist gelöscht).
 
 ## 7. Werkzeuge
 
@@ -343,13 +347,12 @@ einer Temp-Kopie, schreibt die Icons aber nach `game/art/icons/` zurück. `--sho
 
 | Skript | Zweck | Erfolg |
 |---|---|---|
-| `tools/check.sh` | Import, alle Tests, Autoplay-Smoke-Test im Echtzeitkampf (Standard) und im CTB (`--combat=ctb`) | letzte Zeile `check.sh: OK` |
+| `tools/check.sh` | Import, alle Tests, Autoplay-Smoke-Test (Titel → Neues Spiel → Erkundung → Echtzeitkampf → Safe Room) | letzte Zeile `check.sh: OK` |
 | `tools/check.sh --tests-only [--filter=<teil>]` | Import und Tests (optional nur Testdateien, deren Name `<teil>` enthält) | `check.sh: OK` |
 | `tools/check.sh --shot <res://szene.tscn> <out.png> [frames] [BxH] [--touch] [--recipe=<name>] [--params=<json>] [--no-global-ui]` | rendert eine Szene unter Xvfb (`xvfb-run` nötig) im Compatibility-Renderer und speichert ein PNG | `saved <pfad>` |
 | `tools/fullrun.sh [--strategy=thorough\|rush\|dawdle\|typical\|all] [--hero=kai\|mopsula] [--seed=<int>] [--pace=fast\|human] [--liga=0\|1\|2] [--rt-profile=typical\|perfect\|sloppy] [--log-dir=<dir>]` | Full-Run-Bot headless mit festem 60-fps-Takt im Echtzeitkampf (07 §12.5): der `RtBotPlayer` spielt jeden Kampf als Person; `all` = thorough, rush und dawdle als Kai plus thorough als Graf Mopsula nach einem Import (wie in CI) | `fullrun.sh: OK` |
-| `tools/fullrun.sh --combat=ctb [weitere Argumente wie oben]` | derselbe Bot im Rundenkampf (CTB, bis zum Umzug ins Stempelduell); Log-Namen mit `_ctb` | `fullrun.sh: OK` |
 | `tools/rt_balance.sh [--seeds=20] [--hero=kai\|mopsula\|both] [--liga=0\|1\|2\|all] [--profile=typical\|perfect\|sloppy\|all] [--strict-bands] [--out=<datei>]`, `--sequence`, `--perf`, `--nightly` | Balance-Harness des Echtzeitkampfs (07 §11.4): die Begegnungen von Etage 1 auf der echten Sim mit den Bot-Profilen, Urteile gegen die Bänder aus 07 §11.1; nachts 200 Seeds (CI-Job `nightly-balance`) | Tabelle mit `RT-BAND`-Zeilen, Exit 0 |
-| `tools/perf.sh [--driver=opengl3\|vulkan] [--quality=high\|low] [--only=startup,explore,battle,safe_room,leak] [--cycles=20] [--out=<datei.md>] [--shots=<dir>] [--cells] [--headless]` | Performance-Probe unter Xvfb: Budget-Tabelle aus 02_TECH §12.1 (Draw Calls, Primitive, Lichter, Speicher, Ladezeiten) und Leak-Schleife über Szenenwechsel; Ergebnisse in `docs/PERFORMANCE.md` | `PERF: OK`, `perf.sh: exit 0` |
+| `tools/perf.sh [--driver=opengl3\|vulkan] [--quality=high\|low] [--only=startup,explore,safe_room,combat,leak] [--cycles=20] [--out=<datei.md>] [--shots=<dir>] [--cells] [--headless]` | Performance-Probe unter Xvfb: Budget-Tabelle aus 02_TECH §12.1 (Draw Calls, Primitive, Lichter, Speicher, Ladezeiten), der Echtzeitkampf in der Welt (`combat`: regulär, zwei Gruppen, Königin) und Leak-Schleife über Szenenwechsel; Ergebnisse in `docs/PERFORMANCE.md` | `PERF: OK`, `perf.sh: exit 0` |
 | `tools/make_icons.sh` | erzeugt die App-Icons (Android, iOS, macOS) und die iOS-Startbilder in `game/art/icons/` aus `game/icon.svg` neu | Zeilen `ICON: …`, Exit 0 |
 | `tools/apple/release.sh <schritt>` | nur CI (macOS-Runner, Secrets): Schritte der Jobs `apple-macos` und `apple-ios-testflight`, Abschnitt 4 „Mit Apple-Entwicklerkonto“, 02_TECH §12.4 | Exit 0 |
 
@@ -361,8 +364,8 @@ Godot-Prozesses. `2` = Aufruffehler (Godot-Binary nicht gefunden; bei `fullrun.s
 
 ```bash
 GODOT=~/godot/godot prime-time-dungeon/tools/check.sh
-GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --strategy=all                 # Echtzeitkampf (Standard)
-GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --strategy=all --combat=ctb    # Rundenkampf (CTB)
+GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --strategy=all
+GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --hero=mopsula --liga=2      # Graf Mopsula, Unterhosen-Liga Stufe 2
 ```
 
 ## 8. Ordner
@@ -379,7 +382,8 @@ prime-time-dungeon/
     │   ├── data/        GameData, Defs, DataValidator (+ validators/ je neuer Tabelle), SeedUtil, JsonUtil
     │   ├── stats/       StatBlock, Elemente, Balance-Konstanten, FixedMath
     │   ├── rt/          Echtzeitkampf: RtSim (30 Ticks/s), Fähigkeiten, Telegraphen, Partner- und Gegner-KI, RtMods
-    │   ├── battle/      CTB-Kampf (bis zum Stempelduell) und geteilte Typen: Schadensformeln, Status, ActionEvent
+    │   ├── battle/      geteilte Kampf-Typen: Schadensformeln, Status, ActionEvent, BattleCommand, BattleResult (Beute)
+    │   ├── stempel/     Minispiel „Stempelduell“ (10): ctb/ = die Engine des früheren Rundenkampfs, eingefroren
     │   ├── show/        ShowModel (Hype, Zuschauer, Follower), Achievements, Sponsoren, M.O.D.-Ansagen, Marotten/Liga
     │   ├── loot/        LootRoller (Lootboxen, Truhen, Pools)
     │   ├── progression/ GameState, FloorRun, Party, Inventar, EXP, Shop, BattleBridge, SaveCodec, Talents, Casting, HeroRules
@@ -389,7 +393,7 @@ prime-time-dungeon/
     ├── data/            19 JSON-Dateien: 17 GameData-Tabellen + events.json (SHOWRUN-Events) + mod_filter.json (Filter
     │                    für „M.O.D. live“)
     ├── art/             shaders/, materials/, kit/ (prozedurale Figuren, Räume, Props, VFX), gallery/, icons/
-    ├── scenes/          boot/, title/, exploration/, combat/ (Echtzeitkampf: Director, HUD), battle/ (CTB), safe_room/, ui/
+    ├── scenes/          boot/, title/, exploration/, combat/ (Echtzeitkampf: Director, HUD), safe_room/, ui/
     └── tests/           run_tests.gd, test_*.gd, lib/, fixtures/, perf/, tools/, capture.gd, capture_recipes.gd
 ```
 
@@ -413,17 +417,18 @@ Systeme) > 01_GDD / 02_TECH / 03_ART / 05 (je nach Thema) > 04**.
 | [`docs/04_STRATEGIE_ROADMAP.md`](docs/04_STRATEGIE_ROADMAP.md) | Strategie: Positionierung, IP und Recht, Phasenplan 0–7, Team, Finanzierung, Monetarisierung |
 | [`docs/05_LIVE_MODUS.md`](docs/05_LIVE_MODUS.md) | Live-Modus SHOWRUN: Stufen S0–S5, Determinismus, Protokoll, Geschenke, Sponsor-Fenster, Wirtschaft, Recht |
 | [`docs/06_PROGRESSION_MAROTTEN_KI_ADMIN.md`](docs/06_PROGRESSION_MAROTTEN_KI_ADMIN.md) | Neue Systeme in Paketen A–D: Figurenwahl (Paket A, umgesetzt), Talent-Show und Spezies (Paket B, umgesetzt), M.O.D.-Marotten, KI-Admin |
-| [`docs/07_ECHTZEITKAMPF.md`](docs/07_ECHTZEITKAMPF.md) | Echtzeitkampf „WoW-light“ direkt in der Welt (ersetzt den CTB-Kampf ab R5): Vertrag, Phasen R1–R5 |
+| [`docs/07_ECHTZEITKAMPF.md`](docs/07_ECHTZEITKAMPF.md) | Echtzeitkampf „WoW-light“ direkt in der Welt (ersetzt den CTB-Kampf, seit R5b-2b der einzige Kampf der Kampagne): Vertrag, Phasen R1–R5 |
 | [`docs/08_CASTING.md`](docs/08_CASTING.md) | Casting: eigene Kandidat:in (Persona), Vorleben, persönlicher Erzählstrang, Aussehen; KI optional |
 | [`docs/09_STAFFELN.md`](docs/09_STAFFELN.md) | Staffeln: Sendeplan bis Etage 18, KI-Besetzung, Schläfer und Ausloggen, Tod und Modi, Fertigkeiten (ST1–ST3) |
-| [`docs/10_MINISPIEL_STEMPELDUELL.md`](docs/10_MINISPIEL_STEMPELDUELL.md) | Mini-Spiel „Stempelduell“: der CTB-Kampf als optionales Karten-Duell (Etage 8; bis dahin Titel → Extras → Vorschau), Umsetzung SD1–SD3 |
+| [`docs/10_MINISPIEL_STEMPELDUELL.md`](docs/10_MINISPIEL_STEMPELDUELL.md) | Mini-Spiel „Stempelduell“: der CTB-Kampf als optionales Karten-Duell (Etage 8; bis dahin Titel → Extras → Vorschau), Umsetzung SD1–SD3 (SD1, die Engine-Auslagerung, ist umgesetzt) |
 | [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) | Messergebnisse der Performance-Probe gegen die Budgets aus 02_TECH §12.1 |
 
 ## 10. Screenshots
 
 Alle Bilder stammen aus dem Spiel selbst (Compatibility-Renderer unter Xvfb, 1280 × 720; Bilder 59 und 63 im Handy-Format
 2400 × 1080 und Bild 26 im Handy-Format 1600 × 720, alle drei mit Touch-Steuerung). Die Kampfbilder zeigen den Echtzeitkampf,
-den Standard seit R5b-2a; die Bilder des Rundenkampfs (08–12, 18, 22, 28) liegen weiter in `docs/screenshots/`.
+seit R5b-2b den einzigen Kampf der Kampagne; die Bilder des früheren Rundenkampfs (08–12, 18, 22, 28) liegen als Archiv in
+`docs/screenshots/` (die CTB-Kampfszene, die sie erzeugte, ist gelöscht).
 
 | | |
 |---|---|
@@ -452,8 +457,7 @@ den Standard seit R5b-2a; die Bilder des Rundenkampfs (08–12, 18, 22, 28) lieg
 | ![Sponsor-Fenster](docs/screenshots/overlay_sponsor_window.png) **Overlay** Show-Overlay (Demo-Werte): Sponsor-Fenster offen mit Platz-Punkten, Show-Chip „M.O.D. mag heute“ mit Herzen und Liga-Stufe | ![Party](docs/screenshots/talents_party.png) **Party-Seite** mit Talenten und offener Wahl |
 
 **Neu erzeugen:** `tools/check.sh --shot` rendert eine Szene. Zustände, die man nur durch Spielen erreicht, stellen die
-Capture-Rezepte in `game/tests/capture_recipes.gd` her (02_TECH §11.3). Die Rundenkampf-Bilder entstehen mit
-`res://scenes/battle/battle.tscn` und den Rezepten `battle_*` (die Szene spielt immer einen CTB-Spielstand). Beispiele:
+Capture-Rezepte in `game/tests/capture_recipes.gd` her (02_TECH §11.3). Beispiele:
 
 ```bash
 T=prime-time-dungeon/tools/check.sh

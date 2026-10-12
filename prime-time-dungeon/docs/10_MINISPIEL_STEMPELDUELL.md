@@ -29,6 +29,13 @@
 > Kampagne ändert es nur über die Änderungsanträge **CR-34 … CR-38** (Kap. 7.6). Die Vorrangklausel des Briefs bleibt
 > unberührt.
 >
+> **Stand SD1 (2026-10-12, mit 07 R5b-2b, Branch `ptd/r5b2b`):** SD1 ist umgesetzt — Kap. 6.2 Zeilen 0–5; Zeile 6, der
+> Stub für den Befehl `sd`, bleibt bei ST0 bzw. SD3. Die Kampagne kämpft nur noch in Echtzeit und nennt die Engine nirgends
+> mehr (`test_sd_boundaries`); die Engine liegt — bis auf die herausgelöste Beuteregel unverändert — eingefroren in
+> `core/stempel/ctb/` (`test_sd_engine_golden`).
+> Einzelheiten und Abweichungen: Kap. 6.2 „Umgesetzt“; was SD2 vorfindet und braucht: Kap. 7.3 „Stand nach SD1“; Bericht mit
+> Gates: 07 §12.6 „Stand R5b-2b“.
+>
 > **Namen der Phasen:** Der Orchestrator nennt sie M1–M3. Weil „M0–M8“ schon die Module aus 02_TECH sind — und **M1 genau der
 > CTB-Kampf-Kern ist, um den es hier geht** —, heißen sie hier **SD1–SD3** (Stempelduell-Phasen): SD1 = M1, SD2 = M2,
 > SD3 = M3, gleicher Inhalt.
@@ -925,6 +932,13 @@ additiv in `project.godot`, Kap. 7.3); die Ziffern 1–5 liest die Szene als Kom
 `bar_1` … `bar_5` liegen auf dem Gamepad auf A/X/Y/B/RB und würden sonst mit „spielen“ kollidieren. Es gibt **kein
 Zeitlimit** für einen Zug.
 
+**Stand nach SD1 (07 E36, §7.7):** `project.godot` bindet Tab nicht mehr an `map` (Tab wählt in der Erkundung ein Ziel) und
+Y nicht mehr an `toggle_auto` (das liegt am Pad auf Steuerkreuz oben). Die Tabellen oben setzen die alte Belegung voraus: Das
+Duell ruft beim Betreten `CombatInput.apply_input_mode(false)` (Tab → `map`, Y → `toggle_auto`, Steuerkreuz oben aus) und
+beim Verlassen `CombatInput.apply_for_game()` — oder liest Tab und Y in seiner Szene selbst. `toggle_speed` (R, R3) ist
+weiter in der Input-Map, die Kampagne nutzt es seit SD1 nicht mehr (im Echtzeitkampf ist R das Partner-Spezial, eine eigene
+Abfrage): frei für „Tempo × 1 / × 2“.
+
 ### 4.7 Menüs: Schalterhalle, Aktenschrank, Stempelalbum
 
 **Einstieg:** Titel → **Extras** → **Stempelduell (Vorschau)** (der Titel bekommt eine Zeile „Extras“ zwischen „Event-Lauf“
@@ -1078,6 +1092,13 @@ Ranglisten mit Druck; Tagesbelohnungen, Serien („Streaks“), ablaufende Angeb
 | Datenfelder | CTB-Felder in `SkillDef`/`StatusDef`/`EnemyDef` und ihre Validator-Regeln (07 §4.11: `rank`, `cooldown`, `fail_effect.delay_pct`, `default_turns`, `tick_timing`, `tick_speed_mult`, `delay_on_apply`, `ai`/`phases[].actions`, `pseudo_units`) | — | gelöscht |
 | CTB-Darstellung | `scenes/battle/**` (Bühne, Kamera, Player, HUD, Ergebnis) | ≈ 6 100 | gelöscht — **bleibt gelöscht** (Kap. 4.1) |
 
+**Stand nach SD1 (07 R5b-2b):** die Engine in `core/stempel/ctb/` (Code unverändert bis auf das Herauslösen von
+`roll_drops`); die geteilten Basisklassen in `core/battle` wie oben, `battle_command.gd` dabei; die Beuteregel
+`BattleResult.roll_drops`; `test_m1_*` bleiben (dazu `test_sd_engine_golden`, `test_sd_boundaries`); `StateHash.of_battle`/
+`battle_hash_input` und die Konstanten (Abschnitt „Stempelduell-Engine (10, SD1)“ in `Balance`) bleiben; die CTB-Felder
+stehen in den Defs und als optionale Felder im Validator, die Kampagnen-Daten tragen sie nicht mehr; `scenes/battle/**` ist
+gelöscht.
+
 ### 6.2 SD1: Extraktion aus der Kampagne (in 07 R5b)
 
 07 §12.6 legt nach erfüllter Parität vier Commits fest: (1) Standard `realtime`, (2) **Daten backen** (HP × 4, `SaveCodec`
@@ -1093,6 +1114,33 @@ sie sind — die Kampagne wird vollständig echtzeitig, nur die Engine lebt als 
 | 4 | **Wie in 07 §12.6 gelöscht bzw. mit R5b überflüssig:** `scenes/battle/**`, `Router.start_battle`/`end_battle` + Swirl, `Events.battle_turn_started`, CTB-Pfade der Kampagne (`BattleBridge.make_setup`, CTB-Zweige in `RunSim`/`GameReplay`, `Show.take_pending_gift(battle)`/`_battle_party`), `ShowRules`-Profil `ctb`, `GameSettings.battle_speed`/`auto_battle_default`/`partner_auto`, CTB-Teile **aller** Kampagnen-Tests — 07 nennt `test_m5_*`, `test_m8_replay`, `test_m8_run_sim`, `test_06b/06c_balance`; heute nennen **27 weitere Dateien** unter `tests/` die Engine-Klassen im Code (u. a. `test_06a_hero`, `test_06b_talents`, `test_06c_*`, `test_08_*`, `test_m0_game`, `test_m2_*`, `test_m7_*`, `test_m8_command`/`gift_applier`/`integrity`/`receive_gift`/`sponsor_windows`, `capture_recipes.gd`; Liste per `grep -rlw` über die fünf Klassennamen). Nach dem Datenbacken prüfen sie ohnehin nichts Gültiges mehr | wie 07 §12.6 |
 | 5 | **Neu:** `tests/test_sd_engine_golden.gd` (fester Kampf aus dem `test_m1`-Mini-Datensatz mit geskripteten Befehlen → eingefrorener `StateHash.of_battle` und Ereigniszahl; übernimmt den CTB-Teil von `test_m8_state_hash`) und `tests/test_sd_boundaries.gd` (Kap. 6.3: außer dem Stempelduell und seinen Tests nennt kein Code mehr die fünf Engine-Klassen) | beide grün |
 | 6 | **Optional im selben Durchgang (ST0):** Command-Typ `sd` als Stub in `core/live/command.gd` mit Ablehnung `sd_unavailable` in `RunRules`/`RunSim`/`GameReplay` — spart SD3 einen eigenen Vertrags-Durchgang (Kap. 6.8, CR-36) | `test_m8_command` (jeder Typ hat einen Zweig) |
+
+**Umgesetzt (07 R5b-2b, 2026-10-12, Branch `ptd/r5b2b`):** Zeile 0 `48eac82`, Zeile 1 `78efb98`, Zeile 2 `585188b`,
+Zeile 4 `dcccac0`, Zeile 3 `8d4cee4`, Zeile 5 `04fbda5`; davor die 07-Schritte 1–2 (Standard `realtime` seit R5b-2a, Daten
+backen `0aaf01b`, `SaveCodec` v2 `21fe9ab`). Abweichungen und Auslegungen:
+
+- **(a) Zeile 4 vor Zeile 3:** Die CTB-Pfade und -Tests der Kampagne lasen die CTB-Felder der Daten, solange es sie gab; in
+  dieser Reihenfolge blieb jeder Commit grün.
+- **(b) Zeile 2:** Der `Balance`-Abschnitt „Stempelduell-Engine (10, SD1)“ sammelt alle Konstanten, die nur die Engine liest
+  — neben `FLEE_*`, `DEFEND_MULT` und `STUNT_COOLDOWN` auch die MP des Verteidigens, `TAUNT_CHANCE`, `STUN_BOSS_MULT` und
+  `SUMMON_CTR_FRAC` (Werte unverändert).
+- **(c) Zeile 3:** Mit den Feldern gingen `learnset` in `party.json`/`classes.json` (die Leiste ist `rt.bar`, 07 §5.1), die
+  drei Skills, die nur die CTB-KI der Etage-2-Platzhalter nannte (`skl_e_pose`, `skl_e_ram`, `skl_e_price_slam`), und die
+  M.O.D.-Zeilen der CTB-Haken (`tutorial_stunt`, `boss_train_warning`); `PartyMember.skills` wird für ein neues Spiel nicht
+  mehr gefüllt (gespeicherte Listen laden weiter). Die Achievements tragen ihre Echtzeit-Schwellen in `condition`/`desc`.
+- **(d) Zeile 4:** Mit der CTB-Kampfszene gingen auch der Run-Log-Befehl `battle` (eine Begegnung braucht ihren `rt`-Block),
+  die Boot-Argumente `--combat=` und `--goto=battle:` und die Laufzeit-Rückstellung von Tab/Y (07 E36). Zwei Shims halten den
+  unerreichbaren CTB-Zweig von `scenes/exploration/exploration.gd` übersetzbar (dort nicht angefasst): `Game.make_battle_setup`
+  liefert `null`, `Router.start_battle` tut nichts — beide nennen keine Engine-Klasse.
+- **(e) Zeile 5:** Der Golden-Test friert **zwei** Kämpfe ein: einen regulären (verloren nach 35 Befehlen: Diebstahl und
+  Flucht, Heilungen, Wiederbelebung, Stunts, Verteidigen) und die Königin als Boss (gewonnen nach 32: Phasenwechsel,
+  Beschwörungen, der Zug als Pseudo-Einheit) — `StateHash.of_battle`, Ereigniszahl, Prüfsumme des Ereignisstroms und
+  Ausgang. `test_sd_boundaries` prüft zusätzlich, dass ein alter CTB-Kampagnen-Log „ältere Version“ ist (Fixture
+  `run_log_sim_v3_ctb.json`, aufgenommen von `2246c31`).
+- **(f) Zeile 6** nicht in diesem Durchgang (ST0 bzw. SD3, CR-36).
+
+Die fünf Engine-Dateien sind bis auf das Herauslösen von `roll_drops` unverändert; `test_m1_*` behalten Namen und Inhalt
+(nur die Ordner-Zeile in `test_m1_stats`).
 
 **Ergebnis:** Die Kampagne ist echtzeitig und CTB-frei (der Grenztest erzwingt es), die Engine ist mit allen ihren Tests
 erhalten, und der Goldwert hält sie eingefroren: Eine spätere Änderung an geteilten Klassen (`Combatant`, `DamageCalc`,
@@ -1137,7 +1185,7 @@ Einzige Ausnahme ist `core/live/state_hash.gd`, das `of_battle`/`battle_hash_inp
 prüft per Textsuche über **Code-Zeilen ohne Kommentare** (heute erwähnen u. a. `gift.gd`, `gift_applier.gd`, `talents.gd`
 und `rt_gift.gd` die Engine in Kommentaren), dass die fünf Engine-Klassen außerhalb von `core/stempel/**`,
 `scenes/stempel/**`, `core/live/state_hash.gd`, `tests/test_m1_*` und `tests/test_sd_*` nicht vorkommen. Grün wird er erst nach
-SD1 Schritt 0 und 4 (Kap. 6.2).
+SD1 Schritt 0 und 4 (Kap. 6.2) — grün seit 07 R5b-2b.
 
 ### 6.4 Regelbuch: Daten → Engine
 
@@ -1310,8 +1358,8 @@ Operationen — das Muster von `encounter` (07 §10.5):
 | Test | Phase | Prüft |
 |---|---|---|
 | `test_m1_*` (8 Dateien) | SD1 (bleiben) | die Engine wie bisher: Tick-System, Vorschau, Formeln, Zustände, KI, Kampfablauf, Schnappschuss (`test_m1_stats`: Lint-Ordner + `core/stempel/ctb`) |
-| `test_sd_engine_golden` | SD1 | fester Engine-Kampf → eingefrorener `StateHash.of_battle` + Ereigniszahl (dazu der CTB-Teil aus `test_m8_state_hash`); Änderung nur mit Begründung im Commit |
-| `test_sd_boundaries` | SD1 | die fünf Engine-Klassen kommen in Code-Zeilen (ohne Kommentare) nur in `core/stempel/**`, `scenes/stempel/**`, `core/live/state_hash.gd` und den SD-/M1-Tests vor; `BattleState.roll_drops` gibt es nicht mehr |
+| `test_sd_engine_golden` | SD1 (umgesetzt) | zwei feste Engine-Kämpfe (regulär und Boss, Kap. 6.2 „Umgesetzt“ (e)) → eingefrorener `StateHash.of_battle`, Ereigniszahl, Prüfsumme der Ereignisse und Ausgang; zweimal gleich, Befehle über JSON nachgespielt (dazu der CTB-Teil aus `test_m8_state_hash`: Schnappschuss → `from_dict` → gleicher Hash); Änderung nur mit Begründung im Commit |
+| `test_sd_boundaries` | SD1 (umgesetzt) | die fünf Engine-Klassen kommen in Code-Zeilen (ohne Kommentare) nur in `core/stempel/**`, `scenes/stempel/**`, `core/live/state_hash.gd` und den SD-/M1-Tests vor; die Dateien liegen in `core/stempel/ctb/`, `scenes/battle/` bleibt gelöscht; `BattleState.roll_drops` gibt es nicht mehr; ein alter CTB-Kampagnen-Log ist in beiden Verifiern, Bestenliste und Lobby „ältere Version“ |
 | `test_sd_rulebook` | SD2 | Daten gültig (Validator positiv/negativ), Konverter → gültige `GameData` ohne Fehler und Warnung (Grundangriff formal gültig, Engine-Namen = IDs, kein `boss`), `rules_hash` stabil und textunabhängig, Gegnerdecks regelkonform und jede ihrer Karten mit `ai`-Eintrag, Show-Karten mit `cooldown 0`, Freischaltquellen existieren, Texte (IP-Wörter, 110 Zeichen, Platzhalter, Glyphen F8, Kurznamen ≤ 7 Zeichen) |
 | `test_sd_duel` | SD2 | Hand 5, Nachziehen, Mischen bei leerem Stapel, Umlaufmappe, Abheften (halber Ärger, Tausch, 2 WT), jede Karte des Regelbuchs gegen ihre gedruckte Wirkung, Zustände in **Nummern** (Kap. 1.6), Wiedervorlage nicht doppelt, Zuständigkeiten, Immunität, Show-Karten (Chance, Patzer), Durchsage (Warnung, Abheften halbiert), Phasen, Leinen-Fallstrick hebt den Feierabend-Eilvermerk auf, Gleichstand „Kundschaft geht vor“, Dienstschluss = vertagt, Aufgeben, Lernduell (Geduld ≥ 1, Drehbuch) |
 | `test_sd_ai` | SD2 | Gegner spielen nur aus der Hand, Notlösung → Abheften mit der richtigen Karte, Profile (Bedingungen, `turn_mod`), `SdAi.suggest` und `AutoPolicy` liefern nur legale Züge, beide würfelfrei |
@@ -1382,6 +1430,9 @@ SD3 (Etage 8)
    └─ Feinschliff (Art, Ton) mit der Akt-2-Produktion der Kulisse Amt (04 Phase 4/5, 09 Kap. 3.5)
 ```
 
+**Stand 2026-10-12:** 07 R5b Schritte 1–4 mit SD1 sind umgesetzt (07 §12.6 „Stand R5b-2b“); ST0 mit dem Stub `sd` steht
+aus. SD2 kann beginnen.
+
 **Warum so:** SD1 muss in R5b liegen, weil R5b sonst löscht, was SD2 braucht. SD2 hängt an keiner Staffel-Mechanik und
 kann deshalb früh Spaß beweisen (Extras-Vorschau); SD3 braucht eine Etage 8, die es erst mit ST1-C gibt.
 
@@ -1393,6 +1444,7 @@ kann deshalb früh Spaß beweisen (Extras-Vorschau); SD3 braucht eine Etage 8, d
 | **Dateien** | `core/battle/{battle_state,battle_result}.gd`, `core/rt/rt_result.gd`, `tests/{test_m2_loot,test_r1_rt_result}.gd` (`roll_drops`), `core/stempel/ctb/*.gd` (verschoben), `tests/test_m1_stats.gd` (eine Zeile), `core/stats/balance.gd` (Abschnitt bleibt), `core/live/state_hash.gd` (unverändert), `core/data/{game_data,data_validator}.gd` und `core/data/defs/*` (CTB-Felder, `PseudoUnitDef` und `pseudo_units` bleiben, im Validator optional), `tests/test_sd_engine_golden.gd`, `tests/test_sd_boundaries.gd`; mit Stub zusätzlich `core/live/command.gd`, `run_rules.gd`, `run_sim.gd`, `autoload/game_replay.gd` (je ein Zweig) |
 | **Gate** | `check.sh` grün, `fullrun.sh --strategy=all` grün (07 §12.6), alle `test_m1_*` grün, Golden fest, Grenztest grün |
 | **Aufwand** | ≈ 1–2 Personentage mit KI, **zusätzlich** zu R5b Schritt 3 (das Ersetzen der CTB-Teile von heute 27 weiteren Testdateien schuldet R5b in jedem Fall, Kap. 6.2 Zeile 4) |
+| **Stand** | **umgesetzt** mit 07 R5b-2b (Kap. 6.2 „Umgesetzt“, ohne Stub `sd`). Gate erfüllt: `check.sh` grün (1 599 Tests, 0 fehlgeschlagen, 0 übersprungen, 0 Fehler; `AUTOPLAY: OK`), `fullrun.sh --strategy=all` grün, alle `test_m1_*` grün, Golden fest, Grenztest grün. Ersetzt wurden die CTB-Teile von 58 Kampagnen-Testdateien — mehr als die 27 von oben: dazu Tests, die den CTB-Kampf über `Game`, `RunSim`, den Befehl `battle` oder die CTB-Szene spielten |
 
 ### 7.3 SD2 — Mini-Spiel (eigener Agent „Stempelduell“)
 
@@ -1406,6 +1458,29 @@ kann deshalb früh Spaß beweisen (Extras-Vorschau); SD3 braucht eine Etage 8, d
 | SD2-F Ton, Overlay | Klänge, Wartezimmer-Schleife, ShowOverlay-Modus `duel`, ModDialog-Lage | 1–2 |
 | SD2-G Tests, Harness, Captures, Perf | Kap. 6.9/6.10, Capture-Rezepte `sd_table`, `sd_table_touch`, `sd_boss_durchsage`, `sd_deck_builder`, `sd_album`, `sd_results` | 3–4 |
 | **Summe** | | **≈ 22–30 PT** |
+
+**Stand nach SD1 — was SD2 vorfindet und braucht** (07 R5b-2b):
+
+- **Engine:** `BattleState`, `CTBQueue`, `ActionResolver`, `EnemyAI`, `AutoPolicy` heißen wie bisher (`class_name`) und
+  liegen in `core/stempel/ctb/`; `BattleCommand` und die übrigen Basistypen bleiben geteilt in `core/battle`. Eingefroren:
+  Jede Verhaltensänderung lässt `test_sd_engine_golden` scheitern → Änderungsantrag, Begründung, `SD_VERSION`.
+- **Regelbuch statt Kampagnen-Daten:** `data/*.json` trägt keine CTB-Felder mehr (kein `rank`, `cooldown`, `default_turns`,
+  `tick_timing`, `ai`/`phases`, keine `pseudo_units`). Das Regelbuch liefert sie selbst; Defs und `DataValidator` nehmen sie
+  als optionale Felder an. Vorbild für einen kleinen Engine-Datensatz über `GameData.load_from_dicts`: `Fx.tables()` in
+  `tests/test_m1_fixture.gd`.
+- **Grenze:** Engine-Klassen nur in `core/stempel/**`, `scenes/stempel/**` und `tests/test_sd_*` (dazu die Bestände
+  `tests/test_m1_*` und `core/live/state_hash.gd`; sonst ist `test_sd_boundaries` rot) — der Titel-Abschnitt („Extras“) ruft nur `scenes/stempel/`.
+- **Eingabe:** Tab und Y binden (Kap. 4.6 „Stand nach SD1“: `CombatInput.apply_input_mode(false)` beim Betreten,
+  `CombatInput.apply_for_game()` beim Verlassen, oder selbst lesen); `toggle_speed` ist frei; `sd_file` additiv in
+  `project.godot`.
+- **Bildschirmwechsel:** `Router.push(…, Transition.FADE)` und `pop` (02_TECH §9.2); `Router.start_battle`/`end_battle`, der
+  Swirl-Übergang und die Sfx-Id `swirl` gibt es nicht mehr (die Sfx-Id `defend` schon).
+- **Hash und Versionen:** `StateHash.of_battle`/`battle_hash_input` bleiben für `SdDuel.hash()`; `RunSim.SIM_VERSION` ist 4
+  (Kampagne), `SD_VERSION` zählt getrennt.
+- **Show:** `ShowRules` kennt nur das Profil `rt`; das Duell sendet keine Kampf-Signale (Kap. 6.5) und speist die Show nicht.
+- **Tests und Werkzeuge:** Die CTB-Balance-Tests der Kampagne sind gelöscht (`test_m7_balance`, `test_m7_show_balance`,
+  `test_06c_balance`); das Duell misst mit `test_sd_balance` gegen eigene Bänder. `perf.sh` hat keinen Abschnitt `battle`
+  mehr — SD2 ergänzt `stempel`. Die Bilder der CTB-Kampfszene (08–12, 18, 22, 28) liegen als Archiv in `docs/screenshots/`.
 
 **Geteilte Dateien (je ein markierter Abschnitt `# --- Stempelduell (10, SD2) ---`, nur additiv):** `scenes/title/title.gd`
 (Zeile „Extras“), `scenes/ui/show_overlay.gd` (Modus `duel`; `Events.overlay_mode_requested` dokumentiert ihn),

@@ -151,7 +151,7 @@ Basis sind die Konstanten von `UiTheme` (02_TECH §3.9); Art ergänzt nur LIVE/P
 | `art/shaders/glow.gdshader` | spatial | Unshaded-Emissiv: Neonröhren, Treppen-Licht, Signallampen |
 | `art/shaders/vfx_additive.gdshader` | spatial | Additive Billboard-Partikel ohne Textur (Punkt/Stern/Ring/Funke); `billboard` (Standard `true`; `false` behält die Mesh-Ausrichtung, z. B. für Schlag-Bögen) |
 | `art/shaders/hologram.gdshader` | spatial | M.O.D., Bildschirme, Sponsor-Logos, Schilde |
-| `art/shaders/ui_swirl.gdshader` | canvas_item | Kampf-Swirl (Router) |
+| `art/shaders/ui_swirl.gdshader` | canvas_item | Kampf-Swirl (Router) — **entfallen mit 07 R5b-2b** (mit der CTB-Kampfszene; §3.8) |
 | `art/shaders/ui_tv_overlay.gdshader` | canvas_item | Quality `low`: Scanlines + Vignette als Abdunkelung, Testbild „Sendeschluss“; **liest den Bildschirm nicht** (F7) |
 | `art/shaders/ui_tv_overlay_aberration.gdshader` | canvas_item | Quality `high`: wie oben + chromatische Aberration (liest den Bildschirm); gleiche Uniforms + `screen_tex` (Antrag A10 an 02_TECH §1.5) |
 | `art/shaders/ptd_color.gdshaderinc` | Include | `ptd_vertex_albedo()` — sRGB-Weiche für `COLOR` (F1); per `#include` in `toon`, `env_tiles`, `vfx_additive` (Antrag A10 an 02_TECH §1.5) |
@@ -639,6 +639,10 @@ void fragment() {
 ```
 
 ### 3.8 `ui_swirl.gdshader`
+
+> **Stand 07 R5b-2b (2026-10-12):** Shader, Router-Übergang `SWIRL` und Sfx `swirl` sind mit der CTB-Kampfszene entfallen
+> — der Echtzeitkampf beginnt ohne Szenenwechsel in der Welt, mit Kamerafahrt und Banner (07 §8.8). Der Text unten ist
+> Geschichte.
 
 Router (02_TECH §9.3): Snapshot → `TextureRect` auf `CanvasLayer 100` mit diesem Material, `snapshot` = dieselbe Textur,
 `aspect = size.x / size.y`, `progress` 0→1 in **0.7 s** (`TRANS_CUBIC`, `EASE_IN`), danach 0.3 s Fade.
@@ -1491,7 +1495,8 @@ Sponsorfarben: Glückwasser `#4FC3F7`, KRAWUMM `#FF7A1A`, Panzerkeks `#C99A5B`, 
 Fan = Box `#FF5FA2` + Schleife `PAPER` + Herz (2 Sphere + Cone). Tap 1/2/3: Rütteln ±6° (0.15 s), Punch 1.08, Licht in Tierfarbe 1 → 2.5 → 4 (ab Tap 2 in Raritätsfarbe des besten Wurfs).
 Öffnen: Deckel −110° in 0.2 s, `chest_open` (48 Sterne), Karten (Box 0.5×0.7×0.02 mit Rand in Raritätsfarbe **E** 0.6) im Bogen 0.4 s je Karte, Rot Y 180°→0°.
 
-**Übergänge:** Erkundung → Kampf = Pink-Flash 20 % 0.05 s, `ui_swirl` 0.7 s, 0.3 s Fade, Kamera startet `establishing`.
+**Übergänge:** Erkundung → Kampf = Pink-Flash 20 % 0.05 s, `ui_swirl` 0.7 s, 0.3 s Fade, Kamera startet `establishing`
+(bis 07 R5b-2b, CTB-Kampfszene; der Echtzeitkampf beginnt in der Welt, 07 §8.8).
 Kampf → Erkundung / Safe Room = Fade 0.25 s nach `INK`. Etagenkollaps = Trauma 0.6 + Deckenputz (30 Box-Brocken) + Weißblitz + Testbild.
 Game Over = `ui_tv_overlay.test_card` 0→1 in 0.2 s, Buttons nach 1.5 s.
 
@@ -1511,6 +1516,9 @@ Game Over = `ui_tv_overlay.test_card` 0→1 in 0.2 s, Buttons nach 1.5 s.
   Kamera < 1.5 m an Kais Kopf → Rig blendet aus; Zoom 5–9 m per Mausrad oder Zwei-Finger-Pinch.
 
 ### 8.2 Kampf-Bühne (`battle_stage.gd`)
+
+> **Stand 07 R5b-2b:** Die CTB-Kampfszene (`scenes/battle/**`: Bühne, Kamera `battle_camera.gd`, HUD) ist gelöscht; §8.2
+> und §8.3 sind Geschichte. Der Echtzeitkampf spielt im Kampf-Set der Welt (Lichtring, 07 §8; HUD §9.5).
 
 Arena = `EnvKit.build_battle_arena()` (Bühne r 9 m). Party blickt −Z, Gegner +Z. Hinter den Gegnern eine **niedrige LED-Wand**
 (Hologramm 10 × 1.7 m, Mitte y 1.75 m, Text „DUNGEON PRIME TIME“/„BOSSKAMPF“ + „LIVE“ auf der Wand): sie bleibt in den Schulter-Shots
@@ -1580,7 +1588,7 @@ Ein Theme für alles: `UiTheme.get_theme()` (`scenes/ui/theme/ui_theme.gd`, M0);
 Modale Menüs (Pause, Automat) haben einen **deckenden** Panel-Hintergrund (kein HUD-Text scheint durch); der Safe Room blendet seine
 Menüspalte und das Raum-Namensschild an der Rückwand aus, solange ein Modal offen ist bzw. weil der UI-Kopf den Namen trägt.
 
-Kampf-UI (GDD 14.5, auf 720p umgerechnet × 2/3): Befehlsmenü 240×280 unten links (Zeilen 42 px, aktive Zeile + 4 px Magenta-Balken);
+CTB-Kampf-UI (bis 07 R5b-2b, mit der CTB-Kampfszene gelöscht; das Echtzeit-HUD steht in §9.5 — GDD 14.5, auf 720p umgerechnet × 2/3): Befehlsmenü 240×280 unten links (Zeilen 42 px, aktive Zeile + 4 px Magenta-Balken);
 Zugreihenfolge rechts (Eintrag 1: 64 px, weitere 42 px; Rahmen `ui_party`/`ui_enemy`, Zug grau, Geist 50 %); Party-Panels 254×74 (HP-Leiste 8 px mit nachlaufendem `DANGER`-Segment 0.5 s, MP 6 px);
 Element-Icons als `Polygon2D` (Tropfen, Hex-Stern, Zickzack, Blase, Faust) in Elementfarbe.
 
@@ -1588,7 +1596,7 @@ Element-Icons als `Polygon2D` (Tropfen, Hex-Stern, Zickzack, Blase, Faust) in El
 `transparent_bg = true`, `render_target_update_mode = UPDATE_ONCE`; Kamera FOV 30 auf Anker `head`, Abstand 2.2 × Kopfhöhe, Licht
 `DirectionalLight3D` (−30, 30, 0) Energie 1.2). Die Porträts zeigen deren **`ViewportTexture`** (`TextureRect`, `STRETCH_KEEP_ASPECT_COVERED`).
 Kein `get_texture().get_image()` und kein Image-Cache: headless liefert das `null` + Engine-Fehler (bricht `test_m5`/`test_m6`/Autoplay),
-die `ViewportTexture` dagegen läuft headless fehlerfrei (geprüft). Den Cache (`Dictionary key → SubViewport`) besitzt der `BattleHud`;
+die `ViewportTexture` dagegen läuft headless fehlerfrei (geprüft). Den Cache (`Dictionary key → SubViewport`) besaß der `BattleHud` (CTB, bis R5b-2b);
 die Viewports hängen unter ihm und werden mit ihm freigegeben (max. 6 je Kampf: 2 Party + 4 Gegnertypen).
 
 **Glyphen-Regel (F8):** Statische UI-Texte und `Label3D`-Texte verwenden nur Zeichen, für die `ThemeDB.fallback_font.has_char()` gilt.
@@ -1709,7 +1717,7 @@ Rangfolge bei Widersprüchen: 00_BRIEF > 02_TECH (APIs, Schemas, Pfade) > 01_GDD
 |---|---|---|---|
 | A1 | Tonemapper | **übernommen** (02_TECH §8.5) | `make_environment()` setzt `Environment.TONE_MAPPER_AGX`. |
 | A2 | Vertex-Farbraum | **übernommen** (02_TECH §8.2 Merge-Part `{mesh, xform, color (sRGB), emission, metal}`) | sRGB speichern + Shader-Weiche (F1) — gilt auch für Partikel/MultiMesh (`vfx_additive`); Post-Import linear→sRGB (F3). |
-| A3 | Instance-Uniform-Reihenfolge | **übernommen** (02_TECH §8.3, auch für M0-Stubs) | `toon` und `toon_outline`: `flash_amount, flash_color, highlight, dissolve` in genau dieser Reihenfolge (F2). `ui_swirl.aspect` setzt der Router (02_TECH §9.3). |
+| A3 | Instance-Uniform-Reihenfolge | **übernommen** (02_TECH §8.3, auch für M0-Stubs) | `toon` und `toon_outline`: `flash_amount, flash_color, highlight, dissolve` in genau dieser Reihenfolge (F2). `ui_swirl.aspect` setzte der Router (02_TECH §9.3; Shader mit 07 R5b-2b entfallen). |
 | A4 | Raumgröße | **erledigt** (01_GDD §1.3: 16-m-Zellen) | 16 m, `EnvKit.ROOM_SIZE`. |
 | A5 | Erkundungskamera | **erledigt** (01_GDD §2.2 = 02_TECH §7.3) | 7 m, −38°, FOV 60. |
 | A6 | Bases/Props/Pose | **übernommen** (02_TECH §4.3 `MODEL_BASES += swarm`, `MODEL_PROPS +=` 16 Props, `MODEL_POSES`; §4.4.14 `pose`; §8.4 `resolve_pose`) | M4 baut alle (5.3 `swarm`, 5.4); `enm_boss_rattenkoenigin` `pose: "quadruped"`. 01_GDD §16 nutzt `model` statt `visual`. |

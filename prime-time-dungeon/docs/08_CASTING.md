@@ -1499,7 +1499,8 @@ kompletten Kämpfe, der Safe Rooms und des Echtzeitkampfs unverändert (PERFORMA
   einem Snapshot, `core/battle/**`) setzt das Def-Modell — ein so fortgesetzter Kampf zeigt den Kanon-Look bis zum nächsten.
 - **Bot und Werkzeuge:** `--persona=random` würfelt auch den Look und stellt ihn über die ◀ ▶-Knöpfe ein; jeder Lauf prüft,
   dass Kais Erkundungsfigur `DB.party_model` trägt. `tools/perf.sh --look=worst`, `tests/capture.gd --look=<n|json>` (neues
-  Spiel mit Persona-Look; `battle.tscn` über `Game.make_battle_setup`), Rezepte `safe_look`, `safe_mask`, `rt_world_look`.
+  Spiel mit Persona-Look; bis 07 R5b-2b auch `battle.tscn` über `Game.make_battle_setup` — die CTB-Kampfszene ist
+  gelöscht), Rezepte `safe_look`, `safe_mask`, `rt_world_look`.
 - **Tests und Fixtures:** zusätzlich `test_08_avatar_world` (beide Helden, Echtzeit-Puppen); angepasst `test_08_casting_ui`
   (Tastaturweg durch das Look-Feld) und `test_08_k0_contract` (keine Stubs mehr, Vokabular 9); `tests/fixtures/rt_min/looks.json`
   = `data_min` (je Art die Kanon-Option).

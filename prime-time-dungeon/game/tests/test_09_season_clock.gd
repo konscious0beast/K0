@@ -193,7 +193,13 @@ func test_live_wall_clock_stands_backwards() -> void:
 	cmds = Game.run_log.cmds().size()
 	Game.season_speed = 1
 	Game._season_process()
-	assert_eq(Game.run_log.cmds().size(), cmds, "a gap over 10 min is an absence: away (ST1-G; its stub refuses)")
+	var kinds: Array = []
+	for e: Dictionary in Game.run_log.cmds().slice(cmds):
+		kinds.append(str(e["c"]["t"]))
+	assert_eq(kinds, ["sleep", "away"], "a gap over 10 min is an absence: the figure slept there (ST1-G, 09 §5.1 Nr. 2)")
+	assert_false(Game.state.season.asleep, "and woke up: the wake summary tells the night")
+	assert_eq(Game.season_wake["title"], "WÄHREND SIE SCHLIEFEN …")
+	Game.season_wake = {}
 
 
 # --- the Am-Stück countdown, no grace ---------------------------------------------------------------------------------

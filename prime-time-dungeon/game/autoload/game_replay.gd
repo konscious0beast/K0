@@ -258,8 +258,8 @@ func _apply(c: Dictionary) -> bool:
 			return game.season_clock(JsonUtil.to_int(c.get("sec", 0)))
 		"away":
 			return game.season_away(JsonUtil.to_int(c.get("sec", 0)))
-		"sleep":
-			return game.logout(str(c.get("tactic", "")))
+		"sleep":                                         # ST1-G: the recorded command as it is (its cell)
+			return game.season_sleep_cmd(c)
 		"prof":
 			return game.prof_action(str(c.get("op", "")), str(c.get("id", "")))
 		"gather":

@@ -149,6 +149,8 @@ func activate(id: String) -> void:
 
 
 func open_save() -> Node:
+	if Game.state != null and Game.state.season != null:   # Staffeln (09 §5.1, ST1-G): "Ausloggen" instead
+		return open_logout()
 	if Game.mode == &"event_offline":
 		_set_status("Im Event-Lauf wird nicht gespeichert – der Lauf zählt am Stück.", UiTheme.C_GOLD)
 		Sfx.play_ui(&"ui_error")
@@ -523,6 +525,8 @@ func _refresh_menu_labels() -> void:
 	if badge != null:
 		badge.visible = pending_scene != null
 	_set_button_text("save", "Speichern")
+	if Game.state != null and Game.state.season != null:   # Staffeln (09 §9.1, ST1-G): no "Speichern" in a season
+		_set_button_text("save", "Ausloggen")
 	_header_sub.text = "Credits %s  ·  Countdown angehalten%s" % [UiUtil.fmt_int(UiUtil.credits()),
 		(": " + UiUtil.fmt_time(floori(Game.time_left()))) if Game.state != null and Game.state.floor_run != null and
 		Game.state.floor_run.timer_started else ""]
@@ -824,3 +828,22 @@ func _new_badge() -> PanelContainer:
 	badge.add_child(t)
 	badge.visible = false
 	return badge
+
+
+# --- Staffeln (09, ST1-G) ---------------------------------------------------------------------------------------------
+# A season saves by itself (09 §9.1): the menu's "Speichern" says "Ausloggen" and opens the logout dialog — the short
+# path of a safe room ("sicher, Sie werden ausgeruht", no tactic); "Hier schlafen" goes to the title.
+
+const LOGOUT: String = "res://scenes/ui/logout_dialog.tscn"
+
+
+func open_logout() -> Node:
+	var d: CanvasLayer = (load(LOGOUT) as PackedScene).instantiate() as CanvasLayer
+	d.call("setup", {"context": "safe_room"})
+	add_child(d)
+	_modal = d
+	d.connect("closed", func(slept: bool) -> void:
+		_modal = null
+		if not slept and menu_buttons.has("save"):
+			UiUtil.focus_later(menu_buttons["save"] as Control))
+	return d

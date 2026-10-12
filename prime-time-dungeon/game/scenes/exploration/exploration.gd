@@ -733,6 +733,7 @@ func _update_room(force: bool) -> void:
 		var boss_room: bool = rc.kind == RoomCell.Kind.QUARTER_BOSS or rc.kind == RoomCell.Kind.FLOOR_BOSS
 		_camera.frame_extra_arm = BOSS_EXTRA_ARM if boss_room else 0.0
 	_rt_on_room(cell)                       # Echtzeitkampf (07 §8.10, §9.6, R2): prewarm extras, show boss
+	Game.season_note_cell(cell)             # Staffeln (09 §5.1, ST1-G): a logout lets the figure sleep here
 
 
 ## Only the current room and the rooms linked to it by a door are drawn: rooms have no ceiling, so the high camera

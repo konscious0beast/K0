@@ -224,7 +224,7 @@ func test_stub_headers_and_constants() -> void:
 	assert_eq(PersonaRules.REASONS, PackedStringArray(["bad_version", "unknown_talent", "bad_bias", "already_set",
 		"run_started", "event_run", "no_swap", "same"]), "08 §2.3")
 	assert_eq(GameState.DEFAULT_NAME, "Kai")
-	assert_eq(RunSim.SIM_VERSION, 2, "the ONE joint bump of 07 R1a + 08 K0 (1 → 2)")
+	assert_eq(RunSim.SIM_VERSION, 3, "the ONE joint bump of 07 R1a + 08 K0 (1 → 2), then 07 E32 (2 → 3)")
 	assert_eq([RunSim.OLD_VERSION, RunSim.NEW_VERSION, RunSim.OLD_VERSION_TAG],
 		["old_version", "new_version", "ältere Version"])
 	assert_eq(Command.TYPES[Command.TYPES.size() - 1], "persona")

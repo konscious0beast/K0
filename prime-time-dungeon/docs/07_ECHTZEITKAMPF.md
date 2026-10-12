@@ -72,8 +72,8 @@
 Die Nutzerin/der Nutzer hat Detailentscheidungen delegiert (Maßstab: gute UX, Spaß, Witz, **einfaches, sofort verständliches**
 Konzept; Grundsatzentscheidung „Variante 3 — WoW-light direkt in der Welt“). Ein unabhängiges Review fand 33 Punkte; so sind sie
 entschieden (Nummern = Review-Punkte). E25–E27 und E29 sind Entscheidungen des Orchestrators nach dem Review, E28 kommt aus
-der Konsistenzprüfung derselben Revision, E30 ist ein angenommener Änderungsantrag aus `08_CASTING` (CR-24), E31 eine
-Entscheidung des Orchestrators für R5b:
+der Konsistenzprüfung derselben Revision, E30 ist ein angenommener Änderungsantrag aus `08_CASTING` (CR-24), E31 und E32
+sind Entscheidungen des Orchestrators für R5b:
 
 | Nr. | Thema (Review) | Entscheidung | Wo |
 |---|---|---|---|
@@ -108,6 +108,7 @@ Entscheidung des Orchestrators für R5b:
 | E29 | Werte E25 abgenommen; Taktik-Hinweis (Orchestrator) | Die nachgestellten KI-Werte aus E25 (25 % „spät“ +45 Ticks, übersehene Telegraphen, Angriffs-Reaktion 15 Ticks) gelten als Startwerte für R4. Dass ein perfekter Mopsula-Spieler mit der Standard-Taktik noch 15–16 % Bossversuche verliert, ist gewollt: die Partner-Taktik ist Teil des Könnens. Damit das verständlich bleibt, zeigt ein einmaliger Kontext-Hinweis `partner_tactic` den Weg zu „Vorsichtig“ (§2.13) | §2.13, §5.2, §11.3 |
 | E30 | Element-Abwehr gegen Prozent-Treffer (08 CR-24, angenommen) | **Prozent-Treffer tragen das Element ihres Skills:** Nach dem Grundwert faltet `rt_damage.gd` zuerst den Element-Faktor des Ziels für dieses Element (`element_mods`, auf 500–1500 ‰ begrenzt, Immunität zählt als 500); ohne Element kein Schritt. ATK, DEF, RES, Krit und Varianz wirken auf Prozent-Treffer weiterhin nicht. So wirken Element-Talente (06 B; die Starttalente aus 08 sind mit 08 CR-33 entfallen) in beiden Kampfmodi; R4 misst die Bänder (§11) mit E30. Dazu ein **gemeinsamer Vertrags-Durchgang R1a + 08 K0** mit genau einem `SIM_VERSION`-Sprung, in dem auch die K0-Zeilen in `data_validator.gd` stehen | §3.9.1, §6.3, §9.6, §10.2, §12.2, §12.3, §12.5 |
 | E31 | Unterhosen-Liga im Echtzeitkampf (Orchestrator, R5b) | **Eine** Liga-Regel im Kampf: Wer in der Liga kämpft (`MarottenRules.in_liga` bei der zu Kampfbeginn eingefrorenen Stufe, nie im Tutorial), ist **„leichtfüßig“** — Status `sts_light_footed` für den ganzen Kampf (`BattleBridge` hängt den Mod `{"src": "liga:mar_unterhose", "op": "on", "event": "combat_start"}` als letzten Eintrag der festen Mod-Reihenfolge an): **8 % schneller** (`move_pm` 1080 — Sim, Körper der Person und Bot lesen den Status) und als sim-gesteuerte Einheit **ein Viertel weniger übersehene Telegraphen** (`ai_miss_pm` 750 auf `AI_DODGE_MISS_PM`; der KI-Strom zieht wie zuvor); Flag `keep`: übersteht ein K.O. Angekündigt im Regeltext („Ohne Rüstung & ohne Accessoire: leichtfüßig …“: Liga-Marotte, Pausetab „Show“, Liga-Toast) und als Statussymbol im HUD. Der Liga-Wortlaut bleibt „ohne Rüstung & ohne Accessoire“ (E8); „leichtfüßig“ beschreibt den Schritt, nicht die Ausrüstung. Ziel der Abstimmung: Liga 1 je Held:in und Boss 5–15 Punkte schwerer als Liga 0, Königin in Liga 2 ≤ 80 % Niederlagen (Messung §11.5 „Stand R5b-1“) | §9.5, §11.5, 06 §4.3 |
+| E32 | Show-Ökonomie des Echtzeitkampfs (Orchestrator, R5b-2a) | Die Show-Zahlen des Echtzeitkampfs liegen in den Bändern von GDD §13 (§11.1). Ein Echtzeitkampf hat je Minute etwa dreimal so viele Anlässe wie ein CTB-Kampf (Auto-Angriffe, eine Combo alle 5 s, die SHOW alle 30 s); mit den R5a-Startwerten stand der Hype meist über 70, und fast jeder Kampf brachte ein Geschenk. Hebel im Profil `rt` (CTB unverändert): **Krit und Schwäche nur für Fähigkeitstreffer** (je +1, ein Auto-Angriff ist keine Aktion), **Combo +1, SHOW/FINALE +6 / +2** (halbe CTB-Werte), **Heilen ist keine Wiederholung** (wie Slot 1 — die Heilerin-Held:in verlor sonst ≈ 45 Hype je Bosskampf), **Sponsoren-Pause**: nach einem regulären Echtzeitkampf mit System-Geschenk bringen die nächsten 4 regulären keines (Bosskämpfe und externe Geschenke unberührt, §9.2), und **Follower × 600 ‰** je gewonnenem Echtzeitkampf (`RT_FOLLOWER_PM`). Gemessen mit `fullrun.sh --combat=realtime --strategy=typical --pace=human`, Seeds 101–110 je Held:in, Median vorher → nachher [Spanne nachher]: **Kai** Hype Start 40,5 → 38,8 [37–40,5], Ende 73 → 59,8 [55–64], Geschenke je Etage 17 → 7 [5–7], Follower 2 327 → 1 385 [1 317–1 417], Zuschauer-Spitze 6 274 → 4 880 [4 739–4 955], Etagenzeit 26:36 → 26:55 [25:28–27:36]; **Graf Mopsula** 40 → 38 [36,5–40,5], 69,2 → 57,8 [53–61,5], 16 → 6 [6–7], 2 194 → 1 312 [1 237–1 337], 6 081 → 4 776 [4 505–4 836], 26:25 → 27:10 [26:17–28:01] — alle Mediane in den Bändern (25–45, 45–65, 4–7, 1 200–1 500, 3 000–5 500, 22–28 min). Schneller Takt (`--pace=fast`, gleiche Seeds) Kai / Mopsula: Hype-Ende 79,8 / 77,5 → 75,2 / 70,5, Geschenke 20 / 19,5 → 8 / 7, Follower 2 587 / 2 486 → 1 682 / 1 583, Zuschauer 6 535 / 6 388 → 5 222 / 5 079 (die Bänder gelten für den menschlichen Takt). Im menschlichen Takt schwanken Läufe desselben Stands etwas (die M.O.D.-Zeile ist Darstellungs-Zufall, ihre Lesezeit verschiebt die Erkundung). `SIM_VERSION` 2 → 3: ältere Logs und Einträge zeigen „ältere Version“ (05 §4.3). Werte fest in `test_r5b_show_economy` | §9.1, §9.2, §11.2, §12.6 Nr. 3 |
 
 ---
 
@@ -2302,21 +2303,21 @@ keine Draw Calls; (6) Komparsen und Beschwörungen ohne Echtzeitschatten. R2/R3 
 
 `ShowRules` erhält ein Profil (`profile: StringName`, `&"ctb"` | `&"rt"`), gesetzt von `Show.begin_battle(setup)` über
 `setup is RtSetup`. Das CTB-Profil bleibt unverändert, bis CTB entfernt wird. Die gesteuerte Einheit kennt ShowRules aus
-`RtSetup.controlled_id` und aus `CONTROL_CHANGED`. Startwerte des Echtzeit-Profils (Konstanten `RT_*` in `show_rules.gd`, per
-Balancing änderbar, R5a):
+`RtSetup.controlled_id` und aus `CONTROL_CHANGED`. Werte des Echtzeit-Profils (Konstanten `RT_*` in `show_rules.gd`, per
+Balancing änderbar; Startwerte R5a, abgestimmt mit **E32** in R5b-2a):
 
 | Anlass | CTB | Echtzeit | zählt für |
 |---|---|---|---|
 | Kampfstart normal / Erstschlag / Hinterhalt / Boss | +3 / +3 / +5 / +8 | gleich | — |
 | Abwechslung (Fähigkeit/Gegenstand nicht unter den letzten 4 eigenen Aktionen) | +2 | +1 | **nur Aktionen der Person** (`by_ai == false`: gesteuerte Figur und Partner-Spezial) |
-| Wiederholung | −5 (3 × gleich) | −3 (4 × dieselbe Fähigkeit in Folge); die **Slot-1-Fähigkeit ist ausgenommen** (sie ist zum Oft-Drücken da) | nur Aktionen der Person |
-| Krit der Party | +3 | +2 | ganze Party |
-| Schwäche (einmal je Aktion) | +2 | +1 | ganze Party |
+| Wiederholung | −5 (3 × gleich) | −3 (4 × dieselbe Fähigkeit in Folge); die **Slot-1-Fähigkeit** und **Heilungen** (`damage_type` `heal`, E32) sind ausgenommen (zum Oft-Drücken da bzw. Arbeit der Heilerin) | nur Aktionen der Person |
+| Krit der Party | +3 | +1, nur **Fähigkeitstreffer** (E32; ein Auto-Angriff ist keine Aktion, sein Krit ist Darstellung) | ganze Party |
+| Schwäche (einmal je Aktion) | +2 | +1, nur Fähigkeitstreffer, einmal je Aktion (E32) | ganze Party |
 | Kill durch Auto-Angriff / Fähigkeit / Stunt | +1 / +2 / +4 (+`kill_hype`) | gleich | ganze Party |
 | Overkill | +3 | +3 (Schwelle §3.9.1) | ganze Party |
 | Serie | +5 (3 Kills in 3 Aktionen) | +5 (3 Kills in 6 s) | ganze Party |
-| Combo | +2 | +2 (höchstens alle 5 s, Sim-Regel §3.9.1) | ganze Party |
-| Stunt Erfolg / Fehlschlag (SHOW, FINALE) | +12 / +4 | gleich — die gemeinsame SHOW-Abklingzeit (30 s, Party) begrenzt beide Figuren zusammen | ganze Party (die KI zündet erst nach 5 s Vorlauf, §4.1) |
+| Combo | +2 | +1 (höchstens alle 5 s, Sim-Regel §3.9.1; E32) | ganze Party |
+| Stunt Erfolg / Fehlschlag (SHOW, FINALE) | +12 / +4 | +6 / +2 (E32) — die gemeinsame SHOW-Abklingzeit (30 s, Party) begrenzt beide Figuren zusammen | ganze Party (die KI zündet erst nach 5 s Vorlauf, §4.1) |
 | **Unterbrechung** (`CAST_INTERRUPTED`) | — | +3 | **nur gesteuerte Figur** (`actor_id == controlled`, `by_ai == false`) |
 | **Ausgewichen** / **knapp ausgewichen** (`TELEGRAPH_DODGED`) | — | +2 / +4 je Telegraph | **nur gesteuerte Figur** (`by_ai == false`; Autopilot-Ausweicher zählen nicht) |
 | **Zug-Kill** (Add stirbt durch einen gegnerischen Telegraphen) | — | +4 | — |
@@ -2340,6 +2341,10 @@ Balancing änderbar, R5a):
 - Kill-Zuordnung für Status-, Zonen- und Telegraph-Kills wie bisher über `KO.actor_id`/`command = −1`.
 - `GameState.hype_gain_pm(data)` (Ausrüstung × Talente × Liga × Twist, 06 §8.0 Nr. 4, Ganzzahl-Promille), Sponsor-Schwellen
   70/85/100 und Hype-Verfall (nur Erkundung) bleiben unverändert.
+- **Follower eines gewonnenen Echtzeitkampfs (E32):** `ShowModel.followers_for_battle_pm` mit dem Faktor aus
+  `GameState.follower_pm` × Liga × Herzen und als letztem Schritt `ShowRules.RT_FOLLOWER_PM` = **600 ‰**
+  (`Show._battle_follower_pm`, ganzzahlig, halb aufgerundet); CTB-Kämpfe nehmen ihn nie. Follower aus Achievements und
+  Events bleiben.
 
 ### 9.2 Sponsor-Geschenke im Kampf: die Tick-Grenze
 
@@ -2375,6 +2380,14 @@ dann dieselbe Grenze auf — System-Geschenke entstehen dabei aus denselben Erei
   `ally_mp_below`, `ally_ko`, `is_boss`) aus `sim.units()`.
 - Grenzen unverändert: System-Geschenke höchstens 1 pro regulärem Kampf, 2 pro Bosskampf; externe höchstens
   `rules.gifts.max_per_battle`; Sponsor-Fenster öffnen im Kampf nicht (§2.10).
+- **Sponsoren-Pause (E32):** Nach einem regulären Echtzeitkampf mit System-Geschenk bringen die nächsten
+  `ShowRules.RT_GIFT_PAUSE` = **4** regulären Echtzeitkämpfe der Etage kein System-Geschenk. Der Zähler steht in
+  `FloorRun.stats["rt_gift_pause"]` (nur `Show` schreibt ihn; gespeichert und gehasht wie jeder Etagen-Zähler, beide
+  Verifier rechnen ihn gleich): Beginnt ein regulärer Echtzeitkampf bei einem Zähler über 0, zieht `Show.begin_battle` einen
+  ab und sperrt die Schwellen-Geschenke dieses Kampfes; das System-Geschenk eines regulären Kampfes setzt ihn auf 4.
+  Bosskämpfe zählen nicht und behalten ihre 2 Geschenke; externe Geschenke, die Hype-Schwellen selbst und das Zurücksetzen
+  auf 80 an der obersten Schwelle bleiben. Grund: Ein Echtzeitkampf erreicht 70 viel öfter als ein CTB-Kampf — ohne Pause
+  brachte fast jeder Kampf ein Geschenk (§12.6 Nr. 3).
 - Pflichttest (`test_r5_gifts_in_combat`): ein externes und ein System-Geschenk werden im selben Tick fällig → extern an der
   Grenze `c`, System an `c + 1`; das Replay liefert dieselben Ticks, Ereignisse und Hashes.
 - Darstellung: Sponsor-Bauchbinde 1,5 s (380 px), Drohne fliegt zum Ziel, Effekt am Ziel, Chat-Jubel; keine Pause, keine
@@ -2825,7 +2838,8 @@ nicht.
    Heil-Schwellen der Presets → Schwierigkeit je Held:in (§11.3). Beide Held:innen bewegen sich dabei gemeinsam; den Abstand
    zwischen ihnen bestimmt, wer tankt (bei Held:in Mopsula tankt die KI).
 7. Enrage-Zeit (weich), Boss-Phasenschwellen.
-8. ShowRules-`RT_*` → Hype/Geschenke/Follower.
+8. ShowRules-`RT_*` → Hype/Geschenke/Follower (E32: `RT_CRIT`, `RT_WEAK`, `RT_COMBO`, `RT_SHOW_SUCCESS`/`_FAIL`,
+   `RT_GIFT_PAUSE`, `RT_FOLLOWER_PM`; Messung mit `fullrun.sh --strategy=typical --pace=human`, §11.4).
 
 Formeln (GDD §3.7) und Krit/Varianz bleiben fest.
 

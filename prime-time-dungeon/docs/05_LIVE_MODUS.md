@@ -792,6 +792,10 @@ Die `cmd_id` steht auch im Run-Log (Kap. 10.6); der Verifier prüft strikte Mono
 - **Versionssprünge:** `SIM_VERSION` **1 → 2** mit dem gemeinsamen Vertrags-Durchgang 07 R1a + 08 K0 (2026-10-11, genau einmal):
   Anzeigenamen fallen aus jedem Zustands- und Kampf-Hash (`player_name`, `display_name`, 08 §2.7), dazu das Command `persona` und
   die Echtzeit-Vertragsfelder. Vor dem Sprung lief die Plattform-Matrix (Kap. 2 S0, Ergebnis dort).
+  **2 → 3** mit 07 E32 (R5b-2a, 2026-10-12): Die Show-Ökonomie des Echtzeitkampfs (Hype-Werte, Sponsoren-Pause,
+  Follower-Faktor) ändert, was `Game.replay_log` für einen Echtzeit-Lauf und ein Event-Lauf an Followern errechnet; CTB-Regeln
+  unverändert. Logs und Bestenlisten-Einträge der Version 2 (auch CTB-Läufe, die Version gilt für den ganzen Kern) erscheinen
+  als „ältere Version“. Plattform-Matrix vor und nach dem Sprung: gleicher Digest (Linux x86-64 headless und OpenGL 3).
 
 ### 4.4 Client → Server
 

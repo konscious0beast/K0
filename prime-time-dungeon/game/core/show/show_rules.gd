@@ -423,8 +423,8 @@ const RT_VARIETY: float = 1.0                # the person's skill / item not amo
 const RT_VARIETY_WINDOW: int = 4
 const RT_REPEAT: float = -3.0                # the same skill RT_REPEAT_COUNT times in a row (not the slot-1 skill)
 const RT_REPEAT_COUNT: int = 4
-const RT_CRIT: float = 2.0
-const RT_WEAK: float = 1.0                   # once per ability action (an auto-attack hit is its own)
+const RT_CRIT: float = 1.0                   # E32: ability hits only (CTB +3, R5a +2)
+const RT_WEAK: float = 1.0                   # E32: once per ability action, ability hits only
 const RT_STREAK_KILLS: int = 3               # kills of the party within RT_STREAK_TICKS → HYPE_KILL_STREAK
 const RT_STREAK_TICKS: int = 180             # 6 s
 const RT_INTERRUPT: float = 3.0              # CAST_INTERRUPTED by the controlled unit (by_ai false)
@@ -439,6 +439,17 @@ const RT_DRAG: float = -3.0                  # every RT_DRAG_EVERY_SEC from RT_D
 const RT_DRAG_AFTER_SEC: int = 45
 const RT_DRAG_AFTER_SEC_BOSS: int = 240
 const RT_DRAG_EVERY_SEC: int = 10
+# E32 (07 §9.1, R5b-2a): the show economy of the real-time combat in the GDD §13 bands. A real-time combat has about
+# three times the moments per minute of a CTB battle (auto-attacks, a combo every 5 s, the party SHOW every 30 s):
+# auto-attack hits are no actions and bring no crit / weakness hype (RT_CRIT, RT_WEAK), combos and SHOW results count
+# half (CTB HYPE_COMBO, HYPE_STUNT_*), heals are no repetition (the healer's work, like slot 1); after a regular
+# real-time combat with a system gift the next RT_GIFT_PAUSE regular ones bring none (Show; external gifts are never
+# paced), and the followers of a won real-time combat are scaled (Show.end_battle).
+const RT_COMBO: float = 1.0
+const RT_SHOW_SUCCESS: float = 6.0           # SHOW / FINALE result (STUNT_RESULT)
+const RT_SHOW_FAIL: float = 2.0
+const RT_GIFT_PAUSE: int = 4                 # regular real-time combats without a system gift after one with a gift
+const RT_FOLLOWER_PM: int = 600              # followers of a won real-time combat, per mille (ShowModel, integer)
 
 ## &"ctb" | &"rt" — chosen from the setup (an RtSetup plays the real-time profile).
 var profile: StringName = PROFILE_CTB
@@ -491,7 +502,7 @@ func _rt_feed(d: ShowDelta, e: ActionEvent) -> void:
 			_rt_status_added(e)
 		ActionEvent.Type.COMBO:
 			if _is_party(e.actor_id):
-				_add(d, HYPE_COMBO, &"combo")
+				_add(d, RT_COMBO, &"combo")
 				_trigger(d, "combo", {"member": _member(e.actor_id), "enemy_id": e.def_id})
 		ActionEvent.Type.STUNT_RESULT:
 			if _is_party(e.actor_id):
@@ -556,7 +567,7 @@ func _rt_action_start(d: ShowDelta, e: ActionEvent) -> void:
 	if not _rt_keys.has(key):
 		_add(d, RT_VARIETY)
 	_rt_repeat = _rt_repeat + 1 if not _rt_keys.is_empty() and _rt_keys[_rt_keys.size() - 1] == key else 1
-	if _rt_repeat >= RT_REPEAT_COUNT and key != str(_slot1.get(e.actor_id, "")):
+	if _rt_repeat >= RT_REPEAT_COUNT and key != str(_slot1.get(e.actor_id, "")) and not _is_heal(e.skill_id):
 		_add(d, RT_REPEAT, &"boring_fight")
 	_rt_keys.append(key)
 	while _rt_keys.size() > RT_VARIETY_WINDOW:
@@ -573,13 +584,18 @@ func _rt_damage(d: ShowDelta, e: ActionEvent) -> void:
 	else:
 		_tick_status.erase(e.target_id)
 	if _is_party(e.actor_id) and _is_enemy(e.target_id) and e.status_id == "":
+		# E32: an auto-attack hit (no open action of its skill) is no action — its crit / weakness is presentation only
+		var a: Dictionary = _rt_open.get(e.actor_id, {})
+		var ability: bool = not a.is_empty() and str(a["skill"]) == e.skill_id
 		if e.crit:
-			_add(d, RT_CRIT, &"crit")
 			_stat(d, "crits_total")
+			if ability:
+				_add(d, RT_CRIT, &"crit")
+			else:
+				_reason(d, &"crit")
 		if e.weak:
-			var a: Dictionary = _rt_open.get(e.actor_id, {})
-			if a.is_empty() or str(a["skill"]) != e.skill_id:
-				_add(d, RT_WEAK, &"weakness")          # an auto-attack hit (or a hit outside an action)
+			if not ability:
+				_reason(d, &"weakness")
 			elif not bool(a["weak"]):
 				a["weak"] = true
 				_add(d, RT_WEAK, &"weakness")
@@ -654,9 +670,9 @@ func _rt_status_added(e: ActionEvent) -> void:
 ## "own SHOW") only for the person's (E27: the AI partner's SHOW is no own SHOW).
 func _rt_stunt(d: ShowDelta, e: ActionEvent) -> void:
 	if e.success:
-		_add(d, HYPE_STUNT_SUCCESS, &"stunt_success")
+		_add(d, RT_SHOW_SUCCESS, &"stunt_success")
 	else:
-		_add(d, HYPE_STUNT_FAIL, &"stunt_fail")
+		_add(d, RT_SHOW_FAIL, &"stunt_fail")
 	if e.by_ai:
 		return
 	if e.success:
@@ -688,6 +704,12 @@ func _rt_second(d: ShowDelta, sec: int) -> void:
 	var after: int = RT_DRAG_AFTER_SEC_BOSS if _setup != null and _setup.is_boss else RT_DRAG_AFTER_SEC
 	if sec >= after and (sec - after) % RT_DRAG_EVERY_SEC == 0:
 		_add(d, RT_DRAG)
+
+
+## E32: a heal (SkillDef.damage_type "heal") is never a repetition — healing the tank four times in a row is work.
+func _is_heal(skill_id: String) -> bool:
+	var sk: SkillDef = _skill_or_null(skill_id)
+	return sk != null and sk.damage_type == "heal"
 
 
 ## The skill applies a status with the rt flag "fixate" (a taunt, 07 §9.4 taunts_total). Memoized.

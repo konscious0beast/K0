@@ -3784,7 +3784,8 @@ Geschenke kosten **keinen** Hype und keine Ticks. Auswahl `SponsorSystem.pick` m
 
 Zuschauer: `ShowModel.viewers_for(floor.floor_mult, hype, followers)` (rauschfrei, deterministisch); Anzeige glättet und rauscht (§3.5).
 `viewers_peak_battle` = Maximum des rauschfreien Werts während des Kampfes.
-Follower nach Sieg: `ShowModel.followers_for_battle_pm(viewers_peak_battle, hype_end, is_boss, state.follower_pm(data))`;
+Follower nach Sieg: `ShowModel.followers_for_battle_pm(viewers_peak_battle, hype_end, is_boss, pm)` mit `pm` =
+`state.follower_pm(data)` × Liga × Herzen, im Echtzeitkampf zuletzt × `ShowRules.RT_FOLLOWER_PM` (600 ‰, 07 E32);
 Flucht: `−followers_lost_on_flee(followers)`; Niederlage: 0. Achievements: bronze 20 / silver 40 / gold 80; Events laut §7.4.
 Kontrolle (GDD §13): Hype 100, 1 500 Follower → `(1000 + 0.5 × 1500) × 2.9 = 5 075` Zuschauer → `ach_viewers_5000` nur mit
 Top-Kampf am Etagenende; Ziel-Peak der Etage 3 000–5 500.
@@ -4089,8 +4090,9 @@ Erkundungs-Uhr `RunSim` (`core/live/run_sim.gd`, M8, dünne Variante 05 CR-6) un
 class_name RunSim extends RefCounted
 const TICKS_PER_SEC: int = 30
 const CHECKPOINT_TICKS: int = 300
-const SIM_VERSION: int = 2                            # in the run-log header; bump on any rule change (05 §10.6);
-	# 2 = the one joint bump of 07 R1a + 08 K0 (display names out of every hash, persona command, real-time contract)
+const SIM_VERSION: int = 3                            # in the run-log header; bump on any rule change (05 §10.6);
+	# 2 = the one joint bump of 07 R1a + 08 K0 (display names out of every hash, persona command, real-time contract);
+	# 3 = 07 E32 (R5b-2a): the show economy of the real-time combat (ShowRules RT_*, sponsors' pause, follower factor)
 const OLD_VERSION: String = "old_version"             # version_status of an older log / board entry (no mismatch)
 const NEW_VERSION: String = "new_version"
 const OLD_VERSION_TAG: String = "ältere Version"      # UI tag of such replays and board entries

@@ -352,6 +352,7 @@ func begin_battle(setup: BattleSetup) -> void:
 	_battle_closing = false
 	_rt_line_at = -INF                             # Echtzeitkampf (07 §9.3, R5a): the line rate starts fresh
 	_rt_line_prio = -1
+	_rt_gift_paused = _rt_pace_gifts(st)           # 07 E32: a regular real-time combat in the sponsors' pause
 	_peak_battle = viewers()
 	set_stat("explore_seconds_since_battle", 0)
 	if setup.advantage == BattleSetup.Advantage.PREEMPTIVE:
@@ -480,6 +481,7 @@ func _take_pending(party: Array, ct: int) -> Dictionary:
 			else:
 				_take_from_queue(str(g.get("gift_id", "")))
 				_gifts_given += 1
+				_rt_gift_given(st)                         # 07 E32: the sponsors' pause starts
 		if t == _top_threshold():
 			_reset_after_top()
 		if not g.is_empty():
@@ -669,12 +671,12 @@ func _add_hype_parts(gain: float, loss: float, reason: StringName) -> void:
 	_set_hype(ShowModel.clamp_hype(st.show.hype + points), reason)
 
 
-## Upward threshold crossings in battle: a system gift is due while fewer than max gifts were (or will be) given;
-## without gift the top threshold still resets hype to 80.
+## Upward threshold crossings in battle: a system gift is due while fewer than max gifts were (or will be) given and
+## the real-time combat is not in the sponsors' pause (07 E32); without gift the top threshold still resets hype to 80.
 func _check_thresholds(prev: float, now: float) -> void:
 	for t: int in SponsorSystem.crossed(prev, now, _fired):
 		_fired.append(t)
-		if not _battle_closing and _gifts_given + _open_thresholds.size() < _max_gifts():
+		if not _battle_closing and not _rt_gift_paused and _gifts_given + _open_thresholds.size() < _max_gifts():
 			_open_thresholds.append(t)
 			_open_thresholds.sort()   # ascending even when a nested change (achievement hype) crossed a higher one first
 		elif t == _top_threshold():
@@ -1016,6 +1018,7 @@ func _reset_battle() -> void:
 	_twist_hype_pm = 1000
 	_battle_active = false
 	_battle_closing = false
+	_rt_gift_paused = false                        # 07 E32
 	_open_thresholds = PackedInt32Array()
 	_fired = PackedInt32Array()
 	_queue.clear()
@@ -1363,11 +1366,16 @@ func _marotten_battle_end(result: BattleResult) -> Dictionary:
 
 ## GameState.follower_pm (equipment × talents) × the Liga factor `liga_pm` (this battle's, or 1000 for the part without
 ## it) × the hearts' follower factor, integer per mille with each step rounded half up (06 §8.0 Nr. 4) — without
-## talents bit-identical to package C's float path.
+## talents bit-identical to package C's float path. A real-time combat adds ShowRules.RT_FOLLOWER_PM as the last step
+## (07 E32); CTB battles never take it.
 func _battle_follower_pm(st: GameState, mres: Dictionary, liga_pm: int) -> int:
 	var pm: int = st.follower_pm(DB.data)
 	var extra: int = (liga_pm * int(mres.get("follower_pm", 1000)) + 500) / 1000
-	return pm if extra == 1000 else (pm * extra + 500) / 1000
+	if extra != 1000:
+		pm = (pm * extra + 500) / 1000
+	if _rt_combat():
+		pm = (pm * ShowRules.RT_FOLLOWER_PM + 500) / 1000
+	return pm
 
 
 ## After battle_won: won bets (boxes, followers, hype, show_bet achievements), the Liga battle payload; lines.
@@ -1499,6 +1507,11 @@ const RT_FINALE_HYPE: float = 85.0           # FINALE at hype >= 85: rt_finale_h
 
 var _rt_line_at: float = -INF                # the last non-blocking line of the running real-time combat
 var _rt_line_prio: int = -1
+## 07 E32: the running regular real-time combat is in the sponsors' pause (no system gift; external gifts as always).
+var _rt_gift_paused: bool = false
+## FloorRun.stats key of the sponsors' pause: regular real-time combats of this floor still without a system gift
+## (absent = none; written by Show only — part of the floor run, saved and hashed).
+const RT_GIFT_PAUSE_KEY: String = "rt_gift_pause"
 
 
 ## The gift of the tick boundary before combat tick sim.tick() (07 §9.2): like take_pending_gift(battle) — same order
@@ -1512,6 +1525,27 @@ func take_pending_gift_rt(sim: RtSim) -> Dictionary:
 		if u != null and u.side == Combatant.Side.PARTY:
 			party.append(u)
 	return _take_pending(party, sim.tick())
+
+
+## 07 E32, begin_battle: a regular real-time combat while the floor's sponsors' pause runs takes one combat off it and
+## gives no system gift (true). Bosses, CTB battles and combats outside the pause: false.
+func _rt_pace_gifts(st: GameState) -> bool:
+	if not _rt_combat() or _setup.is_boss or st.floor_run == null:
+		return false
+	var left: int = int(st.floor_run.stats.get(RT_GIFT_PAUSE_KEY, 0))
+	if left <= 0:
+		return false
+	if left == 1:
+		st.floor_run.stats.erase(RT_GIFT_PAUSE_KEY)
+	else:
+		st.floor_run.stats[RT_GIFT_PAUSE_KEY] = left - 1
+	return true
+
+
+## 07 E32: a system gift in a regular real-time combat starts the sponsors' pause (ShowRules.RT_GIFT_PAUSE combats).
+func _rt_gift_given(st: GameState) -> void:
+	if _rt_combat() and not _setup.is_boss and st.floor_run != null and ShowRules.RT_GIFT_PAUSE > 0:
+		st.floor_run.stats[RT_GIFT_PAUSE_KEY] = ShowRules.RT_GIFT_PAUSE
 
 
 ## An accepted gift still waits in the battle queue (Game.replay_log: a recorded gift must be applied at its boundary).

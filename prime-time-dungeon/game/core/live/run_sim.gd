@@ -75,7 +75,10 @@ const CHECKPOINT_TICKS: int = 300      # 05 §3.3 Nr. 8: checkpoint every 300 ti
 ## every state / battle hash (08 §2.7), the persona command, the real-time contract fields. A log or board entry of an
 ## older version is reported as OLD_VERSION ("ältere Version") — it needs the archive build of its kernel (05 §4.3);
 ## this kernel never replays it, so it is never a mismatch.
-const SIM_VERSION: int = 2
+## 3 — 07 E32 (R5b-2a): the show economy of the real-time combat (ShowRules RT_*: crit / weakness of ability hits only,
+## combo and SHOW values, RT_FOLLOWER_PM) — Game.replay_log of a real-time run and the follower score of an event run
+## change; CTB rules are untouched.
+const SIM_VERSION: int = 3
 const OLD_VERSION: String = "old_version"
 const NEW_VERSION: String = "new_version"
 const OLD_VERSION_TAG: String = "ältere Version"   # display tag of old replays and board entries (08 §10.2 Nr. 7)

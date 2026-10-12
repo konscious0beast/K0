@@ -77,18 +77,19 @@ func test_variety_and_repetition_count_the_person_only() -> void:
 
 
 func test_party_moments_count_for_everyone() -> void:
+	_rules.feed(_act("p1", "skl_mop_noble_flame", true))
 	var crit: ShowDelta = _rules.feed(_ev(ActionEvent.Type.DAMAGE, {"actor_id": "p1", "target_id": "e0", "crit": true,
-		"skill_id": "skl_attack_mopsula", "amount": 5}))
-	assert_eq(crit.hype, ShowRules.RT_CRIT, "the AI partner's crit counts for the party")
+		"skill_id": "skl_mop_noble_flame", "amount": 5}))
+	assert_eq(crit.hype, ShowRules.RT_CRIT, "the AI partner's ability crit counts for the party")
 	assert_eq(crit.stats.get("crits_total", 0), 1)
 	_rules.feed(_act("p0", "skl_kai_leash_trip", false))
 	var weak: Callable = func(skill: String) -> float:
 		return _hype(_ev(ActionEvent.Type.DAMAGE, {"actor_id": "p0", "target_id": "e0", "weak": true, "skill_id": skill,
 			"amount": 5}))
 	assert_eq([weak.call("skl_kai_leash_trip"), weak.call("skl_kai_leash_trip"), weak.call("skl_attack_kai")],
-		[ShowRules.RT_WEAK, 0.0, ShowRules.RT_WEAK], "weakness once per action; an auto-attack hit is its own")
+		[ShowRules.RT_WEAK, 0.0, 0.0], "weakness once per ability action; an auto-attack hit brings none (E32)")
 	var combo: ShowDelta = _rules.feed(_ev(ActionEvent.Type.COMBO, {"actor_id": "p1", "target_id": "e0"}))
-	assert_eq(combo.hype, ShowRules.HYPE_COMBO)
+	assert_eq(combo.hype, ShowRules.RT_COMBO)
 	assert_eq(combo.triggers[0]["trigger"], "combo")
 
 
@@ -153,15 +154,15 @@ func test_interrupts_and_dodges_count_the_controlled_unit_only() -> void:
 func test_show_results_for_the_party_stats_for_the_person() -> void:
 	var ai: ShowDelta = _rules.feed(_ev(ActionEvent.Type.STUNT_RESULT, {"actor_id": "p1", "success": true,
 		"by_ai": true, "skill_id": "skl_stunt_mop_entrance"}))
-	assert_eq([ai.hype, ai.stats, ai.triggers], [ShowRules.HYPE_STUNT_SUCCESS, {}, []],
+	assert_eq([ai.hype, ai.stats, ai.triggers], [ShowRules.RT_SHOW_SUCCESS, {}, []],
 		"the AI's SHOW: hype for the party, no own SHOW (E27)")
 	var own: ShowDelta = _rules.feed(_ev(ActionEvent.Type.STUNT_RESULT, {"actor_id": "p0", "success": true,
 		"skill_id": "skl_stunt_kai_suplex"}))
-	assert_eq([own.hype, own.stats], [ShowRules.HYPE_STUNT_SUCCESS, {"stunts_success": 1}])
+	assert_eq([own.hype, own.stats], [ShowRules.RT_SHOW_SUCCESS, {"stunts_success": 1}])
 	assert_eq(own.triggers[0]["trigger"], "stunt_resolved")
 	var fail: ShowDelta = _rules.feed(_ev(ActionEvent.Type.STUNT_RESULT, {"actor_id": "p0", "success": false,
 		"skill_id": "skl_stunt_kai_suplex"}))
-	assert_eq([fail.hype, fail.stats], [ShowRules.HYPE_STUNT_FAIL, {"stunts_fail": 1}])
+	assert_eq([fail.hype, fail.stats], [ShowRules.RT_SHOW_FAIL, {"stunts_fail": 1}])
 	assert_eq(_rules.stunts_succeeded(), 1)
 
 

@@ -90,7 +90,7 @@ func test_external_and_system_gift_due_in_the_same_tick() -> void:
 		if due.is_empty() and Show.hype() >= SponsorSystem.THRESHOLDS[0]:
 			due.append(c)
 			assert_eq(Show.receive_gift(gift)["apply"], "queued")
-	RtLive.adopt(RtLive.state(6, 50.0))
+	RtLive.adopt(RtLive.state(6, 60.0))                        # 07 E32: smaller real-time hype gains, start nearer 70
 	assert_true(Game.open_dev_sponsor_window(60, 3))
 	var boss: Dictionary = RtKit.encounter("enc_rt_test_boss", [["g_boss", "enc_rt_test_boss", [0, -200, 128]]])
 	assert_not_null(Game.make_rt_setup(boss))

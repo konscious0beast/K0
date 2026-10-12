@@ -8,6 +8,8 @@ extends TestCase
 ## seven days, a clock Am Stück or after the logout, a forged schedule, a changed duration, a clock with a player id, a
 ## clock of zero seconds); runs without a season are bit-identical to the golden values of main before ST1-B (bc54fca).
 ## "away" (ST1-G), "prof" / "craft" (ST1-E) and "talent" v2 (ST1-D) join the session with their packages.
+## ST1-G: a night in a corridor ("sleep" with its cell and tactic, a Sendepause of the night, "away" with encounters
+## fought in RtSim) in both verifiers — recorded by RunSim and live through Game's logout and login.
 
 const Kit := preload("res://tests/fixtures/season_core/season_core.gd")
 const RtLive := preload("res://tests/fixtures/rt_live/rt_live.gd")
@@ -124,6 +126,69 @@ func test_a_season_session_in_both_verifiers() -> void:
 	if shown != null:
 		assert_eq(_core_part(shown), _core_part(s.state), "Game.replay_log: the season and the core state agree")
 		assert_eq(shown.season.to_dict(), s.state.season.to_dict(), "the season block")
+
+
+## ST1-G: a sleeper in the dangerous quarter of floor 1 (Gleis 9) for 30 h — the rolls, the fights in RtSim, the
+## Sendepause of the night — replays to the same hash in RunSim.replay and Game.replay_log.
+func test_a_night_in_both_verifiers() -> void:
+	var d: GameData = Kit.data(6)
+	var s: RunSim = Kit.sim(d, "ssn_basis", "calendar", "net", 33)
+	var layout: FloorLayout = DungeonGenerator.generate(d.floor_def(1), s.state.floor_run.seed)
+	var cell: Vector2i = SleepResolver.NO_CELL
+	for c: Vector2i in layout.sorted_cells():
+		if SleepResolver.danger_of(d.floor_def(1), layout, c) == 2 and cell == SleepResolver.NO_CELL:
+			cell = c
+	var ev: Array = []
+	ev.append_array(s.apply({"t": "clock", "sec": 600}))
+	ev.append_array(s.apply({"t": "sleep", "tactic": "attack", "cell": [cell.x, cell.y]}))
+	ev.append_array(s.apply({"t": "season", "v": 1, "op": "pause", "sec": 3 * 3600, "why": "user"}))
+	ev.append_array(s.apply({"t": "away", "sec": 30 * 3600}))
+	assert_eq(s.rejected_cmds, [] as Array[Dictionary], "every command accepted")
+	assert_gt(Kit.kinds(ev).count("meet"), 0, "the night met something")
+	var away: Dictionary = Kit.event(ev, "away")
+	assert_eq([away["tactic"], away["cell"], away["quiet"]], ["attack", [cell.x, cell.y], 3 * 3600])
+	var live: String = StateHash.of(s.state)
+	var r: Dictionary = RunSim.replay(s.data, s.run_log)
+	assert_eq([r["errors"], r["mismatch_at"], r["final_hash"]], [PackedStringArray(), -1, live], "RunSim.replay")
+	DB.data = s.data
+	var gr: RefCounted = GameReplayScript.new(Game)
+	var g: Dictionary = gr.call("run", s.run_log, -1)
+	assert_eq(g["errors"], PackedStringArray(), "Game.replay_log accepts every entry")
+	var shown: GameState = gr.get("_final_state")
+	if shown != null:
+		assert_eq(_core_part(shown), _core_part(s.state), "Game.replay_log: the night agrees")
+		assert_eq(shown.season.to_dict(), s.state.season.to_dict(), "the season block")
+	# live: Game's logout and login (the wall clock moved back by 30 h) — Game.replay_log and RunSim.replay
+	DB.data = _data
+	assert_true(Game.start_season(0, "ssn_basis", {"now": Kit.START, "tz_sec": 0, "seed": 34}))
+	var gl: FloorLayout = DungeonGenerator.generate(DB.floor_def(1), Game.state.floor_run.seed)
+	var gcell: Vector2i = SleepResolver.NO_CELL
+	for c: Vector2i in gl.sorted_cells():
+		if SleepResolver.danger_of(DB.floor_def(1), gl, c) == 1 and gcell == SleepResolver.NO_CELL:
+			gcell = c
+	Game.visit_room(gcell)
+	Game.season_note_cell(gcell)
+	assert_true(Game.season_logout("careful", gcell))
+	var ro: bool = Save.read_only
+	Save.read_only = true
+	Game.season_live_clock = true
+	Game.state.season.seen_unix = int(Time.get_unix_time_from_system()) - 30 * 3600
+	Game.season_login()
+	Game.season_live_clock = false
+	Save.read_only = ro
+	assert_false(Game.state.season.asleep, "awake after the login")
+	assert_false(Game.season_wake.is_empty(), "the wake summary")
+	Game.season_wake = {}
+	var types: Array = RtLive.cmd_types(Game.run_log)
+	for t: String in ["sleep", "away"]:
+		assert_has(types, t)
+	var glive: String = StateHash.of(Game.state)
+	var gg: Dictionary = Game.replay_log(Game.run_log)
+	assert_eq([gg["errors"], gg["mismatch_at"], gg["final_hash"]], [PackedStringArray(), -1, glive], "Game.replay_log")
+	var rr: Dictionary = RunSim.replay(DB.data, Game.run_log)
+	assert_eq(rr["errors"], PackedStringArray(), "RunSim.replay accepts every entry")
+	var core: GameState = _core_replay(DB.data, Game.run_log)
+	assert_eq(_core_part(core), _core_part(Game.state), "RunSim.replay: the night and the core state agree")
 
 
 func test_a_live_season_session() -> void:

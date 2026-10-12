@@ -54,6 +54,13 @@ extends Node
 ##   the room, the menu's "Ausloggen" — the short path), sleep_wake (wake_summary.tscn: a real night — Mit Netz asleep
 ##   in a corridor of floor 2 through its collapse: the rescue first, the encounters, the Crashkurs, Ausgeruht, the
 ##   status, the news), sleep_days (the same night, the page "Tag für Tag"), sleep_question (the clock-jump question).
+## Staffeln (09, ST1-H; the state made before the scene with capture.gd --before=<name>, before()):
+##   season_tab_<ranking | ticker | programme | actions> (exploration.tscn: pause → "Staffel"),
+##   season_ask_<pause | binge | leave> (its dialog), season_hud (the collapse display and the counter; season_hud_warn
+##   with --before=warn: 40 min before, gold, M.O.D.'s line), season_stairs (--before=cal3: the closed stairs),
+##   season_guests (safe_room.tscn: the AI candidates, "Anheuern"), season_offer (safe_room.tscn: the tempo offer after
+##   the class choice), season_quiet (any screen without M.O.D.'s box and the toasts: the title with --before=career,
+##   season_summary.tscn with finale | out, hall_of_fame.tscn with hall).
 
 const ZONES: Dictionary = {"platform": "zone_platform", "sewer": "zone_sewer", "cellar": "zone_cellar"}
 
@@ -1810,3 +1817,241 @@ func _settle(n: int) -> bool:
 			c.queue_free()
 	await frames(2)
 	return true
+
+
+# --- Staffeln (09, ST1-H): the season UI ------------------------------------------------------------------------------
+
+const ST1H_SEED: int = 6                  # a Helfer:in in the first safe room of floor 2, a Pechvogel in need
+
+## capture.gd --before=<name>: the state (and the career) of a still, made before the scene is built — seasons at
+## SEASON_NOW in UTC (tz 0) moved on with real clock commands (Game.replaying keeps M.O.D. and the routes quiet).
+## cal2 | cal3: a calendar season on day 3, 5 h after the air time, the candidate on floor 2 / 3 (Stufe 8 / 11);
+## cal3late: floor 3 on day 5, 3 h after floor 2 collapsed (the ticker of that night);
+## warn: floor 2, 40 min before its collapse; finale: the basis season won (Am Stück, floor 6); out: Ohne Netz,
+## buried with floor 3 on day 9; left: "Staffel beenden" on floor 2; career: two seasons in the hall of fame (the
+## title's "Neue Staffel" and "Ruhmeshalle"); hall: three, with their titles.
+func before(name: String) -> bool:
+	match name:
+		"cal2", "cal3":
+			return _h_calendar(2 if name == "cal2" else 3, 3 * SeasonClock.DAY_SEC + 5 * 3600)
+		"cal3late":
+			return _h_calendar(3, 5 * SeasonClock.DAY_SEC + 3 * 3600)
+		"warn":
+			return _h_calendar(2, 0) and _h_clock_to(Game.state.season.collapse_utc[1] - 40 * 60)
+		"finale":
+			if not _h_start("binge", "net", 11, 3):
+				return false
+			while Game.state.floor_run.index < 6:
+				if not Game.season_debug_descend():
+					return false
+			_h_party(21, ["cls_kai_wrecker", "cls_mop_physician"])
+			var s: SeasonState = Game.state.season
+			s.qbosses = 6
+			s.fbosses = 2
+			Game.state.show.followers = 15400
+			Game.state.play_time_sec = 19 * 3600 + 1240.0
+			s.result = "finalist"
+			s.result_floor = 6
+			s.finale_at = SeasonRules.now(Game.state)
+			CastSim.advance(Game.state, DB.data)
+			return true
+		"out":
+			if not _h_start("calendar", "no_net", 5, 2):
+				return false
+			while Game.state.floor_run.index < 3:
+				if not Game.season_debug_descend():
+					return false
+			_h_party(11, ["cls_kai_wrecker", "cls_mop_physician"])
+			Game.state.show.followers = 3100
+			Game.state.play_time_sec = 6 * 3600 + 410.0
+			return _h_clock_to(Game.state.season.collapse_utc[2] + 3600) and Game.state.season.result == "buried"
+		"left":
+			if not _h_calendar(2, SeasonClock.DAY_SEC + 3600):
+				return false
+			Game.replaying = true
+			var ok: bool = Game.season_leave()
+			Game.replaying = false
+			return ok
+		"career", "hall":
+			var entries: Array[Dictionary] = _h_hall_entries()
+			if name == "career":
+				entries.resize(2)
+			for i in range(entries.size() - 1, -1, -1):
+				Save.career_hall_add(entries[i])
+			Save.career_set("seasons", 3)
+			Save.career_set("no_net", true)
+			return Save.career_hall().size() == entries.size()
+	push_warning("[CaptureRecipes] unknown --before '%s'" % name)
+	return false
+
+
+func _h_start(tempo: String, mode: String, seed: int, number: int) -> bool:
+	return Game.start_season(0, "ssn_basis", {"tempo": tempo, "mode": mode, "unlock": true, "seed": seed,
+		"now": SEASON_NOW, "tz_sec": 0, "number": number})
+
+
+## A calendar season (Mit Netz) with the candidate on `floor` (floors 1–3 are open from the start), `after` seconds
+## after day 0 — a party in the band, credits for a Helfer:in.
+func _h_calendar(floor: int, after: int) -> bool:
+	if not _h_start("calendar", "net", ST1H_SEED, 3):
+		return false
+	while Game.state.floor_run.index < floor:
+		if not Game.season_debug_descend():
+			return false
+	_h_party(8 if floor <= 2 else 11, ["", ""])
+	Game.state.inventory.credits = 640
+	Game.state.show.followers = 2400
+	Show.sync_from_state()
+	return _h_clock_to(Game.state.season.day0_utc + after)
+
+
+## Moves the season clock to `target` (UTC) in recorded "clock" commands of at most a week; quiet (replaying).
+func _h_clock_to(target: int) -> bool:
+	var s: SeasonState = Game.state.season
+	Game.replaying = true
+	while s.utc < target and s.result == "":
+		if not Game.season_clock(mini(target - s.utc, SeasonClock.MAX_JUMP_SEC)):
+			break
+	Game.replaying = false
+	return s.utc >= target or s.result != ""
+
+
+func _h_party(level: int, classes: Array) -> void:
+	var ids: Array = ["kai", "mopsula"]
+	for i in ids.size():
+		var m: PartyMember = Game.state.member(str(ids[i]))
+		m.level = level
+		m.class_id = str(classes[i])
+	Progression.full_heal(Game.state, DB.data)
+
+
+## Three finished seasons of a device (SeasonView.hall_entry's keys; newest first): a won basis season, one buried
+## Ohne Netz, one left early.
+func _h_hall_entries() -> Array[Dictionary]:
+	var day: int = SeasonClock.DAY_SEC
+	var base: Dictionary = {"v": 1, "def": "ssn_basis", "format": 6, "hero": "kai", "places": 100, "achievements": 0}
+	var out: Array[Dictionary] = []
+	for e: Dictionary in [
+			{"key": "ssn_basis#3#1791921600", "number": 3, "tempo": "calendar", "mode": "net", "result": "finalist",
+				"floor": 6, "titles": ["Finalist:in der Staffel 3 (privat)", "Weiße Weste (privat)"], "quote": 12480,
+				"rank": 4, "stairs": 5, "qbosses": 6, "fbosses": 2, "rescues": 0, "deaths": 0, "vest": true,
+				"level": 21, "level_mop": 21, "class": "cls_kai_wrecker", "class_mop": "cls_mop_physician",
+				"followers": 15400, "play_sec": 19 * 3600 + 1240, "day0": SEASON_NOW + 3600,
+				"ended": SEASON_NOW + 22 * day},
+			{"key": "ssn_basis#2#1789329600", "number": 2, "tempo": "calendar", "mode": "no_net", "result": "buried",
+				"floor": 3, "titles": ["Studiogast, verschüttet auf Etage 3 (privat)"], "quote": 2310, "rank": 61,
+				"stairs": 2, "qbosses": 2, "fbosses": 0, "rescues": 0, "deaths": 0, "vest": true, "level": 11,
+				"level_mop": 11, "class": "cls_kai_wrecker", "class_mop": "cls_mop_physician", "followers": 3100,
+				"play_sec": 6 * 3600 + 410, "day0": SEASON_NOW - 30 * day, "ended": SEASON_NOW - 21 * day},
+			{"key": "ssn_basis#1#1786737600", "number": 1, "tempo": "binge", "mode": "net", "result": "left",
+				"floor": 2, "titles": [], "quote": 640, "rank": 88, "stairs": 1, "qbosses": 1, "fbosses": 0,
+				"rescues": 1, "deaths": 2, "vest": false, "level": 7, "level_mop": 7, "class": "", "class_mop": "",
+				"followers": 820, "play_sec": 2 * 3600 + 95, "day0": SEASON_NOW - 60 * day,
+				"ended": SEASON_NOW - 59 * day}]:
+		var full: Dictionary = base.duplicate()
+		full.merge(e, true)
+		out.append(full)
+	return out
+
+
+## season_tab_<segment> (exploration.tscn --before=cal2): pause → "Staffel" → ranking | ticker | programme | actions.
+func _r_season_tab(scene: Node, segment: String) -> bool:
+	var pm: Node = await _h_season_pause(scene)
+	if pm == null:
+		return false
+	var page: Node = pm.call("page", "season")
+	page.call("show_segment", segment)
+	var b: Control = (page.get("_seg_buttons") as Dictionary).get(segment) as Control
+	if b != null:
+		b.grab_focus()
+	return await _settle(10)
+
+
+## season_ask_<action> (exploration.tscn --before=cal2): the tab's actions → the dialog of pause | binge | leave.
+func _r_season_ask(scene: Node, action: String) -> bool:
+	var pm: Node = await _h_season_pause(scene)
+	if pm == null:
+		return false
+	var page: Node = pm.call("page", "season")
+	page.call("show_segment", "actions")
+	await frames(3)
+	var b: Button = page.call("action", action) as Button
+	if b == null:
+		return false
+	b.emit_signal("pressed")
+	return await _settle(10)
+
+
+func _h_season_pause(scene: Node) -> Node:
+	if not await _r_season(scene, "q0"):
+		return null
+	await _quiet_mod_queue()
+	var hud: Node = scene.get("_hud")
+	var pm: Node = hud.call("open_pause_menu", "season") if hud != null else null
+	if pm == null:
+		return null
+	get_tree().paused = true
+	await frames(5)
+	return pm
+
+
+## season_hud (exploration.tscn --before=cal2): Kai in the first quarter — the collapse display and the counter;
+## season_hud_warn (--before=warn): 40 min before the collapse, gold, with M.O.D.'s calm line.
+func _r_season_hud(scene: Node, variant: String = "") -> bool:
+	if not await _r_season(scene, "q0"):
+		return false
+	await _quiet_mod_queue()
+	var hud: Node = scene.get("_hud")
+	ExplorationHud.season_said.clear()           # the warning of the first tick again, for the still
+	hud.call("season_refresh")
+	await frames(10)
+	if variant != "warn":
+		await _quiet_mod_queue()
+	else:
+		await _settle_toasts()
+	return true
+
+
+## season_stairs (exploration.tscn --before=cal3): the stairs of floor 3 before floor 3 is on air — closed, with the
+## reason and the tempo offer.
+func _r_season_stairs(scene: Node) -> bool:
+	if not await _r_season(scene, "q0"):
+		return false
+	await _quiet_mod_queue()
+	scene.call("open_stairs_dialog")
+	await frames(20)
+	await _settle_toasts()
+	return scene.call("active_dialog") != null
+
+
+## season_guests (safe_room.tscn --before=cal2): the AI candidates of the floor in this safe room.
+func _r_season_guests(scene: Node) -> bool:
+	if not await _safe_ready(scene):
+		return false
+	await _settle(10)
+	var g: Control = scene.get("season_guests") as Control
+	return g != null and g.visible
+
+
+## season_offer (safe_room.tscn --before=cal3): the class is chosen — M.O.D.'s tempo offer.
+func _r_season_offer(scene: Node) -> bool:
+	if not await _safe_ready(scene):
+		return false
+	Game.state.member("kai").class_id = "cls_kai_wrecker"
+	await _settle(5)
+	return scene.call("season_open_tempo_offer") != null and await _settle(10)
+
+
+## season_quiet: a season screen without M.O.D.'s box and the toasts of the setup.
+func _r_season_quiet(_scene: Node) -> bool:
+	return await _settle(10)
+
+
+func _settle_toasts() -> void:
+	var ui: Node = get_tree().root.get_node_or_null("GlobalUi")
+	var toasts: Node = ui.get("toasts") as Node if ui != null else null
+	var list: Node = toasts.get("_list") as Node if toasts != null else null
+	if list != null:
+		for c: Node in list.get_children():
+			c.queue_free()
+	await frames(2)

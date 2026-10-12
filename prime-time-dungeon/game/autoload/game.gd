@@ -121,6 +121,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	_season_notices_process()                     # Staffeln (09 §2.9, ST1-G): desktop notices after a logout
 	if state == null:
 		return
 	state.play_time_sec += delta
@@ -1694,13 +1695,10 @@ func season_away(sec: int) -> bool:
 	return _season_command({"t": "away", "sec": sec})
 
 
-## Logout with the sleeping tactic (09 §5.1; RtVocab.RT_PRESETS): {"t": "sleep", "tactic"}, then the save (09 §9.1:
-## "sleep → Speichern → Titel" — the caller, ST1-G's logout dialog, goes to the title).
+## Logout with the sleeping tactic (09 §5.1; RtVocab.RT_PRESETS): {"t": "sleep", "tactic", "cell"}, then the save (09
+## §9.1: "sleep → Speichern → Titel" — the caller, ST1-G's logout dialog, goes to the title). ST1-G: season_logout.
 func logout(tactic: String) -> bool:
-	if not _season_command({"t": "sleep", "tactic": tactic}):
-		return false
-	_season_autosave()
-	return true
+	return season_logout(tactic, season_cell())
 
 
 ## A row of the talent tree (09 §8.4): {"t": "talent", "v": 2, "member", "row", "id"}.
@@ -1742,7 +1740,8 @@ func _season_command(cmd: Dictionary) -> bool:
 			sim != null and sim.is_event_run()) != "":
 		return false
 	record(cmd)
-	_dispatch(RunRules.apply_season(state, DB.data, cmd))
+	_season_last_events = RunRules.apply_season(state, DB.data, cmd)   # ST1-G: the login summary reads them
+	_dispatch(_season_last_events)
 	return true
 
 
@@ -1756,17 +1755,23 @@ func season_resume(st: GameState, entries: Array) -> Dictionary:
 
 
 ## Save.load_slot after a season slot was adopted (09 §9.1, "Login: away → Login-Bilanz → Welt"): the absence since the
-## wall clock seen last becomes "away" (ST1-G — its stub refuses it until then, so the time without the app does not
-## count yet); the wall clock is seen now.
+## wall clock seen last (× Zeitraffer) wakes the sleeper — ST1-G: _season_wake_up (an awake figure gone over 10 min
+## sleeps first, a jump over seven days waits for the question of the wake summary); the wall clock is seen now.
 func season_login() -> void:
 	if replaying or state == null or state.season == null:
 		return
 	var wall: int = int(Time.get_unix_time_from_system())
 	var s: SeasonState = state.season
+	var sec: int = 0
 	if season_live_clock and s.seen_unix > 0 and wall > s.seen_unix and s.tempo == "calendar":
-		_season_absence((wall - s.seen_unix) * clampi(season_speed, 1, SEASON_SPEED_MAX))
-	s.seen_unix = maxi(s.seen_unix, wall)
+		sec = (wall - s.seen_unix) * clampi(season_speed, 1, SEASON_SPEED_MAX)
 	_season_saved_at = wall
+	season_wake = {}                              # Staffeln (09 §5.5, ST1-G): this login's summary only
+	_season_wake_n += 1
+	_season_wake_up(sec)
+	if season_wake.has("question"):               # the absence is not booked before the answer (V-17)
+		return
+	s.seen_unix = maxi(s.seen_unix, wall)
 	_cast_news_reset(CastSim.last_seq(state))   # ST1-F: the news until the login are the Login-Bilanz's (ST1-G)
 
 
@@ -1823,7 +1828,7 @@ func _season_event(ev: ExploreEvent) -> void:
 		Events.party_changed.emit()
 		Events.inventory_changed.emit()
 		Events.credits_changed.emit(_credits(), 0)
-	if replaying:
+	if _season_quiet():                           # ST1-G: a night being booked is told by the wake summary
 		return
 	var waived: String = str(ev.data.get("waived", ""))
 	match kind:
@@ -1923,17 +1928,16 @@ func _season_process() -> void:
 	_cast_news()                              # ST1-F: the breaking news of the AI cast
 
 
-## An absence of `sec` season seconds (09 §5.5): over seven days the rest becomes a pause "clamp", then "away" — the
-## SleepResolver of ST1-G; while its stub refuses "away" nothing is recorded (ST1-G also asks first, V-17).
+## An absence of `sec` season seconds in the live views (09 §5.1 Nr. 2: over 10 min of pause or background count as a
+## logout) — ST1-G: the figure sleeps where it stood, the night is booked (or the clock-jump question waits), and the
+## wake summary shows it.
 func _season_absence(sec: int) -> void:
 	if state == null or state.season == null or sec <= 0:
 		return
-	var away: int = mini(sec, SeasonClock.MAX_JUMP_SEC)
-	if SleepResolver.refusal(state, DB.data, {"t": "away", "sec": away}) != "":
-		return
-	if sec > away:
-		season_op({"t": "season", "v": Command.SEASON_VERSION, "op": "pause", "sec": sec - away, "why": "clamp"})
-	season_away(away)
+	_season_wake_n += 1
+	_season_wake_up(sec)
+	if not season_wake.is_empty():
+		_season_wake_route.call_deferred(_season_wake_n)
 
 
 ## The local UTC offset in seconds (Time zone bias of the system; the client's, never the core's).
@@ -2036,7 +2040,7 @@ func _level_event(ev: ExploreEvent) -> void:
 			Events.party_changed.emit()
 			if int(ev.data.get("overtime", 0)) > 0:
 				Events.credits_changed.emit(_credits(), int(ev.data.get("overtime", 0)))
-			if not replaying:
+			if not _season_quiet():               # ST1-G: quiet while a night is booked
 				_level_exp_notes(ev.data)
 		"crash":
 			var lifted: Dictionary = ev.data.get("members", {})
@@ -2051,7 +2055,7 @@ func _level_event(ev: ExploreEvent) -> void:
 				_level_signals(str(mid), int(span[0]), int(span[1]), learned)
 			Events.party_changed.emit()
 			Events.inventory_changed.emit()
-			if not replaying:
+			if not _season_quiet():               # ST1-G: the wake summary tells the Crashkurs
 				Show.say("season_crash_course")
 				var parts: PackedStringArray = []
 				for mid: Variant in lids:
@@ -2064,7 +2068,7 @@ func _level_event(ev: ExploreEvent) -> void:
 			Events.talent_picked.emit(str(ev.data.get("member", "")), str(ev.data.get("id", "")))
 			Events.party_changed.emit()
 		"rescue":
-			if not replaying:
+			if not _season_quiet():               # ST1-G
 				_level_floor_notes()
 
 
@@ -2079,7 +2083,7 @@ func _level_signals(mid: String, from: int, to: int, learned: PackedStringArray)
 		Events.level_up.emit({"member": mid, "level": lv})
 	for row: int in TalentTree.rows_between(DB.data, m, from, to):
 		Events.talent_pending.emit(mid, row)
-	if not replaying:
+	if not _season_quiet():                       # ST1-G: quiet while a night is booked
 		_level_notes(m, from, to, learned)
 
 
@@ -2151,3 +2155,236 @@ func _level_who(m: PartyMember) -> String:
 	var def: PartyMemberDef = DB.party_member(m.id) if DB.has_id("party", m.id) else null
 	var n: String = m.display_name if m.display_name != "" else (def.name if def != null else m.id)
 	return def.title + " " + n if def != null and def.title != "" and m.id != "kai" else n
+
+
+# --- Staffeln (09 §5, §2.9, ST1-G): the sleeper — logout, login, wake summary, notices -------------------------------
+# Logout (09 §5.1): the pause menu's "Ausloggen" and the safe room's open the logout dialog (scenes/ui/logout_dialog:
+# what happens where the figure lies, the sleeping tactic, a Sendepause, the opt-in of the notices) → season_logout:
+# "sleep" {tactic, cell} — the cell of the room the exploration last told (season_note_cell) — and a Sendepause
+# ("season" pause "user", its days belong to the night) → the save → the plan of the notices → the title.
+# Login (09 §5.5, V-17): season_login / _season_absence → _season_wake_up: an asleep figure wakes with "away" {sec};
+# an awake one gone over 10 min (the app closed or crashed, the pause or the background; calendar) sleeps first where
+# it stood (careful, "automatisch ausgeloggt"); a jump over seven days plus the rest of a running Sendepause waits for
+# the question of the wake summary (season_login_answer: confirmed → a pause "clamp" for the rest and "away" for the
+# seven days; denied → "away" for one second: nothing counts). The night's SEASON events stay quiet while it is booked
+# (_season_quiet: no M.O.D. line, no toast, no route) — SleepResolver.report turns them into season_wake, the wake
+# summary (scenes/ui/wake_summary) shows it and "Weiter" (season_wake_done) leads into the world.
+# Notices (09 §2.9, §5.6; opt-in, settings.notify_collapse): Godot 4.7 has no system notifications on desktop and
+# none without a plugin on Android / iOS (09 Kap. 11.3 ST1-G, G-12) — while the app stays open after a logout, a due
+# warning goes into the window title (and asks for attention); the login summary repeats the next collapse.
+
+const SCENE_WAKE_SUMMARY: String = "res://scenes/ui/wake_summary.tscn"
+const SCENE_LOGOUT_DIALOG: String = "res://scenes/ui/logout_dialog.tscn"
+const SEASON_NOTICE_POLL_SEC: float = 1.0
+
+## The wake summary pending: SleepResolver.report (+ "auto"), or {"question": seconds, "auto"} for a clock jump over
+## seven days (V-17); {} without one.
+var season_wake: Dictionary = {}
+## The notices planned at the logout: [{"wall" (unix seconds of the local clock), "kind", "text"}], oldest first.
+var season_notices: Array[Dictionary] = []
+## The notice shown last ("" none): the window title says it until the next login.
+var season_notice_text: String = ""
+
+var _season_last_events: Array[ExploreEvent] = []   # the events of the last season command (_season_command)
+var _season_waking: bool = false            # a night is being booked: its SEASON events stay quiet
+var _season_wake_n: int = 0                 # logins and absences so far (a deferred route belongs to one of them)
+var _season_cell: Vector2i = SleepResolver.NO_CELL  # the room the figure stands in (the exploration tells it)
+var _season_notice_poll: float = 0.0
+
+
+## The exploration tells the room the figure stands in (presentation only, never recorded): the cell of a logout.
+func season_note_cell(cell: Vector2i) -> void:
+	_season_cell = cell
+
+
+## The cell a logout puts the figure to sleep at: the room the exploration told last, else the last room entered.
+func season_cell() -> Vector2i:
+	if _season_cell != SleepResolver.NO_CELL:
+		return _season_cell
+	var fr: FloorRun = state.floor_run if state != null else null
+	return fr.visited.back() if fr != null and not fr.visited.is_empty() else SleepResolver.NO_CELL
+
+
+## A logout is possible now (09 §5.1 Nr. 1): a season that is not over, awake, outside a combat.
+func season_can_logout() -> bool:
+	return state != null and state.season != null and not state.season.asleep and state.season.result == "" \
+		and state.floor_run != null and combat == null and not in_battle
+
+
+## The logout (09 §5.1): "sleep" {tactic, cell} (the cell only outside a safe room), then a Sendepause of `pause_sec`
+## when asked (private calendar seasons, the budget of 14 days — a refused one changes nothing), the wall clock seen,
+## the plan of the notices, the save. false = refused (in a combat, asleep, the season over).
+func season_logout(tactic: String, cell: Vector2i = SleepResolver.NO_CELL, pause_sec: int = 0) -> bool:
+	if not season_can_logout():
+		return false
+	var cmd: Dictionary = {"t": "sleep", "tactic": tactic if RtVocab.RT_PRESETS.has(tactic) else "careful"}
+	if state.floor_run.location == RunRules.LOCATION_START and cell != SleepResolver.NO_CELL \
+			and SleepResolver.layout_of(state, DB.data) != null \
+			and SleepResolver.layout_of(state, DB.data).cell_at(cell) != null:
+		cmd["cell"] = [cell.x, cell.y]
+	if not _season_command(cmd):
+		return false
+	if pause_sec > 0:
+		season_op({"t": "season", "v": Command.SEASON_VERSION, "op": "pause", "sec": pause_sec, "why": "user"})
+	state.season.seen_unix = maxi(state.season.seen_unix, int(Time.get_unix_time_from_system()))
+	_season_notices_plan()
+	_season_autosave()
+	return true
+
+
+## The replay of a recorded "sleep" (GameReplay): the command as it was recorded (its cell included).
+func season_sleep_cmd(c: Dictionary) -> bool:
+	if not _season_command(c.duplicate(true)):
+		return false
+	_season_autosave()
+	return true
+
+
+## The whole days of Sendepause a logout may still take (09 §2.9: private calendar seasons, 14 days per season;
+## SeasonRules decides — Am Stück, a public template or a season over: none).
+func season_pause_days_left() -> int:
+	var s: SeasonState = state.season if state != null else null
+	if s == null:
+		return 0
+	var days: int = maxi(0, (SeasonClock.PAUSE_MAX_SEC - s.pause_sec) / SeasonClock.DAY_SEC)
+	var c: Dictionary = {"t": "season", "v": Command.SEASON_VERSION, "op": "pause", "sec": SeasonClock.DAY_SEC,
+		"why": "user"}
+	return days if days > 0 and SeasonRules.refusal(state, DB.data, c) == "" else 0
+
+
+## What the logout dialog says for the figure now (SleepResolver.logout_info at season_cell()).
+func season_logout_info() -> Dictionary:
+	if state == null or state.season == null:
+		return {}
+	return SleepResolver.logout_info(state, DB.data, season_cell(), _season_tz_offset())
+
+
+## The answer of the clock-jump question (V-17): confirmed → seven days (plus the rest of the night's Sendepause)
+## count and the rest becomes a pause "clamp"; denied → nothing counts (one second). Books the night.
+func season_login_answer(confirmed: bool) -> void:
+	if state == null or state.season == null or not season_wake.has("question"):
+		return
+	var sec: int = int(season_wake["question"])
+	var auto: bool = bool(season_wake.get("auto", false))
+	season_wake = {}
+	var events: Array[ExploreEvent] = []
+	var away: int = 1
+	if confirmed:
+		away = SleepResolver.max_away(state)
+		if season_op({"t": "season", "v": Command.SEASON_VERSION, "op": "pause", "sec": sec - away, "why": "clamp"}):
+			events.append_array(_season_last_events)
+	_season_book_night(away, auto, events)
+	state.season.seen_unix = maxi(state.season.seen_unix, int(Time.get_unix_time_from_system()))
+	_cast_news_reset(CastSim.last_seq(state))
+
+
+## "Weiter" of the wake summary: the world — the exploration at the figure's place (a floor without playable content:
+## the Abspann), the Sendeschluss screen when the season is over for the candidate (out), the Abspann at its end.
+func season_wake_done() -> void:
+	season_wake = {}
+	if state == null or state.season == null:
+		Router.goto(Router.SCENE_TITLE)
+		return
+	var s: SeasonState = state.season
+	match s.result:
+		"":
+			_season_goto(Router.SCENE_EXPLORATION, String(state.floor_run.location) if state.floor_run != null
+				else "start")
+		"fallen", "buried":
+			_season_goto(Router.SCENE_GAME_OVER, "timer" if s.result == "buried" else "defeat")
+		_:
+			_season_goto(Router.SCENE_CREDITS, "")
+
+
+## The deferred route to the wake summary after absence number `n` in the live views — only while that one is pending.
+func _season_wake_route(n: int) -> void:
+	if n == _season_wake_n and state != null and not replaying and not season_wake.is_empty():
+		_season_goto(SCENE_WAKE_SUMMARY, "")
+
+
+## True while a SEASON event's presentation stays quiet: a replay, or a night being booked (the wake summary tells it).
+func _season_quiet() -> bool:
+	return replaying or _season_waking
+
+
+## The login after `sec` season seconds without the figure (09 §5.5): wakes the sleeper, makes the awake one gone over
+## 10 min a sleeper first (an automatic logout), asks about a jump over seven days, or moves the clock for a short gap.
+func _season_wake_up(sec: int) -> void:
+	var s: SeasonState = state.season
+	if s.result != "" or state.floor_run == null:
+		return
+	var auto: bool = false
+	if not s.asleep:
+		if s.tempo != "calendar" or sec <= SEASON_AWAY_SEC:
+			if sec > 0:
+				season_clock(mini(sec, SeasonClock.MAX_JUMP_SEC))
+			return
+		var tactic: String = s.sleep_tactic if RtVocab.RT_PRESETS.has(s.sleep_tactic) else "careful"
+		var cmd: Dictionary = {"t": "sleep", "tactic": tactic}
+		var cell: Vector2i = season_cell()
+		if state.floor_run.location == RunRules.LOCATION_START and cell != SleepResolver.NO_CELL:
+			cmd["cell"] = [cell.x, cell.y]
+		if not _season_command(cmd) and not _season_command({"t": "sleep", "tactic": tactic}):
+			return
+		auto = true
+	if s.tempo == "calendar" and sec > SleepResolver.max_away(state):
+		season_wake = {"question": sec, "auto": auto}
+		return
+	var none: Array[ExploreEvent] = []
+	_season_book_night(maxi(1, sec), auto, none)
+
+
+## "away" {sec} with the night's events kept quiet, then the wake summary (season_wake) and the save.
+func _season_book_night(sec: int, auto: bool, before: Array[ExploreEvent]) -> void:
+	_season_waking = true
+	var ok: bool = season_away(sec)
+	_season_waking = false
+	if not ok:
+		return
+	var events: Array[ExploreEvent] = before.duplicate()
+	events.append_array(_season_last_events)
+	season_wake = SleepResolver.report(state, DB.data, events, _season_tz_offset(), auto)
+	season_wake["auto"] = auto
+	season_wake["daily"] = settings.daily_summary
+	season_notices.clear()
+	if season_notice_text != "":
+		season_notice_text = ""
+		_season_window_title("")
+	_season_autosave()
+
+
+## The plan of the notices after a logout (09 §2.9; opt-in): SleepResolver.notice_plan in local wall time (the season
+## clock runs with the wall clock — × Zeitraffer in debug builds).
+func _season_notices_plan() -> void:
+	season_notices.clear()
+	var s: SeasonState = state.season if state != null else null
+	if s == null or not settings.notify_collapse:
+		return
+	var wall: int = int(Time.get_unix_time_from_system())
+	var speed: int = clampi(season_speed, 1, SEASON_SPEED_MAX)
+	for n: Dictionary in SleepResolver.notice_plan(state, DB.data, s.utc, {"collapse": true}, _season_tz_offset()):
+		season_notices.append({"wall": wall + (int(n["at"]) - s.utc) / speed, "kind": n["kind"], "text": n["text"]})
+
+
+## Desktop (no system notifications in Godot 4.7, G-12): a due notice goes into the window title and asks for
+## attention; on a phone the plan waits for a notification plugin (open question of 09 ST1-G).
+func _season_notices_process() -> void:
+	if season_notices.is_empty():
+		return
+	_season_notice_poll -= get_process_delta_time()
+	if _season_notice_poll > 0.0:
+		return
+	_season_notice_poll = SEASON_NOTICE_POLL_SEC
+	var wall: int = int(Time.get_unix_time_from_system())
+	while not season_notices.is_empty() and int(season_notices[0]["wall"]) <= wall:
+		season_notice_text = str(season_notices.pop_front()["text"])
+		_season_window_title(season_notice_text)
+
+
+func _season_window_title(text: String) -> void:
+	if DisplayServer.get_name() == "headless" or OS.has_feature("mobile"):
+		return
+	var base: String = str(ProjectSettings.get_setting("application/config/name", "PRIME TIME DUNGEON"))
+	DisplayServer.window_set_title(base + (" — " + text if text != "" else ""))
+	if text != "":
+		DisplayServer.window_request_attention()

@@ -212,6 +212,7 @@ func _build() -> void:
 	lang.disabled = true
 	lang.text = "Deutsch"
 	_persona_section()                      # 08 K1: section "Kandidat:in" ("Kandidat:in löschen"; K3: KI-Casting)
+	_season_section()                       # Staffeln (09 §2.9, ST1-G): section "Staffel" (in a season)
 	_list.add_child(UiUtil.spacer(8))
 	UiUtil.wire_vertical(_controls)
 	if _framed:
@@ -601,4 +602,43 @@ func _set_combat_choice(key: String, i: int) -> void:
 			s.floating_text_scale = RT_TEXT_SCALES[clampi(i, 0, RT_TEXT_SCALES.size() - 1)]
 		"camera_shake":
 			s.camera_shake = i == 1
+	_commit()
+
+
+# --- Staffeln (09, ST1-G) ---------------------------------------------------------------------------------------------
+# The section "Staffel" while a season runs (09 §2.9, §5.6): the collapse warnings (opt-in — the first logout asks;
+# here they are switched any time) and the daily summary at the login (V-9: off by default).
+
+func _season_section() -> void:
+	if Game.state == null or Game.state.season == null:
+		return
+	var s: GameSettings = Game.settings
+	_section("Staffel")
+	_season_cycler("notify_collapse", "Einsturz-Warnungen", ["Aus", "An"], 1 if s.notify_collapse else 0,
+		"Etage stürzt bald ein, neue Etage offen. Höchstens drei am Tag, nie zwischen 22 und 8 Uhr.")
+	_season_cycler("daily_summary", "Tageszusammenfassung", ["Aus", "An"], 1 if s.daily_summary else 0,
+		"Beim Login zusätzlich: was Ihr Schläfer Tag für Tag erlebt hat.")
+
+
+func _season_cycler(key: String, label_text: String, options: Array, idx: int, hint: String = "") -> Cycler:
+	var row: HBoxContainer = _row(label_text, hint)
+	var c: Cycler = Cycler.new()
+	var opts: PackedStringArray = []
+	for o: Variant in options:
+		opts.append(str(o))
+	c.set_options(opts, maxi(idx, 0))
+	row.add_child(c)
+	c.changed.connect(func(i: int) -> void: _set_season_choice(key, i))
+	_register(key, c)
+	return c
+
+
+func _set_season_choice(key: String, i: int) -> void:
+	var s: GameSettings = Game.settings
+	match key:
+		"notify_collapse":
+			s.notify_collapse = i == 1
+			s.notify_asked = true
+		"daily_summary":
+			s.daily_summary = i == 1
 	_commit()

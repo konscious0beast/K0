@@ -157,10 +157,13 @@ func page(tab: String) -> Control:
 	return pages.get(tab) as Control
 
 
-## Opens the "Zum Titel" confirm (modal); while one is open, the open one is returned and no second one stacks.
+## Opens the "Zum Titel" confirm (modal); while one is open, the open one is returned and no second one stacks. In a
+## season the tab says "Ausloggen" and opens the logout dialog instead (ST1-G, _season_logout).
 func ask_to_title() -> Node:
 	if is_confirm_open():
 		return _confirm
+	if _season_tab():                              # Staffeln (09 §5.1, ST1-G)
+		return _season_logout()
 	if not ResourceLoader.exists(CONFIRM):
 		return null
 	var d: Node = (load(CONFIRM) as PackedScene).instantiate()
@@ -305,7 +308,8 @@ func _build() -> void:
 	outer.add_child(tabs)
 	for t: Dictionary in TABS:
 		var id: String = str(t["id"])
-		var b: Button = _tab_button(t["icon"] as StringName, str(t["label"]),
+		var caption: String = "Ausloggen" if id == "title" and _season_tab() else str(t["label"])   # ST1-G
+		var b: Button = _tab_button(t["icon"] as StringName, caption,
 			UiTheme.C_DANGER if id == "title" else UiTheme.C_ACCENT_2)
 		b.name = "Tab_" + id
 		b.toggle_mode = id != "title"
@@ -383,3 +387,33 @@ func _tab_button(icon: StringName, caption: String, icon_color: Color) -> Button
 	b.add_theme_stylebox_override("hover_pressed", on)
 	UiUtil.touch_pad(b)
 	return b
+
+
+# --- Staffeln (09, ST1-G) ---------------------------------------------------------------------------------------------
+# In a season the last tab is "Ausloggen" (09 §5.1, §9.1: "Pausemenü „Ausloggen“ → Dialog mit Taktik → sleep →
+# Speichern → Titel"): the logout dialog over the menu (modal like the confirm, WHEN_PAUSED); "Zurück" returns to
+# the tab bar. Outside a combat by construction (the combat has its own pause), Game.season_logout checks again.
+
+const LOGOUT: String = "res://scenes/ui/logout_dialog.tscn"
+
+
+## The menu belongs to a season (the "Ausloggen" tab).
+func _season_tab() -> bool:
+	return Game.state != null and Game.state.season != null
+
+
+func _season_logout() -> Node:
+	if not ResourceLoader.exists(LOGOUT):
+		return null
+	var d: Node = (load(LOGOUT) as PackedScene).instantiate()
+	_confirm = d
+	d.call("setup", {"context": "explore"})
+	d.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	d.connect("closed", func(slept: bool) -> void:
+		if slept:
+			_closing = true
+			queue_free()
+		elif is_instance_valid(self) and _tab_buttons.has("title"):
+			(_tab_buttons["title"] as Control).grab_focus())
+	add_child(d)
+	return d

@@ -568,7 +568,7 @@ schließt jederzeit — M.O.D. sagt, wo die Wahl wartet (`casting_later`), und j
 Aufgezeichnet wird erst „Bestätigen“: das Command `casting` und in Staffeln ein `loadout` mit der Signatur (beide über die
 bestehenden Wege, deterministisch, in beiden Verifiern nachgespielt). Tastatur, Gamepad, Maus und Touch (erstes Antippen
 zeigt, zweites wählt; Trefferflächen ≥ 88 px). Die Spezies-Optik am Rig folgt mit 03_ART; Spezies und Klasse am
-Party-Rahmen im Kampf und die Bauchbinde „ORIGINAL“ sind Antrag 07 CR-32 m.
+Party-Rahmen im Kampf und die Bauchbinde „ORIGINAL“ sind Antrag 07 CR-32 p.
 
 ### 3.6 Umentscheiden (Re-Spec)
 

@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/logout_dialog.gd" id="1_script"]
+
+[node name="LogoutDialog" type="CanvasLayer"]
+process_mode = 3
+layer = 61
+script = ExtResource("1_script")

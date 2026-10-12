@@ -36,7 +36,8 @@ static func clean_name(player_name: String) -> String:
 	return out if out != "" else "Kai"
 
 
-## Save.load_slot(slot) and route: unplayable floor → credits; else exploration at the saved location (§6.4).
+## Save.load_slot(slot) and route: a season's login summary first (ST1-G); unplayable floor → credits; else exploration
+## at the saved location (§6.4).
 ## Returns the load error (OK on success).
 static func load_and_route(slot: int) -> Error:
 	var err: Error = Save.load_slot(slot)
@@ -44,6 +45,9 @@ static func load_and_route(slot: int) -> Error:
 		return err
 	if not Game.has_state() or Game.state.floor_run == null:
 		return ERR_INVALID_DATA
+	if not Game.season_wake.is_empty():                # Staffeln (09 §5.4, ST1-G): "Während Sie schliefen …" first
+		Router.goto(Game.SCENE_WAKE_SUMMARY)
+		return OK
 	var def: FloorDef = DB.floor_def(Game.state.floor_run.index)
 	if def == null or not def.playable_in(Game.state.season != null):   # Staffeln (ST1-C): season floors need a season
 		Router.goto(Router.SCENE_CREDITS)

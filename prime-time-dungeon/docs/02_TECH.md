@@ -303,7 +303,8 @@ Schicht: nutzt `core/data`, `core/dungeon`, `core/progression`, `core/rt`; `core
 | `core/data/defs/{season,profession,recipe,theme}_def.gd` | `SeasonDef`, `ProfessionDef`, `RecipeDef`, `ThemeDef` | ST1-B, -E, -E, -C | Mindestschema mit `from_dict` |
 | `core/data/validators/{seasons,professions,cast,themes}.gd` | (ohne `class_name`) | ST1-B, -E, -F, -C | Schema, Id-Muster, Referenzen, Bereiche |
 
-`season_clock.gd`, `level_band.gd`, `cast_member.gd`, `cast_event.gd`, `ability_book.gd`, `zone_generator.gd` und
+`season_clock.gd`, `level_band.gd`, `cast_member.gd`, `cast_event.gd`, `ability_book.gd`, `zone_generator.gd`, die privaten
+Helfer `sleep_fight.gd` und `sleep_text.gd` (ST1-G) und
 `core/live/command_journal.gd` (`CommandJournal`, ST1-B: Zeilen schreiben und lesen, offenen Kampf finden; die Haken in
 `Save` stehen unten) entstehen in ihren Paketen — kein geteilter Code braucht sie in ST0.
 
@@ -594,6 +595,33 @@ kommt (§4.10 dort: ein Box-Zusatz in der Welt baut unter Jolt die ganze Form ne
 Mobilgeräten (gemessen nur am PC); die Bühne der Bossräume ist ein Platzhalter bis zu den Raumteilen je Kulisse (03_ART,
 09 CR-28).
 
+**Stand ST1-G (2026-10-12, Branch `ptd/st1g`): Schläfer und Ausloggen** (09 Kap. 5, Kap. 2.9, Kap. 11.3 „Stand ST1-G“,
+Entscheidungen G-1 … G-15). Alles hängt an `state.season != null`; **kein `SIM_VERSION`-Sprung**, Save v2 unverändert (der
+Block `sleeper` im Staffel-Block ist additiv), ohne Staffel bitgleich (`fullrun.sh` mit `--strategy=all`,
+`--hero=mopsula`, `--liga=1`, `--liga=2` gegen die Basis `1228ede`: gleiche Ereigniszeilen und Statistiken). Der ST0-Stub
+`SleepResolver` ist ersetzt (öffentliche API `refusal`/`apply`/`UNAVAILABLE` behalten); neu sind die privaten Helfer
+`core/season/sleep_fight.gd` (der Kampf eines Schläfers in `RtSim`) und `core/season/sleep_text.gd` (Dialog-, Bilanz- und
+Hinweistexte), beide ohne `class_name`, von `SleepResolver` vorgeladen. Schicht: `core/season` nutzt `core/rt` (wie
+`BattleBridge`) und `core/progression`; keine Autoloads, kein Wanduhr-Zugriff (der Ortszeit-Versatz kommt als Parameter).
+
+| Teil | API |
+|---|---|
+| `SleepResolver` (rein) | `refusal(state, data, c)` für `away` (`awake`, `season_over`, `clock_jump` über `max_away`), `apply` (die Nacht, Reihenfolge 09 G-2); `max_away(state)` (7 Tage + Rest der Sendepause der Nacht), `quiet_left(state)`; Haken von `SeasonRules`: `sleep_refusal` (`bad_cell`), `on_sleep` (Block `sleeper`), `on_pause` (Sendepause der Nacht); Abfragen `place_of(state, data, cell)` (`kind` safe \| boss \| stairs \| corridor, Viertel, Gefahr, Chance, nächster Safe Room), `danger_of(def, layout, cell)`, `zone_danger`, `zone_key`, `zone_name`, `nearest_safe_room`, `patrol_pool(state, data, layout, cell, tier)`, `is_patrol(data, enc)`, `rested_pm(state, data, member)`, `layout_of(state, data)` (das Layout der Etage, das letzte gemerkt); Texte `logout_info(state, data, cell, tz)`, `report(state, data, events, tz, auto)`, `notice_plan(state, data, now_utc, prefs, tz)`, `duration_text`, `tactic_name`. Konstanten: `CHANCE_PM` [150, 350, 600], `FIRST_ROLL_SEC` 1 800, `ROLL_EVERY_SEC` 14 400, `MAX_ENCOUNTERS` 3, `PATROL_PM` 700, `ANGRY_PM` [0, 120, 170], `PROFILE_WHAT`, `RESTED_HOUR_PM` 50, `RESTED_CAP_PM` 1 500. Ereignisse (SEASON, `t` und `day` an jedem): `away`, `meet`, `rested`, `wake` — dazwischen die von `SeasonRules` und `CastSim` |
+| `sleep_fight.gd` (privat) | `run(state, data, o)` → {result, end: won \| lost \| fled \| retreat \| moved_on \| none, rolled, ticks}; `command(state, data, o)` (der Kampf-Command: Hinterhalt, Posen, Taktik und Schalter beider Figuren); `damage_pm(o)`; `party_pm(sim)`; `flight(sim)` (Flucht-Ergebnis aus `tally` und Einheiten). `RETREAT_BELOW_PM` 250, `RETREAT_PM` {careful 800, sonst 600}, `ANGRY_DMG_PM` 8 000, `WATCH_DMG_PM` 500, `MAX_TICKS` 900 |
+| `sleep_text.gd` (privat) | `logout_info`, `report` ({title, sub, lines ≤ 6, kinds, more, days, result, sec}), `news_text`, `notice_plan`, `duration`, `short`, `clock_label`, `date_label`, `num`, `who`, `tactic_name` |
+| `SeasonState` | `sleeper: Dictionary` ({v, at, cell, floor, seq, quiet}; `to_dict` nur wenn nicht leer), `SLEEPER_KEYS`, `sleeper_from(raw)` |
+| Haken (je markiert) | `SeasonRules.refusal`/`apply` (`sleep`: Zelle, Beginn der Nacht), `SeasonRules._pause` (Sendepause der Nacht), `CastSim.floor_ai(state, data, floor)` (KI auf einer Etage); `RunRules.apply_season` schon seit ST0 (`away` → `SleepResolver.apply`) |
+| `Game` (Abschnitt „ST1-G“) | `season_logout(tactic, cell, pause_sec)`, `logout(tactic)` (ST0-Fassade, jetzt mit Zelle), `season_sleep_cmd(c)` (Replay), `season_can_logout()`, `season_cell()`/`season_note_cell(cell)`, `season_pause_days_left()`, `season_logout_info()`, `season_wake` (die Bilanz), `season_login_answer(confirmed)`, `season_wake_done()`, `season_notices` / `season_notice_text`; `season_login` und `_season_absence` (ST1-B) rufen `_season_wake_up`; `_season_quiet()` hält die Darstellung der Nacht still (in `_season_event` und den Hinweisen von ST1-D) |
+| Weitere Abschnitte | `GameReplay` (`sleep` → `season_sleep_cmd`), `GameSettings` (`[season]`: `notify_collapse`, `daily_summary`, `notify_asked`), `title_flow.load_and_route` (Bilanz zuerst), `pause_menu.gd` (Reiter „Ausloggen“), `safe_room.gd` („Ausloggen“), `exploration.gd` (`Game.season_note_cell`), `settings_menu.gd` (Abschnitt „Staffel“) |
+| Werkzeuge | Aufnahmen `sleep_logout_corridor` (`--season-floor=3`), `sleep_logout_safe`, `sleep_wake`, `sleep_days`, `sleep_question`; `PTD_SLEEP_NIGHTS=1000 tools/check.sh --tests-only --filter=test_09_sleep` (die Todesraten mit 1 000 Nächten je Gefahr, gut 5 min; Standard 100) |
+
+**Für die anderen Pakete:** ST1-E — die Händler:in legt heute eine Probe hin (`LevelBand.catch_up_potion`); mit Waren
+wird es ein Angebot zum Kaufen beim Login. ST1-H — der Reiter „Staffel“ (Sendepause außerhalb des Ausloggens, Ticker), die
+Ausloggen-Zeile im Safe-Room-Menü von GDD §14.7 (fünf Zeilen) und der Hinweis-Kanal auf Mobilgeräten (Plugin, 09 G-12);
+die Bilanz liest schon `CastSim.news`. ST1-I — Harness-Profile mit Abwesenheiten (`away` über `Game.season_login`
+mit gesetzter Wanduhr wie in `test_09_sleep`). 07 — CR-32 m (Gast im Schlafkampf), n (Layout einmal je Kampf), o
+(Autopilot für die ganze Party, `result_now`).
+
 **Stand Recall (2026-10-12, Branch `ptd/recall`): Spezies und Klasse auf Etage 3** (06 §3.5–3.7, 09 Kap. 11.3 „Stand
 Recall“, Entscheidungen R-1 … R-14). Neu sind `scenes/ui/recall.{gd,tscn}` und `tests/test_09_recall.gd`; Regeln und
 Command bleiben die von 06 Paket B (`Casting.check`/`choose`, `{"t": "casting", "member", "species", "class"}`). **Kein
@@ -612,7 +640,7 @@ Etage 3 und damit der Recall gibt es nur in Staffeln.
 
 **Für die anderen Pakete:** ST1-H — das Tempo-Angebot nach der ersten Klassenwahl (09 Kap. 0.6) hängt sich an das Signal
 `closed` des Recalls oder an `Casting.mode`; ST1-I — der Full-Run-Bot bestätigt auf Etage 3 den Recall (Rezept wie
-`recall_done`: `choose(0)` und `confirm()` je Figur); 07 — CR-32 m (Spezies und Klasse am Party-Rahmen, Bauchbinde
+`recall_done`: `choose(0)` und `confirm()` je Figur); 07 — CR-32 p (Spezies und Klasse am Party-Rahmen, Bauchbinde
 „ORIGINAL“); 03_ART — die Spezies-Optik am Rig (`model_hint.props_add`), bis dahin nur die Farbe am Sockel.
 
 ---
@@ -893,6 +921,8 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `scenes/ui/achievements_menu.gd` | M6 | Achievements (erhalten / verborgen „???“) |
 | `scenes/ui/bestiary_menu.gd` | M6 | Bestiarium aus `GameState.bestiary` |
 | `scenes/ui/floor_summary.tscn` + `.gd` | M6 | `FloorSummary`: Etagen-Bilanz (Zeit, Kills, Zuschauer-Peak, Follower, Achievements; Zeile „Regie-Notizen n/3“ bei `regie_notes_total` > 0, 06 §2.7) → `Game.continue_after_summary()` |
+| `scenes/ui/logout_dialog.tscn` + `.gd` | 09 ST1-G | Ausloggen einer Staffel (Modal, Ebene 61 über dem Pausemenü, ohne `class_name`): Ort und Gefahr (`Game.season_logout_info`), Taktik im Gang, Sendepause in Tagen, Opt-in der Hinweise; „Hier schlafen“ → `Game.season_logout` → Titel |
+| `scenes/ui/wake_summary.tscn` + `.gd` | 09 ST1-G | Login-Bilanz „Während Sie schliefen …“ (`Game.season_wake`), davor die Uhrsprung-Frage, „Tag für Tag“; „Weiter“ → `Game.season_wake_done()` |
 | `scenes/ui/event_lobby.tscn` + `.gd` | M6 | Event-Lauf-Karte (05 CR-10) |
 | `scenes/ui/run_result.tscn` + `.gd` | M6 | Event-Lauf-Ergebnis (05 CR-10) |
 | `scenes/ui/settings_menu.tscn` + `.gd` | M6 | Einstellungen (Echtzeit-Kampfzeilen 07 §7.8; „Partner automatisch“, Kampftempo und Auto-Kampf sind mit R5b-2b entfallen) |

@@ -48,6 +48,12 @@ extends Node
 ##   the Etagenboss on its stage), season_door (in front of a closed programme door: its prompt), season_gate (in front
 ##   of the key gate before the stairs), season_safe (in front of the safe room door of the first quarter),
 ##   season_map (the big map, every quarter revealed).
+## Staffeln (09 §5, ST1-G): sleep_logout_corridor (exploration.tscn with --season-floor=3: the season as a calendar
+##   season Ohne Netz, Kai in a room of the restless quarter, pause → "Ausloggen": the logout dialog with the tactic,
+##   the risk line, the Sendepause and the opt-in), sleep_logout_safe (safe_room.tscn: a calendar season standing in
+##   the room, the menu's "Ausloggen" — the short path), sleep_wake (wake_summary.tscn: a real night — Mit Netz asleep
+##   in a corridor of floor 2 through its collapse: the rescue first, the encounters, the Crashkurs, Ausgeruht, the
+##   status, the news), sleep_days (the same night, the page "Tag für Tag"), sleep_question (the clock-jump question).
 ## Recall (06 §3.5; with capture.gd --season-floor=3, safe_room.tscn — the Recall opens by itself): recall_species
 ##   (Kai's species cards), recall_class (his class cards with the badges and the first class abilities),
 ##   recall_confirm (step 3), recall_judged (M.O.D. judges the pair), recall_mopsula (the Count's species cards),
@@ -1705,6 +1711,109 @@ func _r_season_preview(scene: Node) -> bool:
 	page.call("show_view", "preview")
 	await frames(20)
 	await _quiet_mod_dialog()
+	return true
+
+
+# --- Staffeln (09 §5, ST1-G): the sleeper — the logout dialog and the login summary -----------------------------------
+
+## sleep_logout_<where>: corridor (exploration.tscn, --season-floor=3) | safe (safe_room.tscn).
+func _r_sleep_logout(scene: Node, where: String) -> bool:
+	if where == "safe":
+		var room: String = str(scene.get("safe_room_id"))
+		if not Game.start_season(0, "ssn_basis", {"now": SEASON_NOW, "tz_sec": 0, "seed": 7, "mode": "no_net",
+				"unlock": true}):
+			return false
+		Game.enter_safe_room(room)
+		scene.call("_refresh_menu_labels")
+		await frames(5)
+		await _quiet_mod_dialog()
+		return scene.call("open_save") != null and await _settle(10)
+	if not await _explore_ready(scene):
+		return false
+	_freeze_enemies(scene)
+	var s: SeasonState = Game.state.season
+	s.tempo = "calendar"                         # the --season-floor season runs Am Stück: the logout of a calendar one
+	s.mode = "no_net"
+	var layout: FloorLayout = scene.call("get_layout")
+	var def: FloorDef = DB.floor_def(Game.state.floor_run.index)
+	var cell: Vector2i = SleepResolver.NO_CELL
+	var reach: Dictionary = layout.distances(layout.start, Game.state.floor_run.opened_gates)   # no closed door between
+	for c: Vector2i in layout.sorted_cells():
+		var busy: bool = false
+		for e: EnemySpawn in layout.enemies:
+			busy = busy or e.cell == c
+		if not busy and reach.has(c) and SleepResolver.danger_of(def, layout, c) == 1 and cell == SleepResolver.NO_CELL:
+			cell = c
+	if cell == SleepResolver.NO_CELL:
+		return false
+	_reveal_zone(scene, layout, layout.cell_at(cell).zone)
+	_place_facing(scene, layout, cell, layout.cell_to_world(cell) + Vector3(2.0, 0.0, 2.0), 2.5)
+	scene.call("_update_room", true)
+	await frames(20)
+	await _quiet_mod_queue()
+	var hud: Node = scene.get("_hud")
+	var pm: Node = hud.call("open_pause_menu", "party") if hud != null else null
+	if pm == null:
+		return false
+	get_tree().paused = true
+	await frames(5)
+	return pm.call("ask_to_title") != null and await _settle(12)
+
+
+## sleep_wake | sleep_days | sleep_question (wake_summary.tscn).
+func _r_sleep(scene: Node, what: String) -> bool:
+	if what == "question":
+		scene.set("wake", {"question": 23 * 86400})
+		scene.call("rebuild")
+		return await _settle(8)
+	if not Game.start_season(0, "ssn_basis", {"now": SEASON_NOW, "tz_sec": 0, "seed": 5, "mode": "net"}):
+		return false
+	if not Game.season_debug_descend():          # floor 2 (calendar: floors 1–3 are open from the start)
+		return false
+	var st: GameState = Game.state
+	for m: PartyMember in st.party:
+		m.level = 7
+	st.inventory.credits = 840
+	st.inventory.counts = {"itm_bandage": 3, "itm_antidote": 1, "itm_brutzel_burger": 2}
+	Progression.full_heal(st, DB.data)
+	var layout: FloorLayout = SleepResolver.layout_of(st, DB.data)
+	var cell: Vector2i = SleepResolver.NO_CELL
+	for c: Vector2i in layout.sorted_cells():
+		if SleepResolver.danger_of(DB.floor_def(2), layout, c) == 0 and cell == SleepResolver.NO_CELL:
+			cell = c
+	Game.settings.daily_summary = true
+	if not Game.season_logout("careful", cell):
+		return false
+	var ro: bool = Save.read_only
+	Save.read_only = true
+	Game.season_live_clock = true
+	st.season.seen_unix = int(Time.get_unix_time_from_system()) - (st.season.collapse_utc[1] - st.season.utc
+		+ 7 * 3600)                              # through the collapse of floor 2, seven hours after it
+	Game.season_login()
+	Game.season_live_clock = false
+	Save.read_only = ro
+	if Game.season_wake.is_empty():
+		return false
+	scene.set("wake", Game.season_wake.duplicate(true))
+	scene.call("rebuild")
+	await _settle(8)
+	if what == "days":
+		scene.call("show_days")
+		await _settle(8)
+	return true
+
+
+## Waits `n` frames, ends M.O.D.'s box and the toasts of the setup (a descent's level-ups); true.
+func _settle(n: int) -> bool:
+	await frames(n)
+	await _quiet_mod_dialog()
+	var ui: Node = get_tree().root.get_node_or_null("GlobalUi")
+	var toasts: Node = ui.get("toasts") as Node if ui != null else null
+	var list: Node = toasts.get("_list") as Node if toasts != null else null
+	if list != null:
+		for c: Node in list.get_children():
+			c.queue_free()
+	await frames(2)
 	return true
 
 

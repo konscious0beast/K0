@@ -37,6 +37,10 @@ var auto_attack_default: bool = true        # combat/auto_attack_default (RtSetu
 var auto_retarget: bool = true              # combat/auto_retarget (RtSetup.auto_retarget)
 var floating_text_scale: int = 100          # combat/floating_text_scale in % (§8.6)
 var camera_shake: bool = true               # combat/camera_shake (§7.6)
+# --- Staffeln (09 §2.9, §5.6, ST1-G): section [season] (menu: settings_menu "Staffel") --------------------------------
+var notify_collapse: bool = false           # season/notify_collapse: collapse warnings and "Etage offen" (opt-in)
+var daily_summary: bool = false             # season/daily_summary: the daily summary at the login (V-9: off)
+var notify_asked: bool = false              # season/notify_asked: the first logout asked "Sollen wir Sie … wecken?"
 # true: save_to_disk() is a no-op returning OK, load_from_disk() keeps defaults
 var ephemeral: bool = false
 
@@ -63,6 +67,7 @@ func reset_defaults() -> void:
 	mod_live = &"off"
 	mod_live_url = ""
 	_reset_combat()                               # Echtzeitkampf (07, R1a)
+	_reset_season()                               # Staffeln (09, ST1-G)
 
 
 ## Reads user://settings.cfg (missing file → defaults). No-op when ephemeral.
@@ -94,6 +99,7 @@ func load_from_disk() -> void:
 	mod_live = ml if MOD_LIVE_MODES.has(ml) else &"off"
 	mod_live_url = str(cfg.get_value("live", "mod_live_url", mod_live_url)) if OS.is_debug_build() else ""
 	_load_combat(cfg)                             # Echtzeitkampf (07, R1a)
+	_load_season(cfg)                             # Staffeln (09, ST1-G)
 
 
 ## Writes user://settings.cfg. Ephemeral: returns OK without writing.
@@ -118,6 +124,7 @@ func save_to_disk() -> Error:
 	cfg.set_value("live", "mod_live", String(mod_live))
 	cfg.set_value("live", "mod_live_url", mod_live_url)
 	_save_combat(cfg)                             # Echtzeitkampf (07, R1a)
+	_save_season(cfg)                             # Staffeln (09, ST1-G)
 	return cfg.save(PATH)
 
 
@@ -138,7 +145,7 @@ func to_dict() -> Dictionary:
 		"regie_twists": regie_twists,
 		"mod_live": mod_live,
 		"mod_live_url": mod_live_url,
-	}.merged(_combat_dict())                      # Echtzeitkampf (07, R1a)
+	}.merged(_combat_dict()).merged(_season_dict())   # Echtzeitkampf (07, R1a); Staffeln (09, ST1-G)
 
 
 # --- Echtzeitkampf (07, R1a): §7.8 ------------------------------------------------------------------------------------
@@ -186,3 +193,27 @@ func _combat_dict() -> Dictionary:
 		"combat_camera_assist": combat_camera_assist, "combat_hints": combat_hints,
 		"telegraph_contrast": telegraph_contrast, "auto_attack_default": auto_attack_default,
 		"auto_retarget": auto_retarget, "floating_text_scale": floating_text_scale, "camera_shake": camera_shake}
+
+
+# --- Staffeln (09 §2.9, §5.6, ST1-G): the notices of a sleeper (opt-in) and the daily summary (off) -----------------
+
+func _reset_season() -> void:
+	notify_collapse = false
+	daily_summary = false
+	notify_asked = false
+
+
+func _load_season(cfg: ConfigFile) -> void:
+	notify_collapse = bool(cfg.get_value("season", "notify_collapse", notify_collapse))
+	daily_summary = bool(cfg.get_value("season", "daily_summary", daily_summary))
+	notify_asked = bool(cfg.get_value("season", "notify_asked", notify_asked))
+
+
+func _save_season(cfg: ConfigFile) -> void:
+	cfg.set_value("season", "notify_collapse", notify_collapse)
+	cfg.set_value("season", "daily_summary", daily_summary)
+	cfg.set_value("season", "notify_asked", notify_asked)
+
+
+func _season_dict() -> Dictionary:
+	return {"notify_collapse": notify_collapse, "daily_summary": daily_summary, "notify_asked": notify_asked}

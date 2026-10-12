@@ -4030,6 +4030,90 @@
 			"voice": "mod",
 			"text": "Willkommen zur neuen Staffel! Jede Etage stürzt pünktlich ein. Pünktlicher als jeder Zug.",
 			"weight": 1
+		},
+		{
+			"id": "mod_season_start_01",
+			"tag": "season_start",
+			"voice": "mod",
+			"text": "Etage 1 ist die Generalprobe. Hier dürfen Sie noch scheitern. Ab Etage 2 läuft die Kamera wirklich.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_rescue_01",
+			"tag": "season_rescue",
+			"voice": "mod",
+			"text": "Gerettet! Die Rechnung kommt mit der Post. Eigentlich sofort.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_rescue_free_01",
+			"tag": "season_rescue_free",
+			"voice": "mod",
+			"text": "Gerettet! Diesmal zahlt der Sender. Erzählen Sie es nicht herum.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_medics_01",
+			"tag": "season_medics",
+			"voice": "mod",
+			"text": "Die Regie-Sanitäter haben Sie eingesammelt. Die Rechnung liegt unter dem Kopfkissen.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_medics_free_01",
+			"tag": "season_medics_free",
+			"voice": "mod",
+			"text": "Die Regie-Sanitäter haben Sie eingesammelt. Diese Woche geht es aufs Haus.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_medics_rehearsal_01",
+			"tag": "season_medics_rehearsal",
+			"voice": "mod",
+			"text": "Das war die Generalprobe. Die Sanitäter haben trotzdem gern geübt.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_out_01",
+			"tag": "season_out",
+			"voice": "mod",
+			"text": "Sendeschluss für Sie. Ab jetzt sitzen Sie als Studiogast in der ersten Reihe.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_stairs_closed_01",
+			"tag": "season_stairs_closed",
+			"voice": "mod",
+			"text": "Fertig? Eine Etage dürfen Sie vorgehen. Weiter baut die Regie noch nicht.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_daily_01",
+			"tag": "season_daily",
+			"voice": "mod",
+			"text": "Neu im Programm: Auf dieser Etage gibt es heute etwas Neues. Es bleibt bis zum Einsturz.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_finale_01",
+			"tag": "season_finale",
+			"voice": "mod",
+			"text": "Das Große Finale ist gewonnen! Abspann, Applaus — und morgen weckt Sie niemand.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_end_01",
+			"tag": "season_end",
+			"voice": "mod",
+			"text": "Der letzte Einsturz. Sie waren bis zum Ende dabei. Die Regie verneigt sich.",
+			"weight": 1
+		},
+		{
+			"id": "mod_season_content_01",
+			"tag": "season_content",
+			"voice": "mod",
+			"text": "Weiter reicht das Programm noch nicht, die nächsten Kulissen sind im Aufbau. Sie waren bis zum Ende dabei.",
+			"weight": 1
 		}
 	]
 }

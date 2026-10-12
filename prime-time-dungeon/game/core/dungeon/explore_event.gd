@@ -8,16 +8,21 @@ class_name ExploreEvent extends RefCounted
 ## GATE_OPENED {"key"}, FLOOR_COMPLETED {"floor"}. RunSim (Sponsor-Fenster, 05 §6.13): SPONSOR_WINDOW_OPENED
 ## {"window": SponsorWindows.window_view}, SPONSOR_WINDOW_CLOSED {"id", "kind", "reason"}. Twists (06-D, TwistApplier):
 ## TWIST_APPLIED {"twist": TwistApplier view entry, "src", "n"}, TWIST_ENDED {"id", "n", "reason": time|instant}.
+## Staffeln (09, ST1-B; appended, the earlier values keep their numbers): SEASON {"kind", …} — the events of the season
+## rules (SeasonRules: start, collapse, hold, rescue, death, out, finale, end, left, daily, opened, pause, tempo,
+## sleep; keys per kind in SeasonRules' class doc). RunSim and Game act on "rescue" (the floor changed).
 ## All data values are JSON types (grid cells as [x, y]).
 
 enum Type { ROOM_ENTERED, CHEST_OPENED, ENCOUNTER, ENEMY_STATE, EVENT_CHOICE, GATE_OPENED, ACHIEVEMENT, HYPE,
 	TIMER_SECOND, TIMER_WARNING, TIMER_EXPIRED, EXPLORE_TICK, STRAY_DUE, GIFT_DELIVERED, FLOOR_COMPLETED,
-	SPONSOR_WINDOW_OPENED, SPONSOR_WINDOW_CLOSED, TWIST_APPLIED, TWIST_ENDED }
+	SPONSOR_WINDOW_OPENED, SPONSOR_WINDOW_CLOSED, TWIST_APPLIED, TWIST_ENDED,
+	SEASON }                                # Staffeln (09, ST1-B)
 ## Serialized names, index == Type value.
 const TYPE_NAMES: PackedStringArray = ["room_entered", "chest_opened", "encounter", "enemy_state", "event_choice",
 	"gate_opened", "achievement", "hype", "timer_second", "timer_warning", "timer_expired", "explore_tick", "stray_due",
 	"gift_delivered", "floor_completed", "sponsor_window_opened", "sponsor_window_closed", "twist_applied",
-	"twist_ended"]
+	"twist_ended",
+	"season"]                               # Staffeln (09, ST1-B)
 
 var type: ExploreEvent.Type = Type.ROOM_ENTERED
 var tick: int = 0                   # RunSim tick

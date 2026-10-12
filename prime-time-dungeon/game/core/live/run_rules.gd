@@ -18,13 +18,17 @@ static func next_seed(state: GameState, purpose: String) -> int:
 
 
 ## New FloorRun of floor `index` (FloorRun.create with the run seed and the CURRENT difficulty — the Vorabend timer
-## factor applies from here, GDD §2.9). false = unknown floor (nothing changes).
+## factor applies from here, GDD §2.9). false = unknown floor (nothing changes). Staffeln (09, ST1-B): with a season
+## SeasonRules.on_floor_start follows (Am-Stück countdown, programme, binge clock).
 static func start_floor(state: GameState, data: GameData, index: int) -> bool:
 	var def: FloorDef = data.floor_def(index) if data != null else null
 	if state == null or def == null:
 		return false
+	var prev: FloorRun = state.floor_run
 	state.floor_run = FloorRun.create(def, state.seed, state.difficulty)
 	TwistApplier.on_floor(state, index)                 # 06-D: twists end with their floor
+	if state.season != null:                            # Staffeln (09, ST1-B)
+		SeasonRules.on_floor_start(state, data, prev)
 	return true
 
 
@@ -146,6 +150,8 @@ static func enter_safe_room(state: GameState, data: GameData, safe_room_id: Stri
 		fr.visited_safe_rooms.append(safe_room_id)
 	Progression.full_heal(state, data)
 	TwistApplier.on_safe_room_enter(state)              # 06-D: tw_happy_hour prices apply during this visit
+	if state.season != null:                            # Staffeln (09 §7.1, ST1-B): the medics' destination
+		SeasonRules.on_safe_room(state, safe_room_id)
 	var kai: PartyMember = state.member("kai")
 	return {"safe_room_id": safe_room_id, "first_visit": first_visit, "safe_room_visits": fr.safe_room_visits,
 		"kai_level": kai.level if kai != null else 1}
@@ -209,7 +215,10 @@ static func lower_difficulty(state: GameState, d: StringName) -> bool:
 ##   event_run; else version (v2 or v1), catalog, bias, once per run before the run started
 ## - Echtzeitkampf (07, R5a): loadout: loadout_refusal (every run fights in real time since R5b part 2b)
 ## - Staffeln (09 §9.1, ST0): season, clock, away, sleep, prof, gather, craft, cast and talent v2: season_refusal
-##   (no season → no_season; ST0's module stubs refuse the rest); sd (10 §6.8): sd_unavailable until SD3
+##   (no season → no_season; with one the owning module); sd (10 §6.8): sd_unavailable until SD3
+## - Staffeln (09, ST1-B): first SeasonRules.gate — with a season the sleeping figure / the finished candidate act no
+##   more (asleep / season_over), floor 1 starts it, "descend" follows the staircase rule; without a season only the
+##   start of one in an event run is refused (event_run), so every run of today passes unchanged
 ## (flag keys are whitelisted by Command.validate; QA Sponsor-Fenster by SponsorWindows.dev_allowed; twists by
 ## twist_refusal below; the entries of a running real-time combat by combat_refusal.)
 static func command_refusal(state: GameState, data: GameData, rules: Dictionary, c: Dictionary, floor_done: bool,
@@ -217,6 +226,9 @@ static func command_refusal(state: GameState, data: GameData, rules: Dictionary,
 	var t: String = str(c.get("t", ""))
 	if t == "gift" or state == null:
 		return ""
+	var gate: String = SeasonRules.gate(state, data, c, event_run)   # Staffeln (09, ST1-B)
+	if gate != "":
+		return gate
 	if floor_done and t != "floor":
 		return "run_not_active"
 	match t:
@@ -300,8 +312,8 @@ const SD_UNAVAILABLE: String = "sd_unavailable"      # 10 §6.8: the "sd" comman
 ## "" or why a season command ("season", "clock", "away", "sleep", "prof", "gather", "craft", "cast", "talent" v2) is
 ## refused now: the start of a season → SeasonRules (it has no season yet); every other one without a season →
 ## no_season; with one the owning module decides — SeasonRules (season, clock, sleep; ST1-B), SleepResolver (away;
-## ST1-G), TalentTree (talent v2; ST1-D), Professions (prof, gather, craft; ST1-E), CastSim (cast; ST1-F). ST0 ships
-## the modules as stubs that refuse with season_unavailable. Read-only.
+## ST1-G), TalentTree (talent v2; ST1-D), Professions (prof, gather, craft; ST1-E), CastSim (cast; ST1-F). The modules
+## of the packages to come are stubs that refuse with season_unavailable. Read-only.
 static func season_refusal(state: GameState, data: GameData, c: Dictionary) -> String:
 	var t: String = str(c.get("t", ""))
 	if t == "season" and str(c.get("op", "")) == "start":
@@ -322,8 +334,17 @@ static func season_refusal(state: GameState, data: GameData, c: Dictionary) -> S
 	return "not_allowed"
 
 
+## Staffeln (09 §2.5, ST1-B): a rescue moved the candidate to floor `index` (the SeasonRules event "rescue": the new
+## FloorRun stands) — the part of a floor start the season module cannot do itself (core/live): the twists of the old
+## floor end. RunSim and Game call it first when they act on the event (then hype, Sponsor-Fenster, their context).
+static func season_moved(state: GameState, index: int) -> void:
+	if state != null:
+		TwistApplier.on_floor(state, index)
+
+
 ## Applies an accepted season command (season_refusal == ""): the owning module's state change — THE rule the live
-## game (Game's season facades) and RunSim.apply share. Returns its explore events. ST0: the stubs change nothing.
+## game (Game's season facades) and RunSim.apply share. Returns its explore events (the stubs of the packages to come
+## change nothing).
 static func apply_season(state: GameState, data: GameData, c: Dictionary) -> Array[ExploreEvent]:
 	match str(c.get("t", "")):
 		"season", "clock", "sleep":

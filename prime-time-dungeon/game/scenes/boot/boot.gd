@@ -81,11 +81,13 @@ func _input(event: InputEvent) -> void:
 		route()
 
 
-## Leaves the boot card: --goto target or the title.
+## Leaves the boot card: --goto target or the title (debug builds: --season starts a season, _season_boot).
 func route() -> void:
 	if _routed:
 		return
 	_routed = true
+	if _season_boot():                          # Staffeln (09, ST1-B)
+		return
 	var target: String = str(args.get("goto", ""))
 	if target == "" or target == "title":
 		Router.goto(Router.SCENE_TITLE)
@@ -116,6 +118,67 @@ func route() -> void:
 func _ensure_dev_state() -> void:
 	var s: int = int(args.get("seed", -1))
 	Game.ensure_state(s if s >= 0 else 1)
+
+
+# --- Staffeln (09, ST1-B): the debug start of a season ----------------------------------------------------------------
+
+## Debug builds only (09 §11.1: until "Sendung starten" becomes the default, seasons exist in debug builds and the
+## harness only): --season=<ssn id> starts a new season (Game.start_season) and goes straight into the exploration of
+## floor 1 — no title, casting or intro. Options (season_args): --tempo=calendar|binge, --mode=net|no_net (Ohne Netz
+## without the unlock), --speed=<n> (Zeitraffer: season seconds per wall second, 1–10080), --slot=<1..3> (default: the
+## first empty slot, else 0 = never saved), --hero=kai|mopsula, --air=HH:MM, --seed=<int>. true = started and routed.
+func _season_boot() -> bool:
+	var o: Dictionary = season_args(OS.get_cmdline_user_args())
+	if o.is_empty():
+		return false
+	if not OS.is_debug_build():
+		push_warning("[Boot] --season is a debug option (09 §11.1): ignored")
+		return false
+	var slot: int = int(o.get("slot", -1))
+	if slot > Save.SLOT_COUNT:
+		slot = 0
+	if slot < 0:
+		slot = 0
+		for s in range(1, Save.SLOT_COUNT + 1):
+			if not Save.has_save(s):
+				slot = s
+				break
+	var opts: Dictionary = {"tempo": str(o.get("tempo", "calendar")), "mode": str(o.get("mode", "net")),
+		"unlock": true, "seed": int(args.get("seed", -1))}
+	if o.has("air"):
+		opts["air_time"] = str(o["air"])
+	if not Game.start_season(slot, str(o["season"]), opts, str(o.get("hero", "kai"))):
+		push_warning("[Boot] --season=%s could not start → title" % str(o["season"]))
+		return false
+	Game.season_speed = clampi(int(o.get("speed", 1)), 1, Game.SEASON_SPEED_MAX)
+	Router.goto(Router.SCENE_EXPLORATION, {"spawn": &"start"})
+	return true
+
+
+## The season arguments of the user args: {"season", "tempo", "mode", "speed", "slot", "hero", "air"} — {} without
+## --season=<id>; malformed values are left out (the defaults apply).
+static func season_args(user_args: PackedStringArray) -> Dictionary:
+	var out: Dictionary = {}
+	for a: String in user_args:
+		var kv: PackedStringArray = a.trim_prefix("--").split("=", true, 1)
+		if not a.begins_with("--") or kv.size() != 2 or kv[1] == "":
+			continue
+		match kv[0]:
+			"season", "air":
+				out[kv[0]] = kv[1]
+			"tempo":
+				if SeasonState.TEMPOS.has(kv[1]):
+					out["tempo"] = kv[1]
+			"mode":
+				if SeasonState.MODES.has(kv[1]):
+					out["mode"] = kv[1]
+			"hero":
+				if HeroRules.HEROES.has(kv[1]):
+					out["hero"] = kv[1]
+			"speed", "slot":
+				if kv[1].is_valid_int():
+					out[kv[0]] = kv[1].to_int()
+	return out if out.has("season") else {}
 
 
 func _build_logo() -> void:

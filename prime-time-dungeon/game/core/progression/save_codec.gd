@@ -15,7 +15,9 @@ class_name SaveCodec extends RefCounted
 ##   Season block (09 §9.1, ST0 — additive, no version bump): `state.season` (an object or absent; absent / null = no
 ##   season, every campaign save), the members' `rested`, `professions`, `prof_head`, `talent_rows` and the floor
 ##   run's `gather_nodes`, `respawn`, `daily` — all optional and written only when set, so a v2 file without them loads
-##   and hashes exactly as before. The command journal next to the slot is Save's (journal_append / journal_replay).
+##   and hashes exactly as before. The command journal next to the slot is Save's (journal_append / journal_replay);
+##   since ST1-B a season slot file also carries the top-level key "journal" (the id of its journal, written by Save —
+##   validate ignores it) and the summary a "season" block.
 
 const FORMAT: String = "ptd_save"
 const VERSION: int = 2
@@ -135,13 +137,15 @@ static func validate(d: Dictionary, data: GameData) -> PackedStringArray:
 
 
 ## {"player_name", "floor_index", "level" (Kai), "play_time_sec" (int), "followers", "location"} for slot lists.
+## Staffeln (09, ST1-B): with a season also "season": {"def", "number", "format", "tempo", "mode", "on_air",
+## "result"} (the slot list of ST1-H).
 static func summary(state: GameState) -> Dictionary:
 	if state == null:
 		return {}
 	var kai: PartyMember = state.member("kai")
 	if kai == null and not state.party.is_empty():
 		kai = state.party[0]
-	return {
+	var out: Dictionary = {
 		"player_name": state.player_name,
 		"floor_index": state.floor_run.index if state.floor_run != null else 1,
 		"level": kai.level if kai != null else 1,
@@ -149,6 +153,11 @@ static func summary(state: GameState) -> Dictionary:
 		"followers": state.show.followers if state.show != null else 0,
 		"location": String(state.floor_run.location) if state.floor_run != null else "start",
 	}
+	if state.season != null:
+		var s: SeasonState = state.season
+		out["season"] = {"def": s.def_id, "number": s.number, "format": s.format, "tempo": s.tempo, "mode": s.mode,
+			"on_air": s.on_air(), "result": s.result}
+	return out
 
 
 static func last_errors() -> PackedStringArray:
@@ -359,6 +368,22 @@ static func _sanitize_season_member(m: PartyMember, data: GameData) -> void:
 
 
 ## A season whose template is unknown keeps its block (a season never turns into a campaign by loading); warning.
+## ST1-B: a tempo, mode or result outside SeasonState's lists falls back to calendar / net / "" (warning); a schedule
+## that does not fit the format is only reported (SeasonRules stops at its end).
 static func _sanitize_season(st: GameState, data: GameData) -> void:
-	if st.season != null and not data.has_id("seasons", st.season.def_id):
-		_warn("season template '%s' unknown (the season block is kept)" % st.season.def_id)
+	if st.season == null:
+		return
+	var s: SeasonState = st.season
+	if not data.has_id("seasons", s.def_id):
+		_warn("season template '%s' unknown (the season block is kept)" % s.def_id)
+	if not SeasonState.TEMPOS.has(s.tempo):
+		_warn("season tempo '%s' unknown → calendar" % s.tempo)
+		s.tempo = "calendar"
+	if not SeasonState.MODES.has(s.mode):
+		_warn("season mode '%s' unknown → net" % s.mode)
+		s.mode = "net"
+	if not SeasonState.RESULTS.has(s.result):
+		_warn("season result '%s' unknown → \"\"" % s.result)
+		s.result = ""
+	if s.collapse_utc.size() != s.format:
+		_warn("season schedule has %d dates for %d floors" % [s.collapse_utc.size(), s.format])

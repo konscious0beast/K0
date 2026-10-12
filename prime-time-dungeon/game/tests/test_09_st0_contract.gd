@@ -17,6 +17,8 @@ extends TestCase
 ## ST1-C1 (2026-10-12): ThemeDef and validators/themes.gd are real (the Kulissen with art theme and programme pool);
 ## the boss lines of the season bosses (floors 2–6, enemies without the floor_1 tag) follow the anchor too.
 ## ST1-D (2026-10-12): TalentTree is real (no stub header; its public API stays) — "talent" v2 is TalentTree's.
+## ST1-G (2026-10-12): SleepResolver is real (no stub header; its public API stays) — "away" is SleepResolver's (an
+## awake figure: awake).
 
 const R1A := preload("res://tests/test_r1a_contract.gd")
 const SeasonMin := preload("res://tests/fixtures/season_min/season_min.gd")
@@ -101,21 +103,20 @@ const PROPERTIES: Dictionary = {
 ## The stub files of ST0 → the ST1 package that owns them (09 §11.3, §11.4); ST1-B replaced its four, ST1-F CastSim,
 ## ST1-C the Kulissen, ST1-D TalentTree (REAL).
 const STUBS: Dictionary = {
-	"res://core/season/sleep_resolver.gd": "G",
 	"res://core/progression/professions.gd": "E",
 	"res://core/data/defs/profession_def.gd": "E",
 	"res://core/data/defs/recipe_def.gd": "E",
 	"res://core/data/validators/professions.gd": "E",
 	"res://core/data/validators/cast.gd": "F",
 }
-## The former stubs, real since ST1-B, ST1-F, ST1-C and ST1-D (no stub header; the public API above stays).
+## The former stubs, real since ST1-B, ST1-F, ST1-C, ST1-D and ST1-G (no stub header; the public API above stays).
 const REAL: PackedStringArray = ["res://core/season/season_state.gd", "res://core/season/season_rules.gd",
 	"res://core/data/defs/season_def.gd", "res://core/data/validators/seasons.gd", "res://core/season/cast_sim.gd",
 	"res://core/data/defs/theme_def.gd", "res://core/data/validators/themes.gd",
-	"res://core/progression/talent_tree.gd"]
-## The season commands whose module is still a stub (season_unavailable): ST1-G, -E (ST1-D: "talent" v2 is
-## TalentTree's).
-const STUB_CMDS: PackedStringArray = ["away", "prof", "gather", "craft"]
+	"res://core/progression/talent_tree.gd", "res://core/season/sleep_resolver.gd"]
+## The season commands whose module is still a stub (season_unavailable): ST1-E (ST1-D: "talent" v2 is TalentTree's,
+## ST1-G: "away" SleepResolver's).
+const STUB_CMDS: PackedStringArray = ["prof", "gather", "craft"]
 
 ## One schema-valid sample of every season command (09 §9.1) and talent v2; the first is the start of a season.
 const SEASON_CMDS: Array[Dictionary] = [
@@ -277,6 +278,7 @@ func test_every_season_command_is_refused() -> void:
 		assert_eq(RunRules.apply_season(st, data, c).size(), 0, "the stubs change nothing")
 	assert_eq(StateHash.of(st), before)
 	assert_eq(RunRules.season_refusal(st, data, SEASON_CMDS[9]), "no_cast", "ST1-F: CastSim decides (no AI cast)")
+	assert_eq(RunRules.season_refusal(st, data, SEASON_CMDS[3]), "awake", "ST1-G: SleepResolver decides (awake)")
 	assert_eq(RunRules.season_refusal(st, data, SEASON_CMDS[0]), "season_started", "ST1-B: SeasonRules decides")
 	for c: Dictionary in [{"t": "clock", "sec": 60}, {"t": "sleep", "tactic": "careful"}, {"t": "season", "v": 1,
 			"op": "leave"}]:

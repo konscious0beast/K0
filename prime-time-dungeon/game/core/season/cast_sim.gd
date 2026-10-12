@@ -517,6 +517,22 @@ static func census(state: GameState, data: GameData) -> Dictionary:
 		"first_who": m.first_who, "first_t": m.first_t, "ai_first": m.ai_first, "human": m.ha, "collapse": m.ct}
 
 
+# --- Staffeln (09, ST1-G) ---
+
+## The AI candidates playing on `floor` now (the sleeper's visitors, 09 §5.3 "die laut Modell gerade auf der Etage
+## ist"), in place order: [{"place", "profile", "label"}]; [] without a cast. One read of the block (cheaper than a
+## member_view per place).
+static func floor_ai(state: GameState, data: GameData, floor: int) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var m: CastModel = _load(state, data)
+	if m == null:
+		return out
+	for mb: CastMember in m.members:
+		if mb.is_ai() and mb.in_play() and mb.fl == floor:
+			out.append({"place": mb.place, "profile": mb.profile, "label": _label(state, mb)})
+	return out
+
+
 # ======================================================================================================================
 # Private
 # ======================================================================================================================

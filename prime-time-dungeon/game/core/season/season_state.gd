@@ -62,6 +62,14 @@ var result_floor: int = 0                  # the floor of the result ("verschüt
 var asleep: bool = false
 var sleep_tactic: String = ""              # RtVocab.RT_PRESETS (careful | support | attack)
 var sleep_room: String = ""                # the safe room the sleeper lies in ("" = a corridor)
+# --- Staffeln (09, ST1-G) ---
+## The night of a sleeper (SleepResolver.on_sleep fills it, "away" resolves and clears it): {"v", "at" (season time
+## of the logout), "cell" ([x, y] where the figure lies), "floor", "seq" (the cast's newest event then — the news of
+## the login summary start after it), "quiet" (seconds of Sendepause taken during this night: the clock stands)} —
+## integers only (SLEEPER_KEYS). Written only while it holds something, so every season state of ST1-B, D and F keeps
+## its JSON and hash.
+const SLEEPER_KEYS: PackedStringArray = ["v", "at", "floor", "seq", "quiet"]
+var sleeper: Dictionary = {}
 
 
 ## The save / hash form (integers, bools and strings only; every field, always — a season has no older form).
@@ -74,7 +82,8 @@ func to_dict() -> Dictionary:
 		"programme": programme.duplicate(), "reached": reached.duplicate(), "last_safe_room": last_safe_room,
 		"vest": vest, "rescues": rescues, "deaths": deaths, "fee_at": fee_at, "stairs": stairs, "qbosses": qbosses,
 		"fbosses": fbosses, "finale_at": finale_at, "descent_at": descent_at, "result": result,
-		"result_floor": result_floor, "asleep": asleep, "sleep_tactic": sleep_tactic, "sleep_room": sleep_room}
+		"result_floor": result_floor, "asleep": asleep, "sleep_tactic": sleep_tactic, "sleep_room": sleep_room
+		}.merged({"sleeper": sleeper.duplicate(true)} if not sleeper.is_empty() else {})   # Staffeln (09, ST1-G)
 
 
 ## Missing fields → defaults (an ST0-shaped block loads; the per-floor arrays stay as they are — SeasonRules reads a
@@ -118,7 +127,23 @@ static func from_dict(d: Dictionary) -> SeasonState:
 	s.asleep = bool(d.get("asleep", false))
 	s.sleep_tactic = str(d.get("sleep_tactic", ""))
 	s.sleep_room = str(d.get("sleep_room", ""))
+	s.sleeper = sleeper_from(d.get("sleeper", {}))                 # Staffeln (09, ST1-G)
 	return s
+
+
+## Staffeln (09, ST1-G): the sleeper block in its canonical form — the integer keys of SLEEPER_KEYS and "cell" as
+## [x, y] (JSON numbers are floats); {} for anything that is not a block.
+static func sleeper_from(raw: Variant) -> Dictionary:
+	var out: Dictionary = {}
+	if not (raw is Dictionary) or (raw as Dictionary).is_empty():
+		return out
+	var d: Dictionary = raw
+	for k: String in SLEEPER_KEYS:
+		out[k] = JsonUtil.to_int(d.get(k, 0))
+	var cell: Variant = d.get("cell", [])
+	if cell is Array and (cell as Array).size() == 2:
+		out["cell"] = [JsonUtil.to_int((cell as Array)[0]), JsonUtil.to_int((cell as Array)[1])]
+	return out
 
 
 ## The floor on air (09 §1.1: the floor whose collapse comes next); format + 1 once every floor collapsed.

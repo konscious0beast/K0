@@ -89,7 +89,9 @@ static func refusal(state: GameState, data: GameData, c: Dictionary) -> String:
 				return "asleep"
 			if s.result != "":
 				return "season_over"
-			return "" if state.floor_run != null else "not_allowed"
+			if state.floor_run == null:
+				return "not_allowed"
+			return SleepResolver.sleep_refusal(state, data, c)   # Staffeln (09, ST1-G): the cell of the night
 	return "not_allowed"
 
 
@@ -119,6 +121,7 @@ static func apply(state: GameState, data: GameData, c: Dictionary) -> Array[Expl
 			var fr: FloorRun = state.floor_run
 			sl.sleep_room = String(fr.location) if fr != null and fr.location != START else ""
 			out.append(_ev("sleep", {"tactic": sl.sleep_tactic, "room": sl.sleep_room}))
+			SleepResolver.on_sleep(state, data, c)              # Staffeln (09, ST1-G): the night begins
 	return out
 
 
@@ -634,6 +637,7 @@ static func _pause(state: GameState, sec: int, why: String) -> Array[ExploreEven
 	s.next_air_utc += sec
 	if why == "user":
 		s.pause_sec += sec
+		SleepResolver.on_pause(state, sec)                      # Staffeln (09, ST1-G): a Sendepause of the night
 	var out: Array[ExploreEvent] = [_ev("pause", {"sec": sec, "why": why})]
 	return out
 

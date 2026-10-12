@@ -48,7 +48,7 @@ func test_catalog_counts_and_shape() -> void:
 	var raw: Dictionary = JsonUtil.read_file("res://data/origins.json")
 	assert_false(raw.has("talents"), "CR-33: no start talents in the catalog")
 	for e: Dictionary in data.all_origins():
-		assert_eq(str(e.get("talent", "")), "", "no tal_org_ talent: " + str(e["id"]))
+		assert_false(e.has("talent") or e.has("alt"), "no start talent fields (CR-33, 09 ST0): " + str(e["id"]))
 		var status: bool = bool(e["status"]) or str(e["id"]) == "org_allround"
 		assert_eq(str(e["prof"]) == "", status, "prof empty exactly for status tiles + org_allround: " + str(e["id"]))
 		assert_eq(JsonUtil.to_str_array(e["rivals"]).size(), 2, str(e["id"]))
@@ -126,7 +126,8 @@ func test_validator_rejects_bad_content() -> void:
 			"hook": "game_over", "n": 0, "slot": "line", "every": 1, "else": "line"}], "every"],
 		[func(o: Dictionary) -> void: (o["canon"] as Dictionary)["occupation"] = "occ_care_nurse", "no job of"],
 		[func(o: Dictionary) -> void: (o["canon"] as Dictionary)["origin"] = "org_nope", "unknown origin"],
-		[func(o: Dictionary) -> void: _entry(o, "org_it")["talent"] = "tal_org_it", "unknown start talent"],
+		[func(o: Dictionary) -> void: _entry(o, "org_it")["talent"] = "tal_org_it", "org_it].talent: unknown key"],
+		[func(o: Dictionary) -> void: o["talents"] = [], "origins.talents: unknown top-level key"],
 	]
 	for c: Array in cases:
 		var errs: String = _errors_with(c[0] as Callable)

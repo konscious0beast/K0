@@ -24,10 +24,6 @@ var casting: Dictionary = {}           # Casting bookkeeping: {"floor", "visit",
 var rt_preset: String = ""             # partner tactic (RtVocab.RT_PRESETS; "" = party.json rt.default_preset)
 var rt_toggles: Dictionary = {}        # partner switches {interrupt, show, potions} → bool ({} = RtVocab defaults)
 var rt_loadout: Dictionary = {}        # action bar variants: "2".."4" → skill id ({} = the base abilities, §4.1)
-# --- Casting (08, K0) -------------------------------------------------------------------------------------------------
-## Start talent of the persona (08 §2.4, only kai; "" = none: old saves, event runs): PersonaRules.apply sets it, the
-## Talents queries add its effects (rank 1) from level 1 (Talents.has_any). Written by to_dict only when set.
-var origin_talent: String = ""
 
 
 func to_dict() -> Dictionary:
@@ -44,7 +40,7 @@ func to_dict() -> Dictionary:
 		"equipment": eq,
 		"skills": Array(skills),
 		"class_id": class_id,
-	}.merged(_b_dict()).merged(_rt_dict()).merged({"origin_talent": origin_talent} if origin_talent != "" else {})
+	}.merged(_b_dict()).merged(_rt_dict())
 
 
 ## 06 package B fields, only when set (see header).
@@ -105,7 +101,6 @@ static func from_dict(d: Dictionary) -> PartyMember:
 			if (raw_c as Dictionary).has(k):
 				m.casting[k] = JsonUtil.to_int((raw_c as Dictionary)[k])
 	_rt_from_dict(m, d)                    # Echtzeitkampf (07, R1a)
-	m.origin_talent = str(d.get("origin_talent", ""))   # Casting (08, K0)
 	return m
 
 

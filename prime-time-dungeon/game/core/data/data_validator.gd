@@ -163,7 +163,6 @@ const ID_PATTERNS: Dictionary = {
 	# --- Casting (08 §3.9, K0): origins.json / looks.json ----------------------------------------------------------
 	"origins": "^org_[a-z0-9_]+$",
 	"occupations": "^occ_[a-z0-9_]+$",
-	"origin_talents": "^tal_org_[a-z0-9_]+$",
 	"hobbies": "^hob_[a-z0-9_]+$",
 	"traits": "^trt_[a-z0-9_]+$",
 	"rivals": "^rv_[a-z0-9_]+$",
@@ -182,7 +181,7 @@ const TABLES: PackedStringArray = ["statuses", "skills", "items", "classes", "pa
 	"origins", "looks"]                         # Casting (08, K0): validators/origins.gd (K1), looks.gd (K2)
 ## Allowed extra top-level keys per file (§4.1); everything else is an error.
 const TABLE_EXTRA_KEYS: Dictionary = {"party": ["start"], "enemies": ["pseudo_units"], "lootboxes": ["pools", "pity"],
-	"origins": ["talents", "hobbies", "traits", "rivals", "brands", "gags", "greetings", "plans", "canon"]}   # 08 K0
+	"origins": ["hobbies", "traits", "rivals", "brands", "gags", "greetings", "plans", "canon"]}   # 08 K0 (09 ST0)
 const REQUIRED_BOXES: PackedStringArray = ["box_bronze", "box_silver", "box_gold", "box_fan"]
 const LEVEL_CAP: int = 10                    # copy of Balance.LEVEL_CAP (core/data must not depend on core/stats)
 const MAX_TEXT_LEN: int = 110
@@ -412,7 +411,7 @@ func validate(raw: Dictionary, p_strict: bool = true, read_errors: Dictionary = 
 		"pseudo_units": []}
 	for t: String in TABLES:
 		_out[t] = []
-	_out["origin_extras"] = {}                    # Casting (08, K0): talents, hobbies, …, canon of origins.json
+	_out["origin_extras"] = {}                    # Casting (08, K0): hobbies, traits, …, canon of origins.json
 	# Rule 1 + rules 2/4 per entry.
 	for t: String in TABLES:
 		var entries: Array = _file_entries(t, raw, read_errors)

@@ -63,7 +63,6 @@ var _rt_balance: Dictionary = {}
 # --- Casting (08, K0): origins.json (+ its lists) and looks.json — plain read-only dictionaries ---------------------
 var _origins: Dictionary = {}              # org id → entry
 var _all_origins: Array[Dictionary] = []   # file order
-var _origin_talents: Dictionary = {}       # tal_org id → TalentDef (never in the Talent-Show pool)
 var _persona_lists: Dictionary = {}        # list (hobbies, traits, rivals, brands, gags, greetings) → {id → entry}
 var _persona_plans: Array = []             # origins.json → plans (file order)
 var _persona_canon: Dictionary = {}        # origins.json → canon
@@ -103,7 +102,7 @@ func load_from_dicts(tables: Dictionary) -> bool:
 			"lootboxes":
 				file["pools"] = (tables.get("lootbox_pools", {}) as Dictionary).duplicate(true)
 				file["pity"] = (tables.get("lootbox_pity", {"rare": 4, "epic": 8}) as Dictionary).duplicate(true)
-			"origins":                                    # Casting (08, K0): {talents, hobbies, …, canon}
+			"origins":                                    # Casting (08, K0): {hobbies, traits, …, canon}
 				file.merge((tables.get("origin_extras", {}) as Dictionary).duplicate(true))
 		raw[t] = file
 	if tables.has("rt_balance"):                              # Echtzeitkampf (07, R1a): file object or bare values
@@ -354,15 +353,6 @@ func all_origins() -> Array[Dictionary]:
 	return _all_origins.duplicate()
 
 
-## Start talent (origins.json → talents) as a TalentDef (for "kai", max rank 1); null + error if unknown.
-func origin_talent(id: String) -> TalentDef:
-	return _get_def(_origin_talents, "origins", id) as TalentDef
-
-
-func has_origin_talent(id: String) -> bool:
-	return _origin_talents.has(id)
-
-
 ## origins.json → hobbies entry ({} if unknown).
 func hobby(id: String) -> Dictionary:
 	return persona_entry("hobbies", id)
@@ -424,10 +414,6 @@ func _build_persona(norm: Dictionary) -> void:
 			_origins[str(d["id"])] = d
 			_all_origins.append(d)
 	var extras: Dictionary = norm.get("origin_extras", {})
-	for d: Dictionary in extras.get("talents", []):
-		var t: TalentDef = TalentDef.from_dict(d)
-		if t.id != "" and not _origin_talents.has(t.id):
-			_origin_talents[t.id] = t
 	for list: String in ["hobbies", "traits", "rivals", "brands", "gags", "greetings"]:
 		var by_id: Dictionary = {}
 		for d: Dictionary in extras.get(list, []):
@@ -447,8 +433,6 @@ func _build_persona(norm: Dictionary) -> void:
 	for v: Variant in [_origins, _persona_lists, _persona_canon, _looks, _looks_by_kind]:
 		_freeze(v)
 	_freeze(_persona_plans)
-	for t: Variant in _origin_talents.values():
-		_freeze_object(t as Object)
 
 
 ## Echtzeitkampf (07 §3.16, R1a): the "values" of data/rt_balance.json (a copy; {} without the file). Read through
@@ -495,7 +479,6 @@ func _clear() -> void:
 	_rt_balance = {}                                              # Echtzeitkampf (07, R1a)
 	# Casting (08, K0): fresh containers — the loaded ones are frozen (read-only) and cannot be cleared
 	_origins = {}
-	_origin_talents = {}
 	_persona_lists = {}
 	_persona_canon = {}
 	_looks = {}

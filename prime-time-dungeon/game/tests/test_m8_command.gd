@@ -60,10 +60,9 @@ const VALID: Array[Dictionary] = [
 	# Echtzeitkampf (07 §4.1, §5.2; R5a): variants + partner tactic chosen outside a combat
 	{"t": "loadout", "member": "kai", "bar": {"4": "skl_kai_deo_torch"}, "preset": "careful", "tog": {"potions": true}},
 	{"t": "loadout", "member": "mopsula", "bar": {}, "preset": "", "tog": {}},
-	# Casting (08 §2.3, K0): start (bias 0–3 ids) and swap
+	# Casting (08 §2.3, K0): start (bias 0–3 ids); the talent is any String (PersonaRules.check takes only "")
 	{"t": "persona", "v": 1, "talent": "tal_org_animals", "bias": ["mar_graf_finale", "mar_variety"]},
 	{"t": "persona", "v": 1, "talent": "tal_org_nature", "bias": []},
-	{"t": "persona", "v": 1, "talent": "tal_org_nature", "swap": true},
 	{"t": "persona", "v": 1, "talent": "", "bias": ["mar_bio"]},      # K1 (CR-33): the command K1 records
 ]
 
@@ -166,12 +165,10 @@ func test_invalid_commands() -> void:
 		[{"t": "persona", "talent": "tal_org_animals", "bias": []}, "persona: v must be 1"],
 		[{"t": "persona", "v": 2, "talent": "tal_org_animals", "bias": []}, "persona: v must be 1"],
 		[{"t": "persona", "v": 1, "bias": []}, "persona: talent must be a String"],   # 08 K1: "" is allowed
-		[{"t": "persona", "v": 1, "talent": "tal_kai_wischtechnik", "bias": []}, "talent must start with tal_org_"],
 		[{"t": "persona", "v": 1, "talent": "tal_org_animals"}, "persona: bias must be an array"],
 		[{"t": "persona", "v": 1, "talent": "tal_org_animals", "bias": ["a", "b", "c", "d"]}, "at most 3"],
 		[{"t": "persona", "v": 1, "talent": "tal_org_animals", "bias": [3]}, "bias must contain non-empty Strings"],
-		[{"t": "persona", "v": 1, "talent": "tal_org_animals", "swap": true, "bias": []}, "a swap is"],
-		[{"t": "persona", "v": 1, "talent": "tal_org_animals", "swap": false}, "a swap is"],
+		[{"t": "persona", "v": 1, "talent": "", "swap": true}, "persona: bias must be an array"],   # 09 ST0: no swap
 		# Echtzeitkampf (07 §4.1, §5.2; R5a)
 		[{"t": "loadout", "bar": {}, "preset": "", "tog": {}}, "loadout: member"],
 		[{"t": "loadout", "member": "kai", "preset": "", "tog": {}}, "loadout: bar must be a Dictionary"],

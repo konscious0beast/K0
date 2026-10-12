@@ -173,11 +173,6 @@ static func is_canon(p: PersonaProfile, data: GameData) -> bool:
 		and (p.occupation == "" or p.occupation == str(c.get("occupation", "")))
 
 
-## Dormant since CR-33 (no start talents): always "".
-static func plain_line(_def: TalentDef) -> String:
-	return ""
-
-
 ## "" or the reason sentence why a name cannot be broadcast (08 D-3): "Dieser Name ist leider nicht sendefähig: …".
 ## The name is TitleFlow.clean_name's (<= 12 glyphs the font has); this checks length, PII patterns and the word lists.
 static func check_name(name: String) -> String:

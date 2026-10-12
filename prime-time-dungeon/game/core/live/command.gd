@@ -21,9 +21,9 @@ class_name Command extends RefCounted
 ## combat branch, Game.replay_log combat loop). loadout {"member", "bar": {"2" | "3" | "4": skill id}, "preset": "" |
 ## RtVocab.RT_PRESETS, "tog": {switch: bool}} (R5a: action bar variants and partner tactic chosen outside a combat;
 ## the rules are RunRules.loadout_refusal's).
-## Casting (08 §2.3, K0): persona {"v": 1, "talent", "bias": [≤ 3 Strings]} (start, once per run) or {"v": 1,
-## "talent", "swap": true} (first Talent-Show) — ids only; the rules are PersonaRules.check's. K1 (CR-33): "talent"
-## may be "" — the only value K1 records (no start talents; any other talent is refused by PersonaRules.check).
+## Casting (08 §2.3, K0): persona {"v": 1, "talent", "bias": [≤ 3 Strings]} (start, once per run) — ids only; the
+## rules are PersonaRules.check's. K1 (CR-33): "talent" is "" (no start talents; any other talent is refused by
+## PersonaRules.check; the K0 swap left with the start talents in 09 ST0).
 
 const TYPES: PackedStringArray = ["floor", "encounter", "lootbox", "buy", "sell", "equip", "use_item", "rest",
 	"event", "chest", "gate", "room", "safe_room", "safe_room_exit", "scene", "flag", "difficulty", "descend", "gift",
@@ -202,12 +202,6 @@ static func _persona(d: Dictionary) -> String:
 	var e: String = _str(d, "talent")         # 08 K1 (CR-33): "" = no start talent (the K1 command)
 	if e != "":
 		return e
-	if str(d["talent"]) != "" and not str(d["talent"]).begins_with("tal_org_"):
-		return "talent must start with tal_org_"
-	if d.has("swap"):
-		if d.has("bias") or not (d["swap"] is bool) or not bool(d["swap"]):
-			return "a swap is {v, talent, swap: true} (no bias)"
-		return ""
 	var bias: Variant = d.get("bias", null)
 	if not (bias is Array) or (bias as Array).size() > PERSONA_MAX_BIAS:
 		return "bias must be an array of at most %d marotte ids" % PERSONA_MAX_BIAS

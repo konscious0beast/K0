@@ -3,7 +3,8 @@ class_name PersonaProfile extends RefCounted
 ## traits, look (K2: one looks.json id per kind — ids only, never colours or a model), story beats, AI lines (K3).
 ## Never part of GameState, never recorded, never synced; stored per slot in user://persona/slot_N.json
 ## (Save.persona_path). Loading checks everything against the catalog again: unknown ids show the canon value
-## (08 §2.5), rejected texts are dropped. The K0 fields `talent` and `offer` stay empty until 09 ST0 (CR-33).
+## (08 §2.5), rejected texts are dropped. The K0 fields `talent` and `offer` left with CR-33 (09 ST0); a persona file
+## that still carries them loads (the keys are ignored).
 
 const FORMAT: String = "ptd_persona"
 const VERSION: int = 1
@@ -28,8 +29,6 @@ var hobby: String = ""
 var hobby_text: String = ""
 var traits: PackedStringArray = []
 var look: Dictionary = {}
-var talent: String = ""
-var offer: PackedStringArray = []
 var beats: Dictionary = {}
 var ai: Dictionary = {}
 var source: String = "canon"
@@ -89,8 +88,6 @@ static func from_dict(d: Dictionary, data: GameData) -> PersonaProfile:
 	p.hobby_text = str(d.get("hobby_text", ""))
 	p.traits = JsonUtil.to_str_array(d.get("traits", []))
 	p.look = (d.get("look", {}) as Dictionary).duplicate(true) if d.get("look", {}) is Dictionary else {}
-	p.talent = ""                                   # CR-33: never a start talent (K0 field, dormant)
-	p.offer = PackedStringArray()
 	p.beats = (d.get("beats", {}) as Dictionary).duplicate(true) if d.get("beats", {}) is Dictionary else {}
 	p.ai = (d.get("ai", {}) as Dictionary).duplicate(true) if d.get("ai", {}) is Dictionary else {}
 	p.source = str(d.get("source", "offline")) if SOURCES.has(str(d.get("source", ""))) else "offline"
@@ -104,8 +101,7 @@ static func from_dict(d: Dictionary, data: GameData) -> PersonaProfile:
 func to_dict() -> Dictionary:
 	return {"format": FORMAT, "v": VERSION, "name": name, "form": form, "origin": origin, "occupation": occupation,
 		"job_text": job_text, "hobby": hobby, "hobby_text": hobby_text, "traits": Array(traits),
-		"look": look.duplicate(true), "talent": talent, "offer": Array(offer), "beats": beats.duplicate(true),
-		"ai": ai.duplicate(true), "source": source}
+		"look": look.duplicate(true), "beats": beats.duplicate(true), "ai": ai.duplicate(true), "source": source}
 
 
 ## "Rest automatisch" (08 §1.5): every field of FIELDS that is not in `set_fields` gets its canon value ("origin"
@@ -164,8 +160,6 @@ func validate(data: GameData) -> PackedStringArray:
 		if seen.has(t):
 			out.append("traits: '%s' twice" % t)
 		seen[t] = true
-	if talent != "":
-		out.append("talent: must be empty (CR-33)")
 	for kind: Variant in look.keys():               # K2 (08 §2.2): one look id per kind, known and of that kind
 		var e: Dictionary = data.look(str(look[kind]))
 		if not LOOK_KINDS.has(str(kind)):
@@ -261,10 +255,9 @@ func is_canon(data: GameData) -> bool:
 ## A deep copy.
 func copy() -> PersonaProfile:
 	var p: PersonaProfile = PersonaProfile.new()
-	for f: String in ["name", "form", "origin", "occupation", "job_text", "hobby", "hobby_text", "talent", "source"]:
+	for f: String in ["name", "form", "origin", "occupation", "job_text", "hobby", "hobby_text", "source"]:
 		p.set(f, get(f))
 	p.traits = traits.duplicate()
-	p.offer = offer.duplicate()
 	p.look = look.duplicate(true)
 	p.beats = beats.duplicate(true)
 	p.ai = ai.duplicate(true)

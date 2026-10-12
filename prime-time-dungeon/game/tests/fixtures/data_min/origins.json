@@ -1,35 +1,5 @@
 {
 	"schema": 1,
-	"talents": [
-		{
-			"id": "tal_org_animals",
-			"name": "Vermittlungsprofi",
-			"icon": "show",
-			"effects": [
-				{
-					"kind": "marotte_heart",
-					"per_floor": 1
-				}
-			]
-		},
-		{
-			"id": "tal_org_nature",
-			"name": "Wetterfest",
-			"icon": "element",
-			"effects": [
-				{
-					"kind": "element_pm",
-					"element": "poison",
-					"pm": 900
-				},
-				{
-					"kind": "element_pm",
-					"element": "shock",
-					"pm": 850
-				}
-			]
-		}
-	],
 	"entries": [
 		{
 			"id": "org_animals",
@@ -56,8 +26,6 @@
 				"hundetrain",
 				"=zoo"
 			],
-			"talent": "tal_org_animals",
-			"alt": "org_nature",
 			"prof": "prf_first_aid",
 			"spec_hint": "cls_kai_wrecker",
 			"flavor": "Sie verstehen Wesen, die beißen.",
@@ -79,10 +47,7 @@
 				"hund",
 				"katze"
 			],
-			"talent": "tal_org_animals",
 			"prof": "prf_cooking",
-			"title": "Tierisch beliebt",
-			"desc": "Herzen gewinnen Sie im Schlaf.",
 			"club": {
 				"text": "Tierheim-Team",
 				"g": "n"
@@ -144,7 +109,6 @@
 		"origin": "org_animals",
 		"occupation": "occ_animals_keeper",
 		"hobby": "hob_animals",
-		"traits": [],
-		"talent": "tal_org_animals"
+		"traits": []
 	}
 }

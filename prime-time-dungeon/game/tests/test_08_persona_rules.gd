@@ -97,7 +97,10 @@ func test_bias_and_command() -> void:
 	var cmd: Dictionary = PersonaRules.command_for(data, "", PackedStringArray(["trt_sporty", "trt_natural"]))
 	assert_eq(cmd, {"t": "persona", "v": 1, "talent": "", "bias": ["mar_bio", "mar_stunt"]})
 	assert_eq(Command.validate(cmd), "", "Command.validate takes the K1 command (talent \"\")")
-	assert_has(Command.validate({"t": "persona", "v": 1, "talent": "org_care", "bias": []}), "tal_org_")
+	assert_eq(Command.validate({"t": "persona", "v": 1, "talent": "org_care", "bias": []}), "",
+		"the schema takes any talent String — PersonaRules.check refuses it (CR-33, 09 ST0)")
+	assert_eq(PersonaRules.check(GameState.create_new(data, 0, "Kai", 77, &"prime"), data,
+		{"t": "persona", "v": 1, "talent": "org_care", "bias": []}, false), "unknown_talent")
 	assert_has(Command.validate({"t": "persona", "v": 1, "bias": []}), "talent must be a String")
 	for t: MarotteDef in data.all_marotten():
 		if not t.rotation:
@@ -240,8 +243,13 @@ func test_persona_file_round_trip_and_corrections() -> void:
 	assert_eq(q.validate(data), PackedStringArray())
 	var bad: PersonaProfile = _jana(data)
 	bad.occupation = "occ_it_dev"
-	bad.talent = "tal_org_care"
-	assert_eq(bad.validate(data).size(), 2, "a job of another tile, a start talent")
+	assert_eq(bad.validate(data).size(), 1, "a job of another tile")
+	var k0: Dictionary = _jana(data).to_dict()
+	k0["talent"] = "tal_org_care"
+	k0["offer"] = ["tal_org_care"]
+	assert_eq(PersonaProfile.from_dict(k0, data).to_dict(), _jana(data).to_dict(),
+		"a K0 persona file loads: its talent / offer keys are ignored (CR-33, 09 ST0)")
+	assert_false(_jana(data).to_dict().has("talent") or _jana(data).to_dict().has("offer"))
 
 
 func test_save_and_load_keep_the_name_out_of_the_slot() -> void:

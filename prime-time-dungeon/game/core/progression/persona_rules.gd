@@ -1,11 +1,11 @@
 class_name PersonaRules extends RefCounted
 ## Rules of the candidate persona in the core (08 §2.3, §3.7, §4.8). Only ids go into the core (P-1): the recorded
 ## command {"t": "persona", "v": 1, "talent": "", "bias": [...]} — once per run, before the run begins (Game.new_game
-## records floor → hero → persona) — and its effect flags["persona"] = {"v": 1, "bias": [...], "swapped": false}.
-## CR-33 (09 §8.6): there is no start talent any more. `talent` is always "" (any other value → unknown_talent), the
-## swap is gone (no_swap), the persona never changes a combat value; its only effect in the core is the Marotten
-## bias from floor 2 (weight_add). The dormant K0 start-talent API (offer, swap_command, can_swap, kai.origin_talent)
-## keeps its signatures until 09 ST0 removes it (09 §11.2 Nr. 2).
+## records floor → hero → persona) — and its effect flags["persona"] = {"v": 1, "bias": [...], "swapped": false}
+## (the K1 shape, kept bit for bit: the logs and saves of K1 hash the same).
+## CR-33 (09 §8.6): there is no start talent. `talent` is always "" (any other value → unknown_talent), the persona
+## never changes a combat value; its only effect in the core is the Marotten bias from floor 2 (weight_add). The
+## dormant K0 start-talent API (offer, swap, PartyMember.origin_talent) left in 09 ST0 (09 §11.2 Nr. 2).
 ## Also the offline mapping of "Anderes …" free texts to catalog ids (map_text, 08 §3.7). Static and pure (core): no
 ## autoloads, integer math only.
 
@@ -16,18 +16,13 @@ const VERSION: int = 1
 const FLAG: String = "persona"
 const MEMBER: String = "kai"                 # the persona is the candidate (party id kai)
 const REASONS: PackedStringArray = ["bad_version", "unknown_talent", "bad_bias", "already_set", "run_started",
-	"event_run", "no_swap", "same"]
+	"event_run"]
 ## "Anderes …" mapping (08 §3.7 Nr. 1): ä → ae, ö → oe, ü → ue, ß → ss; other accents of the on-screen keyboard's
 ## accent layer fold to their base letter.
 const FOLD: Dictionary = {"ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss", "à": "a", "á": "a", "â": "a", "å": "a",
 	"æ": "ae", "ç": "c", "č": "c", "è": "e", "é": "e", "ê": "e", "ë": "e", "ğ": "g", "ì": "i", "í": "i", "î": "i",
 	"ï": "i", "ł": "l", "ñ": "n", "ò": "o", "ó": "o", "ô": "o", "ø": "o", "œ": "oe", "š": "s", "ş": "s", "ù": "u",
 	"ú": "u", "û": "u", "ý": "y", "ž": "z"}
-
-
-## Dormant since CR-33 (start talents are gone): always [].
-static func offer(_data: GameData, _origin_id: String, _hobby_id: String) -> PackedStringArray:
-	return PackedStringArray()
 
 
 ## The Marotten bias of the chosen traits (08 §3.7): their `bias` preferences (empty ones skipped), only rotating
@@ -50,14 +45,9 @@ static func command_for(data: GameData, talent_id: String, trait_ids: PackedStri
 	return {"t": "persona", "v": VERSION, "talent": talent_id, "bias": Array(bias_for(data, trait_ids))}
 
 
-## Dormant since CR-33 (the swap is gone): the K0 command shape, refused by check (no_swap).
-static func swap_command(talent_id: String) -> Dictionary:
-	return {"t": "persona", "v": VERSION, "talent": talent_id, "swap": true}
-
-
 ## "" or why `cmd` is refused now (08 §2.3): bad_version | event_run (event runs never have a persona, 08 §8) |
-## unknown_talent (any non-empty talent — CR-33; also a state without kai) | no_swap (the swap is gone) | already_set |
-## run_started (HeroRules.run_started) | bad_bias (0–3 distinct ascending ids of rotating marotten).
+## unknown_talent (any non-empty talent — CR-33; also a state without kai) | already_set | run_started
+## (HeroRules.run_started) | bad_bias (0–3 distinct ascending ids of rotating marotten).
 static func check(state: GameState, data: GameData, cmd: Dictionary, event_run: bool) -> String:
 	if not _is_int(cmd.get("v", null)) or int(cmd["v"]) != VERSION:
 		return "bad_version"
@@ -65,8 +55,6 @@ static func check(state: GameState, data: GameData, cmd: Dictionary, event_run: 
 		return "event_run"
 	if state == null or data == null or state.member(MEMBER) == null or str(cmd.get("talent", "")) != "":
 		return "unknown_talent"
-	if cmd.has("swap"):
-		return "no_swap"
 	if state.flags.get(FLAG, null) != null:
 		return "already_set"
 	if HeroRules.run_started(state):
@@ -74,8 +62,8 @@ static func check(state: GameState, data: GameData, cmd: Dictionary, event_run: 
 	return _bias_refusal(data, cmd.get("bias", []))
 
 
-## Applies a valid command: flags["persona"] = {"v", "bias", "swapped": false}. No combat value changes (CR-33).
-## false (nothing changes) if check() refuses.
+## Applies a valid command: flags["persona"] = {"v", "bias", "swapped": false} (the K1 shape; nothing reads
+## "swapped" any more). No combat value changes (CR-33). false (nothing changes) if check() refuses.
 static func apply(state: GameState, data: GameData, cmd: Dictionary) -> bool:
 	if check(state, data, cmd, false) != "":
 		return false
@@ -84,11 +72,6 @@ static func apply(state: GameState, data: GameData, cmd: Dictionary) -> bool:
 		bias.append(str(b))
 	state.flags[FLAG] = {"v": VERSION, "bias": bias, "swapped": false}
 	return true
-
-
-## Dormant since CR-33: the swap is gone — always false.
-static func can_swap(_state: GameState) -> bool:
-	return false
 
 
 ## The recorded bias of the run ([] without a persona).

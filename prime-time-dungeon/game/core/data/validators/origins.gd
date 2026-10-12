@@ -1,27 +1,22 @@
 extends RefCounted
 ## Validation of data/origins.json (08 §3.8, §3.9): the origin tiles (entries: the Vorleben catalog) and the lists
-## hobbies, traits, rivals, brands, gags, greetings, plans and the canon persona — plus, until 09 ST0, the dormant K0
-## start talents (`talents`, only the test fixtures still carry them; CR-33). Private helper of DataValidator (no
-## class_name; preloaded as OriginsCheck). Schema (normalize / read_extras), id patterns and uniqueness (K0) and the
-## content rules of 08 §3.9 (K1): text lengths and word lists, `prof` (the Vorleben head start of 09 §8.6 as plain data;
-## the reference check against professions.json comes with 09 ST0), references, keywords, icons, broadcast plans and
-## the canon persona. Counts are the real catalog's business (test_08_origins_data) — fixtures may carry fewer entries.
+## hobbies, traits, rivals, brands, gags, greetings, plans and the canon persona (the dormant K0 start talents left
+## with CR-33 in 09 ST0). Private helper of DataValidator (no class_name; preloaded as OriginsCheck). Schema
+## (normalize / read_extras), id patterns and uniqueness (K0) and the content rules of 08 §3.9 (K1): text lengths and
+## word lists, `prof` (the Vorleben head start of 09 §8.6), references, keywords, icons, broadcast plans and the canon
+## persona. Counts are the real catalog's business (test_08_origins_data) — fixtures may carry fewer entries.
 
 const TalentsRules := preload("res://core/data/validators/talents.gd")
 const IpWords := preload("res://core/data/validators/ip_words.gd")
 
 const SPEC: Array = [["id", "s"], ["name", "s"], ["icon", "s", ""], ["status", "b", false], ["role", "d", {}],
-	["jobs", "a", []], ["keywords", "sa", []], ["talent", "s", ""], ["alt", "s", ""], ["prof", "s", ""],
-	["spec_hint", "s", ""], ["flavor", "s", ""], ["mod_tags", "sa", []], ["rivals", "sa", []], ["brand", "s", ""]]
-## Start talents (dormant since CR-33, fixtures only): the talents.json fields without for / max_rank / weight /
-## min_level (implicitly kai / 1 / 1 / 1).
-const SPEC_TALENT: Array = [["id", "s"], ["name", "s"], ["desc", "s", ""], ["icon", "s"], ["effects", "a"]]
+	["jobs", "a", []], ["keywords", "sa", []], ["prof", "s", ""], ["spec_hint", "s", ""], ["flavor", "s", ""],
+	["mod_tags", "sa", []], ["rivals", "sa", []], ["brand", "s", ""]]
 const SPEC_JOB: Array = [["id", "s"], ["n", "s"], ["f", "s", ""], ["m", "s", ""]]
 ## list → [spec, id pattern kind of DataValidator.ID_PATTERNS]
 const LISTS: Dictionary = {
-	"hobbies": [[["id", "s"], ["name", "s"], ["icon", "s", ""], ["keywords", "sa", []], ["talent", "s", ""],
-		["prof", "s", ""], ["title", "s", ""], ["desc", "s", ""], ["club", "d", {}], ["gag", "s", ""],
-		["greeting", "s", ""]], "hobbies"],
+	"hobbies": [[["id", "s"], ["name", "s"], ["icon", "s", ""], ["keywords", "sa", []], ["prof", "s", ""],
+		["club", "d", {}], ["gag", "s", ""], ["greeting", "s", ""]], "hobbies"],
 	"traits": [[["id", "s"], ["name", "s"], ["bias", "s", ""]], "traits"],
 	"rivals": [[["id", "s"], ["name", "s"]], "rivals"],
 	"brands": [[["id", "s"], ["name", "s"]], "brands"],
@@ -30,7 +25,7 @@ const LISTS: Dictionary = {
 	"plans": [[["id", "s"], ["slots", "a", []]], "plans"],
 }
 const SPEC_CANON: Array = [["name", "s"], ["form", "s", "n"], ["origin", "s"], ["occupation", "s", ""],
-	["hobby", "s", ""], ["traits", "sa", []], ["talent", "s", ""]]
+	["hobby", "s", ""], ["traits", "sa", []]]
 
 # --- K1 content rules (08 §3.9) ---------------------------------------------------------------------------------------
 const NAME_MAX: int = 28                    # tile name (Vorleben / hobby)
@@ -86,20 +81,9 @@ static func normalize(v: DataValidator, ctx: String, raw: Variant) -> Dictionary
 	return d
 
 
-## The extra top-level keys of origins.json → v._out["origin_extras"] = {"talents": [...], <list>: [...],
-## "canon": {...}} (normalized).
+## The extra top-level keys of origins.json → v._out["origin_extras"] = {<list>: [...], "canon": {...}} (normalized).
 static func read_extras(v: DataValidator, f: Dictionary) -> void:
 	var out: Dictionary = {}
-	var talents: Array[Dictionary] = []
-	var raw_t: Variant = f.get("talents", [])
-	if not (raw_t is Array):
-		v._err("origins.talents", "must be an array")
-		raw_t = []
-	for i in (raw_t as Array).size():
-		var t: Dictionary = _talent(v, v._ctx("origins.talents", i, (raw_t as Array)[i]), (raw_t as Array)[i])
-		if not t.is_empty():
-			talents.append(t)
-	out["talents"] = talents
 	for list: String in LISTS.keys():
 		var entries: Array[Dictionary] = []
 		var raw_l: Variant = f.get(list, [])
@@ -116,13 +100,9 @@ static func read_extras(v: DataValidator, f: Dictionary) -> void:
 	v._out["origin_extras"] = out
 
 
-## Id patterns and uniqueness (start talents never share an id with talents.json) and the K1 content rules.
+## Id patterns and uniqueness and the K1 content rules.
 static func check(v: DataValidator) -> void:
 	var extras: Dictionary = v._out.get("origin_extras", {})
-	var pool: Dictionary = {}
-	for t: Dictionary in v._out.get("talents", []):
-		pool[str(t["id"])] = true
-	_ids(v, "origins.talents", extras.get("talents", []), "origin_talents", pool)
 	for list: String in LISTS.keys():
 		_ids(v, "origins." + list, extras.get(list, []), str(LISTS[list][1]), {})
 	var occupations: Dictionary = {}
@@ -148,13 +128,12 @@ static func check(v: DataValidator) -> void:
 
 # --- K1 rules ------------------------------------------------------------------------------------------------------
 
-## {list → {id → entry}} of every persona list, plus "origins", "talents", "classes", "marotten".
+## {list → {id → entry}} of every persona list, plus "origins", "classes", "marotten".
 static func _id_sets(v: DataValidator, extras: Dictionary) -> Dictionary:
 	var out: Dictionary = {}
 	for list: String in LISTS.keys():
 		out[list] = _by_id(extras.get(list, []))
 	out["origins"] = _by_id(v._out.get("origins", []))
-	out["talents"] = _by_id(extras.get("talents", []))
 	out["classes"] = _by_id(v._out.get("classes", []))
 	out["marotten"] = _by_id(v._out.get("marotten", []))
 	return out
@@ -196,9 +175,6 @@ static func _check_entries(v: DataValidator, ids: Dictionary) -> void:
 		for r: String in rivals:
 			_ref(v, ctx + ".rivals", r, ids["rivals"], "rival")
 		_ref(v, ctx + ".brand", str(o["brand"]), ids["brands"], "brand")
-		var talent: String = str(o["talent"])          # dormant K0 start talent (fixtures only, CR-33)
-		if talent != "" and not (ids["talents"] as Dictionary).has(talent):
-			v._err(ctx + ".talent", "unknown start talent '%s'" % talent)
 		for t: String in o["mod_tags"]:
 			if t == "" or t.length() > FORM_MAX:
 				v._err(ctx + ".mod_tags", "tags are 1..%d characters" % FORM_MAX)
@@ -224,9 +200,6 @@ static func _check_hobbies(v: DataValidator, ids: Dictionary) -> void:
 				v._err(ctx + ".club." + str(k), "unknown key")
 		_ref(v, ctx + ".gag", str(h["gag"]), ids["gags"], "gag")
 		_ref(v, ctx + ".greeting", str(h["greeting"]), ids["greetings"], "greeting")
-		var talent: String = str(h["talent"])
-		if talent != "" and not (ids["talents"] as Dictionary).has(talent):
-			v._err(ctx + ".talent", "unknown start talent '%s'" % talent)
 
 
 static func _check_lists(v: DataValidator, extras: Dictionary, ids: Dictionary) -> void:
@@ -298,9 +271,6 @@ static func _check_canon(v: DataValidator, c: Dictionary, ids: Dictionary) -> vo
 		v._err("origins.canon.traits", "at most 3 traits")
 	for t: String in traits:
 		_ref(v, "origins.canon.traits", t, ids["traits"], "trait")
-	var talent: String = str(c["talent"])
-	if talent != "" and not (ids["talents"] as Dictionary).has(talent):
-		v._err("origins.canon.talent", "unknown start talent '%s'" % talent)
 
 
 ## Lower-case ASCII, parts >= 4 characters, whole words with "=", never the same keyword in two entries of one list.
@@ -431,24 +401,6 @@ static func word_hit(tokens: PackedStringArray, entry: String) -> bool:
 		elif t == core:
 			return true
 	return false
-
-
-static func _talent(v: DataValidator, ctx: String, raw: Variant) -> Dictionary:
-	var d: Dictionary = v._norm(ctx, raw, SPEC_TALENT)
-	if d.is_empty():
-		return d
-	var effects: Array[Dictionary] = []
-	var raw_e: Array = d["effects"]
-	for i in raw_e.size():
-		var e: Dictionary = TalentsRules.normalize_effect(v, "%s.effects[%d]" % [ctx, i], raw_e[i])
-		if not e.is_empty():
-			effects.append(e)
-	d["effects"] = effects
-	d["for"] = PackedStringArray(["kai"])
-	d["max_rank"] = 1
-	d["weight"] = 1
-	d["min_level"] = 1
-	return d
 
 
 static func _ids(v: DataValidator, ctx: String, entries: Array, kind: String, taken: Dictionary) -> void:

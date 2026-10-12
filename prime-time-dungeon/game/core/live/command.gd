@@ -24,6 +24,15 @@ class_name Command extends RefCounted
 ## Casting (08 §2.3, K0): persona {"v": 1, "talent", "bias": [≤ 3 Strings]} (start, once per run) — ids only; the
 ## rules are PersonaRules.check's. K1 (CR-33): "talent" is "" (no start talents; any other talent is refused by
 ## PersonaRules.check; the K0 swap left with the start talents in 09 ST0).
+## Staffeln (09 §9.1, ST0): persona v2 {"v": 2, "prof": "" | prf_, "recipe": "" | rcp_, "bias"} (the Vorleben head
+## start, 09 §8.6; v1 stays readable for old logs), talent v2 {"v": 2, "member", "row", "id"} (a row of the talent
+## tree; without "v" the 06-B pick), season {"v": 1, "op": "start", "def", "format", "tempo", "mode", "number",
+## "day0_utc", "collapse_utc", "cast"} | {"v": 1, "op": "tempo"} | {"v": 1, "op": "pause", "sec", "why"} | {"v": 1,
+## "op": "leave"}, clock {"sec"} and away {"sec"} (external inputs: the clock is set from outside, cmd id 0), sleep
+## {"tactic"}, prof {"op", "id"}, gather {"node"}, craft {"recipe", "n"}, cast {"op", "who", "item"?}; the rules are
+## RunRules.season_refusal's (every one needs state.season != null, ST0 refuses them all). Stempelduell (10 §6.8,
+## ST0 stub): sd {"v": 1, "op": "start", "opp", "deck", "rh"} | {"v": 1, "op": "end", "moves", "res"} — refused with
+## sd_unavailable until SD3.
 
 const TYPES: PackedStringArray = ["floor", "encounter", "lootbox", "buy", "sell", "equip", "use_item", "rest",
 	"event", "chest", "gate", "room", "safe_room", "safe_room_exit", "scene", "flag", "difficulty", "descend", "gift",
@@ -34,18 +43,33 @@ const TYPES: PackedStringArray = ["floor", "encounter", "lootbox", "buy", "sell"
 	"ability_use", "target_change", "move_sample", "combat_item", "partner_preset", "partner_special", "auto_attack",
 	"autopilot", "combat_hint", "move_input", "combat_speed", "move_batch",
 	"loadout",                               # Echtzeitkampf (07 §4.1, §5.2; R5a): variants + partner tactic
-	"persona"]                               # Casting (08, K0): start talent + bias / swap (PersonaRules)
+	"persona",                               # Casting (08, K0): bias (v1) / head start + bias (v2, 09 ST0)
+	# --- Staffeln (09, ST0): the season commands (09 §9.1) and the Stempelduell stub (10 §6.8) ---
+	"season", "clock", "away", "sleep", "prof", "gather", "craft", "cast",
+	"sd"]
 const SPONSOR_WINDOW_OPS: PackedStringArray = ["dev_open"]
-## Inputs from outside the player (cmd id 0, 05 §10.6; == Game.EXTERNAL_CMDS): viewer gifts and M.O.D. twists (06-D).
-const EXTERNAL: PackedStringArray = ["gift", "twist"]
+## Inputs from outside the player (cmd id 0, 05 §10.6): viewer gifts, M.O.D. twists (06-D) and the season clock
+## (09 §9.1, Brief §6b Nr. 4: the clock is set from outside — clock, away).
+const EXTERNAL: PackedStringArray = ["gift", "twist", "clock", "away"]
 const EQUIP_SLOTS: PackedStringArray = ["weapon", "armor", "accessory"]
 const DIFFICULTIES: PackedStringArray = ["prime", "vorabend"]
 ## Flag keys a player command may set (Game.set_flag: only the intro). Every other flag is a reaction of the core
 ## (scene_*, defeated_*, title_*, mop_pep_talk, "live" — the gift counters) and never a recorded write (05 §11.4).
 const FLAG_KEYS: PackedStringArray = ["intro_seen"]
 const ADVANTAGE_MAX: int = 2           # BattleSetup.Advantage NORMAL 0 / PREEMPTIVE 1 / AMBUSH 2
-const PERSONA_VERSION: int = 1         # Casting (08 §2.3, K0) == PersonaRules.VERSION
+const PERSONA_VERSION: int = 2         # Casting (08 §2.3, K0; v2 since 09 ST0) == PersonaRules.VERSION
 const PERSONA_MAX_BIAS: int = 3        # == PersonaRules.MAX_BIAS
+# --- Staffeln (09, ST0) ---
+const PERSONA_V1: int = 1              # the K0/K1 persona command (old logs)
+const TALENT_ROW_VERSION: int = 2      # talent v2: a row of the talent tree (09 §8.4)
+const SEASON_VERSION: int = 1
+const SEASON_OPS: PackedStringArray = ["start", "tempo", "pause", "leave"]
+const SEASON_FORMATS: PackedStringArray = ["6", "12", "18"]   # floors of a season (09 §2.1)
+const PAUSE_WHY: PackedStringArray = ["user", "clamp"]       # 09 §2.9: the player's pause | after a clock jump
+const PROF_OPS: PackedStringArray = ["learn", "unlearn", "rank", "head"]
+const CAST_OPS: PackedStringArray = ["hire", "trade", "help"]
+const SD_VERSION: int = 1              # the "sd" command of 10 §6.8
+const SD_OPS: PackedStringArray = ["start", "end"]
 
 static var _gate_key: RegEx = null
 
@@ -151,7 +175,11 @@ static func _validate_fields(t: String, d: Dictionary) -> String:
 			if e8 != "":
 				return e8
 			return "" if str(d["id"]).begins_with("sec_") else "id must start with sec_"
-		"talent":                            # 06 package B
+		"talent":                            # 06 package B; v2 (09 ST0): a row of the talent tree
+			if d.has("v"):
+				if not _is_int(d["v"]) or int(d["v"]) != TALENT_ROW_VERSION:
+					return "v must be %d (or absent: the 06-B pick)" % TALENT_ROW_VERSION
+				return _first([_id(d, "member"), _int_min(d, "row", 1), _id(d, "id")])
 			return _first([_id(d, "member"), _id(d, "id")])
 		"casting":
 			return _first([_id(d, "member"), _id(d, "species"), _id(d, "class")])
@@ -169,7 +197,95 @@ static func _validate_fields(t: String, d: Dictionary) -> String:
 				return "gift must be a Dictionary"
 			var reason: String = Gift.validate(d["gift"])
 			return "" if reason == "" else "%s (%s)" % [reason, Gift.last_detail]
+		# --- Staffeln (09, ST0) ---
+		"season":
+			return _season(d)
+		"clock", "away":
+			return _int_min(d, "sec", 1)
+		"sleep":
+			return "" if RtVocab.RT_PRESETS.has(str(d.get("tactic", ""))) else "tactic must be one of %s" % \
+				", ".join(RtVocab.RT_PRESETS)
+		"prof":
+			if not PROF_OPS.has(str(d.get("op", ""))):
+				return "op must be one of %s" % ", ".join(PROF_OPS)
+			return _prefixed(d, "id", "prf_")
+		"gather":
+			return _id(d, "node")
+		"craft":
+			return _first([_prefixed(d, "recipe", "rcp_"), _int_min(d, "n", 1)])
+		"cast":
+			if not CAST_OPS.has(str(d.get("op", ""))):
+				return "op must be one of %s" % ", ".join(CAST_OPS)
+			if d.has("item") and not (d["item"] is String):
+				return "item must be a String"
+			return _int_min(d, "who", 0)
+		"sd":                                      # Stempelduell (10 §6.8): the shape only (SD3 has the rules)
+			return _sd(d)
 	return ""
+
+
+# --- Staffeln (09, ST0) -----------------------------------------------------------------------------------------------
+
+## The shape of a "season" command (the rules are RunRules.season_refusal's).
+static func _season(d: Dictionary) -> String:
+	if not _is_int(d.get("v", null)) or int(d["v"]) != SEASON_VERSION:
+		return "v must be %d" % SEASON_VERSION
+	match str(d.get("op", "")):
+		"start":
+			var e: String = _first([_prefixed(d, "def", "ssn_"), _int_min(d, "number", 1), _int_min(d, "day0_utc", 0)])
+			if e != "":
+				return e
+			if not _is_int(d.get("format", null)) or not SEASON_FORMATS.has(str(int(d["format"]))):
+				return "format must be 6, 12 or 18"
+			if not SeasonState.TEMPOS.has(str(d.get("tempo", ""))):
+				return "tempo must be one of %s" % ", ".join(SeasonState.TEMPOS)
+			if not SeasonState.MODES.has(str(d.get("mode", ""))):
+				return "mode must be one of %s" % ", ".join(SeasonState.MODES)
+			var times: Variant = d.get("collapse_utc", null)
+			if not (times is Array) or (times as Array).size() != int(d["format"]):
+				return "collapse_utc must hold one time per floor"
+			var last: int = int(d["day0_utc"])
+			for t: Variant in (times as Array):
+				if not _is_int(t) or int(t) <= last:
+					return "collapse_utc must be ascending integers after day0_utc"
+				last = int(t)
+			return "" if d.get("cast", null) is Dictionary else "cast must be a Dictionary"
+		"tempo", "leave":
+			return ""
+		"pause":
+			var ep: String = _int_min(d, "sec", 1)
+			if ep != "":
+				return ep
+			return "" if PAUSE_WHY.has(str(d.get("why", ""))) else "why must be one of %s" % ", ".join(PAUSE_WHY)
+	return "op must be one of %s" % ", ".join(SEASON_OPS)
+
+
+## The shape of the "sd" command stub (10 §6.8; SdRules decides from SD3 on).
+static func _sd(d: Dictionary) -> String:
+	if not _is_int(d.get("v", null)) or int(d["v"]) != SD_VERSION:
+		return "v must be %d" % SD_VERSION
+	match str(d.get("op", "")):
+		"start":
+			var deck: Variant = d.get("deck", null)
+			if not (deck is Array):
+				return "deck must be an array of card ids"
+			for c: Variant in (deck as Array):
+				if not (c is String) or str(c) == "":
+					return "deck must contain non-empty Strings"
+			return _first([_id(d, "opp"), _str(d, "rh")])
+		"end":
+			if not (d.get("moves", null) is Array):
+				return "moves must be an array"
+			return _id(d, "res")
+	return "op must be one of %s" % ", ".join(SD_OPS)
+
+
+## "" or why d[key] is not a non-empty String starting with `prefix`.
+static func _prefixed(d: Dictionary, key: String, prefix: String) -> String:
+	var e: String = _id(d, key)
+	if e != "":
+		return e
+	return "" if str(d[key]).begins_with(prefix) else "%s must start with %s" % [key, prefix]
 
 
 ## 06-D: the shape of a recorded twist (the rules are TwistApplier.validate's).
@@ -195,13 +311,19 @@ static func _twist(v: Variant) -> String:
 	return ""
 
 
-## Casting (08 §2.3, K0): the shape of a persona command (the rules are PersonaRules.check's).
+## Casting (08 §2.3, K0): the shape of a persona command (the rules are PersonaRules.check's). v1: "talent" (a
+## String, "" since K1); v2 (09 ST0): "prof" and "recipe" ("" or a prf_ / rcp_ id).
 static func _persona(d: Dictionary) -> String:
-	if not _is_int(d.get("v", null)) or int(d["v"]) != PERSONA_VERSION:
-		return "v must be %d" % PERSONA_VERSION
-	var e: String = _str(d, "talent")         # 08 K1 (CR-33): "" = no start talent (the K1 command)
+	var v: int = int(d["v"]) if _is_int(d.get("v", null)) else -1
+	if v != PERSONA_V1 and v != PERSONA_VERSION:
+		return "v must be %d or %d" % [PERSONA_V1, PERSONA_VERSION]
+	var e: String = _str(d, "talent") if v == PERSONA_V1 else _first([_str(d, "prof"), _str(d, "recipe")])
 	if e != "":
 		return e
+	if v == PERSONA_VERSION:
+		for pair: Array in [["prof", "prf_"], ["recipe", "rcp_"]]:
+			if str(d[str(pair[0])]) != "" and not str(d[str(pair[0])]).begins_with(str(pair[1])):
+				return "%s must be \"\" or start with %s" % pair
 	var bias: Variant = d.get("bias", null)
 	if not (bias is Array) or (bias as Array).size() > PERSONA_MAX_BIAS:
 		return "bias must be an array of at most %d marotte ids" % PERSONA_MAX_BIAS

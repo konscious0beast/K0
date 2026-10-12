@@ -94,9 +94,13 @@ func test_bias_and_command() -> void:
 	var four: PackedStringArray = PersonaRules.bias_for(data, PackedStringArray(["trt_sporty", "trt_natural",
 		"trt_brave", "trt_foodie"]))
 	assert_eq(four.size(), 3, "at most three")
-	var cmd: Dictionary = PersonaRules.command_for(data, "", PackedStringArray(["trt_sporty", "trt_natural"]))
-	assert_eq(cmd, {"t": "persona", "v": 1, "talent": "", "bias": ["mar_bio", "mar_stunt"]})
-	assert_eq(Command.validate(cmd), "", "Command.validate takes the K1 command (talent \"\")")
+	var p: PersonaProfile = _jana(data)
+	p.traits = PackedStringArray(["trt_sporty", "trt_natural"])
+	var cmd: Dictionary = PersonaRules.command_for(data, p)
+	assert_eq(cmd, {"t": "persona", "v": 2, "prof": "prf_first_aid", "recipe": "rcp_cooking_hobby",
+		"bias": ["mar_bio", "mar_stunt"]}, "09 ST0: v2 — head start, hobby recipe, bias; no origin or hobby id")
+	assert_eq(Command.validate(cmd), "", "Command.validate takes the v2 command")
+	assert_eq(Command.validate({"t": "persona", "v": 1, "talent": "", "bias": []}), "", "v1 stays readable")
 	assert_eq(Command.validate({"t": "persona", "v": 1, "talent": "org_care", "bias": []}), "",
 		"the schema takes any talent String — PersonaRules.check refuses it (CR-33, 09 ST0)")
 	assert_eq(PersonaRules.check(GameState.create_new(data, 0, "Kai", 77, &"prime"), data,
@@ -115,9 +119,12 @@ func test_apply_sets_only_the_flag() -> void:
 	sim.apply({"t": "floor", "floor": 1})
 	sim.apply({"t": "hero", "id": "kai"})
 	var before: Dictionary = st.to_dict()
-	assert_true(PersonaRules.apply(st, data, PersonaRules.command_for(data, "", PackedStringArray(["trt_brave"]))))
+	var p: PersonaProfile = PersonaProfile.canon(data)
+	p.traits = PackedStringArray(["trt_brave"])
+	assert_true(PersonaRules.apply(st, data, PersonaRules.command_for(data, p)))
 	var after: Dictionary = st.to_dict()
-	assert_eq((after["flags"] as Dictionary)["persona"], {"v": 1, "bias": ["mar_brave"], "swapped": false})
+	assert_eq((after["flags"] as Dictionary)["persona"], {"v": 2, "prof": "", "recipe": "rcp_cooking_hobby",
+		"bias": ["mar_brave"]}, "09 ST0: v2 — the canon Kai picks freely")
 	(after["flags"] as Dictionary).erase("persona")
 	assert_eq(after, before, "nothing else changes (no combat value, 08 §3.4)")
 

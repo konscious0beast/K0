@@ -94,8 +94,9 @@ func test_a_cast_run_replays_hash_equal() -> void:
 	var p: PersonaProfile = _jana()
 	Game.new_game(1, p.name, SEED, &"prime", "kai", p)
 	assert_eq(_types(), ["floor", "hero", "persona"], "floor → hero → persona (08 §2.3)")
-	assert_eq(Game.run_log.cmds().back()["c"], {"t": "persona", "v": 1, "talent": "",
-		"bias": Array(PersonaRules.bias_for(DB.data, p.traits))}, "ids only, talent \"\" (CR-33)")
+	assert_eq(Game.run_log.cmds().back()["c"], {"t": "persona", "v": 2, "prof": "prf_first_aid",
+		"recipe": "rcp_cooking_hobby", "bias": Array(PersonaRules.bias_for(DB.data, p.traits))},
+		"ids only (09 ST0: v2 — Pflege → Erste Hilfe, Kochen → the cooking recipe; no origin or hobby id)")
 	assert_eq(PersonaRules.bias(Game.state).size(), 2, "two rotating preferences")
 	_verify("right after the casting")
 	_fight()
@@ -150,25 +151,25 @@ func test_graf_mopsula_with_a_persona() -> void:
 func test_refusals_in_logs() -> void:
 	var p: PersonaProfile = _jana()
 	Game.new_game(0, p.name, SEED, &"prime", "kai", p)
-	assert_false(Game.apply_persona(PersonaRules.command_for(DB.data, "", PackedStringArray())),
+	assert_false(Game.apply_persona(PersonaRules.command_for(DB.data, null)),
 		"already_set: refused live, nothing recorded")
 	assert_eq(_types(), ["floor", "hero", "persona"])
-	var twice: RunLog = _with_cmds(Game.run_log, [PersonaRules.command_for(DB.data, "", PackedStringArray())])
+	var twice: RunLog = _with_cmds(Game.run_log, [PersonaRules.command_for(DB.data, null)])
 	assert_has("; ".join(Game.replay_log(twice)["errors"]), "already_set")
 	assert_has("; ".join(RunSim.replay(DB.data, twice)["errors"]), "already_set")
 	# a run without a persona that already began: a late persona command is refused (run_started)
 	Game.new_game(0, "Kai", SEED)
 	_fight()
 	assert_true(HeroRules.run_started(Game.state), "the battle began the run")
-	assert_false(Game.apply_persona(PersonaRules.command_for(DB.data, "", PackedStringArray())), "run_started")
-	var late: RunLog = _with_cmds(Game.run_log, [PersonaRules.command_for(DB.data, "", PackedStringArray())])
+	assert_false(Game.apply_persona(PersonaRules.command_for(DB.data, null)), "run_started")
+	var late: RunLog = _with_cmds(Game.run_log, [PersonaRules.command_for(DB.data, null)])
 	assert_has("; ".join(Game.replay_log(late)["errors"]), "run_started")
 	assert_has("; ".join(RunSim.replay(DB.data, late)["errors"]), "run_started")
 	# event runs never take a persona (08 §8)
 	Game.start_event_run(EVENT_ID)
 	assert_null(Game.persona, "an event run has no persona")
-	assert_false(Game.apply_persona(PersonaRules.command_for(DB.data, "", PackedStringArray())), "event_run")
-	var ev: RunLog = _with_cmds(Game.run_log, [PersonaRules.command_for(DB.data, "", PackedStringArray())])
+	assert_false(Game.apply_persona(PersonaRules.command_for(DB.data, null)), "event_run")
+	var ev: RunLog = _with_cmds(Game.run_log, [PersonaRules.command_for(DB.data, null)])
 	assert_has("; ".join(Game.replay_log(ev)["errors"]), "event_run")
 	assert_has("; ".join(RunSim.replay(DB.data, ev)["errors"]), "event_run")
 

@@ -86,8 +86,8 @@ func test_cmd_ids_strictly_increase() -> void:
 	assert_eq(rl.rejected, 3)
 
 
-## 05 §10.6: id 0 is for external inputs (gift, twist) only — a player command with id 0 would slip past the id
-## sequence, an external input with a player id would consume one.
+## 05 §10.6: id 0 is for external inputs (gift, twist; clock, away since 09 ST0) only — a player command with id 0
+## would slip past the id sequence, an external input with a player id would consume one.
 func test_id_zero_only_for_external_inputs() -> void:
 	var rl: RunLog = RunLog.new()
 	var gift: Dictionary = {"t": "gift", "gift": Gift.make_dev("cheer", "", 0)}

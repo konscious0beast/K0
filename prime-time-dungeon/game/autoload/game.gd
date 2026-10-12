@@ -1529,13 +1529,93 @@ func apply_persona(cmd: Dictionary) -> bool:
 
 
 ## K1 (08 §2.3): with a profile, the display fields follow it (P-2: never in the hash or a file) and the start
-## command PersonaRules.command_for(DB.data, "", p.traits) — talent always "" (CR-33), bias from the traits — is
-## recorded through apply_persona right after the hero (floor → hero → persona). Never in event runs (they have no
-## persona, 08 §8); without a profile nothing happens.
+## command PersonaRules.command_for(DB.data, p) — v2 since 09 ST0: the head-start profession and the hobby recipe
+## (ids only, no origin or hobby id), the bias from the traits — is recorded through apply_persona right after the
+## hero (floor → hero → persona). Never in event runs (they have no persona, 08 §8); without a profile nothing
+## happens.
 func _choose_initial_persona(p: PersonaProfile) -> void:
 	if p == null or state == null or mode != &"campaign":
 		return
 	if p.beats.is_empty():
 		p.make_beats(DB.data, null)
 	PersonaPrivacy.restore_display(state, p)
-	apply_persona(PersonaRules.command_for(DB.data, "", p.traits))
+	apply_persona(PersonaRules.command_for(DB.data, p))
+
+
+# ======================================================================================================================
+# Staffeln (09 §9.1, ST0) — the season facades; ST1-B (season, clock, sleep), ST1-G (away), ST1-D (talent rows), ST1-E
+# (professions) and ST1-F (cast) fill the rules behind them
+# ======================================================================================================================
+# Every facade builds its command (09 §9.1) and goes the one recording path of _season_command: Command.validate +
+# RunRules.command_refusal (season_refusal: no season → no_season, the module stubs → season_unavailable) → record →
+# RunRules.apply_season → the explore events through _dispatch. false = refused, nothing recorded. ST0: no season can
+# start (start_season is a stub, SeasonRules refuses every start), so every facade returns false and nothing is ever
+# recorded. GameReplay replays the season commands through these facades.
+
+## Stub (ST0; ST1-B): a new game in a season ("Sendung starten" / "Neue Staffel", 09 §2.2) — like new_game, with the
+## "season" start command before floor → hero → persona. `opts`: format, tempo, mode, air time (09 §2.1). false.
+func start_season(_slot: int, _def_id: String, _opts: Dictionary = {}, _hero_id: String = HeroRules.DEFAULT_HERO,
+		_p_persona: PersonaProfile = null) -> bool:
+	return false
+
+
+## A "season" command (09 §9.1: tempo, pause, leave; the replay also passes its start).
+func season_op(cmd: Dictionary) -> bool:
+	return str(cmd.get("t", "")) == "season" and _season_command(cmd)
+
+
+## The season clock (09 §9.1, external input): `sec` of wall-clock time ({"t": "clock", "sec"}).
+func season_clock(sec: int) -> bool:
+	return _season_command({"t": "clock", "sec": sec})
+
+
+## Login after an absence (09 §5.5, external input): {"t": "away", "sec"}.
+func season_away(sec: int) -> bool:
+	return _season_command({"t": "away", "sec": sec})
+
+
+## Logout with the sleeping tactic (09 §5.1; RtVocab.RT_PRESETS): {"t": "sleep", "tactic"}.
+func logout(tactic: String) -> bool:
+	return _season_command({"t": "sleep", "tactic": tactic})
+
+
+## A row of the talent tree (09 §8.4): {"t": "talent", "v": 2, "member", "row", "id"}.
+func pick_talent_row(member_id: String, row: int, talent_id: String) -> bool:
+	return _season_command({"t": "talent", "v": Command.TALENT_ROW_VERSION, "member": member_id, "row": row,
+		"id": talent_id})
+
+
+## The Gewerke-Büro (09 §8.5): {"t": "prof", "op": learn | unlearn | rank | head, "id"}.
+func prof_action(op: String, prof_id: String) -> bool:
+	return _season_command({"t": "prof", "op": op, "id": prof_id})
+
+
+## A gathering node (09 §8.5): {"t": "gather", "node"}.
+func gather(node_id: String) -> bool:
+	return _season_command({"t": "gather", "node": node_id})
+
+
+## Crafting in a safe room (09 §8.5): {"t": "craft", "recipe", "n"}.
+func craft(recipe_id: String, n: int = 1) -> bool:
+	return _season_command({"t": "craft", "recipe": recipe_id, "n": n})
+
+
+## The AI candidates (09 §4.3): {"t": "cast", "op": hire | trade | help, "who" (their place), "item"?}.
+func cast_action(op: String, who: int, item: String = "") -> bool:
+	var cmd: Dictionary = {"t": "cast", "op": op, "who": who}
+	if item != "":
+		cmd["item"] = item
+	return _season_command(cmd)
+
+
+func _season_command(cmd: Dictionary) -> bool:
+	if state == null or Command.validate(cmd) != "":
+		return false
+	var rules: Dictionary = sim.rules if sim != null else {}
+	if RunRules.command_refusal(state, DB.data, rules, cmd, _floor_done, _scene_ctx,
+			sim != null and sim.is_event_run()) != "":
+		return false
+	record(cmd)
+	_dispatch(RunRules.apply_season(state, DB.data, cmd))
+	return true
+

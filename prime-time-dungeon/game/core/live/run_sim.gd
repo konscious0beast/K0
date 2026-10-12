@@ -45,6 +45,10 @@ class_name RunSim extends RefCounted
 ## contain are the reactions of the Show facade (hype/followers from battle events, achievements, milestones, sponsor
 ## gifts, M.O.D.); a RunSim-only run is therefore a "core run": RunSim.replay of its log reproduces it bit for bit
 ## (05 §11.4 test_m8_replay), while Game.replay_log reproduces complete live runs.
+## Staffeln (09 §9.1, ST0): the season commands (season, clock, away, sleep, prof, gather, craft, cast, talent v2) run
+## RunRules.season_refusal / apply_season — the switch is state.season != null (without a season: no_season), the
+## module stubs of ST0 refuse them all, so every run of today replays bit for bit (no SIM_VERSION bump until the season
+## becomes the default, 09 §11.1). "sd" (Stempelduell, 10 §6.8) is refused with sd_unavailable until SD3.
 ##
 ## With `quest` set, apply() feeds it the quest events the core can tell on its own (same shapes as the Game adapter,
 ## CR-4): battle_started (encounter), enemy_killed (KO of an enemy unit), boss_defeated (boss victory),
@@ -211,7 +215,10 @@ func apply(cmd: Dictionary) -> Array[ExploreEvent]:
 		"sponsor_window":
 			out.append_array(sponsor_dev_open(int(c["sec"]), int(c["slots"])))
 		"talent":                                # 06 package B (legality: RunRules.command_refusal)
-			Talents.pick(state, data, str(c["member"]), str(c["id"]))
+			if c.has("v"):                         # Staffeln (09, ST0): talent v2 (a row; only with a season)
+				out.append_array(RunRules.apply_season(state, data, c))
+			else:
+				Talents.pick(state, data, str(c["member"]), str(c["id"]))
 		"casting":
 			Casting.choose(state, data, str(c["member"]), str(c["species"]), str(c["class"]))
 		"scene":
@@ -228,6 +235,26 @@ func apply(cmd: Dictionary) -> Array[ExploreEvent]:
 			PersonaRules.apply(state, data, c)
 		"loadout":                                 # Echtzeitkampf (07 §4.1, §5.2; R5a; RunRules.loadout_refusal)
 			RunRules.apply_loadout(state, c)
+		# Staffeln (09 §9.1, ST0): only with a season (RunRules.season_refusal: no_season; ST0's stubs refuse them all).
+		# One case per type: test_m8_command reads the cases of this dispatcher.
+		"season":
+			out.append_array(RunRules.apply_season(state, data, c))
+		"clock":
+			out.append_array(RunRules.apply_season(state, data, c))
+		"away":
+			out.append_array(RunRules.apply_season(state, data, c))
+		"sleep":
+			out.append_array(RunRules.apply_season(state, data, c))
+		"prof":
+			out.append_array(RunRules.apply_season(state, data, c))
+		"gather":
+			out.append_array(RunRules.apply_season(state, data, c))
+		"craft":
+			out.append_array(RunRules.apply_season(state, data, c))
+		"cast":
+			out.append_array(RunRules.apply_season(state, data, c))
+		"sd":                                      # Stempelduell (10 §6.8): refused (sd_unavailable) until SD3
+			pass
 		"descend":
 			if state.floor_run != null:
 				_floor_done = true

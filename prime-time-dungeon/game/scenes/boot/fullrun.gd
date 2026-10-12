@@ -463,8 +463,9 @@ func _main() -> void:
 
 ## Plays the casting like a player: the canon persona with "Rest automatisch" (Esc) and Enter on "Sendung starten";
 ## any other profile through the controls — the name on the on-screen keyboard, the form, the Vorleben / hobby / traits
-## overlays, "Weiter" twice, "Sendung starten". Checks the card, the recorded command (talent "", the traits' bias) and
-## the local profile. false = the run failed.
+## overlays, "Weiter" twice, "Sendung starten". Checks the card, the recorded command (persona v2 since 09 ST0: the
+## head-start profession, the hobby recipe and the traits' bias — PersonaRules.command_for of the entered profile)
+## and the local profile. false = the run failed.
 func _casting(run_seed: int, cast: PersonaProfile) -> bool:
 	phase = "casting"
 	var log_before: RunLog = Game.run_log
@@ -530,9 +531,9 @@ func _casting(run_seed: int, cast: PersonaProfile) -> bool:
 		if str((e["c"] as Dictionary).get("t", "")) == "persona":
 			cmd = e["c"]
 			break
-	var want_bias: Array = Array(PersonaRules.bias_for(DB.data, cast.traits))
-	if str(cmd.get("t", "")) != "persona" or str(cmd.get("talent", "x")) != "" or cmd.get("bias", []) != want_bias:
-		return fail("the persona command is %s (expected talent \"\" and bias %s)" % [str(cmd), str(want_bias)])
+	var want: Dictionary = PersonaRules.command_for(DB.data, cast)
+	if cmd != want:
+		return fail("the persona command is %s (expected %s)" % [str(cmd), str(want)])
 	if Game.persona == null or Game.state.player_name != cast.name:
 		return fail("the new game has no persona / name '%s'" % Game.state.player_name)
 	if Game.persona.look != cast.look:

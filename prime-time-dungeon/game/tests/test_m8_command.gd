@@ -64,6 +64,26 @@ const VALID: Array[Dictionary] = [
 	{"t": "persona", "v": 1, "talent": "tal_org_animals", "bias": ["mar_graf_finale", "mar_variety"]},
 	{"t": "persona", "v": 1, "talent": "tal_org_nature", "bias": []},
 	{"t": "persona", "v": 1, "talent": "", "bias": ["mar_bio"]},      # K1 (CR-33): the command K1 records
+	# Staffeln (09 §9.1, ST0): persona v2 (the casting's command), talent v2 and the season commands; sd (10 §6.8)
+	{"t": "persona", "v": 2, "prof": "prf_first_aid", "recipe": "rcp_cooking_hobby", "bias": ["mar_bio"]},
+	{"t": "persona", "v": 2, "prof": "", "recipe": "", "bias": []},
+	{"t": "talent", "v": 2, "member": "kai", "row": 3, "id": "tal_kai_dicke_haut"},
+	{"t": "season", "v": 1, "op": "start", "def": "ssn_basis", "format": 6, "tempo": "calendar", "mode": "net",
+		"number": 1, "day0_utc": 1791921600, "collapse_utc": [1792094400, 1792353600, 1792699200, 1793131200,
+		1793563200, 1793995200], "cast": {}},
+	{"t": "season", "v": 1, "op": "pause", "sec": 86400, "why": "user"},
+	{"t": "season", "v": 1, "op": "tempo"},
+	{"t": "season", "v": 1, "op": "leave"},
+	{"t": "clock", "sec": 60},
+	{"t": "away", "sec": 7200},
+	{"t": "sleep", "tactic": "careful"},
+	{"t": "prof", "op": "learn", "id": "prf_scrap"},
+	{"t": "gather", "node": "nod_scrap_heap"},
+	{"t": "craft", "recipe": "rcp_cooking_hobby", "n": 2},
+	{"t": "cast", "op": "hire", "who": 17},
+	{"t": "cast", "op": "trade", "who": 4, "item": "itm_bandage"},
+	{"t": "sd", "v": 1, "op": "start", "opp": "sdo_ulla", "deck": ["sdc_stempel"], "rh": "abc"},
+	{"t": "sd", "v": 1, "op": "end", "moves": [{"op": "play", "slot": 2}], "res": "won"},
 ]
 
 
@@ -72,9 +92,11 @@ func test_types_are_the_recorded_list() -> void:
 		"event", "chest", "gate", "room", "safe_room", "safe_room_exit", "scene", "flag", "difficulty", "descend",
 		"gift", "sponsor_window", "hero", "talent", "casting", "secret", "twist",
 		"ability_use", "target_change", "move_sample", "combat_item", "partner_preset", "partner_special",
-		"auto_attack", "autopilot", "combat_hint", "move_input", "combat_speed", "move_batch", "loadout", "persona"],
+		"auto_attack", "autopilot", "combat_hint", "move_input", "combat_speed", "move_batch", "loadout", "persona",
+		"season", "clock", "away", "sleep", "prof", "gather", "craft", "cast", "sd"],
 		"02_TECH §3.4 (+ hero / secret 06 §1.7 / §2.7, talent / casting 06 §2.2 / §3.4, twist 06 §5.7, real-time "
-		+ "combat 07 §10.1, loadout 07 §4.1 (R5a), persona 08 §2.3; R5b part 2b: no CTB battle command)")
+		+ "combat 07 §10.1, loadout 07 §4.1 (R5a), persona 08 §2.3; R5b part 2b: no CTB battle command; the "
+		+ "season commands 09 §9.1 and the sd stub 10 §6.8 since ST0)")
 	var covered: Dictionary = {"gift": true}
 	for c: Dictionary in VALID:
 		covered[c["t"]] = true
@@ -162,8 +184,13 @@ func test_invalid_commands() -> void:
 		[{"t": "twist", "twist": {"schema": 1, "id": "tw_x", "n": 1, "src": "dev", "params": {}, "duration": 0,
 			"tick": -1}}, "twist: twist.tick"],
 		# Casting (08 §2.3, K0)
-		[{"t": "persona", "talent": "tal_org_animals", "bias": []}, "persona: v must be 1"],
-		[{"t": "persona", "v": 2, "talent": "tal_org_animals", "bias": []}, "persona: v must be 1"],
+		[{"t": "persona", "talent": "tal_org_animals", "bias": []}, "persona: v must be 1 or 2"],
+		[{"t": "persona", "v": 3, "prof": "", "recipe": "", "bias": []}, "persona: v must be 1 or 2"],
+		[{"t": "persona", "v": 2, "talent": "tal_org_animals", "bias": []}, "persona: prof must be a String"],
+		[{"t": "persona", "v": 2, "prof": "", "bias": []}, "persona: recipe must be a String"],
+		[{"t": "persona", "v": 2, "prof": "org_care", "recipe": "", "bias": []}, "prof must be \"\" or start with prf_"],
+		[{"t": "persona", "v": 2, "prof": "", "recipe": "hob_cooking", "bias": []}, "recipe must be \"\" or start"],
+		[{"t": "persona", "v": 2, "prof": "", "recipe": ""}, "persona: bias must be an array"],
 		[{"t": "persona", "v": 1, "bias": []}, "persona: talent must be a String"],   # 08 K1: "" is allowed
 		[{"t": "persona", "v": 1, "talent": "tal_org_animals"}, "persona: bias must be an array"],
 		[{"t": "persona", "v": 1, "talent": "tal_org_animals", "bias": ["a", "b", "c", "d"]}, "at most 3"],
@@ -177,6 +204,39 @@ func test_invalid_commands() -> void:
 		[{"t": "loadout", "member": "kai", "bar": {}, "preset": "berserk", "tog": {}}, "loadout: preset must be"],
 		[{"t": "loadout", "member": "kai", "bar": {}, "preset": "", "tog": {"heal": true}}, "tog.heal is not a switch"],
 		[{"t": "loadout", "member": "kai", "bar": {}, "preset": "", "tog": {"show": 1}}, "tog.show must be a bool"],
+		# Staffeln (09 §9.1, ST0)
+		[{"t": "talent", "v": 1, "member": "kai", "row": 3, "id": "tal_x"}, "talent: v must be 2"],
+		[{"t": "talent", "v": 2, "member": "kai", "row": 0, "id": "tal_x"}, "talent: row must be an integer >= 1"],
+		[{"t": "season", "op": "leave"}, "season: v must be 1"],
+		[{"t": "season", "v": 1, "op": "reboot"}, "season: op must be one of"],
+		[{"t": "season", "v": 1, "op": "start", "def": "basis", "format": 6, "tempo": "calendar", "mode": "net",
+			"number": 1, "day0_utc": 0, "collapse_utc": [1, 2, 3, 4, 5, 6], "cast": {}}, "def must start with ssn_"],
+		[{"t": "season", "v": 1, "op": "start", "def": "ssn_basis", "format": 7, "tempo": "calendar", "mode": "net",
+			"number": 1, "day0_utc": 0, "collapse_utc": [1, 2, 3, 4, 5, 6, 7], "cast": {}}, "format must be 6, 12"],
+		[{"t": "season", "v": 1, "op": "start", "def": "ssn_basis", "format": 6, "tempo": "turbo", "mode": "net",
+			"number": 1, "day0_utc": 0, "collapse_utc": [1, 2, 3, 4, 5, 6], "cast": {}}, "tempo must be one of"],
+		[{"t": "season", "v": 1, "op": "start", "def": "ssn_basis", "format": 6, "tempo": "binge", "mode": "x",
+			"number": 1, "day0_utc": 0, "collapse_utc": [1, 2, 3, 4, 5, 6], "cast": {}}, "mode must be one of"],
+		[{"t": "season", "v": 1, "op": "start", "def": "ssn_basis", "format": 6, "tempo": "binge", "mode": "net",
+			"number": 1, "day0_utc": 0, "collapse_utc": [1, 2, 3], "cast": {}}, "one time per floor"],
+		[{"t": "season", "v": 1, "op": "start", "def": "ssn_basis", "format": 6, "tempo": "binge", "mode": "net",
+			"number": 1, "day0_utc": 9, "collapse_utc": [1, 2, 3, 4, 5, 6], "cast": {}}, "ascending integers after"],
+		[{"t": "season", "v": 1, "op": "start", "def": "ssn_basis", "format": 6, "tempo": "binge", "mode": "net",
+			"number": 1, "day0_utc": 0, "collapse_utc": [1, 2, 3, 4, 5, 6]}, "cast must be a Dictionary"],
+		[{"t": "season", "v": 1, "op": "pause", "sec": 60, "why": "bored"}, "why must be one of"],
+		[{"t": "clock", "sec": 0}, "clock: sec must be an integer >= 1"],
+		[{"t": "away", "sec": 1.5}, "away: sec must be an integer >= 1"],
+		[{"t": "sleep", "tactic": "berserk"}, "sleep: tactic must be one of"],
+		[{"t": "prof", "op": "forget", "id": "prf_scrap"}, "prof: op must be one of"],
+		[{"t": "prof", "op": "learn", "id": "job_scrap"}, "id must start with prf_"],
+		[{"t": "gather", "node": ""}, "gather: node must be a non-empty String"],
+		[{"t": "craft", "recipe": "rcp_x", "n": 0}, "craft: n must be an integer >= 1"],
+		[{"t": "cast", "op": "fight", "who": 1}, "cast: op must be one of"],
+		[{"t": "cast", "op": "help", "who": -1}, "cast: who must be an integer >= 0"],
+		[{"t": "cast", "op": "trade", "who": 1, "item": 3}, "cast: item must be a String"],
+		[{"t": "sd", "op": "start"}, "sd: v must be 1"],
+		[{"t": "sd", "v": 1, "op": "start", "opp": "sdo_ulla", "deck": [""], "rh": ""}, "deck must contain"],
+		[{"t": "sd", "v": 1, "op": "end", "moves": [], "res": ""}, "sd: res must be a non-empty String"],
 	]
 	for c: Array in cases:
 		var err: String = Command.validate(c[0])
@@ -187,6 +247,10 @@ func test_invalid_commands() -> void:
 func test_external_commands() -> void:
 	assert_true(Command.is_external({"t": "gift"}))
 	assert_false(Command.is_external({"t": "rest"}))
+	for t: String in ["clock", "away"]:
+		assert_true(Command.is_external({"t": t}), "09 §9.1: the clock is set from outside (cmd id 0): " + t)
+	for t: String in ["season", "sleep", "prof", "gather", "craft", "cast", "sd"]:
+		assert_false(Command.is_external({"t": t}), t + " is the player's")
 
 
 func test_explore_event_round_trip() -> void:

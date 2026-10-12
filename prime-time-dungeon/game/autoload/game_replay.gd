@@ -227,7 +227,10 @@ func _apply(c: Dictionary) -> bool:
 			Show.receive_gift(c.get("gift", {}))
 		"sponsor_window":
 			return game.open_dev_sponsor_window(int(c.get("sec", 0)), int(c.get("slots", 0)))
-		"talent":                                        # 06 package B
+		"talent":                                        # 06 package B; v2 (09 ST0): a row of the talent tree
+			if c.has("v"):
+				return game.pick_talent_row(str(c.get("member", "")), JsonUtil.to_int(c.get("row", 0)),
+					str(c.get("id", "")))
 			return game.pick_talent(str(c.get("member", "")), str(c.get("id", "")))
 		"casting":
 			return game.choose_casting(str(c.get("member", "")), str(c.get("species", "")), str(c.get("class", "")))
@@ -239,6 +242,25 @@ func _apply(c: Dictionary) -> bool:
 			return game.apply_persona(c)
 		"loadout":                                       # Echtzeitkampf (07 §4.1, §5.2; R5a)
 			return game.apply_loadout(c)
+		# Staffeln (09 §9.1, ST0): the season facades (_cmd refuses them first: no_season / season_unavailable)
+		"season":
+			return game.season_op(c)
+		"clock":
+			return game.season_clock(JsonUtil.to_int(c.get("sec", 0)))
+		"away":
+			return game.season_away(JsonUtil.to_int(c.get("sec", 0)))
+		"sleep":
+			return game.logout(str(c.get("tactic", "")))
+		"prof":
+			return game.prof_action(str(c.get("op", "")), str(c.get("id", "")))
+		"gather":
+			return game.gather(str(c.get("node", "")))
+		"craft":
+			return game.craft(str(c.get("recipe", "")), JsonUtil.to_int(c.get("n", 1)))
+		"cast":
+			return game.cast_action(str(c.get("op", "")), JsonUtil.to_int(c.get("who", -1)), str(c.get("item", "")))
+		"sd":                                            # Stempelduell (10 §6.8): _cmd refuses it until SD3
+			return false
 		"combat_speed":                                  # no state effect (07 §10.7: the "Zeitlupe" mark)
 			return true
 		# Echtzeitkampf (07 §10.6, R5a): the combat loop (_combat) replays these through Game.combat_*; _cmd refuses

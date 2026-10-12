@@ -1,22 +1,28 @@
 class_name PersonaRules extends RefCounted
 ## Rules of the candidate persona in the core (08 §2.3, §3.7, §4.8). Only ids go into the core (P-1): the recorded
-## command {"t": "persona", "v": 1, "talent": "", "bias": [...]} — once per run, before the run begins (Game.new_game
-## records floor → hero → persona) — and its effect flags["persona"] = {"v": 1, "bias": [...], "swapped": false}
-## (the K1 shape, kept bit for bit: the logs and saves of K1 hash the same).
-## CR-33 (09 §8.6): there is no start talent. `talent` is always "" (any other value → unknown_talent), the persona
-## never changes a combat value; its only effect in the core is the Marotten bias from floor 2 (weight_add). The
-## dormant K0 start-talent API (offer, swap, PartyMember.origin_talent) left in 09 ST0 (09 §11.2 Nr. 2).
+## command — once per run, before the run begins (Game.new_game records floor → hero → persona) — and its effect
+## flags["persona"]:
+## - v2 (09 §8.6/§8.7, ST0; what the casting records): {"t": "persona", "v": 2, "prof", "recipe", "bias": [...]} →
+##   {"v": 2, "prof", "recipe", "bias"}. `prof` is the profession of the Vorleben head start (+50, origins.json →
+##   prof; "" = free pick in the Gewerke-Büro: status tiles, Allrounder:in, the canon Kai of "Rest automatisch"),
+##   `recipe` the hobby recipe (the hobby's profession → its hobby_recipe in professions.json; "" = none). No origin or
+##   hobby id in the command (08 D-2). The head start acts only in a season (ST1-E reads head_start).
+## - v1 (K0/K1, old logs): {"t": "persona", "v": 1, "talent": "", "bias"} → {"v": 1, "bias", "swapped": false} (the
+##   K1 shape bit for bit: K1 logs and saves replay and hash the same). `talent` must be "" (CR-33: no start talent).
+## The persona never changes a combat value; outside a season its only effect in the core is the Marotten bias from
+## floor 2 (weight_add). The dormant K0 start-talent API (offer, swap, PartyMember.origin_talent) left in 09 ST0.
 ## Also the offline mapping of "Anderes …" free texts to catalog ids (map_text, 08 §3.7). Static and pure (core): no
 ## autoloads, integer math only.
 
 const MAX_BIAS: int = 3
 const BIAS_WEIGHT_ADD: int = 1
 const BIAS_MIN_FLOOR: int = 2
-const VERSION: int = 1
+const VERSION: int = 2                       # the command the casting records (09 ST0)
+const V1: int = 1                            # K0/K1 logs: still readable
 const FLAG: String = "persona"
 const MEMBER: String = "kai"                 # the persona is the candidate (party id kai)
 const REASONS: PackedStringArray = ["bad_version", "unknown_talent", "bad_bias", "already_set", "run_started",
-	"event_run"]
+	"event_run", "unknown_prof", "unknown_recipe"]
 ## "Anderes …" mapping (08 §3.7 Nr. 1): ä → ae, ö → oe, ü → ue, ß → ss; other accents of the on-screen keyboard's
 ## accent layer fold to their base letter.
 const FOLD: Dictionary = {"ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss", "à": "a", "á": "a", "â": "a", "å": "a",
@@ -40,21 +46,62 @@ static func bias_for(data: GameData, trait_ids: PackedStringArray) -> PackedStri
 	return out.slice(0, MAX_BIAS)
 
 
-## The start command: K1 always passes talent_id "" (CR-33).
-static func command_for(data: GameData, talent_id: String, trait_ids: PackedStringArray) -> Dictionary:
-	return {"t": "persona", "v": VERSION, "talent": talent_id, "bias": Array(bias_for(data, trait_ids))}
+## The start command of the persona `p` (v2, 09 §8.6): the head-start profession of its origin ("" for the canon Kai
+## of "Rest automatisch" — PersonaText.is_canon — who picks freely), the hobby recipe of its hobby and the bias of its
+## traits — ids of the catalog only, never the origin or hobby id itself (08 D-2). p == null: the canon persona.
+static func command_for(data: GameData, p: PersonaProfile) -> Dictionary:
+	var canon: bool = p == null or p.is_canon(data)
+	var hobby: String = p.hobby if p != null else ""
+	if p == null and data != null:
+		hobby = str(data.persona_canon().get("hobby", ""))
+	var traits: PackedStringArray = p.traits if p != null else PackedStringArray()
+	return {"t": "persona", "v": VERSION, "prof": "" if canon else head_prof(data, p.origin),
+		"recipe": hobby_recipe(data, hobby), "bias": Array(bias_for(data, traits))}
 
 
-## "" or why `cmd` is refused now (08 §2.3): bad_version | event_run (event runs never have a persona, 08 §8) |
-## unknown_talent (any non-empty talent — CR-33; also a state without kai) | already_set | run_started
-## (HeroRules.run_started) | bad_bias (0–3 distinct ascending ids of rotating marotten).
+## 09 §8.6: the profession of the Vorleben head start (+50): origins.json → prof of `origin_id`; "" = free pick in the
+## Gewerke-Büro (status tiles, Allrounder:in, an unknown origin).
+static func head_prof(data: GameData, origin_id: String) -> String:
+	if data == null or origin_id == "":
+		return ""
+	var prof: String = str(data.origin(origin_id).get("prof", ""))
+	return prof if data.has_id("professions", prof) else ""
+
+
+## 09 §8.6: the hobby recipe of `hobby_id`: the hobby's profession (origins.json → hobbies → prof) → its recipe with
+## hobby_recipe (professions.json); "" without a hobby or without such a recipe (it then costs credits, ST1-E).
+static func hobby_recipe(data: GameData, hobby_id: String) -> String:
+	if data == null or hobby_id == "":
+		return ""
+	var prof: String = str(data.hobby(hobby_id).get("prof", ""))
+	if prof == "":
+		return ""
+	for r: RecipeDef in data.all_recipes():
+		if r.hobby_recipe and r.prof == prof:
+			return r.id
+	return ""
+
+
+## "" or why `cmd` is refused now (08 §2.3): bad_version (neither v2 nor v1) | event_run (event runs never have a
+## persona, 08 §8) | v1: unknown_talent (any non-empty talent — CR-33; also a state without kai) | v2: unknown_prof
+## (not "" and not in professions.json; also a state without kai), unknown_recipe (not "" and not a hobby_recipe) |
+## already_set | run_started (HeroRules.run_started) | bad_bias (0–3 distinct ascending ids of rotating marotten).
 static func check(state: GameState, data: GameData, cmd: Dictionary, event_run: bool) -> String:
-	if not _is_int(cmd.get("v", null)) or int(cmd["v"]) != VERSION:
+	var v: int = int(cmd["v"]) if _is_int(cmd.get("v", null)) else -1
+	if v != VERSION and v != V1:
 		return "bad_version"
 	if event_run:
 		return "event_run"
-	if state == null or data == null or state.member(MEMBER) == null or str(cmd.get("talent", "")) != "":
+	var no_kai: bool = state == null or data == null or state.member(MEMBER) == null
+	if v == V1 and (no_kai or str(cmd.get("talent", "")) != ""):
 		return "unknown_talent"
+	if v == VERSION:
+		var prof: String = str(cmd.get("prof", ""))
+		if no_kai or (prof != "" and not data.has_id("professions", prof)):
+			return "unknown_prof"
+		var recipe: String = str(cmd.get("recipe", ""))
+		if recipe != "" and (not data.has_id("recipes", recipe) or not data.recipe(recipe).hobby_recipe):
+			return "unknown_recipe"
 	if state.flags.get(FLAG, null) != null:
 		return "already_set"
 	if HeroRules.run_started(state):
@@ -62,16 +109,30 @@ static func check(state: GameState, data: GameData, cmd: Dictionary, event_run: 
 	return _bias_refusal(data, cmd.get("bias", []))
 
 
-## Applies a valid command: flags["persona"] = {"v", "bias", "swapped": false} (the K1 shape; nothing reads
-## "swapped" any more). No combat value changes (CR-33). false (nothing changes) if check() refuses.
+## Applies a valid command: flags["persona"] = {"v": 2, "prof", "recipe", "bias"} (v2) or {"v": 1, "bias",
+## "swapped": false} (v1, the K1 shape; nothing reads "swapped"). No combat value changes (CR-33). false (nothing
+## changes) if check() refuses.
 static func apply(state: GameState, data: GameData, cmd: Dictionary) -> bool:
 	if check(state, data, cmd, false) != "":
 		return false
 	var bias: Array = []
 	for b: Variant in (cmd.get("bias", []) as Array):
 		bias.append(str(b))
-	state.flags[FLAG] = {"v": VERSION, "bias": bias, "swapped": false}
+	if int(cmd["v"]) == V1:
+		state.flags[FLAG] = {"v": V1, "bias": bias, "swapped": false}
+	else:
+		state.flags[FLAG] = {"v": VERSION, "prof": str(cmd.get("prof", "")), "recipe": str(cmd.get("recipe", "")),
+			"bias": bias}
 	return true
+
+
+## 09 §8.6 (read by ST1-E): {"prof", "recipe"} of the recorded persona v2 — {"prof": "", "recipe": ""} for a v1
+## persona or none.
+static func head_start(state: GameState) -> Dictionary:
+	var f: Variant = state.flags.get(FLAG, null) if state != null else null
+	if f is Dictionary and JsonUtil.to_int((f as Dictionary).get("v", 0)) == VERSION:
+		return {"prof": str((f as Dictionary).get("prof", "")), "recipe": str((f as Dictionary).get("recipe", ""))}
+	return {"prof": "", "recipe": ""}
 
 
 ## The recorded bias of the run ([] without a persona).

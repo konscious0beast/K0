@@ -256,7 +256,8 @@ func test_rest_automatisch_in_two_inputs() -> void:
 	await wait_frames(1)
 	assert_true(bool(n.get("started")), "the second input starts the show")
 	assert_true(Game.persona.is_canon(DB.data))
-	assert_eq(Game.run_log.cmds().back()["c"], {"t": "persona", "v": 1, "talent": "", "bias": []})
+	assert_eq(Game.run_log.cmds().back()["c"], {"t": "persona", "v": 2, "prof": "", "recipe": "rcp_cooking_hobby",
+		"bias": []}, "09 ST0: persona v2 — the canon Kai picks his profession freely, Tiere gives the cooking recipe")
 	await _settle_router()
 	var g: Node = await _casting()
 	_joy(JOY_BUTTON_START)

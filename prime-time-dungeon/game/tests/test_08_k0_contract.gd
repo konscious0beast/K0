@@ -22,7 +22,7 @@ const EVENT_ID: String = "evt_offline_gleis9"
 const METHODS: Dictionary = {
 	"res://core/progression/persona_rules.gd": [
 		"bias_for(GameData, PackedStringArray) -> PackedStringArray static",
-		"command_for(GameData, String, PackedStringArray) -> Dictionary static",
+		"command_for(GameData, PersonaProfile) -> Dictionary static",          # 09 ST0: persona v2
 		"check(GameState, GameData, Dictionary, bool) -> String static",
 		"apply(GameState, GameData, Dictionary) -> bool static",
 		"bias(GameState) -> PackedStringArray static", "weight_add(GameState, String, int) -> int static",
@@ -226,13 +226,14 @@ func test_stub_headers_and_constants() -> void:
 		assert_false(FileAccess.get_file_as_string(path).contains("STUB(K0)"), "K1 / K2 replaced the stub " + path)
 	assert_eq([PersonaRules.MAX_BIAS, PersonaRules.BIAS_WEIGHT_ADD, PersonaRules.BIAS_MIN_FLOOR], [3, 1, 2])
 	assert_eq(PersonaRules.REASONS, PackedStringArray(["bad_version", "unknown_talent", "bad_bias", "already_set",
-		"run_started", "event_run"]), "08 §2.3 (09 ST0: no swap — no_swap, same are gone)")
+		"run_started", "event_run", "unknown_prof", "unknown_recipe"]),
+		"08 §2.3 (09 ST0: no swap — no_swap, same are gone; persona v2: unknown_prof, unknown_recipe)")
 	assert_eq(GameState.DEFAULT_NAME, "Kai")
 	assert_eq(RunSim.SIM_VERSION, 4,
 		"the ONE joint bump of 07 R1a + 08 K0 (1 → 2), then 07 E32 (2 → 3) and the baked HP of R5b part 2b (3 → 4)")
 	assert_eq([RunSim.OLD_VERSION, RunSim.NEW_VERSION, RunSim.OLD_VERSION_TAG],
 		["old_version", "new_version", "ältere Version"])
-	assert_eq(Command.TYPES[Command.TYPES.size() - 1], "persona")
+	assert_has(Command.TYPES, "persona")
 	assert_eq([Command.PERSONA_VERSION, Command.PERSONA_MAX_BIAS], [PersonaRules.VERSION, PersonaRules.MAX_BIAS])
 	assert_eq(ModAnnouncer.ALWAYS_SAID_PREFIXES, PackedStringArray(["persona_"]))
 	assert_true(ModAnnouncer.NO_COOLDOWN_PREFIXES.has("persona_"))
@@ -390,7 +391,7 @@ func test_no_start_talent_and_old_states_load() -> void:
 func test_persona_rules_check_reasons() -> void:
 	var data: GameData = real_data()
 	var st: GameState = _sim(data).state
-	assert_eq(PersonaRules.check(st, data, {"t": "persona", "v": 2, "talent": "", "bias": []}, false), "bad_version")
+	assert_eq(PersonaRules.check(st, data, {"t": "persona", "v": 3, "talent": "", "bias": []}, false), "bad_version")
 	assert_eq(PersonaRules.check(st, data, _start(), true), "event_run")
 	for talent: String in ["tal_org_animals", "tal_org_nope", "tal_kai_wischtechnik"]:
 		assert_eq(PersonaRules.check(st, data, _start(talent), false), "unknown_talent", "CR-33: no start talent " +
@@ -450,7 +451,9 @@ func test_run_sim_applies_and_refuses_persona() -> void:
 
 func test_both_verifiers_replay_the_persona_command() -> void:
 	Game.new_game(0, "Kai", 4242)
-	assert_true(Game.apply_persona(PersonaRules.command_for(DB.data, "", PackedStringArray(["trt_natural"]))))
+	var natural: PersonaProfile = PersonaProfile.canon(DB.data)
+	natural.traits = PackedStringArray(["trt_natural"])
+	assert_true(Game.apply_persona(PersonaRules.command_for(DB.data, natural)))
 	assert_eq(PersonaRules.bias(Game.state), PackedStringArray(["mar_bio"]))
 	assert_false(Game.apply_persona(_start()), "already_set: refused, nothing recorded")
 	var types: Array = []
@@ -478,8 +481,9 @@ func test_k1_records_the_persona_command() -> void:
 	p.traits = PackedStringArray(["trt_caring"])
 	Game.new_game(0, p.name, 4242, &"prime", "kai", p)
 	assert_eq(Game.persona, p, "Game.persona: the local profile")
-	assert_eq(Game.run_log.cmds().back()["c"], {"t": "persona", "v": 1, "talent": "", "bias": ["mar_graf_finale"]},
-		"K1 records the persona command (ids only)")
+	assert_eq(Game.run_log.cmds().back()["c"], {"t": "persona", "v": 2, "prof": "prf_first_aid",
+		"recipe": "rcp_cooking_hobby", "bias": ["mar_graf_finale"]},
+		"K1 records the persona command (ids only; v2 since 09 ST0: Tierpflege → Erste Hilfe, Tiere → Kochen)")
 	assert_eq([Game.state.player_name, Game.state.member("kai").display_name], ["Jana", "Jana"], "display fields")
 	Game.new_game(0, "Kai", 4242)
 	for c: Dictionary in Game.run_log.cmds():
@@ -597,7 +601,8 @@ func test_k1_and_k2_bodies() -> void:
 	var data: GameData = real_data()
 	var st: GameState = _sim(data).state
 	assert_eq(PersonaRules.bias_for(data, PackedStringArray(["trt_caring"])), PackedStringArray(["mar_graf_finale"]))
-	assert_eq(PersonaRules.command_for(data, "", PackedStringArray()), _start())
+	assert_eq(PersonaRules.command_for(data, null), {"t": "persona", "v": 2, "prof": "", "recipe": "rcp_cooking_hobby",
+		"bias": []}, "09 §8.6: the canon Kai picks his profession freely; his hobby (Tiere) gives the cooking recipe")
 	PersonaRules.apply(st, data, _start("", ["mar_brave"]))
 	for def: MarotteDef in data.all_marotten():
 		var add: int = 1 if def.id == "mar_brave" else 0

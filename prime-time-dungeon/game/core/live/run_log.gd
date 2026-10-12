@@ -6,9 +6,10 @@ class_name RunLog extends RefCounted
 ##  "checkpoints": [{"k", "h"}, …], "result": {"cause", "score", "final_hash"}}
 ## - k = sim tick (explore ticks in timer_mode explore_only; battle commands carry the k of their encounter).
 ## - Commands stay in tick order: a command with a smaller k than the previous one is rejected.
-## - id = cmd_id: 0 for external inputs (Command.is_external: gift, twist) and only for them, else strictly increasing
-##   from 1; a repeated or decreasing id (duplicate) or a player command with id 0 is rejected. Rejections are counted
-##   in `rejected` and warned, never applied (RunSim.replay reports them as errors).
+## - id = cmd_id: 0 for external inputs (Command.is_external: gift, twist; since 09 ST0 the season clock, clock and
+##   away) and only for them, else strictly increasing from 1; a repeated or decreasing id (duplicate) or a player
+##   command with id 0 is rejected. Rejections are counted in `rejected` and warned, never applied (RunSim.replay
+##   reports them as errors).
 ## - Checkpoint k = state hash after all commands with k' <= k (one per tick; a later hash for the same k replaces it).
 ## - Echtzeitkampf (07 §10.2, R1a): a combat checkpoint {"k", "ct", "h"} (h = StateHash.of_rt) carries the combat tick
 ##   of the encounter at k; several share that k (every CHECKPOINT_TICKS combat ticks and the end), in ct order; a

@@ -15,7 +15,9 @@ static func from_dict(d: Dictionary) -> ThemeDef:
 	r.id = str(d.get("id", ""))
 	r.name = str(d.get("name", ""))
 	var fl: Variant = d.get("floors", [])
-	if fl is Array:
+	if fl is PackedInt32Array:                 # the validator's normalized form ("ia")
+		r.floors = (fl as PackedInt32Array).duplicate()
+	elif fl is Array:                          # a raw JSON entry
 		for f: Variant in (fl as Array):
 			r.floors.append(int(f))
 	var pr: Variant = d.get("program", [])

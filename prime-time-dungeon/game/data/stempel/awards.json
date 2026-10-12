@@ -1,0 +1,15 @@
+{
+	"schema": 1,
+	"entries": [
+		{"id": "sda_tutorial", "name": "Eingearbeitet", "desc": "Lernduell beendet."},
+		{"id": "sda_first_win", "name": "Erster Bescheid", "desc": "Das erste Duell gewonnen."},
+		{"id": "sda_chain", "name": "Dreimal ich", "desc": "Dreimal hintereinander dran gewesen."},
+		{"id": "sda_no_file", "name": "Ohne Ablage", "desc": "Gewonnen, ohne abzuheften."},
+		{"id": "sda_close", "name": "Haarscharf bewilligt", "desc": "Mit höchstens 3 Geduld gewonnen."},
+		{"id": "sda_show_5", "name": "Showtalent", "desc": "Insgesamt 5 Show-Karten geglückt."},
+		{"id": "sda_termin", "name": "Termin, Termin, Termin", "desc": "3 Wiedervorlagen in einem Duell."},
+		{"id": "sda_durchsage", "name": "Gut zugehört", "desc": "Eine Durchsage abgeheftet."},
+		{"id": "sda_amt", "name": "Dienstweg komplett", "desc": "Ferdi, Ulla und den Stempelmeister besiegt."},
+		{"id": "sda_graf", "name": "Fußnote gelesen", "desc": "Den Grafen im Übungsduell besiegt."}
+	]
+}

@@ -1,0 +1,19 @@
+{
+	"schema": 1,
+	"entries": [
+		{"id": "sdk_back_durchschlag", "kind": "back", "name": "Durchschlag", "desc": "Für das beendete Lernduell."},
+		{"id": "sdk_back_monokel", "kind": "back", "name": "Monokel", "desc": "Erster Sieg gegen den Grafen."},
+		{"id": "sdk_back_wartemarke", "kind": "back", "name": "Wartemarke", "desc": "Aus dem Stempelheft."},
+		{"id": "sdk_back_rohrpost", "kind": "back", "name": "Rohrpost", "desc": "Aus dem Stempelheft."},
+		{"id": "sdk_back_durchsage", "kind": "back", "name": "Durchsage", "desc": "Aus dem Stempelheft."},
+		{"id": "sdk_back_goldschnitt", "kind": "back", "name": "Goldschnitt", "desc": "Das Stempelalbum ist vollständig."},
+		{"id": "sdk_ink_kopierblau", "kind": "ink", "name": "Kopierblau", "desc": "Erster Sieg gegen Ferdi."},
+		{"id": "sdk_ink_gold", "kind": "ink", "name": "Gold", "desc": "Erster Sieg gegen den Stempelmeister."},
+		{"id": "sdk_mat_umlaufmappe", "kind": "mat", "name": "Umlaufmappe", "desc": "Erster Sieg gegen Ulla."},
+		{"id": "sdk_mat_gummibaum", "kind": "mat", "name": "Gummibaum", "desc": "Aus dem Stempelheft."},
+		{"id": "sdk_title_stempelmeisterin", "kind": "title", "name": "Stempelmeister:in",
+			"desc": "Erster Sieg gegen den Stempelmeister."},
+		{"id": "sdk_title_vollstaendige_akte", "kind": "title", "name": "Vollständige Akte",
+			"desc": "Alle 24 Karten im Stempelalbum."}
+	]
+}

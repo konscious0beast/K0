@@ -2,7 +2,7 @@ extends SceneTree
 ## Screenshot tool (02_TECH §11.3), used by `check.sh --shot`. No class_name / autoload identifiers.
 ## godot --path <game> --rendering-driver opengl3 --resolution WxH -s res://tests/capture.gd -- \
 ##     --scene=<res://…tscn> --out=<abs.png> [--frames=<n>] [--no-global-ui] [--params=<json>] [--touch] \
-##     [--recipe=<name>] [--look=<n | json>] [--season-floor=<n>] [--before=<name>]
+##     [--recipe=<name>] [--look=<n | json>] [--season-floor=<n>] [--before=<name>] [--quiet-ui] [--dc]
 ## --params: JSON object merged over {"capture": true} for the scene's setup(params).
 ## --touch:  touch controls on + input scheme TOUCH before the scene is built (phone layout stills).
 ## --recipe: named scripted state from res://tests/capture_recipes.gd, run after the scene is in the tree; the
@@ -13,6 +13,9 @@ extends SceneTree
 ##           to floor n (capture_recipes.season_floor).
 ## --before: Staffeln (ST1-H): before the scene is built, a named state from capture_recipes.before(name) — a calendar
 ##           season on its day, a finished one, the career's hall of fame.
+## --quiet-ui: after the wait, M.O.D.'s box and the toasts hidden (as perf.sh's season section, PERFORMANCE.md §3.9).
+## --dc:     after the wait, prints the most UI (canvas) and 3D draw calls of the next 30 frames ("CAPTURE: draw calls
+##           …", PERFORMANCE.md §3.11) before the still is taken.
 
 const GLOBAL_UI: String = "res://scenes/ui/global_ui.tscn"
 const RECIPES: String = "res://tests/capture_recipes.gd"
@@ -30,6 +33,8 @@ func _initialize() -> void:
 	var look: String = ""
 	var season_floor: int = 0
 	var before: String = ""
+	var quiet_ui: bool = false
+	var dc: bool = false
 	for a: String in OS.get_cmdline_user_args():
 		if a.begins_with("--scene="):
 			scene_path = a.trim_prefix("--scene=")
@@ -49,6 +54,10 @@ func _initialize() -> void:
 			season_floor = a.trim_prefix("--season-floor=").to_int()
 		elif a.begins_with("--before="):
 			before = a.trim_prefix("--before=")
+		elif a == "--quiet-ui":
+			quiet_ui = true
+		elif a == "--dc":
+			dc = true
 		elif a.begins_with("--params="):
 			var parsed: Variant = JSON.parse_string(a.trim_prefix("--params="))
 			if not (parsed is Dictionary):
@@ -139,6 +148,10 @@ func _initialize() -> void:
 			return
 	for i in frames:
 		await process_frame
+	if quiet_ui:
+		_quiet_ui()
+	if dc:
+		await _print_draw_calls()
 	await RenderingServer.frame_post_draw
 	var img: Image = root.get_texture().get_image()
 	if img == null or img.is_empty():
@@ -153,3 +166,28 @@ func _initialize() -> void:
 		return
 	print("CAPTURE: saved %s %dx%d" % [out_path, img.get_width(), img.get_height()])
 	quit(0)
+
+
+## --quiet-ui: the layers of M.O.D.'s box and the toasts hidden (perf.sh measures the floors without them, §3.9).
+func _quiet_ui() -> void:
+	var ui: Node = root.get_node_or_null("GlobalUi")
+	if ui == null:
+		return
+	for n: String in ["mod_dialog", "toasts"]:
+		var layer: CanvasLayer = ui.get(n) as CanvasLayer
+		if layer != null:
+			layer.visible = false
+
+
+## --dc: the most UI (canvas) and 3D (visible) draw calls of the main viewport over 30 drawn frames (02_TECH §12.1).
+func _print_draw_calls() -> void:
+	var vp: RID = root.get_viewport_rid()
+	var ui: int = 0
+	var d3: int = 0
+	for i in 30:
+		await RenderingServer.frame_post_draw
+		ui = maxi(ui, RenderingServer.viewport_get_render_info(vp, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_CANVAS,
+			RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME))
+		d3 = maxi(d3, RenderingServer.viewport_get_render_info(vp, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_VISIBLE,
+			RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME))
+	print("CAPTURE: draw calls ui=%d 3d=%d (max of 30 frames)" % [ui, d3])

@@ -313,7 +313,7 @@
 			"id": "mod_marotte_announce_mar_speed_01",
 			"tag": "marotte_announce:mar_speed",
 			"voice": "mod",
-			"text": "Ich habe heute wenig Sendezeit. Kämpfe in höchstens drei Zügen, und ich liebe Sie.",
+			"text": "Ich habe heute wenig Sendezeit. Kämpfe unter 15 Sekunden, und ich liebe Sie.",
 			"weight": 1
 		},
 		{
@@ -327,7 +327,7 @@
 			"id": "mod_marotte_announce_mar_stunt_01",
 			"tag": "marotte_announce:mar_stunt",
 			"voice": "mod",
-			"text": "Heute Abend: Akrobatik! Ein gelungener Stunt pro Kampf, und ich bin Ihr Fan.",
+			"text": "Heute Abend: Akrobatik! Eine gelungene SHOW pro Kampf, und ich bin Ihr Fan.",
 			"weight": 1
 		},
 		{
@@ -355,7 +355,7 @@
 			"id": "mod_marotte_announce_mar_brave_01",
 			"tag": "marotte_announce:mar_brave",
 			"voice": "mod",
-			"text": "Heute mag ich Mut. Kein Verteidigen, kein Weglaufen. Nur nach vorn.",
+			"text": "Heute mag ich Mut. Kein Weglaufen, kein Nebel. Nur nach vorn.",
 			"weight": 1
 		},
 		{

@@ -4,7 +4,7 @@
 		{
 			"id": "itm_bandage",
 			"name": "Werbepflaster",
-			"desc": "Heilt 45 HP. Mit Rabattcode, abgelaufen seit dem Weltuntergang.",
+			"desc": "Heilt 180 HP. Mit Rabattcode, abgelaufen seit dem Weltuntergang.",
 			"type": "consumable",
 			"rarity": "common",
 			"price": 25,
@@ -24,7 +24,7 @@
 		{
 			"id": "itm_antidote",
 			"name": "Gegengift-Gurgler",
-			"desc": "Heilt Vergiftung. Schmeckt nach Minze und Reue.",
+			"desc": "Heilt Vergiftung und Verbrennung. Schmeckt nach Minze und Reue.",
 			"type": "consumable",
 			"rarity": "common",
 			"price": 20,
@@ -64,7 +64,7 @@
 		{
 			"id": "itm_brutzel_burger",
 			"name": "Brutzel-Burger",
-			"desc": "Heilt 120 HP. Mit echtem Fleisch-Aroma.",
+			"desc": "Heilt 480 HP. Mit echtem Fleisch-Aroma.",
 			"type": "consumable",
 			"rarity": "rare",
 			"price": 80,
@@ -104,7 +104,7 @@
 		{
 			"id": "itm_molotov",
 			"name": "Grillanzünder-Cocktail",
-			"desc": "60 Feuerschaden an allen Gegnern. Grillsaison ist immer.",
+			"desc": "240 Feuerschaden an allen Gegnern im Umkreis von 4 m. Grillsaison ist immer.",
 			"type": "consumable",
 			"rarity": "common",
 			"price": 70,
@@ -124,7 +124,7 @@
 		{
 			"id": "itm_ice_spray",
 			"name": "Kältespray",
-			"desc": "90 Eisschaden an einem Gegner. Eigentlich für Sportverletzungen.",
+			"desc": "360 Eisschaden an einem Gegner. Eigentlich für Sportverletzungen.",
 			"type": "consumable",
 			"rarity": "common",
 			"price": 50,
@@ -459,7 +459,7 @@
 		{
 			"id": "itm_arm_ermine",
 			"name": "Hermelin-Umhang (Kunstpelz!)",
-			"desc": "DEF +6, RES +9, HP +15. Kein Tier kam zu Schaden.",
+			"desc": "DEF +6, RES +9, HP +60. Kein Tier kam zu Schaden.",
 			"type": "armor",
 			"rarity": "epic",
 			"price": 0,

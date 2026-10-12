@@ -103,7 +103,7 @@
 		{
 			"id": "skl_kai_taunt",
 			"name": "Hier spielt die Musik!",
-			"desc": "Sie ziehen alle Blicke auf sich: Provoziert und Gepanzert für 3 Züge.",
+			"desc": "Sie ziehen alle Blicke auf sich.",
 			"user": "party",
 			"category": "buff",
 			"target": "self",
@@ -167,7 +167,7 @@
 		{
 			"id": "skl_kai_first_aid",
 			"name": "Erste Hilfe (Tierarzt-Edition)",
-			"desc": "Heilt 30 % der max. HP und entfernt Gift. Wuff.",
+			"desc": "Heilt 30 % der max. HP und entfernt Gift und Verbrennung. Wuff.",
 			"user": "party",
 			"category": "heal",
 			"target": "single_ally",
@@ -423,7 +423,7 @@
 		{
 			"id": "skl_mop_expert_opinion",
 			"name": "Gräfliches Gutachten",
-			"desc": "„Tempus fugit!“ Laut Gutachten zu langsam: Turbo für 3 Züge.",
+			"desc": "„Tempus fugit!“ Laut Gutachten zu langsam.",
 			"user": "party",
 			"category": "buff",
 			"target": "single_ally",
@@ -847,7 +847,7 @@
 		{
 			"id": "skl_e_rat_heal",
 			"name": "Rattensegen",
-			"desc": "Heilt einen Verbündeten um 30 % der max. HP.",
+			"desc": "Heilt einen Verbündeten um 15 % der max. HP.",
 			"user": "enemy",
 			"category": "heal",
 			"target": "single_ally",
@@ -1036,7 +1036,7 @@
 		{
 			"id": "skl_e_brace",
 			"name": "Stufen fahren hoch",
-			"desc": "Die Stufen klappen hoch: Gepanzert für 2 Züge.",
+			"desc": "Die Stufen klappen hoch: Gepanzert für 4 Sekunden.",
 			"user": "enemy",
 			"category": "buff",
 			"target": "self",
@@ -1105,7 +1105,7 @@
 		{
 			"id": "skl_e_shield_wall",
 			"name": "Schildwall",
-			"desc": "Die Garde rückt zusammen: Gepanzert für 3 Züge.",
+			"desc": "Die Garde rückt zusammen: Gepanzert für 8 Sekunden.",
 			"user": "enemy",
 			"category": "buff",
 			"target": "all_allies",
@@ -1299,7 +1299,7 @@
 		{
 			"id": "skl_b_rules",
 			"name": "Hausordnung verlesen",
-			"desc": "Paragraf für Paragraf: Gepanzert für 2 Züge.",
+			"desc": "Paragraf für Paragraf: Gepanzert für 12 Sekunden, die Party ist ermahnt.",
 			"user": "enemy",
 			"category": "buff",
 			"target": "self",
@@ -1617,7 +1617,7 @@
 		{
 			"id": "skl_e_pose",
 			"name": "Schaufensterpose",
-			"desc": "Starr, schön, unangreifbar: Gepanzert und Provoziert für 2 Züge.",
+			"desc": "Starr, schön, unangreifbar.",
 			"user": "enemy",
 			"category": "buff",
 			"target": "self",
@@ -1672,7 +1672,7 @@
 		{
 			"id": "skl_item_bandage",
 			"name": "Werbepflaster",
-			"desc": "Heilt 45 HP.",
+			"desc": "Heilt 180 HP.",
 			"user": "item",
 			"category": "item",
 			"target": "single_ally",
@@ -1693,7 +1693,7 @@
 		{
 			"id": "skl_item_antidote",
 			"name": "Gegengift-Gurgler",
-			"desc": "Heilt Vergiftung.",
+			"desc": "Heilt Vergiftung und Verbrennung.",
 			"user": "item",
 			"category": "item",
 			"target": "single_ally",
@@ -1738,7 +1738,7 @@
 		{
 			"id": "skl_item_brutzel_burger",
 			"name": "Brutzel-Burger",
-			"desc": "Heilt 120 HP.",
+			"desc": "Heilt 480 HP.",
 			"user": "item",
 			"category": "item",
 			"target": "single_ally",
@@ -1780,7 +1780,7 @@
 		{
 			"id": "skl_item_molotov",
 			"name": "Grillanzünder-Cocktail",
-			"desc": "60 Feuerschaden an allen Gegnern.",
+			"desc": "240 Feuerschaden an allen Gegnern im Umkreis von 4 m.",
 			"user": "item",
 			"category": "item",
 			"target": "all_enemies",
@@ -1807,7 +1807,7 @@
 		{
 			"id": "skl_item_ice_spray",
 			"name": "Kältespray",
-			"desc": "90 Eisschaden an einem Gegner.",
+			"desc": "360 Eisschaden an einem Gegner.",
 			"user": "item",
 			"category": "item",
 			"target": "single_enemy",

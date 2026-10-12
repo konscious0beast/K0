@@ -202,10 +202,10 @@ func test_every_condition_hits_and_misses() -> void:
 		"mar_variety": [{"distinct_actions": 4}, {"distinct_actions": 3}],
 		"mar_sneaky": [{"encounter_type": "preemptive"}, {"encounter_type": "normal"}],
 		"mar_secondhand": [{"equip_all_common": true}, {"equip_all_common": false}],
-		"mar_speed": [{"party_turns": 3, "is_boss": false}, {"party_turns": 4, "is_boss": false}],
+		"mar_speed": [{"duration_sec": 15, "is_boss": false}, {"duration_sec": 16, "is_boss": false}],   # E34
 		"mar_stunt": [{"stunts_success": 1}, {"stunts_success": 0}],
 		"mar_bio": [{"items_used": 0, "gifts": 0}, {"items_used": 0, "gifts": 1}],
-		"mar_brave": [{"defends": 0, "flee_attempts": 0}, {"defends": 1, "flee_attempts": 0}],
+		"mar_brave": [{"defends": 0, "flee_attempts": 0}, {"defends": 0, "flee_attempts": 1}],     # E34
 		"mar_gourmet": [{"weakness_hits": 3}, {"weakness_hits": 2}],
 	}
 	for id: String in cases:
@@ -215,7 +215,7 @@ func test_every_condition_hits_and_misses() -> void:
 		miss.merge(cases[id][1] as Dictionary, true)
 		assert_true(d.marotte(id).expr.eval(hit, {}, {}), id + " hits")
 		assert_false(d.marotte(id).expr.eval(miss, {}, {}), id + " misses")
-	assert_false(d.marotte("mar_speed").expr.eval(_with(base, {"party_turns": 2, "is_boss": true}), {}, {}),
+	assert_false(d.marotte("mar_speed").expr.eval(_with(base, {"duration_sec": 10, "is_boss": true}), {}, {}),
 		"Schnellschnitt: bosses do not count")
 	var pac: MarotteDef = d.marotte("mar_pacifist")
 	assert_true(pac.expr.eval({"zones_since_battle": 3, "zone": "zone_a", "floor": 2}, {}, {}))

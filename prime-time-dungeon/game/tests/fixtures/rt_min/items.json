@@ -4,7 +4,7 @@
 		{
 			"id": "itm_bandage",
 			"name": "Werbepflaster",
-			"desc": "Heilt 45 HP.",
+			"desc": "Heilt 180 HP.",
 			"type": "consumable",
 			"price": 25,
 			"tags": [
@@ -51,7 +51,7 @@
 			"color": "#ffffff",
 			"id": "itm_brutzel_burger",
 			"name": "Brutzel-Burger",
-			"desc": "Heilt 120 HP.",
+			"desc": "Heilt 480 HP.",
 			"price": 60,
 			"tags": [
 				"heal"

@@ -114,18 +114,14 @@ static func uses_gcd(def: SkillDef) -> bool:
 	return def != null and (def.rt.is_empty() or bool(def.rt.get("gcd", true)))
 
 
-## Real-time text of a skill (R5b-2a text pass): its description without a rule part that counts CTB turns ("Sie
-## ziehen alle Blicke auf sich: Provoziert und Gepanzert für 3 Züge." keeps the part before the colon — the data keep
-## the CTB text until they are baked, R5b part 2) plus one line with the statuses of its rt block in seconds, e.g.
+## Real-time text of a skill: its description (real-time wording since the data bake of R5b part 2b, no CTB turns)
+## plus one line with the statuses of its rt block in seconds, e.g.
 ## "Wirkung: Provoziert (alle Gegner) 4 s · Gepanzert (selbst) 6 s".
 static func skill_text(def: SkillDef) -> String:
 	if def == null:
 		return ""
 	var lines: PackedStringArray = []
 	var desc: String = TranslationServer.translate(def.desc)
-	if desc.contains(" Züge") or desc.contains(" Zug."):
-		var cut: int = desc.rfind(": ")
-		desc = desc.substr(0, cut) + "." if cut > 0 else ""
 	if desc != "":
 		lines.append(desc)
 	var parts: PackedStringArray = []

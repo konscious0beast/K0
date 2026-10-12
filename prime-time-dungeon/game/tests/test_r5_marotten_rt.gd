@@ -81,8 +81,11 @@ func test_context_keys_of_a_real_time_combat() -> void:
 	assert_eq([ctb_ctx["duration_sec"], ctb_ctx["flee_attempts"]], [0, 1], "CTB: the tracker's count, no duration")
 	var data: GameData = real_data()
 	assert_false(data.marotte("mar_brave").expr.eval(rt_ctx, {}, {}), "mar_brave: a flight warning breaks it")
-	assert_true(ConditionExpr.parse("e.duration_sec <= 15 && e.is_boss == false").eval(rt_ctx, {}, {}),
-		"the real-time mar_speed condition of floor 2 can be written (07 §9.6)")
+	assert_true(data.marotte("mar_speed").expr.eval(rt_ctx, {}, {}),
+		"the real-time mar_speed of floor 2 (07 §9.6, E34): a regular combat of at most 15 s")
+	r.duration_ticks = 16 * 30
+	assert_false(data.marotte("mar_speed").expr.eval(MarottenRules.battle_context(st, RtKit.data(), r, {"rt": true}),
+		{}, {}), "16 s are too slow")
 
 
 ## Level 1, a first strike on two rats: slot 1, the SHOW, a potion and the Partner-Spezial are four own actions —

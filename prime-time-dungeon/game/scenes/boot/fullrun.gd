@@ -1611,6 +1611,8 @@ func _rt_combat(ex: ExplorationScene) -> bool:
 		str(rec["level"]), int(rec["followers"]), int(rec["hype_end"])])
 	if res.outcome == BattleResult.Outcome.DEFEAT:
 		return true                                    # settle() takes the game over screen
+	if season_def != "" and Game.state.season != null and Game.state.season.result != "":
+		return true                                    # Staffeln (09, ST1-I): the finale won — settle takes the Abspann
 	if not (Router.current is ExplorationScene):
 		return fail("after the combat the screen is %s" % _screen_name(Router.current))
 	if res.outcome == BattleResult.Outcome.VICTORY and res.group_id != "" \
@@ -2979,8 +2981,9 @@ func _season_floor_summary(fs: FloorSummary) -> bool:
 		_season_done = true
 		return true
 	_season_ui.call("floor_summary", fs)
-	return await _wait(func() -> bool: return Router.current != fs and not Router.busy, 600,
-		"the next floor after the Etagen-Bilanz")
+	var fs_id: int = fs.get_instance_id()          # the summary is freed on the way: no capture of the node
+	return await _wait(func() -> bool: return Router.current != null and Router.current.get_instance_id() != fs_id \
+		and not Router.busy, 600, "the next floor after the Etagen-Bilanz")
 
 
 ## The end of the candidate's season (the Abspann after the finale or the last collapse; the Sendeschluss Ohne Netz):

@@ -182,8 +182,10 @@ func wake(screen: Node) -> bool:
 	bot.note("%s · %s" % [str(w.get("title", "")), str(w.get("sub", ""))])
 	for l: String in lines:
 		bot.note("  • " + l)
+	var screen_id: int = screen.get_instance_id()      # the summary is freed on the way: no capture of the node
 	screen.call("continue_pressed")
-	return await bot.wait_for(func() -> bool: return Router.current != screen and not Router.busy, DIALOG_BUDGET,
+	return await bot.wait_for(func() -> bool: return Router.current != null \
+		and Router.current.get_instance_id() != screen_id and not Router.busy, DIALOG_BUDGET,
 		"the world after the wake summary")
 
 

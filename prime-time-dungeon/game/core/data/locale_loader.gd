@@ -23,7 +23,8 @@ const LANG_ARG: String = "--lang="
 
 static var _registered: Translation = null   # the catalog apply() handed to the TranslationServer
 static var _languages: Array[Dictionary] = []
-static var _re_comment: RegEx = null
+static var _re_comment: RegEx = null         # the comment lines but "#," (read_messages)
+static var _re_untranslated: RegEx = null    # a whole singular entry with msgstr "" (read_messages)
 
 
 # --- languages and the choice of a run (11 §1.9) ---------------------------------------------------------------------
@@ -277,14 +278,18 @@ static func parse_po(text: String, source: String = "po", meta: bool = false) ->
 ## The runtime reader (the start of an English game reads every PO): only what the catalog takes, the translated and
 ## non-fuzzy entries in file order — [[ctx, msgid, msgid_plural, PackedStringArray forms]], or straight into `into`
 ## (later entries override earlier ones: the pack PO after the base) with the plural forms in `plurals` ("<ctx>\u0004
-## <msgid>" → forms, for Tx.n). An empty plural form falls back to msgid / msgid_plural. Lenient and fast: the comment
-## lines except "#," are cut natively first, there is no dictionary per entry; malformed lines are skipped — the
-## rules are parse_po's (tools/i18n.sh check, test_11_po_rules). test_11_po compares both readers.
+## <msgid>" → forms, for Tx.n). An empty plural form falls back to msgid / msgid_plural. Lenient and fast: two native
+## regex passes first cut the comment lines but "#," and every untranslated singular entry, the loop then sees only
+## translations, without a dictionary per entry; malformed lines are skipped — the rules are parse_po's
+## (tools/i18n.sh check, test_11_po_rules). test_11_po compares both readers.
 static func read_messages(text: String, into: Translation = null, plurals: Dictionary = {}) -> Array:
 	if _re_comment == null:
 		_re_comment = RegEx.create_from_string("(?m)^#(?!,)[^\\n]*\\n")
+		_re_untranslated = RegEx.create_from_string("(?m)^(?:#,[^\\n]*\\n)?(?:msgctxt \"[^\\n]*\"\\n(?:\"[^\\n]*\"\\n)*)?"
+			+ "msgid \"[^\\n]*\"\\n(?:\"[^\\n]*\"\\n)*msgstr \"\"\\n(?!\")")
 	var out: Array = []
-	var lines: PackedStringArray = _re_comment.sub(text.replace("\r\n", "\n"), "", true).split("\n")
+	var lean: String = _re_comment.sub(text.replace("\r\n", "\n"), "", true)
+	var lines: PackedStringArray = _re_untranslated.sub(lean, "", true).split("\n")
 	lines.append("")                              # the last entry ends like every other one
 	var ctx: String = ""
 	var id: String = ""
@@ -322,7 +327,7 @@ static func read_messages(text: String, into: Translation = null, plurals: Dicti
 			field = -1
 			continue
 		if c == 34:                               # a continuation string
-			var cont: String = _lenient(line)
+			var cont: String = _value(line, 0)
 			match field:
 				0:
 					ctx += cont
@@ -340,7 +345,7 @@ static func read_messages(text: String, into: Translation = null, plurals: Dicti
 		if sp < 0:
 			continue
 		var kw: String = line.left(sp)
-		var value: String = _lenient(line.substr(sp + 1))
+		var value: String = _value(line, sp + 1)
 		match kw:
 			"msgctxt":
 				ctx = value
@@ -500,6 +505,15 @@ static func _quoted(s: String, source: String, line: int, errors: PackedStringAr
 	if not body.contains("\\"):
 		return body
 	return _unescape(body, source, line, errors)
+
+
+## The value of the "…" literal that starts at `from` in a PO line — the fast way for the well-formed lines msgmerge
+## writes (the quotes at `from` and at the end, escapes only where a backslash is), else _lenient.
+static func _value(line: String, from: int) -> String:
+	if line.unicode_at(from) != 34 or not line.ends_with("\"") or line.length() - from < 2:
+		return _lenient(line.substr(from))
+	var body: String = line.substr(from + 1, line.length() - from - 2)
+	return _unescape(body, "", 0, PackedStringArray()) if body.contains("\\") else body
 
 
 ## The content of a "…" literal for the runtime reader (no error list: the tools check the files).

@@ -164,7 +164,10 @@ func test_the_runtime_reader_matches_the_parser() -> void:
 	for rel: String in ["root/en/ui.po", "root/en/data.po", "pack/locale/en.po"]:
 		texts[rel] = FileAccess.get_file_as_string(FIX.path_join(rel))
 	for d: String in LocaleLoader.DOMAINS:
-		texts["full " + d] = _translated_copy(FileAccess.get_file_as_string("res://locale/pot/%s.pot" % d))
+		var pot: String = FileAccess.get_file_as_string("res://locale/pot/%s.pot" % d)
+		texts["full " + d] = _translated_copy(pot)
+		texts["half " + d] = _translated_copy(pot, 2)          # untranslated and translated entries in turn
+		texts["third " + d] = _translated_copy(pot, 3)
 	texts["crlf"] = "msgid \"\"\r\nmsgstr \"Language: en\\n\"\r\n\r\n#, fuzzy\r\nmsgid \"A\"\r\nmsgstr \"B\"\r\n\r\n" \
 		+ "msgid \"C\"\r\nmsgstr \"D\"\r\n"
 	for k: String in texts:
@@ -220,16 +223,25 @@ func test_a_full_catalog_builds_fast() -> void:
 	DirAccess.remove_absolute(root)
 
 
-## A POT with every msgstr filled ("EN " + the msgid; plural forms too) — a stand-in for the finished translation.
-static func _translated_copy(pot: String) -> String:
+## A POT with the msgstr of every `every`-th entry filled ("EN " + the msgid; plural forms too) — 1: a stand-in for
+## the finished translation.
+static func _translated_copy(pot: String, every: int = 1) -> String:
 	var out: PackedStringArray = []
 	var last_id: String = ""
 	var last_plural: String = ""
+	var n: int = 0
 	for line: String in pot.split("\n"):
 		if line.begins_with("msgid \"") and line != "msgid \"\"":
 			last_id = line.substr(6)
+			n += 1
 		elif line.begins_with("msgid_plural \""):
 			last_plural = line.substr(13)
+		if last_id != "" and n % every != 0:
+			out.append(line)
+			if line == "":
+				last_id = ""
+				last_plural = ""
+			continue
 		if line == "msgstr \"\"" and last_id != "":
 			out.append("msgstr \"EN " + last_id.substr(1))
 			continue

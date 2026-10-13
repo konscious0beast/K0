@@ -1,0 +1,1554 @@
+# English translation of PRIME TIME DUNGEON — the domain "stempel" (docs/11 §1.2): msgid = the German source text.
+# Fill in msgstr only; tools/i18n.sh merge adds new msgids, tools/i18n.sh check verifies (11 §1.11, §2 glossary).
+msgid ""
+msgstr ""
+"Project-Id-Version: PRIME TIME DUNGEON\n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: 2026-10-13 00:00+0000\n"
+"Last-Translator: PRIME TIME DUNGEON team\n"
+"Language-Team: English\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Domain: stempel\n"
+
+#: data/stempel/awards.json:sda_tutorial.name
+msgctxt "stempel.awards"
+msgid "Eingearbeitet"
+msgstr ""
+
+#. max 110
+#: data/stempel/awards.json:sda_tutorial.desc
+msgctxt "stempel.awards"
+msgid "Lernduell beendet."
+msgstr ""
+
+#: data/stempel/awards.json:sda_first_win.name
+msgctxt "stempel.awards"
+msgid "Erster Bescheid"
+msgstr ""
+
+#. max 110
+#: data/stempel/awards.json:sda_first_win.desc
+msgctxt "stempel.awards"
+msgid "Das erste Duell gewonnen."
+msgstr ""
+
+#: data/stempel/awards.json:sda_chain.name
+msgctxt "stempel.awards"
+msgid "Dreimal ich"
+msgstr ""
+
+#. max 110
+#: data/stempel/awards.json:sda_chain.desc
+msgctxt "stempel.awards"
+msgid "Dreimal hintereinander dran gewesen."
+msgstr ""
+
+#: data/stempel/awards.json:sda_no_file.name
+msgctxt "stempel.awards"
+msgid "Ohne Ablage"
+msgstr ""
+
+#. max 110
+#: data/stempel/awards.json:sda_no_file.desc
+msgctxt "stempel.awards"
+msgid "Gewonnen, ohne abzuheften."
+msgstr ""
+
+#: data/stempel/awards.json:sda_close.name
+msgctxt "stempel.awards"
+msgid "Haarscharf bewilligt"
+msgstr ""
+
+#. max 110
+#: data/stempel/awards.json:sda_close.desc
+msgctxt "stempel.awards"
+msgid "Mit höchstens 3 Geduld gewonnen."
+msgstr ""
+
+#: data/stempel/awards.json:sda_show_5.name
+msgctxt "stempel.awards"
+msgid "Showtalent"
+msgstr ""
+
+#. max 110
+#: data/stempel/awards.json:sda_show_5.desc
+msgctxt "stempel.awards"
+msgid "Insgesamt 5 Show-Karten geglückt."
+msgstr ""
+
+#: data/stempel/awards.json:sda_termin.name
+msgctxt "stempel.awards"
+msgid "Termin, Termin, Termin"
+msgstr ""
+
+#. max 110
+#: data/stempel/awards.json:sda_termin.desc
+msgctxt "stempel.awards"
+msgid "3 Wiedervorlagen in einem Duell."
+msgstr ""
+
+#: data/stempel/awards.json:sda_durchsage.name
+msgctxt "stempel.awards"
+msgid "Gut zugehört"
+msgstr ""
+
+#. max 110
+#: data/stempel/awards.json:sda_durchsage.desc
+msgctxt "stempel.awards"
+msgid "Eine Durchsage abgeheftet."
+msgstr ""
+
+#: data/stempel/awards.json:sda_amt.name
+msgctxt "stempel.awards"
+msgid "Dienstweg komplett"
+msgstr ""
+
+#. max 110
+#: data/stempel/awards.json:sda_amt.desc
+msgctxt "stempel.awards"
+msgid "Ferdi, Ulla und den Stempelmeister besiegt."
+msgstr ""
+
+#: data/stempel/awards.json:sda_graf.name
+msgctxt "stempel.awards"
+msgid "Fußnote gelesen"
+msgstr ""
+
+#. max 110
+#: data/stempel/awards.json:sda_graf.desc
+msgctxt "stempel.awards"
+msgid "Den Grafen im Übungsduell besiegt."
+msgstr ""
+
+#. max 24
+#: data/stempel/cards.json:sdc_stempel.name
+msgctxt "stempel.cards"
+msgid "Stempel"
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_stempel.text
+#: data/stempel/cards.json:sdc_kaeltespray.text
+msgctxt "stempel.cards"
+msgid "2 Ärger."
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_stempel.quip
+msgctxt "stempel.cards"
+msgid "Rums. Gilt als zugestellt."
+msgstr ""
+
+#. max 24
+#: data/stempel/cards.json:sdc_doppelstempel.name
+msgctxt "stempel.cards"
+msgid "Doppelstempel"
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_doppelstempel.text
+#: data/stempel/cards.json:sdc_stereo.text
+msgctxt "stempel.cards"
+msgid "2 × 3 Ärger."
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_doppelstempel.quip
+msgctxt "stempel.cards"
+msgid "Doppelt hält besser. Dreifach wäre Verschwendung."
+msgstr ""
+
+#. max 24
+#: data/stempel/cards.json:sdc_formular_27b.name
+msgctxt "stempel.cards"
+msgid "Formular 27b"
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_formular_27b.text
+#: data/stempel/cards.json:sdc_ablehnung.text
+msgctxt "stempel.cards"
+msgid "9 Ärger."
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_formular_27b.quip
+msgctxt "stempel.cards"
+msgid "Bitte in dreifacher Ausfertigung. Die dritte schreddern wir sofort."
+msgstr ""
+
+#. max 24
+#: data/stempel/cards.json:sdc_ablehnung.name
+msgctxt "stempel.cards"
+msgid "Ablehnungsbescheid"
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_ablehnung.quip
+msgctxt "stempel.cards"
+msgid "Leider nein. Mit freundlichen Grüßen, ohne Freude."
+msgstr ""
+
+#. max 24
+#: data/stempel/cards.json:sdc_wiedervorlage.name
+msgctxt "stempel.cards"
+msgid "Wiedervorlage"
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_wiedervorlage.text
+msgctxt "stempel.cards"
+msgid "Die nächste Nummer des Gegenübers rutscht 3 Werktage nach hinten. Nicht doppelt."
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_wiedervorlage.quip
+msgctxt "stempel.cards"
+msgid "Bitte noch einmal vorlegen. Persönlich. Mit Termin."
+msgstr ""
+
+#. max 24
+#: data/stempel/cards.json:sdc_kleingedrucktes.name
+msgctxt "stempel.cards"
+msgid "Kleingedrucktes"
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_kleingedrucktes.text
+msgctxt "stempel.cards"
+msgid "2 Ärger. Zu Beginn seiner nächsten 3 Nummern verliert das Gegenüber je 2 Geduld."
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_kleingedrucktes.quip
+msgctxt "stempel.cards"
+msgid "Steht alles drin. Seite 214, hellgrau auf weiß."
+msgstr ""
+
+#. max 24
+#: data/stempel/cards.json:sdc_durchatmen.name
+msgctxt "stempel.cards"
+msgid "Tief durchatmen"
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_durchatmen.text
+msgctxt "stempel.cards"
+msgid "+8 Geduld."
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_durchatmen.quip
+msgctxt "stempel.cards"
+msgid "Ein. Aus. Nicht in die Wartemarke pusten."
+msgstr ""
+
+#. max 24
+#: data/stempel/cards.json:sdc_umlaufmappe.name
+msgctxt "stempel.cards"
+msgid "Umlaufmappe"
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_umlaufmappe.text
+msgctxt "stempel.cards"
+msgid "Ganze Hand auf die Ablage, dann 5 neue Karten ziehen."
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_umlaufmappe.quip
+msgctxt "stempel.cards"
+msgid "Alles einmal im Kreis. Vielleicht kommt was Besseres zurück."
+msgstr ""
+
+#. max 24
+#: data/stempel/cards.json:sdc_wuchtschlag.name
+msgctxt "stempel.cards"
+msgid "Wuchtschlag"
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_wuchtschlag.text
+msgctxt "stempel.cards"
+msgid "13 Ärger."
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_wuchtschlag.quip
+msgctxt "stempel.cards"
+msgid "Mit voller Wucht. Und schlechter Haltung."
+msgstr ""
+
+#. max 24
+#: data/stempel/cards.json:sdc_leinen.name
+msgctxt "stempel.cards"
+msgid "Leinen-Fallstrick"
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_leinen.text
+msgctxt "stempel.cards"
+msgid "3 Ärger. Dienst nach Vorschrift: Die nächsten 2 Nummern des Gegenübers dauern 50 % länger."
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_leinen.quip
+msgctxt "stempel.cards"
+msgid "Bremst aus. Diesmal mit Dienstanweisung."
+msgstr ""
+
+#. max 24
+#: data/stempel/cards.json:sdc_erste_hilfe.name
+msgctxt "stempel.cards"
+msgid "Erste Hilfe"
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_erste_hilfe.text
+msgctxt "stempel.cards"
+msgid "+10 Geduld. Entfernt Kleingedrucktes."
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_erste_hilfe.quip
+msgctxt "stempel.cards"
+msgid "Pflaster drauf, Puste drüber, weiter im Text."
+msgstr ""
+
+#. max 24
+#: data/stempel/cards.json:sdc_kabelpeitsche.name
+msgctxt "stempel.cards"
+msgid "Kabelpeitsche"
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_kabelpeitsche.text
+msgctxt "stempel.cards"
+msgid "6 Ärger. Wiedervorlage: Die nächste Nummer des Gegenübers rutscht 3 Werktage nach hinten."
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_kabelpeitsche.quip
+msgctxt "stempel.cards"
+msgid "Starkstrom am Schalter. Bitte Abstand halten."
+msgstr ""
+
+#. max 24
+#: data/stempel/cards.json:sdc_suplex.name
+msgctxt "stempel.cards"
+msgid "Bahnsteig-Suplex"
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_suplex.text
+msgctxt "stempel.cards"
+msgid "60 %: 26 Ärger. Patzer: Sie verlieren 10 % Geduld, Ihre nächste Nummer kommt 2 Werktage später."
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_suplex.quip
+msgctxt "stempel.cards"
+msgid "Live, ungeprobt, ungepolstert."
+msgstr ""
+
+#. max 24
+#: data/stempel/cards.json:sdc_adelsflamme.name
+msgctxt "stempel.cards"
+msgid "Adelsflamme"
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_adelsflamme.text
+msgctxt "stempel.cards"
+msgid "10 Ärger."
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_adelsflamme.quip
+msgctxt "stempel.cards"
+msgid "Flamma nobilis! Fußnote 1: Brandschutzordnung beachten."
+msgstr ""
+
+#. max 24
+#: data/stempel/cards.json:sdc_schlabbern.name
+msgctxt "stempel.cards"
+msgid "Heiliges Schlabbern"
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_schlabbern.text
+msgctxt "stempel.cards"
+msgid "+12 Geduld."
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_schlabbern.quip
+msgctxt "stempel.cards"
+msgid "Eine Ehre, die keiner wollte."
+msgstr ""
+
+#. max 24
+#: data/stempel/cards.json:sdc_frostniesen.name
+msgctxt "stempel.cards"
+msgid "Frostniesen"
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_frostniesen.text
+msgctxt "stempel.cards"
+msgid "6 Ärger."
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_frostniesen.quip
+msgctxt "stempel.cards"
+msgid "Hatschi! Gesundheit gibt es an Schalter 5."
+msgstr ""
+
+#. max 24
+#: data/stempel/cards.json:sdc_gutachten.name
+msgctxt "stempel.cards"
+msgid "Gräfliches Gutachten"
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_gutachten.text
+msgctxt "stempel.cards"
+msgid "Eilvermerk: Diese und Ihre nächsten 2 Karten sind 40 % schneller bearbeitet."
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_gutachten.quip
+msgctxt "stempel.cards"
+msgid "Tempus fugit! Laut Gutachten sind Sie zu langsam."
+msgstr ""
+
+#. max 24
+#: data/stempel/cards.json:sdc_auftritt.name
+msgctxt "stempel.cards"
+msgid "Auftritt um Mitternacht"
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_auftritt.text
+msgctxt "stempel.cards"
+msgid "55 %: 24 Ärger. Patzer: eine Wiedervorlage für Sie selbst (Ihre nächste Nummer kommt 3 Werktage später)."
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_auftritt.quip
+msgctxt "stempel.cards"
+msgid "Umhang, Nebel, Pathos — und ein Teppichrand, den keiner gesehen hat."
+msgstr ""
+
+#. max 24
+#: data/stempel/cards.json:sdc_werbepflaster.name
+msgctxt "stempel.cards"
+msgid "Werbepflaster"
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_werbepflaster.text
+msgctxt "stempel.cards"
+msgid "+5 Geduld."
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_werbepflaster.quip
+msgctxt "stempel.cards"
+msgid "Heilt 5 Geduld. Zeigt dabei drei Werbespots."
+msgstr ""
+
+#. max 24
+#: data/stempel/cards.json:sdc_gegengift.name
+msgctxt "stempel.cards"
+msgid "Gegengift-Gurgler"
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_gegengift.text
+msgctxt "stempel.cards"
+msgid "+3 Geduld. Entfernt Kleingedrucktes."
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_gegengift.quip
+msgctxt "stempel.cards"
+msgid "Gurgeln, schlucken, unterschreiben."
+msgstr ""
+
+#. max 24
+#: data/stempel/cards.json:sdc_kaeltespray.name
+msgctxt "stempel.cards"
+msgid "Kältespray"
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_kaeltespray.quip
+msgctxt "stempel.cards"
+msgid "Kurz, kalt, quittiert."
+msgstr ""
+
+#. max 24
+#: data/stempel/cards.json:sdc_kaffee.name
+msgctxt "stempel.cards"
+msgid "Automatenkaffee"
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_kaffee.text
+msgctxt "stempel.cards"
+msgid "+3 Geduld. Eilvermerk: Diese und Ihre nächste Karte sind 40 % schneller bearbeitet."
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_kaffee.quip
+msgctxt "stempel.cards"
+msgid "Schmeckt nach Pappe. Wirkt nach Turbo."
+msgstr ""
+
+#. max 24
+#: data/stempel/cards.json:sdc_stereo.name
+msgctxt "stempel.cards"
+msgid "Bellen in Stereo"
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_stereo.quip
+msgctxt "stempel.cards"
+msgid "WUFF links, WUFF rechts. Fußnote 8: zählt doppelt."
+msgstr ""
+
+#. max 24
+#: data/stempel/cards.json:sdc_amtsstempel.name
+msgctxt "stempel.cards"
+msgid "Großer Amtsstempel"
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_amtsstempel.text
+msgctxt "stempel.cards"
+msgid "22 Ärger."
+msgstr ""
+
+#. max 110
+#: data/stempel/cards.json:sdc_amtsstempel.quip
+msgctxt "stempel.cards"
+msgid "Wiegt drei Kilo. Die Verantwortung mehr."
+msgstr ""
+
+#: data/stempel/cosmetics.json:sdk_back_durchschlag.name
+msgctxt "stempel.cosmetics"
+msgid "Durchschlag"
+msgstr ""
+
+#. max 110
+#: data/stempel/cosmetics.json:sdk_back_durchschlag.desc
+msgctxt "stempel.cosmetics"
+msgid "Für das beendete Lernduell."
+msgstr ""
+
+#: data/stempel/cosmetics.json:sdk_back_monokel.name
+msgctxt "stempel.cosmetics"
+msgid "Monokel"
+msgstr ""
+
+#. max 110
+#: data/stempel/cosmetics.json:sdk_back_monokel.desc
+msgctxt "stempel.cosmetics"
+msgid "Erster Sieg gegen den Grafen."
+msgstr ""
+
+#: data/stempel/cosmetics.json:sdk_back_wartemarke.name
+msgctxt "stempel.cosmetics"
+msgid "Wartemarke"
+msgstr ""
+
+#. max 110
+#: data/stempel/cosmetics.json:sdk_back_wartemarke.desc
+#: data/stempel/cosmetics.json:sdk_back_rohrpost.desc
+#: data/stempel/cosmetics.json:sdk_back_durchsage.desc
+#: data/stempel/cosmetics.json:sdk_mat_gummibaum.desc
+msgctxt "stempel.cosmetics"
+msgid "Aus dem Stempelheft."
+msgstr ""
+
+#: data/stempel/cosmetics.json:sdk_back_rohrpost.name
+msgctxt "stempel.cosmetics"
+msgid "Rohrpost"
+msgstr ""
+
+#: data/stempel/cosmetics.json:sdk_back_durchsage.name
+msgctxt "stempel.cosmetics"
+msgid "Durchsage"
+msgstr ""
+
+#: data/stempel/cosmetics.json:sdk_back_goldschnitt.name
+msgctxt "stempel.cosmetics"
+msgid "Goldschnitt"
+msgstr ""
+
+#. max 110
+#: data/stempel/cosmetics.json:sdk_back_goldschnitt.desc
+msgctxt "stempel.cosmetics"
+msgid "Das Stempelalbum ist vollständig."
+msgstr ""
+
+#: data/stempel/cosmetics.json:sdk_ink_kopierblau.name
+msgctxt "stempel.cosmetics"
+msgid "Kopierblau"
+msgstr ""
+
+#. max 110
+#: data/stempel/cosmetics.json:sdk_ink_kopierblau.desc
+msgctxt "stempel.cosmetics"
+msgid "Erster Sieg gegen Ferdi."
+msgstr ""
+
+#: data/stempel/cosmetics.json:sdk_ink_gold.name
+msgctxt "stempel.cosmetics"
+msgid "Gold"
+msgstr ""
+
+#. max 110
+#: data/stempel/cosmetics.json:sdk_ink_gold.desc
+#: data/stempel/cosmetics.json:sdk_title_stempelmeisterin.desc
+msgctxt "stempel.cosmetics"
+msgid "Erster Sieg gegen den Stempelmeister."
+msgstr ""
+
+#: data/stempel/cosmetics.json:sdk_mat_umlaufmappe.name
+msgctxt "stempel.cosmetics"
+msgid "Umlaufmappe"
+msgstr ""
+
+#. max 110
+#: data/stempel/cosmetics.json:sdk_mat_umlaufmappe.desc
+msgctxt "stempel.cosmetics"
+msgid "Erster Sieg gegen Ulla."
+msgstr ""
+
+#: data/stempel/cosmetics.json:sdk_mat_gummibaum.name
+msgctxt "stempel.cosmetics"
+msgid "Gummibaum"
+msgstr ""
+
+#: data/stempel/cosmetics.json:sdk_title_stempelmeisterin.name
+msgctxt "stempel.cosmetics"
+msgid "Stempelmeister:in"
+msgstr ""
+
+#: data/stempel/cosmetics.json:sdk_title_vollstaendige_akte.name
+msgctxt "stempel.cosmetics"
+msgid "Vollständige Akte"
+msgstr ""
+
+#. max 110
+#: data/stempel/cosmetics.json:sdk_title_vollstaendige_akte.desc
+msgctxt "stempel.cosmetics"
+msgid "Alle 24 Karten im Stempelalbum."
+msgstr ""
+
+#. max 110
+#. tag sd_explain, voice mod
+#: data/stempel/lines.json:sdl_explain_01.text
+msgctxt "stempel.lines"
+msgid "Stempelduell an Schalter 3! Lange Formulare, lange Wartezeit. Wer zuerst die Geduld verliert, verliert."
+msgstr ""
+
+#. max 110
+#. tag sd_intro, voice mod
+#: data/stempel/lines.json:sdl_intro_01.text
+msgctxt "stempel.lines"
+msgid "Willkommen bei STEMPELDUELL, der Spieleshow in meiner Show! Heute: Papier gegen Nerven."
+msgstr ""
+
+#. max 110
+#. tag sd_intro, voice mod
+#: data/stempel/lines.json:sdl_intro_02.text
+msgctxt "stempel.lines"
+msgid "Schalter 3 ist geöffnet. Ziehen Sie eine Nummer und lächeln Sie in Kamera 2."
+msgstr ""
+
+#. max 110
+#. tag sd_intro, voice mod
+#: data/stempel/lines.json:sdl_intro_03.text
+msgctxt "stempel.lines"
+msgid "STEMPELDUELL! Die einzige Show, in der Warten spannend ist. Behauptet jedenfalls die Werbeabteilung."
+msgstr ""
+
+#. max 110
+#. tag sd_first_card, voice mod
+#: data/stempel/lines.json:sdl_first_card_01.text
+msgctxt "stempel.lines"
+msgid "Eine Karte, ein Zug. Lange Formulare, lange Wartezeit. Wie im echten Leben, nur mit Kamera."
+msgstr ""
+
+#. max 110
+#. tag sd_turn_player, voice mod
+#: data/stempel/lines.json:sdl_turn_player_01.text
+msgctxt "stempel.lines"
+msgid "Nummer {ticket}, bitte. Sie sind dran."
+msgstr ""
+
+#. max 110
+#. tag sd_turn_player, voice mod
+#: data/stempel/lines.json:sdl_turn_player_02.text
+msgctxt "stempel.lines"
+msgid "Nummer {ticket} — Sie sind dran."
+msgstr ""
+
+#. max 110
+#. tag sd_turn_opp, voice mod
+#: data/stempel/lines.json:sdl_turn_opp_01.text
+msgctxt "stempel.lines"
+msgid "Nummer {ticket} — {opp} stempelt."
+msgstr ""
+
+#. max 110
+#. tag sd_turn_opp, voice mod
+#: data/stempel/lines.json:sdl_turn_opp_02.text
+msgctxt "stempel.lines"
+msgid "Nummer {ticket}: {opp} ist dran. Bitte nicht drängeln."
+msgstr ""
+
+#. max 110
+#. tag sd_wiedervorlage, voice mod
+#: data/stempel/lines.json:sdl_wiedervorlage_01.text
+msgctxt "stempel.lines"
+msgid "Wiedervorlage! Die Nummer rutscht nach hinten. Das Publikum liebt Verzögerungen. Ich auch."
+msgstr ""
+
+#. max 110
+#. tag sd_wiedervorlage, voice mod
+#: data/stempel/lines.json:sdl_wiedervorlage_02.text
+msgctxt "stempel.lines"
+msgid "Bitte noch einmal vorlegen! Drei Werktage später. Bis dahin senden wir Werbung."
+msgstr ""
+
+#. max 110
+#. tag sd_abgeprallt, voice mod
+#: data/stempel/lines.json:sdl_abgeprallt_01.text
+msgctxt "stempel.lines"
+msgid "Abgeprallt! Für Wiedervorlagen ist man hier schlicht nicht zuständig."
+msgstr ""
+
+#. max 110
+#. tag sd_weak, voice mod
+#: data/stempel/lines.json:sdl_weak_01.text
+msgctxt "stempel.lines"
+msgid "WUNDER PUNKT! Das ging mitten durch die Ablage."
+msgstr ""
+
+#. max 110
+#. tag sd_weak, voice mod
+#: data/stempel/lines.json:sdl_weak_02.text
+msgctxt "stempel.lines"
+msgid "Wunder Punkt getroffen! Da wellt sich das Papier."
+msgstr ""
+
+#. max 110
+#. tag sd_resist, voice mod
+#: data/stempel/lines.json:sdl_resist_01.text
+msgctxt "stempel.lines"
+msgid "Nicht zuständig! Der halbe Ärger landet bei der Poststelle."
+msgstr ""
+
+#. max 110
+#. tag sd_resist, voice mod
+#: data/stempel/lines.json:sdl_resist_02.text
+msgctxt "stempel.lines"
+msgid "Prallt halb ab. Falsche Abteilung, richtige Mühe."
+msgstr ""
+
+#. max 110
+#. tag sd_chain, voice mod
+#: data/stempel/lines.json:sdl_chain_01.text
+msgctxt "stempel.lines"
+msgid "Dreimal hintereinander dran! Das nennt man bei uns ‚Programmplanung‘."
+msgstr ""
+
+#. max 110
+#. tag sd_chain, voice mod
+#: data/stempel/lines.json:sdl_chain_02.text
+msgctxt "stempel.lines"
+msgid "Schon wieder Sie? Die Wartenummern-Anzeige glüht. Bitte weitermachen."
+msgstr ""
+
+#. max 110
+#. tag sd_show_success, voice mod
+#: data/stempel/lines.json:sdl_show_success_01.text
+msgctxt "stempel.lines"
+msgid "Ein Stempel wie ein Donnerschlag! Das kommt in die Jahresrückschau."
+msgstr ""
+
+#. max 110
+#. tag sd_show_success, voice mod
+#: data/stempel/lines.json:sdl_show_success_02.text
+msgctxt "stempel.lines"
+msgid "SHOW-KARTE geglückt! Liebes Publikum, liebe Ablagefächer: Das ist Quote."
+msgstr ""
+
+#. max 110
+#. tag sd_show_fail, voice mod
+#: data/stempel/lines.json:sdl_show_fail_01.text
+msgctxt "stempel.lines"
+msgid "Patzer am Schalter. Die Wiederholung läuft in Zeitlupe. In Dauerschleife."
+msgstr ""
+
+#. max 110
+#. tag sd_show_fail, voice mod
+#: data/stempel/lines.json:sdl_show_fail_02.text
+msgctxt "stempel.lines"
+msgid "Das war … mutig. Der Teppichrand bedankt sich für die Aufmerksamkeit."
+msgstr ""
+
+#. max 110
+#. tag sd_durchsage_warn, voice mod
+#: data/stempel/lines.json:sdl_durchsage_warn_01.text
+msgctxt "stempel.lines"
+msgid "Achtung, gleich eine Durchsage! Wer abheftet, hört nur die Hälfte."
+msgstr ""
+
+#. max 110
+#. tag sd_durchsage_warn, voice mod
+#: data/stempel/lines.json:sdl_durchsage_warn_02.text
+msgctxt "stempel.lines"
+msgid "Die Durchsage ist gleich dran. Abheften schont die Ohren — und die Geduld."
+msgstr ""
+
+#. max 110
+#. tag sd_durchsage, voice mod
+#: data/stempel/lines.json:sdl_durchsage_01.text
+msgctxt "stempel.lines"
+msgid "Durchsage: Bitte bewahren Sie Ruhe. Und Geduld. Vor allem Geduld."
+msgstr ""
+
+#. max 110
+#. tag sd_reshuffle, voice mod
+#: data/stempel/lines.json:sdl_reshuffle_01.text
+msgctxt "stempel.lines"
+msgid "Die Ablage wird neu sortiert. Alphabetisch nach Zufall."
+msgstr ""
+
+#. max 110
+#. tag sd_dienstschluss_warn, voice mod
+#: data/stempel/lines.json:sdl_dienstschluss_warn_01.text
+msgctxt "stempel.lines"
+msgid "Hinweis der Hausverwaltung: Dienstschluss bei Nummer 80. Danach wird vertagt."
+msgstr ""
+
+#. max 110
+#. tag sd_win, voice mod
+#: data/stempel/lines.json:sdl_win_01.text
+msgctxt "stempel.lines"
+msgid "Antrag bewilligt! Applaus vom Band — heute ausnahmsweise echt."
+msgstr ""
+
+#. max 110
+#. tag sd_win, voice mod
+#: data/stempel/lines.json:sdl_win_02.text
+msgctxt "stempel.lines"
+msgid "BEWILLIGT! Bitte nehmen Sie Ihren Durchschlag mit. Und Ihren Ruhm."
+msgstr ""
+
+#. max 110
+#. tag sd_loss, voice mod
+#: data/stempel/lines.json:sdl_loss_01.text
+msgctxt "stempel.lines"
+msgid "Antrag abgelehnt. Widerspruch ist zwecklos, Revanche nicht."
+msgstr ""
+
+#. max 110
+#. tag sd_loss, voice mod
+#: data/stempel/lines.json:sdl_loss_02.text
+msgctxt "stempel.lines"
+msgid "Abgelehnt — aber mit Stil. Die nächste Nummer wartet schon auf Sie."
+msgstr ""
+
+#. max 110
+#. tag sd_dienstschluss, voice mod
+#: data/stempel/lines.json:sdl_dienstschluss_01.text
+msgctxt "stempel.lines"
+msgid "Dienstschluss! Ihr Antrag ist vertagt. Bitte ziehen Sie morgen eine neue Nummer."
+msgstr ""
+
+#. max 110
+#. tag sd_forfeit, voice mod
+#: data/stempel/lines.json:sdl_forfeit_01.text
+msgctxt "stempel.lines"
+msgid "Antrag zurückgezogen. Kostet nichts, steht aber im Protokoll. Ganz klein."
+msgstr ""
+
+#. max 110
+#. tag sd_boss_intro, voice mod
+#: data/stempel/lines.json:sdl_boss_intro_01.text
+msgctxt "stempel.lines"
+msgid "Der Stempelmeister! Bitte erheben Sie sich. Nein, setzen Sie sich. Formular 1."
+msgstr ""
+
+#. max 110
+#. tag sd_boss_phase:2, voice mod
+#: data/stempel/lines.json:sdl_boss_phase_2_01.text
+msgctxt "stempel.lines"
+msgid "Achtung, eine Durchsage: Ab jetzt wird durchgesagt."
+msgstr ""
+
+#. max 110
+#. tag sd_boss_phase:3, voice mod
+#: data/stempel/lines.json:sdl_boss_phase_3_01.text
+msgctxt "stempel.lines"
+msgid "Er will nach Hause. Er wird schneller. Und gefährlicher."
+msgstr ""
+
+#. max 110
+#. tag sd_tut:1, voice mod
+#: data/stempel/lines.json:sdl_tut_1_01.text
+msgctxt "stempel.lines"
+msgid "Ihre Hand: fünf Karten. Tippen Sie den Stempel an — und noch einmal zum Spielen."
+msgstr ""
+
+#. max 110
+#. tag sd_tut:1:keys, voice mod
+#: data/stempel/lines.json:sdl_tut_1_keys_01.text
+msgctxt "stempel.lines"
+msgid "Ihre Hand: fünf Karten. Markieren Sie den Stempel und spielen Sie ihn."
+msgstr ""
+
+#. max 110
+#. tag sd_tut:2, voice mod
+#: data/stempel/lines.json:sdl_tut_2_01.text
+msgctxt "stempel.lines"
+msgid "Kurze Karte: Sie sind gleich wieder dran. Die Wartenummern-Anzeige zeigt es."
+msgstr ""
+
+#. max 110
+#. tag sd_tut_note:2, voice mopsula
+#: data/stempel/lines.json:sdl_tut_note_2_01.text
+msgctxt "stempel.lines"
+msgid "Fußnote 1: Kurze Formulare, kurze Wartezeit. Zwinger 7 wusste das. Mein Antrag auf Decke nicht."
+msgstr ""
+
+#. max 110
+#. tag sd_tut:3, voice mod
+#: data/stempel/lines.json:sdl_tut_3_01.text
+msgctxt "stempel.lines"
+msgid "Markieren Sie Formular 27b: Ihre nächste Nummer rutscht drei Werktage nach hinten. Dann spielen."
+msgstr ""
+
+#. max 110
+#. tag sd_tut:4, voice mod
+#: data/stempel/lines.json:sdl_tut_4_01.text
+msgctxt "stempel.lines"
+msgid "Ferdi legt Ihnen eine Wiedervorlage vor. Ihre nächste Nummer rutscht nach hinten."
+msgstr ""
+
+#. max 110
+#. tag sd_tut_note:4, voice mopsula
+#: data/stempel/lines.json:sdl_tut_note_4_01.text
+msgctxt "stempel.lines"
+msgid "Fußnote 3: Ihre Nummer rutscht. Ärgerlich, aber rechtmäßig."
+msgstr ""
+
+#. max 110
+#. tag sd_tut:5, voice mod
+#: data/stempel/lines.json:sdl_tut_5_01.text
+msgctxt "stempel.lines"
+msgid "Ferdi hält einen Ablehnungsbescheid bereit! Heften Sie ab: halber Ärger, und Sie tauschen eine Karte."
+msgstr ""
+
+#. max 110
+#. tag sd_tut:6, voice mod
+#: data/stempel/lines.json:sdl_tut_6_01.text
+msgctxt "stempel.lines"
+msgid "Da ist die Adelsflamme. Ferdis wunder Punkt ist Eilt. Spielen Sie sie!"
+msgstr ""
+
+#. max 110
+#. tag sd_tut_note:6, voice mopsula
+#: data/stempel/lines.json:sdl_tut_note_6_01.text
+msgctxt "stempel.lines"
+msgid "Fußnote 4: Papier mag kein Feuer."
+msgstr ""
+
+#. max 110
+#. tag sd_tie, voice mopsula
+#: data/stempel/lines.json:sdl_tie_01.text
+msgctxt "stempel.lines"
+msgid "Fußnote 12: Bei Gleichstand geht die Kundschaft vor. Das Einzige, was ich an Ämtern mag."
+msgstr ""
+
+#. max 110
+#. tag sd_hint:file, voice mopsula
+#: data/stempel/lines.json:sdl_hint_file_01.text
+msgctxt "stempel.lines"
+msgid "Kolleg:in, ich rate zum Abheften. Fußnote 9: Wer abheftet, hat mehr vom Leben."
+msgstr ""
+
+#. max 110
+#. tag sd_hint:durchsage, voice mopsula
+#: data/stempel/lines.json:sdl_hint_durchsage_01.text
+msgctxt "stempel.lines"
+msgid "Fußnote 10: Gleich kommt eine Durchsage. Abheften, Ohren zu, halber Ärger."
+msgstr ""
+
+#. max 110
+#. tag sd_hint:heal, voice mopsula
+#: data/stempel/lines.json:sdl_hint_heal_01.text
+msgctxt "stempel.lines"
+msgid "Fußnote 5: Erst durchatmen, dann stempeln. So stand es im Tierheim Pfotenglück an der Wand."
+msgstr ""
+
+#. max 110
+#. tag sd_hint:damage, voice mopsula
+#: data/stempel/lines.json:sdl_hint_damage_01.text
+msgctxt "stempel.lines"
+msgid "Kurz und schmerzhaft: diese Karte. Ärger je Werktag, Kolleg:in — nur das zählt."
+msgstr ""
+
+#. max 110
+#. tag sd_hint:tempo, voice mopsula
+#: data/stempel/lines.json:sdl_hint_tempo_01.text
+msgctxt "stempel.lines"
+msgid "Fußnote 2: Schnell bearbeitet. Danach sind Sie wieder vor dem Gegenüber dran."
+msgstr ""
+
+#. max 110
+#. tag sd_hint:weak, voice mopsula
+#: data/stempel/lines.json:sdl_hint_weak_01.text
+msgctxt "stempel.lines"
+msgid "Fußnote 4: Wunder Punkt! Ich spüre so etwas. Im Schwanz."
+msgstr ""
+
+#. max 110
+#. tag sd_hint:status, voice mopsula
+#: data/stempel/lines.json:sdl_hint_status_01.text
+msgctxt "stempel.lines"
+msgid "Fußnote 7: Zeit ist auch Ärger. Eine Verzögerung für das Gegenüber, ein Vergnügen für uns."
+msgstr ""
+
+#. max 110
+#. tag sd_hint:kill, voice mopsula
+#: data/stempel/lines.json:sdl_hint_kill_01.text
+msgctxt "stempel.lines"
+msgid "Fußnote 11: Das reicht. Quod erat stempelandum."
+msgstr ""
+
+#. max 110
+#. tag sd_hint:counter, voice mopsula
+#: data/stempel/lines.json:sdl_hint_counter_01.text
+msgctxt "stempel.lines"
+msgid "Fußnote 13: Der Leinen-Fallstrick hebt seinen Feierabend-Eilvermerk auf. Dienst nach Vorschrift!"
+msgstr ""
+
+#. max 110
+#. tag sd_hint:deck, voice mopsula
+#: data/stempel/lines.json:sdl_hint_deck_01.text
+msgctxt "stempel.lines"
+msgid "Fußnote 14: Ein Blick in die Akte lohnt sich. Ich sage das mit Liebe."
+msgstr ""
+
+#. max 110
+#. tag sd_hint:refresh, voice mopsula
+#: data/stempel/lines.json:sdl_hint_refresh_01.text
+msgctxt "stempel.lines"
+msgid "Fußnote 6: Diese Hand taugt nichts. Umlaufmappe, und alles kommt neu."
+msgstr ""
+
+#. max 110
+#. tag sd_hint:show, voice mopsula
+#: data/stempel/lines.json:sdl_hint_show_01.text
+msgctxt "stempel.lines"
+msgid "Fußnote 15: Eine Show-Karte. Riskant, laut, wunderbar. Ich bin dafür."
+msgstr ""
+
+#. max 110
+#. tag sd_akte:ferdi, voice mopsula
+#: data/stempel/lines.json:sdl_akte_ferdi_01.text
+msgctxt "stempel.lines"
+msgid "Fußnote 6: Ferdi hat einen wunden Punkt bei Eilt. Eine Adelsflamme mehr in der Mappe?"
+msgstr ""
+
+#. max 110
+#. tag sd_akte:graf, voice mopsula
+#: data/stempel/lines.json:sdl_akte_graf_01.text
+msgctxt "stempel.lines"
+msgid "Fußnote 2: Für Eiskalt bin ich nicht zuständig. Doppelter Unterpelz, Kolleg:in."
+msgstr ""
+
+#. max 110
+#. tag sd_akte:ulla, voice mopsula
+#: data/stempel/lines.json:sdl_akte_ulla_01.text
+msgctxt "stempel.lines"
+msgid "Fußnote 6: Ulla ist für Stempel nicht zuständig. Zwei Ablehnungsbescheide mehr?"
+msgstr ""
+
+#. max 110
+#. tag sd_akte:meister, voice mopsula
+#: data/stempel/lines.json:sdl_akte_meister_01.text
+msgctxt "stempel.lines"
+msgid "Fußnote 16: Rohrpost mag er gar nicht. Und der Leinen-Fallstrick bremst seinen Feierabend."
+msgstr ""
+
+#. max 110
+#. tag sd_opp_intro:ferdi, voice opp
+#: data/stempel/lines.json:sdl_opp_intro_ferdi_01.text
+msgctxt "stempel.lines"
+msgid "Ich habe noch keine Stempelfarbe. Ich habe einen Stift."
+msgstr ""
+
+#. max 110
+#. tag sd_opp_intro:graf, voice mopsula
+#: data/stempel/lines.json:sdl_opp_intro_graf_01.text
+msgctxt "stempel.lines"
+msgid "Ich spiele mit offenen Karten. Ehrensache. Fußnote 2: Und weil ich sonst verliere."
+msgstr ""
+
+#. max 110
+#. tag sd_opp_intro:ulla, voice opp
+#: data/stempel/lines.json:sdl_opp_intro_ulla_01.text
+msgctxt "stempel.lines"
+msgid "Gemäß Umlauf 12/4 beginnen wir pünktlich. Sie sind pünktlich. Sehr gut."
+msgstr ""
+
+#. max 110
+#. tag sd_opp_intro:meister, voice opp
+#: data/stempel/lines.json:sdl_opp_intro_meister_01.text
+msgctxt "stempel.lines"
+msgid "Bescheid. Bescheid. BESCHEID."
+msgstr ""
+
+#. max 110
+#. tag sd_opp_play:ferdi, voice opp
+#: data/stempel/lines.json:sdl_opp_play_ferdi_01.text
+msgctxt "stempel.lines"
+msgid "Das müssen wir wieder vorlegen."
+msgstr ""
+
+#. max 110
+#. tag sd_opp_play:graf, voice mopsula
+#: data/stempel/lines.json:sdl_opp_play_graf_01.text
+msgctxt "stempel.lines"
+msgid "Fußnote 17: Diesen Zug habe ich im Tierheim geübt. Mit einem Quietsche-Igel."
+msgstr ""
+
+#. max 110
+#. tag sd_opp_play:ulla, voice opp
+#: data/stempel/lines.json:sdl_opp_play_ulla_01.text
+msgctxt "stempel.lines"
+msgid "Gemäß Umlauf 12/4 ist das jetzt fällig."
+msgstr ""
+
+#. max 110
+#. tag sd_opp_play:meister, voice opp
+#: data/stempel/lines.json:sdl_opp_play_meister_01.text
+msgctxt "stempel.lines"
+msgid "Bescheid ergeht. Rechtsmittel: keine. Stempel: viele."
+msgstr ""
+
+#. max 110
+#. tag sd_opp_hit:ferdi, voice opp
+#: data/stempel/lines.json:sdl_opp_hit_ferdi_01.text
+msgctxt "stempel.lines"
+msgid "Bitte nicht knicken!"
+msgstr ""
+
+#. max 110
+#. tag sd_opp_hit:ulla, voice opp
+#: data/stempel/lines.json:sdl_opp_hit_ulla_01.text
+msgctxt "stempel.lines"
+msgid "Ablehnungen nehme ich persönlich. Ich lehne lieber selbst ab."
+msgstr ""
+
+#. max 110
+#. tag sd_opp_hit:meister, voice opp
+#: data/stempel/lines.json:sdl_opp_hit_meister_01.text
+msgctxt "stempel.lines"
+msgid "Unterbrechung. Wird vermerkt. Mit Nachdruck."
+msgstr ""
+
+#. max 110
+#. tag sd_opp_lose:ferdi, voice opp
+#: data/stempel/lines.json:sdl_opp_lose_ferdi_01.text
+msgctxt "stempel.lines"
+msgid "Erledigt. Ich stempel mir das selbst auf die Stirn. Mit Stift."
+msgstr ""
+
+#. max 110
+#. tag sd_opp_lose:graf, voice mopsula
+#: data/stempel/lines.json:sdl_opp_lose_graf_01.text
+msgctxt "stempel.lines"
+msgid "Gut gespielt, Kolleg:in. Fußnote 18: Ich bin stolz. Und ein kleines bisschen beleidigt."
+msgstr ""
+
+#. max 110
+#. tag sd_opp_lose:ulla, voice opp
+#: data/stempel/lines.json:sdl_opp_lose_ulla_01.text
+msgctxt "stempel.lines"
+msgid "Bewilligt. Gründlich geprüft. Eine Kopie für die Ablage — und eine für mich."
+msgstr ""
+
+#. max 110
+#. tag sd_opp_lose:meister, voice opp
+#: data/stempel/lines.json:sdl_opp_lose_meister_01.text
+msgctxt "stempel.lines"
+msgid "Bescheid: BEWILLIGT. In Gold. Sie haben es verdient."
+msgstr ""
+
+#. max 110
+#. tag sd_opp_win:ferdi, voice opp
+#: data/stempel/lines.json:sdl_opp_win_ferdi_01.text
+msgctxt "stempel.lines"
+msgid "Oh. Ich habe gewonnen? Darf ich das behalten?"
+msgstr ""
+
+#. max 110
+#. tag sd_opp_win:graf, voice mopsula
+#: data/stempel/lines.json:sdl_opp_win_graf_01.text
+msgctxt "stempel.lines"
+msgid "Fußnote 19: Revanche ist ein Menschenrecht. Und ein Mopsrecht."
+msgstr ""
+
+#. max 110
+#. tag sd_opp_win:ulla, voice opp
+#: data/stempel/lines.json:sdl_opp_win_ulla_01.text
+msgctxt "stempel.lines"
+msgid "Abgelehnt, aber fair. Lesen Sie Umlauf 12/4. Und kommen Sie wieder."
+msgstr ""
+
+#. max 110
+#. tag sd_opp_win:meister, voice opp
+#: data/stempel/lines.json:sdl_opp_win_meister_01.text
+msgctxt "stempel.lines"
+msgid "Bescheid: ABGELEHNT. Wiedervorlage in einem neuen Duell."
+msgstr ""
+
+#. max 110
+#. tag sd_mopsula_turn, voice mopsula
+#: data/stempel/lines.json:sdl_mopsula_turn_01.text
+msgctxt "stempel.lines"
+msgid "Fußnote 20: Das war ein Lehrzug. Bitte mitschreiben."
+msgstr ""
+
+#. max 110
+#. tag sd_mopsula_turn, voice mopsula
+#: data/stempel/lines.json:sdl_mopsula_turn_02.text
+msgctxt "stempel.lines"
+msgid "Fußnote 21: Merke: Wer zuerst stempelt, stempelt zuerst."
+msgstr ""
+
+#. max 110
+#. tag sd_mopsula_turn, voice mopsula
+#: data/stempel/lines.json:sdl_mopsula_turn_03.text
+msgctxt "stempel.lines"
+msgid "Fußnote 22: In dubio pro Mops."
+msgstr ""
+
+#. max 110
+#. tag sd_chat_show, voice chat
+#: data/stempel/lines.json:sdl_chat_show_01.text
+msgctxt "stempel.lines"
+msgid "SHOW-KARTE!!! mein puls"
+msgstr ""
+
+#. max 110
+#. tag sd_chat_show, voice chat
+#: data/stempel/lines.json:sdl_chat_show_02.text
+msgctxt "stempel.lines"
+msgid "ich hab den teppichrand gesehen"
+msgstr ""
+
+#. max 110
+#. tag sd_chat_chain, voice chat
+#: data/stempel/lines.json:sdl_chat_chain_01.text
+msgctxt "stempel.lines"
+msgid "3x hintereinander, ist das überhaupt erlaubt"
+msgstr ""
+
+#. max 110
+#. tag sd_chat_chain, voice chat
+#: data/stempel/lines.json:sdl_chat_chain_02.text
+msgctxt "stempel.lines"
+msgid "die anzeige glüht"
+msgstr ""
+
+#. max 110
+#. tag sd_chat_win, voice chat
+#: data/stempel/lines.json:sdl_chat_win_01.text
+msgctxt "stempel.lines"
+msgid "BEWILLIGT!!!"
+msgstr ""
+
+#. max 110
+#. tag sd_chat_win, voice chat
+#: data/stempel/lines.json:sdl_chat_win_02.text
+msgctxt "stempel.lines"
+msgid "gönn ich, ehrlich"
+msgstr ""
+
+#. max 110
+#. tag sd_chat_loss, voice chat
+#: data/stempel/lines.json:sdl_chat_loss_01.text
+msgctxt "stempel.lines"
+msgid "revanche, revanche"
+msgstr ""
+
+#. max 110
+#. tag sd_chat_handle, voice chat
+#: data/stempel/lines.json:sdl_chat_handle_01.text
+msgctxt "stempel.lines"
+msgid "stempelfan99"
+msgstr ""
+
+#. max 110
+#. tag sd_chat_handle, voice chat
+#: data/stempel/lines.json:sdl_chat_handle_02.text
+msgctxt "stempel.lines"
+msgid "mitleserin"
+msgstr ""
+
+#. max 110
+#. tag sd_chat_handle, voice chat
+#: data/stempel/lines.json:sdl_chat_handle_03.text
+msgctxt "stempel.lines"
+msgid "ablage_ole"
+msgstr ""
+
+#. max 110
+#. tag sd_chat_handle, voice chat
+#: data/stempel/lines.json:sdl_chat_handle_04.text
+msgctxt "stempel.lines"
+msgid "nummer_042"
+msgstr ""
+
+#. max 110
+#. tag sd_chat_handle, voice chat
+#: data/stempel/lines.json:sdl_chat_handle_05.text
+msgctxt "stempel.lines"
+msgid "durchschlag_dani"
+msgstr ""
+
+#. max 110
+#. tag sd_hall, voice mod
+#: data/stempel/lines.json:sdl_hall_01.text
+msgctxt "stempel.lines"
+msgid "Bitte ziehen Sie eine Nummer. Wir rufen Sie auf. Irgendwann."
+msgstr ""
+
+#. max 110
+#. tag sd_heft, voice mod
+#: data/stempel/lines.json:sdl_heft_01.text
+msgctxt "stempel.lines"
+msgid "Ein Stempel ins Stempelheft! Drei davon, und es gibt Nachschub."
+msgstr ""
+
+#. max 110
+#. tag sd_new_card, voice mod
+#: data/stempel/lines.json:sdl_new_card_01.text
+msgctxt "stempel.lines"
+msgid "Neue Karte im Stempelalbum: {card}. Bitte nicht knicken."
+msgstr ""
+
+#. max 110
+#. tag sd_season_win, voice mod
+#. {count} = a number
+#: data/stempel/lines.json:sdl_season_win_01.text
+msgctxt "stempel.lines"
+msgid "Erster Sieg in dieser Staffel! {count} Leute im Chat finden Papier jetzt spannend."
+msgstr ""
+
+#. max 110
+#. tag sd_album, voice mod
+#: data/stempel/lines.json:sdl_album_01.text
+msgctxt "stempel.lines"
+msgid "Das Stempelalbum ist vollständig! Titel: Vollständige Akte. Bitte einrahmen."
+msgstr ""
+
+#. max 110
+#: data/stempel/opponents.json:sdo_ferdi.name
+msgctxt "stempel.opponents"
+msgid "Ferdi Durchschlag"
+msgstr ""
+
+#. max 7
+#: data/stempel/opponents.json:sdo_ferdi.short
+msgctxt "stempel.opponents"
+msgid "FERDI"
+msgstr ""
+
+#. max 110
+#: data/stempel/opponents.json:sdo_ferdi.role
+msgctxt "stempel.opponents"
+msgid "Sachbearbeitung in Ausbildung · Schalter 3"
+msgstr ""
+
+#. max 110
+#: data/stempel/opponents.json:sdo_ferdi.akte
+msgctxt "stempel.opponents"
+msgid "Ein Formular-Golem aus Durchschlagpapier, erster Tag an Schalter 3. Hat noch keine Stempelfarbe."
+msgstr ""
+
+#. max 110
+#: data/stempel/opponents.json:sdo_ferdi.rule
+msgctxt "stempel.opponents"
+msgid "Wunder Punkt: Eilt trifft ihn besonders (× 1,5)."
+msgstr ""
+
+#. max 110
+#: data/stempel/opponents.json:sdo_graf.name
+msgctxt "stempel.opponents"
+msgid "Graf Mopsula"
+msgstr ""
+
+#. max 7
+#: data/stempel/opponents.json:sdo_graf.short
+msgctxt "stempel.opponents"
+msgid "GRAF"
+msgstr ""
+
+#. max 110
+#: data/stempel/opponents.json:sdo_graf.role
+msgctxt "stempel.opponents"
+msgid "Beistand · heute zur Übung gegenüber"
+msgstr ""
+
+#. max 110
+#: data/stempel/opponents.json:sdo_graf.akte
+msgctxt "stempel.opponents"
+msgid "Der Graf setzt sich zum Üben gegenüber und spielt mit offenen Karten. Ehrensache."
+msgstr ""
+
+#. max 110
+#: data/stempel/opponents.json:sdo_graf.rule
+msgctxt "stempel.opponents"
+msgid "Nicht zuständig: Eiskalt prallt halb ab (× 0,5)."
+msgstr ""
+
+#. max 110
+#: data/stempel/opponents.json:sdo_ulla.name
+msgctxt "stempel.opponents"
+msgid "Ulla Umlauf"
+msgstr ""
+
+#. max 7
+#: data/stempel/opponents.json:sdo_ulla.short
+msgctxt "stempel.opponents"
+msgid "ULLA"
+msgstr ""
+
+#. max 110
+#: data/stempel/opponents.json:sdo_ulla.role
+msgctxt "stempel.opponents"
+msgid "Abteilungsleitung · liest wirklich alles"
+msgstr ""
+
+#. max 110
+#: data/stempel/opponents.json:sdo_ulla.akte
+msgctxt "stempel.opponents"
+msgid "Ein Aktenschrank auf vier Beinen mit Schubladen-Mund und Lesebrille. Gründlich, nie gemein."
+msgstr ""
+
+#. max 110
+#: data/stempel/opponents.json:sdo_ulla.rule
+msgctxt "stempel.opponents"
+msgid "Immun: Wiedervorlagen prallen an ihr ab."
+msgstr ""
+
+#. max 110
+#: data/stempel/opponents.json:sdo_meister.name
+msgctxt "stempel.opponents"
+msgid "Der Stempelmeister"
+msgstr ""
+
+#. max 7
+#: data/stempel/opponents.json:sdo_meister.short
+msgctxt "stempel.opponents"
+msgid "MEISTER"
+msgstr ""
+
+#. max 110
+#: data/stempel/opponents.json:sdo_meister.role
+msgctxt "stempel.opponents"
+msgid "Zimmer 8.08 · spricht nur in Bescheiden"
+msgstr ""
+
+#. max 110
+#: data/stempel/opponents.json:sdo_meister.akte
+msgctxt "stempel.opponents"
+msgid "Eine hohe Gestalt im grauen Kittel, der Kopf ein Stempelkarussell mit zwölf Stempeln."
+msgstr ""
+
+#. max 110
+#: data/stempel/opponents.json:sdo_meister.rule
+msgctxt "stempel.opponents"
+msgid "Phasen und Durchsagen: Wer vor einer Durchsage abheftet, hört nur die Hälfte."
+msgstr ""
+
+#. max 110
+#: data/stempel/rules.json:sts_sd_wiedervorlage.name
+msgctxt "stempel.rules"
+msgid "Wiedervorlage"
+msgstr ""
+
+#. max 110
+#: data/stempel/rules.json:sts_sd_wiedervorlage.text
+msgctxt "stempel.rules"
+msgid "Die nächste Nummer rutscht 3 Werktage nach hinten. Endet bei dieser Nummer. Nicht doppelt."
+msgstr ""
+
+#. max 110
+#: data/stempel/rules.json:sts_sd_vorschrift.name
+msgctxt "stempel.rules"
+msgid "Dienst nach Vorschrift"
+msgstr ""
+
+#. max 110
+#: data/stempel/rules.json:sts_sd_vorschrift.text
+msgctxt "stempel.rules"
+msgid "Die nächsten 2 Nummern dauern 50 % länger."
+msgstr ""
+
+#. max 110
+#: data/stempel/rules.json:sts_sd_eilvermerk.name
+msgctxt "stempel.rules"
+msgid "Eilvermerk"
+msgstr ""
+
+#. max 110
+#: data/stempel/rules.json:sts_sd_eilvermerk.text
+msgctxt "stempel.rules"
+msgid "Karten sind 40 % schneller bearbeitet. Hebt Dienst nach Vorschrift auf."
+msgstr ""
+
+#. max 110
+#: data/stempel/rules.json:sts_sd_kleingedrucktes.name
+msgctxt "stempel.rules"
+msgid "Kleingedrucktes"
+msgstr ""
+
+#. max 110
+#: data/stempel/rules.json:sts_sd_kleingedrucktes.text
+msgctxt "stempel.rules"
+msgid "Zu Beginn jeder der nächsten 3 Nummern: 2 Geduld weniger."
+msgstr ""
+
+#. max 110
+#: data/stempel/rules.json:pu_sd_durchsage.name
+msgctxt "stempel.rules"
+msgid "Durchsage"
+msgstr ""
+
+#: data/stempel/rules.json:pu_sd_durchsage.short
+msgctxt "stempel.rules"
+msgid "DURCHSAGE"
+msgstr ""
+
+#. max 110
+#: data/stempel/rules.json:pu_sd_durchsage.text
+msgctxt "stempel.rules"
+msgid "Wenn ihre Nummer kommt: 4 Ärger, mit Abheften 2. Danach 6 Werktage Pause."
+msgstr ""

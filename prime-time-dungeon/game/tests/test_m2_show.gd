@@ -663,7 +663,8 @@ func test_show_battle_events_signals_and_lines() -> void:
 	assert_eq(kills, [{"enemy_id": "enm_rat", "overkill": false, "by": "attack", "member": "kai"}])
 	assert_eq(Game.state.show.stats["kills_total"], 1)
 	assert_has(Show.unlocked_this_battle(), "ach_first_blood")
-	Show.set("_now", float(Show.get("_now")) + Show.RT_LINE_GAP_SEC)   # 07 §9.3: one line per 6 s (first_fight)
+	# 07 §9.3: one line per 6 s (first_fight); + 0.01 so float rounding of _now never lands just below the gap
+	Show.set("_now", float(Show.get("_now")) + Show.RT_LINE_GAP_SEC + 0.01)
 	Show.on_battle_event(_ev(ActionEvent.Type.MOD_LINE, {"text": "boss_intro:enm_boss"}))
 	assert_eq(lines.back(), ["Applaus für den Hausmeister!", "mod", "boss_intro:enm_boss"], "MOD_LINE → say(tag)")
 	Events.enemy_killed.disconnect(cb_k)

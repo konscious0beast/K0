@@ -265,7 +265,7 @@ func _build_logo() -> void:
 	var top: Label = UiUtil.label("NOVA SYNDIKAT", &"LabelTitle", 64, UiTheme.C_ACCENT)
 	top.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(top)
-	var sub: Label = UiUtil.label("präsentiert", &"", 26, UiTheme.C_ACCENT_2)
+	var sub: Label = UiUtil.label(Tx.t("präsentiert"), &"", 26, UiTheme.C_ACCENT_2)   # 11 §3.14: a pack may override it
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(sub)
 	root.modulate.a = 0.0

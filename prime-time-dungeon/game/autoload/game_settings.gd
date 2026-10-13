@@ -41,6 +41,8 @@ var camera_shake: bool = true               # combat/camera_shake (§7.6)
 var notify_collapse: bool = false           # season/notify_collapse: collapse warnings and "Etage offen" (opt-in)
 var daily_summary: bool = false             # season/daily_summary: the daily summary at the login (V-9: off)
 var notify_asked: bool = false              # season/notify_asked: the first logout asked "Sollen wir Sie … wecken?"
+# --- Sprachen (11 §1.9, 11-L1): section [game] (menu: settings_menu "Sprache / Language", changeable on the title) ---
+var language: String = "auto"               # game/language: "auto" | "de" | "en" (LocaleLoader.setting_values())
 # true: save_to_disk() is a no-op returning OK, load_from_disk() keeps defaults
 var ephemeral: bool = false
 
@@ -68,6 +70,7 @@ func reset_defaults() -> void:
 	mod_live_url = ""
 	_reset_combat()                               # Echtzeitkampf (07, R1a)
 	_reset_season()                               # Staffeln (09, ST1-G)
+	_reset_language()                             # Sprachen (11, L1)
 
 
 ## Reads user://settings.cfg (missing file → defaults). No-op when ephemeral.
@@ -100,6 +103,7 @@ func load_from_disk() -> void:
 	mod_live_url = str(cfg.get_value("live", "mod_live_url", mod_live_url)) if OS.is_debug_build() else ""
 	_load_combat(cfg)                             # Echtzeitkampf (07, R1a)
 	_load_season(cfg)                             # Staffeln (09, ST1-G)
+	_load_language(cfg)                           # Sprachen (11, L1)
 
 
 ## Writes user://settings.cfg. Ephemeral: returns OK without writing.
@@ -125,6 +129,7 @@ func save_to_disk() -> Error:
 	cfg.set_value("live", "mod_live_url", mod_live_url)
 	_save_combat(cfg)                             # Echtzeitkampf (07, R1a)
 	_save_season(cfg)                             # Staffeln (09, ST1-G)
+	_save_language(cfg)                           # Sprachen (11, L1)
 	return cfg.save(PATH)
 
 
@@ -145,7 +150,7 @@ func to_dict() -> Dictionary:
 		"regie_twists": regie_twists,
 		"mod_live": mod_live,
 		"mod_live_url": mod_live_url,
-	}.merged(_combat_dict()).merged(_season_dict())   # Echtzeitkampf (07, R1a); Staffeln (09, ST1-G)
+	}.merged(_combat_dict()).merged(_season_dict()).merged({"language": language})   # 07 R1a; 09 ST1-G; 11 L1
 
 
 # --- Echtzeitkampf (07, R1a): §7.8 ------------------------------------------------------------------------------------
@@ -217,3 +222,19 @@ func _save_season(cfg: ConfigFile) -> void:
 
 func _season_dict() -> Dictionary:
 	return {"notify_collapse": notify_collapse, "daily_summary": daily_summary, "notify_asked": notify_asked}
+
+
+# --- Sprachen (11 §1.9, 11-L1): [game] language — "auto" follows the system language (German OS → German, else
+# English); FILE_VERSION stays 2, a missing key reads as "auto". Applied by Game.apply_language (LocaleLoader). -------
+
+func _reset_language() -> void:
+	language = LocaleLoader.AUTO
+
+
+func _load_language(cfg: ConfigFile) -> void:
+	var lg: String = str(cfg.get_value("game", "language", language))
+	language = lg if LocaleLoader.setting_values().has(lg) else LocaleLoader.AUTO
+
+
+func _save_language(cfg: ConfigFile) -> void:
+	cfg.set_value("game", "language", language)

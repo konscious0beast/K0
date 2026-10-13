@@ -1,0 +1,17 @@
+# A content pack's English PO over the base (11 §3.6) — a test fixture.
+msgid ""
+msgstr ""
+"Language: en\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Gift"
+msgstr "Venom"
+
+msgid "Testbild"
+msgstr "Test Card"
+
+msgid "{count} Kampf"
+msgid_plural "{count} Kämpfe"
+msgstr[0] "{count} bout"
+msgstr[1] "{count} bouts"

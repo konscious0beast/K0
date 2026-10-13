@@ -11,11 +11,12 @@ auch in der CI (`tools/pack_check.sh game/packs/testbild`, Paket 11-PB). Es gela
 | `data/mod_lines.json` | `patch` der zweiten `boss_intro`-Zeile der Königin (Sendestörung), `disable` der dritten `chat_bark`-Zeile |
 | `data/looks.json` | `add`: Outfit `lk_outfit_testbild` „Testbildstreifen“ in Testbild-Grau (Namen von Looks: höchstens 16 Zeichen) |
 | `art.json` | Graf Mopsula in den Testbild-Farben (nur `colors`; nicht im Paket-Hash) |
+| `locale/en.po` | Englisch (11-L1): die drei neuen Texte des Pakets (Bossname, Bossansage, Look) und ein Override eines Basis-Eintrags, der Untertitel des Titelbildschirms — Paket-PO > Basis-PO > msgid |
+| `locale/de.po` | ein deutscher Override eines Codetexts: die Bootkarte „präsentiert“ → „präsentiert im Testbild“ |
 
-**Offen (11-L1):** Die PO-Dateien kommen mit der i18n-Infrastruktur: `locale/en.po` (englische Texte der drei neuen
-msgids und ein Override eines Basis-Eintrags, der Untertitel des Titelbildschirms) und `locale/de.po` (Bootkarte:
-„präsentiert“ → „präsentiert im Testbild“). Mit ihnen wird `languages` in `pack.json` zu `["de", "en"]` —
-`PackLoader.read` verlangt zu jeder Sprache außer `source_lang` ihre `locale/<sprache>.po`.
+`languages` in `pack.json` ist `["de", "en"]`: `PackLoader.read` verlangt zu jeder Sprache außer `source_lang` ihre
+`locale/<sprache>.po`. Die PO-Dateien prüft `test_11_po_rules` mit denselben Regeln wie die Basis-PO (Längen der
+Basis-Einträge gelten auch für ihre Overrides); `tools/i18n.sh check` prüft sie zusätzlich mit `msgfmt`.
 
 Starten (Debug): `godot --path game -- --pack=testbild`. Die Spielstände liegen dann unter `user://packs/testbild/`.
 

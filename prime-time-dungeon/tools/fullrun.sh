@@ -7,11 +7,11 @@
 # Usage:
 #   tools/fullrun.sh [--strategy=thorough|rush|dawdle|typical|all] [--hero=kai|mopsula] [--seed=<int>]
 #                    [--pace=fast|human] [--liga=0|1|2] [--persona=none|canon|random|<org_id>]
-#                    [--rt-profile=typical|perfect|sloppy] [--log-dir=<dir>]
+#                    [--rt-profile=typical|perfect|sloppy] [--lang=de|en] [--log-dir=<dir>]
 #   tools/fullrun.sh --season=<ssn id> [--tempo=binge|calendar] [--mode=net|no_net] [--speed=<n>]
 #                    [--sessions=typical|20min|weekend|away2w|none] [--floors=<n>]
 #                    [--strategy=thorough|typical|rush|auto] [--hero=…] [--seed=…] [--pace=…] [--rt-profile=…]
-#                    [--log-dir=…]
+#                    [--lang=…] [--log-dir=…]
 #     thorough (default)  every group, chest, event and room; bosses; stairs → summary → credits
 #     rush                safe rooms, gates and bosses only (under-levelled)
 #     dawdle              idles after the first save until the floor collapses → Sendeschluss → load → finishes
@@ -27,6 +27,9 @@
 #   --rt-profile=…        the person the RtBotPlayer plays each combat as (07 §12.5; default typical) — the campaign
 #                         fights in real time only since R5b part 2b (07 §12.6; the CTB engine lives on in the
 #                         Stempelduell, 10)
+#   --lang=en             the run's language (docs/11 §1.9; default German like every transient run): its
+#                         "FULLRUN: stats" and "FULLRUN: OK" lines (with --season the "FULLRUN: season" line too) must
+#                         equal the German run's (11 §1.10, §5.9)
 #   --season=<ssn id>     09 ST1-I: a season instead of the campaign — the bot starts it (reproducibly: day 0 fixed,
 #                         the run seed) and plays every floor of the format (ssn_basis: 1–6, the finale on floor 6):
 #                         thorough = vollständig (default), typical = Pflichtweg, rush = bosses only, auto = the
@@ -54,6 +57,7 @@ PERSONA_ARG=()
 PROFILE_ARG=()
 SEASON_ARG=()             # Staffeln (09, ST1-I): --season → --fullrun-season (boot leaves the start to the bot)
 SEASON_OPTS=()
+LANG_ARG=()
 LOG_DIR=""
 for a in "$@"; do
   case "$a" in
@@ -70,6 +74,7 @@ for a in "$@"; do
     --tempo=binge|--tempo=calendar|--mode=net|--mode=no_net) SEASON_OPTS+=("$a") ;;
     --sessions=typical|--sessions=20min|--sessions=weekend|--sessions=away2w|--sessions=none) SEASON_OPTS+=("$a") ;;
     --speed=[0-9]*|--floors=[0-9]*) SEASON_OPTS+=("$a") ;;
+    --lang=*) LANG_ARG=("$a") ;;
     --log-dir=*) LOG_DIR="${a#--log-dir=}" ;;
     *) echo "fullrun.sh: unknown argument $a" >&2; exit 2 ;;
   esac
@@ -135,11 +140,11 @@ for run in "${RUNS[@]}"; do
   what="Floor 1"
   [ ${#SEASON_ARG[@]} -gt 0 ] && what="season ${SEASON_ARG[0]#--fullrun-season=} ${SEASON_OPTS[*]:-}"
   echo "== full run: strategy $st hero $hero ${SEED_ARG[*]:-} ${PACE_ARG[*]:-} ${LIGA_ARG[*]:-} ${PERS[*]:-}" \
-    "${PROFILE_ARG[*]:-} ($what, headless, fixed 60 fps) =="
+    "${PROFILE_ARG[*]:-} ${LANG_ARG[*]:-} ($what, headless, fixed 60 fps) =="
   start=$(date +%s)
   out="$(timeout "$WALL_LIMIT" "$GODOT" --headless --path "$WORK" --fixed-fps 60 --quit-after "$QUIT_AFTER" \
         -- --autoplay=full "--strategy=$st" "--hero=$hero" "${SEED_ARG[@]}" "${PACE_ARG[@]}" "${LIGA_ARG[@]}" \
-        "${PERS[@]}" "${PROFILE_ARG[@]}" "${SEASON_ARG[@]}" "${SEASON_OPTS[@]}" 2>&1 | filter_noise)"
+        "${PERS[@]}" "${PROFILE_ARG[@]}" "${LANG_ARG[@]}" "${SEASON_ARG[@]}" "${SEASON_OPTS[@]}" 2>&1 | filter_noise)"
   code=${PIPESTATUS[0]}
   end=$(date +%s)
   log_name="fullrun_$st"
@@ -151,6 +156,7 @@ for run in "${RUNS[@]}"; do
     for o in "${SEASON_OPTS[@]}" "${PACE_ARG[@]}"; do log_name="${log_name}_${o#--*=}"; done
     [ "$hero" != "kai" ] && log_name="${log_name}_$hero"
   fi
+  [ ${#LANG_ARG[@]} -gt 0 ] && log_name="${log_name}_${LANG_ARG[0]#--lang=}"
   if [ -n "$LOG_DIR" ]; then mkdir -p "$LOG_DIR" && printf '%s\n' "$out" > "$LOG_DIR/$log_name.log"; fi
   echo "$out" | grep -E '^FULLRUN: (\[|stats|season|OK)|Assertion failed|SCRIPT ERROR|ERROR:' \
     | grep -v '^FULLRUN: \[[0-9]*\]   hype' | tail -n 120

@@ -1,0 +1,8 @@
+{
+	"schema": 1,
+	"doc": "The languages of the game (11 §1.9, SP-5): code and own name; the first one is the source language (msgid = German text, no PO of its own). A content pack can only narrow this list (pack.json -> languages).",
+	"languages": [
+		{"code": "de", "name": "Deutsch"},
+		{"code": "en", "name": "English"}
+	]
+}

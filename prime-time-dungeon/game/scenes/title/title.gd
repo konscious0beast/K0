@@ -112,7 +112,7 @@ func _open_settings() -> void:
 	layer.layer = 60
 	layer.name = "SettingsLayer"
 	var menu: Control = (load(SETTINGS) as PackedScene).instantiate() as Control
-	menu.call("setup", {"framed": true})
+	menu.call("setup", {"framed": true, "language": true})   # Sprachen (11 §1.9): the language row only here
 	UiUtil.apply_theme(menu)
 	layer.add_child(menu)
 	add_child(layer)
@@ -121,6 +121,7 @@ func _open_settings() -> void:
 		layer.queue_free()
 		_modal = null
 		UiUtil.focus_later((menu_buttons["options"] as Control)))
+	menu.connect("language_changed", _on_language_changed)   # Sprachen (11 §1.9, L1)
 
 
 func _ask_quit() -> void:
@@ -195,7 +196,7 @@ func _build_logo(frame: Control) -> void:
 	_logo_b.add_theme_color_override("font_outline_color", Color("#3a1050"))
 	col.add_child(_logo_b)
 	col.add_child(UiUtil.spacer(10))
-	col.add_child(UiUtil.label("Eine Sendung des NOVA SYNDIKAT", &"", 17, UiTheme.C_ACCENT_2))
+	col.add_child(UiUtil.label(Tx.t("Eine Sendung des NOVA SYNDIKAT"), &"", 17, UiTheme.C_ACCENT_2))   # 11 §3.14
 	var air: PanelContainer = PanelContainer.new()
 	air.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	air.offset_left = -150
@@ -350,3 +351,33 @@ func _sd_on_tree_entered() -> void:
 	Events.overlay_mode_requested.emit.call_deferred(&"menu")
 	Sfx.music(&"title")
 	UiUtil.focus_later(extras_button)
+
+
+# --- Sprachen (11 §1.9, 11-L1) ----------------------------------------------------------------------------------------
+## A new language from the options: the title rebuilds itself in it (Router.goto(SCENE_TITLE)) and reopens the options
+## on the language row (setup {"options": "language"}). Hooked in additively like the Stempelduell section above.
+
+var _lang_hooked: bool = _lang_hook()
+
+
+func _lang_hook() -> bool:
+	ready.connect(_lang_reopen_options, CONNECT_ONE_SHOT)
+	return true
+
+
+func _on_language_changed(_code: String) -> void:
+	if _busy:
+		return                                  # one rebuild; it shows the language applied last
+	_busy = true
+	Router.goto(Router.SCENE_TITLE, {"options": "language"})
+
+
+func _lang_reopen_options() -> void:
+	var row: String = str(_params.get("options", ""))
+	if row == "":
+		return
+	_open_settings()
+	var layer: Node = _modal
+	var menu: Node = layer.get_child(0) if layer != null and layer.get_child_count() > 0 else null
+	if menu != null and menu.has_method("focus_row"):
+		menu.call("focus_row", row)

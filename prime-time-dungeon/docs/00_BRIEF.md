@@ -213,6 +213,7 @@ data/          JSON: die 23 GameData-Tabellen (statuses, skills, items, classes,
                achievements, sponsors, milestones, mod_lines, scenes, talents, species, marotten, twists, origins,
                looks, seasons, professions, cast, themes) + rt_balance.json + events.json (SHOWRUN, geladen von
                EventCatalog) + mod_filter.json (Wortfilter für „M.O.D. live“, ModLineFilter)
+locale/        Sprachen (11): formats.json, languages.json, contexts.json, pot/ (msgid-Vorlagen), en/ (englische PO)
 art/           shaders/, materials/, kit/ (prozedurale Mesh-Bauer: Figuren, Umgebung, Props, VFX)
 scenes/        boot/, title/, exploration/, combat/ (Echtzeitkampf, 07), stempel/ (Stempelduell, 10), safe_room/, ui/
                (wiederverwendbare UI)
@@ -220,7 +221,7 @@ tests/         run_tests.gd + test_*.gd
 ```
 
 Außerhalb von `res://`: `prime-time-dungeon/docs/` (Dokumente), `prime-time-dungeon/tools/` (check.sh, fullrun.sh, perf.sh,
-make_icons.sh), `prime-time-dungeon/README.md` (Einstieg).
+make_icons.sh, i18n.sh), `prime-time-dungeon/README.md` (Einstieg).
 
 Szenenfluss: `Boot → Title → (Neues Spiel | Laden) → Exploration(Etage N) ⇄ SafeRoom → … → Credits/GameOver`; gekämpft wird
 in der Exploration.

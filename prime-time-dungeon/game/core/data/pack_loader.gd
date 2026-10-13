@@ -30,8 +30,6 @@ const PACK_ENGINE: String = "pack_engine"
 const PACK_INVALID: String = "pack_invalid"
 ## Allowed file types of a pack folder (11 §3.2, §3.10): data, texts and notes only.
 const ALLOWED_EXT: PackedStringArray = ["json", "po", "md", "txt"]
-## The languages a pack may name — until 11-L1 brings locale/languages.json (11 §1.9).
-const LANGUAGES: PackedStringArray = ["de", "en"]
 const MANIFEST_KEYS: PackedStringArray = ["pack_schema", "id", "name", "version", "engine", "source_lang", "languages",
 	"default_lang", "licence", "touches", "art", "tone_exceptions"]
 const LICENCE_KEYS: PackedStringArray = ["holder", "contract", "scope", "valid_until", "credits", "notice"]
@@ -461,15 +459,16 @@ static func _read_manifest(p: PackDef) -> void:
 				or not commit.is_valid_hex_number(false))):
 			_fail(p, "pack.json.engine.commit", "\"\" or the 40 hex digits of the public engine commit")
 	p.source_lang = str(m.get("source_lang", ""))
-	if not LANGUAGES.has(p.source_lang):
-		_fail(p, "pack.json.source_lang", "'%s' is none of %s" % [p.source_lang, ", ".join(LANGUAGES)])
+	var known: PackedStringArray = LocaleLoader.codes()       # the game's languages (locale/languages.json, 11-L1)
+	if not known.has(p.source_lang):
+		_fail(p, "pack.json.source_lang", "'%s' is none of %s" % [p.source_lang, ", ".join(known)])
 	var langs: Variant = m.get("languages", null)
 	if not _is_str_array(langs) or (langs as Array).is_empty():
 		_fail(p, "pack.json.languages", "a non-empty list of language codes")
 	else:
 		for l: Variant in (langs as Array):
-			if not LANGUAGES.has(str(l)) or p.languages.has(str(l)):
-				_fail(p, "pack.json.languages", "'%s' unknown or twice (%s)" % [str(l), ", ".join(LANGUAGES)])
+			if not known.has(str(l)) or p.languages.has(str(l)):
+				_fail(p, "pack.json.languages", "'%s' unknown or twice (%s)" % [str(l), ", ".join(known)])
 			else:
 				p.languages.append(str(l))
 		if not p.languages.has(p.source_lang):

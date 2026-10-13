@@ -1,0 +1,9 @@
+# A content pack's German overrides (11 §3.6: msgid German → msgstr German) — a test fixture.
+msgid ""
+msgstr ""
+"Language: de\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Graf Mopsula"
+msgstr "Graf Testbild"

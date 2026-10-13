@@ -1,0 +1,62 @@
+# English UI texts — a test fixture of test_11_po / test_11_locale (msgfmt --check clean).
+msgid ""
+msgstr ""
+"Project-Id-Version: PRIME TIME DUNGEON\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# a translator comment
+#. max 24
+#: scenes/ui/ui_util.gd:26
+msgid "Gift"
+msgstr "Poison"
+
+#: scenes/ui/season_tab.gd:10
+msgctxt "season"
+msgid "Stand"
+msgstr "Standings"
+
+msgid "Stand"
+msgstr "Stand"
+
+#. {count} = a number
+msgid "{count} Kampf"
+msgid_plural "{count} Kämpfe"
+msgstr[0] "{count} fight"
+msgstr[1] "{count} fights"
+
+msgid "{count} Truhe"
+msgid_plural "{count} Truhen"
+msgstr[0] "{count} chest"
+msgstr[1] ""
+
+#, fuzzy
+#| msgid "Alter Text"
+msgid "Neuer Text"
+msgstr "Old text"
+
+msgid "Noch nicht übersetzt"
+msgstr ""
+
+msgid ""
+"Zwei Zeilen:\n"
+"die zweite"
+msgstr ""
+"Two lines:\n"
+"the second"
+
+msgid "Sie sagt \"Hallo\" mit \\ und\tTab"
+msgstr "She says \"Hello\" with \\ and\tTab"
+
+msgid "Oktal \101 und Hex \x42"
+msgstr "Octal \101 and hex \x42"
+
+#, c-format
+msgid "%d Credits"
+msgstr "%d credits"
+
+#~ msgid "Entfernt"
+#~ msgstr "Removed"

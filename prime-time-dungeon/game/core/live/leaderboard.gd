@@ -101,6 +101,8 @@ static func _int(v: Variant) -> int:
 
 ## "" for an entry of this kernel (or one without "sim_version"), else RunSim.OLD_VERSION / NEW_VERSION — the UI tags
 ## such entries "ältere Version" (RunSim.OLD_VERSION_TAG, 08 §10.2 Nr. 7: K1 shows it in the lobby and the results)
-## instead of treating them as a mismatch; they keep their rank.
-static func version_status(entry: Dictionary) -> String:
-	return RunSim.version_status(entry)
+## instead of treating them as a mismatch; they keep their rank. Inhaltspakete (11-P1, 11 §3.9): with the build's
+## `data` also RunSim.OTHER_PACK (an entry of another content pack: hidden) and OTHER_PACK_VERSION (tagged like an
+## older version).
+static func version_status(entry: Dictionary, data: GameData = null) -> String:
+	return RunSim.version_status(entry, data)

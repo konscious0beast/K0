@@ -95,6 +95,11 @@ const SIM_VERSION: int = 4
 const OLD_VERSION: String = "old_version"
 const NEW_VERSION: String = "new_version"
 const OLD_VERSION_TAG: String = "ältere Version"   # display tag of old replays and board entries (08 §10.2 Nr. 7)
+## Inhaltspakete (11-P1, 11 §3.9): a log / board entry of another content pack (also "with a pack" against "without")
+## is never replayed and its entry hidden; the same pack with another pack_hash is not replayed either and its entry is
+## tagged like OLD_VERSION. Only checked when the caller passes the GameData of the build (version_status's `data`).
+const OTHER_PACK: String = "other_pack"
+const OTHER_PACK_VERSION: String = "other_pack_version"
 const EVENTS_PATH: String = "res://data/events.json"
 
 var data: GameData = null
@@ -490,10 +495,10 @@ static func replay(p_data: GameData, p_log: RunLog, p_rules: Dictionary = {}, p_
 		return out
 	var src: RunLog = p_log.expanded() if p_log.has_batches() else p_log
 	var h: Dictionary = src.header
-	var ver: String = version_status(h)       # 08 §10.2 Nr. 7 / 07 §10.2: an older kernel's log is not replayed here —
-	out["version"] = ver                      # nor checked against this kernel's schema (R5b part 2b: no CTB commands)
-	if ver != "":
-		out["errors"] = PackedStringArray([version_error(h)])
+	var ver: String = version_status(h, p_data)   # 08 §10.2 Nr. 7 / 07 §10.2: an older kernel's log (11-P1: or one of
+	out["version"] = ver                      # another content pack) is not replayed here — nor checked against this
+	if ver != "":                             # kernel's schema (R5b part 2b: no CTB commands)
+		out["errors"] = PackedStringArray([version_error(h, p_data)])
 		return out
 	var errors: PackedStringArray = src.validate()
 	if src.rejected > 0:
@@ -516,7 +521,7 @@ static func replay(p_data: GameData, p_log: RunLog, p_rules: Dictionary = {}, p_
 				r = def.rules
 			if q.is_empty():
 				q = def.quest
-			errors.append_array(header_errors(h, def, r))
+			errors.append_array(header_errors(h, def, r, p_data))
 	errors.append_array(RunRules.rt_header_errors(h))
 	var st: GameState = null
 	if bool(h.get("from_save", false)):
@@ -601,11 +606,13 @@ static func identity_of(header: Dictionary) -> Dictionary:
 ## Header problems of a catalog event run: fixed seed (seed_policy fixed → EventDef.run_seed()), difficulty "prime"
 ## (event runs never lower it, 05 §10.1 rules.difficulty), league ∈ rules.leagues (required for several leagues), the
 ## combat mode is checked by RunRules.rt_header_errors (real time only since R5b part 2b). An older sim_version is
-## reported as old_version (no mismatch, 08 §10.2 Nr. 7).
-static func header_errors(h: Dictionary, def: EventDef, p_rules: Dictionary) -> PackedStringArray:
+## reported as old_version (no mismatch, 08 §10.2 Nr. 7); with `data` (11-P1) a log of another content pack as
+## other_pack / other_pack_version (11 §3.9).
+static func header_errors(h: Dictionary, def: EventDef, p_rules: Dictionary,
+		data: GameData = null) -> PackedStringArray:
 	var out: PackedStringArray = []
-	if version_status(h) != "":
-		out.append(version_error(h))
+	if version_status(h, data) != "":
+		out.append(version_error(h, data))
 	var seed_v: Variant = h.get("seed", h.get("run_seed", null))
 	if str(def.seed_policy.get("type", "")) == "fixed" and not ((typeof(seed_v) == TYPE_INT
 			or typeof(seed_v) == TYPE_FLOAT) and int(seed_v) == def.run_seed()):
@@ -1215,8 +1222,14 @@ func _season_events(evs: Array[ExploreEvent]) -> Array[ExploreEvent]:
 # --- version (08 §10.2 Nr. 7, 07 §10.2: the one SIM_VERSION bump of R1a + K0) --------------------------------------
 
 ## "" = replayable by this kernel (same version, or no "sim_version" key: hand-made logs, pre-header formats);
-## OLD_VERSION / NEW_VERSION for a log header or board entry of another kernel.
-static func version_status(h: Dictionary) -> String:
+## OLD_VERSION / NEW_VERSION for a log header or board entry of another kernel. Inhaltspakete (11-P1, 11 §3.9): with
+## the build's `data` first the content pack — OTHER_PACK / OTHER_PACK_VERSION (pack_status); without `data` exactly
+## the check of before.
+static func version_status(h: Dictionary, data: GameData = null) -> String:
+	if data != null:
+		var pack: String = pack_status(h, data)
+		if pack != "":
+			return pack
 	var v: Variant = h.get("sim_version", null)
 	if v == null or not JsonUtil.is_integral(v):
 		return ""
@@ -1227,11 +1240,26 @@ static func version_status(h: Dictionary) -> String:
 	return ""
 
 
-## The error line of a header of another version ("header: old_version …").
-static func version_error(h: Dictionary) -> String:
-	var st: String = version_status(h)
+## Inhaltspakete (11-P1, 11 §3.9): "" when a run-log header or board entry ("pack", "pack_version", "pack_hash" — absent
+## in the base game) belongs to the content pack of `data`; OTHER_PACK for another pack id (also a pack record in the
+## base game and the other way round), OTHER_PACK_VERSION for the same id with another pack_hash.
+static func pack_status(h: Dictionary, data: GameData) -> String:
+	var want: String = data.pack_id if data != null else ""
+	if str(h.get("pack", "")) != want:
+		return OTHER_PACK
+	if want != "" and str(h.get("pack_hash", "")) != data.pack_hash:
+		return OTHER_PACK_VERSION
+	return ""
+
+
+## The error line of a header of another version ("header: old_version …"; 11-P1: "header: other_pack …").
+static func version_error(h: Dictionary, data: GameData = null) -> String:
+	var st: String = version_status(h, data)
 	if st == "":
 		return ""
+	if st == OTHER_PACK or st == OTHER_PACK_VERSION:
+		return "header: %s — content pack '%s' %s, this build plays '%s' %s (11 §3.9: replayed only by its own build)" \
+			% [st, str(h.get("pack", "")), str(h.get("pack_version", "")), data.pack_id, data.pack_version]
 	var tag: String = OLD_VERSION_TAG if st == OLD_VERSION else "neuere Version"
 	return "header: %s — sim_version %d, this kernel is %d (%s: replay with the archive build of that version, 05 §4.3)" \
 		% [st, JsonUtil.to_int(h.get("sim_version", 0)), SIM_VERSION, tag]

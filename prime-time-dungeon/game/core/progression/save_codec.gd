@@ -19,6 +19,12 @@ class_name SaveCodec extends RefCounted
 ##   since ST1-B a season slot file also carries the top-level key "journal" (the id of its journal, written by Save —
 ##   validate ignores it) and the summary a "season" block. Contract pass 4 (09 §8.2): decode clamps a member's level
 ##   to level_cap — 50 in a season, 10 outside one (unchanged for every campaign save).
+##   Content pack block (11 §3.9, 11-P1 — additive, no version bump): a save of a build with a content pack carries
+##   "pack": {"id", "version", "hash"} at the top level (encode's `pack`, GameData.pack_record); a file without it is
+##   a save of the base game. decode checks it FIRST after the header, before migrate / validate / _sanitize (which
+##   drops unknown ids silently): another pack id — also a pack save in the base game and the other way round — is
+##   refused (other_pack, MSG_OTHER_PACK, no backup fallback); the same id with another hash loads like a save after a
+##   game update, with the warning MSG_PACK_UPDATED (other_pack_version).
 
 const FORMAT: String = "ptd_save"
 const VERSION: int = 2
@@ -26,6 +32,11 @@ const VERSION: int = 2
 const V1_CTB_HP_FACTOR: int = 4
 const TICKS_PER_SEC: int = 30
 const MSG_NEWER: String = "Spielstand stammt aus neuerer Version"
+## Inhaltspakete (11-P1, 11 §3.9): refusal and hint of the pack check; the codes are data, the display translates them.
+const MSG_OTHER_PACK: String = "Spielstand gehört zu einem anderen Inhaltspaket"
+const MSG_PACK_UPDATED: String = "Das Inhaltspaket wurde aktualisiert"
+const OTHER_PACK: String = "other_pack"
+const OTHER_PACK_VERSION: String = "other_pack_version"
 ## Renamed ids (no version bump): an older save keeps the skill / class under its new id instead of dropping it.
 ## Polish pass 2026-10-10 (IP distance, no royalty or diva-pet motif for Graf Mopsula): "Königlicher Erlass" →
 ## "Gräfliches Gutachten", class "Diva" → "Zeremonienmeister".
@@ -36,10 +47,11 @@ const PROF_VALUE_MAX: int = 300              # Staffeln (09 §8.5): profession v
 static var _errors: PackedStringArray = []
 
 
-static func encode(state: GameState, game_version: String) -> Dictionary:
+## `pack` (11-P1): the save block of the build's content pack (GameData.pack_record); {} = the base game, no block.
+static func encode(state: GameState, game_version: String, pack: Dictionary = {}) -> Dictionary:
 	if state == null:
 		return {}
-	return {
+	var out: Dictionary = {
 		"format": FORMAT,
 		"version": VERSION,
 		"game_version": game_version,
@@ -47,6 +59,9 @@ static func encode(state: GameState, game_version: String) -> Dictionary:
 		"summary": summary(state),
 		"state": state.to_dict(),
 	}
+	if not pack.is_empty():
+		out["pack"] = pack.duplicate(true)
+	return out
 
 
 ## null on fatal error; errors via last_errors().
@@ -59,6 +74,14 @@ static func decode(d: Dictionary, data: GameData) -> GameState:
 	if version > VERSION:
 		_errors.append("%s (v%d > v%d)" % [MSG_NEWER, version, VERSION])
 		return null
+	match pack_status(d, data):                  # Inhaltspakete (11-P1, 11 §3.9): before migrate, validate, _sanitize
+		OTHER_PACK:
+			_errors.append("%s (%s: '%s', this build plays '%s')" % [MSG_OTHER_PACK, OTHER_PACK, pack_id_of(d),
+				data.pack_id if data != null else ""])
+			return null
+		OTHER_PACK_VERSION:
+			_warn("%s (%s: %s → %s)" % [MSG_PACK_UPDATED, OTHER_PACK_VERSION,
+				str((d["pack"] as Dictionary).get("version", "")), data.pack_version])
 	var m: Dictionary = migrate(d)
 	if m.is_empty():
 		_errors.append("unsupported save version")
@@ -163,6 +186,29 @@ static func summary(state: GameState) -> Dictionary:
 
 static func last_errors() -> PackedStringArray:
 	return _errors.duplicate()
+
+
+## Inhaltspakete (11-P1, 11 §3.9): "" when the save belongs to the content pack of `data` (none: no "pack" block),
+## OTHER_PACK for another pack id (a pack save in the base game or the other way round; a block that is no object
+## counts as another pack), OTHER_PACK_VERSION for the same id with another hash. data == null: the base game.
+static func pack_status(d: Dictionary, data: GameData) -> String:
+	var want: String = data.pack_id if data != null else ""
+	var block: Variant = d.get("pack", null)
+	if block != null and not (block is Dictionary):
+		return OTHER_PACK
+	if pack_id_of(d) != want:
+		return OTHER_PACK
+	if want != "" and str((block as Dictionary).get("hash", "")) != data.pack_hash:
+		return OTHER_PACK_VERSION
+	return ""
+
+
+## The pack id of a save dict ("" = the base game; "?" for a block that is no object).
+static func pack_id_of(d: Dictionary) -> String:
+	var block: Variant = d.get("pack", null)
+	if block == null:
+		return ""
+	return str((block as Dictionary).get("id", "")) if block is Dictionary else "?"
 
 
 ## Staffeln (09 §8.2, contract pass 4): the highest level a loaded member may have — Balance.SEASON_LEVEL_CAP (50) in a

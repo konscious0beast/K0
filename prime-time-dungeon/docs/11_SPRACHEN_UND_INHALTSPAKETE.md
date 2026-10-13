@@ -46,7 +46,8 @@
 > `PackDef`, `PackLoader` und die Paketregeln, der Vertrags-Durchgang 11-P1, `DB.pack`, Aufzeichnungen und Ablehnungen,
 > die Fehlerkarte beim Start, das Beispielpaket „Testbild“ (ohne PO-Dateien, die kommen mit L1) und die IP-Firewall
 > Schichten 1 und 2 in der Variante F-20. Ohne Paket bleibt alles bitgleich: `DB.data_hash()` vor und nach P1
-> `6c17e6ce…3ec3`, `fullrun.sh` mit gleichen Ereigniszeilen und Statistiken.
+> `6c17e6ce…3ec3`, `fullrun.sh` mit gleichen Ereigniszeilen und Statistiken (bis auf den Münzwurf der Darstellung in
+> `mod_tags`, Kap. 5.3).
 >
 > **Namen:** Der Orchestrator nennt die Mechaniken M1–M8. Weil „M0–M8“ die Module aus 02_TECH sind (M1 ist der
 > CTB-Kern, M8 das Live-Modul), heißen sie hier **MB1–MB8** (Mechanik-Baukasten), gleicher Inhalt. Die übrigen
@@ -1433,7 +1434,9 @@ Fehlerkarte in `boot.gd` statt `route()`. (6) „Testbild“ unter `game/packs/t
 `test_11_pack_records`, `test_11_ip_firewall` (Schichten 1 und 2, F-20), zusammen 47 Tests. **Gate:** `check.sh` grün;
 `DB.data_hash()` ohne Paket vor und nach P1
 `6c17e6ce623efbb3c584eae1d121c2c04077752084786f7d776507098e593ec3`; `fullrun.sh` (`--strategy=all`, `--hero=mopsula`,
-`--liga=1`, `--liga=2`) mit denselben Ereigniszeilen und Statistiken wie `main`; ein Debug-Lauf mit `--pack=testbild`
+`--liga=1`, `--liga=2`) mit denselben Ereigniszeilen und Statistiken wie `main` — bis auf einen Münzwurf der Darstellung
+in `mod_tags`: Ob M.O.D. im Safe Room die Hobby-Variante von `persona_safe_room` sagt, entscheidet `Show._fx_rng`
+(`randomize()`, `VARIANT_CHANCE` 0,5); er wechselt auch zwischen zwei Läufen desselben Builds. Ein Debug-Lauf mit `--pack=testbild`
 startet bis zum Titel (auch der Autoplay-Smoke), die Königin heißt dort „Die Testbild-Königin von Gleis 9“, und ein
 Testbild-Spielstand lädt ohne das Paket nicht (`other_pack`).
 

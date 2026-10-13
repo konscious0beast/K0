@@ -991,7 +991,8 @@ Bestenlisten am `data_hash` hängen.
 ### 3.12 IP-Firewall (O-6, SP-17)
 
 **Ziel:** Kein Paket mit fremden Inhalten gelangt in dieses Repository — und wenn doch, schlägt die öffentliche CI
-fehl. Ohne dass dafür fremde Begriffe im öffentlichen Repository stehen.
+fehl. Ohne dass dafür fremde Begriffe im öffentlichen Repository stehen. (Wird das Repository privat, gilt F-20: das
+Paket darf dann hier liegen, und die Schichten schützen die Grund-Builds statt des Repositorys.)
 
 **Schicht 1 — Struktur** (`test_11_ip_firewall`, `tools/ip_firewall.sh structure`; ohne Geheimnis, läuft überall):
 
@@ -1575,3 +1576,4 @@ Etage 1, Gegner, Gegenstände, Achievements), dann Staffel-Inhalte, dann das Ste
 | F-17 | `events.json` mit `name_key`/`label_key`? | **Auf deutsche Textfelder umstellen** wie alle anderen Tabellen (02_TECH §4.1); bis dahin sind die Rückfalltexte in `event_info.gd` `NAME_KEYS` die msgids. |
 | F-18 | UI-Farben (`Palette`, `UiTheme`) je Paket? | **Nicht in v1** (Konstanten). Verlangt eine Partnerseite es, kommt `ui_palette` in `art.json` mit einem eigenen Vertrags-Durchgang. |
 | F-19 | 04 und 06 und der Sprachtest aus 09 nennen das Werk, von dem PTD Abstand hält. Neutralisieren? | **Lassen.** Die Nennungen sind beschreibend, kein fremder Inhalt, und begründen den Abstand; die Baseline der Firewall erfasst sie. Vor einem öffentlichen Auftritt prüft das Anwalts-Memo (04 §2.3) die Formulierungen. |
+| F-20 | Was gilt, wenn **dieses Repository privat** wird (Wunsch der Nutzer:in, 2026-10-13)? | **Dann darf ein lizenziertes Paket hier liegen** (`game/packs/<id>/`, eigener Branch), und die Firewall schützt die **Builds** statt des Repositorys: Grund-Exporte schließen `packs/*` aus (PB), `ip_words` prüft weiter alle Grundinhalte (PTD bleibt veröffentlichbar), Schicht 1 erlaubt Ordner aus einer Liste `PRIVATE_PACKS` nur, solange die CI `github.event.repository.private` meldet (wird das Repository wieder öffentlich, schlägt sie fehl), Schicht 3 (HMAC) entfällt, solange es privat ist. Das CI-Minutenbudget privater Repositorys verlangt dann sparsamere Läufe (PB). |

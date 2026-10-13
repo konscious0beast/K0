@@ -494,6 +494,8 @@ prime-time-dungeon/
     │                    KI-Admin: TwistApplier (Twists), RegieDirector (Offline-Regie ab Etage 2)
     ├── data/            26 JSON-Dateien: 23 GameData-Tabellen (seit 09 ST0 auch seasons, professions, cast, themes) +
     │                    rt_balance.json + events.json (SHOWRUN-Events) + mod_filter.json (Filter für „M.O.D. live“)
+    ├── locale/          geplant (11): Übersetzungen als PO-Dateien je Sprache (en/), POT-Vorlagen, Zahlenformate
+    ├── packs/           geplant (11): Inhaltspakete aus reinen Daten; im Repo nur das Testpaket „Testbild“
     ├── art/             shaders/, materials/, kit/ (prozedurale Figuren, Räume, Props, VFX), gallery/, icons/
     ├── scenes/          boot/, title/, exploration/, combat/ (Echtzeitkampf: Director, HUD), safe_room/, ui/
     └── tests/           run_tests.gd, test_*.gd, lib/, fixtures/, perf/, tools/, capture.gd, capture_recipes.gd
@@ -523,6 +525,7 @@ Systeme) > 01_GDD / 02_TECH / 03_ART / 05 (je nach Thema) > 04**.
 | [`docs/08_CASTING.md`](docs/08_CASTING.md) | Casting: eigene Kandidat:in (Persona), Vorleben, persönlicher Erzählstrang, Aussehen; KI optional |
 | [`docs/09_STAFFELN.md`](docs/09_STAFFELN.md) | Staffeln: Sendeplan bis Etage 18, KI-Besetzung, Schläfer und Ausloggen, Tod und Modi, Fertigkeiten (ST1–ST3) |
 | [`docs/10_MINISPIEL_STEMPELDUELL.md`](docs/10_MINISPIEL_STEMPELDUELL.md) | Mini-Spiel „Stempelduell“: der CTB-Kampf als optionales Karten-Duell (Etage 8; bis dahin Titel → Extras → Vorschau), Umsetzung SD1–SD3 (SD1, die Engine-Auslagerung, ist umgesetzt) |
+| [`docs/11_SPRACHEN_UND_INHALTSPAKETE.md`](docs/11_SPRACHEN_UND_INHALTSPAKETE.md) | Sprachen und Inhaltspakete (geplant): Englisch als zweite Sprache (gettext-PO, Glossar, Stimme), Inhaltspakete aus reinen Daten mit IP-Firewall, Mechanik-Baukasten (CR-39); Pakete P1, L1–L5, A1, MB1–MB8, PB |
 | [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) | Messergebnisse der Performance-Probe gegen die Budgets aus 02_TECH §12.1 |
 
 ## 10. Screenshots

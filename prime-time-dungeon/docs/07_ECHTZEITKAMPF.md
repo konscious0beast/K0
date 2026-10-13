@@ -3810,6 +3810,15 @@ bitgleich.
 | CR-32 o (ST1-G) | `core/rt/rt_sim.gd`, `core/rt/rt_setup.gd` | **Schlafkampf ohne Hilfskonstruktionen** (09 G-6): (1) ein Schalter „Autopilot für jede Figur der Party“ im Setup — heute schickt `SleepFight` nach jedem `CONTROL_CHANGED` den Autopilot neu an die gesteuerte Figur; (2) ein öffentliches `RtSim.result_now(outcome)` — das Ergebnis des Kampfs, wie es in diesem Tick steht (Flucht beim Notfall-Rückzug oder wenn die Streife weiterzieht); heute setzt `SleepFight.flight` es aus `tally` und den Einheiten zusammen (gleiche Felder wie `rt_result.gd` für eine Flucht). Ohne Staffel unberührt | Eigentum `core/rt` |
 | CR-32 p (Recall, 2026-10-12) | `scenes/combat/ui/unit_frames.gd` (Party-Rahmen), die Bauchbinde beim Kampfstart (`scenes/combat`) | **Spezies und Klasse im Kampf** (06 §3.2, §3.5; 09 R-14): (1) nach dem Recall nennt der Party-Rahmen unter dem Namen „Spezies · Klasse“ (die Form der statischen Helfer `pair_text`/`passive_text` in `scenes/ui/recall.gd`, z. B. „Kachelgolem · Abrissbirne“; gekürzt mit Ellipse, der Tooltip trägt beides und den Satz des Passivs), vorher nichts; (2) eine Figur mit `spc_original` bekommt beim Kampfstart die Bauchbinde „ORIGINAL“ (06 §3.2; einmal je Kampf wie die Show-Boss-Bauchbinde, nicht über einem Boss-Intro). Daten: `PartyMember.species_id`/`class_id`, Namen aus `species.json`/`classes.json`; nur Anzeige, die Sim bleibt unberührt; ohne Staffel nie sichtbar (`class_id` bleibt `""`). Bis dahin zeigt Pausemenü → Party beides | Eigentum `scenes/combat` (R3) |
 
+**Änderungsantrag aus 11 (CR-39, 2026-10-13):** `11_SPRACHEN_UND_INHALTSPAKETE.md` Kap. 4 beschreibt acht allgemeine,
+über Daten gesteuerte Bausteine für den Echtzeitkampf, die Inhaltspakete und PTD-Inhalte nutzen (MB1 Aasfresser, MB2
+Teilung beim Tod, MB3 Bahnen-Boss, MB4 Umgebungssieg, MB5 Spawner, MB6 Ort als Gegner, MB7 Wurf-Sprengsätze, MB8
+Gesprächsboss). Ihr Code in `core/rt/**` und `scenes/combat/**` ist CR-39 a–h (Tabelle 11 Kap. 4.11), dazu CR-39 i: die
+Texte des Kampf-HUD über den Sprachhelfer `Tx` und die Markierung der Anzeige-Texte des Kerns („Erstschlag!“ …). Jeder
+Punkt bleibt ohne die neuen Datenfelder bitgleich (neue Laufzeitfelder nur geschrieben, wenn gesetzt; neue
+Ereignis-Typen am Ende) und wird einzeln umgesetzt, wenn ein Inhalt ihn braucht; die Vokabulare kommen im
+Vertrags-Durchgang 11-MB.
+
 ---
 
 ## 13. Risiken und offene Punkte

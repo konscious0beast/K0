@@ -645,16 +645,17 @@ func _set_season_choice(key: String, i: int) -> void:
 
 # --- Sprachen (11 §1.9, 11-L1) ----------------------------------------------------------------------------------------
 # The row "Sprache / Language" — bilingual, so it is found in the wrong language too: Automatisch / Deutsch / English
-# (the own names of locale/languages.json). Changeable only where setup() passes "language": true, the title's options;
-# elsewhere (the pause menu) it is shown locked with "Im Titelmenü änderbar": screens build their texts once, a switch
-# in a running game would mix languages. A change saves [game] language, applies it (Game.apply_language) and — when
-# the language of the run changes — emits language_changed: the title rebuilds itself in the new language.
+# (the own names of locale/languages.json; with a content pack only its languages, 11 §3.6). Changeable only where
+# setup() passes "language": true, the title's options; elsewhere (the pause menu) it is shown locked with "Im
+# Titelmenü änderbar": screens build their texts once, a switch in a running game would mix languages. A change saves
+# [game] language, applies it (Game.apply_language) and — when the language of the run changes — emits
+# language_changed: the title rebuilds itself in the new language.
 
 signal language_changed(code: String)
 
 
 func _language_row() -> void:
-	var values: PackedStringArray = LocaleLoader.setting_values()
+	var values: PackedStringArray = LocaleLoader.setting_values(LocaleLoader.pack_languages(DB.pack))   # 11 §3.6
 	var names: PackedStringArray = []
 	for v: String in values:
 		names.append(Tx.t("Automatisch") if v == LocaleLoader.AUTO else LocaleLoader.language_name(v))

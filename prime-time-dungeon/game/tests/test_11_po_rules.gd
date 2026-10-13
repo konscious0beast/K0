@@ -1,12 +1,13 @@
 extends TestCase
 ## 11-L1 (11 §1.5, §1.8, §1.12): the rules of every translation in locale/en/*.po — the checks of
-## tests/tools/i18n/po_rules.gd, which tools/i18n.sh check runs too: placeholders ⊆ msgid (SP-9), the %-directives of
-## c-format entries, the length limit of the field ("#. max N", persona placeholders at their longest), the same digit
-## runs, no glyph the font lacks; "{count}" right before a word in a data text is a warning (F-16). Coverage is only
-## reported: the gate "100 % translated, 0 fuzzy" is for builds shipped in English (L4, 11 §5.9). Plus the rules
-## themselves on made-up entries.
+## core/data/validators/po.gd, which tools/i18n.sh check and the pack rules (validators/pack.gd) run too: placeholders
+## ⊆ msgid (SP-9), the %-directives of c-format entries, the length limit of the field ("#. max N", persona
+## placeholders at their longest), the same digit runs, no glyph the font lacks; "{count}" right before a word in a
+## data text is a warning (F-16). Coverage is only reported: the gate "100 % translated, 0 fuzzy" is for builds shipped
+## in English (L4, 11 §5.9). The PO files of the content packs (packs/<id>/locale/<lang>.po) keep the same rules (with
+## the limits of the base entries they override). Plus the rules themselves on made-up entries.
 
-const PoRules := preload("res://tests/tools/i18n/po_rules.gd")
+const PoRules := preload("res://core/data/validators/po.gd")
 const HEADER: String = "msgid \"\"\nmsgstr \"\"\n\"Language: en\\n\"\n" \
 	+ "\"Content-Type: text/plain; charset=UTF-8\\n\"\n\"Plural-Forms: nplurals=2; plural=(n != 1);\\n\"\n\n"
 
@@ -23,6 +24,29 @@ func test_every_english_translation_keeps_the_rules() -> void:
 			print("[INFO] warning " + w)
 		assert_eq(res["errors"], PackedStringArray(), "the rules of 11 §1.12 in " + path)
 		assert_gt(int(c["total"]), 0, path + " is merged with its POT (tools/i18n.sh merge)")
+
+
+## The PO files of the content packs (11 §3.5, §3.6; the Testbild pack, 11 §3.14): the same rules, an override keeps
+## the limit of the base entry it replaces, the Language header names the file's language.
+func test_every_pack_po_keeps_the_rules() -> void:
+	var limits: Dictionary = PoRules.base_limits()
+	assert_gt(limits.size(), 500, "the limits of the base POT files")
+	var files: PackedStringArray = PoRules.pack_po_files()
+	assert_has(files, "res://packs/testbild/locale/en.po")
+	assert_has(files, "res://packs/testbild/locale/de.po")
+	for path: String in files:
+		var res: Dictionary = PoRules.check_pack_po(FileAccess.get_file_as_string(path), path,
+			path.get_file().get_basename(), limits)
+		assert_eq(res["errors"], PackedStringArray(), "the rules of 11 §1.12 in " + path)
+		assert_gt(int((res["counts"] as Dictionary)["translated"]), 0, path + " carries translations")
+	var text: String = HEADER + "\n".join(PackedStringArray([
+		"msgctxt \"looks\"", "msgid \"Tierheim-Petrol\"", "msgstr \"Animal Shelter Petrol Blue\"", ""]))
+	var long: Dictionary = PoRules.check_pack_po(text, "pack.po", "en", limits)
+	assert_eq(long["errors"], PackedStringArray(["pack.po:7 (Tierheim-Petrol): 26 characters, the field allows 16"]),
+		"an override without its own \"#. max\" keeps the base limit of looks.name")
+	var other: Dictionary = PoRules.check_pack_po(text.replace("Animal Shelter Petrol Blue", "Shelter Petrol"),
+		"pack.po", "de", limits)
+	assert_eq(other["errors"], PackedStringArray(["pack.po: header Language 'en', the file is locale/de.po"]))
 
 
 func test_the_rules_on_made_up_entries() -> void:

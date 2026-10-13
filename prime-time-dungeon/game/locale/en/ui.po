@@ -14,6 +14,10 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Domain: ui\n"
 
+#: scenes/boot/boot.gd:268
+msgid "präsentiert"
+msgstr ""
+
 #: scenes/combat/combat_director.gd:257
 msgid "BOSS"
 msgstr ""
@@ -294,6 +298,10 @@ msgstr ""
 
 #: scenes/exploration/stairs_interactable.gd:20
 msgid "Treppe nach unten: Etage verlassen"
+msgstr ""
+
+#: scenes/title/title.gd:199
+msgid "Eine Sendung des NOVA SYNDIKAT"
 msgstr ""
 
 #: scenes/ui/settings_menu.gd:660

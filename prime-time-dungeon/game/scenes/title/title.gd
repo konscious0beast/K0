@@ -196,7 +196,7 @@ func _build_logo(frame: Control) -> void:
 	_logo_b.add_theme_color_override("font_outline_color", Color("#3a1050"))
 	col.add_child(_logo_b)
 	col.add_child(UiUtil.spacer(10))
-	col.add_child(UiUtil.label("Eine Sendung des NOVA SYNDIKAT", &"", 17, UiTheme.C_ACCENT_2))
+	col.add_child(UiUtil.label(Tx.t("Eine Sendung des NOVA SYNDIKAT"), &"", 17, UiTheme.C_ACCENT_2))   # 11 §3.14
 	var air: PanelContainer = PanelContainer.new()
 	air.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	air.offset_left = -150

@@ -2407,10 +2407,10 @@ func _season_window_title(text: String) -> void:
 ## runs German, else settings.language ("auto" = the system language if it is one of ours, else English). An active
 ## content pack (11-P1, DB.pack) adds its PO and may narrow the languages. `from_menu`: the options row on the title
 ## changed the setting — the choice wins over --lang and the ephemeral default. Reading PO files is logged with its time
-## (German reads none and stays silent).
+## (German reads none — unless a pack brings a locale/de.po — and stays silent).
 func apply_language(from_menu: bool = false) -> String:
 	var t0: int = Time.get_ticks_usec()
-	var pack: Object = DB.get("pack") as Object       # 11-P1's PackDef (null without a pack); read by name
+	var pack: PackDef = DB.pack                       # the content pack of the run (11-P1; null = the base game)
 	var args: PackedStringArray = PackedStringArray() if from_menu else OS.get_cmdline_user_args()
 	var setting: String = settings.language if settings != null else LocaleLoader.AUTO
 	var lang: String = LocaleLoader.resolve(setting, args, ephemeral and not from_menu, OS.get_locale_language(),

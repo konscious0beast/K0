@@ -17,7 +17,8 @@
 #   tools/i18n.sh check [--lang=en] [--no-gettext]
 #                                          # msgfmt --check-format --check-header, the rules of test_11_po_rules
 #                                          # (placeholders, lengths, digits, glyphs), POT current (extract without a
-#                                          # diff), PO merged with its POT; --no-gettext: without msgfmt (warning)
+#                                          # diff), PO merged with its POT; the same for every pack PO
+#                                          # (game/packs/<id>/locale/<lang>.po, 11 §3.6); --no-gettext: without msgfmt
 #
 # Env: GODOT=<path to godot 4.7 binary> (default: "godot" on PATH). GNU gettext (msgmerge, msgfmt, msginit) for merge
 # and check: apt-get install gettext.
@@ -117,10 +118,21 @@ check_lang() {
         echo "msgfmt --check-format --check-header $po: ok"
       fi
     done
+    for po in "$SRC"/packs/*/locale/*.po; do        # the content packs' PO files (11 §3.6)
+      [ -f "$po" ] || continue
+      local out
+      out="$(msgfmt --check-format --check-header -o /dev/null "$po" 2>&1)"
+      if [ $? -ne 0 ]; then
+        echo "$out"; echo "i18n.sh: msgfmt --check $po FAILED"; status=1
+      else
+        echo "msgfmt --check-format --check-header $po: ok"
+      fi
+    done
   else
     echo "i18n.sh: WARNING — without GNU gettext: msgfmt's format and header checks skipped"
   fi
   run_tool rules "--lang=$LANG_CODE" || status=1
+  run_tool pack-rules || status=1
   run_tool check-pot || status=1
   run_tool sync "--lang=$LANG_CODE" || status=1
   return $status

@@ -15,14 +15,17 @@ const CHILD_TIMEOUT_MS: int = 90000
 
 var _lang_was: String = "de"
 var _setting_was: String = "auto"
+var _pack_was: PackDef = null
 
 
 func before_each() -> void:
 	_lang_was = Tx.lang()
 	_setting_was = Game.settings.language
+	_pack_was = DB.pack
 
 
 func after_each() -> void:
+	DB.pack = _pack_was
 	Game.settings.language = _setting_was
 	LocaleLoader.apply(_lang_was)                  # German again for every following test
 	tree.paused = false
@@ -104,27 +107,33 @@ func test_real_english_po_files_exist_and_load() -> void:
 	assert_eq(Tx.lang(), "en")
 
 
-# --- the hook for 11-P1 (DB.pack, read by name) -----------------------------------------------------------------------
+# --- the active content pack (11 §3.6; 11-P1: DB.pack) ---------------------------------------------------------------
 
-class FakePack extends RefCounted:
-	var id: String = "testbild"
-	var languages: PackedStringArray = ["de", "en"]
-	var default_lang: String = "de"
-
-
-class FakePackDir extends RefCounted:
-	var id: String = "x"
-	var dir: String = "res://tests/fixtures/locale/pack"
-
-
-func test_pack_hook_reads_the_pack_def_by_name() -> void:
+func test_pack_hook_reads_the_pack_def() -> void:
 	assert_eq([LocaleLoader.pack_dir(null), LocaleLoader.pack_languages(null), LocaleLoader.pack_default_lang(null)],
-		["", PackedStringArray(), ""], "no pack (L1 alone, or P1 without one)")
-	var p: FakePack = FakePack.new()
+		["", PackedStringArray(), ""], "no pack: the base game")
+	var p: PackDef = PackLoader.read("res://packs", "testbild")
 	assert_eq([LocaleLoader.pack_dir(p), LocaleLoader.pack_languages(p), LocaleLoader.pack_default_lang(p)],
-		["res://packs/testbild", PackedStringArray(["de", "en"]), "de"], "PACK_ROOT/<id>, pack.json's fields")
-	assert_eq(LocaleLoader.pack_dir(FakePackDir.new()), FIX + "/pack", "a PackDef with its folder")
-	assert_eq(Game.apply_language(), "de", "Game: no DB.pack on this branch — the hook reads null")
+		["res://packs/testbild", PackedStringArray(["de", "en"]), "de"], "PackDef.root and pack.json's fields")
+	assert_eq(LocaleLoader.setting_values(p.languages), PackedStringArray(["auto", "de", "en"]))
+	assert_eq(LocaleLoader.setting_values(PackedStringArray(["de"])), PackedStringArray(["auto", "de"]),
+		"a German-only pack: the row offers Automatisch and Deutsch")
+	assert_eq(DB.pack, null, "the test run plays the base game")
+	assert_eq(Game.apply_language(), "de", "Game.apply_language without a pack: German (ephemeral)")
+
+
+func test_the_row_shows_only_the_languages_of_the_pack() -> void:
+	var p: PackDef = PackDef.new()
+	p.id = "only_de"
+	p.languages = PackedStringArray(["de"])
+	DB.pack = p
+	var sm: Control = (load(SETTINGS) as PackedScene).instantiate() as Control
+	sm.call("setup", {"framed": true, "language": true})
+	add_to_tree(sm)
+	await wait_frames(2)
+	var c: Button = (sm.get("rows") as Dictionary)["language"] as Button
+	assert_eq(c.get("options"), PackedStringArray(["Automatisch", "Deutsch"]), "pack.json → languages (11 §3.6)")
+	sm.queue_free()
 
 
 # --- the boot order (11 §1.9) -----------------------------------------------------------------------------------------

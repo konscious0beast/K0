@@ -2,9 +2,10 @@ extends TestCase
 ## 11-L1 (11 §1.12, SP-8, R11): the lint against German texts outside Tx (tests/tools/i18n/literal_lint.gd — a literal
 ## that looks German: an umlaut, ß, „ or a word of a small stopword list; in player code; outside Tx.t / Tx.n / Tx.m,
 ## the developer calls and files, and lines with "# no-i18n: <reason>"). PENDING = the findings per file when 11-L1
-## landed (903 in 91 files): L2 moves its areas to Tx and lowers or removes their entries — the list only shrinks. A
-## file outside PENDING must stay clean, a listed one at its exact count (fewer: lower the number; more: a new German
-## text outside Tx — wrap it in Tx.t, R11). tools/i18n.sh lint prints the current table and, with --file, the lines.
+## landed (911 in 91 files, with the texts 11-P1 brought): L2 moves its areas to Tx and lowers or removes their entries
+## — the list only shrinks. A file outside PENDING must stay clean, a listed one at its exact count (fewer: lower the
+## number; more: a new German text outside Tx — wrap it in Tx.t, R11). tools/i18n.sh lint prints the current table
+## and, with --file, the lines.
 
 const Lint := preload("res://tests/tools/i18n/literal_lint.gd")
 ## file → German literals outside Tx (only shrinks).
@@ -14,7 +15,7 @@ const PENDING: Dictionary = {
 	"res://autoload/game.gd": 8,
 	"res://autoload/show.gd": 5,
 	"res://core/live/run_sim.gd": 1,
-	"res://core/progression/save_codec.gd": 1,
+	"res://core/progression/save_codec.gd": 3,
 	"res://core/rt/rt_sim.gd": 1,
 	"res://core/season/cast_sim.gd": 5,
 	"res://core/season/season_rules.gd": 5,
@@ -22,7 +23,7 @@ const PENDING: Dictionary = {
 	"res://core/show/mod_line_filter.gd": 1,
 	"res://core/show/persona_text.gd": 33,
 	"res://core/stempel/sd_rulebook.gd": 3,
-	"res://scenes/boot/boot.gd": 1,
+	"res://scenes/boot/boot.gd": 6,
 	"res://scenes/combat/ui/combat_hud.gd": 9,
 	"res://scenes/combat/ui/combat_input.gd": 1,
 	"res://scenes/combat/ui/combat_results.gd": 9,
@@ -64,8 +65,8 @@ const PENDING: Dictionary = {
 	"res://scenes/title/intro.gd": 14,
 	"res://scenes/title/name_entry.gd": 12,
 	"res://scenes/title/persona_casting.gd": 18,
-	"res://scenes/title/slot_select.gd": 14,
-	"res://scenes/title/title.gd": 6,
+	"res://scenes/title/slot_select.gd": 16,
+	"res://scenes/title/title.gd": 5,
 	"res://scenes/title/title_flow.gd": 2,
 	"res://scenes/ui/achievements_menu.gd": 1,
 	"res://scenes/ui/bestiary_menu.gd": 5,

@@ -121,11 +121,11 @@ func test_read_testbild() -> void:
 	assert_eq([p.id, p.name, p.version, p.pack_schema, p.source_lang, p.default_lang, p.art_file],
 		["testbild", "Testbild", "1.0.0", 1, "de", "de", "art.json"])
 	assert_eq(p.root, "res://packs/testbild")
-	assert_eq(p.languages, PackedStringArray(["de"]), "\"en\" comes with locale/en.po (11-L1)")
+	assert_eq(p.languages, PackedStringArray(["de", "en"]), "\"en\" with its locale/en.po (11-L1)")
 	assert_eq(p.engine, {"min": "0.3.0", "max": "0.4.*", "commit": ""})
 	assert_false(p.has_licence(), "own content: licence null")
 	assert_eq(p.files, PackedStringArray(["README.md", "art.json", "data/enemies.json", "data/looks.json",
-		"data/mod_lines.json", "pack.json"]))
+		"data/mod_lines.json", "locale/de.po", "locale/en.po", "pack.json"]))
 	var tables: Array = p.overlays.keys()
 	tables.sort()
 	assert_eq(tables, ["enemies", "looks", "mod_lines"])

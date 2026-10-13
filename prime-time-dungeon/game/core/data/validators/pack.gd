@@ -11,9 +11,13 @@ extends RefCounted
 ##   · tone_exceptions name a text of the pack, a tone list and their review reason.
 ##   · A licence block names its credits (valid_until: a runtime warning, PackLoader.licence_notes; the export refuses
 ##     a past date, 11-PB).
-## The PO rules of the pack's locale/*.po (test_11_po_rules) come with 11-L1.
+##   · The PO rules of the pack's locale/<lang>.po (11-L1, validators/po.gd → check_pack_po): placeholders,
+##     %-directives, "#. max N", digits, glyphs, the header (its Language names the file's language). The limits of the
+##     base entries a pack PO overrides need the base POT files (not in an export): test_11_po_rules and
+##     tools/i18n.sh check add them.
 
 const OriginsCheck := preload("res://core/data/validators/origins.gd")
+const PoRules := preload("res://core/data/validators/po.gd")
 const FILTER_PATH: String = "res://data/mod_filter.json"
 const TONE_LISTS: PackedStringArray = ["politics", "sexual", "slurs", "violence", "real_brands", "origin"]
 const NO_EXCEPTION: PackedStringArray = ["politics", "sexual"]
@@ -43,6 +47,18 @@ static func check(v: DataValidator, provenance: Dictionary) -> void:
 		var credits: Variant = pack.licence.get("credits", [])
 		if not (credits is Array) or (credits as Array).is_empty():
 			v._err("pack[%s].licence.credits" % pack.id, "a licensed pack names its credits (11 §3.3, F-15)")
+	_check_po(v, pack)                            # 11-L1: the PO rules of its locale/<lang>.po
+
+
+## 11-L1 (11 §3.5 Nr. 4, §3.6): every locale/<lang>.po of the pack keeps the PO rules (validators/po.gd).
+static func _check_po(v: DataValidator, pack: PackDef) -> void:
+	for f: String in pack.files:
+		if not f.begins_with("locale/") or f.get_extension() != "po":
+			continue
+		var res: Dictionary = PoRules.check_pack_po(FileAccess.get_file_as_string(pack.root.path_join(f)), f,
+			f.get_file().get_basename(), {})
+		for e: String in res["errors"]:
+			v._err("pack[%s]" % pack.id, e)
 
 
 ## Every text of the pack: [{"ref": "<table>:<id>.<field>" (tone_exceptions), "at": "<table>[<id>].<field>" (errors),

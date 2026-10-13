@@ -5,7 +5,9 @@ extends SceneTree
 ##   extract [--out=<dir>]          the four POT files (default res://locale/pot) + the report (dynamic calls, msgids in
 ##                                  several domains or contexts)
 ##   check-pot [--pot=<dir>]        the POT files are what extract writes now (exit 1 with the first differences)
-##   rules [--lang=en] [--dir=<d>]  the rules of po_rules.gd over <d>/<lang>/*.po (default res://locale; 1 = errors)
+##   rules [--lang=en] [--dir=<d>]  the PO rules (validators/po.gd) over <d>/<lang>/*.po (default res://locale)
+##   pack-rules [--packs=<dir>]     the same rules over every <packs>/<id>/locale/<lang>.po (default res://packs; an
+##                                  override keeps the limit of its base entry; the header names the file's language)
 ##   sync [--lang=en] [--pot=<dir>] every POT msgid is in the PO (merged) and the PO has no active entry the POT lacks
 ##   stats [--lang=en] [--pack=<dir>]  coverage per domain and context; with a pack (a folder with data/*.json and
 ##                                  locale/<lang>.po): the base msgids that still name what the pack renamed (11 §3.6)
@@ -13,11 +15,12 @@ extends SceneTree
 ## Exit code 0 = fine, 1 = findings, 2 = usage.
 
 const EXTRACTOR: String = "res://tests/tools/i18n/extractor.gd"
-const RULES: String = "res://tests/tools/i18n/po_rules.gd"
+const RULES: String = "res://core/data/validators/po.gd"
 const PO_FILE: String = "res://core/data/po_file.gd"
 const LINT: String = "res://tests/tools/i18n/literal_lint.gd"
 const POT_DIR: String = "res://locale/pot"
 const LOCALE_DIR: String = "res://locale"
+const PACKS_DIR: String = "res://packs"
 
 
 func _initialize() -> void:
@@ -36,6 +39,8 @@ func _initialize() -> void:
 			code = _check_pot(str(opts.get("pot", POT_DIR)))
 		"rules":
 			code = _rules(str(opts.get("lang", "en")), str(opts.get("dir", LOCALE_DIR)))
+		"pack-rules":
+			code = _pack_rules(str(opts.get("packs", PACKS_DIR)))
 		"sync":
 			code = _sync(str(opts.get("lang", "en")), str(opts.get("pot", POT_DIR)), str(opts.get("dir", LOCALE_DIR)))
 		"stats":
@@ -43,7 +48,8 @@ func _initialize() -> void:
 		"lint":
 			code = _lint(str(opts.get("file", "")))
 		_:
-			printerr("i18n_tool: unknown command '%s' (extract | check-pot | rules | sync | stats | lint)" % cmd)
+			printerr("i18n_tool: unknown command '%s' (extract | check-pot | rules | pack-rules | sync | stats | lint)"
+				% cmd)
 	quit(code)
 
 
@@ -159,6 +165,28 @@ func _rules(lang: String, dir: String) -> int:
 		for w: String in res["warnings"]:
 			print("I18N:   warning " + w)
 		bad += (res["errors"] as PackedStringArray).size()
+	return 1 if bad > 0 else 0
+
+
+func _pack_rules(packs: String) -> int:
+	var rules: GDScript = load(RULES) as GDScript
+	var limits: Dictionary = rules.call("base_limits", POT_DIR)
+	var bad: int = 0
+	var files: PackedStringArray = rules.call("pack_po_files", packs)
+	for path: String in files:
+		var res: Dictionary = rules.call("check_pack_po", FileAccess.get_file_as_string(path), path,
+			path.get_file().get_basename(), limits)
+		var counts: Dictionary = res["counts"]
+		print("I18N: %s: %d entries, %d translated — %d errors, %d warnings" % [path, int(counts["total"]),
+			int(counts["translated"]), (res["errors"] as PackedStringArray).size(),
+			(res["warnings"] as PackedStringArray).size()])
+		for e: String in res["errors"]:
+			print("I18N:   ERROR " + e)
+		for w: String in res["warnings"]:
+			print("I18N:   warning " + w)
+		bad += (res["errors"] as PackedStringArray).size()
+	if files.is_empty():
+		print("I18N: no pack PO files under %s" % packs)
 	return 1 if bad > 0 else 0
 
 

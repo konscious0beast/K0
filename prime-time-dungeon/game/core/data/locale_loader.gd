@@ -11,8 +11,6 @@ class_name LocaleLoader extends RefCounted
 ## (overrides of German texts, 11 §3.6).
 
 const ROOT: String = "res://locale"
-## = PackLoader.ROOT (11 §3.2, 11-P1): the folder of the packs.
-const PACK_ROOT: String = "res://packs"
 const DOMAINS: PackedStringArray = ["ui", "data", "mod_lines", "stempel"]
 const LANGUAGES_FILE: String = "languages.json"
 ## The value of [game] language that follows the system language (11 §1.9).
@@ -70,10 +68,13 @@ static func language_name(code: String) -> String:
 	return code
 
 
-## The values of the setting [game] language: "auto" and every language code.
-static func setting_values() -> PackedStringArray:
+## The values of the setting [game] language: "auto" and every language code — of `allowed` only when it is not empty
+## (an active pack's languages, 11 §3.6).
+static func setting_values(allowed: PackedStringArray = PackedStringArray()) -> PackedStringArray:
 	var out: PackedStringArray = [AUTO]
-	out.append_array(codes())
+	for c: String in codes():
+		if allowed.is_empty() or allowed.has(c):
+			out.append(c)
 	return out
 
 
@@ -167,29 +168,21 @@ static func apply(lang: String, pack_dir: String = "", root: String = ROOT) -> D
 	return res
 
 
-# --- 11-P1 hook: the active content pack ------------------------------------------------------------------------------
-# DB.pack (11 §3.8) is 11-P1's PackDef. It is read by name here, so L1 builds before P1 lands: the folder is the
-# PackDef's "dir" if it has one, else PACK_ROOT/<id>; "languages" and "default_lang" mirror pack.json (11 §3.3).
+# --- the active content pack (11 §3.6, 11-P1: DB.pack) ---------------------------------------------------------------
+# A pack's locale/<lang>.po lies over the base PO (pack > base > msgid) — also for German (overrides of German texts);
+# the pack's `languages` narrow the choice (resolve, the options row), `default_lang` is the choice outside them.
 
-static func pack_dir(pack: Object) -> String:
-	if pack == null:
-		return ""
-	if "dir" in pack and str(pack.get("dir")) != "":
-		return str(pack.get("dir"))
-	var id: String = str(pack.get("id")) if "id" in pack else ""
-	return PACK_ROOT.path_join(id) if id != "" else ""
+## The folder whose locale/<lang>.po apply() lays over the base ("" = no pack).
+static func pack_dir(pack: PackDef) -> String:
+	return pack.root if pack != null else ""
 
 
-static func pack_languages(pack: Object) -> PackedStringArray:
-	var out: PackedStringArray = []
-	if pack != null and "languages" in pack:
-		for c: Variant in pack.get("languages"):
-			out.append(str(c))
-	return out
+static func pack_languages(pack: PackDef) -> PackedStringArray:
+	return pack.languages if pack != null else PackedStringArray()
 
 
-static func pack_default_lang(pack: Object) -> String:
-	return str(pack.get("default_lang")) if pack != null and "default_lang" in pack else ""
+static func pack_default_lang(pack: PackDef) -> String:
+	return pack.default_lang if pack != null else ""
 
 
 # --- the PO reader of a start (11 §1.2) -------------------------------------------------------------------------------

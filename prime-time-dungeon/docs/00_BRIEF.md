@@ -14,6 +14,8 @@ Sendeplan, Tod und Modi, Stufen, Talente, Berufe, Schläfer, KI-Besetzung; CR-25
 Vorleben, persönlicher Erzählstrang) > `01_GDD` / `02_TECH` / `03_ART` / `05_LIVE_MODUS` (je nach Thema).
 `11_SPRACHEN_UND_INHALTSPAKETE.md` (Sprachen, englisches Glossar, Inhaltspakete, Mechanik-Baukasten) gilt für seine
 Themen im Rang von `02_TECH`; Kampfrelevantes daraus wird erst über CR-39 in `07` verbindlich.
+`12_KI_SHOWRUNNER.md` (Staffel-Drehbuch: je Staffel eine neue Geschichte, vorab von der KI geschrieben und geprüft,
+ohne Netz aus dem Baukasten) gilt für seine Themen direkt nach `08`; es ändert nie Regeln oder Zahlen.
 
 ---
 

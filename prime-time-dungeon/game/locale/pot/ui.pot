@@ -1,0 +1,310 @@
+# PRIME TIME DUNGEON — the msgid template of the domain "ui" (11 §1.2, §1.11). msgid = the German
+# source text. Written by tools/i18n.sh extract — never edit by hand.
+msgid ""
+msgstr ""
+"Project-Id-Version: PRIME TIME DUNGEON\n"
+"Report-Msgid-Bugs-To: \n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Domain: ui\n"
+
+#: scenes/boot/boot.gd:268
+msgid "präsentiert"
+msgstr ""
+
+#: scenes/combat/combat_director.gd:257
+msgid "BOSS"
+msgstr ""
+
+#: scenes/exploration/chest_interactable.gd:40
+msgid "Verschlossen. Ein Generalschlüssel wäre praktisch."
+msgstr ""
+
+#: scenes/exploration/chest_interactable.gd:43
+msgid "Spind aufschließen – mit der Schnauze"
+msgstr ""
+
+#: scenes/exploration/chest_interactable.gd:43
+msgid "Spind aufschließen"
+msgstr ""
+
+#: scenes/exploration/chest_interactable.gd:45
+msgid "Spind mit der Schnauze öffnen"
+msgstr ""
+
+#: scenes/exploration/chest_interactable.gd:45
+msgid "Spind öffnen"
+msgstr ""
+
+#: scenes/exploration/chest_interactable.gd:46
+msgid "Kiste mit der Schnauze öffnen"
+msgstr ""
+
+#: scenes/exploration/chest_interactable.gd:46
+msgid "Kiste öffnen"
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:51
+#, c-format
+msgid "Untersuchen: %s"
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:62
+msgid "Kamera-Drohne „Lächeln!“"
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:64
+msgid "Herr Brettschneider in der Telefonzelle"
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:66
+msgid "Glücksrad von DoomScroll+"
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:68
+msgid "Verdächtiger Hebel"
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:70
+msgid "Kaputter Automat"
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:71
+msgid "Etwas Seltsames"
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:78
+msgid "Eine NOVA-Drohne surrt dir ins Gesicht. Das rote Licht blinkt: LIVE."
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:80
+msgid "Ein verletzter Kandidat klammert sich an den Hörer. „Haben Sie vielleicht was zum Verbinden?“"
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:83
+msgid "Keine Drehung mehr."
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:85
+msgid "Noch 1 Drehung."
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:87
+#, c-format
+msgid "Noch %d Drehungen."
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:88
+#, c-format
+msgid "Ein Dreh kostet %d Cr. %s Die Zuschauer lieben Glücksspiel."
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:90
+msgid "Ein rostiger Hebel. Daneben ein Schild: „NICHT ZIEHEN“."
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:92
+msgid "Der Automat flackert. Drinnen klemmen zwei Dosen KRAWUMM."
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:105
+msgid "Posieren"
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:106
+msgid "Zertreten"
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:112
+#, c-format
+msgid "Geben: %s"
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:115
+msgid "Heilitem geben (keins dabei)"
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:116
+msgid "Weitergehen"
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:118
+#, c-format
+msgid "Drehen (%d Cr)"
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:121
+#, c-format
+msgid "%s – keine Drehungen mehr"
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:122
+#, c-format
+msgid "%s – zu wenig Credits"
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:124
+msgid "Ignorieren"
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:126
+msgid "Ziehen"
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:127
+#: scenes/exploration/event_interactable.gd:130
+msgid "Lassen"
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:129
+msgid "Treten"
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:159
+msgid "Klick! Die Zuschauer sind begeistert."
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:160
+#, c-format
+msgid "Drohne zerlegt: +%d Cr"
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:163
+msgid "Herr Brettschneider bedankt sich mit einem Glückslos."
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:168
+#, c-format
+msgid "Glücksrad: %d× %s"
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:170
+#, c-format
+msgid "Glücksrad: +%d Cr"
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:172
+msgid "Glücksrad: Lootbox!"
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:174
+msgid "Glücksrad: Tauben-Alarm!"
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:176
+msgid "Glücksrad: Niete. Werbepause."
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:178
+msgid "Klonk! Irgendwo öffnet sich ein Tor."
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:179
+msgid "Flutwelle! Und da kommt noch was …"
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:181
+msgid "Zwei Dosen KRAWUMM fallen heraus!"
+msgstr ""
+
+#: scenes/exploration/event_interactable.gd:182
+msgid "Stromschlag! Autsch."
+msgstr ""
+
+#: scenes/exploration/exploration.gd:1113
+#, c-format
+msgid "%d Cr"
+msgstr ""
+
+#: scenes/exploration/exploration.gd:1117
+#, c-format
+msgid "Truhe: %s"
+msgstr ""
+
+#: scenes/exploration/exploration.gd:1117
+msgid "Truhe geöffnet"
+msgstr ""
+
+#: scenes/exploration/exploration.gd:1161
+msgid "Kulissenwand! Der Weg ist frei."
+msgstr ""
+
+#: scenes/exploration/exploration.gd:1167
+#, c-format
+msgid "Regie-Notiz %d/%d · +%d Follower"
+msgstr ""
+
+#: scenes/exploration/exploration.gd:1261
+msgid "Abstieg"
+msgstr ""
+
+#: scenes/exploration/exploration.gd:1262
+msgid "Noch nicht"
+msgstr ""
+
+#: scenes/exploration/exploration.gd:1263
+msgid "Treppe nach unten"
+msgstr ""
+
+#: scenes/exploration/exploration.gd:1263
+msgid "Etage verlassen? Offene Truhen und der Etagenboss bleiben zurück."
+msgstr ""
+
+#: scenes/exploration/exploration.gd:1323
+msgid "Quest"
+msgstr ""
+
+#: scenes/exploration/gate_interactable.gd:68
+#, c-format
+msgid "Noch geschlossen — öffnet mit Programmpunkt %d"
+msgstr ""
+
+#: scenes/exploration/gate_interactable.gd:70
+msgid "Verriegelt. Irgendwo muss es einen Mechanismus geben."
+msgstr ""
+
+#: scenes/exploration/gate_interactable.gd:72
+#, c-format
+msgid "Tor öffnen (%s)"
+msgstr ""
+
+#: scenes/exploration/gate_interactable.gd:73
+#, c-format
+msgid "Benötigt: %s"
+msgstr ""
+
+#: scenes/exploration/note_interactable.gd:72
+msgid "Regie-Notiz beschnuppern"
+msgstr ""
+
+#: scenes/exploration/note_interactable.gd:72
+msgid "Regie-Notiz lesen"
+msgstr ""
+
+#: scenes/exploration/safe_door_interactable.gd:20
+msgid "Safe Room betreten"
+msgstr ""
+
+#: scenes/exploration/safe_door_interactable.gd:21
+#, c-format
+msgid "Safe Room betreten: %s"
+msgstr ""
+
+#: scenes/exploration/stairs_interactable.gd:20
+msgid "Treppe nach unten: Etage verlassen"
+msgstr ""
+
+#: scenes/title/title.gd:199
+msgid "Eine Sendung des NOVA SYNDIKAT"
+msgstr ""
+
+#: scenes/ui/settings_menu.gd:661
+msgid "Automatisch"
+msgstr ""
+
+#: scenes/ui/settings_menu.gd:663
+msgid "Im Titelmenü änderbar"
+msgstr ""

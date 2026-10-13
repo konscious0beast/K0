@@ -1,0 +1,10 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "ms_100",
+			"followers": 100,
+			"reward_box": "box_bronze"
+		}
+	]
+}

@@ -1,0 +1,2861 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "org_animals",
+			"name": "Tierpflege",
+			"icon": "paw",
+			"status": false,
+			"role": {
+				"n": "Tierpfleger:in",
+				"f": "Tierpflegerin",
+				"m": "Tierpfleger"
+			},
+			"jobs": [
+				{
+					"id": "occ_animals_keeper",
+					"n": "Tierpfleger:in",
+					"f": "Tierpflegerin",
+					"m": "Tierpfleger"
+				},
+				{
+					"id": "occ_animals_vet",
+					"n": "Tierärzt:in",
+					"f": "Tierärztin",
+					"m": "Tierarzt"
+				},
+				{
+					"id": "occ_animals_trainer",
+					"n": "Hundetrainer:in",
+					"f": "Hundetrainerin",
+					"m": "Hundetrainer"
+				}
+			],
+			"keywords": [
+				"tierpfleg",
+				"tierarzt",
+				"tieraerzt",
+				"hundetrain",
+				"=zoo",
+				"tierheim",
+				"zoolog",
+				"tiermediz",
+				"pferdewirt",
+				"tierpsycholog",
+				"hundefris",
+				"=vet",
+				"tierschutz",
+				"zoowaert",
+				"tierwirt"
+			],
+			"prof": "prf_first_aid",
+			"spec_hint": "cls_kai_wrecker",
+			"flavor": "Sie verstehen Wesen, die beißen. Der Dungeon ist nur ein größerer Zwinger.",
+			"mod_tags": [
+				"tiere",
+				"geduld",
+				"pfoten"
+			],
+			"rivals": [
+				"rv_animals_1",
+				"rv_animals_2"
+			],
+			"brand": "br_org_animals"
+		},
+		{
+			"id": "org_care",
+			"name": "Pflege & Medizin",
+			"icon": "heart",
+			"status": false,
+			"role": {
+				"n": "Pflegekraft",
+				"f": "Pflegerin",
+				"m": "Pfleger"
+			},
+			"jobs": [
+				{
+					"id": "occ_care_nurse",
+					"n": "Pflegekraft",
+					"f": "Pflegerin",
+					"m": "Pfleger"
+				},
+				{
+					"id": "occ_care_doctor",
+					"n": "Ärzt:in",
+					"f": "Ärztin",
+					"m": "Arzt"
+				},
+				{
+					"id": "occ_care_paramedic",
+					"n": "Sanitäter:in",
+					"f": "Sanitäterin",
+					"m": "Sanitäter"
+				},
+				{
+					"id": "occ_care_midwife",
+					"n": "Hebamme",
+					"f": "Hebamme",
+					"m": "Entbindungspfleger"
+				},
+				{
+					"id": "occ_care_physio",
+					"n": "Physiotherapeut:in",
+					"f": "Physiotherapeutin",
+					"m": "Physiotherapeut"
+				}
+			],
+			"keywords": [
+				"pfleg",
+				"kranken",
+				"arzt",
+				"aerzt",
+				"sanitae",
+				"hebamm",
+				"physio",
+				"medizin",
+				"klinik",
+				"apothek",
+				"ergothera",
+				"logopaed",
+				"therapeut",
+				"heilprakt",
+				"psycholog",
+				"praxis",
+				"hospiz",
+				"geburtshilf"
+			],
+			"prof": "prf_first_aid",
+			"spec_hint": "cls_kai_wrecker",
+			"flavor": "Sie halten Menschen am Leben. Ein Dungeon ist da fast Erholung.",
+			"mod_tags": [
+				"hygiene",
+				"schichtdienst",
+				"helfen"
+			],
+			"rivals": [
+				"rv_care_1",
+				"rv_care_2"
+			],
+			"brand": "br_org_care"
+		},
+		{
+			"id": "org_craft",
+			"name": "Handwerk & Technik",
+			"icon": "gear",
+			"status": false,
+			"role": {
+				"n": "Fachkraft im Handwerk",
+				"f": "Handwerkerin",
+				"m": "Handwerker"
+			},
+			"jobs": [
+				{
+					"id": "occ_craft_electrician",
+					"n": "Elektriker:in",
+					"f": "Elektrikerin",
+					"m": "Elektriker"
+				},
+				{
+					"id": "occ_craft_carpenter",
+					"n": "Tischler:in",
+					"f": "Tischlerin",
+					"m": "Tischler"
+				},
+				{
+					"id": "occ_craft_mechatronic",
+					"n": "Mechatroniker:in",
+					"f": "Mechatronikerin",
+					"m": "Mechatroniker"
+				},
+				{
+					"id": "occ_craft_plumber",
+					"n": "Installateur:in",
+					"f": "Installateurin",
+					"m": "Installateur"
+				}
+			],
+			"keywords": [
+				"elektrik",
+				"elektron",
+				"tischler",
+				"schreiner",
+				"mechatron",
+				"mechanik",
+				"installat",
+				"klempner",
+				"maurer",
+				"zimmerer",
+				"dachdeck",
+				"malermeist",
+				"anstreich",
+				"schlosser",
+				"schweiss",
+				"handwerk",
+				"fliesen",
+				"heizung",
+				"sanitaer",
+				"=kfz",
+				"metallbau",
+				"glaser",
+				"goldschmied",
+				"techniker",
+				"bauarbeit",
+				"lackier",
+				"monteur",
+				"zweirad",
+				"orthopaedietech"
+			],
+			"prof": "prf_props",
+			"spec_hint": "cls_kai_tinker",
+			"flavor": "Sie reparieren, was andere kaputt machen. Hier unten gibt es viel zu tun.",
+			"mod_tags": [
+				"werkzeug",
+				"pfusch",
+				"baustelle"
+			],
+			"rivals": [
+				"rv_craft_1",
+				"rv_craft_2"
+			],
+			"brand": "br_org_craft"
+		},
+		{
+			"id": "org_office",
+			"name": "Büro, Finanzen & Verwaltung",
+			"icon": "floppy",
+			"status": false,
+			"role": {
+				"n": "Bürokraft",
+				"f": "Bürokauffrau",
+				"m": "Bürokaufmann"
+			},
+			"jobs": [
+				{
+					"id": "occ_office_clerk",
+					"n": "Sachbearbeiter:in",
+					"f": "Sachbearbeiterin",
+					"m": "Sachbearbeiter"
+				},
+				{
+					"id": "occ_office_accountant",
+					"n": "Buchhalter:in",
+					"f": "Buchhalterin",
+					"m": "Buchhalter"
+				},
+				{
+					"id": "occ_office_bank",
+					"n": "Bankfachkraft",
+					"f": "Bankkauffrau",
+					"m": "Bankkaufmann"
+				},
+				{
+					"id": "occ_office_assistant",
+					"n": "Assistenz",
+					"f": "Assistentin",
+					"m": "Assistent"
+				}
+			],
+			"keywords": [
+				"buero",
+				"sachbearb",
+				"buchhalt",
+				"=bank",
+				"bankkauf",
+				"banker",
+				"verwaltung",
+				"assistenz",
+				"assistent",
+				"sekretaer",
+				"steuer",
+				"versicher",
+				"finanz",
+				"controll",
+				"beamt",
+				"kaufmann",
+				"kauffrau",
+				"personaler",
+				"recruit",
+				"behoerde",
+				"empfang",
+				"rezeption",
+				"office",
+				"notariatsfach",
+				"industriekauf"
+			],
+			"prof": "prf_lab",
+			"spec_hint": "cls_kai_wrecker",
+			"flavor": "Sie bändigen Formulare. Monster sind auch nur Vorgänge mit Zähnen.",
+			"mod_tags": [
+				"formulare",
+				"ablage",
+				"stempel"
+			],
+			"rivals": [
+				"rv_office_1",
+				"rv_office_2"
+			],
+			"brand": "br_org_office"
+		},
+		{
+			"id": "org_it",
+			"name": "IT & Digitales",
+			"icon": "bolt",
+			"status": false,
+			"role": {
+				"n": "IT-Fachkraft",
+				"f": "Informatikerin",
+				"m": "Informatiker"
+			},
+			"jobs": [
+				{
+					"id": "occ_it_dev",
+					"n": "Programmierer:in",
+					"f": "Programmiererin",
+					"m": "Programmierer"
+				},
+				{
+					"id": "occ_it_admin",
+					"n": "Admin",
+					"f": "Admin",
+					"m": "Admin"
+				},
+				{
+					"id": "occ_it_support",
+					"n": "IT-Supportkraft",
+					"f": "IT-Supporterin",
+					"m": "IT-Supporter"
+				},
+				{
+					"id": "occ_it_data",
+					"n": "Datenanalyst:in",
+					"f": "Datenanalystin",
+					"m": "Datenanalyst"
+				}
+			],
+			"keywords": [
+				"=it",
+				"informat",
+				"programm",
+				"software",
+				"entwickler",
+				"admin",
+				"support",
+				"daten",
+				"=web",
+				"webdesign",
+				"=edv",
+				"netzwerk",
+				"devops",
+				"hacker",
+				"coder",
+				"computer",
+				"cyber",
+				"frontend",
+				"backend",
+				"fullstack",
+				"=ki",
+				"digital",
+				"systemelektron",
+				"=data"
+			],
+			"prof": "prf_scrap",
+			"spec_hint": "cls_kai_tinker",
+			"flavor": "Sie haben schon schlimmere Systeme neu gestartet. Dieses hat nur mehr Ratten.",
+			"mod_tags": [
+				"neustart",
+				"update",
+				"kabelsalat"
+			],
+			"rivals": [
+				"rv_it_1",
+				"rv_it_2"
+			],
+			"brand": "br_org_it"
+		},
+		{
+			"id": "org_teach",
+			"name": "Bildung & Erziehung",
+			"icon": "bubble",
+			"status": false,
+			"role": {
+				"n": "Lehrkraft",
+				"f": "Lehrerin",
+				"m": "Lehrer"
+			},
+			"jobs": [
+				{
+					"id": "occ_teach_teacher",
+					"n": "Lehrkraft",
+					"f": "Lehrerin",
+					"m": "Lehrer"
+				},
+				{
+					"id": "occ_teach_educator",
+					"n": "Erzieher:in",
+					"f": "Erzieherin",
+					"m": "Erzieher"
+				},
+				{
+					"id": "occ_teach_lecturer",
+					"n": "Dozent:in",
+					"f": "Dozentin",
+					"m": "Dozent"
+				},
+				{
+					"id": "occ_teach_social",
+					"n": "Sozialarbeiter:in",
+					"f": "Sozialarbeiterin",
+					"m": "Sozialarbeiter"
+				}
+			],
+			"keywords": [
+				"lehrer",
+				"lehrkraft",
+				"erzieh",
+				"dozent",
+				"sozialarb",
+				"sozialpaed",
+				"paedagog",
+				"=kita",
+				"kindergaert",
+				"nachhilf",
+				"professor",
+				"ausbilder",
+				"kindergarten",
+				"schulleit",
+				"tagesmutt",
+				"tagesvat",
+				"bibliothek",
+				"trainer",
+				"coach",
+				"referendar",
+				"kursleit",
+				"schulbegleit"
+			],
+			"prof": "prf_first_aid",
+			"spec_hint": "cls_kai_showrunner",
+			"flavor": "Sie bringen Chaos zur Ruhe. Täglich. Mit Kreide und Geduld.",
+			"mod_tags": [
+				"kreide",
+				"pause",
+				"klassenfahrt"
+			],
+			"rivals": [
+				"rv_teach_1",
+				"rv_teach_2"
+			],
+			"brand": "br_org_teach"
+		},
+		{
+			"id": "org_kitchen",
+			"name": "Küche & Gastronomie",
+			"icon": "flame",
+			"status": false,
+			"role": {
+				"n": "Küchenfachkraft",
+				"f": "Köchin",
+				"m": "Koch"
+			},
+			"jobs": [
+				{
+					"id": "occ_kitchen_cook",
+					"n": "Köch:in",
+					"f": "Köchin",
+					"m": "Koch"
+				},
+				{
+					"id": "occ_kitchen_baker",
+					"n": "Bäcker:in",
+					"f": "Bäckerin",
+					"m": "Bäcker"
+				},
+				{
+					"id": "occ_kitchen_service",
+					"n": "Servicekraft",
+					"f": "Kellnerin",
+					"m": "Kellner"
+				},
+				{
+					"id": "occ_kitchen_barista",
+					"n": "Barista",
+					"f": "Barista",
+					"m": "Barista"
+				}
+			],
+			"keywords": [
+				"koch",
+				"koech",
+				"baeck",
+				"kellner",
+				"servicekraft",
+				"barista",
+				"gastro",
+				"konditor",
+				"metzger",
+				"fleischer",
+				"kueche",
+				"restaurant",
+				"catering",
+				"brauer",
+				"sommelier",
+				"imbiss",
+				"barkeep",
+				"barmann",
+				"barfrau",
+				"patissier",
+				"chocolatier",
+				"kantine"
+			],
+			"prof": "prf_cooking",
+			"spec_hint": "cls_kai_tinker",
+			"flavor": "Sie arbeiten unter Hitze, Zeitdruck und Kritik. Also genau wie hier.",
+			"mod_tags": [
+				"hitze",
+				"bestellung",
+				"abschmecken"
+			],
+			"rivals": [
+				"rv_kitchen_1",
+				"rv_kitchen_2"
+			],
+			"brand": "br_org_kitchen"
+		},
+		{
+			"id": "org_sales",
+			"name": "Handel & Verkauf",
+			"icon": "coin",
+			"status": false,
+			"role": {
+				"n": "Verkaufskraft",
+				"f": "Verkäuferin",
+				"m": "Verkäufer"
+			},
+			"jobs": [
+				{
+					"id": "occ_sales_seller",
+					"n": "Verkäufer:in",
+					"f": "Verkäuferin",
+					"m": "Verkäufer"
+				},
+				{
+					"id": "occ_sales_cashier",
+					"n": "Kassierer:in",
+					"f": "Kassiererin",
+					"m": "Kassierer"
+				},
+				{
+					"id": "occ_sales_field",
+					"n": "im Außendienst",
+					"f": "im Außendienst",
+					"m": "im Außendienst"
+				}
+			],
+			"keywords": [
+				"verkauf",
+				"verkaeuf",
+				"kassier",
+				"einzelhandel",
+				"aussendienst",
+				"handel",
+				"makler",
+				"immobil",
+				"vertrieb",
+				"kundenberat",
+				"filial",
+				"kasse",
+				"einkauf",
+				"haendler",
+				"marktleit",
+				"sales"
+			],
+			"prof": "prf_salvage",
+			"spec_hint": "cls_kai_showrunner",
+			"flavor": "Sie überzeugen Kundschaft in Sekunden. Monster sind auch nur Laufkundschaft.",
+			"mod_tags": [
+				"kundschaft",
+				"kasse",
+				"regal"
+			],
+			"rivals": [
+				"rv_sales_1",
+				"rv_sales_2"
+			],
+			"brand": "br_org_sales"
+		},
+		{
+			"id": "org_transport",
+			"name": "Verkehr & Logistik",
+			"icon": "map",
+			"status": false,
+			"role": {
+				"n": "Logistikfachkraft",
+				"f": "Logistikerin",
+				"m": "Logistiker"
+			},
+			"jobs": [
+				{
+					"id": "occ_transport_bus",
+					"n": "Busfahrer:in",
+					"f": "Busfahrerin",
+					"m": "Busfahrer"
+				},
+				{
+					"id": "occ_transport_train",
+					"n": "Lokführer:in",
+					"f": "Lokführerin",
+					"m": "Lokführer"
+				},
+				{
+					"id": "occ_transport_courier",
+					"n": "Paketzusteller:in",
+					"f": "Paketzustellerin",
+					"m": "Paketzusteller"
+				},
+				{
+					"id": "occ_transport_warehouse",
+					"n": "Lagerfachkraft",
+					"f": "Lageristin",
+					"m": "Lagerist"
+				}
+			],
+			"keywords": [
+				"fahrer",
+				"lokfuehr",
+				"zusteller",
+				"paket",
+				"lager",
+				"logistik",
+				"spedition",
+				"pilot",
+				"flugbegleit",
+				"kapitaen",
+				"schaffner",
+				"kurier",
+				"=post",
+				"=lkw",
+				"=taxi",
+				"fluglots",
+				"matrose",
+				"disponent",
+				"fahrdienst",
+				"schiff"
+			],
+			"prof": "prf_scrap",
+			"spec_hint": "cls_kai_runner",
+			"flavor": "Sie kommen immer an. Notfalls mit Umleitung.",
+			"mod_tags": [
+				"fahrplan",
+				"umleitung",
+				"verspaetung"
+			],
+			"rivals": [
+				"rv_transport_1",
+				"rv_transport_2"
+			],
+			"brand": "br_org_transport"
+		},
+		{
+			"id": "org_stage",
+			"name": "Kunst, Musik & Bühne",
+			"icon": "mic",
+			"status": false,
+			"role": {
+				"n": "Künstler:in",
+				"f": "Künstlerin",
+				"m": "Künstler"
+			},
+			"jobs": [
+				{
+					"id": "occ_stage_musician",
+					"n": "Musiker:in",
+					"f": "Musikerin",
+					"m": "Musiker"
+				},
+				{
+					"id": "occ_stage_actor",
+					"n": "Schauspieler:in",
+					"f": "Schauspielerin",
+					"m": "Schauspieler"
+				},
+				{
+					"id": "occ_stage_designer",
+					"n": "Designer:in",
+					"f": "Designerin",
+					"m": "Designer"
+				},
+				{
+					"id": "occ_stage_dancer",
+					"n": "Tänzer:in",
+					"f": "Tänzerin",
+					"m": "Tänzer"
+				}
+			],
+			"keywords": [
+				"musik",
+				"saenger",
+				"schauspiel",
+				"design",
+				"taenz",
+				"kuenstl",
+				"kunstmal",
+				"illustrat",
+				"theater",
+				"zirkus",
+				"artist",
+				"=dj",
+				"komiker",
+				"kabarett",
+				"bildhauer",
+				"grafik",
+				"buehne",
+				"musical",
+				"zauberer",
+				"puppenspiel",
+				"comedian"
+			],
+			"prof": "prf_costume",
+			"spec_hint": "cls_kai_showrunner",
+			"flavor": "Sie stehen gern im Rampenlicht. Hier brennt es manchmal sogar.",
+			"mod_tags": [
+				"applaus",
+				"rampenlicht",
+				"zugabe"
+			],
+			"rivals": [
+				"rv_stage_1",
+				"rv_stage_2"
+			],
+			"brand": "br_org_stage"
+		},
+		{
+			"id": "org_media",
+			"name": "Medien & Marketing",
+			"icon": "camera",
+			"status": false,
+			"role": {
+				"n": "Medienfachkraft",
+				"f": "Medienmacherin",
+				"m": "Medienmacher"
+			},
+			"jobs": [
+				{
+					"id": "occ_media_journalist",
+					"n": "Journalist:in",
+					"f": "Journalistin",
+					"m": "Journalist"
+				},
+				{
+					"id": "occ_media_creator",
+					"n": "Content Creator",
+					"f": "Content Creator",
+					"m": "Content Creator"
+				},
+				{
+					"id": "occ_media_host",
+					"n": "Moderator:in",
+					"f": "Moderatorin",
+					"m": "Moderator"
+				}
+			],
+			"keywords": [
+				"journal",
+				"redakt",
+				"content",
+				"creator",
+				"influenc",
+				"moderat",
+				"marketing",
+				"werbe",
+				"werbung",
+				"presse",
+				"youtub",
+				"autor",
+				"schriftstell",
+				"texter",
+				"fotograf",
+				"kamera",
+				"film",
+				"regisseur",
+				"radio",
+				"podcast",
+				"blogger",
+				"streamer",
+				"=pr",
+				"medien",
+				"social media",
+				"kommunikation",
+				"lektor",
+				"verlag"
+			],
+			"prof": "prf_props",
+			"spec_hint": "cls_kai_showrunner",
+			"flavor": "Sie wissen, wie man Geschichten erzählt. Jetzt sind Sie die Geschichte.",
+			"mod_tags": [
+				"schlagzeile",
+				"reichweite",
+				"kamera"
+			],
+			"rivals": [
+				"rv_media_1",
+				"rv_media_2"
+			],
+			"brand": "br_org_media"
+		},
+		{
+			"id": "org_science",
+			"name": "Forschung & Labor",
+			"icon": "potion",
+			"status": false,
+			"role": {
+				"n": "Wissenschaftler:in",
+				"f": "Wissenschaftlerin",
+				"m": "Wissenschaftler"
+			},
+			"jobs": [
+				{
+					"id": "occ_science_researcher",
+					"n": "Wissenschaftler:in",
+					"f": "Wissenschaftlerin",
+					"m": "Wissenschaftler"
+				},
+				{
+					"id": "occ_science_lab",
+					"n": "Laborant:in",
+					"f": "Laborantin",
+					"m": "Laborant"
+				},
+				{
+					"id": "occ_science_engineer",
+					"n": "Ingenieur:in",
+					"f": "Ingenieurin",
+					"m": "Ingenieur"
+				}
+			],
+			"keywords": [
+				"wissenschaft",
+				"labor",
+				"ingenieur",
+				"forsch",
+				"chemi",
+				"physik",
+				"biolog",
+				"mathemat",
+				"pharma",
+				"geolog",
+				"doktorand",
+				"statistik",
+				"archaeolog",
+				"astronom",
+				"meteorolog",
+				"botanik",
+				"postdoc"
+			],
+			"prof": "prf_lab",
+			"spec_hint": "cls_kai_tinker",
+			"flavor": "Sie stellen Hypothesen auf. Der Dungeon liefert die Versuchsreihe.",
+			"mod_tags": [
+				"hypothese",
+				"versuch",
+				"messreihe"
+			],
+			"rivals": [
+				"rv_science_1",
+				"rv_science_2"
+			],
+			"brand": "br_org_science"
+		},
+		{
+			"id": "org_rescue",
+			"name": "Sicherheit & Rettung",
+			"icon": "shield",
+			"status": false,
+			"role": {
+				"n": "Einsatzkraft",
+				"f": "Einsatzkraft",
+				"m": "Einsatzkraft"
+			},
+			"jobs": [
+				{
+					"id": "occ_rescue_fire",
+					"n": "Feuerwehrkraft",
+					"f": "Feuerwehrfrau",
+					"m": "Feuerwehrmann"
+				},
+				{
+					"id": "occ_rescue_police",
+					"n": "Polizist:in",
+					"f": "Polizistin",
+					"m": "Polizist"
+				},
+				{
+					"id": "occ_rescue_security",
+					"n": "Sicherheitskraft",
+					"f": "Sicherheitskraft",
+					"m": "Sicherheitskraft"
+				},
+				{
+					"id": "occ_rescue_lifeguard",
+					"n": "Rettungsschwimmer:in",
+					"f": "Rettungsschwimmerin",
+					"m": "Rettungsschwimmer"
+				}
+			],
+			"keywords": [
+				"feuerwehr",
+				"polizei",
+				"polizist",
+				"security",
+				"sicherheit",
+				"rettung",
+				"soldat",
+				"wachschutz",
+				"detektiv",
+				"bademeister",
+				"=zoll",
+				"zoellner",
+				"lebensrett",
+				"bergwacht",
+				"katastrophenschutz",
+				"=thw",
+				"personenschutz",
+				"objektschutz",
+				"leitstelle",
+				"kommissar"
+			],
+			"prof": "prf_salvage",
+			"spec_hint": "cls_kai_wrecker",
+			"flavor": "Sie laufen hin, wenn andere weglaufen. Die Regie bewundert das. Heimlich.",
+			"mod_tags": [
+				"einsatz",
+				"blaulicht",
+				"sirene"
+			],
+			"rivals": [
+				"rv_rescue_1",
+				"rv_rescue_2"
+			],
+			"brand": "br_org_rescue"
+		},
+		{
+			"id": "org_nature",
+			"name": "Natur & Landwirtschaft",
+			"icon": "star",
+			"status": false,
+			"role": {
+				"n": "Naturprofi",
+				"f": "Naturprofi",
+				"m": "Naturprofi"
+			},
+			"jobs": [
+				{
+					"id": "occ_nature_gardener",
+					"n": "Gärtner:in",
+					"f": "Gärtnerin",
+					"m": "Gärtner"
+				},
+				{
+					"id": "occ_nature_farmer",
+					"n": "Landwirt:in",
+					"f": "Landwirtin",
+					"m": "Landwirt"
+				},
+				{
+					"id": "occ_nature_forester",
+					"n": "Förster:in",
+					"f": "Försterin",
+					"m": "Förster"
+				},
+				{
+					"id": "occ_nature_florist",
+					"n": "Florist:in",
+					"f": "Floristin",
+					"m": "Florist"
+				}
+			],
+			"keywords": [
+				"gaertner",
+				"landwirt",
+				"bauer",
+				"baeuerin",
+				"foerster",
+				"florist",
+				"garten",
+				"forst",
+				"winzer",
+				"imker",
+				"fischer",
+				"schaefer",
+				"landschaft",
+				"agrar",
+				"baumpfleg",
+				"umwelt",
+				"ranger",
+				"jaeger",
+				"hufschmied",
+				"obstbau",
+				"weinbau"
+			],
+			"prof": "prf_shrooms",
+			"spec_hint": "cls_kai_runner",
+			"flavor": "Sie kennen jedes Gewächs. Auch die, die hier unten leuchten.",
+			"mod_tags": [
+				"wetter",
+				"ernte",
+				"unkraut"
+			],
+			"rivals": [
+				"rv_nature_1",
+				"rv_nature_2"
+			],
+			"brand": "br_org_nature"
+		},
+		{
+			"id": "org_law",
+			"name": "Recht & Justiz",
+			"icon": "menu",
+			"status": false,
+			"role": {
+				"n": "Jurist:in",
+				"f": "Juristin",
+				"m": "Jurist"
+			},
+			"jobs": [
+				{
+					"id": "occ_law_lawyer",
+					"n": "Anwält:in",
+					"f": "Anwältin",
+					"m": "Anwalt"
+				},
+				{
+					"id": "occ_law_judge",
+					"n": "Richter:in",
+					"f": "Richterin",
+					"m": "Richter"
+				},
+				{
+					"id": "occ_law_notary",
+					"n": "Notar:in",
+					"f": "Notarin",
+					"m": "Notar"
+				},
+				{
+					"id": "occ_law_clerk",
+					"n": "Justizfachkraft",
+					"f": "Justizfachangestellte",
+					"m": "Justizfachangestellter"
+				}
+			],
+			"keywords": [
+				"anwalt",
+				"anwaelt",
+				"richter",
+				"=notar",
+				"notarin",
+				"justiz",
+				"jurist",
+				"rechts",
+				"gericht",
+				"kanzlei",
+				"=jura",
+				"schoeff",
+				"rechtspfleg",
+				"gerichtsvollzieh",
+				"justizvollzug",
+				"staatsanwalt",
+				"syndikus"
+			],
+			"prof": "prf_costume",
+			"spec_hint": "cls_kai_runner",
+			"flavor": "Sie lesen das Kleingedruckte. Ihr Vertrag mit NOVA ist sehr klein gedruckt.",
+			"mod_tags": [
+				"paragraf",
+				"akte",
+				"einspruch"
+			],
+			"rivals": [
+				"rv_law_1",
+				"rv_law_2"
+			],
+			"brand": "br_org_law"
+		},
+		{
+			"id": "org_school",
+			"name": "Schule, Ausbildung & Studium",
+			"icon": "stairs",
+			"status": true,
+			"role": {
+				"n": "in Ausbildung",
+				"f": "in Ausbildung",
+				"m": "in Ausbildung"
+			},
+			"jobs": [
+				{
+					"id": "occ_school_pupil",
+					"n": "Schüler:in",
+					"f": "Schülerin",
+					"m": "Schüler"
+				},
+				{
+					"id": "occ_school_apprentice",
+					"n": "Azubi",
+					"f": "Azubi",
+					"m": "Azubi"
+				},
+				{
+					"id": "occ_school_student",
+					"n": "Student:in",
+					"f": "Studentin",
+					"m": "Student"
+				},
+				{
+					"id": "occ_school_volunteer",
+					"n": "im Freiwilligendienst",
+					"f": "im Freiwilligendienst",
+					"m": "im Freiwilligendienst"
+				}
+			],
+			"keywords": [
+				"schueler",
+				"azubi",
+				"student",
+				"studier",
+				"ausbildung",
+				"freiwilligendienst",
+				"praktikant",
+				"=fsj",
+				"=bfd",
+				"lehrling",
+				"abitur",
+				"=schule",
+				"=uni",
+				"trainee",
+				"werkstudent",
+				"studium",
+				"duales"
+			],
+			"prof": "",
+			"spec_hint": "cls_kai_runner",
+			"flavor": "Sie lernen jeden Tag Neues. Heute: Überleben in der Prime Time.",
+			"mod_tags": [
+				"pruefung",
+				"mensa",
+				"lernen"
+			],
+			"rivals": [
+				"rv_school_1",
+				"rv_school_2"
+			],
+			"brand": "br_org_school"
+		},
+		{
+			"id": "org_cleaning",
+			"name": "Reinigung & Hausmeisterei",
+			"icon": "hand",
+			"status": false,
+			"role": {
+				"n": "Reinigungskraft",
+				"f": "Reinigungskraft",
+				"m": "Reinigungskraft"
+			},
+			"jobs": [
+				{
+					"id": "occ_cleaning_cleaner",
+					"n": "Reinigungskraft",
+					"f": "Reinigungskraft",
+					"m": "Reinigungskraft"
+				},
+				{
+					"id": "occ_cleaning_caretaker",
+					"n": "Hausmeister:in",
+					"f": "Hausmeisterin",
+					"m": "Hausmeister"
+				},
+				{
+					"id": "occ_cleaning_building",
+					"n": "Gebäudereiniger:in",
+					"f": "Gebäudereinigerin",
+					"m": "Gebäudereiniger"
+				}
+			],
+			"keywords": [
+				"reinig",
+				"putz",
+				"hausmeist",
+				"hauswirtschaft",
+				"facility",
+				"raumpfleg",
+				"muellabfuhr",
+				"entsorg",
+				"kammerjaeg",
+				"schornstein",
+				"hauswart",
+				"objektbetreu"
+			],
+			"prof": "prf_scrap",
+			"spec_hint": "cls_kai_wrecker",
+			"flavor": "Sie wissen, was in Kellern liegt. Und wie man es wieder rausbekommt.",
+			"mod_tags": [
+				"keller",
+				"eimer",
+				"glanz"
+			],
+			"rivals": [
+				"rv_cleaning_1",
+				"rv_cleaning_2"
+			],
+			"brand": "br_org_cleaning"
+		},
+		{
+			"id": "org_beauty",
+			"name": "Friseur & Kosmetik",
+			"icon": "eye",
+			"status": false,
+			"role": {
+				"n": "Friseur:in",
+				"f": "Friseurin",
+				"m": "Friseur"
+			},
+			"jobs": [
+				{
+					"id": "occ_beauty_hair",
+					"n": "Friseur:in",
+					"f": "Friseurin",
+					"m": "Friseur"
+				},
+				{
+					"id": "occ_beauty_cosmetics",
+					"n": "Kosmetiker:in",
+					"f": "Kosmetikerin",
+					"m": "Kosmetiker"
+				},
+				{
+					"id": "occ_beauty_nails",
+					"n": "Nageldesigner:in",
+					"f": "Nageldesignerin",
+					"m": "Nageldesigner"
+				}
+			],
+			"keywords": [
+				"friseur",
+				"frisoer",
+				"kosmetik",
+				"nagel",
+				"barbier",
+				"visagist",
+				"maskenbild",
+				"stylist",
+				"tattoo",
+				"piercing",
+				"wellness",
+				"massage",
+				"masseur",
+				"beauty"
+			],
+			"prof": "prf_costume",
+			"spec_hint": "cls_kai_showrunner",
+			"flavor": "Sie bringen alle in Form. Auch Frisuren, die gegen Monster verloren haben.",
+			"mod_tags": [
+				"frisur",
+				"spiegel",
+				"glamour"
+			],
+			"rivals": [
+				"rv_beauty_1",
+				"rv_beauty_2"
+			],
+			"brand": "br_org_beauty"
+		},
+		{
+			"id": "org_industry",
+			"name": "Produktion & Industrie",
+			"icon": "box",
+			"status": false,
+			"role": {
+				"n": "Produktionsfachkraft",
+				"f": "Produktionsfachkraft",
+				"m": "Produktionsfachkraft"
+			},
+			"jobs": [
+				{
+					"id": "occ_industry_worker",
+					"n": "Produktionshelfer:in",
+					"f": "Produktionshelferin",
+					"m": "Produktionshelfer"
+				},
+				{
+					"id": "occ_industry_operator",
+					"n": "Maschinenführer:in",
+					"f": "Maschinenführerin",
+					"m": "Maschinenführer"
+				},
+				{
+					"id": "occ_industry_shift",
+					"n": "Schichtleiter:in",
+					"f": "Schichtleiterin",
+					"m": "Schichtleiter"
+				}
+			],
+			"keywords": [
+				"produktion",
+				"fabrik",
+				"maschinen",
+				"schichtarbeit",
+				"schichtleit",
+				"schichtfuehr",
+				"industrie",
+				"fertigung",
+				"fliessband",
+				"chemikant",
+				"stapler",
+				"bergbau",
+				"stahl",
+				"giesser",
+				"werkzeugmach",
+				"zerspan",
+				"verpack",
+				"anlagenfuehr",
+				"kommission"
+			],
+			"prof": "prf_props",
+			"spec_hint": "cls_kai_tinker",
+			"flavor": "Sie halten Maschinen am Laufen. Der Dungeon ist eine sehr große Maschine.",
+			"mod_tags": [
+				"takt",
+				"schicht",
+				"fliessband"
+			],
+			"rivals": [
+				"rv_industry_1",
+				"rv_industry_2"
+			],
+			"brand": "br_org_industry"
+		},
+		{
+			"id": "org_selfemployed",
+			"name": "Selbstständig",
+			"icon": "person",
+			"status": true,
+			"role": {
+				"n": "selbstständig",
+				"f": "selbstständig",
+				"m": "selbstständig"
+			},
+			"jobs": [],
+			"keywords": [
+				"selbststaendig",
+				"selbstaendig",
+				"freiberuf",
+				"freelanc",
+				"unternehm",
+				"gruender",
+				"inhaber",
+				"=chef",
+				"chefin",
+				"geschaeftsfuehr",
+				"startup",
+				"=ceo",
+				"eigene firma",
+				"eigenes geschaeft"
+			],
+			"prof": "",
+			"spec_hint": "cls_kai_tinker",
+			"flavor": "Chef:in, Buchhaltung und Kaffeeküche in einer Person. Ein Dungeon? Machbar.",
+			"mod_tags": [
+				"rechnung",
+				"akquise",
+				"kaffee"
+			],
+			"rivals": [
+				"rv_selfemployed_1",
+				"rv_selfemployed_2"
+			],
+			"brand": "br_org_selfemployed"
+		},
+		{
+			"id": "org_retired",
+			"name": "Ruhestand",
+			"icon": "clock",
+			"status": true,
+			"role": {
+				"n": "im Ruhestand",
+				"f": "im Ruhestand",
+				"m": "im Ruhestand"
+			},
+			"jobs": [],
+			"keywords": [
+				"rente",
+				"rentner",
+				"pension",
+				"ruhestand",
+				"altersteilzeit",
+				"vorruhestand"
+			],
+			"prof": "",
+			"spec_hint": "cls_kai_runner",
+			"flavor": "Sie haben schon alles erlebt. Ein Dungeon bringt Sie nicht aus der Ruhe.",
+			"mod_tags": [
+				"erfahrung",
+				"gelassenheit"
+			],
+			"rivals": [
+				"rv_retired_1",
+				"rv_retired_2"
+			],
+			"brand": "br_org_retired"
+		},
+		{
+			"id": "org_family",
+			"name": "Familie & Sorgearbeit",
+			"icon": "door",
+			"status": true,
+			"role": {
+				"n": "für die Familie da",
+				"f": "für die Familie da",
+				"m": "für die Familie da"
+			},
+			"jobs": [],
+			"keywords": [
+				"hausfrau",
+				"hausmann",
+				"eltern",
+				"mutter",
+				"vater",
+				"familie",
+				"pflegende",
+				"angehoerig",
+				"sorgearbeit",
+				"carearbeit",
+				"hausarbeit",
+				"kinderbetreu",
+				"mama",
+				"papa"
+			],
+			"prof": "",
+			"spec_hint": "cls_kai_wrecker",
+			"flavor": "Sie managen täglich Termine, Chaos und Wäsche. Ein Dungeon ist fast Urlaub.",
+			"mod_tags": [
+				"termine",
+				"chaos",
+				"pausenbrot"
+			],
+			"rivals": [
+				"rv_family_1",
+				"rv_family_2"
+			],
+			"brand": "br_org_family"
+		},
+		{
+			"id": "org_reorient",
+			"name": "Neuorientierung",
+			"icon": "swap",
+			"status": true,
+			"role": {
+				"n": "im Neustart",
+				"f": "im Neustart",
+				"m": "im Neustart"
+			},
+			"jobs": [],
+			"keywords": [
+				"arbeitslos",
+				"arbeitssuch",
+				"jobsuch",
+				"neuorient",
+				"umschul",
+				"neustart",
+				"auszeit",
+				"sabbatical",
+				"orientierung",
+				"weiterbild",
+				"quereinst",
+				"wiedereinstieg"
+			],
+			"prof": "",
+			"spec_hint": "cls_kai_runner",
+			"flavor": "Sie sortieren sich gerade neu. Die Show nennt das: Neustart mit Publikum.",
+			"mod_tags": [
+				"neustart",
+				"mut",
+				"kurswechsel"
+			],
+			"rivals": [
+				"rv_reorient_1",
+				"rv_reorient_2"
+			],
+			"brand": "br_org_reorient"
+		},
+		{
+			"id": "org_allround",
+			"name": "Allrounder:in",
+			"icon": "",
+			"status": false,
+			"role": {
+				"n": "Allrounder:in",
+				"f": "Allrounderin",
+				"m": "Allrounder"
+			},
+			"jobs": [],
+			"keywords": [],
+			"prof": "",
+			"spec_hint": "cls_kai_wrecker",
+			"flavor": "Sie können ein bisschen von allem. Genau das sucht die Show.",
+			"mod_tags": [
+				"vielseitig"
+			],
+			"rivals": [
+				"rv_allround_1",
+				"rv_allround_2"
+			],
+			"brand": "br_org_allround"
+		}
+	],
+	"hobbies": [
+		{
+			"id": "hob_cooking",
+			"name": "Kochen & Backen",
+			"icon": "potion",
+			"keywords": [
+				"koch",
+				"back",
+				"rezept",
+				"grill",
+				"kuchen",
+				"kulinar",
+				"torte",
+				"brot"
+			],
+			"prof": "prf_cooking",
+			"club": {
+				"text": "Kochkurs",
+				"g": "m"
+			},
+			"gag": "gag_cooking",
+			"greeting": "gr_hob_cooking"
+		},
+		{
+			"id": "hob_gaming",
+			"name": "Videospiele",
+			"icon": "play",
+			"keywords": [
+				"gaming",
+				"zocken",
+				"videospiel",
+				"konsole",
+				"computerspiel",
+				"games",
+				"=pc",
+				"esport",
+				"gamer"
+			],
+			"prof": "prf_scrap",
+			"club": {
+				"text": "Gaming-Runde",
+				"g": "f"
+			},
+			"gag": "gag_gaming",
+			"greeting": "gr_hob_gaming"
+		},
+		{
+			"id": "hob_sports",
+			"name": "Sport & Fitness",
+			"icon": "trophy",
+			"keywords": [
+				"sport",
+				"fitness",
+				"lauf",
+				"jogg",
+				"fussball",
+				"handball",
+				"basketball",
+				"volleyball",
+				"tennis",
+				"schwimm",
+				"radfahr",
+				"yoga",
+				"=gym",
+				"boxen",
+				"marathon",
+				"turnen",
+				"reiten",
+				"kampfsport",
+				"krafttrain",
+				"pilates",
+				"=ski",
+				"skifahr",
+				"surf"
+			],
+			"prof": "prf_first_aid",
+			"club": {
+				"text": "Lauftreff",
+				"g": "m"
+			},
+			"gag": "gag_sports",
+			"greeting": "gr_hob_sports"
+		},
+		{
+			"id": "hob_music",
+			"name": "Musik",
+			"icon": "mic",
+			"keywords": [
+				"musik",
+				"gitarre",
+				"klavier",
+				"singen",
+				"=chor",
+				"=band",
+				"schlagzeug",
+				"geige",
+				"konzert",
+				"=dj",
+				"=rap",
+				"instrument",
+				"ukulele",
+				"posaune",
+				"trompete",
+				"saxofon"
+			],
+			"prof": "prf_props",
+			"club": {
+				"text": "Band",
+				"g": "f"
+			},
+			"gag": "gag_music",
+			"greeting": "gr_hob_music"
+		},
+		{
+			"id": "hob_reading",
+			"name": "Lesen",
+			"icon": "menu",
+			"keywords": [
+				"lesen",
+				"=buch",
+				"buecher",
+				"roman",
+				"literatur",
+				"comic",
+				"manga",
+				"gedicht",
+				"schreiben",
+				"poesie",
+				"lyrik"
+			],
+			"prof": "prf_lab",
+			"club": {
+				"text": "Lesekreis",
+				"g": "m"
+			},
+			"gag": "gag_reading",
+			"greeting": "gr_hob_reading"
+		},
+		{
+			"id": "hob_garden",
+			"name": "Garten & Pflanzen",
+			"icon": "star",
+			"keywords": [
+				"garten",
+				"gaertn",
+				"pflanz",
+				"blume",
+				"gemuese",
+				"bonsai",
+				"kraeuter",
+				"balkon",
+				"kakte"
+			],
+			"prof": "prf_shrooms",
+			"club": {
+				"text": "Gartenverein",
+				"g": "m"
+			},
+			"gag": "gag_garden",
+			"greeting": "gr_hob_garden"
+		},
+		{
+			"id": "hob_diy",
+			"name": "Heimwerken & Basteln",
+			"icon": "gear",
+			"keywords": [
+				"heimwerk",
+				"bastel",
+				"=diy",
+				"werkeln",
+				"holz",
+				"naehen",
+				"stricken",
+				"haekeln",
+				"handarbeit",
+				"renovier",
+				"modellbau",
+				"toepfer",
+				"origami",
+				"schnitz",
+				"upcycl"
+			],
+			"prof": "prf_props",
+			"club": {
+				"text": "Werkstatt-Stammtisch",
+				"g": "m"
+			},
+			"gag": "gag_diy",
+			"greeting": "gr_hob_diy"
+		},
+		{
+			"id": "hob_animals",
+			"name": "Tiere",
+			"icon": "paw",
+			"keywords": [
+				"tiere",
+				"=hund",
+				"hunde",
+				"katze",
+				"pferd",
+				"aquarium",
+				"vogel",
+				"voegel",
+				"haustier",
+				"gassi",
+				"kaninchen",
+				"meerschwein"
+			],
+			"prof": "prf_cooking",
+			"club": {
+				"text": "Tierheim-Team",
+				"g": "n"
+			},
+			"gag": "gag_animals",
+			"greeting": "gr_tierheim"
+		},
+		{
+			"id": "hob_travel",
+			"name": "Reisen",
+			"icon": "map",
+			"keywords": [
+				"reisen",
+				"reise",
+				"urlaub",
+				"backpack",
+				"weltreise",
+				"kreuzfahrt",
+				"roadtrip",
+				"fernweh",
+				"staedtetrip",
+				"interrail"
+			],
+			"prof": "prf_costume",
+			"club": {
+				"text": "Reisegruppe",
+				"g": "f"
+			},
+			"gag": "gag_travel",
+			"greeting": "gr_hob_travel"
+		},
+		{
+			"id": "hob_dance",
+			"name": "Tanzen",
+			"icon": "heart",
+			"keywords": [
+				"tanz",
+				"ballett",
+				"salsa",
+				"tango",
+				"hiphop",
+				"zumba",
+				"walzer",
+				"disco",
+				"breakdance"
+			],
+			"prof": "prf_costume",
+			"club": {
+				"text": "Tanzkurs",
+				"g": "m"
+			},
+			"gag": "gag_dance",
+			"greeting": "gr_hob_dance"
+		},
+		{
+			"id": "hob_photo",
+			"name": "Fotografieren & Filmen",
+			"icon": "camera",
+			"keywords": [
+				"foto",
+				"film",
+				"kamera",
+				"video",
+				"drohne",
+				"kino"
+			],
+			"prof": "prf_props",
+			"club": {
+				"text": "Fotoclub",
+				"g": "m"
+			},
+			"gag": "gag_photo",
+			"greeting": "gr_hob_photo"
+		},
+		{
+			"id": "hob_social",
+			"name": "Social Media",
+			"icon": "chat",
+			"keywords": [
+				"social",
+				"posten",
+				"influenc",
+				"=blog",
+				"blogg",
+				"stream",
+				"memes",
+				"follower",
+				"=insta",
+				"reels",
+				"selfie"
+			],
+			"prof": "prf_costume",
+			"club": {
+				"text": "Community",
+				"g": "f"
+			},
+			"gag": "gag_social",
+			"greeting": "gr_hob_social"
+		},
+		{
+			"id": "hob_outdoor",
+			"name": "Wandern & Draußen",
+			"icon": "snow",
+			"keywords": [
+				"wandern",
+				"draussen",
+				"camping",
+				"klettern",
+				"bergsteig",
+				"natur",
+				"angeln",
+				"zelten",
+				"spazier",
+				"geocach",
+				"outdoor",
+				"pilze",
+				"berge"
+			],
+			"prof": "prf_shrooms",
+			"club": {
+				"text": "Wandergruppe",
+				"g": "f"
+			},
+			"gag": "gag_outdoor",
+			"greeting": "gr_hob_outdoor"
+		},
+		{
+			"id": "hob_volunteer",
+			"name": "Ehrenamt",
+			"icon": "hand",
+			"keywords": [
+				"ehrenamt",
+				"freiwillig",
+				"=verein",
+				"helfen",
+				"tafel",
+				"nachbarschaft",
+				"jugendarbeit",
+				"feuerwehr"
+			],
+			"prof": "prf_first_aid",
+			"club": {
+				"text": "Ehrenamtsteam",
+				"g": "n"
+			},
+			"gag": "gag_volunteer",
+			"greeting": "gr_hob_volunteer"
+		},
+		{
+			"id": "hob_boardgames",
+			"name": "Brett- & Kartenspiele",
+			"icon": "diamond",
+			"keywords": [
+				"brettspiel",
+				"kartenspiel",
+				"schach",
+				"=skat",
+				"poker",
+				"puzzle",
+				"spieleabend",
+				"backgammon",
+				"doppelkopf",
+				"rollenspiel",
+				"tabletop",
+				"=uno",
+				"gesellschaftsspiel"
+			],
+			"prof": "prf_lab",
+			"club": {
+				"text": "Spieleabend",
+				"g": "m"
+			},
+			"gag": "gag_boardgames",
+			"greeting": "gr_hob_boardgames"
+		},
+		{
+			"id": "hob_crime",
+			"name": "Krimis & Rätsel",
+			"icon": "eye",
+			"keywords": [
+				"krimi",
+				"raetsel",
+				"detektiv",
+				"escape",
+				"crime",
+				"sudoku",
+				"kreuzwort",
+				"thriller",
+				"mystery"
+			],
+			"prof": "prf_salvage",
+			"club": {
+				"text": "Krimiclub",
+				"g": "m"
+			},
+			"gag": "gag_crime",
+			"greeting": "gr_hob_crime"
+		},
+		{
+			"id": "hob_tech",
+			"name": "Technik & Elektronik",
+			"icon": "bolt",
+			"keywords": [
+				"technik",
+				"elektronik",
+				"loeten",
+				"computer",
+				"roboter",
+				"arduino",
+				"raspberry",
+				"=3d",
+				"3d druck",
+				"amateurfunk",
+				"smarthome",
+				"programmieren"
+			],
+			"prof": "prf_scrap",
+			"club": {
+				"text": "Bastelkeller",
+				"g": "m"
+			},
+			"gag": "gag_tech",
+			"greeting": "gr_hob_tech"
+		}
+	],
+	"traits": [
+		{
+			"id": "trt_pragmatic",
+			"name": "pragmatisch",
+			"bias": "mar_mop_only"
+		},
+		{
+			"id": "trt_witty",
+			"name": "schlagfertig",
+			"bias": ""
+		},
+		{
+			"id": "trt_caring",
+			"name": "fürsorglich",
+			"bias": "mar_graf_finale"
+		},
+		{
+			"id": "trt_chaotic",
+			"name": "chaotisch",
+			"bias": "mar_variety"
+		},
+		{
+			"id": "trt_cautious",
+			"name": "vorsichtig",
+			"bias": "mar_sneaky"
+		},
+		{
+			"id": "trt_peaceful",
+			"name": "friedlich",
+			"bias": "mar_pacifist"
+		},
+		{
+			"id": "trt_thrifty",
+			"name": "sparsam",
+			"bias": "mar_secondhand"
+		},
+		{
+			"id": "trt_impatient",
+			"name": "ungeduldig",
+			"bias": "mar_speed"
+		},
+		{
+			"id": "trt_sporty",
+			"name": "sportlich",
+			"bias": "mar_stunt"
+		},
+		{
+			"id": "trt_natural",
+			"name": "naturverbunden",
+			"bias": "mar_bio"
+		},
+		{
+			"id": "trt_brave",
+			"name": "mutig",
+			"bias": "mar_brave"
+		},
+		{
+			"id": "trt_foodie",
+			"name": "genießerisch",
+			"bias": "mar_gourmet"
+		}
+	],
+	"rivals": [
+		{
+			"id": "rv_animals_1",
+			"name": "Kira Katzenjammer"
+		},
+		{
+			"id": "rv_animals_2",
+			"name": "Bodo Bürste"
+		},
+		{
+			"id": "rv_care_1",
+			"name": "Dr. Till Tupfer"
+		},
+		{
+			"id": "rv_care_2",
+			"name": "Hanna Heftpflaster"
+		},
+		{
+			"id": "rv_craft_1",
+			"name": "Sascha Schraubzwinge"
+		},
+		{
+			"id": "rv_craft_2",
+			"name": "Doris Dübel"
+		},
+		{
+			"id": "rv_office_1",
+			"name": "Waltraud Wiedervorlage"
+		},
+		{
+			"id": "rv_office_2",
+			"name": "Ben Büroklammer"
+		},
+		{
+			"id": "rv_it_1",
+			"name": "Nico Neustart"
+		},
+		{
+			"id": "rv_it_2",
+			"name": "Lara Ladebalken"
+		},
+		{
+			"id": "rv_teach_1",
+			"name": "Klara Kreide"
+		},
+		{
+			"id": "rv_teach_2",
+			"name": "Tom Tafelschwamm"
+		},
+		{
+			"id": "rv_kitchen_1",
+			"name": "Kim Kochlöffel"
+		},
+		{
+			"id": "rv_kitchen_2",
+			"name": "Rita Rührteig"
+		},
+		{
+			"id": "rv_sales_1",
+			"name": "Ronja Rabatt"
+		},
+		{
+			"id": "rv_sales_2",
+			"name": "Bernd Bonuskarte"
+		},
+		{
+			"id": "rv_transport_1",
+			"name": "Fred Fahrplan"
+		},
+		{
+			"id": "rv_transport_2",
+			"name": "Lotte Lieferfenster"
+		},
+		{
+			"id": "rv_stage_1",
+			"name": "Bella Bühnenbild"
+		},
+		{
+			"id": "rv_stage_2",
+			"name": "Viktor Vorhang"
+		},
+		{
+			"id": "rv_media_1",
+			"name": "Lea Livestream"
+		},
+		{
+			"id": "rv_media_2",
+			"name": "Max Mikrofon"
+		},
+		{
+			"id": "rv_science_1",
+			"name": "Dr. Pia Pipette"
+		},
+		{
+			"id": "rv_science_2",
+			"name": "Ingo Isotop"
+		},
+		{
+			"id": "rv_rescue_1",
+			"name": "Sven Sirene"
+		},
+		{
+			"id": "rv_rescue_2",
+			"name": "Hella Helmlampe"
+		},
+		{
+			"id": "rv_nature_1",
+			"name": "Gerda Gießkanne"
+		},
+		{
+			"id": "rv_nature_2",
+			"name": "Fritz Forstweg"
+		},
+		{
+			"id": "rv_law_1",
+			"name": "Dr. Paula Paragraf"
+		},
+		{
+			"id": "rv_law_2",
+			"name": "Rolf Revision"
+		},
+		{
+			"id": "rv_school_1",
+			"name": "Lisa Lernzettel"
+		},
+		{
+			"id": "rv_school_2",
+			"name": "Emil Eselsbrücke"
+		},
+		{
+			"id": "rv_cleaning_1",
+			"name": "Willi Wischwasser"
+		},
+		{
+			"id": "rv_cleaning_2",
+			"name": "Marta Mikrofaser"
+		},
+		{
+			"id": "rv_beauty_1",
+			"name": "Fiona Föhnwelle"
+		},
+		{
+			"id": "rv_beauty_2",
+			"name": "Lino Lockenwickler"
+		},
+		{
+			"id": "rv_industry_1",
+			"name": "Petra Presslufthammer"
+		},
+		{
+			"id": "rv_industry_2",
+			"name": "Stefan Schichtplan"
+		},
+		{
+			"id": "rv_selfemployed_1",
+			"name": "Henrik Homeoffice"
+		},
+		{
+			"id": "rv_selfemployed_2",
+			"name": "Svea Skontofrist"
+		},
+		{
+			"id": "rv_retired_1",
+			"name": "Greta Gelassen"
+		},
+		{
+			"id": "rv_retired_2",
+			"name": "Ruth Rosenschere"
+		},
+		{
+			"id": "rv_family_1",
+			"name": "Mia Multitask"
+		},
+		{
+			"id": "rv_family_2",
+			"name": "Paul Pausenbrot"
+		},
+		{
+			"id": "rv_reorient_1",
+			"name": "Nora Neuanfang"
+		},
+		{
+			"id": "rv_reorient_2",
+			"name": "Lukas Lebenslauf"
+		},
+		{
+			"id": "rv_allround_1",
+			"name": "Alex Alleskönner"
+		},
+		{
+			"id": "rv_allround_2",
+			"name": "Toni Tausendsassa"
+		}
+	],
+	"brands": [
+		{
+			"id": "br_org_animals",
+			"name": "Wedelwurst"
+		},
+		{
+			"id": "br_org_care",
+			"name": "Pflasterpracht"
+		},
+		{
+			"id": "br_org_craft",
+			"name": "Schraubwunder"
+		},
+		{
+			"id": "br_org_office",
+			"name": "Ordnerglück"
+		},
+		{
+			"id": "br_org_it",
+			"name": "Cloudkissen"
+		},
+		{
+			"id": "br_org_teach",
+			"name": "Kreidekraft"
+		},
+		{
+			"id": "br_org_kitchen",
+			"name": "Pfannenfreund"
+		},
+		{
+			"id": "br_org_sales",
+			"name": "Rabattrausch"
+		},
+		{
+			"id": "br_org_transport",
+			"name": "Gleisglanz"
+		},
+		{
+			"id": "br_org_stage",
+			"name": "Applausspray"
+		},
+		{
+			"id": "br_org_media",
+			"name": "Likelack"
+		},
+		{
+			"id": "br_org_science",
+			"name": "Formelfrisch"
+		},
+		{
+			"id": "br_org_rescue",
+			"name": "Sirenensirup"
+		},
+		{
+			"id": "br_org_nature",
+			"name": "Beetboost"
+		},
+		{
+			"id": "br_org_law",
+			"name": "Paragrafenpastillen"
+		},
+		{
+			"id": "br_org_school",
+			"name": "Lernlimo"
+		},
+		{
+			"id": "br_org_cleaning",
+			"name": "Glanzgarant"
+		},
+		{
+			"id": "br_org_beauty",
+			"name": "Föhnfreude"
+		},
+		{
+			"id": "br_org_industry",
+			"name": "Taktkekse"
+		},
+		{
+			"id": "br_org_selfemployed",
+			"name": "Belegbonbons"
+		},
+		{
+			"id": "br_org_retired",
+			"name": "Gelassenheitsgelee"
+		},
+		{
+			"id": "br_org_family",
+			"name": "Chaoskekse"
+		},
+		{
+			"id": "br_org_reorient",
+			"name": "Neustartnudeln"
+		},
+		{
+			"id": "br_org_allround",
+			"name": "Allzweckwunder"
+		},
+		{
+			"id": "br_generic_1",
+			"name": "NOVA Glanz"
+		},
+		{
+			"id": "br_generic_2",
+			"name": "Prime-Puffreis"
+		},
+		{
+			"id": "br_generic_3",
+			"name": "Quotenquark"
+		}
+	],
+	"gags": [
+		{
+			"id": "gag_cooking",
+			"name": "Kochshow-Jury"
+		},
+		{
+			"id": "gag_gaming",
+			"name": "Speicherpunkt"
+		},
+		{
+			"id": "gag_sports",
+			"name": "Wiederholungen"
+		},
+		{
+			"id": "gag_music",
+			"name": "Konzertkritik"
+		},
+		{
+			"id": "gag_reading",
+			"name": "Kapitel"
+		},
+		{
+			"id": "gag_garden",
+			"name": "Unkraut"
+		},
+		{
+			"id": "gag_diy",
+			"name": "Baumarkt-Gutachten"
+		},
+		{
+			"id": "gag_animals",
+			"name": "Hundeschule"
+		},
+		{
+			"id": "gag_travel",
+			"name": "Hotelbewertung"
+		},
+		{
+			"id": "gag_dance",
+			"name": "Punktrichter"
+		},
+		{
+			"id": "gag_photo",
+			"name": "Kamera drei"
+		},
+		{
+			"id": "gag_social",
+			"name": "Schlagworte"
+		},
+		{
+			"id": "gag_outdoor",
+			"name": "Wetterbericht"
+		},
+		{
+			"id": "gag_volunteer",
+			"name": "Gute-Taten-Zähler"
+		},
+		{
+			"id": "gag_boardgames",
+			"name": "Regelkunde"
+		},
+		{
+			"id": "gag_crime",
+			"name": "Ermittlungsakte"
+		},
+		{
+			"id": "gag_tech",
+			"name": "Firmware-Update"
+		}
+	],
+	"greetings": [
+		{
+			"id": "gr_hob_cooking"
+		},
+		{
+			"id": "gr_hob_gaming"
+		},
+		{
+			"id": "gr_hob_sports"
+		},
+		{
+			"id": "gr_hob_music"
+		},
+		{
+			"id": "gr_hob_reading"
+		},
+		{
+			"id": "gr_hob_garden"
+		},
+		{
+			"id": "gr_hob_diy"
+		},
+		{
+			"id": "gr_hob_travel"
+		},
+		{
+			"id": "gr_hob_dance"
+		},
+		{
+			"id": "gr_hob_photo"
+		},
+		{
+			"id": "gr_hob_social"
+		},
+		{
+			"id": "gr_hob_outdoor"
+		},
+		{
+			"id": "gr_hob_volunteer"
+		},
+		{
+			"id": "gr_hob_boardgames"
+		},
+		{
+			"id": "gr_hob_crime"
+		},
+		{
+			"id": "gr_hob_tech"
+		},
+		{
+			"id": "gr_tierheim"
+		},
+		{
+			"id": "gr_colleagues"
+		},
+		{
+			"id": "gr_home"
+		}
+	],
+	"plans": [
+		{
+			"id": "plan_a",
+			"slots": [
+				{
+					"floor": 1,
+					"hook": "intro",
+					"n": 1,
+					"slot": "card"
+				},
+				{
+					"floor": 1,
+					"hook": "intro",
+					"n": 1,
+					"slot": "sponsor:intro"
+				},
+				{
+					"floor": 1,
+					"hook": "first_chest",
+					"n": 1,
+					"slot": "gag:1"
+				},
+				{
+					"floor": 1,
+					"hook": "safe_room",
+					"n": 1,
+					"slot": "rival:intro"
+				},
+				{
+					"floor": 1,
+					"hook": "boss_won",
+					"n": 1,
+					"slot": "gag:2"
+				},
+				{
+					"floor": 1,
+					"hook": "safe_room",
+					"n": 2,
+					"slot": "greeting"
+				},
+				{
+					"floor": 1,
+					"hook": "boss_won",
+					"n": 2,
+					"slot": "rival:result"
+				},
+				{
+					"floor": 1,
+					"hook": "safe_room",
+					"n": 3,
+					"slot": "line"
+				},
+				{
+					"floor": 1,
+					"hook": "floor_end",
+					"n": 1,
+					"slot": "sponsor:thanks"
+				},
+				{
+					"floor": 1,
+					"hook": "summary",
+					"n": 1,
+					"slot": "gag:3"
+				},
+				{
+					"floor": 1,
+					"hook": "game_over",
+					"n": 0,
+					"slot": "rival:taunt",
+					"every": 2,
+					"else": "line"
+				},
+				{
+					"floor": 0,
+					"hook": "floor_start",
+					"n": 1,
+					"slot": "marotte"
+				},
+				{
+					"floor": 0,
+					"hook": "first_chest",
+					"n": 1,
+					"slot": "gag:1"
+				},
+				{
+					"floor": 0,
+					"hook": "safe_room",
+					"n": 1,
+					"slot": "rival:taunt"
+				},
+				{
+					"floor": 0,
+					"hook": "safe_room",
+					"n": 2,
+					"slot": "greeting",
+					"every": 2,
+					"else": "line"
+				},
+				{
+					"floor": 0,
+					"hook": "safe_room",
+					"n": 0,
+					"slot": "line"
+				},
+				{
+					"floor": 0,
+					"hook": "boss_won",
+					"n": 1,
+					"slot": "gag:2"
+				},
+				{
+					"floor": 0,
+					"hook": "boss_won",
+					"n": 0,
+					"slot": "line"
+				},
+				{
+					"floor": 0,
+					"hook": "floor_end",
+					"n": 1,
+					"slot": "rival:result",
+					"every": 2,
+					"else": "sponsor:thanks"
+				},
+				{
+					"floor": 0,
+					"hook": "summary",
+					"n": 1,
+					"slot": "gag:3"
+				},
+				{
+					"floor": 0,
+					"hook": "game_over",
+					"n": 0,
+					"slot": "rival:taunt",
+					"every": 2,
+					"else": "line"
+				}
+			]
+		},
+		{
+			"id": "plan_b",
+			"slots": [
+				{
+					"floor": 1,
+					"hook": "intro",
+					"n": 1,
+					"slot": "card"
+				},
+				{
+					"floor": 1,
+					"hook": "intro",
+					"n": 1,
+					"slot": "rival:intro"
+				},
+				{
+					"floor": 1,
+					"hook": "first_chest",
+					"n": 1,
+					"slot": "gag:1"
+				},
+				{
+					"floor": 1,
+					"hook": "safe_room",
+					"n": 1,
+					"slot": "greeting"
+				},
+				{
+					"floor": 1,
+					"hook": "boss_won",
+					"n": 1,
+					"slot": "gag:2"
+				},
+				{
+					"floor": 1,
+					"hook": "safe_room",
+					"n": 2,
+					"slot": "sponsor:intro"
+				},
+				{
+					"floor": 1,
+					"hook": "boss_won",
+					"n": 2,
+					"slot": "rival:result"
+				},
+				{
+					"floor": 1,
+					"hook": "safe_room",
+					"n": 3,
+					"slot": "line"
+				},
+				{
+					"floor": 1,
+					"hook": "floor_end",
+					"n": 1,
+					"slot": "gag:3"
+				},
+				{
+					"floor": 1,
+					"hook": "game_over",
+					"n": 0,
+					"slot": "rival:taunt",
+					"every": 2,
+					"else": "line"
+				},
+				{
+					"floor": 0,
+					"hook": "floor_start",
+					"n": 1,
+					"slot": "marotte"
+				},
+				{
+					"floor": 0,
+					"hook": "first_chest",
+					"n": 1,
+					"slot": "gag:1"
+				},
+				{
+					"floor": 0,
+					"hook": "safe_room",
+					"n": 1,
+					"slot": "rival:taunt"
+				},
+				{
+					"floor": 0,
+					"hook": "safe_room",
+					"n": 2,
+					"slot": "greeting",
+					"every": 2,
+					"else": "line"
+				},
+				{
+					"floor": 0,
+					"hook": "safe_room",
+					"n": 0,
+					"slot": "line"
+				},
+				{
+					"floor": 0,
+					"hook": "boss_won",
+					"n": 1,
+					"slot": "gag:2"
+				},
+				{
+					"floor": 0,
+					"hook": "boss_won",
+					"n": 0,
+					"slot": "line"
+				},
+				{
+					"floor": 0,
+					"hook": "floor_end",
+					"n": 1,
+					"slot": "rival:result",
+					"every": 2,
+					"else": "sponsor:thanks"
+				},
+				{
+					"floor": 0,
+					"hook": "summary",
+					"n": 1,
+					"slot": "gag:3"
+				},
+				{
+					"floor": 0,
+					"hook": "game_over",
+					"n": 0,
+					"slot": "rival:taunt",
+					"every": 2,
+					"else": "line"
+				}
+			]
+		},
+		{
+			"id": "plan_c",
+			"slots": [
+				{
+					"floor": 1,
+					"hook": "intro",
+					"n": 1,
+					"slot": "card"
+				},
+				{
+					"floor": 1,
+					"hook": "intro",
+					"n": 1,
+					"slot": "sponsor:intro"
+				},
+				{
+					"floor": 1,
+					"hook": "first_chest",
+					"n": 1,
+					"slot": "greeting"
+				},
+				{
+					"floor": 1,
+					"hook": "safe_room",
+					"n": 1,
+					"slot": "rival:intro"
+				},
+				{
+					"floor": 1,
+					"hook": "boss_won",
+					"n": 1,
+					"slot": "gag:1"
+				},
+				{
+					"floor": 1,
+					"hook": "safe_room",
+					"n": 2,
+					"slot": "line"
+				},
+				{
+					"floor": 1,
+					"hook": "boss_won",
+					"n": 2,
+					"slot": "gag:2"
+				},
+				{
+					"floor": 1,
+					"hook": "safe_room",
+					"n": 3,
+					"slot": "rival:result"
+				},
+				{
+					"floor": 1,
+					"hook": "floor_end",
+					"n": 1,
+					"slot": "sponsor:thanks"
+				},
+				{
+					"floor": 1,
+					"hook": "summary",
+					"n": 1,
+					"slot": "gag:3"
+				},
+				{
+					"floor": 1,
+					"hook": "game_over",
+					"n": 0,
+					"slot": "rival:taunt",
+					"every": 2,
+					"else": "line"
+				},
+				{
+					"floor": 0,
+					"hook": "floor_start",
+					"n": 1,
+					"slot": "marotte"
+				},
+				{
+					"floor": 0,
+					"hook": "first_chest",
+					"n": 1,
+					"slot": "gag:1"
+				},
+				{
+					"floor": 0,
+					"hook": "safe_room",
+					"n": 1,
+					"slot": "rival:taunt"
+				},
+				{
+					"floor": 0,
+					"hook": "safe_room",
+					"n": 2,
+					"slot": "greeting",
+					"every": 2,
+					"else": "line"
+				},
+				{
+					"floor": 0,
+					"hook": "safe_room",
+					"n": 0,
+					"slot": "line"
+				},
+				{
+					"floor": 0,
+					"hook": "boss_won",
+					"n": 1,
+					"slot": "gag:2"
+				},
+				{
+					"floor": 0,
+					"hook": "boss_won",
+					"n": 0,
+					"slot": "line"
+				},
+				{
+					"floor": 0,
+					"hook": "floor_end",
+					"n": 1,
+					"slot": "rival:result",
+					"every": 2,
+					"else": "sponsor:thanks"
+				},
+				{
+					"floor": 0,
+					"hook": "summary",
+					"n": 1,
+					"slot": "gag:3"
+				},
+				{
+					"floor": 0,
+					"hook": "game_over",
+					"n": 0,
+					"slot": "rival:taunt",
+					"every": 2,
+					"else": "line"
+				}
+			]
+		}
+	],
+	"canon": {
+		"name": "Kai",
+		"form": "n",
+		"origin": "org_animals",
+		"occupation": "occ_animals_keeper",
+		"hobby": "hob_animals",
+		"traits": []
+	}
+}

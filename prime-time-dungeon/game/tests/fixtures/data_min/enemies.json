@@ -1,0 +1,58 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "enm_kanalratte",
+			"name": "Kanalratte",
+			"level": 1,
+			"stats": {
+				"hp": 24,
+				"mp": 0,
+				"str": 13,
+				"mag": 3,
+				"def": 5,
+				"res": 3,
+				"spd": 13,
+				"lck": 5
+			},
+			"exp": 12,
+			"credits": 6,
+			"attack_skill": "skl_e_strike",
+			"ai": {
+				"type": "weighted",
+				"actions": [
+					{
+						"skill": "skl_e_bite",
+						"weight": 3,
+						"target": "random"
+					}
+				]
+			},
+			"element_mods": {
+				"fire": 1.5
+			},
+			"drops": [
+				{
+					"item": "itm_bandage",
+					"chance": 0.25
+				},
+				{
+					"item": "itm_antidote",
+					"chance": 0.1
+				}
+			],
+			"model": {
+				"base": "rodent",
+				"scale": 0.8,
+				"colors": {
+					"primary": "#6b5b4e",
+					"secondary": "#e88a9a",
+					"eyes": "#ff3030"
+				}
+			},
+			"explore": {
+				"field_speed": 4.8
+			}
+		}
+	]
+}

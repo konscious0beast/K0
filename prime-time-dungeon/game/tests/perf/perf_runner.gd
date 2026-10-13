@@ -1,0 +1,1363 @@
+extends Node
+## Performance probe runner (02_TECH §12.1/§12.5, docs/PERFORMANCE.md). Loaded by perf_probe.gd after the first frame,
+## so autoloads and class_names are available. Sections (all by default, `--only=` picks some):
+##   startup    boot scene → interactive title (incl. the fixed 2 s card + fades), DB load, floor build cold/warm and
+##              safe-room build times (§12.1 "Aufbauzeit")
+##   explore    every cell of floor 1 from 4 camera yaws → per zone the worst view, the worst room with enemies
+##   safe_room  the three safe rooms of floor 1
+##   combat     the real-time combat in the world (07 §8.10; see the section below)
+##   season     Staffeln (09 §3.6 Nr. 6, ST1-C1): floors 2–6 of the basis season — the build of each whole floor (cold,
+##              warm; against the explore budget), its layout alone, every cell from 4 camera yaws like floor 1
+##   leak       N cycles explore (rebuild) → real-time combat → safe room through the Router, object/memory counts per
+##              cycle
+## Every section plays a real-time game (the campaign fights in real time only since R5b part 2b: the CTB battle
+## scene and its "battle" section are gone).
+## Casting (08 §6.2, K2): --look=worst plays every section with a candidate persona in the heaviest look (curls,
+## stubble, glasses: 2 940 tris in Kai's 7 MeshInstances) — Kai in exploration, safe room and real-time combat.
+## Render metrics need a display (Xvfb); headless runs print "–" for them. Prints Markdown tables and a final
+## "PERF: OK" / "PERF: OVER BUDGET (<n>)" line (+ "LEAK: OK" / "LEAK: GROWTH …"); exit code 1 on budget/leak failures.
+
+const UiUtil := preload("res://scenes/ui/ui_util.gd")
+const VfxNodeScript := preload("res://art/kit/vfx_node.gd")
+const BOOT_SCENE: String = "res://scenes/boot/boot.tscn"
+const FLOOR_SEED: int = 4242
+const YAWS: Array[float] = [0.0, PI * 0.5, PI, PI * 1.5]
+const OMNI_RADIUS: float = 24.0
+const MB: float = 1048576.0
+const SETTLE_FRAMES: int = 3
+const ROOM_SAMPLES: int = 2
+const SAFE_ROOM_SAMPLES: int = 30
+const LEAK_COMBAT_FRAMES: int = 3000        # a leak cycle's combat (the tutorial group, autopilot) ends within this
+const LEAK_WARMUP: int = 2                    # cycles before the baseline (caches, pools, lazy streams)
+const LEAK_WINDOW: int = 5                    # baseline = min over cycles WARMUP..WARMUP+4, end = min over the last 5
+const LEAK_OBJECT_SLACK: int = 16             # tolerated object drift of the minima (transient tweens/timers)
+## Casting (08 §6.2, K2): the persona look with the most triangles (test_08_avatar_kit: every combination ≤ 3 000).
+const WORST_LOOK: Dictionary = {"hair": "lk_hair_curls", "hair_color": "lk_hc_black", "skin": "lk_skin_7",
+	"beard": "lk_beard_stubble", "glasses": "lk_glasses_round", "outfit": "lk_outfit_blue"}
+
+## 02_TECH §12.1 (keys: explore / safe_room; the real-time combat: BUDGET_COMBAT).
+const BUDGET_DC3D: Dictionary = {"explore": 150, "safe_room": 120}
+## UI canvas draw calls (02_TECH §12.1 "DC 2D"): canvas items only batch while texture and command type stay the same
+## (measured 4.7.2: every StyleBoxFlat 1 DC, an outlined label 2, a polygon 1) → own ceiling next to the 3D budget.
+const BUDGET_DC2D: Dictionary = {"explore": 100, "safe_room": 100}
+const BUDGET_PRIMS: Dictionary = {"explore": 120000, "safe_room": 60000}
+const BUDGET_OMNI: Dictionary = {"explore": 4, "safe_room": 3}
+const BUDGET_SPOT: Dictionary = {"explore": 0, "safe_room": 0}
+const BUDGET_OMNI_LOW_EXPLORE: int = 2
+## Accent omni lights on top of the budget, quality high only, at most one at a time (02_TECH §12.1): the neon signal
+## of a stairs / safe-room cell (03_ART §5) and the train's head lamp while it passes (Königin, ~1 s).
+const ACCENT_LIGHTS: Array[StringName] = [&"Neon", &"HeadLamp"]
+const BUDGET_LIGHTS_PER_MESH: int = 3
+const BUDGET_MATS: Dictionary = {"explore": 24, "safe_room": 16}
+const MATS_FRAME_LIMIT: int = 24              # frames above this count are reported with a material overrun
+const BUDGET_LABEL3D: int = 12
+const BUDGET_PARTICLES: int = 400
+const BUDGET_EMITTERS: int = 6
+const BUDGET_BODIES: int = 40
+const BUDGET_RAM_MB: float = 400.0
+const BUDGET_BUILD_MS: Dictionary = {"explore": 500.0, "safe_room": 300.0}
+const SEASON_FLOORS: Array[int] = [2, 3, 4, 5, 6]   # ST1-C1: the floors of the basis season after floor 1
+const SEASON_NOW: int = 1791918000          # the probe season's fixed start (UTC)
+
+var engine_init_ms: int = 0                   # set by perf_probe.gd (process start → this probe's main loop)
+
+var _only: PackedStringArray = []
+var _quality: StringName = &"high"
+var _cycles: int = 20
+var _out_path: String = ""
+var _shots_dir: String = ""                   # --shots=<abs dir>: PNG of each row's frame with the most draw calls
+var _cells_table: bool = false                # --cells: one line per exploration cell
+var _boot_line: String = ""                   # --boot=<BOOT: … line of boot_timer.gd>
+var _leak_diff: bool = false                  # --leak-diff: print which node kinds changed between leak cycles
+var _mat_dump: bool = false                   # --mat-dump: print the unique materials of each row's peak frame
+var _mat_owners: Dictionary = {}              # material instance id → "shader/class @ first owner" (last _audit)
+var _mat_keys: Dictionary = {}                # material instance id → Materials cache key (--mat-dump)
+var _look: Dictionary = {}                    # --look=worst: the candidate persona's look (K2), {} = no persona
+var _rendered: bool = false
+var _lines: PackedStringArray = []
+var _over: PackedStringArray = []
+var _leak_fail: PackedStringArray = []
+var _explore: ExplorationScene = null
+var _build_rows: Array[Dictionary] = []
+
+
+func _ready() -> void:
+	for a: String in OS.get_cmdline_user_args():
+		if a.begins_with("--only="):
+			_only = a.trim_prefix("--only=").split(",", false)
+		elif a.begins_with("--quality="):
+			_quality = StringName(a.trim_prefix("--quality="))
+		elif a.begins_with("--cycles="):
+			_cycles = maxi(LEAK_WARMUP + 1, a.trim_prefix("--cycles=").to_int())
+		elif a.begins_with("--out="):
+			_out_path = a.trim_prefix("--out=")
+		elif a.begins_with("--shots="):
+			_shots_dir = a.trim_prefix("--shots=")
+		elif a == "--cells":
+			_cells_table = true
+		elif a == "--leak-diff":
+			_leak_diff = true
+		elif a == "--mat-dump":
+			_mat_dump = true
+		elif a.begins_with("--boot="):
+			_boot_line = a.trim_prefix("--boot=")
+		elif a == "--look=worst":
+			_look = WORST_LOOK
+	_rendered = DisplayServer.get_name() != "headless"
+	_run.call_deferred()
+
+
+## gl_compatibility (opengl3) or mobile (vulkan): the driver decides (--rendering-driver opengl3 switches the method).
+static func _renderer_name() -> String:
+	var drv: String = RenderingServer.get_current_rendering_driver_name()
+	return "gl_compatibility" if drv.begins_with("opengl") else str(ProjectSettings.get_setting(
+		"rendering/renderer/rendering_method", "mobile"))
+
+
+func _wants(section: String) -> bool:
+	return _only.is_empty() or _only.has(section)
+
+
+## The probe's new game (floor 1, FLOOR_SEED, a real-time game like every game since R5b part 2b); with --look=worst a
+## candidate persona in that look (K2).
+func _new_game() -> void:
+	var p: PersonaProfile = null
+	if not _look.is_empty():
+		p = PersonaProfile.canon(DB.data)
+		p.look = PersonaProfile.clean_look(_look, DB.data)
+	Game.new_game(0, "Kai", FLOOR_SEED, &"prime", HeroRules.DEFAULT_HERO, p)
+
+
+func _run() -> void:
+	Game.ephemeral = true
+	Save.read_only = true
+	if Game.settings != null:
+		Game.settings.ephemeral = true
+		Game.settings.quality = _quality
+	_emit("# Perf-Probe — Renderer %s, Treiber %s, Qualität %s, %s, Godot %s" % [
+		_renderer_name() if _rendered else "Dummy",
+		RenderingServer.get_current_rendering_driver_name() if _rendered else "headless", _quality,
+		"%dx%d" % [get_viewport().get_visible_rect().size.x, get_viewport().get_visible_rect().size.y]
+			if _rendered else "headless",
+		Engine.get_version_info().get("string", "?")])
+	_emit("GPU: %s" % RenderingServer.get_video_adapter_name() if _rendered else "GPU: – (headless)")
+	if not _look.is_empty():
+		_emit("Kandidat:in im Persona-Look (K2): %s" % " · ".join(PackedStringArray(_look.values())))
+	await _section_startup()
+	if _wants("explore"):
+		await _section_explore()
+	if _wants("safe_room"):
+		await _section_safe_room()
+	if _wants_combat():
+		await _section_combat()                # Echtzeitkampf (07 §8.10, R2)
+	if _wants("season"):
+		await _section_season()                # Staffeln (09 §3.6 Nr. 6, ST1-C1)
+	if _wants("startup") or _wants("season"):
+		_print_build_table()
+	if _wants("leak"):
+		await _section_leak()
+	_emit("")
+	if _over.is_empty():
+		_emit("PERF: OK")
+	else:
+		_emit("PERF: OVER BUDGET (%d): %s" % [_over.size(), "; ".join(_over)])
+	if _wants("leak"):
+		_emit("LEAK: OK" if _leak_fail.is_empty() else "LEAK: GROWTH " + "; ".join(_leak_fail))
+	if _out_path != "":
+		var f: FileAccess = FileAccess.open(_out_path, FileAccess.WRITE)
+		if f != null:
+			f.store_string("\n".join(_lines) + "\n")
+			f.close()
+	# Leave the screens before quitting (clean exit, no leaked instances).
+	await _free_screens()
+	get_tree().quit(0 if _over.is_empty() and _leak_fail.is_empty() else 1)
+
+
+func _emit(line: String) -> void:
+	_lines.append(line)
+	print(line)
+
+
+# ======================================================================================================================
+# Startup and build times
+# ======================================================================================================================
+
+## Boots like the main scene (adds GlobalUi, routes to the title) so later sections see the real UI. Timings of the
+## real boot come from tests/perf/boot_timer.gd (perf.sh passes its BOOT line as --boot=…): this runner itself
+## compiles every screen class up front, so its own boot would be faster than a real one.
+func _section_startup() -> void:
+	var root: Window = get_tree().root
+	var boot: Node = (load(BOOT_SCENE) as PackedScene).instantiate()
+	root.add_child(boot)
+	get_tree().current_scene = boot
+	var guard: int = 0
+	while guard < 3000 and not (Router.current is TitleScreen and not Router.busy):
+		await get_tree().process_frame
+		guard += 1
+	var t_data: int = Time.get_ticks_usec()
+	var data: GameData = GameData.new()
+	var data_ok: bool = data.load_dir("res://data")
+	var data_ms: float = (Time.get_ticks_usec() - t_data) / 1000.0
+	if not _wants("startup"):
+		return
+	_emit("")
+	_emit("## Start (echter Boot über tests/perf/boot_timer.gd, Zeiten ab Prozessstart)")
+	_emit("")
+	_emit("| Messpunkt | Zeit |")
+	_emit("|---|---:|")
+	var bt: Dictionary = _boot_values()
+	if bt.is_empty():
+		_emit("| (kein BOOT-Wert übergeben — tools/perf.sh ruft boot_timer.gd auf) | – |")
+	else:
+		var ms: Callable = func(k: String) -> String: return "%d ms" % int(bt[k]) if int(bt.get(k, -1)) >= 0 else "–"
+		_emit("| Engine + Autoload-`_init` (Skripte kompiliert, DB geladen) → Hauptschleife | %s |" % ms.call("init_ms"))
+		_emit("| Boot-Szene geladen und `_ready` (GlobalUi, Logo-Karte, Shader-Prewarm) | %s |" % ms.call("boot_ready_ms"))
+		_emit("| erstes Bild | %s |" % ms.call("first_frame_ms"))
+		_emit("| Titel interaktiv (inkl. fester 2,0 s Logo-Karte + 0,5 s Blende) | %s |" % ms.call("title_ms"))
+		_emit("| davon variabel (ohne die festen 2,5 s) | %d ms |" % maxi(0, int(bt.get("title_ms", 0)) - 2500))
+		_emit("| Titel → „Neues Spiel“ → Erkundung interaktiv (0,5 s Blende, erstes Kompilieren der Erkundung, Bau) | %s |"
+			% ms.call("explore_cost_ms"))
+	_emit("| DB erneut laden (`GameData.load_dir`, warm, %s) | %.0f ms |" % ["ok" if data_ok else "FEHLER", data_ms])
+
+
+func _boot_values() -> Dictionary:
+	var out: Dictionary = {}
+	if _boot_line == "":
+		return out
+	for part: String in _boot_line.trim_prefix("BOOT:").strip_edges().split(" ", false):
+		var kv: PackedStringArray = part.split("=")
+		if kv.size() == 2:
+			out[kv[0]] = kv[1].to_int()
+	return out
+
+
+func _print_build_table() -> void:
+	if _build_rows.is_empty():
+		return
+	_emit("")
+	_emit("## Aufbauzeiten (§12.1)")
+	_emit("")
+	_emit("| Aufbau | kalt | warm | Budget PC | Status |")
+	_emit("|---|---:|---:|---:|---|")
+	for r: Dictionary in _build_rows:
+		var budget: float = float(r["budget"])
+		var warm: float = float(r["warm"])
+		var ok: bool = budget <= 0.0 or warm <= budget
+		_emit("| %s | %.0f ms | %.0f ms | %s | %s |" % [r["name"], float(r["cold"]), warm,
+			"%.0f ms" % budget if budget > 0.0 else "–", "OK" if ok else "ÜBER"])
+		if not ok:
+			_over.append("build %s %.0f ms > %.0f ms" % [r["name"], warm, budget])
+
+
+func _add_build(build_name: String, cold_ms: float, warm_ms: float, budget_ms: float) -> void:
+	_build_rows.append({"name": build_name, "cold": cold_ms, "warm": warm_ms, "budget": budget_ms})
+
+
+## Builds the exploration screen directly (timed _ready = layout + world + actors + HUD) and adopts it.
+func _build_exploration() -> float:
+	var root: Window = get_tree().root
+	var old: Node = Router.current
+	if old != null and is_instance_valid(old):
+		old.queue_free()
+	if _explore != null and is_instance_valid(_explore):
+		_explore.queue_free()
+	await get_tree().process_frame
+	var t0: int = Time.get_ticks_usec()
+	var node: ExplorationScene = (load(Router.SCENE_EXPLORATION) as PackedScene).instantiate() as ExplorationScene
+	node.setup({"spawn": &"start"})
+	root.add_child(node)
+	var ms: float = (Time.get_ticks_usec() - t0) / 1000.0
+	get_tree().current_scene = node
+	Router.adopt(node)
+	_explore = node
+	return ms
+
+
+func _ensure_exploration() -> void:
+	if _explore != null and is_instance_valid(_explore) and _explore.is_inside_tree():
+		return
+	_new_game()
+	var cold: float = await _build_exploration()
+	var warm: float = await _build_exploration()
+	var t_gen: int = Time.get_ticks_usec()
+	var layout: FloorLayout = DungeonGenerator.generate(Game.floor_def(), Game.state.floor_run.seed)
+	var gen1_ms: float = (Time.get_ticks_usec() - t_gen) / 1000.0
+	var gen2_ms: float = -1.0
+	var f2: FloorDef = DB.floor_def(2)
+	if f2 != null:
+		var t2: int = Time.get_ticks_usec()
+		DungeonGenerator.generate(f2, 777)
+		gen2_ms = (Time.get_ticks_usec() - t2) / 1000.0
+	_add_build("Etage 1 (Layout + Räume + Akteure + HUD, `ExplorationScene._ready`)", cold, warm,
+		float(BUDGET_BUILD_MS["explore"]))
+	_add_build("davon Layout Etage 1 (`DungeonGenerator.generate`, feste Daten, %d Zellen)" % (
+		layout.cells.size() if layout != null else 0), gen1_ms, gen1_ms, 0.0)
+	if gen2_ms >= 0.0:
+		_add_build("Layout Etage 2 (prozedural, Seed 777)", gen2_ms, gen2_ms, 0.0)
+	_explore.auto_start_combat = false
+
+
+# ======================================================================================================================
+# Sampling
+# ======================================================================================================================
+
+func _new_acc() -> Dictionary:
+	return {"n": 0, "dc": 0, "dc_sum": 0, "prims": 0, "objs": 0, "dc3d": 0, "dcsh": 0, "dccv": 0, "omni": 0,
+		"omni_near": 0, "neon": 0, "omni_room": 0, "spot": 0, "lpm": 0, "dirl": 0, "shadow": 0, "mats": 0, "l3d": 0,
+		"emit": 0, "parts": 0, "static": 0, "kinematic": 0, "areas": 0, "rigid": 0, "meshes": 0, "ram": 0.0, "vram": 0.0,
+		"nodes": 0, "objects": 0, "mats_over": 0}
+
+
+## Waits `frames` drawn frames and folds the monitors + scene audit of each into `acc` (max; dc also summed).
+func _sample(frames: int, acc: Dictionary) -> void:
+	for i in frames:
+		if _rendered:
+			await RenderingServer.frame_post_draw
+		else:
+			await get_tree().process_frame
+		_take(acc)
+
+
+func _take(acc: Dictionary) -> void:
+	acc["n"] = int(acc["n"]) + 1
+	var vp: RID = get_viewport().get_viewport_rid()
+	var dc: int = int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))
+	acc["dc_sum"] = int(acc["dc_sum"]) + dc
+	var vals: Dictionary = {
+		"dc": dc,
+		"prims": int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)),
+		"objs": int(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)),
+		"dc3d": RenderingServer.viewport_get_render_info(vp, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_VISIBLE,
+			RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME),
+		"dcsh": RenderingServer.viewport_get_render_info(vp, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_SHADOW,
+			RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME),
+		"dccv": RenderingServer.viewport_get_render_info(vp, RenderingServer.VIEWPORT_RENDER_INFO_TYPE_CANVAS,
+			RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME),
+		"nodes": int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),
+		"objects": int(Performance.get_monitor(Performance.OBJECT_COUNT)),
+	}
+	if _rendered and _shots_dir != "" and dc > int(acc["dc"]):
+		acc["shot"] = get_viewport().get_texture().get_image()
+	var audit: Dictionary = _audit()
+	if int(audit["mats"]) > MATS_FRAME_LIMIT:
+		acc["mats_over"] = int(acc["mats_over"]) + 1
+	if _mat_dump and int(audit["mats"]) > int(acc["mats"]):
+		acc["mat_list"] = _mat_owners.values()
+	for k: String in audit.keys():
+		vals[k] = audit[k]
+	for k: String in vals.keys():
+		acc[k] = maxi(int(acc[k]), int(vals[k]))
+	acc["ram"] = maxf(float(acc["ram"]), Performance.get_monitor(Performance.MEMORY_STATIC) / MB)
+	acc["vram"] = maxf(float(acc["vram"]), Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / MB)
+
+
+## Scene audit of the main viewport (SubViewports are skipped): active omni/spot lights within 24 m of the camera,
+## lights per mesh (light_cull_mask vs layers, omni as sphere, spot as cone), unique materials, Label3D, particles,
+## physics bodies (static / kinematic+rigid / areas).
+func _audit() -> Dictionary:
+	var out: Dictionary = {"omni": 0, "omni_near": 0, "neon": 0, "spot": 0, "lpm": 0, "dirl": 0, "shadow": 0, "mats": 0,
+		"l3d": 0, "emit": 0,
+		"parts": 0, "static": 0, "kinematic": 0, "areas": 0, "rigid": 0, "meshes": 0}
+	var cam: Camera3D = get_viewport().get_camera_3d()
+	var cam_pos: Vector3 = cam.global_position if cam != null else Vector3.ZERO
+	var planes: Array[Plane] = cam.get_frustum() if cam != null else ([] as Array[Plane])
+	var mats: Dictionary = {}
+	_mat_owners.clear()
+	if _mat_dump:
+		_mat_keys.clear()
+		for key: Variant in Materials._cache.keys():
+			_mat_keys[(Materials._cache[key] as Material).get_instance_id()] = str(key)
+	var lights: Array[Light3D] = []             # active omni/spot lights (not faded out)
+	var geos: Array[GeometryInstance3D] = []
+	var stack: Array[Node] = [get_tree().root]
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		if n is SubViewport:
+			continue
+		for c: Node in n.get_children():
+			stack.append(c)
+		if n is Light3D:
+			var l: Light3D = n as Light3D
+			if not l.is_visible_in_tree() or l.light_energy <= 0.0:
+				continue
+			if l.shadow_enabled:
+				out["shadow"] = int(out["shadow"]) + 1
+			if l is DirectionalLight3D:
+				out["dirl"] = int(out["dirl"]) + 1
+				continue
+			var d: float = l.global_position.distance_to(cam_pos)
+			if l.distance_fade_enabled and d >= l.distance_fade_begin + l.distance_fade_length:
+				continue
+			lights.append(l)
+			# "aktiv" (§12.1): within 24 m AND its range sphere reaches the view frustum — lights outside the frustum
+			# are culled by the renderer and cost nothing that frame. "omni_near" counts every one within 24 m.
+			if d <= OMNI_RADIUS:
+				var key: String = "omni" if l is OmniLight3D else "spot"
+				if l is OmniLight3D:
+					out["omni_near"] = int(out["omni_near"]) + 1
+				var rng: float = (l as OmniLight3D).omni_range if l is OmniLight3D else (l as SpotLight3D).spot_range
+				if planes.is_empty() or _sphere_in_frustum(l.global_position, rng, planes):
+					out[key] = int(out[key]) + 1
+					if l is OmniLight3D and ACCENT_LIGHTS.has(l.name):
+						out["neon"] = int(out["neon"]) + 1
+		elif n is GeometryInstance3D:
+			var g: GeometryInstance3D = n as GeometryInstance3D
+			if not g.is_visible_in_tree():
+				continue
+			out["meshes"] = int(out["meshes"]) + 1
+			geos.append(g)
+			_collect_materials(g, mats)
+			if g is Label3D:
+				out["l3d"] = int(out["l3d"]) + 1
+			elif g is CPUParticles3D and (g as CPUParticles3D).emitting:
+				out["emit"] = int(out["emit"]) + 1
+				out["parts"] = int(out["parts"]) + (g as CPUParticles3D).amount
+		elif n is CollisionObject3D:
+			var key2: String = "areas"
+			if n is StaticBody3D:
+				key2 = "static"
+			elif n is RigidBody3D:
+				key2 = "rigid"
+			elif n is PhysicsBody3D:
+				key2 = "kinematic"
+			out[key2] = int(out[key2]) + 1
+	out["mats"] = mats.size()
+	out["omni_room"] = int(out["omni"]) - int(out["neon"])
+	var lpm: int = 0
+	for g: GeometryInstance3D in geos:
+		if g is Label3D or g is CPUParticles3D or g is Sprite3D:
+			continue
+		var box: AABB = g.global_transform * g.get_aabb()
+		var k: int = 0
+		for l: Light3D in lights:
+			if (l.light_cull_mask & g.layers) != 0 and _lights_box(l, box):
+				k += 1
+		lpm = maxi(lpm, k)
+	out["lpm"] = lpm
+	return out
+
+
+## Conservative sphere-vs-frustum test (Camera3D.get_frustum() planes point outwards).
+static func _sphere_in_frustum(center: Vector3, radius: float, planes: Array[Plane]) -> bool:
+	for p: Plane in planes:
+		if p.distance_to(center) > radius:
+			return false
+	return true
+
+
+## Omni: sphere (position, range) touches the box. Spot: some box sample point (closest point, centre, corners) lies
+## inside the cone (range, angle).
+static func _lights_box(l: Light3D, box: AABB) -> bool:
+	var p: Vector3 = l.global_position
+	if l is OmniLight3D:
+		return p.distance_to(p.clamp(box.position, box.end)) <= (l as OmniLight3D).omni_range
+	var sp: SpotLight3D = l as SpotLight3D
+	var axis: Vector3 = -l.global_transform.basis.z.normalized()
+	var cos_a: float = cos(deg_to_rad(sp.spot_angle))
+	var pts: Array[Vector3] = [p.clamp(box.position, box.end), box.get_center()]
+	for i in 8:
+		pts.append(box.get_endpoint(i))
+	for q: Vector3 in pts:
+		var v: Vector3 = q - p
+		var dist: float = v.length()
+		if dist <= sp.spot_range and (dist < 0.001 or v.dot(axis) / dist >= cos_a):
+			return true
+	return false
+
+
+func _collect_materials(g: GeometryInstance3D, mats: Dictionary) -> void:
+	var list: Array[Material] = []
+	if g.material_override != null:
+		list.append(g.material_override)
+	else:
+		var mesh: Mesh = null
+		if g is MeshInstance3D:
+			mesh = (g as MeshInstance3D).mesh
+			if mesh != null:
+				for s in mesh.get_surface_count():
+					var m: Material = (g as MeshInstance3D).get_active_material(s)
+					if m != null:
+						list.append(m)
+				mesh = null
+		elif g is MultiMeshInstance3D and (g as MultiMeshInstance3D).multimesh != null:
+			mesh = (g as MultiMeshInstance3D).multimesh.mesh
+		elif g is CPUParticles3D:
+			mesh = (g as CPUParticles3D).mesh
+		if mesh != null:
+			for s in mesh.get_surface_count():
+				var m2: Material = mesh.surface_get_material(s)
+				if m2 != null:
+					list.append(m2)
+	if g.material_overlay != null:
+		list.append(g.material_overlay)
+	for m3: Material in list:
+		var cur: Material = m3
+		var guard: int = 0
+		while cur != null and guard < 8:
+			mats[cur.get_instance_id()] = true
+			if _mat_dump and not _mat_owners.has(cur.get_instance_id()):
+				var sh: Shader = (cur as ShaderMaterial).shader if cur is ShaderMaterial else null
+				_mat_owners[cur.get_instance_id()] = "%s @ %s [%s]" % [sh.resource_path.get_file() if sh != null else
+					cur.get_class(), str(get_tree().root.get_path_to(g)).right(70),
+					_mat_keys.get(cur.get_instance_id(), "not cached")]
+			cur = cur.next_pass
+			guard += 1
+
+
+# ======================================================================================================================
+# Tables
+# ======================================================================================================================
+
+func _table_head(title: String) -> void:
+	_emit("")
+	_emit("## " + title)
+	_emit("")
+	_emit("| Ansicht | DC gesamt max (Ø) | DC 3D + Schatten | DC 2D (UI) | Primitive max | Omni aktiv (≤ 24 m) / Spot | " +
+		"Lichter/Mesh | Materialien | Label3D | Partikel (Emitter) | Bodies stat./kin. (Areas) | Nodes | RAM MB | " +
+		"VRAM MB | Status |")
+	_emit("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|")
+
+
+func _row(view: String, ctx: String, acc: Dictionary) -> void:
+	var issues: PackedStringArray = _check(ctx, acc)
+	if acc.get("shot") is Image:
+		DirAccess.make_dir_recursive_absolute(_shots_dir)
+		var file: String = "%s_%s.png" % [ctx, view.validate_filename().replace(" ", "_").left(48)]
+		(acc["shot"] as Image).save_png(_shots_dir.path_join(file))
+	var n: int = maxi(1, int(acc["n"]))
+	var dc_txt: String = "–"
+	var d3_txt: String = "–"
+	var d2_txt: String = "–"
+	var prim_txt: String = "–"
+	if _rendered:
+		dc_txt = "%d (%d)" % [int(acc["dc"]), roundi(float(acc["dc_sum"]) / float(n))]
+		d3_txt = "%d + %d" % [int(acc["dc3d"]), int(acc["dcsh"])]
+		d2_txt = str(int(acc["dccv"]))
+		prim_txt = _fmt_int(int(acc["prims"]))
+	_emit("| %s | %s | %s | %s | %s | %d (%d) / %d | %d | %d | %d | %d (%d) | %d / %d (%d) | %d | %.0f | %.0f | %s |" % [
+		view, dc_txt, d3_txt, d2_txt, prim_txt, int(acc["omni"]), int(acc["omni_near"]), int(acc["spot"]), int(acc["lpm"]),
+		int(acc["mats"]),
+		int(acc["l3d"]), int(acc["parts"]), int(acc["emit"]), int(acc["static"]), int(acc["kinematic"]) +
+		int(acc["rigid"]), int(acc["areas"]), int(acc["nodes"]), float(acc["ram"]), float(acc["vram"]),
+		"OK" if issues.is_empty() else "ÜBER: " + ", ".join(issues)])
+	for s: String in issues:
+		_over.append("%s/%s: %s" % [ctx, view, s])
+	if _mat_dump and acc.get("mat_list") is Array:
+		for desc: Variant in acc["mat_list"]:
+			print("MATDUMP %s/%s: %s" % [ctx, view, str(desc)])
+
+
+func _check(ctx: String, acc: Dictionary) -> PackedStringArray:
+	var issues: PackedStringArray = []
+	if _rendered:
+		var d3: int = int(acc["dc3d"]) + int(acc["dcsh"])
+		if d3 > int(BUDGET_DC3D[ctx]):
+			issues.append("DC 3D %d > %d" % [d3, int(BUDGET_DC3D[ctx])])
+		if int(acc["dccv"]) > int(BUDGET_DC2D[ctx]):
+			issues.append("DC 2D %d > %d" % [int(acc["dccv"]), int(BUDGET_DC2D[ctx])])
+		if int(acc["prims"]) > int(BUDGET_PRIMS[ctx]):
+			issues.append("Prims %d > %d" % [int(acc["prims"]), int(BUDGET_PRIMS[ctx])])
+	var omni_budget: int = int(BUDGET_OMNI[ctx])
+	if ctx == "explore" and _quality == &"low":
+		omni_budget = BUDGET_OMNI_LOW_EXPLORE
+	# ACCENT_LIGHTS: at most ONE on top of the budget, only on high.
+	var accent_max: int = 1 if _quality == &"high" else 0
+	if int(acc["omni_room"]) > omni_budget or int(acc["neon"]) > accent_max:
+		issues.append("Omni %d (+%d Akzent) > %d" % [int(acc["omni_room"]), int(acc["neon"]), omni_budget])
+	var spot_budget: int = int(BUDGET_SPOT[ctx]) if _quality == &"high" else 0
+	if int(acc["spot"]) > spot_budget:
+		issues.append("Spot %d > %d" % [int(acc["spot"]), spot_budget])
+	var lpm_budget: int = BUDGET_LIGHTS_PER_MESH
+	if int(acc["lpm"]) > lpm_budget:
+		issues.append("Lichter/Mesh %d > %d" % [int(acc["lpm"]), lpm_budget])
+	if int(acc["dirl"]) > 1:
+		issues.append("DirectionalLight %d > 1" % int(acc["dirl"]))
+	if int(acc["mats"]) > int(BUDGET_MATS[ctx]):
+		issues.append("Mat %d > %d%s" % [int(acc["mats"]), int(BUDGET_MATS[ctx]), " (%d von %d Frames)" % [
+			int(acc["mats_over"]), int(acc["n"])] if int(BUDGET_MATS[ctx]) == MATS_FRAME_LIMIT else ""])
+	if int(acc["l3d"]) > BUDGET_LABEL3D:
+		issues.append("Label3D %d > %d" % [int(acc["l3d"]), BUDGET_LABEL3D])
+	if int(acc["parts"]) > BUDGET_PARTICLES or int(acc["emit"]) > BUDGET_EMITTERS:
+		issues.append("Partikel %d/%d" % [int(acc["parts"]), int(acc["emit"])])
+	var bodies: int = int(acc["static"]) + int(acc["kinematic"]) + int(acc["rigid"])
+	var body_budget: int = BUDGET_BODIES if ctx == "explore" else 0
+	if bodies > body_budget:
+		issues.append("Bodies %d > %d" % [bodies, body_budget])
+	if int(acc["rigid"]) > 0:
+		issues.append("RigidBody %d" % int(acc["rigid"]))
+	if float(acc["ram"]) > BUDGET_RAM_MB:
+		issues.append("RAM %.0f MB" % float(acc["ram"]))
+	return issues
+
+
+static func _fmt_int(v: int) -> String:
+	var s: String = str(absi(v))
+	var out: String = ""
+	while s.length() > 3:
+		out = "." + s.substr(s.length() - 3) + out
+		s = s.substr(0, s.length() - 3)
+	return ("-" if v < 0 else "") + s + out
+
+
+# ======================================================================================================================
+# Exploration
+# ======================================================================================================================
+
+func _section_explore() -> void:
+	await _ensure_exploration()
+	await _explore_floor("Erkundung Etage 1 (je Zone: Maximum jeder Größe über alle Zellen × 4 Kamerarichtungen)")
+
+
+## Every cell of the running exploration from 4 camera yaws → per zone (quarter) the worst view, the worst single view
+## and the floor's maximum, under the table title `title`.
+func _explore_floor(title: String) -> void:
+	var scene: ExplorationScene = _explore
+	var layout: FloorLayout = scene.get_layout()
+	var zones: Dictionary = {}               # zone id → {"acc" (max over its cells), "cell", "kind", "enemies", "cells"}
+	var all: Dictionary = _new_acc()
+	var all_cell: Dictionary = {}
+	var cell_rows: PackedStringArray = []
+	for c: Vector2i in layout.sorted_cells():
+		var rc: RoomCell = layout.cell_at(c)
+		var acc: Dictionary = _new_acc()
+		var enemies: int = 0
+		for yaw: float in YAWS:
+			scene.get_player().teleport(layout.cell_to_world(c) + Vector3(0.0, 0.05, 0.0), yaw)
+			scene.get_camera_rig().snap(yaw)
+			for i in SETTLE_FRAMES:
+				await get_tree().physics_frame
+			await _sample(ROOM_SAMPLES, acc)
+			enemies = maxi(enemies, _visible_enemies(scene))
+		cell_rows.append("| %s | %s | %s | %d | %d / %d | %d (%d) | %d | %d |" % [_cell_txt(c),
+			RoomCell.kind_to_string(rc.kind), rc.zone, int(acc["dc"]), int(acc["dc3d"]) + int(acc["dcsh"]), int(acc["dccv"]),
+			int(acc["omni"]), int(acc["omni_near"]), int(acc["lpm"]), enemies])
+		var z: String = rc.zone
+		if not zones.has(z):
+			zones[z] = {"acc": _new_acc(), "cell": c, "kind": RoomCell.kind_to_string(rc.kind), "enemies": enemies,
+				"dc": -1, "cells": 0}
+		var ze: Dictionary = zones[z]
+		ze["cells"] = int(ze["cells"]) + 1
+		if _worse(acc, {"dc": int(ze["dc"]), "prims": 0, "meshes": int(ze["dc"])}):
+			ze["cell"] = c
+			ze["kind"] = RoomCell.kind_to_string(rc.kind)
+			ze["enemies"] = enemies
+			ze["dc"] = int(acc["dc"]) if _rendered else int(acc["meshes"])
+		_merge(ze["acc"] as Dictionary, acc)
+		if all_cell.is_empty() or _worse(acc, all_cell["acc"] as Dictionary):
+			all_cell = {"acc": acc, "cell": c, "kind": RoomCell.kind_to_string(rc.kind), "enemies": enemies}
+		_merge(all, acc)
+	_table_head(title)
+	var names: Array = zones.keys()
+	names.sort()
+	for zn: Variant in names:
+		var e: Dictionary = zones[zn]
+		_row("%s (%d Zellen; meiste DC: %s %s, %d Gegner)" % [zn, int(e["cells"]), _cell_txt(e["cell"]), e["kind"],
+			int(e["enemies"])], "explore", e["acc"] as Dictionary)
+	if not all_cell.is_empty():
+		_row("**Schlechteste Einzelansicht** %s (%s, %d Gegner)" % [_cell_txt(all_cell["cell"]), all_cell["kind"],
+			int(all_cell["enemies"])], "explore", all_cell["acc"] as Dictionary)
+	_row("**Etage gesamt (Maximum je Größe)**", "explore", all)
+	if _cells_table:
+		_emit("")
+		_emit("| Zelle | Art | Zone | DC max | 3D / 2D | Omni aktiv (≤ 24 m) | Lichter/Mesh | Gegner |")
+		_emit("|---|---|---|---:|---:|---:|---:|---:|")
+		for line: String in cell_rows:
+			_emit(line)
+
+
+## Folds `acc` into `into`: maximum of every size, sums of the averages.
+func _merge(into: Dictionary, acc: Dictionary) -> void:
+	for k: String in acc.keys():
+		if k == "shot" or k == "mat_list":
+			var by: String = "dc" if k == "shot" else "mats"
+			if int(acc[by]) >= int(into[by]):
+				into[k] = acc[k]
+			continue
+		if k == "n" or k == "dc_sum" or k == "mats_over":
+			into[k] = int(into[k]) + int(acc[k])
+		elif k == "ram" or k == "vram":
+			into[k] = maxf(float(into[k]), float(acc[k]))
+		else:
+			into[k] = maxi(int(into.get(k, 0)), int(acc[k]))
+
+
+func _worse(a: Dictionary, b: Dictionary) -> bool:
+	if _rendered:
+		return int(a["dc"]) > int(b["dc"]) or (int(a["dc"]) == int(b["dc"]) and int(a["prims"]) > int(b["prims"]))
+	return int(a["meshes"]) > int(b["meshes"])
+
+
+func _visible_enemies(scene: ExplorationScene) -> int:
+	var n: int = 0
+	for gid: String in scene.living_groups():
+		var a: Node3D = scene.get_enemy(gid)
+		if a != null and a.is_visible_in_tree():
+			n += 1
+	return n
+
+
+static func _cell_txt(c: Vector2i) -> String:
+	return "(%d, %d)" % [c.x, c.y]
+
+
+# ======================================================================================================================
+# Staffeln (09 §3.6 Nr. 6, ST1-C1)
+# ======================================================================================================================
+
+## Floors 2–6 of the basis season (Am Stück, seed FLOOR_SEED, a fixed start, taken down the stairs with
+## Game.season_debug_descend): the build of the whole floor cold and warm against the explore budget (no quarter
+## streaming yet — ST1-C2), the layout alone (ZoneGenerator.generate) and every cell × 4 yaws (_explore_floor). The
+## probe's floor-1 game comes back for the later sections.
+func _section_season() -> void:
+	if _build_rows.is_empty():                  # alone (--only=season): floor 1 of the same process as the reference
+		_new_game()
+		var c1: float = await _build_exploration()
+		var w1: float = await _build_exploration()
+		_add_build("Etage 1 (Referenz im selben Lauf, handgebaut)", c1, w1, float(BUDGET_BUILD_MS["explore"]))
+	for f: int in SEASON_FLOORS:
+		var def: FloorDef = DB.floor_def(f)
+		if def == null or not def.has_zones():
+			continue
+		if not _season_on_floor(f):
+			_over.append("season: floor %d not reached" % f)
+			continue
+		var cold: float = await _build_exploration()
+		var warm: float = await _build_exploration()
+		var t0: int = Time.get_ticks_usec()
+		var layout: FloorLayout = DungeonGenerator.generate(def, Game.state.floor_run.seed)
+		var gen_ms: float = (Time.get_ticks_usec() - t0) / 1000.0
+		_add_build("Etage %d (Staffel: %d Zellen, %d Viertel; ganze Etage, `ExplorationScene._ready`)" % [f,
+			layout.cells.size(), def.zones.size()], cold, warm, float(BUDGET_BUILD_MS["explore"]))
+		_add_build("davon Layout Etage %d (`ZoneGenerator.generate`)" % f, gen_ms, gen_ms, 0.0)
+		_explore.auto_start_combat = false
+		_show_passing_ui(false)
+		await _explore_floor("Erkundung Etage %d – %s (Staffel; je Viertel: Maximum über alle Zellen × 4 Richtungen; "
+			% [f, def.name.get_slice("– ", 1)] + "ohne M.O.D.-Kasten und Toasts)")
+		_show_passing_ui(true)
+	if _explore != null and is_instance_valid(_explore):
+		_explore.queue_free()
+	_explore = null
+	await get_tree().process_frame
+
+
+## Staffeln (ST1-C1): the season section measures the floors, not the Show's passing UI — while it samples, the layers
+## of the M.O.D. box and the toasts are hidden (`on` = false) and shown again afterwards. The probe walks every room
+## without a fight, so bets, achievements and boxes come in bursts: three toasts and the M.O.D. box add ≈ 30 UI draw
+## calls on any floor (PERFORMANCE.md §3.9).
+func _show_passing_ui(on: bool) -> void:
+	var ui: Node = get_tree().root.get_node_or_null("GlobalUi")
+	if ui == null:
+		return
+	for n: String in ["mod_dialog", "toasts"]:
+		var layer: CanvasLayer = ui.get(n) as CanvasLayer
+		if layer != null:
+			layer.visible = on
+
+
+## A basis season taken down the stairs to floor `f` (Game.start_season + Game.season_debug_descend); false if not.
+func _season_on_floor(f: int) -> bool:
+	if not Game.start_season(0, "ssn_basis", {"tempo": "binge", "seed": FLOOR_SEED, "unlock": true, "now": SEASON_NOW}):
+		return false
+	while Game.state.floor_run.index < f:
+		if not Game.season_debug_descend():
+			return false
+	return Game.state.floor_run.index == f
+
+
+# ======================================================================================================================
+# Safe room
+# ======================================================================================================================
+
+func _section_safe_room() -> void:
+	await _ensure_exploration()
+	var root: Window = get_tree().root
+	_table_head("Safe Room (Etage 1, %d Frames je Raum)" % SAFE_ROOM_SAMPLES)
+	var cold_ms: float = -1.0
+	var warm_ms: float = 0.0
+	for sr: Dictionary in UiUtil.floor_safe_rooms(Game.floor_def()):
+		_explore.on_suspend()
+		root.remove_child(_explore)
+		var t0: int = Time.get_ticks_usec()
+		var node: SafeRoomScene = (load(Router.SCENE_SAFE_ROOM) as PackedScene).instantiate() as SafeRoomScene
+		node.setup({"safe_room_id": str(sr["id"])})
+		root.add_child(node)
+		var ms: float = (Time.get_ticks_usec() - t0) / 1000.0
+		if cold_ms < 0.0:
+			cold_ms = ms
+		else:
+			warm_ms = maxf(warm_ms, ms)
+		Router.adopt(node)
+		var acc: Dictionary = _new_acc()
+		await _sample(SAFE_ROOM_SAMPLES, acc)
+		_row("%s (%s)" % [sr["id"], sr["theme"]], "safe_room", acc)
+		root.remove_child(node)
+		node.queue_free()
+		root.add_child(_explore)
+		get_tree().current_scene = _explore
+		Router.adopt(_explore)
+		_explore.on_resume({"from_safe_room": str(sr["id"])})
+		await get_tree().process_frame
+	_add_build("Safe Room (`SafeRoomScene._ready`)", cold_ms, warm_ms, float(BUDGET_BUILD_MS["safe_room"]))
+
+
+# ======================================================================================================================
+# Leak loop (Router transitions)
+# ======================================================================================================================
+
+func _section_leak() -> void:
+	if _explore == null or not is_instance_valid(_explore):
+		_new_game()
+	var root: Window = get_tree().root
+	if _explore != null and is_instance_valid(_explore) and not _explore.is_inside_tree():
+		root.add_child(_explore)
+		Router.adopt(_explore)
+	Game.autoplay = true                    # the results lower third continues on its own (§11.4)
+	Game.fast_text = true
+	var hints: bool = Game.settings.combat_hints
+	Game.settings.combat_hints = false      # a first-time card would hold the ticks (07 §2.13)
+	var old_scale: float = Engine.time_scale
+	Engine.time_scale = 8.0
+	var sr_list: Array[Dictionary] = UiUtil.floor_safe_rooms(Game.floor_def())
+	var sr_id: String = str(sr_list[0]["id"]) if not sr_list.is_empty() else ""
+	_emit("")
+	_emit("## Router-Zyklen (je Zyklus: Echtzeitkampf → Safe Room → zurück → Erkundung neu aufbauen, dort gemessen)")
+	_emit("")
+	_emit("| Zyklus | Objekte | davon in Caches | Nodes | Ressourcen | verwaiste Nodes | RAM MB | Frames |")
+	_emit("|---:|---:|---:|---:|---:|---:|---:|---:|")
+	var snaps: Array[Dictionary] = []
+	var prev_hist: Dictionary = {}
+	var frames: int = 0
+	for cycle in _cycles + 1:
+		# Every cycle builds the same floor: the stray spawners (RunSim, 90 s explore time per zone) are held back —
+		# a stray is game state (≤ 1 per zone, ≈ 21 nodes each), not a leak; measured: +2 strays in cycle 12 of a
+		# rendered run lifted the node minima by 43 and then stayed flat.
+		# The same combat every cycle: the tutorial group comes back (defeated groups cleared) — a defeated group is game
+		# state, not a leak.
+		if Game.state != null and Game.state.floor_run != null:
+			Game.state.floor_run.spawner_ticks.clear()
+			Game.state.floor_run.defeated_groups.clear()
+		Router.goto(Router.SCENE_EXPLORATION, {"spawn": &"start"}, Router.Transition.NONE)
+		frames += await _wait_screen("ExplorationScene", 600)
+		if cycle > 0:
+			# Measured on the floor the goto rebuilt: the last cycle's screens are freed, and with them the Vfx pools
+			# of its combat (they live on the floor that spawned them and differ with each fight, 03_ART A12).
+			for i in 4:
+				await get_tree().process_frame
+			var snap: Dictionary = _counts()
+			snap["frames"] = frames
+			snap["cached"] = cache_objects()
+			snap["objects_net"] = int(snap["objects"]) - int(snap["cached"])
+			snaps.append(snap)
+			if _leak_diff:
+				var hist: Dictionary = node_histogram(root)
+				if not prev_hist.is_empty():
+					for line: String in histogram_diff(prev_hist, hist):
+						print("LEAKDIFF cycle %d: %s" % [cycle, line])
+				prev_hist = hist
+			_emit("| %d | %d | %d | %d | %d | %d | %.1f | %d |" % [cycle, int(snap["objects"]), int(snap["cached"]),
+				int(snap["nodes"]), int(snap["resources"]), int(snap["orphans"]), float(snap["ram"]), frames])
+			frames = 0
+		if cycle == _cycles:
+			break
+		Progression.full_heal(Game.state, DB.data)
+		var fought: Dictionary = await leak_combat(Router.current as ExplorationScene, LEAK_COMBAT_FRAMES)
+		frames += int(fought["frames"])
+		if str(fought["error"]) != "":
+			_leak_fail.append("cycle %d: %s" % [cycle + 1, str(fought["error"])])
+		if sr_id != "":
+			Router.enter_safe_room(sr_id)
+			frames += await _wait_screen("SafeRoomScene", 600)
+			Router.exit_safe_room()
+			frames += await _wait_screen("ExplorationScene", 600)
+		if not (Router.current is ExplorationScene):
+			_leak_fail.append("cycle %d ended on %s" % [cycle + 1, Router.current])
+			break
+	Engine.time_scale = old_scale
+	Game.autoplay = false
+	Game.settings.combat_hints = hints
+	for k: String in leak_growth(snaps, LEAK_WARMUP, LEAK_WINDOW, LEAK_OBJECT_SLACK):
+		_leak_fail.append(k)
+	if snaps.size() >= LEAK_WARMUP + 2 * LEAK_WINDOW - 1:
+		var a: Dictionary = _window_min(snaps, LEAK_WARMUP - 1, LEAK_WINDOW)
+		var b: Dictionary = _window_min(snaps, snaps.size() - LEAK_WINDOW, LEAK_WINDOW)
+		_emit("")
+		_emit(("Minimum Zyklen %d–%d → %d–%d: Objekte %+d (ohne Cache-Einträge %+d), Nodes %+d, Ressourcen %+d, " +
+			"verwaiste Nodes max %d, RAM %+.1f MB") % [LEAK_WARMUP, LEAK_WARMUP + LEAK_WINDOW - 1,
+			snaps.size() - LEAK_WINDOW + 1, snaps.size(), int(b["objects"]) - int(a["objects"]),
+			int(b["objects_net"]) - int(a["objects_net"]), int(b["nodes"]) - int(a["nodes"]),
+			int(b["resources"]) - int(a["resources"]), int(b["orphans"]), float(b["ram"]) - float(a["ram"])])
+
+
+## One real-time combat of a leak cycle in `ex` (also tests/test_perf_router_cycles.gd): the nearest group (the
+## tutorial group) through ExplorationScene.force_encounter, played by the autopilot like the autoplay smoke.
+## {"frames": until the combat ended and the director is idle, "error": "" or why not within `max_frames`}.
+static func leak_combat(ex: ExplorationScene, max_frames: int) -> Dictionary:
+	var tree: SceneTree = ex.get_tree() if ex != null and ex.is_inside_tree() else null
+	if tree == null:
+		return {"frames": 0, "error": "no exploration for the combat"}
+	var d: CombatDirector = ex.get_director()
+	ex.auto_start_combat = true
+	var sent: bool = false
+	var n: int = 0
+	while n < max_frames:
+		if not sent and Game.combat == null and n % 10 == 0 and is_instance_valid(ex):
+			ex.force_encounter("")             # again while a line or a transition still holds the exploration
+		await tree.process_frame
+		n += 1
+		if d == null or not is_instance_valid(d):
+			break
+		if not sent and Game.combat != null and d.is_running():
+			sent = true
+			d.submit(RtCommand.autopilot(Game.combat.tick(), Game.combat.controlled_id(), true))
+		if sent and Game.combat == null and not d.is_busy() and not Router.busy:
+			return {"frames": n, "error": ""}
+	return {"frames": n, "error": "the combat %s within %d frames" % ["did not end" if sent else "did not start",
+		max_frames]}
+
+
+## Leak verdict of a series of _counts() snapshots (one per cycle): the minima of a window after the warm-up and of
+## the last window must not grow (nodes, resources: 0; objects: `slack`), and no orphan nodes. Transient nodes
+## (toasts, damage numbers, chat lines) only lift single cycles, a leak lifts every later cycle → compare minima.
+## Objects are judged without the entries of the bounded art caches ("objects_net" when present, cache_objects()):
+## a battle with an effect colour / enemy model not seen before fills them once, a leak grows outside them.
+## Also used by tests/test_perf_router_cycles.gd.
+static func leak_growth(snaps: Array[Dictionary], warmup: int, window: int, slack: int) -> PackedStringArray:
+	var out: PackedStringArray = []
+	if snaps.size() < warmup + 2 * window - 1:
+		out.append("too few cycles (%d)" % snaps.size())
+		return out
+	var a: Dictionary = _window_min(snaps, warmup - 1, window)
+	var b: Dictionary = _window_min(snaps, snaps.size() - window, window)
+	if int(b["nodes"]) > int(a["nodes"]):
+		out.append("nodes %+d" % (int(b["nodes"]) - int(a["nodes"])))
+	if int(b["resources"]) > int(a["resources"]):
+		out.append("resources %+d" % (int(b["resources"]) - int(a["resources"])))
+	var okey: String = "objects_net" if a.has("objects_net") and b.has("objects_net") else "objects"
+	if int(b[okey]) - int(a[okey]) > slack:
+		out.append("objects %+d" % (int(b[okey]) - int(a[okey])))
+	if int(b["orphans"]) > 0:
+		out.append("orphan nodes %d" % int(b["orphans"]))
+	return out
+
+
+static func _window_min(snaps: Array[Dictionary], from: int, count: int) -> Dictionary:
+	var out: Dictionary = {}
+	for i in range(from, mini(from + count, snaps.size())):
+		for k: String in ["objects", "objects_net", "nodes", "resources", "orphans", "ram"]:
+			if snaps[i].has(k):
+				out[k] = snaps[i][k] if not out.has(k) else minf(float(out[k]), float(snaps[i][k]))
+	return out
+
+
+## Objects held by the bounded art caches (Materials incl. next_pass, CharacterBuilder meshes ≤ 96 models, tinted VFX
+## quads ≤ 64): they fill once per new colour / model and are no leak (leak_growth "objects_net").
+static func cache_objects() -> int:
+	var ids: Dictionary = {}
+	for m: Variant in Materials._cache.values():
+		var cur: Material = m as Material
+		while cur != null and not ids.has(cur.get_instance_id()):
+			ids[cur.get_instance_id()] = true
+			cur = cur.next_pass
+	_collect_objects(CharacterBuilder._mesh_cache, ids, 0)
+	_collect_objects(VfxNodeScript._quad_meshes, ids, 0)
+	return ids.size()
+
+
+static func _collect_objects(v: Variant, ids: Dictionary, depth: int) -> void:
+	if depth > 6:
+		return
+	if v is Object:
+		ids[(v as Object).get_instance_id()] = true
+	elif v is Dictionary:
+		for e: Variant in (v as Dictionary).values():
+			_collect_objects(e, ids, depth + 1)
+	elif v is Array:
+		for e: Variant in v:
+			_collect_objects(e, ids, depth + 1)
+
+
+## Node count per "kind" (path below `root` with digits and auto-generated @names folded, + class): two histograms
+## of consecutive leak cycles show which part of the tree grew (--leak-diff).
+static func node_histogram(root: Node) -> Dictionary:
+	var out: Dictionary = {}
+	var digits: RegEx = RegEx.create_from_string("[0-9]+")
+	var stack: Array[Node] = [root]
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		for c: Node in n.get_children(true):
+			stack.append(c)
+		var key: String = digits.sub(str(root.get_path_to(n)), "#", true) + " (" + n.get_class() + ")"
+		out[key] = int(out.get(key, 0)) + 1
+	return out
+
+
+static func histogram_diff(a: Dictionary, b: Dictionary) -> PackedStringArray:
+	var out: PackedStringArray = []
+	var keys: Dictionary = a.duplicate()
+	keys.merge(b)
+	for k: Variant in keys.keys():
+		var d: int = int(b.get(k, 0)) - int(a.get(k, 0))
+		if d != 0:
+			out.append("%+d %s" % [d, str(k)])
+	out.sort()
+	return out
+
+
+func _counts() -> Dictionary:
+	return {"objects": int(Performance.get_monitor(Performance.OBJECT_COUNT)),
+		"nodes": int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),
+		"resources": int(Performance.get_monitor(Performance.OBJECT_RESOURCE_COUNT)),
+		"orphans": int(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT)),
+		"ram": Performance.get_monitor(Performance.MEMORY_STATIC) / MB}
+
+
+## Waits until Router.current is the named screen class and the Router is idle; returns the frames waited.
+func _wait_screen(cls_name: String, max_frames: int) -> int:
+	var n: int = 0
+	while n < max_frames:
+		await get_tree().process_frame
+		n += 1
+		var cur: Node = Router.current
+		if cur != null and not Router.busy and _is_screen(cur, cls_name):
+			return n
+	_leak_fail.append("timeout waiting for %s (current %s)" % [cls_name, Router.current])
+	return n
+
+
+static func _is_screen(node: Node, cls_name: String) -> bool:
+	match cls_name:
+		"ExplorationScene":
+			return node is ExplorationScene
+		"SafeRoomScene":
+			return node is SafeRoomScene
+	return false
+
+
+func _free_screens() -> void:
+	var root: Window = get_tree().root
+	if _explore != null and is_instance_valid(_explore) and not _explore.is_inside_tree():
+		_explore.free()
+	for c: Node in root.get_children():
+		if c is ExplorationScene or c is SafeRoomScene or c is TitleScreen:
+			c.queue_free()
+	Sfx.music(&"", 0.0)
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+
+# ======================================================================================================================
+# --- Echtzeitkampf (07, R2) ---
+# ======================================================================================================================
+# Scenarios combat_regular, combat_two_groups, combat_boss_queen (07 §8.10, §12.3; --only=combat or the names): a
+# real-time combat in the world of seed 4242 played by the world fixture (tests/fixtures/rt_world/world_stream.gd) WITH
+# effects — the telegraph pool filled to all 10 quads, zones, swings and hits (sparks), the extras (Komparsen) and the
+# boss's adds — the director ticking in real time; maximum over the 4 camera directions. Budgets 07 §8.10 / 02_TECH
+# §12.1 (combat): DC 3D ≤ 150, UI ≤ 180, primitives ≤ 120 000, materials ≤ 24, Label3D ≤ 12, particles ≤ 400 / 6
+# emitters, bodies ≤ 40 (exploration + the collision ring), lights as in the exploration. Frame time: the director's own
+# cost per frame (tick loop + puppets + telegraphs) and Godot's process / physics time per frame.
+
+const RT_SCENARIOS: PackedStringArray = ["combat_regular", "combat_two_groups", "combat_boss_queen"]
+const RT_SAMPLES: int = 16                    # drawn frames per camera direction
+const RT_TIMING_FRAMES: int = 60              # frames of the timing pass (no scene audit): exploration vs. combat
+const RT_WARMUP_SEC: float = 1.2              # entry, pop-in and first effects before the samples
+const RT_BOSS_COURT_TICK: int = 350           # world fixture "boss": 2 rats at tick 10, 3 more at 300 (+ their walk)
+const RT_FIXTURE: String = "res://tests/fixtures/rt_world/world_stream.gd"
+const BUDGET_COMBAT: Dictionary = {"dc3d": 150, "dc2d": 180, "prims": 120000, "mats": 24, "bodies": 40}
+
+var _rt_hints_before: bool = true
+
+
+func _wants_combat() -> bool:
+	if _only.is_empty() or _only.has("combat"):
+		return true
+	for s: String in RT_SCENARIOS:
+		if _only.has(s):
+			return true
+	return false
+
+
+func _section_combat() -> void:
+	var rows: Array[Dictionary] = []
+	for sc: String in RT_SCENARIOS:
+		if _only.is_empty() or _only.has("combat") or _only.has(sc):
+			rows.append(await _rt_scenario(sc))
+	_table_head("Echtzeitkampf in der Welt (07 §8.10) — mit Effekten (10 Telegraph-Quads, Zonen, Treffer-Funken, " +
+		"Komparsen / Adds), Maximum über 4 Kamerarichtungen")
+	for r: Dictionary in rows:
+		_rt_row(str(r["label"]), r["acc"] as Dictionary)
+	_emit("")
+	_emit("Erkundung → Kampf im selben Raum (Erkundung: dieselben 4 Kamerarichtungen vor dem Auslösen). " +
+		"Zeitmessung ohne Szenen-Audit (%d Frames, gleiche Stelle und Kamera); Director = Tick-Schleife + Puppen + "
+		% RT_TIMING_FRAMES + "Telegraphen je Frame (`CombatDirector.cost_us`).")
+	_emit("")
+	_emit("| Szenario | Einheiten (Komparsen) | Telegraph-Quads | DC 3D | DC UI | Materialien | Körper (ohne Areas) | " +
+		"Frame ms Ø (max) | Process / Physics ms max Kampf | Director µs/Frame Ø / p95 (max) |")
+	_emit("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
+	for r: Dictionary in rows:
+		var t: Dictionary = r["time"]
+		var b: Dictionary = r["base"]
+		var ex: Dictionary = r["explore"]
+		var ac: Dictionary = r["acc"]
+		var arrow: Callable = func(k: String) -> String:
+			return "%d → %d" % [_rt_val(ex, k), _rt_val(ac, k)]
+		_emit("| %s | %d (%d) | %d | %s | %s | %s | %s | %.1f (%.1f) → %.1f (%.1f) | %.1f / %.1f | %d / %d (%d) |" % [
+			str(r["name"]), int(r["units"]), int(r["extras"]), int(r["quads"]), arrow.call("dc3d"), arrow.call("dccv"),
+			arrow.call("mats"), arrow.call("bodies"), float(b.get("frame_avg", 0.0)), float(b.get("frame_max", 0.0)),
+			float(t["frame_avg"]), float(t["frame_max"]), float(t["proc_max"]), float(t["phys_max"]),
+			int(t["dir_avg"]), int(t.get("dir_p95", 0)), int(t["dir_max"])])
+
+
+## A value of an audit accumulator for the comparison table: "dc3d" = visible + shadow pass, "bodies" = static +
+## kinematic + rigid.
+static func _rt_val(acc: Dictionary, k: String) -> int:
+	if k == "dc3d":
+		return int(acc.get("dc3d", 0)) + int(acc.get("dcsh", 0))
+	if k == "bodies":
+		return int(acc.get("static", 0)) + int(acc.get("kinematic", 0)) + int(acc.get("rigid", 0))
+	return int(acc.get(k, 0))
+
+
+## The exploration at the scenario's spot before the trigger: the same 4 camera directions, ROOM_SAMPLES frames each.
+func _rt_explore_audit(scene: ExplorationScene) -> Dictionary:
+	var acc: Dictionary = _new_acc()
+	var cam: Node3D = scene.get_camera_rig()
+	var yaw0: float = float(cam.get("yaw"))
+	for yaw: float in YAWS:
+		cam.set("yaw", yaw0 + yaw)
+		for i in SETTLE_FRAMES:
+			await get_tree().physics_frame
+		await _sample(ROOM_SAMPLES, acc)
+	cam.set("yaw", yaw0)
+	await _wait_frames_rt(SETTLE_FRAMES)
+	return acc
+
+
+## One scenario: {"name", "label", "acc", "time", "units", "extras", "quads"}.
+func _rt_scenario(sc: String) -> Dictionary:
+	_new_game()                                # a new game: real time (run log header, RunRules.rt_start)
+	_rt_hints_before = Game.settings.combat_hints
+	Game.settings.combat_hints = false         # a first-time card would hold the ticks (07 §2.13): fixed load
+	await _build_exploration()
+	var scene: ExplorationScene = _explore
+	await _wait_frames_rt(4)
+	var d: CombatDirector = scene.get_director()
+	d.present_results = false
+	d.auto_tick = true
+	scene.auto_start_combat = true
+	var out: Dictionary = {"name": sc, "label": sc, "acc": _new_acc(), "time": {"frame_avg": 0.0, "frame_max": 0.0,
+		"proc_max": 0.0, "phys_max": 0.0, "dir_avg": 0, "dir_max": 0}, "base": {}, "explore": _new_acc(), "units": 0,
+		"extras": 0, "quads": 0}
+	var layout: FloorLayout = scene.get_layout()
+	var boss: bool = sc == "combat_boss_queen"
+	var cell: Vector2i = Vector2i(0, 0) if boss else Vector2i(1, 3)
+	var fixture: GDScript = load(RT_FIXTURE) as GDScript
+	Game.rt_sim_factory = fixture.call("factory", scene, "boss" if boss else "loop", 3000)
+	var center: Vector3 = layout.cell_to_world(cell)
+	if boss:
+		var q: Node3D = scene.get_enemy("f1_fb")
+		var home: Vector3 = q.get("home")
+		var spot: Vector3 = home + Vector3(5.6, 0.0, 0.5)              # outside the 5 m trigger: the baseline first
+		_rt_place(scene, spot, home)
+		out["base"] = await _rt_timing(null)
+		out["explore"] = await _rt_explore_audit(scene)
+		spot = home + Vector3(4.0, 0.0, 0.5)
+		_rt_place(scene, spot, home)
+		var waited: int = 0
+		while Game.combat == null and waited < 1200:
+			await get_tree().process_frame
+			waited += 1
+			if d.phase == CombatDirector.Phase.INTRO and waited % 30 == 0:
+				_rt_quiet_dialog()
+	else:
+		var lead: Node3D = scene.get_enemy("f1_g3")
+		_rt_lead(lead, center + Vector3(0.0, 0.0, -1.5))
+		if sc == "combat_two_groups":
+			_rt_lead(scene.get_enemy("f1_g1"), center + Vector3(1.8, 0.0, 0.4))
+		var spot2: Vector3 = center + Vector3(0.0, 0.0, 2.6)
+		_rt_place(scene, spot2, lead.global_position)
+		await _wait_frames_rt(2)
+		out["base"] = await _rt_timing(null)
+		out["explore"] = await _rt_explore_audit(scene)
+		scene.pull("f1_g3", "skill", "perf")
+	if Game.combat == null:
+		_over.append("%s: kein Kampf gestartet (Director-Phase %d, pending %s, versteckt %s, Router busy %s / aktuell %s)"
+			% [sc, int(d.phase), scene.is_encounter_pending(), scene.get_player().is_hidden(), Router.busy,
+			Router.current == scene])
+		await _rt_leave(scene, d)
+		return out
+	_rt_quiet_dialog()
+	var t_end: int = Time.get_ticks_msec() + int(RT_WARMUP_SEC * 1000.0)
+	while Time.get_ticks_msec() < t_end:
+		await get_tree().process_frame
+	var hops: int = 0
+	while boss and d.is_running() and Game.combat.tick() < RT_BOSS_COURT_TICK and hops < 60:
+		d.advance(10)                          # the queen's whole court: 3 more rats come at tick 300 (07 §8.10)
+		hops += 1
+		await get_tree().process_frame
+	out["quads"] = _rt_fill_telegraphs(d)
+	var units: int = 0
+	for u: RtUnit in Game.combat.units():
+		units += 1 if u.side == Combatant.Side.ENEMY else 0
+	out["units"] = units
+	out["extras"] = (d.puppets.get("_used") as Array).size()
+	var acc: Dictionary = out["acc"]
+	var cam: Node3D = scene.get_camera_rig()
+	var yaw0: float = float(cam.get("yaw"))
+	for yaw: float in YAWS:
+		cam.set("yaw", yaw0 + yaw)
+		for i in SETTLE_FRAMES:
+			await get_tree().physics_frame
+		for i in RT_SAMPLES:
+			await _sample(1, acc)
+			if int(d.telegraphs.call("visible_quads")) < 10:
+				_rt_fill_telegraphs(d)
+	cam.set("yaw", yaw0)
+	await _wait_frames_rt(SETTLE_FRAMES)
+	out["time"] = await _rt_timing(d)
+	out["label"] = "%s — %s, %d Gegner (%d Komparsen/Adds), %d Telegraph-Quads" % [sc, _cell_txt(cell), units,
+		int(out["extras"]), int(out["quads"])]
+	await _rt_leave(scene, d)
+	return out
+
+
+## Ends the scenario: the combat dropped and the world freed at once (left exploring next to the frozen leads, a stray
+## contact would push a battle over the next scenario's world).
+func _rt_leave(scene: ExplorationScene, d: CombatDirector) -> void:
+	d.abort()
+	Game.rt_sim_factory = Callable()
+	Router.adopt(null)
+	_explore = null
+	scene.queue_free()
+	await _wait_frames_rt(2)
+	Game.settings.combat_hints = _rt_hints_before
+
+
+## Frame intervals and Godot's process / physics time over RT_TIMING_FRAMES frames without the scene audit; with a
+## running combat (`d`) also the director's own cost per frame (its counters restart here: steady state only).
+func _rt_timing(d: CombatDirector) -> Dictionary:
+	var t: Dictionary = {"frame_avg": 0.0, "frame_max": 0.0, "proc_max": 0.0, "phys_max": 0.0, "dir_avg": 0,
+		"dir_p95": 0, "dir_max": 0}
+	if d != null:
+		d.cost_max_us = 0
+		d.cost_sum_us = 0
+		d.cost_frames = 0
+	var costs: Array[int] = []                  # the director's cost of the last physics frame of every drawn frame
+	var last: int = Time.get_ticks_usec()
+	var sum: int = 0
+	for i in RT_TIMING_FRAMES:
+		if _rendered:
+			await RenderingServer.frame_post_draw
+		else:
+			await get_tree().process_frame
+		var now: int = Time.get_ticks_usec()
+		sum += now - last
+		t["frame_max"] = maxf(float(t["frame_max"]), (now - last) / 1000.0)
+		last = now
+		t["proc_max"] = maxf(float(t["proc_max"]), Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0)
+		t["phys_max"] = maxf(float(t["phys_max"]), Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0)
+		if d != null:
+			costs.append(d.cost_us)
+		if d != null and d.telegraphs != null and int(d.telegraphs.call("visible_quads")) < 10:
+			_rt_fill_telegraphs(d)
+	t["frame_avg"] = sum / 1000.0 / float(RT_TIMING_FRAMES)
+	if d != null:
+		t["dir_avg"] = d.cost_sum_us / maxi(1, d.cost_frames)
+		t["dir_max"] = d.cost_max_us
+		costs.sort()
+		t["dir_p95"] = costs[mini(costs.size() - 1, int(costs.size() * 0.95))] if not costs.is_empty() else 0
+	return t
+
+
+func _wait_frames_rt(n: int) -> void:
+	for i in n:
+		await get_tree().process_frame
+
+
+func _rt_place(scene: ExplorationScene, at: Vector3, look: Vector3) -> void:
+	var yaw: float = atan2(-(look.x - at.x), -(look.z - at.z))
+	scene.get_player().teleport(Vector3(at.x, 0.05, at.z), yaw)
+	scene.get_camera_rig().snap(yaw)
+	scene.get_companion().snap_behind()
+	scene.call("_update_room", true)
+
+
+func _rt_lead(a: Node3D, at: Vector3) -> void:
+	if a == null:
+		return
+	a.global_position = Vector3(at.x, a.global_position.y, at.z)
+	a.set("frozen", true)
+
+
+## Fills the telegraph pool with long-running enemy telegraphs around the set (the worst case: every quad drawn).
+func _rt_fill_telegraphs(d: CombatDirector) -> int:
+	var tl: Node3D = d.telegraphs
+	var ct: int = Game.combat.tick() if Game.combat != null else 0
+	var shapes: Array[int] = [0, 1, 2, 3]
+	var i: int = 0
+	while int(tl.call("visible_quads")) < 10 and i < 10:
+		var e: ActionEvent = ActionEvent.make(ActionEvent.Type.TELEGRAPH_START)
+		e.value = 90000 + ct * 16 + i
+		e.tick = ct
+		var a: float = TAU * float(i) / 10.0
+		e.rt = {"shape": shapes[i % 4], "x": roundi(cos(a) * 250.0), "z": roundi(sin(a) * 250.0), "yaw": (i * 37) % 256,
+			"r": 180 if i % 4 != 3 else 400, "r2": 90 if i % 4 == 2 else 160, "half": 40, "start": ct,
+			"impact": ct + 9000}
+		tl.call("on_event", e)
+		i += 1
+	return int(tl.call("visible_quads"))
+
+
+## The boss intro line and whatever the M.O.D. box shows (GlobalUi): advanced, so the intro and the stills go on.
+func _rt_quiet_dialog() -> void:
+	var ui: Node = get_tree().root.get_node_or_null("GlobalUi")
+	var dlg: Node = ui.get("mod_dialog") as Node if ui != null else null
+	if dlg == null:
+		return
+	for i in 4:
+		if not bool(dlg.call("is_busy")):
+			return
+		dlg.call("advance")
+
+
+func _rt_row(view: String, acc: Dictionary) -> void:
+	var issues: PackedStringArray = []
+	if _rendered:
+		var d3: int = int(acc["dc3d"]) + int(acc["dcsh"])
+		if d3 > int(BUDGET_COMBAT["dc3d"]):
+			issues.append("DC 3D %d > %d" % [d3, int(BUDGET_COMBAT["dc3d"])])
+		if int(acc["dccv"]) > int(BUDGET_COMBAT["dc2d"]):
+			issues.append("DC 2D %d > %d" % [int(acc["dccv"]), int(BUDGET_COMBAT["dc2d"])])
+		if int(acc["prims"]) > int(BUDGET_COMBAT["prims"]):
+			issues.append("Prims %d > %d" % [int(acc["prims"]), int(BUDGET_COMBAT["prims"])])
+	var omni_budget: int = int(BUDGET_OMNI["explore"]) if _quality == &"high" else BUDGET_OMNI_LOW_EXPLORE
+	if int(acc["omni_room"]) > omni_budget or int(acc["neon"]) > (1 if _quality == &"high" else 0):
+		issues.append("Omni %d (+%d Akzent) > %d" % [int(acc["omni_room"]), int(acc["neon"]), omni_budget])
+	if int(acc["lpm"]) > BUDGET_LIGHTS_PER_MESH:
+		issues.append("Lichter/Mesh %d > %d" % [int(acc["lpm"]), BUDGET_LIGHTS_PER_MESH])
+	if int(acc["mats"]) > int(BUDGET_COMBAT["mats"]):
+		issues.append("Mat %d > %d" % [int(acc["mats"]), int(BUDGET_COMBAT["mats"])])
+	if int(acc["l3d"]) > BUDGET_LABEL3D:
+		issues.append("Label3D %d > %d" % [int(acc["l3d"]), BUDGET_LABEL3D])
+	if int(acc["parts"]) > BUDGET_PARTICLES or int(acc["emit"]) > BUDGET_EMITTERS:
+		issues.append("Partikel %d/%d" % [int(acc["parts"]), int(acc["emit"])])
+	var bodies: int = int(acc["static"]) + int(acc["kinematic"]) + int(acc["rigid"])
+	if bodies > int(BUDGET_COMBAT["bodies"]) or int(acc["rigid"]) > 0:
+		issues.append("Bodies %d > %d" % [bodies, int(BUDGET_COMBAT["bodies"])])
+	if float(acc["ram"]) > BUDGET_RAM_MB:
+		issues.append("RAM %.0f MB" % float(acc["ram"]))
+	if acc.get("shot") is Image:
+		DirAccess.make_dir_recursive_absolute(_shots_dir)
+		(acc["shot"] as Image).save_png(_shots_dir.path_join("combat_%s.png" % view.get_slice(" ", 0)))
+	var n: int = maxi(1, int(acc["n"]))
+	var dc_txt: String = "%d (%d)" % [int(acc["dc"]), roundi(float(acc["dc_sum"]) / float(n))] if _rendered else "–"
+	var d3_txt: String = "%d + %d" % [int(acc["dc3d"]), int(acc["dcsh"])] if _rendered else "–"
+	var d2_txt: String = str(int(acc["dccv"])) if _rendered else "–"
+	var prim_txt: String = _fmt_int(int(acc["prims"])) if _rendered else "–"
+	_emit("| %s | %s | %s | %s | %s | %d (%d) / %d | %d | %d | %d | %d (%d) | %d / %d (%d) | %d | %.0f | %.0f | %s |" % [
+		view, dc_txt, d3_txt, d2_txt, prim_txt, int(acc["omni"]), int(acc["omni_near"]), int(acc["spot"]), int(acc["lpm"]),
+		int(acc["mats"]), int(acc["l3d"]), int(acc["parts"]), int(acc["emit"]), int(acc["static"]),
+		int(acc["kinematic"]) + int(acc["rigid"]), int(acc["areas"]), int(acc["nodes"]), float(acc["ram"]),
+		float(acc["vram"]), "OK" if issues.is_empty() else "ÜBER: " + ", ".join(issues)])
+	for s2: String in issues:
+		_over.append("combat/%s: %s" % [view.get_slice(" ", 0), s2])
+

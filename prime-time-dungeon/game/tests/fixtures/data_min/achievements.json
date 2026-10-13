@@ -1,0 +1,21 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "ach_first_blood",
+			"name": "Erster Kill",
+			"desc": "Den ersten Gegner besiegt.",
+			"trigger": "enemy_killed",
+			"condition": "true",
+			"box": "box_bronze"
+		},
+		{
+			"id": "ach_one_hp",
+			"name": "Haaresbreite",
+			"desc": "Einen Kampf mit genau 1 HP gewonnen.",
+			"trigger": "battle_won",
+			"condition": "e.min_party_hp == 1",
+			"box": "box_silver"
+		}
+	]
+}

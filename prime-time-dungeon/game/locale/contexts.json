@@ -1,0 +1,5 @@
+{
+	"schema": 1,
+	"doc": "True homonyms inside one data table (11 §1.5, SP-2): these ids get the msgctxt '<table>:<id>' instead of '<table>'. Every other key is a table (or 'table.sublist') of GameData.TABLES.",
+	"statuses": ["sts_taunt", "sts_taunted"]
+}

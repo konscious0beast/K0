@@ -1,0 +1,116 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "tal_kai_wischtechnik",
+			"name": "Wischtechnik",
+			"desc": "Jahre am Bahnsteig gewischt. Jeder Hieb sitzt.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 2,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "atk",
+			"effects": [
+				{
+					"kind": "stat_flat",
+					"stat": "str",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "tal_mop_mitternachtsformel",
+			"name": "Mitternachtsformel",
+			"desc": "Um Mitternacht gelernt, nie vergessen. Zauber sitzen fester.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 2,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "mag",
+			"effects": [
+				{
+					"kind": "stat_flat",
+					"stat": "mag",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "tal_kai_erster_eindruck",
+			"name": "Erster Eindruck",
+			"desc": "Wer zuerst zuschlägt, schlägt härter.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 3,
+			"icon": "atk",
+			"effects": [
+				{
+					"kind": "preemptive_dmg_pm",
+					"pm": 1150
+				}
+			]
+		},
+		{
+			"id": "tal_mop_taktgefuehl",
+			"name": "Taktgefühl",
+			"desc": "Der Graf wartet auf den perfekten Moment.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 3,
+			"icon": "mag",
+			"effects": [
+				{
+					"kind": "stunt_window_pm",
+					"pm": 1200
+				}
+			]
+		},
+		{
+			"id": "tal_kai_scharfes_auge",
+			"name": "Scharfes Auge",
+			"desc": "Trifft die Schwachstellen.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 2,
+			"weight": 1,
+			"min_level": 3,
+			"icon": "atk",
+			"effects": [
+				{
+					"kind": "crit_add_pm",
+					"pm": 30
+				}
+			]
+		},
+		{
+			"id": "tal_kai_feuerfest",
+			"name": "Feuerfest",
+			"desc": "Kennt jeden Grillabend.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 3,
+			"icon": "def",
+			"effects": [
+				{
+					"kind": "element_pm",
+					"element": "fire",
+					"pm": 750
+				}
+			]
+		}
+	]
+}

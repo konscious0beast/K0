@@ -1,0 +1,3 @@
+# Godot 4.4+ writes <script>.gd.uid files when the project is opened in place; this project references
+# resources by path only (02_TECH §13: handwritten .tscn without uid), so they are never committed.
+*.uid

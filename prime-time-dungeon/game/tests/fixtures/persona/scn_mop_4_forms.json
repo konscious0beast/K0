@@ -1,0 +1,149 @@
+{
+	"schema": 1,
+	"doc": "08 §4.4 R9, §10.3: scn_mop_4 line 5 (\"Und du bist {job}. …\") filled for each word form, job chip, status tile and the free text (never quoted in a scene: the free text only goes on the card). test_08_persona_lines renders the line with Game.persona = canon + the persona fields of each case.",
+	"scene": "scn_mop_4",
+	"line": 4,
+	"cases": [
+		{
+			"persona": {},
+			"text": "Und du bist Tierpfleger:in. Mit einem Wischmopp. Und doch stehen wir hier."
+		},
+		{
+			"persona": {
+				"form": "f",
+				"origin": "org_care",
+				"occupation": "occ_care_midwife"
+			},
+			"text": "Und du bist Hebamme. Mit einem Wischmopp. Und doch stehen wir hier."
+		},
+		{
+			"persona": {
+				"form": "m",
+				"origin": "org_care",
+				"occupation": "occ_care_midwife"
+			},
+			"text": "Und du bist Entbindungspfleger. Mit einem Wischmopp. Und doch stehen wir hier."
+		},
+		{
+			"persona": {
+				"form": "n",
+				"origin": "org_care",
+				"occupation": ""
+			},
+			"text": "Und du bist Pflegekraft. Mit einem Wischmopp. Und doch stehen wir hier."
+		},
+		{
+			"persona": {
+				"form": "f",
+				"origin": "org_kitchen",
+				"occupation": ""
+			},
+			"text": "Und du bist Köchin. Mit einem Wischmopp. Und doch stehen wir hier."
+		},
+		{
+			"persona": {
+				"form": "m",
+				"origin": "org_kitchen",
+				"occupation": "occ_kitchen_cook"
+			},
+			"text": "Und du bist Koch. Mit einem Wischmopp. Und doch stehen wir hier."
+		},
+		{
+			"persona": {
+				"form": "n",
+				"origin": "org_kitchen",
+				"occupation": "occ_kitchen_cook"
+			},
+			"text": "Und du bist Köch:in. Mit einem Wischmopp. Und doch stehen wir hier."
+		},
+		{
+			"persona": {
+				"form": "m",
+				"origin": "org_rescue",
+				"occupation": "occ_rescue_fire"
+			},
+			"text": "Und du bist Feuerwehrmann. Mit einem Wischmopp. Und doch stehen wir hier."
+		},
+		{
+			"persona": {
+				"form": "n",
+				"origin": "org_craft",
+				"occupation": ""
+			},
+			"text": "Und du bist Fachkraft im Handwerk. Mit einem Wischmopp. Und doch stehen wir hier."
+		},
+		{
+			"persona": {
+				"form": "n",
+				"origin": "org_media",
+				"occupation": "occ_media_creator"
+			},
+			"text": "Und du bist Content Creator. Mit einem Wischmopp. Und doch stehen wir hier."
+		},
+		{
+			"persona": {
+				"form": "f",
+				"origin": "org_sales",
+				"occupation": "occ_sales_field"
+			},
+			"text": "Und du bist im Außendienst. Mit einem Wischmopp. Und doch stehen wir hier."
+		},
+		{
+			"persona": {
+				"form": "m",
+				"origin": "org_school",
+				"occupation": "occ_school_apprentice"
+			},
+			"text": "Und du bist Azubi. Mit einem Wischmopp. Und doch stehen wir hier."
+		},
+		{
+			"persona": {
+				"form": "n",
+				"origin": "org_school",
+				"occupation": ""
+			},
+			"text": "Und du bist in Ausbildung. Mit einem Wischmopp. Und doch stehen wir hier."
+		},
+		{
+			"persona": {
+				"form": "f",
+				"origin": "org_retired",
+				"occupation": ""
+			},
+			"text": "Und du bist im Ruhestand. Mit einem Wischmopp. Und doch stehen wir hier."
+		},
+		{
+			"persona": {
+				"form": "m",
+				"origin": "org_family",
+				"occupation": ""
+			},
+			"text": "Und du bist für die Familie da. Mit einem Wischmopp. Und doch stehen wir hier."
+		},
+		{
+			"persona": {
+				"form": "n",
+				"origin": "org_selfemployed",
+				"occupation": ""
+			},
+			"text": "Und du bist selbstständig. Mit einem Wischmopp. Und doch stehen wir hier."
+		},
+		{
+			"persona": {
+				"form": "n",
+				"origin": "org_reorient",
+				"occupation": ""
+			},
+			"text": "Und du bist im Neustart. Mit einem Wischmopp. Und doch stehen wir hier."
+		},
+		{
+			"persona": {
+				"form": "f",
+				"origin": "org_allround",
+				"occupation": "",
+				"job_text": "Astronautin"
+			},
+			"text": "Und du bist Allrounderin. Mit einem Wischmopp. Und doch stehen wir hier."
+		}
+	]
+}

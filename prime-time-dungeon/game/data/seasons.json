@@ -1,0 +1,44 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "ssn_basis",
+			"name": "Basis-Staffel",
+			"format": 6,
+			"days": 24,
+			"places": 100,
+			"air_time": "20:00",
+			"rules": {
+				"pvp": "arena"
+			},
+			"kind": "private",
+			"min_humans": 1
+		},
+		{
+			"id": "ssn_akt2",
+			"name": "Akt-2-Staffel",
+			"format": 12,
+			"days": 54,
+			"places": 100,
+			"air_time": "20:00",
+			"rules": {
+				"pvp": "arena"
+			},
+			"kind": "private",
+			"min_humans": 1
+		},
+		{
+			"id": "ssn_akt3",
+			"name": "Akt-3-Staffel",
+			"format": 18,
+			"days": 84,
+			"places": 100,
+			"air_time": "20:00",
+			"rules": {
+				"pvp": "arena"
+			},
+			"kind": "private",
+			"min_humans": 1
+		}
+	]
+}

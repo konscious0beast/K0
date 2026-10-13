@@ -1,0 +1,114 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "org_animals",
+			"name": "Tierpflege",
+			"icon": "paw",
+			"status": false,
+			"role": {
+				"n": "Tierpfleger:in",
+				"f": "Tierpflegerin",
+				"m": "Tierpfleger"
+			},
+			"jobs": [
+				{
+					"id": "occ_animals_keeper",
+					"n": "Tierpfleger:in",
+					"f": "Tierpflegerin",
+					"m": "Tierpfleger"
+				}
+			],
+			"keywords": [
+				"tierpfleg",
+				"tierarzt",
+				"tieraerzt",
+				"hundetrain",
+				"=zoo"
+			],
+			"prof": "prf_first_aid",
+			"spec_hint": "cls_kai_wrecker",
+			"flavor": "Sie verstehen Wesen, die beißen.",
+			"mod_tags": [],
+			"rivals": [
+				"rv_animals_1",
+				"rv_animals_2"
+			],
+			"brand": "br_org_animals"
+		}
+	],
+	"hobbies": [
+		{
+			"id": "hob_animals",
+			"name": "Tiere",
+			"icon": "paw",
+			"keywords": [
+				"tiere",
+				"hund",
+				"katze"
+			],
+			"prof": "prf_cooking",
+			"club": {
+				"text": "Tierheim-Team",
+				"g": "n"
+			},
+			"gag": "gag_animals",
+			"greeting": "gr_tierheim"
+		}
+	],
+	"traits": [
+		{
+			"id": "trt_caring",
+			"name": "fürsorglich",
+			"bias": ""
+		}
+	],
+	"rivals": [
+		{
+			"id": "rv_animals_1",
+			"name": "Kira Katzenjammer"
+		},
+		{
+			"id": "rv_animals_2",
+			"name": "Bodo Bürste"
+		}
+	],
+	"brands": [
+		{
+			"id": "br_org_animals",
+			"name": "Wedelwurst"
+		}
+	],
+	"gags": [
+		{
+			"id": "gag_animals",
+			"name": "Hundeschule"
+		}
+	],
+	"greetings": [
+		{
+			"id": "gr_tierheim"
+		}
+	],
+	"plans": [
+		{
+			"id": "plan_a",
+			"slots": [
+				{
+					"floor": 1,
+					"hook": "intro",
+					"n": 1,
+					"slot": "card"
+				}
+			]
+		}
+	],
+	"canon": {
+		"name": "Kai",
+		"form": "n",
+		"origin": "org_animals",
+		"occupation": "occ_animals_keeper",
+		"hobby": "hob_animals",
+		"traits": []
+	}
+}

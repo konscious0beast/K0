@@ -261,6 +261,8 @@ const SpeciesRules := preload("res://core/data/validators/species.gd")
 ## 06-D: rules of twists.json (06 §5.6) — private helper like the others (06 §8.0 Nr. 7).
 const TwistCheck := preload("res://core/data/validators/twists.gd")
 const IpWords := preload("res://core/data/validators/ip_words.gd")   # polish pass: IP-distance / tone word lists
+## Inhaltspakete (11-P1, 11 §3.5 Nr. 4): the pack rules — run only with a provenance (a content pack is mixed in).
+const PackCheck := preload("res://core/data/validators/pack.gd")
 
 # --- Field specs: [name, type(, default)] — no default = required. Types: s i f b d a sa ia c2 v2 ---------------------
 const SPEC_STATUS: Array = [["id", "s"], ["name", "s"], ["kind", "s"], ["default_turns", "i", 3],
@@ -403,6 +405,8 @@ const SPEC_SCENE_LINE: Array = [["voice", "s"], ["text", "s"]]
 var errors: PackedStringArray = []
 var warnings: PackedStringArray = []
 var strict: bool = true
+## Inhaltspakete (11-P1): PackLoader.provenance of the pack mixed into these tables ({} = base data).
+var provenance: Dictionary = {}
 
 var _out: Dictionary = {}
 var _regex: Dictionary = {}                 # pattern → RegEx
@@ -429,8 +433,12 @@ var _referenced_tags: Dictionary = {}       # tag → ctx (rule 9)
 # ======================================================================================================================
 
 ## Validates + normalizes `raw` (table → parsed file object). `read_errors` (table → message) marks unreadable files.
-func validate(raw: Dictionary, p_strict: bool = true, read_errors: Dictionary = {}) -> Dictionary:
+## Contract pass 11-P1 (11 §3.5 Nr. 3): `p_provenance` (PackLoader.provenance; {} = base data — exactly the rules of
+## before) goes to ip_words (the licence exemption, 11 §3.12 layer 2) and runs the pack rules (validators/pack.gd).
+func validate(raw: Dictionary, p_strict: bool = true, read_errors: Dictionary = {},
+		p_provenance: Dictionary = {}) -> Dictionary:
 	strict = p_strict
+	provenance = p_provenance
 	errors.clear()
 	warnings.clear()
 	_mod_tags.clear()
@@ -461,7 +469,9 @@ func validate(raw: Dictionary, p_strict: bool = true, read_errors: Dictionary = 
 		_check_floor_rules()                       # rule 8
 		_check_mod_line_rules()                    # rule 9
 	_check_conditions()                            # rule 10
-	IpWords.check(self)                            # polish pass: IP-distance / tone words in every text (always)
+	IpWords.check(self, provenance)                # polish pass: IP-distance / tone words in every text (always)
+	if not provenance.is_empty():
+		PackCheck.check(self, provenance)          # Inhaltspakete (11-P1): tone lists, exceptions, licence
 	return _out
 
 

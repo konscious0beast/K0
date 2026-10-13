@@ -16,6 +16,10 @@ const TABLES: PackedStringArray = ["statuses", "skills", "items", "classes", "pa
 var source: String = ""                    # dir or "dicts"
 var errors: PackedStringArray = []
 var warnings: PackedStringArray = []
+# --- Inhaltspakete (11-P1, 11 §3.4/§3.9): the content pack mixed into the raw tables ("" without one) ----------------
+var pack_id: String = ""
+var pack_version: String = ""
+var pack_hash: String = ""                 # PackLoader.content_hash (SHA-256 over pack.json + data/*.json)
 
 var _statuses: Dictionary = {}             # id → StatusDef
 var _skills: Dictionary = {}
@@ -88,7 +92,11 @@ var _exp_table: PackedInt32Array = []
 
 
 ## Loads all TABLES from `dir` (<table>.json). Full validation (rules 1–10). True if no errors.
-func load_dir(dir: String = "res://data") -> bool:
+## Inhaltspakete (11-P1, 11 §3.4): with `pack` (PackLoader.read) its overlays and art.json are mixed into the raw
+## tables first (PackLoader.merge) and the result is validated with every rule plus the pack rules, the provenance
+## going to ip_words; pack_id / pack_version / pack_hash name the pack, its read and merge errors come first in
+## `errors`. Without a pack everything is exactly as before.
+func load_dir(dir: String = "res://data", pack: PackDef = null) -> bool:
 	var raw: Dictionary = {}
 	var read_errors: Dictionary = {}
 	for t: String in TABLES:
@@ -101,7 +109,18 @@ func load_dir(dir: String = "res://data") -> bool:
 	var rt_path: String = dir.path_join(RT_BALANCE_FILE)         # Echtzeitkampf (07, R1a): optional, not a table
 	if FileAccess.file_exists(rt_path):
 		raw["rt_balance"] = JsonUtil.read_file(rt_path)
-	return _load(raw, dir, true, read_errors)
+	if pack == null:
+		return _load(raw, dir, true, read_errors)
+	var merged: Dictionary = PackLoader.merge(raw, pack)          # Inhaltspakete (11-P1)
+	_load(merged["raw"], dir, true, read_errors, PackLoader.provenance(pack, merged["owned"]))
+	pack_id = pack.id
+	pack_version = pack.version
+	pack_hash = pack.pack_hash
+	var first: PackedStringArray = pack.errors.duplicate()
+	first.append_array(merged["errors"])
+	first.append_array(errors)
+	errors = first
+	return errors.is_empty()
 
 
 ## Test helper: {"skills": [ {...} ], ..., "party_start": {...}, "lootbox_pools": {...}, "lootbox_pity": {...},
@@ -143,6 +162,21 @@ func load_from_tables(raw: Dictionary, p_source: String = "tables") -> bool:
 
 func is_valid() -> bool:
 	return errors.is_empty()
+
+
+## Inhaltspakete (11-P1, 11 §3.9): the pack fields of a run-log header and a leaderboard entry — {"pack": id,
+## "pack_version", "pack_hash"}; {} without a pack, so a record of the base game stays exactly as before.
+func pack_fields() -> Dictionary:
+	if pack_id == "":
+		return {}
+	return {"pack": pack_id, "pack_version": pack_version, "pack_hash": pack_hash}
+
+
+## Inhaltspakete (11-P1, 11 §3.9): the save block "pack" {"id", "version", "hash"}; {} without a pack.
+func pack_record() -> Dictionary:
+	if pack_id == "":
+		return {}
+	return {"id": pack_id, "version": pack_version, "hash": pack_hash}
 
 
 # --- getters (unknown id → null + push_error) --------------------------------------------------------------------
@@ -590,11 +624,13 @@ func all_pseudo_units() -> Array[PseudoUnitDef]:
 
 # --- loading ---------------------------------------------------------------------------------------------------------
 
-func _load(raw: Dictionary, p_source: String, p_strict: bool, read_errors: Dictionary) -> bool:
+## `provenance` (11-P1): PackLoader.provenance of a mixed-in pack; {} = base data.
+func _load(raw: Dictionary, p_source: String, p_strict: bool, read_errors: Dictionary,
+		provenance: Dictionary = {}) -> bool:
 	_clear()
 	source = p_source
 	var v: DataValidator = DataValidator.new()
-	var norm: Dictionary = v.validate(raw, p_strict, read_errors)
+	var norm: Dictionary = v.validate(raw, p_strict, read_errors, provenance)
 	errors = v.errors.duplicate()
 	warnings = v.warnings.duplicate()
 	_build(norm)
@@ -608,6 +644,9 @@ func _load(raw: Dictionary, p_source: String, p_strict: bool, read_errors: Dicti
 func _clear() -> void:
 	errors = PackedStringArray()
 	warnings = PackedStringArray()
+	pack_id = ""                                                  # Inhaltspakete (11-P1): load_dir sets them again
+	pack_version = ""
+	pack_hash = ""
 	for d: Dictionary in [_statuses, _skills, _items, _classes, _party, _enemies, _pseudo, _floors, _floors_by_id,
 			_encounters, _lootboxes, _achievements, _sponsors, _milestones, _mod_lines, _mod_lines_by_tag, _scenes,
 			_talents, _species, _marotten, _twists]:

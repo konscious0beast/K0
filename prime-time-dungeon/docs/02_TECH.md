@@ -643,14 +643,15 @@ Etage 3 und damit der Recall gibt es nur in Staffeln.
 `recall_done`: `choose(0)` und `confirm()` je Figur); 07 — CR-32 p (Spezies und Klasse am Party-Rahmen, Bauchbinde
 „ORIGINAL“); 03_ART — die Spezies-Optik am Rig (`model_hint.props_add`), bis dahin nur die Farbe am Sockel.
 
-**Stand ST1-H (2026-10-12, Branch `ptd/st1h`): die Staffel-UI** (09 Kap. 2, 4.3, 4.6, 7.2, Kap. 11.3 „Stand ST1-H“,
-Entscheidungen H-1 … H-20, Orchestrator-Entscheidungen O-1 … O-4). Nur Oberfläche und Fassaden: kein neuer Command, kein
+**Stand ST1-H (2026-10-13, Branch `ptd/st1h`): die Staffel-UI** (09 Kap. 2, 4.3, 4.6, 7.2, Kap. 11.3 „Stand ST1-H“,
+Entscheidungen H-1 … H-23, Orchestrator-Entscheidungen O-1 … O-4). Nur Oberfläche und Fassaden: kein neuer Command, kein
 neues Feld im Spielzustand, **kein `SIM_VERSION`-Sprung**, Save v2 unverändert; ohne Staffel bitgleich (`fullrun.sh` mit
-`--strategy=all`, `--hero=mopsula`, `--liga=1`, `--liga=2` gegen die Basis `266295f`: gleiche Ereigniszeilen und
-Statistiken bis auf den Münzwurf der Persona-Zeile in `mod_tags`). Jede Änderung geht über die Commands von `Game`
+`--strategy=all`, `--hero=mopsula`, `--liga=1`, `--liga=2` gegen `claude/prime-time-dungeon` `74c82d7`: gleiche
+Ereigniszeilen und Statistiken bis auf den Münzwurf der Persona-Zeile in `mod_tags` — `Show._fx_rng` ist zufällig
+geseedet, zwei Läufe desselben Stands unterscheiden sich darin ebenso). Jede Änderung geht über die Commands von `Game`
 (`season` tempo/pause/leave, `cast` hire/help); Sichten (Rangliste der Zukunft, Zeitraffer) rechnen auf einer Kopie
-(`GameState.from_dict(state.to_dict())`). Keine Datei in `core/rt/**` oder `scenes/combat/**` (Farben der Plakette im
-Zielrahmen: CR-32 l).
+(`GameState.from_dict(state.to_dict())`). Keine Datei in `core/rt/**` oder `scenes/combat/**` (Farbe und Differenz der
+Plakette im Kampf: CR-32 l; in der Erkundung `explore_target.gd`, H-22).
 
 | Teil | API |
 |---|---|
@@ -658,17 +659,18 @@ Zielrahmen: CR-32 l).
 | Szenen (neu) | `scenes/ui/season_dialog.*` (Rückfrage, Ebene 61, `setup({title, kicker, lines, danger, buttons, focus, cancel_id, days})`, Signal `closed(id, days)`), `scenes/ui/season_tab.gd` (Seite „Staffel“ des Pausemenüs: `show_segment(id)`, `action(id)`, `plan_rows()`, `export_ics()`), `scenes/title/season_setup.*` (`setup({mode, capture, now, tz})`, `start_opts()`, `set_tempo`, `set_mode`, `step_air`, `start()`), `scenes/ui/season_summary.*` (`entry`, `projected`), `scenes/ui/hall_of_fame.*` (`setup({from, slot})`, `cards`, `select(i)`) |
 | `Game` (Abschnitt „ST1-H“) | `season_tempo_binge()`, `season_pause_days(days)`, `season_leave()`, `SCENE_SEASON_SUMMARY`, `SCENE_HALL_OF_FAME`; `_season_end_path(path)` (Abspann und — nach „Staffel beenden“ — Titel → Staffel-Bilanz; Haken in `_season_goto` und `continue_after_summary`), `_season_hall()` (am Ende von `_season_autosave`: die Ruhmeshalle einmal je Staffel; „left“ löscht den Slot, `state.slot` = 0) |
 | `Save` (Abschnitt „ST1-H“) | `career()` mit `hall`, `titles`, `seen`: `season_finished(summary)`, `career_hall()`, `career_hall_has(key)`, `career_hall_add(entry)`, `career_titles()`, `career_seen(key)`, `career_mark(key)`; `newest_slot()` überspringt beendete Staffeln |
-| Abschnitte „Staffeln (09, ST1-H)“ | `title.gd` (Karte, `TitleScreen.seasons_offered()`, `season_gate`), `title_flow.gd` (`pending_season`, `_start_season`; eine beendete Staffel lädt in die Ruhmeshalle), `slot_select.gd` (Zeile der Staffel), `pause_menu.gd` (`_tabs()`, `season_modal(d)`, `season_close()`, Kopfzeile), `exploration_hud.gd` (`season_panel`, `season_counter`, `season_refresh()`, `season_said`, `season_legend`; die Lesungen von `CastSim` nur, wenn sich ihr Schlüssel ändert — PERFORMANCE.md §3.11), `minimap.gd` (NEU an Programmtüren), `exploration.gd` (gesperrte Treppe), `safe_room.gd` (`season_guests` mit einem Knopf je Gast, `season_guest_buttons`, `season_ask_hire(place)`, `season_open_tempo_offer()`, Kopfzeile), `game_over.gd` (`season_out()`, „Staffel-Bilanz“), `intro.gd` (`season_lines()`) |
-| Daten | `mod_lines.json`: 26 Zeilen hinter `mod_ssn_anchor_01` — `season_welcome`, `season_collapse_intro`, `season_warn_3600/600/60/last`, `season_vest`, `season_counter_in`, `season_tempo_offer`, `season_tempo_binge`, `season_no_net_unlocked`, `season_rival`, `season_rival_after`, `season_need`, `season_left`, `season_guest_<profil>` |
-| Werkzeuge | `tests/capture.gd --before=<name>` (ein Zustand vor dem Bau der Szene: `cal2`, `cal3`, `cal3late`, `warn`, `finale`, `out`, `left`, `career`, `hall`); Aufnahmen `season_tab_<abschnitt>`, `season_ask_<aktion>`, `season_hud`, `season_hud_warn`, `season_stairs`, `season_guests`, `season_offer`, `season_quiet` (README Abschnitt Screenshots, Bilder 100–114); Test `test_09_season_ui` |
+| Abschnitte „Staffeln (09, ST1-H)“ | `title.gd` (Karte, `TitleScreen.seasons_offered()`, `season_gate`), `title_flow.gd` (`pending_season`, `_start_season`; eine beendete Staffel lädt in die Ruhmeshalle), `slot_select.gd` (Zeile der Staffel), `pause_menu.gd` (`_tabs()`, `season_modal(d)`, `season_close()`, Kopfzeile), `exploration_hud.gd` (`season_panel`, `season_counter`, `season_refresh()`, `season_said`, `season_legend`; die Lesungen von `CastSim` nur, wenn sich ihr Schlüssel ändert — PERFORMANCE.md §3.11; `_season_pull(model)` als Haken in `set_pull_target`: der Zähler macht dem Zielrahmen Platz, H-23), `explore_target.gd` (`level_view()`: Gegnerfarbe, Differenz und Warnzeichen der Plakette in einer Beschriftung, H-22), `minimap.gd` (NEU an Programmtüren), `exploration.gd` (gesperrte Treppe), `safe_room.gd` (`season_guests` mit einem Knopf je Gast, `season_guest_buttons`, `season_ask_hire(place)`, `_season_place()` nach `_refresh_recall_cta` — die Gäste unter TALENT-SHOW und RECALL, unter beiden einer, und ihr Fokus —, `_season_watch_recall(recall)` als Haken in `open_recall` → `_season_offer()` → `season_open_tempo_offer()`, Kopfzeile), `game_over.gd` (`season_out()`, „Staffel-Bilanz“), `intro.gd` (`season_lines()`) |
+| Daten | `mod_lines.json`: 25 Zeilen hinter `mod_ssn_anchor_01` — `season_welcome`, `season_collapse_intro`, `season_warn_3600/600/60/last`, `season_vest`, `season_counter_in`, `season_tempo_offer`, `season_tempo_binge`, `season_rival`, `season_rival_after`, `season_need`, `season_left`, `season_guest_<profil>` |
+| Werkzeuge | `tests/capture.gd --before=<name>` (ein Zustand vor dem Bau der Szene: `cal2`, `cal3`, `cal3late`, `warn`, `finale`, `out`, `left`, `career`, `hall`); Aufnahmen `season_tab_<abschnitt>`, `season_ask_<aktion>`, `season_hud`, `season_hud_warn`, `season_stairs`, `season_guests`, `season_hire`, `season_offer` (der Recall: beide wählen, FERTIG — dann das Angebot), `season_target` (Pull-Ziel fünf Stufen über der Figur), `season_quiet` (README Abschnitt Screenshots, Bilder 100–119); `capture.gd --dc` / `--quiet-ui` (Draw Calls, PERFORMANCE.md §3.11); Test `test_09_season_ui` |
 
 **Für die anderen Pakete:** 07 — CR-32 c (die Kampfeinheit von Gast und Pechvogel: bis dahin ist „Anheuern“ und „Helfen“
-Buchhaltung in `CastSim`), CR-32 l (Farbe und Differenz der Plakette im Zielrahmen; `LevelBand.color_name`, `diff_text`,
-`is_warning`). Recall (06 §3.5) — das Tempo-Angebot erscheint im Safe Room, sobald nach der Klassenwahl kein Dialog mehr
-offen ist (`_after_modal`); öffnet die Recall-Oberfläche kein Safe-Room-Dialog, kommt es beim nächsten Betreten eines
-Safe Rooms. ST1-I — der Harness kann die Staffel über `TitleFlow.pending_season` und `start_new_game` starten wie ein
-Mensch. ST2 — Freunde und öffentliche Staffeln in „Neue Staffel“, Zuschauen als Studiogast, Systemmitteilungen und Teilen
-der Kalender-Datei auf Mobilgeräten (09 O-2).
+Buchhaltung in `CastSim`), CR-32 l (Farbe und Differenz der Plakette im Zielrahmen des Kampfes; `LevelBand.color_name`,
+`diff_text`, `is_warning`, als Vorlage der Abschnitt „Staffeln“ in `explore_target.gd`). Recall (06 §3.5) — das
+Tempo-Angebot hängt am Signal `closed` des Recalls (eine Haken-Zeile in `open_recall`: wer beim Öffnen `Casting.mode` =
+`first` hatte und beim Schließen eine Klasse hat, hat gerade gewählt); die Gäste richten sich nach dem Knopf RECALL (09
+H-21). ST1-I — der Harness kann die Staffel über `TitleFlow.pending_season` und `start_new_game` starten wie ein Mensch.
+ST2 — Freunde und öffentliche Staffeln in „Neue Staffel“, Zuschauen als Studiogast, Systemmitteilungen und Teilen der
+Kalender-Datei auf Mobilgeräten (09 O-2).
 
 ---
 

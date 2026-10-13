@@ -17,9 +17,11 @@ Dieses Dokument hält fest, **was** gemessen wurde, **wie**, was vorher/nachher 
 > jede Größe im Budget, die größte Etage (48 Räume, ganz gebaut) warm 408 ms im Median (Probe 428 ms). Die Türstürze kommen
 > vor dem Eintritt in die Welt in den Etagen-Körper (§4.10: −14 ms auf Etage 1, −32–52 ms auf Etage 6).
 >
-> **Stand ST1-H (2026-10-12, Branch `ptd/st1h`):** die Staffel-UI gemessen (§3.11): Erkundung im Kalender 87, Safe Room
-> mit zwei KI-Gästen 88 UI-Draw-Calls (Budget 100; die Gäste-Tafel von 18 auf 6 gesenkt), ohne Staffel unverändert. Das HUD
-> liest die KI-Besetzung nur nach einer Änderung und dann eine Abfrage je Takt (vorher ≈ 13 ms alle 5 s).
+> **Stand ST1-H (2026-10-13, Branch `ptd/st1h`):** die Staffel-UI gemessen (§3.11): Erkundung im Kalender 87, Safe Room
+> mit zwei KI-Gästen 88 UI-Draw-Calls (Budget 100; die Gäste-Tafel von 18 auf 6 gesenkt), auf Etage 3 mit TALENT-SHOW,
+> RECALL und einem Gast 91, mit dem Zielrahmen eines Pull-Ziels (Gegnerfarbe und Differenz) 99 im Kalender, 100 Am Stück
+> (der Zähler macht dem Rahmen Platz), ohne Staffel unverändert. Das HUD liest die KI-Besetzung nur nach einer Änderung
+> und dann eine Abfrage je Takt (vorher ≈ 13 ms alle 5 s).
 
 ---
 
@@ -53,7 +55,7 @@ Maximum über alle gemessenen Ansichten bzw. Frames (Methode §2). „vorher“ 
 | Staffel-Etage 6 bauen (48 Räume, ganze Etage), warm: Median aus 9 · Probe | 500 ms | – | **408 · 428 ms** | – | – |
 | Stempelduell (§3.10, 10 §6.10): Draw Calls UI · 3D, Tisch gegen den Stempelmeister mit Durchsage | 120 · 0 | – | **101 · 0** | – | – |
 | Stempelduell: Zug · Vorschau (Mittel) · Tisch aufbauen, warm | 2 · 3 · 300 ms | – | **0,50 · 1,02 · 7 ms** | – | – |
-| Staffel-UI (§3.11, 09 ST1-H): Draw Calls UI Erkundung im Kalender · Safe Room mit zwei Gästen (Anteil 5 · 6) | 100 · 100 | – | **87 · 88** | – | – |
+| Staffel-UI (§3.11, 09 ST1-H): Draw Calls UI Erkundung im Kalender · Safe Room mit zwei Gästen (Anteil 5 · 6) · Erkundung mit Pull-Ziel, Kalender · Am Stück | 100 · 100 · 100 · 100 | – | **87 · 88 · 99 · 100** | – | – |
 | Staffel-UI: HUD-Takt ohne Änderung · größte Abfrage nach einer Änderung (Platz) | – | – | **0,03 · 6–8 ms** | – | – |
 | Router-Zyklen (20×), Wachstum | 0 | – | **0 Nodes, 0 Ressourcen** | | |
 | „ObjectDB instances leaked at exit“ | 0 | 6 (sporadisch) ✗ | **0** | | |
@@ -403,9 +405,9 @@ mobilen Referenzgeräten (60 FPS, Quality `low`) ist das Duell noch nicht gemess
 
 ### 3.11 Staffel-UI (09 ST1-H)
 
-Stand 2026-10-12, Branch `ptd/st1h`, Compatibility-Renderer unter Xvfb (llvmpipe), geteilte 4-Kern-Maschine unter Last
+Stand 2026-10-13, Branch `ptd/st1h`, Compatibility-Renderer unter Xvfb (llvmpipe), geteilte 4-Kern-Maschine unter Last
 (Load 6–10). **Draw Calls:** `tests/capture.gd --dc` liest nach dem Aufbau 30 Bilder lang
-`viewport_get_render_info` (CANVAS = UI, VISIBLE = 3D; Höchstwert), in den Zuständen der Bilder 100–114
+`viewport_get_render_info` (CANVAS = UI, VISIBLE = 3D; Höchstwert), in den Zuständen der Bilder 100–119
 (`capture.gd --before=<Zustand>`, Rezepte `season_*`); `--quiet-ui` blendet M.O.D.-Kasten und Toasts aus wie der
 Abschnitt `season` von `perf.sh` (§3.9). Dieselben Ansichten ohne Staffel und Am Stück zum Vergleich auf dem Basisstand
 `266295f` (mit denselben zwei Schaltern in einer Kopie von `capture.gd`). Die
@@ -418,19 +420,31 @@ Kalender-Staffel läuft nur hier: `perf.sh --only=season` startet Am Stück. **Z
 | Erkundung Etage 2, Am Stück (`--season-floor=2`): Countdown wie heute, Zähler | 86 | 88 | 2 | 100 |
 | Erkundung Etage 2, Kalender (`--before=cal2`): Einsturz-Anzeige statt Countdown, Zähler | – | 87 | 3 + 2 | 100 |
 | dasselbe im Handy-Format 2400 × 1080 mit Touch | – | 86 | 3 + 2 | 100 |
+| Erkundung Etage 1, ohne Staffel, Pull-Ziel gewählt (Rezept `pull_target_platform`, Bild 62) | – | 97 | – | 100 |
+| Erkundung Etage 2, Kalender, Pull-Ziel fünf Stufen über Kai (`season_target`): Plakette rot mit „+5“ und Warnzeichen, Zähler ausgeblendet | – | 99 | 3 | 100 |
+| dasselbe Am Stück (`--season-floor=2`): Countdown wie heute | – | 100 | 0 | 100 |
+| dasselbe im Handy-Format 2400 × 1080 mit Touch (Kalender, Bild 119) | – | 92 | 3 | 100 |
 | Safe Room Etage 1, ohne Staffel | 76 | 76 | – | 100 |
 | Safe Room Etage 2, Kalender, zwei Gäste (Bild 108) | – | 88 | 6 | 100 |
 | dasselbe im Handy-Format (Bild 114) | – | 80 | 6 | 100 |
+| Safe Room Etage 3, Kalender: TALENT-SHOW, RECALL und darunter ein Gast (Bild 116; 2026-10-13, nach dem Recall) | – | 91 | ≤ 6 | 100 |
 | Pausemenü, Reiter Party, ohne Staffel | 292 | 292 | – | – |
 | Pausemenü einer Kalender-Staffel: Party · „Staffel“ mit Rangliste · Ticker · Programm · Aktionen | – | 306 · 295 · 254 · 278 · 258 | – | – |
 
 - **Gäste im Safe Room:** Die erste Fassung (je Gast eine Zeile mit den Knöpfen „Reden“ und „Anheuern“, Beschriftung mit
   der Kontur des Themes) kostete 18 Draw Calls — der Safe Room einer Kalender-Staffel kam damit auf 100–102 > 100. Jetzt
   ist jeder Gast **ein** Knopf (rechts das Wort „Reden“ bzw. „Anheuern“), die Beschriftung auf der Tafel ohne Kontur
-  (eine Kontur kostet je Label einen zweiten Draw Call, 02_TECH §12.1): 6 Draw Calls.
+  (eine Kontur kostet je Label einen zweiten Draw Call, 02_TECH §12.1): 6 Draw Calls. Auf Etage 3 steht mit dem Recall
+  (06 §3.5) dessen Knopf RECALL unter der TALENT-SHOW; die Tafel rückt darunter und zeigt einen Gast — 91 mit beiden
+  Knöpfen (09 H-14, H-21).
 - **HUD:** Die Einsturz-Anzeige ersetzt im Kalender den stehenden Countdown; ihr Text liegt auf dem eigenen Feld und
   braucht keine Kontur. Der Zähler darunter („Weiße Weste 86/100 · Platz 96“) steht über der 3D-Szene und behält seine
   Kontur: +2 Draw Calls in beiden Tempi ab Etage 2.
+- **Zielrahmen (09 H-22, H-23):** Die erste Fassung (die Differenz als eigenes Label links der Plakette, der Zähler
+  stehen gelassen) kam mit einem Pull-Ziel auf 102 im Kalender und 103 Am Stück. Jetzt trägt die Beschriftung der
+  Plakette Differenz und Stufe („+5   12“, rechtsbündig, die Stufe mittig im Ring: −1), das Warnzeichen liegt im
+  Dreiecks-Array des Rahmens (±0), und solange ein Pull-Ziel steht, blendet das HUD den Zähler aus (−2): 99 bzw. 100.
+  Ohne Staffel zeichnet der Rahmen wie vorher (kein Label, kein Mesh mehr).
 - **Pausemenü:** 02_TECH §12.1 gibt dem Pausemenü kein eigenes Budget; der Reiter „Staffel“ liegt im Bereich der anderen
   Reiter (Party ohne Staffel 292, in einer Kalender-Staffel 306 mit den Reitern „Staffel“ und „Ausloggen“ in der Leiste).
 - **M.O.D.-Kasten und Toasts** kommen wie in §3.9 dazu: Bild 106 (40 min vor dem Einsturz, M.O.D.s Zeile im Kasten)

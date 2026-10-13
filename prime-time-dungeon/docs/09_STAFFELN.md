@@ -79,14 +79,15 @@
 > Leiste, Klassenreihen ab Stufe 15, die erste Klassenwahl schaltet „Ohne Netz“ frei. Umentscheiden und Umschulung nach
 > 06 §3.6, Talente im Talentbaum. Ohne Staffel bleibt jeder Lauf bitgleich.
 >
-> **Stand ST1-H (2026-10-12, Branch `ptd/st1h`):** Die Staffel-UI ist umgesetzt (Kap. 11.3 „Stand ST1-H“, Entscheidungen
-> H-1 … H-20 und die Orchestrator-Entscheidungen O-1 … O-4; 02_TECH §0.8 „Stand ST1-H“): im Titel „Sendung starten“ bzw.
+> **Stand ST1-H (2026-10-13, Branch `ptd/st1h`):** Die Staffel-UI ist umgesetzt (Kap. 11.3 „Stand ST1-H“, Entscheidungen
+> H-1 … H-23 und die Orchestrator-Entscheidungen O-1 … O-4; 02_TECH §0.8 „Stand ST1-H“): im Titel „Sendung starten“ bzw.
 > „Neue Staffel“ und die Ruhmeshalle (bis zum ST1-Gate nur in Debug-Builds, O-1), die Wahl von Modus, Tempo und Sendezeit
 > mit Ein-Satz-Erklärungen, der Pausemenü-Reiter „Staffel“ (Sendeplan in Ortszeit, `.ics`, Rangliste mit KI-Kennzeichnung,
 > Ticker, Tagesprogramm mit Pechvogel, Sendepause, „Am Stück“, „Staffel beenden“ mit klarer Rückfrage), die ruhige
-> Einsturz-Anzeige und der Zähler im HUD, die gesperrte Treppe mit Grund, das Tempo-Angebot, die Gäste im Safe Room mit
-> Anheuern, Staffel-Bilanz und Finale mit Titeln, der Zeitraffer des Studiogasts, die Ruhmeshalle. Ohne Staffel bleibt jeder
-> Lauf bitgleich.
+> Einsturz-Anzeige und der Zähler im HUD, Gegnerfarbe und Stufendifferenz im Zielrahmen der Erkundung, die gesperrte
+> Treppe mit Grund, das Tempo-Angebot, wenn der Recall nach der ersten Klassenwahl schließt, die Gäste im Safe Room mit
+> Anheuern, Staffel-Bilanz und Finale mit Titeln, der Zeitraffer des Studiogasts, die Ruhmeshalle. Keine nativen
+> Systemmitteilungen (O-2). Ohne Staffel bleibt jeder Lauf bitgleich.
 >
 > **Namen der Phasen:** Der Orchestrator nennt sie S1–S3. Weil „S0–S5“ schon die SHOWRUN-Stufen (05) und „S0–S3“ die
 > KI-Stufen (06 §5.12) sind, heißen sie hier **ST1–ST3** (Staffel-Phasen) — gleicher Inhalt, keine Verwechslung.
@@ -1715,9 +1716,9 @@ oder sie über 10 min im Hintergrund lässt, schläft dort, wo die Figur stand (
 `test_09_recall` (15 Tests). **Was ein Debug-Build zeigt** (`--season=ssn_basis --tempo=binge --floor=3`, dann in den
 ersten Safe Room): den Recall wie in 06 §3.5 beschrieben; danach trägt die Party Spezies und Klasse (Pausemenü → Party),
 die Signatur liegt auf Platz 1, das Fähigkeitenbuch zeigt die Klassenleiste statt der Klassen-Vorschau, der Talentbaum
-die Klassenreihen ab Stufe 15. **Offen:** das Tempo-Angebot nach der Klassenwahl (Kap. 0.6 Etage 3, ST1-H); die
-Spezies-Optik am Rig (03_ART); die Kampf-Anzeige (07 CR-32 p); der Full-Run-Bot kennt Etage 3 nicht (ST1-I: er sollte dort
-den Recall bestätigen).
+die Klassenreihen ab Stufe 15. **Offen:** das Tempo-Angebot nach der Klassenwahl (Kap. 0.6 Etage 3, ST1-H — umgesetzt,
+H-11); die Spezies-Optik am Rig (03_ART); die Kampf-Anzeige (07 CR-32 p); der Full-Run-Bot kennt Etage 3 nicht (ST1-I:
+er sollte dort den Recall bestätigen).
 
 **Entscheidungen Recall** (Auslegungen von 06 Kap. 3 und dieses Dokuments):
 
@@ -1738,19 +1739,21 @@ den Recall bestätigen).
 | R-13 | M.O.D. | 36 Zeilen `casting_*`: Eröffnung (06 §0.5), Schritte je Figur, Bestätigen, Urteile mit der Kette `casting_combo:<spc>:<cls>` (die elf empfohlenen Paare) → `casting_combo:<spc>` → `casting_combo`, Umentscheiden, Umschulung, Schluss, „Später“, Ohne Netz; je ≤ 110 Zeichen, eigene Show-Sprache, keine Namen oder Begriffe des Buchs. Sie stehen im Kasten „JURY · M.O.D.“ (`UiUtil.mod_line`, nie aufgezeichnet); nur `casting_later` geht über `Show.say` und wird nie verschluckt (`ALWAYS_SAID_TAGS`). | 06 §3.5 |
 | R-14 | Kampf-Anzeige | Spezies und Klasse am Party-Rahmen und die Bauchbinde „ORIGINAL“ beim Kampfstart (06 §3.2) gehören `scenes/combat`: Antrag 07 CR-32 p (07 §12.10). Pausemenü → Party zeigt beide; vor der Wahl „Spezies & Klasse: Recall offen – im Safe Room“ (ab Etage 3) bzw. „Recall auf Etage 3“. | 06 §3.2 |
 
-**Stand ST1-H (2026-10-12, Branch `ptd/st1h`) — umgesetzt** (Einzelheiten 02_TECH §0.8 „Stand ST1-H“): neu
+**Stand ST1-H (2026-10-13, Branch `ptd/st1h`) — umgesetzt** (Einzelheiten 02_TECH §0.8 „Stand ST1-H“): neu
 `scenes/ui/season_view.gd` (privat: alle Wörter, Termine und Zeilen der Staffel-Oberfläche als reine Sichten auf
 `GameState`, `SeasonRules` und `CastSim`; die `.ics`-Datei), `scenes/ui/season_dialog.*` (Rückfragen der Staffel),
 `scenes/ui/season_tab.gd` (Reiter „Staffel“), `scenes/title/season_setup.*` („Sendung starten“ / „Neue Staffel“),
 `scenes/ui/season_summary.*` (Staffel-Bilanz und Finale), `scenes/ui/hall_of_fame.*` (Ruhmeshalle); je ein Abschnitt
 „Staffeln (09, ST1-H)“ in `title.gd` (die Karte), `title_flow.gd` (der eine Neues-Spiel-Weg, eine beendete Staffel lädt in
-die Ruhmeshalle), `slot_select.gd`, `pause_menu.gd`, `exploration_hud.gd`, `minimap.gd` („NEU“), `exploration.gd` (die
-gesperrte Treppe), `safe_room.gd` (Gäste, Kopfzeile, Tempo-Angebot), `game_over.gd` (Sendeschluss Ohne Netz), `intro.gd`
-(Willkommen in Staffel n), `Game` (Tempo, Sendepause, Aussteigen; das Ende einer Staffel führt zur Bilanz, die Ruhmeshalle
-schreibt `_season_hall`), `Save` (`career_hall`, `career_titles`, `career_seen`; eine beendete Staffel setzt nicht fort);
-26 M.O.D.-Zeilen `season_*` hinter dem Anker; Aufnahmen `season_*` mit `capture.gd --before=<Zustand>`; Test
-`test_09_season_ui` (neu). Keine Datei in `core/rt/**` oder `scenes/combat/**`: Farbe und Differenz der Stufen-Plakette
-im Zielrahmen des Kampfes bleiben Antrag CR-32 l (07 §12.10).
+die Ruhmeshalle), `slot_select.gd`, `pause_menu.gd`, `exploration_hud.gd`, `minimap.gd` („NEU“), `explore_target.gd`
+(Farbe und Differenz der Plakette im Zielrahmen), `exploration.gd` (die gesperrte Treppe), `safe_room.gd` (Gäste unter
+TALENT-SHOW und RECALL, Kopfzeile, Tempo-Angebot am Signal `closed` des Recalls — eine Haken-Zeile in `open_recall`),
+`game_over.gd` (Sendeschluss Ohne Netz), `intro.gd` (Willkommen in Staffel n), `Game` (Tempo, Sendepause, Aussteigen;
+das Ende einer Staffel führt zur Bilanz, die Ruhmeshalle schreibt `_season_hall`), `Save` (`career_hall`,
+`career_titles`, `career_seen`; eine beendete Staffel setzt nicht fort); 25 M.O.D.-Zeilen `season_*` hinter dem Anker;
+Aufnahmen `season_*` mit `capture.gd --before=<Zustand>` (Bilder 100–119); Test `test_09_season_ui` (neu, 20 Tests).
+Keine Datei in `core/rt/**` oder `scenes/combat/**`: Farbe und Differenz der Stufen-Plakette in den Rahmen und
+Namensschildern des Kampfes bleiben Antrag CR-32 l (07 §12.10).
 
 *Was ein Debug-Build zeigt* (ohne Startargument): Im Titel steht rechts unten die Karte „STAFFELN · Vorschau“ mit
 „Sendung starten“ (die erste Staffel des Geräts) bzw. „Neue Staffel“ und „Ruhmeshalle“; die Menüspalte und „Extras“
@@ -1760,13 +1763,16 @@ wählt Modus (Ohne Netz erst nach der Freischaltung, mit „Ein Leben. Ernsthaft
 Danach Slot → Figur → Casting → Intro wie „Neues Spiel“; M.O.D. begrüßt im Studio „Willkommen in Staffel 3! …“. In der
 Erkundung steht oben statt des eingefrorenen Countdowns „Einsturz So 20:00 · in 1 T 19 Std.“ (ab 1 h gold, ab 10 min
 orange, die letzte Minute leuchtet sanft; M.O.D. sagt es je Etage einmal), ab Etage 2 darunter „Weiße Weste 81/100 ·
-Platz 12“. Pause → „Staffel“: links der Sendeplan (jede Etage mit Einsturztermin, „auf Sendung · in …“, „Kulissen im Aufbau ·
-öffnet So 20:00“, Programm n/5, FINALE), rechts Rangliste (die ersten drei und die Plätze um Sie, „(KI)“ an jeder
+Platz 12“; zielt die Figur auf eine Gruppe, trägt die Plakette im Zielrahmen die Gegnerfarbe, daneben „+3“, „−4“ oder
+„±0“ und bei Rot das Warnzeichen (solange der Rahmen steht, macht der Zähler ihm Platz). Pause → „Staffel“: links der
+Sendeplan (jede Etage mit Einsturztermin, „auf Sendung · in …“, „Kulissen im Aufbau · öffnet So 20:00“, Programm n/5,
+FINALE), rechts Rangliste (die ersten drei und die Plätze um Sie, „(KI)“ an jeder
 KI-Kandidat:in), Ticker der letzten 24 h, Tagesprogramm (NEU, nächster Punkt, „Pechvogel in Not … [Helfen]“, Begleitung,
 Gefallen) und Aktionen (Kalender-Datei, Sendepause in Tagen mit neuer Datei danach, „Am Stück spielen“, „Staffel beenden“
 rot mit „Weiterspielen“ zuerst). Eine gesperrte Treppe sagt „Etage 4: Kulissen im Aufbau — öffnet in 1 T 19 Std. …“ und
 bietet privat „Am Stück spielen“. Im Safe Room sitzen bis zu zwei KI-Kandidat:innen der Etage: „Reden“, eine Helfer:in
-„Anheuern“ (Kosten im Dialog). Nach der Klassenwahl bietet M.O.D. einmal „Weiter im Kalender“ oder „Am Stück“ an. Am Ende:
+„Anheuern“ (Kosten im Dialog); stehen rechts TALENT-SHOW und RECALL (Etage 3), bleibt unter ihnen Platz für einen Gast.
+Schließt der Recall nach der ersten Klassenwahl, bietet M.O.D. einmal „Weiter im Kalender“ oder „Am Stück“ an. Am Ende:
 Staffel-Bilanz mit Titeln (Abspann beim Finale), als Studiogast „Zeitraffer bis zum Finale“; die Ruhmeshalle zeigt jede
 beendete Staffel des Geräts.
 
@@ -1793,23 +1799,27 @@ beendete Staffel des Geräts.
 | H-8 | Wege am Ende | Abspann und — nach „Staffel beenden“ — Titel führen zur Staffel-Bilanz (`Game._season_end_path`; der Abspann steht als Kicker „ABSPANN · STAFFEL-BILANZ“ darüber); der Sendeschluss Ohne Netz bietet „Staffel-Bilanz“ statt „Laden“ (keine Gnadenfrist). | 2.7, 7.2 |
 | H-9 | Studiogast offline | Der „Zeitraffer bis zum Finale“ ist die Rangliste am letzten Einsturz, gerechnet auf einer Kopie des Zustands (`SeasonView.projection`: Uhr bis zum letzten Einsturz, die KI spielt weiter); der Spielstand bleibt unberührt. Zuschauen live und Schnellsätze: ST2. | 7.2 |
 | H-10 | Einsturz-Anzeige | Kalender: eine Zeile oben in der Mitte statt des eingefrorenen Countdowns, ruhig (keine Farbe Rot, kein Wackeln, kein Piepen; ab 1 h gold, ab 10 min orange, die letzte Minute ein sanftes Leuchten); zwischen den 60-s-Schritten der Uhr zählt sie mit der Wanduhr weiter. M.O.D. nennt jede Schwelle je Etage einmal (`season_warn_3600/600/60`, auf der letzten Etage `season_warn_last` ohne Treppen-Rat). Am Stück bleibt der Countdown von heute. | 2.5, 2.9, 10 |
-| H-11 | Tempo-Angebot | Nach der Klassenwahl einmal je Gerät (`career()["seen"]`), im Safe Room, sobald kein Dialog offen ist (privater Kalender): „Weiter im Kalender“ ist vorgewählt. Dazu bietet jede gesperrte Treppe „Am Stück spielen“ an (Kap. 2.6), und der Reiter „Staffel“ hat es unter Aktionen — immer nur in diese Richtung. | 2.1, 2.6 |
+| H-11 | Tempo-Angebot | Am Signal `closed` des Recalls (Vorgabe des Orchestrators, 2026-10-12): Wer beim Öffnen eine erste Wahl offen hatte (`Casting.open_members` mit `Casting.mode` = `first`) und beim Schließen eine Klasse hat, hat gerade zum ersten Mal gewählt — dann, im Safe Room ohne anderen Dialog, einmal je Gerät (`career()["seen"]`) und nur, wo der Wechsel geht (private Kalender-Staffel, `SeasonRules.refusal` von `tempo`): „Weiter wie im Fernsehen?“ mit „Weiter im Kalender“ vorgewählt. Nicht nach „Später“ ohne Wahl, nie Am Stück, nie beim bloßen Betreten eines Safe Rooms; danach steht der Fokus wieder auf RECALL. Dazu bietet jede gesperrte Treppe „Am Stück spielen“ an (Kap. 2.6), und der Reiter „Staffel“ hat es unter Aktionen — immer nur in diese Richtung. | 0.6, 2.1, 2.6 |
 | H-12 | Sendepause im Reiter | Ganze Tage (1 bis zum Rest der 14), wach genommen: Alle offenen Termine rücken sofort; danach bietet der Reiter die neue Kalender-Datei an. | 2.9 |
 | H-13 | Kalender-Datei | `user://exports/staffel_<n>_sendeplan.ics` (RFC 5545, UTC, je künftigem Einsturz ein Termin von 15 min mit der öffnenden Etage im Text; nur Staffelnummer, Etagen, Termine — kein Name). Desktop: „Ordner zeigen“. Mobilgeräte: Die Datei liegt im App-Ordner; Teilen braucht ein Plugin (O-2). | 2.4 |
-| H-14 | Gäste im Safe Room | Rechts unter dem Platz der TALENT-SHOW, frei von der M.O.D.-Box, je Gast **ein** Knopf: Name mit „(KI)“, Profil, Platz, Stufe und rechts, was er tut — „Reden“ (M.O.D. zitiert sie, `season_guest_<profil>`) oder bei einer Helfer:in „Anheuern“ mit Rückfrage und Preis (ein Gefallen zuerst, sonst Credits); kann sie nicht mitkommen, steht der Grund in der zweiten Zeile. Ein Knopf je Gast und Beschriftung ohne Kontur halten die Tafel bei 6 UI-Draw-Calls (Safe-Room-Budget 100, PERFORMANCE.md §3.11). Bis 07 CR-32 c ist der Gastauftritt Buchhaltung (`CastSim`), die Kampfeinheit fehlt noch. | 4.3 |
+| H-14 | Gäste im Safe Room | Rechts unter dem untersten Knopf der rechten Spalte (TALENT-SHOW, RECALL; ohne beide unter dem Platz der TALENT-SHOW), frei von der M.O.D.-Box; unter beiden passt nur ein Gast (eine Helfer:in, die mitkommen kann, zuerst), `_season_place`. Je Gast **ein** Knopf: Name mit „(KI)“, Profil, Platz, Stufe und rechts, was er tut — „Reden“ (M.O.D. zitiert sie, `season_guest_<profil>`) oder bei einer Helfer:in „Anheuern“ mit Rückfrage und Preis (ein Gefallen zuerst, sonst Credits); kann sie nicht mitkommen, steht der Grund in der zweiten Zeile. Ein Knopf je Gast und Beschriftung ohne Kontur halten die Tafel bei 6 UI-Draw-Calls (Safe-Room-Budget 100, PERFORMANCE.md §3.11). Bis 07 CR-32 c ist der Gastauftritt Buchhaltung (`CastSim`), die Kampfeinheit fehlt noch. | 4.3 |
 | H-15 | Pechvogel | „Helfen“ im Reiter „Staffel“ → Programm (nur draußen auf der Etage); M.O.D. meldet den Pechvogel je Etage einmal. Der Pechvogel kommt in den nächsten Kampf (`CastSim`); seine Kampfeinheit: CR-32 c. | 4.3 |
 | H-16 | Rival:in | Betritt die Figur einen Raum neben dem Revier-Boss, solange er steht, sagt M.O.D. die Rival:in an (`rival_near`); nach dem Sieg der Zeitvergleich („Sie waren 4 Minuten schneller …“, die Minuten aus dem Seed — Erzählung, nie aufgezeichnet). | 4.3 |
 | H-17 | „NEU“ auf der Karte | Eine goldene Raute an jeder offenen Programmtür, deren Raum noch nicht betreten wurde (nur an Türen, die die Figur gesehen hat), dazu eine Legendenzeile der großen Karte; im Reiter das Etikett NEU. | 3.3, C-5 |
 | H-18 | Gesperrte Treppe | Statt des Abstiegs ein Dialog mit dem Grund (Kap. 2.6; die letzte Etage: „Hier geht es nicht tiefer …“), „Weiter erkunden“ und privat „Am Stück spielen“ — der Abstieg wird dort nie versucht (vorher wartete die Erkundung danach angehalten). | 2.6 |
-| H-19 | Erklärungen einmal | Die Ein-Satz-Erklärungen von Kap. 0.5 je Gerät einmal (`career()["seen"]`): Einsturz (sobald die Anzeige erscheint), Weiße Weste bzw. Noch dabei (Etage 2), Tempo und Ohne Netz (nach der Klassenwahl); „Willkommen in Staffel n“ im Intro. | 0.5, 0.6 |
+| H-19 | Erklärungen einmal | Die Ein-Satz-Erklärungen von Kap. 0.5 je Gerät einmal (`career()["seen"]`): Einsturz (sobald die Anzeige erscheint), Weiße Weste bzw. Noch dabei (Etage 2), Tempo (nach der ersten Klassenwahl, H-11); „Willkommen in Staffel n“ im Intro. „Ohne Netz“ nennt die Schlussseite des Recalls (R-11) — die Staffel-UI wiederholt es nicht. | 0.5, 0.6 |
 | H-20 | Reiter „Staffel“ | Links der Sendeplan, rechts vier Abschnitte (Rangliste, Ticker, Programm, Aktionen); alles passt ohne Scrollen in 1280 × 720, 1920 × 1080 und 2400 × 1080, auch mit Notch (Rangliste: die ersten drei und je ein Platz um Sie). Rückfragen liegen modal über dem Menü. | 2.4, 4.6 |
+| H-21 | Recall und Safe Room | Der Abschnitt „Recall“ (06 §3.5) und der Abschnitt „Staffeln (09, ST1-H)“ teilen sich `safe_room.gd`: Der Recall öffnet zuerst (`_ready`, `_build_ui`), die Gäste richten sich danach (`_season_place` nach `_refresh_recall_cta`, auch ihr Fokus: ↓ von RECALL, Tab nach RECALL); in den Recall selbst greift die Staffel-UI nicht ein (eine Haken-Zeile in `open_recall` hängt das Tempo-Angebot an sein `closed`). | 4.3, 06 §3.5 |
+| H-22 | Gegnerfarbe | Das „Namensschild“ einer Gruppe in der Erkundung ist der Zielrahmen des Pulls (`explore_target.gd`, Abschnitt „Staffeln“, `level_view()`): In Staffeln trägt die Plakette die Farbe von `LevelBand.color_name(Gruppenstufe − Stufe der gesteuerten Figur)` (grau, grün, gelb = das Gold von heute, orange, rot), links daneben steht `LevelBand.diff_text` („+5“, „−4“, „±0“) in derselben Farbe — die Zahl trägt die Information, die Farbe hilft nur. Differenz und Stufe teilen sich die Beschriftung der Plakette („+5   12“, rechtsbündig, die Stufe mittig im Ring): kein Draw-Call mehr; bei Rot steht ein Warnzeichen davor (rotes Dreieck mit „!“ im Dreiecks-Array des Rahmens). Der Name kürzt sich mit „…“, statt darunter zu laufen. Ohne Staffel bleibt die Plakette gold ohne Zahl. Im Kampf (Zielrahmen, Namensschilder, `scenes/combat`) bleibt es Antrag CR-32 l. | 3.4, D-7, V-6 |
+| H-23 | Zielrahmen und Zähler | Solange ein Pull-Ziel gezeigt wird, blendet das HUD die Zählerzeile („Weiße Weste … · Platz …“) aus (`_season_pull` in `set_pull_target`): Der Zielrahmen steht direkt unter der Einsturz-Anzeige, und die Erkundung bleibt mit Rahmen im UI-Budget von 100 Draw-Calls (gemessen 99 bzw. 100 statt 102 bzw. 103, PERFORMANCE.md §3.11). Geht das Ziel, kommt der Zähler zurück; die Einsturz-Anzeige bleibt immer stehen. | 2.3, 3.4 |
 
 **Offen nach ST1-H:** die Kampfeinheit von Gast und Pechvogel (07 CR-32 c — bis dahin „kommt mit“ als Buchhaltung);
 Teilen der `.ics`-Datei und Systemmitteilungen auf Mobilgeräten (O-2); die Staffel-Bilanz zeigt die Summen der Quote, aber
 keine EP je Figur und keine Überstunden-Summe (ST1-D-Hinweis: dafür bräuchte `SeasonState` eigene Zähler); Farbe und
-Differenz der Plakette im Zielrahmen (CR-32 l); der Zeitraffer (`--speed`) gilt nur für mit `--season` gestartete
-Staffeln. Vorschlag an `CastSim` (ST1-F): das gelesene Modell bis zum nächsten Command behalten — heute baut jede Abfrage
-es neu (≈ 3 ms), und HUD, Reiter und Safe Room fragen mehrmals hintereinander (PERFORMANCE.md §3.11).
+Differenz der Plakette im Kampf (CR-32 l — in der Erkundung umgesetzt, H-22); der Zeitraffer (`--speed`) gilt nur für
+mit `--season` gestartete Staffeln. Vorschlag an `CastSim` (ST1-F): das gelesene Modell bis zum nächsten Command
+behalten — heute baut jede Abfrage es neu (≈ 3 ms), und HUD, Reiter und Safe Room fragen mehrmals hintereinander
+(PERFORMANCE.md §3.11).
 
 ### 11.4 Dateieigentum gegenüber 07 und 08
 
@@ -1855,7 +1865,7 @@ es neu (≈ 3 ms), und HUD, Reiter und Safe Room fragen mehrmals hintereinander 
 | `test_09_ability_book` | Freischaltung auf festen Stufen, Vorschau, Klassenleisten über `rt.bar`, Rang II–IV; Stand ST1-D: dazu Belegung der Plätze 1–5, Kampfleiste und KI-Regeln, Zugleiste der Erkundung |
 | `test_09_replay` | Sitzung mit `season`/`clock`/`away`/`sleep`/`prof`/`craft`/`talent` v2 → `RunSim.replay` und `Game.replay_log` hash-gleich; manipulierte Uhr-Commands → Fehler; Läufe ohne Staffel bitgleich zu den Golden-Hashes |
 | `test_09_terms` | Sprachregel (Kap. 1.2) |
-| `test_09_season_ui` | Stand ST1-H: Wörter, Ortszeit und Zeilen der Staffel-UI (Sendeplan, Einsturz-Anzeige, Zähler, Rangliste mit KI-Kennzeichnung, Ticker, Tagesprogramm, gesperrte Treppe), `.ics` ohne persönliche Daten, Ruhmeshalle einmal je Staffel und ohne Namen, „Staffel beenden“ gibt den Slot frei, Wege zum Ende, Titel-Karte nur in Debug-Builds (O-1), Einrichtung und der eine Neues-Spiel-Weg, Reiter „Staffel“ mit Rückfragen, HUD, Gäste und Anheuern, Tempo-Angebot einmal; Fokus in jedem Bildschirm, Trefferflächen ≥ 88 px mit 12 px Abstand, keine Überlappung in 1280 × 720, 1920 × 1080 und 2400 × 1080 mit Notch, Texte ≥ 16 px mit gezeichneten Glyphen; die Sichten ändern den aufgezeichneten Zustand nie |
+| `test_09_season_ui` | Stand ST1-H: Wörter, Ortszeit und Zeilen der Staffel-UI (Sendeplan, Einsturz-Anzeige, Zähler, Rangliste mit KI-Kennzeichnung, Ticker, Tagesprogramm, gesperrte Treppe), `.ics` ohne persönliche Daten, Ruhmeshalle einmal je Staffel und ohne Namen, „Staffel beenden“ gibt den Slot frei, Wege zum Ende, Titel-Karte nur in Debug-Builds (O-1), Einrichtung und der eine Neues-Spiel-Weg, Reiter „Staffel“ mit Rückfragen, HUD, Gäste und Anheuern (auf Etage 3 unter TALENT-SHOW und RECALL ein Gast, im Fokus unter RECALL, frei von der M.O.D.-Box), Tempo-Angebot am `closed` des Recalls nach der ersten Klassenwahl (einmal je Gerät, nicht nach „Später“ ohne Wahl, nie Am Stück), Zielrahmen mit Gegnerfarbe, Differenz und Warnzeichen je Abstand (ohne Staffel gold ohne Zahl; der Zähler macht ihm Platz); Fokus in jedem Bildschirm, Trefferflächen ≥ 88 px mit 12 px Abstand, keine Überlappung in 1280 × 720, 1920 × 1080 und 2400 × 1080 mit Notch, Texte ≥ 16 px mit gezeichneten Glyphen; die Sichten ändern den aufgezeichneten Zustand nie |
 | `test_09_zone_generator` | 200 Seeds je Etage 3–18 erfüllen die Prüfregeln (Kap. 3.6), deterministisch (ST1-C1: Etagen 2–6; dazu `test_09_floors`) |
 | `test_09_recall` | Recall (06 §3.5): Modi auf Etage 3 und 4, keiner vor Etage 3; öffnet von selbst, „Später“, Knopf, zweiter Besuch; ein ganzer Recall beider Figuren (Karten, Plaketten, Vorleben-Zeile, Klassenzeilen, Commands `casting` und `loadout`, Urteile, Deckel 13, „Ohne Netz“, Talentbaum, Signatur in der Zugleiste); Touch (zweites Antippen), Zurück; Ablehnungen außerhalb (Etage 2, Erkundung, fremde Spezies/Klasse, gefälschtes Command); Replay in beiden Verifiern und ein zweiter Live-Lauf; Re-Spec (Spezies fest, Umschulung je Etage, alte Signatur weg, eigene Varianten bleiben); Original-Follower und Flattermops-Bellen; jeder Kartentext ein Satz, jede Jury-Zeile da; jeder Schritt mit jeder Karte passt auf 1280 × 720, jede Karte zeigt ihren Satz ganz |
 

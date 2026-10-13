@@ -304,10 +304,10 @@ msgstr ""
 msgid "Eine Sendung des NOVA SYNDIKAT"
 msgstr ""
 
-#: scenes/ui/settings_menu.gd:660
+#: scenes/ui/settings_menu.gd:661
 msgid "Automatisch"
 msgstr ""
 
-#: scenes/ui/settings_menu.gd:662
+#: scenes/ui/settings_menu.gd:663
 msgid "Im Titelmenü änderbar"
 msgstr ""

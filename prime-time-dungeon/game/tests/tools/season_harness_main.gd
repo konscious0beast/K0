@@ -87,9 +87,12 @@ func _initialize() -> void:
 					if str(o["strategy"]) != "":
 						opts["strategy"] = str(o["strategy"])
 					var r: Dictionary = h.call("run", data, int(o["first"]) + i, opts)
-					if r.has("error"):
+					if bool(r.get("refused", false)):
 						print("HARNESS: refused %s" % str(r["error"]))
 						quit(3)
+						return
+					if r.has("error"):
+						_bad(str(r["error"]))
 						return
 					runs.append(r)
 					print("HARNESS: run " + str(rep.call("run_line", r)))

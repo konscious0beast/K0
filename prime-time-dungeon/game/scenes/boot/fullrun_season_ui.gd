@@ -13,7 +13,6 @@ extends RefCounted
 ## itself as `bot` (duck-typed: wait_for, note, fail, finished).
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
-const DAY: int = 86400
 ## The Recall of the bot (09 §8.3, 06 §3): species and class per figure — a tank and a healer.
 const RECALL: Dictionary = {"kai": ["spc_original", "cls_kai_wrecker"],
 	"mopsula": ["spc_original", "cls_mop_physician"]}

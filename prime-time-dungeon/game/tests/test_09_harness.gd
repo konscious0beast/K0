@@ -100,10 +100,13 @@ func test_formats_twelve_and_eighteen_are_refused() -> void:
 	assert_eq(HarnessScript.PLAYABLE_FORMATS, [6] as Array[int], "the harness measures format 6")
 	for def_id: String in ["ssn_akt2", "ssn_akt3"]:
 		var r: Dictionary = HarnessScript.run(d, 0, {"def": def_id})
-		assert_true(str(r.get("error", "")).contains("ST1-C2"), "%s: refused with the reason" % def_id)
+		assert_true(str(r.get("error", "")).contains("ST1-C2") and bool(r.get("refused", false)),
+			"%s: refused with the reason" % def_id)
 		assert_false(r.has("floors"), "%s: no run" % def_id)
-	assert_true(str(HarnessScript.run(d, 0, {"profile": "hourly"}).get("error", "")).contains("hourly"),
-		"an unknown profile is refused")
+	for bad: Dictionary in [{"profile": "hourly"}, {"strategy": "dawdle"}, {"tempo": "weekly"}, {"fighter": "cat"}]:
+		var e: Dictionary = HarnessScript.run(d, 0, bad)
+		assert_true(str(e.get("error", "")).contains(str(bad.values()[0])) and not e.has("refused"),
+			"bad option %s: an error, no refusal" % JSON.stringify(bad))
 
 
 # --- the planner (both bots) ------------------------------------------------------------------------------------------

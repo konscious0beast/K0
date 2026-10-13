@@ -114,7 +114,7 @@ var _final_hash: String = ""
 ## "time" ({} — overrides of TIME), "floors" / "sessions" (0; > 0: stop after leaving floor n / after n logouts),
 ## "plan" (the sessions instead of the profile's, season_profiles.gd format), "debug" (false: a line per goal and
 ## fight), "probe" (a Callable(harness, encounter command) before every boss fight: balance probes)}. The report (see
-## report()); {"error": …} for a refused format.
+## report()); {"error": …} for bad options, with "refused": true for a format the harness cannot play yet.
 static func run(p_data: GameData, p_seed: int, opts: Dictionary = {}) -> Dictionary:
 	var h: RefCounted = (load("res://tests/tools/season_harness.gd") as GDScript).new()
 	return h.call("play_season", p_data, p_seed, opts)
@@ -133,12 +133,16 @@ func play_season(p_data: GameData, p_seed: int, opts: Dictionary) -> Dictionary:
 		for k: String in SCREENS:
 			t[k] = float(t[k]) * float(FAST_SCREENS_PM) / 1000.0
 	t.merge(o["time"] as Dictionary, true)
+	for k: String in ["tempo", "strategy", "fighter"]:
+		var allowed: PackedStringArray = {"tempo": TEMPOS, "strategy": STRATEGIES, "fighter": FIGHTERS}[k]
+		if not allowed.has(str(o[k])):
+			return {"error": "unknown %s %s" % [k, str(o[k])]}
 	var def: SeasonDef = data.season_def(str(o["def"])) if data.has_id("seasons", str(o["def"])) else null
 	if def == null:
 		return {"error": "unknown season template %s" % str(o["def"])}
 	format = def.format
 	if not PLAYABLE_FORMATS.has(format):
-		return {"error": FORMAT_REFUSAL % [format, format]}
+		return {"error": FORMAT_REFUSAL % [format, format], "refused": true}
 	if str(o["tempo"]) == "calendar":
 		plan = Profiles.sessions(str(o["profile"]), seed, format)
 		if o.has("plan"):                       # the tests' own sessions

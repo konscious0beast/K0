@@ -9,7 +9,7 @@ extends SceneTree
 ##   pack-rules [--packs=<dir>]     the same rules over every <packs>/<id>/locale/<lang>.po (default res://packs; an
 ##                                  override keeps the limit of its base entry; the header names the file's language)
 ##   sync [--lang=en] [--pot=<dir>] every POT msgid is in the PO (merged) and the PO has no active entry the POT lacks
-##   stats [--lang=en] [--pack=<dir>]  coverage per domain and context; with a pack (a folder with data/*.json and
+##   stats [--lang=en] [--pack-dir=<dir>]  coverage per domain and context; with a pack (a folder with data/*.json and
 ##                                  locale/<lang>.po): the base msgids that still name what the pack renamed (11 §3.6)
 ##   lint [--file=<res path>]       the German literals outside Tx per file (test_11_literals) and its PENDING table
 ## Exit code 0 = fine, 1 = findings, 2 = usage.
@@ -44,7 +44,7 @@ func _initialize() -> void:
 		"sync":
 			code = _sync(str(opts.get("lang", "en")), str(opts.get("pot", POT_DIR)), str(opts.get("dir", LOCALE_DIR)))
 		"stats":
-			code = _stats(str(opts.get("lang", "en")), str(opts.get("pack", "")), str(opts.get("dir", LOCALE_DIR)))
+			code = _stats(str(opts.get("lang", "en")), str(opts.get("pack-dir", "")), str(opts.get("dir", LOCALE_DIR)))
 		"lint":
 			code = _lint(str(opts.get("file", "")))
 		_:
@@ -256,9 +256,12 @@ func _stats(lang: String, pack: String, dir: String) -> int:
 
 
 ## 11 §3.6 "Namensprüfung": the base msgids that contain a name the pack changed per patch and that the pack's PO does
-## not override — warnings, so no old name stays.
+## not override — warnings, so no old name stays. A name matches without its leading article and in any case ("Die
+## Rattenkönigin von Gleis 9" also in "…, die Rattenkönigin von Gleis 9!"); a base text the pack patches itself (every
+## place of the msgid is a patched field) is no hit.
 func _pack_names(pack: String, lang: String) -> int:
 	var po_file: GDScript = load(PO_FILE) as GDScript
+	var patched: Dictionary = {}                  # "data/<table>.json:<id>.<field>" → true (the extractor's places)
 	var renamed: Dictionary = {}                  # old text → new text
 	for f: String in DirAccess.get_files_at(pack.path_join("data")):
 		if not f.ends_with(".json"):
@@ -278,6 +281,8 @@ func _pack_names(pack: String, lang: String) -> int:
 			var old: Variant = by_id.get(str(id), null)
 			if not p is Dictionary or not old is Dictionary:
 				continue
+			for k: Variant in (p as Dictionary).keys():
+				patched["data/%s.json:%s.%s" % [table, str(id), str(k)]] = true
 			for field: String in ["name", "title"]:
 				if (p as Dictionary).has(field) and (old as Dictionary).has(field):
 					renamed[str((old as Dictionary)[field])] = str((p as Dictionary)[field])
@@ -291,15 +296,30 @@ func _pack_names(pack: String, lang: String) -> int:
 	var all: Dictionary = ex.call("entries")
 	var hits: int = 0
 	for old_name: String in renamed:
+		var needle: String = _without_article(old_name).to_lower()
 		for d: String in _domains():
 			for e: Dictionary in all[d]:
 				var id: String = str(e["id"])
-				if id.contains(old_name) and id != old_name and not overridden.has(id):
+				if id == old_name or overridden.has(id) or not id.to_lower().contains(needle):
+					continue
+				var shown: bool = false                   # some place of the msgid the pack leaves as it is
+				for ref: String in e["refs"]:
+					shown = shown or not patched.has(ref)
+				if shown:
 					hits += 1
 					print("I18N: warning %s: \"%s\" still names \"%s\" (the pack says \"%s\")" % [d, id.left(70),
 						old_name, str(renamed[old_name])])
 	print("I18N: %d base texts name what the pack renamed and its %s.po does not override" % [hits, lang])
 	return 0
+
+
+## "Die Rattenkönigin von Gleis 9" → "Rattenkönigin von Gleis 9": the leading German article off (running text
+## declines it).
+static func _without_article(name: String) -> String:
+	for art: String in ["Der ", "Die ", "Das ", "Den ", "Dem ", "Des "]:
+		if name.begins_with(art):
+			return name.substr(art.length())
+	return name
 
 
 # --- lint -------------------------------------------------------------------------------------------------------------

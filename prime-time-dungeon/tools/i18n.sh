@@ -149,7 +149,8 @@ case "$CMD" in
     ;;
   stats)
     prepare_godot
-    if [ -n "$PACK" ]; then run_tool stats "--lang=$LANG_CODE" "--pack=$PACK" || status=1
+    # --pack-dir, not --pack: DB reads --pack=<id> (the debug pack switch, 11 §3.8) from the same arguments
+    if [ -n "$PACK" ]; then run_tool stats "--lang=$LANG_CODE" "--pack-dir=$PACK" || status=1
     else run_tool stats "--lang=$LANG_CODE" || status=1; fi
     ;;
   check)

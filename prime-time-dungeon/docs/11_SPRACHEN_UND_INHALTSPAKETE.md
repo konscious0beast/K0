@@ -1473,6 +1473,8 @@ Testbild-Spielstand lädt ohne das Paket nicht (`other_pack`).
   `PACK_ERROR_TEXTS`, die Slot-Liste).
 - **A1:** Die Art-Regeln finden die Herkunft in `DataValidator.provenance`; die Pfade aus `art.json` stehen als
   `model.…` in `owned`.
+- **12 (KS, CR-48):** Ein neuer Block in `pack.json` (etwa `drehbuch`, 12 §7.2) kommt als Schlüssel in
+  `PackLoader.MANIFEST_KEYS` plus Feld in `PackDef`; bis dahin ist jeder unbekannte Schlüssel ein Fehler.
 - **Folgeänderungen außerhalb von 02_TECH** (Kap. 5.12): `00_BRIEF` Kap. 6 (`packs/`), `05` (Wertungen je Paket), `04`
   §2.4 und `CHANGELOG` („[Pakete]“ ab der ersten Änderung am Datenvertrag).
 

@@ -14,6 +14,7 @@ const Kit := preload("res://tests/fixtures/season_core/season_core.gd")
 const SeasonView := preload("res://scenes/ui/season_view.gd")
 const TitleFlow := preload("res://scenes/title/title_flow.gd")
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
+const ModDialogScript := preload("res://scenes/ui/mod_dialog.gd")
 const TITLE: String = "res://scenes/title/title.tscn"
 const SETUP: String = "res://scenes/title/season_setup.tscn"
 const SUMMARY: String = "res://scenes/ui/season_summary.tscn"
@@ -673,24 +674,125 @@ func test_the_guests_of_a_safe_room_and_the_hire() -> void:
 			_check_labels(panel, tag)
 
 
-func test_the_tempo_offer_after_the_class_choice() -> void:
-	var st: GameState = _season("calendar", "net", 7, 3, HOUR)
-	st.member("kai").class_id = "cls_kai_wrecker"
+## Floor 3 (the Recall, 06 §3.5): TALENT-SHOW and RECALL stand on the right — the guests go below both, and only one
+## fits there (the Helfer:in first); ui_down from RECALL reaches her, Tab after RECALL too; nothing overlaps, and the
+## panel stays above M.O.D.'s box on every screen.
+func test_the_guests_below_the_recall_button() -> void:
+	var st: GameState = _season("calendar", "net", SEED_GUESTS, 3, 3 * DAY + 5 * HOUR)
+	for m: PartyMember in st.party:
+		m.level = 11                                     # open talent rows: the TALENT-SHOW stands too
+	st.inventory.credits = 640                           # a Helfer:in can come
 	var room: String = str(SleepResolver.layout_of(st, DB.data).safe_room_ids.values().min())
-	var sr: Node = _screen(SAFE_ROOM, {"safe_room_id": room})
-	assert_true(await wait_until(func() -> bool: return sr.get("_modal") != null, 120), "M.O.D. offers once")
-	var d: Node = sr.get("_modal")
-	assert_eq(tree.root.gui_get_focus_owner(), d.call("button", "calendar"), "staying is the default")
-	assert_true(Save.career_seen("season_tempo_offer") and Save.career_seen("season_no_net_unlocked"))
-	d.call("answer", "binge")
-	await wait_frames(2)
-	assert_eq(st.season.tempo, "binge", "recorded: season tempo")
+	var sr: Node = _screen(SAFE_ROOM, {"safe_room_id": room, "recall": false})   # the Recall waits behind its button
+	await wait_frames(5)
+	assert_true(bool(sr.call("talent_show_available")) and bool(sr.call("recall_available")), "both buttons stand")
+	var panel: Control = sr.get("season_guests") as Control
+	var buttons: Dictionary = sr.get("season_guest_buttons")
+	assert_true(panel.visible)
+	assert_eq(buttons.size(), 1, "below both buttons one guest fits")
+	assert_true(str(buttons.keys()[0]).begins_with("hire_"), "the Helfer:in first: her button acts")
+	var mb: Dictionary = sr.get("menu_buttons")
+	var recall: Control = mb["recall"] as Control
+	var guest: Control = buttons.values()[0] as Control
+	assert_eq(recall.get_node(recall.focus_neighbor_bottom), guest, "ui_down from RECALL")
+	assert_eq(guest.get_node(guest.focus_neighbor_top), recall, "ui_up back")
+	assert_eq(recall.get_node(recall.focus_next), guest, "Tab after RECALL")
+	await _assert_guest_layout(sr, "floor 3")
+	(sr.call("open_recall") as Node).call("close")      # the Recall came and went: the room keeps its layout
+	await wait_frames(4)
+	assert_eq((sr.get("season_guest_buttons") as Dictionary).size(), 1)
 	_dispose(sr)
-	var again: GameState = _season("calendar", "net", 8, 3, HOUR)
-	again.member("kai").class_id = "cls_kai_wrecker"
-	var sr2: Node = _screen(SAFE_ROOM, {"safe_room_id": room})
+	var st2: GameState = _season("calendar", "net", SEED_GUESTS, 2, 3 * DAY + 5 * HOUR)
+	var sr2: Node = _screen(SAFE_ROOM, {"safe_room_id": str(SleepResolver.layout_of(st2, DB.data).safe_room_ids.values()
+		.min())})
+	await wait_frames(5)
+	assert_false(bool(sr2.call("recall_available")), "floor 2: no Recall")
+	assert_eq((sr2.get("season_guest_buttons") as Dictionary).size(), 2, "below one button both guests")
+	await _assert_guest_layout(sr2, "floor 2")
+
+
+## The guests' panel at every screen: inside the frame, apart from the menu and the buttons on the right, above the
+## M.O.D. box (one box high and its speaker tab: the bottom right of the safe room, ModDialog.set_align_right).
+func _assert_guest_layout(sr: Node, what: String) -> void:
+	var panel: Control = sr.get("season_guests") as Control
+	for res: Vector2i in RESOLUTIONS:
+		for notch: bool in [false, true]:
+			tree.root.size = res
+			SafeAreaContainer.simulated_insets = NOTCH if notch else {}
+			tree.root.size_changed.emit()
+			await wait_frames(3)
+			var tag: String = "%s %s notch=%s" % [what, str(res), notch]
+			var rects: Dictionary = {"guests": panel.get_global_rect()}
+			for id: Variant in (sr.get("menu_buttons") as Dictionary).keys():
+				var b: Control = (sr.get("menu_buttons") as Dictionary)[id] as Control
+				if b.is_visible_in_tree():
+					rects["menu_" + str(id)] = b.get_global_rect()
+			_no_overlap(rects, _frame(panel), tag)
+			var vp: Vector2 = panel.get_viewport().get_visible_rect().size
+			var mod_top: float = vp.y - 24.0 - ModDialogScript.BOX_BOTTOM - ModDialogScript.BOX_SIZE.y \
+				- ModDialogScript.TAB_INSET.y
+			assert_lt(panel.get_global_rect().end.y, mod_top, "above the M.O.D. box %s" % tag)
+			var targets: Array[Control] = []
+			for b2: Variant in (sr.get("season_guest_buttons") as Dictionary).values():
+				targets.append(b2 as Control)
+			_targets(targets, tag)
+			_check_labels(panel, tag)
+	tree.root.size = _saved_size
+	SafeAreaContainer.simulated_insets = {}
+	tree.root.size_changed.emit()
+	await wait_frames(2)
+
+
+## 09 §0.6 (floor 3: the Recall, "danach das Tempo-Angebot"): the offer hangs off the Recall's `closed` — after a first
+## class choice, in a private calendar season, once on this device; never after "Später" without a choice, never Am
+## Stück, never on entering a room.
+func test_the_tempo_offer_after_the_first_class_choice() -> void:
+	var st: GameState = _season("calendar", "net", 7, 3, HOUR)
+	var sr: Node = _screen(SAFE_ROOM, {})               # the floor's first safe room: the Recall opens by itself
+	assert_true(await wait_until(func() -> bool: return _recall_of(sr) != null, 60), "the Recall opens")
+	(_recall_of(sr)).call("close")                      # "Später" without a choice
+	await wait_frames(6)
+	assert_false(_offer_open(sr), "no class chosen: no offer")
+	assert_false(Save.career_seen("season_tempo_offer"))
+	var rc: Node = sr.call("open_recall")               # the RECALL button
+	assert_true(bool(rc.call("choose", 1)) and bool(rc.call("choose", 0)) and bool(rc.call("confirm")), "Kai chooses")
+	await wait_frames(4)
+	assert_false(_offer_open(sr), "not over the Recall")
+	rc.call("close")                                    # the Count's choice waits ("Später")
+	assert_true(await wait_until(func() -> bool: return _offer_open(sr), 30), "after the first class choice")
+	var d: Node = sr.get("_modal")
+	await wait_frames(2)
+	assert_eq(tree.root.gui_get_focus_owner(), d.call("button", "calendar"), "staying is the default")
+	assert_true(Save.career_seen("season_tempo_offer"), "once on this device")
+	_check_screen(d, "tempo offer")
+	var n0: int = Game.run_log.cmds().size()
+	d.call("answer", "binge")
+	await wait_frames(3)
+	assert_eq(st.season.tempo, "binge", "recorded: season tempo")
+	assert_eq(str((Game.run_log.cmds()[n0]["c"] as Dictionary).get("op", "")), "tempo")
+	assert_null(sr.get("_modal"))
+	assert_eq(tree.root.gui_get_focus_owner(), (sr.get("menu_buttons") as Dictionary)["recall"],
+		"back on RECALL: the Count's choice waits, Kai may still change")
+	_dispose(sr)
+	_season("calendar", "net", 8, 3, HOUR)               # a second season on this device: no second offer
+	var sr2: Node = _screen(SAFE_ROOM, {})
+	assert_true(await wait_until(func() -> bool: return _recall_of(sr2) != null, 60))
+	rc = _recall_of(sr2)
+	assert_true(bool(rc.call("choose", 1)) and bool(rc.call("choose", 0)) and bool(rc.call("confirm")))
+	rc.call("close")
 	await wait_frames(10)
-	assert_null(sr2.get("_modal"), "only once on this device")
+	assert_false(_offer_open(sr2), "only once on this device")
+	_dispose(sr2)
+	Save.career_set("seen", [])                          # a fresh device: Am Stück needs no offer
+	_season("binge", "net", 9, 3, 0)
+	var sr3: Node = _screen(SAFE_ROOM, {})
+	assert_true(await wait_until(func() -> bool: return _recall_of(sr3) != null, 60))
+	rc = _recall_of(sr3)
+	assert_true(bool(rc.call("choose", 1)) and bool(rc.call("choose", 0)) and bool(rc.call("confirm")))
+	rc.call("close")
+	await wait_frames(10)
+	assert_false(_offer_open(sr3), "Am Stück: nothing to offer")
+	assert_false(Save.career_seen("season_tempo_offer"))
 
 
 # --- texts ------------------------------------------------------------------------------------------------------------
@@ -698,7 +800,7 @@ func test_the_tempo_offer_after_the_class_choice() -> void:
 func test_every_line_of_the_season_ui_exists() -> void:
 	for tag: String in ["season_welcome", "season_collapse_intro", "season_warn_3600", "season_warn_600",
 			"season_warn_60", "season_warn_last", "season_vest", "season_counter_in", "season_tempo_offer",
-			"season_tempo_binge", "season_no_net_unlocked", "season_rival", "season_rival_after", "season_need",
+			"season_tempo_binge", "season_rival", "season_rival_after", "season_need",
 			"season_left", "season_finale", "season_end", "season_out", "season_stairs_closed",
 			"season_guest_extra", "season_guest_rival", "season_guest_helper", "season_guest_trader",
 			"season_guest_unlucky"]:
@@ -733,6 +835,21 @@ func _screen(path: String, params: Dictionary) -> Node:
 		n.call("setup", params)
 	add_to_tree(n)
 	return n
+
+
+## The Recall modal of a safe room (null while it is not open).
+static func _recall_of(r: Node) -> Node:
+	for c: Node in r.get_children():
+		if c.has_method("confirm") and c.has_signal("closed") and not c.is_queued_for_deletion():
+			return c
+	return null
+
+
+## The tempo offer is the safe room's modal.
+func _offer_open(sr: Node) -> bool:
+	var m: Node = sr.get("_modal") as Node
+	return m != null and is_instance_valid(m) and m.has_method("answer") and \
+		_find_text(m, "Weiter wie im Fernsehen?") != null
 
 
 ## Every visible button of `root` is an 88 px target 12 px apart from the others, inside the safe frame; every

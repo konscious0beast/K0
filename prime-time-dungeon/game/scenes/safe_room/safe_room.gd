@@ -102,7 +102,6 @@ func _ready() -> void:
 	Show.say("safe_room_enter")
 	_focus_first()
 	_recall_on_enter()                         # Recall (06 §3.5): opens by itself while a first choice is open
-	_season_offer.call_deferred()              # Staffeln (09 §2.1, ST1-H): the tempo offer after the class choice
 
 
 func _exit_tree() -> void:
@@ -471,7 +470,6 @@ func _after_modal(focus_id: String) -> void:
 		UiUtil.focus_later((menu_buttons[focus_id] as Control))
 	elif is_inside_tree():
 		_focus_first()
-	_season_offer.call_deferred()              # Staffeln (09 §2.1, ST1-H): e.g. after the Recall's class choice
 
 
 ## Casting (08 §1.7, K2): after the pause menu (Kandidatenkarte → "Name & Aussehen ändern") the candidate stands
@@ -546,6 +544,7 @@ func _refresh_menu_labels() -> void:
 	_refresh_talent_cta()
 	_wire_menu_focus()
 	_refresh_recall_cta()                      # Recall (06 §3.5): its button and its place in the focus chain
+	_season_place()                            # Staffeln (09 §4.3, ST1-H): the guests below those buttons
 
 
 ## 06 package B: the call-to-action shows the open talent choices (its focus: _wire_menu_focus).
@@ -601,7 +600,6 @@ func _wire_menu_focus() -> void:
 	for k in order.size():
 		order[k].focus_previous = order[k].get_path_to(order[(k + order.size() - 1) % order.size()])
 		order[k].focus_next = order[k].get_path_to(order[(k + 1) % order.size()])
-	_season_wire(rows, cta)                    # Staffeln (09 §4.3, ST1-H): the guests right of the menu
 
 
 func _build_talent_cta(frame: Control) -> void:
@@ -887,6 +885,7 @@ func open_recall() -> Node:
 	_modal = layer
 	_set_menu_shown(false)
 	layer.connect("closed", _recall_closed)
+	_season_watch_recall(layer)                # Staffeln (09 §0.6, ST1-H): the tempo offer after a first class choice
 	return layer
 
 
@@ -1024,22 +1023,25 @@ func _wire_recall_focus() -> void:
 
 # --- Staffeln (09, ST1-H) ---------------------------------------------------------------------------------------------
 # 09 §4.3: up to two AI candidates of the floor sit in this safe room (CastSim.safe_room_guests, deterministic per
-# visit) — a panel on the right under the TALENT-SHOW slot, clear of the M.O.D. box at the bottom right: one button per
-# guest with the name (labelled "KI"), profile, place and level. Pressing it: "Reden" (M.O.D. quotes them,
-# season_guest_<profile>) or, for a Helfer:in who can come, "Anheuern" (three combats, never a boss fight; a favour
-# pays first, else credits — a dialog names the price; Game.cast_action("hire") records it, a refusal names its
-# reason). The header names the collapse of the floor (calendar) or the standing countdown (Am Stück) instead of
-# "Countdown angehalten". After the class choice of the Recall (09 §2.1, §0.5) M.O.D. offers "Am Stück" once in a
-# private calendar season (season_dialog; career "seen") and names the Ohne-Netz unlock once.
+# visit) — a panel on the right below the call-to-action buttons (TALENT-SHOW, RECALL; the TALENT-SHOW's place stays
+# free without them), clear of the M.O.D. box at the bottom right: one button per guest with the name (labelled "KI"),
+# profile, place and level. Below both buttons only one guest fits (a Helfer:in who can come first). Pressing it:
+# "Reden" (M.O.D. quotes them, season_guest_<profile>) or, for a Helfer:in who can come, "Anheuern" (three combats,
+# never a boss fight; a favour pays first, else credits — a dialog names the price; Game.cast_action("hire") records
+# it, a refusal names its reason). The header names the collapse of the floor (calendar) or the standing countdown (Am
+# Stück) instead of "Countdown angehalten". The tempo offer (09 §0.6: the Recall on floor 3, "danach das
+# Tempo-Angebot"): when the Recall closes after a first class choice, M.O.D. offers "Am Stück" once on this device in
+# a private calendar season (season_dialog; career "seen"). The Recall's end page names the Ohne-Netz unlock itself.
 
 const SeasonView := preload("res://scenes/ui/season_view.gd")
 const SEASON_DIALOG: String = "res://scenes/ui/season_dialog.tscn"
 const GUESTS_W: float = 560.0
-const GUESTS_TOP: float = CTA_TOP + 88.0 + MENU_GAP    # under the TALENT-SHOW hit area (UiTheme.TOUCH_HIT)
+const GUESTS_MAX: int = 2                   # 09 §4.3: up to two AI candidates in a safe room
 
 var season_guests: PanelContainer = null
 var season_guest_buttons: Dictionary = {}    # "talk_<place>" | "hire_<place>" → Button (tests)
 var _season_guest_list: VBoxContainer
+var _season_limit: int = GUESTS_MAX         # guests shown: below two call-to-action buttons one (_season_place)
 var _season_offering: bool = false
 
 
@@ -1052,7 +1054,7 @@ func _season_build(frame: Control) -> void:
 	season_guests.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	season_guests.offset_left = -GUESTS_W - 8.0
 	season_guests.offset_right = -8.0
-	season_guests.offset_top = GUESTS_TOP
+	season_guests.offset_top = CTA_TOP + UiTheme.TOUCH_HIT + MENU_GAP   # below the TALENT-SHOW (_season_place)
 	season_guests.add_theme_stylebox_override("panel", UiUtil.box_style(Color(UiTheme.C_PANEL, 0.88),
 		Color(UiTheme.C_ACCENT_2, 0.45), 1, 0.0, 14, 8))
 	frame.add_child(season_guests)
@@ -1071,7 +1073,7 @@ func season_refresh_guests() -> void:
 	season_guest_buttons.clear()
 	var rows: Array[Dictionary] = []
 	if CastSim.has_cast(Game.state):
-		rows = SeasonView.guest_rows(Game.state, DB.data)
+		rows = _season_pick(SeasonView.guest_rows(Game.state, DB.data), _season_limit)
 	season_guests.visible = not rows.is_empty()
 	if rows.is_empty():
 		return
@@ -1181,9 +1183,8 @@ func season_ask_hire(place: int) -> Node:
 				Sfx.play_ui(&"ui_error")
 				_set_status(SeasonView.cast_reason(CastSim.refusal(Game.state, DB.data, {"t": "cast", "op": "hire",
 					"who": place})), UiTheme.C_DANGER)
-		_refresh_menu_labels()
 		season_refresh_guests()
-		_season_wire_again()
+		_refresh_menu_labels()                  # the credits, and the guests' place and focus (_season_place)
 		var back: Control = season_guest_buttons.get("talk_%d" % place, season_guest_buttons.get("hire_%d" % place,
 			null)) as Control
 		UiUtil.focus_later(back if back != null else menu_buttons["save"] as Control))
@@ -1204,49 +1205,108 @@ func _season_header() -> void:
 	_header_sub.text = UiUtil.glyph_safe("  ·  ".join(parts))
 
 
-## Focus with guests: ui_right from the right end of every menu row (without the TALENT-SHOW button) and ui_down from
-## the TALENT-SHOW button reach the first guest; between the guests up / down; ui_left back to the TALENT-SHOW button
-## or the first menu row.
-func _season_wire(rows: Array[Array], cta: Control) -> void:
+## The `n` guests shown when not all fit: a Helfer:in who can come first (her button hires), then CastSim's order.
+static func _season_pick(rows: Array[Dictionary], n: int) -> Array[Dictionary]:
+	if rows.size() <= n:
+		return rows
+	var out: Array[Dictionary] = []
+	for r: Dictionary in rows:
+		if out.size() < n and str(r.get("hire_refusal", "-")) == "":
+			out.append(r)
+	for r: Dictionary in rows:
+		if out.size() < n and not out.has(r):
+			out.append(r)
+	return out
+
+
+## The guests' place (after _refresh_recall_cta): below the lowest call-to-action button on the right (TALENT-SHOW,
+## RECALL), else below the TALENT-SHOW's place; below both only one guest fits above M.O.D.'s box (every format draws
+## on a 720-px-high canvas). Then their focus.
+func _season_place() -> void:
+	if season_guests == null:
+		return
+	var above: Control = null
+	var bottom: float = CTA_TOP + UiTheme.TOUCH_HIT
+	var shown: int = 0
+	for c: Control in [_talent_cta, _recall_cta]:
+		if c != null and c.visible:
+			shown += 1
+			if c.offset_bottom >= bottom:
+				bottom = c.offset_bottom
+				above = c
+	season_guests.offset_top = bottom + MENU_GAP
+	var limit: int = 1 if shown >= 2 else GUESTS_MAX
+	if limit != _season_limit:
+		_season_limit = limit
+		season_refresh_guests()
+	_season_wire(above)
+
+
+## Focus with guests (after the menu, the TALENT-SHOW and the RECALL wired theirs): ui_down from the lowest of those
+## buttons — without one ui_right from the right end of every menu row — reaches the first guest; up / down between the
+## guests, the first one up to that button; ui_left to the first menu row (as from RECALL); Tab after that button (or
+## the last menu entry), then back to the first menu entry.
+func _season_wire(above: Control) -> void:
 	var list: Array[Control] = []
 	if season_guests == null or not season_guests.visible:
 		return
 	for c: Node in _season_guest_list.get_children():
 		if c is Button:
 			list.append(c as Control)
-	if list.is_empty() or rows.is_empty():
+	var order: Array[Button] = _menu_buttons_in_order()
+	if list.is_empty() or order.is_empty():
 		return
-	var first_menu: Array = rows[0]
-	var home: Control = first_menu[first_menu.size() - 1]
-	if cta != null:
-		cta.focus_neighbor_bottom = cta.get_path_to(list[0])
+	var home: Control = menu_buttons.get(str((MENU_ROWS[0] as Array).back()), order[0]) as Control
+	if above != null:
+		above.focus_neighbor_bottom = above.get_path_to(list[0])
 	else:
-		for row2: Array in rows:
-			var last: Control = row2[row2.size() - 1]
-			last.focus_neighbor_right = last.get_path_to(list[0])
+		for ids: Array in MENU_ROWS:
+			var e: Control = menu_buttons.get(str(ids.back())) as Control
+			if e != null:
+				e.focus_neighbor_right = e.get_path_to(list[0])
 	for i in list.size():
-		var b2: Control = list[i]
-		b2.focus_neighbor_left = b2.get_path_to(cta if cta != null else home)
-		b2.focus_neighbor_right = b2.get_path_to(b2)
-		b2.focus_neighbor_top = b2.get_path_to(list[i - 1] if i > 0 else (cta if cta != null else b2))
-		b2.focus_neighbor_bottom = b2.get_path_to(list[i + 1] if i < list.size() - 1 else b2)
+		var b: Control = list[i]
+		b.focus_neighbor_left = b.get_path_to(home)
+		b.focus_neighbor_right = b.get_path_to(b)
+		b.focus_neighbor_top = b.get_path_to(list[i - 1] if i > 0 else (above if above != null else b))
+		b.focus_neighbor_bottom = b.get_path_to(list[i + 1] if i < list.size() - 1 else b)
+	var prev: Control = above if above != null else order[order.size() - 1]
+	var chain: Array[Control] = [prev]
+	chain.append_array(list)
+	chain.append(order[0])
+	for k in range(1, chain.size()):
+		chain[k - 1].focus_next = chain[k - 1].get_path_to(chain[k])
+		chain[k].focus_previous = chain[k].get_path_to(chain[k - 1])
 
 
-func _season_wire_again() -> void:
-	if is_inside_tree() and _menu != null:
-		_wire_menu_focus()
+## The Recall opened (open_recall): who chooses for the first time now (Casting.mode "first"). When it closes and one of
+## them holds a class, the first class choice just happened — the tempo offer follows (09 §0.6, §2.1).
+func _season_watch_recall(recall: Node) -> void:
+	var st: GameState = Game.state
+	if st == null or st.season == null:
+		return
+	var first: PackedStringArray = []
+	for mid: String in Casting.open_members(st, DB.data):
+		if Casting.mode(st, DB.data, mid) == "first":
+			first.append(mid)
+	if first.is_empty():
+		return
+	recall.connect("closed", func() -> void:
+		for mid: String in first:
+			var m: PartyMember = Game.state.member(mid) if Game.state != null else null
+			if m != null and m.class_id != "":
+				_season_offer.call_deferred()  # after the Recall's own close (_recall_closed: the menu is back)
+				return)
 
 
-## After the class choice (the Recall, 06 §3; 09 §2.1, §0.5): the Ohne-Netz unlock once, then the tempo offer once —
-## private calendar seasons; never while a modal is open.
+## The tempo offer once on this device (career "seen") in a private calendar season (SeasonRules: only calendar →
+## Am Stück, only private) — never over another modal or while leaving.
 func _season_offer() -> void:
 	var st: GameState = Game.state
-	if not is_inside_tree() or st == null or st.season == null or _season_offering or _leaving:
+	if not is_inside_tree() or st == null or st.season == null or st.season.result != "" or _season_offering:
 		return
-	if (_modal != null and is_instance_valid(_modal)) or not SeasonRules.unlocks_no_net(st) or st.season.result != "":
+	if _leaving or _busy or (_modal != null and is_instance_valid(_modal)):
 		return
-	if not Save.career_seen("season_no_net_unlocked") and Show.say("season_no_net_unlocked") != "":
-		Save.career_mark("season_no_net_unlocked")
 	var c: Dictionary = {"t": "season", "v": Command.SEASON_VERSION, "op": "tempo"}
 	if Save.career_seen("season_tempo_offer") or SeasonRules.refusal(st, DB.data, c) != "":
 		return
@@ -1271,10 +1331,8 @@ func season_open_tempo_offer() -> Node:
 	add_child(d)
 	Save.career_mark("season_tempo_offer")
 	d.connect("closed", func(id: String, _days: int) -> void:
-		_modal = null
 		_season_offering = false
 		if id == "binge" and Game.season_tempo_binge():
 			Show.say("season_tempo_binge")
-		_refresh_menu_labels()
-		_focus_first())
+		_after_modal("recall" if recall_available() else ""))   # the focus where the Recall left it
 	return d

@@ -2,7 +2,8 @@ extends Control
 ## "Sendung starten" / "Neue Staffel" (09 §2.2, V-6; ST1-H) — the screen between the title and the slot selection of a
 ## new private season. The first season of the device is one button with the standard values (private, Mit Netz,
 ## Kalender, Sendezeit 20:00, the largest owned format): the screen shows them with their one-sentence explanations (09
-## §0.5) — the tempo comes later (M.O.D. offers "Am Stück" after the class choice, the pause tab "Staffel" switches it).
+## §0.5) — the tempo comes later (M.O.D. offers "Am Stück" when the Recall closes after the first class choice, the
+## pause tab "Staffel" switches it).
 ## Every further season ("Neue Staffel") chooses: the format (by owned content, H-2 — Basis only for now, then a fixed
 ## line), Mit Netz or Ohne Netz (once unlocked: the first class choice or a finished season, V-7; with "Ein Leben.
 ## Ernsthaft?"), the tempo (Kalender | Am Stück) and the air time (calendar: 08:00 … 21:30, H-4). The right card shows
@@ -242,7 +243,7 @@ func _first_rows(left: VBoxContainer) -> void:
 		row.add_child(v)
 		left.add_child(row)
 	var note: Label = UiUtil.label(UiUtil.glyph_safe("Die erste Staffel startet mit diesen Werten. „Am Stück“ bietet " +
-		"M.O.D. nach der Klassenwahl an — umschalten geht auch später im Pausemenü unter „Staffel“."), &"", 17,
+		"M.O.D. nach dem Recall auf Etage 3 an — umschalten geht auch später im Pausemenü unter „Staffel“."), &"", 17,
 		UiTheme.C_TEXT_DIM)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	note.custom_minimum_size = Vector2(COL_W, 0)

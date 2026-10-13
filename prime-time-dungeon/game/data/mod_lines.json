@@ -4893,13 +4893,6 @@
 			"weight": 1
 		},
 		{
-			"id": "mod_season_no_net_unlocked_01",
-			"tag": "season_no_net_unlocked",
-			"voice": "mod",
-			"text": "Ein Leben. Keine Rettung. Das Publikum liebt das. Sie hoffentlich auch. Ohne Netz ist ab sofort frei.",
-			"weight": 1
-		},
-		{
 			"id": "mod_season_rival_01",
 			"tag": "season_rival",
 			"voice": "mod",

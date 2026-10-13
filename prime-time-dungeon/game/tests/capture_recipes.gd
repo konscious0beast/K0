@@ -63,9 +63,10 @@ extends Node
 ##   season_tab_<ranking | ticker | programme | actions> (exploration.tscn: pause → "Staffel"),
 ##   season_ask_<pause | binge | leave> (its dialog), season_hud (the collapse display and the counter; season_hud_warn
 ##   with --before=warn: 40 min before, gold, M.O.D.'s line), season_stairs (--before=cal3: the closed stairs),
-##   season_guests (safe_room.tscn: the AI candidates, "Anheuern"; season_hire: its dialog with the price),
-##   season_offer (safe_room.tscn: the tempo offer after the class choice), season_quiet (any screen without M.O.D.'s
-##   box and the toasts: the title with --before=career, season_summary.tscn with finale | out, hall_of_fame.tscn with
+##   season_guests (safe_room.tscn: the AI candidates, "Anheuern"; season_hire: its dialog with the price; with
+##   --before=cal3 and --params='{"recall": false}' below TALENT-SHOW and RECALL), season_offer (safe_room.tscn
+##   --before=cal3: the Recall, both choose, FERTIG — the tempo offer), season_quiet (any screen without M.O.D.'s box
+##   and the toasts: the title with --before=career, season_summary.tscn with finale | out, hall_of_fame.tscn with
 ##   hall).
 
 const ZONES: Dictionary = {"platform": "zone_platform", "sewer": "zone_sewer", "cellar": "zone_cellar"}
@@ -2168,13 +2169,18 @@ func _r_season_hire(scene: Node) -> bool:
 	return false
 
 
-## season_offer (safe_room.tscn --before=cal3): the class is chosen — M.O.D.'s tempo offer.
+## season_offer (safe_room.tscn --before=cal3): the Recall opens by itself, both figures choose (as recall_done) and
+## FERTIG closes it — M.O.D.'s tempo offer after the first class choice (09 §0.6).
 func _r_season_offer(scene: Node) -> bool:
-	if not await _safe_ready(scene):
+	if not await _r_recall_done(scene):
 		return false
-	Game.state.member("kai").class_id = "cls_kai_wrecker"
-	await _settle(5)
-	return scene.call("season_open_tempo_offer") != null and await _settle(10)
+	var rc: Node = _recall_of(scene)
+	if rc == null:
+		return false
+	rc.call("close")
+	if not await until(func() -> bool: return bool(scene.get("_season_offering")), 120):
+		return false
+	return await _settle(10)
 
 
 ## season_quiet: a season screen without M.O.D.'s box and the toasts of the setup.

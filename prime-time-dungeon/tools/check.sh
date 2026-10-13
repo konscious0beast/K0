@@ -53,7 +53,8 @@ run_tests() {
   local out code
   local extra=()
   [ -n "${TEST_FILTER:-}" ] && extra=(-- "--filter=$TEST_FILTER")
-  out="$(timeout 1200 "$GODOT" --headless --path "$WORK" -s res://tests/run_tests.gd "${extra[@]}" 2>&1 | filter_noise)"
+  # 1800 s: the suite takes 1170–1250 s on a loaded 4-core box (11-L1 report); the CI job has its own timeout
+  out="$(timeout 1800 "$GODOT" --headless --path "$WORK" -s res://tests/run_tests.gd "${extra[@]}" 2>&1 | filter_noise)"
   code=$?
   echo "$out"
   if [ "$code" -ne 0 ] || echo "$out" | grep -qE "$ERR_RE"; then

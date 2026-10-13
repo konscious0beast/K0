@@ -50,7 +50,7 @@ func test_two_hundred_seeds_per_floor_pass_the_check_rules() -> void:
 		print("ZONEGEN floor %d: %d seeds, rooms %d..%d, attempts avg %.2f max %d, gen avg %.1f ms max %.1f ms" % [
 			f, SEEDS, rooms_min, rooms_max, float(attempts) / SEEDS, worst_attempts, total_us / 1000.0 / SEEDS,
 			worst_us / 1000.0])
-		assert_lt(worst_us / 1000.0, GEN_BUDGET_MS, "floor %d: the slowest layout" % f)
+		assert_time_budget(worst_us / 1000.0, GEN_BUDGET_MS, "floor %d: the slowest layout" % f)   # CI asserts
 
 
 ## ZoneGenerator.generate step by step (the same attempts, generators and checks) with the attempt count as meta.

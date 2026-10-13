@@ -588,7 +588,9 @@ jeder bleibt bis zu ihrem Einsturz. Ein Programmpunkt ist ein **Event-Raum** (ei
 nichts verfällt vor dem Einsturz. Die ersten fünf Tage, in denen eine Etage offen ist, sind meist ihre Vorlauf-Tage — genau
 dann sind die Schnellen dort; die Langsameren finden später alles beisammen. Am Stück bringt jede Etage beim Betreten einen
 Punkt mit. Auswahl deterministisch aus dem Pool der Kulisse (`SeedUtil.derive(season_seed, "daily", floor, day)`), Marker
-„NEU“ auf der Karte und im Reiter „Staffel“.
+„NEU“ auf der Karte und im Reiter „Staffel“. Ein Staffel-Drehbuch (`12_KI_SHOWRUNNER.md` Kap. 5.3) darf die Reihenfolge
+der Punkte aus diesem Pool festlegen und ihnen Sendungsnamen und Ansagen geben — Inhalt und Belohnung bleiben; Titel,
+Motto und Twist der Folge je Etage beschreibt 12 Kap. 2.
 
 | Etage | Pflichtweg (Treppe + Revier-Boss) | Vollständig (alles, inkl. Etagenboss) | Tagesprogramm | Kalender: Minuten je Tag für den Pflichtweg |
 |---|---|---|---|---|

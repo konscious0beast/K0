@@ -12,6 +12,10 @@ Dieses Dokument ist die **verbindliche Grundlage**. Alle anderen Dokumente und d
 Sendeplan, Tod und Modi, Stufen, Talente, Berufe, Schläfer, KI-Besetzung; CR-25) >
 `06_PROGRESSION_MAROTTEN_KI_ADMIN.md` (Progression, Marotten, KI-Admin, Twists) > `08_CASTING.md` (Casting, Persona,
 Vorleben, persönlicher Erzählstrang) > `01_GDD` / `02_TECH` / `03_ART` / `05_LIVE_MODUS` (je nach Thema).
+`11_SPRACHEN_UND_INHALTSPAKETE.md` (Sprachen, englisches Glossar, Inhaltspakete, Mechanik-Baukasten) gilt für seine
+Themen im Rang von `02_TECH`; Kampfrelevantes daraus wird erst über CR-39 in `07` verbindlich.
+`12_KI_SHOWRUNNER.md` (Staffel-Drehbuch: je Staffel eine neue Geschichte, vorab von der KI geschrieben und geprüft,
+ohne Netz aus dem Baukasten) gilt für seine Themen direkt nach `08`; es ändert nie Regeln oder Zahlen.
 
 ---
 
@@ -72,7 +76,7 @@ Etage betreten → Erkunden (Gegner sichtbar, Truhen, Events, Safe Room)
 | Speichern | Ein Spielstand pro Slot (3 Slots), JSON in `user://`. Nur im Safe Room + Autosave bei Etagenwechsel. In Staffeln (09 §9.1): **Dauerspeicherstand mit Command-Journal** (kein Zurückladen), Ausloggen überall außerhalb des Kampfes. |
 | Tod und Einsturz | Mit Netz: Wiederbelebung im Safe Room bzw. Rettung durch die Regie (Gebühr höchstens einmal je 7 Tage); Ohne Netz: raus (Studiogast); Etage 1 ist die Generalprobe (09 §7). **Game Over** gibt es nur Ohne Netz und in Event-Läufen. |
 | Eingabe | Tastatur/Maus, Gamepad, Touch (virtueller Stick + Buttons). Alle Menüs fokus-navigierbar. |
-| Sprache | UI-Texte Deutsch. Code/Kommentare Englisch. Texte über `tr()`-fähige Keys vorbereitet (später EN). |
+| Sprache | UI-Texte Deutsch. Code/Kommentare Englisch. Texte über `tr()`-fähige Keys vorbereitet (später EN). Zweite Sprache Englisch (gettext-PO, msgid = deutscher Text) und Inhaltspakete als reine Daten: `11_SPRACHEN_UND_INHALTSPAKETE.md`. |
 
 ## 5. Technische Leitentscheidungen
 

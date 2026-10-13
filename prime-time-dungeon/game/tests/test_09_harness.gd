@@ -463,7 +463,8 @@ func _floor(f: int, minutes: int, out: int, how: String, pflicht: int, full: int
 	return r
 
 
-## n whole seasons per gate profile and Am Stück, each without an error of the core bot.
+## n whole seasons per gate profile and Am Stück, each without an error of the core bot; after the profile's last
+## session the season ends within two logins (I-3: the absence in season time, at most seven days a login).
 func _whole_seasons(n: int) -> Array:
 	var d: GameData = real_data()
 	var series: Array = []
@@ -480,6 +481,9 @@ func _whole_seasons(n: int) -> Array:
 			var floors: Array = r["floors"]
 			for i in floors.size():
 				assert_eq(int((floors[i] as Dictionary)["floor"]), i + 1, "%s seed %d: no floor skipped" % [prof, seed])
+			var planned: int = Profiles.sessions(prof, seed, 6).size() if prof != "" else 0
+			assert_true((r["logouts"] as Array).size() <= planned + 2, "%s seed %d: %d logouts for %d sessions" % [prof,
+				seed, (r["logouts"] as Array).size(), planned])
 			runs.append(r)
 			print("    ", Report.run_line(r))
 		series.append({"mode": "net", "profile": prof, "runs": runs})

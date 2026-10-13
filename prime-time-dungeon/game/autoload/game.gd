@@ -1006,6 +1006,7 @@ func finish_run(cause: StringName) -> Dictionary:
 		"sim_version": RunSim.SIM_VERSION, "client_version": str(header.get("game_version", "")),
 		"verified": "local", "finished_at": Time.get_datetime_string_from_system(true) + "Z",
 	}
+	entry.merge(DB.data.pack_fields())        # Inhaltspakete (11-P1, 11 §3.9): pack, pack_version, pack_hash — if any
 	summary["rank"] = board.add(entry)
 	summary["entry"] = entry.duplicate(true)
 	Save.save_leaderboard(event_id, board.to_dict())
@@ -1067,7 +1068,8 @@ func _reset_run() -> void:
 
 ## Header of a new run log (05 §10.6): run identity (run_id unique per attempt, player_id "local", event_id,
 ## window_id "" offline, league) + seed, slot, mode, difficulty, versions. No name (08 §2.7 Nr. 2: the replay builds
-## its state with GameState.DEFAULT_NAME).
+## its state with GameState.DEFAULT_NAME). Inhaltspakete (11-P1, 11 §3.9): with a content pack also pack, pack_version
+## and pack_hash — only then, so the header and RunLog.digest() of the base game stay as they were.
 func _make_run_log(run_seed: int, slot: int, difficulty: StringName, event_id: String,
 		league: String = "") -> RunLog:
 	var rl: RunLog = RunLog.new()
@@ -1086,6 +1088,7 @@ func _make_run_log(run_seed: int, slot: int, difficulty: StringName, event_id: S
 		"window_id": "",
 		"league": league,
 	}
+	rl.header.merge(DB.data.pack_fields())         # Inhaltspakete (11-P1): {} without a pack
 	return rl
 
 

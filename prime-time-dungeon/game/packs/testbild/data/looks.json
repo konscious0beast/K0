@@ -1,0 +1,14 @@
+{
+	"schema": 1,
+	"add": [
+		{
+			"id": "lk_outfit_testbild",
+			"kind": "outfit",
+			"name": "Testbildstreifen",
+			"colors": {
+				"primary": "#F2F2F2",
+				"secondary": "#1A1A1A"
+			}
+		}
+	]
+}

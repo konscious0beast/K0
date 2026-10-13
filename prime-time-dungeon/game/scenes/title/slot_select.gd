@@ -206,7 +206,12 @@ func _slot_card(slot: int) -> Button:
 	texts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	texts.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(texts)
-	if corrupt:
+	if corrupt and str(info.get("refusal", "")) == SaveCodec.OTHER_PACK:    # Inhaltspakete (11-P1): names the pack
+		var pid: String = str(info.get("pack", ""))
+		texts.add_child(UiUtil.label("Spielstand eines anderen Inhaltspakets", &"", 26, UiTheme.C_DANGER))
+		texts.add_child(UiUtil.label(("Paket „%s“" % pid if pid != "" else "Grundspiel")
+			+ " – in diesem Build nicht ladbar, überschreiben ist möglich.", &"LabelSmall", 16))
+	elif corrupt:
 		texts.add_child(UiUtil.label("Beschädigter Spielstand", &"", 26, UiTheme.C_DANGER))
 		texts.add_child(UiUtil.label("Kann nicht geladen werden – überschreiben ist möglich.", &"LabelSmall", 16))
 	elif not occupied:

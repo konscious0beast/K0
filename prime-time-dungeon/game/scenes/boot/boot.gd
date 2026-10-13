@@ -5,7 +5,7 @@ extends Node
 ## read-only saves, fast text, ephemeral), with --autoplay=full the full Floor-1 bot instead (fullrun.gd: time_scale
 ## FullRun TIME_SCALE, real saves in its own directory). Shows the "NOVA SYNDIKAT präsentiert" card for 2 s (any input
 ## skips) while pre-warming the shader materials behind it (03_ART §3.10), then routes to the title (or the --goto
-## target).
+## target) — unless the content pack cannot start (11-P1: DB.pack_error), then an error card stays instead.
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const TitleFlow := preload("res://scenes/title/title_flow.gd")
@@ -81,11 +81,14 @@ func _input(event: InputEvent) -> void:
 		route()
 
 
-## Leaves the boot card: --goto target or the title (debug builds: --season starts a season, _season_boot).
+## Leaves the boot card: --goto target or the title (debug builds: --season starts a season, _season_boot). A content
+## pack that cannot start (11-P1) keeps the boot card as an error card instead (_pack_error_card).
 func route() -> void:
 	if _routed:
 		return
 	_routed = true
+	if _pack_error_card():                      # Inhaltspakete (11-P1, 11 §3.5 Nr. 5)
+		return
 	if _season_boot():                          # Staffeln (09, ST1-B)
 		return
 	var target: String = str(args.get("goto", ""))
@@ -118,6 +121,58 @@ func route() -> void:
 func _ensure_dev_state() -> void:
 	var s: int = int(args.get("seed", -1))
 	Game.ensure_state(s if s >= 0 else 1)
+
+
+# --- Inhaltspakete (11-P1, 11 §3.5 Nr. 5, §3.9): the error card of a content pack that cannot start -------------------
+
+## Headline per DB.pack_error (the code itself stays data: it is shown under the headline).
+const PACK_ERROR_TEXTS: Dictionary = {
+	"pack_ambiguous": "Mehr als ein Inhaltspaket ist aktiviert.",
+	"pack_missing": "Das Inhaltspaket wurde nicht gefunden.",
+	"pack_engine": "Das Inhaltspaket passt nicht zu dieser Spielversion.",
+	"pack_invalid": "Die Daten des Inhaltspakets sind fehlerhaft.",
+}
+const PACK_ERROR_LINES: int = 5
+
+
+## A build whose content pack is ambiguous, missing, incompatible or invalid never starts with the base data (11 §3.5
+## Nr. 5): the boot card becomes an error card — "Inhaltspaket fehlerhaft", the code and the first five messages
+## (DB.pack_messages) — and stays; there is no route. false = no pack error.
+func _pack_error_card() -> bool:
+	var code: String = DB.pack_error
+	if code == "":
+		return false
+	push_warning("[Boot] content pack error %s: the game does not start (11 §3.5)" % code)
+	var card: CanvasLayer = CanvasLayer.new()
+	card.name = "PackErrorCard"
+	card.layer = 96                             # above the boot card (95)
+	add_child(card)
+	var root: Control = Control.new()
+	UiUtil.full_rect(root)
+	UiUtil.apply_theme(root)
+	card.add_child(root)
+	var bg: ColorRect = ColorRect.new()
+	UiUtil.full_rect(bg)
+	bg.color = UiUtil.C_INK
+	root.add_child(bg)
+	var center: CenterContainer = CenterContainer.new()
+	UiUtil.full_rect(center)
+	root.add_child(center)
+	var col: VBoxContainer = UiUtil.vbox(10)
+	col.custom_minimum_size = Vector2(960, 0)
+	center.add_child(col)
+	col.add_child(UiUtil.label("INHALTSPAKET FEHLERHAFT", &"LabelTitle", 48, UiTheme.C_DANGER))
+	col.add_child(UiUtil.label("%s (%s)" % [str(PACK_ERROR_TEXTS.get(code, "")), code], &"", 24, UiTheme.C_ACCENT_2))
+	var lines: PackedStringArray = DB.pack_messages
+	for i in mini(PACK_ERROR_LINES, lines.size()):
+		var l: Label = UiUtil.label(UiUtil.glyph_safe(lines[i]), &"LabelSmall", 16, UiTheme.C_TEXT_DIM)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		col.add_child(l)
+	if lines.size() > PACK_ERROR_LINES:
+		col.add_child(UiUtil.label("… und %d weitere Meldungen im Log." % (lines.size() - PACK_ERROR_LINES),
+			&"LabelSmall", 16, UiTheme.C_TEXT_DIM))
+	col.add_child(UiUtil.label("Das Spiel startet nicht mit den Grunddaten.", &"", 20))
+	return true
 
 
 # --- Staffeln (09, ST1-B): the debug start of a season ----------------------------------------------------------------

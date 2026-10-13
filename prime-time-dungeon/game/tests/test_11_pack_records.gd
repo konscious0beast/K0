@@ -104,7 +104,7 @@ func _updated_testbild() -> GameData:
 	return d
 
 
-# --- data_hash -------------------------------------------------------------------------------------------------------------
+# --- data_hash --------------------------------------------------------------------------------------------------------
 
 func test_data_hash_without_and_with_a_pack() -> void:
 	var names: PackedStringArray = []
@@ -131,7 +131,7 @@ func test_data_hash_without_and_with_a_pack() -> void:
 	assert_eq(DB.data_hash(), before_p1)
 
 
-# --- headers and digests ---------------------------------------------------------------------------------------------------
+# --- headers and digests ----------------------------------------------------------------------------------------------
 
 func test_run_log_headers_carry_the_pack_only_with_a_pack() -> void:
 	Game.new_game(0, "Kai", 4242)
@@ -183,7 +183,7 @@ func test_leaderboard_entry() -> void:
 		"without the build's data: the check of before (sim_version only)")
 
 
-# --- the save block --------------------------------------------------------------------------------------------------------
+# --- the save block ---------------------------------------------------------------------------------------------------
 
 func test_save_block_only_with_a_pack() -> void:
 	var st: GameState = GameState.create_new(real_data(), 1, "Kai", 99)
@@ -276,7 +276,7 @@ func test_slot_of_another_pack_is_refused_and_named() -> void:
 	assert_eq(Game.run_log.header.get("pack", ""), "testbild", "the log after the load names the pack")
 
 
-# --- replays -----------------------------------------------------------------------------------------------------------------
+# --- replays ----------------------------------------------------------------------------------------------------------
 
 func test_replay_refusals() -> void:
 	DB.data = Kit.testbild_data()
@@ -345,21 +345,24 @@ func test_boot_error_card_for_every_code() -> void:
 	assert_eq([DB.pack_error, DB.ok], ["", true], "this test run started without a pack error")
 
 
-# --- user data per pack ----------------------------------------------------------------------------------------------------
+# --- user data per pack -----------------------------------------------------------------------------------------------
+
+## Save._ready of a fresh Save (not in the tree) and its save_dir.
+static func _save_dir_at_start() -> String:
+	var fresh: Node = SaveScript.new()
+	fresh.call("_ready")
+	var dir: String = str(fresh.get("save_dir"))
+	fresh.free()
+	return dir
+
 
 func test_user_data_per_pack() -> void:
-	var fresh: Node = SaveScript.new()
-	assert_eq(fresh.get("save_dir"), "user://saves", "the base game keeps user://saves")
-	fresh.free()
+	assert_eq(_save_dir_at_start(), "user://saves", "the base game keeps user://saves")
 	DB.pack = PackLoader.read(Kit.PACKS, Kit.TESTBILD)
 	DB.pack_via = "feature"
-	fresh = SaveScript.new()
-	assert_eq(fresh.get("save_dir"), "user://saves", "a pack export has a user folder of its own")
-	fresh.free()
+	assert_eq(_save_dir_at_start(), "user://saves", "a pack export has a user folder of its own")
 	DB.pack_via = "arg"
-	fresh = SaveScript.new()
-	assert_eq(fresh.get("save_dir"), "user://packs/testbild/saves", "a debug run with --pack=testbild")
-	fresh.free()
+	assert_eq(_save_dir_at_start(), "user://packs/testbild/saves", "a debug run with --pack=testbild")
 	Save.save_dir = "user://packs/testbild/saves"
 	for p: String in [Save.slot_path(1), Save.journal_path(1), Save.career_path(), Save.persona_path(1),
 			Save.sd_collection_path(), Save._leaderboard_path("evt_x"), Save._data_root().path_join(Save.REPLAY_DIR)]:

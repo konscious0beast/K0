@@ -1,8 +1,8 @@
 extends RefCounted
 ## Test kit of the content-pack tests (11-P1; test_11_pack_loader, test_11_pack_testbild, test_11_pack_records,
-## test_11_ip_firewall): the base data with "Testbild" (cached), packs written into user:// (the loader's error cases and
-## the variants of the layer-2 fixture are built at run time — no forbidden word is ever stored in a file), folder copies
-## and clean-up. No class_name (tests/fixtures, 02_TECH §0.3).
+## test_11_ip_firewall): the base data with "Testbild" (cached), packs written into user:// (the loader's error
+## cases and the variants of the layer-2 fixture are built at run time — no forbidden word is ever stored in a file),
+## folder copies and clean-up. No class_name (tests/fixtures, 02_TECH §0.3).
 
 const PACKS: String = "res://packs"
 const FIXTURES: String = "res://tests/fixtures/packs"

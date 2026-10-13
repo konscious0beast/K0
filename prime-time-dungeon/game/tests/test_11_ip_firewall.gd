@@ -1,17 +1,17 @@
 extends TestCase
-## 11-P1 (docs/11 §3.12, SP-17, in the F-20 variant): the IP firewall, layers 1 and 2 (layer 3, the HMAC fingerprints, is
-## 11-PB's tools/ip_firewall.sh).
+## 11-P1 (docs/11 §3.12, SP-17, in the F-20 variant): the IP firewall, layers 1 and 2 (layer 3, the HMAC
+## fingerprints, is 11-PB's tools/ip_firewall.sh).
 ## Layer 1 — structure: every folder under game/packs/ is listed in PUBLIC_PACKS or in PRIVATE_PACKS (F-20: a licensed
 ## pack may live here only while the repository is private); a pack.json carries a licence block only for an id of
 ## PRIVATE_PACKS or as a test fixture under game/tests/fixtures/packs/ with the holder "TEST – kein Rechteinhaber"; no
 ## pack.json anywhere else below res://; game/packs/.gitignore whitelists exactly the public files. With
 ## PTD_REPO_VISIBILITY=public (set by the CI from github.event.repository.private, 11-PB) PRIVATE_PACKS must be empty;
 ## without the variable the visibility is unknown here and only the structure rules apply.
-## Layer 2 — texts: a pack with a licence block owns its texts (PackLoader provenance "owned"): they are exempt from the
-## IP-distance lists of ip_words (ALL_WORDS, the Mopsula rule — a figure the licensed pack redesigned is not Graf Mopsula
-## any more), never from the tone rules (ORIGIN_WORDS; the tone lists of the pack rules), and never for texts the pack
-## does not own. The fixture "lizenztest" on disk is harmless; the variants with listed words are written into user://
-## at run time from the lists themselves — no such word is stored in this repository for the test.
+## Layer 2 — texts: a pack with a licence block owns its texts (PackLoader provenance "owned"): they are exempt from
+## the IP-distance lists of ip_words (ALL_WORDS, the Mopsula rule — a figure the licensed pack redesigned is not Graf
+## Mopsula any more), never from the tone rules (ORIGIN_WORDS; the tone lists of the pack rules), and never for texts
+## the pack does not own. The fixture "lizenztest" on disk is harmless; the variants with listed words are written into
+## user:// at run time from the lists themselves — no such word is stored in this repository for the test.
 
 const Kit := preload("res://tests/fixtures/packs/pack_kit.gd")
 const IpWords := preload("res://core/data/validators/ip_words.gd")
@@ -101,7 +101,7 @@ static func _tone_word(list: String) -> String:
 	return ""
 
 
-# --- layer 1: structure ----------------------------------------------------------------------------------------------------
+# --- layer 1: structure -----------------------------------------------------------------------------------------------
 
 func test_every_pack_folder_is_listed() -> void:
 	var public: PackedStringArray = list_file(PACKS_DIR.path_join("PUBLIC_PACKS"))
@@ -176,7 +176,7 @@ func test_private_packs_need_a_private_repository() -> void:
 			% [VISIBILITY_ENV, str(private)])
 
 
-# --- layer 2: texts ----------------------------------------------------------------------------------------------------------
+# --- layer 2: texts ---------------------------------------------------------------------------------------------------
 
 func test_licensed_fixture_reads_and_loads() -> void:
 	var p: PackDef = PackLoader.read(FIXTURES_DIR, Kit.LIZENZTEST)
@@ -239,8 +239,9 @@ func test_pack_rules_need_a_provenance() -> void:
 	var refs: PackedStringArray = []
 	for t: Dictionary in texts:
 		refs.append(str(t["ref"]))
-	assert_eq(refs, PackedStringArray(["pack:name", "enemies:enm_boss_rattenkoenigin.name", "looks:lk_outfit_testbild.name",
-		"mod_lines:mod_boss_intro_enm_boss_rattenkoenigin_02.text"]), "every text of Testbild")
+	assert_eq(refs, PackedStringArray(["pack:name", "enemies:enm_boss_rattenkoenigin.name",
+		"looks:lk_outfit_testbild.name", "mod_lines:mod_boss_intro_enm_boss_rattenkoenigin_02.text"]),
+		"every text of Testbild")
 	var v: DataValidator = DataValidator.new()
 	v.validate(Kit.base_raw())
 	assert_eq([v.provenance, v.errors], [{}, PackedStringArray()], "base data: no provenance, no pack rule")

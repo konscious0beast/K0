@@ -85,7 +85,7 @@ static func _ids(raw: Dictionary, table: String, list: String = "entries") -> Pa
 	return out
 
 
-# --- the contract pass 11-P1 -------------------------------------------------------------------------------------------
+# --- the contract pass 11-P1 ------------------------------------------------------------------------------------------
 
 func test_contract_pass_signatures() -> void:
 	for path: String in METHODS.keys():
@@ -112,7 +112,7 @@ func test_contract_pass_signatures() -> void:
 	assert_eq(SaveCodec.VERSION, 2, "the save block is additive: no version bump (11 §3.9)")
 
 
-# --- read ----------------------------------------------------------------------------------------------------------------
+# --- read -------------------------------------------------------------------------------------------------------------
 
 func test_read_testbild() -> void:
 	var p: PackDef = PackLoader.read(Kit.PACKS, Kit.TESTBILD)
@@ -230,7 +230,7 @@ func test_ids_and_missing_folders() -> void:
 	_expect(PackLoader.read(ROOT, "fehlt").errors, "pack[fehlt]: no pack folder %s/fehlt" % ROOT, "no folder")
 
 
-# --- merge -----------------------------------------------------------------------------------------------------------------
+# --- merge ------------------------------------------------------------------------------------------------------------
 
 ## RFC 7386 Appendix A, plus: neither argument changes.
 func test_merge_patch_is_rfc7386() -> void:
@@ -368,8 +368,8 @@ func test_merge_sub_top_and_rt_balance() -> void:
 	assert_false(hobbies.has("hob_gaming"), "sub disable")
 	assert_eq(hobbies[hobbies.size() - 1], "hob_testpaket", "sub add appends")
 	assert_eq(str(_entry(out, "origins", "hob_cooking", "hobbies").get("name", "")), "Kochshow", "sub patch")
-	assert_eq((out["lootboxes"] as Dictionary)["pity"], {"rare": 5, "epic": (raw["lootboxes"] as Dictionary)["pity"]["epic"]},
-		"top: a merge patch on pity")
+	var epic: Variant = ((raw["lootboxes"] as Dictionary)["pity"] as Dictionary)["epic"]
+	assert_eq((out["lootboxes"] as Dictionary)["pity"], {"rare": 5, "epic": epic}, "top: a merge patch on pity")
 	assert_eq(_ids(out, "enemies", "pseudo_units"), PackedStringArray(["pu_testpaket"]),
 		"a sub list the base lacks is created by add")
 	assert_eq(int(((out["rt_balance"] as Dictionary)["values"] as Dictionary)[key]), int(values[key]) + 1)
@@ -414,7 +414,7 @@ func test_merge_provenance_and_art() -> void:
 	assert_eq(float(((_entry(art["raw"], "enemies", "enm_kanalratte")["model"]) as Dictionary)["scale"]), 1.5)
 
 
-# --- content_hash, compat ----------------------------------------------------------------------------------------------
+# --- content_hash, compat ---------------------------------------------------------------------------------------------
 
 func test_content_hash_covers_pack_json_and_overlays_only() -> void:
 	Kit.copy_pack(Kit.PACKS, Kit.TESTBILD, ROOT)
@@ -465,7 +465,7 @@ func test_compat() -> void:
 	assert_true(PackLoader.compat_message(future, "0.3.0").contains("pack_schema 2, this engine reads 1"))
 
 
-# --- activation ------------------------------------------------------------------------------------------------------------
+# --- activation -------------------------------------------------------------------------------------------------------
 
 func _folders() -> void:
 	for d: String in ["alpha", "beta", ".versteckt"]:

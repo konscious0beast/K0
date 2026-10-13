@@ -25,7 +25,8 @@ var _name_re: RegEx = RegEx.create_from_string("^[A-Za-z0-9_\\-]+$")
 ## Inhaltspakete (11-P1, 11 §3.8 Nr. 6): a debug run whose pack came from --pack keeps its user data apart —
 ## save_dir = user://packs/<id>/saves, so leaderboards, replays, persona, career and the Stempel collection (all below
 ## the parent of save_dir) follow. A pack export has a user folder of its own; the base game keeps user://saves.
-func _init() -> void:
+## In _ready: autoloads read each other there (02_TECH §2.3); no earlier _ready uses a Save path.
+func _ready() -> void:
 	var own: String = PackLoader.debug_save_dir(DB.pack.id if DB.pack != null else "", DB.pack_via)
 	if own != "":
 		save_dir = own

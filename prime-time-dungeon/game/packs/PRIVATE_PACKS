@@ -1,0 +1,2 @@
+# Private content packs (docs/11 F-20): one pack id per line. Only while this repository is private — the CI fails
+# when it is public and this list is not empty (test_11_ip_firewall with PTD_REPO_VISIBILITY, 11-PB). Empty today.

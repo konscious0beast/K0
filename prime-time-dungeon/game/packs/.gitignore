@@ -1,0 +1,8 @@
+# Content packs (docs/11 §3.12, layer 1): everything here is ignored except this whitelist. A pack copied in by
+# mistake never lands with `git add`; `git add -f` is caught by test_11_ip_firewall (PUBLIC_PACKS / PRIVATE_PACKS).
+/*
+!/.gitignore
+!/PUBLIC_PACKS
+!/PRIVATE_PACKS
+!/ip_firewall*.json
+!/testbild/

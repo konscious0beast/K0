@@ -115,6 +115,10 @@ Verzeichnis.*
   Titeln, als Studiogast der „Zeitraffer bis zum Finale“, danach die Ruhmeshalle. In einer Staffel ist nichts käuflich;
   Systemmitteilungen gibt es noch keine (Einsturz-Wecker nur auf Wunsch, am Desktop im Fenstertitel).
 - 3 Speicherslots (JSON in `user://saves/`), Einstellungen, Pausemenü, Touch-Steuerung.
+- **Sprachen, Grundlage** (11-L1): Optionen → „Sprache / Language“ (Automatisch / Deutsch / English, nur im Titelmenü
+  änderbar), `--lang=en` für einzelne Läufe, Übersetzungen als gettext-PO-Dateien (`game/locale/`, msgid = deutscher
+  Text) mit Extraktor und Prüfungen (`tools/i18n.sh`). Englische Texte kommen mit 11-L2/L3; bis dahin ändert Englisch nur
+  Zahlen-, Zeit- und Datumsformate.
 - **M.O.D.-Marotten & Unterhosen-Liga** (06 Kap. 4): M.O.D. verrät je Etage, was sie heute mag (Show-Wetten mit Herzen,
   Fanpost-Paket bei drei Treffern); wer ohne Rüstung & ohne Accessoire kämpft, spielt in der Liga und bekommt mehr Hype und
   Follower. Show-Chip im Overlay, Pausemenü-Reiter „Show“, Achievement-Kette „Ohne alles“.
@@ -436,6 +440,7 @@ Argumente stehen nach `--` (CLI) bzw. in den Main Run Args (Editor). Quelle: `sc
 | `--strategy=thorough\|rush\|dawdle\|typical` | Strategie des Full-Run-Bots: alles / nur Safe Rooms, Tore, Bosse / trödeln bis zum Etagenkollaps / typische:r Erstspieler:in |
 | `--pace=fast\|human` | Takt des Full-Run-Bots: ohne Wartezeit oder mit dem Modell eines aufmerksamen Menschen |
 | `--rt-profile=typical\|perfect\|sloppy` | Full-Run-Bot im Echtzeitkampf: Spielprofil der Person (07 §5.7, je Held:in) |
+| `--lang=de\|en` | Sprache dieses Laufs (11 §1.9), ohne die Einstellung zu speichern. Ohne das Argument gilt die Einstellung „Sprache / Language“ (Automatisch: Deutsch bei deutscher Systemsprache, sonst Englisch); Tests, Capture, Autoplay und Full-Run-Bot spielen ohne `--lang` immer Deutsch. Die Spielertexte kommen mit 11-L2/L3 — bis dahin ändert Englisch nur Zahlen-, Zeit- und Datumsformate |
 | `--season=<ssn-id>` | **nur Debug-Builds** (Staffeln, 09 §11.1, ST1-B): startet eine neue private Staffel der Vorlage (`ssn_basis` 6 Etagen / 24 Tage, `ssn_akt2` 12 / 54, `ssn_akt3` 18 / 84) und geht ohne Titel, Casting und Intro in die Erkundung von Etage 1. Tag 0 ist die nächste Sendezeit; die Einsturz-Termine stehen ab dann in UTC fest. Etage 1 ist die Generalprobe (ein verlorener Kampf kostet dort nichts: die Sanitäter bringen die Gruppe in den zuletzt betretenen Safe Room); ihre Treppe führt nach der Etagen-Bilanz auf die Etagen 2–6 (ST1-C1: Passage, Fundus, Paketzentrum). Etage 6 ist das Finale der Basis-Staffel: Der Sieg über ihren Etagenboss oder der letzte Einsturz beendet die Staffel; längere Formate enden nach Etage 6 mit dem Ende des Inhalts („Bis zum Ende dabei“, Abspann). Ohne `--slot` im ersten freien Slot (alle belegt: Slot 0, nie gespeichert); gespeichert wird automatisch (Dauerspeicherstand mit Journal). Die freien Plätze spielt die KI-Besetzung (99 KI-Kandidat:innen, ST1-F): ihre Erstbesteigungen, Einstürze und Rekorde meldet M.O.D. als Eilmeldung (höchstens eine je 10 min Spielzeit, nie im Kampf). Stufen und Talente (ST1-D): auf Etage 1 endet die Stufe am Deckel 7 (darüber Überstunden als Credits); die Grundreihen des Talentbaums öffnen auf Stufe 3, 5 und 7 (Talent-Show im Safe Room, umwählen in Pause → Party → „Talentbaum“), die Treppe gibt eine halbe Stufe, ein Etagen-Event 5 %; Klassenfähigkeiten, Ränge und Klassenreihen kommen mit dem Recall auf Etage 3: Er öffnet im ersten Safe Room der Etage von selbst (Spezies und Klasse beider Figuren, Abschnitt 2; danach liegt die Signatur der Klasse auf Slot 1, „Ohne Netz“ ist frei) — am schnellsten mit `--tempo=binge --floor=3` und dem ersten Safe Room. Schläfer (ST1-G): Pause → „Ausloggen“ legt die Figur schlafen und führt zum Titel; beim Laden des Slots wird die Abwesenheit gebucht (mit `--speed` × Zeitraffer) und „Während Sie schliefen …“ gezeigt; über 10 min geschlossen oder im Hintergrund gilt als Ausloggen |
 | `--tempo=calendar\|binge` | mit `--season`: Kalender (Einsturz zu festen Terminen; die Uhr läuft in Erkundung und Safe Room, ein Uhr-Command je 60 s) oder Am Stück (Countdown je Etage: 20, 30, 40, 50 … min) |
 | `--mode=net\|no_net` | mit `--season`: Mit Netz (Rettung, Sanitäter) oder Ohne Netz (ab Etage 2 ein Leben) — hier ohne Freischaltung |
@@ -470,7 +475,8 @@ Echtzeit, die CTB-Kampfszene ist gelöscht).
 Alle Skripte liegen in `tools/` und brauchen die Umgebungsvariable `GODOT=<Pfad zur Godot-4.7-Binary>` (Standard: `godot`
 im `PATH`). `check.sh`, `fullrun.sh` und `perf.sh` arbeiten in einer **isolierten Temp-Kopie** des Projekts mit eigenem
 `user://`: Mehrere Läufe können parallel laufen, und eigene Spielstände bleiben unberührt. `make_icons.sh` baut ebenfalls in
-einer Temp-Kopie, schreibt die Icons aber nach `game/art/icons/` zurück. `--shot` und `perf.sh` brauchen `xvfb-run`
+einer Temp-Kopie, schreibt die Icons aber nach `game/art/icons/` zurück; `i18n.sh` ebenso (`extract` schreibt nach
+`game/locale/pot/`, `merge` nach `game/locale/en/`). `--shot` und `perf.sh` brauchen `xvfb-run`
 (außer `perf.sh --headless`).
 
 | Skript | Zweck | Erfolg |
@@ -478,7 +484,8 @@ einer Temp-Kopie, schreibt die Icons aber nach `game/art/icons/` zurück. `--sho
 | `tools/check.sh` | Import, alle Tests, Autoplay-Smoke-Test (Titel → Neues Spiel → Erkundung → Echtzeitkampf → Safe Room) | letzte Zeile `check.sh: OK` |
 | `tools/check.sh --tests-only [--filter=<teil>]` | Import und Tests (optional nur Testdateien, deren Name `<teil>` enthält) | `check.sh: OK` |
 | `tools/check.sh --shot <res://szene.tscn> <out.png> [frames] [BxH] [--touch] [--recipe=<name>] [--params=<json>] [--no-global-ui]` | rendert eine Szene unter Xvfb (`xvfb-run` nötig) im Compatibility-Renderer und speichert ein PNG | `saved <pfad>` |
-| `tools/fullrun.sh [--strategy=thorough\|rush\|dawdle\|typical\|all] [--hero=kai\|mopsula] [--seed=<int>] [--pace=fast\|human] [--liga=0\|1\|2] [--rt-profile=typical\|perfect\|sloppy] [--log-dir=<dir>]` | Full-Run-Bot headless mit festem 60-fps-Takt im Echtzeitkampf (07 §12.5): der `RtBotPlayer` spielt jeden Kampf als Person; `all` = thorough, rush und dawdle als Kai plus thorough als Graf Mopsula nach einem Import (wie in CI) | `fullrun.sh: OK` |
+| `tools/fullrun.sh [--strategy=thorough\|rush\|dawdle\|typical\|all] [--hero=kai\|mopsula] [--seed=<int>] [--pace=fast\|human] [--liga=0\|1\|2] [--rt-profile=typical\|perfect\|sloppy] [--lang=de\|en] [--log-dir=<dir>]` | Full-Run-Bot headless mit festem 60-fps-Takt im Echtzeitkampf (07 §12.5): der `RtBotPlayer` spielt jeden Kampf als Person; `all` = thorough, rush und dawdle als Kai plus thorough als Graf Mopsula nach einem Import (wie in CI); mit `--lang=en` müssen die Zeilen `FULLRUN: stats` und `FULLRUN: OK` denen des deutschen Laufs gleichen (11 §1.10) | `fullrun.sh: OK` |
+| `tools/i18n.sh extract\|merge\|stats [--pack=<dir>]\|check [--no-gettext]\|lint [--file=res://…]` | Sprach-Werkzeuge (11 §1.11): `extract` schreibt die msgid-Vorlagen `game/locale/pot/*.pot` (Code-Literale in `Tx`/`tr`, Szenentexte, Datenfelder) und meldet dynamische Aufrufe; `merge` mischt `game/locale/en/*.po` mit GNU `msgmerge` (neue Einträge leer, geänderte „fuzzy“); `stats` zeigt die Abdeckung je Domäne und Kontext; `check` = `msgfmt --check-format --check-header`, die Regeln aus `test_11_po_rules`, POT aktuell, PO gemischt — dazu dieselben Prüfungen für die PO-Dateien der Inhaltspakete (`game/packs/<id>/locale/<sprache>.po`); `lint` listet deutsche Literale außerhalb von `Tx` (die `PENDING`-Tabelle von `test_11_literals`). `merge` und `check` brauchen GNU gettext (`apt-get install gettext`) | `i18n.sh: OK` |
 | `tools/rt_balance.sh [--seeds=20] [--hero=kai\|mopsula\|both] [--liga=0\|1\|2\|all] [--profile=typical\|perfect\|sloppy\|all] [--strict-bands] [--out=<datei>]`, `--sequence`, `--perf`, `--nightly` | Balance-Harness des Echtzeitkampfs (07 §11.4): die Begegnungen von Etage 1 auf der echten Sim mit den Bot-Profilen, Urteile gegen die Bänder aus 07 §11.1; nachts 200 Seeds (CI-Job `nightly-balance`) | Tabelle mit `RT-BAND`-Zeilen, Exit 0 |
 | `tools/perf.sh [--driver=opengl3\|vulkan] [--quality=high\|low] [--only=startup,explore,safe_room,combat,leak] [--cycles=20] [--out=<datei.md>] [--shots=<dir>] [--cells] [--headless]` | Performance-Probe unter Xvfb: Budget-Tabelle aus 02_TECH §12.1 (Draw Calls, Primitive, Lichter, Speicher, Ladezeiten), der Echtzeitkampf in der Welt (`combat`: regulär, zwei Gruppen, Königin) und Leak-Schleife über Szenenwechsel; Ergebnisse in `docs/PERFORMANCE.md` | `PERF: OK`, `perf.sh: exit 0` |
 | `tools/make_icons.sh` | erzeugt die App-Icons (Android, iOS, macOS) und die iOS-Startbilder in `game/art/icons/` aus `game/icon.svg` neu | Zeilen `ICON: …`, Exit 0 |
@@ -494,6 +501,7 @@ Godot-Prozesses. `2` = Aufruffehler (Godot-Binary nicht gefunden; bei `fullrun.s
 GODOT=~/godot/godot prime-time-dungeon/tools/check.sh
 GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --strategy=all
 GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --hero=mopsula --liga=2      # Graf Mopsula, Duo-Liga
+GODOT=~/godot/godot prime-time-dungeon/tools/i18n.sh extract && prime-time-dungeon/tools/i18n.sh merge   # neue Texte
 ```
 
 ## 8. Ordner
@@ -503,11 +511,13 @@ prime-time-dungeon/
 ├── README.md            diese Datei
 ├── CHANGELOG.md         was in welchem spielbaren Build neu ist
 ├── docs/                Design- und Technik-Dokumente (Abschnitt 9), docs/screenshots/
-├── tools/               check.sh, fullrun.sh, perf.sh, make_icons.sh, apple/ (release.sh + Entitlements, nur CI)
+├── tools/               check.sh, fullrun.sh, perf.sh, make_icons.sh, i18n.sh (Sprachen, 11),
+│                        apple/ (release.sh + Entitlements, nur CI)
 └── game/                Godot-Projekt (= res://), project.godot, export_presets.cfg, icon.svg
     ├── autoload/        Events, DB, Game, Show, Save, Router, Sfx (+ private Helfer wie game_replay.gd)
     ├── core/            reine Logik (RefCounted, headless testbar, ohne Autoloads)
-    │   ├── data/        GameData, Defs, DataValidator (+ validators/ je neuer Tabelle), SeedUtil, JsonUtil
+    │   ├── data/        GameData, Defs, DataValidator (+ validators/ je neuer Tabelle), SeedUtil, JsonUtil; Tx (jeder
+    │   │                Spielertext und jedes Zahlenformat) und LocaleLoader (PO-Dateien → eine Übersetzung je Sprache, 11)
     │   ├── stats/       StatBlock, Elemente, Balance-Konstanten, FixedMath
     │   ├── rt/          Echtzeitkampf: RtSim (30 Ticks/s), Fähigkeiten, Telegraphen, Partner- und Gegner-KI, RtMods
     │   ├── battle/      geteilte Kampf-Typen: Schadensformeln, Status, ActionEvent, BattleCommand, BattleResult (Beute)
@@ -526,8 +536,9 @@ prime-time-dungeon/
     ├── data/            26 JSON-Dateien: 23 GameData-Tabellen (seit 09 ST0 auch seasons, professions, cast, themes) +
     │                    rt_balance.json + events.json (SHOWRUN-Events) + mod_filter.json (Filter für „M.O.D. live“);
     │                    geplant (12): drehbuch/ — Menü, Bausteine, Namen, Marken und Pilot des Staffel-Drehbuchs
-    ├── locale/          geplant (11): Übersetzungen als PO-Dateien je Sprache (en/), POT-Vorlagen, Zahlenformate
-    ├── packs/           geplant (11): Inhaltspakete aus reinen Daten; im Repo nur das Testpaket „Testbild“
+    ├── locale/          Sprachen (11): formats.json (Zahlen, Zeiten, Daten je Sprache), languages.json, contexts.json,
+    │                    pot/ (msgid-Vorlagen, von tools/i18n.sh), en/ (englische PO-Dateien; msgid = deutscher Text)
+    ├── packs/           Inhaltspakete aus reinen Daten (11-P1, Texte 11-L1); im Repo nur das Testpaket „Testbild“
     ├── art/             shaders/, materials/, kit/ (prozedurale Figuren, Räume, Props, VFX), gallery/, icons/
     ├── scenes/          boot/, title/, exploration/, combat/ (Echtzeitkampf: Director, HUD), safe_room/, ui/
     └── tests/           run_tests.gd, test_*.gd, lib/, fixtures/, perf/, tools/, capture.gd, capture_recipes.gd
@@ -558,7 +569,7 @@ Systeme) > 01_GDD / 02_TECH / 03_ART / 05 (je nach Thema) > 04**.
 | [`docs/08_CASTING.md`](docs/08_CASTING.md) | Casting: eigene Kandidat:in (Persona), Vorleben, persönlicher Erzählstrang, Aussehen; KI optional |
 | [`docs/09_STAFFELN.md`](docs/09_STAFFELN.md) | Staffeln: Sendeplan bis Etage 18, KI-Besetzung, Schläfer und Ausloggen, Tod und Modi, Fertigkeiten (ST1–ST3) |
 | [`docs/10_MINISPIEL_STEMPELDUELL.md`](docs/10_MINISPIEL_STEMPELDUELL.md) | Mini-Spiel „Stempelduell“: der CTB-Kampf als optionales Karten-Duell (Etage 8; bis dahin Titel → Extras → Vorschau), Umsetzung SD1–SD3 (SD1, die Engine-Auslagerung, ist umgesetzt) |
-| [`docs/11_SPRACHEN_UND_INHALTSPAKETE.md`](docs/11_SPRACHEN_UND_INHALTSPAKETE.md) | Sprachen und Inhaltspakete (geplant): Englisch als zweite Sprache (gettext-PO, Glossar, Stimme), Inhaltspakete aus reinen Daten mit IP-Firewall, Mechanik-Baukasten (CR-39); Pakete P1, L1–L5, A1, MB1–MB8, PB |
+| [`docs/11_SPRACHEN_UND_INHALTSPAKETE.md`](docs/11_SPRACHEN_UND_INHALTSPAKETE.md) | Sprachen und Inhaltspakete (P1 und L1 gebaut: Paket-Lader mit „Testbild“, `Tx`, `LocaleLoader`, Spracheinstellung, `tools/i18n.sh`; der Rest geplant): Englisch als zweite Sprache (gettext-PO, Glossar, Stimme), Inhaltspakete aus reinen Daten mit IP-Firewall, Mechanik-Baukasten (CR-39); Pakete P1, L1–L5, A1, MB1–MB8, PB |
 | [`docs/12_KI_SHOWRUNNER.md`](docs/12_KI_SHOWRUNNER.md) | KI-Showrunner (geplant): je Staffel ein neues Drehbuch — Titel, Folgen-Mottos, Ensemble, Boss-Beinamen, Rückblicke —, vorab von der KI im Dienst `mod-brain` geschrieben, geprüft und aufgezeichnet, ohne Netz aus dem Baukasten; nie Regeln oder Zahlen; Pakete KS0–KS5 |
 | [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) | Messergebnisse der Performance-Probe gegen die Budgets aus 02_TECH §12.1 |
 

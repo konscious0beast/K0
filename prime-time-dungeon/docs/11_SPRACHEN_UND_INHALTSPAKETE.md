@@ -49,6 +49,14 @@
 > `6c17e6ce…3ec3`, `fullrun.sh` mit gleichen Ereigniszeilen und Statistiken (bis auf den Münzwurf der Darstellung in
 > `mod_tags`, Kap. 5.3).
 >
+> **Stand 11-L1 (2026-10-13, Branch `ptd/l1`):** Die i18n-Infrastruktur ist umgesetzt (Kap. 5.4 „Stand 11-L1“:
+> Prüfergebnisse P-1 … P-6, Entscheidungen L1-1 … L1-15; 02_TECH §0.4, §13.1): `Tx`, `LocaleLoader` mit eigenem
+> PO-Leser (der strenge Parser `PoFile` nur für Werkzeuge und Tests), `game/locale/` mit den vier POT-Vorlagen
+> (2 577 msgids) und leeren englischen PO-Dateien, Einstellung „Sprache / Language“ (nur im Titelmenü änderbar; mit
+> Paket nur dessen Sprachen), `--lang`, automatische Übersetzung aus, Extraktor und `tools/i18n.sh`, Lint mit `PENDING`
+> (911 Funde in 91 Dateien) und die PO-Dateien von „Testbild“ (Paket-PO über der Basis-PO, dieselben Regeln). Deutsch
+> bleibt bitgleich; Englisch ändert bis L2/L3 nur Zahlen-, Zeit- und Datumsformate.
+>
 > **Namen:** Der Orchestrator nennt die Mechaniken M1–M8. Weil „M0–M8“ die Module aus 02_TECH sind (M1 ist der
 > CTB-Kern, M8 das Live-Modul), heißen sie hier **MB1–MB8** (Mechanik-Baukasten), gleicher Inhalt. Die übrigen
 > Paketnamen bleiben: **P1** (Paket-Lader), **L1–L5** (Sprachen), **A1** (Art-Kit), **PB** (Paket-Build). Die
@@ -190,7 +198,7 @@ den Rest. Spielerseitig sind davon etwa die Hälfte bis zwei Drittel. Insgesamt 
 
 | Kriterium | gettext-PO (msgid = deutscher Text) | Schlüssel-CSV (`KEY,de,en`) |
 |---|---|---|
-| Godot 4.7 | lädt `.po` als `Translation`; `tr(msg, ctx)`, `tr_n(msg, plural, n, ctx)`, `TranslationServer.translate(_plural)` | importiert CSV zu `.translation`-Dateien je Sprache; Kontext und Plural nur über Zusatzspalten **[zu prüfen für 4.7]** |
+| Godot 4.7 | lädt `.po` als `Translation`; `tr(msg, ctx)`, `tr_n(msg, plural, n, ctx)`, `TranslationServer.translate(_plural)` | importiert CSV zu `.translation`-Dateien je Sprache; Kontext und Plural nur über Zusatzspalten (nicht mehr geprüft: Entscheidung PO, Kap. 5.4 P-6) |
 | Bestand | passt zu 02_TECH §4.1 und zu allen heutigen `tr()`-Aufrufen; Daten bleiben unverändert | jeder Text bräuchte einen Schlüssel: 2 664 Datentexte und ≈ 1 300 Codetexte umbauen, Daten unlesbar |
 | Werkzeuge | Industriestandard: `msgmerge`, `msgfmt --check`, Poedit, Weblate, Crowdin; Übersetzerkommentare (`#.`), Fundstellen (`#:`), `fuzzy`-Markierung | Tabellenkalkulation; keine Fundstellen, kein „fuzzy“ |
 | Merges | eine Datei je Sprache und Bereich, Einträge unabhängig; Konflikte selten und lokal | alle Sprachen in einer Zeile: zwei Übersetzer:innen kollidieren in derselben Zeile |
@@ -211,13 +219,15 @@ Vorlagen liegen in `game/locale/pot/<domain>.pot`, erzeugt vom Extraktor (Kap. 1
 **Laden:** `LocaleLoader` (`core/data/locale_loader.gd`, neu) parst die PO-Dateien selbst (msgctxt, msgid,
 msgid_plural, msgstr[n], `fuzzy`) und baut **eine** `Translation` je Sprache: erst die Basis-PO, dann die PO des aktiven
 Pakets (überschreibt einzelne Einträge, Kap. 3.6). Grund für den eigenen Parser: Die Reihenfolge, in der der
-`TranslationServer` mehrere Übersetzungen derselben Sprache befragt, ist nicht dokumentiert **[zu prüfen]**, und ein
-reiner Parser ist ohne Szenenbaum testbar. `fuzzy`-Einträge gelten wie bei `msgfmt` als fehlend. Die gebaute
+`TranslationServer` mehrere Übersetzungen derselben Sprache befragt, ist nicht dokumentiert (mit genau einer
+`Translation` je Sprache spielt sie keine Rolle, Kap. 5.4 P-1), und ein reiner Parser ist ohne Szenenbaum testbar.
+`fuzzy`-Einträge gelten wie bei `msgfmt` als fehlend. Die gebaute
 `Translation` wird beim `TranslationServer` angemeldet (`add_translation`, `set_locale`), damit bestehende `tr()`- und
 `tr_text()`-Aufrufe während der Umstellung (L2) weiter funktionieren. Plural wählt `Tx` selbst aus der Tabelle
 (Deutsch und Englisch: Form 0 für n = 1, sonst Form 1), unabhängig von der Pluralbehandlung einer selbst gebauten
-`Translation` **[API zu prüfen: `Translation.add_plural_message` in 4.7]**. Messziel: Laden ≤ 50 ms auf dem
-Referenz-Telefon **[zu messen]**; sonst wird die zusammengeführte Tabelle beim Export vorkompiliert.
+`Translation` (`Translation.add_plural_message` gibt es in 4.7.2, `TranslationPO` nicht; Kap. 5.4 P-2). Messziel:
+Laden ≤ 50 ms auf dem Referenz-Telefon **[zu messen, L4; Desktop: Kap. 5.4 P-5]**; sonst wird die zusammengeführte
+Tabelle beim Export vorkompiliert.
 
 **Der Helfer `Tx`** (`core/data/tx.gd`, `class_name Tx`, statisch, ohne Abhängigkeit von Autoloads):
 
@@ -230,7 +240,7 @@ static func data(table: String, id: String, text: String) -> String # ctx = tabl
 static func m(msgid: String) -> String                             # marker only: returns msgid unchanged (core texts)
 static func lang() -> String                                       # "de" | "en"
 static func fmt_int(v: int) -> String                              # de "12.345", en "12,345"
-static func fmt_signed(v: int) -> String                           # "+12" / "-3" / "±0"
+static func fmt_signed(v: int) -> String                           # "+12" / "-3" / "0" (L1-1)
 static func fmt_dec(v_pm: int, decimals: int = 1) -> String        # per-mille input: de "1,5", en "1.5"
 static func fmt_pct(p_pm: int, decimals: int = 1) -> String        # de "36,0 %", en "36.0%"
 static func fmt_clock(minutes: int) -> String                      # de "20:00", en "8:00 PM"
@@ -249,7 +259,8 @@ heutige Ausgabe (Gate „deutsch bitgleich“, Kap. 5.9).
 wäre falsch, sobald ein englischer Text zufällig einem deutschen msgid gleicht — „Gift“ (englisch für „Geschenk“, 05)
 würde zu „Poison“, weil `UiUtil.ELEMENT_NAMES["poison"]` das msgid „Gift“ hat. `Game._ready()` setzt deshalb
 `get_tree().root.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED`; eigene Fenster und Popups erben es
-**[zu prüfen: Popups außerhalb des Wurzelbaums]**. Übersetzt wird nur, was durch `Tx` geht.
+(geprüft: alle Fenster, Popups und Tooltips im Baum; dazu `root_node_auto_translate=false` in `project.godot`, Kap. 5.4
+P-3). Übersetzt wird nur, was durch `Tx` geht.
 
 ### 1.3 Was übersetzt wird — und was nicht
 
@@ -363,7 +374,7 @@ Mopsula duzt Kai („Kolleg:in. Setz dich.“).
 | Format | Deutsch (heute, bleibt) | Englisch (US) | `Tx` |
 |---|---|---|---|
 | Ganzzahl | 12.345 | 12,345 | `fmt_int` |
-| mit Vorzeichen | +12 / −3 / ±0 | +12 / −3 / ±0 | `fmt_signed` |
+| mit Vorzeichen | +12 / -3 / 0 (wie heute, L1-1) | +12 / -3 / 0 | `fmt_signed` |
 | Dezimal | 1,5 | 1.5 | `fmt_dec` |
 | Prozent | 36,0 % | 36.0% | `fmt_pct` |
 | Uhrzeit | 20:00 | 8:00 PM | `fmt_clock` |
@@ -454,10 +465,11 @@ zusätzlich mit `--lang=en`; seine Zeilen „FULLRUN: stats {…}“ und „FULL
 
 | Befehl | Wirkung |
 |---|---|
-| `i18n.sh extract` | Extraktor (`game/tests/tools/i18n/extract.gd`, headless) schreibt `locale/pot/{ui,data,mod_lines,stempel}.pot` |
-| `i18n.sh merge` | `msgmerge --update --backup=none --no-wrap --sort-by-file locale/en/<d>.po locale/pot/<d>.pot` je Domäne; neue Einträge leer, geänderte „fuzzy“, entfallene als `#~` |
-| `i18n.sh stats [--pack=<dir>]` | Abdeckung je Domäne und Tabelle: übersetzt / fuzzy / leer, Wörter offen; mit Paket zusätzlich die Basis-msgids, die Namen enthalten, die das Paket umbenennt (Kap. 3.6) |
-| `i18n.sh check` | `msgfmt --check-format --check-header`, Platzhalter-, Längen-, Ziffern- und Glyphen-Regeln (dieselben wie `test_11_po_rules`), POT aktuell (Extraktor-Lauf ohne Diff) |
+| `i18n.sh extract` | Extraktor (`game/tests/tools/i18n/extractor.gd` über `i18n_tool.gd`, headless) schreibt `locale/pot/{ui,data,mod_lines,stempel}.pot` |
+| `i18n.sh merge` | `msgmerge --update --backup=none --no-wrap --previous locale/en/<d>.po locale/pot/<d>.pot` je Domäne (Reihenfolge der POT, L1-8); neue Einträge leer, geänderte „fuzzy“ (mit dem alten msgid als `#|`), entfallene als `#~`; eine fehlende PO legt `msginit` an |
+| `i18n.sh stats [--pack=<dir>]` | Abdeckung je Domäne und Tabelle: übersetzt / fuzzy / leer, Wörter offen; mit Paket zusätzlich die Basis-msgids, die Namen enthalten, die das Paket umbenennt (Kap. 3.6; Stand 11-L1: der Name ohne führenden Artikel, gleich in welcher Schreibung; Texte, die das Paket selbst patcht, zählen nicht) |
+| `i18n.sh check` | `msgfmt --check-format --check-header`, Platzhalter-, Längen-, Ziffern- und Glyphen-Regeln (dieselben wie `test_11_po_rules`), POT aktuell (Extraktor-Lauf ohne Diff), PO mit ihrer POT gemischt |
+| `i18n.sh lint [--file=res://…]` | (Stand 11-L1) die Funde von `test_11_literals` je Datei als `PENDING`-Tabelle zum Einfügen; mit `--file` die Zeilen einer Datei |
 
 **Extraktor:** Drei Quellen, jede mit Fundstelle:
 
@@ -1464,7 +1476,7 @@ Testbild-Spielstand lädt ohne das Paket nicht (`other_pack`).
 
 - **L1:** die PO-Dateien von „Testbild“ (`locale/en.po`, `locale/de.po`, dann `languages: ["de", "en"]`), die PO-Regeln in
   `validators/pack.gd`, `LocaleLoader.apply(…, DB.pack)`, `PackLoader.LANGUAGES` → `locale/languages.json` und die
-  englischen Teile von `test_11_pack_testbild`.
+  englischen Teile von `test_11_pack_testbild` — erledigt mit 11-L1 (Kap. 5.4 „Stand 11-L1“, L1-14, L1-15).
 - **PB:** `pack_check.sh` (ein hineinkopiertes Paket muss in `PUBLIC_PACKS`/`PRIVATE_PACKS` stehen, sonst schlägt
   `test_11_ip_firewall` an — oder der Lauf nimmt nur `PACK_SAFE`-Tests), `pack_export.sh`, `ip_firewall.sh` (die
   Struktur über das ganze Repository statt nur `res://`; Schicht 3), `exclude_filter` `packs/*`, die CI mit
@@ -1490,9 +1502,154 @@ Testbild-Spielstand lädt ohne das Paket nicht (`other_pack`).
 4. Extraktor, `i18n.sh extract|merge|stats|check`, die vier POT-Dateien, leere `locale/en/*.po`.
 5. `test_11_literals` mit `PENDING` (Ausgangszählung je Datei), `test_11_po_rules`, `test_11_lang_determinism`.
 6. `export_presets.cfg`: `include_filter` um `locale/*` ergänzen (PO als Datei lesbar; **[zu prüfen]**, ob Godot `.po`
-   ohnehin als Ressource exportiert).
+   ohnehin als Ressource exportiert). — Geprüft: Godot 4.7.2 exportiert `locale/*.json` und `locale/en/*.po` mit
+   `all_resources` ohnehin als Rohdateien; kein Filter nötig, die Voreinstellungen bleiben unverändert (P-4).
 
 **Gate:** `check.sh` grün; alle deutschen Tests unverändert; Fullrun bitgleich; Start + ≤ 50 ms; `i18n.sh check` grün.
+
+**Stand 11-L1 (2026-10-13, Branch `ptd/l1`, mit 11-P1 zusammengeführt) — umgesetzt** (02_TECH §0.4, §1, §2.1, §3.4,
+§11.5, §12.3, §13.1; README §6–8): neu `core/data/tx.gd` (`Tx`), `core/data/locale_loader.gd` (`LocaleLoader`),
+`core/data/po_file.gd` (`PoFile`: der strenge Parser und der Schreiber für Werkzeuge und Tests, nicht auf dem
+Startweg, L1-13), `core/data/validators/po.gd` (die PO-Regeln, L1-14), `game/locale/` (`languages.json`,
+`formats.json`, `contexts.json`, `pot/{ui,data,mod_lines,stempel}.pot`, `en/{ui,data,mod_lines,stempel}.po` — leer,
+mit Kopf), `tools/i18n.sh` (`extract`, `merge`, `stats`, `check`, `lint`), `tests/tools/i18n/` (`gd_literals.gd` — der
+Literal-Scanner nach den Regeln von `test_09_terms`, `extractor.gd`, `literal_lint.gd`, `i18n_tool.gd`), die Tests
+`test_11_tx_format`, `test_11_po`, `test_11_locale`, `test_11_po_rules`, `test_11_literals`,
+`test_11_lang_determinism` mit Fixtures unter `tests/fixtures/locale/`; je ein Abschnitt „Sprachen (11-L1)“ in
+`autoload/game.gd` (`apply_language()` am Ende von `_init`, die Wurzel ohne automatische Übersetzung in `_ready`),
+`game_settings.gd` (`[game] language`), `scenes/ui/settings_menu.gd` (Zeile „Sprache / Language“, Signal
+`language_changed`, `focus_row`), `scenes/title/title.gd` (ein Wechsel baut den Titel neu auf und öffnet die Optionen
+wieder); `ui_util.gd` (`fmt_int`, `fmt_signed`, `fmt_pct`, `tr_text` delegieren an `Tx`), `project.godot`
+(`internationalization/rendering/root_node_auto_translate=false`), `tools/fullrun.sh` (`--lang`). Aus der offenen
+Liste von 11-P1: die PO-Dateien von „Testbild“ (`packs/testbild/locale/en.po`, `de.po`; `languages: ["de", "en"]`),
+die Paket-PO über der Basis-PO aus `DB.pack` (`PackDef.root`), die PO-Regeln in `validators/pack.gd`,
+`PackLoader` liest die Sprachen aus `locale/languages.json`, die englischen Teile von `test_11_pack_testbild`; dafür
+gehen die beiden Texte, die „Testbild“ überschreibt, über `Tx.t` (`boot.gd`: „präsentiert“, `title.gd`: „Eine Sendung
+des NOVA SYNDIKAT“). `export_presets.cfg` bleibt unverändert (P-4); kein `SIM_VERSION`-Sprung, kein Hash ändert sich.
+
+*Was ein Build zeigt:* Titel → Optionen → „Sprache / Language“ mit *Automatisch / Deutsch / English* (mit einem Paket
+nur dessen Sprachen). Ein Wechsel lädt den Katalog sofort, baut den Titel in der neuen Sprache neu auf und öffnet die
+Optionen wieder auf derselben Zeile; im Pausemenü steht die Zeile gesperrt mit „Im Titelmenü änderbar“. Bis L2/L3 sind
+die Basis-Kataloge leer: Englisch ändert nur die Formate (Zahlen „12,345“, Prozent „36.0%“), jeder Text bleibt das
+deutsche msgid. `--lang=en` gilt für einen Lauf und wird nie gespeichert; Tests, Capture, Autoplay und Full-Run-Bot
+spielen ohne `--lang` Deutsch. Ein Debug-Lauf mit `--pack=testbild` zeigt auf Deutsch (`--lang=de`) auf der
+Bootkarte „präsentiert im Testbild“, auf Englisch (`--lang=en`) unter dem Logo „A NOVA Media Group test broadcast“;
+die englischen Namen des Pakets (Bossname, Ansage, Look) stehen im Katalog und erscheinen, sobald L2 deren Anzeige über
+`Tx.data` führt.
+
+**API** (Kap. 1.2 mit den Ergänzungen aus L1-2):
+
+```gdscript
+Tx.t(msgid, ctx = "")   Tx.n(msgid, plural, count, ctx = "")   Tx.data(table, id, text)   Tx.data_ctx(table, id)
+Tx.m(msgid)   Tx.lang()   Tx.plural_index(count)
+Tx.fmt_int(v)   Tx.fmt_signed(v)   Tx.fmt_dec(v_pm, decimals = 1)   Tx.fmt_pct(p_pm, decimals = 1)
+Tx.fmt_float(v, decimals = 1)   Tx.fmt_pct_f(ratio, decimals = 1)   Tx.fmt_clock(minutes)   Tx.fmt_weekday(wd)
+Tx.fmt_date(day, month)   Tx.fmt_wday_date(wd, day, month)   Tx.fmt_duration(sec)   Tx.quote(s)
+Tx.use_language(code, catalog, plurals)   Tx.formats_of(code)          # LocaleLoader, Tests, Werkzeuge
+LocaleLoader.languages()  codes()  is_language(code)  source_lang()  language_name(code)  setting_values(allowed = [])
+LocaleLoader.arg_language(user_args)
+LocaleLoader.resolve(setting, user_args, ephemeral, os_language, allowed = [], fallback = "") -> String
+LocaleLoader.build(lang, pack_dir = "", root = ROOT) -> {lang, translation, plurals, count, files, missing, errors}
+LocaleLoader.apply(lang, pack_dir = "", root = ROOT) -> Dictionary   # build(), anmelden, set_locale, Tx
+LocaleLoader.pack_dir(pack: PackDef)  pack_languages(pack)  pack_default_lang(pack)   # DB.pack (11-P1)
+LocaleLoader.read_messages(text, into = null, plurals = {})  unescape(body, source, line, errors)
+PoFile.parse(text, source = "po", meta = false)  messages(po)  po_string(s)  po_field(keyword, s)   # Werkzeuge, Tests
+PoRules (validators/po.gd): check_text(text, source, limits = {})  check_pack_po(text, source, lang, limits)
+                            base_limits(pot_dir)  pack_po_files(packs_root)  entry_errors(…)  missing_glyphs(text)
+Game.apply_language(from_menu = false) -> String
+```
+
+**Prüfergebnisse** (die **[zu prüfen]** aus Kap. 1.2 und 5.4, mit Godot 4.7.2):
+
+| Nr. | Frage | Ergebnis |
+|---|---|---|
+| P-1 | Reihenfolge mehrerer `Translation` derselben Sprache im `TranslationServer` | spielt keine Rolle: `LocaleLoader` meldet je Sprache genau **eine** zusammengeführte `Translation` an (Basis-PO, darüber die Paket-PO) und entfernt vorher die vorige; `TranslationServer.find_translations("en")` liefert eine. |
+| P-2 | `Translation.add_plural_message` in 4.7 | vorhanden (`add_plural_message(src, forms, ctx)`, `get_plural_message`); eine Klasse `TranslationPO` gibt es in 4.7.2 **nicht**. `Tx.n` wählt die Form selbst (Tabelle `plurals`, Regel `one_other` aus `formats.json`); die `Translation` trägt die Formen zusätzlich für `tr_n()`. |
+| P-3 | Popups außerhalb des Wurzelbaums (SP-3) | Alles im Baum erbt `AUTO_TRANSLATE_MODE_DISABLED` von der Wurzel: `CanvasLayer`, `SubViewport`, `Window`, `AcceptDialog`/`ConfirmationDialog` (Text und Knöpfe), `PopupMenu` (auch das von `OptionButton`/`MenuButton`), `PopupPanel`, `TabBar` und das Tooltip-Popup (internes Kind). Knoten außerhalb des Baums melden `can_auto_translate() == true`, werden aber nie gezeichnet; beim Eintreten erben sie. Übersetzen würde nur ein ausdrückliches `AUTO_TRANSLATE_MODE_ALWAYS` (kommt im Code nicht vor). Gesichert in `test_11_locale`. Nebenwirkung: Der Fenstertitel wird nicht mehr automatisch übersetzt — er bleibt „Prime Time Dungeon“ (F-13). |
+| P-4 | Exportiert Godot `.po` ohne `include_filter`? | **Ja**: `export_filter="all_resources"` nimmt in 4.7.2 die Nicht-Ressourcen-Dateien des Projekts als Rohdateien mit — geprüft mit `--export-pack` (Linux) und dem eingehängten Paket: `locale/*.json` und `locale/en/*.po` sind über `FileAccess` lesbar, `locale/pot/*.pot` fehlt (gewollt). `export_presets.cfg` bleibt unverändert (`test_perf_platform` prüft die Filter wörtlich); `test_11_locale` sichert, dass keine Voreinstellung `locale/` ausschließt. Nebenbefund (02_TECH §12.3 vermerkt ihn): Die Begründung des `include_filter="data/*.json"` — JSON fehle sonst — trifft auf 4.7.2 nicht mehr zu; der Filter bleibt als Absicherung. |
+| P-5 | Ladezeit (Messziel ≤ 50 ms auf dem Telefon) | Desktop, 4 Kerne unter Last 9–16: die vier leeren englischen PO-Dateien ≈ 8–43 ms Wandzeit (meist ≈ 11–23 ms; CPU-Zeit 3–8 ms), mit der PO von „Testbild“ 8–12 ms; der volle Katalog (alle msgids synthetisch übersetzt) ≈ 28 ms (Last 9) bis ≈ 56 ms (Last 12) — Godots eigener PO-Lader brauchte für dieselben Dateien ≈ 70 ms. Deutsch ohne Paket-PO liest keine Datei. Telefon **[zu messen, L4]**; Rückfall bleibt der vorkompilierte Katalog beim Export. |
+| P-6 | CSV in 4.7 (Kontext, Plural) | nicht geprüft — mit der Entscheidung für PO (SP-1) ohne Belang. |
+
+**Entscheidungen 11-L1** (Auslegungen und Abweichungen):
+
+| Nr. | Thema | Entscheidung | Kap. |
+|---|---|---|---|
+| L1-1 | `fmt_signed` | „+12“ / „-3“ / „0“: Null ohne Zeichen und ASCII-Minus wie `UiUtil.fmt_signed` vor L1 (Gate „deutsch bitgleich“); „±0“ und „−3“ aus Kap. 1.7 wären eine sichtbare Änderung der deutschen Ausgabe. | 1.2, 1.7 |
+| L1-2 | API-Ergänzungen | `fmt_float` und `fmt_pct_f` (Anzeige-Floats, die es heute gibt: `UiUtil.fmt_pct` und die sieben `replace(".", ",")`, die L2 umstellt), `fmt_wday_date` („Mo 12.10.“ / „Mon, Oct 12“), `data_ctx`, `plural_index`, `formats_of`, `use_language`. Fehlt `formats.json`, gelten die deutschen Formate aus `Tx.FORMATS_DE` — die deutsche Ausgabe hängt an keiner Datei. | 1.2, 1.7 |
+| L1-3 | Fehlende Dateien | Fehlen **alle** Basis-PO einer Sprache, bleibt der Lauf deutsch (Warnung); fehlt eine, fehlen nur deren Texte (Warnung). Der Laufzeit-Leser (`read_messages`, zwei native RegEx-Durchgänge, dann nur die übersetzten Einträge) überspringt fehlerhafte Zeilen still — die Regeln prüfen `PoFile.parse` in `i18n.sh check` und `test_11_po_rules`; `test_11_po` hält beide Leser gleich. Eine Zeile „[LocaleLoader] en: 4 PO files, … messages (… ms)“ meldet jedes Laden mit Dateien; Deutsch ohne Paket-PO liest keine Datei und schreibt nichts. | 1.9 |
+| L1-4 | „Automatisch“ | die Systemsprache, wenn sie eine der Sprachen aus `languages.json` ist, sonst Englisch (Kap. 1.9 verallgemeinert für eine dritte Sprache). Gespeichert wird `auto`, `de` oder `en`; ein unbekannter Wert gilt als `auto`. Flüchtige Läufe ohne `--lang`: Deutsch; ein unbekannter `--lang`-Code: Deutsch mit Warnung. | 1.9 |
+| L1-5 | Wechsel im Titel | Der Katalog wechselt sofort (`Game.apply_language(true)`), der Titel baut sich über `Router.goto(SCENE_TITLE, {"options": "language"})` neu auf und öffnet die Optionen wieder auf der Zeile — kein Neustart. | 1.9 |
+| L1-6 | Lint | `tr("…")` und `tr_text("…")` gelten noch nicht als `Tx` (L2 stellt sie um). Ausnahmen je Datei (Validatoren, `RtCheck`, Galerien, Debug-Overlay, die Bots, die eingefrorene CTB-Engine, die Sprach-Maschinerie) und je Zeile (`# no-i18n: <Grund>`); ein einzelnes Zeichen ist kein Text. | 1.12 |
+| L1-7 | Extraktor | Datentexte aus den JSON-Dateien selbst statt über `GameData` (die Normalisierung fügt keine Texte hinzu; das msgid ist der geschriebene Text); Kontexte nach Kap. 1.4, Stempelduell-Daten mit `stempel.<datei>`; Code unter `core/stempel/**` gehört zur Domäne `stempel`. Übersetzerkommentare `#.` mit `max N` (Limits aus den Validator-Konstanten; Fähigkeitsnamen: höchstens so lang wie deutsch), Tag und Stimme der Sprechzeilen und der Bedeutung der Platzhalter; Fundstellen `#:` als `<datei>:<id>.<feld>` bzw. `<skript>:<zeile>`; `%`-msgids des Codes tragen `#, c-format`, damit `msgfmt --check-format` die Platzhalter prüft. Szenentexte: heute keine. | 1.4, 1.11 |
+| L1-8 | Aktualität | „POT aktuell“ und „PO gemischt“ prüft nur `i18n.sh check` (braucht GNU gettext), nicht `check.sh`: Sonst bräche jeder parallele Branch mit neuen Texten `check.sh`, bevor er `extract` lief. `merge` behält die Reihenfolge der POT (der Extraktor sortiert schon stabil) statt `--sort-by-file`. | 1.11 |
+| L1-9 | Determinismus-Test | `test_11_lang_determinism` spielt eine Kampagne (Safe Room, Echtzeitkampf auf Autopilot, Lootbox, Rast), eine Staffel-Nacht (`sleep`, Sendepause, 30 h `away`; von `RunSim` aufgezeichnet, über `Game.replay_log` nachgespielt) und das Golden-Stempelduell auf Deutsch und mit vollem englischem Katalog (jedes msgid der vier POT übersetzt, englische Formate): gleicher `StateHash`, gleiches Run-Log (ohne die zufällige `run_id`), gleiche Kampfereignisse ohne `text`, gleiches Duell; ein deutsches Run-Log spielt englisch auf denselben Hash. | 1.10 |
+| L1-10 | Nicht in L1 | `test_11_terms_en` und die Capture-Rezepte `en_*` kommen mit L3/L4 — ohne englische Texte gibt es nichts zu prüfen. | 1.12, 5.10 |
+| L1-11 | Layout | Die Locale selbst verschiebt kein Layout: Labels mit Umbruch brechen deutsche Texte unter `set_locale("en")` genauso um wie unter `"de"` (Zeilenzahl und Mindestgröße gleich, headless geprüft). Bis L3 ändert `--lang=en` also nur die Zahlen; die englischen Captures (L4) prüfen erst die Übersetzungen. | 1.8 |
+| L1-12 | Laufzeit-Texte aus 12 | Staffel-Skripte des KI-Showrunners (12) kommen zur Laufzeit schon in der Zielsprache: Sie laufen an `Tx.t` vorbei und haben keine msgids; nicht jeder angezeigte Text steht in einer POT. | 1.11 |
+| L1-13 | Startzeit | Was L1 einem deutschen Start hinzufügt, ist fast nur Kompilierzeit: `Tx` und `LocaleLoader` (Sprachwahl, Aufbau, Laufzeit-Leser); `apply("de")` liest keine Datei. Deshalb liegen der strenge Parser und der Schreiber in `PoFile` (nur Werkzeuge und Tests) — das senkt die Kompilierzeit von `LocaleLoader` um ≈ 40 %. Die Uhr der Log-Zeile steht in `Game.apply_language`, nicht im Kern (`test_m8_no_global_rng`: keine Uhr unter `core/`). Messwerte unten. | 1.2, 5.9 |
+| L1-14 | Regeln der Paket-PO | Die PO-Regeln (`core/data/validators/po.gd`, vorher `tests/tools/i18n/po_rules.gd`) laufen beim Laden eines Pakets für jede `locale/<sprache>.po` (`validators/pack.gd`, Kap. 3.5 Nr. 4): Ein Verstoß macht das Paket ungültig (Fehlerkarte), dazu muss die Sprache im Kopf dem Dateinamen entsprechen. Die Grenzen der Basis-Einträge, die ein Override ersetzt, kennen nur die POT-Dateien (nicht im Export): `test_11_po_rules` und `i18n.sh check` (dort auch `msgfmt` über die Paket-PO) prüfen sie zusätzlich. Im Kern prüft `PoRules.missing_glyphs` den Standard-Font selbst — der Kern darf `scenes/ui/ui_util.gd` nicht laden. | 3.5, 3.6 |
+| L1-15 | Sprachen eines Pakets | `pack.json → languages` begrenzt die Optionszeile (`setting_values(allowed)`) und die Wahl (`resolve`, außerhalb gilt `default_lang`); `PackLoader` prüft die Codes gegen `locale/languages.json` statt gegen eine eigene Liste. Die Overrides von „Testbild“ wirken nur, wo die Anzeige `Tx` fragt: Deshalb gehen die Bootkarte „präsentiert“ und der Untertitel des Titels schon jetzt über `Tx.t` (`PENDING` je −1); der Rest der Codetexte folgt mit L2. | 1.9, 3.6, 3.14 |
+
+**Messwerte** (Box mit 4 Kernen, parallel ausgelastet von anderen Agenten; Spannen statt Einzelwerte):
+
+- `tools/check.sh` (voll, nach dem Merge von 11-P1): **grün** — 1 933 Tests bestanden, 0 fehlgeschlagen, Testlauf
+  1 033 s, mit Import und Smoke 1 091 s Wandzeit (Last ≈ 6–9). Zwei Läufe davor unter höherer Last scheiterten nicht an
+  L1: einmal am Zeitbudget von `test_09_zone_generator` und am Rundungs-Flake von `test_m2_show` (siehe „Offen“),
+  einmal am 1 200-s-Limit des Testlaufs. `tools/i18n.sh check` grün (Basis-PO und die PO von „Testbild“).
+- Fullrun (`--strategy=all`, `--hero=mopsula`, `--liga=1`, `--liga=2`) gegen `main` vor P1 (`a8c48a5`) und nach P1
+  (`0514cf5`): jeweils `fullrun.sh: OK`, dieselben Zeilen „FULLRUN: OK …“ (thorough `floor_time=320 battles=20
+  frames=16739`, rush `427/22/23926`, dawdle `313/21/29733`, Mopsula `375/20/16389`, Liga 1 `374/23/20744`, Liga 2
+  `319/20/16695`) und dieselben Ereigniszeilen (118, 130, 123, 115, 115, 124, 112); `--strategy=all --lang=en` gibt
+  dieselben Zeilen wie der deutsche Lauf (auch alle Ereigniszeilen). Die Zeilen „FULLRUN: stats“ sind bis auf den
+  Münzwurf der Darstellung in `mod_tags` gleich
+  (ob M.O.D. im Safe Room die Hobby-Variante von `persona_safe_room` sagt, entscheidet `Show._fx_rng` nach
+  `randomize()`): Er wechselt auch zwischen zwei Läufen desselben Builds (`main` gegen `main` geprüft; derselbe Befund
+  wie in „Stand 11-P1“). Verglichen mit diesem einen Feld normalisiert.
+- Start (Box unter Last 8–16, Spannen über abwechselnde Läufe): `tools/perf.sh --only=startup` (Xvfb, je 2 Läufe):
+  `main` Start bis Hauptschleife 4,6–8,8 s, Titel interaktiv 17,9–28,9 s; `ptd/l1` 9,4–12,5 s bzw. 26,0–40,8 s. Der
+  Boot-Timer allein (je 6 Läufe `main` / L1 deutsch / L1 englisch): Hauptschleife 5,7–10,7 / 7,2–12,6 / 4,9–11,7 s,
+  Titel 11,7–18,4 / 14,3–27,6 / 12,5–21,7 s — Englisch (mehr Arbeit) liegt unter Deutsch: Das Rauschen ist größer als
+  die ganze Messgröße. Genauer: die CPU-Zeit eines Headless-Starts (je 9 Läufe) `main` 4,98–5,33 s, L1 deutsch
+  4,99–5,61 s, L1 englisch 4,94–5,79 s (Minima +14 ms bzw. −36 ms), und im Prozess gemessen (Thread-CPU-Zeit, 21
+  Wiederholungen, Last ≈ 7) das, was L1 einem Start hinzufügt: `Tx` kompilieren 8–12 ms, `LocaleLoader` 20–24 ms (vor
+  der Abspaltung von `PoFile` 32–43 ms), `apply("de")` < 0,1 ms, `apply("en")` mit den vier leeren PO 3–8 ms.
+  **Deutsch ≈ +30–35 ms CPU unter Last, Englisch ≈ +8 ms mehr — innerhalb von +50 ms;** mit vollem Katalog P-5.
+- Extraktor: `ui` 70, `data` 1 537, `mod_lines` 728, `stempel` 242 msgids (zusammen 2 577, noch keine Pluralformen);
+  89 dynamische Aufrufe (`tr(def.name)`, `tr_text(…)` mit Variablen; die Daten sind ihre Quelle, L2 stellt sie auf
+  `Tx.data` um), 34 msgids in mehreren Domänen oder Kontexten. „Testbild“: `en.po` 4 Einträge (drei Paket-Texte, ein
+  Override), `de.po` 1 Override; `i18n.sh stats --pack=game/packs/testbild` (Namensprüfung, Kap. 3.6) warnt bei zwei
+  Basis-Texten, die die alte Königin noch nennen (Quest-Ziel „Besiege die Rattenkönigin von Gleis 9.“ und die
+  beibehaltene Bossansage) — das Paket lässt sie als Beispiel der Warnung stehen.
+- `PENDING`: 911 Funde in 91 Dateien (mit den Texten, die 11-P1 brachte: `save_codec.gd` 3, `boot.gd` 6,
+  `slot_select.gd` 16) — `scenes/ui` 347, `scenes/stempel` 181, `scenes/title` 96, `core/season` 78, `scenes/combat`
+  67, `scenes/exploration` 43, `scenes/safe_room` 36, `core/show` 34, der Rest 29.
+
+**Offen** (für die Folgepakete):
+
+- **Merges nach L1:** Pakete, die vor L1 begonnen haben (09 ST1-H, ST1-I), bringen deutsche Spielertexte ohne `Tx`
+  mit, und `test_11_literals` meldet ihre Dateien. Beim Merge trägt der Integrator sie mit den Zahlen von
+  `tools/i18n.sh lint` in `PENDING` ein (oder hüllt die Texte in `Tx.t`) und lässt `i18n.sh extract` und `merge`
+  laufen — so geschehen mit den Texten von 11-P1. Arbeit, die nach L1 beginnt, schreibt Spielertexte gleich mit
+  `Tx.t` (02_TECH §13.1).
+- **L2:** Namens-Tabellen in Konstanten (`UiUtil.ELEMENT_NAMES`, `SaveCodec.MSG_*`, `boot.gd` `PACK_ERROR_TEXTS` u. a.)
+  werden `static var X := {"common": Tx.m("Gewöhnlich")}` (markiert für den Extraktor), übersetzt erst in der Anzeige
+  mit `Tx.t`; die 89 dynamischen Aufrufe gehen auf `Tx.data(table, id, text)` — erst dann zeigt das Spiel die
+  englischen Namen von „Testbild“; `pack.json → name` über die Paket-PO (Kap. 3.6, z. B. Kontext `pack`);
+  `events.json` (F-17).
+- **PB:** CI-Schritte `tools/i18n.sh check` (braucht `apt-get install gettext`) und `fullrun.sh --strategy=all
+  --lang=en` mit Vergleich der Zeilen „FULLRUN: stats“ und „FULLRUN: OK“ gegen den deutschen Lauf — mit dem
+  Münzwurf in `mod_tags` normalisiert, oder M6/M2 setzen `Show._fx_rng` im Full-Run-Bot auf einen festen Seed (dann
+  sind die Zeilen bitgleich).
+- **Befunde für andere Pakete** (beim Gate gesehen, nicht durch L1):
+  `test_m2_show.test_show_battle_events_signals_and_lines` schlägt selten fehl — der Test rückt `Show._now` um genau
+  `RT_LINE_GAP_SEC` vor, und liegt `_now` knapp unter einer Zweierpotenz (im vollen Lauf ≈ 506–512 s), rundet
+  `(_now + 6) − _now` unter 6,0, und die Zeile fällt weg (Abhilfe im Test: `+ RT_LINE_GAP_SEC + 0.01`);
+  `test_09_zone_generator` prüft die längste Bauzeit gegen 250 ms und scheitert unter Last; die volle Testsuite
+  braucht unter Last 1 170–1 250 s, `check.sh` erlaubt 1 200 s.
+- **Vor EN-1 (erster englischer Build):** „Automatisch“ zeigt auf englischen Systemen bis L3 deutsche Texte mit
+  englischen Formaten.
+- **L4:** Ladezeit auf dem Referenz-Telefon (P-5); wenn nötig ein `user://`-Cache oder der beim Export vorkompilierte
+  Katalog.
 
 ### 5.5 L2 — Codetexte bereichsweise
 
@@ -1552,7 +1709,7 @@ Etage 1, Gegner, Gegenstände, Achievements), dann Staffel-Inhalte, dann das Ste
 | **Bitgleich ohne Paket, auf Deutsch** | P1, L1, L2, A1, MB, PB | `tools/fullrun.sh --strategy=all` liefert dieselben Zeilen „FULLRUN: stats {…}“ und „FULLRUN: OK …“ wie vor dem Paket; `DB.data_hash()` ohne Paket unverändert; `test_r1_rt_golden`, `test_sd_engine_golden`, `test_sd_golden` grün |
 | **Sprache neutral** | ab L1 | `fullrun.sh --strategy=all --lang=en` liefert dieselben Zeilen wie der deutsche Lauf; `test_11_lang_determinism` grün |
 | Paket | P1, PB | `pack_check.sh game/packs/testbild` grün |
-| Start | L1, P1 | Startzeit + ≤ 50 ms gegenüber vorher (`tools/perf.sh`) **[zu messen]** |
+| Start | L1, P1 | Startzeit + ≤ 50 ms gegenüber vorher (`tools/perf.sh`); L1 gemessen (Kap. 5.4 „Stand 11-L1“) |
 | Übersetzung | L3, L4 | `i18n.sh check` grün; Builds, die als englisch ausgeliefert werden: 100 % übersetzt, 0 „fuzzy“ |
 | Layout | L4 | englische Captures ohne Überlauf (Sichtprüfung), Längenregeln in `test_11_po_rules` grün |
 | IP | L4, PB | Distanz-Review der englischen Begriffe abgeschlossen; `ip_firewall.sh scan` grün |

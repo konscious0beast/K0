@@ -3,8 +3,9 @@ extends TestCase
 ## pack load clean; the renamed boss, the patched and the missing line (the required tags still hold), the new look,
 ## Graf Mopsula's colours through DB.party_model (art.json, never in the pack hash), data_hash ≠ the base hash with the
 ## element pack:testbild:<hash>, the run-log header and the save block, the refusals (a Testbild save without the pack:
-## other_pack; after an overlay change: other_pack_version) — and without the pack everything as before. The parts with
-## the pack's PO files (English boss name, the overrides) come with 11-L1.
+## other_pack; after an overlay change: other_pack_version) — and without the pack everything as before. 11-L1 adds the
+## pack's PO files: its texts in English through locale/en.po, the override of a base entry (pack PO > base PO > msgid)
+## and of a German code text through locale/de.po.
 
 const Kit := preload("res://tests/fixtures/packs/pack_kit.gd")
 const ROOT: String = "user://test_11_testbild"
@@ -14,14 +15,18 @@ const LINE_KEPT: String = "mod_boss_intro_enm_boss_rattenkoenigin_01"
 const LINE_GONE: String = "mod_chat_bark_03"
 
 var _prev_data: GameData = null
+var _lang_was: String = "de"
 
 
 func before_each() -> void:
 	Kit.rmrf(ROOT)
 	_prev_data = DB.data
+	_lang_was = Tx.lang()
 
 
 func after_each() -> void:
+	LocaleLoader.apply(_lang_was)                  # 11-L1: the base catalog again (no pack PO)
+	Kit.rmrf(BASE_LOCALE)
 	DB.data = _prev_data
 	Game.state = null
 	Game.run_log = null
@@ -162,3 +167,74 @@ func test_without_the_pack_everything_is_as_before() -> void:
 	assert_eq(DB.data_hash(), "|".join(parts).sha256_text(), "data_hash: the formula of before P1, no pack element")
 	assert_eq(DB.pack, null, "the test run plays the base game")
 	assert_eq([DB.pack_error, DB.pack_via, DB.ok], ["", "", true])
+
+
+# --- 11-L1: the pack's PO files (11 §3.6, §3.14) ----------------------------------------------------------------------
+
+const SUBTITLE: String = "Eine Sendung des NOVA SYNDIKAT"     # the title screen's subtitle (a base entry)
+const BOOT_SUB: String = "präsentiert"                         # the boot card's second line (a German code text)
+const BASE_LOCALE: String = "user://test_11_testbild_locale"
+
+
+## English with the pack: its three texts through locale/en.po by their table contexts (11 §1.4) and the override of the
+## subtitle; German with the pack: the override of the boot card's code text; without the pack: the msgids again.
+func test_english_texts_and_the_overrides_through_the_pack_po() -> void:
+	var p: PackDef = PackLoader.read(Kit.PACKS, Kit.TESTBILD)
+	var d: GameData = Kit.testbild_data()
+	var line: String = ""
+	for l: ModLineDef in d.mod_lines("boss_intro:" + BOSS):
+		if l.id == LINE_PATCHED:
+			line = l.text
+	var look: String = str(d.look("lk_outfit_testbild").get("name", ""))
+	var en: Dictionary = LocaleLoader.apply("en", LocaleLoader.pack_dir(p))
+	assert_eq(en["lang"], "en")
+	assert_eq((en["files"] as PackedStringArray)[(en["files"] as PackedStringArray).size() - 1],
+		"res://packs/testbild/locale/en.po", "the pack PO after the four base files")
+	assert_eq(Tx.data("enemies", BOSS, d.enemy(BOSS).name), "The Test Pattern Queen of Track 9", "the boss name")
+	assert_eq(Tx.data("mod_lines", LINE_PATCHED, line),
+		"Signal trouble on Track 9! The Test Pattern Queen has taken over the picture. Don't touch that dial!")
+	assert_eq(Tx.data("looks", "lk_outfit_testbild", look), "Test Pattern")
+	assert_eq(Tx.t(SUBTITLE), "A NOVA Media Group test broadcast", "the override of a base entry")
+	assert_eq(Tx.t(BOOT_SUB), BOOT_SUB, "German overrides stay in de.po")
+	var de: Dictionary = LocaleLoader.apply("de", LocaleLoader.pack_dir(p))
+	assert_eq(de["files"], PackedStringArray(["res://packs/testbild/locale/de.po"]), "German: no base PO, the pack's")
+	assert_eq(Tx.t(BOOT_SUB), "präsentiert im Testbild", "a German code text overridden (11 §3.6)")
+	assert_eq(Tx.data("enemies", BOSS, d.enemy(BOSS).name), "Die Testbild-Königin von Gleis 9",
+		"German shows the overlay's own text")
+	LocaleLoader.apply("de")
+	assert_eq([Tx.t(BOOT_SUB), Tx.t(SUBTITLE)], [BOOT_SUB, SUBTITLE], "without the pack: the msgids")
+
+
+## Pack PO > base PO > msgid (11 §3.6): over a base catalog that translates the subtitle, the pack's entry wins; base
+## entries the pack does not name stay.
+func test_the_pack_po_wins_over_the_base_po() -> void:
+	var p: PackDef = PackLoader.read(Kit.PACKS, Kit.TESTBILD)
+	Kit.write_text(BASE_LOCALE.path_join("en/ui.po"), "\n".join(PackedStringArray([
+		"msgid \"\"", "msgstr \"\"", "\"Language: en\\n\"", "\"Content-Type: text/plain; charset=UTF-8\\n\"",
+		"\"Plural-Forms: nplurals=2; plural=(n != 1);\\n\"", "",
+		PoFile.po_field("msgid", SUBTITLE), PoFile.po_field("msgstr", "A NOVA Media Group broadcast"), "",
+		PoFile.po_field("msgid", BOOT_SUB), PoFile.po_field("msgstr", "presents"), ""])))
+	var base: Translation = LocaleLoader.build("en", "", BASE_LOCALE)["translation"]
+	var both: Translation = LocaleLoader.build("en", p.root, BASE_LOCALE)["translation"]
+	assert_eq(String(base.get_message(SUBTITLE)), "A NOVA Media Group broadcast", "the base entry")
+	assert_eq(String(both.get_message(SUBTITLE)), "A NOVA Media Group test broadcast", "the pack's entry wins")
+	assert_eq(String(both.get_message(BOOT_SUB)), "presents", "a base entry the pack does not name stays")
+	assert_eq(String(both.get_message("Die Testbild-Königin von Gleis 9", "enemies")),
+		"The Test Pattern Queen of Track 9", "the pack's own texts")
+
+
+## 11 §3.5 Nr. 4: the PO rules run when a pack loads (validators/pack.gd) — a pack PO that breaks them makes the pack
+## invalid (DB: pack_invalid, the boot error card), like every other pack rule.
+func test_a_pack_po_breaking_the_rules_fails_the_pack() -> void:
+	Kit.copy_pack(Kit.PACKS, Kit.TESTBILD, ROOT)
+	var path: String = ROOT.path_join("testbild/locale/en.po")
+	Kit.write_text(path, FileAccess.get_file_as_string(path).replace("on Track 9!", "on Track {floor}!"))
+	var d: GameData = Kit.data_with(PackLoader.read(ROOT, Kit.TESTBILD))
+	assert_true(Kit.has_error(d.errors, "pack[testbild]: locale/en.po:"), str(d.errors))
+	assert_true(Kit.has_error(d.errors, "{floor} is not in the msgid"), "a placeholder the msgid lacks")
+	assert_true(Kit.has_error(d.errors, "digits [], the msgid has [\"9\"]"), "a number the msgid has")
+	Kit.write_text(ROOT.path_join("testbild/locale/de.po"),
+		FileAccess.get_file_as_string(Kit.PACKS.path_join("testbild/locale/de.po")).replace("Language: de", "Language: en"))
+	var d2: GameData = Kit.data_with(PackLoader.read(ROOT, Kit.TESTBILD))
+	assert_true(Kit.has_error(d2.errors, "header Language 'en', the file is locale/de.po"), str(d2.errors))
+	assert_eq(Kit.testbild_data().errors, PackedStringArray(), "the real Testbild keeps every rule")

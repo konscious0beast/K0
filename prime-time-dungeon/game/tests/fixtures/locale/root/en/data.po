@@ -1,0 +1,20 @@
+msgid ""
+msgstr ""
+"Language: en\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: data/statuses.json:sts_taunt.name
+msgctxt "statuses:sts_taunt"
+msgid "Provoziert"
+msgstr "Taunting"
+
+#: data/statuses.json:sts_taunted.name
+msgctxt "statuses:sts_taunted"
+msgid "Provoziert"
+msgstr "Taunted"
+
+#: data/items.json:itm_potion.name
+msgctxt "items"
+msgid "Gift"
+msgstr "Poison flask"

@@ -48,25 +48,14 @@ const GLYPH_FALLBACKS: Dictionary = {"→": "-", "←": "-", "↑": "+", "↓": 
 
 # --- formatting -------------------------------------------------------------------------------------------------------
 
-## 12345 → "12.345" (German thousands separator).
+## 12345 → "12.345" (Tx: the thousands separator of the language, 11 §1.7; English "12,345").
 static func fmt_int(n: int) -> String:
-	var neg: bool = n < 0
-	var s: String = str(absi(n))
-	var out: String = ""
-	var count: int = 0
-	for i in range(s.length() - 1, -1, -1):
-		out = s[i] + out
-		count += 1
-		if count % 3 == 0 and i > 0:
-			out = "." + out
-	return ("-" if neg else "") + out
+	return Tx.fmt_int(n)
 
 
-## +12 / -3 / ±0 style (always with sign).
+## +12 / -3 / 0 (a sign for positive values; Tx.fmt_signed).
 static func fmt_signed(n: int) -> String:
-	if n > 0:
-		return "+" + fmt_int(n)
-	return fmt_int(n)
+	return Tx.fmt_signed(n)
 
 
 ## Seconds → "mm:ss" ("h:mm:ss" from one hour); negative → "00:00".
@@ -77,11 +66,9 @@ static func fmt_time(sec: int) -> String:
 	return "%02d:%02d" % [s / 60, s % 60]
 
 
-## Percentage with one decimal, German comma ("36,0 %"). Values in 0..1.
+## Percentage with one decimal ("36,0 %"; Tx: English "36.0%"). Values in 0..1.
 static func fmt_pct(p: float, decimals: int = 1) -> String:
-	var v: float = clampf(p, 0.0, 1.0) * 100.0
-	var s: String = ("%." + str(decimals) + "f") % v
-	return s.replace(".", ",") + " %"
+	return Tx.fmt_pct_f(clampf(p, 0.0, 1.0), decimals)
 
 
 ## Hex string → Color with fallback (no dependency on Palette, which may be an M4 stub).
@@ -433,8 +420,9 @@ static func skill_def(skill_id: String) -> SkillDef:
 	return DB.skill(skill_id) if skill_id != "" and DB.has_id("skills", skill_id) else null
 
 
+## The translated text (Tx.t, 11 §1.2): the msgid itself without a catalog (German).
 static func tr_text(s: String) -> String:
-	return TranslationServer.translate(s)
+	return Tx.t(s)
 
 
 ## Price of an item in the vending machine (Shop, else ItemDef.price).

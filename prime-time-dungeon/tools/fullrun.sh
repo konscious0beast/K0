@@ -7,7 +7,7 @@
 # Usage:
 #   tools/fullrun.sh [--strategy=thorough|rush|dawdle|typical|all] [--hero=kai|mopsula] [--seed=<int>]
 #                    [--pace=fast|human] [--liga=0|1|2] [--persona=none|canon|random|<org_id>]
-#                    [--rt-profile=typical|perfect|sloppy] [--log-dir=<dir>]
+#                    [--rt-profile=typical|perfect|sloppy] [--lang=de|en] [--log-dir=<dir>]
 #     thorough (default)  every group, chest, event and room; bosses; stairs → summary → credits
 #     rush                safe rooms, gates and bosses only (under-levelled)
 #     dawdle              idles after the first save until the floor collapses → Sendeschluss → load → finishes
@@ -23,6 +23,8 @@
 #   --rt-profile=…        the person the RtBotPlayer plays each combat as (07 §12.5; default typical) — the campaign
 #                         fights in real time only since R5b part 2b (07 §12.6; the CTB engine lives on in the
 #                         Stempelduell, 10)
+#   --lang=en             the run's language (docs/11 §1.9; default German like every transient run): its
+#                         "FULLRUN: stats" and "FULLRUN: OK" lines must equal the German run's (11 §1.10, §5.9)
 #
 # Env: GODOT=<path to godot 4.7 binary> (default: "godot" on PATH)
 set -uo pipefail
@@ -39,6 +41,7 @@ PACE_ARG=()
 LIGA_ARG=()
 PERSONA_ARG=()
 PROFILE_ARG=()
+LANG_ARG=()
 LOG_DIR=""
 for a in "$@"; do
   case "$a" in
@@ -50,6 +53,7 @@ for a in "$@"; do
     --liga=0|--liga=1|--liga=2) LIGA_ARG=("$a") ;;
     --persona=none|--persona=canon|--persona=random|--persona=org_*) PERSONA_ARG=("$a") ;;
     --rt-profile=typical|--rt-profile=perfect|--rt-profile=sloppy) PROFILE_ARG=("$a") ;;
+    --lang=*) LANG_ARG=("$a") ;;
     --log-dir=*) LOG_DIR="${a#--log-dir=}" ;;
     *) echo "fullrun.sh: unknown argument $a" >&2; exit 2 ;;
   esac
@@ -98,17 +102,18 @@ for run in "${RUNS[@]}"; do
   PERS=()
   [ -n "$pers" ] && PERS=("$pers")
   echo "== full run: strategy $st hero $hero ${SEED_ARG[*]:-} ${PACE_ARG[*]:-} ${LIGA_ARG[*]:-} ${PERS[*]:-}" \
-    "${PROFILE_ARG[*]:-} (Floor 1, headless, fixed 60 fps) =="
+    "${PROFILE_ARG[*]:-} ${LANG_ARG[*]:-} (Floor 1, headless, fixed 60 fps) =="
   start=$(date +%s)
   out="$(timeout 900 "$GODOT" --headless --path "$WORK" --fixed-fps 60 --quit-after "$QUIT_AFTER" \
         -- --autoplay=full "--strategy=$st" "--hero=$hero" "${SEED_ARG[@]}" "${PACE_ARG[@]}" "${LIGA_ARG[@]}" \
-        "${PERS[@]}" "${PROFILE_ARG[@]}" 2>&1 | filter_noise)"
+        "${PERS[@]}" "${PROFILE_ARG[@]}" "${LANG_ARG[@]}" 2>&1 | filter_noise)"
   code=${PIPESTATUS[0]}
   end=$(date +%s)
   log_name="fullrun_$st"
   [ "$hero" != "kai" ] && log_name="fullrun_${st}_$hero"
   [ ${#LIGA_ARG[@]} -gt 0 ] && log_name="${log_name}_liga${LIGA_ARG[0]#--liga=}"
   [ ${#PERS[@]} -gt 0 ] && log_name="${log_name}_persona_${PERS[0]#--persona=}"
+  [ ${#LANG_ARG[@]} -gt 0 ] && log_name="${log_name}_${LANG_ARG[0]#--lang=}"
   if [ -n "$LOG_DIR" ]; then mkdir -p "$LOG_DIR" && printf '%s\n' "$out" > "$LOG_DIR/$log_name.log"; fi
   echo "$out" | grep -E '^FULLRUN: (\[|stats|OK)|Assertion failed|SCRIPT ERROR|ERROR:' | grep -v '^FULLRUN: \[[0-9]*\]   hype' \
     | tail -n 120

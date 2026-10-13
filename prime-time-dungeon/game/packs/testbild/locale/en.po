@@ -1,0 +1,38 @@
+# Inhaltspaket „Testbild“ — English (docs/11 §3.6, §3.14): the three texts the pack brings (its boss name, its boss
+# intro line, its new look) and one override of a base entry (the title screen's subtitle). LocaleLoader lays this file
+# over the base PO: pack > base > msgid. Glossary: docs/11 §2 („Gleis 9“ → Track 9, „NOVA SYNDIKAT“ → NOVA Media Group).
+msgid ""
+msgstr ""
+"Project-Id-Version: PRIME TIME DUNGEON pack testbild 1.0.0\n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: 2026-10-13 00:00+0000\n"
+"Last-Translator: PRIME TIME DUNGEON team\n"
+"Language-Team: English\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: data/enemies.json:enm_boss_rattenkoenigin.name
+msgctxt "enemies"
+msgid "Die Testbild-Königin von Gleis 9"
+msgstr "The Test Pattern Queen of Track 9"
+
+#. max 110
+#. tag boss_intro:enm_boss_rattenkoenigin, voice mod
+#: data/mod_lines.json:mod_boss_intro_enm_boss_rattenkoenigin_02.text
+msgctxt "mod_lines"
+msgid "Sendestörung auf Gleis 9! Die Testbild-Königin hat das Bild übernommen. Bitte nicht umschalten!"
+msgstr "Signal trouble on Track 9! The Test Pattern Queen has taken over the picture. Don't touch that dial!"
+
+#. max 16
+#: data/looks.json:lk_outfit_testbild.name
+msgctxt "looks"
+msgid "Testbildstreifen"
+msgstr "Test Pattern"
+
+#. the title screen's subtitle — an override of the base entry (docs/11 §3.6)
+#: scenes/title/title.gd
+msgid "Eine Sendung des NOVA SYNDIKAT"
+msgstr "A NOVA Media Group test broadcast"

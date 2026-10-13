@@ -88,6 +88,11 @@ das ist die normale Richtung `autoload ← core`. Spielregeln, die Live-Lauf und
 - `core/**` greift **nie** auf Autoloads (`Events`, `DB`, `Game`, `Show`, `Save`, `Router`, `Sfx`) oder den SceneTree zu.
   Daten kommen als `GameData`-Instanz, Zufall als `RandomNumberGenerator` per Parameter.
 - `art/**` greift nie auf `Game`, `Show`, `Save`, `Router` zu; `Sfx`/`DB` nur in Gallery-Szenen.
+- **Sprachen (11-L1):** `Tx` und `LocaleLoader` (`core/data/tx.gd`, `locale_loader.gd`) hängen nur von Godot
+  (`TranslationServer`, `Translation`) und `res://locale/*` ab; `Tx` hält Sprache, Katalog und Formate statisch (keine
+  Autoloads). Jede Schicht darf `Tx` zur **Anzeige** nutzen; der Kern übersetzt nie in Zustand, Befehle, Logs oder Hashes
+  (11 SP-4) und markiert eigene Anzeige-Texte nur mit `Tx.m()`. `Game._init` ruft `Game.apply_language()` →
+  `LocaleLoader.apply` (11 §1.9).
 - Inhaltspakete (11-P1, §0.9): `PackLoader`/`PackDef` liegen in `core/data` (rein; lesen Dateien unter `res://packs`) und
   hängen nur von `GameData`, `DataValidator` und `JsonUtil` ab; `DB._init()` ruft sie, sonst kein Autoload. Was ein
   Paket trägt, kennt der Rest über `GameData.pack_id`/`pack_fields()`/`pack_record()` — der Kern bekommt es mit den Daten.
@@ -735,7 +740,8 @@ Inhaltspakete (11-P1: `core/data/{pack_def,pack_loader}.gd`, `core/data/validato
 | `icon.svg` | M0 | App-Icon (handgeschriebenes SVG: „PTD“-Logo, Magenta/Cyan) |
 | `../.github/workflows/ptd-check.yml` (Repo-Root `K0/.github/…`) | M0 | CI (§12.4) |
 | `../tools/check.sh` | M0 | Import + Tests + Autoplay-Smoke, `--shot` (§11) |
-| `../tools/fullrun.sh` | M6 | Full-Run-Bot Etage 1 headless (§11.4.1; CI-Schritt §12.4) |
+| `../tools/fullrun.sh` | M6 | Full-Run-Bot Etage 1 headless (§11.4.1; CI-Schritt §12.4); `--lang=<code>` (11-L1) |
+| `../tools/i18n.sh` | 11 (L1) | Sprach-Werkzeuge (11 §1.11): `extract` (Extraktor → `locale/pot/*.pot`), `merge` (GNU `msgmerge`), `stats [--pack=]`, `check` (`msgfmt --check-format --check-header`, PO-Regeln, POT aktuell, PO gemischt), `lint` (deutsche Literale außerhalb von `Tx`) |
 | `../tools/perf.sh` | M0 (Phase C) | Performance-Probe unter Xvfb + Leak-Schleife (§12.5, `docs/PERFORMANCE.md`) |
 | `../tools/make_icons.sh` | M0 (Phase C) | Export-Icons und iOS-Startbilder aus `icon.svg` neu erzeugen (§12.3) |
 | `../tools/apple/release.sh`, `../tools/apple/PrimeTimeDungeon.entitlements` | M0 (Release) | Apple-Release-Schritte der CI-Jobs `apple-macos`/`apple-ios-testflight` (nur macOS-Runner mit Secrets) und die Entitlements der Mac-App (§12.4) |
@@ -769,10 +775,14 @@ Inhaltspakete (11-P1: `core/data/{pack_def,pack_loader}.gd`, `core/data/validato
 | `core/data/validators/marotten.gd` | 06-C | Privater Helfer (§0.3, ohne `class_name`; in `DataValidator` als `MarottenCheck` vorgeladen): Schema, Referenzen, Bedingungs-Schlüssel und Zeilen-Pflicht von `marotten.json`, Fuß-Wörter-Sperre (§4.4.17) |
 | `core/data/pack_def.gd` | 11 (P1) | `PackDef`: ein gelesenes Inhaltspaket — Felder von `pack.json`, Overlays, `art.json`, Dateiliste, `pack_hash`, `errors` (§0.9, 11 §3.3) |
 | `core/data/pack_loader.gd` | 11 (P1) | `PackLoader`: Aktivierung, Lesen, Kompatibilität, Zusammenführen mit Herkunft, Inhalts-Hash, Start für `DB` (§0.9, 11 §3.4–§3.9) |
-| `core/data/validators/pack.gd` | 11 (P1) | Privater Helfer (in `DataValidator` als `PackCheck`): die Paketregeln — Sperrlisten über alle Paket-Texte, `tone_exceptions`, Credits (11 §3.5 Nr. 4) |
+| `core/data/validators/pack.gd` | 11 (P1) | Privater Helfer (in `DataValidator` als `PackCheck`): die Paketregeln — Sperrlisten über alle Paket-Texte, `tone_exceptions`, Credits (11 §3.5 Nr. 4); seit 11-L1 auch die PO-Regeln der `locale/<sprache>.po` des Pakets (über `validators/po.gd`) |
+| `core/data/validators/po.gd` | 11 (L1) | Privater Helfer (als `PoRules`): die Regeln einer Übersetzung (11 §1.12) — Platzhalter ⊆ msgid, %-Direktiven, `#. max N`, Ziffern, Glyphen, Kopf; `check_pack_po` (Sprache im Kopf = Dateiname), `base_limits` (Grenzen der Basis-Einträge für Overrides), `pack_po_files`. Benutzt von `validators/pack.gd` (beim Laden eines Pakets), `test_11_po_rules` und `tools/i18n.sh check` |
 | `core/data/json_util.gd` | M0 | `JsonUtil`: Datei lesen, `to_int`, `to_str_array`, `vec2i_to_arr`, `arr_to_vec2i` |
 | `core/data/seed_util.gd` | M0 | `SeedUtil`: deterministische Seed-Ableitung (§4.6) |
 | `core/data/condition_expr.gd` | M0 | `ConditionExpr`: Parser/Auswerter für Achievement- und Szenen-Bedingungen (§4.4.9, §6.1) |
+| `core/data/tx.gd` | 11 (L1) | `Tx`: jeder Spielertext (`t`, `n`, `data`, `m`) und jedes Zahlen-, Zeit- und Datumsformat (`fmt_*`, `quote`) — statisch, ohne Autoloads; ohne angewendete Sprache gibt es die msgids und die deutschen Formate zurück (11 §1.2, §1.7) |
+| `core/data/locale_loader.gd` | 11 (L1) | `LocaleLoader`: Sprachwahl (`resolve`: `--lang`, flüchtige Läufe, Einstellung, Paket), eigener PO-Leser für den Start (`read_messages`), **eine** `Translation` je Sprache (Basis-PO, darüber die Paket-PO), Anmeldung beim `TranslationServer` und bei `Tx` (11 §1.2, §1.9) |
+| `core/data/po_file.gd` | 11 (L1) | `PoFile`: das PO-Format für Werkzeuge und Tests — strenger Parser mit Fehlern und Übersetzerkommentaren (`parse`), `messages`, Schreiber (`po_string`, `po_field`); nie auf dem Startweg (kostet keine Kompilierzeit beim Start, 11 §5.4 L1-13) |
 | `core/data/defs/status_def.gd` | M0 | `StatusDef` |
 | `core/data/defs/skill_def.gd` | M0 | `SkillDef` |
 | `core/data/defs/item_def.gd` | M0 | `ItemDef` |
@@ -897,6 +907,16 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `data/twists.json` | 06-D: Twist-Katalog des KI-Admins (20 Einträge, 11 im Slice wirksam, §4.4.18) |
 | `data/mod_filter.json` | 06-D: Wortlisten/Schwellen des Live-Zeilen-Filters (`ModLineFilter`, mod-brain `safety.py`); **nicht** in `GameData.TABLES` |
 | `data/events.json` | Live-/Offline-Events (M7 Inhalt, M8 Schema); **nicht** in `GameData.TABLES`, geladen von `EventCatalog` (§4.5); eigenes Format `{schema, events}` (Ausnahme von §4.1, 05 §10.1) |
+
+### 1.4a `locale/` (11, L1)
+
+| Datei | Zweck |
+|---|---|
+| `locale/formats.json` | Zahlen-, Zeit- und Datumsformate je Sprache (11 §1.7, SP-6), gelesen von `Tx` |
+| `locale/languages.json` | Sprachen des Spiels (Code, Eigenname); die erste ist die Quellsprache Deutsch (11 §1.9) |
+| `locale/contexts.json` | echte Homonyme einer Tabelle → `msgctxt` `<tabelle>:<id>` (11 §1.5, SP-2) |
+| `locale/pot/{ui,data,mod_lines,stempel}.pot` | msgid-Vorlagen der vier Domänen, geschrieben von `tools/i18n.sh extract` — nie von Hand |
+| `locale/en/{ui,data,mod_lines,stempel}.po` | Englisch (msgid = deutscher Text), gemischt mit `tools/i18n.sh merge`, übersetzt in 11-L3 |
 
 **`packs/` (11-P1, §0.9; nicht unter `data/`):** je Inhaltspaket ein Ordner `packs/<id>/` mit `pack.json`, Overlays
 `data/<tabelle>.json`, `art.json`, `locale/<sprache>.po` und README (11 §3.2; heute `testbild`), dazu `PUBLIC_PACKS`,
@@ -1119,8 +1139,16 @@ Jede Datei unter `tests/` gehört dem genannten Modul; `test_<modul>_*.gd` ist d
 | `tests/perf/perf_probe.gd` + `perf_runner.gd`, `tests/perf/boot_timer.gd` | Phase C | Mess-Werkzeug für `tools/perf.sh` (§12.5); keine Tests (kein `test_`-Präfix) |
 | `tests/tools/make_icons.gd` | Phase C | Icon-Generator für `tools/make_icons.sh` (§12.3) |
 | `tests/tools/apple_preset.gd` | Release | schreibt Team-ID, Bundle-ID, Build-Nummer und Signatur in eine Temp-Kopie der Presets (`tools/apple/release.sh export`, §12.3/§12.4) |
+| `tests/test_11_tx_format.gd` | 11 (L1) | `Tx.fmt_*` und die Texthelfer in beiden Sprachen; Deutsch Zeichen für Zeichen wie `UiUtil` und `SleepText` vor 11-L1; `formats.json` vollständig |
+| `tests/test_11_po.gd` | 11 (L1) | PO-Parser `PoFile` (Kontext, Plural, Fortsetzung, Escapes, `fuzzy`, Kopf, Fehler), Schreiber-Rundlauf, `build` mit Domänen und Paket-PO, Laufzeit-Leser ≡ Parser, voller Katalog ≤ 50 ms (`assert_time_budget`); Fixtures `msgfmt`-geprüft |
+| `tests/test_11_locale.gd` | 11 (L1) | Sprachwahl (auto/de/en, Systemsprache, `--lang`, flüchtige Läufe, Paket), ein Katalog beim `TranslationServer`, Paket-PO > Basis-PO, Deutsch ohne PO, Boot-Reihenfolge (Kindprozess mit `--lang=en`), Auto-Übersetzung aus (Fenster, Dialoge, Popups), Einstellung `[game] language`, Menüzeile (nur Titel, Neuaufbau), Export der `locale/`-Dateien |
+| `tests/test_11_po_rules.gd` | 11 (L1) | Regeln jeder Übersetzung in `locale/en/*.po` und in den PO-Dateien der Pakete (`packs/<id>/locale/<sprache>.po`, mit den Grenzen der Basis-Einträge): Platzhalter ⊆ msgid, %-Direktiven, Länge, Ziffern, Glyphen; Warnung `{count}` vor einem Wort |
+| `tests/test_11_literals.gd` | 11 (L1) | Lint: deutsche Literale außerhalb von `Tx` mit `PENDING` je Datei (schrumpft nur, 11 R11) |
+| `tests/test_11_lang_determinism.gd` | 11 (L1) | Kampagne mit Echtzeitkampf, Staffel-Nacht und Stempelduell auf Deutsch und Englisch: gleicher `StateHash`, gleiches Run-Log, gleiche Ereignisse ohne Text; ein deutsches Log läuft englisch bitgleich nach |
+| `tests/tools/i18n/*.gd` | 11 (L1) | Extraktor, Literal-Scanner, Lint und die Godot-Seite von `tools/i18n.sh` (keine Tests; die PO-Regeln liegen in `core/data/validators/po.gd`) |
+| `tests/fixtures/locale/**` | 11 (L1) | PO-Fixtures (`msgfmt`-geprüft), Paket-PO (en, de), Boot-Probe |
 | `tests/test_11_pack_loader.gd` | 11 (P1) | `PackLoader`: `read`, `merge` (Reihenfolge, RFC 7386, Fehler, geschützte IDs, `touches`, Herkunft), `content_hash`, `compat`, `active_id` (Feature-Tags simuliert, Debug und Release), `load_data`; Signaturen des Vertrags-Durchgangs 11-P1 |
-| `tests/test_11_pack_testbild.gd` | 11 (P1) | Beispielpaket „Testbild“ (11 §3.14) ohne die PO-Teile (L1) |
+| `tests/test_11_pack_testbild.gd` | 11 (P1, PO-Teile L1) | Beispielpaket „Testbild“ (11 §3.14); seit 11-L1 mit den PO-Teilen: englische Texte über die Paket-PO, Paket-PO > Basis-PO > msgid, deutscher Override, eine Paket-PO gegen die Regeln macht das Paket ungültig |
 | `tests/test_11_pack_records.gd` | 11 (P1) | `data_hash`, Köpfe, Bestenlisten-Eintrag, Spielstand-Block, alle Ablehnungen, Prüfung vor `_sanitize`, Fehlerkarte, Nutzerdaten je Paket; ohne Paket die Aufzeichnungen von vorher |
 | `tests/test_11_ip_firewall.gd` | 11 (P1) | IP-Firewall Schicht 1 (F-20: `PUBLIC_PACKS`/`PRIVATE_PACKS`, Lizenzblöcke, Orte, `.gitignore`, `PTD_REPO_VISIBILITY`) und Schicht 2 (Ausnahme nur für den IP-Abstand) |
 | `tests/fixtures/packs/pack_kit.gd`, `tests/fixtures/packs/lizenztest/` | 11 (P1) | Test-Kit der Paket-Tests und das Fixture-Paket mit Lizenzblock (`holder` „TEST – kein Rechteinhaber“) |
@@ -1206,6 +1234,7 @@ pointing/emulate_mouse_from_touch=true
 [internationalization]
 
 locale/fallback="de"
+rendering/root_node_auto_translate=false
 
 [layer_names]
 
@@ -1682,6 +1711,10 @@ func time_left() -> float             # state.floor_run.time_left_ticks / float(
 func clear_blocking_dialogs() -> void # _blocking_dialogs = 0 — Router at every goto (old screens freed), start_floor
 func set_dialog_presenter(active: bool) -> void   # ModDialog (M6) true in _ready, false in _exit_tree (false also clears)
 func apply_settings() -> void         # audio volumes (Sfx), fullscreen, quality (scaling_3d_scale etc.), emits settings_changed
+# --- Sprachen (11 §1.9, 11-L1) ---
+func apply_language(from_menu: bool = false) -> String   # in _init after the settings (before the first screen):
+	# LocaleLoader.resolve(settings.language, --lang, ephemeral → "de", OS language, DB.pack) → LocaleLoader.apply;
+	# from_menu: the title's options row — the choice wins over --lang and the ephemeral default. Returns "de" | "en".
 # --- KI-Admin (06 §5, Paket D) ---
 var mod_live: Node                    # ModLiveLink (autoload/mod_voice/mod_live_link.gd, Kind-Node, kein class_name); null ephemer
 func apply_twist(twist: Dictionary) -> String   # DER Eingang jedes M.O.D.-Eingriffs (Regie, M.O.D. live, Votes, QA):
@@ -5881,6 +5914,7 @@ Kampfstart/-ende/-peak, Teleports, Fallbacks, Replay-Prüfungen, M.O.D.-Tags, `h
 | 06 A × B | `tests/test_06ab_hero_talents.gd`: Feld-Talente nur der führenden Figur (Ganzzahl-Promille, Szene für Kai und Graf Mopsula, Wechsel im Safe Room), je Held:in Talent-Show + Replay-Hash + KI-Partner mit Talenten im Echtzeitkampf, Safe-Room-Layout Desktop und Handy (Trefferflächen ≥ 88) |
 | 06-C | Marotten (`test_06c_marotten`): Auswahl deterministisch je Seed/Etage (E1 nur Starter, möglichst ohne Wiederholung), jede Bedingung trifft/trifft nicht, ≤ 1 Herz je Vorliebe und Kampf, Wette → Box/Follower/Hype/`bets_won`/`show_bet`, Tutorial/Niederlage/Event-Lauf zahlen nichts, Pazifist (Erstbesuch, Countdown, kein Safe Room, Latch, Save/Load), Replay-Gleichheit; Liga (`test_06c_liga`): Stufen je gesteuerter Figur, Blocker, Faktoren beim Kampfstart eingefroren, Etagen-Bonus, Kette „Ohne alles“, Regel-Schalter im `rules_hash`, UI; Sponsor-Fenster-Entscheidungen (`test_06c_sponsor_display`); Balance-Bänder 06 §4.10 (seit R5b-2b Echtzeit: Liga-Schritt im Harness, 07 E31, §11.5); Integration Runde 4: Deckel des Liga-Follower-Bonus je Etage (`test_06c_liga_cap`), Bellen ≠ Anschleichen (`test_06ac_bark_opener`) |
 | 11-P1 | Inhaltspakete (11 Kap. 5.10): `test_11_pack_loader`, `test_11_pack_testbild`, `test_11_pack_records`, `test_11_ip_firewall` (Schichten 1 und 2); ohne Paket gleiche Köpfe, Digests, Spielstände und `data_hash`; Packs der Fehlerfälle zur Laufzeit in `user://`, nie verbotene Wörter in Repository-Dateien |
+| 11-L1 (Sprachen) | 11 §1.12: `test_11_tx_format` (jedes Format in beiden Sprachen, Deutsch Zeichen für Zeichen wie vor 11-L1), `test_11_po` (Parser, Laufzeit-Leser ≡ Parser, voller Katalog ≤ 50 ms), `test_11_locale` (Sprachwahl, ein Katalog beim `TranslationServer`, Boot-Reihenfolge, Auto-Übersetzung aus in allen Fenstern, Menüzeile, Export der `locale/`-Dateien), `test_11_po_rules`, `test_11_literals` (`PENDING` schrumpft nur: neue Spielertexte gehen durch `Tx`), `test_11_lang_determinism` (die Sprache wirkt nie auf Zustand, Run-Log oder Hash); außerhalb von `check.sh`: `tools/i18n.sh check` (POT aktuell, PO gemischt, `msgfmt`) und `fullrun.sh --strategy=all --lang=en` (dieselben Zeilen wie deutsch) |
 
 ---
 
@@ -5943,6 +5977,11 @@ Fallback auf `gl_compatibility` automatisch (`fallback_to_opengl3=true`). CI-Scr
 Gemeinsam für alle: `export_filter="all_resources"`, `include_filter="data/*.json"` (JSON sind keine Ressourcen und würden sonst
 fehlen — geprüft mit `--export-pack`), `exclude_filter="tests/*, art/gallery/*"`. Skripte werden als `.gdc` exportiert → Laufzeitcode
 darf **nie** `.gd`-Dateien per `DirAccess` suchen (DB lädt feste Dateiliste).
+Sprachen (11-L1, gemessen mit 4.7.2: `--export-pack` des Linux-Presets, Pack gemountet): `locale/*.json` und
+`locale/<sprache>/*.po` landen mit `all_resources` als Original-Textdateien im Export (JSON- bzw. Translation-Ressourcen),
+lesbar mit `FileAccess`; die `.pot`-Vorlagen (kein Ressourcentyp) bleiben draußen. Dafür braucht es keinen `include_filter`;
+`test_11_locale` prüft die Bedingung. Nebenbefund: Auch JSON außerhalb von `data/` wurde exportiert — `include_filter`
+bleibt als Absicherung.
 
 | name | platform | export_path | Optionen (Auszug) |
 |---|---|---|---|
@@ -6249,7 +6288,11 @@ und gelten 1:1; Zeiten sind CPU-gebunden und nur relativ (Vorher/Nachher) aussag
   `exp()` wird in diesen Klassen nicht benutzt).
 - Keine globalen `randi()/randf()` in `core/` und `art/kit/`; reine Darstellungs-Jitter (Kamera-Shake, Partikel) dürfen sie nutzen.
 - Ganzzahlen für HP/MP/Schaden/Credits; `float` nur für Verhältnisse, Zeiten, Hype.
-- Spielertexte: `tr("Deutscher Text")`; Datentexte: `tr(def.name)`; Formatierung mit `"…{name}…".format(ctx)` (Platzhalter §4.3).
+- Spielertexte **nur über `Tx`** (11 §1.2): `Tx.t("Deutscher Text")`, Mengen `Tx.n("{count} Kampf", "{count} Kämpfe", n)`,
+  Datentexte `Tx.data("items", def.id, def.name)`, Anzeige-Texte des Kerns nur markiert `Tx.m("…")`; Zahlen vor dem Einsetzen
+  mit `Tx.fmt_*`; Formatierung mit `"…{name}…".format(ctx)` (Platzhalter §4.3; ab zwei Argumenten benannt, 11 §1.5). `tr()` und
+  `UiUtil.tr_text()` sind Altbestand bis 11-L2. Neue deutsche Literale außerhalb von `Tx` meldet `test_11_literals` (Ausnahme:
+  Zeile mit `# no-i18n: <Grund>`).
 
 ### 13.2 `class_name`-Regeln
 

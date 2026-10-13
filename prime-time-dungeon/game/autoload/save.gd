@@ -18,7 +18,18 @@ var save_dir: String = "user://saves"        # tests may redirect, e.g. "user://
 var read_only: bool = false                  # Autoplay: true → save calls return OK without writing
 
 var _last_error: String = ""
+var _last_refusal: Dictionary = {}           # 11-P1: {"refusal": "other_pack", "pack": id} of the last _load_state
 var _name_re: RegEx = RegEx.create_from_string("^[A-Za-z0-9_\\-]+$")
+
+
+## Inhaltspakete (11-P1, 11 §3.8 Nr. 6): a debug run whose pack came from --pack keeps its user data apart —
+## save_dir = user://packs/<id>/saves, so leaderboards, replays, persona, career and the Stempel collection (all below
+## the parent of save_dir) follow. A pack export has a user folder of its own; the base game keeps user://saves.
+## In _ready: autoloads read each other there (02_TECH §2.3); no earlier _ready uses a Save path.
+func _ready() -> void:
+	var own: String = PackLoader.debug_save_dir(DB.pack.id if DB.pack != null else "", DB.pack_via)
+	if own != "":
+		save_dir = own
 
 
 ## save_dir + "/slot_%d.json" % slot
@@ -35,12 +46,17 @@ func has_save(slot: int) -> bool:
 
 
 ## {} empty; {"corrupt": true, "error": String} unreadable; else SaveCodec summary keys + "saved_at_unix", "slot".
+## Inhaltspakete (11-P1, 11 §3.9): a save of another content pack (or of the base game in a pack build) is not
+## loadable: {"corrupt": true, "error", "refusal": "other_pack", "pack": its pack id ("" = the base game)} — the slot
+## names the pack.
 func slot_summary(slot: int) -> Dictionary:
 	if not has_save(slot):
 		return {}
 	var loaded: Dictionary = _load_state(slot)
 	if loaded.is_empty():
-		return {"corrupt": true, "error": _last_error}
+		var out: Dictionary = {"corrupt": true, "error": _last_error}
+		out.merge(_last_refusal)
+		return out
 	var out: Dictionary = SaveCodec.summary(loaded["state"])
 	out["saved_at_unix"] = int(loaded["saved_at_unix"])
 	out["slot"] = slot
@@ -74,7 +90,7 @@ func save_slot(slot: int) -> Error:
 	if season_why != "":
 		Events.game_saved.emit(slot, false)
 		return _fail(ERR_UNAVAILABLE, season_why)
-	var d: Dictionary = SaveCodec.encode(Game.state, _game_version())
+	var d: Dictionary = SaveCodec.encode(Game.state, _game_version(), DB.data.pack_record())   # 11-P1: block "pack"
 	d["saved_at_unix"] = int(Time.get_unix_time_from_system())
 	(d["state"] as Dictionary)["slot"] = slot
 	d["state"] = _slot_state_dict(d["state"])       # Casting (08 §2.7 Nr. 1): the slot without the name (K1)
@@ -107,7 +123,9 @@ func load_slot(slot: int) -> Error:
 	var loaded: Dictionary = _load_state(slot)
 	if loaded.is_empty():
 		push_warning("[Save] load_slot(%d) failed: %s" % [slot, _last_error])
-		return ERR_FILE_CORRUPT if not _last_error.begins_with(SaveCodec.MSG_NEWER) else ERR_FILE_UNRECOGNIZED
+		var refused: bool = _last_error.begins_with(SaveCodec.MSG_NEWER) \
+			or _last_error.begins_with(SaveCodec.MSG_OTHER_PACK)                 # 11-P1: another content pack
+		return ERR_FILE_UNRECOGNIZED if refused else ERR_FILE_CORRUPT
 	var st: GameState = loaded["state"]
 	var warnings: PackedStringArray = loaded["warnings"]
 	if not warnings.is_empty():
@@ -573,10 +591,12 @@ func _game_version() -> String:
 
 
 ## {"state": GameState, "warnings": PackedStringArray, "saved_at_unix": int} from the slot file or its backup;
-## {} with _last_error set if neither is loadable. A save of a newer version is refused without fallback.
+## {} with _last_error set if neither is loadable. A save of a newer version is refused without fallback — and so is a
+## save of another content pack (11-P1: _last_refusal names its pack; the backup belongs to the same pack).
 func _load_state(slot: int) -> Dictionary:
 	var path: String = slot_path(slot)
 	var problems: PackedStringArray = []
+	_last_refusal = {}
 	for p: String in [path, path + ".bak"]:
 		if not FileAccess.file_exists(p):
 			continue
@@ -597,6 +617,10 @@ func _load_state(slot: int) -> Dictionary:
 		var msg: String = "; ".join(errs)
 		if msg.begins_with(SaveCodec.MSG_NEWER):
 			_last_error = msg
+			return {}
+		if msg.begins_with(SaveCodec.MSG_OTHER_PACK):                     # Inhaltspakete (11-P1, 11 §3.9)
+			_last_error = msg
+			_last_refusal = {"refusal": SaveCodec.OTHER_PACK, "pack": SaveCodec.pack_id_of(raw as Dictionary)}
 			return {}
 		problems.append("%s: %s" % [p.get_file(), msg])
 	_last_error = " | ".join(problems) if not problems.is_empty() else "no save file"
@@ -621,6 +645,7 @@ func _make_run_log(st: GameState) -> RunLog:
 		"combat_mode": String(RunRules.REALTIME),      # Echtzeitkampf (07 §10.2): like Game.new_game's header
 		"rt_version": RunRules.RT_VERSION,
 	}
+	rl.header.merge(DB.data.pack_fields())             # Inhaltspakete (11-P1, 11 §3.9): {} without a pack
 	return rl
 
 

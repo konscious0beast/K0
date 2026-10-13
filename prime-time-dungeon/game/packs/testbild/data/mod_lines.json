@@ -1,0 +1,11 @@
+{
+	"schema": 1,
+	"disable": [
+		"mod_chat_bark_03"
+	],
+	"patch": {
+		"mod_boss_intro_enm_boss_rattenkoenigin_02": {
+			"text": "Sendestörung auf Gleis 9! Die Testbild-Königin hat das Bild übernommen. Bitte nicht umschalten!"
+		}
+	}
+}

@@ -1,0 +1,8 @@
+{
+	"schema": 1,
+	"patch": {
+		"enm_kanalratte": {
+			"name": "Fixture-Ratte"
+		}
+	}
+}

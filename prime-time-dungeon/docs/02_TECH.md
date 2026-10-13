@@ -88,6 +88,9 @@ das ist die normale Richtung `autoload ← core`. Spielregeln, die Live-Lauf und
 - `core/**` greift **nie** auf Autoloads (`Events`, `DB`, `Game`, `Show`, `Save`, `Router`, `Sfx`) oder den SceneTree zu.
   Daten kommen als `GameData`-Instanz, Zufall als `RandomNumberGenerator` per Parameter.
 - `art/**` greift nie auf `Game`, `Show`, `Save`, `Router` zu; `Sfx`/`DB` nur in Gallery-Szenen.
+- Inhaltspakete (11-P1, §0.9): `PackLoader`/`PackDef` liegen in `core/data` (rein; lesen Dateien unter `res://packs`) und
+  hängen nur von `GameData`, `DataValidator` und `JsonUtil` ab; `DB._init()` ruft sie, sonst kein Autoload. Was ein
+  Paket trägt, kennt der Rest über `GameData.pack_id`/`pack_fields()`/`pack_record()` — der Kern bekommt es mit den Daten.
 
 ### 0.5 Änderungsanträge aus `06_PROGRESSION_MAROTTEN_KI_ADMIN.md` (CR-16 … CR-19)
 
@@ -672,6 +675,38 @@ H-21). ST1-I — der Harness kann die Staffel über `TitleFlow.pending_season` u
 ST2 — Freunde und öffentliche Staffeln in „Neue Staffel“, Zuschauen als Studiogast, Systemmitteilungen und Teilen der
 Kalender-Datei auf Mobilgeräten (09 O-2).
 
+### 0.9 Vertrags-Durchgang 11-P1: Inhaltspakete (11, Stand 2026-10-13)
+
+Paket 11-P1 (`11_SPRACHEN_UND_INHALTSPAKETE.md` Kap. 3, 5.3), Branch `ptd/p1`. Ein **Inhaltspaket** ändert für genau
+einen Build die Daten — nur Daten, Texte und Art-Parameter, keine Skripte (11 O-2); ein Build trägt höchstens eines
+(Feature-Tag `pack_<id>`, in Debug-Builds `--pack=<id>`). **Schalter:** `DB.pack != null` bzw. `GameData.pack_id != ""`.
+Ohne Paket bleibt alles bitgleich — `DB.data_hash()`, Run-Log-Köpfe und `RunLog.digest()`, Spielstände, Bestenlisten,
+Replays; **kein `SIM_VERSION`-Sprung**, `SaveCodec.VERSION` bleibt 2 (der Block `pack` ist additiv).
+
+| Datei | Änderung (additiv) |
+|---|---|
+| `core/data/game_data.gd` | `load_dir(dir, pack: PackDef = null)`: mischt das Paket vor `_load` (`PackLoader.merge`), seine Lese- und Mischfehler zuerst in `errors`; Felder `pack_id`, `pack_version`, `pack_hash`; `pack_fields()` (`pack`, `pack_version`, `pack_hash` — Kopf und Bestenlisten-Eintrag) und `pack_record()` (`{id, version, hash}` — Spielstand), beide `{}` ohne Paket |
+| `core/data/data_validator.gd` | `validate(raw, strict, read_errors, provenance = {})`, Feld `provenance` (`PackLoader.provenance`: `pack`, `licensed`, `owned`, `def`); mit Herkunft zusätzlich die Paketregeln (`validators/pack.gd`, `PackCheck`) |
+| `core/data/validators/ip_words.gd` | `check(v, provenance = {})`: die Texte, die ein Paket **mit Lizenzblock** besitzt (`owned`: hinzugefügte Einträge, gesetzte Feldpfade), sind von `ALL_WORDS` und der Mopsula-Regel ausgenommen, nie von `ORIGIN_WORDS` (11 §3.12 Schicht 2) |
+| `autoload/db.gd` | `_init()`: `PackLoader.active_id` + `load_data`; `pack: PackDef`, `pack_via` (`feature` \| `arg`), `pack_error` (`pack_ambiguous` \| `pack_missing` \| `pack_engine` \| `pack_invalid`), `pack_messages`; `ok` ist auch bei einem Paketfehler `false`; `data_hash()` + Element `pack:<id>:<pack_hash>` am Ende, wenn `DB.data` ein Paket trägt (`data_hash_input()`) |
+| `autoload/game.gd`, `autoload/save.gd` | Run-Log-Kopf (`_make_run_log` beider) und Bestenlisten-Eintrag + `DB.data.pack_fields()`; `Save.save_slot` schreibt `pack_record()`; `_load_state`: ein Spielstand eines anderen Pakets wird wie ein neuerer ohne `.bak`-Rückfall abgelehnt, `slot_summary` → `refusal: "other_pack"`, `pack`; `Save._ready()`: `save_dir = user://packs/<id>/saves` in Debug-Läufen mit `--pack` |
+| `core/progression/save_codec.gd` | `encode(state, game_version, pack = {})`; `decode` prüft `pack_status` gleich nach dem Kopf, **vor** `migrate`/`validate`/`_sanitize`; `MSG_OTHER_PACK`, `MSG_PACK_UPDATED`, `OTHER_PACK`, `OTHER_PACK_VERSION`, `pack_id_of` |
+| `core/live/run_sim.gd`, `core/live/leaderboard.gd`, `autoload/game_replay.gd` | `version_status(h, data = null)`, `version_error(h, data = null)`, `header_errors(h, def, rules, data = null)`, `pack_status(h, data)`, `OTHER_PACK`, `OTHER_PACK_VERSION`; mit den Daten des Builds geht die Paketprüfung der `sim_version` vor, ohne sie bleibt die Prüfung wie vorher; `RunSim.replay` und `Game.replay_log` übergeben sie |
+| `scenes/boot/boot.gd`, `scenes/title/slot_select.gd` | Fehlerkarte („INHALTSPAKET FEHLERHAFT“, Code, die ersten fünf Meldungen) statt `route()` bei `DB.pack_error`; die Slot-Liste nennt das Paket eines abgelehnten Spielstands |
+
+**Neue Dateien (Eigentum 11):** `core/data/pack_def.gd` (`PackDef`: Felder von `pack.json`, `overlays`, `art`, `files`,
+`pack_hash`, `errors`; `is_valid()`, `has_licence()`, `record()`), `core/data/pack_loader.gd` (`PackLoader`: `ROOT`,
+`PACK_SCHEMA` 1, `ID_RE`; `active_id(user_args, debug, root = ROOT, features = Callable())`, `read(root, id)`,
+`compat(pack, game_version)`, `merge(raw, pack)` → `{raw, owned, errors}`, `content_hash(pack)`, `load_data(data_dir, act,
+game_version, root = ROOT)`, `provenance`, `owned_paths`/`covers`, `merge_patch` (RFC 7386), `patch_paths`,
+`protected_ids`, `debug_save_dir`, `hash_element`, `licence_notes`, `compat_message`, `folders`, `is_valid_id`),
+`core/data/validators/pack.gd` (privat: Sperrlisten aus `mod_filter.json` über alle Paket-Texte, `tone_exceptions`,
+Credits), `packs/` (`.gitignore`, `PUBLIC_PACKS`, `PRIVATE_PACKS`, `testbild/`; §1.4), die Tests
+`test_11_{pack_loader,pack_testbild,pack_records,ip_firewall}.gd` und `tests/fixtures/packs/` (§1.7). Die Signaturen
+prüft `test_11_pack_loader.test_contract_pass_signatures`; `test_08_k0_contract` pinnt die neuen
+`version_status`-Signaturen. Offene Punkte (L1, PB, Anzeige in `event_info.gd`, L2-Texte, A1) stehen in 11 Kap. 5.3
+„Stand 11-P1“.
+
 ---
 
 ## 1. Dateibaum und Modulzuordnung
@@ -687,7 +722,9 @@ Szenen unten eingetragen (`persona_casting`, `persona_card`); Kern und Daten der
 Dateien des Durchgangs ST0 (`core/season/**`, `core/progression/{talent_tree,professions}.gd`, die vier Defs und
 Validatoren der Staffel-Tabellen, `data/{seasons,professions,cast,themes}.json`, `tests/fixtures/season_min/**`,
 `tests/test_09_st0_contract.gd`) stehen mit ihrem Eigentümer (ST1-B … ST1-G) in §0.8, die von ST1-A und Vertrag 4
-(`core/data/validators/{floor_season,levels}.gd`, `tests/test_09_{terms,contract4}.gd`) in §0.8 „Stand Vertrag 4“.
+(`core/data/validators/{floor_season,levels}.gd`, `tests/test_09_{terms,contract4}.gd`) in §0.8 „Stand Vertrag 4“. Die
+Inhaltspakete (11-P1: `core/data/{pack_def,pack_loader}.gd`, `core/data/validators/pack.gd`, `packs/**`,
+`tests/test_11_*.gd`, `tests/fixtures/packs/**`) gehören 11 (§0.9; 11 Kap. 5.11).
 
 ### 1.1 Projektwurzel
 
@@ -730,6 +767,9 @@ Validatoren der Staffel-Tabellen, `data/{seasons,professions,cast,themes}.json`,
 | `core/data/game_data.gd` | M0 | `GameData`: Laden, Normalisieren, Validieren, Getter (§4.5) |
 | `core/data/data_validator.gd` | M0 | `DataValidator`: Schema-/Referenz-/Wertebereichsprüfung, Vokabular-Konstanten (§4.3) |
 | `core/data/validators/marotten.gd` | 06-C | Privater Helfer (§0.3, ohne `class_name`; in `DataValidator` als `MarottenCheck` vorgeladen): Schema, Referenzen, Bedingungs-Schlüssel und Zeilen-Pflicht von `marotten.json`, Fuß-Wörter-Sperre (§4.4.17) |
+| `core/data/pack_def.gd` | 11 (P1) | `PackDef`: ein gelesenes Inhaltspaket — Felder von `pack.json`, Overlays, `art.json`, Dateiliste, `pack_hash`, `errors` (§0.9, 11 §3.3) |
+| `core/data/pack_loader.gd` | 11 (P1) | `PackLoader`: Aktivierung, Lesen, Kompatibilität, Zusammenführen mit Herkunft, Inhalts-Hash, Start für `DB` (§0.9, 11 §3.4–§3.9) |
+| `core/data/validators/pack.gd` | 11 (P1) | Privater Helfer (in `DataValidator` als `PackCheck`): die Paketregeln — Sperrlisten über alle Paket-Texte, `tone_exceptions`, Credits (11 §3.5 Nr. 4) |
 | `core/data/json_util.gd` | M0 | `JsonUtil`: Datei lesen, `to_int`, `to_str_array`, `vec2i_to_arr`, `arr_to_vec2i` |
 | `core/data/seed_util.gd` | M0 | `SeedUtil`: deterministische Seed-Ableitung (§4.6) |
 | `core/data/condition_expr.gd` | M0 | `ConditionExpr`: Parser/Auswerter für Achievement- und Szenen-Bedingungen (§4.4.9, §6.1) |
@@ -857,6 +897,11 @@ Signaturen von `RunSim` stehen in §7.1, die übrigen in 05_LIVE_MODUS §11.2 (d
 | `data/twists.json` | 06-D: Twist-Katalog des KI-Admins (20 Einträge, 11 im Slice wirksam, §4.4.18) |
 | `data/mod_filter.json` | 06-D: Wortlisten/Schwellen des Live-Zeilen-Filters (`ModLineFilter`, mod-brain `safety.py`); **nicht** in `GameData.TABLES` |
 | `data/events.json` | Live-/Offline-Events (M7 Inhalt, M8 Schema); **nicht** in `GameData.TABLES`, geladen von `EventCatalog` (§4.5); eigenes Format `{schema, events}` (Ausnahme von §4.1, 05 §10.1) |
+
+**`packs/` (11-P1, §0.9; nicht unter `data/`):** je Inhaltspaket ein Ordner `packs/<id>/` mit `pack.json`, Overlays
+`data/<tabelle>.json`, `art.json`, `locale/<sprache>.po` und README (11 §3.2; heute `testbild`), dazu `PUBLIC_PACKS`,
+`PRIVATE_PACKS` (F-20, leer) und `.gitignore` (Whitelist, 11 §3.12). Erlaubt sind nur `.json`, `.po`, `.md`, `.txt`;
+Grund-Exporte schließen `packs/*` aus (11-PB).
 
 ### 1.5 `art/` (alle M4)
 
@@ -1074,6 +1119,11 @@ Jede Datei unter `tests/` gehört dem genannten Modul; `test_<modul>_*.gd` ist d
 | `tests/perf/perf_probe.gd` + `perf_runner.gd`, `tests/perf/boot_timer.gd` | Phase C | Mess-Werkzeug für `tools/perf.sh` (§12.5); keine Tests (kein `test_`-Präfix) |
 | `tests/tools/make_icons.gd` | Phase C | Icon-Generator für `tools/make_icons.sh` (§12.3) |
 | `tests/tools/apple_preset.gd` | Release | schreibt Team-ID, Bundle-ID, Build-Nummer und Signatur in eine Temp-Kopie der Presets (`tools/apple/release.sh export`, §12.3/§12.4) |
+| `tests/test_11_pack_loader.gd` | 11 (P1) | `PackLoader`: `read`, `merge` (Reihenfolge, RFC 7386, Fehler, geschützte IDs, `touches`, Herkunft), `content_hash`, `compat`, `active_id` (Feature-Tags simuliert, Debug und Release), `load_data`; Signaturen des Vertrags-Durchgangs 11-P1 |
+| `tests/test_11_pack_testbild.gd` | 11 (P1) | Beispielpaket „Testbild“ (11 §3.14) ohne die PO-Teile (L1) |
+| `tests/test_11_pack_records.gd` | 11 (P1) | `data_hash`, Köpfe, Bestenlisten-Eintrag, Spielstand-Block, alle Ablehnungen, Prüfung vor `_sanitize`, Fehlerkarte, Nutzerdaten je Paket; ohne Paket die Aufzeichnungen von vorher |
+| `tests/test_11_ip_firewall.gd` | 11 (P1) | IP-Firewall Schicht 1 (F-20: `PUBLIC_PACKS`/`PRIVATE_PACKS`, Lizenzblöcke, Orte, `.gitignore`, `PTD_REPO_VISIBILITY`) und Schicht 2 (Ausnahme nur für den IP-Abstand) |
+| `tests/fixtures/packs/pack_kit.gd`, `tests/fixtures/packs/lizenztest/` | 11 (P1) | Test-Kit der Paket-Tests und das Fixture-Paket mit Lizenzblock (`holder` „TEST – kein Rechteinhaber“) |
 
 ### 1.8 Private Helfer, auf die andere Abschnitte verweisen (§0.3)
 
@@ -1447,9 +1497,15 @@ Achievement-Trigger, deren Name **kein** eigenes Signal ist, bildet `Show` aus b
 ```gdscript
 extends Node
 var data: GameData            # created + loaded in _init()
-var ok: bool                  # data.is_valid()
+var ok: bool                  # data.is_valid() and pack_error == ""
+var pack: PackDef             # 11-P1: the content pack of this run (null = the base game), never switched later
+var pack_via: String          # 11-P1: "" | "feature" (export tag pack_<id>) | "arg" (--pack=<id>, debug builds)
+var pack_error: String        # 11-P1: "" | pack_ambiguous | pack_missing | pack_engine | pack_invalid (boot error card)
+var pack_messages: PackedStringArray   # 11-P1: why (the error card shows the first five)
 
-func _init() -> void          # data = GameData.new(); ok = data.load_dir("res://data"); push_error each error
+func _init() -> void          # PackLoader.active_id → load_data("res://data", …) → data, pack; push_error each error
+func data_hash() -> String    # SHA-256 over name:sha256 of res://data/*.json (+ "pack:<id>:<hash>" with a pack, 11 §3.9)
+func data_hash_input() -> PackedStringArray   # 11-P1: the parts data_hash() hashes
 # Facade (forwarders, identical semantics to GameData, see §4.5):
 func enemy(id: String) -> EnemyDef
 func pseudo_unit(id: String) -> PseudoUnitDef
@@ -4474,6 +4530,16 @@ Staffel). `validate`: `state.season` ist ein Objekt oder fehlt; `_sanitize_seaso
 Fixture: `tests/fixtures/season_min/save_v2_season.json` (lädt gegen `SeasonMin.data()`). Das Journal neben dem Slot ist
 `Save`s (§3.6). In Staffeln gilt die Gnadenfrist nicht (09 §2.1) — das stellt ST1-B in `Save.load_slot` um.
 
+**Paket-Block (11 §3.9, 11-P1 — additiv in Version 2, keine Version 3):** Ein Build mit Inhaltspaket schreibt oben
+`"pack": {"id", "version", "hash"}` (`SaveCodec.encode(state, game_version, DB.data.pack_record())`); eine Datei ohne den
+Block ist ein Spielstand des Grundspiels — jede heutige Datei lädt und hasht wie vorher. `SaveCodec.decode` prüft den
+Block gleich nach dem Kopf, **vor** `migrate`/`validate`/`_sanitize` (das unbekannte IDs stillschweigend verwirft): eine
+andere Paket-ID — auch ein Paket-Stand im Grundspiel und umgekehrt — wird abgelehnt (`other_pack`,
+„Spielstand gehört zu einem anderen Inhaltspaket“, kein `.bak`-Rückfall, die Slot-Liste nennt das Paket); dieselbe ID mit
+anderem Hash lädt wie nach einem Spiel-Update mit der Warnung „Das Inhaltspaket wurde aktualisiert“
+(`other_pack_version`). Debug-Läufe mit `--pack=<id>` speichern unter `user://packs/<id>/saves` (Bestenlisten, Replays,
+Persona, Karriere, Stempel-Sammlung folgen `Save._data_root()`).
+
 **Kopplung mit dem CTB-Minispiel (Entscheidung 2026-10-11, `10_MINISPIEL_STEMPELDUELL.md` Kap. 6.2):** Das „Stempelduell“
 behält die CTB-Engine, liest aber eigene Regelbuch-Daten (`data/stempel/`). Die Kampagnendaten sind gebacken und haben
 ihre CTB-Werte verloren (R5b-2b); die CTB-Felder der Defs bleiben (im Validator optional) und werden nur noch vom Regelbuch
@@ -5814,6 +5880,7 @@ Kampfstart/-ende/-peak, Teleports, Fallbacks, Replay-Prüfungen, M.O.D.-Tags, `h
 | 06-A | 06 §8.2 (`tests/test_06a_*.gd`): Startwahl/Safe-Room-Wechsel inkl. Ablehnungsgründe und `RunSim`-Gleichheit, Replay-Hash auch für einen Lauf als Mopsula, Altstand ohne `hero` → `kai`; Bellen-Geometrie/Sichtlinie/Immunität/Bosse, `DAZED` → PREEMPTIVE aus jeder Richtung; der Partner ist im Echtzeitkampf immer KI (07 §5.1; „Partner automatisch“ ist mit R5b-2b entfallen); Figurenwahl-Szene (Fokus, Touch-Flächen), Safe-Room-Menü passt über den Chat-Ticker; Full-Run-Bot `--hero=mopsula`; E1-Geheimnisse (`test_06a_secrets`: Regeln, Command + Replay + `RunSim`, Save, Datenregeln, Wand fällt mit Feldschlag und Bellen, nie mit Interagieren, Notizen genau einmal) |
 | 06 A × B | `tests/test_06ab_hero_talents.gd`: Feld-Talente nur der führenden Figur (Ganzzahl-Promille, Szene für Kai und Graf Mopsula, Wechsel im Safe Room), je Held:in Talent-Show + Replay-Hash + KI-Partner mit Talenten im Echtzeitkampf, Safe-Room-Layout Desktop und Handy (Trefferflächen ≥ 88) |
 | 06-C | Marotten (`test_06c_marotten`): Auswahl deterministisch je Seed/Etage (E1 nur Starter, möglichst ohne Wiederholung), jede Bedingung trifft/trifft nicht, ≤ 1 Herz je Vorliebe und Kampf, Wette → Box/Follower/Hype/`bets_won`/`show_bet`, Tutorial/Niederlage/Event-Lauf zahlen nichts, Pazifist (Erstbesuch, Countdown, kein Safe Room, Latch, Save/Load), Replay-Gleichheit; Liga (`test_06c_liga`): Stufen je gesteuerter Figur, Blocker, Faktoren beim Kampfstart eingefroren, Etagen-Bonus, Kette „Ohne alles“, Regel-Schalter im `rules_hash`, UI; Sponsor-Fenster-Entscheidungen (`test_06c_sponsor_display`); Balance-Bänder 06 §4.10 (seit R5b-2b Echtzeit: Liga-Schritt im Harness, 07 E31, §11.5); Integration Runde 4: Deckel des Liga-Follower-Bonus je Etage (`test_06c_liga_cap`), Bellen ≠ Anschleichen (`test_06ac_bark_opener`) |
+| 11-P1 | Inhaltspakete (11 Kap. 5.10): `test_11_pack_loader`, `test_11_pack_testbild`, `test_11_pack_records`, `test_11_ip_firewall` (Schichten 1 und 2); ohne Paket gleiche Köpfe, Digests, Spielstände und `data_hash`; Packs der Fehlerfälle zur Laufzeit in `user://`, nie verbotene Wörter in Repository-Dateien |
 
 ---
 

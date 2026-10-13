@@ -28,16 +28,17 @@ func _init(p_game: Node) -> void:
 
 ## Game.replay_log: {"final_hash", "result", "mismatch_at", "errors", "version", "combat_mismatch_at"} — see there. A
 ## log of another sim_version is not replayed (RunSim.version_status / version_error, 08 §10.2 Nr. 7): one error,
-## mismatch_at -1.
+## mismatch_at -1. Inhaltspakete (11-P1, 11 §3.9): nor is a log of another content pack (other_pack /
+## other_pack_version against DB.data).
 func run(p_log: RunLog, until_tick: int) -> Dictionary:
 	var out: Dictionary = {"final_hash": "", "result": {}, "mismatch_at": -1, "errors": PackedStringArray(),
 		"version": "", "combat_mismatch_at": -1}
 	if p_log == null:
 		return out
 	var src: RunLog = p_log.expanded() if p_log.has_batches() else p_log   # 07 §10.3: replays use the expanded form
-	out["version"] = RunSim.version_status(src.header)
+	out["version"] = RunSim.version_status(src.header, DB.data)
 	if str(out["version"]) != "":                 # another kernel's log: not replayed, nor checked against this schema
-		out["errors"] = PackedStringArray([RunSim.version_error(src.header)])
+		out["errors"] = PackedStringArray([RunSim.version_error(src.header, DB.data)])
 		return out
 	var errors: PackedStringArray = src.validate()
 	out["errors"] = errors
@@ -62,7 +63,7 @@ func run(p_log: RunLog, until_tick: int) -> Dictionary:
 			errors.append("header: event '%s' not found in %s (no replay without its rules)"
 				% [event_id, RunSim.EVENTS_PATH])
 			return out
-		errors.append_array(RunSim.header_errors(header, def, def.rules))
+		errors.append_array(RunSim.header_errors(header, def, def.rules, DB.data))
 	var run_seed: int = int(header.get("seed", header.get("run_seed", 1)))
 	var difficulty: StringName = StringName(str(header.get("difficulty", "prime")))
 	var saved: Dictionary = game._capture_context()

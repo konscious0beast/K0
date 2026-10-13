@@ -12,6 +12,11 @@ extends RefCounted
 ## Texts = the fields "name", "desc", "text", "title" and "slogan" at any depth of the normalized tables (mod lines,
 ## scene lines, floors with their zones and safe rooms included). Substrings are checked case-insensitively; the origin
 ## list as whole words. The Rattenkönigin keeps her title and crown — only Mopsula's texts are checked for royalty.
+## Inhaltspakete (11-P1, 11 §3.12 layer 2): with a provenance whose pack has a licence block, the texts that pack owns
+## (entries it added, fields its patches set — PackLoader.owned_paths) are exempt from the IP-distance lists
+## (ALL_WORDS and the Mopsula rule: a figure the licensed pack redesigned is not Graf Mopsula any more);
+## ORIGIN_WORDS are tone and always apply. A pack without a licence block and every base text are checked exactly as
+## before.
 
 const TEXT_KEYS: PackedStringArray = ["name", "desc", "text", "title", "slogan"]
 ## Every player-facing text (lower-case substrings; the live line filter blocks them too: mod_filter.json →
@@ -33,11 +38,14 @@ const MOPSULA_NAME_RE: String = "(?i)\\b(graf|grafen|mopsula|mops)\\b"
 const EQUIPMENT: PackedStringArray = ["weapon", "armor", "accessory"]
 
 
-## Appends one error per offending text to the validator `v` (works on its normalized output).
-static func check(v: DataValidator) -> void:
+## Appends one error per offending text to the validator `v` (works on its normalized output). `provenance`: see the
+## file comment (11-P1; {} = base data).
+static func check(v: DataValidator, provenance: Dictionary = {}) -> void:
 	var names: RegEx = RegEx.create_from_string(MOPSULA_NAME_RE)
 	var origin: RegEx = RegEx.create_from_string("(?i)\\b(%s)\\b" % "|".join(ORIGIN_WORDS))
 	var mop_skills: Dictionary = _mopsula_skills(v._out.get("party", []))
+	var licensed: bool = bool(provenance.get("licensed", false))
+	var owned: Dictionary = provenance.get("owned", {}) if provenance.get("owned", {}) is Dictionary else {}
 	for t: String in DataValidator.TABLES:
 		var list: Array = v._out.get(t, [])
 		for i in list.size():
@@ -45,7 +53,10 @@ static func check(v: DataValidator) -> void:
 			if not d is Dictionary:
 				continue
 			var ctx: String = DataValidator._ctx(t, i, d)
-			_walk(v, ctx, d, _entry_for_mopsula(t, d as Dictionary, mop_skills), names, origin)
+			var mine: PackedStringArray = PackedStringArray()
+			if licensed:
+				mine = PackLoader.owned_paths(owned, t, str((d as Dictionary).get("id", "")))
+			_walk(v, ctx, d, _entry_for_mopsula(t, d as Dictionary, mop_skills), names, origin, mine, "")
 
 
 ## The first forbidden word of `text` for every player-facing text ("" = none).
@@ -67,7 +78,10 @@ static func mopsula_word(text: String) -> String:
 	return ""
 
 
-static func _walk(v: DataValidator, ctx: String, node: Variant, for_mopsula: bool, names: RegEx, origin: RegEx) -> void:
+## `mine` (11-P1): the field paths of this entry a licensed pack owns ([] = none: no path is built), `path` the path of
+## `node` inside the entry ("name", "lines[0].text").
+static func _walk(v: DataValidator, ctx: String, node: Variant, for_mopsula: bool, names: RegEx, origin: RegEx,
+		mine: PackedStringArray = PackedStringArray(), path: String = "") -> void:
 	if node is Dictionary:
 		var d: Dictionary = node
 		var mop: bool = for_mopsula or (d.has("voice") and str(d["voice"]) == "mopsula") \
@@ -75,26 +89,30 @@ static func _walk(v: DataValidator, ctx: String, node: Variant, for_mopsula: boo
 		for k: Variant in d.keys():
 			var key: String = str(k)
 			var val: Variant = d[k]
+			var sub: String = "" if mine.is_empty() else (key if path == "" else path + "." + key)
 			if val is String and TEXT_KEYS.has(key):
-				_check_text(v, ctx + "." + key, str(val), mop, names, origin)
+				_check_text(v, ctx + "." + key, str(val), mop, names, origin,
+					not mine.is_empty() and PackLoader.covers(mine, sub))
 			elif val is Dictionary or val is Array:
-				_walk(v, ctx + "." + key, val, mop, names, origin)
+				_walk(v, ctx + "." + key, val, mop, names, origin, mine, sub)
 	elif node is Array:
 		var a: Array = node
 		for i in a.size():
-			_walk(v, "%s[%d]" % [ctx, i], a[i], for_mopsula, names, origin)
+			_walk(v, "%s[%d]" % [ctx, i], a[i], for_mopsula, names, origin, mine,
+				"" if mine.is_empty() else "%s[%d]" % [path, i])
 
 
+## `owned` (11-P1): a text a licensed pack owns — the IP-distance lists are skipped, the origin list is not.
 static func _check_text(v: DataValidator, ctx: String, text: String, for_mopsula: bool, names: RegEx,
-		origin: RegEx) -> void:
+		origin: RegEx, owned: bool = false) -> void:
 	var low: String = text.to_lower()
 	for w: String in ALL_WORDS:
-		if low.contains(w):
+		if not owned and low.contains(w):
 			v._err(ctx, "contains '%s' (IP distance: Fanpost-Paket, no underwear / foot words, 04 §2.3, 06 §0.3)" % w)
 	var m: RegExMatch = origin.search(text)
 	if m != null:
 		v._err(ctx, "names '%s' (tone: no nationality or ethnic group as a joke target)" % m.get_string(1))
-	if for_mopsula or names.search(text) != null:
+	if not owned and (for_mopsula or names.search(text) != null):
 		var bad: String = mopsula_word(text)
 		if bad != "":
 			v._err(ctx, "contains '%s' (no royalty motif for Graf Mopsula)" % bad)

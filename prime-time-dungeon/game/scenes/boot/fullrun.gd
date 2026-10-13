@@ -3056,7 +3056,8 @@ func _season_session_over() -> bool:
 
 
 ## The logout of a finished session (in `scene` — a safe room, rested — or where the figure stands, Vorsichtig), the
-## absence until the next session of the profile (after the last one: until after the last collapse), the login.
+## absence until the next session of the profile (after the last one: until after the last collapse of the schedule
+## now — a Sendepause of the login's clamp moves it), the login.
 func _season_logout(scene: SafeRoomScene) -> bool:
 	phase = "logout"
 	var fr: FloorRun = Game.state.floor_run
@@ -3074,8 +3075,9 @@ func _season_logout(scene: SafeRoomScene) -> bool:
 		_season_rec["sleeps"] = int(_season_rec.get("sleeps", 0)) + 1
 	var wall: int = _season_session_wall + roundi(_season_session_play)
 	_season_session += 1
-	var next: int = SEASON_DAY0_UTC + SeasonClock.format_days(Game.state.season.format) * SeasonClock.DAY_SEC \
-		+ SEASON_AFTER_END_SEC
+	var ends: Array[int] = Game.state.season.collapse_utc      # the last collapse now (a Sendepause moved it)
+	var next: int = (ends[ends.size() - 1] if not ends.is_empty() else SEASON_DAY0_UTC
+		+ SeasonClock.format_days(Game.state.season.format) * SeasonClock.DAY_SEC) + SEASON_AFTER_END_SEC
 	if _season_session < _season_plan.size():
 		next = SEASON_DAY0_UTC + int(_season_plan[_season_session]["start"])
 	var absence: int = maxi(SeasonClock.COMBAT_GRACE_SEC, next - wall)

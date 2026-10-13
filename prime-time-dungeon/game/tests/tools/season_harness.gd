@@ -796,8 +796,9 @@ func _session_over() -> bool:
 
 
 ## The logout of a finished session (in a safe room — rested — or the corridor, Vorsichtig), the absence until the
-## next session (after the last one: until after the last collapse) and the login: "away" — over seven days (plus the
-## night's Sendepause) "clamp" for the rest first, like Game.season_login_answer(true).
+## next session (after the last one: until an hour after the last collapse — of the schedule now, a Sendepause moved
+## it) and the login: "away" — over seven days (plus the night's Sendepause) "clamp" for the rest first, like
+## Game.season_login_answer(true).
 func _logout_login() -> void:
 	_logout_due = false
 	var fr: FloorRun = rs.state.floor_run
@@ -816,7 +817,7 @@ func _logout_login() -> void:
 	var rec: Dictionary = {"session": session, "floor": fr.index, "day": snappedf(_day(), 0.01), "safe": safe,
 		"play_min": snappedf(session_play / 60.0, 0.1), "level": _levels()}
 	session += 1
-	var next: int = DAY0_UTC + SeasonClock.format_days(format) * DAY + 3600
+	var next: int = _end_utc() + 3600                # after the last session: until after the season's end
 	if session < plan.size():
 		next = DAY0_UTC + int(plan[session]["start"])
 	var absence: int = maxi(SeasonClock.COMBAT_GRACE_SEC, next - wall)
@@ -1035,6 +1036,12 @@ func _levels() -> Array[int]:
 func _band_of(floor_index: int) -> Array[int]:
 	var b: Vector2i = LevelBand.band(data, floor_index)
 	return [b.x, b.y]
+
+
+## The season's last collapse (unix seconds): a Sendepause (the login's clamp) moves it.
+func _end_utc() -> int:
+	var at: Array[int] = rs.state.season.collapse_utc
+	return at[at.size() - 1] if not at.is_empty() else DAY0_UTC + SeasonClock.format_days(format) * DAY
 
 
 ## Days since day 0 in season time (the cast's clock, without the Sendepause).

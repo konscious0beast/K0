@@ -14,7 +14,9 @@ extends RefCounted
 ##   weekend  Saturday and Sunday 90 min each: the season starts on a weekend day; sessions from two hours before to
 ##            an hour after the air time
 ##   away2w   typical, without the 14 days from AWAY_FROM[format] on (format 18: days 30–44 as in 09 §11.6;
-##            format 6: days 7–20, the week of floors 3/4 — the season goes on meanwhile)
+##            format 6: days 7–20, the week of floors 3/4). The login after them answers the clock jump with "Ja"
+##            (09 V-17): seven days count, the rest becomes a Sendepause and moves the season's end — so the
+##            sessions go on AWAY_DAYS days past the format (those after the season's end are never played)
 
 const DAY: int = 86400
 const MIN: int = 60
@@ -49,7 +51,7 @@ static func sessions(profile: String, seed: int, format: int) -> Array[Dictionar
 	out.append({"day": -1, "start": -rng.randi_range(1, 23 * 60 + 59 - first_min) * MIN, "sec": first_min * MIN,
 		"first": true})
 	var away_from: int = int(AWAY_FROM.get(format, days)) if profile == "away2w" else days
-	for d in days:
+	for d in (days + AWAY_DAYS if profile == "away2w" else days):
 		var start: int = d * DAY + rng.randi_range(-60, 60) * MIN
 		var length: int = 20 if profile == "20min" else rng.randi_range(45, 60)
 		if d >= away_from and d < away_from + AWAY_DAYS:

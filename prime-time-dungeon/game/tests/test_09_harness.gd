@@ -63,7 +63,8 @@ func test_profiles_weekend_and_two_weeks_away() -> void:
 				assert_between(int(s["start"]) - int(s["day"]) * DAY, -120 * MIN, 60 * MIN, "around the air time")
 			var away: Array[Dictionary] = Profiles.sessions("away2w", seed, fmt)
 			var from: int = int(Profiles.AWAY_FROM[fmt])
-			assert_eq(away.size(), days + 1 - Profiles.AWAY_DAYS, "away2w/%d: 14 days without a session" % fmt)
+			assert_eq([away.size(), int((away.back() as Dictionary)["day"])], [days + 1, days + Profiles.AWAY_DAYS - 1],
+				"away2w/%d: 14 days without a session, then on past the format (the clamp's Sendepause)" % fmt)
 			for s2: Dictionary in away:
 				assert_false(int(s2["day"]) >= from and int(s2["day"]) < from + Profiles.AWAY_DAYS,
 					"away2w/%d: no session on day %d" % [fmt, int(s2["day"])])

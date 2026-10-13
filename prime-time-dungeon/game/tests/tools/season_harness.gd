@@ -800,8 +800,9 @@ func _session_over() -> bool:
 
 
 ## The logout of a finished session (in a safe room — rested — or the corridor, Vorsichtig), the absence until the
-## next session (after the last one: until an hour after the last collapse — of the schedule now, a Sendepause moved
-## it) and the login: "away" — over seven days (plus the night's Sendepause) "clamp" for the rest first, like
+## next session (after the last one: until an hour after the last collapse in season time — a clamp's Sendepause moved
+## it and the season clock stayed behind the wall clock — at most what a login books without the question) and the
+## login: "away" — over seven days (plus the night's Sendepause) "clamp" for the rest first, like
 ## Game.season_login_answer(true).
 func _logout_login() -> void:
 	_logout_due = false
@@ -821,10 +822,10 @@ func _logout_login() -> void:
 	var rec: Dictionary = {"session": session, "floor": fr.index, "day": snappedf(_day(), 0.01), "safe": safe,
 		"play_min": snappedf(session_play / 60.0, 0.1), "level": _levels()}
 	session += 1
-	var next: int = _end_utc() + 3600                # after the last session: until after the season's end
+	var absence: int = mini(_end_utc() + 3600 - rs.state.season.utc, SleepResolver.max_away(rs.state))
 	if session < plan.size():
-		next = DAY0_UTC + int(plan[session]["start"])
-	var absence: int = maxi(SeasonClock.COMBAT_GRACE_SEC, next - wall)
+		absence = DAY0_UTC + int(plan[session]["start"]) - wall
+	absence = maxi(SeasonClock.COMBAT_GRACE_SEC, absence)
 	rec["absence"] = absence
 	logouts.append(rec)
 	session_wall = wall + absence

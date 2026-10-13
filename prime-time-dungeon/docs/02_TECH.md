@@ -2209,6 +2209,8 @@ Fokus-Stil aller Buttons: 3 px `C_ACCENT_2`-Rahmen (StyleBox `focus`).
 - Texte (`name`, `desc`, `text`, `slogan`) sind **deutscher Quelltext**; Anzeige immer über `tr(text)`
   (gettext-Stil: msgid = deutscher Text; spätere EN-Übersetzung per `.po`, kein Key-System). Das erfüllt die `tr()`-Pflicht
   aus Brief §4; die `name_key`/`desc_key`-Spalten des GDD werden direkt als deutscher Text in `name`/`desc` geschrieben (§4.4.0).
+  Wie Englisch umgesetzt wird (PO-Ablage, Helfer `Tx`, Kontexte, Extraktor, Spracheinstellung) und wie Inhaltspakete
+  Daten und Texte überlagern, legt `11_SPRACHEN_UND_INHALTSPAKETE.md` fest (Kap. 1 und 3).
 - JSON kennt nur Floats: `JSON.parse_string` liefert `12` als `12.0` (geprüft). `int`-Felder müssen ganzzahlig sein
   (Validator prüft `fmod(v, 1.0) == 0.0` und `|v| < 9·10¹⁵` = `JsonUtil.MAX_INTEGRAL`, sonst liefert `int()` Überlauf-Werte)
   und werden mit `int()` konvertiert.
@@ -3096,6 +3098,8 @@ Jede Tabelle mit Kampfwerten trägt einen optionalen `rt`-Block für den Echtzei
 
 Ablauf `GameData.load_dir(dir)`: (1) alle Dateien aus `TABLES` parsen; (2) je Eintrag Schema prüfen + normalisieren; (3) zweiter
 Durchlauf: Referenzen; (4) Bedingungen parsen (`ConditionExpr.parse`); (5) Defs bauen. Alle Fehler werden gesammelt (kein Abbruch).
+Geplant (11 Kap. 3.4, Paket P1): Ein aktives Inhaltspaket wird zwischen (1) und (2) in die Rohtabellen gemischt
+(`PackLoader.merge`) und danach mit denselben Regeln geprüft; sein Inhalts-Hash geht in `DB.data_hash()` ein.
 
 Regeln (jede Verletzung = ein Eintrag in `errors`, Format `"<table>[<index>|<id>].<field>: <message>"`):
 

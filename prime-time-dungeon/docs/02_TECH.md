@@ -678,7 +678,9 @@ Tempo-Angebot hängt am Signal `closed` des Recalls (eine Haken-Zeile in `open_r
 `first` hatte und beim Schließen eine Klasse hat, hat gerade gewählt); die Gäste richten sich nach dem Knopf RECALL (09
 H-21). ST1-I — der Harness kann die Staffel über `TitleFlow.pending_season` und `start_new_game` starten wie ein Mensch.
 ST2 — Freunde und öffentliche Staffeln in „Neue Staffel“, Zuschauen als Studiogast, Systemmitteilungen und Teilen der
-Kalender-Datei auf Mobilgeräten (09 O-2).
+Kalender-Datei auf Mobilgeräten (09 O-2). 11 — L2: die Texte der Staffel-UI über `Tx` (zehn Dateien in `PENDING` von
+`test_11_literals`; lange Sätze stehen über zwei Zeilen verkettet und werden je ein msgid, die Termine von
+`SeasonView` gehören zu `Tx.fmt_*`).
 
 ### 0.9 Vertrags-Durchgang 11-P1: Inhaltspakete (11, Stand 2026-10-13)
 

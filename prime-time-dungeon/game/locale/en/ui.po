@@ -240,24 +240,33 @@ msgstr ""
 msgid "Regie-Notiz %d/%d · +%d Follower"
 msgstr ""
 
-#: scenes/exploration/exploration.gd:1261
+#: scenes/exploration/exploration.gd:1263
 msgid "Abstieg"
 msgstr ""
 
-#: scenes/exploration/exploration.gd:1262
+#: scenes/exploration/exploration.gd:1264
 msgid "Noch nicht"
 msgstr ""
 
-#: scenes/exploration/exploration.gd:1263
+#: scenes/exploration/exploration.gd:1265
+#: scenes/exploration/exploration.gd:2248
 msgid "Treppe nach unten"
 msgstr ""
 
-#: scenes/exploration/exploration.gd:1263
+#: scenes/exploration/exploration.gd:1265
 msgid "Etage verlassen? Offene Truhen und der Etagenboss bleiben zurück."
 msgstr ""
 
-#: scenes/exploration/exploration.gd:1323
+#: scenes/exploration/exploration.gd:1325
 msgid "Quest"
+msgstr ""
+
+#: scenes/exploration/exploration.gd:2245
+msgid "Weiter erkunden"
+msgstr ""
+
+#: scenes/exploration/exploration.gd:2247
+msgid "Am Stück spielen"
 msgstr ""
 
 #: scenes/exploration/gate_interactable.gd:68

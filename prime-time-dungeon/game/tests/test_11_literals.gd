@@ -2,10 +2,10 @@ extends TestCase
 ## 11-L1 (11 §1.12, SP-8, R11): the lint against German texts outside Tx (tests/tools/i18n/literal_lint.gd — a literal
 ## that looks German: an umlaut, ß, „ or a word of a small stopword list; in player code; outside Tx.t / Tx.n / Tx.m,
 ## the developer calls and files, and lines with "# no-i18n: <reason>"). PENDING = the findings per file when 11-L1
-## landed (911 in 91 files, with the texts 11-P1 brought): L2 moves its areas to Tx and lowers or removes their entries
-## — the list only shrinks. A file outside PENDING must stay clean, a listed one at its exact count (fewer: lower the
-## number; more: a new German text outside Tx — wrap it in Tx.t, R11). tools/i18n.sh lint prints the current table
-## and, with --file, the lines.
+## landed (911 in 91 files, with the texts 11-P1 brought) and the season UI of ST1-H merged after it (150 in 10 files,
+## 09 "Offen nach ST1-H"): L2 moves its areas to Tx and lowers or removes their entries — the list only shrinks. A
+## file outside PENDING must stay clean, a listed one at its exact count (fewer: lower the number; more: a new German
+## text outside Tx — wrap it in Tx.t, R11). tools/i18n.sh lint prints the current table and, with --file, the lines.
 
 const Lint := preload("res://tests/tools/i18n/literal_lint.gd")
 ## file → German literals outside Tx (only shrinks).
@@ -35,12 +35,12 @@ const PENDING: Dictionary = {
 	"res://scenes/combat/ui/unit_frames.gd": 2,
 	"res://scenes/exploration/chest_interactable.gd": 7,
 	"res://scenes/exploration/event_interactable.gd": 22,
-	"res://scenes/exploration/exploration.gd": 5,
+	"res://scenes/exploration/exploration.gd": 7,
 	"res://scenes/exploration/gate_interactable.gd": 4,
 	"res://scenes/exploration/pull_rules.gd": 4,
 	"res://scenes/exploration/stairs_interactable.gd": 1,
 	"res://scenes/safe_room/lootbox_opening.gd": 13,
-	"res://scenes/safe_room/safe_room.gd": 11,
+	"res://scenes/safe_room/safe_room.gd": 22,
 	"res://scenes/safe_room/vending_menu.gd": 12,
 	"res://scenes/stempel/sd_akte.gd": 6,
 	"res://scenes/stempel/sd_album.gd": 18,
@@ -60,13 +60,14 @@ const PENDING: Dictionary = {
 	"res://scenes/stempel/sd_texts.gd": 39,
 	"res://scenes/stempel/sd_tutorial.gd": 4,
 	"res://scenes/title/credits.gd": 16,
-	"res://scenes/title/game_over.gd": 8,
+	"res://scenes/title/game_over.gd": 11,
 	"res://scenes/title/hero_select.gd": 5,
 	"res://scenes/title/intro.gd": 14,
 	"res://scenes/title/name_entry.gd": 12,
 	"res://scenes/title/persona_casting.gd": 18,
-	"res://scenes/title/slot_select.gd": 16,
-	"res://scenes/title/title.gd": 5,
+	"res://scenes/title/season_setup.gd": 16,
+	"res://scenes/title/slot_select.gd": 18,
+	"res://scenes/title/title.gd": 7,
 	"res://scenes/title/title_flow.gd": 2,
 	"res://scenes/ui/achievements_menu.gd": 1,
 	"res://scenes/ui/bestiary_menu.gd": 5,
@@ -78,6 +79,7 @@ const PENDING: Dictionary = {
 	"res://scenes/ui/exploration_hud.gd": 12,
 	"res://scenes/ui/explore_target.gd": 2,
 	"res://scenes/ui/floor_summary.gd": 7,
+	"res://scenes/ui/hall_of_fame.gd": 7,
 	"res://scenes/ui/input_glyph.gd": 1,
 	"res://scenes/ui/inventory_menu.gd": 10,
 	"res://scenes/ui/level_badge.gd": 1,
@@ -91,6 +93,9 @@ const PENDING: Dictionary = {
 	"res://scenes/ui/persona_picker.gd": 11,
 	"res://scenes/ui/recall.gd": 36,
 	"res://scenes/ui/run_result.gd": 4,
+	"res://scenes/ui/season_summary.gd": 8,
+	"res://scenes/ui/season_tab.gd": 48,
+	"res://scenes/ui/season_view.gd": 51,
 	"res://scenes/ui/settings_menu.gd": 32,
 	"res://scenes/ui/show_overlay.gd": 13,
 	"res://scenes/ui/skills_menu.gd": 39,

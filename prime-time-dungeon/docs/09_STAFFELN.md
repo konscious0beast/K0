@@ -1819,9 +1819,12 @@ beendete Staffel des Geräts.
 Teilen der `.ics`-Datei und Systemmitteilungen auf Mobilgeräten (O-2); die Staffel-Bilanz zeigt die Summen der Quote, aber
 keine EP je Figur und keine Überstunden-Summe (ST1-D-Hinweis: dafür bräuchte `SeasonState` eigene Zähler); Farbe und
 Differenz der Plakette im Kampf (CR-32 l — in der Erkundung umgesetzt, H-22); der Zeitraffer (`--speed`) gilt nur für
-mit `--season` gestartete Staffeln. Vorschlag an `CastSim` (ST1-F): das gelesene Modell bis zum nächsten Command
-behalten — heute baut jede Abfrage es neu (≈ 3 ms), und HUD, Reiter und Safe Room fragen mehrmals hintereinander
-(PERFORMANCE.md §3.11).
+mit `--season` gestartete Staffeln; die Texte der Staffel-UI gehen noch nicht über `Tx` (11-L1 kam nach ST1-H):
+`test_11_literals` führt ihre zehn Dateien in `PENDING` (150 Literale, davon `season_view.gd` 51 und `season_tab.gd`
+48 — Tabellen, Termine und die `.ics`-Zeilen ziehen mit `Tx.fmt_*` um, L2); die 25 M.O.D.-Zeilen `season_*` und die
+Knöpfe der gesperrten Treppe stehen schon in den POT-Dateien (`tools/i18n.sh extract`). Vorschlag an `CastSim`
+(ST1-F): das gelesene Modell bis zum nächsten Command behalten — heute baut jede Abfrage es neu (≈ 3 ms), und HUD,
+Reiter und Safe Room fragen mehrmals hintereinander (PERFORMANCE.md §3.11).
 
 ### 11.4 Dateieigentum gegenüber 07 und 08
 

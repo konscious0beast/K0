@@ -93,6 +93,7 @@ func _init() -> void:
 	ephemeral = _detect_ephemeral()
 	if not ephemeral:
 		settings.load_from_disk()
+	apply_language()                          # Sprachen (11 §1.9, L1): the catalog stands before the first screen
 	var watcher: InputSchemeWatcher = InputSchemeWatcher.new()
 	watcher.name = "InputSchemeWatcher"
 	watcher.process_mode = Node.PROCESS_MODE_ALWAYS
@@ -111,6 +112,7 @@ func _ready() -> void:
 	Events.viewers_changed.connect(_on_quest_viewers_changed)
 	Events.followers_changed.connect(_on_quest_followers_changed)
 	Events.hype_changed.connect(_on_quest_hype_changed)
+	get_tree().root.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED   # Sprachen (11 SP-3, L1)
 	apply_settings()
 	_rt_ready()                               # Echtzeitkampf (07 §10.1, R2): combat_speed
 	season_live_clock = not ephemeral         # Staffeln (09 §9.1, ST1-B): tests and tools set the clock themselves
@@ -2388,3 +2390,24 @@ func _season_window_title(text: String) -> void:
 	DisplayServer.window_set_title(base + (" — " + text if text != "" else ""))
 	if text != "":
 		DisplayServer.window_request_attention()
+
+
+# ======================================================================================================================
+# Sprachen (11 §1.9, 11-L1) — the language of the run. _init applies it after the settings are read, so the catalog
+# stands before the first screen exists (DB loaded the data before: the autoload order Events, DB, Game). _ready turns
+# the automatic translation of the root off (SP-3; project setting internationalization/rendering/
+# root_node_auto_translate too): texts are translated once, through Tx — an English text that happens to equal a German
+# msgid ("Gift") must not be translated a second time. The language never reaches the state (11 §1.10, SP-4).
+# ======================================================================================================================
+
+## Applies the language of the run (LocaleLoader.resolve → apply) and returns it: --lang=<code> (transient), ephemeral
+## runs German, else settings.language ("auto" = the system language if it is one of ours, else English). An active
+## content pack (11-P1, DB.pack) adds its PO and may narrow the languages. `from_menu`: the options row on the title
+## changed the setting — the choice wins over --lang and the ephemeral default.
+func apply_language(from_menu: bool = false) -> String:
+	var pack: Object = DB.get("pack") as Object       # 11-P1's PackDef (null without a pack); read by name
+	var args: PackedStringArray = PackedStringArray() if from_menu else OS.get_cmdline_user_args()
+	var setting: String = settings.language if settings != null else LocaleLoader.AUTO
+	var lang: String = LocaleLoader.resolve(setting, args, ephemeral and not from_menu, OS.get_locale_language(),
+		LocaleLoader.pack_languages(pack), LocaleLoader.pack_default_lang(pack))
+	return str(LocaleLoader.apply(lang, LocaleLoader.pack_dir(pack)).get("lang", lang))

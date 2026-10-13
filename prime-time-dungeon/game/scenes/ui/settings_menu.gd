@@ -73,7 +73,8 @@ var _arrows: Array[Control] = []
 var _t: float = 0.0
 
 
-## {"framed": bool (default true standalone), "capture": bool}
+## {"framed": bool (default true standalone), "capture": bool, "language": bool (the language row is changeable —
+## only the title's options pass it, 11 §1.9)}
 func setup(params: Dictionary) -> void:
 	_params = params
 
@@ -208,9 +209,7 @@ func _build() -> void:
 	_cycler("quality", "Grafikqualität", ["Hoch", "Niedrig"], 0 if s.quality == &"high" else 1)
 	_cycler("show_fps", "FPS anzeigen", ["Aus", "An"], 1 if s.show_fps else 0)
 	_cycler("show_bets_hud", "Show-Wetten anzeigen", ["Aus", "An"], 1 if s.show_bets_hud else 0)   # 06-C
-	var lang: Cycler = _cycler("language", "Sprache", ["Deutsch"], 0)
-	lang.disabled = true
-	lang.text = "Deutsch"
+	_language_row()                         # Sprachen (11 §1.9, L1): "Sprache / Language", changeable on the title
 	_persona_section()                      # 08 K1: section "Kandidat:in" ("Kandidat:in löschen"; K3: KI-Casting)
 	_season_section()                       # Staffeln (09 §2.9, ST1-G): section "Staffel" (in a season)
 	_list.add_child(UiUtil.spacer(8))
@@ -642,3 +641,47 @@ func _set_season_choice(key: String, i: int) -> void:
 		"daily_summary":
 			s.daily_summary = i == 1
 	_commit()
+
+
+# --- Sprachen (11 §1.9, 11-L1) ----------------------------------------------------------------------------------------
+# The row "Sprache / Language" — bilingual, so it is found in the wrong language too: Automatisch / Deutsch / English
+# (the own names of locale/languages.json). Changeable only where setup() passes "language": true, the title's options;
+# elsewhere (the pause menu) it is shown locked with "Im Titelmenü änderbar": screens build their texts once, a switch
+# in a running game would mix languages. A change saves [game] language, applies it (Game.apply_language) and — when
+# the language of the run changes — emits language_changed: the title rebuilds itself in the new language.
+
+signal language_changed(code: String)
+
+
+func _language_row() -> void:
+	var values: PackedStringArray = LocaleLoader.setting_values()
+	var names: PackedStringArray = []
+	for v: String in values:
+		names.append(Tx.t("Automatisch") if v == LocaleLoader.AUTO else LocaleLoader.language_name(v))
+	var unlocked: bool = bool(_params.get("language", false))
+	var row: HBoxContainer = _row("Sprache / Language", "" if unlocked else Tx.t("Im Titelmenü änderbar"))
+	var c: Cycler = Cycler.new()
+	var idx: int = maxi(values.find(Game.settings.language), 0)
+	c.set_options(names, idx)
+	c.disabled = not unlocked
+	if not unlocked:
+		c.text = names[idx]                     # locked: the value without the cycle arrows
+	row.add_child(c)
+	c.changed.connect(func(i: int) -> void: _set_language(values[clampi(i, 0, values.size() - 1)]))
+	_register("language", c)
+
+
+func _set_language(value: String) -> void:
+	var before: String = Tx.lang()
+	Game.settings.language = value
+	_commit()                                   # written now, like every cycler
+	var now: String = Game.apply_language(true)
+	if now != before:
+		language_changed.emit(now)
+
+
+## Focus on a row (the title reopens the options on "language" after a switch).
+func focus_row(key: String) -> void:
+	var c: Control = rows.get(key) as Control
+	if c != null:
+		UiUtil.focus_later(c)

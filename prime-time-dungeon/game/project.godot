@@ -267,6 +267,7 @@ pointing/emulate_mouse_from_touch=true
 [internationalization]
 
 locale/fallback="de"
+rendering/root_node_auto_translate=false
 
 [layer_names]
 

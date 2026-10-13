@@ -155,3 +155,92 @@ func test_fixtures_pass_msgfmt_when_installed() -> void:
 		var code: int = OS.execute("msgfmt", PackedStringArray(["--check", "-o", "/dev/null",
 			ProjectSettings.globalize_path(FIX.path_join(rel))]), out, true)
 		assert_eq(code, 0, "msgfmt --check %s: %s" % [rel, "".join(out)])
+
+
+## The runtime reader (LocaleLoader.read_messages: no dictionary per entry) takes exactly what messages(parse_po())
+## takes — on the fixtures and on a fully translated copy of the real POT files.
+func test_the_runtime_reader_matches_the_parser() -> void:
+	var texts: Dictionary = {}
+	for rel: String in ["root/en/ui.po", "root/en/data.po", "pack/locale/en.po"]:
+		texts[rel] = FileAccess.get_file_as_string(FIX.path_join(rel))
+	for d: String in LocaleLoader.DOMAINS:
+		texts["full " + d] = _translated_copy(FileAccess.get_file_as_string("res://locale/pot/%s.pot" % d))
+	texts["crlf"] = "msgid \"\"\r\nmsgstr \"Language: en\\n\"\r\n\r\n#, fuzzy\r\nmsgid \"A\"\r\nmsgstr \"B\"\r\n\r\n" \
+		+ "msgid \"C\"\r\nmsgstr \"D\"\r\n"
+	for k: String in texts:
+		var fast: Array = LocaleLoader.read_messages(str(texts[k]))
+		var full: Array = []
+		var po: Dictionary = LocaleLoader.parse_po(str(texts[k]), k)
+		for e: Dictionary in LocaleLoader.messages(po):
+			var forms: PackedStringArray = (e["str"] as PackedStringArray).duplicate()
+			if str(e["plural"]) == "":
+				forms = PackedStringArray([forms[0]])
+			else:
+				for i in forms.size():
+					if forms[i] == "":
+						forms[i] = str(e["id"]) if i == 0 else str(e["plural"])
+			full.append([str(e["ctx"]), str(e["id"]), str(e["plural"]), forms])
+		assert_eq(po["errors"], PackedStringArray(), k + ": a well-formed file")
+		assert_eq(fast.size(), full.size(), k + ": the same messages")
+		assert_eq(fast, full, k)
+	assert_eq(LocaleLoader.read_messages(str(texts["crlf"])), [["", "C", "", PackedStringArray(["D"])]],
+		"CRLF, fuzzy skipped")
+	var tr: Translation = Translation.new()
+	var plurals: Dictionary = {}
+	LocaleLoader.read_messages(str(texts["root/en/ui.po"]), tr, plurals)
+	assert_eq([String(tr.get_message("Gift")), String(tr.get_message("Stand", "season")), plurals.keys().size()],
+		["Poison", "Standings", 2], "straight into a catalog; the plural forms for Tx")
+
+
+## The start of an English game reads the four PO files: a fully translated catalog (every msgid of the POTs) builds in
+## ≤ 50 ms (11 §1.2 Messziel; asserted with PTD_PERF_ASSERTS=1 like every timing, printed otherwise).
+func test_a_full_catalog_builds_fast() -> void:
+	var root: String = "user://test_11_po_full"
+	DirAccess.make_dir_recursive_absolute(root.path_join("en"))
+	var keys: Dictionary = {}
+	for d: String in LocaleLoader.DOMAINS:
+		var text: String = _translated_copy(FileAccess.get_file_as_string("res://locale/pot/%s.pot" % d))
+		for e: Dictionary in LocaleLoader.parse_po(text, d)["entries"]:
+			keys[str(e["ctx"]) + Tx.CTX_SEP + str(e["id"])] = true
+		var f: FileAccess = FileAccess.open(root.path_join("en").path_join(d + ".po"), FileAccess.WRITE)
+		f.store_string(text)
+		f.close()
+	var best: float = INF
+	var res: Dictionary = {}
+	for i in 3:
+		var t0: int = Time.get_ticks_usec()
+		res = LocaleLoader.build("en", "", root)
+		best = minf(best, (Time.get_ticks_usec() - t0) / 1000.0)
+	assert_eq(res["errors"], PackedStringArray())
+	assert_eq(int(res["count"]), keys.size(), "every msgid of the four POTs")
+	assert_time_budget(best, 50.0, "build of a full English catalog (%d messages)" % int(res["count"]))
+	for d: String in LocaleLoader.DOMAINS:
+		DirAccess.remove_absolute(root.path_join("en").path_join(d + ".po"))
+	DirAccess.remove_absolute(root.path_join("en"))
+	DirAccess.remove_absolute(root)
+
+
+## A POT with every msgstr filled ("EN " + the msgid; plural forms too) — a stand-in for the finished translation.
+static func _translated_copy(pot: String) -> String:
+	var out: PackedStringArray = []
+	var last_id: String = ""
+	var last_plural: String = ""
+	for line: String in pot.split("\n"):
+		if line.begins_with("msgid \"") and line != "msgid \"\"":
+			last_id = line.substr(6)
+		elif line.begins_with("msgid_plural \""):
+			last_plural = line.substr(13)
+		if line == "msgstr \"\"" and last_id != "":
+			out.append("msgstr \"EN " + last_id.substr(1))
+			continue
+		if line == "msgstr[0] \"\"":
+			out.append("msgstr[0] \"EN " + last_id.substr(1))
+			continue
+		if line == "msgstr[1] \"\"":
+			out.append("msgstr[1] \"EN " + last_plural.substr(1))
+			continue
+		out.append(line)
+		if line == "":
+			last_id = ""
+			last_plural = ""
+	return "\n".join(out)

@@ -479,10 +479,10 @@ static func pot_text(domain: String, list: Array) -> String:
 		if not flags.is_empty():
 			out.append("#, " + ", ".join(flags))
 		if str(e["ctx"]) != "":
-			out.append(LocaleLoader.po_field("msgctxt", str(e["ctx"])))
-		out.append(LocaleLoader.po_field("msgid", str(e["id"])))
+			out.append(PoFile.po_field("msgctxt", str(e["ctx"])))
+		out.append(PoFile.po_field("msgid", str(e["id"])))
 		if str(e["plural"]) != "":
-			out.append(LocaleLoader.po_field("msgid_plural", str(e["plural"])))
+			out.append(PoFile.po_field("msgid_plural", str(e["plural"])))
 			out.append("msgstr[0] \"\"")
 			out.append("msgstr[1] \"\"")
 		else:

@@ -20,7 +20,7 @@ static var _re_count_word: RegEx = null
 
 ## {"errors": PackedStringArray, "warnings": PackedStringArray, "counts": {"total", "translated", "fuzzy", "empty"}}
 static func check_text(text: String, source: String) -> Dictionary:
-	var po: Dictionary = LocaleLoader.parse_po(text, source, true)
+	var po: Dictionary = PoFile.parse(text, source, true)
 	var errors: PackedStringArray = (po["errors"] as PackedStringArray).duplicate()
 	var warnings: PackedStringArray = []
 	var header: Dictionary = po["header"]

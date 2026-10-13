@@ -2403,11 +2403,18 @@ func _season_window_title(text: String) -> void:
 ## Applies the language of the run (LocaleLoader.resolve → apply) and returns it: --lang=<code> (transient), ephemeral
 ## runs German, else settings.language ("auto" = the system language if it is one of ours, else English). An active
 ## content pack (11-P1, DB.pack) adds its PO and may narrow the languages. `from_menu`: the options row on the title
-## changed the setting — the choice wins over --lang and the ephemeral default.
+## changed the setting — the choice wins over --lang and the ephemeral default. Reading PO files is logged with its time
+## (German reads none and stays silent).
 func apply_language(from_menu: bool = false) -> String:
+	var t0: int = Time.get_ticks_usec()
 	var pack: Object = DB.get("pack") as Object       # 11-P1's PackDef (null without a pack); read by name
 	var args: PackedStringArray = PackedStringArray() if from_menu else OS.get_cmdline_user_args()
 	var setting: String = settings.language if settings != null else LocaleLoader.AUTO
 	var lang: String = LocaleLoader.resolve(setting, args, ephemeral and not from_menu, OS.get_locale_language(),
 		LocaleLoader.pack_languages(pack), LocaleLoader.pack_default_lang(pack))
-	return str(LocaleLoader.apply(lang, LocaleLoader.pack_dir(pack)).get("lang", lang))
+	var res: Dictionary = LocaleLoader.apply(lang, LocaleLoader.pack_dir(pack))
+	var files: PackedStringArray = res.get("files", PackedStringArray())
+	if not files.is_empty():
+		print("[LocaleLoader] %s: %d PO files, %d messages (%.1f ms)" % [str(res.get("lang", lang)), files.size(),
+			int(res.get("count", 0)), (Time.get_ticks_usec() - t0) / 1000.0])
+	return str(res.get("lang", lang))

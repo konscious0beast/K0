@@ -1,15 +1,16 @@
 extends TestCase
-## 11-L1 (11 §1.2, §1.12): the PO parser of LocaleLoader — msgctxt, plural, continuation lines, escapes, "fuzzy"
-## (missing, like msgfmt), comments, obsolete entries, the header, errors — and the round trip with the extractor's
-## writer. The fixtures under tests/fixtures/locale were checked with `msgfmt --check` (GNU gettext 0.21); the test
-## checks them again when msgfmt is on the PATH.
+## 11-L1 (11 §1.2, §1.12): the PO parser (PoFile) — msgctxt, plural, continuation lines, escapes, "fuzzy" (missing,
+## like msgfmt), comments, obsolete entries, the header, errors — and the round trip with the extractor's writer;
+## LocaleLoader's runtime reader takes the same messages and builds one catalog per language. The fixtures under
+## tests/fixtures/locale were checked with `msgfmt --check` (GNU gettext 0.21); the test checks them again when msgfmt
+## is on the PATH.
 
 const FIX: String = "res://tests/fixtures/locale"
 const UI_PO: String = "res://tests/fixtures/locale/root/en/ui.po"
 
 
 func _parse(path: String, meta: bool = false) -> Dictionary:
-	return LocaleLoader.parse_po(FileAccess.get_file_as_string(path), path, meta)
+	return PoFile.parse(FileAccess.get_file_as_string(path), path, meta)
 
 
 func _find(po: Dictionary, id: String, ctx: String = "") -> Dictionary:
@@ -46,7 +47,7 @@ func test_fuzzy_and_untranslated_are_missing() -> void:
 	assert_true(bool(_find(po, "Neuer Text")["fuzzy"]), "#, fuzzy")
 	assert_false(bool(_find(po, "Gift")["fuzzy"]))
 	var ids: PackedStringArray = []
-	for e: Dictionary in LocaleLoader.messages(po):
+	for e: Dictionary in PoFile.messages(po):
 		ids.append(("%s|%s" % [e["ctx"], e["id"]]))
 	assert_false(ids.has("|Neuer Text"), "fuzzy counts as missing (like msgfmt)")
 	assert_false(ids.has("|Noch nicht übersetzt"), "an empty msgstr is no message")
@@ -66,9 +67,9 @@ func test_comments_with_meta() -> void:
 
 func test_line_endings_and_errors() -> void:
 	var crlf: String = "msgid \"\"\r\nmsgstr \"Language: en\\n\"\r\n\r\nmsgid \"A\"\r\nmsgstr \"B\"\r\n"
-	var po: Dictionary = LocaleLoader.parse_po(crlf, "crlf")
+	var po: Dictionary = PoFile.parse(crlf, "crlf")
 	assert_eq([po["errors"], _find(po, "A")["str"]], [PackedStringArray(), PackedStringArray(["B"])], "CRLF")
-	var bad: Dictionary = LocaleLoader.parse_po("\n".join(PackedStringArray([
+	var bad: Dictionary = PoFile.parse("\n".join(PackedStringArray([
 		"msgid \"open", "msgstr \"x\"", "",
 		"msgid \"a\"", "msgstr[1] \"b\"", "",
 		"msgid \"c\"", "msgtext \"d\"", "",
@@ -81,7 +82,7 @@ func test_line_endings_and_errors() -> void:
 			"msgstr[n] without msgid_plural", "bad.po:8: unknown keyword 'msgtext'", "msgid without msgstr",
 			"bad.po:12: a string without a keyword", "bad.po:14: unknown escape \\q"]:
 		assert_has(errors, want)
-	var esc: Dictionary = LocaleLoader.parse_po("msgid \"a\\\"\"\nmsgstr \"b\\\\\"\n", "esc")
+	var esc: Dictionary = PoFile.parse("msgid \"a\\\"\"\nmsgstr \"b\\\\\"\n", "esc")
 	assert_eq([esc["errors"], _find(esc, "a\"")["str"]], [PackedStringArray(), PackedStringArray(["b\\"])],
 		"an escaped quote before the closing one; a backslash at the end")
 
@@ -91,25 +92,25 @@ func test_round_trip_with_the_writer() -> void:
 	var out: PackedStringArray = []
 	for e: Dictionary in po["entries"]:
 		if bool(e["has_ctx"]):
-			out.append(LocaleLoader.po_field("msgctxt", str(e["ctx"])))
-		out.append(LocaleLoader.po_field("msgid", str(e["id"])))
+			out.append(PoFile.po_field("msgctxt", str(e["ctx"])))
+		out.append(PoFile.po_field("msgid", str(e["id"])))
 		var forms: PackedStringArray = e["str"]
 		if str(e["plural"]) != "":
-			out.append(LocaleLoader.po_field("msgid_plural", str(e["plural"])))
+			out.append(PoFile.po_field("msgid_plural", str(e["plural"])))
 			for i in forms.size():
-				out.append(LocaleLoader.po_field("msgstr[%d]" % i, forms[i]))
+				out.append(PoFile.po_field("msgstr[%d]" % i, forms[i]))
 		else:
-			out.append(LocaleLoader.po_field("msgstr", forms[0]))
+			out.append(PoFile.po_field("msgstr", forms[0]))
 		out.append("")
-	var back: Dictionary = LocaleLoader.parse_po("\n".join(out), "round trip")
+	var back: Dictionary = PoFile.parse("\n".join(out), "round trip")
 	assert_eq(back["errors"], PackedStringArray())
 	assert_eq(back["entries"].size(), po["entries"].size())
 	for i in mini(back["entries"].size(), po["entries"].size()):
 		var a: Dictionary = po["entries"][i]
 		var b: Dictionary = back["entries"][i]
 		assert_eq([b["ctx"], b["id"], b["plural"], b["str"]], [a["ctx"], a["id"], a["plural"], a["str"]], str(a["id"]))
-	assert_eq(LocaleLoader.po_field("msgid", "a\nb"), "msgid \"\"\n\"a\\n\"\n\"b\"", "gettext style for two lines")
-	assert_eq(LocaleLoader.po_field("msgid", "a\n"), "msgid \"a\\n\"", "one line with its newline stays one line")
+	assert_eq(PoFile.po_field("msgid", "a\nb"), "msgid \"\"\n\"a\\n\"\n\"b\"", "gettext style for two lines")
+	assert_eq(PoFile.po_field("msgid", "a\n"), "msgid \"a\\n\"", "one line with its newline stays one line")
 
 
 func test_build_merges_domains_and_the_pack() -> void:
@@ -157,7 +158,7 @@ func test_fixtures_pass_msgfmt_when_installed() -> void:
 		assert_eq(code, 0, "msgfmt --check %s: %s" % [rel, "".join(out)])
 
 
-## The runtime reader (LocaleLoader.read_messages: no dictionary per entry) takes exactly what messages(parse_po())
+## The runtime reader (LocaleLoader.read_messages: no dictionary per entry) takes exactly what PoFile.messages(parse())
 ## takes — on the fixtures and on a fully translated copy of the real POT files.
 func test_the_runtime_reader_matches_the_parser() -> void:
 	var texts: Dictionary = {}
@@ -173,8 +174,8 @@ func test_the_runtime_reader_matches_the_parser() -> void:
 	for k: String in texts:
 		var fast: Array = LocaleLoader.read_messages(str(texts[k]))
 		var full: Array = []
-		var po: Dictionary = LocaleLoader.parse_po(str(texts[k]), k)
-		for e: Dictionary in LocaleLoader.messages(po):
+		var po: Dictionary = PoFile.parse(str(texts[k]), k)
+		for e: Dictionary in PoFile.messages(po):
 			var forms: PackedStringArray = (e["str"] as PackedStringArray).duplicate()
 			if str(e["plural"]) == "":
 				forms = PackedStringArray([forms[0]])
@@ -203,7 +204,7 @@ func test_a_full_catalog_builds_fast() -> void:
 	var keys: Dictionary = {}
 	for d: String in LocaleLoader.DOMAINS:
 		var text: String = _translated_copy(FileAccess.get_file_as_string("res://locale/pot/%s.pot" % d))
-		for e: Dictionary in LocaleLoader.parse_po(text, d)["entries"]:
+		for e: Dictionary in PoFile.parse(text, d)["entries"]:
 			keys[str(e["ctx"]) + Tx.CTX_SEP + str(e["id"])] = true
 		var f: FileAccess = FileAccess.open(root.path_join("en").path_join(d + ".po"), FileAccess.WRITE)
 		f.store_string(text)

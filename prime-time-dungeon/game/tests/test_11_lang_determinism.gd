@@ -130,7 +130,7 @@ func _english() -> void:
 		"\"Content-Type: text/plain; charset=UTF-8\\n\"", "\"Plural-Forms: nplurals=2; plural=(n != 1);\\n\"", ""]
 	var seen: Dictionary = {}
 	for d: String in LocaleLoader.DOMAINS:
-		var pot: Dictionary = LocaleLoader.parse_po(FileAccess.get_file_as_string("res://locale/pot/%s.pot" % d), d)
+		var pot: Dictionary = PoFile.parse(FileAccess.get_file_as_string("res://locale/pot/%s.pot" % d), d)
 		for e: Dictionary in pot["entries"]:
 			for ctx: String in [str(e["ctx"]), ""]:
 				var key: String = ctx + Tx.CTX_SEP + str(e["id"])
@@ -138,14 +138,14 @@ func _english() -> void:
 					continue
 				seen[key] = true
 				if ctx != "":
-					out.append(LocaleLoader.po_field("msgctxt", ctx))
-				out.append(LocaleLoader.po_field("msgid", str(e["id"])))
+					out.append(PoFile.po_field("msgctxt", ctx))
+				out.append(PoFile.po_field("msgid", str(e["id"])))
 				if str(e["plural"]) != "":
-					out.append(LocaleLoader.po_field("msgid_plural", str(e["plural"])))
-					out.append(LocaleLoader.po_field("msgstr[0]", "EN " + str(e["id"])))
-					out.append(LocaleLoader.po_field("msgstr[1]", "EN " + str(e["plural"])))
+					out.append(PoFile.po_field("msgid_plural", str(e["plural"])))
+					out.append(PoFile.po_field("msgstr[0]", "EN " + str(e["id"])))
+					out.append(PoFile.po_field("msgstr[1]", "EN " + str(e["plural"])))
 				else:
-					out.append(LocaleLoader.po_field("msgstr", "EN " + str(e["id"])))
+					out.append(PoFile.po_field("msgstr", "EN " + str(e["id"])))
 				out.append("")
 	for d: String in LocaleLoader.DOMAINS:
 		var f: FileAccess = FileAccess.open(FULL.path_join("en").path_join(d + ".po"), FileAccess.WRITE)

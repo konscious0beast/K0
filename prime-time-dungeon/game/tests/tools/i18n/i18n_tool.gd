@@ -14,7 +14,7 @@ extends SceneTree
 
 const EXTRACTOR: String = "res://tests/tools/i18n/extractor.gd"
 const RULES: String = "res://tests/tools/i18n/po_rules.gd"
-const LOADER: String = "res://core/data/locale_loader.gd"
+const PO_FILE: String = "res://core/data/po_file.gd"
 const LINT: String = "res://tests/tools/i18n/literal_lint.gd"
 const POT_DIR: String = "res://locale/pot"
 const LOCALE_DIR: String = "res://locale"
@@ -163,13 +163,13 @@ func _rules(lang: String, dir: String) -> int:
 
 
 func _sync(lang: String, pot_dir: String, dir: String) -> int:
-	var loader: GDScript = load(LOADER) as GDScript
+	var po_file: GDScript = load(PO_FILE) as GDScript
 	var bad: int = 0
 	for d: String in _domains():
 		var pot_path: String = pot_dir.path_join(d + ".pot")
 		var po_path: String = dir.path_join(lang).path_join(d + ".po")
-		var pot: Dictionary = loader.call("parse_po", FileAccess.get_file_as_string(pot_path), pot_path)
-		var po: Dictionary = loader.call("parse_po", FileAccess.get_file_as_string(po_path), po_path)
+		var pot: Dictionary = po_file.call("parse", FileAccess.get_file_as_string(pot_path), pot_path)
+		var po: Dictionary = po_file.call("parse", FileAccess.get_file_as_string(po_path), po_path)
 		var want: Dictionary = {}
 		for e: Dictionary in pot["entries"]:
 			want[str(e["ctx"]) + "\u0004" + str(e["id"])] = true
@@ -190,12 +190,12 @@ func _sync(lang: String, pot_dir: String, dir: String) -> int:
 
 
 func _stats(lang: String, pack: String, dir: String) -> int:
-	var loader: GDScript = load(LOADER) as GDScript
+	var po_file: GDScript = load(PO_FILE) as GDScript
 	var total_open_words: int = 0
 	print("I18N: coverage of '%s' (translated / fuzzy / empty, words still open)" % lang)
 	for d: String in _domains():
 		var po_path: String = dir.path_join(lang).path_join(d + ".po")
-		var po: Dictionary = loader.call("parse_po", FileAccess.get_file_as_string(po_path), po_path)
+		var po: Dictionary = po_file.call("parse", FileAccess.get_file_as_string(po_path), po_path)
 		var by_ctx: Dictionary = {}
 		for e: Dictionary in po["entries"]:
 			var ctx: String = str(e["ctx"]).get_slice(":", 0)
@@ -230,7 +230,7 @@ func _stats(lang: String, pack: String, dir: String) -> int:
 ## 11 §3.6 "Namensprüfung": the base msgids that contain a name the pack changed per patch and that the pack's PO does
 ## not override — warnings, so no old name stays.
 func _pack_names(pack: String, lang: String) -> int:
-	var loader: GDScript = load(LOADER) as GDScript
+	var po_file: GDScript = load(PO_FILE) as GDScript
 	var renamed: Dictionary = {}                  # old text → new text
 	for f: String in DirAccess.get_files_at(pack.path_join("data")):
 		if not f.ends_with(".json"):
@@ -256,7 +256,7 @@ func _pack_names(pack: String, lang: String) -> int:
 	var pack_po: String = pack.path_join("locale").path_join(lang + ".po")
 	var overridden: Dictionary = {}
 	if FileAccess.file_exists(pack_po):
-		for e: Dictionary in loader.call("messages", loader.call("parse_po", FileAccess.get_file_as_string(pack_po),
+		for e: Dictionary in po_file.call("messages", po_file.call("parse", FileAccess.get_file_as_string(pack_po),
 				pack_po)):
 			overridden[str(e["id"])] = true
 	var ex: RefCounted = _run_extractor()

@@ -8,8 +8,9 @@ extends RefCounted
 ## Talent-Show, the logout through the logout dialog (from the pause menu or the safe room), the login through the
 ## title's "Fortsetzen" and "Während Sie schliefen …", the stairs dialog, the Etagen-Bilanz and the end screens. A new
 ## season screen (an offer after the Recall, a tab, the season results) gets its function here and one call where the
-## bot meets it (_season_safe_room, _season_settle). Private helper (no class_name), created by the bot with itself as
-## `bot` (duck-typed: wait_for, note, fail, finished).
+## bot meets it (_season_safe_room, _season_settle). The bot never reads a screen's text: its lines and the report name
+## ids and numbers only, the same in every language (11 §1.10). Private helper (no class_name), created by the bot with
+## itself as `bot` (duck-typed: wait_for, note, fail, finished).
 
 const UiUtil := preload("res://scenes/ui/ui_util.gd")
 const DAY: int = 86400
@@ -22,7 +23,7 @@ const PICK_BUDGET: int = 1500
 const RECALL_BUDGET: int = 120
 
 var bot: Node = null
-## The logins so far: [{"absence", "away", "question", "lines", "sub"}] (the bot's report).
+## The logins so far: [{"absence", "away", "question", "sec", "lines", "more", "kinds"}] (the bot's report).
 var logins: Array[Dictionary] = []
 
 var _absence: int = -1                     # the absence the next login books (season seconds), -1 = none
@@ -73,8 +74,8 @@ func recall(scene: SafeRoomScene) -> Variant:
 			bot.fail("Recall: the signature of %s was refused: %s" % [mid, JSON.stringify(lo)])
 			return null
 		out.append("%s:%s/%s" % [mid, str(pick[0]), str(pick[1])])
-		bot.note("Recall: %s wird %s (%s)%s" % [mid, DB.class_def(str(pick[1])).name, str(pick[0]),
-			", Signatur auf der Leiste" if not lo.is_empty() else ""])
+		bot.note("Recall: %s → %s / %s%s" % [mid, str(pick[0]), str(pick[1]),
+			", signature on the bar %s" % JSON.stringify(lo.get("bar", {})) if not lo.is_empty() else ""])
 	layer.call("close")
 	if not await bot.wait_for(func() -> bool: return recall_screen(scene) == null, RECALL_BUDGET, "the Recall closed"):
 		return null
@@ -127,7 +128,7 @@ func loadout() -> PackedStringArray:
 			bot.fail("loadout of %s refused: %s" % [m.id, JSON.stringify(bar)])
 			return out
 		out.append(m.id)
-		bot.note("Fähigkeitenbuch: %s legt %s auf die Leiste" % [m.id, JSON.stringify(bar)])
+		bot.note("ability book: %s puts %s on the bar" % [m.id, JSON.stringify(bar)])
 	return out
 
 
@@ -215,24 +216,27 @@ func login(absence: int) -> bool:
 	return true
 
 
-## "Während Sie schliefen …" (the screen after a login or an absence): a clock jump over seven days → "Ja"; the lines
-## go into the bot's log; "Weiter" (the world, the Sendeschluss screen or the Abspann). false = the run failed.
+## "Während Sie schliefen …" (the screen after a login or an absence): a clock jump over seven days → "Ja"; the kinds
+## of its lines (SleepText.report "kinds": ids, never the text) go into the bot's log and report; "Weiter" (the world,
+## the Sendeschluss screen or the Abspann). false = the run failed.
 func wake(screen: Node) -> bool:
 	if screen.has_method("answer") and (screen.get("wake") as Dictionary).has("question"):
-		bot.note("Uhrsprung-Rückfrage: %d s weg → „Ja“ (7 Tage zählen, der Rest wird Sendepause)" % int(
+		bot.note("clock jump question: %d s away → yes (seven days count, the rest pauses the season)" % int(
 			(screen.get("wake") as Dictionary)["question"]))
 		screen.call("answer", true)
 		if not logins.is_empty():
 			logins[logins.size() - 1]["question"] = true
 	var w: Dictionary = screen.get("wake")
-	var lines: PackedStringArray = w.get("lines", PackedStringArray())
+	var kinds: PackedStringArray = PackedStringArray(w.get("kinds", PackedStringArray()))
+	var n: int = (w.get("lines", PackedStringArray()) as PackedStringArray).size()
 	if not logins.is_empty():
-		logins[logins.size() - 1]["sub"] = str(w.get("sub", ""))
-		logins[logins.size() - 1]["lines"] = lines.size()
-		logins[logins.size() - 1]["kinds"] = PackedStringArray(w.get("kinds", PackedStringArray()))
-	bot.note("%s · %s" % [str(w.get("title", "")), str(w.get("sub", ""))])
-	for l: String in lines:
-		bot.note("  • " + l)
+		var rec: Dictionary = logins[logins.size() - 1]
+		rec["sec"] = int(w.get("sec", 0))
+		rec["lines"] = n
+		rec["more"] = int(w.get("more", 0))
+		rec["kinds"] = kinds
+	bot.note("wake summary: %d s, %d lines %s (+%d), result \"%s\"" % [int(w.get("sec", 0)), n, str(kinds),
+		int(w.get("more", 0)), str(w.get("result", ""))])
 	var screen_id: int = screen.get_instance_id()      # the summary is freed on the way: no capture of the node
 	screen.call("continue_pressed")
 	return await bot.wait_for(func() -> bool: return Router.current != null \

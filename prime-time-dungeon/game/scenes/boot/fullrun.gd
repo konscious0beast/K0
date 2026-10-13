@@ -2807,8 +2807,8 @@ func _season_open_floor() -> void:
 	_same_sig = 0
 	_season_shut = false
 	var def: FloorDef = Game.floor_def()
-	_note("floor %d (%s): band %d–%d, level %s, day %.2f" % [fr.index, def.name if def != null else "?", band.x,
-		band.y, str(_levels()), _season_day()])
+	_note("floor %d (%s, %s): band %d–%d, level %s, day %.2f" % [fr.index, def.id if def != null else "?",
+		def.theme if def != null else "?", band.x, band.y, str(_levels()), _season_day()])
 	if fr.index > 1 and def != null and def.has_zones():
 		var layout: FloorLayout = DungeonGenerator.generate(def, fr.seed)
 		var open: int = 0
@@ -2971,7 +2971,7 @@ func _season_stairs(ex: ExplorationScene, dlg: Node) -> bool:
 		_season_shut = true
 		if not await _wait(func() -> bool: return not ex.is_modal(), 60, "stairs dialog closed"):
 			return false
-		_note("stairs of floor %d closed: Kulissen im Aufbau (opens in %d s)" % [fr.index,
+		_note("stairs of floor %d closed (opens in %d s)" % [fr.index,
 			SeasonRules.opens_in(Game.state, fr.index + 1)])
 		return true
 	_note("stairs: descend from floor %d" % fr.index)

@@ -853,6 +853,7 @@ func _rt_ready() -> void:
 ## The target of a pull ({} hides it; ExplorationScene.pull_frame_model): the frame below the floor name / timer /
 ## quest column, the marker at the lead, and on touch the action button with slot 1's symbol (07 §7.3).
 func set_pull_target(model: Dictionary) -> void:
+	_season_pull(model)                           # Staffeln (09 H-23, ST1-H): the counter makes room for the frame
 	var col: Control = _frame.get_node_or_null("TopCenter") as Control
 	if col != null:
 		_target_view.set("top", col.position.y + col.size.y + 10.0)
@@ -936,6 +937,7 @@ var _season_seen: Dictionary = {}           # career "seen" keys read once (Save
 var _season_cast_at: String = ""            # _season_cast_key of the cached cast reads
 var _season_cast: Dictionary = {}           # "counter", "rank", "need", "need_label" (_season_read)
 var _season_reads: Array[String] = []       # the cast reads still due after a change, one per tick
+var _season_targeting: bool = false         # a pull target is shown: the counter line makes room (_season_pull)
 
 
 ## A calendar season: the floor countdown is frozen (SeasonRules.floor_timer_frozen) — the collapse display replaces it.
@@ -1082,7 +1084,7 @@ func _season_show(st: GameState) -> void:
 	var s: SeasonState = st.season
 	var has_cast: bool = CastSim.has_cast(st)
 	var c: Dictionary = _season_cast.get("counter", {}) as Dictionary
-	var show_counter: bool = st.floor_run.index >= 2 and has_cast and not c.is_empty()
+	var show_counter: bool = st.floor_run.index >= 2 and has_cast and not c.is_empty() and not _season_targeting
 	season_counter.visible = show_counter
 	if show_counter:
 		var rank: int = int(_season_cast.get("rank", 0))
@@ -1094,6 +1096,19 @@ func _season_show(st: GameState) -> void:
 	var need_label: String = str(_season_cast.get("need_label", ""))
 	if has_cast and st.floor_run.location == &"start" and s.result == "" and need_label != "":
 		_season_say("season_need", {"cand": need_label}, "need")
+
+
+## A pull target is shown or gone (set_pull_target, every physics frame while one is): the counter line makes room — the
+## target frame stands right below the collapse display, and the HUD keeps the exploration's UI budget with the frame
+## (09 H-23, PERFORMANCE.md §3.11); it comes back when the target goes.
+func _season_pull(model: Dictionary) -> void:
+	var targeting: bool = not model.is_empty()
+	if season_counter == null or targeting == _season_targeting:
+		return
+	_season_targeting = targeting
+	var st: GameState = Game.state
+	if st != null and st.season != null and st.floor_run != null:
+		_season_show(st)
 
 
 ## What the HUD's cast reads depend on (cheap to build): the cast's stored rows, clock and bookkeeping (they change

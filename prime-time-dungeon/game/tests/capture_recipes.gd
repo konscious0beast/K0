@@ -65,9 +65,9 @@ extends Node
 ##   with --before=warn: 40 min before, gold, M.O.D.'s line), season_stairs (--before=cal3: the closed stairs),
 ##   season_guests (safe_room.tscn: the AI candidates, "Anheuern"; season_hire: its dialog with the price; with
 ##   --before=cal3 and --params='{"recall": false}' below TALENT-SHOW and RECALL), season_offer (safe_room.tscn
-##   --before=cal3: the Recall, both choose, FERTIG — the tempo offer), season_quiet (any screen without M.O.D.'s box
-##   and the toasts: the title with --before=career, season_summary.tscn with finale | out, hall_of_fame.tscn with
-##   hall).
+##   --before=cal3: the Recall, both choose, FERTIG — the tempo offer), season_target (exploration.tscn: a pull target
+##   five levels above Kai — red plaque, "+5", the warning sign), season_quiet (any screen without M.O.D.'s box and the
+##   toasts: the title with --before=career, season_summary.tscn with finale | out, hall_of_fame.tscn with hall).
 
 const ZONES: Dictionary = {"platform": "zone_platform", "sewer": "zone_sewer", "cellar": "zone_cellar"}
 
@@ -2181,6 +2181,32 @@ func _r_season_offer(scene: Node) -> bool:
 	if not await until(func() -> bool: return bool(scene.get("_season_offering")), 120):
 		return false
 	return await _settle(10)
+
+
+## season_target (exploration.tscn --before=cal2): Kai, five levels below a group of the first quarter, targets its lead
+## for a pull — the plaque in red with "+5" and the warning sign (09 §3.4), above it the collapse display (the counter
+## makes room while a target is shown, 09 H-23).
+func _r_season_target(scene: Node) -> bool:
+	if not await _explore_ready(scene):
+		return false
+	ExplorationScene.pull_taught = false
+	var layout: FloorLayout = scene.call("get_layout")
+	var spawn: EnemySpawn = _zone_group(scene, layout, _season_zone(layout, 0))
+	if spawn == null:
+		return false
+	_freeze_enemies(scene)
+	_reveal_zone(scene, layout, _season_zone(layout, 0))
+	_h_party(maxi(1, EnemyLevels.enemy_level(Game.state, DB.data, spawn.id, layout) - 5), ["", ""])
+	Events.party_changed.emit()                # the party frames show the new level
+	var actor: Node3D = scene.call("get_enemy", spawn.id) as Node3D
+	_place_facing(scene, layout, spawn.cell, actor.global_position, 3.0)
+	await frames(20)
+	await _quiet_mod_queue()
+	if not bool(scene.call("set_pull_target", spawn.id)):
+		return false
+	await seconds(0.3)
+	await _settle_toasts()
+	return str(scene.call("pull_target")) == spawn.id
 
 
 ## season_quiet: a season screen without M.O.D.'s box and the toasts of the setup.

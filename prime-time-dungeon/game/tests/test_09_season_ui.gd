@@ -594,6 +594,15 @@ func test_the_collapse_display_in_the_hud() -> void:
 	hud.season_refresh()
 	assert_ne(lbl.get_theme_color("font_color"), UiTheme.C_DANGER)
 	Events.mod_said.disconnect(on_said)
+	var target: Dictionary = {"lead": "enm_rabattschild", "count": 2, "level": 9, "dist_m": 5.0, "slots": [],
+		"state": ""}
+	hud.set_pull_target(target)                       # 09 H-23: a pull target — the counter makes room
+	assert_false(hud.season_counter.visible, "the counter steps aside for the target frame")
+	assert_true(hud.season_panel.visible, "the collapse display stays")
+	hud.season_refresh()
+	assert_false(hud.season_counter.visible, "… also after a refresh")
+	hud.set_pull_target({})
+	assert_true(hud.season_counter.visible, "back when the target goes")
 	for res: Vector2i in RESOLUTIONS:
 		for notch: bool in [false, true]:
 			tree.root.size = res
@@ -672,6 +681,51 @@ func test_the_guests_of_a_safe_room_and_the_hire() -> void:
 				targets.append(b as Control)
 			_targets(targets, tag)
 			_check_labels(panel, tag)
+
+
+## 09 §3.4, V-6, D-7: the target frame of a pull (the group's name plate in the exploration) shows the group's level in
+## its colour against the controlled figure, the difference left of the plaque ("+3", "−4", "±0") and, red, the warning
+## sign — in the level label itself (no draw call more); the name gives way. Outside a season the plaque stays gold
+## without a number.
+func test_the_target_frame_shows_colour_and_difference() -> void:
+	var view: Control = (load("res://scenes/ui/explore_target.gd") as GDScript).new() as Control
+	view.size = Vector2(1280, 720)
+	add_to_tree(view)
+	var model: Dictionary = {"lead": "enm_rabattschild", "count": 3, "level": 9, "dist_m": 6.0, "slots": [],
+		"state": ""}
+	view.call("set_model", model)
+	await wait_frames(1)
+	var lv_l: Label = view.find_child("L_level", true, false) as Label
+	var name_l: Label = view.find_child("L_name", true, false) as Label
+	var labels: int = view.find_children("*", "Label", true, false).size()
+	assert_eq(view.call("level_view"), {}, "without a season: gold, no number")
+	assert_eq(lv_l.text, "9")
+	var st: GameState = _season("calendar", "net", 7, 2, 0)
+	var me: int = st.member(Game.hero()).level
+	for c: Array in [[0, "yellow", "±0", false], [2, "yellow", "+2", false], [3, "orange", "+3", false],
+			[5, "red", "+5", true], [-3, "green", "−3", false], [-6, "grey", "−6", false]]:
+		model["level"] = me + int(c[0])
+		view.call("set_model", model.duplicate())
+		await wait_frames(1)
+		var v: Dictionary = view.call("level_view")
+		assert_eq([v.get("color", ""), v.get("text", ""), v.get("warning", false)], [c[1], c[2], c[3]], str(c))
+		var want: String = UiUtil.glyph_safe(str(c[2]))
+		assert_true(lv_l.text.begins_with(want) and lv_l.text.ends_with(str(me + int(c[0]))), lv_l.text)
+		assert_eq(UiUtil.missing_glyphs(lv_l.text), "", "drawn glyphs: " + lv_l.text)
+		var font: Font = lv_l.get_theme_font("font")
+		var digits: float = font.get_string_size(str(me + int(c[0])), HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
+		var plaque: Vector2 = view.call("level_center", view.call("frame_rect"))
+		assert_almost(lv_l.get_rect().end.x, plaque.x + digits * 0.5, 1.0, "the level sits in the plaque %s" % str(c))
+		var diff_end: float = float(v["x"]) + font.get_string_size(want, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
+		assert_true(diff_end <= plaque.x - 11.5, "the difference left of the ring %s" % str(c))
+		assert_lt(name_l.get_rect().end.x, float(v["x"]) - (14.0 if bool(c[3]) else 0.0),
+			"the name gives way to the difference %s" % str(c))
+	assert_eq(view.find_children("*", "Label", true, false).size(), labels, "no label more (the UI budget)")
+	Game.state.season = null                           # no season any more: gold again, the level alone
+	view.call("set_model", model.duplicate())
+	await wait_frames(1)
+	assert_eq([lv_l.text, view.call("level_view")], [str(model["level"]), {}])
+	_dispose(view)
 
 
 ## Floor 3 (the Recall, 06 §3.5): TALENT-SHOW and RECALL stand on the right — the guests go below both, and only one

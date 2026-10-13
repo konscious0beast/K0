@@ -58,11 +58,12 @@ const METHODS: Dictionary = {
 	"res://autoload/show.gd": ["on_safe_room_entered(String, bool) -> void"],
 	"res://core/show/mod_announcer.gd": ["set_extra_lines(Callable) -> void"],
 	"res://core/show/marotten_rules.gd": ["_draw_weight(GameState, MarotteDef, int) -> int static"],
-	"res://core/live/run_sim.gd": ["version_status(Dictionary) -> String static",
-		"version_error(Dictionary) -> String static", "is_event_run() -> bool"],
+	# contract pass 11-P1 (docs/11 §3.9): an optional GameData — the content-pack check; without it as before
+	"res://core/live/run_sim.gd": ["version_status(Dictionary, GameData=) -> String static",
+		"version_error(Dictionary, GameData=) -> String static", "is_event_run() -> bool"],
 	"res://core/live/run_rules.gd": [
 		"command_refusal(GameState, GameData, Dictionary, Dictionary, bool, Dictionary, bool=) -> String static"],
-	"res://core/live/leaderboard.gd": ["version_status(Dictionary) -> String static"],
+	"res://core/live/leaderboard.gd": ["version_status(Dictionary, GameData=) -> String static"],   # 11-P1
 	"res://core/live/event_def.gd": ["persona_rule_errors(Variant) -> PackedStringArray static"],
 	"res://core/data/validators/origins.gd": ["normalize(DataValidator, String, Variant) -> Dictionary static",
 		"read_extras(DataValidator, Dictionary) -> void static", "check(DataValidator) -> void static"],

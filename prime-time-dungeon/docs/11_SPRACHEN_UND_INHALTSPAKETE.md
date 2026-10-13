@@ -42,6 +42,13 @@
 > den Änderungsantrag **CR-39** an `07` verbindlich (Kap. 4.11). Die Vorrangklausel des Briefs bleibt unberührt. Es
 > ändert keinen Code; es nennt zu jeder Aussage über den Code Datei und Funktion (Stand `cffb177`).
 >
+> **Stand 11-P1 (2026-10-13, Branch `ptd/p1`):** Der Paket-Lader ist umgesetzt (Kap. 5.3 „Stand 11-P1“, 02_TECH §0.9):
+> `PackDef`, `PackLoader` und die Paketregeln, der Vertrags-Durchgang 11-P1, `DB.pack`, Aufzeichnungen und Ablehnungen,
+> die Fehlerkarte beim Start, das Beispielpaket „Testbild“ (ohne PO-Dateien, die kommen mit L1) und die IP-Firewall
+> Schichten 1 und 2 in der Variante F-20. Ohne Paket bleibt alles bitgleich: `DB.data_hash()` vor und nach P1
+> `6c17e6ce…3ec3`, `fullrun.sh` mit gleichen Ereigniszeilen und Statistiken (bis auf den Münzwurf der Darstellung in
+> `mod_tags`, Kap. 5.3).
+>
 > **Namen:** Der Orchestrator nennt die Mechaniken M1–M8. Weil „M0–M8“ die Module aus 02_TECH sind (M1 ist der
 > CTB-Kern, M8 das Live-Modul), heißen sie hier **MB1–MB8** (Mechanik-Baukasten), gleicher Inhalt. Die übrigen
 > Paketnamen bleiben: **P1** (Paket-Lader), **L1–L5** (Sprachen), **A1** (Art-Kit), **PB** (Paket-Build). Die
@@ -735,6 +742,7 @@ Rohtabellen gemischt; danach ist es von Grunddaten nicht zu unterscheiden. Engin
 game/packs/
   .gitignore                    # ignoriert alles außer der Whitelist (Kap. 3.12)
   PUBLIC_PACKS                  # eine ID je Zeile; heute: testbild
+  PRIVATE_PACKS                 # F-20: private Pakete, nur solange das Repository privat ist; heute leer
   ip_firewall.json              # HMAC-Fingerabdrücke (Kap. 3.12)
   ip_firewall_baseline.json     # akzeptierter Bestand (Kap. 3.12)
   testbild/
@@ -1003,6 +1011,10 @@ Paket darf dann hier liegen, und die Schichten schützen die Grund-Builds statt 
 - Keine `pack.json` außerhalb dieser beiden Orte.
 - `game/packs/.gitignore` (`/*`, `!/.gitignore`, `!/PUBLIC_PACKS`, `!/ip_firewall*.json`, `!/testbild/`) verhindert,
   dass ein hineinkopiertes privates Paket versehentlich mit `git add` landet; `git add -f` fängt die CI.
+- **Variante F-20 (umgesetzt mit 11-P1):** Ein Ordner darf statt in `PUBLIC_PACKS` in `game/packs/PRIVATE_PACKS` stehen;
+  einen Lizenzblock trägt dann nur eine `pack.json` mit einer ID aus `PRIVATE_PACKS`. `test_11_ip_firewall` lässt
+  `PRIVATE_PACKS` nur zu, solange `PTD_REPO_VISIBILITY` nicht `public` ist (die CI setzt die Variable aus
+  `github.event.repository.private`, PB); `.gitignore` öffnet zusätzlich `!/PRIVATE_PACKS`.
 
 Weil jedes lizenzierte Paket einen Lizenzblock trägt, fällt es an Schicht 1 — unabhängig von seinem Inhalt.
 
@@ -1403,6 +1415,71 @@ Summen: englischer Weg (P1, L1, L2, L3, L4, PB) **45–63 PT**; alles zusammen *
    `test_11_ip_firewall` (Schicht 1).
 
 **Gate:** `check.sh` grün; Fullrun bitgleich; `DB.data_hash()` ohne Paket gleich dem Wert vor P1; Testbild lädt.
+
+**Stand 11-P1 (2026-10-13, Branch `ptd/p1`) — umgesetzt** (Einzelheiten 02_TECH §0.9): (1) Vertrags-Durchgang:
+`GameData.load_dir(dir, pack)` mit `pack_id`, `pack_version`, `pack_hash` und den Helfern `pack_fields()` (Kopf,
+Eintrag) und `pack_record()` (Spielstand-Block); `DataValidator.validate(…, provenance)` (Feld `provenance`) und
+`IpWords.check(v, provenance)` — ohne Paket ist die Herkunft leer und jede Regel wie vorher. (2) `PackDef`, `PackLoader`
+(`active_id`, `read`, `compat`, `merge` mit `owned`, `content_hash`; dazu `load_data` für `DB._init`, `merge_patch`,
+`patch_paths`, `owned_paths`/`covers`, `provenance`, `debug_save_dir`, `hash_element`, `licence_notes`) und
+`validators/pack.gd` (Sperrlisten über alle Texte des Pakets, `tone_exceptions`, Credits eines Lizenzblocks). (3)
+`DB.pack`, `pack_via`, `pack_error`, `pack_messages`; `DB.data_hash()` hängt `pack:<id>:<hash>` an, wenn `DB.data` ein
+Paket trägt (`DB.data_hash_input()`). (4) Run-Log-Kopf (`Game`, `Save`), Bestenlisten-Eintrag und Spielstand-Block nur
+mit Paket; die Paketprüfung in `SaveCodec.decode` vor `migrate`/`validate`/`_sanitize`; `other_pack` ohne Rückfall auf
+`.bak`, der Slot nennt das Paket (`Save.slot_summary` → `refusal`, `pack`; Slot-Liste); `other_pack_version` lädt mit
+dem Hinweis `SaveCodec.MSG_PACK_UPDATED`; `RunSim.replay`, `Game.replay_log`, `RunSim.header_errors`/`version_status`
+und `Leaderboard.version_status` mit den Daten des Builds; Debug-Läufe mit `--pack` unter `user://packs/<id>/`. (5) Die
+Fehlerkarte in `boot.gd` statt `route()`. (6) „Testbild“ unter `game/packs/testbild/` (Daten, `art.json`, README),
+`PUBLIC_PACKS`, `PRIVATE_PACKS` (leer), `.gitignore`; Tests `test_11_pack_loader`, `test_11_pack_testbild` (ohne PO),
+`test_11_pack_records`, `test_11_ip_firewall` (Schichten 1 und 2, F-20), zusammen 47 Tests. **Gate:** `check.sh` grün;
+`DB.data_hash()` ohne Paket vor und nach P1
+`6c17e6ce623efbb3c584eae1d121c2c04077752084786f7d776507098e593ec3`; `fullrun.sh` (`--strategy=all`, `--hero=mopsula`,
+`--liga=1`, `--liga=2`) mit denselben Ereigniszeilen und Statistiken wie `main` — bis auf einen Münzwurf der Darstellung
+in `mod_tags`: Ob M.O.D. im Safe Room die Hobby-Variante von `persona_safe_room` sagt, entscheidet `Show._fx_rng`
+(`randomize()`, `VARIANT_CHANCE` 0,5); er wechselt auch zwischen zwei Läufen desselben Builds. Ein Debug-Lauf mit `--pack=testbild`
+startet bis zum Titel (auch der Autoplay-Smoke), die Königin heißt dort „Die Testbild-Königin von Gleis 9“, und ein
+Testbild-Spielstand lädt ohne das Paket nicht (`other_pack`).
+
+**Abweichungen von diesem Dokument:**
+
+- „Testbild“ nennt bis L1 nur `languages: ["de"]` (`read` verlangt zu jeder weiteren Sprache ihre PO-Datei). Der Look
+  heißt „Testbildstreifen“: Namen von Looks haben höchstens 16 Zeichen, „Testbild-Streifen“ hat 17.
+- `active_id` liefert zusätzlich `via` (`feature`/`arg`), `ids` und `note` und nimmt optional `root` und `features` (ein
+  Prädikat statt `OS.has_feature`, damit Tests Export-Tags simulieren). Ein Feature-Tag und `--pack` mit **demselben**
+  Paket sind nicht mehrdeutig.
+- Der Bestenlisten-Eintrag trägt wie der Kopf `pack`, `pack_version` und `pack_hash` — ohne den Hash ließe sich
+  `other_pack_version` nicht erkennen.
+- Die Versionsprüfungen bekommen das Paket über ein optionales `data: GameData` (ohne: genau die Prüfung von vorher); die
+  Paketprüfung geht der `sim_version` vor. `test_08_k0_contract` pinnt die neuen Signaturen.
+- `sub` kennt für `cast` keine Liste: `entries` ist die Tabelle selbst, `names` tragen keine IDs (über `top`).
+- Ein mehrdeutiges oder fehlendes Paket lädt die Grunddaten, damit die Autoloads starten — mit `DB.ok = false`,
+  `push_error` und Fehlerkarte, nie mit einem Start. `valid_until` warnt zur Laufzeit über `DB`
+  (`PackLoader.licence_notes`; der Kern hat keine Uhr), die Prüfung beim Export bleibt PB.
+- Schicht 1 in der Variante F-20: Jeder Ordner steht in `PUBLIC_PACKS` oder `PRIVATE_PACKS`, ein Lizenzblock nur für eine
+  ID aus `PRIVATE_PACKS` (und die Test-Fixtures); mit `PTD_REPO_VISIBILITY=public` muss `PRIVATE_PACKS` leer sein.
+- `Save` setzt den Ordner je Paket in `_ready()` (02_TECH §2.3: Autoloads lesen einander erst dort), nicht in `_init()`.
+- Die Paketregeln lesen als Texte zusätzlich `label`, `flavor` und die Formen `n`/`f`/`m` von `role` und `jobs` (Kap. 1.4).
+
+**Offen nach 11-P1:**
+
+- **L1:** die PO-Dateien von „Testbild“ (`locale/en.po`, `locale/de.po`, dann `languages: ["de", "en"]`), die PO-Regeln in
+  `validators/pack.gd`, `LocaleLoader.apply(…, DB.pack)`, `PackLoader.LANGUAGES` → `locale/languages.json` und die
+  englischen Teile von `test_11_pack_testbild`.
+- **PB:** `pack_check.sh` (ein hineinkopiertes Paket muss in `PUBLIC_PACKS`/`PRIVATE_PACKS` stehen, sonst schlägt
+  `test_11_ip_firewall` an — oder der Lauf nimmt nur `PACK_SAFE`-Tests), `pack_export.sh`, `ip_firewall.sh` (die
+  Struktur über das ganze Repository statt nur `res://`; Schicht 3), `exclude_filter` `packs/*`, die CI mit
+  `PTD_REPO_VISIBILITY`; ob `DirAccess` `res://packs` in einem exportierten PCK listet **[zu prüfen]**.
+- **Anzeige:** `EventInfo.version_tag` (`scenes/ui/event_info.gd`, Eigentum L2e/ST1-H) soll
+  `Leaderboard.version_status(e, DB.data)` fragen (ausblenden bei `other_pack`, „ältere Version“ bei
+  `other_pack_version`); bis dahin trennen die Nutzerordner je Paket die Bestenlisten.
+- **L2:** die Ablehnungs- und Fehlertexte über `Tx` (`SaveCodec.MSG_OTHER_PACK`, `MSG_PACK_UPDATED`, `boot.gd`
+  `PACK_ERROR_TEXTS`, die Slot-Liste).
+- **A1:** Die Art-Regeln finden die Herkunft in `DataValidator.provenance`; die Pfade aus `art.json` stehen als
+  `model.…` in `owned`.
+- **12 (KS, CR-48):** Ein neuer Block in `pack.json` (etwa `drehbuch`, 12 §7.2) kommt als Schlüssel in
+  `PackLoader.MANIFEST_KEYS` plus Feld in `PackDef`; bis dahin ist jeder unbekannte Schlüssel ein Fehler.
+- **Folgeänderungen außerhalb von 02_TECH** (Kap. 5.12): `00_BRIEF` Kap. 6 (`packs/`), `05` (Wertungen je Paket), `04`
+  §2.4 und `CHANGELOG` („[Pakete]“ ab der ersten Änderung am Datenvertrag).
 
 ### 5.4 L1 — i18n-Infrastruktur (kann sofort starten)
 

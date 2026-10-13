@@ -1,0 +1,41 @@
+{
+	"pack_schema": 1,
+	"id": "lizenztest",
+	"name": "Lizenztest",
+	"version": "1.0.0",
+	"engine": {
+		"min": "0.3.0",
+		"max": "0.4.*",
+		"commit": ""
+	},
+	"source_lang": "de",
+	"languages": [
+		"de"
+	],
+	"default_lang": "de",
+	"licence": {
+		"holder": "TEST – kein Rechteinhaber",
+		"contract": "TEST-0",
+		"scope": [
+			"pitch"
+		],
+		"valid_until": "2099-12-31",
+		"credits": [
+			"Testdaten, kein Werk"
+		],
+		"notice": "Test-Fixture für test_11_ip_firewall, kein lizenzierter Inhalt."
+	},
+	"touches": {
+		"enemies": {
+			"patch": [
+				"name"
+			]
+		},
+		"party": {
+			"patch": [
+				"title"
+			]
+		}
+	},
+	"art": ""
+}

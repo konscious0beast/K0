@@ -57,6 +57,13 @@
 > (911 Funde in 91 Dateien) und die PO-Dateien von „Testbild“ (Paket-PO über der Basis-PO, dieselben Regeln). Deutsch
 > bleibt bitgleich; Englisch ändert bis L2/L3 nur Zahlen-, Zeit- und Datumsformate.
 >
+> **Stand 11-A1 (2026-10-18, Branch `ptd/a1`):** Die Art-Kit-Erweiterungen sind umgesetzt (Kap. 4.10 „Stand 11-A1“,
+> 03_ART §5.3–5.5): die Basis `cat` (Stand und Sitz, Stil `fur` kurz/lang und `pattern` in fünf Mustern, 1 152–1 444
+> Tris in 3 Meshes), die Props `tiara`, `sunglasses`, `bathrobe`, `sandals`, `shorts`, `jacket`, die Look-Art `wear`
+> („ohne“, „Jacke“), der Vertrags-Durchgang 11-A1 und PTDs Regeln 1–4 im Validator. Jede bestehende Figur baut
+> bitgleich; die Full-Runs zeigen dieselben Ereigniszeilen wie `main`; `DB.data_hash()` ändert sich nur durch
+> `looks.json`.
+>
 > **Namen:** Der Orchestrator nennt die Mechaniken M1–M8. Weil „M0–M8“ die Module aus 02_TECH sind (M1 ist der
 > CTB-Kern, M8 das Live-Modul), heißen sie hier **MB1–MB8** (Mechanik-Baukasten), gleicher Inhalt. Die übrigen
 > Paketnamen bleiben: **P1** (Paket-Lader), **L1–L5** (Sprachen), **A1** (Art-Kit), **PB** (Paket-Build). Die
@@ -918,8 +925,8 @@ Tests, die gemischte Tabellen direkt prüfen.
 
 - `models` ist nach IDs aus `party` und `enemies` geschlüsselt; jeder Wert ist ein Merge Patch auf das rohe Feld
   `model` (`DataValidator.SPEC_MODEL`) und wird **vor** der Validierung angewendet, also mit allen Modellregeln geprüft
-  (`MODEL_BASES`, `MODEL_PROPS`, `MODEL_POSES`, `MODEL_COLOR_KEYS`, Stil nur für `humanoid`, und
-  `CharacterBuilder.supported_bases()`/`supported_props()` müssen dieselben Listen haben).
+  (`MODEL_BASES`, `MODEL_PROPS`, `MODEL_POSES`, `MODEL_COLOR_KEYS`, Stil nur für `humanoid` — seit 11-A1 auch `cat`,
+  `MODEL_STYLES` —, und `CharacterBuilder.supported_bases()`/`supported_props()` müssen dieselben Listen haben).
 - Erlaubt: `base`, `props`, `colors`, `scale`, `pose`, `style`, `gltf` (`""` oder ein vorhandener Pfad der Grunddaten)
   — Figuren aus dem Baukasten (03_ART §5.3–5.5), mit A1 auch die Katzen-Basis und die neuen Props (Kap. 4.10).
 - Neue Persona-Looks sind Daten (`looks.json`-Overlay, `add`), keine Art-Parameter.
@@ -1347,6 +1354,138 @@ bestehende Figur ändert sich.
 **Tests:** `test_11_art_kit` (jede neue Basis und jedes Prop baut, bleibt im Budget, `supported_*` = Validator-Listen,
 Regeln 1–3 als Validator-Fälle); Einträge in `art/gallery/character_gallery.tscn` und ein Capture.
 
+**Stand 11-A1 (2026-10-18, Branch `ptd/a1`) — umgesetzt** (03_ART §5.3–5.5): `art/kit/archetypes.gd` (Basis `cat`, die
+sechs Props, `STYLES`), `character_builder.gd` (`supported_styles()`, Stil je Basis in `normalize` und im Mesh-Cache,
+`resolve_pose` für `cat`), `character_rig.gd` (Familie `quad`, Schwanzschwingen, Kopfdrehen), `persona_look.gd` (`KINDS`
++= `wear`), neu `core/data/validators/art_kit.gd` (Regeln 1–4), `data_validator.gd` (Vertrags-Durchgang 11-A1),
+`validators/looks.gd` (Art `wear`), `validators/species.gd` (`tiara`, Lizenz-Ausnahme), `data/looks.json` („ohne“,
+„Jacke“), die Fixtures `data_min`/`rt_min` (Kanon `wear`), `art/gallery/character_gallery.gd` mit den Szenen
+`cat_gallery.tscn` und `kit_gallery.tscn` (jede Seite auch aus `character_gallery.tscn` über `params {"page": …}`),
+`tests/test_11_art_kit.gd` (18 Tests), `locale/pot/data.pot` und `en/data.po` (der Name „Jacke“), die Captures 140–149.
+
+*Vertrag (additiv):* `MODEL_BASES` += `cat`; `MODEL_PROPS` += `tiara`, `sunglasses`, `bathrobe`, `sandals`, `shorts`,
+`jacket`; neu `MODEL_CAT_FURS`, `MODEL_CAT_PATTERNS` und `MODEL_STYLES` (die Stil-Schlüssel je Basis: `humanoid`
+hair/beard, `cat` fur/pattern; jede andere Basis ohne Stil — die Prüfung `_check_model_style` nimmt die Schlüssel der
+Basis); `Archetypes.BASES`/`PROPS`/`NOMINAL_HEIGHT` (`cat` 0,5 m)/`DEFAULT_COLORS`;
+`CharacterBuilder.supported_bases()`/`supported_props()`/`supported_styles()` gleich den Validator-Listen
+(`test_m4_art_kit`, `test_11_art_kit`); `PersonaLook.KINDS` += `wear`. **Jede bestehende Figur baut bitgleich:** alle
+Modelle aus `party`/`enemies` und dem Cast-Blatt, jede alte Basis × jedes alte Prop und alle alten Props zugleich haben
+dieselben Tris, Meshes und Vertex-Daten (Positionen, Farben, Indizes) wie `main` (Vergleich über 393 Figuren).
+
+*Katze* (Tris je Stil; Stand und Sitz haben dieselbe Summe; immer 3 Meshes `Body`, `Head`, `Tail`; Budget 1 600 / 3,
+dazu jede Variante im Gegner-Budget 1 500; Höhe stehend 0,52 / 0,53 m, sitzend 0,57 / 0,53 m):
+
+| `fur` \ `pattern` | `solid` | `tabby` | `tortie` | `bicolor` | `calico` |
+|---|---:|---:|---:|---:|---:|
+| `short` | 1 152 | 1 304 | 1 292 | 1 248 | 1 324 |
+| `long` | 1 272 | 1 424 | 1 412 | 1 368 | **1 444** |
+
+Props kommen dazu (Diadem +120, Sonnenbrille +188, Mantel +140/+160, Sandalen +96); die Budgets der Datenmodelle prüft
+`test_m4_art_kit` für jeden Gegner und jede Party-Figur der Daten — eine Katze als Gegner mit Sonnenbrille braucht die
+kurze Felllänge und ein schlichtes Muster (`short solid` + `sunglasses` 1 340).
+
+*Props* (die Teile des Props / netto an Kai, gemessen an Kai, einer zweiten Menschfigur, Mops und Katze; alle in
+vorhandene Meshes gemergt, kein neues MeshInstance):
+
+| Prop | Basen (Sockel) | Tris Teile / netto | Budget |
+|---|---|---:|---:|
+| `tiara` | humanoid (auf dem Haaransatz), pug, cat (`head`) | 120 / +120 | 150 |
+| `sunglasses` | humanoid, cat und jede Basis mit `eyes` | 188 / +188 | 220 |
+| `bathrobe` | humanoid (ersetzt Hemd-Details und Hüft-Box, 148) | 164 / +16 | 300 |
+| `jacket` | humanoid (ersetzt die Hemd-Details, 136) | 160 / +24 | 300 |
+| `shorts` | humanoid (ersetzt die Hosenbein-Kapseln, 360) | 112 / −248 | 200 |
+| `sandals` | humanoid (ersetzt Schuhe und Sohlen, 48) | 96 / +48 | 120 |
+
+Andere Basen bekommen einfache Rückfälle (03_ART §5.4): Mantel um den Rumpf eines Vierbeiners (Rahmen `flags.torso` von
+cat, pug, rodent; `jacket` +140, `bathrobe` +160 mit Gürtel), Ring um das Rumpfende (`shorts` +20), Sohle und Riemen
+unter jeder Pfote (`flags.feet`; `sandals` +96), bei brute an Schenkeln und Stiefeln, sonst am Sockel `body`.
+
+*Persona (`wear`, CR-22):* Kanon 2 492 Tris / 7 MeshInstances; Jacke 2 516; schlimmster Fall der Grunddaten `curls` +
+`stubble` + Brille + Jacke **2 964**, über alle `wear`-Stile (auch Paket-Optionen) `curls` + `stubble` + Brille +
+`sandals` **2 988** — immer genau 7 MeshInstances (`test_11_art_kit` baut alle 9 × 4 × 2 × 5 Kombinationen). `wear` und
+Brille kombinieren frei; eine Exklusivität ist nicht nötig.
+
+*Katzen-Optionen (Stil-Erweiterung):* `fur` ist `short` oder `long` (Perser-Typ: Rumpf r 0,122, Halskrause,
+Wangenflausch, flacheres Gesicht, runde Augen, kleine Ohren weit außen, buschiger Schwanz, dicke Beine und Keulen),
+`pattern` ist `solid`, `tabby` (vier Streifen über den Rücken bis zur Flankenmitte, Schwanzringe, „M“ auf der Stirn),
+`tortie` (Flecken auf dunklem Grund), `bicolor` (Latz, Bauch, Pfoten, Schnauze, Blesse, Halskrause, Schwanzspitze) oder
+`calico` (Flecken in secondary und accent auf hellem Grund) — alles Vertex-Farben auf wenigen Formen, keine Textur. Die
+Optionen stehen an **einer** Stelle, `Archetypes.STYLES` (= `CAT_FURS`, `CAT_PATTERNS`; der erste Wert ist der
+Standard), gespiegelt in `DataValidator.MODEL_STYLES` und abfragbar über `CharacterBuilder.supported_styles()["cat"]`;
+ein späteres Paket bildet darauf ein Spielerprofil ab (Fellfarben über die Slots primary, secondary, accent, eyes).
+
+*Regeln* (`validators/art_kit.gd`, nach `IpWords.check`; Herkunft „Grunddaten“ und Pakete ohne Lizenz): (1) Mopsula
+trägt nie `crown`, `ticket_crown` oder `tiara` — sein Partymodell dort, die Spezies-Looks für ihn in `species.gd`
+(`MOPSULA_FORBIDDEN_PROPS` += `tiara`); (2) keine Party-Figur und kein Begleiter mit Basis `cat`; (3) Kai trägt weder
+`shorts` noch `bathrobe` noch `sandals` — nicht am Partymodell, nicht über einen Spezies-Look für ihn, nicht als
+Persona-Look (`wear`) —, und `sandals` nutzen Grundinhalte gar nicht (Party, Gegner, Spezies); (4) ein Paket mit
+Lizenzblock ist für die Einträge, die es hinzufügt, und die Felder, die es setzt, ausgenommen (`PackLoader.owned_paths`;
+die Pfade aus `art.json` als `model.…`), auch für die Kronen-Regel der Spezies. `test_11_art_kit` prüft 1–3 als
+Validator-Fälle und 4 von Ende zu Ende (ein Paket, dessen `art.json` Mopsula zur Katze mit Diadem macht und der
+Kanalratte Sandalen gibt und dessen Looks-Overlay „Kurze Hose“ hinzufügt: mit Lizenz ausgenommen, ohne Lizenz die vier
+Fehler).
+
+*Entscheidungen und Abweichungen:*
+
+- **A1-1 Sitzen ist `"upright"`.** Kap. 4.10 nennt die Posen „`quadruped` (Stand, Sitz)“; `resolve_pose` liefert zwei
+  Werte: `"auto"`/`"quadruped"` → `&"quadruped"` (Stand), `"upright"` → `&"upright"` (Sitz). Die Rig-Familie bleibt in
+  beiden `quad`.
+- **A1-2 Stil je Basis.** `ModelSpec.style` war nur für `humanoid`; jetzt gilt `MODEL_STYLES` (Kap. 3.7 „Stil nur für
+  `humanoid`“ entsprechend erweitert). Eine Basis ohne Eintrag hat keinen Stil, ein unbekannter Schlüssel ist ein
+  Fehler.
+- **A1-3 `wear` ist eine optionale Art.** Persona-Datei (`PersonaProfile.LOOK_KINDS`) und Casting (`persona_casting.gd`)
+  tragen weiter die sechs Arten von 08 §6.1; ein Look ohne `wear` trägt die Kanon-Option, und `PersonaLook.ids()` nennt
+  `wear` nur, wenn der Look die Art setzt (`OPTIONAL_KINDS`). Damit bleiben die Casting-Zeile des Full-Run-Bots, die
+  Persona-Dateien und `test_08_avatar_kit` unverändert. Die Casting-Zeile „Kleidung“ kommt mit einem Casting-Paket (08).
+- **A1-4 Grunddaten-Optionen:** „ohne“ (Kanon) und „Jacke“ — Bademantel, kurze Hose und Sandalen nie (Regel 3). Kais
+  Partymodell darf höchstens ein `wear`-Prop tragen (ein Look setzt eins; sonst könnte der Kanon ihn nicht unverändert
+  lassen).
+- **A1-5 Kleidung ersetzt Teile.** Jacke und Bademantel kleiden Torso und Ärmel ein und decken die Hemd-Details (Kragen,
+  Bauchtasche, Namensschild, Logo), die kurze Hose ersetzt die Hosenbein-Kapsel, die Sandale den Schuh — daher netto
+  wenig oder weniger Tris; das Budget gilt für die Teile des Props (beides im Test). Der Bademantel geht der Jacke vor.
+- **A1-6 Regel 3 gilt auch für Spezies-Looks für Kai** (`for` leer oder mit `kai`): `model_hint.props_add` ist ein Look
+  für ihn.
+- **A1-7 Regel 4 gilt auch für die bestehende Kronen-Regel der Spezies** (Kap. 3.12: dieselbe Ausnahme für die
+  Art-Regeln).
+- **A1-8 Die Katze steht nicht in `CharacterBuilder.ENEMY_BASES`** (kein Gefahren-Saum von Haus aus), weil sie auch
+  Nebenfigur sein darf — wie `humanoid`.
+- **A1-9 Das Diadem am Mops** ist gebaut und getestet, steht aber in keiner Capture: ein Mops mit Diadem läse sich als
+  Graf Mopsula mit Kronen-Motiv (04 §2.3).
+- **A1-10 Galerie-Beschriftungen** nennen die Vokabular-Werte (`short · tabby`), wie die Seiten `bases` und `props`; die
+  Kleidung trägt eine Ersatzfigur, nie Kai.
+- **A1-11 Die Höhe 0,5 m ± 10 % gilt für den Stand;** sitzend ragt der Kopf der kurzhaarigen Katze höher (0,57 m).
+
+*Gates* (2026-10-18, auf der geteilten 4-Kern-Maschine bei Last 6–14): `tools/check.sh` grün — 1 951 Tests (18 neu), 0
+Fehler, 0 übersprungen, Testlauf 1 393 s, gesamt 24 min 27 s, Smoke `AUTOPLAY: OK`; `test_11_literals` grün.
+`tools/fullrun.sh --strategy=all`, `--hero=mopsula`, `--liga=1` und `--liga=2` → `fullrun.sh: OK`, gegenüber `main`
+(`ac5d15c`) dieselben `FULLRUN: OK`-Zeilen, dieselben Ereigniszeilen (118/118/118/115, 115, 118, 112) und dieselben
+Statistiken bis auf den bekannten Münzwurf der Darstellung in `mod_tags` (Kap. 5.3, „Stand 11-P1“). `tools/perf.sh
+--only=explore,combat` → `PERF: OK` auf `main` und `ptd/a1` mit denselben Draw Calls in jeder Zeile (Etage max 203, Ø
+154, 3D 112, UI 94; Kampf 154/182/169) und denselben Materialien; die Primitive schwanken wie zwischen zwei Läufen
+desselben Builds um ±25 (Partikel). `tools/i18n.sh check` grün (`data.pot` 1 538 msgids, „Jacke“ neu). `DB.data_hash()`
+ohne Paket: `main` `6c17e6ce623efbb3c584eae1d121c2c04077752084786f7d776507098e593ec3` → `ptd/a1`
+`12b0014edbeed5183a7d85a2b38bb26dee4ed8c42e174ae7a4c1b35e4edfa528` (nur `looks.json`: die zwei `wear`-Optionen; neue
+Bestenlisten-Wertung wie bei jeder Datenänderung); kein `SIM_VERSION`-Sprung, kein Zustand und keine Aufzeichnung sieht
+ein Modell.
+
+*Captures* (`tools/check.sh --shot`, 1280 × 720): 140 `cat_gallery.tscn` (jedes Muster, beide Felllängen, Stand und
+Sitz), 141 `view: close` (Ohren, Schnurrhaarpolster, Nase, Augen, die Schwanzlocke), 142 `view: game` (Katzen neben Kai
+und Graf Mopsula aus der Erkundungskamera: Arm 7 m, −38°, FOV 60), 143 `view: fur` (kurz und lang nebeneinander), 144
+`view: sit`, 145 `view: patterns`, 146 `kit_gallery.tscn` (jedes Prop an einer passenden Basis), 147 `view: close`
+(Jacke, Bademantel mit Sandalen, kurze Hose, Sandalen), 148 `view: heads` (Diadem und Sonnenbrille an Mensch und Katze),
+149 `view: persona` (Kai Kanon, mit „Jacke“ und der schwerste Look der Grunddaten mit den gemessenen Tris).
+
+*Offen nach 11-A1:*
+
+- **08 / Casting:** eine Zeile „Kleidung“ (`persona_casting.gd`, `PersonaProfile.LOOK_KINDS` += `wear`); dann nennt auch
+  die Casting-Zeile des Full-Run-Bots die Art, und die Zufalls-Persona zieht sie (ändert die Ereigniszeilen — eigener
+  Durchgang). „Sonnenbrille als Persona-Option“ (Kap. 5.8) ebenso: ein Brillen-Stil ändert die Casting-Optionen und die
+  Ziehungen.
+- **02_TECH §4.3/§8.4** (Vokabular-Zeilen `MODEL_BASES`, `MODEL_PROPS`, `MODEL_STYLES`, Test-Zeile `test_11_art_kit`)
+  und die README-Bildtabelle (140–149) — Folgeänderung für den Integrator; beide Dateien ändert gerade ST1-I.
+- Ein Katzen-Gegner in Inhalten (Pakete, Kap. 4.10 „Katzen nur als Gegner oder Nebenfiguren“); Kleidung als
+  Ausrüstungs-Optik bleibt A8.
+
 ### 4.11 Änderungsantrag CR-39 an 07
 
 CR-39 bündelt den Code-Teil der Bausteine. Jeder Punkt ist **ohne die neuen Daten bitgleich** (neue Felder nur
@@ -1697,7 +1836,8 @@ Etage 1, Gegner, Gegenstände, Achievements), dann Staffel-Inhalte, dann das Ste
   (Kap. 3.8); `tools/ip_firewall.sh structure|scan|fingerprints|baseline|expect-hits` (Kap. 3.12);
   `export_presets.cfg` `exclude_filter` += `packs/*`; in `ptd-check.yml` die Schritte „Pack check (testbild)“ und
   „IP firewall“. Die private Vorlage bleibt in Kap. 3.13.
-- **A1:** wie Kap. 4.10; unabhängig, auch für PTD (Katzen-Gegner, Sonnenbrille als Persona-Option).
+- **A1:** wie Kap. 4.10; unabhängig, auch für PTD (Katzen-Gegner, Sonnenbrille als Persona-Option). Umgesetzt (Kap. 4.10
+  „Stand 11-A1“).
 - **MB:** je Baustein erst, wenn ein Inhalt ihn braucht und 07 den Punkt aus CR-39 freigegeben hat; mit dem
   PTD-Einsatz aus Kap. 4 als erstem Inhalt. Der Vertrags-Durchgang 11-MB bringt die Vokabulare des Bausteins mit.
 

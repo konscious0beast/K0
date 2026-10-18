@@ -264,6 +264,19 @@
 				"primary": "#2A2440",
 				"secondary": "#1A1420"
 			}
+		},
+		{
+			"id": "lk_wear_none",
+			"kind": "wear",
+			"name": "ohne",
+			"style": "none",
+			"canon": true
+		},
+		{
+			"id": "lk_wear_jacket",
+			"kind": "wear",
+			"name": "Jacke",
+			"style": "jacket"
 		}
 	]
 }

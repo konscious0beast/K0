@@ -1,24 +1,28 @@
 extends RefCounted
 ## Validation of data/looks.json (08 §6.1, K2): one entry per look option (prefix lk_) with its category `kind` (hair,
-## hair_color, skin, beard, glasses, outfit), a name and its value — `style` (hair: ModelSpec.style.hair, beard:
-## ModelSpec.style.beard, glasses: GLASSES_STYLES), `color` (hair_color, skin: "#rrggbb") or `colors` (outfit:
-## {"primary", "secondary"}); `canon` marks Kai's option (exactly one per kind). Private helper of DataValidator (no
-## class_name; preloaded as LooksCheck). Rules: the value fields of each kind (and no others), known styles, hex
-## colours, names (<= NAME_MAX, unique per kind, skin tones only "Ton N" — no attributions, 08 §6.1), no option twice,
-## exactly one canon per kind, and the canon look is exactly Kai's model in party.json (the canon Kai keeps his look).
-## Counts are the real catalog's business (test_08_avatar_kit) — fixtures may carry the canon only.
+## hair_color, skin, beard, glasses, outfit; 11-A1: wear), a name and its value — `style` (hair: ModelSpec.style.hair,
+## beard: ModelSpec.style.beard, glasses: GLASSES_STYLES, wear: WEAR_STYLES), `color` (hair_color, skin: "#rrggbb") or
+## `colors` (outfit: {"primary", "secondary"}); `canon` marks Kai's option (exactly one per kind). Private helper of
+## DataValidator (no class_name; preloaded as LooksCheck). Rules: the value fields of each kind (and no others), known
+## styles, hex colours, names (<= NAME_MAX, unique per kind, skin tones only "Ton N" — no attributions, 08 §6.1), no
+## option twice, exactly one canon per kind, and the canon look is exactly Kai's model in party.json (the canon Kai
+## keeps his look). Counts are the real catalog's business (test_08_avatar_kit) — fixtures may carry the canon only.
+## Which clothes the persona may wear in the base data: validators/art_kit.gd (11 §4.10 rule 3).
 
 const TalentsRules := preload("res://core/data/validators/talents.gd")
 
 const SPEC: Array = [["id", "s"], ["kind", "s"], ["name", "s"], ["style", "s", ""], ["color", "s", ""],
 	["colors", "d", {}], ["canon", "b", false]]
-const KINDS: PackedStringArray = ["hair", "hair_color", "skin", "beard", "glasses", "outfit"]
+const KINDS: PackedStringArray = ["hair", "hair_color", "skin", "beard", "glasses", "outfit",
+	"wear"]                                     # 11-A1 (11 §4.10): a clothing option that sets a prop
 ## Glasses: none or round (= the ModelSpec prop "glasses", 03_ART §5.4; 08 §6.2: the existing prop, unchanged).
 const GLASSES_STYLES: PackedStringArray = ["none", "round"]
 const GLASSES_PROP: String = "glasses"
+## 11-A1: wear — none or the clothing prop it puts on (== PersonaLook.WEAR_PROPS behind "none").
+const WEAR_STYLES: PackedStringArray = ["none", "jacket", "bathrobe", "shorts", "sandals"]
 ## The value field(s) of each kind; every other value field must stay empty.
 const VALUE_FIELD: Dictionary = {"hair": "style", "beard": "style", "glasses": "style", "hair_color": "color",
-	"skin": "color", "outfit": "colors"}
+	"skin": "color", "outfit": "colors", "wear": "style"}
 const OUTFIT_KEYS: PackedStringArray = ["primary", "secondary"]
 const NAME_MAX: int = 16
 const MAX_PER_KIND: int = 12
@@ -106,6 +110,8 @@ static func _check_entry(v: DataValidator, d: Dictionary) -> void:
 			v._enum(ctx + ".style", str(d["style"]), DataValidator.MODEL_BEARDS)
 		"glasses":
 			v._enum(ctx + ".style", str(d["style"]), GLASSES_STYLES)
+		"wear":
+			v._enum(ctx + ".style", str(d["style"]), WEAR_STYLES)
 		"hair_color", "skin":
 			if not DataValidator.is_hex_color(str(d["color"])):
 				v._err(ctx + ".color", "must be a hex color \"#rrggbb\"")
@@ -120,7 +126,8 @@ static func _check_entry(v: DataValidator, d: Dictionary) -> void:
 
 
 ## The canon option of every kind dresses Kai exactly as party.json does (style, glasses prop, accent / skin /
-## primary / secondary colours) — so DB.party_model with the canon look is the def model.
+## primary / secondary colours, 11-A1: the wear prop — at most one, a look sets one) — so DB.party_model with the
+## canon look is the def model.
 static func _check_canon_is_kai(v: DataValidator, canon: Dictionary) -> void:
 	var kai: Dictionary = {}
 	for p: Dictionary in v._out.get("party", []):
@@ -131,6 +138,14 @@ static func _check_canon_is_kai(v: DataValidator, canon: Dictionary) -> void:
 	var style: Dictionary = kai.get("style", {})
 	var colors: Dictionary = kai.get("colors", {})
 	var props: PackedStringArray = kai.get("props", PackedStringArray())
+	var worn: PackedStringArray = []
+	for w: String in WEAR_STYLES:
+		if props.has(w):
+			worn.append(w)
+	if worn.size() > 1:
+		v._err("party[%s].model.props" % MEMBER, "'%s': at most one wear prop (a persona look sets one)"
+			% "', '".join(worn))
+	var wear: String = worn[0] if not worn.is_empty() else WEAR_STYLES[0]
 	var want: Dictionary = {
 		"hair": str(style.get("hair", DataValidator.MODEL_HAIR_STYLES[0])),
 		"beard": str(style.get("beard", DataValidator.MODEL_BEARDS[0])),
@@ -138,6 +153,7 @@ static func _check_canon_is_kai(v: DataValidator, canon: Dictionary) -> void:
 		"hair_color": str(colors.get("accent", "")).to_lower(),
 		"skin": str(colors.get("skin", "")).to_lower(),
 		"outfit": "%s/%s" % [str(colors.get("primary", "")).to_lower(), str(colors.get("secondary", "")).to_lower()],
+		"wear": wear,
 	}
 	for kind: String in KINDS:
 		var have: String = _value_key(canon[kind] as Dictionary)

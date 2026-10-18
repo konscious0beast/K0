@@ -1,17 +1,28 @@
 class_name PersonaLook extends RefCounted
-## The persona's look on the kai model (08 §6.1–6.3, K2): a pure merge of the six look ids (data/looks.json — hair
-## style, hair colour, skin tone, beard, glasses, outfit; {kind: lk id}) into a ModelSpec: style {"hair", "beard"}
-## (humanoid only), the "glasses" prop, and the colour slots accent (hair, also headscarf and beard), skin and
+## The persona's look on the kai model (08 §6.1–6.3, K2): a pure merge of the look ids (data/looks.json — hair style,
+## hair colour, skin tone, beard, glasses, outfit and, 11-A1, wear; {kind: lk id}) into a ModelSpec: style {"hair",
+## "beard"} (humanoid only), the "glasses" prop, the clothing prop of `wear` (jacket, bathrobe, shorts or sandals —
+## at most one; "none" takes them all off), and the colour slots accent (hair, also headscarf and beard), skin and
 ## primary / secondary (outfit). A missing or unknown id — or the id of another kind — counts as that kind's canon
 ## option (08 §2.5: shown as canon). The canon look leaves Kai's model exactly as party.json has it (no style key,
 ## the same colour strings), so its meshes are the cached canon meshes. Callers: DB.party_model (the running
-## persona) and the casting / card previews (scenes/ui/scene_kit.gd look_figure).
+## persona) and the casting / card previews (scenes/ui/scene_kit.gd look_figure). The persona's wear and glasses
+## combine freely: the heaviest combination stays within CR-22 (≤ 3 000 tris, 7 meshes; test_11_art_kit). 11-A1:
+## the persona file and the casting carry the six kinds of 08 §6.1 (PersonaProfile.LOOK_KINDS); `wear` is OPTIONAL —
+## a look without it wears the canon option, and ids() lists it only when the look names it.
 
-const KINDS: PackedStringArray = ["hair", "hair_color", "skin", "beard", "glasses", "outfit"]
+const KINDS: PackedStringArray = ["hair", "hair_color", "skin", "beard", "glasses", "outfit",
+	"wear"]                                     # 11-A1 (11 §4.10)
 const GLASSES_PROP: String = "glasses"
 const GLASSES_ON: String = "round"
 const DEFAULT_HAIR: String = "short"
 const DEFAULT_BEARD: String = "none"
+## 11-A1: the clothing props a `wear` option puts on (its style; "none" = none of them).
+const WEAR_PROPS: PackedStringArray = ["jacket", "bathrobe", "shorts", "sandals"]
+const WEAR_NONE: String = "none"
+## 11-A1: kinds a look may leave out — ids() lists them only when the look names them (the persona file, the casting and
+## the full run's casting line keep their six kinds until a casting package offers wear).
+const OPTIONAL_KINDS: PackedStringArray = ["wear"]
 
 
 ## A copy of `model` with the look applied (non-humanoid models and a data set without looks: an unchanged copy).
@@ -39,6 +50,13 @@ static func apply(model: Dictionary, look: Dictionary, data: GameData) -> Dictio
 					props.append(GLASSES_PROP)
 				elif not on and props.has(GLASSES_PROP):
 					props.remove_at(props.find(GLASSES_PROP))
+			"wear":
+				var wear: String = str(e.get("style", WEAR_NONE))
+				for w: String in WEAR_PROPS:
+					if w != wear and props.has(w):
+						props.remove_at(props.find(w))
+				if WEAR_PROPS.has(wear) and not props.has(wear):
+					props.append(wear)
 			"hair_color":
 				colors["accent"] = _hex(e.get("color", ""))
 			"skin":
@@ -71,10 +89,13 @@ static func entry(data: GameData, kind: String, id: String) -> Dictionary:
 	return data.look_canon(kind)
 
 
-## The six ids of `look` with every missing / unknown / foreign id replaced by its kind's canon id.
+## The ids of `look` (one per kind; an OPTIONAL_KINDS kind only when `look` has it) with every missing / unknown /
+## foreign id replaced by its kind's canon id.
 static func ids(look: Dictionary, data: GameData) -> Dictionary:
 	var out: Dictionary = {}
 	for kind: String in KINDS:
+		if OPTIONAL_KINDS.has(kind) and not look.has(kind):
+			continue
 		var e: Dictionary = entry(data, kind, str(look.get(kind, "")))
 		if not e.is_empty():
 			out[kind] = str(e["id"])

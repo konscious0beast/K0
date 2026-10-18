@@ -313,7 +313,7 @@ func _build_cats() -> void:
 		"game":
 			_build_cats_game()
 		"close":
-			_cat_row([["short", "tabby", "auto", Vector3(-0.8, 0, 0.12), -35.0],
+			_cat_row([["short", "tabby", "auto", Vector3(-0.72, 0, 0.12), -25.0],
 				["long", "calico", "upright", Vector3(-0.24, 0, -0.32), 10.0],
 				["short", "tortie", "auto", Vector3(0.3, 0, 0.18), 55.0],
 				["long", "bicolor", "auto", Vector3(0.84, 0, -0.26), 25.0]], true)
@@ -372,7 +372,7 @@ func _build_cats_game() -> void:
 	_cat_row([["short", "tabby", "auto", Vector3(0.6, 0, 0.4), -35.0],
 		["long", "calico", "upright", Vector3(1.3, 0, -0.3), 15.0],
 		["short", "bicolor", "auto", Vector3(0.4, 0, -0.9), 70.0],
-		["short", "solid", "upright", Vector3(-0.8, 0, -1.0), -10.0],
+		["long", "solid", "upright", Vector3(-2.25, 0, 0.45), 25.0],
 		["long", "tortie", "auto", Vector3(1.6, 0, 0.9), -80.0]], false)
 	var pivot := Vector3(0.0, 1.4, 0.0)
 	var pitch: float = deg_to_rad(38.0)

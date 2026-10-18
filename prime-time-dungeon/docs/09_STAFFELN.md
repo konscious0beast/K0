@@ -1757,6 +1757,17 @@ Aufnahmen `season_*` mit `capture.gd --before=<Zustand>` (Bilder 100–119); Tes
 Keine Datei in `core/rt/**` oder `scenes/combat/**`: Farbe und Differenz der Stufen-Plakette in den Rahmen und
 Namensschildern des Kampfes bleiben Antrag CR-32 l (07 §12.10).
 
+*Gates* (2026-10-18, nach dem Merge von 11-L1, gegen `claude/prime-time-dungeon` `ac5d15c`): `tools/check.sh` grün —
+1 953 Tests bestanden, 0 fehlgeschlagen, Testlauf 930 s (mit Import und Smoke 16 min Wandzeit; die geteilte Maschine
+mit 4 Kernen unter Last 6–11); `fullrun.sh` mit `--strategy=all`, `--hero=mopsula`, `--liga=1` und `--liga=2` je
+`fullrun.sh: OK` mit denselben Zeilen „FULLRUN:“ wie `ac5d15c` (Ereigniszeilen: `--strategy=all` 118 · 130 · 123 · 115,
+`--hero=mopsula` 115, `--liga=1` 124, `--liga=2` 112; die Statistik bis auf den Münzwurf der Persona-Zeile in
+`mod_tags`, 02_TECH §0.8); `tools/i18n.sh check` grün, `test_11_literals` grün (die zehn Dateien von ST1-H mit 150
+Literalen in `PENDING`, unten „Offen nach ST1-H“); `tools/perf.sh --only=startup,explore,season`: jedes
+Darstellungs-Budget hält (Erkundung höchstens 112 3D- und 96 UI-Draw-Calls), die Aufbauzeiten ganzer Etagen lagen auf
+der ausgelasteten Maschine über 500 ms — `main` im A/B-Lauf genauso; mit demselben HUD-Code war es am 2026-10-13
+`PERF: OK` (PERFORMANCE.md §3.11, Nachmessung).
+
 *Was ein Debug-Build zeigt* (ohne Startargument): Im Titel steht rechts unten die Karte „STAFFELN · Vorschau“ mit
 „Sendung starten“ (die erste Staffel des Geräts) bzw. „Neue Staffel“ und „Ruhmeshalle“; die Menüspalte und „Extras“
 bleiben, wie sie sind. „Sendung starten“ zeigt die Standardwerte (Mit Netz, Kalender, Sendezeit 20:00, Basis · 6 Etagen

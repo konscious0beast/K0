@@ -472,6 +472,21 @@ des Uhr-Commands). Billiger würde es mit einem Modell-Cache in `CastSim` bis zu
 09 „Offen nach ST1-H“). Ohne Staffel bleiben Erkundung, Safe Room und Pausemenü gleich (77 · 76 · 292 UI-Draw-Calls wie
 im Basisstand). Auf den mobilen Referenzgeräten ist die Staffel-UI noch nicht gemessen [zu messen].
 
+**Nachmessung nach dem Merge von 11-L1** (2026-10-18, gegen `main` `ac5d15c`): zwei Läufe von
+`tools/perf.sh --only=startup,explore,season`, der zweite mit `nice -n -10`. Jedes Darstellungs-Budget hält, in beiden
+Läufen gleich und gleich dem Lauf vom 2026-10-13 — Etage 1 höchstens 112 3D- und 94 UI-Draw-Calls, die Staffel-Etagen
+2–6 (Am Stück, Countdown und Zähler im HUD) höchstens 109 3D- und 96 UI-Draw-Calls, Primitive ≤ 50 644, Lichter je Mesh
+≤ 2, Körper ≤ 27 (§3.9). Über dem Budget von 500 ms lagen nur Aufbauzeiten der Staffel-Etagen (warm: im ersten Lauf
+Etage 2, 3, 5 und 6 mit 512–760 ms, im zweiten Etage 4–6 mit 631–1 267 ms; Etage 1 357 bzw. 420 ms): Die geteilte
+Maschine trug drei bis fünf fremde Läufe (Last 8–13, CPU-Druck 80–88 %), selbst `ZoneGenerator.generate` brauchte
+doppelt so lange wie in §3.9. Ein A/B-Lauf im Wechsel mit `ac5d15c` (headless, je Etage 9 warme Aufbauten, CPU-Zeit des
+Hauptthreads, je zwei Runden) zeigt beide Stände gleich belastet: Etage 6 530–540 ms (`main`) gegen 510–550 ms (ST1-H);
+über die Etagen 2–6 liegt ST1-H im Mittel −10 bis +20 ms neben `main`, einzelne Runden streuen um ± 60 ms. ST1-H selbst
+trägt zum Aufbau einer Staffel-Etage ab Etage 2 die erste Lesung des HUD bei (`season_refresh` am Ende von
+`_season_ready`: Zähler, Platz und Pechvogel in einem Zug, damit der Zähler im ersten Bild steht): 13 ms im Kalender,
+29–31 ms Am Stück (Median aus 15, Last ≈ 5). Der Lauf vom 2026-10-13 mit demselben HUD-Code (vor P1 und L1) ergab
+`PERF: OK`, Etage 6 warm 396 ms bei Last ≈ 6; die Aufbauzeiten brauchen eine ruhige Maschine (CI-Job oder Referenz-PC).
+
 ---
 
 ## 4. Optimierungen

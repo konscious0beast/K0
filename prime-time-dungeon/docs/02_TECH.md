@@ -654,12 +654,12 @@ Etage 3 und damit der Recall gibt es nur in Staffeln.
 **Stand ST1-H (2026-10-13, Branch `ptd/st1h`): die Staffel-UI** (09 Kap. 2, 4.3, 4.6, 7.2, Kap. 11.3 „Stand ST1-H“,
 Entscheidungen H-1 … H-23, Orchestrator-Entscheidungen O-1 … O-4). Nur Oberfläche und Fassaden: kein neuer Command, kein
 neues Feld im Spielzustand, **kein `SIM_VERSION`-Sprung**, Save v2 unverändert; ohne Staffel bitgleich (`fullrun.sh` mit
-`--strategy=all`, `--hero=mopsula`, `--liga=1`, `--liga=2` gegen `claude/prime-time-dungeon` `0514cf5`: gleiche
-Ereigniszeilen und Statistiken bis auf den Münzwurf der Persona-Zeile in `mod_tags` — `Show._fx_rng` ist zufällig
-geseedet, zwei Läufe desselben Stands unterscheiden sich darin ebenso). Jede Änderung geht über die Commands von `Game`
-(`season` tempo/pause/leave, `cast` hire/help); Sichten (Rangliste der Zukunft, Zeitraffer) rechnen auf einer Kopie
-(`GameState.from_dict(state.to_dict())`). Keine Datei in `core/rt/**` oder `scenes/combat/**` (Farbe und Differenz der
-Plakette im Kampf: CR-32 l; in der Erkundung `explore_target.gd`, H-22).
+`--strategy=all`, `--hero=mopsula`, `--liga=1`, `--liga=2` gegen `claude/prime-time-dungeon` `ac5d15c`, den Stand nach
+11-L1 — vorher ebenso gegen `0514cf5`: gleiche Ereigniszeilen und Statistiken bis auf den Münzwurf der Persona-Zeile in
+`mod_tags` — `Show._fx_rng` ist zufällig geseedet, zwei Läufe desselben Stands unterscheiden sich darin ebenso). Jede
+Änderung geht über die Commands von `Game` (`season` tempo/pause/leave, `cast` hire/help); Sichten (Rangliste der
+Zukunft, Zeitraffer) rechnen auf einer Kopie (`GameState.from_dict(state.to_dict())`). Keine Datei in `core/rt/**` oder
+`scenes/combat/**` (Farbe und Differenz der Plakette im Kampf: CR-32 l; in der Erkundung `explore_target.gd`, H-22).
 
 | Teil | API |
 |---|---|
@@ -676,11 +676,15 @@ Buchhaltung in `CastSim`), CR-32 l (Farbe und Differenz der Plakette im Zielrahm
 `diff_text`, `is_warning`, als Vorlage der Abschnitt „Staffeln“ in `explore_target.gd`). Recall (06 §3.5) — das
 Tempo-Angebot hängt am Signal `closed` des Recalls (eine Haken-Zeile in `open_recall`: wer beim Öffnen `Casting.mode` =
 `first` hatte und beim Schließen eine Klasse hat, hat gerade gewählt); die Gäste richten sich nach dem Knopf RECALL (09
-H-21). ST1-I — der Harness kann die Staffel über `TitleFlow.pending_season` und `start_new_game` starten wie ein Mensch.
-ST2 — Freunde und öffentliche Staffeln in „Neue Staffel“, Zuschauen als Studiogast, Systemmitteilungen und Teilen der
-Kalender-Datei auf Mobilgeräten (09 O-2). 11 — L2: die Texte der Staffel-UI über `Tx` (zehn Dateien in `PENDING` von
-`test_11_literals`; lange Sätze stehen über zwei Zeilen verkettet und werden je ein msgid, die Termine von
-`SeasonView` gehören zu `Tx.fmt_*`).
+H-21). ST1-I — der Harness kann die Staffel über `TitleFlow.pending_season` und `start_new_game` starten wie ein Mensch;
+der Full-Run-Bot trifft nach dem Zusammenführen drei neue Stellen: in einer privaten Kalender-Staffel nach der ersten
+Klassenwahl einmal je Gerät das Tempo-Angebot (ein `season_dialog` als `_modal` des Safe Rooms, `answer("calendar")`
+behält das Tempo), an einer gesperrten Treppe den Dialog mit Grund (Wahl `stay` | `binge` statt des Abstiegs) und am
+Ende einer Staffel die Staffel-Bilanz statt des Abspanns (`Game.SCENE_SEASON_SUMMARY`, `to_title()`; 09 H-8, H-11,
+H-18). ST2 — Freunde und öffentliche Staffeln in „Neue Staffel“, Zuschauen als Studiogast, Systemmitteilungen und
+Teilen der Kalender-Datei auf Mobilgeräten (09 O-2). 11 — L2: die Texte der Staffel-UI über `Tx` (zehn Dateien in
+`PENDING` von `test_11_literals`; lange Sätze stehen über zwei Zeilen verkettet und werden je ein msgid, die Termine
+von `SeasonView` gehören zu `Tx.fmt_*`).
 
 ### 0.9 Vertrags-Durchgang 11-P1: Inhaltspakete (11, Stand 2026-10-13)
 

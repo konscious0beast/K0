@@ -272,6 +272,8 @@ const TwistCheck := preload("res://core/data/validators/twists.gd")
 const IpWords := preload("res://core/data/validators/ip_words.gd")   # polish pass: IP-distance / tone word lists
 ## Inhaltspakete (11-P1, 11 §3.5 Nr. 4): the pack rules — run only with a provenance (a content pack is mixed in).
 const PackCheck := preload("res://core/data/validators/pack.gd")
+## Contract pass 11-A1 (11 §4.10): PTD's rules for the cat and the clothing props (licensed packs exempt for their own).
+const ArtKitRules := preload("res://core/data/validators/art_kit.gd")
 
 # --- Field specs: [name, type(, default)] — no default = required. Types: s i f b d a sa ia c2 v2 ---------------------
 const SPEC_STATUS: Array = [["id", "s"], ["name", "s"], ["kind", "s"], ["default_turns", "i", 3],
@@ -479,6 +481,7 @@ func validate(raw: Dictionary, p_strict: bool = true, read_errors: Dictionary = 
 		_check_mod_line_rules()                    # rule 9
 	_check_conditions()                            # rule 10
 	IpWords.check(self, provenance)                # polish pass: IP-distance / tone words in every text (always)
+	ArtKitRules.check(self)                        # 11-A1: Mopsula without crowns, no cat in the party, Kai's clothes
 	if not provenance.is_empty():
 		PackCheck.check(self, provenance)          # Inhaltspakete (11-P1): tone lists, exceptions, licence
 	return _out

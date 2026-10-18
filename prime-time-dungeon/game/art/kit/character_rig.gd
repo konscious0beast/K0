@@ -727,7 +727,7 @@ func _family() -> StringName:
 			return &"biped"
 		&"rodent":
 			return &"biped" if _pose == &"upright" else &"quad"
-		&"pug":
+		&"pug", &"cat":                             # the cat moves like a four-legged figure, sitting or standing
 			return &"quad"
 	return _base
 
@@ -968,6 +968,15 @@ func _ch_extras(c: Dictionary, fam: StringName) -> void:
 		&"pug":
 			if _anim == &"idle":
 				_add_ch(c, "head_turn", 10.0 * sin(TAU * 0.25 * tt))
+		&"cat":
+			# 11-A1: the tail swishes (lazily at rest, a short flick now and then; a sitting cat's tail lies still on the
+			# floor apart from a small sway), the head looks round in idle
+			var sway: float = 0.35 if _pose == &"upright" else 1.0
+			var flick: float = 9.0 * maxf(sin(TAU * 0.23 * tt + 1.3), 0.0) ** 6
+			_add_ch(c, "tail", sway * (12.0 * sin(TAU * 0.45 * tt) + flick))
+			if _anim == &"idle":
+				_add_ch(c, "head_turn", 14.0 * sin(TAU * 0.2 * tt))
+				_add_ch(c, "head_tilt", 4.0 * sin(TAU * 0.13 * tt + 0.6))
 	if _pivots.has("WingL"):
 		_add_ch(c, "wing", 50.0 * sin(TAU * 8.0 * tt))
 

@@ -37,17 +37,26 @@ const AI_TARGETS: PackedStringArray = ["random", "lowest_hp_pct", "highest_hp", 
 const PHASE_OPS: PackedStringArray = ["say", "status_self", "summon", "fixed_damage_self", "add_pseudo",
 	"remove_pseudo"]
 const MODEL_BASES: PackedStringArray = ["humanoid", "pug", "rodent", "blob", "insect", "robot", "brute", "specter",
-	"swarm"]
+	"swarm",
+	"cat"]                                      # contract pass 11-A1 (11 §4.10)
 const MODEL_PROPS: PackedStringArray = ["cape", "crown", "monocle", "top_hat", "cap", "bandana", "apron", "mop",
 	"broom", "knife", "staff", "key_ring", "glasses", "lamp_helmet", "backpack", "mask", "wings", "antennae",
 	"newspaper_head", "briefcase", "bottlecap_chain", "cable_tangle", "spray_cap", "escalator_back", "claws", "helmet",
-	"shield", "halberd", "rat_king_tail", "ticket_crown", "wrench", "axe", "crowbar", "cart", "discount_tag"]
+	"shield", "halberd", "rat_king_tail", "ticket_crown", "wrench", "axe", "crowbar", "cart", "discount_tag",
+	"tiara", "sunglasses", "bathrobe", "sandals", "shorts", "jacket"]   # contract pass 11-A1 (11 §4.10)
 const MODEL_POSES: PackedStringArray = ["auto", "quadruped", "upright"]
-## Casting (08 §6.2, K0): optional ModelSpec.style {"hair", "beard"} — only for base "humanoid" (K2 builds them).
+## Casting (08 §6.2, K0): optional ModelSpec.style {"hair", "beard"} for base "humanoid" (K2 builds them).
 ## K2 change request (integrator): + "braids", "headscarf" (inclusive hair options, before "bald").
 const MODEL_HAIR_STYLES: PackedStringArray = ["short", "buzz", "long", "bun", "curls", "ponytail", "braids",
 	"headscarf", "bald"]
 const MODEL_BEARDS: PackedStringArray = ["none", "stubble", "moustache", "full"]
+## Contract pass 11-A1 (11 §4.10): the cat's style {"fur", "pattern"} (copies of Archetypes.CAT_FURS / CAT_PATTERNS).
+const MODEL_CAT_FURS: PackedStringArray = ["short", "long"]
+const MODEL_CAT_PATTERNS: PackedStringArray = ["solid", "tabby", "tortie", "bicolor", "calico"]
+## The style keys of each base and their options (== CharacterBuilder.supported_styles(), test_11_art_kit); every other
+## base has no style.
+const MODEL_STYLES: Dictionary = {"humanoid": {"hair": MODEL_HAIR_STYLES, "beard": MODEL_BEARDS},
+	"cat": {"fur": MODEL_CAT_FURS, "pattern": MODEL_CAT_PATTERNS}}
 const THEMES: PackedStringArray = ["metro", "mall"]
 const SAFE_ROOM_THEMES: PackedStringArray = ["kiosk", "pumphouse", "signalbox"]
 const CELL_KINDS: PackedStringArray = ["start", "normal", "safe", "quarter_boss", "floor_boss", "stairs", "gate"]
@@ -2657,19 +2666,19 @@ func _check_persona_placeholders(ctx: String, text: String, tag: String) -> void
 
 
 ## 08 §6.2: ModelSpec.style is optional — {} is dropped (models without a style keep their exact normalized form);
-## otherwise only for base "humanoid", keys hair / beard from MODEL_HAIR_STYLES / MODEL_BEARDS.
+## otherwise only for the bases of MODEL_STYLES (humanoid: hair / beard; 11-A1: cat fur / pattern), with the keys and
+## options of that base.
 func _check_model_style(ctx: String, m: Dictionary) -> void:
 	var style: Dictionary = m.get("style", {})
 	if style.is_empty():
 		m.erase("style")
 		return
-	if str(m["base"]) != "humanoid":
-		_err(ctx + ".style", "only for base \"humanoid\"")
+	var vocab: Dictionary = MODEL_STYLES.get(str(m["base"]), {})
+	if vocab.is_empty():
+		_err(ctx + ".style", "only for base \"%s\"" % "\" or \"".join(PackedStringArray(MODEL_STYLES.keys())))
+		return
 	for k: Variant in style.keys():
-		match str(k):
-			"hair":
-				_enum(ctx + ".style.hair", str(style[k]), MODEL_HAIR_STYLES)
-			"beard":
-				_enum(ctx + ".style.beard", str(style[k]), MODEL_BEARDS)
-			_:
-				_err(ctx + ".style." + str(k), "unknown key (hair, beard)")
+		if vocab.has(str(k)):
+			_enum(ctx + ".style." + str(k), str(style[k]), vocab[str(k)])
+		else:
+			_err(ctx + ".style." + str(k), "unknown key (%s)" % ", ".join(PackedStringArray(vocab.keys())))

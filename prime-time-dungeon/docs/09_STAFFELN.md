@@ -79,6 +79,15 @@
 > Leiste, Klassenreihen ab Stufe 15, die erste Klassenwahl schaltet „Ohne Netz“ frei. Umentscheiden und Umschulung nach
 > 06 §3.6, Talente im Talentbaum. Ohne Staffel bleibt jeder Lauf bitgleich.
 >
+> **Stand ST1-I (2026-10-18, Branch `ptd/st1i`):** Der Staffel-Harness ist umgesetzt (Kap. 11.3 „Stand ST1-I“,
+> Entscheidungen I-1 … I-16; 02_TECH §0.8 „Stand ST1-I“): Der Full-Run-Bot spielt Basis-Staffeln in der Welt
+> (`tools/fullrun.sh --season`: Etagen 2–6 mit Wegplanung, der Recall-Bildschirm, Kalender mit Ausloggen und Login),
+> der Harness spielt sie im Kern im Zeitraffer (`tools/season_harness.sh`, Format 6; 12/18 erst mit ST1-C2) und misst
+> Pensum, Stufen, Bosse, Tode, Rettungen und Credits gegen das ST1-Gate. Für Format 6 erreicht (80 Staffeln): Stufe
+> beim Abstieg, Etagen per Treppe, Stufe nach jedem Login, Credits am Wochenende und die Rückkehr nach zwei Wochen;
+> verfehlt: das Finale (`typical` 0 %, `2 Wochen weg` 10 %: der Paketberg) und das Pensum der Etagen 2–6 (kürzer als
+> Kap. 3.3) — Anträge an ST1-C2. Ohne Staffel bleibt jeder Lauf bitgleich.
+>
 > **Namen der Phasen:** Der Orchestrator nennt sie S1–S3. Weil „S0–S5“ schon die SHOWRUN-Stufen (05) und „S0–S3“ die
 > KI-Stufen (06 §5.12) sind, heißen sie hier **ST1–ST3** (Staffel-Phasen) — gleicher Inhalt, keine Verwechslung.
 >
@@ -343,7 +352,10 @@ Format; Standard ist das größte.
 | **Akt 2** | Erweiterung | 1–12 | 54 Tage ≈ 8 Wochen | 9 h (≈ 16–19 h) | Etage 12: Die Wellenmaschine |
 | **Akt 3** | Erweiterung | 1–18 | 84 Tage = 12 Wochen | 14 h (≈ 25–30 h) | Etage 18: Die Sendeleitung |
 
-Spielzeiten Am Stück mit Kämpfen, Safe Rooms und Menüs **[Schätzung]**.
+Spielzeiten Am Stück mit Kämpfen, Safe Rooms und Menüs **[Schätzung]**. Gemessen für die Basis-Staffel (ST1-I, Kap.
+11.3 „Stand ST1-I“): Am Stück im Takt einer Person 4,2 h Spielzeit mit dem Pflichtweg (`typical`) und 4,7 h vollständig
+(`thorough`), davon ≈ 1,6 h auf Etage 6, die der Bot bis zum Ende ihres Countdowns spielt (er verliert das Finale) —
+weniger als geschätzt, weil die Etagen 2–6 kürzer sind, als Kap. 3.3 annimmt (Antrag an ST1-C2).
 
 | Tempo | Uhr | Einsturz | Vorlauf | Schläfer / Ausgeruht | Wofür |
 |---|---|---|---|---|---|
@@ -596,7 +608,10 @@ Motto und Twist der Folge je Etage beschreibt 12 Kap. 2.
   („Überstunden“, Kap. 8.2), Material und Quote.
 - **Ehrlich:** Wer im Kalender täglich deutlich mehr als eine Stunde spielen will, findet ab dem dritten Tag einer Etage nur
   noch Programmpunkte und Optionales. Dafür gibt es privat „Am Stück“.
-- Messung im Staffel-Harness (Kap. 11.6): Pflichtweg E4–E18 60–75 min, vollständig 90–120 min **[zu messen]**.
+- Messung im Staffel-Harness (Kap. 11.6; Stand ST1-I für Format 6, Kap. 11.3): Am Stück im Takt einer Person dauert
+  der Pflichtweg der Etagen 1–6 26 / 26 / 27 / 36 / 40 / 43 min, „vollständig“ 32 / 30 / 37 / 37 / 38 / 54 min — die
+  Etagen 2–6 bleiben deutlich unter dieser Schätzung (Antrag an ST1-C2 in Kap. 11.3 „Stand ST1-I“); E7–E18 **[zu
+  messen]** mit ST1-C2.
 
 ### 3.4 Skalierung von Gegnern, Beute und Bossen
 
@@ -1623,9 +1638,9 @@ Generator-v2-Etagen (C-17); `item_level` (C-10); Viertel-Streaming (C-18); eigen
 2–6 braucht er eine Wegplanung auf `FloorLayout` (Revier-Boss → Schlüssel → Tor → Treppe, offene Programmtüren, Safe
 Room je Viertel), den Staffelstart `--season=ssn_basis --tempo=binge` (Kap. 11.4) und eine Kampfstrategie für die Bänder
 (EP-Tabelle und Anteile von ST1-D, C-23); dann misst er das Pensum (Kap. 3.3: Pflichtweg und „vollständig“ je Etage),
-die Stufe beim Abstieg und die Balance der Bosse. Offen für ein Paket: die Oberfläche des Recalls auf Etage 3 (Spezies
-und Klasse; heute nur `Game.choose_casting`) — ohne sie bleiben Klassenleisten und Klassenreihen von ST1-D in der
-Debug-Staffel zu. (**Gebaut:** „Stand Recall“ unten.)
+die Stufe beim Abstieg und die Balance der Bosse (**gebaut:** „Stand ST1-I“ unten). Offen für ein Paket: die
+Oberfläche des Recalls auf Etage 3 (Spezies und Klasse; heute nur `Game.choose_casting`) — ohne sie bleiben
+Klassenleisten und Klassenreihen von ST1-D in der Debug-Staffel zu. (**Gebaut:** „Stand Recall“ unten.)
 
 **Entscheidungen ST1-C1** (Auslegungen dieses Dokuments, Startwerte):
 
@@ -1710,7 +1725,7 @@ ersten Safe Room): den Recall wie in 06 §3.5 beschrieben; danach trägt die Par
 die Signatur liegt auf Platz 1, das Fähigkeitenbuch zeigt die Klassenleiste statt der Klassen-Vorschau, der Talentbaum
 die Klassenreihen ab Stufe 15. **Offen:** das Tempo-Angebot nach der Klassenwahl (Kap. 0.6 Etage 3, ST1-H); die
 Spezies-Optik am Rig (03_ART); die Kampf-Anzeige (07 CR-32 p); der Full-Run-Bot kennt Etage 3 nicht (ST1-I: er sollte dort
-den Recall bestätigen).
+den Recall bestätigen; **gebaut:** „Stand ST1-I“ unten).
 
 **Entscheidungen Recall** (Auslegungen von 06 Kap. 3 und dieses Dokuments):
 
@@ -1731,6 +1746,210 @@ den Recall bestätigen).
 | R-13 | M.O.D. | 36 Zeilen `casting_*`: Eröffnung (06 §0.5), Schritte je Figur, Bestätigen, Urteile mit der Kette `casting_combo:<spc>:<cls>` (die elf empfohlenen Paare) → `casting_combo:<spc>` → `casting_combo`, Umentscheiden, Umschulung, Schluss, „Später“, Ohne Netz; je ≤ 110 Zeichen, eigene Show-Sprache, keine Namen oder Begriffe des Buchs. Sie stehen im Kasten „JURY · M.O.D.“ (`UiUtil.mod_line`, nie aufgezeichnet); nur `casting_later` geht über `Show.say` und wird nie verschluckt (`ALWAYS_SAID_TAGS`). | 06 §3.5 |
 | R-14 | Kampf-Anzeige | Spezies und Klasse am Party-Rahmen und die Bauchbinde „ORIGINAL“ beim Kampfstart (06 §3.2) gehören `scenes/combat`: Antrag 07 CR-32 p (07 §12.10). Pausemenü → Party zeigt beide; vor der Wahl „Spezies & Klasse: Recall offen – im Safe Room“ (ab Etage 3) bzw. „Recall auf Etage 3“. | 06 §3.2 |
 
+**Stand ST1-I (2026-10-18, Branch `ptd/st1i`) — umgesetzt** (Einzelheiten 02_TECH §0.8 „Stand ST1-I“): der
+Staffel-Harness in zwei Schichten (I-1). *Full-Run-Bot in der Welt:* `tools/fullrun.sh --season=ssn_basis` (Abschnitt
+„Staffeln“ in `scenes/boot/fullrun.gd` mit neun markierten Haken, der Adapter `scenes/boot/fullrun_season_ui.gd` für
+jeden Staffel-Bildschirm) spielt eine Basis-Staffel von Etage 1 bis zum Finale — Wegplanung auf `FloorLayout`
+(Revier-Boss → Schlüssel → Tor → Treppe, offene Programmtüren, ein Safe Room je Viertel), den Recall-Bildschirm auf
+Etage 3 (beide Figuren, die gesteuerte zuerst, über die Fassade von „Bestätigen“), Klassenleiste, Talentreihen, „Noch
+nicht“ und geschlossene Treppe, Etagen-Bilanz, Finale und Abspann; im Kalender die Sitzungen eines Profils mit
+Ausloggen (Safe Room oder Gang), Abwesenheit, Login und „Während Sie schliefen …“. *Harness im Kern:*
+`tools/season_harness.sh` (`tests/tools/season_harness.gd`, Einstieg `season_harness_main.gd`, Bericht
+`season_report.gd`) spielt dieselben Staffeln ohne Welt im Zeitraffer; beide planen mit
+`tests/tools/season_planner.gd` und spielen die Sitzungen von `tests/tools/season_profiles.gd`. Test `test_09_harness`
+(neu). Kein Spielcode, keine Daten, kein `SIM_VERSION`-Sprung; ohne `--season` bleibt jeder Lauf bitgleich
+(`fullrun.sh` mit `--strategy=all`, `--hero=mopsula`, `--liga=1`, `--liga=2` gegen main `ac5d15c`: gleiche
+Ereigniszeilen samt Frames, gleiche Statistiken bis auf den Münzwurf der Persona-Zeile im Safe Room, `mod_tags`;
+`--strategy=all --lang=en` mit denselben Zeilen `FULLRUN: stats` und `FULLRUN: OK` wie auf Deutsch).
+
+*Was die Werkzeuge zeigen:* `GODOT=… tools/fullrun.sh --season=ssn_basis --tempo=binge --strategy=thorough` spielt die
+Basis-Staffel Am Stück in der Welt (Seed 4242: 97 Kämpfe; im ersten Safe Room von Etage 3 öffnet der Recall, der Bot
+macht Kai zur Abrissbirne und Graf Mopsula zum Medicus honoris causa, beide „Original-Verpackung“, und schließt ihn —
+die Signaturen liegen auf Slot 1; alle Etagen per Treppe, Stufe 7 / 10 / 13 / 16 / 18 beim Abstieg, das Finale gegen den
+Paketberg viermal verloren, „Bis zum Ende dabei“ mit dem Ende des Countdowns von Etage 6; 203 min Spielzeit, 36
+Replay-Prüfungen ohne Abweichung, kein Teleport; 46–65 min Wanduhr auf der geteilten Maschine je nach Last, auf einem
+freien Kern ≈ 36 min; mit `70e3d05` nachgespielt: Zeichen für Zeichen dieselbe Zeile `FULLRUN: season`).
+`--tempo=calendar --sessions=20min` spielt sie im Kalender (Seed 4242: 20 Sitzungen, 19-mal ausgeloggt, davon viermal im
+Gang, je mit Login und „Während Sie schliefen …“; 103 Kämpfe; Stufe 7 / 10 / 13 / 16 / 19 beim Abstieg, jedes Mal das
+Bandende; das Finale im achten Versuch an Tag 18 gewonnen; 205 min Spielzeit, 70 Replay-Prüfungen ohne Abweichung; 36
+min Wanduhr), `--sessions=away2w` mit 15 Tagen Abwesenheit nach Tag 6 (die Rückfrage des Uhrsprungs mit „Ja“, die Bilanz
+mit der Zeile `clamp`; 18 Sitzungen, 98 Kämpfe, das Finale im zweiten Versuch an Tag 14; 173 min Spielzeit, 68
+Replay-Prüfungen ohne Abweichung; 40 min). Beide Kalender-Läufe halfen sich in denselben zwei Programmräumen viermal mit
+dem Teleport („Anträge und Offenes“). Jedes Log endet mit `FULLRUN: season {json}` (je Etage Minuten, Pflichtweg- und
+Vollständig-Marke, Stufen gegen das Band, Bosse, Tode, Credits; die Logins mit Dauer und Arten der Bilanz-Zeilen) und
+`FULLRUN: OK season=…` — nur IDs und Zahlen, in jeder Sprache gleich (11 §1.10; geprüft mit `--strategy=typical
+--pace=fast --floors=3` samt Recall: mit `--lang=en` jede Zeile gleich). `GODOT=… tools/season_harness.sh --gate
+--seeds=10 --jobs=2` spielt die vier Profile Mit und Ohne Netz (80 Staffeln, 90–115 min Wanduhr mit zwei Prozessen auf
+der geteilten Maschine), `--tempo=binge --strategy=typical|thorough` das Pensum Am Stück (je 10 Staffeln, 10–16 min);
+`--format=18 --tempo=calendar --speed=dev` endet mit „Format 18: die Etagen 7–18 kommen mit ST1-C2 — bis dahin misst der
+Harness Format 6 …“ und Exit 3, `--format=12` ebenso („die Etagen 7–12“).
+
+**Messung ST1-I** (Format 6, `tools/season_harness.sh`, je 10 Seeds, Takt `human`, Mediane über die Läufe; Stand
+`70e3d05` — jede Reihe auch vor dem Merge von 11-L1 gespielt, mit denselben Zeilen je Lauf, Zusammenfassungen und
+Urteilen; jeder Lauf ohne Fehler und ohne abgelehntes Command): Kalender mit den vier Profilen des Gates (`--gate`,
+Strategie `auto`), dazu Kalender `typical` mit der Strategie `typical` (nur der Pflichtweg, für I-12) und Am Stück
+`typical` und `thorough` (das Pensum). „Etagen 1–5 per Treppe“ zählt die Treppen gegen Treppen und Rettungen der Etagen
+1–5; „Logins unter Bandanfang − 2“ misst nach der Nacht; „erste KI vor der Kandidat:in“ ist die Kennzahl von F-18 auf
+den Etagen 2–6 (I-12). Ohne Netz ist ein Tod das Aus („gefallen“), die Spalte Tode zählt dort nichts.
+
+| Profil | Modus | Läufe | Ergebnis | Finale | Tode (Median, Σ) | Rettungen (Σ) | Etagen 1–5 per Treppe | Stufe am Ende | Spielzeit (min) | Credits am Ende | Logins unter Bandanfang − 2 | erste KI vor der Kandidat:in |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| typical | Mit Netz | 10 | bis zum Ende 10 | 0 % | 22 (233) | 0 | 100 % (50/50) | 22 | 359 | 7997 | 0 von 250 | 66 % (33/50) |
+| typical | Ohne Netz | 10 | gefallen 10 | 0 % | 0 (0) | 0 | 100 % (40/40) | 19,5 | 180 | 5664 | 0 von 107 | 57 % (23/40) |
+| 20 min/Tag | Mit Netz | 10 | bis zum Ende 10 | 0 % | 19 (186) | 0 | 100 % (50/50) | 22 | 330 | 8564 | 0 von 250 | 100 % (50/50) |
+| 20 min/Tag | Ohne Netz | 10 | gefallen 10 | 0 % | 0 (0) | 0 | 100 % (48/48) | 21 | 196 | 7328 | 0 von 159 | 100 % (48/48) |
+| nur Wochenende | Mit Netz | 10 | bis zum Ende 10 | 0 % | 9,5 (92) | 3 | 94 % (47/50) | 22 | 257 | 8792 | 0 von 74 | 64 % (32/50) |
+| nur Wochenende | Ohne Netz | 10 | gefallen 7, verschüttet 3 | 0 % | 0 (0) | 0 | 100 % (38/38) | 17 | 140 | 3228 | 0 von 37 | 53 % (22/41) |
+| 2 Wochen weg | Mit Netz | 10 | Finale 1, bis zum Ende 9 | 10 % | 19 (187) | 0 | 100 % (50/50) | 22 | 340 | 8656 | 0 von 245 | 70 % (35/50) |
+| 2 Wochen weg | Ohne Netz | 10 | gefallen 10 | 0 % | 0 (0) | 0 | 100 % (40/40) | 19,5 | 180 | 5428 | 0 von 119 | 57 % (23/40) |
+| typical · `typical` | Mit Netz | 10 | bis zum Ende 10 | 0 % | 21,5 (219) | 0 | 100 % (50/50) | 22 | 325 | 5006 | 0 von 250 | 62 % (31/50) |
+| Am Stück · `typical` | Mit Netz | 10 | bis zum Ende 10 | 0 % | 9 (90) | 0 | 100 % (50/50) | 20 | 253 | 6342 | 0 von 0 | 100 % (50/50) |
+| Am Stück · `thorough` | Mit Netz | 10 | bis zum Ende 10 | 0 % | 13 (129) | 1 | 98 % (49/50) | 20 | 282 | 8088 | 0 von 0 | 100 % (50/50) |
+
+*Je Etage, Kalender `typical`, Mit Netz* (die Stufe der gesteuerten Figur; Pflichtweg und vollständig als Marken nach
+I-10 in den Läufen, die sie erreichten; der Revier-Boss im ersten Versuch; Etage 6: das Finale):
+
+| Etage | Band | Stufe an → ab (Median; min) | Spielzeit | Pflichtweg (Läufe) | vollständig (Läufe) | Kämpfe | Niederlagen | Revier-Boss im 1. Versuch | Etagenboss gewonnen / Versuche | Treppe / Rettung |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 1–7 | 1 → 7; 7 | 32 min | 27 min (10) | 32 min (10) | 19 | 2 | 10/10 | 10/12 | 10/0 |
+| 2 | 7–10 | 7 → 10; 9 | 31 min | 24 min (10) | 30 min (10) | 14 | 7 | 10/10 | 7/14 | 10/0 |
+| 3 | 10–13 | 10 → 13; 12 | 46 min | 27 min (10) | 39 min (10) | 16 | 18 | 9/10 | 2/19 | 10/0 |
+| 4 | 13–16 | 13 → 16; 16 | 40 min | 32 min (10) | 35 min (10) | 16 | 15 | 9/10 | 0/0 | 10/0 |
+| 5 | 16–19 | 16 → 19; 19 | 44 min | 33 min (10) | 37 min (10) | 17 | 5 | 9/10 | 0/0 | 10/0 |
+| 6 | 19–22 | 19 → 22; 22 | 164 min | 35 min (10) | 53 min (10) | 36 | 188 | 10/10 | 0/186 | 0/0 |
+
+*Pensum Am Stück gegen Kap. 3.3* (`typical` setzt die Pflichtweg-Marke, `thorough` die vollständige; Spielzeit der
+Etage bis zur Treppe, auf Etage 6 bis zum Ende):
+
+| Etage | Kap. 3.3 Pflichtweg | `typical`: Pflichtweg (Läufe) | Spielzeit | Kap. 3.3 vollständig | `thorough`: vollständig (Läufe) | Spielzeit |
+|---|---|---|---|---|---|---|
+| 1 | ≈ 20 min | 26 min (10) | 27 min | 25–30 min | 32 min (10) | 32 min |
+| 2 | ≈ 30 min | 26 min (10) | 26 min | 40–50 min | 30 min (10) | 30 min |
+| 3 | ≈ 45 min | 27 min (10) | 27 min | 60–75 min | 37 min (10) | 38 min |
+| 4 | ≈ 60 min | 36 min (10) | 36 min | 90–120 min | 37 min (9) | 41 min |
+| 5 | ≈ 60 min | 40 min (10) | 41 min | 90–120 min | 38 min (10) | 39 min |
+| 6 | ≈ 60 min | 43 min (8) | 97 min | 90–120 min | 54 min (9) | 97 min |
+
+**ST1-Gate (Kap. 11.6) für Format 6 — erreicht oder nicht** (Urteile von `season_report.gd` nach I-15; die Bänder
+nennen Mit Netz, Ohne Netz steht zum Vergleich daneben):
+
+| Profil | Band (Kap. 11.6) | Mit Netz | Ohne Netz | Urteil | Warum nicht |
+|---|---|---|---|---|---|
+| `typical` | Finale Mit Netz in ≥ 80 % der Seeds | 0 % (0 von 186 Versuchen gewonnen) | — | **verfehlt** | Der Paketberg (Etage 6) ist für den Bot nicht zu schlagen — im Harness ohne die Sponsor-Geschenke der Show (I-16), in der Welt verliert er ihn achtmal in zehn; Antrag an ST1-C2 („Anträge und Offenes“) |
+| `typical` | Median-Stufe beim Abstieg im Band ± 1 | 7 / 10 / 13 / 16 / 19 | 7 / 9 / 12 / 15 / 18,5 | erreicht | — |
+| `typical` | Pensum je Etage in den Bändern Kap. 3.3 | Pflichtweg 27 / 24 / 27 / 32 / 33 / 35 min, vollständig 32 / 30 / 39 / 35 / 37 / 53 min | — | **verfehlt** (im Band nur der Pflichtweg von Etage 2) | Die Etagen 2–6 sind kleiner und schneller, als Kap. 3.3 schätzt; Etage 1 misst sich an GDD §13 (Am Stück im Band); Antrag an ST1-C2 |
+| `20 min/Tag` | ≥ 90 % der Etagen per Treppe | 100 % | 100 % | erreicht | — |
+| `20 min/Tag` | Stufe beim Abstieg ≥ Bandanfang − 1 | kleinste 7 / 10 / 13 / 16 / 19 | kleinste 7 / 9 / 12 / 14 / 18 | erreicht | — |
+| `nur Wochenende` | Stufe nach jedem Login ≥ Bandanfang − 2 | 0 von 74 Logins darunter | 0 von 37 | erreicht | — |
+| `nur Wochenende` | ≥ 50 % der Etagen per Treppe | 94 % (drei Rettungen auf Etage 5) | 100 % | erreicht | — |
+| `nur Wochenende` | Credits am Staffelende ≥ 50 % von `typical` | 110 % | 40 % | erreicht (Ohne Netz nicht) | Ohne Netz endet die Staffel früher (Median Stufe 17; dreimal verschüttet auf Etage 5) |
+| `2 Wochen weg` | nach der Rückkehr binnen 2 Sitzungen im Band | 10 von 10 | 6 von 6 | erreicht | — |
+| `2 Wochen weg` | Finale in ≥ 60 % der Seeds | 10 % (Seed 8) | — | **verfehlt** | wie `typical`: der Paketberg; die Abwesenheit selbst kostet keine Stufe |
+| Am Stück | Etage 1 in den Bändern von GDD §13 (Erstdurchlauf 22–28 min) | `typical` 27 min, `thorough` 32 min | — | erreicht (`typical`) | `thorough` spielt dazu alle Nebengruppen |
+
+*Was die Messung sonst zeigt:* Mit Netz endet jede Staffel bis auf eine mit „Bis zum Ende dabei“: Der Bot erreicht
+Etage 6 auf Stufe 19, steigt dort bis zum Bandende 22 und verliert danach jeden Versuch gegen den Paketberg (im Median
+22 Tode je Staffel `typical`, fast alle im Finale; auf Etage 3 gewinnt er die Garderobe 2-mal in 19 Versuchen). Ohne
+Netz endet jede der 40 Staffeln mit dem Aus: 21-mal im Finale, 16-mal gegen einen Revier-Boss der Etagen 3–6, sobald
+die Figur die Stufe des Bosses hat (die Vorsicht von I-8), dreimal verschüttet; Bänder für Ohne Netz legt Kap. 11.6
+nicht fest. Kein Login liegt unter Bandanfang − 2 (Crashkurs und Aufholjagd tragen); „erste KI vor der Kandidat:in“ 66
+% (`typical`), 100 % mit 20 min am Tag.
+
+**Entscheidungen ST1-I** (Auslegungen dieses Dokuments, Startwerte):
+
+| Nr. | Thema | Entscheidung | Kap. |
+|---|---|---|---|
+| I-1 | Zwei Schichten | Der Full-Run-Bot spielt Staffeln in der Welt (`tools/fullrun.sh --season`: echte Bildschirme, Laufwege, Kämpfe, Replay-Prüfung) — eine Basis-Staffel braucht Am Stück ≈ 36 min Wanduhr auf einem freien Kern (Seed 4242, 203 min Spielzeit), im Kalender mit dem Profil `typical` (≈ 6 h Spielzeit) über eine Stunde; die 80 Staffeln des Gates wären dort ≈ 60–80 h. Das leistet nur der **Harness im Kern** (`tools/season_harness.sh`: `RunSim` mit allen Staffel-Regeln, echte `RtSim`-Kämpfe mit dem `RtBotPlayer`, `CastSim`, `SleepResolver`; ≈ 1–2 min je Staffel). Beide planen mit demselben Planer (`tests/tools/season_planner.gd`) und denselben Profilen (`tests/tools/season_profiles.gd`); der Harness ist am Full-Run-Bot kalibriert (I-5). Der Harness misst, der Full-Run-Bot beweist Bildschirme und Abläufe. | 11.6 |
+| I-2 | Formate 12 und 18 | Abgelehnt mit klarer Meldung und Exit 3 („Format 18: die Etagen 7–18 kommen mit ST1-C2 — bis dahin misst der Harness Format 6 (Basis-Staffel, --format=6)“), keine Platzhalter-Etagen: Etagen aus dem Bausatz von Etage 2 (wie `tests/fixtures/season_core`) hätten weder Viertel noch Bänder, Bosse oder Pensum — ihre Zahlen täuschten Pensum und Bänder nur vor. Profile und Abwesenheiten skalieren schon je Format (Test); `PLAYABLE_FORMATS` öffnet 12/18 mit ST1-C2. Das Gate-Kommando aus Kap. 11.6 (`--format=18 --tempo=calendar --speed=dev`) gilt bis dahin für Format 6: `tools/season_harness.sh --gate`. Der Full-Run-Bot lehnt kein Format ab (ein Akt-2-/Akt-3-Format endet nach Etage 6 mit dem Ende des Inhalts, B-9). | 11.6, 2.1 |
+| I-3 | Profile, auf Format 6 skaliert | `typical` = der Referenz-Mensch von F-18 (Vorprogramm-Abend 60–90 min zu zufälliger Minute, dann täglich 45–60 min um die Sendezeit ± 1 h); `20min` dieselben Zeiten, 20 min; `weekend` Samstag und Sonntag je 90 min (2 h vor bis 1 h nach der Sendezeit; die Staffel beginnt an einem Wochenendtag); `away2w` wie `typical`, 14 Tage weg — Format 18 die Tage 30–43 (Kap. 11.6), Format 12 ab Tag 19, **Format 6 die Tage 7–20** (die Woche der Etagen 3 und 4; danach nur noch die Finale-Etage). Der Login nach den 14 Tagen bestätigt den Uhrsprung („Ja“, V-17): sieben Tage zählen, der Rest wird Sendepause und schiebt alle offenen Termine samt Staffelende — `away2w` spielt darum täglich weiter, bis zu 14 Tage über das Format hinaus (Sitzungen nach dem Ende kommen nie dran). Zwei Sitzungen liegen mindestens 30 min auseinander. Nach der letzten Sitzung ist die Figur bis 1 h nach dem letzten Einsturz des dann gültigen Sendeplans weg — in Staffelzeit gerechnet (nach dem Uhrsprung läuft die Staffeluhr heute hinter der Wanduhr her, „Anträge und Offenes“) und je Login höchstens sieben Tage, damit keine zweite Rückfrage kommt. | 11.6, 5.5 |
+| I-4 | Reproduzierbarer Start | `fullrun.sh --season` startet nicht über Boots `--season` (Wanduhr), sondern gibt dem Bot `--fullrun-season`: `Game.start_season` mit Tag 0 = 1791921600 (20:00 UTC), Am Stück 90 min davor, im Kalender zur ersten Sitzung des Profils; Ortszeit-Versatz 0, der Lauf-Seed. Der Harness startet dieselbe Staffel als Command. | 2.2, 9.1 |
+| I-5 | Zeitmodell | Spielzeit = Erkundung + Kampf + Bildschirme. Kampf = die Sekunden der Sim. Erkundung (Countdown läuft) am Full-Run-Bot kalibriert (Seed 4242): 3,2 s je Zellwechsel und 4 s je Gruppe (`fast`, je Etage ± 10 %); Takt `human` mit dem Modell des Full-Run-Bots (8 s Umsehen je neuem Raum, 3 s Entscheiden je Ziel, 1 s je Tür; die Erkundungsminuten der Etagen 1–4 ± 12 % gegen `--pace=human`). Bildschirme (Countdown steht) mit dem Tempo einer Person: Event 6 s, Safe-Room-Besuch 12 s, Szene 15 s, Lootbox 4 s, Wahl 3 s, Kauf 2 s, **Recall 30 s je Figur**, Ergebnis-Panel 4 s, Boss-Intro 8 s, Treppe und Etagen-Bilanz 8 s; der Full-Run-Bot klickt sie in einem Viertel davon (`FAST_SCREENS_PM` 250). Gemessen wird mit `human`. | 3.3, 11.6 |
+| I-6 | Abwesenheit im Full-Run-Bot | Der Bot loggt aus und wartet nicht: Beim Login („Fortsetzen“) setzt er über `Events.game_loaded` die zuletzt gesehene Wanduhr der Staffel um die Abwesenheit zurück (`seen_unix`), mit eingeschalteter Live-Uhr und Zeitraffer 1 — `Game.season_login` bucht dann `away` genau wie auf einem Gerät nach dieser Pause (über sieben Tage mit der Rückfrage, Antwort „Ja“). Danach läuft die Uhr wieder aus der Spielzeit. Der Harness bucht `away` direkt, über sieben Tage zuerst `season pause clamp` wie `Game.season_login_answer(true)`. | 5.5 |
+| I-7 | Strategien | `thorough` = vollständig (jede Gruppe, Truhe, jedes Event, jeder Raum und Safe Room, der Etagenboss); `typical` = der Pflichtweg (Gruppen, Truhen, Events auf dem Weg Eingang → Treppe und einen Raum daneben, ohne Show-Boss und rote Nebengruppen, Safe Rooms höchstens zwei Räume daneben, der Revier-Boss; Etage 1: das `typical` der Kampagne); `rush` = Safe Rooms, Schlüsseltor, Bosse; `auto` = der Mensch der Profile: der Pflichtweg, dann der Rest, solange der Einsturz über 24 h entfernt ist (Am Stück: über 25 % Countdown übrig). Programmräume zählen, sobald das Tagesprogramm ihre Tür geöffnet hat; die Tür selbst ist nie ein Ziel. | 3.3, 3.6 |
+| I-8 | Kampfstrategie für die Bänder | Rote Gruppen (≥ 5 Stufen über der Figur) erst nach dem Revier-Boss; mehr als eine Stufe unter einem Boss erst die übrigen Ziele (ohne Show-Boss, höchstens gelb); vor einem Boss unter 90 % HP oder 70 % MP in den Safe Room; ein Revier-Boss oder das Finale Am Stück viermal je Etage, im Kalender zweimal je Sitzung; der optionale Etagenboss zweimal je Etage; eine Gruppe, die zweimal gewann, bleibt für den Rest der Etage in Ruhe. **Ohne Netz** vorsichtig: kein Show-Boss, nichts über gelb, kein optionaler Etagenboss, ein Boss erst auf seiner Stufe. Gruppen in Räumen auf dem Weg greifen an (wie die Erkundung: Sicht 10 m, Hören 4 m); der Weg meidet lebende Bossräume und die Räume von Gruppen, die zweimal gewannen (Ohne Netz auch die gefährlicher Gruppen), solange es einen anderen gibt. | 3.4, 7, 8.2 |
+| I-9 | Recall, Leiste, Talente | **Recall über den Bildschirm** (06 §3.5, R-1 … R-5): Er öffnet beim ersten Besuch eines Safe Rooms ab Etage 3 von selbst, solange eine erste Wahl offen ist (sonst über den Knopf RECALL). Der Bot bestätigt je Figur mit erster Wahl — die gesteuerte zuerst (`Casting.open_members`) — sein Paar über dieselbe Fassade wie „Bestätigen“: `Game.choose_casting`, dann die Signatur auf ihrem Platz (`Casting.signature_loadout` → `Game.apply_loadout`), und schließt den Bildschirm; der Harness zeichnet dieselben Commands auf (`casting`, `loadout`) und rechnet dafür 30 s je Figur. Die Paare: Kai „Abrissbirne“, Graf Mopsula „Medicus honoris causa“, beide „Original-Verpackung“ (Tank und Heiler). Die Stelle, an der der Bot einen Bildschirm beantwortet, den der Safe Room danach von selbst öffnet (ST1-H: das Tempo-Angebot), ist `FullRunSeasonUi.room_screens`; einen unbekannten beendet sie mit seinem Szenenpfad. Danach je Platz die gelernte Klassenvariante der höchsten Stufe (`Game.apply_loadout`); je offene Talentreihe die erste Karte (wie die Kampagne `pick(0)`). | 8.3, 8.4, 06 §3.5 |
+| I-10 | Pensum-Marken | „Pflichtweg“ = Spielzeit seit der Ankunft, bis der Revier-Boss gefallen und kein erreichbares Ziel von `typical` mehr offen ist (der letzte Weg zur Treppe nicht mitgezählt); „vollständig“ = dazu kein Ziel von `thorough` (rote Gruppen eingeschlossen) und der Etagenboss besiegt oder nach zwei Versuchen aufgegeben. Beide Bots setzen die Marken in jeder Strategie (`season_planner.pensum`). | 3.3 |
+| I-11 | Sitzungsende | Endet die Sitzung, loggt die Figur in einem Safe Room höchstens 4 Räume entfernt aus (sicher, ausgeruht), sonst im Gang mit „Vorsichtig“. Im Gang ausgeloggt, beginnt die nächste Sitzung am Etageneingang (so baut die Erkundung nach dem Login heute auf, „Anträge und Offenes“). | 5.1 |
+| I-12 | Kalibrierung der Besetzung (F-18) | **Keine Änderung der Startwerte** — die Messung gibt keinen Anlass. Gemessen wird, was F-18 nicht festlegen konnte: wann die erste KI eine Etage vor der *spielenden* Kandidat:in erreicht. Kalender `typical` mit der Strategie `typical` (Pflichtweg, dann die Treppe; 10 Seeds, Etagen 2–6): 31 von 50 = 62 % (mit `auto` 33 von 50 = 66 %; Band von F-18 44–56 %). Je Etage: auf den offenen Etagen 2 und 3 ist die Kandidat:in 19-mal in 20 zuerst (am ersten Abend 0,01–0,16 Tage vor der ersten KI), auf den Etagen 4–6 die KI 30-mal in 30 — genau zur Öffnung der Treppe (Tag 5,00 / 9,00 / 14,00), weil von 99 KI-Kandidat:innen immer eine zur Sendezeit spielt, während die Sitzung der Kandidat:in um die Sendezeit ± 1 h beginnt. Das macht die Treppenregel, keine Modellkonstante: Kein Tempo- oder Könnenswert ändert eine Ankunft zur Öffnung (der Referenz-Mensch von F-18 wartet an der Treppe und gleicht dort aus). Die Pflichtweg-Minuten des Modells (F-4: 20/30/45/60) liegen über den gemessenen der Etagen 3–6 (Am Stück 27/36/40/43 min) — nachgestellt wird mit dem Pensum von ST1-C2 (Kap. 3.3) oder den Menschen-Daten von ST2, sonst liefe das Modell heutigen, zu kleinen Etagen hinterher. Die Bänder der Population (Kap. 4.2: Weste, Finale) sind Werte für Akt 3; Format 6 misst sie nicht. | 4.2, F-18 |
+| I-13 | Zeitraffer `--speed` | Im Full-Run-Bot zählt `--speed` in der Sitzung (die Staffel-Uhr läuft × n mit der Spielzeit), die Abwesenheiten kommen aus dem Profil; ohne Sitzungen (`--sessions=none`) ist es der Zeitraffer des Debug-Builds. Der Harness nimmt `--speed` an (das Gate-Kommando nennt es) und braucht es nicht: Sein Zeitraffer sind die Sitzungen. | 9.1, 11.6 |
+| I-14 | Wächter und Kosten | Ein Ziel 20-mal ohne Fortschritt ist ein Fehler des Bots (Lauf endet mit `errors`); höchstens 20 000 Ziele je Staffel; jeder abgelehnte Command ist ein Fehler; eine Stufe über dem Deckel der Etage (Kap. 8.2: Bandende, auf Etage 3 also 13) ebenso — in beiden Bots nach jedem Kampf geprüft. Kosten: Harness ≈ 1–2 min je Staffel (fast alles `RtSim`); `test_09_harness` 38–51 s im Standardlauf (je nach Last der geteilten Maschine; Budget < 60 s); `PTD_HARNESS_SEEDS=<n>` spielt n ganze Staffeln je Gate-Profil und Am Stück. | 11.6, 8.2 |
+| I-15 | Urteile gegen das Gate | Die Bänder von Kap. 11.6 gelten unverändert (Anteile, keine Etagenzahlen), `season_report.gd` liest sie so: „Pensum je Etage in den Bändern Kap. 3.3“ = der Median der Marken (I-10) je Etage über die Läufe, die sie erreichten — Pflichtweg „≈ x“ = x ± 25 %, vollständig der Bereich; „Median-Stufe beim Abstieg im Band ± 1“ = die Stufe der gesteuerten Figur nach der Treppe der Etagen 1–5 (mit der Abschluss-EP); „Etagen per Treppe“ = Treppen / (Treppen + Rettungen) der Etagen 1–5; „Stufe nach jedem Login ≥ Bandanfang − 2“ = jeder Login, gemessen nach der Nacht (Crashkurs inklusive); „nach der Rückkehr binnen 2 Sitzungen im Band“ = beim zweiten Login nach der Abwesenheit ≥ Bandanfang; „Credits ≥ 50 % von `typical`“ = Median der Credits am Ende gegen den Median von `typical` Mit Netz. Ohne Netz gelten dieselben Urteile (die Finale-Bänder nennen Mit Netz). | 11.6 |
+| I-16 | Kern-Lauf ohne Show | Der Harness spielt `RunSim`, einen Kern-Lauf ohne die Reaktionen der Show-Fassade: keine Sponsor-Geschenke im Kampf, kein Hype, keine Follower. Bosskämpfe sind darum im Harness strenger als in der Welt — das Finale auf Stufe 22 gewinnt der Harness-Bot `typical` 0-mal in 186 Versuchen, der Full-Run-Bot in der Welt 2-mal in 10 (GDD §13: mit den Geschenken verliert die Party gegen den Hausmeister 17 % statt 34 %). Zeiten, Stufen, Treppen und Logins misst der Harness wie die Welt (I-5); Niederlagen gegen Bosse und Tode sind im Harness eine obere Schranke, ihre Bänder prüft der Full-Run-Bot in der Welt nach. | 11.6 |
+
+**Anträge und Offenes aus ST1-I** (Code anderer Pakete bleibt unberührt; kein Antrag an `core/rt/**` oder
+`scenes/combat/**` nötig):
+
+- **Etagenbosse aus dem Bausatz der Rattenkönigin (an ST1-C2, C-13) — der Grund, warum die Finale-Bänder verfehlt
+  werden:** Die Garderobe (Etage 3, optional) und der Paketberg (Etage 6, das Finale) sind für den `typical`-Bot kaum
+  zu schlagen. Im Kalender verliert er das Finale in 39 von 40 Staffeln Mit Netz (521 von 522 Versuchen, gewonnen
+  einmal: `away2w` Seed 8), Am Stück `thorough` 36-mal in 36 Versuchen — im Harness ohne die Sponsor-Geschenke der
+  Show (I-16). Der Full-Run-Bot in der Welt verliert es auch: Am Stück auf Stufe 20 viermal in vier Versuchen, im
+  Kalender auf Stufe 22 achtmal in zehn (gewonnen im achten und im zweiten Versuch). Probe im Harness am Zustand vor
+  dem ersten Versuch (30 Kämpfe des `RtBotPlayer` `typical`, Grundwerte HP, STR und MAG × Faktor): die Garderobe
+  (Stufe 14) gegen die Party auf Stufe 12 × 1,00 6/30 gewonnen, × 0,95 16/30, × 0,9 28/30, × 0,8 30/30; der Paketberg
+  (Stufe 23) gegen Stufe 22 × 1,00 1/30, × 0,9 17/30, × 0,85 28/30, × 0,8 30/30. Eine Staffel `typical` mit beiden ×
+  0,9 (10 Seeds): Finale in 10 von 10 (sonst 0), Tode im Median 3,5 statt 22, die Garderobe 8 von 13 Versuchen
+  gewonnen. Vorschlag: den Bausatz-Faktor des Paketbergs von 1,25 auf 1,125–1,2 senken (1,125 = × 0,9:
+  Erstversuch-Niederlage im Harness ≈ 43 %, im Band der Etagenbosse von 07 §11.1, 25–45 %; mit den Geschenken der Welt
+  fällt sie niedriger aus) und den der Garderobe 1,08 → ≈ 1,03 (× 0,95: ≈ 47 %), je für HP, STR und MAG; den Wert
+  wählt ein Nachmessen in der Welt (`tools/fullrun.sh --season`, mehrere Seeds) und mit `tools/season_harness.sh
+  --gate` (Ziel Kap. 11.6: Finale Mit Netz in ≥ 80 % der Seeds).
+- **Pensum der Etagen 2–6 (an ST1-C2, Kap. 3.3):** Der Pflichtweg der Etagen 2–6 dauert 26 / 27 / 36 / 40 / 43 min (Am
+  Stück, `typical`) bzw. 24 / 27 / 32 / 33 / 35 min (Kalender, `typical`), „vollständig“ 30 / 37 / 37 / 38 / 54 min
+  (Am Stück, `thorough`) — statt 30 / 45 / 60 / 60 / 60 und 40–50 / 60–75 / 90–120 min. Die Etagen 2–6 sind kleiner
+  und schneller, als Kap. 3.3 schätzt (Etage 2–5: Erkundung 9–15 min, Kämpfe 13–22 min); Etage 1 liegt mit 26 / 32 min
+  darüber, mit ihrer Spielzeit (27 min `typical`) im Band von GDD §13 (Erstdurchlauf 22–28 min). ST1-C2 entscheidet,
+  ob die Etagen Inhalt dazubekommen (mehr Gruppen und Events je Viertel, Programmpunkte als längere Events) oder Kap.
+  3.3 die gemessenen Werte übernimmt; die Minuten je Tag für den Pflichtweg (10 / 10 / 12 / 12) tragen beides.
+- **Stufen Am Stück (an ST1-D, Kap. 8.2):** Im Kalender erreicht `typical` beim Abstieg jeder Etage das Bandende (7 /
+  10 / 13 / 16 / 19), Am Stück eine Stufe darunter (`typical` und `thorough`: 7 / 10 / 12–13 / 15 / 18, Etage 6 endet
+  auf 20 statt 22): Ohne die Tage an der geschlossenen Treppe bleibt weniger zu tun — ein Programmpunkt je Etage statt
+  bis zu fünf, kein Nachschub der Gruppen nach einem Staffel-Tag. Kein Anlass zum Nachstellen, solange das Pensum
+  (oben) offen ist; die Aufholjagd fängt es auf der nächsten Etage auf.
+- **Ohne Netz (Bots und Kap. 11.6):** Jede der 40 Ohne-Netz-Staffeln des Gates endet mit dem Aus, 16-mal gegen einen
+  Revier-Boss, sobald die Figur seine Stufe hat (I-8), 21-mal im Finale. Eine Person Ohne Netz ginge erst mit dem
+  Bandende an einen Boss; der nächste Schritt der Bots ist dieselbe Vorsicht im Planer (`careful`), gemessen, sobald die
+  Bosse nachgestellt sind. Kap. 11.6 nennt für Ohne Netz keine eigenen Bänder (wie viele das Finale erreichen sollen) —
+  offen für ST2.
+- **Kennzahl „erste KI vor dem ersten Menschen“ (an ST1-F/ST2, Kap. 4.2, F-18):** ab Etage 4 entscheidet die Öffnung
+  der Treppe, nicht das Tempo (I-12); Vorschlag: nur auf den Etagen vor der Treppenregel messen oder eine Ankunft zur
+  Öffnung als Gleichstand zählen.
+- **Der Uhrsprung zählt die Sendepause doppelt (an ST1-G/ST1-B, Kap. 5.5, V-17):** Nach „Ja“ auf die Rückfrage bucht
+  `Game.season_login_answer(true)` eine Pause `clamp` über den Rest R (Abwesenheit − 7 Tage) und `away` über sieben
+  Tage. Die Pause schiebt alle offenen Termine um R (`SeasonRules._pause`), die Staffeluhr (`season.utc`) rückt aber
+  nur um die sieben Tage vor und läuft danach um R hinter der Wanduhr her — für die Person kommen die Termine um 2R
+  später. Gemessen (`away2w` im Harness, Seed 0, und im Full-Run-Bot, Seed 4242: 15 Tage weg nach Tag 6, R = 8 Tage):
+  Die Staffel endet acht Tage später, als die Rückfrage sagt; die Besetzungsuhr (`CastSim.now` = Staffeluhr −
+  Sendepause) springt zurück (Tag 6,0 → 5,0 statt 13,0); die Uhrzeiten der Bilanz und des Ausloggen-Dialogs („am Di um
+  20:00“, aus der Staffeluhr) liegen um R daneben. Mit der Sendepause beim Ausloggen (`user`) stimmt es, weil
+  `max_away` ihre Länge mitbucht. Vorschlag: Die Pause `clamp` rückt die Staffeluhr um dieselbe Länge vor (Termine und
+  Uhr gemeinsam, gespielt wird dazwischen nichts); zu klären, ob R auf ganze Tage fällt — sonst liegt die Sendezeit
+  danach nicht mehr um 20:00. Die Bots spielen das Spiel, wie es ist (`away2w` misst eine um R längere Staffel), und
+  rechnen die Abwesenheit nach der letzten Sitzung in Staffelzeit (I-3).
+- **Login nach dem Schlaf im Gang (an ST1-G/ST1-H):** Die Erkundung baut nach dem Login am Etageneingang auf
+  (`floor_run.location` „start“), nicht im Raum des Schläfers (`season.sleeper.cell`): Wer im Gang ausloggt, wacht am
+  Eingang auf; die Bots bilden es so ab (I-11).
+- **Geschlossene Treppe (an ST1-H):** „Abstieg“ an einer geschlossenen Treppe friert die Erkundung heute ein
+  (`ExplorationScene._on_stairs_choice` setzt `_suspended`, `Game.complete_floor` lehnt still ab); der Bot wählt dort
+  „Noch nicht“ (`stay` — die Antwort, die auch ein eigener Dialog der geschlossenen Treppe anbieten muss).
+- **Bildschirme von ST1-H im Bot:** Das Tempo-Angebot nach der ersten Klassenwahl (Kap. 2.1) beantwortet der
+  Full-Run-Bot in `FullRunSeasonUi.room_screens` (im Kalender die Antwort, die beim Kalender bleibt, damit das Profil
+  gilt); bis es dort steht, endet ein Lauf, der es trifft, mit dessen Szenenpfad. Ebenso jede weitere Staffel-Ansicht
+  (Reiter, Staffel-Bilanz, Ruhmeshalle nach „Fortsetzen“ einer beendeten Staffel): eine Funktion im Adapter, ein
+  Aufruf an der Stelle, an der der Bot sie trifft.
+- **Hängen in zwei Programmräumen (an ST1-C1):** Im Kalender (`--sessions=20min` und `away2w`, Seed 4242) blieb der
+  Full-Run-Bot jedes Mal 2,4 m vor der Mitte zweier Programmräume stehen — Etage 4 Zelle (8, 5) mit `fev_f4_p5`, Etage
+  5 (7, 6) mit `fev_f5_p3`, je hinein und hinaus — und half sich mit seinem Teleport (vier je Lauf); Am Stück, wo nur
+  der erste Programmpunkt einer Etage öffnet, nie. Zu prüfen: was in der Mitte dieser Räume steht und eine Person
+  aufhält. Die Replay-Prüfungen der Läufe waren alle gleich.
+- **`RunSim.settle` (an ST1-B):** Die SEASON-Ereignisse eines Kampfendes (Tod, Rettung, Finale) werden gebucht, aber
+  nicht zurückgegeben (`settle()` liefert nichts); der Harness liest sie aus dem Zustand. Vorschlag: `settle()` gibt
+  sie zurück wie `apply`.
+- **Formate 12/18:** mit ST1-C2 (`PLAYABLE_FORMATS`, I-2); der Full-Run-Bot ist mit ihnen nicht gelaufen. **CI:** Der
+  Harness läuft nicht in CI (Laufzeit); ein nächtlicher Job mit `--gate --seeds=20` wäre der nächste Schritt
+  (`.github/workflows` unverändert).
+
+
 ### 11.4 Dateieigentum gegenüber 07 und 08
 
 | Datei / Bereich | Eigentum heute (06/07/08) | 09 | Regel |
@@ -1749,7 +1968,7 @@ den Recall bestätigen).
 | `origins.json` | K0 (minimal), K1 | Spalte `prof` in K1 als reine Daten, Referenzprüfung ab ST0 (CR-33) | K1 schreibt, ST0 prüft |
 | `mod_lines.json` | Anker A–D, R1a/R4, K | Block hinter `mod_ssn_anchor_01` | Blöcke |
 | `exploration.gd`, `exploration_hud.gd`, `show_overlay.gd`, `safe_room*.gd`, `settings_menu.gd`, `title_screen.gd` | A, C, R2, R3, K | ST1-G/H je ein Abschnitt | Abschnitte |
-| `scenes/boot/fullrun.gd`, `tools/fullrun.sh` | Schritt 0, R5b, K0 | ST1-I: `--season=ssn_basis --tempo=binge` | Abschnitt nach R5b |
+| `scenes/boot/fullrun.gd`, `tools/fullrun.sh` | Schritt 0, R5b, K0 | ST1-I: `--season=ssn_basis --tempo=binge`; neu dazu `scenes/boot/fullrun_season_ui.gd`, `tools/season_harness.sh`, `tests/tools/season_{planner,profiles,harness,harness_main,report}.gd` | Abschnitt nach R5b (Haken je eine markierte Zeile); die neuen Dateien gehören ST1-I |
 | `core/rt/**`, `scenes/combat/**` | R-Phasen | **nie**; Gast-Einheit, Klassenleisten und `talent:`-Quelle nur als Schema-Haken CR-32 (a)–(c) an R1b/R4 | Änderungsantrag |
 
 ### 11.5 ST2 und ST3
@@ -1777,7 +1996,7 @@ den Recall bestätigen).
 | `test_09_terms` | Sprachregel (Kap. 1.2) |
 | `test_09_zone_generator` | 200 Seeds je Etage 3–18 erfüllen die Prüfregeln (Kap. 3.6), deterministisch (ST1-C1: Etagen 2–6; dazu `test_09_floors`) |
 | `test_09_recall` | Recall (06 §3.5): Modi auf Etage 3 und 4, keiner vor Etage 3; öffnet von selbst, „Später“, Knopf, zweiter Besuch; ein ganzer Recall beider Figuren (Karten, Plaketten, Vorleben-Zeile, Klassenzeilen, Commands `casting` und `loadout`, Urteile, Deckel 13, „Ohne Netz“, Talentbaum, Signatur in der Zugleiste); Touch (zweites Antippen), Zurück; Ablehnungen außerhalb (Etage 2, Erkundung, fremde Spezies/Klasse, gefälschtes Command); Replay in beiden Verifiern und ein zweiter Live-Lauf; Re-Spec (Spezies fest, Umschulung je Etage, alte Signatur weg, eigene Varianten bleiben); Original-Follower und Flattermops-Bellen; jeder Kartentext ein Satz, jede Jury-Zeile da; jeder Schritt mit jeder Karte passt auf 1280 × 720, jede Karte zeigt ihren Satz ganz |
-| `test_09_harness` | Stand ST1-I: Spielprofile je Format (je Seed gleich, nie zwei Sitzungen zugleich, Wochenende, zwei Wochen weg), Planer beider Bots auf den echten Etagen 2–6 (Pflichtweg, Programmtüren, rote Gruppen, Aufleveln vor Bossen, Boss-Versuche, `auto`, geschlossene Treppe, Ohne Netz vorsichtig, Pensum-Marken), Formate 12/18 abgelehnt, Etage 1 Am Stück und eine Kalender-Staffel mit neun Tagen Abwesenheit — legal, je Seed gleich, `RunSim.replay` bitgleich; `PTD_HARNESS_SEEDS=<n>` spielt n ganze Staffeln je Gate-Profil |
+| `test_09_harness` | Stand ST1-I: Spielprofile je Format (je Seed gleich, nie zwei Sitzungen zugleich, Wochenende, zwei Wochen weg), Planer beider Bots auf den echten Etagen 2–6 (Pflichtweg, Programmtüren, rote Gruppen, Stufen sammeln vor Bossen, Boss-Versuche, `auto`, geschlossene Treppe, Ohne Netz vorsichtig, Pensum-Marken), Formate 12/18 abgelehnt, Etage 1 Am Stück und eine Kalender-Staffel mit neun Tagen Abwesenheit, Rettung auf Etage 3 und Recall (gesteuerte Figur zuerst, je Signatur auf der Leiste) — legal, je Seed gleich, `RunSim.replay` bitgleich; `PTD_HARNESS_SEEDS=<n>` spielt n ganze Staffeln je Gate-Profil |
 
 **ST1-Gate — nur Mechanik (V-5):** Alle Tests grün; Am-Stück-Etage 1 in den neu gemessenen GDD-§13-Bändern; Staffel-Harness
 (`tools/season_harness.sh --format=18 --tempo=calendar --speed=dev`) mit diesen Profilen (V-8):
@@ -1790,7 +2009,11 @@ den Recall bestätigen).
 | `2 Wochen weg` | wie `typical`, Tage 30–44 abwesend | nach der Rückkehr binnen 2 Sitzungen im Band; Finale in ≥ 60 % der Seeds |
 
 **Stand ST1-I:** Bis die Etagen 7–18 stehen, misst der Harness Format 6 (`tools/season_harness.sh --gate`, Kap. 11.3
-„Stand ST1-I“, I-2/I-3: die Profile auf 24 Tage skaliert, zwei Wochen weg = Tage 7–20); `--format=18` lehnt er mit Exit 3 ab.
+„Stand ST1-I“, I-2/I-3: die Profile auf 24 Tage skaliert, zwei Wochen weg = Tage 7–20); `--format=18` lehnt er mit
+Exit 3 ab. Gemessen (Kap. 11.3 „Stand ST1-I“): erreicht sind die Stufen beim Abstieg, die Etagen per Treppe (`20
+min/Tag` 100 %, `nur Wochenende` 94 %), die Stufe nach jedem Login, die Credits am Wochenende (110 % von `typical`)
+und die Rückkehr nach zwei Wochen (10 von 10); verfehlt sind das Finale Mit Netz (`typical` 0 %, `2 Wochen weg` 10 %)
+und das Pensum je Etage — beides mit Antrag an ST1-C2.
 
 **Echtzeit-Tagebuchstudie (V-5):** Eine Basis-Staffel (6 Etagen, 24 Tage) in echter Zeit mit **≥ 10 Tester:innen** und einer
 täglichen Zwei-Minuten-Notiz. Bestanden, wenn ≥ 8 von 10 Einsturz, Vorlauf und Schläfer in einem Satz richtig erklären,

@@ -111,7 +111,9 @@ Verzeichnis.*
   Replay-Prüfung.
 - Qualitätssicherung: rund 1 800 automatische Tests (darunter Golden- und Grenztest der Stempelduell-Engine),
   Autoplay-Smoke-Test im Echtzeitkampf (`AUTOPLAY: OK`), Full-Run-Bot, der Etage 1 mit drei Strategien und als Graf Mopsula
-  durchspielt, Balance-Harness des Echtzeitkampfs, Performance-Probe (`PERF: OK`) und der CI-Workflow `ptd-check`.
+  durchspielt (in Debug-Staffeln auch eine ganze Basis-Staffel), der Staffel-Harness für die Bänder des ST1-Gates
+  (09 ST1-I, Abschnitt 6), Balance-Harness des Echtzeitkampfs, Performance-Probe (`PERF: OK`) und der CI-Workflow
+  `ptd-check`.
 
 **Bekannte Lücken:**
 
@@ -436,19 +438,23 @@ Recall ansehen: `godot --path prime-time-dungeon/game -- --season=ssn_basis --te
 Room des ersten Viertels (die Karte, M, zeigt ihn)
 
 **Staffel-Bots (09 Kap. 11.6, ST1-I):** Zwei Werkzeuge spielen ganze Staffeln (Abschnitt 7). `tools/fullrun.sh
---season=ssn_basis` lässt den Full-Run-Bot in der Welt spielen: Start zu festem Tag 0 mit dem Lauf-Seed (reproduzierbar),
-alle Etagen der Basis-Staffel mit derselben Wegplanung wie der Harness (Revier-Boss → Schlüssel → Tor → Treppe,
-Programmtüren, Safe Room je Viertel), Recall auf Etage 3, Klassenfähigkeiten und Talentreihen, Finale; `--tempo=calendar`
+--season=ssn_basis` lässt den Full-Run-Bot in der Welt spielen: Start zu festem Tag 0 mit dem Lauf-Seed
+(reproduzierbar), alle Etagen der Basis-Staffel mit derselben Wegplanung wie der Harness (Revier-Boss → Schlüssel →
+Tor → Treppe, Programmtüren, Safe Room je Viertel), den Recall-Bildschirm auf Etage 3 (er bestätigt beide Figuren, die
+gesteuerte zuerst, und schließt ihn), Klassenfähigkeiten und Talentreihen, Finale und Abspann; `--tempo=calendar`
 spielt die Sitzungen eines Profils mit Ausloggen, Abwesenheit, Login und „Während Sie schliefen …“.
 `tools/season_harness.sh` spielt dieselben Staffeln ohne Welt im Kern (RunSim, echte Echtzeitkämpfe, KI-Besetzung,
-Schläfer) in etwa 1–2 min je Staffel und misst Pensum, Stufen gegen das Band, Bosse, Tode, Rettungen und Credits je
-Etage gegen die Bänder des ST1-Gates (auf Format 6 skaliert; Formate 12/18 lehnt er bis ST1-C2 ab, Exit 3).
+Schläfer) in etwa 1–2 min je Staffel auf einem freien Kern und misst Pensum, Stufen gegen das Band, Bosse, Tode,
+Rettungen und Credits je Etage gegen die Bänder des ST1-Gates (auf Format 6 skaliert; Formate 12/18 lehnt er bis
+ST1-C2 ab, Exit 3). Messung und Urteile: 09 Kap. 11.3 „Stand ST1-I“.
 
 ```bash
 GODOT=… prime-time-dungeon/tools/fullrun.sh --season=ssn_basis --tempo=binge --strategy=thorough     # Am Stück, alles
-GODOT=… prime-time-dungeon/tools/fullrun.sh --season=ssn_basis --tempo=calendar --sessions=20min     # Kalender
-GODOT=… prime-time-dungeon/tools/season_harness.sh --gate --seeds=10 --jobs=2      # vier Profile, Mit/Ohne Netz
+GODOT=… prime-time-dungeon/tools/fullrun.sh --season=ssn_basis --tempo=calendar --sessions=20min --strategy=auto
+GODOT=… prime-time-dungeon/tools/season_harness.sh --gate --seeds=10 --jobs=2 --out=gate.json   # ST1-Gate, Format 6
 GODOT=… prime-time-dungeon/tools/season_harness.sh --tempo=binge --strategy=typical --seeds=10   # Pflichtweg Am Stück
+GODOT=… prime-time-dungeon/tools/season_harness.sh --format=18 --tempo=calendar --speed=dev      # Exit 3 bis ST1-C2
+PTD_HARNESS_SEEDS=3 GODOT=… prime-time-dungeon/tools/check.sh --tests-only --filter=test_09_harness   # ganze Staffeln
 ```
 
 Kämpfe beginnen in der Welt (`--goto=explore`); bestimmte Kämpfe stellen die Capture-Rezepte her (Abschnitt 10). Die
@@ -481,9 +487,9 @@ einer Temp-Kopie, schreibt die Icons aber nach `game/art/icons/` zurück; `i18n.
 **Exit-Codes:** `0` = bestanden. `1` = Fehler: Import, Test, Smoke-Test, Screenshot, Bot-Lauf, Budget-Überschreitung oder
 Speicherwachstum. Jede Zeile mit `SCRIPT ERROR`, `Assertion failed`, `ERROR:` usw. zählt als Fehler, auch bei Exit 0 des
 Godot-Prozesses. `2` = Aufruffehler (Godot-Binary nicht gefunden; bei `fullrun.sh` auch ein unbekanntes Argument). `3` =
-`season_harness.sh` lehnt das Format ab (12/18 bis ST1-C2). Der Test-Runner wertet auch
-übersprungene Tests als Fehler, sofern sie nicht ausdrücklich zugelassen sind. Zeitbudgets in Tests werden nur mit
-`PTD_PERF_ASSERTS=1` geprüft (CI-Check-Job).
+`season_harness.sh` lehnt das Format ab (12/18 bis ST1-C2). Der Test-Runner wertet auch übersprungene Tests als Fehler,
+sofern sie nicht ausdrücklich zugelassen sind. Zeitbudgets in Tests werden nur mit `PTD_PERF_ASSERTS=1` geprüft
+(CI-Check-Job).
 
 ```bash
 GODOT=~/godot/godot prime-time-dungeon/tools/check.sh

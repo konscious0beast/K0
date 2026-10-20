@@ -5,7 +5,10 @@ extends Node3D
 ## "anims" (Kai/Mopsula/rat/Hausmeister frozen in key poses) | "props" (every prop on a humanoid) | Casting (08 §6,
 ## K2): "looks" (eight persona looks from data/looks.json on Kai's model, look_gallery.tscn) | "hair" (close-up of every
 ## hair style, or with params {"row": "beard"} every beard with and without glasses; {"view": "front" | "back" |
-## "side"}, hair_gallery.tscn).
+## "side"}, hair_gallery.tscn) | 11-A1 (11 §4.10): "cats" (every pattern, both fur lengths, standing and sitting;
+## {"view": "close" | "game" | "fur" | "sit" | "patterns"}, cat_gallery.tscn) | "kit" (each new prop on a fitting base;
+## {"view": "close" | "heads" | "persona"}, kit_gallery.tscn). params {"page": …} picks the page of this scene, so every
+## page also renders from character_gallery.tscn (check.sh --shot … --params='{"page": "cats"}').
 
 const Cast := preload("res://art/gallery/cast.gd")
 const Stage := preload("res://art/gallery/gallery_stage.gd")
@@ -28,11 +31,17 @@ func setup(params: Dictionary) -> void:
 
 
 func _ready() -> void:
+	if _params.has("page"):
+		page = str(_params["page"])
 	Stage.add_world(self, "metro", {}, &"battle")
 	tags = NameTags.new()
 	tags.name = "NameTags"
 	add_child(tags)
 	match page:
+		"cats":
+			_build_cats()
+		"kit":
+			_build_kit()
 		"bases":
 			_build_bases()
 		"anims":
@@ -60,7 +69,7 @@ func _ready() -> void:
 
 
 func _place(id: String, model: Dictionary, pos: Vector3, yaw_deg: float, label: String, seed: int = 0,
-		tag_over_head: bool = false) -> CharacterRig:
+		tag_over_head: bool = false, tag_offset: Vector3 = Vector3(0, 0, 0.5)) -> CharacterRig:
 	var rig: CharacterRig = CharacterBuilder.build(model, seed)
 	rig.name = "Rig_" + id
 	add_child(rig)
@@ -74,7 +83,7 @@ func _place(id: String, model: Dictionary, pos: Vector3, yaw_deg: float, label: 
 		if tag_over_head:
 			tags.call("add_tag", rig, label, Vector3(0, 0.3, 0), col, TAG_SIZE + 2, false, true)
 		else:
-			tags.call("add_tag", rig, label, Vector3(0, 0, 0.5), col, TAG_SIZE, true)
+			tags.call("add_tag", rig, label, tag_offset, col, TAG_SIZE, true)
 	return rig
 
 
@@ -128,7 +137,7 @@ func _build_cast() -> void:
 func _build_bases() -> void:
 	Stage.add_floor(self, 9.0, {})
 	var bases: PackedStringArray = CharacterBuilder.supported_bases()
-	var x: float = -6.0
+	var x: float = -float(bases.size() - 1) * 0.75
 	for b: String in bases:
 		var m: Dictionary = {"base": b, "scale": 1.0, "colors": {}, "props": []}
 		m["colors"] = _default_primary(b)
@@ -264,6 +273,178 @@ func _build_hair() -> void:
 	Stage.add_camera(self, Vector3(0, 1.9, 6.4), Vector3(0, 1.05, 0), 40.0)
 
 
+# --- 11-A1 (11 §4.10): the cat and the new props ---------------------------------------------------------------------
+
+## Gallery colours per cat pattern: [short fur, long fur] — black / cream, ginger / silver tabby, tortoiseshell,
+## tuxedo / blue-and-white, calico (secondary = markings, accent = calico's dark patches).
+const CAT_COLORS: Dictionary = {
+	"solid": [{"primary": "#34343c", "eyes": "#f2c230"}, {"primary": "#efe1c6", "eyes": "#6fb8e8"}],
+	"tabby": [{"primary": "#e0903e", "secondary": "#93491a", "eyes": "#9fd85a"},
+		{"primary": "#c4c8ce", "secondary": "#4a4d55", "eyes": "#9fd85a"}],
+	"tortie": [{"primary": "#2b2522", "secondary": "#d37a2c", "eyes": "#f2c230"},
+		{"primary": "#2b2522", "secondary": "#d37a2c", "eyes": "#e08a3c"}],
+	"bicolor": [{"primary": "#26262c", "secondary": "#f2eee6", "eyes": "#9fd85a"},
+		{"primary": "#6d7686", "secondary": "#f2eee6", "eyes": "#f2a33c"}],
+	"calico": [{"primary": "#f2eee6", "secondary": "#d9822b", "accent": "#2b2522", "eyes": "#9fd85a"},
+		{"primary": "#f2eee6", "secondary": "#d9822b", "accent": "#2b2522", "eyes": "#6fb8e8"}],
+}
+## A humanoid that is not Kai (the clothing props on a stand-in, never Kai's look in Liga style, 06 §0.3).
+const KIT_HUMAN: Dictionary = {"base": "humanoid", "scale": 1.0, "colors": {"primary": "#c95d63",
+	"secondary": "#3a4a5a", "accent": "#d9b66b", "skin": "#d19a6e", "eyes": "#1a1420"}, "props": [],
+	"style": {"hair": "bun", "beard": "none"}}
+## Tag offset under the small figures of the cat pages (the default 0.5 m reaches the next row).
+const CAT_TAG: Vector3 = Vector3(0, 0, 0.3)
+
+
+## The gallery cat of `fur` × `pattern` in `pose` ("auto" stands, "upright" sits).
+static func cat_model(fur: String, pattern: String, pose: String = "auto") -> Dictionary:
+	var cols: Dictionary = (CAT_COLORS[pattern] as Array)[0 if fur == "short" else 1]
+	return {"base": "cat", "scale": 1.0, "pose": pose, "colors": cols.duplicate(), "props": [],
+		"style": {"fur": fur, "pattern": pattern}}
+
+
+## The cats. Default: every pattern (columns) in four rows — short fur standing, long fur standing, short fur sitting,
+## long fur sitting. {"view": …}: "close" four cats close up (ears, whisker pads, the curled tail), "game" cats beside
+## Kai and Graf Mopsula from the exploration camera, "fur" short and long fur side by side, "sit" sitting cats from
+## three sides, "patterns" the markings seen from above.
+func _build_cats() -> void:
+	Stage.add_floor(self, 9.0, {})
+	match str(_params.get("view", "")):
+		"game":
+			_build_cats_game()
+		"close":
+			_cat_row([["short", "tabby", "auto", Vector3(-0.72, 0, 0.12), -25.0],
+				["long", "calico", "upright", Vector3(-0.24, 0, -0.32), 10.0],
+				["short", "tortie", "auto", Vector3(0.3, 0, 0.18), 55.0],
+				["long", "bicolor", "auto", Vector3(0.84, 0, -0.26), 25.0]], true)
+			Stage.add_camera(self, Vector3(0, 0.8, 2.25), Vector3(0, 0.24, -0.05), 36.0)
+		"fur":
+			_cat_row([["short", "tabby", "auto", Vector3(-1.25, 0, 0), 75.0],
+				["long", "tabby", "auto", Vector3(-0.45, 0, 0), 75.0],
+				["short", "solid", "auto", Vector3(0.38, 0, 0), 25.0],
+				["long", "solid", "auto", Vector3(1.08, 0, 0), 25.0]], true)
+			Stage.add_camera(self, Vector3(0, 0.75, 2.6), Vector3(0, 0.24, 0), 40.0)
+		"sit":
+			_cat_row([["short", "tortie", "upright", Vector3(-0.62, 0, 0), 20.0],
+				["long", "bicolor", "upright", Vector3(0.0, 0, -0.1), 70.0],
+				["long", "calico", "upright", Vector3(0.62, 0, 0), -35.0]], true)
+			Stage.add_camera(self, Vector3(0, 0.62, 1.95), Vector3(0, 0.24, 0), 40.0)
+		"patterns":
+			var pats: PackedStringArray = CharacterBuilder.supported_styles()["cat"]["pattern"]
+			var row: Array = []
+			for i in pats.size():
+				row.append(["short", pats[i], "auto", Vector3((float(i) - 2.0) * 0.62, 0, 0.0), 60.0])
+			_cat_row(row, true)
+			Stage.add_camera(self, Vector3(0, 1.75, 2.4), Vector3(0, 0.15, -0.05), 40.0)
+		_:
+			_build_cats_all()
+
+
+## Cats of `row` ([fur, pattern, pose, position, yaw]); `tag`: a name tag "fur · pattern" under each.
+func _cat_row(row: Array, tag: bool) -> void:
+	for c: Array in row:
+		var label: String = "%s · %s" % [c[0], c[1]] if tag else ""
+		_place("cat_%s_%s_%s" % [c[0], c[1], c[2]], cat_model(str(c[0]), str(c[1]), str(c[2])), c[3] as Vector3,
+			float(c[4]), label, 0, false, CAT_TAG)
+
+
+## Every pattern × fur length × pose: the pattern names under the front row, the rows named at the left.
+func _build_cats_all() -> void:
+	var patterns: PackedStringArray = CharacterBuilder.supported_styles()["cat"]["pattern"]
+	var rows: Array = [["short", "auto", 1.8, "short · stand"], ["long", "auto", 0.6, "long · stand"],
+		["short", "upright", -0.6, "short · sit"], ["long", "upright", -1.8, "long · sit"]]
+	for r: Array in rows:
+		for i in patterns.size():
+			var x: float = (float(i) - float(patterns.size() - 1) * 0.5) * 1.0
+			# standing cats turned half to the camera (face, legs and the tail curl), sitting ones a little less
+			var yaw: float = 40.0 if str(r[1]) == "auto" else 20.0
+			_place("cat_%s_%s_%s" % [r[0], patterns[i], r[1]], cat_model(str(r[0]), patterns[i], str(r[1])),
+				Vector3(x, 0, float(r[2])), yaw, patterns[i] if float(r[2]) > 1.0 else "", 0, false, CAT_TAG)
+		_tag_at(Vector3(-2.75, 0.15, float(r[2])), str(r[3]))
+	Stage.add_camera(self, Vector3(0, 3.6, 5.4), Vector3(0, 0.0, -0.1), 40.0)
+
+
+## Cats beside Kai and Graf Mopsula from the exploration camera (02_TECH §7.3: arm 7 m from a pivot 1.4 m over the
+## leader, pitch −38°, FOV 60).
+func _build_cats_game() -> void:
+	_place("kai", _db_model("kai"), Vector3(-1.2, 0, 0.2), 20.0, "")
+	_place("mopsula", _db_model("mopsula"), Vector3(-0.3, 0, 0.6), 10.0, "")
+	_cat_row([["short", "tabby", "auto", Vector3(0.6, 0, 0.4), -35.0],
+		["long", "calico", "upright", Vector3(1.3, 0, -0.3), 15.0],
+		["short", "bicolor", "auto", Vector3(0.4, 0, -0.9), 70.0],
+		["long", "solid", "upright", Vector3(-2.25, 0, 0.45), 25.0],
+		["long", "tortie", "auto", Vector3(1.6, 0, 0.9), -80.0]], false)
+	var pivot := Vector3(0.0, 1.4, 0.0)
+	var pitch: float = deg_to_rad(38.0)
+	Stage.add_camera(self, pivot + Vector3(0, sin(pitch), cos(pitch)) * 7.0, pivot, 60.0)
+
+
+## The new props. Default: each on a fitting base — the humanoid stand-in with tiara, sunglasses, jacket, bathrobe
+## (+ sandals), shorts and sandals; cats with tiara and sunglasses. {"view": …}: "close" the clothing up close, "heads"
+## tiara and sunglasses on the stand-in and on cats, "persona" Kai in the persona option "Jacke" (wear) beside the
+## canon and the heaviest persona look (tris in the tags).
+func _build_kit() -> void:
+	Stage.add_floor(self, 9.0, {})
+	match str(_params.get("view", "")):
+		"close":
+			var clothes: Array = [["jacket"], ["bathrobe", "sandals"], ["shorts"], ["sandals"]]
+			for i in clothes.size():
+				_kit_human(i, clothes[i] as Array, Vector3((float(i) - 1.5) * 0.85, 0, 0), -12.0 + 8.0 * float(i))
+			Stage.add_camera(self, Vector3(0, 1.25, 3.6), Vector3(0, 0.75, 0), 40.0)
+		"heads":
+			for i in 2:
+				var m: Dictionary = KIT_HUMAN.duplicate(true)
+				m["props"] = [["tiara"], ["sunglasses"]][i]
+				_place("kit_human_%d" % i, m, Vector3(-0.5 + 1.0 * float(i), 0, -1.6), 18.0 - 36.0 * float(i), "")
+			_kit_cat("long", "solid", "upright", ["tiara"], Vector3(-0.3, 0, 0.55), 18.0, false)
+			_kit_cat("short", "tabby", "upright", ["sunglasses"], Vector3(0.3, 0, 0.55), -18.0, false)
+			Stage.add_camera(self, Vector3(0, 0.85, 2.5), Vector3(0, 0.62, -0.4), 40.0)
+		"persona":
+			var kai: Dictionary = _db_model("kai")
+			var looks: Array = [[{}, "Kanon"], [{"wear": "lk_wear_jacket"}, "Jacke"],
+				[{"hair": "lk_hair_curls", "beard": "lk_beard_stubble", "glasses": "lk_glasses_round",
+				"wear": "lk_wear_jacket"}, "Locken · Bart · Brille · Jacke"]]
+			for i in looks.size():
+				var rig: CharacterRig = _place("persona_%d" % i, PersonaLook.apply(kai, looks[i][0] as Dictionary, DB.data),
+					Vector3((float(i) - 1.0) * 1.1, 0, 0), 12.0 - 12.0 * float(i), "")
+				tags.call("add_tag", rig, "%s · %d Tris" % [looks[i][1], MeshUtil.tri_count_tree(rig)], Vector3(0, 0, 0.5),
+					TAG_COLORS["hero"], TAG_SIZE, true)
+			Stage.add_camera(self, Vector3(0, 1.7, 4.3), Vector3(0, 0.85, 0), 40.0)
+		_:
+			var human: Array = [["tiara"], ["sunglasses"], ["jacket"], ["bathrobe", "sandals"], ["shorts"], ["sandals"]]
+			for i in human.size():
+				_kit_human(i, human[i] as Array, Vector3((float(i) - float(human.size() - 1) * 0.5) * 0.95, 0, -0.6),
+					-10.0 + 4.0 * float(i))
+			_kit_cat("long", "solid", "upright", ["tiara"], Vector3(-0.55, 0, 2.1), 10.0)
+			_kit_cat("short", "tabby", "auto", ["sunglasses"], Vector3(0.6, 0, 2.1), -25.0)
+			Stage.add_camera(self, Vector3(0, 2.0, 5.6), Vector3(0, 0.62, 0.3), 40.0)
+
+
+## The humanoid stand-in with `props` (the tag names them).
+func _kit_human(i: int, props: Array, pos: Vector3, yaw: float) -> void:
+	var m: Dictionary = KIT_HUMAN.duplicate(true)
+	m["props"] = props
+	_place("kit_human_%d" % i, m, pos, yaw, " + ".join(PackedStringArray(props)))
+
+
+## A gallery cat with `props` (`tag`: named "cat + <props>").
+func _kit_cat(fur: String, pattern: String, pose: String, props: Array, pos: Vector3, yaw: float,
+		tag: bool = true) -> void:
+	var m: Dictionary = cat_model(fur, pattern, pose)
+	m["props"] = props
+	var label: String = "cat + " + " + ".join(PackedStringArray(props)) if tag else ""
+	_place("kit_cat_" + "_".join(PackedStringArray(props)), m, pos, yaw, label, 0, false, CAT_TAG)
+
+
+## A name tag at a point of the stage (row names).
+func _tag_at(pos: Vector3, text: String) -> void:
+	var marker := Node3D.new()
+	marker.name = "Tag_" + text.validate_node_name()
+	add_child(marker)
+	marker.position = pos
+	tags.call("add_tag", marker, text, Vector3.ZERO, TAG_COLORS["hero"], TAG_SIZE, false)
+
+
 func _build_closeup(ids: Array, positions: Array, cam: Vector3, target: Vector3) -> void:
 	Stage.add_floor(self, 9.0, {})
 	for i in ids.size():
@@ -288,7 +469,8 @@ func _freeze(rig: CharacterRig, anim: StringName, t: float) -> void:
 
 func _default_primary(base: String) -> Dictionary:
 	var defaults: Dictionary = {"humanoid": "#3aa9a0", "pug": "#d8b98a", "rodent": "#6b5b4e", "blob": "#6fbf4a",
-		"insect": "#2b2b33", "robot": "#2f6fb3", "brute": "#7c8a94", "specter": "#e23e9b", "swarm": "#8c93a6"}
+		"insect": "#2b2b33", "robot": "#2f6fb3", "brute": "#7c8a94", "specter": "#e23e9b", "swarm": "#8c93a6",
+		"cat": "#e08a3c"}
 	return {"primary": defaults.get(base, "#888888")}
 
 

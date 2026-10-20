@@ -14,15 +14,17 @@ extends RefCounted
 ##   labels: Array[Dictionary] ({"name", "pivot", "pos", "rot", "text", "color", "outline", "font_size",
 ##     "outline_size", "pixel_size"} → Label3D, e.g. the Rabattschild percent sign), flags: Dictionary.
 
-const BASES: PackedStringArray = ["humanoid", "pug", "rodent", "blob", "insect", "robot", "brute", "specter", "swarm"]
+const BASES: PackedStringArray = ["humanoid", "pug", "rodent", "blob", "insect", "robot", "brute", "specter", "swarm",
+	"cat"]                                                     # 11-A1 (11 §4.10): the cat
 const PROPS: PackedStringArray = ["cape", "crown", "monocle", "top_hat", "cap", "bandana", "apron", "mop", "broom",
 	"knife", "staff", "key_ring", "glasses", "lamp_helmet", "backpack", "mask", "wings", "antennae",
 	"newspaper_head", "briefcase", "bottlecap_chain", "cable_tangle", "spray_cap", "escalator_back", "claws", "helmet",
-	"shield", "halberd", "rat_king_tail", "ticket_crown", "wrench", "axe", "crowbar", "cart", "discount_tag"]
+	"shield", "halberd", "rat_king_tail", "ticket_crown", "wrench", "axe", "crowbar", "cart", "discount_tag",
+	"tiara", "sunglasses", "bathrobe", "sandals", "shorts", "jacket"]   # 11-A1 (11 §4.10)
 
 ## Nominal heights at scale 1.0 (02_TECH §8.4).
 const NOMINAL_HEIGHT: Dictionary = {"humanoid": 1.75, "pug": 0.6, "rodent": 0.7, "blob": 0.9, "insect": 0.8,
-	"robot": 1.5, "brute": 2.2, "specter": 1.6, "swarm": 0.8}
+	"robot": 1.5, "brute": 2.2, "specter": 1.6, "swarm": 0.8, "cat": 0.5}
 ## Uniform fit of a recipe (03_ART §5.3 part lists) to its nominal height: the listed parts give blob 0.72 m, insect
 ## 0.98 m and specter 1.85 m at scale 1.0; the Model node is scaled by ModelSpec.scale × fit (02_TECH §8.4 sizes).
 const BASE_FIT: Dictionary = {"blob": 1.25, "insect": 0.82, "specter": 0.865}
@@ -37,6 +39,8 @@ const DEFAULT_COLORS: Dictionary = {
 	"brute": {"primary": "#7c8a94", "secondary": "#3e4a55", "accent": "#4a3a30", "skin": "#d9a88a", "eyes": "#1a1420"},
 	"specter": {"primary": "#e23e9b", "secondary": "#ffffff", "accent": "#4ad9d9", "skin": "#e23e9b", "eyes": "#1a1420"},
 	"swarm": {"primary": "#8c93a6", "secondary": "#5fa38e", "accent": "#e0a040", "skin": "#8c93a6", "eyes": "#ff9a2e"},
+	# 11-A1: a ginger cat with brown markings and green eyes; accent = calico's dark patches
+	"cat": {"primary": "#e08a3c", "secondary": "#8c4a1e", "accent": "#2b2522", "skin": "#e08a3c", "eyes": "#9fd85a"},
 }
 
 const BLACK_SHOE: Color = Color("#1f1f24")
@@ -59,7 +63,7 @@ const CAPE_HEM: Color = Color("#6a46c0")
 # --- entry ---------------------------------------------------------------------------------------------------------
 
 ## m: normalized ModelSpec ({"base", "scale", "pose" (StringName resolved), "colors" (slot → Color), "props",
-## "style" (humanoid: {"hair", "beard"}, 08 §6.2)}).
+## "style" (humanoid: {"hair", "beard"}, 08 §6.2; cat: {"fur", "pattern"}, 11-A1)}).
 static func blueprint(m: Dictionary, seed: int) -> Dictionary:
 	var base: String = str(m.get("base", "humanoid"))
 	if not BASES.has(base):
@@ -95,6 +99,8 @@ static func blueprint(m: Dictionary, seed: int) -> Dictionary:
 			_specter(bp)
 		"swarm":
 			_swarm(bp)
+		"cat":
+			_cat(bp)
 	_apply_props(bp)
 	return bp
 
@@ -250,6 +256,10 @@ static func _humanoid(bp: Dictionary) -> void:
 	# request to 02_TECH §4.3/§4.4.14 + DataValidator; until then authors must not give a humanoid eyes == skin by
 	# accident (test_m4_art_kit documents the rule).
 	var faceless: bool = eyes.is_equal_approx(skin)
+	# 11-A1 (11 §4.10): a garment prop (the bathrobe over the jacket) dresses torso and sleeves and covers the shirt
+	# details; shorts and sandals vary the leg segments (_humanoid_shorts_leg, _humanoid_sandal)
+	var garment: String = "bathrobe" if _has(bp, "bathrobe") else ("jacket" if _has(bp, "jacket") else "")
+	var top: Color = prim if garment == "" else _garment_color(bp, garment)
 	_pivot(bp, "Hips", "", Vector3(0, 0.60, 0))
 	_pivot(bp, "Torso", "Hips", Vector3(0, 0.60, 0))
 	_pivot(bp, "Head", "Torso", Vector3(0, 1.12, 0))
@@ -257,9 +267,10 @@ static func _humanoid(bp: Dictionary) -> void:
 	_pivot(bp, "ArmR", "Torso", Vector3(0.32, 1.04, 0))
 	_pivot(bp, "LegL", "Hips", Vector3(-0.13, 0.55, 0))
 	_pivot(bp, "LegR", "Hips", Vector3(0.13, 0.55, 0))
-	# Torso (hip box merged in, Hips has no mesh)
-	_add(bp, "Torso", _p(MeshUtil.box(Vector3(0.50, 0.12, 0.36)), Vector3(0, 0.0, 0), sec))
-	_add(bp, "Torso", _p(MeshUtil.capsule(0.24, 0.62), Vector3(0, 0.26, 0), prim))
+	# Torso (hip box merged in, Hips has no mesh; the bathrobe's skirt covers the waist instead)
+	if garment != "bathrobe":
+		_add(bp, "Torso", _p(MeshUtil.box(Vector3(0.50, 0.12, 0.36)), Vector3(0, 0.0, 0), sec))
+	_add(bp, "Torso", _p(MeshUtil.capsule(0.24, 0.62), Vector3(0, 0.26, 0), top))
 	if news:
 		_add(bp, "Torso",
 			_p(MeshUtil.box(Vector3(0.16, 0.22, 0.02)), Vector3(0, 0.42, -0.226), Color("#d9d9d9"), Vector3(-6, 0, 0)))
@@ -268,13 +279,15 @@ static func _humanoid(bp: Dictionary) -> void:
 		# shoulder joints (Sphere 0.06 class: small segment count) at the arm pivots, rig-local to Torso
 		for sx: float in [-1.0, 1.0]:
 			_add(bp, "Torso", _p(MeshUtil.sphere(0.058), Vector3(0.30 * sx, 0.44, 0), Palette.mul(skin, 0.9)))
-	else:
+	elif garment == "":
 		_add(bp, "Torso", _p(MeshUtil.torus(0.10, 0.20), Vector3(0, 0.50, 0.10), Palette.mul(prim, 0.8),
 			Vector3(-70, 0, 0)))
 		_add(bp, "Torso", _p(MeshUtil.box(Vector3(0.30, 0.12, 0.03)), Vector3(0, 0.10, -0.235), Palette.mul(prim, 0.8)))
 		_add(bp, "Torso", _p(MeshUtil.box(Vector3(0.12, 0.07, 0.02)), Vector3(-0.12, 0.38, -0.235), Color("#f2f2ea")))
 		_add(bp, "Torso", _p(MeshUtil.box(Vector3(0.06, 0.06, 0.02)), Vector3(0.11, 0.38, -0.236), Palette.HYPE_GOLD,
 			Vector3(0, 0, 45), Vector3.ONE, 0.4))
+	if garment != "":
+		_humanoid_garment(bp, garment, prim, sec, skin)
 	# Head
 	if news:
 		_newspaper_head(bp, "Head", Vector3(0, 0.26, 0), 1.0)
@@ -298,13 +311,19 @@ static func _humanoid(bp: Dictionary) -> void:
 		_humanoid_beard(bp, str(style.get("beard", BEARDS[0])), acc, skin)
 	# Arms
 	for arm: String in ["ArmL", "ArmR"]:
-		_add(bp, arm, _p(MeshUtil.capsule(0.085, 0.48), Vector3(0, -0.20, 0), prim))
+		_add(bp, arm, _p(MeshUtil.capsule(0.085, 0.48), Vector3(0, -0.20, 0), top))
 		_add(bp, arm, _p(MeshUtil.sphere(0.095), Vector3(0, -0.46, 0), skin))
 	# Legs
 	for leg: String in ["LegL", "LegR"]:
-		_add(bp, leg, _p(MeshUtil.capsule(0.11, 0.50), Vector3(0, -0.22, 0), sec))
-		_add(bp, leg, _p(MeshUtil.box(Vector3(0.18, 0.12, 0.28)), Vector3(0, -0.49, -0.04), BLACK_SHOE))
-		_add(bp, leg, _p(MeshUtil.box(Vector3(0.19, 0.03, 0.29)), Vector3(0, -0.545, -0.04), Palette.PAPER))
+		if _has(bp, "shorts"):
+			_humanoid_shorts_leg(bp, leg, sec, skin)
+		else:
+			_add(bp, leg, _p(MeshUtil.capsule(0.11, 0.50), Vector3(0, -0.22, 0), sec))
+		if _has(bp, "sandals"):
+			_humanoid_sandal(bp, leg, skin)
+		else:
+			_add(bp, leg, _p(MeshUtil.box(Vector3(0.18, 0.12, 0.28)), Vector3(0, -0.49, -0.04), BLACK_SHOE))
+			_add(bp, leg, _p(MeshUtil.box(Vector3(0.19, 0.03, 0.29)), Vector3(0, -0.545, -0.04), Palette.PAPER))
 	_common_anchor_set(bp, "Head", Vector3(0, 0.26, 0), "Torso", Vector3(0, 0.30, 0), Vector3(0, 0.83, 0))
 	_anchor(bp, "hand_r", "ArmR", Vector3(0, -0.46, 0))
 	_anchor(bp, "hand_l", "ArmL", Vector3(0, -0.46, 0))
@@ -332,6 +351,15 @@ static func _humanoid(bp: Dictionary) -> void:
 const HAIR_STYLES: PackedStringArray = ["short", "buzz", "long", "bun", "curls", "ponytail", "braids", "headscarf",
 	"bald"]
 const BEARDS: PackedStringArray = ["none", "stubble", "moustache", "full"]
+## 11-A1 (11 §4.10): ModelSpec.style.fur / .pattern of a cat (== DataValidator.MODEL_CAT_FURS / MODEL_CAT_PATTERNS);
+## the first entry of each is the default. Their recipes are data (CAT_FUR, CAT_MARKINGS, CAT_RECOLOR in the cat
+## section) and the options are listed only here — a later package maps a player's profile to them.
+const CAT_FURS: PackedStringArray = ["short", "long"]
+const CAT_PATTERNS: PackedStringArray = ["solid", "tabby", "tortie", "bicolor", "calico"]
+## ModelSpec.style per base (== DataValidator.MODEL_STYLES, CharacterBuilder.supported_styles()): key → its options,
+## the first option is the default; a base without an entry has no style (08 §6.2 humanoid, 11-A1 cat).
+const STYLES: Dictionary = {"humanoid": {"hair": HAIR_STYLES, "beard": BEARDS},
+	"cat": {"fur": CAT_FURS, "pattern": CAT_PATTERNS}}
 const HAIR_TRIS_ADD: int = 150
 const BEARD_TRIS: int = 100
 ## Hair styles that cover the ears (the ear spheres are left out instead of poking through).
@@ -407,6 +435,75 @@ static func _humanoid_beard(bp: Dictionary, beard: String, acc: Color, skin: Col
 			pass
 
 
+# --- 11-A1 (11 §4.10): clothing props on the humanoid --------------------------------------------------------------
+# Variants of the base parts, merged into Kai's meshes (Torso, ArmL/ArmR, LegL/LegR) — no new MeshInstance3D, so the
+# persona look keeps its 7 meshes (CR-22). A garment covers the shirt details (collar, pocket, name tag, logo:
+# 136 tris), which keeps it nearly free; measured in test_11_art_kit.
+
+const SANDAL_SOLE: Color = Color("#7a5232")
+const SANDAL_STRAP: Color = Color("#c9a36b")
+
+
+## The colour of a garment prop: the jacket in the trouser colour (secondary — a suit, the shirt shows in its V), the
+## bathrobe in a light tint of the outfit colour (primary).
+static func _garment_color(bp: Dictionary, garment: String) -> Color:
+	if garment == "jacket":
+		return _col(bp, "secondary")
+	return _col(bp, "primary").lerp(Color.WHITE, 0.3)
+
+
+## Jacket: the shirt's V, lapels, a stand-up collar, two pockets, two buttons and cuffs. Bathrobe: the chest's V, a
+## rolled shawl collar, a belt with knot and hanging ends, a skirt to the knees and wide cuffs (11 §4.10).
+static func _humanoid_garment(bp: Dictionary, garment: String, prim: Color, sec: Color, skin: Color) -> void:
+	var cloth: Color = _garment_color(bp, garment)
+	var jacket: bool = garment == "jacket"
+	var trim: Color = Palette.mul(cloth, 0.8) if jacket else cloth.lerp(Color.WHITE, 0.3)
+	if jacket:
+		_add(bp, "Torso", _p(MeshUtil.prism(Vector3(0.15, 0.22, 0.02)), Vector3(0, 0.37, -0.232), prim, Vector3(-8, 0, 180)))
+		for sx: float in [-1.0, 1.0]:
+			_add(bp, "Torso", _p(MeshUtil.box(Vector3(0.05, 0.24, 0.02)), Vector3(0.062 * sx, 0.36, -0.236), trim,
+				Vector3(-8, 0, -17.0 * sx)))
+			_add(bp, "Torso", _p(MeshUtil.box(Vector3(0.09, 0.05, 0.02)), Vector3(0.12 * sx, 0.08, -0.232), trim))
+		_add(bp, "Torso", _p(MeshUtil.torus(0.11, 0.19, 8, 3), Vector3(0, 0.50, 0.10), trim, Vector3(-70, 0, 0)))
+		for k in 2:
+			_add(bp, "Torso", _p(MeshUtil.box(Vector3(0.022, 0.022, 0.012)), Vector3(0, 0.21 - 0.09 * float(k), -0.243),
+				trim))
+	else:
+		_add(bp, "Torso", _p(MeshUtil.prism(Vector3(0.12, 0.20, 0.02)), Vector3(0, 0.39, -0.232), skin, Vector3(-8, 0, 180)))
+		_add(bp, "Torso", _p(MeshUtil.torus(0.10, 0.17, 8, 3), Vector3(0, 0.44, -0.03), trim, Vector3(-52, 0, 0),
+			Vector3(1.12, 1, 1)))
+		_add(bp, "Torso", _p(MeshUtil.tube(0.236, 0.045, 10), Vector3(0, 0.12, 0), sec))
+		_add(bp, "Torso", _p(MeshUtil.box(Vector3(0.07, 0.05, 0.04)), Vector3(0, 0.12, -0.24), sec))
+		for sx: float in [-1.0, 1.0]:
+			_add(bp, "Torso", _p(MeshUtil.box(Vector3(0.03, 0.15, 0.015)), Vector3(0.03 * sx, 0.035, -0.248), sec,
+				Vector3(0, 0, 12.0 * sx)))
+		var skirt := MeshUtil.tube(0.232, 0.42, 10)
+		skirt.bottom_radius = 0.29
+		_add(bp, "Torso", _p(skirt, Vector3(0, -0.09, 0), cloth))
+	for arm: String in ["ArmL", "ArmR"]:
+		_add(bp, arm, _p(MeshUtil.tube(0.094 if jacket else 0.108, 0.05 if jacket else 0.075, 8), Vector3(0, -0.385, 0),
+			trim))
+
+
+## Shorts (11 §4.10): the trouser leg becomes a short one with a turned-up hem and the bare shin below it.
+static func _humanoid_shorts_leg(bp: Dictionary, leg: String, sec: Color, skin: Color) -> void:
+	var short := MeshUtil.tube(0.122, 0.24, 10)
+	short.bottom_radius = 0.13
+	_add(bp, leg, _p(short, Vector3(0, -0.09, 0), sec))
+	_add(bp, leg, _p(MeshUtil.tube(0.136, 0.03, 10), Vector3(0, -0.195, 0), Palette.mul(sec, 0.82)))
+	var shin := MeshUtil.tube(0.08, 0.30, 8)
+	shin.bottom_radius = 0.07
+	_add(bp, leg, _p(shin, Vector3(0, -0.33, 0), skin))
+
+
+## Sandals (11 §4.10): instead of the shoe a sole with two straps over the foot.
+static func _humanoid_sandal(bp: Dictionary, leg: String, skin: Color) -> void:
+	_add(bp, leg, _p(MeshUtil.box(Vector3(0.14, 0.06, 0.25)), Vector3(0, -0.505, -0.05), skin))
+	_add(bp, leg, _p(MeshUtil.box(Vector3(0.17, 0.028, 0.29)), Vector3(0, -0.548, -0.05), SANDAL_SOLE))
+	_add(bp, leg, _p(MeshUtil.box(Vector3(0.152, 0.022, 0.045)), Vector3(0, -0.475, -0.12), SANDAL_STRAP))
+	_add(bp, leg, _p(MeshUtil.box(Vector3(0.152, 0.022, 0.04)), Vector3(0, -0.475, 0.0), SANDAL_STRAP))
+
+
 ## Pendler costume head: newspaper with clock (03_ART §5.4 newspaper_head). `c` = head center, k = scale.
 static func _newspaper_head(bp: Dictionary, pivot: String, c: Vector3, k: float) -> void:
 	_add(bp, pivot, _p(MeshUtil.box(Vector3(0.42, 0.50, 0.12) * k), c, Color("#e8e4d8"), Vector3(0, 0, -4)))
@@ -463,6 +560,14 @@ static func _pug(bp: Dictionary) -> void:
 		_p(MeshUtil.capsule(0.012, 0.12), Vector3(0, 0.13, -0.13), Palette.mul(prim, 0.85), Vector3(0, 0, 90)))
 	_add(bp, "Head",
 		_p(MeshUtil.capsule(0.012, 0.12), Vector3(0, 0.10, -0.15), Palette.mul(prim, 0.85), Vector3(0, 0, 90)))
+	# 11-A1: torso frame and feet for the clothing fallbacks (_prop_coat, _prop_shorts_fallback, _prop_sandals_fallback)
+	bp["flags"]["torso"] = _torso_frame("Body", Vector3(0, 0.27, 0.02), Vector3(90, 0, 0), Vector3(0, 0, -1), Vector3.UP,
+		0.17, 0.09)
+	var feet: Array = []
+	for sx: float in [-1.0, 1.0]:
+		for z: float in [-0.16, 0.16]:
+			feet.append({"pivot": "Body", "pos": Vector3(0.10 * sx, 0.0, z), "size": 1.3})
+	bp["flags"]["feet"] = feet
 	_common_anchor_set(bp, "Head", Vector3.ZERO, "Body", Vector3(0, 0.27, 0), Vector3(0, 0.41, 0.12))
 	_anchor(bp, "hand_r", "Head", Vector3(0, -0.06, -0.20))
 	_anchor(bp, "hand_l", "Body", Vector3(-0.17, 0.27, -0.05))
@@ -521,6 +626,14 @@ static func _rodent_quadruped(bp: Dictionary) -> void:
 		_pivot(bp, "Tail", "Body", Vector3(0, 0.20, 0.30) * f)
 	if queen:
 		bp["mat"] = {"bands": 3, "rim": 0.8, "rim_color": Color("#9a6bff")}
+	# 11-A1: torso frame and feet for the clothing fallbacks
+	bp["flags"]["torso"] = _torso_frame("Body", Vector3.ZERO, Vector3(90, 0, 0), Vector3(0, 0, -1), Vector3.UP, 0.16 * f,
+		0.14 * f)
+	var feet: Array = []
+	for sx: float in [-1.0, 1.0]:
+		for sz: float in [-1.0, 1.0]:
+			feet.append({"pivot": "Body", "pos": Vector3(0.10 * sx, -0.22, 0.18 * sz) * f, "size": f})
+	bp["flags"]["feet"] = feet
 	_common_anchor_set(bp, "Head", Vector3.ZERO, "Body", Vector3.ZERO, Vector3(0, 0.40, 0) * f)
 	_anchor(bp, "hand_r", "Head", Vector3(0, -0.07, -0.22) * f)
 	_anchor(bp, "hand_l", "Body", Vector3(-0.16, 0.0, -0.1) * f)
@@ -991,6 +1104,405 @@ static func _swarm(bp: Dictionary) -> void:
 	_socket(bp, "hand_l", "Bird1", Vector3(0, 0.09, -0.20), 0.2, Vector3(0, 0, -90))
 
 
+# --- cat (11-A1, 11 §4.10) -------------------------------------------------------------------------------------------
+# A stylised cat next to the pug. At the game camera it reads by its silhouette — two upright triangular ears on a
+# round head, a slim body on four legs and a long tail that sweeps up into a curl; up close by whisker pads, a pink
+# nose, almond eyes with slit pupils and whiskers. Three meshes: Body (torso, neck or ruff, legs, paws), Head and Tail
+# (budget 1 600 tris; every style stays within the enemy budget of 1 500, test_11_art_kit). Pose (resolve_pose):
+# &"quadruped" stands (the default), &"upright" sits — the body tilted up on folded haunches, the tail curled round
+# beside the front paws. ModelSpec.style {"fur", "pattern"}: the proportions per fur length (CAT_FUR) and the markings
+# per pattern (CAT_MARKINGS, CAT_RECOLOR) are data placed on body frames (torso, tail, skull), so both poses and both
+# fur lengths share them. Slots: primary = fur, secondary = markings, accent = calico's dark patches (and the accent
+# props), eyes = iris (a slight glow). Nose and inner ears pink, whiskers light.
+
+const CAT_NOSE: Color = Color("#d9707f")
+const CAT_EAR_INNER: Color = Color("#e8a0ab")
+const CAT_WHISKER: Color = Color("#f2eee6")
+## Proportions per fur length: "body_r" torso radius; "skull" scale of the skull (r 0.10); "ear" [radius, height, x,
+## outward tilt°]; "muzzle" how far the whisker pads stand out (1 = a short muzzle, less = a flatter face); "eye_r";
+## "tail_r" [root, tip]; "bush" how much the tail swells in its middle (0 = a plain taper); "thigh" haunch scale;
+## "leg" leg thickness; "paw_r"; "ruff" radius of the chest ruff (0 = a plain neck); "cheek" cheek fluff radius (0 =
+## none). Long fur is a Persian-type: a fluffier body, a ruff, cheek fluff, a flatter face with rounder eyes, small ears
+## set wide, a plume tail, fluffy legs and haunches.
+const CAT_FUR: Dictionary = {
+	"short": {"body_r": 0.10, "skull": Vector3(1.12, 0.94, 1.0), "ear": [0.05, 0.09, 0.056, 14.0], "muzzle": 1.0,
+		"eye_r": 0.027, "tail_r": [0.026, 0.017], "bush": 0.0, "thigh": 1.0, "leg": 1.0, "paw_r": 0.032, "ruff": 0.0,
+		"cheek": 0.0},
+	"long": {"body_r": 0.122, "skull": Vector3(1.2, 1.0, 1.0), "ear": [0.042, 0.062, 0.066, 26.0], "muzzle": 0.55,
+		"eye_r": 0.031, "tail_r": [0.044, 0.03], "bush": 0.45, "thigh": 1.22, "leg": 1.3, "paw_r": 0.038, "ruff": 0.125,
+		"cheek": 0.056},
+}
+## Markings per pattern (in the secondary colour unless "slot" names another). "stripe": a stripe over the back that
+## fades out down the flanks ("t": −1 rump … 1 chest along the body axis, "w" its width); "band": a ring round the
+## tail ("s": 0 root … 1 tip, "w"); "patch": a flat ellipse on the torso ("t", "phi": degrees round the body axis,
+## 0 = the back, 90 = the right flank, 180 = the belly) or on the skull ("yaw", "pitch": degrees, 0/0 = between the
+## eyes), "size" [across, along] in metres; "stroke": a thin box on the skull (the tabby's forehead "M"), "size"
+## [width, length], "roll" degrees. Head patches sit above the eyes (a patch round an eye reads as goggles).
+const CAT_MARKINGS: Dictionary = {
+	"solid": [],
+	"tabby": [
+		{"kind": "stripe", "t": 0.9, "w": 0.024}, {"kind": "stripe", "t": 0.3, "w": 0.028},
+		{"kind": "stripe", "t": -0.3, "w": 0.028}, {"kind": "stripe", "t": -0.9, "w": 0.024},
+		{"kind": "band", "s": 0.3, "w": 0.02}, {"kind": "band", "s": 0.55, "w": 0.02}, {"kind": "band", "s": 0.78, "w": 0.02},
+		{"kind": "stroke", "yaw": 0.0, "pitch": 40.0, "size": [0.008, 0.042], "roll": 0.0},
+		{"kind": "stroke", "yaw": -15.0, "pitch": 36.0, "size": [0.008, 0.036], "roll": 14.0},
+		{"kind": "stroke", "yaw": 15.0, "pitch": 36.0, "size": [0.008, 0.036], "roll": -14.0},
+	],
+	"tortie": [
+		{"kind": "patch", "on": "torso", "t": 0.45, "phi": -35.0, "size": [0.10, 0.12]},
+		{"kind": "patch", "on": "torso", "t": -0.25, "phi": 55.0, "size": [0.11, 0.15]},
+		{"kind": "patch", "on": "torso", "t": -0.75, "phi": -70.0, "size": [0.07, 0.09]},
+		{"kind": "patch", "on": "head", "yaw": -44.0, "pitch": 58.0, "size": [0.08, 0.075]},
+		{"kind": "band", "s": 0.62, "w": 0.06},
+	],
+	"bicolor": [
+		{"kind": "patch", "on": "torso", "t": 0.95, "phi": 170.0, "size": [0.085, 0.10]},
+		{"kind": "patch", "on": "torso", "t": 0.1, "phi": 180.0, "size": [0.07, 0.22]},
+		{"kind": "patch", "on": "head", "yaw": 0.0, "pitch": 8.0, "size": [0.026, 0.07]},
+	],
+	"calico": [
+		{"kind": "patch", "on": "torso", "t": 0.5, "phi": -30.0, "size": [0.10, 0.13]},
+		{"kind": "patch", "on": "torso", "t": -0.1, "phi": 45.0, "size": [0.11, 0.15], "slot": "accent"},
+		{"kind": "patch", "on": "torso", "t": -0.7, "phi": -15.0, "size": [0.08, 0.10]},
+		{"kind": "patch", "on": "head", "yaw": -44.0, "pitch": 58.0, "size": [0.08, 0.075]},
+		{"kind": "patch", "on": "head", "yaw": 46.0, "pitch": 56.0, "size": [0.07, 0.07], "slot": "accent"},
+		{"kind": "band", "s": 0.5, "w": 0.07, "slot": "accent"},
+	],
+}
+## Parts of the base recipe a pattern paints in a marking slot ("paws", "muzzle" = whisker pads, chin and cheek fluff,
+## "tail_tip" = the last tail segment and the tip, "ruff"): bicolor's white socks, muzzle, ruff and tail tip, the
+## tabby's dark and calico's ginger tail tip.
+const CAT_RECOLOR: Dictionary = {"tabby": {"tail_tip": "secondary"},
+	"bicolor": {"paws": "secondary", "muzzle": "secondary", "tail_tip": "secondary", "ruff": "secondary"},
+	"calico": {"tail_tip": "secondary"}}
+## Tail segments ([pitch°, yaw°] of each, 0/0 = straight back, +yaw = to the right): standing it rises behind the rump
+## into a curl over the back; sitting it lies on the floor and curls round the right haunch to the front paws (the
+## segments grow with the haunches of long fur).
+const CAT_TAIL_STAND: Array = [[-25.0, 0.0], [5.0, 0.0], [35.0, 4.0], [62.0, 8.0], [86.0, 10.0], [112.0, 12.0]]
+const CAT_TAIL_SIT: Array = [[0.0, 0.0], [0.0, 55.0], [0.0, 105.0], [0.0, 145.0], [0.0, 170.0], [0.0, 182.0],
+	[0.0, 200.0], [0.0, 230.0]]
+const CAT_TAIL_SEG: float = 0.068
+## Each tail segment reaches this share of its radius past both joints, so the bends show no gaps.
+const CAT_TAIL_OVERLAP: float = 0.6
+## The head is drawn at r 0.10 and scaled up a little (a stylised cat's big head; its sockets scale with it).
+const CAT_HEAD_SCALE: float = 1.1
+## A "stripe" marking: tube radius and its shift towards the back, in torso radii (top 0.06 r above the fur, sinking
+## into it halfway down each flank).
+const STRIPE_R: float = 1.0
+const STRIPE_LIFT: float = 0.06
+
+
+static func _cat(bp: Dictionary) -> void:
+	var style: Dictionary = bp.get("style", {})
+	var pattern: String = str(style.get("pattern", CAT_PATTERNS[0]))
+	var d: Dictionary = CAT_FUR.get(str(style.get("fur", CAT_FURS[0])), CAT_FUR[CAT_FURS[0]])
+	var recolor: Dictionary = CAT_RECOLOR.get(pattern, {})
+	var sit: bool = StringName(bp["pose"]) == &"upright"
+	var frames: Dictionary = {}
+	_pivot(bp, "Body", "", Vector3.ZERO)
+	if sit:
+		_cat_body_sit(bp, d, recolor, frames)
+	else:
+		_cat_body_stand(bp, d, recolor, frames)
+	_cat_head(bp, d, recolor, frames)
+	_cat_tail(bp, d, recolor, frames, sit)
+	for mk: Variant in (CAT_MARKINGS.get(pattern, []) as Array):
+		_cat_marking(bp, mk as Dictionary, frames)
+	_mesh(bp, "Tail", "Tail")["mat"] = {"bands": 3, "rim": 0.45, "wobble": 0.015}
+	bp["flags"]["torso"] = frames["torso"]
+	_cat_sockets(bp, d, frames, sit)
+
+
+## The colour of a base part a pattern may paint (CAT_RECOLOR), else the fur.
+static func _cat_slot(bp: Dictionary, recolor: Dictionary, part: String) -> Color:
+	return _col(bp, str(recolor.get(part, "primary")))
+
+
+## A torso frame for markings and prop fallbacks: centre, the capsule's rotation (its local Y is the body axis), the
+## body axis rear → front ("fwd"), the back's normal ("up"), radius and the half length of the cylindrical part.
+static func _torso_frame(pivot: String, c: Vector3, rot_deg: Vector3, fwd: Vector3, up: Vector3, r: float,
+		half: float) -> Dictionary:
+	return {"pivot": pivot, "c": c, "basis": Basis.from_euler(rot_deg * (PI / 180.0)), "fwd": fwd, "up": up, "r": r,
+		"half": half}
+
+
+static func _cat_body_stand(bp: Dictionary, d: Dictionary, recolor: Dictionary, frames: Dictionary) -> void:
+	var fur: Color = _col(bp, "primary")
+	var paw: Color = _cat_slot(bp, recolor, "paws")
+	var r: float = float(d["body_r"])
+	var c := Vector3(0, 0.235, 0.02)
+	var half: float = 0.09
+	var rot := Vector3(90, 0, 0)                     # the capsule's axis (local Y) points to the rear (+Z)
+	_add(bp, "Body", _p(MeshUtil.capsule(r, 2.0 * (half + r)), c, fur, rot))
+	frames["torso"] = _torso_frame("Body", c, rot, Vector3(0, 0, -1), Vector3.UP, r, half)
+	if float(d["ruff"]) > 0.0:
+		_add(bp, "Body", _p(_sphere_lo(float(d["ruff"]), 8, 3), Vector3(0, 0.28, -0.13), _cat_slot(bp, recolor, "ruff"),
+			Vector3(-20, 0, 0), Vector3(1.22, 1.0, 0.92)))
+	else:
+		_add(bp, "Body", _limb(Vector3(0, 0.27, -0.11), Vector3(0, 0.35, -0.17), 0.052, 0.048, fur, 8))
+	var th: float = float(d["thigh"])
+	var lg: float = float(d["leg"])
+	var pr: float = float(d["paw_r"])
+	var feet: Array = []
+	for sx: float in [-1.0, 1.0]:
+		# front leg straight down; hind leg: haunch, the thigh back to the hock, the shin forward to the paw
+		_add(bp, "Body", _limb(Vector3(0.05 * sx, 0.22, -0.105), Vector3(0.052 * sx, 0.03, -0.115), 0.028 * lg,
+			0.023 * lg, fur, 6))
+		_add(bp, "Body", _p(_sphere_lo(pr, 5, 2), Vector3(0.052 * sx, 0.02, -0.125), paw, Vector3.ZERO,
+			Vector3(1.0, 0.62, 1.25)))
+		_add(bp, "Body", _p(_sphere_lo(0.07, 6, 3), Vector3(0.056 * sx, 0.205, 0.12), fur, Vector3(-12, 0, 0),
+			Vector3(0.72, 1.15, 1.15) * th))
+		var hock := Vector3(0.056 * sx, 0.075, 0.175)
+		_add(bp, "Body", _limb(Vector3(0.058 * sx, 0.17, 0.15), hock, 0.028 * lg, 0.022 * lg, fur, 6))
+		_add(bp, "Body", _limb(hock + Vector3(0, 0.006, 0.004), Vector3(0.054 * sx, 0.03, 0.135), 0.023 * lg, 0.021 * lg,
+			fur, 6))
+		_add(bp, "Body", _p(_sphere_lo(pr, 5, 2), Vector3(0.054 * sx, 0.02, 0.125), paw, Vector3.ZERO,
+			Vector3(1.0, 0.62, 1.25)))
+		feet.append({"pivot": "Body", "pos": Vector3(0.052 * sx, 0.0, -0.125)})
+		feet.append({"pivot": "Body", "pos": Vector3(0.054 * sx, 0.0, 0.125)})
+	bp["flags"]["feet"] = feet
+	frames["head_pos"] = Vector3(0, 0.345, -0.185)
+	frames["tail_pos"] = Vector3(0, 0.29, 0.18)
+	frames["neck"] = Vector3(0, 0.29, -0.15)
+
+
+## Sitting: the body tilted up on two big folded haunches (a pear from the front), the hind paws in front of them, the
+## front legs straight down from the chest, the head above.
+static func _cat_body_sit(bp: Dictionary, d: Dictionary, recolor: Dictionary, frames: Dictionary) -> void:
+	var fur: Color = _col(bp, "primary")
+	var paw: Color = _cat_slot(bp, recolor, "paws")
+	var r: float = float(d["body_r"])
+	var c := Vector3(0, 0.195, 0.025)
+	var half: float = 0.07
+	var rot := Vector3(-32, 0, 0)                    # the capsule's axis (local Y) points up to the chest
+	var b: Basis = Basis.from_euler(rot * (PI / 180.0))
+	_add(bp, "Body", _p(MeshUtil.capsule(r, 2.0 * (half + r)), c, fur, rot))
+	frames["torso"] = _torso_frame("Body", c, rot, b.y, b.z, r, half)
+	if float(d["ruff"]) > 0.0:
+		_add(bp, "Body", _p(_sphere_lo(float(d["ruff"]), 8, 3), Vector3(0, 0.305, -0.06), _cat_slot(bp, recolor, "ruff"),
+			Vector3(-35, 0, 0), Vector3(1.22, 1.0, 0.92)))
+	else:
+		_add(bp, "Body", _limb(Vector3(0, 0.29, -0.035), Vector3(0, 0.38, -0.065), 0.052, 0.048, fur, 8))
+	var th: float = float(d["thigh"])
+	var lg: float = float(d["leg"])
+	var pr: float = float(d["paw_r"])
+	var feet: Array = []
+	for sx: float in [-1.0, 1.0]:
+		_add(bp, "Body", _p(_sphere_lo(0.095, 6, 3), Vector3(0.074 * sx, 0.088, 0.06), fur, Vector3(-8, 0, 0),
+			Vector3(0.8, 0.9, 1.25) * th))
+		_add(bp, "Body", _p(_sphere_lo(pr, 5, 2), Vector3(0.078 * sx, 0.018, -0.07), paw, Vector3.ZERO,
+			Vector3(1.0, 0.6, 1.4)))
+		_add(bp, "Body", _limb(Vector3(0.046 * sx, 0.25, -0.055), Vector3(0.047 * sx, 0.03, -0.085), 0.028 * lg,
+			0.023 * lg, fur, 6))
+		_add(bp, "Body", _p(_sphere_lo(pr, 5, 2), Vector3(0.047 * sx, 0.02, -0.098), paw, Vector3.ZERO,
+			Vector3(1.0, 0.62, 1.25)))
+		feet.append({"pivot": "Body", "pos": Vector3(0.047 * sx, 0.0, -0.098)})
+		feet.append({"pivot": "Body", "pos": Vector3(0.078 * sx, 0.0, -0.07)})
+	bp["flags"]["feet"] = feet
+	frames["head_pos"] = Vector3(0, 0.405, -0.07)
+	var lie: float = 0.0                         # the tail lies on the floor: lifted by its thickest point
+	for i in CAT_TAIL_SIT.size() + 1:
+		lie = maxf(lie, _cat_tail_r(d, float(i) / float(CAT_TAIL_SIT.size())))
+	frames["tail_pos"] = Vector3(0, lie + 0.004, 0.16)
+	frames["neck"] = Vector3(0, 0.335, -0.05)
+
+
+static func _cat_head(bp: Dictionary, d: Dictionary, recolor: Dictionary, frames: Dictionary) -> void:
+	_pivot(bp, "Head", "Body", frames["head_pos"] as Vector3)
+	bp["pivot_scale"]["Head"] = Vector3.ONE * CAT_HEAD_SCALE
+	var fur: Color = _col(bp, "primary")
+	var muzzle: Color = _cat_slot(bp, recolor, "muzzle")
+	var sk: Vector3 = d["skull"]
+	_add(bp, "Head", _p(_sphere_lo(0.10, 10, 5), Vector3.ZERO, fur, Vector3.ZERO, sk))
+	frames["skull"] = sk * 0.10
+	# muzzle: two whisker pads and the chin; the pink nose above them
+	var pad_z: float = -0.074 - 0.02 * float(d["muzzle"])
+	for sx: float in [-1.0, 1.0]:
+		_add(bp, "Head", _p(_sphere_lo(0.03, 6, 3), Vector3(0.025 * sx, -0.034, pad_z), muzzle, Vector3.ZERO,
+			Vector3(1.0, 0.85, 0.85)))
+	_add(bp, "Head", _p(_sphere_lo(0.022, 5, 2), Vector3(0, -0.06, pad_z + 0.01), muzzle, Vector3.ZERO,
+		Vector3(1.1, 0.8, 0.9)))
+	_add(bp, "Head", _p(MeshUtil.prism(Vector3(0.03, 0.02, 0.016)), Vector3(0, -0.012, pad_z - 0.016), CAT_NOSE,
+		Vector3(-25, 0, 180)))
+	if float(d["cheek"]) > 0.0:
+		for sx: float in [-1.0, 1.0]:
+			_add(bp, "Head", _p(_sphere_lo(float(d["cheek"]), 6, 2), Vector3(0.088 * sx, -0.04, -0.03), muzzle,
+				Vector3.ZERO, Vector3(0.85, 0.75, 0.9)))
+	# eyes: almond iris with a slight glow, a slit pupil and a glint, following the curve of the face
+	var er: float = float(d["eye_r"])
+	for sx: float in [-1.0, 1.0]:
+		var ep := Vector3(0.042 * sx, 0.014, -0.08)
+		var yaw := Vector3(0, -24.0 * sx, 0)
+		var eb: Basis = Basis.from_euler(yaw * (PI / 180.0))
+		_add(bp, "Head", _p(_sphere_lo(er, 6, 3), ep, _col(bp, "eyes"), yaw, Vector3(1.0, 1.2, 0.55), 0.35))
+		_add(bp, "Head", _p(MeshUtil.box(Vector3(0.009, er * 1.3, 0.006)), ep + eb * Vector3(0, 0, -er * 0.52), DARK, yaw))
+		_add(bp, "Head", _p(MeshUtil.box(Vector3(0.008, 0.008, 0.006)), ep + eb * Vector3(-0.007, 0.011, -er * 0.56),
+			Color.WHITE, yaw, Vector3.ONE, 1.0))
+	# ears: flat triangular plates (three-sided cones, flat face to the front) with a pink inner ear
+	var ear: Array = d["ear"]
+	var e_r: float = float(ear[0])
+	var e_h: float = float(ear[1])
+	for sx: float in [-1.0, 1.0]:
+		var rot := Vector3(-8, 0, -float(ear[3]) * sx)
+		var rb: Basis = Basis.from_euler(rot * (PI / 180.0))
+		var base := Vector3(float(ear[2]) * sx, 0.062, 0.004)
+		_add(bp, "Head", _p(_cone_lo(e_r, e_h, 3), base + rb * Vector3(0, e_h * 0.5, 0), fur, rot, Vector3(1, 1, 0.45)))
+		_add(bp, "Head", _p(_cone_lo(e_r * 0.62, e_h * 0.66, 3), base + rb * Vector3(0, e_h * 0.33, -0.007), CAT_EAR_INNER,
+			rot, Vector3(1, 1, 0.4)))
+	# whiskers: three thin strands per side fanning out from the pads
+	for sx: float in [-1.0, 1.0]:
+		for k in 3:
+			var lift: float = 0.008 * float(1 - k)
+			_add(bp, "Head", _strand(Vector3(0.034 * sx, -0.036 + lift, pad_z - 0.01),
+				Vector3(0.14 * sx, -0.026 + 2.6 * lift, pad_z + 0.02), 0.0026, 0.0014, CAT_WHISKER))
+
+
+static func _cat_tail(bp: Dictionary, d: Dictionary, recolor: Dictionary, frames: Dictionary, sit: bool) -> void:
+	_pivot(bp, "Tail", "Body", frames["tail_pos"] as Vector3)
+	var fur: Color = _col(bp, "primary")
+	var tip_col: Color = _cat_slot(bp, recolor, "tail_tip")
+	var tr: Array = d["tail_r"]
+	var dirs: Array = CAT_TAIL_SIT if sit else CAT_TAIL_STAND
+	var seg_len: float = CAT_TAIL_SEG * (float(d["thigh"]) if sit else 1.0)
+	var n: int = dirs.size()
+	var p := Vector3.ZERO
+	var segs: Array = []
+	for i in n:
+		var pitch: float = deg_to_rad(float(dirs[i][0]))
+		var yaw: float = deg_to_rad(float(dirs[i][1]))
+		var dir := Vector3(sin(yaw) * cos(pitch), sin(pitch), cos(yaw) * cos(pitch))
+		var q: Vector3 = p + dir * seg_len
+		var ra: float = _cat_tail_r(d, float(i) / float(n))
+		var rb: float = _cat_tail_r(d, float(i + 1) / float(n))
+		var reach: float = rb * CAT_TAIL_OVERLAP if i < n - 1 else 0.0          # the tip ends in its round tuft
+		var seg: Dictionary = _seg(p - dir * (ra * CAT_TAIL_OVERLAP), q + dir * reach, ra, rb,
+			tip_col if i == n - 1 else fur)
+		_add(bp, "Tail", seg)
+		segs.append({"a": p, "b": q, "r_a": ra, "r_b": rb, "basis": (seg["xform"] as Transform3D).basis})
+		p = q
+	_add(bp, "Tail", _p(_sphere_lo(_cat_tail_r(d, 1.0) * 1.05, 5, 2), p, tip_col))
+	frames["tail"] = {"segs": segs, "tip": p}
+
+
+## The tail's radius at `s` (0 root … 1 tip): a taper, swollen in the middle by "bush" (the long fur's plume).
+static func _cat_tail_r(d: Dictionary, s: float) -> float:
+	var tr: Array = d["tail_r"]
+	return lerpf(float(tr[0]), float(tr[1]), s) * (1.0 + float(d.get("bush", 0.0)) * sin(PI * s))
+
+
+## One marking of CAT_MARKINGS on its frame (torso, tail or skull).
+static func _cat_marking(bp: Dictionary, mk: Dictionary, frames: Dictionary) -> void:
+	var col: Color = _col(bp, str(mk.get("slot", "secondary")))
+	var kind: String = str(mk.get("kind", ""))
+	var on: String = str(mk.get("on", "head"))
+	if kind == "stripe":
+		# an open tube as wide as the torso, shifted towards the back: it stands 0.06 r out of the fur on the spine and
+		# sinks into it halfway down each flank — a stripe over the back, not a hoop round the belly
+		var f: Dictionary = frames["torso"]
+		var r0: float = float(f["r"])
+		var pos: Vector3 = (f["c"] as Vector3) + (f["fwd"] as Vector3) * (float(mk["t"]) * float(f["half"])) \
+			+ (f["up"] as Vector3) * (r0 * STRIPE_LIFT)
+		_add(bp, "Body", {"mesh": MeshUtil.tube(r0 * STRIPE_R, float(mk["w"]), 10),
+			"xform": Transform3D(f["basis"] as Basis, pos), "color": col, "emission": 0.0, "metal": 0.0})
+	elif kind == "band":
+		var t: Dictionary = frames["tail"]
+		var segs: Array = t["segs"]
+		var at: float = clampf(float(mk["s"]), 0.0, 0.999) * float(segs.size())
+		var s: Dictionary = segs[int(at)]
+		var u: float = at - floorf(at)
+		var r: float = lerpf(float(s["r_a"]), float(s["r_b"]), u) + 0.005
+		_add(bp, "Tail", {"mesh": MeshUtil.tube(r, float(mk["w"]), 6),
+			"xform": Transform3D(s["basis"] as Basis, (s["a"] as Vector3).lerp(s["b"] as Vector3, u)), "color": col,
+			"emission": 0.0, "metal": 0.0})
+	elif kind == "patch" and on == "torso":
+		var f2: Dictionary = frames["torso"]
+		var fwd: Vector3 = f2["fwd"]
+		var up: Vector3 = f2["up"]
+		var ph: float = deg_to_rad(float(mk["phi"]))
+		var nrm: Vector3 = (up * cos(ph) + fwd.cross(up) * sin(ph)).normalized()
+		var size: Array = mk["size"]
+		var r2: float = float(f2["r"])
+		var w: float = minf(float(size[0]) * 0.5, r2 * 0.9)
+		var sink: float = r2 - sqrt(r2 * r2 - w * w)       # the patch edge meets the curved fur
+		var surf: Vector3 = (f2["c"] as Vector3) + fwd * (float(mk["t"]) * float(f2["half"])) + nrm * r2
+		_add(bp, "Body", _patch(surf - nrm * sink, nrm, fwd, w, float(size[1]) * 0.5, sink + 0.006, col))
+	elif on == "head":
+		var semi: Vector3 = frames["skull"]
+		var yaw: float = deg_to_rad(float(mk["yaw"]))
+		var pitch: float = deg_to_rad(float(mk["pitch"]))
+		var dir := Vector3(sin(yaw) * cos(pitch), sin(pitch), -cos(yaw) * cos(pitch))
+		var k: float = 1.0 / sqrt(pow(dir.x / semi.x, 2) + pow(dir.y / semi.y, 2) + pow(dir.z / semi.z, 2))
+		var surf2: Vector3 = dir * k
+		var nrm2: Vector3 = Vector3(surf2.x / (semi.x * semi.x), surf2.y / (semi.y * semi.y),
+			surf2.z / (semi.z * semi.z)).normalized()
+		var up2: Vector3 = Vector3.UP - nrm2 * nrm2.dot(Vector3.UP)
+		up2 = up2.normalized() if up2.length() > 0.001 else Vector3(0, 0, 1)
+		var size2: Array = mk["size"]
+		if kind == "stroke":
+			var across: Vector3 = up2.cross(nrm2).normalized()
+			var b := Basis(across, up2, nrm2).rotated(nrm2, deg_to_rad(float(mk.get("roll", 0.0))))
+			_add(bp, "Head", {"mesh": MeshUtil.box(Vector3(float(size2[0]), float(size2[1]), 0.008)),
+				"xform": Transform3D(b, surf2 - nrm2 * 0.002), "color": col, "emission": 0.0, "metal": 0.0})
+		else:
+			var hw: float = float(size2[0]) * 0.5
+			var hl: float = float(size2[1]) * 0.5
+			var rr: float = minf(semi.x, semi.y)
+			var sink2: float = rr - sqrt(maxf(rr * rr - maxf(hw, hl) * maxf(hw, hl), 0.0))
+			_add(bp, "Head", _patch(surf2 - nrm2 * sink2, nrm2, up2, hw, hl, sink2 + 0.005, col))
+
+
+## A flat ellipse (an eight-sided low sphere: a round outline for 32 tris) centred at `pos`: semi-axes `across`
+## (⊥ `along_dir`), `along` and `thick` along the surface normal `nrm` — a marking patch sunk into the fur so that only
+## its middle stands out.
+static func _patch(pos: Vector3, nrm: Vector3, along_dir: Vector3, across: float, along: float, thick: float,
+		col: Color) -> Dictionary:
+	var a: Vector3 = (along_dir - nrm * nrm.dot(along_dir)).normalized()
+	var x: Vector3 = a.cross(nrm).normalized()
+	return {"mesh": _sphere_lo(1.0, 8, 1), "xform": Transform3D(Basis(x * across, nrm * thick, a * along), pos),
+		"color": col, "emission": 0.0, "metal": 0.0}
+
+
+static func _cat_sockets(bp: Dictionary, d: Dictionary, frames: Dictionary, sit: bool) -> void:
+	var f: Dictionary = frames["torso"]
+	var c: Vector3 = f["c"]
+	var r: float = f["r"]
+	var fwd: Vector3 = f["fwd"]
+	var up: Vector3 = f["up"]
+	var tr: Array = d["tail_r"]
+	_common_anchor_set(bp, "Head", Vector3.ZERO, "Body", c, Vector3(0, 0.21, 0))
+	_anchor(bp, "hand_r", "Head", Vector3(0, -0.065, -0.085))                  # the mouth (cats carry things in it)
+	_anchor(bp, "hand_l", "Body", Vector3(-0.05, 0.05, -0.13 if not sit else -0.098))
+	_socket(bp, "head", "Head", Vector3.ZERO, 0.10 * float((d["skull"] as Vector3).x))
+	_socket(bp, "eyes", "Head", Vector3(0, 0.014, -0.095), 0.045)
+	_socket(bp, "neck", "Body", frames["neck"] as Vector3, 0.055)
+	_socket(bp, "back", "Body", c + up * r, r, Vector3(-38, 0, 0) if sit else Vector3(-90, 0, 0))
+	_socket(bp, "chest", "Body", c + fwd * (float(f["half"]) + r * 0.7) - up * (r * 0.3), r)
+	_socket(bp, "belly", "Body", c - up * r, r)
+	_socket(bp, "hip_r", "Body", c + fwd.cross(up) * r - fwd * (float(f["half"]) * 0.6), r)
+	_socket(bp, "body", "Body", c, r)
+	_socket(bp, "hand_r", "Head", Vector3(0, -0.07, -0.09), 0.25, Vector3(0, 0, -90))
+	_socket(bp, "hand_l", "Body", Vector3(-0.10, 0.10, -0.13 if not sit else -0.10), 0.3)
+	_socket(bp, "tail", "Tail", Vector3.ZERO, float(tr[0]))
+	_socket(bp, "tail_tip", "Tail", (frames["tail"] as Dictionary)["tip"] as Vector3, float(tr[1]) * 2.0)
+
+
+## Open cylinder a → b with `radial` sides and no caps (its ends sit inside other parts): the cat's legs and neck.
+static func _limb(a: Vector3, b: Vector3, r_a: float, r_b: float, color: Color, radial: int) -> Dictionary:
+	var p: Dictionary = _seg(a, b, r_a, r_b, color)
+	var m: CylinderMesh = p["mesh"]
+	m.radial_segments = radial
+	m.cap_top = false
+	m.cap_bottom = false
+	return p
+
+
+## Cone with `radial` sides (three: a flat-faced triangular plate — the cat's ears).
+static func _cone_lo(radius: float, height: float, radial: int) -> CylinderMesh:
+	var m := MeshUtil.cone(radius, height)
+	m.radial_segments = radial
+	return m
+
+
 # --- props (03_ART §5.4) ---------------------------------------------------------------------------------------------
 
 static func _apply_props(bp: Dictionary) -> void:
@@ -1069,6 +1581,19 @@ static func _apply_props(bp: Dictionary) -> void:
 					_prop_cart_fallback(bp)
 			"discount_tag":
 				_prop_discount_tag(bp)
+			"tiara":                                     # 11-A1 (11 §4.10)
+				_prop_tiara(bp)
+			"sunglasses":
+				_prop_sunglasses(bp)
+			"bathrobe", "jacket":                        # the humanoid wears them in _humanoid
+				if str(bp["base"]) != "humanoid" and not (prop == "jacket" and _has(bp, "bathrobe")):
+					_prop_coat(bp, prop)
+			"shorts":
+				if str(bp["base"]) != "humanoid":
+					_prop_shorts_fallback(bp)
+			"sandals":
+				if str(bp["base"]) != "humanoid":
+					_prop_sandals_fallback(bp)
 
 
 ## Rabattschild price tag (03_ART §5.7: percent number as Label3D 96 px in the accent colour, outline 12 white): a
@@ -1606,3 +2131,139 @@ static func _prop_cart_fallback(bp: Dictionary) -> void:
 			parts.append(_p(MeshUtil.cylinder(0.04, 0.04, 0.03), Vector3(0.12 * sx, -0.16, 0.15 * sz), Color("#1e1e1e"),
 				Vector3(0, 0, 90)))
 	_place(bp, "hip_r", 0.24, parts)
+
+
+# --- 11-A1 props (11 §4.10) ------------------------------------------------------------------------------------------
+
+const TIARA_SILVER: Color = Color("#dfe4ec")
+const TIARA_GEM: Color = Color("#ff5fa2")
+const TIARA_GEM_SIDE: Color = Color("#7fd6ff")
+## Radius of the tiara's arc round the head socket at humanoid size (head r 0.28): on the hair of each hair style.
+const TIARA_RADIUS: Dictionary = {"bald": 0.285, "buzz": 0.295, "headscarf": 0.33, "curls": 0.335, "long": 0.315}
+const TIARA_RADIUS_DEFAULT: float = 0.31
+const SHADES_LENS: Color = Color("#1b1824")
+const SHADES_FRAME: Color = Color("#0f0e14")
+
+
+## Tiara (≤ 150 tris): a silver band of five segments arched over the front of the head, three points with gems, on
+## the head socket (the humanoid: on the hairline; pug and cat: in front of the ears). Never on Graf Mopsula
+## (validators/art_kit.gd, rule 1).
+static func _prop_tiara(bp: Dictionary) -> void:
+	var rr: float = TIARA_RADIUS_DEFAULT
+	if str(bp["base"]) == "humanoid":
+		var hair: String = str((bp.get("style", {}) as Dictionary).get("hair", ""))
+		rr = float(TIARA_RADIUS.get(hair, TIARA_RADIUS_DEFAULT))
+	var parts: Array = []
+	for i in 5:
+		var b: Basis = _tiara_basis(deg_to_rad(-56.0 + 28.0 * float(i)), deg_to_rad(52.0))
+		var pos: Vector3 = b.z * rr
+		parts.append({"mesh": MeshUtil.box(Vector3(0.088, 0.026, 0.016)), "xform": Transform3D(b, pos),
+			"color": TIARA_SILVER, "emission": 0.0, "metal": 1.0})
+		if i >= 1 and i <= 3:
+			var tall: bool = i == 2
+			var size := Vector3(0.062, 0.08, 0.012) if tall else Vector3(0.04, 0.05, 0.012)
+			var tip_b: Basis = b.rotated(b.x, deg_to_rad(-18.0))           # the points stand more upright than the band
+			var at: Vector3 = pos + tip_b.y * (0.012 + size.y * 0.5)
+			parts.append({"mesh": MeshUtil.prism(size), "xform": Transform3D(tip_b, at), "color": TIARA_SILVER,
+				"emission": 0.0, "metal": 1.0})
+			var gem: float = 0.028 if tall else 0.018
+			parts.append({"mesh": MeshUtil.box(Vector3(gem, gem, 0.012)),
+				"xform": Transform3D(tip_b * Basis(Vector3(0, 0, 1), PI * 0.25), at + tip_b.z * 0.008 - tip_b.y * size.y * 0.12),
+				"color": TIARA_GEM if tall else TIARA_GEM_SIDE, "emission": 0.3, "metal": 0.0})
+	_place(bp, "head", 0.28, parts)
+
+
+## The tiara's frame on the head at yaw `a` (0 = the front) and `pitch` above the horizon: X along the band, Y up over
+## the head, Z = the surface normal.
+static func _tiara_basis(a: float, pitch: float) -> Basis:
+	var n := Vector3(sin(a) * cos(pitch), sin(pitch), -cos(a) * cos(pitch))
+	var tx := Vector3(cos(a), 0, sin(a))
+	return Basis(tx, tx.cross(n).normalized(), n)
+
+
+## Sunglasses (≤ 220 tris; the glasses prop has 212): two dark rounded lenses with a glint, a brow bar over the bridge
+## and temple arms back to the ears, on the eyes socket (the humanoid's, the cat's and every other base's).
+static func _prop_sunglasses(bp: Dictionary) -> void:
+	var parts: Array = [_p(MeshUtil.box(Vector3(0.33, 0.024, 0.022)), Vector3(0, 0.03, -0.022), SHADES_FRAME)]
+	for sx: float in [-1.0, 1.0]:
+		parts.append(_p(_sphere_lo(0.062, 8, 3), Vector3(0.10 * sx, -0.006, -0.018), SHADES_LENS, Vector3(0, -8.0 * sx, 0),
+			Vector3(1.0, 0.74, 0.24)))
+		parts.append(_p(MeshUtil.box(Vector3(0.024, 0.01, 0.006)), Vector3(0.10 * sx - 0.024, 0.016, -0.034), Color.WHITE,
+			Vector3(0, -8.0 * sx, 28), Vector3.ONE, 1.0))
+		parts.append(_p(MeshUtil.box(Vector3(0.012, 0.016, 0.24)), Vector3(0.215 * sx, 0.028, 0.09), SHADES_FRAME,
+			Vector3(0, 24.0 * sx, 0)))
+	_place(bp, "eyes", 0.10, parts)
+
+
+## Jacket or bathrobe on another base (a simplified fallback, 03_ART §5.4): a coat over the torso of a four-legged
+## figure (bp flags "torso": cat, pug, rat), else a vest round the body socket; the bathrobe adds a belt.
+static func _prop_coat(bp: Dictionary, garment: String) -> void:
+	var cloth: Color = _garment_color(bp, garment)
+	var belt: Color = _col(bp, "secondary")
+	var trim: Color = Palette.mul(cloth, 0.8) if garment == "jacket" else cloth.lerp(Color.WHITE, 0.3)
+	var f: Dictionary = bp["flags"].get("torso", {})
+	if not f.is_empty():
+		var r: float = float(f["r"]) * 1.1
+		var half: float = float(f["half"]) * 0.8
+		var fwd: Vector3 = f["fwd"]
+		var b: Basis = f["basis"]
+		var c: Vector3 = (f["c"] as Vector3) + fwd * (float(f["half"]) * 0.2)
+		var pv: String = str(f["pivot"])
+		_add(bp, pv, {"mesh": _capsule_lo(r, 2.0 * (half + r), 10, 1), "xform": Transform3D(b, c), "color": cloth,
+			"emission": 0.0, "metal": 0.0})
+		_add(bp, pv, {"mesh": MeshUtil.tube(r * 1.05, r * 0.35, 10), "xform": Transform3D(b, c + fwd * (half + r * 0.3)),
+			"color": trim, "emission": 0.0, "metal": 0.0})
+		if garment == "bathrobe":
+			_add(bp, pv, {"mesh": MeshUtil.tube(r * 1.05, r * 0.3, 10), "xform": Transform3D(b, c - fwd * (half * 0.2)),
+				"color": belt, "emission": 0.0, "metal": 0.0})
+		return
+	var parts: Array = [_p(MeshUtil.tube(1.06, 1.3, 10), Vector3(0, 0.05, 0), cloth),
+		_p(MeshUtil.torus(0.62, 1.0, 8, 3), Vector3(0, 0.72, 0), trim)]
+	if garment == "bathrobe":
+		parts.append(_p(MeshUtil.tube(1.1, 0.22, 10), Vector3(0, -0.25, 0), belt))
+	_place(bp, "body", 1.0, parts)
+
+
+## Shorts on another base (fallback): round the rear of a four-legged torso, round the brute's thighs, else a band
+## round the lower body.
+static func _prop_shorts_fallback(bp: Dictionary) -> void:
+	var sec: Color = _col(bp, "secondary")
+	var f: Dictionary = bp["flags"].get("torso", {})
+	if not f.is_empty():
+		var r: float = float(f["r"])
+		var pos: Vector3 = (f["c"] as Vector3) - (f["fwd"] as Vector3) * (float(f["half"]) * 0.75)
+		_add(bp, str(f["pivot"]), {"mesh": MeshUtil.tube(r * 1.1, r * 0.9, 10),
+			"xform": Transform3D(f["basis"] as Basis, pos), "color": sec, "emission": 0.0, "metal": 0.0})
+		return
+	if _has_pivot(bp, "LegL") and _has_pivot(bp, "LegR"):
+		for leg: String in ["LegL", "LegR"]:
+			_add(bp, leg, _p(MeshUtil.tube(0.17, 0.26, 10), Vector3(0, -0.06, 0), sec))
+		return
+	_place(bp, "body", 1.0, [_p(MeshUtil.tube(1.08, 0.7, 10), Vector3(0, -0.55, 0), sec)])
+
+
+## Sandals on another base (fallback): a sole and a strap under every foot its recipe lists (bp flags "feet": cat,
+## pug, rat), a sole under each of the brute's boots, else two soles on the floor below the body.
+static func _prop_sandals_fallback(bp: Dictionary) -> void:
+	var feet: Array = bp["flags"].get("feet", [])
+	if not feet.is_empty():
+		for fv: Variant in feet:
+			var ft: Dictionary = fv
+			var at: Vector3 = ft["pos"]
+			var s: float = float(ft.get("size", 1.0))
+			_add(bp, str(ft["pivot"]), _p(MeshUtil.box(Vector3(0.07, 0.012, 0.09) * s), at + Vector3(0, 0.006, -0.005) * s,
+				SANDAL_SOLE))
+			_add(bp, str(ft["pivot"]), _p(MeshUtil.box(Vector3(0.072, 0.012, 0.018) * s), at + Vector3(0, 0.03, -0.02) * s,
+				SANDAL_STRAP))
+		return
+	if _has_pivot(bp, "LegL") and _has_pivot(bp, "LegR"):
+		for leg: String in ["LegL", "LegR"]:
+			_add(bp, leg, _p(MeshUtil.box(Vector3(0.28, 0.03, 0.40)), Vector3(0, -0.56, -0.06), SANDAL_SOLE))
+		return
+	var bs: Dictionary = bp["sockets"].get("body", {})
+	var pv: String = str(bs.get("pivot", (bp["pivots"] as Array)[0]))
+	var ground: float = -_pivot_rig_pos(bp, pv).y
+	var k: float = float(bs.get("size", 0.3))
+	for sx: float in [-1.0, 1.0]:
+		_add(bp, pv, _p(MeshUtil.box(Vector3(0.5, 0.04, 0.7) * k), Vector3(0.45 * k * sx, ground + 0.02 * k, 0),
+			SANDAL_SOLE))

@@ -3,7 +3,8 @@ class_name CharacterBuilder extends RefCounted
 ## a ModelSpec with an existing `gltf` path is wrapped in a CharacterRig subclass that maps the AnimationPlayer clips
 ## (art/kit/gltf_rig.gd, 03_ART §10). Merged part meshes are cached per ModelSpec (base + pose + colors + props + seed
 ## + style). Casting (08 §6.2, K2): the optional ModelSpec.style {"hair", "beard"} of a humanoid picks its hair style
-## and beard (art/kit/archetypes.gd, merged into the Head mesh — no extra MeshInstance3D).
+## and beard (art/kit/archetypes.gd, merged into the Head mesh — no extra MeshInstance3D); 11-A1 (11 §4.10): a cat's
+## style {"fur", "pattern"} its fur length and markings (Archetypes.STYLES lists the styles of every base).
 
 const Archetypes := preload("res://art/kit/archetypes.gd")
 const GltfRig := preload("res://art/kit/gltf_rig.gd")
@@ -56,7 +57,14 @@ static func supported_beards() -> PackedStringArray:
 	return Archetypes.BEARDS.duplicate()
 
 
+## 11-A1 (11 §4.10): ModelSpec.style per base, {base: {key: options}} (humanoid hair / beard, cat fur / pattern; the
+## first option is the default) == DataValidator.MODEL_STYLES (test asserts).
+static func supported_styles() -> Dictionary:
+	return Archetypes.STYLES.duplicate(true)
+
+
 ## pose "auto": rodent with scale >= 1.0 → &"upright", else &"quadruped"; "quadruped"/"upright" force it.
+## The cat (11-A1) stands (&"quadruped") unless "upright" seats it (&"upright": it sits up on its haunches).
 ## Other bases have a fixed natural pose (pug, insect → &"quadruped", all others → &"upright").
 static func resolve_pose(model: Dictionary) -> StringName:
 	var base: String = str(model.get("base", "humanoid"))
@@ -67,14 +75,17 @@ static func resolve_pose(model: Dictionary) -> StringName:
 		if pose == "upright":
 			return &"upright"
 		return &"upright" if float(model.get("scale", 1.0)) >= 1.0 else &"quadruped"
+	if base == "cat":
+		return &"upright" if pose == "upright" else &"quadruped"
 	if base == "pug" or base == "insect":
 		return &"quadruped"
 	return &"upright"
 
 
 ## Normalized ModelSpec used by the archetypes: base (unknown → humanoid), scale (0.3..4.0), pose (resolved),
-## colors (slot → Color, archetype defaults for missing slots), props (known, unique, in order), style ({"hair",
-## "beard"} for a humanoid — missing or unknown → the canon "short" / "none"; {} for every other base).
+## colors (slot → Color, archetype defaults for missing slots), props (known, unique, in order), style (the keys of
+## Archetypes.STYLES[base] — humanoid {"hair", "beard"}, cat {"fur", "pattern"}; missing or unknown → the first
+## option, e.g. the canon "short" / "none"; {} for every base without a style).
 static func normalize(model: Dictionary) -> Dictionary:
 	var base: String = str(model.get("base", "humanoid"))
 	if not Archetypes.BASES.has(base):
@@ -109,20 +120,20 @@ static func normalize(model: Dictionary) -> Dictionary:
 	return spec
 
 
-## Casting (08 §6.2, K2): {"hair", "beard"} for a humanoid (defaults = Kai's canon look), {} otherwise.
+## Casting (08 §6.2, K2) and 11-A1: every style key of the base (Archetypes.STYLES; humanoid defaults = Kai's canon
+## look, cat = short fur, solid), {} for a base without a style.
 static func _normalize_style(base: String, raw: Variant) -> Dictionary:
-	if base != "humanoid":
-		return {}
+	var vocab: Dictionary = Archetypes.STYLES.get(base, {})
 	var given: Dictionary = raw if raw is Dictionary else {}
-	var hair: String = str(given.get("hair", Archetypes.HAIR_STYLES[0]))
-	var beard: String = str(given.get("beard", Archetypes.BEARDS[0]))
-	if not Archetypes.HAIR_STYLES.has(hair):
-		push_warning("CharacterBuilder: unknown hair style '%s' → %s" % [hair, Archetypes.HAIR_STYLES[0]])
-		hair = Archetypes.HAIR_STYLES[0]
-	if not Archetypes.BEARDS.has(beard):
-		push_warning("CharacterBuilder: unknown beard '%s' → %s" % [beard, Archetypes.BEARDS[0]])
-		beard = Archetypes.BEARDS[0]
-	return {"hair": hair, "beard": beard}
+	var out: Dictionary = {}
+	for key: String in vocab:
+		var options: PackedStringArray = vocab[key]
+		var value: String = str(given.get(key, options[0]))
+		if not options.has(value):
+			push_warning("CharacterBuilder: unknown style.%s '%s' → %s" % [key, value, options[0]])
+			value = options[0]
+		out[key] = value
+	return out
 
 
 static func clear_cache() -> void:
@@ -250,7 +261,7 @@ static func _cache_key(m: Dictionary, seed: int) -> String:
 	# recipes are defined at scale 1 (the Model node scales), except the compact brute below scale 1.0
 	var variant: String = "compact" if str(m["base"]) == "brute" and float(m["scale"]) < 1.0 else ""
 	var style: Dictionary = m.get("style", {})
-	var style_part: String = "%s,%s" % [str(style["hair"]), str(style["beard"])] if not style.is_empty() else ""
+	var style_part: String = ",".join(PackedStringArray(style.values()))   # in Archetypes.STYLES key order
 	return "%s|%s|%s|%s|%s|%s|%s" % [str(m["base"]), str(m["pose"]), ",".join(cs), ",".join(props), seed_part, variant,
 		style_part]
 

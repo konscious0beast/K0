@@ -10,8 +10,9 @@ const SPEC: Array = [["id", "s"], ["name", "s"], ["desc", "s", ""], ["for", "sa"
 const SPEC_MODEL_HINT: Array = [["props_add", "sa", []], ["colors", "d", {}]]
 const NAME_MAX: int = 32
 const DESC_MAX: int = 60
-## 04 §2.3: no crown motif on Graf Mopsula — also not through a species look.
-const MOPSULA_FORBIDDEN_PROPS: PackedStringArray = ["crown", "ticket_crown"]
+## 04 §2.3: no crown motif on Graf Mopsula — also not through a species look (11-A1, 11 §4.10 rule 1: + the tiara; his
+## party model: validators/art_kit.gd). A pack with a licence block is exempt for the species looks it owns.
+const MOPSULA_FORBIDDEN_PROPS: PackedStringArray = ["crown", "ticket_crown", "tiara"]
 
 
 static func normalize(v: DataValidator, ctx: String, raw: Variant) -> Dictionary:
@@ -31,7 +32,8 @@ static func normalize(v: DataValidator, ctx: String, raw: Variant) -> Dictionary
 	if mh.is_empty():
 		mh = {"props_add": PackedStringArray(), "colors": {}}
 	v._subset(ctx + ".model_hint.props_add", mh["props_add"], DataValidator.MODEL_PROPS)
-	var for_mopsula: bool = TalentsRules.is_for_mopsula(d)
+	var for_mopsula: bool = TalentsRules.is_for_mopsula(d) \
+		and not DataValidator.ArtKitRules.exempt(v, "species", str(d["id"]), "model_hint.props_add")
 	for prop: String in mh["props_add"]:
 		if for_mopsula and MOPSULA_FORBIDDEN_PROPS.has(prop):
 			v._err(ctx + ".model_hint.props_add", "'%s': no crown motif on Graf Mopsula (04 §2.3)" % prop)

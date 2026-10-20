@@ -1530,6 +1530,7 @@ msgstr ""
 
 #. max 16
 #: data/looks.json:lk_beard_none.name data/looks.json:lk_glasses_none.name
+#: data/looks.json:lk_wear_none.name
 msgctxt "looks"
 msgid "ohne"
 msgstr ""
@@ -1604,6 +1605,12 @@ msgstr ""
 #: data/looks.json:lk_outfit_midnight.name
 msgctxt "looks"
 msgid "Mitternacht"
+msgstr ""
+
+#. max 16
+#: data/looks.json:lk_wear_jacket.name
+msgctxt "looks"
+msgid "Jacke"
 msgstr ""
 
 #: data/lootboxes.json:box_bronze.name

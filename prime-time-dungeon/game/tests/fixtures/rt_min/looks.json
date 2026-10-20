@@ -45,6 +45,13 @@
 				"secondary": "#2E3A57"
 			},
 			"canon": true
+		},
+		{
+			"id": "lk_wear_none",
+			"kind": "wear",
+			"name": "ohne",
+			"style": "none",
+			"canon": true
 		}
 	]
 }

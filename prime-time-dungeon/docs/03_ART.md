@@ -1144,6 +1144,15 @@ MeshInstances; `test_08_avatar_kit` prüft alle 9 × 4 × 2 Kombinationen (≤ 3
 Bart ≤ 100). Galerien: `art/gallery/look_gallery.tscn` (neun Looks), `hair_gallery.tscn` (alle Frisuren; Parameter `row: beard`,
 `view: front | back | side`, `hair_color`).
 
+**Stand 11-A1 (2026-10-18):** Look-Art **`wear`** (11 §4.10): eine Kleidungs-Option, die ein Prop aus 5.4 setzt (`jacket`,
+`bathrobe`, `shorts` oder `sandals`; „ohne“ nimmt alle ab), gemergt in Kais vorhandene Meshes — Kanon „ohne“, in den
+Grunddaten dazu nur „Jacke“ (Bademantel, kurze Hose und Sandalen trägt Kai nie, 11 §4.10 Regel 3). Gemessen
+(`test_11_art_kit`, alle 9 × 4 × 2 × 5 Kombinationen mit jedem `wear`-Stil): Kai + Jacke **2 516 Tris**; schlimmster Fall der
+Grunddaten `curls` + `stubble` + Brille + Jacke **2 964**, über alle Stile (auch Paket-Optionen) `curls` + `stubble` +
+Brille + `sandals` **2 988** — immer genau 7 MeshInstances: `wear` und Brille kombinieren frei. Die Persona-Datei und das Casting
+tragen bis zu einem Casting-Paket weiter nur die sechs Arten von 08 §6.1 (`PersonaLook.ids` nennt `wear` nur, wenn ein
+Look die Art setzt).
+
 #### `pug` — 0.6 m (Graf Mopsula)
 Slots: primary = Fell, secondary = Maske/Ohren, accent = Kleidung, eyes. Gemessen: **1 448 Tris** inkl. `cape` + `monocle`, 2 Meshes;
 mit Siegel-Plakette (+ Box 12 + Torus 100) **≈ 1 560 Tris**. **Kein Kronen-Motiv an Mopsula** (04_STRATEGIE §2.3): weder `crown`-Prop
@@ -1241,6 +1250,35 @@ Flügel-Flap 8 Hz als Bird-Pivot-Roll ±15° + Skal. Y 1.0↔0.8 (keine eigenen 
 Zugzähler mod 5) stößt 1.0 m auf das Ziel und zurück; `die`: Vögel fliegen radial 3 m auseinander + Dissolve. Anker: `center` (0,0.8,0),
 `head` (0,0.9,0), `overhead` (0,1.3,0), `hand_r`/`hand_l` = `Bird0`/`Bird1`.
 
+#### `cat` — 0.5 m (11-A1; Gegner und Nebenfiguren, **nie** Party oder Begleiter: 11 §4.10 Regel 2)
+Slots: primary = Fell, secondary = Zeichnung, accent = dunkle Flecken der Glückskatze (und Akzent-Props), eyes = Iris (**E** 0.35);
+fest: Nase `#D9707F`, Innenohr `#E8A0AB`, Schnurrhaare `#F2EEE6`. Ein Vierbeiner neben `pug` (Rig-Familie `quad`, der Schwanz schwingt,
+mit gelegentlichem Zucken; im Idle schaut der Kopf umher). Drei Meshes: `Body` (Rumpf Capsule, Hals oder Halskrause, Beine als offene
+Röhren mit Sprunggelenk hinten, Pfoten, Zeichnung), `Head` (Schädel Sphere 0.10 · ×1.1 am Pivot, zwei Schnurrhaarpolster und Kinn,
+Nase Prism, Mandelaugen mit Schlitzpupille und Glanz, Ohren als dreiseitige Kegel mit rosa Innenohr, je Seite drei Schnurrhaare),
+`Tail` (Kette aus Segmenten, die über die Gelenke reichen — Stand 6, Sitz 8; Wobble). Posen über `CharacterBuilder.resolve_pose`:
+`"auto"`/`"quadruped"` → **Stand** (der Schwanz steigt hinter dem Rumpf zur Locke über den Rücken), `"upright"` → **Sitz** (der Rumpf auf
+gefalteten Keulen aufgerichtet, der Schwanz liegt um die rechte Keule bis vor die Pfoten). Sockel: `head`, `eyes`, `neck`, `back`,
+`chest`, `belly`, `hip_r`, `body`, `hand_r` = Maul, `hand_l`, `tail`, `tail_tip`. `ModelSpec.style` {`fur`, `pattern`} (Vokabular nur in
+`Archetypes.STYLES`, gespiegelt in `DataValidator.MODEL_STYLES`; der erste Wert ist der Standard):
+
+| Stil | Wert | Aufbau |
+|---|---|---|
+| `fur` | `short` | Rumpf r 0.10, Schädel Skal. (1.12, 0.94, 1.0), Ohren r 0.05 / h 0.09, Polster vorn, Schwanz r 0.026 → 0.017 |
+| | `long` | Perser-Typ: Rumpf r 0.122, Halskrause Sphere 0.125, Wangenflausch, flacheres Gesicht, runde Augen (r 0.031), kleine Ohren weit außen, buschiger Schwanz (r 0.044 → 0.03, in der Mitte bis +45 %), Beine ×1.3, Keulen ×1.22 |
+| `pattern` | `solid` | einfarbig |
+| | `tabby` | vier Streifen über den Rücken bis zur Flankenmitte (offene Röhren r = Rumpf, 0.06 r zum Rücken versetzt), drei Schwanzringe, „M“ auf der Stirn (drei Striche), dunkle Schwanzspitze |
+| | `tortie` | drei Flecken am Rumpf und einer oben am Kopf in secondary auf dunklem primary, ein Schwanzring |
+| | `bicolor` | Latz, Bauch, Pfoten, Schnurrhaarpolster, Blesse, Halskrause und Schwanzspitze in secondary |
+| | `calico` | Grund primary (hell), Flecken in secondary und accent an Rumpf und Kopf, Schwanzring accent, Schwanzspitze secondary |
+
+Flecken sind flache, in das Fell versenkte Ellipsoide (8 × 1, 32 Tris); Kopf-Flecken sitzen über den Augen (ein Fleck um das Auge wirkt
+wie eine Brille). Gemessen (`test_11_art_kit`, Stand und Sitz haben dieselbe Summe): kurz `solid` **1 152**, `bicolor` 1 248, `tortie`
+1 292, `tabby` 1 304, `calico` 1 324; lang `solid` 1 272, `bicolor` 1 368, `tortie` 1 412, `tabby` 1 424, `calico` **1 444** Tris — immer
+3 Meshes, im Budget 1 600 und im Gegner-Budget 1 500 (02_TECH §12.1). Höhe stehend 0.52 m (kurz) / 0.53 m (lang), sitzend 0.57 / 0.53 m.
+Galerie: `art/gallery/cat_gallery.tscn` (jedes Muster, beide Felllängen, Stand und Sitz; Parameter `view: close | game | fur | sit |
+patterns`).
+
 ### 5.4 Props (`ModelSpec.props`, Vokabular 02_TECH §4.3)
 
 | Prop | Anker | Aufbau (Referenz humanoid; für andere Bases × Rumpfbreite skaliert) |
@@ -1279,12 +1317,25 @@ Zugzähler mod 5) stößt 1.0 m auf das Ziel und zurück; `die`: Vögel fliegen 
 | `axe` | hand_r | Ref. humanoid: Stiel Cyl 0.025/0.025/0.80 · (0,0.10,0) · (−70,0,0) · `#C23B22`; Klinge Prism 0.22×0.18×0.03 **M** · (0.10,0.20,−0.36) · `#D8DDE2`; Dorn Cone 0.025/0.10 **M** · (−0.08,0.20,−0.36) · (0,0,90) · `#D8DDE2` |
 | `crowbar` | hand_r | Ref. humanoid: Stange Cyl 0.02/0.02/0.85 **M** · (0,0.10,0) · (−70,0,0) · `#3A3A44`; Klaue Cyl 0.02/0.012/0.15 **M** · (0,0.25,−0.42) · (−35,0,0) · `#3A3A44`; Griffband Cyl 0.024/0.024/0.15 · (0,0.0,0.05) · (−70,0,0) · `#F2C230` |
 | `cart` | Body (ersetzt bei `robot` alle Gehäuse-Teile außer `JawLower` = Korbklappe) | Ref. robot: Gitterkorb 12 Cyl 0.01/0.01/0.6 **M** `#C0C6CC` (4 Kanten senkrecht, 8 Streben waagrecht) um Box-Volumen 0.6×0.5×0.8 auf y 0.55; Griff Cyl 0.02/0.02/0.6 · (0,1.0,0.42) · (0,0,90) · `#E8455A`; 4 Räder Cyl 0.06/0.06/0.04 · (±0.25,0.06,±0.35) · (0,0,90) · `#1E1E1E`; Scheinwerfer-Augen 2× Sphere 0.05 **E** · (±0.15,0.60,−0.42) · `#FFF2C8` |
+| `tiara` (11-A1) | head (humanoid: auf dem Haaransatz, Radius je Frisur 0.285–0.335; pug, cat: vor den Ohren) | Bogen aus 5 Box 0.088×0.026×0.016 **M** `#DFE4EC` über der Stirn (Gierwinkel −56°…+56°, 52° über dem Horizont), 3 Zacken Prism (Mitte 0.062×0.08, Seiten 0.04×0.05) **M**, je ein Stein Box 45° **E** 0.3 (Mitte `#FF5FA2`, Seiten `#7FD6FF`) — 11 Teile, 120 Tris. **Nie an Graf Mopsula** (11 §4.10 Regel 1) |
+| `sunglasses` (11-A1) | eyes (jede Base) | Brauensteg Box 0.33×0.024×0.022 · `#0F0E14`; 2 Gläser Sphere 0.062 (8 × 3) · (±0.10,−0.006,−0.018) · Skal. (1,0.74,0.24) · `#1B1824`; 2 Glanzstriche Box **E**; 2 Bügel Box 0.012×0.016×0.24 nach hinten — 7 Teile, 188 Tris |
+| `jacket` (11-A1) | Torso, ArmL/ArmR (humanoid; ersetzt Kragen, Bauchtasche, Namensschild, Logo) | Sakko in secondary (wie die Hose): Torso-Kapsel und Ärmel in secondary, Hemd-V Prism 0.15×0.22 · primary, 2 Revers Box 0.05×0.24 · secondary×0.8, Stehkragen Torus 0.11/0.19 (8 × 3), 2 Taschen, 2 Knöpfe, 2 Manschetten Röhre r 0.094 — 10 Teile 160 Tris, an Kai netto +24. Andere Bases: Mantel-Kapsel (10 × 1) um den Rumpf eines Vierbeiners + Saum (+140), sonst Weste am Sockel `body` |
+| `bathrobe` (11-A1) | Torso, ArmL/ArmR (humanoid; ersetzt zusätzlich die Hüft-Box) | Bademantel in primary + 30 % Weiß: Brust-V Prism · skin, Schalkragen Torus 0.10/0.17 (8 × 3), Gürtel Röhre r 0.236 + Knoten Box + 2 Enden in secondary, Rock bis zum Knie Röhre r 0.232 → 0.29 / h 0.42, weite Ärmelaufschläge Röhre r 0.108 — 9 Teile 164 Tris, an Kai netto +16. Andere Bases: wie `jacket` mit Gürtel (+160) |
+| `shorts` (11-A1) | LegL/LegR (humanoid; ersetzt die Hosenbein-Kapsel) | kurzes Hosenbein Röhre r 0.122 → 0.13 / h 0.24 · secondary, umgeschlagener Saum Röhre r 0.136 · secondary×0.82, nacktes Schienbein Röhre r 0.08 → 0.07 · skin — 6 Teile 112 Tris, an Kai netto −248. Andere Bases: Ring um das Rumpfende (Vierbeiner, +20), um die Schenkel (brute) bzw. den Unterkörper |
+| `sandals` (11-A1) | LegL/LegR (humanoid; ersetzt Schuh und Sohle) | Fuß Box 0.14×0.06×0.25 · skin, Sohle Box 0.17×0.028×0.29 · `#7A5232`, 2 Riemen Box · `#C9A36B` — 8 Teile 96 Tris, an Kai netto +48. Andere Bases: Sohle und Riemen unter jeder Pfote (Fußliste der Vierbeiner: cat, pug, rodent; +96), unter den Stiefeln (brute) bzw. zwei Sohlen am Boden. **In Grundinhalten nie benutzt** (11 §4.10 Regel 3) |
 
 Alle Props aus `DataValidator.MODEL_PROPS` werden gebaut (`CharacterBuilder.supported_props() == MODEL_PROPS`, 02_TECH §8.4); Maße sind
 Rig-Koordinaten bei scale 1.0 der genannten Referenz-Base, an anderen Bases skaliert `archetypes.gd` mit der Rumpfbreite (vereinfachter
 Rückfall erlaubt, nie ein Fehler). `cape` an rodent aufrecht ersetzt die Bauch-Kugel (Umhang deckt sie). Zusatz `cape` an rodent Vierbeiner: Box 0.36×0.03×0.55 · Body (0,0.15,0.02) · (4,0,0) · accent + Saum Box
 0.38×0.04×0.04 **M** `HYPE_GOLD` hinten. `wrench`/`axe`/`crowbar` sind die Waffen-Optik von Kai (`itm_wpn_pipe_wrench`/`itm_wpn_fire_axe`/
 `itm_wpn_rail_crowbar`); sichtbar werden sie erst mit A8 (Ausrüstungs-Optik), bis dahin trägt Kai immer `mop`.
+
+**Stand 11-A1 (2026-10-18):** Die sechs neuen Props bleiben in ihren Budgets aus 11 §4.10 (Teile des Props / netto an der Figur,
+`test_11_art_kit` misst beides an Kai, an einer zweiten Figur, an Mops und Katze): `tiara` 120 / +120 (≤ 150, auch an pug und
+cat), `sunglasses` 188 / +188 (≤ 220, auch an cat), `bathrobe` 164 / +16 (≤ 300), `jacket` 160 / +24 (≤ 300), `shorts` 112 /
+−248 (≤ 200), `sandals` 96 / +48 (≤ 120). Alle mergen in vorhandene Meshes — kein neues MeshInstance, kein Draw Call. Der
+Bademantel geht der Jacke vor (er deckt sie). Galerie: `art/gallery/kit_gallery.tscn` (jedes Prop an einer passenden Base;
+Parameter `view: close | heads | persona`); die Kleidung zeigt sie an einer Ersatzfigur, nie an Kai (06 §0.3).
 
 ### 5.5 Besetzung (Party & Gegner → `ModelSpec`)
 
@@ -1313,10 +1364,13 @@ Quelle der `model`-Daten in `party.json`/`enemies.json` (01_GDD §5.1 verweist h
 Das Vokabular-Prop `crown` bleibt baubar, wird im Slice aber von **keiner** Figur getragen (Mopsula nie, 04_STRATEGIE §2.3); die
 Königin trägt `ticket_crown`. `itm_acc_queen_crown` ist nur für Kai ausrüstbar (`equip_by ["kai"]`, 01_GDD §6.4).
 Die Tris-Werte außer Kai sind gerechnet; `test_m4_art_kit` misst alle Einträge gegen 02_TECH §12.1 und ist maßgeblich.
+**Stand 11-A1:** Keine Figur der Grunddaten nutzt `cat` oder die sechs neuen Props (Party und Begleiter nie als Katze; `tiara`, `crown`,
+`ticket_crown` nie an Mopsula; `shorts`, `bathrobe`, `sandals` nie an Kai oder der Persona; `sandals` gar nicht — 11 §4.10 Regeln
+1–3, `validators/art_kit.gd`). Lizenzierte Pakete sind für ihre eigenen Einträge ausgenommen (Regel 4).
 
 **Persona-Look-Palette** (Casting 08 §6.1, `data/looks.json`; `DB.party_model("kai")` mischt die sechs IDs der laufenden
-Persona in Kais Modell, Kanon = die Werte der Zeile `kai` oben). Jede Option für alle, jede Farbe mit Namen; Hauttöne heißen
-neutral „Ton 1–8“.
+Persona in Kais Modell, mit 11-A1 dazu die optionale Art `wear`; Kanon = die Werte der Zeile `kai` oben). Jede Option für alle,
+jede Farbe mit Namen; Hauttöne heißen neutral „Ton 1–8“.
 
 | Art (Slot) | Optionen |
 |---|---|
@@ -1325,6 +1379,7 @@ neutral „Ton 1–8“.
 | Outfit (`primary` / `secondary`) | **Tierheim-Petrol `#3AA9A0`/`#2E3A57`**, Kittelweiß `#E8EEF0`/`#5A6B7A`, Blaumann `#2F4F8F`/`#23314F`, Warnorange `#F28C28`/`#3A3F4B`, Bürograu `#7A808A`/`#2A2E36`, Neonpink `#FF5FA2`/`#2A2440`, Waldgrün `#3F7A3A`/`#3B2A22`, Mitternacht `#2A2440`/`#1A1420` |
 | Frisur, Bart (`style`) | 9 Frisuren, 4 Bärte (Kap. 5.3, Persona-Look); das Kopftuch trägt die Haarfarbe (Editor: „TUCHFARBE“) |
 | Brille (`props`) | ohne, rund (`glasses`) |
+| Kleidung (`props`, Art `wear`, 11-A1) | **ohne**, Jacke (`jacket`) — Bademantel, kurze Hose und Sandalen nie (11 §4.10 Regel 3); das Casting bietet die Art noch nicht an |
 
 Boss-Sonderwerte: Rattenkönigin-Material `Materials.toon_vc({"bands": 3, "rim": 0.8, "rim_color": Color("#9A6BFF")})`; Thron =
 `PropKit.build("wreck")` (Kap. 6.3), Königin liegt auf dem Wagendach (Rig-Root y +3.0). P3: `Crown`-Mesh (`ticket_crown`)

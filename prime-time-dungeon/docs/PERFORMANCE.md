@@ -21,7 +21,7 @@ Dieses Dokument hält fest, **was** gemessen wurde, **wie**, was vorher/nachher 
 > mit zwei KI-Gästen 88 UI-Draw-Calls (Budget 100; die Gäste-Tafel von 18 auf 6 gesenkt), auf Etage 3 mit TALENT-SHOW,
 > RECALL und einem Gast 91, mit dem Zielrahmen eines Pull-Ziels (Gegnerfarbe und Differenz) 99 im Kalender, 100 Am Stück
 > (der Zähler macht dem Rahmen Platz), ohne Staffel unverändert. Das HUD liest die KI-Besetzung nur nach einer Änderung
-> und dann eine Abfrage je Takt (vorher ≈ 13 ms alle 5 s).
+> und dann eine Abfrage je Takt (vorher ≈ 13 ms alle 5 s) — auch nach dem Aufbau einer Etage, der selbst keine liest.
 
 ---
 
@@ -455,7 +455,7 @@ Kalender-Staffel läuft nur hier: `perf.sh --only=season` startet Am Stück. **Z
 | `SeasonView.collapse_view` (Einsturz-Anzeige) | 0,01 ms | HUD alle 0,5 s |
 | HUD-Takt 0,5 s · 5 s, wenn sich nichts geändert hat (Schlüssel 0,02 ms) | 0,03 ms | |
 | `CastSim._load` — jede Abfrage baut das Modell aus dem Staffel-Block neu | ≈ 3 ms | |
-| HUD nach einer Änderung: Zähler · Platz · Pechvogel (je ein 0,5-s-Takt) | 2,5 · 6–8 · 3 ms | nach einem Command, spätestens nach einer Minute |
+| HUD nach einer Änderung: Zähler · Platz · Pechvogel (je ein 0,5-s-Takt) | 2,5 · 6–8 · 3 ms | nach einem Command und nach dem Aufbau einer Etage, spätestens nach einer Minute |
 | zum Vergleich: der Uhr-Command (60 s, KI-Besetzung eingeschlossen) | 5,6 ms | einmal je Minute (Kalender) |
 | `SeasonView.schedule` · `ranking_rows` · `ticker_rows` · `floor_view` · `guest_rows` | 0,07 · 6,6 · 2,9 · 9,7 · 2,4 ms | Reiter „Staffel“, Safe Room |
 | `SeasonView.projection` (Zeitraffer bis zum Finale, auf einer Kopie des Zustands) | 18–29 ms | einmal: Bilanz des Studiogasts |
@@ -482,10 +482,13 @@ Maschine trug drei bis fünf fremde Läufe (Last 8–13, CPU-Druck 80–88 %), s
 doppelt so lange wie in §3.9. Ein A/B-Lauf im Wechsel mit `ac5d15c` (headless, je Etage 9 warme Aufbauten, CPU-Zeit des
 Hauptthreads, je zwei Runden) zeigt beide Stände gleich belastet: Etage 6 530–540 ms (`main`) gegen 510–550 ms (ST1-H);
 über die Etagen 2–6 liegt ST1-H im Mittel −10 bis +20 ms neben `main`, einzelne Runden streuen um ± 60 ms. ST1-H selbst
-trägt zum Aufbau einer Staffel-Etage ab Etage 2 die erste Lesung des HUD bei (`season_refresh` am Ende von
+trug zum Aufbau einer Staffel-Etage ab Etage 2 die erste Lesung des HUD bei (`season_refresh` am Ende von
 `_season_ready`: Zähler, Platz und Pechvogel in einem Zug, damit der Zähler im ersten Bild steht): 13 ms im Kalender,
-29–31 ms Am Stück (Median aus 15, Last ≈ 5). Der Lauf vom 2026-10-13 mit demselben HUD-Code (vor P1 und L1) ergab
-`PERF: OK`, Etage 6 warm 396 ms bei Last ≈ 6; die Aufbauzeiten brauchen eine ruhige Maschine (CI-Job oder Referenz-PC).
+29–31 ms Am Stück (Median aus 15, Last ≈ 5). Seitdem liest der Aufbau die Besetzung nicht mehr (09 H-6): Die
+Einsturz-Anzeige steht im ersten Bild, Zähler, Platz und Pechvogel folgen je ein 0,5-s-Takt, und die Zählerzeile
+erscheint, sobald Zähler und Platz gelesen sind (`test_09_season_ui` prüft beides). Der Lauf vom 2026-10-13 mit dem
+HUD-Code von damals (vor P1 und L1) ergab `PERF: OK`, Etage 6 warm 396 ms bei Last ≈ 6; die Aufbauzeiten brauchen eine
+ruhige Maschine (CI-Job oder Referenz-PC).
 
 ---
 

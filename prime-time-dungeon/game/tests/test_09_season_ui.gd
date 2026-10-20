@@ -563,6 +563,16 @@ func test_the_collapse_display_in_the_hud() -> void:
 	var on_said: Callable = func(_t: String, _v: StringName, tag: String, _b: bool) -> void: said.append(tag)
 	Events.mod_said.connect(on_said)
 	var hud: ExplorationHud = _screen(HUD, {}) as ExplorationHud
+	# The build reads no cast (PERFORMANCE.md §3.11): the collapse display stands at once, the reads behind the counter
+	# follow one per 0.5-s tick, and the line shows once counter and place are read.
+	assert_true(hud.season_panel.visible, "the collapse display from the first frame")
+	assert_true((hud.get("_season_cast") as Dictionary).is_empty(), "no cast read while the floor is built")
+	assert_eq(hud.get("_season_reads"), ["counter", "rank", "need"], "the reads wait for the ticks")
+	assert_false(hud.season_counter.visible)
+	hud.call("_season_tick")
+	assert_false(hud.season_counter.visible, "the counter alone: the line waits for the place")
+	hud.call("_season_tick")
+	assert_true(hud.season_counter.visible and hud.season_counter.text.contains(" · Platz "), hud.season_counter.text)
 	await wait_frames(2)
 	hud.season_refresh()
 	assert_true(hud.season_panel.visible, "the collapse display (09 §2.5 Nr. 6)")

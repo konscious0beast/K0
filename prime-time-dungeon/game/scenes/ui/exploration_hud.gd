@@ -985,11 +985,14 @@ func _season_ready() -> void:
 	_season_timer.timeout.connect(_season_tick)
 	add_child(_season_timer)
 	_season_timer.start()
-	season_refresh()                          # the counter from the first frame (the floor is built right now)
+	# The collapse display from the first frame; the cast reads behind the counter follow on the ticks (one per 0.5 s,
+	# the line shows once counter and place are read): the build of a floor reads no cast (PERFORMANCE.md §3.11).
+	_season_ticks = SEASON_SLOW_TICKS
+	_season_tick()
 
 
-## The collapse display, the counter and the warnings now — the cast reads at once instead of one per tick (also the
-## tests' way to refresh the HUD).
+## The collapse display, the counter and the warnings now — the cast reads at once instead of one per tick (the tests'
+## and the captures' way to refresh the HUD).
 func season_refresh() -> void:
 	_season_ticks = SEASON_SLOW_TICKS
 	_season_cast_at = ""
@@ -1079,12 +1082,13 @@ func _season_read(st: GameState, what: String) -> void:
 	_season_show(st)
 
 
-## The counter line from the cached reads (hidden until the first read) and the cues that go with it.
+## The counter line from the cached reads (hidden until counter and place were read once) and the cues that go with it.
 func _season_show(st: GameState) -> void:
 	var s: SeasonState = st.season
 	var has_cast: bool = CastSim.has_cast(st)
 	var c: Dictionary = _season_cast.get("counter", {}) as Dictionary
-	var show_counter: bool = st.floor_run.index >= 2 and has_cast and not c.is_empty() and not _season_targeting
+	var show_counter: bool = st.floor_run.index >= 2 and has_cast and not c.is_empty() and _season_cast.has("rank") \
+		and not _season_targeting
 	season_counter.visible = show_counter
 	if show_counter:
 		var rank: int = int(_season_cast.get("rank", 0))

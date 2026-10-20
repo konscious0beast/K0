@@ -22,6 +22,7 @@ Dieses Dokument hält fest, **was** gemessen wurde, **wie**, was vorher/nachher 
 > RECALL und einem Gast 91, mit dem Zielrahmen eines Pull-Ziels (Gegnerfarbe und Differenz) 99 im Kalender, 100 Am Stück
 > (der Zähler macht dem Rahmen Platz), ohne Staffel unverändert. Das HUD liest die KI-Besetzung nur nach einer Änderung
 > und dann eine Abfrage je Takt (vorher ≈ 13 ms alle 5 s) — auch nach dem Aufbau einer Etage, der selbst keine liest.
+> Gate 2026-10-20 gegen `main` `ac5d15c`: `perf.sh --only=startup,explore,season` `PERF: OK` (§3.11, Nachmessung).
 
 ---
 
@@ -455,6 +456,7 @@ Kalender-Staffel läuft nur hier: `perf.sh --only=season` startet Am Stück. **Z
 | `SeasonView.collapse_view` (Einsturz-Anzeige) | 0,01 ms | HUD alle 0,5 s |
 | HUD-Takt 0,5 s · 5 s, wenn sich nichts geändert hat (Schlüssel 0,02 ms) | 0,03 ms | |
 | `CastSim._load` — jede Abfrage baut das Modell aus dem Staffel-Block neu | ≈ 3 ms | |
+| HUD aufbauen (`ExplorationHud`, instanziieren und `_ready`; Etage 2 und 6, Median aus 21): `main` · ST1-H | 8–10 · 9–10 ms | je Etage, ohne Lesung der Besetzung (2026-10-20) |
 | HUD nach einer Änderung: Zähler · Platz · Pechvogel (je ein 0,5-s-Takt) | 2,5 · 6–8 · 3 ms | nach einem Command und nach dem Aufbau einer Etage, spätestens nach einer Minute |
 | zum Vergleich: der Uhr-Command (60 s, KI-Besetzung eingeschlossen) | 5,6 ms | einmal je Minute (Kalender) |
 | `SeasonView.schedule` · `ranking_rows` · `ticker_rows` · `floor_view` · `guest_rows` | 0,07 · 6,6 · 2,9 · 9,7 · 2,4 ms | Reiter „Staffel“, Safe Room |
@@ -489,6 +491,16 @@ Einsturz-Anzeige steht im ersten Bild, Zähler, Platz und Pechvogel folgen je ei
 erscheint, sobald Zähler und Platz gelesen sind (`test_09_season_ui` prüft beides). Der Lauf vom 2026-10-13 mit dem
 HUD-Code von damals (vor P1 und L1) ergab `PERF: OK`, Etage 6 warm 396 ms bei Last ≈ 6; die Aufbauzeiten brauchen eine
 ruhige Maschine (CI-Job oder Referenz-PC).
+
+**Nachmessung nach dem HUD-Umbau** (2026-10-20, gegen `main` `ac5d15c`, Last 2–5 mit einem fremden Lauf daneben):
+`tools/perf.sh --only=startup,explore,season` ergab `PERF: OK`. Die Darstellung ist dieselbe wie am 2026-10-13 und
+2026-10-18 — Etage 1 höchstens 112 3D- und 94 UI-Draw-Calls, die Staffel-Etagen 2–6 höchstens 109 3D- und 96
+UI-Draw-Calls, Primitive ≤ 50 644, Lichter je Mesh ≤ 2, Körper ≤ 27. Ganze Etagen warm (kalt): Etage 1 201 (401) ms,
+Etage 2–6 171 · 185 · 279 · 277 · 323 (193 · 210 · 287 · 321 · 342) ms; erstes Bild 8,1 s, Titel interaktiv 12,7 s.
+Der HUD-Aufbau allein (instanziieren und `_ready` in einer Staffel — Etage 2 im Kalender und Am Stück, Etage 6 Am
+Stück —, headless, Median aus 21, drei Runden im Wechsel, Last 3–4): `main` 8,3–9,8 ms, ST1-H mit der Lesung in einem
+Zug (`69e6f81`) 16,7–20,7 ms, ST1-H jetzt 8,6–10,4 ms. Der Abschnitt „Staffeln“ kostet den Aufbau damit höchstens
+1,5 ms statt 8–12 ms; Zähler, Platz und Pechvogel liest das HUD in den ersten drei 0,5-s-Takten danach.
 
 ---
 

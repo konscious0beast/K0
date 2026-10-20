@@ -1757,16 +1757,17 @@ Aufnahmen `season_*` mit `capture.gd --before=<Zustand>` (Bilder 100–119); Tes
 Keine Datei in `core/rt/**` oder `scenes/combat/**`: Farbe und Differenz der Stufen-Plakette in den Rahmen und
 Namensschildern des Kampfes bleiben Antrag CR-32 l (07 §12.10).
 
-*Gates* (2026-10-18, nach dem Merge von 11-L1, gegen `claude/prime-time-dungeon` `ac5d15c`): `tools/check.sh` grün —
-1 953 Tests bestanden, 0 fehlgeschlagen, Testlauf 930 s (mit Import und Smoke 16 min Wandzeit; die geteilte Maschine
-mit 4 Kernen unter Last 6–11); `fullrun.sh` mit `--strategy=all`, `--hero=mopsula`, `--liga=1` und `--liga=2` je
-`fullrun.sh: OK` mit denselben Zeilen „FULLRUN:“ wie `ac5d15c` (Ereigniszeilen: `--strategy=all` 118 · 130 · 123 · 115,
-`--hero=mopsula` 115, `--liga=1` 124, `--liga=2` 112; die Statistik bis auf den Münzwurf der Persona-Zeile in
-`mod_tags`, 02_TECH §0.8); `tools/i18n.sh check` grün, `test_11_literals` grün (die zehn Dateien von ST1-H mit 150
-Literalen in `PENDING`, unten „Offen nach ST1-H“); `tools/perf.sh --only=startup,explore,season`: jedes
-Darstellungs-Budget hält (Erkundung höchstens 112 3D- und 96 UI-Draw-Calls), die Aufbauzeiten ganzer Etagen lagen auf
-der ausgelasteten Maschine über 500 ms — `main` im A/B-Lauf genauso; mit demselben HUD-Code war es am 2026-10-13
-`PERF: OK` (PERFORMANCE.md §3.11, Nachmessung).
+*Gates* (2026-10-20, nach dem Umbau des HUD-Aufbaus — H-6 —, gegen `claude/prime-time-dungeon` `ac5d15c`, den Stand
+nach 11-L1): `tools/check.sh` grün — 1 953 Tests bestanden, 0 fehlgeschlagen, Testlauf 504 s (mit Import und Smoke
+9 min Wandzeit; die geteilte Maschine mit 4 Kernen unter Last 2–4); `fullrun.sh` mit `--strategy=all`, `--hero=mopsula`,
+`--liga=1` und `--liga=2` je `fullrun.sh: OK` mit denselben Zeilen „FULLRUN:“ wie `ac5d15c` (Ereigniszeilen:
+`--strategy=all` 118 · 130 · 123 · 115, `--hero=mopsula` 115, `--liga=1` 124, `--liga=2` 112; die Statistik diesmal
+vollständig gleich, auch der ungeseedete Münzwurf der Persona-Zeile in `mod_tags`, der abweichen darf, 02_TECH §0.8);
+`tools/i18n.sh check` grün, `test_11_literals` grün (die zehn Dateien von ST1-H mit 150 Literalen in `PENDING`, unten
+„Offen nach ST1-H“); `tools/perf.sh --only=startup,explore,season` `PERF: OK` — Erkundung höchstens 112 3D- und 96
+UI-Draw-Calls, ganze Etagen warm in 171–323 ms (Etage 1 201 ms; PERFORMANCE.md §3.11, Nachmessung). Am 2026-10-18 lagen
+auf der damals ausgelasteten Maschine nur die Aufbauzeiten über 500 ms, `main` im A/B-Lauf genauso; seitdem liest der
+Aufbau einer Etage die KI-Besetzung nicht mehr (H-6).
 
 *Was ein Debug-Build zeigt* (ohne Startargument): Im Titel steht rechts unten die Karte „STAFFELN · Vorschau“ mit
 „Sendung starten“ (die erste Staffel des Geräts) bzw. „Neue Staffel“ und „Ruhmeshalle“; die Menüspalte und „Extras“
@@ -1807,7 +1808,7 @@ beendete Staffel des Geräts.
 | H-3 | Neue Staffel | Nur privat (Freunde und öffentlich: ST2). Die erste Staffel des Geräts hat keine Wahl (V-6), jede weitere Modus, Tempo, Sendezeit. Danach der eine Neues-Spiel-Weg: `TitleFlow.pending_season` → Slot → Figur → Casting → `Game.start_season` statt `new_game`; der Titel vergisst die gemerkte Staffel. | 2.2 |
 | H-4 | Sendezeit | 08:00 bis 21:30 in halben Stunden (Einstürze abends, nie nachts; die Hinweise behalten ihre Ruhezeit 22–8). | 2.4, 2.9 |
 | H-5 | Ortszeit | Termine zeigen die Ortszeit des Geräts mit dessen heutigem Versatz (Godot kennt keine Zeitzonenregeln): Ein Termin hinter einer Zeitumstellung erscheint bis dahin eine Stunde verschoben; die `.ics`-Datei trägt UTC, der Kalender des Geräts zeigt ihn richtig. | 2.4 |
-| H-6 | Zähler im HUD | Ab Etage 2 als Zeile unter der Einsturz-Anzeige („Weiße Weste 41/100 · Platz 12“), nicht neben dem LIVE-Badge: dort stehen bei 1280 px Zuschauer und Follower, und die Etagennamen oben sind lang. Mit Ohne Netz „Noch dabei“. `CastSim` baut sein Modell bei jeder Abfrage neu (≈ 3 ms, der Platz ≈ 6 ms): Das HUD liest erst nach einer Änderung (ein Command, spätestens nach einer Minute) und dann eine Abfrage je 0,5 s (PERFORMANCE.md §3.11) — auch nach dem Aufbau einer Etage: Die Einsturz-Anzeige steht im ersten Bild, die Zählerzeile erscheint, sobald Zähler und Platz gelesen sind (gut 1 s nach dem Betreten); der Aufbau selbst liest die Besetzung nicht (2026-10-18; vorher kostete die Lesung in einem Zug jeden Aufbau 13–31 ms). | 2.3 |
+| H-6 | Zähler im HUD | Ab Etage 2 als Zeile unter der Einsturz-Anzeige („Weiße Weste 41/100 · Platz 12“), nicht neben dem LIVE-Badge: dort stehen bei 1280 px Zuschauer und Follower, und die Etagennamen oben sind lang. Mit Ohne Netz „Noch dabei“. `CastSim` baut sein Modell bei jeder Abfrage neu (≈ 3 ms, der Platz ≈ 6 ms): Das HUD liest erst nach einer Änderung (ein Command, spätestens nach einer Minute) und dann eine Abfrage je 0,5 s (PERFORMANCE.md §3.11) — auch nach dem Aufbau einer Etage: Die Einsturz-Anzeige steht im ersten Bild, die Zählerzeile erscheint, sobald Zähler und Platz gelesen sind (gut 1 s nach dem Betreten); der Aufbau selbst liest die Besetzung nicht (2026-10-20; vorher kostete die Lesung in einem Zug jeden Aufbau 13–31 ms). | 2.3 |
 | H-7 | Ruhmeshalle | `Save.career()["hall"]`: je beendeter Staffel ein Eintrag (Schlüssel Vorlage#Nummer#Tag 0, neueste zuerst, höchstens 200) mit Ergebnis, Titeln, Quote, Platz, Etagen, Figuren (Klassen), Zahlen der Quote, Spielzeit — **ohne Namen** (08 P-1); die Titel sammelt `career()["titles"]`. Ein Slot mit beendeter Staffel öffnet die Ruhmeshalle (B-18); „Staffel beenden“ gibt den Slot frei (V-18) und schreibt nie wieder. | 2.7, 2.8 |
 | H-8 | Wege am Ende | Abspann und — nach „Staffel beenden“ — Titel führen zur Staffel-Bilanz (`Game._season_end_path`; der Abspann steht als Kicker „ABSPANN · STAFFEL-BILANZ“ darüber); der Sendeschluss Ohne Netz bietet „Staffel-Bilanz“ statt „Laden“ (keine Gnadenfrist). | 2.7, 7.2 |
 | H-9 | Studiogast offline | Der „Zeitraffer bis zum Finale“ ist die Rangliste am letzten Einsturz, gerechnet auf einer Kopie des Zustands (`SeasonView.projection`: Uhr bis zum letzten Einsturz, die KI spielt weiter); der Spielstand bleibt unberührt. Zuschauen live und Schnellsätze: ST2. | 7.2 |

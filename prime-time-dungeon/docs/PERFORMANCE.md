@@ -16,6 +16,13 @@ Dieses Dokument hält fest, **was** gemessen wurde, **wie**, was vorher/nachher 
 > **Stand ST1-C1 (2026-10-12, Branch `ptd/st1c1`):** die Etagen 2–6 der Basis-Staffel gemessen (§3.9, `--only=season`):
 > jede Größe im Budget, die größte Etage (48 Räume, ganz gebaut) warm 408 ms im Median (Probe 428 ms). Die Türstürze kommen
 > vor dem Eintritt in die Welt in den Etagen-Körper (§4.10: −14 ms auf Etage 1, −32–52 ms auf Etage 6).
+>
+> **Stand ST1-H (2026-10-13, Branch `ptd/st1h`):** die Staffel-UI gemessen (§3.11): Erkundung im Kalender 87, Safe Room
+> mit zwei KI-Gästen 88 UI-Draw-Calls (Budget 100; die Gäste-Tafel von 18 auf 6 gesenkt), auf Etage 3 mit TALENT-SHOW,
+> RECALL und einem Gast 91, mit dem Zielrahmen eines Pull-Ziels (Gegnerfarbe und Differenz) 99 im Kalender, 100 Am Stück
+> (der Zähler macht dem Rahmen Platz), ohne Staffel unverändert. Das HUD liest die KI-Besetzung nur nach einer Änderung
+> und dann eine Abfrage je Takt (vorher ≈ 13 ms alle 5 s) — auch nach dem Aufbau einer Etage, der selbst keine liest.
+> Gate 2026-10-20 gegen `main` `ac5d15c`: `perf.sh --only=startup,explore,season` `PERF: OK` (§3.11, Nachmessung).
 
 ---
 
@@ -49,6 +56,8 @@ Maximum über alle gemessenen Ansichten bzw. Frames (Methode §2). „vorher“ 
 | Staffel-Etage 6 bauen (48 Räume, ganze Etage), warm: Median aus 9 · Probe | 500 ms | – | **408 · 428 ms** | – | – |
 | Stempelduell (§3.10, 10 §6.10): Draw Calls UI · 3D, Tisch gegen den Stempelmeister mit Durchsage | 120 · 0 | – | **101 · 0** | – | – |
 | Stempelduell: Zug · Vorschau (Mittel) · Tisch aufbauen, warm | 2 · 3 · 300 ms | – | **0,50 · 1,02 · 7 ms** | – | – |
+| Staffel-UI (§3.11, 09 ST1-H): Draw Calls UI Erkundung im Kalender · Safe Room mit zwei Gästen (Anteil 5 · 6) · Erkundung mit Pull-Ziel, Kalender · Am Stück | 100 · 100 · 100 · 100 | – | **87 · 88 · 99 · 100** | – | – |
+| Staffel-UI: HUD-Takt ohne Änderung · größte Abfrage nach einer Änderung (Platz) | – | – | **0,03 · 6–8 ms** | – | – |
 | Router-Zyklen (20×), Wachstum | 0 | – | **0 Nodes, 0 Ressourcen** | | |
 | „ObjectDB instances leaked at exit“ | 0 | 6 (sporadisch) ✗ | **0** | | |
 | Erstes Bild nach Prozessstart (llvmpipe) | – | 3,0–3,1 s | 2,0–2,4 s (Phase C); heute 5,2–5,4 s auf einer anderen, geteilten Maschine — Basisstand gleich schnell, §3.5 | | |
@@ -394,6 +403,104 @@ Die Tabelle ist der Lauf auf ruhiger Maschine. Über die Läufe der SD2-Sitzung 
 Full-Runs): Regelbuch 25–45 ms, Zug 0,5–0,9 ms, Vorschau 1,0–1,9 ms, Tisch warm 5–7 ms, UI-Draw-Calls 101 — immer
 `PERF: OK`. Ohne `--only` läuft das Szenario `stempel` zuerst und bricht `perf.sh` bei einer Überschreitung ab. Auf den
 mobilen Referenzgeräten (60 FPS, Quality `low`) ist das Duell noch nicht gemessen [zu messen].
+
+### 3.11 Staffel-UI (09 ST1-H)
+
+Stand 2026-10-13, Branch `ptd/st1h`, Compatibility-Renderer unter Xvfb (llvmpipe), geteilte 4-Kern-Maschine unter Last
+(Load 6–10). **Draw Calls:** `tests/capture.gd --dc` liest nach dem Aufbau 30 Bilder lang
+`viewport_get_render_info` (CANVAS = UI, VISIBLE = 3D; Höchstwert), in den Zuständen der Bilder 100–119
+(`capture.gd --before=<Zustand>`, Rezepte `season_*`); `--quiet-ui` blendet M.O.D.-Kasten und Toasts aus wie der
+Abschnitt `season` von `perf.sh` (§3.9). Dieselben Ansichten ohne Staffel und Am Stück zum Vergleich auf dem Basisstand
+`266295f` (mit denselben zwei Schaltern in einer Kopie von `capture.gd`). Die
+Kalender-Staffel läuft nur hier: `perf.sh --only=season` startet Am Stück. **Zeiten:** headless in einem Testlauf
+(Mittel aus 20–50 Aufrufen bzw. Median aus 5–7 warmen Aufbauten).
+
+| Ansicht (1280 × 720, UI-Draw-Calls) | Basis `266295f` | ST1-H | davon Staffel-UI | Budget |
+|---|---:|---:|---:|---:|
+| Erkundung Etage 1, ohne Staffel | 77 | 77 | – | 100 |
+| Erkundung Etage 2, Am Stück (`--season-floor=2`): Countdown wie heute, Zähler | 86 | 88 | 2 | 100 |
+| Erkundung Etage 2, Kalender (`--before=cal2`): Einsturz-Anzeige statt Countdown, Zähler | – | 87 | 3 + 2 | 100 |
+| dasselbe im Handy-Format 2400 × 1080 mit Touch | – | 86 | 3 + 2 | 100 |
+| Erkundung Etage 1, ohne Staffel, Pull-Ziel gewählt (Rezept `pull_target_platform`, Bild 62) | – | 97 | – | 100 |
+| Erkundung Etage 2, Kalender, Pull-Ziel fünf Stufen über Kai (`season_target`): Plakette rot mit „+5“ und Warnzeichen, Zähler ausgeblendet | – | 99 | 3 | 100 |
+| dasselbe Am Stück (`--season-floor=2`): Countdown wie heute | – | 100 | 0 | 100 |
+| dasselbe im Handy-Format 2400 × 1080 mit Touch (Kalender, Bild 119) | – | 92 | 3 | 100 |
+| Safe Room Etage 1, ohne Staffel | 76 | 76 | – | 100 |
+| Safe Room Etage 2, Kalender, zwei Gäste (Bild 108) | – | 88 | 6 | 100 |
+| dasselbe im Handy-Format (Bild 114) | – | 80 | 6 | 100 |
+| Safe Room Etage 3, Kalender: TALENT-SHOW, RECALL und darunter ein Gast (Bild 116; 2026-10-13, nach dem Recall) | – | 91 | ≤ 6 | 100 |
+| Pausemenü, Reiter Party, ohne Staffel | 292 | 292 | – | – |
+| Pausemenü einer Kalender-Staffel: Party · „Staffel“ mit Rangliste · Ticker · Programm · Aktionen | – | 306 · 295 · 254 · 278 · 258 | – | – |
+
+- **Gäste im Safe Room:** Die erste Fassung (je Gast eine Zeile mit den Knöpfen „Reden“ und „Anheuern“, Beschriftung mit
+  der Kontur des Themes) kostete 18 Draw Calls — der Safe Room einer Kalender-Staffel kam damit auf 100–102 > 100. Jetzt
+  ist jeder Gast **ein** Knopf (rechts das Wort „Reden“ bzw. „Anheuern“), die Beschriftung auf der Tafel ohne Kontur
+  (eine Kontur kostet je Label einen zweiten Draw Call, 02_TECH §12.1): 6 Draw Calls. Auf Etage 3 steht mit dem Recall
+  (06 §3.5) dessen Knopf RECALL unter der TALENT-SHOW; die Tafel rückt darunter und zeigt einen Gast — 91 mit beiden
+  Knöpfen (09 H-14, H-21).
+- **HUD:** Die Einsturz-Anzeige ersetzt im Kalender den stehenden Countdown; ihr Text liegt auf dem eigenen Feld und
+  braucht keine Kontur. Der Zähler darunter („Weiße Weste 86/100 · Platz 96“) steht über der 3D-Szene und behält seine
+  Kontur: +2 Draw Calls in beiden Tempi ab Etage 2.
+- **Zielrahmen (09 H-22, H-23):** Die erste Fassung (die Differenz als eigenes Label links der Plakette, der Zähler
+  stehen gelassen) kam mit einem Pull-Ziel auf 102 im Kalender und 103 Am Stück. Jetzt trägt die Beschriftung der
+  Plakette Differenz und Stufe („+5   12“, rechtsbündig, die Stufe mittig im Ring: −1), das Warnzeichen liegt im
+  Dreiecks-Array des Rahmens (±0), und solange ein Pull-Ziel steht, blendet das HUD den Zähler aus (−2): 99 bzw. 100.
+  Ohne Staffel zeichnet der Rahmen wie vorher (kein Label, kein Mesh mehr).
+- **Pausemenü:** 02_TECH §12.1 gibt dem Pausemenü kein eigenes Budget; der Reiter „Staffel“ liegt im Bereich der anderen
+  Reiter (Party ohne Staffel 292, in einer Kalender-Staffel 306 mit den Reitern „Staffel“ und „Ausloggen“ in der Leiste).
+- **M.O.D.-Kasten und Toasts** kommen wie in §3.9 dazu: Bild 106 (40 min vor dem Einsturz, M.O.D.s Zeile im Kasten)
+  misst 100 — der Overlay-Stapel aus §8.2, zu dem die Staffel-UI im Kalender 5 Draw Calls beiträgt.
+
+| Aufruf | Zeit | Wann |
+|---|---:|---|
+| `SeasonView.collapse_view` (Einsturz-Anzeige) | 0,01 ms | HUD alle 0,5 s |
+| HUD-Takt 0,5 s · 5 s, wenn sich nichts geändert hat (Schlüssel 0,02 ms) | 0,03 ms | |
+| `CastSim._load` — jede Abfrage baut das Modell aus dem Staffel-Block neu | ≈ 3 ms | |
+| HUD aufbauen (`ExplorationHud`, instanziieren und `_ready`; Etage 2 und 6, Median aus 21): `main` · ST1-H | 8–10 · 9–10 ms | je Etage, ohne Lesung der Besetzung (2026-10-20) |
+| HUD nach einer Änderung: Zähler · Platz · Pechvogel (je ein 0,5-s-Takt) | 2,5 · 6–8 · 3 ms | nach einem Command und nach dem Aufbau einer Etage, spätestens nach einer Minute |
+| zum Vergleich: der Uhr-Command (60 s, KI-Besetzung eingeschlossen) | 5,6 ms | einmal je Minute (Kalender) |
+| `SeasonView.schedule` · `ranking_rows` · `ticker_rows` · `floor_view` · `guest_rows` | 0,07 · 6,6 · 2,9 · 9,7 · 2,4 ms | Reiter „Staffel“, Safe Room |
+| `SeasonView.projection` (Zeitraffer bis zum Finale, auf einer Kopie des Zustands) | 18–29 ms | einmal: Bilanz des Studiogasts |
+| `SeasonView.ics_text` | 0,7 ms | „Kalender-Datei“ |
+| Pausemenü öffnen: ohne Staffel · Kalender-Staffel (Party) · Reiter „Staffel“ (Median aus 7) | 33 · 49 · 83 ms | |
+| Abschnitt wechseln: Rangliste · Ticker · Programm · Aktionen | 20 · 4,5 · 15 · 2,7 ms | |
+| Staffel-Bilanz aufbauen: Finale · Studiogast · ausgestiegen (mit Zeitraffer; Median aus 5, kalt bis 375 ms) | 27 · 43 · 51 ms | einmal |
+
+Vor der Messung las das HUD Zähler, Platz und Pechvogel alle 5 s neu — ≈ 13 ms je Takt auf dieser Maschine. Jetzt hängen
+die Lesungen an einem Schlüssel aus dem, wovon sie abhängen (die gespeicherten Zeilen und die Buchhaltung der Besetzung,
+der Sortierschlüssel der Kandidat:in, Etage, Ergebnis; spätestens eine Minute Wanduhr), und nach einer Änderung kommt je
+0,5-s-Takt eine Lesung (`test_09_season_ui` prüft beides). Die Spitze ist damit die Platz-Abfrage (6–8 ms, in der Größe
+des Uhr-Commands). Billiger würde es mit einem Modell-Cache in `CastSim` bis zum nächsten Command (Vorschlag an ST1-F,
+09 „Offen nach ST1-H“). Ohne Staffel bleiben Erkundung, Safe Room und Pausemenü gleich (77 · 76 · 292 UI-Draw-Calls wie
+im Basisstand). Auf den mobilen Referenzgeräten ist die Staffel-UI noch nicht gemessen [zu messen].
+
+**Nachmessung nach dem Merge von 11-L1** (2026-10-18, gegen `main` `ac5d15c`): zwei Läufe von
+`tools/perf.sh --only=startup,explore,season`, der zweite mit `nice -n -10`. Jedes Darstellungs-Budget hält, in beiden
+Läufen gleich und gleich dem Lauf vom 2026-10-13 — Etage 1 höchstens 112 3D- und 94 UI-Draw-Calls, die Staffel-Etagen
+2–6 (Am Stück, Countdown und Zähler im HUD) höchstens 109 3D- und 96 UI-Draw-Calls, Primitive ≤ 50 644, Lichter je Mesh
+≤ 2, Körper ≤ 27 (§3.9). Über dem Budget von 500 ms lagen nur Aufbauzeiten der Staffel-Etagen (warm: im ersten Lauf
+Etage 2, 3, 5 und 6 mit 512–760 ms, im zweiten Etage 4–6 mit 631–1 267 ms; Etage 1 357 bzw. 420 ms): Die geteilte
+Maschine trug drei bis fünf fremde Läufe (Last 8–13, CPU-Druck 80–88 %), selbst `ZoneGenerator.generate` brauchte
+doppelt so lange wie in §3.9. Ein A/B-Lauf im Wechsel mit `ac5d15c` (headless, je Etage 9 warme Aufbauten, CPU-Zeit des
+Hauptthreads, je zwei Runden) zeigt beide Stände gleich belastet: Etage 6 530–540 ms (`main`) gegen 510–550 ms (ST1-H);
+über die Etagen 2–6 liegt ST1-H im Mittel −10 bis +20 ms neben `main`, einzelne Runden streuen um ± 60 ms. ST1-H selbst
+trug zum Aufbau einer Staffel-Etage ab Etage 2 die erste Lesung des HUD bei (`season_refresh` am Ende von
+`_season_ready`: Zähler, Platz und Pechvogel in einem Zug, damit der Zähler im ersten Bild steht): 13 ms im Kalender,
+29–31 ms Am Stück (Median aus 15, Last ≈ 5). Seitdem liest der Aufbau die Besetzung nicht mehr (09 H-6): Die
+Einsturz-Anzeige steht im ersten Bild, Zähler, Platz und Pechvogel folgen je ein 0,5-s-Takt, und die Zählerzeile
+erscheint, sobald Zähler und Platz gelesen sind (`test_09_season_ui` prüft beides). Der Lauf vom 2026-10-13 mit dem
+HUD-Code von damals (vor P1 und L1) ergab `PERF: OK`, Etage 6 warm 396 ms bei Last ≈ 6; die Aufbauzeiten brauchen eine
+ruhige Maschine (CI-Job oder Referenz-PC).
+
+**Nachmessung nach dem HUD-Umbau** (2026-10-20, gegen `main` `ac5d15c`, Last 2–5 mit einem fremden Lauf daneben):
+`tools/perf.sh --only=startup,explore,season` ergab `PERF: OK`. Die Darstellung ist dieselbe wie am 2026-10-13 und
+2026-10-18 — Etage 1 höchstens 112 3D- und 94 UI-Draw-Calls, die Staffel-Etagen 2–6 höchstens 109 3D- und 96
+UI-Draw-Calls, Primitive ≤ 50 644, Lichter je Mesh ≤ 2, Körper ≤ 27. Ganze Etagen warm (kalt): Etage 1 201 (401) ms,
+Etage 2–6 171 · 185 · 279 · 277 · 323 (193 · 210 · 287 · 321 · 342) ms; erstes Bild 8,1 s, Titel interaktiv 12,7 s.
+Der HUD-Aufbau allein (instanziieren und `_ready` in einer Staffel — Etage 2 im Kalender und Am Stück, Etage 6 Am
+Stück —, headless, Median aus 21, drei Runden im Wechsel, Last 3–4): `main` 8,3–9,8 ms, ST1-H mit der Lesung in einem
+Zug (`69e6f81`) 16,7–20,7 ms, ST1-H jetzt 8,6–10,4 ms. Der Abschnitt „Staffeln“ kostet den Aufbau damit höchstens
+1,5 ms statt 8–12 ms; Zähler, Platz und Pechvogel liest das HUD in den ersten drei 0,5-s-Takten danach.
 
 ---
 

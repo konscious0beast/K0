@@ -194,6 +194,8 @@ func newest_slot() -> int:
 		var s: Dictionary = slot_summary(slot)
 		if s.is_empty() or bool(s.get("corrupt", false)):
 			continue
+		if season_finished(s):                       # Staffeln (09, ST1-H): a finished season does not continue
+			continue
 		var t: int = int(s.get("saved_at_unix", 0))
 		if t > best_t:
 			best_t = t
@@ -339,8 +341,8 @@ func career_path() -> String:
 	return _data_root().path_join(CAREER_FILE)
 
 
-## {"v": 1, "no_net": bool (the Ohne-Netz unlock, 09 §2.2), "seasons": int (the last season number)}; {} without
-## a file. ST1-H adds the titles and the hall of fame.
+## {"v": 1, "no_net": bool (the Ohne-Netz unlock, 09 §2.2), "seasons": int (the last season number); ST1-H: "hall"
+## (career_hall), "titles" (career_titles), "seen" (career_seen)}; {} without a file.
 func career() -> Dictionary:
 	var path: String = career_path()
 	for p: String in [path, path + ".bak"]:
@@ -361,6 +363,86 @@ func career_set(key: String, value: Variant) -> Error:
 	d["v"] = 1
 	d[key] = value
 	return _atomic_write(career_path(), d)
+
+
+# --- Staffeln (09 §2.7, §2.8, ST1-H): the hall of fame and the one-time cues of the career --------------------------
+# What stays across seasons on this device (09 §2.8) besides the Ohne-Netz unlock and the season counter: the hall of
+# fame ("hall": the entries of the finished seasons, newest first — ids and numbers, never a name, 08 P-1), the titles
+# earned ("titles", in the order of their first award) and the one-time cues already shown ("seen": the tempo offer,
+# M.O.D.'s first explanations, 09 §0.5). Game records a finished season with its save (season_hall_add); the title, the
+# slot list and the hall of fame read it.
+
+const CAREER_HALL_MAX: int = 200                    # the oldest entries go beyond it (a long career, a small file)
+
+
+## A slot summary of a season the candidate has finished (finalist, end, out, left): it does not load (B-18).
+static func season_finished(summary: Dictionary) -> bool:
+	var s: Variant = summary.get("season", null)
+	return s is Dictionary and str((s as Dictionary).get("result", "")) != ""
+
+
+## The hall of fame, newest first ([] without one).
+func career_hall() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var raw: Variant = career().get("hall", [])
+	for e: Variant in (raw as Array if raw is Array else []):
+		if e is Dictionary:
+			out.append(e as Dictionary)
+	return out
+
+
+## True when the hall of fame holds the season `key` (SeasonView.hall_key).
+func career_hall_has(key: String) -> bool:
+	for e: Dictionary in career_hall():
+		if str(e.get("key", "")) == key:
+			return true
+	return false
+
+
+## Adds the entry of a finished season once (its "key"; first in the list) and its titles to the career's titles.
+## false when it is known already, empty or not written (read_only).
+func career_hall_add(entry: Dictionary) -> bool:
+	var key: String = str(entry.get("key", ""))
+	if key == "" or read_only or career_hall_has(key):
+		return false
+	var d: Dictionary = career()
+	var hall: Array = [entry]
+	hall.append_array(career_hall())
+	if hall.size() > CAREER_HALL_MAX:
+		hall.resize(CAREER_HALL_MAX)
+	var titles: Array = Array(career_titles())
+	for t: Variant in (entry.get("titles", []) as Array if entry.get("titles", []) is Array else []):
+		if not titles.has(str(t)):
+			titles.append(str(t))
+	d["v"] = 1
+	d["hall"] = hall
+	d["titles"] = titles
+	return _atomic_write(career_path(), d) == OK
+
+
+## The titles earned on this device (09 §2.8), in the order of their first award.
+func career_titles() -> PackedStringArray:
+	var out: PackedStringArray = []
+	var raw: Variant = career().get("titles", [])
+	for t: Variant in (raw as Array if raw is Array else []):
+		out.append(str(t))
+	return out
+
+
+## A one-time cue `key` was shown on this device (career "seen").
+func career_seen(key: String) -> bool:
+	var raw: Variant = career().get("seen", [])
+	return raw is Array and (raw as Array).has(key)
+
+
+## Marks the one-time cue `key` as shown (read_only: nothing written).
+func career_mark(key: String) -> void:
+	if career_seen(key):
+		return
+	var raw: Variant = career().get("seen", [])
+	var seen: Array = (raw as Array).duplicate() if raw is Array else []
+	seen.append(key)
+	career_set("seen", seen)
 
 
 ## "" or why Game.state may not be saved into `slot` now: a season saves only into its own slot and never during a

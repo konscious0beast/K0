@@ -156,6 +156,7 @@ func _make_script() -> void:
 				["kai", "… Graf?"], ["mopsula", "GRAF MOPSULA, bitte. Mit Titel, %s. Es ist gleich Mitternacht." % kai],
 				["mod", hero_pick_line()]]},
 	]
+	(shots[3]["lines"] as Array).append_array(season_lines())      # Staffeln (09 §0.5, ST1-H)
 	(shots[3]["lines"] as Array).append_array(persona_lines())     # Casting (08 §4.2 H1)
 
 
@@ -565,3 +566,17 @@ func _build_ui() -> void:
 			_skip_ring.draw_arc(c, 11.0, -PI * 0.5, -PI * 0.5 + TAU * clampf(_hold / HOLD_TO_SKIP, 0.0, 1.0), 32,
 				UiTheme.C_ACCENT, 3.0, true))
 	skip_frame.add_child(_skip_ring)
+
+
+# --- Staffeln (09, ST1-H) ---------------------------------------------------------------------------------------------
+
+## 09 §0.5: in a season M.O.D. welcomes the candidate to it in the studio ("Willkommen in Staffel 37! Jede Etage
+## stürzt pünktlich ein. Pünktlicher als jeder Zug.", season_welcome with {count} = its number); [] without a season.
+func season_lines() -> Array[Array]:
+	var out: Array[Array] = []
+	if Game.state == null or Game.state.season == null:
+		return out
+	var text: String = UiUtil.mod_line("season_welcome", {"count": Game.state.season.number}, Game.state.season.number)
+	if text != "":
+		out.append(["mod", text])
+	return out

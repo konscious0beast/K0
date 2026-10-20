@@ -94,6 +94,7 @@ class BigMap extends CanvasLayer:
 			l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			r.add_child(l)
 			side.add_child(r)
+		ExplorationHud.season_legend(side)        # Staffeln (09 §3.3, ST1-H): "NEU" of the programme doors
 		side.add_child(UiUtilB.spacer(0, 0, true))
 		var hint: HBoxContainer = UiUtilB.hbox(12)
 		hint.add_child(InputGlyphB.make(&"map", "Schließen", 16))
@@ -184,6 +185,7 @@ func _ready() -> void:
 	if bool(_params.get("capture", false)):
 		_start_demo()
 	_rt_ready()                                   # Echtzeitkampf (07, R3)
+	_season_ready()                               # Staffeln (09, ST1-H): the collapse display, the counter
 
 
 ## Detached stack screen (ExplorationScene during battles / safe room, §9.2): handlers only mark work as dirty; it is
@@ -648,7 +650,7 @@ func _on_timer_expired() -> void:
 
 
 func _update_timer_visibility() -> void:
-	_timer_panel.visible = _timer_started
+	_timer_panel.visible = _timer_started and not _season_calendar()   # ST1-H: a calendar season shows its collapse
 
 
 ## Light screenshake: HUD layer offset + active camera h/v offset (restored afterwards).
@@ -851,6 +853,7 @@ func _rt_ready() -> void:
 ## The target of a pull ({} hides it; ExplorationScene.pull_frame_model): the frame below the floor name / timer /
 ## quest column, the marker at the lead, and on touch the action button with slot 1's symbol (07 §7.3).
 func set_pull_target(model: Dictionary) -> void:
+	_season_pull(model)                           # Staffeln (09 H-23, ST1-H): the counter makes room for the frame
 	var col: Control = _frame.get_node_or_null("TopCenter") as Control
 	if col != null:
 		_target_view.set("top", col.position.y + col.size.y + 10.0)
@@ -898,3 +901,325 @@ func _on_rt_overlay_mode(p_mode: StringName) -> void:
 ## True while the real-time combat hides this HUD (tests).
 func is_combat_hidden() -> bool:
 	return _frame != null and not _frame.visible
+
+
+# --- Staffeln (09, ST1-H) ---------------------------------------------------------------------------------------------
+# The collapse display of a calendar season (09 §2.5 Nr. 6) sits in the top centre instead of the frozen countdown: one
+# line "Einsturz Do 20:00 · in 1 T 4 Std." in local time (below the floor on air: "Etage 4 · Einsturz …"), calm —
+# from 1 h gold, from 10 min orange, the last minute a slow glow; never red, no shake, no beep (09 §2.9, §10: neutral,
+# no pressure). Between the recorded 60-s clock steps it counts on with the wall clock (seen_unix × season_speed).
+# M.O.D. names each threshold once per floor (season_warn_3600 / _600 / _60). Am Stück keeps today's countdown. From
+# floor 2 the counter (09 §2.3: "Weiße Weste 41/100 · Platz 12") is the line under it (H-6: under the collapse
+# display, not beside the LIVE badge — the floor names are long at 1280 px). One-time cues (09 §0.5; career "seen"):
+# the collapse when it first shows, the counter on floor 2. Once per floor and session: the Pechvogel in need (09
+# §4.3, "Helfen" in the pause tab "Staffel"), the rival before the Revier-Boss's door and the time after the fight.
+# Presentation only — nothing here records a command.
+
+const SeasonView := preload("res://scenes/ui/season_view.gd")
+const SEASON_TICK_SEC: float = 0.5
+const SEASON_SLOW_TICKS: int = 10           # the counter, the rank and the Pechvogel every 5 s (CastSim reads)
+
+## Lines said in this session (key → true): per season (day 0), floor and kind.
+static var season_said: Dictionary = {}
+
+var season_panel: PanelContainer = null
+var season_counter: Label = null
+var _season_text: Label
+var _season_icon: Control
+var _season_timer: Timer
+var _season_level: int = -1
+var _season_tempo: String = ""
+var _season_ticks: int = 0
+var _season_glow: float = 0.0
+var _season_rival_pending: bool = false
+var _season_intro_pending: bool = false
+var _season_seen: Dictionary = {}           # career "seen" keys read once (Save.career reads the file)
+var _season_cast_at: String = ""            # _season_cast_key of the cached cast reads
+var _season_cast: Dictionary = {}           # "counter", "rank", "need", "need_label" (_season_read)
+var _season_reads: Array[String] = []       # the cast reads still due after a change, one per tick
+var _season_targeting: bool = false         # a pull target is shown: the counter line makes room (_season_pull)
+
+
+## A calendar season: the floor countdown is frozen (SeasonRules.floor_timer_frozen) — the collapse display replaces it.
+static func _season_calendar() -> bool:
+	return Game.state != null and Game.state.season != null and Game.state.season.tempo == "calendar"
+
+
+func _season_ready() -> void:
+	if Game.state == null or Game.state.season == null:
+		return
+	var col: VBoxContainer = _frame.get_node_or_null("TopCenter") as VBoxContainer
+	if col == null:
+		return
+	season_panel = PanelContainer.new()
+	season_panel.name = "Collapse"
+	season_panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	season_panel.visible = false
+	col.add_child(season_panel)
+	col.move_child(season_panel, _timer_panel.get_index() + 1)
+	var row: HBoxContainer = UiUtil.hbox(10)
+	season_panel.add_child(row)
+	_season_icon = UiIcon.make(&"clock", UiTheme.C_TEXT, 22)
+	_season_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(_season_icon)
+	_season_text = UiUtil.label("", &"", 20)
+	_season_text.name = "CollapseText"
+	_season_text.add_theme_font_override("font", UiTheme.font_bold())
+	_season_text.add_theme_constant_override("outline_size", 0)   # on its panel: one draw call, not two
+	row.add_child(_season_text)
+	season_counter = UiUtil.label("", &"", 16, UiTheme.C_TEXT)
+	season_counter.name = "Counter"
+	season_counter.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	season_counter.add_theme_constant_override("outline_size", 4)
+	season_counter.add_theme_color_override("font_outline_color", UiUtil.C_INK)
+	season_counter.visible = false
+	col.add_child(season_counter)
+	col.move_child(season_counter, season_panel.get_index() + 1)
+	_season_style(0)
+	_season_intro_pending = not _season_was_seen("season_collapse_intro")
+	Events.room_entered.connect(_season_on_room)
+	Events.battle_ended.connect(_season_on_battle_ended)
+	_season_timer = Timer.new()
+	_season_timer.name = "SeasonTick"
+	_season_timer.wait_time = SEASON_TICK_SEC
+	_season_timer.timeout.connect(_season_tick)
+	add_child(_season_timer)
+	_season_timer.start()
+	# The collapse display from the first frame; the cast reads behind the counter follow on the ticks (one per 0.5 s,
+	# the line shows once counter and place are read): the build of a floor reads no cast (PERFORMANCE.md §3.11).
+	_season_ticks = SEASON_SLOW_TICKS
+	_season_tick()
+
+
+## The collapse display, the counter and the warnings now — the cast reads at once instead of one per tick (the tests'
+## and the captures' way to refresh the HUD).
+func season_refresh() -> void:
+	_season_ticks = SEASON_SLOW_TICKS
+	_season_cast_at = ""
+	_season_tick()
+	var st: GameState = Game.state
+	while not _season_reads.is_empty() and st != null and st.season != null and st.floor_run != null:
+		_season_read(st, _season_reads.pop_front())
+
+
+func _season_tick() -> void:
+	if not is_inside_tree() or season_panel == null:
+		return
+	var st: GameState = Game.state
+	var s: SeasonState = st.season if st != null else null
+	if s == null or st.floor_run == null:
+		season_panel.visible = false
+		season_counter.visible = false
+		return
+	if s.tempo != _season_tempo:                  # "Am Stück" from the pause tab: the countdown comes back
+		_season_tempo = s.tempo
+		if s.tempo == "binge":
+			_set_seconds(floori(Game.time_left()))
+		_update_timer_visibility()
+	var cv: Dictionary = {}
+	if s.tempo == "calendar" and _timer_started:
+		var extra: int = 0
+		if s.seen_unix > 0 and Game.season_live_clock:
+			var wall: int = int(Time.get_unix_time_from_system())
+			var speed: int = clampi(Game.season_speed, 1, Game.SEASON_SPEED_MAX)
+			extra = clampi((wall - s.seen_unix) * speed, 0, Game.SEASON_CLOCK_STEP_SEC * speed)
+		cv = SeasonView.collapse_view(st, extra, SeasonView.tz_offset())
+	season_panel.visible = not cv.is_empty()
+	if not cv.is_empty():
+		_season_text.text = UiUtil.glyph_safe("%s · %s" % [str(cv["text"]), str(cv["sub"])])
+		var level: int = int(cv["level"])
+		if level != _season_level:
+			_season_style(level)
+			_season_level = level
+		if level > 0:
+			_season_warn(st, level, int(cv["left"]))
+		if level == 3:
+			_season_glow += SEASON_TICK_SEC
+			var a: float = 0.55 + 0.45 * (0.5 + 0.5 * cos(_season_glow * PI))
+			(season_panel.get_theme_stylebox("panel") as StyleBoxFlat).border_color.a = a
+		if _season_intro_pending and _season_say("season_collapse_intro", {"floor": st.floor_run.index}, "intro"):
+			_season_mark("season_collapse_intro")
+			_season_intro_pending = false
+	if _season_rival_pending:
+		_season_rival_after(st)
+	if not _season_reads.is_empty():              # one cast read per tick after a change (_season_slow)
+		_season_read(st, _season_reads.pop_front())
+	_season_ticks += 1
+	if _season_ticks >= SEASON_SLOW_TICKS:
+		_season_ticks = 0
+		_season_slow(st)
+
+
+## Every 5 s: the counter line (from floor 2), its first explanation, the Pechvogel of the floor. CastSim rebuilds its
+## model from the season block on every call (≈ 3 ms; the rank ≈ 6 ms): the reads run only when their inputs moved
+## (_season_cast_key: a command changed the cast or the candidate's standing, at the latest after a minute) and then
+## one per 0.5-s tick — the 5-s tick itself costs next to nothing (PERFORMANCE.md §3.11).
+func _season_slow(st: GameState) -> void:
+	var ck: String = _season_cast_key(st)
+	if ck != _season_cast_at:
+		_season_cast_at = ck
+		_season_reads.clear()
+		if CastSim.has_cast(st):
+			if st.floor_run.index >= 2:
+				_season_reads.append("counter")
+				_season_reads.append("rank")
+			_season_reads.append("need")
+	_season_show(st)
+
+
+## One cast read of the HUD (counter | rank | need — the label only when the Pechvogel changed), then the lines.
+func _season_read(st: GameState, what: String) -> void:
+	match what:
+		"counter":
+			_season_cast["counter"] = SeasonView.counter(st, DB.data)
+		"rank":
+			_season_cast["rank"] = CastSim.rank_of(st, DB.data, 0)
+		"need":
+			var need: int = CastSim.in_need(st, DB.data)
+			if need != int(_season_cast.get("need", -1)):
+				_season_cast["need"] = need
+				_season_cast["need_label"] = CastSim.label(st, DB.data, need) if need >= 0 else ""
+	_season_show(st)
+
+
+## The counter line from the cached reads (hidden until counter and place were read once) and the cues that go with it.
+func _season_show(st: GameState) -> void:
+	var s: SeasonState = st.season
+	var has_cast: bool = CastSim.has_cast(st)
+	var c: Dictionary = _season_cast.get("counter", {}) as Dictionary
+	var show_counter: bool = st.floor_run.index >= 2 and has_cast and not c.is_empty() and _season_cast.has("rank") \
+		and not _season_targeting
+	season_counter.visible = show_counter
+	if show_counter:
+		var rank: int = int(_season_cast.get("rank", 0))
+		season_counter.text = UiUtil.glyph_safe(str(c.get("text", "")) + (" · Platz %d" % rank if rank > 0 else ""))
+		var key: String = "season_counter_intro_" + str(c.get("kind", "vest"))
+		if not _season_was_seen(key) and _season_say("season_vest" if c.get("kind", "vest") == "vest"
+				else "season_counter_in", {}, key):
+			_season_mark(key)
+	var need_label: String = str(_season_cast.get("need_label", ""))
+	if has_cast and st.floor_run.location == &"start" and s.result == "" and need_label != "":
+		_season_say("season_need", {"cand": need_label}, "need")
+
+
+## A pull target is shown or gone (set_pull_target, every physics frame while one is): the counter line makes room — the
+## target frame stands right below the collapse display, and the HUD keeps the exploration's UI budget with the frame
+## (09 H-23, PERFORMANCE.md §3.11); it comes back when the target goes.
+func _season_pull(model: Dictionary) -> void:
+	var targeting: bool = not model.is_empty()
+	if season_counter == null or targeting == _season_targeting:
+		return
+	_season_targeting = targeting
+	var st: GameState = Game.state
+	if st != null and st.season != null and st.floor_run != null:
+		_season_show(st)
+
+
+## What the HUD's cast reads depend on (cheap to build): the cast's stored rows, clock and bookkeeping (they change
+## only with a command), the candidate's sort key and pause shift, the floor, the result — and the wall-clock minute,
+## so nothing stays stale for longer than that. Not the season clock: Am Stück it moves every 0.4 s.
+func _season_cast_key(st: GameState) -> String:
+	var s: SeasonState = st.season
+	var c: Dictionary = s.cast
+	return "%d|%s|%s|%s|%s|%s|%s|%d|%d|%s|%s|%d" % [str(c.get("state", "")).hash(), str(c.get("h", 0)),
+		str(c.get("seq", 0)), str(c.get("favors", 0)), str(c.get("helped", 0)), str(c.get("lead", -1)),
+		str(SeasonRules.rank_key(st)), CastSim.pause_total(s), st.floor_run.index, s.result, str(s.vest),
+		Time.get_ticks_msec() / 60000]
+
+
+func _season_was_seen(key: String) -> bool:
+	if not _season_seen.has(key):
+		_season_seen[key] = Save.career_seen(key)
+	return bool(_season_seen[key])
+
+
+func _season_mark(key: String) -> void:
+	_season_seen[key] = true
+	Save.career_mark(key)
+
+
+## M.O.D. on a warning threshold (once per floor and level in this session): "Noch {min} Minuten …" — on the last
+## floor of the format no stairs are advised (season_warn_last; the last minute is the same everywhere).
+func _season_warn(st: GameState, level: int, left: int) -> void:
+	var sec: int = SeasonView.WARN_SEC[level - 1]
+	var tag: String = "season_warn_%d" % sec
+	if level < 3 and st.floor_run.index >= st.season.format:
+		tag = "season_warn_last"
+	_season_say(tag, {"floor": st.floor_run.index, "min": maxi(1, ceili(left / 60.0))}, "warn_%d" % sec)
+
+
+## Show.say once per season, floor and `kind` in this session (true when it was said now or before).
+func _season_say(tag: String, ctx: Dictionary, kind: String) -> bool:
+	var st: GameState = Game.state
+	var key: String = "%d:%d:%s" % [st.season.day0_utc, st.floor_run.index, kind]
+	if season_said.has(key):
+		return true
+	if Show.say(tag, ctx) == "":
+		return false
+	season_said[key] = true
+	return true
+
+
+## The display's look per level: calm (0), gold (≤ 1 h), orange (≤ 10 min and the last minute, which glows).
+func _season_style(level: int) -> void:
+	var col: Color = UiTheme.C_TEXT
+	if level == 1:
+		col = UiTheme.C_GOLD
+	elif level >= 2:
+		col = UiUtil.C_SODIUM
+	var border: Color = Color(UiTheme.C_ACCENT_2, 0.6) if level == 0 else col
+	season_panel.add_theme_stylebox_override("panel", UiUtil.box_style(Color(UiTheme.C_PANEL, 0.88), border, 2, 0.21,
+		18, 4))
+	_season_text.add_theme_color_override("font_color", col)
+	_season_icon.set("color", col)
+
+
+## The rival before the Revier-Boss's door (09 §4.3): entering a room next to it while the boss stands.
+func _season_on_room(cell: Vector2i, _kind: int, _first: bool) -> void:
+	var st: GameState = Game.state
+	if not is_inside_tree() or st == null or st.season == null or st.floor_run == null:
+		return
+	if st.floor_run.quarter_boss_defeated or not CastSim.has_cast(st) or st.season.result != "":
+		return
+	var layout: FloorLayout = minimap.get("layout") as FloorLayout if minimap != null else null
+	if layout == null or layout.quarter_boss == Vector2i(-1, -1) or not layout.linked(layout.quarter_boss).has(cell):
+		return
+	if season_said.has("%d:%d:rival" % [st.season.day0_utc, st.floor_run.index]):
+		return                                    # said on this floor: no cast reads on the next door
+	var who: int = CastSim.rival_near(st, DB.data)
+	if who >= 0:
+		_season_say("season_rival", {"cand": CastSim.label(st, DB.data, who)}, "rival")
+
+
+## After the Revier-Boss fall the rival compares the time ("Sie waren 4 Minuten schneller. Ich bin entsetzt.") — said
+## when the HUD is back (it is detached during the combat).
+func _season_on_battle_ended(outcome: int, encounter_id: String) -> void:
+	var st: GameState = Game.state
+	if st == null or st.season == null or st.floor_run == null or outcome != BattleResult.Outcome.VICTORY:
+		return
+	var def: FloorDef = DB.floor_def(st.floor_run.index)
+	if def != null and encounter_id == def.quarter_boss \
+			and season_said.has("%d:%d:rival" % [st.season.day0_utc, st.floor_run.index]):
+		_season_rival_pending = true
+
+
+func _season_rival_after(st: GameState) -> void:
+	_season_rival_pending = false
+	var who: int = CastSim.rival_near(st, DB.data)
+	if who < 0:
+		return
+	var mins: int = 2 + SeedUtil.derive(st.seed, "rival_time", st.floor_run.index) % 8   # flavour, never recorded
+	_season_say("season_rival_after", {"cand": CastSim.label(st, DB.data, who), "min": mins}, "rival_after")
+
+
+## The big map's legend line of the programme doors (09 §3.3, C-5: "NEU" on the map) — in a season only.
+static func season_legend(side: VBoxContainer) -> void:
+	if Game.state == null or Game.state.season == null:
+		return
+	var r: HBoxContainer = UiUtil.hbox(12)
+	r.name = "LegendNew"
+	r.add_child(MinimapScript.swatch("new", 30.0))
+	var l: Label = UiUtil.label("NEU im Programm", &"", 18, UiTheme.C_GOLD)
+	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	r.add_child(l)
+	side.add_child(r)

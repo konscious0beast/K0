@@ -19,7 +19,7 @@ var player_cell: Vector2i = Vector2i(-1, -1)
 var player_yaw: float = 0.0
 var big: bool = false
 var show_unvisited: bool = false        # debug/capture: draw every cell
-var swatch_kind: String = ""            # legend swatch: "player" | "start" | "safe" | "stairs" | "boss" | "gate"
+var swatch_kind: String = ""            # legend: "player" | "start" | "safe" | "stairs" | "boss" | "gate" | "new"
 var _blink: float = 0.0
 ## Everything goes out as ONE triangle array (icon_mesh.gd, 02_TECH §12.1: before, every cell, door, marker and gate
 ## was its own canvas draw call — ~150 with the whole floor visited). The cell layer is cached until the view, the
@@ -155,6 +155,7 @@ func build_mesh() -> IconMesh:
 		_cells_mesh = _mesh_cells(origin, cs, opened)
 		_cells_key = key
 	m.append(_cells_mesh)
+	_season_marks(m, origin, cs)                # Staffeln (09 §3.3, ST1-H): "NEU" at the open programme doors
 	if player_cell.x >= 0 and layout.cells.has(player_cell):
 		var pc: Vector2 = origin + (Vector2(player_cell) + Vector2(0.5, 0.5)) * cs
 		var fwd: Vector2 = Vector2(-sin(player_yaw), -cos(player_yaw))
@@ -253,6 +254,8 @@ func _mesh_swatch(m: IconMesh) -> void:
 	if swatch_kind == "gate":
 		m.line(c + Vector2(cs * 0.5 - 1.0, -cs * 0.28), c + Vector2(cs * 0.5 - 1.0, cs * 0.28), UiTheme.C_DANGER,
 			maxf(3.0, cs * 0.14))
+	elif swatch_kind == "new":                  # ST1-H: the legend of the programme doors
+		_season_diamond(m, c, cs * 0.3)
 	elif swatch_kind == "player":
 		var alen: float = cs * 0.32
 		var pts: PackedVector2Array = [c + Vector2(0, -alen), c + Vector2(alen * 0.7, alen * 0.6),
@@ -310,3 +313,33 @@ func _mesh_marker(m: IconMesh, cr: Rect2, rc: RoomCell) -> void:
 			m.circle(c, s * 0.35, UiUtil.C_INK, true)
 		RoomCell.Kind.START:
 			m.ring(c, s * 0.45, Color(UiUtil.C_PAPER, 0.7), 2.0, true)
+
+
+# --- Staffeln (09, ST1-H) ---------------------------------------------------------------------------------------------
+# 09 §3.3, C-5: a programme point opens its door (ZoneGenerator.open_programme_doors); until its room was entered the
+# door carries a gold "NEU" diamond on the map (only at a door the candidate has seen: its cell is known).
+
+## The NEU marks of the open, unvisited programme rooms (a season with generator-v2 floors only).
+func _season_marks(m: IconMesh, origin: Vector2, cs: float) -> void:
+	var fr: FloorRun = Game.state.floor_run if Game.state != null and Game.state.season != null else null
+	if fr == null or layout.programme.is_empty():
+		return
+	for p: Dictionary in layout.programme:
+		var room: Vector2i = p.get("cell", Vector2i(-1, -1))
+		if int(p.get("n", 0)) > fr.daily.size() or visited.has(room) or fr.visited.has(room):
+			continue
+		for g: Dictionary in layout.gates:
+			if str(g.get("key", "")) != str(p.get("key", "")):
+				continue
+			var gcell: Vector2i = g.get("cell", Vector2i.ZERO)
+			var i: int = DOOR_BITS.find(int(g.get("dir", 1)))
+			if i < 0 or (not show_unvisited and not visited.has(gcell)):
+				continue
+			var c: Vector2 = origin + (Vector2(gcell) + Vector2(0.5, 0.5) + Vector2(DIRS[i]) * 0.5) * cs
+			_season_diamond(m, c, maxf(4.0, cs * 0.3) * (0.9 + 0.1 * sin(_blink * TAU)))
+
+
+func _season_diamond(m: IconMesh, c: Vector2, r: float) -> void:
+	var pts: PackedVector2Array = [c + Vector2(0, -r), c + Vector2(r, 0), c + Vector2(0, r), c + Vector2(-r, 0)]
+	m.poly(pts, UiTheme.C_GOLD)
+	m.polyline(pts, UiUtil.C_INK, 1.5, true)

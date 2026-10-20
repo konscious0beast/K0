@@ -111,7 +111,7 @@ func _enable_buttons() -> void:
 
 
 func _first_button() -> Button:
-	for id: String in ["result", "load", "title"]:
+	for id: String in ["result", "summary", "load", "title"]:
 		if buttons.has(id) and not (buttons[id] as Button).disabled:
 			return buttons[id]
 	return buttons["title"]
@@ -151,8 +151,11 @@ func _build() -> void:
 	head.add_child(hc)
 	hc.add_child(UiUtil.label("SENDESCHLUSS", &"LabelTitle", 58, UiTheme.C_DANGER))
 	var why: String = "Die Etage ist eingestürzt." if reason == &"timer" else "Die Party ist gefallen."
+	if season_out():                              # Staffeln (09 §7.2, ST1-H): out of the season, a studio guest
+		why = _season_why()
 	hc.add_child(UiUtil.label(why, &"", 22, UiTheme.C_TEXT_DIM))
-	var quote: String = UiUtil.mod_line("timer_expired" if reason == &"timer" else "death")
+	var quote: String = UiUtil.mod_line("season_out" if season_out() else ("timer_expired" if reason == &"timer"
+		else "death"))
 	if quote != "":
 		var q: Label = UiUtil.label("M.O.D.: „%s“" % quote, &"", 20, UiTheme.C_ACCENT_2)
 		q.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -192,6 +195,8 @@ func _build() -> void:
 	if Game.mode == &"event_offline":
 		var rb: Button = _button("result", "Auswertung", to_result)
 		list.append(rb)
+	elif season_out():                            # ST1-H: the season summary (Zeitraffer bis zum Finale), no load
+		list.append(_button("summary", "Staffel-Bilanz", to_summary))
 	else:
 		var lb: Button = _button("load", "Letzten Spielstand laden", load_last)
 		lb.disabled = not can_load()
@@ -200,7 +205,12 @@ func _build() -> void:
 		list.append(lb)
 	list.append(_button("title", "Zum Titel", to_title))
 	UiUtil.wire_horizontal(list)
-	if not (Game.mode == &"event_offline"):
+	if season_out():
+		var sn: Label = UiUtil.label("Ihre Figur geht in die Ruhmeshalle. Eine neue Staffel können Sie sofort beginnen.",
+			&"", 16, UiTheme.C_TEXT_DIM)
+		sn.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		inner.add_child(sn)
+	elif not (Game.mode == &"event_offline"):
 		var load_ok: bool = not (buttons["load"] as Button).disabled
 		var note: Label = UiUtil.label("Beim Laden gibt es mindestens 3:00 Gnadenfrist." if load_ok
 			else "Kein gespeicherter Spielstand in diesem Slot.", &"LabelSmall", 15)
@@ -235,3 +245,30 @@ func _button(id: String, text: String, cb: Callable) -> Button:
 	_button_row.add_child(b)
 	buttons[id] = b
 	return b
+
+
+# --- Staffeln (09, ST1-H) ---------------------------------------------------------------------------------------------
+# Ohne Netz from floor 2 a death or a collapse ends the season for the candidate (09 §7.2): the Sendeschluss says
+# "Verschüttet / Gefallen auf Etage N — ab jetzt Studiogast", M.O.D.'s season_out line, and offers the Staffel-Bilanz
+# (the Zeitraffer bis zum Finale) instead of a load — a finished season does not load (B-18), there is no grace time.
+
+const SEASON_SUMMARY: String = "res://scenes/ui/season_summary.tscn"
+
+
+## The candidate is out of a season (fallen, buried).
+func season_out() -> bool:
+	var s: SeasonState = Game.state.season if Game.state != null else null
+	return s != null and (s.result == "fallen" or s.result == "buried")
+
+
+func to_summary() -> void:
+	if _busy:
+		return
+	_busy = true
+	Router.goto(SEASON_SUMMARY)
+
+
+func _season_why() -> String:
+	var s: SeasonState = Game.state.season
+	return "%s auf Etage %d — ab jetzt Studiogast." % ["Verschüttet" if s.result == "buried" else "Gefallen",
+		s.result_floor]

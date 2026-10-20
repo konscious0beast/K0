@@ -13,6 +13,8 @@ static func start_new_game(slot: int, player_name: String, skip_intro: bool, see
 		difficulty: StringName = &"prime", hero_id: String = "kai", persona: PersonaProfile = null) -> bool:
 	var name_clean: String = clean_name(player_name)
 	var s: int = seed if seed != -1 else boot_seed
+	if not pending_season.is_empty():                  # Staffeln (09 §2.2, ST1-H): "Sendung starten" / "Neue Staffel"
+		return _start_season(slot, name_clean, skip_intro, s, difficulty, hero_id, persona)
 	Game.new_game(slot, name_clean, s, difficulty, hero_id, persona)
 	if not Game.has_state():
 		push_warning("[Title] new game failed (no state)")
@@ -40,6 +42,9 @@ static func clean_name(player_name: String) -> String:
 ## at the saved location (§6.4).
 ## Returns the load error (OK on success).
 static func load_and_route(slot: int) -> Error:
+	if Save.season_finished(Save.slot_summary(slot)):  # Staffeln (09, ST1-H): a finished season is in the hall of fame
+		Router.goto(Game.SCENE_HALL_OF_FAME, {"slot": slot})
+		return OK
 	var err: Error = Save.load_slot(slot)
 	if err != OK:
 		return err
@@ -81,3 +86,31 @@ static func parse_args(args: PackedStringArray) -> Dictionary:
 		elif a.begins_with("--goto="):
 			out["goto"] = a.trim_prefix("--goto=")
 	return out
+
+
+# --- Staffeln (09 §2.2, ST1-H): a new season through the single new-game path --------------------------------------
+# "Sendung starten" / "Neue Staffel" (scenes/title/season_setup) set the season of the next new game and route through
+# the slot selection, the hero choice and the casting like "Neues Spiel"; start_new_game then starts the season
+# (Game.start_season: the start command before floor → hero → persona) instead of a campaign game. The title clears it.
+
+## {"def": ssn_ id, "opts": the options of Game.start_season ("tempo", "mode", "air_time")}; {} = a campaign game.
+static var pending_season: Dictionary = {}
+
+
+## Game.start_season with the pending season (cleared once it started; kept when it is refused, so a retry of the
+## casting stays a season), then the intro (or the exploration with skip_intro).
+static func _start_season(slot: int, player_name: String, skip_intro: bool, seed: int, difficulty: StringName,
+		hero_id: String, persona: PersonaProfile) -> bool:
+	var opts: Dictionary = (pending_season.get("opts", {}) as Dictionary).duplicate()
+	opts["seed"] = seed
+	opts["difficulty"] = String(difficulty)
+	opts["name"] = player_name
+	if not Game.start_season(slot, str(pending_season.get("def", "")), opts, hero_id, persona):
+		push_warning("[Title] the season could not start")
+		return false
+	pending_season = {}
+	if skip_intro:
+		Router.goto(Router.SCENE_EXPLORATION, {"spawn": &"start"})
+	else:
+		Router.goto(Router.SCENE_INTRO)
+	return true

@@ -7,8 +7,8 @@ extends CanvasLayer
 ## process_mode WHEN_PAUSED — also every page and dialog opened from here (§9.4). tab_prev / tab_next switch tabs.
 ## Layout: one tab bar (icon over caption, 64 px visible / 88 px hit, 12 px apart) with the close button at its end;
 ## ui_left/ui_right move along the bar, ui_down enters the page, ui_cancel in a page returns to the bar.
-## setup({"tab": "party"|"inventory"|"equipment"|"skills"|"show"|"achievements"|"bestiary"|"settings", "context":
-## "explore"|"safe_room"}).
+## setup({"tab": "party"|"inventory"|"equipment"|"skills"|"show"|"achievements"|"bestiary"|"settings" (in a season also
+## "season", ST1-H), "context": "explore"|"safe_room"}).
 
 signal closed()
 
@@ -138,7 +138,7 @@ func show_tab(tab: String) -> void:
 	for id: Variant in _tab_buttons.keys():
 		var b: Button = _tab_buttons[id]
 		b.button_pressed = str(id) == tab
-	for t: Dictionary in TABS:
+	for t: Dictionary in _tabs():
 		if str(t["id"]) == tab:
 			_page_title.text = str(t["label"]).to_upper()
 
@@ -197,7 +197,7 @@ func _release_pause() -> void:
 
 func _page_ids() -> Array[String]:
 	var out: Array[String] = []
-	for t: Dictionary in TABS:
+	for t: Dictionary in _tabs():
 		if str(t["id"]) != "title":
 			out.append(str(t["id"]))
 	return out
@@ -210,7 +210,7 @@ func _make_page(tab: String) -> Control:
 			page = (load(SETTINGS) as PackedScene).instantiate() as Control
 			page.call("setup", {"framed": false})
 	else:
-		for t: Dictionary in TABS:
+		for t: Dictionary in _tabs():
 			if str(t["id"]) == tab and str(t["script"]) != "":
 				page = (load(str(t["script"])) as GDScript).new() as Control
 	if page == null:
@@ -256,6 +256,8 @@ func _show_status(text: String) -> void:
 
 
 func _info_text() -> String:
+	if _season_tab():                              # Staffeln (09 §2.5, ST1-H): the collapse, never a frozen countdown
+		return _season_info()
 	var parts: PackedStringArray = []
 	if Game.state != null and Game.state.floor_run != null:
 		var def: FloorDef = Game.floor_def()
@@ -306,7 +308,7 @@ func _build() -> void:
 	var tabs: HBoxContainer = UiUtil.hbox(12)       # 12 px between the 88 px hit areas
 	tabs.name = "Tabs"
 	outer.add_child(tabs)
-	for t: Dictionary in TABS:
+	for t: Dictionary in _tabs():                     # ST1-H: + "Staffel" in a season
 		var id: String = str(t["id"])
 		var caption: String = "Ausloggen" if id == "title" and _season_tab() else str(t["label"])   # ST1-G
 		var b: Button = _tab_button(t["icon"] as StringName, caption,
@@ -417,3 +419,59 @@ func _season_logout() -> Node:
 			(_tab_buttons["title"] as Control).grab_focus())
 	add_child(d)
 	return d
+
+
+# --- Staffeln (09, ST1-H) ---------------------------------------------------------------------------------------------
+# In a season the tab "Staffel" follows "Party" (09 §2.4, §4.6: the schedule, the programme, the ranking, the ticker,
+# the actions — scenes/ui/season_tab.gd); the head line names the collapse of the candidate's floor in local time
+# (calendar) or the countdown (Am Stück) instead of "Restzeit … (angehalten)". The season dialogs of the page are modal
+# like the confirm (season_modal); "Staffel beenden" closes the menu first (season_close), then Game leaves the season.
+
+const SeasonView := preload("res://scenes/ui/season_view.gd")
+const SEASON_TAB: Dictionary = {"id": "season", "label": "Staffel", "icon": &"tv",
+	"script": "res://scenes/ui/season_tab.gd"}
+
+
+## The tabs of this menu: TABS, in a season with "Staffel" after "Party".
+func _tabs() -> Array[Dictionary]:
+	if not _season_tab():
+		return TABS
+	var out: Array[Dictionary] = []
+	for t: Dictionary in TABS:
+		out.append(t)
+		if str(t["id"]) == "party":
+			out.append(SEASON_TAB)
+	return out
+
+
+## A season dialog over the menu (process ALWAYS, layer 61): modal — no tab switching behind it.
+func season_modal(d: Node) -> void:
+	_confirm = d
+
+
+## Closes the menu for a route of the season ("Staffel beenden"): unpaused, without the cancel sound.
+func season_close() -> void:
+	if _closing:
+		return
+	_closing = true
+	_release_pause()
+	closed.emit()
+	queue_free()
+
+
+## "ETAGE 2 – PASSAGE …   ·   Einsturz Do 20:00 (in 1 T 4 Std.)   ·   1.234 Cr   ·   Spielzeit 1:02:03".
+func _season_info() -> String:
+	var parts: PackedStringArray = []
+	var st: GameState = Game.state
+	if st != null and st.floor_run != null:
+		var def: FloorDef = Game.floor_def()
+		parts.append("ETAGE %d" % st.floor_run.index if def == null else UiUtil.tr_text(def.name))
+		var cv: Dictionary = SeasonView.collapse_view(st, 0, SeasonView.tz_offset())
+		if not cv.is_empty():
+			parts.append("%s (%s)" % [str(cv["text"]), str(cv["sub"])])
+		elif st.season.tempo == "binge" and st.floor_run.timer_started:
+			parts.append("Countdown %s (steht)" % UiUtil.fmt_time(floori(Game.time_left())))
+	parts.append("%s Cr" % UiUtil.fmt_int(UiUtil.credits()))
+	if st != null:
+		parts.append("Spielzeit %s" % UiUtil.fmt_time(floori(st.play_time_sec)))
+	return "   ·   ".join(parts)

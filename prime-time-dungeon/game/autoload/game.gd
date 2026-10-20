@@ -364,7 +364,7 @@ func continue_after_summary() -> void:
 		Router.goto(Router.SCENE_TITLE)
 		return
 	if state.season != null and state.season.result != "":   # Staffeln (09, ST1-B): the stairs ended the season
-		Router.goto(Router.SCENE_CREDITS)
+		Router.goto(_season_end_path(Router.SCENE_CREDITS))   # ST1-H: the season summary
 		return
 	var idx: int = state.floor_run.index
 	var next: FloorDef = DB.floor_def(idx + 1)
@@ -1866,9 +1866,10 @@ func _season_event(ev: ExploreEvent) -> void:
 ## The deferred route of a season event (after the frame's processing): the exploration of the new floor at
 ## `arg` (its first safe room — entered from there — or the entrance; a floor without playable content shows the
 ## Abspann, like the campaign's last floor), the Sendeschluss screen (reason `arg`), the credits or the title.
-func _season_goto(path: String, arg: String) -> void:
+func _season_goto(p_path: String, arg: String) -> void:
 	if state == null or replaying:
 		return
+	var path: String = _season_end_path(p_path)   # Staffeln (09 §2.7, ST1-H): the season summary at the end
 	timer_running = false
 	if path == Router.SCENE_EXPLORATION:
 		var def: FloorDef = floor_def()
@@ -1902,6 +1903,7 @@ func _season_autosave() -> void:
 		Save.career_set("no_net", true)
 	if state.slot > 0:
 		Save.autosave()
+	_season_hall()                                # Staffeln (09 §2.7, ST1-H): a finished season joins the hall of fame
 
 
 ## The live wall clock of a calendar season (_process; 09 §9.1, V-17): in the season views (exploration, safe room;
@@ -2393,6 +2395,61 @@ func _season_window_title(text: String) -> void:
 	DisplayServer.window_set_title(base + (" — " + text if text != "" else ""))
 	if text != "":
 		DisplayServer.window_request_attention()
+
+
+# --- Staffeln (09 §2.2, §2.7, §2.8, ST1-H): the season UI — its commands, the end of a season, the hall of fame -------
+# The season UI (scenes/title/season_setup, the pause tab "Staffel", the HUD's collapse display, the safe-room guests,
+# the season summary, the hall of fame) reads the season through SeasonRules / CastSim / scenes/ui/season_view.gd and
+# changes it only through the recorded commands below. The end of the candidate's season (finalist, end, out, left)
+# leads to the season summary instead of the Abspann or the title (_season_end_path; the Sendeschluss screen of an
+# Ohne-Netz season links to it); every season save of a finished season records it in the hall of fame of the career
+# (_season_hall, once per season, no name — 08 P-1), and a season the candidate left frees its slot (V-18).
+
+const SCENE_SEASON_SUMMARY: String = "res://scenes/ui/season_summary.tscn"
+const SCENE_HALL_OF_FAME: String = "res://scenes/ui/hall_of_fame.tscn"
+const SEASON_VIEW: String = "res://scenes/ui/season_view.gd"   # loaded at a season's end only (02_TECH §13.2 rule 6)
+
+
+## "Am Stück" (09 §2.1, V-6: private calendar seasons, one way only): {"t": "season", "op": "tempo"}. false = refused.
+func season_tempo_binge() -> bool:
+	return season_op({"t": "season", "v": Command.SEASON_VERSION, "op": "tempo"})
+
+
+## A Sendepause of `days` whole days while awake (09 §2.9: the pause tab "Staffel"; the budget of 14 days per season).
+## false = refused.
+func season_pause_days(days: int) -> bool:
+	return days > 0 and season_op({"t": "season", "v": Command.SEASON_VERSION, "op": "pause",
+		"sec": days * SeasonClock.DAY_SEC, "why": "user"})
+
+
+## "Staffel beenden" (09 §2.2, V-18): {"t": "season", "op": "leave"} — the event "left" saves the season, records it
+## in the hall of fame, frees its slot and shows the season summary. false = refused (asleep, over, in a combat).
+func season_leave() -> bool:
+	return season_op({"t": "season", "v": Command.SEASON_VERSION, "op": "leave"})
+
+
+## Where a route of a season the candidate finished leads: the Abspann and — after "Staffel beenden" — the title become
+## the season summary (09 §2.7: "Abspann, Staffel-Bilanz, Titel"); every other route stays.
+func _season_end_path(path: String) -> String:
+	if state == null or state.season == null or state.season.result == "":
+		return path
+	if path == Router.SCENE_CREDITS or (path == Router.SCENE_TITLE and state.season.result == "left"):
+		return SCENE_SEASON_SUMMARY
+	return path
+
+
+## A finished season joins the hall of fame of the career once (SeasonView.hall_entry: the result, the titles, the
+## Quote and the place, the floors — ids and numbers); a season the candidate left frees its slot (V-18) and is never
+## saved again (slot 0, meta data — not hashed). Live only.
+func _season_hall() -> void:
+	if replaying or state == null or state.season == null or state.season.result == "":
+		return
+	var view: GDScript = load(SEASON_VIEW) as GDScript
+	if not Save.career_hall_has(str(view.call("hall_key", state))):
+		Save.career_hall_add(view.call("hall_entry", state, DB.data, int(Time.get_unix_time_from_system())) as Dictionary)
+	if state.season.result == "left" and state.slot > 0:
+		Save.delete_slot(state.slot)
+		state.slot = 0
 
 
 # ======================================================================================================================

@@ -258,6 +258,7 @@ func _layout_labels() -> void:
 		var lc: Vector2 = level_center(r)
 		var level: int = int(model.get("level", def.level if def != null else 1))   # Staffeln (ST1-C): group level
 		_put("level", str(level), lc - Vector2(LEVEL_R, 9.0), LEVEL_R * 2.0, HORIZONTAL_ALIGNMENT_CENTER)
+		_season_level(r, level)                # Staffeln (09 §3.4, ST1-H): colour and difference beside the plaque
 		_put("dist", ("%.1f m" % float(model.get("dist_m", 0.0))).replace(".", ","), r.position + Vector2(52.0, 28.0),
 			236.0, HORIZONTAL_ALIGNMENT_RIGHT)
 		var first: bool = bool(model.get("first", false))
@@ -352,7 +353,8 @@ func _draw_frame(m: IconMesh) -> void:
 	m.rect(r, CombatStyle.C_PANEL)
 	m.rect(Rect2(r.position, Vector2(r.size.x, 2.0)), CombatStyle.C_GOLD if first else CombatStyle.C_ENEMY)
 	_lead_symbol(m, Rect2(r.position + Vector2(6.0, 8.0), Vector2(40.0, 40.0)))
-	LevelBadge.draw(m, level_center(r), LEVEL_R, CombatStyle.C_GOLD)
+	LevelBadge.draw(m, level_center(r), LEVEL_R, _season_color() if _season_on else CombatStyle.C_GOLD)   # ST1-H
+	_season_warning(m, r)                      # Staffeln (09 §3.4, ST1-H): red groups carry the warning sign
 	var pad: bool = _scheme() == Game.InputScheme.GAMEPAD
 	for s: Variant in model.get("slots", []) as Array:
 		var d: Dictionary = s
@@ -398,3 +400,84 @@ func _lead_symbol(m: IconMesh, r: Rect2) -> void:
 	m.circle(c + Vector2(s * 0.11, 0.0), s * 0.06, CombatStyle.C_ENEMY, true)
 	if bool(model.get("first", false)):
 		m.ring(c, s * 0.46, CombatStyle.C_GOLD, 2.0, true)
+
+
+# --- Staffeln (09, ST1-H) ---------------------------------------------------------------------------------------------
+# 09 §3.4, V-6, D-7 (the name plate of a group, here the target frame of a pull): in a season the plaque takes the
+# colour of the group's level against the controlled figure (LevelBand: grey ≤ −6, green −5 … −3, yellow ± 2 — the gold
+# of today —, orange +3 / +4, red ≥ +5 with the warning sign) and the difference stands left of it as a number ("+3",
+# "−4", "±0": the number carries the information, the colour only helps — colour-blind safe). The level label carries
+# both ("+5   12", right-aligned so the level sits in the plaque): no draw call more (the exploration's UI budget,
+# PERFORMANCE.md §3.11); the warning sign is part of the frame's triangle array. The name gives way. Outside a season
+# the plaque stays gold without a number. The combat's own frames are scenes/combat (07 CR-32 l).
+
+const SEASON_COLORS: Dictionary = {"grey": CombatStyle.C_GREY, "green": CombatStyle.C_HEAL,
+	"yellow": CombatStyle.C_GOLD, "orange": Color("#ff9a2e"), "red": CombatStyle.C_DANGER}
+const DIFF_GAP: float = 3.0                 # between the difference and the plaque's ring
+const WARN_W: float = 14.0                  # the warning sign left of the difference (a red group)
+
+var _season_on: bool = false                # a season: colour and difference are shown
+var _season_d: int = 0                      # the target's level minus the controlled figure's
+var _season_diff_x: float = 0.0             # local x where the difference starts (tests: the name ends before it)
+var _season_warn_x: float = 0.0             # local x of the warning sign's centre
+
+
+## {"diff", "text", "color" (LevelBand.color_name), "warning", "x" (where the difference starts)} of the target shown
+## in a season; {} otherwise (tests).
+func level_view() -> Dictionary:
+	if not _season_on or model.is_empty():
+		return {}
+	return {"diff": _season_d, "text": LevelBand.diff_text(_season_d), "color": LevelBand.color_name(_season_d),
+		"warning": LevelBand.is_warning(_season_d), "x": _season_diff_x}
+
+
+func _season_color() -> Color:
+	return SEASON_COLORS.get(LevelBand.color_name(_season_d), CombatStyle.C_GOLD) as Color
+
+
+## The difference in the level label left of the plaque (after _put("level")), its colour, and the room the name keeps
+## (it is shortened with "…" rather than run under them).
+func _season_level(r: Rect2, level: int) -> void:
+	var st: GameState = Game.state
+	var hero: PartyMember = st.member(Game.hero()) if st != null and st.season != null else null
+	_season_on = hero != null
+	var name_l: Label = _labels["name"]
+	var lv_l: Label = _labels["level"]
+	if not _season_on:
+		name_l.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+		lv_l.add_theme_color_override("font_color", CombatStyle.C_GOLD)
+		return
+	_season_d = level - hero.level
+	var font: Font = lv_l.get_theme_font("font")
+	var w_lv: float = font.get_string_size(str(level), HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
+	var w_space: float = maxf(1.0, font.get_string_size(" ", HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x)
+	var lc: Vector2 = level_center(r)
+	var gap: int = ceili((LEVEL_R + DIFF_GAP - w_lv * 0.5) / w_space)   # spaces from the difference to the ring
+	var text: String = UiUtilRef.glyph_safe(LevelBand.diff_text(_season_d)) + " ".repeat(maxi(1, gap)) + str(level)
+	var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
+	var right: float = lc.x + w_lv * 0.5                                  # the level's digits centred in the plaque
+	lv_l.text = text
+	lv_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	lv_l.position = Vector2(right - w - 2.0, lc.y - 9.0)
+	lv_l.size = Vector2(w + 2.0, 18.0)
+	lv_l.add_theme_color_override("font_color", _season_color())
+	_season_diff_x = right - w
+	var left: float = _season_diff_x
+	if LevelBand.is_warning(_season_d):
+		_season_warn_x = left - 3.0 - WARN_W * 0.5
+		left -= WARN_W + 3.0
+	name_l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	name_l.size = Vector2(maxf(40.0, left - 6.0 - name_l.position.x), 18.0)
+
+
+## The warning sign "Achtung" of a red group (09 §3.4): a red triangle with an ink "!" left of the difference.
+func _season_warning(m: IconMesh, r: Rect2) -> void:
+	if not _season_on or not LevelBand.is_warning(_season_d):
+		return
+	var cy: float = level_center(r).y
+	var c: Vector2 = Vector2(_season_warn_x, cy)
+	var h: float = WARN_W * 0.5
+	m.poly(PackedVector2Array([c + Vector2(0.0, -h), c + Vector2(h, h * 0.8), c + Vector2(-h, h * 0.8)]),
+		CombatStyle.C_DANGER)
+	m.rect(Rect2(c + Vector2(-1.0, -h * 0.45), Vector2(2.0, h * 0.75)), CombatStyle.C_INK)
+	m.rect(Rect2(c + Vector2(-1.0, h * 0.45), Vector2(2.0, 2.0)), CombatStyle.C_INK)

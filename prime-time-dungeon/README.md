@@ -40,7 +40,7 @@ Prüfwerkzeuge (`tools/`).
 
 ## 2. Status
 
-*Stand: 2026-10-12, nach ST1-G (Schläfer und Ausloggen). Die genaue Version ergibt sich aus `git log -1` in diesem
+*Stand: 2026-10-13, nach ST1-H (die Staffel-UI). Die genaue Version ergibt sich aus `git log -1` in diesem
 Verzeichnis.*
 
 **Läuft:**
@@ -99,6 +99,21 @@ Verzeichnis.*
   Laden folgt „Während Sie schliefen …“ (Titel und höchstens sechs Zeilen, ein Einsturz zuerst), auf Wunsch „Tag für
   Tag“; über 7 Tage erst eine Rückfrage. Am Stück steht die Uhr: Ausloggen ist dort immer sicher. Einsturz-Warnungen
   nur auf Wunsch (Desktop: im Fenstertitel, solange das Spiel offen ist).
+- **Staffeln: die Staffel-UI** (09 Kap. 2, 4.3, 7.2, ST1-H; bis zum ST1-Gate nur in Debug-Builds): Im Titel steht rechts
+  unten „Sendung starten“ (die erste Staffel des Geräts mit Standardwerten) bzw. „Neue Staffel“ (Mit oder Ohne Netz,
+  Kalender oder Am Stück, Sendezeit 08:00–21:30) und die **Ruhmeshalle**; jede Wahl erklärt sich in einem Satz, und der
+  Sendeplan der neuen Staffel steht daneben in Ortszeit. Danach geht es wie bei „Neues Spiel“ über Slot, Figur und
+  Casting. In der Erkundung steht oben ruhig der nächste Einsturz („Einsturz So 20:00 · in 1 T 19 Std.“, ab 1 h gold, ab
+  10 min orange — nie rot, nie laut), ab Etage 2 darunter der Zähler („Weiße Weste 81/100 · Platz 12“). Der Zielrahmen
+  eines Gegners zeigt dessen Stufe in der Farbe des Abstands zur gesteuerten Figur (grau, grün, gelb, orange, rot) und
+  den Abstand selbst („+5“, ab fünf Stufen darüber mit Warnzeichen). Pause →
+  **„Staffel“**: der Sendeplan aller Etagen in Ortszeit, Rangliste (die KI mit „(KI)“), Ticker der letzten 24 h,
+  Tagesprogramm mit „NEU“ und dem Pechvogel („Helfen“), dazu Kalender-Datei (`.ics`, nur lokal, ohne Namen), Sendepause,
+  „Am Stück spielen“ und „Staffel beenden“ mit klarer Rückfrage. Eine gesperrte Treppe sagt, wann sie öffnet; im Safe Room
+  sitzen KI-Kandidat:innen („Reden“, eine Helfer:in „Anheuern“). Schließt der Recall auf Etage 3 nach der ersten
+  Klassenwahl, bietet M.O.D. einmal „Am Stück“ an („Weiter im Kalender“ ist vorgewählt). Am Ende: Staffel-Bilanz mit
+  Titeln, als Studiogast der „Zeitraffer bis zum Finale“, danach die Ruhmeshalle. In einer Staffel ist nichts käuflich;
+  Systemmitteilungen gibt es noch keine (Einsturz-Wecker nur auf Wunsch, am Desktop im Fenstertitel).
 - 3 Speicherslots (JSON in `user://saves/`), Einstellungen, Pausemenü, Touch-Steuerung.
 - **Sprachen, Grundlage** (11-L1): Optionen → „Sprache / Language“ (Automatisch / Deutsch / English, nur im Titelmenü
   änderbar), `--lang=en` für einzelne Läufe, Übersetzungen als gettext-PO-Dateien (`game/locale/`, msgid = deutscher
@@ -335,6 +350,10 @@ Gamepad und Touch bedienen (02_TECH §2.2, §10). Gekämpft wird in Echtzeit dir
 | Staffel: Login-Bilanz „Während Sie schliefen …“ | Enter = Weiter; „Tag für Tag“ (wenn eingeschaltet) | A | „Weiter“ antippen |
 | Staffel: Recall (Etage 3, Safe Room; sonst Knopf „RECALL“) | ↑/↓ = Karte (rechts die Vorschau), Enter = wählen und weiter, → = zu „WEITER“; Maus: Zeigen = Vorschau, Klick = wählen; Esc = einen Schritt zurück (im ersten Schritt: „Später“) | Steuerkreuz / Stick, A; B = zurück / später | Karte antippen = Vorschau, nochmal antippen oder „WEITER“ = wählen; „Zurück“, „Später“ |
 | Staffel: Recall bestätigen | Enter auf „BESTÄTIGEN“, dann „WEITER: <Figur>“ bzw. „FERTIG“ („Talentbaum“ auf der Schlussseite) | A | „BESTÄTIGEN“, „WEITER“, „FERTIG“ |
+| Staffel starten (Titel, Debug-Builds: Karte „STAFFELN“ rechts unten) | → aus der Menüspalte, Enter; Einrichtung: Pfeiltasten, Enter, Esc = zurück | Steuerkreuz / Stick, A; B | „Sendung starten“ / „Neue Staffel“ / „Ruhmeshalle“ antippen |
+| Staffel: Reiter „Staffel“ (Pause → „Staffel“) | ←/→ = Rangliste, Ticker, Programm, Aktionen; ↓ in den Abschnitt, Esc = zurück zur Leiste | Steuerkreuz / Stick, A; LB / RB = Reiter; B | Abschnitt und Knöpfe antippen |
+| Staffel: Rückfragen („Staffel beenden“, Sendepause, Am Stück, Anheuern, das Tempo-Angebot nach dem Recall) | ←/→, Enter; Esc = die sichere Antwort | Steuerkreuz, A; B | Knopf antippen |
+| Staffel: Gäste im Safe Room | → vom Menü zu den Gästen (stehen TALENT-SHOW oder RECALL darüber: ↓ vom untersten der beiden), ↑/↓, Enter = „Reden“ bzw. „Anheuern“ | Steuerkreuz / Stick, A | Gast antippen |
 
 Interagieren hat Vorrang: Zeigt die Erkundung einen Prompt (Truhe, Tür, Event in 1,5 m vor der Figur), löst die
 Aktionstaste die Interaktion aus, sonst den Feldschlag bzw. das Bellen. Einen Kampf eröffnet man selbst mit einem **Pull**:
@@ -436,6 +455,18 @@ Staffel (Debug): `godot --path prime-time-dungeon/game -- --season=ssn_basis --t
 Etage 4 einer Staffel ansehen: `godot --path prime-time-dungeon/game -- --season=ssn_basis --tempo=binge --floor=4`
 Recall ansehen: `godot --path prime-time-dungeon/game -- --season=ssn_basis --tempo=binge --floor=3`, dann in den Safe
 Room des ersten Viertels (die Karte, M, zeigt ihn)
+
+**Eine Staffel im Debug-Build starten (09 ST1-H):** Ohne Startargument steht im Titel rechts unten die Karte
+„STAFFELN · Vorschau“ (→ aus der Menüspalte, oder antippen). „Sendung starten“ ist die erste Staffel des Geräts mit den
+Standardwerten (Mit Netz, Kalender, Sendezeit 20:00, Basis: 6 Etagen in 24 Tagen); danach heißt der Knopf „Neue
+Staffel“ und lässt Modus (Ohne Netz erst nach der ersten Klassenwahl oder einer beendeten Staffel), Tempo und Sendezeit
+wählen. Weiter geht es wie bei „Neues Spiel“ über Slot, Figur, Casting und Intro; die Staffel läuft in Echtzeit (der
+Zeitraffer `--speed` gilt nur mit `--season`). Im Spiel: Pause → „Staffel“ (Sendeplan, Rangliste, Ticker, Programm,
+Aktionen mit Kalender-Datei, Sendepause, „Am Stück spielen“, „Staffel beenden“). Das Tempo-Angebot kommt, wenn der
+Recall auf Etage 3 nach der ersten Klassenwahl schließt — am schnellsten mit
+`--season=ssn_basis --tempo=calendar --floor=3` und dem ersten Safe Room (einmal je Gerät: `career.json` neben den
+Spielständen merkt es sich, wie die Ruhmeshalle). „Staffel beenden“ führt zur Staffel-Bilanz und in die Ruhmeshalle,
+der Slot wird frei. Ein Release-Build zeigt die Karte bis zum ST1-Gate nicht (09 O-1).
 
 **Staffel-Bots (09 Kap. 11.6, ST1-I):** Zwei Werkzeuge spielen ganze Staffeln (Abschnitt 7). `tools/fullrun.sh
 --season=ssn_basis` lässt den Full-Run-Bot in der Welt spielen: Start zu festem Tag 0 mit dem Lauf-Seed
@@ -570,14 +601,18 @@ Systeme) > 01_GDD / 02_TECH / 03_ART / 05 (je nach Thema) > 04**.
 ## 10. Screenshots
 
 Alle Bilder stammen aus dem Spiel selbst (Compatibility-Renderer unter Xvfb, 1280 × 720; Bilder 59, 63, 70, 71, 78, 84,
-98 und 99 im Handy-Format 2400 × 1080 und Bild 26 im Handy-Format 1600 × 720, alle mit Touch-Steuerung). Die
-Staffel-Bilder 72–78 und 90–99 (Recall, Etage 3) zeigen eine Basis-Staffel, die mit `--season-floor` direkt auf die Etage
-gestiegen ist (ohne Kämpfe: die Gruppe hat nur die Abschluss-EP der Treppen, Stufe 2 auf Etage 2 bis Stufe 6 auf Etage
-6). Die Bilder 79–84 (09, ST1-G) zeigen das Ausloggen und den Login einer Kalender-Staffel: 79, 80 und 84 im Modus Ohne
-Netz, 81 und 82 nach fünf Tagen Schlaf auf Etage 2 im Modus Mit Netz (die Etage stürzte dabei ein), 83 nach einem
-Uhrsprung von 23 Tagen. Die Kampfbilder zeigen den Echtzeitkampf, seit R5b-2b den einzigen Kampf der Kampagne; die
-Bilder des früheren Rundenkampfs (08–12, 18, 22, 28) liegen als Archiv in `docs/screenshots/` (die CTB-Kampfszene, die
-sie erzeugte, ist gelöscht).
+98, 99, 113, 114, 118 und 119 im Handy-Format 2400 × 1080 und Bild 26 im Handy-Format 1600 × 720, alle mit
+Touch-Steuerung). Die Staffel-Bilder 72–78 und 90–99 (Recall, Etage 3) zeigen eine Basis-Staffel, die mit
+`--season-floor` direkt auf die Etage gestiegen ist (ohne Kämpfe: die Gruppe hat nur die Abschluss-EP der Treppen,
+Stufe 2 auf Etage 2 bis Stufe 6 auf Etage 6). Die Bilder 79–84 (09, ST1-G) zeigen das Ausloggen und den Login einer
+Kalender-Staffel: 79, 80 und 84 im Modus Ohne Netz, 81 und 82 nach fünf Tagen Schlaf auf Etage 2 im Modus Mit Netz (die
+Etage stürzte dabei ein), 83 nach einem Uhrsprung von 23 Tagen. Die Bilder 100–119 (09, ST1-H) zeigen die Staffel-UI
+einer Kalender-Staffel am dritten Tag (Etage 2 auf Sendung; 107, 109, 116 und 118 auf Etage 3, 117 am fünften Tag, 106
+vierzig Minuten vor dem Einsturz, 119 mit einer Figur fünf Stufen unter dem Ziel), die Bilanz einer gewonnenen
+Basis-Staffel und eines Studiogasts Ohne Netz, die Ruhmeshalle eines Geräts mit drei beendeten Staffeln und (115) ein
+Gerät ohne Staffel; die Zustände stellt `capture.gd --before=<Zustand>` her. Die Kampfbilder zeigen den Echtzeitkampf,
+seit R5b-2b den einzigen Kampf der Kampagne; die Bilder des früheren Rundenkampfs (08–12, 18, 22, 28) liegen als Archiv
+in `docs/screenshots/` (die CTB-Kampfszene, die sie erzeugte, ist gelöscht).
 
 | | |
 |---|---|
@@ -612,6 +647,16 @@ sie erzeugte, ist gelöscht).
 | ![Recall Graf](docs/screenshots/94_staffel_recall_mopsula.png) **94** Graf Mopsula ist dran: seine eigenen Spezies, Flattermops in der Vorschau | ![Recall fertig](docs/screenshots/95_staffel_recall_fertig.png) **95** Schlussseite: beide Rollen, Höchststufe 13, „NEU: OHNE NETZ“, Knopf „Talentbaum“ |
 | ![Safe Room Recall](docs/screenshots/96_staffel_safe_room_recall.png) **96** Nach „Später“: der Knopf RECALL im Safe Room, M.O.D. sagt, wo die Wahl wartet | ![Party Recall](docs/screenshots/97_staffel_party_recall.png) **97** Pausemenü → Party nach dem Recall: Spezies und Klasse beider Figuren |
 | ![Handy Recall](docs/screenshots/98_handy_staffel_recall_spezies_touch.png) **98** Handy-Format mit Touch: Recall, Spezies-Karten (99: Klassen) | |
+| ![Titel mit Staffeln](docs/screenshots/100_staffel_titel_karte.png) **100** Titel (Debug-Build): Karte „STAFFELN“ mit „Neue Staffel“ und „Ruhmeshalle“ neben dem unveränderten Menü (09, ST1-H) | ![Neue Staffel](docs/screenshots/101_staffel_neue_staffel.png) **101** „Neue Staffel“: Modus, Tempo, Sendezeit, daneben der Sendeplan in Ortszeit und je Wahl ein Satz |
+| ![Reiter Staffel](docs/screenshots/102_staffel_reiter_rangliste.png) **102** Pause → „Staffel“: Sendeplan aller Etagen, Rangliste mit Zähler, KI gekennzeichnet | ![Programm](docs/screenshots/103_staffel_reiter_programm.png) **103** Tagesprogramm der Etage: Pechvogel mit „Helfen“, Programmpunkte mit „NEU“ |
+| ![Aktionen](docs/screenshots/104_staffel_reiter_aktionen.png) **104** Aktionen: Kalender-Datei, Sendepause, Am Stück, Staffel beenden — der Satz zur Aktion im Fokus darunter | ![Staffel beenden](docs/screenshots/105_staffel_beenden_rueckfrage.png) **105** „Staffel beenden?“ — rot, „Weiterspielen“ vorgewählt |
+| ![Einsturz-Anzeige](docs/screenshots/106_staffel_einsturz_anzeige.png) **106** Einsturz-Anzeige 40 Minuten vorher: gold, ruhig, M.O.D. sagt es einmal | ![Gesperrte Treppe](docs/screenshots/107_staffel_treppe_gesperrt.png) **107** Gesperrte Treppe: „Etage 4: Kulissen im Aufbau — öffnet in …“ und das Angebot „Am Stück spielen“ |
+| ![Gäste](docs/screenshots/108_staffel_safe_room_gaeste.png) **108** Safe Room: zwei KI-Kandidat:innen der Etage — „Reden“, eine Helfer:in „Anheuern“ | ![Tempo-Angebot](docs/screenshots/109_staffel_tempo_angebot.png) **109** Der Recall schließt nach der ersten Klassenwahl: M.O.D. bietet einmal „Am Stück“ an |
+| ![Finale](docs/screenshots/110_staffel_finale_bilanz.png) **110** Staffel-Bilanz nach dem Großen Finale: Titel, Quote, Rangliste | ![Studiogast](docs/screenshots/111_staffel_studiogast_zeitraffer.png) **111** Ohne Netz verschüttet: Bilanz des Studiogasts mit dem „Zeitraffer bis zum Finale“ |
+| ![Ruhmeshalle](docs/screenshots/112_staffel_ruhmeshalle.png) **112** Ruhmeshalle: jede beendete Staffel des Geräts, ohne Namen | ![Handy Reiter](docs/screenshots/113_handy_staffel_reiter_touch.png) **113** Handy-Format mit Touch: Pause → „Staffel“ |
+| ![Handy Safe Room](docs/screenshots/114_handy_staffel_safe_room_touch.png) **114** Handy-Format mit Touch: Gäste im Safe Room | ![Sendung starten](docs/screenshots/115_staffel_sendung_starten.png) **115** „Sendung starten“: die erste Staffel des Geräts mit Standardwerten und ihrem Sendeplan |
+| ![Etage 3](docs/screenshots/116_staffel_safe_room_recall_gast.png) **116** Safe Room auf Etage 3: TALENT-SHOW, RECALL und darunter ein Gast | ![Ticker](docs/screenshots/117_staffel_reiter_ticker.png) **117** Pause → „Staffel“ → Ticker: die Eilmeldungen der letzten 24 Stunden |
+| ![Handy Tempo](docs/screenshots/118_handy_staffel_tempo_angebot_touch.png) **118** Handy-Format mit Touch: das Tempo-Angebot nach dem Recall | ![Handy Ziel](docs/screenshots/119_handy_staffel_erkundung_ziel_touch.png) **119** Handy-Format mit Touch: Zielrahmen in der Erkundung — der Gegner liegt fünf Stufen über der Figur: Warnzeichen, „+5“, die Stufe im roten Ring |
 | ![Casting 1/3](docs/screenshots/29_casting_1_wer_sind_sie.png) **29** Casting 1/3 „Wer sind Sie?“: Name, Wortform, Figur (08 K1) | ![Casting 2/3](docs/screenshots/30_casting_2_steckbrief.png) **30** Casting 2/3 „Steckbrief“: Vorleben, Hobby / Talent, Eigenschaften |
 | ![Vorleben](docs/screenshots/31_casting_2_vorleben_overlay.png) **31** Overlay „Vorleben wählen“ mit „genauer“-Chips | ![Eigenschaften](docs/screenshots/32_casting_2_eigenschaften_overlay.png) **32** Overlay „Eigenschaften“ (0–3, leer erlaubt) |
 | ![Kandidatenkarte](docs/screenshots/33_casting_3_kandidatenkarte.png) **33** Casting 3/3: Kandidatenkarte und Sendeformat | ![Tastatur](docs/screenshots/34_casting_bildschirmtastatur_akzente.png) **34** Bildschirmtastatur mit Akzenttasten |
@@ -652,6 +697,28 @@ GODOT=… $T --shot $E shot.png 40 2400x1080 --touch --season-floor=3 --recipe=s
 GODOT=… $T --shot res://scenes/safe_room/safe_room.tscn shot.png 40 1280x720 --recipe=sleep_logout_safe     # 80
 W=res://scenes/ui/wake_summary.tscn                                        # 09 ST1-G: der Login nach dem Schlaf
 GODOT=… $T --shot $W shot.png 40 1280x720 --recipe=sleep_wake                  # 81 (82: sleep_days, 83: sleep_question)
+GODOT=… $T --shot res://scenes/title/title.tscn shot.png 60 1280x720 --before=career --recipe=season_quiet  # 100
+GODOT=… $T --shot res://scenes/title/season_setup.tscn shot.png 20 1280x720 --before=career \
+    --params='{"mode":"new","now":1791918000,"tz":0}'                                                     # 101
+GODOT=… $T --shot $E shot.png 10 1280x720 --before=cal2 --recipe=season_tab_ranking  # 102 (103: _programme, 104: _actions)
+GODOT=… $T --shot $E shot.png 10 1280x720 --before=cal2 --recipe=season_ask_leave                        # 105
+GODOT=… $T --shot $E shot.png 20 1280x720 --before=warn --recipe=season_hud_warn                         # 106
+GODOT=… $T --shot $E shot.png 10 1280x720 --before=cal3 --recipe=season_stairs                           # 107
+R=res://scenes/safe_room/safe_room.tscn                                    # 09 ST1-H: Gäste, Tempo-Angebot
+GODOT=… $T --shot $R shot.png 20 1280x720 --before=cal2 --recipe=season_guests                          # 108
+GODOT=… $T --shot $R shot.png 10 1280x720 --before=cal3 --recipe=season_offer                           # 109
+B=res://scenes/ui/season_summary.tscn                                      # 09 ST1-H: das Ende einer Staffel
+GODOT=… $T --shot $B shot.png 10 1280x720 --before=finale --recipe=season_quiet                          # 110
+GODOT=… $T --shot $B shot.png 10 1280x720 --before=out --recipe=season_quiet                             # 111
+GODOT=… $T --shot res://scenes/ui/hall_of_fame.tscn shot.png 10 1280x720 --before=hall --recipe=season_quiet # 112
+GODOT=… $T --shot $E shot.png 10 2400x1080 --touch --before=cal2 --recipe=season_tab_ranking             # 113
+GODOT=… $T --shot $R shot.png 20 2400x1080 --touch --before=cal2 --recipe=season_guests                 # 114
+GODOT=… $T --shot res://scenes/title/season_setup.tscn shot.png 20 1280x720 \
+    --params='{"mode":"first","now":1791918000,"tz":0}'                                                   # 115
+GODOT=… $T --shot $R shot.png 20 1280x720 --before=cal3 --params='{"recall": false}' --recipe=season_guests  # 116
+GODOT=… $T --shot $E shot.png 10 1280x720 --before=cal3late --recipe=season_tab_ticker                   # 117
+GODOT=… $T --shot $R shot.png 10 2400x1080 --touch --before=cal3 --recipe=season_offer                 # 118
+GODOT=… $T --shot $E shot.png 10 2400x1080 --touch --before=cal2 --recipe=season_target                 # 119
 GODOT=… $T --shot res://scenes/safe_room/safe_room.tscn shot.png 5 1280x720 --recipe=safe_mopsula           # 13
 GODOT=… $T --shot res://scenes/safe_room/safe_room.tscn shot.png 5 1280x720 --recipe=safe_lootbox_open      # 14
 GODOT=… $T --shot res://scenes/ui/event_lobby.tscn shot.png 120 1280x720                                     # 15

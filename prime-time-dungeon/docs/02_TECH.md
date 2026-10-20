@@ -651,6 +651,41 @@ Etage 3 und damit der Recall gibt es nur in Staffeln.
 `recall_done`: `choose(0)` und `confirm()` je Figur); 07 — CR-32 p (Spezies und Klasse am Party-Rahmen, Bauchbinde
 „ORIGINAL“); 03_ART — die Spezies-Optik am Rig (`model_hint.props_add`), bis dahin nur die Farbe am Sockel.
 
+**Stand ST1-H (2026-10-13, Branch `ptd/st1h`): die Staffel-UI** (09 Kap. 2, 4.3, 4.6, 7.2, Kap. 11.3 „Stand ST1-H“,
+Entscheidungen H-1 … H-23, Orchestrator-Entscheidungen O-1 … O-4). Nur Oberfläche und Fassaden: kein neuer Command, kein
+neues Feld im Spielzustand, **kein `SIM_VERSION`-Sprung**, Save v2 unverändert; ohne Staffel bitgleich (`fullrun.sh` mit
+`--strategy=all`, `--hero=mopsula`, `--liga=1`, `--liga=2` gegen `claude/prime-time-dungeon` `ac5d15c`, den Stand nach
+11-L1 — vorher ebenso gegen `0514cf5`: gleiche Ereigniszeilen und Statistiken bis auf den Münzwurf der Persona-Zeile in
+`mod_tags` — `Show._fx_rng` ist zufällig geseedet, zwei Läufe desselben Stands unterscheiden sich darin ebenso). Jede
+Änderung geht über die Commands von `Game` (`season` tempo/pause/leave, `cast` hire/help); Sichten (Rangliste der
+Zukunft, Zeitraffer) rechnen auf einer Kopie (`GameState.from_dict(state.to_dict())`). Keine Datei in `core/rt/**` oder
+`scenes/combat/**` (Farbe und Differenz der Plakette im Kampf: CR-32 l; in der Erkundung `explore_target.gd`, H-22).
+
+| Teil | API |
+|---|---|
+| `scenes/ui/season_view.gd` (privat, statisch) | Zeit: `tz_offset()`, `clock_text`, `date_text`, `when_text`, `day_month`, `short(sec)`, `hhmm`, `air_step(hhmm, steps)`; neue Staffel: `OWNED_FORMATS` [6], `owned_defs(data)`, `default_def(data)`, `format_text`, `format_explain`, `preview_dates(def, air, now, tz)`, `EXPLAIN` (die Ein-Satz-Erklärungen); laufende Staffel: `season_day`, `head_text`, `status_text`, `floor_name`, `collapse_at(s, n)`, `schedule(state, data, tz)` (Zeilen {floor, name, kind, line, sub, here, finale, points}), `stairs_view(state, data)` ({why, text, binge}), `collapse_view(state, extra, tz)` ({floor, at, left, level 0–3, ahead, text, sub}), `counter`, `rank_text`, `ranking_rows(state, data, top, around)`, `ticker_rows(state, data, hours, limit)`, `floor_view(state, data, tz)` ({points, next, need, guest, favors}), `guest_rows`, `hire_cost_text`, `cast_reason`; Ende: `result_title`, `result_tag`, `hall_key`, `hall_entry(state, data, ended)` (ohne Namen), `stat_pairs`, `figures_text`, `projection(state, data, top, around)`; Kalender: `ics_name`, `ics_text(state, data, stamp)` (RFC 5545, UTC, CRLF, gefaltet), `export_ics(state, data, stamp, dir)` |
+| Szenen (neu) | `scenes/ui/season_dialog.*` (Rückfrage, Ebene 61, `setup({title, kicker, lines, danger, buttons, focus, cancel_id, days})`, Signal `closed(id, days)`), `scenes/ui/season_tab.gd` (Seite „Staffel“ des Pausemenüs: `show_segment(id)`, `action(id)`, `plan_rows()`, `export_ics()`), `scenes/title/season_setup.*` (`setup({mode, capture, now, tz})`, `start_opts()`, `set_tempo`, `set_mode`, `step_air`, `start()`), `scenes/ui/season_summary.*` (`entry`, `projected`), `scenes/ui/hall_of_fame.*` (`setup({from, slot})`, `cards`, `select(i)`) |
+| `Game` (Abschnitt „ST1-H“) | `season_tempo_binge()`, `season_pause_days(days)`, `season_leave()`, `SCENE_SEASON_SUMMARY`, `SCENE_HALL_OF_FAME`; `_season_end_path(path)` (Abspann und — nach „Staffel beenden“ — Titel → Staffel-Bilanz; Haken in `_season_goto` und `continue_after_summary`), `_season_hall()` (am Ende von `_season_autosave`: die Ruhmeshalle einmal je Staffel; „left“ löscht den Slot, `state.slot` = 0) |
+| `Save` (Abschnitt „ST1-H“) | `career()` (`career.json` neben dem Ordner der Spielstände, mit `--pack` also im Ordner des Pakets, 11-P1) mit `hall`, `titles`, `seen`: `season_finished(summary)`, `career_hall()`, `career_hall_has(key)`, `career_hall_add(entry)`, `career_titles()`, `career_seen(key)`, `career_mark(key)`; `newest_slot()` überspringt beendete Staffeln |
+| Abschnitte „Staffeln (09, ST1-H)“ | `title.gd` (Karte, `TitleScreen.seasons_offered()`, `season_gate`), `title_flow.gd` (`pending_season`, `_start_season`; eine beendete Staffel lädt in die Ruhmeshalle), `slot_select.gd` (Zeile der Staffel), `pause_menu.gd` (`_tabs()`, `season_modal(d)`, `season_close()`, Kopfzeile), `exploration_hud.gd` (`season_panel`, `season_counter`, `season_refresh()`, `season_said`, `season_legend`; die Lesungen von `CastSim` nur, wenn sich ihr Schlüssel ändert, eine je 0,5-s-Takt — auch nach dem Aufbau, der keine liest (`season_refresh()` liest in einem Zug: Tests, Aufnahmen), PERFORMANCE.md §3.11; `_season_pull(model)` als Haken in `set_pull_target`: der Zähler macht dem Zielrahmen Platz, H-23), `explore_target.gd` (`level_view()`: Gegnerfarbe, Differenz und Warnzeichen der Plakette in einer Beschriftung, H-22), `minimap.gd` (NEU an Programmtüren), `exploration.gd` (gesperrte Treppe), `safe_room.gd` (`season_guests` mit einem Knopf je Gast, `season_guest_buttons`, `season_ask_hire(place)`, `_season_place()` nach `_refresh_recall_cta` — die Gäste unter TALENT-SHOW und RECALL, unter beiden einer, und ihr Fokus —, `_season_watch_recall(recall)` als Haken in `open_recall` → `_season_offer()` → `season_open_tempo_offer()`, Kopfzeile), `game_over.gd` (`season_out()`, „Staffel-Bilanz“), `intro.gd` (`season_lines()`) |
+| Daten | `mod_lines.json`: 25 Zeilen hinter `mod_ssn_anchor_01` — `season_welcome`, `season_collapse_intro`, `season_warn_3600/600/60/last`, `season_vest`, `season_counter_in`, `season_tempo_offer`, `season_tempo_binge`, `season_rival`, `season_rival_after`, `season_need`, `season_left`, `season_guest_<profil>` |
+| Werkzeuge | `tests/capture.gd --before=<name>` (ein Zustand vor dem Bau der Szene: `cal2`, `cal3`, `cal3late`, `warn`, `finale`, `out`, `left`, `career`, `hall`); Aufnahmen `season_tab_<abschnitt>`, `season_ask_<aktion>`, `season_hud`, `season_hud_warn`, `season_stairs`, `season_guests`, `season_hire`, `season_offer` (der Recall: beide wählen, FERTIG — dann das Angebot), `season_target` (Pull-Ziel fünf Stufen über der Figur), `season_quiet` (README Abschnitt Screenshots, Bilder 100–119); `capture.gd --dc` / `--quiet-ui` (Draw Calls, PERFORMANCE.md §3.11); Test `test_09_season_ui` |
+
+**Für die anderen Pakete:** 07 — CR-32 c (die Kampfeinheit von Gast und Pechvogel: bis dahin ist „Anheuern“ und „Helfen“
+Buchhaltung in `CastSim`), CR-32 l (Farbe und Differenz der Plakette im Zielrahmen des Kampfes; `LevelBand.color_name`,
+`diff_text`, `is_warning`, als Vorlage der Abschnitt „Staffeln“ in `explore_target.gd`). Recall (06 §3.5) — das
+Tempo-Angebot hängt am Signal `closed` des Recalls (eine Haken-Zeile in `open_recall`: wer beim Öffnen `Casting.mode` =
+`first` hatte und beim Schließen eine Klasse hat, hat gerade gewählt); die Gäste richten sich nach dem Knopf RECALL (09
+H-21). ST1-I — der Harness kann die Staffel über `TitleFlow.pending_season` und `start_new_game` starten wie ein Mensch;
+der Full-Run-Bot trifft nach dem Zusammenführen drei neue Stellen: in einer privaten Kalender-Staffel nach der ersten
+Klassenwahl einmal je Gerät das Tempo-Angebot (ein `season_dialog` als `_modal` des Safe Rooms, `answer("calendar")`
+behält das Tempo), an einer gesperrten Treppe den Dialog mit Grund (Wahl `stay` | `binge` statt des Abstiegs) und am
+Ende einer Staffel die Staffel-Bilanz statt des Abspanns (`Game.SCENE_SEASON_SUMMARY`, `to_title()`; 09 H-8, H-11,
+H-18). ST2 — Freunde und öffentliche Staffeln in „Neue Staffel“, Zuschauen als Studiogast, Systemmitteilungen und
+Teilen der Kalender-Datei auf Mobilgeräten (09 O-2). 11 — L2: die Texte der Staffel-UI über `Tx` (zehn Dateien in
+`PENDING` von `test_11_literals`; lange Sätze stehen über zwei Zeilen verkettet und werden je ein msgid, die Termine
+von `SeasonView` gehören zu `Tx.fmt_*`).
+
 **Stand ST1-I (2026-10-18, Branch `ptd/st1i`): der Staffel-Harness** (09 Kap. 11.6, Kap. 11.3 „Stand ST1-I“,
 Entscheidungen I-1 … I-16). Nur Werkzeuge und Tests: kein Spielcode, keine Daten, **kein `SIM_VERSION`-Sprung**, ohne
 `--season` bitgleich (`fullrun.sh` mit `--strategy=all`, `--hero=mopsula`, `--liga=1`, `--liga=2` gegen main
@@ -1007,7 +1042,7 @@ Grund-Exporte schließen `packs/*` aus (11-PB).
 | `scenes/ui/minimap.gd` | M6 | Minimap + große Karte |
 | `scenes/ui/touch_controls.tscn` + `.gd` | M6 | Touch-Layer (virtueller Stick + Buttons + Kamera-Drag) |
 | `scenes/ui/virtual_joystick.gd` | M6 | Floating Joystick |
-| `scenes/ui/pause_menu.tscn` + `.gd` | M6 | Pause: Party, Inventar, Ausrüstung, Fähigkeiten, Show (06-C), Achievements, Bestiarium, Optionen, Zum Titel |
+| `scenes/ui/pause_menu.tscn` + `.gd` | M6 | Pause: Party, Inventar, Ausrüstung, Fähigkeiten, Show (06-C), Achievements, Bestiarium, Optionen, Zum Titel (in einer Staffel: „Staffel“ nach Party, 09 ST1-H; „Ausloggen“ statt „Zum Titel“, ST1-G) |
 | `scenes/ui/party_menu.gd` | M6 | Party-Status (+ 06-B: Talente-Zeile mit „n Wahl(en) offen“, Recall-Zeile; 08-K1: Knopf „Kandidatenkarte“) |
 | `scenes/ui/persona_card.tscn` + `.gd` | 08-K1 | Kandidatenkarte als Modal (Pause → Party; Stempel „STAFFEL 1 · FOLGE n“, Figur, Name · Wortform, Vorleben · Hobby, Eigenschaften, Freitexte, Rival:in, Sponsor); `card_panel()` baut die Karte auch für Casting 3/3 |
 | `scenes/ui/talent_show.tscn` + `.gd` | 06-B | Talent-Show (Modal, Ebene 60): je offene Wahl zwei Karten, `pick(i)` → `Game.pick_talent`; „Später“ |
@@ -1021,6 +1056,12 @@ Grund-Exporte schließen `packs/*` aus (11-PB).
 | `scenes/ui/floor_summary.tscn` + `.gd` | M6 | `FloorSummary`: Etagen-Bilanz (Zeit, Kills, Zuschauer-Peak, Follower, Achievements; Zeile „Regie-Notizen n/3“ bei `regie_notes_total` > 0, 06 §2.7) → `Game.continue_after_summary()` |
 | `scenes/ui/logout_dialog.tscn` + `.gd` | 09 ST1-G | Ausloggen einer Staffel (Modal, Ebene 61 über dem Pausemenü, ohne `class_name`): Ort und Gefahr (`Game.season_logout_info`), Taktik im Gang, Sendepause in Tagen, Opt-in der Hinweise; „Hier schlafen“ → `Game.season_logout` → Titel |
 | `scenes/ui/wake_summary.tscn` + `.gd` | 09 ST1-G | Login-Bilanz „Während Sie schliefen …“ (`Game.season_wake`), davor die Uhrsprung-Frage, „Tag für Tag“; „Weiter“ → `Game.season_wake_done()` |
+| `scenes/ui/season_view.gd` | 09 ST1-H | Privat, statisch: Wörter, Ortszeit-Termine und Zeilen der Staffel-UI (Sendeplan, Einsturz-Anzeige, Zähler, Rangliste, Ticker, Tagesprogramm, Gäste, gesperrte Treppe, Bilanz, Ruhmeshalle, `.ics`) als Sichten auf `GameState`, `SeasonRules`, `CastSim` |
+| `scenes/ui/season_dialog.tscn` + `.gd` | 09 ST1-H | Rückfrage einer Staffel (Modal, Ebene 61, ohne `class_name`): Titel, Zeilen, optional Tage −/+, zwei bis drei Knöpfe (rot für „Staffel beenden“); `closed(id, days)` |
+| `scenes/ui/season_tab.gd` | 09 ST1-H | Pausemenü-Reiter „Staffel“ (nur in einer Staffel): Sendeplan; Rangliste, Ticker, Programm, Aktionen (`.ics`, Sendepause, Am Stück, Staffel beenden) |
+| `scenes/ui/season_summary.tscn` + `.gd` | 09 ST1-H | Staffel-Bilanz und Finale: Ergebnis, M.O.D., Titel, Zahlen der Quote, Rangliste oder Zeitraffer bis zum Finale; → Ruhmeshalle / Titel |
+| `scenes/ui/hall_of_fame.tscn` + `.gd` | 09 ST1-H | Ruhmeshalle (`Save.career_hall`): eine Karte je beendeter Staffel, das Ganze rechts |
+| `scenes/title/season_setup.tscn` + `.gd` | 09 ST1-H | „Sendung starten“ / „Neue Staffel“: Modus, Tempo, Sendezeit, der Sendeplan der neuen Staffel → `TitleFlow.pending_season` → Slot-Auswahl |
 | `scenes/ui/event_lobby.tscn` + `.gd` | M6 | Event-Lauf-Karte (05 CR-10) |
 | `scenes/ui/run_result.tscn` + `.gd` | M6 | Event-Lauf-Ergebnis (05 CR-10) |
 | `scenes/ui/settings_menu.tscn` + `.gd` | M6 | Einstellungen (Echtzeit-Kampfzeilen 07 §7.8; „Partner automatisch“, Kampftempo und Auto-Kampf sind mit R5b-2b entfallen) |

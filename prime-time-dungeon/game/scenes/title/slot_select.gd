@@ -152,10 +152,10 @@ func _build() -> void:
 	safe.add_child(col)
 	var head: HBoxContainer = UiUtil.hbox(14)
 	col.add_child(head)
-	head.add_child(UiUtil.label(str(TITLES[mode]), &"LabelTitle", 48))
+	head.add_child(UiUtil.label(_season_title(str(TITLES[mode])), &"LabelTitle", 48))   # ST1-H: a new season
 	head.add_child(UiUtil.spacer(0, 0, true))
 	head.add_child(InputGlyph.make(&"ui_cancel", "Zurück", 16))
-	col.add_child(UiUtil.label(str(HINTS[mode]), &"", 20, UiTheme.C_TEXT_DIM))
+	col.add_child(UiUtil.label(_season_hint(str(HINTS[mode])), &"", 20, UiTheme.C_TEXT_DIM))
 	col.add_child(UiUtil.spacer(8))
 	var list: Array[Control] = []
 	for slot in range(1, Save.SLOT_COUNT + 1):
@@ -234,8 +234,54 @@ func _slot_card(slot: int) -> Button:
 		if info.has("saved_at_unix"):
 			when = "  ·  " + Time.get_datetime_string_from_unix_time(int(info["saved_at_unix"]), true).replace("T", " ")
 		texts.add_child(UiUtil.label(where + when, &"LabelSmall", 15))
+		_season_line(texts, info)                    # Staffeln (09, ST1-H): the season of the slot
 	if occupied and not corrupt:
 		var ic: Control = UiIcon.make(&"floppy", UiTheme.C_ACCENT_2, 34)
 		ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(ic)
 	return b
+
+
+# --- Staffeln (09, ST1-H) ---------------------------------------------------------------------------------------------
+# A slot that holds a season names it under the name ("Staffel 3 · Kalender · Mit Netz · Etage 2 auf Sendung"; a
+# finished one "Staffel 3 beendet · Ruhmeshalle" — it opens the hall of fame, TitleFlow.load_and_route); the
+# selection of a new season ("Sendung starten" / "Neue Staffel", TitleFlow.pending_season) says so in its head.
+
+const SeasonView := preload("res://scenes/ui/season_view.gd")
+
+
+func _season_title(base: String) -> String:
+	if mode != "new" or _embedded or TitleFlow.pending_season.is_empty():
+		return base
+	return "SENDUNG STARTEN" if int(Save.career().get("seasons", 0)) <= 0 else "NEUE STAFFEL"
+
+
+func _season_hint(base: String) -> String:
+	if mode != "new" or _embedded or TitleFlow.pending_season.is_empty():
+		return base
+	return "Welcher Speicherplatz zeichnet Ihre Staffel auf? Jede Staffel hat ihren eigenen."
+
+
+## The season line of an occupied slot (SaveCodec summary "season": def, number, format, tempo, mode, on_air, result).
+func _season_line(texts: VBoxContainer, info: Dictionary) -> void:
+	var raw: Variant = info.get("season", null)
+	if not raw is Dictionary:
+		return
+	var s: Dictionary = raw
+	var text: String = ""
+	var col: Color = UiTheme.C_ACCENT
+	if str(s.get("result", "")) != "":
+		text = "Staffel %d beendet: %s · Ruhmeshalle" % [int(s.get("number", 0)), SeasonView.result_title(
+			str(s.get("result", "")), int(info.get("floor_index", 1)))]
+		col = UiTheme.C_GOLD
+	else:
+		text = "Staffel %d · %s · %s" % [int(s.get("number", 0)), str(SeasonView.TEMPO_NAMES.get(str(s.get("tempo",
+			"")), "")), str(SeasonView.MODE_NAMES.get(str(s.get("mode", "")), ""))]
+		if str(s.get("tempo", "")) == "calendar" and int(s.get("on_air", 0)) > 0:
+			text += " · Etage %d auf Sendung" % int(s["on_air"])
+	var l: Label = UiUtil.label(UiUtil.glyph_safe(text), &"", 17, col)
+	l.name = "Season"
+	l.add_theme_font_override("font", UiTheme.font_bold())
+	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	texts.add_child(l)
+	texts.move_child(l, 1)

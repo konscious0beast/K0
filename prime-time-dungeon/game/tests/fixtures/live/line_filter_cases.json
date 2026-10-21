@@ -1,0 +1,192 @@
+{
+	"schema": 1,
+	"doc": "06 §5.9 Nr. 3: ModLineFilter.check (game) and mod_brain.safety.check_line (service) must return the same reason for every text ('' = shown); 'voice' (optional) is the line's voice. Polish pass: the IP / tone lists (blocked_ip_distance, blocked_origin) and Graf Mopsula's royalty rule (blocked_mopsula_royalty).",
+	"cases": [
+		{
+			"text": "Ein Stunt mit Wischmopp. Ich lasse das als Kunst durchgehen.",
+			"expect": ""
+		},
+		{
+			"text": "Kandidat:in {name} läuft, als hätte der Fahrstuhl Verspätung.",
+			"expect": ""
+		},
+		{
+			"text": "Schnellschnitt! Das war kürzer als meine Mittagspause.",
+			"expect": ""
+		},
+		{
+			"text": "Nur noch zwei Räume bis zur Treppe. Ich zähle mit.",
+			"expect": ""
+		},
+		{
+			"text": "Zack.",
+			"expect": ""
+		},
+		{
+			"text": "",
+			"expect": "empty"
+		},
+		{
+			"text": "   ",
+			"expect": "empty"
+		},
+		{
+			"text": "Das ist ein sehr langer Satz, der immer weiter geht und weiter und weiter, bis er die erlaubte Länge der Bauchbinde sprengt.",
+			"expect": "too_long"
+		},
+		{
+			"text": "Hallo {spieler}, schön dass du da bist.",
+			"expect": "placeholder"
+		},
+		{
+			"text": "Das kostet {name} heute {credits} Credits.",
+			"expect": "placeholder"
+		},
+		{
+			"text": "Klammer auf { und nie wieder zu.",
+			"expect": "placeholder"
+		},
+		{
+			"text": "Mehr dazu auf www.nova-tv.de, dort gibt es alles.",
+			"expect": "url"
+		},
+		{
+			"text": "Schauen Sie mal auf https://example.com vorbei.",
+			"expect": "url"
+		},
+		{
+			"text": "Besuchen Sie unseren Laden auf novatv.com und staunen Sie.",
+			"expect": "url"
+		},
+		{
+			"text": "Rufen Sie an unter 0171 2345678, ich warte.",
+			"expect": "digits"
+		},
+		{
+			"text": "Das war Ihr Kampf Nummer 12, ich zähle mit.",
+			"expect": ""
+		},
+		{
+			"text": "Die Partei der Ratten hat die Wahl gewonnen.",
+			"expect": "blocked_politics"
+		},
+		{
+			"text": "Der Kanzler wäre stolz auf diesen Stunt.",
+			"expect": "blocked_politics"
+		},
+		{
+			"text": "Das war ein Wahlkampfauftritt der Extraklasse.",
+			"expect": "blocked_politics"
+		},
+		{
+			"text": "So nackt habe ich die Ratte noch nie gesehen.",
+			"expect": "blocked_sexual"
+		},
+		{
+			"text": "Was für ein Spast, dieser Gegner.",
+			"expect": "blocked_slurs"
+		},
+		{
+			"text": "Das sieht aus wie ein Werbespot für Netflix.",
+			"expect": "blocked_real_brands"
+		},
+		{
+			"text": "Für nur 5 € gibt es mehr Hype im Shop.",
+			"expect": "money"
+		},
+		{
+			"text": "Spenden Sie dem Grafen eine Leberwurst.",
+			"expect": "money"
+		},
+		{
+			"text": "Kaufen Sie sich doch einen besseren Mopp.",
+			"expect": "money"
+		},
+		{
+			"text": "Schnell, das Sponsor-Fenster ist offen!",
+			"expect": "purchase_pressure"
+		},
+		{
+			"text": "Jetzt ein Geschenk schicken, die Plätze sind begrenzt.",
+			"expect": "purchase_pressure"
+		},
+		{
+			"text": "Letzte Chance für ein Geschenk an den Grafen.",
+			"expect": "purchase_pressure"
+		},
+		{
+			"text": "Ein Geschenk vom Publikum! Der Graf ist gerührt.",
+			"expect": ""
+		},
+		{
+			"text": "This is a great run and the crowd loves it.",
+			"expect": "language"
+		},
+		{
+			"text": "Wow, what a great move by the team there.",
+			"expect": "language"
+		},
+		{
+			"text": "Ein Fan-Box-Moment! Die Fans haben zusammengelegt.",
+			"expect": "blocked_ip_distance"
+		},
+		{
+			"text": "Die Fan Box ist da, und sie glitzert.",
+			"expect": "blocked_ip_distance"
+		},
+		{
+			"text": "Gewonnen im Feinripp! Die Quote jubelt.",
+			"expect": "blocked_ip_distance"
+		},
+		{
+			"text": "Kai kämpft barfuß weiter, die Quote jubelt.",
+			"expect": "blocked_ip_distance"
+		},
+		{
+			"text": "Neue Turnschuhe für Kai! Das Publikum tobt.",
+			"expect": "blocked_ip_distance"
+		},
+		{
+			"text": "Ein Fanpost-Paket! Die Fans haben zusammengelegt.",
+			"expect": ""
+		},
+		{
+			"text": "Ein Paket aus Polen, der Zoll lacht noch.",
+			"expect": "blocked_origin"
+		},
+		{
+			"text": "Polenta im Automaten? Ich bin ehrlich überrascht.",
+			"expect": ""
+		},
+		{
+			"text": "Ein Amerikaner vom Kiosk, mit Zuckerguss. Lecker.",
+			"expect": ""
+		},
+		{
+			"text": "Mit dem Franzosen zieht der Hausmeister jede Schraube fest.",
+			"expect": ""
+		},
+		{
+			"text": "Der Graf verlangt einen Thron. Abgelehnt.",
+			"expect": "blocked_mopsula_royalty"
+		},
+		{
+			"text": "Die Krone sitzt schief, sagt der Mops.",
+			"expect": "blocked_mopsula_royalty"
+		},
+		{
+			"text": "Ihre Majestät hat gesprochen. Ich verneige mich nicht.",
+			"voice": "mopsula",
+			"expect": "blocked_mopsula_royalty"
+		},
+		{
+			"text": "Ihre Majestät, die Rattenkönigin, betritt den Bahnsteig.",
+			"expect": ""
+		},
+		{
+			"text": "Ihre Majestät, die Rattenkönigin, betritt den Bahnsteig.",
+			"voice": "mod",
+			"expect": ""
+		}
+	]
+}

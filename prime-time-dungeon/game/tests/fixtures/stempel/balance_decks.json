@@ -1,0 +1,15 @@
+{
+	"schema": 1,
+	"comment": "Harness decks of test_sd_balance (10 §6.9): the Startmappe comes from rules.json; 'passend' = a Mappe built from the opponent's file; 'erster_besuch' = what one owns at the first visit (Grundakte, the first wins of Ferdi, the Graf and Ulla, one Stempelheft card).",
+	"decks": {
+		"ulla_passend": {"sdc_ablehnung": 2, "sdc_frostniesen": 2, "sdc_kaeltespray": 2, "sdc_adelsflamme": 2,
+			"sdc_stereo": 2, "sdc_kleingedrucktes": 2, "sdc_gutachten": 2, "sdc_durchatmen": 2, "sdc_schlabbern": 2,
+			"sdc_gegengift": 2},
+		"meister_passend": {"sdc_stereo": 2, "sdc_kabelpeitsche": 2, "sdc_leinen": 2, "sdc_amtsstempel": 2,
+			"sdc_formular_27b": 2, "sdc_ablehnung": 2, "sdc_kaffee": 2, "sdc_gutachten": 2, "sdc_erste_hilfe": 2,
+			"sdc_schlabbern": 2},
+		"meister_erster_besuch": {"sdc_stereo": 2, "sdc_kabelpeitsche": 2, "sdc_leinen": 2, "sdc_formular_27b": 2,
+			"sdc_ablehnung": 2, "sdc_wuchtschlag": 2, "sdc_gutachten": 2, "sdc_schlabbern": 2, "sdc_durchatmen": 2,
+			"sdc_frostniesen": 2}
+	}
+}

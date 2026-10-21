@@ -1,0 +1,5485 @@
+# English translation of PRIME TIME DUNGEON — the domain "mod_lines" (docs/11 §1.2): msgid = the German source text.
+# Fill in msgstr only; tools/i18n.sh merge adds new msgids, tools/i18n.sh check verifies (11 §1.11, §2 glossary).
+msgid ""
+msgstr ""
+"Project-Id-Version: PRIME TIME DUNGEON\n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: 2026-10-13 00:00+0000\n"
+"Last-Translator: PRIME TIME DUNGEON team\n"
+"Language-Team: English\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Domain: mod_lines\n"
+
+#. max 110
+#. tag intro, voice mod
+#: data/mod_lines.json:mod_intro_01.text
+msgctxt "mod_lines"
+msgid "Guten Abend, Galaxis! Willkommen bei DUNGEON PRIME TIME — der Show, die Ihren Planeten gekostet hat!"
+msgstr ""
+
+#. max 110
+#. tag intro, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_intro_02.text
+msgctxt "mod_lines"
+msgid "Kandidat:in {name}, Sie sind live. Bitte nicht in die Kamera weinen, das spiegelt."
+msgstr ""
+
+#. max 110
+#. tag intro, voice mod
+#: data/mod_lines.json:mod_intro_03.text
+msgctxt "mod_lines"
+msgid "Ich bin M.O.D., Ihre Moderatorin, Ihre Regie, Ihr Schicksal. Lächeln!"
+msgstr ""
+
+#. max 110
+#. tag hero_pick:kai, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_hero_pick_kai_01.text
+msgctxt "mod_lines"
+msgid "Kandidat:in {name} übernimmt. Der Graf assistiert. Unter Protest, aber in HD."
+msgstr ""
+
+#. max 110
+#. tag hero_pick:mopsula, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_hero_pick_mopsula_01.text
+msgctxt "mod_lines"
+msgid "Der Graf hat die Fernbedienung an sich genommen. {name} darf folgen. Die Quote jubelt."
+msgstr ""
+
+#. max 110
+#. tag hero_switch:kai, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_hero_switch_kai_01.text
+msgctxt "mod_lines"
+msgid "Rollentausch! {name} führt wieder. Der Graf nennt es ‚wohlverdiente Siesta‘."
+msgstr ""
+
+#. max 110
+#. tag hero_switch:kai, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_hero_switch_kai_02.text
+msgctxt "mod_lines"
+msgid "{name} übernimmt die Führung, der Graf das Sofa. Gerechte Arbeitsteilung."
+msgstr ""
+
+#. max 110
+#. tag hero_switch:mopsula, voice mod
+#: data/mod_lines.json:mod_hero_switch_mopsula_01.text
+msgctxt "mod_lines"
+msgid "Rollentausch! Der Graf führt. Bitte Abstand halten, er bellt in Stereo."
+msgstr ""
+
+#. max 110
+#. tag hero_switch:mopsula, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_hero_switch_mopsula_02.text
+msgctxt "mod_lines"
+msgid "Der Graf übernimmt. {name} darf sich ausruhen. Unter Beobachtung, versteht sich."
+msgstr ""
+
+#. max 110
+#. tag tutorial_explore:mopsula, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_tutorial_explore_mopsula_01.text
+msgctxt "mod_lines"
+msgid "Willkommen in der Unterstadt, Graf! Laufen Sie los – {name} kommt hinterher. Die Kamera auch."
+msgstr ""
+
+#. max 110
+#. tag tutorial_sneak:mopsula, voice mod
+#: data/mod_lines.json:mod_tutorial_sneak_mopsula_01.text
+msgctxt "mod_lines"
+msgid "Da vorn schlafen zwei Ratten. Bellen Sie, Graf – verdutzte Monster erwischt man von jeder Seite zuerst."
+msgstr ""
+
+#. max 110
+#. tag chat_bark, voice chat
+#: data/mod_lines.json:mod_chat_bark_01.text
+msgctxt "mod_lines"
+msgid "WUFF IN HD"
+msgstr ""
+
+#. max 110
+#. tag chat_bark, voice chat
+#: data/mod_lines.json:mod_chat_bark_02.text
+msgctxt "mod_lines"
+msgid "der graf hat gesprochen"
+msgstr ""
+
+#. max 110
+#. tag chat_bark, voice chat
+#: data/mod_lines.json:mod_chat_bark_03.text
+msgctxt "mod_lines"
+msgid "ich hab mich auch erschrocken"
+msgstr ""
+
+#. max 110
+#. tag secret_wall, voice mod
+#: data/mod_lines.json:mod_secret_wall_01.text
+msgctxt "mod_lines"
+msgid "Die Wand war aus Pappe. Wie unser Budget. Bitte schneiden Sie das raus."
+msgstr ""
+
+#. max 110
+#. tag secret_wall, voice mod
+#: data/mod_lines.json:mod_secret_wall_02.text
+msgctxt "mod_lines"
+msgid "Sie haben hinter die Kulissen geschaut. Das kostet normalerweise extra."
+msgstr ""
+
+#. max 110
+#. tag secret_note:1, voice mod
+#: data/mod_lines.json:mod_secret_note_1_01.text
+msgctxt "mod_lines"
+msgid "Regie-Notiz am Kiosk: ‚Sandwiches sind Requisite. NICHT ESSEN.‘ Das erklärt einiges."
+msgstr ""
+
+#. max 110
+#. tag secret_note:2, voice mod
+#: data/mod_lines.json:mod_secret_note_2_01.text
+msgctxt "mod_lines"
+msgid "Hinter der Kulisse klebt ein Zettel: ‚Wand ist aus Pappe. Merkt eh keiner.‘ Tja."
+msgstr ""
+
+#. max 110
+#. tag secret_note:3, voice mod
+#: data/mod_lines.json:mod_secret_note_3_01.text
+msgctxt "mod_lines"
+msgid "Regie-Notiz im Keller: ‚Ratten nach der Show zurück in Kiste 3.‘ Kiste 3 ist leer. Hm."
+msgstr ""
+
+#. max 110
+#. tag chat_secret, voice chat
+#: data/mod_lines.json:mod_chat_secret_01.text
+msgctxt "mod_lines"
+msgid "PAPPWAND LOL"
+msgstr ""
+
+#. max 110
+#. tag chat_secret, voice chat
+#: data/mod_lines.json:mod_chat_secret_02.text
+msgctxt "mod_lines"
+msgid "wusste ichs, alles kulisse"
+msgstr ""
+
+#. max 110
+#. tag chat_secret, voice chat
+#: data/mod_lines.json:mod_chat_secret_03.text
+msgctxt "mod_lines"
+msgid "secret gefunden!!"
+msgstr ""
+
+#. max 110
+#. tag chat_secret_hint, voice chat
+#: data/mod_lines.json:mod_chat_secret_hint_01.text
+msgctxt "mod_lines"
+msgid "die rissige wand da… ist die aus pappe??"
+msgstr ""
+
+#. max 110
+#. tag chat_secret_hint, voice chat
+#: data/mod_lines.json:mod_chat_secret_hint_02.text
+msgctxt "mod_lines"
+msgid "hau mal gegen die wand mit dem riss"
+msgstr ""
+
+#. max 110
+#. tag floor_start, voice mod
+#. {floor} = a floor number, e.g. 3
+#: data/mod_lines.json:mod_floor_start_01.text
+msgctxt "mod_lines"
+msgid "Etage {floor}! Neuer Countdown, neue Monster, gleiche Gage: keine."
+msgstr ""
+
+#. max 110
+#. tag floor_start, voice mod
+#: data/mod_lines.json:mod_floor_start_02.text
+msgctxt "mod_lines"
+msgid "Die Uhr läuft. Die Kameras laufen. Laufen Sie auch."
+msgstr ""
+
+#. max 110
+#. tag first_fight, voice mod
+#: data/mod_lines.json:mod_first_fight_01.text
+msgctxt "mod_lines"
+msgid "Ihr erster Kampf! Das Publikum will Treffer sehen. Es ist da nicht wählerisch."
+msgstr ""
+
+#. max 110
+#. tag first_fight, voice mod
+#: data/mod_lines.json:mod_first_fight_02.text
+msgctxt "mod_lines"
+msgid "Tipp der Regie: Monster hassen es, wenn man sie trifft."
+msgstr ""
+
+#. max 110
+#. tag achievement_generic, voice mod
+#. {achievement} = an achievement name
+#: data/mod_lines.json:mod_achievement_generic_01.text
+msgctxt "mod_lines"
+msgid "Achievement freigeschaltet: {achievement}! Applaus vom Band, bitte."
+msgstr ""
+
+#. max 110
+#. tag achievement_generic, voice mod
+#. {achievement} = an achievement name
+#: data/mod_lines.json:mod_achievement_generic_02.text
+msgctxt "mod_lines"
+msgid "{achievement}! Ihre Mutter wäre stolz, wenn sie noch Empfang hätte."
+msgstr ""
+
+#. max 110
+#. tag achievement_generic, voice mod
+#: data/mod_lines.json:mod_achievement_generic_03.text
+msgctxt "mod_lines"
+msgid "Eine Lootbox für Sie! Öffnen nur im Safe Room. Vorfreude ist Content."
+msgstr ""
+
+#. max 110
+#. tag achievement_generic, voice mod
+#: data/mod_lines.json:mod_achievement_generic_04.text
+msgctxt "mod_lines"
+msgid "Neues Achievement. Die Juristen prüfen noch, ob es zählt. Es zählt."
+msgstr ""
+
+#. max 110
+#. tag marotte_announce:mar_mop_only, voice mod
+#: data/mod_lines.json:mod_marotte_announce_mar_mop_only_01.text
+msgctxt "mod_lines"
+msgid "Ich habe heute eine Schwäche für Wischmopps. Fragen Sie nicht. Wischen Sie."
+msgstr ""
+
+#. max 110
+#. tag marotte_hit:mar_mop_only, voice mod
+#: data/mod_lines.json:mod_marotte_hit_mar_mop_only_01.text
+msgctxt "mod_lines"
+msgid "Mit dem Mopp! Ich bekomme Gänsehaut. Ich habe keine Haut."
+msgstr ""
+
+#. max 110
+#. tag marotte_announce:mar_graf_finale, voice mod
+#: data/mod_lines.json:mod_marotte_announce_mar_graf_finale_01.text
+msgctxt "mod_lines"
+msgid "Heute will ich den Grafen glänzen sehen. Den letzten Treffer, bitte. Mit Etikette."
+msgstr ""
+
+#. max 110
+#. tag marotte_hit:mar_graf_finale, voice mod
+#: data/mod_lines.json:mod_marotte_hit_mar_graf_finale_01.text
+msgctxt "mod_lines"
+msgid "Der Graf beendet es. Mit einem Niesen. Zeitlos."
+msgstr ""
+
+#. max 110
+#. tag marotte_announce:mar_variety, voice mod
+#: data/mod_lines.json:mod_marotte_announce_mar_variety_01.text
+msgctxt "mod_lines"
+msgid "Heute zählt Stil: vier verschiedene Aktionen in einem Kampf, und ich vergebe Herzchen."
+msgstr ""
+
+#. max 110
+#. tag marotte_hit:mar_variety, voice mod
+#: data/mod_lines.json:mod_marotte_hit_mar_variety_01.text
+msgctxt "mod_lines"
+msgid "Abwechslung! Die Jury zückt die Zehn."
+msgstr ""
+
+#. max 110
+#. tag marotte_announce:mar_sneaky, voice mod
+#: data/mod_lines.json:mod_marotte_announce_mar_sneaky_01.text
+msgctxt "mod_lines"
+msgid "Heute mag ich Schleichwerbung: anschleichen, zuerst zuschlagen. Überraschung ist Quote."
+msgstr ""
+
+#. max 110
+#. tag marotte_hit:mar_sneaky, voice mod
+#: data/mod_lines.json:mod_marotte_hit_mar_sneaky_01.text
+msgctxt "mod_lines"
+msgid "Erwischt, bevor sie es merkten. Ich liebe Pünktlichkeit."
+msgstr ""
+
+#. max 110
+#. tag marotte_announce:mar_pacifist, voice mod
+#: data/mod_lines.json:mod_marotte_announce_mar_pacifist_01.text
+msgctxt "mod_lines"
+msgid "Heute mag ich es ruhig. Drei neue Räume ohne Prügelei, und ich werde sentimental."
+msgstr ""
+
+#. max 110
+#. tag marotte_hit:mar_pacifist, voice mod
+#: data/mod_lines.json:mod_marotte_hit_mar_pacifist_01.text
+msgctxt "mod_lines"
+msgid "Drei Räume Frieden. Die Werbekunden sind nervös. Ich bin gerührt."
+msgstr ""
+
+#. max 110
+#. tag marotte_announce:mar_secondhand, voice mod
+#: data/mod_lines.json:mod_marotte_announce_mar_secondhand_01.text
+msgctxt "mod_lines"
+msgid "Meine Laune heute: Flohmarkt. Nur gewöhnliche Ausrüstung, bitte. Vintage ist Quote."
+msgstr ""
+
+#. max 110
+#. tag marotte_hit:mar_secondhand, voice mod
+#: data/mod_lines.json:mod_marotte_hit_mar_secondhand_01.text
+msgctxt "mod_lines"
+msgid "Gewonnen in Ramsch-Couture. Die Modeabteilung weint vor Glück."
+msgstr ""
+
+#. max 110
+#. tag marotte_announce:mar_speed, voice mod
+#: data/mod_lines.json:mod_marotte_announce_mar_speed_01.text
+msgctxt "mod_lines"
+msgid "Ich habe heute wenig Sendezeit. Kämpfe unter 15 Sekunden, und ich liebe Sie."
+msgstr ""
+
+#. max 110
+#. tag marotte_hit:mar_speed, voice mod
+#: data/mod_lines.json:mod_marotte_hit_mar_speed_01.text
+msgctxt "mod_lines"
+msgid "Zack, fertig! So schnell schneidet nicht mal mein Praktikant."
+msgstr ""
+
+#. max 110
+#. tag marotte_announce:mar_stunt, voice mod
+#: data/mod_lines.json:mod_marotte_announce_mar_stunt_01.text
+msgctxt "mod_lines"
+msgid "Heute Abend: Akrobatik! Eine gelungene SHOW pro Kampf, und ich bin Ihr Fan."
+msgstr ""
+
+#. max 110
+#. tag marotte_hit:mar_stunt, voice mod
+#: data/mod_lines.json:mod_marotte_hit_mar_stunt_01.text
+msgctxt "mod_lines"
+msgid "Gelandet! Ich habe die Zeitlupe schon dreimal angesehen."
+msgstr ""
+
+#. max 110
+#. tag marotte_announce:mar_bio, voice mod
+#: data/mod_lines.json:mod_marotte_announce_mar_bio_01.text
+msgctxt "mod_lines"
+msgid "Heute bin ich auf Natur. Keine Items, keine Sponsoren. Ja, ich höre mich selbst."
+msgstr ""
+
+#. max 110
+#. tag marotte_hit:mar_bio, voice mod
+#: data/mod_lines.json:mod_marotte_hit_mar_bio_01.text
+msgctxt "mod_lines"
+msgid "Ohne Zusatzstoffe gewonnen. Ich verleihe Ihnen das Siegel ‚garantiert ungesponsert‘."
+msgstr ""
+
+#. max 110
+#. tag marotte_announce:mar_brave, voice mod
+#: data/mod_lines.json:mod_marotte_announce_mar_brave_01.text
+msgctxt "mod_lines"
+msgid "Heute mag ich Mut. Kein Weglaufen, kein Nebel. Nur nach vorn."
+msgstr ""
+
+#. max 110
+#. tag marotte_hit:mar_brave, voice mod
+#: data/mod_lines.json:mod_marotte_hit_mar_brave_01.text
+msgctxt "mod_lines"
+msgid "Nicht einen Schritt zurück! Die Versicherung hat aufgelegt."
+msgstr ""
+
+#. max 110
+#. tag marotte_announce:mar_gourmet, voice mod
+#: data/mod_lines.json:mod_marotte_announce_mar_gourmet_01.text
+msgctxt "mod_lines"
+msgid "Ich habe Appetit auf Schwachstellen. Drei pro Kampf, serviert mit Stil."
+msgstr ""
+
+#. max 110
+#. tag marotte_hit:mar_gourmet, voice mod
+#: data/mod_lines.json:mod_marotte_hit_mar_gourmet_01.text
+msgctxt "mod_lines"
+msgid "Genau da, wo es wehtut. Drei Gänge, null Mitleid."
+msgstr ""
+
+#. max 110
+#. tag marotte_won, voice mod
+#: data/mod_lines.json:mod_marotte_won_01.text
+msgctxt "mod_lines"
+msgid "Wette gewonnen! Sie haben verstanden, was ich mag. Das ist mir fast unheimlich."
+msgstr ""
+
+#. max 110
+#. tag marotte_won, voice mod
+#: data/mod_lines.json:mod_marotte_won_02.text
+msgctxt "mod_lines"
+msgid "Drei Herzen voll! Ein Fanpost-Paket ist unterwegs. Die Poststelle stöhnt schon."
+msgstr ""
+
+#. max 110
+#. tag marotte_won:mar_mop_only, voice mod
+#: data/mod_lines.json:mod_marotte_won_mar_mop_only_01.text
+msgctxt "mod_lines"
+msgid "Drei Siege mit dem Mopp. Ich lasse ihn vergolden. Also den Mopp, nicht Sie."
+msgstr ""
+
+#. max 110
+#. tag marotte_won:mar_graf_finale, voice mod
+#: data/mod_lines.json:mod_marotte_won_mar_graf_finale_01.text
+msgctxt "mod_lines"
+msgid "Dreimal das letzte Wort für den Grafen. Er hat es sich notiert. Auf Pergament."
+msgstr ""
+
+#. max 110
+#. tag marotte_missed, voice mod
+#: data/mod_lines.json:mod_marotte_missed_01.text
+msgctxt "mod_lines"
+msgid "Meine Vorliebe blieb unerfüllt. Ich trage es mit Fassung. Und Statistik."
+msgstr ""
+
+#. max 110
+#. tag marotte_missed, voice mod
+#: data/mod_lines.json:mod_marotte_missed_02.text
+msgctxt "mod_lines"
+msgid "Sie haben ignoriert, was ich mag. Mutig. Ich schreibe es in mein Tagebuch. In Großbuchstaben."
+msgstr ""
+
+#. max 110
+#. tag liga_hint, voice mod
+#: data/mod_lines.json:mod_liga_hint_01.text
+msgctxt "mod_lines"
+msgid "Übrigens: Wer ohne Rüstung & ohne Accessoire kämpft, kriegt bei mir Bonuspunkte. Ich sage das nur."
+msgstr ""
+
+#. max 110
+#. tag liga_enter:1, voice mod
+#: data/mod_lines.json:mod_liga_enter_1_01.text
+msgctxt "mod_lines"
+msgid "Kandidat:in ohne Rüstung & ohne Accessoire. § 3 Kleiderordnung sagt nein, die Quote sagt JA."
+msgstr ""
+
+#. max 110
+#. tag liga_enter:1, voice mod
+#: data/mod_lines.json:mod_liga_enter_1_02.text
+msgctxt "mod_lines"
+msgid "Unterhosen-Liga! Die Versicherung hat gekündigt, das Publikum hat abonniert."
+msgstr ""
+
+#. max 110
+#. tag liga_enter:1:mopsula, voice mod
+#: data/mod_lines.json:mod_liga_enter_1_mopsula_01.text
+msgctxt "mod_lines"
+msgid "Der Graf trägt heute: Würde. Und sein Fell. Das Publikum ist entzückt."
+msgstr ""
+
+#. max 110
+#. tag liga_enter:2, voice mod
+#: data/mod_lines.json:mod_liga_enter_2_01.text
+msgctxt "mod_lines"
+msgid "Zweimal ohne Rüstung & ohne Accessoire, bitte. Mit scharf? Nein, mit Wischmopp."
+msgstr ""
+
+#. max 110
+#. tag liga_enter:2, voice mod
+#: data/mod_lines.json:mod_liga_enter_2_02.text
+msgctxt "mod_lines"
+msgid "Beide ohne Rüstung & ohne Accessoire. Die Kostümabteilung hat heute frei. Die Quote nicht."
+msgstr ""
+
+#. max 110
+#. tag liga_win, voice mod
+#: data/mod_lines.json:mod_liga_win_01.text
+msgctxt "mod_lines"
+msgid "Gewonnen. Ohne Rüstung & ohne Accessoire. Ich reiche die Szene beim Preis für Zivilcourage ein."
+msgstr ""
+
+#. max 110
+#. tag liga_floor, voice mod
+#: data/mod_lines.json:mod_liga_floor_01.text
+msgctxt "mod_lines"
+msgid "Eine ganze Etage in der Duo-Liga. Die Rechtsabteilung prüft, ob das legal ist. Es ist legendär."
+msgstr ""
+
+#. max 110
+#. tag liga_leave, voice mod
+#: data/mod_lines.json:mod_liga_leave_01.text
+msgctxt "mod_lines"
+msgid "Rüstung oder Accessoire wieder an? Verständlich. Die Zuschauer:innen seufzen leise."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_ul_first, voice mod
+#: data/mod_lines.json:mod_achievement_ach_ul_first_01.text
+msgctxt "mod_lines"
+msgid "Einmal ohne alles! Die Imbissbude nebenan bietet Ihnen einen Werbevertrag an."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_duo_first, voice mod
+#: data/mod_lines.json:mod_achievement_ach_duo_first_01.text
+msgctxt "mod_lines"
+msgid "Leichtes Gepäck im Doppelpack! Der Graf nennt es ‚Sommerkollektion‘. Ich nenne es Quote."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_bets_5, voice mod
+#: data/mod_lines.json:mod_achievement_ach_bets_5_01.text
+msgctxt "mod_lines"
+msgid "Fünf Wetten gewonnen. Sie kennen mich besser als meine Programmierer."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_ul_boss, voice mod
+#: data/mod_lines.json:mod_achievement_ach_ul_boss_01.text
+msgctxt "mod_lines"
+msgid "Ein Boss, besiegt ohne Rüstung & ohne Accessoire. Die Kantine benennt ein Gericht nach Ihnen."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_duo_floor, voice mod
+#: data/mod_lines.json:mod_achievement_ach_duo_floor_01.text
+msgctxt "mod_lines"
+msgid "Eine ganze Etage mit leichtem Gepäck! Ich habe das Archiv angewiesen, es nie zu löschen."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_duo_flawless, voice mod
+#: data/mod_lines.json:mod_achievement_ach_duo_flawless_01.text
+msgctxt "mod_lines"
+msgid "Der Etagenboss, kein K.O., keine Rüstung, kein Accessoire. Ich muss mich setzen. Ich habe keinen Stuhl."
+msgstr ""
+
+#. max 110
+#. tag low_hp, voice mod
+#: data/mod_lines.json:mod_low_hp_01.text
+msgctxt "mod_lines"
+msgid "Ihre HP sind niedrig! Die Quote ist hoch! Ein Dilemma!"
+msgstr ""
+
+#. max 110
+#. tag low_hp, voice mod
+#: data/mod_lines.json:mod_low_hp_02.text
+msgctxt "mod_lines"
+msgid "Kandidat:in in Lebensgefahr — Kamera 2, Nahaufnahme!"
+msgstr ""
+
+#. max 110
+#. tag low_hp, voice mod
+#: data/mod_lines.json:mod_low_hp_03.text
+msgctxt "mod_lines"
+msgid "Bitte jetzt nicht sterben, der Werbeblock ist noch nicht verkauft."
+msgstr ""
+
+#. max 110
+#. tag kill_streak, voice mod
+#: data/mod_lines.json:mod_kill_streak_01.text
+msgctxt "mod_lines"
+msgid "Drei auf einen Streich! Das Studiopublikum tobt. Das Studiopublikum ist eine Tonspur, aber trotzdem!"
+msgstr ""
+
+#. max 110
+#. tag kill_streak, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_kill_streak_02.text
+msgctxt "mod_lines"
+msgid "Kill-Serie! Jemand bringe {name} einen Vertrag."
+msgstr ""
+
+#. max 110
+#. tag kill_streak, voice mod
+#: data/mod_lines.json:mod_kill_streak_03.text
+msgctxt "mod_lines"
+msgid "Das nennt man bei uns ‚Programmgestaltung‘."
+msgstr ""
+
+#. max 110
+#. tag crit, voice mod
+#: data/mod_lines.json:mod_crit_01.text
+msgctxt "mod_lines"
+msgid "KRITISCH! Das hat sogar mir wehgetan, und ich bin Software."
+msgstr ""
+
+#. max 110
+#. tag crit, voice mod
+#: data/mod_lines.json:mod_crit_02.text
+msgctxt "mod_lines"
+msgid "Volltreffer! Zeitlupe, bitte. Nochmal. Nochmal!"
+msgstr ""
+
+#. max 110
+#. tag weakness, voice mod
+#: data/mod_lines.json:mod_weakness_01.text
+msgctxt "mod_lines"
+msgid "Schwachstelle gefunden. Wie bei meinen Ex-Producern."
+msgstr ""
+
+#. max 110
+#. tag weakness, voice mod
+#: data/mod_lines.json:mod_weakness_02.text
+msgctxt "mod_lines"
+msgid "Genau da! Sie haben das Handbuch gelesen. Es gibt kein Handbuch."
+msgstr ""
+
+#. max 110
+#. tag overkill, voice mod
+#: data/mod_lines.json:mod_overkill_01.text
+msgctxt "mod_lines"
+msgid "Das war … mehr als nötig. Wunderbar!"
+msgstr ""
+
+#. max 110
+#. tag overkill, voice mod
+#: data/mod_lines.json:mod_overkill_02.text
+msgctxt "mod_lines"
+msgid "Overkill! Die Jugendschutz-Abteilung hat gekündigt."
+msgstr ""
+
+#. max 110
+#. tag stunt_success, voice mod
+#: data/mod_lines.json:mod_stunt_success_01.text
+msgctxt "mod_lines"
+msgid "WAS FÜR EIN STUNT! Das kommt in die Jahresrückschau!"
+msgstr ""
+
+#. max 110
+#. tag stunt_success, voice mod
+#: data/mod_lines.json:mod_stunt_success_02.text
+msgctxt "mod_lines"
+msgid "Ich hätte es nie für möglich gehalten. Ich habe dagegen gewettet. Egal!"
+msgstr ""
+
+#. max 110
+#. tag stunt_success, voice mod
+#: data/mod_lines.json:mod_stunt_success_03.text
+msgctxt "mod_lines"
+msgid "Das, liebe Galaxis, ist Prime Time!"
+msgstr ""
+
+#. max 110
+#. tag stunt_fail, voice mod
+#: data/mod_lines.json:mod_stunt_fail_01.text
+msgctxt "mod_lines"
+msgid "Autsch. Aber Schadenfreude ist auch Quote."
+msgstr ""
+
+#. max 110
+#. tag stunt_fail, voice mod
+#: data/mod_lines.json:mod_stunt_fail_02.text
+msgctxt "mod_lines"
+msgid "Der Stunt ist misslungen. Die Wiederholung läuft in Dauerschleife."
+msgstr ""
+
+#. max 110
+#. tag stunt_fail, voice mod
+#: data/mod_lines.json:mod_stunt_fail_03.text
+msgctxt "mod_lines"
+msgid "Gemäß § 4 der Showordnung: Lachen ist ausdrücklich erlaubt."
+msgstr ""
+
+#. max 110
+#. tag boring_fight, voice mod
+#: data/mod_lines.json:mod_boring_fight_01.text
+msgctxt "mod_lines"
+msgid "Zum dritten Mal dasselbe. Die Zuschauer wechseln zu einer Kochshow."
+msgstr ""
+
+#. max 110
+#. tag boring_fight, voice mod
+#: data/mod_lines.json:mod_boring_fight_02.text
+msgctxt "mod_lines"
+msgid "Gähn. Haben Sie es mal mit … Abwechslung versucht?"
+msgstr ""
+
+#. max 110
+#. tag boring_fight, voice mod
+#: data/mod_lines.json:mod_boring_fight_03.text
+msgctxt "mod_lines"
+msgid "Ich bekomme gerade Beschwerden. Von meinen eigenen Untertiteln."
+msgstr ""
+
+#. max 110
+#. tag flee, voice mod
+#: data/mod_lines.json:mod_flee_01.text
+msgctxt "mod_lines"
+msgid "Flucht! Mutig ist anders. Klug manchmal auch."
+msgstr ""
+
+#. max 110
+#. tag flee, voice mod
+#: data/mod_lines.json:mod_flee_02.text
+msgctxt "mod_lines"
+msgid "Und weg sind sie. Die Kamera bleibt beim Monster. Es wirkt einsam."
+msgstr ""
+
+#. max 110
+#. tag flee, voice mod
+#: data/mod_lines.json:mod_flee_03.text
+msgctxt "mod_lines"
+msgid "Rückzug notiert. Die Zuschauer auch. Sie entfolgen."
+msgstr ""
+
+#. max 110
+#. tag flee_fail, voice mod
+#: data/mod_lines.json:mod_flee_fail_01.text
+msgctxt "mod_lines"
+msgid "Fluchtversuch gescheitert. Das Monster hat Sie freundlich zurückgebeten."
+msgstr ""
+
+#. max 110
+#. tag flee_fail, voice mod
+#: data/mod_lines.json:mod_flee_fail_02.text
+msgctxt "mod_lines"
+msgid "Nö. Die Tür ist dekorativ."
+msgstr ""
+
+#. max 110
+#. tag sponsor_gift, voice mod
+#. {sponsor} = a sponsor name
+#: data/mod_lines.json:mod_sponsor_gift_01.text
+msgctxt "mod_lines"
+msgid "Dieser Moment wird Ihnen präsentiert von {sponsor}!"
+msgstr ""
+
+#. max 110
+#. tag sponsor_gift, voice mod
+#. {sponsor} = a sponsor name
+#: data/mod_lines.json:mod_sponsor_gift_02.text
+msgctxt "mod_lines"
+msgid "Ein Geschenk von {sponsor}! Bitte das Logo in die Kamera halten."
+msgstr ""
+
+#. max 110
+#. tag sponsor_gift, voice mod
+#. {sponsor} = a sponsor name
+#: data/mod_lines.json:mod_sponsor_gift_03.text
+msgctxt "mod_lines"
+msgid "Die Zuschauer lieben Sie, also liebt {sponsor} Sie. Vorläufig."
+msgstr ""
+
+#. max 110
+#. tag timer_warn_300, voice mod
+#: data/mod_lines.json:mod_timer_warn_300_01.text
+msgctxt "mod_lines"
+msgid "Noch fünf Minuten! Die Etage bricht bald zusammen. Wir haben Popcorn."
+msgstr ""
+
+#. max 110
+#. tag timer_warn_300, voice mod
+#: data/mod_lines.json:mod_timer_warn_300_02.text
+msgctxt "mod_lines"
+msgid "Fünf Minuten bis zum Einsturz. Treppe suchen wäre jetzt ein Trend."
+msgstr ""
+
+#. max 110
+#. tag timer_warn_300, voice mod
+#: data/mod_lines.json:mod_timer_warn_300_03.text
+msgctxt "mod_lines"
+msgid "Achtung: Die Unterstadt schließt in fünf Minuten. Bitte zügig zum Ausgang. Oder nicht. Quote!"
+msgstr ""
+
+#. max 110
+#. tag timer_warn_60, voice mod
+#: data/mod_lines.json:mod_timer_warn_60_01.text
+msgctxt "mod_lines"
+msgid "EINE MINUTE! Laufen Sie! LAUFEN SIE!"
+msgstr ""
+
+#. max 110
+#. tag timer_warn_60, voice mod
+#: data/mod_lines.json:mod_timer_warn_60_02.text
+msgctxt "mod_lines"
+msgid "Sechzig Sekunden! Ich habe die Dramamusik extra laut gestellt."
+msgstr ""
+
+#. max 110
+#. tag timer_warn_60, voice mod
+#: data/mod_lines.json:mod_timer_warn_60_03.text
+msgctxt "mod_lines"
+msgid "Letzte Minute! Der Graf sollte jetzt nicht stehen bleiben, um zu posieren."
+msgstr ""
+
+#. max 110
+#. tag timer_expired, voice mod
+#: data/mod_lines.json:mod_timer_expired_01.text
+msgctxt "mod_lines"
+msgid "Und … Sendeschluss. Die Etage ist eingestürzt. Mit Ihnen darin. Schade."
+msgstr ""
+
+#. max 110
+#. tag timer_expired, voice mod
+#: data/mod_lines.json:mod_timer_expired_02.text
+msgctxt "mod_lines"
+msgid "Zeit abgelaufen. Ich hatte Sie wirklich gemocht. Bisschen."
+msgstr ""
+
+#. max 110
+#. tag lootbox_open_bronze, voice mod
+#: data/mod_lines.json:mod_lootbox_open_bronze_01.text
+msgctxt "mod_lines"
+msgid "Bronze. Wie die Medaille für ‚Dabei sein ist alles‘."
+msgstr ""
+
+#. max 110
+#. tag lootbox_open_bronze, voice mod
+#: data/mod_lines.json:mod_lootbox_open_bronze_02.text
+msgctxt "mod_lines"
+msgid "Eine Bronzebox! Was drin ist? Wahrscheinlich ein Pflaster. Mit Werbung."
+msgstr ""
+
+#. max 110
+#. tag lootbox_open_bronze, voice mod
+#: data/mod_lines.json:mod_lootbox_open_bronze_03.text
+msgctxt "mod_lines"
+msgid "Bronze! Die Box, die sagt: ‚Wir haben an dich gedacht. Kurz.‘"
+msgstr ""
+
+#. max 110
+#. tag lootbox_open_silver, voice mod
+#: data/mod_lines.json:mod_lootbox_open_silver_01.text
+msgctxt "mod_lines"
+msgid "Silber! Jetzt wird’s interessant. Ein bisschen."
+msgstr ""
+
+#. max 110
+#. tag lootbox_open_silver, voice mod
+#: data/mod_lines.json:mod_lootbox_open_silver_02.text
+msgctxt "mod_lines"
+msgid "Silberbox! Garantiert mindestens selten. Steht so im Vertrag."
+msgstr ""
+
+#. max 110
+#. tag lootbox_open_gold, voice mod
+#: data/mod_lines.json:mod_lootbox_open_gold_01.text
+msgctxt "mod_lines"
+msgid "GOLD! Bitte Trommelwirbel. Den teuren!"
+msgstr ""
+
+#. max 110
+#. tag lootbox_open_gold, voice mod
+#: data/mod_lines.json:mod_lootbox_open_gold_02.text
+msgctxt "mod_lines"
+msgid "Eine Goldbox. Der Konzern hat dafür einen Mond verkauft."
+msgstr ""
+
+#. max 110
+#. tag lootbox_open_fan, voice mod
+#: data/mod_lines.json:mod_lootbox_open_fan_01.text
+msgctxt "mod_lines"
+msgid "Ein Fanpost-Paket! Ihre Fans haben zusammengelegt. Ein paar haben Glitzer reingetan. Sorry."
+msgstr ""
+
+#. max 110
+#. tag lootbox_open_fan, voice mod
+#: data/mod_lines.json:mod_lootbox_open_fan_02.text
+msgctxt "mod_lines"
+msgid "Von Fans, für Fans, gegen Monster. Rührend."
+msgstr ""
+
+#. max 110
+#. tag lootbox_pity, voice mod
+#: data/mod_lines.json:mod_lootbox_pity_01.text
+msgctxt "mod_lines"
+msgid "Endlich Glück! Und nein, das ist kein Algorithmus. Doch, ist es. Egal!"
+msgstr ""
+
+#. max 110
+#. tag death, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_death_01.text
+msgctxt "mod_lines"
+msgid "Sendeschluss. {name} und der Graf sind gefallen. Wiederholung um 3 Uhr nachts."
+msgstr ""
+
+#. max 110
+#. tag death, voice mod
+#: data/mod_lines.json:mod_death_02.text
+msgctxt "mod_lines"
+msgid "Game Over. Die Zuschauer schalten ab. Ich schalte … noch nicht ab."
+msgstr ""
+
+#. max 110
+#. tag death, voice mod
+#: data/mod_lines.json:mod_death_03.text
+msgctxt "mod_lines"
+msgid "Das war’s. Ich lege Ihnen eine Blume aufs Inventar."
+msgstr ""
+
+#. max 110
+#. tag mopsula_ko, voice mod
+#: data/mod_lines.json:mod_mopsula_ko_01.text
+msgctxt "mod_lines"
+msgid "DER GRAF IST GEFALLEN! Die Quote stürzt ab! Helfen Sie ihm, sofort!"
+msgstr ""
+
+#. max 110
+#. tag mopsula_ko, voice mod
+#: data/mod_lines.json:mod_mopsula_ko_02.text
+msgctxt "mod_lines"
+msgid "Unser Graf liegt am Boden. Ich verlange eine Wiederbelebung, aus rein geschäftlichen Gründen."
+msgstr ""
+
+#. max 110
+#. tag kai_ko, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_kai_ko_01.text
+msgctxt "mod_lines"
+msgid "{name} ist KO! Der Graf ist jetzt allein. Das wird … aristokratisch."
+msgstr ""
+
+#. max 110
+#. tag kai_ko, voice mod
+#: data/mod_lines.json:mod_kai_ko_02.text
+msgctxt "mod_lines"
+msgid "Kandidat:in am Boden. Der Mops übernimmt. Endlich ein Profi."
+msgstr ""
+
+#. max 110
+#. tag revive, voice mod
+#: data/mod_lines.json:mod_revive_01.text
+msgctxt "mod_lines"
+msgid "Wiederbelebt! Comebacks sind unser Lieblingsgenre."
+msgstr ""
+
+#. max 110
+#. tag boss_intro:enm_boss_hausmeister, voice mod
+#: data/mod_lines.json:mod_boss_intro_enm_boss_hausmeister_01.text
+msgctxt "mod_lines"
+msgid "Applaus für den Hausmeister! Seit 34 Jahren im Dienst, seit 34 Minuten ein Monster."
+msgstr ""
+
+#. max 110
+#. tag boss_intro:enm_boss_hausmeister, voice mod
+#: data/mod_lines.json:mod_boss_intro_enm_boss_hausmeister_02.text
+msgctxt "mod_lines"
+msgid "Achtung: Er hat einen Schlüssel für alles. Außer für Gnade."
+msgstr ""
+
+#. max 110
+#. tag boss_phase:enm_boss_hausmeister:2, voice mod
+#: data/mod_lines.json:mod_boss_phase_enm_boss_hausmeister_2_01.text
+msgctxt "mod_lines"
+msgid "Er verliest die Hausordnung! Paragraf sieben! Das wird hässlich."
+msgstr ""
+
+#. max 110
+#. tag boss_phase:enm_boss_hausmeister:3, voice mod
+#: data/mod_lines.json:mod_boss_phase_enm_boss_hausmeister_3_01.text
+msgctxt "mod_lines"
+msgid "Feierabend! Und ein Hausmeister im Feierabend kennt keine Regeln mehr!"
+msgstr ""
+
+#. max 110
+#. tag boss_intro:enm_boss_rattenkoenigin, voice mod
+#: data/mod_lines.json:mod_boss_intro_enm_boss_rattenkoenigin_01.text
+msgctxt "mod_lines"
+msgid "Ihre Majestät, die Rattenkönigin von Gleis 9! Sieben Ratten, ein Knoten, null Humor."
+msgstr ""
+
+#. max 110
+#. tag boss_intro:enm_boss_rattenkoenigin, voice mod
+#: data/mod_lines.json:mod_boss_intro_enm_boss_rattenkoenigin_02.text
+msgctxt "mod_lines"
+msgid "Zwei Adelige, ein Bahnsteig. Das ist das Duell, für das die Galaxis bezahlt hat!"
+msgstr ""
+
+#. max 110
+#. tag boss_phase:enm_boss_rattenkoenigin:2, voice mod
+#: data/mod_lines.json:mod_boss_phase_enm_boss_rattenkoenigin_2_01.text
+msgctxt "mod_lines"
+msgid "Hören Sie das? Das ist der Zug auf Gleis 9. Er ist pünktlich. Zum ersten Mal überhaupt."
+msgstr ""
+
+#. max 110
+#. tag boss_phase:enm_boss_rattenkoenigin:3, voice mod
+#: data/mod_lines.json:mod_boss_phase_enm_boss_rattenkoenigin_3_01.text
+msgctxt "mod_lines"
+msgid "Der Zug ist entgleist! Die Königin ist wütend! Ich bin begeistert!"
+msgstr ""
+
+#. max 110
+#. tag boss_defeated, voice mod
+#: data/mod_lines.json:mod_boss_defeated_01.text
+msgctxt "mod_lines"
+msgid "Boss besiegt! Die Einschaltquote macht gerade einen Handstand."
+msgstr ""
+
+#. max 110
+#. tag boss_defeated, voice mod
+#: data/mod_lines.json:mod_boss_defeated_02.text
+msgctxt "mod_lines"
+msgid "Gefallen! Und das zur besten Sendezeit. Danke!"
+msgstr ""
+
+#. max 110
+#. tag level_up, voice mod
+#. {level} = a level, e.g. 12
+#: data/mod_lines.json:mod_level_up_01.text
+msgctxt "mod_lines"
+msgid "Aufstieg! Sie sind jetzt {level}% weniger verzichtbar."
+msgstr ""
+
+#. max 110
+#. tag level_up, voice mod
+#: data/mod_lines.json:mod_level_up_02.text
+msgctxt "mod_lines"
+msgid "Stufenaufstieg! Mehr HP, mehr MP, gleich wenig Gage."
+msgstr ""
+
+#. max 110
+#. tag talent_show_open, voice mod
+#: data/mod_lines.json:mod_talent_show_open_01.text
+msgctxt "mod_lines"
+msgid "Talent-Show! Wählen Sie je Figur eines von zwei Talenten. Das andere bekommt jemand anderes. Nie."
+msgstr ""
+
+#. max 110
+#. tag talent_pick, voice mod
+#: data/mod_lines.json:mod_talent_pick_01.text
+msgctxt "mod_lines"
+msgid "Neues Talent! Die Regie nennt es Entwicklung. Ich nenne es: mehr Material."
+msgstr ""
+
+#. max 110
+#. tag talent_pick, voice mod
+#: data/mod_lines.json:mod_talent_pick_02.text
+msgctxt "mod_lines"
+msgid "Notiert. Das Publikum liebt Figuren mit Entwicklung. Und mit Wischmopp."
+msgstr ""
+
+#. max 110
+#. tag talent_pick:mopsula, voice mod
+#: data/mod_lines.json:mod_talent_pick_mopsula_01.text
+msgctxt "mod_lines"
+msgid "Der Graf lernt dazu. Er bestreitet, dass es etwas zu lernen gab."
+msgstr ""
+
+#. max 110
+#. tag talent_pick:mopsula, voice mod
+#: data/mod_lines.json:mod_talent_pick_mopsula_02.text
+msgctxt "mod_lines"
+msgid "Der Graf sagt: „Fußnote 5: Dieses Talent hatte ich schon immer.“ Ich sage: Applaus."
+msgstr ""
+
+#. max 110
+#. tag casting_open, voice mod
+#: data/mod_lines.json:mod_casting_open_01.text
+msgctxt "mod_lines"
+msgid "Recall! Wer wollen Sie sein? Und was wollen Sie können? Die Jury bin ich."
+msgstr ""
+
+#. max 110
+#. tag casting_open, voice mod
+#: data/mod_lines.json:mod_casting_open_02.text
+msgctxt "mod_lines"
+msgid "Willkommen zum Recall! Wer wollen Sie sein? Wählen Sie weise. Oder telegen."
+msgstr ""
+
+#. max 110
+#. tag casting_species, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_casting_species_01.text
+msgctxt "mod_lines"
+msgid "Und nun Sie, {name}: Wer wollen Sie sein? Original bleiben ist auch eine Antwort."
+msgstr ""
+
+#. max 110
+#. tag casting_species:mopsula, voice mod
+#: data/mod_lines.json:mod_casting_species_mopsula_01.text
+msgctxt "mod_lines"
+msgid "Jetzt der Graf. Wer möchte er sein? Er sagt, er sei bereits vollendet. Die Jury notiert: optimistisch."
+msgstr ""
+
+#. max 110
+#. tag casting_class, voice mod
+#: data/mod_lines.json:mod_casting_class_01.text
+msgctxt "mod_lines"
+msgid "Und was wollen Sie können? Vier Klassen. Eine davon trägt Sie bis ins Finale. Vielleicht."
+msgstr ""
+
+#. max 110
+#. tag casting_class, voice mod
+#: data/mod_lines.json:mod_casting_class_02.text
+msgctxt "mod_lines"
+msgid "Zweite Runde: die Klasse. Umschulen geht später, einmal je Etage im ersten Safe Room."
+msgstr ""
+
+#. max 110
+#. tag casting_class:mopsula, voice mod
+#: data/mod_lines.json:mod_casting_class_mopsula_01.text
+msgctxt "mod_lines"
+msgid "Was soll der Graf können? Er meint: alles. Die Jury bittet um eine Klasse."
+msgstr ""
+
+#. max 110
+#. tag casting_confirm, voice mod
+#: data/mod_lines.json:mod_casting_confirm_01.text
+msgctxt "mod_lines"
+msgid "Letzte Frage der Jury: sicher? Die Spezies gilt, sobald Sie diesen Raum verlassen."
+msgstr ""
+
+#. max 110
+#. tag casting_combo, voice mod
+#: data/mod_lines.json:mod_casting_combo_01.text
+msgctxt "mod_lines"
+msgid "Notiert. Die Jury nickt. Die Jury nickt immer. Diesmal aus Überzeugung."
+msgstr ""
+
+#. max 110
+#. tag casting_combo, voice mod
+#: data/mod_lines.json:mod_casting_combo_02.text
+msgctxt "mod_lines"
+msgid "Eine mutige Kombination. Das Publikum liebt Mut. Die Statistik schaut noch skeptisch."
+msgstr ""
+
+#. max 110
+#. tag casting_combo, voice mod
+#: data/mod_lines.json:mod_casting_combo_03.text
+msgctxt "mod_lines"
+msgid "Angenommen! Ihre Fans basteln schon Schilder. Mit Glitzer, aus Liebe."
+msgstr ""
+
+#. max 110
+#. tag casting_combo:spc_original, voice mod
+#: data/mod_lines.json:mod_casting_combo_spc_original_01.text
+msgctxt "mod_lines"
+msgid "Original bleiben. Kein Kostüm, keine Ausrede. Das Publikum liebt Echtes."
+msgstr ""
+
+#. max 110
+#. tag casting_combo:spc_kai_kachelgolem, voice mod
+#: data/mod_lines.json:mod_casting_combo_spc_kai_kachelgolem_01.text
+msgctxt "mod_lines"
+msgid "Kachelgolem! Fugenfest, abwaschbar, schwer zu verschieben. Die Requisite bestellt Ersatzfliesen."
+msgstr ""
+
+#. max 110
+#. tag casting_combo:spc_kai_neonfalter, voice mod
+#: data/mod_lines.json:mod_casting_combo_spc_kai_neonfalter_01.text
+msgctxt "mod_lines"
+msgid "Neonfalter! Sie leuchten jetzt. Bitte nicht zu nah an die Scheinwerfer."
+msgstr ""
+
+#. max 110
+#. tag casting_combo:spc_kai_pilzling, voice mod
+#: data/mod_lines.json:mod_casting_combo_spc_kai_pilzling_01.text
+msgctxt "mod_lines"
+msgid "Pilzling! Gift schmeckt Ihnen jetzt nach Waldboden. Die Kantine notiert das."
+msgstr ""
+
+#. max 110
+#. tag casting_combo:spc_kai_teilautomat, voice mod
+#: data/mod_lines.json:mod_casting_combo_spc_kai_teilautomat_01.text
+msgctxt "mod_lines"
+msgid "Teilautomat! Münzschlitz in der Brust. Bitte keine Knöpfe einwerfen, auch nicht im Scherz."
+msgstr ""
+
+#. max 110
+#. tag casting_combo:spc_mop_glutmops, voice mod
+#: data/mod_lines.json:mod_casting_combo_spc_mop_glutmops_01.text
+msgctxt "mod_lines"
+msgid "Glutmops! Der Graf glüht jetzt auch außen. Die Requisite stellt einen Feuerlöscher bereit."
+msgstr ""
+
+#. max 110
+#. tag casting_combo:spc_mop_spukmops, voice mod
+#: data/mod_lines.json:mod_casting_combo_spc_mop_spukmops_01.text
+msgctxt "mod_lines"
+msgid "Spukmops! Halb durchsichtig, voll überzeugt. Das Licht-Team weiß nicht, wohin damit."
+msgstr ""
+
+#. max 110
+#. tag casting_combo:spc_mop_flattermops, voice mod
+#: data/mod_lines.json:mod_casting_combo_spc_mop_flattermops_01.text
+msgctxt "mod_lines"
+msgid "Flattermops! Winzige Flügel, große Pläne. Gelandet wird bisher nur auf Kissen."
+msgstr ""
+
+#. max 110
+#. tag casting_combo:spc_kai_kachelgolem:cls_kai_wrecker, voice mod
+#: data/mod_lines.json:mod_casting_combo_spc_kai_kachelgolem_cls_kai_wrecker_01.text
+msgctxt "mod_lines"
+msgid "Ein Bauprojekt auf zwei Beinen. Die Statik nickt."
+msgstr ""
+
+#. max 110
+#. tag casting_combo:spc_kai_neonfalter:cls_kai_runner, voice mod
+#: data/mod_lines.json:mod_casting_combo_spc_kai_neonfalter_cls_kai_runner_01.text
+msgctxt "mod_lines"
+msgid "Ein Neonfalter auf Gleisen. Sie leuchten schneller, als die Anzeigetafel umschalten kann."
+msgstr ""
+
+#. max 110
+#. tag casting_combo:spc_kai_neonfalter:cls_kai_showrunner, voice mod
+#: data/mod_lines.json:mod_casting_combo_spc_kai_neonfalter_cls_kai_showrunner_01.text
+msgctxt "mod_lines"
+msgid "Leuchtende Showrunner:in! Die Kamera muss Sie nicht einmal mehr suchen."
+msgstr ""
+
+#. max 110
+#. tag casting_combo:spc_kai_pilzling:cls_kai_wrecker, voice mod
+#: data/mod_lines.json:mod_casting_combo_spc_kai_pilzling_cls_kai_wrecker_01.text
+msgctxt "mod_lines"
+msgid "Pilzling mit Abrissbirne. Wo Sie zuschlagen, wächst danach etwas. Ökologisch wertvoll."
+msgstr ""
+
+#. max 110
+#. tag casting_combo:spc_kai_pilzling:cls_kai_showrunner, voice mod
+#: data/mod_lines.json:mod_casting_combo_spc_kai_pilzling_cls_kai_showrunner_01.text
+msgctxt "mod_lines"
+msgid "Ein Pilzling im Rampenlicht. Sporen glitzern im Gegenlicht. Wussten Sie nicht? Jetzt schon."
+msgstr ""
+
+#. max 110
+#. tag casting_combo:spc_kai_teilautomat:cls_kai_tinker, voice mod
+#: data/mod_lines.json:mod_casting_combo_spc_kai_teilautomat_cls_kai_tinker_01.text
+msgctxt "mod_lines"
+msgid "Teilautomat und Schrott-Tüftler:in. Sie reparieren sich jetzt selbst. Theoretisch."
+msgstr ""
+
+#. max 110
+#. tag casting_combo:spc_mop_glutmops:cls_mop_archmage, voice mod
+#: data/mod_lines.json:mod_casting_combo_spc_mop_glutmops_cls_mop_archmage_01.text
+msgctxt "mod_lines"
+msgid "Glutmops und Erzmagister. Der Graf nennt es Feuerwerk. Die Versicherung nennt es anders."
+msgstr ""
+
+#. max 110
+#. tag casting_combo:spc_mop_spukmops:cls_mop_hexer, voice mod
+#: data/mod_lines.json:mod_casting_combo_spc_mop_spukmops_cls_mop_hexer_01.text
+msgctxt "mod_lines"
+msgid "Ein spukender Fluchgraf. Die Akten verschwinden jetzt von selbst. Mit Fußnote."
+msgstr ""
+
+#. max 110
+#. tag casting_combo:spc_mop_spukmops:cls_mop_zeremonienmeister, voice mod
+#: data/mod_lines.json:mod_casting_combo_spc_mop_spukmops_cls_mop_zeremonienmeister_01.text
+msgctxt "mod_lines"
+msgid "Spukmops als Zeremonienmeister. Die Mitternachtsgala hat endlich ihr Gespenst."
+msgstr ""
+
+#. max 110
+#. tag casting_combo:spc_mop_flattermops:cls_mop_physician, voice mod
+#: data/mod_lines.json:mod_casting_combo_spc_mop_flattermops_cls_mop_physician_01.text
+msgctxt "mod_lines"
+msgid "Flattermops und Medicus. Hausbesuche jetzt per Luftpost."
+msgstr ""
+
+#. max 110
+#. tag casting_combo:spc_mop_flattermops:cls_mop_zeremonienmeister, voice mod
+#: data/mod_lines.json:mod_casting_combo_spc_mop_flattermops_cls_mop_zeremonienmeister_01.text
+msgctxt "mod_lines"
+msgid "Flattermops als Zeremonienmeister. Der Abend wird jetzt von oben eröffnet."
+msgstr ""
+
+#. max 110
+#. tag casting_redo, voice mod
+#: data/mod_lines.json:mod_casting_redo_01.text
+msgctxt "mod_lines"
+msgid "Umentscheiden? In diesem Raum ist alles noch offen. Draußen gilt: Vertrag ist Vertrag."
+msgstr ""
+
+#. max 110
+#. tag casting_retrain, voice mod
+#: data/mod_lines.json:mod_casting_retrain_01.text
+msgctxt "mod_lines"
+msgid "Umschulung! Einmal je Etage, kostenlos, im ersten Safe Room. Die Spezies bleibt, wie sie ist."
+msgstr ""
+
+#. max 110
+#. tag casting_done, voice mod
+#: data/mod_lines.json:mod_casting_done_01.text
+msgctxt "mod_lines"
+msgid "Fertig! Entschieden haben Sie. Ich habe nur genickt."
+msgstr ""
+
+#. max 110
+#. tag casting_done, voice mod
+#: data/mod_lines.json:mod_casting_done_02.text
+msgctxt "mod_lines"
+msgid "Das war der Recall. Die Kostüme sitzen, die Kamera läuft. Weiter geht's."
+msgstr ""
+
+#. max 110
+#. tag casting_later, voice mod
+#: data/mod_lines.json:mod_casting_later_01.text
+msgctxt "mod_lines"
+msgid "Kein Stress. Der Recall wartet in jedem Safe Room dieser Etage. Die Jury hat Zeit. Gerade so."
+msgstr ""
+
+#. max 110
+#. tag casting_no_net, voice mod
+#: data/mod_lines.json:mod_casting_no_net_01.text
+msgctxt "mod_lines"
+msgid "Ohne Netz ist frei: Ein Leben. Keine Rettung. Das Publikum liebt das. Sie hoffentlich auch."
+msgstr ""
+
+#. max 110
+#. tag follower_milestone, voice mod
+#. {followers} = a formatted number, e.g. 1.240
+#: data/mod_lines.json:mod_follower_milestone_01.text
+msgctxt "mod_lines"
+msgid "{followers} Follower! Sie haben jetzt mehr Fans als Ihre alte Stadt Einwohner. Hatte."
+msgstr ""
+
+#. max 110
+#. tag follower_milestone, voice mod
+#: data/mod_lines.json:mod_follower_milestone_02.text
+msgctxt "mod_lines"
+msgid "Meilenstein! Ihre Fans schicken Geschenke. Und Liebesbriefe an den Hund."
+msgstr ""
+
+#. max 110
+#. tag safe_room_enter, voice mod
+#: data/mod_lines.json:mod_safe_room_enter_01.text
+msgctxt "mod_lines"
+msgid "Safe Room. Keine Monster, keine Kameras. Doch, eine Kamera. Okay, sieben."
+msgstr ""
+
+#. max 110
+#. tag safe_room_enter, voice mod
+#: data/mod_lines.json:mod_safe_room_enter_02.text
+msgctxt "mod_lines"
+msgid "Werbepause! Heilen Sie sich, wir verkaufen solange Ihre Highlights."
+msgstr ""
+
+#. max 110
+#. tag safe_room_enter, voice mod
+#: data/mod_lines.json:mod_safe_room_enter_03.text
+msgctxt "mod_lines"
+msgid "Willkommen im Safe Room. Bitte den Automaten füttern, er hat Familie."
+msgstr ""
+
+#. max 110
+#. tag vendor_buy, voice mod
+#: data/mod_lines.json:mod_vendor_buy_01.text
+msgctxt "mod_lines"
+msgid "Danke für Ihren Einkauf! Ein Teil des Erlöses geht an … uns."
+msgstr ""
+
+#. max 110
+#. tag vendor_buy, voice mod
+#. {item} = an item name
+#: data/mod_lines.json:mod_vendor_buy_02.text
+msgctxt "mod_lines"
+msgid "{item}! Exzellente Wahl. Die anderen waren schlechter. Für uns."
+msgstr ""
+
+#. max 110
+#. tag stairs_found, voice mod
+#: data/mod_lines.json:mod_stairs_found_01.text
+msgctxt "mod_lines"
+msgid "Die Treppe! Abstieg oder Ruhm — die Uhr sagt Abstieg, das Publikum sagt Königin."
+msgstr ""
+
+#. max 110
+#. tag stairs_found, voice mod
+#: data/mod_lines.json:mod_stairs_found_02.text
+msgctxt "mod_lines"
+msgid "Da ist sie, die Treppe. Ich würde ja noch ein bisschen bleiben. Rein quotentechnisch."
+msgstr ""
+
+#. max 110
+#. tag floor_end, voice mod
+#: data/mod_lines.json:mod_floor_end_01.text
+msgctxt "mod_lines"
+msgid "Etage 1 geschafft! Nach der Werbung: Etage 2. Bleiben Sie dran!"
+msgstr ""
+
+#. max 110
+#. tag floor_end, voice mod
+#: data/mod_lines.json:mod_floor_end_02.text
+msgctxt "mod_lines"
+msgid "Sie haben die Unterstadt überlebt. Bitte unterschreiben Sie hier, hier und — hier, für die Fortsetzung."
+msgstr ""
+
+#. max 110
+#. tag floor_end, voice mod
+#. {floor} = a floor number, e.g. 3
+#: data/mod_lines.json:mod_floor_end_03.text
+msgctxt "mod_lines"
+msgid "Etage {floor} geschafft! Nach der Werbung geht es tiefer. Bleiben Sie dran!"
+msgstr ""
+
+#. max 110
+#. tag timer_warn_600, voice chat
+#: data/mod_lines.json:mod_timer_warn_600_01.text
+msgctxt "mod_lines"
+msgid "noch 10 min?? lauft!!"
+msgstr ""
+
+#. max 110
+#. tag timer_warn_600, voice chat
+#: data/mod_lines.json:mod_timer_warn_600_02.text
+msgctxt "mod_lines"
+msgid "zehn minuten. ich hol schnell popcorn nach"
+msgstr ""
+
+#. max 110
+#. tag chat_handle, voice chat
+#: data/mod_lines.json:mod_chat_handle_01.text
+msgctxt "mod_lines"
+msgid "xX_Gleisgeist_Xx"
+msgstr ""
+
+#. max 110
+#. tag chat_handle, voice chat
+#: data/mod_lines.json:mod_chat_handle_02.text
+msgctxt "mod_lines"
+msgid "OmaHilde1953"
+msgstr ""
+
+#. max 110
+#. tag chat_handle, voice chat
+#: data/mod_lines.json:mod_chat_handle_03.text
+msgctxt "mod_lines"
+msgid "mopsfan_88"
+msgstr ""
+
+#. max 110
+#. tag chat_handle, voice chat
+#: data/mod_lines.json:mod_chat_handle_04.text
+msgctxt "mod_lines"
+msgid "KeinZugMehr"
+msgstr ""
+
+#. max 110
+#. tag chat_handle, voice chat
+#: data/mod_lines.json:mod_chat_handle_05.text
+msgctxt "mod_lines"
+msgid "Pendlerin_42"
+msgstr ""
+
+#. max 110
+#. tag chat_handle, voice chat
+#: data/mod_lines.json:mod_chat_handle_06.text
+msgctxt "mod_lines"
+msgid "GrafFanclub"
+msgstr ""
+
+#. max 110
+#. tag chat_handle, voice chat
+#: data/mod_lines.json:mod_chat_handle_07.text
+msgctxt "mod_lines"
+msgid "u_bahn_ultra"
+msgstr ""
+
+#. max 110
+#. tag chat_handle, voice chat
+#: data/mod_lines.json:mod_chat_handle_08.text
+msgctxt "mod_lines"
+msgid "PssstRegie"
+msgstr ""
+
+#. max 110
+#. tag chat_hype_high, voice chat
+#: data/mod_lines.json:mod_chat_hype_high_01.text
+msgctxt "mod_lines"
+msgid "DAS IST KINO"
+msgstr ""
+
+#. max 110
+#. tag chat_hype_high, voice chat
+#: data/mod_lines.json:mod_chat_hype_high_02.text
+msgctxt "mod_lines"
+msgid "mops for prime time!!!"
+msgstr ""
+
+#. max 110
+#. tag chat_hype_high, voice chat
+#: data/mod_lines.json:mod_chat_hype_high_03.text
+msgctxt "mod_lines"
+msgid "clip it clip it clip it"
+msgstr ""
+
+#. max 110
+#. tag chat_hype_mid, voice chat
+#: data/mod_lines.json:mod_chat_hype_mid_01.text
+msgctxt "mod_lines"
+msgid "solide runde bisher"
+msgstr ""
+
+#. max 110
+#. tag chat_hype_mid, voice chat
+#: data/mod_lines.json:mod_chat_hype_mid_02.text
+msgctxt "mod_lines"
+msgid "wer hat auch grad hunger"
+msgstr ""
+
+#. max 110
+#. tag chat_hype_mid, voice chat
+#: data/mod_lines.json:mod_chat_hype_mid_03.text
+msgctxt "mod_lines"
+msgid "der graf schaut heute so edel"
+msgstr ""
+
+#. max 110
+#. tag chat_hype_low, voice chat
+#: data/mod_lines.json:mod_chat_hype_low_01.text
+msgctxt "mod_lines"
+msgid "gähn"
+msgstr ""
+
+#. max 110
+#. tag chat_hype_low, voice chat
+#: data/mod_lines.json:mod_chat_hype_low_02.text
+msgctxt "mod_lines"
+msgid "kann mal wer was explodieren lassen"
+msgstr ""
+
+#. max 110
+#. tag chat_hype_low, voice chat
+#: data/mod_lines.json:mod_chat_hype_low_03.text
+msgctxt "mod_lines"
+msgid "ich schalt gleich um auf die kochshow"
+msgstr ""
+
+#. max 110
+#. tag chat_crit, voice chat
+#: data/mod_lines.json:mod_chat_crit_01.text
+msgctxt "mod_lines"
+msgid "KRIT!!"
+msgstr ""
+
+#. max 110
+#. tag chat_crit, voice chat
+#: data/mod_lines.json:mod_chat_crit_02.text
+msgctxt "mod_lines"
+msgid "das hat geknallt"
+msgstr ""
+
+#. max 110
+#. tag chat_crit, voice chat
+#: data/mod_lines.json:mod_chat_crit_03.text
+msgctxt "mod_lines"
+msgid "ZEITLUPE BITTE"
+msgstr ""
+
+#. max 110
+#. tag chat_stunt_fail, voice chat
+#: data/mod_lines.json:mod_chat_stunt_fail_01.text
+msgctxt "mod_lines"
+msgid "hahahaha neiiin"
+msgstr ""
+
+#. max 110
+#. tag chat_stunt_fail, voice chat
+#: data/mod_lines.json:mod_chat_stunt_fail_02.text
+msgctxt "mod_lines"
+msgid "F"
+msgstr ""
+
+#. max 110
+#. tag chat_stunt_fail, voice chat
+#: data/mod_lines.json:mod_chat_stunt_fail_03.text
+msgctxt "mod_lines"
+msgid "bester fail der staffel"
+msgstr ""
+
+#. max 110
+#. tag chat_boring, voice chat
+#: data/mod_lines.json:mod_chat_boring_01.text
+msgctxt "mod_lines"
+msgid "schon wieder dasselbe?"
+msgstr ""
+
+#. max 110
+#. tag chat_boring, voice chat
+#: data/mod_lines.json:mod_chat_boring_02.text
+msgctxt "mod_lines"
+msgid "copy-paste-kampf"
+msgstr ""
+
+#. max 110
+#. tag chat_boring, voice chat
+#: data/mod_lines.json:mod_chat_boring_03.text
+msgctxt "mod_lines"
+msgid "mach mal was anderes bitte"
+msgstr ""
+
+#. max 110
+#. tag chat_mopsula, voice chat
+#: data/mod_lines.json:mod_chat_mopsula_01.text
+msgctxt "mod_lines"
+msgid "GRAF MOPSULA <3"
+msgstr ""
+
+#. max 110
+#. tag chat_mopsula, voice chat
+#: data/mod_lines.json:mod_chat_mopsula_02.text
+msgctxt "mod_lines"
+msgid "der mops trägt diese show"
+msgstr ""
+
+#. max 110
+#. tag chat_mopsula, voice chat
+#: data/mod_lines.json:mod_chat_mopsula_03.text
+msgctxt "mod_lines"
+msgid "ich würde für den grafen sterben"
+msgstr ""
+
+#. max 110
+#. tag mopsula_idle, voice mopsula
+#: data/mod_lines.json:mod_mopsula_idle_01.text
+msgctxt "mod_lines"
+msgid "Ich ruhe. Fußnote 4: Weltuntergänge bitte schriftlich einreichen. Und nicht vor Mitternacht."
+msgstr ""
+
+#. max 110
+#. tag mopsula_idle, voice mopsula
+#: data/mod_lines.json:mod_mopsula_idle_02.text
+msgctxt "mod_lines"
+msgid "Dieser Automat führt keine Leberwurst. Scandalum maximum."
+msgstr ""
+
+#. max 110
+#. tag mopsula_idle, voice mopsula
+#: data/mod_lines.json:mod_mopsula_idle_03.text
+msgctxt "mod_lines"
+msgid "Kolleg:in, das linke Ohr. Fußnote 2: Das rechte ist für Notfälle."
+msgstr ""
+
+#. max 110
+#. tag mopsula_idle, voice mopsula
+#: data/mod_lines.json:mod_mopsula_idle_04.text
+msgctxt "mod_lines"
+msgid "Der Fernseher redet zu viel. Ich auch. Aber mit Quellenangaben."
+msgstr ""
+
+#. max 110
+#. tag mopsula_idle, voice mopsula
+#: data/mod_lines.json:mod_mopsula_idle_05.text
+msgctxt "mod_lines"
+msgid "Ein Sofa. In Zwinger 7 gab es nur Beton. Ich nehme es in meine Memoiren auf."
+msgstr ""
+
+#. max 110
+#. tag event_photo_drone_pose, voice mod
+#: data/mod_lines.json:mod_event_photo_drone_pose_01.text
+msgctxt "mod_lines"
+msgid "Lächeln! Das wird das Titelbild der Woche. Oder Ihr Nachruf. Beides verkauft sich."
+msgstr ""
+
+#. max 110
+#. tag event_photo_drone_smash, voice mod
+#: data/mod_lines.json:mod_event_photo_drone_smash_01.text
+msgctxt "mod_lines"
+msgid "Sie haben meine Kamera zertreten. Ich vergesse nichts. Ich bin buchstäblich ein Speicher."
+msgstr ""
+
+#. max 110
+#. tag event_lost_candidate_give, voice mod
+#: data/mod_lines.json:mod_event_lost_candidate_give_01.text
+msgctxt "mod_lines"
+msgid "Sie haben geteilt! Mit einem Fremden! Die Zuschauer sind verwirrt und gerührt."
+msgstr ""
+
+#. max 110
+#. tag event_lost_candidate_leave, voice mod
+#: data/mod_lines.json:mod_event_lost_candidate_leave_01.text
+msgctxt "mod_lines"
+msgid "Weitergehen. Klug. Herr Brettschneider nimmt das sicher sportlich."
+msgstr ""
+
+#. max 110
+#. tag event_wheel_spin, voice mod
+#: data/mod_lines.json:mod_event_wheel_spin_01.text
+msgctxt "mod_lines"
+msgid "Dreh das Rad! Die Gewinnchancen sind fair. Laut unserer Rechtsabteilung."
+msgstr ""
+
+#. max 110
+#. tag event_wheel_spin, voice mod
+#: data/mod_lines.json:mod_event_wheel_spin_02.text
+msgctxt "mod_lines"
+msgid "Und das Rad sagt … Werbung! Nein, Moment. Doch nicht."
+msgstr ""
+
+#. max 110
+#. tag event_lever_open, voice mod
+#: data/mod_lines.json:mod_event_lever_open_01.text
+msgctxt "mod_lines"
+msgid "Eine Abkürzung! Die Bauaufsicht hätte das nie genehmigt. Gibt es nicht mehr."
+msgstr ""
+
+#. max 110
+#. tag event_lever_flood, voice mod
+#: data/mod_lines.json:mod_event_lever_flood_01.text
+msgctxt "mod_lines"
+msgid "Das war der Spülhebel. Für die ganze Kanalisation. Herzlichen Glückwunsch."
+msgstr ""
+
+#. max 110
+#. tag event_broken_vending_ok, voice mod
+#: data/mod_lines.json:mod_event_broken_vending_ok_01.text
+msgctxt "mod_lines"
+msgid "Zwei Dosen KRAWUMM! Vandalismus lohnt sich. Das haben Sie nicht von mir."
+msgstr ""
+
+#. max 110
+#. tag event_broken_vending_fail, voice mod
+#: data/mod_lines.json:mod_event_broken_vending_fail_01.text
+msgctxt "mod_lines"
+msgid "Der Automat hat zurückgetreten. Mit 230 Volt. Das Publikum klatscht."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_first_blood, voice mod
+#: data/mod_lines.json:mod_achievement_ach_first_blood_01.text
+msgctxt "mod_lines"
+msgid "Erster Kill! Die Werbekunden atmen auf."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_first_win, voice mod
+#: data/mod_lines.json:mod_achievement_ach_first_win_01.text
+msgctxt "mod_lines"
+msgid "Ein Sieg. Wir haben schon Merch bestellt."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_close_call, voice mod
+#: data/mod_lines.json:mod_achievement_ach_close_call_01.text
+msgctxt "mod_lines"
+msgid "Mein Puls! Ich habe keinen Puls, aber trotzdem!"
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_one_hp, voice mod
+#: data/mod_lines.json:mod_achievement_ach_one_hp_01.text
+msgctxt "mod_lines"
+msgid "Ein. Einziger. Lebenspunkt. Das schneiden wir in den Trailer."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_pacifist, voice mod
+#: data/mod_lines.json:mod_achievement_ach_pacifist_01.text
+msgctxt "mod_lines"
+msgid "Fünf Minuten ohne Gewalt. Die Zuschauer schlafen ein. Hier, nimm das."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_overkill, voice mod
+#: data/mod_lines.json:mod_achievement_ach_overkill_01.text
+msgctxt "mod_lines"
+msgid "Das war … gründlich. Die Reinigung stellt das in Rechnung."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_crit_3, voice mod
+#: data/mod_lines.json:mod_achievement_ach_crit_3_01.text
+msgctxt "mod_lines"
+msgid "Fünfzehn Kritische in einem Kampf. Statistiker:innen weinen."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_weakness_5, voice mod
+#: data/mod_lines.json:mod_achievement_ach_weakness_5_01.text
+msgctxt "mod_lines"
+msgid "Zehnmal genau dahin, wo es wehtut. Empathie: null. Quote: hoch."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_stunt_first, voice mod
+#: data/mod_lines.json:mod_achievement_ach_stunt_first_01.text
+msgctxt "mod_lines"
+msgid "DAS ist Fernsehen!"
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_stunt_fail_3, voice mod
+#: data/mod_lines.json:mod_achievement_ach_stunt_fail_3_01.text
+msgctxt "mod_lines"
+msgid "Drei Pannen. Wir machen eine eigene Sendung daraus."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_combo_first, voice mod
+#: data/mod_lines.json:mod_achievement_ach_combo_first_01.text
+msgctxt "mod_lines"
+msgid "Mensch und Mops im Gleichschritt. Rührend. Und lukrativ."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_preemptive_3, voice mod
+#: data/mod_lines.json:mod_achievement_ach_preemptive_3_01.text
+msgctxt "mod_lines"
+msgid "Dreimal zuerst zugeschlagen. Die Monster verlangen jetzt eine Vorwarnung. Schriftlich."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_ambush_won, voice mod
+#: data/mod_lines.json:mod_achievement_ach_ambush_won_01.text
+msgctxt "mod_lines"
+msgid "Überrascht und trotzdem gewonnen. Fast, als hätten Sie Talent."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_flee_first, voice mod
+#: data/mod_lines.json:mod_achievement_ach_flee_first_01.text
+msgctxt "mod_lines"
+msgid "Feigheit, äh, Taktik! Auch dafür gibt es eine Box. Leider."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_sponsor_first, voice mod
+#: data/mod_lines.json:mod_achievement_ach_sponsor_first_01.text
+msgctxt "mod_lines"
+msgid "Ihr erster Sponsor! Bitte lächeln Sie in Kamera 3."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_viewers_5000, voice mod
+#: data/mod_lines.json:mod_achievement_ach_viewers_5000_01.text
+msgctxt "mod_lines"
+msgid "Fünftausend! Die Konkurrenz zeigt gerade Kochshows. Ha!"
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_chests_10, voice mod
+#: data/mod_lines.json:mod_achievement_ach_chests_10_01.text
+msgctxt "mod_lines"
+msgid "Zehn Kisten. Das nennt man bei uns ‚Kundenbindung‘."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_vendor_500, voice mod
+#: data/mod_lines.json:mod_achievement_ach_vendor_500_01.text
+msgctxt "mod_lines"
+msgid "500 Credits im Automaten. Die Wirtschaft dankt."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_lootbox_10, voice mod
+#: data/mod_lines.json:mod_achievement_ach_lootbox_10_01.text
+msgctxt "mod_lines"
+msgid "Zehn Boxen. Hier ist noch eine. Für die Gewohnheit."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_level_5, voice mod
+#: data/mod_lines.json:mod_achievement_ach_level_5_01.text
+msgctxt "mod_lines"
+msgid "Stufe fünf. Sie sind jetzt offiziell schwer zu ersetzen."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_mopsula_ko, voice mod
+#: data/mod_lines.json:mod_achievement_ach_mopsula_ko_01.text
+msgctxt "mod_lines"
+msgid "Der Graf liegt! Die Quote liegt mit ihm! Tun Sie was!"
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_mimic, voice mod
+#: data/mod_lines.json:mod_achievement_ach_mimic_01.text
+msgctxt "mod_lines"
+msgid "Schwarzfahren war gestern. Heute: Schwarzautomat."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_events_all, voice mod
+#: data/mod_lines.json:mod_achievement_ach_events_all_01.text
+msgctxt "mod_lines"
+msgid "Alle Events gesehen. Sie lesen auch das Kleingedruckte, oder?"
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_hausmeister, voice mod
+#: data/mod_lines.json:mod_achievement_ach_hausmeister_01.text
+msgctxt "mod_lines"
+msgid "Der Hausmeister ist in Rente. Unbefristet."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_hausmeister_no_items, voice mod
+#: data/mod_lines.json:mod_achievement_ach_hausmeister_no_items_01.text
+msgctxt "mod_lines"
+msgid "Ohne ein einziges Item. Die Sponsoren sind beleidigt. Ich bin beeindruckt."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_queen, voice mod
+#: data/mod_lines.json:mod_achievement_ach_queen_01.text
+msgctxt "mod_lines"
+msgid "Die Königin ist tot, lang lebe — ach, egal, ZUSCHAUERREKORD!"
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_queen_flawless, voice mod
+#: data/mod_lines.json:mod_achievement_ach_queen_flawless_01.text
+msgctxt "mod_lines"
+msgid "Kein einziger KO. Graf Mopsula verlangt dafür eine eigene Fußnote im Geschichtsbuch. Genehmigt."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_speedrun, voice mod
+#: data/mod_lines.json:mod_achievement_ach_speedrun_01.text
+msgctxt "mod_lines"
+msgid "Mit zehn Minuten Rest. Sie sind entweder genial oder haben nichts gesehen."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_last_minute, voice mod
+#: data/mod_lines.json:mod_achievement_ach_last_minute_01.text
+msgctxt "mod_lines"
+msgid "Unter einer Minute! Mein Regieraum hat geschrien. Vor Freude."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_interrupt_10, voice mod
+#: data/mod_lines.json:mod_achievement_ach_interrupt_10_01.text
+msgctxt "mod_lines"
+msgid "Zehnmal mitten im Satz unterbrochen. Sie hätten Talkshow-Moderation werden sollen."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_dodge_25, voice mod
+#: data/mod_lines.json:mod_achievement_ach_dodge_25_01.text
+msgctxt "mod_lines"
+msgid "Fünfundzwanzig Ausweichschritte. Unsere Choreografin legt Ihnen einen Vertrag hin."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_train_adds, voice mod
+#: data/mod_lines.json:mod_achievement_ach_train_adds_01.text
+msgctxt "mod_lines"
+msgid "Drei Gegner, ein Zug, null Mitleid. Wir hatten gesagt: Bitte zurückbleiben."
+msgstr ""
+
+#. max 110
+#. tag achievement:ach_perfect_phase, voice mod
+#: data/mod_lines.json:mod_achievement_ach_perfect_phase_01.text
+msgctxt "mod_lines"
+msgid "Eine ganze Bossphase ohne einen einzigen Treffer. Die Regie hat nichts zu schneiden."
+msgstr ""
+
+#. max 110
+#. tag event_run_start, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_event_run_start_01.text
+msgctxt "mod_lines"
+msgid "Event-Lauf! Gleicher Seed für alle, gleiche Monster, gleiche Ausreden. Viel Glück, {name}."
+msgstr ""
+
+#. max 110
+#. tag event_run_start, voice mod
+#: data/mod_lines.json:mod_event_run_start_02.text
+msgctxt "mod_lines"
+msgid "Willkommen zur Sondersendung. Die Bestenliste ist offen, die Gnade geschlossen."
+msgstr ""
+
+#. max 110
+#. tag event_quest_progress, voice mod
+#: data/mod_lines.json:mod_event_quest_progress_01.text
+msgctxt "mod_lines"
+msgid "Quest-Fortschritt notiert. Die Bestenliste schaut zu. Ich auch."
+msgstr ""
+
+#. max 110
+#. tag event_quest_progress, voice mod
+#: data/mod_lines.json:mod_event_quest_progress_02.text
+msgctxt "mod_lines"
+msgid "Ein Schritt näher am Quest-Ziel. Die Regie nickt. Fast anerkennend."
+msgstr ""
+
+#. max 110
+#. tag event_quest_complete, voice mod
+#: data/mod_lines.json:mod_event_quest_complete_01.text
+msgctxt "mod_lines"
+msgid "Quest erfüllt! Ihr Name kommt auf die Bestenliste. Mit Bleistift, wir sind ja nicht verrückt."
+msgstr ""
+
+#. max 110
+#. tag event_quest_complete, voice mod
+#: data/mod_lines.json:mod_event_quest_complete_02.text
+msgctxt "mod_lines"
+msgid "Quest erledigt! Die Sponsoren wollen ein Interview. Ich habe abgelehnt. Für Sie. Gern geschehen."
+msgstr ""
+
+#. max 110
+#. tag event_result, voice mod
+#: data/mod_lines.json:mod_event_result_01.text
+msgctxt "mod_lines"
+msgid "Abgerechnet wird zum Schluss. Und der Schluss ist jetzt."
+msgstr ""
+
+#. max 110
+#. tag event_result, voice mod
+#: data/mod_lines.json:mod_event_result_02.text
+msgctxt "mod_lines"
+msgid "Die Punkte sind gezählt. Von einer Maschine. Von mir. Ich bin unbestechlich. Meistens."
+msgstr ""
+
+#. max 110
+#. tag gift_received, voice mod
+#. {sender} = a viewer's name
+#: data/mod_lines.json:mod_gift_received_01.text
+msgctxt "mod_lines"
+msgid "Ein Paket von {sender}. NOVA SYNDIKAT verbucht das als ‚organische Zuschauerbindung‘. Wir nennen es nett."
+msgstr ""
+
+#. max 110
+#. tag gift_received, voice mod
+#. {sender} = a viewer's name
+#: data/mod_lines.json:mod_gift_received_02.text
+msgctxt "mod_lines"
+msgid "Lieferung von {sender}! Die Rechtsabteilung prüft noch, ob Freundlichkeit lizenzpflichtig ist."
+msgstr ""
+
+#. max 110
+#. tag gift_received:credits, voice mod
+#. {amount} = a number
+#: data/mod_lines.json:mod_gift_received_credits_01.text
+msgctxt "mod_lines"
+msgid "{amount} Credits. NOVA SYNDIKAT behält sich vor, darauf irgendwann eine Gebühr zu erfinden."
+msgstr ""
+
+#. max 110
+#. tag gift_received:anon, voice mod
+#: data/mod_lines.json:mod_gift_received_anon_01.text
+msgctxt "mod_lines"
+msgid "Ein anonymer Fan schickt Grüße. Die Marketingabteilung ist neidisch auf so viel Zurückhaltung."
+msgstr ""
+
+#. max 110
+#. tag gift_diminished, voice mod
+#. {pct} = a percentage
+#: data/mod_lines.json:mod_gift_diminished_01.text
+msgctxt "mod_lines"
+msgid "Wirkung dieses Geschenks: {pct} Prozent. Das Regelwerk will es so. Ich habe es nicht geschrieben. Leider."
+msgstr ""
+
+#. max 110
+#. tag gift_capped, voice mod
+#: data/mod_lines.json:mod_gift_capped_01.text
+msgctxt "mod_lines"
+msgid "Geschenk-Kontingent für diesen Lauf erreicht. Das Publikum bleibt trotzdem das Beste an dieser Sendung."
+msgstr ""
+
+#. max 110
+#. tag gift_declined, voice mod
+#: data/mod_lines.json:mod_gift_declined_01.text
+msgctxt "mod_lines"
+msgid "Abgelehnt. Kandidat:innen dürfen das. Steht auf Seite 412 der Teilnahmebedingungen, gleich neben ‚Überleben‘."
+msgstr ""
+
+#. max 110
+#. tag fan_pack_received, voice mod
+#. {sender} = a viewer's name
+#: data/mod_lines.json:mod_fan_pack_received_01.text
+msgctxt "mod_lines"
+msgid "Ein Applaus-Paket von {sender}. Echte Begeisterung — die Aktionäre wissen nicht, wie man die bilanziert."
+msgstr ""
+
+#. max 110
+#. tag live_closing, voice mod
+#. {min} = a number of minutes
+#: data/mod_lines.json:mod_live_closing_01.text
+msgctxt "mod_lines"
+msgid "Noch {min} Minuten bis Sendeschluss. Danach geht hier das Licht aus. Und die Etage."
+msgstr ""
+
+#. max 110
+#. tag vote_open, voice mod
+#: data/mod_lines.json:mod_vote_open_01.text
+msgctxt "mod_lines"
+msgid "Das Publikum entscheidet! Demokratie, aber mit Werbeunterbrechung."
+msgstr ""
+
+#. max 110
+#. tag sponsor_window_open, voice mod
+#: data/mod_lines.json:mod_sponsor_window_open_01.text
+msgctxt "mod_lines"
+msgid "Das Sponsor-Fenster ist offen. Wer helfen mag, hilft. Wer zuschaut, zählt genauso."
+msgstr ""
+
+#. max 110
+#. tag sponsor_window_open, voice mod
+#: data/mod_lines.json:mod_sponsor_window_open_02.text
+msgctxt "mod_lines"
+msgid "Das Sponsor-Fenster steht offen. Helfen ist freiwillig, Zuschauen zählt genauso. Nur Zugluft ist Pflicht."
+msgstr ""
+
+#. max 110
+#. tag sponsor_window_open:safe_room, voice mod
+#: data/mod_lines.json:mod_sponsor_window_open_safe_room_01.text
+msgctxt "mod_lines"
+msgid "Werbepause mit Sponsor-Fenster. Wer nur zuschaut, macht auch alles richtig."
+msgstr ""
+
+#. max 110
+#. tag sponsor_window_open:boss, voice mod
+#: data/mod_lines.json:mod_sponsor_window_open_boss_01.text
+msgctxt "mod_lines"
+msgid "Vor dem Boss öffnet das Sponsor-Fenster. Danach entscheiden Können und Glück. Vor allem Glück."
+msgstr ""
+
+#. max 110
+#. tag sponsor_window_open:boss_comeback, voice mod
+#: data/mod_lines.json:mod_sponsor_window_open_boss_comeback_01.text
+msgctxt "mod_lines"
+msgid "Comeback-Runde! Das Sponsor-Fenster öffnet noch einmal. Das Publikum glaubt an Sie. Ich auch, fast."
+msgstr ""
+
+#. max 110
+#. tag sponsor_window_closed, voice mod
+#: data/mod_lines.json:mod_sponsor_window_closed_01.text
+msgctxt "mod_lines"
+msgid "Sponsor-Fenster zu. Die Regie nennt das Programmstruktur. Ich nenne es: Durchzug verhindern."
+msgstr ""
+
+#. max 110
+#. tag sponsor_window_closed, voice mod
+#: data/mod_lines.json:mod_sponsor_window_closed_02.text
+msgctxt "mod_lines"
+msgid "Fenster geschlossen. Mitfiebern bleibt erlaubt – das hat die Rechtsabteilung noch nicht entdeckt."
+msgstr ""
+
+#. max 110
+#. tag sponsor_window_full, voice mod
+#: data/mod_lines.json:mod_sponsor_window_full_01.text
+msgctxt "mod_lines"
+msgid "Alle Plätze im Sponsor-Fenster sind belegt. Danke – auch dem stillen Publikum. Das zählt hier am meisten."
+msgstr ""
+
+#. max 110
+#. tag tutorial_explore, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_tutorial_explore_01.text
+msgctxt "mod_lines"
+msgid "Willkommen in der Unterstadt, {name}! Laufen Sie los – die Kamera dreht sich, wenn Sie sie lassen."
+msgstr ""
+
+#. max 110
+#. tag tutorial_sneak, voice mod
+#: data/mod_lines.json:mod_tutorial_sneak_01.text
+msgctxt "mod_lines"
+msgid "Da vorn schlafen zwei Ratten. Schleichen Sie sich an und schlagen Sie zuerst zu – dann fangen Sie an."
+msgstr ""
+
+#. max 110
+#. tag tutorial_battle, voice mod
+#: data/mod_lines.json:mod_tutorial_battle_01.text
+msgctxt "mod_lines"
+msgid "Zuschlagen kostet nichts. Mopsulas Adelsflamme kostet MP – und Ratten hassen Feuer. Fast so sehr wie Steuern."
+msgstr ""
+
+#. max 110
+#. tag story_battle:enc_f1_b2, voice mod
+#: data/mod_lines.json:mod_story_battle_enc_f1_b2_01.text
+msgctxt "mod_lines"
+msgid "Die Königin hört von euch."
+msgstr ""
+
+#. max 110
+#. tag twist_applied_tw_lights_out, voice mod
+#: data/mod_lines.json:mod_twist_applied_tw_lights_out_01.text
+msgctxt "mod_lines"
+msgid "Stromausfall! Sparmaßnahme der Regie. Die Monster sehen auch nichts. Fair, oder?"
+msgstr ""
+
+#. max 110
+#. tag twist_applied_tw_lights_out, voice mod
+#: data/mod_lines.json:mod_twist_applied_tw_lights_out_02.text
+msgctxt "mod_lines"
+msgid "Licht aus, Spannung an. Die Gegner tappen im Dunkeln. Sie bitte nicht zu laut."
+msgstr ""
+
+#. max 110
+#. tag twist_applied_tw_quiet_please, voice mod
+#: data/mod_lines.json:mod_twist_applied_tw_quiet_please_01.text
+msgctxt "mod_lines"
+msgid "Ruhe im Studio! Die Monster hören jetzt schlechter. Flüstern Sie trotzdem, es ist höflich."
+msgstr ""
+
+#. max 110
+#. tag twist_applied_tw_quiet_please, voice mod
+#: data/mod_lines.json:mod_twist_applied_tw_quiet_please_02.text
+msgctxt "mod_lines"
+msgid "Die Tonabteilung dreht alles leiser. Ideale Bedingungen zum Anschleichen."
+msgstr ""
+
+#. max 110
+#. tag twist_applied_tw_fog_of_fame, voice mod
+#: data/mod_lines.json:mod_twist_applied_tw_fog_of_fame_01.text
+msgctxt "mod_lines"
+msgid "Ruhmesnebel! Das Publikum vergisst gerade nichts. Nutzen Sie das."
+msgstr ""
+
+#. max 110
+#. tag twist_applied_tw_fog_of_fame, voice mod
+#: data/mod_lines.json:mod_twist_applied_tw_fog_of_fame_02.text
+msgctxt "mod_lines"
+msgid "Die Regie hält die Quote fest. Ihr Hype sinkt eine Weile nicht. Gern geschehen."
+msgstr ""
+
+#. max 110
+#. tag twist_applied_tw_confetti_gravity, voice mod
+#: data/mod_lines.json:mod_twist_applied_tw_confetti_gravity_01.text
+msgctxt "mod_lines"
+msgid "Konfetti-Gravitation! Es schneit nach oben. Die Physikabteilung ist im Urlaub."
+msgstr ""
+
+#. max 110
+#. tag twist_applied_tw_confetti_gravity, voice mod
+#: data/mod_lines.json:mod_twist_applied_tw_confetti_gravity_02.text
+msgctxt "mod_lines"
+msgid "Konfetti fällt heute nach oben. Der Hype übrigens auch nicht nach unten."
+msgstr ""
+
+#. max 110
+#. tag twist_applied_tw_double_credits, voice mod
+#: data/mod_lines.json:mod_twist_applied_tw_double_credits_01.text
+msgctxt "mod_lines"
+msgid "Doppel-Credits für eine Minute! Danach ist die Inflation wieder normal."
+msgstr ""
+
+#. max 110
+#. tag twist_applied_tw_double_credits, voice mod
+#: data/mod_lines.json:mod_twist_applied_tw_double_credits_02.text
+msgctxt "mod_lines"
+msgid "Die Buchhaltung hat sich verrechnet. Zu Ihren Gunsten. Bitte nicht weitersagen."
+msgstr ""
+
+#. max 110
+#. tag twist_applied_tw_overtime, voice mod
+#: data/mod_lines.json:mod_twist_applied_tw_overtime_01.text
+msgctxt "mod_lines"
+msgid "Nachspielzeit! Eine Minute extra. Ich bin heute großzügig. Notieren Sie das."
+msgstr ""
+
+#. max 110
+#. tag twist_applied_tw_overtime, voice mod
+#: data/mod_lines.json:mod_twist_applied_tw_overtime_02.text
+msgctxt "mod_lines"
+msgid "Die Uhr bekommt eine Verlängerung. Werbekunden zahlen ja nach Minuten."
+msgstr ""
+
+#. max 110
+#. tag twist_applied_tw_happy_hour, voice mod
+#: data/mod_lines.json:mod_twist_applied_tw_happy_hour_01.text
+msgctxt "mod_lines"
+msgid "Happy Hour am Automaten! Rabatt beim nächsten Safe Room. Der Automat weint leise."
+msgstr ""
+
+#. max 110
+#. tag twist_applied_tw_happy_hour, voice mod
+#: data/mod_lines.json:mod_twist_applied_tw_happy_hour_02.text
+msgctxt "mod_lines"
+msgid "Der nächste Automat hat Happy Hour. Er weiß es nur noch nicht."
+msgstr ""
+
+#. max 110
+#. tag twist_applied_tw_rat_rain, voice mod
+#: data/mod_lines.json:mod_twist_applied_tw_rat_rain_01.text
+msgctxt "mod_lines"
+msgid "Rattenregen! Ein Lieferant hatte zu viel Lagerbestand. Ich konnte nicht Nein sagen."
+msgstr ""
+
+#. max 110
+#. tag twist_applied_tw_rat_rain, voice mod
+#: data/mod_lines.json:mod_twist_applied_tw_rat_rain_02.text
+msgctxt "mod_lines"
+msgid "Neue Kandidaten im Gebäude. Pelzig, hungrig, nicht eingeladen. Viel Spaß."
+msgstr ""
+
+#. max 110
+#. tag twist_applied_tw_party_hats, voice mod
+#: data/mod_lines.json:mod_twist_applied_tw_party_hats_01.text
+msgctxt "mod_lines"
+msgid "Partyhüte für alle Monster! Die nächsten zwei Kämpfe sind offiziell eine Feier."
+msgstr ""
+
+#. max 110
+#. tag twist_applied_tw_party_hats, voice mod
+#: data/mod_lines.json:mod_twist_applied_tw_party_hats_02.text
+msgctxt "mod_lines"
+msgid "Die Gegner tragen jetzt Partyhüte. Das Publikum flippt aus. Ich auch, innerlich."
+msgstr ""
+
+#. max 110
+#. tag twist_applied_tw_mopsula_moderates, voice mod
+#: data/mod_lines.json:mod_twist_applied_tw_mopsula_moderates_01.text
+msgctxt "mod_lines"
+msgid "Ich mache Pause. Der Graf moderiert. Möge die Sendung das überleben."
+msgstr ""
+
+#. max 110
+#. tag twist_applied_tw_mopsula_moderates, voice mod
+#: data/mod_lines.json:mod_twist_applied_tw_mopsula_moderates_02.text
+msgctxt "mod_lines"
+msgid "Kurze Moderationspause. Der Graf hat das Mikro. Gott steh der Technik bei."
+msgstr ""
+
+#. max 110
+#. tag twist_applied_tw_mopsula_monologue, voice mod
+#: data/mod_lines.json:mod_twist_applied_tw_mopsula_monologue_01.text
+msgctxt "mod_lines"
+msgid "Der Graf hat um das Wort gebeten. Ich habe es ihm gegeben. Ich bereue es schon."
+msgstr ""
+
+#. max 110
+#. tag twist_applied_tw_mod_mood, voice mod
+#: data/mod_lines.json:mod_twist_applied_tw_mod_mood_01.text
+msgctxt "mod_lines"
+msgid "Ich wechsle die Stimmung. Bitte schnallen Sie sich an."
+msgstr ""
+
+#. max 110
+#. tag twist_applied_tw_costume, voice mod
+#: data/mod_lines.json:mod_twist_applied_tw_costume_01.text
+msgctxt "mod_lines"
+msgid "Kostümwechsel beim Grafen! Die Garderobe hat Überstunden gemacht."
+msgstr ""
+
+#. max 110
+#. tag twist_applied_tw_trap_or_treasure, voice mod
+#: data/mod_lines.json:mod_twist_applied_tw_trap_or_treasure_01.text
+msgctxt "mod_lines"
+msgid "Im nächsten Raum steht eine Kiste. Falle oder Schatz? Ich verrate nichts."
+msgstr ""
+
+#. max 110
+#. tag twist_applied_tw_mirror_room, voice mod
+#: data/mod_lines.json:mod_twist_applied_tw_mirror_room_01.text
+msgctxt "mod_lines"
+msgid "Spiegel-Raum! Was eben noch wehtat, kitzelt jetzt. Und umgekehrt."
+msgstr ""
+
+#. max 110
+#. tag twist_applied_tw_elite_guest, voice mod
+#: data/mod_lines.json:mod_twist_applied_tw_elite_guest_01.text
+msgctxt "mod_lines"
+msgid "Wir haben einen Stargast! Er ist stärker, eitler und gibt mehr Beute."
+msgstr ""
+
+#. max 110
+#. tag twist_applied_tw_double_trouble, voice mod
+#: data/mod_lines.json:mod_twist_applied_tw_double_trouble_01.text
+msgctxt "mod_lines"
+msgid "Doppelte Quote! Ein Gegner mehr, mehr Beute. Mathe kann so schön sein."
+msgstr ""
+
+#. max 110
+#. tag twist_applied_tw_sponsor_rush, voice mod
+#: data/mod_lines.json:mod_twist_applied_tw_sponsor_rush_01.text
+msgctxt "mod_lines"
+msgid "Werbeblock! Unsere Sponsoren sind heute besonders spendabel."
+msgstr ""
+
+#. max 110
+#. tag twist_applied_tw_boss_mood, voice mod
+#: data/mod_lines.json:mod_twist_applied_tw_boss_mood_01.text
+msgctxt "mod_lines"
+msgid "Das Publikum hat die Laune des Bosses gewählt. Ich wasche meine Hände in Unschuld."
+msgstr ""
+
+#. max 110
+#. tag twist_applied_tw_marotte_flash, voice mod
+#: data/mod_lines.json:mod_twist_applied_tw_marotte_flash_01.text
+msgctxt "mod_lines"
+msgid "Laune der Regie! Meine Vorlieben zählen gerade doppelt. Erfreuen Sie mich."
+msgstr ""
+
+#. max 110
+#. tag regie_cut_in, voice mod
+#: data/mod_lines.json:mod_regie_cut_in_01.text
+msgctxt "mod_lines"
+msgid "Die Regie greift ein. Kurz, begrenzt, meistens zu Ihren Gunsten."
+msgstr ""
+
+#. max 110
+#. tag regie_cut_in, voice mod
+#: data/mod_lines.json:mod_regie_cut_in_02.text
+msgctxt "mod_lines"
+msgid "Achtung, Regie-Eingriff! Keine Sorge, ich habe die Kontrolle. Meistens."
+msgstr ""
+
+#. max 110
+#. tag regie_monologue_1, voice mopsula
+#: data/mod_lines.json:mod_regie_monologue_1_01.text
+msgctxt "mod_lines"
+msgid "Meine Damen und Herren, Ratten und Restposten: Der Graf hat das Wort."
+msgstr ""
+
+#. max 110
+#. tag regie_monologue_1, voice mopsula
+#: data/mod_lines.json:mod_regie_monologue_1_02.text
+msgctxt "mod_lines"
+msgid "Ruhe bitte. Ein Graf spricht nur einmal pro Folge. Höchstens zweimal."
+msgstr ""
+
+#. max 110
+#. tag regie_monologue_2, voice mopsula
+#: data/mod_lines.json:mod_regie_monologue_2_01.text
+msgctxt "mod_lines"
+msgid "Ich habe Zwinger 7 überlebt. Diese Sendung ist dagegen ein Spaziergang."
+msgstr ""
+
+#. max 110
+#. tag regie_monologue_2, voice mopsula
+#: data/mod_lines.json:mod_regie_monologue_2_02.text
+msgctxt "mod_lines"
+msgid "Die Rattenkönigin hört zu? Gut. Sie soll wissen, dass ich sie nicht vergessen habe."
+msgstr ""
+
+#. max 110
+#. tag regie_monologue_3, voice mopsula
+#: data/mod_lines.json:mod_regie_monologue_3_01.text
+msgctxt "mod_lines"
+msgid "Und nun zurück zu meiner Assistentin. Sie ist ein Fernseher. Ich respektiere das."
+msgstr ""
+
+#. max 110
+#. tag regie_monologue_3, voice mopsula
+#: data/mod_lines.json:mod_regie_monologue_3_02.text
+msgctxt "mod_lines"
+msgid "Applaus ist erlaubt. Leberwurst ebenfalls. Danke, das war alles."
+msgstr ""
+
+#. max 110
+#. tag mod_live_on, voice mod
+#: data/mod_lines.json:mod_mod_live_on_01.text
+msgctxt "mod_lines"
+msgid "M.O.D. live ist auf Sendung. Ab jetzt improvisiere ich. Die Rechtsabteilung schwitzt."
+msgstr ""
+
+#. max 110
+#. tag rt_set_quiet, voice mod
+#: data/mod_lines.json:mod_rt_set_quiet_01.text
+msgctxt "mod_lines"
+msgid "Ruhe am Set! Kamera läuft, Monster auf Position, Sie auf eigene Gefahr."
+msgstr ""
+
+#. max 110
+#. tag rt_set_quiet, voice mod
+#: data/mod_lines.json:mod_rt_set_quiet_02.text
+msgctxt "mod_lines"
+msgid "Ruhe am Set! Ihr seid später dran."
+msgstr ""
+
+#. max 110
+#. tag rt_flee_warn, voice mod
+#: data/mod_lines.json:mod_rt_flee_warn_01.text
+msgctxt "mod_lines"
+msgid "Wo willst du hin? Das Set ist HIER!"
+msgstr ""
+
+#. max 110
+#. tag rt_flee_warn, voice mod
+#: data/mod_lines.json:mod_rt_flee_warn_02.text
+msgctxt "mod_lines"
+msgid "Zurück ans Set! Im Flur filmt keine Kamera."
+msgstr ""
+
+#. max 110
+#. tag rt_interrupt, voice mod
+#: data/mod_lines.json:mod_rt_interrupt_01.text
+msgctxt "mod_lines"
+msgid "Und da wird ihm das Wort abgeschnitten — live und in Farbe!"
+msgstr ""
+
+#. max 110
+#. tag rt_interrupt, voice mod
+#: data/mod_lines.json:mod_rt_interrupt_02.text
+msgctxt "mod_lines"
+msgid "Unterbrochen! Die Regie dankt für die Kürzung."
+msgstr ""
+
+#. max 110
+#. tag rt_dodge_close, voice mod
+#: data/mod_lines.json:mod_rt_dodge_close_01.text
+msgctxt "mod_lines"
+msgid "Zentimeterarbeit! Unsere Versicherung atmet auf."
+msgstr ""
+
+#. max 110
+#. tag rt_dodge_close, voice mod
+#: data/mod_lines.json:mod_rt_dodge_close_02.text
+msgctxt "mod_lines"
+msgid "Knapp! Die Stuntkoordination nimmt das ins Showreel."
+msgstr ""
+
+#. max 110
+#. tag rt_telegraph_hit, voice mod
+#: data/mod_lines.json:mod_rt_telegraph_hit_01.text
+msgctxt "mod_lines"
+msgid "Rote Fläche, rote Zahlen. Die Warnung lief ja nur zwei Sekunden."
+msgstr ""
+
+#. max 110
+#. tag rt_telegraph_hit, voice mod
+#: data/mod_lines.json:mod_rt_telegraph_hit_02.text
+msgctxt "mod_lines"
+msgid "Volltreffer — leider für die Gegenseite. Die Fläche war wirklich sehr rot."
+msgstr ""
+
+#. max 110
+#. tag rt_train_kill, voice mod
+#: data/mod_lines.json:mod_rt_train_kill_01.text
+msgctxt "mod_lines"
+msgid "Bitte zurückbleiben! … Zu spät."
+msgstr ""
+
+#. max 110
+#. tag rt_train_kill, voice mod
+#: data/mod_lines.json:mod_rt_train_kill_02.text
+msgctxt "mod_lines"
+msgid "Der Zug hält nicht für Ratten. Fahrplanmäßig."
+msgstr ""
+
+#. max 110
+#. tag rt_healer_first, voice mod
+#: data/mod_lines.json:mod_rt_healer_first_01.text
+msgctxt "mod_lines"
+msgid "Heiler zuerst! Wer heilt, verlängert die Sendung — und nicht im guten Sinn."
+msgstr ""
+
+#. max 110
+#. tag rt_healer_first, voice mod
+#: data/mod_lines.json:mod_rt_healer_first_02.text
+msgctxt "mod_lines"
+msgid "Der Schamane flickt seine Kollegen. Unterbrechen oder ewig zuschauen!"
+msgstr ""
+
+#. max 110
+#. tag rt_finale, voice mod
+#: data/mod_lines.json:mod_rt_finale_01.text
+msgctxt "mod_lines"
+msgid "Das FINALE! Kamera drei, ganz nah ran!"
+msgstr ""
+
+#. max 110
+#. tag rt_finale, voice mod
+#: data/mod_lines.json:mod_rt_finale_02.text
+msgctxt "mod_lines"
+msgid "FINALE! Ich lasse schon mal den Abspann vorwärmen."
+msgstr ""
+
+#. max 110
+#. tag rt_finale_hype, voice mod
+#: data/mod_lines.json:mod_rt_finale_hype_01.text
+msgctxt "mod_lines"
+msgid "FINALE bei Höchstquote! Konfettikanone, JETZT!"
+msgstr ""
+
+#. max 110
+#. tag rt_finale_hype, voice mod
+#: data/mod_lines.json:mod_rt_finale_hype_02.text
+msgctxt "mod_lines"
+msgid "Das Publikum steht, die Regie weint, das FINALE läuft. Mehr Fernsehen geht nicht."
+msgstr ""
+
+#. max 110
+#. tag rt_enrage:enm_boss_hausmeister, voice mod
+#: data/mod_lines.json:mod_rt_enrage_enm_boss_hausmeister_01.text
+msgctxt "mod_lines"
+msgid "Es ist 17 Uhr. Ab jetzt macht der Hausmeister Überstunden — an euch."
+msgstr ""
+
+#. max 110
+#. tag rt_enrage:enm_boss_hausmeister, voice mod
+#: data/mod_lines.json:mod_rt_enrage_enm_boss_hausmeister_02.text
+msgctxt "mod_lines"
+msgid "Feierabend ist Feierabend! Und der Hausmeister nimmt ihn SEHR ernst."
+msgstr ""
+
+#. max 110
+#. tag rt_enrage:enm_boss_rattenkoenigin, voice mod
+#: data/mod_lines.json:mod_rt_enrage_enm_boss_rattenkoenigin_01.text
+msgctxt "mod_lines"
+msgid "Betriebsschluss! Die Königin räumt den Bahnsteig — mit euch."
+msgstr ""
+
+#. max 110
+#. tag rt_enrage:enm_boss_rattenkoenigin, voice mod
+#: data/mod_lines.json:mod_rt_enrage_enm_boss_rattenkoenigin_02.text
+msgctxt "mod_lines"
+msgid "Letzte Durchsage vor Betriebsschluss: Die Königin ist schlecht gelaunt."
+msgstr ""
+
+#. max 110
+#. tag rt_control_switch:kai, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_rt_control_switch_kai_01.text
+msgctxt "mod_lines"
+msgid "Der Graf liegt flach. {name} übernimmt — mit Mopp und Würde."
+msgstr ""
+
+#. max 110
+#. tag rt_control_switch:kai, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_rt_control_switch_kai_02.text
+msgctxt "mod_lines"
+msgid "Der Graf ruht. {name}, das Publikum gehört jetzt dir."
+msgstr ""
+
+#. max 110
+#. tag rt_control_switch:mopsula, voice mod
+#: data/mod_lines.json:mod_rt_control_switch_mopsula_01.text
+msgctxt "mod_lines"
+msgid "Der Graf übernimmt. Möge die Etikette mit uns sein."
+msgstr ""
+
+#. max 110
+#. tag rt_control_switch:mopsula, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_rt_control_switch_mopsula_02.text
+msgctxt "mod_lines"
+msgid "{name} liegt flach. Der Graf übernimmt — mit Monokel und Methode."
+msgstr ""
+
+#. max 110
+#. tag rt_partner_preset:attack, voice mod
+#: data/mod_lines.json:mod_rt_partner_preset_attack_01.text
+msgctxt "mod_lines"
+msgid "Taktik „Angriff“. Höflichkeit wird auf nach der Sendung verschoben."
+msgstr ""
+
+#. max 110
+#. tag rt_partner_preset:support, voice mod
+#: data/mod_lines.json:mod_rt_partner_preset_support_01.text
+msgctxt "mod_lines"
+msgid "Taktik „Unterstützen“. Teamarbeit — das Lieblingswort jeder Personalabteilung."
+msgstr ""
+
+#. max 110
+#. tag rt_partner_preset:careful, voice mod
+#: data/mod_lines.json:mod_rt_partner_preset_careful_01.text
+msgctxt "mod_lines"
+msgid "Taktik „Vorsichtig“. Mehr Abstand, schnellere Reaktion. Die Versicherung schickt Blumen."
+msgstr ""
+
+#. max 110
+#. tag rt_tutorial_target, voice mod
+#: data/mod_lines.json:mod_rt_tutorial_target_01.text
+msgctxt "mod_lines"
+msgid "Wähle ein Ziel. Die Kamera liebt Entschlossenheit."
+msgstr ""
+
+#. max 110
+#. tag rt_tutorial_bar1, voice mod
+#: data/mod_lines.json:mod_rt_tutorial_bar1_01.text
+msgctxt "mod_lines"
+msgid "Deine Hauptfähigkeit! Oft drücken ist ausdrücklich erwünscht."
+msgstr ""
+
+#. max 110
+#. tag rt_tutorial_show, voice mod
+#: data/mod_lines.json:mod_rt_tutorial_show_01.text
+msgctxt "mod_lines"
+msgid "SHOW: riskant, aber das Publikum liebt es."
+msgstr ""
+
+#. max 110
+#. tag rt_tutorial_dodge, voice mod
+#: data/mod_lines.json:mod_rt_tutorial_dodge_01.text
+msgctxt "mod_lines"
+msgid "Rote Fläche? Raus da! Wenn sie voll ist, knallt es."
+msgstr ""
+
+#. max 110
+#. tag rt_hint_zone, voice mod
+#: data/mod_lines.json:mod_rt_hint_zone_01.text
+msgctxt "mod_lines"
+msgid "Pfützen bleiben liegen. Nicht drin stehen — die Reinigung kommt erst nach der Sendung."
+msgstr ""
+
+#. max 110
+#. tag rt_hint_partner_special, voice mod
+#: data/mod_lines.json:mod_rt_hint_partner_special_01.text
+msgctxt "mod_lines"
+msgid "Partner-Spezial: Ein Knopf, und dein Partner legt sofort los — ohne Diskussion."
+msgstr ""
+
+#. max 110
+#. tag rt_hint_finale, voice mod
+#: data/mod_lines.json:mod_rt_hint_finale_01.text
+msgctxt "mod_lines"
+msgid "Ziel unter 30 %? Zeit fürs FINALE. Kamera drei, ganz nah ran!"
+msgstr ""
+
+#. max 110
+#. tag rt_hint_flee, voice mod
+#: data/mod_lines.json:mod_rt_hint_flee_01.text
+msgctxt "mod_lines"
+msgid "Raus aus dem Ring heißt Flucht. Zurück ans Set, wenn du bleiben willst!"
+msgstr ""
+
+#. max 110
+#. tag rt_hint_enrage, voice mod
+#: data/mod_lines.json:mod_rt_hint_enrage_01.text
+msgctxt "mod_lines"
+msgid "Überstunden! Ab jetzt wird jeder Treffer härter — Tempo!"
+msgstr ""
+
+#. max 110
+#. tag rt_hint_partner_tactic, voice mod
+#: data/mod_lines.json:mod_rt_hint_partner_tactic_01.text
+msgctxt "mod_lines"
+msgid "Zu viele Treffer beim Partner? Taktik auf „Vorsichtig“ — mehr Abstand, schneller weg."
+msgstr ""
+
+#. max 110
+#. tag showboss_spotted, voice mod
+#: data/mod_lines.json:mod_showboss_spotted_01.text
+msgctxt "mod_lines"
+msgid "Sonderausgabe! In der Kanalisation tagt die Kanalratten-Gala. Goldrahmen, Elite, Hausordnung."
+msgstr ""
+
+#. max 110
+#. tag showboss_spotted, voice mod
+#: data/mod_lines.json:mod_showboss_spotted_02.text
+msgctxt "mod_lines"
+msgid "Achtung, Show-Boss! Die Kanalratten-Gala wartet. Optional — aber glamourös."
+msgstr ""
+
+#. max 110
+#. tag showboss_rule, voice mod
+#: data/mod_lines.json:mod_showboss_rule_01.text
+msgctxt "mod_lines"
+msgid "Hausordnung verschärft: alle 8 Sekunden ein Strafzettel."
+msgstr ""
+
+#. max 110
+#. tag showboss_won, voice mod
+#: data/mod_lines.json:mod_showboss_won_01.text
+msgctxt "mod_lines"
+msgid "Die Gala ist gesprengt! Ein Fanpost-Paket für Sie, für die Ratten nur Applaus."
+msgstr ""
+
+#. max 110
+#. tag showboss_won, voice mod
+#: data/mod_lines.json:mod_showboss_won_02.text
+msgctxt "mod_lines"
+msgid "Kanalratten-Gala beendet. Die Elite ist geschlagen, das Fanpost-Paket unterwegs."
+msgstr ""
+
+#. max 110
+#. tag persona_intro, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#. {name} = the candidate's name, e.g. Kai
+#. {job} = a job in the word form, e.g. Tierpfleger:in
+#: data/mod_lines.json:mod_persona_intro_01.text
+msgctxt "mod_lines"
+msgid "{cand} {name} — {job}. Ab heute hauptberuflich: Quote."
+msgstr ""
+
+#. max 110
+#. tag persona_intro, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#. {club} = „Ihr“/„Ihre“ + the club, e.g. Ihr Kochkurs
+#: data/mod_lines.json:mod_persona_intro_02.text
+msgctxt "mod_lines"
+msgid "{name} ist da! {club} hat angeblich Plakate gemalt."
+msgstr ""
+
+#. max 110
+#. tag persona_intro, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_intro_03.text
+msgctxt "mod_lines"
+msgid "Applaus für {cand} {name}! Ab heute zählt nur noch eins: die Quote."
+msgstr ""
+
+#. max 110
+#. tag persona_intro, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#. {job} = a job in the word form, e.g. Tierpfleger:in
+#: data/mod_lines.json:mod_persona_intro_04.text
+msgctxt "mod_lines"
+msgid "Willkommen, {name}. Sie sind {job} — und ab sofort auch Fernsehgesicht."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_animals, voice mod
+#: data/mod_lines.json:mod_persona_intro_org_animals_01.text
+msgctxt "mod_lines"
+msgid "Aus der Tierpflege! Sie haben schon Bissigere gebändigt. Der Graf fühlt sich angesprochen."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_animals, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_intro_org_animals_02.text
+msgctxt "mod_lines"
+msgid "{name} kennt Zwinger, Futterpläne und beleidigte Möpse. Bestens vorbereitet, würde ich sagen."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_care, voice mod
+#: data/mod_lines.json:mod_persona_intro_org_care_01.text
+msgctxt "mod_lines"
+msgid "Aus der Pflege! Nachtdienst, Notfälle, kalter Kaffee. Willkommen in Ihrer Komfortzone."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_care, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_intro_org_care_02.text
+msgctxt "mod_lines"
+msgid "{cand} {name} ist Nachtschichten gewohnt. Dieser Keller ist nur eine besonders lange."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_craft, voice mod
+#: data/mod_lines.json:mod_persona_intro_org_craft_01.text
+msgctxt "mod_lines"
+msgid "Aus dem Handwerk! Was hier unten kaputtgeht, reparieren Sie vermutlich nebenbei."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_craft, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_intro_org_craft_02.text
+msgctxt "mod_lines"
+msgid "{name} bringt Werkzeugverstand mit. Die Monster bringen nur Zähne. Ungleicher Kampf."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_office, voice mod
+#: data/mod_lines.json:mod_persona_intro_org_office_01.text
+msgctxt "mod_lines"
+msgid "Aus dem Büro! Sie haben Formulare überlebt, die gefährlicher waren als jedes Monster."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_office, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_intro_org_office_02.text
+msgctxt "mod_lines"
+msgid "{name} kennt Fristen. Die Monster kennen keine. Das wird ein ungleicher Kampf."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_it, voice mod
+#: data/mod_lines.json:mod_persona_intro_org_it_01.text
+msgctxt "mod_lines"
+msgid "Aus der IT! Haben Sie den Dungeon schon aus- und wieder eingeschaltet?"
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_it, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_intro_org_it_02.text
+msgctxt "mod_lines"
+msgid "{name} spricht fließend Fehlermeldung. Hier unten heißen die Fehler nur anders: Ratten."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_teach, voice mod
+#: data/mod_lines.json:mod_persona_intro_org_teach_01.text
+msgctxt "mod_lines"
+msgid "Aus der Bildung! Sie beruhigen sonst dreißig Kinder vor dem Mittagessen. Das hier? Wandertag."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_teach, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#. {name} = the candidate's name, e.g. Kai
+#. {job} = a job in the word form, e.g. Tierpfleger:in
+#: data/mod_lines.json:mod_persona_intro_org_teach_02.text
+msgctxt "mod_lines"
+msgid "{cand} {name} — {job}. Die Monster bekommen heute Unterricht. Mit Hausaufgaben."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_kitchen, voice mod
+#: data/mod_lines.json:mod_persona_intro_org_kitchen_01.text
+msgctxt "mod_lines"
+msgid "Aus der Küche direkt ins Feuer. Bitte die Monster nicht abschmecken."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_kitchen, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_intro_org_kitchen_02.text
+msgctxt "mod_lines"
+msgid "{name} arbeitet sonst unter Hitze und Zeitdruck. Hier unten ist es also fast gemütlich."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_sales, voice mod
+#: data/mod_lines.json:mod_persona_intro_org_sales_01.text
+msgctxt "mod_lines"
+msgid "Aus dem Handel! Sie kennen Kundschaft, die um kurz vor acht noch reinwill. Monster sind harmloser."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_sales, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_intro_org_sales_02.text
+msgctxt "mod_lines"
+msgid "{name} überzeugt Menschen in Sekunden. Mal sehen, ob das bei Ratten auch klappt."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_transport, voice mod
+#: data/mod_lines.json:mod_persona_intro_org_transport_01.text
+msgctxt "mod_lines"
+msgid "Aus Verkehr und Logistik! Sie kommen immer an — notfalls mit Umleitung."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_transport, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_intro_org_transport_02.text
+msgctxt "mod_lines"
+msgid "{cand} {name} kennt jeden Fahrplan. Dieser Dungeon hat keinen. Viel Glück, Profi."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_stage, voice mod
+#: data/mod_lines.json:mod_persona_intro_org_stage_01.text
+msgctxt "mod_lines"
+msgid "Von der Bühne in den Keller! Applaus gibt es hier auch. Meistens."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_stage, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_intro_org_stage_02.text
+msgctxt "mod_lines"
+msgid "{name} kennt Lampenfieber. Hier unten kommen echte Lampen dazu. Und Monster."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_media, voice mod
+#: data/mod_lines.json:mod_persona_intro_org_media_01.text
+msgctxt "mod_lines"
+msgid "Aus den Medien! Sie erzählen sonst Geschichten. Heute sind Sie die Schlagzeile."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_media, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_intro_org_media_02.text
+msgctxt "mod_lines"
+msgid "{name} weiß, wie man Reichweite macht. Die Galaxis schaut zu. Für den Anfang reicht das."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_science, voice mod
+#: data/mod_lines.json:mod_persona_intro_org_science_01.text
+msgctxt "mod_lines"
+msgid "Aus der Forschung! Sie stellen Hypothesen auf. Der Dungeon liefert die Versuchsreihe."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_science, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#. {name} = the candidate's name, e.g. Kai
+#. {job} = a job in the word form, e.g. Tierpfleger:in
+#: data/mod_lines.json:mod_persona_intro_org_science_02.text
+msgctxt "mod_lines"
+msgid "{cand} {name} — {job}. Bitte nichts anfassen, was leuchtet. Oder alles notieren."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_rescue, voice mod
+#: data/mod_lines.json:mod_persona_intro_org_rescue_01.text
+msgctxt "mod_lines"
+msgid "Aus der Rettung! Sie laufen hin, wo andere weglaufen. Die Regie ist ehrlich beeindruckt."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_rescue, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_intro_org_rescue_02.text
+msgctxt "mod_lines"
+msgid "{name} ist Einsätze gewohnt. Dieser hier hat nur mehr Kameras."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_nature, voice mod
+#: data/mod_lines.json:mod_persona_intro_org_nature_01.text
+msgctxt "mod_lines"
+msgid "Aus Natur und Landwirtschaft! Sie kennen jedes Gewächs. Auch die, die hier unten leuchten."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_nature, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_intro_org_nature_02.text
+msgctxt "mod_lines"
+msgid "{name} steht sonst früh auf und packt an. Der Dungeon ist im Grunde ein sehr dunkles Feld."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_law, voice mod
+#: data/mod_lines.json:mod_persona_intro_org_law_01.text
+msgctxt "mod_lines"
+msgid "Aus Recht und Justiz! Haben Sie Ihren Vertrag mit NOVA gelesen? Lieber nicht. Er ist lang."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_law, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_intro_org_law_02.text
+msgctxt "mod_lines"
+msgid "{cand} {name} kennt jeden Paragrafen. Die Monster kennen keinen. Einspruch zwecklos."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_school, voice mod
+#: data/mod_lines.json:mod_persona_intro_org_school_01.text
+msgctxt "mod_lines"
+msgid "Direkt aus Schule, Ausbildung oder Studium! Heute steht Überleben auf dem Stundenplan."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_school, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_intro_org_school_02.text
+msgctxt "mod_lines"
+msgid "{name} lernt jeden Tag Neues. Heute: Fallen erkennen. Die Prüfung folgt sofort."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_cleaning, voice mod
+#: data/mod_lines.json:mod_persona_intro_org_cleaning_01.text
+msgctxt "mod_lines"
+msgid "Aus der Reinigung! Der Hausmeister wartet schon. Fachgespräch unter Kolleg:innen."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_cleaning, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_intro_org_cleaning_02.text
+msgctxt "mod_lines"
+msgid "{name} weiß, was in Kellern liegt. Und wie man es wieder rausbekommt. Bestens."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_beauty, voice mod
+#: data/mod_lines.json:mod_persona_intro_org_beauty_01.text
+msgctxt "mod_lines"
+msgid "Aus dem Salon! Sie bringen alles in Form. Die Monster haben heute einen Termin bei Ihnen."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_beauty, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_intro_org_beauty_02.text
+msgctxt "mod_lines"
+msgid "{cand} {name} hat ein Auge für Details. Hier unten sind die Details meistens Zähne."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_industry, voice mod
+#: data/mod_lines.json:mod_persona_intro_org_industry_01.text
+msgctxt "mod_lines"
+msgid "Aus der Produktion! Sie halten Maschinen am Laufen. Dieser Dungeon ist eine sehr große."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_industry, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_intro_org_industry_02.text
+msgctxt "mod_lines"
+msgid "{name} kennt Schichtarbeit. Gut so: Diese Sendung läuft rund um die Uhr."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_selfemployed, voice mod
+#: data/mod_lines.json:mod_persona_intro_org_selfemployed_01.text
+msgctxt "mod_lines"
+msgid "Selbstständig! Sie sind Chefetage, Buchhaltung und Kaffeeküche. Ein Dungeon? Ein Projekt mehr."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_selfemployed, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_intro_org_selfemployed_02.text
+msgctxt "mod_lines"
+msgid "{name} hat eigentlich keine Zeit für so was. Ist trotzdem gekommen. Respekt."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_retired, voice mod
+#: data/mod_lines.json:mod_persona_intro_org_retired_01.text
+msgctxt "mod_lines"
+msgid "Aus dem Ruhestand ins Abendprogramm. Die Monster haben Respekt vor Lebenserfahrung."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_retired, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_intro_org_retired_02.text
+msgctxt "mod_lines"
+msgid "{name} hat schon viel erlebt. Ein Dungeon ist nur eine neue Geschichte für später."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_family, voice mod
+#: data/mod_lines.json:mod_persona_intro_org_family_01.text
+msgctxt "mod_lines"
+msgid "Familie und Sorgearbeit: Sie managen täglich Chaos. Ein Dungeon ist da fast Urlaub."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_family, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_intro_org_family_02.text
+msgctxt "mod_lines"
+msgid "{name} jongliert sonst Termine, Wäsche und Pausenbrote. Monster? Machbar."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_reorient, voice mod
+#: data/mod_lines.json:mod_persona_intro_org_reorient_01.text
+msgctxt "mod_lines"
+msgid "Mitten im Neustart — und gleich in die Prime Time. Mutiger geht es kaum."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_reorient, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_intro_org_reorient_02.text
+msgctxt "mod_lines"
+msgid "{name} sortiert sich gerade neu. Die Show nennt das: Kurswechsel mit Publikum."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_allround, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_intro_org_allround_01.text
+msgctxt "mod_lines"
+msgid "{cand} {name} kann ein bisschen von allem. Genau das braucht man hier unten."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:org_allround, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_intro_org_allround_02.text
+msgctxt "mod_lines"
+msgid "Kein Etikett passt? Gut so, {name}. Hier unten gibt es eh keine Schubladen."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:custom, voice mod
+#. {job_text} = the candidate's own job text
+#: data/mod_lines.json:mod_persona_intro_custom_01.text
+msgctxt "mod_lines"
+msgid "„{job_text}“? Steht nicht in unserer Kartei. Wir führen Sie als Allrounder:in."
+msgstr ""
+
+#. max 110
+#. tag persona_intro:custom, voice mod
+#. {job_text} = the candidate's own job text
+#: data/mod_lines.json:mod_persona_intro_custom_02.text
+msgctxt "mod_lines"
+msgid "„{job_text}“? Klingt spannend. Die Kartei sagt: Allrounder:in. Die Kartei ist neidisch."
+msgstr ""
+
+#. max 110
+#. tag persona_card, voice mod
+#: data/mod_lines.json:mod_persona_card_01.text
+msgctxt "mod_lines"
+msgid "Das ist Ihre Karte. Ich habe sie gelesen. Leider."
+msgstr ""
+
+#. max 110
+#. tag persona_card, voice mod
+#: data/mod_lines.json:mod_persona_card_02.text
+msgctxt "mod_lines"
+msgid "Ihre Karte ist fertig. Die Regie hat geweint. Vor Rührung, behauptet sie."
+msgstr ""
+
+#. max 110
+#. tag persona_card:org_animals, voice mod
+#: data/mod_lines.json:mod_persona_card_org_animals_01.text
+msgctxt "mod_lines"
+msgid "Tierpflege. Der Graf hat Sie bereits bewertet: fünf Leckerli von fünf."
+msgstr ""
+
+#. max 110
+#. tag persona_card:org_care, voice mod
+#: data/mod_lines.json:mod_persona_card_org_care_01.text
+msgctxt "mod_lines"
+msgid "Aus der Pflege! Sie wissen, wo es wehtut. Die Monster ab jetzt auch."
+msgstr ""
+
+#. max 110
+#. tag persona_card:org_craft, voice mod
+#: data/mod_lines.json:mod_persona_card_org_craft_01.text
+msgctxt "mod_lines"
+msgid "Handwerk. Endlich jemand, der den Dungeon nicht nur kaputt macht."
+msgstr ""
+
+#. max 110
+#. tag persona_card:org_office, voice mod
+#: data/mod_lines.json:mod_persona_card_org_office_01.text
+msgctxt "mod_lines"
+msgid "Büro und Verwaltung. Ich habe Ihre Karte in dreifacher Ausfertigung abgelegt."
+msgstr ""
+
+#. max 110
+#. tag persona_card:org_it, voice mod
+#: data/mod_lines.json:mod_persona_card_org_it_01.text
+msgctxt "mod_lines"
+msgid "IT und Digitales. Falls die Sendung abstürzt, wissen wir, wen wir anrufen."
+msgstr ""
+
+#. max 110
+#. tag persona_card:org_teach, voice mod
+#: data/mod_lines.json:mod_persona_card_org_teach_01.text
+msgctxt "mod_lines"
+msgid "Bildung und Erziehung. Bitte erst melden, bevor Sie Monster zurechtweisen."
+msgstr ""
+
+#. max 110
+#. tag persona_card:org_kitchen, voice mod
+#: data/mod_lines.json:mod_persona_card_org_kitchen_01.text
+msgctxt "mod_lines"
+msgid "Küche und Gastronomie. Die Jury im Studio hat jetzt schon Hunger."
+msgstr ""
+
+#. max 110
+#. tag persona_card:org_sales, voice mod
+#: data/mod_lines.json:mod_persona_card_org_sales_01.text
+msgctxt "mod_lines"
+msgid "Handel und Verkauf. Die Monster haben Fragen zum Umtausch. Viel Erfolg."
+msgstr ""
+
+#. max 110
+#. tag persona_card:org_transport, voice mod
+#: data/mod_lines.json:mod_persona_card_org_transport_01.text
+msgctxt "mod_lines"
+msgid "Verkehr und Logistik. Sie liefern pünktlich. Der Dungeon nicht. Spannend."
+msgstr ""
+
+#. max 110
+#. tag persona_card:org_stage, voice mod
+#: data/mod_lines.json:mod_persona_card_org_stage_01.text
+msgctxt "mod_lines"
+msgid "Kunst, Musik und Bühne. Endlich jemand, der das Rampenlicht nicht scheut."
+msgstr ""
+
+#. max 110
+#. tag persona_card:org_media, voice mod
+#: data/mod_lines.json:mod_persona_card_org_media_01.text
+msgctxt "mod_lines"
+msgid "Medien und Marketing. Bitte nicht die Konkurrenzsendung erwähnen. Danke."
+msgstr ""
+
+#. max 110
+#. tag persona_card:org_science, voice mod
+#: data/mod_lines.json:mod_persona_card_org_science_01.text
+msgctxt "mod_lines"
+msgid "Forschung und Labor. Der Dungeon ist ab sofort Ihr Versuchsaufbau."
+msgstr ""
+
+#. max 110
+#. tag persona_card:org_rescue, voice mod
+#: data/mod_lines.json:mod_persona_card_org_rescue_01.text
+msgctxt "mod_lines"
+msgid "Sicherheit und Rettung. Die Regie fühlt sich gleich sicherer. Ich auch."
+msgstr ""
+
+#. max 110
+#. tag persona_card:org_nature, voice mod
+#: data/mod_lines.json:mod_persona_card_org_nature_01.text
+msgctxt "mod_lines"
+msgid "Natur und Landwirtschaft. Hier unten wächst einiges. Leider auch Ärger."
+msgstr ""
+
+#. max 110
+#. tag persona_card:org_law, voice mod
+#: data/mod_lines.json:mod_persona_card_org_law_01.text
+msgctxt "mod_lines"
+msgid "Recht und Justiz. Ich habe Ihre Karte prüfen lassen. Sie hat Einspruch eingelegt."
+msgstr ""
+
+#. max 110
+#. tag persona_card:org_school, voice mod
+#: data/mod_lines.json:mod_persona_card_org_school_01.text
+msgctxt "mod_lines"
+msgid "Schule, Ausbildung und Studium. Heute gibt es Praxisunterricht."
+msgstr ""
+
+#. max 110
+#. tag persona_card:org_cleaning, voice mod
+#: data/mod_lines.json:mod_persona_card_org_cleaning_01.text
+msgctxt "mod_lines"
+msgid "Reinigung und Hausmeisterei. Der Keller wird nie wieder so sauber sein."
+msgstr ""
+
+#. max 110
+#. tag persona_card:org_beauty, voice mod
+#: data/mod_lines.json:mod_persona_card_org_beauty_01.text
+msgctxt "mod_lines"
+msgid "Friseur und Kosmetik. Die Kamera liebt Sie jetzt schon. Die Monster eher nicht."
+msgstr ""
+
+#. max 110
+#. tag persona_card:org_industry, voice mod
+#: data/mod_lines.json:mod_persona_card_org_industry_01.text
+msgctxt "mod_lines"
+msgid "Produktion und Industrie. Sie kennen Takt und Tempo. Die Show auch."
+msgstr ""
+
+#. max 110
+#. tag persona_card:org_selfemployed, voice mod
+#: data/mod_lines.json:mod_persona_card_org_selfemployed_01.text
+msgctxt "mod_lines"
+msgid "Selbstständig. Sie haben die Karte vermutlich selbst gedruckt. Respekt."
+msgstr ""
+
+#. max 110
+#. tag persona_card:org_retired, voice mod
+#: data/mod_lines.json:mod_persona_card_org_retired_01.text
+msgctxt "mod_lines"
+msgid "Ruhestand. Sie haben Zeit, Nerven und Geschichten. Perfekt fürs Abendprogramm."
+msgstr ""
+
+#. max 110
+#. tag persona_card:org_family, voice mod
+#: data/mod_lines.json:mod_persona_card_org_family_01.text
+msgctxt "mod_lines"
+msgid "Familie und Sorgearbeit. Die härteste Schicht der Welt. Das hier ist Freizeit."
+msgstr ""
+
+#. max 110
+#. tag persona_card:org_reorient, voice mod
+#: data/mod_lines.json:mod_persona_card_org_reorient_01.text
+msgctxt "mod_lines"
+msgid "Neuorientierung. Die Show ist ein guter Ort für Neues. Und für Explosionen."
+msgstr ""
+
+#. max 110
+#. tag persona_card:org_allround, voice mod
+#: data/mod_lines.json:mod_persona_card_org_allround_01.text
+msgctxt "mod_lines"
+msgid "Allrounder:in. Die Kartei hat aufgegeben. Ich finde das sympathisch."
+msgstr ""
+
+#. max 110
+#. tag persona_first_chest, voice mod
+#: data/mod_lines.json:mod_persona_first_chest_01.text
+msgctxt "mod_lines"
+msgid "Ihre erste Truhe! M.O.D. hofft auf Beute, das Publikum auf eine Falle."
+msgstr ""
+
+#. max 110
+#. tag persona_first_chest, voice mod
+#. {club} = „Ihr“/„Ihre“ + the club, e.g. Ihr Kochkurs
+#: data/mod_lines.json:mod_persona_first_chest_02.text
+msgctxt "mod_lines"
+msgid "Die erste Truhe der Etage. {club} schaut zu und hält den Atem an."
+msgstr ""
+
+#. max 110
+#. tag persona_first_chest, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_first_chest_03.text
+msgctxt "mod_lines"
+msgid "Erste Truhe, {name}! Die Regie tippt auf Glitzer, das Publikum auf Ratten."
+msgstr ""
+
+#. max 110
+#. tag persona_first_chest, voice mod
+#. {trait} = a trait, e.g. pragmatisch
+#: data/mod_lines.json:mod_persona_first_chest_04.text
+msgctxt "mod_lines"
+msgid "Eine Truhe! Laut Karte sind Sie {trait}. Mal sehen, ob die Truhe mitspielt."
+msgstr ""
+
+#. max 110
+#. tag persona_first_chest, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_first_chest_05.text
+msgctxt "mod_lines"
+msgid "Erste Truhe der Etage. Ich notiere: {name} öffnet Dinge. Ein Talent für die Karte."
+msgstr ""
+
+#. max 110
+#. tag persona_boss_won, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#. {trait} = a trait, e.g. pragmatisch
+#: data/mod_lines.json:mod_persona_boss_won_01.text
+msgctxt "mod_lines"
+msgid "{name} gegen den Boss: gewonnen. Laut Karte {trait}. Laut Publikum: legendär."
+msgstr ""
+
+#. max 110
+#. tag persona_boss_won, voice mod
+#. {club} = „Ihr“/„Ihre“ + the club, e.g. Ihr Kochkurs
+#: data/mod_lines.json:mod_persona_boss_won_02.text
+msgctxt "mod_lines"
+msgid "Boss erledigt! {club} ruft an. Ich habe gesagt, Sie sind gerade beschäftigt."
+msgstr ""
+
+#. max 110
+#. tag persona_boss_won, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_boss_won_03.text
+msgctxt "mod_lines"
+msgid "Das war ein Boss. War. Applaus für {cand} {name}!"
+msgstr ""
+
+#. max 110
+#. tag persona_boss_won, voice mod
+#. {job} = a job in the word form, e.g. Tierpfleger:in
+#: data/mod_lines.json:mod_persona_boss_won_04.text
+msgctxt "mod_lines"
+msgid "Sie sind {job} und haben gerade einen Boss besiegt. Der Lebenslauf wird lang."
+msgstr ""
+
+#. max 110
+#. tag persona_boss_won, voice mod
+#: data/mod_lines.json:mod_persona_boss_won_05.text
+msgctxt "mod_lines"
+msgid "Boss besiegt. Die Regie hat vor Staunen die Werbepause vergessen. Das ist ein Kompliment."
+msgstr ""
+
+#. max 110
+#. tag persona_boss_won:org_craft, voice mod
+#: data/mod_lines.json:mod_persona_boss_won_org_craft_01.text
+msgctxt "mod_lines"
+msgid "Handwerk schlägt Boss! Der Kostenvoranschlag kommt per Post."
+msgstr ""
+
+#. max 110
+#. tag persona_boss_won:org_kitchen, voice mod
+#: data/mod_lines.json:mod_persona_boss_won_org_kitchen_01.text
+msgctxt "mod_lines"
+msgid "Boss durchgegart! Die Küche meldet: Bitte nicht nachwürzen."
+msgstr ""
+
+#. max 110
+#. tag persona_boss_won:org_office, voice mod
+#: data/mod_lines.json:mod_persona_boss_won_org_office_01.text
+msgctxt "mod_lines"
+msgid "Boss besiegt und ordnungsgemäß abgeheftet. Vorgang geschlossen."
+msgstr ""
+
+#. max 110
+#. tag persona_boss_won:org_rescue, voice mod
+#: data/mod_lines.json:mod_persona_boss_won_org_rescue_01.text
+msgctxt "mod_lines"
+msgid "Boss gesichert, Lage unter Kontrolle. Die Regie atmet hörbar aus."
+msgstr ""
+
+#. max 110
+#. tag persona_boss_won:org_it, voice mod
+#: data/mod_lines.json:mod_persona_boss_won_org_it_01.text
+msgctxt "mod_lines"
+msgid "Boss erfolgreich deinstalliert. Ein Neustart ist nicht erforderlich."
+msgstr ""
+
+#. max 110
+#. tag persona_boss_won:org_law, voice mod
+#: data/mod_lines.json:mod_persona_boss_won_org_law_01.text
+msgctxt "mod_lines"
+msgid "Boss besiegt. Das Urteil ist rechtskräftig, Berufung ausgeschlossen."
+msgstr ""
+
+#. max 110
+#. tag persona_safe_room, voice mod
+#. {hobby} = a hobby, e.g. Kochen & Backen
+#: data/mod_lines.json:mod_persona_safe_room_01.text
+msgctxt "mod_lines"
+msgid "Safe Room. Zeit für {hobby}? Nein. Zeit zum Heilen. Ich bin keine Freizeitberatung."
+msgstr ""
+
+#. max 110
+#. tag persona_safe_room, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#. {club} = „Ihr“/„Ihre“ + the club, e.g. Ihr Kochkurs
+#: data/mod_lines.json:mod_persona_safe_room_02.text
+msgctxt "mod_lines"
+msgid "Kurze Pause, {name}. {club} lässt ausrichten: durchhalten. Und Hände waschen."
+msgstr ""
+
+#. max 110
+#. tag persona_safe_room, voice mod
+#: data/mod_lines.json:mod_persona_safe_room_03.text
+msgctxt "mod_lines"
+msgid "Safe Room! Hier sind Sie sicher. Behauptet jedenfalls die Versicherung von NOVA."
+msgstr ""
+
+#. max 110
+#. tag persona_safe_room, voice mod
+#. {trait} = a trait, e.g. pragmatisch
+#: data/mod_lines.json:mod_persona_safe_room_04.text
+msgctxt "mod_lines"
+msgid "Atempause. Laut Karte sind Sie {trait}. Laut Erfahrung brauchen Sie trotzdem Schlaf."
+msgstr ""
+
+#. max 110
+#. tag persona_safe_room, voice mopsula
+#. {hobby} = a hobby, e.g. Kochen & Backen
+#: data/mod_lines.json:mod_persona_safe_room_05.text
+msgctxt "mod_lines"
+msgid "{hobby}? Später. Erst Leberwurst. Der Graf hat Prioritäten."
+msgstr ""
+
+#. max 110
+#. tag persona_safe_room, voice mopsula
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_safe_room_06.text
+msgctxt "mod_lines"
+msgid "Fußnote 4: Auch {cand} {name} braucht Ruhe. Ich bewache solange die Leberwurst."
+msgstr ""
+
+#. max 110
+#. tag persona_safe_room:hob_cooking, voice mod
+#: data/mod_lines.json:mod_persona_safe_room_hob_cooking_01.text
+msgctxt "mod_lines"
+msgid "Safe Room mit Kochnische. Bitte nichts kochen, was vorhin noch gefaucht hat."
+msgstr ""
+
+#. max 110
+#. tag persona_safe_room:hob_gaming, voice mod
+#: data/mod_lines.json:mod_persona_safe_room_hob_gaming_01.text
+msgctxt "mod_lines"
+msgid "Safe Room! Ja, das ist ein Speicherpunkt. Nein, neu laden ist keine Taktik."
+msgstr ""
+
+#. max 110
+#. tag persona_safe_room:hob_reading, voice mod
+#: data/mod_lines.json:mod_persona_safe_room_hob_reading_01.text
+msgctxt "mod_lines"
+msgid "Safe Room. Das Kapitel ist zu Ende: Lesezeichen rein, Pflaster drauf, weiter."
+msgstr ""
+
+#. max 110
+#. tag persona_safe_room:hob_sports, voice mod
+#. {club} = „Ihr“/„Ihre“ + the club, e.g. Ihr Kochkurs
+#: data/mod_lines.json:mod_persona_safe_room_hob_sports_01.text
+msgctxt "mod_lines"
+msgid "Safe Room. Dehnen, trinken und durchatmen. {club} wäre stolz auf Sie."
+msgstr ""
+
+#. max 110
+#. tag persona_floor_end, voice mod
+#. {club} = „Ihr“/„Ihre“ + the club, e.g. Ihr Kochkurs
+#: data/mod_lines.json:mod_persona_floor_end_01.text
+msgctxt "mod_lines"
+msgid "Etage geschafft! {club} schaut zu, sagt der Sender. Ich glaube dem Sender."
+msgstr ""
+
+#. max 110
+#. tag persona_floor_end, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_floor_end_02.text
+msgctxt "mod_lines"
+msgid "Etage geschafft, {name}. Die Quote steigt. Mein Respekt auch, aber leiser."
+msgstr ""
+
+#. max 110
+#. tag persona_floor_end, voice mod
+#. {job} = a job in the word form, e.g. Tierpfleger:in
+#: data/mod_lines.json:mod_persona_floor_end_03.text
+msgctxt "mod_lines"
+msgid "Geschafft! Sie sind {job} und ab heute auch noch Treppenprofi."
+msgstr ""
+
+#. max 110
+#. tag persona_floor_end, voice mod
+#: data/mod_lines.json:mod_persona_floor_end_04.text
+msgctxt "mod_lines"
+msgid "Eine Etage weniger zwischen Ihnen und dem Finale. Die Regie zählt mit."
+msgstr ""
+
+#. max 110
+#. tag persona_floor_end:org_transport, voice mod
+#: data/mod_lines.json:mod_persona_floor_end_org_transport_01.text
+msgctxt "mod_lines"
+msgid "Etage geschafft — pünktlich auf die Minute. Die Konkurrenz steht noch am Bahnsteig."
+msgstr ""
+
+#. max 110
+#. tag persona_floor_end:org_teach, voice mod
+#: data/mod_lines.json:mod_persona_floor_end_org_teach_01.text
+msgctxt "mod_lines"
+msgid "Etage geschafft. Note eins. Bitte das Klassenbuch nicht vergessen."
+msgstr ""
+
+#. max 110
+#. tag persona_floor_end:org_science, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_floor_end_org_science_01.text
+msgctxt "mod_lines"
+msgid "Etage geschafft. Hypothese bestätigt: {name} ist schwer aufzuhalten."
+msgstr ""
+
+#. max 110
+#. tag persona_floor_end:org_nature, voice mod
+#: data/mod_lines.json:mod_persona_floor_end_org_nature_01.text
+msgctxt "mod_lines"
+msgid "Etage geschafft. Ernte eingefahren, Unkraut beseitigt, weiter nach unten."
+msgstr ""
+
+#. max 110
+#. tag persona_floor_end:org_retired, voice mod
+#: data/mod_lines.json:mod_persona_floor_end_org_retired_01.text
+msgctxt "mod_lines"
+msgid "Etage geschafft — gelassen wie immer. Die Regie nimmt Unterricht."
+msgstr ""
+
+#. max 110
+#. tag persona_floor_end:org_family, voice mod
+#: data/mod_lines.json:mod_persona_floor_end_org_family_01.text
+msgctxt "mod_lines"
+msgid "Etage geschafft. Verglichen mit einem Kindergeburtstag war das ruhig."
+msgstr ""
+
+#. max 110
+#. tag persona_game_over, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#. {trait} = a trait, e.g. pragmatisch
+#: data/mod_lines.json:mod_persona_game_over_01.text
+msgctxt "mod_lines"
+msgid "Sendeschluss für {name}. Die Karte geht ins Archiv, Fach: „{trait}, aber glücklos“."
+msgstr ""
+
+#. max 110
+#. tag persona_game_over, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#. {club} = „Ihr“/„Ihre“ + the club, e.g. Ihr Kochkurs
+#: data/mod_lines.json:mod_persona_game_over_02.text
+msgctxt "mod_lines"
+msgid "Das war's für heute, {name}. {club} hält die Plakate für morgen bereit."
+msgstr ""
+
+#. max 110
+#. tag persona_game_over, voice mod
+#. {job} = a job in the word form, e.g. Tierpfleger:in
+#: data/mod_lines.json:mod_persona_game_over_03.text
+msgctxt "mod_lines"
+msgid "Sendeschluss. Sie sind {job}, Sie stehen wieder auf. Das weiß hier jede:r."
+msgstr ""
+
+#. max 110
+#. tag persona_game_over, voice mod
+#: data/mod_lines.json:mod_persona_game_over_04.text
+msgctxt "mod_lines"
+msgid "Aus. Vorbei. Die Regie senkt die Musik und hebt Ihre Karte auf. Für die Wiederholung."
+msgstr ""
+
+#. max 110
+#. tag persona_game_over:org_rescue, voice mod
+#: data/mod_lines.json:mod_persona_game_over_org_rescue_01.text
+msgctxt "mod_lines"
+msgid "Sie haben oft andere gerettet. Heute nicht sich selbst. Die Regie senkt kurz die Musik."
+msgstr ""
+
+#. max 110
+#. tag persona_game_over:org_care, voice mod
+#: data/mod_lines.json:mod_persona_game_over_org_care_01.text
+msgctxt "mod_lines"
+msgid "Sendeschluss. Sie wissen es am besten: erst versorgen, dann weitermachen."
+msgstr ""
+
+#. max 110
+#. tag persona_game_over:org_it, voice mod
+#: data/mod_lines.json:mod_persona_game_over_org_it_01.text
+msgctxt "mod_lines"
+msgid "Sendeschluss. Kein Fehler im System — nur ein Boss mit schlechten Manieren."
+msgstr ""
+
+#. max 110
+#. tag persona_game_over:org_selfemployed, voice mod
+#: data/mod_lines.json:mod_persona_game_over_org_selfemployed_01.text
+msgctxt "mod_lines"
+msgid "Sendeschluss. Kein Problem: Sie haben schon schwierigere Quartale überstanden."
+msgstr ""
+
+#. max 110
+#. tag persona_game_over:org_stage, voice mod
+#: data/mod_lines.json:mod_persona_game_over_org_stage_01.text
+msgctxt "mod_lines"
+msgid "Vorhang. Aber jede gute Produktion hat eine zweite Vorstellung."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_rival:intro, voice mod
+#. {rival} = a rival's name
+#: data/mod_lines.json:mod_persona_beat_rival_intro_01.text
+msgctxt "mod_lines"
+msgid "Eilmeldung: {rival} ist auch im Dungeon. Und behauptet, Sie kennen sich."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_rival:intro, voice mod
+#. {rival} = a rival's name
+#: data/mod_lines.json:mod_persona_beat_rival_intro_02.text
+msgctxt "mod_lines"
+msgid "Eilmeldung: Ihre Konkurrenz ist auch im Dungeon. Name laut Kartei: {rival}."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_rival:intro, voice mod
+#. {rival} = a rival's name
+#: data/mod_lines.json:mod_persona_beat_rival_intro_03.text
+msgctxt "mod_lines"
+msgid "Eilmeldung! {rival} ist auch im Rennen. Und hat schon ein Interview gegeben. Über Sie."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_rival:result, voice mod
+#. {rival} = a rival's name
+#: data/mod_lines.json:mod_persona_beat_rival_result_01.text
+msgctxt "mod_lines"
+msgid "{rival} meldet: auch geschafft. Drei Sekunden später. Sagen wir nicht laut."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_rival:result, voice mod
+#. {rival} = a rival's name
+#: data/mod_lines.json:mod_persona_beat_rival_result_02.text
+msgctxt "mod_lines"
+msgid "Zwischenstand: {rival} liegt knapp hinter Ihnen. Sehr knapp. Die Regie liebt das."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_rival:result, voice mod
+#. {rival} = a rival's name
+#: data/mod_lines.json:mod_persona_beat_rival_result_03.text
+msgctxt "mod_lines"
+msgid "{rival} hat den Boss auch erledigt. Mit mehr Geschrei. Punkt für Sie."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_rival:taunt, voice mod
+#. {rival} = a rival's name
+#: data/mod_lines.json:mod_persona_beat_rival_taunt_01.text
+msgctxt "mod_lines"
+msgid "{rival} lässt grüßen. Und fragt, ob Ihr Spind noch frei ist."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_rival:taunt, voice mod
+#. {rival} = a rival's name
+#: data/mod_lines.json:mod_persona_beat_rival_taunt_02.text
+msgctxt "mod_lines"
+msgid "{rival} lässt ausrichten: „Wir sehen uns unten.“ Klingt nach Drohung. Ist eine."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_rival:taunt, voice mod
+#. {rival} = a rival's name
+#: data/mod_lines.json:mod_persona_beat_rival_taunt_03.text
+msgctxt "mod_lines"
+msgid "Nachricht von {rival}: „Ich war schneller.“ Die Regie prüft das noch."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_greeting:gr_hob_cooking, voice mod
+#. {club} = „Ihr“/„Ihre“ + the club, e.g. Ihr Kochkurs
+#: data/mod_lines.json:mod_persona_beat_greeting_gr_hob_cooking_01.text
+msgctxt "mod_lines"
+msgid "Grüße von zu Hause! {club} schickt ein Rezept: Rattenragout. Bitte nicht nachkochen."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_greeting:gr_hob_gaming, voice mod
+#. {club} = „Ihr“/„Ihre“ + the club, e.g. Ihr Kochkurs
+#: data/mod_lines.json:mod_persona_beat_greeting_gr_hob_gaming_01.text
+msgctxt "mod_lines"
+msgid "Grüße von zu Hause! {club} hat Ihnen einen Glückstaler geschickt. Er ist aus Plastik."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_greeting:gr_hob_sports, voice mod
+#. {club} = „Ihr“/„Ihre“ + the club, e.g. Ihr Kochkurs
+#: data/mod_lines.json:mod_persona_beat_greeting_gr_hob_sports_01.text
+msgctxt "mod_lines"
+msgid "Grüße von zu Hause! {club} ist heute eine Extrarunde für Sie gelaufen."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_greeting:gr_hob_music, voice mod
+#. {club} = „Ihr“/„Ihre“ + the club, e.g. Ihr Kochkurs
+#: data/mod_lines.json:mod_persona_beat_greeting_gr_hob_music_01.text
+msgctxt "mod_lines"
+msgid "Grüße von zu Hause! {club} hat Ihnen ein Lied geschrieben. Es reimt sich auf Dungeon."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_greeting:gr_hob_reading, voice mod
+#. {club} = „Ihr“/„Ihre“ + the club, e.g. Ihr Kochkurs
+#: data/mod_lines.json:mod_persona_beat_greeting_gr_hob_reading_01.text
+msgctxt "mod_lines"
+msgid "Grüße von zu Hause! {club} liest gerade über Sie. Kapitel drei, Spannung steigt."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_greeting:gr_hob_garden, voice mod
+#. {club} = „Ihr“/„Ihre“ + the club, e.g. Ihr Kochkurs
+#: data/mod_lines.json:mod_persona_beat_greeting_gr_hob_garden_01.text
+msgctxt "mod_lines"
+msgid "Grüße von zu Hause! {club} gießt Ihre Pflanzen. Und redet ihnen gut zu."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_greeting:gr_hob_diy, voice mod
+#. {club} = „Ihr“/„Ihre“ + the club, e.g. Ihr Kochkurs
+#: data/mod_lines.json:mod_persona_beat_greeting_gr_hob_diy_01.text
+msgctxt "mod_lines"
+msgid "Grüße von zu Hause! {club} hat ein Regal für Ihre Trophäen gebaut. Es wackelt."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_greeting:gr_hob_travel, voice mod
+#. {club} = „Ihr“/„Ihre“ + the club, e.g. Ihr Kochkurs
+#: data/mod_lines.json:mod_persona_beat_greeting_gr_hob_travel_01.text
+msgctxt "mod_lines"
+msgid "Grüße von zu Hause! {club} schickt eine Postkarte: „Schön hier. Sie fehlen.“"
+msgstr ""
+
+#. max 110
+#. tag persona_beat_greeting:gr_hob_dance, voice mod
+#. {club} = „Ihr“/„Ihre“ + the club, e.g. Ihr Kochkurs
+#: data/mod_lines.json:mod_persona_beat_greeting_gr_hob_dance_01.text
+msgctxt "mod_lines"
+msgid "Grüße von zu Hause! {club} hat eine Choreo für Ihren Sieg einstudiert."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_greeting:gr_hob_photo, voice mod
+#. {club} = „Ihr“/„Ihre“ + the club, e.g. Ihr Kochkurs
+#: data/mod_lines.json:mod_persona_beat_greeting_gr_hob_photo_01.text
+msgctxt "mod_lines"
+msgid "Grüße von zu Hause! {club} hat Ihr Foto vergrößert. Es hängt jetzt überall."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_greeting:gr_hob_social, voice mod
+#. {club} = „Ihr“/„Ihre“ + the club, e.g. Ihr Kochkurs
+#: data/mod_lines.json:mod_persona_beat_greeting_gr_hob_social_01.text
+msgctxt "mod_lines"
+msgid "Grüße von zu Hause! {club} hat schon drei Fanseiten über Sie angelegt."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_greeting:gr_hob_outdoor, voice mod
+#. {club} = „Ihr“/„Ihre“ + the club, e.g. Ihr Kochkurs
+#: data/mod_lines.json:mod_persona_beat_greeting_gr_hob_outdoor_01.text
+msgctxt "mod_lines"
+msgid "Grüße von zu Hause! {club} hat beim Wandern einen Glücksstein für Sie gefunden."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_greeting:gr_hob_volunteer, voice mod
+#. {club} = „Ihr“/„Ihre“ + the club, e.g. Ihr Kochkurs
+#: data/mod_lines.json:mod_persona_beat_greeting_gr_hob_volunteer_01.text
+msgctxt "mod_lines"
+msgid "Grüße von zu Hause! {club} hat Kuchen gebacken. Für Sie. Und für alle anderen auch."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_greeting:gr_hob_boardgames, voice mod
+#. {club} = „Ihr“/„Ihre“ + the club, e.g. Ihr Kochkurs
+#: data/mod_lines.json:mod_persona_beat_greeting_gr_hob_boardgames_01.text
+msgctxt "mod_lines"
+msgid "Grüße von zu Hause! {club} hält Ihren Platz am Spieltisch frei."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_greeting:gr_hob_crime, voice mod
+#. {club} = „Ihr“/„Ihre“ + the club, e.g. Ihr Kochkurs
+#: data/mod_lines.json:mod_persona_beat_greeting_gr_hob_crime_01.text
+msgctxt "mod_lines"
+msgid "Grüße von zu Hause! {club} ermittelt schon, wer Ihnen die Monster geschickt hat."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_greeting:gr_hob_tech, voice mod
+#. {club} = „Ihr“/„Ihre“ + the club, e.g. Ihr Kochkurs
+#: data/mod_lines.json:mod_persona_beat_greeting_gr_hob_tech_01.text
+msgctxt "mod_lines"
+msgid "Grüße von zu Hause! {club} hat Ihnen ein Gerät gebaut. Es blinkt. Mehr weiß niemand."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_greeting:gr_colleagues, voice mod
+#: data/mod_lines.json:mod_persona_beat_greeting_gr_colleagues_01.text
+msgctxt "mod_lines"
+msgid "Grüße von den Kolleg:innen! Die Kaffeemaschine vermisst Sie. Die Kolleg:innen auch."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_greeting:gr_home, voice mod
+#: data/mod_lines.json:mod_persona_beat_greeting_gr_home_01.text
+msgctxt "mod_lines"
+msgid "Grüße von zu Hause! Jemand hat Ihr Lieblingsessen gekocht. Es wartet. Kalt, aber treu."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_greeting:gr_tierheim, voice mod
+#: data/mod_lines.json:mod_persona_beat_greeting_gr_tierheim_01.text
+msgctxt "mod_lines"
+msgid "Grüße vom Tierheim-Team! Es gibt Leckerli. Der Graf hat sie schon gegessen."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_greeting:gr_tierheim, voice mod
+#: data/mod_lines.json:mod_persona_beat_greeting_gr_tierheim_02.text
+msgctxt "mod_lines"
+msgid "Grüße aus dem Tierheim Pfotenglück! Zwinger 7 ist frisch geputzt. Für den Grafen, versteht sich."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_sponsor:intro, voice mod
+#. {brand} = a brand name
+#: data/mod_lines.json:mod_persona_beat_sponsor_intro_01.text
+msgctxt "mod_lines"
+msgid "Ihr Auftritt wird präsentiert von {brand}. Passt zu Ihnen. Wir haben recherchiert."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_sponsor:intro, voice mod
+#. {brand} = a brand name
+#: data/mod_lines.json:mod_persona_beat_sponsor_intro_02.text
+msgctxt "mod_lines"
+msgid "Diese Etage präsentiert {brand}. Ich wurde gebeten, begeistert zu klingen. Bitte sehr."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_sponsor:thanks, voice mod
+#. {brand} = a brand name
+#: data/mod_lines.json:mod_persona_beat_sponsor_thanks_01.text
+msgctxt "mod_lines"
+msgid "{brand} dankt für die Etage. Die Marketingabteilung weint vor Glück. Oder wegen der Zahlen."
+msgstr ""
+
+#. max 110
+#. tag persona_beat_sponsor:thanks, voice mod
+#. {brand} = a brand name
+#: data/mod_lines.json:mod_persona_beat_sponsor_thanks_02.text
+msgctxt "mod_lines"
+msgid "Danke an {brand}! Ohne Sie wäre diese Etage genauso gewesen, nur ohne Logo."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_cooking:1, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_cooking_1_01.text
+msgctxt "mod_lines"
+msgid "Erster Gang serviert. Die Jury vergibt: medium-rare."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_cooking:2, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_cooking_2_01.text
+msgctxt "mod_lines"
+msgid "Hauptgang! Der Boss war zäh. Nächstes Mal länger im Ofen."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_cooking:3, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_cooking_3_01.text
+msgctxt "mod_lines"
+msgid "Dessert: die Treppe. Die Jury vergibt drei Sterne. Von drei."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_gaming:1, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_gaming_1_01.text
+msgctxt "mod_lines"
+msgid "Erfolg freigeschaltet: Truhe geöffnet. Speichern geht leider nur im Safe Room."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_gaming:2, voice mod
+#. {club} = „Ihr“/„Ihre“ + the club, e.g. Ihr Kochkurs
+#: data/mod_lines.json:mod_persona_gag_gag_gaming_2_01.text
+msgctxt "mod_lines"
+msgid "Bosskampf geschafft. Kein Neuladen nötig. {club} ist beeindruckt."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_gaming:3, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_gaming_3_01.text
+msgctxt "mod_lines"
+msgid "Etage geschafft! Speicherstand: legendär. Die nächste Welt lädt."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_sports:1, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_sports_1_01.text
+msgctxt "mod_lines"
+msgid "Truhe gestemmt: erste Wiederholung. Noch zwei Sätze, dann ist Feierabend."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_sports:2, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_sports_2_01.text
+msgctxt "mod_lines"
+msgid "Boss besiegt: zweite Wiederholung. Bitte nach dem Training dehnen."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_sports:3, voice mod
+#. {club} = „Ihr“/„Ihre“ + the club, e.g. Ihr Kochkurs
+#: data/mod_lines.json:mod_persona_gag_gag_sports_3_01.text
+msgctxt "mod_lines"
+msgid "Dritte Wiederholung: die Treppe. Satz beendet. {club} applaudiert."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_music:1, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_music_1_01.text
+msgctxt "mod_lines"
+msgid "Konzertkritik, erster Satz: Die Truhe quietscht in Moll."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_music:2, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_music_2_01.text
+msgctxt "mod_lines"
+msgid "Konzertkritik, zweiter Satz: Der Boss sang falsch, Sie trafen jeden Ton."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_music:3, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_music_3_01.text
+msgctxt "mod_lines"
+msgid "Konzertkritik, Finale: Standing Ovations im Treppenhaus. Zugabe nach unten."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_reading:1, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_reading_1_01.text
+msgctxt "mod_lines"
+msgid "Kapitel eins: Die Truhe. Spannender Einstieg, etwas hölzern."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_reading:2, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_reading_2_01.text
+msgctxt "mod_lines"
+msgid "Kapitel zwei: Der Boss. Überraschende Wendung! Er verliert."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_reading:3, voice mod
+#. {club} = „Ihr“/„Ihre“ + the club, e.g. Ihr Kochkurs
+#: data/mod_lines.json:mod_persona_gag_gag_reading_3_01.text
+msgctxt "mod_lines"
+msgid "Kapitel drei: Die Treppe. Fortsetzung folgt. {club} blättert schon um."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_garden:1, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_garden_1_01.text
+msgctxt "mod_lines"
+msgid "Unkraut-Bericht: In der Truhe wuchs nichts Böses. Gutes Zeichen."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_garden:2, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_garden_2_01.text
+msgctxt "mod_lines"
+msgid "Unkraut-Bericht: Der Boss ist gejätet. Mit Wurzel."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_garden:3, voice mod
+#. {club} = „Ihr“/„Ihre“ + the club, e.g. Ihr Kochkurs
+#: data/mod_lines.json:mod_persona_gag_gag_garden_3_01.text
+msgctxt "mod_lines"
+msgid "Unkraut-Bericht: Etage sauber. {club} vergibt den Goldenen Rechen."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_diy:1, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_diy_1_01.text
+msgctxt "mod_lines"
+msgid "Baumarkt-Gutachten: Truhe, Massivholz, Scharniere ausbaufähig."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_diy:2, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_diy_2_01.text
+msgctxt "mod_lines"
+msgid "Baumarkt-Gutachten: Boss zerlegt, Schrauben übrig. Das ist normal."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_diy:3, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_diy_3_01.text
+msgctxt "mod_lines"
+msgid "Baumarkt-Gutachten: Treppe trägt. Abnahme erteilt. Weiter nach unten."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_animals:1, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_animals_1_01.text
+msgctxt "mod_lines"
+msgid "Hundeschule, Lektion eins: Die Truhe ist apportiert. Brav."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_animals:2, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_animals_2_01.text
+msgctxt "mod_lines"
+msgid "Hundeschule, Lektion zwei: Boss abgeleint. Sehr brav."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_animals:3, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_animals_3_01.text
+msgctxt "mod_lines"
+msgid "Hundeschule, Lektion drei: Treppe. Zertifikat folgt. Der Graf protestiert."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_travel:1, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_travel_1_01.text
+msgctxt "mod_lines"
+msgid "Hotelbewertung: Truhe im Zimmer, Minibar fehlt. Drei Sterne."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_travel:2, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_travel_2_01.text
+msgctxt "mod_lines"
+msgid "Hotelbewertung: Der Boss war unfreundlich am Empfang. Ausgecheckt."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_travel:3, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_travel_3_01.text
+msgctxt "mod_lines"
+msgid "Hotelbewertung: Die Etage ist sehenswert, der Service ruppig. Nächstes Ziel: unten."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_dance:1, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_dance_1_01.text
+msgctxt "mod_lines"
+msgid "Punktrichter, erste Wertung: Truhe mit Schwung geöffnet. Acht Komma fünf."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_dance:2, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_dance_2_01.text
+msgctxt "mod_lines"
+msgid "Punktrichter, zweite Wertung: Boss mit sauberer Drehung erledigt. Neun."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_dance:3, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_dance_3_01.text
+msgctxt "mod_lines"
+msgid "Punktrichter, Endwertung: Abgang über die Treppe. Höchstnote."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_photo:1, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_photo_1_01.text
+msgctxt "mod_lines"
+msgid "Kamera drei hat die Truhe verpasst. Wir wiederholen in Zeitlupe."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_photo:2, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_photo_2_01.text
+msgctxt "mod_lines"
+msgid "Kamera drei hatte diesmal den Boss im Bild. Endlich."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_photo:3, voice mod
+#. {club} = „Ihr“/„Ihre“ + the club, e.g. Ihr Kochkurs
+#: data/mod_lines.json:mod_persona_gag_gag_photo_3_01.text
+msgctxt "mod_lines"
+msgid "Kamera drei meldet: Treppe im Kasten. {club} ist stolz."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_social:1, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_social_1_01.text
+msgctxt "mod_lines"
+msgid "Schlagworte des Tages: Truhe, Glück, kein Filter nötig."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_social:2, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_social_2_01.text
+msgctxt "mod_lines"
+msgid "Schlagworte: Boss, besiegt, unfassbar. Der Chat übernimmt."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_social:3, voice mod
+#. {name} = the candidate's name, e.g. Kai
+#: data/mod_lines.json:mod_persona_gag_gag_social_3_01.text
+msgctxt "mod_lines"
+msgid "Schlagworte zum Abschluss: Etage, geschafft, {name}. Trendet bereits."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_outdoor:1, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_outdoor_1_01.text
+msgctxt "mod_lines"
+msgid "Wetterbericht: In der Truhe vereinzelt Beute, sonst trocken."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_outdoor:2, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_outdoor_2_01.text
+msgctxt "mod_lines"
+msgid "Wetterbericht: Bossfront abgezogen, Aussichten heiter."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_outdoor:3, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_outdoor_3_01.text
+msgctxt "mod_lines"
+msgid "Wetterbericht: Etage geschafft. Weiter unten wird es ungemütlich. Jacke mitnehmen."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_volunteer:1, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_volunteer_1_01.text
+msgctxt "mod_lines"
+msgid "Gute-Taten-Zähler: eins. Truhe befreit."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_volunteer:2, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_volunteer_2_01.text
+msgctxt "mod_lines"
+msgid "Gute-Taten-Zähler: zwei. Der Boss wurde von sich selbst befreit."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_volunteer:3, voice mod
+#. {club} = „Ihr“/„Ihre“ + the club, e.g. Ihr Kochkurs
+#: data/mod_lines.json:mod_persona_gag_gag_volunteer_3_01.text
+msgctxt "mod_lines"
+msgid "Gute-Taten-Zähler: drei. Etage aufgeräumt. {club} ist stolz."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_boardgames:1, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_boardgames_1_01.text
+msgctxt "mod_lines"
+msgid "Regelkunde: Wer eine Truhe öffnet, darf noch mal würfeln."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_boardgames:2, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_boardgames_2_01.text
+msgctxt "mod_lines"
+msgid "Regelkunde: Der Boss scheidet aus. Keine Hausregeln."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_boardgames:3, voice mod
+#. {club} = „Ihr“/„Ihre“ + the club, e.g. Ihr Kochkurs
+#: data/mod_lines.json:mod_persona_gag_gag_boardgames_3_01.text
+msgctxt "mod_lines"
+msgid "Regelkunde: Treppe erreicht, nächste Runde. {club} mischt schon."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_crime:1, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_crime_1_01.text
+msgctxt "mod_lines"
+msgid "Ermittlungsakte, Eintrag eins: Truhe geöffnet. Keine Spuren."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_crime:2, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_crime_2_01.text
+msgctxt "mod_lines"
+msgid "Ermittlungsakte, Eintrag zwei: Der Boss war es. Fall gelöst."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_crime:3, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_crime_3_01.text
+msgctxt "mod_lines"
+msgid "Ermittlungsakte, Eintrag drei: Die Spur führt nach unten. Fortsetzung folgt."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_tech:1, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_tech_1_01.text
+msgctxt "mod_lines"
+msgid "Firmware-Update eins von drei: Truhe gepatcht."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_tech:2, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_tech_2_01.text
+msgctxt "mod_lines"
+msgid "Firmware-Update zwei von drei: Boss entfernt. Neustart nicht nötig."
+msgstr ""
+
+#. max 110
+#. tag persona_gag:gag_tech:3, voice mod
+#: data/mod_lines.json:mod_persona_gag_gag_tech_3_01.text
+msgctxt "mod_lines"
+msgid "Firmware-Update drei von drei: Etage installiert. Bitte nicht ausschalten."
+msgstr ""
+
+#. max 110
+#. tag persona_marotte, voice mod
+#. {trait} = a trait, e.g. pragmatisch
+#: data/mod_lines.json:mod_persona_marotte_01.text
+msgctxt "mod_lines"
+msgid "Ich habe Ihre Karte gelesen: {trait}. Die heutige Vorliebe ist also ein Geschenk."
+msgstr ""
+
+#. max 110
+#. tag persona_marotte, voice mod
+#. {trait} = a trait, e.g. pragmatisch
+#: data/mod_lines.json:mod_persona_marotte_02.text
+msgctxt "mod_lines"
+msgid "Laut Karte sind Sie {trait}. Rein zufällig passt meine Vorliebe heute dazu."
+msgstr ""
+
+#. max 110
+#. tag persona_marotte, voice mod
+#. {trait} = a trait, e.g. pragmatisch
+#: data/mod_lines.json:mod_persona_marotte_03.text
+msgctxt "mod_lines"
+msgid "Ihre Karte sagt „{trait}“. Meine Vorliebe heute auch. Zufall? Ich bin eine KI."
+msgstr ""
+
+#. max 110
+#. tag persona_spec_hint:cls_kai_wrecker, voice mod
+#: data/mod_lines.json:mod_persona_spec_hint_cls_kai_wrecker_01.text
+msgctxt "mod_lines"
+msgid "Passt zu Ihrem Vorleben: Abrissbirne. Sie packen an, wo andere zögern."
+msgstr ""
+
+#. max 110
+#. tag persona_spec_hint:cls_kai_runner, voice mod
+#: data/mod_lines.json:mod_persona_spec_hint_cls_kai_runner_01.text
+msgctxt "mod_lines"
+msgid "Passt zu Ihrem Vorleben: Gleisläufer:in. Sie wissen immer, wo es langgeht."
+msgstr ""
+
+#. max 110
+#. tag persona_spec_hint:cls_kai_tinker, voice mod
+#: data/mod_lines.json:mod_persona_spec_hint_cls_kai_tinker_01.text
+msgctxt "mod_lines"
+msgid "Passt zu Ihrem Vorleben: Schrott-Tüftler:in. Aus Resten bauen Sie Wunder."
+msgstr ""
+
+#. max 110
+#. tag persona_spec_hint:cls_kai_showrunner, voice mod
+#: data/mod_lines.json:mod_persona_spec_hint_cls_kai_showrunner_01.text
+msgctxt "mod_lines"
+msgid "Passt zu Ihrem Vorleben: Showrunner:in. Sie wissen, wie man ein Publikum hält."
+msgstr ""
+
+#. max 110
+#. tag persona_casting_open, voice mod
+#: data/mod_lines.json:mod_persona_casting_open_01.text
+msgctxt "mod_lines"
+msgid "Wer sind Sie? Zwei Fragen, eine Karte. Oder: Rest automatisch, und Sie spielen Kai."
+msgstr ""
+
+#. max 110
+#. tag persona_casting_open:mopsula, voice mod
+#: data/mod_lines.json:mod_persona_casting_open_mopsula_01.text
+msgctxt "mod_lines"
+msgid "Der Graf führt heute das Casting. Gesucht: Begleitung mit Leberwurst-Erfahrung."
+msgstr ""
+
+#. max 110
+#. tag persona_casting_brief, voice mod
+#: data/mod_lines.json:mod_persona_casting_brief_01.text
+msgctxt "mod_lines"
+msgid "Vorleben und Hobby. Lügen ist erlaubt. Quote ist Pflicht."
+msgstr ""
+
+#. max 110
+#. tag persona_casting_dice, voice mod
+#: data/mod_lines.json:mod_persona_casting_dice_01.text
+msgctxt "mod_lines"
+msgid "Die Redaktion hat gewürfelt. Beschwerden bitte an den Würfel."
+msgstr ""
+
+#. max 110
+#. tag persona_casting_dice, voice mod
+#: data/mod_lines.json:mod_persona_casting_dice_02.text
+msgctxt "mod_lines"
+msgid "Gewürfelt! Falls es nicht passt: Das Schicksal hat keinen Kundendienst."
+msgstr ""
+
+#. max 110
+#. tag persona_casting_ai_wait, voice mod
+#: data/mod_lines.json:mod_persona_casting_ai_wait_01.text
+msgctxt "mod_lines"
+msgid "Die Redaktion liest Ihre Akte …"
+msgstr ""
+
+#. max 110
+#. tag persona_casting_ai_offline, voice mod
+#: data/mod_lines.json:mod_persona_casting_ai_offline_01.text
+msgctxt "mod_lines"
+msgid "Die Redaktion ist in der Kaffeepause. Wir casten klassisch."
+msgstr ""
+
+#. max 110
+#. tag ssn_anchor, voice mod
+#: data/mod_lines.json:mod_ssn_anchor_01.text
+msgctxt "mod_lines"
+msgid "Willkommen zur neuen Staffel! Jede Etage stürzt pünktlich ein. Pünktlicher als jeder Zug."
+msgstr ""
+
+#. max 110
+#. tag season_start, voice mod
+#: data/mod_lines.json:mod_season_start_01.text
+msgctxt "mod_lines"
+msgid "Etage 1 ist die Generalprobe. Hier dürfen Sie noch scheitern. Ab Etage 2 läuft die Kamera wirklich."
+msgstr ""
+
+#. max 110
+#. tag season_rescue, voice mod
+#: data/mod_lines.json:mod_season_rescue_01.text
+msgctxt "mod_lines"
+msgid "Gerettet! Die Rechnung kommt mit der Post. Eigentlich sofort."
+msgstr ""
+
+#. max 110
+#. tag season_rescue_free, voice mod
+#: data/mod_lines.json:mod_season_rescue_free_01.text
+msgctxt "mod_lines"
+msgid "Gerettet! Diesmal zahlt der Sender. Erzählen Sie es nicht herum."
+msgstr ""
+
+#. max 110
+#. tag season_medics, voice mod
+#: data/mod_lines.json:mod_season_medics_01.text
+msgctxt "mod_lines"
+msgid "Die Regie-Sanitäter haben Sie eingesammelt. Die Rechnung liegt unter dem Kopfkissen."
+msgstr ""
+
+#. max 110
+#. tag season_medics_free, voice mod
+#: data/mod_lines.json:mod_season_medics_free_01.text
+msgctxt "mod_lines"
+msgid "Die Regie-Sanitäter haben Sie eingesammelt. Diese Woche geht es aufs Haus."
+msgstr ""
+
+#. max 110
+#. tag season_medics_rehearsal, voice mod
+#: data/mod_lines.json:mod_season_medics_rehearsal_01.text
+msgctxt "mod_lines"
+msgid "Das war die Generalprobe. Die Sanitäter haben trotzdem gern geübt."
+msgstr ""
+
+#. max 110
+#. tag season_out, voice mod
+#: data/mod_lines.json:mod_season_out_01.text
+msgctxt "mod_lines"
+msgid "Sendeschluss für Sie. Ab jetzt sitzen Sie als Studiogast in der ersten Reihe."
+msgstr ""
+
+#. max 110
+#. tag season_stairs_closed, voice mod
+#: data/mod_lines.json:mod_season_stairs_closed_01.text
+msgctxt "mod_lines"
+msgid "Fertig? Eine Etage dürfen Sie vorgehen. Weiter baut die Regie noch nicht."
+msgstr ""
+
+#. max 110
+#. tag season_daily, voice mod
+#: data/mod_lines.json:mod_season_daily_01.text
+msgctxt "mod_lines"
+msgid "Neu im Programm: Auf dieser Etage gibt es heute etwas Neues. Es bleibt bis zum Einsturz."
+msgstr ""
+
+#. max 110
+#. tag season_finale, voice mod
+#: data/mod_lines.json:mod_season_finale_01.text
+msgctxt "mod_lines"
+msgid "Das Große Finale ist gewonnen! Abspann, Applaus — und morgen weckt Sie niemand."
+msgstr ""
+
+#. max 110
+#. tag season_end, voice mod
+#: data/mod_lines.json:mod_season_end_01.text
+msgctxt "mod_lines"
+msgid "Der letzte Einsturz. Sie waren bis zum Ende dabei. Die Regie verneigt sich."
+msgstr ""
+
+#. max 110
+#. tag season_content, voice mod
+#: data/mod_lines.json:mod_season_content_01.text
+msgctxt "mod_lines"
+msgid "Weiter reicht das Programm noch nicht, die nächsten Kulissen sind im Aufbau. Sie waren bis zum Ende dabei."
+msgstr ""
+
+#. max 110
+#. tag cast_intro, voice mod
+#: data/mod_lines.json:mod_cast_intro_01.text
+msgctxt "mod_lines"
+msgid "Sie sind nicht allein. Die anderen Kandidat:innen auch nicht. Einige sind sogar nett."
+msgstr ""
+
+#. max 110
+#. tag cast_first, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#. {floor} = a floor number, e.g. 3
+#: data/mod_lines.json:mod_cast_first_01.text
+msgctxt "mod_lines"
+msgid "Eilmeldung: {cand} hat Etage {floor} als Erstes erreicht. Die Kulissen sind noch feucht."
+msgstr ""
+
+#. max 110
+#. tag cast_first, voice mod
+#. {floor} = a floor number, e.g. 3
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#: data/mod_lines.json:mod_cast_first_02.text
+msgctxt "mod_lines"
+msgid "Eilmeldung: Auf Etage {floor} steht jetzt jemand. {cand}, zuerst und ziemlich stolz."
+msgstr ""
+
+#. max 110
+#. tag cast_first, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#. {floor} = a floor number, e.g. 3
+#: data/mod_lines.json:mod_cast_first_03.text
+msgctxt "mod_lines"
+msgid "Eilmeldung: {cand} eröffnet Etage {floor}. Die Regie hat noch nicht mal das Licht an."
+msgstr ""
+
+#. max 110
+#. tag cast_first_you, voice mod
+#. {floor} = a floor number, e.g. 3
+#: data/mod_lines.json:mod_cast_first_you_01.text
+msgctxt "mod_lines"
+msgid "Eilmeldung: Sie sind als Erstes auf Etage {floor}. Die KI-Konkurrenz prüft ihre Uhren."
+msgstr ""
+
+#. max 110
+#. tag cast_first_you, voice mod
+#. {floor} = a floor number, e.g. 3
+#: data/mod_lines.json:mod_cast_first_you_02.text
+msgctxt "mod_lines"
+msgid "Etage {floor}, und Sie sind die erste Person hier. Bitte nichts anfassen, die Farbe ist frisch."
+msgstr ""
+
+#. max 110
+#. tag cast_out, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#: data/mod_lines.json:mod_cast_out_01.text
+msgctxt "mod_lines"
+msgid "Eilmeldung: {cand} ist raus. Wollte einen Rabattschild-Golem streicheln."
+msgstr ""
+
+#. max 110
+#. tag cast_out, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#. {floor} = a floor number, e.g. 3
+#: data/mod_lines.json:mod_cast_out_02.text
+msgctxt "mod_lines"
+msgid "Eilmeldung: Für {cand} ist auf Etage {floor} Sendeschluss. Ab jetzt im Studio, mit Kaffee."
+msgstr ""
+
+#. max 110
+#. tag cast_out, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#. {floor} = a floor number, e.g. 3
+#: data/mod_lines.json:mod_cast_out_03.text
+msgctxt "mod_lines"
+msgid "Eilmeldung: {cand} verlässt die Staffel auf Etage {floor}. Die Regie verbeugt sich kurz."
+msgstr ""
+
+#. max 110
+#. tag cast_finale, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#: data/mod_lines.json:mod_cast_finale_01.text
+msgctxt "mod_lines"
+msgid "Eilmeldung: {cand} hat das Große Finale gewonnen. Applaus aus der Konserve, aber ehrlich gemeint."
+msgstr ""
+
+#. max 110
+#. tag cast_finale, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#: data/mod_lines.json:mod_cast_finale_02.text
+msgctxt "mod_lines"
+msgid "Eilmeldung: {cand} ist Finalist:in dieser Staffel. Der Abspann läuft, nur noch nicht für alle."
+msgstr ""
+
+#. max 110
+#. tag cast_record, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#: data/mod_lines.json:mod_cast_record_01.text
+msgctxt "mod_lines"
+msgid "Neue Spitze unter den KI-Kandidat:innen: {cand}. Die Konkurrenz notiert hektisch."
+msgstr ""
+
+#. max 110
+#. tag cast_record, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#: data/mod_lines.json:mod_cast_record_02.text
+msgctxt "mod_lines"
+msgid "Wechsel an der Spitze der KI-Wertung: {cand} führt. Statistik ist auch Unterhaltung."
+msgstr ""
+
+#. max 110
+#. tag cast_fboss, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#. {floor} = a floor number, e.g. 3
+#: data/mod_lines.json:mod_cast_fboss_01.text
+msgctxt "mod_lines"
+msgid "Eilmeldung: {cand} hat den Etagenboss von Etage {floor} besiegt. Die Requisite kehrt schon zusammen."
+msgstr ""
+
+#. max 110
+#. tag cast_fboss, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#. {floor} = a floor number, e.g. 3
+#: data/mod_lines.json:mod_cast_fboss_02.text
+msgctxt "mod_lines"
+msgid "{cand} gegen den Etagenboss von Etage {floor}: gewonnen. Die Kulisse wackelt noch."
+msgstr ""
+
+#. max 110
+#. tag cast_collapse, voice mod
+#. {floor} = a floor number, e.g. 3
+#. {count} = a number
+#: data/mod_lines.json:mod_cast_collapse_01.text
+msgctxt "mod_lines"
+msgid "Etage {floor} ist eingestürzt. Die Regie hat {count} Kandidat:innen geborgen."
+msgstr ""
+
+#. max 110
+#. tag cast_collapse, voice mod
+#. {floor} = a floor number, e.g. 3
+#. {count} = a number
+#: data/mod_lines.json:mod_cast_collapse_02.text
+msgctxt "mod_lines"
+msgid "Einsturz auf Etage {floor}: {count} Kandidat:innen wurden pünktlich hinübergetragen."
+msgstr ""
+
+#. max 110
+#. tag cast_collapse_out, voice mod
+#. {floor} = a floor number, e.g. 3
+#. {count} = a number
+#: data/mod_lines.json:mod_cast_collapse_out_01.text
+msgctxt "mod_lines"
+msgid "Etage {floor} ist eingestürzt. Für {count} Kandidat:innen ist die Staffel vorbei."
+msgstr ""
+
+#. max 110
+#. tag cast_collapse_out, voice mod
+#. {floor} = a floor number, e.g. 3
+#. {count} = a number
+#: data/mod_lines.json:mod_cast_collapse_out_02.text
+msgctxt "mod_lines"
+msgid "Einsturz auf Etage {floor}: {count} Kandidat:innen sitzen ab jetzt im Studio."
+msgstr ""
+
+#. max 110
+#. tag cast_leave, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#: data/mod_lines.json:mod_cast_leave_01.text
+msgctxt "mod_lines"
+msgid "{cand} ist ausgestiegen. Die KI übernimmt den Platz. Höflich, versteht sich."
+msgstr ""
+
+#. max 110
+#. tag cast_hired, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#. {count} = a number
+#: data/mod_lines.json:mod_cast_hired_01.text
+msgctxt "mod_lines"
+msgid "{cand} begleitet Sie für {count} Kämpfe. Bosse sind ausgenommen, steht im Vertrag."
+msgstr ""
+
+#. max 110
+#. tag cast_hired, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#. {count} = a number
+#: data/mod_lines.json:mod_cast_hired_02.text
+msgctxt "mod_lines"
+msgid "Verstärkung gebucht: {cand}. {count} Kämpfe, kein Bosskampf. Gute Zusammenarbeit!"
+msgstr ""
+
+#. max 110
+#. tag cast_help, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#: data/mod_lines.json:mod_cast_help_01.text
+msgctxt "mod_lines"
+msgid "{cand} steckt in einem Kampf fest. Sie helfen? Die Regie nimmt das gern auf."
+msgstr ""
+
+#. max 110
+#. tag cast_helped, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#: data/mod_lines.json:mod_cast_helped_01.text
+msgctxt "mod_lines"
+msgid "{cand} ist frei und dankbar. Ein Gefallen ist notiert."
+msgstr ""
+
+#. max 110
+#. tag cast_helped, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#: data/mod_lines.json:mod_cast_helped_02.text
+msgctxt "mod_lines"
+msgid "Geschafft! {cand} schuldet Ihnen einen Gefallen. Steht jetzt im Drehbuch."
+msgstr ""
+
+#. max 110
+#. tag cast_guest_end, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#: data/mod_lines.json:mod_cast_guest_end_01.text
+msgctxt "mod_lines"
+msgid "{cand} verabschiedet sich. Abgemacht ist abgemacht."
+msgstr ""
+
+#. max 110
+#. tag season_tree_open, voice mod
+#: data/mod_lines.json:mod_season_tree_open_01.text
+msgctxt "mod_lines"
+msgid "Talent-Show! Eine neue Reihe, drei Talente, eins nehmen Sie. Umentscheiden dürfen Sie im Safe Room."
+msgstr ""
+
+#. max 110
+#. tag season_tree_open, voice mod
+#: data/mod_lines.json:mod_season_tree_open_02.text
+msgctxt "mod_lines"
+msgid "Talent-Show, neue Reihe! Drei Talente stehen bereit. Wer sich vertut, wählt im Safe Room einfach neu."
+msgstr ""
+
+#. max 110
+#. tag season_tree_pick, voice mod
+#: data/mod_lines.json:mod_season_tree_pick_01.text
+msgctxt "mod_lines"
+msgid "Gewählt! Die Jury nickt. Die Jury nickt immer. Dafür wird sie bezahlt."
+msgstr ""
+
+#. max 110
+#. tag season_tree_pick, voice mod
+#: data/mod_lines.json:mod_season_tree_pick_02.text
+msgctxt "mod_lines"
+msgid "Eine Reihe weiter. Bereuen ist erlaubt — im Safe Room, kostenlos."
+msgstr ""
+
+#. max 110
+#. tag season_tree_pick:mopsula, voice mod
+#: data/mod_lines.json:mod_season_tree_pick_mopsula_01.text
+msgctxt "mod_lines"
+msgid "Der Graf wählt. Er nennt es Fortbildung. Wir nennen es Quote."
+msgstr ""
+
+#. max 110
+#. tag season_tree_repick, voice mod
+#: data/mod_lines.json:mod_season_tree_repick_01.text
+msgctxt "mod_lines"
+msgid "Umentschieden. Kostet nichts, steht trotzdem im Protokoll."
+msgstr ""
+
+#. max 110
+#. tag season_tree_reset, voice mod
+#: data/mod_lines.json:mod_season_tree_reset_01.text
+msgctxt "mod_lines"
+msgid "Neuer Talentbaum — bitte neu wählen. Kostenlos. Diesmal."
+msgstr ""
+
+#. max 110
+#. tag season_ability, voice mod
+#: data/mod_lines.json:mod_season_ability_01.text
+msgctxt "mod_lines"
+msgid "Neue Fähigkeit! Legen Sie sie im Fähigkeitenbuch auf die Leiste."
+msgstr ""
+
+#. max 110
+#. tag season_ability, voice mod
+#: data/mod_lines.json:mod_season_ability_02.text
+msgctxt "mod_lines"
+msgid "Neue Fähigkeit gelernt. Das Fähigkeitenbuch hat schon ein Lesezeichen gesetzt."
+msgstr ""
+
+#. max 110
+#. tag season_rank, voice mod
+#. {count} = a number
+#: data/mod_lines.json:mod_season_rank_01.text
+msgctxt "mod_lines"
+msgid "Rang {count}! Ihre Klassenfähigkeiten haben dazugelernt. Sie hoffentlich auch."
+msgstr ""
+
+#. max 110
+#. tag season_catch_up, voice mod
+#: data/mod_lines.json:mod_season_catch_up_01.text
+msgctxt "mod_lines"
+msgid "Sie hängen hinterher. Bis Sie aufgeholt haben, zählt jede Erfahrung doppelt."
+msgstr ""
+
+#. max 110
+#. tag season_catch_up, voice mod
+#: data/mod_lines.json:mod_season_catch_up_02.text
+msgctxt "mod_lines"
+msgid "Aufholjagd! Die Regie spendiert doppelte Erfahrung, bis Sie wieder im Band sind."
+msgstr ""
+
+#. max 110
+#. tag season_crash_course, voice mod
+#: data/mod_lines.json:mod_season_crash_course_01.text
+msgctxt "mod_lines"
+msgid "Regie-Crashkurs! Wir haben Sie über Nacht nachgeschult. Das Aufholpaket liegt bei."
+msgstr ""
+
+#. max 110
+#. tag season_overtime, voice mod
+#: data/mod_lines.json:mod_season_overtime_01.text
+msgctxt "mod_lines"
+msgid "Überstunden! Mehr Stufen gibt es auf dieser Etage nicht. Die Regie zahlt in Credits."
+msgstr ""
+
+#. max 110
+#. tag season_overtime, voice mod
+#: data/mod_lines.json:mod_season_overtime_02.text
+msgctxt "mod_lines"
+msgid "Deckel erreicht. Ihre Erfahrung geht jetzt auf das Überstundenkonto."
+msgstr ""
+
+#. max 110
+#. tag boss_intro:enm_boss_filialleiterin, voice mod
+#: data/mod_lines.json:mod_boss_intro_enm_boss_filialleiterin_01.text
+msgctxt "mod_lines"
+msgid "Applaus für die Filialleiterin! Sie lächelt seit der Eröffnung. Die Passage auch — gezwungenermaßen."
+msgstr ""
+
+#. max 110
+#. tag boss_phase:enm_boss_filialleiterin:2, voice mod
+#: data/mod_lines.json:mod_boss_phase_enm_boss_filialleiterin_2_01.text
+msgctxt "mod_lines"
+msgid "Sie hat die Kundenordnung dabei. Paragraf eins: Die Kundschaft hat immer Unrecht."
+msgstr ""
+
+#. max 110
+#. tag boss_phase:enm_boss_filialleiterin:3, voice mod
+#: data/mod_lines.json:mod_boss_phase_enm_boss_filialleiterin_3_01.text
+msgctxt "mod_lines"
+msgid "Alles muss raus! Und sie meint: Sie."
+msgstr ""
+
+#. max 110
+#. tag boss_intro:enm_boss_ausverkauf, voice mod
+#: data/mod_lines.json:mod_boss_intro_enm_boss_ausverkauf_01.text
+msgctxt "mod_lines"
+msgid "Der Ausverkauf! Regale, Wühltische und ein Rolltor — verschmolzen zu einem einzigen Schnäppchen."
+msgstr ""
+
+#. max 110
+#. tag boss_phase:enm_boss_ausverkauf:2, voice mod
+#: data/mod_lines.json:mod_boss_phase_enm_boss_ausverkauf_2_01.text
+msgctxt "mod_lines"
+msgid "Alles reduziert! Auch Ihre Lebenspunkte!"
+msgstr ""
+
+#. max 110
+#. tag boss_phase:enm_boss_ausverkauf:3, voice mod
+#: data/mod_lines.json:mod_boss_phase_enm_boss_ausverkauf_3_01.text
+msgctxt "mod_lines"
+msgid "Letzte Preissenkung! Danach wird verschenkt — an Sie, in Schlägen."
+msgstr ""
+
+#. max 110
+#. tag boss_intro:enm_boss_requisiteurin, voice mod
+#: data/mod_lines.json:mod_boss_intro_enm_boss_requisiteurin_01.text
+msgctxt "mod_lines"
+msgid "Die Requisiteurin! Sie kennt jedes Teil im Fundus. Und jedes Teil kennt sie."
+msgstr ""
+
+#. max 110
+#. tag boss_phase:enm_boss_requisiteurin:2, voice mod
+#: data/mod_lines.json:mod_boss_phase_enm_boss_requisiteurin_2_01.text
+msgctxt "mod_lines"
+msgid "Sie verliest die Requisitenliste! Posten 412: Ihre Niederlage."
+msgstr ""
+
+#. max 110
+#. tag boss_phase:enm_boss_requisiteurin:3, voice mod
+#: data/mod_lines.json:mod_boss_phase_enm_boss_requisiteurin_3_01.text
+msgctxt "mod_lines"
+msgid "Letzter Akt! Die Requisiteurin spielt jetzt alle Rollen gleichzeitig."
+msgstr ""
+
+#. max 110
+#. tag boss_intro:enm_boss_garderobe, voice mod
+#: data/mod_lines.json:mod_boss_intro_enm_boss_garderobe_01.text
+msgctxt "mod_lines"
+msgid "Die Garderobe! Ein Kleiderschrank mit Ambitionen. Er will die Hauptrolle."
+msgstr ""
+
+#. max 110
+#. tag boss_phase:enm_boss_garderobe:2, voice mod
+#: data/mod_lines.json:mod_boss_phase_enm_boss_garderobe_2_01.text
+msgctxt "mod_lines"
+msgid "Die Türen gehen auf! Was da rauskommt, hat seit Jahren kein Licht gesehen."
+msgstr ""
+
+#. max 110
+#. tag boss_phase:enm_boss_garderobe:3, voice mod
+#: data/mod_lines.json:mod_boss_phase_enm_boss_garderobe_3_01.text
+msgctxt "mod_lines"
+msgid "Großer Auftritt! Die Garderobe trägt jetzt alles auf einmal."
+msgstr ""
+
+#. max 110
+#. tag boss_intro:enm_boss_schichtleiterin_f4, voice mod
+#: data/mod_lines.json:mod_boss_intro_enm_boss_schichtleiterin_f4_01.text
+msgctxt "mod_lines"
+msgid "Die Schichtleiterin! Pünktlich, gründlich, und Pausen hält sie für ein Gerücht."
+msgstr ""
+
+#. max 110
+#. tag boss_phase:enm_boss_schichtleiterin_f4:2, voice mod
+#: data/mod_lines.json:mod_boss_phase_enm_boss_schichtleiterin_f4_2_01.text
+msgctxt "mod_lines"
+msgid "Neuer Schichtplan! Ihre Pause wurde gestrichen."
+msgstr ""
+
+#. max 110
+#. tag boss_phase:enm_boss_schichtleiterin_f4:3, voice mod
+#: data/mod_lines.json:mod_boss_phase_enm_boss_schichtleiterin_f4_3_01.text
+msgctxt "mod_lines"
+msgid "Feierabend? Nicht in dieser Halle."
+msgstr ""
+
+#. max 110
+#. tag boss_intro:enm_boss_schichtleiterin_f5, voice mod
+#: data/mod_lines.json:mod_boss_intro_enm_boss_schichtleiterin_f5_01.text
+msgctxt "mod_lines"
+msgid "Die Schichtleiterin ist zurück. Mit Hubwagen."
+msgstr ""
+
+#. max 110
+#. tag boss_phase:enm_boss_schichtleiterin_f5:2, voice mod
+#: data/mod_lines.json:mod_boss_phase_enm_boss_schichtleiterin_f5_2_01.text
+msgctxt "mod_lines"
+msgid "Zweite Schicht, zweite Runde. Sie hat dazugelernt."
+msgstr ""
+
+#. max 110
+#. tag boss_phase:enm_boss_schichtleiterin_f5:3, voice mod
+#: data/mod_lines.json:mod_boss_phase_enm_boss_schichtleiterin_f5_3_01.text
+msgctxt "mod_lines"
+msgid "Überstunden! Und die Schichtleiterin rechnet jede Minute ab."
+msgstr ""
+
+#. max 110
+#. tag boss_intro:enm_boss_schichtleiterin_f6, voice mod
+#: data/mod_lines.json:mod_boss_intro_enm_boss_schichtleiterin_f6_01.text
+msgctxt "mod_lines"
+msgid "Die Schichtleiterin, zum dritten Mal. Diesmal mit Stempelkarte und schlechter Laune."
+msgstr ""
+
+#. max 110
+#. tag boss_phase:enm_boss_schichtleiterin_f6:2, voice mod
+#: data/mod_lines.json:mod_boss_phase_enm_boss_schichtleiterin_f6_2_01.text
+msgctxt "mod_lines"
+msgid "Letzte Schicht vor dem Finale! Sie gibt alles. Wirklich alles."
+msgstr ""
+
+#. max 110
+#. tag boss_phase:enm_boss_schichtleiterin_f6:3, voice mod
+#: data/mod_lines.json:mod_boss_phase_enm_boss_schichtleiterin_f6_3_01.text
+msgctxt "mod_lines"
+msgid "Sie stempelt aus — aber erst nach Ihnen."
+msgstr ""
+
+#. max 110
+#. tag boss_intro:enm_boss_paketberg, voice mod
+#: data/mod_lines.json:mod_boss_intro_enm_boss_paketberg_01.text
+msgctxt "mod_lines"
+msgid "Das Große Finale! Der Paketberg: tausend unzustellbare Pakete, die sich selbst zustellen wollen."
+msgstr ""
+
+#. max 110
+#. tag boss_phase:enm_boss_paketberg:2, voice mod
+#: data/mod_lines.json:mod_boss_phase_enm_boss_paketberg_2_01.text
+msgctxt "mod_lines"
+msgid "Zustellung gescheitert! Der Berg nimmt es persönlich."
+msgstr ""
+
+#. max 110
+#. tag boss_phase:enm_boss_paketberg:3, voice mod
+#: data/mod_lines.json:mod_boss_phase_enm_boss_paketberg_3_01.text
+msgctxt "mod_lines"
+msgid "Der Berg rutscht! Bitte nicht unterschreiben, einfach ausweichen!"
+msgstr ""
+
+#. max 110
+#. tag season_welcome, voice mod
+#. {count} = a number
+#: data/mod_lines.json:mod_season_welcome_01.text
+msgctxt "mod_lines"
+msgid "Willkommen in Staffel {count}! Jede Etage stürzt pünktlich ein. Pünktlicher als jeder Zug."
+msgstr ""
+
+#. max 110
+#. tag season_welcome, voice mod
+#. {count} = a number
+#: data/mod_lines.json:mod_season_welcome_02.text
+msgctxt "mod_lines"
+msgid "Staffel {count} ist auf Sendung! Die Etagen stürzen nach Plan ein. Der Plan ist sehr pünktlich."
+msgstr ""
+
+#. max 110
+#. tag season_collapse_intro, voice mod
+#. {floor} = a floor number, e.g. 3
+#: data/mod_lines.json:mod_season_collapse_intro_01.text
+msgctxt "mod_lines"
+msgid "Etage {floor} stürzt zu ihrem Termin ein, oben steht wann. Seien Sie dann woanders. Am besten tiefer."
+msgstr ""
+
+#. max 110
+#. tag season_warn_3600, voice mod
+#. {min} = a number of minutes
+#. {floor} = a floor number, e.g. 3
+#: data/mod_lines.json:mod_season_warn_3600_01.text
+msgctxt "mod_lines"
+msgid "Noch {min} Minuten bis zum Einsturz von Etage {floor}. Die Treppe wäre eine gute Idee."
+msgstr ""
+
+#. max 110
+#. tag season_warn_600, voice mod
+#. {floor} = a floor number, e.g. 3
+#. {min} = a number of minutes
+#: data/mod_lines.json:mod_season_warn_600_01.text
+msgctxt "mod_lines"
+msgid "Etage {floor} stürzt in {min} Minuten ein. Die Regie räumt schon die Kulissen weg."
+msgstr ""
+
+#. max 110
+#. tag season_warn_60, voice mod
+#. {floor} = a floor number, e.g. 3
+#: data/mod_lines.json:mod_season_warn_60_01.text
+msgctxt "mod_lines"
+msgid "Noch eine Minute für Etage {floor}. Bitte Abstand von den Kulissen halten."
+msgstr ""
+
+#. max 110
+#. tag season_vest, voice mod
+#: data/mod_lines.json:mod_season_vest_01.text
+msgctxt "mod_lines"
+msgid "Noch nie gerettet, noch nie gestorben: weiße Weste. Davon gibt es nicht mehr viele."
+msgstr ""
+
+#. max 110
+#. tag season_counter_in, voice mod
+#: data/mod_lines.json:mod_season_counter_in_01.text
+msgctxt "mod_lines"
+msgid "Oben steht, wer noch dabei ist. Ohne Netz hat jede Person genau ein Leben. Auch Sie."
+msgstr ""
+
+#. max 110
+#. tag season_tempo_offer, voice mod
+#: data/mod_lines.json:mod_season_tempo_offer_01.text
+msgctxt "mod_lines"
+msgid "Sie sind schnell. Weiter wie im Fernsehen — oder am Stück, ganz ohne Warten?"
+msgstr ""
+
+#. max 110
+#. tag season_tempo_binge, voice mod
+#: data/mod_lines.json:mod_season_tempo_binge_01.text
+msgctxt "mod_lines"
+msgid "Am Stück! Ab hier wartet niemand. Der Countdown läuft nur, solange Sie erkunden."
+msgstr ""
+
+#. max 110
+#. tag season_rival, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#: data/mod_lines.json:mod_season_rival_01.text
+msgctxt "mod_lines"
+msgid "{cand} steht schon vor der Tür des Revier-Bosses. Angeblich nur zum Aufwärmen."
+msgstr ""
+
+#. max 110
+#. tag season_rival, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#: data/mod_lines.json:mod_season_rival_02.text
+msgctxt "mod_lines"
+msgid "Vor der Boss-Tür wartet {cand}. Rivalität ist gut für die Quote. Und für den Puls."
+msgstr ""
+
+#. max 110
+#. tag season_rival_after, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#. {min} = a number of minutes
+#: data/mod_lines.json:mod_season_rival_after_01.text
+msgctxt "mod_lines"
+msgid "Zeitvergleich mit {cand}: Sie waren {min} Minuten schneller. Die Konkurrenz ist entsetzt."
+msgstr ""
+
+#. max 110
+#. tag season_need, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#: data/mod_lines.json:mod_season_need_01.text
+msgctxt "mod_lines"
+msgid "Meldung aus dem Gang: {cand} steckt in einem Kampf fest. Wer hilft, bekommt einen Gefallen."
+msgstr ""
+
+#. max 110
+#. tag season_left, voice mod
+#: data/mod_lines.json:mod_season_left_01.text
+msgctxt "mod_lines"
+msgid "Ausgestiegen. Die Regie winkt zum Abschied, und die Ruhmeshalle hat schon einen Platz für Sie."
+msgstr ""
+
+#. max 110
+#. tag season_guest_extra, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#: data/mod_lines.json:mod_season_guest_extra_01.text
+msgctxt "mod_lines"
+msgid "{cand} nickt Ihnen zu: „Ich bin nur wegen der Kantine hier. Die ist auf jeder Etage gleich.“"
+msgstr ""
+
+#. max 110
+#. tag season_guest_extra, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#: data/mod_lines.json:mod_season_guest_extra_02.text
+msgctxt "mod_lines"
+msgid "{cand} zählt die Fliesen. Angeblich eine Strategie. Die Regie hat nicht nachgefragt."
+msgstr ""
+
+#. max 110
+#. tag season_guest_rival, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#: data/mod_lines.json:mod_season_guest_rival_01.text
+msgctxt "mod_lines"
+msgid "{cand} mustert Sie: „Wir sehen uns an der Treppe. Ich bin dann schon unten.“"
+msgstr ""
+
+#. max 110
+#. tag season_guest_rival, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#: data/mod_lines.json:mod_season_guest_rival_02.text
+msgctxt "mod_lines"
+msgid "{cand} kennt Ihre Quote auswendig. Die eigene hängt gerahmt über dem Bett."
+msgstr ""
+
+#. max 110
+#. tag season_guest_helper, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#: data/mod_lines.json:mod_season_guest_helper_01.text
+msgctxt "mod_lines"
+msgid "{cand} bietet Hilfe an: drei Kämpfe, kein Bosskampf. Kleingedrucktes inklusive."
+msgstr ""
+
+#. max 110
+#. tag season_guest_helper, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#: data/mod_lines.json:mod_season_guest_helper_02.text
+msgctxt "mod_lines"
+msgid "{cand} dehnt sich schon mal: „Wenn Sie Verstärkung brauchen, ich bin da. Gegen Credits.“"
+msgstr ""
+
+#. max 110
+#. tag season_guest_trader, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#: data/mod_lines.json:mod_season_guest_trader_01.text
+msgctxt "mod_lines"
+msgid "{cand} klappt einen Koffer voller Kram auf: „Heute leider ohne Ware. Morgen vielleicht.“"
+msgstr ""
+
+#. max 110
+#. tag season_guest_unlucky, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#: data/mod_lines.json:mod_season_guest_unlucky_01.text
+msgctxt "mod_lines"
+msgid "{cand} hat sich wieder verlaufen. Im Safe Room. Die Regie findet das bemerkenswert."
+msgstr ""
+
+#. max 110
+#. tag season_guest_unlucky, voice mod
+#. {cand} = Kandidatin|Kandidat|Kandidat:in (English: contestant — may be left out, 11 §1.6)
+#: data/mod_lines.json:mod_season_guest_unlucky_02.text
+msgctxt "mod_lines"
+msgid "{cand} erzählt von der letzten Pechsträhne. Sie dauert noch an."
+msgstr ""
+
+#. max 110
+#. tag season_warn_last, voice mod
+#. {min} = a number of minutes
+#: data/mod_lines.json:mod_season_warn_last_01.text
+msgctxt "mod_lines"
+msgid "Noch {min} Minuten bis zum letzten Einsturz der Staffel. Das Finale wartet, die Uhr nicht."
+msgstr ""
+
+#: data/scenes.json:scn_mop_1.name
+msgctxt "scenes"
+msgid "Fußnote 1"
+msgstr ""
+
+#. max 110
+#. voice mopsula
+#: data/scenes.json:scn_mop_1.lines[0].text
+msgctxt "scenes"
+msgid "Kolleg:in. Setz dich. Es folgt ein kurzer Vortrag. Mit Fußnoten."
+msgstr ""
+
+#. max 110
+#. voice kai
+#: data/scenes.json:scn_mop_1.lines[1].text
+msgctxt "scenes"
+msgid "Du redest seit einer Stunde."
+msgstr ""
+
+#. max 110
+#. voice mopsula
+#: data/scenes.json:scn_mop_1.lines[2].text
+msgctxt "scenes"
+msgid "Mit dir. Nicht AN dich. Fußnote 1: ein Unterschied, den man im Grundstudium lernt."
+msgstr ""
+
+#. max 110
+#. voice kai
+#: data/scenes.json:scn_mop_1.lines[3].text
+msgctxt "scenes"
+msgid "Wieso kannst du überhaupt sprechen?"
+msgstr ""
+
+#. max 110
+#. voice mopsula
+#: data/scenes.json:scn_mop_1.lines[4].text
+msgctxt "scenes"
+msgid "Ich konnte immer sprechen. Ihr habt nur nie zugehört."
+msgstr ""
+
+#. max 110
+#. voice mopsula
+#: data/scenes.json:scn_mop_1.lines[5].text
+msgctxt "scenes"
+msgid "Neun Jahre „Na, du Kleiner?“. Neun Jahre! Ich bin ein GRAF."
+msgstr ""
+
+#. max 110
+#. voice kai
+#: data/scenes.json:scn_mop_1.lines[6].text
+msgctxt "scenes"
+msgid "… Ich hab dir jeden Abend das Ohr gekrault."
+msgstr ""
+
+#. max 110
+#. voice mopsula
+#: data/scenes.json:scn_mop_1.lines[7].text
+msgctxt "scenes"
+msgid "(Pause) Das linke. Das linke war akzeptabel. Weitermachen."
+msgstr ""
+
+#. max 110
+#. voice mod
+#: data/scenes.json:scn_mop_1.lines[8].text
+msgctxt "scenes"
+msgid "Zuschauer-Umfrage: 94 % wollen mehr vom Hund. Notiert."
+msgstr ""
+
+#: data/scenes.json:scn_mop_2.name
+msgctxt "scenes"
+msgid "Ahnenreihe"
+msgstr ""
+
+#. max 110
+#. voice mopsula
+#: data/scenes.json:scn_mop_2.lines[0].text
+msgctxt "scenes"
+msgid "Der Hausmeister. Er hatte einen Schlüssel für jede Tür."
+msgstr ""
+
+#. max 110
+#. voice mopsula
+#: data/scenes.json:scn_mop_2.lines[1].text
+msgctxt "scenes"
+msgid "Und keine einzige, hinter der jemand auf ihn wartete."
+msgstr ""
+
+#. max 110
+#. voice kai
+#: data/scenes.json:scn_mop_2.lines[2].text
+msgctxt "scenes"
+msgid "Das ist ungewohnt nachdenklich für dich."
+msgstr ""
+
+#. max 110
+#. voice mopsula
+#: data/scenes.json:scn_mop_2.lines[3].text
+msgctxt "scenes"
+msgid "Nachdenklichkeit ist erblich. Fußnote 3: Meine Ahnen waren Grafen, Gelehrte, Nachtgestalten —"
+msgstr ""
+
+#. max 110
+#. voice kai
+#: data/scenes.json:scn_mop_2.lines[4].text
+msgctxt "scenes"
+msgid "Laut deiner Akte wurdest du in einem Umzugskarton im Tierheim abgegeben."
+msgstr ""
+
+#. max 110
+#. voice mopsula
+#: data/scenes.json:scn_mop_2.lines[5].text
+msgctxt "scenes"
+msgid "EIN SEHR VORNEHMER UMZUGSKARTON. Mit Büchern darin."
+msgstr ""
+
+#. max 110
+#. voice kai
+#: data/scenes.json:scn_mop_2.lines[6].text
+msgctxt "scenes"
+msgid "(lacht)"
+msgstr ""
+
+#. max 110
+#. voice mopsula
+#: data/scenes.json:scn_mop_2.lines[7].text
+msgctxt "scenes"
+msgid "… Wartet jemand auf dich? Da oben?"
+msgstr ""
+
+#. max 110
+#. voice kai
+#: data/scenes.json:scn_mop_2.lines[8].text
+msgctxt "scenes"
+msgid "Da oben ist nichts mehr."
+msgstr ""
+
+#. max 110
+#. voice mopsula
+#: data/scenes.json:scn_mop_2.lines[9].text
+msgctxt "scenes"
+msgid "Dann warten wir eben aufeinander. Das ist keine Bitte. Das ist eine These."
+msgstr ""
+
+#: data/scenes.json:scn_mop_3.name
+msgctxt "scenes"
+msgid "Das Tierheim"
+msgstr ""
+
+#. max 110
+#. voice mopsula
+#: data/scenes.json:scn_mop_3.lines[0].text
+msgctxt "scenes"
+msgid "Weißt du, warum ich in Zwinger 7 „schwer vermittelbar“ war?"
+msgstr ""
+
+#. max 110
+#. voice kai
+#: data/scenes.json:scn_mop_3.lines[1].text
+msgctxt "scenes"
+msgid "Weil du jeden Besucher angeknurrt hast."
+msgstr ""
+
+#. max 110
+#. voice mopsula
+#: data/scenes.json:scn_mop_3.lines[2].text
+msgctxt "scenes"
+msgid "Weil sie die Falschen waren. Familien mit Kinderwagen. Pärchen mit Selfie-Stab."
+msgstr ""
+
+#. max 110
+#. voice mopsula
+#: data/scenes.json:scn_mop_3.lines[3].text
+msgctxt "scenes"
+msgid "Niemand wollte einen alten Mops mit Atemgeräuschen."
+msgstr ""
+
+#. max 110
+#. voice kai
+#: data/scenes.json:scn_mop_3.lines[4].text
+msgctxt "scenes"
+msgid "Ich wollte dich adoptieren. Nächsten Monat. Die Papiere lagen schon in der Schublade."
+msgstr ""
+
+#. max 110
+#. voice mopsula
+#: data/scenes.json:scn_mop_3.lines[5].text
+msgctxt "scenes"
+msgid "(lange Pause) … Das sagst du nur wegen der Kameras."
+msgstr ""
+
+#. max 110
+#. voice kai
+#: data/scenes.json:scn_mop_3.lines[6].text
+msgctxt "scenes"
+msgid "Die Kameras sind mir egal."
+msgstr ""
+
+#. max 110
+#. voice mopsula
+#: data/scenes.json:scn_mop_3.lines[7].text
+msgctxt "scenes"
+msgid "Hmpf. Ich nehme das zu Protokoll. Unter Vorbehalt. (dreht sich weg, Schwanz wedelt)"
+msgstr ""
+
+#. max 110
+#. voice mod
+#: data/scenes.json:scn_mop_3.lines[8].text
+msgctxt "scenes"
+msgid "Diese Szene wird in 47 Galaxien gerade mit Taschentüchern beworben. Danke."
+msgstr ""
+
+#: data/scenes.json:scn_mop_4.name
+msgctxt "scenes"
+msgid "Mitternacht auf Gleis 9"
+msgstr ""
+
+#. max 110
+#. voice mopsula
+#: data/scenes.json:scn_mop_4.lines[0].text
+msgctxt "scenes"
+msgid "Sie nennt sich Königin. Eine RATTE. Mit Kopfschmuck aus gelochten Fahrscheinen."
+msgstr ""
+
+#. max 110
+#. voice kai
+#: data/scenes.json:scn_mop_4.lines[1].text
+msgctxt "scenes"
+msgid "Wir müssen nicht gegen sie kämpfen. Die Treppe ist gleich da."
+msgstr ""
+
+#. max 110
+#. voice mopsula
+#: data/scenes.json:scn_mop_4.lines[2].text
+msgctxt "scenes"
+msgid "Es gibt Dinge, die ein Graf nicht dulden kann. Fußnote 9: Hochstapelei."
+msgstr ""
+
+#. max 110
+#. voice kai
+#: data/scenes.json:scn_mop_4.lines[3].text
+msgctxt "scenes"
+msgid "Du bist ein Mops aus dem Tierheim."
+msgstr ""
+
+#. max 110
+#. voice mopsula
+#. {job} = a job in the word form, e.g. Tierpfleger:in
+#: data/scenes.json:scn_mop_4.lines[4].text
+msgctxt "scenes"
+msgid "Und du bist {job}. Mit einem Wischmopp. Und doch stehen wir hier."
+msgstr ""
+
+#. max 110
+#. voice mopsula
+#: data/scenes.json:scn_mop_4.lines[5].text
+msgctxt "scenes"
+msgid "Lebend. Im Fernsehen. Kurz vor Mitternacht."
+msgstr ""
+
+#. max 110
+#. voice kai
+#: data/scenes.json:scn_mop_4.lines[6].text
+msgctxt "scenes"
+msgid "… Okay. Zusammen."
+msgstr ""
+
+#. max 110
+#. voice mopsula
+#: data/scenes.json:scn_mop_4.lines[7].text
+msgctxt "scenes"
+msgid "Zusammen. Aber ich gehe voraus. Wegen der Optik."
+msgstr ""

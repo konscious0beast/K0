@@ -1,0 +1,57 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "lk_hair_short",
+			"kind": "hair",
+			"name": "Kurz",
+			"style": "short",
+			"canon": true
+		},
+		{
+			"id": "lk_hc_darkbrown",
+			"kind": "hair_color",
+			"name": "Dunkelbraun",
+			"color": "#3B2A22",
+			"canon": true
+		},
+		{
+			"id": "lk_skin_3",
+			"kind": "skin",
+			"name": "Ton 3",
+			"color": "#E8B48F",
+			"canon": true
+		},
+		{
+			"id": "lk_beard_none",
+			"kind": "beard",
+			"name": "ohne",
+			"style": "none",
+			"canon": true
+		},
+		{
+			"id": "lk_glasses_none",
+			"kind": "glasses",
+			"name": "ohne",
+			"style": "none",
+			"canon": true
+		},
+		{
+			"id": "lk_outfit_petrol",
+			"kind": "outfit",
+			"name": "Tierheim-Petrol",
+			"colors": {
+				"primary": "#3AA9A0",
+				"secondary": "#2E3A57"
+			},
+			"canon": true
+		},
+		{
+			"id": "lk_wear_none",
+			"kind": "wear",
+			"name": "ohne",
+			"style": "none",
+			"canon": true
+		}
+	]
+}

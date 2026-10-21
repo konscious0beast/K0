@@ -1,0 +1,201 @@
+{
+	"format": "ptd_save",
+	"game_version": "st0",
+	"saved_at_unix": 0,
+	"state": {
+		"bestiary": {},
+		"difficulty": "prime",
+		"flags": {},
+		"floor_run": {
+			"completed_events": [],
+			"daily": [
+				"daily_test_1"
+			],
+			"decay_ticks": 0,
+			"defeated_groups": [],
+			"event_uses": {},
+			"floor_boss_defeated": false,
+			"floor_id": "floor_1",
+			"gather_nodes": {
+				"nod_test_heap@1,2": 2
+			},
+			"index": 1,
+			"location": "start",
+			"loot_seed": 1774581050,
+			"opened_chests": [],
+			"opened_gates": [],
+			"quarter_boss_defeated": false,
+			"respawn": {
+				"f1_g1": 1792008000
+			},
+			"safe_room_visits": 0,
+			"seed": 1557687279,
+			"spawner_ticks": {},
+			"stairs_found": false,
+			"stats": {
+				"achievements": 0,
+				"followers_gained": 0,
+				"kills": 0,
+				"time_used_ticks": 0,
+				"viewers_peak": 0
+			},
+			"stray_counter": 0,
+			"strays": {},
+			"time_left_ticks": 36000,
+			"timer_started": false,
+			"visited": [],
+			"visited_safe_rooms": [],
+			"warned": []
+		},
+		"hero": "kai",
+		"inventory": {
+			"counts": {
+				"itm_antidote": 1,
+				"itm_bandage": 3
+			},
+			"credits": 50
+		},
+		"party": [
+			{
+				"class_id": "",
+				"display_name": "Kai",
+				"equipment": {
+					"accessory": "",
+					"armor": "",
+					"weapon": ""
+				},
+				"exp": 0,
+				"hp": 64,
+				"id": "kai",
+				"level": 1,
+				"mp": 12,
+				"prof_head": "prf_first_aid",
+				"professions": {
+					"prf_cooking": 1,
+					"prf_first_aid": 51
+				},
+				"rested": 120,
+				"skills": [
+					"skl_kai_heavy_swing"
+				],
+				"talent_rows": {
+					"3": "tal_kai_wischtechnik"
+				}
+			},
+			{
+				"class_id": "",
+				"display_name": "Mopsula",
+				"equipment": {
+					"accessory": "",
+					"armor": "",
+					"weapon": ""
+				},
+				"exp": 0,
+				"hp": 42,
+				"id": "mopsula",
+				"level": 1,
+				"mp": 30,
+				"skills": [
+					"skl_mop_noble_flame",
+					"skl_mop_holy_lick"
+				]
+			}
+		],
+		"pending_lootboxes": [],
+		"pity_epic": 0,
+		"pity_rare": 0,
+		"play_time_sec": 0.0,
+		"player_name": "Kai",
+		"rng_counter": 0,
+		"season": {
+			"after_combat": false,
+			"airs": 1,
+			"asleep": false,
+			"binge_mark": 0,
+			"binge_sec": 0,
+			"binge_utc0": 1791918000,
+			"cast": {},
+			"collapse_utc": [
+				1792094400,
+				1792353600,
+				1792699200,
+				1793131200,
+				1793563200,
+				1793995200
+			],
+			"collapsed": 0,
+			"day0_utc": 1791921600,
+			"deaths": 0,
+			"def": "ssn_test",
+			"descent_at": -1,
+			"fbosses": 0,
+			"fee_at": -1,
+			"finale_at": -1,
+			"format": 6,
+			"hold_utc": 0,
+			"last_safe_room": "",
+			"mode": "net",
+			"next_air_utc": 1792008000,
+			"number": 1,
+			"pause_sec": 0,
+			"programme": [
+				1,
+				1,
+				1,
+				0,
+				0,
+				0
+			],
+			"qbosses": 0,
+			"reached": [
+				1791918000,
+				-1,
+				-1,
+				-1,
+				-1,
+				-1
+			],
+			"rescues": 0,
+			"result": "",
+			"result_floor": 0,
+			"seen_unix": 1791925200,
+			"sleep_room": "",
+			"sleep_tactic": "",
+			"stairs": 0,
+			"tempo": "calendar",
+			"utc": 1791925200,
+			"v": 1,
+			"vest": true
+		},
+		"seed": 4242,
+		"show": {
+			"achievements": [],
+			"followers": 0,
+			"hype": 30.0,
+			"marotten": {},
+			"milestones": [],
+			"sponsor_uses": {},
+			"stats": {},
+			"viewers": 0
+		},
+		"slot": 1
+	},
+	"summary": {
+		"floor_index": 1,
+		"followers": 0,
+		"level": 1,
+		"location": "start",
+		"play_time_sec": 0,
+		"player_name": "Kai",
+		"season": {
+			"def": "ssn_test",
+			"format": 6,
+			"mode": "net",
+			"number": 1,
+			"on_air": 1,
+			"result": "",
+			"tempo": "calendar"
+		}
+	},
+	"version": 2
+}

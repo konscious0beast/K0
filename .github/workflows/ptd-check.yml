@@ -1,0 +1,414 @@
+name: ptd-check
+on:
+  push:
+    paths: ["prime-time-dungeon/**", "services/**", ".github/workflows/ptd-check.yml"]
+  pull_request:
+    paths: ["prime-time-dungeon/**", "services/**", ".github/workflows/ptd-check.yml"]
+  workflow_dispatch: {}
+  # 07 §11.4 (R4): the nightly real-time balance harness (200 seeds) — the narrow bands of 07 §11.1
+  schedule:
+    - cron: "17 2 * * *"
+env:
+  GODOT_VERSION: "4.7.2"
+  # Name of a playable build in artifact names and summaries: the tag (v0.3.0), or build-<run number> for a push whose
+  # head commit message starts with "[build]" (the second build trigger, README 4 "Neuen Build auslösen"; a merge commit
+  # that merely quotes such a subject does not build)
+  PTD_BUILD_LABEL: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('build-{0}', github.run_number) }}
+jobs:
+  check:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: System deps
+        run: sudo apt-get update && sudo apt-get install -y xvfb libgl1 libglx-mesa0 libgl1-mesa-dri unzip
+      - name: Cache Godot
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}-stable-linux
+      - name: Download Godot
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot && cd ~/godot
+          curl -fsSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip && mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" godot && chmod +x godot
+      - name: Import + tests + autoplay smoke
+        # one test process on a dedicated runner: the wall-clock budgets of the unit tests are asserted here only
+        # (TestCase.assert_time_budget); local parallel check.sh runs print them
+        run: PTD_PERF_ASSERTS=1 GODOT=~/godot/godot prime-time-dungeon/tools/check.sh
+      # the campaign fights in real time only (07 §12.6, R5b part 2b): the bot plays each combat as the person
+      # (RtBotPlayer, profile typical); the CTB engine lives on in the Stempelduell (10, its own tests)
+      - name: "Full run Floor 1 (real time: thorough + rush + dawdle)"
+        run: GODOT=~/godot/godot prime-time-dungeon/tools/fullrun.sh --strategy=all --log-dir=fullrun-logs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fullrun-logs
+          path: fullrun-logs/
+      - name: Screenshots (gl_compatibility)
+        run: |
+          mkdir -p shots
+          for s in res://art/gallery/character_gallery.tscn res://art/gallery/env_gallery.tscn res://art/gallery/vfx_gallery.tscn \
+                   res://scenes/title/title.tscn res://scenes/exploration/exploration.tscn \
+                   res://scenes/safe_room/safe_room.tscn; do
+            GODOT=~/godot/godot prime-time-dungeon/tools/check.sh --shot "$s" "shots/$(basename "$s" .tscn).png" 120 1280x720
+          done
+          # the combat (real time only since R5b part 2b): a real-time fight in the world with the real data
+          GODOT=~/godot/godot prime-time-dungeon/tools/check.sh --shot res://scenes/exploration/exploration.tscn \
+            shots/combat_realtime.png 30 1280x720 --recipe=rt_r4_regular
+      - name: Render probe (03_ART A11)
+        run: |
+          mkdir -p shots
+          GODOT=~/godot/godot prime-time-dungeon/tools/check.sh --shot res://art/gallery/render_probe.tscn \
+            shots/render_probe.png 60 1280x720 | tee render_probe.log
+          grep -q "RENDER_PROBE: OK" render_probe.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: shots/
+  # 06-D: the M.O.D. live reference service (Python). Mocked Anthropic client only — no API key, no network calls.
+  mod-brain-tests:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: pip install -e "services/mod-brain[dev]"
+      - name: pytest
+        working-directory: services/mod-brain
+        run: python -m pytest -q
+  # 07 §11.4 (R4): tools/rt_balance.sh --nightly — 200 seeds per series (regular encounters × both heroes,
+  # show boss + bosses × both heroes × Liga 0/1/2, bosses perfect / sloppy) and 50 floor sequences; the
+  # tables, the RT-BAND verdicts against 07 §11.1 and the JSON as artifact. Fails on script errors; the
+  # bands fail it only with --strict-bands (R5b, after calibrating `typical` from play-test replays).
+  nightly-balance:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache Godot
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}-stable-linux
+      - name: Download Godot
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot && cd ~/godot
+          base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          curl -fsSL -o godot.zip "$base/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip && mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" godot && chmod +x godot
+      - name: Real-time balance harness (nightly, 200 seeds)
+        run: |
+          set -o pipefail
+          mkdir -p rt-balance
+          GODOT=~/godot/godot prime-time-dungeon/tools/rt_balance.sh --nightly --out=rt-balance/nightly.json \
+            | tee rt-balance/nightly.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rt-balance
+          path: rt-balance/
+  # Playable builds for a pushed tag v* or a push whose head commit message starts with "[build]" (README „Spielbare Builds“,
+  # 02_TECH §12.3): Linux, Windows, macOS (universal .app, built-in ad-hoc signature, zipped by Godot so the executable bit
+  # survives) and the iOS Xcode project (project-only export, works on Linux; team and signing are chosen in Xcode on the
+  # Mac). No secrets, no signing identities.
+  export:
+    needs: check
+    if: >-
+      startsWith(github.ref, 'refs/tags/v') ||
+      (github.event_name == 'push' && startsWith(github.event.head_commit.message, '[build]'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Godot + templates (verified against SHA512-SUMS.txt)
+        run: |
+          mkdir -p ~/godot && cd ~/godot
+          base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          editor="Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          tpz="Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          for f in SHA512-SUMS.txt "$editor.zip" "$tpz"; do curl -fsSL -o "$f" "$base/$f"; done
+          sha512sum -c --ignore-missing SHA512-SUMS.txt
+          unzip -q "$editor.zip" && mv "$editor" godot && chmod +x godot
+          templates="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$templates"
+          unzip -q "$tpz" -d tpl && mv tpl/templates/* "$templates/"
+          rm -rf tpl "$tpz" "$editor.zip"
+      - name: Export Linux, Windows, macOS, iOS (Xcode project)
+        working-directory: prime-time-dungeon/game
+        run: |
+          godot() { ~/godot/godot --headless --path . "$@"; }
+          godot --import
+          mkdir -p ../build/linux ../build/windows ../build/macos ../build/ios
+          godot --export-release "Linux" ../build/linux/PrimeTimeDungeon.x86_64
+          godot --export-release "Windows" ../build/windows/PrimeTimeDungeon.exe
+          godot --export-release "macOS" ../build/macos/PrimeTimeDungeon.zip
+          # warns ".ipa can only be built on macOS. Leaving Xcode project …" — the Xcode project is the product
+          godot --export-release "iOS" ../build/ios/PrimeTimeDungeon.xcodeproj
+          for f in linux/PrimeTimeDungeon.x86_64 windows/PrimeTimeDungeon.exe macos/PrimeTimeDungeon.zip \
+                   ios/PrimeTimeDungeon.pck ios/PrimeTimeDungeon.xcodeproj/project.pbxproj; do
+            test -s "../build/$f" || { echo "::error::export output missing: build/$f"; exit 1; }
+          done
+      - uses: actions/upload-artifact@v4
+        id: up-macos
+        with:
+          name: PrimeTimeDungeon-${{ env.PTD_BUILD_LABEL }}-macOS
+          path: prime-time-dungeon/build/macos/PrimeTimeDungeon.zip
+          compression-level: 0  # already a zip; Godot's zip keeps the executable bit of the .app
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        id: up-ios
+        with:
+          name: PrimeTimeDungeon-${{ env.PTD_BUILD_LABEL }}-iOS-Xcode
+          path: prime-time-dungeon/build/ios/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        id: up-windows
+        with:
+          name: PrimeTimeDungeon-${{ env.PTD_BUILD_LABEL }}-Windows
+          path: prime-time-dungeon/build/windows/PrimeTimeDungeon.exe
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        id: up-linux
+        with:
+          name: PrimeTimeDungeon-${{ env.PTD_BUILD_LABEL }}-Linux
+          path: prime-time-dungeon/build/linux/PrimeTimeDungeon.x86_64
+          if-no-files-found: error
+      - name: Step summary
+        working-directory: prime-time-dungeon/build
+        env:
+          URL_MACOS: ${{ steps.up-macos.outputs.artifact-url }}
+          URL_IOS: ${{ steps.up-ios.outputs.artifact-url }}
+          URL_WINDOWS: ${{ steps.up-windows.outputs.artifact-url }}
+          URL_LINUX: ${{ steps.up-linux.outputs.artifact-url }}
+        run: |
+          size() { du -sh "$1" | cut -f1; }
+          n="PrimeTimeDungeon-${PTD_BUILD_LABEL}"
+          {
+            echo "### Spielbare Builds ${PTD_BUILD_LABEL}"
+            echo
+            echo "| Artefakt | Inhalt | Größe |"
+            echo "|---|---|---|"
+            echo "| [$n-macOS]($URL_MACOS) | \`PrimeTimeDungeon.zip\` → \`Prime Time Dungeon.app\` (Universal: Apple Silicon + Intel, ad-hoc signiert) | $(size macos/PrimeTimeDungeon.zip) |"
+            echo "| [$n-iOS-Xcode]($URL_IOS) | Xcode-Projekt \`PrimeTimeDungeon.xcodeproj\` (unsigniert, in Xcode bauen) | $(size ios) |"
+            echo "| [$n-Windows]($URL_WINDOWS) | \`PrimeTimeDungeon.exe\` (x86_64) | $(size windows/PrimeTimeDungeon.exe) |"
+            echo "| [$n-Linux]($URL_LINUX) | \`PrimeTimeDungeon.x86_64\` (vor dem Start \`chmod +x\`) | $(size linux/PrimeTimeDungeon.x86_64) |"
+            echo
+            readme="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/${GITHUB_SHA}/prime-time-dungeon/README.md"
+            echo "Erster Start auf dem Mac, iPhone/iPad über Xcode: [README, Abschnitt 4 Spielbare Builds]($readme#4-spielbare-builds)"
+          } >> "$GITHUB_STEP_SUMMARY"
+  # Apple release with a paid developer account (README 4 "Mit Apple-Entwicklerkonto", 02_TECH §12.4). Which of the two
+  # signing jobs can run: checked on Linux, so a missing setup costs no macOS minutes. Only the NAMES of missing
+  # secrets/variables reach the summary; a malformed value fails here, before a macOS runner starts.
+  apple-gate:
+    needs: check
+    if: >-
+      startsWith(github.ref, 'refs/tags/v') ||
+      (github.event_name == 'push' && startsWith(github.event.head_commit.message, '[build]'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      macos: ${{ steps.gate.outputs.macos }}
+      ios: ${{ steps.gate.outputs.ios }}
+    steps:
+      - name: Signing material present?
+        id: gate
+        env:
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+          APPLE_BUNDLE_ID: ${{ vars.APPLE_BUNDLE_ID }}
+          MAC_DEVID_P12_BASE64: ${{ secrets.MAC_DEVID_P12_BASE64 }}
+          MAC_DEVID_P12_PASSWORD: ${{ secrets.MAC_DEVID_P12_PASSWORD }}
+          IOS_DIST_P12_BASE64: ${{ secrets.IOS_DIST_P12_BASE64 }}
+          IOS_DIST_P12_PASSWORD: ${{ secrets.IOS_DIST_P12_PASSWORD }}
+          IOS_PROFILE_BASE64: ${{ secrets.IOS_PROFILE_BASE64 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+        run: |
+          missing() { local n out=""; for n in "$@"; do [ -n "${!n}" ] || out="$out, \`$n\`"; done; echo "${out#, }"; }
+          shared=(APPLE_TEAM_ID APPLE_BUNDLE_ID ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8_BASE64)
+          mac="$(missing MAC_DEVID_P12_BASE64 MAC_DEVID_P12_PASSWORD "${shared[@]}")"
+          ios="$(missing IOS_DIST_P12_BASE64 IOS_DIST_P12_PASSWORD IOS_PROFILE_BASE64 "${shared[@]}")"
+          bad=()
+          [ -z "$APPLE_TEAM_ID" ] || [[ "$APPLE_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]] || bad+=("APPLE_TEAM_ID: 10 Zeichen A-Z/0-9 (Account → Mitgliedschaftsdetails)")
+          [ -z "$APPLE_BUNDLE_ID" ] || [[ "$APPLE_BUNDLE_ID" =~ ^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$ ]] ||
+            bad+=("APPLE_BUNDLE_ID: umgekehrte Domain aus A-Z, a-z, 0-9, '-' und '.', z. B. de.beispiel.primetimedungeon")
+          key_id="$(printf '%s' "$ASC_KEY_ID" | tr -d '[:space:]')"
+          issuer="$(printf '%s' "$ASC_ISSUER_ID" | tr -d '[:space:]')"
+          [ -z "$key_id" ] || [[ "$key_id" =~ ^[A-Za-z0-9]{6,20}$ ]] || bad+=("ASC_KEY_ID: die Schlüssel-ID des API-Schlüssels")
+          [ -z "$issuer" ] || [[ "$issuer" =~ ^[0-9A-Fa-f]{8}-([0-9A-Fa-f]{4}-){3}[0-9A-Fa-f]{12}$ ]] ||
+            bad+=("ASC_ISSUER_ID: die Issuer-ID (UUID) von App Store Connect → Integrationen")
+          if [ ${#bad[@]} -gt 0 ]; then
+            for b in "${bad[@]}"; do echo "::error::$b"; done
+            exit 1
+          fi
+          {
+            echo "### Apple-Builds (bezahlter Developer-Account)"
+            echo
+            if [ -z "$mac" ]; then
+              echo "- macOS mit Developer ID signiert und notarisiert: Job \`apple-macos\` läuft"
+            else
+              echo "- macOS signiert + notarisiert: **übersprungen**, es fehlen $mac. Für den Mac gibt es weiter das ad-hoc-signierte Artefakt aus \`export\`."
+            fi
+            if [ -z "$ios" ]; then
+              echo "- iPhone/iPad über TestFlight: Job \`apple-ios-testflight\` läuft"
+            else
+              echo "- iPhone/iPad über TestFlight: **übersprungen**, es fehlen $ios. Für iOS gibt es weiter das Xcode-Projekt aus \`export\`."
+            fi
+            if [ -n "$mac$ios" ]; then
+              readme="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/${GITHUB_SHA}/prime-time-dungeon/README.md"
+              echo
+              echo "Einrichtung: [README, Abschnitt 4, *Mit Apple-Entwicklerkonto*]($readme#mit-apple-entwicklerkonto)"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          { echo "macos=$([ -z "$mac" ] && echo true || echo false)"; echo "ios=$([ -z "$ios" ] && echo true || echo false)"; } >> "$GITHUB_OUTPUT"
+  # macOS app with the Developer ID certificate: Godot exports it without a signature (codesign/codesign=0 in a temp copy
+  # of the preset), then release.sh signs inside out (hardened runtime, secure timestamp, tools/apple/
+  # PrimeTimeDungeon.entitlements = no exceptions), notarizes with notarytool (API key, waits), staples the ticket and
+  # zips the stapled app with ditto. Only after `check`, only for v* tags or "[build]" pushes, only with the secrets
+  # (apple-gate).
+  apple-macos:
+    needs: [check, apple-gate]
+    if: needs.apple-gate.outputs.macos == 'true'  # apple-gate runs only for a tag v* or a "[build]" push
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+      APPLE_BUNDLE_ID: ${{ vars.APPLE_BUNDLE_ID }}
+      PTD_BUILD_NUMBER: ${{ github.run_number }}.${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Godot + macOS template (verified against SHA512-SUMS.txt)
+        run: prime-time-dungeon/tools/apple/release.sh godot macos
+      - name: Signing keychain (Developer ID Application)
+        env:
+          P12_BASE64: ${{ secrets.MAC_DEVID_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.MAC_DEVID_P12_PASSWORD }}
+        run: prime-time-dungeon/tools/apple/release.sh keychain devid
+      - name: App Store Connect API key
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+        run: prime-time-dungeon/tools/apple/release.sh asc-key
+      - name: Export macOS app (bundle id + build number into a temp copy of the preset, no signature)
+        run: prime-time-dungeon/tools/apple/release.sh export macos "$RUNNER_TEMP/macos/Prime Time Dungeon.app"
+      - name: Sign (Developer ID, hardened runtime, secure timestamp)
+        run: prime-time-dungeon/tools/apple/release.sh sign-macos "$RUNNER_TEMP/macos/Prime Time Dungeon.app"
+      - name: Notarize + staple + Gatekeeper check + zip
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          prime-time-dungeon/tools/apple/release.sh notarize "$RUNNER_TEMP/macos/Prime Time Dungeon.app" \
+            prime-time-dungeon/build/macos-notarized/PrimeTimeDungeon.zip
+      - uses: actions/upload-artifact@v4
+        id: up
+        with:
+          name: PrimeTimeDungeon-${{ env.PTD_BUILD_LABEL }}-macOS-notarized
+          path: prime-time-dungeon/build/macos-notarized/PrimeTimeDungeon.zip
+          compression-level: 0  # ditto zip of the stapled app: keeps the executable bit and the signature intact
+          if-no-files-found: error
+      - name: Step summary
+        env:
+          URL: ${{ steps.up.outputs.artifact-url }}
+        run: |
+          size="$(du -sh prime-time-dungeon/build/macos-notarized/PrimeTimeDungeon.zip | cut -f1)"
+          {
+            echo "### macOS, signiert und notarisiert"
+            echo
+            echo "[PrimeTimeDungeon-${PTD_BUILD_LABEL}-macOS-notarized]($URL): \`PrimeTimeDungeon.zip\` → \`Prime Time Dungeon.app\`" \
+              "(Universal, Developer ID \`${PTD_SIGN_IDENTITY}\`, Ticket geheftet, Build ${PTD_BUILD_NUMBER}), $size." \
+              "Startet per Doppelklick ohne Gatekeeper-Warnung."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove keychain and keys
+        if: always()
+        run: prime-time-dungeon/tools/apple/release.sh cleanup
+  # iPhone/iPad via TestFlight: Godot exports the Xcode project with APPLE_TEAM_ID / APPLE_BUNDLE_ID, the build number,
+  # the distribution identity and the App Store profile (temp copy of the preset, manual signing); release.sh archives
+  # with xcodebuild, exports the IPA (method app-store-connect), keeps it as an artifact and uploads it with altool and
+  # the App Store Connect API key. Xcode >= 26.1: Godot 4.7.2's iOS libraries are built with the iOS 26.1 SDK, and App
+  # Store Connect only accepts builds made with Xcode 26 / the iOS 26 SDK (since 2026-04-28).
+  apple-ios-testflight:
+    needs: [check, apple-gate]
+    if: needs.apple-gate.outputs.ios == 'true'  # apple-gate runs only for a tag v* or a "[build]" push
+    runs-on: macos-26
+    timeout-minutes: 75
+    env:
+      APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+      APPLE_BUNDLE_ID: ${{ vars.APPLE_BUNDLE_ID }}
+      PTD_BUILD_NUMBER: ${{ github.run_number }}.${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Xcode >= 26.1
+        run: prime-time-dungeon/tools/apple/release.sh xcode
+      - name: Godot + iOS template (verified against SHA512-SUMS.txt)
+        run: prime-time-dungeon/tools/apple/release.sh godot ios
+      - name: Signing keychain (Apple Distribution)
+        env:
+          P12_BASE64: ${{ secrets.IOS_DIST_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.IOS_DIST_P12_PASSWORD }}
+        run: prime-time-dungeon/tools/apple/release.sh keychain dist
+      - name: Provisioning profile (App Store Connect)
+        env:
+          IOS_PROFILE_BASE64: ${{ secrets.IOS_PROFILE_BASE64 }}
+        run: prime-time-dungeon/tools/apple/release.sh profile
+      - name: App Store Connect API key
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+        run: prime-time-dungeon/tools/apple/release.sh asc-key
+      - name: Export iOS Xcode project (team, bundle id, build number, signing into a temp copy of the preset)
+        run: prime-time-dungeon/tools/apple/release.sh export ios "$RUNNER_TEMP/ios/PrimeTimeDungeon.xcodeproj"
+      - name: Archive + export IPA (xcodebuild, app-store-connect, manual signing)
+        id: ipa
+        run: |
+          prime-time-dungeon/tools/apple/release.sh ipa "$RUNNER_TEMP/ios/PrimeTimeDungeon.xcodeproj" \
+            prime-time-dungeon/build/ios-testflight/PrimeTimeDungeon.ipa
+      - uses: actions/upload-artifact@v4
+        id: up
+        with:
+          name: PrimeTimeDungeon-${{ env.PTD_BUILD_LABEL }}-iOS-TestFlight
+          path: prime-time-dungeon/build/ios-testflight/PrimeTimeDungeon.ipa
+          compression-level: 0  # an IPA is a zip already
+          if-no-files-found: error
+      - name: Upload to App Store Connect (TestFlight)
+        id: upload
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: prime-time-dungeon/tools/apple/release.sh upload prime-time-dungeon/build/ios-testflight/PrimeTimeDungeon.ipa
+      - name: Step summary
+        if: always() && steps.ipa.outcome == 'success'
+        env:
+          URL: ${{ steps.up.outputs.artifact-url }}
+          UPLOAD: ${{ steps.upload.outcome }}
+        run: |
+          version="$(grep -m1 '^config/version=' prime-time-dungeon/game/project.godot | cut -d'"' -f2)"
+          {
+            echo "### iPhone/iPad über TestFlight"
+            echo
+            if [ "$UPLOAD" = success ]; then
+              echo "Build **${version} (${PTD_BUILD_NUMBER})** von \`${APPLE_BUNDLE_ID}\` ist an App Store Connect übergeben." \
+                "Nach der Verarbeitung (meist 5 bis 30 Minuten, Apple schickt bei Problemen eine E-Mail) steht er in" \
+                "App Store Connect → Apps → *Prime Time Dungeon* → TestFlight; Tester:innen installieren ihn mit der App TestFlight."
+            else
+              echo "Der Upload zu App Store Connect ist **gescheitert** (Meldung im Schritt *Upload to App Store Connect*)." \
+                "Die signierte IPA liegt trotzdem bereit und lässt sich mit der Mac-App Transporter hochladen."
+            fi
+            echo
+            echo "IPA (App-Store-signiert, Profil \`${PTD_PROFILE_NAME}\`): [PrimeTimeDungeon-${PTD_BUILD_LABEL}-iOS-TestFlight]($URL)"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove keychain, profile and keys
+        if: always()
+        run: prime-time-dungeon/tools/apple/release.sh cleanup

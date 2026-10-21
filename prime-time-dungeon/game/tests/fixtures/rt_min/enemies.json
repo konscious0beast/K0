@@ -1,0 +1,661 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "enm_kanalratte",
+			"name": "Kanalratte",
+			"level": 1,
+			"stats": {
+				"hp": 168,
+				"mp": 0,
+				"str": 13,
+				"mag": 3,
+				"def": 5,
+				"res": 3,
+				"spd": 13,
+				"lck": 5
+			},
+			"exp": 12,
+			"credits": 6,
+			"attack_skill": "skl_e_strike",
+			"ai": {
+				"type": "weighted",
+				"actions": [
+					{
+						"skill": "skl_e_bite",
+						"weight": 3,
+						"target": "random"
+					}
+				]
+			},
+			"element_mods": {
+				"fire": 1.5
+			},
+			"drops": [
+				{
+					"item": "itm_bandage",
+					"chance": 0.25
+				},
+				{
+					"item": "itm_antidote",
+					"chance": 0.1
+				}
+			],
+			"model": {
+				"base": "rodent",
+				"scale": 0.8,
+				"colors": {
+					"primary": "#6b5b4e",
+					"secondary": "#e88a9a",
+					"eyes": "#ff3030"
+				}
+			},
+			"explore": {
+				"field_speed": 4.8
+			},
+			"rt": {
+				"summon_hp": 96,
+				"radius_cm": 30,
+				"move_cm_s": 360,
+				"auto_skill": "skl_e_strike",
+				"swing_ms": 2400,
+				"reach_cm": 220,
+				"auto_target": "threat_top",
+				"rules": [
+					{
+						"skill": "skl_e_bite",
+						"target": "threat_top",
+						"first_ms": 3000,
+						"every_ms": 10000
+					}
+				]
+			}
+		},
+		{
+			"id": "enm_rt_test_caster",
+			"name": "Testschamane",
+			"level": 2,
+			"stats": {
+				"hp": 210,
+				"mp": 20,
+				"str": 8,
+				"mag": 14,
+				"def": 5,
+				"res": 9,
+				"spd": 12,
+				"lck": 5
+			},
+			"exp": 18,
+			"credits": 9,
+			"attack_skill": "skl_e_strike",
+			"ai": {
+				"type": "weighted",
+				"actions": [
+					{
+						"skill": "skl_e_bite",
+						"weight": 3,
+						"target": "random"
+					}
+				]
+			},
+			"element_mods": {
+				"fire": 1.5
+			},
+			"drops": [
+				{
+					"item": "itm_bandage",
+					"chance": 0.25
+				},
+				{
+					"item": "itm_antidote",
+					"chance": 0.1
+				}
+			],
+			"model": {
+				"base": "rodent",
+				"scale": 0.9,
+				"colors": {
+					"primary": "#5a6b7a",
+					"secondary": "#c79bff",
+					"eyes": "#ffd59e"
+				},
+				"props": [
+					"staff"
+				]
+			},
+			"explore": {
+				"field_speed": 4.8
+			},
+			"rt": {
+				"radius_cm": 30,
+				"move_cm_s": 360,
+				"keep_cm": 600,
+				"auto_skill": "skl_e_strike",
+				"swing_ms": 2400,
+				"reach_cm": 220,
+				"rules": [
+					{
+						"skill": "skl_e_test_hex",
+						"target": "threat_top",
+						"first_ms": 1000,
+						"every_ms": 8000
+					},
+					{
+						"skill": "skl_e_test_slam",
+						"target": "threat_top",
+						"first_ms": 2000,
+						"every_ms": 9000
+					}
+				]
+			}
+		},
+		{
+			"id": "enm_rt_test_boss",
+			"name": "Testboss",
+			"level": 4,
+			"stats": {
+				"hp": 1600,
+				"mp": 0,
+				"str": 16,
+				"mag": 8,
+				"def": 9,
+				"res": 7,
+				"spd": 9,
+				"lck": 5
+			},
+			"exp": 80,
+			"credits": 40,
+			"attack_skill": "skl_e_strike",
+			"ai": {
+				"type": "weighted",
+				"actions": [
+					{
+						"skill": "skl_e_bite",
+						"weight": 3,
+						"target": "random"
+					}
+				]
+			},
+			"element_mods": {
+				"fire": 1.5
+			},
+			"drops": [],
+			"model": {
+				"base": "brute",
+				"scale": 1.3,
+				"colors": {
+					"primary": "#7a808a",
+					"secondary": "#2a2e36",
+					"eyes": "#ff3030"
+				}
+			},
+			"explore": {
+				"field_speed": 3.0
+			},
+			"rt": {
+				"radius_cm": 60,
+				"move_cm_s": 300,
+				"stationary": true,
+				"auto_skill": "skl_e_strike",
+				"swing_ms": 2400,
+				"reach_cm": 300,
+				"phases": [
+					{
+						"hp_above_pm": 500,
+						"on_enter": [
+							{
+								"op": "say",
+								"tag": "rt_set_quiet"
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_e_test_slam",
+								"target": "threat_top",
+								"first_ms": 3000,
+								"every_ms": 9000
+							}
+						]
+					},
+					{
+						"hp_above_pm": 0,
+						"on_enter": [
+							{
+								"op": "summon",
+								"enemy": "enm_kanalratte",
+								"count": 2,
+								"at": "door"
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_e_test_train",
+								"target": "none",
+								"first_ms": 2000,
+								"every_ms": 15000
+							}
+						]
+					}
+				],
+				"enrage": {
+					"at_ms": 30000,
+					"every_ms": 10000,
+					"status": "sts_enrage"
+				}
+			},
+			"boss": true
+		},
+		{
+			"id": "enm_rt_dummy",
+			"name": "Trainingspuppe",
+			"level": 1,
+			"stats": {
+				"hp": 2000,
+				"mp": 0,
+				"str": 6,
+				"mag": 3,
+				"def": 5,
+				"res": 3,
+				"spd": 5,
+				"lck": 0
+			},
+			"exp": 10,
+			"credits": 5,
+			"attack_skill": "skl_e_dummy_poke",
+			"ai": {
+				"type": "weighted",
+				"actions": [
+					{
+						"skill": "skl_e_dummy_poke",
+						"weight": 1,
+						"target": "random"
+					}
+				]
+			},
+			"element_mods": {
+				"fire": 1.5
+			},
+			"drops": [
+				{
+					"item": "itm_bandage",
+					"chance": 0.5
+				}
+			],
+			"model": {
+				"base": "brute",
+				"scale": 1.0,
+				"colors": {
+					"primary": "#c8a26b",
+					"secondary": "#5a4632",
+					"eyes": "#1a1420"
+				}
+			},
+			"explore": {
+				"field_speed": 0.0
+			},
+			"rt": {
+				"radius_cm": 40,
+				"move_cm_s": 0,
+				"stationary": true,
+				"auto_skill": "skl_e_dummy_poke",
+				"swing_ms": 3000,
+				"reach_cm": 220
+			}
+		},
+		{
+			"id": "enm_rt_test_sprayer",
+			"name": "Sprühtester",
+			"level": 2,
+			"stats": {
+				"hp": 210,
+				"mp": 0,
+				"str": 10,
+				"mag": 8,
+				"def": 6,
+				"res": 6,
+				"spd": 10,
+				"lck": 5
+			},
+			"exp": 15,
+			"credits": 8,
+			"attack_skill": "skl_e_strike",
+			"ai": {
+				"type": "weighted",
+				"actions": [
+					{
+						"skill": "skl_e_strike",
+						"weight": 1,
+						"target": "random"
+					}
+				]
+			},
+			"element_mods": {
+				"fire": 1.5,
+				"ice": 0.5
+			},
+			"drops": [],
+			"model": {
+				"base": "rodent",
+				"scale": 1.0,
+				"colors": {
+					"primary": "#6a5a4a",
+					"secondary": "#2a2024",
+					"eyes": "#ffd59e"
+				}
+			},
+			"explore": {
+				"field_speed": 3.0
+			},
+			"rt": {
+				"radius_cm": 35,
+				"move_cm_s": 300,
+				"keep_cm": 600,
+				"auto_skill": "skl_e_strike",
+				"swing_ms": 2400,
+				"reach_cm": 220,
+				"rules": [
+					{
+						"skill": "skl_e_rt_fog",
+						"target": "none",
+						"first_ms": 2000,
+						"every_ms": 15000
+					},
+					{
+						"skill": "skl_e_rt_puddles",
+						"target": "none",
+						"first_ms": 6000,
+						"every_ms": 18000
+					}
+				]
+			}
+		},
+		{
+			"id": "enm_rt_test_thief",
+			"name": "Testkontrolleur",
+			"level": 3,
+			"stats": {
+				"hp": 420,
+				"mp": 0,
+				"str": 10,
+				"mag": 8,
+				"def": 6,
+				"res": 6,
+				"spd": 10,
+				"lck": 5
+			},
+			"exp": 15,
+			"credits": 12,
+			"attack_skill": "skl_e_strike",
+			"ai": {
+				"type": "weighted",
+				"actions": [
+					{
+						"skill": "skl_e_strike",
+						"weight": 1,
+						"target": "random"
+					}
+				]
+			},
+			"element_mods": {
+				"fire": 1.5,
+				"ice": 0.5
+			},
+			"drops": [],
+			"model": {
+				"base": "rodent",
+				"scale": 1.0,
+				"colors": {
+					"primary": "#6a5a4a",
+					"secondary": "#2a2024",
+					"eyes": "#ffd59e"
+				}
+			},
+			"explore": {
+				"field_speed": 3.0
+			},
+			"rt": {
+				"radius_cm": 50,
+				"move_cm_s": 0,
+				"stationary": true,
+				"auto_skill": "skl_e_strike",
+				"swing_ms": 2400,
+				"reach_cm": 250,
+				"rules": [
+					{
+						"skill": "skl_e_rt_fine",
+						"target": "threat_top",
+						"first_ms": 2000,
+						"every_ms": 0,
+						"once": true
+					},
+					{
+						"skill": "skl_e_rt_escape",
+						"target": "none",
+						"first_ms": 25000,
+						"every_ms": 10000
+					}
+				]
+			}
+		},
+		{
+			"id": "enm_rt_test_pigeon",
+			"name": "Testtaube",
+			"level": 1,
+			"stats": {
+				"hp": 140,
+				"mp": 0,
+				"str": 10,
+				"mag": 8,
+				"def": 6,
+				"res": 6,
+				"spd": 10,
+				"lck": 5
+			},
+			"exp": 15,
+			"credits": 8,
+			"attack_skill": "skl_e_strike",
+			"ai": {
+				"type": "weighted",
+				"actions": [
+					{
+						"skill": "skl_e_strike",
+						"weight": 1,
+						"target": "random"
+					}
+				]
+			},
+			"element_mods": {
+				"fire": 1.5,
+				"ice": 0.5
+			},
+			"drops": [],
+			"model": {
+				"base": "rodent",
+				"scale": 1.0,
+				"colors": {
+					"primary": "#6a5a4a",
+					"secondary": "#2a2024",
+					"eyes": "#ffd59e"
+				}
+			},
+			"explore": {
+				"field_speed": 3.0
+			},
+			"rt": {
+				"radius_cm": 40,
+				"move_cm_s": 450,
+				"auto_skill": "skl_e_strike",
+				"swing_ms": 1800,
+				"reach_cm": 220,
+				"auto_target": "random_enemy"
+			}
+		},
+		{
+			"id": "enm_rt_test_chief",
+			"name": "Testchefin",
+			"level": 5,
+			"stats": {
+				"hp": 3000,
+				"mp": 0,
+				"str": 10,
+				"mag": 8,
+				"def": 6,
+				"res": 6,
+				"spd": 10,
+				"lck": 5
+			},
+			"exp": 15,
+			"credits": 60,
+			"attack_skill": "skl_e_strike",
+			"ai": {
+				"type": "weighted",
+				"actions": [
+					{
+						"skill": "skl_e_strike",
+						"weight": 1,
+						"target": "random"
+					}
+				]
+			},
+			"element_mods": {
+				"fire": 1.5,
+				"ice": 0.5
+			},
+			"drops": [],
+			"model": {
+				"base": "rodent",
+				"scale": 1.0,
+				"colors": {
+					"primary": "#6a5a4a",
+					"secondary": "#2a2024",
+					"eyes": "#ffd59e"
+				}
+			},
+			"explore": {
+				"field_speed": 3.0
+			},
+			"rt": {
+				"radius_cm": 80,
+				"move_cm_s": 300,
+				"stationary": true,
+				"auto_skill": "skl_e_strike",
+				"swing_ms": 2800,
+				"reach_cm": 320,
+				"phases": [
+					{
+						"hp_above_pm": 600,
+						"on_enter": [
+							{
+								"op": "say",
+								"tag": "rt_test_chief_1"
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_e_rt_cone",
+								"target": "threat_top",
+								"first_ms": 2000,
+								"every_ms": 9000
+							},
+							{
+								"skill": "skl_e_rt_lunge",
+								"target": "lowest_hp_pct_enemy",
+								"first_ms": 4000,
+								"every_ms": 11000
+							}
+						]
+					},
+					{
+						"hp_above_pm": 300,
+						"on_enter": [
+							{
+								"op": "say",
+								"tag": "rt_test_chief_2"
+							},
+							{
+								"op": "summon",
+								"enemy": "enm_kanalratte",
+								"count": 1,
+								"at": "door"
+							},
+							{
+								"op": "telegraph",
+								"skill": "skl_e_rt_puddles"
+							},
+							{
+								"op": "status_self",
+								"status": "sts_guard",
+								"ms": 3000
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_e_rt_fog",
+								"target": "none",
+								"first_ms": 3000,
+								"every_ms": 15000
+							},
+							{
+								"skill": "skl_e_rt_call",
+								"target": "self",
+								"first_ms": 5000,
+								"every_ms": 20000,
+								"cond": {
+									"adds_below": 2
+								}
+							}
+						]
+					},
+					{
+						"hp_above_pm": 0,
+						"on_enter": [
+							{
+								"op": "fixed_damage_self",
+								"pct_pm": 50
+							},
+							{
+								"op": "clear_zones"
+							},
+							{
+								"op": "set",
+								"stationary": false
+							},
+							{
+								"op": "status_self",
+								"status": "sts_haste",
+								"ms": -1
+							}
+						],
+						"rules": [
+							{
+								"skill": "skl_e_rt_ring",
+								"target": "self",
+								"first_ms": 2000,
+								"every_ms": 18000
+							},
+							{
+								"skill": "skl_e_rt_whirl",
+								"target": "self",
+								"first_ms": 6000,
+								"every_ms": 14000
+							}
+						]
+					}
+				],
+				"enrage": {
+					"at_ms": 20000,
+					"every_ms": 10000,
+					"status": "sts_enrage"
+				}
+			},
+			"boss": true,
+			"boss_drops": [
+				{
+					"kind": "item",
+					"id": "itm_bandage",
+					"amount": 1
+				}
+			]
+		}
+	]
+}

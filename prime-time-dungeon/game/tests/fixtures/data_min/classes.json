@@ -1,0 +1,48 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "cls_kai_wrecker",
+			"name": "Abrissbirne",
+			"for": [
+				"kai"
+			],
+			"min_floor": 3,
+			"stat_mult": {
+				"hp": 1.1,
+				"str": 1.15,
+				"def": 1.1,
+				"spd": 0.95
+			},
+			"growth_add": {
+				"hp": 3.0,
+				"def": 0.5
+			},
+			"passives": [
+				{
+					"id": "pas_thick_skin",
+					"params": {
+						"taunt_turns_add": 1,
+						"dmg_taken_mult_while_taunt": 0.9
+					}
+				}
+			],
+			"learnset": [
+				{
+					"level": 11,
+					"skill": "skl_kai_heavy_swing"
+				}
+			],
+			"show_mods": {
+				"hype_gain_mult": 1.0,
+				"stunt_success_add": 0.0,
+				"stunt_cooldown": 3,
+				"sponsor_thresholds": [
+					50,
+					75,
+					100
+				]
+			}
+		}
+	]
+}

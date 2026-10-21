@@ -1,0 +1,618 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "tw_lights_out",
+			"name": "Stromausfall",
+			"desc": "Gegner sehen schlechter. Sie auch.",
+			"gameplay": true,
+			"scope": "explore",
+			"spice": "neutral",
+			"slice": true,
+			"once_per_floor": false,
+			"weight": 3,
+			"duration": {
+				"unit": "sec",
+				"default": 60,
+				"min": 30,
+				"max": 90
+			},
+			"params": {
+				"enemy_sight_pm": {
+					"default": 500,
+					"min": 400,
+					"max": 700
+				}
+			},
+			"sources": [
+				"regie",
+				"mod_brain",
+				"vote",
+				"schedule",
+				"dev"
+			],
+			"mod_tag": "twist_applied_tw_lights_out"
+		},
+		{
+			"id": "tw_quiet_please",
+			"name": "Ruhe im Studio",
+			"desc": "Gegner hören schlechter. Schleichen lohnt sich.",
+			"gameplay": true,
+			"scope": "explore",
+			"spice": "helpful",
+			"slice": true,
+			"once_per_floor": false,
+			"weight": 3,
+			"duration": {
+				"unit": "sec",
+				"default": 60,
+				"min": 30,
+				"max": 90
+			},
+			"params": {
+				"enemy_hear_pm": {
+					"default": 500,
+					"min": 400,
+					"max": 700
+				}
+			},
+			"sources": [
+				"regie",
+				"mod_brain",
+				"vote",
+				"schedule",
+				"dev"
+			],
+			"mod_tag": "twist_applied_tw_quiet_please"
+		},
+		{
+			"id": "tw_fog_of_fame",
+			"name": "Ruhmesnebel",
+			"desc": "Der Hype sinkt eine Weile nicht.",
+			"gameplay": true,
+			"scope": "explore",
+			"spice": "helpful",
+			"slice": true,
+			"once_per_floor": false,
+			"weight": 2,
+			"duration": {
+				"unit": "sec",
+				"default": 90,
+				"min": 30,
+				"max": 90
+			},
+			"params": {},
+			"sources": [
+				"regie",
+				"mod_brain",
+				"vote",
+				"schedule",
+				"dev"
+			],
+			"mod_tag": "twist_applied_tw_fog_of_fame"
+		},
+		{
+			"id": "tw_confetti_gravity",
+			"name": "Konfetti-Gravitation",
+			"desc": "Konfetti fällt nach oben. Der Hype bleibt oben.",
+			"gameplay": true,
+			"scope": "explore",
+			"spice": "helpful",
+			"slice": true,
+			"once_per_floor": false,
+			"weight": 2,
+			"duration": {
+				"unit": "sec",
+				"default": 45,
+				"min": 20,
+				"max": 60
+			},
+			"params": {},
+			"sources": [
+				"regie",
+				"mod_brain",
+				"vote",
+				"schedule",
+				"dev"
+			],
+			"mod_tag": "twist_applied_tw_confetti_gravity"
+		},
+		{
+			"id": "tw_double_credits",
+			"name": "Doppel-Credits",
+			"desc": "Credits aus Kämpfen und Truhen zählen doppelt (max. +200).",
+			"gameplay": true,
+			"scope": "explore",
+			"spice": "helpful",
+			"slice": true,
+			"once_per_floor": false,
+			"weight": 2,
+			"duration": {
+				"unit": "sec",
+				"default": 60,
+				"min": 30,
+				"max": 60
+			},
+			"params": {
+				"credits_pm": {
+					"default": 2000,
+					"min": 1500,
+					"max": 2000
+				},
+				"credits_cap": {
+					"default": 200,
+					"min": 50,
+					"max": 200
+				}
+			},
+			"sources": [
+				"regie",
+				"mod_brain",
+				"vote",
+				"schedule",
+				"dev"
+			],
+			"mod_tag": "twist_applied_tw_double_credits"
+		},
+		{
+			"id": "tw_overtime",
+			"name": "Nachspielzeit",
+			"desc": "Der Etagen-Timer bekommt Sekunden dazu. Einmal je Etage.",
+			"gameplay": true,
+			"scope": "instant",
+			"spice": "helpful",
+			"slice": true,
+			"once_per_floor": true,
+			"weight": 2,
+			"duration": {
+				"unit": "none",
+				"default": 0,
+				"min": 0,
+				"max": 0
+			},
+			"params": {
+				"seconds": {
+					"default": 60,
+					"min": 30,
+					"max": 60
+				}
+			},
+			"sources": [
+				"regie",
+				"mod_brain",
+				"vote",
+				"schedule",
+				"dev"
+			],
+			"mod_tag": "twist_applied_tw_overtime"
+		},
+		{
+			"id": "tw_happy_hour",
+			"name": "Happy Hour",
+			"desc": "Automatenpreise beim nächsten Safe-Room-Besuch reduziert.",
+			"gameplay": true,
+			"scope": "safe_room",
+			"spice": "helpful",
+			"slice": true,
+			"once_per_floor": false,
+			"weight": 2,
+			"duration": {
+				"unit": "visits",
+				"default": 1,
+				"min": 1,
+				"max": 1
+			},
+			"params": {
+				"pct": {
+					"default": 20,
+					"min": 10,
+					"max": 25
+				}
+			},
+			"sources": [
+				"regie",
+				"mod_brain",
+				"vote",
+				"schedule",
+				"dev"
+			],
+			"mod_tag": "twist_applied_tw_happy_hour"
+		},
+		{
+			"id": "tw_rat_rain",
+			"name": "Rattenregen",
+			"desc": "Eine zusätzliche Streuner-Gruppe taucht außer Sicht auf.",
+			"gameplay": true,
+			"scope": "instant",
+			"spice": "spicy",
+			"slice": true,
+			"once_per_floor": false,
+			"weight": 1,
+			"duration": {
+				"unit": "none",
+				"default": 0,
+				"min": 0,
+				"max": 0
+			},
+			"params": {},
+			"sources": [
+				"regie",
+				"mod_brain",
+				"vote",
+				"schedule",
+				"dev"
+			],
+			"mod_tag": "twist_applied_tw_rat_rain"
+		},
+		{
+			"id": "tw_party_hats",
+			"name": "Partyhüte für Gegner",
+			"desc": "Die nächsten Kämpfe bringen mehr Hype.",
+			"gameplay": true,
+			"scope": "battle",
+			"spice": "helpful",
+			"slice": true,
+			"once_per_floor": false,
+			"weight": 2,
+			"duration": {
+				"unit": "battles",
+				"default": 2,
+				"min": 1,
+				"max": 2
+			},
+			"params": {
+				"hype_gain_pm": {
+					"default": 1200,
+					"min": 1100,
+					"max": 1300
+				}
+			},
+			"sources": [
+				"regie",
+				"mod_brain",
+				"vote",
+				"schedule",
+				"dev"
+			],
+			"mod_tag": "twist_applied_tw_party_hats"
+		},
+		{
+			"id": "tw_mopsula_moderates",
+			"name": "Mopsula moderiert",
+			"desc": "M.O.D. macht Pause. Der Graf übernimmt das Mikro.",
+			"gameplay": false,
+			"scope": "presentation",
+			"spice": "none",
+			"slice": true,
+			"once_per_floor": false,
+			"weight": 1,
+			"duration": {
+				"unit": "sec",
+				"default": 180,
+				"min": 60,
+				"max": 180
+			},
+			"params": {},
+			"sources": [
+				"regie",
+				"mod_brain",
+				"vote",
+				"schedule",
+				"dev"
+			],
+			"mod_tag": "twist_applied_tw_mopsula_moderates"
+		},
+		{
+			"id": "tw_mopsula_monologue",
+			"name": "Mopsula-Monolog",
+			"desc": "Der Graf hält eine kurze Rede.",
+			"gameplay": false,
+			"scope": "presentation",
+			"spice": "none",
+			"slice": true,
+			"once_per_floor": false,
+			"weight": 1,
+			"duration": {
+				"unit": "sec",
+				"default": 10,
+				"min": 10,
+				"max": 10
+			},
+			"params": {
+				"lines": {
+					"default": 3,
+					"min": 2,
+					"max": 3
+				}
+			},
+			"sources": [
+				"regie",
+				"mod_brain",
+				"vote",
+				"schedule",
+				"dev"
+			],
+			"mod_tag": "twist_applied_tw_mopsula_monologue"
+		},
+		{
+			"id": "tw_mod_mood",
+			"name": "M.O.D.-Laune",
+			"desc": "M.O.D. wechselt die Stimmung: bissig oder zuckersüß.",
+			"gameplay": false,
+			"scope": "presentation",
+			"spice": "none",
+			"slice": false,
+			"once_per_floor": false,
+			"weight": 1,
+			"duration": {
+				"unit": "sec",
+				"default": 300,
+				"min": 60,
+				"max": 300
+			},
+			"params": {
+				"sweet": {
+					"default": 0,
+					"min": 0,
+					"max": 1
+				}
+			},
+			"sources": [
+				"regie",
+				"mod_brain",
+				"vote",
+				"schedule",
+				"dev"
+			],
+			"mod_tag": "twist_applied_tw_mod_mood"
+		},
+		{
+			"id": "tw_costume",
+			"name": "Kostümwahl",
+			"desc": "Der Graf trägt für den Rest des Laufs ein Kostüm.",
+			"gameplay": false,
+			"scope": "presentation",
+			"spice": "none",
+			"slice": false,
+			"once_per_floor": false,
+			"weight": 1,
+			"duration": {
+				"unit": "run",
+				"default": 0,
+				"min": 0,
+				"max": 0
+			},
+			"params": {
+				"costume": {
+					"default": 0,
+					"min": 0,
+					"max": 3
+				}
+			},
+			"sources": [
+				"regie",
+				"mod_brain",
+				"vote",
+				"schedule",
+				"dev"
+			],
+			"mod_tag": "twist_applied_tw_costume"
+		},
+		{
+			"id": "tw_trap_or_treasure",
+			"name": "Falle oder Schatz",
+			"desc": "Im nächsten Raum steht eine Mystery-Kiste.",
+			"gameplay": true,
+			"scope": "room",
+			"spice": "spicy",
+			"slice": false,
+			"once_per_floor": false,
+			"weight": 1,
+			"duration": {
+				"unit": "none",
+				"default": 0,
+				"min": 0,
+				"max": 0
+			},
+			"params": {},
+			"sources": [
+				"vote",
+				"schedule",
+				"dev"
+			],
+			"mod_tag": "twist_applied_tw_trap_or_treasure"
+		},
+		{
+			"id": "tw_mirror_room",
+			"name": "Spiegel-Raum",
+			"desc": "Nächster Kampf: Schwächen und Resistenzen getauscht.",
+			"gameplay": true,
+			"scope": "battle",
+			"spice": "neutral",
+			"slice": false,
+			"once_per_floor": false,
+			"weight": 1,
+			"duration": {
+				"unit": "battles",
+				"default": 1,
+				"min": 1,
+				"max": 1
+			},
+			"params": {},
+			"sources": [
+				"regie",
+				"mod_brain",
+				"vote",
+				"schedule",
+				"dev"
+			],
+			"mod_tag": "twist_applied_tw_mirror_room"
+		},
+		{
+			"id": "tw_elite_guest",
+			"name": "Stargast",
+			"desc": "Nächste Gruppe ist Elite – mit doppelter Beute.",
+			"gameplay": true,
+			"scope": "battle",
+			"spice": "spicy",
+			"slice": false,
+			"once_per_floor": false,
+			"weight": 1,
+			"duration": {
+				"unit": "battles",
+				"default": 1,
+				"min": 1,
+				"max": 1
+			},
+			"params": {
+				"elite_pm": {
+					"default": 1200,
+					"min": 1200,
+					"max": 1200
+				},
+				"reward_pm": {
+					"default": 2000,
+					"min": 2000,
+					"max": 2000
+				}
+			},
+			"sources": [
+				"regie",
+				"mod_brain",
+				"vote",
+				"schedule",
+				"dev"
+			],
+			"mod_tag": "twist_applied_tw_elite_guest"
+		},
+		{
+			"id": "tw_double_trouble",
+			"name": "Doppelte Quote",
+			"desc": "Ein Gegner mehr, anderthalbfache Beute.",
+			"gameplay": true,
+			"scope": "battle",
+			"spice": "spicy",
+			"slice": false,
+			"once_per_floor": false,
+			"weight": 1,
+			"duration": {
+				"unit": "battles",
+				"default": 1,
+				"min": 1,
+				"max": 1
+			},
+			"params": {
+				"extra_enemies": {
+					"default": 1,
+					"min": 1,
+					"max": 1
+				},
+				"reward_pm": {
+					"default": 1500,
+					"min": 1500,
+					"max": 1500
+				}
+			},
+			"sources": [
+				"regie",
+				"mod_brain",
+				"vote",
+				"schedule",
+				"dev"
+			],
+			"mod_tag": "twist_applied_tw_double_trouble"
+		},
+		{
+			"id": "tw_sponsor_rush",
+			"name": "Werbeblock",
+			"desc": "Die nächste Hype-Schwelle bringt zwei System-Geschenke.",
+			"gameplay": true,
+			"scope": "battle",
+			"spice": "helpful",
+			"slice": false,
+			"once_per_floor": false,
+			"weight": 1,
+			"duration": {
+				"unit": "battles",
+				"default": 1,
+				"min": 1,
+				"max": 1
+			},
+			"params": {
+				"gifts": {
+					"default": 2,
+					"min": 2,
+					"max": 2
+				}
+			},
+			"sources": [
+				"regie",
+				"mod_brain",
+				"vote",
+				"schedule",
+				"dev"
+			],
+			"mod_tag": "twist_applied_tw_sponsor_rush"
+		},
+		{
+			"id": "tw_boss_mood",
+			"name": "Bosslaune",
+			"desc": "Der Boss ist aggressiv oder eitel – das Publikum entscheidet.",
+			"gameplay": true,
+			"scope": "boss",
+			"spice": "neutral",
+			"slice": false,
+			"once_per_floor": false,
+			"weight": 1,
+			"duration": {
+				"unit": "battles",
+				"default": 1,
+				"min": 1,
+				"max": 1
+			},
+			"params": {
+				"aggressive": {
+					"default": 1,
+					"min": 0,
+					"max": 1
+				}
+			},
+			"sources": [
+				"vote"
+			],
+			"mod_tag": "twist_applied_tw_boss_mood"
+		},
+		{
+			"id": "tw_marotte_flash",
+			"name": "Laune der Regie",
+			"desc": "Treffer der aktiven Vorlieben zählen doppelt.",
+			"gameplay": true,
+			"scope": "explore",
+			"spice": "helpful",
+			"slice": false,
+			"once_per_floor": false,
+			"weight": 1,
+			"duration": {
+				"unit": "sec",
+				"default": 180,
+				"min": 60,
+				"max": 180
+			},
+			"params": {
+				"hit_mult": {
+					"default": 2,
+					"min": 2,
+					"max": 2
+				}
+			},
+			"sources": [
+				"regie",
+				"mod_brain",
+				"vote",
+				"schedule",
+				"dev"
+			],
+			"mod_tag": "twist_applied_tw_marotte_flash"
+		}
+	]
+}

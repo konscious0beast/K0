@@ -1,0 +1,282 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "lk_hair_short",
+			"kind": "hair",
+			"name": "Kurz",
+			"style": "short",
+			"canon": true
+		},
+		{
+			"id": "lk_hair_buzz",
+			"kind": "hair",
+			"name": "Raspelkurz",
+			"style": "buzz"
+		},
+		{
+			"id": "lk_hair_long",
+			"kind": "hair",
+			"name": "Lang",
+			"style": "long"
+		},
+		{
+			"id": "lk_hair_bun",
+			"kind": "hair",
+			"name": "Dutt",
+			"style": "bun"
+		},
+		{
+			"id": "lk_hair_curls",
+			"kind": "hair",
+			"name": "Locken",
+			"style": "curls"
+		},
+		{
+			"id": "lk_hair_ponytail",
+			"kind": "hair",
+			"name": "Pferdeschwanz",
+			"style": "ponytail"
+		},
+		{
+			"id": "lk_hair_braids",
+			"kind": "hair",
+			"name": "Zöpfe",
+			"style": "braids"
+		},
+		{
+			"id": "lk_hair_headscarf",
+			"kind": "hair",
+			"name": "Kopftuch",
+			"style": "headscarf"
+		},
+		{
+			"id": "lk_hair_bald",
+			"kind": "hair",
+			"name": "Glatze",
+			"style": "bald"
+		},
+		{
+			"id": "lk_hc_black",
+			"kind": "hair_color",
+			"name": "Schwarz",
+			"color": "#1F1A1A"
+		},
+		{
+			"id": "lk_hc_darkbrown",
+			"kind": "hair_color",
+			"name": "Dunkelbraun",
+			"color": "#3B2A22",
+			"canon": true
+		},
+		{
+			"id": "lk_hc_chestnut",
+			"kind": "hair_color",
+			"name": "Kastanie",
+			"color": "#6B3A22"
+		},
+		{
+			"id": "lk_hc_blond",
+			"kind": "hair_color",
+			"name": "Blond",
+			"color": "#D9B66B"
+		},
+		{
+			"id": "lk_hc_red",
+			"kind": "hair_color",
+			"name": "Rot",
+			"color": "#A8432A"
+		},
+		{
+			"id": "lk_hc_grey",
+			"kind": "hair_color",
+			"name": "Grau",
+			"color": "#9A9A9A"
+		},
+		{
+			"id": "lk_hc_pink",
+			"kind": "hair_color",
+			"name": "Pink",
+			"color": "#E85A9A"
+		},
+		{
+			"id": "lk_hc_blue",
+			"kind": "hair_color",
+			"name": "Blau",
+			"color": "#3A6FD9"
+		},
+		{
+			"id": "lk_skin_1",
+			"kind": "skin",
+			"name": "Ton 1",
+			"color": "#F6D7C3"
+		},
+		{
+			"id": "lk_skin_2",
+			"kind": "skin",
+			"name": "Ton 2",
+			"color": "#EBC1A0"
+		},
+		{
+			"id": "lk_skin_3",
+			"kind": "skin",
+			"name": "Ton 3",
+			"color": "#E8B48F",
+			"canon": true
+		},
+		{
+			"id": "lk_skin_4",
+			"kind": "skin",
+			"name": "Ton 4",
+			"color": "#D19A6E"
+		},
+		{
+			"id": "lk_skin_5",
+			"kind": "skin",
+			"name": "Ton 5",
+			"color": "#B07A50"
+		},
+		{
+			"id": "lk_skin_6",
+			"kind": "skin",
+			"name": "Ton 6",
+			"color": "#8D5A3A"
+		},
+		{
+			"id": "lk_skin_7",
+			"kind": "skin",
+			"name": "Ton 7",
+			"color": "#6B4128"
+		},
+		{
+			"id": "lk_skin_8",
+			"kind": "skin",
+			"name": "Ton 8",
+			"color": "#4A2C1C"
+		},
+		{
+			"id": "lk_beard_none",
+			"kind": "beard",
+			"name": "ohne",
+			"style": "none",
+			"canon": true
+		},
+		{
+			"id": "lk_beard_stubble",
+			"kind": "beard",
+			"name": "Dreitagebart",
+			"style": "stubble"
+		},
+		{
+			"id": "lk_beard_moustache",
+			"kind": "beard",
+			"name": "Schnurrbart",
+			"style": "moustache"
+		},
+		{
+			"id": "lk_beard_full",
+			"kind": "beard",
+			"name": "Vollbart",
+			"style": "full"
+		},
+		{
+			"id": "lk_glasses_none",
+			"kind": "glasses",
+			"name": "ohne",
+			"style": "none",
+			"canon": true
+		},
+		{
+			"id": "lk_glasses_round",
+			"kind": "glasses",
+			"name": "rund",
+			"style": "round"
+		},
+		{
+			"id": "lk_outfit_petrol",
+			"kind": "outfit",
+			"name": "Tierheim-Petrol",
+			"colors": {
+				"primary": "#3AA9A0",
+				"secondary": "#2E3A57"
+			},
+			"canon": true
+		},
+		{
+			"id": "lk_outfit_white",
+			"kind": "outfit",
+			"name": "Kittelweiß",
+			"colors": {
+				"primary": "#E8EEF0",
+				"secondary": "#5A6B7A"
+			}
+		},
+		{
+			"id": "lk_outfit_blue",
+			"kind": "outfit",
+			"name": "Blaumann",
+			"colors": {
+				"primary": "#2F4F8F",
+				"secondary": "#23314F"
+			}
+		},
+		{
+			"id": "lk_outfit_orange",
+			"kind": "outfit",
+			"name": "Warnorange",
+			"colors": {
+				"primary": "#F28C28",
+				"secondary": "#3A3F4B"
+			}
+		},
+		{
+			"id": "lk_outfit_grey",
+			"kind": "outfit",
+			"name": "Bürograu",
+			"colors": {
+				"primary": "#7A808A",
+				"secondary": "#2A2E36"
+			}
+		},
+		{
+			"id": "lk_outfit_pink",
+			"kind": "outfit",
+			"name": "Neonpink",
+			"colors": {
+				"primary": "#FF5FA2",
+				"secondary": "#2A2440"
+			}
+		},
+		{
+			"id": "lk_outfit_green",
+			"kind": "outfit",
+			"name": "Waldgrün",
+			"colors": {
+				"primary": "#3F7A3A",
+				"secondary": "#3B2A22"
+			}
+		},
+		{
+			"id": "lk_outfit_midnight",
+			"kind": "outfit",
+			"name": "Mitternacht",
+			"colors": {
+				"primary": "#2A2440",
+				"secondary": "#1A1420"
+			}
+		},
+		{
+			"id": "lk_wear_none",
+			"kind": "wear",
+			"name": "ohne",
+			"style": "none",
+			"canon": true
+		},
+		{
+			"id": "lk_wear_jacket",
+			"kind": "wear",
+			"name": "Jacke",
+			"style": "jacket"
+		}
+	]
+}

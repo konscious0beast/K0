@@ -1,0 +1,576 @@
+extends Node3D
+## Orbit camera of the exploration (02_TECH §7.3, 03_ART §8.1, GDD §2.2): pivot on Kai + 1.4 m (follow lerp 10/s),
+## SpringArm3D 7.0 m against layer `world` (sphere 0.25, margin 0.25; collisions shorten instantly, return at 4 m/s),
+## pitch −38° (−65°..−15°), FOV 60, stick yaw 2.6 rad/s (cam_* actions), mouse with RMB held 0.005 rad/px, touch drag
+## 0.006 rad/px (Events.camera_drag), all × camera_sensitivity; wheel / pinch (Events.camera_zoom) zoom 5–9 m;
+## auto-recenter behind Kai after 2.5 s without camera input while he moves (lerp 2/s). The rig node itself is the
+## yaw pivot.
+##
+## Rooms have no ceiling, so walls are never "solved" by shortening the arm alone (`pitch` stays the player's pitch,
+## the effective pitch relaxes back to it):
+## - Wall or door behind Kai: the effective pitch is first raised (up to −65°) until the arm's horizontal reach
+##   (arm × cos pitch) fits the free distance behind the pivot, probed at lintel height — the camera stays inside the
+##   room; only when even −65° does not fit, the arm is shortened.
+## - Kai right at a wall / in a doorway (that would put the camera less than MIN_BEHIND behind him): the camera may
+##   stay behind the wall (previous room, above the wall top) at the flattest pitch from which Kai's head AND feet
+##   are in sight (rays against `world`).
+## - Deviation (03_ART §8.1 / 02_TECH §7.3, recorded here): the pivot looks LOOK_AHEAD (2.5 m) ahead of Kai along the
+##   camera's flat forward (shortened in front of walls — and of door openings: the look-ahead is also probed at lintel
+##   height, so walking towards an open doorway never pushes the pivot through it and the arm under the lintel, which
+##   used to give a close-up), so Kai sits in the lower third and the interact (1.5 m) and field-strike (1.8 m) zone in
+##   front of him is not hidden behind his own (chibi) head.
+## - Framing per leader (06 §1.2, polish pass): look-at height, extra distance, look-ahead and head height follow the
+##   controlled figure (LEADER_FRAMING, set_leader): Graf Mopsula (0.9 m) is framed lower and from further back, so
+##   the following Kai is in the picture instead of under its bottom edge. The player's zoom (arm_length) is unchanged.
+## - Camera closer than 1.5 m to the leader's head → the rig fades out (GeometryInstance3D.transparency for art-kit
+##   rigs; the fallback toon shaders dither every fragment closer than 1.5 m to the camera), never a frame filled by
+##   a head; the follower (set by the scene) fades the same way.
+
+const ARM_LENGTH: float = 7.0
+const ZOOM_MIN: float = 5.0
+const ZOOM_MAX: float = 9.0
+const ZOOM_STEP: float = 0.5
+const PITCH_DEFAULT_DEG: float = -38.0
+const PITCH_MIN_DEG: float = -65.0
+const PITCH_MAX_DEG: float = -15.0
+const FOV: float = 60.0
+const STICK_YAW: float = 2.6           # rad/s at full deflection
+const STICK_PITCH: float = 1.6         # rad/s at full deflection
+const MOUSE_RAD_PER_PX: float = 0.005
+const TOUCH_RAD_PER_PX: float = 0.006
+const PIVOT_HEIGHT: float = 1.4
+const LOOK_AHEAD: float = 2.5
+const PROBE_HEIGHT: float = 3.2         # free space behind the pivot is measured here (walls 3.5 m, lintels 3.0 m)
+const LINTEL_PROBE_BACK: float = 1.0    # the look-ahead's lintel probe starts this far behind the leader
+const MIN_BEHIND: float = 0.5           # inside-room solution only if the camera stays this far behind Kai
+const PITCH_STEP_DEG: float = 3.0
+const FOLLOW_LERP: float = 10.0
+const RECENTER_DELAY: float = 2.5
+const RECENTER_LERP: float = 2.0
+const ARM_RETURN_SPEED: float = 4.0
+const COLLISION_MARGIN: float = 0.25
+const CAST_RADIUS: float = 0.25
+const LAYER_WORLD: int = 1
+const PITCH_RAISE_SPEED: float = 3.0   # rad/s towards a steeper pitch when the arm would hit a wall
+const PITCH_RELAX_SPEED: float = 1.0   # rad/s back towards the player's pitch
+const FADE_START: float = 1.5          # camera closer than this to Kai's head → his rig starts to fade
+const FADE_HIDDEN: float = 0.6         # … and is gone at this distance
+const HEAD_HEIGHT: float = 1.5
+const FEET_HEIGHT: float = 0.3
+## Framing per leader (06 §1.2): look-at height above the leader's feet, extra arm on top of the player's zoom,
+## look-ahead, the pitch a snap() starts from and the head height (sight rays, fade). Kai = the M3 values. Graf
+## Mopsula (0.9 m): lower, further back and a little steeper, so the following Kai (1.8 m behind) is in the picture
+## with his head below the Count's paws (not over him).
+const LEADER_FRAMING: Dictionary = {
+	"kai": {"pivot": PIVOT_HEIGHT, "extra_arm": 0.0, "look": LOOK_AHEAD, "pitch": PITCH_DEFAULT_DEG, "head": HEAD_HEIGHT},
+	"mopsula": {"pivot": 1.0, "extra_arm": 1.5, "look": 1.5, "pitch": -46.0, "head": 0.8},
+}
+
+var target: Node3D = null
+var yaw: float = 0.0
+var pitch: float = deg_to_rad(PITCH_DEFAULT_DEG)     # the player's pitch (input, clamped)
+var arm_length: float = ARM_LENGTH
+var input_enabled: bool = true
+## Extra arm length / flatter pitch for framing large figures (boss rooms; set by the scene).
+var frame_extra_arm: float = 0.0
+## Bodies the camera ignores (blocking bodies of small props: chests, event props; set by the scene). Walls, door
+## lintels and gates always count.
+var exclude: Array[RID] = []
+## The partner following the leader (set by the scene): fades like the leader when the camera comes too close.
+var follower: Node3D = null
+## Framing of the current leader (LEADER_FRAMING, set_leader).
+var leader_id: String = "kai"
+var pivot_height: float = PIVOT_HEIGHT
+var look_ahead: float = LOOK_AHEAD
+var leader_extra_arm: float = 0.0
+var leader_pitch_deg: float = PITCH_DEFAULT_DEG
+var head_height: float = HEAD_HEIGHT
+
+var _pitch_node: Node3D
+var _arm: SpringArm3D
+var _cam: Camera3D
+var _len: float = ARM_LENGTH
+var _eff_pitch: float = deg_to_rad(PITCH_DEFAULT_DEG)
+var _look: float = LOOK_AHEAD
+var _since_input: float = 0.0
+var _arm_kick: float = 1.0
+var _cast_shape: SphereShape3D
+var _fade: Dictionary = {}             # rig instance id → applied transparency (leader and follower)
+var _arm_limit: float = ARM_LENGTH
+
+
+func _init() -> void:
+	name = "CameraRig"
+	_pitch_node = Node3D.new()
+	_pitch_node.name = "Pitch"
+	add_child(_pitch_node)
+	_arm = SpringArm3D.new()
+	_arm.name = "SpringArm"
+	_arm.collision_mask = LAYER_WORLD
+	_arm.margin = COLLISION_MARGIN
+	_cast_shape = SphereShape3D.new()
+	_cast_shape.radius = CAST_RADIUS
+	_arm.shape = _cast_shape
+	_arm.spring_length = ARM_LENGTH
+	_pitch_node.add_child(_arm)
+	_cam = Camera3D.new()
+	_cam.name = "Camera"
+	_cam.fov = FOV
+	_cam.near = 0.1
+	_cam.far = 120.0
+	_pitch_node.add_child(_cam)
+
+
+func _ready() -> void:
+	Events.camera_drag.connect(_on_camera_drag)
+	Events.camera_zoom.connect(_on_camera_zoom)
+	_cam.current = true
+	_apply()
+
+
+func camera() -> Camera3D:
+	return _cam
+
+
+## Effective pitch actually used this frame (player pitch raised to clear walls).
+func effective_pitch() -> float:
+	return _eff_pitch
+
+
+## Current camera distance from the pivot (after collisions).
+func current_arm() -> float:
+	return _len
+
+
+## 06 §1.2: frames `member_id` (the controlled figure) — look-at height, extra distance, look-ahead, head height.
+## Unknown ids frame like Kai. Call snap() afterwards for an instant cut.
+func set_leader(member_id: String) -> void:
+	leader_id = member_id if LEADER_FRAMING.has(member_id) else "kai"
+	var f: Dictionary = LEADER_FRAMING[leader_id]
+	pivot_height = float(f["pivot"])
+	leader_extra_arm = float(f["extra_arm"])
+	look_ahead = float(f["look"])
+	if combat:
+		look_ahead = minf(look_ahead, COMBAT_LOOK_AHEAD)            # 07 §7.5: 2.5 → 1.0 m in a combat
+	leader_pitch_deg = float(f["pitch"])
+	head_height = float(f["head"])
+	_look = look_ahead
+
+
+## Instantly behind `yaw_rad` (the leader's facing) at the target, at the leader's default pitch; arm and pitch
+## resolved against the walls at once.
+func snap(yaw_rad: float) -> void:
+	yaw = yaw_rad
+	pitch = deg_to_rad(leader_pitch_deg)
+	_since_input = 0.0
+	_apply()
+	if target != null and is_instance_valid(target):
+		global_position = _pivot_target()
+		if is_inside_tree():
+			var sol: Vector2 = _solve(_full_arm())
+			_eff_pitch = sol.x
+			_arm_limit = sol.y
+			_len = minf(_free_arm(_eff_pitch, _full_arm()), _arm_limit)
+		else:
+			_eff_pitch = pitch
+			_len = arm_length
+	_apply()
+	_update_fade()
+
+
+## Horizontal forward of the camera (movement is relative to it).
+func flat_forward() -> Vector3:
+	return Vector3(-sin(yaw), 0.0, -cos(yaw))
+
+
+## FOV kick on a field strike (60 → 57 → 60 in 0.15 s).
+func kick_strike() -> void:
+	if not is_inside_tree():
+		return
+	var tw: Tween = create_tween()
+	tw.tween_property(_cam, "fov", FOV - 3.0, 0.06)
+	tw.tween_property(_cam, "fov", FOV, 0.09)
+
+
+## Arm kick when an enemy notices Kai (7.0 → 6.3 → 7.0 in 0.4 s).
+func kick_alert() -> void:
+	if not is_inside_tree():
+		return
+	var tw: Tween = create_tween()
+	tw.tween_property(self, "_arm_kick", 0.9, 0.15)
+	tw.tween_property(self, "_arm_kick", 1.0, 0.25)
+
+
+func _physics_process(delta: float) -> void:
+	if target == null or not is_instance_valid(target):
+		return
+	var want: Vector3 = _pivot_target()
+	global_position = global_position.lerp(want, 1.0 - exp(-FOLLOW_LERP * delta))
+	var sens: float = 1.0
+	var inv_x: bool = false
+	var inv_y: bool = false
+	if Game.settings != null:
+		sens = Game.settings.camera_sensitivity
+		inv_x = Game.settings.camera_invert_x
+		inv_y = Game.settings.camera_invert_y
+	var had_input: bool = false
+	if input_enabled:
+		var sx: float = Input.get_axis(&"cam_left", &"cam_right")
+		var sy: float = Input.get_axis(&"cam_up", &"cam_down")
+		if absf(sx) > 0.0:
+			yaw -= sx * STICK_YAW * sens * delta * (-1.0 if inv_x else 1.0)
+			had_input = true
+		if absf(sy) > 0.0:
+			pitch -= sy * STICK_PITCH * sens * delta * (-1.0 if inv_y else 1.0)
+			had_input = true
+	if had_input:
+		_since_input = 0.0
+	else:
+		_since_input += delta
+	var moving: bool = target.has_method("is_moving") and bool(target.call("is_moving"))
+	if _since_input >= RECENTER_DELAY and moving and not combat:     # 07 §7.5: no auto recenter in a combat
+		yaw = lerp_angle(yaw, target.rotation.y, 1.0 - exp(-RECENTER_LERP * delta))
+	_apply()
+	# Pitch first: raised where walls need it (smoothly), relaxing back to the player's pitch.
+	var full: float = _full_arm()
+	var sol: Vector2 = _solve(full)
+	_arm_limit = sol.y
+	var rate: float = PITCH_RAISE_SPEED if sol.x < _eff_pitch or had_input else PITCH_RELAX_SPEED
+	_eff_pitch = move_toward(_eff_pitch, sol.x, rate * delta)
+	_pitch_node.rotation = Vector3(_eff_pitch, 0.0, 0.0)
+	# Then the arm: within the solved limit, collisions shorten at once (no clipping frames), free space returns at
+	# 4 m/s — Echtzeitkampf (07 §7.5, R2 follow-up of the polish pass): a far shorter arm returns exponentially
+	# (ARM_RETURN_LERP), so the close-up after a doorway (the arm cut by the lintel when the pivot enters the next
+	# room) lasts a few frames instead of up to 1.7 s.
+	var free_len: float = minf(_free_arm(_eff_pitch, full), _arm_limit)
+	if free_len < _len:
+		_len = free_len
+	else:
+		_len = move_toward(_len, free_len, maxf(ARM_RETURN_SPEED, (free_len - _len) * ARM_RETURN_LERP) * delta)
+	_cam.position = Vector3(0.0, 0.0, _len)
+	_combat_camera_fx(delta)                                          # Echtzeitkampf (07 §2.9, §7.5, R2)
+	_update_fade()
+
+
+func _full_arm() -> float:
+	return (arm_length + frame_extra_arm + leader_extra_arm) * _arm_kick
+
+
+## Pivot: leader + look-at height (Kai 1.4 m), the look-ahead along the camera's flat forward — not through a wall in
+## front of the leader and not through an open doorway (probed at lintel height too: a pivot beyond the door would pull
+## the arm under the lintel, a close-up).
+func _pivot_target() -> Vector3:
+	var head: Vector3 = target.global_position + Vector3(0.0, pivot_height, 0.0)
+	_look = look_ahead
+	if is_inside_tree():
+		var fwd: Vector3 = flat_forward()
+		# The lintel probe starts behind the leader: a cast that starts inside a lintel box ignores it.
+		var lintel: Vector3 = target.global_position + Vector3(0.0, PROBE_HEIGHT, 0.0) - fwd * LINTEL_PROBE_BACK
+		var to_lintel: float = _cast_free(lintel, fwd, look_ahead + LINTEL_PROBE_BACK) - LINTEL_PROBE_BACK
+		_look = clampf(minf(_cast_free(head, fwd, look_ahead), to_lintel), 0.0, look_ahead)
+	return head + flat_forward() * _look
+
+
+## Camera solution (pitch, arm limit) for the current pivot, see the header.
+func _solve(full: float) -> Vector2:
+	if not is_inside_tree() or full <= 0.0:
+		return Vector2(pitch, full)
+	var p_min: float = deg_to_rad(PITCH_MIN_DEG)
+	# 1. Inside the room: free distance behind the pivot just under the wall tops (door lintels count as wall).
+	var probe: Vector3 = Vector3(global_position.x, target.global_position.y + PROBE_HEIGHT, global_position.z)
+	var back: float = _cast_free(probe, Vector3(sin(yaw), 0.0, cos(yaw)), full)
+	var p_room: float = pitch
+	if full * cos(pitch) > back:
+		p_room = maxf(minf(pitch, -acos(clampf(back / full, 0.0, 1.0))), p_min)
+	var arm_room: float = minf(full, back / maxf(cos(p_room), 0.001))
+	if arm_room * cos(p_room) - _look >= MIN_BEHIND:
+		return Vector2(p_room, arm_room)
+	# 2. Kai at a wall / in a doorway: flattest pitch whose camera sees his head and feet (may be behind the wall).
+	var step: float = deg_to_rad(PITCH_STEP_DEG)
+	var p: float = pitch
+	while true:
+		var a: float = _free_arm(p, full)
+		if a >= full * 0.5 and _sees_target(p, a):
+			return Vector2(p, full)
+		if p <= p_min + 0.0001:
+			break
+		p = maxf(p_min, p - step)
+	# 3. Neither (the leader right inside a door opening: the lintel box is too deep to look under it, the arm too short
+	# to clear it at the player's pitch): never a camera in front of the leader — the steepest pitch with its free arm.
+	var a_min: float = _free_arm(p_min, full)
+	if arm_room * cos(p_room) < _look and a_min * cos(p_min) >= _look:
+		return Vector2(p_min, a_min)
+	return Vector2(p_room, arm_room)
+
+
+## Rays from the camera position at pitch `p` / arm `a` to the leader's head and feet hit nothing of `world`.
+func _sees_target(p: float, a: float) -> bool:
+	var dir: Vector3 = (Basis(Vector3.UP, yaw) * Basis(Vector3.RIGHT, p)) * Vector3(0.0, 0.0, 1.0)
+	var cam: Vector3 = global_position + dir * a
+	var space: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
+	for h: float in [head_height, FEET_HEIGHT]:
+		var q: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(cam,
+			target.global_position + Vector3(0.0, h, 0.0), LAYER_WORLD, exclude)
+		if not space.intersect_ray(q).is_empty():
+			return false
+	return true
+
+
+## Free arm length at pitch `p` from the current pivot (sphere cast against `world`, minus the margin on a hit).
+func _free_arm(p: float, full: float) -> float:
+	var dir: Vector3 = (Basis(Vector3.UP, yaw) * Basis(Vector3.RIGHT, p)) * Vector3(0.0, 0.0, 1.0)
+	return _cast_free(global_position, dir, full)
+
+
+func _cast_free(from: Vector3, dir: Vector3, length: float) -> float:
+	if length <= 0.0 or not is_inside_tree():
+		return maxf(0.0, length)
+	var space: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
+	var q: PhysicsShapeQueryParameters3D = PhysicsShapeQueryParameters3D.new()
+	q.shape = _cast_shape
+	q.transform = Transform3D(Basis(), from)
+	q.motion = dir.normalized() * length
+	q.collision_mask = LAYER_WORLD
+	q.exclude = exclude
+	var r: PackedFloat32Array = space.cast_motion(q)
+	if r.size() < 1 or r[0] >= 1.0:
+		return length
+	return maxf(0.0, r[0] * length - COLLISION_MARGIN)
+
+
+## Fades the leader's rig when the camera comes closer than FADE_START to its head (corner, zoomed in); the follower
+## (Kai behind the Count, the Count behind Kai) the same way with its own head height.
+func _update_fade() -> void:
+	if not _cam.is_inside_tree():
+		return
+	if target != null and is_instance_valid(target):
+		_fade_body(target, head_height)
+	if follower != null and is_instance_valid(follower):
+		var fid: String = str(follower.get("member_id")) if "member_id" in follower else ""
+		var fr: Dictionary = LEADER_FRAMING.get(fid, LEADER_FRAMING["kai"])
+		_fade_body(follower, float(fr["head"]))
+
+
+func _fade_body(body: Node3D, head_h: float) -> void:
+	var rig: Node = body.get("rig") as Node if "rig" in body else null
+	if rig == null or not is_instance_valid(rig):
+		return
+	var head: Vector3 = body.global_position + Vector3(0.0, head_h, 0.0)
+	var d: float = _cam.global_position.distance_to(head)
+	var f: float = clampf((FADE_START - d) / (FADE_START - FADE_HIDDEN), 0.0, 1.0)
+	var key: int = rig.get_instance_id()
+	if _fade.has(key) and is_equal_approx(float(_fade[key]), f):
+		return
+	if _fade.size() > 8:
+		_fade.clear()                       # rigs are rebuilt on a hero switch; keep only live entries around
+	_fade[key] = f
+	_set_transparency(rig, f)
+
+
+static func _set_transparency(n: Node, t: float) -> void:
+	if n is GeometryInstance3D:
+		(n as GeometryInstance3D).transparency = t
+	for c: Node in n.get_children():
+		_set_transparency(c, t)
+
+
+func _apply() -> void:
+	pitch = clampf(pitch, deg_to_rad(PITCH_MIN_DEG), deg_to_rad(PITCH_MAX_DEG))
+	arm_length = clampf(arm_length, ZOOM_MIN, ZOOM_MAX)
+	rotation = Vector3(0.0, yaw, 0.0)
+	_eff_pitch = clampf(_eff_pitch, deg_to_rad(PITCH_MIN_DEG), deg_to_rad(PITCH_MAX_DEG))
+	_pitch_node.rotation = Vector3(_eff_pitch, 0.0, 0.0)
+	_arm.spring_length = _full_arm()
+	_cam.position = Vector3(0.0, 0.0, minf(_len, _arm.spring_length))
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not input_enabled:
+		return
+	var sens: float = Game.settings.camera_sensitivity if Game.settings != null else 1.0
+	if event is InputEventMouseMotion:
+		var mm: InputEventMouseMotion = event
+		if mm.button_mask & MOUSE_BUTTON_MASK_RIGHT:
+			_rotate_by(mm.relative, MOUSE_RAD_PER_PX * sens)
+	elif event is InputEventMouseButton:
+		var mb: InputEventMouseButton = event
+		if mb.pressed and mb.button_index == MOUSE_BUTTON_WHEEL_UP:
+			_user_zoom()
+			arm_length -= ZOOM_STEP
+			_since_input = 0.0
+		elif mb.pressed and mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			_user_zoom()
+			arm_length += ZOOM_STEP
+			_since_input = 0.0
+
+
+func _on_camera_drag(relative: Vector2) -> void:
+	if not is_inside_tree() or not input_enabled:
+		return
+	var sens: float = Game.settings.camera_sensitivity if Game.settings != null else 1.0
+	_rotate_by(relative, TOUCH_RAD_PER_PX * sens)
+
+
+## Touch pinch (TouchControls): arm length change in m, clamped to ZOOM_MIN..ZOOM_MAX like the mouse wheel.
+func _on_camera_zoom(amount: float) -> void:
+	if not is_inside_tree() or not input_enabled:
+		return
+	_user_zoom()
+	arm_length = clampf(arm_length + amount, ZOOM_MIN, ZOOM_MAX)
+	_since_input = 0.0
+
+
+func _rotate_by(relative: Vector2, rad_per_px: float) -> void:
+	var inv_x: bool = Game.settings != null and Game.settings.camera_invert_x
+	var inv_y: bool = Game.settings != null and Game.settings.camera_invert_y
+	yaw -= relative.x * rad_per_px * (-1.0 if inv_x else 1.0)
+	var before: float = pitch
+	pitch -= relative.y * rad_per_px * (-1.0 if inv_y else 1.0)
+	_since_input = 0.0
+	_apply()
+	# Direct pitch input moves the effective pitch along (the wall clearance can only raise it further).
+	_eff_pitch = clampf(_eff_pitch + (pitch - before), deg_to_rad(PITCH_MIN_DEG), deg_to_rad(PITCH_MAX_DEG))
+
+
+# --- Echtzeitkampf (07, R2) -------------------------------------------------------------------------------------------
+# 07 §7.5: the same orbit camera in a combat — zoom to 8 m (bosses 9 m) in 0.5 s unless the player zoomed in this
+# combat, look-ahead 2.5 → 1.0 m, no auto recenter (the player keeps the camera) and a light shake on party hits;
+# 07 §2.9 the "Boss-Kran" of the boss intro. The framing per controlled figure (LEADER_FRAMING) stays. The soft target
+# framing (GameSettings.combat_camera_assist) is R3's CombatInput: it turns `yaw` (every drag wins); with the recenter
+# off nothing here turns against it.
+
+const COMBAT_LOOK_AHEAD: float = 1.0
+const COMBAT_ZOOM_SEC: float = 0.5
+const CRANE_FOV: float = 40.0
+const ARM_RETURN_LERP: float = 6.0         # 1/s: a much shorter arm returns exponentially (doorways, 07 §7.5)
+const CRANE_BACK: float = 3.0              # the crane starts this far behind the boss's head …
+const CRANE_UP: float = 1.2                # … this much above it …
+const CRANE_MIN_Y: float = 4.4             # … and above the wall tops (3.5 m)
+const CRANE_ARC: float = 1.5               # extra lift in the middle of the crane
+
+var combat: bool = false
+
+var _pre_combat_arm: float = -1.0
+var _pre_combat_extra: float = 0.0
+var _user_zoomed: bool = false
+var _zoom_tween: Tween = null
+var _shot: Dictionary = {}                 # crane: {"t", "sec", "head", "p0", "side"}
+var _shake_left: float = 0.0
+var _shake_total: float = 0.0
+var _shake_amp: float = 0.0
+
+
+## A combat starts: zoom to `zoom` m in 0.5 s (instant: at once), look-ahead 1.0 m, no recenter; the boss-room extra
+## arm gives way to the combat zoom (07 §7.5).
+func enter_combat(zoom: float, instant: bool = false) -> void:
+	if not combat:
+		_pre_combat_arm = arm_length
+		_pre_combat_extra = frame_extra_arm
+		_user_zoomed = false
+	combat = true
+	frame_extra_arm = 0.0
+	set_leader(leader_id)
+	_tween_arm(zoom, 0.0 if instant else COMBAT_ZOOM_SEC)
+
+
+## The combat is over: back to the exploration zoom (unless the player zoomed in the combat), look-ahead and recenter.
+func exit_combat() -> void:
+	if not combat:
+		return
+	combat = false
+	_shot = {}
+	frame_extra_arm = _pre_combat_extra
+	set_leader(leader_id)
+	if not _user_zoomed and _pre_combat_arm > 0.0:
+		_tween_arm(_pre_combat_arm, COMBAT_ZOOM_SEC)
+	_pre_combat_arm = -1.0
+
+
+## 07 §2.9 "Boss-Kran" (03_ART §8.3 `boss_intro`: from behind the boss, looking at its head, FOV 40, crane 2.5 s to
+## the overview): over `sec` the camera travels from behind and above the boss (`head`, the boss looks along
+## `boss_fwd`; at least CRANE_MIN_Y high — rooms have no ceiling, so a wall behind the boss never blocks the shot)
+## around its flank to the combat view, FOV 40 → 60; the orbit camera takes over seamlessly at the end.
+func crane(head: Vector3, boss_fwd: Vector3, sec: float) -> void:
+	var f: Vector3 = Vector3(boss_fwd.x, 0.0, boss_fwd.z).normalized() if boss_fwd.length() > 0.01 else Vector3.BACK
+	var p0: Vector3 = head - f * CRANE_BACK + Vector3(0.0, CRANE_UP, 0.0)
+	p0.y = maxf(p0.y, CRANE_MIN_Y)
+	# the flank the crane passes: the side of the boss the figure stands on (left of its forward → +1)
+	var to_p: Vector3 = (target.global_position - head) if target != null else f
+	var side: float = 1.0 if f.cross(Vector3(to_p.x, 0.0, to_p.z)).y >= 0.0 else -1.0
+	_shot = {"t": 0.0, "sec": maxf(sec, 0.1), "head": head, "p0": p0, "side": side}
+
+
+func is_craning() -> bool:
+	return not _shot.is_empty()
+
+
+## Ends the boss crane at once in the orbit pose (the intro is over: the combat never starts mid-crane, whatever
+## the frame timing of the intro timer and the crane's own clock).
+func end_crane() -> void:
+	if _shot.is_empty():
+		return
+	_shot = {}
+	if _cam != null:
+		_cam.transform = Transform3D(Basis(), Vector3(0.0, 0.0, _len))
+		_cam.fov = FOV
+
+
+## Light shake (07 §7.5: 0.15 s, 0.08 m on party hits); GameSettings.camera_shake is checked by the caller.
+func shake(sec: float, amp: float) -> void:
+	_shake_total = maxf(sec, 0.01)
+	_shake_left = _shake_total
+	_shake_amp = amp
+
+
+func _user_zoom() -> void:
+	if combat:
+		_user_zoomed = true
+		if _zoom_tween != null and _zoom_tween.is_valid():
+			_zoom_tween.kill()
+
+
+func _tween_arm(to: float, sec: float) -> void:
+	if _zoom_tween != null and _zoom_tween.is_valid():
+		_zoom_tween.kill()
+	var v: float = clampf(to, ZOOM_MIN, ZOOM_MAX)
+	if sec <= 0.0 or not is_inside_tree():
+		arm_length = v
+		return
+	_zoom_tween = create_tween()
+	_zoom_tween.tween_property(self, "arm_length", v, sec).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+
+## The boss crane and the shake on top of the solved orbit pose (the orbit keeps running underneath).
+func _combat_camera_fx(delta: float) -> void:
+	if not _shot.is_empty():
+		_shot["t"] = float(_shot["t"]) + delta
+		var u: float = clampf(float(_shot["t"]) / float(_shot["sec"]), 0.0, 1.0)
+		var e: float = u * u * (3.0 - 2.0 * u)
+		_cam.transform = Transform3D(Basis(), Vector3(0.0, 0.0, _len))     # the solved orbit pose of this frame
+		var orbit: Transform3D = _cam.global_transform
+		var head: Vector3 = _shot["head"]
+		var p0: Vector3 = _shot["p0"]
+		var p2: Vector3 = orbit.origin
+		# around the boss, not over it: angle, distance and height blend from behind the boss to the orbit camera
+		# (the far side is reached past the boss's flank, the arc lifts CRANE_ARC m in the middle)
+		var v0: Vector2 = Vector2(p0.x - head.x, p0.z - head.z)
+		var v2: Vector2 = Vector2(p2.x - head.x, p2.z - head.z)
+		var da: float = wrapf(v2.angle() - v0.angle(), -PI, PI)
+		if absf(da) > PI * 0.9:
+			da = absf(da) * float(_shot.get("side", 1.0))
+		var a: float = v0.angle() + da * e
+		var r: float = lerpf(v0.length(), v2.length(), e)
+		var pos: Vector3 = Vector3(head.x + cos(a) * r, lerpf(p0.y, p2.y, e) + sin(PI * u) * CRANE_ARC,
+			head.z + sin(a) * r)
+		var orbit_look: Vector3 = orbit.origin - orbit.basis.z * 8.0
+		var look: Vector3 = head.lerp(orbit_look, smoothstep(0.3, 1.0, u))
+		if pos.distance_to(look) > 0.01 and u < 1.0:
+			_cam.global_transform = Transform3D(Basis.looking_at(look - pos, Vector3.UP), pos)
+		_cam.fov = lerpf(CRANE_FOV, FOV, e)
+		if u >= 1.0:
+			_shot = {}
+			_cam.fov = FOV
+	if _shake_left > 0.0:
+		_shake_left = maxf(0.0, _shake_left - delta)
+		var k: float = _shake_amp * (_shake_left / _shake_total)
+		_cam.position += Vector3(randf_range(-k, k), randf_range(-k, k), 0.0)

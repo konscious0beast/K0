@@ -1,0 +1,730 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "cls_kai_wrecker",
+			"name": "Abrissbirne",
+			"desc": "Tank und Schläger. Steht im Weg, und zwar gern.",
+			"for": [
+				"kai"
+			],
+			"min_floor": 3,
+			"stat_mult": {
+				"hp": 1.1,
+				"str": 1.15,
+				"def": 1.1,
+				"spd": 0.95
+			},
+			"growth_add": {
+				"hp": 12.0,
+				"def": 0.5
+			},
+			"passives": [
+				{
+					"id": "pas_thick_skin",
+					"params": {
+						"taunt_turns_add": 1,
+						"dmg_taken_mult_while_taunt": 0.9
+					}
+				}
+			],
+			"show_mods": {
+				"hype_gain_mult": 1.0,
+				"stunt_success_add": 0.0,
+				"stunt_cooldown": 3,
+				"sponsor_thresholds": [
+					70,
+					85,
+					100
+				]
+			},
+			"rt": {
+				"bar": [
+					{
+						"slot": 1,
+						"skill": "skl_kai_wrecking_ball",
+						"level": 1,
+						"variant": true
+					},
+					{
+						"slot": 3,
+						"skill": "skl_kai_quick_concrete",
+						"level": 12,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_kai_construction_fence",
+						"level": 17,
+						"variant": true
+					},
+					{
+						"slot": 4,
+						"skill": "skl_kai_jackhammer",
+						"level": 22,
+						"variant": true
+					},
+					{
+						"slot": 5,
+						"skill": "skl_kai_demolition",
+						"level": 27,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_kai_structural_report",
+						"level": 32,
+						"variant": true
+					}
+				],
+				"ranks": [
+					{
+						"level": 37,
+						"pm": 1100
+					},
+					{
+						"level": 42,
+						"pm": 1200
+					},
+					{
+						"level": 47,
+						"pm": 1300
+					}
+				]
+			}
+		},
+		{
+			"id": "cls_kai_runner",
+			"name": "Gleisläufer:in",
+			"desc": "Tempo und Krits. Kennt jede Abkürzung, besonders die verbotenen.",
+			"for": [
+				"kai"
+			],
+			"min_floor": 3,
+			"stat_mult": {
+				"spd": 1.2,
+				"lck": 1.2,
+				"def": 0.9
+			},
+			"growth_add": {
+				"spd": 0.5,
+				"lck": 0.5
+			},
+			"passives": [
+				{
+					"id": "pas_first_strike",
+					"params": {
+						"first_action_crit_add": 0.25,
+						"preemptive_angle_deg": 90
+					}
+				}
+			],
+			"show_mods": {
+				"hype_gain_mult": 1.0,
+				"stunt_success_add": 0.0,
+				"stunt_cooldown": 3,
+				"sponsor_thresholds": [
+					70,
+					85,
+					100
+				]
+			},
+			"rt": {
+				"bar": [
+					{
+						"slot": 1,
+						"skill": "skl_kai_switch_kick",
+						"level": 1,
+						"variant": true
+					},
+					{
+						"slot": 3,
+						"skill": "skl_kai_emergency_brake",
+						"level": 12,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_kai_timetable_change",
+						"level": 17,
+						"variant": true
+					},
+					{
+						"slot": 4,
+						"skill": "skl_kai_stand_back",
+						"level": 22,
+						"variant": true
+					},
+					{
+						"slot": 5,
+						"skill": "skl_kai_train_jump",
+						"level": 27,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_kai_on_time",
+						"level": 32,
+						"variant": true
+					}
+				],
+				"ranks": [
+					{
+						"level": 37,
+						"pm": 1100
+					},
+					{
+						"level": 42,
+						"pm": 1200
+					},
+					{
+						"level": 47,
+						"pm": 1300
+					}
+				]
+			}
+		},
+		{
+			"id": "cls_kai_tinker",
+			"name": "Schrott-Tüftler:in",
+			"desc": "Items und Elemente. Aus Müll wird Munition.",
+			"for": [
+				"kai"
+			],
+			"min_floor": 3,
+			"stat_mult": {
+				"mag": 1.3,
+				"str": 0.95
+			},
+			"growth_add": {
+				"mag": 1.0,
+				"mp": 1.0
+			},
+			"passives": [
+				{
+					"id": "pas_tinkering",
+					"params": {
+						"damage_item_mult": 1.5,
+						"item_rank": 1
+					}
+				}
+			],
+			"show_mods": {
+				"hype_gain_mult": 1.0,
+				"stunt_success_add": 0.0,
+				"stunt_cooldown": 3,
+				"sponsor_thresholds": [
+					70,
+					85,
+					100
+				]
+			},
+			"rt": {
+				"bar": [
+					{
+						"slot": 1,
+						"skill": "skl_kai_soldering_iron",
+						"level": 1,
+						"variant": true
+					},
+					{
+						"slot": 3,
+						"skill": "skl_kai_short_circuit",
+						"level": 12,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_kai_tin_shield",
+						"level": 17,
+						"variant": true
+					},
+					{
+						"slot": 4,
+						"skill": "skl_kai_spark_rain",
+						"level": 22,
+						"variant": true
+					},
+					{
+						"slot": 5,
+						"skill": "skl_kai_scrap_cannon",
+						"level": 27,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_kai_generator",
+						"level": 32,
+						"variant": true
+					}
+				],
+				"ranks": [
+					{
+						"level": 37,
+						"pm": 1100
+					},
+					{
+						"level": 42,
+						"pm": 1200
+					},
+					{
+						"level": 47,
+						"pm": 1300
+					}
+				]
+			}
+		},
+		{
+			"id": "cls_kai_showrunner",
+			"name": "Showrunner:in",
+			"desc": "Hype und Stunts. Die Kamera liebt dich, die Versicherung nicht.",
+			"for": [
+				"kai"
+			],
+			"min_floor": 3,
+			"stat_mult": {
+				"lck": 1.25
+			},
+			"growth_add": {
+				"lck": 0.5
+			},
+			"passives": [
+				{
+					"id": "pas_crowd_magnet",
+					"params": {
+						"stunt_success_add": 0.15,
+						"stunt_cooldown": 2,
+						"hype_gain_mult": 1.25
+					}
+				}
+			],
+			"show_mods": {
+				"hype_gain_mult": 1.25,
+				"stunt_success_add": 0.15,
+				"stunt_cooldown": 2,
+				"sponsor_thresholds": [
+					70,
+					85,
+					100
+				]
+			},
+			"rt": {
+				"bar": [
+					{
+						"slot": 1,
+						"skill": "skl_kai_punchline",
+						"level": 1,
+						"variant": true
+					},
+					{
+						"slot": 3,
+						"skill": "skl_kai_ad_break",
+						"level": 12,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_kai_applause",
+						"level": 17,
+						"variant": true
+					},
+					{
+						"slot": 4,
+						"skill": "skl_kai_confetti_cannon",
+						"level": 22,
+						"variant": true
+					},
+					{
+						"slot": 5,
+						"skill": "skl_kai_double_flip",
+						"level": 27,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_kai_stage_fright",
+						"level": 32,
+						"variant": true
+					}
+				],
+				"ranks": [
+					{
+						"level": 37,
+						"pm": 1100
+					},
+					{
+						"level": 42,
+						"pm": 1200
+					},
+					{
+						"level": 47,
+						"pm": 1300
+					}
+				]
+			}
+		},
+		{
+			"id": "cls_mop_archmage",
+			"name": "Erzmagister",
+			"desc": "Elementarschaden. Jede Schwachstelle ist eine Einladung.",
+			"for": [
+				"mopsula"
+			],
+			"min_floor": 3,
+			"stat_mult": {
+				"mag": 1.2,
+				"mp": 1.1
+			},
+			"growth_add": {
+				"mag": 0.6,
+				"mp": 1.0
+			},
+			"passives": [
+				{
+					"id": "pas_exploit",
+					"params": {
+						"weak_mult": 1.75
+					}
+				}
+			],
+			"show_mods": {
+				"hype_gain_mult": 1.0,
+				"stunt_success_add": 0.0,
+				"stunt_cooldown": 3,
+				"sponsor_thresholds": [
+					70,
+					85,
+					100
+				]
+			},
+			"rt": {
+				"bar": [
+					{
+						"slot": 1,
+						"skill": "skl_mop_arch_flame",
+						"level": 1,
+						"variant": true
+					},
+					{
+						"slot": 3,
+						"skill": "skl_mop_ball_lightning",
+						"level": 12,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_mop_cooling_formula",
+						"level": 17,
+						"variant": true
+					},
+					{
+						"slot": 4,
+						"skill": "skl_mop_storm_bark",
+						"level": 22,
+						"variant": true
+					},
+					{
+						"slot": 5,
+						"skill": "skl_mop_ancestor_fireworks",
+						"level": 27,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_mop_ember_comfort",
+						"level": 32,
+						"variant": true
+					}
+				],
+				"ranks": [
+					{
+						"level": 37,
+						"pm": 1100
+					},
+					{
+						"level": 42,
+						"pm": 1200
+					},
+					{
+						"level": 47,
+						"pm": 1300
+					}
+				]
+			}
+		},
+		{
+			"id": "cls_mop_physician",
+			"name": "Medicus honoris causa",
+			"desc": "Heilung mit Standesdünkel. Gift duldet er nicht.",
+			"for": [
+				"mopsula"
+			],
+			"min_floor": 3,
+			"stat_mult": {
+				"res": 1.15,
+				"hp": 1.1
+			},
+			"growth_add": {
+				"hp": 8.0,
+				"res": 0.4
+			},
+			"passives": [
+				{
+					"id": "pas_bedside",
+					"params": {
+						"heal_mult": 1.3,
+						"self_cure_poison_turn_start": true
+					}
+				}
+			],
+			"show_mods": {
+				"hype_gain_mult": 1.0,
+				"stunt_success_add": 0.0,
+				"stunt_cooldown": 3,
+				"sponsor_thresholds": [
+					70,
+					85,
+					100
+				]
+			},
+			"rt": {
+				"bar": [
+					{
+						"slot": 1,
+						"skill": "skl_mop_firm_diagnosis",
+						"level": 1,
+						"variant": true
+					},
+					{
+						"slot": 3,
+						"skill": "skl_mop_sedative",
+						"level": 12,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_mop_house_call",
+						"level": 17,
+						"variant": true
+					},
+					{
+						"slot": 4,
+						"skill": "skl_mop_ward_round",
+						"level": 22,
+						"variant": true
+					},
+					{
+						"slot": 5,
+						"skill": "skl_mop_defibrillator",
+						"level": 27,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_mop_consilium",
+						"level": 32,
+						"variant": true
+					}
+				],
+				"ranks": [
+					{
+						"level": 37,
+						"pm": 1100
+					},
+					{
+						"level": 42,
+						"pm": 1200
+					},
+					{
+						"level": 47,
+						"pm": 1300
+					}
+				]
+			}
+		},
+		{
+			"id": "cls_mop_hexer",
+			"name": "Fluchgraf",
+			"desc": "Debuffs mit Fußnoten. Flüche halten länger.",
+			"for": [
+				"mopsula"
+			],
+			"min_floor": 3,
+			"stat_mult": {
+				"mag": 1.1,
+				"spd": 1.05
+			},
+			"growth_add": {
+				"mag": 0.4,
+				"spd": 0.2
+			},
+			"passives": [
+				{
+					"id": "pas_curse",
+					"params": {
+						"status_chance_add": 0.25,
+						"status_turns_add": 1
+					}
+				}
+			],
+			"show_mods": {
+				"hype_gain_mult": 1.0,
+				"stunt_success_add": 0.0,
+				"stunt_cooldown": 3,
+				"sponsor_thresholds": [
+					70,
+					85,
+					100
+				]
+			},
+			"rt": {
+				"bar": [
+					{
+						"slot": 1,
+						"skill": "skl_mop_file_curse",
+						"level": 1,
+						"variant": true
+					},
+					{
+						"slot": 3,
+						"skill": "skl_mop_objection",
+						"level": 12,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_mop_eerie_lick",
+						"level": 17,
+						"variant": true
+					},
+					{
+						"slot": 4,
+						"skill": "skl_mop_haunt_bark",
+						"level": 22,
+						"variant": true
+					},
+					{
+						"slot": 5,
+						"skill": "skl_mop_witching_hour",
+						"level": 27,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_mop_ward_circle",
+						"level": 32,
+						"variant": true
+					}
+				],
+				"ranks": [
+					{
+						"level": 37,
+						"pm": 1100
+					},
+					{
+						"level": 42,
+						"pm": 1200
+					},
+					{
+						"level": 47,
+						"pm": 1300
+					}
+				]
+			}
+		},
+		{
+			"id": "cls_mop_zeremonienmeister",
+			"name": "Zeremonienmeister",
+			"desc": "Buffs mit Protokoll. Sponsoren kommen früher, Applaus sowieso.",
+			"for": [
+				"mopsula"
+			],
+			"min_floor": 3,
+			"stat_mult": {
+				"lck": 1.2,
+				"res": 1.1
+			},
+			"growth_add": {
+				"lck": 0.5,
+				"res": 0.3
+			},
+			"passives": [
+				{
+					"id": "pas_spotlight",
+					"params": {
+						"buff_turns_add": 1,
+						"sponsor_thresholds": [
+							65,
+							80,
+							95
+						]
+					}
+				}
+			],
+			"show_mods": {
+				"hype_gain_mult": 1.0,
+				"stunt_success_add": 0.0,
+				"stunt_cooldown": 3,
+				"sponsor_thresholds": [
+					65,
+					80,
+					95
+				]
+			},
+			"rt": {
+				"bar": [
+					{
+						"slot": 1,
+						"skill": "skl_mop_etiquette_flame",
+						"level": 1,
+						"variant": true
+					},
+					{
+						"slot": 3,
+						"skill": "skl_mop_call_to_order",
+						"level": 12,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_mop_lap_of_honour",
+						"level": 17,
+						"variant": true
+					},
+					{
+						"slot": 4,
+						"skill": "skl_mop_fanfare_bark",
+						"level": 22,
+						"variant": true
+					},
+					{
+						"slot": 5,
+						"skill": "skl_mop_midnight_gala",
+						"level": 27,
+						"variant": true
+					},
+					{
+						"slot": 2,
+						"skill": "skl_mop_formal_support",
+						"level": 32,
+						"variant": true
+					}
+				],
+				"ranks": [
+					{
+						"level": 37,
+						"pm": 1100
+					},
+					{
+						"level": 42,
+						"pm": 1200
+					},
+					{
+						"level": 47,
+						"pm": 1300
+					}
+				]
+			}
+		}
+	]
+}

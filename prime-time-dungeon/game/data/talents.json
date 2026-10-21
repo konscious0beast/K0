@@ -1,0 +1,3883 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "tal_kai_wischtechnik",
+			"name": "Wischtechnik",
+			"desc": "Jahre am Bahnsteig gewischt. Jeder Hieb sitzt.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 2,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "atk",
+			"effects": [
+				{
+					"kind": "stat_flat",
+					"stat": "str",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "tal_kai_dicke_haut",
+			"name": "Dicke Haut (tierheimgeprüft)",
+			"desc": "Bisse? Kratzer? Kennen Sie aus dem Tierheim.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 2,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "def",
+			"effects": [
+				{
+					"kind": "stat_flat",
+					"stat": "def",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "tal_kai_nachtschicht",
+			"name": "Nachtschicht-Kondition",
+			"desc": "Wer Nachtschichten übersteht, übersteht auch das.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 2,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "hp",
+			"effects": [
+				{
+					"kind": "stat_pct",
+					"stat": "hp",
+					"pm": 50
+				}
+			]
+		},
+		{
+			"id": "tal_kai_hausverstand",
+			"name": "Hausverstand",
+			"desc": "Zaubertricks? Sie glauben kein Wort davon.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "res",
+			"effects": [
+				{
+					"kind": "stat_flat",
+					"stat": "res",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "tal_kai_glueckspfote",
+			"name": "Glückspfote",
+			"desc": "Ein Talisman aus dem Tierheim. Riecht leicht nach Hund.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "lck",
+			"effects": [
+				{
+					"kind": "stat_flat",
+					"stat": "lck",
+					"value": 1
+				},
+				{
+					"kind": "crit_add_pm",
+					"pm": 20
+				}
+			]
+		},
+		{
+			"id": "tal_kai_fester_griff",
+			"name": "Fester Griff",
+			"desc": "Der Mopp rutscht nie. Kritische Treffer kommen öfter.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 2,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "crit",
+			"effects": [
+				{
+					"kind": "crit_add_pm",
+					"pm": 30
+				}
+			]
+		},
+		{
+			"id": "tal_kai_bissfest",
+			"name": "Bissfest",
+			"desc": "Gegen Gift abgehärtet. Danke, Kanalratten.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "element",
+			"effects": [
+				{
+					"kind": "element_pm",
+					"element": "poison",
+					"pm": 750
+				}
+			]
+		},
+		{
+			"id": "tal_kai_kaffee",
+			"name": "Automatenkaffee",
+			"desc": "Nach jedem Kampf ein Becher. Bringt MP zurück.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 2,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "mp",
+			"effects": [
+				{
+					"kind": "post_battle_mp_pm",
+					"pm": 50
+				}
+			]
+		},
+		{
+			"id": "tal_kai_weit_ausholen",
+			"name": "Weit ausholen",
+			"desc": "Der Feldschlag reicht ein Viertel weiter.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "field",
+			"effects": [
+				{
+					"kind": "field_range_pm",
+					"pm": 1250
+				}
+			]
+		},
+		{
+			"id": "tal_kai_erster_eindruck",
+			"name": "Erster Eindruck",
+			"desc": "Nach einem Präventivschlag sitzen die ersten Treffer härter.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "field",
+			"effects": [
+				{
+					"kind": "preemptive_dmg_pm",
+					"pm": 1150
+				}
+			]
+		},
+		{
+			"id": "tal_kai_kamera3",
+			"name": "Kamera 3 kennt mich",
+			"desc": "Einmal je Etage ein Extra-Herz für M.O.D.s Vorliebe.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "show",
+			"effects": [
+				{
+					"kind": "marotte_heart",
+					"per_floor": 1
+				}
+			]
+		},
+		{
+			"id": "tal_kai_liga_routine",
+			"name": "Liga-Routine",
+			"desc": "Ohne Rüstung & ohne Accessoire? Routine. In der Liga etwas mehr Verteidigung.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "liga",
+			"effects": [
+				{
+					"kind": "liga_stat_pct",
+					"stat": "def",
+					"pm": 50
+				}
+			]
+		},
+		{
+			"id": "tal_mop_mitternachtsformel",
+			"name": "Mitternachtsformel",
+			"desc": "Um Mitternacht gelernt, nie vergessen. Zauber sitzen fester.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 2,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "mag",
+			"effects": [
+				{
+					"kind": "stat_flat",
+					"stat": "mag",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "tal_mop_koerbchen",
+			"name": "Körbchen-Nickerchen",
+			"desc": "Nach jedem Kampf ein Nickerchen im Körbchen. Bringt MP zurück.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 2,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "mp",
+			"effects": [
+				{
+					"kind": "post_battle_mp_pm",
+					"pm": 50
+				}
+			]
+		},
+		{
+			"id": "tal_mop_hoher_kragen",
+			"name": "Hoher Kragen",
+			"desc": "Flüche prallen am Kragen ab. Meistens.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 2,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "res",
+			"effects": [
+				{
+					"kind": "stat_flat",
+					"stat": "res",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "tal_mop_leberwurst",
+			"name": "Leberwurst-Diät",
+			"desc": "Streng nach Plan. Der Plan heißt Leberwurst.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 2,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "hp",
+			"effects": [
+				{
+					"kind": "stat_pct",
+					"stat": "hp",
+					"pm": 50
+				}
+			]
+		},
+		{
+			"id": "tal_mop_monokel",
+			"name": "Monokel-Fokus",
+			"desc": "Durchs Monokel sieht der Graf jeden Zug kommen.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 3,
+			"icon": "spd",
+			"effects": [
+				{
+					"kind": "stat_flat",
+					"stat": "spd",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "tal_mop_zwinger7",
+			"name": "Zwinger 7 überlebt",
+			"desc": "Wer das Tierheim übersteht, hat Glück im Blut.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "lck",
+			"effects": [
+				{
+					"kind": "stat_flat",
+					"stat": "lck",
+					"value": 2
+				}
+			]
+		},
+		{
+			"id": "tal_mop_nachtaktiv",
+			"name": "Nachtaktiv",
+			"desc": "Nachts ist der Graf in Bestform. Also immer.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 2,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "mp",
+			"effects": [
+				{
+					"kind": "stat_pct",
+					"stat": "mp",
+					"pm": 50
+				}
+			]
+		},
+		{
+			"id": "tal_mop_unterpelz",
+			"name": "Doppelter Unterpelz",
+			"desc": "Kälte? Der Graf trägt Fell in zwei Lagen.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "element",
+			"effects": [
+				{
+					"kind": "element_pm",
+					"element": "ice",
+					"pm": 750
+				}
+			]
+		},
+		{
+			"id": "tal_mop_stereo",
+			"name": "Bellen in Stereo",
+			"desc": "Das Bellen reicht ein Viertel weiter.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "field",
+			"effects": [
+				{
+					"kind": "field_range_pm",
+					"pm": 1250
+				}
+			]
+		},
+		{
+			"id": "tal_mop_schwer_vermittelbar",
+			"name": "Schwer vermittelbar",
+			"desc": "Lässt sich nicht abwimmeln: öfter bellbereit.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "field",
+			"effects": [
+				{
+					"kind": "field_cd_pm",
+					"pm": 700
+				}
+			]
+		},
+		{
+			"id": "tal_mop_taktgefuehl",
+			"name": "Taktgefühl",
+			"desc": "Der Graf wartet den richtigen Moment ab: Stunts und SHOW gelingen öfter.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "stunt",
+			"effects": [
+				{
+					"kind": "stunt_window_pm",
+					"pm": 1200
+				}
+			]
+		},
+		{
+			"id": "tal_mop_liga_gelassen",
+			"name": "Liga-Gelassenheit",
+			"desc": "Ohne Rüstung & ohne Accessoire bleibt der Graf gelassen: in der Liga etwas mehr Resistenz.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 2,
+			"min_level": 3,
+			"icon": "liga",
+			"effects": [
+				{
+					"kind": "liga_stat_pct",
+					"stat": "res",
+					"pm": 50
+				}
+			]
+		},
+		{
+			"id": "tal_kai_r3_wischtechnik",
+			"name": "Wischtechnik",
+			"desc": "Jahre am Bahnsteig gewischt: Stärke +2.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 3,
+			"icon": "atk",
+			"effects": [
+				{
+					"kind": "stat_flat",
+					"stat": "str",
+					"value": 2
+				}
+			],
+			"row": 3,
+			"col": 1,
+			"tree": "kai"
+		},
+		{
+			"id": "tal_kai_r3_nachtschicht",
+			"name": "Nachtschicht-Kondition",
+			"desc": "Wer Nachtschichten übersteht, hält mehr aus: HP +10 %.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 3,
+			"icon": "hp",
+			"effects": [
+				{
+					"kind": "stat_pct",
+					"stat": "hp",
+					"pm": 100
+				}
+			],
+			"row": 3,
+			"col": 2,
+			"tree": "kai"
+		},
+		{
+			"id": "tal_kai_r3_dicke_haut",
+			"name": "Dicke Haut (tierheimgeprüft)",
+			"desc": "Bisse und Kratzer kennen Sie aus dem Tierheim: Abwehr +2.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 3,
+			"icon": "def",
+			"effects": [
+				{
+					"kind": "stat_flat",
+					"stat": "def",
+					"value": 2
+				}
+			],
+			"row": 3,
+			"col": 3,
+			"tree": "kai"
+		},
+		{
+			"id": "tal_kai_r5_fester_griff",
+			"name": "Fester Griff",
+			"desc": "Der Mopp rutscht nie: kritische Treffer +6 %.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 5,
+			"icon": "crit",
+			"effects": [
+				{
+					"kind": "crit_add_pm",
+					"pm": 60
+				}
+			],
+			"row": 5,
+			"col": 1,
+			"tree": "kai"
+		},
+		{
+			"id": "tal_kai_r5_glueckspfote",
+			"name": "Glückspfote",
+			"desc": "Ein Talisman aus dem Tierheim: Glück +1 und kritische Treffer +2 %.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 5,
+			"icon": "lck",
+			"effects": [
+				{
+					"kind": "stat_flat",
+					"stat": "lck",
+					"value": 1
+				},
+				{
+					"kind": "crit_add_pm",
+					"pm": 20
+				}
+			],
+			"row": 5,
+			"col": 2,
+			"tree": "kai"
+		},
+		{
+			"id": "tal_kai_r5_hausverstand",
+			"name": "Hausverstand",
+			"desc": "Zaubertricks glauben Sie kein Wort: Resistenz +1.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 5,
+			"icon": "res",
+			"effects": [
+				{
+					"kind": "stat_flat",
+					"stat": "res",
+					"value": 1
+				}
+			],
+			"row": 5,
+			"col": 3,
+			"tree": "kai"
+		},
+		{
+			"id": "tal_kai_r7_erster_eindruck",
+			"name": "Erster Eindruck",
+			"desc": "Nach einem Präventivschlag treffen Ihre ersten Schläge 15 % härter.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 7,
+			"icon": "field",
+			"effects": [
+				{
+					"kind": "preemptive_dmg_pm",
+					"pm": 1150
+				}
+			],
+			"row": 7,
+			"col": 1,
+			"tree": "kai"
+		},
+		{
+			"id": "tal_kai_r7_weit_ausholen",
+			"name": "Weit ausholen",
+			"desc": "Ihr Feldschlag reicht ein Viertel weiter.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 7,
+			"icon": "field",
+			"effects": [
+				{
+					"kind": "field_range_pm",
+					"pm": 1250
+				}
+			],
+			"row": 7,
+			"col": 2,
+			"tree": "kai"
+		},
+		{
+			"id": "tal_kai_r7_kaffee",
+			"name": "Automatenkaffee",
+			"desc": "Nach jedem Sieg ein Becher: +10 % Ihrer MP zurück.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 7,
+			"icon": "mp",
+			"effects": [
+				{
+					"kind": "post_battle_mp_pm",
+					"pm": 100
+				}
+			],
+			"row": 7,
+			"col": 3,
+			"tree": "kai"
+		},
+		{
+			"id": "tal_kai_r9_bissfest",
+			"name": "Bissfest",
+			"desc": "Gegen Gift abgehärtet, danke, Kanalratten: Giftschaden −25 %.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 9,
+			"icon": "element",
+			"effects": [
+				{
+					"kind": "element_pm",
+					"element": "poison",
+					"pm": 750
+				}
+			],
+			"row": 9,
+			"col": 1,
+			"tree": "kai"
+		},
+		{
+			"id": "tal_kai_r9_kamera3",
+			"name": "Kamera 3 kennt mich",
+			"desc": "Einmal je Etage ein Extra-Herz für M.O.D.s erste erfüllte Vorliebe.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 9,
+			"icon": "show",
+			"effects": [
+				{
+					"kind": "marotte_heart",
+					"per_floor": 1
+				}
+			],
+			"row": 9,
+			"col": 2,
+			"tree": "kai"
+		},
+		{
+			"id": "tal_kai_r9_liga_routine",
+			"name": "Liga-Routine",
+			"desc": "Ohne Rüstung und Accessoire in der Liga: Abwehr +5 %.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 9,
+			"icon": "liga",
+			"effects": [
+				{
+					"kind": "liga_stat_pct",
+					"stat": "def",
+					"pm": 50
+				}
+			],
+			"row": 9,
+			"col": 3,
+			"tree": "kai"
+		},
+		{
+			"id": "tal_mop_r3_mitternachtsformel",
+			"name": "Mitternachtsformel",
+			"desc": "Um Mitternacht gelernt, nie vergessen: Magie +2.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 3,
+			"icon": "mag",
+			"effects": [
+				{
+					"kind": "stat_flat",
+					"stat": "mag",
+					"value": 2
+				}
+			],
+			"row": 3,
+			"col": 1,
+			"tree": "mopsula"
+		},
+		{
+			"id": "tal_mop_r3_leberwurst",
+			"name": "Leberwurst-Diät",
+			"desc": "Streng nach Plan, der Plan heißt Leberwurst: HP +10 %.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 3,
+			"icon": "hp",
+			"effects": [
+				{
+					"kind": "stat_pct",
+					"stat": "hp",
+					"pm": 100
+				}
+			],
+			"row": 3,
+			"col": 2,
+			"tree": "mopsula"
+		},
+		{
+			"id": "tal_mop_r3_hoher_kragen",
+			"name": "Hoher Kragen",
+			"desc": "Flüche prallen am Kragen ab: Resistenz +2.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 3,
+			"icon": "res",
+			"effects": [
+				{
+					"kind": "stat_flat",
+					"stat": "res",
+					"value": 2
+				}
+			],
+			"row": 3,
+			"col": 3,
+			"tree": "mopsula"
+		},
+		{
+			"id": "tal_mop_r5_nachtaktiv",
+			"name": "Nachtaktiv",
+			"desc": "Nachts in Bestform, also immer: MP +10 %.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 5,
+			"icon": "mp",
+			"effects": [
+				{
+					"kind": "stat_pct",
+					"stat": "mp",
+					"pm": 100
+				}
+			],
+			"row": 5,
+			"col": 1,
+			"tree": "mopsula"
+		},
+		{
+			"id": "tal_mop_r5_zwinger7",
+			"name": "Zwinger 7 überlebt",
+			"desc": "Wer das Tierheim übersteht, hat Glück im Blut: Glück +2.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 5,
+			"icon": "lck",
+			"effects": [
+				{
+					"kind": "stat_flat",
+					"stat": "lck",
+					"value": 2
+				}
+			],
+			"row": 5,
+			"col": 2,
+			"tree": "mopsula"
+		},
+		{
+			"id": "tal_mop_r5_monokel",
+			"name": "Monokel-Fokus",
+			"desc": "Durchs Monokel sieht der Graf jeden Zug kommen: Tempo +1.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 5,
+			"icon": "spd",
+			"effects": [
+				{
+					"kind": "stat_flat",
+					"stat": "spd",
+					"value": 1
+				}
+			],
+			"row": 5,
+			"col": 3,
+			"tree": "mopsula"
+		},
+		{
+			"id": "tal_mop_r7_taktgefuehl",
+			"name": "Taktgefühl",
+			"desc": "Der Graf wartet den richtigen Moment ab: Stunts und SHOW gelingen 20 % öfter.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 7,
+			"icon": "stunt",
+			"effects": [
+				{
+					"kind": "stunt_window_pm",
+					"pm": 1200
+				}
+			],
+			"row": 7,
+			"col": 1,
+			"tree": "mopsula"
+		},
+		{
+			"id": "tal_mop_r7_stereo",
+			"name": "Bellen in Stereo",
+			"desc": "Das Bellen reicht ein Viertel weiter.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 7,
+			"icon": "field",
+			"effects": [
+				{
+					"kind": "field_range_pm",
+					"pm": 1250
+				}
+			],
+			"row": 7,
+			"col": 2,
+			"tree": "mopsula"
+		},
+		{
+			"id": "tal_mop_r7_schwer_vermittelbar",
+			"name": "Schwer vermittelbar",
+			"desc": "Lässt sich nicht abwimmeln: Bellen ist 30 % schneller wieder bereit.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 7,
+			"icon": "field",
+			"effects": [
+				{
+					"kind": "field_cd_pm",
+					"pm": 700
+				}
+			],
+			"row": 7,
+			"col": 3,
+			"tree": "mopsula"
+		},
+		{
+			"id": "tal_mop_r9_unterpelz",
+			"name": "Doppelter Unterpelz",
+			"desc": "Fell in zwei Lagen: Eisschaden −25 %.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 9,
+			"icon": "element",
+			"effects": [
+				{
+					"kind": "element_pm",
+					"element": "ice",
+					"pm": 750
+				}
+			],
+			"row": 9,
+			"col": 1,
+			"tree": "mopsula"
+		},
+		{
+			"id": "tal_mop_r9_koerbchen",
+			"name": "Körbchen-Nickerchen",
+			"desc": "Nach jedem Sieg ein Nickerchen im Körbchen: +10 % der MP zurück.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 9,
+			"icon": "mp",
+			"effects": [
+				{
+					"kind": "post_battle_mp_pm",
+					"pm": 100
+				}
+			],
+			"row": 9,
+			"col": 2,
+			"tree": "mopsula"
+		},
+		{
+			"id": "tal_mop_r9_liga_gelassen",
+			"name": "Liga-Gelassenheit",
+			"desc": "Ohne Rüstung und Accessoire in der Liga: Resistenz +5 %.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 9,
+			"icon": "liga",
+			"effects": [
+				{
+					"kind": "liga_stat_pct",
+					"stat": "res",
+					"pm": 50
+				}
+			],
+			"row": 9,
+			"col": 3,
+			"tree": "mopsula"
+		},
+		{
+			"id": "tal_kai_r20_kraftpaket",
+			"name": "Kraftpaket",
+			"desc": "Training zahlt sich aus: Stärke +5 %.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 20,
+			"icon": "atk",
+			"effects": [
+				{
+					"kind": "stat_pct",
+					"stat": "str",
+					"pm": 50
+				}
+			],
+			"row": 20,
+			"col": 1,
+			"tree": "kai"
+		},
+		{
+			"id": "tal_kai_r20_publikumsnah",
+			"name": "Publikumsnah",
+			"desc": "Sie winken in jede Kamera: Hype steigt 10 % schneller.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 20,
+			"icon": "show",
+			"effects": [
+				{
+					"kind": "hype_gain_pm",
+					"pm": 1100
+				}
+			],
+			"row": 20,
+			"col": 2,
+			"tree": "kai"
+		},
+		{
+			"id": "tal_kai_r20_zaehes_leder",
+			"name": "Zähes Leder",
+			"desc": "Arbeitskleidung mit Erfahrung: HP +5 %.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 20,
+			"icon": "hp",
+			"effects": [
+				{
+					"kind": "stat_pct",
+					"stat": "hp",
+					"pm": 50
+				}
+			],
+			"row": 20,
+			"col": 3,
+			"tree": "kai"
+		},
+		{
+			"id": "tal_kai_r30_schlagroutine",
+			"name": "Schlagroutine",
+			"desc": "Jeder Handgriff sitzt: kritische Treffer +3 %.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 30,
+			"icon": "crit",
+			"effects": [
+				{
+					"kind": "crit_add_pm",
+					"pm": 30
+				}
+			],
+			"row": 30,
+			"col": 1,
+			"tree": "kai"
+		},
+		{
+			"id": "tal_kai_r30_stuntroutine",
+			"name": "Stuntroutine",
+			"desc": "Geübt ist geübt: Stunts und SHOW gelingen 15 % öfter.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 30,
+			"icon": "stunt",
+			"effects": [
+				{
+					"kind": "stunt_window_pm",
+					"pm": 1150
+				}
+			],
+			"row": 30,
+			"col": 2,
+			"tree": "kai"
+		},
+		{
+			"id": "tal_kai_r30_arbeitsschutz",
+			"name": "Arbeitsschutz",
+			"desc": "Vorschrift ist Vorschrift: Abwehr +5 %.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 30,
+			"icon": "def",
+			"effects": [
+				{
+					"kind": "stat_pct",
+					"stat": "def",
+					"pm": 50
+				}
+			],
+			"row": 30,
+			"col": 3,
+			"tree": "kai"
+		},
+		{
+			"id": "tal_kai_r40_durchschlag",
+			"name": "Durchschlagskraft",
+			"desc": "Sie verursachen 5 % mehr Schaden.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 40,
+			"icon": "atk",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "dmg_dealt_pm",
+					"pm": 1050
+				}
+			],
+			"row": 40,
+			"col": 1,
+			"tree": "kai"
+		},
+		{
+			"id": "tal_kai_r40_fanliebling",
+			"name": "Fanliebling",
+			"desc": "Die Leute mögen Sie: Follower +10 %.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 40,
+			"icon": "show",
+			"effects": [
+				{
+					"kind": "follower_pm",
+					"pm": 1100
+				}
+			],
+			"row": 40,
+			"col": 2,
+			"tree": "kai"
+		},
+		{
+			"id": "tal_kai_r40_dickes_fell",
+			"name": "Dickes Fell",
+			"desc": "Sie erleiden 5 % weniger Schaden.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 40,
+			"icon": "def",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "dmg_taken_pm",
+					"pm": 950
+				}
+			],
+			"row": 40,
+			"col": 3,
+			"tree": "kai"
+		},
+		{
+			"id": "tal_kai_r50_feierabend",
+			"name": "Feierabendstimmung",
+			"desc": "Jeder besiegte Gegner gibt Ihnen 4 MP.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 50,
+			"icon": "mp",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "on",
+					"event": "kill",
+					"effect": {
+						"mp": 4
+					}
+				}
+			],
+			"row": 50,
+			"col": 1,
+			"tree": "kai"
+		},
+		{
+			"id": "tal_kai_r50_zugabe",
+			"name": "Zugabe!",
+			"desc": "Gelingt Ihre SHOW, bekommen Sie 10 MP.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 50,
+			"icon": "show",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "on",
+					"event": "show_success",
+					"effect": {
+						"mp": 10
+					}
+				}
+			],
+			"row": 50,
+			"col": 2,
+			"tree": "kai"
+		},
+		{
+			"id": "tal_kai_r50_pflaster",
+			"name": "Pflaster im Blut",
+			"desc": "Heilung an Ihnen wirkt 10 % stärker.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 50,
+			"icon": "hp",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "heal_taken_pm",
+					"pm": 1100
+				}
+			],
+			"row": 50,
+			"col": 3,
+			"tree": "kai"
+		},
+		{
+			"id": "tal_mop_r20_gelehrtenstirn",
+			"name": "Gelehrtenstirn",
+			"desc": "Studiert ist studiert: Magie +5 %.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 20,
+			"icon": "mag",
+			"effects": [
+				{
+					"kind": "stat_pct",
+					"stat": "mag",
+					"pm": 50
+				}
+			],
+			"row": 20,
+			"col": 1,
+			"tree": "mopsula"
+		},
+		{
+			"id": "tal_mop_r20_salonloewe",
+			"name": "Salonlöwe",
+			"desc": "Der Graf plaudert gern: Hype steigt 10 % schneller.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 20,
+			"icon": "show",
+			"effects": [
+				{
+					"kind": "hype_gain_pm",
+					"pm": 1100
+				}
+			],
+			"row": 20,
+			"col": 2,
+			"tree": "mopsula"
+		},
+		{
+			"id": "tal_mop_r20_dichtes_fell",
+			"name": "Dichtes Fell",
+			"desc": "Gut gepflegt, gut gepolstert: HP +5 %.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 20,
+			"icon": "hp",
+			"effects": [
+				{
+					"kind": "stat_pct",
+					"stat": "hp",
+					"pm": 50
+				}
+			],
+			"row": 20,
+			"col": 3,
+			"tree": "mopsula"
+		},
+		{
+			"id": "tal_mop_r30_praezise_formel",
+			"name": "Präzise Formel",
+			"desc": "Jede Silbe sitzt: kritische Treffer +3 %.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 30,
+			"icon": "crit",
+			"effects": [
+				{
+					"kind": "crit_add_pm",
+					"pm": 30
+				}
+			],
+			"row": 30,
+			"col": 1,
+			"tree": "mopsula"
+		},
+		{
+			"id": "tal_mop_r30_buehnenreif",
+			"name": "Bühnenreif",
+			"desc": "Der Umhang spielt mit: Stunts und SHOW gelingen 15 % öfter.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 30,
+			"icon": "stunt",
+			"effects": [
+				{
+					"kind": "stunt_window_pm",
+					"pm": 1150
+				}
+			],
+			"row": 30,
+			"col": 2,
+			"tree": "mopsula"
+		},
+		{
+			"id": "tal_mop_r30_gute_kinderstube",
+			"name": "Gute Kinderstube",
+			"desc": "Manieren schützen: Resistenz +5 %.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 30,
+			"icon": "res",
+			"effects": [
+				{
+					"kind": "stat_pct",
+					"stat": "res",
+					"pm": 50
+				}
+			],
+			"row": 30,
+			"col": 3,
+			"tree": "mopsula"
+		},
+		{
+			"id": "tal_mop_r40_strenge",
+			"name": "Akademische Strenge",
+			"desc": "Sie verursachen 5 % mehr Schaden.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 40,
+			"icon": "mag",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "dmg_dealt_pm",
+					"pm": 1050
+				}
+			],
+			"row": 40,
+			"col": 1,
+			"tree": "mopsula"
+		},
+		{
+			"id": "tal_mop_r40_autogramme",
+			"name": "Autogrammstunde",
+			"desc": "Pfotenabdruck mit Widmung: Follower +10 %.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 40,
+			"icon": "show",
+			"effects": [
+				{
+					"kind": "follower_pm",
+					"pm": 1100
+				}
+			],
+			"row": 40,
+			"col": 2,
+			"tree": "mopsula"
+		},
+		{
+			"id": "tal_mop_r40_fellpflege",
+			"name": "Fellpflege",
+			"desc": "Sie erleiden 5 % weniger Schaden.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 40,
+			"icon": "def",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "dmg_taken_pm",
+					"pm": 950
+				}
+			],
+			"row": 40,
+			"col": 3,
+			"tree": "mopsula"
+		},
+		{
+			"id": "tal_mop_r50_schnelle_zunge",
+			"name": "Schnelle Zunge",
+			"desc": "Ihre Zauber sind 10 % schneller fertig.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 50,
+			"icon": "mag",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "*",
+					"field": "cast",
+					"pm": 900
+				}
+			],
+			"row": 50,
+			"col": 1,
+			"tree": "mopsula"
+		},
+		{
+			"id": "tal_mop_r50_ovationen",
+			"name": "Stehende Ovationen",
+			"desc": "Gelingt Ihre SHOW, bekommen Sie 10 MP.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 50,
+			"icon": "show",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "on",
+					"event": "show_success",
+					"effect": {
+						"mp": 10
+					}
+				}
+			],
+			"row": 50,
+			"col": 2,
+			"tree": "mopsula"
+		},
+		{
+			"id": "tal_mop_r50_mitternachtsruhe",
+			"name": "Mitternachtsruhe",
+			"desc": "Heilung an Ihnen wirkt 10 % stärker.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 50,
+			"icon": "hp",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "heal_taken_pm",
+					"pm": 1100
+				}
+			],
+			"row": 50,
+			"col": 3,
+			"tree": "mopsula"
+		},
+		{
+			"id": "tal_wrk_r15_fugenkitt",
+			"name": "Fugenkitt",
+			"desc": "Spott und Bauzaun sind 20 % schneller wieder bereit.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 15,
+			"icon": "def",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_kai_taunt",
+					"field": "cooldown",
+					"pm": 800
+				},
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_kai_construction_fence",
+					"field": "cooldown",
+					"pm": 800
+				}
+			],
+			"row": 15,
+			"col": 1,
+			"tree": "cls_kai_wrecker",
+			"spec": "bollwerk"
+		},
+		{
+			"id": "tal_wrk_r15_baustellenradio",
+			"name": "Baustellenradio",
+			"desc": "Gelingt Ihre SHOW, bekommen Sie 10 MP.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 15,
+			"icon": "show",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "on",
+					"event": "show_success",
+					"effect": {
+						"mp": 10
+					}
+				}
+			],
+			"row": 15,
+			"col": 2,
+			"tree": "cls_kai_wrecker"
+		},
+		{
+			"id": "tal_wrk_r15_vorschlaghammer",
+			"name": "Vorschlaghammer",
+			"desc": "Wuchtschlag und Abrissbirne treffen 15 % härter.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 15,
+			"icon": "atk",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_kai_heavy_swing",
+					"field": "power",
+					"pm": 1150
+				},
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_kai_wrecking_ball",
+					"field": "power",
+					"pm": 1150
+				}
+			],
+			"row": 15,
+			"col": 3,
+			"tree": "cls_kai_wrecker",
+			"spec": "abriss"
+		},
+		{
+			"id": "tal_wrk_r25_bauzaun_profi",
+			"name": "Bauzaun-Profi",
+			"desc": "Der erste Treffer je Kampf trifft Sie 30 % schwächer.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 25,
+			"icon": "def",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "first_hit_taken_pm",
+					"pm": 700
+				}
+			],
+			"row": 25,
+			"col": 1,
+			"tree": "cls_kai_wrecker",
+			"spec": "bollwerk"
+		},
+		{
+			"id": "tal_wrk_r25_richtfest",
+			"name": "Richtfest",
+			"desc": "Jeder besiegte Gegner heilt Sie um 3 % Ihrer HP.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 25,
+			"icon": "hp",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "on",
+					"event": "kill",
+					"effect": {
+						"heal_pct": 3
+					}
+				}
+			],
+			"row": 25,
+			"col": 2,
+			"tree": "cls_kai_wrecker"
+		},
+		{
+			"id": "tal_wrk_r25_sprengsatz",
+			"name": "Sprengsatz",
+			"desc": "Rundumfeger und Presslufthammer treffen 20 % härter.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 25,
+			"icon": "atk",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_kai_sweep",
+					"field": "power",
+					"pm": 1200
+				},
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_kai_jackhammer",
+					"field": "power",
+					"pm": 1200
+				}
+			],
+			"row": 25,
+			"col": 3,
+			"tree": "cls_kai_wrecker",
+			"spec": "abriss"
+		},
+		{
+			"id": "tal_wrk_r35_statik",
+			"name": "Statiker:in",
+			"desc": "Sie stehen wie eine Wand: Abwehr +5 %.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 35,
+			"icon": "def",
+			"effects": [
+				{
+					"kind": "stat_pct",
+					"stat": "def",
+					"pm": 50
+				}
+			],
+			"row": 35,
+			"col": 1,
+			"tree": "cls_kai_wrecker",
+			"spec": "bollwerk"
+		},
+		{
+			"id": "tal_wrk_r35_bauabnahme",
+			"name": "Bauabnahme",
+			"desc": "Jedes Unterbrechen gibt Ihnen 5 MP.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 35,
+			"icon": "mp",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "on",
+					"event": "interrupt",
+					"effect": {
+						"mp": 5
+					}
+				}
+			],
+			"row": 35,
+			"col": 2,
+			"tree": "cls_kai_wrecker"
+		},
+		{
+			"id": "tal_wrk_r35_akkord",
+			"name": "Akkord",
+			"desc": "Alle Ihre Abklingzeiten sind 10 % kürzer.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 35,
+			"icon": "spd",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "*",
+					"field": "cooldown",
+					"pm": 900
+				}
+			],
+			"row": 35,
+			"col": 3,
+			"tree": "cls_kai_wrecker",
+			"spec": "abriss"
+		},
+		{
+			"id": "tal_wrk_r45_tragende_wand",
+			"name": "Tragende Wand",
+			"desc": "Sie erleiden 10 % weniger Schaden.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 45,
+			"icon": "def",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "dmg_taken_pm",
+					"pm": 900
+				}
+			],
+			"row": 45,
+			"col": 1,
+			"tree": "cls_kai_wrecker",
+			"spec": "bollwerk"
+		},
+		{
+			"id": "tal_wrk_r45_publikumsliebling",
+			"name": "Publikumsliebling",
+			"desc": "Stunts und SHOW gelingen 10 % öfter.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 45,
+			"icon": "stunt",
+			"effects": [
+				{
+					"kind": "stunt_window_pm",
+					"pm": 1100
+				}
+			],
+			"row": 45,
+			"col": 2,
+			"tree": "cls_kai_wrecker"
+		},
+		{
+			"id": "tal_wrk_r45_abrissbirne_xxl",
+			"name": "Abrissbirne XXL",
+			"desc": "Ihre Abrissbirne trifft 15 % härter.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 45,
+			"icon": "atk",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_kai_wrecking_ball",
+					"field": "power",
+					"pm": 1150
+				}
+			],
+			"row": 45,
+			"col": 3,
+			"tree": "cls_kai_wrecker",
+			"spec": "abriss"
+		},
+		{
+			"id": "tal_run_r15_taktfahrplan",
+			"name": "Taktfahrplan",
+			"desc": "Ihr Auto-Angriff schwingt 10 % schneller.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 15,
+			"icon": "spd",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "swing_pm",
+					"pm": 900
+				}
+			],
+			"row": 15,
+			"col": 1,
+			"tree": "cls_kai_runner",
+			"spec": "schnellzug"
+		},
+		{
+			"id": "tal_run_r15_durchsage",
+			"name": "Durchsage",
+			"desc": "Gelingt Ihre SHOW, bekommen Sie 10 MP.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 15,
+			"icon": "show",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "on",
+					"event": "show_success",
+					"effect": {
+						"mp": 10
+					}
+				}
+			],
+			"row": 15,
+			"col": 2,
+			"tree": "cls_kai_runner"
+		},
+		{
+			"id": "tal_run_r15_weichenstellung",
+			"name": "Weichenstellung",
+			"desc": "Leinen-Fallstrick und Notbremse sind 20 % schneller wieder bereit.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 15,
+			"icon": "spd",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_kai_leash_trip",
+					"field": "cooldown",
+					"pm": 800
+				},
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_kai_emergency_brake",
+					"field": "cooldown",
+					"pm": 800
+				}
+			],
+			"row": 15,
+			"col": 3,
+			"tree": "cls_kai_runner",
+			"spec": "weiche"
+		},
+		{
+			"id": "tal_run_r25_rueckenwind",
+			"name": "Rückenwind",
+			"desc": "Sie laufen 10 % schneller.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 25,
+			"icon": "spd",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "move_pm",
+					"pm": 1100
+				}
+			],
+			"row": 25,
+			"col": 1,
+			"tree": "cls_kai_runner",
+			"spec": "schnellzug"
+		},
+		{
+			"id": "tal_run_r25_puenktlich",
+			"name": "Pünktlichkeitsbonus",
+			"desc": "Jeder besiegte Gegner gibt Ihnen 3 MP.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 25,
+			"icon": "mp",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "on",
+					"event": "kill",
+					"effect": {
+						"mp": 3
+					}
+				}
+			],
+			"row": 25,
+			"col": 2,
+			"tree": "cls_kai_runner"
+		},
+		{
+			"id": "tal_run_r25_signalanlage",
+			"name": "Signalanlage",
+			"desc": "Jedes Unterbrechen gibt Ihnen 5 MP.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 25,
+			"icon": "mp",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "on",
+					"event": "interrupt",
+					"effect": {
+						"mp": 5
+					}
+				}
+			],
+			"row": 25,
+			"col": 3,
+			"tree": "cls_kai_runner",
+			"spec": "weiche"
+		},
+		{
+			"id": "tal_run_r35_expresszuschlag",
+			"name": "Expresszuschlag",
+			"desc": "Kritische Treffer +3 %.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 35,
+			"icon": "crit",
+			"effects": [
+				{
+					"kind": "crit_add_pm",
+					"pm": 30
+				}
+			],
+			"row": 35,
+			"col": 1,
+			"tree": "cls_kai_runner",
+			"spec": "schnellzug"
+		},
+		{
+			"id": "tal_run_r35_zugbegleitung",
+			"name": "Zugbegleitung",
+			"desc": "Heilung an Ihnen wirkt 10 % stärker.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 35,
+			"icon": "hp",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "heal_taken_pm",
+					"pm": 1100
+				}
+			],
+			"row": 35,
+			"col": 2,
+			"tree": "cls_kai_runner"
+		},
+		{
+			"id": "tal_run_r35_stellwerk",
+			"name": "Stellwerk",
+			"desc": "Rundumfeger und „Bitte zurücktreten!“ sind 15 % schneller wieder bereit.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 35,
+			"icon": "spd",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_kai_sweep",
+					"field": "cooldown",
+					"pm": 850
+				},
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_kai_stand_back",
+					"field": "cooldown",
+					"pm": 850
+				}
+			],
+			"row": 35,
+			"col": 3,
+			"tree": "cls_kai_runner",
+			"spec": "weiche"
+		},
+		{
+			"id": "tal_run_r45_hochgeschwindigkeit",
+			"name": "Hochgeschwindigkeit",
+			"desc": "Ihr Weichenstoß trifft 20 % härter.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 45,
+			"icon": "atk",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_kai_switch_kick",
+					"field": "power",
+					"pm": 1200
+				}
+			],
+			"row": 45,
+			"col": 1,
+			"tree": "cls_kai_runner",
+			"spec": "schnellzug"
+		},
+		{
+			"id": "tal_run_r45_fahrgastlob",
+			"name": "Fahrgastlob",
+			"desc": "Stunts und SHOW gelingen 10 % öfter.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 45,
+			"icon": "stunt",
+			"effects": [
+				{
+					"kind": "stunt_window_pm",
+					"pm": 1100
+				}
+			],
+			"row": 45,
+			"col": 2,
+			"tree": "cls_kai_runner"
+		},
+		{
+			"id": "tal_run_r45_prellbock",
+			"name": "Prellbock",
+			"desc": "Sie erleiden 10 % weniger Schaden.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 45,
+			"icon": "def",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "dmg_taken_pm",
+					"pm": 900
+				}
+			],
+			"row": 45,
+			"col": 3,
+			"tree": "cls_kai_runner",
+			"spec": "weiche"
+		},
+		{
+			"id": "tal_tnk_r15_bastelkiste",
+			"name": "Bastelkiste",
+			"desc": "Gegenstände im Kampf wirken 15 % stärker.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 15,
+			"icon": "atk",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "item:*",
+					"field": "power",
+					"pm": 1150
+				}
+			],
+			"row": 15,
+			"col": 1,
+			"tree": "cls_kai_tinker",
+			"spec": "bastelbude"
+		},
+		{
+			"id": "tal_tnk_r15_applausmaschine",
+			"name": "Applausmaschine",
+			"desc": "Gelingt Ihre SHOW, bekommen Sie 10 MP.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 15,
+			"icon": "show",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "on",
+					"event": "show_success",
+					"effect": {
+						"mp": 10
+					}
+				}
+			],
+			"row": 15,
+			"col": 2,
+			"tree": "cls_kai_tinker"
+		},
+		{
+			"id": "tal_tnk_r15_loetstelle",
+			"name": "Lötstelle",
+			"desc": "Ihr Lötkolben trifft 15 % härter.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 15,
+			"icon": "mag",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_kai_soldering_iron",
+					"field": "power",
+					"pm": 1150
+				}
+			],
+			"row": 15,
+			"col": 3,
+			"tree": "cls_kai_tinker",
+			"spec": "kurzschluss"
+		},
+		{
+			"id": "tal_tnk_r25_ersatzteillager",
+			"name": "Ersatzteillager",
+			"desc": "Jeder besiegte Gegner gibt Ihnen 3 MP.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 25,
+			"icon": "mp",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "on",
+					"event": "kill",
+					"effect": {
+						"mp": 3
+					}
+				}
+			],
+			"row": 25,
+			"col": 1,
+			"tree": "cls_kai_tinker",
+			"spec": "bastelbude"
+		},
+		{
+			"id": "tal_tnk_r25_funkenflug",
+			"name": "Funkenflug",
+			"desc": "Kritische Treffer +2 %.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 25,
+			"icon": "crit",
+			"effects": [
+				{
+					"kind": "crit_add_pm",
+					"pm": 20
+				}
+			],
+			"row": 25,
+			"col": 2,
+			"tree": "cls_kai_tinker"
+		},
+		{
+			"id": "tal_tnk_r25_hochspannung",
+			"name": "Hochspannung",
+			"desc": "Ihre Schock-Fähigkeiten treffen 15 % härter.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 25,
+			"icon": "element",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "element:shock",
+					"field": "power",
+					"pm": 1150
+				}
+			],
+			"row": 25,
+			"col": 3,
+			"tree": "cls_kai_tinker",
+			"spec": "kurzschluss"
+		},
+		{
+			"id": "tal_tnk_r35_schutzblech",
+			"name": "Schutzblech",
+			"desc": "Ein Blech mehr am Overall: Abwehr +5 %.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 35,
+			"icon": "def",
+			"effects": [
+				{
+					"kind": "stat_pct",
+					"stat": "def",
+					"pm": 50
+				}
+			],
+			"row": 35,
+			"col": 1,
+			"tree": "cls_kai_tinker",
+			"spec": "bastelbude"
+		},
+		{
+			"id": "tal_tnk_r35_tueftlerglueck",
+			"name": "Tüftlerglück",
+			"desc": "Manchmal passt das Teil einfach: Glück +4.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 35,
+			"icon": "lck",
+			"effects": [
+				{
+					"kind": "stat_flat",
+					"stat": "lck",
+					"value": 4
+				}
+			],
+			"row": 35,
+			"col": 2,
+			"tree": "cls_kai_tinker"
+		},
+		{
+			"id": "tal_tnk_r35_brandbeschleuniger",
+			"name": "Brandbeschleuniger",
+			"desc": "Ihre Feuer-Fähigkeiten treffen 15 % härter.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 35,
+			"icon": "element",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "element:fire",
+					"field": "power",
+					"pm": 1150
+				}
+			],
+			"row": 35,
+			"col": 3,
+			"tree": "cls_kai_tinker",
+			"spec": "kurzschluss"
+		},
+		{
+			"id": "tal_tnk_r45_patentamt",
+			"name": "Patentamt",
+			"desc": "Gegenstände im Kampf wirken weitere 15 % stärker.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 45,
+			"icon": "atk",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "item:*",
+					"field": "power",
+					"pm": 1150
+				}
+			],
+			"row": 45,
+			"col": 1,
+			"tree": "cls_kai_tinker",
+			"spec": "bastelbude"
+		},
+		{
+			"id": "tal_tnk_r45_messestand",
+			"name": "Messestand",
+			"desc": "Ihre Erfindungen ziehen Leute an: Follower +10 %.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 45,
+			"icon": "show",
+			"effects": [
+				{
+					"kind": "follower_pm",
+					"pm": 1100
+				}
+			],
+			"row": 45,
+			"col": 2,
+			"tree": "cls_kai_tinker"
+		},
+		{
+			"id": "tal_tnk_r45_isolierband",
+			"name": "Isolierband",
+			"desc": "Ihre Schock-Fähigkeiten sind 15 % schneller wieder bereit.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 45,
+			"icon": "spd",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "element:shock",
+					"field": "cooldown",
+					"pm": 850
+				}
+			],
+			"row": 45,
+			"col": 3,
+			"tree": "cls_kai_tinker",
+			"spec": "kurzschluss"
+		},
+		{
+			"id": "tal_shw_r15_warmup",
+			"name": "Warm-up",
+			"desc": "Sie heizen das Studio an: Hype steigt 10 % schneller.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 15,
+			"icon": "show",
+			"effects": [
+				{
+					"kind": "hype_gain_pm",
+					"pm": 1100
+				}
+			],
+			"row": 15,
+			"col": 1,
+			"tree": "cls_kai_showrunner",
+			"spec": "publikum"
+		},
+		{
+			"id": "tal_shw_r15_pausenclown",
+			"name": "Pausenclown",
+			"desc": "Jeder besiegte Gegner gibt Ihnen 3 MP.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 15,
+			"icon": "mp",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "on",
+					"event": "kill",
+					"effect": {
+						"mp": 3
+					}
+				}
+			],
+			"row": 15,
+			"col": 2,
+			"tree": "cls_kai_showrunner"
+		},
+		{
+			"id": "tal_shw_r15_stuntkoordination",
+			"name": "Stuntkoordination",
+			"desc": "Stunts und SHOW gelingen 15 % öfter.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 15,
+			"icon": "stunt",
+			"effects": [
+				{
+					"kind": "stunt_window_pm",
+					"pm": 1150
+				}
+			],
+			"row": 15,
+			"col": 3,
+			"tree": "cls_kai_showrunner",
+			"spec": "stuntdouble"
+		},
+		{
+			"id": "tal_shw_r25_studiopublikum",
+			"name": "Studiopublikum",
+			"desc": "Das Studio jubelt mit: Follower +10 %.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 25,
+			"icon": "show",
+			"effects": [
+				{
+					"kind": "follower_pm",
+					"pm": 1100
+				}
+			],
+			"row": 25,
+			"col": 1,
+			"tree": "cls_kai_showrunner",
+			"spec": "publikum"
+		},
+		{
+			"id": "tal_shw_r25_rampenlicht",
+			"name": "Rampenlicht",
+			"desc": "Kritische Treffer +2 %.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 25,
+			"icon": "crit",
+			"effects": [
+				{
+					"kind": "crit_add_pm",
+					"pm": 20
+				}
+			],
+			"row": 25,
+			"col": 2,
+			"tree": "cls_kai_showrunner"
+		},
+		{
+			"id": "tal_shw_r25_fallschule",
+			"name": "Fallschule",
+			"desc": "Gelingt Ihre SHOW, heilt sie Sie um 5 % Ihrer HP.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 25,
+			"icon": "hp",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "on",
+					"event": "show_success",
+					"effect": {
+						"heal_pct": 5
+					}
+				}
+			],
+			"row": 25,
+			"col": 3,
+			"tree": "cls_kai_showrunner",
+			"spec": "stuntdouble"
+		},
+		{
+			"id": "tal_shw_r35_einschaltquote",
+			"name": "Einschaltquote",
+			"desc": "Ihre spektakulären Fähigkeiten treffen 10 % härter.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 35,
+			"icon": "atk",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "tag:flashy",
+					"field": "power",
+					"pm": 1100
+				}
+			],
+			"row": 35,
+			"col": 1,
+			"tree": "cls_kai_showrunner",
+			"spec": "publikum"
+		},
+		{
+			"id": "tal_shw_r35_maske",
+			"name": "Maske",
+			"desc": "Gut geschminkt hält länger: HP +5 %.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 35,
+			"icon": "hp",
+			"effects": [
+				{
+					"kind": "stat_pct",
+					"stat": "hp",
+					"pm": 50
+				}
+			],
+			"row": 35,
+			"col": 2,
+			"tree": "cls_kai_showrunner"
+		},
+		{
+			"id": "tal_shw_r35_doppelgaenger",
+			"name": "Doppelgänger:in",
+			"desc": "Ihre riskanten Fähigkeiten treffen 15 % härter.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 35,
+			"icon": "stunt",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "tag:risky",
+					"field": "power",
+					"pm": 1150
+				}
+			],
+			"row": 35,
+			"col": 3,
+			"tree": "cls_kai_showrunner",
+			"spec": "stuntdouble"
+		},
+		{
+			"id": "tal_shw_r45_lieblingskandidat",
+			"name": "Lieblingskandidat:in",
+			"desc": "Einmal je Etage ein Extra-Herz für M.O.D.s erste erfüllte Vorliebe.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 45,
+			"icon": "show",
+			"effects": [
+				{
+					"kind": "marotte_heart",
+					"per_floor": 1
+				}
+			],
+			"row": 45,
+			"col": 1,
+			"tree": "cls_kai_showrunner",
+			"spec": "publikum"
+		},
+		{
+			"id": "tal_shw_r45_zugabe",
+			"name": "Da capo!",
+			"desc": "Gelingt Ihre SHOW, bekommen Sie 10 MP.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 45,
+			"icon": "show",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "on",
+					"event": "show_success",
+					"effect": {
+						"mp": 10
+					}
+				}
+			],
+			"row": 45,
+			"col": 2,
+			"tree": "cls_kai_showrunner"
+		},
+		{
+			"id": "tal_shw_r45_abrollen",
+			"name": "Abrollen",
+			"desc": "Sie erleiden 10 % weniger Schaden.",
+			"for": [
+				"kai"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 45,
+			"icon": "def",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "dmg_taken_pm",
+					"pm": 900
+				}
+			],
+			"row": 45,
+			"col": 3,
+			"tree": "cls_kai_showrunner",
+			"spec": "stuntdouble"
+		},
+		{
+			"id": "tal_arc_r15_zunder",
+			"name": "Zunder",
+			"desc": "Ihre Feuerzauber treffen 15 % härter.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 15,
+			"icon": "element",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "element:fire",
+					"field": "power",
+					"pm": 1150
+				}
+			],
+			"row": 15,
+			"col": 1,
+			"tree": "cls_mop_archmage",
+			"spec": "feuerwerk"
+		},
+		{
+			"id": "tal_arc_r15_funkelnde_pointe",
+			"name": "Funkelnde Pointe",
+			"desc": "Gelingt Ihre SHOW, bekommen Sie 10 MP.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 15,
+			"icon": "show",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "on",
+					"event": "show_success",
+					"effect": {
+						"mp": 10
+					}
+				}
+			],
+			"row": 15,
+			"col": 2,
+			"tree": "cls_mop_archmage"
+		},
+		{
+			"id": "tal_arc_r15_spannungsfeld",
+			"name": "Spannungsfeld",
+			"desc": "Ihre Schockzauber treffen 15 % härter.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 15,
+			"icon": "element",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "element:shock",
+					"field": "power",
+					"pm": 1150
+				}
+			],
+			"row": 15,
+			"col": 3,
+			"tree": "cls_mop_archmage",
+			"spec": "gewitter"
+		},
+		{
+			"id": "tal_arc_r25_glutnest",
+			"name": "Glutnest",
+			"desc": "Adelsflamme und Erzflamme sind 10 % schneller gezaubert.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 25,
+			"icon": "mag",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_mop_noble_flame",
+					"field": "cast",
+					"pm": 900
+				},
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_mop_arch_flame",
+					"field": "cast",
+					"pm": 900
+				}
+			],
+			"row": 25,
+			"col": 1,
+			"tree": "cls_mop_archmage",
+			"spec": "feuerwerk"
+		},
+		{
+			"id": "tal_arc_r25_zauberbuch",
+			"name": "Dickes Zauberbuch",
+			"desc": "Mehr Formeln, mehr Reserven: MP +5 %.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 25,
+			"icon": "mp",
+			"effects": [
+				{
+					"kind": "stat_pct",
+					"stat": "mp",
+					"pm": 50
+				}
+			],
+			"row": 25,
+			"col": 2,
+			"tree": "cls_mop_archmage"
+		},
+		{
+			"id": "tal_arc_r25_blitzableiter",
+			"name": "Blitzableiter",
+			"desc": "Schockschaden an Ihnen sinkt um 20 %.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 25,
+			"icon": "element",
+			"effects": [
+				{
+					"kind": "element_pm",
+					"element": "shock",
+					"pm": 800
+				}
+			],
+			"row": 25,
+			"col": 3,
+			"tree": "cls_mop_archmage",
+			"spec": "gewitter"
+		},
+		{
+			"id": "tal_arc_r35_flaechenbrand",
+			"name": "Flächenbrand",
+			"desc": "Ihre Feuerzauber sind 10 % schneller wieder bereit.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 35,
+			"icon": "spd",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "element:fire",
+					"field": "cooldown",
+					"pm": 900
+				}
+			],
+			"row": 35,
+			"col": 1,
+			"tree": "cls_mop_archmage",
+			"spec": "feuerwerk"
+		},
+		{
+			"id": "tal_arc_r35_gelehrtenruhe",
+			"name": "Gelehrtenruhe",
+			"desc": "Sie erleiden 5 % weniger Schaden.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 35,
+			"icon": "def",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "dmg_taken_pm",
+					"pm": 950
+				}
+			],
+			"row": 35,
+			"col": 2,
+			"tree": "cls_mop_archmage"
+		},
+		{
+			"id": "tal_arc_r35_kettenblitz",
+			"name": "Kettenblitz",
+			"desc": "Donnerbellen und Gewitterbellen sind 15 % schneller wieder bereit.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 35,
+			"icon": "spd",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_mop_thunder_bark",
+					"field": "cooldown",
+					"pm": 850
+				},
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_mop_storm_bark",
+					"field": "cooldown",
+					"pm": 850
+				}
+			],
+			"row": 35,
+			"col": 3,
+			"tree": "cls_mop_archmage",
+			"spec": "gewitter"
+		},
+		{
+			"id": "tal_arc_r45_grosses_feuerwerk",
+			"name": "Großes Feuerwerk",
+			"desc": "Ihre Feuerzauber treffen weitere 15 % härter.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 45,
+			"icon": "element",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "element:fire",
+					"field": "power",
+					"pm": 1150
+				}
+			],
+			"row": 45,
+			"col": 1,
+			"tree": "cls_mop_archmage",
+			"spec": "feuerwerk"
+		},
+		{
+			"id": "tal_arc_r45_hoersaal",
+			"name": "Hörsaal",
+			"desc": "Vorlesung mit Pointe: kritische Treffer +3 %.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 45,
+			"icon": "crit",
+			"effects": [
+				{
+					"kind": "crit_add_pm",
+					"pm": 30
+				}
+			],
+			"row": 45,
+			"col": 2,
+			"tree": "cls_mop_archmage"
+		},
+		{
+			"id": "tal_arc_r45_gewitterzelle",
+			"name": "Gewitterzelle",
+			"desc": "Ihre Schockzauber treffen weitere 15 % härter.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 45,
+			"icon": "element",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "element:shock",
+					"field": "power",
+					"pm": 1150
+				}
+			],
+			"row": 45,
+			"col": 3,
+			"tree": "cls_mop_archmage",
+			"spec": "gewitter"
+		},
+		{
+			"id": "tal_phy_r15_erstversorgung",
+			"name": "Erstversorgung",
+			"desc": "Heiliges Schlabbern und Hausbesuch heilen 15 % mehr.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 15,
+			"icon": "hp",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_mop_holy_lick",
+					"field": "power",
+					"pm": 1150
+				},
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_mop_house_call",
+					"field": "power",
+					"pm": 1150
+				}
+			],
+			"row": 15,
+			"col": 1,
+			"tree": "cls_mop_physician",
+			"spec": "notaufnahme"
+		},
+		{
+			"id": "tal_phy_r15_sprechstunde",
+			"name": "Sprechstunde",
+			"desc": "Gelingt Ihre SHOW, bekommen Sie 10 MP.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 15,
+			"icon": "show",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "on",
+					"event": "show_success",
+					"effect": {
+						"mp": 10
+					}
+				}
+			],
+			"row": 15,
+			"col": 2,
+			"tree": "cls_mop_physician"
+		},
+		{
+			"id": "tal_phy_r15_kurbad",
+			"name": "Kurbad",
+			"desc": "Massen-Schlabbern heilt 15 % mehr.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 15,
+			"icon": "hp",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_mop_mass_lick",
+					"field": "power",
+					"pm": 1150
+				}
+			],
+			"row": 15,
+			"col": 3,
+			"tree": "cls_mop_physician",
+			"spec": "kurkonzert"
+		},
+		{
+			"id": "tal_phy_r25_schnelle_hilfe",
+			"name": "Schnelle Hilfe",
+			"desc": "Heiliges Schlabbern und Hausbesuch sind 15 % schneller gezaubert.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 25,
+			"icon": "spd",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_mop_holy_lick",
+					"field": "cast",
+					"pm": 850
+				},
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_mop_house_call",
+					"field": "cast",
+					"pm": 850
+				}
+			],
+			"row": 25,
+			"col": 1,
+			"tree": "cls_mop_physician",
+			"spec": "notaufnahme"
+		},
+		{
+			"id": "tal_phy_r25_hygieneplan",
+			"name": "Hygieneplan",
+			"desc": "Giftschaden an Ihnen sinkt um 20 %.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 25,
+			"icon": "element",
+			"effects": [
+				{
+					"kind": "element_pm",
+					"element": "poison",
+					"pm": 800
+				}
+			],
+			"row": 25,
+			"col": 2,
+			"tree": "cls_mop_physician"
+		},
+		{
+			"id": "tal_phy_r25_kurkonzert",
+			"name": "Kurkonzert",
+			"desc": "Massen-Schlabbern ist 20 % schneller wieder bereit.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 25,
+			"icon": "spd",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_mop_mass_lick",
+					"field": "cooldown",
+					"pm": 800
+				}
+			],
+			"row": 25,
+			"col": 3,
+			"tree": "cls_mop_physician",
+			"spec": "kurkonzert"
+		},
+		{
+			"id": "tal_phy_r35_notfallkoffer",
+			"name": "Notfallkoffer",
+			"desc": "Fällt ein Verbündeter, bekommen Sie 10 MP.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 35,
+			"icon": "mp",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "on",
+					"event": "ko_ally",
+					"effect": {
+						"mp": 10
+					}
+				}
+			],
+			"row": 35,
+			"col": 1,
+			"tree": "cls_mop_physician",
+			"spec": "notaufnahme"
+		},
+		{
+			"id": "tal_phy_r35_bettruhe",
+			"name": "Bettruhe",
+			"desc": "Heilung an Ihnen wirkt 10 % stärker.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 35,
+			"icon": "hp",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "heal_taken_pm",
+					"pm": 1100
+				}
+			],
+			"row": 35,
+			"col": 2,
+			"tree": "cls_mop_physician"
+		},
+		{
+			"id": "tal_phy_r35_wellness",
+			"name": "Wellness",
+			"desc": "Massen-Schlabbern kostet 20 % weniger MP.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 35,
+			"icon": "mp",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_mop_mass_lick",
+					"field": "mp",
+					"pm": 800
+				}
+			],
+			"row": 35,
+			"col": 3,
+			"tree": "cls_mop_physician",
+			"spec": "kurkonzert"
+		},
+		{
+			"id": "tal_phy_r45_zweitmeinung",
+			"name": "Zweitmeinung",
+			"desc": "Ihr Konsilium heilt 20 % mehr.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 45,
+			"icon": "hp",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_mop_consilium",
+					"field": "power",
+					"pm": 1200
+				}
+			],
+			"row": 45,
+			"col": 1,
+			"tree": "cls_mop_physician",
+			"spec": "notaufnahme"
+		},
+		{
+			"id": "tal_phy_r45_kittel",
+			"name": "Gestärkter Kittel",
+			"desc": "Gut gebügelt hält besser: Resistenz +5 %.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 45,
+			"icon": "res",
+			"effects": [
+				{
+					"kind": "stat_pct",
+					"stat": "res",
+					"pm": 50
+				}
+			],
+			"row": 45,
+			"col": 2,
+			"tree": "cls_mop_physician"
+		},
+		{
+			"id": "tal_phy_r45_trinkkur",
+			"name": "Trinkkur",
+			"desc": "Nach jedem Sieg +6 % Ihrer MP zurück.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 45,
+			"icon": "mp",
+			"effects": [
+				{
+					"kind": "post_battle_mp_pm",
+					"pm": 60
+				}
+			],
+			"row": 45,
+			"col": 3,
+			"tree": "cls_mop_physician",
+			"spec": "kurkonzert"
+		},
+		{
+			"id": "tal_hex_r15_aktenzeichen",
+			"name": "Aktenzeichen",
+			"desc": "Ihr Einspruch ist 20 % schneller wieder bereit.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 15,
+			"icon": "spd",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_mop_objection",
+					"field": "cooldown",
+					"pm": 800
+				}
+			],
+			"row": 15,
+			"col": 1,
+			"tree": "cls_mop_hexer",
+			"spec": "fluchkanzlei"
+		},
+		{
+			"id": "tal_hex_r15_gruselfaktor",
+			"name": "Gruselfaktor",
+			"desc": "Gelingt Ihre SHOW, bekommen Sie 10 MP.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 15,
+			"icon": "show",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "on",
+					"event": "show_success",
+					"effect": {
+						"mp": 10
+					}
+				}
+			],
+			"row": 15,
+			"col": 2,
+			"tree": "cls_mop_hexer"
+		},
+		{
+			"id": "tal_hex_r15_spukgift",
+			"name": "Spukgift",
+			"desc": "Ihre Giftzauber treffen 15 % härter.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 15,
+			"icon": "element",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "element:poison",
+					"field": "power",
+					"pm": 1150
+				}
+			],
+			"row": 15,
+			"col": 3,
+			"tree": "cls_mop_hexer",
+			"spec": "spukschloss"
+		},
+		{
+			"id": "tal_hex_r25_mahnbescheid",
+			"name": "Mahnbescheid",
+			"desc": "Ihr Aktenfluch kostet 20 % weniger MP.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 25,
+			"icon": "mp",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_mop_file_curse",
+					"field": "mp",
+					"pm": 800
+				}
+			],
+			"row": 25,
+			"col": 1,
+			"tree": "cls_mop_hexer",
+			"spec": "fluchkanzlei"
+		},
+		{
+			"id": "tal_hex_r25_nachtschatten",
+			"name": "Nachtschatten",
+			"desc": "Lautlos durch die Gänge: Tempo +5 %.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 25,
+			"icon": "spd",
+			"effects": [
+				{
+					"kind": "stat_pct",
+					"stat": "spd",
+					"pm": 50
+				}
+			],
+			"row": 25,
+			"col": 2,
+			"tree": "cls_mop_hexer"
+		},
+		{
+			"id": "tal_hex_r25_gespenstertakt",
+			"name": "Gespenstertakt",
+			"desc": "Ihr Spukbellen ist 15 % schneller wieder bereit.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 25,
+			"icon": "spd",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_mop_haunt_bark",
+					"field": "cooldown",
+					"pm": 850
+				}
+			],
+			"row": 25,
+			"col": 3,
+			"tree": "cls_mop_hexer",
+			"spec": "spukschloss"
+		},
+		{
+			"id": "tal_hex_r35_paragrafenreiter",
+			"name": "Paragrafenreiter",
+			"desc": "Einspruch und Frostniesen treffen 20 % härter.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 35,
+			"icon": "element",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_mop_objection",
+					"field": "power",
+					"pm": 1200
+				},
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_mop_frost_sneeze",
+					"field": "power",
+					"pm": 1200
+				}
+			],
+			"row": 35,
+			"col": 1,
+			"tree": "cls_mop_hexer",
+			"spec": "fluchkanzlei"
+		},
+		{
+			"id": "tal_hex_r35_kaminfeuer",
+			"name": "Kaminfeuer",
+			"desc": "Heilung an Ihnen wirkt 10 % stärker.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 35,
+			"icon": "hp",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "heal_taken_pm",
+					"pm": 1100
+				}
+			],
+			"row": 35,
+			"col": 2,
+			"tree": "cls_mop_hexer"
+		},
+		{
+			"id": "tal_hex_r35_spukschloss",
+			"name": "Spukschloss",
+			"desc": "Ihre Giftzauber sind 10 % schneller wieder bereit.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 35,
+			"icon": "spd",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "element:poison",
+					"field": "cooldown",
+					"pm": 900
+				}
+			],
+			"row": 35,
+			"col": 3,
+			"tree": "cls_mop_hexer",
+			"spec": "spukschloss"
+		},
+		{
+			"id": "tal_hex_r45_widerspruchsfrist",
+			"name": "Widerspruchsfrist",
+			"desc": "Sie erleiden 10 % weniger Schaden.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 45,
+			"icon": "def",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "dmg_taken_pm",
+					"pm": 900
+				}
+			],
+			"row": 45,
+			"col": 1,
+			"tree": "cls_mop_hexer",
+			"spec": "fluchkanzlei"
+		},
+		{
+			"id": "tal_hex_r45_ahnengalerie",
+			"name": "Ahnengalerie",
+			"desc": "Die Vorfahren schauen zu: kritische Treffer +3 %.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 45,
+			"icon": "crit",
+			"effects": [
+				{
+					"kind": "crit_add_pm",
+					"pm": 30
+				}
+			],
+			"row": 45,
+			"col": 2,
+			"tree": "cls_mop_hexer"
+		},
+		{
+			"id": "tal_hex_r45_geisterstunde",
+			"name": "Spuk ohne Ende",
+			"desc": "Ihre Giftzauber treffen weitere 15 % härter.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 45,
+			"icon": "element",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "element:poison",
+					"field": "power",
+					"pm": 1150
+				}
+			],
+			"row": 45,
+			"col": 3,
+			"tree": "cls_mop_hexer",
+			"spec": "spukschloss"
+		},
+		{
+			"id": "tal_zer_r15_tischordnung",
+			"name": "Tischordnung",
+			"desc": "Ihr Gräfliches Gutachten ist 20 % schneller wieder bereit.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 15,
+			"icon": "spd",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_mop_expert_opinion",
+					"field": "cooldown",
+					"pm": 800
+				}
+			],
+			"row": 15,
+			"col": 1,
+			"tree": "cls_mop_zeremonienmeister",
+			"spec": "protokoll"
+		},
+		{
+			"id": "tal_zer_r15_fanfare",
+			"name": "Fanfare",
+			"desc": "Gelingt Ihre SHOW, bekommen Sie 10 MP.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 15,
+			"icon": "show",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "on",
+					"event": "show_success",
+					"effect": {
+						"mp": 10
+					}
+				}
+			],
+			"row": 15,
+			"col": 2,
+			"tree": "cls_mop_zeremonienmeister"
+		},
+		{
+			"id": "tal_zer_r15_lampenlicht",
+			"name": "Lampenlicht",
+			"desc": "Stunts und SHOW gelingen 15 % öfter.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 15,
+			"icon": "stunt",
+			"effects": [
+				{
+					"kind": "stunt_window_pm",
+					"pm": 1150
+				}
+			],
+			"row": 15,
+			"col": 3,
+			"tree": "cls_mop_zeremonienmeister",
+			"spec": "gala"
+		},
+		{
+			"id": "tal_zer_r25_ehrengeleit",
+			"name": "Ehrengeleit",
+			"desc": "Ehrenrunde und Protokollarischer Beistand heilen 15 % mehr.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 25,
+			"icon": "hp",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_mop_lap_of_honour",
+					"field": "power",
+					"pm": 1150
+				},
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_mop_formal_support",
+					"field": "power",
+					"pm": 1150
+				}
+			],
+			"row": 25,
+			"col": 1,
+			"tree": "cls_mop_zeremonienmeister",
+			"spec": "protokoll"
+		},
+		{
+			"id": "tal_zer_r25_garderobe",
+			"name": "Garderobe",
+			"desc": "Der Umhang polstert: HP +5 %.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 25,
+			"icon": "hp",
+			"effects": [
+				{
+					"kind": "stat_pct",
+					"stat": "hp",
+					"pm": 50
+				}
+			],
+			"row": 25,
+			"col": 2,
+			"tree": "cls_mop_zeremonienmeister"
+		},
+		{
+			"id": "tal_zer_r25_galadinner",
+			"name": "Galadinner",
+			"desc": "Das Publikum isst mit: Hype steigt 10 % schneller.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 25,
+			"icon": "show",
+			"effects": [
+				{
+					"kind": "hype_gain_pm",
+					"pm": 1100
+				}
+			],
+			"row": 25,
+			"col": 3,
+			"tree": "cls_mop_zeremonienmeister",
+			"spec": "gala"
+		},
+		{
+			"id": "tal_zer_r35_etikette",
+			"name": "Etikette",
+			"desc": "Haltung bewahren: Resistenz +5 %.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 35,
+			"icon": "res",
+			"effects": [
+				{
+					"kind": "stat_pct",
+					"stat": "res",
+					"pm": 50
+				}
+			],
+			"row": 35,
+			"col": 1,
+			"tree": "cls_mop_zeremonienmeister",
+			"spec": "protokoll"
+		},
+		{
+			"id": "tal_zer_r35_ballsaal",
+			"name": "Ballsaal",
+			"desc": "Sie laufen 10 % schneller.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 35,
+			"icon": "spd",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "move_pm",
+					"pm": 1100
+				}
+			],
+			"row": 35,
+			"col": 2,
+			"tree": "cls_mop_zeremonienmeister"
+		},
+		{
+			"id": "tal_zer_r35_mitternachtsglanz",
+			"name": "Mitternachtsglanz",
+			"desc": "Auftritt um Mitternacht und Mitternachtsgala treffen 15 % härter.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 35,
+			"icon": "stunt",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_stunt_mop_entrance",
+					"field": "power",
+					"pm": 1150
+				},
+				{
+					"kind": "rt_mod",
+					"op": "skill_pm",
+					"skill": "skl_mop_midnight_gala",
+					"field": "power",
+					"pm": 1150
+				}
+			],
+			"row": 35,
+			"col": 3,
+			"tree": "cls_mop_zeremonienmeister",
+			"spec": "gala"
+		},
+		{
+			"id": "tal_zer_r45_ehrenwache",
+			"name": "Ehrenwache",
+			"desc": "Zu Beginn jedes Kampfes sind Sie 3 Sekunden im Turbo.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 45,
+			"icon": "spd",
+			"effects": [
+				{
+					"kind": "rt_mod",
+					"op": "on",
+					"event": "combat_start",
+					"effect": {
+						"status": "sts_haste",
+						"ms": 3000
+					}
+				}
+			],
+			"row": 45,
+			"col": 1,
+			"tree": "cls_mop_zeremonienmeister",
+			"spec": "protokoll"
+		},
+		{
+			"id": "tal_zer_r45_programmheft",
+			"name": "Programmheft",
+			"desc": "Jeder will eins: Follower +10 %.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 45,
+			"icon": "show",
+			"effects": [
+				{
+					"kind": "follower_pm",
+					"pm": 1100
+				}
+			],
+			"row": 45,
+			"col": 2,
+			"tree": "cls_mop_zeremonienmeister"
+		},
+		{
+			"id": "tal_zer_r45_grosser_auftritt",
+			"name": "Großer Auftritt",
+			"desc": "Stunts und SHOW gelingen 10 % öfter.",
+			"for": [
+				"mopsula"
+			],
+			"max_rank": 1,
+			"weight": 1,
+			"min_level": 45,
+			"icon": "stunt",
+			"effects": [
+				{
+					"kind": "stunt_window_pm",
+					"pm": 1100
+				}
+			],
+			"row": 45,
+			"col": 3,
+			"tree": "cls_mop_zeremonienmeister",
+			"spec": "gala"
+		}
+	]
+}

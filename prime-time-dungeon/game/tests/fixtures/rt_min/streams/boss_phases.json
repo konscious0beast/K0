@@ -1,0 +1,1739 @@
+{
+	"name": "boss_phases",
+	"notes": "Intro, Phasen, Adds, Zug-Kill, Enrage (07 §12.2).",
+	"result": {
+		"advantage": 0,
+		"boss_id": "enm_rt_test_boss",
+		"boss_rewards": [],
+		"credits": 40,
+		"credits_delta": 0,
+		"credits_refunded": 0,
+		"credits_stolen": 0,
+		"crits": 0,
+		"damage_taken": 0,
+		"defeated_ids": [
+			"enm_rt_test_boss"
+		],
+		"drops": [],
+		"duration_ticks": 1015,
+		"encounter_id": "enc_rt_test_boss",
+		"escaped": [],
+		"exp": 80,
+		"group_id": "f1_fb",
+		"group_ids": [
+			"f1_fb"
+		],
+		"is_boss": true,
+		"item_delta": {},
+		"items_used": 0,
+		"kills": 1,
+		"min_party_hp": 168,
+		"outcome": 0,
+		"overkill_credits": 0,
+		"party_hp": {
+			"kai": 256,
+			"mopsula": 168
+		},
+		"party_kos": 0,
+		"party_mp": {
+			"kai": 12,
+			"mopsula": 30
+		},
+		"party_turns": 2,
+		"perfect_phases": 2,
+		"train_kills": 2,
+		"turns": 4,
+		"weak_found": {},
+		"weakness_hits": 0
+	},
+	"setup": {
+		"advantage": 0,
+		"auto_attack": true,
+		"auto_battle": false,
+		"auto_retarget": true,
+		"can_flee": false,
+		"cell": [
+			2,
+			1
+		],
+		"controlled_id": "p0",
+		"credits_available": 50,
+		"difficulty": "prime",
+		"encounter_id": "enc_rt_test_boss",
+		"enemy_dmg_mult_ppm": 1000000,
+		"enemy_ids": [
+			"enm_rt_test_boss"
+		],
+		"exp_mult_ppm": 1000000,
+		"floor_index": 1,
+		"geo": {
+			"blockers": [],
+			"closed": true,
+			"doors": 5,
+			"r": 600
+		},
+		"group_id": "f1_fb",
+		"groups": [
+			{
+				"encounter_id": "enc_rt_test_boss",
+				"enemy_ids": [
+					"enm_rt_test_boss"
+				],
+				"entry": [],
+				"group_id": "f1_fb",
+				"lead": [
+					0,
+					-300,
+					128
+				],
+				"state": "PATROL"
+			}
+		],
+		"is_boss": true,
+		"items": {
+			"itm_antidote": 1,
+			"itm_bandage": 3
+		},
+		"mods": [],
+		"owned_equipment": [],
+		"palette": {},
+		"party": [
+			{
+				"attack_element": "physical",
+				"attack_skill": "skl_attack_kai",
+				"credit_reward": 0,
+				"crit_bonus_ppm": 0,
+				"ctb_counter": 0,
+				"def_id": "kai",
+				"defending": false,
+				"display_name": "Kai",
+				"element_mods_ppm": {},
+				"exp_reward": 0,
+				"hp": 256,
+				"id": "p0",
+				"is_boss": false,
+				"is_pseudo": false,
+				"is_summon": false,
+				"last_action_key": "",
+				"left_battle": false,
+				"level": 1,
+				"mp": 12,
+				"own_turns": 0,
+				"phase": 0,
+				"side": 0,
+				"skills": [
+					"skl_kai_heavy_swing"
+				],
+				"slot": 0,
+				"stats": {
+					"def": 9,
+					"hp": 256,
+					"lck": 8,
+					"mag": 5,
+					"mp": 12,
+					"res": 6,
+					"spd": 11,
+					"str": 12
+				},
+				"status_immune": [],
+				"status_resist_ppm": {},
+				"statuses": [],
+				"stunt_cooldown": 0,
+				"stunts": [
+					"skl_stunt_kai_suplex"
+				],
+				"used_once": [],
+				"warned": false
+			},
+			{
+				"attack_element": "physical",
+				"attack_skill": "skl_attack_mopsula",
+				"credit_reward": 0,
+				"crit_bonus_ppm": 0,
+				"ctb_counter": 0,
+				"def_id": "mopsula",
+				"defending": false,
+				"display_name": "Mopsula",
+				"element_mods_ppm": {},
+				"exp_reward": 0,
+				"hp": 168,
+				"id": "p1",
+				"is_boss": false,
+				"is_pseudo": false,
+				"is_summon": false,
+				"last_action_key": "",
+				"left_battle": false,
+				"level": 1,
+				"mp": 30,
+				"own_turns": 0,
+				"phase": 0,
+				"side": 0,
+				"skills": [
+					"skl_mop_noble_flame",
+					"skl_mop_holy_lick"
+				],
+				"slot": 1,
+				"stats": {
+					"def": 6,
+					"hp": 168,
+					"lck": 12,
+					"mag": 13,
+					"mp": 30,
+					"res": 11,
+					"spd": 14,
+					"str": 5
+				},
+				"status_immune": [],
+				"status_resist_ppm": {},
+				"statuses": [],
+				"stunt_cooldown": 0,
+				"stunts": [
+					"skl_stunt_mop_entrance"
+				],
+				"used_once": [],
+				"warned": false
+			}
+		],
+		"presets": {
+			"p1": {
+				"preset": "support",
+				"tog": {
+					"interrupt": true,
+					"potions": false,
+					"show": true
+				}
+			}
+		},
+		"room_kind": 4,
+		"rt_opener": {},
+		"rules": {},
+		"seed": 77,
+		"show_mods_ppm": {
+			"follower_mult": 1000000,
+			"hype_gain_mult": 1000000
+		},
+		"theme_id": "metro",
+		"tutorial": false,
+		"tutorial_steps": [],
+		"units": [
+			{
+				"ai_seen": {},
+				"attack_element": "physical",
+				"attack_skill": "skl_attack_kai",
+				"auto_on": true,
+				"auto_ranged_skill": "",
+				"auto_skill": "skl_attack_kai",
+				"bar": {
+					"1": "skl_kai_heavy_swing",
+					"3": "skl_kai_leash_trip",
+					"5": "skl_stunt_kai_suplex"
+				},
+				"cast": {},
+				"cooldowns": {},
+				"credit_reward": 0,
+				"crit_bonus_ppm": 0,
+				"ctb_counter": 0,
+				"def_id": "kai",
+				"defending": false,
+				"display_name": "Kai",
+				"dmg_pm": 1000,
+				"driver": 0,
+				"element_mods_ppm": {},
+				"entry": [],
+				"exp_reward": 0,
+				"fixate_id": "",
+				"fixate_until": 0,
+				"follow_cm": 0,
+				"follow_up": {},
+				"gcd_len": 0,
+				"gcd_until": 0,
+				"goal": [],
+				"hp": 256,
+				"id": "p0",
+				"is_boss": false,
+				"is_pseudo": false,
+				"is_summon": false,
+				"keep_cm": 0,
+				"ko_at": -1,
+				"last_action_key": "",
+				"left_battle": false,
+				"level": 1,
+				"lockout_until": 0,
+				"move_budget": 600,
+				"move_cm_tick": 18,
+				"mp": 12,
+				"mp_hit_ready": 0,
+				"mp_regen": {
+					"amount": 1,
+					"every_ticks": 0,
+					"mode": "hit",
+					"taken": 1,
+					"taken_every_ticks": 30
+				},
+				"mp_regen_next": 0,
+				"opener_done": false,
+				"opener_pm": 1000,
+				"outside_since": -1,
+				"own_turns": 0,
+				"partner_order": {},
+				"phase": 0,
+				"phase_perfect": true,
+				"pop_in_until": 0,
+				"preset": "",
+				"queued": {},
+				"radius": 40,
+				"reach": 250,
+				"react_at": -1,
+				"rule_ready": {},
+				"rules": [],
+				"sample": [],
+				"side": 0,
+				"skills": [
+					"skl_kai_heavy_swing"
+				],
+				"slot": 0,
+				"stationary": false,
+				"stats": {
+					"def": 9,
+					"hp": 256,
+					"lck": 8,
+					"mag": 5,
+					"mp": 12,
+					"res": 6,
+					"spd": 11,
+					"str": 12
+				},
+				"status_immune": [],
+				"status_resist_ppm": {},
+				"statuses": [],
+				"stunt_cooldown": 0,
+				"stunt_pm": 1000,
+				"stunts": [
+					"skl_stunt_kai_suplex"
+				],
+				"swing_ready": 30,
+				"swing_ticks": 60,
+				"target_id": "",
+				"threat": {},
+				"threat_pm": 1500,
+				"toggles": {},
+				"used_once": [],
+				"warned": false,
+				"x": 0,
+				"yaw": 0,
+				"z": 300
+			},
+			{
+				"ai_seen": {},
+				"attack_element": "physical",
+				"attack_skill": "skl_attack_mopsula",
+				"auto_on": true,
+				"auto_ranged_skill": "",
+				"auto_skill": "skl_attack_mopsula",
+				"bar": {
+					"1": "skl_mop_noble_flame",
+					"2": "skl_mop_holy_lick",
+					"5": "skl_stunt_mop_entrance"
+				},
+				"cast": {},
+				"cooldowns": {},
+				"credit_reward": 0,
+				"crit_bonus_ppm": 0,
+				"ctb_counter": 0,
+				"def_id": "mopsula",
+				"defending": false,
+				"display_name": "Mopsula",
+				"dmg_pm": 1000,
+				"driver": 1,
+				"element_mods_ppm": {},
+				"entry": [],
+				"exp_reward": 0,
+				"fixate_id": "",
+				"fixate_until": 0,
+				"follow_cm": 700,
+				"follow_up": {},
+				"gcd_len": 0,
+				"gcd_until": 0,
+				"goal": [],
+				"hp": 168,
+				"id": "p1",
+				"is_boss": false,
+				"is_pseudo": false,
+				"is_summon": false,
+				"keep_cm": 0,
+				"ko_at": -1,
+				"last_action_key": "",
+				"left_battle": false,
+				"level": 1,
+				"lockout_until": 0,
+				"move_budget": 600,
+				"move_cm_tick": 18,
+				"mp": 30,
+				"mp_hit_ready": 0,
+				"mp_regen": {
+					"amount": 1,
+					"every_ticks": 45,
+					"mode": "time",
+					"taken": 0,
+					"taken_every_ticks": 0
+				},
+				"mp_regen_next": 0,
+				"opener_done": false,
+				"opener_pm": 1000,
+				"outside_since": -1,
+				"own_turns": 0,
+				"partner_order": {},
+				"phase": 0,
+				"phase_perfect": true,
+				"pop_in_until": 0,
+				"preset": "support",
+				"queued": {},
+				"radius": 35,
+				"reach": 1000,
+				"react_at": -1,
+				"rule_ready": {},
+				"rules": [],
+				"sample": [],
+				"side": 0,
+				"skills": [
+					"skl_mop_noble_flame",
+					"skl_mop_holy_lick"
+				],
+				"slot": 1,
+				"stationary": false,
+				"stats": {
+					"def": 6,
+					"hp": 168,
+					"lck": 12,
+					"mag": 13,
+					"mp": 30,
+					"res": 11,
+					"spd": 14,
+					"str": 5
+				},
+				"status_immune": [],
+				"status_resist_ppm": {},
+				"statuses": [],
+				"stunt_cooldown": 0,
+				"stunt_pm": 1000,
+				"stunts": [
+					"skl_stunt_mop_entrance"
+				],
+				"swing_ready": 30,
+				"swing_ticks": 72,
+				"target_id": "",
+				"threat": {},
+				"threat_pm": 1000,
+				"toggles": {
+					"interrupt": true,
+					"potions": false,
+					"show": true
+				},
+				"used_once": [],
+				"warned": false,
+				"x": -150,
+				"yaw": 0,
+				"z": 400
+			},
+			{
+				"ai_seen": {},
+				"attack_element": "physical",
+				"attack_skill": "skl_e_strike",
+				"auto_on": true,
+				"auto_ranged_skill": "",
+				"auto_skill": "skl_e_strike",
+				"bar": {},
+				"cast": {},
+				"cooldowns": {},
+				"credit_reward": 40,
+				"crit_bonus_ppm": 0,
+				"ctb_counter": 0,
+				"def_id": "enm_rt_test_boss",
+				"defending": false,
+				"display_name": "Testboss",
+				"dmg_pm": 1000,
+				"driver": 1,
+				"element_mods_ppm": {
+					"fire": 1500000
+				},
+				"entry": [],
+				"exp_reward": 80,
+				"fixate_id": "",
+				"fixate_until": 0,
+				"follow_cm": 0,
+				"follow_up": {},
+				"gcd_len": 0,
+				"gcd_until": 0,
+				"goal": [],
+				"hp": 1600,
+				"id": "e0",
+				"is_boss": true,
+				"is_pseudo": false,
+				"is_summon": false,
+				"keep_cm": 0,
+				"ko_at": -1,
+				"last_action_key": "",
+				"left_battle": false,
+				"level": 4,
+				"lockout_until": 0,
+				"move_budget": 600,
+				"move_cm_tick": 10,
+				"mp": 0,
+				"mp_hit_ready": 0,
+				"mp_regen": {},
+				"mp_regen_next": 0,
+				"opener_done": false,
+				"opener_pm": 1000,
+				"outside_since": -1,
+				"own_turns": 0,
+				"partner_order": {},
+				"phase": 0,
+				"phase_perfect": true,
+				"pop_in_until": 0,
+				"preset": "",
+				"queued": {},
+				"radius": 60,
+				"reach": 300,
+				"react_at": -1,
+				"rule_ready": {},
+				"rules": [],
+				"sample": [],
+				"side": 1,
+				"skills": [
+					"skl_e_bite",
+					"skl_e_strike"
+				],
+				"slot": 0,
+				"stationary": true,
+				"stats": {
+					"def": 9,
+					"hp": 1600,
+					"lck": 5,
+					"mag": 8,
+					"mp": 0,
+					"res": 7,
+					"spd": 9,
+					"str": 16
+				},
+				"status_immune": [],
+				"status_resist_ppm": {},
+				"statuses": [],
+				"stunt_cooldown": 0,
+				"stunt_pm": 1000,
+				"stunts": [],
+				"swing_ready": 0,
+				"swing_ticks": 72,
+				"target_id": "",
+				"threat": {},
+				"threat_pm": 1000,
+				"toggles": {},
+				"used_once": [],
+				"warned": false,
+				"x": -200,
+				"yaw": 128,
+				"z": -300
+			}
+		]
+	},
+	"ticks": [
+		[
+			-1,
+			[
+				{
+					"target_ids": [
+						"p0",
+						"p1",
+						"e0"
+					],
+					"tick": 0,
+					"type": "BATTLE_START"
+				},
+				{
+					"text": "rt_set_quiet",
+					"tick": 0,
+					"type": "MOD_LINE"
+				},
+				{
+					"actor_id": "e0",
+					"tick": 0,
+					"type": "PHASE_CHANGE",
+					"value": 1
+				}
+			],
+			{}
+		],
+		[
+			0,
+			[
+				{
+					"actor_id": "p0",
+					"target_id": "e0",
+					"tick": 0,
+					"type": "TARGET_CHANGED"
+				},
+				{
+					"actor_id": "p0",
+					"skill_id": "skl_attack_kai",
+					"target_id": "e0",
+					"tick": 0,
+					"type": "SWING"
+				}
+			],
+			{
+				"p0": {
+					"swing_ready": 60,
+					"target_id": "e0"
+				}
+			}
+		],
+		[
+			3,
+			[
+				{
+					"actor_id": "p1",
+					"by_ai": true,
+					"target_id": "e0",
+					"tick": 3,
+					"type": "TARGET_CHANGED"
+				}
+			],
+			{
+				"p1": {
+					"target_id": "e0"
+				}
+			}
+		],
+		[
+			9,
+			[
+				{
+					"actor_id": "p0",
+					"amount": 120,
+					"def_id": "enm_rt_test_boss",
+					"element": "physical",
+					"hp_after": 1480,
+					"max_hp": 1600,
+					"skill_id": "skl_attack_kai",
+					"target_id": "e0",
+					"tick": 9,
+					"type": "DAMAGE"
+				}
+			],
+			{
+				"e0": {
+					"hp": 1480
+				}
+			}
+		],
+		[
+			29,
+			[
+				{
+					"tick": 29,
+					"type": "SECOND",
+					"value": 1
+				}
+			],
+			{}
+		],
+		[
+			59,
+			[
+				{
+					"tick": 59,
+					"type": "SECOND",
+					"value": 2
+				}
+			],
+			{}
+		],
+		[
+			60,
+			[
+				{
+					"actor_id": "p0",
+					"skill_id": "skl_attack_kai",
+					"target_id": "e0",
+					"tick": 60,
+					"type": "SWING"
+				}
+			],
+			{
+				"p0": {
+					"swing_ready": 120
+				}
+			}
+		],
+		[
+			69,
+			[
+				{
+					"actor_id": "p0",
+					"amount": 120,
+					"def_id": "enm_rt_test_boss",
+					"element": "physical",
+					"hp_after": 1360,
+					"max_hp": 1600,
+					"skill_id": "skl_attack_kai",
+					"target_id": "e0",
+					"tick": 69,
+					"type": "DAMAGE"
+				}
+			],
+			{
+				"e0": {
+					"hp": 1360
+				}
+			}
+		],
+		[
+			89,
+			[
+				{
+					"tick": 89,
+					"type": "SECOND",
+					"value": 3
+				}
+			],
+			{}
+		],
+		[
+			90,
+			[
+				{
+					"actor_id": "e0",
+					"by_ai": true,
+					"rt": {
+						"end": 120,
+						"worthy": 0
+					},
+					"skill_id": "skl_e_test_slam",
+					"tick": 90,
+					"type": "CAST_START",
+					"value": 30
+				},
+				{
+					"actor_id": "e0",
+					"by_ai": true,
+					"rt": {
+						"half": 0,
+						"impact": 120,
+						"r": 250,
+						"r2": 0,
+						"shape": 0,
+						"start": 90,
+						"x": 0,
+						"yaw": 0,
+						"z": 200
+					},
+					"skill_id": "skl_e_test_slam",
+					"tick": 90,
+					"type": "TELEGRAPH_START",
+					"value": 1
+				}
+			],
+			{
+				"e0": {
+					"cast": {
+						"channel": false,
+						"end": 120,
+						"interruptible": false,
+						"item": "",
+						"kind": "ability",
+						"moving_cancels": false,
+						"next_tick": -1,
+						"skill": "skl_e_test_slam",
+						"start": 90,
+						"target": "",
+						"tele": 0,
+						"worthy": false,
+						"x": 0,
+						"z": 0
+					}
+				}
+			}
+		],
+		[
+			105,
+			[],
+			{
+				"p0": {
+					"x": 300,
+					"z": 200
+				}
+			}
+		],
+		[
+			119,
+			[
+				{
+					"tick": 119,
+					"type": "SECOND",
+					"value": 4
+				}
+			],
+			{}
+		],
+		[
+			120,
+			[
+				{
+					"actor_id": "p0",
+					"skill_id": "skl_attack_kai",
+					"target_id": "e0",
+					"tick": 120,
+					"type": "SWING"
+				},
+				{
+					"actor_id": "e0",
+					"skill_id": "skl_e_test_slam",
+					"tick": 120,
+					"type": "TELEGRAPH_IMPACT",
+					"value": 1
+				},
+				{
+					"target_id": "p0",
+					"tick": 120,
+					"type": "TELEGRAPH_DODGED",
+					"value": 1
+				},
+				{
+					"actor_id": "e0",
+					"by_ai": true,
+					"skill_id": "skl_e_test_slam",
+					"tick": 120,
+					"type": "ACTION_END"
+				}
+			],
+			{
+				"e0": {
+					"cast": {}
+				},
+				"p0": {
+					"swing_ready": 180
+				}
+			}
+		],
+		[
+			129,
+			[
+				{
+					"actor_id": "p0",
+					"amount": 120,
+					"def_id": "enm_rt_test_boss",
+					"element": "physical",
+					"hp_after": 1240,
+					"max_hp": 1600,
+					"skill_id": "skl_attack_kai",
+					"target_id": "e0",
+					"tick": 129,
+					"type": "DAMAGE"
+				}
+			],
+			{
+				"e0": {
+					"hp": 1240
+				}
+			}
+		],
+		[
+			149,
+			[
+				{
+					"tick": 149,
+					"type": "SECOND",
+					"value": 5
+				}
+			],
+			{}
+		],
+		[
+			179,
+			[
+				{
+					"tick": 179,
+					"type": "SECOND",
+					"value": 6
+				}
+			],
+			{}
+		],
+		[
+			180,
+			[
+				{
+					"actor_id": "p0",
+					"skill_id": "skl_attack_kai",
+					"target_id": "e0",
+					"tick": 180,
+					"type": "SWING"
+				}
+			],
+			{
+				"p0": {
+					"swing_ready": 240
+				}
+			}
+		],
+		[
+			189,
+			[
+				{
+					"actor_id": "p0",
+					"amount": 120,
+					"def_id": "enm_rt_test_boss",
+					"element": "physical",
+					"hp_after": 1120,
+					"max_hp": 1600,
+					"skill_id": "skl_attack_kai",
+					"target_id": "e0",
+					"tick": 189,
+					"type": "DAMAGE"
+				}
+			],
+			{
+				"e0": {
+					"hp": 1120
+				}
+			}
+		],
+		[
+			209,
+			[
+				{
+					"tick": 209,
+					"type": "SECOND",
+					"value": 7
+				}
+			],
+			{}
+		],
+		[
+			239,
+			[
+				{
+					"tick": 239,
+					"type": "SECOND",
+					"value": 8
+				}
+			],
+			{}
+		],
+		[
+			240,
+			[
+				{
+					"actor_id": "p0",
+					"skill_id": "skl_attack_kai",
+					"target_id": "e0",
+					"tick": 240,
+					"type": "SWING"
+				}
+			],
+			{
+				"p0": {
+					"swing_ready": 300
+				}
+			}
+		],
+		[
+			249,
+			[
+				{
+					"actor_id": "p0",
+					"amount": 120,
+					"def_id": "enm_rt_test_boss",
+					"element": "physical",
+					"hp_after": 1000,
+					"max_hp": 1600,
+					"skill_id": "skl_attack_kai",
+					"target_id": "e0",
+					"tick": 249,
+					"type": "DAMAGE"
+				}
+			],
+			{
+				"e0": {
+					"hp": 1000
+				}
+			}
+		],
+		[
+			250,
+			[
+				{
+					"actor_id": "p0",
+					"command": 1,
+					"skill_id": "skl_kai_heavy_swing",
+					"target_ids": [
+						"e0"
+					],
+					"text": "Wuchtschlag",
+					"tick": 250,
+					"type": "ACTION_START"
+				}
+			],
+			{
+				"p0": {
+					"gcd_len": 45,
+					"gcd_until": 295
+				}
+			}
+		],
+		[
+			259,
+			[
+				{
+					"actor_id": "p0",
+					"amount": 300,
+					"def_id": "enm_rt_test_boss",
+					"element": "physical",
+					"hp_after": 700,
+					"max_hp": 1600,
+					"skill_id": "skl_kai_heavy_swing",
+					"target_id": "e0",
+					"tick": 259,
+					"type": "DAMAGE"
+				},
+				{
+					"actor_id": "p0",
+					"skill_id": "skl_kai_heavy_swing",
+					"tick": 259,
+					"type": "ACTION_END"
+				}
+			],
+			{
+				"e0": {
+					"hp": 700
+				}
+			}
+		],
+		[
+			269,
+			[
+				{
+					"tick": 269,
+					"type": "SECOND",
+					"value": 9
+				}
+			],
+			{}
+		],
+		[
+			299,
+			[
+				{
+					"tick": 299,
+					"type": "SECOND",
+					"value": 10
+				}
+			],
+			{}
+		],
+		[
+			300,
+			[
+				{
+					"actor_id": "e0",
+					"success": true,
+					"tick": 300,
+					"type": "PHASE_CHANGE",
+					"value": 2
+				},
+				{
+					"actor_id": "e0",
+					"def_id": "enm_kanalratte",
+					"target_id": "e1",
+					"tick": 300,
+					"type": "SUMMON",
+					"value": 1
+				},
+				{
+					"actor_id": "e0",
+					"def_id": "enm_kanalratte",
+					"target_id": "e2",
+					"tick": 300,
+					"type": "SUMMON",
+					"value": 2
+				}
+			],
+			{
+				"e1": {
+					"ai_seen": {},
+					"attack_element": "physical",
+					"attack_skill": "skl_e_strike",
+					"auto_on": true,
+					"auto_ranged_skill": "",
+					"auto_skill": "skl_e_strike",
+					"bar": {},
+					"cast": {},
+					"cooldowns": {},
+					"credit_reward": 6,
+					"crit_bonus_ppm": 0,
+					"ctb_counter": 0,
+					"def_id": "enm_kanalratte",
+					"defending": false,
+					"display_name": "Kanalratte",
+					"dmg_pm": 1000,
+					"driver": 1,
+					"element_mods_ppm": {
+						"fire": 1500000
+					},
+					"entry": [
+						-500,
+						-400
+					],
+					"exp_reward": 12,
+					"fixate_id": "",
+					"fixate_until": 0,
+					"follow_cm": 0,
+					"follow_up": {},
+					"gcd_len": 0,
+					"gcd_until": 0,
+					"goal": [],
+					"hp": 96,
+					"id": "e1",
+					"is_boss": false,
+					"is_pseudo": false,
+					"is_summon": true,
+					"keep_cm": 0,
+					"ko_at": -1,
+					"last_action_key": "",
+					"left_battle": false,
+					"level": 1,
+					"lockout_until": 0,
+					"move_budget": 600,
+					"move_cm_tick": 12,
+					"mp": 0,
+					"mp_hit_ready": 0,
+					"mp_regen": {},
+					"mp_regen_next": 0,
+					"opener_done": false,
+					"opener_pm": 1000,
+					"outside_since": -1,
+					"own_turns": 0,
+					"partner_order": {},
+					"phase": 0,
+					"phase_perfect": true,
+					"pop_in_until": 15,
+					"preset": "",
+					"queued": {},
+					"radius": 30,
+					"reach": 220,
+					"react_at": -1,
+					"rule_ready": {},
+					"rules": [],
+					"sample": [],
+					"side": 1,
+					"skills": [
+						"skl_e_bite",
+						"skl_e_strike"
+					],
+					"slot": 1,
+					"stationary": false,
+					"stats": {
+						"def": 5,
+						"hp": 96,
+						"lck": 5,
+						"mag": 3,
+						"mp": 0,
+						"res": 3,
+						"spd": 13,
+						"str": 13
+					},
+					"status_immune": [],
+					"status_resist_ppm": {},
+					"statuses": [],
+					"stunt_cooldown": 0,
+					"stunt_pm": 1000,
+					"stunts": [],
+					"swing_ready": 0,
+					"swing_ticks": 72,
+					"target_id": "",
+					"threat": {},
+					"threat_pm": 1000,
+					"toggles": {},
+					"used_once": [],
+					"warned": false,
+					"x": -500,
+					"yaw": 128,
+					"z": -600
+				},
+				"e2": {
+					"ai_seen": {},
+					"attack_element": "physical",
+					"attack_skill": "skl_e_strike",
+					"auto_on": true,
+					"auto_ranged_skill": "",
+					"auto_skill": "skl_e_strike",
+					"bar": {},
+					"cast": {},
+					"cooldowns": {},
+					"credit_reward": 6,
+					"crit_bonus_ppm": 0,
+					"ctb_counter": 0,
+					"def_id": "enm_kanalratte",
+					"defending": false,
+					"display_name": "Kanalratte",
+					"dmg_pm": 1000,
+					"driver": 1,
+					"element_mods_ppm": {
+						"fire": 1500000
+					},
+					"entry": [
+						500,
+						-400
+					],
+					"exp_reward": 12,
+					"fixate_id": "",
+					"fixate_until": 0,
+					"follow_cm": 0,
+					"follow_up": {},
+					"gcd_len": 0,
+					"gcd_until": 0,
+					"goal": [],
+					"hp": 96,
+					"id": "e2",
+					"is_boss": false,
+					"is_pseudo": false,
+					"is_summon": true,
+					"keep_cm": 0,
+					"ko_at": -1,
+					"last_action_key": "",
+					"left_battle": false,
+					"level": 1,
+					"lockout_until": 0,
+					"move_budget": 600,
+					"move_cm_tick": 12,
+					"mp": 0,
+					"mp_hit_ready": 0,
+					"mp_regen": {},
+					"mp_regen_next": 0,
+					"opener_done": false,
+					"opener_pm": 1000,
+					"outside_since": -1,
+					"own_turns": 0,
+					"partner_order": {},
+					"phase": 0,
+					"phase_perfect": true,
+					"pop_in_until": 30,
+					"preset": "",
+					"queued": {},
+					"radius": 30,
+					"reach": 220,
+					"react_at": -1,
+					"rule_ready": {},
+					"rules": [],
+					"sample": [],
+					"side": 1,
+					"skills": [
+						"skl_e_bite",
+						"skl_e_strike"
+					],
+					"slot": 2,
+					"stationary": false,
+					"stats": {
+						"def": 5,
+						"hp": 96,
+						"lck": 5,
+						"mag": 3,
+						"mp": 0,
+						"res": 3,
+						"spd": 13,
+						"str": 13
+					},
+					"status_immune": [],
+					"status_resist_ppm": {},
+					"statuses": [],
+					"stunt_cooldown": 0,
+					"stunt_pm": 1000,
+					"stunts": [],
+					"swing_ready": 0,
+					"swing_ticks": 72,
+					"target_id": "",
+					"threat": {},
+					"threat_pm": 1000,
+					"toggles": {},
+					"used_once": [],
+					"warned": false,
+					"x": 500,
+					"yaw": 128,
+					"z": -600
+				}
+			}
+		],
+		[
+			329,
+			[
+				{
+					"tick": 329,
+					"type": "SECOND",
+					"value": 11
+				}
+			],
+			{}
+		],
+		[
+			359,
+			[
+				{
+					"tick": 359,
+					"type": "SECOND",
+					"value": 12
+				}
+			],
+			{}
+		],
+		[
+			360,
+			[
+				{
+					"actor_id": "e0",
+					"by_ai": true,
+					"rt": {
+						"end": 420,
+						"worthy": 0
+					},
+					"skill_id": "skl_e_test_train",
+					"tick": 360,
+					"type": "CAST_START",
+					"value": 60
+				},
+				{
+					"actor_id": "e0",
+					"by_ai": true,
+					"rt": {
+						"half": 0,
+						"impact": 420,
+						"r": 1200,
+						"r2": 300,
+						"shape": 3,
+						"start": 360,
+						"x": -600,
+						"yaw": 192,
+						"z": -600
+					},
+					"skill_id": "skl_e_test_train",
+					"tick": 360,
+					"type": "TELEGRAPH_START",
+					"value": 2
+				}
+			],
+			{
+				"e0": {
+					"cast": {
+						"channel": false,
+						"end": 420,
+						"interruptible": false,
+						"item": "",
+						"kind": "ability",
+						"moving_cancels": false,
+						"next_tick": -1,
+						"skill": "skl_e_test_train",
+						"start": 360,
+						"target": "",
+						"tele": 0,
+						"worthy": false,
+						"x": 0,
+						"z": 0
+					}
+				}
+			}
+		],
+		[
+			389,
+			[
+				{
+					"tick": 389,
+					"type": "SECOND",
+					"value": 13
+				}
+			],
+			{}
+		],
+		[
+			419,
+			[
+				{
+					"tick": 419,
+					"type": "SECOND",
+					"value": 14
+				}
+			],
+			{}
+		],
+		[
+			420,
+			[
+				{
+					"actor_id": "e0",
+					"skill_id": "skl_e_test_train",
+					"target_ids": [
+						"e1",
+						"e2"
+					],
+					"tick": 420,
+					"type": "TELEGRAPH_IMPACT",
+					"value": 2
+				},
+				{
+					"actor_id": "e0",
+					"def_id": "enm_kanalratte",
+					"max_hp": 96,
+					"skill_id": "skl_e_test_train",
+					"target_id": "e1",
+					"tick": 420,
+					"type": "KO"
+				},
+				{
+					"actor_id": "e0",
+					"def_id": "enm_kanalratte",
+					"max_hp": 96,
+					"skill_id": "skl_e_test_train",
+					"target_id": "e2",
+					"tick": 420,
+					"type": "KO"
+				},
+				{
+					"actor_id": "e0",
+					"by_ai": true,
+					"skill_id": "skl_e_test_train",
+					"tick": 420,
+					"type": "ACTION_END"
+				}
+			],
+			{
+				"e0": {
+					"cast": {}
+				},
+				"e1": {
+					"cast": {},
+					"hp": 0,
+					"ko_at": 420,
+					"target_id": ""
+				},
+				"e2": {
+					"cast": {},
+					"hp": 0,
+					"ko_at": 420,
+					"target_id": ""
+				}
+			}
+		],
+		[
+			449,
+			[
+				{
+					"tick": 449,
+					"type": "SECOND",
+					"value": 15
+				}
+			],
+			{}
+		],
+		[
+			479,
+			[
+				{
+					"tick": 479,
+					"type": "SECOND",
+					"value": 16
+				}
+			],
+			{}
+		],
+		[
+			509,
+			[
+				{
+					"tick": 509,
+					"type": "SECOND",
+					"value": 17
+				}
+			],
+			{}
+		],
+		[
+			539,
+			[
+				{
+					"tick": 539,
+					"type": "SECOND",
+					"value": 18
+				}
+			],
+			{}
+		],
+		[
+			569,
+			[
+				{
+					"tick": 569,
+					"type": "SECOND",
+					"value": 19
+				}
+			],
+			{}
+		],
+		[
+			599,
+			[
+				{
+					"tick": 599,
+					"type": "SECOND",
+					"value": 20
+				}
+			],
+			{}
+		],
+		[
+			629,
+			[
+				{
+					"tick": 629,
+					"type": "SECOND",
+					"value": 21
+				}
+			],
+			{}
+		],
+		[
+			659,
+			[
+				{
+					"tick": 659,
+					"type": "SECOND",
+					"value": 22
+				}
+			],
+			{}
+		],
+		[
+			689,
+			[
+				{
+					"tick": 689,
+					"type": "SECOND",
+					"value": 23
+				}
+			],
+			{}
+		],
+		[
+			719,
+			[
+				{
+					"tick": 719,
+					"type": "SECOND",
+					"value": 24
+				}
+			],
+			{}
+		],
+		[
+			749,
+			[
+				{
+					"tick": 749,
+					"type": "SECOND",
+					"value": 25
+				}
+			],
+			{}
+		],
+		[
+			779,
+			[
+				{
+					"tick": 779,
+					"type": "SECOND",
+					"value": 26
+				}
+			],
+			{}
+		],
+		[
+			809,
+			[
+				{
+					"tick": 809,
+					"type": "SECOND",
+					"value": 27
+				}
+			],
+			{}
+		],
+		[
+			839,
+			[
+				{
+					"tick": 839,
+					"type": "SECOND",
+					"value": 28
+				}
+			],
+			{}
+		],
+		[
+			869,
+			[
+				{
+					"tick": 869,
+					"type": "SECOND",
+					"value": 29
+				}
+			],
+			{}
+		],
+		[
+			899,
+			[
+				{
+					"tick": 899,
+					"type": "SECOND",
+					"value": 30
+				}
+			],
+			{}
+		],
+		[
+			900,
+			[
+				{
+					"actor_id": "e0",
+					"tick": 900,
+					"type": "ENRAGE",
+					"value": 1
+				},
+				{
+					"rt": {
+						"stacks": 1
+					},
+					"status_id": "sts_enrage",
+					"target_id": "e0",
+					"tick": 900,
+					"type": "STATUS_ADDED",
+					"value": -1
+				}
+			],
+			{
+				"e0": {
+					"statuses": [
+						{
+							"amount": 0,
+							"applied_at": 900,
+							"ends_at": -1,
+							"id": "sts_enrage",
+							"next_tick_at": -1,
+							"period": 0,
+							"source_id": "e0",
+							"stacks": 1
+						}
+					]
+				}
+			}
+		],
+		[
+			929,
+			[
+				{
+					"tick": 929,
+					"type": "SECOND",
+					"value": 31
+				}
+			],
+			{}
+		],
+		[
+			959,
+			[
+				{
+					"tick": 959,
+					"type": "SECOND",
+					"value": 32
+				}
+			],
+			{}
+		],
+		[
+			989,
+			[
+				{
+					"tick": 989,
+					"type": "SECOND",
+					"value": 33
+				}
+			],
+			{}
+		],
+		[
+			990,
+			[
+				{
+					"actor_id": "p0",
+					"command": 2,
+					"skill_id": "skl_stunt_kai_suplex",
+					"target_ids": [
+						"e0"
+					],
+					"text": "Bahnsteig-Suplex",
+					"tick": 990,
+					"type": "ACTION_START"
+				}
+			],
+			{
+				"p0": {
+					"gcd_len": 45,
+					"gcd_until": 1035
+				}
+			}
+		],
+		[
+			1014,
+			[
+				{
+					"actor_id": "p0",
+					"skill_id": "skl_stunt_kai_suplex",
+					"success": true,
+					"tick": 1014,
+					"type": "STUNT_RESULT"
+				},
+				{
+					"actor_id": "p0",
+					"amount": 700,
+					"def_id": "enm_rt_test_boss",
+					"element": "physical",
+					"hp_after": 0,
+					"max_hp": 1600,
+					"skill_id": "skl_stunt_kai_suplex",
+					"target_id": "e0",
+					"tick": 1014,
+					"type": "DAMAGE"
+				},
+				{
+					"actor_id": "p0",
+					"command": 2,
+					"def_id": "enm_rt_test_boss",
+					"max_hp": 1600,
+					"skill_id": "skl_stunt_kai_suplex",
+					"target_id": "e0",
+					"tick": 1014,
+					"type": "KO"
+				},
+				{
+					"success": true,
+					"tick": 1014,
+					"type": "BATTLE_END"
+				}
+			],
+			{
+				"e0": {
+					"cast": {},
+					"hp": 0,
+					"ko_at": 1014,
+					"target_id": ""
+				}
+			}
+		]
+	]
+}

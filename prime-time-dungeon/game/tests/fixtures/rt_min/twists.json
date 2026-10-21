@@ -1,0 +1,153 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "tw_overtime",
+			"name": "Nachspielzeit",
+			"desc": "Der Etagen-Timer bekommt Sekunden dazu.",
+			"gameplay": true,
+			"scope": "instant",
+			"spice": "helpful",
+			"slice": true,
+			"once_per_floor": true,
+			"duration": {
+				"unit": "none"
+			},
+			"params": {
+				"seconds": {
+					"default": 60,
+					"min": 30,
+					"max": 60
+				}
+			},
+			"sources": [
+				"regie",
+				"dev"
+			]
+		},
+		{
+			"id": "tw_mirror_room",
+			"name": "Spiegel-Raum",
+			"desc": "Nächster Kampf: Schwächen und Resistenzen getauscht.",
+			"gameplay": true,
+			"scope": "battle",
+			"spice": "neutral",
+			"slice": false,
+			"once_per_floor": false,
+			"weight": 1,
+			"duration": {
+				"unit": "battles",
+				"default": 1,
+				"min": 1,
+				"max": 1
+			},
+			"params": {},
+			"sources": [
+				"regie",
+				"mod_brain",
+				"vote",
+				"schedule",
+				"dev"
+			]
+		},
+		{
+			"id": "tw_elite_guest",
+			"name": "Stargast",
+			"desc": "Nächste Gruppe ist Elite – mit doppelter Beute.",
+			"gameplay": true,
+			"scope": "battle",
+			"spice": "spicy",
+			"slice": false,
+			"once_per_floor": false,
+			"weight": 1,
+			"duration": {
+				"unit": "battles",
+				"default": 1,
+				"min": 1,
+				"max": 1
+			},
+			"params": {
+				"elite_pm": {
+					"default": 1200,
+					"min": 1200,
+					"max": 1200
+				},
+				"reward_pm": {
+					"default": 2000,
+					"min": 2000,
+					"max": 2000
+				}
+			},
+			"sources": [
+				"regie",
+				"mod_brain",
+				"vote",
+				"schedule",
+				"dev"
+			]
+		},
+		{
+			"id": "tw_double_trouble",
+			"name": "Doppelte Quote",
+			"desc": "Ein Gegner mehr, anderthalbfache Beute.",
+			"gameplay": true,
+			"scope": "battle",
+			"spice": "spicy",
+			"slice": false,
+			"once_per_floor": false,
+			"weight": 1,
+			"duration": {
+				"unit": "battles",
+				"default": 1,
+				"min": 1,
+				"max": 1
+			},
+			"params": {
+				"extra_enemies": {
+					"default": 1,
+					"min": 1,
+					"max": 1
+				},
+				"reward_pm": {
+					"default": 1500,
+					"min": 1500,
+					"max": 1500
+				}
+			},
+			"sources": [
+				"regie",
+				"mod_brain",
+				"vote",
+				"schedule",
+				"dev"
+			]
+		},
+		{
+			"id": "tw_boss_mood",
+			"name": "Bosslaune",
+			"desc": "Der Boss ist aggressiv oder eitel – das Publikum entscheidet.",
+			"gameplay": true,
+			"scope": "boss",
+			"spice": "neutral",
+			"slice": false,
+			"once_per_floor": false,
+			"weight": 1,
+			"duration": {
+				"unit": "battles",
+				"default": 1,
+				"min": 1,
+				"max": 1
+			},
+			"params": {
+				"aggressive": {
+					"default": 1,
+					"min": 0,
+					"max": 1
+				}
+			},
+			"sources": [
+				"vote"
+			]
+		}
+	]
+}

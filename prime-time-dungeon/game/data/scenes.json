@@ -1,0 +1,189 @@
+{
+	"schema": 1,
+	"entries": [
+		{
+			"id": "scn_mop_1",
+			"name": "Fußnote 1",
+			"condition": "e.safe_room_visits >= 1",
+			"priority": 1,
+			"set_flag": "",
+			"once": true,
+			"lines": [
+				{
+					"voice": "mopsula",
+					"text": "Kolleg:in. Setz dich. Es folgt ein kurzer Vortrag. Mit Fußnoten."
+				},
+				{
+					"voice": "kai",
+					"text": "Du redest seit einer Stunde."
+				},
+				{
+					"voice": "mopsula",
+					"text": "Mit dir. Nicht AN dich. Fußnote 1: ein Unterschied, den man im Grundstudium lernt."
+				},
+				{
+					"voice": "kai",
+					"text": "Wieso kannst du überhaupt sprechen?"
+				},
+				{
+					"voice": "mopsula",
+					"text": "Ich konnte immer sprechen. Ihr habt nur nie zugehört."
+				},
+				{
+					"voice": "mopsula",
+					"text": "Neun Jahre „Na, du Kleiner?“. Neun Jahre! Ich bin ein GRAF."
+				},
+				{
+					"voice": "kai",
+					"text": "… Ich hab dir jeden Abend das Ohr gekrault."
+				},
+				{
+					"voice": "mopsula",
+					"text": "(Pause) Das linke. Das linke war akzeptabel. Weitermachen."
+				},
+				{
+					"voice": "mod",
+					"text": "Zuschauer-Umfrage: 94 % wollen mehr vom Hund. Notiert."
+				}
+			]
+		},
+		{
+			"id": "scn_mop_2",
+			"name": "Ahnenreihe",
+			"condition": "f.defeated_enm_boss_hausmeister == true",
+			"priority": 2,
+			"set_flag": "",
+			"once": true,
+			"lines": [
+				{
+					"voice": "mopsula",
+					"text": "Der Hausmeister. Er hatte einen Schlüssel für jede Tür."
+				},
+				{
+					"voice": "mopsula",
+					"text": "Und keine einzige, hinter der jemand auf ihn wartete."
+				},
+				{
+					"voice": "kai",
+					"text": "Das ist ungewohnt nachdenklich für dich."
+				},
+				{
+					"voice": "mopsula",
+					"text": "Nachdenklichkeit ist erblich. Fußnote 3: Meine Ahnen waren Grafen, Gelehrte, Nachtgestalten —"
+				},
+				{
+					"voice": "kai",
+					"text": "Laut deiner Akte wurdest du in einem Umzugskarton im Tierheim abgegeben."
+				},
+				{
+					"voice": "mopsula",
+					"text": "EIN SEHR VORNEHMER UMZUGSKARTON. Mit Büchern darin."
+				},
+				{
+					"voice": "kai",
+					"text": "(lacht)"
+				},
+				{
+					"voice": "mopsula",
+					"text": "… Wartet jemand auf dich? Da oben?"
+				},
+				{
+					"voice": "kai",
+					"text": "Da oben ist nichts mehr."
+				},
+				{
+					"voice": "mopsula",
+					"text": "Dann warten wir eben aufeinander. Das ist keine Bitte. Das ist eine These."
+				}
+			]
+		},
+		{
+			"id": "scn_mop_3",
+			"name": "Das Tierheim",
+			"condition": "e.kai_level >= 4 && f.scene_scn_mop_1 == true",
+			"priority": 3,
+			"set_flag": "",
+			"once": true,
+			"lines": [
+				{
+					"voice": "mopsula",
+					"text": "Weißt du, warum ich in Zwinger 7 „schwer vermittelbar“ war?"
+				},
+				{
+					"voice": "kai",
+					"text": "Weil du jeden Besucher angeknurrt hast."
+				},
+				{
+					"voice": "mopsula",
+					"text": "Weil sie die Falschen waren. Familien mit Kinderwagen. Pärchen mit Selfie-Stab."
+				},
+				{
+					"voice": "mopsula",
+					"text": "Niemand wollte einen alten Mops mit Atemgeräuschen."
+				},
+				{
+					"voice": "kai",
+					"text": "Ich wollte dich adoptieren. Nächsten Monat. Die Papiere lagen schon in der Schublade."
+				},
+				{
+					"voice": "mopsula",
+					"text": "(lange Pause) … Das sagst du nur wegen der Kameras."
+				},
+				{
+					"voice": "kai",
+					"text": "Die Kameras sind mir egal."
+				},
+				{
+					"voice": "mopsula",
+					"text": "Hmpf. Ich nehme das zu Protokoll. Unter Vorbehalt. (dreht sich weg, Schwanz wedelt)"
+				},
+				{
+					"voice": "mod",
+					"text": "Diese Szene wird in 47 Galaxien gerade mit Taschentüchern beworben. Danke."
+				}
+			]
+		},
+		{
+			"id": "scn_mop_4",
+			"name": "Mitternacht auf Gleis 9",
+			"condition": "e.safe_room_id == \"sr_signalbox\"",
+			"priority": 0,
+			"set_flag": "mop_pep_talk",
+			"once": true,
+			"lines": [
+				{
+					"voice": "mopsula",
+					"text": "Sie nennt sich Königin. Eine RATTE. Mit Kopfschmuck aus gelochten Fahrscheinen."
+				},
+				{
+					"voice": "kai",
+					"text": "Wir müssen nicht gegen sie kämpfen. Die Treppe ist gleich da."
+				},
+				{
+					"voice": "mopsula",
+					"text": "Es gibt Dinge, die ein Graf nicht dulden kann. Fußnote 9: Hochstapelei."
+				},
+				{
+					"voice": "kai",
+					"text": "Du bist ein Mops aus dem Tierheim."
+				},
+				{
+					"voice": "mopsula",
+					"text": "Und du bist {job}. Mit einem Wischmopp. Und doch stehen wir hier."
+				},
+				{
+					"voice": "mopsula",
+					"text": "Lebend. Im Fernsehen. Kurz vor Mitternacht."
+				},
+				{
+					"voice": "kai",
+					"text": "… Okay. Zusammen."
+				},
+				{
+					"voice": "mopsula",
+					"text": "Zusammen. Aber ich gehe voraus. Wegen der Optik."
+				}
+			]
+		}
+	]
+}

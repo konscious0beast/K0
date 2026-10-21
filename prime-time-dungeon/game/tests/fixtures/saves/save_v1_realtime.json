@@ -1,0 +1,199 @@
+{
+	"format": "ptd_save",
+	"game_version": "0.3.0",
+	"saved_at_unix": 1791779995,
+	"state": {
+		"bestiary": {
+			"enm_kanalratte": {
+				"defeated": 3,
+				"weak_known": [
+					"fire"
+				]
+			}
+		},
+		"combat_mode": "realtime",
+		"difficulty": "prime",
+		"flags": {
+			"intro_seen": true,
+			"live": {
+				"sponsor": {
+					"exempt": [
+						"cheer"
+					],
+					"last": {},
+					"next_in": 9000,
+					"open": {},
+					"rooms": [],
+					"seq": 0
+				}
+			},
+			"persona": {
+				"bias": [
+					"mar_brave",
+					"mar_stunt"
+				],
+				"swapped": false,
+				"v": 1
+			},
+			"rt_hints": {
+				"interrupt": true,
+				"zone": true
+			}
+		},
+		"floor_run": {
+			"completed_events": [],
+			"decay_ticks": 0,
+			"defeated_groups": [],
+			"event_uses": {},
+			"floor_boss_defeated": false,
+			"floor_id": "floor_1",
+			"index": 1,
+			"location": "sr_kiosk",
+			"loot_seed": 1187283952,
+			"opened_chests": [],
+			"opened_gates": [],
+			"quarter_boss_defeated": false,
+			"safe_room_visits": 0,
+			"seed": 26626814,
+			"spawner_ticks": {},
+			"stairs_found": false,
+			"stats": {
+				"achievements": 0,
+				"followers_gained": 0,
+				"kills": 0,
+				"time_used_ticks": 0,
+				"viewers_peak": 1150
+			},
+			"stray_counter": 0,
+			"strays": {},
+			"time_left_ticks": 36000,
+			"timer_started": false,
+			"visited": [],
+			"visited_safe_rooms": [],
+			"warned": []
+		},
+		"hero": "kai",
+		"inventory": {
+			"counts": {
+				"itm_antidote": 1,
+				"itm_bandage": 6
+			},
+			"credits": 50
+		},
+		"party": [
+			{
+				"casting": {
+					"class_floor": 0,
+					"class_visit": 0,
+					"floor": 2,
+					"visit": 1
+				},
+				"class_id": "",
+				"display_name": "Kai",
+				"equipment": {
+					"accessory": "",
+					"armor": "itm_arm_hoodie",
+					"weapon": "itm_wpn_mop"
+				},
+				"exp": 0,
+				"hp": 150,
+				"hp_scale_pm": 4000,
+				"id": "kai",
+				"level": 5,
+				"mp": 20,
+				"rt_loadout": {
+					"2": "skl_kai_first_aid"
+				},
+				"skills": [
+					"skl_kai_heavy_swing",
+					"skl_kai_taunt",
+					"skl_kai_sweep",
+					"skl_kai_first_aid",
+					"skl_kai_leash_trip"
+				],
+				"species_id": "spc_kai_pilzling",
+				"talents": {
+					"tal_kai_liga_routine": 1
+				}
+			},
+			{
+				"class_id": "",
+				"display_name": "Mopsula",
+				"equipment": {
+					"accessory": "",
+					"armor": "itm_arm_pug_sweater",
+					"weapon": "itm_wpn_collar_leather"
+				},
+				"exp": 0,
+				"hp": 99,
+				"hp_scale_pm": 4000,
+				"id": "mopsula",
+				"level": 5,
+				"mp": 7,
+				"rt_loadout": {
+					"3": "skl_mop_expert_opinion"
+				},
+				"rt_preset": "careful",
+				"rt_toggles": {
+					"interrupt": true,
+					"potions": true,
+					"show": false
+				},
+				"skills": [
+					"skl_mop_noble_flame",
+					"skl_mop_holy_lick",
+					"skl_mop_frost_sneeze",
+					"skl_mop_thunder_bark",
+					"skl_mop_expert_opinion"
+				],
+				"talents": {
+					"tal_mop_zwinger7": 1
+				}
+			}
+		],
+		"pending_lootboxes": [],
+		"pity_epic": 0,
+		"pity_rare": 0,
+		"play_time_sec": 0.0,
+		"player_name": "Kai",
+		"rng_counter": 0,
+		"seed": 6161,
+		"show": {
+			"achievements": [],
+			"followers": 0,
+			"hype": 30.0,
+			"marotten": {
+				"active": [
+					"mar_sneaky"
+				],
+				"floor": 1,
+				"hits": {},
+				"liga": {
+					"battles": 0,
+					"t1": 0,
+					"t2": 0
+				},
+				"prev": [],
+				"won": [],
+				"zones": 0
+			},
+			"milestones": [],
+			"sponsor_uses": {},
+			"stats": {
+				"viewers_max": 1150,
+				"viewers_target_peak": 1150
+			},
+			"viewers": 1150
+		},
+		"slot": 1
+	},
+	"summary": {
+		"floor_index": 1,
+		"followers": 0,
+		"level": 5,
+		"location": "sr_kiosk",
+		"play_time_sec": 0,
+		"player_name": "Kai"
+	},
+	"version": 1
+}
